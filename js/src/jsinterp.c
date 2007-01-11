@@ -1989,7 +1989,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 void *hookData = ifp->hookData;
 
                 if (hookData) {
-                    JSInterpreterHook hook = cx->runtime->callHook;
+                    JSInterpreterHook hook = rt->callHook;
                     if (hook) {
                         hook(cx, fp, JS_FALSE, &ok, hookData);
                         LOAD_INTERRUPT_HANDLER(rt);
@@ -2564,15 +2564,39 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             goto out;                                                         \
     JS_END_MACRO
 
-/*
- * Direct callers, i.e. those who do not wrap CACHED_GET and CACHED_SET calls
- * in PROPERTY_OP or ELEMENT_OP macro calls must SAVE_SP(fp); beforehand, just
- * in case a getter or setter function is invoked.  CACHED_GET and CACHED_SET
- * use cx, obj, id, and rval from their caller's lexical environment.
- */
-#define CACHED_GET(call)        CACHED_GET_VP(call, &rval)
+#define NATIVE_GET(cx,obj,pobj,sprop,vp)                                      \
+    JS_BEGIN_MACRO                                                            \
+        if (SPROP_HAS_STUB_GETTER(sprop)) {                                   \
+            /* Fast path for Object instance properties. */                   \
+            JS_ASSERT((sprop)->slot != SPROP_INVALID_SLOT);                   \
+            *vp = LOCKED_OBJ_GET_SLOT(pobj, (sprop)->slot);                   \
+        } else {                                                              \
+            SAVE_SP(fp);                                                      \
+            ok = js_NativeGet(cx, obj, pobj, sprop, vp);                      \
+            if (!ok)                                                          \
+                goto out;                                                     \
+        }                                                                     \
+    JS_END_MACRO
 
-#define CACHED_GET_VP(call,vp)                                                \
+#define NATIVE_SET(cx,obj,sprop,vp)                                           \
+    JS_BEGIN_MACRO                                                            \
+        if (SPROP_HAS_STUB_SETTER(sprop)) {                                   \
+            /* Fast path for Object instance properties. */                   \
+            JS_ASSERT((sprop)->slot != SPROP_INVALID_SLOT);                   \
+            LOCKED_OBJ_SET_SLOT(obj, (sprop)->slot, *vp);                     \
+        } else {                                                              \
+            SAVE_SP(fp);                                                      \
+            ok = js_NativeSet(cx, obj, sprop, vp);                            \
+            if (!ok)                                                          \
+                goto out;                                                     \
+        }                                                                     \
+    JS_END_MACRO
+
+/*
+ * CACHED_GET and CACHED_SET use cx, obj, id, and rval from their callers'
+ * environments.
+ */
+#define CACHED_GET(call)                                                      \
     JS_BEGIN_MACRO                                                            \
         if (!OBJ_IS_NATIVE(obj)) {                                            \
             ok = call;                                                        \
@@ -2580,17 +2604,8 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             JS_LOCK_OBJ(cx, obj);                                             \
             PROPERTY_CACHE_TEST(&rt->propertyCache, obj, id, sprop);          \
             if (sprop) {                                                      \
-                JSScope *scope_ = OBJ_SCOPE(obj);                             \
-                slot = (uintN)sprop->slot;                                    \
-                *(vp) = (slot != SPROP_INVALID_SLOT)                          \
-                        ? LOCKED_OBJ_GET_SLOT(obj, slot)                      \
-                        : JSVAL_VOID;                                         \
-                JS_UNLOCK_SCOPE(cx, scope_);                                  \
-                ok = SPROP_GET(cx, sprop, obj, obj, vp);                      \
-                JS_LOCK_SCOPE(cx, scope_);                                    \
-                if (ok && SPROP_HAS_VALID_SLOT(sprop, scope_))                \
-                    LOCKED_OBJ_SET_SLOT(obj, slot, *(vp));                    \
-                JS_UNLOCK_SCOPE(cx, scope_);                                  \
+                NATIVE_GET(cx, obj, obj, sprop, &rval);                       \
+                JS_UNLOCK_OBJ(cx, obj);                                       \
             } else {                                                          \
                 JS_UNLOCK_OBJ(cx, obj);                                       \
                 ok = call;                                                    \
@@ -2610,13 +2625,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             if (sprop &&                                                      \
                 !(sprop->attrs & JSPROP_READONLY) &&                          \
                 (scope_ = OBJ_SCOPE(obj), !SCOPE_IS_SEALED(scope_))) {        \
-                JS_UNLOCK_SCOPE(cx, scope_);                                  \
-                ok = SPROP_SET(cx, sprop, obj, obj, &rval);                   \
-                JS_LOCK_SCOPE(cx, scope_);                                    \
-                if (ok && SPROP_HAS_VALID_SLOT(sprop, scope_)) {              \
-                    LOCKED_OBJ_SET_SLOT(obj, sprop->slot, rval);              \
-                    GC_POKE(cx, JSVAL_NULL);  /* XXX second arg ignored */    \
-                }                                                             \
+                NATIVE_SET(cx, obj, sprop, &rval);                            \
                 JS_UNLOCK_SCOPE(cx, scope_);                                  \
             } else {                                                          \
                 JS_UNLOCK_OBJ(cx, obj);                                       \
@@ -3554,10 +3563,10 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 SAVE_SP(&newifp->frame);
 
                 /* Call the debugger hook if present. */
-                hook = cx->runtime->callHook;
+                hook = rt->callHook;
                 if (hook) {
                     newifp->hookData = hook(cx, &newifp->frame, JS_TRUE, 0,
-                                            cx->runtime->callHookData);
+                                            rt->callHookData);
                     LOAD_INTERRUPT_HANDLER(rt);
                 }
 
@@ -3666,26 +3675,11 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 ok = OBJ_GET_PROPERTY(cx, obj, id, &rval);
                 if (!ok)
                     goto out;
-                PUSH_OPND(rval);
-                break;
-            }
-
-            /* Get and push the obj[id] property's value. */
-            sprop = (JSScopeProperty *)prop;
-            slot = (uintN)sprop->slot;
-            rval = (slot != SPROP_INVALID_SLOT)
-                   ? LOCKED_OBJ_GET_SLOT(obj2, slot)
-                   : JSVAL_VOID;
-            JS_UNLOCK_OBJ(cx, obj2);
-            ok = SPROP_GET(cx, sprop, obj, obj2, &rval);
-            JS_LOCK_OBJ(cx, obj2);
-            if (!ok) {
+            } else {
+                sprop = (JSScopeProperty *)prop;
+                NATIVE_GET(cx, obj, obj2, sprop, &rval);
                 OBJ_DROP_PROPERTY(cx, obj2, prop);
-                goto out;
             }
-            if (SPROP_HAS_VALID_SLOT(sprop, OBJ_SCOPE(obj2)))
-                LOCKED_OBJ_SET_SLOT(obj2, slot, rval);
-            OBJ_DROP_PROPERTY(cx, obj2, prop);
             PUSH_OPND(rval);
             break;
 
