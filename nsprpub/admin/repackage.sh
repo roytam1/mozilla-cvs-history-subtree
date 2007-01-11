@@ -64,10 +64,10 @@
 # 
 # ------------------------------------------------------------------
 
-FROMTOP=/share/builds/components/nspr20/v4.6.4
-TOTOP=./v4.6.4
-NSPRDIR=nspr-4.6.4
-SOURCETAG=NSPR_4_6_4_RTM
+FROMTOP=/share/builds/components/nspr20/v4.6.5
+TOTOP=./v4.6.5
+NSPRDIR=nspr-4.6.5
+SOURCETAG=NSPR_4_6_5_RTM
 
 #
 # enumerate Unix object directories on /s/b/c
@@ -179,7 +179,7 @@ for OBJDIR in $WIN_OBJDIRS; do
     cp -r $FROMTOP/$OBJDIR/bin $NSPRDIR
 
     echo "creating directory $TOTOP/$OBJDIR"
-    mkdir $TOTOP/$OBJDIR
+    mkdir -p $TOTOP/$OBJDIR
     echo "creating $TOTOP/$OBJDIR/$NSPRDIR.zip"
     zip -r $TOTOP/$OBJDIR/$NSPRDIR.zip $NSPRDIR
 done
