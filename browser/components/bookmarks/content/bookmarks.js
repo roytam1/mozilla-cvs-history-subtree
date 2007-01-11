@@ -1622,7 +1622,7 @@ var BookmarksUtils = {
   {
     if (aSelection.length > 1)
       gBkmkTxnSvc.startBatch();
-    if (aSelection.length > this.BATCH_LIMIT && aAction != "move")
+    if (aSelection.length > kBATCH_LIMIT && aAction != "move")
       BMDS.beginUpdateBatch();
 
     for (var i = 0; i < aSelection.length; ++i) {
@@ -1661,7 +1661,7 @@ var BookmarksUtils = {
     }
     if (aSelection.length > 1)
       gBkmkTxnSvc.endBatch();
-    if (aSelection.length > this.BATCH_LIMIT && aAction != "move")
+    if (aSelection.length > kBATCH_LIMIT && aAction != "move")
       BMDS.beginUpdateBatch();
     return true;
   },
@@ -1728,7 +1728,7 @@ var BookmarksUtils = {
 
     if (aSelection.length > 1)
       gBkmkTxnSvc.startBatch();
-    if (aSelection.length > this.BATCH_LIMIT && aAction != "move")
+    if (aSelection.length > kBATCH_LIMIT && aAction != "move")
       BMDS.beginUpdateBatch();
 
     for (var i=0; i<aSelection.length; ++i) {
@@ -1763,7 +1763,7 @@ var BookmarksUtils = {
     }
     if (aSelection.length > 1)
       gBkmkTxnSvc.endBatch();
-    if (aSelection.length > this.BATCH_LIMIT && aAction != "move")
+    if (aSelection.length > kBATCH_LIMIT && aAction != "move")
       BMDS.endUpdateBatch();
   },
 
