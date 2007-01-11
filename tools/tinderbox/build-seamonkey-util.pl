@@ -431,7 +431,7 @@ sub SetupEnv {
         $ENV{BUILD_OFFICIAL}   = 1;
         $ENV{MOZILLA_OFFICIAL} = 1;
       if ($Settings::OS =~ /^WIN/) {
-        if ($Settings::shiptalkback) {
+        if ($Settings::shiptalkback || $Settings::airbag_pushsymbols) {
             $ENV{MOZ_DEBUG_SYMBOLS}      = 1;
         }
 #          $ENV{MOZ_PROFILE}      = 1;
