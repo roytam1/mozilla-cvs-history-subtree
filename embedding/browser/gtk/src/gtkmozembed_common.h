@@ -170,9 +170,9 @@ struct _GtkMozEmbedCookie
 typedef struct _GtkMozPlugin GtkMozPlugin;
 struct _GtkMozPlugin
 {
-    const gchar *title;  /** < Plugin title */
-    const gchar *path;   /** < Plugin path */
-    const gchar *type;   /** < Plugin type */
+    gchar *title;  /** < Plugin title */
+    gchar *path;   /** < Plugin path */
+    gchar *type;   /** < Plugin type */
     gboolean isDisabled; /** < is plugin enabled */
 };
 

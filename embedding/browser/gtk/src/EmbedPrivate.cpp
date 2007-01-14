@@ -606,6 +606,7 @@ EmbedPrivate::Show(void)
 
   // and set the visibility on the thing
   nsCOMPtr<nsIBaseWindow> baseWindow = do_QueryInterface(webBrowser);
+  baseWindow->SetVisibility(PR_FALSE);
   baseWindow->SetVisibility(PR_TRUE);
 }
 
