@@ -233,7 +233,10 @@ function onEditVirtualFolderPropertiesCallback(aVirtualFolderURI)
   }
 }
 
-function MsgFolderProperties() 
+/**
+ @param tabID  initial tab
+ */
+function MsgFolderProperties(tabID)
 {
   var preselectedURI = GetSelectedFolderURI();
   var msgFolder = GetMsgFolderFromUri(preselectedURI, true);
@@ -263,7 +266,8 @@ function MsgFolderProperties()
               {preselectedURI:preselectedURI, serverType:serverType,
               msgWindow:msgWindow, title:windowTitle,
               okCallback:FolderProperties, 
-              tabID:"", tabIndex:0, name:name, rebuildSummaryCallback:RebuildSummaryFile});
+              tabID:tabID, name:name,
+              rebuildSummaryCallback:RebuildSummaryFile});
 }
 
 function RebuildSummaryFile(msgFolder)
@@ -303,7 +307,7 @@ function MsgToggleMessagePane()
 
 function MsgSetFolderCharset() 
 {
-  MsgFolderProperties() 
+  MsgFolderProperties();
 }
 
 // Given a URI we would like to return corresponding message folder here.
