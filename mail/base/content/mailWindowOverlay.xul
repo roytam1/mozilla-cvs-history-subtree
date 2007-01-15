@@ -2218,7 +2218,6 @@
                        id="quotaMeter"
                        mode="normal"
                        value="0" />
-        <label id="quotaLabelShadow" />
         <label id="quotaLabel"
                onclick="MsgFolderProperties('QuotaTab');" />
       </stack>
