@@ -1367,3 +1367,21 @@ any
 
 Output stream:
 any
+
+----------------------------------------------------------------------
+
+47) timestamp-trigger
+---------------------
+
+Filter for triggering callbacks when a timestamp is being traversed.
+
+Node parameters:
+none
+
+Control interfaces: zapITimestampTrigger
+
+Input stream:
+any
+
+Output stream:
+same as input stream

@@ -80,6 +80,7 @@ CPPSRCS		= \
 		zapTimestamper.cpp \
 		zapTimestampScaler.cpp \
 		zapTimestampSyncer.cpp \
+		zapTimestampTrigger.cpp \
 		zapUDPPacketizer.cpp \
 		zapUDPSocket.cpp \
 		zapUDPSocketPair.cpp \
@@ -114,6 +115,7 @@ XPIDLSRCS	= \
 		zapIStunClientListener.idl \
 		zapIStunServer.idl \
 		zapIStunServerListener.idl \
+		zapITimestampTrigger.idl \
 		zapITToneGenerator.idl \
 		zapITelephoneEventFrame.idl \
 		zapIUDPSocket.idl \

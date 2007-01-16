@@ -168,8 +168,6 @@ zapFilterNode::DisconnectSource(zapIMediaSource *source, const nsACString & conn
 NS_IMETHODIMP
 zapFilterNode::ConsumeFrame(zapIMediaFrame *frame)
 {
-  if (!mOutput) return NS_ERROR_FAILURE;
-
   nsCOMPtr<nsIPropertyBag2> streamInfo;
   frame->GetStreamInfo(getter_AddRefs(streamInfo));
   if (streamInfo != mCurrentInputStreamInfo) {
@@ -182,6 +180,8 @@ zapFilterNode::ConsumeFrame(zapIMediaFrame *frame)
   if (NS_FAILED(Filter(frame, getter_AddRefs(output_frame))))
     return NS_ERROR_FAILURE;
 
-  return mOutput->ConsumeFrame(output_frame);
+  if (mOutput)
+    return mOutput->ConsumeFrame(output_frame);
+  return NS_OK;
 }
 

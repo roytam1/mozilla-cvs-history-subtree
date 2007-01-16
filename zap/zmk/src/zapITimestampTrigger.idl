@@ -1,0 +1,91 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is the Mozilla SIP client project.
+ *
+ * The Initial Developer of the Original Code is 8x8 Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2007
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Alex Fritze <alex@croczilla.com> (original author)
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
+#include "nsISupports.idl"
+
+
+/**
+ * \ingroup ZMK_MODULE
+ */
+
+[scriptable, uuid(baa13ba7-0951-48ab-bb77-dc42b7fd6fe7)]
+interface zapITimestampTriggerCallback : nsISupports
+{
+  void trigger(in long long triggertime, in ACString triggerID);
+};
+
+
+
+[scriptable, uuid(42c7f821-9424-4c89-ba51-61fdb16a5a5f)]
+interface zapITimestampTrigger : nsISupports
+{
+  /**
+   * Instruct the timestamp-trigger to call callback that when the
+   * timstamp-trigger's input stream traverses the given timestamp
+   * 'triggertime'.
+   *
+   * Traversing 'triggertime' means that the timestamp-trigger sees a
+   * frame with timestamp >= triggertime and the previous frame
+   * (within the same input stream) had a timestamp < triggertime.
+   *
+   * Callbacks with 'oneshot' set to true will be removed as soon as
+   * they fire.
+   *
+   * Returns a token which can be used to remove the callback
+   * manually.
+   *
+   * The same callback may be used in several calls to addTrigger().
+   *
+   * Will fail if called synchronously from a callback.
+   */
+  ACString addTrigger(in zapITimestampTriggerCallback callback,
+                      in long long triggertime,
+                      in boolean oneshot);
+
+  /**
+   * Remove the trigger with the given 'triggerID' (as returned by
+   * addTrigger). Silently succeeds if a trigger with the given id
+   * doesn't exist.
+   *
+   * Will fail if called synchronously from a callback.
+   */
+  void removeTrigger(in ACString triggerID);
+
+  /**
+   * Will fail if called synchronously from a callback.
+   */
+  void removeAllTriggers();
+};
