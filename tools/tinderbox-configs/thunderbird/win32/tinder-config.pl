@@ -142,7 +142,7 @@ $BuildNameExtra = 'Tb-Release';
 $BuildTree  = 'Mozilla1.8';
 
 #$BuildName = '';
-$BuildTag = 'THUNDERBIRD_2_0b1_RELEASE';
+$BuildTag = 'THUNDERBIRD_2_0b2_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -176,7 +176,7 @@ $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path      = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
-$milestone     = "thunderbird2.0b1";
+$milestone     = "thunderbird2.0b2";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 1;
