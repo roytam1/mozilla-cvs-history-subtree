@@ -3057,16 +3057,11 @@ js_NativeGet(JSContext *cx, JSObject *obj, JSObject *pobj,
     JS_ASSERT(scope->object == pobj);
 
     slot = sprop->slot;
-    if (slot != SPROP_INVALID_SLOT) {
-        *vp = LOCKED_OBJ_GET_SLOT(pobj, slot);
-
-        /* If sprop has a stub getter, we're done. */
-        if (SPROP_HAS_STUB_GETTER(sprop))
-            return JS_TRUE;
-    } else {
-        JS_ASSERT(!SPROP_HAS_STUB_GETTER(sprop));
-        *vp = JSVAL_VOID;
-    }
+    *vp = (slot != SPROP_INVALID_SLOT)
+          ? LOCKED_OBJ_GET_SLOT(pobj, slot)
+          : JSVAL_VOID;
+    if (SPROP_HAS_STUB_GETTER(sprop))
+        return JS_TRUE;
 
     sample = cx->runtime->propertyRemovals;
     JS_UNLOCK_SCOPE(cx, scope);
@@ -3110,7 +3105,12 @@ js_NativeSet(JSContext *cx, JSObject *obj, JSScopeProperty *sprop, jsval *vp)
         if (SPROP_HAS_STUB_SETTER(sprop))
             goto set_slot;
     } else {
-        JS_ASSERT(!SPROP_HAS_STUB_GETTER(sprop));
+        /*
+         * No slot allocated, so either we must have a non-stub setter, or
+         * we will get a JSMSG_GETTER_ONLY error from SPROP_SET.
+         */
+        JS_ASSERT(!SPROP_HAS_STUB_SETTER(sprop) ||
+                  (sprop->attrs & JSPROP_GETTER));
         pval = JSVAL_VOID;
     }
 
@@ -3284,7 +3284,8 @@ js_SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 
             /* Don't clone a shared prototype property. */
             if (attrs & JSPROP_SHARED) {
-                JS_ASSERT(!SPROP_HAS_STUB_SETTER(sprop));
+                JS_ASSERT(!SPROP_HAS_STUB_SETTER(sprop) ||
+                          (sprop->attrs & JSPROP_GETTER));
                 return SPROP_SET(cx, sprop, obj, pobj, vp);
             }
 
