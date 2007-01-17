@@ -82,6 +82,8 @@
 #include "nsCRT.h"
 #include "nsXBLEventHandler.h"
 #include "nsHTMLAtoms.h"
+#include "nsIBoxObject.h"
+#include "nsIDOMNSDocument.h"
 
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
                      NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
@@ -132,7 +134,8 @@ nsXBLPrototypeHandler::nsXBLPrototypeHandler(const PRUnichar* aEvent,
 }
 
 nsXBLPrototypeHandler::nsXBLPrototypeHandler(nsIContent* aHandlerElement)
-  : mLineNumber(0),
+  : mBoxObjectForHandlerElement(nsnull),
+    mLineNumber(0),
     mNextHandler(nsnull),
     mPrototypeBinding(nsnull)
 {
@@ -148,8 +151,11 @@ nsXBLPrototypeHandler::nsXBLPrototypeHandler(nsIContent* aHandlerElement)
 nsXBLPrototypeHandler::~nsXBLPrototypeHandler()
 {
   --gRefCnt;
-  if (!(mType & NS_HANDLER_TYPE_XUL) && mHandlerText)
+  if (mType & NS_HANDLER_TYPE_XUL) {
+    NS_IF_RELEASE(mBoxObjectForHandlerElement);
+  } else if (mHandlerText) {
     nsMemory::Free(mHandlerText);
+  }
 
   // We own the next handler in the chain, so delete it now.
   delete mNextHandler;
@@ -158,15 +164,15 @@ nsXBLPrototypeHandler::~nsXBLPrototypeHandler()
 already_AddRefed<nsIContent>
 nsXBLPrototypeHandler::GetHandlerElement()
 {
-  nsIContent* result;
-  if (mType & NS_HANDLER_TYPE_XUL) {
-    result = mHandlerElement;
-    NS_IF_ADDREF(result);
+  if (!mBoxObjectForHandlerElement || !(mType & NS_HANDLER_TYPE_XUL)) {
+    return nsnull;
   }
-  else
-    result = nsnull;
-
-  return result;
+  nsCOMPtr<nsIDOMElement> element;
+  mBoxObjectForHandlerElement->GetElement(getter_AddRefs(element));
+  nsCOMPtr<nsIContent> content = do_QueryInterface(element);
+  nsIContent* handler = nsnull;
+  content.swap(handler);
+  return handler;
 }
 
 void
@@ -217,11 +223,11 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
   if (mType & NS_HANDLER_TYPE_PREVENTDEFAULT) {
     aEvent->PreventDefault();
     // If we prevent default, then it's okay for
-    // mHandlerElement and mHandlerText to be null
+    // mBoxObjectForHandlerElement and mHandlerText to be null
     rv = NS_OK;
   }
 
-  if (!mHandlerElement) // This works for both types of handlers.  In both cases, the union's var should be defined.
+  if (!mBoxObjectForHandlerElement) // This works for both types of handlers.  In both cases, the union's var should be defined.
     return rv;
 
   // See if our event receiver is a content node (and not us).
@@ -376,8 +382,10 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
     keyEvent->GetShiftKey(&event.isShift);
     keyEvent->GetMetaKey(&event.isMeta);
     
+    nsCOMPtr<nsIContent> handlerElement = GetHandlerElement();
+    NS_ENSURE_STATE(handlerElement);
     nsPresContext *pc = nsnull;
-    nsIDocument *doc = mHandlerElement->GetCurrentDoc();
+    nsIDocument *doc = handlerElement->GetCurrentDoc();
     if (doc) {
       nsIPresShell *shell = doc->GetShellAt(0);
       if (shell) {
@@ -385,8 +393,8 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
       }
     }
 
-    mHandlerElement->HandleDOMEvent(pc, &event, nsnull,
-                                    NS_EVENT_FLAG_INIT, &status);
+    handlerElement->HandleDOMEvent(pc, &event, nsnull,
+                                   NS_EVENT_FLAG_INIT, &status);
     return NS_OK;
   }
 
@@ -764,7 +772,12 @@ PRInt32 nsXBLPrototypeHandler::KeyToMask(PRInt32 key)
 void
 nsXBLPrototypeHandler::GetEventType(nsAString& aEvent)
 {
-  mHandlerElement->GetAttr(kNameSpaceID_None, nsXBLAtoms::event, aEvent);
+  nsCOMPtr<nsIContent> handlerElement = GetHandlerElement();
+  if (!handlerElement) {
+    aEvent.Truncate();
+    return;
+  }
+  handlerElement->GetAttr(kNameSpaceID_None, nsXBLAtoms::event, aEvent);
   
   if (aEvent.IsEmpty() && (mType & NS_HANDLER_TYPE_XUL))
     // If no type is specified for a XUL <key> element, let's assume that we're "keypress".
@@ -790,7 +803,17 @@ nsXBLPrototypeHandler::ConstructPrototype(nsIContent* aKeyElement,
 
   if (aKeyElement) {
     mType |= NS_HANDLER_TYPE_XUL;
-    mHandlerElement = aKeyElement;
+
+    nsCOMPtr<nsIDOMNSDocument> nsDomDoc =
+      do_QueryInterface(aKeyElement->GetOwnerDoc());
+    if (nsDomDoc) {
+      nsCOMPtr<nsIDOMElement> el = do_QueryInterface(aKeyElement);
+      nsCOMPtr<nsIBoxObject> box;
+      nsDomDoc->GetBoxObjectFor(el, getter_AddRefs(box));
+      box.swap(mBoxObjectForHandlerElement);
+      NS_WARN_IF_FALSE(mBoxObjectForHandlerElement,
+                       "Couldn't get a box object for the key element!");
+    }
   }
   else {
     mType |= aCommand ? NS_HANDLER_TYPE_XBL_COMMAND : NS_HANDLER_TYPE_XBL_JS;
@@ -840,7 +863,7 @@ nsXBLPrototypeHandler::ConstructPrototype(nsIContent* aKeyElement,
   // Modifiers are supported by both types of handlers (XUL and XBL).  
   nsAutoString modifiers(aModifiers);
   if (mType & NS_HANDLER_TYPE_XUL)
-    mHandlerElement->GetAttr(kNameSpaceID_None, nsXBLAtoms::modifiers, modifiers);
+    aKeyElement->GetAttr(kNameSpaceID_None, nsXBLAtoms::modifiers, modifiers);
   
   if (!modifiers.IsEmpty()) {
     mKeyMask = cAllModifiers;
@@ -872,9 +895,9 @@ nsXBLPrototypeHandler::ConstructPrototype(nsIContent* aKeyElement,
   nsAutoString key(aCharCode);
   if (key.IsEmpty()) {
     if (mType & NS_HANDLER_TYPE_XUL) {
-      mHandlerElement->GetAttr(kNameSpaceID_None, nsXBLAtoms::key, key);
+      aKeyElement->GetAttr(kNameSpaceID_None, nsXBLAtoms::key, key);
       if (key.IsEmpty()) 
-        mHandlerElement->GetAttr(kNameSpaceID_None, nsXBLAtoms::charcode, key);
+        aKeyElement->GetAttr(kNameSpaceID_None, nsXBLAtoms::charcode, key);
     }
   }
 
@@ -895,7 +918,7 @@ nsXBLPrototypeHandler::ConstructPrototype(nsIContent* aKeyElement,
   else {
     key.Assign(aKeyCode);
     if (mType & NS_HANDLER_TYPE_XUL)
-      mHandlerElement->GetAttr(kNameSpaceID_None, nsXBLAtoms::keycode, key);
+      aKeyElement->GetAttr(kNameSpaceID_None, nsXBLAtoms::keycode, key);
     
     if (!key.IsEmpty()) {
       if (mKeyMask == 0)
