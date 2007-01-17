@@ -230,7 +230,7 @@ ssl2_ConstructCipherSpecs(sslSocket *ss)
     	(ss->allowedByPolicy & ss->chosenPreference & SSL_CB_IMPLEMENTED);
     for (i = 0; i < ssl2_NUM_SUITES_IMPLEMENTED * 3; i += 3) {
 	const PRUint8 * hs = implementedCipherSuites + i;
-	int             ok = allowed & (1U << hs[0]);
+	unsigned int    ok = allowed & (1U << hs[0]);
 	if (ok) {
 	    cs[0] = hs[0];
 	    cs[1] = hs[1];
@@ -679,7 +679,7 @@ done:
  * Acquires and releases the socket's xmitBufLock.
  */
 static SECStatus
-ssl2_SendSessionKeyMessage(sslSocket *ss, int cipher, int keySize,
+ssl2_SendSessionKeyMessage(sslSocket *ss, int cipher, int keyBits,
 		      PRUint8 *ca, int caLen,
 		      PRUint8 *ck, int ckLen,
 		      PRUint8 *ek, int ekLen)
@@ -704,8 +704,8 @@ ssl2_SendSessionKeyMessage(sslSocket *ss, int cipher, int keySize,
     msg = ss->sec.ci.sendBuf.buf;
     msg[0] = SSL_MT_CLIENT_MASTER_KEY;
     msg[1] = cipher;
-    msg[2] = MSB(keySize);
-    msg[3] = LSB(keySize);
+    msg[2] = MSB(keyBits);
+    msg[3] = LSB(keyBits);
     msg[4] = MSB(ckLen);
     msg[5] = LSB(ckLen);
     msg[6] = MSB(ekLen);
@@ -1617,7 +1617,7 @@ ssl2_ServerSetupSessionCypher(sslSocket *ss, int cipher, unsigned int keyBits,
     }
 
     allowed = ss->allowedByPolicy & ss->chosenPreference & SSL_CB_IMPLEMENTED;
-    if (!(allowed & (1 << cipher))) {
+    if (!(allowed & (1U << cipher))) {
     	/* client chose a kind we don't allow! */
 	SSL_DBG(("%d: SSL[%d]: disallowed cipher=%d",
 		 SSL_GETPID(), ss->fd, cipher));
@@ -1649,10 +1649,11 @@ ssl2_ServerSetupSessionCypher(sslSocket *ss, int cipher, unsigned int keyBits,
 
     modulusLen = PK11_GetPrivateModulusLen(sc->SERVERKEY);
     if (modulusLen == -1) {
-	/* XXX If the key is bad, then PK11_PubDecryptRaw will fail below. */
+	/* If the key is bad, then PK11_PubDecryptRaw will fail below. */
 	modulusLen = ekLen;
     }
-    if (ekLen > modulusLen || ekLen + ckLen < keySize) {
+    /* RSA modulus size presently limited to 8k bits maximum */
+    if (ekLen > modulusLen || ekLen > 1024 || ekLen + ckLen < keySize) {
 	SSL_DBG(("%d: SSL[%d]: invalid encrypted key length, ekLen=%d (bytes)!",
 		 SSL_GETPID(), ss->fd, ekLen));
 	PORT_SetError(SSL_ERROR_BAD_CLIENT);

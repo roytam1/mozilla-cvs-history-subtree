@@ -271,14 +271,12 @@ GetCertRequest(PRFileDesc *inFile, PRBool ascii)
 	}
 	
  	rv = SECU_ReadDERFromFile(&reqDER, inFile, ascii);
-	if (rv) {
+	if (rv) 
 	    break;
-	}
         certReq = (CERTCertificateRequest*) PORT_ArenaZAlloc
 		  (arena, sizeof(CERTCertificateRequest));
-        if (!certReq) { 
-	    GEN_BREAK(SECFailure);
-	}
+        if (!certReq) 
+	    break;
 	certReq->arena = arena;
 
 	/* Since cert request is a signed data, must decode to get the inner
@@ -287,31 +285,24 @@ GetCertRequest(PRFileDesc *inFile, PRBool ascii)
 	PORT_Memset(&signedData, 0, sizeof(signedData));
 	rv = SEC_ASN1DecodeItem(arena, &signedData, 
 		SEC_ASN1_GET(CERT_SignedDataTemplate), &reqDER);
-	if (rv) {
+	if (rv)
 	    break;
-	}
-	rv = SEC_ASN1DecodeItem(arena, certReq, 
+	
+        rv = SEC_ASN1DecodeItem(arena, certReq, 
 		SEC_ASN1_GET(CERT_CertificateRequestTemplate), &signedData.data);
-	if (rv) {
-	    break;
-	}
-   	rv = CERT_VerifySignedDataWithPublicKeyInfo(&signedData, 
-		&certReq->subjectPublicKeyInfo, NULL /* wincx */);
    } while (0);
 
-   if (reqDER.data) {
-   	SECITEM_FreeItem(&reqDER, PR_FALSE);
+   if (!rv) {
+   	rv = CERT_VerifySignedDataWithPublicKeyInfo(&signedData, 
+		&certReq->subjectPublicKeyInfo, NULL /* wincx */);
    }
 
    if (rv) {
-   	SECU_PrintError(progName, "bad certificate request\n");
-   	if (arena) {
-   	    PORT_FreeArena(arena, PR_FALSE);
-   	}
-   	certReq = NULL;
+       PRErrorCode  perr = PR_GetError();
+       fprintf(stderr, "%s: unable to decode DER cert request (%s)\n", progName,
+               SECU_Strerror(perr));
    }
-
-   return certReq;
+   return (certReq);
 }
 
 static PRBool 
