@@ -91,6 +91,10 @@ public void setBounds(Rectangle rect)
 				newBounds.width, newBounds.height);
 		return null;
 	    }
+            public String toString() {
+                return "WCRunnable.nativeSetBounds";
+            }
+
 	});
 }
 
@@ -115,6 +119,10 @@ public void createWindow(int nativeWindow, Rectangle rect)
 			      finalHeight, bc);
 		return null;
 	    }
+            public String toString() {
+                return "WCRunnable.nativeRealize";
+            }
+            
 	});
 }
 
@@ -160,6 +168,10 @@ public void setVisible(boolean newState)
 		nativeSetVisible(getNativeBrowserControl(), finalBool);
 		return null;
 	    }
+            public String toString() {
+                return "WCRunnable.nativeSetVisible";
+            }
+
 	});
 }
 

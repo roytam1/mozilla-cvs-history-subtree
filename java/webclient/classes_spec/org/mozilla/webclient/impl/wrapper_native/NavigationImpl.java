@@ -89,6 +89,10 @@ public void loadURL(String absoluteURL)
 	    public void run() {
 		NavigationImpl.this.nativeLoadURL(bc, url);
 	    }
+            public String toString() {
+                return "Runnable.nativeLoadURL";
+            }
+
 	});
 }
 
@@ -116,6 +120,11 @@ public void loadURL(String absoluteURL)
 					 finalContentType, 
 					 finalContentLength, finalLoadInfo);
 		}
+                public String toString() {
+                    return "Runnable.nativeLoadFromStream";
+                }
+
+
 	    });
     }
 
@@ -132,7 +141,11 @@ public void refresh(long loadFlags)
 		nativeRefresh(NavigationImpl.this.getNativeBrowserControl(), 
 			      finalLoadFlags);
 		return null;
-	    }
+            }
+            public String toString() {
+                return "WCRunnable.nativeRefresh";
+            }
+
 	});
 }
 
@@ -146,6 +159,10 @@ public void stop()
 		nativeStop(getNativeBrowserControl());
 		return null;
 	    }
+            public String toString() {
+                return "WCRunnable.nativeStop";
+            }
+
 	});
     
 }
@@ -210,7 +227,12 @@ public void post(String  argUrl,
 			   postData, 
 			   postHeadersLength, 
 			   postHeaders);
-	    }
+            }
+            public String toString() {
+                return "Runnable.nativePost";
+            }
+
+
 	});
 }
 

@@ -24,6 +24,7 @@
 package org.mozilla.util;
 
 import java.util.Date;
+import java.util.logging.Logger;
 
 /**
  * <p>Logging facility.</p>
@@ -32,6 +33,15 @@ import java.util.Date;
  */
 
 public class Log extends Object {
+    
+    public static Logger getLogger( String loggerName ) {
+        return Logger.getLogger(loggerName, LOG_STRINGS );
+    }
+
+    public static final String LOG_STRINGS = "org.mozilla.LogStrings";
+    public static final String LOG = "org.mozilla";
+    
+    public static final Logger LOGGER = getLogger(LOG);
     static String applicationName = "APPLICATION NAME UNKNOWN [call setApplicationName() from main]";
     static String applicationVersion = "APPLICATION VERSION UNKNOWN [call setApplicationVersion() from main]";
     static String applicationVersionDate = "APPLICATION VERSION DATE UNKNOWN [call setApplicationVersionDate() from main]";

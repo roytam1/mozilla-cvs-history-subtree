@@ -74,6 +74,10 @@ public class Win32BrowserControlCanvas extends BrowserControlCanvas {
 			    new Integer(Win32BrowserControlCanvas.this.getHandleToPeer());
 			return result;
 		    }
+                    public String toString() {
+                        return "WCRunnable.getHandleToPeer";
+                    }
+
 		});
 	return result.intValue();
     }
