@@ -125,6 +125,11 @@ public void setUp()
     
 }
 
+public void tearDown()
+{
+    LOGGER.info(this.getClass().getName() + " tearDown()");
+}
+
 //
 // General Methods
 //
