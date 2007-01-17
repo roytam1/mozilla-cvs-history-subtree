@@ -95,9 +95,11 @@ public:
   void RemoveExecuteBlocker()
   {
     if (!--mBlockerCount) {
-      ProcessPendingReqests();
+      ProcessPendingRequestsAsync();
     }
   }
+
+  void ProcessPendingReqests();
 
 protected:
   PRBool InNonScriptingContainer(nsIScriptElement* aScriptElement);
@@ -113,7 +115,8 @@ protected:
                            nsScriptLoadRequest* aRequest);
   nsresult EvaluateScript(nsScriptLoadRequest* aRequest,
                           const nsAFlatString& aScript);
-  void ProcessPendingReqests();
+
+  virtual void ProcessPendingRequestsAsync();
 
   // The guts of ProcessScriptElement.  If aFireErrorNotification is
   // true, FireErrorNotification should be called with the return
