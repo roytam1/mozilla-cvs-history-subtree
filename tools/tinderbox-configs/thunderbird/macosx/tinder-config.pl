@@ -11,7 +11,7 @@ $ENV{CVS_RSH} = "ssh";
 $ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "rsync";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
-$BuildAdministrator = "chase\@mozilla.org";
+$BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
 #- You'll need to change these to suit your machine's needs
@@ -142,7 +142,7 @@ $ConfigureOnly = 1;
 
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
-	     "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-%version%.en-US.mac.dmg" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0b2-candidates/rc1/thunderbird-2.0b2.en-US.mac.dmg" =>
 	     "/builds/tinderbox/Tb-Mozilla1.8-l10n/Darwin_8.7.0_Clobber/thunderbird.dmg"
 	     );
 
@@ -161,7 +161,7 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8-l10n/Darwin_8.7.0_Cl
 $BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'THUNDERBIRD_2_0b2_RELEASE';
 #$BuildTag = 'AVIARY_1_0_1_20050124_BRANCH';
 #$BuildTag = 'FIREFOX_1_0_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
@@ -189,8 +189,8 @@ $BinaryName = 'thunderbird-bin';
 $ReleaseBuild  = 1;
 $LocaleProduct = "mail";
 $shiptalkback  = 0;
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "9";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
@@ -201,7 +201,7 @@ $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox";
-$milestone     = "mozilla1.8-l10n";
+$milestone     = "thunderbird2.0b2-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
@@ -214,6 +214,7 @@ $update_platform = "Darwin_ppc-gcc3";
 $update_hash = "md5";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "mail/config/version.txt";
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
