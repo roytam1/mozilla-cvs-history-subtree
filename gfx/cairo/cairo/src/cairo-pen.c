@@ -63,7 +63,7 @@ _cairo_pen_init (cairo_pen_t *pen, double radius, cairo_gstate_t *gstate)
 {
     int i;
     int reflect;
-    double  det, major_axis;
+    double  det;
 
     if (pen->num_vertices) {
 	/* XXX: It would be nice to notice that the pen is already properly constructed.
@@ -74,8 +74,6 @@ _cairo_pen_init (cairo_pen_t *pen, double radius, cairo_gstate_t *gstate)
 	*/
 	_cairo_pen_fini (pen);
     }
-
-    double  major_axis = _cairo_matrix_transformed_circle_major_axis(matrix, radius);
 
     pen->radius = radius;
     pen->tolerance = gstate->tolerance;
