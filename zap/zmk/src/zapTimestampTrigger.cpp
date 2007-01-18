@@ -235,8 +235,8 @@ zapTimestampTrigger::Filter(zapIMediaFrame* input,
                  "uh-oh, corrupt trigger list");
     zapTriggerDescriptor* descr = (zapTriggerDescriptor*)node;
     node = node->next;
-    if ((PRInt64)(descr->triggertime - mLastTimestamp) > 0 &&
-        (PRInt64)(timestamp - descr->triggertime) >= 0) {
+    if (descr->triggertime > mLastTimestamp &&
+        timestamp >= descr->triggertime) {
       descr->callback->Trigger(descr->triggertime, descr->id);
       if (descr->oneshot) {
         descr->prev->next = node;
