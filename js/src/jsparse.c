@@ -3505,8 +3505,6 @@ XMLElementContent(JSContext *cx, JSTokenStream *ts, JSParseNode *pn,
     JSParseNode *pn2;
     JSAtom *textAtom;
 
-    CHECK_RECURSION();
-
     ts->flags &= ~TSF_XMLTAGMODE;
     for (;;) {
         ts->flags |= TSF_XMLTEXTMODE;
@@ -3568,6 +3566,8 @@ XMLElementOrList(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     JSBool hadSpace;
     JSTokenType tt;
     JSAtom *startAtom, *endAtom;
+
+    CHECK_RECURSION();
 
     JS_ASSERT(CURRENT_TOKEN(ts).type == TOK_XMLSTAGO);
     pn = NewParseNode(cx, ts, PN_LIST, tc);
