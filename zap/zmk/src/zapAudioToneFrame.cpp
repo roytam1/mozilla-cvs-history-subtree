@@ -262,12 +262,18 @@ zapAudioToneFrame::AddFrequency(PRUint16 frequency)
 //----------------------------------------------------------------------
 // zapIMediaFrame methods:
 
-/* readonly attribute nsIPropertyBag2 streamInfo; */
+/* attribute nsIPropertyBag2 streamInfo; */
 NS_IMETHODIMP
 zapAudioToneFrame::GetStreamInfo(nsIPropertyBag2** aStreamInfo)
 {
   *aStreamInfo = mStreamInfo.get();
   NS_IF_ADDREF(*aStreamInfo);
+  return NS_OK;
+}
+NS_IMETHODIMP
+zapAudioToneFrame::SetStreamInfo(nsIPropertyBag2 * aStreamInfo)
+{
+  mStreamInfo = aStreamInfo;
   return NS_OK;
 }
 

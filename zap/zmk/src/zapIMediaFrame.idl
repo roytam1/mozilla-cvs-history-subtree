@@ -44,7 +44,17 @@ interface nsIPropertyBag2;
 [scriptable, uuid(866288d7-0cd1-417a-8c35-b02a8a076824)]
 interface zapIMediaFrame : nsISupports
 {
-  readonly attribute nsIPropertyBag2 streamInfo;
+  /**
+   * Object containing information about the current stream.
+   * All stream infos should contain a property 'type' identifying the
+   * type of media frame (e.g. "audio/pcm", "raw", ...).
+   *
+   * Two frames with the same streamInfo (by pointer comparison)
+   * belong to the same stream. Nodes that generate media frames
+   * (filein, etc.) should set the same streamInfo object on all
+   * frames that form part of a particular stream. 
+   */
+  attribute nsIPropertyBag2 streamInfo;
 
   /**
    * Generalized timestamp. Usually in sample clock units unless noted

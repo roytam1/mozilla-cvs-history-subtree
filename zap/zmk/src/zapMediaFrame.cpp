@@ -68,12 +68,18 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaFrame methods:
 
-/* readonly attribute nsIPropertyBag2 streamInfo; */
+/* attribute nsIPropertyBag2 streamInfo; */
 NS_IMETHODIMP
 zapMediaFrame::GetStreamInfo(nsIPropertyBag2** aStreamInfo)
 {
   *aStreamInfo = mStreamInfo.get();
   NS_IF_ADDREF(*aStreamInfo);
+  return NS_OK;
+}
+NS_IMETHODIMP
+zapMediaFrame::SetStreamInfo(nsIPropertyBag2 * aStreamInfo)
+{
+  mStreamInfo = aStreamInfo;
   return NS_OK;
 }
 
