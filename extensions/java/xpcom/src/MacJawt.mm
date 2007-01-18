@@ -41,7 +41,7 @@
 
 PRUint64 GetPlatformHandle(JAWT_DrawingSurfaceInfo* dsi)
 {
-	JAWT_MacOSXDrawingSurfaceInfo* dsi_mac =
-	    static_cast<JAWT_MacOSXDrawingSurfaceInfo*> (dsi->platformInfo);
-	return reinterpret_cast<PRUint64> (dsi_mac->cocoaViewRef);
+    JAWT_MacOSXDrawingSurfaceInfo* dsi_mac =
+        static_cast<JAWT_MacOSXDrawingSurfaceInfo*> (dsi->platformInfo);
+    return reinterpret_cast<PRUint64> (dsi_mac->cocoaViewRef);
 }
