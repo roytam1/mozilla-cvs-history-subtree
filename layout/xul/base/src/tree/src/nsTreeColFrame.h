@@ -37,7 +37,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsBoxFrame.h"
-#include "nsITreeColumns.h"
+
+class nsITreeBoxObject;
 
 nsresult NS_NewTreeColFrame(nsIPresShell* aPresShell, 
                             nsIFrame** aNewFrame, 
@@ -79,7 +80,14 @@ protected:
   nsTreeColFrame(nsIPresShell* aPresShell, PRBool aIsRoot = nsnull, nsIBoxLayout* aLayoutManager = nsnull);
   virtual ~nsTreeColFrame();
 
-  void EnsureColumns();
-  
-  nsCOMPtr<nsITreeColumns>      mColumns;
+  /**
+   * @return the tree box object of the tree this column belongs to, or nsnull.
+   */
+  nsITreeBoxObject* GetTreeBoxObject();
+
+  /**
+   * Helper method that gets the nsITreeColumns object this column belongs to
+   * and calls InvalidateColumns() on it.
+   */
+  void InvalidateColumns();
 };
