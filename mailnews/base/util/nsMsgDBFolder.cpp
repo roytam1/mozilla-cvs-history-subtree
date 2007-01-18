@@ -89,6 +89,7 @@
 #include "nsIMIMEHeaderParam.h"
 #include "plbase64.h"
 #include <time.h>
+#include "nsIMsgFolderNotificationService.h"
 
 #define oneHour 3600000000U
 #include "nsMsgUtils.h"
@@ -3149,7 +3150,15 @@ NS_IMETHODIMP nsMsgDBFolder::RecursiveDelete(PRBool deleteStorage, nsIMsgWindow 
 
   // now delete the disk storage for _this_
   if (deleteStorage && (status == NS_OK))
-      status = Delete();
+  {
+    status = Delete();
+    nsCOMPtr <nsISupports> supports;
+    QueryInterface(NS_GET_IID(nsISupports), getter_AddRefs(supports));
+    nsCOMPtr <nsIMsgFolderNotificationService> notifier = do_GetService(NS_MSGNOTIFICATIONSERVICE_CONTRACTID);
+    if (notifier)
+      notifier->NotifyItemDeleted(supports);    
+    
+  }
   return status;
 }
 
