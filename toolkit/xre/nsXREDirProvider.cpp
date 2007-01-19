@@ -178,6 +178,7 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
   nsresult rv = NS_ERROR_FAILURE;
   *aPersistent = PR_TRUE;
   nsCOMPtr<nsIFile> file;
+  PRBool ensureFilePermissions = PR_FALSE;
 
   if (!strcmp(aProperty, NS_OS_CURRENT_PROCESS_DIR) ||
       !strcmp(aProperty, NS_APP_INSTALL_CLEANUP_DIR)) {
@@ -282,6 +283,7 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
         else {
           rv |= file->AppendNative(NS_LITERAL_CSTRING("localstore.rdf"));
           EnsureProfileFileExists(file);
+          ensureFilePermissions = PR_TRUE;
         }
       }
       else if (!strcmp(aProperty, NS_APP_HISTORY_50_FILE)) {
@@ -292,6 +294,7 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
         rv = mProfileDir->Clone(getter_AddRefs(file));
         rv |= file->AppendNative(NS_LITERAL_CSTRING("mimeTypes.rdf"));
         EnsureProfileFileExists(file);
+        ensureFilePermissions = PR_TRUE;
       }
       else if (!strcmp(aProperty, NS_APP_STORAGE_50_FILE)) {
         rv = mProfileDir->Clone(getter_AddRefs(file));
@@ -322,6 +325,19 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
   }
   if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
   if (!file) return NS_ERROR_FAILURE;
+
+  if (ensureFilePermissions) {
+    PRBool fileToEnsureExists;
+    PRBool isWritable;
+    if (NS_SUCCEEDED(file->Exists(&fileToEnsureExists)) && fileToEnsureExists
+        && NS_SUCCEEDED(file->IsWritable(&isWritable)) && !isWritable) {
+      PRUint32 permissions;
+      if (NS_SUCCEEDED(file->GetPermissions(&permissions))) {
+        rv = file->SetPermissions(permissions | 0600);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to ensure file permissions");
+      }
+    }
+  }
 
   NS_ADDREF(*aFile = file);
   return NS_OK;
