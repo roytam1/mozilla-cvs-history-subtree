@@ -2579,8 +2579,11 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
     JS_BEGIN_MACRO                                                            \
         if (SPROP_HAS_STUB_GETTER(sprop)) {                                   \
             /* Fast path for Object instance properties. */                   \
-            JS_ASSERT((sprop)->slot != SPROP_INVALID_SLOT);                   \
-            *vp = LOCKED_OBJ_GET_SLOT(pobj, (sprop)->slot);                   \
+            JS_ASSERT((sprop)->slot != SPROP_INVALID_SLOT ||                  \
+                      !SPROP_HAS_STUB_SETTER(sprop));                         \
+            *vp = ((sprop)->slot != SPROP_INVALID_SLOT)                       \
+                  ? LOCKED_OBJ_GET_SLOT(pobj, (sprop)->slot)                  \
+                  : JSVAL_VOID;                                               \
         } else {                                                              \
             SAVE_SP(fp);                                                      \
             ok = js_NativeGet(cx, obj, pobj, sprop, vp);                      \
@@ -2591,9 +2594,9 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
 
 #define NATIVE_SET(cx,obj,sprop,vp)                                           \
     JS_BEGIN_MACRO                                                            \
-        if (SPROP_HAS_STUB_SETTER(sprop)) {                                   \
+        if (SPROP_HAS_STUB_SETTER(sprop) &&                                   \
+            (sprop)->slot != SPROP_INVALID_SLOT) {                            \
             /* Fast path for Object instance properties. */                   \
-            JS_ASSERT((sprop)->slot != SPROP_INVALID_SLOT);                   \
             LOCKED_OBJ_SET_SLOT(obj, (sprop)->slot, *vp);                     \
         } else {                                                              \
             SAVE_SP(fp);                                                      \
