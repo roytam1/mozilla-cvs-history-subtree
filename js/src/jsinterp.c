@@ -2861,9 +2861,9 @@ interrupt:
 
 #define NATIVE_SET(cx,obj,sprop,vp)                                           \
     JS_BEGIN_MACRO                                                            \
-        if (SPROP_HAS_STUB_SETTER(sprop)) {                                   \
+        if (SPROP_HAS_STUB_SETTER(sprop) &&                                   \
+            (sprop)->slot != SPROP_INVALID_SLOT) {                            \
             /* Fast path for Object instance properties. */                   \
-            JS_ASSERT((sprop)->slot != SPROP_INVALID_SLOT);                   \
             LOCKED_OBJ_SET_SLOT(obj, (sprop)->slot, *vp);                     \
         } else {                                                              \
             SAVE_SP_AND_PC(fp);                                               \
