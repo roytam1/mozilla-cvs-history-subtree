@@ -44,6 +44,11 @@
 #include <Gestalt.h>
 #include <Movies.h>
 
+#include "nsIContent.h"
+#include "nsIDocument.h"
+#include "nsIFrame.h"
+#include "nsIView.h"
+#include "nsIInterfaceRequestor.h"
 
 
 //-------------------------------------------------------------------------
@@ -130,6 +135,51 @@ nsToolkit::GetWindowEventSink ( WindowPtr aWindow, nsIEventSink** outSink )
     NS_ADDREF(*outSink);
   }
 }
+
+
+nsIView *
+nsToolkit::GetViewFor(nsIWidget *aWidget)
+{
+  if (!aWidget)
+    return nsnull;
+  nsIView *retval = nsnull;
+  nsISupports *data = nsnull;
+  aWidget->GetClientData((void*&)data);
+  nsCOMPtr<nsIInterfaceRequestor> req(do_QueryInterface(data));
+  if (req)
+    req->GetInterface(NS_GET_IID(nsIView), (void**) &retval);
+  return retval;
+}
+
+
+// Returns the nsIDocument associated with the first available nsIContent
+// at or "below" aWidget.
+nsIDocument *
+nsToolkit::GetDocumentFor(nsIWidget *aWidget)
+{
+  if (!aWidget)
+    return nsnull;
+  nsIFrame *frame = nsnull;
+  nsIContent *content = nsnull;
+  nsIDocument *document = nsnull;
+  nsIView *view = nsToolkit::GetViewFor(aWidget);
+  if (view)
+    frame = NS_STATIC_CAST(nsIFrame*, view->GetClientData());
+  if (frame)
+    content = frame->GetContent();
+  if (content)
+    document = content->GetCurrentDoc();
+  if (document)
+    return document;
+  nsIWidget *widgetChild = aWidget->GetFirstChild();
+  while (widgetChild) {
+    if ((document = GetDocumentFor(widgetChild)) != nsnull)
+      return document;
+    widgetChild = widgetChild->GetNextSibling();
+  }
+  return nsnull;
+}
+
 
 //-------------------------------------------------------------------------
 //
