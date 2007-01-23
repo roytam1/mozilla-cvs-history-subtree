@@ -374,10 +374,7 @@ endif
 
 endif # LIBXUL_SDK
 
-README_FILE = $(topsrcdir)/README.txt
-
 libs::
-	$(INSTALL) $(README_FILE) $(DIST)/bin
 	$(INSTALL) $(topsrcdir)/LICENSE $(DIST)/bin
 
 libs:: $(srcdir)/profile/prefs.js
