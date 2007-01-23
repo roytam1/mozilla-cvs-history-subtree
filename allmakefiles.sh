@@ -1671,7 +1671,9 @@ if test -n "$MOZ_XULRUNNER"; then
     add_makefiles "$MAKEFILES_xulrunner"
 fi
 
-add_makefiles "$MAKEFILES_zap"
+if test -n "$MOZ_ZAP"; then
+    add_makefiles "$MAKEFILES_zap"
+fi
 
 if test -n "$MOZ_THUNDERBIRD"; then
     add_makefiles "$MAKEFILES_thunderbird"
