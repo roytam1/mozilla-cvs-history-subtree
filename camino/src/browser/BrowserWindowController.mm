@@ -1913,33 +1913,29 @@ enum BWCOpenDest {
 
 - (void)whitelistAndShowPopup:(nsIDOMPopupBlockedEvent*)aPopupBlockedEvent
 { 
+  nsCOMPtr<nsIDOMWindow> requestingWindow;
+  aPopupBlockedEvent->GetRequestingWindow(getter_AddRefs(requestingWindow));
   // get the URIs for the popup window, and it's parent document
-  nsCOMPtr<nsIURI> requestingWindowURI, popupWindowURI;
-  aPopupBlockedEvent->GetRequestingWindowURI(getter_AddRefs(requestingWindowURI));
+  nsCOMPtr<nsIURI> popupWindowURI;
   aPopupBlockedEvent->GetPopupWindowURI(getter_AddRefs(popupWindowURI));
 
   nsAutoString windowName, features;
   
   // get the popup window's features
-  aPopupBlockedEvent->GetPopupWindowFeatures(features);  
+  aPopupBlockedEvent->GetPopupWindowFeatures(features);
   
 #ifndef MOZILLA_1_8_BRANCH
   // XXXhakan: nsIDOMPopupBlockedEvent didn't get the popupWindowName property added on branch, so
   // we can't set the popup window's original name for now.
   // see bug 343734
   aPopupBlockedEvent->GetPopupWindowName(windowName);
-#endif 
+#endif
 
   // find the docshell for the blocked popup window, in order to show it
-  nsCOMPtr<nsIDocShell> popupWinDocShell = [[mBrowserView getBrowserView] findDocShellForURI:requestingWindowURI];
-  if (!popupWinDocShell)
+  if (!requestingWindow)
     return;
 
-  nsCOMPtr<nsIDOMWindowInternal> domWin = do_GetInterface(popupWinDocShell);
-  if (!domWin)
-    return;
-
-  nsCOMPtr<nsPIDOMWindow> piDomWin = do_QueryInterface(domWin);
+  nsCOMPtr<nsPIDOMWindow> piDomWin = do_QueryInterface(requestingWindow);
   if (!piDomWin)
     return;
 
@@ -1950,13 +1946,21 @@ enum BWCOpenDest {
   popupWindowURI->GetSpec(uriStr);
   
   // whitelist the URL
-  [self whitelistURL:requestingWindowURI];
-
+  nsCOMPtr<nsIURI> requestingWindowURI;
+  nsCOMPtr<nsIWebNavigation> webNav = do_GetInterface(requestingWindow);
+  if (webNav)
+    webNav->GetCurrentURI(getter_AddRefs(requestingWindowURI));
+  
+  if (requestingWindowURI)
+    [self whitelistURL:requestingWindowURI];
+  else
+    NSLog(@"Couldn't whitelist the URI");
+  
   // show the blocked popup
   nsCOMPtr<nsIDOMWindow> openedWindow;
-  nsresult rv = domWin->Open(NS_ConvertUTF8toUTF16(uriStr), windowName, features, getter_AddRefs(openedWindow));
+  nsresult rv = piDomWin->Open(NS_ConvertUTF8toUTF16(uriStr), windowName, features, getter_AddRefs(openedWindow));
   if (NS_FAILED(rv))
-    NSLog(@"Couldn't show the blocked popup window for %@", [NSString stringWith_nsACString:uriStr]);  
+    NSLog(@"Couldn't show the blocked popup window for %@", [NSString stringWith_nsACString:uriStr]);
 }
 
 - (void)whitelistURL:(nsIURI*)URL
