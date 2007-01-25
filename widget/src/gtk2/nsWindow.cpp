@@ -854,6 +854,16 @@ nsWindow::SetCursor(imgIContainer* aCursor,
     if (!pixbuf)
         return NS_ERROR_NOT_AVAILABLE;
 
+    int width = gdk_pixbuf_get_width(pixbuf);
+    int height = gdk_pixbuf_get_height(pixbuf);
+
+    // Reject cursors greater than 128 pixels in some direction, to prevent
+    // spoofing.
+    // XXX ideally we should rescale. Also, we could modify the API to
+    // allow trusted content to set larger cursors.
+    if (width > 128 || height > 128)
+        return NS_ERROR_NOT_AVAILABLE;
+
     // Looks like all cursors need an alpha channel (tested on Gtk 2.4.4). This
     // is of course not documented anywhere...
     // So add one if there isn't one yet
@@ -919,6 +929,7 @@ nsWindow::Invalidate(PRBool aIsSynchronous)
 
     gdk_window_invalidate_rect(mDrawingarea->inner_window,
                                &rect, FALSE);
+
     if (aIsSynchronous)
         gdk_window_process_updates(mDrawingarea->inner_window, FALSE);
 
