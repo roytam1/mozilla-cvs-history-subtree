@@ -191,7 +191,7 @@ zapStreamSyncer::AddedToGraph(zapIMediaGraph *graph,
 NS_IMETHODIMP
 zapStreamSyncer::RemovedFromGraph(zapIMediaGraph *graph)
 {
-  mWakeupEvent.Revoke();
+  Reset();
   return NS_OK;
 }
 
