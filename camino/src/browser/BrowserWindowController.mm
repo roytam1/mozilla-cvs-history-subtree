@@ -1913,8 +1913,12 @@ enum BWCOpenDest {
 
 - (void)whitelistAndShowPopup:(nsIDOMPopupBlockedEvent*)aPopupBlockedEvent
 { 
+  nsCOMPtr<nsIDOMPopupBlockedEvent_MOZILLA_1_8_BRANCH>
+    branchPopupBlockedEvent = do_QueryInterface(aPopupBlockedEvent);
+  if (!branchPopupBlockedEvent)
+    return;
   nsCOMPtr<nsIDOMWindow> requestingWindow;
-  aPopupBlockedEvent->GetRequestingWindow(getter_AddRefs(requestingWindow));
+  branchPopupBlockedEvent->GetRequestingWindow(getter_AddRefs(requestingWindow));
   // get the URIs for the popup window, and it's parent document
   nsCOMPtr<nsIURI> popupWindowURI;
   aPopupBlockedEvent->GetPopupWindowURI(getter_AddRefs(popupWindowURI));
