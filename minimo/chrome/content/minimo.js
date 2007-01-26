@@ -20,7 +20,8 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Marcio S. Galli - mgalli@geckonnection.com
+ *   Doug Turner - dougt@meer.net
+ *   Marcio Galli - mgalli@geckonnection.com
  * 
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -168,8 +169,9 @@ nsBrowserStatusHandler.prototype =
       if (aStateFlags & nsIWebProgressListener.STATE_START)
       {
         // disable and hides the nav-menu-button; and enables unhide the stop button
-        document.getElementById("nav-menu-button").className="stop-button";
-        document.getElementById("nav-menu-button").setAttribute("command","cmd_BrowserStop");
+
+        document.getElementById("nav-stopreload").className="stop-button";
+        document.getElementById("nav-stopreload").setAttribute("command","cmd_BrowserStop");
 
         document.getElementById("statusbar").hidden=false;
 
@@ -189,16 +191,16 @@ nsBrowserStatusHandler.prototype =
         document.getElementById("statusbar").hidden=true;
         document.getElementById("statusbar-text").label="";
 
-        // gURLBarBoxObject width + 20 pixels.... so you cannot see it.         
-        document.getElementById("urlbar").inputField.style.backgroundPosition=gURLBarBoxObject.width+20+"px 100%";
+        // The background progress bar is currently disabled. 
+        //  document.styleSheets[1].cssRules[0].style.backgroundPosition=percentage+"px 100% ! important";
         
         if (aRequest) {
             if (aWebProgress.DOMWindow == content) this.endDocumentLoad(aRequest, aStatus);
         }
 
         // disable and hides the nav-stop-button; and enables unhides the nav-menu-button button
-        document.getElementById("nav-menu-button").className="nav-button";
-        document.getElementById("nav-menu-button").setAttribute("command","cmd_BrowserNavMenu");
+        document.getElementById("nav-stopreload").className="reload-button";
+        document.getElementById("nav-stopreload").setAttribute("command","cmd_BrowserReload");
 
         return;
       }
@@ -238,7 +240,10 @@ nsBrowserStatusHandler.prototype =
 
     var percentage = parseInt((aCurTotalProgress/aMaxTotalProgress)*parseInt(gURLBarBoxObject.width));
     if(percentage<0) percentage=10;
-    document.getElementById("urlbar").inputField.style.backgroundPosition=percentage+"px 100%";
+
+   // The background progress bar is currently disabled. 
+   // document.styleSheets[1].cssRules[0].style.backgroundPosition=percentage+" 0! important";
+
   },
   onLocationChange : function(aWebProgress, aRequest, aLocation)
   {
@@ -301,7 +306,13 @@ nsBrowserStatusHandler.prototype =
     switch (aState) {
     case nsIWebProgressListener.STATE_IS_SECURE | nsIWebProgressListener.STATE_SECURE_HIGH:
     //this.urlBar.value="level high";
+
+ // marcio 12000 trying to fix the security icon feedback . 
+
     document.styleSheets[1].cssRules[0].style.backgroundColor="yellow";
+
+ //gBrowser.selectedTab.style.border="2px solid black";
+
     document.getElementById("lock-icon").className="security-notbroken";
     break;	
     case nsIWebProgressListener.STATE_IS_SECURE | nsIWebProgressListener.STATE_SECURE_LOW:
@@ -427,9 +438,27 @@ function MiniNavStartup()
                        new TransferItemFactory());
 
   if(homepages) {
+    /* 
+     * We need to review this
+     * Now we have the concept of the Homebase as a possible location. We need to 
+     * check the store of Homepage custom vs Homepage multiple vs Homebase
+     */
+
     gBrowser.loadTabs(homepages,true,true); // force load in background.
+
   } else {
-    loadURI(homepage);
+
+    /* Because this is the very first time we load a Content, we need to register 
+       the URI through our singleton BrowserChrome services. This happens because 
+       we want chrome:// uris to be registered and associated with tabs to avoid 
+       multiple instantes of a Chrome tab */
+
+	loadURI(homepage);
+
+    if(homepage.indexOf("chrome")==0) {
+      /* We only do this Tab Memorize effect for chrome urls */
+      BrowserChromeRegisterTab(homepage,gBrowser.selectedTab);
+    }
   }
 
   try { 
@@ -453,7 +482,10 @@ function MiniNavStartup()
    * We save the inputField (anonymous node within textbox urlbar) BoxObject, so we can measure its width 
    * on progress load
    */
-  gURLBarBoxObject=(document.getBoxObjectFor(document.getElementById("urlbar").inputField));  
+
+  /* CHECK THIS - We need to think in other approach to have the Progress bar. */
+  
+  gURLBarBoxObject=(document.getBoxObjectFor(document.getElementById("nav-bar")));  
 
   /*
    * Local bundle repository
@@ -510,8 +542,10 @@ function MiniNavStartup()
           keyboardHeight = parseInt(b.value-t.value);
           keyboardLeft =parseInt(l.value);
           keyboardRight=parseInt(r.value);
-          document.getElementById("keyboardHolder").style.height=keyboardHeight +"px";
-          document.getElementById("keyboardContainer").style.height=keyboardHeight +"px";
+          document.getElementById("keyboardHolder").style.height=keyboardHeight +"px";
+
+          document.getElementById("keyboardContainer").style.height=keyboardHeight +"px";
+
                 
           var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
 
@@ -577,16 +611,13 @@ function MiniNavStartup()
     }
   };
      
-  
   try {
     var os = Components.classes["@mozilla.org/observer-service;1"]
                        .getService(nsIObserverService);
     os.addObserver(keyboardObserver,"software-keyboard", false);
-
     os.addObserver(minimoAppObserver,"open-url", false);
     os.addObserver(minimoAppObserver,"add-bm", false);
     os.addObserver(minimoAppObserver,"low-mem", false);
-
     os.addObserver(minimoAppObserver,"softkey", false);
 
   } catch(ignore) { }
@@ -632,6 +663,26 @@ function MiniNavStartup()
 
   BrowserInitializeTextSizeValue();
  
+ /* 
+  * Custom Toolbar 
+  * so far we have this check here in JS,. The ui.controlbar pref has a list of   
+  * ids that should be visible
+  */ 
+
+  try { 
+    visibleToolbarItemsList = gPref.getCharPref("ui.controlbar");
+	var listItems = visibleToolbarItemsList.split(";");
+	for(var i=0;i<listItems.length;i++) {
+      try {			
+        var elementName =listItems[i]; 
+        if(document.getElementById(elementName)) {
+          document.getElementById(elementName).setAttribute("hidden","false");
+        }
+      } catch (i) { } 
+	}
+  } catch (e) {
+  }
+
 }
 
 function setScreenUpTimeout() {
@@ -651,7 +702,6 @@ function setScreenUpTimeout() {
 function PopupAutoCompleteShowPop(t1,t2,t3,t4,t5,t6) {
   document.getElementById("PopupAutoComplete").StoredShowPopup(t1,-1,-1,t4,"topleft","bottomleft");
 }
-
 
 /* 
  * UTILs to the keyboard / XUL interaction 
@@ -690,7 +740,6 @@ function getPosY(refElement) {
   
   return calcTop ;
 }
-
 
 /* 
  * XUL > Menu > Tabs > Creates menuitems for each tab. 
@@ -892,6 +941,7 @@ function BrowserHome()
   }
 
   loadURI(homepage);
+
 }
 
 function BrowserBack()
@@ -1014,8 +1064,6 @@ function BrowserViewDeckDefault() {
   BrowserSetDeck(0,document.getElementById("command_ViewDeckDefault"));
 }
 
-
-
 /**
  * Has to go through some other approach like a XML-based rule system. 
  * Those are constraints conditions and action. 
@@ -1027,7 +1075,6 @@ function BrowserViewSearch() {
 	document.getElementById("command_ViewSearch").setAttribute("checked","false");
   }
 }
-
 
 /**
  * Has to go through some other approach like a XML-based rule system. 
@@ -1051,20 +1098,10 @@ function BrowserViewFind() {
 function urlbar() {
 }
 
-
-/* Reset the text size */ 
-function BrowserResetZoomPlus() {
-  gBrowser.selectedBrowser.markupDocumentViewer.textZoom+= .1;
-}
-
-function BrowserResetZoomMinus() {
-  gBrowser.selectedBrowser.markupDocumentViewer.textZoom-= .1;
-}
-
-
 /* 
  * Text Size functions - works accross all the Tabs 
  */
+
 function BrowserResetZoomPlus() {
   gTextSize+= .1;
   BrowsersZoomUpdate();
@@ -1112,8 +1149,6 @@ function MenuNavPopupShowing () {
   command_forward
   command_go
   command_reload
-  
-    
   command_stop
   */
 
@@ -1222,11 +1257,12 @@ function BrowserBookmarkThis() {
 }
 
 function BrowserBookmark() {
-  try {  
-    gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/bookmarks/bmview.xhtml');   
-    browserInit(gBrowser.selectedTab);
-  } catch (e) {
-  }  
+
+	/* Now we use the Chrome Open because we want to reuse tabs  instead
+         openning new ones */
+
+	BrowserChromeOpen("chrome://minimo/content/bookmarks/bmview.xhtml");
+
 }
 
 /* Toolbar specific code - to be removed from here */ 
@@ -1244,21 +1280,18 @@ function DoBrowserSearch() {
   }  
 }
 
-
 /*
  * New preferences launches it in the tab 
  */
 
 function DoBrowserPreferences() {
   
-  try { 
-    gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/preferences/preferences.xul#general');    
-    browserInit(gBrowser.selectedTab);
-  } catch (e) {
-    
-  }  
+	/* Now we use the Chrome Open because we want to reuse tabs  instead
+     * openning new ones. 
+     * WARNING: We need to check the case where we close the preferences panel.
+     */
+	BrowserChromeOpen("chrome://minimo/content/preferences/preferences.xul#general");
 }
-
 
 /* 
  * Search extension to urlbar, deckmode.
@@ -1278,35 +1311,23 @@ function DoBrowserSearchURLBAR(vQuery) {
 /* Toolbar specific code - to be removed from here */ 
 
 function DoBrowserRSS(sKey) {
-  
   if(!sKey) BrowserViewRSS(); // The toolbar is being used. Otherwise it is via the sb: trap protocol. 
-  
   try { 
-    
     if(sKey) {
       gRSSTag=sKey;
     } else if(document.getElementById("toolbar-rss-rsstag").value!="") {
       gRSSTag=document.getElementById("toolbar-rss-rsstag").value;
     }
-    
     gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/rssview/rssload.xhtml?url='+gRSSTag);
-    
     browserInit(gBrowser.selectedTab);
-  } catch (e) {
-    
-  }  
+  } catch (e) { }  
 }
 
 function DoBrowserGM(xmlRef) {
-  
-  try { 
-      
+  try {     
     gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/moduleview/moduleload.xhtml?url='+xmlRef);
-    
     browserInit(gBrowser.selectedTab);
-  } catch (e) {
-    
-  }  
+  } catch (e) { }  
 }
 
 /* Toolbar specific code - to be removed from here */ 
@@ -1336,17 +1357,26 @@ function DoBrowserTarget(sKey) {
   var baseHandler=sKey.split(",");
 
   if(baseHandler[0]=="home") {
-    var baseURL="chrome://minimo/content/bookmarks/bmview.xhtml#";
+
+     var baseURL="chrome://minimo/content/bookmarks/bmview.xhtml#";
+
   }
+
   var baseURL="chrome://minimo/content/bookmarks/bmview.xhtml#";
+
   if(baseHandler[0]=="preferences") {
 	baseURL="chrome://minimo/content/preferences/preferences.xul#"
   } 
+  
   try { 
+	
     gBrowser.selectedTab = gBrowser.addTab(baseURL+baseHandler[1]);
     browserInit(gBrowser.selectedTab);
+
   } catch (e) {
+    
   }  
+
 }
 
 function DoBrowserGM(xmlRef) {
@@ -1412,7 +1442,7 @@ function DoTestSendCall(toCall) {
 }
 
 function DoGoogleToggle() {
-  // marcio
+
   //google xhtml string call http://www.google.com/gwt/n?q=xml&site=mozilla_minimo&u=www.xml.com/
   
   var locationAddress="google.com";
@@ -1421,15 +1451,10 @@ function DoGoogleToggle() {
 	locationAddress=gURLBar.value.split("http://")[1];	
   }
 
-  try { 
-        
+  try {  
     gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/gwt/n?q=xml&site=mozilla_minimo&u='+locationAddress);
-    
     browserInit(gBrowser.selectedTab);
-
-  } catch (e) {
-    
-  }  
+  } catch (e) {}  
 }
 
 function DoSSRToggle()
@@ -1475,9 +1500,6 @@ function DoToggleSoftwareKeyboard()
   
   spinSetnext(gKeySpinCurrent); 
 
-
-
-
   // During a page load, this key cause the page to stop
   // loading.  Probably should rename this function.
 
@@ -1502,7 +1524,7 @@ function DoToggleSoftwareKeyboard()
       else
         keyboard.show();
       
-      gKeyBoardToggle = !gKeyBoardToggle;
+        gKeyBoardToggle = !gKeyBoardToggle;
     }
     else {
       document.commandDispatcher.advanceFocus();
@@ -1545,7 +1567,7 @@ function DoFullScreen(fullscreen)
 }
 
 /* 
-   
+ * 
  */
 function DoClipCopy()
 {
@@ -1672,8 +1694,12 @@ function URLBarEntered()
       catch(e) {onErrorHandler(e);}
 
     }
-    
-    loadURI(gURLBar.value);
+
+    /* 
+     * Each new typed URL becomes a new Tab now 
+     */
+     
+    BrowserOpenURLasTab(gURLBar.value);
 
     content.focus();
   }
@@ -1686,8 +1712,6 @@ function URLBarEntered()
 function PageProxyClickHandler(aEvent) {
   document.getElementById("urlbarModeSelector").showPopup(document.getElementById("proxy-deck"),-1,-1,"popup","bottomleft", "topleft");
 }
-
-
 
 /*
  * The URLBAR Deck mode selector 
@@ -1702,8 +1726,9 @@ function BrowserSetDeck(dMode,menuElement) {
   
 }
 
-
-// ripped from browser.js, this should be shared in toolkit.
+/* 
+ * ripped from browser.js, this should be shared in toolkit.
+ */
 function nsBrowserAccess()
 {
 }
@@ -1935,7 +1960,6 @@ function BrowserPanMouseHandlerDestroy(e) {
 	BrowserPan();
   }
 }
-
 
 function DoLeftSoftkeyWithModifier()
 {
@@ -2176,4 +2200,60 @@ function BrowserFixUpURI(pageURI) {
   var fixedUpURI = gURIFixup.createFixupURI(pageURI, 0);
   return fixedUpURI.spec;
 
+}
+
+/* 
+ * Layout Theme System. This is the solution so that the general background color 
+ * that is set via preferences->layout can affect the whole chrome panels.
+ */
+
+var gBrowserChromeTabs = new Array();
+var gBrowserChromeThemeRules = new Array();
+
+function BrowserChromeThemeColorSync(value) {
+  document.styleSheets[1].cssRules[1].style.cssText="background-color:"+value;
+  for ( keyVar in gBrowserChromeThemeRules ) {
+    try {
+      gBrowserChromeThemeRules[keyVar].cssText="background-color:"+value;		
+    } catch (i) {} 
+  }
+}
+
+function BrowserChromeThemeColorSyncRaw(value) {
+  document.styleSheets[1].cssRules[1].style.cssText=value;
+  for ( keyVar in gBrowserChromeThemeRules ) {
+    try { 
+      gBrowserChromeThemeRules[keyVar].cssText=value;		
+    } catch (i) {
+    } 
+  }
+}
+
+function BrowserTellChromeThemeRules(refName,ruleReference) {
+  gBrowserChromeThemeRules[refName] = ruleReference;
+}
+
+function BrowserChromeThemeColorGet() {
+  gGlobalThemeValue = document.styleSheets[1].cssRules[1].style.cssText;
+  return gGlobalThemeValue;
+}
+
+function BrowserChromeRegisterTab(URIvalue,tabReference) {
+  var newChromeApp = {
+    URIsrc:URIvalue,
+    tabReference:tabReference
+  } 
+  gBrowserChromeTabs[URIvalue] = newChromeApp;
+}
+
+function BrowserChromeOpen(URIvalue) {
+  if(gBrowserChromeTabs[URIvalue]) {
+    gBrowser.selectedTab = gBrowserChromeTabs[URIvalue].tabReference;
+  } else {
+    try {  
+      gBrowser.selectedTab = gBrowser.addTab(URIvalue);   
+      browserInit(gBrowser.selectedTab);
+      BrowserChromeRegisterTab(URIvalue,gBrowser.selectedTab);
+    } catch (e) {}  
+  } 
 }
