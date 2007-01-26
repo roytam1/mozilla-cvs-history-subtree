@@ -1,3 +1,6 @@
-<!-- Bookmarks app --> 
+<!-- Bookmarks / Homebase app --> 
 
-<!ENTITY bookmarksEmpty.label     "You have no Bookmarks yet.">
+<!ENTITY bookmarksEmpty.label      "You have no Bookmarks yet.">
+<!ENTITY titleNew.label            "New">
+<!ENTITY titleExtensions.label     "Extensions">
+<!ENTITY titleHistory.label        "History">
