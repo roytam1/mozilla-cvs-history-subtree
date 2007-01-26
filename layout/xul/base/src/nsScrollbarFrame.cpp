@@ -213,6 +213,17 @@ nsScrollbarFrame::GetScrollbarMediator(nsIScrollbarMediator** aResult)
   nsresult rv = GetPresContext()->PresShell()->GetPrimaryFrameFor(mScrollbarMediator, &f);
   if (NS_FAILED(rv) || !f)
     return rv;
+
+  // check if the frame is a scroll frame. If so, get the scrollable frame
+  // inside it.
+  nsIScrollableFrame* scrollFrame;
+  CallQueryInterface(f, &scrollFrame);
+  if (scrollFrame) {
+    f = scrollFrame->GetScrolledFrame();
+    if (!f)
+      return NS_ERROR_FAILURE;
+  }
+
   CallQueryInterface(f, aResult);
   return NS_OK;
 }
