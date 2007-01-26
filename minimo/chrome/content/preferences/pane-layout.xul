@@ -43,96 +43,84 @@
 
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-  <hbox id="pref-panes" >  
+<hbox id="pref-panes" >  
 
-  <!-- GENERAL PANE -->
+ <!-- LAYOUT PANE -->
 
-    <vbox flex="1" id="layout-pane"   collapsed="true">
-
-                <label class="sectionlabel" value="Layout" /> 
-
-
-                        <groupbox  id=''>
-                            <caption label="Pick Color for Background "/>
-
-                                <vbox class="box-prefpadding">     
-
-
-					
-				    <textbox value="lightblue" onchange="setChromeColor(this.value)" />
-
-					</vbox>
-	
-                        </groupbox>
+ <vbox flex="1" id="layout-pane" collapsed="true">
+ 
+  <label class="sectionlabel" value="Layout" /> 
+  <groupbox  id=''>
+    <caption label="Pick Color for Background "/>
+    <vbox class="box-prefpadding">     	
+    <textbox value="lightblue" onchange="setChromeColor(this.value)" />
+    </vbox>
+  </groupbox>
                        
+  <groupbox>
 
-                        <groupbox  id=''>
+    <caption label="Navigation Bar Customization"/>
 
-                            <caption label="Navigation Bar Customization"/>
-
-                                   <vbox class="box-prefpadding">     
+    <vbox class="box-prefpadding">     
 			
-                                     <vbox orient="vertical" >
+    <vbox orient="vertical" >
 
 	<!-- if you update this list, you need to update the mask list as well ( search 
-           for id="controlBarFullList" in this document --> 
+         for id="controlBarFullList" in this document --> 
 
-      <hbox>
-	      <checkbox id="pref_controlbar_nav-back" onclick="syncPref(document.getElementById('controlBarVisibleIds'));" />
-     		 <toolbarbutton id="nav-back" />  
+    <hbox>
+      <checkbox id="pref_controlbar_nav-back" onclick="syncPref(document.getElementById('controlBarVisibleIds'));" />
+      <toolbarbutton id="nav-back" />  
+    </hbox>
+
+    <hbox>    
+      <checkbox id="pref_controlbar_nav-forward" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
+      <toolbarbutton id="nav-forward" />  
+    </hbox>
+
+    <hbox>
+      <checkbox id="pref_controlbar_nav-stopreload" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
+      <toolbarbutton id="nav-reload"/>  
+      <toolbarbutton id="nav-stop"/>  
+    </hbox>
+
+    <hbox>
+      <checkbox id="pref_controlbar_nav-uizoom" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
+      <toolbarbutton id="nav-ui-zoom-plus"/>  
+      <toolbarbutton id="nav-ui-zoom-minus"/>  
 	</hbox>
 
-      <hbox>    
- 	     <checkbox id="pref_controlbar_nav-forward" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
-     		 <toolbarbutton id="nav-forward" />  
+    <hbox>    
+      <checkbox id="pref_controlbar_nav-find" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
+      <toolbarbutton id="nav-find" />  
+    </hbox>
+
+    <hbox>    
+      <checkbox id="pref_controlbar_nav-bookmarkthis" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
+      <toolbarbutton id="nav-bookmarkthis" />  
 	</hbox>
 
-      <hbox>
-	      <checkbox id="pref_controlbar_nav-stopreload" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
-     		<toolbarbutton id="nav-reload"/>  
-     		<toolbarbutton id="nav-stop"/>  
-	</hbox>
+    <hbox>    
+      <checkbox id="pref_controlbar_nav-pan" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
+      <toolbarbutton id="nav-pan" />  
+    </hbox>
 
+    <!-- THIS IS VERY IMPORTANT - the JS Code ( controlbarUIMask* functions ) uses this following list --> 
 
-      <hbox>
-	      <checkbox id="pref_controlbar_nav-uizoom" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
-     		<toolbarbutton id="nav-ui-zoom-plus"/>  
-     		<toolbarbutton id="nav-ui-zoom-minus"/>  
-	</hbox>
+    <box id="controlBarFullList" value="nav-back;nav-forward;nav-stopreload;nav-find;nav-uizoom;nav-bookmarkthis;nav-pan" />
 
-      <hbox>    
- 	     <checkbox id="pref_controlbar_nav-find" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
-     		 <toolbarbutton id="nav-find" />  
-	</hbox>
+    <box  id="controlBarVisibleIds" 
+          preference="ui.controlbar"
+          onsyncfrompreference="controlbarUIMaskRead()"
+          onsynctopreference="controlbarUIMaskWrite()"
+     />
 
-      <hbox>    
- 	     <checkbox id="pref_controlbar_nav-bookmarkthis" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
-     		 <toolbarbutton id="nav-bookmarkthis" />  
-	</hbox>
+    </vbox>
 
-      <hbox>    
- 	     <checkbox id="pref_controlbar_nav-pan" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
-     		 <toolbarbutton id="nav-pan" />  
-	</hbox>
+    </vbox>
 
-			  <!-- THIS IS VERY IMPORTANT - the JS Code ( controlbarUIMask* functions ) uses this following list --> 
+  </groupbox>
 
-			  <box   id="controlBarFullList" value="nav-back;nav-forward;nav-stopreload;nav-find;nav-uizoom;nav-bookmarkthis;nav-pan" />
-
-                    <box   id="controlBarVisibleIds" 
-	                     preference="ui.controlbar"
-                           onsyncfrompreference="controlbarUIMaskRead()"
-                           onsynctopreference="controlbarUIMaskWrite()"
-	                     />
-
-                                    </vbox>
-
-					    </vbox>
-
-
-                        </groupbox>
-
-
-	</vbox>	
-  </hbox >
+ </vbox>	
+</hbox >
 </overlay>
