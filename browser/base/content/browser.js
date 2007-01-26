@@ -378,7 +378,8 @@ const gPopupBlockerObserver = {
         var label = bundle_browser.getFormattedString("popupShowPopupPrefix",
                                                       [popupURIspec]);
         menuitem.setAttribute("label", label);
-        menuitem.setAttribute("requestingWindowURI", pageReport[i].requestingWindowURI.spec);
+        menuitem.requestingWindow = pageReport[i].requestingWindow;
+        menuitem.requestingDocument = pageReport[i].requestingDocument;
         menuitem.setAttribute("popupWindowURI", popupURIspec);
         menuitem.setAttribute("popupWindowFeatures", pageReport[i].popupWindowFeatures);
         menuitem.setAttribute("oncommand", "gPopupBlockerObserver.showBlockedPopup(event);");
@@ -401,22 +402,17 @@ const gPopupBlockerObserver = {
 
   showBlockedPopup: function (aEvent)
   {
-    var requestingWindow = aEvent.target.getAttribute("requestingWindowURI");
-    var requestingWindowURI =
-                      Components.classes["@mozilla.org/network/io-service;1"]
-                                .getService(Components.interfaces.nsIIOService)
-                                .newURI(requestingWindow, null, null);
+    var target = aEvent.target;
+    var popupWindowURI = target.getAttribute("popupWindowURI");
+    var features = target.getAttribute("popupWindowFeatures");
+    var name = target.getAttribute("popupWindowName");
 
-    var popupWindowURI = aEvent.target.getAttribute("popupWindowURI");
-    var features = aEvent.target.getAttribute("popupWindowFeatures");
+    var dwi = target.requestingWindow;
 
-    var shell = findChildShell(null, gBrowser.selectedBrowser.docShell,
-                               requestingWindowURI);
-    if (shell) {
-      var ifr = shell.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
-      var dwi = ifr.getInterface(Components.interfaces.nsIDOMWindowInternal);
-      // XXXben - nsIDOMPopupBlockedEvent needs to store target, too!
-      dwi.open(popupWindowURI, "", features);
+    // If we have a requesting window and the requesting document is
+    // still the current document, open the popup.
+    if (dwi && dwi.document == target.requestingDocument) {
+      dwi.open(popupWindowURI, name, features);
     }
   },
 

@@ -419,8 +419,10 @@
             if (this.pageReport) {
               var i = 0;
               while (i < this.pageReport.length) {
-                if (this.findChildShell(this.docShell,
-                                        this.pageReport[i].requestingWindowURI))
+                // Filter out irrelevant reports.
+                if (this.pageReport[i].requestingWindow &&
+                    (this.pageReport[i].requestingWindow.document ==
+                     this.pageReport[i].requestingDocument))
                   i++;
                 else
                   this.pageReport.splice(i, 1);
@@ -471,10 +473,15 @@
               this.updatePageReport(); 
             }
 
-            var obj = { requestingWindowURI: evt.requestingWindowURI,
+            var obj = { requestingWindow: evt.requestingWindow,
+                        // Record the current document in the requesting windo
+                        // before it can change.
+                        requestingDocument: evt.requestingWindow.document,
                         popupWindowURI: evt.popupWindowURI,
                         popupWindowFeatures: evt.popupWindowFeatures };
+
             this.pageReport.push(obj);
+            this.updatePageReport();
           ]]> 
         </body>
       </method>
