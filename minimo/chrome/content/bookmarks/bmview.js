@@ -36,11 +36,145 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+/* 
+ * URL Find Type in implementation
+ */
+
+var gWin = null;
+
+function URLBarEventCatch(event) {
+
+   if(event.keyCode==13) {
+	
+	URLBarEntered();
+
+   } 
+
+   var currentURLBarString = document.getElementById("urlbar2").value;
+
+   /* This is to filter out everything but the history elements
+    * This filter goes on StyleSheet rule level */
+
+   if(currentURLBarString != "") {
+	hbSelect("timehistory");
+   } else {
+	hbSelectAll();
+   }
+
+   var regExpFineString = currentURLBarString.replace(/\./g,"\.");
+
+   var historyItemsList = document.getElementsByTagName("history");
+
+   var regExp = new RegExp(currentURLBarString );
+
+   for(var i=0;i<historyItemsList.length;i++) {
+
+	var currentElement = historyItemsList[i];
+
+	var textValue = currentElement.getAttribute("value");
+
+	var plainValue = unescape(textValue);
+
+	var brother = currentElement.previousSibling;
+
+	if(textValue.match(regExp)) {
+		brother.style.display="block";
+	} else {
+		brother.style.display="none";
+	} 
+   } 
+}
+
+/* 
+ * This is called when the Hit Enter command goes on with the 
+ * URLBAR field 
+ */
+
+function URLBarEntered()
+{
+
+  gURLBar = document.getElementById("urlbar2");
+
+  try
+  {
+    if (!gURLBar)
+      return;
+    
+    var url = gURLBar.value;
+    if (gURLBar.value == "" || gURLBar.value == null)
+      return;
+    
+    /* Trap to SB 'protocol' */ 
+    
+    if(gURLBar.value.substring(0,3)=="sb:") {
+      gWin.DoBrowserSB(gURLBar.value.split("sb:")[1]);
+      return;
+    }
+
+    /* Trap to chrome targets 'target' */ 
+    
+    if(gURLBar.value.substring(0,3)=="go:") {
+      gWin.DoBrowserTarget(gURLBar.value.split("go:")[1]);
+      return;
+    }
+    
+    if(gURLBar.value.substring(0,4)=="rss:") {
+      gWin.DoBrowserRSS(gURLBar.value.split("rss:")[1]);
+      return;
+    }
+    
+    if(gURLBar.value.substring(0,3)=="gm:") {
+      gWin.DoBrowserGM(gURLBar.value.split("gm:")[1]);
+      return;
+    }
+    
+    /* Other normal cases */ 
+    
+    if (gURLBar.value.indexOf(" ") == -1)
+    {
+      gURLBar.value = gWin.BrowserFixUpURI(url);
+      
+      // Notify anyone interested that we are loading.
+
+      try {
+        var os = Components.classes["@mozilla.org/observer-service;1"]
+          .getService(Components.interfaces.nsIObserverService);
+        var host = gWin.fixedUpURI.host;
+        os.notifyObservers(null, "loading-domain", host);
+      }  catch(e) {gWin.onErrorHandler(e);}
+    }
+
+    gWin.BrowserOpenURLasTab(gURLBar.value);
+
+    return true;
+
+  }
+  catch(ex) {onErrorHandler(ex);}
+ 
+}
+
+function SearchGoogle(vQuery) {
+  try { 
+    if(vQuery!="") {
+      gWin.gBrowser.selectedTab = gWin.gBrowser.addTab('http://www.google.com/xhtml?q='+vQuery+'&hl=en&lr=&safe=off&btnG=Search&site=search&mrestrict=xhtml');
+      gWin.browserInit(gBrowser.selectedTab);
+    }
+  } catch (e) {
+    
+  }  
+}
+
+/* 
+ * This is called when the XSLT transformed document is alive. Search for blLoaded
+ */
+
+function bmLoaded() {
+	document.getElementById("urlbar2").addEventListener("keypress",URLBarEventCatch,false);
+}
 
 /*
  * Homebase Application Implementation 
  */
-
 
 var hbArrayClasses = new Array();
 var hbArrayClassesFeedback= new Array();
@@ -57,23 +191,18 @@ hbArrayClassesFeedback["timehistory"]=7;
 hbArrayClassesFeedback["allFeedback"]=8;
 
 function hbSelect(refShow) {
-
 	for (var key in hbArrayClasses) {
 	    document.styleSheets[0].cssRules[hbArrayClasses[key]].style.display="none";
 	}
-
 	document.styleSheets[0].cssRules[hbArrayClasses[refShow]].style.display="block";
-      hbFeedback(refShow);
-
+    //hbFeedback(refShow);
 }
 
 function hbSelectAll() {
-
 	for (var key in hbArrayClasses) {
 	    document.styleSheets[0].cssRules[hbArrayClasses[key]].style.display="block";
 	}
-      hbFeedback("allFeedback");
-
+    //hbFeedback("allFeedback");
 }
 
 function hbFeedback(refShow) {
@@ -82,15 +211,13 @@ function hbFeedback(refShow) {
 	    document.styleSheets[0].cssRules[hbArrayClassesFeedback[key]].style.backgroundColor="transparent";
 	    document.styleSheets[0].cssRules[hbArrayClassesFeedback[key]].style.color="white";
 	}
-
 	document.styleSheets[0].cssRules[hbArrayClassesFeedback[refShow]].style.color="black";
 	document.styleSheets[0].cssRules[hbArrayClassesFeedback[refShow]].style.backgroundColor="white";
 
 }
 
 function hbOpenAsTab(ref) {
-
-   var win;
+  var win;
   var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                      .getService(Components.interfaces.nsIWindowMediator);
   win = wm.getMostRecentWindow("navigator:browser");
@@ -103,9 +230,7 @@ function hbOpenAsTab(ref) {
     win.browserInit(gBrowser.selectedTab);
   } catch (e) {
   }  
-
   }
-
 }
 
 function bmInit(targetDoc, targetElement) {
@@ -113,19 +238,27 @@ function bmInit(targetDoc, targetElement) {
   var gHomebaseElements = null; 
   var bookmarkStore=null;
 
-
-
   var win;
   var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                      .getService(Components.interfaces.nsIWindowMediator);
   win = wm.getMostRecentWindow("navigator:browser");
   if(!win) win = window.opener; 
   if (win) {
+	
+	gWin = win;
 
 	gHomebaseElements = homebase_menuBuild(win);
 
   }
 
+  // This now is not using the solution to tip the main minimo window on its chrome background 
+  // color, because this is a panel so far with no background color. It's just white. We have to work this 
+  // better. Maybe these panels could simply inherit some sort of live style. 
+  // gWin.BrowserTellChromeThemeRules("homebase",document.styleSheets[0].cssRules[0].style);
+
+  /* 
+   * okay now the homebase / bookmarks starts...
+   */
 
   try {
         bookmarkStore=null;
@@ -133,8 +266,6 @@ function bmInit(targetDoc, targetElement) {
         bookmarkStore = gPref.getCharPref("browser.bookmark.store");
 
   } catch (ignore) {}
-
-
 
 	var myObserver = null;
 
@@ -145,27 +276,31 @@ function bmInit(targetDoc, targetElement) {
 	
 	  myObserver = {
 	      onSearchResult:function (q,w) { 
-	        rr=w.QueryInterface(Components.interfaces.nsIAutoCompleteResult);
-		  this.bookmarkStore="<bm>";
+            rr=w.QueryInterface(Components.interfaces.nsIAutoCompleteResult);
+            this.bookmarkStore="<bm>";
 	        for(var ii=0;ii<rr.matchCount;ii++) {
-	          this.bookmarkStore+="<li hbhistory='true' title='"+rr.getValueAt(ii)+"'>"+rr.getValueAt(ii)+"</li>";
+              //var prepareValue = escape(rr.getValueAt(ii));
+		      var originalString = rr.getValueAt(ii);
+		      var prepareValue = originalString.replace(/&/g,"&amp;");
+	          this.bookmarkStore+="<li hbhistory='true' title='"+prepareValue+"'  value='"+prepareValue+"'>"+prepareValue+"</li>";
 	        }
-		  this.bookmarkStore+="</bm>";
+            this.bookmarkStore+="</bm>";
 	      },
-            bookmarkStore:""
+          bookmarkStore:""
 	  }; 
 	
 
 	/* marcio - todo, fix the search string so that we can get everything */
-
+    // Right now what happens is, if we put "" minimo shows nothing as the result instead everything. 
+    // With FF 1.8 Desktop works fine "". In minimo the workaorund now is www. domains. 
+    
 	mySearch.startSearch("www.","",null, myObserver );
 	
 	} catch (ignore) {
 
 	}
 
-      var multiMarks = "<bmgroup>"+gHomebaseElements+bookmarkStore+myObserver.bookmarkStore+"</bmgroup>";
-
+    var multiMarks = "<bmgroup>"+gHomebaseElements+bookmarkStore+myObserver.bookmarkStore+"</bmgroup>";
 
 	var testLoad=new bmProcessor(multiMarks);
 	testLoad.xslSet("bookmark_template_multiple.xml");
@@ -173,11 +308,14 @@ function bmInit(targetDoc, targetElement) {
 	testLoad.setTargetElement(targetElement);
 	testLoad.run();
 
-
-
   /*
-   * preselection of the style rule 
-   * marcio 4000
+   * preselection of the style rule. This has to do with the solution so that 
+   * is possible to open a panel with sub selection of a given Target rule. 
+   * For example, if you want to open the homebase/bookmarks and get some 
+   * specific sub view in it. With the previous homebase it was a good thing. 
+   * Now the homebase is more like a linear list, so we should consider to remove 
+   * this feature or make it much better. For example a possible interesting rule 
+   * could be #filter=/RegExpValue/
    */
 
    var targetLink = document.location.toString();
@@ -229,13 +367,15 @@ function bmProcessor(bookmarkStore) {
   var aDOMParser = new DOMParser();
 
   try {
-
     this.xmlRef = aDOMParser.parseFromString(bookmarkStore,"text/xml");
+
 
   } catch (ignore) {}
 
+
   if(this.xmlRef&&this.xmlRef.firstChild&&this.xmlRef.firstChild.nodeName=="bmgroup") {
-   
+
+
 
   } else {
     var bookmarkEmpty="<bm></bm>";
@@ -301,6 +441,9 @@ bmProcessor.prototype.apply = function () {
         } catch (e) {
         }
         this.targetElement.appendChild(htmlFragment.firstChild);
+	
+	  bmLoaded();
+
     }    
 }
 
