@@ -49,9 +49,11 @@
 
  <vbox flex="1" id="layout-pane" collapsed="true">
  
-  <label class="sectionlabel" value="Layout" /> 
-  <groupbox  id=''>
-    <caption label="Pick Color for Background "/>
+  <label class="sectionlabel" value="&layout.label;" /> 
+  <groupbox>
+
+    <caption label="&layoutBackgroundColor.label;"/>
+
     <vbox class="box-prefpadding">     	
     <textbox value="lightblue" onchange="setChromeColor(this.value)" />
     </vbox>
@@ -59,7 +61,7 @@
                        
   <groupbox>
 
-    <caption label="Navigation Bar Customization"/>
+    <caption label="&layoutControlbar.label;"/>
 
     <vbox class="box-prefpadding">     
 			
