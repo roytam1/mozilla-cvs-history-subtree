@@ -48,7 +48,7 @@
       <!-- PRIVACY PANE --> 
 
       <vbox id="privacy-pane" flex="1" collapsed="true">
-             <label value="&privacy.label;" /> 
+             <label  class="sectionlabel"   value="&privacy.label;" /> 
             	    <groupbox class='box-prefgroupitem' >
             	      
             	      <grid flex="1"  class="box-prefpadding" style="padding:4px">

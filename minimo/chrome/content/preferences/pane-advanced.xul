@@ -52,7 +52,7 @@
           flex="1"
           collapsed="true" >
           
-            <label value="&advanced.label;" /> 
+            <label  class="sectionlabel"  value="&advanced.label;" /> 
 
                       <groupbox class='box-prefgroupitem'>
 

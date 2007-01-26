@@ -50,13 +50,13 @@
     <vbox flex="1" id="general-pane" >
 
    
-                <label value="&general.label;" /> 
+                <label class="sectionlabel" value="&general.label;" /> 
                         
 
                         <groupbox  class='box-prefgroupitem' id=''>
 
-
                             <caption label="&homeCaption.label;"/>
+
 
                                 <box class="box-prefpadding">
                                     <textbox id="browserStartupHomepage" keyup=""   
@@ -71,14 +71,22 @@
                                   </columns>
                                   <rows>
                                     <row>
+
                                       <button id="browserSetHomePage" 
                                               class='box-prefgroupitem'
                                               label="&loadHomePageCurrent.label;" 
                                               oncommand="loadHomePageFromBrowser();"/>
+
                                       <button id="browserSetHomePage2" 
                                               class='box-prefgroupitem'
                                               label="&loadHomePageBlank.label;" 
                                               oncommand="loadHomePageBlank();"/>
+
+                                      <button id="browserSetHomePage3" 
+                                              class='box-prefgroupitem'
+                                              label="&loadHomePageHomebase.label;" 
+                                              oncommand="loadHomePageHomebase();"/>
+
                                     </row>
                                   </rows>
                                 </grid>
@@ -86,10 +94,10 @@
                         </groupbox>
                         
                         <groupbox  class='box-prefgroupitem' id='ssrimage-box'>
-                                <caption label="&sssCaption.label;"/>
+                                                   <caption label="&sssCaption.label;"/>
 
                                 <vbox class="box-prefpadding">     
-                   
+
                                 <checkbox id="enableImages" 
                                                
                                               onfocus="prefFocus('ssrimage-box')" onblur="prefBlur('ssrimage-box')"
