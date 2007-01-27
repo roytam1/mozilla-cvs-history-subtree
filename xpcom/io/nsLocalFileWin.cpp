@@ -1161,10 +1161,19 @@ nsLocalFile::CopySingleFile(nsIFile *sourceFile, nsIFile *destParent, const nsAC
                 backup.Append(destPath);
                 backup.Append(".moztmp");
 
+                // we are about to remove the .moztmp file,
+                // so attempt to make sure the file is writable
+                // (meaning:  the "read only" attribute is not set)
+                // chmod can silently fail (return -1) if
+                // the file doesn't exist but that's ok, because
+                // remove() will also silently fail if the file
+                // doesn't exist.
+                (void)chmod(backup.get(), _S_IREAD | _S_IWRITE);
+
                 // remove any existing backup file that we may already have.
                 // maybe we should be doing some kind of unique naming here,
                 // but why bother.
-                remove(backup.get());
+                (void)remove(backup.get());
 
                 // move destination file to backup file
                 copyOK = MoveFile(destPath.get(), backup.get());
