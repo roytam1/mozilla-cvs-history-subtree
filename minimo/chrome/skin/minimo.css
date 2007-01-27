@@ -36,15 +36,32 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* 	background-position:0px 100%; */
+/* This was disabled. If you want to enable this you can put a rule here, then change minimo.js
+   Search for .styleSheets[1].cssRules[0] and enable the code back */
 
-#urlbar input {
-	background-repeat:no-repeat;
-	background-image:url(chrome://minimo/skin/transfer.jpg);
-	padding:0px;
-	margin:0px;
-	margin-left:2px ! important;
- 	border:0px ! important
+PlaceHolderToProgressBarRule {
+
+
+
+}
+
+/* This Rule has to be here in position [1], see BrowserChromeThemeColorSync in minimo.js */
+
+window, tabbox , tabbox tabs, tabbox tabs tab > * , tabbox tabs > *, toolbar{
+
+ background-color: #ddddcc ! important;
+
+}
+
+/* this is a initial placeholder study so that we can color tabs to show security level maybe */
+
+tabbrowser .tabbrowser-tab[selected="true"] {
+
+
+}
+
+#urlbar * {
+      background-color:white;
 }
 
 #urlbar {
@@ -52,9 +69,7 @@
 	border:0px ! important;
 }
 
-#urlbar * {
-      background-color:white;
-}
+
 
 /*
  * decuttler 
@@ -160,11 +175,6 @@ toolbar *, #appcontent *, * {
   padding-right:2px ! important;
 }
 
-caption {
-	-moz-border-radius:4px;
-	border:1px solid #eeeeee;
-	background-color:#eeeeee;
-}
 
 /*  Disabled this seems like affects the popup contextAreaContextMenu causing font to be bigger
 * {
@@ -173,20 +183,84 @@ caption {
 }
 */
 
-.menu-button
+#menu-button
   {
 	  list-style-image      : url("chrome://minimo/skin/m.png");
   }
 
-.nav-button
+#nav-menu-button 
   {
-	  list-style-image      : url("chrome://minimo/skin/m-nav.png");
+	  list-style-image      : url("chrome://minimo/skin/icon-more.png");
+	  margin-left:2px;
+
+  } 
+#nav-back 
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-back.png");
+	  margin-left:2px;
   }
 
-.back-button
+#nav-forward 
   {
-	  list-style-image      : url("chrome://minimo/skin/back-active.png");
+	  list-style-image      : url("chrome://minimo/skin/icon-forward.png");
 	  margin-left:2px;
+  }
+
+#nav-ui-zoom-plus 
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-eye-plus.png");
+	  margin-left:2px;
+  }
+
+#nav-ui-zoom-minus 
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-eye-minus.png");
+	  margin-left:2px;
+  }
+
+#nav-find
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-find.png");
+	  margin-left:2px;
+  }
+
+#nav-bookmarkthis
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-bookmarkthis.png");
+	  margin-left:2px;
+  }
+
+#nav-pan
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-pan.png");
+	  margin-left:2px;
+  }
+
+#nav-stop
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-stop.png");
+	  margin-left:2px;
+  }
+
+#nav-reload
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-reload.png");
+	  margin-left:2px;
+  }
+
+#nav-stopreload 
+  {
+	  margin-left:2px;
+  }
+
+.stop-button 
+  { 
+	  list-style-image      : url("chrome://minimo/skin/icon-stop.png");
+  }
+
+.reload-button 
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-reload.png");
   }
 
 .forward-button
@@ -194,20 +268,13 @@ caption {
 	  list-style-image      : url("chrome://minimo/skin/forward-active.png");
   }
 
-.stop-button 
-  {
-	  list-style-image      : url("chrome://minimo/skin/stop-active.png");
-  }
 
 .go-button 
   {
 	  list-style-image      : url("chrome://minimo/skin/go-active.png");
   }
 
-.reload-button 
-  {
-	  list-style-image      : url("chrome://minimo/skin/reload-active.png");
-  }
+
   
 #back-button[disabled="true"] 
   {
