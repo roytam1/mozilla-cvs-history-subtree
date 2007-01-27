@@ -347,8 +347,7 @@ nsBrowserStatusHandler.prototype =
     if (blank ||
         !("popupDomain" in browser)) {
       browser.popupDomain = null;
-      browser.popupUrls = [];
-      browser.popupFeatures = [];
+      browser.popups = [];
     }
     else {
       var hostPort = "";
@@ -358,8 +357,7 @@ nsBrowserStatusHandler.prototype =
       catch(ex) { }
       if (hostPort != browser.popupDomain) {
         browser.popupDomain = null;
-        browser.popupUrls = [];
-        browser.popupFeatures = [];
+        browser.popups = [];
       }
     }
 

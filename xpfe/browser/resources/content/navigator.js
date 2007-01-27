@@ -633,8 +633,7 @@ function Startup()
 
     var browser = getBrowser();
     browser.popupDomain = null;
-    browser.popupUrls = [];
-    browser.popupFeatures = [];
+    browser.popups = [];
 
     if (uriToLoad != "about:blank") {
       gURLBar.value = uriToLoad;
@@ -2282,7 +2281,8 @@ function onFullScreen()
   FullScreen.toggle();
 }
 
-function onPopupWindow(aEvent) {
+function onPopupWindow(aEvent)
+{
   var firstPopup = pref.getBoolPref("privacy.popups.first_popup");
   var blockingEnabled = pref.getBoolPref("dom.disable_open_during_load");
   if (blockingEnabled) {
@@ -2320,7 +2320,8 @@ function onPopupWindow(aEvent) {
   }
 }
 
-function onPopupBlocked(aEvent) {
+function onPopupBlocked(aEvent)
+{
   var playSound = pref.getBoolPref("privacy.popups.sound_enabled");
 
   if (playSound) {
@@ -2357,21 +2358,23 @@ function onPopupBlocked(aEvent) {
       }
       // Check for duplicates, remove the old occurence of this url,
       // to update the features, and put it at the end of the list.
-      for (var i = 0; i < browser.popupUrls.length; ++i) {
-        if (browser.popupUrls[i].equals(aEvent.popupWindowURI)) {
-          browser.popupUrls.splice(i, 1);
-          browser.popupFeatures.splice(i, 1);
+      for (var i = 0; i < browser.popups.length; ++i) {
+        if (browser.popups[i].url.equals(aEvent.popupWindowURI)) {
+          browser.popups.splice(i, 1);
           break;
         }
       }
       // Limit the length of the menu to some reasonable size.
       // We only add one item every time, so no need for more complex stuff.
-      if (browser.popupUrls.length >= 100) {
-        browser.popupUrls.shift();
-        browser.popupFeatures.shift();
+      if (browser.popups.length >= 100) {
+        browser.popups.shift();
       }
-      browser.popupUrls.push(aEvent.popupWindowURI);
-      browser.popupFeatures.push(aEvent.popupWindowFeatures);
+      var popup = {url: aEvent.popupWindowURI,
+                   features: aEvent.popupWindowFeatures,
+                   name: "", // not supported on 1.8
+                   reqDoc: aEvent.requestingWindow.document,
+                   reqWin: aEvent.requestingWindow};
+      browser.popups.push(popup);
     }
   }
 }
@@ -2405,19 +2408,21 @@ function popupBlockerMenuShowing(event) {
 }
 
 function createShowPopupsMenu(parent) {
-  while (parent.lastChild && parent.lastChild.hasAttribute("uri"))
+  while (parent.lastChild && ("popup" in parent.lastChild))
     parent.removeChild(parent.lastChild);
 
   var browser = getBrowser().selectedBrowser;      
 
-  if  (browser.popupUrls.length == 0)
+  if  (browser.popups.length == 0)
     return false;
 
-  for (var i = 0; i < browser.popupUrls.length; i++) {
+  for (var i = 0; i < browser.popups.length; i++) {
+    var popup = popups[i];
     var menuitem = document.createElement("menuitem");
-    menuitem.setAttribute("label", gNavigatorBundle.getFormattedString('popupMenuShow', [browser.popupUrls[i].spec]));
-    menuitem.setAttribute("uri", browser.popupUrls[i].spec);
-    menuitem.setAttribute("features", browser.popupFeatures[i]);
+    var str = gNavigatorBundle.getFormattedString('popupMenuShow',
+                                                  [popup.url.spec]);
+    menuitem.setAttribute("label", str);
+    menuitem.popup = popup;
     parent.appendChild(menuitem);
   }
 
@@ -2425,10 +2430,12 @@ function createShowPopupsMenu(parent) {
 }
 
 function popupBlockerMenuCommand(target) {
-  var uri = target.getAttribute("uri");
-  if (uri) {
-    window.content.open(uri, "", target.getAttribute("features"));
-  }
+  if (!("popup" in target))
+    return;
+  var popup = target.popup;
+  var reqWin = popup.reqWin;
+  if (reqWin.document == popup.reqDoc)
+    reqWin.open(popup.url.spec, popup.name, popup.features);
 }
 
 function toHistory()
