@@ -35,41 +35,67 @@
  *
  * ***** END LICENSE BLOCK ***** */
  
+.pref-toolbar {
+
+  padding-top:6px ! important;
+  padding-left:6px ! important; 
+  background: lightblue url(chrome://minimo/skin/tab-middle-bkgnd.png) repeat-x 0 0;
+
+}
+
 .base { background-color:white } 
 
-.pref-toolbar {
-  padding-top:6px ! important;
-  padding-left:6px ! important;
+/* 
+ orange 
   background-color:rgb(229,96,0);
+
+*/
+
+.pref-toolbar {
+
+  padding-top:6px ! important;
+  padding-left:6px ! important; 
+  background: white url(chrome://minimo/skin/tab-middle-bkgnd.png) repeat-x 0 0;
+
 }
 
-caption {
-	border-top:1px solid gray;
-	background-color:white;
-      padding:4px ! important;
-      padding-bottom:6px ! important;
-      color:rgb(229,96,0);
-      font-size:100%;
-      font-weight:bold;
-      float:right;
+.sectionlabel {
+ font-size:120%;
+ font-weight:bold;
+ margin:4px ! important;
+
 }
+caption {
+
+	background-color:white;
+	margin-top:4px ! important;
+	margin-left:3px ! important;
+      color:rgb(111,111,111);
+      font-size:110%;
+      font-weight:bold;
+	border:1px solid lightgray;      
+
+}
+
+/*   border-top:1px solid gray;
+ */
 
 groupbox {
-  padding:4px ! important;
   -moz-border-radius:0px;
-  margin:0px ! important;
   border:0px;
-  border-top:1px solid gray;
+  padding:3px ! important;
 }
 
+/* 
+ background-color:rgb(229,96,0);
+*/
 .pref-toolbar button {
  -moz-appearance: none;
- background-color:rgb(229,96,0);
  min-width:0px;
  border:0px;
  margin:0px;
  padding:2px;
-
+ background-color:transparent;
 }
 
 .dialog-button {
@@ -98,6 +124,10 @@ groupbox {
   list-style-image: url("chrome://minimo/skin/preferences/icon-pref-general.png");
 }
 
+#layout-button {
+  list-style-image: url("chrome://minimo/skin/preferences/icon-pref-layout.png");
+}
+
 #advanced-button {
   list-style-image: url("chrome://minimo/skin/preferences/icon-pref-advanced.png");
 }
@@ -110,16 +140,10 @@ groupbox {
   list-style-image: url("chrome://minimo/skin/preferences/icon-pref-networking.png");
 }
 
-.box-prefgroupitem {
-  padding:2px ! important;
-}
 
-.box-prefgroupitem2 {
-  padding:2px ! important;
-}
 
 .box-prefpadding {
-  padding:2px ! important;
+  padding:6px ! important;
 }
 
 checkbox > * {
