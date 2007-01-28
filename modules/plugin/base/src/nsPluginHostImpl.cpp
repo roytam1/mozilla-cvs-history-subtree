@@ -2571,6 +2571,20 @@ nsPluginHostImpl::nsPluginHostImpl()
   mCachedPlugins = nsnull;
 }
 
+// static
+const char *
+nsPluginHostImpl::GetPluginName(nsIPluginInstance *aPluginInstance)
+{
+  nsActivePlugin *plugin =
+    gActivePluginList ? gActivePluginList->find(aPluginInstance) : nsnull;
+
+  if (plugin && plugin->mPluginTag) {
+    return plugin->mPluginTag->mName;
+  }
+
+  return nsnull;
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 nsPluginHostImpl::~nsPluginHostImpl()
