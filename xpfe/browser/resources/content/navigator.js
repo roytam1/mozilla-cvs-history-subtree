@@ -2417,7 +2417,7 @@ function createShowPopupsMenu(parent) {
     return false;
 
   for (var i = 0; i < browser.popups.length; i++) {
-    var popup = popups[i];
+    var popup = browser.popups[i];
     var menuitem = document.createElement("menuitem");
     var str = gNavigatorBundle.getFormattedString('popupMenuShow',
                                                   [popup.url.spec]);
