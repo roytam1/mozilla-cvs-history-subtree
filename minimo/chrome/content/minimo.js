@@ -664,6 +664,17 @@ function MiniNavStartup()
   BrowserInitializeTextSizeValue();
  
  /* 
+  * We get the visibility mask for the control bar 
+  * and apply to it in the XUL
+  */
+
+  syncControlBar();
+
+}
+
+function syncControlBar() {
+
+ /* 
   * Custom Toolbar 
   * so far we have this check here in JS,. The ui.controlbar pref has a list of   
   * ids that should be visible
@@ -684,6 +695,7 @@ function MiniNavStartup()
   }
 
 }
+
 
 function setScreenUpTimeout() {
 

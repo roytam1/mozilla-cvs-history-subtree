@@ -81,8 +81,13 @@ function controlbarUIMaskWrite() {
 			}
 		} catch (i) { } 
 	}
+
+	gRefreshUIControlBar = true; 
+
 	return strCheckedMaskList;
 }
+
+gRefreshUIControlBar = false;
 
 function readEnableImagesPref()
 {
@@ -672,6 +677,18 @@ function syncPrefSaveDOM() {
 		}
 
 		psvc.savePrefFile(null);
+
+		if( gRefreshUIControlBar) {
+
+			/* 
+		       * we can now also sync the main app so that 
+		       * it refreshes ... 
+		       */
+		
+		
+			gWin.syncControlBar();
+
+		}
 
 	} catch (e) { alert(e); }
 
