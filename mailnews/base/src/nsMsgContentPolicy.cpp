@@ -292,11 +292,11 @@ nsMsgContentPolicy::ShouldLoad(PRUint32          aContentType,
       contentScheme.LowerCaseEqualsLiteral("about"))
     isExposedProtocol = PR_TRUE;
 #endif
-    
-  rv = aContentLocation->SchemeIs("chrome", &isChrome);
-  NS_ENSURE_SUCCESS(rv, NS_OK);
 
-  if (isExposedProtocol || isChrome)
+  rv = aContentLocation->SchemeIs("chrome", &isChrome);
+  rv |= aContentLocation->SchemeIs("resource", &isRes);
+
+  if (isExposedProtocol || (NS_SUCCEEDED(rv) && (isChrome || isRes)))
   {
     *aDecision = nsIContentPolicy::ACCEPT;
     return NS_OK;
