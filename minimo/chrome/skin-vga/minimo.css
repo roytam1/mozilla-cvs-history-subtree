@@ -84,8 +84,8 @@ toolbox {
 /* Homebar max icons */ 
 
 #homebar .toolbarbutton-icon {
-  width:16px;
-  height:16px;
+  width:28px;
+  height:28px;
 }
 
 /* Hack to remove the resizer icon */ 
@@ -221,6 +221,12 @@ toolbar *, #appcontent *, * {
 #nav-find
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-find.png");
+	  margin-left:2px;
+  }
+
+#nav-urlbar
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-urlbar.png");
 	  margin-left:2px;
   }
 
