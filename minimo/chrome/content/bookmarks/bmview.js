@@ -169,7 +169,12 @@ function SearchGoogle(vQuery) {
  */
 
 function bmLoaded() {
+
 	document.getElementById("urlbar2").addEventListener("keypress",URLBarEventCatch,false);
+
+	document.getElementById("urlbar2").focus();
+
+
 }
 
 /*
