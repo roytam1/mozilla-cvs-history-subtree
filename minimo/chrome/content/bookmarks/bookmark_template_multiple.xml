@@ -20,22 +20,22 @@
 <h3>&titleNew.label;</h3>
 -->
 
-  <div>
+  <div style="text-align:center">
     <img src="chrome://minimo/skin/extensions/icon-urlbar.png">
     </img>
 
-    <xul:textbox id="urlbar2"  size="20" style="height:1em" onkeypress="URLBarEvent(this.event)">
+    <xul:textbox id="urlbar2"  size="20" style="text-align:left;background-color:white;" onkeypress="URLBarEvent(this.event)">
     </xul:textbox>
   </div>	
 
-  <div class="extensions">
+  <div style="text-align:center" class="extensions">
   
     <img src="chrome://minimo/skin/extensions/google.png">
     </img>
 
     <xul:textbox id="search-google"
                  size="20"
-                 style="height:1em"
+                 style="text-align:left;background-color:white;"
                  onchange="return SearchGoogle(this.value);" >
     </xul:textbox>
     
