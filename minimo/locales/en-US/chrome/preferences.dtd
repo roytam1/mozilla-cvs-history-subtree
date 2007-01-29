@@ -39,9 +39,9 @@
 <!-- General pane --> 
 
 <!ENTITY homeCaption.label           "Home Page">
-<!ENTITY loadHomePageCurrent.label   "Use Current Pages">
-<!ENTITY loadHomePageBlank.label     "Use Blank Page">
-<!ENTITY loadHomePageHomebase.label  "Use Homebase">
+<!ENTITY loadHomePageCurrent.label   "Current Tabs">
+<!ENTITY loadHomePageBlank.label     "Blank Page">
+<!ENTITY loadHomePageHomebase.label  "Homebase">
 
 <!-- System Integration --> 
 
