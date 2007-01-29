@@ -1092,6 +1092,22 @@ function BrowserViewFind() {
   }
 }
 
+/* 
+ * The new URLBar is a separated toolbar. Actually we have moved and created 
+ * a new URLBAR option in the bookmarks/homebase. This is here because some users
+ * may want to have an URLBar simultaneous experience 
+ */
+
+function BrowserViewURLBar() {
+  document.getElementById("toolbar-urlbar").collapsed=!document.getElementById("toolbar-urlbar").collapsed;
+  if(document.getElementById("toolbar-urlbar").collapsed) {
+  }
+  else
+  {
+    document.getElementById("urlbar").focus();
+  }
+}
+
 /** 
  * urlbar indentity, style, progress indicator.
  **/ 
