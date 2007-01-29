@@ -627,7 +627,7 @@ pref("ssr.enabled", true);
 
 pref("skey.enabled", true);
 
-pref("browser.startup.homepage", "resource://gre/res/start.html");
+pref("browser.startup.homepage", "chrome://minimo/content/bookmarks/bmview.xhtml");
 
 pref("snav.enabled", true);
 pref("accessibility.tabfocus", 7);
