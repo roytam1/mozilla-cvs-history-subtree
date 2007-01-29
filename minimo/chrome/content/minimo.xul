@@ -111,6 +111,7 @@
     <command id="cmd_ViewDeckSearch"          oncommand="BrowserViewDeckSearch()"/>
     <command id="cmd_ViewDeckDefault"         oncommand="BrowserViewDeckDefault()"/>
     <command id="cmd_ViewFind"                oncommand="BrowserViewFind()" />
+    <command id="cmd_ViewURLBar"              oncommand="BrowserViewURLBar()" />
     <command id="cmd_ViewDownload"            oncommand="BrowserViewDownload(true)" />
     <command id="cmd_ViewDownloadHidden"      oncommand="BrowserViewDownload(false)" />
     <command id="cmd_BrowserOpenLinkAsNewTab" oncommand="BrowserOpenLinkAsTab()" />
@@ -137,7 +138,10 @@
         
     <toolbar id="nav-bar" >
       
+	<!--
       <toolbarbutton  id="menu-button"       command="cmd_BrowserMenu" />  
+	-->
+
       <toolbarbutton  id="nav-back"          hidden="true" command="cmd_BrowserBack" />  
       <toolbarbutton  id="nav-forward"       hidden="true" command="cmd_BrowserForward" />  
       <toolbarbutton  id="nav-stopreload"    hidden="true" command="cmd_BrowserReload" class="reload-button" />
@@ -151,13 +155,15 @@
 
       <toolbarbutton  id="nav-bookmarkthis"  hidden="true" command="cmd_BrowserBookmarkThis" />  
 
-      <toolbarbutton  id="nav-pan"           hidden="true" command="cmd_Pan" />  
+      <toolbarbutton  id="nav-pan"           hidden="true" command="cmd_Pan" /> 
+ 
+      <toolbarbutton  id="nav-urlbar"        hidden="true" command="cmd_ViewURLBar" />  
 
       <toolbarbutton  id="nav-menu-button"   command="cmd_BrowserNavMenu" />  
       
     </toolbar>
 
-	<toolbar id="control-bar" >
+	<toolbar id="toolbar-urlbar" collapsed="true" >
 
       <!-- WARNING: don't add tabindex to the following element. Somehow it conflicts with the popup history open --> 
       
@@ -198,9 +204,7 @@
       
       
 	  <menuitem id="item-call"   label="" insertbefore="context-sep-view" oncommand="" hidden="true"/>
-      
-      
-      <menuitem id="link_as_new_tab"  label="&linknewtab.label;"   command="cmd_BrowserOpenLinkAsNewTab" hidden="true"/>
+        <menuitem id="link_as_new_tab"  label="&linknewtab.label;"   command="cmd_BrowserOpenLinkAsNewTab" hidden="true"/>
 	  <menuitem id="item-copy"        label="&contextCopy.label;"  oncommand="DoClipCopy()"              hidden="true"/>
 	  <menuitem id="item-paste"       label="&contextPaste.label;" oncommand="DoClipPaste()"             hidden="true"/>
 	  <menuitem id="item-find"        label="&findToolbar.label;"  command="cmd_ViewFind" />
@@ -254,25 +258,19 @@
 	  <menuitem id="menu_closeWindow" command="cmd_closeWindow" key="key_closeWindow" label=""  />
 	</popup>
     
-    <menupopup id="menu_MainPopup"
+ 
+
+    
+    <menupopup id="menu_NavPopup"
+               onpopuphiding="MenuNavPopupHiding()"  
                onpopupshown="MenuEnableEscapeKeys()"
-               onpopuphidden="MenuDisableEscapeKeys()" 
-               onpopuphiding="MenuMainPopupHiding()" 
-               onpopupshowing="MenuMainPopupShowing()"
-               oncommand="spinSetnext(gSpinFirst)" >
+               onpopuphidden="MenuDisableEscapeKeys()"
+               onpopupshowing="Menu2PopupShowing()"
+               oncommand="spinSetnext(gSpinLast)" >
       
-      <menuitem id="command_BrowserOpenTab" 
-                command="cmd_BrowserOpenTab"  
-                label="&newtab.label;"  /> 
 
-      <menuitem id="command_BrowserCloseTab" 
-                command="cmd_BrowserCloseTab" 
-                label="&closetab.label;"  /> 
+	<!-- this was in the main menu before --> 
 
-      <menuitem id="command_BrowserFileOpen" 
-                command="cmd_BrowserFileOpen" 
-                label="&fileopen.label;"  /> 
-                      
       <menu     id="command_TabFocus" 
                 label="&tabs.label;"  >
         
@@ -282,46 +280,21 @@
           
         </menupopup>
       </menu>
+
+
+
+      <menuitem id="command_BrowserCloseTab" 
+                command="cmd_BrowserCloseTab" 
+                label="&closetab.label;"  /> 
+
+      <menuitem id="command_BrowserFileOpen" 
+                command="cmd_BrowserFileOpen" 
+                label="&fileopen.label;"  /> 
+                      
+
         
       <menuseparator/>
     
-      <menuitem id="togglet_google" 
-                label="&togglet_google.label;" 
-                oncommand="DoGoogleToggle()"/>
-      
-      
-	  <menuitem id="textplus" 
-                label="&textSizePlus.label;" 
-                oncommand="BrowserResetZoomPlus()"/>
-      
-	  <menuitem id="testminus" 
-                label="&textSizeMinus.label;" 
-                oncommand="BrowserResetZoomMinus()"/>
-      
-      <menuseparator/>
-      
-      <menuitem id="command_ViewFind"
-                command="cmd_ViewFind" 
-                label="&findToolbar.label;"  /> 
-      
-      <menuitem id="command_pan"
-                command="cmd_Pan"  
-                label="&panCmd.label;"  /> 
-      
-      <menuitem id="command_Quit" 
-                class="separator-menu"  
-                command="cmd_Quit" 
-                label="&quit.label;"  /> 
-      
-    </menupopup>  
-    
-    <menupopup id="menu_NavPopup"
-               onpopuphiding="MenuNavPopupHiding()"  
-               onpopupshown="MenuEnableEscapeKeys()"
-               onpopuphidden="MenuDisableEscapeKeys()"
-               onpopupshowing="Menu2PopupShowing()"
-               oncommand="spinSetnext(gSpinLast)" >
-      
 
       <menuitem id="command_DoPanelPreferences" 
                   command="cmd_DoPanelPreferences" 
@@ -358,6 +331,15 @@
                 command="cmd_Go"  
                 label="&goCmd.label;"  /> 
             
+            
+	<!-- this was in the main nav item --> 
+
+      <menuitem id="command_Quit" 
+                class="separator-menu"  
+                command="cmd_Quit" 
+                label="&quit.label;"  /> 
+      
+
     </menupopup>  
     
     
