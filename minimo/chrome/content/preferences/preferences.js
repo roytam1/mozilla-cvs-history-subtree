@@ -84,6 +84,7 @@ function controlbarUIMaskWrite() {
 
 	gRefreshUIControlBar = true; 
 
+	
 	return strCheckedMaskList;
 }
 
@@ -601,6 +602,9 @@ function PrefOkay() {
 
 	document.getElementById("okay-button").setAttribute("disabled",true);
 
+      if(!gCancelSync) {
+		syncPrefSaveDOM();
+	}
 }
 
 /* 
@@ -676,7 +680,6 @@ function syncPrefSaveDOM() {
 
 		}
 
-		psvc.savePrefFile(null);
 
 		if( gRefreshUIControlBar) {
 
@@ -689,6 +692,11 @@ function syncPrefSaveDOM() {
 			gWin.syncControlBar();
 
 		}
+
+
+
+		psvc.savePrefFile(null);
+
 
 	} catch (e) { alert(e); }
 
