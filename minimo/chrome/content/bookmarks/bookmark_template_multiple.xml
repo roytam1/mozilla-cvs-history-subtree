@@ -16,7 +16,9 @@
 
 <div id="container2" >
 
+<!--
 <h3>&titleNew.label;</h3>
+-->
 
   <div>
     <img src="chrome://minimo/skin/extensions/icon-urlbar.png">
@@ -44,8 +46,9 @@
 <xsl:choose>
 <xsl:when test="@action">
 
+<!--
   <div class="section">&titleExtensions.label;</div>
-
+-->
   <div class="item extensions" >
 
     <img>
@@ -104,7 +107,9 @@
 
 </xsl:for-each>
 
+<!--
 <h3>&titleHistory.label;</h3>
+-->
 
  <xsl:for-each select="/bmgroup/bm/li">
 
