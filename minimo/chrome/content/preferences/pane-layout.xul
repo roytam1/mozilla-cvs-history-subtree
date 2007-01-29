@@ -107,9 +107,14 @@
       <toolbarbutton id="nav-pan" />  
     </hbox>
 
+    <hbox>    
+      <checkbox id="pref_controlbar_nav-urlbar" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
+      <toolbarbutton id="nav-urlbar" />  
+    </hbox>
+
     <!-- THIS IS VERY IMPORTANT - the JS Code ( controlbarUIMask* functions ) uses this following list --> 
 
-    <box id="controlBarFullList" value="nav-back;nav-forward;nav-stopreload;nav-find;nav-uizoom;nav-bookmarkthis;nav-pan" />
+    <box id="controlBarFullList" value="nav-back;nav-forward;nav-stopreload;nav-find;nav-uizoom;nav-bookmarkthis;nav-pan;nav-urlbar" />
 
     <box  id="controlBarVisibleIds" 
           preference="ui.controlbar"
