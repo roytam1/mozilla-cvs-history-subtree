@@ -224,6 +224,12 @@ toolbar *, #appcontent *, * {
 	  margin-left:2px;
   }
 
+#nav-urlbar
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-urlbar.png");
+	  margin-left:2px;
+  }
+
 #nav-bookmarkthis
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-bookmarkthis.png");
