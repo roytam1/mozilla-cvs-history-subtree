@@ -532,6 +532,21 @@ function readStringFromFile(file) {
   return text;
 }
 
+// Read the update channel from defaults only.  We do this to ensure that
+// the channel is tightly coupled with the application and does not apply
+// to other instances of the application that may use the same profile.
+function getUpdateChannel() {
+  try {
+    var defaults =
+        gPref.QueryInterface(Components.interfaces.nsIPrefService).
+        getDefaultBranch(null);
+
+    return defaults.getCharPref(PREF_APP_UPDATE_CHANNEL);
+  } catch (e) {
+    return "default";  // failover when pref not found
+  }
+}
+
 /**
  * Update Patch
  * @param   patch
@@ -792,6 +807,9 @@ Update.prototype = {
     update.setAttribute("detailsURL", this.detailsURL);
     update.setAttribute("licenseURL", this.licenseURL);
     update.setAttribute("serviceURL", this.serviceURL);
+    // to properly support updates to the MOZILLA_1_8_BRANCH and trunk
+    // write out the channel.  see bug #368082 for more details
+    update.setAttribute("channel", getUpdateChannel());
     update.setAttribute("installDate", this.installDate);
     update.setAttribute("statusText", this.statusText);
     update.setAttribute("buildID", this.buildID);
@@ -1788,17 +1806,6 @@ Checker.prototype = {
     if (!url || url == "") {
       LOG("Checker", "Update URL not defined");
       return null;
-    }
-
-    // Read the update channel from defaults only.  We do this to ensure that
-    // the channel is tightly coupled with the application and does not apply
-    // to other instances of the application that may use the same profile.
-    function getUpdateChannel() {
-      try {
-        return defaults.getCharPref(PREF_APP_UPDATE_CHANNEL);
-      } catch (e) {
-        return "default";  // failover when pref not found
-      }
     }
 
     url = url.replace(/%PRODUCT%/g, gApp.name);
