@@ -140,7 +140,7 @@ public static TestSuite createServerTestSuite() {
 		serverThread = 
 		    new THTTPD.ServerThread("LocalHTTPD",
 					    new File (getBrowserBinDir() +
-						      "/../../java/webclient/build.test"), -1);
+						      "/../../../java/webclient/build.test"), -1);
 		serverThread.start();
 		serverThread.P();
 		super.run(result);

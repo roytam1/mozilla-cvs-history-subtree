@@ -90,7 +90,7 @@ public class CurrentPageTest extends WebclientTestCase implements ClipboardOwner
     // Testcases
     // 
 
-    public void testCopyCurrentSelectionToSystemClipboard() throws Exception {
+    public void NOT_testCopyCurrentSelectionToSystemClipboard() throws Exception {
 	BrowserControl firstBrowserControl = null;
 	DocumentLoadListenerImpl listener = null;
 	Selection selection = null;
