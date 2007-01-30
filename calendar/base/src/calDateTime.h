@@ -49,10 +49,13 @@
 struct icaltimetype;
 struct _icaltimezone;
 
+/* This class subclasses nsCString so we can check tzids for "freshness". */
 class calTzId : public nsCString
 {
 public:
+    /* Used by AssignLiteral when we set the tzid to "utc" or "floating". */
     void Assign(char* c);
+    /* Used by mTimezone.Assign as our hook to check the tzid's "freshness". */
     void Assign(const nsACString_internal& aStr);
 };
 
