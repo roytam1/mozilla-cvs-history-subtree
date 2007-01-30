@@ -49,6 +49,13 @@
 struct icaltimetype;
 struct _icaltimezone;
 
+class calTzId : public nsCString
+{
+public:
+    void Assign(char* c);
+    void Assign(const nsACString_internal& aStr);
+};
+
 class calDateTime : public calIDateTime,
                     public nsIXPCScriptable
 {
@@ -80,7 +87,7 @@ protected:
     PRInt16 mSecond;
 
     PRBool mIsDate;
-    nsCString mTimezone;
+    calTzId mTimezone;
 
     PRInt16 mWeekday;
     PRInt16 mYearday;
@@ -95,4 +102,3 @@ protected:
 };
 
 #endif /* CALDATETIME_H_ */
-
