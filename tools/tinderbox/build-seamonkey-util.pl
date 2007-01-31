@@ -3246,6 +3246,7 @@ sub RunUnitTests {
     return 'testfailed';
   }
 
+  print_log "TinderboxPrint:TUnit:[OK]\n";
   return 'success';
 }
 
