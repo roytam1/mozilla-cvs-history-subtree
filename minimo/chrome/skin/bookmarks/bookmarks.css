@@ -1,5 +1,7 @@
 /* Dont remove te follwing classes */
 
+
+
   .rsslink  {
 
 
@@ -45,11 +47,30 @@
 
   }
 
+bookmarks {
+
+	overflow:hidden;
+	overflow-y:auto;
+    background-color:white; 
+}
+
+body {
+    background: transparent url(chrome://minimo/skin/tab-middle-bkgnd.png) 0 0 repeat-x fixed;
+
+    padding:4px;margin:0px;
+    font-family:verdana;
+    font-size:80%;
+ 
+
+
+
+}
+
 
 div.item {
 	border-bottom:1px solid gray;
  	margin:2px;
-      
+      overflow:hidden;
       padding-bottom:3px;
 }
 
@@ -61,26 +82,28 @@ div.item img {
 a {
   text-decoration:none;
   color:black;
+  line-height:1.3em;
+  font-size:1em;
 }
  	 
+a:focus {
 
+  line-height:1.3em;
+  font-size:1.1em;
+  font-weight:bold;
 
-bookmarks {
 }
+
+
 	
 .flavor {
- float:left;
 
+ float:left;
  opacity:.5;
 
 }
 
-body {
-    padding:0px;margin:0px;
-    font-family:verdana;
-    font-size:80%;
-    background-color:white;
-}
+
 
 .warning  {	
     background: url("chrome://global/skin/icons/Warning.png") no-repeat 0 0;	
@@ -95,16 +118,6 @@ body {
     margin:.5em;
 }
 
-.header  {	
-    background-color:rgb(229,96,10);
-    padding:2px;
-    padding-top:4px;
-    position:fixed;
-    top:0px;
-    width:100%;
-    padding-bottom:4px;
-}
-
 .header-icons {
     width:18px;
     height:18px;
@@ -117,9 +130,15 @@ body {
    padding-left:3px;
 }
 
-#container {
-	
-   margin-top:5em;
+#container2 {
+
+
+}
+
+.timehistory {
+
+
+
 }
 
 .header a {
