@@ -2403,7 +2403,7 @@ sub run_all_tests {
     # run TUnit
     if ($Settings::RunUnitTests and $test_result eq 'success') {
       $test_result = RunUnitTests("RunUnitTests",
-                                  $build_dir, "mozilla",
+                                  $build_dir, $binary_dir,
                                   ["make", "-k", "check"]);
     }
 
