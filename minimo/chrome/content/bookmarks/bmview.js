@@ -44,9 +44,17 @@ var gWin = null;
 
 function URLBarEventCatch(event) {
 
-   if(event.keyCode==13) {
+   var escapeToHistory = false; 
+
+   if(event.keyCode==KeyEvent.DOM_VK_RETURN) {
 	
 	URLBarEntered();
+
+   } 
+
+   if(event.keyCode==KeyEvent.DOM_VK_DOWN) {
+	
+	escapeToHistory = true;
 
    } 
 
@@ -55,10 +63,10 @@ function URLBarEventCatch(event) {
    /* This is to filter out everything but the history elements
     * This filter goes on StyleSheet rule level */
 
-   if(currentURLBarString != "") {
-	hbSelect("timehistory");
-   } else {
+   if(currentURLBarString == "" || currentURLBarString == " ") {
 	hbSelectAll();
+   } else {
+	hbSelect("timehistory");
    }
 
    var regExpFineString = currentURLBarString.replace(/\./g,"\.");
@@ -79,10 +87,17 @@ function URLBarEventCatch(event) {
 
 	if(textValue.match(regExp)) {
 		brother.style.display="block";
+
+	        if(escapeToHistory) {
+			brother.childNodes[1].focus(); escapeToHistory = false;
+		   }
+
+
 	} else {
 		brother.style.display="none";
 	} 
    } 
+
 }
 
 /* 
@@ -170,7 +185,7 @@ function SearchGoogle(vQuery) {
 
 function bmLoaded() {
 
-	document.getElementById("urlbar2").addEventListener("keypress",URLBarEventCatch,false);
+	document.getElementById("urlbar2").addEventListener("keypress",URLBarEventCatch,true);
 
 	document.getElementById("urlbar2").focus();
 
