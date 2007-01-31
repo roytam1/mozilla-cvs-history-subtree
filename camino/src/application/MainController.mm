@@ -1525,6 +1525,13 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     [self loadApplicationPage:pageToLoad];
 }
 
+- (IBAction)keyboardShortcutsLink:(id)aSender
+{
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"KeyboardShortcutsPageDefault", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"KeyboardShortcutsPageDefault"])
+    [self loadApplicationPage:pageToLoad];
+}
+
 - (IBAction)infoLink:(id)aSender
 {
   NSString* pageToLoad = NSLocalizedStringFromTable(@"InfoPageDefault", @"WebsiteDefaults", nil);
@@ -1535,27 +1542,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 - (IBAction)aboutPlugins:(id)aSender
 {
   [self loadApplicationPage:@"about:plugins"];
-}
-
-- (IBAction)releaseNoteLink:(id)aSender
-{
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"ReleaseNotesDefault", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"ReleaseNotesDefault"])
-    [self loadApplicationPage:pageToLoad];
-}
-
-- (IBAction)tipsTricksLink:(id)aSender
-{
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"TipsTricksPageDefault", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"TipsTricksPageDefault"])
-    [self loadApplicationPage:pageToLoad];
-}
-
-- (IBAction)searchCustomizeLink:(id)aSender
-{
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"SearchCustomPageDefault", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"SearchCustomPageDefault"])
-    [self loadApplicationPage:pageToLoad];
 }
 
 #pragma mark -
