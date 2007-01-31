@@ -77,6 +77,7 @@ nsMsgMailSession::~nsMsgMailSession()
 
 nsresult nsMsgMailSession::Init()
 {
+  m_desktopSearchService = do_GetService("@mozilla.org/desktop-search-integration;1");
   return NS_NewISupportsArray(getter_AddRefs(mWindows));
 }
 

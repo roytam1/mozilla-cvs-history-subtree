@@ -163,7 +163,7 @@ nsMessengerBootstrap::Handle(nsICommandLine* aCmdLine)
       rv = containingFolder->GetServer(getter_AddRefs(server));
       NS_ENSURE_SUCCESS(rv, rv);
       rv = server->GetMsgFolderFromURI(containingFolder, folderUri.get(), getter_AddRefs(containingFolder));
-      NS_ENSURE_SUCCESS(rv, rv);
+      NS_ENSURE_TRUE(containingFolder, NS_ERROR_FAILURE);
       // once we have the folder uri, open the db and search for the message id.
       nsAutoString unicodeMessageid;
       // strip off .mozeml at the end as well

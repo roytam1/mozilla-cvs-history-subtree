@@ -1,4 +1,3 @@
-#
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -12,11 +11,11 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is mozilla.org code.
+# The Original Code is spotlight search integration.
 #
 # The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998
+#  David Bienvenu <bienvenu@mozilla.comg>.
+# Portions created by the Initial Developer are Copyright (C) 2007
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
@@ -35,31 +34,19 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH   = ../..
+DEPTH     = ../../..
 topsrcdir = @top_srcdir@
 srcdir    = @srcdir@
-VPATH   = @srcdir@
+VPATH     = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS    = compose preferences addrbook migration search
-
-ifneq (,$(filter windows gtk2 mac cocoa, $(MOZ_WIDGET_TOOLKIT)))
-DIRS += shell
-endif
-
-ifdef MOZ_SAFE_BROWSING
-DIRS += phishing 
-endif
-
-#currently, only mac has a search integration component
+#currently, we only build this dir on the mac, but if it gets built on other platforms,
+#make sure we still only build spotlight integration on the mac.
 ifneq (,$(filter cocoa mac, $(MOZ_WIDGET_TOOLKIT)))
-DIRS += search
-endif
-
-DIRS += build
-
-EXTRA_PP_COMPONENTS = nsMailDefaultHandler.js
+EXTRA_PP_COMPONENTS = \
+	nsSpotlightIntegration.js \
+	$(NULL)
+endif         
 
 include $(topsrcdir)/config/rules.mk
-
