@@ -409,6 +409,7 @@ function GetFilterEditorMsgWindow()
     var nsIMsgWindow = Components.interfaces.nsIMsgWindow;
     gFilterEditorMsgWindow = Components.classes[msgWindowContractID].createInstance(nsIMsgWindow);
     gFilterEditorMsgWindow.SetDOMWindow(window); 
+    gFilterEditorMsgWindow.rootDocShell.appType = Components.interfaces.nsIDocShell.APP_TYPE_MAIL;
   }
   return gFilterEditorMsgWindow;
 }
