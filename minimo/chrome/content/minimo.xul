@@ -161,6 +161,10 @@
 
       <toolbarbutton  id="nav-menu-button"   command="cmd_BrowserNavMenu" />  
       
+      <toolbarbutton  id="nav-page-rss"  hidden="true" collapsed="true" />  
+      
+      <toolbarbutton  id="nav-page-lock" hidden="true"  />  
+      
     </toolbar>
 
 	<toolbar id="toolbar-urlbar" collapsed="true" >
