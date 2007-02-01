@@ -50,14 +50,14 @@ factory:
   {
   createInstance: function (aOuter, aIID) 
     {
-    if (aOuter != null)
-      throw Components.results.NS_ERROR_NO_AGGREGATION;
-    if (!aIID.equals(Components.interfaces.nsISupports))
-      throw Components.results.NS_ERROR_INVALID_ARG;
-    
-    InitSpotlightIntegration();
-    // return the singleton
-    return nsSpotlightIntegration.QueryInterface(aIID);
+      if (aOuter != null)
+        throw Components.results.NS_ERROR_NO_AGGREGATION;
+      if (!aIID.equals(Components.interfaces.nsISupports))
+        throw Components.results.NS_ERROR_INVALID_ARG;
+      
+      InitSpotlightIntegration();
+      // return the singleton
+      return nsSpotlightIntegration.QueryInterface(aIID);
     }       
   }, // factory
   
@@ -114,10 +114,12 @@ var gHeaderEnumerator;
 var gPrefBranch = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefService).getBranch(null);
 var gIndexMsgsToSpotlight;
 var gAlarm;
+var gBackgroundIndexingDone;
+var gMessenger;
 
 function InitSpotlightIntegration()
 {
-  SIDump("initing spotlight integration\n");
+  SIDump("initializing spotlight integration\n");
 
   try {
     gIndexMsgsToSpotlight = gPrefBranch.getBoolPref("mail.spotlight.enable");
@@ -127,7 +129,7 @@ function InitSpotlightIntegration()
   if (!gIndexMsgsToSpotlight)
     return;
   var nsIFolderListener = Components.interfaces.nsIFolderListener;
-  messenger = Components.classes["@mozilla.org/messenger;1"].createInstance().QueryInterface(Components.interfaces.nsIMessenger);
+  gMessenger = Components.classes["@mozilla.org/messenger;1"].createInstance().QueryInterface(Components.interfaces.nsIMessenger);
 
   var notificationService = Components.classes["@mozilla.org/messenger/msgnotificationservice;1"].getService(Components.interfaces.nsIMsgFolderNotificationService);
   notificationService.addListener(gFolderListener);
@@ -169,6 +171,7 @@ function FindNextFolderToIndex()
       }
     }
   }
+  
 }
 
 function FindNextHdrToIndex()
@@ -193,13 +196,14 @@ function FindNextHdrToIndex()
 function onTimer()
 {
   var msgHdrToIndex = null;
+
+  if (gBackgroundIndexingDone)
+    return;
   
   // find the current folder we're working on
   if (!gCurrentFolderToIndex)
     FindNextFolderToIndex();
   
-  // TODO - if we've cycled through all the folders, we should take a break
-  // from indexing.
   
   // we'd like to index more than one message on each timer fire,
   // but since streaming is async, it's hard to know how long
@@ -209,12 +213,22 @@ function onTimer()
   {
     var msgHdrToIndex = FindNextHdrToIndex();
   }
+  else
+  {
+    // we've cycled through all the folders, we should take a break
+    // from indexing of existing messages
+    gBackgroundIndexingDone = true;
+    
+  }
   if (!msgHdrToIndex)
   {
     SIDump("reached end of folder\n");
-    gLastFolderIndexedUri = gCurrentFolderToIndex.URI;
-    gPrefBranch.setCharPref("mail.spotlight.lastFolderIndexedUri", gLastFolderIndexedUri);
-    gCurrentFolderToIndex = null;
+    if (gCurrentFolderToIndex)
+    {
+      gLastFolderIndexedUri = gCurrentFolderToIndex.URI;
+      gPrefBranch.setCharPref("mail.spotlight.lastFolderIndexedUri", gLastFolderIndexedUri);
+      gCurrentFolderToIndex = null;
+    }
   }
   else
   {
@@ -249,7 +263,7 @@ var CreateMsgDisplayedObserver =
     // if the user is reading messages, we're not idle, so restart timer.
     restartTimer(60);
     SIDump("topic = " + aTopic + " uri = " + aData + "\n");
-    var msgHdr = messenger.msgHdrFromURI(aData);
+    var msgHdr = gMessenger.msgHdrFromURI(aData);
     var indexed = msgHdr.getUint32Property("indexed");
     if (!indexed)
     {
@@ -457,7 +471,7 @@ var gFolderListener = {
        {
          var srcFile = folder.filePath;
          srcFile.leafName = srcFile.leafName + ".mozmsgs";
-         srcFile.remove(false);
+         srcFile.remove(true);
          
        }
      }
@@ -496,7 +510,7 @@ var gFolderListener = {
         {
           msg = aSrcItems.QueryElementAt(msgIndex, Components.interfaces.nsIMsgDBHdr);
           var srcFile = GetSpotlightFileForMsgHdr(msg);
-          if (srcFile)
+          if (srcFile && srcFile.exists())
           {
             var destFile = aDestFolder.filePath;
             destFile.leafName = destFile.leafName + ".mozmsgs";
@@ -609,7 +623,7 @@ function GenerateSpotlightFile(msgHdr)
       file.create(0, 0644);
       var uri = folder.getUriForMsg(msgHdr);
       //SIDump("in onItemAdded messenger = " + messenger + "\n");
-      var msgService = messenger.messageServiceFromURI(uri);
+      var msgService = gMessenger.messageServiceFromURI(uri);
       gStreamListener.outputFile = file;
       
       msgService.streamMessage(uri, gStreamListener, null, null, false, "", null);
