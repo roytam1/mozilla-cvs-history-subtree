@@ -69,3 +69,7 @@ uninstall/UninstallFirefox.exe
 uninstall/UninstallDeerPark.exe
 components/myspell/en-US.dic
 components/myspell/en-US.aff
+# Remove any pending updates and update history to prevent a pave-over install
+updates/
+active-update.xml
+updates.xml
