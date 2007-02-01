@@ -243,27 +243,27 @@ toolbar *, #appcontent *, * {
 	  margin-left:2px;
   }
   
-#nav-page-rss 
+#nav-rss 
   {
 	  list-style-image      : url("chrome://minimo/skin/rssfavicon.png");
 	  margin-left:2px;
   }
 
-#nav-page-lock 
+#nav-lock 
   {
 	  list-style-image      : url("chrome://minimo/skin/");
 	  margin-left:2px;
   }
 
-#nav-page-lock.security-na {
+#nav-lock.security-na {
 }
 
-#nav-page-lock.security-broken {
+#nav-lock.security-broken {
     margin-left:2px;
     list-style-image: url("chrome://minimo/skin/security-broken.png");
 }
 
-#nav-page-lock.security-notbroken {
+#nav-lock.security-notbroken {
     margin-left:2px;
     list-style-image: url("chrome://minimo/skin/security-notbroken.png");
 }
