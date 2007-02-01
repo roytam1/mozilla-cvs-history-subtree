@@ -678,7 +678,9 @@ function syncControlBar() {
         var elementName =listItems[i]; 
         if(document.getElementById(elementName)) {
           document.getElementById(elementName).setAttribute("hidden","false");
-        }
+        } else {
+          document.getElementById(elementName).setAttribute("hidden","true");
+        } 
       } catch (i) { } 
 	}
   } catch (e) {
