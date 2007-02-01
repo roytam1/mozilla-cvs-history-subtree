@@ -689,7 +689,7 @@ function syncPrefSaveDOM() {
 		       */
 		
 		
-			gWin.syncControlBar();
+			gWin.syncControlBar(document.getElementById("controlBarFullList").getAttribute("value"));
 
 		}
 
