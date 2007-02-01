@@ -249,13 +249,15 @@ toolbar *, #appcontent *, * {
 	  margin-left:2px;
   }
 
-#nav-lock 
+#nav-lock
   {
-	  list-style-image      : url("chrome://minimo/skin/");
+	  list-style-image      : url("chrome://minimo/skin/security-na.png");
 	  margin-left:2px;
   }
 
 #nav-lock.security-na {
+	  list-style-image      : url("chrome://minimo/skin/security-na.png");
+	  margin-left:2px;
 }
 
 #nav-lock.security-broken {
