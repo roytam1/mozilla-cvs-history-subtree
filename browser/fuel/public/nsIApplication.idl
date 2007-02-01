@@ -1,0 +1,244 @@
+#include "nsISupports.idl"
+
+/**
+ * Interface that gives simplified access to the console
+ */
+[scriptable, uuid(ae8482e0-aa5a-11db-abbd-0800200c9a66)]
+interface nsIConsole : nsISupports
+{
+/**
+ * 
+ */
+  void log(in string msg);
+};
+
+
+  /**
+   * 
+   */
+[scriptable, function, uuid(05281820-ab62-11db-abbd-0800200c9a66)]
+interface nsIEventItem : nsISupports
+{
+  /**
+   * 
+   */
+  readonly attribute string type;
+
+  /**
+   * 
+   */
+  readonly attribute string detail;
+
+  /**
+   * 
+   */
+  readonly attribute string pref;
+
+  /**
+   * 
+   */
+  void preventDefault();
+}; 
+
+
+  /**
+   * 
+   */
+[scriptable, function, uuid(2dfe3a50-ab2f-11db-abbd-0800200c9a66)]
+interface nsIEventListener : nsISupports
+{
+  /**
+   * 
+   */
+  void handleEvent(in nsIEventItem event);
+}; 
+
+
+  /**
+   * 
+   */
+[scriptable, uuid(3a8ec9d0-ab19-11db-abbd-0800200c9a66)]
+interface nsIEvents : nsISupports
+{
+  /**
+   * 
+   */
+  void add(in string event, in nsIEventListener listener);
+
+  /**
+   * 
+   */
+  void remove(in string event, in nsIEventListener listener);
+
+  /**
+   * 
+   */
+  void fire(in string event);
+}; 
+
+
+  /**
+   * 
+   */
+[scriptable, uuid(ce697d40-aa5a-11db-abbd-0800200c9a66)]
+interface nsIPreferences : nsISupports
+{
+  /**
+   * The events object for the preferences
+   */
+  readonly attribute nsIEvents events;
+
+  /**
+   * Sets the value of a storage item with the given name.
+   * @param   name
+   *          The name of an item
+   * @param   value
+   *          The value to assign to the item
+   */
+  void set(in string name, in string value);
+
+  /**
+   * Gets the value of a preference. Returns a default value if
+   * the preference does not exist.
+   * @param   name
+   *          The name of preference
+   * @param   defaultValue
+   *          The value to return if preference does not exist
+   * @returns value of the preference or the given default value if preference
+   *          does not exists.
+   */
+  string get(in string name, in string defaultValue);
+}; 
+
+
+/**
+ * Interface representing a simple storage system
+ */
+[scriptable, uuid(bbaf6210-aafe-11db-abbd-0800200c9a66)]
+interface nsISessionStorage : nsISupports
+{
+  /**
+   * Determines if a storage item exists with the given name.
+   * @param   name
+   *          The name of an item
+   * @returns true if an item exists with the given name,
+   *          false otherwise.
+   */
+  boolean has(in string name);
+
+  /**
+   * Sets the value of a storage item with the given name.
+   * @param   name
+   *          The name of an item
+   * @param   value
+   *          The value to assign to the item
+   */
+  void set(in string name, in string value);
+
+  /**
+   * Gets the value of a storage item with the given name. Returns a
+   * default value if the item does not exist.
+   * @param   name
+   *          The name of an item
+   * @param   defaultValue
+   *          The value to return if no item exists with the given name
+   * @returns value of the item or the given default value if no item
+   *          exists with the given name.
+   */
+  string get(in string name, in string defaultValue);
+}; 
+
+
+  /**
+   * Interface representing an extension
+   */
+[scriptable, uuid(ea563b60-aa5a-11db-abbd-0800200c9a66)]
+interface nsIExtension : nsISupports
+{
+  /**
+   * The id of the extension.
+   */
+  readonly attribute string id;
+
+  /**
+   * The name of the extension.
+   */
+  readonly attribute string name;
+
+  /**
+   * The preferences object for the extension. Defaults to the
+   * "extensions.@id-of-extension." branch.
+   */
+  readonly attribute nsIPreferences prefs;
+
+  /**
+   * The storage object for the extension.
+   */
+  readonly attribute nsISessionStorage storage;
+
+  /**
+   * The events object for the extension.
+   */
+  readonly attribute nsIEvents events;
+}; 
+
+
+/**
+ * Interface representing a list of all installed extensions
+ */
+[scriptable, uuid(de281930-aa5a-11db-abbd-0800200c9a66)]
+interface nsIExtensions : nsISupports
+{
+  /**
+   * Determines if an extension exists with the given id.
+   * @param   id
+   *          The id of an extension
+   * @returns true if an extension exists with the given id,
+   *          false otherwise.
+   */
+  boolean has(in string id);
+
+  /**
+   * Gets a nsIExtension object for an extension.
+   * @param   id
+   *          The id of an extension
+   * @returns An extension object or null if no extension exists
+   *          with the given id.
+   */
+  nsIExtension get(in string id);
+}; 
+
+
+/**
+ * Interface for managing and accessing the applications systems
+ */
+[scriptable, uuid(fe74cf80-aa2d-11db-abbd-0800200c9a66)]
+interface nsIApplication : nsISupports
+{
+  /**
+   * The console object for the application.
+   */
+  readonly attribute nsIConsole console;
+
+  /**
+   * The extensions object for the application. Contains a list
+   * of all installed extensions.
+   */
+  readonly attribute nsIExtensions extensions;
+
+  /**
+   * The preferences object for the application. Defaults to the
+   * root branch.
+   */
+  readonly attribute nsIPreferences prefs;
+
+  /**
+   * The storage object for the application.
+   */
+  readonly attribute nsISessionStorage storage;
+
+  /**
+   * The events object for the application.
+   */
+  readonly attribute nsIEvents events;
+}; 
