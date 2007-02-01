@@ -306,27 +306,19 @@ nsBrowserStatusHandler.prototype =
     switch (aState) {
     case nsIWebProgressListener.STATE_IS_SECURE | nsIWebProgressListener.STATE_SECURE_HIGH:
   
-    //this.urlBar.value="level high";
-    // marcio 12000 trying to fix the security icon feedback . 
-    //document.styleSheets[1].cssRules[0].style.backgroundColor="yellow";
-    //gBrowser.selectedTab.style.border="2px solid black";
-
-    document.getElementById("nav-page-lock").className="security-notbroken";
+    document.getElementById("nav-lock").className="security-notbroken";
     break;	
     case nsIWebProgressListener.STATE_IS_SECURE | nsIWebProgressListener.STATE_SECURE_LOW:
     // this.urlBar.value="level low";
-    //document.styleSheets[1].cssRules[0].style.backgroundColor="lightyellow";
-    document.getElementById("nav-page-lock").className="security-notbroken";
+    document.getElementById("nav-lock").className="security-notbroken";
     break;
     case nsIWebProgressListener.STATE_IS_BROKEN:
     //this.urlBar.value="level broken";
-    //document.styleSheets[1].cssRules[0].style.backgroundColor="lightred";
-    document.getElementById("nav-page-lock").className="security-broken";
+    document.getElementById("nav-lock").className="security-broken";
     break;
     case nsIWebProgressListener.STATE_IS_INSECURE:
     default:
-    //document.styleSheets[1].cssRules[0].style.backgroundColor="white";
-    document.getElementById("nav-page-lock").className="security-na";
+    document.getElementById("nav-lock").className="security-na";
     break;
     }   
   },
@@ -844,7 +836,7 @@ function BrowserLinkAdded(event) {
         document.getElementById("feed-button-menu").setAttribute("onpopupshowing","DoBrowserRSS('"+ehref+"')");
       }
 
-      var feedToolbarButton = document.getElementById("nav-page-rss");
+      var feedToolbarButton = document.getElementById("nav-rss");
 	if(	feedToolbarButton ) {
 
 		feedToolbarButton.collapsed=false;
@@ -857,7 +849,7 @@ function BrowserLinkAdded(event) {
 
 function BrowserUpdateFeeds() {
   var feedButton = document.getElementById("feed-button");
-  var feedToolbarButton = document.getElementById("nav-page-rss");
+  var feedToolbarButton = document.getElementById("nav-rss");
 
   if (!feedButton)
     return;
