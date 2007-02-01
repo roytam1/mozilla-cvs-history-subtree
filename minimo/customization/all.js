@@ -671,3 +671,5 @@ pref("ui.fullscreen",false);
 pref("gps.enabled", true);
 
 pref("browser.bookmark.store", "<bm><li title='Del.icio.us Mobile Sites...' iconsrc='chrome://minimo/skin/extensions/mobile.png' page='yes'>chrome://minimo/content/rssview/rssload.xhtml?url=http://del.icio.us/rss/tag/mobile-sites</li><li title=\"Map Browsing\" iconsrc=\"chrome://minimo/skin/extensions/map.png\" page=\"yes\">http://people.mozilla.com/~chofmann/map.html</li><li title=\"Google Mobile Search\" iconsrc=\"chrome://minimo/skin/extensions/google.png\" page=\"yes\">http://www.google.com/xhtml</li><li page='yes'  title='Weather...' iconsrc='chrome://minimo/skin/extensions/weather.png'>http://mobile.wunderground.com</li></bm>");
+
+pref("ui.controlbar","nav-back;nav-forward;nav-stopreload;nav-find;nav-uizoom;nav-bookmarkthis;nav-pan;nav-urlbar;nav-rss;");
