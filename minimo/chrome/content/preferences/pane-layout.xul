@@ -124,7 +124,7 @@
 
     <!-- THIS IS VERY IMPORTANT - the JS Code ( controlbarUIMask* functions ) uses this following list --> 
 
-    <box id="controlBarFullList" value="nav-back;nav-forward;nav-stopreload;nav-find;nav-uizoom;nav-bookmarkthis;nav-pan;;nav-urlbar;nav-rss;nav-lock" />
+    <box id="controlBarFullList" value="nav-back;nav-forward;nav-stopreload;nav-find;nav-uizoom;nav-bookmarkthis;nav-pan;nav-urlbar;nav-rss;nav-lock" />
 
     <box  id="controlBarVisibleIds" 
           preference="ui.controlbar"
