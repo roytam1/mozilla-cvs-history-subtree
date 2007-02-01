@@ -662,7 +662,7 @@ function MiniNavStartup()
 
 }
 
-function syncControlBar() {
+function syncControlBar(fullList) {
 
  /* 
   * Custom Toolbar 
@@ -671,17 +671,29 @@ function syncControlBar() {
   */ 
 
   try { 
+	var listItems = fullList.split(";");
+	for(var i=0;i<listItems.length;i++) {
+        try {			
+          var elementName =listItems[i]; 
+          if(document.getElementById(elementName)) {
+            document.getElementById(elementName).setAttribute("hidden","true");
+          }
+        } catch (i) { } 
+	}
+  } catch (e) {
+  }
+  
+
+  try { 
     visibleToolbarItemsList = gPref.getCharPref("ui.controlbar");
 	var listItems = visibleToolbarItemsList.split(";");
 	for(var i=0;i<listItems.length;i++) {
-      try {			
-        var elementName =listItems[i]; 
-        if(document.getElementById(elementName)) {
-          document.getElementById(elementName).setAttribute("hidden","false");
-        } else {
-          document.getElementById(elementName).setAttribute("hidden","true");
-        } 
-      } catch (i) { } 
+        try {			
+          var elementName =listItems[i]; 
+          if(document.getElementById(elementName)) {
+            document.getElementById(elementName).setAttribute("hidden","false");
+          }
+        } catch (i) { } 
 	}
   } catch (e) {
   }
