@@ -114,12 +114,12 @@
 
     <hbox>    
       <checkbox id="pref_controlbar_nav-rss" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
-      <toolbarbutton id="nav-page-rss" />  
+      <toolbarbutton id="nav-rss" />  
     </hbox>
 
     <hbox>    
       <checkbox id="pref_controlbar_nav-lock" onclick="syncPref(document.getElementById('controlBarVisibleIds'));"   />
-      <toolbarbutton id="nav-page-lock" />  
+      <toolbarbutton id="nav-lock" />  
     </hbox>
 
     <!-- THIS IS VERY IMPORTANT - the JS Code ( controlbarUIMask* functions ) uses this following list --> 
