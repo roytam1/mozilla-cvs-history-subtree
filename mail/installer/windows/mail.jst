@@ -212,6 +212,13 @@ if(verifyDiskSpace(fProgram, srDest))
   setPackageFolder(fProgram);
 
   removeOldFiles();
+
+  // prevent pave-over installs by removing any existing updates
+  // and update history
+  deleteThisFolder("Program", "updates");
+  deleteThisFile("Program", "active-update.xml");
+  deleteThisFile("Program", "updates.xml");
+
   err = addDirectory("",
                      "$Version$",
                      "bin",              // dir name in jar to extract 
