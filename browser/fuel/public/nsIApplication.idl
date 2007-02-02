@@ -6,33 +6,31 @@
 [scriptable, uuid(ae8482e0-aa5a-11db-abbd-0800200c9a66)]
 interface nsIConsole : nsISupports
 {
-/**
- * 
- */
+  /**
+   * Sends a given string to the console.
+   * @param   msg
+   *          The text to send to the console
+   */
   void log(in string msg);
 };
 
 
-  /**
-   * 
-   */
+/**
+ * Interface hold information about an event.
+ */
 [scriptable, function, uuid(05281820-ab62-11db-abbd-0800200c9a66)]
 interface nsIEventItem : nsISupports
 {
   /**
-   * 
+   * The type of the event
    */
   readonly attribute string type;
 
   /**
-   * 
+   * Can hold extra details and data associated with the event. This
+   * is optional and event specific.
    */
-  readonly attribute string detail;
-
-  /**
-   * 
-   */
-  readonly attribute string pref;
+  readonly attribute string data;
 
   /**
    * 
@@ -41,45 +39,67 @@ interface nsIEventItem : nsISupports
 }; 
 
 
-  /**
-   * 
-   */
+/**
+ * Interface used as a callback for listening to events.
+ */
 [scriptable, function, uuid(2dfe3a50-ab2f-11db-abbd-0800200c9a66)]
 interface nsIEventListener : nsISupports
 {
   /**
-   * 
+   * This method is called whenever an event occurs of the type for which 
+   * the EventListener interface was registered.
+   *
+   * @param   event
+   *            The EventItem contains contextual information about the 
+   *            event. It also contains the preventDefault method which
+   *            is used to cancel default action.
    */
   void handleEvent(in nsIEventItem event);
 }; 
 
 
-  /**
-   * 
-   */
+/**
+ * Interface for supporting custom events.
+ */
 [scriptable, uuid(3a8ec9d0-ab19-11db-abbd-0800200c9a66)]
 interface nsIEvents : nsISupports
 {
   /**
-   * 
+   * Adds an event listener from the list. Calling remove
+   * with arguments which do not identify any currently registered
+   * EventListener has no effect.
+   * @param   event
+   *          The name of an event
+   * @param   listener
+   *          The reference to a listener
    */
   void add(in string event, in nsIEventListener listener);
 
   /**
-   * 
+   * Removes an event listener from the list. Calling remove
+   * with arguments which do not identify any currently registered
+   * EventListener has no effect.
+   * @param   event
+   *          The name of an event
+   * @param   listener
+   *          The reference to a listener
    */
   void remove(in string event, in nsIEventListener listener);
 
   /**
-   * 
+   * Iterates over the list of listeners and fires the callback for the given event.
+   * @param   event
+   *          The name of an event to fire
    */
   void fire(in string event);
 }; 
 
 
-  /**
-   * 
-   */
+/**
+ * Interface for simplified access to preferences. This interface is
+ * designed to be used in a predefined context. As such, the branch should
+ * be preset to a value appropriate to the context.
+ */
 [scriptable, uuid(ce697d40-aa5a-11db-abbd-0800200c9a66)]
 interface nsIPreferences : nsISupports
 {

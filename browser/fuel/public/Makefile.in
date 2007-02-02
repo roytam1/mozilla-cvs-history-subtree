@@ -42,7 +42,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE        = fule
+MODULE        = fuel
 XPIDL_MODULE  = fuel
 
 XPIDLSRCS = nsIApplication.idl

@@ -40,11 +40,6 @@ const nsIClassInfo = Components.interfaces.nsIClassInfo;
 const nsIObserver = Components.interfaces.nsIObserver;
 const nsIApplication = Components.interfaces.nsIApplication;
 
-// You can change these if you like
-const CLASS_ID = Components.ID("fe74cf80-aa2d-11db-abbd-0800200c9a66");
-const CLASS_NAME = "Application wrapper";
-const CONTRACT_ID = "@mozilla.org/application;1";
-
 
 //=================================================
 // Console constructor
@@ -59,11 +54,9 @@ Console.prototype = {
   _init : function() {
     this._console = Components.classes['@mozilla.org/consoleservice;1']
                               .getService(Components.interfaces.nsIConsoleService);
-    dump("init console\n");
   },
   
   log : function(msg) {
-    dump("log console\n");
     this._console.logStringMessage(msg);
   }
 };
@@ -71,30 +64,24 @@ Console.prototype = {
 
 //=================================================
 // EventItem constructor
-function EventItem(type, detail, pref) {
+function EventItem(type, detail) {
   this._type = type;
   this._detail = detail;
-  this._pref = pref;
 }
 
 //=================================================
 // EventItem implementation
 EventItem.prototype = {
   _type : "",
-  _detail : "",
-  _pref : "",
+  _data : "",
   _cancel : false,
   
   get type() {
     return this._type;
   },
   
-  get detail() {
-    return this._detail;
-  },
-  
-  get pref() {
-    return this._pref;
+  get data() {
+    return this._data;
   },
   
   preventDefault : function() {
@@ -114,10 +101,17 @@ Events.prototype = {
   _listeners : [],
   
   _init : function() {
-    dump("init events\n");
   },
   
   add : function(event, handler) {
+/*
+    function hasFilter(element, index, array) {
+      return (element.event == event && element.handler == handler);
+    }
+    var hasHandler = this._listeners.some(hasFilter);
+    if (hasHandler)
+      return;
+*/
     var key = {};
     key.event = event;
     key.handler = handler;
@@ -136,8 +130,9 @@ Events.prototype = {
   fire : function(event, eventItem) {
     for (var i=0; i<this._listeners.length; i++) {
       var key = this._listeners[i];
-      if (key.event == event)
-        key.handler.handleEvent(eventItem)
+      if (key.event == event) {
+        key.handler.handleEvent(eventItem);
+      }
     }
   }
 };
@@ -172,7 +167,6 @@ Preferences.prototype = {
     this._prefs.QueryInterface(nsIPrefBranch);
     this._prefs.QueryInterface(nsIPrefBranch2);
     
-    dump("new events\n");
     this._events = new Events();
     this._events._init();
 
@@ -182,7 +176,7 @@ Preferences.prototype = {
   // for nsIObserver
   observe: function(subject, topic, data) {
     if (topic == "nsPref:changed") {
-      var evt = new EventItem("change", "preference", data);
+      var evt = new EventItem("change", data);
       this.events.fire("change", evt);
     }
   },
@@ -269,8 +263,7 @@ SessionStorage.prototype = {
     
     if (this.has(name)) {
       value = this._storage[name];
-    }
-    
+    }    
     return value;
   }
 };
@@ -285,14 +278,30 @@ function Extension() {
 // Extensions implementation
 Extension.prototype = {
   _item : null,
+  _prefs : null,
   _storage : null,
+  _events : null,
   
   _init : function(item) {
-    dump("init extension\n");
     this._item = item;
+
+    var domain = "extensions." + _item.id + ".";
+    this._prefs = new Preferences();
+    this._prefs._init(domain);
 
     this._storage = new SessionStorage();
     this._storage._init();
+
+    this._events = new Events();
+    this._events._init();
+    
+    var installedPref = "install-event-fired";
+    if (this._prefs.has(installPref) == false) {
+      this._prefs.set(installPref, true);
+
+      var evt = new EventItem("install", this._item.id);
+      this._events.fire("install", evt);
+    }
   },
   
   get id() {
@@ -305,6 +314,14 @@ Extension.prototype = {
   
   get storage() {
     return this._storage;
+  },
+  
+  get prefs() {
+    return this._prefs;
+  },
+  
+  get events() {
+    return this._events;
   }
 };
 
@@ -320,7 +337,6 @@ Extensions.prototype = {
   _extmgr : null,
   
   _init : function() {
-    dump("init extensions\n");
     this._extmgr = Components.classes["@mozilla.org/extensions/manager;1"]
                              .getService(Components.interfaces.nsIExtensionManager);
   },
@@ -338,23 +354,27 @@ Extensions.prototype = {
   },
   
   has : function(id) {
-    dump("has extensions\n");
     return (this._extmgr != null && this._extmgr.getItemForID(id) != null);
   },
   
   get : function(id) {
     var extension = null;
 
-    var item = this._extmgr.getItemForID(id);
-    if (item) {
-      extension = new Extension();
-      extension._init(item);
+    if (this._extmgr) {
+      var item = this._extmgr.getItemForID(id);
+      if (item) {
+        extension = new Extension();
+        extension._init(item);
+      }
     }
-
     return extension;
   }
 };
 
+
+const CLASS_ID = Components.ID("fe74cf80-aa2d-11db-abbd-0800200c9a66");
+const CLASS_NAME = "Application wrapper";
+const CONTRACT_ID = "@mozilla.org/application;1";
 
 //=================================================
 // Application constructor
@@ -372,19 +392,15 @@ Application.prototype = {
   toolbars : [],
   
   _init : function() {
-    dump("new console\n");
     this._console = new Console();
     this._console._init();
 
-    dump("new prefs\n");
     this._prefs = new Preferences();
     this._prefs._init();
 
-    dump("new storage\n");
     this._storage = new SessionStorage();
     this._storage._init();
 
-    dump("new events\n");
     this._events = new Events();
     this._events._init();
     
@@ -402,24 +418,26 @@ Application.prototype = {
   // for nsIObserver
   observe: function(subject, topic, data) {
     if (topic == "app-startup") {
-      dump("new extensions\n");
       this._extensions = new Extensions();
       this._extensions._init();
       
-      var evt = new EventItem("load", "application", "");
+      var evt = new EventItem("load", "application");
       this._events.fire("load", evt);
     }
     else if (topic == "final-ui-startup") {
-      var evt = new EventItem("ready", "application", "");
+      var evt = new EventItem("ready", "application");
       this._events.fire("ready", evt);
     }
     else if (topic == "quit-application-requested") {
-      var evt = new EventItem("quit", "application", "");
+      var evt = new EventItem("quit", "application");
       this._events.fire("quit", evt);
-      // XXX - we can stop the quit by checking the evt._cancel
+      // we can stop the quit by checking the evt._cancel
+      if (evt._cancel) {
+        data.value = true;
+      }
     }
     else if (topic == "xpcom-shutdown") {
-      var evt = new EventItem("unload", "application", "");
+      var evt = new EventItem("unload", "application");
       this._events.fire("unload", evt);
 
       var os = Components.classes["@mozilla.org/observer-service;1"]
@@ -462,7 +480,6 @@ Application.prototype = {
     {
         throw Components.results.NS_ERROR_NO_INTERFACE;
     }
-    dump("qi - " +aIID + "\n");
     return this;
   },
   
@@ -501,7 +518,6 @@ var ApplicationFactory = {
       this.singleton = new Application();
       this.singleton._init();
     }
-    dump("create - " +aIID + "\n");
     return this.singleton.QueryInterface(aIID);
   }
 };
@@ -514,11 +530,12 @@ var ApplicationModule = {
     aCompMgr = aCompMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
     aCompMgr.registerFactoryLocation(CLASS_ID, CLASS_NAME, CONTRACT_ID, aFileSpec, aLocation, aType);
     
-    // Make the Update Service a startup observer
+    // make the Update Service a startup observer
     var categoryManager = Components.classes["@mozilla.org/categorymanager;1"]
                                     .getService(Components.interfaces.nsICategoryManager);
     categoryManager.addCategoryEntry("app-startup", CLASS_NAME, "service," + CONTRACT_ID, true, true);
-                                     
+
+    // add Application as a global property for easy access                                     
     categoryManager.addCategoryEntry("JavaScript global property", "Application", CONTRACT_ID, true, true);
   },
 
