@@ -2509,7 +2509,11 @@ public:
     NS_DECL_ISUPPORTS
 
 private:
+    static JSBool JS_DLL_CALLBACK ContextHolderBranchCallback(JSContext *cx,
+                                                              JSScript *script);
+    
     XPCAutoJSContext mJSContext;
+    JSBranchCallback mOrigBranchCallback;
     JSContext *mOuterContext;
 };
 
@@ -2517,6 +2521,7 @@ NS_IMPL_ISUPPORTS0(ContextHolder)
 
 ContextHolder::ContextHolder(JSContext *aOuterCx, JSObject *aSandbox)
     : mJSContext(JS_NewContext(JS_GetRuntime(aOuterCx), 1024), JS_FALSE),
+      mOrigBranchCallback(nsnull),
       mOuterContext(aOuterCx)
 {
     if (mJSContext) {
@@ -2524,7 +2529,30 @@ ContextHolder::ContextHolder(JSContext *aOuterCx, JSObject *aSandbox)
         JS_SetGlobalObject(mJSContext, aSandbox);
         JS_SetContextPrivate(mJSContext, this);
         JS_SetErrorReporter(mJSContext, SandboxErrorReporter);
+
+        // Now cache the original branch callback
+        mOrigBranchCallback = JS_SetBranchCallback(aOuterCx, nsnull);
+        JS_SetBranchCallback(aOuterCx, mOrigBranchCallback);
+
+        if (mOrigBranchCallback) {
+            JS_SetBranchCallback(mJSContext, ContextHolderBranchCallback);
+        }
     }
+}
+
+JSBool JS_DLL_CALLBACK
+ContextHolder::ContextHolderBranchCallback(JSContext *cx, JSScript *script)
+{
+    ContextHolder* thisObject =
+        NS_STATIC_CAST(ContextHolder*, JS_GetContextPrivate(cx));
+    NS_ASSERTION(thisObject, "How did that happen?");
+
+    if (thisObject->mOrigBranchCallback) {
+        return (thisObject->mOrigBranchCallback)(thisObject->mOuterContext,
+                                                 script);
+    }
+
+    return JS_TRUE;
 }
 
 static void
