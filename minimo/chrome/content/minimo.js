@@ -2036,7 +2036,7 @@ function spinCycle() {
 
   gKeySpinCurrent.SpinOut();
   gKeySpinCurrent = gKeySpinCurrent.next;
-  setTimeout("gKeySpinCurrent.SpinIn()",60);
+  setTimeout("gKeySpinCurrent.SpinIn()",30);
 }
 
 /* 
@@ -2064,6 +2064,10 @@ function spinSetnext(ref) {
 
 function spinCreate() {
 
+ /* 
+  * Not in use with the new homebase 
+  */
+
  var spinLeftMenu = { 
     SpinIn:function () {
       document.getElementById("menu-button").focus();
@@ -2074,6 +2078,10 @@ function spinCreate() {
       document.getElementById("menu_MainPopup").hidePopup();
     }
   }
+
+  /* 
+   * not in use with the new homebase 
+   */
 
   var spinUrlBar = { 
     SpinIn:function () {
@@ -2100,6 +2108,10 @@ function spinCreate() {
     }
   }
 
+  /* 
+   * New homebase versio uses it 
+   */
+
   var spinRightMenu = { 
     SpinIn:function () {
       document.getElementById("nav-menu-button").focus();
@@ -2108,6 +2120,47 @@ function spinCreate() {
     }, 
     SpinOut:function () {
       document.getElementById("menu_NavPopup").hidePopup();
+    }
+  }
+
+  /* 
+   * This reaches the actual content of the selected Tab 
+   */
+
+  var spinContent = { 
+
+    SpinIn:function () {
+
+        /* Ask marcio, somehow advance and rewind Igot a better behavior, it kicks the focus to finds its first element in
+           in the doc, then the backwards allows to reach the actual first focused one */
+
+	  gBrowser.contentWindow.focus();
+	  document.commandDispatcher.advanceFocus();
+
+    }, 
+    SpinOut:function () {
+
+    }
+  }
+
+  /* 
+   *  Reaches the tab level 
+   */
+
+  var spinTabs = { 
+
+    SpinIn:function () {
+
+
+ 	 if(gBrowser.mPanelContainer.childNodes.length>1) {
+	  gBrowser.selectedTab.focus();
+ 	 } else {
+		spinCycle();
+	 } 
+
+    }, 
+    SpinOut:function () {
+
     }
   }
 
@@ -2123,21 +2176,20 @@ function spinCreate() {
     }
   }
 
+
   gSpinTemp = {	
     SpinIn:function () { }, 
     SpinOut:function () { }
   }
 
-  gKeySpinCurrent = spinRightMenu;
+  gKeySpinCurrent = spinContent;
 
-  spinLeftMenu.next=spinUrlBar;
-  spinUrlBar.next=spinRightMenu;
-  spinRightMenu.next=spinLeftMenu;
-  spinDocument.next=spinLeftMenu;   // this may show up in the middle. 
-
-  gSpinLast=spinRightMenu;
+  spinContent.next=spinRightMenu;  
+  spinRightMenu.next=spinTabs;  
+  spinTabs.next=spinContent;
+  gSpinLast=spinContent;
   gSpinDocument = spinDocument;
-  gSpinFirst=spinLeftMenu;
+  gSpinFirst=spinRightMenu;
   gSpinUrl=spinUrlBar;
 
 }
