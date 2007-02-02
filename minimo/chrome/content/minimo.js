@@ -895,21 +895,22 @@ function BrowserUpdateFeeds() {
  * For now, this updates via DOM the top menu. Context menu should be here as well. 
  */
 function BrowserUpdateBackForwardState() {
+
   if(gBrowser.webNavigation.canGoBack) {
     document.getElementById("command_back").hidden = false;
-    document.getElementById("item-back").hidden = false;
+    document.getElementById("nav-back").className="";
   } else {
     document.getElementById("command_back").hidden = true;
-    document.getElementById("item-back").hidden = true;
+    document.getElementById("nav-back").className="unactive";
   }
-        
   if(gBrowser.webNavigation.canGoForward) {
     document.getElementById("command_forward").hidden = false;
-    document.getElementById("item-forward").hidden = false;
+    document.getElementById("nav-forward").className="";
   } else {
     document.getElementById("command_forward").hidden = true;
-    document.getElementById("item-forward").hidden = true;
+    document.getElementById("nav-forward").className="unactive";
   }
+
 }
 
 
