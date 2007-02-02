@@ -59,7 +59,7 @@
     <menuitem id="spellCheckIgnoreWord"
               label="&spellCheckIgnoreWord.label;"
               accesskey="&spellCheckIgnoreWord.accesskey;"
-              oncommand="InlineSpellCheckerUI.ignoreWord();"/>
+              oncommand="InlineSpellCheckerUI.mInlineSpellChecker.ignoreWord(InlineSpellCheckerUI.mMisspelling);"/>
     <menuseparator id="spellCheckSuggestionsSeparator"/>
 
     <menuitem id="menu_undo_cm"   label="&undoCmd.label;" accesskey="&undo.accesskey;" command="cmd_undo"/>
