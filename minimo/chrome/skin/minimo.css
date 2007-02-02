@@ -190,6 +190,19 @@ toolbar *, #appcontent *, * {
 	  margin-left:2px;
   }
 
+#nav-back.unactive
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-back.png");
+	  -moz-opacity:.4;
+  }
+
+#nav-forward.unactive 
+  {
+	  list-style-image      : url("chrome://minimo/skin/icon-forward.png");
+	  -moz-opacity:.4;
+
+  }
+
 #nav-ui-zoom-plus 
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-eye-plus.png");
