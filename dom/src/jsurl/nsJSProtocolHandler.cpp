@@ -258,11 +258,41 @@ nsresult nsJSThunk::EvaluateScript(nsIChannel *aChannel)
         // prevent it from accessing data it doesn't have permissions
         // to access.
 
+        // First check to make sure it's OK to evaluate this script to
+        // start with.  For example, script could be disabled.
+        nsCOMPtr<nsIPrincipal> enabledCheckPrincipal = principal;
+        if (!enabledCheckPrincipal) {
+            // We just need a principal that's not the system principal and
+            // isn't whitelisted by CanExecuteScripts.  An about:blank
+            // principal will do nicely.
+            nsCOMPtr<nsIURI> uri;
+            rv = NS_NewURI(getter_AddRefs(uri), "about:blank");
+            NS_ENSURE_SUCCESS(rv, rv);
+            rv = securityManager->
+                GetCodebasePrincipal(uri,
+                                     getter_AddRefs(enabledCheckPrincipal));
+            NS_ENSURE_SUCCESS(rv, rv);
+        }
+
+        JSContext *cx = (JSContext*)scriptContext->GetNativeContext();
+
+        PRBool ok;
+        rv = securityManager->CanExecuteScripts(cx, enabledCheckPrincipal,
+                                                &ok);
+        if (NS_FAILED(rv)) {
+            return rv;
+        }
+
+        if (!ok) {
+            // Treat this as returning undefined from the script.  That's what
+            // nsJSContext does.
+            return NS_ERROR_DOM_RETVAL_UNDEFINED;
+        }
+
         nsIXPConnect *xpc = nsContentUtils::XPConnect();
         nsCOMPtr<nsIXPConnect_MOZILLA_1_8_BRANCH> xpc_18 =
             do_QueryInterface(xpc);
 
-        JSContext *cx = (JSContext*)scriptContext->GetNativeContext();
         nsCOMPtr<nsIXPConnectJSObjectHolder> sandbox;
         rv = xpc_18->CreateSandbox(cx, principal, getter_AddRefs(sandbox));
         NS_ENSURE_SUCCESS(rv, rv);
