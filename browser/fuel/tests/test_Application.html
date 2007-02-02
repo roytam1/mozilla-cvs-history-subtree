@@ -1,0 +1,22 @@
+<html>
+<head>
+  <title>Testing Application.js</title>
+  <script type="text/javascript" src="/MochiKit/MochiKit.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/EventUtils.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css"></link>
+</head>
+<body>
+<pre id="test"><script class="testbody" type="text/javascript">
+netscape.security.PrivilegeManager.enablePrivilege('UniversalXPConnect UniversalBrowserAccess');
+
+ok( Components, "Making sure we have XPCOM privileges" );
+
+ok( Application, "Making sure we have access to Application" );
+
+Application.storage.set("fuel-test", "dummy");
+var hasItem = Application.storage.has("fuel-test");
+ok( hasItem, "checking storage" );
+</script></pre>
+</body>
+</html>
