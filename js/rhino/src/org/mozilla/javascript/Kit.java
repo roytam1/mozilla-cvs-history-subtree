@@ -1,7 +1,7 @@
-/* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+/* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
  * The contents of this file are subject to the Mozilla Public License Version
  * 1.1 (the "License"); you may not use this file except in compliance with
@@ -13,32 +13,36 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is collection of utilities useful for Rhino code.
+ * The Original Code is Rhino code, released
+ * May 6, 1999.
  *
  * The Initial Developer of the Original Code is
- * RUnit Software AS.
- * Portions created by the Initial Developer are Copyright (C) 2003
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-1999
  * the Initial Developer. All Rights Reserved.
  *
- * Contributor(s): Igor Bukanov, igor@fastmail.fm
+ * Contributor(s):
+ *   Igor Bukanov, igor@fastmail.fm
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
  *
  * ***** END LICENSE BLOCK ***** */
 
 package org.mozilla.javascript;
 
-import java.lang.reflect.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.lang.reflect.Method;
+import java.util.Hashtable;
 
 /**
  * Collection of utilities
@@ -46,8 +50,25 @@ import java.lang.reflect.*;
 
 public class Kit
 {
+    /**
+     * Reflection of Throwable.initCause(Throwable) from JDK 1.4
+     * or nul if it is not available.
+     */
+    private static Method Throwable_initCause = null;
 
-    static Class classOrNull(String className)
+    static {
+        // Are we running on a JDK 1.4 or later system?
+        try {
+            Class ThrowableClass = Kit.classOrNull("java.lang.Throwable");
+            Class[] signature = { ThrowableClass };
+            Throwable_initCause
+                = ThrowableClass.getMethod("initCause", signature);
+        } catch (Exception ex) {
+            // Assume any exceptions means the method does not exist.
+        }
+    }
+
+    public static Class classOrNull(String className)
     {
         try {
             return Class.forName(className);
@@ -61,7 +82,7 @@ public class Kit
         return null;
     }
 
-    static Class classOrNull(ClassLoader loader, String className)
+    public static Class classOrNull(ClassLoader loader, String className)
     {
         try {
             return loader.loadClass(className);
@@ -88,35 +109,154 @@ public class Kit
     }
 
     /**
+     * Check that testClass is accesible from the given loader.
+     */
+    static boolean testIfCanLoadRhinoClasses(ClassLoader loader)
+    {
+        Class testClass = ScriptRuntime.ContextFactoryClass;
+        Class x = Kit.classOrNull(loader, testClass.getName());
+        if (x != testClass) {
+            // The check covers the case when x == null =>
+            // loader does not know about testClass or the case
+            // when x != null && x != testClass =>
+            // loader loads a class unrelated to testClass
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * If initCause methods exists in Throwable, call
+     * <tt>ex.initCause(cause)</tt> or otherwise do nothing.
+     * @return The <tt>ex</tt> argument.
+     */
+    public static RuntimeException initCause(RuntimeException ex,
+                                             Throwable cause)
+    {
+        if (Throwable_initCause != null) {
+            Object[] args = { cause };
+            try {
+                Throwable_initCause.invoke(ex, args);
+            } catch (Exception e) {
+                // Ignore any exceptions
+            }
+        }
+        return ex;
+    }
+
+    /**
      * Split string into array of strings using semicolon as string terminator
      * (; after the last string is required).
      */
     public static String[] semicolonSplit(String s)
     {
-        int count = 0;
-        for (int cursor = 0; ;) {
-            int next = s.indexOf(';', cursor) + 1;
-            if (next <= 0) {
-                // check for missing ;
-                if (cursor + 1 < s.length())
+        String[] array = null;
+        for (;;) {
+            // loop 2 times: first to count semicolons and then to fill array
+            int count = 0;
+            int cursor = 0;
+            for (;;) {
+                int next = s.indexOf(';', cursor);
+                if (next < 0) {
+                    break;
+                }
+                if (array != null) {
+                    array[count] = s.substring(cursor, next);
+                }
+                ++count;
+                cursor = next + 1;
+            }
+            // after the last semicolon
+            if (array == null) {
+                // array size counting state:
+                // check for required terminating ';'
+                if (cursor != s.length())
                     throw new IllegalArgumentException();
+                array = new String[count];
+            } else {
+                // array filling state: stop the loop
                 break;
             }
-            ++count;
-            cursor = next + 1;
-        }
-        String[] array = new String[count];
-        count = 0;
-        for (int cursor = 0; ;) {
-            int next = s.indexOf(';', cursor);
-            if (next < 0) { break; }
-            array[count] = s.substring(cursor, next);
-            ++count;
-            cursor = next + 1;
         }
         return array;
     }
 
+    /**
+     * If character <tt>c</tt> is a hexadecimal digit, return
+     * <tt>accumulator</tt> * 16 plus corresponding
+     * number. Otherise return -1.
+     */
+    public static int xDigitToInt(int c, int accumulator)
+    {
+        check: {
+            // Use 0..9 < A..Z < a..z
+            if (c <= '9') {
+                c -= '0';
+                if (0 <= c) { break check; }
+            } else if (c <= 'F') {
+                if ('A' <= c) {
+                    c -= ('A' - 10);
+                    break check;
+                }
+            } else if (c <= 'f') {
+                if ('a' <= c) {
+                    c -= ('a' - 10);
+                    break check;
+                }
+            }
+            return -1;
+        }
+        return (accumulator << 4) | c;
+    }
+
+    /**
+     * Add <i>listener</i> to <i>bag</i> of listeners.
+     * The function does not modify <i>bag</i> and return a new collection
+     * containing <i>listener</i> and all listeners from <i>bag</i>.
+     * Bag without listeners always represented as the null value.
+     * <p>
+     * Usage example:
+     * <pre>
+     *     private volatile Object changeListeners;
+     *
+     *     public void addMyListener(PropertyChangeListener l)
+     *     {
+     *         synchronized (this) {
+     *             changeListeners = Kit.addListener(changeListeners, l);
+     *         }
+     *     }
+     *
+     *     public void removeTextListener(PropertyChangeListener l)
+     *     {
+     *         synchronized (this) {
+     *             changeListeners = Kit.removeListener(changeListeners, l);
+     *         }
+     *     }
+     *
+     *     public void fireChangeEvent(Object oldValue, Object newValue)
+     *     {
+     *     // Get immune local copy
+     *         Object listeners = changeListeners;
+     *         if (listeners != null) {
+     *             PropertyChangeEvent e = new PropertyChangeEvent(
+     *                 this, "someProperty" oldValue, newValue);
+     *             for (int i = 0; ; ++i) {
+     *                 Object l = Kit.getListener(listeners, i);
+     *                 if (l == null)
+     *                     break;
+     *                 ((PropertyChangeListener)l).propertyChange(e);
+     *             }
+     *         }
+     *     }
+     * </pre>
+     *
+     * @param listener Listener to add to <i>bag</i>
+     * @param bag Current collection of listeners.
+     * @return A new bag containing all listeners from <i>bag</i> and
+     *          <i>listener</i>.
+     * @see #removeListener(Object bag, Object listener)
+     * @see #getListener(Object bag, int index)
+     */
     public static Object addListener(Object bag, Object listener)
     {
         if (listener == null) throw new IllegalArgumentException();
@@ -140,6 +280,22 @@ public class Kit
         return bag;
     }
 
+    /**
+     * Remove <i>listener</i> from <i>bag</i> of listeners.
+     * The function does not modify <i>bag</i> and return a new collection
+     * containing all listeners from <i>bag</i> except <i>listener</i>.
+     * If <i>bag</i> does not contain <i>listener</i>, the function returns
+     * <i>bag</i>.
+     * <p>
+     * For usage example, see {@link addListener(Object bag, Object listener)}.
+     *
+     * @param listener Listener to remove from <i>bag</i>
+     * @param bag Current collection of listeners.
+     * @return A new bag containing all listeners from <i>bag</i> except
+     *          <i>listener</i>.
+     * @see #addListener(Object bag, Object listener)
+     * @see #getListener(Object bag, int index)
+     */
     public static Object removeListener(Object bag, Object listener)
     {
         if (listener == null) throw new IllegalArgumentException();
@@ -176,6 +332,18 @@ public class Kit
         return bag;
     }
 
+    /**
+     * Get listener at <i>index</i> position in <i>bag</i> or null if
+     * <i>index</i> equals to number of listeners in <i>bag</i>.
+     * <p>
+     * For usage example, see {@link addListener(Object bag, Object listener)}.
+     *
+     * @param bag Current collection of listeners.
+     * @param index Index of the listener to access.
+     * @return Listener at the given index or null.
+     * @see #addListener(Object bag, Object listener)
+     * @see #removeListener(Object bag, Object listener)
+     */
     public static Object getListener(Object bag, int index)
     {
         if (index == 0) {
@@ -206,6 +374,100 @@ public class Kit
         }
     }
 
+    static Object initHash(Hashtable h, Object key, Object initialValue)
+    {
+        synchronized (h) {
+            Object current = h.get(key);
+            if (current == null) {
+                h.put(key, initialValue);
+            } else {
+                initialValue = current;
+            }
+        }
+        return initialValue;
+    }
+
+    private final static class ComplexKey
+    {
+        private Object key1;
+        private Object key2;
+        private int hash;
+
+        ComplexKey(Object key1, Object key2)
+        {
+            this.key1 = key1;
+            this.key2 = key2;
+        }
+
+        public boolean equals(Object anotherObj)
+        {
+            if (!(anotherObj instanceof ComplexKey))
+                return false;
+            ComplexKey another = (ComplexKey)anotherObj;
+            return key1.equals(another.key1) && key2.equals(another.key2);
+        }
+
+        public int hashCode()
+        {
+            if (hash == 0) {
+                hash = key1.hashCode() ^ key2.hashCode();
+            }
+            return hash;
+        }
+    }
+
+    public static Object makeHashKeyFromPair(Object key1, Object key2)
+    {
+        if (key1 == null) throw new IllegalArgumentException();
+        if (key2 == null) throw new IllegalArgumentException();
+        return new ComplexKey(key1, key2);
+    }
+
+    public static String readReader(Reader r)
+        throws IOException
+    {
+        char[] buffer = new char[512];
+        int cursor = 0;
+        for (;;) {
+            int n = r.read(buffer, cursor, buffer.length - cursor);
+            if (n < 0) { break; }
+            cursor += n;
+            if (cursor == buffer.length) {
+                char[] tmp = new char[buffer.length * 2];
+                System.arraycopy(buffer, 0, tmp, 0, cursor);
+                buffer = tmp;
+            }
+        }
+        return new String(buffer, 0, cursor);
+    }
+
+    public static byte[] readStream(InputStream is, int initialBufferCapacity)
+        throws IOException
+    {
+        if (initialBufferCapacity <= 0) {
+            throw new IllegalArgumentException(
+                "Bad initialBufferCapacity: "+initialBufferCapacity);
+        }
+        byte[] buffer = new byte[initialBufferCapacity];
+        int cursor = 0;
+        for (;;) {
+            int n = is.read(buffer, cursor, buffer.length - cursor);
+            if (n < 0) { break; }
+            cursor += n;
+            if (cursor == buffer.length) {
+                byte[] tmp = new byte[buffer.length * 2];
+                System.arraycopy(buffer, 0, tmp, 0, cursor);
+                buffer = tmp;
+            }
+        }
+        if (cursor != buffer.length) {
+            byte[] tmp = new byte[cursor];
+            System.arraycopy(buffer, 0, tmp, 0, cursor);
+            buffer = tmp;
+        }
+        return buffer;
+    }
+
     /**
      * Throws RuntimeException to indicate failed assertion.
      * The function never returns and its return type is RuntimeException
@@ -215,8 +477,10 @@ public class Kit
     public static RuntimeException codeBug()
         throws RuntimeException
     {
-        throw new RuntimeException("FAILED ASSERTION");
+        RuntimeException ex = new IllegalStateException("FAILED ASSERTION");
+        // Print stack trace ASAP
+        ex.printStackTrace(System.err);
+        throw ex;
     }
-
 }
 

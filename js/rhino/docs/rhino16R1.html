@@ -1,3 +1,37 @@
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is Rhino code, released May 6, 1999.
+   -
+   - The Initial Developer of the Original Code is
+   - Netscape Communications Corporation.
+   - Portions created by the Initial Developer are Copyright (C) 1997-1999
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - the GNU General Public License Version 2 or later (the "GPL"), in which
+   - case the provisions of the GPL are applicable instead of those above. If
+   - you wish to allow use of your version of this file only under the terms of
+   - the GPL and not to allow others to use your version of this file under the
+   - MPL, indicate your decision by deleting the provisions above and replacing
+   - them with the notice and other provisions required by the GPL. If you do
+   - not delete the provisions above, a recipient may use your version of this
+   - file under either the MPL or the GPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
 <!DOCTYPE doctype PUBLIC "-//w3c//dtd html 4.0 transitional//en">
 <html>
 <head>
@@ -17,17 +51,18 @@ P { text-align: justify; }
 <h1 align="center">
 Change Log for Rhino</h1>
 
-<h2>Rhino 1.6R1</h2>
+<h2>Rhino 1.6R1, released 2004-11-29</h2>
 
 <h3>Release overview</h3>
 <p>
 Rhino 1.6R1 is the new major release of Rhino. It supports ECMAScript for XML (E4X) as specified by <a href="http://www.ecma-international.org/publications/standards/Ecma-357.htm">ECMA 357</a> standard. E4X is a set of language extensions adding native XML support for JavaScript without affecting the existing code base. <a href="http://lxr.mozilla.org/mozilla/source/js/rhino/examples/E4X/e4x_example.js">E4X example</a> demonstrates various E4X constructions and their usage in JavaScript code.
 </p>
 <p>
-This version of Rhino should be binary compatible with the current embeddings that use only public <a href="apidocs/index.html">API</a> unless the code use the previously deperected classes as documented <a href="#Rhino1.5R1-deprecation-removal">below</a>. Please report any incompatibilitiy issues to <a href="http://bugzilla.mozilla.org/enter_bug.cgi?product=Rhino">Bugzilla</a>.
+This version of Rhino should be binary compatible with the current embeddings that use only public <a href="apidocs/index.html">API</a> unless the code use the previously deprected classes as documented <a href="#Rhino1.5R1-deprecation-removal">below</a>. Please report any incompatibility issues to <a href="http://bugzilla.mozilla.org/enter_bug.cgi?product=Rhino">Bugzilla</a>.
 </p>
 </h3>
 
+<a NAME="E4X"></a>
 <h3>E4X implementation</h3>
 <p>
 The E4X code was donated to the Rhino project by <a href="http://www.bea.com/">BEA</a> and developed by staff from <a href="http://www.bea.com/">BEA</a> and <a href="http://www.agiledelta.com/">AgileDelta</a>.

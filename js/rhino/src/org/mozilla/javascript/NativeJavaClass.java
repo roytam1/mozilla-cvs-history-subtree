@@ -1,20 +1,44 @@
 /* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
- * NPL.
+ * License.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1997-1999 Netscape Communications Corporation.  All Rights
- * Reserved.
- */
+ * The Original Code is Rhino code, released
+ * May 6, 1999.
+ *
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-1999
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Norris Boyd
+ *   Frank Mitchell
+ *   Mike Shaver
+ *   Kurt Westerfeld
+ *   Kemal Bayram
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 package org.mozilla.javascript;
 
@@ -37,21 +61,34 @@ import java.util.Hashtable;
  * @see NativeJavaPackage
  */
 
-public class NativeJavaClass extends NativeJavaObject implements Function {
+public class NativeJavaClass extends NativeJavaObject implements Function
+{
+    static final long serialVersionUID = -6460763940409461664L;
+
+    public NativeJavaClass() {
+    }
 
     public NativeJavaClass(Scriptable scope, Class cl) {
-        super(cl, JavaMembers.lookupClass(scope, cl, cl));
-        fieldAndMethods = members.getFieldAndMethodsObjects(javaObject, false);
+        this.parent = scope;
+        this.javaObject = cl;
+        initMembers();
+    }
+
+    protected void initMembers() {
+        Class cl = (Class)javaObject;
+        members = JavaMembers.lookupClass(parent, cl, cl);
+        staticFieldAndMethods
+            = members.getFieldAndMethodsObjects(this, cl, true);
     }
 
     public String getClassName() {
         return "JavaClass";
     }
-    
+
     public boolean has(String name, Scriptable start) {
         return members.has(name, true);
     }
-        
+
     public Object get(String name, Scriptable start) {
         // When used as a constructor, ScriptRuntime.newObject() asks
         // for our prototype to create an object of the correct type.
@@ -60,48 +97,43 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 
         if (name.equals("prototype"))
             return null;
-        
+
         Object result = Scriptable.NOT_FOUND;
-        
-        if (fieldAndMethods != null) {
-            result = fieldAndMethods.get(name);
+
+        if (staticFieldAndMethods != null) {
+            result = staticFieldAndMethods.get(name);
             if (result != null)
                 return result;
         }
-        
+
         if (members.has(name, true)) {
             result = members.get(this, name, javaObject, true);
         } else {
-            // experimental:  look for nested classes by appending $name to current class' name.
-            try {
-                String nestedName = getClassObject().getName() + '$' + name;
-                Class nestedClass = Class.forName(nestedName);
-                Scriptable nestedValue = wrap(ScriptableObject.getTopLevelScope(this), nestedClass);
-                nestedValue.setParentScope(this);
-                result = nestedValue;
-            } catch (ClassNotFoundException ex) {
+            // experimental:  look for nested classes by appending $name to
+            // current class' name.
+            Class nestedClass = findNestedClass(getClassObject(), name);
+            if (nestedClass == null) {
                 throw members.reportMemberNotFound(name);
             }
+            NativeJavaClass nestedValue = new NativeJavaClass
+                (ScriptableObject.getTopLevelScope(this), nestedClass);
+            nestedValue.setParentScope(this);
+            result = nestedValue;
         }
-		
-     	return result;
+
+        return result;
     }
 
     public void put(String name, Scriptable start, Object value) {
-        members.put(name, javaObject, value, true);
+        members.put(this, name, javaObject, value, true);
     }
 
     public Object[] getIds() {
         return members.getIds(true);
     }
-    
-    public Class getClassObject() { 
-        return (Class) super.unwrap();
-    }
 
-    // XXX ??
-    public static NativeJavaClass wrap(Scriptable scope, Class cls) {
-        return new NativeJavaClass(scope, cls);
+    public Class getClassObject() {
+        return (Class) super.unwrap();
     }
 
     public Object getDefaultValue(Class hint) {
@@ -116,89 +148,87 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 
     public Object call(Context cx, Scriptable scope, Scriptable thisObj,
                        Object[] args)
-        throws JavaScriptException
     {
+        // If it looks like a "cast" of an object to this class type,
+        // walk the prototype chain to see if there's a wrapper of a
+        // object that's an instanceof this class.
+        if (args.length == 1 && args[0] instanceof Scriptable) {
+            Class c = getClassObject();
+            Scriptable p = (Scriptable) args[0];
+            do {
+                if (p instanceof Wrapper) {
+                    Object o = ((Wrapper) p).unwrap();
+                    if (c.isInstance(o))
+                        return p;
+                }
+                p = p.getPrototype();
+            } while (p != null);
+        }
         return construct(cx, scope, args);
     }
 
     public Scriptable construct(Context cx, Scriptable scope, Object[] args)
-        throws JavaScriptException
     {
-    	Class classObject = getClassObject();
-        Scriptable topLevel = ScriptableObject.getTopLevelScope(this);
-    	int modifiers = classObject.getModifiers();
-    	if (! (Modifier.isInterface(modifiers) || 
-               Modifier.isAbstract(modifiers))) 
+        Class classObject = getClassObject();
+        int modifiers = classObject.getModifiers();
+        if (! (Modifier.isInterface(modifiers) ||
+               Modifier.isAbstract(modifiers)))
         {
-	        for (int i = 0; i < args.length; i++) {
-	            if (args[i] instanceof Wrapper)
-	                args[i] = ((Wrapper)args[i]).unwrap();
-	        }
+            MemberBox[] ctors = members.ctors;
+            int index = NativeJavaMethod.findFunction(cx, ctors, args);
+            if (index < 0) {
+                String sig = NativeJavaMethod.scriptSignature(args);
+                throw Context.reportRuntimeError2(
+                    "msg.no.java.ctor", classObject.getName(), sig);
+            }
 
-	        Constructor[] ctors = members.getConstructors();
-	        Member member = NativeJavaMethod.findFunction(ctors, args);
-	        Constructor ctor = (Constructor) member;
-	        if (ctor == null) {
-	            String sig = NativeJavaMethod.signature(args);
-	            Object errArgs[] = { getClassObject().getName(), sig };
-	            throw Context.reportRuntimeError(Context.getMessage(
-	                "msg.no.java.ctor", errArgs));
-	        }
-
-	        // Found the constructor, so try invoking it.
-	        Class[] paramTypes = ctor.getParameterTypes();
-	        for (int i = 0; i < args.length; i++) {
-	            args[i] = NativeJavaObject.coerceType(paramTypes[i], args[i]);
-	        }
-	        try {
-                    /* we need to force this to be wrapped, because construct _has_
-                     * to return a scriptable */
-                    return (Scriptable) NativeJavaObject.wrap(
-                                            topLevel, ctor.newInstance(args),
-                                            getClassObject());
-
-	        } catch (InstantiationException instEx) {
-	            Object[] errArgs = { instEx.getMessage(), 
-	                                 getClassObject().getName() };
-	            throw Context.reportRuntimeError(Context.getMessage
-	                                             ("msg.cant.instantiate",
-	                                              errArgs));
-	        } catch (IllegalArgumentException argEx) {
-	            String signature = NativeJavaMethod.signature(args);
-	            String ctorString = ctor.toString();
-	            Object[] errArgs = { argEx.getMessage(),ctorString,signature };
-	            throw Context.reportRuntimeError(Context.getMessage
-	                                             ("msg.bad.ctor.sig",
-	                                             errArgs));
-	        } catch (InvocationTargetException e) {
-	            throw JavaScriptException.wrapException(scope, e);
-	        } catch (IllegalAccessException accessEx) {
-	            Object[] errArgs = { accessEx.getMessage() };
-	            throw Context.reportRuntimeError(Context.getMessage
-	                                             ("msg.java.internal.private", errArgs));
-	        }
-	    } else {
-                String msg = "";
-	    	try {
-                    // trying to construct an interface; use JavaAdapter to 
-                    // construct a new class on the fly that implements this 
-                    // interface.
-                    Object v = topLevel.get("JavaAdapter", topLevel);
-                    if (v != NOT_FOUND) {
-                        Function f = (Function) v;
-                        Object[] adapterArgs = { this, args[0] };
-                        return (Scriptable) f.construct(cx, topLevel, 
-                                                        adapterArgs);
-                    }
-                } catch (Exception ex) {
-                    // fall through to error
-                    msg = ex.getMessage();
+            // Found the constructor, so try invoking it.
+            return constructSpecific(cx, scope, args, ctors[index]);
+        } else {
+            Scriptable topLevel = ScriptableObject.getTopLevelScope(this);
+            String msg = "";
+            try {
+                // trying to construct an interface; use JavaAdapter to
+                // construct a new class on the fly that implements this
+                // interface.
+                Object v = topLevel.get("JavaAdapter", topLevel);
+                if (v != NOT_FOUND) {
+                    Function f = (Function) v;
+                    Object[] adapterArgs = { this, args[0] };
+                    return f.construct(cx, topLevel,adapterArgs);
                 }
-	        Object[] errArgs = { msg, getClassObject().getName() };
-	        throw Context.reportRuntimeError(Context.getMessage
-	                                         ("msg.cant.instantiate",
-	                                          errArgs));
-	    }
+            } catch (Exception ex) {
+                // fall through to error
+                String m = ex.getMessage();
+                if (m != null)
+                    msg = m;
+            }
+            throw Context.reportRuntimeError2(
+                "msg.cant.instantiate", msg, classObject.getName());
+        }
+    }
+
+    static Scriptable constructSpecific(Context cx, Scriptable scope,
+                                        Object[] args, MemberBox ctor)
+    {
+        Scriptable topLevel = ScriptableObject.getTopLevelScope(scope);
+        Class[] argTypes = ctor.argTypes;
+
+        Object[] origArgs = args;
+        for (int i = 0; i < args.length; i++) {
+            Object arg = args[i];
+            Object x = Context.jsToJava(arg, argTypes[i]);
+            if (x != arg) {
+                if (args == origArgs) {
+                    args = (Object[])origArgs.clone();
+                }
+                args[i] = x;
+            }
+        }
+        Object instance = ctor.newInstance(args);
+        // we need to force this to be wrapped, because construct _has_
+        // to return a scriptable
+        return cx.getWrapFactory().wrapNewObject(cx, topLevel, instance);
     }
 
     public String toString() {
@@ -207,12 +237,17 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
 
     /**
      * Determines if prototype is a wrapped Java object and performs
-     * a Java "instanceof"
+     * a Java "instanceof".
+     * Exception: if value is an instance of NativeJavaClass, it isn't
+     * considered an instance of the Java class; this forestalls any
+     * name conflicts between java.lang.Class's methods and the
+     * static methods exposed by a JavaNativeClass.
      */
     public boolean hasInstance(Scriptable value) {
 
-        if (value instanceof NativeJavaObject) {
-            Object instance = ((NativeJavaObject)value).unwrap();
+        if (value instanceof Wrapper &&
+            !(value instanceof NativeJavaClass)) {
+            Object instance = ((Wrapper)value).unwrap();
 
             return getClassObject().isInstance(instance);
         }
@@ -221,23 +256,19 @@ public class NativeJavaClass extends NativeJavaObject implements Function {
         return false;
     }
 
-    public Scriptable getParentScope() {
-        return parent;
+    private static Class findNestedClass(Class parentClass, String name) {
+        String nestedClassName = parentClass.getName() + '$' + name;
+        ClassLoader loader = parentClass.getClassLoader();
+        if (loader == null) {
+            // ALERT: if loader is null, nested class should be loaded
+            // via system class loader which can be different from the
+            // loader that brought Rhino classes that Class.forName() would
+            // use, but ClassLoader.getSystemClassLoader() is Java 2 only
+            return Kit.classOrNull(nestedClassName);
+        } else {
+            return Kit.classOrNull(loader, nestedClassName);
+        }
     }
 
-    public void setParentScope(Scriptable scope) {
-        // beard:
-        // need at least the top-most scope, so JavaMembers.reflectMethod()
-        // will work. this fixes a bug where a static field of a class would get
-        // reflected by JavaMembers.reflect() in the scope of a NativeJavaClass,
-        // and calls to ScriptableObject.getFunctionPrototype() would return
-        // null because there was no top-level scope with "Function" defined.
-        // question: should the package hierarchy form the scope chain or is top-level sufficient?
-        parent = scope;
-    }
-    
-    private Hashtable fieldAndMethods;
-
-    // beard: need a scope for finding top-level prototypes.
-    private Scriptable parent;
+    private Hashtable staticFieldAndMethods;
 }

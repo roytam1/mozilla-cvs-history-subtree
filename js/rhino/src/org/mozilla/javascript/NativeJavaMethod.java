@@ -1,31 +1,50 @@
 /* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
- * NPL.
+ * License.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1997-1999 Netscape Communications Corporation.  All Rights
- * Reserved.
- */
+ * The Original Code is Rhino code, released
+ * May 6, 1999.
+ *
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-1999
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Norris Boyd
+ *   Frank Mitchell
+ *   Mike Shaver
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 package org.mozilla.javascript;
 
 import java.lang.reflect.*;
 
 /**
- * This class reflects Java methods into the JavaScript environment.  It
- * handles overloading of methods, and method/field name conflicts.
- * All NativeJavaMethods behave as JSRef `bound' methods, in that they
- * always operate on the object underlying the original NativeJavaObject
- * parent regardless of any reparenting that may occur.
+ * This class reflects Java methods into the JavaScript environment and
+ * handles overloading of methods.
  *
  * @author Mike Shaver
  * @see NativeJavaArray
@@ -33,228 +52,428 @@ import java.lang.reflect.*;
  * @see NativeJavaClass
  */
 
-public class NativeJavaMethod extends NativeFunction implements Function {
+public class NativeJavaMethod extends BaseFunction
+{
+    static final long serialVersionUID = -3440381785576412928L;
 
-    public NativeJavaMethod() {
-        names = new String[1];
-    }
-
-    public NativeJavaMethod(Method[] methods) {
+    NativeJavaMethod(MemberBox[] methods)
+    {
+        this.functionName = methods[0].getName();
         this.methods = methods;
-        names = new String[1];
-        names[0] = methods[0].getName();
     }
 
-    public void add(Method method) {
-        if (names[0] == null) {
-            names[0] = method.getName();
-        } else if (!names[0].equals(method.getName())) {
-            throw new RuntimeException("internal method name mismatch");
-        }
-        // XXX a more intelligent growth algorithm would be nice
-        int len = methods == null ? 0 : methods.length;
-        Method[] newMeths = new Method[len + 1];
-        for (int i = 0; i < len; i++)
-            newMeths[i] = methods[i];
-        newMeths[len] = method;
-        methods = newMeths;
+    NativeJavaMethod(MemberBox method, String name)
+    {
+        this.functionName = name;
+        this.methods = new MemberBox[] { method };
     }
 
-    static String signature(Class type) {
-        if (type == null)
-            return "null";
-        if (type == ScriptRuntime.BooleanClass)
-            return "boolean";
-        if (type == ScriptRuntime.ByteClass)
-            return "byte";
-        if (type == ScriptRuntime.ShortClass)
-            return "short";
-        if (type == ScriptRuntime.IntegerClass)
-            return "int";
-        if (type == ScriptRuntime.LongClass)
-            return "long";
-        if (type == ScriptRuntime.FloatClass)
-            return "float";
-        if (type == ScriptRuntime.DoubleClass)
-            return "double";
-        if (type == ScriptRuntime.StringClass)
-            return "string";
-        if (ScriptRuntime.ScriptableClass.isAssignableFrom(type)) {
-            if (ScriptRuntime.FunctionClass.isAssignableFrom(type))
-                return "function";
-            if (type == ScriptRuntime.UndefinedClass)
-                return "undefined";
-            return "object";
-        }
-        return type.getName();
+    public NativeJavaMethod(Method method, String name)
+    {
+        this(new MemberBox(method), name);
     }
 
-    static String signature(Object[] values) {
+    public String getFunctionName()
+    {
+        return functionName;
+    }
+
+    static String scriptSignature(Object[] values)
+    {
         StringBuffer sig = new StringBuffer();
-        for (int i = 0; i < values.length; i++) {
-            if (i != 0)
+        for (int i = 0; i != values.length; ++i) {
+            Object value = values[i];
+
+            String s;
+            if (value == null) {
+                s = "null";
+            } else if (value instanceof Boolean) {
+                s = "boolean";
+            } else if (value instanceof String) {
+                s = "string";
+            } else if (value instanceof Number) {
+                s = "number";
+            } else if (value instanceof Scriptable) {
+                if (value instanceof Undefined) {
+                    s = "undefined";
+                } else if (value instanceof Wrapper) {
+                    Object wrapped = ((Wrapper)value).unwrap();
+                    s = wrapped.getClass().getName();
+                } else if (value instanceof Function) {
+                    s = "function";
+                } else {
+                    s = "object";
+                }
+            } else {
+                s = JavaMembers.javaSignature(value.getClass());
+            }
+
+            if (i != 0) {
                 sig.append(',');
-            sig.append(values[i] == null ? "null"
-                                         : signature(values[i].getClass()));
+            }
+            sig.append(s);
         }
         return sig.toString();
     }
 
-    static String signature(Class[] types) {
-        StringBuffer sig = new StringBuffer();
-        for (int i = 0; i < types.length; i++) {
-            if (i != 0)
-                sig.append(',');
-            sig.append(signature(types[i]));
+    String decompile(int indent, int flags)
+    {
+        StringBuffer sb = new StringBuffer();
+        boolean justbody = (0 != (flags & Decompiler.ONLY_BODY_FLAG));
+        if (!justbody) {
+            sb.append("function ");
+            sb.append(getFunctionName());
+            sb.append("() {");
         }
-        return sig.toString();
+        sb.append("/*\n");
+        sb.append(toString());
+        sb.append(justbody ? "*/\n" : "*/}\n");
+        return sb.toString();
     }
 
-    static String signature(Member member) {
-        Class paramTypes[] = member instanceof Method
-                             ? ((Method) member).getParameterTypes()
-                             : ((Constructor) member).getParameterTypes();
-        return  member.getName() + "(" + signature(paramTypes) + ")";
+    public String toString()
+    {
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0, N = methods.length; i != N; ++i) {
+            Method method = methods[i].method();
+            sb.append(JavaMembers.javaSignature(method.getReturnType()));
+            sb.append(' ');
+            sb.append(method.getName());
+            sb.append(JavaMembers.liveConnectSignature(methods[i].argTypes));
+            sb.append('\n');
+        }
+        return sb.toString();
     }
 
     public Object call(Context cx, Scriptable scope, Scriptable thisObj,
                        Object[] args)
-        throws JavaScriptException
     {
         // Find a method that matches the types given.
         if (methods.length == 0) {
             throw new RuntimeException("No methods defined for call");
         }
 
-        // Eliminate useless args[0] and unwrap if required
-        for (int i = 0; i < args.length; i++)
-            if (args[i] instanceof Wrapper)
-                args[i] = ((Wrapper)args[i]).unwrap();
-
-        Method meth = (Method) findFunction(methods, args);
-        if (meth == null) {
-            Class c = methods[0].getDeclaringClass();
-            String sig = c.getName() + "." + names[0] + "(" +
-                         signature(args) + ")";
-            Object errArgs[] = { sig };
-            throw Context.reportRuntimeError(
-                Context.getMessage("msg.java.no_such_method", errArgs));
+        int index = findFunction(cx, methods, args);
+        if (index < 0) {
+            Class c = methods[0].method().getDeclaringClass();
+            String sig = c.getName() + '.' + getFunctionName() + '(' +
+                         scriptSignature(args) + ')';
+            throw Context.reportRuntimeError1("msg.java.no_such_method", sig);
         }
 
-        // OPT: already retrieved in findFunction, so we should inline that
-        // OPT: or pass it back somehow
-        Class paramTypes[] = meth.getParameterTypes();
+        MemberBox meth = methods[index];
+        Class[] argTypes = meth.argTypes;
 
-        // First, we kill the lawyers.  Er, marshall the args.
+        // First, we marshall the args.
+        Object[] origArgs = args;
         for (int i = 0; i < args.length; i++) {
-            args[i] = NativeJavaObject.coerceType(paramTypes[i], args[i]);
+            Object arg = args[i];
+            Object coerced = Context.jsToJava(arg, argTypes[i]);
+            if (coerced != arg) {
+                if (origArgs == args) {
+                    args = (Object[])args.clone();
+                }
+                args[i] = coerced;
+            }
         }
         Object javaObject;
-        try {
-            javaObject = ((NativeJavaObject) thisObj).unwrap();        
+        if (meth.isStatic()) {
+            javaObject = null;  // don't need an object
+        } else {
+            Scriptable o = thisObj;
+            Class c = meth.getDeclaringClass();
+            for (;;) {
+                if (o == null) {
+                    throw Context.reportRuntimeError3(
+                        "msg.nonjava.method", getFunctionName(),
+                        ScriptRuntime.toString(thisObj), c.getName());
+                }
+                if (o instanceof Wrapper) {
+                    javaObject = ((Wrapper)o).unwrap();
+                    if (c.isInstance(javaObject)) {
+                        break;
+                    }
+                }
+                o = o.getPrototype();
+            }
         }
-        catch (ClassCastException e) {
-            if (Modifier.isStatic(meth.getModifiers())) {
-                javaObject = null;  // don't need it anyway
+        if (debug) {
+            printDebug("Calling ", meth, args);
+        }
+
+        Object retval = meth.invoke(javaObject, args);
+        Class staticType = meth.method().getReturnType();
+
+        if (debug) {
+            Class actualType = (retval == null) ? null
+                                                : retval.getClass();
+            System.err.println(" ----- Returned " + retval +
+                               " actual = " + actualType +
+                               " expect = " + staticType);
+        }
+
+        Object wrapped = cx.getWrapFactory().wrap(cx, scope,
+                                                  retval, staticType);
+        if (debug) {
+            Class actualType = (wrapped == null) ? null
+                                                 : wrapped.getClass();
+            System.err.println(" ----- Wrapped as " + wrapped +
+                               " class = " + actualType);
+        }
+
+        if (wrapped == null && staticType == Void.TYPE) {
+            wrapped = Undefined.instance;
+        }
+        return wrapped;
+    }
+
+    /**
+     * Find the index of the correct function to call given the set of methods
+     * or constructors and the arguments.
+     * If no function can be found to call, return -1.
+     */
+    static int findFunction(Context cx,
+                            MemberBox[] methodsOrCtors, Object[] args)
+    {
+        if (methodsOrCtors.length == 0) {
+            return -1;
+        } else if (methodsOrCtors.length == 1) {
+            MemberBox member = methodsOrCtors[0];
+            Class[] argTypes = member.argTypes;
+            int alength = argTypes.length;
+            if (alength != args.length) {
+                return -1;
+            }
+            for (int j = 0; j != alength; ++j) {
+                if (!NativeJavaObject.canConvert(args[j], argTypes[j])) {
+                    if (debug) printDebug("Rejecting (args can't convert) ",
+                                          member, args);
+                    return -1;
+                }
+            }
+            if (debug) printDebug("Found ", member, args);
+            return 0;
+        }
+
+        int firstBestFit = -1;
+        int[] extraBestFits = null;
+        int extraBestFitsCount = 0;
+
+      search:
+        for (int i = 0; i < methodsOrCtors.length; i++) {
+            MemberBox member = methodsOrCtors[i];
+            Class[] argTypes = member.argTypes;
+            if (argTypes.length != args.length) {
+                continue search;
+            }
+            for (int j = 0; j < argTypes.length; j++) {
+                if (!NativeJavaObject.canConvert(args[j], argTypes[j])) {
+                    if (debug) printDebug("Rejecting (args can't convert) ",
+                                          member, args);
+                    continue search;
+                }
+            }
+            if (firstBestFit < 0) {
+                if (debug) printDebug("Found first applicable ", member, args);
+                firstBestFit = i;
             } else {
-                Object errArgs[] = { names[0] };
-                throw Context.reportRuntimeError(
-                    Context.getMessage("msg.nonjava.method", errArgs));
+                // Compare with all currently fit methods.
+                // The loop starts from -1 denoting firstBestFit and proceed
+                // until extraBestFitsCount to avoid extraBestFits allocation
+                // in the most common case of no ambiguity
+                int betterCount = 0; // number of times member was prefered over
+                                     // best fits
+                int worseCount = 0;  // number of times best fits were prefered
+                                     // over member
+                for (int j = -1; j != extraBestFitsCount; ++j) {
+                    int bestFitIndex;
+                    if (j == -1) {
+                        bestFitIndex = firstBestFit;
+                    } else {
+                        bestFitIndex = extraBestFits[j];
+                    }
+                    MemberBox bestFit = methodsOrCtors[bestFitIndex];
+                    int preference = preferSignature(args, argTypes,
+                                                     bestFit.argTypes);
+                    if (preference == PREFERENCE_AMBIGUOUS) {
+                        break;
+                    } else if (preference == PREFERENCE_FIRST_ARG) {
+                        ++betterCount;
+                    } else if (preference == PREFERENCE_SECOND_ARG) {
+                        ++worseCount;
+                    } else {
+                        if (preference != PREFERENCE_EQUAL) Kit.codeBug();
+                        // This should not happen in theory
+                        // but on some JVMs, Class.getMethods will return all
+                        // static methods of the class heirarchy, even if
+                        // a derived class's parameters match exactly.
+                        // We want to call the dervied class's method.
+                        if (bestFit.isStatic()
+                            && bestFit.getDeclaringClass().isAssignableFrom(
+                                   member.getDeclaringClass()))
+                        {
+                            // On some JVMs, Class.getMethods will return all
+                            // static methods of the class heirarchy, even if
+                            // a derived class's parameters match exactly.
+                            // We want to call the dervied class's method.
+                            if (debug) printDebug(
+                                "Substituting (overridden static)",
+                                member, args);
+                            if (j == -1) {
+                                firstBestFit = i;
+                            } else {
+                                extraBestFits[j] = i;
+                            }
+                        } else {
+                            if (debug) printDebug(
+                                "Ignoring same signature member ",
+                                member, args);
+                        }
+                        continue search;
+                    }
+                }
+                if (betterCount == 1 + extraBestFitsCount) {
+                    // member was prefered over all best fits
+                    if (debug) printDebug(
+                        "New first applicable ", member, args);
+                    firstBestFit = i;
+                    extraBestFitsCount = 0;
+                } else if (worseCount == 1 + extraBestFitsCount) {
+                    // all best fits were prefered over member, ignore it
+                    if (debug) printDebug(
+                        "Rejecting (all current bests better) ", member, args);
+                } else {
+                    // some ambiguity was present, add member to best fit set
+                    if (debug) printDebug(
+                        "Added to best fit set ", member, args);
+                    if (extraBestFits == null) {
+                        // Allocate maximum possible array
+                        extraBestFits = new int[methodsOrCtors.length - 1];
+                    }
+                    extraBestFits[extraBestFitsCount] = i;
+                    ++extraBestFitsCount;
+                }
             }
         }
-        try {
-            Object retval = meth.invoke(javaObject, args);
-            Class staticType = meth.getReturnType();
-            Object wrapped = NativeJavaObject.wrap(scope, retval, staticType);
-            // XXX set prototype && parent
-            if (wrapped == Undefined.instance)
-                return wrapped;
-            if (wrapped == null && staticType == Void.TYPE)
-                return Undefined.instance;
-            if (retval != wrapped && wrapped instanceof Scriptable) {
-                Scriptable s = (Scriptable)wrapped;
-                if (s.getPrototype() == null)
-                    s.setPrototype(parent.getPrototype());
-                if (s.getParentScope() == null)
-                    s.setParentScope(parent.getParentScope());
+
+        if (firstBestFit < 0) {
+            // Nothing was found
+            return -1;
+        } else if (extraBestFitsCount == 0) {
+            // single best fit
+            return firstBestFit;
+        }
+
+        // report remaining ambiguity
+        StringBuffer buf = new StringBuffer();
+        for (int j = -1; j != extraBestFitsCount; ++j) {
+            int bestFitIndex;
+            if (j == -1) {
+                bestFitIndex = firstBestFit;
+            } else {
+                bestFitIndex = extraBestFits[j];
             }
-            return wrapped;
-        } catch (IllegalAccessException accessEx) {
-            throw Context.reportRuntimeError(accessEx.getMessage());
-        } catch (InvocationTargetException e) {
-            throw JavaScriptException.wrapException(scope, e);
+            buf.append("\n    ");
+            buf.append(methodsOrCtors[bestFitIndex].toJavaDeclaration());
+        }
+
+        MemberBox firstFitMember = methodsOrCtors[firstBestFit];
+        String memberName = firstFitMember.getName();
+        String memberClass = firstFitMember.getDeclaringClass().getName();
+
+        if (methodsOrCtors[0].isMethod()) {
+            throw Context.reportRuntimeError3(
+                "msg.constructor.ambiguous",
+                memberName, scriptSignature(args), buf.toString());
+        } else {
+            throw Context.reportRuntimeError4(
+                "msg.method.ambiguous", memberClass,
+                memberName, scriptSignature(args), buf.toString());
         }
     }
 
-    public Object getDefaultValue(Class hint) {
-        return this;
-    }
-    
-    /** 
-     * Find the correct function to call given the set of methods
-     * or constructors and the arguments.
-     * If no function can be found to call, return null.
+    /** Types are equal */
+    private static final int PREFERENCE_EQUAL      = 0;
+    private static final int PREFERENCE_FIRST_ARG  = 1;
+    private static final int PREFERENCE_SECOND_ARG = 2;
+    /** No clear "easy" conversion */
+    private static final int PREFERENCE_AMBIGUOUS  = 3;
+
+    /**
+     * Determine which of two signatures is the closer fit.
+     * Returns one of PREFERENCE_EQUAL, PREFERENCE_FIRST_ARG,
+     * PREFERENCE_SECOND_ARG, or PREFERENCE_AMBIGUOUS.
      */
-    static Member findFunction(Member[] methodsOrCtors, Object[] args) {
-        if (methodsOrCtors.length == 0)
-            return null;
-        boolean hasMethods = methodsOrCtors[0] instanceof Method;
-        if (Context.useJSObject && 
-            NativeJavaObject.jsObjectClass != null) 
-        {
-            try {
-                for (int i = 0; i < args.length; i++) {
-                    if (NativeJavaObject.jsObjectClass.isInstance(args[i]))
-                        args[i] = NativeJavaObject.jsObjectGetScriptable.invoke(
-                                    args[i], ScriptRuntime.emptyArgs);
-                }
-            }
-            catch (InvocationTargetException e) {
-                // Just abandon conversion from JSObject
-            }
-            catch (IllegalAccessException e) {
-                // Just abandon conversion from JSObject
-            }
-        }
-      methodSearch:
-        for (int i = 0; i < methodsOrCtors.length; i++) {
-            Member member = methodsOrCtors[i];
-            Class paramTypes[] = hasMethods
-                                 ? ((Method) member).getParameterTypes()
-                                 : ((Constructor) member).getParameterTypes();
-            if (paramTypes.length != args.length) {
+    private static int preferSignature(Object[] args,
+                                       Class[] sig1, Class[] sig2)
+    {
+        int totalPreference = 0;
+        for (int j = 0; j < args.length; j++) {
+            Class type1 = sig1[j];
+            Class type2 = sig2[j];
+            if (type1 == type2) {
                 continue;
             }
-            for (int j = 0; j < paramTypes.length; j++) {
-                if (!NativeJavaObject.canConvert(args[j], paramTypes[j])) {
-                    if (debug) printDebug("Rejecting ", member, args);
-                    continue methodSearch;
+            Object arg = args[j];
+
+            // Determine which of type1, type2 is easier to convert from arg.
+
+            int rank1 = NativeJavaObject.getConversionWeight(arg, type1);
+            int rank2 = NativeJavaObject.getConversionWeight(arg, type2);
+
+            int preference;
+            if (rank1 < rank2) {
+                preference = PREFERENCE_FIRST_ARG;
+            } else if (rank1 > rank2) {
+                preference = PREFERENCE_SECOND_ARG;
+            } else {
+                // Equal ranks
+                if (rank1 == NativeJavaObject.CONVERSION_NONTRIVIAL) {
+                    if (type1.isAssignableFrom(type2)) {
+                        preference = PREFERENCE_SECOND_ARG;
+                    } else if (type2.isAssignableFrom(type1)) {
+                        preference = PREFERENCE_FIRST_ARG;
+                    } else {
+                        preference = PREFERENCE_AMBIGUOUS;
+                    }
+                } else {
+                    preference = PREFERENCE_AMBIGUOUS;
                 }
             }
-            if (debug) {
-                printDebug("Found ", member, args);
-                while (++i < methodsOrCtors.length)
-                    printDebug("Never considered ", methodsOrCtors[i], args);
+
+            totalPreference |= preference;
+
+            if (totalPreference == PREFERENCE_AMBIGUOUS) {
+                break;
             }
-            return member;
         }
-        return null;
+        return totalPreference;
     }
-    
-    Method[] getMethods() {
-        return methods; 
-    }
+
 
     private static final boolean debug = false;
 
-    private static void printDebug(String msg, Member member, Object[] args) {
+    private static void printDebug(String msg, MemberBox member,
+                                   Object[] args)
+    {
         if (debug) {
-            System.err.println(msg + member.getDeclaringClass().getName() +
-                               "." + signature(member) +
-                               " for arguments (" + signature(args) + ")");
+            StringBuffer sb = new StringBuffer();
+            sb.append(" ----- ");
+            sb.append(msg);
+            sb.append(member.getDeclaringClass().getName());
+            sb.append('.');
+            if (member.isMethod()) {
+                sb.append(member.getName());
+            }
+            sb.append(JavaMembers.liveConnectSignature(member.argTypes));
+            sb.append(" for arguments (");
+            sb.append(scriptSignature(args));
+            sb.append(')');
+            System.out.println(sb);
         }
     }
 
-    Method methods[];
+    MemberBox[] methods;
+    private String functionName;
 }
 

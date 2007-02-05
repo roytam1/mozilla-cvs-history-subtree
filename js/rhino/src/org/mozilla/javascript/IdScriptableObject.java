@@ -1,49 +1,52 @@
 /* -*- Mode: java; tab-width: 4; indent-tabs-mode: 1; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
  *
  * The Original Code is Rhino code, released
  * May 6, 1999.
  *
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1997-1999 Netscape Communications Corporation. All
- * Rights Reserved.
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-1999
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- * Igor Bukanov
+ *   Igor Bukanov
  *
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU Public License (the "GPL"), in which case the
- * provisions of the GPL are applicable instead of those above.
- * If you wish to allow use of your version of this file only
- * under the terms of the GPL and not to allow others to use your
- * version of this file under the NPL, indicate your decision by
- * deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL.  If you do not delete
- * the provisions above, a recipient may use your version of this
- * file under either the NPL or the GPL.
- */
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 package org.mozilla.javascript;
 
 import java.io.*;
 
 /**
-Base class for native object implementation that uses IdFunction to export its methods to script via <class-name>.prototype object.
+Base class for native object implementation that uses IdFunctionObject to export its methods to script via <class-name>.prototype object.
 
 Any descendant should implement at least the following methods:
     findInstanceIdInfo
     getInstanceIdName
-    execMethod
+    execIdCall
     methodArity
 
 To define non-function properties, the descendant should override
@@ -57,16 +60,19 @@ may override scopeInit or fillConstructorProperties methods.
 
 */
 public abstract class IdScriptableObject extends ScriptableObject
-    implements IdFunctionMaster
+    implements IdFunctionCall
 {
+    private transient volatile PrototypeValues prototypeValues;
+
     private static final class PrototypeValues implements Serializable
     {
+        static final long serialVersionUID = 3038645279153854371L;
+
         private static final int VALUE_SLOT = 0;
         private static final int NAME_SLOT = 1;
         private static final int SLOT_SPAN = 2;
 
         private IdScriptableObject obj;
-        private Object tag;
         private int maxId;
         private volatile Object[] valueArray;
         private volatile short[] attributeArray;
@@ -75,7 +81,7 @@ public abstract class IdScriptableObject extends ScriptableObject
         // The following helps to avoid creation of valueArray during runtime
         // initialization for common case of "constructor" property
         int constructorId;
-        private IdFunction constructor;
+        private IdFunctionObject constructor;
         private short constructorAttrs;
 
         PrototypeValues(IdScriptableObject obj, int maxId)
@@ -84,6 +90,11 @@ public abstract class IdScriptableObject extends ScriptableObject
             if (maxId < 1) throw new IllegalArgumentException();
             this.obj = obj;
             this.maxId = maxId;
+        }
+
+        final int getMaxId()
+        {
+            return maxId;
         }
 
         final void initValue(int id, String name, Object value, int attributes)
@@ -99,11 +110,10 @@ public abstract class IdScriptableObject extends ScriptableObject
                 throw new IllegalArgumentException(name);
 
             if (id == constructorId) {
-                if (!(value instanceof IdFunction)) {
-                    throw new IllegalArgumentException(
-                        "consructor should be initialized with IdFunction");
+                if (!(value instanceof IdFunctionObject)) {
+                    throw new IllegalArgumentException("consructor should be initialized with IdFunctionObject");
                 }
-                constructor = (IdFunction)value;
+                constructor = (IdFunctionObject)value;
                 constructorAttrs = (short)attributes;
                 return;
             }
@@ -135,7 +145,7 @@ public abstract class IdScriptableObject extends ScriptableObject
             }
         }
 
-        final IdFunction createPrecachedConstructor()
+        final IdFunctionObject createPrecachedConstructor()
         {
             if (constructorId != 0) throw new IllegalStateException();
             constructorId = obj.findPrototypeId("constructor");
@@ -324,18 +334,31 @@ public abstract class IdScriptableObject extends ScriptableObject
     {
     }
 
+    public IdScriptableObject(Scriptable scope, Scriptable prototype)
+    {
+        super(scope, prototype);
+    }
+
+    protected final Object defaultGet(String name)
+    {
+        return super.get(name, this);
+    }
+
+    protected final void defaultPut(String name, Object value)
+    {
+        super.put(name, this, value);
+    }
+
     public boolean has(String name, Scriptable start)
     {
-        if (maxInstanceId != 0) {
-            int info = findInstanceIdInfo(name);
-            if (info != 0) {
-                int attr = (info >>> 16);
-                if ((attr & PERMANENT) != 0) {
-                    return true;
-                }
-                int id = (info & 0xFFFF);
-                return NOT_FOUND != getInstanceIdValue(id);
+        int info = findInstanceIdInfo(name);
+        if (info != 0) {
+            int attr = (info >>> 16);
+            if ((attr & PERMANENT) != 0) {
+                return true;
             }
+            int id = (info & 0xFFFF);
+            return NOT_FOUND != getInstanceIdValue(id);
         }
         if (prototypeValues != null) {
             int id = prototypeValues.findId(name);
@@ -348,12 +371,10 @@ public abstract class IdScriptableObject extends ScriptableObject
 
     public Object get(String name, Scriptable start)
     {
-        if (maxInstanceId != 0) {
-            int info = findInstanceIdInfo(name);
-            if (info != 0) {
-                int id = (info & 0xFFFF);
-                return getInstanceIdValue(id);
-            }
+        int info = findInstanceIdInfo(name);
+        if (info != 0) {
+            int id = (info & 0xFFFF);
+            return getInstanceIdValue(id);
         }
         if (prototypeValues != null) {
             int id = prototypeValues.findId(name);
@@ -366,25 +387,23 @@ public abstract class IdScriptableObject extends ScriptableObject
 
     public void put(String name, Scriptable start, Object value)
     {
-        if (maxInstanceId != 0) {
-            int info = findInstanceIdInfo(name);
-            if (info != 0) {
-                if (start == this && isSealed()) {
-                    throw Context.reportRuntimeError1("msg.modify.sealed",
-                                                      name);
-                }
-                int attr = (info >>> 16);
-                if ((attr & READONLY) == 0) {
-                    if (start == this) {
-                        int id = (info & 0xFFFF);
-                        setInstanceIdValue(id, value);
-                    }
-                    else {
-                        start.put(name, start, value);
-                    }
-                }
-                return;
+        int info = findInstanceIdInfo(name);
+        if (info != 0) {
+            if (start == this && isSealed()) {
+                throw Context.reportRuntimeError1("msg.modify.sealed",
+                                                  name);
             }
+            int attr = (info >>> 16);
+            if ((attr & READONLY) == 0) {
+                if (start == this) {
+                    int id = (info & 0xFFFF);
+                    setInstanceIdValue(id, value);
+                }
+                else {
+                    start.put(name, start, value);
+                }
+            }
+            return;
         }
         if (prototypeValues != null) {
             int id = prototypeValues.findId(name);
@@ -402,18 +421,16 @@ public abstract class IdScriptableObject extends ScriptableObject
 
     public void delete(String name)
     {
-        if (maxInstanceId != 0) {
-            int info = findInstanceIdInfo(name);
-            if (info != 0) {
-                // Let the super class to throw exceptions for sealed objects
-                if (!isSealed()) {
-                    int attr = (info >>> 16);
-                    if ((attr & PERMANENT) == 0) {
-                        int id = (info & 0xFFFF);
-                        setInstanceIdValue(id, NOT_FOUND);
-                    }
-                    return;
+        int info = findInstanceIdInfo(name);
+        if (info != 0) {
+            // Let the super class to throw exceptions for sealed objects
+            if (!isSealed()) {
+                int attr = (info >>> 16);
+                if ((attr & PERMANENT) == 0) {
+                    int id = (info & 0xFFFF);
+                    setInstanceIdValue(id, NOT_FOUND);
                 }
+                return;
             }
         }
         if (prototypeValues != null) {
@@ -430,12 +447,10 @@ public abstract class IdScriptableObject extends ScriptableObject
 
     public int getAttributes(String name)
     {
-        if (maxInstanceId != 0) {
-            int info = findInstanceIdInfo(name);
-            if (info != 0) {
-                int attr = (info >>> 16);
-                return attr;
-            }
+        int info = findInstanceIdInfo(name);
+        if (info != 0) {
+            int attr = (info >>> 16);
+            return attr;
         }
         if (prototypeValues != null) {
             int id = prototypeValues.findId(name);
@@ -449,16 +464,14 @@ public abstract class IdScriptableObject extends ScriptableObject
     public void setAttributes(String name, int attributes)
     {
         ScriptableObject.checkValidAttributes(attributes);
-        if (maxInstanceId != 0) {
-            int info = findInstanceIdInfo(name);
-            if (info != 0) {
-                int currentAttributes = (info >>> 16);
-                if (attributes != currentAttributes) {
-                    throw new RuntimeException(
-                        "Change of attributes for this id is not supported");
-                }
-                return;
+        int info = findInstanceIdInfo(name);
+        if (info != 0) {
+            int currentAttributes = (info >>> 16);
+            if (attributes != currentAttributes) {
+                throw new RuntimeException(
+                    "Change of attributes for this id is not supported");
             }
+            return;
         }
         if (prototypeValues != null) {
             int id = prototypeValues.findId(name);
@@ -478,6 +491,7 @@ public abstract class IdScriptableObject extends ScriptableObject
             result = prototypeValues.getNames(getAll, result);
         }
 
+        int maxInstanceId = getMaxInstanceId();
         if (maxInstanceId != 0) {
             Object[] ids = null;
             int count = 0;
@@ -516,30 +530,12 @@ public abstract class IdScriptableObject extends ScriptableObject
         return result;
     }
 
-    /** Get maximum id findInstanceIdInfo can generate */
-    protected final int getMaxInstanceId()
-    {
-        return maxInstanceId;
-    }
-
     /**
-     * Set maximum id findInstanceIdInfo can generate.
-     *
-     * @param maxInstanceId new value of maximum id.
-     * @param prevMaxId the current result of {@link #getMaxInstanceId()}.
-     *                  It is used for consitency checks.
+     * Get maximum id findInstanceIdInfo can generate.
      */
-    protected final void setMaxInstanceId(int prevMaxId, int maxInstanceId)
+    protected int getMaxInstanceId()
     {
-        if (prevMaxId != this.maxInstanceId) {
-            // Consitency check
-            throw new IllegalStateException();
-        }
-        if (this.maxInstanceId >= maxInstanceId) {
-            // maxInstanceId can only go up
-            throw new IllegalArgumentException();
-        }
-        this.maxInstanceId = maxInstanceId;
+        return 0;
     }
 
     protected static int instanceIdInfo(int attributes, int id)
@@ -567,7 +563,7 @@ public abstract class IdScriptableObject extends ScriptableObject
     /** Get id value.
      ** If id value is constant, descendant can call cacheIdValue to store
      ** value in the permanent cache.
-     ** Default implementation creates IdFunction instance for given id
+     ** Default implementation creates IdFunctionObject instance for given id
      ** and cache its value
      */
     protected Object getInstanceIdValue(int id)
@@ -586,15 +582,15 @@ public abstract class IdScriptableObject extends ScriptableObject
 
     /** 'thisObj' will be null if invoked as constructor, in which case
      ** instance of Scriptable should be returned. */
-    public Object execMethod(IdFunction f, Context cx, Scriptable scope,
+    public Object execIdCall(IdFunctionObject f, Context cx, Scriptable scope,
                              Scriptable thisObj, Object[] args)
     {
         throw f.unknown();
     }
 
-    public final IdFunction exportAsJSClass(int maxPrototypeId,
-                                            Scriptable scope,
-                                            boolean sealed)
+    public final IdFunctionObject exportAsJSClass(int maxPrototypeId,
+                                                  Scriptable scope,
+                                                  boolean sealed)
     {
         // Set scope and prototype unless this is top level scope itself
         if (scope != this && scope != null) {
@@ -603,7 +599,7 @@ public abstract class IdScriptableObject extends ScriptableObject
         }
 
         activatePrototypeMap(maxPrototypeId);
-        IdFunction ctor = prototypeValues.createPrecachedConstructor();
+        IdFunctionObject ctor = prototypeValues.createPrecachedConstructor();
         if (sealed) {
             sealObject();
         }
@@ -634,11 +630,11 @@ public abstract class IdScriptableObject extends ScriptableObject
                                           int arity)
     {
         Scriptable scope = ScriptableObject.getTopLevelScope(this);
-        IdFunction f = newIdFunction(tag, id, name, arity, scope);
+        IdFunctionObject f = newIdFunction(tag, id, name, arity, scope);
         prototypeValues.initValue(id, name, f, DONTENUM);
     }
 
-    public final void initPrototypeConstructor(IdFunction f)
+    public final void initPrototypeConstructor(IdFunctionObject f)
     {
         int id = prototypeValues.constructorId;
         if (id == 0)
@@ -665,7 +661,7 @@ public abstract class IdScriptableObject extends ScriptableObject
         throw new IllegalStateException(name);
     }
 
-    protected void fillConstructorProperties(IdFunction ctor)
+    protected void fillConstructorProperties(IdFunctionObject ctor)
     {
     }
 
@@ -673,7 +669,7 @@ public abstract class IdScriptableObject extends ScriptableObject
                                          String name, int arity)
     {
         Scriptable scope = ScriptableObject.getTopLevelScope(obj);
-        IdFunction f = newIdFunction(tag, id, name, arity, scope);
+        IdFunctionObject f = newIdFunction(tag, id, name, arity, scope);
         f.addAsProperty(obj);
     }
 
@@ -683,7 +679,7 @@ public abstract class IdScriptableObject extends ScriptableObject
      * Possible usage would be to have a private function like realThis:
      * <pre>
      *  private static NativeSomething realThis(Scriptable thisObj,
-     *                                          IdFunction f)
+     *                                          IdFunctionObject f)
      *  {
      *      if (!(thisObj instanceof NativeSomething))
      *          throw incompatibleCallError(f);
@@ -698,44 +694,41 @@ public abstract class IdScriptableObject extends ScriptableObject
      * operator.
      * @throws RuntimeException if no more instanceof target can be found
      */
-    protected static EcmaError incompatibleCallError(IdFunction f)
+    protected static EcmaError incompatibleCallError(IdFunctionObject f)
     {
         throw ScriptRuntime.typeError1("msg.incompat.call",
                                        f.getFunctionName());
     }
 
-    private IdFunction newIdFunction(Object tag, int id, String name,
-                                     int arity, Scriptable scope)
+    private IdFunctionObject newIdFunction(Object tag, int id, String name,
+                                           int arity, Scriptable scope)
     {
-        IdFunction f = new IdFunction(this, tag, id, name, arity,
-                                      scope);
+        IdFunctionObject f = new IdFunctionObject(this, tag, id, name, arity,
+                                                  scope);
         if (isSealed()) { f.sealObject(); }
         return f;
     }
 
-    protected final Object wrap_double(double x)
+    private void readObject(ObjectInputStream stream)
+        throws IOException, ClassNotFoundException
     {
-        return (x == x) ? new Double(x) : ScriptRuntime.NaNobj;
+        stream.defaultReadObject();
+        int maxPrototypeId = stream.readInt();
+        if (maxPrototypeId != 0) {
+            activatePrototypeMap(maxPrototypeId);
+        }
     }
 
-    protected final Object wrap_int(int x)
+    private void writeObject(ObjectOutputStream stream)
+        throws IOException
     {
-        return ScriptRuntime.wrapInt(x);
+        stream.defaultWriteObject();
+        int maxPrototypeId = 0;
+        if (prototypeValues != null) {
+            maxPrototypeId = prototypeValues.getMaxId();
+        }
+        stream.writeInt(maxPrototypeId);
     }
 
-    protected final Object wrap_long(long x)
-    {
-        int i = (int)x;
-        if (i == x) { return wrap_int(i); }
-        return new Long(x);
-    }
-
-    protected final Object wrap_boolean(boolean x)
-    {
-        return x ? Boolean.TRUE : Boolean.FALSE;
-    }
-
-    private int maxInstanceId;
-    private volatile PrototypeValues prototypeValues;
 }
 

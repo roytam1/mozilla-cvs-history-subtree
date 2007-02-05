@@ -1,3 +1,37 @@
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is Rhino code, released May 6, 1999.
+   -
+   - The Initial Developer of the Original Code is
+   - Netscape Communications Corporation.
+   - Portions created by the Initial Developer are Copyright (C) 1997-1999
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - the GNU General Public License Version 2 or later (the "GPL"), in which
+   - case the provisions of the GPL are applicable instead of those above. If
+   - you wish to allow use of your version of this file only under the terms of
+   - the GPL and not to allow others to use your version of this file under the
+   - MPL, indicate your decision by deleting the provisions above and replacing
+   - them with the notice and other provisions required by the GPL. If you do
+   - not delete the provisions above, a recipient may use your version of this
+   - file under either the MPL or the GPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
 <!doctype html public "-//w3c//dtd html 4.0 transitional//en">
 <html>
 <head>
@@ -33,7 +67,7 @@ so people can ask addition questions or comments there.
 Java classes visible to scripts</h3>
 One attendee raised the point that many embeddings may not want scripts
 to be able to access all Java classes. This is an excellent point, and
-I've implemented an addition to the <a href="../js/rhino/org/mozilla/javascript/SecuritySupport.html">SecuritySupport</a>
+I've implemented an addition to the <a href="apidocs/org/mozilla/javascript/SecuritySupport.html">SecuritySupport</a>
 class that allows embedders to choose which classes are exposed to scripts.
 <h3>
 Easier "importing" of Java classes</h3>
@@ -42,7 +76,7 @@ classes (like <tt>java.lang.String</tt> or <tt>Packages.org.mozilla.javascript.C
 could be improved. I've implemented a set of changes that make importing
 easier, but I'm not convinced that adding them is the right thing to do
 due to some drawbacks.
-<p>To see what I've done, take a look at the javadoc for the <a href="../js/rhino/org/mozilla/javascript/ImporterTopLevel.html">ImporterTopLevel</a>
+<p>To see what I've done, take a look at the javadoc for the <a href="apidocs/org/mozilla/javascript/ImporterTopLevel.html">ImporterTopLevel</a>
 class. You'll see that it's now possible to make function calls to "import"
 Java classes so that they can be referred to without qualification. I didn't
 use the word "import" because that's a keyword in JavaScript.

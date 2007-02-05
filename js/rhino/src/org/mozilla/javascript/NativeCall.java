@@ -1,20 +1,40 @@
 /* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
- * NPL.
+ * License.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1997-1999 Netscape Communications Corporation.  All Rights
- * Reserved.
- */
+ * The Original Code is Rhino code, released
+ * May 6, 1999.
+ *
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-1999
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Norris Boyd
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 package org.mozilla.javascript;
 
@@ -26,103 +46,105 @@ package org.mozilla.javascript;
  * @see org.mozilla.javascript.Arguments
  * @author Norris Boyd
  */
-public final class NativeCall extends ScriptableObject {
+public final class NativeCall extends IdScriptableObject
+{
+    static final long serialVersionUID = -7471457301304454454L;
 
-    NativeCall(Context cx, Scriptable scope, NativeFunction funObj, 
-               Scriptable thisObj, Object[] args)
+    private static final Object CALL_TAG = new Object();
+
+    static void init(Scriptable scope, boolean sealed)
     {
-        this(cx, scope, funObj, thisObj);
-        this.originalArgs = args;
-        
-        // initialize references to nested functions
-        NativeFunction[] fns = funObj.nestedFunctions;
-        if (fns != null) {
-            for (int i=0; i < fns.length; i++) {
-                NativeFunction f = fns[i];
-                if (f.names != null)
-                    super.put(f.names[0], this, f);
-            }
-        }
-        
-        // initialize values of arguments
-        String[] names = funObj.names;
-        if (names != null) {
-            for (int i=0; i < funObj.argCount; i++) {
-                Object val = i < args.length ? args[i] 
-                                             : Undefined.instance;
-                super.put(names[i+1], this, val);
-            }
-        }
-        
-        // initialize "arguments" property
-        super.put("arguments", this, new Arguments(this));
+        NativeCall obj = new NativeCall();
+        obj.exportAsJSClass(MAX_PROTOTYPE_ID, scope, sealed);
     }
-    
-    NativeCall(Context cx, Scriptable scope, NativeFunction funObj, 
-               Scriptable thisObj)
+
+    NativeCall() { }
+
+    NativeCall(NativeFunction function, Scriptable scope, Object[] args)
     {
-        this.funObj = funObj;
-        this.thisObj = thisObj;
-        
+        this.function = function;
+
         setParentScope(scope);
         // leave prototype null
-        
-        // save current activation
-        this.caller = cx.currentActivation;
-        cx.currentActivation = this;
-    }
-    
-    // Needed in order to use this class with ScriptableObject.defineClass
-    public NativeCall() {
+
+        this.originalArgs = (args == null) ? ScriptRuntime.emptyArgs : args;
+
+        // initialize values of arguments
+        int paramAndVarCount = function.getParamAndVarCount();
+        int paramCount = function.getParamCount();
+        if (paramAndVarCount != 0) {
+            for (int i = 0; i != paramCount; ++i) {
+                String name = function.getParamOrVarName(i);
+                Object val = i < args.length ? args[i]
+                                             : Undefined.instance;
+                defineProperty(name, val, PERMANENT);
+            }
+        }
+
+        // initialize "arguments" property but only if it was not overriden by
+        // the parameter with the same name
+        if (!super.has("arguments", this)) {
+            defineProperty("arguments", new Arguments(this), PERMANENT);
+        }
+
+        if (paramAndVarCount != 0) {
+            for (int i = paramCount; i != paramAndVarCount; ++i) {
+                String name = function.getParamOrVarName(i);
+                if (!super.has(name, this)) {
+                    defineProperty(name, Undefined.instance, PERMANENT);
+                }
+            }
+        }
     }
 
-    public String getClassName() {
+    public String getClassName()
+    {
         return "Call";
     }
-    
-    public static Object js_Call(Context cx, Object[] args, Function ctorObj,
-                                 boolean inNewExpr)
+
+    protected int findPrototypeId(String s)
     {
-        if (!inNewExpr) {
-            Object[] errArgs = { "Call" };
-            throw Context.reportRuntimeError(Context.getMessage
-                                             ("msg.only.from.new", errArgs));
-        }
-        ScriptRuntime.checkDeprecated(cx, "Call");
-        NativeCall result = new NativeCall();
-        result.setPrototype(getObjectPrototype(ctorObj));
-        return result;
-    }
-    
-    NativeCall getActivation(NativeFunction f) {
-        NativeCall x = this;
-        do {
-            if (x.funObj == f)
-                return x;
-            x = x.caller;
-        } while (x != null);
-        return null;
-    }
-        
-    public NativeFunction getFunctionObject() {
-        return funObj;
+        return s.equals("constructor") ? Id_constructor : 0;
     }
 
-    public Object[] getOriginalArguments() {
-        return originalArgs;
+    protected void initPrototypeId(int id)
+    {
+        String s;
+        int arity;
+        if (id == Id_constructor) {
+            arity=1; s="constructor";
+        } else {
+            throw new IllegalArgumentException(String.valueOf(id));
+        }
+        initPrototypeMethod(CALL_TAG, id, s, arity);
     }
-    
-    public NativeCall getCaller() {
-        return caller;
+
+    public Object execIdCall(IdFunctionObject f, Context cx, Scriptable scope,
+                             Scriptable thisObj, Object[] args)
+    {
+        if (!f.hasTag(CALL_TAG)) {
+            return super.execIdCall(f, cx, scope, thisObj, args);
+        }
+        int id = f.methodId();
+        if (id == Id_constructor) {
+            if (thisObj != null) {
+                throw Context.reportRuntimeError1("msg.only.from.new", "Call");
+            }
+            ScriptRuntime.checkDeprecated(cx, "Call");
+            NativeCall result = new NativeCall();
+            result.setPrototype(getObjectPrototype(scope));
+            return result;
+        }
+        throw new IllegalArgumentException(String.valueOf(id));
     }
-        
-    public Scriptable getThisObj() {
-        return thisObj;
-    }
-    
-    NativeCall caller;
-    NativeFunction funObj;
-    Scriptable thisObj;
+
+    private static final int
+        Id_constructor   = 1,
+        MAX_PROTOTYPE_ID = 1;
+
+    NativeFunction function;
     Object[] originalArgs;
-    public int debugPC;
+
+    transient NativeCall parentActivationCall;
 }
+

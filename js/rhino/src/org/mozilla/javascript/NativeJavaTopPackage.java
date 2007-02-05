@@ -1,43 +1,44 @@
 /* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
  *
  * The Original Code is Rhino code, released
  * May 6, 1999.
  *
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1997-1999 Netscape Communications Corporation. All
- * Rights Reserved.
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-1999
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- * Norris Boyd
- * Frank Mitchell
- * Mike Shaver
+ *   Norris Boyd
+ *   Frank Mitchell
+ *   Mike Shaver
  *
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU Public License (the "GPL"), in which case the
- * provisions of the GPL are applicable instead of those above.
- * If you wish to allow use of your version of this file only
- * under the terms of the GPL and not to allow others to use your
- * version of this file under the NPL, indicate your decision by
- * deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL.  If you do not delete
- * the provisions above, a recipient may use your version of this
- * file under either the NPL or the GPL.
- */
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 package org.mozilla.javascript;
-
-import java.lang.reflect.*;
 
 /**
  * This class reflects Java packages into the JavaScript environment.  We
@@ -53,14 +54,15 @@ import java.lang.reflect.*;
  */
 
 public class NativeJavaTopPackage
-    extends NativeJavaPackage implements Function
+    extends NativeJavaPackage implements Function, IdFunctionCall
 {
+    static final long serialVersionUID = -1455787259477709999L;
 
     // we know these are packages so we can skip the class check
     // note that this is ok even if the package isn't present.
     private static final String commonPackages = ""
                                                  +"java.lang;"
-                                                 +"java.lang.reflect"
+                                                 +"java.lang.reflect;"
                                                  +"java.io;"
                                                  +"java.math;"
                                                  +"java.net;"
@@ -72,20 +74,18 @@ public class NativeJavaTopPackage
                                                  +"javax.swing;"
                                                  ;
 
-    public NativeJavaTopPackage(ClassLoader loader)
+    NativeJavaTopPackage(ClassLoader loader)
     {
-        super("", loader);
+        super(true, "", loader);
     }
 
     public Object call(Context cx, Scriptable scope, Scriptable thisObj,
                        Object[] args)
-        throws JavaScriptException
     {
         return construct(cx, scope, args);
     }
 
     public Scriptable construct(Context cx, Scriptable scope, Object[] args)
-        throws JavaScriptException
     {
         ClassLoader loader = null;
         if (args.length != 0) {
@@ -101,50 +101,54 @@ public class NativeJavaTopPackage
             Context.reportRuntimeError0("msg.not.classloader");
             return null;
         }
-        return new NativeJavaPackage("", loader);
+        return new NativeJavaPackage(true, "", loader);
     }
 
     public static void init(Context cx, Scriptable scope, boolean sealed)
-        throws PropertyException
     {
         ClassLoader loader = cx.getApplicationClassLoader();
         final NativeJavaTopPackage top = new NativeJavaTopPackage(loader);
         top.setPrototype(getObjectPrototype(scope));
         top.setParentScope(scope);
 
-        for (int nameStart = 0; ;) {
-            int nameEnd = commonPackages.indexOf(';', nameStart);
-            if (nameEnd < 0) { break; }
-            String packageName = commonPackages.substring(nameStart, nameEnd);
-            top.forcePackage(packageName);
-            nameStart = nameEnd + 1;
+        String[] names = Kit.semicolonSplit(commonPackages);
+        for (int i = 0; i != names.length; ++i) {
+            top.forcePackage(names[i], scope);
         }
 
         // getClass implementation
-        JIFunction getClass = new JIFunction("getClass", 1) {
-            public Object call(Context fcx, Scriptable fscope,
-                               Scriptable thisObj, Object[] args)
-            {
-                return top.js_getClass(fcx, fscope, args);
-            }
-        };
+        IdFunctionObject getClass = new IdFunctionObject(top, FTAG, Id_getClass,
+                                                         "getClass", 1, scope);
 
         // We want to get a real alias, and not a distinct JavaPackage
         // with the same packageName, so that we share classes and top
         // that are underneath.
-        NativeJavaPackage javaAlias = (NativeJavaPackage)top.get("java",
-                                                                      top);
+        NativeJavaPackage javaAlias = (NativeJavaPackage)top.get("java", top);
 
         // It's safe to downcast here since initStandardObjects takes
         // a ScriptableObject.
         ScriptableObject global = (ScriptableObject) scope;
 
-        getClass.defineAsProperty(global, ScriptableObject.DONTENUM);
+        if (sealed) {
+            getClass.sealObject();
+        }
+        getClass.exportAsScopeProperty();
         global.defineProperty("Packages", top, ScriptableObject.DONTENUM);
         global.defineProperty("java", javaAlias, ScriptableObject.DONTENUM);
     }
 
-    final Scriptable js_getClass(Context cx, Scriptable scope, Object[] args)
+    public Object execIdCall(IdFunctionObject f, Context cx, Scriptable scope,
+                             Scriptable thisObj, Object[] args)
+    {
+        if (f.hasTag(FTAG)) {
+            if (f.methodId() == Id_getClass) {
+                return js_getClass(cx, scope, args);
+            }
+        }
+        throw f.unknown();
+    }
+
+    private Scriptable js_getClass(Context cx, Scriptable scope, Object[] args)
     {
         if (args.length > 0  && args[0] instanceof Wrapper) {
             Scriptable result = this;
@@ -167,9 +171,10 @@ public class NativeJavaTopPackage
                 offset = index+1;
             }
         }
-        throw Context.reportRuntimeError(
-            Context.getMessage0("msg.not.java.obj"));
+        throw Context.reportRuntimeError0("msg.not.java.obj");
     }
 
+    private static final Object FTAG = new Object();
+    private static final int Id_getClass = 1;
 }
 

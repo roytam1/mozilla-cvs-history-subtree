@@ -1,26 +1,51 @@
 /* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
- * NPL.
+ * License.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1997-1999 Netscape Communications Corporation.  All Rights
- * Reserved.
- */
+ * The Original Code is Rhino code, released
+ * May 6, 1999.
+ *
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-2000
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Norris Boyd
+ *   Igor Bukanov
+ *   Frank Mitchell
+ *   Mike Shaver
+ *   Kemal Bayram
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 package org.mozilla.javascript;
 
+import java.io.*;
 import java.lang.reflect.*;
 import java.util.Hashtable;
-import java.util.Enumeration;
+import java.util.Date;
 
 /**
  * This class reflects non-Array Java objects into the JavaScript environment.  It
@@ -33,38 +58,49 @@ import java.util.Enumeration;
  * @see NativeJavaClass
  */
 
-public class NativeJavaObject implements Scriptable, Wrapper {
-    
-    public NativeJavaObject(Object javaObject, JavaMembers members) {
-        this.javaObject = javaObject;
-        this.members = members;
-    }
-    
-    public NativeJavaObject(Scriptable scope, Object javaObject, 
-                            Class staticType) 
+public class NativeJavaObject implements Scriptable, Wrapper, Serializable
+{
+    static final long serialVersionUID = -6948590651130498591L;
+
+    public NativeJavaObject() { }
+
+    public NativeJavaObject(Scriptable scope, Object javaObject,
+                            Class staticType)
     {
+        this.parent = scope;
         this.javaObject = javaObject;
-        Class dynamicType = javaObject != null ? javaObject.getClass()
-                                               : staticType;
-        members = JavaMembers.lookupClass(scope, dynamicType, staticType);
-        fieldAndMethods = members.getFieldAndMethodsObjects(javaObject, false);
+        this.staticType = staticType;
+        initMembers();
     }
-    
+
+    protected void initMembers() {
+        Class dynamicType;
+        if (javaObject != null) {
+            dynamicType = javaObject.getClass();
+        } else {
+            dynamicType = staticType;
+        }
+        members = JavaMembers.lookupClass(parent, dynamicType, staticType);
+        fieldAndMethods
+            = members.getFieldAndMethodsObjects(this, javaObject, false);
+    }
+
     public boolean has(String name, Scriptable start) {
         return members.has(name, false);
     }
-        
+
     public boolean has(int index, Scriptable start) {
         return false;
     }
-        
+
     public Object get(String name, Scriptable start) {
         if (fieldAndMethods != null) {
             Object result = fieldAndMethods.get(name);
-            if (result != null)
+            if (result != null) {
                 return result;
+            }
         }
-        // TODO: passing 'this' as the scope is bogus since it has 
+        // TODO: passing 'this' as the scope is bogus since it has
         //  no parent scope
         return members.get(this, name, javaObject, false);
     }
@@ -72,9 +108,15 @@ public class NativeJavaObject implements Scriptable, Wrapper {
     public Object get(int index, Scriptable start) {
         throw members.reportMemberNotFound(Integer.toString(index));
     }
-    
+
     public void put(String name, Scriptable start, Object value) {
-        members.put(name, javaObject, value, false);
+        // We could be asked to modify the value of a property in the
+        // prototype. Since we can't add a property to a Java object,
+        // we modify it in the prototype rather than copy it down.
+        if (prototype == null || members.has(name, false))
+            members.put(this, name, javaObject, value, false);
+        else
+            prototype.put(name, prototype, value);
     }
 
     public void put(int index, Scriptable start, Object value) {
@@ -85,61 +127,53 @@ public class NativeJavaObject implements Scriptable, Wrapper {
         // This is an instance of a Java class, so always return false
         return false;
     }
-    
+
     public void delete(String name) {
     }
-    
+
     public void delete(int index) {
     }
-    
+
     public Scriptable getPrototype() {
-        return null;
+        if (prototype == null && javaObject instanceof String) {
+            return ScriptableObject.getClassPrototype(parent, "String");
+        }
+        return prototype;
     }
 
-    public void setPrototype(Scriptable prototype) {
+    /**
+     * Sets the prototype of the object.
+     */
+    public void setPrototype(Scriptable m) {
+        prototype = m;
     }
 
+    /**
+     * Returns the parent (enclosing) scope of the object.
+     */
     public Scriptable getParentScope() {
-        return null;
+        return parent;
     }
 
-    public void setParentScope(Scriptable parent) {
+    /**
+     * Sets the parent (enclosing) scope of the object.
+     */
+    public void setParentScope(Scriptable m) {
+        parent = m;
     }
 
     public Object[] getIds() {
         return members.getIds(false);
     }
-    
-    public static Object wrap(Scriptable scope, Object obj, Class staticType) 
-    {
-        if (obj == null)
-            return obj;
-        Class cls = obj.getClass();
-        if (staticType != null && staticType.isPrimitive()) {
-            if (staticType == Void.TYPE)
-                return Undefined.instance;
-            if (staticType == Character.TYPE)
-                return new Integer((int) ((Character) obj).charValue());
-            return obj;
-        }
-        if (cls.isArray())
-            return NativeJavaArray.wrap(scope, obj);
-        if (obj instanceof Scriptable)
-            return obj;
-        if (Context.useJSObject && jsObjectClass != null && 
-            staticType != jsObjectClass && jsObjectClass.isInstance(obj)) 
-        {
-            try {
-                return jsObjectGetScriptable.invoke(obj, ScriptRuntime.emptyArgs);
-            }
-            catch (InvocationTargetException e) {
-                // Just abandon conversion from JSObject
-            }
-            catch (IllegalAccessException e) {
-                // Just abandon conversion from JSObject
-            }
-        }
-        return new NativeJavaObject(scope, obj, staticType);
+
+/**
+@deprecated Use {@link Context#getWrapFactory()} together with calling {@link
+WrapFactory#wrap(Context cx, Scriptable scope, Object obj, Class)}
+*/
+    public static Object wrap(Scriptable scope, Object obj, Class staticType) {
+
+        Context cx = Context.getContext();
+        return cx.getWrapFactory().wrap(cx, scope, obj, staticType);
     }
 
     public Object unwrap() {
@@ -150,50 +184,42 @@ public class NativeJavaObject implements Scriptable, Wrapper {
         return "JavaObject";
     }
 
-    Function getConverter(String converterName) {
-        Object converterFunction = get(converterName, this);
-        if (converterFunction instanceof Function) {
-            return (Function) converterFunction;
-        }
-        return null;
-    }
-
-    Object callConverter(Function converterFunction)
-        throws JavaScriptException
+    public Object getDefaultValue(Class hint)
     {
-        Function f = (Function) converterFunction;
-        return f.call(Context.getContext(), f.getParentScope(),
-                      this, new Object[0]);
-    }
-
-    Object callConverter(String converterName)
-        throws JavaScriptException
-    {
-        Function converter = getConverter(converterName);
-        if (converter == null) {
-            Object[] errArgs = { converterName, javaObject.getClass().getName() };
-            throw Context.reportRuntimeError(
-                    Context.getMessage("msg.java.conversion.implicit_method",
-                                       errArgs));
-        }
-        return callConverter(converter);
-    }
-
-    public Object getDefaultValue(Class hint) {
-        if (hint == null || hint == ScriptRuntime.StringClass)
-            return javaObject.toString();
-        try {
-            if (hint == ScriptRuntime.BooleanClass)
-                return callConverter("booleanValue");
-            if (hint == ScriptRuntime.NumberClass) {
-                return callConverter("doubleValue");
+        Object value;
+        if (hint == null) {
+            if (javaObject instanceof Boolean) {
+                hint = ScriptRuntime.BooleanClass;
             }
-            // fall through to error message
-        } catch (JavaScriptException jse) {
-            // fall through to error message
         }
-        throw Context.reportRuntimeError(
-            Context.getMessage("msg.default.value", null));
+        if (hint == null || hint == ScriptRuntime.StringClass) {
+            value = javaObject.toString();
+        } else {
+            String converterName;
+            if (hint == ScriptRuntime.BooleanClass) {
+                converterName = "booleanValue";
+            } else if (hint == ScriptRuntime.NumberClass) {
+                converterName = "doubleValue";
+            } else {
+                throw Context.reportRuntimeError0("msg.default.value");
+            }
+            Object converterObject = get(converterName, this);
+            if (converterObject instanceof Function) {
+                Function f = (Function)converterObject;
+                value = f.call(Context.getContext(), f.getParentScope(),
+                               this, ScriptRuntime.emptyArgs);
+            } else {
+                if (hint == ScriptRuntime.NumberClass
+                    && javaObject instanceof Boolean)
+                {
+                    boolean b = ((Boolean)javaObject).booleanValue();
+                    value = ScriptRuntime.wrapNumber(b ? 1.0 : 0.0);
+                } else {
+                    value = javaObject.toString();
+                }
+            }
+        }
+        return value;
     }
 
     /**
@@ -202,183 +228,771 @@ public class NativeJavaObject implements Scriptable, Wrapper {
      * function, but for now I'll hide behind precedent.
      */
     public static boolean canConvert(Object fromObj, Class to) {
-        if (fromObj == null)
-            return true;
-        // XXX nontrivial conversions?
-        return getConversionWeight(fromObj, to) == CONVERSION_TRIVIAL;
+        int weight = getConversionWeight(fromObj, to);
+
+        return (weight < CONVERSION_NONE);
     }
 
-    public static final int CONVERSION_NONE         = 0;
-    public static final int CONVERSION_TRIVIAL      = 1;
-    public static final int CONVERSION_NONTRIVIAL   = 2;
+    private static final int JSTYPE_UNDEFINED   = 0; // undefined type
+    private static final int JSTYPE_NULL        = 1; // null
+    private static final int JSTYPE_BOOLEAN     = 2; // boolean
+    private static final int JSTYPE_NUMBER      = 3; // number
+    private static final int JSTYPE_STRING      = 4; // string
+    private static final int JSTYPE_JAVA_CLASS  = 5; // JavaClass
+    private static final int JSTYPE_JAVA_OBJECT = 6; // JavaObject
+    private static final int JSTYPE_JAVA_ARRAY  = 7; // JavaArray
+    private static final int JSTYPE_OBJECT      = 8; // Scriptable
 
-    public static int getConversionWeight(Object fromObj, Class to) {
-        Class from = fromObj.getClass();
+    static final byte CONVERSION_TRIVIAL      = 1;
+    static final byte CONVERSION_NONTRIVIAL   = 0;
+    static final byte CONVERSION_NONE         = 99;
 
-        // if to is a primitive, from must be assignableFrom
-        // the wrapper class.
-        if (to.isPrimitive()) {
-            if (ScriptRuntime.NumberClass.isAssignableFrom(from))
-                return CONVERSION_TRIVIAL;
-            if (to == Boolean.TYPE)
-                return from == ScriptRuntime.BooleanClass
-                       ? CONVERSION_TRIVIAL
-                       : CONVERSION_NONE;
-            // Allow String to convert to Character if length() == 1
-            if (to == Character.TYPE) {
-                if (from.isAssignableFrom(ScriptRuntime.CharacterClass) ||
-                    (from == ScriptRuntime.StringClass &&
-                     ((String) fromObj).length() == 1))
-                {
-                    return CONVERSION_TRIVIAL;
+    /**
+     * Derive a ranking based on how "natural" the conversion is.
+     * The special value CONVERSION_NONE means no conversion is possible,
+     * and CONVERSION_NONTRIVIAL signals that more type conformance testing
+     * is required.
+     * Based on
+     * <a href="http://www.mozilla.org/js/liveconnect/lc3_method_overloading.html">
+     * "preferred method conversions" from Live Connect 3</a>
+     */
+    static int getConversionWeight(Object fromObj, Class to) {
+        int fromCode = getJSTypeCode(fromObj);
+
+        switch (fromCode) {
+
+        case JSTYPE_UNDEFINED:
+            if (to == ScriptRuntime.StringClass ||
+                to == ScriptRuntime.ObjectClass) {
+                return 1;
+            }
+            break;
+
+        case JSTYPE_NULL:
+            if (!to.isPrimitive()) {
+                return 1;
+            }
+            break;
+
+        case JSTYPE_BOOLEAN:
+            // "boolean" is #1
+            if (to == Boolean.TYPE) {
+                return 1;
+            }
+            else if (to == ScriptRuntime.BooleanClass) {
+                return 2;
+            }
+            else if (to == ScriptRuntime.ObjectClass) {
+                return 3;
+            }
+            else if (to == ScriptRuntime.StringClass) {
+                return 4;
+            }
+            break;
+
+        case JSTYPE_NUMBER:
+            if (to.isPrimitive()) {
+                if (to == Double.TYPE) {
+                    return 1;
                 }
-                return CONVERSION_NONE;
+                else if (to != Boolean.TYPE) {
+                    return 1 + getSizeRank(to);
+                }
             }
-            return CONVERSION_NONTRIVIAL;
+            else {
+                if (to == ScriptRuntime.StringClass) {
+                    // native numbers are #1-8
+                    return 9;
+                }
+                else if (to == ScriptRuntime.ObjectClass) {
+                    return 10;
+                }
+                else if (ScriptRuntime.NumberClass.isAssignableFrom(to)) {
+                    // "double" is #1
+                    return 2;
+                }
+            }
+            break;
+
+        case JSTYPE_STRING:
+            if (to == ScriptRuntime.StringClass) {
+                return 1;
+            }
+            else if (to.isInstance(fromObj)) {
+                return 2;
+            }
+            else if (to.isPrimitive()) {
+                if (to == Character.TYPE) {
+                    return 3;
+                } else if (to != Boolean.TYPE) {
+                    return 4;
+                }
+            }
+            break;
+
+        case JSTYPE_JAVA_CLASS:
+            if (to == ScriptRuntime.ClassClass) {
+                return 1;
+            }
+            else if (to == ScriptRuntime.ObjectClass) {
+                return 3;
+            }
+            else if (to == ScriptRuntime.StringClass) {
+                return 4;
+            }
+            break;
+
+        case JSTYPE_JAVA_OBJECT:
+        case JSTYPE_JAVA_ARRAY:
+            Object javaObj = fromObj;
+            if (javaObj instanceof Wrapper) {
+                javaObj = ((Wrapper)javaObj).unwrap();
+            }
+            if (to.isInstance(javaObj)) {
+                return CONVERSION_NONTRIVIAL;
+            }
+            if (to == ScriptRuntime.StringClass) {
+                return 2;
+            }
+            else if (to.isPrimitive() && to != Boolean.TYPE) {
+                return (fromCode == JSTYPE_JAVA_ARRAY)
+                       ? CONVERSION_NONTRIVIAL : 2 + getSizeRank(to);
+            }
+            break;
+
+        case JSTYPE_OBJECT:
+            // Other objects takes #1-#3 spots
+            if (to == fromObj.getClass()) {
+                // No conversion required
+                return 1;
+            }
+            if (to.isArray()) {
+                if (fromObj instanceof NativeArray) {
+                    // This is a native array conversion to a java array
+                    // Array conversions are all equal, and preferable to object
+                    // and string conversion, per LC3.
+                    return 1;
+                }
+            }
+            else if (to == ScriptRuntime.ObjectClass) {
+                return 2;
+            }
+            else if (to == ScriptRuntime.StringClass) {
+                return 3;
+            }
+            else if (to == ScriptRuntime.DateClass) {
+                if (fromObj instanceof NativeDate) {
+                    // This is a native date to java date conversion
+                    return 1;
+                }
+            }
+            else if (to.isInterface()) {
+                if (fromObj instanceof Function) {
+                    // See comments in coerceType
+                    if (to.getMethods().length == 1) {
+                        return 1;
+                    }
+                }
+                return 11;
+            }
+            else if (to.isPrimitive() && to != Boolean.TYPE) {
+                return 3 + getSizeRank(to);
+            }
+            break;
         }
-        if (to == ScriptRuntime.CharacterClass) {
-            if (from.isAssignableFrom(ScriptRuntime.CharacterClass) ||
-                (from == ScriptRuntime.StringClass &&
-                ((String) fromObj).length() == 1))
-            {
-                return CONVERSION_TRIVIAL;
-            }
+
+        return CONVERSION_NONE;
+    }
+
+    static int getSizeRank(Class aType) {
+        if (aType == Double.TYPE) {
+            return 1;
+        }
+        else if (aType == Float.TYPE) {
+            return 2;
+        }
+        else if (aType == Long.TYPE) {
+            return 3;
+        }
+        else if (aType == Integer.TYPE) {
+            return 4;
+        }
+        else if (aType == Short.TYPE) {
+            return 5;
+        }
+        else if (aType == Character.TYPE) {
+            return 6;
+        }
+        else if (aType == Byte.TYPE) {
+            return 7;
+        }
+        else if (aType == Boolean.TYPE) {
             return CONVERSION_NONE;
         }
-        if (to == ScriptRuntime.StringClass) {
-            return CONVERSION_TRIVIAL;
+        else {
+            return 8;
         }
-        if (Context.useJSObject && jsObjectClass != null && 
-            jsObjectClass.isAssignableFrom(to) && 
-            Scriptable.class.isAssignableFrom(from))
-        {
-            // Convert a Scriptable to a JSObject.
-            return CONVERSION_TRIVIAL;
+    }
+
+    private static int getJSTypeCode(Object value) {
+        if (value == null) {
+            return JSTYPE_NULL;
         }
-        return to.isAssignableFrom(from) ? CONVERSION_TRIVIAL : CONVERSION_NONE;
+        else if (value == Undefined.instance) {
+            return JSTYPE_UNDEFINED;
+        }
+        else if (value instanceof String) {
+            return JSTYPE_STRING;
+        }
+        else if (value instanceof Number) {
+            return JSTYPE_NUMBER;
+        }
+        else if (value instanceof Boolean) {
+            return JSTYPE_BOOLEAN;
+        }
+        else if (value instanceof Scriptable) {
+            if (value instanceof NativeJavaClass) {
+                return JSTYPE_JAVA_CLASS;
+            }
+            else if (value instanceof NativeJavaArray) {
+                return JSTYPE_JAVA_ARRAY;
+            }
+            else if (value instanceof Wrapper) {
+                return JSTYPE_JAVA_OBJECT;
+            }
+            else {
+                return JSTYPE_OBJECT;
+            }
+        }
+        else if (value instanceof Class) {
+            return JSTYPE_JAVA_CLASS;
+        }
+        else {
+            Class valueClass = value.getClass();
+            if (valueClass.isArray()) {
+                return JSTYPE_JAVA_ARRAY;
+            }
+            else {
+                return JSTYPE_JAVA_OBJECT;
+            }
+        }
+    }
+
+    /**
+     * Not intended for public use. Callers should use the
+     * public API Context.toType.
+     * @see org.mozilla.javascript.Context#jsToJava(Object, Class).
+     * @deprecated as of 1.5 Release 4
+     */
+    public static Object coerceType(Class type, Object value)
+    {
+        return coerceTypeImpl(type, value);
     }
 
     /**
      * Type-munging for field setting and method invocation.
-     * This is traditionally the least fun part of getting LiveConnect right.
-     * I hope we've got good tests.... =/<p>
-     *
-     * Assumptions:<br>
-     * <ul>
-     * <li> we should convert fields very aggressively. e.g: a String sent to an
-     *      int slot gets toInteger()ed and then assigned.  Invalid strings
-     *      become NaN and then 0.
-     * <li> we only get called when we <b>must</b> make this coercion.  Don't
-     *      use this unless you already know that the type conversion is really
-     *      what you want.
-     * </ul>
+     * Conforms to LC3 specification
      */
-    public static Object coerceType(Class type, Object value) {
-        // Don't coerce null to a string (or other object)
-        if (value == null)
-            return null;
-            
-        // For final classes we can compare valueClass to a class object
-        // rather than using instanceof
-        Class valueClass = value.getClass();
-        
-        // Is value already of the correct type?
-        if (valueClass == type)
+    static Object coerceTypeImpl(Class type, Object value)
+    {
+        if (value != null && value.getClass() == type) {
             return value;
-
-        // String
-        if (type == ScriptRuntime.StringClass)
-            return ScriptRuntime.toString(value);
-
-        if (type == Character.TYPE || type == ScriptRuntime.CharacterClass) {
-            // Special case for converting a single char string to a character
-            if (valueClass == ScriptRuntime.StringClass && ((String) value).length() == 1)
-                return new Character(((String) value).charAt(0));
-            return new Character((char)ScriptRuntime.toInteger(value));
         }
 
-        // Integer, Long, Char, Byte
-        if (type == ScriptRuntime.IntegerClass || type == Integer.TYPE)
-            return new Integer((int)ScriptRuntime.toInteger(value));
+        switch (getJSTypeCode(value)) {
 
-        if (type == ScriptRuntime.LongClass || type == Long.TYPE)
-            return new Long((long)ScriptRuntime.toInteger(value));
-
-        if (type == ScriptRuntime.ByteClass || type == Byte.TYPE)
-            return new Byte((byte)ScriptRuntime.toInteger(value));
-
-        if (type == ScriptRuntime.ShortClass || type == Short.TYPE)
-            return new Short((short)ScriptRuntime.toInteger(value));
-
-        // Double, Float
-        if (type == ScriptRuntime.DoubleClass || type == Double.TYPE) {
-            return valueClass == ScriptRuntime.DoubleClass
-                   ? value
-                   : new Double(ScriptRuntime.toNumber(value));
-        }
-
-        if (type == ScriptRuntime.FloatClass || type == Float.TYPE) {
-            return valueClass == ScriptRuntime.FloatClass
-                   ? value
-                   : new Float(ScriptRuntime.toNumber(value));
-        }
-
-        if (valueClass == ScriptRuntime.DoubleClass)
-            return value;
-            
-        // If JSObject compatibility is enabled, and the method wants it,
-        // wrap the Scriptable value in a JSObject.
-        if (Context.useJSObject && jsObjectClass != null && 
-            value instanceof Scriptable)
-        {
-            if (Scriptable.class.isAssignableFrom(type))
-                return value;
-            try {
-                Object ctorArgs[] = { value };
-                return jsObjectCtor.newInstance(ctorArgs);
-            } catch (InstantiationException instEx) {
-                throw new EvaluatorException("error generating JSObject wrapper for " +
-                                              value);
-            } catch (IllegalArgumentException argEx) {
-                throw new EvaluatorException("JSObject constructor doesn't want [Scriptable]!");
-            } catch (InvocationTargetException e) {
-                throw WrappedException.wrapException(e);
-            } catch (IllegalAccessException accessEx) {
-                throw new EvaluatorException("JSObject constructor is protected/private!");
+        case JSTYPE_NULL:
+            // raise error if type.isPrimitive()
+            if (type.isPrimitive()) {
+                reportConversionError(value, type);
             }
+            return null;
+
+        case JSTYPE_UNDEFINED:
+            if (type == ScriptRuntime.StringClass ||
+                type == ScriptRuntime.ObjectClass) {
+                return "undefined";
+            }
+            else {
+                reportConversionError("undefined", type);
+            }
+            break;
+
+        case JSTYPE_BOOLEAN:
+            // Under LC3, only JS Booleans can be coerced into a Boolean value
+            if (type == Boolean.TYPE ||
+                type == ScriptRuntime.BooleanClass ||
+                type == ScriptRuntime.ObjectClass) {
+                return value;
+            }
+            else if (type == ScriptRuntime.StringClass) {
+                return value.toString();
+            }
+            else {
+                reportConversionError(value, type);
+            }
+            break;
+
+        case JSTYPE_NUMBER:
+            if (type == ScriptRuntime.StringClass) {
+                return ScriptRuntime.toString(value);
+            }
+            else if (type == ScriptRuntime.ObjectClass) {
+                return coerceToNumber(Double.TYPE, value);
+            }
+            else if ((type.isPrimitive() && type != Boolean.TYPE) ||
+                     ScriptRuntime.NumberClass.isAssignableFrom(type)) {
+                return coerceToNumber(type, value);
+            }
+            else {
+                reportConversionError(value, type);
+            }
+            break;
+
+        case JSTYPE_STRING:
+            if (type == ScriptRuntime.StringClass || type.isInstance(value)) {
+                return value;
+            }
+            else if (type == Character.TYPE
+                     || type == ScriptRuntime.CharacterClass)
+            {
+                // Special case for converting a single char string to a
+                // character
+                // Placed here because it applies *only* to JS strings,
+                // not other JS objects converted to strings
+                if (((String)value).length() == 1) {
+                    return new Character(((String)value).charAt(0));
+                }
+                else {
+                    return coerceToNumber(type, value);
+                }
+            }
+            else if ((type.isPrimitive() && type != Boolean.TYPE)
+                     || ScriptRuntime.NumberClass.isAssignableFrom(type))
+            {
+                return coerceToNumber(type, value);
+            }
+            else {
+                reportConversionError(value, type);
+            }
+            break;
+
+        case JSTYPE_JAVA_CLASS:
+            if (value instanceof Wrapper) {
+                value = ((Wrapper)value).unwrap();
+            }
+
+            if (type == ScriptRuntime.ClassClass ||
+                type == ScriptRuntime.ObjectClass) {
+                return value;
+            }
+            else if (type == ScriptRuntime.StringClass) {
+                return value.toString();
+            }
+            else {
+                reportConversionError(value, type);
+            }
+            break;
+
+        case JSTYPE_JAVA_OBJECT:
+        case JSTYPE_JAVA_ARRAY:
+            if (type.isPrimitive()) {
+                if (type == Boolean.TYPE) {
+                    reportConversionError(value, type);
+                }
+                return coerceToNumber(type, value);
+            }
+            else {
+                if (value instanceof Wrapper) {
+                    value = ((Wrapper)value).unwrap();
+                }
+                if (type == ScriptRuntime.StringClass) {
+                    return value.toString();
+                }
+                else {
+                    if (type.isInstance(value)) {
+                        return value;
+                    }
+                    else {
+                        reportConversionError(value, type);
+                    }
+                }
+            }
+            break;
+
+        case JSTYPE_OBJECT:
+            if (type == ScriptRuntime.StringClass) {
+                return ScriptRuntime.toString(value);
+            }
+            else if (type.isPrimitive()) {
+                if (type == Boolean.TYPE) {
+                    reportConversionError(value, type);
+                }
+                return coerceToNumber(type, value);
+            }
+            else if (type.isInstance(value)) {
+                return value;
+            }
+            else if (type == ScriptRuntime.DateClass
+                     && value instanceof NativeDate)
+            {
+                double time = ((NativeDate)value).getJSTimeValue();
+                // XXX: This will replace NaN by 0
+                return new Date((long)time);
+            }
+            else if (type.isArray() && value instanceof NativeArray) {
+                // Make a new java array, and coerce the JS array components
+                // to the target (component) type.
+                NativeArray array = (NativeArray) value;
+                long length = array.getLength();
+                Class arrayType = type.getComponentType();
+                Object Result = Array.newInstance(arrayType, (int)length);
+                for (int i = 0 ; i < length ; ++i) {
+                    try  {
+                        Array.set(Result, i, coerceType(arrayType,
+                                                        array.get(i, array)));
+                    }
+                    catch (EvaluatorException ee) {
+                        reportConversionError(value, type);
+                    }
+                }
+
+                return Result;
+            }
+            else if (value instanceof Wrapper) {
+                value = ((Wrapper)value).unwrap();
+                if (type.isInstance(value))
+                    return value;
+                reportConversionError(value, type);
+            }
+            else if (type.isInterface() && value instanceof Callable) {
+                // Try to use function as implementation of Java interface.
+                //
+                // XXX: Curently only instances of ScriptableObject are
+                // supported since the resulting interface proxies should
+                // be reused next time conversion is made and generic
+                // Callable has no storage for it. Weak references can
+                // address it but for now use this restriction.
+                if (value instanceof ScriptableObject) {
+                    ScriptableObject so = (ScriptableObject)value;
+                    Object key = Kit.makeHashKeyFromPair(
+                        COERCED_INTERFACE_KEY, type);
+                    Object old = so.getAssociatedValue(key);
+                    if (old != null) {
+                        // Function was already wrapped
+                        return old;
+                    }
+                    Context cx = Context.getContext();
+                    Object glue
+                        = InterfaceAdapter.create(cx, type, (Callable)value);
+                    // Store for later retrival
+                    glue = so.associateValue(key, glue);
+                    return glue;
+                }
+                reportConversionError(value, type);
+            } else {
+                reportConversionError(value, type);
+            }
+            break;
         }
-        
-        if (ScriptRuntime.NumberClass.isInstance(value))
-            return new Double(((Number) value).doubleValue());
 
         return value;
     }
-    
-    public static void initJSObject() {
-        if (!Context.useJSObject)
-            return;
-        // if netscape.javascript.JSObject is in the CLASSPATH, enable JSObject
-        // compatability wrappers
-        jsObjectClass = null;
-        try {
-            jsObjectClass = Class.forName("netscape.javascript.JSObject");
-            Class ctorParms[] = { ScriptRuntime.ScriptableClass };
-            jsObjectCtor = jsObjectClass.getConstructor(ctorParms);
-            jsObjectGetScriptable = jsObjectClass.getMethod("getScriptable", 
-                                                            new Class[0]);
-        } catch (ClassNotFoundException classEx) {
-            // jsObjectClass already null
-        } catch (NoSuchMethodException methEx) {
-            // jsObjectClass already null
+
+    private static Object coerceToNumber(Class type, Object value)
+    {
+        Class valueClass = value.getClass();
+
+        // Character
+        if (type == Character.TYPE || type == ScriptRuntime.CharacterClass) {
+            if (valueClass == ScriptRuntime.CharacterClass) {
+                return value;
+            }
+            return new Character((char)toInteger(value,
+                                                 ScriptRuntime.CharacterClass,
+                                                 Character.MIN_VALUE,
+                                                 Character.MAX_VALUE));
+        }
+
+        // Double, Float
+        if (type == ScriptRuntime.ObjectClass ||
+            type == ScriptRuntime.DoubleClass || type == Double.TYPE) {
+            return valueClass == ScriptRuntime.DoubleClass
+                ? value
+                : new Double(toDouble(value));
+        }
+
+        if (type == ScriptRuntime.FloatClass || type == Float.TYPE) {
+            if (valueClass == ScriptRuntime.FloatClass) {
+                return value;
+            }
+            else {
+                double number = toDouble(value);
+                if (Double.isInfinite(number) || Double.isNaN(number)
+                    || number == 0.0) {
+                    return new Float((float)number);
+                }
+                else {
+                    double absNumber = Math.abs(number);
+                    if (absNumber < Float.MIN_VALUE) {
+                        return new Float((number > 0.0) ? +0.0 : -0.0);
+                    }
+                    else if (absNumber > Float.MAX_VALUE) {
+                        return new Float((number > 0.0) ?
+                                         Float.POSITIVE_INFINITY :
+                                         Float.NEGATIVE_INFINITY);
+                    }
+                    else {
+                        return new Float((float)number);
+                    }
+                }
+            }
+        }
+
+        // Integer, Long, Short, Byte
+        if (type == ScriptRuntime.IntegerClass || type == Integer.TYPE) {
+            if (valueClass == ScriptRuntime.IntegerClass) {
+                return value;
+            }
+            else {
+                return new Integer((int)toInteger(value,
+                                                  ScriptRuntime.IntegerClass,
+                                                  Integer.MIN_VALUE,
+                                                  Integer.MAX_VALUE));
+            }
+        }
+
+        if (type == ScriptRuntime.LongClass || type == Long.TYPE) {
+            if (valueClass == ScriptRuntime.LongClass) {
+                return value;
+            }
+            else {
+                /* Long values cannot be expressed exactly in doubles.
+                 * We thus use the largest and smallest double value that
+                 * has a value expressible as a long value. We build these
+                 * numerical values from their hexidecimal representations
+                 * to avoid any problems caused by attempting to parse a
+                 * decimal representation.
+                 */
+                final double max = Double.longBitsToDouble(0x43dfffffffffffffL);
+                final double min = Double.longBitsToDouble(0xc3e0000000000000L);
+                return new Long(toInteger(value,
+                                          ScriptRuntime.LongClass,
+                                          min,
+                                          max));
+            }
+        }
+
+        if (type == ScriptRuntime.ShortClass || type == Short.TYPE) {
+            if (valueClass == ScriptRuntime.ShortClass) {
+                return value;
+            }
+            else {
+                return new Short((short)toInteger(value,
+                                                  ScriptRuntime.ShortClass,
+                                                  Short.MIN_VALUE,
+                                                  Short.MAX_VALUE));
+            }
+        }
+
+        if (type == ScriptRuntime.ByteClass || type == Byte.TYPE) {
+            if (valueClass == ScriptRuntime.ByteClass) {
+                return value;
+            }
+            else {
+                return new Byte((byte)toInteger(value,
+                                                ScriptRuntime.ByteClass,
+                                                Byte.MIN_VALUE,
+                                                Byte.MAX_VALUE));
+            }
+        }
+
+        return new Double(toDouble(value));
+    }
+
+
+    private static double toDouble(Object value)
+    {
+        if (value instanceof Number) {
+            return ((Number)value).doubleValue();
+        }
+        else if (value instanceof String) {
+            return ScriptRuntime.toNumber((String)value);
+        }
+        else if (value instanceof Scriptable) {
+            if (value instanceof Wrapper) {
+                // XXX: optimize tail-recursion?
+                return toDouble(((Wrapper)value).unwrap());
+            }
+            else {
+                return ScriptRuntime.toNumber(value);
+            }
+        }
+        else {
+            Method meth;
+            try {
+                meth = value.getClass().getMethod("doubleValue", null);
+            }
+            catch (NoSuchMethodException e) {
+                meth = null;
+            }
+            catch (SecurityException e) {
+                meth = null;
+            }
+            if (meth != null) {
+                try {
+                    return ((Number)meth.invoke(value, null)).doubleValue();
+                }
+                catch (IllegalAccessException e) {
+                    // XXX: ignore, or error message?
+                    reportConversionError(value, Double.TYPE);
+                }
+                catch (InvocationTargetException e) {
+                    // XXX: ignore, or error message?
+                    reportConversionError(value, Double.TYPE);
+                }
+            }
+            return ScriptRuntime.toNumber(value.toString());
         }
     }
-        
-    protected Object javaObject;
-    protected JavaMembers members;
-    private Hashtable fieldAndMethods;
-    static Class jsObjectClass;
-    static Constructor jsObjectCtor;
-    static Method jsObjectGetScriptable;
+
+    private static long toInteger(Object value, Class type,
+                                  double min, double max)
+    {
+        double d = toDouble(value);
+
+        if (Double.isInfinite(d) || Double.isNaN(d)) {
+            // Convert to string first, for more readable message
+            reportConversionError(ScriptRuntime.toString(value), type);
+        }
+
+        if (d > 0.0) {
+            d = Math.floor(d);
+        }
+        else {
+            d = Math.ceil(d);
+        }
+
+        if (d < min || d > max) {
+            // Convert to string first, for more readable message
+            reportConversionError(ScriptRuntime.toString(value), type);
+        }
+        return (long)d;
+    }
+
+    static void reportConversionError(Object value, Class type)
+    {
+        // It uses String.valueOf(value), not value.toString() since
+        // value can be null, bug 282447.
+        throw Context.reportRuntimeError2(
+            "msg.conversion.not.allowed",
+            String.valueOf(value),
+            JavaMembers.javaSignature(type));
+    }
+
+    private void writeObject(ObjectOutputStream out)
+        throws IOException
+    {
+        out.defaultWriteObject();
+
+        if (javaObject != null) {
+            Class joClass = javaObject.getClass();
+            if (joClass.getName().startsWith("adapter")) {
+                out.writeBoolean(true);
+                if (adapter_writeAdapterObject == null) {
+                    throw new IOException();
+                }
+                Object[] args = { javaObject, out };
+                try {
+                    adapter_writeAdapterObject.invoke(null, args);
+                } catch (Exception ex) {
+                    throw new IOException();
+                }
+            } else {
+                out.writeBoolean(false);
+                out.writeObject(javaObject);
+            }
+        } else {
+            out.writeBoolean(false);
+            out.writeObject(javaObject);
+        }
+
+        if (staticType != null) {
+            out.writeObject(staticType.getClass().getName());
+        } else {
+            out.writeObject(null);
+        }
+    }
+
+    private void readObject(ObjectInputStream in)
+        throws IOException, ClassNotFoundException
+    {
+        in.defaultReadObject();
+
+        if (in.readBoolean()) {
+            if (adapter_readAdapterObject == null)
+                throw new ClassNotFoundException();
+            Object[] args = { this, in };
+            try {
+                javaObject = adapter_readAdapterObject.invoke(null, args);
+            } catch (Exception ex) {
+                throw new IOException();
+            }
+        } else {
+            javaObject = in.readObject();
+        }
+
+        String className = (String)in.readObject();
+        if (className != null) {
+            staticType = Class.forName(className);
+        } else {
+            staticType = null;
+        }
+
+        initMembers();
+    }
+
+    /**
+     * The prototype of this object.
+     */
+    protected Scriptable prototype;
+
+    /**
+     * The parent scope of this object.
+     */
+    protected Scriptable parent;
+
+    protected transient Object javaObject;
+
+    protected transient Class staticType;
+    protected transient JavaMembers members;
+    private transient Hashtable fieldAndMethods;
+
+    private static final Object COERCED_INTERFACE_KEY = new Object();
+    private static Method adapter_writeAdapterObject;
+    private static Method adapter_readAdapterObject;
+
+    static {
+        // Reflection in java is verbose
+        Class[] sig2 = new Class[2];
+        Class cl = Kit.classOrNull("org.mozilla.javascript.JavaAdapter");
+        if (cl != null) {
+            try {
+                sig2[0] = ScriptRuntime.ObjectClass;
+                sig2[1] = Kit.classOrNull("java.io.ObjectOutputStream");
+                adapter_writeAdapterObject = cl.getMethod("writeAdapterObject",
+                                                          sig2);
+
+                sig2[0] = ScriptRuntime.ScriptableClass;
+                sig2[1] = Kit.classOrNull("java.io.ObjectInputStream");
+                adapter_readAdapterObject = cl.getMethod("readAdapterObject",
+                                                         sig2);
+
+            } catch (Exception ex) {
+                adapter_writeAdapterObject = null;
+                adapter_readAdapterObject = null;
+            }
+        }
+    }
 
 }
-

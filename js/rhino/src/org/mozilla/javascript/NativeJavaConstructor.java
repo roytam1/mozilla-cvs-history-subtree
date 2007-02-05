@@ -1,31 +1,51 @@
 /* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
- * NPL.
+ * License.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1997-1999 Netscape Communications Corporation.  All Rights
- * Reserved.
- */
+ * The Original Code is Rhino code, released
+ * May 6, 1999.
+ *
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-1999
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Norris Boyd
+ *   Frank Mitchell
+ *   Mike Shaver
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 package org.mozilla.javascript;
 
-import java.lang.reflect.*;
-
 /**
- * This class reflects a single Java constructor into the JavaScript 
+ * This class reflects a single Java constructor into the JavaScript
  * environment.  It satisfies a request for an overloaded constructor,
  * as introduced in LiveConnect 3.
  * All NativeJavaConstructors behave as JSRef `bound' methods, in that they
- * always construct the same NativeJavaClass regardless of any reparenting 
+ * always construct the same NativeJavaClass regardless of any reparenting
  * that may occur.
  *
  * @author Frank Mitchell
@@ -34,48 +54,32 @@ import java.lang.reflect.*;
  * @see NativeJavaClass
  */
 
-public class NativeJavaConstructor extends NativeFunction implements Function {
+public class NativeJavaConstructor extends BaseFunction
+{
+    static final long serialVersionUID = -8149253217482668463L;
 
-    public NativeJavaConstructor(Constructor ctor) {
-        this.constructor = ctor;
-        names = new String[1];
-        names[0] = "<init>" + NativeJavaMethod.signature(ctor);
+    MemberBox ctor;
+
+    public NativeJavaConstructor(MemberBox ctor)
+    {
+        this.ctor = ctor;
     }
 
     public Object call(Context cx, Scriptable scope, Scriptable thisObj,
                        Object[] args)
-        throws JavaScriptException
     {
-        // Find a method that matches the types given.
-        if (constructor == null) {
-            throw new RuntimeException("No constructor defined for call");
-        }
-
-        // Eliminate useless args[0] and unwrap if required
-        for (int i = 0; i < args.length; i++) {
-            if (args[i] instanceof Wrapper) {
-                args[i] = ((Wrapper)args[i]).unwrap();
-            }
-        }
-
-        return NativeJavaClass.constructSpecific(cx, scope, 
-                                                 this, constructor, args);
+        return NativeJavaClass.constructSpecific(cx, scope, args, ctor);
     }
 
-    /*
-    public Object getDefaultValue(Class hint) {
-        return this;
-    }
-    */
-
-    public String toString() {
-        return "[JavaConstructor " + constructor.getName() + "]";
+    public String getFunctionName()
+    {
+        String sig = JavaMembers.liveConnectSignature(ctor.argTypes);
+        return "<init>".concat(sig);
     }
 
-    Constructor getConstructor() {
-        return constructor; 
+    public String toString()
+    {
+        return "[JavaConstructor " + ctor.getName() + "]";
     }
-
-    Constructor constructor;
 }
 

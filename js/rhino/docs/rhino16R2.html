@@ -1,3 +1,37 @@
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is Rhino code, released May 6, 1999.
+   -
+   - The Initial Developer of the Original Code is
+   - Netscape Communications Corporation.
+   - Portions created by the Initial Developer are Copyright (C) 1997-1999
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - the GNU General Public License Version 2 or later (the "GPL"), in which
+   - case the provisions of the GPL are applicable instead of those above. If
+   - you wish to allow use of your version of this file only under the terms of
+   - the GPL and not to allow others to use your version of this file under the
+   - MPL, indicate your decision by deleting the provisions above and replacing
+   - them with the notice and other provisions required by the GPL. If you do
+   - not delete the provisions above, a recipient may use your version of this
+   - file under either the MPL or the GPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
 <!DOCTYPE doctype PUBLIC "-//w3c//dtd html 4.0 transitional//en">
 <html>
 <head>
@@ -21,7 +55,7 @@ P { text-align: justify; }
 <h1 align="center">
 Change Log for Rhino</h1>
 
-<h2>Rhino 1.6R2, released 2005-08-21</h2>
+<h2>Rhino 1.6R2, released 2005-09-19</h2>
 
 <h3>Release overview</h3>
 
@@ -33,8 +67,8 @@ for more details. </p>
 <p>
 This version of Rhino should be binary compatible with the current
 embeddings that use only public <a href="apidocs/index.html">API</a>
-unless the code use the previously deperected classes as documented <a href="#Rhino1.5R1-deprecation-removal">below</a>.
-Please report any incompatibilitiy issues to <a href="http://bugzilla.mozilla.org/enter_bug.cgi?product=Rhino">Bugzilla</a>.
+unless the code use the previously deprected classes as documented <a href="#Rhino1.5R1-deprecation-removal">below</a>.
+Please report any incompatibility issues to <a href="http://bugzilla.mozilla.org/enter_bug.cgi?product=Rhino">Bugzilla</a>.
 </p>
 
 <h3>Bugs marked fixed in Rhino 1.6R2 (<a href="https://bugzilla.mozilla.org/buglist.cgi?query_format=advanced&amp;short_desc_type=allwordssubstr&amp;short_desc=&amp;product=Rhino&amp;long_desc_type=substring&amp;long_desc=&amp;bug_file_loc_type=allwordssubstr&amp;bug_file_loc=&amp;status_whiteboard_type=allwordssubstr&amp;status_whiteboard=&amp;keywords_type=allwords&amp;keywords=&amp;resolution=FIXED&amp;emailassigned_to1=1&amp;emailtype1=exact&amp;email1=&amp;emailassigned_to2=1&amp;emailreporter2=1&amp;emailqa_contact2=1&amp;emailtype2=exact&amp;email2=&amp;bugidtype=include&amp;bug_id=&amp;votes=&amp;chfieldfrom=2004-11-29&amp;chfieldto=2005-08-21&amp;chfield=resolution&amp;chfieldvalue=FIXED&amp;cmdtype=doit&amp;order=Reuse+same+sort+as+last+time&amp;field0-0-0=noop&amp;type0-0-0=noop&amp;value0-0-0=">query</a>)</h3>
@@ -303,6 +337,78 @@ script</td>
 
       <td class="xl25" style="width: 330pt;" width="440">Need access to underlying RhinoException in
 rethrown erro...</td>
+
+    </tr>
+
+    <tr>
+      <td><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=305323">305323</a></td>
+      <td>Rhino fails to select the appropriate overloaded method</td>
+    </tr>
+    <tr>
+      <td><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=305753">305753</a></td>
+      <td>&nbsp;NativeJavaMethod objects have incorrect parent when using...</td>
+    </tr>
+    <tr style="height: 12.75pt;" height="17">
+
+      <td class="xl26" style="height: 12.75pt; width: 48pt; text-align: left;" x:num="" height="17" width="64"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=306258">306258</a></td>
+
+      <td class="xl25" style="width: 330pt;" width="440">Can not compile using Ant scripts under JDK 1.5</td>
+
+    </tr>
+
+    <tr style="height: 12.75pt;" height="17">
+
+      <td class="xl26" style="height: 12.75pt; width: 48pt; text-align: left;" x:num="" height="17" width="64"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=306268">306268</a></td>
+
+      <td class="xl25" style="width: 330pt;" width="440">Decompilation of E4X dot query is broken</td>
+
+    </tr>
+
+    <tr style="height: 12.75pt;" height="17">
+
+      <td class="xl26" style="height: 12.75pt; width: 48pt; text-align: left;" x:num="" height="17" width="64"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=306308">306308</a></td>
+
+      <td class="xl25" style="width: 330pt;" width="440">JS function as Java interface via reflect.Proxy</td>
+
+    </tr>
+
+    <tr style="height: 12.75pt;" height="17">
+
+      <td class="xl26" style="height: 12.75pt; width: 48pt; text-align: left;" x:num="" height="17" width="64"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=306419">306419</a></td>
+
+      <td class="xl25" style="width: 330pt;" width="440">Add serialVersionUID to Serializable</td>
+
+    </tr>
+
+    <tr style="height: 12.75pt;" height="17">
+
+      <td class="xl26" style="height: 12.75pt; width: 48pt; text-align: left;" x:num="" height="17" width="64"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=306584">306584</a></td>
+
+      <td class="xl25" style="width: 330pt;" width="440">Crashes parsing .jsp page with javascripts</td>
+
+    </tr>
+
+    <tr style="height: 12.75pt;" height="17">
+
+      <td class="xl26" style="height: 12.75pt; width: 48pt; text-align: left;" x:num="" height="17" width="64"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=303460">303460</a></td>
+
+      <td class="xl25" style="width: 330pt;" width="440">Enhance Rhino's shell to execute compiled script .class f...</td>
+
+    </tr>
+
+    <tr style="height: 12.75pt;" height="17">
+
+      <td class="xl26" style="height: 12.75pt; width: 48pt; text-align: left;" x:num="" height="17" width="64"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=306825">306825</a></td>
+
+      <td class="xl25" style="width: 330pt;" width="440">Allow to use shell.Global in servlets</td>
+
+    </tr>
+
+    <tr style="height: 12.75pt;" height="17">
+
+      <td class="xl26" style="height: 12.75pt; width: 48pt; text-align: left;" x:num="" height="17" width="64"><a href="https://bugzilla.mozilla.org/show_bug.cgi?id=309029"></a>309029</td>
+
+      <td class="xl25" style="width: 330pt;" width="440">Exception when evaluating recursive function</td>
 
     </tr>
 

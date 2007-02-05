@@ -1,20 +1,40 @@
 /* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
- * NPL.
+ * License.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1997-1999 Netscape Communications Corporation.  All Rights
- * Reserved.
- */
+ * The Original Code is Rhino code, released
+ * May 6, 1998.
+ *
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-2000
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Norris Boyd
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 import org.mozilla.javascript.*;
 import java.io.*;
@@ -30,7 +50,6 @@ import java.util.Vector;
  * Example of use of the File object:
  * <pre>
  * js> defineClass("File")
- * js> var file = new File("myfile.txt");
  * js> file = new File("myfile.txt");
  * [object File]
  * js> file.writeLine("one");                       <i>only now is file actually opened</i>
@@ -48,7 +67,7 @@ import java.util.Vector;
  * be wrapped as JavaScript exceptions when called from JavaScript,
  * and may be caught within JavaScript.
  *
- * @author Norris Boyd 
+ * @author Norris Boyd
  */
 public class File extends ScriptableObject {
 
@@ -71,8 +90,9 @@ public class File extends ScriptableObject {
      * Otherwise System.in or System.out is assumed as appropriate
      * to the use.
      */
-    public static Scriptable js_File(Context cx, Object[] args,
-                                     Function ctorObj, boolean inNewExpr)
+    public static Scriptable jsConstructor(Context cx, Object[] args,
+                                           Function ctorObj,
+                                           boolean inNewExpr)
     {
         File result = new File();
         if (args.length == 0 || args[0] == Context.getUndefinedValue()) {
@@ -97,7 +117,7 @@ public class File extends ScriptableObject {
      *
      * Used to define the "name" property.
      */
-    public String js_getName() {
+    public String jsGet_name() {
         return name;
     }
 
@@ -111,32 +131,21 @@ public class File extends ScriptableObject {
      *
      * @exception IOException if an error occurred while accessing the file
      *            associated with this object
-     * @exception JavaScriptException if a JavaScript exception occurred
-     *            while creating the result array
      */
-    public Object js_readLines()
-        throws IOException, JavaScriptException
+    public Object jsFunction_readLines()
+        throws IOException
     {
         Vector v = new Vector();
         String s;
-        while ((s = js_readLine()) != null) {
+        while ((s = jsFunction_readLine()) != null) {
             v.addElement(s);
         }
         Object[] lines = new Object[v.size()];
         v.copyInto(lines);
 
         Scriptable scope = ScriptableObject.getTopLevelScope(this);
-        Scriptable result;
-        try {
-            Context cx = Context.getCurrentContext();
-            result = cx.newObject(scope, "Array", lines);
-        } catch (PropertyException e) {
-            throw Context.reportRuntimeError(e.getMessage());
-        } catch (NotAFunctionException e) {
-            throw Context.reportRuntimeError(e.getMessage());
-        }
-
-        return result;
+        Context cx = Context.getCurrentContext();
+        return cx.newObject(scope, "Array", lines);
     }
 
     /**
@@ -147,7 +156,7 @@ public class File extends ScriptableObject {
      *            associated with this object, or EOFException if the object
      *            reached the end of the file
      */
-    public String js_readLine() throws IOException {
+    public String jsFunction_readLine() throws IOException {
         return getReader().readLine();
     }
 
@@ -158,22 +167,7 @@ public class File extends ScriptableObject {
      *            associated with this object, or EOFException if the object
      *            reached the end of the file
      */
-    public String js_readChar() throws IOException {
-        int i = getReader().read();
-        if (i == -1)
-            return null;
-        char[] charArray = { (char) i };
-        return new String(charArray);
-    }
-
-    /**
-     * Read a block.
-     *
-     * @exception IOException if an error occurred while accessing the file
-     *            associated with this object, or EOFException if the object
-     *            reached the end of the file
-     */
-    public String js_readBlock() throws IOException {
+    public String jsFunction_readChar() throws IOException {
         int i = getReader().read();
         if (i == -1)
             return null;
@@ -191,8 +185,8 @@ public class File extends ScriptableObject {
      * @exception IOException if an error occurred while accessing the file
      *            associated with this object
      */
-    public static void js_write(Context cx, Scriptable thisObj,
-                                Object[] args, Function funObj)
+    public static void jsFunction_write(Context cx, Scriptable thisObj,
+                                        Object[] args, Function funObj)
         throws IOException
     {
         write0(thisObj, args, false);
@@ -206,14 +200,14 @@ public class File extends ScriptableObject {
      *            associated with this object
      *
      */
-    public static void js_writeLine(Context cx, Scriptable thisObj,
-                                    Object[] args, Function funObj)
+    public static void jsFunction_writeLine(Context cx, Scriptable thisObj,
+                                            Object[] args, Function funObj)
         throws IOException
     {
         write0(thisObj, args, true);
     }
 
-    public int js_getLineNumber()
+    public int jsGet_lineNumber()
         throws FileNotFoundException
     {
         return getReader().getLineNumber();
@@ -226,7 +220,7 @@ public class File extends ScriptableObject {
      * @exception IOException if an error occurred while accessing the file
      *            associated with this object
      */
-    public void js_close() throws IOException {
+    public void jsFunction_close() throws IOException {
         if (reader != null) {
             reader.close();
             reader = null;
@@ -241,9 +235,9 @@ public class File extends ScriptableObject {
      *
      * Close the file when this object is collected.
      */
-    public void finalize() {
+    protected void finalize() {
         try {
-            js_close();
+            jsFunction_close();
         }
         catch (IOException e) {
         }
@@ -251,11 +245,6 @@ public class File extends ScriptableObject {
 
     /**
      * Get the Java reader.
-     *
-     * Note that we use the name "jsFunction_getReader" because if we
-     * used just "js_getReader" we'd be defining a readonly property
-     * named "reader".
-     *
      */
     public Object jsFunction_getReader() {
         if (reader == null)
@@ -264,7 +253,7 @@ public class File extends ScriptableObject {
         // in a Scriptable object so that it can be manipulated by
         // JavaScript.
         Scriptable parent = ScriptableObject.getTopLevelScope(this);
-        return Context.toObject(reader, parent);
+        return Context.javaToJS(reader, parent);
     }
 
     /**
@@ -277,7 +266,7 @@ public class File extends ScriptableObject {
         if (writer == null)
             return null;
         Scriptable parent = ScriptableObject.getTopLevelScope(this);
-        return Context.toObject(writer, parent);
+        return Context.javaToJS(writer, parent);
     }
 
     /**

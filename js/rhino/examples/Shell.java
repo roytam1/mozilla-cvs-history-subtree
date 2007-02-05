@@ -1,20 +1,39 @@
 /* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
- * NPL.
+ * License.
  *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1997-1999 Netscape Communications Corporation.  All Rights
- * Reserved.
- */
+ * The Original Code is Rhino code, released
+ * May 6, 1998.
+ *
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-1999
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 import org.mozilla.javascript.*;
 import java.io.*;
@@ -27,7 +46,12 @@ import java.io.*;
  *
  * @author Norris Boyd
  */
-public class Shell extends ScriptableObject {
+public class Shell extends ScriptableObject
+{
+    public String getClassName()
+    {
+        return "global";
+    }
 
     /**
      * Main entry point.
@@ -40,42 +64,36 @@ public class Shell extends ScriptableObject {
     public static void main(String args[]) {
         // Associate a new Context with this thread
         Context cx = Context.enter();
-
-        // A bit of shorthand: since Shell extends ScriptableObject,
-        // we can make it the global object.
-        global = new Shell();
-
-        // Initialize the standard objects (Object, Function, etc.)
-        // This must be done before scripts can be executed.
-        cx.initStandardObjects(global);
-
-        // Define some global functions particular to the shell. Note
-        // that these functions are not part of ECMA.
-        String[] names = { "print", "quit", "version", "load", "help" };
         try {
-            global.defineFunctionProperties(names, Shell.class,
-                                            ScriptableObject.DONTENUM);
-        } catch (PropertyException e) {
-            throw new Error(e.getMessage());
+            // Initialize the standard objects (Object, Function, etc.)
+            // This must be done before scripts can be executed.
+            Shell shell = new Shell();
+            cx.initStandardObjects(shell);
+
+            // Define some global functions particular to the shell. Note
+            // that these functions are not part of ECMA.
+            String[] names = { "print", "quit", "version", "load", "help" };
+            shell.defineFunctionProperties(names, Shell.class,
+                                           ScriptableObject.DONTENUM);
+
+            args = processOptions(cx, args);
+
+            // Set up "arguments" in the global scope to contain the command
+            // line arguments after the name of the script to execute
+            Object[] array = args;
+            if (args.length > 0) {
+                int length = args.length - 1;
+                array = new Object[length];
+                System.arraycopy(args, 1, array, 0, length);
+            }
+            Scriptable argsObj = cx.newArray(shell, array);
+            shell.defineProperty("arguments", argsObj,
+                                 ScriptableObject.DONTENUM);
+
+            shell.processSource(cx, args.length == 0 ? null : args[0]);
+        } finally {
+            Context.exit();
         }
-
-        args = processOptions(cx, args);
-
-        // Set up "arguments" in the global scope to contain the command
-        // line arguments after the name of the script to execute
-        Object[] array = args;
-        if (args.length > 0) {
-            int length = args.length - 1;
-            array = new Object[length];
-            System.arraycopy(args, 1, array, 0, length);
-        }
-        Scriptable argsObj = cx.newArray(global, array);
-        global.defineProperty("arguments", argsObj,
-                              ScriptableObject.DONTENUM);
-
-        processSource(cx, args.length == 0 ? null : args[0]);
-
-        cx.exit();
     }
 
     /**
@@ -105,24 +123,12 @@ public class Shell extends ScriptableObject {
     }
 
     /**
-     * Return name of this class, the global object.
-     *
-     * This method must be implemented in all concrete classes
-     * extending ScriptableObject.
-     *
-     * @see com.netscape.javascript.Scriptable#getClassName
-     */
-    public String getClassName() {
-        return "global";
-    }
-
-    /**
      * Print a usage message.
      */
-    public static void usage(String s) {
+    private static void usage(String s) {
         p("Didn't understand \"" + s + "\".");
         p("Valid arguments are:");
-        p("-version 100|110|120|130");
+        p("-version 100|110|120|130|140|150");
         System.exit(1);
     }
 
@@ -131,7 +137,7 @@ public class Shell extends ScriptableObject {
      *
      * This method is defined as a JavaScript function.
      */
-    public static void help(String s) {
+    public void help() {
         p("");
         p("Command                Description");
         p("=======                ===========");
@@ -181,7 +187,8 @@ public class Shell extends ScriptableObject {
      *
      * This method is defined as a JavaScript function.
      */
-    public static void quit() {
+    public void quit()
+    {
         quitting = true;
     }
 
@@ -210,8 +217,9 @@ public class Shell extends ScriptableObject {
     public static void load(Context cx, Scriptable thisObj,
                             Object[] args, Function funObj)
     {
-        for (int i=0; i < args.length; i++) {
-            processSource(cx, cx.toString(args[i]));
+        Shell shell = (Shell)getTopLevelScope(thisObj);
+        for (int i = 0; i < args.length; i++) {
+            shell.processSource(cx, cx.toString(args[i]));
         }
     }
 
@@ -223,7 +231,8 @@ public class Shell extends ScriptableObject {
      * @param filename the name of the file to compile, or null
      *                 for interactive mode.
      */
-    public static void processSource(Context cx, String filename) {
+    private void processSource(Context cx, String filename)
+    {
         if (filename == null) {
             BufferedReader in = new BufferedReader
                 (new InputStreamReader(System.in));
@@ -255,7 +264,7 @@ public class Shell extends ScriptableObject {
                         if (cx.stringIsCompilableUnit(source))
                             break;
                     }
-                    Object result = cx.evaluateString(global, source,
+                    Object result = cx.evaluateString(this, source,
                                                       sourceName, startline,
                                                       null);
                     if (result != cx.getUndefinedValue()) {
@@ -299,7 +308,7 @@ public class Shell extends ScriptableObject {
                 // Here we evalute the entire contents of the file as
                 // a script. Text is printed only if the print() function
                 // is called.
-                cx.evaluateReader(global, in, filename, 1, null);
+                cx.evaluateReader(this, in, filename, 1, null);
             }
             catch (WrappedException we) {
                 System.err.println(we.getWrappedException().toString());
@@ -323,14 +332,12 @@ public class Shell extends ScriptableObject {
                 }
             }
         }
-        System.gc();
     }
 
     private static void p(String s) {
         System.out.println(s);
     }
 
-    static Shell global;
-    static boolean quitting;
+    private boolean quitting;
 }
 

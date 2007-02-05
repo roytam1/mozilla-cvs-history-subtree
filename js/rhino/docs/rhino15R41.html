@@ -32,47 +32,44 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-
-<html lang="en">
-
+<!DOCTYPE doctype PUBLIC "-//w3c//dtd html 4.0 transitional//en">
+<html>
 <head>
-
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
-<meta http-equiv="Content-Language" content="en">
-<meta http-equiv="Content-Style-Type" content="text/css">
-
 <meta name="Author" content="Igor Bukanov">
 <meta name="KeyWords" content="Rhino, JavaScript, Java">
-<title>Change Log</title>
-
-<link rel="up" href="./" title="Rhino project page">
-
+<title>Rhino 1.5 Release 4.1 Change Log</title>
 </head>
-<body>
 
-<p class="crumbs"><em>You are here:</em> <a href="./">Rhino project page</a> &gt; <strong>Change Log</strong></p>
+<body bgcolor="#ffffff">
 
-<h1 style="text-align: center;">Change Log for Rhino</h1>
-<h2>Change logs for previous Rhino releases</h2>
-<ul>
-  <li><a href="rhino16R2.html">Rhino 1.6R2</a>, released
-2005-09-19</li>
-  <li><a href="rhino16R1.html">Rhino 1.6R1</a>, released
-2004-11-29</li>
-  <li><a href="rhino15R5.html">Rhino 1.5R5</a>, released
-2004-03-25</li>
-  <li><a href="rhino15R41.html">Rhino 1.5R4.1</a>, released
-2003-04-21</li>
-  <li><a href="rhino15R4.html">Rhino 1.5R4</a>, released
-2003-02-10</li>
-  <li><a href="rhino15R3.html">Rhino 1.5R3</a>, released
-2002-01-27</li>
-  <li><a href="rhino15R2.html">Rhino 1.5R2</a>, released
-2001-07-27</li>
-  <li><a href="rhino15R1.html">Rhino 1.5R1</a>, released
-2000-09-10</li>
-</ul>
+<h1 align="center">Rhino 1.5 Release 4.1 Change Log</h1>
 
-</body>
-</html>
+1.5R4.1 is a bug fix release to address mostly regressions from 1.5R3 found in 1.5R4. The only visible API change compared with 1.5R4 is two new methods in <tt>org.mozilla.javascript.Context</tt>,  <tt>getApplicationClassLoader()</tt> and <tt>setApplicationClassLoader(ClasssLoader)</tt>. They allow to control the class loader Rhino uses when accessing application classes. 
+<p>
+For differences between 1.5R4 and 1.5R3, see <a href="rhino15R4.html">1.5R4 change log</a>.
+
+<h3>Resolved Bugzilla reports</h3>
+
+The following Rhino reports in <a href="http://bugzilla.mozilla.org/">Bugzilla</a> where resolved for Rhino 1.5 Release 4.
+<p>
+<a href="http://bugzilla.mozilla.org/show_bug.cgi?id=96270">96270</a> - 
+Unable to create java objects from within a javascript.
+
+<br><a href="http://bugzilla.mozilla.org/show_bug.cgi?id=193168">193168</a> - 
+Rhino debugger in v1.5R4 fails to update script source when a script is reloaded.
+
+<br><a href="http://bugzilla.mozilla.org/show_bug.cgi?id=193555">193555</a> - 
+1.5R4 regression: function expression has no access to its name.
+
+<br><a href="http://bugzilla.mozilla.org/show_bug.cgi?id=196017">196017</a> - 
+1.5R4 regression: script can not find classes on some versions of JDK.
+
+<br><a href="http://bugzilla.mozilla.org/show_bug.cgi?id=200551">200551</a> - 
+JavaAdapter not loading a class if js.jar installed in jre/lib/ext directory.
+
+
+<hr width="100%"><br>
+<a href="index.html">back to top</a></h3>
+
+</body></html>

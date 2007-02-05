@@ -1,3 +1,37 @@
+<!-- ***** BEGIN LICENSE BLOCK *****
+   - Version: MPL 1.1/GPL 2.0
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is Rhino code, released May 6, 1999.
+   -
+   - The Initial Developer of the Original Code is
+   - Netscape Communications Corporation.
+   - Portions created by the Initial Developer are Copyright (C) 1997-1999
+   - the Initial Developer. All Rights Reserved.
+   -
+   - Contributor(s):
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - the GNU General Public License Version 2 or later (the "GPL"), in which
+   - case the provisions of the GPL are applicable instead of those above. If
+   - you wish to allow use of your version of this file only under the terms of
+   - the GPL and not to allow others to use your version of this file under the
+   - MPL, indicate your decision by deleting the provisions above and replacing
+   - them with the notice and other provisions required by the GPL. If you do
+   - not delete the provisions above, a recipient may use your version of this
+   - file under either the MPL or the GPL.
+   -
+   - ***** END LICENSE BLOCK ***** -->
+
 <!doctype html public "-//w3c//dtd html 4.0 transitional//en">
 <html>
 <head>
@@ -97,7 +131,7 @@ numeric identifiers. Conceptually, all accessors are converted to strings
 in order to perform the lookup of the property in the object. However,
 this is not the implementation used in practice because a number to string
 conversion is too expensive to be performed on every array access.
-<p>Instead, every property accessor method in <a href="org/mozilla/javascript/Scriptable.html">Scriptable</a>
+<p>Instead, every property accessor method in <a href="apidocs/org/mozilla/javascript/Scriptable.html">Scriptable</a>
 (<tt>has</tt>, <tt>get</tt>, <tt>set</tt>, <tt>remove</tt>, <tt>getAttributes</tt>,
 and <tt>setAttributes</tt>) has overloaded forms that take either a <tt>String</tt>
 or an <tt>int</tt> argument. It is the responsibility of the caller to
@@ -113,14 +147,14 @@ Defining Host Objects</h3>
 Host objects are JavaScript objects that provide special access to the
 host environment. For example, in a browser environment, the Window and
 Document objects are host objects.
-<p>The easiest way to define new host objects is by using <a href="org/mozilla/javascript/ScriptableObject.html#defineClass(org.mozilla.javascript.Scriptable, java.lang.Class)">ScriptableObject.defineClass()</a>.
+<p>The easiest way to define new host objects is by using <a href="apidocs/org/mozilla/javascript/ScriptableObject.html#defineClass(org.mozilla.javascript.Scriptable, java.lang.Class)">ScriptableObject.defineClass()</a>.
 This method defines a set of JavaScript objects using a Java class. Several
 of the <a href="examples.html">examples</a> define host objects this way.
 <p>If the services provided by defineClass are insufficient, try other
 methods of
-<a href="org/mozilla/javascript/ScriptableObject.html">ScriptableObject</a>
+<a href="apidocs/org/mozilla/javascript/ScriptableObject.html">ScriptableObject</a>
 and
-<a href="org/mozilla/javascript/FunctionObject.html">FunctionObject</a>,
+<a href="apidocs/org/mozilla/javascript/FunctionObject.html">FunctionObject</a>,
 such as <tt>defineProperty</tt> and <tt>defineFunctionProperties</tt>.
 <br>&nbsp;
 <br>&nbsp;

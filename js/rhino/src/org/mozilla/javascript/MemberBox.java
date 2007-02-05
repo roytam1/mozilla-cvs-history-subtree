@@ -1,38 +1,41 @@
 /* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
  *
  * The Original Code is Rhino code, released
  * May 6, 1999.
  *
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1997-1999 Netscape Communications Corporation. All
- * Rights Reserved.
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-1999
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- * Igor Bukanov
- * Felix Meschberger
+ *   Igor Bukanov
+ *   Felix Meschberger
  *
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU Public License (the "GPL"), in which case the
- * provisions of the GPL are applicable instead of those above.
- * If you wish to allow use of your version of this file only
- * under the terms of the GPL and not to allow others to use your
- * version of this file under the NPL, indicate your decision by
- * deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL.  If you do not delete
- * the provisions above, a recipient may use your version of this
- * file under either the NPL or the GPL.
- */
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 package org.mozilla.javascript;
 
@@ -41,14 +44,19 @@ import java.io.*;
 
 /**
  * Wrappper class for Method and Constructor instances to cache
- * getParameterTypes() results and to recover from IllegalAccessException
- * in some cases.
+ * getParameterTypes() results, recover from IllegalAccessException
+ * in some cases and provide serialization support.
  *
  * @author Igor Bukanov
  */
 
 final class MemberBox implements Serializable
 {
+    static final long serialVersionUID = 6358550398665688245L;
+
+    private transient Member memberObject;
+    transient Class[] argTypes;
+    Object delegateTo;
 
     MemberBox(Method method)
     {
@@ -134,37 +142,43 @@ final class MemberBox implements Serializable
     }
 
     Object invoke(Object target, Object[] args)
-        throws IllegalAccessException, InvocationTargetException
     {
         Method method = method();
         try {
-            return method.invoke(target, args);
-        } catch (IllegalAccessException ex) {
-            Method accessible = searchAccessibleMethod(method, argTypes);
-            if (accessible != null) {
-                memberObject = accessible;
-                method = accessible;
-            } else {
-                if (!tryToMakeAccessible(method)) {
-                    throw ex;
+            try {
+                return method.invoke(target, args);
+            } catch (IllegalAccessException ex) {
+                Method accessible = searchAccessibleMethod(method, argTypes);
+                if (accessible != null) {
+                    memberObject = accessible;
+                    method = accessible;
+                } else {
+                    if (!VMBridge.instance.tryToMakeAccessible(method)) {
+                        throw Context.throwAsScriptRuntimeEx(ex);
+                    }
                 }
+                // Retry after recovery
+                return method.invoke(target, args);
             }
-            return method.invoke(target, args);
+        } catch (Exception ex) {
+            throw Context.throwAsScriptRuntimeEx(ex);
         }
     }
 
     Object newInstance(Object[] args)
-        throws InvocationTargetException, IllegalAccessException,
-               InstantiationException
     {
         Constructor ctor = ctor();
         try {
-            return ctor.newInstance(args);
-        } catch (IllegalAccessException ex) {
-            if (!tryToMakeAccessible(ctor)) {
-                throw ex;
+            try {
+                return ctor.newInstance(args);
+            } catch (IllegalAccessException ex) {
+                if (!VMBridge.instance.tryToMakeAccessible(ctor)) {
+                    throw Context.throwAsScriptRuntimeEx(ex);
+                }
             }
             return ctor.newInstance(args);
+        } catch (Exception ex) {
+            throw Context.throwAsScriptRuntimeEx(ex);
         }
     }
 
@@ -206,31 +220,11 @@ final class MemberBox implements Serializable
         return null;
     }
 
-    private static boolean tryToMakeAccessible(Member member)
-    {
-        /**
-         * Due to a bug in Sun's VM, public methods in private
-         * classes are not accessible by default (Sun Bug #4071593).
-         * We have to explicitly set the method accessible
-         * via method.setAccessible(true) but we have to use
-         * reflection because the setAccessible() in Method is
-         * not available under jdk 1.1.
-         */
-        if (method_setAccessible != null) {
-            try {
-                Object[] args_wrapper = { Boolean.TRUE };
-                method_setAccessible.invoke(member, args_wrapper);
-                return true;
-            } catch (Exception ex) { }
-        }
-        return false;
-    }
-
     private void readObject(ObjectInputStream in)
         throws IOException, ClassNotFoundException
     {
         in.defaultReadObject();
-        Member member = FunctionObject.readMember(in);
+        Member member = readMember(in);
         if (member instanceof Method) {
             init((Method)member);
         } else {
@@ -241,22 +235,117 @@ final class MemberBox implements Serializable
     private void writeObject(ObjectOutputStream out)
         throws IOException
     {
-        FunctionObject.writeMember(out, memberObject);
+        out.defaultWriteObject();
+        writeMember(out, memberObject);
     }
 
-    private transient Member memberObject;
-    transient Class[] argTypes;
-
-    private static Method method_setAccessible;
-
-    static {
-        try {
-            Class MethodClass = Class.forName("java.lang.reflect.Method");
-            method_setAccessible = MethodClass.getMethod(
-                "setAccessible", new Class[] { Boolean.TYPE });
-        } catch (Exception ex) {
-            // Assume any exceptions means the method does not exist.
+    /**
+     * Writes a Constructor or Method object.
+     *
+     * Methods and Constructors are not serializable, so we must serialize
+     * information about the class, the name, and the parameters and
+     * recreate upon deserialization.
+     */
+    private static void writeMember(ObjectOutputStream out, Member member)
+        throws IOException
+    {
+        if (member == null) {
+            out.writeBoolean(false);
+            return;
         }
+        out.writeBoolean(true);
+        if (!(member instanceof Method || member instanceof Constructor))
+            throw new IllegalArgumentException("not Method or Constructor");
+        out.writeBoolean(member instanceof Method);
+        out.writeObject(member.getName());
+        out.writeObject(member.getDeclaringClass());
+        if (member instanceof Method) {
+            writeParameters(out, ((Method) member).getParameterTypes());
+        } else {
+            writeParameters(out, ((Constructor) member).getParameterTypes());
+        }
+    }
+
+    /**
+     * Reads a Method or a Constructor from the stream.
+     */
+    private static Member readMember(ObjectInputStream in)
+        throws IOException, ClassNotFoundException
+    {
+        if (!in.readBoolean())
+            return null;
+        boolean isMethod = in.readBoolean();
+        String name = (String) in.readObject();
+        Class declaring = (Class) in.readObject();
+        Class[] parms = readParameters(in);
+        try {
+            if (isMethod) {
+                return declaring.getMethod(name, parms);
+            } else {
+                return declaring.getConstructor(parms);
+            }
+        } catch (NoSuchMethodException e) {
+            throw new IOException("Cannot find member: " + e);
+        }
+    }
+
+    private static final Class[] primitives = {
+        Boolean.TYPE,
+        Byte.TYPE,
+        Character.TYPE,
+        Double.TYPE,
+        Float.TYPE,
+        Integer.TYPE,
+        Long.TYPE,
+        Short.TYPE,
+        Void.TYPE
+    };
+
+    /**
+     * Writes an array of parameter types to the stream.
+     *
+     * Requires special handling because primitive types cannot be
+     * found upon deserialization by the default Java implementation.
+     */
+    private static void writeParameters(ObjectOutputStream out, Class[] parms)
+        throws IOException
+    {
+        out.writeShort(parms.length);
+    outer:
+        for (int i=0; i < parms.length; i++) {
+            Class parm = parms[i];
+            boolean primitive = parm.isPrimitive();
+            out.writeBoolean(primitive);
+            if (!primitive) {
+                out.writeObject(parm);
+                continue;
+            }
+            for (int j=0; j < primitives.length; j++) {
+                if (parm.equals(primitives[j])) {
+                    out.writeByte(j);
+                    continue outer;
+                }
+            }
+            throw new IllegalArgumentException("Primitive " + parm +
+                                               " not found");
+        }
+    }
+
+    /**
+     * Reads an array of parameter types from the stream.
+     */
+    private static Class[] readParameters(ObjectInputStream in)
+        throws IOException, ClassNotFoundException
+    {
+        Class[] result = new Class[in.readShort()];
+        for (int i=0; i < result.length; i++) {
+            if (!in.readBoolean()) {
+                result[i] = (Class) in.readObject();
+                continue;
+            }
+            result[i] = primitives[in.readByte()];
+        }
+        return result;
     }
 }
 

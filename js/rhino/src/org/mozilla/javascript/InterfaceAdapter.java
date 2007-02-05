@@ -1,206 +1,156 @@
 /* -*- Mode: java; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
  *
  * The Original Code is Rhino code, released
  * May 6, 1999.
  *
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1997-1999 Netscape Communications Corporation. All
- * Rights Reserved.
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1997-1999
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- * Igor Bukanov
+ *   Igor Bukanov
  *
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU Public License (the "GPL"), in which case the
- * provisions of the GPL are applicable instead of those above.
- * If you wish to allow use of your version of this file only
- * under the terms of the GPL and not to allow others to use your
- * version of this file under the NPL, indicate your decision by
- * deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL.  If you do not delete
- * the provisions above, a recipient may use your version of this
- * file under either the NPL or the GPL.
- */
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU General Public License Version 2 or later (the "GPL"), in which
+ * case the provisions of the GPL are applicable instead of those above. If
+ * you wish to allow use of your version of this file only under the terms of
+ * the GPL and not to allow others to use your version of this file under the
+ * MPL, indicate your decision by deleting the provisions above and replacing
+ * them with the notice and other provisions required by the GPL. If you do
+ * not delete the provisions above, a recipient may use your version of this
+ * file under either the MPL or the GPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 package org.mozilla.javascript;
 
-import org.mozilla.classfile.*;
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Method;
 
 /**
- * Base class for classes that runtime will generate to allow for
- * JS function to implement Java interfaces with single method
- * or multiple methods with the same signature.
+ * Adapter to use JS function as implementation of Java interfaces with
+ * single method or multiple methods with the same signature.
  */
-public class InterfaceAdapter implements Cloneable, Callable
+public class InterfaceAdapter
 {
-    private Function function;
-    private Class nonPrimitiveResultClass;
-    private int[] argsToConvert;
+    private final Object proxyHelper;
 
     /**
-     * Make glue object implementing single-method interface cl that will
+     * Make glue object implementing interface cl that will
      * call the supplied JS function when called.
+     * Only interfaces were all methods have the same signature is supported.
+     *
+     * @return The glue object or null if <tt>cl</tt> is not interface or
+     *         has methods with different signatures.
      */
-    public static InterfaceAdapter create(Class cl, Function f)
+    static Object create(Context cx, Class cl, Callable function)
     {
-        ClassCache cache = ClassCache.get(f);
-        InterfaceAdapter master;
-        master = (InterfaceAdapter)cache.getInterfaceAdapter(cl);
-        if (master == null) {
-            if (!cl.isInterface())
-                return null;
+        if (!cl.isInterface()) throw new IllegalArgumentException();
+
+        Scriptable topScope = ScriptRuntime.getTopCallScope(cx);
+        ClassCache cache = ClassCache.get(topScope);
+        InterfaceAdapter adapter;
+        adapter = (InterfaceAdapter)cache.getInterfaceAdapter(cl);
+        ContextFactory cf = cx.getFactory();
+        if (adapter == null) {
             Method[] methods = cl.getMethods();
-            if (methods.length == 0) { return null; }
-            Class returnType = methods[0].getReturnType();
-            Class[] argTypes = methods[0].getParameterTypes();
-            // check that the rest of methods has the same signature
-            for (int i = 1; i != methods.length; ++i) {
-                if (returnType != methods[i].getReturnType()) { return null; }
-                Class[] types2 = methods[i].getParameterTypes();
-                if (types2.length != argTypes.length) { return null; }
-                for (int j = 0; j != argTypes.length; ++j) {
-                    if (types2[j] != argTypes[j]) { return null; }
+            if (methods.length == 0) {
+                throw Context.reportRuntimeError2(
+                    "msg.no.empty.interface.conversion",
+                    String.valueOf(function),
+                    cl.getClass().getName());
+            }
+            boolean canCallFunction = false;
+          canCallFunctionChecks: {
+                Class[] argTypes = methods[0].getParameterTypes();
+                // check that the rest of methods has the same signature
+                for (int i = 1; i != methods.length; ++i) {
+                    Class[] types2 = methods[i].getParameterTypes();
+                    if (types2.length != argTypes.length) {
+                        break canCallFunctionChecks;
+                    }
+                    for (int j = 0; j != argTypes.length; ++j) {
+                        if (types2[j] != argTypes[j]) {
+                            break canCallFunctionChecks;
+                        }
+                    }
                 }
+                canCallFunction= true;
             }
-
-            String className = "iadapter"+cache.newClassSerialNumber();
-            byte[] code = createCode(cl, methods, returnType, argTypes,
-                                     className);
-
-            Class iadapterClass = JavaAdapter.loadAdapterClass(className, code);
-            try {
-                master = (InterfaceAdapter)iadapterClass.newInstance();
-            } catch (Exception ex) {
-                throw Context.throwAsScriptRuntimeEx(ex);
+            if (!canCallFunction) {
+                throw Context.reportRuntimeError2(
+                    "msg.no.function.interface.conversion",
+                    String.valueOf(function),
+                    cl.getClass().getName());
             }
-            master.initMaster(returnType, argTypes);
-            cache.cacheInterfaceAdapter(cl, master);
+            adapter = new InterfaceAdapter(cf, cl);
+            cache.cacheInterfaceAdapter(cl, adapter);
         }
-        return master.wrap(f);
+        return VMBridge.instance.newInterfaceProxy(
+            adapter.proxyHelper, cf, adapter, function, topScope);
     }
 
-    private static byte[] createCode(Class interfaceClass,
-                                     Method[] methods,
-                                     Class returnType,
-                                     Class[] argTypes,
-                                     String className)
+    private InterfaceAdapter(ContextFactory cf, Class cl)
     {
-        String superName = "org.mozilla.javascript.InterfaceAdapter";
-        ClassFileWriter cfw = new ClassFileWriter(className,
-                                                  superName,
-                                                  "<ifglue>");
-        cfw.addInterface(interfaceClass.getName());
-
-        // Generate empty constructor
-        cfw.startMethod("<init>", "()V", ClassFileWriter.ACC_PUBLIC);
-        cfw.add(ByteCode.ALOAD_0);  // this
-        cfw.addInvoke(ByteCode.INVOKESPECIAL,
-                      superName, "<init>", "()V");
-        cfw.add(ByteCode.RETURN);
-        cfw.stopMethod((short)1); // 1: single this argument
-
-        for (int i = 0; i != methods.length; ++i) {
-            Method method = methods[i];
-            StringBuffer sb = new StringBuffer();
-            int localsEnd = JavaAdapter.appendMethodSignature(argTypes,
-                                                              returnType, sb);
-            String methodSignature = sb.toString();
-            cfw.startMethod(method.getName(), methodSignature,
-                            ClassFileWriter.ACC_PUBLIC);
-            cfw.addLoadThis();
-            JavaAdapter.generatePushWrappedArgs(cfw, argTypes,
-                                                argTypes.length + 1);
-            // add method name as the last JS parameter
-            cfw.add(ByteCode.DUP); // duplicate array reference
-            cfw.addPush(argTypes.length);
-            cfw.addPush(method.getName());
-            cfw.add(ByteCode.AASTORE);
-
-            cfw.addInvoke(ByteCode.INVOKESPECIAL, superName, "doCall",
-                          "([Ljava/lang/Object;)Ljava/lang/Object;");
-            JavaAdapter.generateReturnResult(cfw, returnType, false);
-
-            cfw.stopMethod((short)localsEnd);
-        }
-
-        return cfw.toByteArray();
+        this.proxyHelper
+            = VMBridge.instance.getInterfaceProxyHelper(
+                cf, new Class[] { cl });
     }
 
-    private void initMaster(Class returnType, Class[] argTypes)
+    public Object invoke(ContextFactory cf,
+                         final Object target,
+                         final Scriptable topScope,
+                         final Method method,
+                         final Object[] args)
     {
-        // Can only be called on master
-        if (this.function != null) Kit.codeBug();
-        if (!returnType.isPrimitive()) {
-            nonPrimitiveResultClass = returnType;
-        }
-        this.argsToConvert = JavaAdapter.getArgsToConvert(argTypes);
+        ContextAction action = new ContextAction() {
+                public Object run(Context cx)
+                {
+                    return invokeImpl(cx, target, topScope, method, args);
+                }
+            };
+        return cf.call(action);
     }
 
-    private InterfaceAdapter wrap(Function function)
+    Object invokeImpl(Context cx,
+                      Object target,
+                      Scriptable topScope,
+                      Method method,
+                      Object[] args)
     {
-        // Arguments can not be null
-        if (function == null)
-            Kit.codeBug();
-        // Can only be called on master
-        if (this.function != null) Kit.codeBug();
-        InterfaceAdapter copy;
-        try {
-            copy = (InterfaceAdapter)clone();
-        } catch (CloneNotSupportedException ex) {
-            // Should not happen
-            copy = null;
-        }
-        copy.function = function;
-        return copy;
-    }
+        int N = (args == null) ? 0 : args.length;
 
-    protected final Object doCall(Object[] args)
-        throws JavaScriptException
-    {
-        Scriptable scope = function.getParentScope();
-        Scriptable thisObj = scope;
-        Object result = Context.call(null, this, scope, thisObj, args);
-        if (nonPrimitiveResultClass != null) {
-            if (result == Undefined.instance) {
-                // Avoid an error for an undefined value; return null instead.
-                result = null;
-            } else {
-                result = NativeJavaObject.coerceType(nonPrimitiveResultClass,
-                                                     result, true);
+        Callable function = (Callable)target;
+        Scriptable thisObj = topScope;
+        Object[] jsargs = new Object[N + 1];
+        jsargs[N] = method.getName();
+        if (N != 0) {
+            WrapFactory wf = cx.getWrapFactory();
+            for (int i = 0; i != N; ++i) {
+                jsargs[i] = wf.wrap(cx, topScope, args[i], null);
             }
+        }
+
+        Object result = function.call(cx, topScope, thisObj, jsargs);
+        Class javaResultType = method.getReturnType();
+        if (javaResultType == Void.TYPE) {
+            result = null;
+        } else {
+            result = Context.jsToJava(result, javaResultType);
         }
         return result;
     }
-
-    public Object call(Context cx, Scriptable scope, Scriptable thisObj,
-                       Object[] args)
-        throws JavaScriptException
-    {
-        if (argsToConvert != null) {
-            WrapFactory wf = cx.getWrapFactory();
-            for (int i = 0, N = argsToConvert.length; i != N; ++i) {
-                int index = argsToConvert[i];
-                Object arg = args[index];
-                if (arg != null && !(arg instanceof Scriptable)) {
-                    args[index] = wf.wrap(cx, scope, arg, null);
-                }
-            }
-        }
-        return function.call(cx, scope, thisObj, args);
-    }
-
-
 }
