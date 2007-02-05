@@ -1595,8 +1595,13 @@ static PaError PaOSX_OpenCommonDevice( internalPortAudioStream   *past,
     OSStatus         err = noErr;
     Float64          deviceRate;
 
-    PaOSX_FixVolumeScalars( inOut->audioDeviceID, isInput,
-        inOut->numChannels, 0.1, 0.9 );
+    // only unmute input devices, un-muting output devices is highly
+    // undesirable
+    if (isInput)
+    {
+        PaOSX_FixVolumeScalars( inOut->audioDeviceID, isInput,
+                                inOut->numChannels, 0.1, 0.9);
+    }
 
     // The HW device format changes are asynchronous.
     // So we don't know when or if the PAOSX_DevicePropertyListener() will
