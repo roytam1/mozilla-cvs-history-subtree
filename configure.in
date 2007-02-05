@@ -459,6 +459,11 @@ case "$target" in
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
             AC_DEFINE(_CRT_SECURE_NO_DEPRECATE)
             AC_DEFINE(_CRT_NONSTDC_NO_DEPRECATE)
+        elif test "$_CC_MAJOR_VERSION" = "15"; then
+            _CC_SUITE=9
+            CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
+            AC_DEFINE(_CRT_SECURE_NO_WARNINGS)
+            AC_DEFINE(_CRT_NONSTDC_NO_WARNINGS)
         else
             AC_MSG_ERROR([This version of the MSVC compiler, $CC_VERSION , is unsupported.])
         fi
@@ -622,6 +627,11 @@ if test "$_perl_res" != 0; then
     AC_MSG_ERROR([Cannot find Config.pm or \$Config{archlib}.  A full perl installation is required.])
 else
     AC_MSG_RESULT([yes])    
+fi
+
+AC_PATH_PROGS(PYTHON, $PYTHON python)
+if test -z "$PYTHON"; then
+    AC_MSG_WARN([TinderboxPrint: python not found in \$PATH .])
 fi
 
 AC_PATH_PROG(DOXYGEN, doxygen, :)
