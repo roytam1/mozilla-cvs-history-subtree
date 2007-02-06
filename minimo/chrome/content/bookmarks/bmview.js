@@ -41,6 +41,7 @@
  */
 
 var gWin = null;
+var gURLBar = null;
 
 
 function URLBarEventCatch2(event) {
@@ -166,7 +167,7 @@ function URLBarEntered()
       try {
         var os = Components.classes["@mozilla.org/observer-service;1"]
           .getService(Components.interfaces.nsIObserverService);
-        var host = gWin.fixedUpURI.host;
+        var host = gURLBar.value;
         os.notifyObservers(null, "loading-domain", host);
       }  catch(e) {gWin.onErrorHandler(e);}
     }
