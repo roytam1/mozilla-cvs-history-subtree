@@ -138,6 +138,11 @@ interface nsIPreferences : nsISupports
 interface nsISessionStorage : nsISupports
 {
   /**
+   * The events object for the storage
+   */
+  readonly attribute nsIEvents events;
+
+  /**
    * Determines if a storage item exists with the given name.
    * @param   name
    *          The name of an item

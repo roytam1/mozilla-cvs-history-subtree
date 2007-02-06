@@ -64,9 +64,9 @@ Console.prototype = {
 
 //=================================================
 // EventItem constructor
-function EventItem(type, detail) {
+function EventItem(type, data) {
   this._type = type;
-  this._detail = detail;
+  this._data = data;
 }
 
 //=================================================
@@ -104,18 +104,17 @@ Events.prototype = {
   },
   
   add : function(event, handler) {
-/*
     function hasFilter(element, index, array) {
       return (element.event == event && element.handler == handler);
     }
     var hasHandler = this._listeners.some(hasFilter);
     if (hasHandler)
       return;
-*/
+
     var key = {};
     key.event = event;
     key.handler = handler;
-    
+
     this._listeners.push(key);
   },
   
@@ -177,7 +176,7 @@ Preferences.prototype = {
   observe: function(subject, topic, data) {
     if (topic == "nsPref:changed") {
       var evt = new EventItem("change", data);
-      this.events.fire("change", evt);
+      this._events.fire("change", evt);
     }
   },
   
@@ -245,9 +244,15 @@ function SessionStorage() {
 // SessionStorage implementation
 SessionStorage.prototype = {
   _storage : {},
+  _events : null,
   
   _init : function() {
-    // Nothing yet
+    this._events = new Events();
+    this._events._init();
+  },
+  
+  get events() {
+    return this._events;
   },
   
   has : function(name) {
@@ -256,6 +261,9 @@ SessionStorage.prototype = {
   
   set : function(name, value) {
     this._storage[name] = value;
+
+    var evt = new EventItem("change", name);
+    this._events.fire("change", evt);
   },
   
   get : function(name, defaultValue) {
@@ -413,6 +421,12 @@ Application.prototype = {
     os.addObserver(this, "quit-application-granted", false);
     os.addObserver(this, "quit-application", false);
     os.addObserver(this, "xpcom-shutdown", false);
+/*    
+    var idleServ = Components.classes["@mozilla.org/widget/idleservice;1"]
+                             .getService(Components.interfaces.nsIIdleService);
+
+    idleServ.addIdleObserver(this, 0);
+*/    
   },
   
   // for nsIObserver
@@ -421,8 +435,8 @@ Application.prototype = {
       this._extensions = new Extensions();
       this._extensions._init();
       
-      var evt = new EventItem("load", "application");
-      this._events.fire("load", evt);
+      var evt = new EventItem("start", "application");
+      this._events.fire("start", evt);
     }
     else if (topic == "final-ui-startup") {
       var evt = new EventItem("ready", "application");
