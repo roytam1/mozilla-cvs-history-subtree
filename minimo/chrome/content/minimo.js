@@ -666,6 +666,13 @@ function MiniNavStartup()
 
   //document.addEventListener("keydown",debug_test_f10,true);
 
+
+  /* 
+   * We watch closing tabs.. so that we know how to keep some of them 
+   */
+
+   gBrowser.addEventListener("TabClose", BrowserClosingTabs, true);
+
 }
 
 function debug_test_f10(e) {
@@ -1038,7 +1045,19 @@ function BrowserOpenTab()
 
 function BrowserCloseTab()
 {
+
   gBrowser.removeCurrentTab();
+
+}
+
+/* 
+ * This function is called always when tbabrowser tries to close a tab ..
+ */ 
+
+function BrowserClosingTabs(e) {
+
+	BrowserChromeUnregisterTab(e.originalTarget);
+
 }
 
 /* 
@@ -2300,6 +2319,15 @@ function BrowserChromeRegisterTab(URIvalue,tabReference) {
     tabReference:tabReference
   } 
   gBrowserChromeTabs[URIvalue] = newChromeApp;
+}
+
+function BrowserChromeUnregisterTab(tabReference) {
+
+  var uriToGo = gBrowser.getBrowserForTab(tabReference).currentURI.spec;
+
+  if(gBrowserChromeTabs[uriToGo]) {
+     gBrowserChromeTabs[uriToGo]=null;
+  } 
 }
 
 function BrowserChromeOpen(URIvalue) {
