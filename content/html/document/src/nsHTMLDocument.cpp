@@ -564,7 +564,7 @@ CheckSameOrigin(nsIDocument* aDoc1, nsIDocument* aDoc2)
   }
 
   return
-    NS_SUCCEEDED(secMan->CheckSameOriginPrincipal(principal1, principal2);
+    NS_SUCCEEDED(secMan->CheckSameOriginPrincipal(principal1, principal2));
 }
 
 PRBool
