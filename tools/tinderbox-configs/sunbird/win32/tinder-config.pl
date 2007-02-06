@@ -46,15 +46,15 @@ $ENV{MOZ_PACKAGE_NSIS} = '1';
 
 #- Default values of command-line opts
 #-
-#$BuildDepend       = 1;      # Depend or Clobber
+$BuildDepend       = 0;      # Depend or Clobber
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
-#$TestOnly          = 0;      # Only run tests, don't pull/build
+#$TestOnly          = 1;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
-#$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
+#$SkipMozilla       = 1;      # Use to debug post-mozilla.pl scripts.
 $BuildLocales      = 1;      # Do l10n packaging?
 
 # Tests
@@ -167,7 +167,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = 'sunbird-obj';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Sb-Nightly';
+$BuildNameExtra = 'Sb-Trunk-l10n';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -220,15 +220,15 @@ $BinaryName = 'sunbird.exe';
 # Release build options
 $ReleaseBuild  = 1;
 $LocaleProduct = "calendar";
-$shiptalkback  = 1;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = "3";
+$shiptalkback  = 0;
+$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$build_hour    = "9";
 $package_creation_path = "/calendar/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
-#$ssh_user      = "cltbld";
-#$ssh_server    = "stage.mozilla.org";
+$ssh_user      = "cltbld";
+$ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox";
