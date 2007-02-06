@@ -530,7 +530,10 @@ nsGlobalWindow::FreeInnerObjects(JSContext *cx)
   mDocument = nsnull;
 
   if (mJSObject && cx) {
-    for (JSObject *o = mJSObject; o; o = ::JS_GetPrototype(cx, o))
+    // Clear mJSObject and its prototype chain, but not Object.prototype.
+    ::JS_ClearScope(cx, mJSObject);
+    for (JSObject *o = ::JS_GetPrototype(cx, mJSObject), *next;
+         o && (next = ::JS_GetPrototype(cx, o)); o = next)
       ::JS_ClearScope(cx, o);
     ::JS_ClearWatchPointsForObject(cx, mJSObject);
 
@@ -1208,8 +1211,11 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         // held in the bfcache.
         if (!currentInner->IsFrozen()) {
           if (!termFuncSet) {
-            for (JSObject *o = currentInner->mJSObject; o;
-                 o = ::JS_GetPrototype(cx, o))
+            // Clear currentInner->mJSObject and its prototype chain,
+            // but not Object.prototype.
+            ::JS_ClearScope(cx, currentInner->mJSObject);
+            for (JSObject *o = ::JS_GetPrototype(cx, currentInner->mJSObject), *next;
+                 o && (next = ::JS_GetPrototype(cx, o)); o = next)
               ::JS_ClearScope(cx, o);
             ::JS_ClearWatchPointsForObject(cx, currentInner->mJSObject);
           }
@@ -1423,7 +1429,10 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
       mDocument = nsnull;
 
       if (mJSObject) {
-        for (JSObject *o = mJSObject; o; o = ::JS_GetPrototype(cx, o))
+        // Clear mJSObject and its prototype chain, but not Object.prototype.
+        ::JS_ClearScope(cx, mJSObject);
+        for (JSObject *o = ::JS_GetPrototype(cx, mJSObject), *next;
+             o && (next = ::JS_GetPrototype(cx, o)); o = next)
           ::JS_ClearScope(cx, o);
         ::JS_ClearWatchPointsForObject(cx, mJSObject);
 
@@ -6300,7 +6309,10 @@ nsGlobalWindow::ClearWindowScope(nsISupports *aWindow)
     JSObject *global = sgo->GetGlobalJSObject();
 
     if (global) {
-      for (JSObject *o = global; o; o = ::JS_GetPrototype(cx, o))
+      // Clear global and its prototype chain, but not Object.prototype.
+      ::JS_ClearScope(cx, global);
+      for (JSObject *o = ::JS_GetPrototype(cx, global), *next;
+           o && (next = ::JS_GetPrototype(cx, o)); o = next)
         ::JS_ClearScope(cx, o);
       ::JS_ClearWatchPointsForObject(cx, global);
     }
