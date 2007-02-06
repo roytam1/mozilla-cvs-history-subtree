@@ -1601,7 +1601,7 @@ nsPasswordManager::LoadPasswords()
   nsresult rv;
   rv = mPrefBranch->GetCharPref("SignonFileName2", getter_Copies(signonFile));
   if (NS_FAILED(rv))
-    signonFile.Assign(NS_LITERAL_CSTRING("signons.txt"));
+    signonFile.Assign(NS_LITERAL_CSTRING("signons2.txt"));
 
   NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(mSignonFile));
   if (!mSignonFile)
