@@ -40,20 +40,19 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
+#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
-$BuildLocales      = 1;      # Do l10n packaging?
+#$BuildLocales      = 0;      # Do l10n packaging?
 
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = 'Sunbird';
-$MacOSProductName         = 'Sunbird';
-#$ProductName              = 'Calendar';
-#$MacOSProductName         = 'Calendar';
+#$ProductName              = "Sunbird";
+$ProductName              = 'Calendar';
+$MacOSProductName         = 'Calendar';
 $VendorName               = "";
 
 #$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
@@ -148,7 +147,7 @@ $VendorName               = "";
 $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
-$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
+#$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
 
 # Allow for non-client builds, e.g. camino.
 #$moz_client_mk = 'client.mk';
@@ -164,13 +163,13 @@ $BuildNameExtra = 'Sb-Release';
 #$UserComment = 0;
 
 # Configure only, don't build.
-#$ConfigureOnly = 0;
+$ConfigureOnly = 1;
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-0.3.1.en-US.mac.dmg" =>
-	      "/builds/tinderbox/Sb-Trunk/Darwin_8.8.4_Depend/sunbird.dmg"
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-0.3.en-US.mac.dmg" =>
+	      "/builds/tinderbox/Sb-Trunk-l10n/Darwin_8.8.4_Depend/sunbird.dmg"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk/Darwin_8.8.4_Depend/sunbird.dmg";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk-l10n/Darwin_8.8.4_Depend/sunbird.dmg";
 
 #-
 #- The rest should not need to be changed
@@ -181,22 +180,15 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk/Darwin_8.8.4_Depend/sunbi
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Sunbird';
+$BuildTree  = 'Mozilla-l10n';
 
 #- If you're building locales and would like locale messages reported to a
 #- tree other than $BuildTree-ab-CD, define the tree here. -ab-CD will be
 #- appended for you.
 $LocaleTree = 'Mozilla-l10n';
 
-#- By default, locale builds delete the wget-ed en-US build from the local
-#- stage directory before rsyncing the freshly baked l10n builds up to the
-#- FTP server.  This prevents the rsync from accidentally overwriting the
-#- already existing en-US build on the FTP server.  This behaviour is most
-#- useful when building en-US and the other locales on different machines.
-$DeleteEnUsOnLocalesUpload = 0;
-
 #$BuildName = '';
-$BuildTag = 'SUNBIRD_0_3_BRANCH';
+#$BuildTag = 'SUNBIRD_0_3_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -238,14 +230,14 @@ $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 0;
-#$update_package = 1;
-#$update_product = "Sunbird";
-#$update_version = "trunk";
-#$update_platform = "Darwin_Universal-gcc3";
-#$update_hash = "sha1";
-#$update_filehost = "ftp.mozilla.org";
-#$update_ver_file = 'calendar/sunbird/config/version.txt';
-#$update_pushinfo = 1;
+$update_package = 1;
+$update_product = "Sunbird";
+$update_version = "trunk";
+$update_platform = "Darwin_Universal-gcc3";
+$update_hash = "sha1";
+$update_filehost = "ftp.mozilla.org";
+$update_ver_file = 'calendar/sunbird/config/version.txt';
+$update_pushinfo = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
