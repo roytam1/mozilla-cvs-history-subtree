@@ -133,7 +133,7 @@
 !define ShowShortcuts "!insertmacro ShowShortcuts"
 
 !macro SetHandlers
-  GetFullPathName $8 "$INSTDIR\${FileMainEXE}"
+  GetFullPathName /SHORT $8 "$INSTDIR\${FileMainEXE}"
 
   StrCpy $0 "SOFTWARE\Classes"
   StrCpy $2 "$\"$8$\" -url $\"%1$\" -requestPending"
@@ -164,8 +164,8 @@
 ; XXXrstrong - there are several values that will be overwritten by and
 ; overwrite other installs of the same application.
 !macro SetStartMenuInternet
-  GetFullPathName $8 "$INSTDIR\${FileMainEXE}"
-  GetFullPathName $7 "$INSTDIR\uninstall\helper.exe"
+  GetFullPathName /SHORT $8 "$INSTDIR\${FileMainEXE}"
+  GetFullPathName /SHORT $7 "$INSTDIR\uninstall\helper.exe"
 
   ${StrFilter} "${FileMainEXE}" "+" "" "" $R9
 
@@ -184,10 +184,10 @@
 
   WriteRegStr HKLM "$0\shell\open\command" "" "$8"
 
-  WriteRegStr HKLM "$0\shell\properties" "" "$(CONTEXT_OPTIONS)"
+  WriteRegStr HKLM "$0\shell\properties" "" "$(OPTIONS)"
   WriteRegStr HKLM "$0\shell\properties\command" "" "$\"$8$\" -preferences"
 
-  WriteRegStr HKLM "$0\shell\safemode" "" "$(CONTEXT_SAFE_MODE)"
+  WriteRegStr HKLM "$0\shell\safemode" "" "${BrandFullNameInternal} $(SAFE_MODE)"
   WriteRegStr HKLM "$0\shell\safemode\command" "" "$\"$8$\" -safemode"
 
   ; Vista Capabilities registry keys
@@ -290,8 +290,8 @@
 !macro SetUninstallKeys
   ; Write the uninstall registry keys
   StrCpy $0 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} (${AppVersion})"
-  GetFullPathName $8 "$INSTDIR\${FileMainEXE}"
-  GetFullPathName $7 "$INSTDIR\uninstall\helper.exe"
+  GetFullPathName /SHORT $8 "$INSTDIR\${FileMainEXE}"
+  GetFullPathName /SHORT $7 "$INSTDIR\uninstall\helper.exe"
 
   ${WriteRegStr2} $TmpVal "$0" "Comments" "${BrandFullNameInternal}" 0
   ${WriteRegStr2} $TmpVal "$0" "DisplayIcon" "$8,0" 0
@@ -348,7 +348,7 @@
   ${EndUnless}
 
   ; Store the command to open the app with an url in a register for easy access.
-  GetFullPathName $8 "$INSTDIR\${FileMainEXE}"
+  GetFullPathName /SHORT $8 "$INSTDIR\${FileMainEXE}"
   StrCpy $1 "$\"$8$\" -url $\"%1$\" -requestPending"
 
   ; Always set the file and protocol handlers since they may specify a

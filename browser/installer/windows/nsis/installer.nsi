@@ -96,16 +96,20 @@ Var fhUninstallLog
 !include locales.nsi
 !include version.nsh
 
+VIAddVersionKey "FileDescription" "${BrandShortName} Installer"
+
 !insertmacro RegCleanMain
 !insertmacro RegCleanUninstall
 !insertmacro CloseApp
 !insertmacro WriteRegStr2
 !insertmacro WriteRegDWORD2
-!insertmacro WriteRegStrHKCR
 !insertmacro CreateRegKey
 !insertmacro CanWriteToInstallDir
 !insertmacro CheckDiskSpace
+!insertmacro AddHandlerValues
 !insertmacro DisplayCopyErrMsg
+
+!include shared.nsh
 
 Name "${BrandFullName}"
 OutFile "setup.exe"
@@ -215,6 +219,14 @@ Section "-Application" Section1
       ${EndIf}
     ${EndIf}
   ${EndIf}
+
+  ; During an install Vista checks if a new entry is added under the uninstall
+  ; registry key (e.g. ARP). When the same version of the app is installed on
+  ; top of an existing install the key is deleted / added and the Program
+  ; Compatibility Assistant doesn't see this as a new entry and displays an
+  ; error to the user. See Bug 354000.
+  StrCpy $0 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} (${AppVersion})"
+  DeleteRegKey HKLM "$0"
 
   ; For a "Standard" upgrade without talkback installed add the InstallDisabled
   ; file to the talkback source files so it will be disabled by the extension
@@ -422,66 +434,34 @@ Section "-Application" Section1
   ; MUST add children first so they will be removed first on uninstall so they
   ; will be empty when the key is deleted. This allows the uninstaller to
   ; specify that only empty keys will be deleted.
+  ${SetAppKeys}
 
-  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal}\${AppVersion} (${AB_CD})\Main"
-  ${WriteRegStr2} $TmpVal "$0" "Install Directory" "$INSTDIR" 0
-  ${WriteRegStr2} $TmpVal "$0" "PathToExe" "$INSTDIR\${FileMainEXE}" 0
-  ${WriteRegStr2} $TmpVal "$0" "Program Folder Path" "$SMPROGRAMS\$StartMenuDir" 0
-  ${WriteRegDWORD2} $TmpVal "$0" "Create Quick Launch Shortcut" $AddQuickLaunchSC 0
-  ${WriteRegDWORD2} $TmpVal "$0" "Create Desktop Shortcut" $AddDesktopSC 0
+  ; XXXrstrong - this should be set in shared.nsh along with "Create Quick
+  ; Launch Shortcut" and Create Desktop Shortcut.
+  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal}\${AppVersion} (${AB_CD})\Uninstall"
   ${WriteRegDWORD2} $TmpVal "$0" "Create Start Menu Shortcut" $AddStartMenuSC 0
 
-  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal}\${AppVersion} (${AB_CD})\Uninstall"
-  ${WriteRegStr2} $TmpVal "$0" "Uninstall Log Folder" "$INSTDIR\uninstall" 0
-  ${WriteRegStr2} $TmpVal "$0" "Description" "${BrandFullNameInternal} (${AppVersion})" 0
+  ${FixClassKeys}
 
-  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal}\${AppVersion} (${AB_CD})"
-  ${WriteRegStr2} $TmpVal  "$0" "" "${AppVersion} (${AB_CD})" 0
+  ; The following keys should only be set if we can write to HKLM
+  ${If} $TmpVal == "HKLM"
+    ; Uninstall keys can only exist under HKLM on some versions of windows.
+    ${SetUninstallKeys}
 
-  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal} ${AppVersion}\bin"
-  ${WriteRegStr2} $TmpVal "$0" "PathToExe" "$INSTDIR\${FileMainEXE}" 0
+    ; Set the Start Menu Internet and Vista Registered App HKLM registry keys.
+    ${SetStartMenuInternet}
 
-  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal} ${AppVersion}\extensions"
-  ${WriteRegStr2} $TmpVal "$0" "Components" "$INSTDIR\components" 0
-  ${WriteRegStr2} $TmpVal "$0" "Plugins" "$INSTDIR\plugins" 0
-
-  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal} ${AppVersion}"
-  ${WriteRegStr2} $TmpVal "$0" "GeckoVer" "${GREVersion}" 0
-
-  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal}"
-  ${WriteRegStr2} $TmpVal "$0" "" "${GREVersion}" 0
-  ${WriteRegStr2} $TmpVal "$0" "CurrentVersion" "${AppVersion} (${AB_CD})" 0
-
-  ; XXXrstrong - there are several values that will be overwritten by and
-  ; overwrite other installs of the same application.
-  ${StrFilter} "${FileMainEXE}" "+" "" "" $R9
-  StrCpy $0 "Software\Clients\StartMenuInternet\$R9"
-  ${WriteRegStr2} $TmpVal "$0" "" "${BrandFullNameInternal}" 0
-
-  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\DefaultIcon"
-  StrCpy $1 "$\"$INSTDIR\${FileMainEXE}$\",0"
-  ${WriteRegStr2} $TmpVal "$0" "" "$1" 0
-
-  ; The Reinstall Command is defined at
-  ; http://msdn.microsoft.com/library/default.asp?url=/library/en-us/shellcc/platform/shell/programmersguide/shell_adv/registeringapps.asp
-  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\InstallInfo"
-  StrCpy $1 "$\"$INSTDIR\uninstall\uninst.exe$\" /ua $\"${AppVersion} (${AB_CD})$\" /hs browser"
-  ${WriteRegStr2} $TmpVal "$0" "HideIconsCommand" "$1" 0
-  ${WriteRegDWORD2} $TmpVal "$0" "IconsVisible" 1 0
-
-  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\InstallInfo"
-  StrCpy $1 "$\"$INSTDIR\${FileMainEXE}$\" -silent -setDefaultBrowser"
-  ${WriteRegStr2} $TmpVal "$0" "ReinstallCommand" "$1" 0
-  StrCpy $1 "$\"$INSTDIR\uninstall\uninst.exe$\" /ua $\"${AppVersion} (${AB_CD})$\" /ss browser"
-  ${WriteRegStr2} $TmpVal "$0" "ShowIconsCommand" "$1" 0
-
-  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\shell\open\command"
-  ${WriteRegStr2} $TmpVal "$0" "" "$INSTDIR\${FileMainEXE}" 0
-
-  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\shell\properties"
-  ${WriteRegStr2} $TmpVal "$0" "" "$(OPTIONS)" 0  
-  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\shell\properties\command"
-  ${WriteRegStr2} $TmpVal "$0" "" "$INSTDIR\${FileMainEXE} -preferences" 0
+    ; If we are writing to HKLM and create the quick launch and the desktop
+    ; shortcuts set IconsVisible to 1 otherwise to 0.
+    ${If} $AddQuickLaunchSC == 1
+    ${OrIf} $AddDesktopSC == 1
+      ${StrFilter} "${FileMainEXE}" "+" "" "" $R9
+      StrCpy $0 "Software\Clients\StartMenuInternet\$R9\InstallInfo"
+      WriteRegDWORD HKLM "$0" "IconsVisible" 1
+    ${Else}
+      WriteRegDWORD HKLM "$0" "IconsVisible" 0
+    ${EndIf}
+  ${EndIf}
 
   ; These need special handling on uninstall since they may be overwritten by
   ; an install into a different location.
@@ -489,27 +469,9 @@ Section "-Application" Section1
   ${WriteRegStr2} $TmpVal "$0" "" "$INSTDIR\${FileMainEXE}" 0
   ${WriteRegStr2} $TmpVal "$0" "Path" "$INSTDIR" 0
 
-  StrCpy $0 "MIME\Database\Content Type\application/x-xpinstall;app=firefox"
-  ${WriteRegStrHKCR} "HKCR" "$0" "Extension" ".xpi" 0
-
   StrCpy $0 "Software\Microsoft\MediaPlayer\ShimInclusionList\$R9"
   ${CreateRegKey} "$TmpVal" "$0" 0
 
-  ; Write the uninstall registry keys
-  StrCpy $0 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} (${AppVersion})"
-  StrCpy $1 "$INSTDIR\uninstall\uninst.exe"
-
-  ${WriteRegStr2} $TmpVal "$0" "Comments" "${BrandFullNameInternal}" 0
-  ${WriteRegStr2} $TmpVal "$0" "DisplayIcon" "$INSTDIR\${FileMainEXE},0" 0
-  ${WriteRegStr2} $TmpVal "$0" "DisplayName" "${BrandFullNameInternal} (${AppVersion})" 0
-  ${WriteRegStr2} $TmpVal "$0" "DisplayVersion" "${AppVersion} (${AB_CD})" 0
-  ${WriteRegStr2} $TmpVal "$0" "InstallLocation" "$INSTDIR" 0
-  ${WriteRegStr2} $TmpVal "$0" "Publisher" "Mozilla" 0
-  ${WriteRegStr2} $TmpVal "$0" "UninstallString" "$1" 0
-  ${WriteRegStr2} $TmpVal "$0" "URLInfoAbout" "${URLInfoAbout}" 0
-  ${WriteRegStr2} $TmpVal "$0" "URLUpdateInfo" "${URLUpdateInfo}" 0
-  ${WriteRegDWORD2} $TmpVal "$0" "NoModify" 1 0
-  ${WriteRegDWORD2} $TmpVal "$0" "NoRepair" 1 0
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
 
   ; Create Start Menu shortcuts
@@ -720,7 +682,7 @@ Function CopyFile
     ; If the file is installed into the installation directory remove the
     ; installation directory's path from the file path when writing to the
     ; uninstall.log so it will be a relative path. This allows the same
-    ; uninst.exe to be used with zip builds if we supply an uninstall.log.
+    ; helper.exe to be used with zip builds if we supply an uninstall.log.
     ${WordReplace} "$R1$R3\$R7" "$INSTDIR" "" "+" $R3
     ${LogUninstall} "File: $R3"
   ${EndIf}
