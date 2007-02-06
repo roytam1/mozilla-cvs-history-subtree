@@ -85,6 +85,7 @@
     MODULE(TransformiixModule) \
     MODULE(nsPermissionsModule) \
     MODULE(nsComposerModule) \
+    MODULE(nsAuthModule) \
     MODULE(BOOT) \
     MODULE(NSS) \
     /* end of list */
