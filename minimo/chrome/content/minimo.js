@@ -1731,7 +1731,7 @@ function URLBarEntered()
       try {
         var os = Components.classes["@mozilla.org/observer-service;1"]
           .getService(Components.interfaces.nsIObserverService);
-        var host = fixedUpURI.host;
+        var host = gURLBar.value;
         os.notifyObservers(null, "loading-domain", host);
       }
       catch(e) {onErrorHandler(e);}
