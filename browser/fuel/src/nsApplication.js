@@ -98,9 +98,8 @@ function Events() {
 //=================================================
 // Events implementation
 Events.prototype = {
-  _listeners : [],
-  
   _init : function() {
+  	this._listeners = [];
   },
   
   add : function(event, handler) {
