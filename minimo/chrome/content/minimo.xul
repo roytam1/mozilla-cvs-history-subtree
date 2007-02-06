@@ -136,6 +136,8 @@
     <command id="cmd_BrowserResetZoomPlus"    oncommand="BrowserResetZoomPlus()" />
     <command id="cmd_BrowserResetZoomMinus"   oncommand="BrowserResetZoomMinus()" />
         
+
+
     <toolbar id="nav-bar" >
       
 	<!--
@@ -266,10 +268,10 @@
 
     
     <menupopup id="menu_NavPopup"
-               onpopuphiding="MenuNavPopupHiding()"  
-               onpopupshown="MenuEnableEscapeKeys()"
-               onpopuphidden="MenuDisableEscapeKeys()"
-               onpopupshowing="Menu2PopupShowing()"
+
+               onpopupshowing="BrowserNavMenuRefresh()"
+               onpopuphidden="BrowserNavMenuHidden()" 
+
                oncommand="spinSetnext(gSpinLast)" >
       
 
