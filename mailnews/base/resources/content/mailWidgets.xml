@@ -2057,6 +2057,7 @@
             }
             else
               folderArray[0] = aFolder;
+            var foundNewMsg = false;
             for (var folderIndex = 0; folderIndex < folderArray.length; folderIndex++)
             {
               aFolder = folderArray[folderIndex];
@@ -2093,6 +2094,7 @@
               var unicodeConverter = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"]
                                     .createInstance(Components.interfaces.nsIScriptableUnicodeConverter);
               unicodeConverter.charset = "UTF-8";                                  
+              foundNewMsg = true;
               
               var index = 0;
               var hdrParser = Components.classes["@mozilla.org/messenger/headerparser;1"].getService(Components.interfaces.nsIMsgHeaderParser);
@@ -2122,7 +2124,7 @@
               if (document.getAnonymousNodes(this)[0].childNodes.length >= this.mMaxMsgHdrsInPopup)
                 return true;    
             }       
-            return true;
+            return foundNewMsg;
           ]]>
         </body>
       </method>
