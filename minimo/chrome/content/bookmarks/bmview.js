@@ -59,34 +59,22 @@ function URLBarEventCatch(event) {
    var escapeToHistory = false; 
 
    if(event.keyCode==KeyEvent.DOM_VK_RETURN) {
-	
 	URLBarEntered();
-
    } 
 
-
    if(event.keyCode==KeyEvent.DOM_VK_DOWN) {
-	
 	escapeToHistory = true;
-
    } 
 
    var currentURLBarString = document.getElementById("urlbar2").value;
-
-   /* This is to filter out everything but the history elements
-    * This filter goes on StyleSheet rule level */
-
-   if(currentURLBarString == "" || currentURLBarString == " ") {
-	hbSelectAll();
-   } else {
-	hbSelect("timehistory");
-   }
 
    var regExpFineString = currentURLBarString.replace(/\./g,"\.");
 
    var historyItemsList = document.getElementsByTagName("history");
 
    var regExp = new RegExp(currentURLBarString );
+
+   var historyFound = false; 
 
    for(var i=0;i<historyItemsList.length;i++) {
 
@@ -99,17 +87,22 @@ function URLBarEventCatch(event) {
 	var brother = currentElement.previousSibling;
 
 	if(textValue.match(regExp)) {
-		brother.style.display="block";
-
-	        if(escapeToHistory) {
-			brother.childNodes[1].focus(); escapeToHistory = false;
-		   }
-
-
+        brother.style.display="block";
+        historyFound=true;		
+        if(escapeToHistory) {
+          brother.childNodes[1].focus(); escapeToHistory = false;
+        }
 	} else {
-		brother.style.display="none";
+          brother.style.display="none";
 	} 
+	
    } 
+  
+   if(historyFound) {
+		hbSelect("timehistory");
+   } else {
+        hbSelectAll();
+   }
 
 }
 
