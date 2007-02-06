@@ -6090,24 +6090,15 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
     aCalleePrincipal->GetURI(getter_AddRefs(currentCodebase));
   }
 
-  // These next two variables are only accessed when checkForPopup is true
-  PopupControlState abuseLevel;
-  OpenAllowValue allowReason;
-  if (checkForPopup) {
-    abuseLevel = CheckForAbusePoint();
-    allowReason = CheckOpenAllow(abuseLevel);
-    if (allowReason == allowNot) {
-      FireAbuseEvents(PR_TRUE, PR_FALSE, aUrl, aOptions);
-      return aDoJSFixups ? NS_OK : NS_ERROR_FAILURE;
-    }
-  }    
-
   // Note: it's very important that this be an nsXPIDLCString, since we want
   // .get() on it to return nsnull until we write stuff to it.  The window
   // watcher expects a null URL string if there is no URL to load.
   nsXPIDLCString url;
   nsresult rv = NS_OK;
 
+  // It's important to do this security check before determining whether this
+  // window opening should be blocked, to ensure that we don't FireAbuseEvents
+  // for a window opening that wouldn't have succeeded in the first place.
   if (!aUrl.IsEmpty()) {
     AppendUTF16toUTF8(aUrl, url);
 
@@ -6120,6 +6111,18 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
 
   if (NS_FAILED(rv))
     return rv;
+
+  // These next two variables are only accessed when checkForPopup is true
+  PopupControlState abuseLevel;
+  OpenAllowValue allowReason;
+  if (checkForPopup) {
+    abuseLevel = CheckForAbusePoint();
+    allowReason = CheckOpenAllow(abuseLevel);
+    if (allowReason == allowNot) {
+      FireAbuseEvents(PR_TRUE, PR_FALSE, aUrl, aOptions);
+      return aDoJSFixups ? NS_OK : NS_ERROR_FAILURE;
+    }
+  }    
 
   nsCOMPtr<nsIDOMWindow> domReturn;
 
