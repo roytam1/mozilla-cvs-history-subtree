@@ -16,16 +16,13 @@
 
 <div id="container2" >
 
-<!--
-<h3>&titleNew.label;</h3>
--->
 
   <div style="text-align:center">
     <img src="chrome://minimo/skin/extensions/icon-urlbar.png">
     </img>
 
-    <xul:textbox id="urlbar2"  size="20" style="text-align:left;background-color:white;" onkeypress="URLBarEvent(this.event)">
-    </xul:textbox>
+    <input type="text" id="urlbar2" style="text-align:left;background-color:white;width:90%" />
+
   </div>	
 
   <div style="text-align:center" class="extensions">
@@ -33,11 +30,9 @@
     <img src="chrome://minimo/skin/extensions/google.png">
     </img>
 
-    <xul:textbox id="search-google"
-                 size="20"
-                 style="text-align:left;background-color:white;"
-                 onchange="return SearchGoogle(this.value);" >
-    </xul:textbox>
+    <input type="text" id="search-google"
+                 style="text-align:left;background-color:white;width:90%"
+                 onchange="return SearchGoogle(this.value);"  />
     
   </div>	
 
