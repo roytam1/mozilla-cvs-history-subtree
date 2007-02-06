@@ -137,6 +137,9 @@
 #ifdef XP_WIN
 #include <process.h>
 #include <shlobj.h>
+#ifndef CSIDL_PROGRAM_FILES
+#define CSIDL_PROGRAM_FILES   0x0026
+#endif
 #endif
 
 #ifdef XP_OS2
