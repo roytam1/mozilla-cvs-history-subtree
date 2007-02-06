@@ -262,5 +262,3 @@ $push_raw_xpis = 0;
 # Prevent Extension Manager from spawning child processes during tests
 # - processes that tbox scripts cannot kill.
 $ENV{NO_EM_RESTART} = '1';
-
-$MacUniversalBinary = 1;
