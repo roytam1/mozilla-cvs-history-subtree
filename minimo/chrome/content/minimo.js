@@ -660,7 +660,26 @@ function MiniNavStartup()
 
   syncControlBar();
 
+ /* 
+  * Hack to Debug the soft keybord emulation in the desktop 
+  */ 
+
+  //document.addEventListener("keydown",debug_test_f10,true);
+
 }
+
+function debug_test_f10(e) {
+
+ 	if(e.keyCode==KeyEvent.DOM_VK_F10) {
+
+		// marcio 20000 
+
+		spinCycle();
+
+      } 
+
+}
+
 
 function syncControlBar(fullList) {
 
@@ -894,6 +913,7 @@ function BrowserUpdateFeeds() {
 /* 
  * For now, this updates via DOM the top menu. Context menu should be here as well. 
  */
+
 function BrowserUpdateBackForwardState() {
 
   if(gBrowser.webNavigation.canGoBack) {
@@ -903,6 +923,7 @@ function BrowserUpdateBackForwardState() {
     document.getElementById("command_back").hidden = true;
     document.getElementById("nav-back").className="unactive";
   }
+        
   if(gBrowser.webNavigation.canGoForward) {
     document.getElementById("command_forward").hidden = false;
     document.getElementById("nav-forward").className="";
@@ -910,7 +931,6 @@ function BrowserUpdateBackForwardState() {
     document.getElementById("command_forward").hidden = true;
     document.getElementById("nav-forward").className="unactive";
   }
-
 }
 
 
@@ -1176,36 +1196,6 @@ function BrowserInitializeTextSizeValue() {
   gTextSize = gBrowser.selectedBrowser.markupDocumentViewer.textZoom;
 }
 
-/* 
- * End of text size operations
- */
- 
-function Menu2PopupShowing() {
-
-}
-
-
-function MenuMainPopupShowing () {
-
-   try {
-    var hasTabs = (gBrowser.tabContainer.childNodes.length > 1);
-    document.getElementById("command_BrowserCloseTab").hidden=!hasTabs;
-    document.getElementById("command_TabFocus").hidden=!hasTabs;
-  }
-  catch(ex) { onErrorHandler(ex); }
-}
-
-function MenuNavPopupShowing () {
-
-  /*  
-  command_back
-  command_forward
-  command_go
-  command_reload
-  command_stop
-  */
-
-}
 
 function isContentFrame(aFocusedWindow)
 {
@@ -2065,21 +2055,6 @@ function spinSetnext(ref) {
 
 function spinCreate() {
 
- /* 
-  * Not in use with the new homebase 
-  */
-
- var spinLeftMenu = { 
-    SpinIn:function () {
-      document.getElementById("menu-button").focus();
-      document.getElementById("menu_MainPopup").showPopup(document.getElementById("menu-button"),-1,-1,"popup","bottomleft", "topleft");
-      gShowingMenuCurrent=document.getElementById("menu_MainPopup");
-    }, 
-    SpinOut:function () {
-      document.getElementById("menu_MainPopup").hidePopup();
-    }
-  }
-
   /* 
    * not in use with the new homebase 
    */
@@ -2110,7 +2085,7 @@ function spinCreate() {
   }
 
   /* 
-   * New homebase versio uses it 
+   * New homebase version uses it 
    */
 
   var spinRightMenu = { 
@@ -2199,67 +2174,43 @@ function spinCreate() {
  * Menu Menu Controls
  */ 
 
-function BrowserMenuPopup() {
-   ref=document.getElementById("menu_MainPopup");
-
-   if(gShowingMenuCurrent==ref) {
-	gShowingMenuCurrent.hidePopup();
-	gShowingMenuCurrent=null;
-   } else {
-	if(!gShowingMenuCurrent) {
-		gShowingMenuCurrent=ref;
-	} 
-      gShowingMenuCurrent.showPopup(document.getElementById("menu-button"),-1,-1,"popup","bottomleft", "topleft");
-   }
-}
-
 function BrowserNavMenuPopup() {
+
    ref=document.getElementById("menu_NavPopup");
 
    if(gShowingMenuCurrent==ref) {
+
 	gShowingMenuCurrent.hidePopup();
-	gShowingMenuCurrent=null;
+
    } else {
+
 	if(!gShowingMenuCurrent) {
 		gShowingMenuCurrent=ref;
 	} 
+
       gShowingMenuCurrent.showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
+
    }
 }
+  
 
-function MenuMainPopupHiding() {
-	gShowingMenuCurrent=null;
-}
+function BrowserNavMenuRefresh() {
 
-function MenuNavPopupHiding() {
-	gShowingMenuCurrent=null;
-}
-
-function BrowserMenuPopupFalse() {
-  document.getElementById("menu_MainPopup").hidePopup();
-}
-
-/* 
- * Ideally we want the XUL key assignements to work when popups are on.
- * What we have here is a an alternate system to catch the SOFT KEYS so 
- * when the popup is on, because XUL <key /> does not work, we enable 
- * keydown listeners. And when the XUL menus are of the screen we 
- * disable the listeners. 
- * 
- * Ref bugs: like https://bugzilla.mozilla.org/show_bug.cgi?id=55495 
- */ 
-function MenuEnableEscapeKeys() {
-	// we remove the focus from the toolbar button to avoid a command_action (keyboard event) to 
-	// call the menu again. 
-
-	document.getElementById("menu_MainPopup").focus();
-    //	document.addEventListener("keydown",MenuHandleMenuEscape,true); 
-}
-
-function MenuDisableEscapeKeys() {
-  //  document.removeEventListener("keydown",MenuHandleMenuEscape,true); 
+   try {
+    var hasTabs = (gBrowser.tabContainer.childNodes.length > 1);
+    document.getElementById("command_BrowserCloseTab").hidden=!hasTabs;
+    document.getElementById("command_TabFocus").hidden=!hasTabs;
+  }
+  catch(ex) { onErrorHandler(ex); }
 
 }
+
+function BrowserNavMenuHidden() {
+
+  gShowingMenuCurrent=null;
+
+}
+
 
 /*
  * File Open Functionality. For now we allow multiple selections and 
