@@ -42,6 +42,17 @@
 
 var gWin = null;
 
+
+function URLBarEventCatch2(event) {
+
+   if(event.keyCode==KeyEvent.DOM_VK_DOWN) {
+	
+	document.commandDispatcher.advanceFocus();
+
+   }   
+
+}
+
 function URLBarEventCatch(event) {
 
    var escapeToHistory = false; 
@@ -51,6 +62,7 @@ function URLBarEventCatch(event) {
 	URLBarEntered();
 
    } 
+
 
    if(event.keyCode==KeyEvent.DOM_VK_DOWN) {
 	
@@ -185,7 +197,10 @@ function SearchGoogle(vQuery) {
 
 function bmLoaded() {
 
-	document.getElementById("urlbar2").addEventListener("keypress",URLBarEventCatch,true);
+
+	document.getElementById("urlbar2").addEventListener("keydown",URLBarEventCatch,true);
+
+	//document.addEventListener("keypress",URLBarEventCatch2,true);
 
 	document.getElementById("urlbar2").focus();
 
@@ -254,6 +269,7 @@ function hbOpenAsTab(ref) {
 }
 
 function bmInit(targetDoc, targetElement) {
+
 
   var gHomebaseElements = null; 
   var bookmarkStore=null;
