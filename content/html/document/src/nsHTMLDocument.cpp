@@ -541,19 +541,25 @@ nsHTMLDocument::TryBookmarkCharset(nsIDocShell* aDocShell,
 }
 
 static PRBool
-CheckSameOrigin(nsINode* aNode1, nsINode* aNode2)
+CheckSameOrigin(nsIDocument* aDoc1, nsIDocument* aDoc2)
 {
-  NS_PRECONDITION(aNode1, "Null node?");
-  NS_PRECONDITION(aNode2, "Null node?");
+  NS_PRECONDITION(aDoc1, "Null doc?");
+  NS_PRECONDITION(aDoc2, "Null doc?");
 
   nsIScriptSecurityManager* secMan = nsContentUtils::GetSecurityManager();
   if (!secMan) {
     return PR_FALSE;
   }
 
+  nsIPrincipal* principal1 = aDoc1->GetPrincipal();
+  nsIPrincipal* principal2 = aDoc2->GetPrincipal();
+
+  if (!principal1 || !principal2) {
+    return PR_FALSE;
+  }
+
   return
-    NS_SUCCEEDED(secMan->CheckSameOriginPrincipal(aNode1->NodePrincipal(),
-                                                  aNode2->NodePrincipal()));
+    NS_SUCCEEDED(secMan->CheckSameOriginPrincipal(principal1, principal2);
 }
 
 PRBool
