@@ -39,12 +39,12 @@ $ENV{CVS_RSH} = "ssh";
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
+#$UseTimeStamp      = !;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
-#$BuildLocales      = 0;      # Do l10n packaging?
+$BuildLocales      = 1;      # Do l10n packaging?
 
 # Tests
 $CleanProfile             = 1;
@@ -163,13 +163,16 @@ $BuildNameExtra = 'Sb-Release';
 #$UserComment = 0;
 
 # Configure only, don't build.
-#$ConfigureOnly = 0;
+$ConfigureOnly = 1;
+
+$LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
+
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-0.3.1.en-US.linux-i686.tar.bz2" =>
-	      "/builds/tinderbox/Sb-Trunk/Linux_2.4.21-32.0.1.EL_Depend/sunbird.tar.bz2"
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-%version%.en-US.linux-i686.tar.bz2" =>
+	      "/builds/tinderbox/Sb-Mozilla1.8-l10n/Linux_2.4.21-32.0.1.EL_Depend/sunbird.tar.bz2"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk/Linux_2.4.21-32.0.1.EL_Depend/sunbird.tar.bz2";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Mozilla1.8-l10n/Linux_2.4.21-32.0.1.EL_Depend/sunbird.tar.bz2";
 
 #-
 #- The rest should not need to be changed
@@ -180,10 +183,10 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk/Linux_2.4.21-32.0.1.EL_De
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Sunbird';
+$BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
-$BuildTag = 'SUNBIRD_0_3_BRANCH';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -216,10 +219,10 @@ $ssh_version   = "2";
 #$ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
-#$tbox_ftp_path = $ftp_path;
-#$tbox_url_path = $url_path;
-#$milestone     = "trunk";
-$notify_list   = "build-announce\@mozilla.org";
+$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox";
+$milestone     = "mozilla1.8-l10n";
+$notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;

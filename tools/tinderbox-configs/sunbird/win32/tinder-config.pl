@@ -50,12 +50,12 @@ $ENV{MOZ_PACKAGE_NSIS} = '1';
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
+#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
-#$BuildLocales      = 0;      # Do l10n packaging?
+$BuildLocales      = 1;      # Do l10n packaging?
 
 # Tests
 $CleanProfile             = 1;
@@ -174,15 +174,18 @@ $BuildNameExtra = 'Sb-Nightly';
 #$UserComment = 0;
 
 # Configure only, don't build.
-#$ConfigureOnly = 0;
+$ConfigureOnly = 1;
+
+$LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
+
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-0.3.1.en-US.win32.zip" =>
-	      "/cygdrive/d/builds/tinderbox/Sunbird-Trunk/WINNT_5.2_Depend/sunbird.zip",
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-0.3.1.en-US.win32.installer.exe" =>
-	      "/cygdrive/d/builds/tinderbox/Sunbird-Trunk/WINNT_5.2_Depend/sunbird-installer.exe"
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-%version%.en-US.win32.zip" =>
+	      "/cygdrive/d/builds/tinderbox/Sunbird-Mozilla1.8-l10n/WINNT_5.2_Depend/sunbird.zip",
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-%version%.en-US.win32.installer.exe" =>
+	      "/cygdrive/d/builds/tinderbox/Sunbird-Mozilla1.8-l10n/WINNT_5.2_Depend/sunbird-installer.exe"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/cygdrive/d/builds/tinderbox/Sunbird-Trunk/WINNT_5.2_Depend/sunbird.zip WIN32_INSTALLER_IN=/cygdrive/d/builds/tinderbox/Sunbird-Trunk/WINNT_5.2_Depend/sunbird-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=/cygdrive/d/builds/tinderbox/Sunbird-Mozilla1.8-l10n/WINNT_5.2_Depend/sunbird.zip WIN32_INSTALLER_IN=/cygdrive/d/builds/tinderbox/Sunbird-Mozilla1.8-l10n/WINNT_5.2_Depend/sunbird-installer.exe";
 #-
 #- The rest should not need to be changed
 #-
@@ -192,10 +195,10 @@ $BuildLocalesArgs = "ZIP_IN=/cygdrive/d/builds/tinderbox/Sunbird-Trunk/WINNT_5.2
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Sunbird';
+$BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
-$BuildTag = 'SUNBIRD_0_3_BRANCH';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -228,10 +231,10 @@ $ssh_version   = "2";
 #$ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
-#$tbox_ftp_path = $ftp_path;
-#$tbox_url_path = $url_path;
-$milestone     = "trunk";
-$notify_list   = "build-announce\@mozilla.org";
+$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox";
+$milestone     = "mozilla1.8-l10n";
+$notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
 $archive       = 1;
