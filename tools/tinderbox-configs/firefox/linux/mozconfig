@@ -1,6 +1,6 @@
 #
-## hostname: argo-vm
-## uname: Linux argo-vm.mozilla.org 2.4.21-32.0.1.ELsmp #1 SMP Tue May 17 17:52:23 EDT 2005 i686 i686 i386 GNU/Linux
+## hostname: argo
+## uname: Linux argo.mozilla.org 2.4.21-32.0.1.ELsmp #1 SMP Tue May 17 17:52:23 EDT 2005 i686 i686 i386 GNU/Linux
 #
 
 export MOZILLA_OFFICIAL=1
@@ -13,7 +13,9 @@ ac_add_options --enable-application=browser
 ac_add_options --enable-update-channel=beta
 ac_add_options --enable-update-packaging
 
-ac_add_options --enable-optimize
+# gcc 3.2.3 doesn't have -freorder-blocks or -fno-reorder-functions
+#ac_add_options --enable-optimize="-Os -freorder-blocks -fno-reorder-functions -gstabs+"
+ac_add_options --enable-optimize="-Os -gstabs+"
 ac_add_options --disable-debug
 ac_add_options --disable-tests
 ac_add_options --enable-canvas
