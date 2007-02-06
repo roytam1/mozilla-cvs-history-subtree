@@ -165,8 +165,11 @@ $BuildNameExtra = 'Sb-Release';
 
 # Configure only, don't build.
 $ConfigureOnly = 1;
+
+$LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
+
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-0.3.en-US.mac.dmg" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-%version%.en-US.mac.dmg" =>
 	      "/builds/tinderbox/Sb-Trunk-l10n/Darwin_8.8.4_Depend/sunbird.dmg"
 	      );
 
@@ -218,9 +221,9 @@ $ssh_version   = "2";
 #$ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
-#$tbox_ftp_path = $ftp_path;
-#$tbox_url_path = $url_path;
-#$milestone     = "trunk";
+$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox";
+$milestone     = "trunk-l10n";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
