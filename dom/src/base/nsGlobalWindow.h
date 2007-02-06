@@ -321,7 +321,9 @@ protected:
   }
 
   // Window Control Functions
-  NS_IMETHOD OpenInternal(const nsAString& aUrl,
+  nsresult OpenSecurityCheck(const nsAString& aUrl, PRBool aDialog,
+                             nsXPIDLCString& aOutUrl);
+  NS_IMETHOD OpenInternal(const nsXPIDLCString& aUrl,
                           const nsAString& aName,
                           const nsAString& aOptions,
                           PRBool aDialog, jsval *argv, PRUint32 argc,

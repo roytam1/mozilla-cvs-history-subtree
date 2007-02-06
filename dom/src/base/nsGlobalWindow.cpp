@@ -4263,7 +4263,13 @@ NS_IMETHODIMP
 nsGlobalWindow::Open(const nsAString& aUrl, const nsAString& aName,
                      const nsAString& aOptions, nsIDOMWindow **_retval)
 {
-  nsresult rv;
+  // Note: it's very important that this be an nsXPIDLCString, since we want
+  // .get() on it to return nsnull until we write stuff to it.  The window
+  // watcher expects a null URL string if there is no URL to load.
+  nsXPIDLCString escapedUrl;
+  nsresult rv = OpenSecurityCheck(aUrl, PR_FALSE, escapedUrl);
+  if (NS_FAILED(rv))
+    return rv;
 
   PopupControlState abuseLevel = CheckForAbusePoint();
   OpenAllowValue allowReason = CheckOpenAllow(abuseLevel, aName);
@@ -4272,7 +4278,7 @@ nsGlobalWindow::Open(const nsAString& aUrl, const nsAString& aName,
     return NS_ERROR_FAILURE; // unlike the public Open method, return an error
   }
 
-  rv = OpenInternal(aUrl, aName, aOptions, PR_FALSE, nsnull, 0, nsnull,
+  rv = OpenInternal(escapedUrl, aName, aOptions, PR_FALSE, nsnull, 0, nsnull,
                     _retval);
   if (NS_SUCCEEDED(rv)) {
     if (abuseLevel >= openControlled && allowReason != allowSelf) {
@@ -4327,6 +4333,14 @@ nsGlobalWindow::Open(nsIDOMWindow **_retval)
     }
   }
 
+  // Note: it's very important that this be an nsXPIDLCString, since we want
+  // .get() on it to return nsnull until we write stuff to it.  The window
+  // watcher expects a null URL string if there is no URL to load.
+  nsXPIDLCString escapedUrl;
+  rv = OpenSecurityCheck(url, PR_FALSE, escapedUrl);
+  if (NS_FAILED(rv))
+    return rv;
+
   PopupControlState abuseLevel = CheckForAbusePoint();
   OpenAllowValue allowReason = CheckOpenAllow(abuseLevel, name);
   if (allowReason == allowNot) {
@@ -4334,7 +4348,7 @@ nsGlobalWindow::Open(nsIDOMWindow **_retval)
     return NS_OK; // don't open the window, but also don't throw a JS exception
   }
 
-  rv = OpenInternal(url, name, options, PR_FALSE, nsnull, 0, nsnull, _retval);
+  rv = OpenInternal(escapedUrl, name, options, PR_FALSE, nsnull, 0, nsnull, _retval);
 
   nsCOMPtr<nsIDOMChromeWindow> chrome_win(do_QueryInterface(*_retval));
 
@@ -4381,7 +4395,15 @@ nsGlobalWindow::OpenDialog(const nsAString& aUrl, const nsAString& aName,
                            const nsAString& aOptions,
                            nsISupports* aExtraArgument, nsIDOMWindow** _retval)
 {
-  return OpenInternal(aUrl, aName, aOptions, PR_TRUE, nsnull, 0,
+  // Note: it's very important that this be an nsXPIDLCString, since we want
+  // .get() on it to return nsnull until we write stuff to it.  The window
+  // watcher expects a null URL string if there is no URL to load.
+  nsXPIDLCString escapedUrl;
+  nsresult rv = OpenSecurityCheck(aUrl, PR_TRUE, escapedUrl);
+  if (NS_FAILED(rv))
+    return rv;
+
+  return OpenInternal(escapedUrl, aName, aOptions, PR_TRUE, nsnull, 0,
                       aExtraArgument, _retval);
 }
 
@@ -4425,7 +4447,15 @@ nsGlobalWindow::OpenDialog(nsIDOMWindow** _retval)
     }
   }
 
-  return OpenInternal(url, name, options, PR_TRUE, argv, argc, nsnull,
+  // Note: it's very important that this be an nsXPIDLCString, since we want
+  // .get() on it to return nsnull until we write stuff to it.  The window
+  // watcher expects a null URL string if there is no URL to load.
+  nsXPIDLCString escapedUrl;
+  rv = OpenSecurityCheck(url, PR_TRUE, escapedUrl);
+  if (NS_FAILED(rv))
+    return rv;
+
+  return OpenInternal(escapedUrl, name, options, PR_TRUE, argv, argc, nsnull,
                       _retval);
 }
 
@@ -5717,8 +5747,44 @@ nsGlobalWindow::GetParentInternal()
   return parentInternal;
 }
 
+nsresult
+nsGlobalWindow::OpenSecurityCheck(const nsAString& aUrl, PRBool aDialog,
+                                  nsXPIDLCString& aOutUrl)
+                                  
+{
+  FORWARD_TO_OUTER(OpenSecurityCheck, (aUrl, aDialog, aOutUrl),
+                   NS_ERROR_NOT_INITIALIZED);
+
+  nsresult rv = NS_OK;
+  if (!aUrl.IsEmpty()) {
+    // fix bug 35076
+    // Escape all non ASCII characters in the url.
+    // Earlier, this code used to call Escape() and would escape characters like
+    // '?', '&', and '=' in the url.  This caused bug 174628.
+    if (IsASCII(aUrl)) {
+      AppendUTF16toUTF8(aUrl, aOutUrl);
+    }
+    else {
+      nsXPIDLCString dest;
+      rv = ConvertCharset(aUrl, getter_Copies(dest));
+      if (NS_SUCCEEDED(rv))
+        NS_EscapeURL(dest, esc_AlwaysCopy | esc_OnlyNonASCII, aOutUrl);      
+      else
+        AppendUTF16toUTF8(aUrl, aOutUrl);
+    }
+
+    /* Check whether the URI is allowed, but not for dialogs --
+       see bug 56851. The security of this function depends on
+       window.openDialog being inaccessible from web scripts */
+    if (aOutUrl.get() && !aDialog)
+      rv = SecurityCheckURL(aOutUrl.get());
+  }
+
+  return rv;
+}
+
 NS_IMETHODIMP
-nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
+nsGlobalWindow::OpenInternal(const nsXPIDLCString& aUrl, const nsAString& aName,
                              const nsAString& aOptions, PRBool aDialog,
                              jsval *argv, PRUint32 argc,
                              nsISupports *aExtraArgument,
@@ -5736,37 +5802,7 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
     return NS_ERROR_NOT_AVAILABLE;
   }
   
-  nsXPIDLCString url;
-  nsresult rv = NS_OK;  
-
   *aReturn = nsnull;
-
-  if (!aUrl.IsEmpty()) {
-    // fix bug 35076
-    // Escape all non ASCII characters in the url.
-    // Earlier, this code used to call Escape() and would escape characters like
-    // '?', '&', and '=' in the url.  This caused bug 174628.
-    if (IsASCII(aUrl)) {
-      AppendUTF16toUTF8(aUrl, url);
-    }
-    else {
-      nsXPIDLCString dest;
-      rv = ConvertCharset(aUrl, getter_Copies(dest));
-      if (NS_SUCCEEDED(rv))
-        NS_EscapeURL(dest, esc_AlwaysCopy | esc_OnlyNonASCII, url);      
-      else
-        AppendUTF16toUTF8(aUrl, url);
-    }
-
-    /* Check whether the URI is allowed, but not for dialogs --
-       see bug 56851. The security of this function depends on
-       window.openDialog being inaccessible from web scripts */
-    if (url.get() && !aDialog)
-      rv = SecurityCheckURL(url.get());
-  }
-
-  if (NS_FAILED(rv))
-    return rv;
 
   // determine whether we must divert the open window to a new tab.
 
@@ -5780,7 +5816,7 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
   nsCOMPtr<nsIURI> tabURI;
   if (!aUrl.IsEmpty()) {
     PRBool whoCares;
-    BuildURIfromBase(url.get(), getter_AddRefs(tabURI), &whoCares, 0);
+    BuildURIfromBase(aUrl.get(), getter_AddRefs(tabURI), &whoCares, 0);
   }
 
   if (divertOpen) { // no such named window
@@ -5866,6 +5902,7 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
   // lacking specific instructions, or just as an error fallback,
   // open a new window.
 
+  nsresult rv = NS_OK;  
   if (!domReturn) {
     nsCOMPtr<nsIWindowWatcher> wwatch =
       do_GetService(NS_WINDOWWATCHER_CONTRACTID, &rv);
@@ -5887,7 +5924,7 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
           nsCOMPtr<nsPIWindowWatcher> pwwatch(do_QueryInterface(wwatch));
           if (pwwatch) {
             PRUint32 extraArgc = argc >= 3 ? argc - 3 : 0;
-            rv = pwwatch->OpenWindowJS(this, url.get(), name_ptr, options_ptr,
+            rv = pwwatch->OpenWindowJS(this, aUrl.get(), name_ptr, options_ptr,
                                        aDialog, extraArgc, argv + 3,
                                        getter_AddRefs(domReturn));
           } else {
@@ -5896,7 +5933,7 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
             rv = NS_ERROR_UNEXPECTED;
           }
         } else {
-          rv = wwatch->OpenWindow(this, url.get(), name_ptr, options_ptr,
+          rv = wwatch->OpenWindow(this, aUrl.get(), name_ptr, options_ptr,
                                   aExtraArgument, getter_AddRefs(domReturn));
         }
       }
