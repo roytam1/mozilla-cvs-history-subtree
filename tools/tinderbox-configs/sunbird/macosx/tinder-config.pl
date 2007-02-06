@@ -45,15 +45,16 @@ $BuildAdministrator = 'build@mozilla.org';
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
-#$BuildLocales      = 0;      # Do l10n packaging?
+$BuildLocales      = 1;      # Do l10n packaging?
 
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-#$ProductName              = "Sunbird";
-$ProductName              = 'Calendar';
-$MacOSProductName         = 'Calendar';
-$VendorName               = "";
+$ProductName              = 'Sunbird';
+#$ProductName              = 'Calendar';
+$MacOSProductName         = 'Sunbird';
+#$MacOSProductName         = 'Calendar';
+$VendorName               = 'Mozilla';
 
 #$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 #$RegxpcomTest             = 1;
@@ -182,13 +183,8 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk-l10n/Darwin_8.8.4_Depend/
 #- change to the tree you're actually building
 $BuildTree  = 'Mozilla-l10n';
 
-#- If you're building locales and would like locale messages reported to a
-#- tree other than $BuildTree-ab-CD, define the tree here. -ab-CD will be
-#- appended for you.
-$LocaleTree = 'Mozilla-l10n';
-
 #$BuildName = '';
-#$BuildTag = 'SUNBIRD_0_3_BRANCH';
+$BuildTag = 'SUNBIRD_0_3_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -230,14 +226,14 @@ $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 0;
-$update_package = 1;
-$update_product = "Sunbird";
-$update_version = "trunk";
-$update_platform = "Darwin_Universal-gcc3";
-$update_hash = "sha1";
-$update_filehost = "ftp.mozilla.org";
-$update_ver_file = 'calendar/sunbird/config/version.txt';
-$update_pushinfo = 1;
+#$update_package = 1;
+#$update_product = "Sunbird";
+#$update_version = "trunk";
+#$update_platform = "Darwin_Universal-gcc3";
+#$update_hash = "sha1";
+#$update_filehost = "ftp.mozilla.org";
+#$update_ver_file = 'calendar/sunbird/config/version.txt';
+#$update_pushinfo = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
