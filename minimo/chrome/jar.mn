@@ -32,10 +32,11 @@ minimo-skin.jar:
 	skin/classic/minimo/preferences/icon-pref-advanced.png   (skin/preferences/icon-pref-advanced.png)
 	skin/classic/minimo/preferences/icon-pref-layout.png     (skin/preferences/icon-pref-layout.png)
 	skin/classic/minimo/extensions/icon-urlbar.png    (skin/extensions/icon-urlbar.png)
-	skin/classic/minimo/extensions/google.png       (skin/extensions/google.png)
-	skin/classic/minimo/extensions/map.png          (skin/extensions/map.png)
-	skin/classic/minimo/extensions/mobile.png       (skin/extensions/mobile.png)
-	skin/classic/minimo/extensions/weather.png      (skin/extensions/weather.png)
+	skin/classic/minimo/extensions/icon-google.png       (skin/extensions/icon-google.png)
+	skin/classic/minimo/extensions/icon-map.png          (skin/extensions/icon-map.png)
+	skin/classic/minimo/extensions/icon-mobile.png       (skin/extensions/icon-mobile.png)
+	skin/classic/minimo/extensions/icon-weather.png      (skin/extensions/icon-weather.png)
+	skin/classic/minimo/extensions/icon-mocomo.png      (skin/extensions/icon-mocomo.png)
 
 minimo-skin-vga.jar:
 %   skin    minimo   classic-vga/1.0 %skin/classic/minimo/
@@ -71,10 +72,11 @@ minimo-skin-vga.jar:
 	skin/classic/minimo/preferences/icon-pref-advanced.png   (skin-vga/preferences/icon-pref-advanced.png)
 	skin/classic/minimo/preferences/icon-pref-layout.png     (skin-vga/preferences/icon-pref-layout.png)
 	skin/classic/minimo/extensions/icon-urlbar.png           (skin-vga/extensions/icon-urlbar.png)
-	skin/classic/minimo/extensions/google.png       (skin-vga/extensions/google.png)
-	skin/classic/minimo/extensions/map.png          (skin-vga/extensions/map.png)
-	skin/classic/minimo/extensions/mobile.png       (skin-vga/extensions/mobile.png)
-	skin/classic/minimo/extensions/weather.png      (skin-vga/extensions/weather.png)
+	skin/classic/minimo/extensions/icon-google.png       (skin-vga/extensions/icon-google.png)
+	skin/classic/minimo/extensions/icon-map.png          (skin-vga/extensions/icon-map.png)
+	skin/classic/minimo/extensions/icon-mobile.png       (skin-vga/extensions/icon-mobile.png)
+	skin/classic/minimo/extensions/icon-weather.png      (skin-vga/extensions/icon-weather.png)
+	skin/classic/minimo/extensions/icon-mocomo.png      (skin-vga/extensions/icon-mocomo.png)
 	
 minimo.jar:
 %   content minimo               %content/minimo/
