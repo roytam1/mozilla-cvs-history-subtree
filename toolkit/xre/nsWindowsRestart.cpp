@@ -62,6 +62,13 @@ BOOL (WINAPI *pCreateProcessWithTokenW)(HANDLE,
 
 BOOL (WINAPI *pIsUserAnAdmin)(VOID);
 
+BOOL (WINAPI *pDuplicateTokenEx)(HANDLE,
+                                 DWORD,
+                                 LPSECURITY_ATTRIBUTES,
+                                 SECURITY_IMPERSONATION_LEVEL,
+                                 TOKEN_TYPE,
+                                 PHANDLE);
+
 /**
  * Get the length that the string will take when it is quoted.
  */
@@ -170,6 +177,13 @@ LaunchAsNormalUser(const char *exePath, char *cl)
 
     if (!pCreateProcessWithTokenW)
       return FALSE;
+
+    // DuplicateTokenEx is not present on WinME and Win9x.
+    *(FARPROC *)&pDuplicateTokenEx =
+        GetProcAddress(GetModuleHandle("advapi32.dll"), "DuplicateTokenEx");
+
+    if (!pDuplicateTokenEx)
+      return FALSE;
   }
 
   // do nothing here if we are not elevated or IsUserAnAdmin is not present.
@@ -192,12 +206,12 @@ LaunchAsNormalUser(const char *exePath, char *cl)
     return FALSE;
 
   HANDLE hNewToken;
-  ok = DuplicateTokenEx(hTokenShell,
-                        MAXIMUM_ALLOWED,
-                        NULL,
-                        SecurityDelegation,
-                        TokenPrimary,
-                        &hNewToken);
+  ok = pDuplicateTokenEx(hTokenShell,
+                         MAXIMUM_ALLOWED,
+                         NULL,
+                         SecurityDelegation,
+                         TokenPrimary,
+                         &hNewToken);
   CloseHandle(hTokenShell);
   if (!ok)
     return FALSE;
