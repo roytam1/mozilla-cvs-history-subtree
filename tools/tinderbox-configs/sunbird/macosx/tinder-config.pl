@@ -170,10 +170,10 @@ $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
 	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-%version%.en-US.mac.dmg" =>
-	      "/builds/tinderbox/Sb-Trunk-l10n/Darwin_8.8.4_Depend/sunbird.dmg"
+	      "/builds/tinderbox/Sb-Trunk-l10n/Darwin_8.8.4_Clobber/sunbird.dmg"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk-l10n/Darwin_8.8.4_Depend/sunbird.dmg";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk-l10n/Darwin_8.8.4_Clobber/sunbird.dmg";
 
 #-
 #- The rest should not need to be changed
