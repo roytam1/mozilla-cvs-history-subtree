@@ -7,6 +7,8 @@
 function setChromeColor(value) {
   try {
 	gWin.BrowserChromeThemeColorSync(value+" ! important");
+      document.getElementById('uiChromeColor').value=value;
+      document.getElementById('dumpColor').value=value;
   } catch (i) { alert (i) }
 
 }
@@ -484,7 +486,7 @@ function prefStartup() {
 
 	gWin.BrowserTellChromeThemeRules("preferences",document.styleSheets[2].cssRules[0].style);
 	var colorvalue = gWin.BrowserChromeThemeColorGet();
-	gWin.BrowserChromeThemeColorSyncRaw(colorvalue);
+	gWin.BrowserChromeThemeColorSyncRaw(colorvalue+" ! important");
 
     /* fix the size of the scrollbox contents */
 
