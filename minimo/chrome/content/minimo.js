@@ -81,6 +81,7 @@ const NS_BINDING_ABORTED = 0x804b0002;
  */
 var gkeyBoardService = null;
 var gKeyBoardToggle = true;
+var gBackGroundColor = "#dddddd";
 
 var gTextSize = null;
 var gPanMode = null;
@@ -403,6 +404,11 @@ function MiniNavStartup()
       } 
       catch(e) {page=null;}
 
+      try {
+        gBackGroundColor = gPref.getCharPref("ui.chromebackgroundcolor");
+      } 
+      catch(e) {gBackGroundColor="#eeeeee";}
+
       if (page == null)
         page = gPref.getCharPref("browser.startup.homepage");
 
@@ -420,6 +426,10 @@ function MiniNavStartup()
   } catch (e) {
     onErrorHandler("Error trying to startup browser.  Please report this as a bug:\n" + e);
   }
+
+  /* 
+   * 
+   */
 
   var reg = Components.manager.QueryInterface(nsIComponentRegistrar);
   reg.registerFactory(Components.ID("{fe4d6bd5-e4cd-45f9-95bd-1e1796d2c7f7}"),
@@ -659,6 +669,8 @@ function MiniNavStartup()
   */
 
   syncControlBar();
+
+  BrowserChromeThemeColorSync(gBackGroundColor);
 
  /* 
   * Hack to Debug the soft keybord emulation in the desktop 
@@ -2310,6 +2322,8 @@ function BrowserTellChromeThemeRules(refName,ruleReference) {
 
 function BrowserChromeThemeColorGet() {
   gGlobalThemeValue = document.styleSheets[1].cssRules[1].style.cssText;
+  gGlobalThemeValue = gGlobalThemeValue.split(";")[0];
+
   return gGlobalThemeValue;
 }
 
@@ -2341,3 +2355,4 @@ function BrowserChromeOpen(URIvalue) {
     } catch (e) {}  
   } 
 }
+
