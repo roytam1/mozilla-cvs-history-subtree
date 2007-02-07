@@ -134,9 +134,10 @@
 
 !macro SetHandlers
   GetFullPathName /SHORT $8 "$INSTDIR\${FileMainEXE}"
+  ${StrFilter} "$8" "+" "" "" $8
 
   StrCpy $0 "SOFTWARE\Classes"
-  StrCpy $2 "$\"$8$\" -url $\"%1$\" -requestPending"
+  StrCpy $2 "$8 -url $\"%1$\" -requestPending"
 
   ; Associate the file handlers with FirefoxHTML
   WriteRegStr SHCTX "$0\.htm"   "" "FirefoxHTML"
@@ -164,8 +165,8 @@
 ; XXXrstrong - there are several values that will be overwritten by and
 ; overwrite other installs of the same application.
 !macro SetStartMenuInternet
-  GetFullPathName /SHORT $8 "$INSTDIR\${FileMainEXE}"
-  GetFullPathName /SHORT $7 "$INSTDIR\uninstall\helper.exe"
+  GetFullPathName $8 "$INSTDIR\${FileMainEXE}"
+  GetFullPathName $7 "$INSTDIR\uninstall\helper.exe"
 
   ${StrFilter} "${FileMainEXE}" "+" "" "" $R9
 
@@ -290,8 +291,8 @@
 !macro SetUninstallKeys
   ; Write the uninstall registry keys
   StrCpy $0 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} (${AppVersion})"
-  GetFullPathName /SHORT $8 "$INSTDIR\${FileMainEXE}"
-  GetFullPathName /SHORT $7 "$INSTDIR\uninstall\helper.exe"
+  GetFullPathName $8 "$INSTDIR\${FileMainEXE}"
+  GetFullPathName $7 "$INSTDIR\uninstall\helper.exe"
 
   ${WriteRegStr2} $TmpVal "$0" "Comments" "${BrandFullNameInternal}" 0
   ${WriteRegStr2} $TmpVal "$0" "DisplayIcon" "$8,0" 0
@@ -349,7 +350,8 @@
 
   ; Store the command to open the app with an url in a register for easy access.
   GetFullPathName /SHORT $8 "$INSTDIR\${FileMainEXE}"
-  StrCpy $1 "$\"$8$\" -url $\"%1$\" -requestPending"
+  ${StrFilter} "$8" "+" "" "" $8
+  StrCpy $1 "$8 -url $\"%1$\" -requestPending"
 
   ; Always set the file and protocol handlers since they may specify a
   ; different path and the path is used by Vista when setting associations.
