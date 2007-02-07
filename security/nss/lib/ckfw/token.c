@@ -151,7 +151,6 @@ struct NSSCKFWTokenStr {
   nssCKFWHash *sessions;
   nssCKFWHash *sessionObjectHash;
   nssCKFWHash *mdObjectHash;
-  nssCKFWHash *mdMechanismHash;
 
   CK_STATE state;
 };
@@ -275,15 +274,6 @@ nssCKFWToken_Create
     goto loser;
   }
 
-  fwToken->mdMechanismHash = nssCKFWHash_Create(fwToken->fwInstance, 
-                            arena, pError);
-  if( (nssCKFWHash *)NULL == fwToken->mdMechanismHash ) {
-    if( CKR_OK == *pError ) {
-      *pError = CKR_GENERAL_ERROR;
-    }
-    goto loser;
-  }
-
   /* More here */
 
   if( (void *)NULL != (void *)mdToken->Setup ) {
@@ -365,7 +355,7 @@ nssCKFWToken_Destroy
    * referencing us (or _Destroy was invalidly called!)
    */
   nssCKFWHash_Iterate(fwToken->sessions, nss_ckfwtoken_session_iterator, 
-                                                                (void *)NULL);
+								(void *)NULL);
   nssCKFWHash_Destroy(fwToken->sessions);
 
   if (fwToken->sessionObjectHash) {
@@ -373,9 +363,6 @@ nssCKFWToken_Destroy
   }
   if (fwToken->mdObjectHash) {
     nssCKFWHash_Destroy(fwToken->mdObjectHash);
-  }
-  if (fwToken->mdMechanismHash) {
-    nssCKFWHash_Destroy(fwToken->mdMechanismHash);
   }
 
   nssCKFWSlot_ClearToken(fwToken->fwSlot);
@@ -1497,30 +1484,8 @@ nssCKFWToken_GetMechanism
   CK_RV *pError
 )
 {
-  NSSCKMDMechanism *mdMechanism;
-  if ((nssCKFWHash *)NULL == fwToken->mdMechanismHash) {
-    *pError = CKR_GENERAL_ERROR;
-    return (NSSCKFWMechanism *)NULL;
-  }
-  
-  if( (void *)NULL == (void *)fwToken->mdToken->GetMechanism ) {
-    /*
-     * If we don't implement any GetMechanism function, then we must
-     * not support any.
-     */
-    *pError = CKR_MECHANISM_INVALID;
-    return (NSSCKFWMechanism *)NULL;
-  }
-
-  /* lookup in hash table */
-  mdMechanism = fwToken->mdToken->GetMechanism(fwToken->mdToken, fwToken,
-    fwToken->mdInstance, fwToken->fwInstance, which, pError);
-  if ((NSSCKMDMechanism *)NULL == mdMechanism) {
-    return (NSSCKFWMechanism *) NULL;
-  }
-  /* store in hash table */
-  return nssCKFWMechanism_Create(mdMechanism, fwToken->mdToken, fwToken,
-    fwToken->mdInstance, fwToken->fwInstance);
+  /* XXX fgmr */
+  return (NSSCKFWMechanism *)NULL;
 }
 
 NSS_IMPLEMENT CK_RV

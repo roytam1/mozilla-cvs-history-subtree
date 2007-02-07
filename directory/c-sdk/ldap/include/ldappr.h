@@ -59,10 +59,6 @@ extern "C" {
  * this LDAP * handle from more than one thread.
  *
  * Returns an LDAP session handle (or NULL if an error occurs).
- *
- * NOTE: If you want to use IPv6, you must use prldap creating a LDAP handle
- * with this function prldap_init.  Prldap_init installs the appropriate
- * set of NSPR functions and prevents calling deprecated functions accidentally.
  */
 LDAP * LDAP_CALL prldap_init( const char *defhost, int defport, int shared );
 
@@ -231,28 +227,6 @@ int LDAP_CALL prldap_set_socket_info( int fd, void *socketarg,
  */
 int LDAP_CALL prldap_get_socket_info( int fd, void *socketarg,
 					PRLDAPSocketInfo *soip );
-
-/*
- * Function: prldap_get_default_socket_info().
- *
- * Given an LDAP session handle, retrieve socket specific information.
- * If ld is NULL, LDAP_PARAM_ERROR is returned.
- *
- * Returns an LDAP API error code (LDAP_SUCCESS if all goes well, in
- * which case the fields in the structure that soip points to are filled in).
- */
-int LDAP_CALL prldap_get_default_socket_info( LDAP *ld, PRLDAPSocketInfo *soip );
-
-/*
- * Function: prldap_set_default_socket_info().
- *
- * Given an LDAP session handle, set socket specific information.
- * If ld is NULL, LDAP_PARAM_ERROR is returned.
- *
- * Returns an LDAP API error code (LDAP_SUCCESS if all goes well, in
- * which case the fields in the structure that soip points to are filled in).
- */
-int LDAP_CALL prldap_set_default_socket_info( LDAP *ld, PRLDAPSocketInfo *soip );
 
 /* Function: prldap_is_installed()
  * Check if NSPR routine is installed 

@@ -22,7 +22,7 @@ AC_DEFUN(AM_PATH_INTREE_SVRCORE,
             SVRCORE_CFLAGS="-I$abs_svrcoreincpath"
         fi
         if test -d "$abs_svrcorelibpath" ; then
-            SVRCORE_LIBS="-L$abs_svrcorelibpath"
+            SVRCORE_LIBS="-L$abs_svrcorelibpath -lsvrcore"
         fi
         if test -n "$SVRCORE_CFLAGS" -a -n "$SVRCORE_LIBS" ; then
             AC_MSG_CHECKING(using in-tree SVRCORE from $svrcoreincpath $svrcorelibpath)
@@ -61,7 +61,7 @@ AC_DEFUN(AM_PATH_GIVEN_SVRCORE,
     # check for --with-svrcore-inc
     AC_ARG_WITH(svrcore-inc, [  --with-svrcore-inc=PATH        svrcore include file directory],
     [
-      if test -n "$withval" -a -f "$withval"/svrcore.h
+      if test -n "$withval" -a -e "$withval"/svrcore.h
       then
         AC_MSG_RESULT([using $withval])
         SVRCORE_CFLAGS="-I$withval"
@@ -103,11 +103,12 @@ AC_DEFUN(AM_PATH_SVRCORE,
         AC_MSG_CHECKING(Trying pkg-config svrcore)
         AC_PATH_PROG(PKG_CONFIG, pkg-config)
         if test -n "$PKG_CONFIG"; then
-            if $PKG_CONFIG --exists svrcore-devel; then
+            if $PKG_CONFIG --exists svrcore; then
                 AC_MSG_CHECKING(using SVRCORE from package svrcore)
-                SVRCORE_CFLAGS=`$PKG_CONFIG --cflags-only-I svrcore-devel`
-                SVRCORE_LIBS=`$PKG_CONFIG --libs-only-L svrcore-devel`
+                SVRCORE_CFLAGS=`$PKG_CONFIG --cflags-only-I svrcore`
+                SVRCORE_LIBS=`$PKG_CONFIG --libs-only-L svrcore`
             else
+#            AC_MSG_NOTICE([system SVRCORE not found])
                 no_svrcore="yes"
             fi
         else
