@@ -1057,18 +1057,13 @@ ssl_SecureSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
 {
     int              rv		= 0;
 
-    SSL_TRC(2, ("%d: SSL[%d]: SecureSend: sending %d bytes",
-		SSL_GETPID(), ss->fd, len));
-
     if (ss->shutdownHow & ssl_SHUTDOWN_SEND) {
 	PORT_SetError(PR_SOCKET_SHUTDOWN_ERROR);
-    	rv = PR_FAILURE;
-	goto done;
+    	return PR_FAILURE;
     }
     if (flags) {
 	PORT_SetError(PR_INVALID_ARGUMENT_ERROR);
-    	rv = PR_FAILURE;
-	goto done;
+    	return PR_FAILURE;
     }
 
     ssl_GetXmitBufLock(ss);
@@ -1083,7 +1078,7 @@ ssl_SecureSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
     }
     ssl_ReleaseXmitBufLock(ss);
     if (rv < 0) {
-	goto done;
+	return rv;
     }
 
     if (len > 0) 
@@ -1098,22 +1093,23 @@ ssl_SecureSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
     }
     if (rv < 0) {
     	ss->writerThread = NULL;
-	goto done;
+	return rv;
     }
 
     /* Check for zero length writes after we do housekeeping so we make forward
      * progress.
      */
     if (len == 0) {
-    	rv = 0;
-	goto done;
+    	return 0;
     }
     PORT_Assert(buf != NULL);
     if (!buf) {
 	PORT_SetError(PR_INVALID_ARGUMENT_ERROR);
-    	rv = PR_FAILURE;
-	goto done;
+    	return PR_FAILURE;
     }
+    
+    SSL_TRC(2, ("%d: SSL[%d]: SecureSend: sending %d bytes",
+		SSL_GETPID(), ss->fd, len));
 
     /* Send out the data using one of these functions:
      *	ssl2_SendClear, ssl2_SendStream, ssl2_SendBlock, 
@@ -1123,14 +1119,6 @@ ssl_SecureSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
     rv = (*ss->sec.send)(ss, buf, len, flags);
     ssl_ReleaseXmitBufLock(ss);
     ss->writerThread = NULL;
-done:
-    if (rv < 0) {
-	SSL_TRC(2, ("%d: SSL[%d]: SecureSend: returning %d count, error %d",
-		    SSL_GETPID(), ss->fd, rv, PORT_GetError()));
-    } else {
-	SSL_TRC(2, ("%d: SSL[%d]: SecureSend: returning %d count",
-		    SSL_GETPID(), ss->fd, rv));
-    }
     return rv;
 }
 

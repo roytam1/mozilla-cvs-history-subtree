@@ -91,9 +91,8 @@ extern "C" {
      extern int	ldap_debug;
 #    define LDAPDebug( level, fmt, arg1, arg2, arg3 ) \
 		if ( ldap_debug & level ) { \
-			char msg[1024]; \
-			snprintf( msg, sizeof(msg), fmt, arg1, arg2, arg3 ); \
-			msg[sizeof(msg)-1] = '\0'; \
+			char msg[256]; \
+			sprintf( msg, fmt, arg1, arg2, arg3 ); \
 			ber_err_print( msg ); \
 		}
 #  endif /* SLAPD_LOGGING */

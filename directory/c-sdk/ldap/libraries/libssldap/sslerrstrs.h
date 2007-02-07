@@ -113,6 +113,10 @@ ER3(SSL_ERROR_EXPIRED_CERT_ALERT,			(SSL_ERROR_BASE + 19),
 ER3(SSL_ERROR_SSL_DISABLED,				(SSL_ERROR_BASE + 20),
 "Cannot connect: SSL is disabled.")
 
+ER3(SSL_ERROR_FORTEZZA_PQG,				(SSL_ERROR_BASE + 21),
+"Cannot connect: SSL peer is in another FORTEZZA domain.")
+
+
 ER3(SSL_ERROR_UNKNOWN_CIPHER_SUITE          , (SSL_ERROR_BASE + 22),
 "An unknown SSL cipher suite has been requested.")
 

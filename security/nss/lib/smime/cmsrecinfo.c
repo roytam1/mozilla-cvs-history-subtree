@@ -73,13 +73,9 @@ nss_cmsrecipientinfo_usessubjectkeyid(NSSCMSRecipientInfo *ri)
  * CMSMessage for that matter */
 static const SECOidData fakeContent;
 NSSCMSRecipientInfo *
-nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg, 
-			    NSSCMSRecipientIDSelector type,
-                            CERTCertificate *cert, 
-			    SECKEYPublicKey *pubKey, 
-                            SECItem *subjKeyID, 
-			    void* pwfn_arg, 
-			    SECItem* DERinput)
+nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg, NSSCMSRecipientIDSelector type,
+                            CERTCertificate *cert, SECKEYPublicKey *pubKey, 
+                            SECItem *subjKeyID, void* pwfn_arg, SECItem* DERinput)
 {
     NSSCMSRecipientInfo *ri;
     void *mark;
@@ -100,7 +96,7 @@ nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg,
 	cmsg = NSS_CMSMessage_Create(NULL);
         cmsg->pwfn_arg = pwfn_arg;
 	/* mark it as a special cms message */
-	cmsg->contentInfo.contentTypeTag = (SECOidData *)&fakeContent;
+	cmsg->contentInfo.contentTypeTag = &fakeContent;
     }
 
     poolp = cmsg->poolp;

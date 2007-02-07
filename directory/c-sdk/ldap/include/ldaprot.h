@@ -45,7 +45,7 @@ extern "C" {
 #define LDAP_VERSION1	1
 #define LDAP_VERSION2	2
 #define LDAP_VERSION3	3
-#define LDAP_VERSION	LDAP_VERSION3
+#define LDAP_VERSION	LDAP_VERSION2
 
 #define COMPAT20
 #define COMPAT30
@@ -90,10 +90,6 @@ extern "C" {
 #define LDAP_TAG_PWP_SECSLEFT	0x80L   /* context specific + primitive */
 #define LDAP_TAG_PWP_GRCLOGINS	0x81L   /* context specific + primitive + 1 */
 #define LDAP_TAG_PWP_ERROR	0x81L   /* context specific + primitive + 1 */
-#define LDAP_TAG_PWDMOD_REQ_ID  0x80L   /* context specific + primitive + 0 */
-#define LDAP_TAG_PWDMOD_REQ_OLD 0x81L   /* context specific + primitive + 1 */
-#define LDAP_TAG_PWDMOD_REQ_NEW 0x82L   /* context specific + primitive + 2 */
-#define LDAP_TAG_PWDMOD_RES_GEN 0x80L   /* context specific + primitive + 0 */
 
 /* possible operations a client can invoke */
 #define LDAP_REQ_BIND		0x60L	/* application + constructed + 0 */
