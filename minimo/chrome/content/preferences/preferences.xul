@@ -89,6 +89,7 @@
       <preferenceitem preftype="bool"    id="ui.fullscreen" name="setFullscreen" />
       <preferenceitem preftype="bool"    id="ui.homebar" name="setHomebar" />
       <preferenceitem preftype="string"  id="ui.controlbar" name="controlBarVisibleIds" />
+      <preferenceitem preftype="string"  id="ui.chromebackgroundcolor" name="uiChromeColor" />
       
   </preferenceset>
   
