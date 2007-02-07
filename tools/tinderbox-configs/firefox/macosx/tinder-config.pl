@@ -220,6 +220,8 @@ $update_platform = "Darwin_Universal-gcc3";
 $update_hash = "md5";
 $update_filehost = "ftp.mozilla.org";
 $update_pushinfo = 0;
+$update_appv = "3.0a2";
+$update_extv = "3.0a2";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
