@@ -501,6 +501,11 @@ nsresult nsExternalHelperAppService::Init()
   }
 #endif
 
+  // turn PR_Now() into microseconds since epoch and seed rand with that.
+  double fpTime;
+  LL_L2D(fpTime, PR_Now());
+  srand((uint)(fpTime));
+
   return obs->AddObserver(this, "profile-before-change", PR_TRUE);
 }
 
@@ -1579,15 +1584,10 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
   // "salted" name.....
   nsAutoString saltedTempLeafName;
   // this salting code was ripped directly from the profile manager.
-  // turn PR_Now() into milliseconds since epoch
-  // and salt rand with that. 
-  double fpTime;
-  LL_L2D(fpTime, PR_Now());
-  srand((uint)(fpTime * 1e-6 + 0.5));
   PRInt32 i;
   for (i=0;i<SALT_SIZE;i++) 
   {
-    saltedTempLeafName.Append(table[(rand()%TABLE_SIZE)]);
+    saltedTempLeafName.Append(table[rand()%TABLE_SIZE]);
   }
 
   // now append our extension.
