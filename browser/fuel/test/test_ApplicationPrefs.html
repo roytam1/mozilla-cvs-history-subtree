@@ -1,0 +1,49 @@
+<html>
+<head>
+  <title>Testing Application.js</title>
+  <script type="text/javascript" src="/MochiKit/MochiKit.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/EventUtils.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css"></link>
+</head>
+<body>
+<pre id="test">
+<script class="testbody" type="text/javascript">
+
+test_Preferences();
+
+function test_Preferences() {
+  netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+
+  // test getting non-existing and existing values
+  var itemValue = Application.prefs.get("fuel.fuel-test-missing", "default");
+  is(itemValue, "default", "Check 'Application.prefs.get' for non-existing item");
+  Application.prefs.set("fuel.fuel-test", "dummy");
+  itemValue = Application.prefs.get("fuel.fuel-test", "default");
+  is(itemValue, "dummy", "Check 'Application.prefs.get' for existing item");
+
+  // test for overwriting an existing value
+  Application.prefs.set("fuel.fuel-test", "smarty");
+  itemValue = Application.prefs.get("fuel.fuel-test", "default");
+  is(itemValue, "smarty", "Check 'Application.prefs.get' for overwritten item");
+
+  // test resetting a pref [since there is no default value, the pref should disappear]
+  Application.prefs.reset("fuel.fuel-test");
+  var itemValue = Application.prefs.get("fuel.fuel-test", "default");
+  is(itemValue, "default", "Check 'Application.prefs.get' for reset pref");
+
+  // check for change event when setting a value
+  SimpleTest.waitForExplicitFinish();
+  Application.prefs.events.add("change", onPrefChange);
+  Application.prefs.set("fuel.fuel-test", "change event");
+}
+
+function onPrefChange(evt) {
+  netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+  is(evt.data, "fuel.fuel-test", "Check 'Application.prefs.set' fired a change event");
+  SimpleTest.finish();
+}
+</script>
+</pre>
+</body>
+</html>

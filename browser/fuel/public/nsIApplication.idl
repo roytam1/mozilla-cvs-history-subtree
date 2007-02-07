@@ -12,6 +12,11 @@ interface nsIConsole : nsISupports
    *          The text to send to the console
    */
   void log(in string msg);
+
+  /**
+   * Opens the error console window.
+   */
+  void open();
 };
 
 
@@ -85,13 +90,6 @@ interface nsIEvents : nsISupports
    *          The reference to a listener
    */
   void remove(in string event, in nsIEventListener listener);
-
-  /**
-   * Iterates over the list of listeners and fires the callback for the given event.
-   * @param   event
-   *          The name of an event to fire
-   */
-  void fire(in string event);
 }; 
 
 
@@ -128,6 +126,15 @@ interface nsIPreferences : nsISupports
    *          does not exists.
    */
   string get(in string name, in string defaultValue);
+
+  /**
+   * Resets a preference back to the default values. If name is null, all
+   * preferences in this branch are reset.
+   * @param   name
+   *          The name of the preference to reset or null to reset all 
+   *          preferences in this branch.
+   */
+  void reset(in string name);
 }; 
 
 

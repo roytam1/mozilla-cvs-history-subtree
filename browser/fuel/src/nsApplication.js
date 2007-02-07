@@ -183,6 +183,11 @@ Preferences.prototype = {
     return this._events;
   },
   
+  find : function(findKeys) {
+    // XXX need to implement
+    return [];
+  },
+  
   set : function(name, value) {
     var type = nsIPrefBranch2.PREF_STRING;
 
@@ -230,6 +235,15 @@ Preferences.prototype = {
       dump("ERROR: Unable to read pref \"" + name + "\".\n" + ex + "\n");
     }
     return value;
+  },
+  
+  reset : function(name) {
+    if (name) {
+      this._prefs.clearUserPref(name);
+    }
+    else {
+      this._prefs.resetBranch("");
+    }
   }
 };
 
@@ -242,10 +256,12 @@ function SessionStorage() {
 //=================================================
 // SessionStorage implementation
 SessionStorage.prototype = {
-  _storage : {},
+  _storage : null,
   _events : null,
   
   _init : function() {
+    this._storage = {};
+    
     this._events = new Events();
     this._events._init();
   },
@@ -349,6 +365,7 @@ Extensions.prototype = {
   },
   
   find : function(findKeys) {
+    // XXX need to implement
     var extension = null;
   /*
     var items = this._extmgr.getItemList(type, { });
@@ -396,7 +413,6 @@ Application.prototype = {
   _prefs : null,
   _extensions : null,
   _events : null,
-  toolbars : [],
   
   _init : function() {
     this._console = new Console();
