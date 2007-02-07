@@ -185,7 +185,7 @@ $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 	      "/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird-installer.exe"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird.zip WIN32_INSTALLER_IN=/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Depend/sunbird-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird.zip WIN32_INSTALLER_IN=/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird-installer.exe";
 #-
 #- The rest should not need to be changed
 #-
