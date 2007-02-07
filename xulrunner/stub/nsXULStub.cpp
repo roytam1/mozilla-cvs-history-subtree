@@ -200,7 +200,7 @@ main(int argc, char **argv)
   argv2[argc + 1] = NULL;
 
 #ifdef XP_WIN
-  BOOL ok = WinLaunchChild(xulBin, argc + 1, argv2);
+  BOOL ok = WinLaunchChild(xulBin, argc + 1, argv2, 0);
 
   free (argv2);
 
