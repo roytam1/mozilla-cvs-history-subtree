@@ -140,7 +140,25 @@ groupbox {
   list-style-image: url("chrome://minimo/skin/preferences/icon-pref-networking.png");
 }
 
+#palette-gray {
+  list-style-image: url("chrome://minimo/skin/palette-gray.png");
+}
 
+#palette-cyan {
+  list-style-image: url("chrome://minimo/skin/palette-cyan.png");
+}
+
+#palette-green {
+  list-style-image: url("chrome://minimo/skin/palette-green.png");
+}
+
+#palette-red {
+  list-style-image: url("chrome://minimo/skin/palette-red.png");
+}
+
+#palette-pink {
+  list-style-image: url("chrome://minimo/skin/palette-pink.png");
+}
 
 .box-prefpadding {
   padding:6px ! important;
