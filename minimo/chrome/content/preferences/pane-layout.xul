@@ -54,9 +54,23 @@
 
     <caption label="&layoutBackgroundColor.label;"/>
 
-    <vbox class="box-prefpadding">     	
-    <textbox value="lightblue" onchange="setChromeColor(this.value)" />
+    <vbox class="box-prefpadding">    
+    <hbox>    
+      <toolbarbutton id="palette-gray" oncommand="setChromeColor('#dddddd');syncPref(document.getElementById('uiChromeColor'))" />  
+      <toolbarbutton id="palette-cyan" oncommand="setChromeColor('rgb(114,184,219)');syncPref(document.getElementById('uiChromeColor'))" />  
+      <toolbarbutton id="palette-green" oncommand="setChromeColor('rgb(188,246,192)');syncPref(document.getElementById('uiChromeColor'))" />  
+      <toolbarbutton id="palette-red" oncommand="setChromeColor('rgb(255,199,179)');syncPref(document.getElementById('uiChromeColor'))" />  
+      <toolbarbutton id="palette-pink" oncommand="setChromeColor('rgb(255,190,255)');syncPref(document.getElementById('uiChromeColor'))" />  
+      <textbox value="" id="dumpColor" onchange="setChromeColor(this.value)" size="8" />
+  </hbox>	
     </vbox>
+
+    
+    <box  id="uiChromeColor" 
+          preference="ui.chromebackgroundcolor"
+
+     />
+
   </groupbox>
                        
   <groupbox>
@@ -124,7 +138,7 @@
 
     <!-- THIS IS VERY IMPORTANT - the JS Code ( controlbarUIMask* functions ) uses this following list --> 
 
-    <box id="controlBarFullList" value="nav-back;nav-forward;nav-stopreload;nav-find;nav-uizoom;nav-bookmarkthis;nav-pan;nav-urlbar;nav-rss;nav-lock" />
+    <box id="controlBarFullList" value="nav-back;nav-forward;nav-stopreload;nav-find;nav-uizoom;nav-bookmarkthis;nav-pan;;nav-urlbar;nav-rss;nav-lock" />
 
     <box  id="controlBarVisibleIds" 
           preference="ui.controlbar"
