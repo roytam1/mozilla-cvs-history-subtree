@@ -190,21 +190,26 @@ InstallLogWriter.prototype = {
     var updRoot = getFile(KEY_APPDIR); 
     var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"]
                                 .getService(Components.interfaces.nsIProperties);
-    var programFilesDir = fileLocator.get(KEY_PROGRAMFILES,
-        Components.interfaces.nsILocalFile);
-    if (programFilesDir.contains(updRoot, true)) {
-      var relativePath = updRoot.QueryInterface(Components.interfaces.nsILocalFile).
-          getRelativeDescriptor(programFilesDir);
-      var userLocalDir = fileLocator.get(KEY_LOCALDATA,
-          Components.interfaces.nsILocalFile).parent;
-      updRoot.setRelativeDescriptor(userLocalDir, relativePath);
-      file = appendUpdateLogPath(updRoot);
+    // Fallback to previous behavior since getting ProgF
+    // (e.g. KEY_PROGRAMFILES) may fail on Win9x.
+    try {
+      var programFilesDir = fileLocator.get(KEY_PROGRAMFILES,
+          Components.interfaces.nsILocalFile);
+      if (programFilesDir.contains(updRoot, true)) {
+        var relativePath = updRoot.QueryInterface(Components.interfaces.nsILocalFile).
+            getRelativeDescriptor(programFilesDir);
+        var userLocalDir = fileLocator.get(KEY_LOCALDATA,
+            Components.interfaces.nsILocalFile).parent;
+        updRoot.setRelativeDescriptor(userLocalDir, relativePath);
+        file = appendUpdateLogPath(updRoot);
 
-      // When updating from Fx 2.0.0.1 to 2.0.0.3 (or later) on Vista,
-      // we will have to see also user app data (see bug 351949).
-      if (!file)
-        file = appendUpdateLogPath(getFile(KEY_UAPPDATA));
+        // When updating from Fx 2.0.0.1 to 2.0.0.3 (or later) on Vista,
+        // we will have to see also user app data (see bug 351949).
+        if (!file)
+          file = appendUpdateLogPath(getFile(KEY_UAPPDATA));
+      }
     }
+    catch (e) {}
 
     // See the app dir if not found or app dir is out of Program Files.
     if (!file)

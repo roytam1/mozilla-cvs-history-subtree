@@ -241,14 +241,19 @@ function getDirInternal(key, pathArray, shouldCreate, update) {
   var dir = fileLocator.get(key, Components.interfaces.nsILocalFile);
 #ifdef XP_WIN
   if (update) {
-    var programFilesDir = fileLocator.get(KEY_PROGRAMFILES,
-        Components.interfaces.nsILocalFile);
-    if (programFilesDir.contains(dir, true)) {
-      var relativePath = dir.getRelativeDescriptor(programFilesDir);
-      var userLocalDir = fileLocator.get(KEY_LOCALDATA,
-          Components.interfaces.nsILocalFile).parent;
-      dir.setRelativeDescriptor(userLocalDir, relativePath);
+    // Fallback to previous behavior since getting ProgF
+    // (e.g. KEY_PROGRAMFILES) may fail on Win9x.
+    try {
+      var programFilesDir = fileLocator.get(KEY_PROGRAMFILES,
+          Components.interfaces.nsILocalFile);
+      if (programFilesDir.contains(dir, true)) {
+        var relativePath = dir.getRelativeDescriptor(programFilesDir);
+        var userLocalDir = fileLocator.get(KEY_LOCALDATA,
+            Components.interfaces.nsILocalFile).parent;
+        dir.setRelativeDescriptor(userLocalDir, relativePath);
+      }
     }
+    catch (e) {}
   }
 #endif
   for (var i = 0; i < pathArray.length; ++i) {
@@ -357,14 +362,19 @@ function getUpdatesDir(key) {
   else {
     appDir = fileLocator.get(KEY_APPDIR, Components.interfaces.nsILocalFile);
 #ifdef XP_WIN
-    var programFilesDir = fileLocator.get(KEY_PROGRAMFILES,
-        Components.interfaces.nsILocalFile);
-    if (programFilesDir.contains(appDir, true)) {
-      var relativePath = appDir.getRelativeDescriptor(programFilesDir);
-      var userLocalDir = fileLocator.get(KEY_LOCALDATA,
-          Components.interfaces.nsILocalFile).parent;
-      appDir.setRelativeDescriptor(userLocalDir, relativePath);
+    // Fallback to previous behavior since getting ProgF
+    // (e.g. KEY_PROGRAMFILES) may fail on Win9x.
+    try {
+      var programFilesDir = fileLocator.get(KEY_PROGRAMFILES,
+          Components.interfaces.nsILocalFile);
+      if (programFilesDir.contains(appDir, true)) {
+        var relativePath = appDir.getRelativeDescriptor(programFilesDir);
+        var userLocalDir = fileLocator.get(KEY_LOCALDATA,
+            Components.interfaces.nsILocalFile).parent;
+        appDir.setRelativeDescriptor(userLocalDir, relativePath);
+      }
     }
+    catch (e) {}
 #endif
   }
   appDir.append(DIR_UPDATES);

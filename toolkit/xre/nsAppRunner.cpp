@@ -2376,30 +2376,34 @@ XRE_main(int argc, char* argv[], const nsXREAppData* aAppData)
   // folder virtualization mess on Windows Vista
   char path[MAXPATHLEN];
   rv = GetShellFolderPath(CSIDL_PROGRAM_FILES, path);
-  NS_ENSURE_SUCCESS(rv, 1);
-  nsCOMPtr<nsILocalFile> programFilesDir;
-  rv = NS_NewNativeLocalFile(nsDependentCString(path), PR_FALSE,
-                             getter_AddRefs(programFilesDir));
-  NS_ENSURE_SUCCESS(rv, 1);
 
-  PRBool descendant;
-  rv = programFilesDir->Contains(updRootl, PR_TRUE, &descendant);
-  NS_ENSURE_SUCCESS(rv, 1);
-  if (descendant) {
-    nsCAutoString relativePath;
-    rv = updRootl->GetRelativeDescriptor(programFilesDir, relativePath);
+  // Fallback to previous behavior since getting CSIDL_PROGRAM_FILES may fail
+  // on Win9x.
+  if (NS_SUCCEEDED(rv)) {
+    nsCOMPtr<nsILocalFile> programFilesDir;
+    rv = NS_NewNativeLocalFile(nsDependentCString(path), PR_FALSE,
+                               getter_AddRefs(programFilesDir));
     NS_ENSURE_SUCCESS(rv, 1);
 
-    nsCOMPtr<nsILocalFile> userLocalDir;
-    rv = dirProvider.GetUserLocalDataDirectory(getter_AddRefs(userLocalDir));
+    PRBool descendant;
+    rv = programFilesDir->Contains(updRootl, PR_TRUE, &descendant);
     NS_ENSURE_SUCCESS(rv, 1);
+    if (descendant) {
+      nsCAutoString relativePath;
+      rv = updRootl->GetRelativeDescriptor(programFilesDir, relativePath);
+      NS_ENSURE_SUCCESS(rv, 1);
 
-    rv = NS_NewNativeLocalFile(EmptyCString(), PR_FALSE,
-                               getter_AddRefs(updRootl));
-    NS_ENSURE_SUCCESS(rv, 1);
+      nsCOMPtr<nsILocalFile> userLocalDir;
+      rv = dirProvider.GetUserLocalDataDirectory(getter_AddRefs(userLocalDir));
+      NS_ENSURE_SUCCESS(rv, 1);
 
-    rv = updRootl->SetRelativeDescriptor(userLocalDir, relativePath);
-    NS_ENSURE_SUCCESS(rv, 1);
+      rv = NS_NewNativeLocalFile(EmptyCString(), PR_FALSE,
+                                 getter_AddRefs(updRootl));
+      NS_ENSURE_SUCCESS(rv, 1);
+
+      rv = updRootl->SetRelativeDescriptor(userLocalDir, relativePath);
+      NS_ENSURE_SUCCESS(rv, 1);
+    }
   }
 #endif
 
