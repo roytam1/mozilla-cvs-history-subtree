@@ -350,6 +350,12 @@
     
     
   </popupset>
+
+ 
+  <!-- a repository to overlay extensions information --> 
+  <extensions id="homebar" hidden="true">
+  </extensions>
+
   
 </window>
 
