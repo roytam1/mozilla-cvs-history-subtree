@@ -330,7 +330,7 @@ function bmInit(targetDoc, targetElement) {
 
 	}
 
-    var multiMarks = "<bmgroup>"+gHomebaseElements+bookmarkStore+myObserver.bookmarkStore+"</bmgroup>";
+    var multiMarks = "<bmgroup>"+bookmarkStore+gHomebaseElements+myObserver.bookmarkStore+"</bmgroup>";
 
 	var testLoad=new bmProcessor(multiMarks);
 	testLoad.xslSet("bookmark_template_multiple.xml");
