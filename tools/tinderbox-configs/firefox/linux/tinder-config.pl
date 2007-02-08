@@ -133,7 +133,8 @@ $ObjDir = 'obj';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'MozillaTest';
+#$BuildTree  = 'MozillaTest';
+$BuildTree  = 'Firefox';
 
 #$BuildName = '';
 #$BuildTag = '';
