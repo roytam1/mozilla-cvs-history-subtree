@@ -14,7 +14,7 @@
 $BuildAdministrator = 'build@mozilla.org';
 
 #- You'll need to change these to suit your machine's needs
-#$DisplayServer = ':0.0';
+$DisplayServer = ':0.0';
 
 #- Default values of command-line opts
 #-
