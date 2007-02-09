@@ -2323,6 +2323,7 @@ function BrowserTellChromeThemeRules(refName,ruleReference) {
 function BrowserChromeThemeColorGet() {
   gGlobalThemeValue = document.styleSheets[1].cssRules[1].style.cssText;
   gGlobalThemeValue = gGlobalThemeValue.split(";")[0];
+  gGlobalThemeValue = gGlobalThemeValue.split("! important")[0];
 
   return gGlobalThemeValue;
 }
