@@ -169,7 +169,7 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/releases/0.3.1rc1/sunbird-%version%.en-US.mac.dmg" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/releases/0.3.1rc1/mac/en-US/sunbird-%version%.en-US.mac.dmg" =>
 	      "/builds/tinderbox/Sb-Trunk-l10n/Darwin_8.8.4_Clobber/sunbird.dmg"
 	      );
 
