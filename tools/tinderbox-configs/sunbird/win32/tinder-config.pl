@@ -179,9 +179,9 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-%version%.en-US.win32.zip" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/releases/0.3.1rc1/sunbird-%version%.en-US.win32.zip" =>
 	      "/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird.zip",
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-%version%.en-US.win32.installer.exe" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/releases/0.3.1rc1/sunbird-%version%.en-US.win32.installer.exe" =>
 	      "/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird-installer.exe"
 	      );
 
@@ -198,7 +198,7 @@ $BuildLocalesArgs = "ZIP_IN=/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINN
 $BuildTree  = 'Mozilla-l10n';
 
 #$BuildName = '';
-$BuildTag = 'SUNBIRD_0_3_BRANCH';
+$BuildTag = 'SUNBIRD_0_3_1_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 

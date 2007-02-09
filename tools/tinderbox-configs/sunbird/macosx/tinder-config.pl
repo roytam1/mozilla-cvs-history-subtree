@@ -169,7 +169,7 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-%version%.en-US.mac.dmg" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/releases/0.3.1rc1/sunbird-%version%.en-US.mac.dmg" =>
 	      "/builds/tinderbox/Sb-Trunk-l10n/Darwin_8.8.4_Clobber/sunbird.dmg"
 	      );
 
@@ -187,7 +187,7 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk-l10n/Darwin_8.8.4_Clobber
 $BuildTree  = 'Mozilla-l10n';
 
 #$BuildName = '';
-$BuildTag = 'SUNBIRD_0_3_BRANCH';
+$BuildTag = 'SUNBIRD_0_3_1_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
