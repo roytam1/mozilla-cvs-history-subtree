@@ -258,8 +258,8 @@ MODULES_all :=                                  \
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
 MOZ_CO_TAG           = LIGHTNING_0_3_BRANCH
-NSPR_CO_TAG          = LIGHTNING_0_3_BRANCH
-NSS_CO_TAG           = LIGHTNING_0_3_BRANCH
+NSPR_CO_TAG          = NSPR_4_6_5_RTM
+NSS_CO_TAG           = NSS_3_11_5_RTM
 LDAPCSDK_CO_TAG      = LIGHTNING_0_3_BRANCH
 LOCALES_CO_TAG       = LIGHTNING_0_3_BRANCH
 
