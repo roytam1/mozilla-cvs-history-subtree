@@ -1,4 +1,5 @@
 #include "nsISupports.idl"
+#include "nsIVariant.idl"
 
 /**
  * Interface that gives simplified access to the console
@@ -113,7 +114,7 @@ interface nsIPreferences : nsISupports
    * @param   value
    *          The value to assign to the item
    */
-  void set(in string name, in string value);
+  nsIVariant set(in string name, in nsIVariant value);
 
   /**
    * Gets the value of a preference. Returns a default value if
@@ -125,7 +126,7 @@ interface nsIPreferences : nsISupports
    * @returns value of the preference or the given default value if preference
    *          does not exists.
    */
-  string get(in string name, in string defaultValue);
+  nsIVariant get(in string name, in nsIVariant defaultValue);
 
   /**
    * Resets a preference back to the default values. If name is null, all

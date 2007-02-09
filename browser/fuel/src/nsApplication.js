@@ -189,51 +189,43 @@ Preferences.prototype = {
   },
   
   set : function(name, value) {
-    var type = nsIPrefBranch2.PREF_STRING;
-
-    try {
-      switch (type) {
-        case nsIPrefBranch2.PREF_STRING:
-          var str = Components.classes['@mozilla.org/supports-string;1']
-                              .createInstance(nsISupportsString);
-          str.data = value;
-          this._prefs.setComplexValue(name, nsISupportsString, str);
-          break;
-        case nsIPrefBranch2.PREF_BOOL:
-          this._prefs.setBoolPref(name, value);
-          break;
-        case nsIPrefBranch2.PREF_INT:
-          this._prefs.setIntPref(name, value);
-          break;
-        default:
-          throw("No pref type found/specified!\n");
-      }
-    } catch(ex) {
-      dump("ERROR: Unable to write pref \"" + name + "\".\n" + ex + "\n");
+    var type = value != null ? value.constructor.name : "";
+    
+    switch (type) {
+      case "String":
+        var str = Components.classes['@mozilla.org/supports-string;1']
+                            .createInstance(nsISupportsString);
+        str.data = value;
+        this._prefs.setComplexValue(name, nsISupportsString, str);
+        break;
+      case "Boolean":
+        this._prefs.setBoolPref(name, value);
+        break;
+      case "Number":
+        this._prefs.setIntPref(name, value);
+        break;
+      default:
+        throw("Unknown preference value specified.");
     }
+    
+    return value;
   },
   
-  get : function(name, defaultValue) {
-    var value = defaultValue;
-    
+  get : function(name, value) {
     var type = this._prefs.getPrefType(name);
-    try {
-      switch (type) {
-        case nsIPrefBranch2.PREF_STRING:
-          value = this._prefs.getComplexValue(name, nsISupportsString).data;
-          break;
-        case nsIPrefBranch2.PREF_BOOL:
-          value = this._prefs.getBoolPref(name);
-          break;
-        case nsIPrefBranch2.PREF_BOOL:
-          value = this._prefs.getIntPref(name);
-          break;
-        default:
-          throw("No pref type found/specified!\n");
-      }
-    } catch(ex) {
-      dump("ERROR: Unable to read pref \"" + name + "\".\n" + ex + "\n");
+    
+    switch (type) {
+      case nsIPrefBranch2.PREF_STRING:
+        value = this._prefs.getComplexValue(name, nsISupportsString).data;
+        break;
+      case nsIPrefBranch2.PREF_BOOL:
+        value = this._prefs.getBoolPref(name);
+        break;
+      case nsIPrefBranch2.PREF_INT:
+        value = this._prefs.getIntPref(name);
+        break;
     }
+    
     return value;
   },
   
