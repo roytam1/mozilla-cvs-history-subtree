@@ -44,18 +44,13 @@ const nsIApplication = Components.interfaces.nsIApplication;
 //=================================================
 // Console constructor
 function Console() {
+  this._console = Components.classes['@mozilla.org/consoleservice;1']
+                            .getService(Components.interfaces.nsIConsoleService);
 }
 
 //=================================================
 // Console implementation
 Console.prototype = {
-  _console : null,
-  
-  _init : function() {
-    this._console = Components.classes['@mozilla.org/consoleservice;1']
-                              .getService(Components.interfaces.nsIConsoleService);
-  },
-  
   log : function(msg) {
     this._console.logStringMessage(msg);
   }
@@ -72,8 +67,6 @@ function EventItem(type, data) {
 //=================================================
 // EventItem implementation
 EventItem.prototype = {
-  _type : "",
-  _data : "",
   _cancel : false,
   
   get type() {
@@ -93,45 +86,42 @@ EventItem.prototype = {
 //=================================================
 // Events constructor
 function Events() {
+  this._listeners = [];
 }
 
 //=================================================
 // Events implementation
 Events.prototype = {
-  _init : function() {
-  	this._listeners = [];
-  },
-  
   add : function(event, handler) {
-    function hasFilter(element, index, array) {
-      return (element.event == event && element.handler == handler);
-    }
-    var hasHandler = this._listeners.some(hasFilter);
-    if (hasHandler)
+	if (this._listeners.some(hasFilter))
       return;
 
-    var key = {};
-    key.event = event;
-    key.handler = handler;
-
-    this._listeners.push(key);
+    this._listeners.push({
+    	event: event,
+    	handler: handler
+    });
+    
+    function hasFilter(element) {
+      return element.event == event && element.handler == handler;
+    }
   },
   
   remove : function(event, handler) {
-    function removeFilter(element, index, array) {
-      return (element.event != event && element.handler != handler);
-    }
-    var filtered = this._listeners.filter(removeFilter);
-    this._listeners = filtered;
+    this._listeners = this._listeners.filter(function(element){
+      return element.event != event && element.handler != handler;
+    });
   },
   
   fire : function(event, eventItem) {
-    for (var i=0; i<this._listeners.length; i++) {
-      var key = this._listeners[i];
+  	eventItem = new EventItem( event, eventItem );
+  	
+  	this._listeners.forEach(function(key){
       if (key.event == event) {
         key.handler.handleEvent(eventItem);
       }
-    }
+    });
+    
+    return !eventItem._cancel;
   }
 };
 
@@ -145,37 +135,29 @@ const nsISupportsString = Components.interfaces.nsISupportsString;
 
 //=================================================
 // Preferences constructor
-function Preferences() {
+function Preferences( branch ) {
+  this._prefs = Components.classes['@mozilla.org/preferences-service;1']
+                          .getService(nsIPrefService);
+
+  if (branch) {
+    this._prefs = this._prefs.getBranch(branch);
+  }
+    
+  this._prefs.QueryInterface(nsIPrefBranch);
+  this._prefs.QueryInterface(nsIPrefBranch2);
+    
+  this._events = new Events();
+
+  this._prefs.addObserver("", this, false);
 }
 
 //=================================================
 // Preferences implementation
 Preferences.prototype = {
-  _prefs : null,
-  _events : null,
-  
-  _init : function(branch) {
-    this._prefs = Components.classes['@mozilla.org/preferences-service;1']
-                            .getService(nsIPrefService);
-
-    if (branch) {
-      this._prefs = this._prefs.getBranch(branch);
-    }
-    
-    this._prefs.QueryInterface(nsIPrefBranch);
-    this._prefs.QueryInterface(nsIPrefBranch2);
-    
-    this._events = new Events();
-    this._events._init();
-
-    this._prefs.addObserver("", this, false);
-  },
-
   // for nsIObserver
   observe: function(subject, topic, data) {
     if (topic == "nsPref:changed") {
-      var evt = new EventItem("change", data);
-      this._events.fire("change", evt);
+      this._events.fire("change", data);
     }
   },
   
@@ -243,21 +225,13 @@ Preferences.prototype = {
 //=================================================
 // SessionStorage constructor
 function SessionStorage() {
+  this._storage = {};
+  this._events = new Events();
 }
 
 //=================================================
 // SessionStorage implementation
 SessionStorage.prototype = {
-  _storage : null,
-  _events : null,
-  
-  _init : function() {
-    this._storage = {};
-    
-    this._events = new Events();
-    this._events._init();
-  },
-  
   get events() {
     return this._events;
   },
@@ -268,57 +242,33 @@ SessionStorage.prototype = {
   
   set : function(name, value) {
     this._storage[name] = value;
-
-    var evt = new EventItem("change", name);
-    this._events.fire("change", evt);
+    this._events.fire("change", name);
   },
   
   get : function(name, defaultValue) {
-    var value = defaultValue;
-    
-    if (this.has(name)) {
-      value = this._storage[name];
-    }    
-    return value;
+    return this.has(name) && this._storage[name] || defaultValue;
   }
 };
 
 
 //=================================================
 // Extension constructor
-function Extension() {
+function Extension( item ) {
+  this._item = item;
+  this._prefs = new Preferences( "extensions." + _item.id + "." );
+  this._storage = new SessionStorage();
+  this._events = new Events();
+  
+  var installPref = "install-event-fired";
+  if ( !this._prefs.has(installPref) ) {
+    this._prefs.set(installPref, true);
+    this._events.fire("install", this._item.id);
+  }
 }
 
 //=================================================
 // Extensions implementation
 Extension.prototype = {
-  _item : null,
-  _prefs : null,
-  _storage : null,
-  _events : null,
-  
-  _init : function(item) {
-    this._item = item;
-
-    var domain = "extensions." + _item.id + ".";
-    this._prefs = new Preferences();
-    this._prefs._init(domain);
-
-    this._storage = new SessionStorage();
-    this._storage._init();
-
-    this._events = new Events();
-    this._events._init();
-    
-    var installedPref = "install-event-fired";
-    if (this._prefs.has(installPref) == false) {
-      this._prefs.set(installPref, true);
-
-      var evt = new EventItem("install", this._item.id);
-      this._events.fire("install", evt);
-    }
-  },
-  
   get id() {
     return this._item.id;
   },
@@ -344,18 +294,13 @@ Extension.prototype = {
 //=================================================
 // Extensions constructor
 function Extensions() {
+  this._extmgr = Components.classes["@mozilla.org/extensions/manager;1"]
+                           .getService(Components.interfaces.nsIExtensionManager);
 }
 
 //=================================================
 // Extensions implementation
 Extensions.prototype = {
-  _extmgr : null,
-  
-  _init : function() {
-    this._extmgr = Components.classes["@mozilla.org/extensions/manager;1"]
-                             .getService(Components.interfaces.nsIExtensionManager);
-  },
-  
   find : function(findKeys) {
     // XXX need to implement
     var extension = null;
@@ -370,20 +315,11 @@ Extensions.prototype = {
   },
   
   has : function(id) {
-    return (this._extmgr != null && this._extmgr.getItemForID(id) != null);
+    return !!(this._extmgr && this._extmgr.getItemForID(id));
   },
   
   get : function(id) {
-    var extension = null;
-
-    if (this._extmgr) {
-      var item = this._extmgr.getItemForID(id);
-      if (item) {
-        extension = new Extension();
-        extension._init(item);
-      }
-    }
-    return extension;
+    return this.has(id) && new Extension(id) || null;
   }
 };
 
@@ -395,71 +331,48 @@ const CONTRACT_ID = "@mozilla.org/application;1";
 //=================================================
 // Application constructor
 function Application() {
+  this._console = new Console();
+  this._prefs = new Preferences();
+  this._storage = new SessionStorage();
+  this._events = new Events();
+    
+  var os = Components.classes["@mozilla.org/observer-service;1"]
+                     .getService(Components.interfaces.nsIObserverService);
+
+  os.addObserver(this, "final-ui-startup", false);
+  os.addObserver(this, "quit-application-requested", false);
+  os.addObserver(this, "quit-application-granted", false);
+  os.addObserver(this, "quit-application", false);
+  os.addObserver(this, "xpcom-shutdown", false);
+  
+/* XXX To implement 
+  var idleServ = Components.classes["@mozilla.org/widget/idleservice;1"]
+                           .getService(Components.interfaces.nsIIdleService);
+
+  idleServ.addIdleObserver(this, 0);
+*/
 }
 
 //=================================================
 // Application implementation
 Application.prototype = {
-  _console : null,
-  _storage : null,
-  _prefs : null,
-  _extensions : null,
-  _events : null,
-  
-  _init : function() {
-    this._console = new Console();
-    this._console._init();
-
-    this._prefs = new Preferences();
-    this._prefs._init();
-
-    this._storage = new SessionStorage();
-    this._storage._init();
-
-    this._events = new Events();
-    this._events._init();
-    
-    var os = Components.classes["@mozilla.org/observer-service;1"]
-                       .getService(Components.interfaces.nsIObserverService);
-
-    os.addObserver(this, "final-ui-startup", false);
-
-    os.addObserver(this, "quit-application-requested", false);
-    os.addObserver(this, "quit-application-granted", false);
-    os.addObserver(this, "quit-application", false);
-    os.addObserver(this, "xpcom-shutdown", false);
-/*    
-    var idleServ = Components.classes["@mozilla.org/widget/idleservice;1"]
-                             .getService(Components.interfaces.nsIIdleService);
-
-    idleServ.addIdleObserver(this, 0);
-*/    
-  },
-  
   // for nsIObserver
   observe: function(subject, topic, data) {
     if (topic == "app-startup") {
       this._extensions = new Extensions();
-      this._extensions._init();
-      
-      var evt = new EventItem("start", "application");
-      this._events.fire("start", evt);
+      this._events.fire("start", "application");
     }
     else if (topic == "final-ui-startup") {
-      var evt = new EventItem("ready", "application");
-      this._events.fire("ready", evt);
+      this._events.fire("ready", "application");
     }
     else if (topic == "quit-application-requested") {
-      var evt = new EventItem("quit", "application");
-      this._events.fire("quit", evt);
-      // we can stop the quit by checking the evt._cancel
-      if (evt._cancel) {
+      // we can stop the quit by checking the return value
+      if (this._events.fire("quit", "application")) {
         data.value = true;
       }
     }
     else if (topic == "xpcom-shutdown") {
-      var evt = new EventItem("unload", "application");
-      this._events.fire("unload", evt);
+      this._events.fire("unload", "application");
 
       var os = Components.classes["@mozilla.org/observer-service;1"]
                          .getService(Components.interfaces.nsIObserverService);
@@ -537,7 +450,6 @@ var ApplicationFactory = {
       
     if (this.singleton == null) {
       this.singleton = new Application();
-      this.singleton._init();
     }
     return this.singleton.QueryInterface(aIID);
   }
