@@ -358,7 +358,25 @@ calDateTime::GetInTimezone(const nsACString& aTimezone, calIDateTime **aResult)
 
         ToIcalTime(&icalt);
 
-        nsresult rv = GetIcalTZ(aTimezone, &tz);
+        // Get the latest version of aTimezone.
+        nsresult rv;
+
+        nsCOMPtr<calIICSService> icsSvc = do_GetService(kCalICSService, &rv);
+        if (NS_FAILED(rv)) {
+            return rv;
+        }
+
+        nsCAutoString newTimezone;
+        rv = icsSvc->LatestTzId(aTimezone, newTimezone);
+        if (NS_FAILED(rv)) {
+            return rv;
+        }
+
+        if (newTimezone.Length() == 0) {
+            newTimezone = aTimezone;
+        }
+
+        rv = GetIcalTZ(newTimezone, &tz);
         if (NS_FAILED(rv))
             return rv;
 
@@ -950,4 +968,26 @@ calDateTime::InnerObject(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                          JSObject *obj, JSObject **_retval)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/**
+ * We are subclassing nsCString for mTimezone so we can check the tzid of all
+ * calIDateTimes as they go by.
+ */
+void calTzId::Assign(char* c)
+{
+  this->Assign(nsDependentCString(c));
+}
+
+void calTzId::Assign(const nsACString_internal& aStr)
+{
+    nsCString _retVal;
+    nsCOMPtr<calIICSService> icsSvc = do_GetService(kCalICSService);
+    icsSvc->LatestTzId(aStr, _retVal);
+
+    if (_retVal.Length() != 0) {
+        nsCString::Assign(_retVal);
+    } else {
+        nsCString::Assign(aStr);
+    }
 }

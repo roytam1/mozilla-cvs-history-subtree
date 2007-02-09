@@ -1267,7 +1267,9 @@ calICSService::CreateIcalProperty(const nsACString &kind,
 // include tzdata, to get ical_timezone_data_struct
 #include "tzdata.c"
 
-#define MOZCAL_TZID_PREFIX "/mozilla.org/20050126_1/"
+/* XXX We should really be using the global defined in tzdata.c for this. */
+#define MOZCAL_TZID_PREFIX "/mozilla.org/20070129_1/"
+
 #define STRLEN_ARGS(x) x, sizeof(x) - 1
 
 TimezoneEntry const* calICSService::getTimezoneEntry(nsACString const& tzid)
@@ -1384,5 +1386,89 @@ calICSService::GetTimezoneLongitude(const nsACString& tzid, nsACString& _retval)
     if (pEntry == nsnull)
         return NS_ERROR_FAILURE;
     _retval = pEntry->mLongitude;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+calICSService::GetTzIdPrefix(nsACString& _retval)
+{
+    _retval.Assign(gTzIdPrefix);
+
+    return NS_OK;
+}
+
+/**
+ * LatestTzId
+ * Gets updated timezone ID (tzId) for a given tzId.
+ * - If this isn't a mozilla.org tzId:
+ *      return nothing
+ * - If the tzId name was changed or the tzId was deleted:
+ *      return updated tzId
+ * - If the tzId's dtstamp is different from our current dtstamp:
+ *      return updated tzId
+ * - Otherwise, don't change the tzId and return nothing.
+ */
+NS_IMETHODIMP
+calICSService::LatestTzId(const nsACString& tzid, nsACString& _retval) {
+    // Ensure _retval is both initialized and empty.
+    _retval.Truncate();
+
+    // If it doesn't start with "/mozilla.org/" then it isn't ours.
+    if (!StringBeginsWith(
+            tzid, nsDependentCString(STRLEN_ARGS("/mozilla.org/")))) {
+        return NS_OK;
+    }
+
+    // We know that our tzids look like "/mozilla.org/<dtstamp>/continent/..."
+    // The ending of the mozilla prefix is the index of that slash before the
+    // continent. Therefore, we start looking for the prefix-ending slash
+    // after position 13.
+    PRInt32 prefixEnd = tzid.FindChar('/', 13);
+    PRInt32 continentEnd = tzid.FindChar('/', prefixEnd + 1);
+
+    // Go through our list of deletions and changes in Olsen, and update
+    // these to entirely new zones.
+    nsCAutoString continent(Substring(tzid, prefixEnd + 1,
+                                      continentEnd - (prefixEnd + 1)));
+
+    // XXX We want to make this table-driven at some point in the future.
+
+    if (continent.EqualsLiteral("Africa")) {
+        if (tzid.EqualsLiteral("/mozilla.org/20050126_1/Africa/Asmera")) {
+            _retval.AssignLiteral("/mozilla.org/20070129_1/Africa/Asmara");
+        } else if (tzid.EqualsLiteral("/mozilla.org/20050126_1/Africa/Timbuktu")) {
+            _retval.AssignLiteral("/mozilla.org/20070129_1/Africa/Bamako");
+        }
+    } else if (continent.EqualsLiteral("Atlantic")) {
+        if (tzid.EqualsLiteral("/mozilla.org/20050126_1/Atlantic/Faeroe")) {
+            _retval.AssignLiteral("/mozilla.org/20070129_1/Atlantic/Faroe");
+        }
+    } else if (continent.EqualsLiteral("America")) {
+        if (tzid.EqualsLiteral("/mozilla.org/20050126_1/America/Argentina/ComodRivadavia")) {
+            _retval.AssignLiteral("/mozilla.org/20070129_1/America/Argentina/Catamarca");
+        } else if (tzid.EqualsLiteral("/mozilla.org/20050126_1/America/Louisville")) {
+            _retval.AssignLiteral("/mozilla.org/20070129_1/America/Kentucky/Louisville");
+        }
+    } else if (continent.EqualsLiteral("Europe")) {
+        if (tzid.EqualsLiteral("/mozilla.org/20050126_1/Europe/Belfast")) {
+            _retval.AssignLiteral("/mozilla.org/20070129_1/Europe/London");
+        }
+    } else if (continent.EqualsLiteral("Pacific")) {
+        if (tzid.EqualsLiteral("/mozilla.org/20050126_1/Pacific/Yap")) {
+            _retval.AssignLiteral("/mozilla.org/20070129_1/Pacific/Truk");
+        }
+    }
+
+    // If the zone's locale was not changed and the zone was not
+    // deleted (i.e. we haven't already created _retVal, then
+    // we just need to update the timestamp.
+    if ((_retval.Length() == 0) &&
+        (gTzIdPrefix != Substring(tzid, 0, prefixEnd + 1))) {
+        // TODO: This assumes that new zones will always be later. If we are
+        // ever going to support mixing our TZID headers, then this needs to
+        // be a date comparison.
+        _retval = gTzIdPrefix + Substring(tzid, prefixEnd + 1,
+                                          tzid.Length() - (prefixEnd + 1));
+    }
     return NS_OK;
 }
