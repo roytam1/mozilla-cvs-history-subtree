@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,11 +11,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the Netscape Portable Runtime (NSPR).
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-2000
+ * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,33 +33,19 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
- 
-/*----------------------
-   POPPAD.H header file
-   (c) Charles Petzold, 1992
-  ----------------------*/
 
-#define IDM_NEW          10
-#define IDM_OPEN         11
-#define IDM_SAVE         12
-#define IDM_SAVEAS       13
-#define IDM_PRINT        14
-#define IDM_EXIT         15
+#ifndef _SHA_256_H_
+#define _SHA_256_H_
 
-#define IDM_UNDO         20
-#define IDM_CUT          21
-#define IDM_COPY         22
-#define IDM_PASTE        23
-#define IDM_DEL          24
-#define IDM_SELALL       25
+#include "prtypes.h"
 
-#define IDM_FIND         30
-#define IDM_NEXT         31
-#define IDM_REPLACE      32
+struct SHA256ContextStr {
+    union {
+	PRUint32 w[64];	    /* message schedule, input buffer, plus 48 words */
+	PRUint8  b[256];
+    } u;
+    PRUint32 h[8];		/* 8 state variables */
+    PRUint32 sizeHi,sizeLo;	/* 64-bit count of hashed bytes. */
+};
 
-#define IDM_FONT         40
-
-#define IDM_HELP         50
-#define IDM_ABOUT        51
-
-#define IDD_FNAME        10
+#endif /* _SHA_256_H_ */
