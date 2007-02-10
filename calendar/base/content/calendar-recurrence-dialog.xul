@@ -45,8 +45,7 @@
 <!DOCTYPE dialog
 [
     <!ENTITY % dtd1 SYSTEM "chrome://calendar/locale/global.dtd" > %dtd1;
-    <!ENTITY % calendar-recurrence-dialogDTD SYSTEM "chrome://calendar/locale/calendar-recurrence-dialog.dtd">
-    %calendar-recurrence-dialogDTD;
+    <!ENTITY % dtd2 SYSTEM "chrome://calendar/locale/calendar.dtd" > %dtd2;
 ]>
 
 <dialog

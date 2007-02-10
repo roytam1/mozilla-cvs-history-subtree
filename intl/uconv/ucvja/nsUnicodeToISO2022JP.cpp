@@ -38,13 +38,32 @@
 #include "nsUnicodeToISO2022JP.h"
 #include "nsIComponentManager.h"
 #include "nsUCVJADll.h"
-#include "nsUnicodeEncodeHelper.h"
+
+// Class ID for our UnicodeEncoderHelper implementation
+// {1767FC50-CAA4-11d2-8AA9-00600811A836}
+static NS_DEFINE_CID(kUnicodeEncodeHelperCID, NS_UNICODEENCODEHELPER_CID);
 
 //----------------------------------------------------------------------
 // Global functions and data [declaration]
 
 static const PRUint16 g_ufAsciiMapping [] = {
   0x0001, 0x0004, 0x0005, 0x0008, 0x0000, 0x0000, 0x007F, 0x0000
+};
+
+static const PRInt16 g_ufAsciiShift [] =  { 
+  0, u1ByteCharset, 
+  ShiftCell(0,0,0,0,0,0,0,0) 
+};
+
+static const PRInt16 g_uf0201Shift [] =  {
+  2, u1ByteCharset ,
+  ShiftCell(u1ByteChar,   1, 0x00, 0x7F, 0x00, 0x00, 0x00, 0x7F),
+  ShiftCell(u1ByteChar,   1, 0xA1, 0xDF, 0x00, 0xA1, 0x00, 0xDF),
+};
+
+static const PRInt16 g_uf0208Shift [] =  {
+  0, u2BytesCharset,
+  ShiftCell(0,0,0,0,0,0,0,0)
 };
 
 #define SIZE_OF_TABLES 5
@@ -56,12 +75,12 @@ static const PRUint16 * g_ufMappingTables[SIZE_OF_TABLES] = {
   g_uf0208Mapping,              // JIS X 0208-1978 ISOREG 42
 };
 
-static const uScanClassID g_ufScanClassIDs[SIZE_OF_TABLES] = {
-  u1ByteCharset,                // ASCII           ISOREG 6
-  u1ByteCharset,                // JIS X 0201-1976 ISOREG 14
-  u2BytesCharset,               // JIS X 0208-1983 ISOREG 87
-  u2BytesCharset,               // JIS X 0208- cp932 ext
-  u2BytesCharset,               // JIS X 0208-1978 ISOREG 42
+static const PRInt16 * g_ufShiftTables[SIZE_OF_TABLES] = {
+  g_ufAsciiShift,               // ASCII           ISOREG 6
+  g_uf0201Shift,                // JIS X 0201-1976 ISOREG 14
+  g_uf0208Shift,                // JIS X 0208-1983 ISOREG 87
+  g_uf0208Shift,                // JIS X 0208- cp932 ext
+  g_uf0208Shift,                // JIS X 0208-1978 ISOREG 42
 };
 
 //----------------------------------------------------------------------
@@ -73,11 +92,13 @@ static const uScanClassID g_ufScanClassIDs[SIZE_OF_TABLES] = {
 nsUnicodeToISO2022JP::nsUnicodeToISO2022JP() 
 : nsEncoderSupport(8)
 {
+  mHelper = NULL;
   Reset();
 }
 
 nsUnicodeToISO2022JP::~nsUnicodeToISO2022JP() 
 {
+  NS_IF_RELEASE(mHelper);
 }
 
 nsresult nsUnicodeToISO2022JP::ChangeCharset(PRInt32 aCharset,
@@ -140,8 +161,15 @@ nsresult nsUnicodeToISO2022JP::ChangeCharset(PRInt32 aCharset,
 
 NS_IMETHODIMP nsUnicodeToISO2022JP::FillInfo(PRUint32* aInfo)
 {
-  return nsUnicodeEncodeHelper::FillInfo(aInfo, SIZE_OF_TABLES, 
-                                         (uMappingTable **) g_ufMappingTables);
+  nsresult res;
+
+  if (mHelper == nsnull) {
+    res = CallCreateInstance(kUnicodeEncodeHelperCID, &mHelper);
+    if (NS_FAILED(res)) return NS_ERROR_UENC_NOHELPER;
+  }
+  return mHelper->FillInfo(aInfo, 
+                  SIZE_OF_TABLES, 
+                  (uMappingTable **) g_ufMappingTables);
 
 }
 NS_IMETHODIMP nsUnicodeToISO2022JP::ConvertNoBuffNoErr(
@@ -151,6 +179,11 @@ NS_IMETHODIMP nsUnicodeToISO2022JP::ConvertNoBuffNoErr(
                                     PRInt32 * aDestLength)
 {
   nsresult res = NS_OK;
+
+  if (mHelper == nsnull) {
+    res = CallCreateInstance(kUnicodeEncodeHelperCID, &mHelper);
+    if (NS_FAILED(res)) return NS_ERROR_UENC_NOHELPER;
+  }
 
   const PRUnichar * src = aSrc;
   const PRUnichar * srcEnd = aSrc + *aSrcLength;
@@ -163,9 +196,9 @@ NS_IMETHODIMP nsUnicodeToISO2022JP::ConvertNoBuffNoErr(
     for (i=0; i< SIZE_OF_TABLES ; i++) {
       bcr = 1;
       bcw = destEnd - dest;
-      res = nsUnicodeEncodeHelper::ConvertByTable(src, &bcr, dest, &bcw, 
-                                      g_ufScanClassIDs[i], nsnull,
-                                      (uMappingTable *) g_ufMappingTables[i]);
+      res = mHelper->ConvertByTable(src, &bcr, dest, &bcw, 
+          (uShiftTable *) g_ufShiftTables[i], 
+          (uMappingTable *) g_ufMappingTables[i]);
       if (res != NS_ERROR_UENC_NOMAPPING) break;
     }
 
@@ -182,9 +215,9 @@ NS_IMETHODIMP nsUnicodeToISO2022JP::ConvertNoBuffNoErr(
 
     bcr = srcEnd - src;
     bcw = destEnd - dest;
-    res = nsUnicodeEncodeHelper::ConvertByTable(src, &bcr, dest, &bcw, 
-                                      g_ufScanClassIDs[i], nsnull,
-                                      (uMappingTable *) g_ufMappingTables[i]);
+    res = mHelper->ConvertByTable(src, &bcr, dest, &bcw, 
+        (uShiftTable *) g_ufShiftTables[i], 
+        (uMappingTable *) g_ufMappingTables[i]);
     src += bcr;
     dest += bcw;
 

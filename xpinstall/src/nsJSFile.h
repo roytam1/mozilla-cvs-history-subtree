@@ -42,67 +42,67 @@
 #include "nscore.h"
 
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpDirCreate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpDirGetParent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpDirRemove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpDirRename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileCopy(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileRemove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileExists(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileGetNativeVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileGetDiskSpaceAvailable(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileGetModDate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileGetSize(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileIsDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileIsWritable(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileIsFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileModDateChanged(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileMove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileRename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileWindowsShortcut(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileMacAlias(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileUnixLink(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval);
 
 PRInt32 InitXPFileOpObjectPrototype(JSContext *jscontext, JSObject *global, JSObject **fileOpObjectPrototype);

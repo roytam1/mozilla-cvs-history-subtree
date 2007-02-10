@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 sw=2 et tw=80: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,14 +37,19 @@
 #include "nsIDOMHTMLScriptElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
+#include "nsPresContext.h"
+#include "nsITextContent.h"
 #include "nsIDocument.h"
-#include "nsScriptElement.h"
+#include "nsIScriptLoader.h"
+#include "nsIScriptLoaderObserver.h"
+#include "nsIScriptElement.h"
+#include "nsGUIEvent.h"
 #include "nsIURI.h"
 #include "nsNetUtil.h"
 
-#include "nsUnicharUtils.h"  // for nsCaseInsensitiveStringComparator()
+#include "nsUnicharUtils.h"  // for nsCaseInsensitiveCaseComparator()
 #include "jsapi.h"
 #include "nsIScriptContext.h"
 #include "nsIScriptGlobalObject.h"
@@ -53,9 +57,7 @@
 #include "nsServiceManagerUtils.h"
 #include "nsIScriptEventHandler.h"
 #include "nsIDOMDocument.h"
-#include "nsContentErrors.h"
-#include "nsIArray.h"
-#include "nsDOMJSUtils.h"
+
 
 //
 // Helper class used to support <SCRIPT FOR=object EVENT=handler ...>
@@ -140,7 +142,7 @@ nsresult nsHTMLScriptEventHandler::ParseEventString(const nsAString &aValue)
   }
 
   // Javascript expects all argument names to be ASCII.
-  NS_LossyConvertUTF16toASCII sig(Substring(next, end));
+  NS_LossyConvertUCS2toASCII sig(Substring(next, end));
 
   // Store each (comma separated) argument in mArgNames
   mArgNames.ParseString(sig.get(), ",");
@@ -205,7 +207,7 @@ nsHTMLScriptEventHandler::Invoke(nsISupports *aTargetObject,
   // Get the script context...
   nsCOMPtr<nsIDOMDocument> domdoc;
   nsCOMPtr<nsIScriptContext> scriptContext;
-  nsIScriptGlobalObject *sgo = nsnull;
+  nsIScriptGlobalObject *sgo;
 
   mOuter->GetOwnerDocument(getter_AddRefs(domdoc));
 
@@ -224,10 +226,9 @@ nsHTMLScriptEventHandler::Invoke(nsISupports *aTargetObject,
   // wrap the target object...
   JSContext *cx = (JSContext *)scriptContext->GetNativeContext();
   JSObject *scriptObject = nsnull;
-  JSObject *scope = sgo->GetGlobalJSObject();
 
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-  nsContentUtils::XPConnect()->WrapNative(cx, scope,
+  nsContentUtils::XPConnect()->WrapNative(cx, sgo->GetGlobalJSObject(),
                                           aTargetObject,
                                           NS_GET_IID(nsISupports),
                                           getter_AddRefs(holder));
@@ -295,33 +296,27 @@ nsHTMLScriptEventHandler::Invoke(nsISupports *aTargetObject,
     return rv;
   }
 
-  // Create an nsIArray for the args (the JS context will efficiently
-  // re-fetch the jsvals from this object)
-  nsCOMPtr<nsIArray> argarray;
-  rv = NS_CreateJSArgv(cx, aArgCount, (jsval *)aArgs, getter_AddRefs(argarray));
-  if (NS_FAILED(rv))
-    return rv;
-
   // Invoke the event handler script...
-  nsCOMPtr<nsIVariant> ret;
-  return scriptContext->CallEventHandler(aTargetObject, scope, funcObject,
-                                         argarray, getter_AddRefs(ret));
+  jsval dummy;
+  return scriptContext->CallEventHandler(scriptObject, (JSObject *)funcObject,
+                                         aArgCount, (jsval *)aArgs, &dummy);
 }
 
 
 class nsHTMLScriptElement : public nsGenericHTMLElement,
                             public nsIDOMHTMLScriptElement,
-                            public nsScriptElement
+                            public nsIScriptLoaderObserver,
+                            public nsIScriptElement
 {
 public:
-  nsHTMLScriptElement(nsINodeInfo *aNodeInfo, PRBool aFromParser);
+  nsHTMLScriptElement(nsINodeInfo *aNodeInfo);
   virtual ~nsHTMLScriptElement();
 
   // nsISupports
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -332,50 +327,79 @@ public:
   // nsIDOMHTMLScriptElement
   NS_DECL_NSIDOMHTMLSCRIPTELEMENT
 
+  // nsIScriptLoaderObserver
+  NS_DECL_NSISCRIPTLOADEROBSERVER
+
   // nsIScriptElement
   virtual void GetScriptType(nsAString& type);
   virtual already_AddRefed<nsIURI> GetScriptURI();
   virtual void GetScriptText(nsAString& text);
   virtual void GetScriptCharset(nsAString& charset); 
+  virtual void SetScriptLineNumber(PRUint32 aLineNumber);
+  virtual PRUint32 GetScriptLineNumber();
 
   // nsIContent
+  nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                   const nsAString& aValue, PRBool aNotify)
+  {
+    return SetAttr(aNameSpaceID, aName, nsnull, aValue, aNotify);
+  }
+  virtual nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                           nsIAtom* aPrefix, const nsAString& aValue,
+                           PRBool aNotify);
+
   virtual nsresult BindToTree(nsIDocument* aDocument, nsIContent* aParent,
                               nsIContent* aBindingParent,
                               PRBool aCompileEventHandlers);
+  virtual nsresult InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
+                                 PRBool aNotify);
+  virtual nsresult AppendChildTo(nsIContent* aKid, PRBool aNotify);
 
   virtual nsresult GetInnerHTML(nsAString& aInnerHTML);
   virtual nsresult SetInnerHTML(const nsAString& aInnerHTML);
-  virtual nsresult DoneAddingChildren(PRBool aHaveNotified);
-  virtual PRBool IsDoneAddingChildren();
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 
 protected:
   PRBool IsOnloadEventForWindow();
 
+  PRUint32 mLineNumber;
+  PRPackedBool mIsEvaluated;
+  PRPackedBool mEvaluating;
 
   // Pointer to the script handler helper object (OWNING reference)
-  nsCOMPtr<nsHTMLScriptEventHandler> mScriptEventHandler;
+  nsHTMLScriptEventHandler *mScriptEventHandler;
 
-  // nsScriptElement
-  virtual PRBool HasScriptContent();
-  virtual nsresult MaybeProcessScript();
+  /**
+   * Processes the script if it's in the document-tree and links to or
+   * contains a script. Once it has been evaluated there is no way to make it
+   * reevaluate the script, you'll have to create a new element. This also means
+   * that when adding a src attribute to an element that already contains an
+   * inline script, the script referenced by the src attribute will not be
+   * loaded.
+   *
+   * In order to be able to use multiple childNodes, or to use the
+   * fallback-mechanism of using both inline script and linked script you have
+   * to add all attributes and childNodes before adding the element to the
+   * document-tree.
+   */
+  void MaybeProcessScript();
 };
 
 
-NS_IMPL_NS_NEW_HTML_ELEMENT_CHECK_PARSER(Script)
+NS_IMPL_NS_NEW_HTML_ELEMENT(Script)
 
 
-nsHTMLScriptElement::nsHTMLScriptElement(nsINodeInfo *aNodeInfo,
-                                         PRBool aFromParser)
+nsHTMLScriptElement::nsHTMLScriptElement(nsINodeInfo *aNodeInfo)
   : nsGenericHTMLElement(aNodeInfo)
 {
-  mDoneAddingChildren = !aFromParser;
-  AddMutationObserver(this);
+  mLineNumber = 0;
+  mIsEvaluated = PR_FALSE;
+  mEvaluating = PR_FALSE;
+  mScriptEventHandler = nsnull;
 }
 
 nsHTMLScriptElement::~nsHTMLScriptElement()
 {
+  NS_IF_RELEASE(mScriptEventHandler);
 }
 
 
@@ -387,7 +411,6 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLScriptElement, nsGenericHTMLElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLScriptElement)
   NS_INTERFACE_MAP_ENTRY(nsIScriptLoaderObserver)
   NS_INTERFACE_MAP_ENTRY(nsIScriptElement)
-  NS_INTERFACE_MAP_ENTRY(nsIMutationObserver)
   if (mScriptEventHandler && aIID.Equals(NS_GET_IID(nsIScriptEventHandler)))
     foundInterface = NS_STATIC_CAST(nsIScriptEventHandler*,
                                     mScriptEventHandler);
@@ -395,6 +418,26 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLScriptElement, nsGenericHTMLElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLScriptElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
+
+nsresult
+nsHTMLScriptElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                             nsIAtom* aPrefix, const nsAString& aValue,
+                             PRBool aNotify)
+{
+  nsresult rv = nsGenericHTMLElement::SetAttr(aNameSpaceID, aName, aPrefix,
+                                              aValue, aNotify);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (aNameSpaceID != kNameSpaceID_None) {
+    return rv;
+  }
+
+  if (aNotify && aName == nsHTMLAtoms::src) {
+    MaybeProcessScript();
+  }
+
+  return rv;
+}
 
 nsresult
 nsHTMLScriptElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
@@ -410,31 +453,53 @@ nsHTMLScriptElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
     MaybeProcessScript();
   }
 
-  return NS_OK;
+  return rv;
 }
 
 nsresult
-nsHTMLScriptElement::Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const
+nsHTMLScriptElement::InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
+                                   PRBool aNotify)
 {
-  *aResult = nsnull;
+  nsresult rv = nsGenericHTMLElement::InsertChildAt(aKid, aIndex, aNotify);
+  if (NS_SUCCEEDED(rv) && aNotify) {
+    MaybeProcessScript();
+  }
 
-  nsHTMLScriptElement* it = new nsHTMLScriptElement(aNodeInfo, PR_FALSE);
+  return rv;
+}
+
+nsresult
+nsHTMLScriptElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
+{
+  nsresult rv = nsGenericHTMLElement::AppendChildTo(aKid, aNotify);
+  if (NS_SUCCEEDED(rv) && aNotify) {
+    MaybeProcessScript();
+  }
+
+  return rv;
+}
+
+nsresult
+nsHTMLScriptElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
+{
+  *aReturn = nsnull;
+
+  nsHTMLScriptElement* it = new nsHTMLScriptElement(mNodeInfo);
   if (!it) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  nsCOMPtr<nsINode> kungFuDeathGrip = it;
-  nsresult rv = CopyInnerTo(it);
-  NS_ENSURE_SUCCESS(rv, rv);
+  nsCOMPtr<nsIDOMNode> kungFuDeathGrip(it);
+
+  CopyInnerTo(it, aDeep);
 
   // The clone should be marked evaluated if we are.  It should also be marked
   // evaluated if we're evaluating, to handle the case when this script node's
   // script clones the node.
-  it->mIsEvaluated = mIsEvaluated;
+  it->mIsEvaluated = mIsEvaluated || mEvaluating;
   it->mLineNumber = mLineNumber;
-  it->mMalformed = mMalformed;
 
-  kungFuDeathGrip.swap(*aResult);
+  kungFuDeathGrip.swap(*aReturn);
 
   return NS_OK;
 }
@@ -442,14 +507,14 @@ nsHTMLScriptElement::Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const
 NS_IMETHODIMP
 nsHTMLScriptElement::GetText(nsAString& aValue)
 {
-  nsContentUtils::GetNodeTextContent(this, PR_FALSE, aValue);
+  GetContentsAsText(aValue);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsHTMLScriptElement::SetText(const nsAString& aValue)
 {
-  return nsContentUtils::SetNodeTextContent(this, aValue, PR_TRUE);
+  return ReplaceContentsWithText(aValue, PR_TRUE);
 }
 
 
@@ -458,36 +523,78 @@ NS_IMPL_BOOL_ATTR(nsHTMLScriptElement, Defer, defer)
 NS_IMPL_URI_ATTR(nsHTMLScriptElement, Src, src)
 NS_IMPL_STRING_ATTR(nsHTMLScriptElement, Type, type)
 NS_IMPL_STRING_ATTR(nsHTMLScriptElement, HtmlFor, _for)
-NS_IMPL_STRING_ATTR(nsHTMLScriptElement, Event, event)
+NS_IMPL_STRING_ATTR(nsHTMLScriptElement, Event, _event)
 
 nsresult
 nsHTMLScriptElement::GetInnerHTML(nsAString& aInnerHTML)
 {
-  nsContentUtils::GetNodeTextContent(this, PR_FALSE, aInnerHTML);
+  GetContentsAsText(aInnerHTML);
   return NS_OK;
 }
 
 nsresult
 nsHTMLScriptElement::SetInnerHTML(const nsAString& aInnerHTML)
 {
-  return nsContentUtils::SetNodeTextContent(this, aInnerHTML, PR_TRUE);
-}
-
-nsresult
-nsHTMLScriptElement::DoneAddingChildren(PRBool aHaveNotified)
-{
-  mDoneAddingChildren = PR_TRUE;
-  return MaybeProcessScript();
-}
-
-PRBool
-nsHTMLScriptElement::IsDoneAddingChildren()
-{
-  return mDoneAddingChildren;
+  return ReplaceContentsWithText(aInnerHTML, PR_TRUE);
 }
 
 // variation of this code in nsSVGScriptElement - check if changes
 // need to be transfered when modifying
+
+/* void scriptAvailable (in nsresult aResult, in nsIScriptElement aElement , in nsIURI aURI, in PRInt32 aLineNo, in PRUint32 aScriptLength, [size_is (aScriptLength)] in wstring aScript); */
+NS_IMETHODIMP
+nsHTMLScriptElement::ScriptAvailable(nsresult aResult,
+                                     nsIScriptElement *aElement,
+                                     PRBool aIsInline,
+                                     PRBool aWasPending,
+                                     nsIURI *aURI,
+                                     PRInt32 aLineNo,
+                                     const nsAString& aScript)
+{
+  if (!aIsInline && NS_FAILED(aResult)) {
+    nsEventStatus status = nsEventStatus_eIgnore;
+    nsScriptErrorEvent event(PR_TRUE, NS_SCRIPT_ERROR);
+
+    event.lineNr = aLineNo;
+
+    NS_NAMED_LITERAL_STRING(errorString, "Error loading script");
+    event.errorMsg = errorString.get();
+
+    nsCAutoString spec;
+    aURI->GetSpec(spec);
+
+    NS_ConvertUTF8toUCS2 fileName(spec);
+    event.fileName = fileName.get();
+
+    nsCOMPtr<nsPresContext> presContext = GetPresContext();
+    HandleDOMEvent(presContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
+  }
+
+  return NS_OK;
+}
+
+// variation of this code in nsSVGScriptElement - check if changes
+// need to be transfered when modifying
+
+/* void scriptEvaluated (in nsresult aResult, in nsIScriptElement aElement); */
+NS_IMETHODIMP
+nsHTMLScriptElement::ScriptEvaluated(nsresult aResult,
+                                     nsIScriptElement *aElement,
+                                     PRBool aIsInline,
+                                     PRBool aWasPending)
+{
+  nsresult rv = NS_OK;
+  if (!aIsInline) {
+    nsEventStatus status = nsEventStatus_eIgnore;
+    nsEvent event(PR_TRUE,
+                  NS_SUCCEEDED(aResult) ? NS_SCRIPT_LOAD : NS_SCRIPT_ERROR);
+    nsCOMPtr<nsPresContext> presContext = GetPresContext();
+    rv = HandleDOMEvent(presContext, &event, nsnull, NS_EVENT_FLAG_INIT,
+                        &status);
+  }
+
+  return rv;
+}
 
 void
 nsHTMLScriptElement::GetScriptType(nsAString& type)
@@ -521,33 +628,69 @@ nsHTMLScriptElement::GetScriptCharset(nsAString& charset)
   GetCharset(charset);
 }
 
-PRBool
-nsHTMLScriptElement::HasScriptContent()
+void 
+nsHTMLScriptElement::SetScriptLineNumber(PRUint32 aLineNumber)
 {
-  return HasAttr(kNameSpaceID_None, nsGkAtoms::src) ||
-         nsContentUtils::HasNonEmptyTextContent(this);
+  mLineNumber = aLineNumber;
 }
 
-nsresult
+PRUint32
+nsHTMLScriptElement::GetScriptLineNumber()
+{
+  return mLineNumber;
+}
+
+// variation of this code in nsSVGScriptElement - check if changes
+// need to be transfered when modifying
+
+void
 nsHTMLScriptElement::MaybeProcessScript()
 {
-  nsresult rv = nsScriptElement::MaybeProcessScript();
-  if (rv == NS_CONTENT_SCRIPT_IS_EVENTHANDLER) {
-    // Don't return NS_CONTENT_SCRIPT_IS_EVENTHANDLER since callers can't deal
-    rv = NS_OK;
-
-    // We tried to evaluate the script but realized it was an eventhandler
-    // mEvaluated will already be set at this point
-    NS_ASSERTION(mIsEvaluated, "should have set mIsEvaluated already");
-    NS_ASSERTION(!mScriptEventHandler, "how could we have an SEH already?");
-
-    mScriptEventHandler = new nsHTMLScriptEventHandler(this);
-    NS_ENSURE_TRUE(mScriptEventHandler, NS_ERROR_OUT_OF_MEMORY);
-
-    nsAutoString event_val;
-    GetAttr(kNameSpaceID_None, nsGkAtoms::event, event_val);
-    mScriptEventHandler->ParseEventString(event_val);
+  if (mIsEvaluated || mEvaluating || !IsInDoc()) {
+    return;
   }
 
-  return rv;
+  // We'll always call this to make sure that
+  // ScriptAvailable/ScriptEvaluated gets called. See bug 153600
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIScriptLoader> loader = GetOwnerDoc()->GetScriptLoader();
+  if (loader) {
+    mEvaluating = PR_TRUE;
+    rv = loader->ProcessScriptElement(this, this);
+    mEvaluating = PR_FALSE;
+  }
+
+  if (rv == NS_CONTENT_SCRIPT_IS_EVENTHANDLER) {
+
+    // If the script has NOT been executed yet then create a script
+    // event handler if necessary...
+    if (!mIsEvaluated && !mScriptEventHandler) {
+      // Set mIsEvaluated, this element will be handled by the
+      // nsIScriptEventManager
+      mIsEvaluated = PR_TRUE;
+
+      mScriptEventHandler = new nsHTMLScriptEventHandler(this);
+      if (!mScriptEventHandler) {
+        return;
+      }
+
+      NS_ADDREF(mScriptEventHandler);
+
+      // The script-loader will make sure that the script is not evaluated
+      // right away.
+    }
+
+    if (mScriptEventHandler) {
+      nsAutoString event_val;
+      GetAttr(kNameSpaceID_None, nsHTMLAtoms::_event, event_val);
+      mScriptEventHandler->ParseEventString(event_val);
+    }
+  }
+
+  // But we'll only set mIsEvaluated if we did really load or evaluate
+  // something
+  if (HasAttr(kNameSpaceID_None, nsHTMLAtoms::src) ||
+      mAttrsAndChildren.ChildCount()) {
+    mIsEvaluated = PR_TRUE;
+  }
 }

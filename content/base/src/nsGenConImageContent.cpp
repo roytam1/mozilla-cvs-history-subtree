@@ -34,20 +34,17 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/**
- * A fake content node class so that the image frame for
- *   content: url(foo);
- * in CSS can have an nsIImageLoadingContent but use an
- * imgIRequest that's already been loaded from the style system.
- */
-
 #include "nsContentCreatorFunctions.h"
 #include "nsXMLElement.h"
 #include "nsImageLoadingContent.h"
 #include "imgIRequest.h"
-#include "nsIEventStateManager.h"
 
+/**
+ * A fake content node class so that the image frame for
+ *   p:before { content: url(foo.gif); }
+ * can have a content node that knows about image loading but can take
+ * an imgIRequest that's already been loaded from the style system.
+ */
 class nsGenConImageContent : public nsXMLElement,
                              public nsImageLoadingContent
 {
@@ -59,13 +56,12 @@ public:
 
   nsresult Init(imgIRequest* aImageRequest)
   {
-    // No need to notify, since we have no frame.
-    return UseAsPrimaryRequest(aImageRequest, PR_FALSE);
+    PreserveLoadHandlers();
+    nsresult rv = aImageRequest->Clone(this, getter_AddRefs(mCurrentRequest));
+    if (NS_FAILED(rv))
+      UnpreserveLoadHandlers();
+    return rv;
   }
-
-  // nsIContent overrides
-  virtual PRInt32 IntrinsicState() const;
-  
 private:
   virtual ~nsGenConImageContent();
 
@@ -73,14 +69,15 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 };
 
-NS_IMPL_ISUPPORTS_INHERITED2(nsGenConImageContent, nsXMLElement,
-                             nsIImageLoadingContent, imgIDecoderObserver)
+NS_IMPL_ISUPPORTS_INHERITED3(nsGenConImageContent, nsXMLElement,
+                             nsIImageLoadingContent,
+                             imgIDecoderObserver,
+                             imgIDecoderObserver_MOZILLA_1_8_BRANCH)
 
 nsresult
 NS_NewGenConImageContent(nsIContent** aResult, nsINodeInfo* aNodeInfo,
                          imgIRequest* aImageRequest)
 {
-  NS_PRECONDITION(aImageRequest, "Must have request!");
   nsGenConImageContent *it = new nsGenConImageContent(aNodeInfo);
   if (!it)
     return NS_ERROR_OUT_OF_MEMORY;
@@ -94,20 +91,4 @@ NS_NewGenConImageContent(nsIContent** aResult, nsINodeInfo* aNodeInfo,
 nsGenConImageContent::~nsGenConImageContent()
 {
   DestroyImageLoadingContent();
-}
-
-PRInt32
-nsGenConImageContent::IntrinsicState() const
-{
-  PRInt32 state = nsXMLElement::IntrinsicState();
-
-  PRInt32 imageState = nsImageLoadingContent::ImageState();
-  if (imageState & NS_EVENT_STATE_BROKEN) {
-    // We should never be in an error state; if the image fails to load, we
-    // just go to the suppressed state.
-    imageState |= NS_EVENT_STATE_SUPPRESSED;
-    imageState &= ~NS_EVENT_STATE_BROKEN;
-  }
-  imageState &= ~NS_EVENT_STATE_LOADING;
-  return state | imageState;
 }

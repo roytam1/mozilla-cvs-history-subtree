@@ -102,12 +102,10 @@ $aBlobName = "mozilla-installer";
 $aBuildWizard = "NO";
 $aMozAppName = "mozilla";
 $aMozAppDisplayName = "Mozilla";
-$aConfigItLocation = ".";
 
 #// parse args
 # all optional args: version, URLPath, stubName, blobName, MozAppName,
 # MozDisplayName
-if ($#ARGV >= 7) { $aConfigItLocation  = $ARGV[7]; }
 if ($#ARGV >= 6) { $aMozAppDisplayName = $ARGV[6]; }
 if ($#ARGV >= 5) { $aMozAppName        = $ARGV[5]; }
 if ($#ARGV >= 4) { $aBuildWizard       = $ARGV[4]; }
@@ -209,8 +207,8 @@ spew("Completed signing NSS libraries");
 
 #// call makeall.pl tunneling args (delivers .xpis to $topobjdir/installer/stage)
 chdir("$topsrcdir/xpinstall/packager/unix");
-system("perl makeall.pl $aVersion $aURLPath $STAGE $XPI $aMozAppName $aMozAppDisplayName $aConfigItLocation");
-system("mv $aConfigItLocation/config.ini $RAW");
+system("perl makeall.pl $aVersion $aURLPath $STAGE $XPI $aMozAppName $aMozAppDisplayName");
+system("mv $topsrcdir/xpinstall/packager/unix/config.ini $RAW");
 spew("Completed making .xpis");
 
 #-------------------------------------------------------------------------
@@ -224,7 +222,7 @@ chdir("$RAW/..");
 system("mv $RAW $ROOT/$SUBDIR");
 system($create_tar . "$STUB/$aStubName.tar ./$SUBDIR/$aMozAppName-installer ./$SUBDIR/$aMozAppName-installer-bin ./$SUBDIR/installer.ini ./$SUBDIR/README ./$SUBDIR/config.ini ./$SUBDIR/MPL-1.1.txt"); 
 system("mv $ROOT/$SUBDIR $RAW");
-system("bzip2 $STUB/$aStubName.tar");
+system("gzip $STUB/$aStubName.tar");
 spew("Completed creating stub installer tarball");
 
 #// tar and gzip mozilla-installer, mozilla-installer-bin, README, license, 
@@ -233,7 +231,7 @@ spew("Creating blob (aka full or sea) installer tarball...");
 system("mv $RAW $ROOT/$SUBDIR");
 system($create_tar . "$BLOB/$aBlobName.tar ./$SUBDIR/"); 
 system("mv $ROOT/$SUBDIR $RAW");
-system("bzip2 $BLOB/$aBlobName.tar");
+system("gzip $BLOB/$aBlobName.tar");
 spew("Completed creating blob (aka full or sea) installer tarball");
 chdir($_orig);
 

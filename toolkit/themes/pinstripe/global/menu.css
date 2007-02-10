@@ -74,12 +74,6 @@ menuitem[_moz-menuactive="true"][disabled="true"] {
   font-weight: inherit;
 }
 
-.menu-description {
-  font-style: italic;
-  color: -moz-mac-menutextdisable;
-  -moz-margin-start: 1ex !important;
-}
-
 .menu-accel,
 .menu-iconic-accel {
   margin: 0px 2px 0px 2px !important;
@@ -88,7 +82,7 @@ menuitem[_moz-menuactive="true"][disabled="true"] {
 }
 
 .menu-iconic-left {
-  margin: 2px 4px 1px 18px !important;
+  margin: 1px 4px 1px 18px !important;
   color: inherit;
 }
 

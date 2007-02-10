@@ -186,21 +186,21 @@ class nsAccessibleWrap : public nsAccessible,
   static STDMETHODIMP AccessibleObjectFromWindow(HWND hwnd,DWORD dwObjectID,REFIID riid,void **ppvObject);
   static STDMETHODIMP NotifyWinEvent(DWORD event,HWND hwnd,LONG idObjectType,LONG idObject);
 
-  static IDispatch *NativeAccessible(nsIAccessible *aXPAccessible);
-
 protected:
   // mEnumVARIANTPosition not the current accessible's position, but a "cursor" of 
   // where we are in the current list of children, with respect to
   // nsIEnumVariant::Reset(), Skip() and Next().
-  PRUint16 mEnumVARIANTPosition;
+  PRUint16 mEnumVARIANTPosition;  
 
-  // Should this accessible be allowed to have any MSAA children
-  static PRBool MustPrune(nsIAccessible *accessible)
-    { PRUint32 role; return NS_SUCCEEDED(accessible->GetRole(&role)) && (role == ROLE_ENTRY || role == ROLE_PASSWORD_TEXT || role == ROLE_PUSHBUTTON); }
+  IDispatch *NativeAccessible(nsIAccessible *aXPAccessible);
 };
 
 // Define unsupported wrap classes here
 typedef class nsHTMLTextFieldAccessible    nsHTMLTextFieldAccessibleWrap;
+typedef class nsHTMLLinkAccessible         nsHTMLLinkAccessibleWrap;
+typedef class nsHTMLTableCellAccessible    nsHTMLTableCellAccessibleWrap;
+typedef class nsHTMLTableAccessible        nsHTMLTableAccessibleWrap;
+typedef class nsXULProgressMeterAccessible nsXULProgressMeterAccessibleWrap;
 typedef class nsXULTextFieldAccessible     nsXULTextFieldAccessibleWrap;
 
 #endif

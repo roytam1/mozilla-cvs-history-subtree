@@ -135,17 +135,15 @@ function initDebugger()
     console.executionHook = { onExecute: jsdExecutionHook };
     console.errorHook     = { onError: jsdErrorHook };
     console.callHook      = { onCall: jsdCallHook };
-
-    console.jsdConsole = console.jsds.wrapValue(console);
+    
+    console.jsdConsole = console.jsds.wrapValue(console);    
 
     dispatch ("tmode", {mode: console.prefs["lastThrowMode"]});
     dispatch ("emode", {mode: console.prefs["lastErrorMode"]});
-
-    console.enumeratingScripts = true;
+    
     var enumer = { enumerateScript: console.scriptHook.onScriptCreated };
     console.jsds.scriptHook = console.scriptHook;
     console.jsds.enumerateScripts(enumer);
-    delete console.enumeratingScripts;
 
     console.jsds.breakpointHook = console.executionHook;
     console.jsds.debuggerHook   = console.executionHook;
@@ -172,11 +170,9 @@ function detachDebugger()
     console.jsds.functionHook = null;
     console.jsds.breakpointHook = null;
     console.jsds.debuggerHook = null;
-    console.jsds.debugHook = null;
     console.jsds.errorHook = null;
     console.jsds.scriptHook = null;
     console.jsds.interruptHook = null;
-    console.jsds.throwHook = null;
     console.jsds.clearAllBreakpoints();
 
     console.jsds.GC();
@@ -390,8 +386,10 @@ function jsdErrorHook (message, fileName, line, pos, flags, exception)
     try
     {
         var flagstr;
-        flagstr  = (flags & jsdIErrorHook.REPORT_EXCEPTION) ? "x" : "-";
-        flagstr += (flags & jsdIErrorHook.REPORT_STRICT) ? "s" : "-";
+        flagstr =
+            (flags && jsdIErrorHook.REPORT_EXCEPTION) ? "x" : "-";
+        flagstr +=
+            (flags && jsdIErrorHook.REPORT_STRICT) ? "s" : "-";
         
         //dd ("===\n" + message + "\n" + fileName + "@" + 
         //    line + ":" + pos + "; " + flagstr);
@@ -1153,13 +1151,10 @@ function sw_addmap (lineMap)
 {    
     var jsdScript = this.jsdScript;
     var end = jsdScript.baseLineNumber + jsdScript.lineExtent;
-    if (!("enumeratingScripts" in console))
+    for (var i = jsdScript.baseLineNumber; i < end; ++i)
     {
-        for (var i = jsdScript.baseLineNumber; i < end; ++i)
-        {
-            if (jsdScript.isLineExecutable(i, PCMAP_SOURCETEXT))
-                arrayOrFlag (lineMap, i - 1, LINE_BREAKABLE);
-        }
+        if (jsdScript.isLineExecutable(i, PCMAP_SOURCETEXT))
+            arrayOrFlag (lineMap, i - 1, LINE_BREAKABLE);
     }
 
     for (i in this.breaks)

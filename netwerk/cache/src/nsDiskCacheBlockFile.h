@@ -42,6 +42,9 @@
 #define _nsDiskCacheBlockFile_h_
 
 #include "nsILocalFile.h"
+#include "nspr.h"
+
+const unsigned short kBitMapBytes = 4096;
 
 /******************************************************************************
  *  nsDiskCacheBlockFile
@@ -56,6 +59,7 @@ public:
     nsDiskCacheBlockFile()
            : mFD(nsnull)
            , mBlockSize(0)
+           , mEndOfFile(0)
            , mBitMap(nsnull)
            , mBitMapDirty(PR_FALSE)
             {}
@@ -63,30 +67,25 @@ public:
     
     nsresult  Open( nsILocalFile *  blockFile, PRUint32  blockSize);
     nsresult  Close(PRBool flush);
-    
-    /*
-     * Trim
-     * Truncates the block file to the end of the last allocated block.
-     */
-    nsresult  Trim() { return nsDiskCache::Truncate(mFD, CalcBlockFileSize()); }
+    nsresult  Trim();
+    PRInt32   AllocateBlocks( PRInt32  numBlocks);
     nsresult  DeallocateBlocks( PRInt32  startBlock, PRInt32  numBlocks);
-    nsresult  WriteBlocks( void * buffer, PRUint32 size, PRInt32  numBlocks, 
-                           PRInt32 * startBlock);
-    nsresult  ReadBlocks( void * buffer, PRInt32  startBlock, PRInt32  numBlocks, 
-                          PRInt32 * bytesRead);
+    nsresult  WriteBlocks( void * buffer, PRInt32  startBlock, PRInt32  numBlocks);
+    nsresult  ReadBlocks(  void * buffer, PRInt32  startBlock, PRInt32  numBlocks);
     
 private:
     nsresult  FlushBitMap();
-    PRInt32   AllocateBlocks( PRInt32  numBlocks);
+    nsresult  ValidateFile();   // called by Open()
     nsresult  VerifyAllocation( PRInt32 startBlock, PRInt32 numBLocks);
-    PRUint32  CalcBlockFileSize();
+    PRInt32   LastBlock();
 
 /**
  *  Data members
  */
     PRFileDesc *                mFD;
     PRUint32                    mBlockSize;
-    PRUint32 *                  mBitMap;      // XXX future: array of bit map blocks
+    PRUint32                    mEndOfFile;
+    PRUint8 *                   mBitMap;      // XXX future: array of bit map blocks
     PRBool                      mBitMapDirty;
 };
 

@@ -40,8 +40,11 @@
 #include "nsXPIDLString.h"
 
 #include "nsIWebProgress.h"
+#include "nsIDOMWindowInternal.h"
+#include "nsPIDOMWindow.h"
 #include "nsIXULBrowserWindow.h"
 #include "nsMsgStatusFeedback.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDocumentViewer.h"
 #include "nsIDocument.h"
 #include "nsIDOMElement.h"
@@ -230,19 +233,17 @@ nsMsgStatusFeedback::OnSecurityChange(nsIWebProgress *aWebProgress,
 NS_IMETHODIMP
 nsMsgStatusFeedback::ShowStatusString(const PRUnichar *status)
 {
-  nsCOMPtr<nsIMsgStatusFeedback> jsStatusFeedback(do_QueryReferent(mJSStatusFeedbackWeak));
-  if (jsStatusFeedback)
-    jsStatusFeedback->ShowStatusString(status);
+  if (mStatusFeedback)
+    mStatusFeedback->ShowStatusString(status);
 	return NS_OK;
 }
 
 NS_IMETHODIMP
 nsMsgStatusFeedback::SetStatusString(const PRUnichar *status)
 {
-  nsCOMPtr<nsIMsgStatusFeedback> jsStatusFeedback(do_QueryReferent(mJSStatusFeedbackWeak));
-  nsCOMPtr <nsIXULBrowserWindow> xulBrowserWindow = do_QueryInterface(jsStatusFeedback);
+  nsCOMPtr <nsIXULBrowserWindow> xulBrowserWindow = do_QueryInterface(mStatusFeedback);
   if (xulBrowserWindow)
-    xulBrowserWindow->SetJSDefaultStatus(nsDependentString(status));
+    xulBrowserWindow->SetJSDefaultStatus(status);
   return NS_OK;
 }
 
@@ -272,34 +273,48 @@ nsMsgStatusFeedback::ShowProgress(PRInt32 percentage)
 	}
 
 	m_lastProgressTime = nowMS;
-  nsCOMPtr<nsIMsgStatusFeedback> jsStatusFeedback(do_QueryReferent(mJSStatusFeedbackWeak));
-  if (jsStatusFeedback)
-    jsStatusFeedback->ShowProgress(percentage);
+  
+  if (mStatusFeedback)
+    mStatusFeedback->ShowProgress(percentage);
 	return NS_OK;
 }
 
 NS_IMETHODIMP
 nsMsgStatusFeedback::StartMeteors()
 {
-  nsCOMPtr<nsIMsgStatusFeedback> jsStatusFeedback(do_QueryReferent(mJSStatusFeedbackWeak));
-  if (jsStatusFeedback)
-    jsStatusFeedback->StartMeteors();
+  if (mStatusFeedback)
+    mStatusFeedback->StartMeteors();
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsMsgStatusFeedback::StopMeteors()
 {
-  nsCOMPtr<nsIMsgStatusFeedback> jsStatusFeedback(do_QueryReferent(mJSStatusFeedbackWeak));
-  if (jsStatusFeedback)
-    jsStatusFeedback->StopMeteors();
+  if (mStatusFeedback)
+    mStatusFeedback->StopMeteors();
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgStatusFeedback::SetWrappedStatusFeedback(nsIMsgStatusFeedback * aJSStatusFeedback)
+NS_IMETHODIMP nsMsgStatusFeedback::CloseWindow()
 {
-  NS_ENSURE_ARG_POINTER(aJSStatusFeedback);
-  mJSStatusFeedbackWeak = do_GetWeakReference(aJSStatusFeedback);
+  mWindow = nsnull;
+  mStatusFeedback = nsnull;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgStatusFeedback::SetDocShell(nsIDocShell *shell, nsIDOMWindow *aWindow)
+{
+
+  nsCOMPtr<nsPIDOMWindow> piDOMWindow(do_QueryInterface(aWindow));
+  if (piDOMWindow)
+  {
+    nsCOMPtr<nsISupports> xpConnectObj;
+    piDOMWindow->GetObjectProperty(NS_LITERAL_STRING("MsgStatusFeedback").get(), getter_AddRefs(xpConnectObj));
+    mStatusFeedback = do_QueryInterface(xpConnectObj);
+  }
+
+  mWindow = aWindow;
   return NS_OK;
 }
 

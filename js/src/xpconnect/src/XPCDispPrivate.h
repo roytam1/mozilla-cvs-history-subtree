@@ -275,6 +275,11 @@ public:
      */
     DISPID Find(const nsAString &target) const;
 private:
+    /**
+     * This is used by Find when it doesn't find something
+     * @see XPCDispNameArray::Find
+     */
+    static const nsString sEmpty;
     PRUint32 mCount;
     nsString* mNames;
 };

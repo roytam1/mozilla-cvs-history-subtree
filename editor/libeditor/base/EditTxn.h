@@ -40,6 +40,7 @@
 
 #include "nsITransaction.h"
 #include "nsString.h"
+#include "nsCOMPtr.h"
 #include "nsPIEditorTransaction.h"
 
 #define EDIT_TXN_CID \
@@ -48,10 +49,13 @@
 {0x86, 0xd8, 0x0, 0x0, 0x64, 0x65, 0x73, 0x74} }
 
 /**
- * Base class for all document editing transactions.
+ * base class for all document editing transactions.
+ * provides default concrete behavior for all nsITransaction methods.
+ * EditTxns optionally have a name.  This name is for internal purposes only, 
+ * it is never seen by the user or by any external entity.
  */
-class EditTxn : public nsITransaction,
-                public nsPIEditorTransaction
+class EditTxn : public nsITransaction
+              , public nsPIEditorTransaction
 {
 public:
 
@@ -59,16 +63,21 @@ public:
 
   NS_DECL_ISUPPORTS
 
+  EditTxn();
   virtual ~EditTxn();
 
-  NS_IMETHOD RedoTransaction(void);
-  NS_IMETHOD GetIsTransient(PRBool *aIsTransient);
-  NS_IMETHOD Merge(nsITransaction *aTransaction, PRBool *aDidMerge);
-};
 
-#define NS_DECL_EDITTXN \
-  NS_IMETHOD DoTransaction(); \
-  NS_IMETHOD UndoTransaction(); \
+  NS_IMETHOD DoTransaction(void);
+
+  NS_IMETHOD UndoTransaction(void);
+
+  NS_IMETHOD RedoTransaction(void);
+
+  NS_IMETHOD GetIsTransient(PRBool *aIsTransient);
+
+  NS_IMETHOD Merge(nsITransaction *aTransaction, PRBool *aDidMerge);
+
   NS_IMETHOD GetTxnDescription(nsAString& aTxnDescription);
+};
 
 #endif

@@ -49,7 +49,7 @@
 
 class nsMathMLmunderFrame : public nsMathMLContainerFrame {
 public:
-  friend nsIFrame* NS_NewMathMLmunderFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLmunderFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   NS_IMETHOD
   Place(nsIRenderingContext& aRenderingContext,
@@ -75,12 +75,13 @@ public:
                                     PRUint32        aFlagsToUpdate);
 
   NS_IMETHOD
-  AttributeChanged(PRInt32         aNameSpaceID,
+  AttributeChanged(nsIContent*     aChild,
+                   PRInt32         aNameSpaceID,
                    nsIAtom*        aAttribute,
                    PRInt32         aModType);
 
 protected:
-  nsMathMLmunderFrame(nsStyleContext* aContext) : nsMathMLContainerFrame(aContext) {}
+  nsMathMLmunderFrame();
   virtual ~nsMathMLmunderFrame();
   
   virtual PRIntn GetSkipSides() const { return 0; }

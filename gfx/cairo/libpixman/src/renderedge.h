@@ -1,4 +1,6 @@
 /*
+ * $Id$
+ *
  * Copyright © 2004 Keith Packard
  *
  * Permission to use, copy, modify, distribute, and sell this software and its
@@ -128,16 +130,16 @@ typedef struct {
     }				    \
 }
 
-pixman_private xFixed
+xFixed
 RenderSampleCeilY (xFixed y, int bpp);
 
-pixman_private xFixed
+xFixed
 RenderSampleFloorY (xFixed y, int bpp);
 
-pixman_private void
+void
 RenderEdgeStep (RenderEdge *e, int n);
 
-pixman_private void
+void
 RenderEdgeInit (RenderEdge	*e,
 		int		bpp,
 		xFixed		y_start,
@@ -146,7 +148,7 @@ RenderEdgeInit (RenderEdge	*e,
 		xFixed		x_bot,
 		xFixed		y_bot);
 
-pixman_private void
+void
 RenderLineFixedEdgeInit (RenderEdge *e,
 			 int	    bpp,
 			 xFixed	    y,

@@ -718,7 +718,7 @@ function xtvr_rkids (always)
 XULTreeViewRecord.prototype.appendChild =
 function xtvr_appchild (child)
 {
-    if (!isinstance(child, XULTreeViewRecord))
+    if (!(child instanceof XULTreeViewRecord))
         throw Components.results.NS_ERROR_INVALID_ARG;
     
     child.isHidden = false;

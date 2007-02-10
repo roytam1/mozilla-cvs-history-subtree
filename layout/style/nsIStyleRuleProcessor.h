@@ -34,13 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * internal abstract interface for containers (roughly origins within
- * the CSS cascade) that provide style rules matching an element or
- * pseudo-element
- */
-
 #ifndef nsIStyleRuleProcessor_h___
 #define nsIStyleRuleProcessor_h___
 
@@ -55,13 +48,14 @@
 class nsIStyleSheet;
 class nsPresContext;
 class nsIContent;
+class nsIStyledContent;
+class nsISupportsArray;
 class nsIAtom;
 class nsICSSPseudoComparator;
 class nsRuleWalker;
-class nsAttrValue;
 
 // The implementation of the constructor and destructor are currently in
-// nsCSSRuleProcessor.cpp.
+// nsCSSStyleSheet.cpp.
 
 struct RuleProcessorData {
   RuleProcessorData(nsPresContext* aPresContext,
@@ -90,14 +84,15 @@ struct RuleProcessorData {
   
   nsIAtom*          mContentTag;    // if content, then content->GetTag()
   nsIAtom*          mContentID;     // if styled content, then weak reference to styledcontent->GetID()
+  nsIStyledContent* mStyledContent; // if content, content->QI(nsIStyledContent)
   PRPackedBool      mIsHTMLContent; // if content, then does QI on HTMLContent, true or false
-  PRPackedBool      mIsLink;        // if content, calls nsStyleUtil::IsHTMLLink or nsStyleUtil::IsLink
-  PRPackedBool      mHasAttributes; // if content, content->GetAttrCount() > 0
+  PRPackedBool      mIsHTMLLink;    // if content, calls nsStyleUtil::IsHTMLLink
+  PRPackedBool      mIsSimpleXLink; // if content, calls nsStyleUtil::IsSimpleXLink
   nsCompatibility   mCompatMode;    // Possibly remove use of this in SelectorMatches?
+  PRPackedBool      mHasAttributes; // if content, content->GetAttrCount() > 0
   nsLinkState       mLinkState;     // if a link, this is the state, otherwise unknown
   PRInt32           mEventState;    // if content, eventStateMgr->GetContentState()
   PRInt32           mNameSpaceID;   // if content, content->GetNameSapce()
-  const nsAttrValue* mClasses;      // if styled content, styledcontent->GetClasses()
   // mPreviousSiblingData and mParentData are always RuleProcessorData
   // and never a derived class.  They are allocated lazily, when
   // selectors require matching of prior siblings or ancestors.
@@ -180,7 +175,7 @@ struct AttributeRuleProcessorData : public RuleProcessorData {
  */
 class nsIStyleRuleProcessor : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISTYLE_RULE_PROCESSOR_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISTYLE_RULE_PROCESSOR_IID)
 
   // Shorthand for:
   //  nsCOMArray<nsIStyleRuleProcessor>::nsCOMArrayEnumFunc
@@ -220,8 +215,5 @@ public:
   NS_IMETHOD HasAttributeDependentStyle(AttributeRuleProcessorData* aData,
                                         nsReStyleHint* aResult) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIStyleRuleProcessor,
-                              NS_ISTYLE_RULE_PROCESSOR_IID)
 
 #endif /* nsIStyleRuleProcessor_h___ */

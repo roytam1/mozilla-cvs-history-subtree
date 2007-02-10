@@ -169,7 +169,7 @@ function DeleteAllSignons() {
   // Confirm the user wants to remove all passwords
   var dummy = { value: false };
   if (prompter.confirmEx(window,
-                         kSignonBundle.getString("removeAllPasswordsTitle"),
+                         null,
                          kSignonBundle.getString("removeAllPasswordsPrompt"),
                          prompter.STD_YES_NO_BUTTONS + prompter.BUTTON_POS_1_DEFAULT,
                          null, null, null, null, dummy) == 1) // 1 == "No" button
@@ -197,7 +197,8 @@ function AskUserShowPasswords() {
   // Confirm the user wants to display passwords
   return prompter.confirmEx(window,
           null,
-          kSignonBundle.getString("noMasterPasswordPrompt"), prompter.STD_YES_NO_BUTTONS,
+          kSignonBundle.getString("noMasterPasswordPrompt"),
+          prompter.BUTTON_TITLE_YES * prompter.BUTTON_POS_0 + prompter.BUTTON_TITLE_NO * prompter.BUTTON_POS_1,
           null, null, null, null, dummy) == 0;    // 0=="Yes" button
 }
 

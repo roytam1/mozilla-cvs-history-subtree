@@ -57,11 +57,11 @@ tree {
 
 /* ::::: tree focusring ::::: */
 
-.focusring > .tree-stack > .tree-rows > .tree-bodybox {
+.focusring > .tree-rows > .tree-bodybox {
   border: 1px solid transparent;  
 }
 
-.focusring:focus > .tree-stack > .tree-rows > .tree-bodybox {
+.focusring:focus > .tree-rows > .tree-bodybox {
   border: 1px solid -moz-mac-focusring;
 }
 
@@ -92,46 +92,17 @@ tree:not([hidecolumnpicker="true"]) treechildren::-moz-tree-row(odd, selected, f
   color: #FFFFFF;
 }
 
-tree[seltype="cell"] > treechildren::-moz-tree-row,
-tree[seltype="text"] > treechildren::-moz-tree-row {
-  border-top: none;
-  background-color: transparent;
-}
-
 /* ::::: tree cells ::::: */
 
 treechildren::-moz-tree-cell {
   padding: 0px 2px 0px 2px;
 }
 
-tree[seltype="cell"] > treechildren::-moz-tree-cell-text,
-tree[seltype="text"] > treechildren::-moz-tree-cell-text,
 treechildren::-moz-tree-cell-text {
   color: inherit;
 }
 
-tree[seltype="cell"] > treechildren::-moz-tree-cell {
-  padding: 0px 1px 0px 1px;
-}
-
-tree[seltype="text"] > treechildren::-moz-tree-cell-text {
-  padding: 0px 1px 1px 1px;
-}
-
 treechildren::-moz-tree-cell-text(selected) {
-  color: -moz-DialogText;
-}
-
-tree[seltype="cell"] > treechildren::-moz-tree-cell(active, selected) {
-  background-color: -moz-mac-secondaryhighlight;
-
-}
-tree[seltype="cell"] > treechildren::-moz-tree-cell-text(active, selected) {
-  color: -moz-DialogText;
-}
-
-tree[seltype="text"] > treechildren::-moz-tree-cell-text(active, selected) {
-  background-color: -moz-mac-secondaryhighlight;
   color: -moz-DialogText;
 }
 
@@ -140,17 +111,6 @@ treechildren::-moz-tree-cell-text(selected, focus) {
   color: #FFFFFF;
 }
 
-tree[seltype="cell"] > treechildren::-moz-tree-cell(active, selected, focus) {
-  background-color: -moz-mac-alternateprimaryhighlight;
-}
-tree[seltype="cell"] > treechildren::-moz-tree-cell-text(active, selected, focus) {
-  color: #FFFFFF;
-}
-
-tree[seltype="text"] > treechildren::-moz-tree-cell-text(active, selected, focus) {
-  background-color: -moz-mac-alternateprimaryhighlight;
-  color: #FFFFFF;
-}
 
 /* ::::: lines connecting cells ::::: */
 
@@ -173,15 +133,11 @@ treechildren::-moz-tree-separator {
 
 /* ::::: drop feedback ::::: */
 
-tree[seltype="cell"] > treechildren::-moz-tree-cell(primary, dropOn),
-tree[seltype="text"] > treechildren::-moz-tree-cell(primary, dropOn),
 treechildren::-moz-tree-cell(primary, dropOn) {
   background-color: #A1A1A1 !important;
   color: #FFF !important;
   background-image: none;
 }
-tree[seltype="cell"] > treechildren::-moz-tree-cell-text(primary, dropOn),
-tree[seltype="text"] > treechildren::-moz-tree-cell-text(primary, dropOn),
 treechildren::-moz-tree-cell-text(primary, dropOn) {
   color: #FFF !important;
 }
@@ -257,6 +213,11 @@ treecolpicker:hover:active {
   -moz-border-bottom-colors: ThreeDDarkShadow;
   -moz-border-left-colors: ThreeDDarkShadow ThreeDShadow;
   background-color: #666666;
+  padding: 1px 4px 0px 5px;
+}
+
+.treecol-image:hover:active {
+  padding: 1px 1px 0px 2px;
 }
 
 /* ::::: column drag and drop styles ::::: */
@@ -388,25 +349,4 @@ treechildren[alternatingbackground="true"]::-moz-tree-row(odd, selected, focus) 
 
 treechildren[alternatingbackground="true"]::-moz-tree-cell-text(odd, selected, focus) {
   color: #FFFFFF;
-}
-
-/* ::::: editable tree ::::: */
-
-treechildren::-moz-tree-row(selected, editing) {
-  background-color: transparent;
-}
-
-treechildren::-moz-tree-cell-text(selected, editing) {
-  color: inherit;
-}
-
-.tree-input {
-  -moz-appearance: none;
-   border: 1px solid Highlight;
-  -moz-border-top-colors: Highlight;
-  -moz-border-bottom-colors: Highlight;
-  -moz-border-left-colors: Highlight;
-  -moz-border-right-colors: Highlight;
-  margin: 0 0 0 -3px;
-  padding: 1px;
 }

@@ -46,5 +46,7 @@
 !define URLUpdateInfo         "http://${AB_CD}.www.mozilla.com/${AB_CD}/firefox/"
 !define SurveyURL             "https://survey.mozilla.com/1/Mozilla%20Firefox/${AppVersion}/${AB_CD}/exit.html"
 
+# Set to 75 for Firefox 2.0 beta releases and should be changed to 10 for the
+# Firefox 2.0 Official Release.
 # Percentage of new "Standard" installs to enable talkback for
 !define RandomPercent         "10"

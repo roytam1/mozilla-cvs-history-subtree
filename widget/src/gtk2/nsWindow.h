@@ -21,7 +21,6 @@
  * are Copyright (C) 2001 the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Masayuki Nakano <masayuki@d-toybox.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,9 +37,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #ifndef __nsWindow_h__
-#define __nsWindow_h__
-
-#include "nsAutoPtr.h"
 
 #include "nsCommonWidget.h"
 
@@ -64,14 +60,9 @@
 #ifdef USE_XIM
 #include <gtk/gtkimmulticontext.h>
 #include "pldhash.h"
-#include "nsIKBStateControl.h"
 #endif
 
-class nsWindow : public nsCommonWidget, public nsSupportsWeakReference
-#ifdef USE_XIM
-                ,public nsIKBStateControl
-#endif
-{
+class nsWindow : public nsCommonWidget, public nsSupportsWeakReference {
 public:
     nsWindow();
     virtual ~nsWindow();
@@ -139,7 +130,6 @@ public:
     NS_IMETHOD         SetBorderStyle(nsBorderStyle aBorderStyle);
     NS_IMETHOD         SetTitle(const nsAString& aTitle);
     NS_IMETHOD         SetIcon(const nsAString& aIconSpec);
-    NS_IMETHOD         SetWindowClass(const nsAString& xulWinType);
     NS_IMETHOD         SetMenuBar(nsIMenuBar * aMenuBar);
     NS_IMETHOD         ShowMenuBar(PRBool aShow);
     NS_IMETHOD         WidgetToScreen(const nsRect& aOldRect,
@@ -269,8 +259,6 @@ public:
     static guint32     mLastButtonReleaseTime;
 
 #ifdef USE_XIM
-    void               IMEInitData       (void);
-    void               IMEReleaseData    (void);
     void               IMEDestroyContext (void);
     void               IMESetFocus       (void);
     void               IMELoseFocus      (void);
@@ -282,61 +270,11 @@ public:
                                           const PangoAttrList *aFeedback);
     void               IMEComposeEnd     (void);
     GtkIMContext*      IMEGetContext     (void);
-    nsWindow*          IMEGetOwningWindow(void);
-    PRBool             IMEIsEnabled      (void);
-    nsWindow*          IMEComposingWindow(void);
     void               IMECreateContext  (void);
     PRBool             IMEFilterEvent    (GdkEventKey *aEvent);
 
-    /*
-     *  |mIMEData| has all IME data for the window and its children widgets.
-     *  Only stand-alone windows and child windows embedded in non-Mozilla GTK
-     *  containers own IME contexts.
-     *  But this is referred from all children after the widget gets focus.
-     *  The children refers to its owning window's object.
-     */
-    struct nsIMEData {
-        // Actual context. This is used for handling the user's input.
-        GtkIMContext       *mContext;
-        // mDummyContext is a dummy context and will be used in IMESetFocus()
-        // when mEnabled is false. This mDummyContext IM state is always
-        // "off", so it works to switch conversion mode to OFF on IM status
-        // window.
-        GtkIMContext       *mDummyContext;
-        // This mComposingWindow is set in IMEComposeStart(), when user starts
-        // composition, then unset in IMEComposeEnd() when user ends the
-        // composition. We will keep the widget where the actual composition is
-        // started. During the composition, we may get some events like
-        // ResetInputStateInternal() and CancelIMECompositionInternal() by
-        // changing input focus, we will use the original widget of
-        // mComposingWindow to commit or reset the composition.
-        nsWindow           *mComposingWindow;
-        // Owner of this struct.
-        // The owner window must release the contexts at destroying.
-        nsWindow           *mOwner;
-        // The reference counter. When this will be zero by the decrement,
-        // the decrementer must free the instance.
-        PRUint32           mRefCount;
-        // IME enabled state in this window.
-        PRPackedBool       mEnabled;
-        nsIMEData(nsWindow* aOwner) {
-            mContext         = nsnull;
-            mDummyContext    = nsnull;
-            mComposingWindow = nsnull;
-            mOwner           = aOwner;
-            mRefCount        = 1;
-            mEnabled         = PR_TRUE;
-        }
-    };
-    nsIMEData          *mIMEData;
-
-    // nsIKBStateControl interface
-    NS_IMETHOD ResetInputState();
-    NS_IMETHOD SetIMEOpenState(PRBool aState);
-    NS_IMETHOD GetIMEOpenState(PRBool* aState);
-    NS_IMETHOD SetIMEEnabled(PRBool aState);
-    NS_IMETHOD GetIMEEnabled(PRBool* aState);
-    NS_IMETHOD CancelIMEComposition();
+    GtkIMContext       *mIMContext;
+    PRBool             mComposingText;
 
 #endif
 
@@ -345,23 +283,12 @@ public:
 #ifdef MOZ_XUL
    NS_IMETHOD          SetWindowTranslucency(PRBool aTransparent);
    NS_IMETHOD          GetWindowTranslucency(PRBool& aTransparent);
-   nsresult            UpdateTranslucentWindowAlphaInternal(const nsRect& aRect,
-                                                            PRUint8* aAlphas, PRInt32 aStride);
    NS_IMETHOD          UpdateTranslucentWindowAlpha(const nsRect& aRect, PRUint8* aAlphas);
-#endif
-
-#ifdef MOZ_CAIRO_GFX
-    gfxASurface       *GetThebesSurface();
-#endif
-
-#ifdef ACCESSIBILITY
-    static PRBool      sAccessibilityEnabled;
 #endif
 
 private:
     void               GetToplevelWidget(GtkWidget **aWidget);
     void               GetContainerWindow(nsWindow  **aWindow);
-    void               SetUrgencyHint(GtkWidget *top_window, PRBool state);
     void              *SetupPluginPort(void);
     nsresult           SetWindowIconList(const nsCStringArray &aIconList);
     void               SetDefaultIcon(void);
@@ -383,13 +310,6 @@ private:
     GtkWindow          *mTransientParent;
     PRInt32             mSizeState;
     PluginType          mPluginType;
-
-    PRUint32            mTransparencyBitmapWidth;
-    PRUint32            mTransparencyBitmapHeight;
-
-#ifdef MOZ_CAIRO_GFX
-    nsRefPtr<gfxASurface> mThebesSurface;
-#endif
 
 #ifdef ACCESSIBILITY
     nsCOMPtr<nsIAccessible> mRootAccessible;

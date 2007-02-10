@@ -45,7 +45,6 @@
 #include "xpcprivate.h"
 #include "nsString.h"
 #include "XPCNativeWrapper.h"
-#include "nsIAtom.h"
 
 //#define STRICT_CHECK_OF_UNICODE
 #ifdef STRICT_CHECK_OF_UNICODE
@@ -124,14 +123,14 @@ static intN sXPCOMUCStringFinalizerIndex = -1;
 
 // static
 JSBool
-XPCConvert::IsMethodReflectable(const XPTMethodDescriptor& info)
+XPCConvert::IsMethodReflectable(const nsXPTMethodInfo& info)
 {
-    if(XPT_MD_IS_NOTXPCOM(info.flags) || XPT_MD_IS_HIDDEN(info.flags))
+    if(info.IsNotXPCOM() || info.IsHidden())
         return JS_FALSE;
 
-    for(int i = info.num_args-1; i >= 0; i--)
+    for(int i = info.GetParamCount()-1; i >= 0; i--)
     {
-        const nsXPTParamInfo& param = info.params[i];
+        const nsXPTParamInfo& param = info.GetParam(i);
         const nsXPTType& type = param.GetType();
 
         uint8 base_type = type.TagPart();
@@ -980,25 +979,6 @@ XPCConvert::JSData2Native(XPCCallContext& ccx, void* d, jsval s,
                 *((nsISupports**)d) = NS_STATIC_CAST(nsIVariant*, variant);
                 return JS_TRUE;
             }
-            else if(iid->Equals(NS_GET_IID(nsIAtom)) &&
-                    JSVAL_IS_STRING(s))
-            {
-                // We're trying to pass a string as an nsIAtom.  Let's atomize!
-                JSString* str = JSVAL_TO_STRING(s);
-                PRUnichar* chars =
-                    NS_REINTERPRET_CAST(PRUnichar*, JS_GetStringChars(str));
-                if (!chars) {
-                    if (pErr)
-                        *pErr = NS_ERROR_XPC_BAD_CONVERT_JS_NULL_REF;
-                    return JS_FALSE;
-                }
-                PRUint32 length = JS_GetStringLength(str);
-                nsIAtom* atom = NS_NewAtom(nsDependentString(chars, length));
-                if (!atom && pErr)
-                    *pErr = NS_ERROR_OUT_OF_MEMORY;
-                *((nsISupports**)d) = atom;
-                return atom != nsnull;                
-            }
             //else ...
 
             if(JSVAL_IS_VOID(s) || JSVAL_IS_NULL(s))
@@ -1294,25 +1274,19 @@ XPCConvert::ConstructException(nsresult rv, const char* message,
     static const char format[] = "\'%s\' when calling method: [%s::%s]";
     const char * msg = message;
     char* sz = nsnull;
-    nsXPIDLString xmsg;
-    nsCAutoString sxmsg;
 
-    nsCOMPtr<nsIScriptError> errorObject = do_QueryInterface(data);
-    if(errorObject) {
-        if (NS_SUCCEEDED(errorObject->GetMessage(getter_Copies(xmsg)))) {
-            CopyUTF16toUTF8(xmsg, sxmsg);
-            msg = sxmsg.get();
-        }
-    }
     if(!msg)
         if(!nsXPCException::NameAndFormatForNSResult(rv, nsnull, &msg) || ! msg)
             msg = "<error>";
+
     if(ifaceName && methodName)
-        msg = sz = JS_smprintf(format, msg, ifaceName, methodName);
+        sz = JS_smprintf(format, msg, ifaceName, methodName);
+    else
+        sz = (char*) msg; // I promise to play nice after casting away const
 
-    nsresult res = nsXPCException::NewException(msg, rv, nsnull, data, exceptn);
+    nsresult res = nsXPCException::NewException(sz, rv, nsnull, data, exceptn);
 
-    if(sz)
+    if(sz && sz != msg)
         JS_smprintf_free(sz);
     return res;
 }
@@ -1450,6 +1424,8 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
         }
         else
         {
+            if(JSVAL_TO_DOUBLE(s))
+            {
                 number = *(JSVAL_TO_DOUBLE(s));
                 if(number > 0.0 &&
                    number < (double)0xffffffff &&
@@ -1458,6 +1434,7 @@ XPCConvert::JSValToXPCException(XPCCallContext& ccx,
                     rv = (nsresult) number;
                     if(NS_FAILED(rv))
                         isResult = JS_TRUE;
+                }
             }
         }
 
@@ -1529,7 +1506,7 @@ XPCConvert::JSErrorToXPCException(XPCCallContext& ccx,
 
         NS_ADDREF(data);
         data->Init(bestMessage.get(),
-                   NS_ConvertASCIItoUTF16(report->filename).get(),
+                   NS_ConvertASCIItoUCS2(report->filename).get(),
                    (const PRUnichar *)report->uclinebuf, report->lineno,
                    report->uctokenptr - report->uclinebuf, report->flags,
                    "XPConnect JavaScript");

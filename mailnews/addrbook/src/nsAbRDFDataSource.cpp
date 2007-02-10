@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Pierre Phaneuf <pp@ludusdesign.com>
- *   Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -48,14 +47,14 @@
 #include "nsRDFCID.h"
 #include "nsIRDFNode.h"
 #include "nsEnumeratorUtils.h"
+#include "nsIThread.h"
+#include "nsIEventQueueService.h"
 #include "nsIProxyObjectManager.h"
 
 #include "nsString.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 #include "nsAutoLock.h"
-#include "nsIServiceManager.h"
-#include "nsThreadUtils.h"
 
 // this is used for notification of observers using nsVoidArray
 typedef struct _nsAbRDFNotification {
@@ -135,21 +134,34 @@ nsresult nsAbRDFDataSource::CreateProxyObserver (nsIRDFObserver* observer,
 {
 	nsresult rv;
 
-	// Proxy the observer on the UI thread
+	nsCOMPtr<nsIEventQueueService> eventQSvc = do_GetService (NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+	NS_ENSURE_SUCCESS(rv, rv);
+
+	// Get the UI event queue
+	nsCOMPtr<nsIEventQueue> uiQueue;
+	rv = eventQSvc->GetSpecialEventQueue (
+			nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
+			getter_AddRefs (uiQueue));
+	NS_ENSURE_SUCCESS(rv, rv);
+
+	nsCOMPtr<nsIProxyObjectManager> proxyMgr = 
+		do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
+	NS_ENSURE_SUCCESS(rv, rv);
+
+	// Proxy the observer on the UI queue
 	/*
 	 * TODO
-	 * Currenly using NS_PROXY_ASYNC, however
+	 * Currenly using PROXY_ASYNC, however
 	 * this can flood the event queue if
 	 * rate of events on the observer is
 	 * greater that the time to process the
 	 * events.
 	 * This causes the UI to pause.
 	 */
-	rv = NS_GetProxyForObject (
-    NS_PROXY_TO_MAIN_THREAD,
+	rv = proxyMgr->GetProxyForObject (uiQueue,
 		NS_GET_IID(nsIRDFObserver),
 		observer,
-		NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
+		PROXY_ASYNC | PROXY_ALWAYS,
 		(void** )proxyObserver);
 
 	return rv;
@@ -218,6 +230,12 @@ nsresult nsAbRDFDataSource::NotifyObservers(nsIRDFResource *subject,
 		return NS_OK;
 
 
+	// Get the current thread
+	nsCOMPtr<nsIThread> currentThread;
+	rv = nsIThread::GetCurrent (getter_AddRefs(currentThread));
+	NS_ENSURE_SUCCESS (rv, rv);
+
+	// Get the main thread, which is the UI thread
 	/*
 	 * TODO
 	 * Is the main thread always guaranteed to be
@@ -229,8 +247,12 @@ nsresult nsAbRDFDataSource::NotifyObservers(nsIRDFResource *subject,
 	 * RDF datasources that are not UI specific
 	 * but are used in the UI?
 	 */
+	nsCOMPtr<nsIThread> uiThread;
+	rv = nsIThread::GetMainThread (getter_AddRefs(uiThread));
+	NS_ENSURE_SUCCESS (rv, rv);
+
 	nsCOMPtr<nsISupportsArray> observers;
-	if (NS_IsMainThread())
+	if (currentThread == uiThread)
 	{
 		/*
 		 * Since this is the UI Thread use the

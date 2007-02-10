@@ -127,7 +127,8 @@ nsImageMac::~nsImageMac()
 }
 
 
-NS_IMPL_ISUPPORTS2(nsImageMac, nsIImage, nsIImageMac)
+NS_IMPL_ISUPPORTS3(nsImageMac, nsIImage, nsIImageMac,
+                   nsIImageMac_MOZILLA_1_8_BRANCH)
 
 
 nsresult

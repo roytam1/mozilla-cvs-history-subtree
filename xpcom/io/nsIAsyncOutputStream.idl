@@ -52,7 +52,7 @@ interface nsIEventTarget;
  * necessary that a non-blocking nsIOutputStream implementation also implement
  * nsIAsyncOutputStream.
  */
-[scriptable, uuid(beb632d3-d77a-4e90-9134-f9ece69e8200)]
+[scriptable, uuid(10dc9c94-8aff-49c6-8af9-d7fdb7339dae)]
 interface nsIAsyncOutputStream : nsIOutputStream
 {
     /**
@@ -91,8 +91,7 @@ interface nsIAsyncOutputStream : nsIOutputStream
      * event will be dispatched when the stream becomes writable or closed.
      * 
      * @param aCallback
-     *        This object is notified when the stream becomes ready.  This
-     *        parameter may be null to clear an existing callback.
+     *        This object is notified when the stream becomes ready.
      * @param aFlags
      *        This parameter specifies optional flags passed in to configure
      *        the behavior of this method.  Pass zero to specify no flags.

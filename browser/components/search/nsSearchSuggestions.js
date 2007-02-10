@@ -74,15 +74,13 @@ function SuggestAutoCompleteResult(searchString,
                                    defaultIndex,
                                    errorDescription,
                                    results,
-                                   comments,
-                                   formHistoryResult) {
+                                   comments) {
   this._searchString = searchString;
   this._searchResult = searchResult;
   this._defaultIndex = defaultIndex;
   this._errorDescription = errorDescription;
   this._results = results;
   this._comments = comments;
-  this._formHistoryResult = formHistoryResult;
 }
 SuggestAutoCompleteResult.prototype = {
   /**
@@ -111,7 +109,7 @@ SuggestAutoCompleteResult.prototype = {
   _errorDescription: "",
 
   /**
-   * The list of words returned by the Suggest Service
+   * The list of URLs returned by the Suggest Service
    * @private
    */
   _results: [],
@@ -122,12 +120,6 @@ SuggestAutoCompleteResult.prototype = {
    * @private
    */
   _comments: [],
-
-  /**
-   * A reference to the form history nsIAutocompleteResult that we're wrapping.
-   * We use this to forward removeEntryAt calls as needed.
-   */
-  _formHistoryResult: null,
 
   /**
    * @return the user's query string
@@ -206,14 +198,6 @@ SuggestAutoCompleteResult.prototype = {
    * @param  index    the index of the result to remove
    */
   removeValueAt: function(index, removeFromDatabase) {
-    // Forward the removeValueAt call to the underlying result if we have one
-    // Note: this assumes that the form history results were added to the top
-    // of our arrays.
-    if (removeFromDatabase && this._formHistoryResult &&
-        index < this._formHistoryResult.matchCount) {
-      // Delete the history result from the DB
-      this._formHistoryResult.removeValueAt(index, true);
-    }
     this._results.splice(index, 1);
     this._comments.splice(index, 1);
   },
@@ -386,7 +370,9 @@ SuggestAutoComplete.prototype = {
     } else if (!this._sentSuggestRequest) {
       // We didn't send a request, so just send back the form history results.
       this._listener.onSearchResult(this, this._formHistoryResult);
-      this._reset();
+      // don't hold onto this until component shutdown!
+      this._formHistoryResult = null;
+
     }
   },
 
@@ -526,23 +512,33 @@ SuggestAutoComplete.prototype = {
 
     this._clearServerErrors();
 
-    // This is a modified version of Crockford's JSON sanitizer, obtained
-    // from http://www.json.org/js.html.
-    // This should use built-in functions once bug 340987 is fixed.
-    const JSON_STRING = /^("(\\.|[^"\\\n\r])*?"|[,:{}\[\]0-9.\-+Eaeflnr-u \n\r\t])+?$/;
+    var searchString, results, queryURLs;
     var sandbox = new Components.utils.Sandbox(this._suggestURI.prePath);
-    function parseJSON(aString) {
-      try {
-        if (JSON_STRING.test(aString))
-          return Components.utils.evalInSandbox("(" + aString + ")", sandbox);
-      } catch (e) {}
+    var results2 = Components.utils.evalInSandbox(responseText, sandbox);
 
-      return [];
-    };
+    if (results2[0]) {
+      searchString = results2[0] ? results2[0] : "";
+      results = results2[1] ? results2[1] : [];
+    } else {
+      // this is backwards compat code for Google Suggest, to be removed
+      // once they shift to the new format
+      // The responseText is formatted like so:
+      // searchString\n"r1","r2","r3"\n"c1","c2","c3"\n"p1","p2","p3"
+      // ... where all values are escaped:
+      //  rX = result  (search term or URL)
+      //  cX = comment (number of results or page title)
+      //  pX = prefix
 
-    var serverResults = parseJSON(responseText);
-    var searchString = serverResults[0] || "";
-    var results = serverResults[1] || [];
+      // Note that right now we're using the "comment" column of the
+      // autocomplete dropdown to indicate where the suggestions
+      // begin, so we're discarding the comments from the server.
+      var parts = responseText.split("\n");
+      results = parts[1] ? parts[1].split(",") : [];
+      for (var i = 0; i < results.length; ++i) {
+        results[i] = unescape(results[i]);
+        results[i] = results[i].substr(1, results[i].length - 2);
+      }
+    }
 
     var comments = [];  // "comments" column values for suggestions
     var historyResults = [];
@@ -563,6 +559,8 @@ SuggestAutoComplete.prototype = {
         historyResults.push(term);
         historyComments.push("");
       }
+
+      this._formHistoryResult = null;
     }
 
     // fill out the comment column for the suggestions
@@ -578,8 +576,7 @@ SuggestAutoComplete.prototype = {
     var finalComments = historyComments.concat(comments);
 
     // Notify the FE of our new results
-    this.onResultsReady(searchString, finalResults, finalComments,
-                        this._formHistoryResult);
+    this.onResultsReady(searchString, finalResults, finalComments);
 
     // Reset our state for next time.
     this._reset();
@@ -592,8 +589,7 @@ SuggestAutoComplete.prototype = {
    * @param comments      an array of metadata corresponding to the results
    * @private
    */
-  onResultsReady: function(searchString, results, comments,
-                           formHistoryResult) {
+  onResultsReady: function(searchString, results, comments) {
     if (this._listener) {
       var result = new SuggestAutoCompleteResult(
           searchString,
@@ -601,14 +597,8 @@ SuggestAutoComplete.prototype = {
           0,
           "",
           results,
-          comments,
-          formHistoryResult);
-
+          comments);
       this._listener.onSearchResult(this, result);
-
-      // Null out listener to make sure we don't notify it twice, in case our
-      // timer callback still hasn't run.
-      this._listener = null;
     }
   },
 

@@ -41,20 +41,33 @@
 
 #include "nsSoftwareUpdate.h"
 #include "nsSoftwareUpdateRun.h"
+#include "nsSoftwareUpdateIIDs.h"
 
 #include "nsInstall.h"
 
+#include "nsIComponentManager.h"
+#include "nsIServiceManager.h"
+
+#include "nsProxiedService.h"
+#include "nsIURI.h"
+#include "nsIFileURL.h"
 #include "nsNetUtil.h"
 
 #include "nspr.h"
-#include "plstr.h"
 #include "jsapi.h"
 
+#include "nsIEventQueueService.h"
+#include "nsIEnumerator.h"
 #include "nsIZipReader.h"
+#include "nsIJSRuntimeService.h"
+#include "nsCOMPtr.h"
+#include "nsXPIDLString.h"
+#include "nsReadableUtils.h"
+#include "nsILocalFile.h"
+#include "nsIChromeRegistry.h"
 #include "nsInstallTrigger.h"
 #include "nsIConsoleService.h"
 #include "nsIScriptError.h"
-#include "nsStringEnumerator.h"
 
 #include "nsIJAR.h"
 #include "nsIPrincipal.h"
@@ -62,6 +75,7 @@
 #include "nsIExtensionManager.h"
 
 static NS_DEFINE_CID(kSoftwareUpdateCID,  NS_SoftwareUpdate_CID);
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 extern JSObject *InitXPInstallObjects(JSContext *jscontext, 
                                       nsIFile* jarfile, const PRUnichar* url, 
@@ -72,14 +86,14 @@ extern nsresult InitInstallVersionClass(JSContext *jscontext, JSObject *global, 
 extern nsresult InitInstallTriggerGlobalClass(JSContext *jscontext, JSObject *global, void** prototype);
 
 // Defined in this file:
-JS_STATIC_DLL_CALLBACK(void) XPInstallErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);
+PR_STATIC_CALLBACK(void) XPInstallErrorReporter(JSContext *cx, const char *message, JSErrorReport *report);
 static PRInt32  GetInstallScriptFromJarfile(nsIZipReader* hZip, char** scriptBuffer, PRUint32 *scriptLength);
 static PRInt32  OpenAndValidateArchive(nsIZipReader* hZip, nsIFile* jarFile, nsIPrincipal* aPrincipal);
 
 static nsresult SetupInstallContext(nsIZipReader* hZip, nsIFile* jarFile, const PRUnichar* url, const PRUnichar* args, 
                                     PRUint32 flags, CHROMEREG_IFACE* reg, JSRuntime *jsRT, JSContext **jsCX, JSObject **jsGlob);
 
-extern "C" void PR_CALLBACK RunInstallOnThread(void *data);
+extern "C" void RunInstallOnThread(void *data);
 
 
 nsresult VerifySigning(nsIZipReader* hZip, nsIPrincipal* aPrincipal)
@@ -105,32 +119,32 @@ nsresult VerifySigning(nsIZipReader* hZip, nsIPrincipal* aPrincipal)
     PRUint32 entryCount = 0;
 
     // first verify all files in the jar are also in the manifest.
-    nsCOMPtr<nsIUTF8StringEnumerator> entries;
-    rv = hZip->FindEntries(nsnull, getter_AddRefs(entries));
+    nsCOMPtr<nsISimpleEnumerator> entries;
+    rv = hZip->FindEntries("*", getter_AddRefs(entries));
     if (NS_FAILED(rv))
         return rv;
 
     PRBool more;
-    nsCAutoString name;
-    while (NS_SUCCEEDED(entries->HasMore(&more)) && more)
+    nsXPIDLCString name;
+    while (NS_SUCCEEDED(entries->HasMoreElements(&more)) && more)
     {
-        rv = entries->GetNext(name);
+        nsCOMPtr<nsIZipEntry> file;
+        rv = entries->GetNext(getter_AddRefs(file));
         if (NS_FAILED(rv)) return rv;
         
-        // Do not verify the directory entries or 
-        // entries which are in the meta-inf directory
-        if ((name.Last() == '/') || 
-            (PL_strncasecmp("META-INF/", name.get(), 9) == 0))
+        file->GetName(getter_Copies(name));
+
+        if ( PL_strncasecmp("META-INF/", name.get(), 9) == 0)
             continue;
 
-        // Count the entries to be verified
+        // we only count the entries not in the meta-inf directory
         entryCount++;
 
         // Each entry must be signed
-        rv = jar->GetCertificatePrincipal(name.get(), getter_AddRefs(principal));
+        PRBool equal;
+        rv = jar->GetCertificatePrincipal(name, getter_AddRefs(principal));
         if (NS_FAILED(rv) || !principal) return NS_ERROR_FAILURE;
 
-        PRBool equal;
         rv = principal->Equals(aPrincipal, &equal);
         if (NS_FAILED(rv) || !equal) return NS_ERROR_FAILURE;
     }
@@ -180,7 +194,7 @@ XPInstallErrorReporter(JSContext *cx, const char *message, JSErrorReport *report
         PRUint32 column = report->uctokenptr - report->uclinebuf;
 
         rv = errorObject->Init(NS_REINTERPRET_CAST(const PRUnichar*, report->ucmessage),
-                               NS_ConvertASCIItoUTF16(report->filename).get(),
+                               NS_ConvertASCIItoUCS2(report->filename).get(),
                                NS_REINTERPRET_CAST(const PRUnichar*, report->uclinebuf),
                                report->lineno, column, report->flags,
                                "XPInstall JavaScript");
@@ -247,11 +261,15 @@ OpenAndValidateArchive(nsIZipReader* hZip, nsIFile* jarFile, nsIPrincipal* aPrin
     nsCOMPtr<nsIFile> jFile;
     nsresult rv =jarFile->Clone(getter_AddRefs(jFile));
     if (NS_SUCCEEDED(rv))
-        rv = hZip->Open(jFile);
+        rv = hZip->Init(jFile);
 
     if (NS_FAILED(rv))
         return nsInstall::CANT_READ_ARCHIVE;
 
+    rv = hZip->Open();
+    if (NS_FAILED(rv))
+        return nsInstall::CANT_READ_ARCHIVE;
+ 
     // CRC check the integrity of all items in this archive
     rv = hZip->Test(nsnull);
     if (NS_FAILED(rv))
@@ -427,7 +445,7 @@ PRInt32 RunInstall(nsInstallInfo *installInfo)
 // Return type      : extern "C"
 // Argument         : void *data
 ///////////////////////////////////////////////////////////////////////////////////////////////
-extern "C" void PR_CALLBACK RunInstallOnThread(void *data)
+extern "C" void RunInstallOnThread(void *data)
 {
     nsInstallInfo *installInfo = (nsInstallInfo*)data;
 
@@ -450,6 +468,16 @@ extern "C" void PR_CALLBACK RunInstallOnThread(void *data)
     PRInt32     finalStatus;
 
     nsCOMPtr<nsIXPIListener> listener;
+
+    // lets set up an eventQ so that our xpcom/proxies will not have to:
+    nsCOMPtr<nsIEventQueue> eventQ;
+    nsCOMPtr<nsIEventQueueService> eventQService =
+             do_GetService(kEventQueueServiceCID, &rv);
+    if (NS_SUCCEEDED(rv))
+    {
+        eventQService->CreateMonitoredThreadEventQueue();
+        eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(eventQ));
+    }
 
     nsCOMPtr<nsISoftwareUpdate> softwareUpdate =
              do_GetService(kSoftwareUpdateCID, &rv);
@@ -595,7 +623,7 @@ extern "C" void PR_CALLBACK RunInstallOnThread(void *data)
 // How do we get it there? Maybe just alerts on errors, could also dump to
 // the new console service.
 //-----------------------------------------------------------------------------
-extern "C" void PR_CALLBACK RunChromeInstallOnThread(void *data)
+extern "C" void RunChromeInstallOnThread(void *data)
 {
     nsresult rv;
 
@@ -616,19 +644,21 @@ extern "C" void PR_CALLBACK RunChromeInstallOnThread(void *data)
         if (info->GetType() == CHROME_SKIN) {
             static NS_DEFINE_CID(kZipReaderCID,  NS_ZIPREADER_CID);
             nsCOMPtr<nsIZipReader> hZip = do_CreateInstance(kZipReaderCID, &rv);
-            if (NS_SUCCEEDED(rv) && hZip) {
-                rv = hZip->Open(info->GetFile());
-                if (NS_SUCCEEDED(rv))
-                {
-                    rv = hZip->Test("install.rdf");
-                    nsIExtensionManager* em = info->GetExtensionManager();
-                    if (NS_SUCCEEDED(rv) && em) {
-                        rv = em->InstallItemFromFile(info->GetFile(), 
-                                                     NS_INSTALL_LOCATION_APPPROFILE);
-                    }
+            if (hZip)
+                rv = hZip->Init(info->GetFile());
+            if (NS_SUCCEEDED(rv))
+                rv = hZip->Open();
+
+            if (NS_SUCCEEDED(rv))
+            {
+                rv = hZip->Test("install.rdf");
+                nsIExtensionManager* em = info->GetExtensionManager();
+                if (NS_SUCCEEDED(rv) && em) {
+                    rv = em->InstallItemFromFile(info->GetFile(), 
+                                                 NS_INSTALL_LOCATION_APPPROFILE);
                 }
-                hZip->Close();
             }
+            hZip->Close();
             // Extension Manager copies the theme .jar file to 
             // a different location, so remove the temporary file.
             info->GetFile()->Remove(PR_FALSE);
@@ -650,7 +680,7 @@ extern "C" void PR_CALLBACK RunChromeInstallOnThread(void *data)
                 
             if (NS_SUCCEEDED(rv) && selected)
             {
-                NS_ConvertUTF16toUTF8 utf8Args(info->GetArguments());
+                NS_ConvertUCS2toUTF8 utf8Args(info->GetArguments());
                 rv = reg->SelectSkin(utf8Args, PR_TRUE);
             }
         }
@@ -661,7 +691,7 @@ extern "C" void PR_CALLBACK RunChromeInstallOnThread(void *data)
 
             if (NS_SUCCEEDED(rv) && selected)
             {
-                NS_ConvertUTF16toUTF8 utf8Args(info->GetArguments());
+                NS_ConvertUCS2toUTF8 utf8Args(info->GetArguments());
                 rv = reg->SelectLocale(utf8Args, PR_TRUE);
             }
         }

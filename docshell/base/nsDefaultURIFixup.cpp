@@ -53,7 +53,7 @@
 #include "nsDefaultURIFixup.h"
 
 /* Implementation file */
-NS_IMPL_ISUPPORTS1(nsDefaultURIFixup, nsIURIFixup)
+NS_IMPL_ISUPPORTS2(nsDefaultURIFixup, nsIURIFixup, nsIURIFixup_MOZILLA_1_8_BRANCH)
 
 nsDefaultURIFixup::nsDefaultURIFixup()
 {
@@ -302,7 +302,7 @@ nsDefaultURIFixup::CreateFixupURI(const nsACString& aStringURI, PRUint32 aFixupF
     //
     //   no-scheme.com
     //   ftp.no-scheme.com
-    //   ftp4.no-scheme.com
+    //   ftp4.no-scheme,com
     //   no-scheme.com/query?foo=http://www.foo.com
     //
     PRInt32 schemeDelim = uriString.Find("://",0);
@@ -319,7 +319,7 @@ nsDefaultURIFixup::CreateFixupURI(const nsACString& aStringURI, PRUint32 aFixupF
         uriString.Left(hostSpec, hostPos);
 
         // insert url spec corresponding to host name
-        if (IsLikelyFTP(hostSpec))
+        if (hostSpec.EqualsIgnoreCase("ftp", 3)) 
             uriString.Assign(NS_LITERAL_CSTRING("ftp://") + uriString);
         else 
             uriString.Assign(NS_LITERAL_CSTRING("http://") + uriString);
@@ -503,44 +503,6 @@ PRBool nsDefaultURIFixup::MakeAlternateURI(nsIURI *aURI)
     return PR_TRUE;
 }
 
-/**
- * Check if the host name starts with ftp\d*\. and it's not directly followed
- * by the tld.
- */
-PRBool nsDefaultURIFixup::IsLikelyFTP(const nsCString &aHostSpec)
-{
-    PRBool likelyFTP = PR_FALSE;
-    if (aHostSpec.EqualsIgnoreCase("ftp", 3)) {
-        nsACString::const_iterator iter;
-        nsACString::const_iterator end;
-        aHostSpec.BeginReading(iter);
-        aHostSpec.EndReading(end);
-        iter.advance(3); // move past the "ftp" part
-
-        while (iter != end)
-        {
-            if (*iter == '.') {
-                // now make sure the name has at least one more dot in it
-                ++iter;
-                while (iter != end)
-                {
-                    if (*iter == '.') {
-                        likelyFTP = PR_TRUE;
-                        break;
-                    }
-                    ++iter;
-                }
-                break;
-            }
-            else if (!nsCRT::IsAsciiDigit(*iter)) {
-                break;
-            }
-            ++iter;
-        }
-    }
-    return likelyFTP;
-}
-
 nsresult nsDefaultURIFixup::FileURIFixup(const nsACString& aStringURI, 
                                          nsIURI** aURI)
 {
@@ -615,10 +577,10 @@ nsresult nsDefaultURIFixup::ConvertFileToStringURI(const nsACString& aIn,
         // to stop using AssignWithConversion and do things correctly.  See bug
         // 58866 for what happens if we remove this
         // PossiblyByteExpandedFileName check.
-        NS_ConvertUTF8toUTF16 in(aIn);
+        NS_ConvertUTF8toUCS2 in(aIn);
         if (PossiblyByteExpandedFileName(in)) {
           // removes high byte
-          rv = NS_NewNativeLocalFile(NS_LossyConvertUTF16toASCII(in), PR_FALSE, getter_AddRefs(filePath));
+          rv = NS_NewNativeLocalFile(NS_LossyConvertUCS2toASCII(in), PR_FALSE, getter_AddRefs(filePath));
         }
         else {
           // input is unicode

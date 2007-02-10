@@ -48,7 +48,7 @@
 #include "msgMapiFactory.h"
 #include "msgMapiMain.h"
 
-#include "nsIMsgCompFields.h"
+#include "nsMsgCompFields.h"
 #include "msgMapiHook.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
@@ -240,7 +240,7 @@ STDMETHODIMP CMapiImp::SendMail( unsigned long aSession, lpnsMapiMessage aMessag
 
     PR_LOG(MAPI, PR_LOG_DEBUG, ("CMapiImp::SendMail using flags %d\n", aFlags));
     // Assign the pointers in the aMessage struct to the array of Recips and Files
-    // received here from MS COM. These are used in BlindSendMail and ShowCompWin fns 
+    // recieved here from MS COM. These are used in BlindSendMail and ShowCompWin fns 
     aMessage->lpRecips = aRecips ;
     aMessage->lpFiles = aFiles ;
 

@@ -48,7 +48,6 @@
 #include "mdb.h"
 #include "nsIPrefBranch.h"
 #include "nsIBrowserHistory.h"
-#include "nsIGlobalHistory3.h"
 #include "nsIHistoryItems.h"
 #include "nsIHistoryObserver.h"
 
@@ -103,8 +102,7 @@ class nsSimpleGlobalHistory : nsSupportsWeakReference,
                         public nsIBrowserHistory,
                         public nsIHistoryItems,
                         public nsIObserver,
-                        public nsIAutoCompleteSession,
-                        public nsIGlobalHistory3
+                        public nsIAutoCompleteSession
 {
 friend class HistoryAutoCompleteEnumerator;
 friend class nsHistoryItem;
@@ -119,7 +117,6 @@ public:
   NS_DECL_ISUPPORTS
 
   NS_DECL_NSIGLOBALHISTORY2
-  NS_DECL_NSIGLOBALHISTORY3
   NS_DECL_NSIBROWSERHISTORY
   NS_DECL_NSIHISTORYITEMS
   NS_DECL_NSIOBSERVER
@@ -308,7 +305,6 @@ protected:
   mdb_column kToken_HostnameColumn;
   mdb_column kToken_HiddenColumn;
   mdb_column kToken_TypedColumn;
-  mdb_column kToken_GeckoFlagsColumn;
 
   // meta-data tokens
   mdb_column kToken_LastPageVisited;

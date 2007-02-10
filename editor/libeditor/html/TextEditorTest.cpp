@@ -90,27 +90,23 @@ nsresult TextEditorTest::RunUnitTest(PRInt32 *outNumTests, PRInt32 *outNumTestsF
   result = mTextEditor->InsertText(NS_LITERAL_STRING("1234567890abcdefghij1234567890"));
   TEST_RESULT(result);
   (*outNumTests)++;
-  if (NS_FAILED(result))
-    ++(*outNumTestsFailed);
+  (*outNumTestsFailed) += (NS_FAILED(result) != NS_OK);
   
   // insert some more text
   result = mTextEditor->InsertText(NS_LITERAL_STRING("Moreover, I am cognizant of the interrelatedness of all communities and states.  I cannot sit idly by in Atlanta and not be concerned about what happens in Birmingham.  Injustice anywhere is a threat to justice everywhere"));
   TEST_RESULT(result);
   (*outNumTests)++;
-  if (NS_FAILED(result))
-    ++(*outNumTestsFailed);
+  (*outNumTestsFailed) += (NS_FAILED(result) != NS_OK);
 
   result = TestInsertBreak();
   TEST_RESULT(result);
   (*outNumTests)++;
-  if (NS_FAILED(result))
-    ++(*outNumTestsFailed);
+  (*outNumTestsFailed) += (NS_FAILED(result) != NS_OK);
 
   result = TestTextProperties();
   TEST_RESULT(result);
   (*outNumTests)++;
-  if (NS_FAILED(result))
-    ++(*outNumTestsFailed);
+  (*outNumTestsFailed) += (NS_FAILED(result) != NS_OK);
 
   // get us back to the original document
   result = mEditor->Undo(12);

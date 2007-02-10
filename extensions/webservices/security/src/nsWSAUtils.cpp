@@ -45,12 +45,14 @@
 #include "nsIDNSRecord.h"
 #include "nsICancelable.h"
 #include "nsIRequest.h"
-#include "nsThreadUtils.h"
+#include "nsEventQueueUtils.h"
 #include "nsAutoPtr.h"
 #include "nsNetCID.h"
 
 static const char kSecurityProperties[] =
   "chrome://global/locale/webservices/security.properties";
+static NS_DEFINE_CID(kDNSServiceCID, NS_DNSSERVICE_CID);
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 class nsDNSListener : public nsIDNSListener
 {
@@ -97,8 +99,8 @@ nsWSAUtils::VerifyIsEqual()
   static PRUint32 size = NS_ARRAY_LENGTH(kStrings);
   PRUint32 i;
   for (i = 0; i < size; ++i) {
-    if (IsEqual(NS_ConvertUTF8toUTF16(kStrings[i].lhs), 
-                NS_ConvertUTF8toUTF16(kStrings[i].rhs)) 
+    if (IsEqual(NS_ConvertUTF8toUCS2(kStrings[i].lhs), 
+                NS_ConvertUTF8toUCS2(kStrings[i].rhs)) 
                 != kStrings[i].equal) {
       const char* equal = 
         kStrings[i].equal ? "equivalent" : 
@@ -226,7 +228,7 @@ nsWSAUtils::GetOfficialHostName(nsIURI* aServiceURI,
     return NS_ERROR_NULL_POINTER;
 
   nsresult rv;
-  nsCOMPtr<nsIDNSService> dns(do_GetService(NS_DNSSERVICE_CONTRACTID, &rv));
+  nsCOMPtr<nsIDNSService> dns(do_GetService(kDNSServiceCID, &rv));
   
   if (NS_FAILED(rv)) 
     return rv;
@@ -237,21 +239,36 @@ nsWSAUtils::GetOfficialHostName(nsIURI* aServiceURI,
   nsRefPtr<nsDNSListener> listener = new nsDNSListener();
   NS_ENSURE_TRUE(listener, NS_ERROR_OUT_OF_MEMORY);
     
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread(); 
-  NS_ENSURE_STATE(thread);
+  nsCOMPtr<nsIEventQueueService> eventQService = 
+    do_GetService(kEventQueueServiceCID, &rv);
+  
+  if (NS_FAILED(rv))
+    return rv;
+
+  nsCOMPtr<nsIEventQueue> eventQ;
+  rv = eventQService->PushThreadEventQueue(getter_AddRefs(eventQ));
+  
+  if (NS_FAILED(rv))
+    return rv;
 
   nsCOMPtr<nsICancelable> dummy;
   rv = dns->AsyncResolve(host, nsIDNSService::RESOLVE_CANONICAL_NAME,
-                         listener, thread, getter_AddRefs(dummy));
+                         listener, eventQ, getter_AddRefs(dummy));
   
-  while (!listener->mLookupFinished) {
-    if (!NS_ProcessNextEvent(thread)) {
-      rv = NS_ERROR_UNEXPECTED;
-      break;
+  PLEvent *ev;
+  while (NS_SUCCEEDED(rv) && !listener->mLookupFinished) {
+    rv = eventQ->WaitForEvent(&ev);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "WaitForEvent failed");
+    if (NS_SUCCEEDED(rv)) {
+      rv = eventQ->HandleEvent(ev);
+      NS_ASSERTION(NS_SUCCEEDED(rv), "HandleEvent failed");
     }
   }
 
   aResult.Assign(listener->mOfficialHostName);
+
+  eventQService->PopThreadEventQueue(eventQ);
+   
   return rv;
 }
 
@@ -278,3 +295,4 @@ nsDNSListener::OnLookupComplete(nsICancelable* aRequest,
   mLookupFinished = PR_TRUE;
   return NS_OK;
 }
+

@@ -48,7 +48,7 @@ DOM_MSG_DEF(NS_ERROR_DOM_INVALID_CHARACTER_ERR, "String contains an invalid char
 DOM_MSG_DEF(NS_ERROR_DOM_NO_DATA_ALLOWED_ERR, "Node does not contain data")
 DOM_MSG_DEF(NS_ERROR_DOM_NO_MODIFICATION_ALLOWED_ERR, "Modifications are not allowed for this document")
 DOM_MSG_DEF(NS_ERROR_DOM_NOT_FOUND_ERR, "Node was not found")
-DOM_MSG_DEF(NS_ERROR_DOM_NOT_SUPPORTED_ERR, "Operation is not supported")
+DOM_MSG_DEF(NS_ERROR_DOM_NOT_SUPPORTED_ERR, "Object cannot be created in this context")
 DOM_MSG_DEF(NS_ERROR_DOM_INUSE_ATTRIBUTE_ERR, "Attribute already in use")
 
 /* DOM error codes from http://www.w3.org/TR/DOM-Level-2/ */
@@ -77,11 +77,6 @@ DOM_MSG_DEF(NS_ERROR_DOM_SVG_INVALID_VALUE_ERR, "One of the parameters has an in
 DOM_MSG_DEF(NS_ERROR_DOM_SVG_MATRIX_NOT_INVERTABLE, "The matrix could not be computed")
 #endif
 
-/* DOM error codes from http://www.w3.org/TR/DOM-Level-3-XPath/ */
-
-DOM_MSG_DEF(NS_ERROR_DOM_INVALID_EXPRESSION_ERR, "The expression is not a legal expression.")
-DOM_MSG_DEF(NS_ERROR_DOM_TYPE_ERR, "The expression cannot be converted to return the specified type.")
-
 /* DOM error codes defined by us */
 
 /* XXX string should be specified by norris */
@@ -99,7 +94,6 @@ DOM_MSG_DEF(NS_ERROR_DOM_PROP_ACCESS_DENIED, "Access to property denied")
 DOM_MSG_DEF(NS_ERROR_DOM_XPCONNECT_ACCESS_DENIED, "Access to XPConnect service denied")
 DOM_MSG_DEF(NS_ERROR_DOM_BAD_URI, "Access to restricted URI denied")
 DOM_MSG_DEF(NS_ERROR_DOM_RETVAL_UNDEFINED, "Return value is undefined")
-DOM_MSG_DEF(NS_ERROR_DOM_QUOTA_REACHED, "Persistent storage maximum size reached")
 
 /* common global codes (from nsError.h) */
 

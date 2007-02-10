@@ -35,13 +35,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsUnicharInputStream.h"
+#include "nsIUnicharInputStream.h"
 #include "nsIInputStream.h"
 #include "nsIByteBuffer.h"
 #include "nsIUnicharBuffer.h"
 #include "nsIServiceManager.h"
 #include "nsString.h"
-#include "nsAutoPtr.h"
 #include "nsCRT.h"
 #include "nsUTF8Utils.h"
 #include <fcntl.h>
@@ -51,23 +50,40 @@
 #include <unistd.h>
 #endif
 
-#define STRING_BUFFER_SIZE 8192
-
 class StringUnicharInputStream : public nsIUnicharInputStream {
 public:
-  StringUnicharInputStream(const nsAString& aString) :
-    mString(aString), mPos(0), mLen(aString.Length()) { }
+  StringUnicharInputStream(const nsAString* aString,
+                           PRBool aTakeOwnership);
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIUNICHARINPUTSTREAM
 
-  nsString mString;
+  const nsAString* mString;
   PRUint32 mPos;
   PRUint32 mLen;
+  PRBool mOwnsString;
 
 private:
-  ~StringUnicharInputStream() { }
+  ~StringUnicharInputStream();
 };
+
+StringUnicharInputStream::StringUnicharInputStream(const nsAString* aString,
+                                                   PRBool aTakeOwnership)
+  : mString(aString),
+    mPos(0),
+    mLen(aString->Length()),
+    mOwnsString(aTakeOwnership)
+{
+}
+
+StringUnicharInputStream::~StringUnicharInputStream()
+{
+  if (mString && mOwnsString) {
+    // Some compilers dislike deleting const pointers
+    nsAString* mutable_string = NS_CONST_CAST(nsAString*, mString);
+    delete mutable_string;
+  }
+}
 
 NS_IMETHODIMP
 StringUnicharInputStream::Read(PRUnichar* aBuf,
@@ -79,7 +95,7 @@ StringUnicharInputStream::Read(PRUnichar* aBuf,
     return NS_OK;
   }
   nsAString::const_iterator iter;
-  mString.BeginReading(iter);
+  mString->BeginReading(iter);
   const PRUnichar* us = iter.get();
   PRUint32 amount = mLen - mPos;
   if (amount > aCount) {
@@ -100,10 +116,10 @@ StringUnicharInputStream::ReadSegments(nsWriteUnicharSegmentFun aWriter,
   PRUint32 totalBytesWritten = 0;
 
   nsresult rv;
-  aCount = PR_MIN(mString.Length() - mPos, aCount);
+  aCount = PR_MIN(mString->Length() - mPos, aCount);
   
   nsAString::const_iterator iter;
-  mString.BeginReading(iter);
+  mString->BeginReading(iter);
   
   while (aCount) {
     rv = aWriter(this, aClosure, iter.get() + mPos,
@@ -136,7 +152,7 @@ StringUnicharInputStream::ReadString(PRUint32 aCount, nsAString& aString,
   if (amount > aCount) {
     amount = aCount;
   }
-  aString = Substring(mString, mPos, amount);
+  aString = Substring(*mString, mPos, amount);
   mPos += amount;
   *aReadCount = amount;
   return NS_OK;
@@ -145,17 +161,41 @@ StringUnicharInputStream::ReadString(PRUint32 aCount, nsAString& aString,
 nsresult StringUnicharInputStream::Close()
 {
   mPos = mLen;
+  if (mString && mOwnsString) {
+    // Some compilers dislike deleting const pointers
+    nsAString* mutable_string = NS_CONST_CAST(nsAString*, mString);
+    delete mutable_string;
+  }
+  mString = nsnull;
   return NS_OK;
 }
 
 NS_IMPL_ISUPPORTS1(StringUnicharInputStream, nsIUnicharInputStream)
+
+NS_COM nsresult
+NS_NewStringUnicharInputStream(nsIUnicharInputStream** aInstancePtrResult,
+                               const nsAString* aString,
+                               PRBool aTakeOwnership)
+{
+  NS_ENSURE_ARG_POINTER(aString);
+  NS_PRECONDITION(aInstancePtrResult, "null ptr");
+
+  StringUnicharInputStream* it = new StringUnicharInputStream(aString,
+                                                              aTakeOwnership);
+  if (!it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  NS_ADDREF(*aInstancePtrResult = it);
+  return NS_OK;
+}
 
 //----------------------------------------------------------------------
 
 class UTF8InputStream : public nsIUnicharInputStream {
 public:
   UTF8InputStream();
-  nsresult Init(nsIInputStream* aStream);
+  nsresult Init(nsIInputStream* aStream, PRUint32 aBufSize);
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIUNICHARINPUTSTREAM
@@ -166,7 +206,7 @@ private:
 protected:
   PRInt32 Fill(nsresult * aErrorCode);
 
-  static void CountValidUTF8Bytes(const char *aBuf, PRUint32 aMaxBytes, PRUint32& aValidUTF8bytes, PRUint32& aValidUTF16CodeUnits);
+  static void CountValidUTF8Bytes(const char *aBuf, PRUint32 aMaxBytes, PRUint32& aValidUTF8bytes, PRUint32& aValidUCS2bytes);
 
   nsCOMPtr<nsIInputStream> mInput;
   nsCOMPtr<nsIByteBuffer> mByteData;
@@ -185,13 +225,15 @@ UTF8InputStream::UTF8InputStream() :
 }
 
 nsresult 
-UTF8InputStream::Init(nsIInputStream* aStream)
+UTF8InputStream::Init(nsIInputStream* aStream, PRUint32 aBufferSize)
 {
-  nsresult rv = NS_NewByteBuffer(getter_AddRefs(mByteData), nsnull,
-                                 STRING_BUFFER_SIZE);
+  if (aBufferSize == 0) {
+    aBufferSize = 8192;
+  }
+
+  nsresult rv = NS_NewByteBuffer(getter_AddRefs(mByteData), nsnull, aBufferSize);
   if (NS_FAILED(rv)) return rv;
-  rv = NS_NewUnicharBuffer(getter_AddRefs(mUnicharData), nsnull,
-                           STRING_BUFFER_SIZE);
+  rv = NS_NewUnicharBuffer(getter_AddRefs(mUnicharData), nsnull, aBufferSize);
   if (NS_FAILED(rv)) return rv;
 
   mInput = aStream;
@@ -327,7 +369,7 @@ PRInt32 UTF8InputStream::Fill(nsresult * aErrorCode)
   if (nb <= 0) {
     // Because we assume a many to one conversion, the lingering data
     // in the byte buffer must be a partial conversion
-    // fragment. Because we know that we have received no more new
+    // fragment. Because we know that we have recieved no more new
     // data to add to it, we can't convert it. Therefore, we discard
     // it.
     return nb;
@@ -361,15 +403,15 @@ PRInt32 UTF8InputStream::Fill(nsresult * aErrorCode)
 }
 
 void
-UTF8InputStream::CountValidUTF8Bytes(const char* aBuffer, PRUint32 aMaxBytes, PRUint32& aValidUTF8bytes, PRUint32& aValidUTF16CodeUnits)
+UTF8InputStream::CountValidUTF8Bytes(const char* aBuffer, PRUint32 aMaxBytes, PRUint32& aValidUTF8bytes, PRUint32& aValidUCS2chars)
 {
   const char *c = aBuffer;
   const char *end = aBuffer + aMaxBytes;
   const char *lastchar = c;     // pre-initialize in case of 0-length buffer
-  PRUint32 utf16length = 0;
+  PRUint32 ucs2bytes = 0;
   while (c < end && *c) {
     lastchar = c;
-    utf16length++;
+    ucs2bytes++;
     
     if (UTF8traits::isASCII(*c))
       c++;
@@ -377,11 +419,8 @@ UTF8InputStream::CountValidUTF8Bytes(const char* aBuffer, PRUint32 aMaxBytes, PR
       c += 2;
     else if (UTF8traits::is3byte(*c))
       c += 3;
-    else if (UTF8traits::is4byte(*c)) {
+    else if (UTF8traits::is4byte(*c))
       c += 4;
-      utf16length++; // add 1 more because this will be converted to a
-                     // surrogate pair.
-    }
     else if (UTF8traits::is5byte(*c))
       c += 5;
     else if (UTF8traits::is6byte(*c))
@@ -393,70 +432,28 @@ UTF8InputStream::CountValidUTF8Bytes(const char* aBuffer, PRUint32 aMaxBytes, PR
   }
   if (c > end) {
     c = lastchar;
-    utf16length--;
+    ucs2bytes--;
   }
 
   aValidUTF8bytes = c - aBuffer;
-  aValidUTF16CodeUnits = utf16length;
+  aValidUCS2chars = ucs2bytes;
 }
 
-NS_IMPL_QUERY_INTERFACE2(nsSimpleUnicharStreamFactory,
-                         nsIFactory,
-                         nsISimpleUnicharStreamFactory)
-
-NS_IMETHODIMP_(nsrefcnt) nsSimpleUnicharStreamFactory::AddRef() { return 2; }
-NS_IMETHODIMP_(nsrefcnt) nsSimpleUnicharStreamFactory::Release() { return 1; }
-
-NS_IMETHODIMP
-nsSimpleUnicharStreamFactory::CreateInstance(nsISupports* aOuter, REFNSIID aIID,
-                                            void **aResult)
+NS_COM nsresult
+NS_NewUTF8ConverterStream(nsIUnicharInputStream** aInstancePtrResult,
+                          nsIInputStream* aStreamToWrap,
+                          PRInt32 aBufferSize)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSimpleUnicharStreamFactory::LockFactory(PRBool aLock)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSimpleUnicharStreamFactory::CreateInstanceFromString(const nsAString& aString,
-                                                      nsIUnicharInputStream* *aResult)
-{
-  StringUnicharInputStream* it = new StringUnicharInputStream(aString);
-  if (!it) {
+  // Create converter input stream
+  UTF8InputStream* it = new UTF8InputStream();
+  if (nsnull == it) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  NS_ADDREF(*aResult = it);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSimpleUnicharStreamFactory::CreateInstanceFromUTF8Stream(nsIInputStream* aStreamToWrap,
-                                                           nsIUnicharInputStream* *aResult)
-{
-  *aResult = nsnull;
-
-  // Create converter input stream
-  nsRefPtr<UTF8InputStream> it = new UTF8InputStream();
-  if (!it)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  nsresult rv = it->Init(aStreamToWrap);
+  nsresult rv = it->Init(aStreamToWrap, aBufferSize);
   if (NS_FAILED(rv))
     return rv;
 
-  NS_ADDREF(*aResult = it);
-  return NS_OK;
+  return it->QueryInterface(NS_GET_IID(nsIUnicharInputStream), 
+                            (void **) aInstancePtrResult);
 }
-
-nsSimpleUnicharStreamFactory*
-nsSimpleUnicharStreamFactory::GetInstance()
-{
-  return NS_CONST_CAST(nsSimpleUnicharStreamFactory*, &kInstance);
-}
-
-const nsSimpleUnicharStreamFactory
-nsSimpleUnicharStreamFactory::kInstance;

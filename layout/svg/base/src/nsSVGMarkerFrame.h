@@ -37,53 +37,48 @@
 #ifndef __NS_SVGMARKERFRAME_H__
 #define __NS_SVGMARKERFRAME_H__
 
-#include "nsISupports.h"
-#include "nsSVGValue.h"
-#include "nsSVGContainerFrame.h"
-#include "nsIDOMSVGAnimatedEnum.h"
-#include "nsIDOMSVGAnimatedAngle.h"
-#include "nsIDOMSVGRect.h"
+#include "nsSVGDefsFrame.h"
+#include "nsIDOMSVGLength.h"
 #include "nsIDOMSVGAngle.h"
+#include "nsIDOMSVGRect.h"
+#include "nsIDOMSVGAnimatedEnum.h"
+#include "nsISVGMarkable.h"
+#include "nsLayoutAtoms.h"
 
-class gfxContext;
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 class nsSVGPathGeometryFrame;
-class nsIURI;
-class nsIContent;
-struct nsSVGMark;
 
-typedef nsSVGContainerFrame nsSVGMarkerFrameBase;
+#define NS_SVGMARKERFRAME_CID \
+{0x899a645c, 0xf817, 0x4a1a, {0xaa, 0x3d, 0xa9, 0x1a, 0xbf, 0xa2, 0xb2, 0x0a}}
 
-class nsSVGMarkerFrame : public nsSVGMarkerFrameBase,
-                         public nsSVGValue
+class nsSVGMarkerFrame : public nsSVGDefsFrame
 {
 protected:
-  friend nsIFrame*
-  NS_NewSVGMarkerFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsStyleContext* aContext);
+  friend nsresult
+  NS_NewSVGMarkerFrame(nsIPresShell* aPresShell,
+                       nsIContent* aContent,
+                       nsIFrame** aNewFrame);
 
   virtual ~nsSVGMarkerFrame();
   NS_IMETHOD InitSVG();
 
 public:
-  nsSVGMarkerFrame(nsStyleContext* aContext) : nsSVGMarkerFrameBase(aContext) {}
+  NS_DECL_ISUPPORTS
 
-  // nsISupports interface:
-  NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
-  NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
-  NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }
+  NS_DEFINE_STATIC_CID_ACCESSOR(NS_SVGMARKERFRAME_CID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_SVGMARKERFRAME_CID)
 
-  // nsISVGValue interface:
-  NS_IMETHOD SetValueString(const nsAString &aValue) { return NS_OK; }
-  NS_IMETHOD GetValueString(nsAString& aValue) { return NS_ERROR_NOT_IMPLEMENTED; }
-
-  // nsIFrame interface:
-  NS_IMETHOD  AttributeChanged(PRInt32         aNameSpaceID,
-                               nsIAtom*        aAttribute,
-                               PRInt32         aModType);
+  // nsISVGValueObserver interface:
+  NS_IMETHOD DidModifySVGObservable(nsISVGValue* observable,
+                                    nsISVGValue::modificationType aModType);
 
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::svgMarkerFrame
+   * @see nsLayoutAtoms::svgMarkerFrame
    */
   virtual nsIAtom* GetType() const;
 
@@ -94,50 +89,33 @@ public:
   }
 #endif
 
-  // nsSVGMarkerFrame methods:
-  nsresult PaintMark(nsSVGRenderState *aContext,
-                     nsSVGPathGeometryFrame *aMarkedFrame,
-                     nsSVGMark *aMark,
-                     float aStrokeWidth);
+  void PaintMark(nsISVGRendererCanvas *aCanvas,
+                 nsSVGPathGeometryFrame *aParent,
+                 nsSVGMark *aMark,
+                 float aStrokeWidth);
 
-  nsRect RegionMark(nsSVGPathGeometryFrame *aMarkedFrame,
-                    const nsSVGMark *aMark, float aStrokeWidth);
+  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>)
+    RegionMark(nsSVGPathGeometryFrame *aParent,
+               nsSVGMark *aMark, float aStrokeWidth);
+
+  static float bisect(float a1, float a2);
 
 private:
+  nsCOMPtr<nsIDOMSVGLength>              mRefX;
+  nsCOMPtr<nsIDOMSVGLength>              mRefY;
   nsCOMPtr<nsIDOMSVGAnimatedEnumeration> mMarkerUnits;
+  nsCOMPtr<nsIDOMSVGLength>              mMarkerWidth;
+  nsCOMPtr<nsIDOMSVGLength>              mMarkerHeight;
   nsCOMPtr<nsIDOMSVGAnimatedEnumeration> mOrientType;
   nsCOMPtr<nsIDOMSVGAngle>               mOrientAngle;
   nsCOMPtr<nsIDOMSVGRect>                mViewBox;
 
   // stuff needed for callback
-  nsSVGPathGeometryFrame *mMarkedFrame;
   float mStrokeWidth, mX, mY, mAngle;
+  nsSVGPathGeometryFrame *mMarkerParent;
 
-  // nsSVGContainerFrame methods:
-  virtual already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
-
-  // VC6 does not allow the inner class to access protected members
-  // of the outer class
-  class AutoMarkerReferencer;
-  friend class AutoMarkerReferencer;
-
-  // A helper class to allow us to paint markers safely. The helper
-  // automatically sets and clears the mInUse flag on the marker frame (to
-  // prevent nasty reference loops) as well as the reference to the marked
-  // frame and its coordinate context. It's easy to mess this up
-  // and break things, so this helper makes the code far more robust.
-  class AutoMarkerReferencer
-  {
-  public:
-    AutoMarkerReferencer(nsSVGMarkerFrame *aFrame,
-                         nsSVGPathGeometryFrame *aMarkedFrame);
-    ~AutoMarkerReferencer();
-  private:
-    nsSVGMarkerFrame *mFrame;
-  };
-
-  // nsSVGMarkerFrame methods:
-  void SetParentCoordCtxProvider(nsSVGCoordCtxProvider *aContext);
+  // nsISVGContainerFrame interface:
+  already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
 
   // recursion prevention flag
   PRPackedBool mInUse;

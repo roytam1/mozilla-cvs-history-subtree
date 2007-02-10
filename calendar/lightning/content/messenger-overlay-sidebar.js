@@ -106,7 +106,8 @@ function ltnMinimonthPick(minimonth)
         return;
 
     var jsDate = minimonth.value;
-    document.getElementById("ltnDateTextPicker").value = jsDate;
+    //XXX Disable for 0.3 release (Bug 355028)
+    //document.getElementById("ltnDateTextPicker").value = jsDate;
     var cdt = new CalDateTime();
     cdt.year = jsDate.getFullYear();
     cdt.month = jsDate.getMonth();
@@ -189,12 +190,6 @@ function ltnOnLoad(event)
 
     // Make sure we update ourselves if the program stays open over midnight
     scheduleMidnightUpdate(refreshUIBits);
-
-    if (getPrefSafe("calendar.prototypes.wcap", false)) {
-        document.loadOverlay(
-            "chrome://lightning/content/sun-messenger-overlay-sidebar.xul",
-            null);
-    }
 
     return;
 }

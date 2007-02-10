@@ -11,6 +11,8 @@
 <!-- MAIN MENU ITEMS -->
 
 <!ENTITY mnFile.label "Fil">
+<!ENTITY mnWindows.label "Inspiser et vindu">
+<!ENTITY mnWindows.accesskey "v">
 <!ENTITY mnFile.accesskey "f">
   <!ENTITY cmdShowOpenURLDialog.label "Inspiser en adresse ...">
   <!ENTITY cmdShowOpenURLDialog.accesskey "I">

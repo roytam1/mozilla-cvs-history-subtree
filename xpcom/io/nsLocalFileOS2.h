@@ -55,7 +55,6 @@
 #include "nsIFile.h"
 #include "nsIFactory.h"
 #include "nsILocalFileOS2.h"
-#include "nsIHashable.h"
 
 #define INCL_DOSFILEMGR
 #define INCL_DOSERRORS
@@ -71,8 +70,7 @@
 
 class TypeEaEnumerator;
 
-class NS_COM nsLocalFile : public nsILocalFileOS2,
-                                   public nsIHashable
+class NS_COM nsLocalFile : public nsILocalFileOS2
 {
 public:
     NS_DEFINE_STATIC_CID_ACCESSOR(NS_LOCAL_FILE_CID)
@@ -92,9 +90,6 @@ public:
 
     // nsILocalFileOS2 interface
     NS_DECL_NSILOCALFILEOS2
-
-    // nsIHashable interface
-    NS_DECL_NSIHASHABLE
 
 public:
     static void GlobalInit();

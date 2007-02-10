@@ -47,6 +47,7 @@ components/accessibility.xpt
 components/addrbook.xpt
 components/alerts.xpt
 components/appshell.xpt
+components/autocomplete.xpt
 components/caps.xpt
 components/chardet.xpt
 components/commandhandler.xpt
@@ -156,7 +157,6 @@ components/xuldoc.xpt
 components/xultmpl.xpt
 components/downloadmanager.xpt
 #endif
-components/nsUnsetDefaultMail.js
 components/nsBackgroundUpdateService.js
 components/nsDownloadProgressListener.js
 components/xptitemp.dat
@@ -166,8 +166,6 @@ chrome/chrome.rdf
 chrome/app-chrome.manifest
 chrome/mail.jar
 chrome/qute.jar
-chrome/offline.jar
-chrome/offline.manifest
 chrome/en-US-mail.jar
 chrome/overlayinfo/
 defaults/pref/all.js
@@ -180,17 +178,7 @@ defaults/profile/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/
 defaults/profile/extensions/Extensions.rdf
 defaults/profile/extensions/installed-extensions.txt
 defaults/profile/extensions/
-defaults/isp/rss.rdf
-defaults/isp/movemail.rdf
-defaults/isp/dotmac.rdf
-defaults/isp/en-US/rss.rdf
-defaults/isp/en-US/movemail.rdf
-defaults/isp/en-US/dotmac.rdf
-defaults/isp/en-US/
-defaults/isp/
-
 @DLL_PREFIX@zlib@DLL_SUFFIX@
-#Remove Talkback files from old location (in case user updates from 1.0.x)
 components/BrandRes.dll
 components/fullsoft.dll
 components/master.ini

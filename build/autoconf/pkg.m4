@@ -1,8 +1,9 @@
-# PKG_CHECK_MODULES(GSTUFF, gtk+-2.0 >= 1.3 glib = 1.3.4, action-if, action-not)
-# defines GSTUFF_LIBS, GSTUFF_CFLAGS, see pkg-config man page
-# also defines GSTUFF_PKG_ERRORS on error
-AC_DEFUN([PKG_CHECK_MODULES],
-[succeeded=no
+
+dnl PKG_CHECK_MODULES(GSTUFF, gtk+-2.0 >= 1.3 glib = 1.3.4, action-if, action-not)
+dnl defines GSTUFF_LIBS, GSTUFF_CFLAGS, see pkg-config man page
+dnl also defines GSTUFF_PKG_ERRORS on error
+AC_DEFUN(PKG_CHECK_MODULES, [
+  succeeded=no
 
   if test -z "$PKG_CONFIG"; then
     AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
@@ -27,8 +28,9 @@ AC_DEFUN([PKG_CHECK_MODULES],
             AC_MSG_RESULT($$1_CFLAGS)
 
             AC_MSG_CHECKING($1_LIBS)
-            ## Remove evil flags like -Wl,--export-dynamic
-            $1_LIBS="`$PKG_CONFIG --libs \"$2\" |sed s/-Wl,--export-dynamic//g`"
+            ## don't use --libs since that can do evil things like add
+            ## -Wl,--export-dynamic
+            $1_LIBS="`$PKG_CONFIG --libs-only-L \"$2\"` `$PKG_CONFIG --libs-only-l \"$2\"`"
             AC_MSG_RESULT($$1_LIBS)
         else
             $1_CFLAGS=""

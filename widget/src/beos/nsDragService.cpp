@@ -66,9 +66,6 @@
 #include <DataIO.h>
 #include <Mime.h>
 #include <Rect.h>
-#include <Region.h>
-#include <String.h>
-#include <View.h>
 
 #include "prlog.h"
 #include "nsIPresShell.h"
@@ -94,7 +91,9 @@ GetPrimaryFrameFor(nsIDOMNode *aDOMNode)
     nsIPresShell* presShell = doc->GetShellAt(0);
     if ( nsnull == presShell) 
         return nsnull;
-    return presShell->GetPrimaryFrameFor(aContent);
+    nsIFrame *frame;
+    presShell->GetPrimaryFrameFor(aContent, &frame);
+	return frame;
 }
 
 static bool 
@@ -168,12 +167,17 @@ nsDragService::InvokeDragSession (nsIDOMNode *aDOMNode,
     bool haveRect = false;
     BRect dragRect;
 	
+    nsCOMPtr<nsIRegion> geckoRegion;
     if (nsnull != aRegion)
+        aRegion->GetRegion(getter_AddRefs(geckoRegion));
+    
+    // if we were given a scriptable region, let's get a box for it for dragging
+    if (nsnull != geckoRegion)
     {
-        PRInt32 aX, aY, aWidth, aHeight;
-        // TODO. Region may represent multiple rects - when dragging multiple items.
-        aRegion->GetBoundingBox(&aX, &aY, &aWidth, &aHeight);
-        dragRect.Set( aX, aY, aX + aWidth, aY + aHeight);
+        BRegion dragRegion;
+        geckoRegion->GetNativeRegion((void *&)dragRegion);
+        dragRect = dragRegion.Frame();
+        dragRect.InsetBy(1,1);
         haveRect = true;
         // does this need to be offset?
     } 
@@ -297,8 +301,7 @@ nsDragService::InvokeDragSession (nsIDOMNode *aDOMNode,
 
         BBitmap *aBitmap;
         image->GetBitmap(&aBitmap);
-        if (aBitmap==NULL || !aBitmap->IsValid())
-        {
+        if (aBitmap==NULL || !aBitmap->IsValid()) {
             PR_LOG(sDragLm, PR_LOG_DEBUG, ("Could not get BBitmap, no drag bitmap %s!", aBitmap==NULL?"(null)":"(not valid)" ));
             break;        
         }
@@ -504,8 +507,7 @@ nsDragService::IsDataFlavorSupported (const char *aDataFlavor,
     *_retval = PR_FALSE;
 
     // check to make sure that we have a drag object set, here
-    if (nsnull == mDragMessage)
-    {
+    if (nsnull == mDragMessage) {
         PR_LOG(sDragLm, PR_LOG_DEBUG, ("*** warning: IsDataFlavorSupported called without a valid drag context!"));
         return NS_OK;
     }
@@ -538,8 +540,7 @@ nsDragService::IsDataFlavorSupported (const char *aDataFlavor,
             
             nsCOMPtr<nsISupports> genericWrapper;
             nsXPIDLCString flavorStr;
-            for ( PRUint32 flavorIndex = 0; flavorIndex < numFlavors ; ++flavorIndex )
-            {
+            for ( PRUint32 flavorIndex = 0; flavorIndex < numFlavors ; ++flavorIndex ) {
                 flavorList->GetElementAt (flavorIndex, getter_AddRefs(genericWrapper));
                 nsCOMPtr<nsISupportsCString> currentFlavor = do_QueryInterface(genericWrapper);
                 if (nsnull == currentFlavor)
@@ -658,8 +659,7 @@ nsDragService::CreateDragMessage()
         }
     }
     
-    if (addedType)
-    {
+    if (addedType) {
         returnMsg->AddString("be:types", B_FILE_MIME_TYPE);
     }
     returnMsg->PrintToStream();

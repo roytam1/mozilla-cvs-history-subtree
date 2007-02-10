@@ -48,7 +48,7 @@
 #include "nsITreeContentView.h"
 #include "nsITreeSelection.h"
 
-nsresult NS_NewTreeContentView(nsITreeView** aResult);
+nsresult NS_NewTreeContentView(nsITreeContentView** aResult);
 
 class nsTreeContentView : public nsINativeTreeView,
                           public nsITreeContentView,
@@ -58,6 +58,8 @@ class nsTreeContentView : public nsINativeTreeView,
     nsTreeContentView(void);
 
     ~nsTreeContentView(void);
+
+    friend nsresult NS_NewTreeContentView(nsITreeContentView** aResult);
 
     NS_DECL_ISUPPORTS
 
@@ -84,7 +86,7 @@ class nsTreeContentView : public nsINativeTreeView,
                                  PRInt32 aIndexInContainer);
     virtual void ContentRemoved(nsIDocument *aDocument, nsIContent* aContainer,
                                 nsIContent* aChild, PRInt32 aIndexInContainer);
-    virtual void NodeWillBeDestroyed(const nsINode* aNode);
+    virtual void DocumentWillBeDestroyed(nsIDocument *aDocument);
 
   protected:
     // Recursive methods which deal with serializing of nested content.

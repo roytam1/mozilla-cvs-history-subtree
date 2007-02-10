@@ -45,8 +45,8 @@
 #include "nsCOMPtr.h"
 #include "nsICache.h"
 #include "nsICacheListener.h"
+#include "nsIEventQueue.h"
 #include "nsCacheSession.h"
-#include "nsCacheService.h"
 
 
 class nsCacheRequest : public PRCList
@@ -63,6 +63,7 @@ private:
         : mKey(key),
           mInfo(0),
           mListener(listener),
+          mThread(nsnull),
           mLock(nsnull),
           mCondVar(nsnull)
     {
@@ -74,7 +75,6 @@ private:
         if (session->WillDoomEntriesIfExpired())  MarkDoomEntriesIfExpired();
         if (blockingMode == nsICache::BLOCKING)    MarkBlockingMode();
         MarkWaitingForValidation();
-        NS_IF_ADDREF(mListener);
     }
     
     ~nsCacheRequest()
@@ -84,9 +84,6 @@ private:
         if (mLock)    PR_DestroyLock(mLock);
         if (mCondVar) PR_DestroyCondVar(mCondVar);
         NS_ASSERTION(PR_CLIST_IS_EMPTY(this), "request still on a list");
-
-        if (mListener)
-            nsCacheService::ReleaseObject_Locked(mListener, mThread);
     }
     
     /**
@@ -191,8 +188,8 @@ private:
      */
     nsCString *                mKey;
     PRUint32                   mInfo;
-    nsICacheListener *         mListener;  // strong ref
-    nsCOMPtr<nsIThread>        mThread;
+    nsCOMPtr<nsICacheListener> mListener;
+    PRThread *                 mThread;
     PRLock *                   mLock;
     PRCondVar *                mCondVar;
 };

@@ -55,15 +55,12 @@ class nsIScriptGlobalObject;
 class nsIScriptGlobalObjectOwner : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISCRIPTGLOBALOBJECTOWNER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTGLOBALOBJECTOWNER_IID)
 
   /**
    * Returns the script global object
    */
   virtual nsIScriptGlobalObject* GetScriptGlobalObject() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIScriptGlobalObjectOwner,
-                              NS_ISCRIPTGLOBALOBJECTOWNER_IID)
 
 #endif /* nsIScriptGlobalObjectOwner_h__ */

@@ -35,11 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * compact representation of the property-value pairs within a CSS
- * declaration, and the code for expanding and compacting it
- */
-
 #include "nsCSSDataBlock.h"
 #include "nsCSSProps.h"
 #include "nsRuleData.h"
@@ -48,7 +43,7 @@
  * nsCSSCompressedDataBlock holds property-value pairs corresponding to
  * CSS declaration blocks.  The value is stored in one of the six CSS
  * data types.  These six types are nsCSSValue, nsCSSRect,
- * nsCSSValueList, nsCSSCounterData, nsCSSQuotes, and nsCSSValuePair, and
+ * nsCSSValueList, nsCSSCounterData, nsCSSQuotes, and nsCSSShadow, and
  * each correspond to a value of the nsCSSType enumeration.
  *
  * The storage strategy uses the CDB*Storage structs below to help
@@ -170,6 +165,16 @@ inline nsCSSQuotes* QuotesAtCursor(const char *aCursor) {
                 NS_REINTERPRET_CAST(const CDBPointerStorage*, aCursor)->value);
 }
 
+inline nsCSSShadow*& ShadowAtCursor(char *aCursor) {
+    return * NS_REINTERPRET_CAST(nsCSSShadow**,
+                    & NS_REINTERPRET_CAST(CDBPointerStorage*, aCursor)->value);
+}
+
+inline nsCSSShadow* ShadowAtCursor(const char *aCursor) {
+    return NS_STATIC_CAST(nsCSSShadow*,
+                NS_REINTERPRET_CAST(const CDBPointerStorage*, aCursor)->value);
+}
+
 nsresult
 nsCSSCompressedDataBlock::MapRuleInfoInto(nsRuleData *aRuleData) const
 {
@@ -198,7 +203,7 @@ nsCSSCompressedDataBlock::MapRuleInfoInto(nsRuleData *aRuleData) const
                         if ((iProp == eCSSProperty_background_image ||
                              iProp == eCSSProperty_list_style_image) &&
                             val->GetUnit() == eCSSUnit_URL) {
-                            val->StartImageLoad(aRuleData->mPresContext->Document(),
+                            val->StartImageLoad(aRuleData->mPresContext->GetDocument(),
                                                 iProp == eCSSProperty_background_image);
                         }
                         *target = *val;
@@ -243,23 +248,19 @@ nsCSSCompressedDataBlock::MapRuleInfoInto(nsRuleData *aRuleData) const
                              l; l = l->mNext)
                             if (l->mValue.GetUnit() == eCSSUnit_URL)
                                 l->mValue.StartImageLoad(
-                                    aRuleData->mPresContext->Document());
+                                    aRuleData->mPresContext->GetDocument());
                     } else if (iProp == eCSSProperty_cursor) {
                         for (nsCSSValueList* l = ValueListAtCursor(cursor);
                              l; l = l->mNext)
-                            if (l->mValue.GetUnit() == eCSSUnit_Array) {
-                                // Don't try to restart loads we've already
-                                // started
-                                nsCSSValue& val =
-                                    l->mValue.GetArrayValue()->Item(0);
-                                if (val.GetUnit() == eCSSUnit_URL)
-                                    val.StartImageLoad(
-                                      aRuleData->mPresContext->Document());
-                            }
+                            if (l->mValue.GetUnit() == eCSSUnit_Array)
+                                l->mValue.GetArrayValue()->Item(0).
+                                    StartImageLoad(
+                                    aRuleData->mPresContext->GetDocument());
                     }
                 // fall through
                 case eCSSType_CounterData:
-                case eCSSType_Quotes: {
+                case eCSSType_Quotes:
+                case eCSSType_Shadow: {
                     void** target = NS_STATIC_CAST(void**, prop);
                     if (!*target) {
                         void* val = PointerAtCursor(cursor);
@@ -285,7 +286,8 @@ nsCSSCompressedDataBlock::MapRuleInfoInto(nsRuleData *aRuleData) const
 
                 case eCSSType_ValueList:
                 case eCSSType_CounterData:
-                case eCSSType_Quotes: {
+                case eCSSType_Quotes:
+                case eCSSType_Shadow: {
                     cursor += CDBPointerStorage_advance;
                 } break;
             }
@@ -326,7 +328,8 @@ nsCSSCompressedDataBlock::StorageFor(nsCSSProperty aProperty) const
                 }
                 case eCSSType_ValueList:
                 case eCSSType_CounterData:
-                case eCSSType_Quotes: {
+                case eCSSType_Quotes:
+                case eCSSType_Shadow: {
                     return &PointerAtCursor(NS_CONST_CAST(char*, cursor));
                 }
             }
@@ -346,7 +349,8 @@ nsCSSCompressedDataBlock::StorageFor(nsCSSProperty aProperty) const
 
             case eCSSType_ValueList:
             case eCSSType_CounterData:
-            case eCSSType_Quotes: {
+            case eCSSType_Quotes:
+            case eCSSType_Shadow: {
                 cursor += CDBPointerStorage_advance;
             } break;
         }
@@ -405,7 +409,8 @@ nsCSSCompressedDataBlock::Clone() const
 
             case eCSSType_ValueList:
             case eCSSType_CounterData:
-            case eCSSType_Quotes: {
+            case eCSSType_Quotes:
+            case eCSSType_Shadow: {
                 void *copy;
                 NS_ASSERTION(PointerAtCursor(cursor), "oops");
                 switch (nsCSSProps::kTypeTable[iProp]) {
@@ -422,6 +427,9 @@ nsCSSCompressedDataBlock::Clone() const
                         break;
                     case eCSSType_Quotes:
                         copy = new nsCSSQuotes(*QuotesAtCursor(cursor));
+                        break;
+                    case eCSSType_Shadow:
+                        copy = new nsCSSShadow(*ShadowAtCursor(cursor));
                         break;
                 }
                 if (!copy) {
@@ -492,6 +500,13 @@ nsCSSCompressedDataBlock::Destroy()
 
             case eCSSType_Quotes: {
                 nsCSSQuotes* val = QuotesAtCursor(cursor);
+                NS_ASSERTION(val, "oops");
+                delete val;
+                cursor += CDBPointerStorage_advance;
+            } break;
+
+            case eCSSType_Shadow: {
+                nsCSSShadow* val = ShadowAtCursor(cursor);
                 NS_ASSERTION(val, "oops");
                 delete val;
                 cursor += CDBPointerStorage_advance;
@@ -590,7 +605,8 @@ nsCSSExpandedDataBlock::DoExpand(nsCSSCompressedDataBlock *aBlock,
 
             case eCSSType_ValueList:
             case eCSSType_CounterData:
-            case eCSSType_Quotes: {
+            case eCSSType_Quotes:
+            case eCSSType_Shadow: {
                 void* val = PointerAtCursor(cursor);
                 NS_ASSERTION(val, "oops");
                 *NS_STATIC_CAST(void**, prop) = val;
@@ -665,7 +681,8 @@ nsCSSExpandedDataBlock::ComputeSize()
 
                 case eCSSType_ValueList:
                 case eCSSType_CounterData:
-                case eCSSType_Quotes: {
+                case eCSSType_Quotes:
+                case eCSSType_Shadow: {
 #ifdef DEBUG
                     void* val = *NS_STATIC_CAST(void**, prop);
                     NS_ASSERTION(val, "Null pointer while computing size");
@@ -773,7 +790,8 @@ nsCSSExpandedDataBlock::Compress(nsCSSCompressedDataBlock **aNormalBlock,
 
                 case eCSSType_ValueList:
                 case eCSSType_CounterData:
-                case eCSSType_Quotes: {
+                case eCSSType_Quotes:
+                case eCSSType_Shadow: {
                     void*& val = *NS_STATIC_CAST(void**, prop);
                     NS_ASSERTION(val, "Null pointer while compressing");
                     CDBPointerStorage *storage =
@@ -873,6 +891,14 @@ nsCSSExpandedDataBlock::ClearProperty(nsCSSProperty aPropID)
                 val = nsnull;
             }
         } break;
+
+        case eCSSType_Shadow: {
+            nsCSSShadow*& val = *NS_STATIC_CAST(nsCSSShadow**, prop);
+            if (val) {
+                delete val;
+                val = nsnull;
+            }
+        } break;
     }
 }
 
@@ -930,6 +956,11 @@ nsCSSExpandedDataBlock::DoAssertInitialState()
 
             case eCSSType_Quotes: {
                 nsCSSQuotes* val = *NS_STATIC_CAST(nsCSSQuotes**, prop);
+                NS_ASSERTION(val == nsnull, "not initial state");
+            } break;
+
+            case eCSSType_Shadow: {
+                nsCSSShadow* val = *NS_STATIC_CAST(nsCSSShadow**, prop);
                 NS_ASSERTION(val == nsnull, "not initial state");
             } break;
         }

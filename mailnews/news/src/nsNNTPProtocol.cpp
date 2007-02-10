@@ -137,6 +137,8 @@
 // and "pushed" authentication (if necessary),
 //#define HAVE_NNTP_EXTENSIONS
 
+static NS_DEFINE_CID(kStreamListenerTeeCID, NS_STREAMLISTENERTEE_CID);
+
 typedef struct _cancelInfoEntry {
     char *from;
     char *old_from;
@@ -314,47 +316,47 @@ NS_IMPL_RELEASE_INHERITED(nsNNTPProtocol, nsMsgProtocol)
 
 NS_INTERFACE_MAP_BEGIN(nsNNTPProtocol)
   NS_INTERFACE_MAP_ENTRY(nsINNTPProtocol)
-  NS_INTERFACE_MAP_ENTRY(nsITimerCallback)
+	NS_INTERFACE_MAP_ENTRY(nsITimerCallback)
   NS_INTERFACE_MAP_ENTRY(nsICacheListener)
 NS_INTERFACE_MAP_END_INHERITING(nsMsgProtocol)
 
 nsNNTPProtocol::nsNNTPProtocol(nsIURI * aURL, nsIMsgWindow *aMsgWindow)
-: nsMsgProtocol(aURL)
+    : nsMsgProtocol(aURL)
 {
-  if (!NNTP)
-    NNTP = PR_NewLogModule("NNTP");
-  
-  m_ProxyServer = nsnull;
-  m_lineStreamBuffer = nsnull;
-  m_responseText = nsnull;
-  m_dataBuf = nsnull;
-  m_path = nsnull;
-  
-  m_cancelFromHdr = nsnull;
-  m_cancelNewsgroups = nsnull;
-  m_cancelDistribution = nsnull;
-  m_cancelID = nsnull;
-  
-  m_messageID = nsnull;
-  m_key = nsMsgKey_None;
-  
-  m_commandSpecificData = nsnull;
-  m_searchData = nsnull;
-  
-  mBytesReceived = 0;
-  mBytesReceivedSinceLastStatusUpdate = 0;
-  m_startTime = PR_Now();
-  
-  if (aMsgWindow) {
-    m_msgWindow = aMsgWindow;
-  }
-  
-  m_runningURL = nsnull;
+	if (!NNTP)
+		NNTP = PR_NewLogModule("NNTP");
+
+    m_ProxyServer = nsnull;
+    m_lineStreamBuffer = nsnull;
+    m_responseText = nsnull;
+    m_dataBuf = nsnull;
+    m_path = nsnull;
+    
+	m_cancelFromHdr = nsnull;
+	m_cancelNewsgroups = nsnull;
+	m_cancelDistribution = nsnull;
+	m_cancelID = nsnull;
+
+	m_messageID = nsnull;
+    m_key = nsMsgKey_None;
+
+    m_commandSpecificData = nsnull;
+    m_searchData = nsnull;
+
+	mBytesReceived = 0;
+    mBytesReceivedSinceLastStatusUpdate = 0;
+    m_startTime = PR_Now();
+
+    if (aMsgWindow) {
+        m_msgWindow = aMsgWindow;
+    }
+
+	m_runningURL = nsnull;
   SetIsBusy(PR_FALSE);
   m_fromCache = PR_FALSE;
-  PR_LOG(NNTP,PR_LOG_ALWAYS,("(%p) creating",this));
-  PR_LOG(NNTP,PR_LOG_ALWAYS,("(%p) initializing, so unset m_currentGroup",this));
-  m_currentGroup.Truncate();
+    PR_LOG(NNTP,PR_LOG_ALWAYS,("(%p) creating",this));
+    PR_LOG(NNTP,PR_LOG_ALWAYS,("(%p) initializing, so unset m_currentGroup",this));
+	m_currentGroup.Truncate();
   LL_I2L(m_lastActiveTimeStamp, 0);
 }
 
@@ -390,79 +392,79 @@ void nsNNTPProtocol::Cleanup()  //free char* member variables
 
 NS_IMETHODIMP nsNNTPProtocol::Initialize(nsIURI * aURL, nsIMsgWindow *aMsgWindow)
 {
-  nsresult rv = NS_OK;
-  PRBool isSecure = PR_FALSE;
-  
-  if (aMsgWindow) {
-    m_msgWindow = aMsgWindow;
-  }
-  nsMsgProtocol::InitFromURI(aURL);
-  
-  nsCAutoString userPass;
-  rv = m_url->GetUserPass(userPass);
-  NS_ENSURE_SUCCESS(rv,rv);
-  
-  nsCAutoString hostName;
-  rv = m_url->GetAsciiHost(hostName);
-  NS_ENSURE_SUCCESS(rv,rv);
-  
-  nsCOMPtr <nsIMsgAccountManager> accountManager = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv,rv);
-  
-  char *unescapedUserPass = ToNewCString(userPass);
-  if (!unescapedUserPass)
-    return NS_ERROR_OUT_OF_MEMORY;
-  nsUnescape(unescapedUserPass);
-  
-  // find the server
-  nsCOMPtr<nsIMsgIncomingServer> server;
-  rv = accountManager->FindServer(unescapedUserPass, hostName.get(), "nntp",
-    getter_AddRefs(server));
-  PR_FREEIF(unescapedUserPass);
-  NS_ENSURE_SUCCESS(rv, NS_MSG_INVALID_OR_MISSING_SERVER);
-  if (!server) return NS_MSG_INVALID_OR_MISSING_SERVER;
-  
-  m_nntpServer = do_QueryInterface(server, &rv);
-  NS_ENSURE_SUCCESS(rv, NS_MSG_INVALID_OR_MISSING_SERVER);
-  if (!m_nntpServer) return NS_MSG_INVALID_OR_MISSING_SERVER;
-  
-  rv = m_nntpServer->GetMaxArticles(&m_maxArticles);
-  NS_ENSURE_SUCCESS(rv,rv);
-  
-  rv = server->GetIsSecure(&isSecure);
-  NS_ENSURE_SUCCESS(rv,rv);
-  
-  PRInt32 port = 0;
-  rv = m_url->GetPort(&port);
-  if (NS_FAILED(rv) || (port<=0)) {
-    rv = server->GetPort(&port);
-    if (NS_FAILED(rv)) return rv;
-    
-    if (port<=0) {
-      if (isSecure) {
-        port = SECURE_NEWS_PORT;
-      }
-      else {
-        port = NEWS_PORT;
-      }
+    nsresult rv = NS_OK;
+    PRBool isSecure = PR_FALSE;
+
+    if (aMsgWindow) {
+        m_msgWindow = aMsgWindow;
     }
+    nsMsgProtocol::InitFromURI(aURL);
+
+    nsCAutoString userPass;
+    rv = m_url->GetUserPass(userPass);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCAutoString hostName;
+    rv = m_url->GetAsciiHost(hostName);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr <nsIMsgAccountManager> accountManager = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    char *unescapedUserPass = ToNewCString(userPass);
+    if (!unescapedUserPass)
+      return NS_ERROR_OUT_OF_MEMORY;
+    nsUnescape(unescapedUserPass);
+
+    // find the server
+    nsCOMPtr<nsIMsgIncomingServer> server;
+    rv = accountManager->FindServer(unescapedUserPass, hostName.get(), "nntp",
+                                    getter_AddRefs(server));
+    PR_FREEIF(unescapedUserPass);
+    NS_ENSURE_SUCCESS(rv, NS_MSG_INVALID_OR_MISSING_SERVER);
+    if (!server) return NS_MSG_INVALID_OR_MISSING_SERVER;
     
-    rv = m_url->SetPort(port);
-    if (NS_FAILED(rv)) return rv;
-  }
-  
-  NS_PRECONDITION(m_url , "invalid URL passed into NNTP Protocol");
-  
-  m_runningURL = do_QueryInterface(m_url);
+    m_nntpServer = do_QueryInterface(server, &rv);
+    NS_ENSURE_SUCCESS(rv, NS_MSG_INVALID_OR_MISSING_SERVER);
+    if (!m_nntpServer) return NS_MSG_INVALID_OR_MISSING_SERVER;
+
+    rv = m_nntpServer->GetMaxArticles(&m_maxArticles);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    rv = server->GetIsSecure(&isSecure);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    PRInt32 port = 0;
+    rv = m_url->GetPort(&port);
+    if (NS_FAILED(rv) || (port<=0)) {
+		rv = server->GetPort(&port);
+        if (NS_FAILED(rv)) return rv;
+
+		if (port<=0) {
+			if (isSecure) {
+            	port = SECURE_NEWS_PORT;
+        	}
+        	else {
+            	port = NEWS_PORT;
+        	}
+		}
+
+        rv = m_url->SetPort(port);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+	NS_PRECONDITION(m_url , "invalid URL passed into NNTP Protocol");
+
+	m_runningURL = do_QueryInterface(m_url);
   SetIsBusy(PR_TRUE);
-  
-  if (NS_SUCCEEDED(rv) && m_runningURL)
-  {
-    nsCOMPtr<nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(m_runningURL);
+
+	if (NS_SUCCEEDED(rv) && m_runningURL)
+	{
+  	nsCOMPtr<nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(m_runningURL);
     if (mailnewsUrl)
     {
       mailnewsUrl->SetMsgWindow(aMsgWindow);
-      
+
       m_runningURL->GetNewsAction(&m_newsAction);
       if (m_newsAction == nsINntpUrl::ActionFetchArticle || m_newsAction == nsINntpUrl::ActionFetchPart
         || m_newsAction == nsINntpUrl::ActionSaveMessageToDisk) {
@@ -470,17 +472,17 @@ NS_IMETHODIMP nsNNTPProtocol::Initialize(nsIURI * aURL, nsIMsgWindow *aMsgWindow
         mailnewsUrl->GetMsgIsInLocalCache(&msgIsInLocalCache);
         if (msgIsInLocalCache)
           return NS_OK; // probably don't need to do anything else - definitely don't want
-        // to open the socket.
+                        // to open the socket.
       }
     }
-  }
+	}
   else {
     return rv;
   }
-  
+	
   if (!m_socketIsOpen)
   {
-    
+
     // When we are making a secure connection, we need to make sure that we
     // pass an interface requestor down to the socket transport so that PSM can
     // retrieve a nsIPrompt instance if needed.
@@ -490,64 +492,65 @@ NS_IMETHODIMP nsNNTPProtocol::Initialize(nsIURI * aURL, nsIMsgWindow *aMsgWindow
       aMsgWindow->GetRootDocShell(getter_AddRefs(docShell));
       ir = do_QueryInterface(docShell);
     }
-    
+
     PR_LOG(NNTP,PR_LOG_ALWAYS,("(%p) opening connection to %s on port %d",this, hostName.get(), port));
     // call base class to set up the transport
-    
+
     PRInt32 port = 0;
     nsXPIDLCString hostName;
     m_url->GetPort(&port);
     nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(m_nntpServer);
     if (server)
       server->GetRealHostName(getter_Copies(hostName));
-    
+
     nsCOMPtr<nsIProxyInfo> proxyInfo;
     rv = NS_ExamineForProxy("nntp", hostName.get(), port, getter_AddRefs(proxyInfo));
     if (NS_FAILED(rv)) proxyInfo = nsnull;
-    
+
     rv = OpenNetworkSocketWithInfo(hostName.get(), port, isSecure ? "ssl" : nsnull, proxyInfo, ir);
-    
-    NS_ENSURE_SUCCESS(rv,rv);
-    m_nextState = NNTP_LOGIN_RESPONSE;
+
+	NS_ENSURE_SUCCESS(rv,rv);
+	m_nextState = NNTP_LOGIN_RESPONSE;
   }
   else {
     m_nextState = SEND_FIRST_NNTP_COMMAND;
   }
-  m_dataBuf = (char *) PR_Malloc(sizeof(char) * OUTPUT_BUFFER_SIZE);
-  m_dataBufSize = OUTPUT_BUFFER_SIZE;
-  
+	m_dataBuf = (char *) PR_Malloc(sizeof(char) * OUTPUT_BUFFER_SIZE);
+	m_dataBufSize = OUTPUT_BUFFER_SIZE;
+
   if (!m_lineStreamBuffer)
-    m_lineStreamBuffer = new nsMsgLineStreamBuffer(OUTPUT_BUFFER_SIZE, PR_TRUE /* create new lines */);
-  
-  m_typeWanted = 0;
-  m_responseCode = 0;
-  m_previousResponseCode = 0;
-  m_responseText = nsnull;
-  
-  m_path = nsnull;
-  
-  m_firstArticle = 0;
-  m_lastArticle = 0;
-  m_firstPossibleArticle = 0;
-  m_lastPossibleArticle = 0;
-  m_numArticlesLoaded = 0;
-  m_numArticlesWanted = 0;
-  
-  m_newsRCListIndex = 0;
-  m_RCIndexToResumeAfterAuthRequest  = 0;
-  m_newsRCListCount = 0;
-  
-  PR_FREEIF(m_messageID);
-  
-  m_key = nsMsgKey_None;
-  
-  m_articleNumber = 0;
-  m_originalContentLength = 0;
-  m_cancelID = nsnull;
-  m_cancelFromHdr = nsnull;
-  m_cancelNewsgroups = nsnull;
-  m_cancelDistribution = nsnull;
-  return NS_OK;
+	  m_lineStreamBuffer = new nsMsgLineStreamBuffer(OUTPUT_BUFFER_SIZE, PR_TRUE /* create new lines */);
+
+	m_typeWanted = 0;
+	m_responseCode = 0;
+	m_previousResponseCode = 0;
+	m_responseText = nsnull;
+
+	m_path = nsnull;
+
+	m_firstArticle = 0;
+	m_lastArticle = 0;
+	m_firstPossibleArticle = 0;
+	m_lastPossibleArticle = 0;
+	m_numArticlesLoaded = 0;
+	m_numArticlesWanted = 0;
+
+	m_newsRCListIndex = 0;
+    m_RCIndexToResumeAfterAuthRequest  = 0;
+	m_newsRCListCount = 0;
+	
+	PR_FREEIF(m_messageID);
+	m_messageID = nsnull;
+
+    m_key = nsMsgKey_None;
+
+	m_articleNumber = 0;
+	m_originalContentLength = 0;
+	m_cancelID = nsnull;
+	m_cancelFromHdr = nsnull;
+	m_cancelNewsgroups = nsnull;
+	m_cancelDistribution = nsnull;
+	return NS_OK;
 }
 
 NS_IMETHODIMP nsNNTPProtocol::GetIsBusy(PRBool *aIsBusy)
@@ -795,14 +798,6 @@ nsresult nsNNTPProtocol::ReadFromMemCache(nsICacheEntryDescriptor *entry)
 
 nsresult nsNNTPProtocol::ReadFromNewsConnection()
 {
-  // we might end up here if we thought we had a news message offline
-  // but it turned out not to be so. In which case, we need to
-  // recall Initialize().
-  if (!m_socketIsOpen || !m_dataBuf)
-  {
-    nsresult rv = Initialize(m_url, m_msgWindow);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
   return nsMsgProtocol::AsyncOpen(m_channelListener, m_channelContext);
 }
 
@@ -863,8 +858,6 @@ PRBool nsNNTPProtocol::ReadFromLocalCache()
           return PR_TRUE;
         }
       }
-      else
-        mailnewsUrl->SetMsgIsInLocalCache(PR_FALSE);
     }
   }
 
@@ -887,7 +880,7 @@ nsNNTPProtocol::OnCacheEntryAvailable(nsICacheEntryDescriptor *entry, nsCacheAcc
     {
       // use a stream listener Tee to force data into the cache and to our current channel listener...
       nsCOMPtr<nsIStreamListener> newListener;
-      nsCOMPtr<nsIStreamListenerTee> tee = do_CreateInstance(NS_STREAMLISTENERTEE_CONTRACTID, &rv);
+      nsCOMPtr<nsIStreamListenerTee> tee = do_CreateInstance(kStreamListenerTeeCID, &rv);
       NS_ENSURE_SUCCESS(rv, rv);
 
       nsCOMPtr<nsIOutputStream> out;
@@ -1252,8 +1245,8 @@ NS_IMETHODIMP nsNNTPProtocol::OnStopRequest(nsIRequest *request, nsISupports * a
 
 NS_IMETHODIMP nsNNTPProtocol::Cancel(nsresult status)  // handle stop button
 {
-    m_nextState = NNTP_ERROR;
-    return nsMsgProtocol::Cancel(NS_BINDING_ABORTED);
+	m_nextState = NNTP_ERROR;
+	return nsMsgProtocol::Cancel(NS_BINDING_ABORTED);
 }
 
 /* 
@@ -1511,66 +1504,66 @@ PRInt32 nsNNTPProtocol::SendData(nsIURI * aURL, const char * dataBuffer, PRBool 
  */
 PRInt32 nsNNTPProtocol::NewsResponse(nsIInputStream * inputStream, PRUint32 length)
 {
-  PRUint32 status = 0;
+	PRUint32 status = 0;
 
-  NS_PRECONDITION(nsnull != inputStream, "invalid input stream");
+	NS_PRECONDITION(nsnull != inputStream, "invalid input stream");
+	
+	PRBool pauseForMoreData = PR_FALSE;
+	char *line = m_lineStreamBuffer->ReadNextLine(inputStream, status, pauseForMoreData);
 
-  PRBool pauseForMoreData = PR_FALSE;
-  char *line = m_lineStreamBuffer->ReadNextLine(inputStream, status, pauseForMoreData);
+	NNTP_LOG_READ(line);
 
-  NNTP_LOG_READ(line);
+    if(pauseForMoreData)
+	{
+		SetFlag(NNTP_PAUSE_FOR_READ);
+		return 0;
+	}
 
-  if(pauseForMoreData)
-  {
-    SetFlag(NNTP_PAUSE_FOR_READ);
-    return 0;
-  }
+	if(!line)
+		return NS_ERROR_FAILURE;
 
-  if(!line)
-    return NS_ERROR_FAILURE;
+    ClearFlag(NNTP_PAUSE_FOR_READ);  /* don't pause if we got a line */
 
-  ClearFlag(NNTP_PAUSE_FOR_READ);  /* don't pause if we got a line */
+    /* almost correct */
+    if(status > 1)
+	{
+		mBytesReceived += status;
+        mBytesReceivedSinceLastStatusUpdate += status;
+	}
 
-  /* almost correct */
-  if(status > 1)
-  {
-    mBytesReceived += status;
-    mBytesReceivedSinceLastStatusUpdate += status;
-  }
+    m_previousResponseCode = m_responseCode;
 
-  m_previousResponseCode = m_responseCode;
+    PR_sscanf(line, "%d", &m_responseCode);
 
-  PR_sscanf(line, "%d", &m_responseCode);
+    if (m_responseCode && PL_strlen(line) > 3)
+        NS_MsgSACopy(&m_responseText, line + 4);
+    else
+        NS_MsgSACopy(&m_responseText, line);
 
-  if (m_responseCode && PL_strlen(line) > 3)
-    NS_MsgSACopy(&m_responseText, line + 4);
-  else
-    NS_MsgSACopy(&m_responseText, line);
-
-  /* login failed */
+		/* login failed */
   if (m_responseCode == MK_NNTP_RESPONSE_AUTHINFO_DENIED)
     HandleAuthenticationFailure();
 
 
-  /* authentication required can come at any time
-  */
-  if (MK_NNTP_RESPONSE_AUTHINFO_REQUIRE == m_responseCode ||
-    MK_NNTP_RESPONSE_AUTHINFO_SIMPLE_REQUIRE == m_responseCode) 
-  {
-    m_nextState = NNTP_BEGIN_AUTHORIZE;
-    GotAuthorizationRequest();
-  }
-  else if (MK_NNTP_RESPONSE_PERMISSION_DENIED == m_responseCode)
-  {
-    PR_FREEIF(line);
-    return (0);
-  }
-  else {
-    m_nextState = m_nextStateAfterResponse;
-  }
+	/* authentication required can come at any time
+	 */
+	if (MK_NNTP_RESPONSE_AUTHINFO_REQUIRE == m_responseCode ||
+        MK_NNTP_RESPONSE_AUTHINFO_SIMPLE_REQUIRE == m_responseCode) 
+	{
+		m_nextState = NNTP_BEGIN_AUTHORIZE;
+        GotAuthorizationRequest();
+	}
+	else if (MK_NNTP_RESPONSE_PERMISSION_DENIED == m_responseCode)
+	{
+		PR_FREEIF(line);
+		return (0);
+	}
+	else {
+    	m_nextState = m_nextStateAfterResponse;
+    }
 
-  PR_FREEIF(line);
-  return(0);  /* everything ok */
+	PR_FREEIF(line);
+    return(0);  /* everything ok */
 }
 
 /* interpret the server response after the connect
@@ -1580,19 +1573,19 @@ PRInt32 nsNNTPProtocol::NewsResponse(nsIInputStream * inputStream, PRUint32 leng
  
 PRInt32 nsNNTPProtocol::LoginResponse()
 {
-  PRBool postingAllowed = m_responseCode == MK_NNTP_RESPONSE_POSTING_ALLOWED;
+	PRBool postingAllowed = m_responseCode == MK_NNTP_RESPONSE_POSTING_ALLOWED;
 
-  if(MK_NNTP_RESPONSE_TYPE(m_responseCode)!=MK_NNTP_RESPONSE_TYPE_OK)
-  {
-    AlertError(MK_NNTP_ERROR_MESSAGE, m_responseText);
+    if(MK_NNTP_RESPONSE_TYPE(m_responseCode)!=MK_NNTP_RESPONSE_TYPE_OK)
+	{
+		AlertError(MK_NNTP_ERROR_MESSAGE, m_responseText);
 
-    m_nextState = NNTP_ERROR;
-    return MK_BAD_NNTP_CONNECTION;
-  }
+    	m_nextState = NNTP_ERROR;
+        return MK_BAD_NNTP_CONNECTION;
+	}
 
-  m_nntpServer->SetPostingAllowed(postingAllowed);
-  m_nextState = NNTP_SEND_MODE_READER;
-  return(0);  /* good */
+	m_nntpServer->SetPostingAllowed(postingAllowed);
+    m_nextState = NNTP_SEND_MODE_READER;
+    return(0);  /* good */
 }
 
 PRInt32 nsNNTPProtocol::SendModeReader()
@@ -2510,15 +2503,7 @@ PRInt32 nsNNTPProtocol::ReadArticle(nsIInputStream * inputStream, PRUint32 lengt
   
   char *line = m_lineStreamBuffer->ReadNextLine(inputStream, status, pauseForMoreData, nsnull, PR_TRUE);
   if (m_newsFolder && line)
-  {
-    const char *unescapedLine = line;
-    // lines beginning with '.' are escaped by nntp server
-    // or is it just '.' on a line by itself?
-    if (line[0] == '.' && line[1] == '.')
-      unescapedLine++;
-    m_newsFolder->NotifyDownloadedLine(unescapedLine, m_key);
-    
-  }
+    m_newsFolder->NotifyDownloadedLine(line, m_key);
   
   if(pauseForMoreData)
   {

@@ -36,8 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* implementation of quotes for the CSS 'content' property */
-
 #include "nsQuoteList.h"
 #include "nsReadableUtils.h"
 
@@ -130,7 +128,7 @@ nsQuoteList::PrintChain()
     if (node->mText) {
       nsAutoString data;
       node->mText->GetData(data);
-      printf(" \"%s\",", NS_ConvertUTF16toUTF8(data).get());
+      printf(" \"%s\",", NS_ConvertUCS2toUTF8(data).get());
     }
     printf("\n");
     node = Next(node);

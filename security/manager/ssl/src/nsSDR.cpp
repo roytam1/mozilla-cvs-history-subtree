@@ -44,7 +44,7 @@
 #include "nsMemory.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
-#include "nsThreadUtils.h"
+#include "nsISupports.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIServiceManager.h"
@@ -95,16 +95,17 @@ nsSDRContext::~nsSDRContext()
 NS_IMETHODIMP nsSDRContext::GetInterface(const nsIID & uuid, void * *result)
 {
   if (uuid.Equals(NS_GET_IID(nsIPrompt))) {
+    nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
+    if (!proxyman) return NS_ERROR_FAILURE;
+
     nsCOMPtr<nsIPrompt> prompter;
     nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
     if (wwatch) {
       wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
       if (prompter) {
         nsCOMPtr<nsIPrompt> proxyPrompt;
-        NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
-                             NS_GET_IID(nsIPrompt),
-                             prompter, NS_PROXY_SYNC,
-                             getter_AddRefs(proxyPrompt));
+        proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIPrompt),
+                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
         if (!proxyPrompt) return NS_ERROR_FAILURE;
         *result = proxyPrompt;
         NS_ADDREF((nsIPrompt*)*result);
@@ -274,6 +275,7 @@ DecryptString(const char *crypt, char **_retval)
     r = 0;
 
 loser:
+    if (r) nsMemory::Free(r);
     if (decrypted) nsMemory::Free(decrypted);
     if (decoded) nsMemory::Free(decoded);
  
@@ -292,7 +294,7 @@ ChangePassword()
   if (!slot) return NS_ERROR_NOT_AVAILABLE;
 
   /* Convert UTF8 token name to UCS2 */
-  NS_ConvertUTF8toUTF16 tokenName(PK11_GetTokenName(slot));
+  NS_ConvertUTF8toUCS2 tokenName(PK11_GetTokenName(slot));
 
   PK11_FreeSlot(slot);
 

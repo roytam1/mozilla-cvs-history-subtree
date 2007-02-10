@@ -71,6 +71,10 @@
 
 using namespace nsWindowUtils;
 
+// CIDs
+static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
+
+
 /*----------------------------------------------------------------------------
 	GetXULWindowFromWindowPtr 
 	
@@ -87,7 +91,7 @@ static void GetXULWindowFromWindowPtr(WindowPtr inWindowPtr, nsIXULWindow **outX
 	if (!inWindowPtr)
 		ThrowOSErr(paramErr);
 	
-	nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(NS_WINDOWMEDIATOR_CONTRACTID));
+	nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(kWindowMediatorCID));
 	ThrowErrIfNil(windowMediator, paramErr);
 
 	nsCOMPtr<nsISimpleEnumerator> windowEnumerator;
@@ -212,7 +216,7 @@ static TWindowKind GetXULWindowKind(nsIXULWindow *inXULWindow)
 ----------------------------------------------------------------------------*/
 long nsWindowUtils::CountWindowsOfKind(TWindowKind windowKind)
 {
-	nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(NS_WINDOWMEDIATOR_CONTRACTID));
+	nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(kWindowMediatorCID));
 	ThrowErrIfNil(windowMediator, paramErr);
 
 	nsCOMPtr<nsISimpleEnumerator> windowEnumerator;
@@ -249,7 +253,7 @@ long nsWindowUtils::CountWindowsOfKind(TWindowKind windowKind)
 WindowPtr nsWindowUtils::GetNamedOrFrontmostWindow(TWindowKind windowKind, const char* windowName)
 {
 	// Search for window with the desired kind and name.
-	nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(NS_WINDOWMEDIATOR_CONTRACTID));
+	nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(kWindowMediatorCID));
 	ThrowErrIfNil(windowMediator, paramErr);
 	
 	nsCOMPtr<nsISimpleEnumerator> windowEnumerator;
@@ -313,7 +317,7 @@ WindowPtr nsWindowUtils::GetNamedOrFrontmostWindow(TWindowKind windowKind, const
 
 WindowPtr nsWindowUtils::GetIndexedWindowOfKind(TWindowKind windowKind, TAEListIndex index)
 {
-	nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(NS_WINDOWMEDIATOR_CONTRACTID));
+	nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(kWindowMediatorCID));
 	ThrowErrIfNil(windowMediator, paramErr);
 	
 	nsCOMPtr<nsISimpleEnumerator> windowEnumerator;
@@ -360,7 +364,7 @@ WindowPtr nsWindowUtils::GetIndexedWindowOfKind(TWindowKind windowKind, TAEListI
 
 TAEListIndex nsWindowUtils::GetWindowIndex(TWindowKind windowKind, WindowPtr theWindow)
 {
-	nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(NS_WINDOWMEDIATOR_CONTRACTID));
+	nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(kWindowMediatorCID));
 	ThrowErrIfNil(windowMediator, paramErr);
 
 	nsCOMPtr<nsISimpleEnumerator> windowEnumerator;

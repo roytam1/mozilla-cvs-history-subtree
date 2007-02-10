@@ -341,9 +341,6 @@ public:
   /** returns PR_TRUE if aParentTag can contain a child of type aChildTag */
   virtual PRBool TagCanContainTag(const nsAString& aParentTag, const nsAString& aChildTag);
   
-  /** returns PR_TRUE if aNode is a container */
-  virtual PRBool IsContainer(nsIDOMNode *aNode);
-
   /** make the given selection span the entire document */
   NS_IMETHOD SelectEntireDocument(nsISelection *aSelection);
 
@@ -366,8 +363,7 @@ public:
                            PRUint32             aLength);
 
   /* ------------ nsICSSLoaderObserver -------------- */
-  NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet*aSheet, PRBool aWasAlternate,
-                              nsresult aStatus);
+  NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet*aSheet, PRBool aNotify);
 
   /* ------------ Utility Routines, not part of public API -------------- */
   NS_IMETHOD TypedText(const nsAString& aString, PRInt32 aAction);
@@ -623,10 +619,8 @@ protected:
                                         const nsAString & aContextStr,
                                         const nsAString & aInfoStr,
                                         nsCOMPtr<nsIDOMNode> *outFragNode,
-                                        nsCOMPtr<nsIDOMNode> *outStartNode,
-                                        nsCOMPtr<nsIDOMNode> *outEndNode,
-                                        PRInt32 *outStartOffset,
-                                        PRInt32 *outEndOffset);
+                                        PRInt32 *outRangeStartHint,
+                                        PRInt32 *outRangeEndHint);
   nsresult   ParseFragment(const nsAString & aStr, nsVoidArray &aTagStack,
                            nsIDocument* aTargetDoc,
                            nsCOMPtr<nsIDOMNode> *outNode);

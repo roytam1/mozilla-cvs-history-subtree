@@ -333,7 +333,6 @@ nsHTTPConn::Request(int aResumePos)
         DUMP(("Unencoded string: %s\n", usrPsd));
         rv = Base64Encode((const unsigned char *)usrPsd, strlen(usrPsd),
                           usrPsdEncoded, 128);
-        free(usrPsd);
         DUMP(("Encoded string: %s\n", usrPsdEncoded));
         DUMP(("Base64Encode returned: %d\n", rv));
         if (rv <= 0)
@@ -489,11 +488,11 @@ int
 nsHTTPConn::ParseURL(const char *aProto, char *aURL, char **aHost, 
                      int *aPort, char **aPath)
 {
-    if (!aURL || !aHost || !aPort || !aPath || !aProto)
-        return E_PARAM;
-
     char *pos, *nextSlash, *nextColon, *end, *hostEnd;
     int protoLen = strlen(aProto);
+
+    if (!aURL || !aHost || !aPort || !aPath || !aProto)
+        return E_PARAM;
 
     if ((strncmp(aURL, aProto, protoLen) != 0) ||
         (strlen(aURL) < 9))

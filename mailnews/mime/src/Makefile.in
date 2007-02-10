@@ -142,7 +142,13 @@ CPPSRCS += \
 endif
 
 EXPORTS		= \
+                nsMsgMimeCID.h \
+		nsMimeObjectClassAccess.h \
 		nsMimeStringResources.h \
+		nsMimeConverter.h \
+		nsMimeHeaders.h \
+		nsStreamConverter.h \
+		nsMsgHeaderParser.h \
 		mimetext.h \
 		mimeleaf.h \
 		mimecth.h \

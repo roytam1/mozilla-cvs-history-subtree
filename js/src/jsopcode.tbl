@@ -179,8 +179,8 @@ OPDEF(JSOP_TABLESWITCH,  70, "tableswitch",  NULL,   -1,  1,  0,  0,  JOF_TABLES
 OPDEF(JSOP_LOOKUPSWITCH, 71, "lookupswitch", NULL,   -1,  1,  0,  0,  JOF_LOOKUPSWITCH|JOF_DETECTING)
 
 /* New, infallible/transitive identity ops. */
-OPDEF(JSOP_STRICTEQ,  72, "stricteq",   NULL,         1,  2,  1,  10,  JOF_BYTE|JOF_DETECTING)
-OPDEF(JSOP_STRICTNE,  73, "strictne",   NULL,         1,  2,  1,  10,  JOF_BYTE|JOF_DETECTING)
+OPDEF(JSOP_NEW_EQ,    72, "eq",         NULL,         1,  2,  1,  10,  JOF_BYTE|JOF_DETECTING)
+OPDEF(JSOP_NEW_NE,    73, "ne",         NULL,         1,  2,  1,  10,  JOF_BYTE|JOF_DETECTING)
 
 /* Lexical closure constructor. */
 OPDEF(JSOP_CLOSURE,   74, "closure",    NULL,         3,  0,  0,  0,  JOF_CONST)
@@ -231,15 +231,11 @@ OPDEF(JSOP_VARINC,    100,"varinc",     NULL,         3,  0,  1, 15,  JOF_QVAR |
 OPDEF(JSOP_ARGDEC,    101,"argdec",     NULL,         3,  0,  1, 15,  JOF_QARG |JOF_NAME|JOF_DEC|JOF_POST)
 OPDEF(JSOP_VARDEC,    102,"vardec",     NULL,         3,  0,  1, 15,  JOF_QVAR |JOF_NAME|JOF_DEC|JOF_POST)
 
-/*
- * Initialize for-in iterator. See also JSOP_FOREACH and JSOP_FOREACHKEYVAL.
- */
-OPDEF(JSOP_FORIN,     103,"forin",      NULL,  1,  1,  1,  0,  JOF_BYTE)
-
 /* ECMA-compliant for/in ops. */
+OPDEF(JSOP_TOOBJECT,  103,"toobject",   NULL,         1,  1,  1,  0,  JOF_BYTE)
 OPDEF(JSOP_FORNAME,   104,"forname",    NULL,         3,  0,  1, 19,  JOF_CONST|JOF_NAME|JOF_FOR)
 OPDEF(JSOP_FORPROP,   105,"forprop",    NULL,         3,  1,  1, 18,  JOF_CONST|JOF_PROP|JOF_FOR)
-OPDEF(JSOP_FORELEM,   106,"forelem",    NULL,         1,  1,  3, 18,  JOF_BYTE |JOF_ELEM|JOF_FOR)
+OPDEF(JSOP_FORELEM,   106,"forelem",    NULL,         1,  2,  4, 18,  JOF_BYTE |JOF_ELEM|JOF_FOR)
 OPDEF(JSOP_POP2,      107,"pop2",       NULL,         1,  2,  0,  0,  JOF_BYTE)
 
 /* ECMA-compliant assignment ops. */
@@ -295,8 +291,8 @@ OPDEF(JSOP_SETTER,    124,js_setter_str,NULL,         1,  0,  0,  0,  JOF_BYTE)
  * Prolog bytecodes for defining function, var, and const names.
  */
 OPDEF(JSOP_DEFFUN,    125,"deffun",     NULL,         3,  0,  0,  0,  JOF_CONST|JOF_DECLARING)
-OPDEF(JSOP_DEFCONST,  126,"defconst",   NULL,         3,  0,  0,  0,  JOF_CONST|JOF_DECLARING)
-OPDEF(JSOP_DEFVAR,    127,"defvar",     NULL,         3,  0,  0,  0,  JOF_CONST|JOF_DECLARING)
+OPDEF(JSOP_DEFCONST,  126,"defconst",   NULL,         3,  0,  0,  0,  JOF_CONST|JOF_NAME|JOF_DECLARING)
+OPDEF(JSOP_DEFVAR,    127,"defvar",     NULL,         3,  0,  0,  0,  JOF_CONST|JOF_NAME|JOF_DECLARING)
 
 /* Auto-clone (if needed due to re-parenting) and push an anonymous function. */
 OPDEF(JSOP_ANONFUNOBJ,  128, "anonfunobj",  NULL,     3,  0,  1, 16,  JOF_CONST)
@@ -403,23 +399,19 @@ OPDEF(JSOP_XMLCOMMENT,    182,"xmlcomment", NULL,     3,  0,  1, 19,  JOF_CONST)
 OPDEF(JSOP_XMLPI,         183,"xmlpi",      NULL,     3,  1,  1, 19,  JOF_CONST)
 OPDEF(JSOP_GETMETHOD,     184,"getmethod",  NULL,     3,  1,  1, 18,  JOF_CONST|JOF_PROP)
 OPDEF(JSOP_GETFUNNS,      185,"getfunns",   NULL,     1,  0,  1, 19,  JOF_BYTE)
-OPDEF(JSOP_FOREACH,       186,"foreach",    NULL,     1,  1,  1,  0,  JOF_BYTE)
+OPDEF(JSOP_FOREACH,       186,"foreach",    NULL,     1,  0,  0,  0,  JOF_BYTE)
 OPDEF(JSOP_DELDESC,       187,"deldesc",    NULL,     1,  2,  1, 17,  JOF_BYTE |JOF_ELEM|JOF_DEL)
 
 /*
- * Opcode to hold 24-bit immediate integer operands.
+ * Opcodes for extended literal addressing, using unsigned 24-bit immediate
+ * operands to hold integer operands (JSOP_UINT24), extended atom indexes in
+ * script->atomMap (JSOP_LITERAL, JSOP_FINDNAME), and ops prefixed by such
+ * atom index immediates (JSOP_LITOPX).  See jsemit.c, EmitAtomIndexOp.
  */
 OPDEF(JSOP_UINT24,        188,"uint24",     NULL,     4,  0,  1, 16,  JOF_UINT24)
-
-/*
- * Opcodes to allow 24-bit atom indexes. Whenever an atom index exceeds the
- * 16-bit limit, the atom-indexing bytecode must be bracketed by JSOP_ATOMBASE
- * and JSOP_RESETBASE to provide the upper bits of the index.  See jsemit.c,
- * EmitAtomIndexOp.
- */
-OPDEF(JSOP_ATOMBASE,      189,"atombase",   NULL,     2,  0,  0,  0,  JOF_2BYTE|JOF_ATOMBASE)
-OPDEF(JSOP_RESETBASE,     190,"resetbase",  NULL,     1,  0,  0,  0,  JOF_BYTE)
-OPDEF(JSOP_RESETBASE0,    191,"resetbase0", NULL,     1,  0,  0,  0,  JOF_BYTE)
+OPDEF(JSOP_LITERAL,       189,"literal",    NULL,     4,  0,  1, 19,  JOF_UINT24)
+OPDEF(JSOP_FINDNAME,      190,"findname",   NULL,     4,  0,  2,  0,  JOF_UINT24)
+OPDEF(JSOP_LITOPX,        191,"litopx",     NULL,     5,  0,  0,  0,  JOF_LITOPX)
 
 /*
  * Opcodes to help the decompiler deal with XML.
@@ -435,12 +427,11 @@ OPDEF(JSOP_SETMETHOD,     194,"setmethod",   NULL,    3,  2,  1,  3,  JOF_CONST|
 OPDEF(JSOP_STOP,          195,"stop",        NULL,    1,  0,  0,  0,  JOF_BYTE)
 
 /*
- * Get an extant property value, throwing ReferenceError if the identified
- * property does not exist.
+ * Get an extant property or element value, throwing ReferenceError if the
+ * identified property does not exist.
  */
 OPDEF(JSOP_GETXPROP,      196,"getxprop",    NULL,    3,  1,  1, 18,  JOF_CONST|JOF_PROP)
-
-OPDEF(JSOP_UNUSED197,     197,"",            NULL,    1,  0,  0, 0,   0)
+OPDEF(JSOP_GETXELEM,      197,"getxelem",    NULL,    1,  2,  1, 18,  JOF_BYTE |JOF_ELEM|JOF_LEFTASSOC)
 
 /*
  * Specialized JSOP_TYPEOF to avoid reporting undefined for typeof(0, undef).
@@ -463,13 +454,13 @@ OPDEF(JSOP_FORLOCAL,      207,"forlocal",    NULL,    3,  0,  1, 19,  JOF_LOCAL|
 /*
  * Iterator, generator, and array comprehension support.
  */
-OPDEF(JSOP_STARTITER,     208,"startiter",   NULL,    1,  0,  0,  0,  JOF_BYTE)
-OPDEF(JSOP_ENDITER,       209,"enditer",     NULL,    1,  1,  0,  0,  JOF_BYTE)
+OPDEF(JSOP_STARTITER,     208,"startiter",   NULL,    1,  0,  2,  0,  JOF_BYTE)
+OPDEF(JSOP_ENDITER,       209,"enditer",     NULL,    1,  3,  0,  0,  JOF_BYTE)
 OPDEF(JSOP_GENERATOR,     210,"generator",   NULL,    1,  0,  0,  0,  JOF_BYTE)
 OPDEF(JSOP_YIELD,         211,"yield",       NULL,    1,  1,  1,  1,  JOF_BYTE)
 OPDEF(JSOP_ARRAYPUSH,     212,"arraypush",   NULL,    3,  1,  0,  3,  JOF_LOCAL)
 
-OPDEF(JSOP_FOREACHKEYVAL, 213,"foreachkeyval",NULL,   1,  1,  1,  0,  JOF_BYTE)
+OPDEF(JSOP_FOREACHKEYVAL, 213,"foreachkeyval",NULL,   1,  0,  0,  0,  JOF_BYTE)
 
 /*
  * Variant of JSOP_ENUMELEM for destructuring const (const [a, b] = ...).
@@ -483,17 +474,7 @@ OPDEF(JSOP_ENUMCONSTELEM, 214,"enumconstelem",NULL,   1,  3,  0,  3,  JOF_BYTE|J
 OPDEF(JSOP_LEAVEBLOCKEXPR,215,"leaveblockexpr",NULL,  3,  0,  0,  1,  JOF_UINT16)
 
 /*
- * Optimize common JSOP_{THIS,GET{ARG,VAR,LOCAL}} -> JSOP_GETPROP cliches.
+ * This opcode prefixes one of JSOP_FOR{NAME,ARG,VAR,LOCAL,PROP,ELEM} in a
+ * standard for-in loop.  See also JSOP_FOREACH and JSOP_FOREACHKEYVAL.
  */
-OPDEF(JSOP_GETTHISPROP,   216,"getthisprop",   NULL,  3,  0,  1, 18,  JOF_CONST)
-OPDEF(JSOP_GETARGPROP,    217,"getargprop",    NULL,  5,  0,  1, 18,  JOF_INDEXCONST|JOF_VARPROP)
-OPDEF(JSOP_GETVARPROP,    218,"getvarprop",    NULL,  5,  0,  1, 18,  JOF_INDEXCONST|JOF_VARPROP)
-OPDEF(JSOP_GETLOCALPROP,  219,"getlocalprop",  NULL,  5,  0,  1, 18,  JOF_INDEXCONST|JOF_VARPROP)
-
-/*
- * Optimize atom segments 1-3.  These must be followed by JSOP_RESETBASE0 after
- * the opcode that they prefix.
- */
-OPDEF(JSOP_ATOMBASE1,     220,"atombase1",     NULL,  1,  0,  0,  0,  JOF_BYTE |JOF_ATOMBASE)
-OPDEF(JSOP_ATOMBASE2,     221,"atombase2",     NULL,  1,  0,  0,  0,  JOF_BYTE |JOF_ATOMBASE)
-OPDEF(JSOP_ATOMBASE3,     222,"atombase3",     NULL,  1,  0,  0,  0,  JOF_BYTE |JOF_ATOMBASE)
+OPDEF(JSOP_FORIN,         216,"forin",         NULL,  1,  0,  0,  0,  JOF_BYTE)

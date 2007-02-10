@@ -136,6 +136,7 @@ class nsAccessNodeWrap :  public nsAccessNode, public ISimpleDOMNode
   protected:
     void GetAccessibleFor(nsIDOMNode *node, nsIAccessible **newAcc);
     ISimpleDOMNode* MakeAccessNode(nsIDOMNode *node);
+    NS_IMETHOD GetComputedStyleDeclaration(nsIDOMCSSStyleDeclaration **aCssDecl, PRUint32 *aLength);
 
     static PRBool gIsEnumVariantSupportDisabled;
 };

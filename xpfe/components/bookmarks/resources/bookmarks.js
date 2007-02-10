@@ -72,6 +72,8 @@ var kDSContractID;
 var kDSIID;
 var DS;
 
+var gLoadInBackground = false;
+
 // should be moved in a separate file
 function initServices()
 {
@@ -186,7 +188,7 @@ var BookmarksCommand = {
     while (popup.hasChildNodes()) 
       popup.removeChild(popup.firstChild);
         
-    var commonCommands = this.flattenEnumerator(this.getValidCommands(popup.id));
+    var commonCommands = [];
     for (var i = 0; i < aSelection.length; ++i) {
       var commands = this.getCommands(aSelection.item[i]);
       if (!commands) {
@@ -194,6 +196,7 @@ var BookmarksCommand = {
         return;
       }
       commands = this.flattenEnumerator(commands);
+      if (!commonCommands.length) commonCommands = commands;
       commonCommands = this.findCommonNodes(commands, commonCommands);
     }
 
@@ -329,21 +332,6 @@ var BookmarksCommand = {
     }
 
     return new CommandArrayEnumerator(commands);
-  },
-
-  /////////////////////////////////////////////////////////////////////////////
-  // For a given target ID, return an enumeration that contains the possible
-  // commands.
-  getValidCommands: function (aTargetID)
-  {
-    var valid = ["bm_open", "bm_openinnewwindow", "bm_openinnewtab", "bm_managefolder",
-                 "bm_separator", "bm_newfolder", "bm_sortfolder", "bm_sortfolderbyname",
-                 "bm_cut", "bm_copy", "bm_paste", "bm_movebookmark", "bm_rename",
-                 "bm_delete", "bm_properties"];
-    if (aTargetID != "bookmarks-context-menu")
-      valid.push("bm_expandfolder");
-
-    return new CommandArrayEnumerator(valid);
   },
   
   /////////////////////////////////////////////////////////////////////////////
@@ -536,16 +524,16 @@ var BookmarksCommand = {
     BookmarksUtils.moveSelection("move", aSelection, target);
   },
 
-  openBookmark: function (aSelection, aTargetBrowser, aDS, aEvent)
+  openBookmark: function (aSelection, aTargetBrowser, aDS) 
   {
     if (!aTargetBrowser)
       return;
     for (var i=0; i<aSelection.length; ++i) {
       var type = aSelection.type[i];
       if (type == "Bookmark" || type == "")
-        this.openOneBookmark(aSelection.item[i].Value, aTargetBrowser, aDS, aEvent);
+        this.openOneBookmark(aSelection.item[i].Value, aTargetBrowser, aDS);
       else if (type == "FolderGroup" || type == "Folder" || type == "PersonalToolbarFolder")
-        this.openGroupBookmark(aSelection.item[i].Value, aTargetBrowser, aEvent);
+        this.openGroupBookmark(aSelection.item[i].Value, aTargetBrowser);
     }
   },
   
@@ -558,23 +546,18 @@ var BookmarksCommand = {
   },
 
   // requires utilityOverlay.js if opening in new window for getTopWin()
-  openOneBookmark: function (aURI, aTargetBrowser, aDS, aEvent)
+  openOneBookmark: function (aURI, aTargetBrowser, aDS)
   {
-    var w = getTopWin();
-    if (!w) // no browser window open, so we have to open in new window
-      aTargetBrowser = "window";
-
-    var url = BookmarksUtils.getProperty(aURI, NC_NS + "URL", aDS);
+    var url = BookmarksUtils.getProperty(aURI, NC_NS+"URL", aDS);
     // Ignore "NC:" and empty urls.
     if (url == "")
       return;
-
-    if (aTargetBrowser == "window") {
+    var w = aTargetBrowser == "window"? null:getTopWin();
+    if (!w) {
       openDialog(getBrowserURL(), "_blank", "chrome,all,dialog=no", url);
       return;
     }
-
-    var browser = w.getBrowser();
+    var browser = w.document.getElementById("content");
     switch (aTargetBrowser) {
     case "current":
       browser.loadURI(url);
@@ -582,24 +565,23 @@ var BookmarksCommand = {
       break;
     case "tab":
       var tab = browser.addTab(url);
-      if (!BookmarksUtils.shouldLoadTabInBackground(aEvent))
+      if (!gLoadInBackground)
         browser.selectedTab = tab;
       break;
     }
   },
 
-  openGroupBookmark: function (aURI, aTargetBrowser, aEvent)
+  openGroupBookmark: function (aURI, aTargetBrowser)
   {
     var w = getTopWin();
     if (!w) // no browser window open, so we have to open in new window
-      aTargetBrowser = "window";
+      aTargetBrowser="window";
 
     var resource = RDF.GetResource(aURI);
+    var urlArc   = RDF.GetResource(NC_NS+"URL");
     RDFC.Init(BMDS, resource);
     var containerChildren = RDFC.GetElements();
-
     var URIs = [];
-    var urlArc = RDF.GetResource(NC_NS + "URL");
     while (containerChildren.hasMoreElements()) {
       var res = containerChildren.getNext().QueryInterface(kRDFRSCIID);
       var target = BMDS.GetTarget(res, urlArc, true);
@@ -610,20 +592,15 @@ var BookmarksCommand = {
           URIs.push({ URI: target.QueryInterface(kRDFLITIID).Value });        
       }
     }
-
-    if (URIs.length == 0)
-      return;
-
     if (aTargetBrowser == "window") {
       // This opens the URIs in separate tabs of a new window
       openDialog(getBrowserURL(), "_blank", "chrome,all,dialog=no", URIs.join("\n"));
-      return;
+    } else {
+      var browser = w.getBrowser();
+      var tab = browser.loadGroup(URIs);
+      if (!gLoadInBackground)
+        browser.selectedTab = tab;
     }
-
-    var browser = w.getBrowser();
-    var tab = browser.loadGroup(URIs);
-    if (!BookmarksUtils.shouldLoadTabInBackground(aEvent))
-      browser.selectedTab = tab;
   },
 
   findBookmark: function ()
@@ -1604,7 +1581,7 @@ var BookmarksUtils = {
   shouldLoadTabInBackground: function(aEvent)
   {
     var loadInBackground = PREF.getBoolPref("browser.tabs.loadInBackground");
-    if (aEvent && aEvent.shiftKey)
+    if (aEvent.shiftKey)
       loadInBackground = !loadInBackground;
     return loadInBackground;
   },
@@ -1613,6 +1590,8 @@ var BookmarksUtils = {
   {
     if (!aEvent)
       return null;
+
+    gLoadInBackground = this.shouldLoadTabInBackground(aEvent);
 
     switch (aEvent.type) {
     case "click":
@@ -1654,7 +1633,7 @@ var BookmarksUtils = {
 
     var rSource   = RDF.GetResource(aEvent.target.id);
     var selection = BookmarksUtils.getSelectionFromResource(rSource);
-    BookmarksCommand.openBookmark(selection, target, aDS, aEvent)
+    BookmarksCommand.openBookmark(selection, target, aDS)
   }
 }
 

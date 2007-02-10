@@ -38,6 +38,11 @@
 #include "nsRegion.h"
 #include "nsISupportsImpl.h"
 
+
+#define MIN_INT32 (-PR_INT32 (0x7FFFFFFF) - 1)
+#define MAX_INT32 (PR_INT32 (0x7FFFFFFF))
+
+
 // Fast inline analogues of nsRect methods for nsRegion::nsRectFast.
 // Check for emptiness is not required - it is guaranteed by caller.
 
@@ -339,7 +344,7 @@ void nsRegion::InsertInPlace (RgnRect* aRect, PRBool aOptimizeOnFly)
   {
     if (aRect->y > mCurRect->y)
     {
-      mRectListHead.y = PR_INT32_MAX;
+      mRectListHead.y = MAX_INT32;
 
       while (aRect->y > mCurRect->next->y)
         mCurRect = mCurRect->next;
@@ -351,7 +356,7 @@ void nsRegion::InsertInPlace (RgnRect* aRect, PRBool aOptimizeOnFly)
     } else
     if (aRect->y < mCurRect->y)
     {
-      mRectListHead.y = PR_INT32_MIN;
+      mRectListHead.y = MIN_INT32;
 
       while (aRect->y < mCurRect->prev->y)
         mCurRect = mCurRect->prev;
@@ -364,7 +369,7 @@ void nsRegion::InsertInPlace (RgnRect* aRect, PRBool aOptimizeOnFly)
     {
       if (aRect->x > mCurRect->x)
       {
-        mRectListHead.y = PR_INT32_MAX;
+        mRectListHead.y = MAX_INT32;
 
         while (aRect->y == mCurRect->next->y && aRect->x > mCurRect->next->x)
           mCurRect = mCurRect->next;
@@ -372,7 +377,7 @@ void nsRegion::InsertInPlace (RgnRect* aRect, PRBool aOptimizeOnFly)
         InsertAfter (aRect, mCurRect);
       } else
       {
-        mRectListHead.y = PR_INT32_MIN;
+        mRectListHead.y = MIN_INT32;
 
         while (aRect->y == mCurRect->prev->y && aRect->x < mCurRect->prev->x)
           mCurRect = mCurRect->prev;
@@ -661,8 +666,8 @@ nsRegion& nsRegion::And (const nsRegion& aRgn1, const nsRegion& aRgn2)
           SetToElements (0);
           pSrcRgn2->SaveLinkChain ();
 
-          pSrcRgn1->mRectListHead.y = PR_INT32_MAX;
-          pSrcRgn2->mRectListHead.y = PR_INT32_MAX;
+          pSrcRgn1->mRectListHead.y = MAX_INT32;
+          pSrcRgn2->mRectListHead.y = MAX_INT32;
 
           for (RgnRect* pSrcRect1 = pSrcRgn1->mRectListHead.next ;
                pSrcRect1->y < pSrcRgn2->mBoundRect.YMost () ; pSrcRect1 = pSrcRect1->next)
@@ -741,7 +746,7 @@ nsRegion& nsRegion::And (const nsRegion& aRegion, const nsRect& aRect)
           }
 
           SetToElements (0);
-          pSrcRegion->mRectListHead.y = PR_INT32_MAX;
+          pSrcRegion->mRectListHead.y = MAX_INT32;
 
           for (const RgnRect* pSrcRect = pSrcRegion->mRectListHead.next ;
                pSrcRect->y < aRectFast.YMost () ; pSrcRect = pSrcRect->next)
@@ -974,34 +979,6 @@ nsRegion& nsRegion::Sub (const nsRegion& aRegion, const nsRect& aRect)
   return *this;
 }
 
-PRBool nsRegion::Contains (const nsRect& aRect) const
-{
-  if (aRect.IsEmpty())
-    return PR_TRUE;
-  if (IsEmpty())
-    return PR_FALSE;
-  if (!IsComplex())
-    return mBoundRect.Contains (aRect);
-
-  nsRegion tmpRgn;
-  tmpRgn.Sub(aRect, *this);
-  return tmpRgn.IsEmpty();
-}
-
-PRBool nsRegion::Intersects (const nsRect& aRect) const
-{
-  if (aRect.IsEmpty() || IsEmpty())
-    return PR_FALSE;
-
-  const RgnRect* r = mRectListHead.next;
-  while (r != &mRectListHead)
-  {
-    if (r->Intersects(aRect))
-      return PR_TRUE;
-    r = r->next;
-  }
-  return PR_FALSE;
-}
 
 // Subtract region from current region.
 // Both regions are non-empty and they intersect each other.
@@ -1066,7 +1043,7 @@ void nsRegion::SubRect (const nsRectFast& aRect, nsRegion& aResult, nsRegion& aC
 
   aResult.SetToElements (0);
 
-  (NS_CONST_CAST (nsRegion*, pSrcRegion))->mRectListHead.y = PR_INT32_MAX;
+  (NS_CONST_CAST (nsRegion*, pSrcRegion))->mRectListHead.y = MAX_INT32;
   const RgnRect* pSrcRect = pSrcRegion->mRectListHead.next;
 
   for ( ; pSrcRect->y < aRect.YMost () ; pSrcRect = pSrcRect->next)
@@ -1124,7 +1101,6 @@ void nsRegion::SubRect (const nsRectFast& aRect, nsRegion& aResult, nsRegion& aC
         } else
         if (*pSrcRect == aRect)         // 4. subset
         {                               // Current rectangle is equal to aRect
-          pSrcRect = pSrcRect->next;    // don't add this one to the result, it's removed
           break;                        // No any other rectangle in region can intersect it
         }
       } else
@@ -1184,7 +1160,6 @@ void nsRegion::SubRect (const nsRectFast& aRect, nsRegion& aResult, nsRegion& aC
           aResult.InsertInPlace (new RgnRect (ax, iym, aw, aym - iym));
 
           // Current rectangle fully overlays aRect. No any other rectangle can intersect it.
-          pSrcRect = pSrcRect->next;    // don't add this one to the result, it's removed
           break;
         } else
         if (bxm >= axm && bym < aym)    // 14.
@@ -1282,44 +1257,4 @@ void nsRegion::SimplifyInward (PRUint32 aMaxRects)
     return;
 
   SetEmpty();
-}
-
-void nsRegion::SimpleSubtract (const nsRect& aRect)
-{
-  if (aRect.IsEmpty())
-    return;
-
-  // protect against aRect being one of our own rectangles
-  nsRect param = aRect;
-  RgnRect* r = mRectListHead.next;
-  while (r != &mRectListHead)
-  {
-    RgnRect* next = r->next;
-    if (param.Contains(*r)) {
-      delete Remove(r);
-    }
-    r = next;
-  }
-  
-  Optimize();
-}
-
-void nsRegion::SimpleSubtract (const nsRegion& aRegion)
-{
-  if (aRegion.IsEmpty())
-    return;
-
-  if (&aRegion == this) {
-    SetEmpty();
-    return;
-  }
-
-  const RgnRect* r = aRegion.mRectListHead.next;
-  while (r != &aRegion.mRectListHead)
-  {
-    SimpleSubtract(*r);
-    r = r->next;
-  }
-
-  Optimize();
 }

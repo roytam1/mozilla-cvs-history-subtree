@@ -229,34 +229,12 @@ function safeHTML(str)
                     
             case "&":
                 return "&amp;";
-                    
-            case "'":
-                return "&#39;";
-                    
-            case '"':
-                return "&quot;";
         }
 
         return "?";
     };
-
-    return String(str).replace(/[<>&"']/g, replaceChars);
-}
-
-function safeCSV(str)
-{
-    function replaceChars(ch)
-    {
-        switch (ch)
-        {
-            case '"':
-                return '""';
-        }
-
-        return "?";
-    }
-
-    return '"' + String(str).replace(/"/g, replaceChars) + '"';
+        
+    return String(str).replace(/[<>&]/g, replaceChars);
 }
 
 function alert(msg, parent, title)
@@ -639,7 +617,7 @@ function getSpecialDirectory(name)
 
 function getPathFromURL (url)
 {
-    var ary = url.match(/^(.*\/)([^\/?#]*)(\?|#|$)/);
+    var ary = url.match(/^(.*\/)([^\/?#]+)(\?|#|$)/);
     if (ary)
         return ary[1];
 
@@ -1043,16 +1021,4 @@ function makeExpression (items)
         expression += escapeItem(items[i], false);
     
     return expression;
-}
-
-function isinstance(inst, base)
-{
-    /* Returns |true| if |inst| was constructed by |base|. Not 100% accurate,
-     * but plenty good enough for us. This is to work around the fix for bug
-     * 254067 which makes instanceof fail if the two sides are 'from'
-     * different windows (something we don't care about).
-     */
-    return (inst && base &&
-            ((inst instanceof base) ||
-             (inst.constructor && (inst.constructor.name == base.name))));
 }

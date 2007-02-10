@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* class for maintaining a linked list of child frames */
-
 #ifndef nsFrameList_h___
 #define nsFrameList_h___
 
@@ -62,7 +59,7 @@ public:
   ~nsFrameList() {
   }
 
-  void DestroyFrames();
+  void DestroyFrames(nsPresContext* aPresContext);
 
   void SetFrames(nsIFrame* aFrameList) {
     mFirstChild = aFrameList;
@@ -95,7 +92,7 @@ public:
   // Take aFrame out of the frame list and then destroy it. This also
   // disconnects aFrame from the sibling list. This will return
   // PR_FALSE if aFrame is nsnull or if aFrame is not in the list.
-  PRBool DestroyFrame(nsIFrame* aFrame);
+  PRBool DestroyFrame(nsPresContext* aPresContext, nsIFrame* aFrame);
 
   void InsertFrame(nsIFrame* aParent,
                    nsIFrame* aPrevSibling,
@@ -110,6 +107,11 @@ public:
     InsertFrames(aParent, aPrevSibling, aFrameList.FirstChild());
     aFrameList.mFirstChild = nsnull;
   }
+
+  PRBool ReplaceFrame(nsIFrame* aParent,
+                      nsIFrame* aOldFrame,
+                      nsIFrame* aNewFrame,
+                      PRBool aDestroy);
 
   PRBool Split(nsIFrame* aAfterFrame, nsIFrame** aNextFrameResult);
 
@@ -149,14 +151,12 @@ public:
 
 #ifdef IBMBIDI
   /**
-   * Return the frame before this frame in visual order (after Bidi reordering).
-   * If aFrame is null, return the last frame in visual order.
+   * Return the frame before this frame in visual order (after Bidi reordering)
    */
   nsIFrame* GetPrevVisualFor(nsIFrame* aFrame) const;
 
   /**
-   * Return the frame after this frame in visual order (after Bidi reordering).
-   * If aFrame is null, return the first frame in visual order.
+   * Return the frame after this frame in visual order (after Bidi reordering)
    */
   nsIFrame* GetNextVisualFor(nsIFrame* aFrame) const;
 #endif // IBMBIDI
@@ -164,10 +164,14 @@ public:
   void VerifyParent(nsIFrame* aParent) const;
 
 #ifdef NS_DEBUG
-  void List(FILE* out) const;
+  void List(nsPresContext* aPresContext, FILE* out) const;
 #endif
 
 private:
+  PRBool DoReplaceFrame(nsIFrame* aParent,
+                        nsIFrame* aOldFrame,
+                        nsIFrame* aNewFrame);
+
 #ifdef DEBUG
   void CheckForLoops();
 #endif

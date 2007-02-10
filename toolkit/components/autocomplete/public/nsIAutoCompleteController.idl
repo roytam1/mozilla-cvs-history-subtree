@@ -41,7 +41,7 @@
 
 interface nsIAutoCompleteInput;
 
-[scriptable, uuid(bafcfe4f-0850-4106-a176-be5aef2e1e52)]
+[scriptable, uuid(CF2ACA0C-4FB1-42e4-8A54-23E832CB2A98)]
 interface nsIAutoCompleteController : nsISupports
 {
   /*
@@ -51,6 +51,18 @@ interface nsIAutoCompleteController : nsISupports
   const unsigned short STATUS_SEARCHING = 2;
   const unsigned short STATUS_COMPLETE_NO_MATCH = 3;
   const unsigned short STATUS_COMPLETE_MATCH = 4;
+
+  /*
+   * Possible key navigation values
+   */
+  const unsigned short KEY_UP = 1;
+  const unsigned short KEY_DOWN = 2;
+  const unsigned short KEY_LEFT = 3;
+  const unsigned short KEY_RIGHT = 4;
+  const unsigned short KEY_PAGE_UP = 5;
+  const unsigned short KEY_PAGE_DOWN = 6;
+  const unsigned short KEY_HOME = 7;
+  const unsigned short KEY_END = 8;
   
   /*
    * The input widget that is currently being controlled.
@@ -114,7 +126,7 @@ interface nsIAutoCompleteController : nsISupports
    *
    * @return True if the controller wishes to prevent event propagation and default event
    */
-  boolean handleKeyNavigation(in unsigned long key);
+  boolean handleKeyNavigation(in unsigned short key);
 
   /*
    * Notify the controller that the user chose to delete the current
@@ -141,7 +153,11 @@ interface nsIAutoCompleteController : nsISupports
    * Set the current search string, but don't start searching
    */
   void setSearchString(in AString aSearchString);
+};
 
+[scriptable, uuid(729CB096-D5F1-4fc4-97CD-4B86E6917F97)]
+interface nsIAutoCompleteController_MOZILLA_1_8_BRANCH : nsIAutoCompleteController
+{
   /*
    * Attach or Detach rollup-listener
    */

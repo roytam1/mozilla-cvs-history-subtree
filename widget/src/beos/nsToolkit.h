@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sergei Dolgov <sergei_d@fi.tartu.ee>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -39,6 +38,7 @@
 #ifndef TOOLKIT_H      
 #define TOOLKIT_H
 
+#include "nsdefs.h"
 #include "nsIToolkit.h"
 
 #include <OS.h>
@@ -58,8 +58,8 @@ public:
 
                             nsToolkit();
             NS_IMETHOD      Init(PRThread *aThread);
-            bool            CallMethod(MethodInfo *info);
-			bool			CallMethodAsync(MethodInfo *info);
+            void            CallMethod(MethodInfo *info);
+			void			CallMethodAsync(MethodInfo *info);
             // Return whether the current thread is the application's Gui thread.  
             PRBool          IsGuiThread(void)      { return (PRBool)(mGuiThread == PR_GetCurrentThread());}
             PRThread*       GetGuiThread(void)       { return mGuiThread;   }
@@ -77,5 +77,9 @@ protected:
 	bool		localthread;
 	port_id		eventport;
 };
+
+#define WM_CALLMETHOD   'CAme'
+
+class  nsWindow;
 
 #endif  // TOOLKIT_H

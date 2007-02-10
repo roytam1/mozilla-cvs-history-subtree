@@ -47,7 +47,6 @@
 
 #include "PyXPCOM_std.h"
 #include "nsIClassInfo.h"
-#include "nsIProgrammingLanguage.h"
 
 static nsIClassInfo *_GetI(PyObject *self) {
 	nsIID iid = NS_GET_IID(nsIClassInfo);
@@ -94,14 +93,14 @@ static PyObject *PyGetHelperForLanguage(PyObject *self, PyObject *args)
 		return NULL;
 
 	nsresult r;
-	nsCOMPtr<nsISupports> pi;
+	nsISupports *pi;
 	Py_BEGIN_ALLOW_THREADS;
-	r = pI->GetHelperForLanguage(language, getter_AddRefs(pi));
+	r = pI->GetHelperForLanguage(language, &pi);
 	Py_END_ALLOW_THREADS;
 	if ( NS_FAILED(r) )
 		return PyXPCOM_BuildPyException(r);
 
-	return Py_nsISupports::PyObjectFromInterface(pi, NS_GET_IID(nsISupports));
+	return Py_nsISupports::PyObjectFromInterface(pi, NS_GET_IID(nsISupports), PR_FALSE);
 }
 
 static PyObject *MakeStringOrNone(char *v)

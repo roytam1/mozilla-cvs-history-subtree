@@ -112,7 +112,10 @@ function open()
                                         url, postData.value, null, null, true);
         break;
       case "3":
-        browser.delayedOpenTab(url, null, null, postData.value, true);
+        if (browser.getBrowser && browser.getBrowser().localName == "tabbrowser")
+          browser.delayedOpenTab(url, null, null, postData.value, true);
+        else
+          browser.loadURI(url, null, postData.value, true); // Just do a normal load.
         break;
     }
   }

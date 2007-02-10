@@ -41,7 +41,6 @@
 #include "nsINIParser.h"
 #include "nsError.h"
 #include "nsILocalFile.h"
-#include "nsCRTGlue.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -90,6 +89,59 @@ nsINIParser::Init(const char *aPath)
     return InitFromFILE(fd);
 }
 
+// Based on toolkit/mozapps/updater/src/updater/updater.cpp
+// we could use nsCRT::strtok except that nsCRT isn't part of the glue,
+// and may never be due to NSPR dependencies. This should probably be declared
+// and exported in a string-management glue header.
+
+/**
+ * Scan "str" for the first character that is not in "delims".
+ */
+static char*
+mstrspnp(const char *delims, char *str)
+{
+  const char *d;
+  do {
+    for (d = delims; *d != '\0'; ++d) {
+      if (*str == *d) {
+        ++str;
+        break;
+      }
+    }
+  } while (*d);
+
+  return str;
+}
+
+static char*
+mstrtok(const char *delims, char **str)
+{
+  if (!*str)
+    return NULL;
+
+  char *ret = mstrspnp(delims, *str);
+
+  if (!*ret) {
+    *str = ret;
+    return NULL;
+  }
+
+  char *i = ret;
+  do {
+    for (const char *d = delims; *d != '\0'; ++d) {
+      if (*i == *d) {
+        *i = '\0';
+        *str = ++i;
+        return ret;
+      }
+    }
+    ++i;
+  } while (*i);
+
+  *str = NULL;
+  return ret;
+}
+
 static const char kNL[] = "\r\n";
 static const char kEquals[] = "=";
 static const char kWhitespace[] = " \t";
@@ -129,11 +181,11 @@ nsINIParser::InitFromFILE(FILE *fd)
     INIValue *last = nsnull;
 
     // outer loop tokenizes into lines
-    while (char *token = NS_strtok(kNL, &buffer)) {
+    while (char *token = mstrtok(kNL, &buffer)) {
         if (token[0] == '#' || token[0] == ';') // it's a comment
             continue;
 
-        token = (char*) NS_strspnp(kWhitespace, token);
+        token = mstrspnp(kWhitespace, token);
         if (!*token) // empty line
             continue;
 
@@ -142,8 +194,8 @@ nsINIParser::InitFromFILE(FILE *fd)
             currSection = token;
             last = nsnull;
 
-            char *rb = NS_strtok(kRBracket, &token);
-            if (!rb || NS_strtok(kWhitespace, &token)) {
+            char *rb = mstrtok(kRBracket, &token);
+            if (!rb || mstrtok(kWhitespace, &token)) {
                 // there's either an unclosed [Section or a [Section]Moretext!
                 // we could frankly decide that this INI file is malformed right
                 // here and stop, but we won't... keep going, looking for
@@ -161,7 +213,7 @@ nsINIParser::InitFromFILE(FILE *fd)
         }
 
         char *key = token;
-        char *e = NS_strtok(kEquals, &token);
+        char *e = mstrtok(kEquals, &token);
         if (!e)
             continue;
 

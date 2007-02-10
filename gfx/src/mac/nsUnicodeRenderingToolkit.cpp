@@ -56,6 +56,8 @@
 
 #define STACK_TRESHOLD 1000
 
+static NS_DEFINE_CID(kSaveAsCharsetCID, NS_SAVEASCHARSET_CID);
+
 //#define DISABLE_TEC_FALLBACK
 //#define DISABLE_PRECOMPOSEHANGUL_FALLBACK
 //#define DISABLE_LATINL_FALLBACK
@@ -127,7 +129,7 @@
   )
 #define BAD_TEXT_ENCODING 0xFFFFFFFF
 
-// all the character should not be drawn if there are no glyph
+// all the chracter should not be drawn if there are no glyph
 #define IS_ZERO_WIDTH_CHAR(c) ( \
   IN_RANGE(c, 0x200b, 0x200f) || \
   IN_RANGE(c, 0x202a, 0x202e) \
@@ -138,14 +140,14 @@
 #define IN_ARABIC_PRESENTATION_B(a) ((0xfe70 <= (a)) && ((a) <= 0xfeff))
 #define IN_ARABIC_PRESENTATION_A_OR_B(a) (IN_ARABIC_PRESENTATION_A(a) || IN_ARABIC_PRESENTATION_B(a))
 
-// We should not use TEC fallback for characters in Latin, Greek and Cyrillic scripts
-// because Japanese, Chinese and Korean fonts have these characters. If we let them 
-// render in the TEC fallback process, then we would use a Japanese/Korean/Chinese font
-// to render it even if the current font has a glyph in it.
+// we should not ues TEC fallback for characters in latin, greek and cyrillic script
+// because Japanese, Chinese and Korean font have these chracters. If we let them 
+// render in the TEC fallback process, then we will use a Japanese/korean/chinese font
+// to render it even the current font have a glyph in it
 // if we skip the TEC fallback, then the ATSUI fallback will try to use the glyph 
 // in the font first (TEC or TEC fallback are using QuickDraw, which can only use 
-// the glyphs that are in the font script's encoding. But a lot of TrueType fonts
-// have hundreds more glyphs in addition to the font scripts.
+// the glyphs that in the font script's encodign. but a lot of TrueType font
+// have houndred more glyph in additional to the font scripts
 #define IS_LATIN(c)  ( IN_RANGE(c, 0x0000, 0x024F) || IN_RANGE(c, 0x1e00, 0x1eff) )
 #define IS_GREEK(c)  ( IN_RANGE(c, 0x0370, 0x03FF) || IN_RANGE(c, 0x1f00, 0x1fff) )
 #define IS_CYRILLIC(c)  IN_RANGE(c, 0x0400, 0x04ff)
@@ -679,7 +681,7 @@ PRBool nsUnicodeRenderingToolkit :: LoadTransliterator()
 		return PR_TRUE;
 		
 	nsresult res;
-    mTrans = do_CreateInstance(NS_SAVEASCHARSET_CONTRACTID, &res);
+    mTrans = do_CreateInstance(kSaveAsCharsetCID, &res);
     if ( NS_SUCCEEDED(res) )
     {
        res = mTrans->Init("x-mac-roman",
@@ -1301,9 +1303,9 @@ nsUnicodeRenderingToolkit::GetTextSegmentDimensions(
       PRBool fallbackDone = PR_FALSE;
       segDim.Clear();
       
-      if (NS_IS_HIGH_SURROGATE(*aString) && 
+      if (IS_HIGH_SURROGATE(*aString) && 
           ((processLen+1) < aLength) &&
-          NS_IS_LOW_SURROGATE(*(aString+1)))
+          IS_LOW_SURROGATE(*(aString+1)))
       {
          const nsFont *font = &mGS->mFontMetrics->Font();
          fallbackDone = SurrogateGetDimensions(aString, segDim, fontNum, 
@@ -1486,9 +1488,9 @@ nsUnicodeRenderingToolkit::GetTextSegmentBoundingMetrics(
       PRBool fallbackDone = PR_FALSE;
       segBoundingMetrics.Clear();
 
-      if (NS_IS_HIGH_SURROGATE(*aString) && 
+      if (IS_HIGH_SURROGATE(*aString) && 
           ((processLen+1) < aLength) &&
-          NS_IS_LOW_SURROGATE(*(aString+1)) )
+          IS_LOW_SURROGATE(*(aString+1)) )
       {
          const nsFont *font = &mGS->mFontMetrics->Font();
          fallbackDone = SurrogateGetBoundingMetrics(aString, segBoundingMetrics, fontNum, 
@@ -1626,9 +1628,9 @@ nsresult nsUnicodeRenderingToolkit :: DrawTextSegment(
   	  {
 		  PRBool fallbackDone = PR_FALSE;
 
-      if (NS_IS_HIGH_SURROGATE(*aString) && 
+      if (IS_HIGH_SURROGATE(*aString) && 
           ((processLen+1) < aLength) &&
-          NS_IS_LOW_SURROGATE(*(aString+1)) )
+          IS_LOW_SURROGATE(*(aString+1)) )
       {
          const nsFont *font = &mGS->mFontMetrics->Font();
          fallbackDone = SurrogateDrawChar(aString, x, y, thisWidth, fontNum, 

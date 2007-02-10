@@ -52,7 +52,7 @@ const nsIWindowWatcher         = Components.interfaces.nsIWindowWatcher;
  * This file provides a generic default command-line handler.
  *
  * It opens the chrome window specified by the pref "toolkit.defaultChromeURI"
- * with the flags specified by the pref "toolkit.defaultChromeFeatures"
+ * with the flags specified by the pref "toolkit.defaultChromeFlags"
  * or "chrome,dialog=no,all" is it is not available.
  * The arguments passed to the window are the nsICommandLine instance.
  *
@@ -81,15 +81,12 @@ var nsDefaultCLH = {
                           .getService(nsIPrefBranch);
 
     try {
-      var singletonWindowType =
-                              prefs.getCharPref("toolkit.singletonWindowType");
-      var windowMediator =
-                Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                          .getService(Components.interfaces.nsIWindowMediator);
-
+      var singletonWindowType = prefs.getCharPref("toolkit.singletonWindowType");
+      var windowMediator = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                                     .getService(Components.interfaces.nsIWindowMediator);
       var win = windowMediator.getMostRecentWindow(singletonWindowType);
       if (win) {
-        win.focus();
+         win.focus();
     	  cmdLine.preventDefault = true;
 	      return;
       }

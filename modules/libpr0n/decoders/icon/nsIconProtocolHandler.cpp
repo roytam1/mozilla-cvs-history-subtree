@@ -83,7 +83,7 @@ NS_IMETHODIMP nsIconProtocolHandler::AllowPort(PRInt32 port, const char *scheme,
 
 NS_IMETHODIMP nsIconProtocolHandler::GetProtocolFlags(PRUint32 *result) 
 {
-  *result = URI_NORELATIVE | URI_NOAUTH | URI_IS_UI_RESOURCE;
+  *result = URI_NORELATIVE | URI_NOAUTH;
   return NS_OK;
 }
 

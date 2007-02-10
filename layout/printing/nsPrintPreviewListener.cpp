@@ -116,7 +116,7 @@ nsPrintPreviewListener::RemoveListeners()
 //
 // GetActionForEvent
 //
-// Helper function to let certain key events through
+// Helper function to let certain key events thru
 //
 enum eEventAction {
   eEventAction_Tab,       eEventAction_ShiftTab,
@@ -171,7 +171,7 @@ nsPrintPreviewListener::HandleEvent(nsIDOMEvent* aEvent)
   if (nsEvent)
     nsEvent->GetOriginalTarget(getter_AddRefs(target));
   nsCOMPtr<nsIContent> content(do_QueryInterface(target));
-  if (content && !content->IsNodeOfType(nsINode::eXUL)) {
+  if (content && !content->IsContentOfType(nsIContent::eXUL)) {
     eEventAction action = ::GetActionForEvent(aEvent);
     switch (action) {
       case eEventAction_Tab:

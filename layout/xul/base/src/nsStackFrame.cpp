@@ -48,22 +48,34 @@
 #include "nsIContent.h"
 #include "nsCOMPtr.h"
 #include "nsUnitConversion.h"
+#include "nsXULAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsHTMLParts.h"
 #include "nsIPresShell.h"
+#include "nsStyleChangeList.h"
 #include "nsCSSRendering.h"
 #include "nsIViewManager.h"
 #include "nsBoxLayoutState.h"
 #include "nsStackLayout.h"
-#include "nsDisplayList.h"
 
-nsIFrame*
-NS_NewStackFrame (nsIPresShell* aPresShell, nsStyleContext* aContext, nsIBoxLayout* aLayoutManager)
+nsresult
+NS_NewStackFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame, nsIBoxLayout* aLayoutManager)
 {
-  return new (aPresShell) nsStackFrame(aPresShell, aContext, aLayoutManager);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsStackFrame* it = new (aPresShell) nsStackFrame(aPresShell, aLayoutManager);
+  if (nsnull == it)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  *aNewFrame = it;
+
+  return NS_OK;
+  
 } // NS_NewStackFrame
 
-nsStackFrame::nsStackFrame(nsIPresShell* aPresShell, nsStyleContext* aContext, nsIBoxLayout* aLayoutManager):
-  nsBoxFrame(aPresShell, aContext)
+nsStackFrame::nsStackFrame(nsIPresShell* aPresShell, nsIBoxLayout* aLayoutManager):nsBoxFrame(aPresShell)
 {
     // if no layout manager specified us the stack layout
   nsCOMPtr<nsIBoxLayout> layout = aLayoutManager;
@@ -75,30 +87,69 @@ nsStackFrame::nsStackFrame(nsIPresShell* aPresShell, nsStyleContext* aContext, n
   SetLayoutManager(layout);
 }
 
-// REVIEW: The old code put everything in the background layer. To be more
-// consistent with the way other frames work, I'm putting everything in the
-// Content() (i.e., foreground) layer (see nsFrame::BuildDisplayListForChild,
-// the case for stacking context but non-positioned, non-floating frames).
-// This could easily be changed back by hacking nsBoxFrame::BuildDisplayListInternal
-// a bit more.
-NS_IMETHODIMP
-nsStackFrame::BuildDisplayListForChildren(nsDisplayListBuilder*   aBuilder,
-                                          const nsRect&           aDirtyRect,
-                                          const nsDisplayListSet& aLists)
+
+NS_IMETHODIMP  
+nsStackFrame::GetFrameForPoint(const nsPoint& aPoint, 
+                               nsFramePaintLayer aWhichLayer,    
+                               nsIFrame** aFrame)
 {
-  // BuildDisplayListForChild puts stacking contexts into the PositionedDescendants
-  // list. So we need to map that list to aLists.Content(). This is an easy way to
-  // do that.
-  nsDisplayList* content = aLists.Content();
-  nsDisplayListSet kidLists(content, content, content, content, content, content);
-  nsIFrame* kid = mFrames.FirstChild();
-  while (kid) {
-    // Force each child into its own true stacking context.
-    nsresult rv =
-      BuildDisplayListForChild(aBuilder, kid, aDirtyRect, kidLists,
-                               DISPLAY_CHILD_FORCE_STACKING_CONTEXT);
-    NS_ENSURE_SUCCESS(rv, rv);
-    kid = kid->GetNextSibling();
+  if (aWhichLayer != NS_FRAME_PAINT_LAYER_BACKGROUND)
+    return NS_ERROR_FAILURE;
+
+  return nsBoxFrame::GetFrameForPoint(aPoint, aWhichLayer, aFrame);
+}
+
+/* virtual */ nsresult
+nsStackFrame::GetFrameForPointChild(const nsPoint&    aPoint,
+                                    nsFramePaintLayer aWhichLayer,    
+                                    nsIFrame*         aChild,
+                                    PRBool            aCheckMouseThrough,
+                                    nsIFrame**        aFrame)
+{
+  if (aWhichLayer != NS_FRAME_PAINT_LAYER_BACKGROUND)
+    return NS_ERROR_FAILURE;
+
+  nsresult rv = nsBoxFrame::GetFrameForPointChild(aPoint,
+                                           NS_FRAME_PAINT_LAYER_FOREGROUND,
+                                           aChild, aCheckMouseThrough, aFrame);
+  if (NS_SUCCEEDED(rv))
+    return rv;
+  return nsBoxFrame::GetFrameForPointChild(aPoint,
+                                           NS_FRAME_PAINT_LAYER_BACKGROUND,
+                                           aChild, aCheckMouseThrough, aFrame);
+}
+
+void
+nsStackFrame::PaintChildren(nsPresContext*      aPresContext,
+                            nsIRenderingContext& aRenderingContext,
+                            const nsRect&        aDirtyRect,
+                            nsFramePaintLayer    aWhichLayer,
+                            PRUint32             aFlags)
+{
+  // we need to make sure we paint background then foreground of each child because they
+  // are stacked. Otherwise the foreground of the first child could be on the top of the
+  // background of the second.
+  if (aWhichLayer == NS_FRAME_PAINT_LAYER_BACKGROUND)
+  {
+      nsBoxFrame::PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
   }
-  return NS_OK;
+}
+
+// Paint one child frame
+void
+nsStackFrame::PaintChild(nsPresContext*      aPresContext,
+                         nsIRenderingContext& aRenderingContext,
+                         const nsRect&        aDirtyRect,
+                         nsIFrame*            aFrame,
+                         nsFramePaintLayer    aWhichLayer,
+                         PRUint32             aFlags)
+{
+  // we need to make sure we paint background then foreground of each child because they
+  // are stacked. Otherwise the foreground of the first child could be on the top of the
+  // background of the second.
+  if (aWhichLayer == NS_FRAME_PAINT_LAYER_BACKGROUND)
+  {
+    nsBoxFrame::PaintChild(aPresContext, aRenderingContext, aDirtyRect, aFrame, NS_FRAME_PAINT_LAYER_BACKGROUND);
+    nsBoxFrame::PaintChild(aPresContext, aRenderingContext, aDirtyRect, aFrame, NS_FRAME_PAINT_LAYER_FOREGROUND);
+  } 
 }

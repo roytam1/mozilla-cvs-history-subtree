@@ -55,7 +55,7 @@ interface nsIMenuBar;
 // A private interface (unfrozen, private to the widget implementation) that
 // gives us access to some extra features on a widget/window.
 //
-[uuid(5DE488F0-C9B1-427C-938F-D3D13DEFF987)]
+[scriptable, uuid(59356b39-2031-4fd2-a856-435cda1ef700)]
 interface nsPIWidgetMac : nsISupports
 {
     // Like OS ::BringToFront, but constrains the window to its z-level
@@ -68,15 +68,24 @@ interface nsPIWidgetMac : nsISupports
     // Obtain the menubar for a window
   nsIMenuBar GetMenuBar ( );
 
-    // Find the displayed child sheet (if aShown) or a child sheet that
-    // wants to be displayed (if !aShown)
-  nsMacWindowPtr GetChildSheet ( in boolean aShown );
-
+    // True if window should ignore the next deactivate event it receives
+  attribute boolean ignoreDeactivate;
+  
     // True if window is a sheet
   readonly attribute boolean isSheet;
-
-    // The event dispatch handler associated with a window
-  readonly attribute nsMacEventDispatchHandlerPtr eventDispatchHandler;
   
 }; // nsPIWidgetMac
 
+[uuid(0DB8C108-D642-49A2-87F6-ED548DD032E2)]
+interface nsPIWidgetMac_MOZILLA_1_8_BRANCH : nsPIWidgetMac
+{
+  // Find the displayed child sheet (if aShown) or a child sheet that
+  // wants to be displayed (if !aShown)
+  nsMacWindowPtr GetChildSheet ( in boolean aShown );
+
+  // The event dispatch handler associated with a window
+  readonly attribute nsMacEventDispatchHandlerPtr eventDispatchHandler;
+
+  // If the window is a sheet, whether or not it is actually displayed
+  attribute boolean sheetShown;
+}; // nsPIWidgetMac_MOZILLA_1_8_BRANCH

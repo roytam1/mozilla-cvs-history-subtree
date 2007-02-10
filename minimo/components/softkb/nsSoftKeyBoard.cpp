@@ -50,7 +50,7 @@
 #include "nsCOMPtr.h"
 #include "nsMemory.h"
 #include "nsString.h"
-#include "nsCOMArray.h"
+#include "nsArray.h"
 
 #include "nsIGenericFactory.h"
 
@@ -82,250 +82,21 @@
 
 #include "nsISoftKeyBoard.h"
 
+
+#include "nsIDocument.h"
+#include "nsIDOMDocument.h"
+#include "nsIDOMDocumentView.h"    
+#include "nsIDOMAbstractView.h" 
+#include "nsIDOMWindowInternal.h"  
+#include "nsPIDOMWindow.h"      
+#include "nsIPresShell.h"    
+#include "nsIDOMWindowInternal.h"  
+#include "nsIPresShell.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIDocShell.h"
+
 static PRBool gUseSoftwareKeyboard;
-
-#ifdef WINCE
-
-#include "keybd.h"
-
-// **************************************************************************
-// Function Name: IsSmartphone
-// 
-// Purpose: Determine if platform is smartphone
-//
-// Arguments:
-//	 none
-//
-// Return Values:
-//  BOOL
-//   TRUE if the current platform is a Smartphone platform
-//   FALSE if the current platform is not a Smartphone platform
-// 
-// Description:  
-//  This function retreives the current platforms type and then
-//  does a case insensitive string comparison.
-
-static BOOL IsSmartphone() 
-{
-    unsigned short platform[64];
-
-    if (TRUE == SystemParametersInfo(SPI_GETPLATFORMTYPE,
-                                     sizeof(platform),
-                                     platform,
-                                     0))
-    {
-      if (0 == _wcsicmp(L"Smartphone", platform)) 
-      {
-        return TRUE;
-      }
-    }
-    return FALSE;   
-}
-
-// The multitap API not accessible.  We need a way to map 
-BYTE GetKeyPress(PRUint32 actualKey, PRUint32 pressCount)
-{
-  BYTE ch = '*';
-
-  switch (actualKey)
-  {
-    case '1':
-    {
-      pressCount %= 8;
-      
-      switch (pressCount)
-      {
-        case 1:
-          ch = '.';
-          break;
-        case 2:
-          ch = ',';
-          break;
-        case 3:
-          ch = '-';
-          break;
-        case 4:
-          ch = '?';
-          break;
-        case 5:
-          ch = '!';
-          break;
-        case 6:
-          ch = '\'';
-          break;
-        case 7:
-          ch = '@';
-          break;
-        case 0:
-          ch = ':';
-          break;
-      }
-    }
-    break;
-
-    case '2':
-    {
-      pressCount %= 3;
-      
-      switch (pressCount)
-      {
-        case 1:
-          ch = 'a';
-          break;
-        case 2:
-          ch = 'b';
-          break;
-        case 0:
-          ch = 'c';
-          break;
-      }
-    }
-    break;
-
-    case '3':
-    {
-      pressCount %= 3;
-      
-      switch (pressCount)
-      {
-        case 1:
-          ch = 'd';
-          break;
-        case 2:
-          ch = 'e';
-          break;
-        case 0:
-          ch = 'f';
-          break;
-      }
-    }
-    break;
-
-    case '4':
-    {
-      pressCount %= 3;
-      
-      switch (pressCount)
-      {
-        case 1:
-          ch = 'g';
-          break;
-        case 2:
-          ch = 'h';
-          break;
-        case 0:
-          ch = 'i';
-          break;
-      }
-    }    
-    break;
-
-    case '5':
-    {
-      pressCount %= 3;
-      
-      switch (pressCount)
-      {
-        case 1:
-          ch = 'j';
-          break;
-        case 2:
-          ch = 'k';
-          break;
-        case 0:
-          ch = 'l';
-          break;
-      }
-    }
-    break;
-
-
-    case '6':
-    {
-      pressCount %= 3;
-      
-      switch (pressCount)
-      {
-        case 1:
-          ch = 'm';
-          break;
-        case 2:
-          ch = 'n';
-          break;
-        case 0:
-          ch = 'o';
-          break;
-      }
-    } 
-    break;
-
-    case '7':
-    {
-      pressCount %= 4;
-      
-      switch (pressCount)
-      {
-        case 1:
-          ch = 'p';
-          break;
-        case 2:
-          ch = 'q';
-          break;
-        case 3:
-          ch = 'r';
-          break;
-        case 0:
-          ch = 's';
-          break;
-      }
-    } 
-    break;
-
-    case '8':
-    {
-      pressCount %= 3;
-      
-      switch (pressCount)
-      {
-        case 1:
-          ch = 't';
-          break;
-        case 2:
-          ch = 'u';
-          break;
-        case 0:
-          ch = 'v';
-          break;
-      }
-    }
-    break;
-
-    case '9':
-    {
-      pressCount %= 4;
-      
-      switch (pressCount)
-      {
-        case 1:
-          ch = 'w';
-          break;
-        case 2:
-          ch = 'x';
-          break;
-        case 3:
-          ch = 'y';
-          break;
-        case 0:
-          ch = 'z';
-          break;
-      }
-    }
-    break;
-  }
-  return ch;
-}
-
-#endif
+static PRBool gNotifyOnly;
 
 class nsSoftKeyBoard : public nsIDOMEventListener
 {
@@ -375,9 +146,16 @@ public:
   nsCOMArray<nsSoftKeyBoard> mObjects;
 
   static void CloseSIP();
+  static void DelayCloseSIP();
+  static void DoDelayCloseSIPCallback(nsITimer *aTimer, void *aClosure);
+
   static void OpenSIP();
+  static void ScrollElementIntoView(nsIContent *aContent);
 
   void HandlePref(const char* pref, nsIPrefBranch2* prefBranch);
+
+  static nsCOMPtr<nsITimer> gTimer;
+  static nsCOMPtr<nsITimer> gScrollTimer;
 };
 
 NS_INTERFACE_MAP_BEGIN(nsSoftKeyBoard)
@@ -404,21 +182,6 @@ nsSoftKeyBoard::nsSoftKeyBoard(nsSoftKeyBoardService* aService)
 nsSoftKeyBoard::~nsSoftKeyBoard()
 {
 }
-#ifdef WINCE
-
-void SoftKeyboardTimerCB(nsITimer *aTimer, void *aClosure)
-{
-  UINT ch = (UINT) aClosure;
-  UINT flag = KeyStateDownFlag; 
-  
-  PostKeybdMessage( (HWND)-1, 
-                    0,
-                    flag,
-                    1,
-                    &flag, /* ignore */
-                    &ch);
-}
-#endif
 
 NS_IMETHODIMP
 nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
@@ -433,7 +196,7 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
   nsCOMPtr<nsIContent> targetContent = do_QueryInterface(target);
 
 
-  if (!targetContent || !targetContent->IsNodeOfType(nsINode::eHTML_FORM_CONTROL))
+  if (!targetContent || !targetContent->IsContentOfType(nsIContent::eHTML_FORM_CONTROL))
     return NS_OK;
 
   nsCOMPtr<nsIFormControl> formControl(do_QueryInterface(targetContent));
@@ -468,107 +231,13 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
       nsSoftKeyBoardService::CloseSIP();
     }
 
-#ifdef WINCE
-
-    if (IsSmartphone())
-    {
-
-      PRUint32 charCode;
-      keyEvent->GetCharCode(&charCode);
-
-#if 0
-      char buffer[2];
-      sprintf(buffer, "%d = %d", keyCode, charCode);
-      MessageBox(0, buffer, buffer, 0);
-#endif
-     
-      /* value determined by inspection */
-      if (keyCode == 120)
-      {
-        // We're using this key, no one else should
-        aEvent->StopPropagation();
-        aEvent->PreventDefault();
-
-        if (mTimer)
-          mTimer->Cancel(); 
-
-        keybd_event(VK_SPACE, 0, 0, 0);
-        keybd_event(VK_SPACE, 0, KEYEVENTF_KEYUP, 0);
-
-        return NS_OK;
-      }
-
-      /* value determined by inspection */
-      if (keyCode == 119)
-      {
-        // We're using this key, no one else should
-        aEvent->StopPropagation();
-        aEvent->PreventDefault();
-
-        if (mTimer)
-          mTimer->Cancel(); 
-        
-        mUsage++;
-        if (mUsage>eUpperCase) 
-          mUsage=eNumbers;
-
-        return NS_OK;
-      }
-
-      if (mUsage == eNumbers)
-        return NS_OK;
-
-      if ( charCode > nsIDOMKeyEvent::DOM_VK_0 && charCode <= nsIDOMKeyEvent::DOM_VK_9) // [0-9)
-      {
-        // We're using this key, no one else should
-        aEvent->StopPropagation();
-        aEvent->PreventDefault();
-
-        if (mTimer)
-          mTimer->Cancel();
-        
-        if (mCurrentDigit != charCode)
-        {
-          mCurrentDigit = charCode;
-          mCurrentDigitCount = 1;
-        }
-        else
-        {
-          mCurrentDigitCount++;
-        }
-
-        mTimer = do_CreateInstance("@mozilla.org/timer;1");
-        if (!mTimer)
-          return NS_OK;
-
-        BYTE key = GetKeyPress(mCurrentDigit, mCurrentDigitCount);
-
-        if (mUsage == eUpperCase)
-          key = _toupper(key);
-
-        PRUint32 closure = key;
-        
-        mTimer->InitWithFuncCallback(SoftKeyboardTimerCB,
-                                     (void*)closure,
-                                     700, 
-                                     nsITimer::TYPE_ONE_SHOT);
-        return NS_OK;
-      }
-      else
-      {
-        mCurrentDigit = 0;
-        mCurrentDigitCount = 0;
-      }
-      
-    }
-#endif
-
     return NS_OK;
   }
 
   if (eventType.EqualsLiteral("click"))
   {
     nsSoftKeyBoardService::OpenSIP();
+    nsSoftKeyBoardService::ScrollElementIntoView(targetContent);
     return NS_OK;
   }
 
@@ -592,6 +261,7 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
   {
     //    if (popupConditions == PR_FALSE)
     nsSoftKeyBoardService::OpenSIP();
+    nsSoftKeyBoardService::ScrollElementIntoView(targetContent);
   }
   else
     nsSoftKeyBoardService::CloseSIP();
@@ -599,71 +269,158 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
   return NS_OK;
 }
 
+nsCOMPtr<nsITimer> nsSoftKeyBoardService::gTimer = nsnull;
+nsCOMPtr<nsITimer> nsSoftKeyBoardService::gScrollTimer = nsnull;
+
+
+static void ScrollElementTimerCB(nsITimer *aTimer, void *aClosure)
+{
+  nsIContent* content = (nsIContent*) aClosure;
+
+  nsIDocument* doc = content->GetDocument();
+  if (!doc)
+    return;
+  
+  nsIFrame* frame;
+  nsIPresShell *presShell = doc->GetShellAt(0);
+
+  presShell->GetPrimaryFrameFor(content, &frame);
+  presShell->ScrollFrameIntoView(frame, NS_PRESSHELL_SCROLL_ANYWHERE, NS_PRESSHELL_SCROLL_ANYWHERE);
+
+  content->Release();
+}
+
+void
+nsSoftKeyBoardService::ScrollElementIntoView(nsIContent *content)
+{
+  NS_ADDREF(content);  // release in timercb.
+  nsSoftKeyBoardService::gScrollTimer = do_CreateInstance("@mozilla.org/timer;1");
+  nsSoftKeyBoardService::gScrollTimer->InitWithFuncCallback(ScrollElementTimerCB,
+                                                            (void*)content,
+                                                            250, 
+                                                            nsITimer::TYPE_ONE_SHOT);
+}
+
+
+
 void
 nsSoftKeyBoardService::OpenSIP()
 {
   if (!gUseSoftwareKeyboard)
     return;
 
-#ifdef WINCE
-  HWND hWndSIP = ::FindWindow( _T( "SipWndClass" ), NULL );
-  if (hWndSIP)
-    ::ShowWindow( hWndSIP, SW_SHOW);
-
-  SHSipPreference(NULL, SIP_UP);
-
-  //  SHFullScreen(GetForegroundWindow(), SHFS_SHOWSIPBUTTON);
-
-  // keep the sip button hidden!
-  
-  hWndSIP = FindWindow( _T( "MS_SIPBUTTON" ), NULL );
-  if (hWndSIP) 
+  if (!gNotifyOnly)
   {
-    ShowWindow( hWndSIP, SW_HIDE );
-    SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
-  }
-
+    if (gTimer)
+    {
+      gTimer->Cancel();
+      gTimer = nsnull;
+    }
+    
+#ifdef WINCE
+    HWND hWndSIP = ::FindWindow( _T( "SipWndClass" ), NULL );
+    if (hWndSIP)
+      ::ShowWindow( hWndSIP, SW_SHOW);
+    
+    SHSipPreference(NULL, SIP_UP);
+    
+    //  SHFullScreen(GetForegroundWindow(), SHFS_SHOWSIPBUTTON);
+    
+    // keep the sip button hidden!
+    
+    hWndSIP = FindWindow( _T( "MS_SIPBUTTON" ), NULL );
+    if (hWndSIP) 
+    {
+      ShowWindow( hWndSIP, SW_HIDE );
+      SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+    }
 #endif
+  }
 
   nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
   if (observerService)
     observerService->NotifyObservers(nsnull, "software-keyboard", NS_LITERAL_STRING("open").get());
 }
 
+
+void
+nsSoftKeyBoardService::DoDelayCloseSIPCallback(nsITimer *aTimer, void *aClosure)
+{
+  nsSoftKeyBoardService::CloseSIP();
+  nsSoftKeyBoardService::gTimer = nsnull;
+}
+
+void
+nsSoftKeyBoardService::DelayCloseSIP()
+{
+  if (nsSoftKeyBoardService::gTimer)
+  {
+    nsSoftKeyBoardService::gTimer->Cancel();
+    nsSoftKeyBoardService::gTimer = nsnull;
+  }
+
+  nsSoftKeyBoardService::gTimer = do_CreateInstance("@mozilla.org/timer;1");
+
+  if (!nsSoftKeyBoardService::gTimer)
+    return;
+
+  nsSoftKeyBoardService::gTimer->InitWithFuncCallback(nsSoftKeyBoardService::DoDelayCloseSIPCallback,
+                                                      nsnull,
+                                                      250,
+                                                      nsITimer::TYPE_ONE_SHOT);
+}
+
 void
 nsSoftKeyBoardService::CloseSIP()
 {
+  if (!gNotifyOnly)
+  {
 #ifdef WINCE
-
-  HWND hWndSIP = FindWindow( _T( "SipWndClass" ), NULL );
-  if (hWndSIP)
-  {
-    ShowWindow( hWndSIP, SW_HIDE );
-  }
-
-  hWndSIP = FindWindow( _T( "MS_SIPBUTTON" ), NULL );
-  if (hWndSIP) 
-  {
-    ShowWindow( hWndSIP, SW_HIDE );
-    SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
-  }
-
-  SHSipPreference(NULL, SIP_DOWN);
-
-  SHFullScreen(GetForegroundWindow(), SHFS_HIDESIPBUTTON);
+    HWND hWndSIP = FindWindow( _T( "SipWndClass" ), NULL );
+    if (hWndSIP)
+    {
+      ShowWindow( hWndSIP, SW_HIDE );
+    }
+    
+    hWndSIP = FindWindow( _T( "MS_SIPBUTTON" ), NULL );
+    if (hWndSIP) 
+    {
+      ShowWindow( hWndSIP, SW_HIDE );
+      SetWindowPos(hWndSIP, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE);
+    }
+    
+    SHSipPreference(NULL, SIP_DOWN);
+    
+    SHFullScreen(GetForegroundWindow(), SHFS_HIDESIPBUTTON);
 #endif
+  }
 
   nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
   if (observerService)
     observerService->NotifyObservers(nsnull, "software-keyboard", NS_LITERAL_STRING("close").get());
-
+  
 }
 
+NS_IMETHODIMP
+nsSoftKeyBoardService::Show(void)
+{
+  nsSoftKeyBoardService::OpenSIP();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSoftKeyBoardService::Hide(void)
+{
+  nsSoftKeyBoardService::CloseSIP();
+  return NS_OK;
+}
 
 
 NS_IMETHODIMP
 nsSoftKeyBoardService::GetWindowRect(PRInt32 *top, PRInt32 *bottom, PRInt32 *left, PRInt32 *right)
 {
+  if (!gNotifyOnly)
+  {
 #ifdef WINCE
   if (!top || !bottom || !left || !right)
     return NS_ERROR_INVALID_ARG;
@@ -684,13 +441,16 @@ nsSoftKeyBoardService::GetWindowRect(PRInt32 *top, PRInt32 *bottom, PRInt32 *lef
 
   return NS_OK;
 #endif
-
+  }
+  
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsSoftKeyBoardService::SetWindowRect(PRInt32 top, PRInt32 bottom, PRInt32 left, PRInt32 right)
 {
+  if (!gNotifyOnly)
+  {
 #ifdef WINCE
   HWND hWndSIP = ::FindWindow( _T( "SipWndClass" ), NULL );
   if (!hWndSIP)
@@ -699,7 +459,7 @@ nsSoftKeyBoardService::SetWindowRect(PRInt32 top, PRInt32 bottom, PRInt32 left, 
   SetWindowPos(hWndSIP, HWND_TOP, left, top, right-left, bottom-top, SWP_SHOWWINDOW);
   return NS_OK;
 #endif
- 
+  }
 
  return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -713,7 +473,7 @@ nsSoftKeyBoard::ShouldOpenKeyboardFor(nsIDOMEvent* aEvent)
   nsevent->GetOriginalTarget(getter_AddRefs(target));
   nsCOMPtr<nsIContent> targetContent = do_QueryInterface(target);
 
-  if (targetContent && targetContent->IsNodeOfType(nsINode::eHTML_FORM_CONTROL)) 
+  if (targetContent && targetContent->IsContentOfType(nsIContent::eHTML_FORM_CONTROL)) 
   {
     nsCOMPtr<nsIFormControl> formControl(do_QueryInterface(targetContent));
     if (formControl)
@@ -790,6 +550,7 @@ nsSoftKeyBoard::GetAttachedWindow(nsIDOMWindow * *aAttachedWindow)
 nsSoftKeyBoardService::nsSoftKeyBoardService()  
 {
   gUseSoftwareKeyboard = PR_FALSE;
+  gNotifyOnly = PR_FALSE;
 }  
 
 nsSoftKeyBoardService::~nsSoftKeyBoardService()  
@@ -803,16 +564,18 @@ nsSoftKeyBoardService::HandlePref(const char* pref, nsIPrefBranch2* prefBranch)
 {
   if (!strcmp(pref, "skey.enabled"))
   {
-    PRBool enabled;
+    PRBool enabled = gUseSoftwareKeyboard;
     prefBranch->GetBoolPref(pref, &enabled);
-    
     gUseSoftwareKeyboard = enabled;
-    
-    if (gUseSoftwareKeyboard)
-      nsSoftKeyBoardService::OpenSIP();
-    else
-      nsSoftKeyBoardService::CloseSIP();
   }
+
+  if (!strcmp(pref, "skey.notifyOnly"))
+  {
+    PRBool enabled = gNotifyOnly;
+    prefBranch->GetBoolPref(pref, &enabled);
+    gNotifyOnly = enabled;
+  }
+
 }
 
 NS_IMETHODIMP
@@ -870,6 +633,7 @@ nsSoftKeyBoardService::Observe(nsISupports *aSubject, const char *aTopic, const 
     prefBranch->AddObserver("skey.", this, PR_FALSE);
 
     HandlePref("skey.enabled", prefBranch);
+    HandlePref("skey.notifyOnly", prefBranch);
     return NS_OK;
   }
 
@@ -878,7 +642,7 @@ nsSoftKeyBoardService::Observe(nsISupports *aSubject, const char *aTopic, const 
     nsCOMPtr<nsIPrefBranch2> prefBranch = do_QueryInterface(aSubject);
     nsXPIDLCString cstr;
     
-    const char* pref = NS_ConvertUTF16toUTF8(aData).get();
+    const char* pref = NS_ConvertUCS2toUTF8(aData).get();
 
     HandlePref(pref, prefBranch);
     return NS_OK;

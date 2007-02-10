@@ -41,7 +41,6 @@
 #include "nsDeviceContextOS2.h"
 #include "nsRenderingContextOS2.h"
 #include "nsDeviceContextSpecOS2.h"
-#include "nsPrintOS2.h"
 #include "nsIServiceManager.h"
 #include "nsCOMPtr.h"
 #include "nsIScreenManager.h"
@@ -60,7 +59,6 @@ static PRBool gIsWarp4 = NOT_SETUP;
 
 PRUint32 nsDeviceContextOS2::sNumberOfScreens = 0;
 nscoord nsDeviceContextOS2::mDpi = 120;
-
 
 nsDeviceContextOS2 :: nsDeviceContextOS2()
   : DeviceContextImpl()
@@ -348,6 +346,14 @@ NS_IMETHODIMP nsDeviceContextOS2 :: SupportsNativeWidgets(PRBool &aSupportsWidge
   else
     aSupportsWidgets = PR_FALSE;
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsDeviceContextOS2 :: GetScrollBarDimensions(float &aWidth, float &aHeight) const
+{
+  float scale = mCPixelScale;
+  aWidth = ::WinQuerySysValue( HWND_DESKTOP, SV_CXVSCROLL) * mDevUnitsToAppUnits * scale;
+  aHeight = ::WinQuerySysValue( HWND_DESKTOP, SV_CYHSCROLL) * mDevUnitsToAppUnits * scale;
   return NS_OK;
 }
 

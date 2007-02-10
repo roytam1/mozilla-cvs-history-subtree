@@ -43,7 +43,7 @@
 #include "jsdbgapi.h"
 #include "nsError.h"
 
-#include "nsIJVMThreadManager.h"
+#include "nsIThreadManager.h"
 #include "nsISecurityContext.h"
 
 /**

@@ -38,13 +38,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/***************************************************************************
-*
-* This File is no longer used by Thunderbird. Seamonkey is the only consumer.
-* See mozilla/mail/components/shell for the Thunderbird registry code
-*
-*****************************************************************************/
-
 #undef UNICODE
 #undef _UNICODE
 
@@ -56,13 +49,12 @@
 #include "nsIStringBundle.h"
 #include "nsIPromptService.h"
 #include "nsXPIDLString.h"
-#include "plstr.h"
+#include "nsSpecialSystemDirectory.h"
 #include "nsDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsNativeCharsetUtils.h"
 #include "nsEmbedCID.h"
-#include "nsIMapiSupport.h"
 #include <mbstring.h>
 
 #define EXE_EXTENSION ".EXE" 
@@ -92,7 +84,7 @@ const char * nsMapiRegistryUtils::thisApplication()
     return m_thisApp.get() ;
 }
 
-void nsMapiRegistryUtils::getVarValue(const PRUnichar * varName, nsXPIDLString & result)
+void nsMapiRegistryUtils::getVarValue(const PRUnichar * varName, nsAutoString & result)
 {
     nsresult rv;
     nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(
@@ -103,9 +95,12 @@ void nsMapiRegistryUtils::getVarValue(const PRUnichar * varName, nsXPIDLString &
                     "chrome://branding/locale/brand.properties",
                     getter_AddRefs(brandBundle));
         if (NS_SUCCEEDED(rv)) {
-            brandBundle->GetStringFromName(
+            nsXPIDLString value;
+            rv = brandBundle->GetStringFromName(
                        varName,
-                       getter_Copies(result));
+                       getter_Copies(value));
+            if (NS_SUCCEEDED(rv))
+                result = value;
         }
     }
 }
@@ -793,7 +788,7 @@ nsresult nsMapiRegistryUtils::registerMailApp(PRBool aForceRegistration)
           appKeyName.Assign(keyName);
           appKeyName.AppendLiteral("\\shell\\properties");
 
-          nsXPIDLString brandShortName;
+          nsAutoString brandShortName;
           getVarValue(NS_LITERAL_STRING("brandShortName").get(), brandShortName);
 
           const PRUnichar* brandNameStrings[] = { brandShortName.get() };
@@ -1030,10 +1025,9 @@ nsresult nsMapiRegistryUtils::setDefaultMailClient()
                               MOZ_HWND_BROADCAST_MSG_TIMEOUT,
                               NULL);
 
-    // Tell the MAPI Service to register the mapi proxy dll now that we are the default mail application
-    nsCOMPtr<nsIMapiSupport> mapiService (do_GetService(NS_IMAPISUPPORT_CONTRACTID, &rv));
-    NS_ENSURE_SUCCESS(rv, rv);
-    return mapiService->RegisterServer();
+    // register the new mapi server
+    RegisterServer(CLSID_CMapiImp, "Mozilla MAPI", "MozillaMapi", "MozillaMapi.1");
+    return rv;
 }
 
 nsresult nsMapiRegistryUtils::unsetDefaultNewsClient() {
@@ -1195,10 +1189,8 @@ nsresult nsMapiRegistryUtils::unsetDefaultMailClient() {
                           SMTO_NORMAL|SMTO_ABORTIFHUNG,
                           MOZ_HWND_BROADCAST_MSG_TIMEOUT,
                           NULL);
-    // Tell the MAPI Service to unregister the mapi proxy dll now that we are the default mail application
-    nsCOMPtr<nsIMapiSupport> mapiService (do_GetService(NS_IMAPISUPPORT_CONTRACTID, &result));
-    NS_ENSURE_SUCCESS(result, result);
-    mapiService->UnRegisterServer();
+
+    UnregisterServer(CLSID_CMapiImp, "MozillaMapi", "MozillaMapi.1");
     return mailKeySet;
 }
 

@@ -14,16 +14,22 @@ bin/.autoreg
 ;
 ; en-US
 bin/chrome/en-US.jar
-bin/chrome/en-US.manifest
-bin/defaults/profile/en-US/*
-bin/defaults/messenger/en-US/*
-bin/defaults/isp/en-US/movemail.rdf
+bin/chrome/en-mac.jar
+bin/chrome/en-unix.jar
+bin/chrome/en-win.jar
+
+[regus]
+;
+; US
+bin/chrome/US.jar
+bin/defaults/profile/US/*
+bin/defaults/messenger/US/*
+bin/defaults/isp/US/movemail.rdf
 bin/searchplugins/*
-bin/dictionaries/*
 
 [deflenus]
 ;
-; default files for en-US
+; default files for US
 bin/defaults/profile/bookmarks.html
 bin/defaults/profile/panels.rdf
 bin/defaults/profile/localstore.rdf
@@ -53,24 +59,6 @@ bin/libxpcom_compat.so
 bin/components/libxpcom_compat_c.so
 
 [browser]
-; MOZ_XUL_APP=1 items
-bin/libxul.so
-bin/components/commandlines.xpt
-bin/components/feeds.xpt
-bin/components/nsUpdateService.js
-bin/components/toolkitprofile.xpt
-bin/components/update.xpt
-bin/components/libcommandlines.so
-bin/components/libsuite.so
-bin/components/libtoolkitcomps.so
-bin/components/nsBrowserContentHandler.js
-bin/components/nsExtensionManager.js
-bin/components/pluginGlue.js
-bin/components/xulapp.xpt
-bin/components/nsURLFormatter.js
-bin/components/urlformatter.xpt
-
-; Original items (pre MOZ_XUL_APP=1)
 bin/seamonkey
 bin/seamonkey-bin
 bin/init.d/README
@@ -82,7 +70,6 @@ bin/libgtkxtbin.so
 bin/libjsj.so
 bin/libprotocol.so
 bin/libgkgfx.so
-bin/libthebes.so
 bin/libmoz_art_lgpl.so
 bin/run-mozilla.sh
 bin/regExport
@@ -100,13 +87,9 @@ bin/libgfxpsshar.so
 bin/components/alerts.xpt
 bin/components/libaccessibility.so
 bin/components/accessibility.xpt
+bin/components/accessibility-atk.xpt
 bin/components/libappcomps.so
-bin/components/libbookmark.so
-bin/components/libwindowds.so
-bin/components/libintlapp.so
-bin/components/libxpautocomplete.so
 bin/components/libsearchservice.so
-bin/components/libgkgfxthebes.so
 bin/components/appstartup.xpt
 bin/components/bookmarks.xpt
 bin/components/directory.xpt
@@ -149,6 +132,7 @@ bin/components/intl.xpt
 bin/components/imglib2.xpt
 bin/components/chardet.xpt
 bin/components/jar.xpt
+bin/components/jsconsole.xpt
 bin/components/jsconsole-clhandler.js
 bin/components/libnsappshell.so
 bin/components/libcaps.so
@@ -165,7 +149,6 @@ bin/components/libgfxps.so
 bin/components/libgfxxprint.so
 bin/components/libimglib2.so
 bin/components/libi18n.so
-bin/components/libchardet.so
 bin/components/libmork.so
 bin/components/libmozfind.so
 bin/components/liboji.so
@@ -179,7 +162,6 @@ bin/components/content_xmldoc.xpt
 bin/components/content_xslt.xpt
 bin/components/content_xtf.xpt
 bin/components/libgklayout.so
-bin/components/libgkgfxthebes.so
 bin/components/libgkplugin.so
 bin/components/libhtmlpars.so
 bin/components/librdf.so
@@ -199,11 +181,13 @@ bin/components/mozbrwsr.xpt
 bin/components/mozcomps.xpt
 bin/components/mozfind.xpt
 bin/components/libnecko.so
+bin/components/libnecko2.so
 bin/components/necko.xpt
 bin/components/mimetype.xpt
 bin/components/necko_cache.xpt
 bin/components/necko_strconv.xpt
 bin/components/necko_about.xpt
+bin/components/necko_data.xpt
 bin/components/necko_dns.xpt
 bin/components/necko_ftp.xpt
 bin/components/necko_http.xpt
@@ -264,24 +248,26 @@ bin/components/libxremoteservice.so
 bin/components/xremoteservice.xpt
 bin/components/libremoteservice.so
 bin/components/toolkitremote.xpt
-bin/components/xremoteservice.xpt
 bin/components/embed_base.xpt
 bin/components/commandhandler.xpt
 bin/components/webbrowserpersist.xpt
 bin/components/windowwatcher.xpt
+bin/components/xmlextras.xpt
 bin/components/libxmlextras.so
 bin/components/nsHelperAppDlg.js
 bin/components/helperAppDlg.xpt
 bin/components/nsProgressDialog.js
 bin/components/progressDlg.xpt
 bin/components/nsDownloadProgressListener.js
+bin/components/libtransformiix.so
 bin/components/libfileview.so
 bin/components/filepicker.xpt
 bin/components/libuniversalchardet.so
-bin/components/suitetypeaheadfind.xpt
-bin/components/libsuitetypeaheadfind.so
+bin/components/typeaheadfind.xpt
+bin/components/libtypeaheadfind.so
 bin/components/nsCloseAllWindows.js
 bin/components/extensions.xpt
+bin/components/nsExtensionManager.js
 bin/components/libsystem-pref.so
 bin/components/htmlparser.xpt
 bin/components/lwbrk.xpt
@@ -292,15 +278,9 @@ bin/components/plugin.xpt
 bin/components/prefetch.xpt
 bin/components/imgicon.xpt
 bin/components/libimgicon.so
-bin/components/txEXSLTRegExFunctions.js
 
 bin/components/xulappinfo.js
 bin/components/xulappinfo.xpt
-
-; spellchecker (may not be present)
-bin/components/libmyspell.so
-bin/components/spellchecker.xpt
-bin/components/libspellchecker.so
 
 ; NegotiateAuth
 bin/components/libauth.so
@@ -327,26 +307,12 @@ bin/chrome/sroaming.jar
 bin/components/p3p.xpt
 bin/components/libp3p.so
 
-; classic theme
-bin/chrome/classic.jar
-bin/chrome/classic.manifest
-bin/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/icon.png
-bin/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/install.rdf
-bin/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/preview.png
-
-; modern theme
-bin/chrome/modern.jar
-bin/extensions/modern@themes.mozilla.org/chrome/modern.jar
-bin/extensions/modern@themes.mozilla.org/chrome.manifest
-bin/extensions/modern@themes.mozilla.org/icon.png
-bin/extensions/modern@themes.mozilla.org/install.rdf
-bin/extensions/modern@themes.mozilla.org/preview.png
-
 bin/chrome/help.jar
 bin/chrome/toolkit.jar
-bin/chrome/toolkit.manifest
 bin/chrome/comm.jar
-bin/chrome/comm.manifest
+bin/chrome/content-packs.jar
+bin/chrome/modern.jar
+bin/chrome/classic.jar
 bin/chrome/installed-chrome.txt
 bin/chrome/chromelist.txt
 ;-bin/chrome/comm/content/editor/EditorInitPage.html
@@ -425,17 +391,12 @@ bin/res/rdf/loading.gif
 bin/res/html/*
 bin/res/fonts/*
 bin/res/dtd/*
-bin/res/effective_tld_names.dat
 
 ; svg
 bin/res/svg.css
 bin/components/dom_svg.xpt
 
 [mail]
-; MOZ_XUL_APP=1 addition
-bin/components/libmail.so
-
-; Original items (pre MOZ_XUL_APP=1)
 bin/libmsgbaseutil.so
 bin/components/addrbook.xpt
 bin/components/libaddrbook.so
@@ -466,7 +427,6 @@ bin/components/nsLDAPPrefsService.js
 bin/components/import.xpt
 bin/components/impComm4xMail.xpt
 bin/chrome/messenger.jar
-bin/chrome/messenger.manifest
 bin/components/libmsgsmime.so
 bin/components/msgsmime.xpt
 bin/components/smime-service.js
@@ -535,7 +495,6 @@ bin/libfreebl_64int_3.so
 bin/libssl3.so
 bin/chrome/pipnss.jar
 bin/chrome/pippki.jar
-bin/chrome/pippki.manifest
 
 [inspector]
 bin/components/inspector-cmdline.js
@@ -545,6 +504,11 @@ bin/res/inspector/viewer-registry.rdf
 bin/res/inspector/search-registry.rdf
 bin/chrome/icons/default/winInspectorMain*.xpm
 
+[spellcheck]
+bin/components/libmyspell.so
+bin/components/libspellchecker.so
+bin/components/spellchecker.xpt
+bin/dictionaries/*
+
 [reporter]
 bin/chrome/reporter.jar
-bin/chrome/reporter.manifest

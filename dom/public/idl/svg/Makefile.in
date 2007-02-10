@@ -50,11 +50,9 @@ XPIDL_MODULE	= dom_svg
 
 XPIDLSRCS	= \
 		nsIDOMGetSVGDocument.idl \
-		nsIDOMSVGAElement.idl \
 		nsIDOMSVGAngle.idl \
 		nsIDOMSVGAnimatedAngle.idl \
 		nsIDOMSVGAnimatedEnum.idl \
-		nsIDOMSVGAnimatedInteger.idl \
 		nsIDOMSVGAnimatedLength.idl \
 		nsIDOMSVGAnimatedLengthList.idl \
 		nsIDOMSVGAnimatedNumber.idl \
@@ -74,8 +72,6 @@ XPIDLSRCS	= \
 		nsIDOMSVGEllipseElement.idl \
 		nsIDOMSVGEvent.idl \
 		nsIDOMSVGException.idl \
-		nsIDOMSVGFilterElement.idl \
-		nsIDOMSVGFilters.idl \
 		nsIDOMSVGFitToViewBox.idl \
 		nsIDOMSVGForeignObjectElem.idl \
 		nsIDOMSVGGElement.idl \
@@ -86,7 +82,6 @@ XPIDLSRCS	= \
 		nsIDOMSVGLineElement.idl \
 		nsIDOMSVGLocatable.idl \
 		nsIDOMSVGMarkerElement.idl \
-		nsIDOMSVGMaskElement.idl \
 		nsIDOMSVGMatrix.idl \
 		nsIDOMSVGMetadataElement.idl \
 		nsIDOMSVGNumber.idl \
@@ -94,7 +89,6 @@ XPIDLSRCS	= \
 		nsIDOMSVGPathElement.idl \
 		nsIDOMSVGPathSeg.idl \
 		nsIDOMSVGPathSegList.idl \
-		nsIDOMSVGPatternElement.idl \
 		nsIDOMSVGPoint.idl \
 		nsIDOMSVGPointList.idl \
 		nsIDOMSVGPolygonElement.idl \
@@ -107,7 +101,6 @@ XPIDLSRCS	= \
 		nsIDOMSVGStopElement.idl \
 		nsIDOMSVGStylable.idl \
 		nsIDOMSVGStyleElement.idl \
-		nsIDOMSVGSwitchElement.idl \
 		nsIDOMSVGSymbolElement.idl \
 		nsIDOMSVGTextContentElement.idl \
 		nsIDOMSVGTextElement.idl \

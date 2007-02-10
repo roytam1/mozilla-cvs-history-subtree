@@ -53,7 +53,7 @@ class nsAString;
 class nsIImageControlFrame : public nsISupports {
 
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ILISTCONTROLFRAME_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ILISTCONTROLFRAME_IID)
 
   /**
    * Get the place the user last clicked on the image (esp. for submits)
@@ -66,8 +66,6 @@ public:
   NS_IMETHOD GetClickedY(PRInt32* aY) = 0;
 
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIImageControlFrame, NS_ILISTCONTROLFRAME_IID)
 
 #endif
 

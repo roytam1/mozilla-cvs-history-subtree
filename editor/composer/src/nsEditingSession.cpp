@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 sw=2 et tw=78: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -40,7 +39,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindow.h"
 #include "nsIDOMWindowUtils.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMNSHTMLDocument.h"
@@ -48,6 +47,7 @@
 #include "nsIHTMLDocument.h"
 #include "nsIDOMDocument.h"
 #include "nsIURI.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsISelectionPrivate.h"
 #include "nsITransactionManager.h"
 
@@ -119,8 +119,8 @@ nsEditingSession::~nsEditingSession()
     mLoadBlankDocTimer->Cancel();
 }
 
-NS_IMPL_ISUPPORTS3(nsEditingSession, nsIEditingSession, nsIWebProgressListener, 
-                   nsISupportsWeakReference)
+NS_IMPL_ISUPPORTS4(nsEditingSession, nsIEditingSession, nsIWebProgressListener, 
+                   nsIURIContentListener, nsISupportsWeakReference)
 
 /*---------------------------------------------------------------------------
 
@@ -145,7 +145,15 @@ nsEditingSession::MakeWindowEditable(nsIDOMWindow *aWindow,
   nsIDocShell *docShell = GetDocShellFromWindow(aWindow);
   if (!docShell) return NS_ERROR_FAILURE;
 
+  // register as a content listener, so that we can fend off URL
+  // loads from sidebar
   nsresult rv;
+  nsCOMPtr<nsIURIContentListener> listener = do_GetInterface(docShell, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = listener->SetParentContentListener(this);
+  NS_ENSURE_SUCCESS(rv, rv);
+
   // Disable JavaScript in this document:
   PRBool tmp;
   rv = docShell->GetAllowJavascript(&tmp);
@@ -718,15 +726,10 @@ nsEditingSession::OnStateChange(nsIWebProgress *aWebProgress,
 
     // Document level notification...
     if (aStateFlags & nsIWebProgressListener::STATE_IS_DOCUMENT) {
-#ifdef NOISY_DOC_LOADING
-      printf("STATE_START & STATE_IS_DOCUMENT flags=%x\n", aStateFlags);
-#endif
-
       PRBool progressIsForTargetDocument =
         IsProgressForTargetDocument(aWebProgress);
 
-      if (progressIsForTargetDocument)
-      {
+      if (progressIsForTargetDocument) {
         nsCOMPtr<nsIDOMWindow> window;
         aWebProgress->GetDOMWindow(getter_AddRefs(window));
 
@@ -735,25 +738,26 @@ nsEditingSession::OnStateChange(nsIWebProgress *aWebProgress,
 
         nsCOMPtr<nsIHTMLDocument> htmlDoc(do_QueryInterface(doc));
 
-        if (htmlDoc && htmlDoc->IsWriting())
-        {
+        if (htmlDoc && htmlDoc->IsWriting()) {
           nsCOMPtr<nsIDOMNSHTMLDocument> htmlDomDoc(do_QueryInterface(doc));
           nsAutoString designMode;
 
           htmlDomDoc->GetDesignMode(designMode);
 
-          if (designMode.EqualsLiteral("on"))
-          {
+          if (designMode.EqualsLiteral("on")) {
             // This notification is for data coming in through
             // document.open/write/close(), ignore it.
 
             return NS_OK;
           }
         }
-
-        mCanCreateEditor = PR_TRUE;
-        StartDocumentLoad(aWebProgress, progressIsForTargetDocument);
       }
+
+      mCanCreateEditor = PR_TRUE;
+      StartDocumentLoad(aWebProgress, progressIsForTargetDocument);
+#ifdef NOISY_DOC_LOADING
+      printf("STATE_START & STATE_IS_DOCUMENT flags=%x\n", aStateFlags);
+#endif
     }
   }
   //
@@ -761,7 +765,7 @@ nsEditingSession::OnStateChange(nsIWebProgress *aWebProgress,
   //
   else if (aStateFlags & nsIWebProgressListener::STATE_TRANSFERRING)
   {
-    if (aStateFlags & nsIWebProgressListener::STATE_IS_DOCUMENT)
+    if (aStateFlags * nsIWebProgressListener::STATE_IS_DOCUMENT)
     {
       // document transfer started
     }
@@ -771,7 +775,7 @@ nsEditingSession::OnStateChange(nsIWebProgress *aWebProgress,
   //
   else if (aStateFlags & nsIWebProgressListener::STATE_REDIRECTING)
   {
-    if (aStateFlags & nsIWebProgressListener::STATE_IS_DOCUMENT)
+    if (aStateFlags * nsIWebProgressListener::STATE_IS_DOCUMENT)
     {
       // got a redirect
     }
@@ -907,6 +911,70 @@ nsEditingSession::OnSecurityChange(nsIWebProgress *aWebProgress,
     return NS_OK;
 }
 
+
+#ifdef XP_MAC
+#pragma mark -
+#endif
+
+/* boolean onStartURIOpen (in nsIURI aURI); */
+NS_IMETHODIMP nsEditingSession::OnStartURIOpen(nsIURI *aURI, PRBool *aAbortOpen)
+{
+  return NS_OK;
+}
+
+/* boolean doContent (in string aContentType, in boolean aIsContentPreferred, in nsIRequest aRequest, out nsIStreamListener aContentHandler); */
+NS_IMETHODIMP nsEditingSession::DoContent(const char *aContentType, PRBool aIsContentPreferred, nsIRequest *aRequest, nsIStreamListener **aContentHandler, PRBool *aAbortProcess)
+{
+  NS_ENSURE_ARG_POINTER(aContentHandler);
+  NS_ENSURE_ARG_POINTER(aAbortProcess);
+  *aContentHandler = nsnull;
+  *aAbortProcess = PR_FALSE;
+  return NS_OK;
+}
+
+/* boolean isPreferred (in string aContentType, out string aDesiredContentType); */
+NS_IMETHODIMP nsEditingSession::IsPreferred(const char *aContentType, char **aDesiredContentType, PRBool *_retval)
+{
+  NS_ENSURE_ARG_POINTER(aDesiredContentType);
+  NS_ENSURE_ARG_POINTER(_retval);
+  *aDesiredContentType = nsnull;
+  *_retval = PR_FALSE;
+  return NS_OK;
+}
+
+/* boolean canHandleContent (in string aContentType, in boolean aIsContentPreferred, out string aDesiredContentType); */
+NS_IMETHODIMP nsEditingSession::CanHandleContent(const char *aContentType, PRBool aIsContentPreferred, char **aDesiredContentType, PRBool *_retval)
+{
+  NS_ENSURE_ARG_POINTER(aDesiredContentType);
+  NS_ENSURE_ARG_POINTER(_retval);
+  *aDesiredContentType = nsnull;
+  *_retval = PR_FALSE;
+  return NS_OK;
+}
+
+/* attribute nsISupports loadCookie; */
+NS_IMETHODIMP nsEditingSession::GetLoadCookie(nsISupports * *aLoadCookie)
+{
+  NS_ENSURE_ARG_POINTER(aLoadCookie);
+  *aLoadCookie = nsnull;
+  return NS_OK;
+}
+NS_IMETHODIMP nsEditingSession::SetLoadCookie(nsISupports * aLoadCookie)
+{
+  return NS_OK;
+}
+
+/* attribute nsIURIContentListener parentContentListener; */
+NS_IMETHODIMP nsEditingSession::GetParentContentListener(nsIURIContentListener * *aParentContentListener)
+{
+  NS_ENSURE_ARG_POINTER(aParentContentListener);
+  *aParentContentListener = nsnull;
+  return NS_OK;
+}
+NS_IMETHODIMP nsEditingSession::SetParentContentListener(nsIURIContentListener * aParentContentListener)
+{
+  return NS_OK;
+}
 
 #ifdef XP_MAC
 #pragma mark -
@@ -1162,11 +1230,11 @@ nsEditingSession::EndPageLoad(nsIWebProgress *aWebProgress,
 nsIDocShell *
 nsEditingSession::GetDocShellFromWindow(nsIDOMWindow *aWindow)
 {
-  nsCOMPtr<nsPIDOMWindow> window = do_QueryInterface(aWindow);
-  if (!window)
+  nsCOMPtr<nsIScriptGlobalObject> scriptGO = do_QueryInterface(aWindow);
+  if (!scriptGO)
     return nsnull;
 
-  return window->GetDocShell();
+  return scriptGO->GetDocShell();
 }
 
 /*---------------------------------------------------------------------------

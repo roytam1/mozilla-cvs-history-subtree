@@ -39,7 +39,7 @@
 #ifndef _nsDocAccessible_H_
 #define _nsDocAccessible_H_
 
-#include "nsHyperTextAccessible.h"
+#include "nsBaseWidgetAccessible.h"
 #include "nsIAccessibleDocument.h"
 #include "nsPIAccessibleDocument.h"
 #include "nsIAccessibleEvent.h"
@@ -51,13 +51,12 @@
 #include "nsIScrollPositionListener.h"
 #include "nsITimer.h"
 #include "nsIWeakReference.h"
-#include "nsCOMArray.h"
 
 class nsIScrollableView;
 
 const PRUint32 kDefaultCacheSize = 256;
 
-class nsDocAccessible : public nsHyperTextAccessible,
+class nsDocAccessible : public nsBlockAccessible,
                         public nsIAccessibleDocument,
                         public nsPIAccessibleDocument,
                         public nsIDocumentObserver,
@@ -78,10 +77,8 @@ class nsDocAccessible : public nsHyperTextAccessible,
     NS_IMETHOD GetName(nsAString& aName);
     NS_IMETHOD GetValue(nsAString& aValue);
     NS_IMETHOD GetState(PRUint32 *aState);
-    NS_IMETHOD GetExtState(PRUint32 *aExtState);
     NS_IMETHOD GetFocusedChild(nsIAccessible **aFocusedChild);
     NS_IMETHOD GetParent(nsIAccessible **aParent);
-    NS_IMETHOD TakeFocus(void);
 
     // ----- nsIScrollPositionListener ---------------------------
     NS_IMETHOD ScrollPositionWillChange(nsIScrollableView *aView, nscoord aX, nscoord aY);
@@ -100,10 +97,6 @@ class nsDocAccessible : public nsHyperTextAccessible,
     // nsPIAccessNode
     NS_IMETHOD_(nsIFrame *) GetFrame(void);
 
-    // Non-virtual
-    nsresult FireDelayedToolkitEvent(PRUint32 aEvent, nsIDOMNode *aDOMNode,
-                                     void *aData, PRBool aAllowDupes = PR_FALSE);
-
   protected:
     virtual void GetBoundsRect(nsRect& aRect, nsIFrame** aRelativeFrame);
     virtual nsresult AddEventListeners();
@@ -112,27 +105,19 @@ class nsDocAccessible : public nsHyperTextAccessible,
     void RemoveScrollListener();
     void RefreshNodes(nsIDOMNode *aStartNode, PRUint32 aChangeEvent);
     static void ScrollTimerCallback(nsITimer *aTimer, void *aClosure);
-    void CheckForEditor();
-    virtual void SetEditor(nsIEditor *aEditor);
-    virtual already_AddRefed<nsIEditor> GetEditor() { nsIEditor *editor = mEditor; NS_IF_ADDREF(editor); return editor; }
+    virtual void CheckForEditor();
+    nsresult FireDelayedToolkitEvent(PRUint32 aEvent, nsIDOMNode *aDOMNode,
+                                     void *aData, PRBool aAllowDupes = PR_FALSE);
 
     nsInterfaceHashtable<nsVoidHashKey, nsIAccessNode> mAccessNodeCache;
     void *mWnd;
     nsCOMPtr<nsIDocument> mDocument;
     nsCOMPtr<nsITimer> mScrollWatchTimer;
     nsCOMPtr<nsITimer> mFireEventTimer;
+    nsCOMPtr<nsIEditor> mEditor; // Editor, if there is one
     PRUint16 mScrollPositionChangedTicks; // Used for tracking scroll events
     PRPackedBool mIsContentLoaded;
     nsCOMArray<nsIAccessibleEvent> mEventsToFire;
-    nsCOMPtr<nsIEditor> mEditor;
-
-protected:
-    PRBool mIsAnchor;
-    PRBool mIsAnchorJumped;
-
-private:
-    static void DocLoadCallback(nsITimer *aTimer, void *aClosure);
-    nsCOMPtr<nsITimer> mDocLoadTimer;
 };
 
 #endif  

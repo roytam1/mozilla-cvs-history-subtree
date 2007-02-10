@@ -57,6 +57,8 @@ extern "C" {
 #include "secder.h"
 }
 
+static NS_DEFINE_CID(kDateTimeFormatCID, NS_DATETIMEFORMAT_CID);
+
 NS_IMPL_ISUPPORTS1(nsCRLInfo, nsICRLInfo)
 
 nsCRLInfo::nsCRLInfo()
@@ -81,20 +83,20 @@ nsCRLInfo::nsCRLInfo(CERTSignedCrl *signedCrl)
   // Get the information we need here //
   char * o = CERT_GetOrgName(&(crl->name));
   if (o) {
-    org = NS_ConvertASCIItoUTF16(o);
+    org = NS_ConvertASCIItoUCS2(o);
     PORT_Free(o);
   }
 
   char * ou = CERT_GetOrgUnitName(&(crl->name));
   if (ou) {
-    orgUnit = NS_ConvertASCIItoUTF16(ou);
+    orgUnit = NS_ConvertASCIItoUCS2(ou);
     //At present, the ou is being used as the unique key - but this
     //would change, one support for delta crls come in.
     nameInDb =  orgUnit;
     PORT_Free(ou);
   }
   
-  nsCOMPtr<nsIDateTimeFormat> dateFormatter = do_CreateInstance(NS_DATETIMEFORMAT_CONTRACTID);
+  nsCOMPtr<nsIDateTimeFormat> dateFormatter = do_CreateInstance(kDateTimeFormatCID);
   
   // Last Update time
   if (crl->lastUpdate.len) {

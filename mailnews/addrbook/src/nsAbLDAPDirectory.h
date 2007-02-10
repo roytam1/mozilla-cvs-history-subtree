@@ -45,7 +45,7 @@
 #include "nsIAbDirectorySearch.h"
 #include "nsAbDirSearchListener.h"
 #include "nsIAbLDAPDirectory.h"
-#include "nsIMutableArray.h"
+#include "nsArray.h"
 #include "nsHashtable.h"
 
 class nsAbLDAPDirectory :
@@ -64,11 +64,10 @@ public:
 
     NS_IMETHOD Init(const char *aUri);
 
-  // nsIAbDirectory methods
-  NS_IMETHOD GetURI(nsACString &aURI);
+    // nsIAbDirectory methods
     NS_IMETHOD GetOperations(PRInt32 *aOperations);
     NS_IMETHOD GetChildNodes(nsISimpleEnumerator* *result);
-    NS_IMETHOD GetChildCards(nsISimpleEnumerator* *result);
+    NS_IMETHOD GetChildCards(nsIEnumerator* *result);
      NS_IMETHOD HasCard(nsIAbCard *cards, PRBool *hasCard);
     NS_IMETHOD GetSupportsMailingLists(PRBool *aSupportsMailingsLists);
     NS_IMETHOD GetIsRemote(PRBool *aIsRemote);

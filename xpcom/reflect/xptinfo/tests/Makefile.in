@@ -54,3 +54,5 @@ LIBS		= \
 		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
+
+DEFINES += -DEXPORT_XPTI_API

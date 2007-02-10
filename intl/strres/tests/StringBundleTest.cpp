@@ -36,7 +36,9 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsCOMPtr.h"
+#include "nsReadableUtils.h"
 #include "nsIStringBundle.h"
+#include "nsIEventQueueService.h"
 #include <stdio.h>
 
 #include "nsIURL.h"
@@ -44,15 +46,11 @@
 #include "nsIComponentRegistrar.h"
 #include "nsNetCID.h"
 
-#include "nsStringAPI.h"
-#include "nsEmbedString.h"
+#include "nsString.h"
 
 #include "nsXPCOM.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
-#include "nsComponentManagerUtils.h"
-#include "nsServiceManagerUtils.h"
-
 //
 #define TEST_URL "resource://gre/res/strres.properties"
 
@@ -71,19 +69,13 @@
 nsresult
 getCountry(const nsAString &lc_name, nsAString &aCountry)
 {
-  const PRUnichar* data;
-  PRUint32 length = NS_StringGetData(lc_name, &data);
-
-  PRUint32 dash;
-  for (dash = 0; dash < length; ++dash) {
-    if (data[dash] == '-')
-      break;
+  PRInt32   dash = lc_name.FindChar('-');
+  if (dash > 0) {
+    aCountry = lc_name;
+    aCountry.Cut(dash, (lc_name.Length()-dash-1));
   }
-  if (dash == length)
+  else
     return NS_ERROR_FAILURE;
-
-  aCountry.Assign(lc_name);
-  aCountry.Cut(dash, (lc_name.Length()-dash-1));
 
   return NS_OK;
 }
@@ -139,7 +131,9 @@ main(int argc, char *argv[])
     return 1;
   }
 
+  nsAutoString v;
   PRUnichar *ptrv = nsnull;
+  char *value = nsnull;
 
   // 123
   ret = bundle->GetStringFromID(123, &ptrv);
@@ -147,17 +141,22 @@ main(int argc, char *argv[])
     printf("cannot get string from ID 123, ret=%d\n", ret);
     return 1;
   }
-
-  printf("123=\"%s\"\n", NS_ConvertUTF16toUTF8(ptrv).get());
+  v = ptrv;
+  value = ToNewCString(v);
+  printf("123=\"%s\"\n", value);
 
   // file
-  ret = bundle->GetStringFromName(NS_LITERAL_STRING("file").get(), &ptrv);
+  nsString strfile;
+  strfile.AssignLiteral("file");
+  const PRUnichar *ptrFile = strfile.get();
+  ret = bundle->GetStringFromName(ptrFile, &ptrv);
   if (NS_FAILED(ret)) {
     printf("cannot get string from name\n");
     return 1;
   }
-
-  printf("file=\"%s\"\n", NS_ConvertUTF16toUTF8(ptrv).get());
+  v = ptrv;
+  value = ToNewCString(v);
+  printf("file=\"%s\"\n", value);
 
   return 0;
 }

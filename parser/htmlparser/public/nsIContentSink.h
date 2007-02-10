@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Henri Sivonen <hsivonen@iki.fi>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -50,7 +49,7 @@
  * about more, which is the IHTMLContentSink interface. (See that file for details).
  */
 #include "nsISupports.h"
-#include "nsStringGlue.h"
+#include "nsString.h"
 #include "mozFlushType.h"
 
 class nsIParser;
@@ -59,21 +58,16 @@ class nsIParser;
 { 0x94ec4df1, 0x6885, 0x4b1f, \
  { 0x85, 0x10, 0xe3, 0x5f, 0x4f, 0x36, 0xea, 0xaa } }
 
+// The base value for the content ID counter.
+// Values greater than or equal to this base value are used
+// by each of the content sinks to assign unique values
+// to the content objects created by them.
+#define NS_CONTENT_ID_COUNTER_BASE 10000
+
 class nsIContentSink : public nsISupports {
 public:
 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICONTENT_SINK_IID)
-
-  /**
-   * This method gets called before the nsParser calls tokenize.
-   * This is needed because the XML side actually builds
-   * the content model as part of the tokenization and
-   * not on BuildModel(). The XML side can use this call
-   * to do stuff that the HTML side does in WillProcessTokens().
-   *
-   * @update 2006-10-17 hsivonen
-   */
-  NS_IMETHOD WillTokenize(void)=0;
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICONTENT_SINK_IID)
 
   /**
    * This method gets called when the parser begins the process
@@ -137,7 +131,5 @@ public:
    */
   virtual nsISupports *GetTarget()=0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIContentSink, NS_ICONTENT_SINK_IID)
 
 #endif /* nsIContentSink_h___ */

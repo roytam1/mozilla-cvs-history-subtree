@@ -1098,13 +1098,13 @@ extern void _PR_MD_MAKE_NONBLOCK(PRFileDesc *fd);
 #define    _PR_MD_MAKE_NONBLOCK _MD_MAKE_NONBLOCK
 
 /* File I/O related */
-extern PROsfd _PR_MD_OPEN(const char *name, PRIntn osflags, PRIntn mode);
+extern PRInt32 _PR_MD_OPEN(const char *name, PRIntn osflags, PRIntn mode);
 #define    _PR_MD_OPEN _MD_OPEN
 
-extern PROsfd _PR_MD_OPEN_FILE(const char *name, PRIntn osflags, PRIntn mode);
+extern PRInt32 _PR_MD_OPEN_FILE(const char *name, PRIntn osflags, PRIntn mode);
 #define    _PR_MD_OPEN_FILE _MD_OPEN_FILE
 
-extern PRInt32 _PR_MD_CLOSE_FILE(PROsfd osfd);
+extern PRInt32 _PR_MD_CLOSE_FILE(PRInt32 osfd);
 #define    _PR_MD_CLOSE_FILE _MD_CLOSE_FILE
 
 extern PRInt32 _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 amount);
@@ -1147,7 +1147,7 @@ extern PRInt32 _PR_MD_RMDIR(const char *name);
 extern PRStatus _PR_MD_OPEN_DIR_UTF16(_MDDirUTF16 *md, const PRUnichar *name);
 #define    _PR_MD_OPEN_DIR_UTF16 _MD_OPEN_DIR_UTF16
 
-extern PROsfd _PR_MD_OPEN_FILE_UTF16(const PRUnichar *name, PRIntn osflags, PRIntn mode);
+extern PRInt32 _PR_MD_OPEN_FILE_UTF16(const PRUnichar *name, PRIntn osflags, PRIntn mode);
 #define    _PR_MD_OPEN_FILE_UTF16 _MD_OPEN_FILE_UTF16
 
 extern PRUnichar * _PR_MD_READ_DIR_UTF16(_MDDirUTF16 *md, PRIntn flags);
@@ -1164,7 +1164,7 @@ extern PRInt32 _PR_MD_GETFILEINFO64_UTF16(const PRUnichar *fn, PRFileInfo64 *inf
 extern void _PR_MD_INIT_IO(void);
 #define    _PR_MD_INIT_IO _MD_INIT_IO
 
-extern PRInt32 _PR_MD_CLOSE_SOCKET(PROsfd osfd);
+extern PRInt32 _PR_MD_CLOSE_SOCKET(PRInt32 osfd);
 #define    _PR_MD_CLOSE_SOCKET _MD_CLOSE_SOCKET
 
 extern PRInt32 _PR_MD_CONNECT(
@@ -1172,7 +1172,7 @@ extern PRInt32 _PR_MD_CONNECT(
     PRUint32 addrlen, PRIntervalTime timeout);
 #define    _PR_MD_CONNECT _MD_CONNECT
 
-extern PROsfd _PR_MD_ACCEPT(
+extern PRInt32 _PR_MD_ACCEPT(
     PRFileDesc *fd, PRNetAddr *addr,
     PRUint32 *addrlen, PRIntervalTime timeout);
 #define    _PR_MD_ACCEPT _MD_ACCEPT
@@ -1195,25 +1195,25 @@ extern PRInt32 _PR_MD_SEND(
     PRIntervalTime timeout);
 #define    _PR_MD_SEND _MD_SEND
 
-extern PRInt32 _PR_MD_ACCEPT_READ(PRFileDesc *sd, PROsfd *newSock, 
+extern PRInt32 _PR_MD_ACCEPT_READ(PRFileDesc *sd, PRInt32 *newSock, 
                                 PRNetAddr **raddr, void *buf, PRInt32 amount,
                                 PRIntervalTime timeout);
 #define _PR_MD_ACCEPT_READ _MD_ACCEPT_READ
 
 #ifdef WIN32
-extern PROsfd _PR_MD_FAST_ACCEPT(PRFileDesc *fd, PRNetAddr *addr, 
+extern PRInt32 _PR_MD_FAST_ACCEPT(PRFileDesc *fd, PRNetAddr *addr, 
                                 PRUint32 *addrlen, PRIntervalTime timeout,
                                 PRBool fast,
                                 _PR_AcceptTimeoutCallback callback,
                                 void *callbackArg);
 
-extern PRInt32 _PR_MD_FAST_ACCEPT_READ(PRFileDesc *sd, PROsfd *newSock, 
+extern PRInt32 _PR_MD_FAST_ACCEPT_READ(PRFileDesc *sd, PRInt32 *newSock, 
                                 PRNetAddr **raddr, void *buf, PRInt32 amount,
                                 PRIntervalTime timeout, PRBool fast,
                                 _PR_AcceptTimeoutCallback callback,
                                 void *callbackArg);
 
-extern void _PR_MD_UPDATE_ACCEPT_CONTEXT(PROsfd s, PROsfd ls);
+extern void _PR_MD_UPDATE_ACCEPT_CONTEXT(PRInt32 s, PRInt32 ls);
 #define _PR_MD_UPDATE_ACCEPT_CONTEXT _MD_UPDATE_ACCEPT_CONTEXT
 #endif /* WIN32 */
 
@@ -1255,10 +1255,10 @@ extern PRInt32 _PR_MD_SENDTO(
     const PRNetAddr *addr, PRUint32 addrlen, PRIntervalTime timeout);
 #define    _PR_MD_SENDTO _MD_SENDTO
 
-extern PRInt32 _PR_MD_SOCKETPAIR(int af, int type, int flags, PROsfd *osfd);
+extern PRInt32 _PR_MD_SOCKETPAIR(int af, int type, int flags, PRInt32 *osfd);
 #define    _PR_MD_SOCKETPAIR _MD_SOCKETPAIR
 
-extern PROsfd _PR_MD_SOCKET(int af, int type, int flags);
+extern PRInt32 _PR_MD_SOCKET(int af, int type, int flags);
 #define    _PR_MD_SOCKET _MD_SOCKET
 
 extern PRInt32 _PR_MD_SOCKETAVAILABLE(PRFileDesc *fd);
@@ -1754,18 +1754,6 @@ struct PRFilePrivate {
 #endif
 };
 
-#ifdef _WIN64
-#define PR_PRIdOSFD "lld"       /* for printing PROsfd */
-#define PR_PRIxOSFD "llx"
-#define PR_SCNdOSFD "lld"       /* for scanning PROsfd */
-#define PR_SCNxOSFD "llx"
-#else
-#define PR_PRIdOSFD "ld"        /* for printing PROsfd */
-#define PR_PRIxOSFD "lx"
-#define PR_SCNdOSFD "ld"        /* for scanning PROsfd */
-#define PR_SCNxOSFD "lx"
-#endif
-
 struct PRDir {
     PRDirEntry d;
     _MDDir md;
@@ -1978,13 +1966,13 @@ extern PRInt32 _PR_MD_GETTHREADAFFINITYMASK(PRThread *thread, PRUint32 *mask);
 
 /* File locking */
 
-extern PRStatus _PR_MD_LOCKFILE(PROsfd osfd);
+extern PRStatus _PR_MD_LOCKFILE(PRInt32 osfd);
 #define    _PR_MD_LOCKFILE _MD_LOCKFILE
 
-extern PRStatus _PR_MD_TLOCKFILE(PROsfd osfd);
+extern PRStatus _PR_MD_TLOCKFILE(PRInt32 osfd);
 #define    _PR_MD_TLOCKFILE _MD_TLOCKFILE
 
-extern PRStatus _PR_MD_UNLOCKFILE(PROsfd osfd);
+extern PRStatus _PR_MD_UNLOCKFILE(PRInt32 osfd);
 #define    _PR_MD_UNLOCKFILE _MD_UNLOCKFILE
 
 /* Memory-mapped files */

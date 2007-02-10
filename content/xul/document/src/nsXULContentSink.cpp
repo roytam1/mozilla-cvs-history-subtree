@@ -23,7 +23,6 @@
  *   Chris Waterson <waterson@netscape.com>
  *   David Hyatt <hyatt@netscape.com>
  *   Brendan Eich <brendan@mozilla.org>
- *   Mark Hammond <mhammond@skippinet.com.au>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -40,12 +39,16 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * An implementation for a Gecko-style content sink that knows how
- * to build a content model (the "prototype" document) from XUL.
- *
- * For more information on XUL,
- * see http://developer.mozilla.org/en/docs/XUL
- */
+
+  An implementation for a Gecko-style content sink that knows how
+  to build a content model from XUL.
+
+  For more information on XUL, see http://www.mozilla.org/xpfe
+
+  TO DO
+  -----
+
+*/
 
 #include "nsCOMPtr.h"
 #include "nsForwardReference.h"
@@ -58,6 +61,7 @@
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMXULDocument.h"
 #include "nsIDocument.h"
+#include "nsIDocumentLoader.h"
 #include "nsIFormControl.h"
 #include "nsHTMLStyleSheet.h"
 #include "nsINameSpaceManager.h"
@@ -65,13 +69,14 @@
 #include "nsIParser.h"
 #include "nsIPresShell.h"
 #include "nsIScriptContext.h"
-#include "nsIScriptRuntime.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIServiceManager.h"
+#include "nsITextContent.h"
 #include "nsIURL.h"
 #include "nsIViewManager.h"
 #include "nsIXULContentSink.h"
 #include "nsIXULDocument.h"
+#include "nsIXULPrototypeDocument.h"
 #include "nsIXULPrototypeCache.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsLayoutCID.h"
@@ -86,7 +91,7 @@
 #include "nsXULElement.h"
 #include "prlog.h"
 #include "prmem.h"
-#include "jscntxt.h"  // for JSVERSION_HAS_XML
+#include "jsapi.h"  // for JSVERSION_*, JS_VersionToString, etc.
 #include "nsCRT.h"
 
 #include "nsIFastLoadService.h"         // XXXbe temporary
@@ -95,19 +100,19 @@
 
 #include "nsIExpatSink.h"
 #include "nsUnicharUtils.h"
-#include "nsGkAtoms.h"
+#include "nsXULAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsNodeInfoManager.h"
 #include "nsContentUtils.h"
 #include "nsAttrName.h"
 #include "nsXMLContentSink.h"
-#include "nsIConsoleService.h"
-#include "nsIScriptError.h"
+#include "nsLayoutAtoms.h"
 
 #ifdef PR_LOGGING
 static PRLogModuleInfo* gLog;
 #endif
 
-static NS_DEFINE_CID(kXULPrototypeCacheCID, NS_XULPROTOTYPECACHE_CID);
+static NS_DEFINE_CID(kXULPrototypeCacheCID,      NS_XULPROTOTYPECACHE_CID);
 
 //----------------------------------------------------------------------
 
@@ -123,7 +128,6 @@ public:
     NS_DECL_NSIEXPATSINK
 
     // nsIContentSink
-    NS_IMETHOD WillTokenize(void) { return NS_OK; }
     NS_IMETHOD WillBuildModel(void);
     NS_IMETHOD DidBuildModel(void);
     NS_IMETHOD WillInterrupt(void);
@@ -134,7 +138,7 @@ public:
     virtual nsISupports *GetTarget();
 
     // nsIXULContentSink
-    NS_IMETHOD Init(nsIDocument* aDocument, nsXULPrototypeDocument* aPrototype);
+    NS_IMETHOD Init(nsIDocument* aDocument, nsIXULPrototypeDocument* aPrototype);
 
 protected:
     // pseudo-constants
@@ -164,9 +168,6 @@ protected:
 
     static PRBool IsDataInBuffer(PRUnichar* aBuffer, PRInt32 aLength);
 
-    nsresult SetElementScriptType(nsXULPrototypeElement* element,
-                                  const PRUnichar** aAttributes, 
-                                  const PRUint32 aAttrLen);
 
     // Text management
     nsresult FlushText(PRBool aCreateTextNode = PR_TRUE);
@@ -180,6 +181,14 @@ protected:
                                       nsAttrName &aName);
     nsresult CreateElement(nsINodeInfo *aNodeInfo, nsXULPrototypeElement** aResult);
 
+    // Style sheets
+    nsresult ProcessStyleLink(nsIContent* aElement,
+                              const nsString& aHref,
+                              PRBool aAlternate,
+                              const nsString& aTitle,
+                              const nsString& aType,
+                              const nsString& aMedia);
+    
 
     public:
     enum State { eInProlog, eInDocumentElement, eInScript, eInEpilog };
@@ -212,7 +221,6 @@ protected:
 
         nsresult GetTopNode(nsXULPrototypeNode** aNode);
         nsresult GetTopChildren(nsVoidArray** aChildren);
-        nsresult GetTopNodeScriptType(PRUint32 *aScriptType);
     };
 
     friend class ContextStack;
@@ -221,9 +229,10 @@ protected:
     nsWeakPtr              mDocument;             // [OWNER]
     nsCOMPtr<nsIURI>       mDocumentURL;          // [OWNER]
 
-    nsRefPtr<nsXULPrototypeDocument> mPrototype;  // [OWNER]
+    nsCOMPtr<nsIXULPrototypeDocument> mPrototype; // [OWNER]
     nsIParser*             mParser;               // [OWNER] We use regular pointer b/c of funky exports on nsIParser
     
+    nsString               mPreferredStyle;
     nsCOMPtr<nsICSSLoader> mCSSLoader;            // [OWNER]
     nsCOMPtr<nsICSSParser> mCSSParser;            // [OWNER]
     nsCOMPtr<nsIScriptSecurityManager> mSecMan;
@@ -302,38 +311,6 @@ XULContentSinkImpl::ContextStack::GetTopChildren(nsVoidArray** aChildren)
     return NS_OK;
 }
 
-nsresult
-XULContentSinkImpl::ContextStack::GetTopNodeScriptType(PRUint32 *aScriptType)
-{
-    if (mDepth == 0)
-        return NS_ERROR_UNEXPECTED;
-
-    // This would be much simpler if nsXULPrototypeNode itself
-    // stored the language ID - but text elements don't need it!
-    nsresult rv = NS_OK;
-    nsXULPrototypeNode* node;
-    rv = GetTopNode(&node);
-    if (NS_FAILED(rv)) return rv;
-    switch (node->mType) {
-        case nsXULPrototypeNode::eType_Element: {
-            nsXULPrototypeElement *parent = \
-                NS_REINTERPRET_CAST(nsXULPrototypeElement*, node);
-            *aScriptType = parent->mScriptTypeID;
-            break;
-        }
-        case nsXULPrototypeNode::eType_Script: {
-            nsXULPrototypeScript *parent = \
-                NS_REINTERPRET_CAST(nsXULPrototypeScript*, node);
-            *aScriptType = parent->mScriptObject.getScriptTypeID();
-            break;
-        }
-        default: {
-            NS_WARNING("Unexpected parent node type");
-            rv = NS_ERROR_UNEXPECTED;
-        }
-    }
-    return rv;
-}
 
 //----------------------------------------------------------------------
 
@@ -460,6 +437,72 @@ XULContentSinkImpl::SetParser(nsIParser* aParser)
     return NS_OK;
 }
 
+nsresult
+XULContentSinkImpl::ProcessStyleLink(nsIContent* aElement,
+                                     const nsString& aHref,
+                                     PRBool aAlternate,
+                                     const nsString& aTitle,
+                                     const nsString& aType,
+                                     const nsString& aMedia)
+{
+    static const char kCSSType[] = "text/css";
+
+    nsresult rv = NS_OK;
+
+    if (aAlternate) { // if alternate, does it have title?
+        if (aTitle.IsEmpty()) { // alternates must have title
+            return NS_OK; //return without error, for now
+        }
+    }
+
+    nsAutoString mimeType;
+    nsAutoString params;
+    nsParserUtils::SplitMimeType(aType, mimeType, params);
+
+    if ((mimeType.IsEmpty()) || mimeType.EqualsIgnoreCase(kCSSType)) {
+        nsCOMPtr<nsIURI> url;
+        rv = NS_NewURI(getter_AddRefs(url), aHref, nsnull, mDocumentURL);
+        if (NS_OK != rv) {
+            return NS_OK; // The URL is bad, move along, don't propagate the error (for now)
+        }
+
+        // Add the style sheet reference to the prototype
+        mPrototype->AddStyleSheetReference(url);
+
+        // Nope, we need to load it asynchronously
+        PRBool blockParser = PR_FALSE;
+        if (! aAlternate) {
+            if (!aTitle.IsEmpty()) {  // possibly preferred sheet
+                if (mPreferredStyle.IsEmpty()) {
+                    mPreferredStyle = aTitle;
+                    mCSSLoader->SetPreferredSheet(aTitle);
+                    nsCOMPtr<nsIAtom> defaultStyle = do_GetAtom("default-style");
+                    if (defaultStyle) {
+                        mPrototype->SetHeaderData(defaultStyle, aTitle);
+                    }
+                }
+            }
+            else {  // persistent sheet, block
+                blockParser = PR_TRUE;
+            }
+        }
+
+        nsCOMPtr<nsIDocument> doc = do_QueryReferent(mDocument);
+        if (! doc)
+            return NS_ERROR_FAILURE; // doc went away!
+
+        PRBool doneLoading;
+        rv = mCSSLoader->LoadStyleLink(aElement, url, aTitle, aMedia,
+                                       ((blockParser) ? mParser : nsnull),
+                                       doneLoading, nsnull);
+        if (NS_SUCCEEDED(rv) && blockParser && (! doneLoading)) {
+          rv = NS_ERROR_HTMLPARSER_BLOCK;
+        }
+    }
+
+    return rv;
+}
+
 NS_IMETHODIMP 
 XULContentSinkImpl::SetDocumentCharset(nsACString& aCharset)
 {
@@ -484,7 +527,7 @@ XULContentSinkImpl::GetTarget()
 //
 
 NS_IMETHODIMP
-XULContentSinkImpl::Init(nsIDocument* aDocument, nsXULPrototypeDocument* aPrototype)
+XULContentSinkImpl::Init(nsIDocument* aDocument, nsIXULPrototypeDocument* aPrototype)
 {
     NS_PRECONDITION(aDocument != nsnull, "null ptr");
     if (! aDocument)
@@ -495,25 +538,21 @@ XULContentSinkImpl::Init(nsIDocument* aDocument, nsXULPrototypeDocument* aProtot
     mDocument    = do_GetWeakReference(aDocument);
     mPrototype   = aPrototype;
 
-    mDocumentURL = mPrototype->GetURI();
+    rv = mPrototype->GetURI(getter_AddRefs(mDocumentURL));
+    if (NS_FAILED(rv)) return rv;
 
     // XXX this presumes HTTP header info is already set in document
     // XXX if it isn't we need to set it here...
-    // XXXbz not like GetHeaderData on the proto doc _does_ anything....
-    nsAutoString preferredStyle;
-    rv = mPrototype->GetHeaderData(nsGkAtoms::headerDefaultStyle,
-                                   preferredStyle);
-    if (NS_FAILED(rv)) return rv;
+    nsCOMPtr<nsIAtom> defaultStyle = do_GetAtom("default-style");
+    if (! defaultStyle)
+        return NS_ERROR_OUT_OF_MEMORY;
 
-    if (!preferredStyle.IsEmpty()) {
-        aDocument->SetHeaderData(nsGkAtoms::headerDefaultStyle,
-                                 preferredStyle);
-    }
+    rv = mPrototype->GetHeaderData(defaultStyle, mPreferredStyle);
+    if (NS_FAILED(rv)) return rv;
 
     // Get the CSS loader from the document so we can load
     // stylesheets
     mCSSLoader = aDocument->CSSLoader();
-    mCSSLoader->SetPreferredSheet(preferredStyle);
 
     mNodeInfoManager = aPrototype->GetNodeInfoManager();
     if (! mNodeInfoManager)
@@ -569,8 +608,8 @@ XULContentSinkImpl::FlushText(PRBool aCreateTextNode)
                 NS_STATIC_CAST(nsXULPrototypeElement*, node)->mNodeInfo;
 
             if (nodeInfo->NamespaceEquals(kNameSpaceID_XUL))
-                stripWhitespace = !nodeInfo->Equals(nsGkAtoms::label) &&
-                                  !nodeInfo->Equals(nsGkAtoms::description);
+                stripWhitespace = !nodeInfo->Equals(nsXULAtoms::label) &&
+                                  !nodeInfo->Equals(nsXULAtoms::description);
         }
 
         // Don't bother if there's nothing but whitespace.
@@ -782,7 +821,7 @@ XULContentSinkImpl::HandleEndElement(const PRUnichar *aName)
             NS_STATIC_CAST(nsXULPrototypeScript*, node);
 
         // If given a src= attribute, we must ignore script tag content.
-        if (! script->mSrcURI && ! script->mScriptObject) {
+        if (! script->mSrcURI && ! script->mJSObject) {
             nsCOMPtr<nsIDocument> doc = do_QueryReferent(mDocument);
 
             script->mOutOfLine = PR_FALSE;
@@ -817,7 +856,10 @@ XULContentSinkImpl::HandleEndElement(const PRUnichar *aName)
         nsXULPrototypeElement* element =
             NS_STATIC_CAST(nsXULPrototypeElement*, node);
 
-        mPrototype->SetRootElement(element);
+        rv = mPrototype->SetRootElement(element);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set document root");
+        if (NS_FAILED(rv)) return rv;
+
         mState = eInEpilog;
     }
 
@@ -864,36 +906,69 @@ XULContentSinkImpl::HandleProcessingInstruction(const PRUnichar *aTarget,
 {
     FlushText();
 
+    // XXX For now, we don't add the PI to the content model.
+    // We just check for a style sheet PI
     const nsDependentString target(aTarget);
     const nsDependentString data(aData);
 
-    // Note: the created nsXULPrototypePI has mRefCnt == 1
-    nsXULPrototypePI* pi = new nsXULPrototypePI();
-    if (!pi)
-        return NS_ERROR_OUT_OF_MEMORY;
+    nsReadingIterator<PRUnichar> targetStart, targetEnd, tmp;
 
-    pi->mTarget = target;
-    pi->mData = data;
+    target.BeginReading(targetStart);
+    target.EndReading(targetEnd);
 
-    if (mState == eInProlog) {
-        // Note: passing in already addrefed pi
-        return mPrototype->AddProcessingInstruction(pi);
-    }
+    tmp = targetStart;
 
     nsresult rv;
-    nsVoidArray* children;
-    rv = mContextStack.GetTopChildren(&children);
-    if (NS_FAILED(rv)) {
-        pi->Release();
-        return rv;
+    if (FindInReadable(NS_LITERAL_STRING("xul-overlay"), targetStart, targetEnd)) {
+      // Load a XUL overlay.
+      nsAutoString href;
+      nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::href, href);
+
+      // If there was no href, we can't do
+      // anything with this PI
+      if (href.IsEmpty()) {
+        return NS_OK;
+      }
+
+      // Add the overlay to our list of overlays that need to be processed.
+      nsCOMPtr<nsIURI> url;
+      rv = NS_NewURI(getter_AddRefs(url), href, nsnull, mDocumentURL);
+      if (NS_FAILED(rv)) {
+        // XXX This is wrong, the error message could be out of memory
+        //     or something else equally bad, which we should propagate. 
+        //     Bad URL should probably be "success with info" value.
+        return NS_OK; // The URL is bad, move along. Don't propagate for now.
+      }
+
+      return mPrototype->AddOverlayReference(url);
     }
 
-    if (!children->AppendElement(pi)) {
-        pi->Release();
-        return NS_ERROR_OUT_OF_MEMORY;
+    targetStart = tmp;
+    if (!FindInReadable(NS_LITERAL_STRING("xml-stylesheet"), targetStart,
+                        targetEnd)) {
+        return NS_OK;
     }
 
-    return NS_OK;
+    // It's a stylesheet PI...
+    nsAutoString type;
+    nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::type, type);
+
+    nsAutoString href, title, media;
+    PRBool isAlternate = PR_FALSE;
+    nsXMLContentSink::ParsePIData(data, href, title, media, isAlternate);
+
+    // If there was no href, we can't do anything with this PI
+    if (href.IsEmpty()) {
+        return NS_OK;
+    }
+
+    // XXX need a node here
+    rv = ProcessStyleLink(nsnull , href, isAlternate, title, type, media);
+    if (rv == NS_ERROR_HTMLPARSER_BLOCK && mParser) {
+        mParser->BlockParser();
+    }
+
+    return rv;
 }
 
 
@@ -908,15 +983,8 @@ XULContentSinkImpl::HandleXMLDeclaration(const PRUnichar *aVersion,
 
 NS_IMETHODIMP
 XULContentSinkImpl::ReportError(const PRUnichar* aErrorText, 
-                                const PRUnichar* aSourceText,
-                                nsIScriptError *aError,
-                                PRBool *_retval)
+                                const PRUnichar* aSourceText)
 {
-  NS_PRECONDITION(aError && aSourceText && aErrorText, "Check arguments!!!");
-
-  // The expat driver should report the error.
-  *_retval = PR_TRUE;
-
   nsresult rv = NS_OK;
 
   // make sure to empty the context stack so that
@@ -943,12 +1011,6 @@ XULContentSinkImpl::ReportError(const PRUnichar* aErrorText,
   // The buffer itself is allocated when we're created and deleted in our
   // destructor, so don't mess with it.
   mTextLength = 0;
-
-  nsCOMPtr<nsIXULDocument> doc = do_QueryReferent(mDocument);
-  if (doc && !doc->OnDocumentParserError()) {
-    // The overlay was broken.  Don't add a messy element to the master doc.
-    return NS_OK;
-  }
 
   const PRUnichar* noAtts[] = { 0, 0 };
 
@@ -984,52 +1046,6 @@ XULContentSinkImpl::ReportError(const PRUnichar* aErrorText,
   return rv;
 }
 
-nsresult
-XULContentSinkImpl::SetElementScriptType(nsXULPrototypeElement* element,
-                                         const PRUnichar** aAttributes, 
-                                         const PRUint32 aAttrLen)
-{
-    // First check if the attributes specify an explicit script type.
-    nsresult rv = NS_OK;
-    PRUint32 i;
-    PRBool found = PR_FALSE;
-    for (i=0;i<aAttrLen;i++) {
-        const nsDependentString key(aAttributes[i*2]);
-        if (key.EqualsLiteral("script-type")) {
-            const nsDependentString value(aAttributes[i*2+1]);
-            if (!value.IsEmpty()) {
-                nsCOMPtr<nsIScriptRuntime> runtime;
-                rv = NS_GetScriptRuntime(value, getter_AddRefs(runtime));
-                if (NS_SUCCEEDED(rv))
-                    element->mScriptTypeID = runtime->GetScriptTypeID();
-                else {
-                    // probably just a bad language name (typo, etc)
-                    NS_WARNING("Failed to load the node's script language!");
-                    // Leave the default language as unknown - we don't want js
-                    // trying to execute this stuff.
-                    NS_ASSERTION(element->mScriptTypeID == nsIProgrammingLanguage::UNKNOWN,
-                                 "Default script type should be unknown");
-                }
-                found = PR_TRUE;
-                break;
-            }
-        }
-    }
-    // If not specified, look at the context stack and use the element
-    // there.
-    if (!found) {
-        if (mContextStack.Depth() == 0) {
-            // This is the root element - default to JS
-            element->mScriptTypeID = nsIProgrammingLanguage::JAVASCRIPT;
-        } else {
-            // Ask the top-node for its script type (which has already
-            // had this function called for it - so no need to recurse
-            // until we find it)
-            rv = mContextStack.GetTopNodeScriptType(&element->mScriptTypeID);
-        }
-    }
-    return rv;
-}
 
 nsresult
 XULContentSinkImpl::OpenRoot(const PRUnichar** aAttributes, 
@@ -1042,8 +1058,8 @@ XULContentSinkImpl::OpenRoot(const PRUnichar** aAttributes,
 
     nsresult rv;
 
-    if (aNodeInfo->Equals(nsGkAtoms::script, kNameSpaceID_XHTML) || 
-        aNodeInfo->Equals(nsGkAtoms::script, kNameSpaceID_XUL)) {
+    if (aNodeInfo->Equals(nsHTMLAtoms::script, kNameSpaceID_XHTML) || 
+        aNodeInfo->Equals(nsHTMLAtoms::script, kNameSpaceID_XUL)) {
         PR_LOG(gLog, PR_LOG_ERROR,
                ("xul: script tag not allowed as root content element"));
 
@@ -1061,17 +1077,13 @@ XULContentSinkImpl::OpenRoot(const PRUnichar** aAttributes,
             aNodeInfo->GetName(anodeC);
             PR_LOG(gLog, PR_LOG_ERROR,
                    ("xul: unable to create element '%s' at line %d",
-                    NS_ConvertUTF16toUTF8(anodeC).get(),
+                    NS_ConvertUCS2toUTF8(anodeC).get(),
                     -1)); // XXX pass in line number
         }
 #endif
 
         return rv;
     }
-
-    // Set the correct script-type for the element.
-    rv = SetElementScriptType(element, aAttributes, aAttrLen);
-    if (NS_FAILED(rv)) return rv;
 
     // Push the element onto the context stack, so that child
     // containers will hook up to us as their parent.
@@ -1108,7 +1120,7 @@ XULContentSinkImpl::OpenTag(const PRUnichar** aAttributes,
             aNodeInfo->GetName(anodeC);
             PR_LOG(gLog, PR_LOG_ERROR,
                    ("xul: unable to create element '%s' at line %d",
-                    NS_ConvertUTF16toUTF8(anodeC).get(),
+                    NS_ConvertUCS2toUTF8(anodeC).get(),
                     aLineNumber));
         }
 #endif
@@ -1130,20 +1142,12 @@ XULContentSinkImpl::OpenTag(const PRUnichar** aAttributes,
 
     children->AppendElement(element);
 
-    if (aNodeInfo->Equals(nsGkAtoms::script, kNameSpaceID_XHTML) || 
-        aNodeInfo->Equals(nsGkAtoms::script, kNameSpaceID_XUL)) {
-        // Do scripty things now.  Set a script language for the element,
-        // even though it is ignored (the nsPrototypeScriptElement
-        // has its own script-type).
-        element->mScriptTypeID = nsIProgrammingLanguage::JAVASCRIPT;
-        // OpenScript will push the nsPrototypeScriptElement onto the 
-        // stack, so we're done after this.
+    if (aNodeInfo->Equals(nsHTMLAtoms::script, kNameSpaceID_XHTML) || 
+        aNodeInfo->Equals(nsHTMLAtoms::script, kNameSpaceID_XUL)) {
+        // Do scripty things now.  OpenScript will push the
+        // nsPrototypeScriptElement onto the stack, so we're done after this.
         return OpenScript(aAttributes, aLineNumber);
     }
-
-    // Set the correct script-type for the element.
-    rv = SetElementScriptType(element, aAttributes, aAttrLen);
-    if (NS_FAILED(rv)) return rv;
 
     // Push the element onto the context stack, so that child
     // containers will hook up to us as their parent.
@@ -1158,10 +1162,10 @@ nsresult
 XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
                                const PRUint32 aLineNumber)
 {
-  PRUint32 langID;
-  nsresult rv = mContextStack.GetTopNodeScriptType(&langID);
-  if (NS_FAILED(rv)) return rv;
-  PRUint32 version = 0;
+  nsresult rv = NS_OK;
+  PRBool isJavaScript = PR_TRUE;
+  PRBool hasE4XOption = PR_TRUE;
+  const char* jsVersionString = nsnull;
 
   // Look for SRC attribute and look for a LANGUAGE attribute
   nsAutoString src;
@@ -1183,7 +1187,6 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
                                            mimeType);
           NS_ENSURE_SUCCESS(rv, rv);
 
-          // Javascript keeps the fast path, optimized for most-likely type
           // Table ordered from most to least likely JS MIME types. For .xul
           // files that we host, the likeliest type is application/x-javascript.
           // See bug 62485, feel free to add <script type="..."> survey data to it,
@@ -1197,7 +1200,7 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
               nsnull
           };
 
-          PRBool isJavaScript = PR_FALSE;
+          isJavaScript = PR_FALSE;
           for (PRInt32 i = 0; jsTypes[i]; i++) {
               if (mimeType.LowerCaseEqualsASCII(jsTypes[i])) {
                   isJavaScript = PR_TRUE;
@@ -1206,50 +1209,31 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
           }
 
           if (isJavaScript) {
-              langID = nsIProgrammingLanguage::JAVASCRIPT;
-          } else {
-              // Use the script object factory to locate the language.
-              nsCOMPtr<nsIScriptRuntime> runtime;
-              rv = NS_GetScriptRuntime(mimeType, getter_AddRefs(runtime));
-              if (NS_FAILED(rv) || runtime == nsnull) {
-                  // Failed to get the explicitly specified language
-                  NS_WARNING("Failed to find a scripting language");
-                  langID = nsIProgrammingLanguage::UNKNOWN;
-              } else
-                  langID = runtime->GetScriptTypeID();
-          }
-
-          if (langID != nsIProgrammingLanguage::UNKNOWN) {
-            // Get the version string, and ensure the language supports it.
-            nsAutoString versionName;
-            rv = mimeHdrParser->GetParameter(typeAndParams, "version",
-                                             EmptyCString(), PR_FALSE, nsnull,
-                                             versionName);
-            if (NS_FAILED(rv)) {
-              // no version specified - version remains 0.
+              JSVersion jsVersion = JSVERSION_DEFAULT;
+              nsAutoString value;
+              rv = mimeHdrParser->GetParameter(typeAndParams, "version",
+                                               EmptyCString(), PR_FALSE, nsnull,
+                                               value);
+              if (NS_FAILED(rv)) {
                   if (rv != NS_ERROR_INVALID_ARG)
                       return rv;
               } else {
-                nsCOMPtr<nsIScriptRuntime> runtime;
-                rv = NS_GetScriptRuntimeByID(langID, getter_AddRefs(runtime));
-                if (NS_FAILED(rv))
-                    return rv;
-                rv = runtime->ParseVersion(versionName, &version);
-                if (NS_FAILED(rv)) {
-                    NS_WARNING("This script language version is not supported - ignored");
-                    langID = nsIProgrammingLanguage::UNKNOWN;
+                  if (value.Length() != 3 || value[0] != '1' || value[1] != '.')
+                      jsVersion = JSVERSION_UNKNOWN;
+                  else switch (value[2]) {
+                      case '0': jsVersion = JSVERSION_1_0; break;
+                      case '1': jsVersion = JSVERSION_1_1; break;
+                      case '2': jsVersion = JSVERSION_1_2; break;
+                      case '3': jsVersion = JSVERSION_1_3; break;
+                      case '4': jsVersion = JSVERSION_1_4; break;
+                      case '5': jsVersion = JSVERSION_1_5; break;
+                      case '6': jsVersion = JSVERSION_1_6; break;
+                      case '7': jsVersion = JSVERSION_1_7; break;
+                      default:  jsVersion = JSVERSION_UNKNOWN;
                   }
               }
-          }
-          // Some js specifics yet to be abstracted.
-          if (langID == nsIProgrammingLanguage::JAVASCRIPT) {
-              // By default scripts in XUL documents have E4X turned on. We use
-              // our implementation knowledge to reuse JSVERSION_HAS_XML as a
-              // safe version flag. This is still OK if version is
-              // JSVERSION_UNKNOWN (-1),
-              version |= JSVERSION_HAS_XML;
+              jsVersionString = ::JS_VersionToString(jsVersion);
 
-              nsAutoString value;
               rv = mimeHdrParser->GetParameter(typeAndParams, "e4x",
                                                EmptyCString(), PR_FALSE, nsnull,
                                                value);
@@ -1258,49 +1242,29 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
                       return rv;
               } else {
                   if (value.Length() == 1 && value[0] == '0')
-                    version &= ~JSVERSION_HAS_XML;
+                      hasE4XOption = PR_FALSE;
               }
           }
       }
       else if (key.EqualsLiteral("language")) {
-          // Language is deprecated, and the impl in nsScriptLoader ignores the
-          // various version strings anyway.  So we make no attempt to support
-          // languages other than JS for language=
           nsAutoString lang(aAttributes[1]);
-          if (nsParserUtils::IsJavaScriptLanguage(lang, &version)) {
-              langID = nsIProgrammingLanguage::JAVASCRIPT;
-
-              // Even when JS version < 1.6 is specified, E4X is
-              // turned on in XUL.
-              version |= JSVERSION_HAS_XML;
-          }
+          isJavaScript =
+              nsParserUtils::IsJavaScriptLanguage(lang, &jsVersionString);
       }
       aAttributes += 2;
   }
-  // Not all script languages have a "sandbox" concept.  At time of
-  // writing, Python is the only other language, and it does not.
-  // For such languages, neither any inline script nor remote script are
-  // safe to execute from untrusted sources.
-  // So for such languages, we only allow script when the document
-  // itself is from chrome.  We then don't bother to check the
-  // "src=" tag - we trust chrome to do the right thing.
-  // (See also similar code in nsScriptLoader.cpp)
-  nsCOMPtr<nsIDocument> doc(do_QueryReferent(mDocument));
-  if (langID != nsIProgrammingLanguage::UNKNOWN && 
-      langID != nsIProgrammingLanguage::JAVASCRIPT &&
-      doc && !nsContentUtils::IsChromeDoc(doc)) {
-      langID = nsIProgrammingLanguage::UNKNOWN;
-      NS_WARNING("Non JS language called from non chrome - ignored");
-  }
-  // Don't process scripts that aren't known
-  if (langID != nsIProgrammingLanguage::UNKNOWN) {
-      nsIScriptGlobalObject* globalObject = nsnull; // borrowed reference
-      if (doc)
-          globalObject = doc->GetScriptGlobalObject();
+
+  // Don't process scripts that aren't JavaScript
+  if (isJavaScript) {
       nsXULPrototypeScript* script =
-          new nsXULPrototypeScript(langID, aLineNumber, version);
+          new nsXULPrototypeScript(aLineNumber, jsVersionString, hasE4XOption,
+                                   &rv);
       if (! script)
           return NS_ERROR_OUT_OF_MEMORY;
+      if (NS_FAILED(rv)) {
+          delete script;
+          return rv;
+      }      
 
       // If there is a SRC attribute...
       if (! src.IsEmpty()) {
@@ -1318,7 +1282,7 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
 
                   if (NS_SUCCEEDED(rv)) {
                       rv = mSecMan->
-                          CheckLoadURIWithPrincipal(doc->NodePrincipal(),
+                          CheckLoadURIWithPrincipal(doc->GetPrincipal(),
                                                     script->mSrcURI,
                                                     nsIScriptSecurityManager::ALLOW_CHROME);
                   }
@@ -1334,8 +1298,15 @@ XULContentSinkImpl::OpenScript(const PRUnichar** aAttributes,
           // file right away.  Otherwise we'll end up reloading the script and
           // corrupting the FastLoad file trying to serialize it, in the case
           // where it's already there.
-          if (globalObject)
-                script->DeserializeOutOfLine(nsnull, globalObject);
+          nsCOMPtr<nsIDocument> doc(do_QueryReferent(mDocument));
+          if (doc) {
+              nsIScriptGlobalObject* globalObject = doc->GetScriptGlobalObject();
+              if (globalObject) {
+                  nsIScriptContext *scriptContext = globalObject->GetContext();
+                  if (scriptContext)
+                      script->DeserializeOutOfLine(nsnull, scriptContext);
+              }
+          }
       }
 
       nsVoidArray* children;
@@ -1397,9 +1368,9 @@ XULContentSinkImpl::AddAttributes(const PRUnichar** aAttributes,
           PR_LOG(gLog, PR_LOG_DEBUG,
                  ("xul: %.5d. %s    %s=%s",
                   -1, // XXX pass in line number
-                  NS_ConvertUTF16toUTF8(extraWhiteSpace).get(),
-                  NS_ConvertUTF16toUTF8(qnameC).get(),
-                  NS_ConvertUTF16toUTF8(valueC).get()));
+                  NS_ConvertUCS2toUTF8(extraWhiteSpace).get(),
+                  NS_ConvertUCS2toUTF8(qnameC).get(),
+                  NS_ConvertUCS2toUTF8(valueC).get()));
       }
 #endif
   }

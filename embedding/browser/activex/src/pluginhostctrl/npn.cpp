@@ -19,7 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Adam Lock <adamlock@eircom.net> 
+ *   Adam Lock <adamlock@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -40,7 +40,7 @@
 #include "npn.h"
 #include "Pluginhostctrl.h"
 
-#include "nsPluginHostWnd.h"
+#include "nsPluginHostCtrl.h"
 
 static NPError
 _OpenURL(NPP npp, const char *szURL, const char *szTarget, void *pNotifyData, const char *pData, uint32 len, NPBool isFile)
@@ -65,14 +65,14 @@ _OpenURL(NPP npp, const char *szURL, const char *szTarget, void *pNotifyData, co
         }
     }
 
-    nsPluginHostWnd *pWnd = (nsPluginHostWnd *) npp->ndata;
-    ATLASSERT(pWnd);
+    nsPluginHostCtrl *pCtrl = (nsPluginHostCtrl *) npp->ndata;
+    ATLASSERT(pCtrl);
 
     // Other window targets
     if (szTarget)
     {
         CComPtr<IWebBrowserApp> cpBrowser;
-        pWnd->GetWebBrowserApp(&cpBrowser);
+        pCtrl->GetWebBrowserApp(&cpBrowser);
         if (!cpBrowser)
         {
             return NPERR_GENERIC_ERROR;
@@ -156,7 +156,7 @@ _OpenURL(NPP npp, const char *szURL, const char *szTarget, void *pNotifyData, co
     }
 
     USES_CONVERSION;
-    HRESULT hr = pWnd->OpenURLStream(A2CT(szURL), pNotifyData, postData, postDataLen);
+    HRESULT hr = pCtrl->OpenURLStream(A2CT(szURL), pNotifyData, postData, postDataLen);
     return SUCCEEDED(hr) ? NPERR_NO_ERROR : NPERR_GENERIC_ERROR;
 }
 
@@ -174,9 +174,6 @@ NPN_GetURLNotify(NPP         npp,
               const char* target, 
               void*       notifyData)
 {
-    if (strncmp("javascript:", relativeURL, 11) == 0)
-        return NPERR_INVALID_URL;
-
     return _OpenURL(npp, relativeURL, target, notifyData, NULL, 0, FALSE);
 }
 
@@ -256,12 +253,12 @@ NPN_Status(NPP npp, const char *message)
         return;
     }
 
-    nsPluginHostWnd *pWnd = (nsPluginHostWnd *) npp->ndata;
-    ATLASSERT(pWnd);
+    nsPluginHostCtrl *pCtrl = (nsPluginHostCtrl *) npp->ndata;
+    ATLASSERT(pCtrl);
 
     // Update the status bar in the browser
     CComPtr<IWebBrowserApp> cpBrowser;
-    pWnd->GetWebBrowserApp(&cpBrowser);
+    pCtrl->GetWebBrowserApp(&cpBrowser);
     if (cpBrowser)
     {
         USES_CONVERSION;
@@ -313,20 +310,7 @@ NPN_InvalidateRect(NPP npp, NPRect *invalidRect)
         return;
     }
 
-    nsPluginHostWnd *pWnd = (nsPluginHostWnd *) npp->ndata;
-    ATLASSERT(pWnd);
-
-    RECT *prc = NULL;
-    RECT rcInvalid;
-    if (invalidRect)
-    {
-        prc = &rcInvalid;
-        prc->left = invalidRect->left;
-        prc->bottom = invalidRect->bottom;
-        prc->top = invalidRect->top;
-        prc->right = invalidRect->right;
-    }
-    pWnd->InvalidateRect(prc, FALSE);
+    // TODO - windowless plugins
 }
 
 
@@ -338,10 +322,7 @@ NPN_InvalidateRegion(NPP npp, NPRegion invalidRegion)
     {
         return;
     }
-    nsPluginHostWnd *pWnd = (nsPluginHostWnd *) npp->ndata;
-    ATLASSERT(pWnd);
-
-    pWnd->InvalidateRgn(invalidRegion, FALSE);
+    // TODO - windowless plugins
 }
 
 
@@ -353,9 +334,7 @@ NPN_ForceRedraw(NPP npp)
     {
         return;
     }
-    nsPluginHostWnd *pWnd = (nsPluginHostWnd *) npp->ndata;
-    ATLASSERT(pWnd);
-    pWnd->InvalidateRect(NULL, FALSE);
+    // TODO - windowless plugins
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -372,26 +351,28 @@ NPN_GetValue(NPP npp, NPNVariable variable, void *result)
         return NPERR_INVALID_PARAM;
     }
 
-    nsPluginHostWnd *pWnd = (nsPluginHostWnd *) npp->ndata;
-    ATLASSERT(pWnd);
+    nsPluginHostCtrl *pCtrl = (nsPluginHostCtrl *) npp->ndata;
+    ATLASSERT(pCtrl);
 
     CComPtr<IWebBrowserApp> cpBrowser;
-    pWnd->GetWebBrowserApp(&cpBrowser);
+    pCtrl->GetWebBrowserApp(&cpBrowser);
 
     // Test the variable
-    switch (variable)
+    if (variable == NPNVnetscapeWindow)
     {
-    case NPNVnetscapeWindow:
-        *((HWND *) result) = pWnd->m_hWnd;
-        break;
-    case NPNVjavascriptEnabledBool:
+        *((HWND *) result) = pCtrl->m_wndPlugin.m_hWnd;
+    }
+    else if (variable == NPNVjavascriptEnabledBool)
+    {
         // TODO
+        *((NPBool *) result) = TRUE;
+    }
+    else if (variable == NPNVasdEnabledBool) // Smart update
+    {
         *((NPBool *) result) = FALSE;
-        break;
-    case NPNVasdEnabledBool:
-        *((NPBool *) result) = FALSE;
-        break;
-    case NPNVisOfflineBool:
+    }
+    else if (variable == NPNVisOfflineBool)
+    {
         *((NPBool *) result) = FALSE;
         if (cpBrowser)
         {
@@ -403,10 +384,12 @@ NPN_GetValue(NPP npp, NPNVariable variable, void *result)
                 *((NPBool *) result) = (bOffline == VARIANT_TRUE) ? TRUE : FALSE;
             }
         }
-        break;
-    default:
+    }
+    else
+    {
         return NPERR_GENERIC_ERROR;
     }
+
     return NPERR_NO_ERROR;
 }
 
@@ -420,22 +403,9 @@ NPN_SetValue(NPP npp, NPPVariable variable, void *result)
         return NPERR_INVALID_INSTANCE_ERROR;
     }
 
-    nsPluginHostWnd *pWnd = (nsPluginHostWnd *) npp->ndata;
-    ATLASSERT(pWnd);
-
-    switch (variable)
-    {
-    case NPPVpluginWindowBool:
-        {
-            pWnd->SetPluginWindowless((result == NULL) ? true : false);            
-        }
-        return NPERR_NO_ERROR;
-    case NPPVpluginTransparentBool:
-        {
-            pWnd->SetPluginTransparent((result != NULL) ? true : false);            
-        }
-        return NPERR_NO_ERROR;
-    }
+    // TODO windowless
+    // NPPVpluginWindowBool
+    // NPPVpluginTransparentBool
 
     return NPERR_GENERIC_ERROR;
 }
@@ -465,7 +435,7 @@ NPN_GetJavaEnv(void)
 const char * NP_EXPORT
 NPN_UserAgent(NPP npp)
 {
-    return "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.7.10) Gecko/20050716 Firefox/1.0.6";
+    return NULL;
 }
 
 

@@ -1,39 +1,3 @@
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
-# The contents of this file are subject to the Mozilla Public License Version 
-# 1.1 (the "License"); you may not use this file except in compliance with 
-# the License. You may obtain a copy of the License at 
-# http://www.mozilla.org/MPL/
-# 
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-# 
-# The Original Code is Mozilla Communicator client code.
-# 
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1996-1999
-# the Initial Developer. All Rights Reserved.
-# 
-# Contributor(s):
-# 
-# Alternatively, the contents of this file may be used under the terms of
-# either of the GNU General Public License Version 2 or later (the "GPL"),
-# or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-# 
-# ***** END LICENSE BLOCK ***** 
-
 10	ldap_abandon
 11	ldap_add
 13	ldap_unbind
@@ -177,10 +141,6 @@
 150	ber_sockbuf_free
 151	ber_get_next_buffer_ext
 152	ber_svecfree
-153	ber_get_buf_datalen
-154	ber_get_buf_databegin
-155	ber_stack_init
-156	ber_sockbuf_free_data
 
 200	ldap_memfree
 201	ldap_ber_free
@@ -251,8 +211,6 @@
 487	ldap_sasl_bind
 488	ldap_sasl_bind_s
 489	ldap_parse_sasl_bind_result
-490	ldap_sasl_interactive_bind_s
-491	ldap_sasl_interactive_bind_ext_s
 # LDAPv3 simple paging controls are not supported by Netscape at this time.
 # 490	ldap_create_page_control
 # 491	ldap_parse_page_control
@@ -301,38 +259,7 @@
 533	ldap_x_calloc
 534	ldap_x_realloc
 535	ldap_x_free
-#
-536 ldap_create_proxiedauth_control
-#
-537 ldap_create_geteffectiveRights_control 
-#
-538 ldap_find_control
-#
-539 ldap_url_parse_no_defaults
-#
-550 ldap_create_userstatus_control
-551 ldap_parse_userstatus_control
-#
-560 ldap_create_passwordpolicy_control
-561 ldap_create_passwordpolicy_control_ext
-562 ldap_parse_passwordpolicy_control
-563 ldap_parse_passwordpolicy_control_ext
-564 ldap_passwordpolicy_err2txt
-#
-570 ldap_passwd
-571 ldap_parse_passwd
-573 ldap_passwd_s
-#
-580 ldap_delete_result_entry
-581 ldap_add_result_entry
-#
-590 ldap_whoami
-591 ldap_parse_whoami
-592 ldap_whoami_s
-#
-600 ldap_create_authzid_control
-601 ldap_parse_authzid_control
-#
+536     ldap_create_proxiedauth_control
 1000	ldap_memcache_init
 1001	ldap_memcache_set
 1002	ldap_memcache_get

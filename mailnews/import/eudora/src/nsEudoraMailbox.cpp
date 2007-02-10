@@ -40,10 +40,9 @@
 #include "nsCOMPtr.h"
 #include "nsReadableUtils.h"
 #include "nsEudoraMailbox.h"
-#include "nsDirectoryServiceDefs.h"
+#include "nsSpecialSystemDirectory.h"
 #include "nsEudoraCompose.h"
 #include "nspr.h"
-#include "nsMsgUtils.h"
 
 #include "EudoraDebugLog.h"
 
@@ -119,18 +118,23 @@ nsEudoraMailbox::~nsEudoraMailbox()
 
 nsresult nsEudoraMailbox::CreateTempFile( nsIFileSpec **ppSpec)
 {
-  *ppSpec = nsnull;
+	*ppSpec = nsnull;
+	
+	nsSpecialSystemDirectory temp(nsSpecialSystemDirectory::OS_TemporaryDirectory);
+	
+	// nsSpecialSystemDirectory temp(nsSpecialSystemDirectory::Mac_DesktopDirectory);
+	
+    temp += "impmail.txt";
+	temp.MakeUnique();
+	nsresult rv = NS_NewFileSpecWithSpec( temp, ppSpec);
+    if (NS_SUCCEEDED(rv)) {
+		if (*ppSpec)
+			return( NS_OK);
+		else
+			return( NS_ERROR_FAILURE);
+	}
 
-  nsCOMPtr<nsIFile> tmpFile;
-  nsresult rv = GetSpecialDirectoryWithFileName(NS_OS_TEMP_DIR,
-                                                "impmail.txt",
-                                                getter_AddRefs(tmpFile));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = tmpFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 00600);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  return NS_NewFileSpecFromIFile(tmpFile, ppSpec);
+	return( rv);
 }
 
 nsresult nsEudoraMailbox::DeleteFile( nsIFileSpec *pSpec)
@@ -361,7 +365,7 @@ nsresult nsEudoraMailbox::ImportMailbox( PRUint32 *pBytes, PRBool *pAbort, const
 	return( rv);
 }
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #define kMsgHeaderSize		220
 #define	kMsgFirstOffset		278
 #else
@@ -1058,17 +1062,13 @@ void nsEudoraMailbox::EmptyAttachments( void)
 static char *eudoraAttachLines[] = {
 	"Attachment Converted:",
 	"Attachment converted:",
-	"Pièce jointe convertie :",
-	// Japanese text encoded with Shift-JIS.
-	// The meaning is "Restored attached file".
-	"\x95\x9c\x8c\xb3\x82\xb3\x82\xea\x82\xbd\x93\x59\x95\x74\x83\x74\x83\x40\x83\x43\x83\x8b\x81\x46"
+  "Pièce jointe convertie :"
 };
 
 static PRInt32 eudoraAttachLen[] = {
 	21,
 	21,
-	24,
-	24,
+  24,
 	0
 };
 

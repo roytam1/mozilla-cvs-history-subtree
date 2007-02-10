@@ -51,7 +51,6 @@ class nsISupportsArray;
 {
   IBOutlet NSButton* mEnableJS;
   IBOutlet NSButton* mEnableJava;
-  IBOutlet NSButton* mEnablePlugins;
 
   IBOutlet NSButton *mEnablePopupBlocking;
   IBOutlet NSButton *mEnableAdBlocking;
@@ -75,7 +74,6 @@ class nsISupportsArray;
 
 -(IBAction) clickEnableJS:(id)sender;
 -(IBAction) clickEnableJava:(id)sender;
--(IBAction) clickEnablePlugins:(id)sender;
 
 -(IBAction) clickEnablePopupBlocking:(id)sender;
 -(IBAction) clickEnableAdBlocking:(id)sender;

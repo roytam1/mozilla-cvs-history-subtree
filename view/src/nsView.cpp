@@ -39,12 +39,14 @@
 #include "nsIWidget.h"
 #include "nsViewManager.h"
 #include "nsIWidget.h"
+#include "nsIButton.h"
 #include "nsGUIEvent.h"
 #include "nsIDeviceContext.h"
 #include "nsIComponentManager.h"
 #include "nsIRenderingContext.h"
 #include "nsTransform2D.h"
 #include "nsIScrollableView.h"
+#include "nsVoidArray.h"
 #include "nsGfxCIID.h"
 #include "nsIRegion.h"
 #include "nsIInterfaceRequestor.h"
@@ -60,7 +62,7 @@ static nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent);
 
 // {34297A07-A8FD-d811-87C6-000244212BCB}
 #define VIEW_WRAPPER_IID \
-{ 0x34297a07, 0xa8fd, 0xd811, { 0x87, 0xc6, 0x0, 0x2, 0x44, 0x21, 0x2b, 0xcb } }
+{ 0x34297a07, 0xa8fd, 0xd811, { 0x87, 0xc6, 0x0, 0x2, 0x44, 0x21, 0x2b, 0xcb } };
 
 
 /**
@@ -69,7 +71,7 @@ static nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent);
 class ViewWrapper : public nsIInterfaceRequestor
 {
   public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(VIEW_WRAPPER_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(VIEW_WRAPPER_IID)
     NS_DECL_ISUPPORTS
     NS_DECL_NSIINTERFACEREQUESTOR
 
@@ -79,8 +81,6 @@ class ViewWrapper : public nsIInterfaceRequestor
   private:
     nsView* mView;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(ViewWrapper, VIEW_WRAPPER_IID)
 
 NS_IMPL_ADDREF(ViewWrapper)
 NS_IMPL_RELEASE(ViewWrapper)
@@ -173,6 +173,8 @@ nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent)
 
   return result;
 }
+
+MOZ_DECL_CTOR_COUNTER(nsView)
 
 nsView::nsView(nsViewManager* aViewManager, nsViewVisibility aVisibility)
 {
@@ -302,6 +304,38 @@ void nsIView::Destroy()
   delete this;
 }
 
+NS_IMETHODIMP nsView::Paint(nsIRenderingContext& rc, const nsRect& rect,
+                              PRUint32 aPaintFlags, PRBool &aResult)
+{
+    // Just paint, assume compositor knows what it's doing.
+    if (nsnull != mClientData) {
+      nsCOMPtr<nsIViewObserver> observer;
+      if (NS_OK == mViewManager->GetViewObserver(*getter_AddRefs(observer))) {
+        observer->Paint((nsIView *)this, rc, rect);
+      }
+    }
+        return NS_OK;
+}
+
+NS_IMETHODIMP nsView::Paint(nsIRenderingContext& rc, const nsIRegion& region,
+                              PRUint32 aPaintFlags, PRBool &aResult)
+{
+  // XXX apply region to rc
+  // XXX get bounding rect from region
+  //if (nsnull != mClientData)
+  //{
+  //  nsIViewObserver *obs;
+  //
+  //  if (NS_OK == mViewManager->GetViewObserver(obs))
+  //  {
+  //    obs->Paint((nsIView *)this, rc, rect, aPaintFlags);
+  //    NS_RELEASE(obs);
+  //  }
+  //}
+  aResult = PR_FALSE;
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 void nsView::SetPosition(nscoord aX, nscoord aY)
 {
   mDimBounds.x += aX - mPosX;
@@ -352,51 +386,43 @@ void nsView::DoResetWidgetBounds(PRBool aMoveOnly,
   if (mViewManager->GetRootView() == this) {
     return;
   }
-  
-  nsRect curBounds;
-  mWindow->GetBounds(curBounds);
-  nsWindowType type;
-  mWindow->GetWindowType(type);
-
-  if (curBounds.IsEmpty() && mDimBounds.IsEmpty() && type == eWindowType_popup) {
-    // Don't manipulate empty popup widgets. For example there's no point
-    // moving hidden comboboxes around, or doing X server roundtrips
-    // to compute their true screen position. This could mean that WidgetToScreen
-    // operations on these widgets don't return up-to-date values, but popup
-    // positions aren't reliable anyway because of correction to be on or off-screen.
-    return;
-  }
 
   NS_PRECONDITION(mWindow, "Why was this called??");
   nsIDeviceContext  *dx;
+  float             t2p, p2t;
   
   mViewManager->GetDeviceContext(dx);
-  PRInt32 p2a = dx->AppUnitsPerDevPixel();
+  t2p = dx->AppUnitsToDevUnits();
+  p2t = dx->DevUnitsToAppUnits();
   NS_RELEASE(dx);
 
   nsPoint offset(0, 0);
   if (GetParent()) {
     nsIWidget* parentWidget = GetParent()->GetNearestWidget(&offset);
-    
+
+    nsWindowType type;
+    mWindow->GetWindowType(type);
     if (type == eWindowType_popup) {
       // put offset into screen coordinates
       nsRect screenRect(0,0,1,1);
       parentWidget->WidgetToScreen(screenRect, screenRect);
-      offset += nsPoint(NSIntPixelsToAppUnits(screenRect.x, p2a),
-                        NSIntPixelsToAppUnits(screenRect.y, p2a));
+      offset += nsPoint(NSIntPixelsToTwips(screenRect.x, p2t),
+                        NSIntPixelsToTwips(screenRect.y, p2t));
     }
   }
 
-  nsRect newBounds(NSAppUnitsToIntPixels((mDimBounds.x + offset.x), p2a),
-                   NSAppUnitsToIntPixels((mDimBounds.y + offset.y), p2a),
-                   NSAppUnitsToIntPixels(mDimBounds.width, p2a),
-                   NSAppUnitsToIntPixels(mDimBounds.height, p2a));
+  nsRect newBounds(NSTwipsToIntPixels((mDimBounds.x + offset.x), t2p),
+                   NSTwipsToIntPixels((mDimBounds.y + offset.y), t2p),
+                   NSTwipsToIntPixels(mDimBounds.width, t2p),
+                   NSTwipsToIntPixels(mDimBounds.height, t2p));
     
   PRBool changedPos = PR_TRUE;
   PRBool changedSize = PR_TRUE;
   if (!(mVFlags & NS_VIEW_FLAG_HAS_POSITIONED_WIDGET)) {
     mVFlags |= NS_VIEW_FLAG_HAS_POSITIONED_WIDGET;
   } else {
+    nsRect curBounds;
+    mWindow->GetBounds(curBounds);
     changedPos = curBounds.TopLeft() != newBounds.TopLeft();
     changedSize = curBounds.Size() != newBounds.Size();
   }
@@ -630,7 +656,7 @@ nsresult nsIView::CreateWidget(const nsIID &aWindowIID,
   NS_IF_RELEASE(mWindow);
 
   mViewManager->GetDeviceContext(dx);
-  float scale = 1.0f / dx->AppUnitsPerDevPixel();
+  float scale = dx->AppUnitsToDevUnits();
 
   trect *= scale;
 
@@ -668,10 +694,6 @@ nsresult nsIView::CreateWidget(const nsIID &aWindowIID,
           : nsnull;
         trect += offset;
         if (aWidgetInitData->mWindowType == eWindowType_popup) {
-          // Without a parent, we can't make a popup.  This can happen
-          // when printing
-          if (!parentWidget)
-            return NS_ERROR_FAILURE;
           mWindow->Create(parentWidget->GetNativeData(NS_NATIVE_WIDGET), trect,
                           ::HandleEvent, dx, nsnull, nsnull, aWidgetInitData);
         } else {
@@ -773,7 +795,7 @@ void nsIView::List(FILE* out, PRInt32 aIndent) const
     float p2t;
     nsIDeviceContext *dx;
     mViewManager->GetDeviceContext(dx);
-    p2t = dx->AppUnitsPerDevPixel();
+    p2t = dx->DevUnitsToAppUnits();
     NS_RELEASE(dx);
     mWindow->GetClientBounds(windowBounds);
     windowBounds *= p2t;
@@ -839,9 +861,9 @@ nsIntPoint nsIView::GetScreenPosition() const
   if (widget) {
     nsCOMPtr<nsIDeviceContext> dx;
     mViewManager->GetDeviceContext(*getter_AddRefs(dx));
-    PRInt32 p2a = dx->AppUnitsPerDevPixel();
-    nsIntRect ourRect(NSAppUnitsToIntPixels(toWidgetOffset.x, p2a),
-                      NSAppUnitsToIntPixels(toWidgetOffset.y, p2a),
+    float t2p = dx->AppUnitsToDevUnits();
+    nsIntRect ourRect(NSTwipsToIntPixels(toWidgetOffset.x, t2p),
+                      NSTwipsToIntPixels(toWidgetOffset.y, t2p),
                       0,
                       0);
     widget->WidgetToScreen(ourRect, screenRect);

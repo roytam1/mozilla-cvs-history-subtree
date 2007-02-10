@@ -51,6 +51,7 @@
 #include "prtypes.h"
 /* Copied from xp_core.h */
 /* removed #ifdef for hpux defined in /usr/include/model.h */
+#ifndef XP_MAC
 #ifndef _INT16
 #define _INT16
 #endif
@@ -62,6 +63,7 @@
 #endif
 #ifndef _UINT32
 #define _UINT32
+#endif
 #endif
 
 /* 
@@ -92,6 +94,11 @@
 
 #ifdef __MWERKS__
 #	define _declspec __declspec
+#	ifdef macintosh
+#		ifndef XP_MAC
+#			define XP_MAC 1
+#		endif /* XP_MAC */
+#	endif /* macintosh */
 #	ifdef __INTEL__
 #		undef NULL
 #		ifndef XP_WIN
@@ -100,7 +107,7 @@
 #	endif /* __INTEL__ */
 #endif /* __MWERKS__ */
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 	#include <Quickdraw.h>
 	#include <Events.h>
 #endif
@@ -118,7 +125,7 @@
 /*----------------------------------------------------------------------*/
 
 #define NP_VERSION_MAJOR 0
-#define NP_VERSION_MINOR 17
+#define NP_VERSION_MINOR 16
 
 
 /* The OS/2 version of Netscape uses RC_DATA to define the
@@ -223,6 +230,10 @@ typedef char*			NPMIMEType;
 /*----------------------------------------------------------------------*/
 /*                       Structures and definitions                     */
 /*----------------------------------------------------------------------*/
+
+#ifdef XP_MAC
+#pragma options align=mac68k
+#endif
 
 /*
  *  NPP is a plug-in's opaque instance handle
@@ -476,7 +487,7 @@ typedef struct _NPPrint
   } print;
 } NPPrint;
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 typedef EventRecord	NPEvent;
 #elif defined(XP_WIN)
 typedef struct _NPEvent
@@ -496,9 +507,9 @@ typedef struct _NPEvent
 typedef XEvent NPEvent;
 #else
 typedef void*			NPEvent;
-#endif /* XP_MACOSX */
+#endif /* XP_MAC */
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 typedef RgnHandle NPRegion;
 #elif defined(XP_WIN)
 typedef HRGN NPRegion;
@@ -506,9 +517,9 @@ typedef HRGN NPRegion;
 typedef Region NPRegion;
 #else
 typedef void *NPRegion;
-#endif /* XP_MACOSX */
+#endif /* XP_MAC */
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 /*
  *  Mac-specific structures and definitions.
  */
@@ -539,7 +550,7 @@ enum NPEventType {
 #define loseFocusEvent    (osEvt + 17)
 #define adjustCursorEvent (osEvt + 18)
 #endif
-#endif /* XP_MACOSX */
+#endif /* XP_MAC */
 
 /*
  * Values for mode passed to NPP_New:
@@ -556,6 +567,10 @@ enum NPEventType {
 #define NP_ASFILEONLY 4
 
 #define NP_MAXREADY	(((unsigned)(~0)<<1)>>1)
+
+#ifdef XP_MAC
+#pragma options align=reset
+#endif
 
 
 /*----------------------------------------------------------------------*/

@@ -50,6 +50,7 @@
 // Class IID's
 static NS_DEFINE_CID(kParserCID, NS_PARSER_CID);
 static NS_DEFINE_IID(kLoggingSinkCID, NS_LOGGING_SINK_CID);
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 // Interface IID's
 
@@ -85,7 +86,7 @@ nsresult GenerateBaselineFile(const char* aSourceFilename,const char* aBaselineF
   localfile->InitWithNativePath(nsDependentCString(aSourceFilename));
   nsCOMPtr<nsIURI> inputURI;
   {
-    nsCOMPtr<nsIIOService> ioService(do_GetService(NS_IOSERVICE_CONTRACTID, &rv));
+    nsCOMPtr<nsIIOService> ioService(do_GetService(kIOServiceCID, &rv));
     if (NS_FAILED(rv))
       return rv;
     rv = ioService->NewFileURI(localfile, getter_AddRefs(inputURI));
@@ -98,9 +99,12 @@ nsresult GenerateBaselineFile(const char* aSourceFilename,const char* aBaselineF
   sink->SetOutputStream(outputfile);
 
   // Parse the document, having the sink write the data to fp
+  nsIDTD* dtd = nsnull;
+  NS_NewNavHTMLDTD(&dtd);
+  parser->RegisterDTD(dtd);
   parser->SetContentSink(sink);
 
-  rv = parser->Parse(inputURI, 0, PR_FALSE, eDTDMode_unknown);
+  rv = parser->Parse(inputURI, 0, PR_FALSE, 0, eDTDMode_unknown);
 
   return rv;
 }

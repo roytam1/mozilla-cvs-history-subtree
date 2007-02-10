@@ -41,6 +41,7 @@
 
 var cvPrefs = 0;
 var addressbook = 0;
+var gAddressBookBundle;
 var gSearchTimer = null;
 var gStatusText = null;
 var gQueryURIFormat = null;
@@ -117,9 +118,7 @@ var gAddressBookAbListener = {
 
 function OnUnloadAddressBook()
 {  
-  var addrbookSession =
-        Components.classes["@mozilla.org/addressbook/services/session;1"]
-                  .getService(Components.interfaces.nsIAddrBookSession);
+  var addrbookSession = Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
   addrbookSession.removeAddressBookListener(gAddressBookAbListener);
 
   RemovePrefObservers();
@@ -175,6 +174,7 @@ function OnLoadAddressBook()
 
 function delayedOnLoadAddressBook()
 {
+  gAddressBookBundle = document.getElementById("bundle_addressBook");
   gSearchInput = document.getElementById("searchInput");
 
   verifyAccounts(null); 	// this will do migration, if we need to.
@@ -184,15 +184,10 @@ function delayedOnLoadAddressBook()
   InitCommonJS();
 
   //This migrates the LDAPServer Preferences from 4.x to mozilla format.
-  var ldapPrefs = null;
   try {
-    ldapPrefs = Components.classes["@mozilla.org/ldapprefs-service;1"]
-                          .getService(Components.interfaces.nsILDAPPrefsService);
-  } catch (ex) {Components.utils.reportError("ERROR: Cannot get the LDAP service\n" + ex + "\n");}
-
-  if (ldapPrefs) {
-    ldapPrefs.migratePrefsIfNeeded();
-  }
+      gLDAPPrefsService = Components.classes["@mozilla.org/ldapprefs-service;1"].getService();       
+      gLDAPPrefsService = gLDAPPrefsService.QueryInterface( Components.interfaces.nsILDAPPrefsService);                  
+  } catch (ex) {dump ("ERROR: Cannot get the LDAP service\n" + ex + "\n");}
 
   GetCurrentPrefs();
 
@@ -212,9 +207,7 @@ function delayedOnLoadAddressBook()
 
   // add a listener, so we can switch directories if
   // the current directory is deleted
-  var addrbookSession =
-        Components.classes["@mozilla.org/addressbook/services/session;1"]
-                  .getService(Components.interfaces.nsIAddrBookSession);
+  var addrbookSession = Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
   // this listener cares when a directory (= address book), or a directory item
   // is/are removed. In the case of directory items, we are only really
   // interested in mailing list changes and not cards but we have to have both.
@@ -232,12 +225,6 @@ function delayedOnLoadAddressBook()
 
   var toolbarset = document.getElementById('customToolbars');
   toolbox.toolbarset = toolbarset;
-
-  // Ensure we don't load xul error pages into the main window
-  window.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
-        .getInterface(Components.interfaces.nsIWebNavigation)
-        .QueryInterface(Components.interfaces.nsIDocShell)
-        .useErrorPages = false;
 }
 
 function OnLoadDirTree() {
@@ -317,7 +304,6 @@ function CommandUpdate_AddressBook()
 {
   goUpdateCommand('cmd_delete');
   goUpdateCommand('button_delete');
-  goUpdateCommand('cmd_newlist');
 }
 
 function ResultsPaneSelectionChanged()
@@ -436,6 +422,36 @@ function AbOnRenameAddressBook(aName)
   addressbook.modifyAddressBook(addressbookDS, parentDir, selectedABDirectory, properties);
 }
 
+function GetPrintSettings()
+{
+  var prevPS = gPrintSettings;
+
+  try {
+    if (gPrintSettings == null) {
+      var useGlobalPrintSettings = true;
+      var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                           .getService(Components.interfaces.nsIPrefBranch);
+      if (pref) {
+        useGlobalPrintSettings = pref.getBoolPref("print.use_global_printsettings", false);
+      }
+
+      // I would rather be using nsIWebBrowserPrint API
+      // but I really don't have a document at this point
+      var printSettingsService = Components.classes["@mozilla.org/gfx/printsettings-service;1"]
+                                           .getService(Components.interfaces.nsIPrintSettingsService);
+      if (useGlobalPrintSettings) {
+        gPrintSettings = printSettingsService.globalPrintSettings;
+      } else {
+        gPrintSettings = printSettingsService.CreatePrintSettings();
+      }
+    }
+  } catch (e) {
+    dump("GetPrintSettings "+e);
+  }
+
+  return gPrintSettings;
+}
+
 function AbPrintCardInternal(doPrintPreview, msgType)
 {
   var selectedItems = GetSelectedAbCards();
@@ -469,7 +485,7 @@ function AbPrintCardInternal(doPrintPreview, msgType)
 
   if (!gPrintSettings)
   {
-    gPrintSettings = PrintUtils.getPrintSettings();
+    gPrintSettings = GetPrintSettings();
   }
 
   printEngineWindow = window.openDialog("chrome://messenger/content/msgPrintEngine.xul",
@@ -517,7 +533,7 @@ function AbPrintAddressBookInternal(doPrintPreview, msgType)
   var printUrl = "addbook://" + abURIArr[0] + "/" + abURIArr[1] + "?action=print"
 
   if (!gPrintSettings) {
-    gPrintSettings = PrintUtils.getPrintSettings();
+    gPrintSettings = GetPrintSettings();
   }
 
 	printEngineWindow = window.openDialog("chrome://messenger/content/msgPrintEngine.xul",
@@ -846,11 +862,9 @@ function IsCardViewAndAbResultsPaneSplitterCollapsed()
 
 function LaunchUrl(url)
 {
-  // Doesn't matter if this bit fails, window.location contains its own prompts
-  try {
-    window.location = url;
-  }
-  catch (ex) {}
+  var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance(Components.interfaces.nsIMessenger);
+  messenger.SetWindow(window,null);
+  messenger.OpenURL(url);
 }
 
 function AbIMSelected()

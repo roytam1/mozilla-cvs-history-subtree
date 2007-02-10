@@ -45,6 +45,8 @@
 
 /* Public Methods */
 
+MOZ_DECL_CTOR_COUNTER(nsWinRegItem)
+
 nsWinRegItem::nsWinRegItem(nsWinReg* regObj, PRInt32 root, PRInt32 action, const nsAString& sub, const nsAString& valname, const nsAString& val, PRInt32 *aReturn)
 : nsInstallObject(regObj->InstallObject())
 {
@@ -199,7 +201,9 @@ char* nsWinRegItem::toString()
   if (result)
   {
       result->Append(*keyString);
-      resultCString = ToNewCString(*result);
+      resultCString = new char[result->Length() + 1];
+      if(resultCString != nsnull)
+          result->ToCString(resultCString, result->Length() + 1);
   }
   
   if (keyString) delete keyString;

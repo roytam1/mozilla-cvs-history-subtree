@@ -41,22 +41,20 @@
 #include "nsLookAndFeel.h"
 #include <gtk/gtkinvisible.h>
 
-#include "gtkdrawing.h"
-
 #define GDK_COLOR_TO_NS_RGB(c) \
     ((nscolor) NS_RGB(c.red>>8, c.green>>8, c.blue>>8))
 
-nscolor   nsLookAndFeel::sInfoText = 0;
-nscolor   nsLookAndFeel::sInfoBackground = 0;
-nscolor   nsLookAndFeel::sMenuText = 0;
-nscolor   nsLookAndFeel::sMenuHover = 0;
-nscolor   nsLookAndFeel::sMenuHoverText = 0;
-nscolor   nsLookAndFeel::sMenuBackground = 0;
-nscolor   nsLookAndFeel::sButtonBackground = 0;
-nscolor   nsLookAndFeel::sButtonText = 0;
-nscolor   nsLookAndFeel::sButtonOuterLightBorder = 0;
-nscolor   nsLookAndFeel::sButtonInnerDarkBorder = 0;
-PRUnichar nsLookAndFeel::sInvisibleCharacter = PRUnichar('*');
+nscolor nsLookAndFeel::sInfoText = 0;
+nscolor nsLookAndFeel::sInfoBackground = 0;
+nscolor nsLookAndFeel::sMenuText = 0;
+nscolor nsLookAndFeel::sMenuHover = 0;
+nscolor nsLookAndFeel::sMenuHoverText = 0;
+nscolor nsLookAndFeel::sMenuBackground = 0;
+nscolor nsLookAndFeel::sButtonBackground = 0;
+nscolor nsLookAndFeel::sButtonText = 0;
+nscolor nsLookAndFeel::sButtonOuterLightBorder = 0;
+nscolor nsLookAndFeel::sButtonInnerDarkBorder = 0;
+PRBool  nsLookAndFeel::sColorsInitialized = PR_FALSE;
 
 //-------------------------------------------------------------------------
 //
@@ -67,12 +65,8 @@ nsLookAndFeel::nsLookAndFeel() : nsXPLookAndFeel()
 {
     InitWidget();
 
-    static PRBool sInitialized = PR_FALSE;
-
-    if (!sInitialized) {
-        sInitialized = PR_TRUE;
-        InitLookAndFeel();
-    }
+    if (!sColorsInitialized)
+        InitColors();
 }
 
 nsLookAndFeel::~nsLookAndFeel()
@@ -122,32 +116,12 @@ nsresult nsLookAndFeel::NativeGetColor(const nsColorID aID, nscolor& aColor)
         aColor = GDK_COLOR_TO_NS_RGB(mStyle->text[GTK_STATE_NORMAL]);
         break;
     case eColor_TextSelectBackground:
-    case eColor_IMESelectedRawTextBackground:
-    case eColor_IMESelectedConvertedTextBackground:
         // still used
         aColor = GDK_COLOR_TO_NS_RGB(mStyle->base[GTK_STATE_SELECTED]);
         break;
     case eColor_TextSelectForeground:
-    case eColor_IMESelectedRawTextForeground:
-    case eColor_IMESelectedConvertedTextForeground:
         // still used
         aColor = GDK_COLOR_TO_NS_RGB(mStyle->text[GTK_STATE_SELECTED]);
-        break;
-    case eColor_IMERawInputBackground:
-    case eColor_IMEConvertedTextBackground:
-        aColor = NS_TRANSPARENT;
-        break;
-    case eColor_IMERawInputForeground:
-    case eColor_IMEConvertedTextForeground:
-        aColor = NS_SAME_AS_FOREGROUND_COLOR;
-        break;
-    case eColor_IMERawInputUnderline:
-    case eColor_IMEConvertedTextUnderline:
-        aColor = NS_SAME_AS_FOREGROUND_COLOR;
-        break;
-    case eColor_IMESelectedRawTextUnderline:
-    case eColor_IMESelectedConvertedTextUnderline:
-        aColor = NS_TRANSPARENT;
         break;
 
         // css2  http://www.w3.org/TR/REC-CSS2/ui.html#system-colors
@@ -310,44 +284,9 @@ nsresult nsLookAndFeel::NativeGetColor(const nsColorID aID, nscolor& aColor)
     return res;
 }
 
-static PRInt32 CheckWidgetStyle(GtkWidget* aWidget, const char* aStyle, PRInt32 aMetric) {
-    gboolean value = PR_FALSE;
-    gtk_widget_style_get(aWidget, aStyle, &value, NULL);
-    return value ? aMetric : 0;
-}
-
-static PRInt32 ConvertGTKStepperStyleToMozillaScrollArrowStyle(GtkWidget* aWidget)
-{
-    if (!aWidget)
-        return nsILookAndFeel::eMetric_ScrollArrowStyleSingle;
-  
-    return
-        CheckWidgetStyle(aWidget, "has-backward-stepper",
-                         nsILookAndFeel::eMetric_ScrollArrowStartBackward) |
-        CheckWidgetStyle(aWidget, "has-forward-stepper",
-                         nsILookAndFeel::eMetric_ScrollArrowEndForward) |
-        CheckWidgetStyle(aWidget, "has-secondary-backward-stepper",
-                         nsILookAndFeel::eMetric_ScrollArrowEndBackward) |
-        CheckWidgetStyle(aWidget, "has-secondary-forward-stepper",
-                         nsILookAndFeel::eMetric_ScrollArrowStartForward);
-}
-
 NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
 {
     nsresult res = NS_OK;
-
-    // Set these before they can get overrided in the nsXPLookAndFeel. 
-    switch (aID) {
-    case eMetric_ScrollButtonLeftMouseButtonAction:
-        aMetric = 0;
-        return NS_OK;
-    case eMetric_ScrollButtonMiddleMouseButtonAction:
-        aMetric = 1;
-        return NS_OK;
-    case eMetric_ScrollButtonRightMouseButtonAction:
-        aMetric = 2;
-        return NS_OK;
-    }
 
     res = nsXPLookAndFeel::GetMetric(aID, aMetric);
     if (NS_SUCCEEDED(res))
@@ -423,23 +362,8 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
         aMetric = 1;
         break;
     case eMetric_CaretBlinkTime:
-        {
-            GtkSettings *settings;
-            gint blink_time;
-            gboolean blink;
-
-            settings = gtk_settings_get_default ();
-            g_object_get (settings,
-                          "gtk-cursor-blink-time", &blink_time,
-                          "gtk-cursor-blink", &blink,
-                          NULL);
- 
-            if (blink)
-                aMetric = (PRInt32) blink_time;
-            else
-                aMetric = 0;
-            break;
-        }
+        aMetric = 500;
+        break;
     case eMetric_CaretWidth:
         aMetric = 1;
         break;
@@ -471,15 +395,8 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
         }
         break;
     case eMetric_SubmenuDelay:
-        {
-            GtkSettings *settings;
-            gint delay;
-
-            settings = gtk_settings_get_default ();
-            g_object_get (settings, "gtk-menu-popup-delay", &delay, NULL);
-            aMetric = (PRInt32) delay;
-            break;
-        }
+        aMetric = 200;
+        break;
     case eMetric_MenusCanOverlapOSBar:
         // we want XUL popups to be able to overlap the task bar.
         aMetric = 1;
@@ -503,8 +420,7 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
         }
         break;
     case eMetric_ScrollArrowStyle:
-        aMetric =
-            ConvertGTKStepperStyleToMozillaScrollArrowStyle(moz_gtk_get_scrollbar_widget());
+        aMetric = eMetric_ScrollArrowStyleSingle;
         break;
     case eMetric_ScrollSliderStyle:
         aMetric = eMetric_ScrollThumbStyleProportional;
@@ -567,9 +483,6 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricFloatID aID,
     case eMetricFloat_ButtonHorizontalInsidePadding:
         aMetric = 0.25f;
         break;
-    case eMetricFloat_IMEUnderlineRelativeSize:
-        aMetric = 1.0f;
-        break;
     default:
         aMetric = -1.0;
         res = NS_ERROR_FAILURE;
@@ -578,18 +491,17 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricFloatID aID,
 }
 
 void
-nsLookAndFeel::InitLookAndFeel()
+nsLookAndFeel::InitColors()
 {
+    sColorsInitialized = PR_TRUE;
     GtkStyle *style;
 
     // tooltip foreground and background
     style = gtk_rc_get_style_by_paths(gtk_settings_get_default(),
                                       "gtk-tooltips", "GtkWindow",
                                       GTK_TYPE_WINDOW);
-    if (style) {
-        sInfoBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
-        sInfoText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
-    }
+    sInfoBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
+    sInfoText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
 
     // menu foreground & menu background
     GtkWidget *accel_label = gtk_accel_label_new("M");
@@ -607,20 +519,14 @@ nsLookAndFeel::InitLookAndFeel()
     gtk_widget_realize(accel_label);
 
     style = gtk_widget_get_style(accel_label);
-    if (style) {
-        sMenuText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
-    }
+    sMenuText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
 
     style = gtk_widget_get_style(menu);
-    if (style) {
-        sMenuBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
-    }
+    sMenuBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
     
     style = gtk_widget_get_style(menuitem);
-    if (style) {
-        sMenuHover = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_PRELIGHT]);
-        sMenuHoverText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_PRELIGHT]);
-    }
+    sMenuHover = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_PRELIGHT]);
+    sMenuHoverText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_PRELIGHT]);
 
     gtk_widget_unref(menu);
 
@@ -642,34 +548,16 @@ nsLookAndFeel::InitLookAndFeel()
     gtk_widget_realize(label);
 
     style = gtk_widget_get_style(label);
-    if (style) {
-        sButtonText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
-    }
+    sButtonText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
 
     style = gtk_widget_get_style(button);
-    if (style) {
-        sButtonBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
-        sButtonOuterLightBorder =
-            GDK_COLOR_TO_NS_RGB(style->light[GTK_STATE_NORMAL]);
-        sButtonInnerDarkBorder =
-            GDK_COLOR_TO_NS_RGB(style->dark[GTK_STATE_NORMAL]);
-    }
+    sButtonBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
+    sButtonOuterLightBorder =
+        GDK_COLOR_TO_NS_RGB(style->light[GTK_STATE_NORMAL]);
+    sButtonInnerDarkBorder =
+        GDK_COLOR_TO_NS_RGB(style->dark[GTK_STATE_NORMAL]);
 
     gtk_widget_destroy(window);
-
-    // invisible character styles
-    GtkWidget *entry = gtk_entry_new();
-    guint value;
-    g_object_get (entry, "invisible-char", &value, NULL);
-    sInvisibleCharacter = PRUnichar(value);
-    gtk_widget_destroy(entry);
-}
-
-// virtual
-PRUnichar
-nsLookAndFeel::GetPasswordCharacter()
-{
-    return sInvisibleCharacter;
 }
 
 NS_IMETHODIMP
@@ -681,7 +569,7 @@ nsLookAndFeel::LookAndFeelChanged()
         gtk_widget_unref(mWidget);
  
     InitWidget();
-    InitLookAndFeel();
+    InitColors();
 
     return NS_OK;
 }

@@ -39,6 +39,10 @@
  * ***** END LICENSE BLOCK ***** */
 #include <string.h>
 #include <stdio.h>
+
+#include <windows.h>
+#include <aygshell.h>
+
 #include "mozce_internal.h"
 
 #define _MAX_FNAME          256
@@ -56,17 +60,17 @@ extern "C" {
 MOZCE_SHUNT_API char *mozce_fullpath(char *absPath, const char *relPath, size_t maxLength)
 {
     MOZCE_PRECHECK
-
+        
 #ifdef LOG_CALLS
 #ifdef DEBUG
-    mozce_printf("mozce_fullpath called\n");
+        mozce_printf("mozce_fullpath called\n");
 #endif
 #endif
-
+    
     if (relPath[0] != '\\') 
     {
         int i;
-                unsigned short dir[MAX_PATH];
+        unsigned short dir[MAX_PATH];
         GetModuleFileName(GetModuleHandle (NULL), dir, MAX_PATH);
         for (i = _tcslen(dir); i && dir[i] != TEXT('\\'); i--) {}
         
@@ -82,10 +86,10 @@ MOZCE_SHUNT_API char *mozce_fullpath(char *absPath, const char *relPath, size_t 
 MOZCE_SHUNT_API void mozce_splitpath(const char* inPath, char* outDrive, char* outDir, char* outFname, char* outExt)
 {
     MOZCE_PRECHECK
-
+        
 #ifdef LOG_CALLS
 #ifdef DEBUG
-    mozce_printf("mozce_splitpath called\n");
+        mozce_printf("mozce_splitpath called\n");
 #endif
 #endif
     if(NULL != outDrive)
@@ -104,14 +108,14 @@ MOZCE_SHUNT_API void mozce_splitpath(const char* inPath, char* outDrive, char* o
     {
         *outExt = '\0';
     }
-
+    
     if(NULL != inPath && '\0' != *inPath)
     {
-                char* dup = (char*) malloc(strlen(inPath));
-                if(NULL != dup)
+        char* dup = (char*) malloc(strlen(inPath));
+        if(NULL != dup)
         {
             strcpy(dup, inPath);
-                        /*
+            /*
             **  Change all forward slashes to back.
             */
             char* convert = dup;
@@ -124,12 +128,12 @@ MOZCE_SHUNT_API void mozce_splitpath(const char* inPath, char* outDrive, char* o
                 convert++;
             }
             while(*convert);
-
+            
             /*
             **  Find last slash first.
             */
             char* slash = strrchr(dup, '\\');
-
+            
             /*
             **  Find extension, must be after any slash.
             */
@@ -142,7 +146,7 @@ MOZCE_SHUNT_API void mozce_splitpath(const char* inPath, char* outDrive, char* o
             {
                 ext = strchr(slash, '.');
             }
-
+            
             /*
             **  Reap extension.
             */
@@ -152,10 +156,10 @@ MOZCE_SHUNT_API void mozce_splitpath(const char* inPath, char* outDrive, char* o
                 {
                     strncpy(outExt, ext, _MAX_EXT);
                 }
-
+                
                 *ext = '\0';
             }
-
+            
             /*
             **  Reap filename.
             */
@@ -168,14 +172,14 @@ MOZCE_SHUNT_API void mozce_splitpath(const char* inPath, char* outDrive, char* o
             {
                 fname = slash + 1;
             }
-
+            
             if(NULL != outFname)
             {
                 strncpy(outFname, fname, _MAX_FNAME);
             }
-
+            
             *fname = '\0';
-
+            
             /*
             **  Reap directory.
             */
@@ -183,7 +187,7 @@ MOZCE_SHUNT_API void mozce_splitpath(const char* inPath, char* outDrive, char* o
             {
                 strncpy(outDir, dup, _MAX_DIR);
             }
-
+            
             free(dup);
         }
     }
@@ -193,10 +197,10 @@ MOZCE_SHUNT_API void mozce_splitpath(const char* inPath, char* outDrive, char* o
 MOZCE_SHUNT_API void mozce_makepath(char* outPath, const char* inDrive, const char* inDir, const char* inFname, const char* inExt)
 {
     MOZCE_PRECHECK
-
+        
 #ifdef LOG_CALLS
 #ifdef DEBUG
-    mozce_printf("mozce_makepath called\n");
+        mozce_printf("mozce_makepath called\n");
 #endif
 #endif
     if(NULL != outPath)
@@ -223,10 +227,10 @@ MOZCE_SHUNT_API void mozce_makepath(char* outPath, const char* inDrive, const ch
 MOZCE_SHUNT_API int mozce_strcmpi(const char *dest, const char *src)
 {
     MOZCE_PRECHECK
-
+        
 #ifdef LOG_CALLS
 #ifdef DEBUG
-    mozce_printf("mozce_strcmpi called\n");
+        mozce_printf("mozce_strcmpi called\n");
 #endif
 #endif
     int f,l;
@@ -238,8 +242,128 @@ MOZCE_SHUNT_API int mozce_strcmpi(const char *dest, const char *src)
         if ( ((l = (unsigned char)(*(src++))) >= 'A') && (l <= 'Z') )
             l -= ('A' - 'a');
     } while ( f && (f == l) );
-
+    
     return(f - l);
+}
+
+
+
+static int gDelayBeforeResending = 1000;
+static int gFirstRun = 1;
+static unsigned long gTotalMemoryAllocated = 0;
+static unsigned long gTotalMemoryAllowed = 0;
+static unsigned long gLastTickCount = 0;
+
+static void setAllocationUpperLimit()
+{
+    MEMORYSTATUS mst;
+    mst.dwLength  = sizeof(MEMORYSTATUS);
+    GlobalMemoryStatus(&mst);
+
+    gTotalMemoryAllowed = mst.dwAvailPhys / 2; /* XXX should be configurable */
+
+    gLastTickCount = GetTickCount() - gDelayBeforeResending;
+}
+
+
+void SendOOMPending()
+{
+
+    DWORD lastTickCount = GetTickCount();
+
+    if (lastTickCount >= gLastTickCount + gDelayBeforeResending)
+    {
+        char buffer[4] = "OOM";
+        COPYDATASTRUCT cds = { 0, 4, buffer };
+        
+        // XXX The name of this window is Minimo specific.
+        // Probably should generalize.
+        
+        HWND a = FindWindowW(L"MINIMO_LISTENER", NULL);
+        PostMessage(a, WM_COPYDATA, NULL, (LPARAM)&cds); 
+
+        gLastTickCount = GetTickCount();
+    }
+}
+
+static void memoryCheck()
+{
+    if (gFirstRun)
+    {
+        setAllocationUpperLimit();
+        gFirstRun = 0;
+    }
+
+    if (gTotalMemoryAllocated > gTotalMemoryAllowed)
+    {
+        SendOOMPending();
+    }
+}
+
+static void oom()
+{
+    // We can't really do anything else.
+    SendOOMPending();
+}
+
+MOZCE_SHUNT_API void *mozce_malloc(unsigned a)
+{
+    gTotalMemoryAllocated += a;
+    memoryCheck();
+
+    void *buffer = malloc(a);
+    if (!buffer)
+    {
+        SHCloseApps(a);
+        buffer = malloc(a);
+
+        if (!buffer)
+            oom();
+    }
+    return buffer;
+}
+
+MOZCE_SHUNT_API void  mozce_free(void* a)
+{
+    if (!a)
+        return;
+
+    gTotalMemoryAllocated -= _msize(a);
+    memoryCheck();
+
+    free(a);
+}
+
+MOZCE_SHUNT_API void *mozce_realloc(void* a, unsigned b)
+{
+    gTotalMemoryAllocated += b;
+    gTotalMemoryAllocated -= _msize(a);
+    memoryCheck();
+    
+    void *buffer = realloc(a,b);
+    if (!buffer)
+    {
+        SHCloseApps(b);
+        if (!buffer)
+            oom();
+    }
+    return buffer;
+}
+
+
+MOZCE_SHUNT_API void *mozce_calloc(size_t n, size_t nelem)
+{
+    gTotalMemoryAllocated += n*nelem;
+    memoryCheck();
+
+    void* buffer = calloc(n, nelem);
+    if (!buffer)
+    {
+        SHCloseApps(n*nelem);
+        if (!buffer)
+            oom();
+    }
+    return buffer;
 }
 
 #if 0

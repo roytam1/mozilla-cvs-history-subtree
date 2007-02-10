@@ -66,6 +66,8 @@ typedef struct _MyData
    ULONG    ulNumFilters;
 }MYDATA, *PMYDATA;
 
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+
 NS_IMPL_ISUPPORTS1(nsFilePicker, nsIFilePicker)
 
 char nsFilePicker::mLastUsedDirectory[MAX_PATH+1] = { 0 };
@@ -125,13 +127,13 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
   NS_ENSURE_ARG_POINTER(retval);
 
   PRBool result = PR_FALSE;
-  nsCAutoString fileBuffer;
+  char fileBuffer[MAX_PATH+1] = "";
   char *converted = ConvertToFileSystemCharset(mDefault);
   if (nsnull == converted) {
-    LossyCopyUTF16toASCII(mDefault, fileBuffer);
+    mDefault.ToCString(fileBuffer,MAX_PATH);
   }
   else {
-    fileBuffer.Assign(converted);
+    PL_strncpyz(fileBuffer, converted, MAX_PATH+1);
     nsMemory::Free( converted );
   }
 
@@ -162,8 +164,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
     WinFileDlg(HWND_DESKTOP, mWnd, &filedlg);
     DosError(FERR_ENABLEHARDERR);
     char* tempptr = strstr(filedlg.szFullFile, "^");
-    if (tempptr)
-      *tempptr = '\0';
+    *tempptr = '\0';
     if (filedlg.lReturn == DID_OK) {
       result = PR_TRUE;
       if (!mDisplayDirectory)
@@ -176,7 +177,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
   else {
     PL_strncpy(filedlg.szFullFile, initialDir.get(), MAX_PATH);
     PL_strncat(filedlg.szFullFile, "\\", 1);
-    PL_strncat(filedlg.szFullFile, fileBuffer.get(), MAX_PATH);
+    PL_strncat(filedlg.szFullFile, fileBuffer, MAX_PATH);
     filedlg.fl = FDS_CENTER;
     if (mMode == modeSave) {
        filedlg.fl |= FDS_SAVEAS_DIALOG | FDS_ENABLEFILELB;
@@ -547,7 +548,7 @@ char * nsFilePicker::ConvertToFileSystemCharset(const nsAString& inString)
     GetFileSystemCharset(fileSystemCharset);
 
     nsCOMPtr<nsICharsetConverterManager> ccm = 
-             do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv); 
+             do_GetService(kCharsetConverterManagerCID, &rv); 
     if (NS_SUCCEEDED(rv)) {
       rv = ccm->GetUnicodeEncoderRaw(fileSystemCharset.get(), &mUnicodeEncoder);
     }
@@ -590,7 +591,7 @@ PRUnichar * nsFilePicker::ConvertFromFileSystemCharset(const char *inString)
     GetFileSystemCharset(fileSystemCharset);
 
     nsCOMPtr<nsICharsetConverterManager> ccm = 
-             do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv); 
+             do_GetService(kCharsetConverterManagerCID, &rv); 
     if (NS_SUCCEEDED(rv)) {
       rv = ccm->GetUnicodeDecoderRaw(fileSystemCharset.get(), &mUnicodeDecoder);
     }

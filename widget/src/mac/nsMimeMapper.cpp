@@ -46,7 +46,7 @@
 #include "nsITransferable.h"
 #include "nsString.h"
 #include "nsReadableUtils.h"
-#include "plstr.h"
+#include "nsCRT.h"
 
 #include <Drag.h>
 #include <Scrap.h>
@@ -240,7 +240,7 @@ nsMimeMapperMac::ParseMappings ( const char* inMappings )
 char*
 nsMimeMapperMac::ExportMapping ( short * outLength ) const
 {
-  NS_ASSERTION ( outLength, "No out param provided" );
+  NS_WARN_IF_FALSE ( outLength, "No out param provided" );
   if ( outLength )
     *outLength = 0;
 
@@ -290,7 +290,7 @@ nsMimeMapperMac::ExportMapping ( short * outLength ) const
         posInString += strlen(currMapping);     // advance marker to get ready for next mapping
       }
       nsMemory::Free ( mimeType );
-      delete[] currMapping;
+      nsCRT::free ( currMapping );
     }
       
     *posInString = '\0';                        // null terminate our resulting string

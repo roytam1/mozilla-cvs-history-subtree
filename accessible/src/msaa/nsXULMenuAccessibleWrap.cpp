@@ -59,8 +59,9 @@ NS_IMETHODIMP nsXULMenuitemAccessibleWrap::GetName(nsAString& aName)
   NS_ASSERTION(content, "Should not have gotten past nsXULMenuitemAccessible::GetName");
   
   nsAutoString accel;
-  content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::acceltext, accel);
-  if (!accel.IsEmpty()) {
+  rv = content->GetAttr(kNameSpaceID_None, 
+                                 nsAccessibilityAtoms::acceltext, accel);
+  if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
     aName += NS_LITERAL_STRING("\t") + accel;
   }
 

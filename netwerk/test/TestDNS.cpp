@@ -43,13 +43,12 @@
 #include "nsIDNSRecord.h"
 #include "nsICancelable.h"
 #include "nsCOMPtr.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "nsNetCID.h"
 #include "prinrval.h"
 #include "prthread.h"
 #include "prnetdb.h"
-#include "nsXPCOM.h"
-#include "nsServiceManagerUtils.h"
+#include "nsCRT.h"
 
 class myDNSListener : public nsIDNSListener
 {
@@ -91,16 +90,6 @@ private:
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(myDNSListener, nsIDNSListener)
 
-static PRBool IsAscii(const char *s)
-{
-  for (; *s; ++s) {
-    if (*s & 0x80)
-      return PR_FALSE;
-  }
-
-  return PR_TRUE;
-}
-
 int main(int argc, char **argv)
 {
     if (test_common_init(&argc, &argv) != 0)
@@ -113,47 +102,40 @@ int main(int argc, char **argv)
         return -1;
     }
 
-    {
-        nsCOMPtr<nsIServiceManager> servMan;
-        NS_InitXPCOM2(getter_AddRefs(servMan), nsnull, nsnull);
+    nsCOMPtr<nsPIDNSService> dns = do_GetService(NS_DNSSERVICE_CONTRACTID);
+    if (!dns)
+        return -1;
 
-        nsCOMPtr<nsPIDNSService> dns = do_GetService(NS_DNSSERVICE_CONTRACTID);
-        if (!dns)
-            return -1;
-
-        if (argv[1][0] == '-') {
-            sleepLen = atoi(argv[1]+1);
-            argv++;
-            argc--;
-        }
-
-        for (int j=0; j<2; ++j) {
-            for (int i=1; i<argc; ++i) {
-                // assume non-ASCII input is given in the native charset 
-                nsCAutoString hostBuf;
-                if (IsAscii(argv[i]))
-                    hostBuf.Assign(argv[i]);
-                else
-                    hostBuf = NS_ConvertUTF16toUTF8(NS_ConvertASCIItoUTF16(argv[i]));
-
-                nsCOMPtr<nsIDNSListener> listener = new myDNSListener(argv[i], i);
-
-                nsCOMPtr<nsICancelable> req;
-                nsresult rv = dns->AsyncResolve(hostBuf,
-                                                nsIDNSService::RESOLVE_CANONICAL_NAME,
-                                                listener, nsnull, getter_AddRefs(req));
-                if (NS_FAILED(rv))
-                    printf("### AsyncResolve failed [rv=%x]\n", rv);
-            }
-
-            printf("main thread sleeping for %d seconds...\n", sleepLen);
-            PR_Sleep(PR_SecondsToInterval(sleepLen));
-        }
-
-        printf("shutting down main thread...\n");
-        dns->Shutdown();
+    if (argv[1][0] == '-') {
+        sleepLen = atoi(argv[1]+1);
+        argv++;
+        argc--;
     }
 
-    NS_ShutdownXPCOM(nsnull);
+    for (int j=0; j<2; ++j) {
+        for (int i=1; i<argc; ++i) {
+            // assume non-ASCII input is given in the native charset 
+            nsCAutoString hostBuf;
+            if (nsCRT::IsAscii(argv[i]))
+                hostBuf.Assign(argv[i]);
+            else
+                hostBuf = NS_ConvertUCS2toUTF8(NS_ConvertASCIItoUCS2(argv[i]));
+
+            nsCOMPtr<nsIDNSListener> listener = new myDNSListener(argv[i], i);
+
+            nsCOMPtr<nsICancelable> req;
+            nsresult rv = dns->AsyncResolve(hostBuf,
+                                            nsIDNSService::RESOLVE_CANONICAL_NAME,
+                                            listener, nsnull, getter_AddRefs(req));
+            if (NS_FAILED(rv))
+                printf("### AsyncResolve failed [rv=%x]\n", rv);
+        }
+
+        printf("main thread sleeping for %d seconds...\n", sleepLen);
+        PR_Sleep(PR_SecondsToInterval(sleepLen));
+    }
+
+    printf("shutting down main thread...\n");
+    dns->Shutdown();
     return 0;
 }

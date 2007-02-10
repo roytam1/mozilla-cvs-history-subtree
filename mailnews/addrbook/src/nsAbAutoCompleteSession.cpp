@@ -92,8 +92,7 @@ PRBool nsAbAutoCompleteSession::ItsADuplicate(PRUnichar* fullAddrStr, PRInt32 aP
                     if (NS_SUCCEEDED(rv))
                     {
                         rv = resultItem->GetValue(valueStr);
-                        if (NS_SUCCEEDED(rv) && !valueStr.IsEmpty() 
-                            && nsDependentString(fullAddrStr).Equals(valueStr, nsCaseInsensitiveStringComparator()))
+                        if (NS_SUCCEEDED(rv) && !valueStr.IsEmpty() && nsDependentString(fullAddrStr).Equals(valueStr, nsCaseInsensitiveStringComparator()))
                         {
                           // ok, we have a duplicate, but before we ignore the dupe, check the popularity index
                           // and use the card that is the most popular so it gets sorted correctly
@@ -112,7 +111,7 @@ PRBool nsAbAutoCompleteSession::ItsADuplicate(PRUnichar* fullAddrStr, PRInt32 aP
                           }
 
                           // it's a dupe, ignore it.
-                          return PR_TRUE;
+                            return PR_TRUE;
                         }
                     }
                 }
@@ -144,11 +143,8 @@ nsAbAutoCompleteSession::AddToResult(const PRUnichar* pNickNameStr,
       return;
 
     nsAutoString aStr(pDisplayNameStr);
-    if (aStr.FindChar('@') == kNotFound)
-    {
-      aStr.Append(PRUnichar('@'));
-      aStr += mDefaultDomain;
-    }
+    aStr.Append(PRUnichar('@'));
+    aStr += mDefaultDomain;
     fullAddrStr = ToNewUnicode(aStr);
   }
   else
@@ -167,12 +163,12 @@ nsAbAutoCompleteSession::AddToResult(const PRUnichar* pNickNameStr,
       else
         utf8Email.Adopt(ToNewUTF8String(nsDependentString(pEmailStr)));
 
-      mParser->MakeFullAddress(nsnull, NS_ConvertUTF16toUTF8(pDisplayNameStr).get(),
+      mParser->MakeFullAddress(nsnull, NS_ConvertUCS2toUTF8(pDisplayNameStr).get(),
                                utf8Email, getter_Copies(fullAddress));
       if (!fullAddress.IsEmpty())
       {
         /* We need to convert back the result from UTF-8 to Unicode */
-        fullAddrStr = nsCRT::strdup(NS_ConvertUTF8toUTF16(fullAddress.get()).get());
+        fullAddrStr = nsCRT::strdup(NS_ConvertUTF8toUCS2(fullAddress.get()).get());
       }
     }
   
@@ -341,7 +337,7 @@ nsAbAutoCompleteSession::CheckEntry(nsAbAutoCompleteSearchString* searchStr,
 nsresult nsAbAutoCompleteSession::SearchCards(nsIAbDirectory* directory, nsAbAutoCompleteSearchString* searchStr, nsIAutoCompleteResults* results)
 {
   nsresult rv;    
-  nsCOMPtr<nsISimpleEnumerator> cardsEnumerator;
+  nsCOMPtr<nsIEnumerator> cardsEnumerator;
   nsCOMPtr<nsIAbCard> card;
   PRInt32 i;
   
@@ -349,15 +345,20 @@ nsresult nsAbAutoCompleteSession::SearchCards(nsIAbDirectory* directory, nsAbAut
   if (NS_SUCCEEDED(rv) && cardsEnumerator)
   {
     nsCOMPtr<nsISupports> item;
-    PRBool more;
-    while (NS_SUCCEEDED(cardsEnumerator->HasMoreElements(&more)) && more)
+    for (rv = cardsEnumerator->First(); NS_SUCCEEDED(rv); rv = cardsEnumerator->Next())
     {
-      rv = cardsEnumerator->GetNext(getter_AddRefs(item));
+      rv = cardsEnumerator->CurrentItem(getter_AddRefs(item));
       if (NS_SUCCEEDED(rv))
       {
         card = do_QueryInterface(item, &rv);
         if (NS_SUCCEEDED(rv))
         {
+          // Skip if it's not a normal card (ie, they can't be added as members).
+          PRBool isNormal;
+          rv = card->GetIsANormalCard(&isNormal);
+          if (NS_FAILED(rv) || !isNormal)
+            continue;
+
           nsXPIDLString pEmailStr[MAX_NUMBER_OF_EMAIL_ADDRESSES]; //[0]=primary email, [1]=secondary email (no available with mailing list)
           nsXPIDLString pDisplayNameStr;
           nsXPIDLString pFirstNameStr;
@@ -401,7 +402,7 @@ nsresult nsAbAutoCompleteSession::SearchCards(nsIAbDirectory* directory, nsAbAut
               continue;
           }
             
-            //Now, retrieve the user name and nickname
+            //Now, retrive the user name and nickname
           rv = card->GetDisplayName(getter_Copies(pDisplayNameStr));
           if (NS_FAILED(rv))
               continue;
@@ -666,11 +667,11 @@ NS_IMETHODIMP nsAbAutoCompleteSession::OnStartLookup(const PRUnichar *uSearchStr
     }
 
 
-    // strings with commas (commas denote multiple names) should be ignored for 
+    // strings with @ signs or commas (commas denote multiple names) should be ignored for 
     // autocomplete purposes
     PRInt32 i;
     for (i = nsCRT::strlen(uSearchString) - 1; i >= 0; i --)
-        if (uSearchString[i] == ',')
+        if (uSearchString[i] == '@' || uSearchString[i] == ',')
         {
             listener->OnAutoComplete(nsnull, nsIAutoCompleteStatus::ignored);
             return NS_OK;

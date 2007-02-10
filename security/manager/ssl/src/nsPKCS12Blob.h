@@ -44,7 +44,7 @@
 #include "nsIPK11TokenDB.h"
 #include "nsNSSHelper.h"
 #include "nsIPK11Token.h"
-#include "nsIMutableArray.h"
+#include "nsIArray.h"
 
 #include "nss.h"
 

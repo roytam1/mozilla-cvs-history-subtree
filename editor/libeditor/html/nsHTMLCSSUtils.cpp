@@ -56,7 +56,6 @@
 #include "nsUnicharUtils.h"
 #include "nsHTMLCSSUtils.h"
 #include "nsColor.h"
-#include "nsAttrName.h"
 
 static
 void ProcessBValue(const nsAString * aInputString, nsAString & aOutputString,
@@ -566,12 +565,12 @@ nsHTMLCSSUtils::GetCSSInlinePropertyBase(nsIDOMNode *aNode, nsIAtom *aProperty,
   switch (aStyleType) {
     case COMPUTED_STYLE_TYPE:
       if (element && aViewCSS) {
-        nsAutoString value, propString;
+        nsAutoString empty, value, propString;
         nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
         aProperty->ToString(propString);
         // Get the all the computed css styles attached to the element node
-        res = aViewCSS->GetComputedStyle(element, EmptyString(), getter_AddRefs(cssDecl));
-        if (NS_FAILED(res) || !cssDecl) return res;
+        res = aViewCSS->GetComputedStyle(element, empty, getter_AddRefs(cssDecl));
+        if (NS_FAILED(res)) return res;
         // from these declarations, get the one we want and that one only
         res = cssDecl->GetPropertyValue(propString, value);
         if (NS_FAILED(res)) return res;
@@ -583,7 +582,7 @@ nsHTMLCSSUtils::GetCSSInlinePropertyBase(nsIDOMNode *aNode, nsIAtom *aProperty,
         nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
         PRUint32 length;
         res = GetInlineStyles(element, getter_AddRefs(cssDecl), &length);
-        if (NS_FAILED(res) || !cssDecl) return res;
+        if (NS_FAILED(res)) return res;
         nsAutoString value, propString;
         aProperty->ToString(propString);
         res = cssDecl->GetPropertyValue(propString, value);
@@ -661,7 +660,14 @@ nsHTMLCSSUtils::RemoveCSSInlineStyle(nsIDOMNode *aNode, nsIAtom *aProperty, cons
     }
     else if (1 == attrCount) {
       // incredible hack in case the only remaining attribute is a _moz_dirty...
-      if (content->GetAttrNameAt(0)->Equals(nsEditProperty::mozdirty)) {
+      PRInt32 nameSpaceID;
+      nsCOMPtr<nsIAtom> attrName, prefix;
+      res = content->GetAttrNameAt(0, &nameSpaceID, getter_AddRefs(attrName),
+                                   getter_AddRefs(prefix));
+      if (NS_FAILED(res)) return res;
+      nsAutoString attrString, tmp;
+      attrName->ToString(attrString);
+      if (attrString.EqualsLiteral("_moz_dirty")) {
         res = mHTMLEditor->RemoveContainer(aNode);
         if (NS_FAILED(res)) return res;
       }
@@ -1435,7 +1441,7 @@ nsHTMLCSSUtils::SetCSSProperty(nsIDOMElement * aElement,
   nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
   PRUint32 length;
   nsresult res = GetInlineStyles(aElement, getter_AddRefs(cssDecl), &length);
-  if (NS_FAILED(res) || !cssDecl) return res;
+  if (NS_FAILED(res)) return res;
 
   return cssDecl->SetProperty(aProperty,
                               aValue,
@@ -1459,7 +1465,7 @@ nsHTMLCSSUtils::RemoveCSSProperty(nsIDOMElement * aElement,
   nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
   PRUint32 length;
   nsresult res = GetInlineStyles(aElement, getter_AddRefs(cssDecl), &length);
-  if (NS_FAILED(res) || !cssDecl) return res;
+  if (NS_FAILED(res)) return res;
 
   nsAutoString returnString;
   return cssDecl->RemoveProperty(aProperty, returnString);

@@ -41,6 +41,8 @@
 
 #include "xptiprivate.h"
 
+MOZ_DECL_CTOR_COUNTER(xptiFile)
+
 xptiFile::xptiFile()
     :   
 #ifdef DEBUG

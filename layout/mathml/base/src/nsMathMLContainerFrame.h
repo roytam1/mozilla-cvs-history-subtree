@@ -76,7 +76,6 @@
 class nsMathMLContainerFrame : public nsHTMLContainerFrame,
                                public nsMathMLFrame {
 public:
-  nsMathMLContainerFrame(nsStyleContext* aContext) : nsHTMLContainerFrame(aContext) {}
 
   NS_DECL_ISUPPORTS_INHERITED
 
@@ -116,12 +115,20 @@ public:
   // --------------------------------------------------------------------------
   // Overloaded nsHTMLContainerFrame methods -- see documentation in nsIFrame.h
 
+  virtual nsIAtom* GetType() const;
   virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
   NS_IMETHOD
-  Init(nsIContent*      aContent,
+  Init(nsPresContext*  aPresContext,
+       nsIContent*      aContent,
        nsIFrame*        aParent,
+       nsStyleContext*  aContext,
        nsIFrame*        aPrevInFlow);
+
+  NS_IMETHOD
+  SetInitialChildList(nsPresContext* aPresContext,
+                      nsIAtom*        aListName,
+                      nsIFrame*       aChildList);
 
   NS_IMETHOD
   AppendFrames(nsIAtom*        aListName,
@@ -137,17 +144,19 @@ public:
               nsIFrame*       aOldFrame);
 
   NS_IMETHOD
+  ReplaceFrame(nsIAtom*        aListName,
+               nsIFrame*       aOldFrame,
+               nsIFrame*       aNewFrame);
+
+  NS_IMETHODIMP
+  ReflowDirtyChild(nsIPresShell* aPresShell, 
+                   nsIFrame*     aChild);
+
+  NS_IMETHOD
   Reflow(nsPresContext*          aPresContext,
          nsHTMLReflowMetrics&     aDesiredSize,
          const nsHTMLReflowState& aReflowState,
          nsReflowStatus&          aStatus);
-
-  NS_IMETHOD
-  WillReflow(nsPresContext* aPresContext)
-  {
-    mPresentationData.flags &= ~NS_MATHML_ERROR;
-    return nsHTMLContainerFrame::WillReflow(aPresContext);
-  }
 
   NS_IMETHOD
   DidReflow(nsPresContext*           aPresContext,
@@ -159,9 +168,12 @@ public:
     return nsHTMLContainerFrame::DidReflow(aPresContext, aReflowState, aStatus);
   }
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD 
+  Paint(nsPresContext*      aPresContext,
+        nsIRenderingContext& aRenderingContext,
+        const nsRect&        aDirtyRect,
+        nsFramePaintLayer    aWhichLayer,
+        PRUint32             aFlags = 0);
 
   // Notification when an attribute is changed. The MathML module uses the
   // following paradigm:
@@ -181,7 +193,8 @@ public:
   //        Therefore, there is an overhead here in that our siblings are re-laid
   //        too (e.g., this happens with <mstyle>, <munder>, <mover>, <munderover>). 
   NS_IMETHOD
-  AttributeChanged(PRInt32         aNameSpaceID,
+  AttributeChanged(nsIContent*     aChild,
+                   PRInt32         aNameSpaceID,
                    nsIAtom*        aAttribute,
                    PRInt32         aModType);
 
@@ -206,6 +219,10 @@ public:
   virtual nsresult
   ReflowError(nsIRenderingContext& aRenderingContext,
               nsHTMLReflowMetrics& aDesiredSize);
+  virtual nsresult
+  PaintError(nsIRenderingContext& aRenderingContext,
+             const nsRect&        aDirtyRect,
+             nsFramePaintLayer    aWhichLayer);
 
   // helper method to reflow a child frame. We are inline frames, and we don't
   // know our positions until reflow is finished. That's why we ask the
@@ -240,17 +257,14 @@ public:
   FinalizeReflow(nsIRenderingContext& aRenderingContext,
                  nsHTMLReflowMetrics& aDesiredSize);
 
-  // helper method to facilitate getting the reflow and bounding metrics.
-  // The argument aMathMLFrameType, when non null, will return the 'type' of
-  // the frame, which is used to determine the inter-frame spacing.
+  // helper method to facilitate getting the reflow and bounding metrics
   // IMPORTANT: This function is only meant to be called in Place() methods 
   // where it is assumed that the frame's rect is still acting as place holder
   // for the frame's ascent and descent information
   static void
   GetReflowAndBoundingMetricsFor(nsIFrame*            aFrame,
                                  nsHTMLReflowMetrics& aReflowMetrics,
-                                 nsBoundingMetrics&   aBoundingMetrics,
-                                 eMathMLFrameType*    aMathMLFrameType = nsnull);
+                                 nsBoundingMetrics&   aBoundingMetrics);
 
   // helper to let the scriptstyle re-resolution pass through
   // a subtree that may contain non-MathML container frames
@@ -315,17 +329,18 @@ protected:
 // Issues: If/when mathml becomes a pluggable component, the separation will be needed.
 class nsMathMLmathBlockFrame : public nsBlockFrame {
 public:
-  friend nsIFrame* NS_NewMathMLmathBlockFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLmathBlockFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   // beware, mFrames is not set by nsBlockFrame
   // cannot use mFrames{.FirstChild()|.etc} since the block code doesn't set mFrames
   NS_IMETHOD
-  SetInitialChildList(nsIAtom*        aListName,
+  SetInitialChildList(nsPresContext* aPresContext,
+                      nsIAtom*        aListName,
                       nsIFrame*       aChildList)
   {
-    nsresult rv = nsBlockFrame::SetInitialChildList(aListName, aChildList);
+    nsresult rv = nsBlockFrame::SetInitialChildList(aPresContext, aListName, aChildList);
     // re-resolve our subtree to set any mathml-expected data
-    nsMathMLContainerFrame::MapCommonAttributesIntoCSS(GetPresContext(), this);
+    nsMathMLContainerFrame::MapAttributesIntoCSS(aPresContext, this);
     nsMathMLContainerFrame::RebuildAutomaticDataForChildren(this);
     return rv;
   }
@@ -365,6 +380,17 @@ public:
   }
 
   NS_IMETHOD
+  ReplaceFrame(nsIAtom*        aListName,
+               nsIFrame*       aOldFrame,
+               nsIFrame*       aNewFrame)
+  {
+    NS_ASSERTION(!aListName, "internal error");
+    nsresult rv = nsBlockFrame::ReplaceFrame(aListName, aOldFrame, aNewFrame);
+    nsMathMLContainerFrame::ReLayoutChildren(this);
+    return rv;
+  }
+
+  NS_IMETHOD
   RemoveFrame(nsIAtom*        aListName,
               nsIFrame*       aOldFrame)
   {
@@ -374,12 +400,8 @@ public:
     return rv;
   }
 
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const {
-    return !(aFlags & ~nsIFrame::eMathML);
-  }
-
 protected:
-  nsMathMLmathBlockFrame(nsStyleContext* aContext) : nsBlockFrame(aContext) {
+  nsMathMLmathBlockFrame() {
     // We should always have a space manager.  Not that things can really try
     // to float out of us anyway, but we need one for line layout.
     AddStateBits(NS_BLOCK_SPACE_MGR);
@@ -387,10 +409,10 @@ protected:
   virtual ~nsMathMLmathBlockFrame() {}
 
   NS_IMETHOD
-  DidSetStyleContext()
+  DidSetStyleContext(nsPresContext* aPresContext)
   {
     mScriptStyleChanged = PR_TRUE;
-    return nsBlockFrame::DidSetStyleContext();
+    return nsBlockFrame::DidSetStyleContext(aPresContext);
   }
 
   PRBool mScriptStyleChanged;
@@ -400,15 +422,16 @@ protected:
 
 class nsMathMLmathInlineFrame : public nsInlineFrame {
 public:
-  friend nsIFrame* NS_NewMathMLmathInlineFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLmathInlineFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   NS_IMETHOD
-  SetInitialChildList(nsIAtom*        aListName,
+  SetInitialChildList(nsPresContext* aPresContext,
+                      nsIAtom*        aListName,
                       nsIFrame*       aChildList)
   {
-    nsresult rv = nsInlineFrame::SetInitialChildList(aListName, aChildList);
+    nsresult rv = nsInlineFrame::SetInitialChildList(aPresContext, aListName, aChildList);
     // re-resolve our subtree to set any mathml-expected data
-    nsMathMLContainerFrame::MapCommonAttributesIntoCSS(GetPresContext(), this);
+    nsMathMLContainerFrame::MapAttributesIntoCSS(aPresContext, this);
     nsMathMLContainerFrame::RebuildAutomaticDataForChildren(this);
     return rv;
   }
@@ -448,6 +471,17 @@ public:
   }
 
   NS_IMETHOD
+  ReplaceFrame(nsIAtom*        aListName,
+               nsIFrame*       aOldFrame,
+               nsIFrame*       aNewFrame)
+  {
+    NS_ASSERTION(!aListName, "internal error");
+    nsresult rv = nsInlineFrame::ReplaceFrame(aListName, aOldFrame, aNewFrame);
+    nsMathMLContainerFrame::ReLayoutChildren(this);
+    return rv;
+  }
+
+  NS_IMETHOD
   RemoveFrame(nsIAtom*        aListName,
               nsIFrame*       aOldFrame)
   {
@@ -457,19 +491,15 @@ public:
     return rv;
   }
 
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const {
-    return !(aFlags & ~nsIFrame::eMathML);
-  }
-
 protected:
-  nsMathMLmathInlineFrame(nsStyleContext* aContext) : nsInlineFrame(aContext) {}
+  nsMathMLmathInlineFrame() {}
   virtual ~nsMathMLmathInlineFrame() {}
 
   NS_IMETHOD
-  DidSetStyleContext()
+  DidSetStyleContext(nsPresContext* aPresContext)
   {
     mScriptStyleChanged = PR_TRUE;
-    return nsInlineFrame::DidSetStyleContext();
+    return nsInlineFrame::DidSetStyleContext(aPresContext);
   }
 
   PRBool mScriptStyleChanged;

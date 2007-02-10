@@ -76,12 +76,13 @@ installation issues with SeaMonkey.
    choose Modern.
 
 * OS/2
-   - This release requires the C runtime DLLs (libc-0.6.1) from
-     ftp://ftp.netlabs.org/pub/gcc/libc-0.6.1-csd1.zip
-     in order to run.  You can unpack them in the same directory as
-     SeaMonkey's executable or somewhere else in your LIBPATH. The
-     SeaMonkey installer will not install the C runtime DLLs for you but
-     requires them to run.
+   - This release requires updated C runtime DLLs (libc-0.5.1) from
+      http://www.innotek.de/products/gccos2/download/gccos2download_e.html
+     in order to run. By default the installation routine places them in
+     \OS2\DLL on your bootdrive, but you can put them in the same
+     directory as SeaMonkey's executable, or somewhere else in your
+     LIBPATH. The SeaMonkey installer will not install the C runtime DLLs
+     for you but requires them to run.
 
    - Minimum hardware requirements
      + Pentium class processor
@@ -160,15 +161,15 @@ OS/2 Installation Instructions
 
    1. Click the "Zip" link on the site you're downloading SeaMonkey from
       to download the ZIP package to your machine. This file is typically
-      called seamonkey-x.x.x.en-US.os2.zip where the "x.x.x" is replaced
-      by the SeaMonkey version.
+      called seamonkey-x.xx.en-US.os2-emx-i386.zip where the "x.xx" is
+      replaced by the SeaMonkey version.
 
    2. Navigate to where you downloaded the file and unpack it using your
       favorite unzip tool.
 
    3. Keep in mind that the unzip process creates a directory "seamonkey"
-      below the location you point it to, e.g.
-        unzip seamonkey-1.7.5.en-US.os2.zip -d c:\seamonkey-1.7.5
+      below the location you point it to, i.e. 
+        unzip mozilla-os2-1.7.5.zip -d c:\seamonkey-1.7.5
       will unpack SeaMonkey into c:\seamonkey-1.7.5\seamonkey.
 
    4. Make sure that you are _not_ unpacking over an old installation.

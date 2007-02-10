@@ -209,6 +209,8 @@ public:
                                  const nsRect &aDestBounds,
                                  PRUint32 aCopyFlags);
 
+    NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 *ngd);
+
     //locals
     NS_IMETHOD CommonInit();
     void       UpdateGC();

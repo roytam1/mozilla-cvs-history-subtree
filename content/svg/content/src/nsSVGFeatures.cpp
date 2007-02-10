@@ -39,12 +39,11 @@
 
 #include "nsString.h"
 #include "nsSVGUtils.h"
-#include "nsGkAtoms.h"
 
 // Test to see if a feature is implemented
 PRBool
 NS_SVG_TestFeature(const nsAString& fstr) {
-  if (!NS_SVGEnabled()) {
+  if (!nsSVGUtils::SVGEnabled()) {
     return PR_FALSE;
   }
   nsAutoString lstr(fstr);
@@ -82,31 +81,3 @@ NS_SVG_TestFeatures(const nsAString& fstr) {
   }
   return PR_TRUE;
 }
-
-// Test to see if this element supports a specific conditional
-static PRBool
-NS_SVG_Conditional(const nsIAtom *atom, PRUint16 cond) {
-
-#define SVG_ELEMENT(_atom, _supports) if (atom == nsGkAtoms::_atom) return (_supports & cond) != 0;
-#include "nsSVGElementList.h"
-#undef SVG_ELEMENT
-  return PR_FALSE;
-}
-
-PRBool
-NS_SVG_TestsSupported(const nsIAtom *atom) {
-  return NS_SVG_Conditional(atom, SUPPORTS_TEST);
-}
-
-PRBool
-NS_SVG_LangSupported(const nsIAtom *atom) {
-  return NS_SVG_Conditional(atom, SUPPORTS_LANG);
-}
-
-#if 0
-// Enable this when (if?) we support the externalResourcesRequired attribute
-PRBool
-NS_SVG_ExternalSupported(const nsIAtom *atom) {
-  return NS_SVG_Conditional(atom, SUPPORTS_EXTERNAL);
-}
-#endif

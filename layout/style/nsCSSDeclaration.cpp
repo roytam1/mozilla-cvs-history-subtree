@@ -36,12 +36,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * representation of a declaration block (or style attribute) in a CSS
- * stylesheet
- */
-
 #include "nscore.h"
 #include "nsCSSDeclaration.h"
 #include "nsString.h"
@@ -51,6 +45,7 @@
 #include "nsCRT.h"
 #include "nsCSSProps.h"
 #include "nsUnitConversion.h"
+#include "nsVoidArray.h"
 #include "nsFont.h"
 #include "nsReadableUtils.h"
 
@@ -81,6 +76,8 @@
 #define B_BORDER_BOTTOM       0x888
 
 #define B_BORDER              0xfff
+
+MOZ_DECL_CTOR_COUNTER(nsCSSDeclaration)
 
 nsCSSDeclaration::nsCSSDeclaration() 
   : mOrder(eCSSProperty_COUNT_no_shorthands, 8),
@@ -236,7 +233,6 @@ PRBool nsCSSDeclaration::AppendValueToString(nsCSSProperty aProperty, nsAString&
           val = val->mNext;
           if (val) {
             if (aProperty == eCSSProperty_cursor
-                || aProperty == eCSSProperty_text_shadow
 #ifdef MOZ_SVG
                 || aProperty == eCSSProperty_stroke_dasharray
 #endif
@@ -275,15 +271,35 @@ PRBool nsCSSDeclaration::AppendValueToString(nsCSSProperty aProperty, nsAString&
           }
         } while (quotes);
       } break;
+      case eCSSType_Shadow: {
+        const nsCSSShadow* shadow =
+            *NS_STATIC_CAST(nsCSSShadow*const*, storage);
+        if (shadow->mXOffset.IsLengthUnit()) {
+          while (shadow) {
+            if (AppendCSSValueToString(eCSSProperty_color, shadow->mColor,
+                                       aResult))
+              aResult.Append(PRUnichar(' '));
+            if (AppendCSSValueToString(aProperty, shadow->mXOffset, aResult)) {
+              aResult.Append(PRUnichar(' '));
+              AppendCSSValueToString(aProperty, shadow->mYOffset, aResult);
+              aResult.Append(PRUnichar(' '));
+            }
+            if (AppendCSSValueToString(aProperty, shadow->mRadius, aResult) &&
+                shadow->mNext)
+              aResult.AppendLiteral(", ");
+            shadow = shadow->mNext;
+          }
+        }
+        else {  // none or inherit
+          AppendCSSValueToString(aProperty, shadow->mXOffset, aResult);
+        }
+      } break;
     }
   }
   return storage != nsnull;
 }
 
-/* static */ PRBool
-nsCSSDeclaration::AppendCSSValueToString(nsCSSProperty aProperty,
-                                         const nsCSSValue& aValue,
-                                         nsAString& aResult)
+PRBool nsCSSDeclaration::AppendCSSValueToString(nsCSSProperty aProperty, const nsCSSValue& aValue, nsAString& aResult) const
 {
   nsCSSUnit unit = aValue.GetUnit();
 
@@ -733,9 +749,8 @@ nsCSSDeclaration::AllPropertiesSameValue(PRInt32 aFirst, PRInt32 aSecond,
   return PR_TRUE;
 }
 
-/* static */ void
-nsCSSDeclaration::AppendImportanceToString(PRBool aIsImportant,
-                                           nsAString& aString)
+void
+nsCSSDeclaration::AppendImportanceToString(PRBool aIsImportant, nsAString& aString) const
 {
   if (aIsImportant) {
    aString.AppendLiteral(" ! important");

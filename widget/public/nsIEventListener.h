@@ -53,7 +53,7 @@ class nsGUIEvent;
 
 class nsIEventListener : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IEVENTLISTENER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IEVENTLISTENER_IID)
   
  /**
   * Processes all events. 
@@ -64,7 +64,5 @@ public:
   virtual nsEventStatus ProcessEvent(const nsGUIEvent & anEvent) = 0;
 
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIEventListener, NS_IEVENTLISTENER_IID)
 
 #endif // nsIEventListener_h__

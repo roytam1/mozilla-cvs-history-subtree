@@ -71,8 +71,7 @@ struct _MozDrawingareaClass
 
 GtkType         moz_drawingarea_get_type       (void);
 MozDrawingarea *moz_drawingarea_new            (MozDrawingarea *parent,
-                                                MozContainer *widget_parent,
-                                                GdkVisual *visual);
+                                                MozContainer *widget_parent);
 void            moz_drawingarea_reparent       (MozDrawingarea *drawingarea,
                                                 GdkWindow *aNewParent);
 void            moz_drawingarea_move           (MozDrawingarea *drawingarea,

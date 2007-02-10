@@ -36,54 +36,223 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsSVGOuterSVGFrame.h"
-#include "nsSVGTextFrame.h"
+#include "nsFrame.h"
+#include "nsISVGRendererGlyphGeometry.h"
+#include "nsISVGRendererGlyphMetrics.h"
+#include "nsISVGRenderer.h"
+#include "nsISVGGlyphGeometrySource.h"
+#include "nsISVGGlyphFragmentLeaf.h"
+#include "nsITextContent.h"
+#include "nsISVGChildFrame.h"
+#include "nsISVGOuterSVGFrame.h"
+#include "nsISVGTextFrame.h"
+#include "nsISVGRendererRegion.h"
+#include "nsISVGContainerFrame.h"
+#include "nsISVGTextContainerFrame.h"
+#include "nsSVGGradient.h"
+#include "nsISVGValueUtils.h"
+#include "nsReadableUtils.h"
+#include "nsCRT.h"
+#include "prdtoa.h"
+#include "nsIDOMSVGRect.h"
 #include "nsILookAndFeel.h"
 #include "nsTextFragment.h"
-#include "nsSVGUtils.h"
-#include "nsIDOMSVGLengthList.h"
-#include "nsIDOMSVGLength.h"
-#include "nsIDOMSVGRect.h"
-#include "nsIDOMSVGPoint.h"
-#include "nsSVGGlyphFrame.h"
-#include "nsSVGTextPathFrame.h"
-#include "nsSVGPathElement.h"
-#include "nsSVGPoint.h"
 #include "nsSVGRect.h"
-#include "nsDOMError.h"
-#include "gfxContext.h"
-#include "gfxMatrix.h"
-#include "cairo.h"
+#include "nsSVGPoint.h"
+#include "nsSVGAtoms.h"
+#include "nsIViewManager.h"
+#include "nsINameSpaceManager.h"
+#include "nsContainerFrame.h"
+#include "nsLayoutAtoms.h"
+#include "nsSVGUtils.h"
+#include "nsISVGPathFlatten.h"
+
+typedef nsFrame nsSVGGlyphFrameBase;
+
+class nsSVGGlyphFrame : public nsSVGGlyphFrameBase,
+                        public nsISVGValueObserver,
+                        public nsSupportsWeakReference,
+                        public nsISVGGlyphGeometrySource, // : nsISVGGlyphMetricsSource : nsISVGGeometrySource
+                        public nsISVGGlyphFragmentLeaf, // : nsISVGGlyphFragmentNode
+                        public nsISVGChildFrame
+{
+protected:
+  friend nsresult
+  NS_NewSVGGlyphFrame(nsIPresShell* aPresShell, nsIContent* aContent,
+                      nsIFrame* parentFrame, nsIFrame** aNewFrame);
+  nsSVGGlyphFrame();
+  virtual ~nsSVGGlyphFrame();
+
+public:
+   // nsISupports interface:
+  NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
+  NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
+  NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }
+
+  // nsIFrame interface:
+  NS_IMETHOD
+  Init(nsPresContext*  aPresContext,
+       nsIContent*      aContent,
+       nsIFrame*        aParent,
+       nsStyleContext*  aContext,
+       nsIFrame*        aPrevInFlow);
+
+  NS_IMETHOD  CharacterDataChanged(nsPresContext* aPresContext,
+                                   nsIContent*     aChild,
+                                   PRBool          aAppend);
+
+  NS_IMETHOD  DidSetStyleContext(nsPresContext* aPresContext);
+
+  NS_IMETHOD  SetSelected(nsPresContext* aPresContext,
+                          nsIDOMRange*    aRange,
+                          PRBool          aSelected,
+                          nsSpread        aSpread);
+  NS_IMETHOD  GetSelected(PRBool *aSelected) const;
+  NS_IMETHOD  IsSelectable(PRBool* aIsSelectable, PRUint8* aSelectStyle);
+
+  /**
+   * Get the "type" of the frame
+   *
+   * @see nsLayoutAtoms::svgGlyphFrame
+   */
+  virtual nsIAtom* GetType() const;
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
+
+#ifdef DEBUG
+  NS_IMETHOD GetFrameName(nsAString& aResult) const
+  {
+    return MakeFrameName(NS_LITERAL_STRING("SVGGlyph"), aResult);
+  }
+#endif
+
+  // nsISVGValueObserver
+  NS_IMETHOD WillModifySVGObservable(nsISVGValue* observable,
+                                     nsISVGValue::modificationType aModType);
+  NS_IMETHOD DidModifySVGObservable (nsISVGValue* observable,
+                                     nsISVGValue::modificationType aModType);
+
+  // nsISVGChildFrame interface:
+  NS_IMETHOD PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips);
+  NS_IMETHOD GetFrameForPointSVG(float x, float y, nsIFrame** hit);
+  NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
+  NS_IMETHOD InitialUpdate();
+  NS_IMETHOD NotifyCanvasTMChanged();
+  NS_IMETHOD NotifyRedrawSuspended();
+  NS_IMETHOD NotifyRedrawUnsuspended();
+  NS_IMETHOD SetMatrixPropagation(PRBool aPropagate) { return NS_OK; }
+  NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval);
+  
+  // nsISVGGeometrySource interface: 
+  NS_DECL_NSISVGGEOMETRYSOURCE
+
+  // nsISVGGlyphMetricsSource interface:
+  NS_DECL_NSISVGGLYPHMETRICSSOURCE
+
+  // nsISVGGlyphGeometrySource interface:
+  NS_DECL_NSISVGGLYPHGEOMETRYSOURCE
+
+  // nsISVGGlyphFragmentLeaf interface:
+  NS_IMETHOD_(void) SetGlyphPosition(float x, float y);
+  NS_IMETHOD_(float) GetGlyphPositionX();
+  NS_IMETHOD_(float) GetGlyphPositionY();  
+  NS_IMETHOD GetGlyphMetrics(nsISVGRendererGlyphMetrics** metrics);
+  NS_IMETHOD_(PRBool) IsStartOfChunk(); // == is new absolutely positioned chunk.
+  NS_IMETHOD_(void) GetAdjustedPosition(/* inout */ float &x, /* inout */ float &y);
+  NS_IMETHOD_(PRUint32) GetNumberOfChars();
+  NS_IMETHOD_(PRUint32) GetCharNumberOffset();
+
+  NS_IMETHOD_(already_AddRefed<nsIDOMSVGLengthList>) GetX();
+  NS_IMETHOD_(already_AddRefed<nsIDOMSVGLengthList>) GetY();
+  NS_IMETHOD_(already_AddRefed<nsIDOMSVGLengthList>) GetDx();
+  NS_IMETHOD_(already_AddRefed<nsIDOMSVGLengthList>) GetDy();
+  NS_IMETHOD_(PRUint16) GetTextAnchor();
+  NS_IMETHOD_(PRBool) IsAbsolutelyPositioned();
+
+  // nsISVGGlyphFragmentNode interface:
+  NS_IMETHOD_(nsISVGGlyphFragmentLeaf *) GetFirstGlyphFragment();
+  NS_IMETHOD_(nsISVGGlyphFragmentLeaf *) GetNextGlyphFragment();
+  NS_IMETHOD_(PRUint32) BuildGlyphFragmentTree(PRUint32 charNum, PRBool lastBranch);
+  NS_IMETHOD_(void) NotifyMetricsSuspended();
+  NS_IMETHOD_(void) NotifyMetricsUnsuspended();
+  NS_IMETHOD_(void) NotifyGlyphFragmentTreeSuspended();
+  NS_IMETHOD_(void) NotifyGlyphFragmentTreeUnsuspended();
+  
+protected:
+  void UpdateGeometry(PRUint32 flags, PRBool bRedraw=PR_TRUE);
+  void UpdateMetrics(PRUint32 flags);
+  void UpdateFragmentTree();
+  nsISVGOuterSVGFrame *GetOuterSVGFrame();
+  nsISVGTextFrame *GetTextFrame();
+  NS_IMETHOD Update(PRUint32 aFlags);
+  
+  nsCOMPtr<nsISVGRendererGlyphGeometry> mGeometry;
+  nsCOMPtr<nsISVGRendererGlyphMetrics> mMetrics;
+  float mX, mY;
+  PRUint32 mGeometryUpdateFlags;
+  PRUint32 mMetricsUpdateFlags;
+  PRUint32 mCharOffset;
+  PRBool mFragmentTreeDirty;
+  nsString mCharacterData;
+  nsCOMPtr<nsISVGGradient> mFillGradient;
+  nsCOMPtr<nsISVGGradient> mStrokeGradient;
+};
 
 //----------------------------------------------------------------------
 // Implementation
 
-nsIFrame*
-NS_NewSVGGlyphFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* parentFrame, nsStyleContext* aContext)
+nsresult
+NS_NewSVGGlyphFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* parentFrame,
+                    nsIFrame** aNewFrame)
 {
+  *aNewFrame = nsnull;
+
+#ifdef DEBUG
   NS_ASSERTION(parentFrame, "null parent");
-  nsISVGTextContentMetrics *metrics;
-  CallQueryInterface(parentFrame, &metrics);
-  NS_ASSERTION(metrics, "trying to construct an SVGGlyphFrame for an invalid container");
+  nsISVGTextContainerFrame *text_container;
+  parentFrame->QueryInterface(NS_GET_IID(nsISVGTextContainerFrame), (void**)&text_container);
+  NS_ASSERTION(text_container, "trying to construct an SVGGlyphFrame for an invalid container");
   
-  NS_ASSERTION(aContent->IsNodeOfType(nsINode::eTEXT),
-               "trying to construct an SVGGlyphFrame for wrong content element");
+  nsCOMPtr<nsITextContent> tc = do_QueryInterface(aContent);
+  NS_ASSERTION(tc, "trying to construct an SVGGlyphFrame for wrong content element");
+#endif
+  
+  nsSVGGlyphFrame* it = new (aPresShell) nsSVGGlyphFrame;
+  if (nsnull == it)
+    return NS_ERROR_OUT_OF_MEMORY;
 
-  return new (aPresShell) nsSVGGlyphFrame(aContext);
+  *aNewFrame = it;
+
+  return NS_OK;
 }
 
-nsSVGGlyphFrame::nsSVGGlyphFrame(nsStyleContext* aContext)
-    : nsSVGGlyphFrameBase(aContext),
-      mWhitespaceHandling(COMPRESS_WHITESPACE)
+nsSVGGlyphFrame::nsSVGGlyphFrame()
+    : mGeometryUpdateFlags(0), mMetricsUpdateFlags(0),
+      mCharOffset(0), mFragmentTreeDirty(PR_FALSE)
 {
 }
+
+nsSVGGlyphFrame::~nsSVGGlyphFrame()
+{
+  if (mFillGradient) {
+    NS_ADD_SVGVALUE_OBSERVER(mFillGradient);
+  }
+  if (mStrokeGradient) {
+    NS_ADD_SVGVALUE_OBSERVER(mStrokeGradient);
+  }
+}
+
 
 //----------------------------------------------------------------------
 // nsISupports methods
 
 NS_INTERFACE_MAP_BEGIN(nsSVGGlyphFrame)
+  NS_INTERFACE_MAP_ENTRY(nsISVGGeometrySource)
+  NS_INTERFACE_MAP_ENTRY(nsISVGGlyphMetricsSource)
+  NS_INTERFACE_MAP_ENTRY(nsISVGGlyphGeometrySource)
   NS_INTERFACE_MAP_ENTRY(nsISVGGlyphFragmentLeaf)
   NS_INTERFACE_MAP_ENTRY(nsISVGGlyphFragmentNode)
+  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
+  NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
   NS_INTERFACE_MAP_ENTRY(nsISVGChildFrame)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGGlyphFrameBase)
 
@@ -91,32 +260,89 @@ NS_INTERFACE_MAP_END_INHERITING(nsSVGGlyphFrameBase)
 // nsIFrame methods
 
 NS_IMETHODIMP
-nsSVGGlyphFrame::CharacterDataChanged(nsPresContext*  aPresContext,
+nsSVGGlyphFrame::Init(nsPresContext*  aPresContext,
+                      nsIContent*      aContent,
+                      nsIFrame*        aParent,
+                      nsStyleContext*  aContext,
+                      nsIFrame*        aPrevInFlow)
+{
+//  rv = nsSVGGlyphFrameBase::Init(aPresContext, aContent, aParent,
+//                                 aContext, aPrevInFlow);
+
+  mContent = aContent;
+  NS_IF_ADDREF(mContent);
+  mParent = aParent;
+
+  if (mContent) {
+    mContent->SetMayHaveFrame(PR_TRUE);
+  }
+  
+  // construct our glyphmetrics & glyphgeometry objects:
+  nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+  if (!outerSVGFrame) {
+    NS_ERROR("No outerSVGFrame");
+    SetStyleContext(aPresContext, aContext);
+    return NS_ERROR_FAILURE;
+  }
+  nsCOMPtr<nsISVGRenderer> renderer;
+  outerSVGFrame->GetRenderer(getter_AddRefs(renderer));
+  if (renderer) {
+    renderer->CreateGlyphMetrics(this, getter_AddRefs(mMetrics));
+    renderer->CreateGlyphGeometry(this, getter_AddRefs(mGeometry));
+  }
+  
+  SetStyleContext(aPresContext, aContext);
+
+  if (!renderer || !mMetrics || !mGeometry)
+    return NS_ERROR_FAILURE;
+    
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGlyphFrame::CharacterDataChanged(nsPresContext* aPresContext,
                                       nsIContent*     aChild,
                                       PRBool          aAppend)
 {
-  return UpdateGraphic();
+	return Update(nsISVGGeometrySource::UPDATEMASK_ALL);
 }
 
-nsresult
-nsSVGGlyphFrame::UpdateGraphic(PRBool suppressInvalidation)
+NS_IMETHODIMP
+nsSVGGlyphFrame::Update(PRUint32 aFlags)
 {
-  if (GetStateBits() & NS_STATE_SVG_NONDISPLAY_CHILD)
-    return NS_OK;
-
-  nsSVGTextFrame *textFrame = GetTextFrame();
-  if (textFrame)
-    textFrame->NotifyGlyphMetricsChange();
+#ifdef DEBUG
+//  printf("** nsSVGGlyphFrame::Update\n");
+#endif
+  nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+  if (!outerSVGFrame) {
+    NS_ERROR("No outerSVGFrame");
+    return NS_ERROR_FAILURE;
+  }
+  
+  outerSVGFrame->SuspendRedraw();
+  UpdateFragmentTree();
+  UpdateMetrics(aFlags);
+  UpdateGeometry(aFlags);
+  outerSVGFrame->UnsuspendRedraw();
 
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsSVGGlyphFrame::DidSetStyleContext()
+nsSVGGlyphFrame::DidSetStyleContext(nsPresContext* aPresContext)
 {
-  nsSVGGlyphFrameBase::DidSetStyleContext();
+  // One of the styles that might have been changed are the urls that
+  // point to gradients, etc.  Drop our cached values to those
+  if (mFillGradient) {
+    NS_ADD_SVGVALUE_OBSERVER(mFillGradient);
+    mFillGradient = nsnull;
+  }
+  if (mStrokeGradient) {
+    NS_ADD_SVGVALUE_OBSERVER(mStrokeGradient);
+    mStrokeGradient = nsnull;
+  }
 
-  return UpdateGraphic();
+  return CharacterDataChanged(aPresContext, nsnull, PR_FALSE);
 }
 
 NS_IMETHODIMP
@@ -142,7 +368,9 @@ nsSVGGlyphFrame::SetSelected(nsPresContext* aPresContext,
   else
     mState &= ~NS_FRAME_SELECTED_CONTENT;
 
-  UpdateGeometry(PR_FALSE, PR_FALSE);
+  UpdateGeometry(nsISVGGlyphGeometrySource::UPDATEMASK_HIGHLIGHT |
+                 nsISVGGlyphGeometrySource::UPDATEMASK_HAS_HIGHLIGHT,
+                 PR_FALSE);  
 
   return NS_OK;
 }
@@ -159,7 +387,7 @@ nsSVGGlyphFrame::GetSelected(PRBool *aSelected) const
 
 NS_IMETHODIMP
 nsSVGGlyphFrame::IsSelectable(PRBool* aIsSelectable,
-                              PRUint8* aSelectStyle) const
+                              PRUint8* aSelectStyle)
 {
   nsresult rv = nsSVGGlyphFrameBase::IsSelectable(aIsSelectable, aSelectStyle);
 #if defined(DEBUG) && defined(SVG_DEBUG_SELECTION)
@@ -171,122 +399,67 @@ nsSVGGlyphFrame::IsSelectable(PRBool* aIsSelectable,
 nsIAtom *
 nsSVGGlyphFrame::GetType() const
 {
-  return nsGkAtoms::svgGlyphFrame;
+  return nsLayoutAtoms::svgGlyphFrame;
 }
 
 PRBool
 nsSVGGlyphFrame::IsFrameOfType(PRUint32 aFlags) const
 {
-  // Set the frame state bit for text frames to mark them as replaced.
-  // XXX kipp: temporary
+  return !(aFlags & ~nsIFrame::eSVG);
+}
 
-  return !(aFlags & ~(eSVG | eReplaced));
+//----------------------------------------------------------------------
+// nsISVGValueObserver methods:
+
+NS_IMETHODIMP
+nsSVGGlyphFrame::WillModifySVGObservable(nsISVGValue* observable,
+                                         nsISVGValue::modificationType aModType)
+{
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsSVGGlyphFrame::DidModifySVGObservable (nsISVGValue* observable,
+                                         nsISVGValue::modificationType aModType)
+{
+  // Is this a gradient?
+  nsCOMPtr<nsISVGGradient>val = do_QueryInterface(observable);
+  if (val) {
+    // Yes, we need to handle this differently
+    nsCOMPtr<nsISVGGradient>fill = do_QueryInterface(mFillGradient);
+    if (fill == val) {
+      if (aModType == nsISVGValue::mod_die) {
+        mFillGradient = nsnull;
+      }
+      return Update(nsISVGGeometrySource::UPDATEMASK_FILL_PAINT);
+    } else {
+      // No real harm in assuming a stroke gradient at this point
+      if (aModType == nsISVGValue::mod_die) {
+        mStrokeGradient = nsnull;
+      }
+      return Update(nsISVGGeometrySource::UPDATEMASK_STROKE_PAINT);
+    }
+  } else {
+    // No, all of our other observables update the canvastm by default
+    return Update(nsISVGGeometrySource::UPDATEMASK_CANVAS_TM);
+  }
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
 // nsISVGChildFrame methods
 
-void
-nsSVGGlyphFrame::LoopCharacters(cairo_t *aCtx, const nsAString &aText,
-                                const nsSVGCharacterPosition *aCP,
-                                void (*aFunc)(cairo_t *cr, const char *utf8))
-{
-  if (!aCP) {
-    aFunc(aCtx, NS_ConvertUTF16toUTF8(aText).get());
-  } else {
-    for (PRUint32 i = 0; i < aText.Length(); i++) {
-      /* character actually on the path? */
-      if (aCP[i].draw == PR_FALSE)
-        continue;
-      cairo_matrix_t matrix;
-      cairo_get_matrix(aCtx, &matrix);
-      cairo_move_to(aCtx, aCP[i].x, aCP[i].y);
-      cairo_rotate(aCtx, aCP[i].angle);
-      aFunc(aCtx, NS_ConvertUTF16toUTF8(Substring(aText, i, 1)).get());
-      cairo_set_matrix(aCtx, &matrix);
-    }
-  }
-}
-
 NS_IMETHODIMP
-nsSVGGlyphFrame::PaintSVG(nsSVGRenderState *aContext, nsRect *aDirtyRect)
+nsSVGGlyphFrame::PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips)
 {
+#ifdef DEBUG
+  //printf("nsSVGGlyphFrame(%p)::Paint\n", this);
+#endif
   if (!GetStyleVisibility()->IsVisible())
     return NS_OK;
 
-  nsAutoString text;
-  if (!GetCharacterData(text)) {
-    return NS_OK;
-  }
-
-  nsAutoArrayPtr<nsSVGCharacterPosition> cp;
-
-  gfxContext *gfx = aContext->GetGfxContext();
-  cairo_t *ctx = gfx->GetCairo();
-
-  SelectFont(gfx);
-
-  nsresult rv = GetCharacterPosition(gfx, text, getter_Transfers(cp));
-
-  cairo_matrix_t matrix;
-
-  PRUint16 renderMode = aContext->GetRenderMode();
-
-  if (renderMode == nsSVGRenderState::NORMAL) {
-    /* save/pop the state so we don't screw up the xform */
-    cairo_save(ctx);
-  }
-  else {
-    cairo_get_matrix(ctx, &matrix);
-  }
-
-  rv = GetGlobalTransform(gfx);
-  if (NS_FAILED(rv)) {
-    if (renderMode == nsSVGRenderState::NORMAL)
-      cairo_restore(ctx);
-    return rv;
-  }
-
-  if (!cp)
-    cairo_move_to(ctx, mX, mY);
-
-  if (renderMode != nsSVGRenderState::NORMAL) {
-    if (GetClipRule() == NS_STYLE_FILL_RULE_EVENODD)
-      cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_EVEN_ODD);
-    else
-      cairo_set_fill_rule(ctx, CAIRO_FILL_RULE_WINDING);
-
-    if (renderMode == nsSVGRenderState::CLIP_MASK) {
-      cairo_set_antialias(ctx, CAIRO_ANTIALIAS_NONE);
-      cairo_set_source_rgba(ctx, 1.0f, 1.0f, 1.0f, 1.0f);
-      LoopCharacters(ctx, text, cp, cairo_show_text);
-    } else {
-      LoopCharacters(ctx, text, cp, cairo_text_path);
-    }
-
-    cairo_set_matrix(ctx, &matrix);
-
-    return NS_OK;
-  }
-
-  void *closure;
-  if (HasFill() && NS_SUCCEEDED(SetupCairoFill(gfx, &closure))) {
-    LoopCharacters(ctx, text, cp, cairo_show_text);
-    CleanupCairoFill(gfx, closure);
-  }
-
-  if (HasStroke() && NS_SUCCEEDED(SetupCairoStroke(gfx, &closure))) {
-    cairo_new_path(ctx);
-    if (!cp)
-      cairo_move_to(ctx, mX, mY);
-    LoopCharacters(ctx, text, cp, cairo_text_path);
-    cairo_stroke(ctx);
-    CleanupCairoStroke(gfx, closure);
-    cairo_new_path(ctx);
-  }
-
-  cairo_restore(ctx);
-
+  mGeometry->Render(canvas);
   return NS_OK;
 }
 
@@ -298,9 +471,6 @@ nsSVGGlyphFrame::GetFrameForPointSVG(float x, float y, nsIFrame** hit)
 #endif
   // test for hit:
   *hit = nsnull;
-
-  if (!mRect.Contains(nscoord(x), nscoord(y)))
-    return NS_OK;
 
   PRBool events = PR_FALSE;
   switch (GetStyleSVG()->mPointerEvents) {
@@ -336,117 +506,33 @@ nsSVGGlyphFrame::GetFrameForPointSVG(float x, float y, nsIFrame** hit)
   if (!events)
     return NS_OK;
 
-  PRBool isHit = ContainsPoint(x, y);
+  PRBool isHit;
+  mGeometry->ContainsPoint(x, y, &isHit);
   if (isHit) 
     *hit = this;
   
   return NS_OK;
 }
 
-NS_IMETHODIMP_(nsRect)
+NS_IMETHODIMP_(already_AddRefed<nsISVGRendererRegion>)
 nsSVGGlyphFrame::GetCoveredRegion()
 {
-  return mRect;
-}
-
-NS_IMETHODIMP
-nsSVGGlyphFrame::UpdateCoveredRegion()
-{
-  mRect.Empty();
-
-  PRBool hasFill = HasFill();
-  PRBool hasStroke = HasStroke();
-
-  if (!hasFill && !hasStroke) {
-    return NS_OK;
-  }
-
-  nsAutoString text;
-  if (!GetCharacterData(text)) {
-    return NS_OK;
-  }
-
-  nsAutoArrayPtr<nsSVGCharacterPosition> cp;
-
-  nsSVGAutoGlyphHelperContext ctx(this, text, getter_Transfers(cp));
-
-  nsresult rv = GetGlobalTransform(ctx);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  if (!cp) {
-    cairo_move_to(ctx, mX, mY);
-
-    if (hasStroke) {
-      cairo_text_path(ctx, NS_ConvertUTF16toUTF8(text).get());
-    } else {
-      cairo_text_extents_t extent;
-      cairo_text_extents(ctx,
-                         NS_ConvertUTF16toUTF8(text).get(),
-                         &extent);
-      cairo_rectangle(ctx, mX + extent.x_bearing, mY + extent.y_bearing,
-                      extent.width, extent.height);
-    }
-  } else {
-    cairo_matrix_t matrix;
-    for (PRUint32 i=0; i<text.Length(); i++) {
-      /* character actually on the path? */
-      if (cp[i].draw == PR_FALSE)
-        continue;
-      cairo_get_matrix(ctx, &matrix);
-      cairo_move_to(ctx, cp[i].x, cp[i].y);
-      cairo_rotate(ctx, cp[i].angle);
-      if (hasStroke) {
-        cairo_text_path(ctx, NS_ConvertUTF16toUTF8(Substring(text, i, 1)).get());
-      } else {
-        cairo_text_extents_t extent;
-        cairo_text_extents(ctx,
-                           NS_ConvertUTF16toUTF8(Substring(text, i, 1)).get(),
-                           &extent);
-        cairo_rel_move_to(ctx, extent.x_bearing, extent.y_bearing);
-        cairo_rel_line_to(ctx, extent.width, 0);
-        cairo_rel_line_to(ctx, 0, extent.height);
-        cairo_rel_line_to(ctx, -extent.width, 0);
-        cairo_close_path(ctx);
-      }
-      cairo_set_matrix(ctx, &matrix);
-    }
-  }
-
-  double xmin, ymin, xmax, ymax;
-
-  if (hasStroke) {
-    SetupCairoStrokeGeometry(ctx);
-    cairo_stroke_extents(ctx, &xmin, &ymin, &xmax, &ymax);
-    nsSVGUtils::UserToDeviceBBox(ctx, &xmin, &ymin, &xmax, &ymax);
-  } else {
-    cairo_identity_matrix(ctx);
-    cairo_fill_extents(ctx, &xmin, &ymin, &xmax, &ymax);
-  }
-
-  mRect = nsSVGUtils::ToBoundingPixelRect(xmin, ymin, xmax, ymax);
-
-  return NS_OK;
+  nsISVGRendererRegion *region = nsnull;
+  if (mGeometry)
+    mGeometry->GetCoveredRegion(&region);
+  return region;
 }
 
 NS_IMETHODIMP
 nsSVGGlyphFrame::InitialUpdate()
 {
-  nsresult rv = UpdateGraphic();
-
-  NS_ASSERTION(!(mState & NS_FRAME_IN_REFLOW),
-               "We don't actually participate in reflow");
-  
-  // Do unset the various reflow bits, though.
-  mState &= ~(NS_FRAME_FIRST_REFLOW | NS_FRAME_IS_DIRTY |
-              NS_FRAME_HAS_DIRTY_CHILDREN);
-  
-  return rv;
+  return Update(nsISVGGeometrySource::UPDATEMASK_ALL);
 }  
 
 NS_IMETHODIMP
-nsSVGGlyphFrame::NotifyCanvasTMChanged(PRBool suppressInvalidation)
+nsSVGGlyphFrame::NotifyCanvasTMChanged()
 {
-  UpdateGeometry(PR_TRUE, suppressInvalidation);
+  UpdateGeometry(nsISVGGeometrySource::UPDATEMASK_CANVAS_TM);
   
   return NS_OK;
 }
@@ -461,9 +547,19 @@ nsSVGGlyphFrame::NotifyRedrawSuspended()
 NS_IMETHODIMP
 nsSVGGlyphFrame::NotifyRedrawUnsuspended()
 {
-  if (GetStateBits() & NS_STATE_SVG_DIRTY)
-    UpdateGeometry(PR_TRUE, PR_FALSE);
-
+  NS_ASSERTION(!mMetricsUpdateFlags, "dirty metrics in nsSVGGlyphFrame::NotifyRedrawUnsuspended");
+  NS_ASSERTION(!mFragmentTreeDirty, "dirty fragmenttree in nsSVGGlyphFrame::NotifyRedrawUnsuspended");
+    
+  if (mGeometryUpdateFlags != 0) {
+    nsCOMPtr<nsISVGRendererRegion> dirty_region;
+    mGeometry->Update(mGeometryUpdateFlags, getter_AddRefs(dirty_region));
+    if (dirty_region) {
+      nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+      if (outerSVGFrame)
+        outerSVGFrame->InvalidateRegion(dirty_region, PR_TRUE);
+    }
+    mGeometryUpdateFlags = 0;
+  }
   return NS_OK;
 }
 
@@ -472,34 +568,23 @@ nsSVGGlyphFrame::GetBBox(nsIDOMSVGRect **_retval)
 {
   *_retval = nsnull;
 
-  nsAutoString text;
-  if (!GetCharacterData(text)) {
-    return NS_OK;
-  }
-
-  nsAutoArrayPtr<nsSVGCharacterPosition> cp;
-
-  nsSVGAutoGlyphHelperContext ctx(this, text, getter_Transfers(cp));
-
-  nsresult rv = GetGlobalTransform(ctx);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  if (!cp)
-    cairo_move_to(ctx, mX, mY);
-
-  LoopCharacters(ctx, text, cp, cairo_text_path);
-
-  cairo_identity_matrix(ctx);
-
-  double xmin, ymin, xmax, ymax;
-
-  cairo_fill_extents(ctx, &xmin, &ymin, &xmax, &ymax);
-
-  return NS_NewSVGRect(_retval, xmin, ymin, xmax - xmin, ymax - ymin);
+  if (mGeometry)
+    return mGeometry->GetBoundingBox(_retval);
+  return NS_ERROR_FAILURE;
 }
 
 //----------------------------------------------------------------------
-// nsSVGGeometryFrame methods:
+// nsISVGGeometrySource methods:
+
+/* [noscript] readonly attribute nsPresContext presContext; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetPresContext(nsPresContext * *aPresContext)
+{
+  // XXX gcc 3.2.2 requires the explicit 'nsSVGGlyphFrameBase::' qualification
+  *aPresContext = nsSVGGlyphFrameBase::GetPresContext();
+  NS_ADDREF(*aPresContext);
+  return NS_OK;
+}
 
 /* readonly attribute nsIDOMSVGMatrix canvasTM; */
 NS_IMETHODIMP
@@ -507,117 +592,430 @@ nsSVGGlyphFrame::GetCanvasTM(nsIDOMSVGMatrix * *aCTM)
 {
   NS_ASSERTION(mParent, "null parent");
   
-  nsSVGContainerFrame *containerFrame = NS_STATIC_CAST(nsSVGContainerFrame*,
-                                                       mParent);
+  nsISVGContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), (void**)&containerFrame);
+  if (!containerFrame) {
+    NS_ERROR("invalid container");
+    return NS_ERROR_FAILURE;
+  }
   nsCOMPtr<nsIDOMSVGMatrix> parentTM = containerFrame->GetCanvasTM();
-
   *aCTM = parentTM.get();
   NS_ADDREF(*aCTM);
   return NS_OK;
 }
 
-//----------------------------------------------------------------------
-// nsSVGGlyphFrame methods:
-
-PRBool
-nsSVGGlyphFrame::GetCharacterData(nsAString & aCharacterData)
+/* readonly attribute float strokeOpacity; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetStrokeOpacity(float *aStrokeOpacity)
 {
-  nsAutoString characterData;
-  mContent->AppendTextTo(characterData);
-
-  if (mWhitespaceHandling & COMPRESS_WHITESPACE) {
-    PRBool trimLeadingWhitespace, trimTrailingWhitespace;
-    trimLeadingWhitespace = ((mWhitespaceHandling & TRIM_LEADING_WHITESPACE) != 0);
-    trimTrailingWhitespace = ((mWhitespaceHandling & TRIM_TRAILING_WHITESPACE) != 0);
-    characterData.CompressWhitespace(trimLeadingWhitespace, 
-                                     trimTrailingWhitespace);
-  } else {
-    nsAString::iterator start, end;
-    characterData.BeginWriting(start);
-    characterData.EndWriting(end);
-    while (start != end) {
-      if (NS_IsAsciiWhitespace(*start))
-        *start = ' ';
-      ++start;
-    }
-  }
-  aCharacterData = characterData;
-
-  return !characterData.IsEmpty();
+  *aStrokeOpacity =
+    GetStyleSVG()->mStrokeOpacity * GetStyleDisplay()->mOpacity;
+  return NS_OK;
 }
 
-nsresult
-nsSVGGlyphFrame::GetCharacterPosition(gfxContext *aContext,
-                                      const nsAString &aText,
-                                      nsSVGCharacterPosition **aCharacterPosition)
+/* readonly attribute float strokeWidth; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetStrokeWidth(float *aStrokeWidth)
 {
-  cairo_t *ctx = aContext->GetCairo();
+  // We use mContent->GetParent() rather than mContent because we're
+  // looking for the containing text container rather than the text node
+  *aStrokeWidth =
+    nsSVGUtils::CoordToFloat(nsSVGGlyphFrameBase::GetPresContext(),
+                             mContent->GetParent(),
+                             GetStyleSVG()->mStrokeWidth);
+  return NS_OK;
+}
 
+/* void getStrokeDashArray ([array, size_is (count)] out float arr, out unsigned long count); */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetStrokeDashArray(float **arr, PRUint32 *count)
+{
+  const nsStyleCoord *dasharray = GetStyleSVG()->mStrokeDasharray;
+  nsPresContext *presContext = nsSVGGlyphFrameBase::GetPresContext();
+  float totalLength = 0.0f;
+
+  *count = GetStyleSVG()->mStrokeDasharrayLength;
+  *arr = nsnull;
+
+  if (*count) {
+    *arr = (float *) nsMemory::Alloc(*count * sizeof(float));
+    if (*arr) {
+      for (PRUint32 i = 0; i < *count; i++) {
+        (*arr)[i] = nsSVGUtils::CoordToFloat(presContext, mContent, dasharray[i]);
+        if ((*arr)[i] < 0.0f) {
+          nsMemory::Free(*arr);
+          *count = 0;
+          *arr = nsnull;
+          return NS_OK;
+        }
+        totalLength += (*arr)[i];
+      }
+    } else {
+      *count = 0;
+      *arr = nsnull;
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    if (totalLength == 0.0f) {
+      nsMemory::Free(*arr);
+      *count = 0;
+    }
+  }
+
+  return NS_OK;
+}
+
+/* readonly attribute float strokeDashoffset; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetStrokeDashoffset(float *aStrokeDashoffset)
+{
+  *aStrokeDashoffset = 
+    nsSVGUtils::CoordToFloat(nsSVGGlyphFrameBase::GetPresContext(),
+                             mContent, GetStyleSVG()->mStrokeDashoffset);
+  return NS_OK;
+}
+
+/* readonly attribute unsigned short strokeLinecap; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetStrokeLinecap(PRUint16 *aStrokeLinecap)
+{
+  *aStrokeLinecap = GetStyleSVG()->mStrokeLinecap;
+  return NS_OK;
+}
+
+/* readonly attribute unsigned short strokeLinejoin; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetStrokeLinejoin(PRUint16 *aStrokeLinejoin)
+{
+  *aStrokeLinejoin = GetStyleSVG()->mStrokeLinejoin;
+  return NS_OK;
+}
+
+/* readonly attribute float strokeMiterlimit; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetStrokeMiterlimit(float *aStrokeMiterlimit)
+{
+  *aStrokeMiterlimit = GetStyleSVG()->mStrokeMiterlimit; 
+  return NS_OK;
+}
+
+/* readonly attribute float fillOpacity; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetFillOpacity(float *aFillOpacity)
+{
+  *aFillOpacity =
+    GetStyleSVG()->mFillOpacity * GetStyleDisplay()->mOpacity;
+  return NS_OK;
+}
+
+/* readonly attribute unsigned short fillRule; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetFillRule(PRUint16 *aFillRule)
+{
+  *aFillRule = GetStyleSVG()->mFillRule;
+  return NS_OK;
+}
+
+/* readonly attribute unsigned short clipRule; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetClipRule(PRUint16 *aClipRule)
+{
+  *aClipRule = GetStyleSVG()->mClipRule;
+  return NS_OK;
+}
+
+/* readonly attribute unsigned short strokePaintType; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetStrokePaintType(PRUint16 *aStrokePaintType)
+{
+  float strokeWidth;
+  GetStrokeWidth(&strokeWidth);
+
+  // cairo will stop rendering if stroke-width is less than or equal to zero
+  *aStrokePaintType = strokeWidth <= 0 ?
+                      nsISVGGeometrySource::PAINT_TYPE_NONE :
+                      GetStyleSVG()->mStroke.mType;
+  return NS_OK;
+}
+
+/* readonly attribute unsigned short strokePaintServerType; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetStrokePaintServerType(PRUint16 *aStrokePaintServerType)
+{
+  return nsSVGUtils::GetPaintType(aStrokePaintServerType, GetStyleSVG()->mStroke, mContent,
+                                  nsSVGGlyphFrameBase::GetPresContext()->PresShell());
+}
+
+/* [noscript] readonly attribute nscolor strokePaint; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetStrokePaint(nscolor *aStrokePaint)
+{
+  *aStrokePaint = GetStyleSVG()->mStroke.mPaint.mColor;
+  return NS_OK;
+}
+
+/* [noscript] void GetStrokeGradient(nsISVGGradient **aGrad); */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetStrokeGradient(nsISVGGradient **aGrad)
+{
+  nsresult rv = NS_OK;
+  if (!mStrokeGradient) {
+    nsIURI *aServer;
+    aServer = GetStyleSVG()->mStroke.mPaint.mPaintServer;
+    if (aServer == nsnull)
+      return NS_ERROR_FAILURE;
+    // Now have the URI.  Get the gradient 
+    rv = NS_GetSVGGradient(getter_AddRefs(mStrokeGradient), aServer, mContent, 
+                           nsSVGGlyphFrameBase::GetPresContext()->PresShell());
+    NS_ADD_SVGVALUE_OBSERVER(mStrokeGradient);
+  }
+  *aGrad = mStrokeGradient;
+  return rv;
+}
+
+/* readonly attribute unsigned short fillPaintType; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetFillPaintType(PRUint16 *aFillPaintType)
+{
+  *aFillPaintType = GetStyleSVG()->mFill.mType;
+  return NS_OK;
+}
+
+/* readonly attribute unsigned short fillPaintServerType; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetFillPaintServerType(PRUint16 *aFillPaintServerType)
+{
+  return nsSVGUtils::GetPaintType(aFillPaintServerType, GetStyleSVG()->mFill, mContent,
+                                  nsSVGGlyphFrameBase::GetPresContext()->PresShell());
+}
+
+/* [noscript] readonly attribute nscolor fillPaint; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetFillPaint(nscolor *aFillPaint)
+{
+  *aFillPaint = GetStyleSVG()->mFill.mPaint.mColor;
+  return NS_OK;
+}
+
+/* [noscript] void GetFillGradient(nsISVGGradient **aGrad); */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetFillGradient(nsISVGGradient **aGrad)
+{
+  nsresult rv = NS_OK;
+  if (!mFillGradient) {
+    nsIURI *aServer;
+    aServer = GetStyleSVG()->mFill.mPaint.mPaintServer;
+    if (aServer == nsnull)
+      return NS_ERROR_FAILURE;
+    // Now have the URI.  Get the gradient 
+    rv = NS_GetSVGGradient(getter_AddRefs(mFillGradient), aServer, mContent, 
+                           nsSVGGlyphFrameBase::GetPresContext()->PresShell());
+    NS_ADD_SVGVALUE_OBSERVER(mFillGradient);
+  }
+  *aGrad = mFillGradient;
+  return rv;
+}
+
+/* [noscript] boolean isClipChild; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::IsClipChild(PRBool *_retval)
+{
+  *_retval = PR_FALSE;
+  nsCOMPtr<nsIContent> node(mContent);
+
+  do {
+    if (node->Tag() == nsSVGAtoms::clipPath) {
+      *_retval = PR_TRUE;
+      break;
+    }
+    node = node->GetParent();
+  } while (node);
+    
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+// nsISVGGlyphMetricsSource methods:
+
+/* [noscript] readonly attribute nsFont font; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetFont(nsFont *aFont)
+{
+  *aFont = GetStyleFont()->mFont;
+
+  // XXX eventually we will have to treat decorations separately from
+  // fonts, because they can have a different color than the current
+  // glyph.
+  
+  NS_ASSERTION(mParent, "no parent");
+  nsStyleContext *parentContext = mParent->GetStyleContext();
+  NS_ASSERTION(parentContext, "no style context on parent");
+  
+  PRUint8 styleDecorations =
+    parentContext->GetStyleTextReset()->mTextDecoration;
+  if (styleDecorations & NS_STYLE_TEXT_DECORATION_UNDERLINE)
+    aFont->decorations |= NS_FONT_DECORATION_UNDERLINE;
+  if (styleDecorations & NS_STYLE_TEXT_DECORATION_OVERLINE)
+    aFont->decorations |= NS_FONT_DECORATION_OVERLINE;
+  if (styleDecorations & NS_STYLE_TEXT_DECORATION_LINE_THROUGH)
+    aFont->decorations |= NS_FONT_DECORATION_LINE_THROUGH;    
+  
+  return NS_OK;
+}
+
+/* readonly attribute DOMString characterData; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetCharacterData(nsAString & aCharacterData)
+{
+  aCharacterData = mCharacterData;
+  return NS_OK;
+}
+
+void
+NS_SVGFindPointOnPath(nsSVGPathData *data,
+                      float aX, float aY, float aAdvance,
+                      nsSVGCharacterPosition *aCP)
+{
+  float x, y, length = 0;
+  float midpoint = aX + aAdvance/2;
+  for (PRUint32 i = 0; i < data->count; i++) {
+    if (data->type[i] == NS_SVGPATHFLATTEN_LINE) {
+      float dx = data->x[i] - x;
+      float dy = data->y[i] - y;
+      float sublength = sqrt(dx*dx + dy*dy);
+      
+      if (sublength != 0 && length + sublength >= midpoint) {
+        float ratio = (aX - length)/sublength;
+        aCP->x = x * (1.0f - ratio) + data->x[i] * ratio;
+        aCP->y = y * (1.0f - ratio) + data->y[i] * ratio;
+
+        float dx = data->x[i] - x;
+        float dy = data->y[i] - y;
+        aCP->angle = atan2(dy, dx);
+
+        float normalization = 1.0/sqrt(dx*dx+dy*dy);
+        aCP->x += - aY * dy * normalization;
+        aCP->y +=   aY * dx * normalization;
+        return;
+      }
+      length += sublength;
+    }
+    x = data->x[i];
+    y = data->y[i];
+  }
+}
+
+/* readonly attribute nsSVGCharacterPostion characterPosition; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetCharacterPosition(nsSVGCharacterPosition **aCharacterPosition)
+{
   *aCharacterPosition = nsnull;
+  nsISVGPathFlatten *textPath = nsnull;
 
-  NS_ASSERTION(!aText.IsEmpty(), "no text");
-
-  nsSVGTextPathFrame *textPath = FindTextPathParent();
+  /* check if we're the child of a textPath */
+  for (nsIFrame *frame = this; frame != nsnull; frame = frame->GetParent())
+    if (frame->GetType() == nsLayoutAtoms::svgTextPathFrame) {
+      frame->QueryInterface(NS_GET_IID(nsISVGPathFlatten), (void **)&textPath);
+      break;
+    }
 
   /* we're an ordinary fragment - return */
   /* XXX: we might want to use this for individual x/y/dx/dy adjustment */
   if (!textPath)
     return NS_OK;
 
-  nsAutoPtr<nsSVGFlattenedPath> data(textPath->GetFlattenedPath());
+  nsSVGPathData *data;
+  textPath->GetFlattenedPath(&data);
 
   /* textPath frame, but invalid target */
   if (!data)
     return NS_ERROR_FAILURE;
 
-  float length = data->GetLength();
-  PRUint32 strLength = aText.Length();
+  float length = data->Length();
+  PRUint32 strLength = mCharacterData.Length();
 
   nsSVGCharacterPosition *cp = new nsSVGCharacterPosition[strLength];
 
   for (PRUint32 k = 0; k < strLength; k++)
-    cp[k].draw = PR_FALSE;
+      cp[k].draw = PR_FALSE;
 
   float x = mX;
   for (PRUint32 i = 0; i < strLength; i++) {
-
-    cairo_text_extents_t extent;
-
-    cairo_text_extents(ctx,
-                       NS_ConvertUTF16toUTF8(Substring(aText, i, 1)).get(),
-                       &extent);
-    float advance = extent.x_advance;
+    float advance;
+    mMetrics->GetAdvanceOfChar(i, &advance);
 
     /* have we run off the end of the path? */
-    if (x + advance / 2 > length)
+    if (x + advance/2 > length)
       break;
 
     /* check that we've advanced to the start of the path */
-    if (x + advance / 2 >= 0.0f) {
+    if (x + advance/2 >= 0.0f) {
       cp[i].draw = PR_TRUE;
 
       // add y (normal)
       // add rotation
       // move point back along tangent
-      data->FindPoint(advance, x, mY,
-                      &(cp[i].x),
-                      &(cp[i].y),
-                      &(cp[i].angle));
+      NS_SVGFindPointOnPath(data, x, mY, advance, &(cp[i]));
     }
     x += advance;
   }
 
   *aCharacterPosition = cp;
 
+  delete data;
+
+  return NS_OK;
+}
+
+/* readonly attribute unsigned short textRendering; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetTextRendering(PRUint16 *aTextRendering)
+{
+  *aTextRendering = GetStyleSVG()->mTextRendering;
   return NS_OK;
 }
 
 //----------------------------------------------------------------------
+// nsISVGGlyphGeometrySource methods:
+
+/* readonly attribute nsISVGRendererGlyphMetrics metrics; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetMetrics(nsISVGRendererGlyphMetrics * *aMetrics)
+{
+  *aMetrics = mMetrics;
+  NS_ADDREF(*aMetrics);
+  return NS_OK;
+}
+
+/* readonly attribute float x; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetX(float *aX)
+{
+  *aX = mX;
+  return NS_OK;
+}
+
+/* readonly attribute float y; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetY(float *aY)
+{
+  *aY = mY;
+  return NS_OK;
+}
+
+/* readonly attribute boolean hasHighlight; */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetHasHighlight(PRBool *aHasHighlight)
+{
+  *aHasHighlight = (mState & NS_FRAME_SELECTED_CONTENT) == NS_FRAME_SELECTED_CONTENT;
+
+  return NS_OK;
+}
+
 
 // Utilities for converting from indices in the uncompressed content
 // element strings to compressed frame string and back:
-static int
-CompressIndex(int index, const nsTextFragment*fragment)
+int CompressIndex(int index, const nsTextFragment*fragment)
 {
   int ci=0;
   if (fragment->Is2b()) {
@@ -656,41 +1054,43 @@ CompressIndex(int index, const nsTextFragment*fragment)
   return ci;
 }
 
-static int
-UncompressIndex(int index, PRBool bRightAffinity, const nsTextFragment*fragment)
+int UncompressIndex(int index, PRBool bRightAffinity, const nsTextFragment*fragment)
 {
   // XXX
   return index;
 }
 
-nsresult
-nsSVGGlyphFrame::GetHighlight(PRUint32 *charnum, PRUint32 *nchars,
-                              nscolor *foreground, nscolor *background)
+/* [noscript] void getHighlight (out unsigned long charnum, out unsigned long nchars, out nscolor foreground, out nscolor background); */
+NS_IMETHODIMP
+nsSVGGlyphFrame::GetHighlight(PRUint32 *charnum, PRUint32 *nchars, nscolor *foreground, nscolor *background)
 {
   *foreground = NS_RGB(255,255,255);
   *background = NS_RGB(0,0,0); 
   *charnum=0;
   *nchars=0;
 
-  PRBool hasHighlight =
-    (mState & NS_FRAME_SELECTED_CONTENT) == NS_FRAME_SELECTED_CONTENT;
+    PRBool hasHighlight;
+  GetHasHighlight(&hasHighlight);
 
   if (!hasHighlight) {
     NS_ERROR("nsSVGGlyphFrame::GetHighlight() called by renderer when there is no highlight");
     return NS_ERROR_FAILURE;
   }
 
-  nsPresContext *presContext = GetPresContext();
+  // XXX gcc 3.2.2 requires the explicit 'nsSVGGlyphFrameBase::' qualification
+  nsPresContext *presContext = nsSVGGlyphFrameBase::GetPresContext();
+
+  nsCOMPtr<nsITextContent> tc = do_QueryInterface(mContent);
+  NS_ASSERTION(tc, "no textcontent interface");
 
   // The selection ranges are relative to the uncompressed text in
   // the content element. We'll need the text fragment:
-  const nsTextFragment *fragment = mContent->GetText();
-  NS_ASSERTION(fragment, "no text");
+  const nsTextFragment *fragment = tc->Text();
   
   // get the selection details 
   SelectionDetails *details = nsnull;
   {
-    nsCOMPtr<nsFrameSelection> frameSelection;
+    nsCOMPtr<nsIFrameSelection> frameSelection;
     {
       nsCOMPtr<nsISelectionController> controller;
       GetSelectionController(presContext, getter_AddRefs(controller));
@@ -709,9 +1109,8 @@ nsSVGGlyphFrame::GetHighlight(PRUint32 *charnum, PRUint32 *nchars,
       return NS_ERROR_FAILURE;
     }
 
-    details = frameSelection->LookUpSelection(
-      mContent, 0, fragment->GetLength(), PR_FALSE
-      );
+    frameSelection->LookUpSelection(mContent, 0, fragment->GetLength(),
+                                    &details, PR_FALSE);
   }
 
 #if defined(DEBUG) && defined(SVG_DEBUG_SELECTION)
@@ -761,246 +1160,29 @@ nsSVGGlyphFrame::SetGlyphPosition(float x, float y)
 {
   mX = x;
   mY = y;
-  UpdateGeometry(PR_TRUE, PR_FALSE);
+  UpdateGeometry(nsISVGGlyphGeometrySource::UPDATEMASK_X |
+                 nsISVGGlyphGeometrySource::UPDATEMASK_Y);
 }
 
-NS_IMETHODIMP
-nsSVGGlyphFrame::GetStartPositionOfChar(PRUint32 charnum, nsIDOMSVGPoint **_retval)
+NS_IMETHODIMP_(float)
+nsSVGGlyphFrame::GetGlyphPositionX()
 {
-  *_retval = nsnull;
-
-  nsAutoString text;
-  GetCharacterData(text);
-
-  nsAutoArrayPtr<nsSVGCharacterPosition> cp;
-
-  nsSVGAutoGlyphHelperContext ctx(this, text, getter_Transfers(cp));
-
-  float x, y;
-
-  if (cp) {
-    if (cp[charnum].draw == PR_FALSE) {
-      return NS_ERROR_DOM_INDEX_SIZE_ERR;
-    }
-
-    x = cp[charnum].x;
-    y = cp[charnum].y;
-
-  } else {
-    x = mX;
-    y = mY;
-
-    if (charnum > 0) {
-      cairo_text_extents_t extent;
-
-      cairo_text_extents(ctx,
-                         NS_ConvertUTF16toUTF8(Substring(text,
-                                                         0,
-                                                         charnum)).get(),
-                         &extent);
-
-      x += extent.x_advance;
-      y += extent.y_advance;
-    }
-  }
-
-  return NS_NewSVGPoint(_retval, x, y);
+  return mX;
 }
 
-NS_IMETHODIMP
-nsSVGGlyphFrame::GetEndPositionOfChar(PRUint32 charnum, nsIDOMSVGPoint **_retval)
+NS_IMETHODIMP_(float)
+nsSVGGlyphFrame::GetGlyphPositionY()
 {
-  *_retval = nsnull;
-
-  nsAutoString text;
-  GetCharacterData(text);
-
-  nsAutoArrayPtr<nsSVGCharacterPosition> cp;
-  
-  nsSVGAutoGlyphHelperContext ctx(this, text, getter_Transfers(cp));
-
-  cairo_text_extents_t extent;
-
-  if (cp) {
-    if (cp[charnum].draw == PR_FALSE) {
-      return NS_ERROR_DOM_INDEX_SIZE_ERR;
-    }
-
-    cairo_text_extents(ctx, 
-                       NS_ConvertUTF16toUTF8(Substring(text, charnum, 1)).get(),
-                       &extent);
-
-    float s = sin(cp[charnum].angle);
-    float c = cos(cp[charnum].angle);
-
-    return NS_NewSVGPoint(_retval, 
-             cp[charnum].x + extent.x_advance * c - extent.y_advance * s,
-             cp[charnum].y + extent.y_advance * c + extent.x_advance * s);
-  }
-
-  cairo_text_extents(ctx, 
-                     NS_ConvertUTF16toUTF8(Substring(text, 0, charnum + 1)).get(),
-                     &extent);
-
-  return NS_NewSVGPoint(_retval, mX + extent.x_advance, mY + extent.y_advance);
+  return mY;
 }
 
-NS_IMETHODIMP
-nsSVGGlyphFrame::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval)
-{
-  *_retval = nsnull;
-
-  nsAutoString text;
-  GetCharacterData(text);
-
-  nsAutoArrayPtr<nsSVGCharacterPosition> cp;
-
-  nsSVGAutoGlyphHelperContext ctx(this, text, getter_Transfers(cp));
-
-  cairo_text_extents_t extent;
-  cairo_text_extents(ctx,
-                     NS_ConvertUTF16toUTF8(Substring(text, charnum, 1)).get(),
-                     &extent);
-
-  if (cp) {
-    if (cp[charnum].draw == PR_FALSE) {
-      return NS_ERROR_DOM_INDEX_SIZE_ERR;
-    }
-
-    cairo_matrix_t matrix;
-    cairo_get_matrix(ctx, &matrix);
-    cairo_move_to(ctx, cp[charnum].x, cp[charnum].y);
-    cairo_rotate(ctx, cp[charnum].angle);
-
-    cairo_rel_move_to(ctx, extent.x_bearing, extent.y_bearing);
-    cairo_rel_line_to(ctx, extent.width, 0);
-    cairo_rel_line_to(ctx, 0, extent.height);
-    cairo_rel_line_to(ctx, -extent.width, 0);
-    cairo_close_path(ctx);
-    cairo_identity_matrix(ctx);
-
-    double xmin, ymin, xmax, ymax;
-
-    cairo_fill_extents(ctx, &xmin, &ymin, &xmax, &ymax);
-
-    cairo_set_matrix(ctx, &matrix);
-
-    return NS_NewSVGRect(_retval, xmin, ymin, xmax - xmin, ymax - ymin);
-  }
-
-  float x = mX;
-  float y = mY;
-
-  x += extent.x_bearing;
-  y += extent.y_bearing;
-
-  cairo_text_extents_t precedingExtent;
-
-  if (charnum > 0) {
-    // add the space taken up by the text which comes before charnum
-    // to the position of the charnum character
-    cairo_text_extents(ctx,
-                       NS_ConvertUTF16toUTF8(Substring(text,
-                                                       0,
-                                                       charnum)).get(),
-                       &precedingExtent);
-
-    x += precedingExtent.x_advance;
-    y += precedingExtent.y_advance;
-  }
-
-  return NS_NewSVGRect(_retval, x, y, extent.width, extent.height);
-}
 
 NS_IMETHODIMP
-nsSVGGlyphFrame::GetRotationOfChar(PRUint32 charnum, float *_retval)
+nsSVGGlyphFrame::GetGlyphMetrics(nsISVGRendererGlyphMetrics** metrics)
 {
-  const double radPerDeg = M_PI/180.0;
-
-  nsAutoString text;
-  GetCharacterData(text);
-
-  nsAutoArrayPtr<nsSVGCharacterPosition> cp;
-
-  nsSVGAutoGlyphHelperContext ctx(this, text, getter_Transfers(cp));
-
-  if (cp) {
-    if (cp[charnum].draw == PR_FALSE) {
-      return NS_ERROR_DOM_INDEX_SIZE_ERR;
-    }
-
-    *_retval = cp[charnum].angle / radPerDeg;
-  } else {
-    *_retval = 0.0;
-  }
+  *metrics = mMetrics;
+  NS_IF_ADDREF(*metrics);
   return NS_OK;
-}
-
-NS_IMETHODIMP_(float)
-nsSVGGlyphFrame::GetBaselineOffset(PRUint16 baselineIdentifier)
-{
-  float _retval;
-  cairo_font_extents_t extents;
-
-  nsSVGAutoGlyphHelperContext ctx(this);
-
-  cairo_font_extents(ctx, &extents);
-
-  switch (baselineIdentifier) {
-  case BASELINE_HANGING:
-    // not really right, but the best we can do with the information provided
-    // FALLTHROUGH
-  case BASELINE_TEXT_BEFORE_EDGE:
-    _retval = -extents.ascent;
-    break;
-  case BASELINE_TEXT_AFTER_EDGE:
-    _retval = extents.descent;
-    break;
-  case BASELINE_CENTRAL:
-  case BASELINE_MIDDLE:
-    _retval = - (extents.ascent - extents.descent) / 2.0;
-    break;
-  case BASELINE_ALPHABETIC:
-  default:
-    _retval = 0.0;
-    break;
-  }
-  
-  return _retval;
-}
-
-NS_IMETHODIMP_(float)
-nsSVGGlyphFrame::GetAdvance()
-{
-  nsAutoString text;
-  if (!GetCharacterData(text)) {
-    return 0.0f;
-  }
-
-  nsSVGAutoGlyphHelperContext ctx(this);
-
-  cairo_text_extents_t extents;
-  cairo_text_extents(ctx, 
-                     NS_ConvertUTF16toUTF8(text).get(),
-                     &extents);
-  
-  return extents.x_advance;
-}
-
-NS_IMETHODIMP_(nsSVGTextPathFrame*) 
-nsSVGGlyphFrame::FindTextPathParent()
-{
-  /* check if we're the child of a textPath */
-  for (nsIFrame *frame = GetParent();
-       frame != nsnull;
-       frame = frame->GetParent()) {
-    nsIAtom* type = frame->GetType();
-    if (type == nsGkAtoms::svgTextPathFrame) {
-      return NS_STATIC_CAST(nsSVGTextPathFrame*, frame);
-    } else if (type == nsGkAtoms::svgTextFrame)
-      return nsnull;
-  }
-  return nsnull;
 }
 
 NS_IMETHODIMP_(PRBool)
@@ -1018,11 +1200,24 @@ nsSVGGlyphFrame::GetAdjustedPosition(/* inout */ float &x, /* inout */ float &y)
 {
 }
 
+NS_IMETHODIMP_(PRUint32)
+nsSVGGlyphFrame::GetNumberOfChars()
+{
+  return mCharacterData.Length();
+}
+
+NS_IMETHODIMP_(PRUint32)
+nsSVGGlyphFrame::GetCharNumberOffset()
+{
+  return mCharOffset;
+}
+
 NS_IMETHODIMP_(already_AddRefed<nsIDOMSVGLengthList>)
 nsSVGGlyphFrame::GetX()
 {
-  nsSVGTextContainerFrame *containerFrame;
-  containerFrame = NS_STATIC_CAST (nsSVGTextContainerFrame *, mParent);
+  nsISVGTextContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGTextContainerFrame),
+                          (void**)&containerFrame);
   if (containerFrame)
     return containerFrame->GetX();
   return nsnull;
@@ -1031,8 +1226,9 @@ nsSVGGlyphFrame::GetX()
 NS_IMETHODIMP_(already_AddRefed<nsIDOMSVGLengthList>)
 nsSVGGlyphFrame::GetY()
 {
-  nsSVGTextContainerFrame *containerFrame;
-  containerFrame = NS_STATIC_CAST (nsSVGTextContainerFrame *, mParent);
+  nsISVGTextContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGTextContainerFrame),
+                          (void**)&containerFrame);
   if (containerFrame)
     return containerFrame->GetY();
   return nsnull;
@@ -1041,8 +1237,9 @@ nsSVGGlyphFrame::GetY()
 NS_IMETHODIMP_(already_AddRefed<nsIDOMSVGLengthList>)
 nsSVGGlyphFrame::GetDx()
 {
-  nsSVGTextContainerFrame *containerFrame;
-  containerFrame = NS_STATIC_CAST (nsSVGTextContainerFrame *, mParent);
+  nsISVGTextContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGTextContainerFrame),
+                          (void**)&containerFrame);
   if (containerFrame)
     return containerFrame->GetDx();
   return nsnull;
@@ -1051,8 +1248,9 @@ nsSVGGlyphFrame::GetDx()
 NS_IMETHODIMP_(already_AddRefed<nsIDOMSVGLengthList>)
 nsSVGGlyphFrame::GetDy()
 {
-  nsSVGTextContainerFrame *containerFrame;
-  containerFrame = NS_STATIC_CAST (nsSVGTextContainerFrame *, mParent);
+  nsISVGTextContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGTextContainerFrame),
+                          (void**)&containerFrame);
   if (containerFrame)
     return containerFrame->GetDy();
   return nsnull;
@@ -1069,7 +1267,7 @@ nsSVGGlyphFrame::IsAbsolutelyPositioned()
 {
   nsIFrame *lastFrame = this;
 
-  for (nsIFrame *frame = GetParent();
+  for (nsIFrame *frame = this->GetParent();
        frame != nsnull;
        lastFrame = frame, frame = frame->GetParent()) {
 
@@ -1079,15 +1277,15 @@ nsSVGGlyphFrame::IsAbsolutelyPositioned()
       break;
 
     // textPath is always absolutely positioned for our purposes
-    if (frame->GetType() == nsGkAtoms::svgTextPathFrame)
+    if (frame->GetType() == nsLayoutAtoms::svgTextPathFrame)
       return PR_TRUE;
         
     if (frame &&
-        (frame->GetContent()->HasAttr(kNameSpaceID_None, nsGkAtoms::x) ||
-         frame->GetContent()->HasAttr(kNameSpaceID_None, nsGkAtoms::y)))
+        (frame->GetContent()->HasAttr(kNameSpaceID_None, nsSVGAtoms::x) ||
+         frame->GetContent()->HasAttr(kNameSpaceID_None, nsSVGAtoms::y)))
         return PR_TRUE;
 
-    if (frame->GetType() == nsGkAtoms::svgTextFrame)
+    if (frame->GetType() == nsLayoutAtoms::svgTextFrame)
       break;
   }
 
@@ -1097,118 +1295,6 @@ nsSVGGlyphFrame::IsAbsolutelyPositioned()
 
 //----------------------------------------------------------------------
 // nsISVGGlyphFragmentNode interface:
-
-NS_IMETHODIMP_(PRUint32)
-nsSVGGlyphFrame::GetNumberOfChars()
-{
-  if (mWhitespaceHandling == PRESERVE_WHITESPACE)
-    return mContent->TextLength();
-
-  nsAutoString text;
-  GetCharacterData(text);
-  return text.Length();
-}
-
-NS_IMETHODIMP_(float)
-nsSVGGlyphFrame::GetComputedTextLength()
-{
-  nsAutoString text;
-  if (!GetCharacterData(text)) {
-    return 0.0f;
-  }
-
-  nsSVGAutoGlyphHelperContext ctx(this);
-
-  cairo_text_extents_t extent;
-  cairo_text_extents(ctx,
-                     NS_ConvertUTF16toUTF8(text).get(),
-                     &extent);
-
-  return fabs(extent.x_advance) + fabs(extent.y_advance);
-}
-
-NS_IMETHODIMP_(float)
-nsSVGGlyphFrame::GetSubStringLength(PRUint32 charnum, PRUint32 fragmentChars)
-{
-  nsAutoString text;
-  GetCharacterData(text);
-
-  nsSVGAutoGlyphHelperContext ctx(this);
-
-  cairo_text_extents_t extent;
-  cairo_text_extents(ctx,
-                     NS_ConvertUTF16toUTF8(Substring(text, charnum, fragmentChars)).get(),
-                     &extent);
-
-  return fabs(extent.x_advance) + fabs(extent.y_advance);
-}
-
-NS_IMETHODIMP_(PRInt32)
-nsSVGGlyphFrame::GetCharNumAtPosition(nsIDOMSVGPoint *point)
-{
-  float xPos, yPos;
-  point->GetX(&xPos);
-  point->GetY(&yPos);
-
-  nsAutoString text;
-  GetCharacterData(text);
-
-  nsAutoArrayPtr<nsSVGCharacterPosition> cp;
-
-  nsSVGAutoGlyphHelperContext ctx(this, text, getter_Transfers(cp));
-
-  float x, y;
-  if (!cp) {
-    x = mX;
-    y = mY;
-  }
-
-  for (PRUint32 charnum = 0; charnum < text.Length(); charnum++) {
-    /* character actually on the path? */
-    if (cp && cp[charnum].draw == PR_FALSE)
-      continue;
-
-    cairo_matrix_t matrix;
-    cairo_get_matrix(ctx, &matrix);
-    cairo_new_path(ctx);
-
-    if (cp) {
-      cairo_move_to(ctx, cp[charnum].x, cp[charnum].y);
-      cairo_rotate(ctx, cp[charnum].angle);
-    } else {
-      if (charnum > 0) {
-        cairo_text_extents_t extent;
-
-        cairo_text_extents(ctx,
-                           NS_ConvertUTF16toUTF8(Substring(text,
-                                                           0,
-                                                           charnum)).get(),
-                           &extent);
-        cairo_move_to(ctx, x + extent.x_advance, y + extent.y_advance);
-      } else {
-        cairo_move_to(ctx, x, y);
-      }
-    }
-    cairo_text_extents_t extent;
-    cairo_text_extents(ctx,
-                       NS_ConvertUTF16toUTF8(Substring(text, charnum, 1)).get(),
-                       &extent);
-
-    cairo_rel_move_to(ctx, extent.x_bearing, extent.y_bearing);
-    cairo_rel_line_to(ctx, extent.width, 0);
-    cairo_rel_line_to(ctx, 0, extent.height);
-    cairo_rel_line_to(ctx, -extent.width, 0);
-    cairo_close_path(ctx);
-
-    cairo_identity_matrix(ctx);
-    if (cairo_in_fill(ctx, xPos, yPos)) {
-      return charnum;
-    }
-
-    cairo_set_matrix(ctx, &matrix);
-  }
-  return -1;
-}
 
 NS_IMETHODIMP_(nsISVGGlyphFragmentLeaf *)
 nsSVGGlyphFrame::GetFirstGlyphFragment()
@@ -1222,7 +1308,7 @@ nsSVGGlyphFrame::GetNextGlyphFragment()
   nsIFrame* sibling = mNextSibling;
   while (sibling) {
     nsISVGGlyphFragmentNode *node = nsnull;
-    CallQueryInterface(sibling, &node);
+    sibling->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
     if (node)
       return node->GetFirstGlyphFragment();
     sibling = sibling->GetNextSibling();
@@ -1232,88 +1318,88 @@ nsSVGGlyphFrame::GetNextGlyphFragment()
   
   NS_ASSERTION(mParent, "null parent");
   nsISVGGlyphFragmentNode *node = nsnull;
-  CallQueryInterface(mParent, &node);
+  mParent->QueryInterface(NS_GET_IID(nsISVGGlyphFragmentNode), (void**)&node);
   return node ? node->GetNextGlyphFragment() : nsnull;
 }
 
-NS_IMETHODIMP_(void)
-nsSVGGlyphFrame::SetWhitespaceHandling(PRUint8 aWhitespaceHandling)
+NS_IMETHODIMP_(PRUint32)
+nsSVGGlyphFrame::BuildGlyphFragmentTree(PRUint32 charNum, PRBool lastBranch)
 {
-  mWhitespaceHandling = aWhitespaceHandling;
+  // XXX actually we should be building a new fragment for each chunk here...
+
+
+  mCharOffset = charNum;
+  nsCOMPtr<nsITextContent> tc = do_QueryInterface(mContent);
+
+  if (tc->TextLength() == 0) {
+#ifdef DEBUG
+    printf("Glyph frame with zero length text\n");
+#endif
+    mCharacterData.AssignLiteral("");
+    return charNum;
+  }
+
+  mCharacterData.Truncate();
+  tc->AppendTextTo(mCharacterData);
+  mCharacterData.CompressWhitespace(charNum==0, lastBranch);
+
+  return charNum+mCharacterData.Length();
 }
+
+NS_IMETHODIMP_(void)
+nsSVGGlyphFrame::NotifyMetricsSuspended()
+{
+  // do nothing
+}
+
+NS_IMETHODIMP_(void)
+nsSVGGlyphFrame::NotifyMetricsUnsuspended()
+{
+  NS_ASSERTION(!mFragmentTreeDirty, "dirty fragmenttree in nsSVGGlyphFrame::NotifyMetricsUnsuspended");
+
+  if (mMetricsUpdateFlags != 0) {
+    PRBool metricsDirty = PR_FALSE;
+    if (mMetrics)
+      mMetrics->Update(mMetricsUpdateFlags, &metricsDirty);
+    if (metricsDirty) {
+      mGeometryUpdateFlags |= nsISVGGlyphGeometrySource::UPDATEMASK_METRICS;
+      nsISVGTextFrame* text_frame = GetTextFrame();
+      NS_ASSERTION(text_frame, "null text frame");
+      if (text_frame)
+        text_frame->NotifyGlyphMetricsChange(this);
+    }
+    mMetricsUpdateFlags = 0;
+  }   
+}
+
+NS_IMETHODIMP_(void)
+nsSVGGlyphFrame::NotifyGlyphFragmentTreeSuspended()
+{
+  // do nothing
+}
+
+NS_IMETHODIMP_(void)
+nsSVGGlyphFrame::NotifyGlyphFragmentTreeUnsuspended()
+{
+  if (mFragmentTreeDirty) {
+    nsISVGTextFrame* text_frame = GetTextFrame();
+    NS_ASSERTION(text_frame, "null text frame");
+    if (text_frame)
+      text_frame->NotifyGlyphFragmentTreeChange(this);
+    mFragmentTreeDirty = PR_FALSE;
+  }
+}
+
+
 
 //----------------------------------------------------------------------
 //
 
-void nsSVGGlyphFrame::SelectFont(gfxContext *aContext)
+void nsSVGGlyphFrame::UpdateGeometry(PRUint32 flags, PRBool bRedraw)
 {
-  cairo_t *ctx = aContext->GetCairo();
-
-  const nsStyleFont* fontData = GetStyleFont();
-  nsFont font = fontData->mFont;
-
-  // XXX eventually we will have to treat decorations separately from
-  // fonts, because they can have a different color than the current
-  // glyph.
+  mGeometryUpdateFlags |= flags;
   
-  NS_ASSERTION(mParent, "no parent");
-  nsStyleContext *parentContext = mParent->GetStyleContext();
-  NS_ASSERTION(parentContext, "no style context on parent");
-  
-  PRUint8 styleDecorations =
-    parentContext->GetStyleTextReset()->mTextDecoration;
-  if (styleDecorations & NS_STYLE_TEXT_DECORATION_UNDERLINE)
-    font.decorations |= NS_FONT_DECORATION_UNDERLINE;
-  if (styleDecorations & NS_STYLE_TEXT_DECORATION_OVERLINE)
-    font.decorations |= NS_FONT_DECORATION_OVERLINE;
-  if (styleDecorations & NS_STYLE_TEXT_DECORATION_LINE_THROUGH)
-    font.decorations |= NS_FONT_DECORATION_LINE_THROUGH;    
-  
-  cairo_font_slant_t slant;
-  cairo_font_weight_t weight = CAIRO_FONT_WEIGHT_NORMAL;
-
-  switch (font.style) {
-  case NS_FONT_STYLE_NORMAL:
-    slant = CAIRO_FONT_SLANT_NORMAL;
-    break;
-  case NS_FONT_STYLE_ITALIC:
-    slant = CAIRO_FONT_SLANT_ITALIC;
-    break;
-  case NS_FONT_STYLE_OBLIQUE:
-    slant = CAIRO_FONT_SLANT_OBLIQUE;
-    break;
-  }
-
-  if (font.weight % 100 == 0) {
-    if (font.weight >= 600)
-      weight = CAIRO_FONT_WEIGHT_BOLD;
-  } else if (font.weight % 100 < 50) {
-    weight = CAIRO_FONT_WEIGHT_BOLD;
-  }
-
-  nsAutoString family;
-  font.GetFirstFamily(family);
-  cairo_select_font_face(ctx,
-                         NS_ConvertUTF16toUTF8(family).get(),
-                         slant,
-                         weight);
-
-  // Since SVG has its own scaling, we really don't want
-  // fonts in SVG to respond to the browser's "TextZoom"
-  // (Ctrl++,Ctrl+-)
-  nsPresContext *presContext = GetPresContext();
-  float textZoom = presContext->TextZoom();
-
-  cairo_set_font_size(ctx, presContext->AppUnitsToDevPixels(fontData->mSize) / textZoom);
-}
-
-void nsSVGGlyphFrame::UpdateGeometry(PRBool bRedraw,
-                                     PRBool suppressInvalidation)
-{
-  if (GetStateBits() & NS_STATE_SVG_NONDISPLAY_CHILD)
-    return;
-
-  nsSVGOuterSVGFrame *outerSVGFrame = nsSVGUtils::GetOuterSVGFrame(this);
+  nsISVGOuterSVGFrame *outerSVGFrame = GetOuterSVGFrame();
   if (!outerSVGFrame) {
     NS_ERROR("null outerSVGFrame");
     return;
@@ -1321,138 +1407,96 @@ void nsSVGGlyphFrame::UpdateGeometry(PRBool bRedraw,
   
   PRBool suspended;
   outerSVGFrame->IsRedrawSuspended(&suspended);
-  if (suspended) {
-    AddStateBits(NS_STATE_SVG_DIRTY);
-  } else {
-    RemoveStateBits(NS_STATE_SVG_DIRTY);
+  if (!suspended) {
+    NS_ASSERTION(!mMetricsUpdateFlags, "dirty metrics in nsSVGGlyphFrame::UpdateGeometry");
+    NS_ASSERTION(!mFragmentTreeDirty, "dirty fragmenttree in nsSVGGlyphFrame::UpdateGeometry");
+    nsCOMPtr<nsISVGRendererRegion> dirty_region;
+    if (mGeometry)
+      mGeometry->Update(mGeometryUpdateFlags, getter_AddRefs(dirty_region));
+    if (dirty_region) {
+      // if we're being used as a clippath, this will get called
+      // during the paint - don't need to invalidate (which causes
+      // us to loop busy-painting)
 
-    if (suppressInvalidation)
-      return;
+      nsIView *view = GetClosestView();
+      if (!view) return;
+      nsIViewManager *vm = view->GetViewManager();
+      PRBool painting;
+      vm->IsPainting(painting);
 
-    outerSVGFrame->InvalidateRect(mRect);
-    UpdateCoveredRegion();
-
-    nsRect filterRect;
-    filterRect = nsSVGUtils::FindFilterInvalidation(this);
-    if (!filterRect.IsEmpty()) {
-      outerSVGFrame->InvalidateRect(filterRect);
-    } else {
-      outerSVGFrame->InvalidateRect(mRect);
+      if (!painting)
+        outerSVGFrame->InvalidateRegion(dirty_region, bRedraw);
     }
+    mGeometryUpdateFlags = 0;
   }  
 }
 
-nsSVGTextFrame *
+void nsSVGGlyphFrame::UpdateMetrics(PRUint32 flags)
+{
+  mMetricsUpdateFlags |= flags;
+
+  nsISVGTextFrame* text_frame = GetTextFrame();
+  if (!text_frame) {
+    NS_ERROR("null text_frame");
+    return;
+  }
+  
+  PRBool suspended = text_frame->IsMetricsSuspended();
+  if (!suspended) {
+    NS_ASSERTION(!mFragmentTreeDirty, "dirty fragmenttree in nsSVGGlyphFrame::UpdateMetrics");
+    PRBool metricsDirty;
+    mMetrics->Update(mMetricsUpdateFlags, &metricsDirty);
+    if (metricsDirty) {
+      mGeometryUpdateFlags |= nsISVGGlyphGeometrySource::UPDATEMASK_METRICS;
+      text_frame->NotifyGlyphMetricsChange(this);
+    }
+    mMetricsUpdateFlags = 0;
+  }
+}
+
+void nsSVGGlyphFrame::UpdateFragmentTree()
+{
+  mFragmentTreeDirty = PR_TRUE;
+    
+  nsISVGTextFrame* text_frame = GetTextFrame();
+  if (!text_frame) {
+    NS_ERROR("null text_frame");
+    return;
+  }
+  
+  PRBool suspended = text_frame->IsGlyphFragmentTreeSuspended();
+  if (!suspended) {
+    text_frame->NotifyGlyphFragmentTreeChange(this);
+    mFragmentTreeDirty = PR_FALSE;
+  }
+}
+
+nsISVGOuterSVGFrame *
+nsSVGGlyphFrame::GetOuterSVGFrame()
+{
+  NS_ASSERTION(mParent, "null parent");
+  
+  nsISVGContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), (void**)&containerFrame);
+  if (!containerFrame) {
+    NS_ERROR("invalid container");
+    return nsnull;
+  }
+
+  return containerFrame->GetOuterSVGFrame();  
+}
+
+nsISVGTextFrame *
 nsSVGGlyphFrame::GetTextFrame()
 {
   NS_ASSERTION(mParent, "null parent");
 
-  nsSVGTextContainerFrame *containerFrame;
-  containerFrame = NS_STATIC_CAST (nsSVGTextContainerFrame *, mParent);
+  nsISVGTextContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGTextContainerFrame), (void**)&containerFrame);
   if (!containerFrame) {
     NS_ERROR("invalid container");
     return nsnull;
   }
 
   return containerFrame->GetTextFrame();
-}
-
-PRBool
-nsSVGGlyphFrame::ContainsPoint(float x, float y)
-{
-  nsAutoString text;
-  if (!GetCharacterData(text)) {
-    return PR_FALSE;
-  }
-
-  nsAutoArrayPtr<nsSVGCharacterPosition> cp;
-
-  nsSVGAutoGlyphHelperContext ctx(this, text, getter_Transfers(cp));
-
-  nsresult rv = GetGlobalTransform(ctx);
-  NS_ENSURE_SUCCESS(rv, PR_FALSE);
-
-  float xx = 0, yy = 0;
-  if (!cp) {
-    xx = mX;
-    yy = mY;
-  }
-
-  cairo_matrix_t matrix;
-
-  for (PRUint32 i = 0; i < text.Length(); i++) {
-    /* character actually on the path? */
-    if (cp && cp[i].draw == PR_FALSE)
-      continue;
-
-    cairo_get_matrix(ctx, &matrix);
-
-    if (cp) {
-      cairo_move_to(ctx, cp[i].x, cp[i].y);
-      cairo_rotate(ctx, cp[i].angle);
-    } else {
-      cairo_move_to(ctx, xx, yy);
-    }
-
-    cairo_text_extents_t extent;
-    cairo_text_extents(ctx,
-                       NS_ConvertUTF16toUTF8(Substring(text, i, 1)).get(),
-                       &extent);
-    cairo_rel_move_to(ctx, extent.x_bearing, extent.y_bearing);
-    cairo_rel_line_to(ctx, extent.width, 0);
-    cairo_rel_line_to(ctx, 0, extent.height);
-    cairo_rel_line_to(ctx, -extent.width, 0);
-    cairo_close_path(ctx);
-
-    cairo_set_matrix(ctx, &matrix);
-
-    if (!cp) {
-      xx += extent.x_advance;
-      yy += extent.y_advance;
-    }
-  }
-
-  cairo_identity_matrix(ctx);
-  return cairo_in_fill(ctx, x, y);
-}
-
-nsresult
-nsSVGGlyphFrame::GetGlobalTransform(gfxContext *aContext)
-{
-  nsCOMPtr<nsIDOMSVGMatrix> ctm;
-  GetCanvasTM(getter_AddRefs(ctm));
-  NS_ASSERTION(ctm, "graphic source didn't specify a ctm");
-
-  cairo_matrix_t matrix = nsSVGUtils::ConvertSVGMatrixToCairo(ctm);
-
-  if (nsSVGUtils::IsSingular(&matrix)) {
-    aContext->IdentityMatrix();
-    return NS_ERROR_FAILURE;
-  }
-
-  aContext->Multiply(gfxMatrix(*reinterpret_cast<gfxMatrix*>(&matrix)));
-
-  return NS_OK;
-}
-
-//----------------------------------------------------------------------
-// helper class
-
-nsSVGGlyphFrame::nsSVGAutoGlyphHelperContext::nsSVGAutoGlyphHelperContext(
-    nsSVGGlyphFrame *aSource,
-    const nsAString &aText,
-    nsSVGCharacterPosition **cp)
-{
-  Init(aSource);
-
-  nsresult rv = aSource->GetCharacterPosition(mCT, aText, cp);
-  if NS_FAILED(rv) {
-    NS_WARNING("failed to get character position data");
-  }
-}
-
-void nsSVGGlyphFrame::nsSVGAutoGlyphHelperContext::Init(nsSVGGlyphFrame *aSource)
-{
-  mCT = new gfxContext(nsSVGUtils::GetThebesComputationalSurface());
-  aSource->SelectFont(mCT);
 }

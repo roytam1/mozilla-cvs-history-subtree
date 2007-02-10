@@ -43,8 +43,6 @@ var dirTree = 0;
 var abList = 0;
 var gAbResultsTree = null;
 var gAbView = null;
-var gAddressBookBundle;
-var gCurDirectory;
 
 var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
 var gPrefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
@@ -75,7 +73,6 @@ var ResultsPaneController =
       case "button_edit":
       case "cmd_printcard":
       case "cmd_printcardpreview":
-      case "cmd_newlist":
         return true;
       default:
         return false;
@@ -112,15 +109,6 @@ var ResultsPaneController =
       case "cmd_printcardpreview":
       case "button_edit":
         return (GetSelectedCardIndex() != -1);
-      case "cmd_newlist":
-        var selectedDir = GetSelectedDirectory();
-        if (selectedDir) {
-          var abDir = GetDirectoryFromURI(selectedDir);
-          if (abDir) {
-            return abDir.supportsMailingLists;
-          }
-        }
-        return false;
       default:
         return false;
     }
@@ -146,9 +134,6 @@ var ResultsPaneController =
       case "cmd_printcardpreview":
         AbPrintPreviewCard();
         break;
-      case "cmd_newlist":
-        AbNewList();
-        break;
     }
   },
 
@@ -173,7 +158,6 @@ var DirPaneController =
       case "button_edit":
       case "cmd_printcard":
       case "cmd_printcardpreview":
-      case "cmd_newlist":
         return true;
       default:
         return false;
@@ -209,14 +193,14 @@ var DirPaneController =
           var ldapUrlPrefix = "moz-abldapdirectory://";
           if ((selectedDir.indexOf(ldapUrlPrefix, 0)) == 0)
           {
+            var prefName = selectedDir.substr(ldapUrlPrefix.length, selectedDir.length);
             var disable = false;
             try {
-              var prefName = selectedDir.substr(ldapUrlPrefix.length);
-              disable = gPrefs.getBoolPref(prefName + ".disable_delete");
-            }
-            catch(ex) {
-              // if this preference is not set its ok.
-            }
+	            disable = gPrefs.getBoolPref(prefName + ".disable_delete");
+	        }
+	        catch(ex){
+	          // if this preference is not set its ok.
+	        }
             if (disable)
               return false;
           }
@@ -229,15 +213,6 @@ var DirPaneController =
         return (GetSelectedCardIndex() != -1);
       case "button_edit":
         return (GetSelectedDirectory() != null);
-      case "cmd_newlist":
-        selectedDir = GetSelectedDirectory();
-        if (selectedDir) {
-          var abDir = GetDirectoryFromURI(selectedDir);
-          if (abDir) {
-            return abDir.supportsMailingLists;
-          }
-        }
-        return false;
       default:
         return false;
     }
@@ -258,10 +233,7 @@ var DirPaneController =
         break;
       case "button_edit":
         AbEditSelectedDirectory();
-        break;
-      case "cmd_newlist":
-        AbNewList();
-        break;
+        break;       
     }
   },
 
@@ -292,11 +264,12 @@ function AbEditSelectedDirectory()
       goEditListDialog(dirUri, null, selecteduri, UpdateCardView);
     }
     else {
-        if (directory instanceof Components.interfaces.nsIAbLDAPDirectory) {
+      var properties = directory.directoryProperties;
+      if (properties.dirType == kLDAPDirectory) {
         var ldapUrlPrefix = "moz-abldapdirectory://";
         var args = { selectedDirectory: directory.dirName,
                      selectedDirectoryString: null};
-        args.selectedDirectoryString = selecteduri.substr(ldapUrlPrefix.length);
+        args.selectedDirectoryString = selecteduri.substr(ldapUrlPrefix.length, selecteduri.length);
         window.openDialog("chrome://messenger/content/addressbook/pref-directory-add.xul",
                       "editDirectory", "chrome,modal=yes,resizable=no,centerscreen", args);
       }
@@ -326,7 +299,6 @@ function InitCommonJS()
   dirTree = document.getElementById("dirTree");
   abList = document.getElementById("addressbookList");
   gAbResultsTree = document.getElementById("abResultsTree");
-  gAddressBookBundle = document.getElementById("bundle_addressBook");
 }
 
 function SetupAbCommandUpdateHandlers()
@@ -347,7 +319,7 @@ function GetSelectedCardTypes()
     return kNothingSelected; // no view
 
   var count = cards.length;
-  if (count == 0)
+  if (!count)
     return kNothingSelected;  // nothing selected
 
   var mailingListCnt = 0;
@@ -368,9 +340,6 @@ function GetSelectedCardTypes()
   }
   else if (!mailingListCnt && cardCnt)
     return kCardsOnly;           // only card(s) selected
-
-  // Fallback just in case.
-  return kNothingSelected;
 }
 
 function AbDelete()
@@ -397,7 +366,7 @@ function AbDelete()
   gAbView.deleteSelectedCards();
 }
 
-function AbNewCard()
+function AbNewCard(abListItem)
 {
   goNewCardDialog(GetSelectedDirectory());
 }
@@ -424,7 +393,10 @@ function GetSelectedCardIndex()
 function GetSelectedCard()
 {
   var index = GetSelectedCardIndex();
-  return (index == -1) ? null : gAbView.getCardFromRow(index);
+  if (index == -1)
+    return null;
+  else 
+    return gAbView.getCardFromRow(index);
 }
 
 function AbEditSelectedCard()
@@ -434,9 +406,11 @@ function AbEditSelectedCard()
 
 function AbEditCard(card)
 {
-  // Need a card,
-  // but not allowing AOL special groups to be edited.
   if (!card)
+    return;
+
+  // Not allowing AOL special groups to be edited.
+  if (card.isASpecialGroup)
     return;
 
   if (card.isMailList) {
@@ -489,6 +463,7 @@ function goToggleSplitter( id, elementID )
   if ( splitter )
   {
     var attribValue = splitter.getAttribute("state") ;
+
     if ( attribValue == "collapsed" )
     {
       splitter.setAttribute("state", "open" );
@@ -516,13 +491,16 @@ function GetSelectedAddressesFromDirTree()
 
   if (dirTree.currentIndex >= 0) {
     var selectedResource = dirTree.builderView.getResourceAtIndex(dirTree.currentIndex);
-    var directory = GetDirectoryFromURI(selectedResource.Value);
+    var mailingListUri = selectedResource.Value;
+    var directory = GetDirectoryFromURI(mailingListUri);
     if (directory.isMailList) {
       var listCardsCount = directory.addressLists.Count();
       var cards = new Array(listCardsCount);
-      for (var i = 0; i < listCardsCount; ++i)
-        cards[i] = directory.addressLists.QueryElementAt(
-                     i, Components.interfaces.nsIAbCard);
+      for ( var i = 0;  i < listCardsCount; i++ ) {
+        var card = directory.addressLists.GetElementAt(i);
+        card = card.QueryInterface(Components.interfaces.nsIAbCard);
+        cards[i] = card;
+      }
       addresses = GetAddressesForCards(cards);
     }
   }
@@ -531,7 +509,8 @@ function GetSelectedAddressesFromDirTree()
 
 function GetSelectedAddresses()
 {
-  return GetAddressesForCards(GetSelectedAbCards());
+  var selectedCards = GetSelectedAbCards();
+  return GetAddressesForCards(selectedCards);
 }
 
 // Generate a comma separated list of addresses from a given
@@ -559,7 +538,8 @@ function GetAddressesForCards(cards)
 function GetNumSelectedCards()
 {
  try {
-   return gAbView.selection.count;
+   var treeSelection = gAbView.selection;
+   return treeSelection.count;
  }
  catch (ex) {
  }
@@ -625,8 +605,10 @@ function GetSelectedAbCards()
     var start = new Object;
     var end = new Object;
     abView.selection.getRangeAt(i,start,end);
-    for (j = start.value; j <= end.value; ++j)
-      cards[current++] = abView.getCardFromRow(j);
+    for (j=start.value;j<=end.value;j++) {
+      cards[current] = abView.getCardFromRow(j);
+      current++;
+    }
   }
   return cards;
 }
@@ -635,9 +617,9 @@ function SelectFirstAddressBook()
 {
   dirTree.view.selection.select(0);
 
-  ChangeDirectoryByURI(GetSelectedDirectory());
-  gAbResultsTree.focus();
-}
+    ChangeDirectoryByURI(GetSelectedDirectory());
+    gAbResultsTree.focus();
+  }
 
 function SelectFirstCard()
 {
@@ -683,7 +665,6 @@ function DirPaneSelectionChange()
     gPreviousDirTreeIndex = dirTree.currentIndex;
     ChangeDirectoryByURI(GetSelectedDirectory());
   }
-  goUpdateCommand('cmd_newlist');
 }
 
 function GetAbResultsBoxObject()
@@ -711,10 +692,10 @@ function SetAbView(uri, searchView, sortColumn, sortDirection)
   
   // make sure sortColumn and sortDirection have non null values before calling gAbView.init
   if (!sortColumn)
-    sortColumn = kDefaultSortColumn;
+		sortColumn = kDefaultSortColumn;
 
-  if (!sortDirection)
-    sortDirection = kDefaultAscending;
+	if (!sortDirection)
+		sortDirection = kDefaultAscending;
 
   if (gAbView && gCurDirectory == GetSelectedDirectory())
   {
@@ -723,12 +704,12 @@ function SetAbView(uri, searchView, sortColumn, sortDirection)
   }
   else
   {
-    CloseAbView();
+	  CloseAbView();
 
-    gCurDirectory = GetSelectedDirectory();
-    gAbView = Components.classes["@mozilla.org/addressbook/abview;1"].createInstance(Components.interfaces.nsIAbView);
+		gCurDirectory = GetSelectedDirectory();
+	  gAbView = Components.classes["@mozilla.org/addressbook/abview;1"].createInstance(Components.interfaces.nsIAbView);
 
-    actualSortColumn = gAbView.init(uri, searchView, GetAbViewListener(), sortColumn, sortDirection);
+		actualSortColumn = gAbView.init(uri, searchView, GetAbViewListener(), sortColumn, sortDirection);
   }
 
   var boxObject = GetAbResultsBoxObject();
@@ -744,12 +725,22 @@ function GetAbView()
   return gAbView;
 }
 
+// this will return the complete search uri if a quick search is currently being 
+// done. to get the uri of the directory only, use GetSelectedDirectory().
+function GetAbViewURI()
+{
+  if (gAbView)
+    return gAbView.URI;
+  else 
+    return null;
+}
+
 function ChangeDirectoryByURI(uri)
 {
   if (!uri)
     uri = kPersonalAddressbookURI;
 
-  if (gAbView && gAbView.URI == uri)
+  if (gAbView && GetAbViewURI() == uri)
     return;
   
   var sortColumn = gAbResultsTree.getAttribute("sortCol");
@@ -833,7 +824,7 @@ function InvalidateResultsPane()
     gAbResultsTree.treeBoxObject.invalidate();
 }
 
-function AbNewList()
+function AbNewList(abListItem)
 {
   goNewListDialog(GetSelectedDirectory());
 }
@@ -911,7 +902,10 @@ function GenerateAddressFromCard(card)
   if (card.isMailList) 
   {
     var directory = GetDirectoryFromURI(card.mailListURI);
-    email = directory.description || card.displayName;
+    if(directory.description)
+      email = directory.description;
+    else
+      email = card.displayName;
   }
   else 
     email = card.primaryEmail;
@@ -921,7 +915,8 @@ function GenerateAddressFromCard(card)
 
 function GetDirectoryFromURI(uri)
 {
-  return rdf.GetResource(uri).QueryInterface(Components.interfaces.nsIAbDirectory);
+  var directory = rdf.GetResource(uri).QueryInterface(Components.interfaces.nsIAbDirectory);
+  return directory;
 }
 
 // returns null if abURI is not a mailing list URI

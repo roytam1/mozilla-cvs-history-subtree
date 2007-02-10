@@ -82,7 +82,6 @@ public:
   NS_IMETHOD SelectOffScreenDrawingSurface(nsIDrawingSurface* aSurface);
   NS_IMETHOD GetDrawingSurface(nsIDrawingSurface* *aSurface);
   NS_IMETHOD GetHints(PRUint32& aResult);
-  virtual void* GetNativeGraphicData(GraphicDataType aType);
 
 #if 0
   NS_IMETHOD PushState(PRInt32 aFlags);
@@ -164,7 +163,7 @@ public:
   NS_IMETHOD GetWidth(char aC, nscoord &aWidth);
   NS_IMETHOD GetWidth(PRUnichar aC, nscoord &aWidth,
                       PRInt32 *aFontID);
-  
+
   NS_IMETHOD GetWidthInternal(const char *aString, PRUint32 aLength, nscoord &aWidth);
   NS_IMETHOD GetWidthInternal(const PRUnichar *aString, PRUint32 aLength, nscoord &aWidth,
                               PRInt32 *aFontID);
@@ -207,7 +206,7 @@ public:
   NS_IMETHOD GetBoundingMetricsInternal(const char*        aString,
                                         PRUint32           aLength,
                                         nsBoundingMetrics& aBoundingMetrics);
-  
+
   /**
    * Returns metrics (in app units) of a Unicode character string
    */
@@ -222,6 +221,7 @@ public:
 
   NS_IMETHOD CopyOffScreenBits(nsIDrawingSurface* aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
                                const nsRect &aDestBounds, PRUint32 aCopyFlags);
+  NS_IMETHOD RetrieveCurrentNativeGraphicData(void** ngd);
 
   NS_IMETHOD SetRightToLeftText(PRBool aIsRTL);
   NS_IMETHOD GetRightToLeftText(PRBool* aIsRTL);

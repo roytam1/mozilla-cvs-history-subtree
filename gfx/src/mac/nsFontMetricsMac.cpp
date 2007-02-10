@@ -237,7 +237,7 @@ void nsFontMetricsMac::RealizeFont()
 			theLangGroupString.AssignLiteral("ja");
 
 		theScriptCode = unicodeMappingUtil->MapLangGroupToScriptCode(
-		    NS_ConvertUTF16toUTF8(theLangGroupString).get());
+		    NS_ConvertUCS2toUTF8(theLangGroupString).get());
 
 	}
 	else

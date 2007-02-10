@@ -65,8 +65,8 @@ REQUIRES	= js \
 		  windowwatcher \
 		  webbrwsr \
 		  gfx \
-		  widget \
 		  webbrowserpersist \
+		  jsconsole \
 		  find \
 		  htmlparser \
 		  embed_base \
@@ -88,26 +88,30 @@ endif
 CPPSRCS		= nsEmbeddingModule.cpp
 
 SHARED_LIBRARY_LIBS = \
-	../windowwatcher/src/$(LIB_PREFIX)windowwatcher_s.$(LIB_SUFFIX) \
-	../appstartup/src/$(LIB_PREFIX)appstartupnotifier_s.$(LIB_SUFFIX) \
-	../find/src/$(LIB_PREFIX)find_s.$(LIB_SUFFIX) \
-	../webbrowserpersist/src/$(LIB_PREFIX)webbrowserpersist_s.$(LIB_SUFFIX) \
-	../commandhandler/src/$(LIB_PREFIX)commandhandler_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)windowwatcher_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)appstartupnotifier_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)find_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)webbrowserpersist_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)commandhandler_s.$(LIB_SUFFIX) \
 	$(NULL)
 
 ifdef MOZ_XUL
-ifdef NS_PRINTING
+SHARED_LIBRARY_LIBS += \
+	$(DIST)/lib/$(LIB_PREFIX)jsconsole_s.$(LIB_SUFFIX) \
+	$(NULL)
+
 ifndef WINCE
 SHARED_LIBRARY_LIBS += \
-	../printingui/src/$(LIB_PREFIX)printingui_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)printingui_s.$(LIB_SUFFIX) \
 	$(NULL)
 endif
-endif
+
 endif
 
 LOCAL_INCLUDES	= \
 	-I$(srcdir)/../windowwatcher/src  \
 	-I$(srcdir)/../appstartup/src  \
+	-I$(srcdir)/../jsconsole/src  \
 	-I$(srcdir)/../find/src  \
 	-I$(srcdir)/../webbrowserpersist/src  \
 	-I$(srcdir)/../commandhandler/src \
@@ -118,7 +122,7 @@ SHARED_LIBRARY_LIBS += $(DIST)/lib/$(LIB_PREFIX)profilesharingsetup_s.$(LIB_SUFF
 LOCAL_INCLUDES += -I$(srcdir)/../profilesharingsetup/src
 endif
 
-ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
+ifeq ($(MOZ_GFX_TOOLKIT),os2)
 LOCAL_INCLUDES += -I$(srcdir)/../printingui/src/os2 
 endif
 
@@ -126,7 +130,7 @@ ifneq (,$(filter gtk gtk2 xlib beos photon qt, $(MOZ_WIDGET_TOOLKIT)))
 LOCAL_INCLUDES += -I$(srcdir)/../printingui/src/unixshared 
 endif
 
-ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
+ifeq ($(MOZ_GFX_TOOLKIT),windows)
 LOCAL_INCLUDES += -I$(srcdir)/../printingui/src/win 
 ifneq ($(OS_ARCH), WINCE)
 OS_LIBS	+= $(call EXPAND_LIBNAME,winspool comdlg32)

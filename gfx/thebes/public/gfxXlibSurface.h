@@ -20,7 +20,6 @@
  *
  * Contributor(s):
  *   Stuart Parmenter <pavlov@pavlov.net>
- *   Vladimir Vukicevic <vladimir@pobox.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -41,10 +40,11 @@
 
 #include "gfxASurface.h"
 
-#include <X11/extensions/Xrender.h>
-#include <X11/Xlib.h>
+#include <cairo-xlib.h>
 
-class THEBES_API gfxXlibSurface : public gfxASurface {
+class gfxXlibSurface : public gfxASurface {
+    THEBES_DECL_ISUPPORTS_INHERITED
+
 public:
     // create a surface for the specified dpy/drawable/visual.
     // Will use XGetGeometry to query the window/pixmap size.
@@ -52,49 +52,29 @@ public:
 
     // create a surface for the specified dpy/drawable/visual,
     // with explicitly provided width/height.
-    gfxXlibSurface(Display *dpy, Drawable drawable, Visual *visual, const gfxIntSize& size);
+    gfxXlibSurface(Display *dpy, Drawable drawable, Visual *visual, unsigned long width, unsigned long height);
 
     // create a new Pixmap on the display dpy, with
     // the root window as the parent and the default depth
     // for the default screen, and attach the given visual
-    gfxXlibSurface(Display *dpy, Visual *visual, const gfxIntSize& size);
-
-    gfxXlibSurface(Display* dpy, Drawable drawable, XRenderPictFormat *format,
-                   const gfxIntSize& size);
-
-    gfxXlibSurface(Display* dpy, XRenderPictFormat *format,
-                   const gfxIntSize& size);
-
-    gfxXlibSurface(cairo_surface_t *csurf);
+    gfxXlibSurface(Display *dpy, Visual *visual, unsigned long width, unsigned long height);
 
     virtual ~gfxXlibSurface();
 
-    const gfxIntSize& GetSize() {
-        if (mSize.width == -1 || mSize.height == -1)
-            DoSizeQuery();
-
-        return mSize;
-    }
+    unsigned long Width() { return mWidth; }
+    unsigned long Height() { return mHeight; }
 
     Display* XDisplay() { return mDisplay; }
     Drawable XDrawable() { return mDrawable; }
 
-    static XRenderPictFormat *FindRenderFormat(Display *dpy, gfxImageFormat format);
-
-    // take ownership of a passed-in Pixmap, calling XFreePixmap on it
-    // when the gfxXlibSurface is destroyed.
-    void TakePixmap();
-
 protected:
-    // if TakePixmap() was already called on this
-    PRBool mPixmapTaken;
-    
+    PRBool mOwnsPixmap;
+
     Display *mDisplay;
     Drawable mDrawable;
 
-    void DoSizeQuery();
-
-    gfxIntSize mSize;
+    unsigned long mWidth;
+    unsigned long mHeight;
 };
 
 #endif /* GFX_XLIBSURFACE_H */

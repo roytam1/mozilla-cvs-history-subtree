@@ -48,6 +48,8 @@
 0x93276f00, 0xab2c, 0x11d2, \
 {0x8f, 0xb4, 0x0, 0x60, 0x8, 0x15, 0x9b, 0xc} }
 
+class nsIPresShell;
+
 /**
   * A transaction that inserts text into a content node. 
   */
@@ -57,6 +59,13 @@ public:
 
   static const nsIID& GetCID() { static const nsIID iid = INSERT_TEXT_TXN_CID; return iid; }
 
+  virtual ~InsertTextTxn();
+
+  /** used to name aggregate transactions that consist only of a single InsertTextTxn,
+    * or a DeleteSelection followed by an InsertTextTxn.
+    */
+  static nsIAtom *gInsertTextTxnName;
+	
   /** initialize the transaction
     * @param aElement the text content node
     * @param aOffset  the location in aElement to do the insertion
@@ -74,9 +83,13 @@ private:
 
 public:
 	
-  NS_DECL_EDITTXN
+  NS_IMETHOD DoTransaction(void);
+
+  NS_IMETHOD UndoTransaction(void);
 
   NS_IMETHOD Merge(nsITransaction *aTransaction, PRBool *aDidMerge);
+
+  NS_IMETHOD GetTxnDescription(nsAString& aTxnDescription);
 
 // nsISupports declarations
 
@@ -85,6 +98,12 @@ public:
 
   /** return the string data associated with this transaction */
   NS_IMETHOD GetData(nsString& aResult);
+
+  /** must be called before any InsertTextTxn is instantiated */
+  static nsresult ClassInit();
+
+  /** must be called once we are guaranteed all InsertTextTxn have completed */
+  static nsresult ClassShutdown();
 
 protected:
 

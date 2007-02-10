@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* rendering object for list-item bullets */
-
 #ifndef nsBulletFrame_h___
 #define nsBulletFrame_h___
 
@@ -53,16 +50,18 @@ class gfxIImageFrame;
  */
 class nsBulletFrame : public nsFrame {
 public:
-  nsBulletFrame(nsStyleContext* aContext) : nsFrame(aContext) {}
+  nsBulletFrame();
   virtual ~nsBulletFrame();
 
   // nsIFrame
-  virtual void Destroy();
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
+  NS_IMETHOD Paint(nsPresContext*      aCX,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
   virtual nsIAtom* GetType() const;
-  NS_IMETHOD DidSetStyleContext();
+  NS_IMETHOD DidSetStyleContext(nsPresContext* aPresContext);
 #ifdef NS_DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
 #endif
@@ -72,8 +71,6 @@ public:
                     nsHTMLReflowMetrics& aMetrics,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus& aStatus);
-  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
-  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
 
   // nsBulletFrame
   PRInt32 SetListItemOrdinal(PRInt32 aNextOrdinal, PRBool* aChanged);
@@ -98,12 +95,10 @@ public:
   /* get list item text, with '.' */
   PRBool GetListItemText(const nsStyleList& aStyleList,
                          nsString& aResult);
-                         
-  void PaintBullet(nsIRenderingContext& aRenderingContext, nsPoint aPt);
 
 protected:
   void GetDesiredSize(nsPresContext* aPresContext,
-                      nsIRenderingContext *aRenderingContext,
+                      const nsHTMLReflowState& aReflowState,
                       nsHTMLReflowMetrics& aMetrics);
 
   void GetLoadGroup(nsPresContext *aPresContext, nsILoadGroup **aLoadGroup);

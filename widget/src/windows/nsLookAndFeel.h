@@ -49,7 +49,6 @@ public:
   nsresult NativeGetColor(const nsColorID aID, nscolor &aColor);
   NS_IMETHOD GetMetric(const nsMetricID aID, PRInt32 & aMetric);
   NS_IMETHOD GetMetric(const nsMetricFloatID aID, float & aMetric);
-  virtual PRUnichar GetPasswordCharacter();
 
 #ifdef NS_DEBUG
   // This method returns the actual (or nearest estimate) 

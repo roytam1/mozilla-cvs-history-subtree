@@ -55,15 +55,9 @@
       currentDay - return day of current date.
   -->
   <binding id="calendar-base">
-    <implementation implements="nsIAccessibleProvider">
-    <!-- nsIAccessibleProvider -->
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XFormsCalendarWidget;
-        </getter>
-      </property>
-
+    <implementation>
     <!-- interface -->
+
       <!-- Set/get readonly state -->
       <property name="readonly">
         <getter>
@@ -385,7 +379,7 @@
           }
 
           dayElm = this._dayElements[aIndex];
-          dayElm.setAttribute("tabindex", "1");
+          dayElm.setAttribute("tabindex", "0");
 
           this._currentDayIndex = aIndex;
         </body>
@@ -491,14 +485,6 @@
         }
       ]]>
       </handler>
-
-      <handler event="keypress" keycode="VK_PAGE_UP">
-        this.month++;
-      </handler>
-      <handler event="keypress" keycode="VK_PAGE_DOWN">
-        this.month--;
-      </handler>
     </handlers>
   </binding>
-
 </bindings>

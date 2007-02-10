@@ -191,12 +191,6 @@ static const nsModuleComponentInfo gAppComponents[] = {
     CocoaPromptServiceConstructor
   },
   {
-    "Auth prompt factory",
-    NS_PROMPTSERVICE_CID,
-    "@mozilla.org/passwordmanager/authpromptfactory;1",
-    CocoaPromptServiceConstructor
-  },
-  {
     "Nonblocking Alert Service",
     NS_NONBLOCKINGALERTSERVICE_CID,
     "@mozilla.org/embedcomp/nbalert-service;1",

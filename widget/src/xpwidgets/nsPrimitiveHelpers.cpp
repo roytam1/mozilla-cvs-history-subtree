@@ -156,15 +156,19 @@ nsPrimitiveHelpers :: ConvertUnicodeToPlatformPlainText ( PRUnichar* inUnicode, 
   if ( !outPlainTextData || !outPlainTextLen )
     return NS_ERROR_INVALID_ARG;
 
-  // get the charset
+  // Get the appropriate unicode encoder. We're guaranteed that this won't change
+  // through the life of the app so we can cache it.
   nsresult rv;
-  nsCOMPtr <nsIPlatformCharset> platformCharsetService = do_GetService(NS_PLATFORMCHARSET_CONTRACTID, &rv);
+  nsCOMPtr<nsIUnicodeEncoder> encoder;
 
+  // get the charset
   nsCAutoString platformCharset;
+  nsCOMPtr <nsIPlatformCharset> platformCharsetService = do_GetService(NS_PLATFORMCHARSET_CONTRACTID, &rv);
   if (NS_SUCCEEDED(rv))
     rv = platformCharsetService->GetCharset(kPlatformCharsetSel_PlainTextInClipboard, platformCharset);
   if (NS_FAILED(rv))
     platformCharset.AssignLiteral("ISO-8859-1");
+  
 
   // use transliterate to convert things like smart quotes to normal quotes for plain text
 
@@ -203,7 +207,7 @@ nsPrimitiveHelpers :: ConvertPlatformPlainTextToUnicode ( const char* inText, PR
 
   // Get the appropriate unicode decoder. We're guaranteed that this won't change
   // through the life of the app so we can cache it.
-  nsresult rv = NS_OK;
+  nsresult rv;
   static nsCOMPtr<nsIUnicodeDecoder> decoder;
   static PRBool hasConverter = PR_FALSE;
   if ( !hasConverter ) {

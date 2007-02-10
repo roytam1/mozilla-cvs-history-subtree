@@ -51,17 +51,13 @@ class nsHTMLImageAccessible : public nsLinkableAccessible
 {
 
 public:
-  //action0 may exist depends on whether an onclick is associated with it
-  enum { eAction_ShowLongDescription = 1 };
-
   nsHTMLImageAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell);
   NS_IMETHOD GetName(nsAString& _retval); 
   NS_IMETHOD GetState(PRUint32 *_retval); 
-  NS_IMETHOD GetRole(PRUint32 *_retval);
-  NS_IMETHOD DoAction(PRUint8 index);
+  NS_IMETHOD GetRole(PRUint32 *_retval); 
 
 protected:
-  virtual void CacheChildren();
+  virtual void CacheChildren(PRBool aWalkAnonContent);
   already_AddRefed<nsIAccessible> CreateAreaAccessible(PRInt32 areaNum);
   nsCOMPtr<nsIDOMHTMLMapElement> mMapElement;
 };

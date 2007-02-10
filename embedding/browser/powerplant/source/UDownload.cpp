@@ -142,12 +142,6 @@ NS_IMETHODIMP CDownload::GetStartTime(PRInt64 *aStartTime)
     return NS_OK;
 }
 
-/* readonly attribute double speed; */
-NS_IMETHODIMP CDownload::GetSpeed(double *aSpeed)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 /* readonly attribute nsIMIMEInfo MIMEInfo; */
 NS_IMETHODIMP CDownload::GetMIMEInfo(nsIMIMEInfo * *aMIMEInfo)
 {
@@ -223,13 +217,6 @@ NS_IMETHODIMP CDownload::OnStatusChange(nsIWebProgress *aWebProgress, nsIRequest
 /* void onSecurityChange (in nsIWebProgress aWebProgress, in nsIRequest aRequest, in unsigned long state); */
 NS_IMETHODIMP CDownload::OnSecurityChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, PRUint32 state)
 {
-    return NS_OK;
-}
-
-/* boolean onRefreshAttempted (in nsIWebProgress aWebProgress, in nsIURI aRefreshURI, in long aDelay, in boolean aSameURI); */
-NS_IMETHODIMP CDownload::OnRefreshAttempted(nsIWebProgress *aWebProgress, nsIURI *aUri, PRInt32 aDelay, PRBool aSameUri, PRBool *allowRefresh)
-{
-    *allowRefresh = PR_TRUE;
     return NS_OK;
 }
 

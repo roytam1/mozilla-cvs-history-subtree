@@ -553,8 +553,8 @@ nsWindow::DoPaint (PRInt32 aX, PRInt32 aY, PRInt32 aWidth, PRInt32 aHeight,
   if (mEventCallback) {
     nsPaintEvent event(PR_TRUE, NS_PAINT, this);
     nsRect rect(aX, aY, aWidth, aHeight);
-    event.refPoint.x = aX;
-    event.refPoint.y = aY; 
+    event.point.x = aX;
+    event.point.y = aY; 
     event.time = PR_Now(); /* No time in EXPOSE events */
     event.rect = &rect;
     
@@ -790,7 +790,7 @@ NS_IMETHODIMP nsWindow::SetTitle(const nsAString& aTitle)
   }
 
   /* if the stuff above failed, replace multibyte with .... */
-  XStoreName(mDisplay, mBaseWindow, NS_LossyConvertUTF16toASCII(aTitle).get());
+  XStoreName(mDisplay, mBaseWindow, NS_LossyConvertUCS2toASCII(aTitle).get());
 
   return NS_OK;
 }

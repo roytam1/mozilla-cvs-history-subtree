@@ -58,7 +58,7 @@ class nsIDOMKeyListener : public nsIDOMEventListener {
 
 public:
 
-     NS_DECLARE_STATIC_IID_ACCESSOR(NS_IDOMKEYLISTENER_IID)
+     NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOMKEYLISTENER_IID)
     
     /**
      * Processes a key pressed event
@@ -83,7 +83,4 @@ public:
     NS_IMETHOD KeyPress(nsIDOMEvent* aKeyEvent) = 0;
 
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDOMKeyListener, NS_IDOMKEYLISTENER_IID)
-
 #endif // nsIDOMKeyListener_h__

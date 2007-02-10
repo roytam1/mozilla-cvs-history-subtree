@@ -56,9 +56,10 @@
 #include "nsISupportsPrimitives.h"
 #include "nsISupportsArray.h"
 #include "nsIWindowWatcher.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsIDOMChromeWindow.h"
 #include "nsIBrowserDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDocShell.h"
 #include "nsIBaseWindow.h"
 #include "nsIWidget.h"
@@ -117,8 +118,6 @@ struct JSContext;
 #ifndef SM_REMOTESESSION
 #define SM_REMOTESESSION 0x1000
 #endif
-
-#define REG_SUCCEEDED(val) (val == ERROR_SUCCESS)
 
 static HWND hwndForDOMWindow( nsISupports * );
 
@@ -913,10 +912,10 @@ struct MessageWindow {
     // SendRequest: Pass string via WM_COPYDATA to message window.
     NS_IMETHOD SendRequest( const char *cmd ) {
         COPYDATASTRUCT cds = { 0, ::strlen( cmd ) + 1, (void*)cmd };
-        // Bring the already running Mozilla process to the foreground.
-        // nsWindow will restore the window (if minimized) and raise it.
-        ::SetForegroundWindow( mHandle );
-        ::SendMessage( mHandle, WM_COPYDATA, 0, (LPARAM)&cds );
+        HWND newWin = (HWND)::SendMessage( mHandle, WM_COPYDATA, 0, (LPARAM)&cds );
+        if ( newWin ) {
+            ::SetForegroundWindow( newWin );
+        }
         return NS_OK;
     }
 
@@ -1549,13 +1548,13 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
                         escapeQuotes( url );
 
                         // Now for the title; first, get the "window" script global object.
-                        nsCOMPtr<nsPIDOMWindow> scrWin( do_QueryInterface( internalContent ) );
-                        if ( !scrWin ) {
+                        nsCOMPtr<nsIScriptGlobalObject> scrGlobalObj( do_QueryInterface( internalContent ) );
+                        if ( !scrGlobalObj ) {
                             break;
                         }
                         // Then from its doc shell get the base window...
                         nsCOMPtr<nsIBaseWindow> baseWindow =
-                            do_QueryInterface( scrWin->GetDocShell() );
+                            do_QueryInterface( scrGlobalObj->GetDocShell() );
                         if ( !baseWindow ) {
                             break;
                         }
@@ -2122,45 +2121,30 @@ nsNativeAppSupportWin::EnsureProfile(nsICmdLineService* args)
 #if MOZ_DEBUG_DDE
 printf( "Setting ddexec subkey entries\n" );
 #endif
-
-      DWORD dwDisp;
-      HKEY hKey;
-      DWORD rc;
-
-      rc = ::RegCreateKeyEx( HKEY_CLASSES_ROOT,
-                             "http\\shell\\open\\ddeexec", 0,
-                             NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL,
-                             &hKey, &dwDisp );
-
-      if ( REG_SUCCEEDED( rc ) ) {
-        // Set ddeexec default value.
-        const BYTE ddeexec[] = "\"%1\",,-1,0,,,,";
-        ::RegSetValueEx( hKey, "", 0, REG_SZ, ddeexec, sizeof ddeexec );
-        ::RegCloseKey( hKey );
-      }
+      // Set ddeexec default value.
+      const BYTE ddeexec[] = "\"%1\",,-1,0,,,,";
+      ::RegSetValueEx( HKEY_CLASSES_ROOT,
+                       "http\\shell\\open\\ddeexec",
+                       0,
+                       REG_SZ,
+                       ddeexec,
+                       sizeof ddeexec );
 
       // Set application/topic (while we're running), reset at exit.
-      rc = ::RegCreateKeyEx( HKEY_CLASSES_ROOT,
-                             "http\\shell\\open\\ddeexec\\application", 0,
-                             NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL,
-                             &hKey, &dwDisp );
+      ::RegSetValueEx( HKEY_CLASSES_ROOT,
+                       "http\\shell\\open\\ddeexec\\application",
+                       0,
+                       REG_SZ,
+                       (unsigned char *)mAppName,
+                       ::strlen( mAppName ) + 1 );
 
-      if ( REG_SUCCEEDED( rc ) ) {
-        ::RegSetValueEx( hKey, "", 0, REG_SZ, (const BYTE *) mAppName,
-                         ::strlen( mAppName ) + 1 );
-        ::RegCloseKey( hKey );
-      }
-
-      rc = ::RegCreateKeyEx( HKEY_CLASSES_ROOT,
-                             "http\\shell\\open\\ddeexec\\topic", 0,
-                             NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL,
-                             &hKey, &dwDisp );
-
-      if ( REG_SUCCEEDED( rc ) ) {
-        const BYTE topic[] = "WWW_OpenURL";
-        ::RegSetValueEx( hKey, "", 0, REG_SZ, topic, sizeof topic );
-        ::RegCloseKey( hKey );
-      }
+      const BYTE topic[] = "WWW_OpenURL";
+      ::RegSetValueEx( HKEY_CLASSES_ROOT,
+                       "http\\shell\\open\\ddeexec\\topic",
+                       0,
+                       REG_SZ,
+                       topic,
+                       sizeof topic );
 
       // Remember we need to undo this.
       mSupportingDDEExec = PR_TRUE;
@@ -2249,13 +2233,13 @@ static LRESULT CALLBACK focusFilterProc( HWND hwnd, UINT uMsg, WPARAM wParam, LP
 }
 
 HWND hwndForDOMWindow( nsISupports *window ) {
-    nsCOMPtr<nsPIDOMWindow> win( do_QueryInterface(window) );
-    if ( !win ) {
+    nsCOMPtr<nsIScriptGlobalObject> ppScriptGlobalObj( do_QueryInterface(window) );
+    if ( !ppScriptGlobalObj ) {
         return 0;
     }
 
     nsCOMPtr<nsIBaseWindow> ppBaseWindow =
-        do_QueryInterface( win->GetDocShell() );
+        do_QueryInterface( ppScriptGlobalObj->GetDocShell() );
     if ( !ppBaseWindow ) {
         return 0;
     }
@@ -2564,7 +2548,7 @@ nsNativeAppSupportWin::StartServerMode() {
     SetupSysTrayIcon();
 
     if (mShouldShowUI) {
-        // We don't have to anything anymore. The native UI
+        // We dont have to anything anymore. The native UI
         // will create the window
         return NS_OK;
     } else {
@@ -2579,7 +2563,7 @@ nsNativeAppSupportWin::StartServerMode() {
         }
     }
 
-    // Since native UI won't create any window, we create a hidden window
+    // Since native UI wont create any window, we create a hidden window
     // so thing work alright.
 
     // Create some of the objects we'll need.

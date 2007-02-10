@@ -55,7 +55,9 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIServiceManager.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIObserverService.h"
+#include "nsIDocumentLoader.h"
 #include "nsCURILoader.h"
 #include "nsIDocShell.h"
 #include "nsIDocumentViewer.h"
@@ -77,7 +79,6 @@
 #include "nsIFormSubmitObserver.h"
 #include "nsISecurityWarningDialogs.h"
 #include "nsIProxyObjectManager.h"
-#include "nsThreadUtils.h"
 #include "nsNetUtil.h"
 #include "nsCRT.h"
 
@@ -202,18 +203,17 @@ nsSecureBrowserUIImpl::Init(nsIDOMWindow *window)
   // nsSecureBrowserUIImpl implementation without the
   // bundle.
   service->CreateBundle(SECURITY_STRING_BUNDLE_URL, getter_AddRefs(mStringBundle));
-  
-  
+
   // hook up to the form post notifications:
   nsCOMPtr<nsIObserverService> svc(do_GetService("@mozilla.org/observer-service;1", &rv));
   if (NS_SUCCEEDED(rv)) {
     rv = svc->AddObserver(this, NS_FORMSUBMIT_SUBJECT, PR_TRUE);
   }
   
-  nsCOMPtr<nsPIDOMWindow> piwindow(do_QueryInterface(mWindow));
-  if (!piwindow) return NS_ERROR_FAILURE;
+  nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(mWindow));
+  if (!sgo) return NS_ERROR_FAILURE;
 
-  nsIDocShell *docShell = piwindow->GetDocShell();
+  nsIDocShell *docShell = sgo->GetDocShell();
 
   // The Docshell will own the SecureBrowserUI object
   if (!docShell)
@@ -360,7 +360,7 @@ nsSecureBrowserUIImpl::Notify(nsIContent* formNode,
   nsCOMPtr<nsIDocument> document = formNode->GetDocument();
   if (!document) return NS_OK;
 
-  nsIPrincipal *principal = formNode->NodePrincipal();
+  nsIPrincipal *principal = document->GetPrincipal();
   
   if (!principal)
   {
@@ -1089,12 +1089,12 @@ nsresult nsSecureBrowserUIImpl::UpdateSecurityState(nsIRequest* aRequest)
       default:
         break;
     }
-
+    
     if (showWarning)
     {
       warnSecurityState = newSecurityState;
     }
-    
+
     mPreviousSecurityState = newSecurityState;
 
     if (lis_no_security == newSecurityState)
@@ -1275,7 +1275,7 @@ nsSecureBrowserUIImpl::OnSecurityChange(nsIWebProgress *aWebProgress,
 NS_IMETHODIMP
 nsSecureBrowserUIImpl::GetSSLStatus(nsISupports** _result)
 {
-  NS_ENSURE_ARG_POINTER(_result);
+  NS_ASSERTION(_result, "non-NULL destination required");
 
   *_result = mSSLStatus;
   NS_IF_ADDREF(*_result);
@@ -1425,11 +1425,15 @@ GetNSSDialogs(nsISecurityWarningDialogs **result)
   if (NS_FAILED(rv)) 
     return rv;
 
+  nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
+  if (!proxyman)
+    return NS_ERROR_FAILURE;
+
   nsCOMPtr<nsISupports> proxiedResult;
-  NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
-                       NS_GET_IID(nsISecurityWarningDialogs),
-                       my_result, NS_PROXY_SYNC,
-                       getter_AddRefs(proxiedResult));
+  proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
+                              NS_GET_IID(nsISecurityWarningDialogs),
+                              my_result, PROXY_SYNC,
+                              getter_AddRefs(proxiedResult));
 
   if (!proxiedResult) {
     return NS_ERROR_FAILURE;

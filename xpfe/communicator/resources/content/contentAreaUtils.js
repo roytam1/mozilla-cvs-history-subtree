@@ -512,8 +512,7 @@ function poseFilePicker(aFpP)
   // Try and pull in download directory pref
   try {
     dir = branch.getComplexValue(kDownloadDirPref, nsILocalFile);
-  } catch (e) {
-  }
+  } catch (e) { }
 
   var autoDownload = branch.getBoolPref("autoDownload");
   if (autoDownload && dir && dir.exists()) {
@@ -532,8 +531,7 @@ function poseFilePicker(aFpP)
   try {
     if (dir.exists())
       fp.displayDirectory = dir;
-  } catch (e) {
-  }
+  } catch (e) { }
 
   fp.defaultExtension = aFpP.fileInfo.fileExt;
   fp.defaultString = getNormalizedLeafName(aFpP.fileInfo.fileName,
@@ -615,11 +613,6 @@ function appendFiltersForContentType(aFilePicker, aContentType, aFileExtension, 
   case "application/xhtml+xml":
     bundleName   = "WebPageXHTMLOnlyFilter";
     filterString = "*.xht; *.xhtml";
-    break;
-
-  case "image/svg+xml":
-    bundleName   = "WebPageSVGOnlyFilter";
-    filterString = "*.svg; *.svgz";
     break;
 
   case "text/xml":
@@ -906,14 +899,13 @@ function getDefaultExtension(aFilename, aURI, aContentType)
   }
   else {
     try {
-      if (mimeInfo)
-        return mimeInfo.primaryExtension;
+      return mimeInfo.primaryExtension;
     }
     catch (e) {
+      // Fall back on the extensions in the filename and URI for lack
+      // of anything better.
+      return ext || urlext;
     }
-    // Fall back on the extensions in the filename and URI for lack
-    // of anything better.
-    return ext || urlext;
   }
 }
 
@@ -923,7 +915,6 @@ function GetSaveModeForContentType(aContentType)
   switch (aContentType) {
   case "text/html":
   case "application/xhtml+xml":
-  case "image/svg+xml":
     saveMode |= SAVEMODE_COMPLETE_TEXT;
     // Fall through
   case "text/xml":

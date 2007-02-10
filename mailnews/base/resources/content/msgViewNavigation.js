@@ -220,15 +220,12 @@ function GetRootFoldersInFolderPaneOrder()
 
 function CrossFolderNavigation(type)
 {
-  // do cross folder navigation for next unread message/thread and message history
-  if (type != nsMsgNavigationType.nextUnreadMessage &&
-      type != nsMsgNavigationType.nextUnreadThread &&
-      type != nsMsgNavigationType.forward &&
-      type != nsMsgNavigationType.back)
+  if (type != nsMsgNavigationType.nextUnreadMessage && type != nsMsgNavigationType.forward
+      && type != nsMsgNavigationType.back)    // currently, only do cross folder navigation for "next unread message"
     return;
 
-  if (type == nsMsgNavigationType.nextUnreadMessage ||
-      type == nsMsgNavigationType.nextUnreadThread)
+
+  if (type == nsMsgNavigationType.nextUnreadMessage)
   {
     
     var nextMode = pref.getIntPref("mailnews.nav_crosses_folders");

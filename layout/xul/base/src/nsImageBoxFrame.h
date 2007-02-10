@@ -42,25 +42,19 @@
 #include "imgILoader.h"
 #include "imgIRequest.h"
 #include "imgIContainer.h"
-#include "nsStubImageDecoderObserver.h"
+#include "imgIDecoderObserver.h"
 
 class nsImageBoxFrame;
 
-class nsImageBoxListener : public nsStubImageDecoderObserver
+class nsImageBoxListener : public imgIDecoderObserver
 {
 public:
   nsImageBoxListener();
   virtual ~nsImageBoxListener();
 
   NS_DECL_ISUPPORTS
-  // imgIDecoderObserver (override nsStubImageDecoderObserver)
-  NS_IMETHOD OnStartContainer(imgIRequest *request, imgIContainer *image);
-  NS_IMETHOD OnStopContainer(imgIRequest *request, imgIContainer *image);
-  NS_IMETHOD OnStopDecode(imgIRequest *request, nsresult status,
-                          const PRUnichar *statusArg);
-  // imgIContainerObserver (override nsStubImageDecoderObserver)
-  NS_IMETHOD FrameChanged(imgIContainer *container, gfxIImageFrame *newframe,
-                          nsRect * dirtyRect);
+  NS_DECL_IMGIDECODEROBSERVER
+  NS_DECL_IMGICONTAINEROBSERVER
 
   void SetFrame(nsImageBoxFrame *frame) { mFrame = frame; }
 
@@ -73,26 +67,29 @@ class nsImageBoxFrame : public nsLeafBoxFrame
 public:
 
   // nsIBox
-  virtual nsSize GetPrefSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nsSize GetMinSize(nsBoxLayoutState& aBoxLayoutState);
+  NS_IMETHOD GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
   NS_IMETHOD GetAscent(nsBoxLayoutState& aBoxLayoutState, nscoord& aAscent);
-  virtual void MarkIntrinsicWidthsDirty();
+  NS_IMETHOD NeedsRecalc();
 
-  friend nsIFrame* NS_NewImageBoxFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewImageBoxFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   // nsIBox frame interface
 
-  NS_IMETHOD  Init(nsIContent*      aContent,
+  NS_IMETHOD  Init(nsPresContext*  aPresContext,
+                   nsIContent*      aContent,
                    nsIFrame*        aParent,
+                   nsStyleContext*  aContext,
                    nsIFrame*        asPrevInFlow);
 
-  NS_IMETHOD AttributeChanged(PRInt32 aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent* aChild,
+                              PRInt32 aNameSpaceID,
                               nsIAtom* aAttribute,
                               PRInt32 aModType);
 
-  NS_IMETHOD DidSetStyleContext();
+  NS_IMETHOD  DidSetStyleContext (nsPresContext* aPresContext);
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
   virtual nsIAtom* GetType() const;
 #ifdef DEBUG
@@ -112,9 +109,11 @@ public:
    */
   void UpdateLoadFlags();
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD  Paint(nsPresContext*      aPresContext,
+                    nsIRenderingContext& aRenderingContext,
+                    const nsRect&        aDirtyRect,
+                    nsFramePaintLayer    aWhichLayer,
+                    PRUint32             aFlags = 0);
 
   NS_IMETHOD OnStartContainer(imgIRequest *request, imgIContainer *image);
   NS_IMETHOD OnStopContainer(imgIRequest *request, imgIContainer *image);
@@ -126,13 +125,13 @@ public:
                           nsRect * dirtyRect);
 
   virtual ~nsImageBoxFrame();
+protected:
 
   void  PaintImage(nsIRenderingContext& aRenderingContext,
                    const nsRect& aDirtyRect,
-                   nsPoint aPt);
+                   nsFramePaintLayer aWhichLayer);
 
-protected:
-  nsImageBoxFrame(nsIPresShell* aShell, nsStyleContext* aContext);
+  nsImageBoxFrame(nsIPresShell* aShell);
 
   virtual void GetImageSize();
 

@@ -37,219 +37,196 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var g_bShutdown = false;
-var g_logTimezone = null;
-var g_logFilestream = null;
-var g_logPrefObserver = null;
-
-function initLogging()
+function logMessage( context, msg )
 {
-    g_logTimezone = getPref("calendar.timezone.local", null);
-    
-    if (g_logFilestream) {
-        try {
-            g_logFilestream.close();
-        }
-        catch (exc) {
-        }
-        g_logFilestream = null;
-    }
-    
-    LOG_LEVEL = getPref("calendar.wcap.log_level", 0);
-    if (LOG_LEVEL < 1 && getPref("calendar.debug.log", false))
-        LOG_LEVEL = 1; // at least basic logging when calendar.debug.log is set
-    
     if (LOG_LEVEL > 0) {
-        var logFileName = getPref("calendar.wcap.log_file", null);
-        if (logFileName) {
-            try {
-                // set up file:
-                var logFile = Components.classes["@mozilla.org/file/local;1"]
-                                        .createInstance(Components.interfaces.nsILocalFile);
-                logFile.initWithPath(logFileName);
-                // create output stream:
-                var logFileStream =
-                    Components.classes["@mozilla.org/network/file-output-stream;1"]
-                              .createInstance(Components.interfaces.nsIFileOutputStream);
-                logFileStream.init(
-                    logFile,
-                    0x02 /* PR_WRONLY */ |
-                    0x08 /* PR_CREATE_FILE */ |
-                    0x10 /* PR_APPEND */,
-                    0700 /* read, write, execute/search by owner */,
-                    0 /* unused */);
-                g_logFilestream = logFileStream;
-            }
-            catch (exc) {
-                logError(exc, "init logging");
-            }
-        }
-        log("################################# NEW LOG #################################",
-            "init logging");
-    }
-    if (!g_logPrefObserver) {
-        g_logPrefObserver = { // nsIObserver:
-            observe: function logPrefObserver_observe(subject, topic, data) {
-                if (topic == "nsPref:changed") {
-                    switch (data) {
-                    case "calendar.wcap.log_level":
-                    case "calendar.wcap.log_file":
-                    case "calendar.debug.log":
-                        initLogging();
-                        break;
-                    }
-                }
-            }
-        };
-        var prefBranch = Components.classes["@mozilla.org/preferences-service;1"]
-                                   .getService(Components.interfaces.nsIPrefBranch2);
-        prefBranch.addObserver("calendar.wcap.log_level", g_logPrefObserver, false);
-        prefBranch.addObserver("calendar.wcap.log_file", g_logPrefObserver, false);
-        prefBranch.addObserver("calendar.debug.log", g_logPrefObserver, false);
-        
-        var observerService = Components.classes["@mozilla.org/observer-service;1"]
-                                        .getService(Components.interfaces.nsIObserverService);
-        var appObserver = { // nsIObserver:
-            observe: function app_observe(subject, topic, data) {
-                if (topic == "quit-application")
-                    prefBranch.removeObserver("calendar.", g_logPrefObserver);
-            }
-        };
-        observerService.addObserver(appObserver, "quit-application", false);
-    }
-}
-
-function log(msg, context, bForce)
-{
-    if (bForce || LOG_LEVEL > 0) {
-        var ret = "";
-        if (context)
-            ret += ("[" + context + "]");
-        if (msg) {
-            if (ret.length > 0)
-                ret += "\n";
-            ret += msg;
-        }
         var now = getTime();
-        if (now && g_logTimezone)
-            now = now.getInTimezone(g_logTimezone);
-        var str = ("### WCAP log entry: " + now + "\n" + ret);
-        getConsoleService().logStringMessage(str);
-        str = ("\n" + str + "\n");
-        dump(str);
-        if (g_logFilestream) {
+        if (LOG_TIMEZONE != null)
+            now = now.getInTimezone(LOG_TIMEZONE);
+        var str = ("\n### WCAP log " + now + "\n### [" + context + "]\n### " +
+                   (msg ? msg : ""));
+        getConsoleService().logStringMessage( str );
+        str += "\n\n";
+        dump( str );
+        if (LOG_FILE_STREAM != null) {
             try {
                 // xxx todo?
                 // assuming ANSI chars here, for logging sufficient:
-                g_logFilestream.write(str, str.length);
+                LOG_FILE_STREAM.write( str, str.length );
             }
             catch (exc) { // catching any io errors here:
-                var err = ("error writing log file: " + errorToString(exc));
-                Components.utils.reportError(exc);
-                getConsoleService().logStringMessage(err);
-                dump(err  + "\n\n");
+                var err = ("error writing log file: " + exc);
+                Components.utils.reportError( exc );
+                getConsoleService().logStringMessage( err );
+                dump( err  + "\n\n" );
             }
         }
-        return ret;
+        return str;
     }
     else
         return msg;
 }
 
-function logError(err, context)
-{
-    var msg = errorToString(err);
-    Components.utils.reportError( log("error: " + msg, context, true) );
-    return msg;
-}
-
-// late-inited service accessors:
+// late-init service accessors:
 
 var g_consoleService = null;
-function getConsoleService() {
-    if (!g_consoleService) {
-        g_consoleService =
-            Components.classes["@mozilla.org/consoleservice;1"]
-                      .getService(Components.interfaces.nsIConsoleService);
+function getConsoleService()
+{
+    if (g_consoleService == null) {
+        g_consoleService = Components.classes["@mozilla.org/consoleservice;1"]
+                           .getService(Components.interfaces.nsIConsoleService);
     }
     return g_consoleService;
 }
 
 var g_windowWatcher = null;
-function getWindowWatcher() {
-    if (!g_windowWatcher) {
+function getWindowWatcher()
+{
+    if (g_windowWatcher == null) {
         g_windowWatcher =
             Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                      .getService(Components.interfaces.nsIWindowWatcher);
+            .getService(Components.interfaces.nsIWindowWatcher);
     }
     return g_windowWatcher;
 }
 
+var g_ioService = null;
+function getIoService()
+{
+    if (g_ioService == null) {
+        g_ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                      .getService(Components.interfaces.nsIIOService);
+    }
+    return g_ioService;
+}
+
 var g_icsService = null;
-function getIcsService() {
-    if (!g_icsService) {
-        g_icsService =
-            Components.classes["@mozilla.org/calendar/ics-service;1"]
-                      .getService(Components.interfaces.calIICSService);
+function getIcsService()
+{
+    if (g_icsService == null) {
+        g_icsService = Components.classes["@mozilla.org/calendar/ics-service;1"]
+                       .getService(Components.interfaces.calIICSService);
     }
     return g_icsService;
 }
 
 var g_domParser = null;
-function getDomParser() {
-    if (!g_domParser) {
-        g_domParser =
-            Components.classes["@mozilla.org/xmlextras/domparser;1"]
+function getDomParser()
+{
+    if (g_domParser == null) {
+        g_domParser = Components.classes["@mozilla.org/xmlextras/domparser;1"]
                       .getService(Components.interfaces.nsIDOMParser);
     }
     return g_domParser;
 }
 
 var g_calendarManager = null;
-function getCalendarManager() {
-    if (!g_calendarManager) {
+function getCalendarManager()
+{
+    if (g_calendarManager == null) {
         g_calendarManager =
             Components.classes["@mozilla.org/calendar/manager;1"]
-                      .getService(Components.interfaces.calICalendarManager);
+            .getService(Components.interfaces.calICalendarManager);
     }
     return g_calendarManager;
 };
 
+var g_bInitedLockedExec = false;
+var g_eventQueueService = null;
+var g_threadManager = null;
+
+/** Locks event dispatching for the current event queue while the passed
+    function is executed.
+    
+    xxx todo: this hinders timeeout events for sync requests
+              to be dispatched!
+*/
+function lockedExec( func )
+{
+    if (!g_bInitedLockedExec) {
+        try {
+            var cl = Components.classes["@mozilla.org/event-queue-service;1"];
+            if (cl) {
+                g_eventQueueService =
+                    cl.getService(Components.interfaces.nsIEventQueueService);
+            }
+        }
+        catch (exc) { // eventQueue has vanished on trunk
+        }
+        if (!g_eventQueueService) {
+            g_threadManager =
+                Components.classes["@mozilla.org/thread-manager;1"]
+                .getService(Components.interfaces.nsIThreadManager);
+        }
+        g_bInitedLockedExec = true;
+    }
+    
+    var queue;
+    var ret;
+    if (g_eventQueueService)
+        queue = g_eventQueueService.pushThreadEventQueue();
+    else // we are on trunk using nsIThreadInternal
+        g_threadManager.currentThread.pushEventQueue(null);
+    try {
+        ret = func();
+    }
+    catch (exc) {
+        if (g_eventQueueService)
+            g_eventQueueService.popThreadEventQueue(queue);
+        else // we are on trunk using nsIThreadInternal
+            g_threadManager.currentThread.popEventQueue();
+        throw exc;
+    }
+    if (g_eventQueueService)
+        g_eventQueueService.popThreadEventQueue(queue);
+    else // we are on trunk using nsIThreadInternal
+        g_threadManager.currentThread.popEventQueue();
+    return ret;
+}
+
 var g_wcapBundle = null;
-function getWcapBundle() {
-    if (!g_wcapBundle) {
+function getWcapBundle()
+{
+    if (g_wcapBundle == null) {
         var stringBundleService =
             Components.classes["@mozilla.org/intl/stringbundle;1"]
-                      .getService(Components.interfaces.nsIStringBundleService);
+            .getService(Components.interfaces.nsIStringBundleService);
         g_wcapBundle = stringBundleService.createBundle(
-            "chrome://calendar/locale/wcap.properties");
+            "chrome://calendar/locale/wcap.properties" );
     }
     return g_wcapBundle;
 }
 
-function subClass(subCtor, baseCtor) {
-    subCtor.prototype = new baseCtor();
-    subCtor.prototype.constructor = subCtor;
-    subCtor.prototype.superClass = baseCtor;
+function getResultCode( exc )
+{
+    return (exc instanceof Components.interfaces.nsIException
+            ? exc.result : exc);
 }
 
-function qiface(list, iid) {
-    if (!list.some( function(i) { return i.equals(iid); } ))
-        throw Components.results.NS_ERROR_NO_INTERFACE;
+function testResultCode( exc, rc )
+{
+    return (getResultCode(exc) == rc);
 }
 
-function isEvent(item) {
+function isEvent( item )
+{
     return (item instanceof Components.interfaces.calIEvent);
 }
 
-function isParent(item) {
+function isParent( item )
+{
     if (item.id != item.parentItem.id) {
-        throw new Components.Exception("proxy has different id than its parent!");
+        throw new Components.Exception(
+            "proxy has different id than its parent!");
+    }
+    if (item.parentItem.recurrenceId) {
+        throw new Components.Exception("parent has recurrenceId: " +
+                                       item.parentItem.recurrenceId);
     }
     return (!item.recurrenceId);
 }
 
-function forEachIcalComponent(icalRootComp, componentType, func, maxResults)
+function forEachIcalComponent( icalRootComp, componentType, func, maxResult )
 {
     var itemCount = 0;
     // libical returns the vcalendar component if there is just
@@ -259,11 +236,11 @@ function forEachIcalComponent(icalRootComp, componentType, func, maxResults)
     for ( var calComp = (icalRootComp.componentType == "VCALENDAR"
                          ? icalRootComp
                          : icalRootComp.getFirstSubcomponent("VCALENDAR"));
-          calComp != null && (!maxResults || itemCount < maxResults);
+          calComp != null && (!maxResult || itemCount < maxResult);
           calComp = icalRootComp.getNextSubcomponent("VCALENDAR") )
     {
         for ( var subComp = calComp.getFirstSubcomponent(componentType);
-              subComp != null && (!maxResults || itemCount < maxResults);
+              subComp != null && (!maxResult || itemCount < maxResult);
               subComp = calComp.getNextSubcomponent(componentType) )
         {
             func( subComp );
@@ -272,32 +249,20 @@ function forEachIcalComponent(icalRootComp, componentType, func, maxResults)
     }
 }
 
-function filterXmlNodes(name, rootNode)
+function trimString( str )
 {
-    var ret = [];
-    if (rootNode) {
-        var nodeList = rootNode.getElementsByTagName(name);
-        for (var i = 0; i < nodeList.length; ++i) {
-            var node = nodeList.item(i);
-            ret.push( trimString(node.textContent) );
-        }
-    }
-    return ret;
+    return str.replace( /(^\s+|\s+$)/g, "" );
 }
 
-function trimString(str) {
-    return str.replace(/(^\s+|\s+$)/g, "");
-}
-
-function getTime() {
-    if (g_bShutdown)
-        return null;
+function getTime()
+{
     var ret = new CalDateTime();
     ret.jsDate = new Date();
     return ret;
 }
 
-function getIcalUTC(dt) {
+function getIcalUTC( dt )
+{
     if (!dt)
         return "0";
     else {
@@ -309,63 +274,47 @@ function getIcalUTC(dt) {
     }
 }
 
-function getDatetimeFromIcalString(val) {
-    if (!val || val.length == 0 || val == "0")
+function getDatetimeFromIcalProp( prop )
+{
+    if (!prop)
+        return null;
+    var val = prop.valueAsIcalString;
+    if (val.length == 0 || val == "0")
         return null;
     // assuming timezone is known:
     var dt = new CalDateTime();
     dt.icalString = val;
-    if (LOG_LEVEL > 1) {
-        var dt_ = dt.clone();
-        dt_.normalize();
-        if (dt.icalString != val || dt_.icalString != val) {
-            logError(dt.icalString + " vs. " + val, "date-time error");
-            logError(dt_.icalString + " vs. " + val, "date-time error");
-            debugger;
-        }
-    }
+//     dt.makeImmutable();
     return dt;
 }
 
-function getDatetimeFromIcalProp(prop) {
-    if (!prop)
-        return null;
-    return getDatetimeFromIcalString(prop.valueAsIcalString);
-}
-
-function getPref(prefName, defaultValue) {
+function getPref(prefName, defaultValue)
+{
     const nsIPrefBranch = Components.interfaces.nsIPrefBranch;
     var prefBranch = Components.classes["@mozilla.org/preferences-service;1"]
-                               .getService(nsIPrefBranch);
-    var ret;
+                     .getService(nsIPrefBranch);
     try {
         switch (prefBranch.getPrefType(prefName)) {
         case nsIPrefBranch.PREF_BOOL:
-            ret = prefBranch.getBoolPref(prefName);
-            break;
+            return prefBranch.getBoolPref(prefName);
         case nsIPrefBranch.PREF_INT:
-            ret = prefBranch.getIntPref(prefName);
-            break;
+            return prefBranch.getIntPref(prefName);
         case nsIPrefBranch.PREF_STRING:
-            ret = prefBranch.getCharPref(prefName);
-            break;
+            return prefBranch.getCharPref(prefName);
         default:
-            ret = defaultValue;
-            break;
+            return defaultValue;
         }
     }
     catch (exc) {
-        ret = defaultValue;
+        return defaultValue;
     }
-    log(ret, "getPref(): prefName=" + prefName);
-    return ret;
 }
 
-function setPref(prefName, value) {
-    log(value, "setPref(): prefName=" + prefName);
+function setPref(prefName, value)
+{
     const nsIPrefBranch = Components.interfaces.nsIPrefBranch;
     var prefBranch = Components.classes["@mozilla.org/preferences-service;1"]
-                               .getService(nsIPrefBranch);
+                     .getService(nsIPrefBranch);
     switch (typeof(value)) {
     case "boolean":
         prefBranch.setBoolPref(prefName, value);

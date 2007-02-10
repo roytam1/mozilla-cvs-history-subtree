@@ -92,8 +92,8 @@ typedef enum {
 // Create a new browser container window and return the contained view. 
 - (CHBrowserView*)createBrowserWindow:(unsigned int)mask;
 
-- (NSMenu*)contextMenu;
-- (NSWindow*)nativeWindow;
+- (NSMenu*)getContextMenu;
+- (NSWindow*)getNativeWindow;
 
 // Ask whether the browser should accept a drag from the given source.
 // Should return NO if the source is a container for the browser, or
@@ -181,8 +181,8 @@ enum {
 
 - (void)setActive: (BOOL)aIsActive;
 
-- (NSMenu*)contextMenu;
-- (NSWindow*)nativeWindow;
+- (NSMenu*)getContextMenu;
+- (NSWindow*)getNativeWindow;
 
 - (void)destroyWebBrowser;
 - (nsIWebBrowser*)getWebBrowser;

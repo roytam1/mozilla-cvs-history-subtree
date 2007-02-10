@@ -38,7 +38,7 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<!DOCTYPE bindings [
+<!DOCTYPE window [
   <!ENTITY % findBarDTD SYSTEM "chrome://global/locale/findbar.dtd" >
   %findBarDTD;
 ]>
@@ -48,11 +48,12 @@
           xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
   <binding id="browser" extends="xul:browser">
-    <implementation type="application/x-javascript" implements="nsIAccessibleProvider, nsIObserver, nsIDOMEventListener">
-      <property name="accessibleType" readonly="true">
+    <implementation type="application/x-javascript" implements="nsIAccessibleProvider, nsIObserver">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.OuterDoc;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createOuterDocAccessible(this);
           ]]>
         </getter>
       </property>
@@ -222,7 +223,7 @@
                 readonly="true"/>
 
       <property name="docShell"
-                onget="return this.boxObject.QueryInterface(Components.interfaces.nsIContainerBoxObject).docShell;"
+                onget="return this.boxObject.QueryInterface(Components.interfaces.nsIBrowserBoxObject).docShell;"
                 readonly="true"/>
 
       <property name="webNavigation"
@@ -263,17 +264,25 @@
               return null;
 
             var tabBrowser = this.getTabBrowser();
-            if (tabBrowser)
+            if (tabBrowser && tabBrowser.mCurrentBrowser == this)
               return this._fastFind = tabBrowser.fastFind;
 
             if (!this.docShell)
               return null;
 
             this._fastFind = Components.classes["@mozilla.org/typeaheadfind;1"]
-                                       .createInstance(Components.interfaces.nsITypeAheadFind);                                
+                                       .createInstance(Components.interfaces.nsITypeAheadFind_MOZILLA_1_8_BRANCH);
             this._fastFind.init(this.docShell);
           }
           return this._fastFind;
+        ]]>
+        </getter>
+      </property>
+      
+      <property name="findString" readonly="true">
+        <getter>
+        <![CDATA[
+          return this.fastFind.searchString;
         ]]>
         </getter>
       </property>
@@ -424,10 +433,8 @@
             if (this.pageReport) {
               var i = 0;
               while (i < this.pageReport.length) {
-                // Filter out irrelevant reports.
-                if (this.pageReport[i].requestingWindow &&
-                    (this.pageReport[i].requestingWindow.document ==
-                     this.pageReport[i].requestingDocument))
+                if (this.findChildShell(this.docShell,
+                                        this.pageReport[i].requestingWindowURI))
                   i++;
                 else
                   this.pageReport.splice(i, 1);
@@ -454,9 +461,6 @@
             var tabBrowser = this.getTabBrowser();
             if (!tabBrowser || tabBrowser.mCurrentBrowser == this)
               this.fastFind.setDocShell(this.docShell);
-
-            if (this._isScrolling)
-              this.stopScroll();
          ]]>
         </body>
       </method>
@@ -483,17 +487,19 @@
               this.pageReport = new Array();
             }
 
-            var obj = { requestingWindow: evt.requestingWindow,
-                        // Record the current document in the requesting window
-                        // before it can change.
-                        requestingDocument: evt.requestingWindow.document,
+#ifdef MOZILLA_1_8_BRANCH
+# bug 314700
+            var obj = { requestingWindowURI: evt.requestingWindowURI,
+                        popupWindowURI: evt.popupWindowURI,
+                        popupWindowFeatures: evt.popupWindowFeatures };
+#else
+            var obj = { requestingWindowURI: evt.requestingWindowURI,
                         popupWindowURI: evt.popupWindowURI,
                         popupWindowFeatures: evt.popupWindowFeatures,
                         popupWindowName: evt.popupWindowName };
-
+#endif
             this.pageReport.push(obj);
-            this.pageReport.reported = false;
-            this.updatePageReport();
+            this.updatePageReport()
           ]]> 
         </body>
       </method>
@@ -563,19 +569,15 @@
         <![CDATA[
           try {
             if (!this.hasAttribute("disablehistory")) {
-              var os = Components.classes["@mozilla.org/observer-service;1"]
-                                 .getService(Components.interfaces.nsIObserverService);
-              os.addObserver(this, "browser:purge-session-history", false);
               // wire up session history
-              this.webNavigation.sessionHistory = 
-                      Components.classes["@mozilla.org/browser/shistory;1"]
-                                .createInstance(Components.interfaces.nsISHistory);
+              this.webNavigation.sessionHistory = Components.classes["@mozilla.org/browser/shistory;1"].createInstance(Components.interfaces.nsISHistory);
+              var os = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+              os.addObserver(this, "browser:purge-session-history", false);
               // enable global history
               this.docShell.QueryInterface(Components.interfaces.nsIDocShellHistory).useGlobalHistory = true;
             }
           }
           catch (e) {
-            Components.utils.reportError(e);
           }
           try {
             this.mDragDropHandler = Components.classes["@mozilla.org:/content/content-area-dragdrop;1"].createInstance(Components.interfaces.nsIDragDropHandler);
@@ -612,10 +614,9 @@
           this.mDestroyed = true;
 
           if (!this.hasAttribute("disablehistory")) {
-            var os = Components.classes["@mozilla.org/observer-service;1"]
-                               .getService(Components.interfaces.nsIObserverService);
+            var os = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
             try {
-              os.removeObserver(this, "browser:purge-session-history");
+              os.removeObserver(this, "browser:purge-session-history", false);
             } catch (ex) {
               // It's not clear why this sometimes throws an exception.
             }
@@ -643,7 +644,7 @@
         <parameter name="aState"/>
         <body>
           <![CDATA[
-            if (aTopic != "browser:purge-session-history" || !this.sessionHistory)
+            if (aTopic != "browser:purge-session-history")
               return;
               
             // place the entry at current index at the end of the history list, so it won't get removed
@@ -679,8 +680,7 @@
         <body>
           <![CDATA[
             this._isScrolling = false;
-            this.removeEventListener("mousemove", this, false);
-            this.contentDocument.removeEventListener("blur", this, true);
+            this.removeEventListener('mousemove', this.handleMouseMove, false);            
             if (this._autoScrollMarkerImage) {
               this._autoScrollMarkerImage.style.display = 'none';  // seems to avoid blocking when autoscroll is initited during pageload
               this._autoScrollMarkerImage.parentNode.removeChild(this._autoScrollMarkerImage);
@@ -778,7 +778,7 @@
          ]]>
        </body>
      </method>
-     <method name="_handleMouseMove">
+     <method name="handleMouseMove">
         <parameter name="aEvent"/>
         <body>
         <![CDATA[
@@ -797,21 +797,46 @@
         </body>
       </method>
 
-      <method name="handleEvent">
-        <parameter name="aEvent"/>
-        <body>
-        <![CDATA[
-          switch (aEvent.type) {
-            case "mousemove":
-              this._handleMouseMove(aEvent);
-              break;
-            case "blur":
-              if (aEvent.target == this.contentDocument)
-                this.stopScroll();
-          }
-        ]]>
-        </body>
-      </method>
+     <field name="_findInstData">null</field>
+     <property name="findInstData" readonly="true">
+        <getter>
+          <![CDATA[
+            if (!this._findInstData) {
+              this._findInstData = new nsFindInstData();
+              this._findInstData.browser = this;
+              // defaults for rootSearchWindow and currentSearchWindow are fine here
+            }
+            return this._findInstData;
+          ]]>
+        </getter>
+     </property>
+
+     <property name="canFindAgain" readonly="true" onget="return canFindAgainInPage();"/>
+
+     <method name="find">
+       <body>
+         <![CDATA[
+           findInPage(this.findInstData)
+         ]]>
+       </body>
+     </method>
+
+     <method name="findAgain">
+       <body>
+         <![CDATA[
+           findAgainInPage(this.findInstData, false)
+         ]]>
+       </body>
+     </method>
+
+     <method name="findPrevious">
+       <body>
+         <![CDATA[
+           findAgainInPage(this.findInstData, true)
+         ]]>
+       </body>
+     </method>
+
     </implementation>
 
     <handlers>
@@ -840,7 +865,8 @@
             var buttonPressed = promptService.confirmEx(window, 
               this.mStrBundle.GetStringFromName('browsewithcaret.checkWindowTitle'), 
               this.mStrBundle.GetStringFromName('browsewithcaret.checkLabel'),
-              promptService.STD_YES_NO_BUTTONS,
+              (promptService.BUTTON_TITLE_YES * promptService.BUTTON_POS_0) +
+              (promptService.BUTTON_TITLE_NO * promptService.BUTTON_POS_1),
               null, null, null, this.mStrBundle.GetStringFromName('browsewithcaret.checkMsg'),
               checkValue);
             if (buttonPressed != 0)
@@ -878,8 +904,7 @@
                 this.currentURI.spec == "about:blank"|| 
                 this.isAutoscrollBlocker(event.originalTarget))
               return;
-            this.addEventListener("mousemove", this, false);
-            this.contentDocument.addEventListener("blur", this, true);
+            this.addEventListener('mousemove', this.handleMouseMove, false);
             this._screenX = event.screenX;
             this._screenY = event.screenY;
             this._startX = event.screenX;

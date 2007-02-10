@@ -200,17 +200,10 @@ nsLoadSaveContentSink::HandleXMLDeclaration(const PRUnichar *aVersion,
 
 NS_IMETHODIMP
 nsLoadSaveContentSink::ReportError(const PRUnichar* aErrorText, 
-                                   const PRUnichar* aSourceText,
-                                   nsIScriptError *aError,
-                                   PRBool *_retval)
+                                   const PRUnichar* aSourceText)
 {
-  NS_PRECONDITION(aError && aSourceText && aErrorText, "Check arguments!!!");
-
   // XXX Do error reporting here.  I see no reason to call ReportError
   // on the "base" sink; all we need to do is drop the document on the
   // floor...
-
-  // The expat driver should report the error.
-  *_retval = PR_TRUE;
   return NS_OK;
 }

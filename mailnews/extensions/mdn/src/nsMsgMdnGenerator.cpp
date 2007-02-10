@@ -43,6 +43,7 @@
 #include "nsMsgMimeCID.h"
 #include "nsIMsgAccountManager.h"
 #include "nsMsgBaseCID.h"
+#include "nsSpecialSystemDirectory.h"
 #include "nsCRT.h"
 #include "nsMimeTypes.h"
 #include "prmem.h"
@@ -61,8 +62,6 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
 #include "nsIStringBundle.h"
-#include "nsDirectoryServiceDefs.h"
-#include "nsMsgUtils.h"
 
 #define MDN_NOT_IN_TO_CC          ((int) 0x0001)
 #define MDN_OUTSIDE_DOMAIN        ((int) 0x0002)
@@ -409,18 +408,12 @@ nsresult nsMsgMdnGenerator::CreateMdnMsg()
     if (!m_reallySendMdn)
         return NS_OK;
 
-    
+    nsSpecialSystemDirectory
+        tmpFile(nsSpecialSystemDirectory::OS_TemporaryDirectory); 
+    tmpFile += "mdnmsg";
+    tmpFile.MakeUnique();
 
-    nsCOMPtr<nsIFile> tmpFile;
-    rv = GetSpecialDirectoryWithFileName(NS_OS_TEMP_DIR,
-                                         "mdnmsg",
-                                         getter_AddRefs(tmpFile));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = tmpFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 00600);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = NS_NewFileSpecFromIFile(tmpFile, getter_AddRefs(m_fileSpec));
+    rv = NS_NewFileSpecWithSpec(tmpFile, getter_AddRefs(m_fileSpec));
 
     NS_ASSERTION(NS_SUCCEEDED(rv),"creating mdn: failed to create");
     if (NS_FAILED(rv)) 
@@ -514,7 +507,7 @@ nsresult nsMsgMdnGenerator::CreateFirstPart()
         conformToStandard);
     parm = PR_smprintf("From: %s" CRLF, convbuf ? convbuf : m_email.get());
 
-    rv = FormatStringFromName(NS_LITERAL_STRING("MsgMdnMsgSentTo").get(), NS_ConvertASCIItoUTF16(m_email).get(),
+    rv = FormatStringFromName(NS_LITERAL_STRING("MsgMdnMsgSentTo").get(), NS_ConvertASCIItoUCS2(m_email).get(),
                             getter_Copies(firstPart1));
     if (NS_FAILED(rv)) 
         return rv;
@@ -579,7 +572,7 @@ nsresult nsMsgMdnGenerator::CreateFirstPart()
         conformToStandard);
     tmpBuffer = PR_smprintf("Subject: %s - %s" CRLF, 
                             (receipt_string ? 
-                             NS_LossyConvertUTF16toASCII(receipt_string).get() :
+                             NS_LossyConvertUCS2toASCII(receipt_string).get() :
                              "Return Receipt"),
                             (convbuf ? convbuf : 
                              (subject.Length() ? subject.get() : 
@@ -632,7 +625,7 @@ report-type=disposition-notification;\r\n\tboundary=\"%s\"" CRLF CRLF,
   
     if (!firstPart1.IsEmpty())
     {
-        tmpBuffer = PR_smprintf("%s" CRLF CRLF, NS_LossyConvertUTF16toASCII(firstPart1).get());
+        tmpBuffer = PR_smprintf("%s" CRLF CRLF, NS_LossyConvertUCS2toASCII(firstPart1).get());
         PUSH_N_FREE_STRING(tmpBuffer);
     }
 
@@ -680,7 +673,7 @@ report-type=disposition-notification;\r\n\tboundary=\"%s\"" CRLF CRLF,
     {
         tmpBuffer = 
             PR_smprintf("%s" CRLF CRLF, 
-                        NS_LossyConvertUTF16toASCII(firstPart2).get()); 
+                        NS_LossyConvertUCS2toASCII(firstPart2).get()); 
         PUSH_N_FREE_STRING(tmpBuffer);
     }
     

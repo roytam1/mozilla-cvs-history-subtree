@@ -49,18 +49,16 @@
 #include "nsCacheDevice.h"
 #include "nsCacheEntry.h"
 
-#include "prlock.h"
-#include "prthread.h"
+#include "nspr.h"
 #include "nsIObserver.h"
 #include "nsString.h"
+#include "nsIEventQueueService.h"
 #include "nsProxiedService.h"
-#include "nsTArray.h"
 
 class nsCacheRequest;
 class nsCacheProfilePrefObserver;
 class nsDiskCacheDevice;
 class nsMemoryCacheDevice;
-class nsCacheServiceAutoLock;
 
 
 /******************************************************************************
@@ -117,6 +115,8 @@ public:
 
     static nsresult  OnDataSizeChange(nsCacheEntry * entry, PRInt32 deltaSize);
 
+    static PRLock *  ServiceLock();
+    
     static nsresult  SetCacheElement(nsCacheEntry * entry, nsISupports * element);
 
     static nsresult  ValidateEntry(nsCacheEntry * entry);
@@ -131,15 +131,9 @@ public:
     
     static nsresult  DoomEntry(nsCacheEntry * entry);
 
-    static PRBool    IsStorageEnabledForPolicy_Locked(nsCacheStoragePolicy policy);
+    static void      ProxyObjectRelease(nsISupports * object, PRThread * thread);
 
-    // This method may be called to release an object while the cache service
-    // lock is being held.  If a non-null target is specified and the target
-    // does not correspond to the current thread, then the release will be
-    // proxied to the specified target.  Otherwise, the object will be added to
-    // the list of objects to be released when the cache service is unlocked.
-    static void      ReleaseObject_Locked(nsISupports *    object,
-                                          nsIEventTarget * target = nsnull);
+    static PRBool    IsStorageEnabledForPolicy_Locked(nsCacheStoragePolicy policy);
 
     /**
      * Methods called by nsCacheProfilePrefObserver
@@ -150,19 +144,16 @@ public:
     static void      SetDiskCacheEnabled(PRBool  enabled);
     static void      SetDiskCacheCapacity(PRInt32  capacity);
 
-    static void      SetMemoryCache();
+    static void      SetMemoryCacheEnabled(PRBool  enabled);
+    static void      SetMemoryCacheCapacity(PRInt32  capacity);
 
     nsresult         Init();
     void             Shutdown();
 private:
-    friend class nsCacheServiceAutoLock;
 
     /**
      * Internal Methods
      */
-
-    static void      Lock();
-    static void      Unlock();
 
     nsresult         CreateDiskDevice();
     nsresult         CreateMemoryDevice();
@@ -179,9 +170,6 @@ private:
     nsresult         EvictEntriesForClient(const char *          clientID,
                                            nsCacheStoragePolicy  storagePolicy);
 
-    // Notifies request listener asynchronously on the request's thread, and
-    // releases the descriptor on the request's thread.  If this method fails,
-    // the descriptor is not released.
     nsresult         NotifyListener(nsCacheRequest *          request,
                                     nsICacheEntryDescriptor * descriptor,
                                     nsCacheAccessMode         accessGranted,
@@ -191,7 +179,7 @@ private:
 
     nsCacheDevice *  EnsureEntryHasDevice(nsCacheEntry * entry);
 
-    nsCacheEntry *   SearchCacheDevices(nsCString * key, nsCacheStoragePolicy policy, PRBool *collision);
+    nsCacheEntry *   SearchCacheDevices(nsCString * key, nsCacheStoragePolicy policy);
 
     void             DeactivateEntry(nsCacheEntry * entry);
 
@@ -205,6 +193,8 @@ private:
     void             ClearDoomList(void);
     void             ClearActiveEntries(void);
     void             DoomActiveEntries(void);
+
+    PRInt32         CacheMemoryAvailable();
 
     static
     PLDHashOperator PR_CALLBACK  DeactivateAndClearEntry(PLDHashTable *    table,
@@ -225,16 +215,12 @@ private:
      */
 
     static nsCacheService *         gService;  // there can be only one...
+    nsCOMPtr<nsIEventQueueService>  mEventQService;
+    nsCOMPtr<nsIProxyObjectManager> mProxyObjectManager;
     
     nsCacheProfilePrefObserver *    mObserver;
     
-    PRLock *                        mLock;
-
-#if defined(DEBUG)
-    PRThread *                      mLockedThread;  // The thread holding mLock
-#endif
-
-    nsTArray<nsISupports*>          mDoomedObjects;
+    PRLock *                        mCacheServiceLock;
     
     PRBool                          mInitialized;
     
@@ -261,20 +247,5 @@ private:
     PRUint32                        mDeactivatedUnboundEntries;
 };
 
-/******************************************************************************
- *  nsCacheServiceAutoLock
- ******************************************************************************/
-
-// Instantiate this class to acquire the cache service lock for a particular
-// execution scope.
-class nsCacheServiceAutoLock {
-public:
-    nsCacheServiceAutoLock() {
-        nsCacheService::Lock();
-    }
-    ~nsCacheServiceAutoLock() {
-        nsCacheService::Unlock();
-    }
-};
 
 #endif // _nsCacheService_h_

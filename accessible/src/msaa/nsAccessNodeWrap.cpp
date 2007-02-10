@@ -51,10 +51,9 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
 #include "nsIPresShell.h"
-#include "nsPIDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIServiceManager.h"
 #include "nsIServiceManager.h"
-#include "nsAttrName.h"
 
 /// the accessible library and cached methods
 HINSTANCE nsAccessNodeWrap::gmAccLib = nsnull;
@@ -192,17 +191,21 @@ STDMETHODIMP nsAccessNodeWrap::get_attributes(
     numAttribs = aMaxAttribs;
   *aNumAttribs = NS_STATIC_CAST(unsigned short, numAttribs);
 
+  PRInt32 nameSpaceID;
+  nsCOMPtr<nsIAtom> nameAtom, prefixAtom;
+
   for (PRUint32 index = 0; index < numAttribs; index++) {
     aNameSpaceIDs[index] = 0; aAttribValues[index] = aAttribNames[index] = nsnull;
     nsAutoString attributeValue;
     const char *pszAttributeName; 
 
-    const nsAttrName* name = content->GetAttrNameAt(index);
-    aNameSpaceIDs[index] = NS_STATIC_CAST(short, name->NamespaceID());
-    name->LocalName()->GetUTF8String(&pszAttributeName);
-    aAttribNames[index] = ::SysAllocString(NS_ConvertUTF8toUTF16(pszAttributeName).get());
-    content->GetAttr(name->NamespaceID(), name->LocalName(), attributeValue);
-    aAttribValues[index] = ::SysAllocString(attributeValue.get());
+    if (NS_SUCCEEDED(content->GetAttrNameAt(index, &nameSpaceID, getter_AddRefs(nameAtom), getter_AddRefs(prefixAtom)))) {
+      aNameSpaceIDs[index] = NS_STATIC_CAST(short, nameSpaceID);
+      nameAtom->GetUTF8String(&pszAttributeName);
+      aAttribNames[index] = ::SysAllocString(NS_ConvertUTF8toUCS2(pszAttributeName).get());
+      if (NS_SUCCEEDED(content->GetAttr(nameSpaceID, nameAtom, attributeValue))) 
+        aAttribValues[index] = ::SysAllocString(attributeValue.get());
+    }
   }
 
   return S_OK; 
@@ -250,6 +253,42 @@ STDMETHODIMP nsAccessNodeWrap::get_attributesForNames(
   return S_OK; 
 }
 
+
+NS_IMETHODIMP nsAccessNodeWrap::GetComputedStyleDeclaration(nsIDOMCSSStyleDeclaration **aCssDecl, PRUint32 *aLength)
+{
+  nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
+  if (!content) 
+    return NS_ERROR_FAILURE;   
+
+  if (content->IsContentOfType(nsIContent::eTEXT)) {
+    content = content->GetParent();
+    NS_ASSERTION(content, "No parent for text node");
+  }
+
+  nsCOMPtr<nsIDOMElement> domElement(do_QueryInterface(content));
+  nsCOMPtr<nsIDocument> doc = content->GetDocument();
+
+  if (!domElement || !doc) {
+    return NS_ERROR_FAILURE;
+  }
+
+  nsCOMPtr<nsIDOMViewCSS> viewCSS(do_QueryInterface(doc->GetScriptGlobalObject()));
+
+  if (!viewCSS)
+    return NS_ERROR_FAILURE;   
+
+  nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
+  nsAutoString empty;
+  viewCSS->GetComputedStyle(domElement, empty, getter_AddRefs(cssDecl));
+  if (cssDecl) {
+    *aCssDecl = cssDecl;
+    NS_ADDREF(*aCssDecl);
+    cssDecl->GetLength(aLength);
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
+}
+
 /* To do: use media type if not null */
 STDMETHODIMP nsAccessNodeWrap::get_computedStyle( 
     /* [in] */ unsigned short aMaxStyleProperties,
@@ -258,17 +297,14 @@ STDMETHODIMP nsAccessNodeWrap::get_computedStyle(
     /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues,
     /* [out] */ unsigned short __RPC_FAR *aNumStyleProperties)
 {
-  nsCOMPtr<nsIDOMElement> domElement(do_QueryInterface(mDOMNode));
-  if (!domElement)
+  if (!mDOMNode)
     return E_FAIL;
-  
+ 
   *aNumStyleProperties = 0;
-  nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
-  GetComputedStyleDeclaration(EmptyString(), domElement, getter_AddRefs(cssDecl));
-  NS_ENSURE_TRUE(cssDecl, E_FAIL);
-
   PRUint32 length;
-  cssDecl->GetLength(&length);
+  nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
+  if (NS_FAILED(GetComputedStyleDeclaration(getter_AddRefs(cssDecl), &length)))
+    return E_FAIL;
 
   PRUint32 index, realIndex;
   for (index = realIndex = 0; index < length && realIndex < aMaxStyleProperties; index ++) {
@@ -293,13 +329,14 @@ STDMETHODIMP nsAccessNodeWrap::get_computedStyleForProperties(
     /* [length_is][size_is][in] */ BSTR __RPC_FAR *aStyleProperties,
     /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues)
 {
-  nsCOMPtr<nsIDOMElement> domElement(do_QueryInterface(mDOMNode));
-  if (!domElement)
+  if (!mDOMNode)
     return E_FAIL;
  
+  PRUint32 length = 0;
   nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
-  GetComputedStyleDeclaration(EmptyString(), domElement, getter_AddRefs(cssDecl));
-  NS_ENSURE_TRUE(cssDecl, E_FAIL);
+  nsresult rv = GetComputedStyleDeclaration(getter_AddRefs(cssDecl), &length);
+  if (NS_FAILED(rv))
+    return E_FAIL;
 
   PRUint32 index;
   for (index = 0; index < aNumStyleProperties; index ++) {
@@ -490,7 +527,8 @@ nsAccessNodeWrap::get_language(BSTR __RPC_FAR *aLanguage)
 
   nsAutoString language;
   for (nsIContent *walkUp = content; walkUp = walkUp->GetParent(); walkUp) {
-    if (walkUp->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::lang, language)) {
+    if (NS_CONTENT_ATTR_HAS_VALUE ==
+        walkUp->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::lang, language)) {
       break;
     }
   }

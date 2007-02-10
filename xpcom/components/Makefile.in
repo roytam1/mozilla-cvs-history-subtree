@@ -58,6 +58,7 @@ CPPSRCS		= \
 		nsNativeComponentLoader.cpp \
 		nsStaticComponentLoader.cpp \
 		nsServiceManagerObsolete.cpp \
+		xcDll.cpp \
 		$(NULL)
 
 EXPORTS		= \
@@ -65,11 +66,14 @@ EXPORTS		= \
 		nsCategoryCache.h \
 		nsIServiceManagerObsolete.h \
 		nsModule.h \
+		nsNativeComponentLoader.h \
 		nsObsoleteModuleLoading.h \
+		xcDll.h \
 		$(NULL)
 
 XPIDLSRCS	= \
-		nsIModuleLoader.idl \
+		nsIComponentLoader.idl \
+		nsIComponentLoaderManager.idl \
 		nsIComponentManagerObsolete.idl \
 		$(NULL)
 
@@ -85,14 +89,7 @@ SDK_XPIDLSRCS	= \
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 
-LOCAL_INCLUDES	= \
-	-I$(srcdir)/../reflect/xptinfo/src \
-	-I$(srcdir)/../base \
-	-I$(srcdir)/../thread \
-	-I$(srcdir)/../ds \
-	-I$(srcdir)/../build \
-	-I.. \
-	$(NULL)
+LOCAL_INCLUDES	= -I$(srcdir)/../base -I$(srcdir)/../thread -I$(srcdir)/../ds -I$(srcdir)/../build -I..
 
 # we don't want the shared lib, but we want to force the creation of a static lib.
 FORCE_STATIC_LIB = 1
@@ -101,4 +98,4 @@ FORCE_STATIC_LIB = 1
 FORCE_USE_PIC	= 1
 include $(topsrcdir)/config/rules.mk
 
-DEFINES	+= -D_IMPL_NS_COM
+DEFINES	+= -D_IMPL_NS_COM -DEXPORT_XPTI_API

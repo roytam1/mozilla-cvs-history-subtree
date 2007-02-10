@@ -29,9 +29,6 @@ bin\js3250.dll
 bin\plc4.dll
 bin\plds4.dll
 bin\xpcom.dll
-#ifdef MOZILLA_1_8_BRANCH
-bin\xpcom_compat.dll
-#endif
 bin\xpcom_core.dll
 bin\xpistub.dll
 bin\nspr4.dll
@@ -48,6 +45,7 @@ bin\sunbird.exe
 bin\res\cmessage.txt
 bin\xpicleanup.exe
 bin\LICENSE
+bin\README.txt
 
 ; [Components]
 bin\AccessibleMarshal.dll
@@ -171,9 +169,6 @@ bin\components\xpcom_base.xpt
 bin\components\xpcom_components.xpt
 bin\components\xpcom_ds.xpt
 bin\components\xpcom_io.xpt
-#ifdef MOZILLA_1_8_BRANCH
-bin\components\xpcom_obsolete.xpt
-#endif
 bin\components\xpcom_thread.xpt
 bin\components\xpcom_xpti.xpt
 bin\components\xpconnect.xpt
@@ -218,8 +213,6 @@ bin\js\calDateTimeFormatter.js
 bin\js\calEvent.js
 bin\js\calHtmlExport.js
 bin\js\calIcsImportExport.js
-bin\js\calIcsParser.js
-bin\js\calIcsSerializer.js
 bin\js\calItemBase.js
 bin\js\calItipItem.js
 bin\js\calListFormatter.js
@@ -229,7 +222,6 @@ bin\js\calProtocolHandler.js
 bin\js\calRecurrenceInfo.js
 bin\js\calTodo.js
 bin\js\calUtils.js
-bin\js\calWeekPrinter.js
 bin\js\calWeekTitleService.js
 bin\js\calWcapCachedCalendar.js
 bin\js\calWcapCalendar.js
@@ -253,7 +245,6 @@ bin\chrome\toolkit.manifest
 ; [Default Preferences]
 ; All the pref files must be part of base to prevent migration bugs
 bin\defaults\pref\sunbird.js
-bin\defaults\pref\channel-prefs.js
 bin\greprefs\all.js
 bin\greprefs\security-prefs.js
 bin\greprefs\xpinstall.js

@@ -45,7 +45,7 @@
 #include "nsIBindingManager.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMNodeList.h"
-#include "nsGkAtoms.h"
+#include "nsXULAtoms.h"
 #include "nsIScrollableFrame.h"
 
 class nsListBoxObject : public nsPIListBoxObject, public nsBoxObject
@@ -55,13 +55,13 @@ public:
   NS_DECL_NSILISTBOXOBJECT
 
   // nsPIListBoxObject
+  virtual void ClearCachedListBoxBody();
   virtual nsIListBoxObject* GetListBoxBody();
 
   nsListBoxObject();
+  virtual ~nsListBoxObject();
 
-  // nsPIBoxObject
-  virtual void Clear();
-  virtual void ClearCachedValues();
+  NS_IMETHOD InvalidatePresentationStuff();
   
 protected:
   nsIListBoxObject* mListBoxBody;
@@ -74,6 +74,11 @@ nsListBoxObject::nsListBoxObject()
   : mListBoxBody(nsnull)
 {
 }
+
+nsListBoxObject::~nsListBoxObject()
+{
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 //// nsIListBoxObject
@@ -158,12 +163,18 @@ nsListBoxObject::GetIndexOfItem(nsIDOMElement* aElement, PRInt32 *aResult)
   return NS_OK;
 }
 
+void
+nsListBoxObject::ClearCachedListBoxBody()
+{
+  mListBoxBody = nsnull;
+}
+
 //////////////////////
 
 static void
 FindBodyContent(nsIContent* aParent, nsIContent** aResult)
 {
-  if (aParent->Tag() == nsGkAtoms::listboxbody) {
+  if (aParent->Tag() == nsXULAtoms::listboxbody) {
     *aResult = aParent;
     NS_IF_ADDREF(*aResult);
   }
@@ -193,11 +204,11 @@ nsListBoxObject::GetListBoxBody()
     return mListBoxBody;
   }
 
-  nsIFrame* frame = GetFrame(PR_FALSE);
+  nsIFrame* frame = GetFrame();
   if (!frame)
     return nsnull;
 
-  nsIPresShell* shell = GetPresShell(PR_FALSE);
+  nsCOMPtr<nsIPresShell> shell = GetPresShell();
   if (!shell) {
     return nsnull;
   }
@@ -207,7 +218,7 @@ nsListBoxObject::GetListBoxBody()
   FindBodyContent(frame->GetContent(), getter_AddRefs(content));
 
   // this frame will be a nsGFXScrollFrame
-  frame = shell->GetPrimaryFrameFor(content);
+  shell->GetPrimaryFrameFor(content, &frame);
   if (!frame)
      return nsnull;
   nsIScrollableFrame* scrollFrame;
@@ -225,18 +236,12 @@ nsListBoxObject::GetListBoxBody()
   return mListBoxBody;
 }
 
-void
-nsListBoxObject::Clear()
+NS_IMETHODIMP
+nsListBoxObject::InvalidatePresentationStuff()
 {
-  ClearCachedValues();
+  ClearCachedListBoxBody();
 
-  nsBoxObject::Clear();
-}
-
-void
-nsListBoxObject::ClearCachedValues()
-{
-  mListBoxBody = nsnull;
+  return nsBoxObject::InvalidatePresentationStuff();
 }
 
 // Creation Routine ///////////////////////////////////////////////////////////////////////

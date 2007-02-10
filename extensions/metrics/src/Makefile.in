@@ -76,8 +76,7 @@ endif
 
 ifdef MOZ_PLACES
 REQUIRES	+= places toolkitcomps
-endif
-ifndef MOZ_PLACES_BOOKMARKS
+else
 REQUIRES	+= bookmarks
 endif
 
@@ -103,14 +102,6 @@ FORCE_STATIC_LIB = 1
 
 # md5.c requires NSS headers
 LOCAL_INCLUDES = -I$(DIST)/public/nss -I$(DIST)/private/nss
-
-# Link against the static CRT
-ifeq ($(OS_ARCH)_$(GNU_CC), WINNT_)
-USE_STATIC_LIBS = 1
-EXTRA_DSO_LDOPTS += -NODEFAULTLIB:MSVCRT \
-		    -NODEFAULTLIB:MSVCRTD \
-		    $(NULL)
-endif
 
 # Enable logging in release builds
 ifneq (,$(findstring -DMOZ_LOGGING=1, $(ACDEFINES)))

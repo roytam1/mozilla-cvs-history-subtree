@@ -174,8 +174,7 @@ nsCommandManager::RemoveCommandObserver(nsIObserver *aCommandObserver, const cha
 	if (!commandObservers)
 	  return NS_ERROR_UNEXPECTED;
 	
-	nsCOMPtr<nsISupports> observerAsSupports = do_QueryInterface(aCommandObserver);
-	nsresult removed = commandObservers->RemoveElement(observerAsSupports);
+	nsresult removed = commandObservers->RemoveElement(aCommandObserver);
 	return (removed) ? NS_OK : NS_ERROR_FAILURE;
 }
 

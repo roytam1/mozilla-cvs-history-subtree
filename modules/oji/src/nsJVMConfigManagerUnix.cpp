@@ -42,7 +42,6 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
 #include "nsReadableUtils.h"
-#include "nsIMutableArray.h"
 #include "prprf.h"
 #include "nsNetCID.h"
 #include "nsIHttpProtocolHandler.h"
@@ -53,6 +52,8 @@
 
 #define NS_COMPILER_GNUC3 defined(__GXX_ABI_VERSION) && \
                           (__GXX_ABI_VERSION >= 102) /* G++ V3 ABI */
+
+static NS_DEFINE_CID(kHttpHandlerCID, NS_HTTPPROTOCOLHANDLER_CID);
 
 // Implementation of nsJVMConfigManagerUnix
 NS_IMPL_ISUPPORTS1(nsJVMConfigManagerUnix, nsIJVMConfigManager)
@@ -104,9 +105,9 @@ nsJVMConfigManagerUnix::GetJVMConfigList(nsIArray **_retval)
     ClearJVMConfigList();
     InitJVMConfigList();
 
-    nsCOMPtr<nsIMutableArray> array =
-        do_CreateInstance(NS_ARRAY_CONTRACTID);
-    NS_ENSURE_STATE(array);
+    nsCOMPtr<nsIMutableArray> array;
+    nsresult rv = NS_NewArray(getter_AddRefs(array));
+    NS_ENSURE_SUCCESS(rv, rv);
 
     if (mJVMConfigList.Count() > 0) {
         mJVMConfigList.Enumerate(AppendJVMConfig,
@@ -392,7 +393,7 @@ nsJVMConfigManagerUnix::GetAgentVersion(nsCAutoString& _retval)
 {
     nsresult rv = NS_OK;
 
-    nsCOMPtr<nsIHttpProtocolHandler> http = do_GetService(NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "http", &rv);
+    nsCOMPtr<nsIHttpProtocolHandler> http = do_GetService(kHttpHandlerCID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCAutoString userAgent;
@@ -491,7 +492,7 @@ nsJVMConfigManagerUnix::SearchDefault()
     prefs->GetCharPref(defaultLocationName,
                        getter_Copies(defaultLocationXPIDLValue));
 
-    NS_ConvertUTF8toUTF16 defaultLocation(defaultLocationXPIDLValue);
+    NS_ConvertUTF8toUCS2 defaultLocation(defaultLocationXPIDLValue);
 
 #ifdef SPARC
     // On Solaris, the default location is the java home

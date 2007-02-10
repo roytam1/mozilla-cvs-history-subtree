@@ -35,8 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import <AppKit/NSScroller.h>
-
 #import <AddressBook/AddressBook.h>
 #import "ABAddressBook+Utils.h"
 
@@ -47,7 +45,6 @@
 
 #import "BrowserWindowController.h"
 #import "BrowserWindow.h"
-#import "SessionManager.h"
 
 #import "BookmarkToolbar.h"
 #import "BookmarkViewController.h"
@@ -89,7 +86,6 @@
 #include "nsIHistoryItems.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMNSDocument.h"
-#include "nsIDOMNSHTMLDocument.h"
 #include "nsIDOMLocation.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMEvent.h"
@@ -127,7 +123,6 @@
 
 // for spellchecking
 #include "nsIEditor.h"
-#include "nsIEditingSession.h"
 #include "nsIInlineSpellChecker.h"
 #include "nsIEditorSpellCheck.h"
 #include "nsISelection.h"
@@ -159,10 +154,7 @@ static NSString* const HistoryToolbarItemIdentifier     = @"History Toolbar Item
 int TabBarVisiblePrefChangedCallback(const char* pref, void* data);
 static const char* const gTabBarVisiblePref = "camino.tab_bar_always_visible";
 
-const float kMinimumLocationBarWidth = 250.0;
-const float kMinimumURLAndSearchBarWidth = 128.0;
-const float kDefaultSearchBarWidth = 192.0;
-const float kEpsilon = 0.001; //suitable for "equality"-testing pseudo-integer values up to ~10000
+const float kMininumURLAndSearchBarWidth = 128.0;
 
 static NSString* const NavigatorWindowFrameSaveName = @"NavigatorWindow";
 static NSString* const NavigatorWindowSearchBarWidth = @"SearchBarWidth";
@@ -171,14 +163,6 @@ static NSString* const kViewSourceProtocolString = @"view-source:";
 const unsigned long kNoToolbarsChromeMask = (nsIWebBrowserChrome::CHROME_ALL & ~(nsIWebBrowserChrome::CHROME_TOOLBAR |
                                                                                  nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR |
                                                                                  nsIWebBrowserChrome::CHROME_LOCATIONBAR)); 
-
-// context menu items tags
-const int kFrameRelatedItemsTag = 100;
-const int kFrameInapplicableItemsTag = 101;
-const int kSelectionRelatedItemsTag = 102;
-const int kSpellingRelatedItemsTag = 103;
-const int kItemsNeedingOpenBehaviorAlternatesTag = 104;
-const int kItemsNeedingForceAlternateTag = 105;
 
 // Cached toolbar defaults read in from a plist. If null, we'll use
 // hardcoded defaults.
@@ -429,18 +413,6 @@ public:
     [target validateToolbarItem:self];
 }
 
-//
-// -setEnabled:
-//
-// Make sure that the menu form, which is used for the text-only view,
-// is enabled and disabled with the rest of the toolbar item.
-//
-- (void)setEnabled:(BOOL)enabled
-{
-  [super setEnabled:enabled];
-  [[self menuFormRepresentation] setEnabled:enabled];
-}
-
 @end
 
 #pragma mark -
@@ -536,9 +508,7 @@ enum BWCOpenDest {
 - (void)goToLocationFromToolbarURLField:(AutoCompleteTextField *)inURLField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
 
 - (BrowserTabViewItem*)tabForBrowser:(BrowserWrapper*)inWrapper;
-- (void)closeTab:(NSTabViewItem *)tab;
 - (BookmarkViewController*)bookmarkViewControllerForCurrentTab;
-- (void)showAddBookmarkDialogForAllTabs:(BOOL)isTabGroup;
 - (void)sessionHistoryItemAtRelativeOffset:(int)indexOffset forWrapper:(BrowserWrapper*)inWrapper title:(NSString**)outTitle URL:(NSString**)outURLString;
 - (NSString *)locationToolTipWithFormat:(NSString *)format title:(NSString *)backTitle URL:(NSString *)backURL;
 
@@ -552,17 +522,12 @@ enum BWCOpenDest {
 - (IBAction)backMenu:(id)inSender;
 - (IBAction)forwardMenu:(id)inSender;
 
-- (void)reloadBrowserWrapper:(BrowserWrapper *)inWrapper sender:(id)sender;
-
 // run a modal according to the users pref on opening a feed
 - (BOOL)shouldWarnBeforeOpeningFeed;
 - (void)buildFeedsDetectedListMenu:(NSNotification*)notifer; 
 - (IBAction)openFeedInExternalApp:(id)sender;
 
-- (void)insertForceAlternatesIntoMenu:(NSMenu *)inMenu;
 - (BOOL)prepareSpellingSuggestionMenu:(NSMenu*)inMenu tag:(int)inTag;
-
-- (void)setZoomState:(NSRect)newFrame defaultFrame:(NSRect)defaultFrame;
 
 @end
 
@@ -728,7 +693,7 @@ enum BWCOpenDest {
                                     button1:NSLocalizedString(@"CloseWindowWithMultipleTabsButton", @"")
                                     button2:NSLocalizedString(@"CancelButtonText", @"")
                                     button3:nil
-                                   checkMsg:NSLocalizedString(@"DontShowWarningAgainCheckboxLabel", @"")
+                                   checkMsg:NSLocalizedString(@"CloseWindowWithMultipleTabsCheckboxLabel", @"")
                                  checkValue:&dontShowAgain];
       NS_HANDLER
       NS_ENDHANDLER
@@ -914,13 +879,7 @@ enum BWCOpenDest {
     [[self window] setAcceptsMouseMovedEvents:YES];
 
     [self setupToolbar];
-
-    // Insert alternate menu items for force reload into the context menus that have reload items
-    // This is necessary because IB won't accept shift modifiers on menu items that don't have keyEquivalents
-    [self insertForceAlternatesIntoMenu:mPageMenu];
-    [self insertForceAlternatesIntoMenu:mTabMenu];
-    [self insertForceAlternatesIntoMenu:mTabBarMenu];
-
+    
     // Listen to the context menu events from the URL bar for the feed icon
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(buildFeedsDetectedListMenu:)
@@ -934,12 +893,12 @@ enum BWCOpenDest {
       [mLocationToolbarView collapseSubviewAtIndex:1];
     else {
       float searchBarWidth = [[NSUserDefaults standardUserDefaults] floatForKey:NavigatorWindowSearchBarWidth];
-      if (searchBarWidth < kEpsilon)
-        searchBarWidth = kDefaultSearchBarWidth;
+      if (searchBarWidth <= 0)
+        searchBarWidth = kMininumURLAndSearchBarWidth;
       const float currentWidth = [mLocationToolbarView frame].size.width;
       float newDividerPosition = currentWidth - searchBarWidth - [mLocationToolbarView dividerThickness];
-      if (newDividerPosition < kMinimumURLAndSearchBarWidth)
-        newDividerPosition = kMinimumURLAndSearchBarWidth;
+      if (newDividerPosition < kMininumURLAndSearchBarWidth)
+        newDividerPosition = kMininumURLAndSearchBarWidth;
       [mLocationToolbarView setLeftWidth:newDividerPosition];
       [mLocationToolbarView adjustSubviews];
     }
@@ -982,7 +941,7 @@ enum BWCOpenDest {
 
     BOOL chromeHidesToolbar = (mChromeMask != 0) && !(mChromeMask & nsIWebBrowserChrome::CHROME_PERSONAL_TOOLBAR);
     if (chromeHidesToolbar || ![self shouldShowBookmarkToolbar])
-      [mPersonalToolbar setVisible:NO];
+      [mPersonalToolbar showBookmarksToolbar:NO];
     
     if (mustResizeChrome)
       [mContentView resizeSubviewsWithOldSize:[mContentView frame].size];
@@ -1021,9 +980,6 @@ enum BWCOpenDest {
       [[self window] setFrameOrigin: testBrowserFrame.origin];
     }
     
-    // cache the original window frame, we may need this for correct zooming
-    mLastFrameSize = [[self window] frame];
-
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(newTab:)
                                         name:kTabBarBackgroundDoubleClickedNotification object:mTabBrowser];
 
@@ -1034,103 +990,6 @@ enum BWCOpenDest {
   //if ( mChromeMask && !(mChromeMask & nsIWebBrowserChrome::CHROME_WINDOW_RESIZE) )
   //  return [[self window] frame].size;
   return proposedFrameSize;
-}
-
-// zoom to fit contents
-- (NSRect)windowWillUseStandardFrame:(NSWindow *)sender defaultFrame:(NSRect)defaultFrame
-{
-  // Maximize to screen
-  if (([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask) ||
-      [[self getBrowserWrapper] isEmpty] ||
-      [self bookmarkManagerIsVisible])
-  {
-    [self setZoomState:defaultFrame defaultFrame:defaultFrame];
-    return defaultFrame;
-  }
-
-  // Get the needed content size
-  nsCOMPtr<nsIDOMWindow> contentWindow = [[mBrowserView getBrowserView] getContentWindow];
-  if (!contentWindow) {
-    [self setZoomState:defaultFrame defaultFrame:defaultFrame];
-    return defaultFrame;
-  }
-
-  PRInt32 contentWidth = 0, contentHeight = 0;
-  const PRInt32 kMinSaneHeight = 20; // for bug 361049
-  GeckoUtils::GetIntrisicSize(contentWindow, &contentWidth, &contentHeight);
-  if (contentWidth <= 0 || contentHeight <= kMinSaneHeight) {
-    // Something went wrong, maximize to screen
-    [self setZoomState:defaultFrame defaultFrame:defaultFrame];
-    return defaultFrame;
-  }
-
-  // Get the current content size and calculate the changes.
-  NSSize curFrameSize = [[mBrowserView getBrowserView] frame].size;
-  float widthChange   = contentWidth  - curFrameSize.width;
-  float heightChange  = contentHeight - curFrameSize.height;
-
-  // The values from GeckoUtils::GetIntrisicSize may be rounded down, add 1 extra pixel but
-  // only if the window will be smaller than the screen (see bug 360878)
-  NSRect stdFrame     = [[self window] frame];
-  if (stdFrame.size.width + widthChange < defaultFrame.size.width)
-    widthChange += 1;
-
-  if (stdFrame.size.height + heightChange < defaultFrame.size.height)
-    heightChange += 1;
-
-  // Change the window size, but don't let it be to narrow
-  stdFrame.size.width = MAX([[self window] minSize].width, stdFrame.size.width + widthChange);
-
-  if ([mPersonalToolbar isVisible])
-    // if the personal toolbar is shown we need to adjust for its height change
-    heightChange += [mPersonalToolbar computeHeight:stdFrame.size.width startingAtIndex:0]
-                    - [mPersonalToolbar frame].size.height;
-
-  stdFrame.size.height += heightChange;
-  stdFrame.origin.y    -= heightChange;
-
-  // add space for scrollers if needed
-  float scrollerSize = [NSScroller scrollerWidth];
-
-  if (stdFrame.size.height > defaultFrame.size.height)
-    stdFrame.size.width += scrollerSize;
-
-  if (stdFrame.size.width > defaultFrame.size.width) {
-    stdFrame.size.height += scrollerSize;
-    stdFrame.origin.y    -= scrollerSize;
-  }
-
-  [self setZoomState:stdFrame defaultFrame:defaultFrame];
-  return stdFrame;
-} 
-
-- (BOOL)windowShouldZoom:(NSWindow *)sender toFrame:(NSRect)newFrame
-{
-  return mShouldZoom;
-}
-
-// Don't zoom a window that has not been zoomed before and we're not changing its size,
-// strange things will happen (see bug 155956 for details)
-- (void)setZoomState:(NSRect)newFrame defaultFrame:(NSRect)defaultFrame
-{
-  const int kMinZoomChange = 10;
-
-  mShouldZoom = (ABS(mLastFrameSize.size.width  - [[self window] frame].size.width)  > kMinZoomChange ||
-                 ABS(mLastFrameSize.size.height - [[self window] frame].size.height) > kMinZoomChange ||
-                 ABS(MIN(newFrame.size.width,  defaultFrame.size.width)  - [[self window] frame].size.width)  > kMinZoomChange ||
-                 ABS(MIN(newFrame.size.height, defaultFrame.size.height) - [[self window] frame].size.height) > kMinZoomChange);
-}
-
-- (void)windowDidResize:(NSNotification *)aNotification
-{
-  [self updateWindowTitle:[mBrowserView windowTitle]];
-
-  // Update the cached windowframe unless we are zooming the window
-  if (!mShouldZoom)
-    mLastFrameSize = [[self window] frame];
-  else
-    // reset mShouldZoom so further resizes will be catched
-    mShouldZoom = NO;
 }
 
 #pragma mark -
@@ -1144,15 +1003,15 @@ enum BWCOpenDest {
   NSRect frame = NSMakeRect(0.,0.,32.,32.);
   NSButton* button = [[[ToolbarButton alloc] initWithFrame:frame item:inItem] autorelease];
   if (button) {
-    DraggableImageAndTextCell* newCell = [[[DraggableImageAndTextCell alloc] initTextCell:@""] autorelease];
+    DraggableImageAndTextCell* newCell = [[[DraggableImageAndTextCell alloc] init] autorelease];
     [newCell setDraggable:YES];
     [newCell setClickHoldTimeout:0.45];
     [button setCell:newCell];
 
-    [button setBezelStyle:NSRegularSquareBezelStyle];
-    [button setButtonType:NSMomentaryChangeButton];
-    [button setImagePosition:NSImageOnly];
-    [button setBordered:NO];
+    [button setBezelStyle: NSRegularSquareBezelStyle];
+    [button setButtonType: NSMomentaryChangeButton];
+    [button setBordered: NO];
+    [button setImagePosition: NSImageOnly];
   }
   return button;
 }
@@ -1241,25 +1100,6 @@ enum BWCOpenDest {
   return sToolbarDefaults;
 }
 
-// +shouldLoadInBackground
-//
-// gets the foreground/background tab loading pref
-//
-+ (BOOL)shouldLoadInBackground:(id)aSender
-{
-  BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
-
-  if ([aSender respondsToSelector:@selector(keyEquivalentModifierMask)]) {
-    if ([aSender keyEquivalentModifierMask] & NSShiftKeyMask)
-      loadInBackground = !loadInBackground;
-  }
-  else {
-    if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
-      loadInBackground = !loadInBackground;
-  }
-
-  return loadInBackground;
-}
 
 - (NSArray *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar
 {
@@ -1404,7 +1244,7 @@ enum BWCOpenDest {
     [toolbarItem setLabel:NSLocalizedString(@"Location", nil)];
     [toolbarItem setPaletteLabel:NSLocalizedString(@"Location", nil)];
     [toolbarItem setView:mLocationToolbarView];
-    [toolbarItem setMinSize:NSMakeSize(kMinimumLocationBarWidth, NSHeight([mLocationToolbarView frame]))];
+    [toolbarItem setMinSize:NSMakeSize(250, NSHeight([mLocationToolbarView frame]))];
     [toolbarItem setMaxSize:NSMakeSize(FLT_MAX, NSHeight([mLocationToolbarView frame]))];
 
     [mSearchBar setTarget:self];
@@ -1580,8 +1420,28 @@ enum BWCOpenDest {
 
     return ![self bookmarkManagerIsVisible] || [self canHideBookmarks];
   }
-
-  return [self validateActionBySelector:action];
+  else if (action == @selector(reload:))
+    return [[self getBrowserWrapper] canReload];
+  else if (action == @selector(stop:))
+    return [mBrowserView isBusy];
+  else if (action == @selector(addBookmark:))
+    return ![mBrowserView isEmpty];
+  else if (action == @selector(biggerTextSize:))
+    return [self canMakeTextBigger];
+  else if ( action == @selector(smallerTextSize:))
+    return [self canMakeTextSmaller];
+  else if (action == @selector(newTab:))
+    return YES;
+  else if (action == @selector(closeCurrentTab:))
+    return ([mTabBrowser numberOfTabViewItems] > 1 && [[self window] isKeyWindow]);
+  else if (action == @selector(sendURL:) || action == @selector(fillForm:))
+    return ![[[self getBrowserWrapper] getCurrentURI] hasPrefix:@"about:"];
+  else if (action == @selector(viewSource:)) {
+    return (![self bookmarkManagerIsVisible] &&
+            [[[self getBrowserWrapper] getBrowserView] isTextBasedContent]);
+  }
+  else
+    return YES;
 }
 
 //
@@ -1623,7 +1483,7 @@ enum BWCOpenDest {
 - (float)splitView:(NSSplitView *)sender constrainMinCoordinate:(float)proposedMin ofSubviewAt:(int)offset
 {
   if (sender == mLocationToolbarView)
-    return kMinimumURLAndSearchBarWidth;
+    return kMininumURLAndSearchBarWidth;
   return proposedMin;
 }
 
@@ -1638,7 +1498,7 @@ enum BWCOpenDest {
 - (float)splitView:(NSSplitView *)sender constrainMaxCoordinate:(float)proposedMax ofSubviewAt:(int)offset
 {
   if (sender == mLocationToolbarView)
-    return proposedMax - kMinimumURLAndSearchBarWidth;
+    return proposedMax - kMininumURLAndSearchBarWidth;
   return proposedMax;
 }
 
@@ -1662,16 +1522,6 @@ enum BWCOpenDest {
   float deltaX = newSize.width - oldSize.width;     // positive when window grows
   urlBarFrame.size.width += deltaX;
   searchFrame.origin.x += deltaX;
-  // each toolbar resize actually shrinks the splitview to its minwidth, then re-expands
-  // it to the new value; enforce min URL width only when not doing the min-size call
-  if (fabsf(newSize.width - kMinimumLocationBarWidth) > kEpsilon) {
-    if (urlBarFrame.size.width < kMinimumURLAndSearchBarWidth) {
-      float widthShortage = kMinimumURLAndSearchBarWidth - urlBarFrame.size.width;
-      searchFrame.origin.x += widthShortage;
-      searchFrame.size.width -= widthShortage;
-      urlBarFrame.size.width = kMinimumURLAndSearchBarWidth;
-    }
-  }
   [urlSuperview setFrame:urlBarFrame];
   [mSearchBar setFrame:searchFrame];
   [sender setNeedsDisplay:YES];
@@ -1680,81 +1530,27 @@ enum BWCOpenDest {
 #pragma mark -
 
 
-- (BOOL)validateMenuItem:(NSMenuItem*)aMenuItem
+-(BOOL)validateMenuItem: (NSMenuItem*)aMenuItem
 {
   SEL action = [aMenuItem action];
 
-  // Disable all window-specific menu items while a sheet is showing.
-  // We don't do this in validateActionBySelector: because toolbar items shouldn't
-  // suddenly get a disabled look when a sheet appears (they aren't clickable anyway).
-  if ([[self window] attachedSheet])
-    return NO;
+  if (action == @selector(moveTabToNewWindow:) ||
+      action == @selector(closeCurrentTab:)    ||
+      action == @selector(closeSendersTab:)    ||
+      action == @selector(closeOtherTabs:))
+    return ([mTabBrowser numberOfTabViewItems] > 1);
 
   if (action == @selector(reloadSendersTab:)) {
     BrowserTabViewItem* sendersTab = [[self getTabBrowser] itemWithTag:[aMenuItem tag]];
     return [[sendersTab view] canReload];
   }
 
-  if (action == @selector(getInfo:)) {
-    if ([self bookmarkManagerIsVisible]) {
-      [aMenuItem setTitle:NSLocalizedString(@"Bookmark Info", nil)];
-      // let the BookmarkViewController validate based on selection
-      return [[self bookmarkViewControllerForCurrentTab] validateMenuItem:aMenuItem];
-    }
-    else
-      [aMenuItem setTitle:NSLocalizedString(@"Page Info", nil)];
-  }
-
-  return [self validateActionBySelector:action];
-}
-
-- (BOOL)validateActionBySelector:(SEL)action
-{
-  if (action == @selector(back:))
-    return [[mBrowserView getBrowserView] canGoBack];
-  if (action == @selector(forward:))
-    return [[mBrowserView getBrowserView] canGoForward];
-  if (action == @selector(stop:))
-    return [mBrowserView isBusy];
   if (action == @selector(reload:))
     return [[self getBrowserWrapper] canReload];
-  if (action == @selector(moveTabToNewWindow:) ||
-      action == @selector(closeSendersTab:) ||
-      action == @selector(closeOtherTabs:) ||
-      action == @selector(nextTab:) ||
-      action == @selector(previousTab:) ||
-      action == @selector(addTabGroup:) ||
-      action == @selector(addTabGroupWithoutPrompt:))
-  {
-    return ([mTabBrowser numberOfTabViewItems] > 1);
-  }
-  if (action == @selector(closeCurrentTab:))
-    return ([mTabBrowser numberOfTabViewItems] > 1 && [[self window] isKeyWindow]);
-  if (action == @selector(addBookmark:) ||
-      action == @selector(addBookmarkWithoutPrompt:))
-  {
-    return ![mBrowserView isEmpty];
-  }
-  if (action == @selector(makeTextBigger:))
-    return [self canMakeTextBigger];
-  if (action == @selector(makeTextSmaller:))
-    return [self canMakeTextSmaller];
-  if (action == @selector(makeTextDefaultSize:))
-    return [self canMakeTextDefaultSize];
-  if (action == @selector(sendURL:))
-    return ![[self getBrowserWrapper] isInternalURI];
-  if (action == @selector(viewSource:) ||
-      action == @selector(viewPageSource:) ||
-      action == @selector(fillForm:))
-  {
-    BrowserWrapper* browser = [self getBrowserWrapper];
-    return (![browser isInternalURI] && [[browser getBrowserView] isTextBasedContent]);
-  }
-  if (action == @selector(printDocument:) ||
-      action == @selector(pageSetup:))
-  {
-    return ![self bookmarkManagerIsVisible];
-  }
+
+  if (action == @selector(fillForm:))
+    return ![[[self getBrowserWrapper] getCurrentURI] hasPrefix:@"about:"];
+
 
   return YES;
 }
@@ -1770,24 +1566,23 @@ enum BWCOpenDest {
 
 - (void)loadingDone:(BOOL)activateContent
 {
-  if (activateContent) {
+  if (activateContent)
+  {
     // if we're the front/key window, focus the content area. If we're not,
     // set gecko as the first responder so that it will be activated when
     // the window is focused. If the user is typing in the urlBar, however,
     // don't mess with the focus at all.
-    if ([[self window] isKeyWindow]) {
+    if ([[self window] isKeyWindow])
+    {
       if (![self userChangedLocationField])
         [mBrowserView setBrowserActive:YES];
     }
     else
       [[self window] makeFirstResponder:[mBrowserView getBrowserView]];
   }
-
+  
   if ([[self window] isMainWindow])
     [[PageInfoWindowController visiblePageInfoWindowController] updateFromBrowserView:[self activeBrowserView]];
-
-  [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
-  [[SessionManager sharedInstance] windowStateChanged];
 }
 
 - (void)setLoadingActive:(BOOL)active
@@ -1823,27 +1618,9 @@ enum BWCOpenDest {
   }
 }
 
-// Get the title's maximal width manually and truncate the title ourselves to work around
-// 10.3's crappy title truncation.  Also, this way we can middle-truncate, which 10.4 doesn't do
 - (void)updateWindowTitle:(NSString*)title
 {
-  if (!title)
-    return;
-
-  NSWindow* window = [self window];
-
-  float leftEdge = NSMaxX([[window standardWindowButton:NSWindowZoomButton] frame]);
-  NSButton* toolbarButton = [window standardWindowButton:NSWindowToolbarButton];
-  float rightEdge = toolbarButton ? [toolbarButton frame].origin.x : NSMaxX([window frame]);
-
-  // Leave 8 pixels of padding around the title.
-  const int kTitlePadding = 8;
-  float titleWidth = rightEdge - leftEdge - 2 * kTitlePadding;
-
-  // Sending |titleBarFontOfSize| 0 returns default size
-  NSDictionary* attributes = [NSDictionary dictionaryWithObject:[NSFont titleBarFontOfSize:0] forKey:NSFontAttributeName];
-
-  [window setTitle:[title stringByTruncatingToWidth:titleWidth at:kTruncateAtMiddle withAttributes:attributes]];
+  [[self window] setTitle:title];
 }
 
 - (void)updateStatus:(NSString*)status
@@ -1934,29 +1711,33 @@ enum BWCOpenDest {
 
 - (void)whitelistAndShowPopup:(nsIDOMPopupBlockedEvent*)aPopupBlockedEvent
 { 
-  nsCOMPtr<nsIDOMWindow> requestingWindow;
-  aPopupBlockedEvent->GetRequestingWindow(getter_AddRefs(requestingWindow));
   // get the URIs for the popup window, and it's parent document
-  nsCOMPtr<nsIURI> popupWindowURI;
+  nsCOMPtr<nsIURI> requestingWindowURI, popupWindowURI;
+  aPopupBlockedEvent->GetRequestingWindowURI(getter_AddRefs(requestingWindowURI));
   aPopupBlockedEvent->GetPopupWindowURI(getter_AddRefs(popupWindowURI));
 
   nsAutoString windowName, features;
   
   // get the popup window's features
-  aPopupBlockedEvent->GetPopupWindowFeatures(features);
+  aPopupBlockedEvent->GetPopupWindowFeatures(features);  
   
 #ifndef MOZILLA_1_8_BRANCH
   // XXXhakan: nsIDOMPopupBlockedEvent didn't get the popupWindowName property added on branch, so
   // we can't set the popup window's original name for now.
   // see bug 343734
   aPopupBlockedEvent->GetPopupWindowName(windowName);
-#endif
+#endif 
 
   // find the docshell for the blocked popup window, in order to show it
-  if (!requestingWindow)
+  nsCOMPtr<nsIDocShell> popupWinDocShell = [[mBrowserView getBrowserView] findDocShellForURI:requestingWindowURI];
+  if (!popupWinDocShell)
     return;
 
-  nsCOMPtr<nsPIDOMWindow> piDomWin = do_QueryInterface(requestingWindow);
+  nsCOMPtr<nsIDOMWindowInternal> domWin = do_GetInterface(popupWinDocShell);
+  if (!domWin)
+    return;
+
+  nsCOMPtr<nsPIDOMWindow> piDomWin = do_QueryInterface(domWin);
   if (!piDomWin)
     return;
 
@@ -1967,21 +1748,13 @@ enum BWCOpenDest {
   popupWindowURI->GetSpec(uriStr);
   
   // whitelist the URL
-  nsCOMPtr<nsIURI> requestingWindowURI;
-  nsCOMPtr<nsIWebNavigation> webNav = do_GetInterface(requestingWindow);
-  if (webNav)
-    webNav->GetCurrentURI(getter_AddRefs(requestingWindowURI));
-  
-  if (requestingWindowURI)
-    [self whitelistURL:requestingWindowURI];
-  else
-    NSLog(@"Couldn't whitelist the URI");
-  
+  [self whitelistURL:requestingWindowURI];
+
   // show the blocked popup
   nsCOMPtr<nsIDOMWindow> openedWindow;
-  nsresult rv = piDomWin->Open(NS_ConvertUTF8toUTF16(uriStr), windowName, features, getter_AddRefs(openedWindow));
+  nsresult rv = domWin->Open(NS_ConvertUTF8toUTF16(uriStr), windowName, features, getter_AddRefs(openedWindow));
   if (NS_FAILED(rv))
-    NSLog(@"Couldn't show the blocked popup window for %@", [NSString stringWith_nsACString:uriStr]);
+    NSLog(@"Couldn't show the blocked popup window for %@", [NSString stringWith_nsACString:uriStr]);  
 }
 
 - (void)whitelistURL:(nsIURI*)URL
@@ -2095,7 +1868,7 @@ enum BWCOpenDest {
 
 - (void)updateFromFrontmostTab
 {
-  [self updateWindowTitle:[mBrowserView windowTitle]];
+  [[self window] setTitle:[mBrowserView windowTitle]];
   [self setLoadingActive:[mBrowserView isBusy]];
   [self setLoadingProgress:[mBrowserView loadingProgress]];
   [self showSecurityState:[mBrowserView securityState]];
@@ -2287,6 +2060,8 @@ enum BWCOpenDest {
   }
   else
     [self loadURL:@"about:bookmarks"];
+
+  [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
 }
 
 //
@@ -2407,7 +2182,7 @@ enum BWCOpenDest {
   {
     nsAutoString url;
     [theURL assignTo_nsAString:url];
-    NS_ConvertUTF16toUTF8 utf8URL(url);
+    NS_ConvertUCS2toUTF8 utf8URL(url);
 
     nsCOMPtr<nsIURI> fixedURI;
     mDataOwner->mURIFixer->CreateFixupURI(utf8URL, 0, getter_AddRefs(fixedURI));
@@ -2478,9 +2253,7 @@ enum BWCOpenDest {
 
 - (IBAction)viewPageSource:(id)aSender
 {
-  // If it's a capital V, shift is down
-  BOOL loadInBackground = ([[aSender keyEquivalent] isEqualToString:@"V"]);
-
+  BOOL loadInBackground = (([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask) != 0);
   NSString* urlStr = [[mBrowserView getBrowserView] getCurrentURI];
   [self loadSourceOfURL:urlStr inBackground:loadInBackground];
 }
@@ -2515,17 +2288,7 @@ enum BWCOpenDest {
   NSString* selection = [[mBrowserView getBrowserView] getSelection];
   [mSearchBar becomeFirstResponder];
   [mSearchBar setStringValue:selection];
-  
-  unsigned int modifiers = [[NSApp currentEvent] modifierFlags];
-
-  // do search in a new window/tab if Command is held down
-  if (modifiers & NSCommandKeyMask) {
-    BOOL loadInTab = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
-    BWCOpenDest destination = loadInTab ? kDestinationNewTab : kDestinationNewWindow;
-    [self performSearch:mSearchBar inView:destination inBackground:[BrowserWindowController shouldLoadInBackground:nil]];
-  }
-  else
-    [self performSearch:mSearchBar];
+  [self performSearch:mSearchBar];
 }
 
 //
@@ -2609,7 +2372,7 @@ enum BWCOpenDest {
 
 // - transformFormatString:domain:search
 //
-// Replaces all occurrences of %d in |inFormat| with |inDomain| and all occurrences of
+// Replaces all occurances of %d in |inFormat| with |inDomain| and all occurances of
 // %s with |inSearch|.
 - (void) transformFormatString:(NSMutableString*)inFormat domain:(NSString*)inDomain search:(NSString*)inSearch
 {
@@ -2740,20 +2503,6 @@ enum BWCOpenDest {
   }
 }
 
-// -performFindCommand
-//
-// Has the opportunity to handle a Find command.  Returns whether or not it did.
-//
-- (BOOL)performFindCommand
-{
-  if ([self bookmarkManagerIsVisible]) {
-    [[self bookmarkViewControllerForCurrentTab] focusSearchField];
-    return YES;
-  }
-
-  return NO;
-}
-
 - (void)stopThrobber
 {
   [mThrobberHandler stopThrobber];
@@ -2763,6 +2512,7 @@ enum BWCOpenDest {
   if (throbberItem)
     [throbberItem setImage: [[self throbberImages] objectAtIndex: 0]];
 }
+
 
 - (BOOL)findInPageWithPattern:(NSString*)text caseSensitive:(BOOL)inCaseSensitive
     wrap:(BOOL)inWrap backwards:(BOOL)inBackwards
@@ -2803,16 +2553,6 @@ enum BWCOpenDest {
 
 - (IBAction)addBookmark:(id)aSender
 {
-  [self showAddBookmarkDialogForAllTabs:NO];
-}
-
-- (IBAction)addTabGroup:(id)aSender
-{
-  [self showAddBookmarkDialogForAllTabs:YES];
-}
-
-- (void)showAddBookmarkDialogForAllTabs:(BOOL)isTabGroup
-{
   int numTabs = [mTabBrowser numberOfTabViewItems];
   NSMutableArray* itemsArray = [NSMutableArray arrayWithCapacity:numTabs];
   for (int i = 0; i < numTabs; i++)
@@ -2827,55 +2567,14 @@ enum BWCOpenDest {
     // title can be nil (e.g. for text files)
     if (curTitleString)
       [itemInfo setObject:curTitleString forKey:kAddBookmarkItemTitleKey];
-
+    
     if (browserWrapper == mBrowserView)
       [itemInfo setObject:[NSNumber numberWithBool:YES] forKey:kAddBookmarkItemPrimaryTabKey];
 
     [itemsArray addObject:itemInfo];
   }
-
-  AddBookmarkDialogController* dlgController = [AddBookmarkDialogController sharedAddBookmarkDialogController];
-  [dlgController showDialogWithLocationsAndTitles:itemsArray isFolder:NO onWindow:[self window]];
-
-  if (isTabGroup)
-    [dlgController makeTabGroup:YES];
-}
-
-- (IBAction)addBookmarkWithoutPrompt:(id)aSender
-{
-  BookmarkManager* bookmarkManager = [BookmarkManager sharedBookmarkManager];
-  BookmarkFolder*  parentFolder = [bookmarkManager lastUsedBookmarkFolder];
-
-  NSString* itemTitle = nil;
-  NSString* itemURL = nil;
-  [[self getBrowserWrapper] getTitle:&itemTitle andHref:&itemURL];
-
-  [parentFolder addBookmark:itemTitle url:itemURL inPosition:[parentFolder count] isSeparator:NO];
-  [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
-}
-
-- (IBAction)addTabGroupWithoutPrompt:(id)aSender
-{
-  BookmarkManager* bookmarkManager = [BookmarkManager sharedBookmarkManager];
-  BookmarkFolder*  parentFolder = [bookmarkManager lastUsedBookmarkFolder];
-
-  unsigned int folderPosition = [parentFolder count];
-  unsigned int numItems = [mTabBrowser numberOfTabViewItems];
-  NSString* itemTitle = nil;
-  NSString* itemURL = nil;
-  [[self getBrowserWrapper] getTitle:&itemTitle andHref:&itemURL];
-
-  NSString* titleString = [NSString stringWithFormat:NSLocalizedString(@"defaultTabGroupTitle", nil), numItems, itemTitle];
-  BookmarkFolder* newGroup = [parentFolder addBookmarkFolder:titleString inPosition:folderPosition isGroup:YES];
-
-  for (unsigned int i = 0; i < numItems; i++) {
-    BrowserWrapper* browserWrapper = (BrowserWrapper*)[[mTabBrowser tabViewItemAtIndex:i] view];
-    [browserWrapper getTitle:&itemTitle andHref:&itemURL];
-
-    [newGroup addBookmark:itemTitle url:itemURL inPosition:i isSeparator:NO];
-  }
-
-  [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
+  
+  [[AddBookmarkDialogController sharedAddBookmarkDialogController] showDialogWithLocationsAndTitles:itemsArray isFolder:NO onWindow:[self window]];
 }
 
 - (IBAction)addBookmarkForLink:(id)aSender
@@ -3064,41 +2763,12 @@ enum BWCOpenDest {
 
 - (IBAction)reload:(id)aSender
 {
-  [self reloadBrowserWrapper:mBrowserView sender:aSender];
-}
-
-- (IBAction)reloadSendersTab:(id)sender
-{
-  if ([sender isMemberOfClass:[NSMenuItem class]]) {
-    BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
-    if (tabViewItem)
-      [self reloadBrowserWrapper:[tabViewItem view] sender:sender];
-  }
-}
-
-- (IBAction)reloadAllTabs:(id)sender
-{
-  NSEnumerator* tabsEnum = [[mTabBrowser tabViewItems] objectEnumerator];
-  BrowserTabViewItem* curTabItem;
-  while ((curTabItem = [tabsEnum nextObject])) {
-    if ([curTabItem isKindOfClass:[BrowserTabViewItem class]])
-      [self reloadBrowserWrapper:[curTabItem view] sender:sender];
-  }
-}
-
-- (void)reloadBrowserWrapper:(BrowserWrapper *)inWrapper sender:(id)sender
-{
   unsigned int reloadFlags = NSLoadFlagsNone;
-  if ([sender respondsToSelector:@selector(keyEquivalent)]) {
-    // Capital R tests for shift when there's a keyEquivalent, keyEquivalentModifierMask tests when there isn't
-    if ([[sender keyEquivalent] isEqualToString:@"R"] || ([sender keyEquivalentModifierMask] & NSShiftKeyMask))
-      reloadFlags = NSLoadFlagsBypassCacheAndProxy;
-  }
-  // It's a toolbar button, so we test for shift using modifierFlags
-  else if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
+  
+  if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
     reloadFlags = NSLoadFlagsBypassCacheAndProxy;
-
-  [inWrapper reload:reloadFlags];
+  
+  [[mBrowserView getBrowserView] reload: reloadFlags];
 }
 
 - (IBAction)stop:(id)aSender
@@ -3170,24 +2840,6 @@ enum BWCOpenDest {
   [self forward:sender];
 }
 
-- (void)focusController:(nsIFocusController**)outController
-{
-  #define ENSURE_TRUE(x) if (!x) return;
-  if (!outController)
-    return;
-  *outController = nsnull;
-
-  nsCOMPtr<nsIWebBrowser> webBrizzle = dont_AddRef([[[self getBrowserWrapper] getBrowserView] getWebBrowser]);
-  ENSURE_TRUE(webBrizzle);
-  nsCOMPtr<nsIDOMWindow> domWindow;
-  webBrizzle->GetContentDOMWindow(getter_AddRefs(domWindow));
-  nsCOMPtr<nsPIDOMWindow> privateWindow = do_QueryInterface(domWindow);
-  ENSURE_TRUE(privateWindow);
-  *outController = privateWindow->GetRootFocusController();
-  NS_IF_ADDREF(*outController);
-  #undef ENSURE_TRUE
-}
-
 //
 // -focusedElement
 //
@@ -3195,24 +2847,31 @@ enum BWCOpenDest {
 //
 - (void)focusedElement:(nsIDOMElement**)outElement
 {
+  #define ENSURE_TRUE(x) if (!x) return;
   if (!outElement)
     return;
   *outElement = nsnull;
 
-  nsCOMPtr<nsIFocusController> controller;
-  [self focusController:getter_AddRefs(controller)];
-  if (!controller)
-    return;
+  nsCOMPtr<nsIWebBrowser> webBrizzle = dont_AddRef([[[self getBrowserWrapper] getBrowserView] getWebBrowser]);
+  ENSURE_TRUE(webBrizzle);
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  webBrizzle->GetContentDOMWindow(getter_AddRefs(domWindow));
+  nsCOMPtr<nsPIDOMWindow> privateWindow = do_QueryInterface(domWindow);
+  ENSURE_TRUE(privateWindow);
+  nsIFocusController *controller = privateWindow->GetRootFocusController();
+  ENSURE_TRUE(controller);
   nsCOMPtr<nsIDOMElement> focusedItem;
   controller->GetFocusedElement(getter_AddRefs(focusedItem));
   *outElement = focusedItem.get();
   NS_IF_ADDREF(*outElement);
+
+  #undef ENSURE_TRUE
 }
 
 //
 // -currentEditor:
 //
-// Returns the nsIEditor of the currently focused text area, input, or midas editor
+// Returns the nsIEditor of the currently focused text area or input
 //
 - (void)currentEditor:(nsIEditor**)outEditor
 {
@@ -3223,36 +2882,8 @@ enum BWCOpenDest {
   nsCOMPtr<nsIDOMElement> focusedElement;
   [self focusedElement:getter_AddRefs(focusedElement)];
   nsCOMPtr<nsIDOMNSEditableElement> editElement = do_QueryInterface(focusedElement);
-  if (editElement) {
+  if (editElement)
     editElement->GetEditor(outEditor);
-  }
-  // if there's no element focused, we're probably in a Midas editor
-  else {
-    #define ENSURE_TRUE(x) if (!x) return;
-    nsCOMPtr<nsIFocusController> controller;
-    [self focusController:getter_AddRefs(controller)];
-    ENSURE_TRUE(controller);
-    nsCOMPtr<nsIDOMWindowInternal> winInternal;
-    controller->GetFocusedWindow(getter_AddRefs(winInternal));
-    nsCOMPtr<nsIDOMWindow> focusedWindow(do_QueryInterface(winInternal));
-    ENSURE_TRUE(focusedWindow);
-    nsCOMPtr<nsIDOMDocument> domDoc;
-    focusedWindow->GetDocument(getter_AddRefs(domDoc));
-    nsCOMPtr<nsIDOMNSHTMLDocument> htmlDoc(do_QueryInterface(domDoc));
-    ENSURE_TRUE(htmlDoc);
-    nsAutoString designMode;
-    htmlDoc->GetDesignMode(designMode);
-    if (designMode.EqualsLiteral("on")) {
-      // we are in a Midas editor, so find its editor
-      nsCOMPtr<nsPIDOMWindow> privateWindow = do_QueryInterface(focusedWindow);
-      ENSURE_TRUE(privateWindow);
-      nsIDocShell *docshell = privateWindow->GetDocShell();
-      nsCOMPtr<nsIEditingSession> editSession = do_GetInterface(docshell);
-      ENSURE_TRUE(editSession)
-      editSession->GetEditorForWindow(focusedWindow, outEditor);
-    }
-    #undef ENSURE_TRUE
-  }
 }
 
 //
@@ -3359,18 +2990,20 @@ enum BWCOpenDest {
 //
 - (void)closeBrowserWindow:(BrowserWrapper*)inBrowser
 {
-  if ([mTabBrowser numberOfTabViewItems] > 1) {
-    [self closeTab:[inBrowser tab]];
+  if ( [mTabBrowser numberOfTabViewItems] > 1 ) {
+    // close the appropriate browser (it may not be frontmost) and
+    // remove it from the tab UI
+    [inBrowser windowClosed];
+    [mTabBrowser removeTabViewItem:[inBrowser tab]];
   }
-  // if a window unload handler calls window.close(), we
-  // can get here while the window is already being closed,
-  // so we don't want to close it again (and recurse).
-  else if (!mClosingWindow) {
-    [[self window] close];
-    [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
+  else
+  {
+    // if a window unload handler calls window.close(), we
+    // can get here while the window is already being closed,
+    // so we don't want to close it again (and recurse).
+    if (!mClosingWindow)
+      [[self window] close];
   }
-
-  [[SessionManager sharedInstance] windowStateChanged];
 }
 
 - (void)willShowPromptForBrowser:(BrowserWrapper*)inBrowser
@@ -3419,9 +3052,9 @@ enum BWCOpenDest {
 
       [newView loadURI:urlToLoad referrer:nil flags:NSLoadFlagsNone focusContent:!focusURLBar allowPopups:NO];
     }
-
-    [mTabBrowser selectLastTabViewItem:self];
-
+    
+    [mTabBrowser selectLastTabViewItem: self];
+    
     if (focusURLBar)
       [self focusURLBar];
 }
@@ -3433,8 +3066,11 @@ enum BWCOpenDest {
 
 -(IBAction)closeCurrentTab:(id)sender
 {
-  if ([mTabBrowser numberOfTabViewItems] > 1)
-    [self closeTab:[mTabBrowser selectedTabViewItem]];
+  if ( [mTabBrowser numberOfTabViewItems] > 1 )
+  {
+    [[[mTabBrowser selectedTabViewItem] view] windowClosed];
+    [mTabBrowser removeTabViewItem:[mTabBrowser selectedTabViewItem]];
+  }
 }
 
 - (IBAction)previousTab:(id)sender
@@ -3445,8 +3081,6 @@ enum BWCOpenDest {
     [mTabBrowser selectLastTabViewItem:sender];
   else
     [mTabBrowser selectPreviousTabViewItem:sender];
-
-  [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
 }
 
 - (IBAction)nextTab:(id)sender
@@ -3463,49 +3097,80 @@ enum BWCOpenDest {
 
 - (IBAction)closeSendersTab:(id)sender
 {
-  if ([sender isMemberOfClass:[NSMenuItem class]]) {
+  if ([sender isMemberOfClass:[NSMenuItem class]])
+  {
     BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
     if (tabViewItem)
-      [self closeTab:tabViewItem];
+    {
+      [[tabViewItem view] windowClosed];
+      [mTabBrowser removeTabViewItem:tabViewItem];
+    }
   }
 }
 
 - (IBAction)closeOtherTabs:(id)sender
 {
-  if ([sender isMemberOfClass:[NSMenuItem class]]) {
+  if ([sender isMemberOfClass:[NSMenuItem class]])
+  {
     BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
-    if (tabViewItem) {
-      while ([mTabBrowser numberOfTabViewItems] > 1) {
+    if (tabViewItem)
+    {
+      while ([mTabBrowser numberOfTabViewItems] > 1)
+      {
         NSTabViewItem* doomedItem = nil;
         if ([mTabBrowser indexOfTabViewItem:tabViewItem] == 0)
           doomedItem = [mTabBrowser tabViewItemAtIndex:1];
         else
           doomedItem = [mTabBrowser tabViewItemAtIndex:0];
-
-        [self closeTab:doomedItem];
+        
+        [[doomedItem view] windowClosed];
+        [mTabBrowser removeTabViewItem:doomedItem];
       }
     }
   }
 }
 
-- (void)closeTab:(NSTabViewItem *)tab
+- (IBAction)reloadSendersTab:(id)sender
 {
-  [[tab view] windowClosed];
-  [mTabBrowser removeTabViewItem:tab];
-  [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
+  if ([sender isMemberOfClass:[NSMenuItem class]])
+  {
+    BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
+    if (tabViewItem)
+    {
+      [[[tabViewItem view] getBrowserView] reload: NSLoadFlagsNone];
+    }
+  }
+}
+
+- (IBAction)reloadAllTabs:(id)sender
+{
+  unsigned int reloadFlags = NSLoadFlagsNone;
+  if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
+    reloadFlags = NSLoadFlagsBypassCacheAndProxy;
+
+  NSEnumerator* tabsEnum = [[mTabBrowser tabViewItems] objectEnumerator];
+  BrowserTabViewItem* curTabItem;
+  while ((curTabItem = [tabsEnum nextObject]))
+  {
+    if ([curTabItem isKindOfClass:[BrowserTabViewItem class]])
+      [[[curTabItem view] getBrowserView] reload:reloadFlags];
+  }
 }
 
 - (IBAction)moveTabToNewWindow:(id)sender
 {
-  if ([sender isMemberOfClass:[NSMenuItem class]]) {
+  if ([sender isMemberOfClass:[NSMenuItem class]])
+  {
     BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
-    if (tabViewItem) {
+    if (tabViewItem)
+    {
       NSString* url = [[tabViewItem view] getCurrentURI];
-      BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:nil];
+      BOOL backgroundLoad = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
 
       [self openNewWindowWithURL:url referrer:nil loadInBackground:backgroundLoad allowPopups:NO];
 
-      [self closeTab:tabViewItem];
+      [[tabViewItem view] windowClosed];
+      [mTabBrowser removeTabViewItem:tabViewItem];
     }
   }
 }
@@ -3724,7 +3389,9 @@ enum BWCOpenDest {
   
   // if we replace all tabs (because we opened a tab group), or we open additional tabs
   // with the "focus new tab"-pref on, focus the first new tab.
-  if (!((tabPolicy == eAppendTabs) && [BrowserWindowController shouldLoadInBackground:nil]))
+  BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
+  
+  if (!((tabPolicy == eAppendTabs) && loadInBackground))
     [mTabBrowser selectTabViewItem:tabViewToSelect];
     
 }
@@ -3797,7 +3464,6 @@ enum BWCOpenDest {
   BrowserWrapper* wrapper = [self getBrowserWrapper];
   return (![wrapper isEmpty] &&
           ![self bookmarkManagerIsVisible] &&
-          [[wrapper getBrowserView] isTextBasedContent] &&
           [[wrapper getBrowserView] canMakeTextBigger]);
 }
 
@@ -3806,7 +3472,6 @@ enum BWCOpenDest {
   BrowserWrapper* wrapper = [self getBrowserWrapper];
   return (![wrapper isEmpty] &&
           ![self bookmarkManagerIsVisible] &&
-          [[wrapper getBrowserView] isTextBasedContent] &&
           [[wrapper getBrowserView] canMakeTextSmaller]);
 }
 
@@ -3815,7 +3480,6 @@ enum BWCOpenDest {
   BrowserWrapper* wrapper = [self getBrowserWrapper];
   return (![wrapper isEmpty] &&
           ![self bookmarkManagerIsVisible] &&
-          [[wrapper getBrowserView] isTextBasedContent] &&
           ![[wrapper getBrowserView] isTextDefaultSize]);
 }
 
@@ -3987,7 +3651,7 @@ enum BWCOpenDest {
   return addToAddressBookItem;
 }
 
-- (NSMenu*)contextMenu
+- (NSMenu*)getContextMenu
 {
   if (!mDataOwner->mGotOnContextMenu)
     return nil;
@@ -3995,41 +3659,17 @@ enum BWCOpenDest {
   BOOL showFrameItems = NO;
   BOOL showSpellingItems = NO;
   BOOL needsAlternates = NO;
-
+  
+  NSMenu* menuPrototype = nil;
+  int contextMenuFlags = mDataOwner->mContextMenuFlags;
+  
   NSArray* emailAddresses = nil;
   unsigned numEmailAddresses = 0;
 
   BOOL hasSelection = [[mBrowserView getBrowserView] canCopy];
-  BOOL isMidas = NO;
-
-  if (mDataOwner->mContextMenuNode) {
-    nsCOMPtr<nsIDOMDocument> ownerDoc;
-    mDataOwner->mContextMenuNode->GetOwnerDocument(getter_AddRefs(ownerDoc));
-
-    // Check to see if it's a Midas frame
-    nsCOMPtr<nsIDOMNSHTMLDocument> htmlDoc(do_QueryInterface(ownerDoc));
-    if (htmlDoc) {
-      nsAutoString designMode;
-      htmlDoc->GetDesignMode(designMode);
-      isMidas = designMode.EqualsLiteral("on");
-    }
-
-    // If it's not a Midas frame, check to see if it's a subframe
-    if (!isMidas) {
-      nsCOMPtr<nsIDOMWindow> contentWindow = [[mBrowserView getBrowserView] getContentWindow];
-
-      nsCOMPtr<nsIDOMDocument> contentDoc;
-      if (contentWindow)
-        contentWindow->GetDocument(getter_AddRefs(contentDoc));
-
-      showFrameItems = (contentDoc != ownerDoc);
-    }
-  }
-
-  NSMenu* menuPrototype = nil;
-  int contextMenuFlags = mDataOwner->mContextMenuFlags;
-
-  if ((contextMenuFlags & nsIContextMenuListener::CONTEXT_LINK) != 0) {
+  
+  if ((contextMenuFlags & nsIContextMenuListener::CONTEXT_LINK) != 0)
+  {
     emailAddresses = [self mailAddressesInContextMenuLinkNode];
     if (emailAddresses != nil)
       numEmailAddresses = [emailAddresses count];
@@ -4050,39 +3690,7 @@ enum BWCOpenDest {
     }
   }
   else if ((contextMenuFlags & nsIContextMenuListener::CONTEXT_INPUT) != 0 ||
-           (contextMenuFlags & nsIContextMenuListener::CONTEXT_TEXT) != 0 ||
-           isMidas)
-  {
-    // The following is a hack to work around bug 365183: If there is a no selection in the
-    // editor, we simulate a double click to select the word as native text fields do
-    // for context clicks, which allows spell check to operate on the word under the mouse.
-    // The behavior is not quite right since a right click outside of an existing selection should
-    // change the selection, but this gets us most of the way there until bug 365183 is fixed.
-    if (!hasSelection) {
-      NSEvent* realClick = [NSApp currentEvent];
-      NSEvent* fakeDoubleClickDown = [NSEvent mouseEventWithType:NSLeftMouseDown
-                                                        location:[realClick locationInWindow]
-                                                   modifierFlags:0
-                                                       timestamp:[realClick timestamp]
-                                                    windowNumber:[realClick windowNumber]
-                                                         context:[realClick context]
-                                                     eventNumber:[realClick eventNumber]
-                                                      clickCount:2
-                                                        pressure:[realClick pressure]];
-      NSEvent* fakeDoubleClickUp = [NSEvent mouseEventWithType:NSLeftMouseUp
-                                                      location:[realClick locationInWindow]
-                                                 modifierFlags:0
-                                                     timestamp:[realClick timestamp]
-                                                  windowNumber:[realClick windowNumber]
-                                                       context:[realClick context]
-                                                   eventNumber:[realClick eventNumber]
-                                                    clickCount:2
-                                                      pressure:[realClick pressure]];
-      NSView* textFieldView = [mContentView hitTest:[[mContentView superview] convertPoint:[realClick locationInWindow] fromView:nil]];
-      [textFieldView mouseDown:fakeDoubleClickDown];
-      [textFieldView mouseUp:fakeDoubleClickUp];
-    }
-    
+           (contextMenuFlags & nsIContextMenuListener::CONTEXT_TEXT) != 0) {
     menuPrototype = mInputMenu;
     showSpellingItems = YES;
   }
@@ -4099,17 +3707,29 @@ enum BWCOpenDest {
     [mForwardItem setEnabled: [[mBrowserView getBrowserView] canGoForward]];
     [mCopyItem    setEnabled:hasSelection];
   }
+    
+  if (mDataOwner->mContextMenuNode) {
+    nsCOMPtr<nsIDOMDocument> ownerDoc;
+    mDataOwner->mContextMenuNode->GetOwnerDocument(getter_AddRefs(ownerDoc));
+  
+    nsCOMPtr<nsIDOMWindow> contentWindow = [[mBrowserView getBrowserView] getContentWindow];
+
+    nsCOMPtr<nsIDOMDocument> contentDoc;
+    if (contentWindow)
+      contentWindow->GetDocument(getter_AddRefs(contentDoc));
+    
+    showFrameItems = (contentDoc != ownerDoc);
+  }
 
   // we have to clone the menu and return that, so that we don't change
   // our only copy of the menu
   NSMenu* result = [[menuPrototype copy] autorelease];
 
-  // validate View Page/Frame Source
-  BrowserWrapper* browser = [self getBrowserWrapper];
-  if ([browser isInternalURI] || ![[browser getBrowserView] isTextBasedContent]) {
-    [[result itemWithTarget:self andAction:@selector(viewPageSource:)] setEnabled:NO];
-    [[result itemWithTarget:self andAction:@selector(viewSource:)] setEnabled:NO];
-  }
+  const int kFrameRelatedItemsTag = 100;
+  const int kFrameInapplicableItemsTag = 101;
+  const int kSelectionRelatedItemsTag = 102;
+  const int kSpellingRelatedItemsTag = 103;
+  const int kItemsNeedingAlternatesTag = 104;
 
   if (showSpellingItems)
     showSpellingItems = [self prepareSpellingSuggestionMenu:result tag:kSpellingRelatedItemsTag];
@@ -4157,11 +3777,12 @@ enum BWCOpenDest {
     NSArray* menuArray = [result itemArray];
     BOOL inNewTab = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
 
-    for (int i = [menuArray count] - 1; i >= 0; i--) {
+    unsigned i;
+    for (i = 0; i < [menuArray count]; i++) {
       NSMenuItem* menuItem = [menuArray objectAtIndex:i];
 
       // Only create alternates for the items that need them
-      if ([menuItem tag] == kItemsNeedingOpenBehaviorAlternatesTag) {
+      if ([menuItem tag] == kItemsNeedingAlternatesTag) {
         NSString* altMenuItemTitle;
         if (inNewTab)
           altMenuItemTitle = [NSString stringWithFormat:NSLocalizedString(@"Action in New Tab", nil), [menuItem title]];
@@ -4172,50 +3793,21 @@ enum BWCOpenDest {
         id target = [menuItem target];
 
         // Create the alternates and insert them into the two places after the menu item
-        NSMenuItem* cmdMenuItem = [NSMenuItem alternateMenuItemWithTitle:altMenuItemTitle
-                                                                  action:action
-                                                                  target:target
-                                                               modifiers:NSCommandKeyMask];
-        [result insertItem:cmdMenuItem atIndex:(i + 1)];
-        NSMenuItem* cmdShiftMenuItem = [NSMenuItem alternateMenuItemWithTitle:altMenuItemTitle
-                                                                       action:action
-                                                                       target:target
-                                                                    modifiers:(NSCommandKeyMask | NSShiftKeyMask)];
-        [result insertItem:cmdShiftMenuItem atIndex:(i + 2)];
+        NSMenuItem* cmdMenuItem = [NSMenu alternateMenuItemWithTitle:altMenuItemTitle
+                                                              action:action
+                                                              target:target
+                                                           modifiers:NSCommandKeyMask];
+        [result insertItem:cmdMenuItem atIndex:i + 1];
+        NSMenuItem* cmdShiftMenuItem = [NSMenu alternateMenuItemWithTitle:altMenuItemTitle
+                                                                   action:action
+                                                                   target:target
+                                                                modifiers:(NSCommandKeyMask | NSShiftKeyMask)];
+        [result insertItem:cmdShiftMenuItem atIndex:i + 2];
       }
     }
   }
 
-  // Disable context menu items if the window is currently showing a sheet.
-  if ([[self window] attachedSheet]) {
-    NSArray* menuArray = [result itemArray];
-    for (unsigned i = 0; i < [menuArray count]; i++) {
-      [[menuArray objectAtIndex:i] setEnabled:NO];
-    }
-  }
-
   return result;
-}
-
-- (void)insertForceAlternatesIntoMenu:(NSMenu *)inMenu
-{
-  NSArray* menuArray = [inMenu itemArray];
-
-  for (unsigned int i = 0; i < [menuArray count]; i++) {
-    NSMenuItem* menuItem = [menuArray objectAtIndex:i];
-
-    if ([menuItem tag] == kItemsNeedingForceAlternateTag) {
-      // @"Force Format" = @"Force %@", so this gives the menu's title prepended with "Force"
-      NSString* title = [NSString stringWithFormat:NSLocalizedString(@"Force Format", nil), [menuItem title]];
-
-      NSMenuItem* forceReloadItem = [NSMenuItem alternateMenuItemWithTitle:title
-                                                                    action:[menuItem action]
-                                                                    target:[menuItem target]
-                                                                 modifiers:([menuItem keyEquivalentModifierMask] | NSShiftKeyMask)];
-
-      [inMenu insertItem:forceReloadItem atIndex:(i + 1)];
-    }
-  }
 }
 
 //
@@ -4235,7 +3827,7 @@ enum BWCOpenDest {
   ENSURE_TRUE(editor);
 
   nsCOMPtr<nsIInlineSpellChecker> inlineChecker;
-  editor->GetInlineSpellChecker(PR_TRUE, getter_AddRefs(inlineChecker));
+  editor->GetInlineSpellChecker(getter_AddRefs(inlineChecker));
   ENSURE_TRUE(inlineChecker);
   
   // verify inline spellchecking is "on" before we continue
@@ -4254,9 +3846,6 @@ enum BWCOpenDest {
   nsCOMPtr<nsIDOMNode> anchorNode;
   PRInt32 anchorOffset = 0;
   GeckoUtils::GetAnchorNodeFromSelection(editor, getter_AddRefs(anchorNode), &anchorOffset);
-  // the anchor is at the beginning of the word, which the spelling system for whatever reason
-  // doesn't consider to be inside of the mispelled range, so we check one character further
-  ++anchorOffset;
   nsCOMPtr<nsIDOMRange> mispelledRange;
   inlineChecker->GetMispelledWord(anchorNode, (long)anchorOffset, getter_AddRefs(mispelledRange));
   if (mispelledRange) {
@@ -4320,13 +3909,11 @@ enum BWCOpenDest {
   ENSURE_TRUE(editor);
 
   nsCOMPtr<nsIInlineSpellChecker> inlineChecker;
-  editor->GetInlineSpellChecker(PR_TRUE, getter_AddRefs(inlineChecker));
+  editor->GetInlineSpellChecker(getter_AddRefs(inlineChecker));
   ENSURE_TRUE(inlineChecker);
   nsCOMPtr<nsIDOMNode> anchorNode;
   PRInt32 anchorOffset = 0;
   GeckoUtils::GetAnchorNodeFromSelection(editor, getter_AddRefs(anchorNode), &anchorOffset);
-  // once again, we shift the anchor off the beginning of the word to make the spelling system happy
-  ++anchorOffset;
   
   nsString newWord;
   [[inSender title] assignTo_nsAString:newWord];
@@ -4337,22 +3924,22 @@ enum BWCOpenDest {
 
 - (IBAction)openLinkInNewWindow:(id)aSender
 {
-  [self openLinkInNewWindowOrTab:YES];
+  [self openLinkInNewWindowOrTab: YES];
 }
 
 - (IBAction)openLinkInNewTab:(id)aSender
 {
-  [self openLinkInNewWindowOrTab:NO];
+  [self openLinkInNewWindowOrTab: NO];
 }
 
--(void)openLinkInNewWindowOrTab:(BOOL)aUseWindow
+-(void)openLinkInNewWindowOrTab: (BOOL)aUseWindow
 {
   NSString* hrefStr = [self getContextMenuNodeHrefText];
 
   if ([hrefStr length] == 0)
     return;
 
-  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:nil];
+  BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
 
   NSString* referrer = [[mBrowserView getBrowserView] getFocusedURLString];
 
@@ -4442,7 +4029,9 @@ enum BWCOpenDest {
 
     if (modifiers & NSCommandKeyMask) {
       BOOL loadInTab = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
-      BOOL loadInBG = [BrowserWindowController shouldLoadInBackground:nil];
+      BOOL loadInBG  = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
+      if (modifiers & NSShiftKeyMask)
+        loadInBG = !loadInBG; // shift key should toggle the foreground/background pref as it does elsewhere
       if (loadInTab)
         [self openNewTabWithURL:urlStr referrer:referrer loadInBackground:loadInBG allowPopups:NO setJumpback:NO];
       else
@@ -4667,54 +4256,26 @@ enum BWCOpenDest {
 //
 - (BOOL)loadBookmarkBarIndex:(unsigned short)inIndex openBehavior:(EBookmarkOpenBehavior)inBehavior
 {
-  // We don't want to trigger bookmark bar loads if the bookmark bar isn't visible
-  if (![mPersonalToolbar isVisible])
-    return NO;
-
   NSArray* bookmarkBarChildren   = [[[BookmarkManager sharedBookmarkManager] toolbarFolder] childArray];
-  unsigned int bookmarkBarCount = [bookmarkBarChildren count];
-  unsigned int i;
-  int loadableItemIndex = -1;
-  BookmarkItem* item;
+  unsigned int loadableItemIndex = 0; // holds the number of loadable items we've cycled through
+  NSEnumerator* enumerator       = [bookmarkBarChildren objectEnumerator];
+  id item;
 
   // We cycle through all the toolbar items.  When we've skipped enough loadable items
-  // (i.e., loadableItemIndex == inIndex), we've gotten there and |item| is the bookmark we want to load.
-  for (i = 0; i < bookmarkBarCount; ++i) {
-    item = [bookmarkBarChildren objectAtIndex:i];
-    // Only real (non-seperator) bookmarks and tab groups count
+  // (ie loadableItemIndex > inIndex), we've gotten there and |item| is the bookmark we want to load.
+  while ((loadableItemIndex <= inIndex) && (item = [enumerator nextObject])) {
+    // Only if it's a real non-seperator bookmark, or a tab group
     if (([item isKindOfClass:[Bookmark class]] && ![(Bookmark *)item isSeparator]) || 
         ([item isKindOfClass:[BookmarkFolder class]] && [(BookmarkFolder *)item isGroup]))
-    {
-      if (++loadableItemIndex == inIndex)
-        break;
-    }
+      ++loadableItemIndex;
   }
 
-  if (loadableItemIndex == inIndex) {
+  if (item)
     [[NSApp delegate] loadBookmark:item withBWC:self openBehavior:inBehavior reverseBgToggle:NO];
-    [mPersonalToolbar momentarilyHighlightButtonAtIndex:i];
-    return YES;
-  }
-  // We ran out of toolbar items before finding the nth loadable one
-  return NO;
-}
+  else // We ran out of toolbar items before finding the nth loadable one
+    NSBeep();
 
-//
-// -revealBookmark:
-//
-// Reveals a bookmark in the manager
-//
-- (void)revealBookmark:(BookmarkItem*)anItem
-{
-  BookmarkViewController* bvc = [self bookmarkViewControllerForCurrentTab];
-
-  if (![self bookmarkManagerIsVisible]) {
-    [bvc setItemToRevealOnLoad:anItem];
-    [self manageBookmarks:nil];
-  }
-  else {
-    [bvc revealItem:anItem scrollIntoView:YES selecting:YES byExtendingSelection:NO];
-  }
+  return YES;
 }
 
 //

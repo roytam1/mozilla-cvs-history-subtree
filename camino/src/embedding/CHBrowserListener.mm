@@ -46,7 +46,6 @@
 #include "nsIWebNavigation.h"
 #include "nsIWebProgress.h"
 #include "nsIURI.h"
-#include "nsIURIFixup.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMWindow.h"
 #include "nsIDOMDocument.h"
@@ -233,12 +232,9 @@ CHBrowserListener::ProvideWindow(nsIDOMWindow *inParent, PRUint32 inChromeFlags,
   if (prefersTabs) {
     CHBrowserView* newContainer = [mContainer reuseExistingBrowserWindow:inChromeFlags];
     nsCOMPtr<nsIDOMWindow> contentWindow = [newContainer getContentWindow];
-    
-    // make sure gecko knows whether we're creating a new browser window (new tabs don't count)
-    nsCOMPtr<nsIDOMWindow> currentWindow = [mView getContentWindow];
-    *outWindowIsNew = (contentWindow != currentWindow);
-    
-    NS_IF_ADDREF(*outDOMWindow = contentWindow.get());
+    *outDOMWindow = contentWindow.get();
+    *outWindowIsNew = PR_TRUE;
+    NS_IF_ADDREF(*outDOMWindow);
   }
 
   return NS_OK;
@@ -362,7 +358,7 @@ CHBrowserListener::ShowAsModal()
     return NS_ERROR_FAILURE;
   }
 
-  NSWindow* window = [mView nativeWindow];
+  NSWindow* window = [mView getNativeWindow];
 
   if (!window) {
     return NS_ERROR_FAILURE;
@@ -410,7 +406,7 @@ CHBrowserListener::SetDimensions(PRUint32 flags, PRInt32 x, PRInt32 y, PRInt32 c
   if (!mView)
     return NS_ERROR_FAILURE;
 
-  // use -window here and not -nativeWindow because we don't want to allow bg tabs
+  // use -window here and not -getNativeWindow because we don't want to allow bg tabs
   // (which aren't in the window hierarchy) to resize the window.
   NSWindow* window = [mView window];
   if (!window)
@@ -463,7 +459,7 @@ CHBrowserListener::GetDimensions(PRUint32 flags,  PRInt32 *x,  PRInt32 *y, PRInt
   if (!mView)
     return NS_ERROR_FAILURE;
 
-  NSWindow* window = [mView nativeWindow];
+  NSWindow* window = [mView getNativeWindow];
   if (!window)
     return NS_ERROR_FAILURE;
 
@@ -503,7 +499,7 @@ CHBrowserListener::GetDimensions(PRUint32 flags,  PRInt32 *x,  PRInt32 *y, PRInt
 NS_IMETHODIMP 
 CHBrowserListener::SetFocus()
 {
-  // don't use -nativeWindow here so tabs in the bg can't take focus
+  // don't use -getNativeWindow here so tabs in the bg can't take focus
   NSWindow* window = [mView window];
   if (!window) 
     return NS_ERROR_FAILURE;
@@ -534,17 +530,19 @@ CHBrowserListener::GetVisibility(PRBool *aVisibility)
   if (!mView)
     return NS_ERROR_FAILURE;
 
-  // Only return PR_TRUE if the view is the current tab
-  // (so its -window is non-nil). See bug 306245.
-  // XXX should we bother testing [window isVisible]?
-  *aVisibility = [mView window] && [[mView window] isVisible];
+  NSWindow* window = [mView getNativeWindow];
+  if (!window) {
+    return NS_ERROR_FAILURE;
+  }
+
+  *aVisibility = [window isVisible];
   return NS_OK;
 }
 
 NS_IMETHODIMP 
 CHBrowserListener::SetVisibility(PRBool aVisibility)
 {
-  // use -window instead of -nativeWindow to prevent bg tabs from being able to
+  // use -window instead of -getNativeWindow to prevent bg tabs from being able to
   // change the visibility
   NSWindow* window = [mView window];
   if (!window)
@@ -643,18 +641,6 @@ CHBrowserListener::OnProgressChange64(nsIWebProgress *aWebProgress, nsIRequest *
   return NS_OK;
 }
 
-/* boolean onRefreshAttempted (in nsIWebProgress aWebProgress, in nsIURI aRefreshURI, in long aDelay, in boolean aSameURI); */
-NS_IMETHODIMP
-CHBrowserListener::OnRefreshAttempted(nsIWebProgress *aWebProgress,
-                                      nsIURI *aUri,
-                                      PRInt32 aDelay,
-                                      PRBool aSameUri,
-                                      PRBool *allowRefresh)
-{
-    *allowRefresh = PR_TRUE;
-    return NS_OK;
-}
-
 //
 // Implementation of nsIWebProgressListener
 //
@@ -721,13 +707,7 @@ CHBrowserListener::OnLocationChange(nsIWebProgress *aWebProgress, nsIRequest *aR
   }
   
   nsCAutoString spec;
-  nsCOMPtr<nsIURI> exposableLocation;
-  nsCOMPtr<nsIURIFixup> fixup(do_GetService("@mozilla.org/docshell/urifixup;1"));
-  if (fixup && NS_SUCCEEDED(fixup->CreateExposableURI(aLocation, getter_AddRefs(exposableLocation))) && exposableLocation)
-    exposableLocation->GetSpec(spec);
-  else
-    aLocation->GetSpec(spec);
-
+  aLocation->GetSpec(spec);
   NSString* str = [NSString stringWithUTF8String:spec.get()];
 
   NSEnumerator* enumerator = [mListeners objectEnumerator];
@@ -977,7 +957,7 @@ CHBrowserListener::HandleFeedLink(nsIDOMElement* inElement)
   feedURI->SetScheme(NS_LITERAL_CSTRING("feed"));
   
   nsCAutoString feedFullURI;
-  feedURI->GetAsciiSpec(feedFullURI);
+  feedURI->GetSpec(feedFullURI);
   
   // get the two specs, the feed's uri and the feed's title
   NSString* feedSpec = [NSString stringWith_nsACString:feedFullURI];

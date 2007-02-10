@@ -43,7 +43,7 @@ class nsACString;
 class nsIURI;
 class nsIInputStream;
 class nsGenericHTMLElement;
-class nsILinkHandler;
+class nsPresContext;
 class nsIContent;
 class nsIFormControl;
 class nsIDOMHTMLElement;
@@ -62,7 +62,7 @@ class nsIFormSubmission : public nsISupports
 {
 public:
 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IFORMSUBMISSION_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IFORMSUBMISSION_IID)
 
   /**
    * Find out whether or not this form submission accepts files
@@ -77,13 +77,13 @@ public:
    * @param aActionURL the URL to submit to (may be modified with GET contents)
    * @param aTarget the target window
    * @param aSource the element responsible for the submission (for web shell)
-   * @param aLinkHandler the link handler to use
+   * @param aPresContext the presentation context
    * @param aDocShell (out param) the DocShell in which the submission was
    *        loaded
    * @param aRequest (out param) the Request for the submission
    */
   virtual nsresult SubmitTo(nsIURI* aActionURL, const nsAString& aTarget,
-                            nsIContent* aSource, nsILinkHandler* aLinkHandler,
+                            nsIContent* aSource, nsPresContext* aPresContext,
                             nsIDocShell** aDocShell,
                             nsIRequest** aRequest) = 0;
 
@@ -118,8 +118,6 @@ public:
 
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIFormSubmission, NS_IFORMSUBMISSION_IID)
-
 //
 // Factory methods
 // 
@@ -128,9 +126,11 @@ NS_DEFINE_STATIC_IID_ACCESSOR(nsIFormSubmission, NS_IFORMSUBMISSION_IID)
  * Get a submission object based on attributes in the form (ENCTYPE and METHOD)
  *
  * @param aForm the form to get a submission object based on
+ * @param aPresContext the presentation context
  * @param aFormSubmission the form submission object (out param)
  */
 nsresult GetSubmissionFromForm(nsGenericHTMLElement* aForm,
+                               nsPresContext* aPresContext,
                                nsIFormSubmission** aFormSubmission);
 
 

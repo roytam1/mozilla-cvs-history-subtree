@@ -23,7 +23,6 @@
  *   Seth Spitzer <sspitzer@netscape.com>
  *   Bhuvan Racham <racham@netscape.com>
  *   Howard Chu <hyc@symas.com>
- *   Jens Bannmann <jens.b@web.de>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -60,11 +59,10 @@
 #include "nsIWindowMediator.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsPIDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDocShell.h"
 #include "nsIBaseWindow.h"
 #include "nsIWidget.h"
-#include "nsWidgetsCID.h"
-#include "nsILookAndFeel.h"
 
 #include "nsIMessengerWindowService.h"
 #include "prprf.h"
@@ -77,8 +75,7 @@
 
 #include "nsNativeCharsetUtils.h"
 
-// XXX test for this as long as there are still non-xul-app suite builds
-#ifdef MOZ_XUL_APP
+#ifdef MOZ_THUNDERBIRD
 #include "nsToolkitCompsCID.h" 
 #define PROFILE_COMMANDLINE_ARG " -profile "
 #else
@@ -109,12 +106,12 @@
 // begin shameless copying from nsNativeAppSupportWin
 HWND hwndForDOMWindow( nsISupports *window ) 
 {
-  nsCOMPtr<nsPIDOMWindow> win( do_QueryInterface(window) );
-  if ( !win )
+  nsCOMPtr<nsIScriptGlobalObject> ppScriptGlobalObj( do_QueryInterface(window) );
+  if ( !ppScriptGlobalObj )
       return 0;
   
   nsCOMPtr<nsIBaseWindow> ppBaseWindow =
-      do_QueryInterface( win->GetDocShell() );
+      do_QueryInterface( ppScriptGlobalObj->GetDocShell() );
   if (!ppBaseWindow) return 0;
 
   nsCOMPtr<nsIWidget> ppWidget;
@@ -141,26 +138,28 @@ static void activateWindow( nsIDOMWindowInternal *win )
 
 static void openMailWindow(const PRUnichar * aMailWindowName, const char * aFolderUri)
 {
-  nsresult rv;
-  nsCOMPtr<nsIMsgMailSession> mailSession ( do_GetService(NS_MSGMAILSESSION_CONTRACTID, &rv));
-  if (NS_FAILED(rv))
+  nsCOMPtr<nsIWindowMediator> mediator ( do_GetService(NS_WINDOWMEDIATOR_CONTRACTID) );
+  if (!mediator)
     return;
 
-  nsCOMPtr<nsIMsgWindow> topMostMsgWindow;
-  rv = mailSession->GetTopmostMsgWindow(getter_AddRefs(topMostMsgWindow));
-  if (topMostMsgWindow)
+  nsCOMPtr<nsIDOMWindowInternal> domWindow;
+  mediator->GetMostRecentWindow(aMailWindowName, getter_AddRefs(domWindow));
+  if (domWindow)
   {
     if (aFolderUri)
     {
-      nsCOMPtr<nsIMsgWindowCommands> windowCommands;
-      topMostMsgWindow->GetWindowCommands(getter_AddRefs(windowCommands));
-      if (windowCommands)
-        windowCommands->SelectFolder(aFolderUri);
+      nsCOMPtr<nsPIDOMWindow> piDOMWindow(do_QueryInterface(domWindow));
+      if (piDOMWindow)
+      {
+        nsCOMPtr<nsISupports> xpConnectObj;
+        piDOMWindow->GetObjectProperty(NS_LITERAL_STRING("MsgWindowCommands").get(), getter_AddRefs(xpConnectObj));
+        nsCOMPtr<nsIMsgWindowCommands> msgWindowCommands = do_QueryInterface(xpConnectObj);
+        if (msgWindowCommands)
+          msgWindowCommands->SelectFolder(aFolderUri);
+      }
     }
-    nsCOMPtr<nsIDOMWindowInternal> domWindow;
-    topMostMsgWindow->GetDomWindow(getter_AddRefs(domWindow));
-    if (domWindow)
-      activateWindow(domWindow);
+
+    activateWindow(domWindow);
   }
   else
   {
@@ -329,14 +328,14 @@ NOTIFYICONDATAW nsMessengerWinIntegration::sWideBiffIconData = { sizeof(NOTIFYIC
                                                     0,
                                                     0 };
 
+#ifdef MOZ_THUNDERBIRD
 #ifdef MOZ_STATIC_BUILD
 #define MAIL_DLL_NAME NULL
 #else
-#ifdef MOZ_STATIC_MAIL_BUILD
 #define MAIL_DLL_NAME "mail.dll"
+#endif
 #else
 #define MAIL_DLL_NAME "msgbase.dll"
-#endif
 #endif
 
 void nsMessengerWinIntegration::InitializeBiffStatusIcon()
@@ -420,8 +419,7 @@ nsMessengerWinIntegration::Init()
 
   if (mStoreUnreadCounts)
   {
-// XXX test for this as long as there are still non-xul-app suite builds
-#ifdef MOZ_XUL_APP
+#ifdef MOZ_THUNDERBIRD
     // get current profile path for the commandliner
     nsCOMPtr<nsIFile> profilePath;
     rv = directoryService->Get(NS_APP_USER_PROFILE_50_DIR, 
@@ -505,7 +503,7 @@ nsresult nsMessengerWinIntegration::ShowAlertMessage(const PRUnichar * aAlertTit
     {
       rv = alertsService->ShowAlertNotification(NS_LITERAL_STRING(NEW_MAIL_ALERT_ICON), nsDependentString(aAlertTitle),
                                                 nsDependentString(aAlertText), PR_TRUE, 
-                                                NS_ConvertASCIItoUTF16(aFolderURI), this); 
+                                                NS_ConvertASCIItoUCS2(aFolderURI), this); 
       mAlertInProgress = PR_TRUE;
     }
   }
@@ -544,8 +542,7 @@ nsresult nsMessengerWinIntegration::ShowNewAlertNotification(PRBool aUserInitiat
     NS_ENSURE_SUCCESS(rv, rv);
     ifptr->SetData(mFoldersWithNewMail);
     ifptr->SetDataIID(&NS_GET_IID(nsISupportsArray));
-    rv = argsArray->AppendElement(ifptr);
-    NS_ENSURE_SUCCESS(rv, rv);
+    argsArray->AppendElement(ifptr);
 
     // pass in the observer
     ifptr = do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
@@ -553,31 +550,13 @@ nsresult nsMessengerWinIntegration::ShowNewAlertNotification(PRBool aUserInitiat
     nsCOMPtr <nsISupports> supports = do_QueryInterface(NS_STATIC_CAST(nsIMessengerOSIntegration*, this));
     ifptr->SetData(supports);
     ifptr->SetDataIID(&NS_GET_IID(nsIObserver));
-    rv = argsArray->AppendElement(ifptr);
-    NS_ENSURE_SUCCESS(rv, rv);
+    argsArray->AppendElement(ifptr);
     
     // pass in the animation flag
     nsCOMPtr<nsISupportsPRBool> scriptableUserInitiated (do_CreateInstance(NS_SUPPORTS_PRBOOL_CONTRACTID, &rv));
     NS_ENSURE_SUCCESS(rv, rv);
     scriptableUserInitiated->SetData(aUserInitiated);
-    rv = argsArray->AppendElement(scriptableUserInitiated);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    // pass in the alert origin
-    nsCOMPtr<nsISupportsPRUint8> scriptableOrigin (do_CreateInstance(NS_SUPPORTS_PRUINT8_CONTRACTID));
-    NS_ENSURE_TRUE(scriptableOrigin, NS_ERROR_FAILURE);
-    scriptableOrigin->SetData(0);
-    nsCOMPtr<nsILookAndFeel> lookAndFeel = do_GetService("@mozilla.org/widget/lookandfeel;1");
-    if (lookAndFeel)
-    {
-      PRInt32 origin;
-      lookAndFeel->GetMetric(nsILookAndFeel::eMetric_AlertNotificationOrigin,
-                             origin);
-      if (origin && origin >= 0 && origin <= 7)
-        scriptableOrigin->SetData(origin);
-    }
-    rv = argsArray->AppendElement(scriptableOrigin);
-    NS_ENSURE_SUCCESS(rv, rv);
+    argsArray->AppendElement(scriptableUserInitiated);
 
     nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
     nsCOMPtr<nsIDOMWindow> newWindow;
@@ -1029,7 +1008,7 @@ nsMessengerWinIntegration::RemoveCurrentFromRegistry()
       if (!deleteKey.IsEmpty()) {
         // delete this key and berak out of the loop
         RegDeleteKey(HKEY_CURRENT_USER, 
-                     NS_ConvertUTF16toUTF8(deleteKey).get());
+                     NS_ConvertUCS2toUTF8(deleteKey).get());
         break;
       }
       else {
@@ -1067,8 +1046,7 @@ nsMessengerWinIntegration::UpdateRegistryWithCurrent()
   commandLinerForAppLaunch.Append(mAppName);
   commandLinerForAppLaunch.Append(NS_LITERAL_STRING(DOUBLE_QUOTE));
   commandLinerForAppLaunch.Append(NS_LITERAL_STRING(PROFILE_COMMANDLINE_ARG));
-// XXX test for this as long as there are still non-xul-app suite builds
-#ifdef MOZ_XUL_APP
+#ifdef MOZ_THUNDERBIRD
   commandLinerForAppLaunch.Append(NS_LITERAL_STRING(DOUBLE_QUOTE));
   commandLinerForAppLaunch.Append(mProfilePath);
   commandLinerForAppLaunch.Append(NS_LITERAL_STRING(DOUBLE_QUOTE));

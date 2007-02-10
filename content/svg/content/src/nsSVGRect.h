@@ -41,7 +41,6 @@
 #define __NS_SVGRECT_H__
 
 #include "nsIDOMSVGRect.h"
-#include "gfxRect.h"
 
 class nsIDOMSVGLength;
 
@@ -51,11 +50,15 @@ NS_NewSVGRect(nsIDOMSVGRect** result,
               float width=0.0f, float height=0.0f);
 
 nsresult
-NS_NewSVGRect(nsIDOMSVGRect** result, const gfxRect& rect);
-
-nsresult
 NS_NewSVGReadonlyRect(nsIDOMSVGRect** result,
                       float x=0.0f, float y=0.0f,
                       float width=0.0f, float height=0.0f);
+
+// A 'viewbox' is a special kind of nsIDOMSVGRect that defaults to
+// (0,0,viewportWidth.value,viewportHeight.value) until set explicitly.
+nsresult
+NS_NewSVGViewBox(nsIDOMSVGRect** result,
+                 nsIDOMSVGLength *viewportWidth,
+                 nsIDOMSVGLength *viewportHeight);
 
 #endif //__NS_SVGRECT_H__

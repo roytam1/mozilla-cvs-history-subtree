@@ -47,9 +47,7 @@
 
 class nsMathMLmspaceFrame : public nsMathMLContainerFrame {
 public:
-  friend nsIFrame* NS_NewMathMLmspaceFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
-
-  virtual PRBool IsLeaf() const;
+  friend nsresult NS_NewMathMLmspaceFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   NS_IMETHOD
   Reflow(nsPresContext*          aPresContext,
@@ -58,7 +56,7 @@ public:
          nsReflowStatus&          aStatus);
   
 protected:
-  nsMathMLmspaceFrame(nsStyleContext* aContext) : nsMathMLContainerFrame(aContext) {}
+  nsMathMLmspaceFrame();
   virtual ~nsMathMLmspaceFrame();
   
   virtual PRIntn GetSkipSides() const { return 0; }

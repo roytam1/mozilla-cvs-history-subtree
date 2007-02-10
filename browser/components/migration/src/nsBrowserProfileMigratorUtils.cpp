@@ -37,10 +37,9 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsBrowserProfileMigratorUtils.h"
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
 #include "nsINavBookmarksService.h"
 #include "nsBrowserCompsCID.h"
-#include "nsToolkitCompsCID.h"
 #else
 #include "nsIBookmarksService.h"
 #endif
@@ -61,6 +60,8 @@
 #include "nsXPCOMCID.h"
 
 #define MIGRATION_BUNDLE "chrome://browser/locale/migration/migration.properties"
+
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 void SetUnicharPref(const char* aPref, const nsAString& aValue,
                     nsIPrefBranch* aPrefs)
@@ -95,10 +96,9 @@ void SetProxyPref(const nsAString& aHostPort, const char* aPref,
     if (portDelimOffset > 0) {
       SetUnicharPref(aPref, Substring(hostPort, 0, portDelimOffset), aPrefs);
       nsAutoString port(Substring(hostPort, portDelimOffset + 1));
-      nsresult stringErr;
+      PRInt32 stringErr;
       portValue = port.ToInteger(&stringErr);
-      if (NS_SUCCEEDED(stringErr))
-        aPrefs->SetIntPref(aPortPref, portValue);
+      aPrefs->SetIntPref(aPortPref, portValue);
     }
     else
       SetUnicharPref(aPref, hostPort, aPrefs); 
@@ -224,13 +224,13 @@ ImportBookmarksHTML(nsIFile* aBookmarksFile,
 {
   nsresult rv;
 
-#ifndef MOZ_PLACES_BOOKMARKS
+#ifndef MOZ_PLACES
   nsCOMPtr<nsIBookmarksService> bms = 
     do_GetService("@mozilla.org/browser/bookmarks-service;1", &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsISupportsArray> params =
-    do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv);
+  nsCOMPtr<nsISupportsArray> params;
+  rv = NS_NewISupportsArray(getter_AddRefs(params));
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIRDFService> rdfs =
@@ -257,27 +257,27 @@ ImportBookmarksHTML(nsIFile* aBookmarksFile,
   rv = rdfs->GetResource(NS_LITERAL_CSTRING("NC:BookmarksRoot"),
                          getter_AddRefs(root));
   NS_ENSURE_SUCCESS(rv, rv);
-#endif // MOZ_PLACES_BOOKMARKS
+#endif // MOZ_PLACES
 
   // Look for the localized name of the bookmarks toolbar
   nsCOMPtr<nsIStringBundleService> bundleService =
-    do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+    do_GetService(kStringBundleServiceCID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIStringBundle> bundle;
   rv = bundleService->CreateBundle(MIGRATION_BUNDLE, getter_AddRefs(bundle));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsString sourceName;
+  nsXPIDLString sourceName;
   bundle->GetStringFromName(aImportSourceNameKey, getter_Copies(sourceName));
 
   const PRUnichar* sourceNameStrings[] = { sourceName.get() };
-  nsString importedBookmarksTitle;
+  nsXPIDLString importedBookmarksTitle;
   bundle->FormatStringFromName(NS_LITERAL_STRING("importedBookmarksFolder").get(),
                                sourceNameStrings, 1, 
                                getter_Copies(importedBookmarksTitle));
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
   // Get the bookmarks service
   nsCOMPtr<nsINavBookmarksService> bms =
     do_GetService(NS_NAVBOOKMARKSSERVICE_CONTRACTID, &rv);
@@ -299,7 +299,7 @@ ImportBookmarksHTML(nsIFile* aBookmarksFile,
 
   // Import the bookmarks into the folder.
   rv = bms->ImportBookmarksHTMLToFolder(fileURI, folder);
-  return rv;
+  NS_ENSURE_SUCCESS(rv, rv);
 #else
   nsCOMPtr<nsIRDFResource> folder;
   bms->CreateFolderInContainer(importedBookmarksTitle.get(), root, -1,
@@ -312,8 +312,8 @@ ImportBookmarksHTML(nsIFile* aBookmarksFile,
   params->AppendElement(folderProp);
   params->AppendElement(folder);
 
-  nsCOMPtr<nsISupportsArray> sources =
-    do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv);
+  nsCOMPtr<nsISupportsArray> sources;
+  rv = NS_NewISupportsArray(getter_AddRefs(sources));
   NS_ENSURE_SUCCESS(rv, rv);
   sources->AppendElement(folder);
 

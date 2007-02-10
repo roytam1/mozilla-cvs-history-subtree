@@ -37,8 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* XPCOM interface to provide some internal information to DOM inspector */
-
 #ifndef nsIInspectorCSSUtils_h___
 #define nsIInspectorCSSUtils_h___
 
@@ -63,7 +61,7 @@ class nsIArray;
 
 class nsIInspectorCSSUtils : public nsISupports {
 public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IINSPECTORCSSUTILS_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IINSPECTORCSSUTILS_IID)
 
     // Hooks to nsCSSProps static methods from another library (the
     // AddRefTable and ReleaseTable should be handled by the
@@ -86,7 +84,5 @@ public:
     // Hooks to XBL
     NS_IMETHOD GetBindingURLs(nsIDOMElement *aElement, nsIArray **aResult) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIInspectorCSSUtils, NS_IINSPECTORCSSUTILS_IID)
 
 #endif /* nsIInspectorCSSUtils_h___ */

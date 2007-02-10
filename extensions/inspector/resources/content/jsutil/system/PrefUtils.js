@@ -61,20 +61,20 @@ var PrefUtils =
     this.mPrefs = prefService.getBranch(null);
   },
 
-  addObserver: function addObserver(aDomain, aFunction)
+  addObserver: function(aDomain, aFunction)
   {
     if (!this.mPrefs) this.init();
 
-    var pbi = XPCU.QI(this.mPrefs, "nsIPrefBranch2");
+    var pbi = XPCU.QI(this.mPrefs, "nsIPrefBranchInternal");
     if (pbi)
       pbi.addObserver(aDomain, aFunction, false);
   },
 
-  removeObserver: function removeObserver(aDomain, aFunction)
+  removeObserver: function(aDomain, aFunction)
   {
     if (!this.mPrefs) this.init();
 
-    var pbi = XPCU.QI(this.mPrefs, "nsIPrefBranch2");
+    var pbi = XPCU.QI(this.mPrefs, "nsIPrefBranchInternal");
     if (pbi)
       pbi.removeObserver(aDomain, aFunction);
   },

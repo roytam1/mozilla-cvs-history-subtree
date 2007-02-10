@@ -54,7 +54,6 @@
 #include "nsNetUtil.h"
 #include "prlog.h"
 #include "nsAutoPtr.h"
-#include "nsIProgrammingLanguage.h"
 
 static NS_DEFINE_CID(kThisImplCID, NS_THIS_STANDARDURL_IMPL_CID);
 static NS_DEFINE_CID(kStandardURLCID, NS_STANDARDURL_CID);
@@ -64,7 +63,6 @@ nsICharsetConverterManager *nsStandardURL::gCharsetMgr = nsnull;
 PRBool nsStandardURL::gInitialized = PR_FALSE;
 PRBool nsStandardURL::gEscapeUTF8 = PR_TRUE;
 PRBool nsStandardURL::gAlwaysEncodeInUTF8 = PR_TRUE;
-PRBool nsStandardURL::gEncodeQueryInUTF8 = PR_TRUE;
 PRBool nsStandardURL::gShowPunycode = PR_FALSE;
 nsIPrefBranch *nsStandardURL::gIDNWhitelistPrefBranch = nsnull;
 
@@ -139,7 +137,6 @@ end:
 #define NS_NET_PREF_ESCAPEUTF8         "network.standard-url.escape-utf8"
 #define NS_NET_PREF_ENABLEIDN          "network.enableIDN"
 #define NS_NET_PREF_ALWAYSENCODEINUTF8 "network.standard-url.encode-utf8"
-#define NS_NET_PREF_ENCODEQUERYINUTF8  "network.standard-url.encode-query-utf8"
 #define NS_NET_PREF_SHOWPUNYCODE       "network.IDN_show_punycode"
 #define NS_NET_PREF_IDNWHITELIST       "network.IDN.whitelist."
 
@@ -192,7 +189,7 @@ nsSegmentEncoder::EncodeSegmentCount(const char *str,
         if (mCharset && *mCharset && !nsCRT::IsAscii(str + pos, len)) {
             // we have to encode this segment
             if (mEncoder || InitUnicodeEncoder()) {
-                NS_ConvertUTF8toUTF16 ucsBuf(Substring(str + pos, str + pos + len));
+                NS_ConvertUTF8toUCS2 ucsBuf(Substring(str + pos, str + pos + len));
                 if (NS_SUCCEEDED(EncodeString(mEncoder, ucsBuf, encBuf))) {
                     str = encBuf.get();
                     pos = 0;
@@ -258,15 +255,8 @@ nsSegmentEncoder::InitUnicodeEncoder()
     return PR_TRUE;
 }
 
-#define GET_SEGMENT_ENCODER_INTERNAL(name, useUTF8) \
-    nsSegmentEncoder name(useUTF8 ? nsnull : mOriginCharset.get())
-
 #define GET_SEGMENT_ENCODER(name) \
-    GET_SEGMENT_ENCODER_INTERNAL(name, gAlwaysEncodeInUTF8)
-
-#define GET_QUERY_ENCODER(name) \
-    GET_SEGMENT_ENCODER_INTERNAL(name, gAlwaysEncodeInUTF8 && \
-                                 gEncodeQueryInUTF8)
+    nsSegmentEncoder name(gAlwaysEncodeInUTF8 ? nsnull : mOriginCharset.get())
 
 //----------------------------------------------------------------------------
 // nsStandardURL <public>
@@ -311,11 +301,10 @@ nsStandardURL::InitGlobalObjects()
     nsCOMPtr<nsIPrefBranch2> prefBranch( do_GetService(NS_PREFSERVICE_CONTRACTID) );
     if (prefBranch) {
         nsCOMPtr<nsIObserver> obs( new nsPrefObserver() );
-        prefBranch->AddObserver(NS_NET_PREF_ESCAPEUTF8, obs.get(), PR_FALSE);
+        prefBranch->AddObserver(NS_NET_PREF_ESCAPEUTF8, obs.get(), PR_FALSE); 
         prefBranch->AddObserver(NS_NET_PREF_ALWAYSENCODEINUTF8, obs.get(), PR_FALSE);
-        prefBranch->AddObserver(NS_NET_PREF_ENCODEQUERYINUTF8, obs.get(), PR_FALSE);
-        prefBranch->AddObserver(NS_NET_PREF_ENABLEIDN, obs.get(), PR_FALSE);
-        prefBranch->AddObserver(NS_NET_PREF_SHOWPUNYCODE, obs.get(), PR_FALSE);
+        prefBranch->AddObserver(NS_NET_PREF_ENABLEIDN, obs.get(), PR_FALSE); 
+        prefBranch->AddObserver(NS_NET_PREF_SHOWPUNYCODE, obs.get(), PR_FALSE); 
 
         PrefsChanged(prefBranch, nsnull);
 
@@ -498,14 +487,13 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
     // appropriate encoding.
     {
         GET_SEGMENT_ENCODER(encoder);
-        GET_QUERY_ENCODER(queryEncoder);
         approxLen += encoder.EncodeSegmentCount(spec, mUsername,  esc_Username,      encUsername,  useEncUsername);
         approxLen += encoder.EncodeSegmentCount(spec, mPassword,  esc_Password,      encPassword,  useEncPassword);
         approxLen += encoder.EncodeSegmentCount(spec, mDirectory, esc_Directory,     encDirectory, useEncDirectory);
         approxLen += encoder.EncodeSegmentCount(spec, mBasename,  esc_FileBaseName,  encBasename,  useEncBasename);
         approxLen += encoder.EncodeSegmentCount(spec, mExtension, esc_FileExtension, encExtension, useEncExtension);
         approxLen += encoder.EncodeSegmentCount(spec, mParam,     esc_Param,         encParam,     useEncParam);
-        approxLen += queryEncoder.EncodeSegmentCount(spec, mQuery, esc_Query,        encQuery,     useEncQuery);
+        approxLen += encoder.EncodeSegmentCount(spec, mQuery,     esc_Query,         encQuery,     useEncQuery);
         approxLen += encoder.EncodeSegmentCount(spec, mRef,       esc_Ref,           encRef,       useEncRef);
     }
 
@@ -847,17 +835,11 @@ nsStandardURL::PrefsChanged(nsIPrefBranch *prefs, const char *pref)
             gEscapeUTF8 = val;
         LOG(("escape UTF-8 %s\n", gEscapeUTF8 ? "enabled" : "disabled"));
     }
-
+        
     if (PREF_CHANGED(NS_NET_PREF_ALWAYSENCODEINUTF8)) {
         if (GOT_PREF(NS_NET_PREF_ALWAYSENCODEINUTF8, val))
             gAlwaysEncodeInUTF8 = val;
         LOG(("encode in UTF-8 %s\n", gAlwaysEncodeInUTF8 ? "enabled" : "disabled"));
-    }
-
-    if (PREF_CHANGED(NS_NET_PREF_ENCODEQUERYINUTF8)) {
-        if (GOT_PREF(NS_NET_PREF_ENCODEQUERYINUTF8, val))
-            gEncodeQueryInUTF8 = val;
-        LOG(("encode query in UTF-8 %s\n", gEncodeQueryInUTF8 ? "enabled" : "disabled"));
     }
 
     if (PREF_CHANGED(NS_NET_PREF_SHOWPUNYCODE)) {
@@ -936,7 +918,6 @@ NS_INTERFACE_MAP_BEGIN(nsStandardURL)
     NS_INTERFACE_MAP_ENTRY(nsIStandardURL)
     NS_INTERFACE_MAP_ENTRY(nsISerializable)
     NS_INTERFACE_MAP_ENTRY(nsIClassInfo)
-    NS_INTERFACE_MAP_ENTRY(nsIMutable)
     // see nsStandardURL::Equals
     if (aIID.Equals(kThisImplCID))
         foundInterface = NS_STATIC_CAST(nsIURI *, this);
@@ -1426,11 +1407,6 @@ nsStandardURL::SetHost(const nsACString &input)
         NS_ERROR("cannot set host on no-auth url");
         return NS_ERROR_UNEXPECTED;
     }
-
-    // For consistency with SetSpec/nsURLParsers, don't allow spaces
-    // in the hostname.
-    if (strchr(host, ' '))
-        return NS_ERROR_MALFORMED_URI;
 
     InvalidateCache();
     mHostEncoding = eEncoding_ASCII;
@@ -2219,7 +2195,7 @@ nsStandardURL::SetQuery(const nsACString &input)
     // encode query if necessary
     nsCAutoString buf;
     PRBool encoded;
-    GET_QUERY_ENCODER(encoder);
+    GET_SEGMENT_ENCODER(encoder);
     encoder.EncodeSegmentCount(query, URLSegment(0, queryLen), esc_Query,
                                buf, encoded);
     if (encoded) {
@@ -2608,8 +2584,6 @@ nsStandardURL::GetMutable(PRBool *value)
 NS_IMETHODIMP
 nsStandardURL::SetMutable(PRBool value)
 {
-    NS_ENSURE_ARG(mMutable || !value);
-
     mMutable = value;
     return NS_OK;
 }
@@ -2693,12 +2667,6 @@ nsStandardURL::Read(nsIObjectInputStream *stream)
     rv = NS_ReadOptionalCString(stream, mOriginCharset);
     if (NS_FAILED(rv)) return rv;
 
-    PRBool isMutable;
-    rv = stream->ReadBoolean(&isMutable);
-    if (NS_FAILED(rv)) return rv;
-
-    mMutable = isMutable;
-
     return NS_OK;
 }
 
@@ -2759,9 +2727,6 @@ nsStandardURL::Write(nsIObjectOutputStream *stream)
     if (NS_FAILED(rv)) return rv;
 
     rv = NS_WriteOptionalStringZ(stream, mOriginCharset.get());
-    if (NS_FAILED(rv)) return rv;
-
-    rv = stream->WriteBoolean(mMutable);
     if (NS_FAILED(rv)) return rv;
 
     return NS_OK;
@@ -2829,3 +2794,4 @@ nsStandardURL::GetClassIDNoAlloc(nsCID *aClassIDNoAlloc)
     *aClassIDNoAlloc = kStandardURLCID;
     return NS_OK;
 }
+

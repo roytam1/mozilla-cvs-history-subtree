@@ -40,8 +40,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsFilePicker_h_
-#define nsFilePicker_h_
+#ifndef nsFilePicker_h__
+#define nsFilePicker_h__
 
 #include "nsBaseFilePicker.h"
 #include "nsString.h"
@@ -85,8 +85,6 @@ protected:
 
     // actual implementations of get/put dialogs using NSOpenPanel & NSSavePanel
     // aFile is an existing but unspecified file. These functions must specify it.
-    //
-    // will return |returnCancel| or |returnOK| as result.
   PRInt16 GetLocalFiles(const nsString& inTitle, PRBool inAllowMultiple, nsCOMArray<nsILocalFile>& outFiles);
   PRInt16 GetLocalFolder(const nsString& inTitle, nsILocalFile** outFile);
   PRInt16 PutLocalFile(const nsString& inTitle, const nsString& inDefaultName, nsILocalFile** outFile);
@@ -94,7 +92,6 @@ protected:
   NSArray  *GenerateFilterList();
   void     SetDialogTitle(const nsString& inTitle, id aDialog);
   NSString *PanelDefaultDirectory();
-  NSView* nsFilePicker::GetAccessoryView();
                                                 
   PRBool                 mAllFilesDisplayed;
   nsString               mTitle;
@@ -110,4 +107,4 @@ protected:
 
 };
 
-#endif // nsFilePicker_h_
+#endif // nsFilePicker_h__

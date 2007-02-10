@@ -326,13 +326,11 @@ nsDNSService::Init()
             return NS_ERROR_OUT_OF_MEMORY;
 
         // register as prefs observer
-        if (prefs) {
-            prefs->AddObserver(kPrefDnsCacheEntries, this, PR_FALSE);
-            prefs->AddObserver(kPrefDnsCacheExpiration, this, PR_FALSE);
-            prefs->AddObserver(kPrefEnableIDN, this, PR_FALSE);
-            prefs->AddObserver(kPrefIPv4OnlyDomains, this, PR_FALSE);
-            prefs->AddObserver(kPrefDisableIPv6, this, PR_FALSE);
-        }
+        prefs->AddObserver(kPrefDnsCacheEntries, this, PR_FALSE);
+        prefs->AddObserver(kPrefDnsCacheExpiration, this, PR_FALSE);
+        prefs->AddObserver(kPrefEnableIDN, this, PR_FALSE);
+        prefs->AddObserver(kPrefIPv4OnlyDomains, this, PR_FALSE);
+        prefs->AddObserver(kPrefDisableIPv6, this, PR_FALSE);
     }
 
     // we have to null out mIDN since we might be getting re-initialized
@@ -372,11 +370,11 @@ nsDNSService::Shutdown()
 }
 
 NS_IMETHODIMP
-nsDNSService::AsyncResolve(const nsACString  &hostname,
-                           PRUint32           flags,
-                           nsIDNSListener    *listener,
-                           nsIEventTarget    *target,
-                           nsICancelable    **result)
+nsDNSService::AsyncResolve(const nsACString &hostname,
+                           PRUint32          flags,
+                           nsIDNSListener   *listener,
+                           nsIEventTarget   *eventTarget,
+                           nsICancelable   **result)
 {
     // grab reference to global host resolver and IDN service.  beware
     // simultaneous shutdown!!
@@ -399,11 +397,13 @@ nsDNSService::AsyncResolve(const nsACString  &hostname,
     }
 
     nsCOMPtr<nsIDNSListener> listenerProxy;
-    if (target) {
-        rv = NS_GetProxyForObject(target,
+    nsCOMPtr<nsIEventQueue> eventQ = do_QueryInterface(eventTarget);
+    // TODO(darin): make XPCOM proxies support any nsIEventTarget impl
+    if (eventQ) {
+        rv = NS_GetProxyForObject(eventQ,
                                   NS_GET_IID(nsIDNSListener),
                                   listener,
-                                  NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
+                                  PROXY_ASYNC | PROXY_ALWAYS,
                                   getter_AddRefs(listenerProxy));
         if (NS_FAILED(rv)) return rv;
         listener = listenerProxy;
@@ -456,7 +456,7 @@ nsDNSService::Resolve(const nsACString &hostname,
     // sync resolve: since the host resolver only works asynchronously, we need
     // to use a mutex and a condvar to wait for the result.  however, since the
     // result may be in the resolvers cache, we might get called back recursively
-    // on the same thread.  so, our mutex needs to be re-entrant.  in other words,
+    // on the same thread.  so, our mutex needs to be re-entrant.  inotherwords,
     // we need to use a monitor! ;-)
     //
     

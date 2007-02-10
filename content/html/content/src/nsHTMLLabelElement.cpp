@@ -39,7 +39,7 @@
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsIFormControl.h"
@@ -51,7 +51,7 @@
 #include "nsIPresShell.h"
 #include "nsGUIEvent.h"
 #include "nsIEventStateManager.h"
-#include "nsEventDispatcher.h"
+
 
 class nsHTMLLabelElement : public nsGenericHTMLFormElement,
                            public nsIDOMHTMLLabelElement
@@ -64,7 +64,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLFormElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLFormElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLFormElement::)
@@ -87,9 +87,10 @@ public:
                               PRBool aCompileEventHandlers);
   virtual void UnbindFromTree(PRBool aDeep = PR_TRUE,
                               PRBool aNullParent = PR_TRUE);
-
-  virtual nsresult PostHandleEvent(nsEventChainPostVisitor& aVisitor);
-
+  virtual nsresult HandleDOMEvent(nsPresContext* aPresContext,
+                                  nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                                  PRUint32 aFlags,
+                                  nsEventStatus* aEventStatus);
   virtual void SetFocus(nsPresContext* aContext);
   nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                    const nsAString& aValue, PRBool aNotify)
@@ -101,7 +102,6 @@ public:
                            PRBool aNotify);
   virtual nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                              PRBool aNotify);
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 
 protected:
   already_AddRefed<nsIContent> GetForContent();
@@ -145,7 +145,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_END
 // nsIDOMHTMLLabelElement
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLLabelElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLLabelElement)
 
 
 NS_IMETHODIMP
@@ -186,9 +186,12 @@ nsHTMLLabelElement::UnbindFromTree(PRBool aDeep, PRBool aNullParent)
 }
 
 static PRBool
-EventTargetIn(nsEvent *aEvent, nsIContent *aChild, nsIContent *aStop)
+EventTargetIn(nsPresContext *aPresContext, nsEvent *aEvent,
+              nsIContent *aChild, nsIContent *aStop)
 {
-  nsCOMPtr<nsIContent> c = do_QueryInterface(aEvent->target);
+  nsCOMPtr<nsIContent> c;
+  aPresContext->EventStateManager()->GetEventTargetContent(aEvent,
+                                                           getter_AddRefs(c));
   nsIContent *content = c;
   while (content) {
     if (content == aChild) {
@@ -205,26 +208,37 @@ EventTargetIn(nsEvent *aEvent, nsIContent *aChild, nsIContent *aStop)
 }
 
 nsresult
-nsHTMLLabelElement::PostHandleEvent(nsEventChainPostVisitor& aVisitor)
+nsHTMLLabelElement::HandleDOMEvent(nsPresContext* aPresContext,
+                                   nsEvent* aEvent,
+                                   nsIDOMEvent** aDOMEvent,
+                                   PRUint32 aFlags,
+                                   nsEventStatus* aEventStatus)
 {
+  NS_ENSURE_ARG_POINTER(aEventStatus);
+
+  nsresult rv = nsGenericHTMLFormElement::HandleDOMEvent(aPresContext, aEvent,
+                                                         aDOMEvent, aFlags,
+                                                         aEventStatus);
+  if (NS_FAILED(rv))
+    return rv;
+
   if (mHandlingEvent ||
-      (!NS_IS_MOUSE_LEFT_CLICK(aVisitor.mEvent) &&
-       aVisitor.mEvent->message != NS_FOCUS_CONTENT) ||
-      aVisitor.mEventStatus == nsEventStatus_eConsumeNoDefault ||
-      !aVisitor.mPresContext) {
+      *aEventStatus == nsEventStatus_eConsumeNoDefault ||
+      (aEvent->message != NS_MOUSE_LEFT_CLICK &&
+       aEvent->message != NS_FOCUS_CONTENT) ||
+      aFlags & NS_EVENT_FLAG_CAPTURE ||
+      !(aFlags & NS_EVENT_FLAG_SYSTEM_EVENT))
     return NS_OK;
-  }
 
   nsCOMPtr<nsIContent> content = GetForContent();
-  if (content && !EventTargetIn(aVisitor.mEvent, content, this)) {
+  if (content && !EventTargetIn(aPresContext, aEvent, content, this)) {
     mHandlingEvent = PR_TRUE;
-    switch (aVisitor.mEvent->message) {
-      case NS_MOUSE_CLICK:
-        if (NS_IS_MOUSE_LEFT_CLICK(aVisitor.mEvent)) {
+    switch (aEvent->message) {
+      case NS_MOUSE_LEFT_CLICK:
+        if (aEvent->eventStructType == NS_MOUSE_EVENT) {
           if (ShouldFocus(this)) {
             // Focus the for content.
-            aVisitor.mPresContext->EventStateManager()->
-              ChangeFocusWith(content, nsIEventStateManager::eEventFocusedByKey);
+            content->SetFocus(aPresContext);
           }
 
           // Dispatch a new click event to |content|
@@ -233,12 +247,9 @@ nsHTMLLabelElement::PostHandleEvent(nsEventChainPostVisitor& aVisitor)
           //    would do nothing.  If we wanted to do something
           //    sensible, we might send more events through like
           //    this.)  See bug 7554, bug 49897, and bug 96813.
-          nsEventStatus status = aVisitor.mEventStatus;
-          // Ok to use aVisitor.mEvent as parameter because DispatchClickEvent
-          // will actually create a new event.
-          DispatchClickEvent(aVisitor.mPresContext,
-                             NS_STATIC_CAST(nsInputEvent*, aVisitor.mEvent),
-                             content, PR_FALSE, &status);
+          nsEventStatus status = *aEventStatus;
+          rv = DispatchClickEvent(aPresContext, NS_STATIC_CAST(nsInputEvent*, aEvent),
+                                  content, PR_FALSE, &status);
           // Do we care about the status this returned?  I don't think we do...
         }
         break;
@@ -250,17 +261,16 @@ nsHTMLLabelElement::PostHandleEvent(nsEventChainPostVisitor& aVisitor)
         // Since focus doesn't bubble, this is basically the second part
         // of redirecting |SetFocus|.
         {
-          nsEvent event(NS_IS_TRUSTED_EVENT(aVisitor.mEvent), NS_FOCUS_CONTENT);
-          nsEventStatus status = aVisitor.mEventStatus;
-          DispatchEvent(aVisitor.mPresContext, &event,
-                        content, PR_TRUE, &status);
+          nsEvent event(NS_IS_TRUSTED_EVENT(aEvent), NS_FOCUS_CONTENT);
+          nsEventStatus status = *aEventStatus;
+          rv = DispatchEvent(aPresContext, &event, content, PR_TRUE, &status);
           // Do we care about the status this returned?  I don't think we do...
         }
         break;
     }
     mHandlingEvent = PR_FALSE;
   }
-  return NS_OK;
+  return rv;
 }
 
 void
@@ -290,7 +300,7 @@ nsresult
 nsHTMLLabelElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, nsIAtom* aPrefix,
                             const nsAString& aValue, PRBool aNotify)
 {
-  if (aName == nsGkAtoms::accesskey && kNameSpaceID_None == aNameSpaceID) {
+  if (aName == nsHTMLAtoms::accesskey && kNameSpaceID_None == aNameSpaceID) {
     RegUnRegAccessKey(PR_FALSE);
   }
 
@@ -298,7 +308,7 @@ nsHTMLLabelElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, nsIAtom* aPref
       nsGenericHTMLElement::SetAttr(aNameSpaceID, aName, aPrefix, aValue,
                                     aNotify);
 
-  if (aName == nsGkAtoms::accesskey && kNameSpaceID_None == aNameSpaceID &&
+  if (aName == nsHTMLAtoms::accesskey && kNameSpaceID_None == aNameSpaceID &&
       !aValue.IsEmpty()) {
     RegUnRegAccessKey(PR_TRUE);
   }
@@ -310,7 +320,7 @@ nsresult
 nsHTMLLabelElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                               PRBool aNotify)
 {
-  if (aAttribute == nsGkAtoms::accesskey &&
+  if (aAttribute == nsHTMLAtoms::accesskey &&
       kNameSpaceID_None == aNameSpaceID) {
     RegUnRegAccessKey(PR_FALSE);
   }
@@ -320,8 +330,8 @@ nsHTMLLabelElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
 
 inline PRBool IsNonLabelFormControl(nsIContent *aContent)
 {
-  return aContent->IsNodeOfType(nsINode::eHTML_FORM_CONTROL) &&
-         aContent->Tag() != nsGkAtoms::label;
+  return aContent->IsContentOfType(nsIContent::eHTML_FORM_CONTROL) &&
+         aContent->Tag() != nsHTMLAtoms::label;
 }
 
 already_AddRefed<nsIContent>

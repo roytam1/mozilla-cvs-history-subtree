@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * methods for dealing with CSS properties and tables of the keyword
- * values they accept
- */
-
 #include "nsCSSProps.h"
 #include "nsCSSKeywords.h"
 #include "nsStyleConsts.h"
@@ -219,7 +214,6 @@ const PRInt32 nsCSSProps::kAppearanceKTable[] = {
   eCSSKeyword_spinner_upbutton,       NS_THEME_SPINNER_UP_BUTTON,
   eCSSKeyword_spinner_downbutton,     NS_THEME_SPINNER_DOWN_BUTTON,
   eCSSKeyword_scrollbar,              NS_THEME_SCROLLBAR,
-  eCSSKeyword_scrollbar_small,        NS_THEME_SCROLLBAR_SMALL,
   eCSSKeyword_scrollbarbutton_up,     NS_THEME_SCROLLBAR_BUTTON_UP,
   eCSSKeyword_scrollbarbutton_down,   NS_THEME_SCROLLBAR_BUTTON_DOWN,
   eCSSKeyword_scrollbarbutton_left,   NS_THEME_SCROLLBAR_BUTTON_LEFT,
@@ -236,13 +230,11 @@ const PRInt32 nsCSSProps::kAppearanceKTable[] = {
   eCSSKeyword_menulistbutton,         NS_THEME_DROPDOWN_BUTTON,
   eCSSKeyword_menulisttext,           NS_THEME_DROPDOWN_TEXT,
   eCSSKeyword_menulisttextfield,      NS_THEME_DROPDOWN_TEXTFIELD,
-  eCSSKeyword_scale_horizontal,       NS_THEME_SCALE_HORIZONTAL,
-  eCSSKeyword_scale_vertical,         NS_THEME_SCALE_VERTICAL,
-  eCSSKeyword_scalethumb_horizontal,  NS_THEME_SCALE_THUMB_HORIZONTAL,
-  eCSSKeyword_scalethumb_vertical,    NS_THEME_SCALE_THUMB_VERTICAL,
-  eCSSKeyword_scalethumbstart,        NS_THEME_SCALE_THUMB_START,
-  eCSSKeyword_scalethumbend,          NS_THEME_SCALE_THUMB_END,
-  eCSSKeyword_scalethumbtick,         NS_THEME_SCALE_TICK,
+  eCSSKeyword_slider,                 NS_THEME_SLIDER,
+  eCSSKeyword_sliderthumb,            NS_THEME_SLIDER_THUMB,
+  eCSSKeyword_sliderthumbstart,       NS_THEME_SLIDER_THUMB_START,
+  eCSSKeyword_sliderthumbend,         NS_THEME_SLIDER_THUMB_END,
+  eCSSKeyword_sliderthumbtick,        NS_THEME_SLIDER_TICK,
   eCSSKeyword_checkboxcontainer,      NS_THEME_CHECKBOX_CONTAINER,
   eCSSKeyword_radiocontainer,         NS_THEME_RADIO_CONTAINER,
   eCSSKeyword_checkboxlabel,          NS_THEME_CHECKBOX_LABEL,
@@ -350,6 +342,9 @@ const PRInt32 nsCSSProps::kBorderStyleKTable[] = {
   eCSSKeyword_ridge,  NS_STYLE_BORDER_STYLE_RIDGE,
   eCSSKeyword_inset,  NS_STYLE_BORDER_STYLE_INSET,
   eCSSKeyword_outset, NS_STYLE_BORDER_STYLE_OUTSET,
+  eCSSKeyword__moz_bg_inset,  NS_STYLE_BORDER_STYLE_BG_INSET,
+  eCSSKeyword__moz_bg_outset, NS_STYLE_BORDER_STYLE_BG_OUTSET,
+  eCSSKeyword__moz_bg_solid,  NS_STYLE_BORDER_STYLE_BG_SOLID,
   eCSSKeyword_UNKNOWN,-1
 };
 
@@ -445,7 +440,6 @@ const PRInt32 nsCSSProps::kColorKTable[] = {
   eCSSKeyword__moz_mac_secondaryhighlight, nsILookAndFeel::eColor__moz_mac_secondaryhighlight,
   eCSSKeyword__moz_menuhover, nsILookAndFeel::eColor__moz_menuhover,
   eCSSKeyword__moz_menuhovertext, nsILookAndFeel::eColor__moz_menuhovertext,
-  eCSSKeyword__moz_menubarhovertext, nsILookAndFeel::eColor__moz_menubarhovertext,
   eCSSKeyword__moz_visitedhyperlinktext, NS_COLOR_MOZ_VISITEDHYPERLINKTEXT,
   eCSSKeyword_currentcolor, NS_COLOR_CURRENTCOLOR,
   eCSSKeyword_UNKNOWN,-1
@@ -456,7 +450,6 @@ const PRInt32 nsCSSProps::kContentKTable[] = {
   eCSSKeyword_close_quote, NS_STYLE_CONTENT_CLOSE_QUOTE,
   eCSSKeyword_no_open_quote, NS_STYLE_CONTENT_NO_OPEN_QUOTE,
   eCSSKeyword_no_close_quote, NS_STYLE_CONTENT_NO_CLOSE_QUOTE,
-  eCSSKeyword__moz_alt_content, NS_STYLE_CONTENT_ALT_CONTENT,
   eCSSKeyword_UNKNOWN,-1
 };
 
@@ -517,13 +510,13 @@ const PRInt32 nsCSSProps::kDirectionKTable[] = {
 const PRInt32 nsCSSProps::kDisplayKTable[] = {
   eCSSKeyword_inline,             NS_STYLE_DISPLAY_INLINE,
   eCSSKeyword_block,              NS_STYLE_DISPLAY_BLOCK,
-  eCSSKeyword_inline_block,       NS_STYLE_DISPLAY_INLINE_BLOCK,
+  eCSSKeyword__moz_inline_block,  NS_STYLE_DISPLAY_INLINE_BLOCK,
   eCSSKeyword_list_item,          NS_STYLE_DISPLAY_LIST_ITEM,
   eCSSKeyword__moz_run_in,        NS_STYLE_DISPLAY_RUN_IN,
   eCSSKeyword__moz_compact,       NS_STYLE_DISPLAY_COMPACT,
   eCSSKeyword__moz_marker,        NS_STYLE_DISPLAY_MARKER,
   eCSSKeyword_table,              NS_STYLE_DISPLAY_TABLE,
-  eCSSKeyword_inline_table,       NS_STYLE_DISPLAY_INLINE_TABLE,
+  eCSSKeyword__moz_inline_table,  NS_STYLE_DISPLAY_INLINE_TABLE,
   eCSSKeyword_table_row_group,    NS_STYLE_DISPLAY_TABLE_ROW_GROUP,
   eCSSKeyword_table_header_group, NS_STYLE_DISPLAY_TABLE_HEADER_GROUP,
   eCSSKeyword_table_footer_group, NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP,
@@ -532,11 +525,8 @@ const PRInt32 nsCSSProps::kDisplayKTable[] = {
   eCSSKeyword_table_column,       NS_STYLE_DISPLAY_TABLE_COLUMN,
   eCSSKeyword_table_cell,         NS_STYLE_DISPLAY_TABLE_CELL,
   eCSSKeyword_table_caption,      NS_STYLE_DISPLAY_TABLE_CAPTION,
-  // Make sure this is kept in sync with the code in
-  // nsCSSFrameConstructor::ConstructXULFrame
   eCSSKeyword__moz_box,           NS_STYLE_DISPLAY_BOX,
   eCSSKeyword__moz_inline_box,    NS_STYLE_DISPLAY_INLINE_BOX,
-#ifdef MOZ_XUL  
   eCSSKeyword__moz_grid,          NS_STYLE_DISPLAY_GRID,
   eCSSKeyword__moz_inline_grid,   NS_STYLE_DISPLAY_INLINE_GRID,
   eCSSKeyword__moz_grid_group,    NS_STYLE_DISPLAY_GRID_GROUP,
@@ -546,7 +536,6 @@ const PRInt32 nsCSSProps::kDisplayKTable[] = {
   eCSSKeyword__moz_deck,          NS_STYLE_DISPLAY_DECK,
   eCSSKeyword__moz_popup,         NS_STYLE_DISPLAY_POPUP,
   eCSSKeyword__moz_groupbox,      NS_STYLE_DISPLAY_GROUPBOX,
-#endif
   eCSSKeyword_UNKNOWN,-1
 };
 
@@ -724,6 +713,9 @@ const PRInt32 nsCSSProps::kOutlineStyleKTable[] = {
   eCSSKeyword_ridge,  NS_STYLE_BORDER_STYLE_RIDGE,
   eCSSKeyword_inset,  NS_STYLE_BORDER_STYLE_INSET,
   eCSSKeyword_outset, NS_STYLE_BORDER_STYLE_OUTSET,
+  eCSSKeyword__moz_bg_inset,  NS_STYLE_BORDER_STYLE_BG_INSET,
+  eCSSKeyword__moz_bg_outset, NS_STYLE_BORDER_STYLE_BG_OUTSET,
+  eCSSKeyword__moz_bg_solid,  NS_STYLE_BORDER_STYLE_BG_SOLID,
   eCSSKeyword_UNKNOWN,-1
 };
 
@@ -1039,12 +1031,6 @@ const PRInt32 nsCSSProps::kTextRenderingKTable[] = {
   eCSSKeyword_optimizespeed, NS_STYLE_TEXT_RENDERING_OPTIMIZESPEED,
   eCSSKeyword_optimizelegibility, NS_STYLE_TEXT_RENDERING_OPTIMIZELEGIBILITY,
   eCSSKeyword_geometricprecision, NS_STYLE_TEXT_RENDERING_GEOMETRICPRECISION,
-  eCSSKeyword_UNKNOWN, -1
-};
-
-const PRInt32 nsCSSProps::kColorInterpolationKTable[] = {
-  eCSSKeyword_srgb, NS_STYLE_COLOR_INTERPOLATION_SRGB,
-  eCSSKeyword_linearrgb, NS_STYLE_COLOR_INTERPOLATION_LINEARRGB,
   eCSSKeyword_UNKNOWN, -1
 };
 

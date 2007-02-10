@@ -157,6 +157,9 @@ public:
   NS_IMETHOD    HasOriginalTarget(PRBool* aResult);
   NS_IMETHOD    SetTrusted(PRBool aTrusted);
 
+  NS_IMETHOD    IsHandled(PRBool* aHandled);
+  NS_IMETHOD    SetHandled(PRBool aHandled);
+
   static PopupControlState GetEventPopupControlState(nsEvent *aEvent);
 
   static void PopupAllowedEventsChanged();
@@ -170,11 +173,16 @@ protected:
   static const char* GetEventName(PRUint32 aEventType);
   already_AddRefed<nsIDOMEventTarget> GetTargetFromFrame();
 
-  nsEvent*                    mEvent;
-  nsCOMPtr<nsPresContext>     mPresContext;
-  nsCOMPtr<nsIDOMEventTarget> mTmpRealOriginalTarget;
+  nsEvent* mEvent;
+  nsCOMPtr<nsPresContext> mPresContext;
+  nsCOMPtr<nsIDOMEventTarget> mTarget;
+  nsCOMPtr<nsIDOMEventTarget> mCurrentTarget;
+  nsCOMPtr<nsIDOMEventTarget> mOriginalTarget;
   nsCOMPtr<nsIDOMEventTarget> mExplicitOriginalTarget;
-  PRPackedBool                mEventIsInternal;
+  nsCOMPtr<nsIDOMEventTarget> mTmpRealOriginalTarget;
+  PRPackedBool mEventIsInternal;
+
+  void* mScriptObject;
 };
 
 #define NS_FORWARD_TO_NSDOMEVENT \

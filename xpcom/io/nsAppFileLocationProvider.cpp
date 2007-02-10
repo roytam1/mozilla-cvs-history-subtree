@@ -48,7 +48,7 @@
 #include "prenv.h"
 #include "nsCRT.h"
 
-#if defined(XP_MACOSX)
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #include <Folders.h>
 #include <Script.h>
 #include <Processes.h>
@@ -75,7 +75,7 @@
 // WARNING: These hard coded names need to go away. They need to
 // come from localizable resources
 
-#if defined(XP_MACOSX)
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #define APP_REGISTRY_NAME NS_LITERAL_CSTRING("Application Registry")
 #define ESSENTIAL_FILES   NS_LITERAL_CSTRING("Essential Files")
 #elif defined(XP_WIN) || defined(XP_OS2)
@@ -85,7 +85,7 @@
 #endif
 
 // define default product directory
-#ifdef WINCE
+#if defined (XP_MAC) || defined (WINCE)
 #define DEFAULT_PRODUCT_DIR NS_LITERAL_CSTRING("Mozilla")
 #else
 #define DEFAULT_PRODUCT_DIR NS_LITERAL_CSTRING(MOZ_USER_DIR)
@@ -95,12 +95,21 @@
 #define NS_ENV_PLUGINS_DIR          "EnvPlugins"    // env var MOZ_PLUGIN_PATH
 #define NS_USER_PLUGINS_DIR         "UserPlugins"
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #define NS_MACOSX_USER_PLUGIN_DIR   "OSXUserPlugins"
 #define NS_MACOSX_LOCAL_PLUGIN_DIR  "OSXLocalPlugins"
 #define NS_MAC_CLASSIC_PLUGIN_DIR   "MacSysPlugins"
 #endif
 
+#if defined(XP_MAC)
+#define DEFAULTS_DIR_NAME           NS_LITERAL_CSTRING("Defaults")
+#define DEFAULTS_PREF_DIR_NAME      NS_LITERAL_CSTRING("Pref")
+#define DEFAULTS_PROFILE_DIR_NAME   NS_LITERAL_CSTRING("Profile")
+#define RES_DIR_NAME                NS_LITERAL_CSTRING("Res")
+#define CHROME_DIR_NAME             NS_LITERAL_CSTRING("Chrome")
+#define PLUGINS_DIR_NAME            NS_LITERAL_CSTRING("Plug-ins")
+#define SEARCH_DIR_NAME             NS_LITERAL_CSTRING("Search Plugins")
+#else
 #define DEFAULTS_DIR_NAME           NS_LITERAL_CSTRING("defaults")
 #define DEFAULTS_PREF_DIR_NAME      NS_LITERAL_CSTRING("pref")
 #define DEFAULTS_PROFILE_DIR_NAME   NS_LITERAL_CSTRING("profile")
@@ -108,6 +117,7 @@
 #define CHROME_DIR_NAME             NS_LITERAL_CSTRING("chrome")
 #define PLUGINS_DIR_NAME            NS_LITERAL_CSTRING("plugins")
 #define SEARCH_DIR_NAME             NS_LITERAL_CSTRING("searchplugins")
+#endif
 
 //*****************************************************************************
 // nsAppFileLocationProvider::Constructor/Destructor
@@ -128,16 +138,16 @@ NS_IMPL_THREADSAFE_ISUPPORTS2(nsAppFileLocationProvider, nsIDirectoryServiceProv
 //*****************************************************************************
 
 NS_IMETHODIMP
-nsAppFileLocationProvider::GetFile(const char *prop, PRBool *persistent, nsIFile **_retval)
+nsAppFileLocationProvider::GetFile(const char *prop, PRBool *persistant, nsIFile **_retval)
 {
     nsCOMPtr<nsILocalFile>  localFile;
     nsresult rv = NS_ERROR_FAILURE;
 
     NS_ENSURE_ARG(prop);
     *_retval = nsnull;
-    *persistent = PR_TRUE;
+    *persistant = PR_TRUE;
 
-#ifdef XP_MACOSX
+#if defined (XP_MAC) || defined(XP_MACOSX)
     short foundVRefNum;
     long foundDirID;
     FSSpec fileSpec;
@@ -205,7 +215,7 @@ nsAppFileLocationProvider::GetFile(const char *prop, PRBool *persistent, nsIFile
         if (NS_SUCCEEDED(rv))
             rv = localFile->AppendRelativeNativePath(PLUGINS_DIR_NAME);
     }
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
     else if (nsCRT::strcmp(prop, NS_MACOSX_USER_PLUGIN_DIR) == 0)
     {
         if (!(::FindFolder(kUserDomain,
@@ -245,7 +255,7 @@ nsAppFileLocationProvider::GetFile(const char *prop, PRBool *persistent, nsIFile
         NS_ERROR("Don't use nsAppFileLocationProvider::GetFile(NS_ENV_PLUGINS_DIR, ...). "
                  "Use nsAppFileLocationProvider::GetFiles(...).");
         const char *pathVar = PR_GetEnv("MOZ_PLUGIN_PATH");
-        if (pathVar && *pathVar)
+        if (pathVar)
             rv = NS_NewNativeLocalFile(nsDependentCString(pathVar), PR_TRUE, getter_AddRefs(localFile));
     }
     else if (nsCRT::strcmp(prop, NS_USER_PLUGINS_DIR) == 0)
@@ -272,6 +282,11 @@ nsAppFileLocationProvider::GetFile(const char *prop, PRBool *persistent, nsIFile
         // This is cloned so that embeddors will have a hook to override
         // with their own cleanup dir.  See bugzilla bug #105087 
         rv = CloneMozBinDirectory(getter_AddRefs(localFile));
+#ifdef XP_MAC
+        if (NS_SUCCEEDED(rv))
+            rv = localFile->AppendNative(ESSENTIAL_FILES);
+#endif
+
     } 
 
     if (localFile && NS_SUCCEEDED(rv))
@@ -334,7 +349,17 @@ NS_METHOD nsAppFileLocationProvider::GetProductDirectory(nsILocalFile **aLocalFi
     PRBool exists;
     nsCOMPtr<nsILocalFile> localDir;
 
-#if defined(XP_MACOSX)
+#if defined(XP_MAC)
+    nsCOMPtr<nsIProperties> directoryService = 
+             do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) return rv;
+    OSErr   err;
+    long    response;
+    err = ::Gestalt(gestaltSystemVersion, &response);
+    const char *prop = (!err && response >= 0x00001000) ? NS_MAC_USER_LIB_DIR : NS_MAC_DOCUMENTS_DIR;
+    rv = directoryService->Get(prop, NS_GET_IID(nsILocalFile), getter_AddRefs(localDir));
+    if (NS_FAILED(rv)) return rv;
+#elif defined(XP_MACOSX)
     FSRef fsRef;
     OSType folderType = aLocal ? kCachedDataFolderType : kDomainLibraryFolderType;
     OSErr err = ::FSFindFolder(kUserDomain, folderType, kCreateFolder, &fsRef);
@@ -425,7 +450,7 @@ NS_METHOD nsAppFileLocationProvider::GetDefaultUserProfileRoot(nsILocalFile **aL
     rv = GetProductDirectory(getter_AddRefs(localDir), aLocal);
     if (NS_FAILED(rv)) return rv;
 
-#if defined(XP_MACOSX) || defined(XP_OS2) || defined(XP_WIN)
+#if defined(XP_MAC) || defined(XP_MACOSX) || defined(XP_OS2) || defined(XP_WIN)
     // These 3 platforms share this part of the path - do them as one
     rv = localDir->AppendRelativeNativePath(NS_LITERAL_CSTRING("Profiles"));
     if (NS_FAILED(rv)) return rv;
@@ -578,7 +603,7 @@ nsAppFileLocationProvider::GetFiles(const char *prop, nsISimpleEnumerator **_ret
     
     if (!nsCRT::strcmp(prop, NS_APP_PLUGINS_DIR_LIST))
     {
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
         static const char* osXKeys[] = { NS_APP_PLUGINS_DIR, NS_MACOSX_USER_PLUGIN_DIR, NS_MACOSX_LOCAL_PLUGIN_DIR, nsnull };
         static const char* os9Keys[] = { NS_APP_PLUGINS_DIR, NS_MAC_CLASSIC_PLUGIN_DIR, nsnull };
         static const char** keys;

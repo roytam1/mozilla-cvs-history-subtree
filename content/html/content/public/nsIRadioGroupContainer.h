@@ -55,18 +55,15 @@ class nsIRadioGroupContainer : public nsISupports
 {
 public:
 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IRADIOGROUPCONTAINER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IRADIOGROUPCONTAINER_IID)
 
   /**
    * Walk through the radio group, visiting each note with avisitor->Visit()
    * @param aName the group name
    * @param aVisitor the visitor to visit with
-   * @param aFlushContent whether to ensure the content model is up to date
-   *        before walking.
    */
   NS_IMETHOD WalkRadioGroup(const nsAString& aName,
-                            nsIRadioVisitor* aVisitor,
-                            PRBool aFlushContent) = 0;
+                            nsIRadioVisitor* aVisitor) = 0;
 
   /**
    * Set the current radio button in a group
@@ -133,8 +130,5 @@ public:
                                 PRInt32 *aPositionIndex,
                                 PRInt32 *aItemsInGroup) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIRadioGroupContainer,
-                              NS_IRADIOGROUPCONTAINER_IID)
 
 #endif /* nsIRadioGroupContainer_h__ */

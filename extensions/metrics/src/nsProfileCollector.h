@@ -44,7 +44,7 @@
 class nsISupports;
 class nsIMetricsEventItem;
 class nsIPropertyBag;
-#ifndef MOZ_PLACES_BOOKMARKS
+#ifndef MOZ_PLACES
 class nsIRDFResource;
 #endif
 
@@ -77,7 +77,7 @@ class nsProfileCollector : public nsIMetricsCollector
   nsresult LogDisplay(nsIMetricsEventItem *profile);
   nsresult LogBookmarks(nsIMetricsEventItem *profile);
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
   void LogBookmarkLocation(nsIMetricsEventItem *bookmarksItem,
                            const nsACString &location,
                            BookmarkCounter *counter,

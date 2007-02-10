@@ -39,3 +39,4 @@
 <!ENTITY nodeName.label "Csomópont neve:">
 <!ENTITY namespaceURI.label "Névtér URI:">
 <!ENTITY nodeType.label "Csomópont típusa:">
+<!ENTITY nodeValue.label "Csomópont értéke:">

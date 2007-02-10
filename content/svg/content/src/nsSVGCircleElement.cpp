@@ -36,13 +36,16 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsSVGPathGeometryElement.h"
+#include "nsSVGGraphicElement.h"
+#include "nsSVGAtoms.h"
+#include "nsSVGAnimatedLength.h"
+#include "nsSVGLength.h"
 #include "nsIDOMSVGCircleElement.h"
-#include "nsSVGLength2.h"
-#include "nsGkAtoms.h"
-#include "nsSVGUtils.h"
+#include "nsCOMPtr.h"
+#include "nsISVGSVGElement.h"
+#include "nsSVGCoordCtxProvider.h"
 
-typedef nsSVGPathGeometryElement nsSVGCircleElementBase;
+typedef nsSVGGraphicElement nsSVGCircleElementBase;
 
 class nsSVGCircleElement : public nsSVGCircleElementBase,
                            public nsIDOMSVGCircleElement
@@ -51,39 +54,32 @@ protected:
   friend nsresult NS_NewSVGCircleElement(nsIContent **aResult,
                                          nsINodeInfo *aNodeInfo);
   nsSVGCircleElement(nsINodeInfo *aNodeInfo);
+  virtual ~nsSVGCircleElement();
+  nsresult Init();
 
 public:
-  // interfaces:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIDOMSVGCIRCLEELEMENT
 
   // xxx I wish we could use virtual inheritance
-  NS_FORWARD_NSIDOMNODE(nsSVGCircleElementBase::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsSVGCircleElementBase::)
   NS_FORWARD_NSIDOMELEMENT(nsSVGCircleElementBase::)
   NS_FORWARD_NSIDOMSVGELEMENT(nsSVGCircleElementBase::)
 
-  // nsSVGPathGeometryElement methods:
-  virtual void ConstructPath(cairo_t *aCtx);
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
-
+  // nsISVGContent specializations:
+  virtual void ParentChainChanged();
+    
 protected:
-
-  virtual LengthAttributesInfo GetLengthInfo();
-
-  enum { CX, CY, R };
-  nsSVGLength2 mLengthAttributes[3];
-  static LengthInfo sLengthInfo[3];
+  
+  nsCOMPtr<nsIDOMSVGAnimatedLength> mCx;
+  nsCOMPtr<nsIDOMSVGAnimatedLength> mCy;
+  nsCOMPtr<nsIDOMSVGAnimatedLength> mR;
+  
 };
 
-nsSVGElement::LengthInfo nsSVGCircleElement::sLengthInfo[3] =
-{
-  { &nsGkAtoms::cx, 0, nsIDOMSVGLength::SVG_LENGTHTYPE_NUMBER, nsSVGUtils::X },
-  { &nsGkAtoms::cy, 0, nsIDOMSVGLength::SVG_LENGTHTYPE_NUMBER, nsSVGUtils::Y },
-  { &nsGkAtoms::r, 0, nsIDOMSVGLength::SVG_LENGTHTYPE_NUMBER, nsSVGUtils::XY }
-};
 
 NS_IMPL_NS_NEW_SVG_ELEMENT(Circle)
+
 
 //----------------------------------------------------------------------
 // nsISupports methods
@@ -105,12 +101,65 @@ NS_INTERFACE_MAP_END_INHERITING(nsSVGCircleElementBase)
 nsSVGCircleElement::nsSVGCircleElement(nsINodeInfo *aNodeInfo)
   : nsSVGCircleElementBase(aNodeInfo)
 {
+
+}
+
+nsSVGCircleElement::~nsSVGCircleElement()
+{
+}
+
+  
+nsresult
+nsSVGCircleElement::Init()
+{
+  nsresult rv = nsSVGCircleElementBase::Init();
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  // Create mapped properties:
+
+  // DOM property: cx ,  #IMPLIED attrib: cx
+  {
+    nsCOMPtr<nsISVGLength> length;
+    rv = NS_NewSVGLength(getter_AddRefs(length), 0.0f);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedLength(getter_AddRefs(mCx), length);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = AddMappedSVGValue(nsSVGAtoms::cx, mCx);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  // DOM property: cy ,  #IMPLIED attrib: cy
+  {
+    nsCOMPtr<nsISVGLength> length;
+    rv = NS_NewSVGLength(getter_AddRefs(length), 0.0f);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedLength(getter_AddRefs(mCy), length);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = AddMappedSVGValue(nsSVGAtoms::cy, mCy);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  // DOM property: r ,  #REQUIRED  attrib: r
+  // XXX: enforce requiredness
+  {
+    nsCOMPtr<nsISVGLength> length;
+    rv = NS_NewSVGLength(getter_AddRefs(length), 0.0f);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedLength(getter_AddRefs(mR), length);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = AddMappedSVGValue(nsSVGAtoms::r, mR);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  return rv;
 }
 
 //----------------------------------------------------------------------
 // nsIDOMNode methods
 
-NS_IMPL_ELEMENT_CLONE_WITH_INIT(nsSVGCircleElement)
+
+NS_IMPL_DOM_CLONENODE_WITH_INIT(nsSVGCircleElement)
+
 
 //----------------------------------------------------------------------
 // nsIDOMSVGCircleElement methods
@@ -118,41 +167,70 @@ NS_IMPL_ELEMENT_CLONE_WITH_INIT(nsSVGCircleElement)
 /* readonly attribute nsIDOMSVGAnimatedLength cx; */
 NS_IMETHODIMP nsSVGCircleElement::GetCx(nsIDOMSVGAnimatedLength * *aCx)
 {
-  return mLengthAttributes[CX].ToDOMAnimatedLength(aCx, this);
+  *aCx = mCx;
+  NS_IF_ADDREF(*aCx);
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGAnimatedLength cy; */
 NS_IMETHODIMP nsSVGCircleElement::GetCy(nsIDOMSVGAnimatedLength * *aCy)
 {
-  return mLengthAttributes[CY].ToDOMAnimatedLength(aCy, this);
+  *aCy = mCy;
+  NS_IF_ADDREF(*aCy);
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGAnimatedLength r; */
 NS_IMETHODIMP nsSVGCircleElement::GetR(nsIDOMSVGAnimatedLength * *aR)
 {
-  return mLengthAttributes[R].ToDOMAnimatedLength(aR, this);
+   *aR = mR;
+  NS_IF_ADDREF(*aR);
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
-// nsSVGElement methods
+// nsISVGContent methods
 
-nsSVGElement::LengthAttributesInfo
-nsSVGCircleElement::GetLengthInfo()
+void nsSVGCircleElement::ParentChainChanged()
 {
-  return LengthAttributesInfo(mLengthAttributes, sLengthInfo,
-                              NS_ARRAY_LENGTH(sLengthInfo));
-}
+  // set new context information on our length-properties:
+  
+  nsCOMPtr<nsIDOMSVGSVGElement> dom_elem;
+  GetOwnerSVGElement(getter_AddRefs(dom_elem));
+  if (!dom_elem) return;
 
-//----------------------------------------------------------------------
-// nsSVGPathGeometryElement methods
+  nsCOMPtr<nsSVGCoordCtxProvider> ctx = do_QueryInterface(dom_elem);
+  NS_ASSERTION(ctx, "<svg> element missing interface");
 
-void
-nsSVGCircleElement::ConstructPath(cairo_t *aCtx)
-{
-  float x, y, r;
+  // cx:
+  {
+    nsCOMPtr<nsIDOMSVGLength> dom_length;
+    mCx->GetAnimVal(getter_AddRefs(dom_length));
+    nsCOMPtr<nsISVGLength> length = do_QueryInterface(dom_length);
+    NS_ASSERTION(length, "svg length missing interface");
 
-  GetAnimatedLengthValues(&x, &y, &r, nsnull);
+    length->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextX()));
+  }
 
-  if (r > 0.0f)
-    cairo_arc(aCtx, x, y, r, 0, 2*M_PI);
-}
+  // cy:
+  {
+    nsCOMPtr<nsIDOMSVGLength> dom_length;
+    mCy->GetAnimVal(getter_AddRefs(dom_length));
+    nsCOMPtr<nsISVGLength> length = do_QueryInterface(dom_length);
+    NS_ASSERTION(length, "svg length missing interface");
+
+    length->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextY()));
+  }
+
+  // r:
+  {
+    nsCOMPtr<nsIDOMSVGLength> dom_length;
+    mR->GetAnimVal(getter_AddRefs(dom_length));
+    nsCOMPtr<nsISVGLength> length = do_QueryInterface(dom_length);
+    NS_ASSERTION(length, "svg length missing interface");
+
+    length->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextUnspecified()));
+  }
+
+  // XXX call baseclass version to recurse into children?
+}  

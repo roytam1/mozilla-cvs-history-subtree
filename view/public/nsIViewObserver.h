@@ -40,10 +40,9 @@
 
 #include "nsISupports.h"
 #include "nsEvent.h"
-#include "nsColor.h"
-#include "nsRect.h"
 
 class nsIRenderingContext;
+struct nsRect;
 class nsGUIEvent;
 
 #define NS_IVIEWOBSERVER_IID   \
@@ -54,32 +53,18 @@ class nsIViewObserver : public nsISupports
 {
 public:
   
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IVIEWOBSERVER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IVIEWOBSERVER_IID)
 
-  /* called when the observer needs to paint. This paints the entire
-   * frame subtree rooted at the view, including frame subtrees from
-   * subdocuments.
-   * @param aRenderingContext rendering context to paint to
-   * @param aDirtyRegion the region to be painted, in the coordinates of aRootView
+  /* called when the observer needs to paint
+   * @param aRenderingContext - rendering context to paint to
+   * @param aDirtyRect - rectangle of dirty area
    * @return error status
    */
-  NS_IMETHOD Paint(nsIView*             aRootView,
-                   nsIRenderingContext* aRenderingContext,
-                   const nsRegion&      aDirtyRegion) = 0;
-
-  /**
-   * @see nsLayoutUtils::ComputeRepaintRegionForCopy
-   */
-  NS_IMETHOD ComputeRepaintRegionForCopy(nsIView*      aRootView,
-                                         nsIView*      aMovingView,
-                                         nsPoint       aDelta,
-                                         const nsRect& aCopyRect,
-                                         nsRegion*     aRepaintRegion) = 0;
+  NS_IMETHOD Paint(nsIView *            aView,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect) = 0;
 
   /* called when the observer needs to handle an event
-   * @param aView  - where to start processing the event; the root view,
-   * or the view that's currently capturing this sort of event; must be a view
-   * for this presshell
    * @param aEvent - event notification
    * @param aEventStatus - out parameter for event handling
    *                       status
@@ -87,18 +72,11 @@ public:
    *                   handle the event
    * @return error status
    */
-  NS_IMETHOD HandleEvent(nsIView*       aView,
-                         nsGUIEvent*    aEvent,
-                         nsEventStatus* aEventStatus) = 0;
-
-  /**
-   * This is temporary until nsIViewManager::RenderOffscreen goes away (which
-   * will happen when views, and hence this entire interface, go away!).
-   */
-  NS_IMETHOD RenderOffscreen(nsRect aRect, PRBool aUntrusted,
-                             PRBool aIgnoreViewportScrolling,
-                             nscolor aBackgroundColor,
-                             nsIRenderingContext** aRenderedContext) = 0;
+  NS_IMETHOD HandleEvent(nsIView *       aView,
+                         nsGUIEvent*     aEvent,
+                         nsEventStatus*  aEventStatus,
+                         PRBool          aForceHandle,
+                         PRBool&         aHandled) = 0;
 
   /* called when the view has been resized and the
    * content within the view needs to be reflowed.
@@ -121,7 +99,5 @@ public:
    */
   NS_IMETHOD_(void) WillPaint() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIViewObserver, NS_IVIEWOBSERVER_IID)
 
 #endif

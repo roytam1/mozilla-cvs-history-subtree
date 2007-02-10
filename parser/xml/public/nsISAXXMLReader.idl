@@ -220,3 +220,5 @@ interface nsISAXXMLReader : nsIStreamListener {
    */
   void parseAsync(in nsIRequestObserver observer);
 };
+
+

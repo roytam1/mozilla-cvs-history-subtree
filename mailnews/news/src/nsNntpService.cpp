@@ -99,6 +99,8 @@
 #define PREF_MAIL_ROOT_NNTP_REL 	"mail.root.nntp-rel"
 
 static NS_DEFINE_CID(kMessengerMigratorCID, NS_MESSENGERMIGRATOR_CID);
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+static NS_DEFINE_CID(kCacheServiceCID, NS_CACHESERVICE_CID);
                     
 nsNntpService::nsNntpService()
 {
@@ -1006,7 +1008,7 @@ nsNntpService::ConstructNntpUrl(const char *urlString, nsIUrlListener *aUrlListe
   nsCOMPtr <nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(nntpUrl);
   mailnewsurl->SetMsgWindow(aMsgWindow);
   nsCOMPtr <nsIMsgMessageUrl> msgUrl = do_QueryInterface(nntpUrl);
-  msgUrl->SetUri(originalMessageUri);
+  msgUrl->SetUri(urlString);
   mailnewsurl->SetSpec(nsDependentCString(urlString));
   nntpUrl->SetNewsAction(action);
   
@@ -1243,7 +1245,7 @@ PRBool nsNntpService::WeAreOffline()
 	nsresult rv = NS_OK;
   PRBool offline = PR_FALSE;
 
-  nsCOMPtr<nsIIOService> netService(do_GetService(NS_IOSERVICE_CONTRACTID, &rv));
+  nsCOMPtr<nsIIOService> netService(do_GetService(kIOServiceCID, &rv));
   if (NS_SUCCEEDED(rv) && netService)
     netService->GetOffline(&offline);
 
@@ -1382,8 +1384,7 @@ nsNntpService::GetDefaultServerPort(PRBool isSecure, PRInt32 *aDefaultPort)
 NS_IMETHODIMP nsNntpService::GetProtocolFlags(PRUint32 *aUritype)
 {
     NS_ENSURE_ARG_POINTER(aUritype);
-    *aUritype = URI_NORELATIVE | URI_FORBIDS_AUTOMATIC_DOCUMENT_REPLACEMENT |
-      URI_LOADABLE_BY_ANYONE | ALLOWS_PROXY;
+    *aUritype = URI_NORELATIVE | ALLOWS_PROXY;
     return NS_OK;
 }
 
@@ -1839,7 +1840,7 @@ NS_IMETHODIMP nsNntpService::GetCacheSession(nsICacheSession **result)
   nsresult rv = NS_OK;
   if (!mCacheSession)
   {
-    nsCOMPtr<nsICacheService> serv = do_GetService(NS_CACHESERVICE_CONTRACTID, &rv);
+    nsCOMPtr<nsICacheService> serv = do_GetService(kCacheServiceCID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
     
     rv = serv->CreateSession("NNTP-memory-only", nsICache::STORE_IN_MEMORY, nsICache::STREAM_BASED, getter_AddRefs(mCacheSession));

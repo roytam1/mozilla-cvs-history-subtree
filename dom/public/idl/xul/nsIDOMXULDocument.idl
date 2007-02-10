@@ -22,6 +22,7 @@
  * Contributor(s):
  *   David Hyatt <hyatt@netscape.com> (original author)
  *   Johnny Stenback <jst@netscape.com>
+ *   Brett Wilson <brettw@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -42,21 +43,11 @@
 interface nsIDOMXULCommandDispatcher;
 interface nsIObserver;
 
-[scriptable, uuid(9816241b-2a20-44ff-903b-575f40c0ecc5)]
+[scriptable, uuid(e64bb081-13ba-430e-ab70-73a9f1d3de58)]
 interface nsIDOMXULDocument : nsISupports
 {
-  attribute nsIDOMNode                          popupNode;
-
-  /**
-   * These attributes correspond to trustedGetPopupNode().rangeOffset and
-   * rangeParent. They will help you find where in the DOM the popup is
-   * happening. Can be accessed from chrome only, and only during a popup
-   * event. Accessing any other time will be an error.
-   */
-  readonly attribute nsIDOMNode                 popupRangeParent;
-  readonly attribute long                       popupRangeOffset;
-
-  attribute nsIDOMNode                          tooltipNode;
+           attribute nsIDOMNode                 popupNode;
+           attribute nsIDOMNode                 tooltipNode;
 
   readonly attribute nsIDOMXULCommandDispatcher commandDispatcher;
 
@@ -65,10 +56,6 @@ interface nsIDOMXULDocument : nsISupports
 
   nsIDOMNodeList            getElementsByAttribute(in DOMString name,
                                                    in DOMString value);
-
-  nsIDOMNodeList            getElementsByAttributeNS(in DOMString namespaceURI,
-                                                     in DOMString name,
-                                                     in DOMString value);
 
   void                      addBroadcastListenerFor(in nsIDOMElement broadcaster,
                                                     in nsIDOMElement observer,
@@ -98,21 +85,41 @@ interface nsIDOMXULDocument : nsISupports
    *          - Ben Goodger (8/23/2005)
    */
   void                      loadOverlay(in DOMString url, in nsIObserver aObserver);
+};
 
-  /**
-   * Get the popup node from this XUL document without doing a security check to
-   * make sure that the caller has access to this node. This is for use from C++
-   * callers that can indirectly be called from content.
-   */
-  [noscript] nsIDOMNode     trustedGetPopupNode();
+/**
+ * This interface is a hack for bug 319434 since we have to preserve the
+ * nsIDOMXULDocument interface on the branch. It provides non-scriptable
+ * functions that don't do security checks to access the popup and tooltip
+ * nodes.
+ *
+ * @status TEMPORARY
+ */
+[uuid(87545e48-b966-4579-829a-ca01b0fca9b3)]
+interface nsIDOMXULDocument2 : nsIDOMXULDocument
+{
+  nsIDOMNode trustedGetPopupNode();
+  nsIDOMNode trustedGetTooltipNode();
 
-  /**
-   * Like trustedGetPopupNode, but gets the tooltip node instead.
-   */
-  [noscript] nsIDOMNode     trustedGetTooltipNode();
+  attribute nsIDOMEvent trustedPopupEvent;
+};
 
+/**
+ * This interface adds the popup event for the inline spell checker on brach,
+ * because we can't change nsIDOMXULDoucument. We can't use nsIDOMXULDocument2
+ * because it isn't scriptable.
+ *
+ * @status TEMPORARY
+ */
+[scriptable, uuid(8cc6316d-ecbc-4c5f-8fda-28c91fb56e3d)]
+interface nsIDOMXULDocument_MOZILLA_1_8_BRANCH : nsISupports
+{
   /**
-   * Like trustedGetPopupNode, but gets the 
+   * These attributes correspond to trustedGetPopupNode().rangeOffset and
+   * rangeParent. They will help you find where in the DOM the popup is
+   * happening. Can be accessed from chrome only, and only during a popup
+   * event. Accessing any other time will be an error.
    */
-  [noscript] attribute nsIDOMEvent trustedPopupEvent;
+  readonly attribute nsIDOMNode popupRangeParent;
+  readonly attribute long popupRangeOffset;
 };

@@ -1,29 +1,29 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  * http://www.mozilla.org/MPL/
- * 
+ *
  * Software distributed under the License is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
  * License.
- * 
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
+ *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998-1999
  * the Initial Developer. All Rights Reserved.
- * 
+ *
  * Contributor(s):
- * 
+ *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -32,7 +32,7 @@
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the MPL, the GPL or the LGPL.
- * 
+ *
  * ***** END LICENSE BLOCK ***** */
 /*
  *
@@ -350,7 +350,7 @@ ldap_memcache_init( unsigned long ttl, unsigned long size,
 	return( LDAP_SIZELIMIT_EXCEEDED );
     }
 
-    LDAPDebug( LDAP_DEBUG_TRACE, "ldap_memcache_init new cache 0x%p\n",
+    LDAPDebug( LDAP_DEBUG_TRACE, "ldap_memcache_init new cache 0x%x\n",
 	    *cachep, 0, 0 );
 
     return( LDAP_SUCCESS );
@@ -452,7 +452,7 @@ int
 LDAP_CALL
 ldap_memcache_get( LDAP *ld, LDAPMemCache **cachep )
 {
-    LDAPDebug( LDAP_DEBUG_TRACE, "ldap_memcache_get ld: 0x%p\n", ld, 0, 0 );
+    LDAPDebug( LDAP_DEBUG_TRACE, "ldap_memcache_get ld: 0x%x\n", ld, 0, 0 );
 
     if ( !NSLDAPI_VALID_LDAP_POINTER( ld ) || cachep == NULL ) { 
 	return( LDAP_PARAM_ERROR );
@@ -474,7 +474,7 @@ void
 LDAP_CALL
 ldap_memcache_update( LDAPMemCache *cache )
 {
-    LDAPDebug( LDAP_DEBUG_TRACE, "ldap_memcache_update: cache 0x%p\n",
+    LDAPDebug( LDAP_DEBUG_TRACE, "ldap_memcache_update: cache 0x%x\n",
 	    cache, 0, 0 );
 
     if ( !NSLDAPI_VALID_MEMCACHE_POINTER( cache )) {
@@ -492,7 +492,7 @@ LDAP_CALL
 ldap_memcache_flush( LDAPMemCache *cache, char *dn, int scope )
 {
     LDAPDebug( LDAP_DEBUG_TRACE,
-	    "ldap_memcache_flush( cache: 0x%p, dn: %s, scope: %d)\n",
+	    "ldap_memcache_flush( cache: 0x%x, dn: %s, scope: %d)\n",
 	    cache, ( dn == NULL ) ? "(null)" : dn, scope );
 
     if ( !NSLDAPI_VALID_MEMCACHE_POINTER( cache )) {
@@ -520,7 +520,7 @@ ldap_memcache_destroy( LDAPMemCache *cache )
     unsigned long size = sizeof(LDAPMemCache);
     ldapmemcacheld *pNode = NULL, *pNextNode = NULL;
 
-    LDAPDebug( LDAP_DEBUG_TRACE, "ldap_memcache_destroy( 0x%p )\n",
+    LDAPDebug( LDAP_DEBUG_TRACE, "ldap_memcache_destroy( 0x%x )\n",
 	    cache, 0, 0 );
 
     if ( !NSLDAPI_VALID_MEMCACHE_POINTER( cache )) {
@@ -691,7 +691,7 @@ ldap_memcache_result(LDAP *ld, int msgid, unsigned long key)
     LDAPMessage *pMsg = NULL;
 
     LDAPDebug( LDAP_DEBUG_TRACE,
-	    "ldap_memcache_result( ld: 0x%p, msgid: %d, key: 0x%8.8lx)\n",
+	    "ldap_memcache_result( ld: 0x%x, msgid: %d, key: 0x%8.8lx)\n",
 	    ld, msgid, key );
 
     if ( !NSLDAPI_VALID_LDAP_POINTER( ld ) || (msgid < 0) ) {
@@ -764,8 +764,8 @@ ldap_memcache_append(LDAP *ld, int msgid, int bLast, LDAPMessage *result)
 {
     int nRes = LDAP_SUCCESS;
 
-    LDAPDebug( LDAP_DEBUG_TRACE, "ldap_memcache_append( ld: 0x%p, ", ld, 0, 0 );
-    LDAPDebug( LDAP_DEBUG_TRACE, "msgid %d, bLast: %d, result: 0x%p)\n",
+    LDAPDebug( LDAP_DEBUG_TRACE, "ldap_memcache_append( ld: 0x%x, ", ld, 0, 0 );
+    LDAPDebug( LDAP_DEBUG_TRACE, "msgid %d, bLast: %d, result: 0x%x)\n",
 	    msgid, bLast, result );
 
     if ( !NSLDAPI_VALID_LDAP_POINTER( ld ) || !result ) {
@@ -1116,8 +1116,6 @@ memcache_add_to_ld(LDAP *ld, int msgid, LDAPMessage *pMsg)
     if (nRes != LDAP_SUCCESS)
 	return nRes;
 
-    LDAP_MUTEX_LOCK( ld, LDAP_RESP_LOCK );
-
     for (r = &(ld->ld_responses); *r; r = &((*r)->lm_next))
 	if ((*r)->lm_msgid == msgid)
 	    break;
@@ -1128,8 +1126,6 @@ memcache_add_to_ld(LDAP *ld, int msgid, LDAPMessage *pMsg)
 	}
 
     *r = pCopy;
-
-    LDAP_MUTEX_UNLOCK( ld, LDAP_RESP_LOCK );
     
     return nRes;
 }
@@ -1389,17 +1385,17 @@ memcache_print_list( LDAPMemCache *cache, int index )
 	name = "unknown";
     }
 
-    LDAPDebug( LDAP_DEBUG_TRACE, "memcache 0x%p %s list:\n",
+    LDAPDebug( LDAP_DEBUG_TRACE, "memcache 0x%x %s list:\n",
 	    cache, name, 0 );
     for ( restmp = cache->ldmemc_resHead[index]; restmp != NULL;
 	    restmp = restmp->ldmemcr_next[index] ) {
 	LDAPDebug( LDAP_DEBUG_TRACE,
-		"    key: 0x%8.8lx, ld: 0x%p, msgid: %d\n",
+		"    key: 0x%8.8lx, ld: 0x%x, msgid: %d\n",
 		restmp->ldmemcr_crc_key,
 		restmp->ldmemcr_req_id.ldmemcrid_ld,
 		restmp->ldmemcr_req_id.ldmemcrid_msgid );
     }
-    LDAPDebug( LDAP_DEBUG_TRACE, "memcache 0x%p end of %s list.\n",
+    LDAPDebug( LDAP_DEBUG_TRACE, "memcache 0x%x end of %s list.\n",
 	    cache, name, 0 );
 }
 #endif /* LDAP_DEBUG */
@@ -1431,9 +1427,8 @@ memcache_access(LDAPMemCache *cache, int mode,
 	unsigned long key = *((unsigned long*)pData1);
 	char *basedn = (char*)pData3;
 	ldapmemcacheRes *pRes = NULL;
-	void* hashResult = NULL;
 
-	nRes = htable_get(cache->ldmemc_resTmp, pData2, &hashResult);
+	nRes = htable_get(cache->ldmemc_resTmp, pData2, (void**)&pRes);
 	if (nRes == LDAP_SUCCESS)
 	    return( LDAP_ALREADY_EXISTS );
 
@@ -1462,13 +1457,11 @@ memcache_access(LDAPMemCache *cache, int mode,
 	LDAPMessage *pMsg = (LDAPMessage*)pData2;
 	LDAPMessage *pCopy = NULL;
 	ldapmemcacheRes *pRes = NULL;
-	void* hashResult = NULL;
 
-	nRes = htable_get(cache->ldmemc_resTmp, pData1, &hashResult);
+	nRes = htable_get(cache->ldmemc_resTmp, pData1, (void**)&pRes);
 	if (nRes != LDAP_SUCCESS)
 	    return nRes;
 
-	pRes = (ldapmemcacheRes*) hashResult;
 	nRes = memcache_dup_message(pMsg, pMsg->lm_msgid, 0, &pCopy, &size);
 	if (nRes != LDAP_SUCCESS) {
 	    nRes = htable_remove(cache->ldmemc_resTmp, pData1, NULL);
@@ -1536,11 +1529,10 @@ memcache_access(LDAPMemCache *cache, int mode,
     /* Remove cached entries in the temporary cache. */
     else if (mode == MEMCACHE_ACCESS_DELETE) {
 
-	void* hashResult = NULL;
+	ldapmemcacheRes *pCurRes = NULL;
 
 	if ((nRes = htable_remove(cache->ldmemc_resTmp, pData1,
-	                          &hashResult)) == LDAP_SUCCESS) {
-	    ldapmemcacheRes *pCurRes = (ldapmemcacheRes*) hashResult;
+	                          (void**)&pCurRes)) == LDAP_SUCCESS) {
 	    memcache_free_from_list(cache, pCurRes, LIST_TMP);
 	    memcache_free_entry(cache, pCurRes);
 	}
@@ -1692,7 +1684,7 @@ memcache_report_statistics( LDAPMemCache *cache )
 	hitrate = ( 100L * cache->ldmemc_stats.ldmemcstat_hits ) /
 	    cache->ldmemc_stats.ldmemcstat_tries;
     }
-    LDAPDebug( LDAP_DEBUG_STATS, "memcache 0x%p:\n", cache, 0, 0 );
+    LDAPDebug( LDAP_DEBUG_STATS, "memcache 0x%x:\n", cache, 0, 0 );
     LDAPDebug( LDAP_DEBUG_STATS, "    tries: %ld  hits: %ld  hitrate: %ld%%\n",
 	    cache->ldmemc_stats.ldmemcstat_tries,
 	    cache->ldmemc_stats.ldmemcstat_hits, hitrate );
@@ -2144,7 +2136,7 @@ attrkey_clearnode(void **ppTableData, void *pData)
  */
 #define NSLDAPI_CRC32_POLY 0x04c11db7     /* AUTODIN II, Ethernet, & FDDI */
 
-static nsldapi_uint_32 crc32_table[256] = { 
+static unsigned long crc32_table[256] = { 
     0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4326d9, 0x130476dc, 0x17c56b6b, 
     0x1a864db2, 0x1e475005, 0x2608edb8, 0x22c9f00f, 0x2f8ad6d6, 0x2b4bcb61, 
     0x350c9b64, 0x31cd86d3, 0x3c8ea00a, 0x384fbdbd, 0x4c11db70, 0x48d0c6c7, 
@@ -2196,11 +2188,15 @@ static nsldapi_uint_32 crc32_table[256] = {
 static unsigned long
 crc32_convert(char *buf, int len)
 {
-    unsigned char *p;
-	nsldapi_uint_32	crc;
+    char *p;
+#ifdef OSF1V4D
+    unsigned int crc;
+#else
+    unsigned long crc;	    /* FIXME: this is not 32-bits on all platforms! */
+#endif /* OSF1V4D */
 
     crc = 0xffffffff;       /* preload shift register, per CRC-32 spec */
-    for (p = (unsigned char *)buf; len > 0; ++p, --len)
+    for (p = buf; len > 0; ++p, --len)
 	crc = ((crc << 8) ^ crc32_table[(crc >> 24) ^ *p]) & 0xffffffff;
 
     return (unsigned long) ~crc;    /* transmit complement, per CRC-32 spec */

@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Pierre Phaneuf <pp@ludusdesign.com>
- *   Sergei Dolgov <sergei_d@fi.tartu.ee>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -59,6 +58,8 @@
 
 #include "nsIScreenManager.h"
 
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID); 
+ 
 nscoord nsDeviceContextBeOS::mDpi = 96; 
 
 nsDeviceContextBeOS::nsDeviceContextBeOS()
@@ -78,7 +79,7 @@ nsDeviceContextBeOS::nsDeviceContextBeOS()
 nsDeviceContextBeOS::~nsDeviceContextBeOS()
 {
   nsresult rv; 
-  nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv); 
+  nsCOMPtr<nsIPref> prefs = do_GetService(kPrefCID, &rv); 
   if (NS_SUCCEEDED(rv))
     prefs->UnregisterCallback("layout.css.dpi", prefChanged, (void *)this); 
 }
@@ -119,7 +120,7 @@ NS_IMETHODIMP nsDeviceContextBeOS::Init(nsNativeWidget aNativeWidget)
     PRInt32 prefVal = -1; 
     nsresult res; 
 
-    nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &res)); 
+    nsCOMPtr<nsIPref> prefs(do_GetService(kPrefCID, &res)); 
     if (NS_SUCCEEDED(res) && prefs)
     { 
       res = prefs->GetIntPref("layout.css.dpi", &prefVal); 
@@ -154,6 +155,9 @@ NS_IMETHODIMP nsDeviceContextBeOS::Init(nsNativeWidget aNativeWidget)
   } 
  
   SetDPI(mDpi); 
+
+  mScrollbarHeight = PRInt16(B_H_SCROLL_BAR_HEIGHT); 
+  mScrollbarWidth = PRInt16(B_V_SCROLL_BAR_WIDTH); 
 
   menu_info info;
   get_menu_info(&info);
@@ -224,6 +228,16 @@ NS_IMETHODIMP nsDeviceContextBeOS::SupportsNativeWidgets(PRBool &aSupportsWidget
   //XXX it is very critical that this not lie!! MMP
   // read the comments in the mac code for this
   aSupportsWidgets = PR_TRUE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsDeviceContextBeOS::GetScrollBarDimensions(float &aWidth, float &aHeight) const
+{
+  float scale;
+  GetCanonicalPixelScale(scale);
+  aWidth = mScrollbarWidth * mPixelsToTwips * scale;
+  aHeight = mScrollbarHeight * mPixelsToTwips * scale;
+
   return NS_OK;
 }
 
@@ -407,7 +421,7 @@ int nsDeviceContextBeOS::prefChanged(const char *aPref, void *aClosure)
   if (nsCRT::strcmp(aPref, "layout.css.dpi")==0)
   {
     PRInt32 dpi; 
-    nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &rv)); 
+    nsCOMPtr<nsIPref> prefs(do_GetService(kPrefCID, &rv)); 
     rv = prefs->GetIntPref(aPref, &dpi); 
     if (NS_SUCCEEDED(rv)) 
       context->SetDPI(dpi); 
@@ -460,7 +474,7 @@ nsDeviceContextBeOS::GetSystemFontInfo(const BFont *theFont, nsSystemFontID anID
     theFont->GetFamilyAndStyle(&family, &style);
 
     face = theFont->Face();
-    aFont->name.Assign(NS_ConvertUTF8toUTF16(family));
+    aFont->name.Assign(NS_ConvertUTF8toUCS2(family));
     aFont->size = NSIntPixelsToTwips(uint32(theFont->Size()), mPixelsToTwips); 
 
     if(face & B_ITALIC_FACE)

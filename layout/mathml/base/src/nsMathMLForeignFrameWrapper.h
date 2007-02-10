@@ -49,7 +49,7 @@
 class nsMathMLForeignFrameWrapper : public nsBlockFrame,
                                     public nsMathMLFrame {
 public:
-  friend nsIFrame* NS_NewMathMLForeignFrameWrapper(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLForeignFrameWrapper(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   NS_DECL_ISUPPORTS_INHERITED
 
@@ -76,12 +76,20 @@ public:
 
   // overloaded nsBlockFrame methods
 
+  NS_IMETHOD
+  Init(nsPresContext*  aPresContext,
+       nsIContent*      aContent,
+       nsIFrame*        aParent,
+       nsStyleContext*  aContext,
+       nsIFrame*        aPrevInFlow);
+
 #ifdef NS_DEBUG
   NS_IMETHOD
-  SetInitialChildList(nsIAtom*        aListName,
+  SetInitialChildList(nsPresContext* aPresContext,
+                      nsIAtom*        aListName,
                       nsIFrame*       aChildList)
   {
-    nsresult rv = nsBlockFrame::SetInitialChildList(aListName, aChildList);
+    nsresult rv = nsBlockFrame::SetInitialChildList(aPresContext, aListName, aChildList);
     // cannot use mFrames{.FirstChild()|.etc} since the block code doesn't set mFrames
     nsFrameList frameList(aChildList);
     NS_ASSERTION(frameList.FirstChild() && frameList.GetLength() == 1,
@@ -114,6 +122,22 @@ public:
     return NS_ERROR_NOT_IMPLEMENTED;
   }
 
+  // need special care here because the base class implementation treats this
+  // as two operations: remove & insert; In our case, removing the child will
+  // remove us too... so we have to operate from our parent's perspective
+  NS_IMETHOD
+  ReplaceFrame(nsIAtom*        aListName,
+               nsIFrame*       aOldFrame,
+               nsIFrame*       aNewFrame)
+  {
+    nsresult rv = mParent->ReplaceFrame(aListName, this, aNewFrame);
+    // XXX the usage of ReplaceFrame() vs. ReplaceFrameAndDestroy() is
+    // XXX ambiguous - see bug 122748. The style system doesn't call ReplaceFrame()
+    // XXX and that's why nobody seems to have been biten by the ambiguity yet
+    aOldFrame->Destroy(GetPresContext());
+    return rv;
+  }
+
   // Our life is bound to the life of our unique child.
   // When our child goes away, we ask our parent to delete us
   NS_IMETHOD
@@ -124,7 +148,7 @@ public:
   }
 
 protected:
-  nsMathMLForeignFrameWrapper(nsStyleContext* aContext) : nsBlockFrame(aContext) {}
+  nsMathMLForeignFrameWrapper() {}
   virtual ~nsMathMLForeignFrameWrapper() {}
 };
 

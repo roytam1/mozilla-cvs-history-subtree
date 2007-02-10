@@ -34,21 +34,19 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * Implementations of DOM Core's nsIDOMComment node.
- */
-
 #include "nsIDOMComment.h"
 #include "nsGenericDOMDataNode.h"
+#include "nsLayoutAtoms.h"
 #include "nsCOMPtr.h"
 #include "nsIDocument.h"
+#include "nsContentUtils.h"
+
 
 class nsCommentNode : public nsGenericDOMDataNode,
                       public nsIDOMComment
 {
 public:
-  nsCommentNode(nsINodeInfo *aNodeInfo);
+  nsCommentNode(nsNodeInfoManager *aNodeInfoManager);
   virtual ~nsCommentNode();
 
   // nsISupports
@@ -64,8 +62,9 @@ public:
   // Empty interface
 
   // nsIContent
+  virtual nsIAtom *Tag() const;
   virtual PRBool MayHaveFrame() const;
-  virtual PRBool IsNodeOfType(PRUint32 aFlags) const;
+  virtual PRBool IsContentOfType(PRUint32 aFlags) const;
 
 #ifdef DEBUG
   virtual void List(FILE* out, PRInt32 aIndent) const;
@@ -75,6 +74,9 @@ public:
     return;
   }
 #endif
+
+  virtual already_AddRefed<nsITextContent> CloneContent(PRBool aCloneText,
+                                                        nsNodeInfoManager *aNodeInfoManager);
 };
 
 nsresult
@@ -85,10 +87,7 @@ NS_NewCommentNode(nsIContent** aInstancePtrResult,
 
   *aInstancePtrResult = nsnull;
 
-  nsCOMPtr<nsINodeInfo> ni = aNodeInfoManager->GetCommentNodeInfo();
-  NS_ENSURE_TRUE(ni, NS_ERROR_OUT_OF_MEMORY);
-
-  nsCommentNode *instance = new nsCommentNode(ni);
+  nsCommentNode *instance = new nsCommentNode(aNodeInfoManager);
   if (!instance) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -98,8 +97,8 @@ NS_NewCommentNode(nsIContent** aInstancePtrResult,
   return NS_OK;
 }
 
-nsCommentNode::nsCommentNode(nsINodeInfo *aNodeInfo)
-  : nsGenericDOMDataNode(aNodeInfo)
+nsCommentNode::nsCommentNode(nsNodeInfoManager *aNodeInfoManager)
+  : nsGenericDOMDataNode(aNodeInfoManager)
 {
 }
 
@@ -110,6 +109,7 @@ nsCommentNode::~nsCommentNode()
 
 // QueryInterface implementation for nsCommentNode
 NS_INTERFACE_MAP_BEGIN(nsCommentNode)
+  NS_INTERFACE_MAP_ENTRY(nsITextContent)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
   NS_INTERFACE_MAP_ENTRY(nsIDOMCharacterData)
   NS_INTERFACE_MAP_ENTRY(nsIDOMComment)
@@ -121,6 +121,12 @@ NS_IMPL_ADDREF_INHERITED(nsCommentNode, nsGenericDOMDataNode)
 NS_IMPL_RELEASE_INHERITED(nsCommentNode, nsGenericDOMDataNode)
 
 
+nsIAtom *
+nsCommentNode::Tag() const
+{
+  return nsLayoutAtoms::commentTagName;
+}
+
 // virtual
 PRBool
 nsCommentNode::MayHaveFrame() const
@@ -129,9 +135,9 @@ nsCommentNode::MayHaveFrame() const
 }
 
 PRBool
-nsCommentNode::IsNodeOfType(PRUint32 aFlags) const
+nsCommentNode::IsContentOfType(PRUint32 aFlags) const
 {
-  return !(aFlags & ~(eCONTENT | eCOMMENT | eDATA_NODE));
+  return !(aFlags & ~eCOMMENT);
 }
 
 NS_IMETHODIMP
@@ -160,13 +166,29 @@ nsCommentNode::GetNodeType(PRUint16* aNodeType)
   return NS_OK;
 }
 
-nsGenericDOMDataNode*
-nsCommentNode::CloneDataNode(nsINodeInfo *aNodeInfo, PRBool aCloneText) const
+NS_IMETHODIMP
+nsCommentNode::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
-  nsCommentNode *it = new nsCommentNode(aNodeInfo);
-  if (it && aCloneText) {
+  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE,
+                                                      mNodeInfoManager);
+  NS_ENSURE_TRUE(textContent, NS_ERROR_OUT_OF_MEMORY);
+
+  return CallQueryInterface(textContent, aReturn);
+}
+
+already_AddRefed<nsITextContent>
+nsCommentNode::CloneContent(PRBool aCloneText,
+                            nsNodeInfoManager *aNodeInfoManager)
+{
+  nsCommentNode* it = new nsCommentNode(aNodeInfoManager);
+  if (!it)
+    return nsnull;
+
+  if (aCloneText) {
     it->mText = mText;
   }
+
+  NS_ADDREF(it);
 
   return it;
 }
@@ -175,6 +197,8 @@ nsCommentNode::CloneDataNode(nsINodeInfo *aNodeInfo, PRBool aCloneText) const
 void
 nsCommentNode::List(FILE* out, PRInt32 aIndent) const
 {
+  NS_PRECONDITION(IsInDoc(), "bad content");
+
   PRInt32 indx;
   for (indx = aIndent; --indx >= 0; ) fputs("  ", out);
 
@@ -182,7 +206,7 @@ nsCommentNode::List(FILE* out, PRInt32 aIndent) const
 
   nsAutoString tmp;
   ToCString(tmp, 0, mText.GetLength());
-  fputs(NS_LossyConvertUTF16toASCII(tmp).get(), out);
+  fputs(NS_LossyConvertUCS2toASCII(tmp).get(), out);
 
   fputs("-->\n", out);
 }

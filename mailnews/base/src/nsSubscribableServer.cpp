@@ -58,6 +58,8 @@
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 
+MOZ_DECL_CTOR_COUNTER(nsSubscribableServer)
+
 nsSubscribableServer::nsSubscribableServer(void)
 {
     mDelimiter = '.';

@@ -313,21 +313,17 @@ nsSchemaModelGroupRef::Resolve(nsIWebServiceErrorHandler* aErrorHandler)
 
   mIsResolved = PR_TRUE;
   if (!mModelGroup && mSchema) {
-    if (mRefNS.IsEmpty()) {
-      mSchema->GetModelGroupByName(mRef, getter_AddRefs(mModelGroup));
-    } else {
-      // use the namespace and type
-      nsCOMPtr<nsISchemaCollection> schemaColl;
-      mSchema->GetCollection(getter_AddRefs(schemaColl));
-      NS_ENSURE_STATE(schemaColl);
+    // use the namespace and type
+    nsCOMPtr<nsISchemaCollection> schemaColl;
+    mSchema->GetCollection(getter_AddRefs(schemaColl));
+    NS_ENSURE_STATE(schemaColl);
 
-      // get the right schema
-      nsCOMPtr<nsISchema> schema;
-      schemaColl->GetSchema(mRefNS, getter_AddRefs(schema));
-      NS_ENSURE_STATE(schema);
+    // get the right schema
+    nsCOMPtr<nsISchema> schema;
+    schemaColl->GetSchema(mRefNS, getter_AddRefs(schema));
+    NS_ENSURE_STATE(schema);
 
-      schema->GetModelGroupByName(mRef, getter_AddRefs(mModelGroup));
-    }
+    schema->GetModelGroupByName(mRef, getter_AddRefs(mModelGroup));
   }
 
   if (mModelGroup) {

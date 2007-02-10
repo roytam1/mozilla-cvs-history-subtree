@@ -55,6 +55,7 @@ class nsIDOMNode;
 class nsIDOMPopupBlockedEvent;
 class nsIDOMEvent;
 class nsIEventSink;
+class nsIDragHelperService;
 class nsIPrintSettings;
 class nsIURI;
 class nsISupports;
@@ -117,8 +118,13 @@ typedef enum {
 - (BOOL)shouldReuseExistingWindow;
 - (int)respectWindowOpenCallsWithSizeAndPosition;
 
-- (NSMenu*)contextMenu;
-- (NSWindow*)nativeWindow;
+- (NSMenu*)getContextMenu;
+- (NSWindow*)getNativeWindow;
+
+// Ask whether the browser should accept a drag from the given source.
+// Should return NO if the source is a container for the browser, or
+// another item that represents the same entity (e.g. tab or proxy icon)
+- (BOOL)shouldAcceptDragFromSource:(id)dragSource;
 
 // Gecko wants to close the "window" associated with this instance. Some
 // embedding apps might want to multiplex multiple gecko views in one
@@ -164,7 +170,11 @@ typedef enum {
   nsIWebBrowser*        _webBrowser;
   CHBrowserListener*    _listener;
   NSWindow*             mWindow;
-
+  
+  nsIDragHelperService* mDragHelper;
+  NSPoint               mLastTrackedLocation;
+  NSWindow*             mLastTrackedWindow;
+  
   nsIPrintSettings*     mPrintSettings; // we own this
   BOOL                  mUseGlobalPrintSettings;
 }
@@ -255,8 +265,8 @@ typedef enum {
 
 - (void)setActive: (BOOL)aIsActive;
 
-- (NSMenu*)contextMenu;
-- (NSWindow*)nativeWindow;
+- (NSMenu*)getContextMenu;
+- (NSWindow*)getNativeWindow;
 
 - (void)destroyWebBrowser;
 - (nsIWebBrowser*)getWebBrowser;

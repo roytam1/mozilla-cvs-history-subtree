@@ -13,16 +13,28 @@ bin/.autoreg
 [langenus]
 ;
 ; en-US 
-; If you add a new directory you must explicitly call addDirectory in langenus.jst
 bin\chrome\en-US.jar
+bin\chrome\en-mac.jar
+bin\chrome\en-unix.jar
+bin\chrome\en-win.jar
 bin\chrome\en-US\*
-bin\defaults\profile\en-US\*
-bin\defaults\messenger\en-US\*
+bin\chrome\en-win\*
+bin\chrome\en-unix\*
+bin\chrome\en-mac\*
+
+[regus]
+;
+; US
+; If you add a new directory you must explicitly call addDirectory in regus.jst
+bin\chrome\US.jar
+bin\chrome\US\*
+bin\defaults\profile\US\*
+bin\defaults\messenger\US\*
 bin\searchplugins\*
 
 [deflenus]
 ;
-; default files for en-US
+; default files for US
 bin\defaults\profile\bookmarks.html
 bin\defaults\profile\panels.rdf
 bin\defaults\profile\localstore.rdf
@@ -85,7 +97,6 @@ bin\components\search.xpt
 bin\components\urlwidgt.xpt
 bin\components\universalchardet.dll
 bin\components\caps.xpt
-bin\components\nsBrowserContentHandler.js
 bin\components\chrome.xpt
 bin\components\cookie.xpt
 bin\components\docshell_base.xpt
@@ -100,7 +111,6 @@ bin\components\dom_events.xpt
 bin\components\dom_html.xpt
 bin\components\dom_loadsave.xpt
 bin\components\dom_range.xpt
-bin\components\dom_storage.xpt
 bin\components\dom_stylesheets.xpt
 bin\components\dom_traversal.xpt
 bin\components\dom_views.xpt
@@ -141,6 +151,7 @@ bin\components\mimetype.xpt
 bin\components\necko_cache.xpt
 bin\components\necko_strconv.xpt
 bin\components\necko_about.xpt
+bin\components\necko_data.xpt
 bin\components\necko_dns.xpt
 bin\components\necko_ftp.xpt
 bin\components\necko_http.xpt
@@ -189,6 +200,7 @@ bin\components\xml-rpc.xpt
 bin\components\nsDictionary.js
 bin\components\nsProxyAutoConfig.js
 bin\components\nsXmlRpcClient.js
+bin\components\xmlextras.xpt
 bin\components\nsHelperAppDlg.js
 bin\components\helperAppDlg.xpt
 bin\components\nsKillAll.js
@@ -270,7 +282,6 @@ bin\res\broken-image.gif
 bin\res\html\*
 bin\res\fonts\*
 bin\res\dtd\*
-bin\res\effective_tld_names.dat
 bin\defaults\wallet\VcardSchema.tbl
 bin\defaults\wallet\FieldSchema.tbl
 bin\defaults\wallet\SchemaConcat.tbl

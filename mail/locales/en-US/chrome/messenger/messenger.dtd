@@ -5,10 +5,6 @@
 <!-- File Menu -->
 <!ENTITY newFolderCmd.label "Folder...">
 <!ENTITY newFolderCmd.accesskey "F">
-<!ENTITY newTabCmd.label "New Tab">
-<!ENTITY newTabCmd.accesskey "T">
-<!ENTITY closeTabCmd.label "Close Tab">
-<!ENTITY closeTabCmd.accesskey "e">
 <!ENTITY newVirtualFolderCmd.label "Saved Search...">
 <!ENTITY newVirtualFolderCmd.accesskey "S">
 <!ENTITY newAccountCmd.label "Account...">
@@ -47,18 +43,6 @@
 <!ENTITY emptyTrashCmd.accesskey		"y">
 <!ENTITY importCmd.label "Import...">
 <!ENTITY importCmd.accesskey "I">
-<!ENTITY offlineMenu.label "Offline">
-<!ENTITY offlineMenu.accesskey "l">
-<!ENTITY offlineGoOfflineCmd.label "Work Offline">
-<!ENTITY offlineGoOfflineCmd.accesskey "w">
-<!ENTITY synchronizeOfflineCmd.label "Download/Sync Now...">
-<!ENTITY synchronizeOfflineCmd.accesskey "S">
-<!ENTITY settingsOfflineCmd.label "Offline Settings...">
-<!ENTITY settingsOfflineCmd.accesskey "e">
-<!ENTITY downloadSelectedCmd.label "Get Selected Messages">
-<!ENTITY downloadSelectedCmd.accesskey "M">
-<!ENTITY downloadStarredCmd.label "Get Starred Messages">
-<!ENTITY downloadStarredCmd.accesskey "a">
 <!ENTITY printCmd.label "Print...">
 <!ENTITY printCmd.accesskey "P">
 <!ENTITY printCmd.key "p">
@@ -184,6 +168,12 @@
 <!ENTITY groupBySortCmd.key "G">
 <!ENTITY msgsMenu.label "Messages">
 <!ENTITY msgsMenu.accesskey "M">
+<!ENTITY viewAll.label "All">
+<!ENTITY viewUnread.label "Unread">
+<!ENTITY viewAll.accesskey "A">
+<!ENTITY viewUnread.accesskey "U">
+<!ENTITY viewCustomView.label "Customize...">
+<!ENTITY viewCustomView.accesskey "C">
 <!ENTITY threads.label "Threads">
 <!ENTITY threads.accesskey "e">
 <!ENTITY allMsgsCmd.label "All">
@@ -432,8 +422,8 @@
 <!ENTITY hintsAndTips.label "&brandFullName; Help">
 <!ENTITY hintsAndTipsMac.commandkey "?">
 <!ENTITY hintsAndTips.accesskey "h">
-<!ENTITY updateCmd.label      "Check for Updates...">
 <!ENTITY updateCmd.accesskey  "o">
+<!ENTITY updateCmd.label      "Check for Updates...">
 <!ENTITY aboutCmd.label "About &brandFullName;">
 <!ENTITY aboutCmd.accesskey "A">
 
@@ -446,8 +436,8 @@
 <!ENTITY fileButton.label "File">
 <!ENTITY nextButton.label "Next">
 <!ENTITY previousButton.label "Previous">
-<!ENTITY backButton1.label "Back">
-<!ENTITY goForwardButton1.label "Forward">
+<!ENTITY backButton.label "Go Back">
+<!ENTITY goForwardButton.label "Go Forward">
 <!ENTITY deleteButton.label "Delete">
 <!ENTITY markButton.label "Mark">
 <!ENTITY printButton.label "Print">
@@ -495,8 +485,6 @@
 <!-- Folder Pane Context Menu -->
 <!ENTITY folderContextOpenNewWindow.label "Open">
 <!ENTITY folderContextOpenNewWindow.accesskey "O">
-<!ENTITY folderContextOpenNewTab.label "Open in New Tab">
-<!ENTITY folderContextOpenNewTab.accesskey "T">
 <!ENTITY folderContextNew.label "New Subfolder...">
 <!ENTITY folderContextNew.accesskey "N">
 <!ENTITY folderContextRename.label "Rename">
@@ -507,8 +495,6 @@
 <!ENTITY folderContextCompact.accesskey "C">
 <!ENTITY folderContextEmptyTrash.label "Empty Trash">
 <!ENTITY folderContextEmptyTrash.accesskey "y">
-<!ENTITY folderContextEmptyJunk.label "Empty Junk">
-<!ENTITY folderContextEmptyJunk.accesskey "J">
 <!ENTITY folderContextSendUnsentMessages.label "Send Unsent Messages">
 <!ENTITY folderContextSendUnsentMessages.accesskey "d">
 <!ENTITY folderContextUnsubscribe.label "Unsubscribe">
@@ -529,6 +515,12 @@
 <!ENTITY folderContextFavoriteFolder.accesskey "a">
 
 <!-- Search Bar -->
+<!ENTITY viewPicker.label "View:">
+<!ENTITY viewPicker.accesskey "i">
+<!ENTITY viewPickerAll.label "All">
+<!ENTITY viewPickerUnread.label "Unread">
+<!ENTITY viewPickerCustomView.label "Customize...">
+<!ENTITY viewPickerSaveAsVirtualFolder.label "Save View as a Folder...">
 <!ENTITY SearchNameOrEmail.label "Name or Email contains:">
 <!ENTITY SearchNameOrEmail.accesskey "N">
 <!ENTITY clearButton.label "Clear">
@@ -587,8 +579,6 @@
 <!-- Thread Pane Context Menu -->
 <!ENTITY contextOpenNewWindow.label "Open Message in New Window">
 <!ENTITY contextOpenNewWindow.accesskey "W">
-<!ENTITY contextOpenNewTab.label "Open Message in New Tab">
-<!ENTITY contextOpenNewTab.accesskey "T">
 <!ENTITY contextEditAsNew.label "Edit As New...">
 <!ENTITY contextEditAsNew.accesskey "E">
 <!ENTITY contextReplySender.label "Reply to Sender Only">
@@ -612,7 +602,6 @@
 <!ENTITY contextPrint.label "Print...">
 <!ENTITY contextPrint.accesskey "P">
 <!ENTITY contextPrintPreview.label "Print Preview">
-<!ENTITY contextPrintPreview.accesskey "v">
 <!ENTITY contextDelete.label "Delete">
 <!ENTITY contextDelete.accesskey "D">
 <!ENTITY contextAddSenderToAddressBook.label "Add Sender To Address Book">
@@ -627,13 +616,13 @@
 
 <!-- Remote Content Bar -->
 <!ENTITY remoteContentMessage.label "To protect your privacy, &brandShortName; has blocked remote images in this message.">
-<!ENTITY loadRemoteContentButton1.label "Load Images">
+<!ENTITY loadRemoteContentButton.label "Show Images">
 
-<!-- Phishing Bar -->
+<!-- Phshing bar Bar -->
 <!ENTITY phishingBarMessage.label "&brandShortName; thinks this message might be an email scam.">
 <!ENTITY removePhishingBarButton.label "Not a Scam">
 
-<!-- Quick Search Bar -->
+<!-- Search Bar -->
 <!ENTITY quickSearchCmd.key "k">
 
 <!-- Message Header Context Menu -->
@@ -647,27 +636,12 @@
 <!ENTITY CreateFilter.accesskey "F">
 <!ENTITY BlockAddress.label "Block Address">
 <!ENTITY BlockAddress.accesskey "A">
-<!ENTITY reportPhishingURL.label "Report E-mail Scam">
-<!ENTITY reportPhishingURL.accesskey "o">
 
 <!-- Statusbar -->
 <!ENTITY statusText.label "Done">
 
 <!--  Mac OS X Window Menu -->
-<!ENTITY minimizeWindow.label "Minimize">
 <!ENTITY minimizeWindow.key "m">
+<!ENTITY minimizeWindow.label "Minimize">
 <!ENTITY bringAllToFront.label "Bring All to Front">
 <!ENTITY zoomWindow.label "Zoom">
-
-<!-- Mac OS X Application Menu (Cocoa widgets) -->
-<!ENTITY preferencesCmdMac.label        "Preferences...">
-<!ENTITY preferencesCmdMac.commandkey   ",">
-<!ENTITY preferencesCmdMac.modifiers    "accel">
-<!ENTITY servicesMenuMac.label          "Services">
-<!ENTITY hideThisAppCmdMac.label        "Hide &brandShortName;">
-<!ENTITY hideThisAppCmdMac.commandkey   "H">
-<!ENTITY hideThisAppCmdMac.modifiers    "accel">
-<!ENTITY hideOtherAppsCmdMac.label      "Hide Others">
-<!ENTITY hideOtherAppsCmdMac.commandkey "H">
-<!ENTITY hideOtherAppsCmdMac.modifiers  "accel,alt">
-<!ENTITY showAllAppsCmdMac.label        "Show All">

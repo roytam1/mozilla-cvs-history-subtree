@@ -45,6 +45,8 @@
 #include "nsString.h"
 #include "nsCRT.h"
 
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+
 //--------------------------------------------------------------------------
 
 nsUnicodeMappingUtil *nsUnicodeMappingUtil::gSingleton = nsnull;
@@ -60,6 +62,8 @@ int PR_CALLBACK nsUnicodeMappingUtil::PrefChangedCallback( const char* aPrefName
 	nsUnicodeMappingUtil::GetSingleton()->Reset();
 	return 0;
 }
+
+MOZ_DECL_CTOR_COUNTER(nsUnicodeMappingUtil)
 
 nsUnicodeMappingUtil::nsUnicodeMappingUtil()
 {
@@ -322,7 +326,7 @@ nsUnicodeMappingUtil::PrefEnumCallback(const char* aName, void* aClosure)
   nsString genNameString;
   genNameString.AssignWithConversion(genName);
   nsGenericFontNameType type = Self->MapGenericFontNameType(genNameString);
-  if(type >= kUnknownGenericFontName)
+  if(type >= kUknownGenericFontName)
   	return;
   	
   char* valueInUTF8 = nsnull;
@@ -356,7 +360,7 @@ nsUnicodeMappingUtil::PrefEnumCallback(const char* aName, void* aClosure)
 void nsUnicodeMappingUtil::InitFromPref()
 {
   if (!mPref) {
-    mPref = do_GetService(NS_PREF_CONTRACTID);
+    mPref = do_GetService(kPrefCID);
     if (!mPref)
       return;
     mPref->RegisterCallback("font.name.", nsUnicodeMappingUtil::PrefChangedCallback, (void*) nsnull);
@@ -467,7 +471,7 @@ nsGenericFontNameType nsUnicodeMappingUtil::MapGenericFontNameType(const nsStrin
 	if (aGenericName.LowerCaseEqualsLiteral("fantasy"))
 	  return kFantasy;
 	  
-	return kUnknownGenericFontName;			
+	return kUknownGenericFontName;			
 }
 
 //--------------------------------------------------------------------------

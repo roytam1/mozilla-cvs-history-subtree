@@ -45,6 +45,7 @@
 #include "nsAutoLock.h"
 #include "nsCOMPtr.h"
 #include "nsFastLoadFile.h"
+#include "nsFastLoadPtr.h"
 #include "nsFastLoadService.h"
 #include "nsString.h"
 
@@ -57,6 +58,8 @@
 #include "nsISeekableStream.h"
 #include "nsISupports.h"
 
+PR_IMPLEMENT_DATA(nsIFastLoadService*) gFastLoadService_ = nsnull;
+
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsFastLoadService, nsIFastLoadService)
 
 nsFastLoadService::nsFastLoadService()
@@ -64,10 +67,14 @@ nsFastLoadService::nsFastLoadService()
     mFastLoadPtrMap(nsnull),
     mDirection(0)
 {
+    NS_ASSERTION(gFastLoadService_ == nsnull, "double FastLoadService init?");
+    gFastLoadService_ = this;
 }
 
 nsFastLoadService::~nsFastLoadService()
 {
+    gFastLoadService_ = nsnull;
+
     if (mInputStream)
         mInputStream->Close();
     if (mOutputStream)

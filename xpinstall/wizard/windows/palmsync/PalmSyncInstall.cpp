@@ -253,7 +253,7 @@ int LoadConduitManagerDll(HINSTANCE* hCondMgrDll, const TCHAR * szPalmDesktopDir
     // Load the Conduit Manager library from the Palm Desktop directory
     if( (*hCondMgrDll=LoadLibrary(szPDCondMgrPath)) != NULL )
         // Successfully loaded CondMgr Library from Palm Desktop Directory
-    return 0;
+        return 0;
 
     return IDS_ERR_LOADING_CONDMGR;
 }
@@ -486,7 +486,7 @@ int InstallConduit(HINSTANCE hInstance, TCHAR *installDir)
 
     // Load the Conduit Manager DLL.
     HINSTANCE hConduitManagerDLL;
-    if( (dwReturnCode=GetPalmDesktopInstallDirectory(szPalmDesktopDir, &desktopSize)) == 0 ) 
+    if( (dwReturnCode = GetPalmDesktopInstallDirectory(szPalmDesktopDir, &desktopSize)) == 0 ) 
     {
         // need to switch current working directory to directory with palm dlls
         // because of a bug in Palm Desktop 6.01
@@ -644,7 +644,7 @@ int UninstallConduit()
     }
     // if registery key not load it from local dir if present by any chance
     else 
-          return(dwReturnCode);
+        return(dwReturnCode);
     
     // need to switch current working directory to directory with palm dlls
     // because of a bug in Palm Desktop 6.01
@@ -657,7 +657,7 @@ int UninstallConduit()
     lpfnCmRemoveConduitByCreatorID = (CmRemoveConduitByCreatorIDPtr) GetProcAddress(hConduitManagerDLL, "CmRemoveConduitByCreatorID");
     if( (lpfnCmRemoveConduitByCreatorID == NULL) )
         return(IDS_ERR_LOADING_CONDMGR);
-        CmSetCorePathPtr lpfnCmSetCorePath = (CmSetCorePathPtr) GetProcAddress(hConduitManagerDLL, "CmSetCorePath");
+    CmSetCorePathPtr lpfnCmSetCorePath = (CmSetCorePathPtr) GetProcAddress(hConduitManagerDLL, "CmSetCorePath");
     CmSetHotSyncExePathPtr lpfnCmSetHotSyncExePath = (CmSetHotSyncExePathPtr) GetProcAddress(hConduitManagerDLL, "CmSetHotSyncExecPath");
     CmRestoreHotSyncSettingsPtr lpfnCmRestoreHotSyncSettings;
     lpfnCmRestoreHotSyncSettings = (CmRestoreHotSyncSettingsPtr) GetProcAddress(hConduitManagerDLL, "CmRestoreHotSyncSettings");

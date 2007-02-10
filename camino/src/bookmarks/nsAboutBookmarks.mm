@@ -40,7 +40,7 @@
 
 #include "nsIIOService.h"
 #include "nsIServiceManager.h"
-#include "nsStringStream.h"
+#include "nsIStringStream.h"
 #include "nsNetUtil.h"
 
 #import "NSString+Utils.h"
@@ -60,13 +60,13 @@ nsAboutBookmarks::NewChannel(nsIURI *aURI, nsIChannel **result)
     nsresult rv;
     nsIChannel* channel;
 
-    NSString* windowTitle = mIsBookmarks ? NSLocalizedString(@"BookmarksWindowTitle", nil)
-                                         : NSLocalizedString(@"HistoryWindowTitle", nil);
-
+    NSString* windowTitle = mIsBookmarks ? NSLocalizedString(@"BookmarksWindowTitle", @"")
+                                         : NSLocalizedString(@"HistoryWindowTitle", @"");
+    
     NSString* sourceString = [NSString stringWithFormat:kBlankPageHTML, windowTitle];
     nsAutoString pageSource;
     [sourceString assignTo_nsAString:pageSource];
-
+    
     nsCOMPtr<nsIInputStream> in;
     rv = NS_NewCStringInputStream(getter_AddRefs(in),
                                   NS_ConvertUTF16toUTF8(pageSource));
@@ -79,13 +79,6 @@ nsAboutBookmarks::NewChannel(nsIURI *aURI, nsIChannel **result)
 
     *result = channel;
     return rv;
-}
-
-NS_IMETHODIMP
-nsAboutBookmarks::GetURIFlags(nsIURI *aURI, PRUint32 *result)
-{
-    *result = 0;
-    return NS_OK;
 }
 
 NS_METHOD
@@ -111,3 +104,4 @@ nsAboutBookmarks::CreateHistory(nsISupports *aOuter, REFNSIID aIID, void **aResu
     NS_RELEASE(about);
     return rv;
 }
+

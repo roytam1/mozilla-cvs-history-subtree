@@ -54,16 +54,16 @@
 #include "nsIPrivateTextRange.h"
 #include "nsITransactionManager.h"
 #include "nsIComponentManager.h"
-#include "nsCOMArray.h"
-#include "nsIEditActionListener.h"
-#include "nsIEditorObserver.h"
-#include "nsIDocumentStateListener.h"
+#include "nsISupportsArray.h"
 #include "nsICSSStyleSheet.h"
+#include "nsIDTD.h"
 #include "nsIDOMElement.h"
 #include "nsSelectionState.h"
 #include "nsIEditorSpellCheck.h"
 #include "nsIInlineSpellChecker.h"
 
+class nsIEditActionListener;
+class nsIDocumentStateListener;
 class nsIDOMCharacterData;
 class nsIDOMRange;
 class nsIPresShell;
@@ -77,6 +77,8 @@ class DeleteTextTxn;
 class SplitElementTxn;
 class JoinElementTxn;
 class EditAggregateTxn;
+class nsVoidArray;
+class nsISupportsArray;
 class nsILocale;
 class IMETextTxn;
 class AddStyleSheetTxn;
@@ -93,7 +95,7 @@ class nsIDOMEventReceiver;
  *  manager, event interfaces. the idea for the event interfaces is to have them 
  *  delegate the actual commands to the editor independent of the XPFE implementation.
  */
-class nsEditor : public nsIEditor,
+class nsEditor : public nsIEditor_MOZILLA_1_8_BRANCH,
                  public nsIEditorIMESupport,
                  public nsSupportsWeakReference,
                  public nsIPhonetic
@@ -130,7 +132,7 @@ public:
    */
   nsEditor();
   /** The default destructor. This should suffice. Should this be pure virtual 
-   *  for someone to derive from the nsEditor later? I don't believe so.
+   *  for someone to derive from the nsEditor later? I dont believe so.
    */
   virtual ~nsEditor();
 
@@ -144,6 +146,7 @@ public:
 
   /* ------------ nsIEditor methods -------------- */
   NS_DECL_NSIEDITOR
+  NS_DECL_NSIEDITOR_MOZILLA_1_8_BRANCH
   /* ------------ nsIEditorIMESupport methods -------------- */
   NS_DECL_NSIEDITORIMESUPPORT
   
@@ -189,6 +192,12 @@ public:
   nsresult CreateHTMLContent(const nsAString& aTag, nsIContent** aContent);
 
 protected:
+
+  /*
+  NS_IMETHOD SetProperties(nsVoidArray *aPropList);
+  NS_IMETHOD GetProperties(nsVoidArray *aPropList);
+  */
+  
   nsCString mContentMIMEType;       // MIME type of the doc we are editing.
 
   /** create a transaction for setting aAttribute to aValue on aElement
@@ -225,17 +234,11 @@ protected:
 
 
   NS_IMETHOD CreateTxnForDeleteSelection(EDirection aAction,
-                                         EditAggregateTxn ** aTxn,
-                                         nsIDOMNode ** aNode,
-                                         PRInt32 *aOffset,
-                                         PRInt32 *aLength);
+                                              EditAggregateTxn  ** aTxn);
 
   NS_IMETHOD CreateTxnForDeleteInsertionPoint(nsIDOMRange         *aRange, 
                                               EDirection aAction, 
-                                              EditAggregateTxn *aTxn,
-                                              nsIDOMNode ** aNode,
-                                              PRInt32 *aOffset,
-                                              PRInt32 *aLength);
+                                              EditAggregateTxn    *aTxn);
 
 
   /** create a transaction for inserting aStringToInsert into aTextNode
@@ -267,11 +270,6 @@ protected:
                                     PRUint32             aOffset,
                                     PRUint32             aLength,
                                     DeleteTextTxn      **aTxn);
-
-  nsresult CreateTxnForDeleteCharacter(nsIDOMCharacterData  *aData,
-                                       PRUint32              aOffset,
-                                       nsIEditor::EDirection aDirection,
-                                       DeleteTextTxn       **aTxn);
 	
   NS_IMETHOD CreateTxnForSplitNode(nsIDOMNode *aNode,
                                    PRUint32    aOffset,
@@ -497,7 +495,7 @@ public:
   PRBool IsDescendantOfBody(nsIDOMNode *inNode);
 
   /** returns PR_TRUE if aNode is a container */
-  virtual PRBool IsContainer(nsIDOMNode *aNode);
+  PRBool IsContainer(nsIDOMNode *aNode);
 
   /** returns PR_TRUE if aNode is an editable node */
   PRBool IsEditable(nsIDOMNode *aNode);
@@ -506,6 +504,9 @@ public:
 
   /** returns PR_TRUE if aNode is a MozEditorBogus node */
   PRBool IsMozEditorBogusNode(nsIDOMNode *aNode);
+
+  /** returns PR_TRUE if content is an merely formatting whitespacce */
+  PRBool IsEmptyTextContent(nsIContent* aContent);
 
   /** counts number of editable child nodes */
   nsresult CountEditableChildren(nsIDOMNode *aNode, PRUint32 &outCount);
@@ -589,7 +590,7 @@ public:
 protected:
 
   PRUint32        mModCount;		// number of modifications (for undo/redo stack)
-  PRUint32        mFlags;		// behavior flags. See nsIPlaintextEditor.idl for the flags we use.
+  PRUint32        mFlags;		// behavior flags. See nsPlaintextEditor.h for the flags we use.
   
   nsWeakPtr       mPresShellWeak;   // weak reference to the nsIPresShell
   nsWeakPtr       mSelConWeak;   // weak reference to the nsISelectionController
@@ -616,25 +617,27 @@ protected:
   EDirection        mDirection;          // the current direction of editor action
   
   // data necessary to build IME transactions
-  nsCOMPtr<nsIPrivateTextRangeList> mIMETextRangeList; // IME special selection ranges
-  nsCOMPtr<nsIDOMCharacterData>     mIMETextNode;      // current IME text node
-  PRUint32                          mIMETextOffset;    // offset in text node where IME comp string begins
-  PRUint32                          mIMEBufferLength;  // current length of IME comp string
-  PRPackedBool                      mInIMEMode;        // are we inside an IME composition?
-  PRPackedBool                      mIsIMEComposing;   // is IME in composition state?
-                                                       // This is different from mInIMEMode. see Bug 98434.
+  nsIPrivateTextRangeList*      mIMETextRangeList; // IME special selection ranges
+  nsCOMPtr<nsIDOMCharacterData> mIMETextNode;      // current IME text node
+  PRUint32                      mIMETextOffset;    // offset in text node where IME comp string begins
+  PRUint32                      mIMEBufferLength;  // current length of IME comp string
+  PRPackedBool                  mInIMEMode;        // are we inside an IME composition?
+  PRPackedBool                  mIsIMEComposing;   // is IME in composition state?
+                                                   // This is different from mInIMEMode. see Bug 98434.
+  PRPackedBool                  mNeedRecoverIMEOpenState;   // Need IME open state change on blur.
 
   PRPackedBool                  mShouldTxnSetSelection;  // turn off for conservative selection adjustment by txns
   PRPackedBool                  mDidPreDestroy;    // whether PreDestroy has been called
-   // various listeners
-  nsCOMArray<nsIEditActionListener> mActionListeners;  // listens to all low level actions on the doc
-  nsCOMArray<nsIEditorObserver> mEditorObservers;  // just notify once per high level change
-  nsCOMArray<nsIDocumentStateListener> mDocStateListeners;// listen to overall doc state (dirty or not, just created, etc)
+  // various listeners
+  nsVoidArray*                  mActionListeners;  // listens to all low level actions on the doc
+  nsVoidArray*                  mEditorObservers;  // just notify once per high level change
+  nsCOMPtr<nsISupportsArray>    mDocStateListeners;// listen to overall doc state (dirty or not, just created, etc)
 
   PRInt8                        mDocDirtyState;		// -1 = not initialized
   nsWeakPtr        mDocWeak;  // weak reference to the nsIDOMDocument
   // The form field as an event receiver
   nsCOMPtr<nsIDOMEventReceiver> mDOMEventReceiver;
+  nsCOMPtr<nsIDTD> mDTD;
 
   nsString* mPhonetic;
 

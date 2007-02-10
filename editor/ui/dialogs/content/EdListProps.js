@@ -104,7 +104,7 @@ function Startup()
   gDialog.RadioGroup.collapsed = !gListElement;
   if (gListElement)
   {
-    // Radio button index is persistent
+    // Radio button index is persistant
     if (gDialog.RadioGroup.getAttribute("index") == "1")
       gDialog.RadioGroup.selectedItem = gDialog.ChangeSelectedRadio;
     else

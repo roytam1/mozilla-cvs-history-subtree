@@ -89,8 +89,6 @@ public:
   NS_IMETHOD PushState(void);
   NS_IMETHOD PopState(void);
 
-  void* GetNativeGraphicData(GraphicDataType aType);
-
   NS_IMETHOD IsVisibleRect(const nsRect& aRect, PRBool &aClipState);
 
   NS_IMETHOD SetClipRect(const nsRect& aRect, nsClipCombine aCombine);
@@ -168,7 +166,7 @@ public:
   NS_IMETHOD GetWidth(char aC, nscoord &aWidth);
   NS_IMETHOD GetWidth(PRUnichar aC, nscoord &aWidth,
                       PRInt32 *aFontID);
-  
+
   NS_IMETHOD GetWidthInternal(const char *aString, PRUint32 aLength, nscoord &aWidth);
   NS_IMETHOD GetWidthInternal(const PRUnichar *aString, PRUint32 aLength, nscoord &aWidth,
                               PRInt32 *aFontID);
@@ -211,7 +209,7 @@ public:
   NS_IMETHOD GetBoundingMetricsInternal(const char*        aString,
                                         PRUint32           aLength,
                                         nsBoundingMetrics& aBoundingMetrics);
-  
+
   /**
    * Returns metrics (in app units) of a Unicode character string
    */
@@ -219,12 +217,15 @@ public:
                                         PRUint32           aLength,
                                         nsBoundingMetrics& aBoundingMetrics,
                                         PRInt32*           aFontID = nsnull);
-
 #endif /* MOZ_MATHML */
+
   virtual PRInt32 GetMaxStringLength();
 
   NS_IMETHOD CopyOffScreenBits(nsIDrawingSurface* aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
                                const nsRect &aDestBounds, PRUint32 aCopyFlags);
+  //~~~
+  NS_IMETHOD RetrieveCurrentNativeGraphicData(void** ngd);
+
   // nsIRenderingContextWin
   NS_IMETHOD CreateDrawingSurface(HDC aDC, nsIDrawingSurface* &aSurface);
 

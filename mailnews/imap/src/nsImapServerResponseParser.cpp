@@ -162,18 +162,19 @@ void nsImapServerResponseParser::IncrementNumberOfTaggedResponsesExpected(const 
   if (!fCurrentCommandTag)
     HandleMemoryFailure();
 }
+/* 
+ response        ::= *response_data response_done
+*/
+
 
 void nsImapServerResponseParser::InitializeState()
 {
+  fProcessingTaggedResponse = PR_FALSE;
   fCurrentCommandFailed = PR_FALSE;
   fNumberOfRecentMessages = 0;
   fReceivedHeaderOrSizeForUID = nsMsgKey_None;
 }
 
-// RFC3501:  response = *(continue-req / response-data) response-done
-//           response-data = "*" SP (resp-cond-state / resp-cond-bye /
-//                           mailbox-data / message-data / capability-data) CRLF
-//           continue-req    = "+" SP (resp-text / base64) CRLF
 void nsImapServerResponseParser::ParseIMAPServerResponse(const char *currentCommand, PRBool aIgnoreBadAndNOResponses)
 {
   
@@ -204,7 +205,7 @@ void nsImapServerResponseParser::ParseIMAPServerResponse(const char *currentComm
   {
     char *placeInTokenString = nsnull;
     char *tagToken = nsnull;
-    const char *commandToken = nsnull;
+    char *commandToken = nsnull;
     PRBool inIdle = PR_FALSE;
     if (!sendingIdleDone)
     {
@@ -231,8 +232,6 @@ void nsImapServerResponseParser::ParseIMAPServerResponse(const char *currentComm
       
       do {
         AdvanceToNextToken();
-
-        // untagged responses [RFC3501, Sec. 2.2.2]
         while (ContinueParse() && !PL_strcmp(fNextToken, "*") )
         {
           response_data();
@@ -244,8 +243,7 @@ void nsImapServerResponseParser::ParseIMAPServerResponse(const char *currentComm
               AdvanceToNextToken();
           }
         }
-
-        // command continuation request [RFC3501, Sec. 7.5]
+        
         if (ContinueParse() && *fNextToken == '+')	// never pipeline APPEND or AUTHENTICATE
         {
           NS_ASSERTION((fNumberOfTaggedResponsesExpected - numberOfTaggedResponsesReceived) == 1, 
@@ -265,7 +263,10 @@ void nsImapServerResponseParser::ParseIMAPServerResponse(const char *currentComm
           numberOfTaggedResponsesReceived++;
         
         if (numberOfTaggedResponsesReceived < fNumberOfTaggedResponsesExpected)
+        {
           response_tagged();
+          fProcessingTaggedResponse = PR_FALSE;
+        }
         
       } while (ContinueParse() && !inIdle && (numberOfTaggedResponsesReceived < fNumberOfTaggedResponsesExpected));
       
@@ -523,21 +524,25 @@ void nsImapServerResponseParser::ProcessBadCommand(const char *commandToken)
 }
 
 
-
-// RFC3501:  response-data = "*" SP (resp-cond-state / resp-cond-bye /
-//                           mailbox-data / message-data / capability-data) CRLF
-// These are ``untagged'' responses [RFC3501, Sec. 2.2.2]
 /*
+ response_data   ::= "*" SPACE (resp_cond_state / resp_cond_bye /
+                              mailbox_data / message_data / capability_data)
+                              CRLF
+ 
  The RFC1730 grammar spec did not allow one symbol look ahead to determine
  between mailbox_data / message_data so I combined the numeric possibilities
  of mailbox_data and all of message_data into numeric_mailbox_data.
  
- It is assumed that the initial "*" is already consumed before calling this
- method. The production implemented here is 
-         response_data   ::= (resp_cond_state / resp_cond_bye /
+ The production implemented here is 
+
+ response_data   ::= "*" SPACE (resp_cond_state / resp_cond_bye /
                               mailbox_data / numeric_mailbox_data / 
                               capability_data)
                               CRLF
+
+Instead of comparing lots of strings and make function calls, try to pre-flight
+the possibilities based on the first letter of the token.
+
 */
 void nsImapServerResponseParser::response_data()
 {
@@ -545,25 +550,23 @@ void nsImapServerResponseParser::response_data()
   
   if (ContinueParse())
   {
-    // Instead of comparing lots of strings and make function calls, try to
-    // pre-flight the possibilities based on the first letter of the token.
     switch (toupper(fNextToken[0]))
     {
     case 'O':			// OK
       if (toupper(fNextToken[1]) == 'K')
-        resp_cond_state(PR_FALSE);
+        resp_cond_state();
       else SetSyntaxError(PR_TRUE);
       break;
     case 'N':			// NO
       if (toupper(fNextToken[1]) == 'O')
-        resp_cond_state(PR_FALSE);
+        resp_cond_state();
       else if (!PL_strcasecmp(fNextToken, "NAMESPACE"))
         namespace_data();
       else SetSyntaxError(PR_TRUE);
       break;
     case 'B':			// BAD
       if (!PL_strcasecmp(fNextToken, "BAD"))
-        resp_cond_state(PR_FALSE);
+        resp_cond_state();
       else if (!PL_strcasecmp(fNextToken, "BYE"))
         resp_cond_bye();
       else SetSyntaxError(PR_TRUE);
@@ -1136,7 +1139,7 @@ void nsImapServerResponseParser::msg_fetch()
         char *whereHeader = PL_strstr(fNextToken, "HEADER");
         if (whereHeader)
         {
-          const char *startPartNum = fNextToken + 5;
+          char *startPartNum = fNextToken + 5;
           if (whereHeader > startPartNum)
           {
             PRInt32 partLength = whereHeader - startPartNum - 1; //-1 for the dot!
@@ -1322,7 +1325,7 @@ void nsImapServerResponseParser::msg_fetch()
           if (CurrentResponseUID() && CurrentResponseUID() != nsMsgKey_None 
             && fCurrentLineContainedFlagInfo && fFlagState)
           {
-            fFlagState->AddUidFlagPair(CurrentResponseUID(), fSavedFlagInfo, fFetchResponseIndex - 1);
+            fFlagState->AddUidFlagPair(CurrentResponseUID(), fSavedFlagInfo);
             for (PRInt32 i = 0; i < fCustomFlags.Count(); i++)
               fFlagState->AddUidCustomFlagPair(CurrentResponseUID(), fCustomFlags.CStringAt(i)->get());
             fCustomFlags.Clear();
@@ -1393,18 +1396,12 @@ void nsImapServerResponseParser::envelope_data()
   fNextToken++; // eat '('
   for (int tableIndex = 0; tableIndex < (int)(sizeof(EnvelopeTable) / sizeof(EnvelopeTable[0])); tableIndex++)
   {
-    if (!ContinueParse())
-      break;
-    else if (*fNextToken == ')')
-    {
-      SetSyntaxError(PR_TRUE); // envelope too short
-      break;
-    }
-    else
+    PRBool headerNonNil = PR_TRUE;
+    
+    if (ContinueParse() && (*fNextToken != ')'))
     {
       nsCAutoString headerLine(EnvelopeTable[tableIndex].name);
       headerLine += ": ";
-      PRBool headerNonNil = PR_TRUE;
       if (EnvelopeTable[tableIndex].type == envelopeString)
       {
         nsXPIDLCString strValue;
@@ -1427,11 +1424,13 @@ void nsImapServerResponseParser::envelope_data()
       if (headerNonNil)
         fServerConnection.HandleMessageDownLoadLine(headerLine.get(), PR_FALSE);
     }
-    if (ContinueParse())
+    else
+      break;
+    // only fetch the next token if we aren't eating a parenthes
+    if (ContinueParse() && (*fNextToken != ')') || tableIndex < (int)(sizeof(EnvelopeTable) / sizeof(EnvelopeTable[0])) - 1 )
       AdvanceToNextToken();
   }
-  // Now we should be at the end of the envelope and have *fToken == ')'.
-  // Skip this last parenthesis.
+  
   AdvanceToNextToken();
 }
 
@@ -1527,7 +1526,10 @@ void nsImapServerResponseParser::parse_address(nsCAutoString &addressLine)
       {
         AdvanceToNextToken();
         char *hostName = CreateNilString();
-        AdvanceToNextToken();
+        // our tokenizer doesn't handle "NIL)" quite like we
+        // expect, so we need to check specially for this.
+        if (hostName || *fNextToken != ')')
+          AdvanceToNextToken();	// skip hostName
         addressLine += mailboxName;
         if (hostName)
         {
@@ -1712,18 +1714,15 @@ void nsImapServerResponseParser::flags()
     fSavedFlagInfo = messageFlags;
 }
 
-// RFC3501:  resp-cond-state = ("OK" / "NO" / "BAD") SP resp-text
-//                             ; Status condition
-void nsImapServerResponseParser::resp_cond_state(PRBool isTagged)
+/* 
+ resp_cond_state ::= ("OK" / "NO" / "BAD") SPACE resp_text
+*/
+void nsImapServerResponseParser::resp_cond_state()
 {
-  // According to RFC3501, Sec. 7.1, the untagged NO response "indicates a
-  // warning; the command can still complete successfully."
-  // However, the untagged BAD response "indicates a protocol-level error for
-  // which the associated command can not be determined; it can also indicate an
-  // internal server failure." 
-  // Thus, we flag an error for a tagged NO response and for any BAD response.
-  if (isTagged && !PL_strcasecmp(fNextToken, "NO") ||
-    !PL_strcasecmp(fNextToken, "BAD"))
+  if ((!PL_strcasecmp(fNextToken, "NO") ||
+    !PL_strcasecmp(fNextToken, "BAD") ) &&
+    fProcessingTaggedResponse)
+    
     fCurrentCommandFailed = PR_TRUE;
   
   AdvanceToNextToken();
@@ -1972,7 +1971,9 @@ void nsImapServerResponseParser::resp_text_code()
   }
 }
 
-// RFC3501:  response-done = response-tagged / response-fatal
+/*
+ response_done   ::= response_tagged / response_fatal
+ */
  void nsImapServerResponseParser::response_done()
  {
    if (ContinueParse())
@@ -1984,14 +1985,16 @@ void nsImapServerResponseParser::resp_text_code()
    }
  }
  
-// RFC3501:  response-tagged = tag SP resp-cond-state CRLF
+ /*  response_tagged ::= tag SPACE resp_cond_state CRLF
+ */
  void nsImapServerResponseParser::response_tagged()
  {
    // eat the tag
    AdvanceToNextToken();
    if (ContinueParse())
    {
-     resp_cond_state(PR_TRUE);
+     fProcessingTaggedResponse = PR_TRUE;
+     resp_cond_state();
      if (ContinueParse())
      {
        if (!fAtEndOfLine)
@@ -2002,8 +2005,8 @@ void nsImapServerResponseParser::resp_text_code()
    }
  }
  
-// RFC3501:  response-fatal = "*" SP resp-cond-bye CRLF
-//                              ; Server closes connection immediately
+ /* response_fatal  ::= "*" SPACE resp_cond_bye CRLF
+ */
  void nsImapServerResponseParser::response_fatal()
  {
    // eat the "*"
@@ -2011,8 +2014,10 @@ void nsImapServerResponseParser::resp_text_code()
    if (ContinueParse())
      resp_cond_bye();
  }
-
-// RFC3501:  resp-cond-bye = "BYE" SP resp-text
+/*
+resp_cond_bye   ::= "BYE" SPACE resp_text
+                              ;; Server will disconnect condition
+                    */
 void nsImapServerResponseParser::resp_cond_bye()
 {
   SetConnected(PR_FALSE);
@@ -2313,7 +2318,7 @@ void nsImapServerResponseParser::namespace_data()
 					char *namespacePrefix = CreateQuoted(PR_FALSE);
 
 					AdvanceToNextToken();
-					const char *quotedDelimiter = fNextToken;
+					char *quotedDelimiter = fNextToken;
 					char namespaceDelimiter = '\0';
 
 					if (quotedDelimiter[0] == '"')
@@ -2837,25 +2842,18 @@ nsImapServerResponseParser::bodystructure_multipart(char *partNum, nsIMAPBodypar
 }
 
 
-// RFC2087:  quotaroot_response = "QUOTAROOT" SP astring *(SP astring)
-//           quota_response = "QUOTA" SP astring SP quota_list
-//           quota_list     = "(" [quota_resource *(SP quota_resource)] ")"
-//           quota_resource = atom SP number SP number
-// Only the STORAGE resource is considered.  The current implementation is
-// slightly broken because it assumes that STORAGE is the first resource;
-// a reponse   QUOTA (MESSAGE 5 100 STORAGE 10 512)   would be ignored.
 void nsImapServerResponseParser::quota_data()
 {
+  nsCString quotaroot;
   if (!PL_strcasecmp(fNextToken, "QUOTAROOT"))
   {
-    // ignore QUOTAROOT response
-    nsCString quotaroot; 
-    AdvanceToNextToken();
-    while (ContinueParse() && !fAtEndOfLine)
+    do
     {
-      quotaroot.Adopt(CreateAstring());
       AdvanceToNextToken();
+      if (!fAtEndOfLine)
+        quotaroot.Adopt(CreateAstring());
     }
+    while (ContinueParse() && !fAtEndOfLine);
   }
   else if(!PL_strcasecmp(fNextToken, "QUOTA"))
   {
@@ -2863,9 +2861,10 @@ void nsImapServerResponseParser::quota_data()
     char *parengroup;
 
     AdvanceToNextToken();
-    if (ContinueParse())
+    if (! fNextToken)
+      SetSyntaxError(PR_TRUE);
+    else
     {
-      nsCString quotaroot;
       quotaroot.Adopt(CreateAstring());
 
       if(ContinueParse() && !fAtEndOfLine)

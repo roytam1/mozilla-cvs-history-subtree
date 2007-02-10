@@ -44,24 +44,23 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE    = xulrunner
 
-REQUIRES  = xpcom xulapp
-
-CPPSRCS   = nsXULStub.cpp
-
-# Statically link the CRT when possible
-USE_STATIC_LIBS = 1
+REQUIRES  = xpcom
 
 ifeq ($(OS_ARCH),Darwin)
 
 PROGRAM   = xulrunner$(BIN_SUFFIX)
 
+CPPSRCS   = nsXULStubOSX.cpp
+
 else
 
 PROGRAM   = xulrunner-stub$(BIN_SUFFIX)
 
-endif # OS_ARCH
+CPPSRCS   = nsXULStub.cpp
 
 LOCAL_INCLUDES = -I$(topsrcdir)/xpcom/build
+
+endif # OS_ARCH
 
 DEFINES  += -DXPCOM_GLUE
 
@@ -89,7 +88,3 @@ endif
 endif
 
 include $(topsrcdir)/config/rules.mk
-
-ifeq ($(OS_ARCH),WINNT)
-OS_LIBS += $(call EXPAND_LIBNAME,shell32)
-endif

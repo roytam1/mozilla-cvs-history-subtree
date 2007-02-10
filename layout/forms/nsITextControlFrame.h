@@ -43,17 +43,16 @@
 class nsIEditor;
 class nsIDocShell;
 class nsISelectionController;
-class nsFrameSelection;
 
 #define NS_IGFXTEXTCONTROLFRAME2_IID \
-{/* 0c3b64da-4431-11da-94fd-00e08161165f*/ \
-0xc3b64da, 0x4431, 0x11da, \
-{ 0x94, 0xfd, 0x0, 0xe0, 0x81, 0x61, 0x16, 0x5f } }
+{/* A744CFC9-2DA8-416d-A058-ADB1D4B3B534*/ \
+0xa744cfc9, 0x2da8, 0x416d, \
+{ 0xa0, 0x58, 0xad, 0xb1, 0xd4, 0xb3, 0xb5, 0x34 } }
 
 class nsITextControlFrame : public nsIFormControlFrame
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IGFXTEXTCONTROLFRAME2_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IGFXTEXTCONTROLFRAME2_IID)
 
   NS_IMETHOD    GetEditor(nsIEditor **aEditor) = 0;
 
@@ -73,7 +72,7 @@ public:
    *        value.  If this is true, linebreaks will not be inserted even if
    *        wrap=hard.
    */
-  NS_IMETHOD    GetValue(nsAString& aValue, PRBool aIgnoreWrap) const = 0;
+  NS_IMETHOD    GetValue(nsAString& aValue, PRBool aIgnoreWrap) = 0;
   
   NS_IMETHOD    GetTextLength(PRInt32* aTextLength) = 0;
   
@@ -88,11 +87,7 @@ public:
   NS_IMETHOD    SetSelectionRange(PRInt32 aSelectionStart, PRInt32 aSelectionEnd) = 0;
   NS_IMETHOD    GetSelectionRange(PRInt32* aSelectionStart, PRInt32* aSelectionEnd) = 0;
 
-  virtual nsISelectionController* GetOwnedSelectionController() = 0;
-  virtual nsFrameSelection* GetOwnedFrameSelection() = 0;
+  NS_IMETHOD    GetSelectionContr(nsISelectionController **aSelCon) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsITextControlFrame,
-                              NS_IGFXTEXTCONTROLFRAME2_IID)
 
 #endif

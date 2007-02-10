@@ -39,26 +39,15 @@
 #include <cairo-win32.h>
 #include <cairoint.h>
 
-#ifndef SHADEBLENDCAPS
-#define SHADEBLENDCAPS 120
-#endif
-#ifndef SB_NONE
-#define SB_NONE 0
-#endif
-
-#define WIN32_FONT_LOGICAL_SCALE 1
-
 typedef struct _cairo_win32_surface {
     cairo_surface_t base;
 
     cairo_format_t format;
-
+    
     HDC dc;
 
-    /* We create off-screen surfaces as DIBs or DDBs, based on what we created
-     * originally*/
+    /* We create off-screen surfaces as DIBs */
     HBITMAP bitmap;
-    cairo_bool_t is_dib;
 
     /* Used to save the initial 1x1 monochrome bitmap for the DC to
      * select back into the DC before deleting the DC and our
@@ -69,43 +58,31 @@ typedef struct _cairo_win32_surface {
      */
     HBITMAP saved_dc_bitmap;
 
-    cairo_surface_t *image;
+    /* We need two images that point to the same bits, because of
+     * broken pixman clipping semantics -- pixman (brokenly) does
+     * source clipping because Render does -- the xlib backend
+     * avoids this by creating two Pictures for each Drawable,
+     * one that's used as a src and one that's used as a dst.
+     */
+    cairo_surface_t *src_image;
+    cairo_surface_t *dst_image;
+    
+    cairo_rectangle_t clip_rect;
 
-    cairo_rectangle_int16_t clip_rect;
-
+    int set_clip;
     HRGN saved_clip;
 
-    cairo_rectangle_int16_t extents;
-
-    /* Surface DC flags */
-    uint32_t flags;
 } cairo_win32_surface_t;
-
-/* Surface DC flag values */
-enum {
-    /* Whether the DC is a display DC or not */
-    CAIRO_WIN32_SURFACE_IS_DISPLAY = (1<<1),
-
-    /* Whether we can use BitBlt with this surface */
-    CAIRO_WIN32_SURFACE_CAN_BITBLT = (1<<2),
-
-    /* Whether we can use AlphaBlend with this surface */
-    CAIRO_WIN32_SURFACE_CAN_ALPHABLEND = (1<<3),
-
-    /* Whether we can use StretchBlt with this surface */
-    CAIRO_WIN32_SURFACE_CAN_STRETCHBLT = (1<<4),
-
-    /* Whether we can use StretchDIBits with this surface */
-    CAIRO_WIN32_SURFACE_CAN_STRETCHDIB = (1<<5)
-};
 
 cairo_status_t
 _cairo_win32_print_gdi_error (const char *context);
 
+cairo_surface_t *
+_cairo_win32_surface_create_dib (cairo_format_t format,
+				 int            width,
+				 int            height);
+
 cairo_bool_t
 _cairo_surface_is_win32 (cairo_surface_t *surface);
-
-void
-_cairo_win32_initialize (void);
 
 #endif /* CAIRO_WIN32_PRIVATE_H */

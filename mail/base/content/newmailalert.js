@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const HORIZONTAL = 1;
-const LEFT = 2;
-const TOP = 4;
-const MSG_FOLDER_FLAG_VIRTUAL = 0x0020;
-
 var gSlideTime = 50;
 var gNumNewMsgsToShowInAlert = 4; // the more messages we show in the alert, the larger it will be
 var gOpenTime = 3000; // total time the alert should stay up once we are done animating.
@@ -48,7 +43,6 @@ var gAlertListener = null;
 var gPendingPreviewFetchRequests = 0;
 var gUserInitiated = false;
 var gFadeIncrement = .05;
-var gOrigin = 0;
 
 function prefillAlertInfo()
 {
@@ -57,11 +51,9 @@ function prefillAlertInfo()
   // arguments[1] --> the observer to call back with notifications about the alert
   // arguments[2] --> user initiated boolean. true if the user initiated opening the alert 
   //                 (which means skip the fade effect and don't auto close the alert)
-  // arguments[3] --> the alert origin returned by the look and feel
   var foldersWithNewMail = window.arguments[0];  
   gAlertListener = window.arguments[1];
   gUserInitiated = window.arguments[2];
-  gOrigin = window.arguments[3];
 
   // for now just grab the first folder which should be a root folder
   // for the account that has new mail. 
@@ -82,7 +74,7 @@ function prefillAlertInfo()
   for (var folderIndex = 0; folderIndex < numFolders; folderIndex++)
   {
     var folder = allFolders.GetElementAt(folderIndex).QueryInterface(Components.interfaces.nsIMsgFolder);
-    if (folder.hasNewMessages && !(folder.flags & MSG_FOLDER_FLAG_VIRTUAL))
+    if (folder.hasNewMessages)
     {
       var asyncFetch = {};
       folderSummaryInfoEl.parseFolder(folder, new urlListener(folder), asyncFetch);
@@ -121,7 +113,9 @@ function onAlertLoad()
   // read out our initial settings from prefs.
   try 
   {
-    var prefBranch = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefService).getBranch(null);
+    var prefService = Components.classes["@mozilla.org/preferences-service;1"].getService();
+    prefService = prefService.QueryInterface(Components.interfaces.nsIPrefService);
+    var prefBranch = prefService.getBranch(null);
     gSlideTime = prefBranch.getIntPref("alerts.slideIncrementTime");
     gOpenTime = prefBranch.getIntPref("alerts.totalOpenTime");
   } catch (ex) {}
@@ -174,13 +168,7 @@ function resizeAlert(aMoveOffScreen)
   // leftover hack to get the window properly hidden when we first open it
   if (aMoveOffScreen)
     window.outerHeight = 1;
-
-  // Determine position and move window
-  var x = gOrigin & LEFT ? screen.availLeft :
-          (screen.availLeft + screen.availWidth - window.outerWidth);
-  var y = gOrigin & TOP ? screen.availTop :
-          (screen.availTop + screen.availHeight - window.outerHeight);
-  window.moveTo(x, y);
+  window.moveTo(screen.availLeft + screen.availWidth - window.outerWidth, screen.availTop + screen.availHeight - window.outerHeight);
 }
 
 function fadeOpen()

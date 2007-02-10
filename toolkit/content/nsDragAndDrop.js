@@ -73,9 +73,7 @@ var nsTransferable = {
             }
           else 
             {
-              // non-string data.
-              supports = currData.supports;
-              length = 0; // kFlavorHasDataProvider
+              // non-string data. TBD!
             }
           trans.setTransferData(currFlavour, supports, length * 2);
         }
@@ -318,7 +316,7 @@ var transferUtils = {
  * Use: map the handler functions to the 'ondraggesture', 'ondragover' and
  *   'ondragdrop' event handlers on your XML element, e.g.                   
  *   <xmlelement ondraggesture="nsDragAndDrop.startDrag(event, observer);"   
- *               ondragover="nsDragAndDrop.dragOver(event, observer);"      
+ *               ondragover="nsDragAndDrop.startDrag(event, observer);"      
  *               ondragdrop="nsDragAndDrop.drop(event, observer);"/>         
  *                                                                           
  *   You need to create an observer js object with the following member      

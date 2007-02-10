@@ -40,7 +40,6 @@
 #include "nsXPCOM.h"
 #include "nsITransactionManager.h"
 #include "nsIComponentManager.h"
-#include "nsComponentManagerUtils.h"
 
 static PRInt32 sConstructorCount     = 0;
 static PRInt32 sDestructorCount      = 0;

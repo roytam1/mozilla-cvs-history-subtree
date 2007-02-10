@@ -164,7 +164,7 @@ Bool XpuXprintServersAvailable( void )
         c++;
     }
   }
-  /* a valid server name must at least contain the ':'-separator
+  /* a valid server name must at least contain the ':'-seperator
    * and a number (e.g. ":1") */
   return( c >= 2 );
 }
@@ -1366,7 +1366,7 @@ int XpuSetResolution( Display *pdpy, XPContext pcontext, XPAttributes type, XpuR
 }
 
 /* Set document resolution 
- * Return error if printer does not support setting a resolution
+ * Retun error if printer does not support setting a resolution
  */
 int XpuSetDocResolution( Display *pdpy, XPContext pcontext, XpuResolutionRec *rec )
 {
@@ -1377,7 +1377,7 @@ int XpuSetDocResolution( Display *pdpy, XPContext pcontext, XpuResolutionRec *re
 }
 
 /* Set page medium size 
- * Return error if printer does not support setting a resolution or if per-page
+ * Retun error if printer does not support setting a resolution or if per-page
  * resolution changes are not allowed.
  */
 int XpuSetPageResolution( Display *pdpy, XPContext pcontext, XpuResolutionRec *rec )
@@ -1502,7 +1502,7 @@ int XpuSetOrientation( Display *pdpy, XPContext pcontext, XPAttributes type, Xpu
 }
 
 /* Set document orientation 
- * Return error if printer does not support setting an orientation
+ * Retun error if printer does not support setting an orientation
  */
 int XpuSetDocOrientation( Display *pdpy, XPContext pcontext, XpuOrientationRec *rec )
 {
@@ -1513,7 +1513,7 @@ int XpuSetDocOrientation( Display *pdpy, XPContext pcontext, XpuOrientationRec *
 }
 
 /* Set page orientation
- * Return error if printer does not support setting an orientation or if
+ * Retun error if printer does not support setting an orientation or if
  * per-page orientations changes are not allowed
  */
 int XpuSetPageOrientation( Display *pdpy, XPContext pcontext, XpuOrientationRec *rec )
@@ -1638,7 +1638,7 @@ int XpuSetContentPlex( Display *pdpy, XPContext pcontext, XPAttributes type, Xpu
 }
 
 /* Set document plex 
- * Return error if printer does not support setting an plex
+ * Retun error if printer does not support setting an plex
  */
 int XpuSetDocPlex( Display *pdpy, XPContext pcontext, XpuPlexRec *rec )
 {
@@ -1649,7 +1649,7 @@ int XpuSetDocPlex( Display *pdpy, XPContext pcontext, XpuPlexRec *rec )
 }
 
 /* Set page plex
- * Return error if printer does not support setting an plex or if
+ * Retun error if printer does not support setting an plex or if
  * per-page plex changes are not allowed
  */
 int XpuSetPagePlex( Display *pdpy, XPContext pcontext, XpuPlexRec *rec )

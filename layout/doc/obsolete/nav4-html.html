@@ -55,7 +55,7 @@ The parser processes META tags looking for META TARGET</LI>
 <LI>
 The parser processes META tags looking for META tags which affect the character
 set. Nav4 handles the very first character set defining meta tag (all others
-are ignored) by reloading the document with the proper character conversion
+are ingored) by reloading the document with the proper character conversion
 module inserted into the stream pipeline.</LI>
 </UL>
 
@@ -101,7 +101,7 @@ them, all other tags are ignored until the matching
 <BR>&nbsp;&nbsp; */
 <BR>During the searching of an end tag, comments and quoted strings are
 observed. see <A HREF="../testhtml/title01.html">compatibility test title01.html</A>.
-6.0 handles comments now, need to add quoted string.
+6.0 handles coments now, need to add quoeted string.
 <LI>
 If a &lt;tr> or &lt;td> tag is seen outside any &lt;table> scope, it is
 ignored. see <A HREF="../testhtml/table110.htm">compatibility test table110.htm</A>.</LI>
@@ -383,7 +383,7 @@ state machine. It has no effect on any other state.</UL>
 <B>CENTER</B>
 <UL>Closes the paragraph. Always does a conditional soft line break. The
 open tag pushes an alignment on the aligment stack. The close tag pops
-the top alignment off.
+the top alighment off.
 <BR>Attributes: none</UL>
 <B>DIV</B>
 <UL>Closes the paragraph. Always does a conditional soft line break. COLS

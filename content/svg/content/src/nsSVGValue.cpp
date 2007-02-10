@@ -67,11 +67,7 @@ nsSVGValue::NotifyObservers(SVGObserverNotifyFunction f,
                             modificationType aModType)
 {
   PRInt32 count = mObservers.Count();
-
-  // Since notification might cause the listeners to remove themselves
-  // from the observer list (mod_die), walk backwards through the list
-  // to catch everyone.
-  for (PRInt32 i = count - 1; i >= 0; i--) {
+  for (PRInt32 i = 0; i < count; ++i) {
     nsIWeakReference* wr = NS_STATIC_CAST(nsIWeakReference*,mObservers.ElementAt(i));
     nsCOMPtr<nsISVGValueObserver> observer = do_QueryReferent(wr);
     if (observer)
@@ -102,15 +98,6 @@ nsSVGValue::AddObserver(nsISVGValueObserver* observer)
 {
   nsIWeakReference* wr = NS_GetWeakReference(observer);
   if (!wr) return NS_ERROR_FAILURE;
-
-  // Prevent duplicate observers - needed because geometry can attempt
-  // to add itself as an observer of a paint server for both the
-  // stroke and fill.  Safe, as on a style change we remove both, as
-  // the change notification isn't fine grained, and re-add as
-  // appropriate.
-  if (mObservers.IndexOf((void*)wr) >= 0)
-    return NS_OK;
-
   mObservers.AppendElement((void*)wr);
   return NS_OK;
 }

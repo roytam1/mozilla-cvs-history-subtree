@@ -44,13 +44,13 @@
 #include "nsHttpTransaction.h"
 #include "nsHttpRequestHead.h"
 #include "nsHttpAuthCache.h"
-#include "nsHashPropertyBag.h"
 #include "nsInputStreamPump.h"
-#include "nsThreadUtils.h"
-#include "nsString.h"
+#include "nsXPIDLString.h"
 #include "nsAutoPtr.h"
 #include "nsCOMPtr.h"
 #include "nsInt64.h"
+
+#include "nsHashPropertyBag.h"
 
 #include "nsIHttpChannel.h"
 #include "nsIHttpChannelInternal.h"
@@ -79,7 +79,6 @@
 #include "nsISupportsPriority.h"
 #include "nsIProtocolProxyCallback.h"
 #include "nsICancelable.h"
-#include "nsIProxiedChannel.h"
 
 class nsHttpResponseHead;
 class nsAHttpConnection;
@@ -102,7 +101,6 @@ class nsHttpChannel : public nsHashPropertyBag
                     , public nsIResumableChannel
                     , public nsISupportsPriority
                     , public nsIProtocolProxyCallback
-                    , public nsIProxiedChannel
 {
 public:
     NS_DECL_ISUPPORTS_INHERITED
@@ -120,7 +118,6 @@ public:
     NS_DECL_NSIRESUMABLECHANNEL
     NS_DECL_NSISUPPORTSPRIORITY
     NS_DECL_NSIPROTOCOLPROXYCALLBACK
-    NS_DECL_NSIPROXIEDCHANNEL
 
     nsHttpChannel();
     virtual ~nsHttpChannel();
@@ -138,12 +135,18 @@ private:
     template <class T>
     void GetCallback(nsCOMPtr<T> &aResult)
     {
-        NS_QueryNotificationCallbacks(mCallbacks, mLoadGroup,
-                                      NS_GET_TEMPLATE_IID(T),
+        NS_QueryNotificationCallbacks(mCallbacks, mLoadGroup, NS_GET_IID(T),
                                       getter_AddRefs(aResult));
     }
 
+    //
     // AsyncCall may be used to call a member function asynchronously.
+    //
+    struct nsAsyncCallEvent : PLEvent
+    {
+        nsAsyncCallback mFuncPtr;
+    };
+
     nsresult AsyncCall(nsAsyncCallback funcPtr);
 
     PRBool   RequestIsConditional();
@@ -151,7 +154,7 @@ private:
     nsresult AsyncAbort(nsresult status);
     nsresult SetupTransaction();
     void     AddCookiesToRequest();
-    nsresult ApplyContentConversions();
+    void     ApplyContentConversions();
     nsresult CallOnStartRequest();
     nsresult ProcessResponse();
     nsresult ProcessNormal();
@@ -177,7 +180,7 @@ private:
     nsresult UpdateExpirationTime();
     nsresult CheckCache();
     nsresult ReadFromCache();
-    void     CloseCacheEntry();
+    nsresult CloseCacheEntry(nsresult status);
     nsresult InitCacheEntry();
     nsresult StoreAuthorizationMetaData();
     nsresult FinalizeCacheEntry();
@@ -196,7 +199,7 @@ private:
     nsresult GetAuthenticator(const char *challenge, nsCString &scheme, nsIHttpAuthenticator **auth); 
     void     ParseRealm(const char *challenge, nsACString &realm);
     void     GetIdentityFromURI(PRUint32 authFlags, nsHttpAuthIdentity&);
-    nsresult PromptForIdentity(PRUint32 level, PRBool proxyAuth, const char *realm, const char *authType, PRUint32 authFlags, nsHttpAuthIdentity &);
+    nsresult PromptForIdentity(const char *scheme, const char *host, PRInt32 port, PRBool proxyAuth, const char *realm, const char *authType, PRUint32 authFlags, nsHttpAuthIdentity &);
     PRBool   ConfirmAuth(const nsString &bundleKey, PRBool doYesNoPrompt);
     void     CheckForSuperfluousAuth();
     void     SetAuthorizationHeader(nsHttpAuthCache *, nsHttpAtom header, const char *scheme, const char *host, PRInt32 port, const char *path, nsHttpAuthIdentity &ident);
@@ -204,6 +207,9 @@ private:
     nsresult GetCurrentPath(nsACString &);
     void     ClearPasswordManagerEntry(const char *scheme, const char *host, PRInt32 port, const char *realm, const PRUnichar *user);
     nsresult DoAuthRetry(nsAHttpConnection *);
+
+    static void *PR_CALLBACK AsyncCall_EventHandlerFunc(PLEvent *);
+    static void  PR_CALLBACK AsyncCall_EventCleanupFunc(PLEvent *);
 
 private:
     nsCOMPtr<nsIURI>                  mOriginalURI;
@@ -218,6 +224,7 @@ private:
     nsCOMPtr<nsIInputStream>          mUploadStream;
     nsCOMPtr<nsIURI>                  mReferrer;
     nsCOMPtr<nsISupports>             mSecurityInfo;
+    nsCOMPtr<nsIEventQueue>           mEventQ;
     nsCOMPtr<nsICancelable>           mProxyRequest;
 
     nsHttpRequestHead                 mRequestHead;
@@ -275,7 +282,7 @@ private:
     PRUint32                          mAuthRetryPending         : 1;
     PRUint32                          mSuppressDefensiveAuth    : 1;
     PRUint32                          mResuming                 : 1;
-    PRUint32                          mInitedCacheEntry         : 1;
+    PRUint32                          mOpenedCacheForWriting    : 1;
 
     class nsContentEncodings : public nsIUTF8StringEnumerator
     {

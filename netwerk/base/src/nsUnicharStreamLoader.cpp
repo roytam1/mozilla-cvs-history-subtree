@@ -37,6 +37,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsUnicharStreamLoader.h"
+#include "nsIPipe.h"
+#include "nsIChannel.h"
 #include "nsNetUtil.h"
 #include "nsProxiedService.h"
 #include "nsIChannel.h"
@@ -48,21 +50,52 @@
 #include "nsReadableUtils.h"
 #endif // DEBUG
 
+static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
+
 NS_IMETHODIMP
-nsUnicharStreamLoader::Init(nsIUnicharStreamLoaderObserver *aObserver,
+nsUnicharStreamLoader::Init(nsIChannel *aChannel,
+                            nsIUnicharStreamLoaderObserver *aObserver,
+                            nsISupports *aContext,
                             PRUint32 aSegmentSize)
 {
+  NS_ENSURE_ARG_POINTER(aChannel);
   NS_ENSURE_ARG_POINTER(aObserver);
 
   if (aSegmentSize <= 0) {
     aSegmentSize = nsIUnicharStreamLoader::DEFAULT_SEGMENT_SIZE;
   }
   
+  nsresult rv = aChannel->AsyncOpen(this, aContext);
+
+  if (NS_FAILED(rv)) {
+    // don't callback synchronously as it puts the caller
+    // in a recursive situation and breaks the asynchronous
+    // semantics of nsIStreamLoader
+    nsresult rv2 = NS_OK;
+    nsCOMPtr<nsIProxyObjectManager> pIProxyObjectManager = 
+      do_GetService(kProxyObjectManagerCID, &rv2);
+    if (NS_FAILED(rv2))
+      return rv2;
+
+    nsCOMPtr<nsIUnicharStreamLoaderObserver> pObserver;
+    rv2 =
+      pIProxyObjectManager->GetProxyForObject(NS_CURRENT_EVENTQ, 
+                                              NS_GET_IID(nsIUnicharStreamLoaderObserver),
+                                              aObserver, 
+                                              PROXY_ASYNC | PROXY_ALWAYS,
+                                              getter_AddRefs(pObserver));
+    if (NS_FAILED(rv2))
+      return rv2;
+
+    rv = pObserver->OnStreamComplete(this, aContext, rv, nsnull);
+  }
+
   mObserver = aObserver;
+  mContext = aContext;
   mCharset.Truncate();
   mChannel = nsnull; // Leave this null till OnStopRequest
   mSegmentSize = aSegmentSize;
-  return NS_OK;
+  return rv;
 }
 
 NS_METHOD
@@ -105,7 +138,6 @@ NS_IMETHODIMP
 nsUnicharStreamLoader::OnStartRequest(nsIRequest* request,
                                       nsISupports *ctxt)
 {
-  mContext = ctxt;
   return NS_OK;
 }
 

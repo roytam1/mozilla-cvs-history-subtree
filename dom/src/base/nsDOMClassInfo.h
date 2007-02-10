@@ -45,14 +45,15 @@
 #include "jsapi.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIScriptContext.h"
-#include "nsDOMJSUtils.h" // for GetScriptContextFromJSContext
 
 class nsIDOMWindow;
 class nsIDOMNSHTMLOptionCollection;
 class nsIPluginInstance;
 class nsIForm;
+class nsIDOMNode;
 class nsIDOMNodeList;
 class nsIDOMDocument;
+class nsIDOMGCParticipant;
 class nsIHTMLDocument;
 class nsGlobalWindow;
 
@@ -173,7 +174,87 @@ public:
       ::JS_GetClass(cx, obj) == sXPCNativeWrapperClass;
   }
 
-  static nsresult PreserveNodeWrapper(nsIXPConnectWrappedNative *aWrapper);
+  /**
+   * Note that the XPConnect wrapper should be protected from garbage
+   * collection as long as the GC participant is reachable.
+   *
+   * A preservation with a given key overwrites any previous
+   * preservation with that key.
+   *
+   * No strong references are held as a result of this function call, so
+   * the caller is responsible for calling |ReleaseWrapper| sometime
+   * before |aParticipant|'s destructor runs.
+   *
+   * aRootWhenExternallyReferenced should be true if the preservation is
+   * for an event handler that could be triggered by the participant
+   * being externally referenced by a network load.
+   */
+  static nsresult PreserveWrapper(void* aKey,
+                                  nsIXPConnectJSObjectHolder* (*aKeyToWrapperFunc)(void* aKey),
+                                  nsIDOMGCParticipant *aParticipant,
+                                  PRBool aRootWhenExternallyReferenced);
+
+
+  /**
+   * Easier way to call the above just for DOM nodes (and better, since
+   * we get the performance benefits of having the same identity function).
+   * The call to |PreserveWrapper| is made with |aKey| == |aWrapper|.
+   *
+   * The caller need not call |ReleaseWrapper| since the node's
+   * wrapper's scriptable helper does so in its finalize callback.
+   */
+  static nsresult PreserveNodeWrapper(nsIXPConnectWrappedNative *aWrapper,
+                                      PRBool aRootWhenExternallyReferenced =
+                                        PR_FALSE);
+
+  /**
+   * Undoes the effects of any prior |PreserveWrapper| calls made with
+   * |aKey|.
+   */
+  static void ReleaseWrapper(void* aKey);
+
+  /**
+   * Mark all preserved wrappers reachable from |aDOMNode| via DOM APIs.
+   */
+  static void MarkReachablePreservedWrappers(nsIDOMGCParticipant *aParticipant,
+                                             JSContext *cx, void *arg);
+
+  /**
+   * Add/remove |aParticipant| from the table of externally referenced
+   * participants.  Does not maintain a count, so an object should not
+   * be added when it is already in the table.
+   *
+   * The table of externally referenced participants is a list of
+   * participants that should be marked at GC-time **if they are a
+   * participant in the preserved wrapper table added with
+   * aRootWhenExternallyReferenced**, whether or not they are reachable
+   * from marked participants.  This should be used for participants
+   * that hold onto scripts (typically onload or onerror handlers) that
+   * can be triggered at the end of a currently-ongoing operation
+   * (typically a network request) and that could thus expose the
+   * participant to script again in the future even though it is not
+   * otherwise reachable.
+   *
+   * The caller is responsible for ensuring that the GC participant is
+   * alive while it is in this table; the table does not own a reference.
+   *
+   * UnsetExternallyReferenced must be called exactly once for every
+   * successful SetExternallyReferenced call, and in no other cases.
+   */
+  static nsresult SetExternallyReferenced(nsIDOMGCParticipant *aParticipant);
+  static void UnsetExternallyReferenced(nsIDOMGCParticipant *aParticipant);
+
+  /**
+   * Classify the wrappers for use by |MarkReachablePreservedWrappers|
+   * during the GC.  Returns false to indicate failure (out-of-memory).
+   */
+  static PRBool BeginGCMark(JSContext *cx);
+
+  /**
+   * Clean up data structures (and strong references) created by
+   * |BeginGCMark|.
+   */
+  static void EndGCMark();
 
 protected:
   const nsDOMClassInfoData* mData;
@@ -247,6 +328,7 @@ protected:
   static jsval sParent_id;
   static jsval sScrollbars_id;
   static jsval sLocation_id;
+  static jsval sComponents_id;
   static jsval sConstructor_id;
   static jsval s_content_id;
   static jsval sContent_id;
@@ -312,9 +394,6 @@ protected:
   static jsval sAll_id;
   static jsval sTags_id;
   static jsval sAddEventListener_id;
-  static jsval sBaseURIObject_id;
-  static jsval sNodePrincipal_id;
-  static jsval sDocumentURIObject_id;
 
   static const JSClass *sObjectClass;
   static const JSClass *sXPCNativeWrapperClass;
@@ -325,14 +404,39 @@ public:
 
 typedef nsDOMClassInfo nsDOMGenericSH;
 
+// Scriptable helper for implementations of nsIDOMGCParticipant that
+// need a mark callback.
+class nsDOMGCParticipantSH : public nsDOMGenericSH
+{
+protected:
+  nsDOMGCParticipantSH(nsDOMClassInfoData* aData) : nsDOMGenericSH(aData)
+  {
+  }
+
+  virtual ~nsDOMGCParticipantSH()
+  {
+  }
+
+public:
+  NS_IMETHOD Finalize(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                      JSObject *obj);
+  NS_IMETHOD Mark(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                  JSObject *obj, void *arg, PRUint32 *_retval);
+
+  static nsIClassInfo *doCreate(nsDOMClassInfoData* aData)
+  {
+    return new nsDOMGCParticipantSH(aData);
+  }
+};
+
 // EventProp scriptable helper, this class should be the base class of
 // all objects that should support things like
 // obj.onclick=function{...}
 
-class nsEventReceiverSH : public nsDOMGenericSH
+class nsEventReceiverSH : public nsDOMGCParticipantSH
 {
 protected:
-  nsEventReceiverSH(nsDOMClassInfoData* aData) : nsDOMGenericSH(aData)
+  nsEventReceiverSH(nsDOMClassInfoData* aData) : nsDOMGCParticipantSH(aData)
   {
   }
 
@@ -509,31 +613,10 @@ protected:
   {
   }
 
-  // Helper to check whether a capability is enabled
-  PRBool IsCapabilityEnabled(const char* aCapability);
-
-  inline PRBool IsPrivilegedScript() {
-    return IsCapabilityEnabled("UniversalXPConnect");
-  }
-
-  // Helper to define a void property with JSPROP_SHARED; this can do all the
-  // work so it's safe to just return whatever it returns.  |obj| is the object
-  // we're defining on, |id| is the name of the prop.  This must be a string
-  // jsval.  |objp| is the out param if we define successfully.
-  nsresult DefineVoidProp(JSContext* cx, JSObject* obj, jsval id,
-                          JSObject** objp);
-
 public:
   NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
                        JSObject *globalObj, JSObject **parentObj);
   NS_IMETHOD AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
-  NS_IMETHOD NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                        JSObject *obj, jsval id, PRUint32 flags,
-                        JSObject **objp, PRBool *_retval);
-  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
-  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                          JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
   NS_IMETHOD GetFlags(PRUint32 *aFlags);
 
@@ -1552,27 +1635,6 @@ public:
   static nsIClassInfo *doCreate(nsDOMClassInfoData* aData)
   {
     return new nsNonDOMObjectSH(aData);
-  }
-};
-
-// Need this to override GetFlags() on nsNodeSH
-class nsAttributeSH : public nsNodeSH
-{
-protected:
-  nsAttributeSH(nsDOMClassInfoData* aData) : nsNodeSH(aData)
-  {
-  }
-
-  virtual ~nsAttributeSH()
-  {
-  }
-
-public:
-  NS_IMETHOD GetFlags(PRUint32 *aFlags);
-
-  static nsIClassInfo *doCreate(nsDOMClassInfoData* aData)
-  {
-    return new nsAttributeSH(aData);
   }
 };
 

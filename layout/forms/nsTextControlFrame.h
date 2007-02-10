@@ -45,12 +45,12 @@
 #include "nsIAnonymousContentCreator.h"
 #include "nsIEditor.h"
 #include "nsITextControlFrame.h"
+#include "nsFormControlHelper.h"//for the inputdimensions
 #include "nsIFontMetrics.h"
 #include "nsWeakReference.h" //for service and presshell pointers
 #include "nsIScrollableViewProvider.h"
 #include "nsIPhonetic.h"
 #include "nsContentUtils.h"
-#include "nsDisplayList.h"
 
 class nsISupportsArray;
 class nsIEditor;
@@ -72,27 +72,36 @@ class nsTextControlFrame : public nsStackFrame,
 
 {
 public:
-  nsTextControlFrame(nsIPresShell* aShell, nsStyleContext* aContext);
+  nsTextControlFrame(nsIPresShell* aShell);
   virtual ~nsTextControlFrame();
 
-  virtual void RemovedAsPrimaryFrame(); 
+  virtual void RemovedAsPrimaryFrame(nsPresContext* aPresContext); 
 
-  virtual void Destroy();
-
-  virtual nscoord GetMinWidth(nsIRenderingContext* aRenderingContext);
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&          aStatus);
 
-  virtual nsSize GetPrefSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nsSize GetMinSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nsSize GetMaxSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nscoord GetBoxAscent(nsBoxLayoutState& aBoxLayoutState);
-  virtual PRBool IsCollapsed(nsBoxLayoutState& aBoxLayoutState);
+  NS_IMETHOD  Paint(nsPresContext*      aPresContext,
+                    nsIRenderingContext& aRenderingContext,
+                    const nsRect&        aDirtyRect,
+                    nsFramePaintLayer    aWhichLayer,
+                    PRUint32             aFlags = 0);
 
-  DECL_DO_GLOBAL_REFLOW_COUNT_DSP(nsTextControlFrame, nsStackFrame)
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint,
+                              nsFramePaintLayer aWhichLayer,
+                              nsIFrame** aFrame);
+
+  NS_IMETHOD HandleEvent(nsPresContext* aPresContext,
+                         nsGUIEvent* aEvent,
+                         nsEventStatus* aEventStatus);
+
+  NS_IMETHOD GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetMaxSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetAscent(nsBoxLayoutState& aBoxLayoutState, nscoord& aAscent);
 
   virtual PRBool IsLeaf() const;
   
@@ -108,8 +117,6 @@ public:
   }
 #endif
 
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
-
   // from nsIAnonymousContentCreator
   NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,
                                     nsISupportsArray& aChildList);
@@ -120,13 +127,27 @@ public:
 
   // Utility methods to set current widget state
   void SetValue(const nsAString& aValue);
-  NS_IMETHOD SetInitialChildList(nsIAtom*        aListName,
-                                 nsIFrame*       aChildList);
+  NS_IMETHOD SetInitialChildList(nsPresContext* aPresContext,
+                                  nsIAtom*        aListName,
+                                  nsIFrame*       aChildList);
 
 //==== BEGIN NSIFORMCONTROLFRAME
+  NS_IMETHOD_(PRInt32) GetFormControlType() const; //*
+  NS_IMETHOD GetName(nsAString* aName);//*
   virtual void SetFocus(PRBool aOn , PRBool aRepaint); 
-  virtual nsresult SetFormProperty(nsIAtom* aName, const nsAString& aValue);
-  virtual nsresult GetFormProperty(nsIAtom* aName, nsAString& aValue) const; 
+  virtual void ScrollIntoView(nsPresContext* aPresContext);
+  virtual nscoord GetVerticalInsidePadding(nsPresContext* aPresContext,
+                                           float aPixToTwip,
+                                           nscoord aInnerHeight) const;
+  virtual nscoord GetHorizontalInsidePadding(nsPresContext* aPresContext,
+                                             float aPixToTwip, 
+                                             nscoord aInnerWidth,
+                                             nscoord aCharWidth) const;/**/
+  NS_IMETHOD SetSuggestedSize(nscoord aWidth, nscoord aHeight);
+  NS_IMETHOD GetFormContent(nsIContent*& aContent) const;
+  NS_IMETHOD SetProperty(nsPresContext* aPresContext, nsIAtom* aName, const nsAString& aValue);
+  NS_IMETHOD GetProperty(nsIAtom* aName, nsAString& aValue); 
+  NS_IMETHOD OnContentReset();
 
 
 //==== END NSIFORMCONTROLFRAME
@@ -135,17 +156,14 @@ public:
 
   NS_IMETHOD    GetEditor(nsIEditor **aEditor);
   NS_IMETHOD    OwnsValue(PRBool* aOwnsValue);
-  NS_IMETHOD    GetValue(nsAString& aValue, PRBool aIgnoreWrap) const;
+  NS_IMETHOD    GetValue(nsAString& aValue, PRBool aIgnoreWrap);
   NS_IMETHOD    GetTextLength(PRInt32* aTextLength);
   NS_IMETHOD    CheckFireOnChange();
   NS_IMETHOD    SetSelectionStart(PRInt32 aSelectionStart);
   NS_IMETHOD    SetSelectionEnd(PRInt32 aSelectionEnd);
   NS_IMETHOD    SetSelectionRange(PRInt32 aSelectionStart, PRInt32 aSelectionEnd);
   NS_IMETHOD    GetSelectionRange(PRInt32* aSelectionStart, PRInt32* aSelectionEnd);
-  virtual nsISelectionController* GetOwnedSelectionController()
-    { return mSelCon; }
-  virtual nsFrameSelection* GetOwnedFrameSelection()
-    { return mFrameSel; }
+  NS_IMETHOD    GetSelectionContr(nsISelectionController **aSelCon);
 
   // nsIPhonetic
   NS_DECL_NSIPHONETIC
@@ -155,7 +173,8 @@ public:
   virtual nsIAtom* GetType() const;
 
   /** handler for attribute changes to mContent */
-  NS_IMETHOD AttributeChanged(PRInt32         aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent*     aChild,
+                              PRInt32         aNameSpaceID,
                               nsIAtom*        aAttribute,
                               PRInt32         aModType);
 
@@ -164,6 +183,8 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
 public: //for methods who access nsTextControlFrame directly
+
+  void FireOnInput();//notify that we have some kind of change.
   /**
    * Find out whether this is a single line text control.  (text or password)
    * @return whether this is a single line text control
@@ -184,27 +205,22 @@ public: //for methods who access nsTextControlFrame directly
    * @return whether this is a password ontrol
    */
   PRBool IsPasswordTextControl() const;
-  void FireOnInput();
   void SetValueChanged(PRBool aValueChanged);
   /** Called when the frame is focused, to remember the value for onChange. */
   nsresult InitFocusedValue();
   nsresult DOMPointToOffset(nsIDOMNode* aNode, PRInt32 aNodeOffset, PRInt32 *aResult);
   nsresult OffsetToDOMPoint(PRInt32 aOffset, nsIDOMNode** aResult, PRInt32* aPosition);
 
-  void SetFireChangeEventState(PRBool aNewState)
+  void SetHasFocus(PRBool aHasFocus)
   {
-    mFireChangeEventState = aNewState;
+    mHasFocus = aHasFocus;
   };
-
-  PRBool GetFireChangeEventState() const
-  {
-    return mFireChangeEventState;
-  }    
 
   /* called to free up native keybinding services */
   static NS_HIDDEN_(void) ShutDown();
-  
+
 protected:
+
   /**
    * Find out whether this control is scrollable (i.e. if it is not a single
    * line text control)
@@ -225,9 +241,9 @@ protected:
   /**
    * Get the maxlength attribute
    * @param aMaxLength the value of the max length attr
-   * @returns PR_FALSE if attr not defined
+   * @throws NS_CONTENT_ATTR_NOT_THERE if attr not defined
    */
-  PRBool GetMaxLength(PRInt32* aMaxLength);
+  nsresult GetMaxLength(PRInt32* aMaxLength);
   /**
    * Find out whether an attribute exists on the content or not.
    * @param aAtt the attribute to determine the existence of
@@ -240,12 +256,15 @@ protected:
    * We call this when we are being destroyed or removed from the PFM.
    * @param aPresContext the current pres context
    */
-  void PreDestroy();
+  void PreDestroy(nsPresContext* aPresContext);
   /**
    * Fire the onChange event.
    */
+  nsresult FireOnChange();
 
-  // Helper methods
+//helper methods
+  nsresult GetSizeFromContent(PRInt32* aSize) const;
+
   /**
    * Get the cols attribute (if textarea) or a default
    * @return the number of columns to use
@@ -257,11 +276,17 @@ protected:
    */
   PRInt32 GetRows();
 
-  // Compute our intrinsic size.  This does not include any borders, paddings,
-  // etc.  Just the size of our actual area for the text (and the scrollbars,
-  // for <textarea>).
-  nsresult CalcIntrinsicSize(nsIRenderingContext* aRenderingContext,
-                             nsSize&              aIntrinsicSize);
+  nsresult ReflowStandard(nsPresContext*          aPresContext,
+                          nsSize&                  aDesiredSize,
+                          const nsHTMLReflowState& aReflowState,
+                          nsReflowStatus&          aStatus);
+
+  nsresult CalculateSizeStandard(nsPresContext*       aPresContext,
+                                 const nsHTMLReflowState& aReflowState,
+                                 nsSize&               aDesiredSize,
+                                 nsSize&               aMinSize);
+
+  PRInt32 GetWidthInCharacters() const;
 
   // nsIScrollableViewProvider
   virtual nsIScrollableView* GetScrollableView();
@@ -272,29 +297,27 @@ private:
                                 nsIDOMNode *aEndNode, PRInt32 aEndOffset);
   nsresult SelectAllContents();
   nsresult SetSelectionEndPoints(PRInt32 aSelStart, PRInt32 aSelEnd);
-  
+
 private:
   nsCOMPtr<nsIEditor> mEditor;
+  nsCOMPtr<nsISelectionController> mSelCon;
+
+  //cached sizes and states
+  nscoord      mSuggestedWidth;
+  nscoord      mSuggestedHeight;
+  nsSize       mSize;
 
   // these packed bools could instead use the high order bits on mState, saving 4 bytes 
   PRPackedBool mUseEditor;
   PRPackedBool mIsProcessing;
   PRPackedBool mNotifyOnInput;//default this to off to stop any notifications until setup is complete
   PRPackedBool mDidPreDestroy; // has PreDestroy been called
-  // Calls to SetValue will be treated as user values (i.e. trigger onChange
-  // eventually) when mFireChangeEventState==true, this is used by nsFileControlFrame.
-  PRPackedBool mFireChangeEventState;
+  PRPackedBool mHasFocus;
 
-  nsCOMPtr<nsISelectionController> mSelCon;
-  nsCOMPtr<nsFrameSelection> mFrameSel;
-  nsTextInputListener* mTextListener;
-  // XXX This seems unsafe; what's keeping it around?
+  nsTextInputSelectionImpl *mTextSelImpl;
+  nsTextInputListener *mTextListener;
   nsIScrollableView *mScrollableView;
   nsString mFocusedValue;
-
-#ifdef DEBUG
-  PRBool mCreateFrameForCalled;
-#endif
 };
 
 #endif

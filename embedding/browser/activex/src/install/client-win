@@ -11,6 +11,9 @@ plugins\npmozax.dll
 defaults\pref\activex.js
 components\nsAxSecurityPolicy.js
 
+; Necko2 for view-source: and data:
+components\necko2.dll
+
 ; MathML
 components\ucvmath.dll
 res\mathml.css

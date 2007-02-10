@@ -45,56 +45,6 @@
 
 // NOTE: much of the fancy footwork is done in xpcstubs.cpp
 
-NS_IMPL_CYCLE_COLLECTION_CLASS(nsXPCWrappedJS)
-
-NS_IMETHODIMP
-NS_CYCLE_COLLECTION_CLASSNAME(nsXPCWrappedJS)::Traverse
-   (nsISupports *s, nsCycleCollectionTraversalCallback &cb)
-{
-    // REVIEW ME PLEASE: this is a very odd area and it's easy to get
-    // it wrong. I'm not sure I got it right.
-    //
-    // We *might* have a stub that's not actually connected to an
-    // nsXPCWrappedJS, so we begin by QI'ing over to a "real"
-    // nsIXPConnectWrappedJS. Since that's a mostly-empty class, we
-    // then downcast from there to the "true" nsXPCWrappedJS.
-    //
-    // Is this right? It's hard to know. It seems to work, but who
-    // knows for how long. 
-
-    nsresult rv;
-    nsCOMPtr<nsIXPConnectWrappedJS> owner = do_QueryInterface(s, &rv);
-    if (NS_FAILED(rv))
-        return rv;
-
-    nsIXPConnectWrappedJS *base = owner.get();
-    nsXPCWrappedJS *tmp = NS_STATIC_CAST(nsXPCWrappedJS*, base);
-
-    // REVIEW ME PLEASE:
-    // 
-    // I am not sure when this represents the true refcount.
-
-    cb.DescribeNode(tmp->mRefCnt.get(), sizeof(nsXPCWrappedJS), 
-                    "nsXPCWrappedJS");
-
-    if (tmp->IsValid()) 
-        cb.NoteScriptChild(nsIProgrammingLanguage::JAVASCRIPT, 
-                           tmp->GetJSObject());
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-NS_CYCLE_COLLECTION_CLASSNAME(nsXPCWrappedJS)::Unlink(nsISupports *s)
-{
-    // NB: We might unlink our outgoing references in the future; for
-    // now we do nothing. This is a harmless conservative behavior; it
-    // just means that we rely on the cycle being broken by some of
-    // the external XPCOM objects' unlink() methods, not our
-    // own. Typically *any* unlinking will break the cycle.
-    return NS_OK;
-}
-
 NS_IMETHODIMP
 nsXPCWrappedJS::AggregatedQueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
@@ -107,10 +57,11 @@ nsXPCWrappedJS::AggregatedQueryInterface(REFNSIID aIID, void** aInstancePtr)
     // to be in QueryInterface before the possible delegation to 'outer', but
     // we don't want to do this check twice in one call in the normal case:
     // once in QueryInterface and once in DelegatedQueryInterface.
-    if(aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS)))
+    if(aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS)) ||
+       aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS_MOZILLA_1_8_BRANCH)))
     {
         NS_ADDREF(this);
-        *aInstancePtr = (void*) NS_STATIC_CAST(nsIXPConnectWrappedJS*,this);
+        *aInstancePtr = (void*) NS_STATIC_CAST(nsIXPConnectWrappedJS_MOZILLA_1_8_BRANCH*,this);
         return NS_OK;
     }
 
@@ -129,17 +80,20 @@ nsXPCWrappedJS::QueryInterface(REFNSIID aIID, void** aInstancePtr)
         return NS_ERROR_NULL_POINTER;
     }
 
-    if ( aIID.Equals(NS_GET_IID(nsCycleCollectionParticipant)) ) {
-        *aInstancePtr = & NS_CYCLE_COLLECTION_NAME(nsXPCWrappedJS);
+    // Always check for this first so that our 'outer' can get this interface
+    // from us without recurring into a call to the outer's QI!
+    if(aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS)) ||
+       aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS_MOZILLA_1_8_BRANCH)))
+    {
+        NS_ADDREF(this);
+        *aInstancePtr = (void*) NS_STATIC_CAST(nsIXPConnectWrappedJS_MOZILLA_1_8_BRANCH*,this);
         return NS_OK;
     }
 
-    // Always check for this first so that our 'outer' can get this interface
-    // from us without recurring into a call to the outer's QI!
-    if(aIID.Equals(NS_GET_IID(nsIXPConnectWrappedJS)))
+    // This interface is a hack that says "don't AddRef me".
+    if(aIID.Equals(NS_GET_IID(nsWeakRefToIXPConnectWrappedJS)))
     {
-        NS_ADDREF(this);
-        *aInstancePtr = (void*) NS_STATIC_CAST(nsIXPConnectWrappedJS*,this);
+        *aInstancePtr = NS_STATIC_CAST(nsWeakRefToIXPConnectWrappedJS*, this);
         return NS_OK;
     }
 
@@ -244,10 +198,7 @@ do_decrement:
 NS_IMETHODIMP
 nsXPCWrappedJS::GetWeakReference(nsIWeakReference** aInstancePtr)
 {
-    if(mRoot != this)
-        return mRoot->GetWeakReference(aInstancePtr);
-
-    return nsSupportsWeakReference::GetWeakReference(aInstancePtr);
+    return mRoot->nsSupportsWeakReference::GetWeakReference(aInstancePtr);
 }
 
 NS_IMETHODIMP
@@ -316,10 +267,6 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
                                                 aOuter);
             if(root)
             {   // scoped lock
-#if DEBUG_xpc_leaks
-                printf("Created nsXPCWrappedJS %p, JSObject is %p\n",
-                       (void*)wrapper, (void*)aJSObj);
-#endif
                 XPCAutoLock lock(rt->GetMapLock());
                 map->Add(root);
             }
@@ -340,10 +287,6 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
             if(!root)
                 goto return_wrapper;
             {   // scoped lock
-#if DEBUG_xpc_leaks
-                printf("Created nsXPCWrappedJS %p, JSObject is %p\n",
-                       (void*)root, (void*)rootJSObj);
-#endif
                 XPCAutoLock lock(rt->GetMapLock());
                 map->Add(root);
             }
@@ -359,10 +302,6 @@ nsXPCWrappedJS::GetNewOrUsed(XPCCallContext& ccx,
         wrapper = new nsXPCWrappedJS(ccx, aJSObj, clazz, root, aOuter);
         if(!wrapper)
             goto return_wrapper;
-#if DEBUG_xpc_leaks
-        printf("Created nsXPCWrappedJS %p, JSObject is %p\n",
-               (void*)wrapper, (void*)aJSObj);
-#endif
     }
 
     wrapper->mNext = root->mNext;
@@ -399,8 +338,6 @@ nsXPCWrappedJS::nsXPCWrappedJS(XPCCallContext& ccx,
     if(0 == (++count % interval))
         printf("//////// %d instances of nsXPCWrappedJS created\n", count);
 #endif
-
-    InitStub(GetClass()->GetIID());
 
     // intensionally do double addref - see Release().
     NS_ADDREF_THIS();
@@ -522,7 +459,7 @@ nsXPCWrappedJS::GetInterfaceInfo(nsIInterfaceInfo** info)
 
 NS_IMETHODIMP
 nsXPCWrappedJS::CallMethod(PRUint16 methodIndex,
-                           const XPTMethodDescriptor* info,
+                           const nsXPTMethodInfo* info,
                            nsXPTCMiniVariant* params)
 {
     if(!IsValid())

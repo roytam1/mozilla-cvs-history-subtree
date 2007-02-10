@@ -110,16 +110,31 @@ ifdef HOST_PROGRAM
 	$(INSTALL) $(HOST_PROGRAM) $(DIST)/bin
 endif
 
+
+# Copy NSPR to the SDK
+ifndef MOZ_NATIVE_NSPR
+ABS_DIST = cd $(DIST) && pwd
+ifeq (,$(CROSS_COMPILE)$(filter-out WINNT,$(OS_ARCH)))
+ifdef CYGDRIVE_MOUNT
+ABS_DIST = cygpath -w $(DIST) | sed -e 's|\\\\|/|g'
+endif
+endif
+libs::
+	_ABS_DIST=`$(ABS_DIST)`; \
+	$(MAKE) -C $(DEPTH)/nsprpub real_install prefix=$$_ABS_DIST/sdk exec_prefix=$$_ABS_DIST/sdk bindir=$$_ABS_DIST/sdk/dummy includedir=$$_ABS_DIST/sdk/include libdir=$$_ABS_DIST/sdk/lib datadir=$$_ABS_DIST/sdk/dummy DESTDIR=
+	$(RM) -rf $(DIST)/sdk/dummy
+ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
+	$(RM) -f $(DIST)/sdk/lib/$(DLL_PREFIX)nspr4$(DLL_SUFFIX) $(DIST)/sdk/lib/$(DLL_PREFIX)plc4$(DLL_SUFFIX) $(DIST)/sdk/lib/$(DLL_PREFIX)plds4$(DLL_SUFFIX)
+	$(RM) -f $(DIST)/sdk/lib/$(LIB_PREFIX)nspr4_s.$(LIB_SUFFIX) $(DIST)/sdk/lib/$(LIB_PREFIX)plc4_s.$(LIB_SUFFIX) $(DIST)/sdk/lib/$(LIB_PREFIX)plds4_s.$(LIB_SUFFIX)
+else
+	$(RM) -f $(DIST)/sdk/lib/$(LIB_PREFIX)nspr4.$(LIB_SUFFIX) $(DIST)/sdk/lib/$(LIB_PREFIX)plc4.$(LIB_SUFFIX) $(DIST)/sdk/lib/$(LIB_PREFIX)plds4.$(LIB_SUFFIX)
+endif
+endif
+
 ifdef WRAP_SYSTEM_INCLUDES
 export::
 	if test ! -d system_wrappers; then mkdir system_wrappers; fi
-	$(PERL) $(topsrcdir)/config/preprocessor.pl $(DEFINES) $(ACDEFINES) \
-		-DMOZ_TREE_CAIRO=$(MOZ_TREE_CAIRO) \
-		-DMOZ_ENABLE_LIBXUL=$(MOZ_ENABLE_LIBXUL) \
-		-DMOZ_NATIVE_ZLIB=$(MOZ_NATIVE_ZLIB) \
-		-DMOZ_NATIVE_PNG=$(MOZ_NATIVE_PNG) \
-		-DMOZ_NATIVE_JPEG=$(MOZ_NATIVE_JPEG) \
-		$(srcdir)/system-headers | $(PERL) $(topsrcdir)/nsprpub/config/make-system-wrappers.pl system_wrappers
+	$(PERL) $(topsrcdir)/nsprpub/config/make-system-wrappers.pl system_wrappers < $(srcdir)/system-headers
 	$(INSTALL) system_wrappers $(DIST)/include
 endif
 
@@ -138,10 +153,15 @@ install::
 GARBAGE += build_number nsBuildID \
 	$(FINAL_LINK_COMPS) $(FINAL_LINK_LIBS) $(FINAL_LINK_COMP_NAMES)
 
-ifneq (,$(BUILD_OFFICIAL)$(MOZILLA_OFFICIAL))
+ifneq ($(origin BUILD_OFFICIAL)_$(origin MOZILLA_OFFICIAL),undefined_undefined)
 _BN_OFFICIAL=1
 else
 _BN_OFFICIAL=
+endif
+
+ifdef MOZ_ENABLE_GTK2
+  GLIB_CFLAGS = $(MOZ_GTK2_CFLAGS)
+  GLIB_LIBS = $(MOZ_GTK2_LIBS)
 endif
 
 build_number: FORCE
@@ -149,14 +169,15 @@ build_number: FORCE
 
 nsBuildID.h: nsBuildID.h.in build_number $(srcdir)/milestone.txt Makefile
 	$(RM) $@
-	MOZ_MILESTONE_RELEASE=$(MOZ_MILESTONE_RELEASE); \
-	export MOZ_MILESTONE_RELEASE; \
 	$(PERL) -I$(srcdir) $(srcdir)/aboutime.pl -m $(srcdir)/milestone.txt $@ build_number $(srcdir)/nsBuildID.h.in
 
 ifndef CROSS_COMPILE
 ifdef USE_ELF_DYNSTR_GC
 elf-dynstr-gc: elf-dynstr-gc.c Makefile Makefile.in
 	$(CC) $(COMPILE_CFLAGS) $(GLIB_CFLAGS) -o $@ $< $(LDFLAGS) $(GLIB_LIBS) 
+
+export:: elf-dynstr-gc
+	$(INSTALL) -m 555 elf-dynstr-gc $(DIST)/bin
 endif
 endif
 
@@ -166,3 +187,5 @@ ifdef MKDEPEND_DIR
 clean clobber realclean clobber_all::
 	cd $(MKDEPEND_DIR); $(MAKE) $@
 endif
+
+

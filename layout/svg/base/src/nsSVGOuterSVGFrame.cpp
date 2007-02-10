@@ -36,160 +36,334 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsSVGOuterSVGFrame.h"
-#include "nsIDOMSVGSVGElement.h"
-#include "nsSVGSVGElement.h"
-#include "nsSVGTextFrame.h"
-#include "nsIServiceManager.h"
+//#include "nsHTMLContainerFrame.h"
+#include "nsContainerFrame.h"
+#include "nsCSSRendering.h"
+#include "nsISVGSVGElement.h"
+#include "nsPresContext.h"
+#include "nsIDOMSVGAnimatedLength.h"
+#include "nsIDOMSVGLength.h"
+#include "nsISVGContainerFrame.h"
+#include "nsISVGChildFrame.h"
+#include "nsISVGOuterSVGFrame.h"
+#include "nsISVGRendererCanvas.h"
+#include "nsIView.h"
 #include "nsIViewManager.h"
-#include "nsSVGRect.h"
-#include "nsDisplayList.h"
-#include "nsStubMutationObserver.h"
-#include "gfxContext.h"
-
+#include "nsWeakReference.h"
+#include "nsISVGValue.h"
+#include "nsISVGValueObserver.h"
+#include "nsHTMLParts.h"
+#include "nsReflowPath.h"
+#include "nsISVGRenderer.h"
+#include "nsISVGRendererRegion.h"
+#include "nsIServiceManager.h"
+#include "nsISVGRectangleSink.h"
+#include "nsISVGValueUtils.h"
+#include "nsIDOMSVGRect.h"
+#include "nsIDOMSVGNumber.h"
+#include "nsSVGCoordCtxProvider.h"
 #if defined(DEBUG) && defined(SVG_DEBUG_PRINTING)
 #include "nsIDeviceContext.h"
 #include "nsTransform2D.h"
 #endif
+#include "nsISVGEnum.h"
+#include "nsIDOMSVGPoint.h"
+#include "nsIDOMSVGZoomAndPan.h"
+#include "nsIDOMSVGAnimatedRect.h"
+#include "nsIDOMSVGFitToViewBox.h"
+#include "nsSVGRect.h"
+#include "nsLayoutAtoms.h"
+#include "nsIDocument.h"
 
-class nsSVGMutationObserver : public nsStubMutationObserver
-{
+////////////////////////////////////////////////////////////////////////
+// VMRectInvalidator: helper class for invalidating rects on the viewmanager.
+// used in nsSVGOuterSVGFrame::InvalidateRegion
+
+class VMRectInvalidator : public nsISVGRectangleSink
+{  
+protected:
+  friend already_AddRefed<nsISVGRectangleSink> CreateVMRectInvalidator(nsIViewManager* vm,
+                                                                       nsIView* view,
+                                                                       int twipsPerPx);
+  VMRectInvalidator(nsIViewManager* vm, nsIView* view, int twipsPerPx); 
+
 public:
-  // nsIMutationObserver interface
-  void AttributeChanged(nsIDocument *aDocument,
-                        nsIContent *aContent,
-                        PRInt32 aNameSpaceID,
-                        nsIAtom *aAttribute,
-                        PRInt32 aModType);
+  // nsISupports interface:
+  NS_DECL_ISUPPORTS
 
-   // nsISupports interface:
-  NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
+  // nsISVGRectangleSink interface:
+  NS_DECL_NSISVGRECTANGLESINK
 private:
-  NS_IMETHOD_(nsrefcnt) AddRef() { return 1; }
-  NS_IMETHOD_(nsrefcnt) Release() { return 1; }
-
-  static void UpdateTextFragmentTrees(nsIFrame *aFrame);
+  nsCOMPtr<nsIViewManager> mViewManager;
+  nsIView* mView;
+  int mTwipsPerPx;
 };
 
 //----------------------------------------------------------------------
-// nsISupports methods
+// Implementation:
 
-NS_INTERFACE_MAP_BEGIN(nsSVGMutationObserver)
-  NS_INTERFACE_MAP_ENTRY(nsIMutationObserver)
+VMRectInvalidator::VMRectInvalidator(nsIViewManager* vm, nsIView* view,
+                                     int twipsPerPx)
+    : mViewManager(vm), mView(view), mTwipsPerPx(twipsPerPx)
+{
+}
+
+already_AddRefed<nsISVGRectangleSink>
+CreateVMRectInvalidator(nsIViewManager* vm, nsIView* view, int twipsPerPx)
+{
+  nsISVGRectangleSink* retval = new VMRectInvalidator(vm, view, twipsPerPx);
+  NS_IF_ADDREF(retval);
+  return retval;
+}
+
+
+//----------------------------------------------------------------------
+// nsISupports methods:
+
+NS_IMPL_ADDREF(VMRectInvalidator)
+NS_IMPL_RELEASE(VMRectInvalidator)
+
+NS_INTERFACE_MAP_BEGIN(VMRectInvalidator)
+  NS_INTERFACE_MAP_ENTRY(nsISVGRectangleSink)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
 NS_INTERFACE_MAP_END
 
-static nsSVGMutationObserver sSVGMutationObserver;
-
 //----------------------------------------------------------------------
-// nsIMutationObserver methods
+// nsISVGRectangleSink methods:
 
-void
-nsSVGMutationObserver::AttributeChanged(nsIDocument *aDocument,
-                                        nsIContent *aContent,
-                                        PRInt32 aNameSpaceID,
-                                        nsIAtom *aAttribute,
-                                        PRInt32 aModType)
+/* void sinkRectangle (in float x, in float y, in float width, in float height); */
+NS_IMETHODIMP
+VMRectInvalidator::SinkRectangle(float x, float y, float width, float height)
 {
-  if (aNameSpaceID != kNameSpaceID_XML || aAttribute != nsGkAtoms::space) {
-    return;
-  }
-
-  PRUint32 count = aDocument->GetNumberOfShells();
-  for (PRUint32 i = 0; i < count; ++i) {
-    nsIFrame *frame = aDocument->GetShellAt(i)->GetPrimaryFrameFor(aContent);
-    if (!frame) {
-      continue;
-    }
-
-    // is the content a child of a text element
-    nsISVGTextContentMetrics* metrics;
-    CallQueryInterface(frame, &metrics);
-    if (metrics) {
-      nsSVGTextFrame* textFrame = NS_STATIC_CAST(nsSVGTextContainerFrame*,
-                                                 frame)->GetTextFrame();
-      textFrame->NotifyGlyphMetricsChange();
-      continue;
-    }
-    // if not, are there text elements amongst its descendents
-    UpdateTextFragmentTrees(frame);
-  }
+#ifdef DEBUG
+  // printf("invalidating %f %f %f %f\n", x,y,width,height);
+#endif
+  nsRect rect((nscoord)(x*mTwipsPerPx), (nscoord)(y*mTwipsPerPx),
+              (nscoord)(width*mTwipsPerPx), (nscoord)(height*mTwipsPerPx));
+  mViewManager->UpdateView(mView, rect, NS_VMREFRESH_NO_SYNC);
+  return NS_OK;
 }
 
-//----------------------------------------------------------------------
-// Implementation helpers
 
-void
-nsSVGMutationObserver::UpdateTextFragmentTrees(nsIFrame *aFrame)
+////////////////////////////////////////////////////////////////////////
+// nsSVGOuterSVGFrame class
+
+//typedef nsHTMLContainerFrame nsSVGOuterSVGFrameBase;
+typedef nsContainerFrame nsSVGOuterSVGFrameBase;
+
+class nsSVGOuterSVGFrame : public nsSVGOuterSVGFrameBase,
+                           public nsISVGOuterSVGFrame,
+                           public nsISVGContainerFrame,
+                           public nsISVGValueObserver,
+                           public nsSupportsWeakReference,
+                           public nsSVGCoordCtxProvider
 {
-  nsIFrame* kid = aFrame->GetFirstChild(nsnull);
-  while (kid) {
-    if (kid->GetType() == nsGkAtoms::svgTextFrame) {
-      nsSVGTextFrame* textFrame = NS_STATIC_CAST(nsSVGTextFrame*, kid);
-      textFrame->NotifyGlyphMetricsChange();
-    } else {
-      UpdateTextFragmentTrees(kid);
-    }
-    kid = kid->GetNextSibling();
+  friend nsresult
+  NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+protected:
+  nsSVGOuterSVGFrame();
+  virtual ~nsSVGOuterSVGFrame();
+  nsresult Init();
+  
+   // nsISupports interface:
+  NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
+private:
+  NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
+  NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }  
+public:
+  // nsIFrame:
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
+                  nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
+                  nsIFrame*        aPrevInFlow);
+  
+  NS_IMETHOD Reflow(nsPresContext*          aPresContext,
+                    nsHTMLReflowMetrics&     aDesiredSize,
+                    const nsHTMLReflowState& aReflowState,
+                    nsReflowStatus&          aStatus);
+
+  NS_IMETHOD  DidReflow(nsPresContext*   aPresContext,
+                        const nsHTMLReflowState*  aReflowState,
+                        nsDidReflowStatus aStatus);
+
+
+  NS_IMETHOD  AppendFrames(nsIAtom*        aListName,
+                           nsIFrame*       aFrameList);
+  NS_IMETHOD  InsertFrames(nsIAtom*        aListName,
+                           nsIFrame*       aPrevFrame,
+                           nsIFrame*       aFrameList);
+  NS_IMETHOD  RemoveFrame(nsIAtom*        aListName,
+                          nsIFrame*       aOldFrame);
+  NS_IMETHOD  ReplaceFrame(nsIAtom*        aListName,
+                           nsIFrame*       aOldFrame,
+                           nsIFrame*       aNewFrame);
+
+  NS_IMETHOD  AttributeChanged(nsIContent*     aChild,
+                               PRInt32         aNameSpaceID,
+                               nsIAtom*        aAttribute,
+                               PRInt32         aModType);
+
+  NS_IMETHOD  GetFrameForPoint(const nsPoint& aPoint, 
+                               nsFramePaintLayer aWhichLayer,
+                               nsIFrame**     aFrame);
+
+  
+  NS_IMETHOD  Paint(nsPresContext* aPresContext,
+                    nsIRenderingContext& aRenderingContext,
+                    const nsRect& aDirtyRect,
+                    nsFramePaintLayer aWhichLayer,
+                    PRUint32 aFlags = 0);
+
+  PRBool CanPaintBackground() { return PR_FALSE; }
+
+  /**
+   * Get the "type" of the frame
+   *
+   * @see nsLayoutAtoms::svgOuterSVGFrame
+   */
+  virtual nsIAtom* GetType() const;
+  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
+
+#ifdef DEBUG
+  NS_IMETHOD GetFrameName(nsAString& aResult) const
+  {
+    return MakeFrameName(NS_LITERAL_STRING("SVGOuterSVG"), aResult);
   }
-}
+#endif
+
+  // nsISVGValueObserver
+  NS_IMETHOD WillModifySVGObservable(nsISVGValue* observable,
+                                     nsISVGValue::modificationType aModType);
+  NS_IMETHOD DidModifySVGObservable (nsISVGValue* observable,
+                                     nsISVGValue::modificationType aModType);
+
+  // nsISupportsWeakReference
+  // implementation inherited from nsSupportsWeakReference
+  
+  // nsISVGOuterSVGFrame interface:
+  NS_IMETHOD InvalidateRegion(nsISVGRendererRegion* region, PRBool bRedraw);
+  NS_IMETHOD IsRedrawSuspended(PRBool* isSuspended);
+  NS_IMETHOD GetRenderer(nsISVGRenderer**renderer);
+
+  // nsISVGSVGFrame interface:
+  NS_IMETHOD SuspendRedraw();
+  NS_IMETHOD UnsuspendRedraw();
+  NS_IMETHOD NotifyViewportChange();
+  
+  // nsISVGContainerFrame interface:
+  nsISVGOuterSVGFrame*GetOuterSVGFrame();
+  already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
+  already_AddRefed<nsSVGCoordCtxProvider> GetCoordContextProvider();
+  
+protected:
+  // implementation helpers:
+  void InitiateReflow();
+  
+  float GetPxPerTwips();
+  float GetTwipsPerPx();
+
+  void AddAsWidthHeightObserver();
+  void RemoveAsWidthHeightObserver();
+
+  void CalculateAvailableSpace(nsRect *maxRect, nsRect *preferredRect,
+                               nsPresContext* aPresContext,
+                               const nsHTMLReflowState& aReflowState);
+  
+//  nsIView* mView;
+  PRUint32 mRedrawSuspendCount;
+  PRBool mNeedsReflow;
+  PRBool mViewportInitialized;
+  nsCOMPtr<nsISVGRenderer> mRenderer;
+  nsCOMPtr<nsIDOMSVGMatrix> mCanvasTM;
+
+  // zoom and pan
+  nsCOMPtr<nsISVGEnum>      mZoomAndPan;
+  nsCOMPtr<nsIDOMSVGPoint>  mCurrentTranslate;
+  nsCOMPtr<nsIDOMSVGNumber> mCurrentScale;
+};
 
 //----------------------------------------------------------------------
 // Implementation
 
-nsIFrame*
-NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsStyleContext* aContext)
-{  
+nsresult
+NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame)
+{
+  *aNewFrame = nsnull;
+  
   nsCOMPtr<nsIDOMSVGSVGElement> svgElement = do_QueryInterface(aContent);
   if (!svgElement) {
 #ifdef DEBUG
     printf("warning: trying to construct an SVGOuterSVGFrame for a content element that doesn't support the right interfaces\n");
 #endif
-    return nsnull;
+    return NS_ERROR_FAILURE;
   }
 
-  return new (aPresShell) nsSVGOuterSVGFrame(aContext);
+  nsSVGOuterSVGFrame* it = new (aPresShell) nsSVGOuterSVGFrame;
+  if (nsnull == it)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  *aNewFrame = it;
+
+  return NS_OK;
 }
 
-nsSVGOuterSVGFrame::nsSVGOuterSVGFrame(nsStyleContext* aContext)
-    : nsSVGOuterSVGFrameBase(aContext),
-      mRedrawSuspendCount(0),
+nsSVGOuterSVGFrame::nsSVGOuterSVGFrame()
+    : mRedrawSuspendCount(0),
       mNeedsReflow(PR_FALSE),
       mViewportInitialized(PR_FALSE)
 {
 }
 
-NS_IMETHODIMP
-nsSVGOuterSVGFrame::InitSVG()
+nsSVGOuterSVGFrame::~nsSVGOuterSVGFrame()
 {
-  nsresult rv;
+#ifdef DEBUG
+//  printf("~nsSVGOuterSVGFrame %p\n", this);
+#endif
+
+  if (mZoomAndPan)
+    NS_REMOVE_SVGVALUE_OBSERVER(mZoomAndPan);
+
+  RemoveAsWidthHeightObserver();
+}
+
+nsresult nsSVGOuterSVGFrame::Init()
+{
+#if (defined(MOZ_SVG_RENDERER_GDIPLUS) + \
+     defined(MOZ_SVG_RENDERER_LIBART) + \
+     defined(MOZ_SVG_RENDERER_CAIRO) > 1)
+#error "Multiple SVG renderers. Please choose one manually."
+#elif defined(MOZ_SVG_RENDERER_GDIPLUS)  
+  mRenderer = do_CreateInstance(NS_SVG_RENDERER_GDIPLUS_CONTRACTID);
+#elif defined(MOZ_SVG_RENDERER_LIBART)
+  mRenderer = do_CreateInstance(NS_SVG_RENDERER_LIBART_CONTRACTID);
+#elif defined(MOZ_SVG_RENDERER_CAIRO)
+  mRenderer = do_CreateInstance(NS_SVG_RENDERER_CAIRO_CONTRACTID);
+#else
+#error "No SVG renderer."
+#endif
+  NS_ASSERTION(mRenderer, "could not get renderer");
 
   // we are an *outer* svg element, so this frame will become the
   // coordinate context for our content element:
-  float mmPerPx = 25.4f / GetPresContext()->AppUnitsToDevPixels(GetPresContext()->AppUnitsPerInch());
+  float mmPerPx = GetTwipsPerPx() / TWIPS_PER_POINT_FLOAT / (72.0f * 0.03937f);
   SetCoordCtxMMPerPx(mmPerPx, mmPerPx);
   
   nsCOMPtr<nsISVGSVGElement> SVGElement = do_QueryInterface(mContent);
   NS_ASSERTION(SVGElement, "wrong content element");
   SVGElement->SetParentCoordCtxProvider(this);
 
+  // we only care about our content's zoom and pan values if it's the root element
   nsIDocument* doc = mContent->GetCurrentDoc();
-  if (doc) {
-    // we only care about our content's zoom and pan values if it's the root element
-    if (doc->GetRootContent() == mContent) {
-      SVGElement->GetZoomAndPanEnum(getter_AddRefs(mZoomAndPan));
-      SVGElement->GetCurrentTranslate(getter_AddRefs(mCurrentTranslate));
-      SVGElement->GetCurrentScaleNumber(getter_AddRefs(mCurrentScale));
-    }
-    // AddMutationObserver checks that the observer is not already added.
-    // sSVGMutationObserver has the same lifetime as the document so does
-    // not need to be removed
-    doc->AddMutationObserver(&sSVGMutationObserver);
+  if (doc && doc->GetRootContent() == mContent) {
+    SVGElement->GetZoomAndPanEnum(getter_AddRefs(mZoomAndPan));
+    NS_ADD_SVGVALUE_OBSERVER(mZoomAndPan);
+    SVGElement->GetCurrentTranslate(getter_AddRefs(mCurrentTranslate));
+    SVGElement->GetCurrentScaleNumber(getter_AddRefs(mCurrentScale));
   }
 
+  AddAsWidthHeightObserver();
   SuspendRedraw();
-
-  AddStateBits(NS_STATE_IS_OUTER_SVG);
-
   return NS_OK;
 }
 
@@ -197,12 +371,34 @@ nsSVGOuterSVGFrame::InitSVG()
 // nsISupports methods
 
 NS_INTERFACE_MAP_BEGIN(nsSVGOuterSVGFrame)
+  NS_INTERFACE_MAP_ENTRY(nsISVGContainerFrame)
+  NS_INTERFACE_MAP_ENTRY(nsISVGOuterSVGFrame)
   NS_INTERFACE_MAP_ENTRY(nsISVGSVGFrame)
+  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
+  NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
   NS_INTERFACE_MAP_ENTRY(nsSVGCoordCtxProvider)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGOuterSVGFrameBase)
 
 //----------------------------------------------------------------------
 // nsIFrame methods
+
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::Init(nsPresContext*  aPresContext,
+                         nsIContent*     aContent,
+                         nsIFrame*       aParent,
+                         nsStyleContext* aContext,
+                         nsIFrame*       aPrevInFlow)
+{
+  nsresult rv;
+  rv = nsSVGOuterSVGFrameBase::Init(aPresContext, aContent, aParent,
+                                    aContext, aPrevInFlow);
+
+  Init();
+
+  return rv;
+}
+
+
   
 //----------------------------------------------------------------------
 // reflowing
@@ -213,13 +409,55 @@ nsSVGOuterSVGFrame::Reflow(nsPresContext*          aPresContext,
                            const nsHTMLReflowState& aReflowState,
                            nsReflowStatus&          aStatus)
 {
-  if (!aReflowState.ShouldReflowAllKids()) {
-    // We're not the target of the incremental reflow, so just bail.
-    // This means that something happened to one of our descendants
-    // (excluding those inside svg:foreignObject, since
-    // nsSVGForeignObjectFrame is a reflow root).
-    aStatus = NS_FRAME_COMPLETE;
-    return NS_OK;
+#if defined(DEBUG) && defined(SVG_DEBUG_PRINTING)
+  {
+    printf("nsSVGOuterSVGFrame(%p)::Reflow()[\n",this);
+    float twipsPerScPx = aPresContext->ScaledPixelsToTwips();
+    float twipsPerPx = aPresContext->PixelsToTwips();
+    printf("tw/sc(px)=%f tw/px=%f\n", twipsPerScPx, twipsPerPx);
+    printf("]\n");
+  }
+#endif
+  
+  // check whether this reflow request is targeted at us or a child
+  // frame (e.g. a foreignObject):
+  if (aReflowState.reason == eReflowReason_Incremental) {
+    nsReflowPath::iterator iter = aReflowState.path->FirstChild();
+    nsReflowPath::iterator end = aReflowState.path->EndChildren();
+
+    for ( ; iter != end; ++iter) {
+      // The actual target of this reflow is one of our child
+      // frames. Since SVG as such doesn't use reflow, this will
+      // probably be the child of a <foreignObject>. Some HTML|XUL
+      // content frames target reflow events at themselves when they
+      // need to be redrawn in response to e.g. a style change. For
+      // correct visual updating, we must make sure the reflow
+      // reaches its intended target.
+        
+      // Since it is an svg frame (probably an nsSVGForeignObjectFrame),
+      // we might as well pass in our aDesiredSize and aReflowState
+      // objects - they are ignored by svg frames:
+      nsSize availSpace(0, 0); // XXXwaterson probably wrong!
+      nsHTMLReflowState state(aPresContext, aReflowState, *iter, availSpace);
+      (*iter)->Reflow (aPresContext,
+                       aDesiredSize,
+                       state,
+                       aStatus);
+
+      // XXX do we really have to return our metrics although we're
+      // not affected by the reflow? Is there a way of telling our
+      // parent that we don't want anything changed?
+      aDesiredSize.width  = mRect.width;
+      aDesiredSize.height = mRect.height;
+      aDesiredSize.ascent = aDesiredSize.height;
+      aDesiredSize.descent = 0;
+    }
+
+    if (! aReflowState.path->mReflowCommand) {
+      // We're not the target of the incremental reflow, so just bail.
+      aStatus = NS_FRAME_COMPLETE;
+      return NS_OK;
+    }
   }
   
   //  SVG CR 20001102: When the SVG content is embedded inline within
@@ -242,21 +480,29 @@ nsSVGOuterSVGFrame::Reflow(nsPresContext*          aPresContext,
   nsCOMPtr<nsISVGSVGElement> SVGElement = do_QueryInterface(mContent);
   NS_ENSURE_TRUE(SVGElement, NS_ERROR_FAILURE);
 
+  float pxPerTwips = GetPxPerTwips();
+  float twipsPerPx = GetTwipsPerPx();
+
   // The width/height attribs given on the <svg>-element might be
   // percentage values of the parent viewport. We will set the parent
   // coordinate context dimensions to the available space.
 
   nsRect maxRect, preferredRect;
   CalculateAvailableSpace(&maxRect, &preferredRect, aPresContext, aReflowState);
-  float preferredWidth = nsPresContext::AppUnitsToFloatCSSPixels(preferredRect.width);
-  float preferredHeight = nsPresContext::AppUnitsToFloatCSSPixels(preferredRect.height);
+  float preferredWidth = preferredRect.width * pxPerTwips;
+  float preferredHeight = preferredRect.height * pxPerTwips;
 
-  SuspendRedraw();
+  SuspendRedraw(); 
+  
+  // As soon as we set the coordinate context, the width/height
+  // attributes might emit change-notifications. We don't want those
+  // right now:
+  RemoveAsWidthHeightObserver();
 
   nsCOMPtr<nsIDOMSVGRect> r;
   NS_NewSVGRect(getter_AddRefs(r), 0, 0, preferredWidth, preferredHeight);
   SetCoordCtxRect(r);
-
+  
 #ifdef DEBUG
   // some debug stuff:
 //   {
@@ -266,7 +512,7 @@ nsSVGOuterSVGFrame::Reflow(nsPresContext*          aPresContext,
 //            aReflowState.availableHeight,
 //            r.width, r.height);
 //     printf("******* cw: %d, ch: %d \n    cmaxw: %d, cmaxh: %d\n",
-//            aReflowState.ComputedWidth(),
+//            aReflowState.mComputedWidth,
 //            aReflowState.mComputedHeight,
 //            aReflowState.mComputedMaxWidth,
 //            aReflowState.mComputedMaxHeight);
@@ -276,7 +522,7 @@ nsSVGOuterSVGFrame::Reflow(nsPresContext*          aPresContext,
 //              aReflowState.parentReflowState->availableWidth,
 //              aReflowState.parentReflowState->availableHeight);
 //       printf("******* parent cw: %d, parent ch: %d \n  parent cmaxw: %d, parent cmaxh: %d\n",
-//              aReflowState.parentReflowState->ComputedWidth(),
+//              aReflowState.parentReflowState->mComputedWidth,
 //              aReflowState.parentReflowState->mComputedHeight,
 //              aReflowState.parentReflowState->mComputedMaxWidth,
 //              aReflowState.parentReflowState->mComputedMaxHeight);
@@ -288,26 +534,45 @@ nsSVGOuterSVGFrame::Reflow(nsPresContext*          aPresContext,
   // width/height attributes will be valid.
   // Let's work out our desired dimensions.
 
-  nsSVGSVGElement *svg = NS_STATIC_CAST(nsSVGSVGElement*, mContent);
-  svg->SetParentCoordCtxProvider(this);
-  float width =
-    svg->mLengthAttributes[nsSVGSVGElement::WIDTH].GetAnimValue(this);
-  float height =
-    svg->mLengthAttributes[nsSVGSVGElement::HEIGHT].GetAnimValue(this);
+  float width;
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> animLength;
+    SVGElement->GetWidth(getter_AddRefs(animLength));
+    NS_ENSURE_TRUE(animLength, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIDOMSVGLength> length;
+    animLength->GetAnimVal(getter_AddRefs(length));
+    NS_ENSURE_TRUE(length, NS_ERROR_FAILURE);
+    
+    length->GetValue(&width);
+    
+    aDesiredSize.width = (int)(width*twipsPerPx);
+  }
 
-  aDesiredSize.width = nsPresContext::CSSPixelsToAppUnits(width);
-  aDesiredSize.height = nsPresContext::CSSPixelsToAppUnits(height);
+  float height;
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> animLength;
+    SVGElement->GetHeight(getter_AddRefs(animLength));
+    NS_ENSURE_TRUE(animLength, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIDOMSVGLength> length;
+    animLength->GetAnimVal(getter_AddRefs(length));
+    NS_ENSURE_TRUE(length, NS_ERROR_FAILURE);
+    
+    length->GetValue(&height);
+    
+    aDesiredSize.height = (int)(height*twipsPerPx);
+  }
+  
 
+  aDesiredSize.ascent = aDesiredSize.height;
+  aDesiredSize.descent = 0;
+  
   // XXX add in CSS borders ??
 
   aStatus = NS_FRAME_COMPLETE;
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
 
-  // tell our element that the viewbox to viewport transform needs refreshing,
-  // and set us up to draw
-  svg->InvalidateViewBoxToViewport();
-  NotifyViewportChange();
-
+  AddAsWidthHeightObserver();
+  
   UnsuspendRedraw();
   
   return NS_OK;
@@ -327,8 +592,8 @@ nsSVGOuterSVGFrame::DidReflow(nsPresContext*   aPresContext,
     // call InitialUpdate() on all frames:
     nsIFrame* kid = mFrames.FirstChild();
     while (kid) {
-      nsISVGChildFrame* SVGFrame = nsnull;
-      CallQueryInterface(kid, &SVGFrame);
+      nsISVGChildFrame* SVGFrame=nsnull;
+      kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
       if (SVGFrame) {
         SVGFrame->InitialUpdate(); 
       }
@@ -345,87 +610,175 @@ nsSVGOuterSVGFrame::DidReflow(nsPresContext*   aPresContext,
 // container methods
 
 NS_IMETHODIMP
+nsSVGOuterSVGFrame::AppendFrames(nsIAtom*        aListName,
+                                 nsIFrame*       aFrameList)
+{
+  // append == insert at end:
+  return InsertFrames(aListName, mFrames.LastChild(), aFrameList);  
+}
+
+NS_IMETHODIMP
 nsSVGOuterSVGFrame::InsertFrames(nsIAtom*        aListName,
                                  nsIFrame*       aPrevFrame,
                                  nsIFrame*       aFrameList)
 {
+  // memorize last new frame
+  nsIFrame* lastNewFrame = nsnull;
+  {
+    nsFrameList tmpList(aFrameList);
+    lastNewFrame = tmpList.LastChild();
+  }
+  
+  // Insert the new frames
+  mFrames.InsertFrames(this, aPrevFrame, aFrameList);
+
   SuspendRedraw();
-  nsSVGOuterSVGFrameBase::InsertFrames(aListName, aPrevFrame, aFrameList);
+
+  // call InitialUpdate() on all new frames:
+  
+  nsIFrame* end = nsnull;
+  if (lastNewFrame)
+    end = lastNewFrame->GetNextSibling();
+
+  for (nsIFrame* kid = aFrameList; kid != end;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      SVGFrame->InitialUpdate(); 
+    }
+  }
+
   UnsuspendRedraw();
   
   return NS_OK;
 }
 
-class nsDisplaySVG : public nsDisplayItem {
-public:
-  nsDisplaySVG(nsSVGOuterSVGFrame* aFrame) : nsDisplayItem(aFrame) {
-    MOZ_COUNT_CTOR(nsDisplaySVG);
-  }
-#ifdef NS_BUILD_REFCNT_LOGGING
-  virtual ~nsDisplaySVG() {
-    MOZ_COUNT_DTOR(nsDisplaySVG);
-  }
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::RemoveFrame(nsIAtom*        aListName,
+                                nsIFrame*       aOldFrame)
+{
+  nsCOMPtr<nsISVGRendererRegion> dirty_region;
+  
+  nsISVGChildFrame* SVGFrame=nsnull;
+  aOldFrame->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+
+  if (SVGFrame)
+    dirty_region = SVGFrame->GetCoveredRegion();
+
+  PRBool result = mFrames.DestroyFrame(GetPresContext(), aOldFrame);
+
+  nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+  NS_ASSERTION(outerSVGFrame, "no outer svg frame");
+  if (dirty_region && outerSVGFrame)
+    outerSVGFrame->InvalidateRegion(dirty_region, PR_TRUE);
+
+  NS_ASSERTION(result, "didn't find frame to delete");
+  return result ? NS_OK : NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::ReplaceFrame(nsIAtom*        aListName,
+                                 nsIFrame*       aOldFrame,
+                                 nsIFrame*       aNewFrame)
+{
+  NS_NOTYETIMPLEMENTED("nsSVGOuterSVGFrame::ReplaceFrame");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::AttributeChanged(nsIContent*     aChild,
+                                     PRInt32         aNameSpaceID,
+                                     nsIAtom*        aAttribute,
+                                     PRInt32         aModType)
+{
+#ifdef DEBUG
+//  {
+//    nsAutoString str;
+//    aAttribute->ToString(str);
+//    printf("** nsSVGOuterSVGFrame::AttributeChanged(%s)\n",
+//           NS_LossyConvertUCS2toASCII(str).get());
+//  }
 #endif
-
-  virtual nsIFrame* HitTest(nsDisplayListBuilder* aBuilder, nsPoint aPt);
-  virtual void Paint(nsDisplayListBuilder* aBuilder, nsIRenderingContext* aCtx,
-     const nsRect& aDirtyRect);
-  NS_DISPLAY_DECL_NAME("SVGEventReceiver")
-};
-
-nsIFrame*
-nsDisplaySVG::HitTest(nsDisplayListBuilder* aBuilder, nsPoint aPt)
-{
-  return NS_STATIC_CAST(nsSVGOuterSVGFrame*, mFrame)->
-    GetFrameForPoint(aPt - aBuilder->ToReferenceFrame(mFrame));
+  return NS_OK;
 }
 
-void
-nsDisplaySVG::Paint(nsDisplayListBuilder* aBuilder, nsIRenderingContext* aCtx,
-     const nsRect& aDirtyRect)
-{
-  NS_STATIC_CAST(nsSVGOuterSVGFrame*, mFrame)->
-    Paint(*aCtx, aDirtyRect, aBuilder->ToReferenceFrame(mFrame));
-}
 
-nsIFrame*
-nsSVGOuterSVGFrame::GetFrameForPoint(const nsPoint& aPoint)
+nsresult
+nsSVGOuterSVGFrame::GetFrameForPoint(const nsPoint& aPoint,
+                                     nsFramePaintLayer aWhichLayer,
+                                     nsIFrame**     aFrame)
 {
   // XXX This algorithm is really bad. Because we only have a
   // singly-linked list we have to test each and every SVG element for
   // a hit. What we really want is a double-linked list.
+  
 
-  float x = GetPresContext()->AppUnitsToDevPixels(aPoint.x);
-  float y = GetPresContext()->AppUnitsToDevPixels(aPoint.y);
-
-  nsRect thisRect(nsPoint(0,0), GetSize());
-  if (!thisRect.Contains(aPoint)) {
-    return nsnull;
+  *aFrame = nsnull;
+  if (aWhichLayer != NS_FRAME_PAINT_LAYER_FOREGROUND) return NS_ERROR_FAILURE;
+  
+  float x = GetPxPerTwips() * ( aPoint.x - mRect.x);
+  float y = GetPxPerTwips() * ( aPoint.y - mRect.y);
+  
+  PRBool inThisFrame = mRect.Contains(aPoint);
+  
+  if (!inThisFrame || !mRenderer) {
+    return NS_ERROR_FAILURE;
   }
 
-  nsIFrame* hit;
-  nsSVGUtils::HitTestChildren(this, x, y, &hit);
-
-  return hit;
+  *aFrame = this;
+  nsIFrame* hit = nsnull;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      nsresult rv = SVGFrame->GetFrameForPointSVG(x, y, &hit);
+      if (NS_SUCCEEDED(rv) && hit) {
+        *aFrame = hit;
+        // return NS_OK; can't return. we need reverse order but only
+        // have a singly linked list...
+      }
+    }
+  }
+    
+  return NS_OK;
 }
+
+
 
 //----------------------------------------------------------------------
 // painting
 
 NS_IMETHODIMP
-nsSVGOuterSVGFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                                     const nsRect&           aDirtyRect,
-                                     const nsDisplayListSet& aLists)
+nsSVGOuterSVGFrame::Paint(nsPresContext* aPresContext,
+                          nsIRenderingContext& aRenderingContext,
+                          const nsRect& aDirtyRect,
+                          nsFramePaintLayer aWhichLayer,
+                          PRUint32 aFlags)
 {
-  // XXX Not sure why this nsSVGOuterSVGFrame::Paint doesn't paint its
-  // background or respect CSS visiblity
-  return aLists.Content()->AppendNewToTop(new (aBuilder) nsDisplaySVG(this));
-}
+  
+//    if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
+//      if (GetStyleDisplay()->IsVisible() && mRect.width && mRect.height) {
+//        // Paint our background and border
+//        const nsStyleBorder* border = GetStyleBorder();
+//        const nsStylePadding* padding = GetStylePadding();
+//        const nsStyleOutline* outline = GetStyleOutline();
 
-void
-nsSVGOuterSVGFrame::Paint(nsIRenderingContext& aRenderingContext,
-                          const nsRect& aDirtyRect, nsPoint aPt)
-{
+//        nsRect  rect(0, 0, mRect.width, mRect.height);
+// //       nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+// //                                       aDirtyRect, rect, *border, *padding, PR_TRUE);
+//        nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+//                                    aDirtyRect, rect, *border, mStyleContext, 0);
+//        nsCSSRendering::PaintOutline(aPresContext, aRenderingContext, this,
+//                                    aDirtyRect, rect, *border, *outline, mStyleContext, 0);
+      
+//      }
+//    }
+
+  if (aWhichLayer != NS_FRAME_PAINT_LAYER_FOREGROUND) return NS_OK;
+  if (aDirtyRect.width<=0 || aDirtyRect.height<=0) return NS_OK;
+
 #if defined(DEBUG) && defined(SVG_DEBUG_PRINTING)
   {
     nsCOMPtr<nsIDeviceContext>  dx;
@@ -446,7 +799,7 @@ nsSVGOuterSVGFrame::Paint(nsIRenderingContext& aRenderingContext,
     float twipsPerPx = aPresContext->PixelsToTwips();
     printf("tw/sc(px)=%f tw/px=%f\n", twipsPerScPx, twipsPerPx);
     int fontsc;
-    GetPresContext()->GetFontScaler(&fontsc);
+    aPresContext->GetFontScaler(&fontsc);
     printf("font scale=%d\n",fontsc);
     printf("]\n");
   }
@@ -455,37 +808,50 @@ nsSVGOuterSVGFrame::Paint(nsIRenderingContext& aRenderingContext,
   // initialize Mozilla rendering context
   aRenderingContext.PushState();
   
-  nsRect clipRect;
-  clipRect.IntersectRect(aDirtyRect, nsRect(aPt, GetSize()));
-  aRenderingContext.SetClipRect(clipRect, nsClipCombine_kIntersect);
-  aRenderingContext.Translate(aPt.x, aPt.y);
-  nsRect dirtyRect = clipRect - aPt;
+  aRenderingContext.SetClipRect(aDirtyRect, nsClipCombine_kIntersect);
 
 #if defined(DEBUG) && defined(SVG_DEBUG_PAINT_TIMING)
   PRTime start = PR_Now();
 #endif
 
-  dirtyRect.ScaleRoundOut(1.0f / GetPresContext()->AppUnitsPerDevPixel());
+  float pxPerTwips = GetPxPerTwips();
+  int x0 = (int)(aDirtyRect.x*pxPerTwips);
+  int y0 = (int)(aDirtyRect.y*pxPerTwips);
+  int x1 = (int)ceil((aDirtyRect.x+aDirtyRect.width)*pxPerTwips);
+  int y1 = (int)ceil((aDirtyRect.y+aDirtyRect.height)*pxPerTwips);
+  NS_ASSERTION(x0>=0 && y0>=0, "unexpected negative coordinates");
+  NS_ASSERTION(x1-x0>0 && y1-y0>0, "zero sized dirtyRect");
+  nsRect dirtyRectPx(x0, y0, x1-x0, y1-y0);
 
-  nsSVGRenderState ctx(&aRenderingContext);
+  // If we don't have a renderer due to the component failing
+  // to load (gdi+ or cairo not available), indicate to the user
+  // what's going on by drawing a red "X" at the appropriate spot.
+  if (!mRenderer) {
+    aRenderingContext.SetColor(NS_RGB(255,0,0));
+    aRenderingContext.DrawLine(mRect.x, mRect.y,
+                               mRect.x + mRect.width, mRect.y + mRect.height);
+    aRenderingContext.DrawLine(mRect.x + mRect.width, mRect.y,
+                               mRect.x, mRect.y + mRect.height);
+    aRenderingContext.PopState();
+    return NS_OK;
+  }
 
-  // nquartz fallback paths, which svg tends to trigger, need
-  // a non-window context target
-#ifdef XP_MACOSX
-  ctx.GetGfxContext()->PushGroup(gfxASurface::CONTENT_COLOR_ALPHA);
-#endif
+  nsCOMPtr<nsISVGRendererCanvas> canvas;
+  mRenderer->CreateCanvas(&aRenderingContext, aPresContext, dirtyRectPx,
+                          getter_AddRefs(canvas));
 
   // paint children:
   for (nsIFrame* kid = mFrames.FirstChild(); kid;
        kid = kid->GetNextSibling()) {
-    nsSVGUtils::PaintChildWithEffects(&ctx, &dirtyRect, kid);
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame)
+      SVGFrame->PaintSVG(canvas, aDirtyRect);
   }
+  
+  canvas->Flush();
 
-// show the surface we pushed earlier for nquartz fallbacks
-#ifdef XP_MACOSX
-  ctx.GetGfxContext()->PopGroupToSource();
-  ctx.GetGfxContext()->Paint();
-#endif
+  canvas = nsnull;
 
 #if defined(DEBUG) && defined(SVG_DEBUG_PAINT_TIMING)
   PRTime end = PR_Now();
@@ -493,41 +859,94 @@ nsSVGOuterSVGFrame::Paint(nsIRenderingContext& aRenderingContext,
 #endif
   
   aRenderingContext.PopState();
+  
+  return NS_OK;
+  // see if we have to draw a selection frame around this container
+  //return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
 }
 
 nsIAtom *
 nsSVGOuterSVGFrame::GetType() const
 {
-  return nsGkAtoms::svgOuterSVGFrame;
+  return nsLayoutAtoms::svgOuterSVGFrame;
+}
+
+PRBool
+nsSVGOuterSVGFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~nsIFrame::eSVG);
 }
 
 //----------------------------------------------------------------------
-// nsSVGOuterSVGFrame methods:
+// nsISVGValueObserver methods:
 
-nsresult
-nsSVGOuterSVGFrame::InvalidateRect(nsRect aRect)
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::WillModifySVGObservable(nsISVGValue* observable,
+                                            nsISVGValue::modificationType aModType)
 {
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::DidModifySVGObservable(nsISVGValue* observable,
+                                           nsISVGValue::modificationType aModType)
+{
+  mNeedsReflow = PR_TRUE;
+  if (mRedrawSuspendCount==0) {
+    InitiateReflow();
+  }
+  
+  return NS_OK;
+}
+
+
+//----------------------------------------------------------------------
+// nsISVGOuterSVGFrame methods:
+
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::InvalidateRegion(nsISVGRendererRegion* region, PRBool bRedraw)
+{
+//  NS_ASSERTION(mView, "need a view!");
+//  if (!mView) return NS_ERROR_FAILURE;
+  
+  if (!region && !bRedraw) return NS_OK;
+
   // just ignore invalidates if painting is suppressed by the shell
   PRBool suppressed = PR_FALSE;
   GetPresContext()->PresShell()->IsPaintingSuppressed(&suppressed);
-  if (suppressed)
-    return NS_OK;
+  if (suppressed) return NS_OK;
   
   nsIView* view = GetClosestView();
   NS_ENSURE_TRUE(view, NS_ERROR_FAILURE);
 
   nsIViewManager* vm = view->GetViewManager();
 
-  aRect.ScaleRoundOut(GetPresContext()->AppUnitsPerDevPixel());
-  vm->UpdateView(view, aRect, NS_VMREFRESH_NO_SYNC);
-
+  vm->BeginUpdateViewBatch();
+  if (region) {
+    nsCOMPtr<nsISVGRectangleSink> sink = CreateVMRectInvalidator(vm, view,
+                                                                 (int)(GetTwipsPerPx()+0.5f));
+    NS_ASSERTION(sink, "could not create rectangle sink for viewmanager");
+    if (sink)
+      region->GetRectangleScans(sink);
+  }
+  vm->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
+  
   return NS_OK;
 }
 
-nsresult
+NS_IMETHODIMP
 nsSVGOuterSVGFrame::IsRedrawSuspended(PRBool* isSuspended)
 {
   *isSuspended = (mRedrawSuspendCount>0) || !mViewportInitialized;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGOuterSVGFrame::GetRenderer(nsISVGRenderer**renderer)
+{
+  *renderer = mRenderer;
+  NS_IF_ADDREF(*renderer);
   return NS_OK;
 }
 
@@ -538,6 +957,9 @@ nsSVGOuterSVGFrame::IsRedrawSuspended(PRBool* isSuspended)
 NS_IMETHODIMP
 nsSVGOuterSVGFrame::SuspendRedraw()
 {
+  if (!mRenderer)
+    return NS_OK;
+
 #ifdef DEBUG
   //printf("suspend redraw (count=%d)\n", mRedrawSuspendCount);
 #endif
@@ -558,6 +980,9 @@ nsSVGOuterSVGFrame::SuspendRedraw()
 NS_IMETHODIMP
 nsSVGOuterSVGFrame::UnsuspendRedraw()
 {
+  if (!mRenderer)
+    return NS_OK;
+
 #ifdef DEBUG
 //  printf("unsuspend redraw (count=%d)\n", mRedrawSuspendCount);
 #endif
@@ -586,6 +1011,9 @@ nsSVGOuterSVGFrame::UnsuspendRedraw()
 NS_IMETHODIMP
 nsSVGOuterSVGFrame::NotifyViewportChange()
 {
+  if (!mRenderer)
+    return NS_OK;
+
   // no point in doing anything when were not init'ed yet:
   if (!mViewportInitialized) return NS_OK;
 
@@ -596,10 +1024,10 @@ nsSVGOuterSVGFrame::NotifyViewportChange()
   SuspendRedraw();
   nsIFrame* kid = mFrames.FirstChild();
   while (kid) {
-    nsISVGChildFrame* SVGFrame = nsnull;
-    CallQueryInterface(kid, &SVGFrame);
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame)
-      SVGFrame->NotifyCanvasTMChanged(PR_FALSE); 
+      SVGFrame->NotifyCanvasTMChanged(); 
     kid = kid->GetNextSibling();
   }
   UnsuspendRedraw();
@@ -607,13 +1035,20 @@ nsSVGOuterSVGFrame::NotifyViewportChange()
 }
 
 //----------------------------------------------------------------------
-// nsSVGContainerFrame methods:
+// nsISVGContainerFrame methods:
+
+nsISVGOuterSVGFrame *
+nsSVGOuterSVGFrame::GetOuterSVGFrame()
+{
+  return this;
+}
 
 already_AddRefed<nsIDOMSVGMatrix>
 nsSVGOuterSVGFrame::GetCanvasTM()
 {
   if (!mCanvasTM) {
-    nsSVGSVGElement *svgElement = NS_STATIC_CAST(nsSVGSVGElement*, mContent);
+    nsCOMPtr<nsIDOMSVGSVGElement> svgElement = do_QueryInterface(mContent);
+    NS_ASSERTION(svgElement, "wrong content element");
     svgElement->GetViewboxToViewportTransform(getter_AddRefs(mCanvasTM));
 
     if (mZoomAndPan) {
@@ -656,18 +1091,86 @@ nsSVGOuterSVGFrame::GetCoordContextProvider()
 //----------------------------------------------------------------------
 // Implementation helpers
 
+float nsSVGOuterSVGFrame::GetPxPerTwips()
+{
+  float val = GetTwipsPerPx();
+  
+  NS_ASSERTION(val!=0.0f, "invalid px/twips");  
+  if (val == 0.0) val = 1e-20f;
+  
+  return 1.0f/val;
+}
+
+float nsSVGOuterSVGFrame::GetTwipsPerPx()
+{
+  return GetPresContext()->ScaledPixelsToTwips();
+}
+
 void nsSVGOuterSVGFrame::InitiateReflow()
 {
   mNeedsReflow = PR_FALSE;
   
+  // Generate a reflow command to reflow ourselves
   nsIPresShell* presShell = GetPresContext()->PresShell();
-  presShell->FrameNeedsReflow(this, nsIPresShell::eStyleChange);
+  presShell->AppendReflowCommand(this, eReflowType_ReflowDirty, nsnull);
   // XXXbz why is this synchronously flushing reflows, exactly?  If it
   // needs to, why is it not using the presshell's reflow batching
   // instead of hacking its own?
   presShell->FlushPendingNotifications(Flush_OnlyReflow);  
 }
 
+
+void nsSVGOuterSVGFrame::AddAsWidthHeightObserver()
+{
+  nsCOMPtr<nsIDOMSVGSVGElement> svgElement = do_QueryInterface(mContent);
+  NS_ASSERTION(svgElement, "wrong content element");  
+ 
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> animLength;
+    svgElement->GetWidth(getter_AddRefs(animLength));
+    NS_ASSERTION(animLength, "could not get <svg>:width");
+    nsCOMPtr<nsIDOMSVGLength> length;
+    animLength->GetAnimVal(getter_AddRefs(length));
+    NS_ASSERTION(length, "could not get <svg>:width:animval");
+    NS_ADD_SVGVALUE_OBSERVER(length);
+  }
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> animLength;
+    svgElement->GetHeight(getter_AddRefs(animLength));
+    NS_ASSERTION(animLength, "could not get <svg>:height");
+    nsCOMPtr<nsIDOMSVGLength> length;
+    animLength->GetAnimVal(getter_AddRefs(length));
+    NS_ASSERTION(length, "could not get <svg>:height:animval");
+    NS_ADD_SVGVALUE_OBSERVER(length);
+  }  
+}
+
+void nsSVGOuterSVGFrame::RemoveAsWidthHeightObserver()
+{
+  nsCOMPtr<nsIDOMSVGSVGElement> svgElement = do_QueryInterface(mContent);
+  NS_ASSERTION(svgElement, "wrong content element");  
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> animLength;
+    svgElement->GetWidth(getter_AddRefs(animLength));
+    NS_ASSERTION(animLength, "could not get <svg>:width");
+    nsCOMPtr<nsIDOMSVGLength> length;
+    animLength->GetAnimVal(getter_AddRefs(length));
+    NS_ASSERTION(length, "could not get <svg>:width:animval");
+    NS_REMOVE_SVGVALUE_OBSERVER(length);
+  }
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> animLength;
+    svgElement->GetHeight(getter_AddRefs(animLength));
+    NS_ASSERTION(animLength, "could not get <svg>:height");
+    nsCOMPtr<nsIDOMSVGLength> length;
+    animLength->GetAnimVal(getter_AddRefs(length));
+    NS_ASSERTION(length, "could not get <svg>:height:animval");
+    NS_REMOVE_SVGVALUE_OBSERVER(length);
+  }  
+}
 
 void
 nsSVGOuterSVGFrame::CalculateAvailableSpace(nsRect *maxRect,
@@ -677,12 +1180,11 @@ nsSVGOuterSVGFrame::CalculateAvailableSpace(nsRect *maxRect,
 {
   *preferredRect = aPresContext->GetVisibleArea();
   
-  // XXXldb What about margin?
   if (aReflowState.availableWidth != NS_INTRINSICSIZE)
     maxRect->width = aReflowState.availableWidth;
   else if (aReflowState.parentReflowState &&
-           aReflowState.parentReflowState->ComputedWidth() != NS_INTRINSICSIZE)
-    maxRect->width = aReflowState.parentReflowState->ComputedWidth();
+           aReflowState.parentReflowState->mComputedWidth != NS_INTRINSICSIZE)
+    maxRect->width = aReflowState.parentReflowState->mComputedWidth;
   else
     maxRect->width = NS_MAXSIZE;
   

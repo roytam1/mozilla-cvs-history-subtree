@@ -146,7 +146,6 @@ var gEngineManagerDialog = {
     gEngineView.invalidate();
     gEngineView.selection.select(newIndex);
     gEngineView.ensureRowIsVisible(newIndex);
-    this.showRestoreDefaults(true);
     document.getElementById("engineList").focus();
   },
 
@@ -456,7 +455,6 @@ EngineView.prototype = {
     }
 
     this._engineStore.moveEngine(sourceEngine, dropIndex);
-    gEngineManagerDialog.showRestoreDefaults(true);
 
     // Redraw, and adjust selection
     this.invalidate();
@@ -483,7 +481,6 @@ EngineView.prototype = {
   selectionChanged: function() { },
   cycleCell: function(row, column) { },
   isEditable: function(index, column) { return false; },
-  isSelectable: function(index, column) { return false; },
   setCellValue: function(index, column, value) { },
   setCellText: function(index, column, value) { },
   performAction: function(action) { },

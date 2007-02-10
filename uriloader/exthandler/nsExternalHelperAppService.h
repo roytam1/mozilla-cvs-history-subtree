@@ -67,15 +67,14 @@
 #include "nsIChannel.h"
 #include "nsITimer.h"
 
-#ifdef MOZ_RDF
 #include "nsIRDFDataSource.h"
 #include "nsIRDFResource.h"
-#endif
 #include "nsCOMPtr.h"
 #include "nsIObserver.h"
 #include "nsCOMArray.h"
 #include "nsWeakReference.h"
 #include "nsIPrompt.h"
+#include "nsEventQueueUtils.h"
 
 class nsExternalAppHandler;
 class nsIMIMEInfo;
@@ -196,7 +195,6 @@ protected:
    * Pointer to the datasource that contains the user override information.
    * @see InitDataSource
    */
-#ifdef MOZ_RDF
   nsCOMPtr<nsIRDFDataSource> mOverRideDataSource;
 
   nsCOMPtr<nsIRDFResource> kNC_Description;
@@ -208,7 +206,6 @@ protected:
   nsCOMPtr<nsIRDFResource> kNC_AlwaysAsk;
   nsCOMPtr<nsIRDFResource> kNC_HandleInternal;
   nsCOMPtr<nsIRDFResource> kNC_PrettyName;
-#endif
 
   /**
    * Whether mOverRideDataSource is initialized
@@ -220,7 +217,6 @@ protected:
    * object for a given content type inside that data source.
    * The content type of the MIME Info will not be changed.
    */
-#ifdef MOZ_RDF
   NS_HIDDEN_(nsresult) FillTopLevelProperties(nsIRDFResource * aContentTypeNodeResource, 
                                               nsIRDFService * aRDFService,
                                               nsIMIMEInfo * aMIMEInfo);
@@ -240,7 +236,6 @@ protected:
   NS_HIDDEN_(nsresult) FillLiteralValueFromTarget(nsIRDFResource * aSource,
                                                   nsIRDFResource * aProperty,
                                                   const PRUnichar ** aLiteralValue);
-#endif
 
   /**
    * Searches the "extra" array of MIMEInfo objects for an object
@@ -290,7 +285,6 @@ protected:
 #endif
   // friend, so that it can access the nspr log module and FixFilePermissions
   friend class nsExternalAppHandler;
-  friend class nsExternalLoadRequest;
 
   /**
    * Functions related to the tempory file cleanup service provided by
@@ -308,6 +302,9 @@ protected:
   virtual NS_HIDDEN_(nsresult) LoadUriInternal(nsIURI * aURL) = 0;
   NS_HIDDEN_(PRBool) isExternalLoadOK(nsIURI* aURI, nsIPrompt* aPrompt);
   NS_HIDDEN_(PRBool) promptForScheme(nsIURI* aURI, nsIPrompt* aPrompt, PRBool *aRemember);
+
+  // friend event handler that accesses the external loading functions
+  static void *PR_CALLBACK handleExternalLoadEvent(PLEvent *event);
 };
 
 /**
@@ -399,8 +396,6 @@ protected:
   PRPackedBool mReceivedDispositionInfo;
   PRPackedBool mStopRequestIssued; 
   PRPackedBool mProgressListenerInitialized;
-
-  PRPackedBool mIsFileChannel;
 
   /**
    * One of the REASON_ constants from nsIHelperAppLauncherDialog. Indicates the

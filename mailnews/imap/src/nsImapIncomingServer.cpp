@@ -56,7 +56,7 @@
 #include "nsIMsgIdentity.h"
 #include "nsIImapUrl.h"
 #include "nsIUrlListener.h"
-#include "nsThreadUtils.h"
+#include "nsIEventQueue.h"
 #include "nsImapProtocol.h"
 #include "nsISupportsArray.h"
 #include "nsVoidArray.h"
@@ -75,6 +75,7 @@
 #include "nsIRDFService.h"
 #include "nsRDFCID.h"
 #include "nsEnumeratorUtils.h"
+#include "nsIEventQueueService.h"
 #include "nsIMsgMailNewsUrl.h"
 #include "nsIImapService.h"
 #include "nsMsgI18N.h"
@@ -99,6 +100,7 @@
 
 static NS_DEFINE_CID(kImapProtocolCID, NS_IMAPPROTOCOL_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kImapServiceCID, NS_IMAPSERVICE_CID);
 static NS_DEFINE_CID(kSubscribableServerCID, NS_SUBSCRIBABLESERVER_CID);
 static NS_DEFINE_CID(kCImapHostSessionListCID, NS_IIMAPHOSTSESSIONLIST_CID);
@@ -436,14 +438,14 @@ nsImapIncomingServer::SetIsAOLServer(PRBool aBool)
 
 
 NS_IMETHODIMP
-nsImapIncomingServer::GetImapConnectionAndLoadUrl(nsIEventTarget * aClientEventTarget,
+nsImapIncomingServer::GetImapConnectionAndLoadUrl(nsIEventQueue * aClientEventQueue,
                                                   nsIImapUrl* aImapUrl,
                                                   nsISupports* aConsumer)
 {
   nsresult rv = NS_OK;
   nsCOMPtr <nsIImapProtocol> aProtocol;
   
-  rv = GetImapConnection(aClientEventTarget, aImapUrl, getter_AddRefs(aProtocol));
+  rv = GetImapConnection(aClientEventQueue, aImapUrl, getter_AddRefs(aProtocol));
   if (NS_FAILED(rv)) return rv;
 
   nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(aImapUrl, &rv);
@@ -482,10 +484,16 @@ NS_IMETHODIMP
 nsImapIncomingServer::RetryUrl(nsIImapUrl *aImapUrl)
 {
   nsresult rv;
+  nsCOMPtr <nsIEventQueue> aEventQueue;
   // Get current thread envent queue
+  nsCOMPtr<nsIEventQueueService> pEventQService = 
+    do_GetService(kEventQueueServiceCID, &rv); 
+  if (NS_SUCCEEDED(rv) && pEventQService)
+    pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
+    getter_AddRefs(aEventQueue));
   nsCOMPtr <nsIImapProtocol> protocolInstance;
   nsImapProtocol::LogImapUrl("creating protocol instance to retry queued url", aImapUrl);
-  rv = GetImapConnection(NS_GetCurrentThread(), aImapUrl, getter_AddRefs(protocolInstance));
+  rv = GetImapConnection(aEventQueue, aImapUrl, getter_AddRefs(protocolInstance));
   if (NS_SUCCEEDED(rv) && protocolInstance)
   {
     nsCOMPtr<nsIURI> url = do_QueryInterface(aImapUrl, &rv);
@@ -657,6 +665,7 @@ nsImapIncomingServer::ConnectionTimeOut(nsIImapProtocol* aConnection)
     if (!aConnection) return retVal;
     nsresult rv;
 
+    PR_CEnterMonitor(this);
     PRInt32 timeoutInMinutes = 0;
     rv = GetTimeOutLimits(&timeoutInMinutes);
     if (NS_FAILED(rv) || timeoutInMinutes <= 0 || timeoutInMinutes > 29)
@@ -682,16 +691,17 @@ nsImapIncomingServer::ConnectionTimeOut(nsIImapProtocol* aConnection)
                                                               &rv));
         if (NS_SUCCEEDED(rv) && aProtocol)
         {
-            RemoveConnection(aConnection);
+            m_connectionCache->RemoveElement(aConnection);
             aProtocol->TellThreadToDie(PR_FALSE);
             retVal = PR_TRUE;
         }
     }
+    PR_CExitMonitor(this);
     return retVal;
 }
 
 nsresult
-nsImapIncomingServer::GetImapConnection(nsIEventTarget *aEventTarget, 
+nsImapIncomingServer::GetImapConnection(nsIEventQueue *aEventQueue, 
                                            nsIImapUrl * aImapUrl, 
                                            nsIImapProtocol ** aImapConnection)
 {
@@ -853,10 +863,10 @@ nsImapIncomingServer::GetImapConnection(nsIEventTarget *aEventTarget,
   // (e.g., a folder delete or msg append) but we shouldn't create new connections
   // for these types of urls if we have a free connection. So we check the actual
   // required state here.
-  else if (cnt < ((PRUint32)maxConnections) && aEventTarget 
+  else if (cnt < ((PRUint32)maxConnections) && aEventQueue 
       && (!freeConnection || requiredState == nsIImapUrl::nsImapSelectedState))
   {	
-    rv = CreateProtocolInstance(aEventTarget, aImapConnection);
+    rv = CreateProtocolInstance(aEventQueue, aImapConnection);
   }
   else if (freeConnection)
   {
@@ -876,7 +886,7 @@ nsImapIncomingServer::GetImapConnection(nsIEventTarget *aEventTarget,
 }
 
 nsresult
-nsImapIncomingServer::CreateProtocolInstance(nsIEventTarget *aEventTarget, 
+nsImapIncomingServer::CreateProtocolInstance(nsIEventQueue *aEventQueue, 
                                              nsIImapProtocol ** aImapConnection)
 {
   // create a new connection and add it to the connection cache
@@ -899,7 +909,7 @@ nsImapIncomingServer::CreateProtocolInstance(nsIEventTarget *aEventTarget,
     nsCOMPtr<nsIImapHostSessionList> hostSession = 
       do_GetService(kCImapHostSessionListCID, &rv);
     if (NS_SUCCEEDED(rv))
-      rv = protocolInstance->Initialize(hostSession, this, aEventTarget);
+      rv = protocolInstance->Initialize(hostSession, this, aEventQueue);
   }
   
   // take the protocol instance and add it to the connectionCache
@@ -1003,8 +1013,16 @@ nsImapIncomingServer::PerformExpand(nsIMsgWindow *aMsgWindow)
     nsCOMPtr<nsIImapService> imapService = do_GetService(kImapServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
     if (!imapService) return NS_ERROR_FAILURE;
-    rv = imapService->DiscoverAllFolders(NS_GetCurrentThread(), rootMsgFolder,
-                                         this, aMsgWindow, nsnull);
+    nsCOMPtr<nsIEventQueue> queue;
+    // get the Event Queue for this thread...
+    nsCOMPtr<nsIEventQueueService> pEventQService = 
+             do_GetService(kEventQueueServiceCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+	if (!pEventQService) return NS_ERROR_FAILURE;
+ 
+    rv = pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(queue));
+    if (NS_FAILED(rv)) return rv;
+    rv = imapService->DiscoverAllFolders(queue, rootMsgFolder, this, aMsgWindow, nsnull);
  	return rv; 	
 }
 
@@ -1575,7 +1593,7 @@ NS_IMETHODIMP nsImapIncomingServer::ConvertFolderName(const char *originalName, 
   if (NS_SUCCEEDED(rv) && (nsnull != sBundleService)) 
     rv = sBundleService->CreateBundle(propertyURL.get(), getter_AddRefs(stringBundle));
   if (NS_SUCCEEDED(rv))
-    rv = stringBundle->GetStringFromName(NS_ConvertASCIItoUTF16(originalName).get(), convertedName);
+    rv = stringBundle->GetStringFromName(NS_ConvertASCIItoUCS2(originalName).get(), convertedName);
 
   if (NS_SUCCEEDED(rv) && ((!*convertedName) || (!**convertedName)))
     return NS_ERROR_FAILURE;
@@ -2345,7 +2363,7 @@ NS_IMETHODIMP nsImapIncomingServer::PromptForPassword(char ** aPassword,
     }
 
     nsXPIDLString passwordText;
-    rv = GetFormattedStringFromID(NS_ConvertASCIItoUTF16(promptValue).get(), IMAP_ENTER_PASSWORD_PROMPT, getter_Copies(passwordText));
+    rv = GetFormattedStringFromID(NS_ConvertASCIItoUCS2(promptValue).get(), IMAP_ENTER_PASSWORD_PROMPT, getter_Copies(passwordText));
     NS_ENSURE_SUCCESS(rv,rv);
 
     rv =  GetPasswordWithUI(passwordText, passwordTitle, aMsgWindow,
@@ -2561,13 +2579,19 @@ NS_IMETHODIMP nsImapIncomingServer::OnLogonRedirectionError(const PRUnichar *pEr
     if (urlQueueCnt > 0)
     {
       nsCOMPtr <nsIImapProtocol> imapProtocol;
+      nsCOMPtr <nsIEventQueue> aEventQueue;
+      // Get current thread envent queue
+      nsCOMPtr<nsIEventQueueService> pEventQService = 
+        do_GetService(kEventQueueServiceCID, &rv); 
+      if (NS_SUCCEEDED(rv) && pEventQService)
+        pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
+        getter_AddRefs(aEventQueue));
       
       if (aImapUrl)
       {       
         nsCOMPtr <nsIImapProtocol>  protocolInstance ;
         m_waitingForConnectionInfo = PR_FALSE;
-        rv = GetImapConnection(NS_GetCurrentThread(), aImapUrl,
-                               getter_AddRefs(protocolInstance));
+        rv = GetImapConnection(aEventQueue, aImapUrl, getter_AddRefs(protocolInstance));
         // If users cancel the login then we need to reset url state.
         if (rv == NS_BINDING_ABORTED)
           resetUrlState = PR_TRUE;
@@ -2609,7 +2633,14 @@ NS_IMETHODIMP nsImapIncomingServer::OnLogonRedirectionReply(const PRUnichar *pHo
   PRBool urlRun = PR_FALSE;
   nsresult rv;
   nsCOMPtr <nsIImapProtocol> imapProtocol;
+  nsCOMPtr <nsIEventQueue> aEventQueue;
   nsCAutoString cookie(pCookieData, pCookieSize);
+  // Get current thread envent queue
+  nsCOMPtr<nsIEventQueueService> pEventQService = 
+    do_GetService(kEventQueueServiceCID, &rv); 
+  if (NS_SUCCEEDED(rv) && pEventQService)
+    pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
+    getter_AddRefs(aEventQueue));
   // we used to logoff the external requestor...we no longer need to do
   // that.
   
@@ -2627,8 +2658,7 @@ NS_IMETHODIMP nsImapIncomingServer::OnLogonRedirectionReply(const PRUnichar *pHo
       nsCOMPtr<nsISupports> aConsumer = (nsISupports*)m_urlConsumers.ElementAt(0);
       
       nsCOMPtr <nsIImapProtocol>  protocolInstance ;
-      rv = GetImapConnection(NS_GetCurrentThread(), aImapUrl,
-                             getter_AddRefs(protocolInstance));
+      rv = GetImapConnection(aEventQueue, aImapUrl, getter_AddRefs(protocolInstance));
       m_waitingForConnectionInfo = PR_FALSE;
       if (NS_SUCCEEDED(rv) && protocolInstance)
       {
@@ -2930,16 +2960,23 @@ nsImapIncomingServer::SubscribeToFolder(const PRUnichar *aName, PRBool subscribe
     rv = rootMsgFolder->FindSubFolder(folderCName, getter_AddRefs(msgFolder));
   }
   
-  nsIThread *thread = NS_GetCurrentThread();
+  nsCOMPtr<nsIEventQueue> queue;
+  // get the Event Queue for this thread...
+  nsCOMPtr<nsIEventQueueService> pEventQService = 
+    do_GetService(kEventQueueServiceCID, &rv);
+  if (NS_FAILED(rv)) return rv;
+  
+  rv = pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(queue));
+  if (NS_FAILED(rv)) return rv;
 
   nsAutoString unicodeName;
   rv = CopyMUTF7toUTF16(folderCName, unicodeName);
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (subscribe)
-    rv = imapService->SubscribeFolder(thread, msgFolder, unicodeName.get(), nsnull, aUri);
+    rv = imapService->SubscribeFolder(queue, msgFolder, unicodeName.get(), nsnull, aUri);
   else 
-    rv = imapService->UnsubscribeFolder(thread, msgFolder, unicodeName.get(), nsnull, nsnull);
+    rv = imapService->UnsubscribeFolder(queue, msgFolder, unicodeName.get(), nsnull, nsnull);
   
   if (NS_FAILED(rv)) return rv;
   return NS_OK;

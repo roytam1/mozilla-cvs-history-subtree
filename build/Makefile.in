@@ -50,10 +50,6 @@ ifeq (,$(filter WINCE WINNT OS2,$(OS_ARCH)))
 DIRS		= unix
 endif
 
-ifeq (WINNT,$(OS_ARCH))
-DIRS = win32
-endif
-
 include $(topsrcdir)/config/rules.mk
 
 # Install bloaturls.txt file for tinderbox bloat test.

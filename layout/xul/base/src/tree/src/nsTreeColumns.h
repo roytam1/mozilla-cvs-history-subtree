@@ -51,7 +51,7 @@ class nsTreeColumns;
 // information about each column.
 class nsTreeColumn : public nsITreeColumn {
 public:
-  nsTreeColumn(nsTreeColumns* aColumns, nsIContent* aContent);
+  nsTreeColumn(nsTreeColumns* aColumns, nsIFrame* aFrame);
   ~nsTreeColumn();
 
   NS_DECL_ISUPPORTS
@@ -61,20 +61,14 @@ public:
   friend class nsTreeColumns;
 
 protected:
-  nsIFrame* GetFrame();
-  nsIFrame* GetFrame(nsIFrame* aBodyFrame);
+  void CacheAttributes();
 
-  /**
-   * Returns a rect with x and width taken from the frame's rect and specified
-   * y and height. May fail in case there's no frame for the column.
-   */
-  nsresult GetRect(nsIFrame* aBodyFrame, nscoord aY, nscoord aHeight,
-                   nsRect* aResult);
-
-  nsresult GetXInTwips(nsIFrame* aBodyFrame, nscoord* aResult);
-  nsresult GetWidthInTwips(nsIFrame* aBodyFrame, nscoord* aResult);
+  nsIContent* GetContent() { return mFrame->GetContent(); };
 
   void SetColumns(nsTreeColumns* aColumns) { mColumns = aColumns; };
+
+  PRInt32 GetX() { return mFrame->GetRect().x; };
+  nscoord GetWidth() { return mFrame->GetRect().width; };
 
   const nsAString& GetId() { return mId; };
   nsIAtom* GetAtom() { return mAtom; };
@@ -84,8 +78,6 @@ protected:
   PRBool IsPrimary() { return mIsPrimary; };
   PRBool IsCycler() { return mIsCycler; };
   PRBool IsEditable() { return mIsEditable; };
-  PRBool IsSelectable() { return mIsSelectable; };
-  PRBool Overflow() { return mOverflow; };
 
   PRInt16 GetType() { return mType; };
 
@@ -98,10 +90,7 @@ protected:
   void SetPrevious(nsTreeColumn* aPrevious) { mPrevious = aPrevious; };
 
 private:
-  /**
-   * Non-null nsIContent for the associated <treecol> element.
-   */
-  nsCOMPtr<nsIContent> mContent;
+  nsIFrame* mFrame;
 
   nsTreeColumns* mColumns;
 
@@ -113,8 +102,6 @@ private:
   PRPackedBool mIsPrimary;
   PRPackedBool mIsCycler;
   PRPackedBool mIsEditable;
-  PRPackedBool mIsSelectable;
-  PRPackedBool mOverflow;
 
   PRInt16 mType;
 
@@ -124,14 +111,6 @@ private:
   nsTreeColumn* mNext;
   nsTreeColumn* mPrevious;
 };
-
-#define NS_TREECOLUMN_IMPL_CID                       \
-{ /* 02cd1963-4b5d-4a6c-9223-814d3ade93a3 */         \
-    0x02cd1963,                                      \
-    0x4b5d,                                          \
-    0x4a6c,                                          \
-    {0x92, 0x23, 0x81, 0x4d, 0x3a, 0xde, 0x93, 0xa3} \
-}
 
 class nsTreeColumns : public nsITreeColumns {
 public:
@@ -154,14 +133,6 @@ protected:
 private:
   nsITreeBoxObject* mTree;
 
-  /**
-   * The first column in the list of columns. All of the columns are supposed
-   * to be "alive", i.e. have a frame. This is achieved by clearing the columns
-   * list each time an nsTreeColFrame is destroyed.
-   *
-   * XXX this means that new nsTreeColumn objects are unnecessarily created
-   *     for untouched columns.
-   */
   nsTreeColumn* mFirstColumn;
 };
 

@@ -60,14 +60,11 @@
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
 #include "nsUnicharUtils.h"
-#include "nsILookAndFeel.h"
-#include "nsWidgetsCID.h"
+#include "nsIWordBreakerFactory.h"
+#include "nsLWBrkCIID.h"
 
 // for IBMBIDI
 #include "nsIPresShell.h"
-#include "nsFrameSelection.h"
-
-static NS_DEFINE_CID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
 
 #define CANCEL_OPERATION_IF_READONLY_OR_DISABLED \
   if ((mFlags & nsIPlaintextEditor::eEditorReadonlyMask) || (mFlags & nsIPlaintextEditor::eEditorDisabledMask)) \
@@ -170,14 +167,6 @@ nsTextEditRules::Init(nsPlaintextEditor *aEditor, PRUint32 aFlags)
     res = ReplaceNewlines(wholeDoc);
   }
 
-  PRBool deleteBidiImmediately = PR_FALSE;
-  nsCOMPtr<nsIPrefBranch> prefBranch =
-    do_GetService(NS_PREFSERVICE_CONTRACTID, &res);
-  if (NS_SUCCEEDED(res))
-    prefBranch->GetBoolPref("bidi.edit.delete_immediately",
-                            &deleteBidiImmediately);
-  mDeleteBidiImmediately = deleteBidiImmediately;
-
   return res;
 }
 
@@ -269,11 +258,10 @@ nsTextEditRules::AfterEdit(PRInt32 action, nsIEditor::EDirection aDirection)
      */
     if (action == nsEditor::kOpInsertText
         || action == nsEditor::kOpInsertIMEText) {
-      nsCOMPtr<nsISelectionPrivate> privateSelection(do_QueryInterface(selection));
-      nsCOMPtr<nsFrameSelection> frameSelection;
-      privateSelection->GetFrameSelection(getter_AddRefs(frameSelection));      
-      if (frameSelection) {
-        frameSelection->UndefineCaretBidiLevel();
+      nsCOMPtr<nsIPresShell> shell;
+      mEditor->GetPresShell(getter_AddRefs(shell));
+      if (shell) {
+        shell->UndefineCaretBidiLevel();
       }
     }
   }
@@ -466,7 +454,7 @@ nsTextEditRules::DidInsertBreak(nsISelection *aSelection, nsresult aResult)
   res = mEditor->GetStartNodeAndOffset(aSelection, address_of(selNode), &selOffset);
   if (NS_FAILED(res)) return res;
   // confirm we are at end of document
-  if (selOffset == 0) return NS_OK;  // can't be after a br if we are at offset 0
+  if (selOffset == 0) return NS_OK;  // cant be after a br if we are at offset 0
   nsIDOMElement *rootElem = mEditor->GetRoot();
 
   nsCOMPtr<nsIDOMNode> root = do_QueryInterface(rootElem);
@@ -569,73 +557,61 @@ nsTextEditRules::WillInsertText(PRInt32          aAction,
 
   // People have lots of different ideas about what text fields
   // should do with multiline pastes.  See bugs 21032, 23485, 23485, 50935.
-  // The six possible options are:
+  // The four possible options are:
   // 0. paste newlines intact
-  // 1. paste up to the first newline (default)
+  // 1. paste up to the first newline
   // 2. replace newlines with spaces
   // 3. strip newlines
   // 4. replace with commas
-  // 5. strip newlines and surrounding whitespace
   // So find out what we're expected to do:
+  enum {
+    ePasteIntact = 0, ePasteFirstLine = 1,
+    eReplaceWithSpaces = 2, eStripNewlines = 3, 
+    eReplaceWithCommas = 4
+  };
+  PRInt32 singleLineNewlineBehavior = 1;
+  nsCOMPtr<nsIPrefBranch> prefBranch =
+    do_GetService(NS_PREFSERVICE_CONTRACTID, &res);
+  if (NS_SUCCEEDED(res) && prefBranch)
+    res = prefBranch->GetIntPref("editor.singleLine.pasteNewlines",
+                                 &singleLineNewlineBehavior);
+
   if (nsIPlaintextEditor::eEditorSingleLineMask & mFlags)
   {
     nsAutoString tString(*outString);
 
-    switch(mEditor->mNewlineHandling)
+    if (singleLineNewlineBehavior == eReplaceWithSpaces)
     {
-    case nsIPlaintextEditor::eNewlinesReplaceWithSpaces:
-      tString.ReplaceChar(CRLF, ' ');
-      break;
-    case nsIPlaintextEditor::eNewlinesStrip:
-      tString.StripChars(CRLF);
-      break;
-    case nsIPlaintextEditor::eNewlinesPasteToFirst:
-    default:
-      {
-        PRInt32 firstCRLF = tString.FindCharInSet(CRLF);
+      //nsAString destString;
+      //NormalizeCRLF(outString,destString);
 
-        // we get first *non-empty* line.
-        PRInt32 offset = 0;
-        while (firstCRLF == offset)
-        {
-          offset++;
-          firstCRLF = tString.FindCharInSet(CRLF, offset);
-        }
-        if (firstCRLF > 0)
-          tString.Truncate(firstCRLF);
-        if (offset > 0)
-          tString.Cut(0, offset);
+      tString.ReplaceChar(CRLF, ' ');
+    }
+    else if (singleLineNewlineBehavior == eStripNewlines)
+      tString.StripChars(CRLF);
+    else if (singleLineNewlineBehavior == ePasteFirstLine)
+    {
+      PRInt32 firstCRLF = tString.FindCharInSet(CRLF);
+
+      // we get first *non-empty* line.
+      PRInt32 offset = 0;
+      while (firstCRLF == offset)
+      {
+        offset++;
+        firstCRLF = tString.FindCharInSet(CRLF, offset);
       }
-      break;
-    case nsIPlaintextEditor::eNewlinesReplaceWithCommas:
+      if (firstCRLF > 0)
+        tString.Truncate(firstCRLF);
+      if (offset > 0)
+        tString.Cut(0, offset);
+    }
+    else if (singleLineNewlineBehavior == eReplaceWithCommas)
+    {
       tString.Trim(CRLF, PR_TRUE, PR_TRUE);
       tString.ReplaceChar(CRLF, ',');
-      break;
-    case nsIPlaintextEditor::eNewlinesStripSurroundingWhitespace:
-      {
-        // find each newline, and strip all the whitespace before
-        // and after it
-        PRInt32 firstCRLF = tString.FindCharInSet(CRLF);
-        while (firstCRLF >= 0)
-        {
-          PRUint32 wsBegin = firstCRLF, wsEnd = firstCRLF + 1;
-          // look backwards for the first non-whitespace char
-          while (wsBegin > 0 && NS_IS_SPACE(tString[wsBegin - 1]))
-            --wsBegin;
-          while (wsEnd < tString.Length() && NS_IS_SPACE(tString[wsEnd]))
-            ++wsEnd;
-          // now cut this range out of the string
-          tString.Cut(wsBegin, wsEnd - wsBegin);
-          // look for another CR or LF
-          firstCRLF = tString.FindCharInSet(CRLF);
-        }
-      }
-      break;
-    case nsIPlaintextEditor::eNewlinesPasteIntact:
-      // even if we're pasting newlines, don't paste leading/trailing ones
-      tString.Trim(CRLF, PR_TRUE, PR_TRUE);
-      break;
     }
+    else // even if we're pasting newlines, don't paste leading/trailing ones
+      tString.Trim(CRLF, PR_TRUE, PR_TRUE);
 
     outString->Assign(tString);
   }
@@ -717,7 +693,7 @@ nsTextEditRules::WillInsertText(PRInt32          aAction,
         {
           if (nsIPlaintextEditor::eEditorSingleLineMask & mFlags)
           {
-            NS_ASSERTION((mEditor->mNewlineHandling == nsIPlaintextEditor::eNewlinesPasteIntact),
+            NS_ASSERTION((singleLineNewlineBehavior == ePasteIntact),
                   "Newline improperly getting into single-line edit field!");
             res = mEditor->InsertTextImpl(subStr, address_of(curNode), &curOffset, doc);
           }
@@ -918,7 +894,7 @@ nsTextEditRules::WillDeleteSelection(nsISelection *aSelection,
     if (bCollapsed)
     {
       // Test for distance between caret and text that will be deleted
-      res = CheckBidiLevelForDeletion(aSelection, startNode, startOffset, aCollapsedAction, aCancel);
+      res = CheckBidiLevelForDeletion(startNode, startOffset, aCollapsedAction, aCancel);
       if (NS_FAILED(res)) return res;
       if (*aCancel) return NS_OK;
 
@@ -1172,7 +1148,7 @@ nsTextEditRules::ReplaceNewlines(nsIDOMRange *aRange)
   if (!aRange) return NS_ERROR_NULL_POINTER;
   
   // convert any newlines in editable, preformatted text nodes 
-  // into normal breaks.  this is because layout won't give us a place 
+  // into normal breaks.  this is because layout wont give us a place 
   // to put the cursor on empty lines otherwise.
 
   nsresult res;
@@ -1424,20 +1400,13 @@ nsTextEditRules::EchoInsertionToPWBuff(PRInt32 aStart, PRInt32 aEnd, nsAString *
   // manage the password buffer
   mPasswordText.Insert(*aOutString, aStart);
 
-  // change the output to the platform password character
-  PRUnichar passwordChar = PRUnichar('*');
-  nsCOMPtr<nsILookAndFeel> lookAndFeel = do_GetService(kLookAndFeelCID);
-  if (lookAndFeel)
-  {
-    passwordChar = lookAndFeel->GetPasswordCharacter();
-  }
-
+  // change the output to '*' only
   PRInt32 length = aOutString->Length();
   PRInt32 i;
   aOutString->Truncate();
   for (i=0; i<length; i++)
   {
-    aOutString->Append(passwordChar);
+    aOutString->Append(PRUnichar('*'));
   }
 
   return NS_OK;

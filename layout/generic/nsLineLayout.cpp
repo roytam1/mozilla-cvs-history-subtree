@@ -40,9 +40,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* state and methods used while laying out a single line of a block frame */
-
 #define PL_ARENA_CONST_ALIGN_MASK (sizeof(void*)-1)
 #include "plarena.h"
 
@@ -57,13 +54,16 @@
 #include "nsPresContext.h"
 #include "nsIFontMetrics.h"
 #include "nsIRenderingContext.h"
-#include "nsGkAtoms.h"
+#include "nsLayoutAtoms.h"
 #include "nsPlaceholderFrame.h"
+#include "nsReflowPath.h"
 #include "nsIDocument.h"
 #include "nsIHTMLDocument.h"
 #include "nsIContent.h"
+#include "nsITextContent.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
+#include "nsHTMLAtoms.h"
 #include "nsTextFragment.h"
 #include "nsBidiUtils.h"
 #include "nsLayoutUtils.h"
@@ -91,25 +91,77 @@
 #define PLACED_LEFT  0x1
 #define PLACED_RIGHT 0x2
 
+#define HACK_MEW
+//#undef HACK_MEW
+#ifdef HACK_MEW
+static nscoord AccumulateImageSizes(nsPresContext& aPresContext, nsIFrame& aFrame)
+{
+  nscoord sizes = 0;
+
+  // see if aFrame is an image frame first
+  if (aFrame.GetType() == nsLayoutAtoms::imageFrame) {
+    sizes += aFrame.GetSize().width;
+  } else {
+    // see if there are children to process
+    // XXX: process alternate child lists?
+    nsIFrame* child = aFrame.GetFirstChild(nsnull);
+    while (child) {
+      // recurse: note that we already know we are in a child frame, so no need to track further
+      sizes += AccumulateImageSizes(aPresContext, *child);
+      // now next sibling
+      child = child->GetNextSibling();
+    }
+  }
+
+  return sizes;
+}
+
+static PRBool InUnconstrainedTableCell(const nsHTMLReflowState& aBlockReflowState)
+{
+  PRBool result = PR_FALSE;
+
+  // get the parent reflow state
+  const nsHTMLReflowState* parentReflowState = aBlockReflowState.parentReflowState;
+  if (parentReflowState) {
+    // check if the frame is a tablecell
+    NS_ASSERTION(parentReflowState->mStyleDisplay, "null styleDisplay in parentReflowState unexpected");
+    if (parentReflowState->mStyleDisplay &&
+        parentReflowState->mStyleDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_CELL) {
+      // see if width is unconstrained or percent
+      NS_ASSERTION(parentReflowState->mStylePosition, "null stylePosition in parentReflowState unexpected");
+      if(parentReflowState->mStylePosition) {
+        switch(parentReflowState->mStylePosition->mWidth.GetUnit()) {
+          case eStyleUnit_Auto :
+          case eStyleUnit_Null :
+            result = PR_TRUE;
+            break;
+          default:
+            result = PR_FALSE;
+            break;
+        }
+      }
+    }
+  }
+  return result;
+}
+
+#endif
+
+MOZ_DECL_CTOR_COUNTER(nsLineLayout)
+
 nsLineLayout::nsLineLayout(nsPresContext* aPresContext,
                            nsSpaceManager* aSpaceManager,
                            const nsHTMLReflowState* aOuterReflowState,
-                           const nsLineList::iterator* aLine)
+                           PRBool aComputeMaxElementWidth)
   : mPresContext(aPresContext),
     mSpaceManager(aSpaceManager),
     mBlockReflowState(aOuterReflowState),
-    mLastOptionalBreakContent(nsnull),
-    mForceBreakContent(nsnull),
-    mLastOptionalBreakContentOffset(-1),
-    mForceBreakContentOffset(-1),
-    mTrailingTextFrame(nsnull),
     mBlockRS(nsnull),/* XXX temporary */
     mMinLineHeight(0),
-    mTextIndent(0)
+    mComputeMaxElementWidth(aComputeMaxElementWidth),
+    mTextIndent(0),
+    mWordFrames(0)
 {
-  NS_ASSERTION(aSpaceManager || aOuterReflowState->frame->GetType() ==
-                                  nsGkAtoms::letterFrame,
-               "space manager should be present");
   MOZ_COUNT_CTOR(nsLineLayout);
 
   // Stash away some style data that we need
@@ -125,7 +177,7 @@ nsLineLayout::nsLineLayout(nsPresContext* aPresContext,
 
   // Instead of always pre-initializing the free-lists for frames and
   // spans, we do it on demand so that situations that only use a few
-  // frames and spans won't waste a lot of time in unneeded
+  // frames and spans won't waste alot of time in unneeded
   // initialization.
   PL_INIT_ARENA_POOL(&mArena, "nsLineLayout", 1024);
   mFrameFreeList = nsnull;
@@ -133,11 +185,6 @@ nsLineLayout::nsLineLayout(nsPresContext* aPresContext,
 
   mCurrentSpan = mRootSpan = nsnull;
   mSpanDepth = 0;
-
-  if (aLine) {
-    SetFlag(LL_GOTLINEBOX, PR_TRUE);
-    mLineBox = *aLine;
-  }
 
   mCompatMode = mPresContext->CompatibilityMode();
 }
@@ -147,6 +194,8 @@ nsLineLayout::~nsLineLayout()
   MOZ_COUNT_DTOR(nsLineLayout);
 
   NS_ASSERTION(nsnull == mRootSpan, "bad line-layout user");
+
+  delete mWordFrames; // operator delete for this class just returns
 
   // PL_FreeArenaPool takes our memory and puts in on a global free list so
   // that the next time an arena makes an allocation it will not have to go
@@ -159,6 +208,22 @@ nsLineLayout::~nsLineLayout()
   // since PL_FreeArenaPool() has done all the work.
   PL_FreeArenaPool(&mArena);
   PL_FinishArenaPool(&mArena);
+}
+
+void*
+nsLineLayout::ArenaDeque::operator new(size_t aSize, PLArenaPool &aPool)
+{
+  void *mem;
+
+  PL_ARENA_ALLOCATE(mem, &aPool, aSize);
+  return mem;
+}
+
+PRBool nsLineLayout::AllocateDeque()
+{
+  mWordFrames = new(mArena) ArenaDeque;
+
+  return mWordFrames != nsnull;
 }
 
 // Find out if the frame has a non-null prev-in-flow, i.e., whether it
@@ -217,6 +282,8 @@ nsLineLayout::BeginLineReflow(nscoord aX, nscoord aY,
   mSpanDepth = 0;
   mMaxTopBoxHeight = mMaxBottomBoxHeight = 0;
 
+  ForgetWordFrames();
+
   PerSpanData* psd;
   NewPerSpanData(&psd);
   mCurrentSpan = mRootSpan = psd;
@@ -232,13 +299,21 @@ nsLineLayout::BeginLineReflow(nscoord aX, nscoord aY,
 
   mTopEdge = aY;
 
-  psd->mNoWrap = !mStyleText->WhiteSpaceCanWrap();
+  switch (mStyleText->mWhiteSpace) {
+  case NS_STYLE_WHITESPACE_PRE:
+  case NS_STYLE_WHITESPACE_NOWRAP:
+    psd->mNoWrap = PR_TRUE;
+    break;
+  default:
+    psd->mNoWrap = PR_FALSE;
+    break;
+  }
   psd->mDirection = mBlockReflowState->mStyleVisibility->mDirection;
   psd->mChangedFrameDirection = PR_FALSE;
 
   // If this is the first line of a block then see if the text-indent
   // property amounts to anything.
-
+  
   if (0 == mLineNumber && !HasPrevInFlow(mBlockReflowState->frame)) {
     nscoord indent = 0;
     nsStyleUnit unit = mStyleText->mTextIndent.GetUnit();
@@ -352,7 +427,7 @@ nsLineLayout::UpdateBand(nscoord aX, nscoord aY,
   SetFlag(LL_IMPACTEDBYFLOATS, PR_TRUE);
 
   SetFlag(LL_LASTFLOATWASLETTERFRAME,
-          nsGkAtoms::letterFrame == aFloatFrame->GetType());
+          nsLayoutAtoms::letterFrame == aFloatFrame->GetType());
 
   // Now update all of the open spans...
   mRootSpan->mContainsFloat = PR_TRUE;              // make sure mRootSpan gets updated too
@@ -454,8 +529,16 @@ nsLineLayout::BeginSpan(nsIFrame* aFrame,
     psd->mX = aLeftEdge;
     psd->mRightEdge = aRightEdge;
 
-    psd->mNoWrap =
-      !aSpanReflowState->frame->GetStyleText()->WhiteSpaceCanWrap();
+    const nsStyleText* styleText = aSpanReflowState->frame->GetStyleText();
+    switch (styleText->mWhiteSpace) {
+    case NS_STYLE_WHITESPACE_PRE:
+    case NS_STYLE_WHITESPACE_NOWRAP:
+        psd->mNoWrap = PR_TRUE;
+        break;
+    default:
+        psd->mNoWrap = PR_FALSE;
+        break;
+    }
     psd->mDirection = aSpanReflowState->mStyleVisibility->mDirection;
     psd->mChangedFrameDirection = PR_FALSE;
 
@@ -467,7 +550,9 @@ nsLineLayout::BeginSpan(nsIFrame* aFrame,
 }
 
 void
-nsLineLayout::EndSpan(nsIFrame* aFrame, nsSize& aSizeResult)
+nsLineLayout::EndSpan(nsIFrame* aFrame,
+                      nsSize& aSizeResult,
+                      nscoord* aMaxElementWidth)
 {
   NS_ASSERTION(mSpanDepth > 0, "end-span without begin-span");
 #ifdef NOISY_REFLOW
@@ -478,6 +563,7 @@ nsLineLayout::EndSpan(nsIFrame* aFrame, nsSize& aSizeResult)
   PerSpanData* psd = mCurrentSpan;
   nscoord width = 0;
   nscoord maxHeight = 0;
+  nscoord maxElementWidth = 0;
   if (nsnull != psd->mLastFrame) {
     width = psd->mX - psd->mLeftEdge;
     PerFrameData* pfd = psd->mFirstFrame;
@@ -495,12 +581,39 @@ nsLineLayout::EndSpan(nsIFrame* aFrame, nsSize& aSizeResult)
         if (pfd->mBounds.height > maxHeight) maxHeight = pfd->mBounds.height;
 
         // Compute max-element-width if necessary
+        if (aMaxElementWidth) {
+          nscoord mw = pfd->mMaxElementWidth;
+          // add only fixed margins to the MEW
+          if (pfd->mMargin.left) {
+            if (pfd->mFrame->GetStyleMargin()->mMargin.GetLeftUnit() ==
+                eStyleUnit_Coord)
+              mw += pfd->mMargin.left;
+          }
+          if (pfd->mMargin.right) {
+            if (pfd->mFrame->GetStyleMargin()->mMargin.GetRightUnit() ==
+                eStyleUnit_Coord)
+              mw += pfd->mMargin.right;
+          }
+          if (maxElementWidth < mw) {
+            maxElementWidth = mw;
+          }
+        }
       }
       pfd = pfd->mNext;
     }
   }
   aSizeResult.width = width;
   aSizeResult.height = maxHeight;
+  if (aMaxElementWidth) {
+    if (psd->mNoWrap) {
+      // When we have a non-breakable span, it's max-element-width
+      // width is its entire width.
+      *aMaxElementWidth = width;
+    }
+    else {
+      *aMaxElementWidth = maxElementWidth;
+    }
+  }
 
   mSpanDepth--;
   mCurrentSpan->mReflowState = nsnull;  // no longer valid so null it out!
@@ -623,7 +736,7 @@ nsLineLayout::FreeSpan(PerSpanData* psd)
     pfd = next;
   }
 
-  // Now put the span on the free list since it's free too
+  // Now put the span on the free list since its free too
   psd->mNextFreeSpan = mSpanFreeList;
   mSpanFreeList = psd;
 #ifdef DEBUG
@@ -689,75 +802,6 @@ nsLineLayout::LineIsBreakable() const
   return PR_FALSE;
 }
 
-// Checks all four sides for percentage units.  This means it should
-// only be used for things (margin, padding) where percentages on top
-// and bottom depend on the *width* just like percentages on left and
-// right.
-static PRBool
-HasPercentageUnitSide(const nsStyleSides& aSides)
-{
-  NS_FOR_CSS_SIDES(side) {
-    if (eStyleUnit_Percent == aSides.GetUnit(side))
-      return PR_TRUE;
-  }
-  return PR_FALSE;
-}
-
-static PRBool
-IsPercentageAware(const nsIFrame* aFrame)
-{
-  NS_ASSERTION(aFrame, "null frame is not allowed");
-
-  nsIAtom *fType = aFrame->GetType();
-  if (fType == nsGkAtoms::textFrame) {
-    // None of these things can ever be true for text frames.
-    return PR_FALSE;
-  }
-
-  // Some of these things don't apply to non-replaced inline frames
-  // (that is, fType == nsGkAtoms::inlineFrame || fType ==
-  // nsGkAtoms::positionedInlineFrame), but we won't bother making
-  // things unnecessarily complicated, since they'll probably be set
-  // quite rarely.
-
-  const nsStyleMargin* margin = aFrame->GetStyleMargin();
-  if (HasPercentageUnitSide(margin->mMargin)) {
-    return PR_TRUE;
-  }
-
-  const nsStylePadding* padding = aFrame->GetStylePadding();
-  if (HasPercentageUnitSide(padding->mPadding)) {
-    return PR_TRUE;
-  }
-
-  // Note that borders can't be aware of percentages
-
-  const nsStylePosition* pos = aFrame->GetStylePosition();
-
-  if (eStyleUnit_Percent == pos->mWidth.GetUnit() ||
-      eStyleUnit_Percent == pos->mMaxWidth.GetUnit() ||
-      eStyleUnit_Percent == pos->mMinWidth.GetUnit() ||
-      eStyleUnit_Percent == pos->mOffset.GetRightUnit() ||
-      eStyleUnit_Percent == pos->mOffset.GetLeftUnit()) {
-    return PR_TRUE;
-  }
-
-  if (eStyleUnit_Auto == pos->mWidth.GetUnit()) {
-    // We need to check for frames that shrink-wrap when they're auto
-    // width.
-    const nsStyleDisplay* disp = aFrame->GetStyleDisplay();
-    if (disp->mDisplay == NS_STYLE_DISPLAY_INLINE_BLOCK ||
-        disp->mDisplay == NS_STYLE_DISPLAY_INLINE_TABLE ||
-        fType == nsGkAtoms::HTMLButtonControlFrame ||
-        fType == nsGkAtoms::gfxButtonControlFrame ||
-        fType == nsGkAtoms::fieldSetFrame) {
-      return PR_TRUE;
-    }
-  }
-
-  return PR_FALSE;
-}
-
 nsresult
 nsLineLayout::ReflowFrame(nsIFrame* aFrame,
                           nsReflowStatus& aReflowStatus,
@@ -782,35 +826,94 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   printf("\n");
 #endif
 
-  // See if this frame depends on the width of its containing block.  If
-  // so, disable resize reflow optimizations for the line.  (Note that,
-  // to be conservative, we do this if we *try* to fit a frame on a
-  // line, even if we don't succeed.)
-  if (GetFlag(LL_GOTLINEBOX) && IsPercentageAware(aFrame)) {
-    mLineBox->DisableResizeReflowOptimization();
-  }
-
   // Compute the available size for the frame. This available width
   // includes room for the side margins.
+  nsSize availSize;
+  if (NS_UNCONSTRAINEDSIZE == psd->mRightEdge) {
+    availSize.width = NS_UNCONSTRAINEDSIZE;
+  }
+  else {
+    availSize.width = psd->mRightEdge - psd->mX;
+    if (psd->mNoWrap) {
+      // Make up a width to use for reflowing into.  XXX what value to
+      // use? for tables, we want to limit it; for other elements
+      // (e.g. text) it can be unlimited...
+      availSize.width = psd->mReflowState->availableWidth;
+    }
+  }
   // For now, set the available height to unconstrained always.
-  nsSize availSize(mBlockReflowState->ComputedWidth(), NS_UNCONSTRAINEDSIZE);
+  // XXX inline blocks and tables won't be able to break across pages/
+  // columns, but it's not clear how to handle that anyway
+  availSize.height = NS_UNCONSTRAINEDSIZE;
+
+  // Get reflow reason set correctly. It's possible that a child was
+  // created and then it was decided that it could not be reflowed
+  // (for example, a block frame that isn't at the start of a
+  // line). In this case the reason will be wrong so we need to check
+  // the frame state.
+  const nsHTMLReflowState* rs = psd->mReflowState;
+  nsReflowReason reason = eReflowReason_Resize;
+  if (NS_FRAME_FIRST_REFLOW & aFrame->GetStateBits()) {
+    reason = eReflowReason_Initial;
+  }
+  else if (rs->reason == eReflowReason_Initial &&
+           mBlockReflowState->reason == eReflowReason_StyleChange) {
+    // The frame we're about to reflow is an _old_ frame that was
+    // pushed inside a _new_ parent (overflow).
+
+    // So we propagate the same 'style change' that led to creating
+    // the new overflow parent to which this frame is now the child
+    reason = eReflowReason_StyleChange;
+  }
+  else if (rs->reason == eReflowReason_Incremental) { // XXX
+    // XXXwaterson (above) previously used mBlockReflowState rather
+    // than psd->mReflowState.
+
+    // If the frame we're about to reflow is on the reflow path, then
+    // propagate the reflow as `incremental' so it unwinds correctly
+    // to the target frames below us.
+    PRBool frameIsOnReflowPath = rs->path->HasChild(aFrame);
+    if (frameIsOnReflowPath)
+      reason = eReflowReason_Incremental;
+
+    // But...if the incremental reflow command is a StyleChanged
+    // reflow and its target is the current span, change the reason
+    // to `style change', so that it propagates through the entire
+    // subtree.
+    nsHTMLReflowCommand* rc = rs->path->mReflowCommand;
+    if (rc) {
+      nsReflowType type = rc->Type();
+      if (type == eReflowType_StyleChanged) {
+        nsIFrame* parentFrame = psd->mFrame
+          ? psd->mFrame->mFrame
+          : mBlockReflowState->frame;
+        if (rc->GetTarget() == parentFrame) {
+          reason = eReflowReason_StyleChange;
+        }
+      }
+      else if (type == eReflowType_ReflowDirty &&
+               (aFrame->GetStateBits() & NS_FRAME_IS_DIRTY) &&
+               !frameIsOnReflowPath) {
+        reason = eReflowReason_Dirty;
+      }
+    }
+  }
+  else if (rs->reason == eReflowReason_StyleChange) {
+    reason = eReflowReason_StyleChange;
+  }
+  else if (rs->reason == eReflowReason_Dirty) {
+    if (aFrame->GetStateBits() & NS_FRAME_IS_DIRTY)
+      reason = eReflowReason_Dirty;
+  }
 
   // Setup reflow state for reflowing the frame
   nsHTMLReflowState reflowState(mPresContext, *psd->mReflowState,
-                                aFrame, availSize);
+                                aFrame, availSize, reason);
   reflowState.mLineLayout = this;
   reflowState.mFlags.mIsTopOfPage = GetFlag(LL_ISTOPOFPAGE);
   SetFlag(LL_UNDERSTANDSNWHITESPACE, PR_FALSE);
   mTextJustificationNumSpaces = 0;
   mTextJustificationNumLetters = 0;
-
-  // Inline-ish and text-ish things don't compute their width;
-  // everything else does.  We need to give them an available width that
-  // reflects the space left on the line.
-  NS_ASSERTION(psd->mRightEdge != NS_UNCONSTRAINEDSIZE,
-               "shouldn't have unconstrained widths anymore");
-  if (reflowState.ComputedWidth() == NS_UNCONSTRAINEDSIZE)
-    reflowState.availableWidth = psd->mRightEdge - psd->mX;
 
   // Stash copies of some of the computed state away for later
   // (vertical alignment, for example)
@@ -833,16 +936,17 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 
   // We want to guarantee that we always make progress when
   // formatting. Therefore, if the object being placed on the line is
-  // too big for the line, but it is the only thing on the line and is not
-  // impacted by a float, then we go ahead and place it anyway. (If the line
-  // is impacted by one or more floats, then it is safe to break because
-  // we can move the line down below float(s).)
+  // too big for the line, but it is the only thing on the line
+  // (including counting floats) then we go ahead and place it
+  // anyway. Its also true that if the object is a part of a larger
+  // object (a multiple frame word) then we will place it on the line
+  // too.
   //
   // Capture this state *before* we reflow the frame in case it clears
   // the state out. We need to know how to treat the current frame
   // when breaking.
-  PRBool notSafeToBreak = CanPlaceFloatNow() && !GetFlag(LL_IMPACTEDBYFLOATS);
-  
+  PRBool notSafeToBreak = CanPlaceFloatNow() || InWord();
+
   // Apply start margins (as appropriate) to the frame computing the
   // new starting x,y coordinates for the frame.
   ApplyStartMargin(pfd, reflowState);
@@ -862,10 +966,15 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   // parents border/padding is <b>inside</b> the parent
   // frame. Therefore we have to subtract out the parents
   // border+padding before translating.
-  nsHTMLReflowMetrics metrics;
+  nsHTMLReflowMetrics metrics(mComputeMaxElementWidth);
 #ifdef DEBUG
   metrics.width = nscoord(0xdeadbeef);
   metrics.height = nscoord(0xdeadbeef);
+  metrics.ascent = nscoord(0xdeadbeef);
+  metrics.descent = nscoord(0xdeadbeef);
+  if (mComputeMaxElementWidth) {
+    metrics.mMaxElementWidth = nscoord(0xdeadbeef);
+  }
 #endif
   nscoord tx = x - psd->mReflowState->mComputedBorderPadding.left;
   nscoord ty = y - psd->mReflowState->mComputedBorderPadding.top;
@@ -882,47 +991,41 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 #endif // IBMBIDI
 
   nsIAtom* frameType = aFrame->GetType();
-  PRInt32 savedOptionalBreakOffset;
-  nsIContent* savedOptionalBreakContent =
-    GetLastOptionalBreakPosition(&savedOptionalBreakOffset);
 
   rv = aFrame->Reflow(mPresContext, metrics, reflowState, aReflowStatus);
   if (NS_FAILED(rv)) {
     NS_WARNING( "Reflow of frame failed in nsLineLayout" );
     return rv;
   }
-  
+
   pfd->mJustificationNumSpaces = mTextJustificationNumSpaces;
   pfd->mJustificationNumLetters = mTextJustificationNumLetters;
 
   // XXX See if the frame is a placeholderFrame and if it is process
   // the float.
-  PRBool placedFloat = PR_FALSE;
   if (frameType) {
-    if (nsGkAtoms::placeholderFrame == frameType) {
-      pfd->SetFlag(PFD_SKIPWHENTRIMMINGWHITESPACE, PR_TRUE);
+    if (nsLayoutAtoms::placeholderFrame == frameType) {
+      pfd->SetFlag(PFD_ISPLACEHOLDERFRAME, PR_TRUE);
       nsIFrame* outOfFlowFrame = nsLayoutUtils::GetFloatFromPlaceholder(aFrame);
       if (outOfFlowFrame) {
         nsPlaceholderFrame* placeholder = NS_STATIC_CAST(nsPlaceholderFrame*, aFrame);
-        // XXXldb What is this test supposed to be?
-        if (!(aFrame->GetStateBits() &
-              (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) {
-          // incremental reflow of child
-          placedFloat = InitFloat(placeholder, aReflowStatus);
+        PRBool didPlace;
+        if (eReflowReason_Incremental == reason) {
+          didPlace = InitFloat(placeholder, aReflowStatus);
         }
         else {
-          placedFloat = AddFloat(placeholder, aReflowStatus);
+          didPlace = AddFloat(placeholder, aReflowStatus);
         }
-        if (!placedFloat) {
+        if (!didPlace) {
           aReflowStatus = NS_INLINE_LINE_BREAK_BEFORE();
         }
-        if (outOfFlowFrame->GetType() == nsGkAtoms::letterFrame) {
+        if (outOfFlowFrame->GetType() == nsLayoutAtoms::letterFrame) {
           SetFlag(LL_FIRSTLETTERSTYLEOK, PR_FALSE);
         }
       }
     }
-    else if (nsGkAtoms::textFrame == frameType) {
-      // Note non-empty text-frames for inline frame compatibility hackery
+    else if (nsLayoutAtoms::textFrame == frameType) {
+      // Note non-empty text-frames for inline frame compatability hackery
       pfd->SetFlag(PFD_ISTEXTFRAME, PR_TRUE);
       // XXX An empty text frame at the end of the line seems not
       // to have zero width.
@@ -930,13 +1033,15 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
         pfd->SetFlag(PFD_ISNONEMPTYTEXTFRAME, PR_TRUE);
         nsIContent* content = pfd->mFrame->GetContent();
 
-        const nsTextFragment* frag = content->GetText();
-        if (frag) {
+        nsCOMPtr<nsITextContent> textContent
+          = do_QueryInterface(content);
+        if (textContent) {
           pfd->SetFlag(PFD_ISNONWHITESPACETEXTFRAME,
-                       !content->TextIsOnlyWhitespace());
+                       !textContent->IsOnlyWhitespace());
 // fix for bug 40882
 #ifdef IBMBIDI
           if (mPresContext->BidiEnabled()) {
+            const nsTextFragment* frag = textContent->Text();
             if (frag->Is2b()) {
               //PRBool isVisual;
               //mPresContext->IsVisualMode(isVisual);
@@ -944,7 +1049,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
                               *(frag->Get2b() + frag->GetLength() - 1) :*/ *frag->Get2b();
               if (IS_BIDI_DIACRITIC(ch)) {
                 mPresContext->PropertyTable()->SetProperty(aFrame,
-                           nsGkAtoms::endsInDiacritic, NS_INT32_TO_PTR(ch),
+                           nsLayoutAtoms::endsInDiacritic, NS_INT32_TO_PTR(ch),
                                                            nsnull, nsnull);
               }
             }
@@ -953,11 +1058,8 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
         }
       }
     }
-    else if (nsGkAtoms::letterFrame==frameType) {
+    else if (nsLayoutAtoms::letterFrame==frameType) {
       pfd->SetFlag(PFD_ISLETTERFRAME, PR_TRUE);
-    }
-    else if (nsGkAtoms::brFrame == frameType) {
-      pfd->SetFlag(PFD_SKIPWHENTRIMMINGWHITESPACE, PR_TRUE);
     }
   }
 
@@ -977,11 +1079,46 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       nsFrame::ListTag(stdout, aFrame);
       printf(" metrics=%d,%d!\n", metrics.width, metrics.height);
     }
-    if ((metrics.width == nscoord(0xdeadbeef)) ||
-        (metrics.height == nscoord(0xdeadbeef))) {
+    if (mComputeMaxElementWidth &&
+        (nscoord(0xdeadbeef) == metrics.mMaxElementWidth)) {
       printf("nsLineLayout: ");
       nsFrame::ListTag(stdout, aFrame);
-      printf(" didn't set w/h %d,%d!\n", metrics.width, metrics.height);
+      printf(" didn't set max-element-width!\n");
+    }
+#ifdef REALLY_NOISY_MAX_ELEMENT_SIZE
+    // Note: there are common reflow situations where this *correctly*
+    // occurs; so only enable this debug noise when you really need to
+    // analyze in detail.
+    if (mComputeMaxElementWidth &&
+        (metrics.mMaxElementWidth > metrics.width)) {
+      printf("nsLineLayout: ");
+      nsFrame::ListTag(stdout, aFrame);
+      printf(": WARNING: maxElementWidth=%d > metrics=%d\n",
+             metrics.mMaxElementWidth, metrics.width);
+    }
+#endif
+    if ((metrics.width == nscoord(0xdeadbeef)) ||
+        (metrics.height == nscoord(0xdeadbeef)) ||
+        (metrics.ascent == nscoord(0xdeadbeef)) ||
+        (metrics.descent == nscoord(0xdeadbeef))) {
+      printf("nsLineLayout: ");
+      nsFrame::ListTag(stdout, aFrame);
+      printf(" didn't set whad %d,%d,%d,%d!\n", metrics.width, metrics.height,
+             metrics.ascent, metrics.descent);
+    }
+  }
+#endif
+#ifdef DEBUG
+  if (nsBlockFrame::gNoisyMaxElementWidth) {
+    nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
+    if (!NS_INLINE_IS_BREAK_BEFORE(aReflowStatus)) {
+      if (mComputeMaxElementWidth) {
+        printf("  ");
+        nsFrame::ListTag(stdout, aFrame);
+        printf(": maxElementWidth=%d wh=%d,%d,\n",
+               metrics.mMaxElementWidth,
+               metrics.width, metrics.height);
+      }
     }
   }
 #endif
@@ -995,6 +1132,9 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 
   pfd->mBounds.width = metrics.width;
   pfd->mBounds.height = metrics.height;
+  if (mComputeMaxElementWidth) {
+    pfd->mMaxElementWidth = metrics.mMaxElementWidth;
+  }
 
   // Size the frame, but |RelativePositionFrames| will size the view.
   aFrame->SetSize(nsSize(metrics.width, metrics.height));
@@ -1023,14 +1163,9 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       }
     }
 
-    // Check whether this frame breaks up text runs. All frames break up text
-    // runs (hence return false here) except for text frames and inline containers.
-    PRBool continuingTextRun = aFrame->CanContinueTextRun();
-    
     // See if we can place the frame. If we can't fit it, then we
     // return now.
-    if (CanPlaceFrame(pfd, reflowState, notSafeToBreak, continuingTextRun,
-                      metrics, aReflowStatus)) {
+    if (CanPlaceFrame(pfd, reflowState, notSafeToBreak, metrics, aReflowStatus)) {
       // Place the frame, updating aBounds with the final size and
       // location.  Then apply the bottom+right margins (as
       // appropriate) to the frame.
@@ -1042,34 +1177,16 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
         // so do most of it now.
         VerticalAlignFrames(span);
       }
-      
-      if (!continuingTextRun) {
-        SetFlag(LL_INWORD, PR_FALSE);
-        mTrailingTextFrame = nsnull;
-        if (!psd->mNoWrap && (!CanPlaceFloatNow() || placedFloat)) {
-          // record soft break opportunity after this content that can't be
-          // part of a text run. This is not a text frame so we know
-          // that offset PR_INT32_MAX means "after the content".
-          if (NotifyOptionalBreakPosition(aFrame->GetContent(), PR_INT32_MAX)) {
-            // If this returns true then we are being told to actually break here.
-            aReflowStatus = NS_INLINE_LINE_BREAK_AFTER(aReflowStatus);
-          }
-        }
-      }
     }
     else {
       PushFrame(aFrame);
       aPushedFrame = PR_TRUE;
-      // Undo any saved break positions that the frame might have told us about,
-      // since we didn't end up placing it
-      RestoreSavedBreakPosition(savedOptionalBreakContent,
-                                savedOptionalBreakOffset);
     }
   }
   else {
     PushFrame(aFrame);
   }
-  
+
 #ifdef REALLY_NOISY_REFLOW
   nsFrame::IndentBy(stdout, mSpanDepth);
   printf("End ReflowFrame ");
@@ -1110,7 +1227,7 @@ nsLineLayout::ApplyStartMargin(PerFrameData* pfd,
   PRBool ltr = (NS_STYLE_DIRECTION_LTR == aReflowState.mStyleVisibility->mDirection);
 
   // Only apply start-margin on the first-in flow for inline frames
-  if (pfd->mFrame->GetPrevContinuation()) {
+  if (HasPrevInFlow(pfd->mFrame)) {
     // Zero this out so that when we compute the max-element-width of
     // the frame we will properly avoid adding in the starting margin.
     if (ltr)
@@ -1118,19 +1235,16 @@ nsLineLayout::ApplyStartMargin(PerFrameData* pfd,
     else
       pfd->mMargin.right = 0;
   }
-  else {
-    pfd->mBounds.x += ltr ? pfd->mMargin.left : pfd->mMargin.right;
 
-    NS_ASSERTION(NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth,
-                 "shouldn't have unconstrained widths anymore");
-    if (NS_UNCONSTRAINEDSIZE == aReflowState.ComputedWidth()) {
-      // For inline-ish and text-ish things (which don't compute widths
-      // in the reflow state), adjust available width to account for the
-      // left margin. The right margin will be accounted for when we
-      // finish flowing the frame.
-      aReflowState.availableWidth -= ltr ? pfd->mMargin.left : pfd->mMargin.right;
-    }
+  if (NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth){
+    // Adjust available width to account for the left margin. The
+    // right margin will be accounted for when we finish flowing the
+    // frame.
+    aReflowState.availableWidth -= ltr ? pfd->mMargin.left : pfd->mMargin.right;
   }
+
+  if (ltr)
+    pfd->mBounds.x += pfd->mMargin.left;
 }
 
 /**
@@ -1147,7 +1261,6 @@ PRBool
 nsLineLayout::CanPlaceFrame(PerFrameData* pfd,
                             const nsHTMLReflowState& aReflowState,
                             PRBool aNotSafeToBreak,
-                            PRBool aFrameCanContinueTextRun,
                             nsHTMLReflowMetrics& aMetrics,
                             nsReflowStatus& aStatus)
 {
@@ -1161,8 +1274,7 @@ nsLineLayout::CanPlaceFrame(PerFrameData* pfd,
     // XXXwaterson this is probably not exactly right; e.g., embeddings, etc.
     PRBool ltr = (NS_STYLE_DIRECTION_LTR == aReflowState.mStyleVisibility->mDirection);
 
-    if ((NS_FRAME_IS_NOT_COMPLETE(aStatus) || (pfd->mFrame->GetNextContinuation() && !pfd->mFrame->GetNextInFlow())) 
-        && !pfd->GetFlag(PFD_ISLETTERFRAME)) {
+    if (NS_FRAME_IS_NOT_COMPLETE(aStatus) && !pfd->GetFlag(PFD_ISLETTERFRAME)) {
       // Only apply end margin for the last-in-flow. Zero this out so
       // that when we compute the max-element-width of the frame we
       // will properly avoid adding in the end margin.
@@ -1183,9 +1295,6 @@ nsLineLayout::CanPlaceFrame(PerFrameData* pfd,
     return PR_TRUE;
   }
 
-  PRBool ltr = NS_STYLE_DIRECTION_LTR == aReflowState.mStyleVisibility->mDirection;
-  nscoord endMargin = ltr ? pfd->mMargin.right : pfd->mMargin.left;
-
 #ifdef NOISY_CAN_PLACE_FRAME
   if (nsnull != psd->mFrame) {
     nsFrame::ListTag(stdout, psd->mFrame->mFrame);
@@ -1195,12 +1304,12 @@ nsLineLayout::CanPlaceFrame(PerFrameData* pfd,
   } 
   printf(": aNotSafeToBreak=%s frame=", aNotSafeToBreak ? "true" : "false");
   nsFrame::ListTag(stdout, pfd->mFrame);
-  printf(" frameWidth=%d\n", pfd->mBounds.XMost() + endMargin - psd->mX);
+  printf(" frameWidth=%d\n", pfd->mBounds.XMost() + rightMargin - psd->mX);
 #endif
 
   // Set outside to PR_TRUE if the result of the reflow leads to the
   // frame sticking outside of our available area.
-  PRBool outside = pfd->mBounds.XMost() + endMargin > psd->mRightEdge;
+  PRBool outside = pfd->mBounds.XMost() + pfd->mMargin.right > psd->mRightEdge;
   if (!outside) {
     // If it fits, it fits
 #ifdef NOISY_CAN_PLACE_FRAME
@@ -1221,7 +1330,7 @@ nsLineLayout::CanPlaceFrame(PerFrameData* pfd,
 
 #ifdef FIX_BUG_50257
   // another special case:  always place a BR
-  if (nsGkAtoms::brFrame == pfd->mFrame->GetType()) {
+  if (nsLayoutAtoms::brFrame == pfd->mFrame->GetType()) {
 #ifdef NOISY_CAN_PLACE_FRAME
     printf("   ==> BR frame fits\n");
 #endif
@@ -1230,20 +1339,75 @@ nsLineLayout::CanPlaceFrame(PerFrameData* pfd,
 #endif
 
   if (aNotSafeToBreak) {
-    // There are no frames on the line that take up width and the line is
-    // not impacted by floats, so we must allow the current frame to be
-    // placed on the line
+    // There are no frames on the line or we are in the first word on
+    // the line. If the line isn't impacted by a float then the
+    // current frame fits.
+    if (!GetFlag(LL_IMPACTEDBYFLOATS)) {
 #ifdef NOISY_CAN_PLACE_FRAME
-    printf("   ==> not-safe and not-impacted fits: ");
-    while (nsnull != psd) {
-      printf("<psd=%p x=%d left=%d> ", psd, psd->mX, psd->mLeftEdge);
-      psd = psd->mParent;
-    }
-    printf("\n");
+      printf("   ==> not-safe and not-impacted fits: ");
+      while (nsnull != psd) {
+        printf("<psd=%p x=%d left=%d> ", psd, psd->mX, psd->mLeftEdge);
+        psd = psd->mParent;
+      }
+      printf("\n");
 #endif
-    return PR_TRUE;
+      return PR_TRUE;
+    }
+    else if (GetFlag(LL_LASTFLOATWASLETTERFRAME)) {
+      // Another special case: see if the float is a letter
+      // frame. If it is, then allow the frame next to it to fit.
+      if (pfd->GetFlag(PFD_ISNONEMPTYTEXTFRAME)) {
+        // This must be the first piece of non-empty text (because
+        // aNotSafeToBreak is true) or its a piece of text that is
+        // part of a larger word.
+        pfd->SetFlag(PFD_ISSTICKY, PR_TRUE);
+      }
+      else if (pfd->mSpan) {
+        PerFrameData* pf = pfd->mSpan->mFirstFrame;
+        while (pf) {
+          if (pf->GetFlag(PFD_ISSTICKY)) {
+            // If one of the spans children was sticky then the span
+            // itself is sticky.
+            pfd->SetFlag(PFD_ISSTICKY, PR_TRUE);
+          }
+          pf = pf->mNext;
+        }
+      }
+
+      if (pfd->GetFlag(PFD_ISSTICKY)) {
+#ifdef NOISY_CAN_PLACE_FRAME
+        printf("   ==> last float was letter frame && frame is sticky\n");
+#endif
+        return PR_TRUE;
+      }
+    }
   }
- 
+
+  // If this is a piece of text inside a letter frame...
+  if (pfd->GetFlag(PFD_ISNONEMPTYTEXTFRAME)) {
+    if (psd->mFrame && psd->mFrame->GetFlag(PFD_ISLETTERFRAME)) {
+      nsIFrame* prevInFlow = psd->mFrame->mFrame->GetPrevInFlow();
+      if (prevInFlow) {
+        nsIFrame* prevPrevInFlow = prevInFlow->GetPrevInFlow();
+        if (!prevPrevInFlow) {
+          // And it's the first continuation of the letter frame...
+          // Then make sure that the text fits
+          return PR_TRUE;
+        }
+      }
+    }
+  }
+  else if (pfd->GetFlag(PFD_ISLETTERFRAME)) {
+    // If this is the first continuation of the letter frame...
+    nsIFrame* prevInFlow = pfd->mFrame->GetPrevInFlow();
+    if (prevInFlow) {
+      nsIFrame* prevPrevInFlow = prevInFlow->GetPrevInFlow();
+      if (!prevPrevInFlow) {
+        return PR_TRUE;
+      }
+    }
+  }
+
   // Special check for span frames
   if (pfd->mSpan && pfd->mSpan->mContainsFloat) {
     // If the span either directly or indirectly contains a float then
@@ -1256,7 +1420,7 @@ nsLineLayout::CanPlaceFrame(PerFrameData* pfd,
     // only things on a line will be those things that "fit".
     //
     // 2. Before a float is placed on a line, the line has to be empty
-    // (otherwise it's a "below current line" float and will be placed
+    // (otherwise its a "below current line" flaoter and will be placed
     // after the line).
     //
     // Therefore, if the span directly or indirectly has a float
@@ -1271,24 +1435,6 @@ nsLineLayout::CanPlaceFrame(PerFrameData* pfd,
     // don't naturally fit.
     return PR_TRUE;
  }
-
-  if (aFrameCanContinueTextRun) {
-    // Let it fit, but we reserve the right to roll back
-    // to before the text run! Note that we usually won't get here because
-    // a text frame will break itself to avoid exceeding the available width.
-    // We'll only get here for text frames that couldn't break early enough.
-#ifdef NOISY_CAN_PLACE_FRAME
-    printf("   ==> placing overflowing textrun, requesting backup\n");
-#endif
-    if (!mLastOptionalBreakContent) {
-      // Nowhere to roll back to, so make this fit
-      return PR_TRUE;
-    }
-
-    // We have something to roll back to. So, signal that we will to roll back,
-    // and fall through to not place this frame.
-    SetFlag(LL_NEEDBACKUP, PR_TRUE);
-  }
 
 #ifdef NOISY_CAN_PLACE_FRAME
   printf("   ==> didn't fit\n");
@@ -1313,10 +1459,8 @@ nsLineLayout::PlaceFrame(PerFrameData* pfd, nsHTMLReflowMetrics& aMetrics)
   }
 
   // Record ascent and update max-ascent and max-descent values
-  if (aMetrics.ascent == nsHTMLReflowMetrics::ASK_FOR_BASELINE)
-    pfd->mAscent = pfd->mFrame->GetBaseline();
-  else
-    pfd->mAscent = aMetrics.ascent;
+  pfd->mAscent = aMetrics.ascent;
+  pfd->mDescent = aMetrics.descent;
 
   // If the band was updated during the reflow of that frame then we
   // need to adjust any prior frames that were reflowed.
@@ -1325,9 +1469,9 @@ nsLineLayout::PlaceFrame(PerFrameData* pfd, nsHTMLReflowMetrics& aMetrics)
     SetFlag(LL_UPDATEDBAND, PR_FALSE);
   }
 
-  PRBool ltr = (NS_STYLE_DIRECTION_LTR == pfd->mFrame->GetStyleVisibility()->mDirection);
   // Advance to next X coordinate
-  psd->mX = pfd->mBounds.XMost() + (ltr ? pfd->mMargin.right : pfd->mMargin.left);
+  psd->mX = pfd->mBounds.XMost() + pfd->mMargin.right;
+  psd->mRightEdge = PR_MAX(psd->mRightEdge, psd->mX);
 
   // If the frame is a not aware of white-space and it takes up some
   // width, disable leading white-space compression for the next frame
@@ -1360,17 +1504,18 @@ nsLineLayout::AddBulletFrame(nsIFrame* aFrame,
     pfd->mFrame = aFrame;
     pfd->mMargin.SizeTo(0, 0, 0, 0);
     pfd->mBorderPadding.SizeTo(0, 0, 0, 0);
-    pfd->mFrameType = NS_FRAME_REPLACED(NS_CSS_FRAME_TYPE_INLINE);
+    pfd->mFrameType = NS_CSS_FRAME_TYPE_INLINE|NS_FRAME_REPLACED_ELEMENT;
     pfd->mFlags = 0;  // all flags default to false
     pfd->SetFlag(PFD_ISBULLET, PR_TRUE);
-    if (aMetrics.ascent == nsHTMLReflowMetrics::ASK_FOR_BASELINE)
-      pfd->mAscent = aFrame->GetBaseline();
-    else
-      pfd->mAscent = aMetrics.ascent;
+    pfd->mAscent = aMetrics.ascent;
+    pfd->mDescent = aMetrics.descent;
 
     // Note: y value will be updated during vertical alignment
     pfd->mBounds = aFrame->GetRect();
     pfd->mCombinedArea = aMetrics.mOverflowArea;
+    if (mComputeMaxElementWidth) {
+      pfd->mMaxElementWidth = aMetrics.width;
+    }
   }
   return rv;
 }
@@ -1400,15 +1545,87 @@ nsLineLayout::DumpPerSpanData(PerSpanData* psd, PRInt32 aIndent)
 #define VALIGN_TOP    1
 #define VALIGN_BOTTOM 2
 
+PRBool
+nsLineLayout::IsPercentageUnitSides(const nsStyleSides* aSides)
+{
+  return eStyleUnit_Percent == aSides->GetLeftUnit()
+      || eStyleUnit_Percent == aSides->GetRightUnit()
+      || eStyleUnit_Percent == aSides->GetTopUnit()
+      || eStyleUnit_Percent == aSides->GetBottomUnit();
+}
+
+PRBool
+nsLineLayout::IsPercentageAwareReplacedElement(nsPresContext *aPresContext, 
+                                               nsIFrame* aFrame)
+{
+  if (aFrame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT)
+  {
+    nsIAtom* frameType = aFrame->GetType();
+    if (nsLayoutAtoms::brFrame != frameType && 
+        nsLayoutAtoms::textFrame != frameType)
+    {
+      const nsStyleMargin* margin = aFrame->GetStyleMargin();
+      if (IsPercentageUnitSides(&margin->mMargin)) {
+        return PR_TRUE;
+      }
+
+      const nsStylePadding* padding = aFrame->GetStylePadding();
+      if (IsPercentageUnitSides(&padding->mPadding)) {
+        return PR_TRUE;
+      }
+
+      // Borders aren't percentage aware
+
+      const nsStylePosition* pos = aFrame->GetStylePosition();
+      if (eStyleUnit_Percent == pos->mWidth.GetUnit()
+        || eStyleUnit_Percent == pos->mMaxWidth.GetUnit()
+        || eStyleUnit_Percent == pos->mMinWidth.GetUnit()
+        || eStyleUnit_Percent == pos->mHeight.GetUnit()
+        || eStyleUnit_Percent == pos->mMinHeight.GetUnit()
+        || eStyleUnit_Percent == pos->mMaxHeight.GetUnit()
+        || IsPercentageUnitSides(&pos->mOffset)) { // XXX need more here!!!
+        return PR_TRUE;
+      }
+    }
+  }
+
+  return PR_FALSE;
+}
+
+PRBool IsPercentageAwareFrame(nsPresContext *aPresContext, nsIFrame *aFrame)
+{
+  if (aFrame->GetStateBits() & NS_FRAME_REPLACED_ELEMENT) {
+    if (nsLineLayout::IsPercentageAwareReplacedElement(aPresContext, aFrame)) {
+      return PR_TRUE;
+    }
+  }
+  else
+  {
+    nsIFrame *child = aFrame->GetFirstChild(nsnull);
+    if (child)
+    { // aFrame is an inline container frame, check my frame state
+      if (aFrame->GetStateBits() & NS_INLINE_FRAME_CONTAINS_PERCENT_AWARE_CHILD) {
+        return PR_TRUE;
+      }
+    }
+    // else it's a frame we just don't care about
+  }  
+  return PR_FALSE;
+}
+
+
 void
-nsLineLayout::VerticalAlignLine()
+nsLineLayout::VerticalAlignLine(nsLineBox* aLineBox,
+                                nscoord* aMaxElementWidthResult)
 {
   // Synthesize a PerFrameData for the block frame
   PerFrameData rootPFD;
   rootPFD.mFrame = mBlockReflowState->frame;
   rootPFD.mFrameType = mBlockReflowState->mFrameType;
   rootPFD.mAscent = 0;
+  rootPFD.mDescent = 0;
   mRootSpan->mFrame = &rootPFD;
+  mLineBox = aLineBox;
 
   // Partially place the children of the block frame. The baseline for
   // this operation is set to zero so that the y coordinates for all
@@ -1470,7 +1687,95 @@ nsLineLayout::VerticalAlignLine()
   // frames we find.
   // XXX PERFORMANCE: set a bit per-span to avoid the extra work
   // (propagate it upward too)
-  for (PerFrameData* pfd = psd->mFirstFrame; pfd; pfd = pfd->mNext) {
+  PerFrameData* pfd = psd->mFirstFrame;
+  nscoord maxElementWidth = 0;
+  PRBool prevFrameAccumulates = PR_FALSE;
+  nscoord accumulatedWidth = 0;
+#ifdef HACK_MEW
+  PRBool strictMode = InStrictMode();
+  PRBool inUnconstrainedTable = InUnconstrainedTableCell(*mBlockReflowState);
+#endif
+#ifdef DEBUG
+  int frameCount = 0;
+#endif
+
+  nscoord indent = mTextIndent; // Used for the first frame.
+
+  while (nsnull != pfd) {
+
+    // Compute max-element-width if necessary
+    if (mComputeMaxElementWidth) {
+
+      nscoord mw = pfd->mMaxElementWidth + indent;
+      // add only fixed margins to the MEW
+      if (pfd->mMargin.left) {
+        if (pfd->mFrame->GetStyleMargin()->mMargin.GetLeftUnit() ==
+            eStyleUnit_Coord)
+          mw += pfd->mMargin.left;
+      }
+      if (pfd->mMargin.right) {
+        if (pfd->mFrame->GetStyleMargin()->mMargin.GetRightUnit() ==
+            eStyleUnit_Coord)
+          mw += pfd->mMargin.right;
+      }
+
+      // Zero |indent| after including the 'text-indent' only for the
+      // frame that is indented.
+      indent = 0;
+
+      if (psd->mNoWrap) {
+        maxElementWidth += mw;
+      }
+      else {
+
+#ifdef HACK_MEW
+
+#ifdef DEBUG
+      if (nsBlockFrame::gNoisyMaxElementWidth) 
+        frameCount++;
+#endif
+        // if in Quirks mode and in a table cell with an unconstrained width, then emulate an IE
+        // quirk to keep consecutive images from breaking the line
+        // - see bugs 54565, 32191, and their many dups
+        // XXX - reconsider how textFrame text measurement happens and have it take into account
+        //       image frames as well, thus eliminating the need for this code
+        if (!strictMode && inUnconstrainedTable ) {
+
+          nscoord imgSizes = AccumulateImageSizes(*mPresContext, *pfd->mFrame);
+          PRBool curFrameAccumulates = (imgSizes > 0) || 
+                                       (pfd->mMaxElementWidth == pfd->mBounds.width &&
+                                        pfd->GetFlag(PFD_ISNONWHITESPACETEXTFRAME));
+            // NOTE: we check for the maxElementWidth == the boundsWidth to detect when
+            //       a textframe has whitespace in it and thus should not be used as the basis
+            //       for accumulating the image width
+            // - this is to handle images in a text run
+
+          if(prevFrameAccumulates && curFrameAccumulates) {
+            accumulatedWidth += mw;
+          } else {
+            accumulatedWidth = mw;
+          } 
+          // now update the prevFrame
+          prevFrameAccumulates = curFrameAccumulates;
+        
+#ifdef DEBUG
+          if (nsBlockFrame::gNoisyMaxElementWidth) {
+            nsFrame::IndentBy(stdout, nsBlockFrame::gNoiseIndent);
+            printf("(%d) last frame's MEW=%d | Accumulated MEW=%d\n", frameCount, mw, accumulatedWidth);
+          }
+#endif 
+
+          mw = accumulatedWidth;
+        }
+
+#endif // HACK_MEW
+
+        // and finally reset the max element width
+        if (maxElementWidth < mw) {
+          maxElementWidth = mw;
+        }
+      }
+    }
     PerSpanData* span = pfd->mSpan;
 #ifdef DEBUG
     NS_ASSERTION(0xFF != pfd->mVerticalAlign, "umr");
@@ -1511,25 +1816,37 @@ nsLineLayout::VerticalAlignLine()
       nscoord distanceFromTop = pfd->mBounds.y - mTopEdge;
       PlaceTopBottomFrames(span, distanceFromTop, lineHeight);
     }
+    // check to see if the frame is an inline replace element
+    // and if it is percent-aware.  If so, mark the line.
+    if ((PR_FALSE==aLineBox->ResizeReflowOptimizationDisabled()) &&
+         pfd->mFrameType & NS_CSS_FRAME_TYPE_INLINE)
+    {
+      if (IsPercentageAwareFrame(mPresContext, pfd->mFrame))
+        aLineBox->DisableResizeReflowOptimization();
+    }
+    pfd = pfd->mNext;
   }
 
   // Fill in returned line-box and max-element-width data
-  mLineBox->mBounds.x = psd->mLeftEdge;
-  mLineBox->mBounds.y = mTopEdge;
-  mLineBox->mBounds.width = psd->mX - psd->mLeftEdge;
-  mLineBox->mBounds.height = lineHeight;
+  aLineBox->mBounds.x = psd->mLeftEdge;
+  aLineBox->mBounds.y = mTopEdge;
+  aLineBox->mBounds.width = psd->mX - psd->mLeftEdge;
+  aLineBox->mBounds.height = lineHeight;
   mFinalLineHeight = lineHeight;
-  mLineBox->SetAscent(baselineY - mTopEdge);
+  *aMaxElementWidthResult = maxElementWidth;
+  aLineBox->SetAscent(baselineY - mTopEdge);
 #ifdef NOISY_VERTICAL_ALIGN
   printf(
-    "  [line]==> bounds{x,y,w,h}={%d,%d,%d,%d} lh=%d a=%d\n",
-    mLineBox->mBounds.x, mLineBox->mBounds.y,
-    mLineBox->mBounds.width, mLineBox->mBounds.height,
-    mFinalLineHeight, mLineBox->GetAscent());
+    "  [line]==> bounds{x,y,w,h}={%d,%d,%d,%d} lh=%d a=%d mew=%d\n",
+    aLineBox->mBounds.x, aLineBox->mBounds.y,
+    aLineBox->mBounds.width, aLineBox->mBounds.height,
+    mFinalLineHeight, aLineBox->GetAscent(),
+    *aMaxElementWidthResult);
 #endif
 
   // Undo root-span mFrame pointer to prevent brane damage later on...
   mRootSpan->mFrame = nsnull;
+  mLineBox = nsnull;
 }
 
 void
@@ -1688,7 +2005,7 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
         (0 == spanFramePFD->mMargin.right) &&
         (0 == spanFramePFD->mMargin.bottom) &&
         (0 == spanFramePFD->mMargin.left)))) {
-    // This code handles an issue with compatibility with non-css
+    // This code handles an issue with compatability with non-css
     // conformant browsers. In particular, there are some cases
     // where the font-size and line-height for a span must be
     // ignored and instead the span must *act* as if it were zero
@@ -1801,7 +2118,7 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
   while (nsnull != pfd) {
     nsIFrame* frame = pfd->mFrame;
 
-    // sanity check (see bug 105168, non-reproducible crashes from null frame)
+    // sanity check (see bug 105168, non-reproducable crashes from null frame)
     NS_ASSERTION(frame, "null frame in PerFrameData - something is very very bad");
     if (!frame) {
       return;
@@ -1857,7 +2174,17 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
           case NS_STYLE_VERTICAL_ALIGN_BASELINE:
             // The elements baseline is aligned with the baseline of
             // the parent.
-            pfd->mBounds.y = baselineY - pfd->mAscent;
+            if (frameSpan) {
+              // XXX explain
+              pfd->mBounds.y = baselineY - pfd->mAscent;
+            }
+            else {
+              // For non-span elements the borders, padding and
+              // margins are significant. Use the visual box height
+              // and the bottom margin as the distance off of the
+              // baseline.
+              pfd->mBounds.y = baselineY - pfd->mAscent - pfd->mMargin.bottom;
+            }
             pfd->mVerticalAlign = VALIGN_OTHER;
             break;
 
@@ -1868,7 +2195,13 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
             // offset to the baseline Y.
             fm->GetSubscriptOffset(parentSubscript);
             revisedBaselineY = baselineY + parentSubscript;
-            pfd->mBounds.y = revisedBaselineY - pfd->mAscent;
+            if (frameSpan) {
+              pfd->mBounds.y = revisedBaselineY - pfd->mAscent;
+            }
+            else {
+              pfd->mBounds.y = revisedBaselineY - pfd->mAscent -
+                pfd->mMargin.bottom;
+            }
             pfd->mVerticalAlign = VALIGN_OTHER;
             break;
 
@@ -1879,7 +2212,13 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
             // offset to the baseline Y.
             fm->GetSuperscriptOffset(parentSuperscript);
             revisedBaselineY = baselineY - parentSuperscript;
-            pfd->mBounds.y = revisedBaselineY - pfd->mAscent;
+            if (frameSpan) {
+              pfd->mBounds.y = revisedBaselineY - pfd->mAscent;
+            }
+            else {
+              pfd->mBounds.y = revisedBaselineY - pfd->mAscent -
+                pfd->mMargin.bottom;
+            }
             pfd->mVerticalAlign = VALIGN_OTHER;
             break;
 
@@ -1963,7 +2302,13 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
         // the screen we reverse the sign.
         coordOffset = textStyle->mVerticalAlign.GetCoordValue();
         revisedBaselineY = baselineY - coordOffset;
-        pfd->mBounds.y = revisedBaselineY - pfd->mAscent;
+        if (frameSpan) {
+          pfd->mBounds.y = revisedBaselineY - pfd->mAscent;
+        }
+        else {
+          pfd->mBounds.y = revisedBaselineY - pfd->mAscent -
+            pfd->mMargin.bottom;
+        }
         pfd->mVerticalAlign = VALIGN_OTHER;
         break;
 
@@ -1976,7 +2321,13 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
           textStyle->mVerticalAlign.GetPercentValue() * elementLineHeight
           );
         revisedBaselineY = baselineY - percentOffset;
-        pfd->mBounds.y = revisedBaselineY - pfd->mAscent;
+        if (frameSpan) {
+          pfd->mBounds.y = revisedBaselineY - pfd->mAscent;
+        }
+        else {
+          pfd->mBounds.y = revisedBaselineY - pfd->mAscent -
+            pfd->mMargin.bottom;
+        }
         pfd->mVerticalAlign = VALIGN_OTHER;
         break;
     }
@@ -2025,7 +2376,7 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
           // Check if it's a BR frame that is not alone on its line (it
           // is given a height of zero to indicate this), and if so reset
           // yTop and yBottom so that BR frames don't influence the line.
-          if (nsGkAtoms::brFrame == frame->GetType()) {
+          if (nsLayoutAtoms::brFrame == frame->GetType()) {
             yTop = VERTICAL_ALIGN_FRAMES_NO_MINIMUM;
             yBottom = VERTICAL_ALIGN_FRAMES_NO_MAXIMUM;
           }
@@ -2033,8 +2384,8 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
         if (yTop < minY) minY = yTop;
         if (yBottom > maxY) maxY = yBottom;
 #ifdef NOISY_VERTICAL_ALIGN
-        printf("     [frame]raw: a=%d h=%d bp=%d,%d logical: h=%d leading=%d y=%d minY=%d maxY=%d\n",
-               pfd->mAscent, pfd->mBounds.height,
+        printf("     [frame]raw: a=%d d=%d h=%d bp=%d,%d logical: h=%d leading=%d y=%d minY=%d maxY=%d\n",
+               pfd->mAscent, pfd->mDescent, pfd->mBounds.height,
                pfd->mBorderPadding.top, pfd->mBorderPadding.bottom,
                logicalHeight,
                pfd->mSpan ? topLeading : 0,
@@ -2075,7 +2426,7 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
       if (blockContent) {
         nsIAtom *blockTagAtom = blockContent->Tag();
         // (2) above, if the first line of LI
-        if (isFirstLine && blockTagAtom == nsGkAtoms::li) {
+        if (isFirstLine && blockTagAtom == nsHTMLAtoms::li) {
           // if the line is empty, then don't force the min height
           // (see bug 75963)
           if (!IsZeroHeight()) {
@@ -2085,9 +2436,9 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
         }
         // (3) above, if the last line of LI, DT, or DD
         else if (!applyMinLH && isLastLine &&
-                 ((blockTagAtom == nsGkAtoms::li) ||
-                  (blockTagAtom == nsGkAtoms::dt) ||
-                  (blockTagAtom == nsGkAtoms::dd))) {
+                 ((blockTagAtom == nsHTMLAtoms::li) ||
+                  (blockTagAtom == nsHTMLAtoms::dt) ||
+                  (blockTagAtom == nsHTMLAtoms::dd))) {
           applyMinLH = PR_TRUE;
         }
       }
@@ -2129,16 +2480,16 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
   }
 
   if ((minY == VERTICAL_ALIGN_FRAMES_NO_MINIMUM) ||
-      (maxY == VERTICAL_ALIGN_FRAMES_NO_MAXIMUM)) {
+      (maxY == VERTICAL_ALIGN_FRAMES_NO_MINIMUM)) {
     minY = maxY = baselineY;
   }
 
   if ((psd != mRootSpan) && (psd->mZeroEffectiveSpanBox)) {
 #ifdef NOISY_VERTICAL_ALIGN
     printf("   [span]adjusting for zeroEffectiveSpanBox\n");
-    printf("     Original: minY=%d, maxY=%d, height=%d, ascent=%d, logicalHeight=%d, topLeading=%d, bottomLeading=%d\n",
+    printf("     Original: minY=%d, maxY=%d, height=%d, ascent=%d, descent=%d, logicalHeight=%d, topLeading=%d, bottomLeading=%d\n",
            minY, maxY, spanFramePFD->mBounds.height,
-           spanFramePFD->mAscent,
+           spanFramePFD->mAscent, spanFramePFD->mDescent,
            psd->mLogicalHeight, psd->mTopLeading, psd->mBottomLeading);
 #endif
     nscoord goodMinY = spanFramePFD->mBorderPadding.top - psd->mTopLeading;
@@ -2176,12 +2527,13 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
     if (maxY < spanFramePFD->mBounds.height) {
       nscoord adjust = spanFramePFD->mBounds.height - maxY;
       spanFramePFD->mBounds.height -= adjust; // move the bottom up
+      spanFramePFD->mDescent -= adjust;
       psd->mBottomLeading += adjust;
     }
 #ifdef NOISY_VERTICAL_ALIGN
-    printf("     New: minY=%d, maxY=%d, height=%d, ascent=%d, logicalHeight=%d, topLeading=%d, bottomLeading=%d\n",
+    printf("     New: minY=%d, maxY=%d, height=%d, ascent=%d, descent=%d, logicalHeight=%d, topLeading=%d, bottomLeading=%d\n",
            minY, maxY, spanFramePFD->mBounds.height,
-           spanFramePFD->mAscent,
+           spanFramePFD->mAscent, spanFramePFD->mDescent,
            psd->mLogicalHeight, psd->mTopLeading, psd->mBottomLeading);
 #endif
   }
@@ -2198,13 +2550,6 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
   if (maxBottomBoxHeight > mMaxBottomBoxHeight) {
     mMaxBottomBoxHeight = maxBottomBoxHeight;
   }
-}
-
-static void SlideSpanFrameRect(nsIFrame* aFrame, nscoord aDeltaWidth)
-{
-  nsRect r = aFrame->GetRect();
-  r.x -= aDeltaWidth;
-  aFrame->SetRect(r);
 }
 
 PRBool
@@ -2265,22 +2610,13 @@ nsLineLayout::TrimTrailingWhiteSpaceIn(PerSpanData* psd,
           while (pfd->mNext) {
             pfd = pfd->mNext;
             pfd->mBounds.x -= deltaWidth;
-            if (psd != mRootSpan) {
-              // When the child span is not a direct child of the block
-              // we need to update the child spans frame rectangle
-              // because it most likely will not be done again. Spans
-              // that are direct children of the block will be updated
-              // later, however, because the VerticalAlignFrames method
-              // will be run after this method.
-              SlideSpanFrameRect(pfd->mFrame, deltaWidth);
-            }
           }
         }
         return PR_TRUE;
       }
     }
     else if (!pfd->GetFlag(PFD_ISTEXTFRAME) &&
-             !pfd->GetFlag(PFD_SKIPWHENTRIMMINGWHITESPACE)) {
+             !pfd->GetFlag(PFD_ISPLACEHOLDERFRAME)) {
       // If we hit a frame on the end that's not text and not a placeholder,
       // then there is no trailing whitespace to trim. Stop the search.
       *aDeltaWidth = 0;
@@ -2307,6 +2643,9 @@ nsLineLayout::TrimTrailingWhiteSpaceIn(PerSpanData* psd,
 
       if (deltaWidth) {
         pfd->mBounds.width -= deltaWidth;
+        if (0 == pfd->mBounds.width) {
+          pfd->mMaxElementWidth = 0;
+        }
 
         // See if the text frame has already been placed in its parent
         if (psd != mRootSpan) {
@@ -2325,15 +2664,6 @@ nsLineLayout::TrimTrailingWhiteSpaceIn(PerSpanData* psd,
         while (pfd->mNext) {
           pfd = pfd->mNext;
           pfd->mBounds.x -= deltaWidth;
-          if (psd != mRootSpan) {
-            // When the child span is not a direct child of the block
-            // we need to update the child spans frame rectangle
-            // because it most likely will not be done again. Spans
-            // that are direct children of the block will be updated
-            // later, however, because the VerticalAlignFrames method
-            // will be run after this method.
-            SlideSpanFrameRect(pfd->mFrame, deltaWidth);
-          }
         }
       }
 
@@ -2445,20 +2775,20 @@ nsLineLayout::ApplyFrameJustification(PerSpanData* aPSD, FrameJustificationState
   return deltaX;
 }
 
-void
+PRBool
 nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
-                                    PRBool aAllowJustify)
+                                    PRBool aAllowJustify,
+                                    PRBool aShrinkWrapWidth)
 {
   PerSpanData* psd = mRootSpan;
   nscoord availWidth = psd->mRightEdge;
   if (NS_UNCONSTRAINEDSIZE == availWidth) {
-    NS_NOTREACHED("This shouldn't be called anymore");
     // Don't bother horizontal aligning on pass1 table reflow
 #ifdef NOISY_HORIZONTAL_ALIGN
     nsFrame::ListTag(stdout, mBlockReflowState->frame);
     printf(": skipping horizontal alignment in pass1 table reflow\n");
 #endif
-    return;
+    return PR_TRUE;
   }
   availWidth -= psd->mLeftEdge;
   nscoord remainingWidth = availWidth - aLineBounds.width;
@@ -2471,34 +2801,13 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
   nscoord dx = 0;
 #endif
 
+  // XXXldb What if it's less than 0??
   if (remainingWidth > 0)
   {
 #ifndef IBMBIDI
     nscoord dx = 0;
 #endif
     switch (mTextAlign) {
-      case NS_STYLE_TEXT_ALIGN_JUSTIFY:
-        // If this is not the last line then go ahead and justify the
-        // frames in the line.
-        if (aAllowJustify) {
-          PRInt32 numSpaces;
-          PRInt32 numLetters;
-            
-          ComputeJustificationWeights(psd, &numSpaces, &numLetters);
-
-          if (numSpaces > 0) {
-            FrameJustificationState state =
-              { numSpaces, numLetters, remainingWidth, 0, 0, 0, 0, 0 };
-
-            // Apply the justification, and make sure to update our linebox
-            // width to account for it.
-            aLineBounds.width += ApplyFrameJustification(psd, &state);
-            break;
-          }
-        }
-        // Fall through to the default case if we were told not to
-        // justify anything or could not justify to fill the space.
-
       case NS_STYLE_TEXT_ALIGN_DEFAULT:
         if (NS_STYLE_DIRECTION_LTR == psd->mDirection) {
           // default alignment for left-to-right is left so do nothing
@@ -2516,19 +2825,36 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
       case NS_STYLE_TEXT_ALIGN_MOZ_LEFT:
         break;
 
+      case NS_STYLE_TEXT_ALIGN_JUSTIFY:
+        // If this is not the last line then go ahead and justify the
+        // frames in the line. If it is the last line then if the
+        // direction is right-to-left then we right-align the frames.
+        if (aAllowJustify) {
+          if (!aShrinkWrapWidth) {
+            PRInt32 numSpaces;
+            PRInt32 numLetters;
+            
+            ComputeJustificationWeights(psd, &numSpaces, &numLetters);
+
+            if (numSpaces > 0) {
+              FrameJustificationState state = { numSpaces, numLetters, remainingWidth, 0, 0, 0, 0, 0 };
+
+              ApplyFrameJustification(psd, &state);
+            }
+          }
+        }
+        else if (NS_STYLE_DIRECTION_RTL == psd->mDirection) {
+          // right align the frames
+          dx = remainingWidth;
+        }
+        break;
+
       case NS_STYLE_TEXT_ALIGN_CENTER:
       case NS_STYLE_TEXT_ALIGN_MOZ_CENTER:
         dx = remainingWidth / 2;
         break;
     }
 #ifdef IBMBIDI
-  }
-  else if (remainingWidth < 0) {
-    if (NS_STYLE_DIRECTION_RTL == psd->mDirection) {
-      dx = remainingWidth;
-      psd->mX += dx;
-      psd->mLeftEdge += dx;
-    }
   }
   PRBool isRTL = ( (NS_STYLE_DIRECTION_RTL == psd->mDirection)
                 && (!psd->mChangedFrameDirection) );
@@ -2550,6 +2876,11 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
     if (0 != dx)
 #endif
     {
+      // If we need to move the frames but we're shrink wrapping, then
+      // we need to wait until the final width is known
+      if (aShrinkWrapWidth) {
+        return PR_FALSE;
+      }
       for (PerFrameData* pfd = psd->mFirstFrame; pfd
 #ifdef IBMBIDI
            && bulletPfd != pfd
@@ -2572,6 +2903,10 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
         !psd->mChangedFrameDirection) {
       psd->mChangedFrameDirection = PR_TRUE;
   
+      /* Assume that all frames have been right aligned.*/
+      if (aShrinkWrapWidth) {
+        return PR_FALSE;
+      }
       PerFrameData* pfd = psd->mFirstFrame;
       PRUint32 maxX = psd->mRightEdge;
       while (nsnull != pfd) {
@@ -2583,6 +2918,8 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
     }
 #endif // ndef IBMBIDI
   }
+
+  return PR_TRUE;
 }
 
 void
@@ -2688,6 +3025,107 @@ nsLineLayout::RelativePositionFrames(PerSpanData* psd, nsRect& aCombinedArea)
   }
   aCombinedArea = combinedAreaResult;
 }
+
+void
+nsLineLayout::ForgetWordFrame(nsIFrame* aFrame)
+{
+  if (mWordFrames && 0 != mWordFrames->GetSize()) {
+    NS_ASSERTION((void*)aFrame == mWordFrames->PeekFront(), "forget-word-frame");
+    mWordFrames->PopFront();
+  }
+}
+
+nsIFrame*
+nsLineLayout::FindNextText(nsPresContext* aPresContext, nsIFrame* aFrame)
+{
+  // Grovel through the frame hierarchy to find a text frame that is
+  // "adjacent" to aFrame.
+
+  // So this is kind of funky. During reflow, overflow frames will
+  // have their parent pointers set up lazily. We assume that, on
+  // entry, aFrame has it's parent pointer set correctly (as do all of
+  // its ancestors). Starting from that, we need to make sure that as
+  // we traverse through frames trying to find the next text frame, we
+  // leave the frames with their parent pointers set correctly, so the
+  // *next* time we come through here, we're good to go.
+
+  // Build a path from the enclosing block frame down to aFrame. We'll
+  // use this to walk the frame tree. (XXXwaterson if I was clever, I
+  // wouldn't need to build this up before hand, and could incorporate
+  // this logic into the walking code directly.)
+  nsAutoVoidArray stack;
+  for (;;) {
+    stack.InsertElementAt(aFrame, 0);
+
+    aFrame = aFrame->GetParent();
+
+    NS_ASSERTION(aFrame, "wow, no block frame found");
+    if (! aFrame)
+      break;
+
+    if (NS_STYLE_DISPLAY_INLINE != aFrame->GetStyleDisplay()->mDisplay)
+      break;
+  }
+
+  // Using the path we've built up, walk the frame tree looking for
+  // the text frame that follows aFrame.
+  PRInt32 count;
+  while ((count = stack.Count()) != 0) {
+    PRInt32 lastIndex = count - 1;
+    nsIFrame* top = NS_STATIC_CAST(nsIFrame*, stack.ElementAt(lastIndex));
+
+    // If this is a frame that'll break a word, then bail.
+    PRBool canContinue;
+    top->CanContinueTextRun(canContinue);
+    if (! canContinue)
+      return nsnull;
+
+    // Advance to top's next sibling
+    nsIFrame* next = top->GetNextSibling();
+
+    if (! next) {
+      // No more siblings. Pop the top element to walk back up the
+      // frame tree.
+      stack.RemoveElementAt(lastIndex);
+      continue;
+    }
+
+    // We know top's parent is good, but next's might not be. So let's
+    // set it to be sure.
+    next->SetParent(top->GetParent());
+
+    // Save next at the top of the stack...
+    stack.ReplaceElementAt(next, lastIndex);
+
+    // ...and prowl down to next's deepest child. We'll need to check
+    // for potential run-busters "on the way down", too.
+    for (;;) {
+      next->CanContinueTextRun(canContinue);
+      if (! canContinue)
+        return nsnull;
+
+      nsIFrame* child = next->GetFirstChild(nsnull);
+
+      if (! child)
+        break;
+
+      stack.AppendElement(child);
+      next = child;
+    }
+
+    // Ignore continuing frames
+    if (HasPrevInFlow(next))
+      continue;
+
+    // If this is a text frame, return it.
+    if (nsLayoutAtoms::textFrame == next->GetType())
+      return next;
+  }
+
+  // If we get here, then there are no more text frames in this block.
+  return nsnull;
+}
+
 
 PRBool
 nsLineLayout::TreatFrameAsBlock(nsIFrame* aFrame)

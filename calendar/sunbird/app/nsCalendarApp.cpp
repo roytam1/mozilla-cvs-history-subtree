@@ -46,7 +46,7 @@
 #include <string.h>
 
 static const nsXREAppData kAppData = {
-  offsetof(nsXREAppData, xreDirectory),
+  sizeof(nsXREAppData),
   nsnull,
   "Mozilla",
   "Sunbird",

@@ -20,8 +20,6 @@
  *
  * Contributor(s):
  *   Joe Hewitt <hewitt@netscape.com> (original author)
- *   Jason Barnabe <jason_barnabe@fastmail.fm>
- *   Shawn Wilsher <me@shawnwilsher.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -52,13 +50,6 @@ const kInspectorNSURI = "http://www.mozilla.org/inspector#";
 const kXULNSURI = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
 const kHTMLNSURI = "http://www.w3.org/1999/xhtml";
 const nsITransactionManager = Components.interfaces.nsITransactionManager;
-var gEntityConverter;
-const kCharTable = {
-  '&': "&amp;",
-  '<': "&lt;",
-  '>': "&gt;",
-  '"': "&quot;"
-};
 
 var InsUtil = {
   /******************************************************************************
@@ -96,42 +87,6 @@ var InsUtil = {
         document.persist(aId, attrs[i]);
       }
     }
-  },
-
-  /******************************************************************************
-  * Convenience function for escaping HTML strings.
-  *******************************************************************************/
-  unicodeToEntity: function(text)
-  {
-    const entityVersion = Components.interfaces.nsIEntityConverter.entityW3C;
-
-    function charTableLookup(letter) {
-      return kCharTable[letter];
-    }
-
-    function convertEntity(letter) {
-      try {
-        return gEntityConverter.ConvertToEntity(letter, entityVersion);
-      } catch (ex) {
-        return letter;
-      }
-    }
-
-    if (!gEntityConverter) {
-      try {
-        gEntityConverter =
-          Components.classes["@mozilla.org/intl/entityconverter;1"]
-                    .createInstance(Components.interfaces.nsIEntityConverter);
-      } catch (ex) { }
-    }
-
-    // replace chars in our charTable
-    text = text.replace(/[<>&"]/g, charTableLookup);
-
-    // replace chars > 0x7f via nsIEntityConverter
-    text = text.replace(/[^\0-\u007f]/g, convertEntity);
-
-    return text;
   }
 };
 
@@ -170,6 +125,28 @@ function dumpDOM(aNode, aIndent)
     dumpDOM(aNode.childNodes[i], aIndent);
 }
 
+var gStringBundle;
+
+// convert nodeType constant into human readable form
+function nodeTypeToText (nodeType)
+{
+  if (!gStringBundle) {
+    var strBundleService =
+       Components.classes["@mozilla.org/intl/stringbundle;1"].
+                  getService(Components.interfaces.nsIStringBundleService);
+    gStringBundle = strBundleService.createBundle("chrome://inspector/locale/inspector.properties"); 
+  }
+
+  if (gStringBundle) {
+    const nsIDOMNode = Components.interfaces.nsIDOMNode;
+    if (nodeType >= nsIDOMNode.ELEMENT_NODE && nodeType <= nsIDOMNode.NOTATION_NODE) {
+      return gStringBundle.GetStringFromName(nodeType);
+    }
+  }
+
+  return nodeType;
+}
+
 // ::::::: nsITransaction helper functions :::::::
 
 function txnQueryInterface(theUID, theResult)
@@ -190,72 +167,3 @@ function txnMerge()
 function txnRedoTransaction() {
   this.doTransaction();
 }
-
-/**
- * A nsITransaction for clipboard copy.
- * @param an array of objects that define a clipboard flavor, a delimiter, and
- *   toString().
- */
-function cmdEditCopy(aObjects) {
-  // remove this line for bug 179621, Phase Three
-  this.txnType = "standard";
-
-  // required for nsITransaction
-  this.QueryInterface = txnQueryInterface;
-  this.merge = txnMerge;
-  this.isTransient = true;
-
-  this.objects = aObjects;
-}
-
-cmdEditCopy.prototype.doTransaction = 
-function doTransaction() {
-  if (this.objects.length == 1)
-    viewer.pane.panelset.setClipboardData(this.objects[0],
-                                          this.objects[0].flavor,
-                                          this.objects.toString());
-  else
-    viewer.pane.panelset.setClipboardData(this.objects,
-                                          this.objects[0].flavor + "s",
-                                          this.objects.join(this.objects[0].delimiter));
-}
-
-
-/**
- * Represents a CSS declaration.
- * @param aProperty the property of the declaration
- * @param aValue the value of the declaration
- */
-function CSSDeclaration(aProperty, aValue, aImportant) {
-  this.flavor = "inspector/css-declaration";
-  this.delimiter = "\n";
-  this.property = aProperty;
-  this.value = aValue;
-  this.important = aImportant == true;
-}
-/**
- * Returns a usable CSS string for the CSSDeclaration.
- * @return a string in the form "property: value;"
- */
-CSSDeclaration.prototype.toString = function toString() {
-  return this.property + ": " + this.value + (this.important ? " !important" : "") + ";";
-}
-
-/**
- * Represents a DOM attribute.
- * @param aNode the attribute node
- */
-function DOMAttribute(aNode)
-{
-  this.flavor = "inspector/dom-attribute";
-  this.node = aNode.cloneNode(false);
-  this.delimiter = " ";
-}
-/**
- * Returns a string representing an attribute name/value pair
- * @return a string in the form of 'name="value"'
- */
-DOMAttribute.prototype.toString = function toString()
-{
-  return this.node.nodeName + "=\"" + InsUtil.unicodeToEntity(this.node.nodeValue) + "\"";
-};

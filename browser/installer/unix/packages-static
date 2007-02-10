@@ -38,20 +38,21 @@ bin/libxpistub.so
 bin/libnspr4.so
 bin/components/libxpinstall.so
 bin/components/libjar50.so
+bin/libxpcom_compat.so
 
 [browser]
 ; [Base Browser Files]
-bin/@MOZ_APP_NAME@-bin
-bin/@MOZ_APP_NAME@
+bin/firefox-bin
+bin/firefox
 bin/mozilla-xremote-client
 bin/run-mozilla.sh
 bin/plugins/libnullplugin.so
 bin/res/cmessage.txt
-bin/res/effective_tld_names.dat
 bin/xpicleanup
 
 ; [Components]
 bin/components/accessibility.xpt
+bin/components/accessibility-atk.xpt
 bin/components/appshell.xpt
 bin/components/appstartup.xpt
 bin/components/autocomplete.xpt
@@ -126,6 +127,7 @@ bin/components/mozfind.xpt
 bin/components/necko_about.xpt
 bin/components/necko_cache.xpt
 bin/components/necko_cookie.xpt
+bin/components/necko_data.xpt
 bin/components/necko_dns.xpt
 bin/components/necko_file.xpt
 bin/components/necko_ftp.xpt
@@ -165,11 +167,13 @@ bin/components/websrvcs.xpt
 bin/components/widget.xpt
 bin/components/windowds.xpt
 bin/components/windowwatcher.xpt
+bin/components/xmlextras.xpt
 bin/components/xml-rpc.xpt
 bin/components/xpcom_base.xpt
 bin/components/xpcom_components.xpt
 bin/components/xpcom_ds.xpt
 bin/components/xpcom_io.xpt
+bin/components/xpcom_obsolete.xpt
 bin/components/xpcom_threads.xpt
 bin/components/xpcom_xpti.xpt
 bin/components/xpconnect.xpt
@@ -204,7 +208,6 @@ bin/components/nsSidebar.js
 bin/components/nsXmlRpcClient.js
 bin/components/nsExtensionManager.js
 bin/components/nsUpdateService.js
-bin/components/pluginGlue.js
 bin/components/extensions.xpt
 bin/components/update.xpt
 bin/components/nsBookmarkTransactionManager.js
@@ -213,9 +216,6 @@ bin/components/nsSessionStore.js
 bin/components/sessionstore.xpt
 bin/components/nsURLFormatter.js
 bin/components/urlformatter.xpt
-bin/components/libbrowserdirprovider.so
-bin/components/libbrowsercomps.so
-bin/components/txEXSLTRegExFunctions.js
 
 ; Safe Browsing
 bin/components/nsSafebrowsingApplication.js

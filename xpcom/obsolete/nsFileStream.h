@@ -100,7 +100,11 @@
 #include "xpcomobsolete.h"
 #include "nsStringFwd.h"
 
+#ifdef XP_MAC
+#include "pprio.h" // To get PR_ImportFile
+#else
 #include "prio.h"
+#endif
 
 #include "nsCOMPtr.h"
 #include "nsIFileStream.h"
@@ -132,7 +136,7 @@ class nsIFileSpec;
 
 #endif // NS_USING_NAMESPACE
 
-#ifndef __KCC
+#if !defined(XP_MAC) && !defined(__KCC)
 // PR_STDOUT and PR_STDIN are fatal on Macintosh.  So for console i/o, we must use the std
 // stream stuff instead.  However, we have to require that cout and cin are passed in
 // to the constructor because in the current build, there is a copy in the base.shlb,
@@ -478,6 +482,31 @@ private:
     nsRandomAccessInputStream&        operator=(const nsRandomAccessInputStream& rhs);
 
 }; // class nsRandomAccessInputStream
+
+//========================================================================================
+class NS_COM_OBSOLETE nsInputStringStream
+//========================================================================================
+: public nsRandomAccessInputStream
+{
+public:
+                                      nsInputStringStream(const char* stringToRead);
+                                      nsInputStringStream(const nsString& stringToRead);
+
+    // Input streamers.  Unfortunately, they don't inherit!
+    nsInputStream&                    operator >> (char& ch)
+                                         { return nsInputStream::operator >>(ch); }
+    nsInputStream&                    operator >> (nsInputStream& (*pf)(nsInputStream&))
+                                         { return nsInputStream::operator >>(pf); }
+
+
+private:
+
+    // private and unimplemented to disallow copies and assigns
+                                      nsInputStringStream(const nsInputStringStream& rhs);
+    nsInputStringStream&              operator=(const nsInputStringStream& rhs);
+
+
+}; // class nsInputStringStream
 
 //========================================================================================
 class NS_COM_OBSOLETE nsInputFileStream

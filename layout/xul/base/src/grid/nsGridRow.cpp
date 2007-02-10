@@ -44,7 +44,6 @@
 
 #include "nsGridRow.h"
 #include "nsIFrame.h"
-#include "nsBoxLayoutState.h"
 
 nsGridRow::nsGridRow():mIsBogus(PR_FALSE),
                        mBox(nsnull), 
@@ -91,15 +90,18 @@ nsGridRow::MarkDirty(nsBoxLayoutState& aState)
   mTop = -1;
   mBottom = -1;
 
-  if (mBox) {
-    mBox->AddStateBits(NS_FRAME_IS_DIRTY);
-    aState.PresShell()->FrameNeedsReflow(mBox, nsIPresShell::eTreeChange);
-  }
+  if (mBox) 
+    mBox->MarkDirty(aState);
 }
 
 PRBool 
 nsGridRow::IsCollapsed(nsBoxLayoutState& aState)
 {
-  return mBox && mBox->IsCollapsed(aState);
+  PRBool isCollapsed = PR_FALSE;
+
+  if (mBox)
+    mBox->IsCollapsed(aState,isCollapsed);
+
+  return isCollapsed;
 }
 

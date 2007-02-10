@@ -470,7 +470,7 @@ LocalSearchDataSource::parseDate(const nsAString& aDate,
     // parse the time
     PRTime *outTime = NS_STATIC_CAST(PRTime*,aResult);
     PRStatus err;
-    err = PR_ParseTimeString(NS_ConvertUTF16toUTF8(aDate).get(),
+    err = PR_ParseTimeString(NS_ConvertUCS2toUTF8(aDate).get(),
                              PR_FALSE, // PR_FALSE == use current timezone
                              outTime);
     NS_ENSURE_TRUE(err == 0, NS_ERROR_FAILURE);
@@ -636,7 +636,14 @@ LocalSearchDataSource::getFindResults(nsIRDFResource *source, nsISimpleEnumerato
 	rv = parseFindURL(source, nameArray);
 	if (NS_FAILED(rv)) return rv;
 
-        return NS_NewArrayEnumerator(aResult, nameArray);
+	nsISimpleEnumerator* result = new nsArrayEnumerator(nameArray);
+	if (! result)
+		return(NS_ERROR_OUT_OF_MEMORY);
+
+	NS_ADDREF(result);
+	*aResult = result;
+
+	return NS_OK;
 }
 
 
@@ -687,7 +694,15 @@ LocalSearchDataSource::GetTargets(nsIRDFResource *source,
 			rv = getFindName(source, getter_AddRefs(name));
 			if (NS_FAILED(rv)) return rv;
 
-                        return NS_NewSingletonEnumerator(targets, name);
+			nsISimpleEnumerator* result =
+			new nsSingletonEnumerator(name);
+
+			if (! result)
+				return NS_ERROR_OUT_OF_MEMORY;
+
+			NS_ADDREF(result);
+			*targets = result;
+			return NS_OK;
 		}
 		else if (property == kRDF_type)
 		{
@@ -696,24 +711,38 @@ LocalSearchDataSource::GetTargets(nsIRDFResource *source,
 			if (NS_FAILED(rv)) return rv;
 
 			nsAutoString	url; url.AssignWithConversion(uri);
-
-			nsCOMPtr<nsIRDFLiteral> literal;
-			rv = gRDFService->GetLiteral(url.get(),
-                                                     getter_AddRefs(literal));
+			nsIRDFLiteral	*literal;
+			rv = gRDFService->GetLiteral(url.get(), &literal);
 			if (NS_FAILED(rv)) return rv;
 
-                        return NS_NewSingletonEnumerator(targets, literal);
+			nsISimpleEnumerator* result = new nsSingletonEnumerator(literal);
+
+			NS_RELEASE(literal);
+
+			if (! result)
+				return NS_ERROR_OUT_OF_MEMORY;
+
+			NS_ADDREF(result);
+			*targets = result;
+			return NS_OK;
 		}
 		else if (property == kNC_pulse)
 		{
 			nsAutoString	pulse(NS_LITERAL_STRING("15"));
-
-			nsCOMPtr<nsIRDFLiteral> pulseLiteral;
-			rv = gRDFService->GetLiteral(pulse.get(),
-                                                     getter_AddRefs(pulseLiteral));
+			nsIRDFLiteral	*pulseLiteral;
+			rv = gRDFService->GetLiteral(pulse.get(), &pulseLiteral);
 			if (NS_FAILED(rv)) return rv;
 
-                        return NS_NewSingletonEnumerator(targets, pulseLiteral);
+			nsISimpleEnumerator* result = new nsSingletonEnumerator(pulseLiteral);
+
+			NS_RELEASE(pulseLiteral);
+
+			if (! result)
+				return NS_ERROR_OUT_OF_MEMORY;
+
+			NS_ADDREF(result);
+			*targets = result;
+			return NS_OK;
 		}
 	}
 
@@ -866,7 +895,13 @@ LocalSearchDataSource::ArcLabelsOut(nsIRDFResource *source,
 		array->AppendElement(kNC_Child);
 		array->AppendElement(kNC_pulse);
 
-                return NS_NewArrayEnumerator(labels, array);
+		nsISimpleEnumerator* result = new nsArrayEnumerator(array);
+		if (! result)
+			return NS_ERROR_OUT_OF_MEMORY;
+
+		NS_ADDREF(result);
+		*labels = result;
+		return(NS_OK);
 	}
 	return(NS_NewEmptyEnumerator(labels));
 }

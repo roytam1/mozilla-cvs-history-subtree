@@ -70,14 +70,13 @@ function toggleOfflineStatus()
   }
 
   var ioService = Components.classes[kIOServiceProgID]
-                            .getService(Components.interfaces.nsIIOService2);
+                            .getService(Components.interfaces.nsIIOService);
   if (checkfunc) {
     if (!eval(checkfunc)) {
       // the pre-offline check function returned false, so don't go offline
       return;
     }
   }
-  ioService.manageOfflineStatus = false;
   ioService.offline = !ioService.offline;
 }
 
@@ -591,6 +590,9 @@ function startScrolling(event)
     return;
 
   if (!pref.getBoolPref("general.autoScroll"))
+    return;
+
+  if (gScrollingView || event.button != 1)
     return;
 
   if (event.originalTarget instanceof XULElement &&

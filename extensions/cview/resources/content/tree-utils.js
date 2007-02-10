@@ -282,12 +282,6 @@ function bov_isedit (row, col)
     return false;
 }
 
-BasicOView.prototype.isSelectable =
-function bov_isselect (row, col)
-{
-    return false;
-}
-
 BasicOView.prototype.setCellValue =
 function bov_setct (row, col, value)
 {
@@ -512,7 +506,7 @@ function tovr_resort (leafSort)
                 (rowIndex + this.visualFootprint - 1));
             */
             tree.tree.invalidateRange (rowIndex,
-                                       rowIndex + this.visualFootprint - 1);
+                                           rowIndex + this.visualFootprint - 1);
         }
     }
     /*
@@ -602,7 +596,7 @@ function tovr_appchild (children, skipResort)
 }
 
 /*
- * remove a child from this record. updates the tree too.  DON'T call this with
+ * remove a child from this record. updates the tree too.  DONT call this with
  * an index not actually contained by this record.
  */
 TreeOViewRecord.prototype.removeChildAtIndex =
@@ -654,7 +648,7 @@ function tovr_uhide ()
 }
 
 /*
- * open this record, exposing it's children.  DON'T call this method if the record
+ * open this record, exposing it's children.  DONT call this method if the record
  * has no children.
  */
 TreeOViewRecord.prototype.open =
@@ -682,7 +676,7 @@ function tovr_open ()
 }
 
 /*
- * close this record, hiding it's children.  DON'T call this method if the record
+ * close this record, hiding it's children.  DONT call this method if the record
  * has no children, or if it is already closed.
  */
 TreeOViewRecord.prototype.close =
@@ -1223,12 +1217,6 @@ function tov_cyclecell (row, col)
 
 TreeOView.prototype.isEditable =
 function tov_isedit (row, col)
-{
-    return false;
-}
-
-TreeOView.prototype.isSelectable =
-function tov_isselect (row, col)
 {
     return false;
 }

@@ -1,5 +1,6 @@
 messenger.jar:
 % content messenger %content/messenger/ xpcnativewrappers=yes
+    content/messenger/mailTasksOverlay.xul          (content/mailTasksOverlay.xul)
 *   content/messenger/mailWindow.js                 (content/mailWindow.js)
 *   content/messenger/mailWindowOverlay.js          (content/mailWindowOverlay.js)
 *   content/messenger/mailWindowOverlay.xul         (content/mailWindowOverlay.xul)
@@ -26,13 +27,10 @@ messenger.jar:
 *   content/messenger/subscribe.xul                 (content/subscribe.xul)
     content/messenger/subscribe.js                  (content/subscribe.js)
 *   content/messenger/aboutDialog.xul               (content/aboutDialog.xul)
-*   content/messenger/defaultClientDialog.xul       (content/defaultClientDialog.xul)
-*   content/messenger/defaultClientDialog.js        (content/defaultClientDialog.js)
 *   content/messenger/msgSelectOffline.xul          (content/msgSelectOffline.xul)
 *   content/messenger/msgPrintEngine.xul            (content/msgPrintEngine.xul)
 *   content/messenger/searchBar.js                  (content/searchBar.js)
 *   content/messenger/phishingDetector.js           (content/phishingDetector.js)
-*   content/messenger/mail-offline.js               (content/mail-offline.js)
     content/messenger/about-footer.png              (content/about-footer.png)
     content/messenger/aboutDialog.css               (content/aboutDialog.css)
 *   content/messenger/credits.xhtml                 (content/credits.xhtml)
@@ -41,7 +39,11 @@ messenger.jar:
     content/messenger/startpage-h1-rtl.png          (content/startpage-h1-rtl.png)
     content/messenger/startpage-h2.png              (content/startpage-h2.png)
     content/messenger/startpage-h2-rtl.png          (content/startpage-h2-rtl.png)
+    content/messenger/startpage-back.png            (content/startpage-back.png)
+    content/messenger/startpage-back-rtl.png        (content/startpage-back-rtl.png)
     content/messenger/startpage-li.png              (content/startpage-li.png)
+    content/messenger/startpage-gecko.png           (content/startpage-gecko.png)
+    content/messenger/startpage-gecko-rtl.png       (content/startpage-gecko-rtl.png)
     content/messenger/messenger.css                 (content/messenger.css)
 *   content/messenger/search.xml                    (content/search.xml)
 *   content/messenger/newmailalert.xul              (content/newmailalert.xul)
@@ -49,7 +51,7 @@ messenger.jar:
 #ifdef MOZ_USE_GENERIC_BRANDING
 % content branding %content/branding/ xpcnativewrappers=yes
     content/branding/about-credits.png              (content/about-credits.png)
-    content/branding/about.png                      (content/about-thunderbird.png)
+    content/branding/about-thunderbird.png          (content/about-thunderbird.png)
     content/branding/thunderbird-watermark.png      (content/thunderbird-watermark.png)
     content/branding/icon64.png                     (content/icon64.png)
 #ifdef XP_WIN
@@ -96,7 +98,7 @@ messenger.jar:
     content/messenger/junkLog.xul                   (/mailnews/base/resources/content/junkLog.xul)
     content/messenger/junkLog.js                    (/mailnews/base/resources/content/junkLog.js)
     content/messenger/importDialog.js               (/mailnews/import/resources/content/importDialog.js)
-*   content/messenger/importDialog.xul              (/mailnews/import/resources/content/importDialog.xul)
+    content/messenger/importDialog.xul              (/mailnews/import/resources/content/importDialog.xul)
     content/messenger/fieldMapImport.xul            (/mailnews/import/resources/content/fieldMapImport.xul)
     content/messenger/fieldMapImport.js             (/mailnews/import/resources/content/fieldMapImport.js)
     content/messenger/attach.js                     (/mailnews/mime/emitters/resources/content/attach.js)
@@ -118,7 +120,6 @@ messenger.jar:
 comm.jar:
 *+  content/communicator/contentAreaClick.js        (content/contentAreaClick.js)
 *+  content/communicator/utilityOverlay.xul         (content/utilityOverlay.xul)
-*+  content/communicator/utilityOverlay.js          (content/utilityOverlay.js)
 *+  content/communicator/nsContextMenu.js           (content/nsContextMenu.js)
 +   content/help/contextHelp.js                     (content/contextHelp.js)
 % content help %content/help/ xpcnativewrappers=yes

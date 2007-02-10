@@ -294,7 +294,7 @@ public:
 						 PRInt32 aFontID,
 						 const nscoord* aSpacing)
 		{
-		NS_ConvertUTF16toUTF8 theUnicodeString( aString, aLength );
+		NS_ConvertUCS2toUTF8 theUnicodeString( aString, aLength );
 		const char *p = theUnicodeString.get( );
 		return DrawString( p, strlen( p ), aX, aY, aSpacing );
 		}
@@ -302,7 +302,7 @@ public:
 	 inline
    NS_IMETHODIMP DrawString(const nsString& aString, nscoord aX, nscoord aY, PRInt32 aFontID, const nscoord* aSpacing)
 		{
-		NS_ConvertUTF16toUTF8 theUnicodeString( aString.get(), aString.Length() );
+		NS_ConvertUCS2toUTF8 theUnicodeString( aString.get(), aString.Length() );
 		const char *p = theUnicodeString.get();
 		return DrawString( p, strlen( p ), aX, aY, aSpacing );
 		}
@@ -347,6 +347,13 @@ public:
    
    NS_IMETHOD CopyOffScreenBits(nsIDrawingSurface* aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
 								const nsRect &aDestBounds, PRUint32 aCopyFlags);
+
+	 inline
+   NS_IMETHODIMP RetrieveCurrentNativeGraphicData(PRUint32 * ngd)
+		{
+		if( ngd != nsnull ) *ngd = nsnull;
+		return NS_OK;
+		}
 
 #ifdef MOZ_MATHML
   /**

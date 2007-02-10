@@ -48,7 +48,7 @@
 
 class nsMathMLmfencedFrame : public nsMathMLContainerFrame {
 public:
-  friend nsIFrame* NS_NewMathMLmfencedFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLmfencedFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   virtual void
   SetAdditionalStyleContext(PRInt32          aIndex, 
@@ -60,7 +60,8 @@ public:
   InheritAutomaticData(nsIFrame* aParent);
 
   NS_IMETHOD
-  SetInitialChildList(nsIAtom*        aListName,
+  SetInitialChildList(nsPresContext* aPresContext,
+                      nsIAtom*        aListName,
                       nsIFrame*       aChildList);
 
   NS_IMETHOD
@@ -69,12 +70,16 @@ public:
          const nsHTMLReflowState& aReflowState,
          nsReflowStatus&          aStatus);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD 
+  Paint(nsPresContext*      aPresContext,
+        nsIRenderingContext& aRenderingContext,
+        const nsRect&        aDirtyRect,
+        nsFramePaintLayer    aWhichLayer,
+        PRUint32             aFlags = 0);
 
   NS_IMETHOD
-  AttributeChanged(PRInt32         aNameSpaceID,
+  AttributeChanged(nsIContent*     aContent,
+                   PRInt32         aNameSpaceID,
                    nsIAtom*        aAttribute,
                    PRInt32         aModType);
 
@@ -110,8 +115,7 @@ public:
              nscoord              leading,
              nscoord              em,
              nsBoundingMetrics&   aContainerSize,
-             nscoord&             aAscent,
-             nscoord&             aDescent);
+             nsHTMLReflowMetrics& aDesiredSize);
 
   static void
   PlaceChar(nsMathMLChar*      aMathMLChar,
@@ -120,7 +124,7 @@ public:
             nscoord&           dx);
 
 protected:
-  nsMathMLmfencedFrame(nsStyleContext* aContext) : nsMathMLContainerFrame(aContext) {}
+  nsMathMLmfencedFrame();
   virtual ~nsMathMLmfencedFrame();
   
   virtual PRIntn GetSkipSides() const { return 0; }

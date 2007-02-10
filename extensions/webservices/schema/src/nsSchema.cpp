@@ -65,16 +65,6 @@ nsSchema::nsSchema(nsISchemaCollection* aCollection,
     elementFormDefault.Trim(" \r\n\t");
     mElementFormQualified = 
       elementFormDefault.EqualsLiteral("qualified");
-
-    // get the attribute qualification form
-    nsAutoString attributeFormDefault;
-    aSchemaElement->GetAttributeNS(empty,
-                                   NS_LITERAL_STRING("attributeFormDefault"),
-                                   attributeFormDefault);
-
-    // default is unqualified
-    mAttributeFormDefaultQualified =
-      attributeFormDefault.EqualsLiteral("qualified");
   }
 }
 

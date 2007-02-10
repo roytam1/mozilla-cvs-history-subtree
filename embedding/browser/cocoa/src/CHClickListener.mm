@@ -53,7 +53,8 @@
 #include "nsIDOMHTMLSelectElement.h"
 #include "nsIDOMHTMLOptionElement.h"
 #include "nsIDOMHTMLOptionsCollection.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDocument.h"
 #include "nsString.h"
 
@@ -199,7 +200,9 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
     // I'm going to assume that if we got a mousedown for a content node,
     // it's actually in a document.
 
-    nsCOMPtr<nsIDOMWindow> window = doc->GetWindow();
+    nsCOMPtr<nsIScriptGlobalObject> sgo;
+    doc->GetScriptGlobalObject(getter_AddRefs(sgo));
+    nsCOMPtr<nsIDOMWindow> window = do_QueryInterface(sgo);
     if (!window)
       return NS_OK;
 

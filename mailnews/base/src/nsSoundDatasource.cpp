@@ -152,10 +152,10 @@ nsSoundDatasource::GetTarget(nsIRDFResource *source,
       // turn "file://C|/winnt/media/foo.wav" into "foo".
       nsCAutoString soundName(lastSlash + 1);
       soundName.Truncate(soundName.Length() - WAV_EXTENSION_LENGTH);
-      rv = mRDFService->GetLiteral(NS_ConvertASCIItoUTF16(soundName).get(), getter_AddRefs(name));
+      rv = mRDFService->GetLiteral(NS_ConvertASCIItoUCS2(soundName).get(), getter_AddRefs(name));
     }
     else {
-      rv = mRDFService->GetLiteral(NS_ConvertASCIItoUTF16(DEFAULT_SOUND_URL_NAME).get(), getter_AddRefs(name));
+      rv = mRDFService->GetLiteral(NS_ConvertASCIItoUCS2(DEFAULT_SOUND_URL_NAME).get(), getter_AddRefs(name));
     }
     NS_ENSURE_SUCCESS(rv,rv);
     
@@ -166,7 +166,7 @@ nsSoundDatasource::GetTarget(nsIRDFResource *source,
   }
   else if (property == kNC_SoundURL.get()) {
     nsCOMPtr<nsIRDFLiteral> name;
-    rv = mRDFService->GetLiteral(NS_ConvertASCIItoUTF16(value).get(), getter_AddRefs(name));
+    rv = mRDFService->GetLiteral(NS_ConvertASCIItoUCS2(value).get(), getter_AddRefs(name));
     NS_ENSURE_SUCCESS(rv,rv);
     
     if (!name) 
@@ -264,7 +264,7 @@ nsSoundDatasource::GetTargets(nsIRDFResource *source,
     nsCOMPtr <nsILocalFile> directory = do_CreateInstance (NS_LOCAL_FILE_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv,rv);
 
-    rv = directory->InitWithPath(NS_ConvertASCIItoUTF16(soundFolder));
+    rv = directory->InitWithPath(NS_ConvertASCIItoUCS2(soundFolder));
     NS_ENSURE_SUCCESS(rv,rv);
 
     nsCOMPtr <nsISimpleEnumerator> dirEntries;
@@ -334,7 +334,7 @@ nsSoundDatasource::GetTargets(nsIRDFResource *source,
   }
   else if (property == kNC_SoundURL.get()) {
     nsCOMPtr<nsIRDFLiteral> name;
-    rv = mRDFService->GetLiteral(NS_ConvertASCIItoUTF16(value).get(), getter_AddRefs(name));
+    rv = mRDFService->GetLiteral(NS_ConvertASCIItoUCS2(value).get(), getter_AddRefs(name));
     NS_ENSURE_SUCCESS(rv,rv);
 
     nsISimpleEnumerator* result = new nsSingletonEnumerator(name);
@@ -351,10 +351,10 @@ nsSoundDatasource::GetTargets(nsIRDFResource *source,
       // turn "file://C|/winnt/media/foo.wav" into "foo".
       nsCAutoString soundName(lastSlash + 1);
       soundName.Truncate(soundName.Length() - WAV_EXTENSION_LENGTH);
-      rv = mRDFService->GetLiteral(NS_ConvertASCIItoUTF16(soundName).get(), getter_AddRefs(name));
+      rv = mRDFService->GetLiteral(NS_ConvertASCIItoUCS2(soundName).get(), getter_AddRefs(name));
     }
     else {
-      rv = mRDFService->GetLiteral(NS_ConvertASCIItoUTF16(DEFAULT_SOUND_URL_NAME).get(), getter_AddRefs(name));
+      rv = mRDFService->GetLiteral(NS_ConvertASCIItoUCS2(DEFAULT_SOUND_URL_NAME).get(), getter_AddRefs(name));
     }
     NS_ENSURE_SUCCESS(rv,rv);
 

@@ -36,35 +36,48 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsSVGPolyElement.h"
+#include "nsSVGGraphicElement.h"
+#include "nsSVGAtoms.h"
+#include "nsSVGPointList.h"
 #include "nsIDOMSVGPolylineElement.h"
+#include "nsIDOMSVGAnimatedPoints.h"
+#include "nsCOMPtr.h"
 
-typedef nsSVGPolyElement nsSVGPolylineElementBase;
+typedef nsSVGGraphicElement nsSVGPolylineElementBase;
 
 class nsSVGPolylineElement : public nsSVGPolylineElementBase,
-                             public nsIDOMSVGPolylineElement
+                             public nsIDOMSVGPolylineElement,
+                             public nsIDOMSVGAnimatedPoints
 {
 protected:
   friend nsresult NS_NewSVGPolylineElement(nsIContent **aResult,
                                            nsINodeInfo *aNodeInfo);
   nsSVGPolylineElement(nsINodeInfo* aNodeInfo);
-
+  virtual ~nsSVGPolylineElement();
+  nsresult Init();
+  
 public:
   // interfaces:
-
+  
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIDOMSVGPOLYLINEELEMENT
+  NS_DECL_NSIDOMSVGANIMATEDPOINTS
 
   // xxx I wish we could use virtual inheritance
-  NS_FORWARD_NSIDOMNODE(nsSVGPolylineElementBase::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsSVGPolylineElementBase::)
   NS_FORWARD_NSIDOMELEMENT(nsSVGPolylineElementBase::)
   NS_FORWARD_NSIDOMSVGELEMENT(nsSVGPolylineElementBase::)
 
-  // nsIContent interface
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
+  // nsIStyledContent interface
+  NS_IMETHODIMP_(PRBool) IsAttributeMapped(const nsIAtom* name) const;
+  
+protected:
+  nsCOMPtr<nsIDOMSVGPointList> mPoints;
 };
 
+
 NS_IMPL_NS_NEW_SVG_ELEMENT(Polyline)
+
 
 //----------------------------------------------------------------------
 // nsISupports methods
@@ -77,6 +90,7 @@ NS_INTERFACE_MAP_BEGIN(nsSVGPolylineElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMSVGElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMSVGPolylineElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMSVGAnimatedPoints)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(SVGPolylineElement)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGPolylineElementBase)
 
@@ -89,7 +103,64 @@ nsSVGPolylineElement::nsSVGPolylineElement(nsINodeInfo* aNodeInfo)
 
 }
 
+nsSVGPolylineElement::~nsSVGPolylineElement()
+{
+}
+
+  
+nsresult
+nsSVGPolylineElement::Init()
+{
+  nsresult rv = nsSVGPolylineElementBase::Init();
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  // Create mapped properties:
+  
+  // points #IMPLIED
+  rv = nsSVGPointList::Create(getter_AddRefs(mPoints));
+  NS_ENSURE_SUCCESS(rv,rv);
+  rv = AddMappedSVGValue(nsSVGAtoms::points, mPoints);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  return rv;
+}
+
 //----------------------------------------------------------------------
 // nsIDOMNode methods
 
-NS_IMPL_ELEMENT_CLONE_WITH_INIT(nsSVGPolylineElement)
+
+NS_IMPL_DOM_CLONENODE_WITH_INIT(nsSVGPolylineElement)
+
+
+//----------------------------------------------------------------------
+// nsIDOMSGAnimatedPoints methods:
+
+/* readonly attribute nsIDOMSVGPointList points; */
+NS_IMETHODIMP nsSVGPolylineElement::GetPoints(nsIDOMSVGPointList * *aPoints)
+{
+  *aPoints = mPoints;
+  NS_ADDREF(*aPoints);
+  return NS_OK;
+}
+
+/* readonly attribute nsIDOMSVGPointList animatedPoints; */
+NS_IMETHODIMP nsSVGPolylineElement::GetAnimatedPoints(nsIDOMSVGPointList * *aAnimatedPoints)
+{
+  *aAnimatedPoints = mPoints;
+  NS_ADDREF(*aAnimatedPoints);
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+// nsIStyledContent methods
+
+NS_IMETHODIMP_(PRBool)
+nsSVGPolylineElement::IsAttributeMapped(const nsIAtom* name) const
+{
+  static const MappedAttributeEntry* const map[] = {
+    sMarkersMap,
+  };
+  
+  return FindAttributeDependence(name, map, NS_ARRAY_LENGTH(map)) ||
+    nsSVGPolylineElementBase::IsAttributeMapped(name);
+}

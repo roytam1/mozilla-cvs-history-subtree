@@ -20,7 +20,6 @@
  *
  * Contributor(s):
  *   Joe Hewitt (hewitt@netscape.com)
- *   Manuel Reimer (Manuel.Reimer@gmx.de)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,71 +42,69 @@
 /* ::::: primary toolbar buttons ::::: */
 
 .toolbarbutton-1 {
-  list-style-image: url("chrome://communicator/skin/icons/communicatoricons.png") !important;
+  list-style-image: url("chrome://navigator/skin/icons/btn1.gif");
 }
 
 #helpBackButton {
-  -moz-image-region: rect(60px 29px 89px 0);
+  -moz-image-region: rect(0px 19px 20px 0px);
 }
 
 #helpBackButton:hover {
-  -moz-image-region: rect(60px 59px 89px 30px);
+  -moz-image-region: rect(0px 38px 20px 19px);
 }
 
 #helpBackButton:hover:active {
-  -moz-image-region: rect(60px 89px 89px 60px);
+  -moz-image-region: rect(0px 57px 20px 38px);
 }
 
 #helpBackButton[disabled="true"] {
-  -moz-image-region: rect(60px 119px 89px 90px) !important;
+  -moz-image-region: rect(0px 76px 20px 57px) !important;
 }
 
 #helpForwardButton {
-  -moz-image-region: rect(90px 29px 119px 0);
+  -moz-image-region: rect(20px 19px 40px 0px);
 }
 
 #helpForwardButton:hover {
-  -moz-image-region: rect(90px 59px 119px 30px);
+  -moz-image-region: rect(20px 38px 40px 19px);
 }
 
 #helpForwardButton:hover:active {
-  -moz-image-region: rect(90px 89px 119px 60px);
+  -moz-image-region: rect(20px 57px 40px 38px);
 }
 
 #helpForwardButton[disabled="true"] {
-  -moz-image-region: rect(90px 119px 119px 90px) !important;
+  -moz-image-region: rect(20px 76px 40px 57px) !important;
 }
 
 #helpPrintButton {
-  -moz-image-region: rect(0 29px 29px 0);
+  list-style-image: url("chrome://communicator/skin/icons/btn1.gif");
+  -moz-image-region: rect(0px 23px 21px 0px);
 }
 
 #helpPrintButton:hover {
-  -moz-image-region: rect(0 59px 29px 30px);
+  -moz-image-region: rect(0px 46px 21px 23px);
 }
 
 #helpPrintButton:hover:active {
-  -moz-image-region: rect(0 89px 29px 60px);
+  -moz-image-region: rect(0px 69px 21px 46px);
 }
 
 #helpPrintButton[disabled="true"] {
-  -moz-image-region: rect(0 119px 29px 90px) !important;
+  -moz-image-region: rect(0px 92px 21px 69px) !important;
 }
 
 #helpHomeButton {
-  -moz-image-region: rect(120px 29px 149px 0);
+  list-style-image: url("chrome://communicator/skin/home.gif");
+  -moz-image-region: rect(0px 23px 20px 0px);
 }
-
+    
 #helpHomeButton:hover {
-  -moz-image-region: rect(120px 59px 149px 30px);
+  -moz-image-region: rect(0px 46px 20px 23px);
 }
-
+    
 #helpHomeButton:hover:active {
-  -moz-image-region: rect(120px 89px 149px 60px);
-}
-
-#helpHomeButton[disabled="true"] {
-  -moz-image-region: rect(120px 119px 149px 90px) !important;
+  -moz-image-region: rect(0px 69px 20px 46px);
 }
 
 #helpsidebar-box {

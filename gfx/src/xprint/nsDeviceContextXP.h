@@ -74,6 +74,8 @@ public:
   NS_IMETHOD  CreateRenderingContextInstance(nsIRenderingContext *&aContext);
   NS_IMETHOD  SupportsNativeWidgets(PRBool &aSupportsWidgets);
 
+  NS_IMETHOD  GetScrollBarDimensions(float &aWidth, float &aHeight) const;
+
   NS_IMETHOD         CheckFontExistence(const nsString& aFontName);
 
   NS_IMETHOD         GetDeviceSurfaceDimensions(PRInt32 &aWidth, PRInt32 &aHeight);

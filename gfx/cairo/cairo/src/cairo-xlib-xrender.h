@@ -45,13 +45,14 @@
 
 CAIRO_BEGIN_DECLS
 
-cairo_public cairo_surface_t *
+cairo_surface_t *
 cairo_xlib_surface_create_with_xrender_format (Display		 *dpy,
                                                Drawable		  drawable,
 					       Screen		 *screen,
                                                XRenderPictFormat *format,
                                                int		  width,
                                                int		  height);
+
 
 CAIRO_END_DECLS
 

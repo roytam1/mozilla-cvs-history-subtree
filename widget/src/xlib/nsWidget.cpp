@@ -363,7 +363,7 @@ nsWidget::StandardWidgetCreate(nsIWidget *aParent,
 NS_IMETHODIMP nsWidget::Destroy()
 {
 
-  // Don't reenter.
+  // Dont reenter.
   if (mIsDestroying)
     return NS_OK;
 
@@ -724,7 +724,7 @@ NS_IMETHODIMP nsWidget::SetCursor(nsCursor aCursor)
   if (!mBaseWindow)
     return NS_ERROR_FAILURE;
 
-  /* don't bother setting if it it isn't mapped, duh */
+  /* don't bother setting if it it isnt mapped, duh */
   if (!mMapped)
     return NS_OK;
   
@@ -756,6 +756,9 @@ NS_IMETHODIMP nsWidget::PreCreateWidget(nsWidgetInitData *aInitData)
 
 nsIWidget *nsWidget::GetParent(void)
 {
+  if (nsnull != mParentWidget) {
+    NS_ADDREF(mParentWidget);
+  }
   return mParentWidget;
 }
 
@@ -1077,9 +1080,15 @@ PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
   }
 
   /* If there was a mouse down event, check if any popups need to be notified */
-  if (aEvent.message == NS_MOUSE_BUTTON_DOWN &&
-      HandlePopup(aEvent.refPoint.x, aEvent.refPoint.y)) {
-    return PR_TRUE;
+  switch (aEvent.message) {
+    case NS_MOUSE_LEFT_BUTTON_DOWN:
+    case NS_MOUSE_MIDDLE_BUTTON_DOWN:
+    case NS_MOUSE_RIGHT_BUTTON_DOWN:
+      if (HandlePopup(aEvent.point.x, aEvent.point.y)){
+        // Should we return here as GTK does?
+        return PR_TRUE;
+      }
+      break;
   }
 
   if (nsnull != mEventCallback) {
@@ -1091,10 +1100,14 @@ PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
     case NS_MOUSE_MOVE:
       // XXX this isn't handled in gtk for some reason.
       break;
-    case NS_MOUSE_BUTTON_DOWN:
+    case NS_MOUSE_LEFT_BUTTON_DOWN:
+    case NS_MOUSE_MIDDLE_BUTTON_DOWN:
+    case NS_MOUSE_RIGHT_BUTTON_DOWN:
       result = ConvertStatus(mMouseListener->MousePressed(aEvent));
       break;
-    case NS_MOUSE_BUTTON_UP:
+    case NS_MOUSE_LEFT_BUTTON_UP:
+    case NS_MOUSE_MIDDLE_BUTTON_UP:
+    case NS_MOUSE_RIGHT_BUTTON_UP:
       result = ConvertStatus(mMouseListener->MouseReleased(aEvent));
       result = ConvertStatus(mMouseListener->MouseClicked(aEvent));
       break;
@@ -1188,7 +1201,7 @@ nsWidget::DebugPrintEvent(nsGUIEvent &   aEvent,
          (void *) this,
          (void *) aWindow);
          
-  printf(" , x=%-3d, y=%d)",aEvent.refPoint.x,aEvent.refPoint.y);
+  printf(" , x=%-3d, y=%d)",aEvent.point.x,aEvent.point.y);
 
   printf("\n");
 }
@@ -1223,6 +1236,22 @@ NS_IMETHODIMP nsWidget::DispatchEvent(nsGUIEvent * aEvent,
   NS_IF_RELEASE(aEvent->widget);
 
   return NS_OK;
+}
+
+PRBool nsWidget::ConvertStatus(nsEventStatus aStatus)
+{
+  switch(aStatus) {
+    case nsEventStatus_eIgnore:
+      return(PR_FALSE);
+    case nsEventStatus_eConsumeNoDefault:
+      return(PR_TRUE);
+    case nsEventStatus_eConsumeDoDefault:
+      return(PR_FALSE);
+    default:
+      NS_WARNING("Illegal nsEventStatus enumeration value\n");
+      break;
+  }
+  return(PR_FALSE);
 }
 
 void nsWidget::WidgetPut(nsWidget *aWidget)
@@ -1435,7 +1464,7 @@ Cursor nsWidget::XlibCreateCursor(nsCursor aCursorType)
       break;
   }
 
-  /* if by now we don't have a xcursor, this means we have to make a custom one */
+  /* if by now we dont have a xcursor, this means we have to make a custom one */
   if (!xcursor) {
     NS_ASSERTION(newType != 0xff, "Unknown cursor type and no standard cursor");
     

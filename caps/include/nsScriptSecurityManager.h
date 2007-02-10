@@ -52,7 +52,6 @@
 #include "nsCOMPtr.h"
 #include "nsIPrefService.h"
 #include "nsISecurityPref.h"
-#include "nsIChannelEventSink.h"
 #include "nsIJSContextStack.h"
 #include "nsIObserver.h"
 #include "pldhash.h"
@@ -66,7 +65,6 @@ class nsIXPConnect;
 class nsIStringBundle;
 class nsSystemPrincipal;
 struct ClassPolicy;
-class ClassInfoData;
 class DomainPolicy;
 
 #if defined(DEBUG_mstoltz) || defined(DEBUG_caillon)
@@ -377,7 +375,6 @@ MoveClassPolicyEntry(PLDHashTable *table,
 
 class nsScriptSecurityManager : public nsIScriptSecurityManager,
                                 public nsIPrefSecurityCheck,
-                                public nsIChannelEventSink,
                                 public nsIObserver
 {
 public:
@@ -389,7 +386,6 @@ public:
     NS_DECL_NSISCRIPTSECURITYMANAGER
     NS_DECL_NSIXPCSECURITYMANAGER
     NS_DECL_NSIPREFSECURITYCHECK
-    NS_DECL_NSICHANNELEVENTSINK
     NS_DECL_NSIOBSERVER
 
     static nsScriptSecurityManager*
@@ -416,17 +412,22 @@ private:
     // Returns null if a principal cannot be found; generally callers
     // should error out at that point.
     static nsIPrincipal*
-    doGetObjectPrincipal(JSContext *cx, JSObject *obj,
-                         PRBool aAllowShortCircuit = PR_FALSE);
+    doGetObjectPrincipal(JSContext *cx, JSObject *obj);
 
     // Returns null if a principal cannot be found.  Note that rv can be NS_OK
     // when this happens -- this means that there was no JS running.
     nsIPrincipal*
     doGetSubjectPrincipal(nsresult* rv);
     
+    static nsresult
+    GetBaseURIScheme(nsIURI* aURI, nsCString& aScheme);
+
     static nsresult 
     ReportError(JSContext* cx, const nsAString& messageTag,
                 nsIURI* aSource, nsIURI* aTarget);
+
+    nsresult
+    GetRootDocShell(JSContext* cx, nsIDocShell **result);
 
     nsresult
     CheckPropertyAccessImpl(PRUint32 aAction,
@@ -450,7 +451,7 @@ private:
 
     nsresult
     LookupPolicy(nsIPrincipal* principal,
-                 ClassInfoData& aClassData, jsval aProperty,
+                 const char* aClassName, jsval aProperty,
                  PRUint32 aAction,
                  ClassPolicy** aCachedClassPolicy,
                  SecurityLevel* result);
@@ -542,15 +543,6 @@ private:
     nsresult
     InitPrincipals(PRUint32 prefCount, const char** prefNames,
                    nsISecurityPref* securityPref);
-
-
-    /**
-     * Utility method for comparing two URIs.  For security purposes, two URIs
-     * are equivalent if their schemes, hosts, and ports (if any) match.  This
-     * method returns true if aSubjectURI and aObjectURI have the same origin,
-     * false otherwise.
-     */
-    PRBool SecurityCompareURIs(nsIURI* aSourceURI, nsIURI* aTargetURI);
 
 #ifdef XPC_IDISPATCH_SUPPORT
     // While this header is included outside of caps, this class isn't 

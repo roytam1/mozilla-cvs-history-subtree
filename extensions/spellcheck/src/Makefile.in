@@ -44,17 +44,19 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= spellchecker
 LIBRARY_NAME	= spellchecker
-MODULE_NAME     = mozSpellCheckerModule
 SHORT_LIBNAME = spellchk
-EXPORT_LIBRARY  = 1
+# Do not set EXPORT_LIBRARY as we do not want spellcheck in the static libs list
+#EXPORT_LIBRARY  = 1
+FORCE_SHARED_LIB = 1
 IS_COMPONENT	= 1
-LIBXUL_LIBRARY = 1
+MOZILLA_INTERNAL_API = 1
+
+PACKAGE_FILE = spellcheck.pkg
 
 REQUIRES	= xpcom \
 		  string \
 		  editor \
 		  content \
-		  layout \
 		  dom \
 		  necko \
 		  widget \
@@ -71,33 +73,16 @@ CPPSRCS		= \
 		mozEnglishWordUtils.cpp		\
 		mozGenericWordUtils.cpp		\
 		mozSpellI18NManager.cpp		\
-		mozInlineSpellChecker.cpp	\
-		mozInlineSpellWordUtil.cpp      \
+ 		mozInlineSpellChecker.cpp	\
+ 		mozInlineSpellWordUtil.cpp      \
 		$(NULL)
-
-ifeq (cocoa,$(MOZ_WIDGET_TOOLKIT))
-SHARED_LIBRARY_LIBS += ../osxspell/src/$(LIB_PREFIX)osxspell_s.$(LIB_SUFFIX)
-LOCAL_INCLUDES += -I$(srcdir)/../osxspell/src
-else
-SHARED_LIBRARY_LIBS += ../myspell/src/$(LIB_PREFIX)myspell_s.$(LIB_SUFFIX)
-LOCAL_INCLUDES += -I$(srcdir)/../myspell/src
-endif
 
 EXTRA_DSO_LDOPTS = \
 		$(LIBS_DIR) \
 		$(MOZ_COMPONENT_LIBS) \
-		$(MOZ_UNICHARUTIL_LIBS) \
+ 		$(MOZ_UNICHARUTIL_LIBS) \
 		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
 
-LOCAL_INCLUDES += \
-	-I$(topsrcdir)/xpcom/io \
-	$(NULL)
 
-ifeq (cocoa,$(MOZ_WIDGET_TOOLKIT))
-LDFLAGS	+= \
-	-framework Cocoa \
-	-framework Foundation \
-	$(NULL)
-endif

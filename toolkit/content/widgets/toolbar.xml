@@ -10,13 +10,14 @@
       <stylesheet src="chrome://global/skin/toolbar.css"/>
     </resources>
     <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
             if (this.localName == "toolbarseparator")
-              return Components.interfaces.nsIAccessibleProvider.XULToolbarSeparator;
+              return accService.createXULToolbarSeparatorAccessible(this);
             else
-              return Components.interfaces.nsIAccessibleProvider.XULToolbar;
+              return accService.createXULToolbarAccessible(this);
           ]]>
         </getter>
       </property>
@@ -268,10 +269,11 @@
 
   <binding id="menubar" extends="chrome://global/content/bindings/toolbar.xml#toolbar-base" display="xul:menubar">
     <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULMenubar;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULMenubarAccessible(this);
           ]]>
         </getter>
        </property>

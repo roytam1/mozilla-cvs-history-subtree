@@ -20,7 +20,6 @@
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Mark Banner <bugzilla@standard8.demon.co.uk>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -45,27 +44,8 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS		= \
 		branding \
-		browser \
-		common \
-		locales \
+		components \
 		$(NULL)
-
-# XXX Once SeaMonkey becomes a fully fledged xul app, we can remove
-# this ifdef.
-ifdef MOZ_XUL_APP
-# if you add DIRS here, care that app is always at the bottom of the list
-# as it packages up the built files on mac...
-DIRS += \
-		profile \
-		build \
-		app \
-		$(NULL)
-else
-# XXX This should completely go away in the future but still holds the
-# xulappinfo component needed as long as suite is not a fully fledged
-# MOZ_XUL_APP
-DIRS +=		components
-endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 README_FILE = $(call EXPAND_LOCALE_SRCDIR,suite/locales)/installer/mac/README.txt

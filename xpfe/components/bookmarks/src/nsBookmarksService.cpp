@@ -64,6 +64,7 @@
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsUnicharUtils.h"
+#include "nsICmdLineHandler.h"
 
 #include "nsISound.h"
 #include "nsIPrompt.h"
@@ -73,7 +74,6 @@
 #include "nsIURL.h"
 #include "nsIFileURL.h"
 #include "nsIFile.h"
-#include "nsIGenericFactory.h"
 #include "nsIInputStream.h"
 #include "nsILineInputStream.h"
 #include "nsIOutputStream.h"
@@ -163,6 +163,13 @@ static NS_DEFINE_CID(kRDFInMemoryDataSourceCID,   NS_RDFINMEMORYDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,              NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFContainerCID,            NS_RDFCONTAINER_CID);
 static NS_DEFINE_CID(kRDFContainerUtilsCID,       NS_RDFCONTAINERUTILS_CID);
+static NS_DEFINE_CID(kIOServiceCID,               NS_IOSERVICE_CID);
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_CID(kStringBundleServiceCID,     NS_STRINGBUNDLESERVICE_CID);
+static NS_DEFINE_CID(kPlatformCharsetCID,         NS_PLATFORMCHARSET_CID);
+static NS_DEFINE_CID(kCacheServiceCID,            NS_CACHESERVICE_CID);
+static NS_DEFINE_CID(kCharsetAliasCID,            NS_CHARSETALIAS_CID);
+static NS_DEFINE_CID(kCollationFactoryCID,        NS_COLLATIONFACTORY_CID);
 
 #define URINC_BOOKMARKS_TOPROOT_STRING            "NC:BookmarksTopRoot"
 #define URINC_BOOKMARKS_ROOT_STRING               "NC:BookmarksRoot"
@@ -205,7 +212,7 @@ bm_AddRefGlobals()
             return rv;
         }
 
-        rv = CallGetService(NS_CHARSETALIAS_CONTRACTID, &gCharsetAlias);
+        rv = CallGetService(kCharsetAliasCID, &gCharsetAlias);
         if (NS_FAILED(rv)) {
             NS_ERROR("unable to get charset alias service");
             return rv;
@@ -216,7 +223,7 @@ bm_AddRefGlobals()
             nsCOMPtr<nsILocale> locale;
             ls->GetApplicationLocale(getter_AddRefs(locale));
             if (locale) {
-                nsCOMPtr<nsICollationFactory> factory = do_CreateInstance(NS_COLLATIONFACTORY_CONTRACTID);
+                nsCOMPtr<nsICollationFactory> factory = do_CreateInstance(kCollationFactoryCID);
                 if (factory) {
                     factory->CreateCollation(locale, &gCollation);
                 }
@@ -549,7 +556,7 @@ BookmarkParser::Init(nsIFile *aFile, nsIRDFDataSource *aDataSource,
 
     // determine default platform charset...
     nsCOMPtr<nsIPlatformCharset> platformCharset = 
-        do_GetService(NS_PLATFORMCHARSET_CONTRACTID, &rv);
+        do_GetService(kPlatformCharsetCID, &rv);
     if (NS_SUCCEEDED(rv) && (platformCharset))
     {
         nsCAutoString    defaultCharset;
@@ -557,7 +564,7 @@ BookmarkParser::Init(nsIFile *aFile, nsIRDFDataSource *aDataSource,
         {
             // found the default platform charset, now try and get a decoder from it to Unicode
             nsCOMPtr<nsICharsetConverterManager> charsetConv = 
-                do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv);
+                do_GetService(kCharsetConverterManagerCID, &rv);
             if (NS_SUCCEEDED(rv) && (charsetConv))
             {
                 rv = charsetConv->GetUnicodeDecoderRaw(defaultCharset.get(),
@@ -995,7 +1002,7 @@ BookmarkParser::ParseMetaTag(const nsString &aLine, nsIUnicodeDecoder **decoder)
 
     // found a charset, now try and get a decoder from it to Unicode
     nsICharsetConverterManager *charsetConv;
-    rv = CallGetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &charsetConv);
+    rv = CallGetService(kCharsetConverterManagerCID, &charsetConv);
     if (NS_SUCCEEDED(rv))
     {
         rv = charsetConv->GetUnicodeDecoderRaw(charset.get(), decoder);
@@ -1625,11 +1632,11 @@ nsBookmarksService::Init()
     rv = bm_AddRefGlobals();
     if (NS_FAILED(rv))  return rv;
 
-    mNetService = do_GetService(NS_IOSERVICE_CONTRACTID, &rv);
+    mNetService = do_GetService(kIOServiceCID, &rv);
     if (NS_FAILED(rv))  return rv;
 
     // create cache service/session, ignoring errors
-    mCacheService = do_GetService(NS_CACHESERVICE_CONTRACTID, &rv);
+    mCacheService = do_GetService(kCacheServiceCID, &rv);
     if (NS_SUCCEEDED(rv))
     {
         rv = mCacheService->CreateSession("HTTP", nsICache::STORE_ANYWHERE,
@@ -1647,7 +1654,7 @@ nsBookmarksService::Init()
     {
         /* create a bundle for the localization */
         nsCOMPtr<nsIStringBundleService> stringService =
-                do_GetService(NS_STRINGBUNDLE_CONTRACTID);
+                do_GetService(kStringBundleServiceCID);
         if (stringService)
         {
             nsCAutoString spec;
@@ -2031,7 +2038,7 @@ nsBookmarksService::FireTimer(nsITimer* aTimer, void* aClosure)
 
 #ifdef  DEBUG_BOOKMARK_PING_OUTPUT
             printf("nsBookmarksService::FireTimer - Pinging '%s'\n",
-                   NS_ConvertUTF16toUTF8(url).get());
+                   NS_ConvertUCS2toUTF8(url).get());
 #endif
 
             nsCOMPtr<nsIURI>    uri;
@@ -2092,7 +2099,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
     if (NS_SUCCEEDED(rv = GetURLFromResource(busyResource, url)))
     {
 #ifdef  DEBUG_BOOKMARK_PING_OUTPUT
-        printf("Finished polling '%s'\n", NS_ConvertUTF16toUTF8(url).get());
+        printf("Finished polling '%s'\n", NS_ConvertUCS2toUTF8(url).get());
 #endif
     }
     nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
@@ -2103,11 +2110,11 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
 
         nsCAutoString val;
         if (NS_SUCCEEDED(httpChannel->GetResponseHeader(NS_LITERAL_CSTRING("ETag"), val)))
-            CopyASCIItoUTF16(val, eTagValue);
+            CopyASCIItoUCS2(val, eTagValue);
         if (NS_SUCCEEDED(httpChannel->GetResponseHeader(NS_LITERAL_CSTRING("Last-Modified"), val)))
-            CopyASCIItoUTF16(val, lastModValue);
+            CopyASCIItoUCS2(val, lastModValue);
         if (NS_SUCCEEDED(httpChannel->GetResponseHeader(NS_LITERAL_CSTRING("Content-Length"), val)))
-            CopyASCIItoUTF16(val, contentLengthValue);
+            CopyASCIItoUCS2(val, contentLengthValue);
         val.Truncate();
 
         PRBool      changedFlag = PR_FALSE;
@@ -2120,7 +2127,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
                 if (!eTagValue.IsEmpty())
                 {
 #ifdef  DEBUG_BOOKMARK_PING_OUTPUT
-                    printf("eTag: '%s'\n", NS_ConvertUTF16toUTF8(eTagValue).get());
+                    printf("eTag: '%s'\n", NS_ConvertUCS2toUTF8(eTagValue).get());
 #endif
                     nsAutoString        eTagStr;
                     nsCOMPtr<nsIRDFNode>    currentETagNode;
@@ -2423,31 +2430,24 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
                     if (wwatch)
                     {
                         nsCOMPtr<nsIDOMWindow> newWindow;
-                        nsCOMPtr<nsISupportsArray> suppArray;
-                        rv = NS_NewISupportsArray(getter_AddRefs(suppArray));
-                        if (NS_FAILED(rv)) return rv;
+            nsCOMPtr<nsISupportsArray> suppArray;
+            rv = NS_NewISupportsArray(getter_AddRefs(suppArray));
+            if (NS_FAILED(rv)) return rv;
+            nsCOMPtr<nsISupportsString> suppString(do_CreateInstance("@mozilla.org/supports-string;1", &rv));
+            if (!suppString) return rv;
+            rv = suppString->SetData(url);
+            if (NS_FAILED(rv)) return rv;
+            suppArray->AppendElement(suppString);
+    
+            nsCOMPtr<nsICmdLineHandler> handler(do_GetService("@mozilla.org/commandlinehandler/general-startup;1?type=browser", &rv));    
+            if (NS_FAILED(rv)) return rv;
+   
+            nsXPIDLCString chromeUrl;
+            rv = handler->GetChromeUrlForTask(getter_Copies(chromeUrl));
+            if (NS_FAILED(rv)) return rv;
 
-                        nsCOMPtr<nsISupportsString> suppString(do_CreateInstance("@mozilla.org/supports-string;1", &rv));
-                        if (!suppString) return rv;
-
-                        rv = suppString->SetData(url);
-                        if (NS_FAILED(rv)) return rv;
-
-                        suppArray->AppendElement(suppString);
-
-                        nsXPIDLCString chromeUrl;
-                        nsCOMPtr<nsIPrefBranch> prefs(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
-                        if (NS_SUCCEEDED(rv))
-                        {
-                            prefs->GetCharPref("browser.chromeURL", getter_Copies(chromeUrl));
-                        }
-                        if (chromeUrl.IsEmpty())
-                        {
-                            chromeUrl.AssignLiteral("chrome://navigator/content/navigator.xul");
-                        }
-                        wwatch->OpenWindow(0, chromeUrl, "_blank",
-                                           "chrome,dialog=no,all", suppArray,
-                                           getter_AddRefs(newWindow));
+            wwatch->OpenWindow(0, chromeUrl, "_blank", "chrome,dialog=no,all", 
+                               suppArray, getter_AddRefs(newWindow));
                     }
                 }
             }
@@ -3336,7 +3336,7 @@ nsBookmarksService::IsBookmarked(const char* aURL, PRBool* aIsBookmarked)
     *aIsBookmarked = PR_FALSE;
 
     nsCOMPtr<nsIRDFLiteral> urlLiteral;
-    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUTF16(aURL).get(),
+    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUCS2(aURL).get(),
                                    getter_AddRefs(urlLiteral));
     if (NS_FAILED(rv))
         return rv;
@@ -3370,7 +3370,7 @@ nsBookmarksService::RequestCharset(nsIWebNavigation* aWebNavigation,
     uri->GetSpec(urlSpec);
    
     nsCOMPtr<nsIRDFLiteral> urlLiteral;
-    rv = gRDF->GetLiteral(NS_ConvertUTF8toUTF16(urlSpec).get(),
+    rv = gRDF->GetLiteral(NS_ConvertUTF8toUCS2(urlSpec).get(),
                                    getter_AddRefs(urlLiteral));
     if (NS_FAILED(rv))
         return rv;
@@ -3422,7 +3422,7 @@ NS_IMETHODIMP
 nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const PRUnichar *aIconURL)
 {
     nsCOMPtr<nsIRDFLiteral> urlLiteral;
-    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUTF16(aURL).get(),
+    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUCS2(aURL).get(),
                                    getter_AddRefs(urlLiteral));
     if (NS_FAILED(rv))
         return rv;
@@ -3462,7 +3462,7 @@ NS_IMETHODIMP
 nsBookmarksService::RemoveBookmarkIcon(const char *aURL, const PRUnichar *aIconURL)
 {
     nsCOMPtr<nsIRDFLiteral> urlLiteral;
-    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUTF16(aURL).get(),
+    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUCS2(aURL).get(),
                                    getter_AddRefs(urlLiteral));
     if (NS_FAILED(rv))
         return rv;
@@ -3517,7 +3517,7 @@ nsBookmarksService::UpdateLastVisitedDate(const char *aURL,
         return NS_ERROR_NULL_POINTER;
 
     nsCOMPtr<nsIRDFLiteral> urlLiteral;
-    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUTF16(aURL).get(),
+    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUCS2(aURL).get(),
                                    getter_AddRefs(urlLiteral));
     if (NS_FAILED(rv))
         return rv;
@@ -3673,7 +3673,7 @@ nsBookmarksService::GetLastCharset(const nsACString &aURL, nsAString &aCharset)
     aCharset.Truncate(); 
 
     nsCOMPtr<nsIRDFLiteral> urlLiteral;
-    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUTF16(aURL).get(),
+    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUCS2(aURL).get(),
                                    getter_AddRefs(urlLiteral));
 
     if (NS_FAILED(rv))
@@ -4439,7 +4439,13 @@ nsBookmarksService::GetAllCmds(nsIRDFResource* source,
     // always append a separator last (due to aggregation of commands from multiple datasources)
     cmdArray->AppendElement(kNC_BookmarkSeparator);
 
-    return NS_NewArrayEnumerator(commands, cmdArray);
+    nsISimpleEnumerator     *result = new nsArrayEnumerator(cmdArray);
+    if (!result)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(result);
+    *commands = result;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -6044,17 +6050,3 @@ nsBookmarksService::OnEndUpdateBatch(nsIRDFDataSource* aDataSource)
 
     return NS_OK;
 }
-
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsBookmarksService, Init)
-
-static const nsModuleComponentInfo components[] = {
-    { "Bookmarks", NS_BOOKMARKS_SERVICE_CID, NS_BOOKMARKS_SERVICE_CONTRACTID,
-      nsBookmarksServiceConstructor },
-    { "Bookmarks", NS_BOOKMARKS_SERVICE_CID,
-      "@mozilla.org/embeddor.implemented/bookmark-charset-resolver;1",
-      nsBookmarksServiceConstructor },
-    { "Bookmarks", NS_BOOKMARKS_SERVICE_CID, NS_BOOKMARKS_DATASOURCE_CONTRACTID,
-      nsBookmarksServiceConstructor }
-};
-
-NS_IMPL_NSGETMODULE(BookmarkModule, components)

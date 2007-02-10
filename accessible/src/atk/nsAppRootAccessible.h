@@ -2,28 +2,28 @@
 /* vim:expandtab:shiftwidth=4:tabstop=4:
  */
 /* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are Copyright (C) 2002
- * the Initial Developer. All Rights Reserved.
+ * The Initial Developer of the Original Code is Sun Microsystems, Inc.
+ * Portions created by Sun Microsystems are Copyright (C) 2002 Sun
+ * Microsystems, Inc. All Rights Reserved.
  *
- * Contributor(s):
- *   Bolian Yin (bolian.yin@sun.com)
- *   Ginn Chen (ginn.chen@sun.com)
+ * Original Author: Bolian Yin (bolian.yin@sun.com)
+ *
+ * Contributor(s): 
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -31,18 +31,18 @@
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
+ * use your version of this file under the terms of the NPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
 
 #ifndef __NS_APP_ROOT_ACCESSIBLE_H__
 #define __NS_APP_ROOT_ACCESSIBLE_H__
 
-#include "nsIMutableArray.h"
+#include "nsArray.h"
 #include "nsIAccessibleDocument.h"
 #include "nsAccessibilityService.h"
 #include "nsAccessibleWrap.h"
@@ -63,9 +63,11 @@ class nsAppRootAccessible: public nsAccessibleWrap
 {
 public:
     virtual ~nsAppRootAccessible();
+#ifdef MAI_LOGGING
+    //    virtual void DumpMaiObjectInfo(int aDepth);
+#endif
 
     static nsAppRootAccessible *Create();
-    static void Load();
     static void Unload();
 
 public:
@@ -84,17 +86,17 @@ public:
     NS_IMETHOD GetPreviousSibling(nsIAccessible **aPreviousSibling);
     NS_IMETHOD GetChildAt(PRInt32 aChildNum, nsIAccessible **aChild);
 
+    NS_IMETHOD GetFirstChild(nsIAccessible * *aFirstChild);
+    NS_IMETHOD GetChildCount(PRInt32 *aAccChildCount);
+
     // return the atk object for app root accessible
     NS_IMETHOD GetNativeInterface(void **aOutAccessible);
 
-    nsresult AddRootAccessible(nsIAccessible *aRootAccWrap);
-    nsresult RemoveRootAccessible(nsIAccessible *aRootAccWrap);
-
-protected:
-    virtual void CacheChildren();
-
+    nsresult AddRootAccessible(nsRootAccessibleWrap *aRootAccWrap);
+    nsresult RemoveRootAccessible(nsRootAccessibleWrap *aRootAccWrap);
 private:
     nsCOMPtr<nsIMutableArray> mChildren;
+    PRBool mInitialized;
 };
 
 #endif   /* __NS_APP_ROOT_ACCESSIBLE_H__ */

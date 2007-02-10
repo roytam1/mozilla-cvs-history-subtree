@@ -50,7 +50,6 @@
 #include "nsISchemaLoader.h"
 #include "nsSOAPUtils.h"
 #include "nsReadableUtils.h"
-#include "nsIClassInfoImpl.h"
 
 //
 // callback for deleting the encodings from the nsObjectHashtable, mEncodings,

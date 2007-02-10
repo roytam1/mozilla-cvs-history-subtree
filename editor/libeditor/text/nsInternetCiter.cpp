@@ -46,8 +46,8 @@
 
 // Line breaker stuff
 #include "nsIServiceManager.h"
+#include "nsILineBreakerFactory.h"
 #include "nsLWBrkCIID.h"
-#include "nsILineBreaker.h"
 
 const PRUnichar gt ('>');
 const PRUnichar space (' ');
@@ -203,9 +203,16 @@ nsInternetCiter::Rewrap(const nsAString& aInString,
 
   aOutString.Truncate();
 
+  nsCOMPtr<nsILineBreaker> lineBreaker;
+  nsILineBreakerFactory *lf;
   nsresult rv;
-  nsCOMPtr<nsILineBreaker> lineBreaker = do_GetService(NS_LBRK_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
+  rv = CallGetService(NS_LWBRK_CONTRACTID, &lf);
+  if (NS_SUCCEEDED(rv))
+  {
+    nsAutoString lbarg;
+    lf->GetBreaker(lbarg, getter_AddRefs(lineBreaker));
+    NS_RELEASE(lf);
+  }
 
   // Loop over lines in the input string, rewrapping each one.
   PRUint32 length;
@@ -221,10 +228,10 @@ nsInternetCiter::Rewrap(const nsAString& aInString,
   {
 #ifdef DEBUG_wrapping
     printf("Outer loop: '%s'\n",
-           NS_LossyConvertUTF16toASCII(Substring(tString, posInString,
+           NS_LossyConvertUCS2toASCII(Substring(tString, posInString,
                                                 length-posInString)).get());
     printf("out string is now: '%s'\n",
-           NS_LossyConvertUTF16toASCII(aOutString).get());
+           NS_LossyConvertUCS2toASCII(aOutString).get());
 
 #endif
 
@@ -313,7 +320,7 @@ nsInternetCiter::Rewrap(const nsAString& aInString,
         NS_ASSERTION(PR_FALSE, "possible infinite loop in nsInternetCiter\n");
 
       printf("Inner loop: '%s'\n",
-             NS_LossyConvertUTF16toASCII(Substring(tString, posInString,
+             NS_LossyConvertUCS2toASCII(Substring(tString, posInString,
                                               nextNewline-posInString)).get());
 #endif
 
@@ -354,13 +361,15 @@ nsInternetCiter::Rewrap(const nsAString& aInString,
         continue;    // continue inner loop, with outStringCol now at bol
       }
 
-      PRInt32 breakPt;
+      PRUint32 breakPt;
       rv = NS_ERROR_BASE;
       if (lineBreaker)
       {
-        breakPt = lineBreaker->Prev(tString.get() + posInString,
-                                 length - posInString, eol + 1 - posInString);
-        if (breakPt == NS_LINEBREAKER_NEED_MORE_TEXT)
+        PRBool needMore;
+        rv = lineBreaker->Prev(tString.get() + posInString,
+                               length - posInString,
+                               eol + 1 - posInString, &breakPt, &needMore);
+        if (NS_FAILED(rv) || needMore)
         {
           // if we couldn't find a breakpoint looking backwards,
           // and we're not starting a new line, then end this line
@@ -372,12 +381,11 @@ nsInternetCiter::Rewrap(const nsAString& aInString,
           }
 
           // Else try looking forwards:
-          breakPt = lineBreaker->Next(tString.get() + posInString,
-                                      length - posInString, eol - posInString);
-          if (breakPt == NS_LINEBREAKER_NEED_MORE_TEXT) rv = NS_ERROR_BASE;
-          else rv = NS_OK;
+          rv = lineBreaker->Next(tString.get() + posInString,
+                                 length - posInString,
+                                 eol - posInString, &breakPt, &needMore);
+          if (needMore) rv = NS_ERROR_BASE;
         }
-        else rv = NS_OK;
       }
       // If rv is okay, then breakPt is the place to break.
       // If we get out here and rv is set, something went wrong with line
@@ -425,16 +433,15 @@ nsInternetCiter::Rewrap(const nsAString& aInString,
     } // end inner loop within one line of aInString
 #ifdef DEBUG_wrapping
     printf("---------\nEnd inner loop: out string is now '%s'\n-----------\n",
-           NS_LossyConvertUTF16toASCII(aOutString).get());
+           NS_LossyConvertUCS2toASCII(aOutString).get());
 #endif
   } // end outer loop over lines of aInString
 
 #ifdef DEBUG_wrapping
   printf("Final out string is now: '%s'\n",
-         NS_LossyConvertUTF16toASCII(aOutString).get());
+         NS_LossyConvertUCS2toASCII(aOutString).get());
 
 #endif
   return NS_OK;
 }
-
 

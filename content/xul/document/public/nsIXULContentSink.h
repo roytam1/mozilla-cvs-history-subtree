@@ -42,27 +42,26 @@
 #include "nsIXMLContentSink.h"
 
 class nsIDocument;
-class nsXULPrototypeDocument;
+class nsIXULPrototypeDocument;
 
-// {26b87c63-1b6b-46af-b685-11bbf39aa84a}
+// {f9da9ee5-d353-4994-9560-6a4e06310e2d}
 #define NS_IXULCONTENTSINK_IID \
-{ 0x26b87c63, 0x1b6b, 0x46af, \
-  { 0xb6, 0x85, 0x11, 0xbb, 0xf3, 0x9a, 0xa8, 0x4a } }
+{ 0xf9da9ee5, 0xd353, 0x4994, \
+{ 0x95, 0x60, 0x6a, 0x4e, 0x06, 0x31, 0x0e, 0x2d } }
 
 class nsIXULContentSink : public nsIXMLContentSink
 {
 public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IXULCONTENTSINK_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IXULCONTENTSINK_IID)
 
     /**
      * Initialize the content sink, giving it an nsIDocument object
      * with which to communicate with the outside world, and an
-     * nsXULPrototypeDocument to build.
+     * nsIXULPrototypeDocument to build.
      */
-    NS_IMETHOD Init(nsIDocument* aDocument, nsXULPrototypeDocument* aPrototype) = 0;
+    NS_IMETHOD Init(nsIDocument* aDocument, nsIXULPrototypeDocument* aPrototype) = 0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIXULContentSink, NS_IXULCONTENTSINK_IID)
 
 nsresult
 NS_NewXULContentSink(nsIXULContentSink** aResult);

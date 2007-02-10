@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 sw=2 et tw=78: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * Class for managing loading of a subframe (creation of the docshell,
- * handling of loads in it, recursion-checking).
- */
-
 #include "nsIDOMHTMLIFrameElement.h"
 #include "nsIDOMHTMLFrameElement.h"
 #include "nsIDOMWindow.h"
@@ -70,7 +64,7 @@
 #include "nsIURL.h"
 #include "nsNetUtil.h"
 
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsINameSpaceManager.h"
 
 // Bug 136580: Limit to the number of nested content frames that can have the
@@ -97,6 +91,14 @@ nsFrameLoader::LoadFrame()
 {
   NS_ENSURE_TRUE(mOwnerContent, NS_ERROR_NOT_INITIALIZED);
 
+  nsresult rv = EnsureDocShell();
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsIDocument* doc = mOwnerContent->GetDocument();
+  if (!doc) {
+    return NS_OK;
+  }
+
   nsAutoString src;
   GetURL(src);
 
@@ -106,41 +108,13 @@ nsFrameLoader::LoadFrame()
     src.AssignLiteral("about:blank");
   }
 
-  nsIDocument* doc = mOwnerContent->GetOwnerDoc();
-  if (!doc) {
-    return NS_OK;
-  }
-
   nsCOMPtr<nsIURI> base_uri = mOwnerContent->GetBaseURI();
   const nsAFlatCString &doc_charset = doc->GetDocumentCharacterSet();
-  const char *charset = doc_charset.IsEmpty() ? nsnull : doc_charset.get();
 
   nsCOMPtr<nsIURI> uri;
-  nsresult rv = NS_NewURI(getter_AddRefs(uri), src, charset, base_uri);
-
-  // If the URI was malformed, try to recover by loading about:blank.
-  if (rv == NS_ERROR_MALFORMED_URI) {
-    rv = NS_NewURI(getter_AddRefs(uri), NS_LITERAL_STRING("about:blank"),
-                   charset);
-  }
-
-  NS_ENSURE_SUCCESS(rv, rv);
-  return LoadURI(uri);
-}
-
-NS_IMETHODIMP
-nsFrameLoader::LoadURI(nsIURI* aURI)
-{
-  NS_PRECONDITION(aURI, "Null URI?");
-  if (!aURI)
-    return NS_ERROR_INVALID_POINTER;
-
-  nsIDocument* doc = mOwnerContent->GetOwnerDoc();
-  if (!doc) {
-    return NS_OK;
-  }
-
-  nsresult rv = EnsureDocShell();
+  rv = NS_NewURI(getter_AddRefs(uri), src,
+                 doc_charset.IsEmpty() ? nsnull : doc_charset.get(),
+                 base_uri);
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIDocShellLoadInfo> loadInfo;
@@ -156,7 +130,7 @@ nsFrameLoader::LoadURI(nsIURI* aURI)
   // or whatever, then they can clearly access it... and we should still use
   // the principal of mOwnerContent.  I don't think that leads to privilege
   // escalation, and it's reasonably guaranteed to not lead to XSS issues
-  // (since caller can already access mOwnerContent in this case).  So just use
+  // (since caller can already access mOwnerContent in this case.  So just use
   // the principal of mOwnerContent no matter what.  If script wants to run
   // things with its own permissions, which differ from those of mOwnerContent
   // (which means the script is privileged in some way) it should set
@@ -164,53 +138,53 @@ nsFrameLoader::LoadURI(nsIURI* aURI)
   nsIScriptSecurityManager *secMan = nsContentUtils::GetSecurityManager();
 
   // Get our principal
-  nsIPrincipal* principal = mOwnerContent->NodePrincipal();
+  nsIPrincipal* principal = doc->GetPrincipal();
 
+  if (!principal) {
+    return NS_ERROR_FAILURE;
+  }
+  
   // Check if we are allowed to load absURL
-  rv = secMan->CheckLoadURIWithPrincipal(principal, aURI,
+  rv = secMan->CheckLoadURIWithPrincipal(principal, uri,
                                          nsIScriptSecurityManager::STANDARD);
   if (NS_FAILED(rv)) {
     return rv; // We're not
   }
 
   // Bail out if this is an infinite recursion scenario
-  rv = CheckForRecursiveLoad(aURI);
+  rv = CheckForRecursiveLoad(uri);
   NS_ENSURE_SUCCESS(rv, rv);
   
-  // We'll use our principal, not that of the document loaded inside us.  This
-  // is very important; needed to prevent XSS attacks on documents loaded in
-  // subframes!  But only use our principal if our docshell's type is the same
-  // as the type of our ownerDocument's docshell.  Note that we could try
-  // checking GetSameTypeParent() on mDocShell, but that might break if we ever
-  // support docshells loaded inside disconnected nodes...
-  nsCOMPtr<nsISupports> container = doc->GetContainer();
-  nsCOMPtr<nsIDocShellTreeItem> parentItem = do_QueryInterface(container);
-  nsCOMPtr<nsIDocShellTreeItem> ourItem = do_QueryInterface(mDocShell);
-  NS_ASSERTION(ourItem, "Must have item");
-  if (parentItem) {
-    PRInt32 parentType;
-    rv = parentItem->GetItemType(&parentType);
-    PRInt32 ourType;
-    nsresult rv2 = ourItem->GetItemType(&ourType);
-    if (NS_SUCCEEDED(rv) && NS_SUCCEEDED(rv2) && ourType == parentType) {
-      loadInfo->SetOwner(principal);
-    }
-  }
-
-  nsCOMPtr<nsIURI> referrer;
-  rv = principal->GetURI(getter_AddRefs(referrer));
+  // Is our principal the system principal?
+  nsCOMPtr<nsIPrincipal> sysPrin;
+  rv = secMan->GetSystemPrincipal(getter_AddRefs(sysPrin));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  loadInfo->SetReferrer(referrer);
+  if (principal == sysPrin) {
+    // We're a chrome node.  Belt and braces -- inherit the principal for this
+    // load instead of just forcing the system principal.  That way if we have
+    // something loaded already the principal used will be that of what we
+    // already have loaded.
+    loadInfo->SetInheritOwner(PR_TRUE);
+
+    // Also, in this case we don't set a referrer, just in case.
+  } else {
+    // We'll use our principal, not that of the document loaded inside us.
+    // This is very important; needed to prevent XSS attacks on documents
+    // loaded in subframes!
+    loadInfo->SetOwner(principal);
+
+    nsCOMPtr<nsIURI> referrer;  
+    rv = principal->GetURI(getter_AddRefs(referrer));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    loadInfo->SetReferrer(referrer);
+  }
 
   // Kick off the load...
-  rv = mDocShell->LoadURI(aURI, loadInfo, nsIWebNavigation::LOAD_FLAGS_NONE,
+  rv = mDocShell->LoadURI(uri, loadInfo, nsIWebNavigation::LOAD_FLAGS_NONE,
                           PR_FALSE);
-#ifdef DEBUG
-  if (NS_FAILED(rv)) {
-    NS_WARNING("Failed to load the URL");
-  }
-#endif
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to load URL");
 
   return rv;
 }
@@ -312,15 +286,17 @@ nsFrameLoader::EnsureDocShell()
   NS_ENSURE_TRUE(docShellAsItem, NS_ERROR_FAILURE);
   nsAutoString frameName;
 
-  PRInt32 namespaceID = mOwnerContent->GetNameSpaceID();
-  if (namespaceID == kNameSpaceID_XHTML) {
-    mOwnerContent->GetAttr(kNameSpaceID_None, nsGkAtoms::id, frameName);
+  // Don't use mOwnerContent->GetNameSpaceID() here since it returns
+  // kNameSpaceID_XHTML for both HTML and XHTML, see bug 183683.
+  nsINodeInfo* ni = mOwnerContent->GetNodeInfo();
+  if (ni && ni->NamespaceID() == kNameSpaceID_XHTML) {
+    mOwnerContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::id, frameName);
   } else {
-    mOwnerContent->GetAttr(kNameSpaceID_None, nsGkAtoms::name, frameName);
+    mOwnerContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::name, frameName);
     // XXX if no NAME then use ID, after a transition period this will be
     // changed so that XUL only uses ID too (bug 254284).
-    if (frameName.IsEmpty() && namespaceID == kNameSpaceID_XUL) {
-      mOwnerContent->GetAttr(kNameSpaceID_None, nsGkAtoms::id, frameName);
+    if (frameName.IsEmpty() && ni && ni->NamespaceID() == kNameSpaceID_XUL) {
+      mOwnerContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::id, frameName);
     }
   }
 
@@ -346,8 +322,8 @@ nsFrameLoader::EnsureDocShell()
     nsAutoString value;
     PRBool isContent = PR_FALSE;
 
-    if (mOwnerContent->IsNodeOfType(nsINode::eXUL)) {
-      mOwnerContent->GetAttr(kNameSpaceID_None, nsGkAtoms::type, value);
+    if (mOwnerContent->IsContentOfType(nsIContent::eXUL)) {
+      mOwnerContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::type, value);
     }
 
     // we accept "content" and "content-xxx" values.
@@ -404,8 +380,8 @@ nsFrameLoader::EnsureDocShell()
       // enclosing chrome shell.
 
       chromeEventHandler = do_QueryInterface(mOwnerContent);
-      NS_ASSERTION(chromeEventHandler,
-                   "This mContent should implement this.");
+      NS_WARN_IF_FALSE(chromeEventHandler,
+                       "This mContent should implement this.");
     } else {
       nsCOMPtr<nsIDocShell> parentShell(do_QueryInterface(parentAsNode));
 
@@ -449,10 +425,10 @@ nsFrameLoader::GetURL(nsString& aURI)
 {
   aURI.Truncate();
 
-  if (mOwnerContent->Tag() == nsGkAtoms::object) {
-    mOwnerContent->GetAttr(kNameSpaceID_None, nsGkAtoms::data, aURI);
+  if (mOwnerContent->Tag() == nsHTMLAtoms::object) {
+    mOwnerContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::data, aURI);
   } else {
-    mOwnerContent->GetAttr(kNameSpaceID_None, nsGkAtoms::src, aURI);
+    mOwnerContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::src, aURI);
   }
 }
 

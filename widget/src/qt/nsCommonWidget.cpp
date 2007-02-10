@@ -241,9 +241,7 @@ keyEventToContextMenuEvent(const nsKeyEvent* aKeyEvent,
                            nsMouseEvent* aCMEvent)
 {
     memcpy(aCMEvent, aKeyEvent, sizeof(nsInputEvent));
-    aCMEvent->message = NS_CONTEXTMENU;
-    aCMEvent->button = nsMouseEvent::eRightButton;
-    aCMEvent->context = nsMouseEvent::eContextMenuKey;
+    aCMEvent->message = NS_CONTEXTMENU_KEY;
     aCMEvent->isShift = aCMEvent->isControl = PR_FALSE;
     aCMEvent->isAlt = aCMEvent->isMeta = PR_FALSE;
     aCMEvent->clickCount = 0;
@@ -859,8 +857,8 @@ nsCommonWidget::DispatchResizeEvent(nsRect &aRect, nsEventStatus &aStatus)
     nsSizeEvent event(PR_TRUE, NS_SIZE, this);
 
     event.windowSize = &aRect;
-    event.refPoint.x = aRect.x;
-    event.refPoint.y = aRect.y;
+    event.point.x = aRect.x;
+    event.point.y = aRect.y;
     event.mWinWidth = aRect.width;
     event.mWinHeight = aRect.height;
 
@@ -872,22 +870,21 @@ nsCommonWidget::mousePressEvent(QMouseEvent *e)
 {
     //qDebug("mousePressEvent mWidget=%p", (void*)mWidget);
 //     backTrace();
-    PRInt16 button;
+    PRUint32      eventType;
 
     switch (e->button()) {
     case Qt::MidButton:
-        button = nsMouseEvent::eMiddleButton;
+        eventType = NS_MOUSE_MIDDLE_BUTTON_DOWN;
         break;
     case Qt::RightButton:
-        button = nsMouseEvent::eRightButton;
+        eventType = NS_MOUSE_RIGHT_BUTTON_DOWN;
         break;
     default:
-        button = nsMouseEvent::eLeftButton;
+        eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
         break;
     }
 
-    nsMouseEvent event(PR_TRUE, NS_MOUSE_BUTTON_DOWN, this, nsMouseEvent::eReal);
-    event.button = button;
+    nsMouseEvent event(PR_TRUE, eventType, this, nsMouseEvent::eReal);
 
     InitMouseEvent(&event, e, 1);
 
@@ -895,11 +892,10 @@ nsCommonWidget::mousePressEvent(QMouseEvent *e)
     DispatchEvent(&event, status);
 
     // right menu click on linux should also pop up a context menu
-    if (button == nsMouseEvent::eRightButton) {
+    if (eventType == NS_MOUSE_RIGHT_BUTTON_DOWN) {
         nsMouseEvent contextMenuEvent(PR_TRUE, NS_CONTEXTMENU, this,
                                       nsMouseEvent::eReal);
         InitMouseEvent(&contextMenuEvent, e, 1);
-        contextMenuEvent.button = button;
         DispatchEvent(&contextMenuEvent, status);
     }
 
@@ -910,22 +906,21 @@ bool
 nsCommonWidget::mouseReleaseEvent(QMouseEvent *e)
 {
     //qDebug("mouseReleaseEvent mWidget=%p", (void*)mWidget);
-    PRInt16 button;
+    PRUint32      eventType;
 
     switch (e->button()) {
     case Qt::MidButton:
-        button = nsMouseEvent::eMiddleButton;
+        eventType = NS_MOUSE_MIDDLE_BUTTON_UP;
         break;
     case Qt::RightButton:
-        button = nsMouseEvent::eRightButton;
+        eventType = NS_MOUSE_RIGHT_BUTTON_UP;
         break;
     default:
-        button = nsMouseEvent::eLeftButton;
+        eventType = NS_MOUSE_LEFT_BUTTON_UP;
         break;
     }
 
-    nsMouseEvent event(PR_TRUE, NS_MOUSE_BUTTON_UP, this, nsMouseEvent::eReal);
-    event.button = button;
+    nsMouseEvent event(PR_TRUE, eventType, this, nsMouseEvent::eReal);
 
     InitMouseEvent(&event, e, 1);
 
@@ -938,24 +933,23 @@ nsCommonWidget::mouseReleaseEvent(QMouseEvent *e)
 bool
 nsCommonWidget::mouseDoubleClickEvent(QMouseEvent *e)
 {
-    PRInt16 button;
+    PRUint32      eventType;
 
     switch (e->button()) {
     case Qt::MidButton:
-        button = nsMouseEvent::eMiddleButton;
+        eventType = NS_MOUSE_MIDDLE_BUTTON_DOWN;
         break;
     case Qt::RightButton:
-        button = nsMouseEvent::eRightButton;
+        eventType = NS_MOUSE_RIGHT_BUTTON_DOWN;
         break;
     default:
-        button = nsMouseEvent::eLeftButton;
+        eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
         break;
     }
 
-    nsMouseEvent event(PR_TRUE, NS_MOUSE_BUTTON_DOWN, this, nsMouseEvent::eReal);
+    nsMouseEvent event(PR_TRUE, eventType, this, nsMouseEvent::eReal);
 
     InitMouseEvent(&event, e, 2);
-    event.button = button;
     //pressed
     nsEventStatus status;
     DispatchEvent(&event, status);
@@ -1078,8 +1072,8 @@ nsCommonWidget::enterEvent(QEvent *)
 
     QPoint pt = QCursor::pos();
 
-    event.refPoint.x = nscoord(pt.x());
-    event.refPoint.y = nscoord(pt.y());
+    event.point.x = nscoord(pt.x());
+    event.point.y = nscoord(pt.y());
 
     nsEventStatus status;
     DispatchEvent(&event, status);
@@ -1093,8 +1087,8 @@ nsCommonWidget::leaveEvent(QEvent *aEvent)
 
     QPoint pt = QCursor::pos();
 
-    event.refPoint.x = nscoord(pt.x());
-    event.refPoint.y = nscoord(pt.y());
+    event.point.x = nscoord(pt.x());
+    event.point.y = nscoord(pt.y());
 
     nsEventStatus status;
     DispatchEvent(&event, status);
@@ -1118,8 +1112,8 @@ nsCommonWidget::paintEvent(QPaintEvent *e)
 
     // Generate XPFE paint event
     nsPaintEvent event(PR_TRUE, NS_PAINT, this);
-    event.refPoint.x = 0;
-    event.refPoint.y = 0;
+    event.point.x = 0;
+    event.point.y = 0;
     event.rect = &rect;
     // XXX fix this!
     event.region = nsnull;
@@ -1164,8 +1158,8 @@ nsCommonWidget::moveEvent(QMoveEvent *e)
     }
 
     nsGUIEvent event(PR_TRUE, NS_MOVE, this);
-    event.refPoint.x = pos.x();
-    event.refPoint.y = pos.y();
+    event.point.x = pos.x();
+    event.point.y = pos.y();
 
     // XXX mozilla will invalidate the entire window after this move
     // complete.  wtf?
@@ -1202,8 +1196,8 @@ nsCommonWidget::closeEvent(QCloseEvent *)
 {
     nsGUIEvent event(PR_TRUE, NS_XUL_CLOSE, this);
 
-    event.refPoint.x = 0;
-    event.refPoint.y = 0;
+    event.point.x = 0;
+    event.point.y = 0;
 
     nsEventStatus status;
     DispatchEvent(&event, status);
@@ -1280,8 +1274,8 @@ nsCommonWidget::showEvent(QShowEvent *)
     nsCOMPtr<nsIRenderingContext> rc = getter_AddRefs(GetRenderingContext());
        // Generate XPFE paint event
     nsPaintEvent event(PR_TRUE, NS_PAINT, this);
-    event.refPoint.x = 0;
-    event.refPoint.y = 0;
+    event.point.x = 0;
+    event.point.y = 0;
     event.rect = &rect;
     // XXX fix this!
     event.region = nsnull;
@@ -1330,8 +1324,8 @@ nsCommonWidget::InitKeyEvent(nsKeyEvent *nsEvent, QKeyEvent *qEvent)
 void
 nsCommonWidget::InitMouseEvent(nsMouseEvent *nsEvent, QMouseEvent *qEvent, int aClickCount)
 {
-    nsEvent->refPoint.x = nscoord(qEvent->x());
-    nsEvent->refPoint.y = nscoord(qEvent->y());
+    nsEvent->point.x = nscoord(qEvent->x());
+    nsEvent->point.y = nscoord(qEvent->y());
 
     nsEvent->isShift         = qEvent->state() & Qt::ShiftButton;
     nsEvent->isControl       = qEvent->state() & Qt::ControlButton;
@@ -1357,8 +1351,8 @@ nsCommonWidget::InitMouseWheelEvent(nsMouseScrollEvent *aEvent,
     }
     aEvent->delta = (int)((qEvent->delta() / WHEEL_DELTA) * -3);
 
-    aEvent->refPoint.x = nscoord(qEvent->x());
-    aEvent->refPoint.y = nscoord(qEvent->y());
+    aEvent->point.x = nscoord(qEvent->x());
+    aEvent->point.y = nscoord(qEvent->y());
 
     aEvent->isShift         = qEvent->state() & Qt::ShiftButton;
     aEvent->isControl       = qEvent->state() & Qt::ControlButton;
@@ -1508,6 +1502,25 @@ NS_METHOD nsCommonWidget::SetCursor(nsCursor aCursor)
     }
     mWidget->setCursor(cursor);
     return NS_OK;
+}
+
+bool nsCommonWidget::ignoreEvent(nsEventStatus aStatus) const
+{
+      switch(aStatus) {
+    case nsEventStatus_eIgnore:
+        return(PR_FALSE);
+
+    case nsEventStatus_eConsumeNoDefault:
+        return(PR_TRUE);
+
+    case nsEventStatus_eConsumeDoDefault:
+        return(PR_FALSE);
+
+    default:
+        NS_ASSERTION(0,"Illegal nsEventStatus enumeration value");
+        break;
+    }
+    return(PR_FALSE);
 }
 
 NS_METHOD nsCommonWidget::SetModal(PRBool aModal)

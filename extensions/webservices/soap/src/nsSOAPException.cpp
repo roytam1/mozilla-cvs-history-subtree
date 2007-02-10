@@ -38,7 +38,6 @@
 #include "nsSOAPException.h"
 #include "nsReadableUtils.h"
 #include "nsIXPConnect.h"
-#include "nsIClassInfoImpl.h"
 
 nsSOAPException::nsSOAPException(nsresult aStatus, const nsAString & aName, 
                                  const nsAString & aMessage, nsIException* aInner) :
@@ -174,7 +173,7 @@ nsSOAPException::ToString(char **_retval)
     if (str) {
       s.AppendLiteral(", called by ");
       nsAutoString i;
-      CopyASCIItoUTF16(nsDependentCString(str),i);
+      CopyASCIItoUCS2(nsDependentCString(str),i);
       nsMemory::Free(str);
       s.Append(i);
     }
@@ -184,7 +183,7 @@ nsSOAPException::ToString(char **_retval)
     mInner->ToString(&str);
     if (str) {
       nsAutoString i;
-      CopyASCIItoUTF16(nsDependentCString(str),i);
+      CopyASCIItoUCS2(nsDependentCString(str),i);
       nsMemory::Free(str);
       s.AppendLiteral(", caused by ");
       s.Append(i);

@@ -173,15 +173,12 @@ var unifinderObserver = {
         this.addItemToTree(aItem);
     },
     onModifyItem: function(aNewItem, aOldItem) {
-        if (this.mInBatch) {
+        if (!(aNewItem instanceof Components.interfaces.calIEvent) ||
+            this.mInBatch) {
             return;
         }
-        if (aOldItem instanceof Components.interfaces.calIEvent) {
-            this.removeItemFromTree(aOldItem);
-        }
-        if (aNewItem instanceof Components.interfaces.calIEvent) {
-            this.addItemToTree(aNewItem);
-        }
+        this.removeItemFromTree(aOldItem);
+        this.addItemToTree(aNewItem);
     },
     onDeleteItem: function(aDeletedItem) {
         if (!(aDeletedItem instanceof Components.interfaces.calIEvent) ||
@@ -315,9 +312,9 @@ function unifinderDoubleClickEvent( event )
    var calendarEvent = getCalendarEventFromEvent( event );
    
    if( calendarEvent != null )
-      modifyEventWithDialog(calendarEvent);
+      editEvent(calendarEvent);
    else
-      createEventWithDialog();
+      newEvent();
 }
 
 
@@ -368,15 +365,18 @@ function unifinderOnSelect( event )
             dump( "e is "+e+"\n" );
             return;
          }
-         if (calendarEvent) {
-             ArrayOfEvents.push(calendarEvent);
-         }
+         ArrayOfEvents.push( calendarEvent );
       }
    }
    
    if( ArrayOfEvents.length == 1 )
    {
-       currentView().goToDay(ArrayOfEvents[0].startDate);
+      /*start date is either the next or last occurence, or the start date of the event */
+      var eventStartDate = calendarEvent.startDate.jsDate;
+      
+      /* you need this in case the current day is not visible. */
+      if( gCalendarWindow.currentView.getVisibleEvent( calendarEvent ) == false )
+         gCalendarWindow.currentView.goToDay( eventStartDate, true);
    }
    
    // Pass in true, so we don't end up in a circular loop
@@ -722,7 +722,7 @@ function refreshEventTree( eventArray )
          break;
 
       case "current":
-         var SelectedDate = currentView().selectedDay.jsDate;
+         var SelectedDate = gCalendarWindow.getSelectedDate();
          StartDate = new Date( SelectedDate.getFullYear(), SelectedDate.getMonth(), SelectedDate.getDate(), 0, 0, 0 );
          EndDate = new Date( StartDate.getTime() + ( 1000 * 60 * 60 * 24 ) - 1000 );
          break;
@@ -807,7 +807,7 @@ function unifinderKeyPress(aEvent) {
     switch (aEvent.keyCode) {
         case 13:
             // Enter, edit the event
-            modifyEventWithDialog(getSelectedItems()[0]);
+            editEvent();
             break;
         case kKE.DOM_VK_BACK_SPACE:
         case kKE.DOM_VK_DELETE:

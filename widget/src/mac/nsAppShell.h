@@ -20,8 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Darin Fisher <darin@meer.net>
- *   Mark Mentovai <mark@moxienet.com>
+ *  Mark Mentovai <mark@moxienet.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,45 +37,31 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * Runs the main native run loop, interrupting it as needed to process Gecko
- * events.
+ * Runs the main native Carbon run loop.
  */
 
 #ifndef nsAppShell_h__
 #define nsAppShell_h__
 
-#include <CoreFoundation/CoreFoundation.h>
-
-#include "nsBaseAppShell.h"
+#include "nsIAppShell.h"
 #include "nsCOMPtr.h"
-#include "nsAutoPtr.h"
 
 class nsIToolkit;
 class nsMacMessagePump;
 
-class nsAppShell : public nsBaseAppShell
+class nsAppShell : public nsIAppShell
 {
-public:
-  nsAppShell();
+  public:
+    nsAppShell();
+    virtual ~nsAppShell();
 
-  nsresult Init();
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIAPPSHELL
 
-protected:
-  virtual ~nsAppShell();
-
-  virtual void ScheduleNativeEventCallback();
-  virtual PRBool ProcessNextNativeEvent(PRBool aMayWait);
-
-  static void ProcessGeckoEvents(void* aInfo);
-
-protected:
-  nsCOMPtr<nsIToolkit>        mToolkit;
-  nsAutoPtr<nsMacMessagePump> mMacPump;
-
-  CFRunLoopRef                mCFRunLoop;
-  CFRunLoopSourceRef          mCFRunLoopSource;
-
-  PRBool                      mRunningEventLoop;
+  protected:
+    nsCOMPtr<nsIToolkit>     mToolkit;
+    static nsMacMessagePump* sMacPump;
+    static nsAppShell*       sMacPumpOwner;
 };
 
 #endif // nsAppShell_h__

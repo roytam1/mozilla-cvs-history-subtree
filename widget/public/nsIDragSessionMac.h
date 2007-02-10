@@ -49,7 +49,7 @@
 class nsIDragSessionMac : public nsISupports {
 
   public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IDRAGSESSIONMAC_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDRAGSESSIONMAC_IID)
 
   /**
     * Since the drag may originate in an external application, we need some way of
@@ -62,7 +62,5 @@ class nsIDragSessionMac : public nsISupports {
    NS_IMETHOD SetDragReference ( DragReference aDragRef ) = 0; 
 
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDragSessionMac, NS_IDRAGSESSIONMAC_IID)
 
 #endif

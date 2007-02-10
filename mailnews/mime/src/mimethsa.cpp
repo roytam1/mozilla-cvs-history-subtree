@@ -54,7 +54,7 @@
 MimeDefClass(MimeInlineTextHTMLSanitized, MimeInlineTextHTMLSanitizedClass,
 			 mimeInlineTextHTMLSanitizedClass, &MIME_SUPERCLASS);
 
-static int MimeInlineTextHTMLSanitized_parse_line (const char *, PRInt32,
+static int MimeInlineTextHTMLSanitized_parse_line (char *, PRInt32,
                                                    MimeObject *);
 static int MimeInlineTextHTMLSanitized_parse_begin (MimeObject *obj);
 static int MimeInlineTextHTMLSanitized_parse_eof (MimeObject *, PRBool);
@@ -158,7 +158,7 @@ printf("/parse_eof (early exit)\n");
   }
 #ifdef DEBUG_BenB
 printf(" E1\n");
-printf("buffer: -%s-\n", NS_LossyConvertUTF16toASCII(*textHTMLSan->complete_buffer).get());
+printf("buffer: -%s-\n", NS_LossyConvertUCS2toASCII(*textHTMLSan->complete_buffer).get());
 #endif
 
   char* allowedTags = 0;
@@ -178,7 +178,7 @@ printf(" E3\n");
 #ifdef DEBUG_BenB
 printf(" E4\n");
 #endif
-  HTMLSanitize(cb, sanitized, 0, NS_ConvertASCIItoUTF16(allowedTags));
+  HTMLSanitize(cb, sanitized, 0, NS_ConvertASCIItoUCS2(allowedTags));
 #ifdef DEBUG_BenB
 printf(" E5\n");
 #endif
@@ -250,7 +250,7 @@ printf("/finalize\n");
 }
 
 static int
-MimeInlineTextHTMLSanitized_parse_line (const char *line, PRInt32 length,
+MimeInlineTextHTMLSanitized_parse_line (char *line, PRInt32 length,
                                           MimeObject *obj)
 {
 #ifdef DEBUG_BenB
@@ -271,7 +271,7 @@ printf("Can't output: %s\n", line);
   }
 
   nsCString linestr(line, length);
-  NS_ConvertUTF8toUTF16 line_ucs2(linestr.get());
+  NS_ConvertUTF8toUCS2 line_ucs2(linestr.get());
   if (length && line_ucs2.IsEmpty())
     line_ucs2.AssignWithConversion(linestr.get());
   (textHTMLSan->complete_buffer)->Append(line_ucs2);

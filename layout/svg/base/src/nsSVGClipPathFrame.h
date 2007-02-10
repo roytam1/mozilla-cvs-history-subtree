@@ -34,41 +34,39 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __NS_SVGCLIPPATHFRAME_H__
-#define __NS_SVGCLIPPATHFRAME_H__
+#include "nsSVGDefsFrame.h"
+#include "nsLayoutAtoms.h"
 
-#include "nsSVGContainerFrame.h"
+#define NS_SVGCLIPPATHFRAME_CID \
+{0xb497bbe2, 0x4434, 0x4d96, {0x9c, 0xe8, 0xf2, 0xad, 0xd1, 0x1f, 0x1d, 0x26}}
 
-typedef nsSVGContainerFrame nsSVGClipPathFrameBase;
+typedef nsSVGDefsFrame nsSVGClipPathFrameBase;
 
 class nsSVGClipPathFrame : public nsSVGClipPathFrameBase
 {
-  friend nsIFrame*
-  NS_NewSVGClipPathFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsStyleContext* aContext);
+  friend nsresult
+  NS_NewSVGClipPathFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 
+  virtual ~nsSVGClipPathFrame();
   NS_IMETHOD InitSVG();
 
  public:
-  nsSVGClipPathFrame(nsStyleContext* aContext) : nsSVGClipPathFrameBase(aContext) {}
+  NS_DECL_ISUPPORTS
 
-  // nsSVGClipPathFrame methods:
-  NS_IMETHOD ClipPaint(nsSVGRenderState* aContext,
+  NS_DEFINE_STATIC_CID_ACCESSOR(NS_SVGCLIPPATHFRAME_CID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_SVGCLIPPATHFRAME_CID)
+
+  NS_IMETHOD ClipPaint(nsISVGRendererCanvas* canvas,
                        nsISVGChildFrame* aParent,
                        nsCOMPtr<nsIDOMSVGMatrix> aMatrix);
 
   NS_IMETHOD ClipHitTest(nsISVGChildFrame* aParent,
                          nsCOMPtr<nsIDOMSVGMatrix> aMatrix,
                          float aX, float aY, PRBool *aHit);
-
-  // Check if this clipPath is made up of more than one geometry object.
-  // If so, the clipping API in cairo isn't enough and we need to use
-  // mask based clipping.
-  NS_IMETHOD IsTrivial(PRBool *aTrivial);
-
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::svgClipPathFrame
+   * @see nsLayoutAtoms::svgClipPathFrame
    */
   virtual nsIAtom* GetType() const;
 
@@ -83,15 +81,12 @@ class nsSVGClipPathFrame : public nsSVGClipPathFrameBase
   nsISVGChildFrame *mClipParent;
   nsCOMPtr<nsIDOMSVGMatrix> mClipParentMatrix;
 
-  // nsSVGContainerFrame methods:
-  virtual already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
+  // nsISVGContainerFrame interface:
+  already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
 
   // recursion prevention flag
-  PRPackedBool mInUse;
+  PRPackedBool mInUse;  
 };
 
 nsresult
-NS_GetSVGClipPathFrame(nsSVGClipPathFrame **aResult,
-                       nsIURI *aURI, nsIContent *aContent);
-
-#endif
+NS_GetSVGClipPathFrame(nsSVGClipPathFrame **aResult, nsIURI *aURI, nsIContent *aContent);

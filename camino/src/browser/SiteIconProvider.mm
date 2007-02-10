@@ -328,15 +328,6 @@ NeckoCacheHelper::ClearCache()
   return faviconURL;
 }
 
-// -removeImageForPageURL:
-//
-// Public method to remove the favicon image associated with a webpage's URL inURI from cache.
-//
-- (void)removeImageForPageURL:(NSString*)inURI
-{
-  [[SiteIconCache sharedSiteIconCache] removeImageForURL:[self favoriteIconURLFromPageURL:inURI]];
-}
-
 - (void)addToMissedIconsCache:(NSString*)inURI withExpirationSeconds:(unsigned int)inExpSeconds
 {
   if (mIconsCacheHelper)
@@ -375,29 +366,26 @@ NeckoCacheHelper::ClearCache()
   // So we just go ahead and try to make the image; it will return nil on
   // failure.
   NSImage*	faviconImage = nil;
-
-  NSURL* inURIAsNSURL = [NSURL URLWithString:inURI];
-  if ([inURIAsNSURL isFileURL]) {
-    faviconImage = [[NSWorkspace sharedWorkspace] iconForFile:[inURIAsNSURL path]];
-  }
-  else {
-    NS_DURING
-      faviconImage = [[[NSImage alloc] initWithData:data] autorelease];
-    NS_HANDLER
-      NSLog(@"Exception \"%@\" making favicon image for %@", localException, inURI);
-      faviconImage = nil;
-    NS_ENDHANDLER
-  }
+  
+  NS_DURING
+    faviconImage = [[[NSImage alloc] initWithData:data] autorelease];
+  NS_HANDLER
+    NSLog(@"Exception \"%@\" making favicon image for %@", localException, inURI);
+    faviconImage = nil;
+  NS_ENDHANDLER
 
   BOOL gotImageData = loadOK && (faviconImage != nil);
-  if (NS_SUCCEEDED(status) && !gotImageData) // error status indicates that load was attempted from cache
+  if (NS_SUCCEEDED(status) && !gotImageData)		// error status indicates that load was attempted from cache
+  {	
     [self addToMissedIconsCache:inURI withExpirationSeconds:SITE_ICON_EXPIRATION_SECONDS];
-
-  if (gotImageData) {
+  }
+  
+  if (gotImageData)
+  {
     [faviconImage setDataRetained:YES];
     [faviconImage setScalesWhenResized:YES];
     [faviconImage setSize:NSMakeSize(16, 16)];
-
+    
     // add the image to the cache
     [[SiteIconCache sharedSiteIconCache] setSiteIcon:faviconImage
                                               forURL:inURI
@@ -555,9 +543,14 @@ NeckoCacheHelper::ClearCache()
 
 + (NSString*)defaultFaviconLocationStringFromURI:(NSString*)inURI
 {
-  // about: urls and local files are special
-  if ([inURI hasPrefix:@"about:"] || [inURI hasPrefix:@"file:"])
+  // about: urls are special
+  if ([inURI hasPrefix:@"about:"])
     return inURI;
+
+  // show small file icon for local files (this assumes that someone has
+  // registered the blank document icon for "about:blank")
+  if ([inURI compare:@"file://" options:NSCaseInsensitiveSearch range:NSMakeRange(0, 7)] == NSOrderedSame)
+    return @"about:local_file";
 
   // we use nsIURI here, rather than NSURL, because the former does
   // a better job with suspect urls (e.g. those containing |), and 

@@ -55,6 +55,7 @@ nsMsgXFVirtualFolderDBView::nsMsgXFVirtualFolderDBView()
 {
   mSuppressMsgDisplay = PR_FALSE;
   m_doingSearch = PR_FALSE;
+  m_numUnread = m_numTotal = 0;
 }
 
 nsMsgXFVirtualFolderDBView::~nsMsgXFVirtualFolderDBView()
@@ -109,6 +110,8 @@ nsMsgXFVirtualFolderDBView::CopyDBView(nsMsgDBView *aNewMsgDBView, nsIMessenger 
   nsMsgXFVirtualFolderDBView* newMsgDBView = (nsMsgXFVirtualFolderDBView *) aNewMsgDBView;
 
   newMsgDBView->m_viewFolder = m_viewFolder;
+  newMsgDBView->m_numUnread = m_numUnread;
+  newMsgDBView->m_numTotal = m_numTotal;
   newMsgDBView->m_searchSession = m_searchSession;
   return NS_OK;
 }
@@ -288,6 +291,12 @@ nsMsgXFVirtualFolderDBView::OnSearchHit(nsIMsgDBHdr* aMsgHdr, nsIMsgFolder *fold
   }
   m_hdrHits.AppendObject(aMsgHdr);
 
+  m_numTotal++;
+  PRUint32 msgFlags;
+  aMsgHdr->GetFlags(&msgFlags);
+  if (!(msgFlags & MSG_FLAG_READ))
+    m_numUnread++;
+
   return NS_OK;
 }
 
@@ -310,15 +319,8 @@ nsMsgXFVirtualFolderDBView::OnSearchDone(nsresult status)
 
   nsresult rv = m_viewFolder->GetDBFolderInfoAndDB(getter_AddRefs(dbFolderInfo), getter_AddRefs(virtDatabase));
   NS_ENSURE_SUCCESS(rv, rv);
-  // count up the number of unread and total messages from the view, and set those in the
-  // folder - easier than trying to keep the count up to date in the face of
-  // search hits coming in while the user is reading/deleting messages.
-  PRInt32 numUnread = 0;
-  for (PRInt32 i = 0; i < m_flags.GetSize(); i++)
-    if (!(m_flags[i] & MSG_FLAG_READ))
-      numUnread++;
-  dbFolderInfo->SetNumUnreadMessages(numUnread);
-  dbFolderInfo->SetNumMessages(GetSize());
+  dbFolderInfo->SetNumUnreadMessages(m_numUnread);
+  dbFolderInfo->SetNumMessages(m_numTotal);
   m_viewFolder->UpdateSummaryTotals(true); // force update from db.
   virtDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
   if (!m_sortValid && m_sortType != nsMsgViewSortType::byThread)

@@ -49,7 +49,6 @@
 #include "nsNetCID.h"
 #include "nsIObjectInputStream.h"
 #include "nsIObjectOutputStream.h"
-#include "nsIProgrammingLanguage.h"
 
 static NS_DEFINE_CID(kJARURICID, NS_JARURI_CID);
 
@@ -73,7 +72,6 @@ NS_INTERFACE_MAP_BEGIN(nsJARURI)
   NS_INTERFACE_MAP_ENTRY(nsIJARURI)
   NS_INTERFACE_MAP_ENTRY(nsISerializable)
   NS_INTERFACE_MAP_ENTRY(nsIClassInfo)
-  NS_INTERFACE_MAP_ENTRY(nsINestedURI)
   // see nsJARURI::Equals
   if (aIID.Equals(NS_GET_IID(nsJARURI)))
       foundInterface = NS_REINTERPRET_CAST(nsISupports*, this);
@@ -319,8 +317,6 @@ nsJARURI::SetSpecWithBase(const nsACString &aSpec, nsIURI* aBaseURL)
                         aBaseURL, getter_AddRefs(mJARFile));
     if (NS_FAILED(rv)) return rv;
 
-    NS_TryToSetImmutable(mJARFile);
-
     // skip over any extra '/' chars
     while (*delim_end == '/')
         ++delim_end;
@@ -503,8 +499,6 @@ nsJARURI::Clone(nsIURI **result)
     rv = mJARFile->Clone(getter_AddRefs(newJARFile));
     if (NS_FAILED(rv)) return rv;
 
-    NS_TryToSetImmutable(newJARFile);
-
     nsCOMPtr<nsIURI> newJAREntryURI;
     rv = mJAREntry->Clone(getter_AddRefs(newJAREntryURI));
     if (NS_FAILED(rv)) return rv;
@@ -518,12 +512,11 @@ nsJARURI::Clone(nsIURI **result)
         uri->mJARFile = newJARFile;
         uri->mJAREntry = newJAREntry;
         *result = uri;
-        rv = NS_OK;
     } else {
         rv = NS_ERROR_OUT_OF_MEMORY;
     }
 
-    return rv;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -580,13 +573,14 @@ nsJARURI::SetParam(const nsACString& param)
 NS_IMETHODIMP
 nsJARURI::GetQuery(nsACString& query)
 {
-    return mJAREntry->GetQuery(query);
+    query.Truncate();
+    return NS_OK;
 }
 
 NS_IMETHODIMP
 nsJARURI::SetQuery(const nsACString& query)
 {
-    return mJAREntry->SetQuery(query);
+    return NS_ERROR_NOT_AVAILABLE;
 }
 
 NS_IMETHODIMP
@@ -764,7 +758,16 @@ nsJARURI::GetRelativeSpec(nsIURI* uriToCompare, nsACString& relativeSpec)
 NS_IMETHODIMP
 nsJARURI::GetJARFile(nsIURI* *jarFile)
 {
-    return GetInnerURI(jarFile);
+    *jarFile = mJARFile;
+    NS_ADDREF(*jarFile);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsJARURI::SetJARFile(nsIURI* jarFile)
+{
+    mJARFile = jarFile;
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -786,16 +789,3 @@ nsJARURI::SetJAREntry(const nsACString &entryPath)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-NS_IMETHODIMP
-nsJARURI::GetInnerURI(nsIURI **uri)
-{
-    return NS_EnsureSafeToReturn(mJARFile, uri);
-}
-
-NS_IMETHODIMP
-nsJARURI::GetInnermostURI(nsIURI** uri)
-{
-    return NS_ImplGetInnermostURI(this, uri);
-}
-

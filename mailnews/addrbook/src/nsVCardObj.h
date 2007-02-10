@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -132,6 +131,9 @@ they will use an appropriately defined local type |vwchar_t|.
 #endif
 
 #include "prtypes.h"
+#include "nsFileSpec.h"
+
+class nsOutputFileStream;
 
 PR_BEGIN_EXTERN_C
 
@@ -351,6 +353,7 @@ struct StrItem {
     };
 
 typedef struct OFile {
+    nsOutputFileStream *fp;
     char *s;
     int len;
     int limit;
@@ -405,6 +408,10 @@ void initPropIterator(VObjectIterator *i, VObject *o);
 int moreIteration(VObjectIterator *i);
 VObject* nextVObject(VObjectIterator *i);
 
+extern void printVObject(nsOutputFileStream *fp,VObject *o);
+void printVObject_(nsOutputFileStream *fp, VObject *o, int level);
+extern void writeVObject(nsOutputFileStream *fp, VObject *o);
+
 void writeVObject_(OFile *fp, VObject *o);
 char* writeMemVObject(char *s, int *len, VObject *o);
 extern "C" char* writeMemoryVObjects(char *s, int *len, VObject *list, PRBool expandSpaces);
@@ -420,6 +427,11 @@ const char* lookupProp_(const char* str);
 vwchar_t* fakeUnicode(const char *ps, int *bytes);
 int uStrLen(const vwchar_t *u);
 char* fakeCString(const vwchar_t *u);
+
+void printVObjectToFile(nsFileSpec *fname,VObject *o);
+void printVObjectsToFile(nsFileSpec *fname,VObject *list);
+void writeVObjectToFile(nsFileSpec *fname, VObject *o);
+void writeVObjectsToFile(nsFileSpec *fname, VObject *list);
 
 #define MAXPROPNAMESIZE 256
 #define MAXMOZPROPNAMESIZE 16

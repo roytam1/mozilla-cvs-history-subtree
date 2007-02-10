@@ -44,7 +44,7 @@
     
     <separator/>
 
-    <description>&profileDirectoryExplanation.text;</description>
+    <description>&profileDirExplanation.text;</description>
 
     <vbox class="indent" flex="1" style="overflow: auto;">
       <description id="profileDisplay">*</description>

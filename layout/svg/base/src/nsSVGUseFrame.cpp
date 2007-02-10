@@ -34,23 +34,28 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsIDOMSVGTransformable.h"
+#include "nsSVGDefsFrame.h"
+#include "nsIDOMSVGAnimatedLength.h"
+#include "nsSVGLength.h"
 #include "nsSVGGFrame.h"
+#include "nsIDOMSVGUseElement.h"
+#include "nsISVGValue.h"
 #include "nsIAnonymousContentCreator.h"
 #include "nsSVGMatrix.h"
-#include "nsIDOMSVGUseElement.h"
-#include "nsIDOMSVGTransformable.h"
-#include "nsSVGElement.h"
+#include "nsLayoutAtoms.h"
 
 typedef nsSVGGFrame nsSVGUseFrameBase;
 
 class nsSVGUseFrame : public nsSVGUseFrameBase,
                       public nsIAnonymousContentCreator
 {
-  friend nsIFrame*
-  NS_NewSVGUseFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsStyleContext* aContext);
+  friend nsresult
+  NS_NewSVGUseFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 
 protected:
-  nsSVGUseFrame(nsStyleContext* aContext) : nsSVGUseFrameBase(aContext) {}
+
+  NS_IMETHOD InitSVG();
 
    // nsISupports interface:
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
@@ -59,18 +64,14 @@ private:
   NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }  
 
 public:
-  // nsIFrame interface:
-  NS_IMETHOD  AttributeChanged(PRInt32         aNameSpaceID,
-                               nsIAtom*        aAttribute,
-                               PRInt32         aModType);
 
-  // nsSVGContainerFrame methods:
-  virtual already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
+  // nsISVGContainerFrame interface:
+  already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
 
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::svgUseFrame
+   * @see nsLayoutAtoms::svgUseFrame
    */
   virtual nsIAtom* GetType() const;
 
@@ -87,29 +88,75 @@ public:
   NS_IMETHOD CreateFrameFor(nsPresContext *aPresContext,
                             nsIContent *aContent,
                             nsIFrame **aFrame);
+
+protected:
+
+  nsCOMPtr<nsIDOMSVGLength> mX;
+  nsCOMPtr<nsIDOMSVGLength> mY;
 };
 
 //----------------------------------------------------------------------
 // Implementation
 
-nsIFrame*
-NS_NewSVGUseFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsStyleContext* aContext)
+nsresult
+NS_NewSVGUseFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame)
 {
+  *aNewFrame = nsnull;
+  
   nsCOMPtr<nsIDOMSVGTransformable> transformable = do_QueryInterface(aContent);
   if (!transformable) {
 #ifdef DEBUG
     printf("warning: trying to construct an SVGUseFrame for a content element that doesn't support the right interfaces\n");
 #endif
-    return nsnull;
+    return NS_ERROR_FAILURE;
+  }
+  
+  nsSVGUseFrame* it = new (aPresShell) nsSVGUseFrame;
+  if (it == nsnull)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  *aNewFrame = it;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGUseFrame::InitSVG()
+{
+  nsresult rv = nsSVGUseFrameBase::InitSVG();
+  if (NS_FAILED(rv)) return rv;
+ 
+  nsCOMPtr<nsIDOMSVGUseElement> UseElement = do_QueryInterface(mContent);
+
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> length;
+    UseElement->GetX(getter_AddRefs(length));
+    length->GetAnimVal(getter_AddRefs(mX));
+    NS_ASSERTION(mX, "no x");
+    if (!mX) return NS_ERROR_FAILURE;
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(mX);
+    if (value)
+      value->AddObserver(this);  // nsISVGValueObserver
   }
 
-  return new (aPresShell) nsSVGUseFrame(aContext);
+  {
+    nsCOMPtr<nsIDOMSVGAnimatedLength> length;
+    UseElement->GetY(getter_AddRefs(length));
+    length->GetAnimVal(getter_AddRefs(mY));
+    NS_ASSERTION(mY, "no y");
+    if (!mY) return NS_ERROR_FAILURE;
+    nsCOMPtr<nsISVGValue> value = do_QueryInterface(mY);
+    if (value)
+      value->AddObserver(this);
+  }
+
+  return NS_OK;
 }
 
 nsIAtom *
 nsSVGUseFrame::GetType() const
 {
-  return nsGkAtoms::svgUseFrame;
+  return nsLayoutAtoms::svgUseFrame;
 }
 
 //----------------------------------------------------------------------
@@ -120,48 +167,14 @@ NS_INTERFACE_MAP_BEGIN(nsSVGUseFrame)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGUseFrameBase)
 
 //----------------------------------------------------------------------
-// nsIFrame methods:
-
-NS_IMETHODIMP
-nsSVGUseFrame::AttributeChanged(PRInt32         aNameSpaceID,
-                                nsIAtom*        aAttribute,
-                                PRInt32         aModType)
-{
-  if (aNameSpaceID == kNameSpaceID_None &&
-      (aAttribute == nsGkAtoms::x ||
-       aAttribute == nsGkAtoms::y)) {
-    // make sure our cached transform matrix gets (lazily) updated
-    mCanvasTM = nsnull;
-    
-    for (nsIFrame* kid = mFrames.FirstChild(); kid;
-         kid = kid->GetNextSibling()) {
-      nsISVGChildFrame* SVGFrame = nsnull;
-      CallQueryInterface(kid, &SVGFrame);
-      if (SVGFrame)
-        SVGFrame->NotifyCanvasTMChanged(PR_FALSE);
-    }
-    return NS_OK;
-  }
-
-  return nsSVGUseFrameBase::AttributeChanged(aNameSpaceID,
-                                             aAttribute, aModType);
-}
-
-
-//----------------------------------------------------------------------
-// nsSVGContainerFrame methods:
+// nsISVGContainerFrame methods:
 
 already_AddRefed<nsIDOMSVGMatrix>
 nsSVGUseFrame::GetCanvasTM()
 {
   if (!mPropagateTransform) {
     nsIDOMSVGMatrix *retval;
-    if (mOverrideCTM) {
-      retval = mOverrideCTM;
-      NS_ADDREF(retval);
-    } else {
-      NS_NewSVGMatrix(&retval);
-    }
+    NS_NewSVGMatrix(&retval);
     return retval;
   }
 
@@ -169,9 +182,8 @@ nsSVGUseFrame::GetCanvasTM()
 
   // x and y:
   float x, y;
-  nsSVGElement *element = NS_STATIC_CAST(nsSVGElement*, mContent);
-  element->GetAnimatedLengthValues(&x, &y, nsnull);
-
+  mX->GetValue(&x);
+  mY->GetValue(&y);
   nsCOMPtr<nsIDOMSVGMatrix> fini;
   currentTM->Translate(x, y, getter_AddRefs(fini));
 

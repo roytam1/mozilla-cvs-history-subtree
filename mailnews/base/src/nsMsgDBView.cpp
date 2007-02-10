@@ -68,7 +68,8 @@
 #include "nsIMsgAccountManager.h"
 #include "nsITreeColumns.h"
 #include "nsTextFormatter.h"
-#include "nsMsgI18N.h"
+
+static NS_DEFINE_CID(kDateTimeFormatCID,    NS_DATETIMEFORMAT_CID);
 
 nsrefcnt nsMsgDBView::gInstanceCount	= 0;
 
@@ -366,16 +367,16 @@ nsresult nsMsgDBView::FetchAuthor(nsIMsgDBHdr * aHdr, PRUnichar ** aSenderString
   if (mHeaderParser)
   {
     nsXPIDLCString name;
-    rv = mHeaderParser->ExtractHeaderAddressName("UTF-8", NS_ConvertUTF16toUTF8(unparsedAuthor).get(), getter_Copies(name));
-    if (NS_SUCCEEDED(rv) && !name.IsEmpty())
+    rv = mHeaderParser->ExtractHeaderAddressName("UTF-8", NS_ConvertUCS2toUTF8(unparsedAuthor).get(), getter_Copies(name));
+    if (NS_SUCCEEDED(rv) && (const char*)name)
     {
-      *aSenderString = nsCRT::strdup(NS_ConvertUTF8toUTF16(name).get());
-      return (*aSenderString) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+      *aSenderString = nsCRT::strdup(NS_ConvertUTF8toUCS2(name).get());
+      return NS_OK;
     }
   }
   // if we got here then just return the original string
-  *aSenderString = nsCRT::strdup(unparsedAuthor.IsEmpty() ? NS_LITERAL_STRING("").get() : unparsedAuthor.get());
-  return (*aSenderString) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+  *aSenderString = nsCRT::strdup(unparsedAuthor);
+  return NS_OK;
 }
 
 nsresult nsMsgDBView::FetchAccount(nsIMsgDBHdr * aHdr, PRUnichar ** aAccount)
@@ -427,16 +428,16 @@ nsresult nsMsgDBView::FetchRecipients(nsIMsgDBHdr * aHdr, PRUnichar ** aRecipien
   if (mHeaderParser)
   {
     nsXPIDLCString names;
-    rv = mHeaderParser->ExtractHeaderAddressNames("UTF-8", NS_ConvertUTF16toUTF8(unparsedRecipients).get(), getter_Copies(names));
+    rv = mHeaderParser->ExtractHeaderAddressNames("UTF-8", NS_ConvertUCS2toUTF8(unparsedRecipients).get(), getter_Copies(names));
     if (NS_SUCCEEDED(rv) && (const char*)names)
     {
-      *aRecipientsString = nsCRT::strdup(NS_ConvertUTF8toUTF16(names).get());
+      *aRecipientsString = nsCRT::strdup(NS_ConvertUTF8toUCS2(names).get());
       return NS_OK;
     }
   }
-
-  *aRecipientsString = nsCRT::strdup(unparsedRecipients.IsEmpty() ? NS_LITERAL_STRING("").get() : unparsedRecipients.get());
-  return (*aRecipientsString) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+  // if we got here then just return the original string
+  *aRecipientsString = nsCRT::strdup(unparsedRecipients);
+  return NS_OK;
 }
 
 nsresult nsMsgDBView::FetchSubject(nsIMsgDBHdr * aMsgHdr, PRUint32 aFlags, PRUnichar ** aValue)
@@ -456,18 +457,6 @@ nsresult nsMsgDBView::FetchSubject(nsIMsgDBHdr * aMsgHdr, PRUint32 aFlags, PRUni
   return NS_OK;
 }
 
-nsresult nsMsgDBView::FetchPreviewText(nsIMsgDBHdr * aMsgHdr, nsAString& aValue)
-{
-  nsresult rv;
-  nsXPIDLCString utf8PreviewText;
-  rv = aMsgHdr->GetStringProperty("preview", getter_Copies(utf8PreviewText));
-  if (NS_SUCCEEDED(rv) && utf8PreviewText.get())
-    // convert to unicode
-    rv = ConvertToUnicode("UTF-8", utf8PreviewText, aValue);
-
-  return rv;
-}
-
 // in case we want to play around with the date string, I've broken it out into
 // a separate routine. 
 nsresult nsMsgDBView::FetchDate(nsIMsgDBHdr * aHdr, PRUnichar ** aDateString)
@@ -477,7 +466,7 @@ nsresult nsMsgDBView::FetchDate(nsIMsgDBHdr * aHdr, PRUnichar ** aDateString)
   nsAutoString formattedDateString;
 
   if (!mDateFormater)
-    mDateFormater = do_CreateInstance(NS_DATETIMEFORMAT_CONTRACTID);
+    mDateFormater = do_CreateInstance(kDateTimeFormatCID);
 
   NS_ENSURE_TRUE(mDateFormater, NS_ERROR_FAILURE);
   nsresult rv = aHdr->GetDate(&dateOfMsg);
@@ -670,7 +659,7 @@ nsresult nsMsgDBView::FetchKeywords(nsIMsgDBHdr *aHdr, char ** keywordString)
   {
     nsCAutoString labelStr("$label");
     labelStr.Append((char) (label + '0'));
-    if (!FindInReadable(labelStr, keywords, nsCaseInsensitiveCStringComparator()))
+    if (!FindInReadable(labelStr, keywords))
     {
       if (!keywords.IsEmpty())
         keywords.Append(' ');
@@ -700,7 +689,7 @@ nsresult nsMsgDBView::FetchTags(nsIMsgDBHdr *aHdr, PRUnichar ** aTagString)
   {
     nsCAutoString labelStr("$label");
     labelStr.Append((char) (label + '0'));
-    if (!FindInReadable(labelStr, keywords, nsCaseInsensitiveCStringComparator()))
+    if (!FindInReadable(labelStr, keywords))
       FetchLabel(aHdr, getter_Copies(tags));
   }
 
@@ -897,12 +886,6 @@ NS_IMETHODIMP nsMsgDBView::IsEditable(PRInt32 row, nsITreeColumn* col, PRBool* _
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::IsSelectable(PRInt32 row, nsITreeColumn* col, PRBool* _retval)
-{
-  *_retval = PR_FALSE;
-  return NS_OK;
-}
-
 NS_IMETHODIMP nsMsgDBView::SetCellValue(PRInt32 row, nsITreeColumn* col, const nsAString& value)
 {
   return NS_OK;
@@ -1075,11 +1058,9 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
     m_currentlyDisplayedViewIndex = nsMsgViewIndex_None;
 
     // if we used to have one item selected, and now we have more than one, we should clear the message pane.
-    nsCOMPtr <nsIMsgWindowCommands> windowCommands;
-    if ((mNumSelectedRows == 1) && (numSelected > 1) && mMsgWindow 
-        && NS_SUCCEEDED(mMsgWindow->GetWindowCommands(getter_AddRefs(windowCommands))) 
-        && windowCommands) {
-      windowCommands->ClearMsgPane();
+    nsCOMPtr <nsIMsgMessagePaneController> controller;
+    if ((mNumSelectedRows == 1) && (numSelected > 1) && mMsgWindow && NS_SUCCEEDED(mMsgWindow->GetMessagePaneController(getter_AddRefs(controller))) && controller) {
+      controller->ClearMsgPane();
     }
   }
 
@@ -1170,11 +1151,6 @@ NS_IMETHODIMP nsMsgDBView::GetRowProperties(PRInt32 index, nsISupportsArray *pro
   FetchKeywords(msgHdr, getter_Copies(keywordProperty));
   if (!keywordProperty.IsEmpty())
     AppendKeywordProperties(keywordProperty.get(), properties, PR_FALSE);
-
-  // give the custom column handlers a chance to style the row.
-  for (int i = 0; i < m_customColumnHandlers.Count(); i++)
-    m_customColumnHandlers[i]->GetRowProperties(index, properties);
-
   return NS_OK;
 }
 
@@ -1345,7 +1321,7 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, nsITreeColumn *col, n
   if (colHandler != nsnull) 
   {
     colHandler->GetCellProperties(aRow, col, properties);
-    return NS_OK;
+  	return NS_OK;
   }
   
   return NS_OK;
@@ -1526,45 +1502,7 @@ nsMsgDBView::GetProgressMode(PRInt32 aRow, nsITreeColumn* aCol, PRInt32* _retval
 
 NS_IMETHODIMP nsMsgDBView::GetCellValue(PRInt32 aRow, nsITreeColumn* aCol, nsAString& aValue)
 {
-  nsCOMPtr <nsIMsgDBHdr> msgHdr;
-  nsresult rv = GetMsgHdrForViewIndex(aRow, getter_AddRefs(msgHdr));
-
-  if (NS_FAILED(rv) || !msgHdr) 
-  {
-    ClearHdrCache();
-    return NS_MSG_INVALID_DBVIEW_INDEX;
-  }
-
-  const PRUnichar* colID;
-  aCol->GetIdConst(&colID);
-
-  PRUint32 flags;
-  msgHdr->GetFlags(&flags);
-  
-  // provide a string "value" for cells that do not normally have text.
-  switch (colID[0]) 
-  {
-    case 'a': // attachment column
-      aValue.Assign(GetString ((flags & MSG_FLAG_ATTACHMENT) ? 
-      NS_LITERAL_STRING("messageHasAttachment").get()
-      : NS_LITERAL_STRING("messageHasNoAttachment").get()));
-      break;
-    case 'f': // flagged (starred) column
-      aValue.Assign(GetString ((flags & MSG_FLAG_MARKED) ? 
-      NS_LITERAL_STRING("messageHasFlag").get()
-      : NS_LITERAL_STRING("messageHasNoFlag").get()));
-      break;
-    case 'u': // read/unread column
-      aValue.Assign(GetString ((flags & MSG_FLAG_READ) ?
-      NS_LITERAL_STRING("messageRead").get()
-      : NS_LITERAL_STRING("messageUnread").get()));
-      break;
-    default:
-      aValue.Assign(colID);
-      break;
-  }
-    	  
-  return rv;
+  return NS_OK;
 }
 
 //add a custom column handler
@@ -1637,7 +1575,7 @@ nsIMsgCustomColumnHandler* nsMsgDBView::GetColumnHandler(const PRUnichar *colID)
   PRInt32 index = m_customColumnHandlerIDs.IndexOf(nsDependentString(colID));
   
   if (index > -1)
-    columnHandler = m_customColumnHandlers[index];
+    columnHandler =  m_customColumnHandlers[index];
   
   return columnHandler;
 }  
@@ -1687,16 +1625,7 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsAStr
   {
   case 's':
     if (colID[1] == 'u') // subject
-    {
       rv = FetchSubject(msgHdr, m_flags[aRow], getter_Copies(valueText));
-      nsAutoString previewText;
-      rv = FetchPreviewText(msgHdr, previewText);
-      if (!previewText.IsEmpty())
-      {
-        valueText.Append(NS_LITERAL_STRING(" - "));
-        valueText.Append(previewText);
-      }
-    }
     else if (colID[1] == 'e') // sender
       rv = FetchAuthor(msgHdr, getter_Copies(valueText));
     else if (colID[1] == 'i') // size
@@ -1707,13 +1636,11 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsAStr
       msgHdr->GetFlags(&flags);
       rv = FetchStatus(flags, getter_Copies(valueText));
     }
-    if (NS_SUCCEEDED(rv))
-      aValue.Assign(valueText);
+    aValue.Assign(valueText);
     break;
   case 'r': // recipient
     rv = FetchRecipients(msgHdr, getter_Copies(valueText));
-    if (NS_SUCCEEDED(rv))
-      aValue.Assign(valueText);
+    aValue.Assign(valueText);
     break;
   case 'd':  // date
     rv = FetchDate(msgHdr, getter_Copies(valueText));
@@ -1778,7 +1705,7 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsAStr
     {
       nsXPIDLCString junkScoreStr;
       msgHdr->GetStringProperty("junkscore", getter_Copies(junkScoreStr));
-      CopyASCIItoUTF16(junkScoreStr, aValue);
+      CopyASCIItoUCS2(junkScoreStr, aValue);
     }
     break;
   case 'i': // id
@@ -2034,11 +1961,8 @@ NS_IMETHODIMP nsMsgDBView::GetSuppressCommandUpdating(PRBool * aSuppressCommandU
 
 NS_IMETHODIMP nsMsgDBView::SetSuppressMsgDisplay(PRBool aSuppressDisplay)
 {
-  PRUint32 numSelected = 0;
-  GetNumSelected(&numSelected);
- 
   PRBool forceDisplay = PR_FALSE;
-  if (mSuppressMsgDisplay && !aSuppressDisplay && numSelected == 1)
+  if (mSuppressMsgDisplay && (mSuppressMsgDisplay != aSuppressDisplay))
     forceDisplay = PR_TRUE;
 
   mSuppressMsgDisplay = aSuppressDisplay;
@@ -4398,7 +4322,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndexHelper(nsIMsgDBHdr *msgHdr, nsMsgKeyAr
       comparisonContext = m_db.get();
       break;
     case kU32:
-      if (sortType == nsMsgViewSortType::byId)
+      if (sortType == nsMsgViewSortType::byId) 
         EntryInfo1.dword = EntryInfo1.id;
       else
         GetLongField(msgHdr, sortType, &EntryInfo1.dword, colHandler);
@@ -5213,12 +5137,19 @@ nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgView
         case nsMsgNavigationType::lastUnreadMessage:
             break;
         case nsMsgNavigationType::nextUnreadThread:
-            if (startIndex != nsMsgViewIndex_None)
             {
                 nsMsgKeyArray idsMarkedRead;
-                MarkThreadOfMsgRead(m_keys.GetAt(startIndex), startIndex, idsMarkedRead, PR_TRUE);
+
+                if (startIndex == nsMsgViewIndex_None) 
+                {
+                    NS_ASSERTION(0,"startIndex == nsMsgViewIndex_None");
+                    break;
+                }
+                rv = MarkThreadOfMsgRead(m_keys.GetAt(startIndex), startIndex, idsMarkedRead, PR_TRUE);
+                if (NS_SUCCEEDED(rv)) 
+                    return NavigateFromPos(nsMsgNavigationType::nextUnreadMessage, startIndex, pResultKey, pResultIndex, pThreadIndex, PR_TRUE);
+                break;
             }
-            return NavigateFromPos(nsMsgNavigationType::nextUnreadMessage, startIndex, pResultKey, pResultIndex, pThreadIndex, PR_TRUE);
         case nsMsgNavigationType::toggleThreadKilled:
             {
                 PRBool resultKilled;
@@ -5694,30 +5625,27 @@ nsMsgDBView::GetMsgToSelectAfterDelete(nsMsgViewIndex *msgToSelectAfterDelete)
   PRBool thisIsImapFolder = (imapFolder != nsnull);
   if (thisIsImapFolder) //need to update the imap-delete model, can change more than once in a session.
     GetImapDeleteModel(nsnull);
-
-  // If mail.delete_matches_sort_order is true, 
-  // for views sorted in descending order (newest at the top), make msgToSelectAfterDelete
-  // advance in the same direction as the sort order.
-  PRBool deleteMatchesSort = PR_FALSE;
-  if (m_sortOrder == nsMsgViewSortOrder::descending && *msgToSelectAfterDelete)
-  {
-    nsCOMPtr<nsIPrefBranch> prefBranch (do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
-    NS_ENSURE_SUCCESS(rv, rv);
-    prefBranch->GetBoolPref("mail.delete_matches_sort_order", &deleteMatchesSort);
-  }
-
   if (mDeleteModel == nsMsgImapDeleteModels::IMAPDelete)
   {
     if (selectionCount > 1 || (endRange-startRange) > 0)  //multiple selection either using Ctrl or Shift keys
       *msgToSelectAfterDelete = nsMsgViewIndex_None;
-    else if(deleteMatchesSort)
-      *msgToSelectAfterDelete -= 1;
     else
       *msgToSelectAfterDelete += 1;
   }
-  else if (deleteMatchesSort)
+  else
   {
-    *msgToSelectAfterDelete -= 1;
+    // If mail.delete_matches_sort_order is true, 
+    // for views sorted in descending order (newest at the top), make msgToSelectAfterDelete
+    // advance in the same direction as the sort order. 
+    if (m_sortOrder == nsMsgViewSortOrder::descending && *msgToSelectAfterDelete)
+    {
+      nsCOMPtr<nsIPrefBranch> prefBranch (do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
+      NS_ENSURE_SUCCESS(rv, rv);
+      PRBool deleteMatchesSort = PR_FALSE;
+      prefBranch->GetBoolPref("mail.delete_matches_sort_order", &deleteMatchesSort);
+      if (deleteMatchesSort)
+        *msgToSelectAfterDelete -= 1;
+    }
   }
 
   return NS_OK;

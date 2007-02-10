@@ -221,7 +221,7 @@ SemReleasex86     ENDP
 ;;;---------------------------------------------------------------------
         ALIGN   10H
 _PR_MD_ATOMIC_SET     proc
-        xchg    dword ptr [eax],edx
+   lock xchg    dword ptr [eax],edx
         mov eax, edx;
         ret
 _PR_MD_ATOMIC_SET     endp

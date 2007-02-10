@@ -36,14 +36,6 @@
 # ***** END LICENSE BLOCK *****
 
 """Test the xpcom.file module."""
-from pyxpcom_test_tools import suite_from_functions, testmain
-
+# Called "test_comfile" as Python has a standard test called test_file :-(
 import xpcom.file
-
-# Make this test run under our std test suite
-def suite():
-    return suite_from_functions(xpcom.file._TestAll)
-
-if __name__=='__main__':
-    testmain()
-
+xpcom.file._TestAll()

@@ -53,6 +53,9 @@ REQUIRES	= xpcom \
 		  mimetype \
 		  intl \
 		  unicharutil \
+		  caps \
+		  xpconnect \
+		  js \
 		  uconv \
 		  $(NULL)
 

@@ -13,8 +13,9 @@
  *
  * The Original Code is Java XPCOM Bindings.
  *
- * The Initial Developer of the Original Code is IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * The Initial Developer of the Original Code is
+ * IBM Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2005
  * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
@@ -40,65 +41,48 @@
 #include "jni.h"
 #include "nscore.h"
 
-#define MOZILLA_NATIVE(func) Java_org_mozilla_xpcom_internal_MozillaImpl_##func
 #define GRE_NATIVE(func) Java_org_mozilla_xpcom_internal_GREImpl_##func
 #define XPCOM_NATIVE(func) Java_org_mozilla_xpcom_internal_XPCOMImpl_##func
 #define JAVAPROXY_NATIVE(func) \
           Java_org_mozilla_xpcom_internal_XPCOMJavaProxy_##func
-#define LOCKPROXY_NATIVE(func) Java_org_mozilla_xpcom_ProfileLock_##func
 
 
-extern "C" NS_EXPORT void JNICALL
-MOZILLA_NATIVE(initialize) (JNIEnv* env, jobject);
-
-extern "C" NS_EXPORT void JNICALL
+extern "C" NS_EXPORT void
 GRE_NATIVE(initEmbedding) (JNIEnv* env, jobject, jobject aLibXULDirectory,
                            jobject aAppDirectory, jobject aAppDirProvider);
 
-extern "C" NS_EXPORT void JNICALL
+extern "C" NS_EXPORT void
 GRE_NATIVE(termEmbedding) (JNIEnv *env, jobject);
 
-extern "C" NS_EXPORT jobject JNICALL
-GRE_NATIVE(lockProfileDirectory) (JNIEnv *, jobject, jobject aDirectory);
-
-extern "C" NS_EXPORT void JNICALL
-GRE_NATIVE(notifyProfile) (JNIEnv *env, jobject);
-
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 XPCOM_NATIVE(initXPCOM) (JNIEnv* env, jobject, jobject aMozBinDirectory,
                          jobject aAppFileLocProvider);
 
-extern "C" NS_EXPORT void JNICALL
+extern "C" NS_EXPORT void
 XPCOM_NATIVE(shutdownXPCOM) (JNIEnv *env, jobject, jobject aServMgr);
 
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 XPCOM_NATIVE(newLocalFile) (JNIEnv *env, jobject, jstring aPath,
                             jboolean aFollowLinks);
 
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 XPCOM_NATIVE(getComponentManager) (JNIEnv *env, jobject);
 
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 XPCOM_NATIVE(getComponentRegistrar) (JNIEnv *env, jobject);
 
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 XPCOM_NATIVE(getServiceManager) (JNIEnv *env, jobject);
 
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 JAVAPROXY_NATIVE(callXPCOMMethod) (JNIEnv *env, jclass that, jobject aJavaProxy,
                                    jstring aMethodName, jobjectArray aParams);
 
-extern "C" NS_EXPORT void JNICALL
+extern "C" NS_EXPORT void
 JAVAPROXY_NATIVE(finalizeProxy) (JNIEnv *env, jclass that, jobject aJavaProxy);
 
-extern "C" NS_EXPORT jboolean JNICALL
+extern "C" NS_EXPORT jboolean
 JAVAPROXY_NATIVE(isSameXPCOMObject) (JNIEnv *env, jclass that, jobject aProxy1,
                                      jobject aProxy2);
-
-extern "C" NS_EXPORT void JNICALL
-LOCKPROXY_NATIVE(release) (JNIEnv *env, jclass that, jlong aLockObject);
-
-extern "C" NS_EXPORT jlong JNICALL
-MOZILLA_NATIVE(getNativeHandleFromAWT) (JNIEnv* env, jobject, jobject widget);
 
 #endif // _nsJavaInterfaces_h_

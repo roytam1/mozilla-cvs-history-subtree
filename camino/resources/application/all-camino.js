@@ -46,6 +46,7 @@ pref("browser.tabs.startPage", 0);
 pref("browser.quartz.enable.all_font_sizes", true);
 
 pref("chimera.store_passwords_with_keychain", true);
+pref("chimera.keychain_passwords_autofill", true);
 
 // by default, Camino will take proxy settings (including PAC) from the OS.
 // set this pref to false if you want to specify proxy settings by hand.
@@ -57,14 +58,14 @@ pref("camino.enable_plugins", true);
 pref("camino.warn_when_closing", true);
 
 // show warning when attempting to open a feed to another application
-pref("camino.warn_before_opening_feed", true);
+pref("camino.warn_before_opening_feed", true); 
 
 // turn off dumping of JS and CSS errors to the console
 pref("chimera.log_js_to_console", false);
 
 // Identify Camino in the UA string
 pref("general.useragent.vendor", "Camino");
-pref("general.useragent.vendorSub", "1.2+");
+pref("general.useragent.vendorSub", "1.0+");
 
 pref("browser.chrome.favicons", true);
 pref("browser.urlbar.autocomplete.enabled", true);
@@ -76,6 +77,8 @@ pref("browser.download.progressDnldDialog.keepAlive", true);
 
 // Download removing policy
 pref("browser.download.downloadRemoveAction", 0);
+
+pref("chimera.enable_rendezvous", true);
 
 // set typeahead find to search all text by default, but not invoke
 // unless you type '/'
@@ -122,9 +125,9 @@ pref("browser.backspace_action", 0);
 // bring download window to the front when each download starts
 pref("browser.download.progressDnldDialog.bringToFront", true);
 
-// 0 = spellcheck nothing, 1 = check multi-line controls, 2 = check 
+// 0 = spellcheck nothing, 1 = check multi-line controls, 2 = check
 //  multi/single line controls
-pref("layout.spellcheckDefault", 2);
+pref("layout.spellcheckDefault", 1);
 
 // enable the tab jumpback feature
 pref("camino.enable_tabjumpback", true);
@@ -134,9 +137,3 @@ pref("browser.link.open_newwindow.restriction", 2);
 
 // enable popup blocking
 pref("dom.disable_open_during_load", true);
-
-// don't hide user:pass when fixing up URIs
-pref("browser.fixup.hide_user_pass", false);
-
-// give users the option of restoring windows after a crash
-pref("browser.sessionstore.resume_from_crash", true);

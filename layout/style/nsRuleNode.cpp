@@ -39,11 +39,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * a node in the lexicographic tree of rules that match an element,
- * responsible for converting the rules' information into computed style
- */
-
 #include "nsRuleNode.h"
 #include "nscore.h"
 #include "nsIServiceManager.h"
@@ -201,11 +196,12 @@ nscoord CalcLength(const nsCSSValue& aValue,
 {
   NS_ASSERTION(aValue.IsLengthUnit(), "not a length unit");
   if (aValue.IsFixedLengthUnit()) {
-    return aPresContext->TwipsToAppUnits(aValue.GetLengthTwips());
+    return aValue.GetLengthTwips();
   }
   nsCSSUnit unit = aValue.GetUnit();
   if (unit == eCSSUnit_Pixel) {
-    return nsPresContext::CSSPixelsToAppUnits(aValue.GetFloatValue());
+    return NSFloatPixelsToTwips(aValue.GetFloatValue(),
+                                aPresContext->ScaledPixelsToTwips());
   }
   // Common code for all units other than pixels:
   aInherited = PR_TRUE;
@@ -263,7 +259,6 @@ nscoord CalcLength(const nsCSSValue& aValue,
 #define SETCOORD_IA     (SETCOORD_INTEGER | SETCOORD_AUTO)
 #define SETCOORD_LAE    (SETCOORD_LENGTH | SETCOORD_AUTO | SETCOORD_ENUMERATED)
 
-// changes aCoord iff it returns PR_TRUE
 static PRBool SetCoord(const nsCSSValue& aValue, nsStyleCoord& aCoord, 
                        const nsStyleCoord& aParentCoord,
                        PRInt32 aMask, nsStyleContext* aStyleContext,
@@ -462,10 +457,6 @@ nsRuleNode::Transition(nsIStyleRule* aRule, nsRuleNode** aResult)
   if (ChildrenAreHashed()) {
     ChildrenHashEntry *entry = NS_STATIC_CAST(ChildrenHashEntry*,
         PL_DHashTableOperate(ChildrenHash(), aRule, PL_DHASH_ADD));
-    if (!entry) {
-      *aResult = nsnull;
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
     if (entry->mRuleNode)
       next = entry->mRuleNode;
     else {
@@ -591,16 +582,11 @@ struct PropertyCheckData {
   nsCSSType type;
 };
 
-/*
- * a callback function that that can revise the result of
- * CheckSpecifiedProperties before finishing; aResult is the current
- * result, and it returns the revised one.
- */
-typedef nsRuleNode::RuleDetail
-  (* PR_CALLBACK CheckCallbackFn)(const nsRuleDataStruct& aData,
-                                  nsRuleNode::RuleDetail aResult);
-
 /* the information for all the properties in a style struct */
+
+typedef nsRuleNode::RuleDetail
+  (* PR_CALLBACK CheckCallbackFn)(const nsRuleDataStruct& aData);
+
 struct StructCheckData {
   const PropertyCheckData* props;
   PRInt32 nprops;
@@ -648,19 +634,13 @@ ExamineCSSRect(const nsCSSRect* aRect,
 }
 
 PR_STATIC_CALLBACK(nsRuleNode::RuleDetail)
-CheckFontCallback(const nsRuleDataStruct& aData,
-                  nsRuleNode::RuleDetail aResult)
+CheckFontCallback(const nsRuleDataStruct& aData)
 {
   const nsRuleDataFont& fontData =
       NS_STATIC_CAST(const nsRuleDataFont&, aData);
   if (eCSSUnit_Enumerated == fontData.mFamily.GetUnit()) {
     // A special case. We treat this as a fully specified font,
     // since no other font props are legal with a system font.
-    NS_ASSERTION(aResult == nsRuleNode::eRulePartialReset ||
-                 aResult == nsRuleNode::eRuleFullReset ||
-                 aResult == nsRuleNode::eRulePartialMixed ||
-                 aResult == nsRuleNode::eRuleFullMixed,
-                 "we know we already have a reset-counted property");
     PRInt32 family = fontData.mFamily.GetIntValue();
     if ((family == NS_STYLE_FONT_CAPTION) ||
         (family == NS_STYLE_FONT_ICON) ||
@@ -677,54 +657,13 @@ CheckFontCallback(const nsRuleDataStruct& aData,
         (family == NS_STYLE_FONT_BUTTON) ||
         (family == NS_STYLE_FONT_PULL_DOWN_MENU) ||
         (family == NS_STYLE_FONT_LIST) ||
-        (family == NS_STYLE_FONT_FIELD)) {
-      // promote partial to full since we're fully specified
-      if (aResult == nsRuleNode::eRulePartialMixed ||
-          aResult == nsRuleNode::eRuleFullMixed) {
-        aResult = nsRuleNode::eRuleFullMixed;
-      } else {
-        aResult = nsRuleNode::eRuleFullReset;
-      }
-    }
+        (family == NS_STYLE_FONT_FIELD))
+      // Mixed rather than Reset in case another sub-property has
+      // an explicit 'inherit'.   XXXperf Could check them.
+      return nsRuleNode::eRuleFullMixed;
   }
-
-  // em, ex, and percentage values for font size require inheritance
-  if ((fontData.mSize.IsRelativeLengthUnit() &&
-       fontData.mSize.GetUnit() != eCSSUnit_Pixel) ||
-      fontData.mSize.GetUnit() == eCSSUnit_Percent) {
-    NS_ASSERTION(aResult == nsRuleNode::eRulePartialReset ||
-                 aResult == nsRuleNode::eRuleFullReset ||
-                 aResult == nsRuleNode::eRulePartialMixed ||
-                 aResult == nsRuleNode::eRuleFullMixed,
-                 "we know we already have a reset-counted property");
-    // promote reset to mixed since we have something inherited
-    if (aResult == nsRuleNode::eRulePartialReset)
-      aResult = nsRuleNode::eRulePartialMixed;
-    else if (aResult == nsRuleNode::eRuleFullReset)
-      aResult = nsRuleNode::eRuleFullMixed;
-  }
-
-  return aResult;
+  return nsRuleNode::eRuleUnknown;
 }
-
-PR_STATIC_CALLBACK(nsRuleNode::RuleDetail)
-CheckColorCallback(const nsRuleDataStruct& aData,
-                   nsRuleNode::RuleDetail aResult)
-{
-  const nsRuleDataColor& colorData =
-      NS_STATIC_CAST(const nsRuleDataColor&, aData);
-
-  // currentColor values for color require inheritance
-  if (colorData.mColor.GetUnit() == eCSSUnit_Integer && 
-      colorData.mColor.GetIntValue() == NS_COLOR_CURRENTCOLOR) {
-    NS_ASSERTION(aResult == nsRuleNode::eRuleFullReset,
-                 "we should already be counted as full-reset");
-    aResult = nsRuleNode::eRuleFullInherited;
-  }
-
-  return aResult;
-}
-
 
 // for nsCSSPropList.h, so we get information on things in the style
 // structs but not nsCSS*
@@ -965,12 +904,18 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
                                      const nsRuleDataStruct& aRuleDataStruct)
 {
   const StructCheckData *structData = gCheckProperties + aSID;
+  if (structData->callback) {
+    nsRuleNode::RuleDetail res = (*structData->callback)(aRuleDataStruct);
+    if (res != eRuleUnknown)
+      return res;
+  }
 
   // Build a count of the:
   PRUint32 total = 0,      // total number of props in the struct
            specified = 0,  // number that were specified for this node
            inherited = 0;  // number that were 'inherit' (and not
                            //   eCSSUnit_Inherit) for this node
+  PRBool canHaveExplicitInherit = PR_FALSE;
 
   for (const PropertyCheckData *prop = structData->props,
                            *prop_end = prop + structData->nprops;
@@ -1038,6 +983,10 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
         }
         break;
 
+      case eCSSType_Shadow:
+        NS_NOTYETIMPLEMENTED("nsCSSShadow not yet transferred to structs");
+        break;
+
       default:
         NS_NOTREACHED("unknown type");
         break;
@@ -1045,37 +994,29 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID aSID,
     }
 
 #if 0
-  printf("CheckSpecifiedProperties: SID=%d total=%d spec=%d inh=%d.\n",
-         aSID, total, specified, inherited);
+  printf("CheckSpecifiedProperties: SID=%d total=%d spec=%d inh=%d chei=%s.\n",
+    aSID, total, specified, inherited, canHaveExplicitInherit?"true":"false");
 #endif
 
-  /*
-   * Return the most specific information we can: prefer None or Full
-   * over Partial, and Reset or Inherited over Mixed, since we can
-   * optimize based on the edge cases and not the in-between cases.
-   */
-  nsRuleNode::RuleDetail result;
-  if (inherited == total)
-    result = eRuleFullInherited;
-  else if (specified == total) {
-    if (inherited == 0)
-      result = eRuleFullReset;
-    else
-      result = eRuleFullMixed;
-  } else if (specified == 0)
-    result = eRuleNone;
-  else if (specified == inherited)
-    result = eRulePartialInherited;
-  else if (inherited == 0)
-    result = eRulePartialReset;
-  else
-    result = eRulePartialMixed;
-
-  if (structData->callback) {
-    result = (*structData->callback)(aRuleDataStruct, result);
+  if (canHaveExplicitInherit) {
+    if (specified == total)
+      return eRuleFullMixed;
+    return eRulePartialMixed;
   }
-
-  return result;
+  if (inherited == total)
+    return eRuleFullInherited;
+  if (specified == total) {
+    if (inherited == 0)
+      return eRuleFullReset;
+    return eRuleFullMixed;
+  }
+  if (specified == 0)
+    return eRuleNone;
+  if (specified == inherited)
+    return eRulePartialInherited;
+  if (inherited == 0)
+    return eRulePartialReset;
+  return eRulePartialMixed;
 }
 
 const nsStyleStruct*
@@ -1115,9 +1056,7 @@ nsRuleNode::GetTextResetData(nsStyleContext* aContext)
   nsRuleData ruleData(eStyleStruct_TextReset, mPresContext, aContext);
   ruleData.mTextData = &textData;
 
-  const nsStyleStruct* res = WalkRuleTree(eStyleStruct_TextReset, aContext, &ruleData, &textData);
-  textData.mTextShadow = nsnull; // We are sharing with some style rule.  It really owns the data.
-  return res;
+  return WalkRuleTree(eStyleStruct_TextReset, aContext, &ruleData, &textData);
 }
 
 const nsStyleStruct*
@@ -1128,7 +1067,7 @@ nsRuleNode::GetUserInterfaceData(nsStyleContext* aContext)
   ruleData.mUserInterfaceData = &uiData;
 
   const nsStyleStruct* res = WalkRuleTree(eStyleStruct_UserInterface, aContext, &ruleData, &uiData);
-  uiData.mCursor = nsnull; // We are sharing with some style rule.  It really owns the data.
+  uiData.mCursor = nsnull;
   return res;
 }
 
@@ -1755,153 +1694,10 @@ nsRuleNode::AdjustLogicalBoxProp(nsStyleContext* aContext,
     }
   }
 }
-
-/**
- * Begin an nsRuleNode::Compute*Data function for an inherited struct.
- *
- * @param type_ The nsStyle* type this function computes.
- * @param ctorargs_ The arguments used for the default nsStyle* constructor.
- * @param data_ Variable (declared here) holding the result of this
- *              function.
- * @param parentdata_ Variable (declared here) holding the parent style
- *                    context's data for this struct.
- * @param rdtype_ The nsCSS* struct type used to compute this struct's data.
- * @param rdata_ Variable (declared here) holding the nsCSS* used here.
- */
-#define COMPUTE_START_INHERITED(type_, ctorargs_, data_, parentdata_, rdtype_, rdata_) \
-  nsStyleContext* parentContext = aContext->GetParent();                      \
-                                                                              \
-  const nsRuleData##rdtype_& rdata_ =                                         \
-    NS_STATIC_CAST(const nsRuleData##rdtype_&, aData);                        \
-  nsStyle##type_* data_ = nsnull;                                             \
-  const nsStyle##type_* parentdata_ = nsnull;                                 \
-  PRBool inherited = aInherited;                                              \
-                                                                              \
-  if (parentContext && aRuleDetail != eRuleFullReset)                         \
-    parentdata_ = parentContext->GetStyle##type_();                           \
-  if (aStartStruct)                                                           \
-    /* We only need to compute the delta between this computed data and */    \
-    /* our computed data. */                                                  \
-    data_ = new (mPresContext)                                                \
-            nsStyle##type_(*NS_STATIC_CAST(nsStyle##type_*, aStartStruct));   \
-  else {                                                                      \
-    /* XXXldb What about eRuleFullInherited?  Which path is faster? */        \
-    if (aRuleDetail != eRuleFullMixed && aRuleDetail != eRuleFullReset) {     \
-      /* No question. We will have to inherit. Go ahead and init */           \
-      /* with inherited vals from parent. */                                  \
-      inherited = PR_TRUE;                                                    \
-      if (parentdata_)                                                        \
-        data_ = new (mPresContext) nsStyle##type_(*parentdata_);              \
-      else                                                                    \
-        data_ = new (mPresContext) nsStyle##type_ ctorargs_;                  \
-    }                                                                         \
-    else                                                                      \
-      data_ = new (mPresContext) nsStyle##type_ ctorargs_;                    \
-  }                                                                           \
-                                                                              \
-  if (NS_UNLIKELY(!data_))                                                    \
-    return nsnull;  /* Out Of Memory */                                       \
-  if (!parentdata_)                                                           \
-    parentdata_ = data_;
-
-/**
- * Begin an nsRuleNode::Compute*Data function for a reset struct.
- *
- * @param type_ The nsStyle* type this function computes.
- * @param ctorargs_ The arguments used for the default nsStyle* constructor.
- * @param data_ Variable (declared here) holding the result of this
- *              function.
- * @param parentdata_ Variable (declared here) holding the parent style
- *                    context's data for this struct.
- * @param rdtype_ The nsCSS* struct type used to compute this struct's data.
- * @param rdata_ Variable (declared here) holding the nsCSS* used here.
- */
-#define COMPUTE_START_RESET(type_, ctorargs_, data_, parentdata_, rdtype_, rdata_) \
-  nsStyleContext* parentContext = aContext->GetParent();                      \
-                                                                              \
-  const nsRuleData##rdtype_& rdata_ =                                         \
-    NS_STATIC_CAST(const nsRuleData##rdtype_&, aData);                        \
-  nsStyle##type_* data_;                                                      \
-  if (aStartStruct)                                                           \
-    /* We only need to compute the delta between this computed data and */    \
-    /* our computed data. */                                                  \
-    data_ = new (mPresContext)                                                \
-            nsStyle##type_(*NS_STATIC_CAST(nsStyle##type_*, aStartStruct));   \
-  else                                                                        \
-    data_ = new (mPresContext) nsStyle##type_ ctorargs_;                      \
-                                                                              \
-  if (NS_UNLIKELY(!data_))                                                    \
-    return nsnull;  /* Out Of Memory */                                       \
-                                                                              \
-  const nsStyle##type_* parentdata_ = data_;                                  \
-  if (parentContext &&                                                        \
-      aRuleDetail != eRuleFullReset &&                                        \
-      aRuleDetail != eRulePartialReset &&                                     \
-      aRuleDetail != eRuleNone)                                               \
-    parentdata_ = parentContext->GetStyle##type_();                           \
-  PRBool inherited = aInherited;
-
-/**
- * Begin an nsRuleNode::Compute*Data function for an inherited struct.
- *
- * @param type_ The nsStyle* type this function computes.
- * @param data_ Variable holding the result of this function.
- */
-#define COMPUTE_END_INHERITED(type_, data_)                                   \
-  if (inherited)                                                              \
-    /* We inherited, and therefore can't be cached in the rule node.  We */   \
-    /* have to be put right on the style context. */                          \
-    aContext->SetStyle(eStyleStruct_##type_, data_);                          \
-  else {                                                                      \
-    /* We were fully specified and can therefore be cached right on the */    \
-    /* rule node. */                                                          \
-    if (!aHighestNode->mStyleData.mInheritedData) {                           \
-      aHighestNode->mStyleData.mInheritedData =                               \
-        new (mPresContext) nsInheritedStyleData;                              \
-      if (NS_UNLIKELY(!aHighestNode->mStyleData.mInheritedData)) {            \
-        data_->Destroy(mPresContext);                                         \
-        return nsnull;                                                        \
-      }                                                                       \
-    }                                                                         \
-    aHighestNode->mStyleData.mInheritedData->m##type_##Data = data_;          \
-    /* Propagate the bit down. */                                             \
-    PropagateDependentBit(NS_STYLE_INHERIT_BIT(type_), aHighestNode);         \
-  }                                                                           \
-                                                                              \
-  return data_;
-
-/**
- * Begin an nsRuleNode::Compute*Data function for a reset struct.
- *
- * @param type_ The nsStyle* type this function computes.
- * @param data_ Variable holding the result of this function.
- */
-#define COMPUTE_END_RESET(type_, data_)                                       \
-  if (inherited)                                                              \
-    /* We inherited, and therefore can't be cached in the rule node.  We */   \
-    /* have to be put right on the style context. */                          \
-    aContext->SetStyle(eStyleStruct_##type_, data_);                          \
-  else {                                                                      \
-    /* We were fully specified and can therefore be cached right on the */    \
-    /* rule node. */                                                          \
-    if (!aHighestNode->mStyleData.mResetData) {                               \
-      aHighestNode->mStyleData.mResetData =                                   \
-        new (mPresContext) nsResetStyleData;                                  \
-      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {                \
-        data_->Destroy(mPresContext);                                         \
-        return nsnull;                                                        \
-      }                                                                       \
-    }                                                                         \
-    aHighestNode->mStyleData.mResetData->m##type_##Data = data_;              \
-    /* Propagate the bit down. */                                             \
-    PropagateDependentBit(NS_STYLE_INHERIT_BIT(type_), aHighestNode);         \
-  }                                                                           \
-                                                                              \
-  return data_;
   
 /* static */ void
 nsRuleNode::SetFont(nsPresContext* aPresContext, nsStyleContext* aContext,
-                    nscoord aMinFontSize,
+                    nscoord aMinFontSize, PRBool aUseDocumentFonts,
                     PRBool aIsGeneric, const nsRuleDataFont& aFontData,
                     const nsFont& aDefaultFont, const nsStyleFont* aParentFont,
                     nsStyleFont* aFont, PRBool& aInherited)
@@ -1909,16 +1705,23 @@ nsRuleNode::SetFont(nsPresContext* aPresContext, nsStyleContext* aContext,
   const nsFont* defaultVariableFont =
     aPresContext->GetDefaultFont(kPresContext_DefaultVariableFont_ID);
 
+  const nsFont* defaultFixedFont =
+    aPresContext->GetDefaultFont(kPresContext_DefaultFixedFont_ID);
+
   // font-family: string list, enum, inherit
   if (eCSSUnit_String == aFontData.mFamily.GetUnit()) {
     // set the correct font if we are using DocumentFonts OR we are overriding for XUL
     // MJA: bug 31816
-    if (!aIsGeneric) {
-      // only bother appending fallback fonts if this isn't a fallback generic font itself
-      if (!aFont->mFont.name.IsEmpty())
+    if (aUseDocumentFonts) {
+      if (!aIsGeneric) {
+        // only bother appending fallback fonts if this isn't a fallback generic font itself
         aFont->mFont.name.Append((PRUnichar)',');
-      // XXXldb Should this name be quoted?
-      aFont->mFont.name.Append(aDefaultFont.name);
+        aFont->mFont.name.Append(aDefaultFont.name);
+      }
+    }
+    else {
+      // now set to defaults
+      aFont->mFont.name = aDefaultFont.name;
     }
     aFont->mFont.familyNameQuirks =
         (aPresContext->CompatibilityMode() == eCompatibility_NavQuirks &&
@@ -1982,7 +1785,7 @@ nsRuleNode::SetFont(nsPresContext* aPresContext, nsStyleContext* aContext,
       case eSystemFont_List:
         // Assumption: system defined font is proportional
         aFont->mSize = nsStyleFont::ZoomText(aPresContext,
-             PR_MAX(defaultVariableFont->size - aPresContext->PointsToAppUnits(2), 0));
+             PR_MAX(defaultVariableFont->size - NSIntPointsToTwips(2), 0));
         break;
     }
 #endif
@@ -2104,8 +1907,7 @@ nsRuleNode::SetFont(nsPresContext* aPresContext, nsStyleContext* aContext,
   }
   else if (eCSSUnit_Percent == aFontData.mSize.GetUnit()) {
     aInherited = PR_TRUE;
-    aFont->mSize = NSToCoordRound(float(aParentFont->mSize) *
-                                  aFontData.mSize.GetPercentValue());
+    aFont->mSize = (nscoord)((float)(aParentFont->mSize) * aFontData.mSize.GetPercentValue());
     zoom = PR_FALSE;
   }
   else if (eCSSUnit_Inherit == aFontData.mSize.GetUnit()) {
@@ -2151,7 +1953,7 @@ nsRuleNode::SetGenericFont(nsPresContext* aPresContext,
                            nsStyleContext* aContext,
                            const nsRuleDataFont& aFontData,
                            PRUint8 aGenericFontID, nscoord aMinFontSize,
-                           nsStyleFont* aFont)
+                           PRBool aUseDocumentFonts, nsStyleFont* aFont)
 {
   // walk up the contexts until a context with the desired generic font
   nsAutoVoidArray contextPath;
@@ -2209,7 +2011,7 @@ nsRuleNode::SetGenericFont(nsPresContext* aPresContext,
     fontData.mFamily.Reset(); // avoid unnecessary operations in SetFont()
 
     nsRuleNode::SetFont(aPresContext, context, aMinFontSize,
-                        PR_TRUE, fontData, *defaultFont,
+                        aUseDocumentFonts, PR_TRUE, fontData, *defaultFont,
                         &parentFont, aFont, dummy);
 
     // XXX Not sure if we need to do this here
@@ -2226,20 +2028,8 @@ nsRuleNode::SetGenericFont(nsPresContext* aPresContext,
   // already has the current cascading information that we want. We
   // can just compute the delta from the parent.
   nsRuleNode::SetFont(aPresContext, aContext, aMinFontSize,
-                      PR_TRUE, aFontData, *defaultFont,
+                      aUseDocumentFonts, PR_TRUE, aFontData, *defaultFont,
                       &parentFont, aFont, dummy);
-}
-
-static PRBool ExtractGeneric(const nsString& aFamily, PRBool aGeneric,
-                             void *aData)
-{
-  nsAutoString *data = NS_STATIC_CAST(nsAutoString*, aData);
-
-  if (aGeneric) {
-    *data = aFamily;
-    return PR_FALSE; // stop enumeration
-  }
-  return PR_TRUE;
 }
 
 const nsStyleStruct* 
@@ -2249,8 +2039,44 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct,
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_INHERITED(Font, (mPresContext), font, parentFont,
-                          Font, fontData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataFont& fontData = NS_STATIC_CAST(const nsRuleDataFont&, aData);
+  nsStyleFont* font = nsnull;
+  const nsStyleFont* parentFont = nsnull;
+  PRBool inherited = aInherited;
+
+  // This optimization is a little weaker here since 'em', etc., for
+  // 'font-size' require inheritance.
+  if (parentContext &&
+      (aRuleDetail != eRuleFullReset ||
+       (fontData.mSize.IsRelativeLengthUnit() &&
+        fontData.mSize.GetUnit() != eCSSUnit_Pixel) ||
+       fontData.mSize.GetUnit() == eCSSUnit_Percent))
+    parentFont = parentContext->GetStyleFont();
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    font = new (mPresContext) nsStyleFont(*NS_STATIC_CAST(nsStyleFont*, aStartStruct));
+  else {
+    // XXXldb What about eRuleFullInherited?  Which path is faster?
+    if (aRuleDetail != eRuleFullMixed && aRuleDetail != eRuleFullReset) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentFont)
+        font = new (mPresContext) nsStyleFont(*parentFont);
+      else
+        font = new (mPresContext) nsStyleFont(mPresContext);
+    }
+    else
+      font = new (mPresContext) nsStyleFont(mPresContext);
+  }
+
+  if (NS_UNLIKELY(!font))
+    return nsnull; // Out Of Memory
+  if (!parentFont)
+    parentFont = font;
 
   // See if there is a minimum font-size constraint to honor
   nscoord minimumFontSize = 
@@ -2259,74 +2085,77 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct,
   if (minimumFontSize < 0)
     minimumFontSize = 0;
 
-  PRBool useDocumentFonts =
-    mPresContext->GetCachedBoolPref(kPresContext_UseDocumentFonts);
+  PRBool useDocumentFonts = PR_TRUE;
+
+  // Figure out if we are a generic font
+  PRUint8 generic = kGenericFont_NONE;
+  if (eCSSUnit_String == fontData.mFamily.GetUnit()) {
+    fontData.mFamily.GetStringValue(font->mFont.name);
+    nsFont::GetGenericID(font->mFont.name, &generic);
+
+    // MJA: bug 31816
+    // if we are not using document fonts, but this is a XUL document,
+    // then we use the document fonts anyway
+    useDocumentFonts =
+      mPresContext->GetCachedBoolPref(kPresContext_UseDocumentFonts);
+  }
 
   // See if we are in the chrome
   // We only need to know this to determine if we have to use the
   // document fonts (overriding the useDocumentFonts flag), or to
   // determine if we have to override the minimum font-size constraint.
   if ((!useDocumentFonts || minimumFontSize > 0) && IsChrome(mPresContext)) {
-    // if we are not using document fonts, but this is a XUL document,
-    // then we use the document fonts anyway
     useDocumentFonts = PR_TRUE;
     minimumFontSize = 0;
   }
 
-  // Figure out if we are a generic font
-  PRUint8 generic = kGenericFont_NONE;
-  if (eCSSUnit_String == fontData.mFamily.GetUnit()) {
-    fontData.mFamily.GetStringValue(font->mFont.name);
-    // XXXldb Do we want to extract the generic for this if it's not only a
-    // generic?
-    nsFont::GetGenericID(font->mFont.name, &generic);
-
-    // If we aren't allowed to use document fonts, then we are only entitled
-    // to use the user's default variable-width font and fixed-width font
-    if (!useDocumentFonts) {
-      // Extract the generic from the specified font family...
-      nsAutoString genericName;
-      if (!font->mFont.EnumerateFamilies(ExtractGeneric, &genericName)) {
-        // The specified font had a generic family.
-        font->mFont.name = genericName;
-        nsFont::GetGenericID(genericName, &generic);
-
-        // ... and only use it if it's -moz-fixed or monospace
-        if (generic != kGenericFont_moz_fixed &&
-            generic != kGenericFont_monospace) {
-          font->mFont.name.Truncate();
-          generic = kGenericFont_NONE;
-        }
-      } else {
-        // The specified font did not have a generic family.
-        font->mFont.name.Truncate();
-        generic = kGenericFont_NONE;
-      }
-    }
+  // If we don't have to use document fonts, then we are only entitled
+  // to use the user's default variable-width font and fixed-width font
+  if (!useDocumentFonts) {
+    if (generic != kGenericFont_moz_fixed)
+      generic = kGenericFont_NONE;
   }
 
   // Now compute our font struct
   if (generic == kGenericFont_NONE) {
     // continue the normal processing
     // our default font is the most recent generic font
-    // XXXldb Probably should be the serif/sans-serif pref instead.
     const nsFont* defaultFont =
       mPresContext->GetDefaultFont(parentFont->mFlags & NS_STYLE_FONT_FACE_MASK);
 
-    nsRuleNode::SetFont(mPresContext, aContext, minimumFontSize, PR_FALSE,
+    nsRuleNode::SetFont(mPresContext, aContext, minimumFontSize,
+                        useDocumentFonts, PR_FALSE,
                         fontData, *defaultFont, parentFont, font, inherited);
   }
   else {
     // re-calculate the font as a generic font
     inherited = PR_TRUE;
     nsRuleNode::SetGenericFont(mPresContext, aContext, fontData, generic,
-                               minimumFontSize, font);
+                               minimumFontSize, useDocumentFonts, font);
   }
   // Set our generic font's bit to inform our descendants
   font->mFlags &= ~NS_STYLE_FONT_FACE_MASK;
   font->mFlags |= generic;
 
-  COMPUTE_END_INHERITED(Font, font)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Font, font);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData) {
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mInheritedData)) {
+        font->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mInheritedData->mFontData = font;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Font), aHighestNode);
+  }
+
+  return font;
 }
 
 const nsStyleStruct*
@@ -2336,7 +2165,38 @@ nsRuleNode::ComputeTextData(nsStyleStruct* aStartStruct,
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_INHERITED(Text, (), text, parentText, Text, textData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataText& textData = NS_STATIC_CAST(const nsRuleDataText&, aData);
+  nsStyleText* text = nsnull;
+  const nsStyleText* parentText = nsnull;
+  PRBool inherited = aInherited;
+
+  if (parentContext && aRuleDetail != eRuleFullReset)
+    parentText = parentContext->GetStyleText();
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    text = new (mPresContext) nsStyleText(*NS_STATIC_CAST(nsStyleText*, aStartStruct));
+  else {
+    // XXXldb What about eRuleFullInherited?  Which path is faster?
+    if (aRuleDetail != eRuleFullMixed && aRuleDetail != eRuleFullReset) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentText)
+        text = new (mPresContext) nsStyleText(*parentText);
+      else
+        text = new (mPresContext) nsStyleText();
+    }
+    else
+      text = new (mPresContext) nsStyleText();
+  }
+
+  if (NS_UNLIKELY(!text))
+    return nsnull;  // Out Of Memory
+  if (!parentText)
+    parentText = text;
 
     // letter-spacing: normal, length, inherit
   SetCoord(textData.mLetterSpacing, text->mLetterSpacing, parentText->mLetterSpacing,
@@ -2423,17 +2283,55 @@ nsRuleNode::ComputeTextData(nsStyleStruct* aStartStruct,
   SetCoord(textData.mWordSpacing, text->mWordSpacing, parentText->mWordSpacing,
            SETCOORD_LH | SETCOORD_NORMAL, aContext, mPresContext, inherited);
 
-  COMPUTE_END_INHERITED(Text, text)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Text, text);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData) {
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mInheritedData)) {
+        text->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mInheritedData->mTextData = text;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Text), aHighestNode);
+  }
+
+  return text;
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeTextResetData(nsStyleStruct* aStartStruct,
+nsRuleNode::ComputeTextResetData(nsStyleStruct* aStartData,
                                  const nsRuleDataStruct& aData, 
                                  nsStyleContext* aContext, 
                                  nsRuleNode* aHighestNode,
                                  const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(TextReset, (), text, parentText, Text, textData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataText& textData = NS_STATIC_CAST(const nsRuleDataText&, aData);
+  nsStyleTextReset* text;
+  if (aStartData)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    text = new (mPresContext) nsStyleTextReset(*NS_STATIC_CAST(nsStyleTextReset*, aStartData));
+  else
+    text = new (mPresContext) nsStyleTextReset();
+
+  if (NS_UNLIKELY(!text))
+    return nsnull;  // Out Of Memory
+
+  const nsStyleTextReset* parentText = text;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentText = parentContext->GetStyleTextReset();
+  PRBool inherited = aInherited;
   
   // vertical-align: enum, length, percent, inherit
   SetCoord(textData.mVerticalAlign, text->mVerticalAlign, parentText->mVerticalAlign,
@@ -2474,19 +2372,67 @@ nsRuleNode::ComputeTextResetData(nsStyleStruct* aStartStruct,
     text->mUnicodeBidi = parentText->mUnicodeBidi;
   }
 
-  COMPUTE_END_RESET(TextReset, text)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_TextReset, text);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        text->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mTextResetData = text;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(TextReset), aHighestNode);
+  }
+
+  return text;
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeUserInterfaceData(nsStyleStruct* aStartStruct,
+nsRuleNode::ComputeUserInterfaceData(nsStyleStruct* aStartData,
                                      const nsRuleDataStruct& aData, 
                                      nsStyleContext* aContext, 
                                      nsRuleNode* aHighestNode,
                                      const RuleDetail& aRuleDetail,
                                      PRBool aInherited)
 {
-  COMPUTE_START_INHERITED(UserInterface, (), ui, parentUI,
-                          UserInterface, uiData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataUserInterface& uiData = NS_STATIC_CAST(const nsRuleDataUserInterface&, aData);
+  nsStyleUserInterface* ui = nsnull;
+  const nsStyleUserInterface* parentUI = nsnull;
+  PRBool inherited = aInherited;
+
+  if (parentContext && aRuleDetail != eRuleFullReset)
+    parentUI = parentContext->GetStyleUserInterface();
+  if (aStartData)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    ui = new (mPresContext) nsStyleUserInterface(*NS_STATIC_CAST(nsStyleUserInterface*, aStartData));
+  else {
+    // XXXldb What about eRuleFullInherited?  Which path is faster?
+    if (aRuleDetail != eRuleFullMixed && aRuleDetail != eRuleFullReset) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentUI)
+        ui = new (mPresContext) nsStyleUserInterface(*parentUI);
+      else
+        ui = new (mPresContext) nsStyleUserInterface();
+    }
+    else
+      ui = new (mPresContext) nsStyleUserInterface();
+  }
+
+  if (NS_UNLIKELY(!ui))
+    return nsnull;  // Out Of Memory
+  if (!parentUI)
+    parentUI = ui;
 
   // cursor: enum, auto, url, inherit
   nsCSSValueList*  list = uiData.mCursor;
@@ -2580,17 +2526,55 @@ nsRuleNode::ComputeUserInterfaceData(nsStyleStruct* aStartStruct,
     ui->mUserFocus = parentUI->mUserFocus;
   }
 
-  COMPUTE_END_INHERITED(UserInterface, ui)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_UserInterface, ui);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData) {
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mInheritedData)) {
+        ui->Destroy(mPresContext);
+        return nsnull;
+      }
+    }    
+    aHighestNode->mStyleData.mInheritedData->mUserInterfaceData = ui;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(UserInterface), aHighestNode);
+  }
+
+  return ui;
 }
 
 const nsStyleStruct*
-nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartStruct,
+nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartData,
                                const nsRuleDataStruct& aData, 
                                nsStyleContext* aContext, 
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(UIReset, (), ui, parentUI, UserInterface, uiData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataUserInterface& uiData = NS_STATIC_CAST(const nsRuleDataUserInterface&, aData);
+  nsStyleUIReset* ui;
+  if (aStartData)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    ui = new (mPresContext) nsStyleUIReset(*NS_STATIC_CAST(nsStyleUIReset*, aStartData));
+  else
+    ui = new (mPresContext) nsStyleUIReset();
+
+  if (NS_UNLIKELY(!ui))
+    return nsnull;  // Out Of Memory
+
+  const nsStyleUIReset* parentUI = ui;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentUI = parentContext->GetStyleUIReset();
+  PRBool inherited = aInherited;
   
   // user-select: none, enum, inherit
   if (eCSSUnit_Enumerated == uiData.mUserSelect.GetUnit()) {
@@ -2608,7 +2592,26 @@ nsRuleNode::ComputeUIResetData(nsStyleStruct* aStartStruct,
   if (eCSSUnit_Integer == uiData.mForceBrokenImageIcon.GetUnit()) {
     ui->mForceBrokenImageIcon = uiData.mForceBrokenImageIcon.GetIntValue();
   }
-  COMPUTE_END_RESET(UIReset, ui)
+  
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_UIReset, ui);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        ui->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mUIResetData = ui;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(UIReset), aHighestNode);
+  }
+
+  return ui;
 }
 
 const nsStyleStruct*
@@ -2618,15 +2621,32 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct,
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(Display, (), display, parentDisplay,
-                      Display, displayData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataDisplay& displayData = NS_STATIC_CAST(const nsRuleDataDisplay&, aData);
+  nsStyleDisplay* display;
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    display = new (mPresContext) nsStyleDisplay(*NS_STATIC_CAST(nsStyleDisplay*, aStartStruct));
+  else
+    display = new (mPresContext) nsStyleDisplay();
+
+  if (NS_UNLIKELY(!display))
+    return nsnull;  // Out Of Memory
+
+  const nsStyleDisplay* parentDisplay = display;
   nsIAtom* pseudoTag = aContext->GetPseudoType();
   PRBool generatedContent = (pseudoTag == nsCSSPseudoElements::before || 
                              pseudoTag == nsCSSPseudoElements::after);
-  NS_ASSERTION(!generatedContent || parentContext,
-               "Must have parent context for generated content");
-  if (parentDisplay == display && generatedContent)
+
+  if (parentContext && 
+      ((aRuleDetail != eRuleFullReset &&
+        aRuleDetail != eRulePartialReset &&
+        aRuleDetail != eRuleNone) ||
+       generatedContent))
     parentDisplay = parentContext->GetStyleDisplay();
+  PRBool inherited = aInherited;
 
   // opacity: factor, inherit
   if (eCSSUnit_Number == displayData.mOpacity.GetUnit()) {
@@ -2836,9 +2856,6 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct,
     // pseudo-elements must not be positioned or floated (CSS2 12.1) and
     // must be limited to certain display types (depending on the
     // display type of the element to which they are attached).
-    // XXX These restrictions are no longer present in CSS2.1.  We
-    // should ensure that we support removing them before doing so,
-    // though.
 
     if (display->mPosition != NS_STYLE_POSITION_STATIC)
       display->mPosition = NS_STYLE_POSITION_STATIC;
@@ -2847,12 +2864,9 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct,
 
     PRUint8 displayValue = display->mDisplay;
     if (displayValue != NS_STYLE_DISPLAY_NONE &&
-        displayValue != NS_STYLE_DISPLAY_INLINE &&
-        displayValue != NS_STYLE_DISPLAY_INLINE_BLOCK) {
+        displayValue != NS_STYLE_DISPLAY_INLINE) {
       inherited = PR_TRUE;
-      // XXX IsBlockInside?  (except for the marker bit)
-      if (parentDisplay->IsBlockLevel() ||
-          parentDisplay->mDisplay == NS_STYLE_DISPLAY_INLINE_BLOCK) {
+      if (parentDisplay->IsBlockLevel()) {
         // If the subject of the selector is a block-level element,
         // allowed values are 'none', 'inline', 'block', and 'marker'.
         // If the value of the 'display' has any other value, the
@@ -2911,7 +2925,25 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct,
     }
   }
 
-  COMPUTE_END_RESET(Display, display)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Display, display);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        display->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mDisplayData = display;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Display), aHighestNode);
+  }
+
+  return display;
 }
 
 const nsStyleStruct*
@@ -2921,9 +2953,38 @@ nsRuleNode::ComputeVisibilityData(nsStyleStruct* aStartStruct,
                                   nsRuleNode* aHighestNode,
                                   const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_INHERITED(Visibility, (mPresContext),
-                          visibility, parentVisibility,
-                          Display, displayData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataDisplay& displayData = NS_STATIC_CAST(const nsRuleDataDisplay&, aData);
+  nsStyleVisibility* visibility = nsnull;
+  const nsStyleVisibility* parentVisibility = nsnull;
+  PRBool inherited = aInherited;
+
+  if (parentContext && aRuleDetail != eRuleFullReset)
+    parentVisibility = parentContext->GetStyleVisibility();
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    visibility = new (mPresContext) nsStyleVisibility(*NS_STATIC_CAST(nsStyleVisibility*, aStartStruct));
+  else {
+    // XXXldb What about eRuleFullInherited?  Which path is faster?
+    if (aRuleDetail != eRuleFullMixed && aRuleDetail != eRuleFullReset) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentVisibility)
+        visibility = new (mPresContext) nsStyleVisibility(*parentVisibility);
+      else
+        visibility = new (mPresContext) nsStyleVisibility(mPresContext);
+    }
+    else
+      visibility = new (mPresContext) nsStyleVisibility(mPresContext);
+  }
+
+  if (NS_UNLIKELY(!visibility))
+    return nsnull;  // Out Of Memory
+  if (!parentVisibility)
+    parentVisibility = visibility;
 
   // direction: enum, inherit
   if (eCSSUnit_Enumerated == displayData.mDirection.GetUnit()) {
@@ -2959,7 +3020,25 @@ nsRuleNode::ComputeVisibilityData(nsStyleStruct* aStartStruct,
     }
   } 
 
-  COMPUTE_END_INHERITED(Visibility, visibility)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Visibility, visibility);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData) {
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mInheritedData)) {
+        visibility->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mInheritedData->mVisibilityData = visibility;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Visibility), aHighestNode);
+  }
+
+  return visibility;
 }
 
 const nsStyleStruct*
@@ -2969,8 +3048,38 @@ nsRuleNode::ComputeColorData(nsStyleStruct* aStartStruct,
                              nsRuleNode* aHighestNode,
                              const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_INHERITED(Color, (mPresContext), color, parentColor,
-                          Color, colorData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataColor& colorData = NS_STATIC_CAST(const nsRuleDataColor&, aData);
+  nsStyleColor* color = nsnull;
+  const nsStyleColor* parentColor = nsnull;
+  PRBool inherited = aInherited;
+
+  if (parentContext && aRuleDetail != eRuleFullReset)
+    parentColor = parentContext->GetStyleColor();
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    color = new (mPresContext) nsStyleColor(*NS_STATIC_CAST(nsStyleColor*, aStartStruct));
+  else {
+    // XXXldb What about eRuleFullInherited?  Which path is faster?
+    if (aRuleDetail != eRuleFullMixed && aRuleDetail != eRuleFullReset) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentColor)
+        color = new (mPresContext) nsStyleColor(*parentColor);
+      else
+        color = new (mPresContext) nsStyleColor(mPresContext);
+    }
+    else
+      color = new (mPresContext) nsStyleColor(mPresContext);
+  }
+
+  if (NS_UNLIKELY(!color))
+    return nsnull;  // Out Of Memory
+  if (!parentColor)
+    parentColor = color;
 
   // color: color, string, inherit
   // Special case for currentColor.  According to CSS3, setting color to 'currentColor'
@@ -2984,7 +3093,25 @@ nsRuleNode::ComputeColorData(nsStyleStruct* aStartStruct,
              inherited);
   }
 
-  COMPUTE_END_INHERITED(Color, color)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Color, color);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData) {
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mInheritedData)) {
+        color->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mInheritedData->mColorData = color;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Color), aHighestNode);
+  }
+
+  return color;
 }
 
 const nsStyleStruct*
@@ -2994,9 +3121,27 @@ nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct,
                                   nsRuleNode* aHighestNode,
                                   const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(Background, (mPresContext), bg, parentBG,
-                      Color, colorData)
+  nsStyleContext* parentContext = aContext->GetParent();
 
+  const nsRuleDataColor& colorData = NS_STATIC_CAST(const nsRuleDataColor&, aData);
+  nsStyleBackground* bg;
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    bg = new (mPresContext) nsStyleBackground(*NS_STATIC_CAST(nsStyleBackground*, aStartStruct));
+  else
+    bg = new (mPresContext) nsStyleBackground(mPresContext);
+
+  if (NS_UNLIKELY(!bg))
+    return nsnull;  // Out Of Memory
+
+  const nsStyleBackground* parentBG = bg;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentBG = parentContext->GetStyleBackground();
+  PRBool inherited = aInherited;
   // save parentFlags in case bg == parentBG and we clobber them later
   PRUint8 parentFlags = parentBG->mBackgroundFlags;
 
@@ -3010,12 +3155,6 @@ nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct,
   else if (SetColor(colorData.mBackColor, parentBG->mBackgroundColor, 
                     mPresContext, aContext, bg->mBackgroundColor, inherited)) {
     bg->mBackgroundFlags &= ~NS_STYLE_BG_COLOR_TRANSPARENT;
-    // if not using document colors, we have to use the user's background color
-    // instead of any background color other than transparent
-    if (!mPresContext->GetCachedBoolPref(kPresContext_UseDocumentColors) &&
-        !IsChrome(mPresContext)) {
-      bg->mBackgroundColor = mPresContext->DefaultBackgroundColor();
-    }
   }
   else if (eCSSUnit_Enumerated == colorData.mBackColor.GetUnit()) {
     //bg->mBackgroundColor = parentBG->mBackgroundColor; XXXwdh crap crap crap!
@@ -3025,19 +3164,17 @@ nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct,
   // background-image: url (stored as image), none, inherit
   if (eCSSUnit_Image == colorData.mBackImage.GetUnit()) {
     bg->mBackgroundImage = colorData.mBackImage.GetImageValue();
+    bg->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
   }
   else if (eCSSUnit_None == colorData.mBackImage.GetUnit()) {
     bg->mBackgroundImage = nsnull;
+    bg->mBackgroundFlags |= NS_STYLE_BG_IMAGE_NONE;
   }
   else if (eCSSUnit_Inherit == colorData.mBackImage.GetUnit()) {
     inherited = PR_TRUE;
     bg->mBackgroundImage = parentBG->mBackgroundImage;
-  }
-
-  if (bg->mBackgroundImage) {
     bg->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
-  } else {
-    bg->mBackgroundFlags |= NS_STYLE_BG_IMAGE_NONE;
+    bg->mBackgroundFlags |= (parentFlags & NS_STYLE_BG_IMAGE_NONE);
   }
 
   // background-repeat: enum, inherit
@@ -3138,7 +3275,25 @@ nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct,
     bg->mBackgroundFlags |= (parentFlags & (NS_STYLE_BG_Y_POSITION_LENGTH | NS_STYLE_BG_Y_POSITION_PERCENT));
   }
 
-  COMPUTE_END_RESET(Background, bg)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Background, bg);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        bg->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mBackgroundData = bg;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Background), aHighestNode);
+  }
+
+  return bg;
 }
 
 const nsStyleStruct*
@@ -3148,7 +3303,27 @@ nsRuleNode::ComputeMarginData(nsStyleStruct* aStartStruct,
                               nsRuleNode* aHighestNode,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(Margin, (), margin, parentMargin, Margin, marginData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
+  nsStyleMargin* margin;
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    margin = new (mPresContext) nsStyleMargin(*NS_STATIC_CAST(nsStyleMargin*, aStartStruct));
+  else
+    margin = new (mPresContext) nsStyleMargin();
+
+  if (NS_UNLIKELY(!margin))
+    return nsnull;  // Out Of Memory
+
+  const nsStyleMargin* parentMargin = margin;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentMargin = parentContext->GetStyleMargin();
+  PRBool inherited = aInherited;
 
   // margin: length, percent, auto, inherit
   nsStyleCoord  coord;
@@ -3175,8 +3350,26 @@ nsRuleNode::ComputeMarginData(nsStyleStruct* aStartStruct,
                        parentMargin->mMargin, margin->mMargin,
                        NS_SIDE_RIGHT, SETCOORD_LPAH, inherited);
 
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Margin, margin);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        margin->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mMarginData = margin;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Margin), aHighestNode);
+  }
+
   margin->RecalcData();
-  COMPUTE_END_RESET(Margin, margin)
+  return margin;
 }
 
 const nsStyleStruct* 
@@ -3186,10 +3379,29 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
                               nsRuleNode* aHighestNode,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(Border, (mPresContext), border, parentBorder,
-                      Margin, marginData)
+  nsStyleContext* parentContext = aContext->GetParent();
 
-  // border-width, border-*-width: length, enum, inherit
+  const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
+  nsStyleBorder* border;
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    border = new (mPresContext) nsStyleBorder(*NS_STATIC_CAST(nsStyleBorder*, aStartStruct));
+  else
+    border = new (mPresContext) nsStyleBorder(mPresContext);
+  
+  if (NS_UNLIKELY(!border))
+    return nsnull;  // Out Of Memory
+
+  const nsStyleBorder* parentBorder = border;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentBorder = parentContext->GetStyleBorder();
+  PRBool inherited = aInherited;
+
+  // border-size: length, enum, inherit
   nsStyleCoord  coord;
   nsStyleCoord  parentCoord;
   { // scope for compilers with broken |for| loop scoping
@@ -3234,7 +3446,7 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
     }
   }
 
-  // border-style, border-*-style: enum, none, inherit
+  // border-style: enum, none, inhert
   const nsCSSRect& ourStyle = marginData.mBorderStyle;
   { // scope for compilers with broken |for| loop scoping
     NS_FOR_CSS_SIDES(side) {
@@ -3253,7 +3465,7 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
     }
   }
 
-  // -moz-border-*-colors: color, string, enum
+  // border-colors: color, string, enum
   nscolor borderColor;
   nscolor unused = NS_RGB(0,0,0);
   
@@ -3278,7 +3490,7 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
     }
   }
 
-  // border-color, border-*-color: color, string, enum, inherit
+  // border-color: color, string, enum, inherit
   const nsCSSRect& ourBorderColor = marginData.mBorderColor;
   PRBool transparent;
   PRBool foreground;
@@ -3342,7 +3554,25 @@ nsRuleNode::ComputeBorderData(nsStyleStruct* aStartStruct,
     border->mFloatEdge = parentBorder->mFloatEdge;
   }
 
-  COMPUTE_END_RESET(Border, border)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Border, border);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        border->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mBorderData = border;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Border), aHighestNode);
+  }
+
+  return border;
 }
   
 const nsStyleStruct*
@@ -3352,7 +3582,27 @@ nsRuleNode::ComputePaddingData(nsStyleStruct* aStartStruct,
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(Padding, (), padding, parentPadding, Margin, marginData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
+  nsStylePadding* padding;
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    padding = new (mPresContext) nsStylePadding(*NS_STATIC_CAST(nsStylePadding*, aStartStruct));
+  else
+    padding = new (mPresContext) nsStylePadding();
+  
+  if (NS_UNLIKELY(!padding))
+    return nsnull;  // Out Of Memory
+
+  const nsStylePadding* parentPadding = padding;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentPadding = parentContext->GetStylePadding();
+  PRBool inherited = aInherited;
 
   // padding: length, percent, inherit
   nsStyleCoord  coord;
@@ -3379,8 +3629,26 @@ nsRuleNode::ComputePaddingData(nsStyleStruct* aStartStruct,
                        parentPadding->mPadding, padding->mPadding,
                        NS_SIDE_RIGHT, SETCOORD_LPH, inherited);
 
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Padding, padding);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (!aHighestNode->mStyleData.mResetData) {
+        delete padding;
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mPaddingData = padding;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Padding), aHighestNode);
+  }
+
   padding->RecalcData();
-  COMPUTE_END_RESET(Padding, padding)
+  return padding;
 }
 
 const nsStyleStruct*
@@ -3390,8 +3658,27 @@ nsRuleNode::ComputeOutlineData(nsStyleStruct* aStartStruct,
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(Outline, (mPresContext), outline, parentOutline,
-                      Margin, marginData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataMargin& marginData = NS_STATIC_CAST(const nsRuleDataMargin&, aData);
+  nsStyleOutline* outline;
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    outline = new (mPresContext) nsStyleOutline(*NS_STATIC_CAST(nsStyleOutline*, aStartStruct));
+  else
+    outline = new (mPresContext) nsStyleOutline(mPresContext);
+  
+  if (NS_UNLIKELY(!outline))
+    return nsnull;  // Out Of Memory
+
+  const nsStyleOutline* parentOutline = outline;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentOutline = parentContext->GetStyleOutline();
+  PRBool inherited = aInherited;
 
   // outline-width: length, enum, inherit
   SetCoord(marginData.mOutlineWidth, outline->mOutlineWidth, parentOutline->mOutlineWidth,
@@ -3442,8 +3729,26 @@ nsRuleNode::ComputeOutlineData(nsStyleStruct* aStartStruct,
     outline->SetOutlineStyle(parentOutline->GetOutlineStyle());
   }
 
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Outline, outline);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        outline->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mOutlineData = outline;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Outline), aHighestNode);
+  }
+
   outline->RecalcData(mPresContext);
-  COMPUTE_END_RESET(Outline, outline)
+  return outline;
 }
 
 const nsStyleStruct* 
@@ -3453,7 +3758,38 @@ nsRuleNode::ComputeListData(nsStyleStruct* aStartStruct,
                             nsRuleNode* aHighestNode,
                             const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_INHERITED(List, (), list, parentList, List, listData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataList& listData = NS_STATIC_CAST(const nsRuleDataList&, aData);
+  nsStyleList* list = nsnull;
+  const nsStyleList* parentList = nsnull;
+  PRBool inherited = aInherited;
+
+  if (parentContext && aRuleDetail != eRuleFullReset)
+    parentList = parentContext->GetStyleList();
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    list = new (mPresContext) nsStyleList(*NS_STATIC_CAST(nsStyleList*, aStartStruct));
+  else {
+    // XXXldb What about eRuleFullInherited?  Which path is faster?
+    if (aRuleDetail != eRuleFullMixed && aRuleDetail != eRuleFullReset) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentList)
+        list = new (mPresContext) nsStyleList(*parentList);
+      else
+        list = new (mPresContext) nsStyleList();
+    }
+    else
+      list = new (mPresContext) nsStyleList();
+  }
+
+  if (NS_UNLIKELY(!list))
+    return nsnull;  // Out Of Memory
+  if (!parentList)
+    parentList = list;
 
   // list-style-type: enum, none, inherit
   if (eCSSUnit_Enumerated == listData.mType.GetUnit()) {
@@ -3517,7 +3853,25 @@ nsRuleNode::ComputeListData(nsStyleStruct* aStartStruct,
                                 list->mImageRegion.x;
   }
 
-  COMPUTE_END_INHERITED(List, list)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_List, list);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData) {
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mInheritedData)) {
+        list->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mInheritedData->mListData = list;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(List), aHighestNode);
+  }
+
+  return list;
 }
 
 const nsStyleStruct* 
@@ -3527,7 +3881,27 @@ nsRuleNode::ComputePositionData(nsStyleStruct* aStartStruct,
                                 nsRuleNode* aHighestNode,
                                 const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(Position, (), pos, parentPos, Position, posData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataPosition& posData = NS_STATIC_CAST(const nsRuleDataPosition&, aData);
+  nsStylePosition* pos;
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    pos = new (mPresContext) nsStylePosition(*NS_STATIC_CAST(nsStylePosition*, aStartStruct));
+  else
+    pos = new (mPresContext) nsStylePosition();
+  
+  if (NS_UNLIKELY(!pos))
+    return nsnull;  // Out Of Memory
+
+  const nsStylePosition* parentPos = pos;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentPos = parentContext->GetStylePosition();
+  PRBool inherited = aInherited;
 
   // box offsets: length, percent, auto, inherit
   nsStyleCoord  coord;
@@ -3585,7 +3959,25 @@ nsRuleNode::ComputePositionData(nsStyleStruct* aStartStruct,
     }
   }
 
-  COMPUTE_END_RESET(Position, pos)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Position, pos);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        pos->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mPositionData = pos;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Position), aHighestNode);
+  }
+
+  return pos;
 }
 
 const nsStyleStruct* 
@@ -3595,7 +3987,27 @@ nsRuleNode::ComputeTableData(nsStyleStruct* aStartStruct,
                              nsRuleNode* aHighestNode,
                              const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(Table, (), table, parentTable, Table, tableData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataTable& tableData = NS_STATIC_CAST(const nsRuleDataTable&, aData);
+  nsStyleTable* table;
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    table = new (mPresContext) nsStyleTable(*NS_STATIC_CAST(nsStyleTable*, aStartStruct));
+  else
+    table = new (mPresContext) nsStyleTable();
+  
+  if (!table)
+    return nsnull;  // Out Of Memory
+
+  const nsStyleTable* parentTable = table;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentTable = parentContext->GetStyleTable();
+  PRBool inherited = aInherited;
 
   // table-layout: auto, enum, inherit
   if (eCSSUnit_Enumerated == tableData.mLayout.GetUnit())
@@ -3625,7 +4037,25 @@ nsRuleNode::ComputeTableData(nsStyleStruct* aStartStruct,
       eCSSUnit_Integer == tableData.mSpan.GetUnit())
     table->mSpan = tableData.mSpan.GetIntValue();
     
-  COMPUTE_END_RESET(Table, table)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Table, table);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        table->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mTableData = table;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Table), aHighestNode);
+  }
+
+  return table;
 }
 
 const nsStyleStruct* 
@@ -3635,8 +4065,38 @@ nsRuleNode::ComputeTableBorderData(nsStyleStruct* aStartStruct,
                                    nsRuleNode* aHighestNode,
                                    const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_INHERITED(TableBorder, (mPresContext), table, parentTable,
-                          Table, tableData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataTable& tableData = NS_STATIC_CAST(const nsRuleDataTable&, aData);
+  nsStyleTableBorder* table = nsnull;
+  const nsStyleTableBorder* parentTable = nsnull;
+  PRBool inherited = aInherited;
+
+  if (parentContext && aRuleDetail != eRuleFullReset)
+    parentTable = parentContext->GetStyleTableBorder();
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    table = new (mPresContext) nsStyleTableBorder(*NS_STATIC_CAST(nsStyleTableBorder*, aStartStruct));
+  else {
+    // XXXldb What about eRuleFullInherited?  Which path is faster?
+    if (aRuleDetail != eRuleFullMixed && aRuleDetail != eRuleFullReset) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentTable)
+        table = new (mPresContext) nsStyleTableBorder(*parentTable);
+      else
+        table = new (mPresContext) nsStyleTableBorder(mPresContext);
+    }
+    else
+      table = new (mPresContext) nsStyleTableBorder(mPresContext);
+  }
+
+  if (NS_UNLIKELY(!table))
+    return nsnull;  // Out Of Memory
+  if (!parentTable)
+    parentTable = table;
 
   // border-collapse: enum, inherit
   if (eCSSUnit_Enumerated == tableData.mBorderCollapse.GetUnit()) {
@@ -3674,7 +4134,25 @@ nsRuleNode::ComputeTableBorderData(nsStyleStruct* aStartStruct,
     table->mEmptyCells = parentTable->mEmptyCells;
   }
 
-  COMPUTE_END_INHERITED(TableBorder, table)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_TableBorder, table);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData) {
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mInheritedData)) {
+        table->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mInheritedData->mTableBorderData = table;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(TableBorder), aHighestNode);
+  }
+
+  return table;
 }
 
 const nsStyleStruct* 
@@ -3684,8 +4162,27 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
                                nsRuleNode* aHighestNode,
                                const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(Content, (), content, parentContent,
-                      Content, contentData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataContent& contentData = NS_STATIC_CAST(const nsRuleDataContent&, aData);
+  nsStyleContent* content;
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    content = new (mPresContext) nsStyleContent(*NS_STATIC_CAST(nsStyleContent*, aStartStruct));
+  else
+    content = new (mPresContext) nsStyleContent();
+  
+  if (NS_UNLIKELY(!content))
+    return nsnull;  // Out Of Memory
+
+  const nsStyleContent* parentContent = content;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentContent = parentContext->GetStyleContent();
+  PRBool inherited = aInherited;
 
   // content: [string, url, counter, attr, enum]+, normal, inherit
   PRUint32 count;
@@ -3737,8 +4234,6 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
                   type = eStyleContentType_NoOpenQuote;   break;
                 case NS_STYLE_CONTENT_NO_CLOSE_QUOTE:
                   type = eStyleContentType_NoCloseQuote;  break;
-                case NS_STYLE_CONTENT_ALT_CONTENT:
-                  type = eStyleContentType_AltContent;    break;
                 default:
                   NS_ERROR("bad content value");
               }
@@ -3754,7 +4249,7 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
           else if (type <= eStyleContentType_Attr) {
             value.GetStringValue(buffer);
             Unquote(buffer);
-            data.mContent.mString = NS_strdup(buffer.get());
+            data.mContent.mString = nsCRT::strdup(buffer.get());
           }
           else if (type <= eStyleContentType_Counters) {
             data.mContent.mCounters = value.GetArrayValue();
@@ -3859,7 +4354,25 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
   SetCoord(contentData.mMarkerOffset, content->mMarkerOffset, parentContent->mMarkerOffset,
            SETCOORD_LH | SETCOORD_AUTO, aContext, mPresContext, inherited);
     
-  COMPUTE_END_RESET(Content, content)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Content, content);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        content->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mContentData = content;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Content), aHighestNode);
+  }
+
+  return content;
 }
 
 const nsStyleStruct* 
@@ -3869,8 +4382,38 @@ nsRuleNode::ComputeQuotesData(nsStyleStruct* aStartStruct,
                               nsRuleNode* aHighestNode,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_INHERITED(Quotes, (), quotes, parentQuotes,
-                          Content, contentData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataContent& contentData = NS_STATIC_CAST(const nsRuleDataContent&, aData);
+  nsStyleQuotes* quotes = nsnull;
+  const nsStyleQuotes* parentQuotes = nsnull;
+  PRBool inherited = aInherited;
+
+  if (parentContext && aRuleDetail != eRuleFullReset)
+    parentQuotes = parentContext->GetStyleQuotes();
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    quotes = new (mPresContext) nsStyleQuotes(*NS_STATIC_CAST(nsStyleQuotes*, aStartStruct));
+  else {
+    // XXXldb What about eRuleFullInherited?  Which path is faster?
+    if (aRuleDetail != eRuleFullMixed && aRuleDetail != eRuleFullReset) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentQuotes)
+        quotes = new (mPresContext) nsStyleQuotes(*parentQuotes);
+      else
+        quotes = new (mPresContext) nsStyleQuotes();
+    }
+    else
+      quotes = new (mPresContext) nsStyleQuotes();
+  }
+
+  if (NS_UNLIKELY(!quotes))
+    return nsnull;  // Out Of Memory
+  if (!parentQuotes)
+    parentQuotes = quotes;
 
   // quotes: [string string]+, none, inherit
   PRUint32 count;
@@ -3912,7 +4455,25 @@ nsRuleNode::ComputeQuotesData(nsStyleStruct* aStartStruct,
     }
   }
 
-  COMPUTE_END_INHERITED(Quotes, quotes)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Quotes, quotes);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData) {
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mInheritedData)) {
+        quotes->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mInheritedData->mQuotesData = quotes;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Quotes), aHighestNode);
+  }
+
+  return quotes;
 }
 
 const nsStyleStruct* 
@@ -3922,7 +4483,29 @@ nsRuleNode::ComputeXULData(nsStyleStruct* aStartStruct,
                            nsRuleNode* aHighestNode,
                            const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(XUL, (), xul, parentXUL, XUL, xulData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataXUL& xulData = NS_STATIC_CAST(const nsRuleDataXUL&, aData);
+  nsStyleXUL* xul = nsnull;
+  
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    xul = new (mPresContext) nsStyleXUL(*NS_STATIC_CAST(nsStyleXUL*, aStartStruct));
+  else
+    xul = new (mPresContext) nsStyleXUL();
+
+  if (NS_UNLIKELY(!xul))
+    return nsnull;  // Out Of Memory
+
+  const nsStyleXUL* parentXUL = xul;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentXUL = parentContext->GetStyleXUL();
+
+  PRBool inherited = aInherited;
 
   // box-align: enum, inherit
   if (eCSSUnit_Enumerated == xulData.mBoxAlign.GetUnit()) {
@@ -3974,7 +4557,25 @@ nsRuleNode::ComputeXULData(nsStyleStruct* aStartStruct,
     xul->mBoxOrdinal = xulData.mBoxOrdinal.GetIntValue();
   }
 
-  COMPUTE_END_RESET(XUL, xul)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_XUL, xul);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        xul->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mXULData = xul;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(XUL), aHighestNode);
+  }
+
+  return xul;
 }
 
 const nsStyleStruct* 
@@ -3984,17 +4585,39 @@ nsRuleNode::ComputeColumnData(nsStyleStruct* aStartStruct,
                               nsRuleNode* aHighestNode,
                               const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(Column, (), column, parent, Column, columnData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataColumn& columnData = NS_STATIC_CAST(const nsRuleDataColumn&, aData);
+  nsStyleColumn* column = nsnull;
+  
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    column = new (mPresContext) nsStyleColumn(*NS_STATIC_CAST(nsStyleColumn*, aStartStruct));
+  else
+    column = new (mPresContext) nsStyleColumn();
+
+  if (NS_UNLIKELY(!column))
+    return nsnull;  // Out Of Memory
+
+  const nsStyleColumn* parent = column;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parent = parentContext->GetStyleColumn();
+
+  PRBool inherited = aInherited;
 
   // column-width: length, auto, inherit
   SetCoord(columnData.mColumnWidth,
            column->mColumnWidth, parent->mColumnWidth, SETCOORD_LAH,
            aContext, mPresContext, inherited);
 
-  // column-gap: length, percentage, inherit, normal
+  // column-gap: length, percentage, inherit
   SetCoord(columnData.mColumnGap,
-           column->mColumnGap, parent->mColumnGap,
-           SETCOORD_LPH | SETCOORD_NORMAL, aContext, mPresContext, inherited);
+           column->mColumnGap, parent->mColumnGap, SETCOORD_LPH,
+           aContext, mPresContext, inherited);
 
   // column-count: auto, integer, inherit
   if (eCSSUnit_Auto == columnData.mColumnCount.GetUnit()) {
@@ -4008,31 +4631,43 @@ nsRuleNode::ComputeColumnData(nsStyleStruct* aStartStruct,
     column->mColumnCount = parent->mColumnCount;
   }
 
-  COMPUTE_END_RESET(Column, column)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_Column, column);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        column->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mColumnData = column;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(Column), aHighestNode);
+  }
+
+  return column;
 }
 
 #ifdef MOZ_SVG
 static void
-SetSVGPaint(const nsCSSValuePair& aValue, const nsStyleSVGPaint& parentPaint,
+SetSVGPaint(const nsCSSValue& aValue, const nsStyleSVGPaint& parentPaint,
             nsPresContext* aPresContext, nsStyleContext *aContext, 
             nsStyleSVGPaint& aResult, PRBool& aInherited)
 {
-  if (aValue.mXValue.GetUnit() == eCSSUnit_Inherit) {
+  if (aValue.GetUnit() == eCSSUnit_Inherit) {
     aResult = parentPaint;
     aInherited = PR_TRUE;
-  } else if (aValue.mXValue.GetUnit() == eCSSUnit_None) {
+  } else if (aValue.GetUnit() == eCSSUnit_None) {
     aResult.mType = eStyleSVGPaintType_None;
-  } else if (aValue.mXValue.GetUnit() == eCSSUnit_URL) {
+  } else if (aValue.GetUnit() == eCSSUnit_URL) {
     aResult.mType = eStyleSVGPaintType_Server;
-    aResult.mPaint.mPaintServer = aValue.mXValue.GetURLValue();
+    aResult.mPaint.mPaintServer = aValue.GetURLValue();
     NS_IF_ADDREF(aResult.mPaint.mPaintServer);
-    if (aValue.mYValue.GetUnit() == eCSSUnit_None) {
-      aResult.mFallbackColor = NS_RGBA(0, 0, 0, 0);
-    } else {
-      NS_ASSERTION(aValue.mYValue.GetUnit() != eCSSUnit_Inherit, "cannot inherit fallback colour");
-      SetColor(aValue.mYValue, NS_RGB(0, 0, 0), aPresContext, aContext, aResult.mFallbackColor, aInherited);
-    }
-  } else if (SetColor(aValue.mXValue, parentPaint.mPaint.mColor, aPresContext, aContext, aResult.mPaint.mColor, aInherited)) {
+  } else if (SetColor(aValue, parentPaint.mPaint.mColor, aPresContext, aContext, aResult.mPaint.mColor, aInherited)) {
     aResult.mType = eStyleSVGPaintType_Color;
   }
 }
@@ -4058,7 +4693,38 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct,
                            nsRuleNode* aHighestNode,
                            const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_INHERITED(SVG, (), svg, parentSVG, SVG, SVGData)
+  nsStyleContext* parentContext = aContext->GetParent();
+
+  const nsRuleDataSVG& SVGData = NS_STATIC_CAST(const nsRuleDataSVG&, aData);
+  nsStyleSVG* svg = nsnull;
+  const nsStyleSVG* parentSVG = nsnull;
+  PRBool inherited = aInherited;
+
+  if (parentContext && aRuleDetail != eRuleFullReset)
+    parentSVG = parentContext->GetStyleSVG();
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    svg = new (mPresContext) nsStyleSVG(*NS_STATIC_CAST(nsStyleSVG*, aStartStruct));
+  else {
+    // XXXldb What about eRuleFullInherited?  Which path is faster?
+    if (aRuleDetail != eRuleFullMixed && aRuleDetail != eRuleFullReset) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentSVG)
+        svg = new (mPresContext) nsStyleSVG(*parentSVG);
+      else
+        svg = new (mPresContext) nsStyleSVG();
+    }
+    else
+      svg = new (mPresContext) nsStyleSVG();
+  }
+
+  if (NS_UNLIKELY(!svg))
+    return nsnull;  // Out Of Memory
+  if (!parentSVG)
+    parentSVG = svg;
 
   // clip-rule: enum, inherit
   if (eCSSUnit_Enumerated == SVGData.mClipRule.GetUnit()) {
@@ -4067,36 +4733,6 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct,
   else if (eCSSUnit_Inherit == SVGData.mClipRule.GetUnit()) {
     inherited = PR_TRUE;
     svg->mClipRule = parentSVG->mClipRule;
-  }
-
-  // color-interpolation: auto, sRGB, linearRGB, inherit
-  if (eCSSUnit_Enumerated == SVGData.mColorInterpolation.GetUnit()) {
-    svg->mColorInterpolation = SVGData.mColorInterpolation.GetIntValue();
-  }
-  else if (eCSSUnit_Auto == SVGData.mColorInterpolation.GetUnit()) {
-    svg->mColorInterpolation = NS_STYLE_COLOR_INTERPOLATION_AUTO;
-  }
-  else if (eCSSUnit_Inherit == SVGData.mColorInterpolation.GetUnit()) {
-    inherited = PR_TRUE;
-    svg->mColorInterpolation = parentSVG->mColorInterpolation;
-  }
-  else if (eCSSUnit_Initial == SVGData.mColorInterpolation.GetUnit()) {
-    svg->mColorInterpolation = NS_STYLE_COLOR_INTERPOLATION_SRGB;
-  }
-
-  // color-interpolation-filters: auto, sRGB, linearRGB, inherit
-  if (eCSSUnit_Enumerated == SVGData.mColorInterpolationFilters.GetUnit()) {
-    svg->mColorInterpolationFilters = SVGData.mColorInterpolationFilters.GetIntValue();
-  }
-  else if (eCSSUnit_Auto == SVGData.mColorInterpolationFilters.GetUnit()) {
-    svg->mColorInterpolationFilters = NS_STYLE_COLOR_INTERPOLATION_AUTO;
-  }
-  else if (eCSSUnit_Inherit == SVGData.mColorInterpolationFilters.GetUnit()) {
-    inherited = PR_TRUE;
-    svg->mColorInterpolationFilters = parentSVG->mColorInterpolationFilters;
-  }
-  else if (eCSSUnit_Initial == SVGData.mColorInterpolation.GetUnit()) {
-    svg->mColorInterpolation = NS_STYLE_COLOR_INTERPOLATION_LINEARRGB;
   }
 
   // fill: 
@@ -4113,7 +4749,7 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct,
     inherited = PR_TRUE;
     svg->mFillRule = parentSVG->mFillRule;
   }
-
+  
   // marker-end: url, none, inherit
   if (eCSSUnit_URL == SVGData.mMarkerEnd.GetUnit()) {
     svg->mMarkerEnd = SVGData.mMarkerEnd.GetURLValue();
@@ -4284,7 +4920,25 @@ nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct,
     svg->mTextRendering = parentSVG->mTextRendering;
   }
 
-  COMPUTE_END_INHERITED(SVG, svg)
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_SVG, svg);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData) {
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mInheritedData)) {
+        svg->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mInheritedData->mSVGData = svg;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(SVG), aHighestNode);
+  }
+
+  return svg;
 }
 
 const nsStyleStruct* 
@@ -4294,15 +4948,34 @@ nsRuleNode::ComputeSVGResetData(nsStyleStruct* aStartStruct,
                                 nsRuleNode* aHighestNode,
                                 const RuleDetail& aRuleDetail, PRBool aInherited)
 {
-  COMPUTE_START_RESET(SVGReset, (), svgReset, parentSVGReset, SVG, SVGData)
+  nsStyleContext* parentContext = aContext->GetParent();
 
-  // stop-color:
-  SetColor(SVGData.mStopColor, parentSVGReset->mStopColor,
-           mPresContext, aContext, svgReset->mStopColor, inherited);
+  const nsRuleDataSVG& SVGData = NS_STATIC_CAST(const nsRuleDataSVG&, aData);
+  nsStyleSVGReset* svgReset;
 
-  // flood-color:
-  SetColor(SVGData.mFloodColor, parentSVGReset->mFloodColor,
-           mPresContext, aContext, svgReset->mFloodColor, inherited);
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    svgReset = new (mPresContext) nsStyleSVGReset(*NS_STATIC_CAST(nsStyleSVGReset*,aStartStruct));
+  else 
+    svgReset = new (mPresContext) nsStyleSVGReset();
+
+  if (NS_UNLIKELY(!svgReset)) {
+    return nsnull;  // Out Of Memory
+  }
+
+  const nsStyleSVGReset* parentSVGReset = svgReset;
+  if (parentContext && 
+      aRuleDetail != eRuleFullReset &&
+      aRuleDetail != eRulePartialReset &&
+      aRuleDetail != eRuleNone)
+    parentSVGReset = parentContext->GetStyleSVGReset();
+
+  PRBool inherited = aInherited;
+
+  // stop-color: 
+  SetSVGPaint(SVGData.mStopColor, parentSVGReset->mStopColor,
+              mPresContext, aContext, svgReset->mStopColor, inherited);
 
   // clip-path: url, none, inherit
   if (eCSSUnit_URL == SVGData.mClipPath.GetUnit()) {
@@ -4318,10 +4991,6 @@ nsRuleNode::ComputeSVGResetData(nsStyleStruct* aStartStruct,
   SetSVGOpacity(SVGData.mStopOpacity, parentSVGReset->mStopOpacity,
                 svgReset->mStopOpacity, inherited);
 
-  // flood-opacity:
-  SetSVGOpacity(SVGData.mFloodOpacity, parentSVGReset->mFloodOpacity,
-                svgReset->mFloodOpacity, inherited);
-
   // dominant-baseline: enum, auto, inherit
   if (eCSSUnit_Enumerated == SVGData.mDominantBaseline.GetUnit()) {
     svgReset->mDominantBaseline = SVGData.mDominantBaseline.GetIntValue();
@@ -4334,27 +5003,26 @@ nsRuleNode::ComputeSVGResetData(nsStyleStruct* aStartStruct,
     svgReset->mDominantBaseline = parentSVGReset->mDominantBaseline;
   }
 
-  // filter: url, none, inherit
-  if (eCSSUnit_URL == SVGData.mFilter.GetUnit()) {
-    svgReset->mFilter = SVGData.mFilter.GetURLValue();
-  } else if (eCSSUnit_None == SVGData.mFilter.GetUnit()) {
-    svgReset->mFilter = nsnull;
-  } else if (eCSSUnit_Inherit == SVGData.mFilter.GetUnit()) {
-    inherited = PR_TRUE;
-    svgReset->mFilter = parentSVGReset->mFilter;
+  
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_SVGReset, svgReset);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mResetData) {
+      aHighestNode->mStyleData.mResetData = new (mPresContext) nsResetStyleData;
+      if (NS_UNLIKELY(!aHighestNode->mStyleData.mResetData)) {
+        svgReset->Destroy(mPresContext);
+        return nsnull;
+      }
+    }
+    aHighestNode->mStyleData.mResetData->mSVGResetData = svgReset;
+    // Propagate the bit down.
+    PropagateDependentBit(NS_STYLE_INHERIT_BIT(SVGReset), aHighestNode);
   }
 
-  // mask: url, none, inherit
-  if (eCSSUnit_URL == SVGData.mMask.GetUnit()) {
-    svgReset->mMask = SVGData.mMask.GetURLValue();
-  } else if (eCSSUnit_None == SVGData.mMask.GetUnit()) {
-    svgReset->mMask = nsnull;
-  } else if (eCSSUnit_Inherit == SVGData.mMask.GetUnit()) {
-    inherited = PR_TRUE;
-    svgReset->mMask = parentSVGReset->mMask;
-  }
-  
-  COMPUTE_END_RESET(SVGReset, svgReset)
+  return svgReset;
 }
 #endif
 
@@ -4377,30 +5045,6 @@ nsRuleNode::GetParentData(const nsStyleStructID aSID)
 
   return ruleNode->mStyleData.GetStyleData(aSID);
 }
-
-#define STYLE_STRUCT(name_, checkdata_cb_, ctor_args_)                      \
-inline const nsStyle##name_ *                                               \
-nsRuleNode::GetParent##name_()                                              \
-{                                                                           \
-  NS_PRECONDITION(mDependentBits &                                          \
-                  nsCachedStyleData::GetBitForSID(eStyleStruct_##name_),    \
-                  "should be called when node depends on parent data");     \
-  NS_ASSERTION(mStyleData.GetStyle##name_() == nsnull,                      \
-               "both struct and dependent bits present");                   \
-  /* Walk up the rule tree from this rule node (towards less specific */    \
-  /* rules). */                                                             \
-  PRUint32 bit = nsCachedStyleData::GetBitForSID(eStyleStruct_##name_);     \
-  nsRuleNode *ruleNode = mParent;                                           \
-  while (ruleNode->mDependentBits & bit) {                                  \
-    NS_ASSERTION(ruleNode->mStyleData.GetStyle##name_() == nsnull,          \
-                 "both struct and dependent bits present");                 \
-    ruleNode = ruleNode->mParent;                                           \
-  }                                                                         \
-                                                                            \
-  return ruleNode->mStyleData.GetStyle##name_();                            \
-}
-#include "nsStyleStructList.h"
-#undef STYLE_STRUCT
 
 const nsStyleStruct* 
 nsRuleNode::GetStyleData(nsStyleStructID aSID, 
@@ -4445,42 +5089,6 @@ nsRuleNode::GetStyleData(nsStyleStructID aSID,
   return mPresContext->PresShell()->StyleSet()->
     DefaultStyleData()->GetStyleData(aSID);
 }
-
-// See comments above in GetStyleData for an explanation of what the
-// code below does.
-#define STYLE_STRUCT(name_, checkdata_cb_, ctor_args_)                        \
-const nsStyle##name_*                                                         \
-nsRuleNode::GetStyle##name_(nsStyleContext* aContext, PRBool aComputeData)    \
-{                                                                             \
-  const nsStyle##name_ *data;                                                 \
-  if (mDependentBits &                                                        \
-      nsCachedStyleData::GetBitForSID(eStyleStruct_##name_)) {                \
-    data = GetParent##name_();                                                \
-    NS_ASSERTION(data, "dependent bits set but no cached struct present");    \
-    return data;                                                              \
-  }                                                                           \
-                                                                              \
-  data = mStyleData.GetStyle##name_();                                        \
-  if (NS_LIKELY(data != nsnull))                                              \
-    return data;                                                              \
-                                                                              \
-  if (NS_UNLIKELY(!aComputeData))                                             \
-    return nsnull;                                                            \
-                                                                              \
-  data =                                                                      \
-    NS_STATIC_CAST(const nsStyle##name_ *, Get##name_##Data(aContext));       \
-                                                                              \
-  if (NS_LIKELY(data != nsnull))                                              \
-    return data;                                                              \
-                                                                              \
-  NS_NOTREACHED("could not create style struct");                             \
-  return                                                                      \
-    NS_STATIC_CAST(const nsStyle##name_ *,                                    \
-                   mPresContext->PresShell()->StyleSet()->                    \
-                     DefaultStyleData()->GetStyleData(eStyleStruct_##name_)); \
-}
-#include "nsStyleStructList.h"
-#undef STYLE_STRUCT
 
 void
 nsRuleNode::Mark()

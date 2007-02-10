@@ -1,29 +1,29 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  * http://www.mozilla.org/MPL/
- * 
+ *
  * Software distributed under the License is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
  * License.
- * 
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
+ *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998-1999
  * the Initial Developer. All Rights Reserved.
- * 
+ *
  * Contributor(s):
- * 
+ *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -32,7 +32,7 @@
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the MPL, the GPL or the LGPL.
- * 
+ *
  * ***** END LICENSE BLOCK ***** */
 /*
  *  Copyright (c) 1995 Regents of the University of Michigan.
@@ -65,7 +65,7 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 #endif
 
 #include "ldap-int.h"
-#ifdef NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED
+#ifdef LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
 #include <signal.h>
 #endif
 
@@ -179,9 +179,6 @@ static LBER_SOCKET nsldapi_os_socket( LDAP *ld, int secure, int domain,
 static int nsldapi_os_ioctl( LBER_SOCKET s, int option, int *statusp );
 static int nsldapi_os_connect_with_to( LBER_SOCKET s, struct sockaddr *name,
 	int namelen, int msec_timeout );
-#if defined(KERBEROS)
-char * nsldapi_host_connected_to( LDAP *ld, Sockbuf *sb );
-#endif
 
 /*
  * Function typedefs used by nsldapi_try_each_host()
@@ -353,8 +350,8 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 			tval.tv_usec = 1000 * ( msec % 1000 );
 		} else {
 			tval.tv_sec = 0;
-			tval.tv_usec = 0;
 		}
+		tval.tv_usec = 0;
 #endif /* NSLDAPI_HAVE_POLL */
 	}
 
@@ -364,7 +361,7 @@ nsldapi_os_connect_with_to(LBER_SOCKET sockfd, struct sockaddr *saptr,
 		errno = ETIMEDOUT;
 		return (-1);
 	}
-	if (pfd.revents & (POLLOUT|POLLERR|POLLHUP|POLLNVAL)) {
+	if (pfd.revents & POLLOUT) {
 		len = sizeof(error);
 		if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, (char *)&error, &len)
 			< 0)
@@ -557,13 +554,11 @@ nsldapi_try_each_host( LDAP *ld, const char *hostlist,
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
 	return -1;
 #else /* NSLDAPI_AVOID_OS_SOCKETS */
-	int			rc = -1;
-	int			s = 0;
-	int			i, err, connected, use_hp;
+	int			rc, i, s, err, connected, use_hp;
 	int			parse_err, port;
 	struct sockaddr_in	sin;
 	nsldapi_in_addr_t	address;
-	char			**addrlist, *ldhpbuf, *ldhpbuf_allocd = NULL;
+	char			**addrlist, *ldhpbuf, *ldhpbuf_allocd;
 	char			*host;
 	LDAPHostEnt		ldhent, *ldhp;
 	struct hostent		*hp;
@@ -587,14 +582,8 @@ nsldapi_try_each_host( LDAP *ld, const char *hostlist,
 
 		if (( address = inet_addr( host )) == -1 ) {
 			if ( ld->ld_dns_gethostbyname_fn == NULL ) {
-#ifdef GETHOSTBYNAME_R_RETURNS_INT
-				(void)GETHOSTBYNAME( host, &hent, hbuf,
-				    sizeof(hbuf), &hp, &err );
-#else
-				hp = GETHOSTBYNAME( host, &hent, hbuf,
-				    sizeof(hbuf), &err );
-#endif
-				if ( hp != NULL ) {
+				if (( hp = GETHOSTBYNAME( host, &hent, hbuf,
+				    sizeof(hbuf), &err )) != NULL ) {
 					addrlist = hp->h_addr_list;
 				}
 			} else {
@@ -674,12 +663,12 @@ nsldapi_try_each_host( LDAP *ld, const char *hostlist,
 			    (char *) &address ), sizeof( sin.sin_addr.s_addr) );
 
 			{
-#ifdef NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED
+#ifdef LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
 /*
- * Block all of the signals that might interrupt connect() since
- * there is an OS bug that causes connect() to fail if it is restarted.
- * Look in ../../include/portable.h for the definition of
- * NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED.
+ * Block all of the signals that might interrupt connect() since there
+ * is an OS bug that causes connect() to fail if it is restarted.  Look in
+ * ns/netsite/ldap/include/portable.h for the definition of
+ * LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
  */
 				sigset_t	ints_off, oldset;
 
@@ -688,8 +677,8 @@ nsldapi_try_each_host( LDAP *ld, const char *hostlist,
 				sigaddset( &ints_off, SIGIO );
 				sigaddset( &ints_off, SIGCLD );
 
-				NSLDAPI_MT_SAFE_SIGPROCMASK( SIG_BLOCK, &ints_off, &oldset );
-#endif /* NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED */
+				sigprocmask( SIG_BLOCK, &ints_off, &oldset );
+#endif /* LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED */
 
 				if ( NULL != connectwithtofn  ) {	
 					err = (*connectwithtofn)(s,
@@ -701,12 +690,12 @@ nsldapi_try_each_host( LDAP *ld, const char *hostlist,
 						(struct sockaddr *)&sin,
 						sizeof(struct sockaddr_in));
 				}
-#ifdef NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED
+#ifdef LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
 /*
  * restore original signal mask
  */
-				NSLDAPI_MT_SAFE_SIGPROCMASK( SIG_SETMASK, &oldset, 0 );
-#endif /* NSLDAPI_CONNECT_MUST_NOT_BE_INTERRUPTED */
+				sigprocmask( SIG_SETMASK, &oldset, 0 );
+#endif /* LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED */
 
 			}
 			if ( err >= 0 ) {
@@ -775,7 +764,7 @@ nsldapi_close_connection( LDAP *ld, Sockbuf *sb )
 
 #ifdef KERBEROS
 char *
-nsldapi_host_connected_to( LDAP *ld, Sockbuf *sb )
+nsldapi_host_connected_to( Sockbuf *sb )
 {
 	struct hostent		*hp;
 	char			*p;
@@ -794,7 +783,7 @@ nsldapi_host_connected_to( LDAP *ld, Sockbuf *sb )
 	 * hostname is used as the kerberos instance.
 	 */
 #error XXXmcs: need to use DNS callbacks here
-	if (( hp = (struct hostent *)gethostbyaddr( (char *) &sin.sin_addr,
+	if (( hp = gethostbyaddr( (char *) &sin.sin_addr,
 	    sizeof( sin.sin_addr ), AF_INET )) != NULL ) {
 		if ( hp->h_name != NULL ) {
 			return( nsldapi_strdup( hp->h_name ));
@@ -813,23 +802,21 @@ nsldapi_host_connected_to( LDAP *ld, Sockbuf *sb )
 int
 nsldapi_iostatus_interest_write( LDAP *ld, Sockbuf *sb )
 {
-	int		rc = 0;
 	NSLDAPIIOStatus	*iosp;
 
 	LDAP_MUTEX_LOCK( ld, LDAP_IOSTATUS_LOCK );
 
 	if ( ld->ld_iostatus == NULL
 	    && nsldapi_iostatus_init_nolock( ld ) < 0 ) {
-		rc = -1;
-		goto unlock_and_return;
+		LDAP_MUTEX_UNLOCK( ld, LDAP_IOSTATUS_LOCK );
+		return( -1 );
 	}
 
 	iosp = ld->ld_iostatus;
 
 	if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_OSNATIVE ) {
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
-		rc = -1;
-		goto unlock_and_return;
+		return( -1 );
 #else /* NSLDAPI_AVOID_OS_SOCKETS */
 #ifdef NSLDAPI_HAVE_POLL
 		if ( nsldapi_add_to_os_pollfds( sb->sb_sd,
@@ -858,9 +845,9 @@ nsldapi_iostatus_interest_write( LDAP *ld, Sockbuf *sb )
 		     iosp->ios_type, 0, 0 );
 	}
 
-unlock_and_return:
 	LDAP_MUTEX_UNLOCK( ld, LDAP_IOSTATUS_LOCK );
-	return( rc );
+
+	return( 0 );
 }
 
 
@@ -871,23 +858,21 @@ unlock_and_return:
 int
 nsldapi_iostatus_interest_read( LDAP *ld, Sockbuf *sb )
 {
-	int		rc = 0;
 	NSLDAPIIOStatus	*iosp;
 
 	LDAP_MUTEX_LOCK( ld, LDAP_IOSTATUS_LOCK );
 
 	if ( ld->ld_iostatus == NULL
 	    && nsldapi_iostatus_init_nolock( ld ) < 0 ) {
-		rc = -1;
-		goto unlock_and_return;
+		LDAP_MUTEX_UNLOCK( ld, LDAP_IOSTATUS_LOCK );
+		return( -1 );
 	}
 
 	iosp = ld->ld_iostatus;
 
 	if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_OSNATIVE ) {
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
-		rc = -1;
-		goto unlock_and_return;
+		return( -1 );
 #else /* NSLDAPI_AVOID_OS_SOCKETS */
 #ifdef NSLDAPI_HAVE_POLL
 		if ( nsldapi_add_to_os_pollfds( sb->sb_sd,
@@ -915,9 +900,9 @@ nsldapi_iostatus_interest_read( LDAP *ld, Sockbuf *sb )
 		     iosp->ios_type, 0, 0 );
 	}
 
-unlock_and_return:
 	LDAP_MUTEX_UNLOCK( ld, LDAP_IOSTATUS_LOCK );
-	return( rc );
+
+	return( 0 );
 }
 
 
@@ -928,23 +913,21 @@ unlock_and_return:
 int
 nsldapi_iostatus_interest_clear( LDAP *ld, Sockbuf *sb )
 {
-	int		rc = 0;
 	NSLDAPIIOStatus	*iosp;
 
 	LDAP_MUTEX_LOCK( ld, LDAP_IOSTATUS_LOCK );
 
 	if ( ld->ld_iostatus == NULL
 	    && nsldapi_iostatus_init_nolock( ld ) < 0 ) {
-		rc = -1;
-		goto unlock_and_return;
+		LDAP_MUTEX_UNLOCK( ld, LDAP_IOSTATUS_LOCK );
+		return( -1 );
 	}
 
 	iosp = ld->ld_iostatus;
 
 	if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_OSNATIVE ) {
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
-		rc = -1;
-		goto unlock_and_return;
+		return( -1 );
 #else /* NSLDAPI_AVOID_OS_SOCKETS */
 #ifdef NSLDAPI_HAVE_POLL
 		if ( nsldapi_clear_from_os_pollfds( sb->sb_sd,
@@ -986,9 +969,9 @@ nsldapi_iostatus_interest_clear( LDAP *ld, Sockbuf *sb )
 		     iosp->ios_type, 0, 0 );
 	}
 
-unlock_and_return:
 	LDAP_MUTEX_UNLOCK( ld, LDAP_IOSTATUS_LOCK );
-	return( rc );
+
+	return( 0 );
 }
 
 
@@ -998,18 +981,15 @@ unlock_and_return:
 int
 nsldapi_iostatus_is_write_ready( LDAP *ld, Sockbuf *sb )
 {
-	int		rc = 0;
+	int		rc;
 	NSLDAPIIOStatus	*iosp;
 
 	LDAP_MUTEX_LOCK( ld, LDAP_IOSTATUS_LOCK );
 	iosp = ld->ld_iostatus;
-	if ( iosp == NULL ) {
-		goto unlock_and_return;
-	}
 
 	if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_OSNATIVE ) {
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
-		goto unlock_and_return;
+		return 0;
 #else  /* NSLDAPI_AVOID_OS_SOCKETS */
 #ifdef NSLDAPI_HAVE_POLL
 		/*
@@ -1040,7 +1020,6 @@ nsldapi_iostatus_is_write_ready( LDAP *ld, Sockbuf *sb )
 		rc = 0;
 	}
 
-unlock_and_return:
 	LDAP_MUTEX_UNLOCK( ld, LDAP_IOSTATUS_LOCK );
 	return( rc );
 }
@@ -1052,18 +1031,15 @@ unlock_and_return:
 int
 nsldapi_iostatus_is_read_ready( LDAP *ld, Sockbuf *sb )
 {
-	int		rc = 0;
+	int		rc;
 	NSLDAPIIOStatus	*iosp;
 
 	LDAP_MUTEX_LOCK( ld, LDAP_IOSTATUS_LOCK );
 	iosp = ld->ld_iostatus;
-	if ( iosp == NULL ) {
-		goto unlock_and_return;
-	}
 
 	if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_OSNATIVE ) {
 #ifdef NSLDAPI_AVOID_OS_SOCKETS
-		goto unlock_and_return;
+		return 0;
 #else /* NSLDAPI_AVOID_OS_SOCKETS */
 #ifdef NSLDAPI_HAVE_POLL
 		/*
@@ -1094,7 +1070,6 @@ nsldapi_iostatus_is_read_ready( LDAP *ld, Sockbuf *sb )
 		rc = 0;
 	}
 
-unlock_and_return:
 	LDAP_MUTEX_UNLOCK( ld, LDAP_IOSTATUS_LOCK );
 	return( rc );
 }
@@ -1240,7 +1215,7 @@ nsldapi_iostatus_poll( LDAP *ld, struct timeval *timeout )
 	iosp = ld->ld_iostatus;
 
 	if ( iosp == NULL ||
-            ( iosp->ios_read_count <= 0 && iosp->ios_write_count <= 0 )) {
+	    ( iosp->ios_read_count <= 0 && iosp->ios_read_count <= 0 )) {
 		rc = 0;		/* simulate a timeout */
 
 	} else if ( iosp->ios_type == NSLDAPI_IOSTATUS_TYPE_OSNATIVE ) {

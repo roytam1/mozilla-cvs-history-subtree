@@ -106,11 +106,6 @@ FeedConverter.prototype = {
    * docshell for the load.
    */
   _listener: null,
-
-  /**
-   * Records if the feed was sniffed
-   */
-  _sniffed: false,
   
   /**
    * See nsIStreamConverter.idl
@@ -140,7 +135,7 @@ FeedConverter.prototype = {
    * Whether or not the preview page is being forced.
    */
   _forcePreviewPage: false,
-  
+
   /** 
    * Release our references to various things once we're done using them.
    */
@@ -148,7 +143,7 @@ FeedConverter.prototype = {
     this._listener = null;
     this._request = null;
   },
-  
+
   /**
    * See nsIFeedResultListener.idl
    */
@@ -216,30 +211,25 @@ FeedConverter.prototype = {
                 var desc = feed.subtitle ? feed.subtitle.plainText() : "";
                 feedService.addToClientReader(result.uri.spec, title, desc);
                 return;
-              } catch(ex) { /* fallback to preview mode */ }
+              }
+              catch(ex) { /* fallback to preview mode */ }
           }
         }
       }
-          
+
       var ios = 
-          Cc["@mozilla.org/network/io-service;1"].
-          getService(Ci.nsIIOService);
+           Cc["@mozilla.org/network/io-service;1"].
+           getService(Ci.nsIIOService);
       var chromeChannel;
-
-      // show the feed page if it wasn't sniffed and we have a document,
-      // or we have a document, title, and link or id
-      if (result.doc && (!this._sniffed ||
-          (result.doc.title && (result.doc.link || result.doc.id)))) {
-
+      if (result.doc) {
         // If there was no automatic handler, or this was a podcast,
         // photostream or some other kind of application, we must always
-        // show the preview page.
-        
-        // Store the result in the result service so that the display
-        // page can access it.
+        // show the preview page...
 
+        // Store the result in the result service so that the display page can 
+        // access it.
         feedService.addFeedResult(result);
-
+        
         // Now load the actual XUL document.
         var chromeURI = ios.newURI(FEEDHANDLER_URI, null, null);
         chromeChannel = ios.newChannelFromURI(chromeURI, null);
@@ -248,7 +238,6 @@ FeedConverter.prototype = {
       else
         chromeChannel = ios.newChannelFromURI(result.uri, null);
 
-      chromeChannel.loadGroup = this._request.loadGroup;
       chromeChannel.asyncOpen(this._listener, null);
     }
     finally {
@@ -270,17 +259,6 @@ FeedConverter.prototype = {
    */
   onStartRequest: function FC_onStartRequest(request, context) {
     var channel = request.QueryInterface(Ci.nsIChannel);
-
-    // Check for a header that tells us there was no sniffing
-    // The value doesn't matter.
-    try {
-      var httpChannel = channel.QueryInterface(Ci.nsIHttpChannel);
-      var noSniff = httpChannel.getResponseHeader("X-Moz-Is-Feed");
-    }
-    catch (ex) {
-      this._sniffed = true;
-    }
-
     this._request = request;
     
     // Save and reset the forced state bit early, in case there's some kind of
@@ -290,6 +268,7 @@ FeedConverter.prototype = {
         getService(Ci.nsIFeedResultService);
     this._forcePreviewPage = feedService.forcePreviewPage;
     feedService.forcePreviewPage = false;
+
 
     // Parse feed data as it comes in
     this._processor =
@@ -363,12 +342,13 @@ var FeedResultService = {
         getService(Ci.nsIPrefBranch);
 
     var handler = safeGetCharPref(PREF_SELECTED_ACTION, "bookmarks");
-    if (handler == "ask" || handler == "reader")
-      handler = safeGetCharPref(PREF_SELECTED_READER, "bookmarks");
+    if (handler == "ask" || handler == "reader")                                
+      handler = safeGetCharPref(PREF_SELECTED_READER, "bookmarks");             
 
     switch (handler) {
     case "client":
-      var clientApp = prefs.getComplexValue(PREF_SELECTED_APP, Ci.nsILocalFile);
+      var clientApp = 
+        prefs.getComplexValue(PREF_SELECTED_APP, Ci.nsILocalFile);
 #ifdef XP_MACOSX
       // On OS X, the built in feed dispatcher (Safari) sends feeds to other
       // applications (When Default Reader is adjusted) in the following format:
@@ -392,7 +372,7 @@ var FeedResultService = {
 #endif
       var ss = 
           Cc["@mozilla.org/browser/shell-service;1"].
-          getService(Ci.nsIShellService);
+          getService(Ci.nsIShellService_MOZILLA_1_8_BRANCH);
       ss.openApplicationWithURI(clientApp, spec);
       break;
 
@@ -405,7 +385,7 @@ var FeedResultService = {
           Cc["@mozilla.org/appshell/window-mediator;1"].
           getService(Ci.nsIWindowMediator);
       var topWindow = wm.getMostRecentWindow("navigator:browser");
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
       topWindow.PlacesCommandHook.addLiveBookmark(spec, title, subtitle);
 #else
       topWindow.FeedHandler.addLiveBookmark(spec, title, subtitle);
@@ -532,10 +512,7 @@ FeedProtocolHandler.prototype = {
     else
       uri.scheme = "http";
 
-    var channel =
-      ios.newChannelFromURI(uri, null).QueryInterface(Ci.nsIHttpChannel);
-    // Set this so we know this is supposed to be a feed
-    channel.setRequestHeader("X-Moz-Is-Feed", "1", false);
+    var channel = ios.newChannelFromURI(uri, null);
     channel.originalURI = uri;
     return channel;
   },

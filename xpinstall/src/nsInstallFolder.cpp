@@ -49,6 +49,8 @@
 #include "nsUnicharUtils.h"
 #include "nsNativeCharsetUtils.h"
 #include "nsXPIDLString.h"
+#include "nsFileSpec.h"
+#include "nsIFileSpec.h"
 #include "nsIFile.h"
 #include "nsILocalFile.h"
 #include "nsDirectoryService.h"
@@ -57,8 +59,8 @@
 
 #ifdef XP_WIN
 #include <stdarg.h>
-#include <stdlib.h>
-#include <windows.h>
+#include <winbase.h>
+#include <winreg.h>
 #endif
 
 struct DirectoryTable
@@ -135,6 +137,8 @@ struct DirectoryTable DirectoryTable[] =
   {"",                              -1                               }
 };
 
+
+MOZ_DECL_CTOR_COUNTER(nsInstallFolder)
 
 nsInstallFolder::nsInstallFolder()
 {
@@ -272,23 +276,27 @@ nsInstallFolder::SetDirectoryPath(const nsAString& aFolderID, const nsString& aR
             {
                 if (!aRelativePath.IsEmpty())
                 {
+                    nsFileSpec             tmpSpec;
+                    nsCAutoString          tmpPath("file:///");
                     nsCAutoString          nativePath;
                     nsCOMPtr<nsILocalFile> localFile;
 
                     NS_CopyUnicodeToNative(aRelativePath, nativePath);
-                    rv = NS_NewNativeLocalFile(nativePath, PR_TRUE, getter_AddRefs(localFile));
-                    if (rv == NS_ERROR_FILE_UNRECOGNIZED_PATH) {
-                      // we need to convert this relative path to absolute
-                      directoryService->Get(NS_OS_CURRENT_PROCESS_DIR, NS_GET_IID(nsILocalFile), getter_AddRefs(localFile));
-                      if (localFile)
-                          rv = localFile->AppendRelativeNativePath(nativePath);
-                    }
-                    if (NS_SUCCEEDED(rv)) {
+                    tmpPath.Append(nativePath);
+                    tmpSpec =  nsFileURL(tmpPath.get());
+
+                    rv = NS_FileSpecToIFile( &tmpSpec, getter_AddRefs(localFile) );
+                    if (NS_SUCCEEDED(rv))
+                    {
                         mFileSpec = do_QueryInterface(localFile);
                     }
                 }
+
                 // file:// is a special case where it returns and does not
-                // go to the standard relative path code below.
+                // go to the standard relative path code below.  This is
+                // so that nsFile(Spec|Path) will work properly.  (ie. Passing
+                // just "file://" to the nsFileSpec && nsFileURL is wrong).
+
                 return;
             }
             break;
@@ -642,7 +650,7 @@ nsInstallFolder::AppendXPPath(const nsString& aRelativePath)
             mFileSpec = nsnull;
             break;
         }
-        else if ( curr == PRUint32(kNotFound) )
+        else if ( curr == kNotFound )
         {
             // last segment
             aRelativePath.Right(segment,aRelativePath.Length() - start);
@@ -660,7 +668,7 @@ nsInstallFolder::AppendXPPath(const nsString& aRelativePath)
         {
             // Unicode converters not present (likely wizard case)
             // so do our best with the vanilla conversion.
-            mFileSpec->AppendNative(NS_LossyConvertUTF16toASCII(segment));
+            mFileSpec->AppendNative(NS_LossyConvertUCS2toASCII(segment));
         }
     } while ( start < aRelativePath.Length() );
 }
@@ -679,7 +687,7 @@ nsInstallFolder::MapNameToEnum(const nsAString& name)
 	while ( DirectoryTable[i].directoryName[0] != 0 )
 	{
     // safe compare because all strings in DirectoryTable are ASCII
-    if ( name.Equals(NS_ConvertASCIItoUTF16(DirectoryTable[i].directoryName), nsCaseInsensitiveStringComparator()) )
+    if ( name.Equals(NS_ConvertASCIItoUCS2(DirectoryTable[i].directoryName), nsCaseInsensitiveStringComparator()) )
 			return DirectoryTable[i].folderEnum;
 		i++;
 	}

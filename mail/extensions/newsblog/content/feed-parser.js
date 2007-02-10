@@ -136,7 +136,6 @@ FeedParser.prototype =
         isPermaLink = guidNode.getAttribute('isPermaLink') == 'false' ? false : true;
       }
 
-      item.isStoredWithId = true;
       item.url = link ? link : (guid && isPermaLink) ? guid : null;
       item.id = guid;
       item.description = getNodeValue(this.childrenByTagNameNS(itemNode, nsURI, "description")[0]);
@@ -369,7 +368,7 @@ FeedParser.prototype =
     aFeed.title = aFeed.title || this.stripTags(this.serializeTextConstruct(this.childrenByTagNameNS(channel,ATOM_IETF_NS,"title")[0]));
     aFeed.description = this.serializeTextConstruct(this.childrenByTagNameNS(channel,ATOM_IETF_NS,"subtitle")[0]);
     aFeed.link = this.findAtomLink("alternate", this.childrenByTagNameNS(channel,ATOM_IETF_NS,"link"));
-    
+
     if (!aFeed.parseItems)
       return parsedItems;
 

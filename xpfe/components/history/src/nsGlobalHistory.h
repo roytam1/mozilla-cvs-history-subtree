@@ -42,7 +42,6 @@
 
 #include "mdb.h"
 #include "nsIBrowserHistory.h"
-#include "nsIGlobalHistory3.h"
 #include "nsIObserver.h"
 #include "nsIPrefBranch.h"
 #include "nsIRDFDataSource.h"
@@ -54,14 +53,10 @@
 #include "nsVoidArray.h"
 #include "nsHashtable.h"
 #include "nsCOMPtr.h"
-#include "nsCOMArray.h"
-#include "nsAutoPtr.h"
 #include "nsAString.h"
 #include "nsString.h"
 #include "nsITimer.h"
 #include "nsIAutoCompleteSession.h"
-#include "nsIAutoCompleteSearch.h"
-#include "nsIAutoCompleteResult.h"
 #include "nsHashSets.h"
 
 //----------------------------------------------------------------------
@@ -134,22 +129,18 @@ class nsGlobalHistory : nsSupportsWeakReference,
                         public nsIObserver,
                         public nsIRDFDataSource,
                         public nsIRDFRemoteDataSource,
-                        public nsIAutoCompleteSearch,
-                        public nsIAutoCompleteResult,
-                        public nsIGlobalHistory3
+                        public nsIAutoCompleteSession
 {
 public:
   // nsISupports methods 
   NS_DECL_ISUPPORTS
 
   NS_DECL_NSIGLOBALHISTORY2
-  NS_DECL_NSIGLOBALHISTORY3
   NS_DECL_NSIBROWSERHISTORY
   NS_DECL_NSIOBSERVER
   NS_DECL_NSIRDFDATASOURCE
   NS_DECL_NSIRDFREMOTEDATASOURCE
-  NS_DECL_NSIAUTOCOMPLETESEARCH
-  NS_DECL_NSIAUTOCOMPLETERESULT
+  NS_DECL_NSIAUTOCOMPLETESESSION
 
   NS_METHOD Init();
 
@@ -222,9 +213,11 @@ protected:
   PRBool mAutocompleteOnlyTyped;
   nsStringArray mIgnoreSchemes;
   nsStringArray mIgnoreHostnames;
-  nsString mSearchString;
-  nsCOMArray<nsIMdbRow> mResults;
   
+  nsresult AutoCompleteSearch(const nsAString& aSearchString,
+                              AutocompleteExclude* aExclude,
+                              nsIAutoCompleteResults* aPrevResults,
+                              nsIAutoCompleteResults* aResults);
   void AutoCompleteCutPrefix(nsAString& aURL, AutocompleteExclude* aExclude);
   void AutoCompleteGetExcludeInfo(const nsAString& aURL, AutocompleteExclude* aExclude);
   nsString AutoCompletePrefilter(const nsAString& aSearchString);
@@ -232,7 +225,7 @@ protected:
                              const nsAString& aUserURL,
                              AutocompleteExclude* aExclude);
   PR_STATIC_CALLBACK(int)
-  AutoCompleteSortComparison(nsIMdbRow* v1, nsIMdbRow* v2, void *unused);
+  AutoCompleteSortComparison(const void *v1, const void *v2, void *unused);
 
   // AutoCompleteSortClosure - used to pass info into 
   // AutoCompleteSortComparison from the NS_QuickSort() function
@@ -303,7 +296,6 @@ protected:
   mdb_column kToken_HostnameColumn;
   mdb_column kToken_HiddenColumn;
   mdb_column kToken_TypedColumn;
-  mdb_column kToken_GeckoFlagsColumn;
 
   // meta-data tokens
   mdb_column kToken_LastPageVisited;
@@ -324,8 +316,7 @@ protected:
                                 const char *aReferrer,
                                 nsIMdbRow **aResult);
 
-  nsresult RemovePageInternal(const nsCString& aSpec);
-  nsresult RemovePageInternal(const nsCString& aSpec, nsIMdbRow *aRow);
+  nsresult RemovePageInternal(const char *aSpec);
 
   //
   // generic routines for setting/retrieving various datatypes
@@ -339,9 +330,6 @@ protected:
   nsresult GetRowValue(nsIMdbRow *aRow, mdb_column aCol, nsACString& aResult);
   nsresult GetRowValue(nsIMdbRow *aRow, mdb_column aCol, PRTime* aResult);
   nsresult GetRowValue(nsIMdbRow *aRow, mdb_column aCol, PRInt32* aResult);
-
-  // specific routine to get a URL but convert it from UTF-8
-  nsresult GetRowURL(nsIMdbRow *aRow, nsAString& aResult);
 
   // Look up a row in mStore and returns success if it is found or failure
   // if it is not.  |aResult| may be null if only testing for row existance.
@@ -421,8 +409,10 @@ protected:
   {
   public:
     SearchEnumerator(searchQuery *aQuery,
+                     mdb_column aHiddenColumn,
                      nsGlobalHistory *aHistory) :
       mQuery(aQuery),
+      mHiddenColumn(aHiddenColumn),
       mHistory(aHistory)
     {}
 
@@ -430,6 +420,7 @@ protected:
 
   protected:
     searchQuery *mQuery;
+    mdb_column mHiddenColumn;
     nsGlobalHistory *mHistory;
     nsHashtable mUniqueRows;
     
@@ -442,8 +433,48 @@ protected:
     PRBool RowMatches(nsIMdbRow* aRow, searchQuery *aQuery);
   };
 
+  // AutoCompleteEnumerator - for searching for a partial url match  
+  class AutoCompleteEnumerator : public nsMdbTableEnumerator
+  {
+  protected:
+    nsGlobalHistory* mHistory;
+    mdb_column mURLColumn;
+    mdb_column mHiddenColumn;
+    mdb_column mTypedColumn;
+    mdb_column mCommentColumn;
+    AutocompleteExclude* mExclude;
+    const nsAString& mSelectValue;
+    PRBool mMatchOnlyTyped;
+
+    virtual ~AutoCompleteEnumerator();
+  
+  public:
+    AutoCompleteEnumerator(nsGlobalHistory* aHistory,
+                           mdb_column aURLColumn,
+                           mdb_column aCommentColumn,
+                           mdb_column aHiddenColumn,
+                           mdb_column aTypedColumn,
+                           PRBool aMatchOnlyTyped,
+                           const nsAString& aSelectValue,
+                           AutocompleteExclude* aExclude) :
+      mHistory(aHistory),
+      mURLColumn(aURLColumn),
+      mHiddenColumn(aHiddenColumn),
+      mTypedColumn(aTypedColumn),
+      mCommentColumn(aCommentColumn),
+      mExclude(aExclude),
+      mSelectValue(aSelectValue), 
+      mMatchOnlyTyped(aMatchOnlyTyped) {}
+
+  protected:
+    virtual PRBool   IsResult(nsIMdbRow* aRow);
+    virtual nsresult ConvertToISupports(nsIMdbRow* aRow, nsISupports** aResult);
+  };
+
+
   friend class URLEnumerator;
   friend class SearchEnumerator;
+  friend class AutoCompleteEnumerator;
 };
 
 

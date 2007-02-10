@@ -99,9 +99,8 @@ function PROT_Application() {
 }
 
 /**
- * @param name String The type of url to get (either Phish or Error).
  * @return String the report phishing URL (localized).
  */
-PROT_Application.prototype.getReportURL = function(name) {
-  return gDataProvider["getReport" + name + "URL"]();
+PROT_Application.prototype.getReportPhishingURL = function() {
+  return gDataProvider.getReportPhishURL();
 }

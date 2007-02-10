@@ -45,8 +45,7 @@
 #include "nsIComponentManager.h"
 #include "nsICategoryManager.h"
 #include "nsCRT.h"
-// XXX test for this as long as there are still non-xul-app suite builds
-#ifdef MOZ_XUL_APP
+#ifdef MOZ_THUNDERBIRD
 #include "nsIExtensionManager.h"
 #endif
 #include "nsIFile.h"
@@ -77,13 +76,13 @@ NS_IMPL_THREADSAFE_ISUPPORTS2(nsPalmSyncSupport, nsIPalmSyncSupport, nsIObserver
 static NS_METHOD nsPalmSyncRegistrationProc(nsIComponentManager *aCompMgr,
                    nsIFile *aPath, const char *registryLocation, const char *componentType,
                    const nsModuleComponentInfo *info)
-{
-  nsresult rv;
-  nsCOMPtr<nsICategoryManager> categoryManager(do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv));
-  if (NS_SUCCEEDED(rv)) 
-      rv = categoryManager->AddCategoryEntry(APPSTARTUP_CATEGORY, "PalmSync Support", 
-                  "service," NS_IPALMSYNCSUPPORT_CONTRACTID, PR_TRUE, PR_TRUE, nsnull);
-  return rv ;
+{  
+    nsresult rv;
+    nsCOMPtr<nsICategoryManager> categoryManager(do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv));
+    if (NS_SUCCEEDED(rv)) 
+        rv = categoryManager->AddCategoryEntry(APPSTARTUP_CATEGORY, "PalmSync Support", 
+                    "service," NS_IPALMSYNCSUPPORT_CONTRACTID, PR_TRUE, PR_TRUE, nsnull);
+    return rv ;
 }
 
 static NS_METHOD nsPalmSyncUnRegistrationProc(nsIComponentManager *aCompMgr,
@@ -106,22 +105,21 @@ nsPalmSyncSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUn
     // our observer topics and return.
     if (!strcmp(aTopic, "app-startup"))
     {
-    nsCOMPtr<nsIObserverService> observerService(do_GetService("@mozilla.org/observer-service;1", &rv));
+      nsCOMPtr<nsIObserverService> observerService(do_GetService("@mozilla.org/observer-service;1", &rv));
       NS_ENSURE_SUCCESS(rv, rv);
  
-    rv = observerService->AddObserver(this,"profile-after-change", PR_FALSE);
+      rv = observerService->AddObserver(this,"profile-after-change", PR_FALSE);
       NS_ENSURE_SUCCESS(rv, rv);
 
       rv = observerService->AddObserver(this, "em-action-requested", PR_FALSE);
       NS_ENSURE_SUCCESS(rv, rv);      
 
       rv = observerService->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_FALSE);
-}
+    }
     // otherwise, take the appropriate action based on the topic
     else if (!strcmp(aTopic, "profile-after-change"))
     {
-// XXX test for this as long as there are still non-xul-app suite builds
-#ifdef MOZ_XUL_APP
+#ifdef MOZ_THUNDERBIRD
         // we can't call installPalmSync in app-startup because the extension manager hasn't been initialized yet. 
         // so we need to wait until the profile-after-change notification has fired. 
         rv = LaunchPalmSyncInstallExe(); 
@@ -130,9 +128,7 @@ nsPalmSyncSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUn
     } 
     else if (!strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID))
         rv = ShutdownPalmSyncSupport();
-
-// XXX test for this as long as there are still non-xul-app suite builds
-#ifdef MOZ_XUL_APP
+#ifdef MOZ_THUNDERBIRD
     else if (aSubject && !strcmp(aTopic, "em-action-requested") && !nsCRT::strcmp(aData, NS_LITERAL_STRING("item-uninstalled").get()))
     {
         // make sure the subject is our extension.
@@ -175,8 +171,7 @@ nsPalmSyncSupport::~nsPalmSyncSupport()
 {
 }
 
-// XXX test for this as long as there are still non-xul-app suite builds
-#ifdef MOZ_XUL_APP
+#ifdef MOZ_THUNDERBIRD
 nsresult nsPalmSyncSupport::GetPalmSyncInstall(nsILocalFile ** aLocalFile)
 {
     nsresult rv;
@@ -201,7 +196,7 @@ nsresult nsPalmSyncSupport::LaunchPalmSyncInstallExe()
     // palm sync extension. We use PREF_CONDUIT_REGISTERED to keep track of that
     // information.
 
-    nsresult rv;    
+    nsresult rv;
     nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv,rv);
     

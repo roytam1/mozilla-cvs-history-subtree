@@ -73,7 +73,7 @@ TODO:
 
 class nsMathMLmsqrtFrame : public nsMathMLContainerFrame {
 public:
-  friend nsIFrame* NS_NewMathMLmsqrtFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLmsqrtFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   virtual void
   SetAdditionalStyleContext(PRInt32          aIndex, 
@@ -82,9 +82,11 @@ public:
   GetAdditionalStyleContext(PRInt32 aIndex) const;
 
   NS_IMETHOD
-  Init(nsIContent* aContent,
-       nsIFrame*   aParent,
-       nsIFrame*   aPrevInFlow);
+  Init(nsPresContext*  aPresContext,
+       nsIContent*      aContent,
+       nsIFrame*        aParent,
+       nsStyleContext*  aContext,
+       nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD
   Reflow(nsPresContext*          aPresContext,
@@ -92,9 +94,12 @@ public:
          const nsHTMLReflowState& aReflowState,
          nsReflowStatus&          aStatus);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD 
+  Paint(nsPresContext*      aPresContext,
+        nsIRenderingContext& aRenderingContext,
+        const nsRect&        aDirtyRect,
+        nsFramePaintLayer    aWhichLayer,
+        PRUint32             aFlags = 0);
 
   NS_IMETHOD
   InheritAutomaticData(nsIFrame* aParent);
@@ -110,7 +115,7 @@ public:
   FixInterFrameSpacing(nsHTMLReflowMetrics& aDesiredSize);
 
 protected:
-  nsMathMLmsqrtFrame(nsStyleContext* aContext);
+  nsMathMLmsqrtFrame();
   virtual ~nsMathMLmsqrtFrame();
   
   virtual PRIntn GetSkipSides() const { return 0; }

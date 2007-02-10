@@ -52,10 +52,8 @@
 #include "nsIDocument.h"
 #include "nsGUIEvent.h"
 #include "nsINameSpaceManager.h"
-#include "nsGkAtoms.h"
+#include "nsXULAtoms.h"
 #include "nsPLDOMEvent.h"
-#include "nsEventDispatcher.h"
-#include "nsAutoPtr.h"
 
 // A helper class for managing our ranges of selection.
 struct nsTreeRange
@@ -215,8 +213,7 @@ struct nsTreeRange
   };
 
   void Invalidate() {
-    if (mSelection->mTree)
-      mSelection->mTree->InvalidateRange(mMin, mMax);
+    mSelection->mTree->InvalidateRange(mMin, mMax);
     if (mNext)
       mNext->Invalidate();
   };
@@ -257,12 +254,12 @@ struct nsTreeRange
 };
 
 nsTreeSelection::nsTreeSelection(nsITreeBoxObject* aTree)
-  : mTree(aTree),
-    mSuppressed(PR_FALSE),
-    mCurrentIndex(-1),
-    mShiftSelectPivot(-1),
-    mFirstRange(nsnull)
 {
+  mTree = aTree;
+  mSuppressed = PR_FALSE;
+  mFirstRange = nsnull;
+  mShiftSelectPivot = -1;
+  mCurrentIndex = -1;
 }
 
 nsTreeSelection::~nsTreeSelection()
@@ -300,19 +297,12 @@ NS_IMETHODIMP nsTreeSelection::SetTree(nsITreeBoxObject * aTree)
 NS_IMETHODIMP nsTreeSelection::GetSingle(PRBool* aSingle)
 {
   nsCOMPtr<nsIBoxObject> boxObject = do_QueryInterface(mTree);
-
   nsCOMPtr<nsIDOMElement> element;
   boxObject->GetElement(getter_AddRefs(element));
-
   nsCOMPtr<nsIContent> content = do_QueryInterface(element);
-
-  static nsIContent::AttrValuesArray strings[] =
-    {&nsGkAtoms::single, &nsGkAtoms::cell, &nsGkAtoms::text, nsnull};
-
-  *aSingle = content->FindAttrValueIn(kNameSpaceID_None,
-                                      nsGkAtoms::seltype,
-                                      strings, eCaseMatters) >= 0;
-
+  nsAutoString seltype;
+  content->GetAttr(kNameSpaceID_None, nsXULAtoms::seltype, seltype);
+  *aSingle = seltype.EqualsLiteral("single");
   return NS_OK;
 }
 
@@ -355,9 +345,7 @@ NS_IMETHODIMP nsTreeSelection::Select(PRInt32 aIndex)
 {
   mShiftSelectPivot = -1;
 
-  nsresult rv = SetCurrentIndex(aIndex);
-  if (NS_FAILED(rv))
-    return rv;
+  SetCurrentIndex(aIndex);
 
   if (mFirstRange) {
     PRBool alreadySelected = mFirstRange->Contains(aIndex);
@@ -401,10 +389,9 @@ NS_IMETHODIMP nsTreeSelection::ToggleSelect(PRInt32 aIndex)
   // (5) The addition of the item causes two ranges to be merged.
   // (6) The removal of the item causes two ranges to be split.
   mShiftSelectPivot = -1;
-  nsresult rv = SetCurrentIndex(aIndex);
-  if (NS_FAILED(rv))
-    return rv;
+  SetCurrentIndex(aIndex);
 
+  nsresult rv = NS_OK;
   if (!mFirstRange)
     Select(aIndex);
   else {
@@ -417,8 +404,7 @@ NS_IMETHODIMP nsTreeSelection::ToggleSelect(PRInt32 aIndex)
     else
       rv = mFirstRange->Remove(aIndex);
     if (NS_SUCCEEDED(rv)) {
-      if (mTree)
-        mTree->InvalidateRow(aIndex);
+      mTree->InvalidateRow(aIndex);
 
       FireOnSelectHandler();
     }
@@ -449,9 +435,7 @@ NS_IMETHODIMP nsTreeSelection::RangedSelect(PRInt32 aStartIndex, PRInt32 aEndInd
   }
 
   mShiftSelectPivot = aStartIndex;
-  nsresult rv = SetCurrentIndex(aEndIndex);
-  if (NS_FAILED(rv))
-    return rv;
+  SetCurrentIndex(aEndIndex);
   
   PRInt32 start = aStartIndex < aEndIndex ? aStartIndex : aEndIndex;
   PRInt32 end = aStartIndex < aEndIndex ? aEndIndex : aStartIndex;
@@ -482,9 +466,7 @@ NS_IMETHODIMP nsTreeSelection::RangedSelect(PRInt32 aStartIndex, PRInt32 aEndInd
 
 NS_IMETHODIMP nsTreeSelection::ClearRange(PRInt32 aStartIndex, PRInt32 aEndIndex)
 {
-  nsresult rv = SetCurrentIndex(aEndIndex);
-  if (NS_FAILED(rv))
-    return rv;
+  SetCurrentIndex(aEndIndex);
 
   if (mFirstRange) {
     PRInt32 start = aStartIndex < aEndIndex ? aStartIndex : aEndIndex;
@@ -492,8 +474,7 @@ NS_IMETHODIMP nsTreeSelection::ClearRange(PRInt32 aStartIndex, PRInt32 aEndIndex
 
     mFirstRange->RemoveRange(start, end);
 
-    if (mTree)
-      mTree->InvalidateRange(start, end);
+    mTree->InvalidateRange(start, end);
   }
   
   return NS_OK;
@@ -520,9 +501,6 @@ NS_IMETHODIMP nsTreeSelection::InvertSelection()
 
 NS_IMETHODIMP nsTreeSelection::SelectAll()
 {
-  if (!mTree)
-    return NS_OK;
-
   nsCOMPtr<nsITreeView> view;
   mTree->GetView(getter_AddRefs(view));
   if (!view)
@@ -612,18 +590,13 @@ NS_IMETHODIMP nsTreeSelection::GetCurrentIndex(PRInt32 *aCurrentIndex)
 
 NS_IMETHODIMP nsTreeSelection::SetCurrentIndex(PRInt32 aIndex)
 {
-  if (!mTree) {
-    return NS_ERROR_UNEXPECTED;
-  }
   if (mCurrentIndex == aIndex) {
     return NS_OK;
   }
-  if (mCurrentIndex != -1 && mTree)
+  if (mCurrentIndex != -1)
     mTree->InvalidateRow(mCurrentIndex);
   
   mCurrentIndex = aIndex;
-  if (!mTree)
-    return NS_OK;
   
   if (aIndex != -1)
     mTree->InvalidateRow(aIndex);
@@ -639,43 +612,21 @@ NS_IMETHODIMP nsTreeSelection::SetCurrentIndex(PRInt32 aIndex)
   nsCOMPtr<nsIDOMNode> treeDOMNode(do_QueryInterface(treeElt));
   NS_ENSURE_TRUE(treeDOMNode, NS_ERROR_UNEXPECTED);
 
-  nsRefPtr<nsPLDOMEvent> event = new nsPLDOMEvent(treeDOMNode,
+  nsPLDOMEvent *event = new nsPLDOMEvent(treeDOMNode,
                                          NS_LITERAL_STRING("DOMMenuItemActive"));
-  if (!event)
-    return NS_ERROR_OUT_OF_MEMORY;
 
-  return event->PostDOMEvent();
-}
-
-NS_IMETHODIMP nsTreeSelection::GetCurrentColumn(nsITreeColumn** aCurrentColumn)
-{
-  NS_IF_ADDREF(*aCurrentColumn = mCurrentColumn);
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsTreeSelection::SetCurrentColumn(nsITreeColumn* aCurrentColumn)
-{
-  if (mCurrentColumn == aCurrentColumn) {
-    return NS_OK;
+  nsresult rv;
+  if (event) {
+    rv = event->PostDOMEvent();
+    if (NS_FAILED(rv)) {
+      PL_DestroyEvent(event);
+    }
   }
-
-  if (mCurrentColumn) {
-    if (mFirstRange)
-      mTree->InvalidateCell(mFirstRange->mMin, mCurrentColumn);
-    if (mCurrentIndex != -1)
-      mTree->InvalidateCell(mCurrentIndex, mCurrentColumn);
+  else {
+    rv = NS_ERROR_OUT_OF_MEMORY;
   }
   
-  mCurrentColumn = aCurrentColumn;
-  
-  if (mCurrentColumn) {
-    if (mFirstRange)
-      mTree->InvalidateCell(mFirstRange->mMin, mCurrentColumn);
-    if (mCurrentIndex != -1)
-      mTree->InvalidateCell(mCurrentIndex, mCurrentColumn);
-  }
-
-  return NS_OK;
+  return rv;
 }
 
 #define ADD_NEW_RANGE(macro_range, macro_selection, macro_start, macro_end) \
@@ -807,7 +758,7 @@ nsTreeSelection::GetShiftSelectPivot(PRInt32* aIndex)
 nsresult
 nsTreeSelection::FireOnSelectHandler()
 {
-  if (mSuppressed || !mTree)
+  if (mSuppressed)
     return NS_OK;
 
   nsCOMPtr<nsIBoxObject> boxObject = do_QueryInterface(mTree);
@@ -833,7 +784,8 @@ nsTreeSelection::FireOnSelectHandler()
     nsEventStatus status = nsEventStatus_eIgnore;
     nsEvent event(PR_TRUE, NS_FORM_SELECTED);
 
-    nsEventDispatcher::Dispatch(content, aPresContext, &event, nsnull, &status);
+    content->HandleDOMEvent(aPresContext, &event, nsnull, NS_EVENT_FLAG_INIT,
+                            &status);
   }
 
   return NS_OK;

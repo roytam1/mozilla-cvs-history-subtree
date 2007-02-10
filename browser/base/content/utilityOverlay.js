@@ -89,29 +89,6 @@ function getBoolPref ( prefname, def )
   }
 }
 
-// Change focus for this browser window to |aElement|, without focusing the
-// window itself.
-function focusElement(aElement) {
-  // This is a redo of the fix for jag bug 91884
-  var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                     .getService(Components.interfaces.nsIWindowWatcher);
-  if (window == ww.activeWindow)
-    aElement.focus();
-  else {
-    // set the element in command dispatcher so focus will restore properly
-    // when the window does become active
-    var cmdDispatcher = document.commandDispatcher;
-    if (aElement instanceof Window) {
-      cmdDispatcher.focusedWindow = aElement;
-      cmdDispatcher.focusedElement = null;
-    }
-    else if (aElement instanceof Element) {
-      cmdDispatcher.focusedWindow = aElement.ownerDocument.defaultView;
-      cmdDispatcher.focusedElement = aElement;
-    }
-  }
-}
-
 // openUILink handles clicks on UI elements that cause URLs to load.
 function openUILink( url, e, ignoreButton, ignoreAlt, allowKeywordFixup, postData )
 {
@@ -217,6 +194,7 @@ function openUILinkIn( url, where, allowThirdPartyFixup, postData )
   switch (where) {
   case "current":
     w.loadURI(url, null, postData, allowThirdPartyFixup);
+    w.content.focus();
     break;
   case "tabshifted":
     loadInBackground = !loadInBackground;
@@ -227,11 +205,6 @@ function openUILinkIn( url, where, allowThirdPartyFixup, postData )
                        allowThirdPartyFixup || false);
     break;
   }
-
-  // Call focusElement(w.content) instead of w.content.focus() to make sure
-  // that we don't raise the old window, since the URI we just loaded may have
-  // resulted in a new frontmost window (e.g. "javascript:window.open('');").
-  focusElement(w.content);
 }
 
 // Used as an onclick handler for UI elements with link-like behavior.
@@ -434,10 +407,10 @@ function openPreferences(paneID)
  */
 function openReleaseNotes(event)
 {
-  var formatter = Components.classes["@mozilla.org/toolkit/URLFormatterService;1"]
-                            .getService(Components.interfaces.nsIURLFormatter);
-  var relnotesURL = formatter.formatURLPref("app.releaseNotesURL");
-  
+  var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]
+                          .getService(Components.interfaces.nsIXULAppInfo);
+  var regionBundle = document.getElementById("bundle_browser_region");
+  var relnotesURL = formatURL("app.releaseNotesURL", true);
   openUILink(relnotesURL, event, false, true);
 }
   
@@ -464,11 +437,6 @@ function checkForUpdates()
 
 function buildHelpMenu()
 {
-  // Enable/disable the "Report Web Forgery" menu item.  safebrowsing object
-  // may not exist in OSX
-  if (typeof safebrowsing != "undefined")
-    safebrowsing.setReportPhishingMenu();
-
   var updates = 
       Components.classes["@mozilla.org/updates/update-service;1"].
       getService(Components.interfaces.nsIApplicationUpdateService);
@@ -517,25 +485,4 @@ function buildHelpMenu()
     checkForUpdates.setAttribute("loading", "true");
   else
     checkForUpdates.removeAttribute("loading");
-}
-
-function isElementVisible(aElement)
-{
-  // * When an element is hidden, the width and height of its boxObject
-  //   are set to 0
-  // * css-visibility (unlike css-display) is inherited.
-  var bo = aElement.boxObject;
-  return (bo.height != 0 && bo.width != 0 &&
-          document.defaultView
-                  .getComputedStyle(aElement, null).visibility == "visible");
-}
-
-function getBrowserFromContentWindow(aContentWindow)
-{
-  var browsers = gBrowser.browsers;
-  for (var i = 0; i < browsers.length; i++) {
-    if (browsers[i].contentWindow == aContentWindow)
-      return browsers[i];
-  }
-  return null;
 }

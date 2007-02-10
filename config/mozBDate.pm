@@ -87,22 +87,23 @@ sub UpdateBuildNumber($$) {
         return;
     }
 
-    if (!$official) {
-	$build_number = "0000000000";
-    }
-
-    my $old_num = "";
-    
-    # Don't overwrite $outfile if its contents won't change
-    if ( -e $outfile ) {
-        open(OLD, "<$outfile") || die "$outfile: $!\n";
-        $old_num = <OLD>;
-        chomp($old_num);
-        close(OLD);
-    }
-
-    if ($old_num ne $build_number) {
+    if ($official) {
         &write_number($outfile, $build_number);
+    } else {
+
+        my $old_num = -1;
+        
+        # Only overwrite file if contents are not already set to 0
+        if ( -e $outfile ) {
+            open(OLD, "<$outfile") || die "$outfile: $!\n";
+            $old_num = <OLD>;
+            chomp($old_num);
+            close(OLD);
+        }
+    
+        if ($old_num != 0) {
+            &write_number($outfile, "0000000000");
+        }
     }
     return;
 }
@@ -140,8 +141,7 @@ sub SubstituteBuildNumber($$$) {
             print $OUTFILE $id;
         }
         elsif ($id =~ "GRE_BUILD_ID") {
-            if (defined($ENV{'MOZ_MILESTONE_RELEASE'}) &&
-                $ENV{'MOZ_MILESTONE_RELEASE'} ne "") {
+            if (defined($ENV{'MOZ_MILESTONE_RELEASE'})) {
                 $temp = "GRE_BUILD_ID \"$milestone\"";
             } else {
                 $temp = "GRE_BUILD_ID \"${milestone}_${build}\"";

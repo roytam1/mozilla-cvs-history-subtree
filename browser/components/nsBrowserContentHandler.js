@@ -61,8 +61,6 @@ const nsIWindowWatcher       = Components.interfaces.nsIWindowWatcher;
 const nsICategoryManager     = Components.interfaces.nsICategoryManager;
 const nsIWebNavigationInfo   = Components.interfaces.nsIWebNavigationInfo;
 const nsIBrowserSearchService = Components.interfaces.nsIBrowserSearchService;
-const nsITimer                = Components.interfaces.nsITimer;
-const nsITimerCallback        = Components.interfaces.nsITimerCallback;
 
 const NS_BINDING_ABORTED = 0x804b0002;
 const NS_ERROR_WONT_HANDLE_CONTENT = 0x805d0001;
@@ -109,10 +107,12 @@ function resolveURIInternal(aCmdLine, aArgument) {
 }
 
 function needHomepageOverride(prefb) {
-  var savedmstone = null;
+  var savedmstone;
   try {
     savedmstone = prefb.getCharPref("browser.startup.homepage_override.mstone");
-  } catch (e) {}
+  }
+  catch (e) {
+  }
 
   if (savedmstone == "ignore")
     return 0;
@@ -125,7 +125,7 @@ function needHomepageOverride(prefb) {
     // Return 1 if true if the pref didn't exist (i.e. new profile) or 2 for an upgrade
     return (savedmstone ? 2 : 1);
   }
-
+  
   // Return 0 if not a new profile and not an upgrade
   return 0;
 }
@@ -258,7 +258,7 @@ var nsBrowserContentHandler = {
         !iid.equals(nsIBrowserHandler) &&
         !iid.equals(nsIContentHandler) &&
         !iid.equals(nsIFactory))
-      throw Components.results.NS_ERROR_NO_INTERFACE;
+      throw Components.errors.NS_ERROR_NO_INTERFACE;
 
     return this;
   },
@@ -282,17 +282,14 @@ var nsBrowserContentHandler = {
     if (remoteCommand != null) {
       try {
         var a = /^\s*(\w+)\(([^\)]*)\)\s*$/.exec(remoteCommand);
-        var remoteVerb;
-        if (a) {
-          remoteVerb = a[1].toLowerCase();
-          var remoteParams = [];
-          var sepIndex = a[2].lastIndexOf(",");
-          if (sepIndex == -1)
-            remoteParams[0] = a[2];
-          else {
-            remoteParams[0] = a[2].substring(0, sepIndex);
-            remoteParams[1] = a[2].substring(sepIndex + 1);
-          }
+        var remoteVerb = a[1].toLowerCase();
+        var remoteParams = [];
+        var sepIndex = a[2].lastIndexOf(",");
+        if (sepIndex == -1)
+          remoteParams[0] = a[2];
+        else {
+          remoteParams[0] = a[2].substring(0, sepIndex);
+          remoteParams[1] = a[2].substring(sepIndex + 1);
         }
 
         switch (remoteVerb) {
@@ -302,26 +299,15 @@ var nsBrowserContentHandler = {
           // openURL(<url>,new-window)
           // openURL(<url>,new-tab)
 
-          // First param is the URL, second param (if present) is the "target"
-          // (tab, window)
-          var url = remoteParams[0];
-          var target = nsIBrowserDOMWindow.OPEN_DEFAULTWINDOW;
-          if (remoteParams[1]) {
-            var targetParam = remoteParams[1].toLowerCase()
-                                             .replace(/^\s*|\s*$/g, "");
-            if (targetParam == "new-tab")
-              target = nsIBrowserDOMWindow.OPEN_NEWTAB;
-            else if (targetParam == "new-window")
-              target = nsIBrowserDOMWindow.OPEN_NEWWINDOW;
-            else {
-              // The "target" param isn't one of our supported values, so
-              // assume it's part of a URL that contains commas.
-              url += "," + remoteParams[1];
-            }
-          }
+          var uri = resolveURIInternal(cmdLine, remoteParams[0]);
 
-          var uri = resolveURIInternal(cmdLine, url);
-          handURIToExistingBrowser(uri, target, cmdLine);
+          var location = nsIBrowserDOMWindow.OPEN_DEFAULTWINDOW;
+          if (/new-window/.test(remoteParams[1]))
+            location = nsIBrowserDOMWindow.OPEN_NEWWINDOW;
+          else if (/new-tab/.test(remoteParams[1]))
+            location = nsIBrowserDOMWindow.OPEN_NEWTAB;
+
+          handURIToExistingBrowser(uri, location);
           break;
 
         case "xfedocommand":
@@ -337,13 +323,12 @@ var nsBrowserContentHandler = {
         default:
           // Somebody sent us a remote command we don't know how to process:
           // just abort.
-          throw "Unknown remote command.";
+          throw NS_ERROR_ABORT;
         }
 
         cmdLine.preventDefault = true;
       }
       catch (e) {
-        Components.utils.reportError(e);
         // If we had a -remote flag but failed to process it, throw
         // NS_ERROR_ABORT so that the xremote code knows to return a failure
         // back to the handling code.
@@ -370,7 +355,7 @@ var nsBrowserContentHandler = {
     try {
       while ((uriparam = cmdLine.handleFlagWithParam("new-tab", false))) {
         var uri = resolveURIInternal(cmdLine, uriparam);
-        handURIToExistingBrowser(uri, nsIBrowserDOMWindow.OPEN_NEWTAB, cmdLine);
+        handURIToExistingBrowser(uri, nsIBrowserDOMWindow.OPEN_NEWTAB);
         cmdLine.preventDefault = true;
       }
     }
@@ -442,9 +427,6 @@ var nsBrowserContentHandler = {
     catch (e) {
     }
 
-    if (pagesToLoad == "about:blank")
-      pagesToLoad = "";
-
     var startpage = "";
     try {
       var choice = prefb.getIntPref("browser.startup.page");
@@ -461,8 +443,7 @@ var nsBrowserContentHandler = {
     if (startpage == "about:blank")
       startpage = "";
 
-    if (pagesToLoad && startpage)
-      pagesToLoad += "|";
+    if (pagesToLoad && startpage) pagesToLoad += "|";
     pagesToLoad += startpage;
 
     return (pagesToLoad ?  pagesToLoad : "about:blank");
@@ -567,7 +548,7 @@ const bch_contractID = "@mozilla.org/browser/clh;1";
 const bch_CID = Components.ID("{5d0ce354-df01-421a-83fb-7ead0990c24e}");
 const CONTRACTID_PREFIX = "@mozilla.org/uriloader/content-handler;1?type=";
 
-function handURIToExistingBrowser(uri, location, cmdLine)
+function handURIToExistingBrowser(uri, location)
 {
   if (!shouldLoadURI(uri))
     return;
@@ -597,72 +578,15 @@ var nsDefaultCommandLineHandler = {
   QueryInterface : function dch_QI(iid) {
     if (!iid.equals(nsISupports) &&
         !iid.equals(nsICommandLineHandler) &&
-        !iid.equals(nsITimerCallback) &&
         !iid.equals(nsIFactory))
-      throw Components.results.NS_ERROR_NO_INTERFACE;
+      throw Components.errors.NS_ERROR_NO_INTERFACE;
 
     return this;
-  },
-
-  // True when a DDE request will follow
-  _requestPending: false,
-  _URIs: [ ],
-  _timer: null,
-
-  /* nsITimerCallback - opens urls after the ui is sufficiently initialized */
-  notify: function (aTimer) {
-    try {
-      var navWin = getMostRecentBrowserWindow();
-      var navNav = navWin.QueryInterface(nsIInterfaceRequestor)
-                         .getInterface(nsIWebNavigation);
-      var rootItem = navNav.QueryInterface(nsIDocShellTreeItem).rootTreeItem;
-      var rootWin = rootItem.QueryInterface(nsIInterfaceRequestor)
-                            .getInterface(nsIDOMWindow);
-      var bwin = rootWin.QueryInterface(nsIDOMChromeWindow).browserDOMWindow;
-      if (bwin) {
-        var browser = navWin.getBrowser();
-        var tabPanels = browser.browsers;
-        var count = this._URIs.length;
-        for (var i = 0; i < count; ++i) {
-          var uri = this._URIs[0];
-          if (tabPanels.length == 1 &&
-              tabPanels[0].currentURI.spec == "about:blank" &&
-              !tabPanels[0].webProgress.isLoadingDocument) {
-            if (shouldLoadURI(uri))
-              handURIToExistingBrowser(uri, nsIBrowserDOMWindow.OPEN_CURRENTWINDOW);
-          }
-          else {
-            handURIToExistingBrowser(uri, nsIBrowserDOMWindow.OPEN_DEFAULTWINDOW);
-          }
-          this._URIs.splice(0, 1);
-        }
-        this._requestPending = false;
-        this._timer.cancel();
-        this._timer = null;
-        this._URIs = [ ];
-        return;
-      }
-    }
-    catch (e) {
-    }
   },
 
   /* nsICommandLineHandler */
   handle : function dch_handle(cmdLine) {
     var urilist = [];
-
-#ifdef XP_WIN
-    if (cmdLine.handleFlag("requestpending", false) &&
-        cmdLine.state == nsICommandLine.STATE_INITIAL_LAUNCH) {
-      this._requestPending = true;
-      // When the requestpending flag is present a dde message will follow that
-      // contains the same url. By handling the url flag here as a noop
-      // duplicate requests to open the same url are prevented. When the
-      // application needs to restart during startup the requestpending flag
-      // is removed and the url flag will be handled normally after the restart.
-      cmdLine.handleFlagWithParam("url", false);
-    }
-#endif
 
     try {
       var ar;
@@ -673,41 +597,6 @@ var nsDefaultCommandLineHandler = {
     catch (e) {
       Components.utils.reportError(e);
     }
-
-#ifdef XP_WIN
-    if (cmdLine.state == nsICommandLine.STATE_REMOTE_EXPLICIT && this._requestPending) {
-      // Handdle DDE request to open an url by first trying to open it via an
-      // existing window's openURI. If this fails a timer will be used to allow
-      // the window to finish opening so the url can be opened correctly and
-      // respect the OPEN_EXTERNAL pref.
-      try {
-        var navWin = getMostRecentBrowserWindow();
-        var navNav = navWin.QueryInterface(nsIInterfaceRequestor)
-                           .getInterface(nsIWebNavigation);
-        var rootItem = navNav.QueryInterface(nsIDocShellTreeItem).rootTreeItem;
-        var rootWin = rootItem.QueryInterface(nsIInterfaceRequestor)
-                              .getInterface(nsIDOMWindow);
-        var bwin = rootWin.QueryInterface(nsIDOMChromeWindow).browserDOMWindow;
-        bwin.openURI(urilist[0], null, nsIBrowserDOMWindow.OPEN_DEFAULTWINDOW,
-                     nsIBrowserDOMWindow.OPEN_EXTERNAL);
-        this._requestPending = false;
-      }
-      catch (e) {
-        this._URIs.push(urilist[0]);
-        // If multiple urls (e.g. local files, etc.) are opened at the same
-        // time when the app is not running it is possible to have multiple
-        // requests before there is a window available to handle the request so
-        // a timer is used to allow the window to finish opening before
-        // attempting to open the url.
-        if (!this._timer) {
-          this._timer = Components.classes["@mozilla.org/timer;1"]
-                                  .createInstance(nsITimer);
-          this._timer.initWithCallback(this, 100, nsITimer.TYPE_REPEATING_SLACK);
-        }
-      }
-      return;
-    }
-#endif
 
     var count = cmdLine.length;
 
@@ -734,7 +623,7 @@ var nsDefaultCommandLineHandler = {
         // Try to find an existing window and load our URI into the
         // current tab, new tab, or new window as prefs determine.
         try {
-          handURIToExistingBrowser(urilist[0], nsIBrowserDOMWindow.OPEN_DEFAULTWINDOW, cmdLine);
+          handURIToExistingBrowser(urilist[0], nsIBrowserDOMWindow.OPEN_DEFAULTWINDOW);
           return;
         }
         catch (e) {

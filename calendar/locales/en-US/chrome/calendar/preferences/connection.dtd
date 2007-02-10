@@ -41,7 +41,8 @@
 
 <!ENTITY  pref.showConnections.label    "Connection Settings…">
 <!ENTITY  pref.showConnections.accesskey "o">
-<!ENTITY  pref.proxiesInfo.label        "Determine how &brandShortName; connects to the Internet">
+<!ENTITY  pref.proxiesInfo.label        "Determine how &brandShortName; connects to the Internet.">
+<!ENTITY  pref.connectionsInfo.caption  "Connection">
 
 <!ENTITY  connectionsDialog.title       "Connection Settings">
 <!ENTITY  window.width                  "37em">
@@ -56,6 +57,8 @@
 <!ENTITY  manualTypeRadio.accesskey     "m">
 <!ENTITY  autoTypeRadio.label           "Automatic proxy configuration URL:">
 <!ENTITY  autoTypeRadio.accesskey       "a">
+<!ENTITY  configAutoconfigText.label    "Configuration location (URL):">
+<!ENTITY  configAutoconfigText.accesskey "u">
 <!ENTITY  reload.label                  "Reload">
 <!ENTITY  reload.accesskey              "e">
 <!ENTITY  ftp.label                     "FTP Proxy:">

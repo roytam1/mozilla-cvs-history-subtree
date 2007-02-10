@@ -40,117 +40,93 @@
 #define __NS_SVGPATHSEG_H__
 
 #include "nsIDOMSVGPathSeg.h"
-#include "nsIWeakReference.h"
-#include "nsSVGUtils.h"
-#include "nsSVGPathDataParser.h"
 
-class nsSVGPathSegList;
-class nsISVGValue;
+nsresult
+NS_NewSVGPathSegClosePath(nsIDOMSVGPathSegClosePath** result);
 
-struct nsSVGPathSegTraversalState {
-  float curPosX, startPosX, quadCPX, cubicCPX;
-  float curPosY, startPosY, quadCPY, cubicCPY;
-  nsSVGPathSegTraversalState()
-  {
-    curPosX = startPosX = quadCPX = cubicCPX = 0;
-    curPosY = startPosY = quadCPY = cubicCPY = 0;
-  }
-};
+nsresult
+NS_NewSVGPathSegMovetoAbs(nsIDOMSVGPathSegMovetoAbs** result,
+                          float x, float y);
 
-class nsSVGPathSeg : public nsIDOMSVGPathSeg
-{
-public:
-  nsSVGPathSeg() : mCurrentList(nsnull) {}
-  nsresult SetCurrentList(nsISVGValue* aList);
-  nsQueryReferent GetCurrentList() const;
+nsresult
+NS_NewSVGPathSegMovetoRel(nsIDOMSVGPathSegMovetoRel** result,
+                          float x, float y);
 
-  // nsISupports interface:
-  NS_DECL_ISUPPORTS
+nsresult
+NS_NewSVGPathSegLinetoAbs(nsIDOMSVGPathSegLinetoAbs** result,
+                          float x, float y);
 
-  // nsIDOMSVGPathSeg interface:
-  NS_DECL_NSIDOMSVGPATHSEG
-  NS_IMETHOD GetValueString(nsAString& aValue) = 0;
+nsresult
+NS_NewSVGPathSegLinetoRel(nsIDOMSVGPathSegLinetoRel** result,
+                          float x, float y);
 
-  // nsSVGPathSeg methods:
-  virtual float GetLength(nsSVGPathSegTraversalState *ts) = 0;
-
-protected:
-  virtual PRUint16 GetSegType() = 0;
-  void DidModify();
-
-private:
-  static char mTypeLetters[];
-  nsCOMPtr<nsIWeakReference> mCurrentList;
-};
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegClosePath();
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegMovetoAbs(float x, float y);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegMovetoRel(float x, float y);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegLinetoAbs(float x, float y);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegLinetoRel(float x, float y);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegCurvetoCubicAbs(float x, float y,
+nsresult
+NS_NewSVGPathSegCurvetoCubicAbs(nsIDOMSVGPathSegCurvetoCubicAbs** result,
+                                float x, float y,
                                 float x1, float y1,
                                 float x2, float y2);
 
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegCurvetoCubicRel(float x, float y,
+nsresult
+NS_NewSVGPathSegCurvetoCubicRel(nsIDOMSVGPathSegCurvetoCubicRel** result,
+                                float x, float y,
                                 float x1, float y1,
                                 float x2, float y2);
 
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegCurvetoQuadraticAbs(float x, float y,
+nsresult
+NS_NewSVGPathSegCurvetoQuadraticAbs(nsIDOMSVGPathSegCurvetoQuadraticAbs** result,
+                                    float x, float y,
                                     float x1, float y1);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegCurvetoQuadraticRel(float x, float y,
+                                             
+nsresult
+NS_NewSVGPathSegCurvetoQuadraticRel(nsIDOMSVGPathSegCurvetoQuadraticRel** result,
+                                    float x, float y,
                                     float x1, float y1);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegArcAbs(float x, float y,
+                                            
+nsresult
+NS_NewSVGPathSegArcAbs(nsIDOMSVGPathSegArcAbs** result,
+                       float x, float y,
                        float r1, float r2, float angle,
                        PRBool largeArcFlag, PRBool sweepFlag);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegArcRel(float x, float y,
+                                
+nsresult
+NS_NewSVGPathSegArcRel(nsIDOMSVGPathSegArcRel** result,
+                       float x, float y,
                        float r1, float r2, float angle,
                        PRBool largeArcFlag, PRBool sweepFlag);
+                                
+nsresult
+NS_NewSVGPathSegLinetoHorizontalAbs(nsIDOMSVGPathSegLinetoHorizontalAbs** result,
+                                    float x);
 
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegLinetoHorizontalAbs(float x);
+nsresult
+NS_NewSVGPathSegLinetoHorizontalRel(nsIDOMSVGPathSegLinetoHorizontalRel** result,
+                                    float x);
+                                             
+nsresult
+NS_NewSVGPathSegLinetoVerticalAbs(nsIDOMSVGPathSegLinetoVerticalAbs** result,
+                                  float y);
 
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegLinetoHorizontalRel(float x);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegLinetoVerticalAbs(float y);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegLinetoVerticalRel(float y);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegCurvetoCubicSmoothAbs(float x, float y,
+nsresult
+NS_NewSVGPathSegLinetoVerticalRel(nsIDOMSVGPathSegLinetoVerticalRel** result,
+                                  float y);
+                                           
+nsresult
+NS_NewSVGPathSegCurvetoCubicSmoothAbs(nsIDOMSVGPathSegCurvetoCubicSmoothAbs** result,
+                                      float x, float y,
                                       float x2, float y2);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegCurvetoCubicSmoothRel(float x, float y,
+                                               
+nsresult
+NS_NewSVGPathSegCurvetoCubicSmoothRel(nsIDOMSVGPathSegCurvetoCubicSmoothRel** result,
+                                      float x, float y,
                                       float x2, float y2);
+                                               
+nsresult
+NS_NewSVGPathSegCurvetoQuadraticSmoothAbs(nsIDOMSVGPathSegCurvetoQuadraticSmoothAbs** result,
+                                          float x, float y);
 
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegCurvetoQuadraticSmoothAbs(float x, float y);
-
-nsIDOMSVGPathSeg*
-NS_NewSVGPathSegCurvetoQuadraticSmoothRel(float x, float y);
+nsresult
+NS_NewSVGPathSegCurvetoQuadraticSmoothRel(nsIDOMSVGPathSegCurvetoQuadraticSmoothRel** result,
+                                          float x, float y);
 
 
 #endif //__NS_SVGPATHSEG_H__

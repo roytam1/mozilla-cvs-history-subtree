@@ -57,21 +57,20 @@
 #include "nsCOMPtr.h"
 #include "nsCRT.h"
 #include "nsEscape.h"
+#include "nsIDocumentLoader.h"
 #include "nsIEnumerator.h"
-#ifdef MOZ_RDF
 #include "nsIRDFService.h"
-#include "nsRDFCID.h"
-#include "rdf.h"
-#endif
 #include "nsIScriptContext.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsIXPConnect.h"
 #include "nsEnumeratorUtils.h"
+#include "nsRDFCID.h"
 #include "nsString.h"
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
+#include "rdf.h"
 #include "nsITextToSubURI.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
@@ -91,7 +90,6 @@
 #include "nsIStreamConverterService.h"
 #include "nsICategoryManager.h"
 #include "nsXPCOMCID.h"
-#include "nsIDocument.h"
 
 static const int FORMAT_HTML = 2;
 static const int FORMAT_XUL = 3;
@@ -101,9 +99,7 @@ static const int FORMAT_XUL = 3;
 // Common CIDs
 //
 
-#ifdef MOZ_RDF
 static NS_DEFINE_CID(kRDFServiceCID,             NS_RDFSERVICE_CID);
-#endif
 
 // Various protocols we have to special case
 static const char               kFTPProtocol[] = "ftp://";
@@ -114,7 +110,6 @@ static const char               kGopherProtocol[] = "gopher://";
 // nsHTTPIndex
 //
 
-#ifdef MOZ_RDF
 NS_IMPL_THREADSAFE_ISUPPORTS7(nsHTTPIndex,
                               nsIHTTPIndex,
                               nsIRDFDataSource,
@@ -323,7 +318,7 @@ nsHTTPIndex::OnStartRequest(nsIRequest *request, nsISupports* aContext)
     nsCOMPtr<nsIRDFResource> entry;
     rv = mDirRDF->GetResource(entryuriC, getter_AddRefs(entry));
     
-    NS_ConvertUTF8toUTF16 uriUnicode(entryuriC);
+    NS_ConvertUTF8toUCS2 uriUnicode(entryuriC);
 
     nsCOMPtr<nsIRDFLiteral> URLVal;
     rv = mDirRDF->GetLiteral(uriUnicode.get(), getter_AddRefs(URLVal));
@@ -370,7 +365,7 @@ nsHTTPIndex::OnStopRequest(nsIRequest *request,
   mParser->GetComment(getter_Copies(commentStr));
 
   nsCOMPtr<nsIRDFLiteral> comment;
-  rv = mDirRDF->GetLiteral(NS_ConvertASCIItoUTF16(commentStr).get(), getter_AddRefs(comment));
+  rv = mDirRDF->GetLiteral(NS_ConvertASCIItoUCS2(commentStr).get(), getter_AddRefs(comment));
   if (NS_FAILED(rv)) return rv;
 
   rv = Assert(mDirectory, kNC_Comment, comment, PR_TRUE);
@@ -440,7 +435,7 @@ nsHTTPIndex::OnIndexAvailable(nsIRequest* aRequest, nsISupports *aContext,
 
   PRBool isDirType = (type == nsIDirIndex::TYPE_DIRECTORY);
 
-  if (isDirType && entryuriC.Last() != '/') {
+  if (isDirType) {
       entryuriC.Append('/');
   }
 
@@ -476,8 +471,6 @@ nsHTTPIndex::OnIndexAvailable(nsIRequest* aRequest, nsISupports *aContext,
       // description
       rv = aIndex->GetDescription(getter_Copies(xpstr));
       if (NS_FAILED(rv)) return rv;
-      if (xpstr.Last() == '/')
-        xpstr.Truncate(xpstr.Length() - 1);
 
       rv = mDirRDF->GetLiteral(xpstr.get(), getter_AddRefs(lit));
       if (NS_FAILED(rv)) return rv;
@@ -1282,7 +1275,13 @@ nsHTTPIndex::ArcLabelsOut(nsIRDFResource *aSource, nsISimpleEnumerator **_retval
 		}
 	}
 
-        return NS_NewArrayEnumerator(_retval, array);
+	nsISimpleEnumerator* result = new nsArrayEnumerator(array);
+	if (! result)
+	return NS_ERROR_OUT_OF_MEMORY;
+
+	NS_ADDREF(result);
+	*_retval = result;
+	return(NS_OK);
 }
 
 NS_IMETHODIMP
@@ -1343,7 +1342,6 @@ nsHTTPIndex::GetAllCmds(nsIRDFResource *aSource, nsISimpleEnumerator **_retval)
 	return(rv);
 }
 
-#endif /* MOZ_RDF */
 
 
 //----------------------------------------------------------------------
@@ -1381,15 +1379,14 @@ nsDirectoryViewerFactory::CreateInstance(const char *aCommand,
   nsCOMPtr<nsIPrefBranch> prefSrv = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
   if (NS_FAILED(rv)) return rv;
 
-  PRBool useXUL = PR_FALSE;  
-  PRBool viewSource = (PL_strstr(aContentType,"view-source") != 0);
-  
-#ifdef MOZ_RDF
+  PRBool useXUL = PR_FALSE;
   PRInt32 dirPref;
   rv = prefSrv->GetIntPref("network.dir.format", &dirPref);
   if (NS_SUCCEEDED(rv) && dirPref == FORMAT_XUL) {
     useXUL = PR_TRUE;
   }
+
+  PRBool viewSource = (PL_strstr(aContentType,"view-source") != 0);
 
   if ((NS_FAILED(rv) || useXUL) && !viewSource) {
     // ... and setup the original channel's content type
@@ -1449,7 +1446,6 @@ nsDirectoryViewerFactory::CreateInstance(const char *aCommand,
     
     return NS_OK;
   }
-#endif
 
   // setup the original channel's content type
   (void)aChannel->SetContentType(NS_LITERAL_CSTRING("text/html"));
@@ -1509,7 +1505,6 @@ nsDirectoryViewerFactory::CreateInstanceForDocument(nsISupports* aContainer,
 
 NS_IMETHODIMP
 nsDirectoryViewerFactory::CreateBlankDocument(nsILoadGroup *aLoadGroup,
-                                              nsIPrincipal *aPrincipal,
                                               nsIDocument **_retval) {
 
   NS_NOTYETIMPLEMENTED("didn't expect to get here");

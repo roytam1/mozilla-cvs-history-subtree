@@ -41,7 +41,6 @@
 
 #include "nscore.h"
 #include "nsIWindowsHooks.h"
-#include "nsWindowsHooksUtil.h"
 
 #ifndef MAX_BUF
 #define MAX_BUF 4096
@@ -131,14 +130,6 @@ protected:
     char mShortcutName[MAX_BUF];
     char mShortcutBase[MAX_BUF];
     char mShortcutProg[MAX_BUF];
-
-    // Objects that describe the Windows registry entries that we need to tweak.
-    ProtocolRegistryEntry http, https, ftp, chrome, gopher;
-    FileTypeRegistryEntry jpg, gif, png, mng, xbm, bmp, ico, xml, xhtml, xul;
-    EditableFileTypeRegistryEntry mozillaMarkup;
-
-    // Give nsWindowsHooksSettings full access.
-    friend class nsWindowsHooksSettings;
-}; // nsWindowsHooks
+}; // nsWindowsHooksSettings
 
 #endif // nswindowshooks_h____

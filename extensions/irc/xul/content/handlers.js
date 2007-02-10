@@ -187,41 +187,26 @@ function onMessageViewClick(e)
         return true;
 
     var cx = getMessagesContext(null, e.target);
-    var command = getEventCommand(e);
-    if (!client.commandManager.isCommandSatisfied(cx, command))
-        return false;
+    var command;
 
-    dispatch(command, cx);
-    dispatch("focus-input");
-    e.preventDefault();
-    return true;
-}
+    if (e.which == 2)
+        command = client.prefs["messages.middleClick"];
+    else if (e.metaKey || e.altKey)
+        command = client.prefs["messages.metaClick"];
+    else if (e.ctrlKey)
+        command = client.prefs["messages.ctrlClick"];
+    else
+        command = client.prefs["messages.click"];
 
-function onMessageViewMouseDown(e)
-{
-    if ((typeof startScrolling != "function") ||
-        ((e.which != 1) && (e.which != 2)))
+    if (client.commandManager.isCommandSatisfied(cx, command))
     {
+        dispatch(command, cx);
+        dispatch("focus-input");
+        e.preventDefault();
         return true;
     }
-        
-    var cx = getMessagesContext(null, e.target);
-    var command = getEventCommand(e);
-    if (!client.commandManager.isCommandSatisfied(cx, command))
-        startScrolling(e);
-    return true;
-}
 
-function getEventCommand(e)
-{
-    if (e.which == 2)
-        return client.prefs["messages.middleClick"];
-    if (e.metaKey || e.altKey)
-        return client.prefs["messages.metaClick"];
-    if (e.ctrlKey)
-        return client.prefs["messages.ctrlClick"];
-    
-    return client.prefs["messages.click"];
+    return false;
 }
 
 function onMouseOver (e)
@@ -1036,29 +1021,12 @@ function my_showtonet (e)
                 // This makes sure we have the *right* me object.
                 this.primServ.me.rehome(this.primServ);
             }
-
             // Update the list of ignored users from the prefs:
             var ignoreAry = this.prefs["ignoreList"];
             for (var j = 0; j < ignoreAry.length; ++j)
                 this.ignoreList[ignoreAry[j]] = getHostmaskParts(ignoreAry[j]);
 
-            // Update everything.
-            // Welcome to history.
-            if (client.globalHistory)
-                client.globalHistory.addPage(this.getURL());
-            updateTitle(this);
-            this.updateHeader();
-            client.updateHeader();
-            updateSecurityIcon();
-            updateStalkExpression(this);
-
-            client.ident.removeNetwork(this);
-
-            str = e.decodeParam(2);
-
-            break;
-
-        case "251": /* users */
+            // After rehoming it is now safe for the user's commands.
             var cmdary = this.prefs["autoperform"];
             for (var i = 0; i < cmdary.length; ++i)
             {
@@ -1094,6 +1062,16 @@ function my_showtonet (e)
                 delete this.pendingURLs;
             }
 
+            // Update everything.
+            // Welcome to history.
+            if (client.globalHistory)
+                client.globalHistory.addPage(this.getURL());
+            updateTitle(this);
+            this.updateHeader();
+            client.updateHeader();
+            updateSecurityIcon();
+            updateStalkExpression(this);
+
             // Do this after the JOINs, so they are quicker.
             // This is not time-critical code.
             if (jsenv.HAS_SERVER_SOCKETS && client.prefs["dcc.enabled"] &&
@@ -1108,6 +1086,8 @@ function my_showtonet (e)
                 setTimeout(delayFn, 1000 * Math.random(), this);
             }
 
+            client.ident.removeNetwork(this);
+
             // Had some collision during connect.
             if (this.primServ.me.unicodeName != this.prefs["nickname"])
             {
@@ -1115,13 +1095,12 @@ function my_showtonet (e)
                 this.reclaimName();
             }
 
+            str = e.decodeParam(2);
             if ("onLogin" in this)
             {
                 ev = new CEvent("network", "login", this, "onLogin");
                 client.eventPump.addEvent(ev);
             }
-
-            str = e.decodeParam(e.params.length - 1);
             break;
 
         case "376": /* end of MOTD */
@@ -1143,6 +1122,7 @@ function my_showtonet (e)
     }
 
     this.displayHere(p + str, e.code.toUpperCase());
+
 }
 
 CIRCNetwork.prototype.onUnknownCTCPReply =
@@ -1157,9 +1137,7 @@ function my_ctcprunk (e)
 CIRCNetwork.prototype.onNotice =
 function my_notice (e)
 {
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     this.display(e.decodeParam(2), "NOTICE", this, e.server.me);
-    client.munger.entries[".mailto"].enabled = false;
 }
 
 /* userhost reply */
@@ -1291,7 +1269,7 @@ function my_263 (e)
         this._list.done = true;
         this._list.error = e.decodeParam(2);
         // Return early for this one if we're saving it.
-        if ("file" in this._list)
+        if ("saveTo" in this._list)
             return true;
     }
 
@@ -1330,7 +1308,7 @@ function my_list(word, file)
         this._list.file = new LocalFile(lfile.localFile, ">");
     }
 
-    if (isinstance(word, RegExp))
+    if (word instanceof RegExp)
     {
         this._list.regexp = word;
         this._list.string = "";
@@ -1422,7 +1400,7 @@ function my_list_init ()
         this._list.count = 0;
     }
 
-    if (!("file" in this._list))
+    if (!("saveTo" in this._list))
     {
         this._list.displayed = 0;
         if (client.currentObject != this)
@@ -1444,7 +1422,7 @@ function my_321 (e)
 {
     this.listInit();
 
-    if (!("file" in this._list))
+    if (!("saveTo" in this._list))
         this.displayHere (e.params[2] + " " + e.params[3], "321");
 }
 
@@ -1511,10 +1489,7 @@ function my_401 (e)
     }
     else
     {
-        if (this.whoisList && (target in this.whoisList))
-            this.whoisList[target] = false;
-        else
-            display(toUnicode(e.params[3], this));
+        display(toUnicode(e.params[3], this));
     }
 }
 
@@ -1607,17 +1582,6 @@ function my_352 (e)
     }
 }
 
-CIRCNetwork.prototype.on301 = /* user away message */
-function my_301(e)
-{
-    if (e.user.awayMessage != e.user.lastShownAwayMessage)
-    {
-        var params = [e.user.unicodeName, e.user.awayMessage];
-        e.user.display(getMsg(MSG_WHOIS_AWAY, params), e.code);
-        e.user.lastShownAwayMessage = e.user.awayMessage;
-    }
-}
-
 CIRCNetwork.prototype.on311 = /* whois name */
 CIRCNetwork.prototype.on319 = /* whois channels */
 CIRCNetwork.prototype.on312 = /* whois server */
@@ -1628,11 +1592,7 @@ function my_whoisreply (e)
 {
     var text = "egads!";
     var nick = e.params[2];
-    var lowerNick = this.primServ.toLowerCase(nick);
     var user;
-
-    if (this.whoisList && (e.code != 318) && (lowerNick in this.whoisList))
-        this.whoisList[lowerNick] = true;
 
     if (e.user)
     {
@@ -1643,10 +1603,6 @@ function my_whoisreply (e)
     switch (Number(e.code))
     {
         case 311:
-            // Clear saved away message so it appears and can be reset.
-            if (e.user)
-                e.user.lastShownAwayMessage = "";
-
             text = getMsg(MSG_WHOIS_NAME,
                           [nick, e.params[3], e.params[4],
                            e.decodeParam(6)]);
@@ -1669,17 +1625,6 @@ function my_whoisreply (e)
             break;
 
         case 318:
-            // If this user isn't here, don't display anything and do a whowas
-            if (this.whoisList && (lowerNick in this.whoisList) &&
-                !this.whoisList[lowerNick])
-            {
-                delete this.whoisList[lowerNick];
-                this.primServ.whowas(nick, 1);
-                return;
-            }
-            if (this.whoisList)
-                delete this.whoisList[lowerNick];
-
             text = getMsg(MSG_WHOIS_END, nick);
             if (user)
                 user.updateHeader();
@@ -1900,15 +1845,6 @@ function my_netdisconnect (e)
                 msg = getMsg(MSG_UNKNOWN_HOST,
                              [e.server.hostname, this.getURL(),
                               e.server.getURL()]);
-                break;
-
-            case NS_ERROR_UNKNOWN_PROXY_HOST:
-                msg = getMsg(MSG_UNKNOWN_PROXY_HOST,
-                             [this.getURL(), e.server.getURL()]);
-                break;
-
-            case NS_ERROR_PROXY_CONNECTION_REFUSED:
-                msg = MSG_PROXY_CONNECTION_REFUSED;
                 break;
 
             default:
@@ -2158,9 +2094,7 @@ function my_cprivmsg (e)
 {
     var msg = e.decodeParam(2);
 
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     this.display (msg, "PRIVMSG", e.user, this);
-    client.munger.entries[".mailto"].enabled = false;
 }
 
 /* end of names */
@@ -2201,7 +2135,7 @@ CIRCChannel.prototype.onTopic = /* user changed topic */
 CIRCChannel.prototype.on332 = /* TOPIC reply */
 function my_topic (e)
 {
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
+
     if (e.code == "TOPIC")
         this.display (getMsg(MSG_TOPIC_CHANGED, [this.topicBy, this.topic]),
                       "TOPIC");
@@ -2222,7 +2156,7 @@ function my_topic (e)
 
     this.updateHeader();
     updateTitle(this);
-    client.munger.entries[".mailto"].enabled = false;
+
 }
 
 CIRCChannel.prototype.on333 = /* Topic setter information */
@@ -2304,17 +2238,13 @@ function my_needops(e)
 CIRCChannel.prototype.onNotice =
 function my_notice (e)
 {
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     this.display(e.decodeParam(2), "NOTICE", e.user, this);
-    client.munger.entries[".mailto"].enabled = false;
 }
 
 CIRCChannel.prototype.onCTCPAction =
 function my_caction (e)
 {
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     this.display (e.CTCPData, "ACTION", e.user, this);
-    client.munger.entries[".mailto"].enabled = false;
 }
 
 CIRCChannel.prototype.onUnknownCTCP =
@@ -2336,11 +2266,6 @@ function my_cjoin (e)
         var params = [e.user.unicodeName, e.channel.unicodeName];
         this.display(getMsg(MSG_YOU_JOINED, params), "JOIN",
                      e.server.me, this);
-        /* Tell the user that conference mode is on, lest they forget (if it
-         * subsequently turns itself off, they'll get a message anyway).
-         */
-        if (this.prefs["conference.enabled"])
-            this.display(MSG_CONF_MODE_STAYON);
         if (client.globalHistory)
             client.globalHistory.addPage(this.getURL());
 
@@ -2592,7 +2517,6 @@ CIRCUser.prototype.onInit =
 function user_oninit ()
 {
     this.logFile = null;
-    this.lastShownAwayMessage = "";
 }
 
 CIRCUser.prototype.onPrivmsg =
@@ -2605,9 +2529,7 @@ function my_cprivmsg(e)
             openQueryTab(e.server, e.user.unicodeName);
     }
 
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     this.display(e.decodeParam(2), "PRIVMSG", e.user, e.server.me);
-    client.munger.entries[".mailto"].enabled = false;
 }
 
 CIRCUser.prototype.onNick =
@@ -2634,7 +2556,6 @@ CIRCUser.prototype.onNotice =
 function my_notice (e)
 {
     var msg = e.decodeParam(2);
-    var displayMailto = client.prefs["munger.mailto"];
 
     var ary = msg.match(/^\[(\S+)\]\s+/);
     if (ary)
@@ -2642,16 +2563,12 @@ function my_notice (e)
         var channel = e.server.getChannel(ary[1]);
         if (channel)
         {
-            client.munger.entries[".mailto"].enabled = displayMailto;
             channel.display(msg, "NOTICE", this, e.server.me);
-            client.munger.entries[".mailto"].enabled = false;
             return;
         }
     }
 
-    client.munger.entries[".mailto"].enabled = displayMailto;
     this.display(msg, "NOTICE", this, e.server.me);
-    client.munger.entries[".mailto"].enabled = false;
 }
 
 CIRCUser.prototype.onCTCPAction =
@@ -2664,9 +2581,7 @@ function my_uaction(e)
             openQueryTab(e.server, e.user.unicodeName);
     }
 
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     this.display(e.CTCPData, "ACTION", this, e.server.me);
-    client.munger.entries[".mailto"].enabled = false;
 }
 
 CIRCUser.prototype.onUnknownCTCP =
@@ -2839,17 +2754,13 @@ function my_dccgetparams()
 CIRCDCCChat.prototype.onPrivmsg =
 function my_dccprivmsg(e)
 {
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     this.displayHere(toUnicode(e.line, this), "PRIVMSG", e.user, "ME!");
-    client.munger.entries[".mailto"].enabled = false;
 }
 
 CIRCDCCChat.prototype.onCTCPAction =
 function my_uaction(e)
 {
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     this.displayHere(e.CTCPData, "ACTION", e.user, "ME!");
-    client.munger.entries[".mailto"].enabled = false;
 }
 
 CIRCDCCChat.prototype.onUnknownCTCP =
@@ -3006,14 +2917,6 @@ function my_dccfiledisconnect(e)
 
 var CopyPasteHandler = new Object();
 
-CopyPasteHandler.allowDrop =
-CopyPasteHandler.allowStartDrag =
-CopyPasteHandler.onCopyOrDrag =
-function phand_bogus()
-{
-    return true;
-}
-
 CopyPasteHandler.onPasteOrDrop =
 function phand_onpaste(e, data)
 {
@@ -3030,19 +2933,10 @@ function phand_onpaste(e, data)
     str.value.QueryInterface(Components.interfaces.nsISupportsString);
     str.value.data = str.value.data.replace(/(^\s*[\r\n]+|[\r\n]+\s*$)/g, "");
 
-    // XXX part of what follows is a very ugly hack to make links (with a title)
-    // not open the multiline box. We 'should' be able to ask the transferable
-    // what flavours it supports, but testing showed that by the time we can ask
-    // for that info, it's forgotten about everything apart from text/unicode.
-    var lines = str.value.data.split("\n");
-    var m = lines[0].match(client.linkRE);
-
-    if ((str.value.data.indexOf("\n") == -1) ||
-        (m && (m[0] == lines[0]) && (lines.length == 2)))
+    if (str.value.data.indexOf("\n") == -1)
     {
         // If, after stripping leading/trailing empty lines, the string is a
-        // single line, or it's a link with a title, put it back in
-        // the transferable and return.
+        // single line, put it back in the transferable and return.
         data.setTransferData("text/unicode", str.value,
                              str.value.data.length * 2);
         return true;

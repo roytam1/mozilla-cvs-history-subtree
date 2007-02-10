@@ -56,18 +56,18 @@
 #include "nsAbQueryStringToExpression.h"
 #include "nsArrayEnumerator.h"
 #include "nsAbMDBCardProperty.h"
-#include "nsEnumeratorUtils.h"
+
 #include "mdb.h"
 #include "prprf.h"
-#include "nsIPrefService.h"
 
 // XXX todo
 // fix this -1,0,1 crap, use an enum or #define
 
 nsAbMDBDirectory::nsAbMDBDirectory(void):
-     nsAbDirectoryRDFResource(),
+     nsRDFResource(),
      mInitialized(PR_FALSE),
      mIsMailingList(-1),
+     mIsQueryURI(PR_FALSE),
      mPerformingQuery(PR_FALSE)
 {
 }
@@ -79,85 +79,11 @@ nsAbMDBDirectory::~nsAbMDBDirectory(void)
   }
 }
 
-NS_IMPL_ISUPPORTS_INHERITED4(nsAbMDBDirectory, nsAbDirectoryRDFResource,
+NS_IMPL_ISUPPORTS_INHERITED4(nsAbMDBDirectory, nsRDFResource,
                              nsIAbDirectory,
                              nsIAbMDBDirectory,
                              nsIAbDirectorySearch,
                              nsIAddrDBListener)
-
-NS_IMETHODIMP nsAbMDBDirectory::Init(const char *aUri)
-{
-  // We need to ensure  that the m_DirPrefId is initialized properly
-  nsCAutoString uri;
-  uri = aUri;
-
-  // Mailing lists don't have their own prefs.
-  if (m_DirPrefId.IsEmpty() && (uri.Find("MailList") == kNotFound))
-  {
-    // Find the first ? (of the search params) if there is one.
-    // We know we can start at the end of the moz-abmdbdirectory:// because
-    // that's the URI we should have been passed.
-    PRInt32 searchCharLocation = uri.FindChar('?', kMDBDirectoryRootLen);
-
-    nsCAutoString filename;
-
-    // extract the filename from the uri.
-    if (searchCharLocation == kNotFound)
-      uri.Right(filename, uri.Length() - kMDBDirectoryRootLen);
-    else
-      uri.Mid(filename, kMDBDirectoryRootLen,
-              searchCharLocation - kMDBDirectoryRootLen);
-
-    // Get the pref servers and the address book directory branch
-    nsresult rv;
-    nsCOMPtr<nsIPrefService> prefService(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIPrefBranch> prefBranch;
-    rv = prefService->GetBranch(NS_LITERAL_CSTRING(PREF_LDAP_SERVER_TREE_NAME ".").get(),
-                                getter_AddRefs(prefBranch));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    char** childArray;
-    PRUint32 childCount, i;
-    PRInt32 dotOffset;
-    nsXPIDLCString childValue;
-    nsDependentCString child;
-
-    rv = prefBranch->GetChildList("", &childCount, &childArray);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    for (i = 0; i < childCount; ++i)
-    {
-      child.Assign(childArray[i]);
-
-      if (StringEndsWith(child, NS_LITERAL_CSTRING(".filename")))
-      {
-        if (NS_SUCCEEDED(prefBranch->GetCharPref(child.get(),
-                                                 getter_Copies(childValue))))
-        {
-          if (childValue == filename)
-          {
-            dotOffset = child.RFindChar('.');
-            if (dotOffset != -1)
-            {
-              nsCAutoString prefName;
-              child.Left(prefName, dotOffset);
-              m_DirPrefId.AssignLiteral(PREF_LDAP_SERVER_TREE_NAME ".");
-              m_DirPrefId.Append(prefName);
-            }
-          }
-        }
-      }
-    }     
-    NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(childCount, childArray);
-
-    NS_ASSERTION(!m_DirPrefId.IsEmpty(),
-                 "Error, Could not set m_DirPrefId in nsAbMDBDirectory::Init");
-  }
-
-  return nsAbDirectoryRDFResource::Init(aUri);
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -304,6 +230,53 @@ nsresult nsAbMDBDirectory::NotifyItemDeleted(nsISupports *item)
   return NS_OK;
 }
 
+
+// nsIRDFResource methods
+
+NS_IMETHODIMP nsAbMDBDirectory::Init(const char* aURI)
+{
+  nsresult rv;
+
+  rv = nsRDFResource::Init(aURI);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  mURINoQuery = aURI;
+
+  nsCOMPtr<nsIURI> uri = do_CreateInstance (NS_STANDARDURL_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = uri->SetSpec(nsDependentCString(aURI));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  mIsValidURI = PR_TRUE;
+
+    nsCOMPtr<nsIURL> url = do_QueryInterface(uri);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCAutoString queryString;
+  rv = url->GetQuery (queryString);
+
+  nsCAutoString path;
+  rv = url->GetPath (path);
+  mPath = path;
+
+  if (!queryString.IsEmpty())
+  {
+    mPath.Truncate(path.Length() - queryString.Length() - 1);
+
+    mURINoQuery.Truncate(mURINoQuery.Length() - queryString.Length() - 1);
+
+    mQueryString = queryString;
+
+    mIsQueryURI = PR_TRUE;
+  }
+  else
+    mIsQueryURI = PR_FALSE;
+
+  return rv;
+}
+
+
 // nsIAbMDBDirectory methods
 
 NS_IMETHODIMP nsAbMDBDirectory::ClearDatabase()
@@ -370,8 +343,7 @@ NS_IMETHODIMP nsAbMDBDirectory::AddDirectory(const char *uriName, nsIAbDirectory
   nsCOMPtr<nsIAbDirectory> directory(do_QueryInterface(res, &rv));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  if (mSubDirectories.IndexOf(directory) == kNotFound)
-    mSubDirectories.AppendObject(directory);
+  mSubDirectories.AppendObject(directory);
   NS_IF_ADDREF(*childDir = directory);
   return rv;
 }
@@ -392,21 +364,6 @@ NS_IMETHODIMP nsAbMDBDirectory::GetDirUri(char **uri)
 
 
 // nsIAbDirectory methods
-
-NS_IMETHODIMP nsAbMDBDirectory::GetURI(nsACString &aURI)
-{
-  nsresult rv = GetStringValue("uri", EmptyCString(), aURI);
-
-  if (aURI.IsEmpty())
-  {
-    rv = GetFileName(aURI);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    aURI.Insert(kMDBDirectoryRoot, 0);
-  }
-
-  return NS_OK;
-}
 
 NS_IMETHODIMP nsAbMDBDirectory::GetChildNodes(nsISimpleEnumerator* *aResult)
 {
@@ -429,7 +386,7 @@ PR_STATIC_CALLBACK(PRBool) enumerateSearchCache(nsHashKey *aKey, void *aData, vo
         return PR_TRUE;
 }
 
-NS_IMETHODIMP nsAbMDBDirectory::GetChildCards(nsISimpleEnumerator* *result)
+NS_IMETHODIMP nsAbMDBDirectory::GetChildCards(nsIEnumerator* *result)
 {
   if (mIsQueryURI)
   {
@@ -443,7 +400,7 @@ NS_IMETHODIMP nsAbMDBDirectory::GetChildCards(nsISimpleEnumerator* *result)
     nsCOMPtr<nsISupportsArray> array;
     NS_NewISupportsArray(getter_AddRefs(array));
     mSearchCache.Enumerate(enumerateSearchCache, (void*)array);
-    return NS_NewArrayEnumerator(result, array);
+    return array->Enumerate(result);
   }
 
   NS_ASSERTION(!mURI.IsEmpty(), "Not Initialized?");
@@ -628,6 +585,7 @@ NS_IMETHODIMP nsAbMDBDirectory::HasCard(nsIAbCard *cards, PRBool *hasCard)
   {
     if(NS_SUCCEEDED(rv))
       rv = mDatabase->ContainsCard(cards, hasCard);
+
   }
   return rv;
 }
@@ -675,7 +633,17 @@ NS_IMETHODIMP nsAbMDBDirectory::CreateDirectoryByURI(const PRUnichar *dirName, c
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP nsAbMDBDirectory::AddMailListWithKey(nsIAbDirectory *list, PRUint32 *key)
+{
+  return(InternalAddMailList(list, key));
+}
+
 NS_IMETHODIMP nsAbMDBDirectory::AddMailList(nsIAbDirectory *list)
+{
+  return(InternalAddMailList(list, nsnull));
+}
+
+nsresult nsAbMDBDirectory::InternalAddMailList(nsIAbDirectory *list, PRUint32 *key)
 {
   if (mIsQueryURI)
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -690,21 +658,21 @@ NS_IMETHODIMP nsAbMDBDirectory::AddMailList(nsIAbDirectory *list)
   nsCOMPtr<nsIAbMDBDirectory> dblist(do_QueryInterface(list, &rv));
   if (NS_FAILED(rv))
   {
-    nsCOMPtr<nsIAbDirectory> newlist(new nsAbMDBDirProperty);
-    if (!newlist)
+    // XXX fix this.
+    nsAbMDBDirProperty* dblistproperty = new nsAbMDBDirProperty ();
+    if (!dblistproperty)
       return NS_ERROR_OUT_OF_MEMORY;
-
-    rv = newlist->CopyMailList(list);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    dblist = do_QueryInterface(newlist, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
-    mDatabase->CreateMailListAndAddToDB(newlist, PR_TRUE);
+    NS_ADDREF(dblistproperty);
+    nsCOMPtr<nsIAbDirectory> newlist = getter_AddRefs(NS_STATIC_CAST(nsIAbDirectory*, dblistproperty));
+    newlist->CopyMailList(list);
+    list = newlist;
+    dblist = do_QueryInterface(list, &rv);
   }
-  else
-    mDatabase->CreateMailListAndAddToDB(list, PR_TRUE);
 
+  if (!key)
+    mDatabase->CreateMailListAndAddToDB(list, PR_TRUE);
+  else
+    mDatabase->CreateMailListAndAddToDBWithKey(list, PR_TRUE, key);
   mDatabase->Commit(nsAddrDBCommitType::kLargeCommit);
 
   PRUint32 dbRowID;
@@ -774,22 +742,6 @@ NS_IMETHODIMP nsAbMDBDirectory::AddCard(nsIAbCard* card, nsIAbCard **addedCard)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsAbMDBDirectory::ModifyCard(nsIAbCard *aModifiedCard)
-{
-  NS_ENSURE_ARG_POINTER(aModifiedCard);
-
-  nsresult rv;
-  if (!mDatabase)
-  {
-    rv = GetAbDatabase();
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
-
-  rv = mDatabase->EditCard(aModifiedCard, PR_TRUE);
-  NS_ENSURE_SUCCESS(rv, rv);
-  return mDatabase->Commit(nsAddrDBCommitType::kLargeCommit);
-}
-
 NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* aCard, PRBool needToCopyCard)
 {
   NS_ENSURE_ARG_POINTER(aCard);
@@ -798,6 +750,12 @@ NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* aCard, PRBool needToCopyCard
     return NS_ERROR_NOT_IMPLEMENTED;
 
   nsresult rv = NS_OK;
+
+  // Don't add the card if it's not a normal one (ie, they can't be added as members).
+  PRBool isNormal;
+  rv = aCard->GetIsANormalCard(&isNormal);
+  if (!isNormal)
+    return NS_OK;
 
   NS_ASSERTION(!mURI.IsEmpty(), "Not initialized?");
   if (mIsMailingList == -1)
@@ -1062,21 +1020,8 @@ nsresult nsAbMDBDirectory::GetAbDatabase()
 
 NS_IMETHODIMP nsAbMDBDirectory::HasCardForEmailAddress(const char * aEmailAddress, PRBool * aCardExists)
 {
-  nsCOMPtr<nsIAbCard> card;
-  nsresult rv = CardForEmailAddress(aEmailAddress, getter_AddRefs(card));
-  NS_ENSURE_SUCCESS(rv, rv);
-  
-  *aCardExists = card ? PR_TRUE : PR_FALSE;
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsAbMDBDirectory::CardForEmailAddress(const char * aEmailAddress, nsIAbCard ** aAbCard)
-{
-  NS_ENSURE_ARG_POINTER(aAbCard);
-  NS_ENSURE_ARG_POINTER(aEmailAddress);
-
   nsresult rv = NS_OK;
-  *aAbCard = NULL;
+  *aCardExists = PR_FALSE;
 
   if (!mDatabase)
     rv = GetAbDatabase();
@@ -1087,8 +1032,11 @@ NS_IMETHODIMP nsAbMDBDirectory::CardForEmailAddress(const char * aEmailAddress, 
   }
   NS_ENSURE_SUCCESS(rv, rv);
 
-  mDatabase->GetCardFromAttribute(this, kLowerPriEmailColumn /* see #196777 */, aEmailAddress, PR_TRUE /* caseInsensitive, see bug #191798 */, aAbCard);
-  if (!*aAbCard) 
+  nsCOMPtr<nsIAbCard> card; 
+  mDatabase->GetCardFromAttribute(this, kLowerPriEmailColumn /* see #196777 */, aEmailAddress, PR_TRUE /* caseInsensitive, see bug #191798 */, getter_AddRefs(card));
+  if (card)
+    *aCardExists = PR_TRUE;
+  else 
   {
     // fix for bug #187239
     // didn't find it as the primary email?  try again, with k2ndEmailColumn ("Additional Email")
@@ -1096,8 +1044,9 @@ NS_IMETHODIMP nsAbMDBDirectory::CardForEmailAddress(const char * aEmailAddress, 
     // TODO bug #198731
     // unlike the kPriEmailColumn, we don't have kLower2ndEmailColumn
     // so we will still suffer from bug #196777 for "additional emails"
-    mDatabase->GetCardFromAttribute(this, k2ndEmailColumn, aEmailAddress, PR_TRUE /* caseInsensitive, see bug #191798 */, aAbCard);
+    mDatabase->GetCardFromAttribute(this, k2ndEmailColumn, aEmailAddress, PR_TRUE /* caseInsensitive, see bug #191798 */, getter_AddRefs(card));
+    if (card)
+      *aCardExists = PR_TRUE;
   }
-
   return NS_OK;
 }

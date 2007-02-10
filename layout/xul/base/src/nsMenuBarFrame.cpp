@@ -49,7 +49,8 @@
 #include "nsINameSpaceManager.h"
 #include "nsIDocument.h"
 #include "nsIDOMEventReceiver.h"
-#include "nsGkAtoms.h"
+#include "nsXULAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsMenuFrame.h"
 #include "nsIView.h"
 #include "nsIViewManager.h"
@@ -74,10 +75,18 @@
 //
 // Wrapper for creating a new menu Bar container
 //
-nsIFrame*
-NS_NewMenuBarFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMenuBarFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMenuBarFrame (aPresShell, aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMenuBarFrame* it = new (aPresShell) nsMenuBarFrame (aPresShell);
+  if ( !it )
+    return NS_ERROR_OUT_OF_MEMORY;
+  *aNewFrame = it;
+  return NS_OK;
 }
 
 NS_IMETHODIMP_(nsrefcnt) 
@@ -104,14 +113,11 @@ NS_INTERFACE_MAP_END_INHERITING(nsBoxFrame)
 //
 // nsMenuBarFrame cntr
 //
-nsMenuBarFrame::nsMenuBarFrame(nsIPresShell* aShell, nsStyleContext* aContext):
-  nsBoxFrame(aShell, aContext),
-    mMenuBarListener(nsnull),
-    mKeyboardNavigator(nsnull),
-    mIsActive(PR_FALSE),
-    mTarget(nsnull),
-    mCaretWasVisible(PR_FALSE)
+nsMenuBarFrame::nsMenuBarFrame(nsIPresShell* aShell):nsBoxFrame(aShell),
+mMenuBarListener(nsnull), mKeyboardNavigator(nsnull),
+mIsActive(PR_FALSE), mTarget(nsnull), mCaretWasVisible(PR_FALSE)
 {
+
 } // cntr
 
 nsMenuBarFrame::~nsMenuBarFrame()
@@ -126,11 +132,16 @@ nsMenuBarFrame::~nsMenuBarFrame()
 }
 
 NS_IMETHODIMP
-nsMenuBarFrame::Init(nsIContent*      aContent,
+nsMenuBarFrame::Init(nsPresContext*  aPresContext,
+                     nsIContent*      aContent,
                      nsIFrame*        aParent,
+                     nsStyleContext*  aContext,
                      nsIFrame*        aPrevInFlow)
 {
-  nsresult  rv = nsBoxFrame::Init(aContent, aParent, aPrevInFlow);
+  nsresult  rv = nsBoxFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+
+  // XXX hack
+  mPresContext = aPresContext;
 
   // Create the menu bar listener.
   mMenuBarListener = new nsMenuBarListener(this);
@@ -155,13 +166,6 @@ nsMenuBarFrame::Init(nsIContent*      aContent,
   target->AddEventListener(NS_LITERAL_STRING("blur"), (nsIDOMFocusListener*)mMenuBarListener, PR_TRUE);   
 
   return rv;
-}
-
-PRBool
-nsMenuBarFrame::IsFrameOfType(PRUint32 aFlags) const
-{
-  // Override bogus IsFrameOfType in base class.
-  return !aFlags;
 }
 
 NS_IMETHODIMP
@@ -197,7 +201,7 @@ nsMenuBarFrame::SetActive(PRBool aActiveFlag)
   // The caret distracts screen readers and other assistive technologies from the menu selection
   // There is 1 caret per document, we need to find the focused document and toggle its caret 
   do {
-    nsIPresShell *presShell = GetPresContext()->GetPresShell();
+    nsIPresShell *presShell = mPresContext->GetPresShell();
     if (!presShell)
       break;
 
@@ -303,7 +307,7 @@ nsMenuBarFrame::FindMenuWithShortcut(nsIDOMKeyEvent* aKeyEvent)
 
   // Enumerate over our list of frames.
   nsIFrame* immediateParent = nsnull;
-  GetInsertionPoint(GetPresContext()->PresShell(), this, nsnull, &immediateParent);
+  GetInsertionPoint(mPresContext->PresShell(), this, nsnull, &immediateParent);
   if (!immediateParent)
     immediateParent = this;
 
@@ -316,7 +320,7 @@ nsMenuBarFrame::FindMenuWithShortcut(nsIDOMKeyEvent* aKeyEvent)
     if (IsValidItem(current)) {
       // Get the shortcut attribute.
       nsAutoString shortcutKey;
-      current->GetAttr(kNameSpaceID_None, nsGkAtoms::accesskey, shortcutKey);
+      current->GetAttr(kNameSpaceID_None, nsXULAtoms::accesskey, shortcutKey);
       if (!shortcutKey.IsEmpty()) {
         // We've got something.
         PRUnichar letter = PRUnichar(charCode); // throw away the high-zero-fill
@@ -366,21 +370,11 @@ nsMenuBarFrame::ShortcutNavigation(nsIDOMKeyEvent* aKeyEvent, PRBool& aHandledFl
   nsIMenuFrame* result = FindMenuWithShortcut(aKeyEvent);
   if (result) {
     // We got one!
-    nsWeakFrame weakFrame(this);
-    nsIFrame* frame = nsnull;
-    CallQueryInterface(result, &frame);
-    nsWeakFrame weakResult(frame);
     aHandledFlag = PR_TRUE;
     SetActive(PR_TRUE);
-    if (weakFrame.IsAlive()) {
-      SetCurrentMenuItem(result);
-    }
-    if (weakResult.IsAlive()) {
-      result->OpenMenu(PR_TRUE);
-      if (weakResult.IsAlive()) {
-        result->SelectFirstItem();
-      }
-    }
+    SetCurrentMenuItem(result);
+    result->OpenMenu(PR_TRUE);
+    result->SelectFirstItem();
   }
 
   return NS_OK;
@@ -393,8 +387,7 @@ nsMenuBarFrame::KeyboardNavigation(PRUint32 aKeyCode, PRBool& aHandledFlag)
   NS_DIRECTION_FROM_KEY_CODE(theDirection, aKeyCode);
   if (!mCurrentMenu)
     return NS_OK;
-
-  nsWeakFrame weakFrame(this);
+  
   PRBool isContainer = PR_FALSE;
   PRBool isOpen = PR_FALSE;
   mCurrentMenu->MenuIsContainer(isContainer);
@@ -416,13 +409,8 @@ nsMenuBarFrame::KeyboardNavigation(PRUint32 aKeyCode, PRBool& aHandledFlag)
                              GetNextMenuItem(mCurrentMenu) : 
                              GetPreviousMenuItem(mCurrentMenu);
 
-    nsIFrame* nextFrame = nsnull;
-    if (nextItem) {
-      CallQueryInterface(nextItem, &nextFrame);
-    }
-    nsWeakFrame weakNext(nextFrame);
     SetCurrentMenuItem(nextItem);
-    if (weakNext.IsAlive()) {
+    if (nextItem) {
       PRBool nextIsOpen;
       nextItem->MenuIsOpen(nextIsOpen);
       if (nextIsOpen) {
@@ -432,16 +420,9 @@ nsMenuBarFrame::KeyboardNavigation(PRUint32 aKeyCode, PRBool& aHandledFlag)
     }
   }
   else if NS_DIRECTION_IS_BLOCK(theDirection) {
-    NS_ENSURE_TRUE(weakFrame.IsAlive(), NS_OK);
-    nsIFrame* frame = nsnull;
-    CallQueryInterface(mCurrentMenu, &frame);
-    nsWeakFrame weakCurrentMenu(frame);
-    nsIMenuFrame* currentMenu = mCurrentMenu;
-     // Open the menu and select its first item.
-    currentMenu->OpenMenu(PR_TRUE);
-    if (weakCurrentMenu.IsAlive()) {
-      currentMenu->SelectFirstItem();
-    }
+    // Open the menu and select its first item.
+    mCurrentMenu->OpenMenu(PR_TRUE);
+    mCurrentMenu->SelectFirstItem();
   }
 
   return NS_OK;
@@ -451,7 +432,7 @@ nsMenuBarFrame::KeyboardNavigation(PRUint32 aKeyCode, PRBool& aHandledFlag)
 nsMenuBarFrame::GetNextMenuItem(nsIMenuFrame* aStart)
 {
   nsIFrame* immediateParent = nsnull;
-  GetInsertionPoint(GetPresContext()->PresShell(), this, nsnull, &immediateParent);
+  GetInsertionPoint(mPresContext->PresShell(), this, nsnull, &immediateParent);
   if (!immediateParent)
     immediateParent = this;
 
@@ -501,7 +482,7 @@ nsMenuBarFrame::GetNextMenuItem(nsIMenuFrame* aStart)
 nsMenuBarFrame::GetPreviousMenuItem(nsIMenuFrame* aStart)
 {
   nsIFrame* immediateParent = nsnull;
-  GetInsertionPoint(GetPresContext()->PresShell(), this, nsnull, &immediateParent);
+  GetInsertionPoint(mPresContext->PresShell(), this, nsnull, &immediateParent);
   if (!immediateParent)
     immediateParent = this;
 
@@ -566,33 +547,18 @@ NS_IMETHODIMP nsMenuBarFrame::SetCurrentMenuItem(nsIMenuFrame* aMenuItem)
   if (nsMenuFrame::GetContextMenu())
     return NS_OK;
 
-  nsWeakFrame weakFrame(this);
-
   // Unset the current child.
   if (mCurrentMenu) {
-    nsIFrame* frame = nsnull;
-    CallQueryInterface(mCurrentMenu, &frame);
-    nsWeakFrame weakCurrentMenu(frame);
-    nsIMenuFrame* currentMenu = mCurrentMenu;
-    currentMenu->MenuIsOpen(wasOpen);
-    currentMenu->SelectMenu(PR_FALSE);
-    if (wasOpen && weakCurrentMenu.IsAlive()) {
-      currentMenu->OpenMenu(PR_FALSE);
-    }
+    mCurrentMenu->MenuIsOpen(wasOpen);
+    mCurrentMenu->SelectMenu(PR_FALSE);
+    if (wasOpen)
+      mCurrentMenu->OpenMenu(PR_FALSE);
   }
-
-  NS_ENSURE_TRUE(weakFrame.IsAlive(), NS_OK);
-
 
   // Set the new child.
   if (aMenuItem) {
-    nsIFrame* newMenu = nsnull;
-    CallQueryInterface(aMenuItem, &newMenu);
-    nsWeakFrame weakNewMenu(newMenu);
     aMenuItem->SelectMenu(PR_TRUE);
-    NS_ENSURE_TRUE(weakNewMenu.IsAlive(), NS_OK);
     aMenuItem->MarkAsGenerated(); // Have the menu building. Get it ready to be shown.
-    NS_ENSURE_TRUE(weakNewMenu.IsAlive(), NS_OK);
 
     PRBool isDisabled = PR_FALSE;
     aMenuItem->MenuIsDisabled(isDisabled);
@@ -601,7 +567,6 @@ NS_IMETHODIMP nsMenuBarFrame::SetCurrentMenuItem(nsIMenuFrame* aMenuItem)
     ClearRecentlyRolledUp();
   }
 
-  NS_ENSURE_TRUE(weakFrame.IsAlive(), NS_OK);
   mCurrentMenu = aMenuItem;
 
   return NS_OK;
@@ -614,7 +579,6 @@ nsMenuBarFrame::Escape(PRBool& aHandledFlag)
   if (!mCurrentMenu)
     return NS_OK;
 
-  nsWeakFrame weakFrame(this);
   // See if our menu is open.
   PRBool isOpen = PR_FALSE;
   mCurrentMenu->MenuIsOpen(isOpen);
@@ -622,25 +586,25 @@ nsMenuBarFrame::Escape(PRBool& aHandledFlag)
     // Let the child menu handle this.
     aHandledFlag = PR_FALSE;
     mCurrentMenu->Escape(aHandledFlag);
-    NS_ENSURE_TRUE(weakFrame.IsAlive(), NS_OK);
     if (!aHandledFlag) {
       // Close up this menu but keep our current menu item
       // designation.
       mCurrentMenu->OpenMenu(PR_FALSE);
-      NS_ENSURE_TRUE(weakFrame.IsAlive(), NS_OK);
     }
-    nsMenuDismissalListener::Shutdown();
+	if (nsMenuFrame::sDismissalListener)
+      nsMenuFrame::sDismissalListener->Unregister();
     return NS_OK;
   }
 
   // Clear our current menu item if we've got one.
   SetCurrentMenuItem(nsnull);
-  NS_ENSURE_TRUE(weakFrame.IsAlive(), NS_OK);
 
   SetActive(PR_FALSE);
 
   // Clear out our dismissal listener
-  nsMenuDismissalListener::Shutdown();
+  if (nsMenuFrame::sDismissalListener)
+    nsMenuFrame::sDismissalListener->Unregister();
+
   return NS_OK;
 }
 
@@ -704,7 +668,8 @@ nsMenuBarFrame::HideChain()
   // Stop capturing rollups
   // (must do this during Hide, which happens before the menu item is executed,
   // since this reinstates normal event handling.)
-  nsMenuDismissalListener::Shutdown();
+  if (nsMenuFrame::sDismissalListener)
+    nsMenuFrame::sDismissalListener->Unregister();
 
   ClearRecentlyRolledUp();
   if (mCurrentMenu) {
@@ -724,18 +689,17 @@ NS_IMETHODIMP
 nsMenuBarFrame::DismissChain()
 {
   // Stop capturing rollups
-  nsMenuDismissalListener::Shutdown();
-  nsWeakFrame weakFrame(this);
+  if (nsMenuFrame::sDismissalListener)
+    nsMenuFrame::sDismissalListener->Unregister();
+  
   SetCurrentMenuItem(nsnull);
-  if (weakFrame.IsAlive()) {
-    SetActive(PR_FALSE);
-  }
+  SetActive(PR_FALSE);
   return NS_OK;
 }
 
 
 NS_IMETHODIMP
-nsMenuBarFrame::KillPendingTimers ( )
+nsMenuBarFrame :: KillPendingTimers ( )
 {
   return NS_OK;
 
@@ -758,13 +722,20 @@ nsMenuBarFrame::GetWidget(nsIWidget **aWidget)
 #if DONT_WANT_TO_DO_THIS
   // Get parent view
   nsIView * view = nsnull;
-  nsMenuPopupFrame::GetNearestEnclosingView(GetPresContext(), this, &view);
+  nsMenuPopupFrame::GetNearestEnclosingView(mPresContext, this, &view);
   if (!view)
     return NS_OK;
 
   *aWidget = view->GetWidget();
   NS_IF_ADDREF(*aWidget);
 #endif
+}
+
+NS_IMETHODIMP
+nsMenuBarFrame::CreateDismissalListener()
+{
+  NS_ADDREF(nsMenuFrame::sDismissalListener = new nsMenuDismissalListener());
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -805,20 +776,23 @@ nsMenuBarFrame::IsValidItem(nsIContent* aContent)
 {
   nsIAtom *tag = aContent->Tag();
 
-  return ((tag == nsGkAtoms::menu ||
-           tag == nsGkAtoms::menuitem) &&
+  return ((tag == nsXULAtoms::menu ||
+           tag == nsXULAtoms::menuitem) &&
           !IsDisabled(aContent));
 }
 
 PRBool 
 nsMenuBarFrame::IsDisabled(nsIContent* aContent)
 {
-  return aContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::disabled,
-                               nsGkAtoms::_true, eCaseMatters);
+  nsString disabled;
+  aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::disabled, disabled);
+  if (disabled.EqualsLiteral("true"))
+    return PR_TRUE;
+  return PR_FALSE;
 }
 
-void
-nsMenuBarFrame::Destroy()
+NS_IMETHODIMP
+nsMenuBarFrame::Destroy(nsPresContext* aPresContext)
 {
   mTarget->RemoveEventListener(NS_LITERAL_STRING("keypress"), (nsIDOMKeyListener*)mMenuBarListener, PR_FALSE); 
   mTarget->RemoveEventListener(NS_LITERAL_STRING("keydown"), (nsIDOMKeyListener*)mMenuBarListener, PR_FALSE);  
@@ -829,6 +803,6 @@ nsMenuBarFrame::Destroy()
 
   NS_IF_RELEASE(mMenuBarListener);
 
-  nsBoxFrame::Destroy();
+  return nsBoxFrame::Destroy(aPresContext);
 }
 

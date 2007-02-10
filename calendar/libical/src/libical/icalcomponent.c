@@ -587,14 +587,10 @@ icalcomponent_add_component (icalcomponent* parent, icalcomponent* child)
 
     child->parent = parent;
 
-    /* Fix for Mozilla - bug 327602 */
-    if (child->kind != ICAL_VTIMEZONE_COMPONENT) {
-        pvl_push(parent->components, child);
-    } else {
-        /* VTIMEZONES should be first in the resulting VCALENDAR. */
-        pvl_unshift(parent->components, child);
+    pvl_push(parent->components,child);
 
-    /* Add the VTIMEZONE to our array. */
+    /* If the new component is a VTIMEZONE, add it to our array. */
+    if (child->kind == ICAL_VTIMEZONE_COMPONENT) {
 	/* FIXME: Currently we are also creating this array when loading in
 	   a builtin VTIMEZONE, when we don't need it. */
 	if (!parent->timezones)

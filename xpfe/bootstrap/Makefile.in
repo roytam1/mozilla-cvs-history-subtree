@@ -100,7 +100,6 @@ REQUIRES	= xpcom \
 		  profile \
 		  chrome \
 		  xremoteclient \
-		  layout \
 		  $(NULL)
 # for jprof
 REQUIRES	+= jprof
@@ -125,6 +124,7 @@ endif
 # when building the mozcomps meta component
 ifneq (,$(filter mozcomps,$(MOZ_META_COMPONENTS)))
 BUILD_STATIC_LIBS=
+BUILD_SHARED_LIBS=1
 ifdef MOZ_COMPONENTLIB
 DEFINES += -D_MOZCOMPS_SHARED_LIBRARY -D_BUILD_STATIC_BIN
 endif
@@ -214,10 +214,6 @@ ifdef GC_LEAK_DETECTOR
 LIBS += -lboehm
 endif
 
-ifdef WRAP_SYSTEM_INCLUDES
-DEFINES        	+= -DWRAP_SYSTEM_INCLUDES
-endif
-
 ifeq ($(MOZ_WIDGET_TOOLKIT),beos)
 BEOS_PROGRAM_RESOURCE = $(srcdir)/apprunner-beos.rsrc
 CPPSRCS += nsNativeAppSupportBeOS.cpp
@@ -278,11 +274,8 @@ endif
 
 RCINCLUDE = splash.rc
 CPPSRCS += nsNativeAppSupportWin.cpp nsNativeAppSupportBase.cpp
-OS_LIBS	+= $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 oleaut32 version winspool)
+OS_LIBS	+= $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 oleaut32 version winspool gdi32)
 endif
-
-ifndef MOZ_SUITE
-# Suite icons are all contained within /suite/branding
 
 ifneq (,$(filter windows os2 gtk gtk2,$(MOZ_WIDGET_TOOLKIT)))
 ifneq (,$(filter windows os2,$(MOZ_WIDGET_TOOLKIT)))
@@ -350,8 +343,6 @@ install:: $(addprefix icons/$(ICON_DIR)/,$(DESKTOP_ICON_FILES))
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/chrome/icons/default
 endif
 
-endif # MOZ_SUITE
-
 ifeq ($(MOZ_WIDGET_TOOLKIT),cocoa)
 CMMSRCS += nsNativeAppSupportForCocoa.mm
 LIBS += -framework Cocoa $(TK_LIBS)
@@ -387,7 +378,7 @@ endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 ifdef BUILD_STATIC_LIBS
-LIBS	+= -framework QuickTime -framework IOKit -lcups
+LIBS	+= -framework QuickTime -framework IOKit
 endif
 
 endif
@@ -465,6 +456,20 @@ $(EXE_DEF_FILE):
 endif
 endif
 
+ifeq ($(MOZ_REORDER),1)
+
+LDSCRIPT = ldscript
+LDFLAGS += -Wl,-T,$(LDSCRIPT)
+GARBAGE += $(LDSCRIPT)
+ORDERFILE = $(srcdir)/mozilla-bin.order
+
+$(PROGRAM) : $(LDSCRIPT) $(ORDERFILE)
+
+$(LDSCRIPT): $(ORDERFILE)
+	$(PERL) $(topsrcdir)/config/mklinkscript.pl -o $@ $<
+
+endif
+
 libs::
 	touch $(DIST)/bin/.autoreg
 
@@ -486,6 +491,9 @@ libs:: $(PROGRAM)
 	rm -f $(DIST)/$(APP_NAME).app/Contents/MacOS/$(PROGRAM)
 	rsync -aL $(PROGRAM) $(DIST)/$(APP_NAME).app/Contents/MacOS
 	mkdir -p $(DIST)/$(APP_NAME).app/Contents/Plug-Ins
+# Bug 297227: the next line only exists to repair broken depend builds, it can
+# go away once that bug has been closed for a while.
+	rm -rf $(DIST)/$(APP_NAME).app/Contents/Plug-Ins/PrintPDE.plugin
 	rsync -a --copy-unsafe-links $(DIST)/package/PrintPDE.plugin $(DIST)/$(APP_NAME).app/Contents/Plug-Ins
 	cp -RL $(DIST)/package/mozillaSuite.rsrc $(DIST)/$(APP_NAME).app/Contents/Resources/$(PROGRAM).rsrc
 	echo -n APPLMOZZ > $(DIST)/$(APP_NAME).app/Contents/PkgInfo

@@ -44,10 +44,12 @@
   title="&validation.crl.autoupdate.title;"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" 
   onload="onLoad();"
-  buttons="accept,cancel"
+#expand buttons="accept,cancel__HELP_BUTTON__"
   ondialogaccept="return onAccept();"
-  ondialogcancel="return onCancel();">
+  ondialogcancel="return onCancel();"
+  ondialoghelp="return doHelpButton();">
 
+  <script type="application/x-javascript" src="chrome://help/content/contextHelp.js" />
   <script type="application/x-javascript" src="chrome://pippki/content/pippki.js"/>
   <script type="application/x-javascript" src="chrome://global/content/strres.js" />
   <script type="application/x-javascript" src="chrome://pippki/content/pref-crlupdate.js" />

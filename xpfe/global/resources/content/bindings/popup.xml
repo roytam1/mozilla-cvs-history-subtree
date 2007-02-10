@@ -19,10 +19,18 @@
     </content>
 
     <implementation implements="nsIDOMXULPopupElement, nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULMenupopup;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            // Won't create accessible for (menu)popup if parent node is menu
+            // to avoid redundant accessible for menu
+            if (this.localName == "popup" || this.localName == "menupopup")
+              return (this.parentNode.localName != "menu") ?
+                     accService.createXULMenupopupAccessible(this): null;
+            else if (this.localName == "tooltip")
+              return accService.createXULTooltipAccessible(this);
+            return null;
           ]]>
         </getter>
       </property>
@@ -162,13 +170,7 @@
       </children>
     </content>
     
-    <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XULTooltip;
-        </getter>
-      </property>
-
+    <implementation>
       <field name="_mouseOutCount">0</field>
       <field name="_isMouseOver">false</field>
       
@@ -224,6 +226,29 @@
           this.hidePopup();
         }        
       ]]></handler>
+
+      <handler event="popupshowing">
+      <![CDATA[
+        // fill in the label automatically for the default tooltip
+        if (this.getAttribute("default") == "true") {
+          var label = "";
+          var ttNode = document.tooltipNode;
+          if (ttNode && ttNode.hasAttribute("tooltiptext"))
+            this.label = ttNode.getAttribute("tooltiptext");
+        }
+
+        // This is a special consideration for tree titletips. There is a
+        // case where the user moves the mouse from over the treebody to
+        // completely outside of the window, while passing over a cell that
+        // displays a titletip.  This causes the titletip to show, even though
+        // the mouse is not over the corresponding cell, so we need to check
+        // if the titletip was entered by the mouse, and if not, hide it.
+        // XXX commenting this out for now because it doesn't work on Mac 
+        //     become mouseover isn't fired when the tooltip appears with the mouse over it
+        //if (this.hasAttribute("titletip"))
+        //  window.setTimeout(function(me) { if (!me._isMouseOver) me.hidePopup(); }, 100, this);
+      ]]>
+      </handler>
 
       <handler event="popuphiding"><![CDATA[
         this._isMouseOver = false;

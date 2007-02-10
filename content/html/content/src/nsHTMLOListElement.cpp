@@ -39,7 +39,7 @@
 #include "nsIDOMHTMLUListElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsMappedAttributes.h"
@@ -58,7 +58,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -75,13 +75,11 @@ public:
   // nsIDOMHTMLUListElement
   // fully declared by NS_DECL_NSIDOMHTMLOLISTELEMENT
 
-  virtual PRBool ParseAttribute(PRInt32 aNamespaceID,
-                                nsIAtom* aAttribute,
+  virtual PRBool ParseAttribute(nsIAtom* aAttribute,
                                 const nsAString& aValue,
                                 nsAttrValue& aResult);
   virtual nsMapRuleToAttributesFunc GetAttributeMappingFunction() const;
   NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 };
 
 
@@ -116,7 +114,8 @@ NS_HTML_CONTENT_INTERFACE_MAP_AMBIGOUS_BEGIN(nsHTMLSharedListElement,
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLSharedListElement)
+NS_IMPL_DOM_CLONENODE_AMBIGUOUS(nsHTMLSharedListElement,
+                                nsIDOMHTMLOListElement)
 
 
 NS_IMPL_BOOL_ATTR(nsHTMLSharedListElement, Compact, compact)
@@ -148,26 +147,22 @@ nsAttrValue::EnumTable kOldListTypeTable[] = {
 };
 
 PRBool
-nsHTMLSharedListElement::ParseAttribute(PRInt32 aNamespaceID,
-                                        nsIAtom* aAttribute,
+nsHTMLSharedListElement::ParseAttribute(nsIAtom* aAttribute,
                                         const nsAString& aValue,
                                         nsAttrValue& aResult)
 {
-  if (aNamespaceID == kNameSpaceID_None) {
-    if (mNodeInfo->Equals(nsGkAtoms::ol) ||
-        mNodeInfo->Equals(nsGkAtoms::ul)) {
-      if (aAttribute == nsGkAtoms::type) {
-        return aResult.ParseEnumValue(aValue, kListTypeTable) ||
-               aResult.ParseEnumValue(aValue, kOldListTypeTable, PR_TRUE);
-      }
-      if (aAttribute == nsGkAtoms::start) {
-        return aResult.ParseIntValue(aValue);
-      }
+  if (mNodeInfo->Equals(nsHTMLAtoms::ol) ||
+      mNodeInfo->Equals(nsHTMLAtoms::ul)) {
+    if (aAttribute == nsHTMLAtoms::type) {
+      return aResult.ParseEnumValue(aValue, kListTypeTable) ||
+             aResult.ParseEnumValue(aValue, kOldListTypeTable, PR_TRUE);
+    }
+    if (aAttribute == nsHTMLAtoms::start) {
+      return aResult.ParseIntValue(aValue);
     }
   }
 
-  return nsGenericHTMLElement::ParseAttribute(aNamespaceID, aAttribute, aValue,
-                                              aResult);
+  return nsGenericHTMLElement::ParseAttribute(aAttribute, aValue, aResult);
 }
 
 static void
@@ -176,7 +171,7 @@ MapAttributesIntoRule(const nsMappedAttributes* aAttributes, nsRuleData* aData)
   if (aData->mSID == eStyleStruct_List) {
     if (aData->mListData->mType.GetUnit() == eCSSUnit_Null) {
       // type: enum
-      const nsAttrValue* value = aAttributes->GetAttr(nsGkAtoms::type);
+      const nsAttrValue* value = aAttributes->GetAttr(nsHTMLAtoms::type);
       if (value) {
         if (value->Type() == nsAttrValue::eEnum)
           aData->mListData->mType.SetIntValue(value->GetEnumValue(), eCSSUnit_Enumerated);
@@ -192,10 +187,10 @@ MapAttributesIntoRule(const nsMappedAttributes* aAttributes, nsRuleData* aData)
 NS_IMETHODIMP_(PRBool)
 nsHTMLSharedListElement::IsAttributeMapped(const nsIAtom* aAttribute) const
 {
-  if (mNodeInfo->Equals(nsGkAtoms::ol) ||
-      mNodeInfo->Equals(nsGkAtoms::ul)) {
+  if (mNodeInfo->Equals(nsHTMLAtoms::ol) ||
+      mNodeInfo->Equals(nsHTMLAtoms::ul)) {
     static const MappedAttributeEntry attributes[] = {
-      { &nsGkAtoms::type },
+      { &nsHTMLAtoms::type },
       { nsnull }
     };
 
@@ -213,8 +208,8 @@ nsHTMLSharedListElement::IsAttributeMapped(const nsIAtom* aAttribute) const
 nsMapRuleToAttributesFunc
 nsHTMLSharedListElement::GetAttributeMappingFunction() const
 {
-  if (mNodeInfo->Equals(nsGkAtoms::ol) ||
-      mNodeInfo->Equals(nsGkAtoms::ul)) {
+  if (mNodeInfo->Equals(nsHTMLAtoms::ol) ||
+      mNodeInfo->Equals(nsHTMLAtoms::ul)) {
     return &MapAttributesIntoRule;
   }
 

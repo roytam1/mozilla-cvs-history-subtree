@@ -45,10 +45,16 @@ static const PRUint16 g_utMappingTable[] = {
 #include "macarabic.ut"
 };
 
+static const PRInt16 g_utShiftTable[] =  {
+  0, u1ByteCharset ,
+  ShiftCell(0,0,0,0,0,0,0,0)
+};
+
 NS_METHOD
 nsMacArabicToUnicodeConstructor(nsISupports *aOuter, REFNSIID aIID,
                                 void **aResult) 
 {
-   return CreateOneByteDecoder((uMappingTable*) &g_utMappingTable,
+   return CreateOneByteDecoder((uShiftTable*) &g_utShiftTable, 
+                               (uMappingTable*) &g_utMappingTable,
                                aOuter, aIID, aResult);
 }

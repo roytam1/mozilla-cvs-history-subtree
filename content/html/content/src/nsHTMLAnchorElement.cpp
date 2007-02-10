@@ -40,12 +40,12 @@
 #include "nsReadableUtils.h"
 #include "nsUnicharUtils.h"
 #include "nsIDOMHTMLAnchorElement.h"
-#include "nsIDOMNSHTMLAnchorElement2.h"
+#include "nsIDOMNSHTMLAnchorElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLDocument.h"
 #include "nsGenericHTMLElement.h"
 #include "nsILink.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsIEventStateManager.h"
@@ -68,7 +68,7 @@ nsresult NS_NewContentIterator(nsIContentIterator** aInstancePtrResult);
 
 class nsHTMLAnchorElement : public nsGenericHTMLElement,
                             public nsIDOMHTMLAnchorElement,
-                            public nsIDOMNSHTMLAnchorElement2,
+                            public nsIDOMNSHTMLAnchorElement,
                             public nsILink
 {
 public:
@@ -79,7 +79,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -92,9 +92,6 @@ public:
 
   // nsIDOMNSHTMLAnchorElement
   NS_DECL_NSIDOMNSHTMLANCHORELEMENT
-
-  // nsIDOMNSHTMLAnchorElement2
-  NS_DECL_NSIDOMNSHTMLANCHORELEMENT2
 
   // nsILink
   NS_IMETHOD GetLinkState(nsLinkState &aState);
@@ -111,9 +108,10 @@ public:
   virtual void SetFocus(nsPresContext* aPresContext);
   virtual PRBool IsFocusable(PRBool *aTabIndex = nsnull);
 
-  virtual nsresult PostHandleEvent(nsEventChainPostVisitor& aVisitor);
-  virtual PRBool IsLink(nsIURI** aURI) const;
-  virtual void GetLinkTarget(nsAString& aTarget);
+  virtual nsresult HandleDOMEvent(nsPresContext* aPresContext,
+                                  nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                                  PRUint32 aFlags,
+                                  nsEventStatus* aEventStatus);
 
   nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                    const nsAString& aValue, PRBool aNotify)
@@ -125,8 +123,6 @@ public:
                            PRBool aNotify);
   virtual nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                              PRBool aNotify);
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 
 protected:
   // The cached visited state
@@ -156,13 +152,12 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLAnchorElement, nsGenericElement)
 NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLAnchorElement, nsGenericHTMLElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLAnchorElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLAnchorElement)
-  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLAnchorElement2)
   NS_INTERFACE_MAP_ENTRY(nsILink)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLAnchorElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLAnchorElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLAnchorElement)
 
 
 NS_IMPL_STRING_ATTR(nsHTMLAnchorElement, Charset, charset)
@@ -212,7 +207,7 @@ nsHTMLAnchorElement::UnbindFromTree(PRBool aDeep, PRBool aNullParent)
 NS_IMETHODIMP
 nsHTMLAnchorElement::Blur()
 {
-  if (ShouldBlur(this)) {
+  if (ShouldFocus(this)) {
     SetElementFocus(PR_FALSE);
   }
 
@@ -238,8 +233,10 @@ nsHTMLAnchorElement::SetFocus(nsPresContext* aPresContext)
 
   // don't make the link grab the focus if there is no link handler
   nsILinkHandler *handler = aPresContext->GetLinkHandler();
-  if (handler && aPresContext->EventStateManager()->
-                               SetContentState(this, NS_EVENT_STATE_FOCUS)) {
+  if (handler) {
+    aPresContext->EventStateManager()->SetContentState(this,
+                                                       NS_EVENT_STATE_FOCUS);
+
     // Make sure the presentation is up-to-date
     nsIDocument* doc = GetCurrentDoc();
     if (doc) {
@@ -249,7 +246,8 @@ nsHTMLAnchorElement::SetFocus(nsPresContext* aPresContext)
     nsIPresShell *presShell = aPresContext->GetPresShell();
 
     if (presShell) {
-      nsIFrame* frame = presShell->GetPrimaryFrameFor(this);
+      nsIFrame* frame = nsnull;
+      presShell->GetPrimaryFrameFor(this, &frame);
       if (frame) {
         presShell->ScrollFrameIntoView(frame, NS_PRESSHELL_SCROLL_ANYWHERE,
                                        NS_PRESSHELL_SCROLL_ANYWHERE);
@@ -265,10 +263,10 @@ nsHTMLAnchorElement::IsFocusable(PRInt32 *aTabIndex)
     return PR_FALSE;
   }
 
-  if (!HasAttr(kNameSpaceID_None, nsGkAtoms::tabindex)) {
+  if (!HasAttr(kNameSpaceID_None, nsHTMLAtoms::tabindex)) {
     // check whether we're actually a link
-    nsCOMPtr<nsIURI> absURI;
-    if (!IsLink(getter_AddRefs(absURI))) {
+    nsCOMPtr<nsIURI> linkURI = nsContentUtils::GetLinkURI(this);
+    if (!linkURI) {
       // Not tabbable or focusable without href (bug 17605), unless
       // forced to be via presence of nonnegative tabindex attribute
       if (aTabIndex) {
@@ -286,27 +284,23 @@ nsHTMLAnchorElement::IsFocusable(PRInt32 *aTabIndex)
 }
 
 nsresult
-nsHTMLAnchorElement::PostHandleEvent(nsEventChainPostVisitor& aVisitor)
+nsHTMLAnchorElement::HandleDOMEvent(nsPresContext* aPresContext,
+                                    nsEvent* aEvent,
+                                    nsIDOMEvent** aDOMEvent,
+                                    PRUint32 aFlags,
+                                    nsEventStatus* aEventStatus)
 {
-  return PostHandleEventForAnchors(aVisitor);
-}
-
-PRBool
-nsHTMLAnchorElement::IsLink(nsIURI** aURI) const
-{
-  return IsHTMLLink(aURI);
-}
-
-void
-nsHTMLAnchorElement::GetLinkTarget(nsAString& aTarget)
-{
-  GetTarget(aTarget);
+  return HandleDOMEventForAnchors(aPresContext, aEvent, aDOMEvent, 
+                                  aFlags, aEventStatus);
 }
 
 NS_IMETHODIMP
 nsHTMLAnchorElement::GetTarget(nsAString& aValue)
 {
-  if (!GetAttr(kNameSpaceID_None, nsGkAtoms::target, aValue)) {
+  aValue.Truncate();
+
+  nsresult rv = GetAttr(kNameSpaceID_None, nsHTMLAtoms::target, aValue);
+  if (rv == NS_CONTENT_ATTR_NOT_THERE) {
     GetBaseTarget(aValue);
   }
   return NS_OK;
@@ -315,7 +309,7 @@ nsHTMLAnchorElement::GetTarget(nsAString& aValue)
 NS_IMETHODIMP
 nsHTMLAnchorElement::SetTarget(const nsAString& aValue)
 {
-  return SetAttr(kNameSpaceID_None, nsGkAtoms::target, aValue, PR_TRUE);
+  return SetAttr(kNameSpaceID_None, nsHTMLAtoms::target, aValue, PR_TRUE);
 }
 
 NS_IMETHODIMP    
@@ -560,18 +554,6 @@ nsHTMLAnchorElement::ToString(nsAString& aSource)
   return GetHref(aSource);
 }
 
-NS_IMETHODIMP    
-nsHTMLAnchorElement::GetPing(nsAString& aValue)
-{
-  return GetURIListAttr(nsGkAtoms::ping, aValue);
-}
-
-NS_IMETHODIMP
-nsHTMLAnchorElement::SetPing(const nsAString& aValue)
-{
-  return SetAttr(kNameSpaceID_None, nsGkAtoms::ping, aValue, PR_TRUE);
-}
-
 NS_IMETHODIMP
 nsHTMLAnchorElement::GetLinkState(nsLinkState &aState)
 {
@@ -597,7 +579,7 @@ nsHTMLAnchorElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                              nsIAtom* aPrefix, const nsAString& aValue,
                              PRBool aNotify)
 {
-  if (aName == nsGkAtoms::href && kNameSpaceID_None == aNameSpaceID) {
+  if (aName == nsHTMLAtoms::href && kNameSpaceID_None == aNameSpaceID) {
     nsAutoString val;
     GetHref(val);
     if (!val.Equals(aValue)) {
@@ -612,14 +594,14 @@ nsHTMLAnchorElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
     }
   }
 
-  if (aName == nsGkAtoms::accesskey && kNameSpaceID_None == aNameSpaceID) {
+  if (aName == nsHTMLAtoms::accesskey && kNameSpaceID_None == aNameSpaceID) {
     RegUnRegAccessKey(PR_FALSE);
   }
 
   nsresult rv = nsGenericHTMLElement::SetAttr(aNameSpaceID, aName, aPrefix,
                                               aValue, aNotify);
 
-  if (aName == nsGkAtoms::accesskey && kNameSpaceID_None == aNameSpaceID &&
+  if (aName == nsHTMLAtoms::accesskey && kNameSpaceID_None == aNameSpaceID &&
       !aValue.IsEmpty()) {
     RegUnRegAccessKey(PR_TRUE);
   }
@@ -631,11 +613,11 @@ nsresult
 nsHTMLAnchorElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                                PRBool aNotify)
 {
-  if (aAttribute == nsGkAtoms::href && kNameSpaceID_None == aNameSpaceID) {
+  if (aAttribute == nsHTMLAtoms::href && kNameSpaceID_None == aNameSpaceID) {
     SetLinkState(eLinkState_Unknown);
   }
 
-  if (aAttribute == nsGkAtoms::accesskey &&
+  if (aAttribute == nsHTMLAtoms::accesskey &&
       kNameSpaceID_None == aNameSpaceID) {
     RegUnRegAccessKey(PR_FALSE);
   }

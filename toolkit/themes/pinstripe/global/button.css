@@ -50,21 +50,25 @@ button {
   margin: 6px;
   min-width: 6.3em;
   -moz-appearance: button;
-  padding: 0;
+ padding: 0px 4px;
   color: #000000;
 }
 
 .button-text {
-  margin: 0 2px 0 3px !important;
+  margin: 0 !important;
   text-align: center;
 }
 
-.button-icon {
-  margin-left: 1px;
+button[type="default"] {
+	font: menu;
 }
 
-button[type="default"] {
-  font: menu;
+/* .......... active/open/checked state .......... */
+
+button:hover:active,
+button[open="true"],
+button[checked="true"] {
+
 }
 
 /* .......... disabled state .......... */
@@ -88,10 +92,17 @@ button[type="menu-button"] {
 
 .button-menu-dropmarker,
 .button-menubutton-dropmarker {
-  -moz-appearance: none !important;
-  border: none !important;
-  background-color: transparent !important;
   margin: 1px;
+  list-style-image: url("chrome://global/skin/arrow/arrow-dn.png");
+}
+  
+.button-menu-dropmarker[disabled="true"],
+.button-menubutton-dropmarker[disabled="true"] {
+  list-style-image: url("chrome://global/skin/arrow/arrow-dn-dis.png");
+}
+
+.button-menubutton-dropmarker[open="true"] {
+  /* margin: 2px 0px 0px 2px; */
 }
 
 /* ::::: plain buttons ::::: */

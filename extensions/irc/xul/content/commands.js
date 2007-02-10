@@ -134,7 +134,6 @@ function initCommands()
          ["load",              cmdLoad,                            CMD_CONSOLE],
          ["log",               cmdLog,                             CMD_CONSOLE],
          ["map",               cmdSimpleCommand,    CMD_NEED_SRV | CMD_CONSOLE],
-         ["match-users",       cmdMatchUsers,      CMD_NEED_CHAN | CMD_CONSOLE],
          ["me",                cmdMe,                              CMD_CONSOLE],
          ["motd",              cmdSimpleCommand,    CMD_NEED_SRV | CMD_CONSOLE],
          ["mode",              cmdMode,             CMD_NEED_SRV | CMD_CONSOLE],
@@ -185,6 +184,7 @@ function initCommands()
          ["text-direction",    cmdTextDirection,                             0],
          ["time",              cmdTime,             CMD_NEED_SRV | CMD_CONSOLE],
          ["timestamps",        cmdTimestamps,                      CMD_CONSOLE],
+         ["timestamp-format",  cmdTimestampFormat,                 CMD_CONSOLE],
          ["toggle-ui",         cmdToggleUI,                        CMD_CONSOLE],
          ["toggle-pref",       cmdTogglePref,                                0],
          ["topic",             cmdTopic,           CMD_NEED_CHAN | CMD_CONSOLE],
@@ -212,8 +212,8 @@ function initCommands()
          ["part",             "leave",                             CMD_CONSOLE],
          ["raw",              "quote",                             CMD_CONSOLE],
          // Shortcuts to useful URLs:
-         ["faq",              "goto-url faq",                                0],
-         ["homepage",         "goto-url homepage",                           0],
+         ["faq",              "goto-url http://chatzilla.hacksrus.com/faq/", 0],
+         ["homepage",         "goto-url http://chatzilla.hacksrus.com/",     0],
          // Used to display a nickname in the menu only.
          ["label-user",       "echo",                                        0],
          // These are all the font family/size menu commands...
@@ -265,8 +265,8 @@ function initCommands()
     client.commandManager.defineCommands(cmdary);
 
     var restList = ["reason", "action", "text", "message", "params", "font",
-                    "expression", "ircCommand", "prefValue", "newTopic", "file",
-                    "password", "commandList", "commands", "description"];
+                    "expression", "ircCommand", "prefValue", "newTopic",
+                    "commandList", "file", "commands", "description"];
     client.commandManager.argTypes.__aliasTypes__(restList, "rest");
     client.commandManager.argTypes["plugin"] = parsePlugin;
 }
@@ -838,7 +838,6 @@ function cmdAblePlugin(e)
             e.plugin.scope.disablePlugin();
         }
 
-        display(getMsg(MSG_PLUGIN_DISABLED, e.plugin.id));
         e.plugin.enabled = false;
     }
     else
@@ -869,7 +868,6 @@ function cmdAblePlugin(e)
             e.plugin.scope.enablePlugin();
         }
 
-        display(getMsg(MSG_PLUGIN_ENABLED, e.plugin.id));
         e.plugin.enabled = true;
     }
 }
@@ -1086,7 +1084,8 @@ function cmdSync(e)
                   {
                       if (view.prefs["displayHeader"])
                           view.setHeaderState(false);
-                      view.changeCSS(view.getFontCSS("data"), "cz-fonts");
+                      view.changeCSS(view.getFontCSS("data"),
+                                     "cz-fonts");
                       if (view.prefs["displayHeader"])
                           view.setHeaderState(true);
                   };
@@ -1103,7 +1102,6 @@ function cmdSync(e)
             fun = function ()
                   {
                       view.changeCSS(view.prefs["motif.current"]);
-                      updateAppMotif(view.prefs["motif.current"]);
                       // Refresh the motif settings.
                       view.updateMotifSettings();
                   };
@@ -1112,7 +1110,8 @@ function cmdSync(e)
         case "sync-timestamp":
             fun = function ()
                   {
-                      updateTimestamps(view);
+                      view.changeCSS(view.getTimestampCSS("data"),
+                                     "cz-timestamp-format");
                   };
             break;
 
@@ -1392,7 +1391,7 @@ function cmdNetwork(e)
     var network = client.networks[e.networkName];
 
     if (!("messages" in network))
-        network.displayHere(getMsg(MSG_NETWORK_OPENED, network.unicodeName));
+        network.displayHere(getMsg(MSG_NETWORK_OPENED, network.name));
 
     dispatch("set-current-view", { view: network });
 }
@@ -1870,29 +1869,6 @@ function cmdAttach(e)
     gotoIRCURL(e.ircUrl);
 }
 
-function cmdMatchUsers(e)
-{
-    var matches = e.channel.findUsers(e.mask);
-    var uc = matches.unchecked;
-    var msgNotChecked = "";
-
-    // Get a pretty list of nicknames:
-    var nicknames = [];
-    for (var i = 0; i < matches.users.length; i++)
-        nicknames.push(matches.users[i].unicodeName);
-
-    var nicknameStr = arraySpeak(nicknames);
-
-    // Were we unable to check one or more of the users?
-    if (uc != 0)
-        msgNotChecked = getMsg(MSG_MATCH_UNCHECKED, uc);
-
-    if (matches.users.length == 0)
-        display(getMsg(MSG_NO_MATCHING_NICKS, msgNotChecked));
-    else 
-        display(getMsg(MSG_MATCHING_NICKS, [nicknameStr, msgNotChecked]));
-}
-
 function cmdMe(e)
 {
     if (!("act" in e.sourceObject))
@@ -1902,9 +1878,7 @@ function cmdMe(e)
     }
 
     var msg = filterOutput(e.action, "ACTION", e.sourceObject);
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     e.sourceObject.display(msg, "ACTION", "ME!", e.sourceObject);
-    client.munger.entries[".mailto"].enabled = false;
     e.sourceObject.act(msg);
 }
 
@@ -2111,9 +2085,7 @@ function cmdSay(e)
     }
 
     var msg = filterOutput(e.message, "PRIVMSG", e.sourceObject);
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     e.sourceObject.display(msg, "PRIVMSG", "ME!", e.sourceObject);
-    client.munger.entries[".mailto"].enabled = false;
     e.sourceObject.say(msg);
 }
 
@@ -2122,9 +2094,7 @@ function cmdMsg(e)
     var target = e.server.addTarget(e.nickname);
 
     var msg = filterOutput(e.message, "PRIVMSG", target);
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     e.sourceObject.display(msg, "PRIVMSG", "ME!", target);
-    client.munger.entries[".mailto"].enabled = false;
     target.say(msg);
 }
 
@@ -2157,9 +2127,7 @@ function cmdNotice(e)
     var target = e.server.addTarget(e.nickname);
 
     var msg = filterOutput(e.message, "NOTICE", target);
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     e.sourceObject.display(msg, "NOTICE", "ME!", target);
-    client.munger.entries[".mailto"].enabled = false;
     target.notice(msg);
 }
 
@@ -2201,6 +2169,7 @@ function cmdFocusInput(e)
 
 function cmdGotoURL(e)
 {
+    const IO_SVC = "@mozilla.org/network/io-service;1";
     const EXT_PROTO_SVC = "@mozilla.org/uriloader/external-protocol-service;1";
 
     if (e.url.search(/^ircs?:/i) == 0)
@@ -2217,28 +2186,13 @@ function cmdGotoURL(e)
         return;
     }
 
-    try
-    {
-        var uri = client.iosvc.newURI(e.url, "UTF-8", null);
-    }
-    catch (ex)
-    {
-        var localeURLKey = "msg.localeurl." + e.url;
-        if (localeURLKey != getMsg(localeURLKey))
-            dispatch(e.command.name + " " + getMsg(localeURLKey));
-        else
-            display(getMsg(MSG_ERR_INVALID_URL, e.url), MT_ERROR);
-
-        dispatch("focus-input");
-        return;
-    }
-
     if ((e.command.name == "goto-url-external") || (client.host == "XULrunner"))
     {
+        const ioSvc = getService(IO_SVC, "nsIIOService");
         const extProtoSvc = getService(EXT_PROTO_SVC,
                                        "nsIExternalProtocolService");
+        var uri = ioSvc.newURI(e.url, "UTF-8", null);
         extProtoSvc.loadUrl(uri);
-        dispatch("focus-input");
         return;
     }
 
@@ -2492,7 +2446,7 @@ function cmdLoad(e)
                 if (!oldPlugin.disable())
                 {
                     display(getMsg(MSG_CANT_DISABLE, oldPlugin.id));
-                    display(getMsg(MSG_ERR_SCRIPTLOAD, e.url));
+                    display (getMsg(MSG_ERR_SCRIPTLOAD, e.url));
                     return null;
                 }
                 client.prefManager.removeObserver(oldPlugin.prefManager);
@@ -2505,10 +2459,9 @@ function cmdLoad(e)
             else
             {
                 display(getMsg(MSG_CANT_DISABLE, oldPlugin.id));
-                display(getMsg(MSG_ERR_SCRIPTLOAD, e.url));
+                display (getMsg(MSG_ERR_SCRIPTLOAD, e.url));
                 return null;
             }
-            display(getMsg(MSG_PLUGIN_DISABLED, oldPlugin.id));
         }
 
         return i;
@@ -2602,9 +2555,6 @@ function cmdWho(e)
 
 function cmdWhoIs(e)
 {
-    if (!isinstance(e.network.whoisList, Object))
-        e.network.whoisList = {};
-
     for (var i = 0; i < e.nicknameList.length; i++)
     {
         if ((i < e.nicknameList.length - 1) &&
@@ -2618,7 +2568,6 @@ function cmdWhoIs(e)
         {
             e.server.whois(e.nicknameList[i]);
         }
-        e.network.whoisList[e.server.toLowerCase(e.nicknameList[i])] = null;
     }
 }
 
@@ -3046,9 +2995,7 @@ function cmdVersion(e)
 
 function cmdEcho(e)
 {
-    client.munger.entries[".mailto"].enabled = client.prefs["munger.mailto"];
     display(e.message);
-    client.munger.entries[".mailto"].enabled = false;
 }
 
 function cmdInvite(e)
@@ -3364,8 +3311,6 @@ function cmdSave(e)
                  */
                 else if (!requestSpec && saveType > 0)
                 {
-                    if (wbp)
-                        wbp.progressListener = null;
                     pm = [e.sourceObject.viewName, e.filename];
                     display(getMsg(MSG_SAVE_SUCCESSFUL, pm), MT_INFO);
                 }
@@ -3653,6 +3598,21 @@ function cmdTimestamps(e)
     {
         display(getMsg(MSG_FMT_PREF, ["timestamps",
                                       view.prefs["timestamps"]]));
+    }
+}
+
+function cmdTimestampFormat(e)
+{
+    var view = e.sourceObject;
+
+    if (e.format != null)
+    {
+        view.prefs["timestampFormat"] = e.format;
+    }
+    else
+    {
+        display(getMsg(MSG_FMT_PREF, ["timestampFormat",
+                                      view.prefs["timestampFormat"]]));
     }
 }
 

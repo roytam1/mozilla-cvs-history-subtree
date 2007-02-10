@@ -52,10 +52,9 @@
 [scriptable, uuid(34d268d6-1dd2-11b2-9d63-83a5e0ada290)]
 interface nsIAccessibleSelectable : nsISupports
 {
-    const unsigned long eSelection_Add = 0;
-    const unsigned long eSelection_Remove = 1;
-    const unsigned long eSelection_GetState = 2;
-
+%{C++
+    enum { eSelection_Add = 0U, eSelection_Remove = 1U, eSelection_GetState = 2U };
+%}
     /**
      * Return an nsIArray of selected nsIAccessible children 
      */

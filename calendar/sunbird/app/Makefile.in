@@ -22,7 +22,7 @@
 #   Brian Ryner <bryner@brianryner.com>
 #   Jonathan Wilson <jonwil@tpgi.com.au>
 #   Dan Mosedale <dmose@mozilla.org>
-#   Matthew Willis <lilmatt@mozilla.com>
+#   Matthew Willis <mattwillis@gmail.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -47,10 +47,7 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS		= profile/extensions
 
-PREF_JS_EXPORTS = \
-    $(srcdir)/profile/sunbird.js \
-    $(srcdir)/profile/channel-prefs.js \
-    $(NULL)
+PREF_JS_EXPORTS = $(srcdir)/profile/sunbird.js
 
 # hardcode en-US for the moment
 AB_CD = en-US
@@ -102,11 +99,7 @@ ifdef MOZILLA_1_8_BRANCH
 LIBS += $(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX)
 else
 ifdef BUILD_STATIC_LIBS
-ifdef _MSC_VER
-STATIC_COMPONENTS_LINKER_PATH = -LIBPATH:$(DIST)/lib/components
-else
 STATIC_COMPONENTS_LINKER_PATH = -L$(DIST)/lib/components
-endif
 LIBS += $(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX)
 else
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
@@ -356,14 +349,16 @@ libs repackage:: $(PROGRAM)
 	mkdir -p $(DIST)/$(APP_NAME).app/Contents/MacOS
 	rsync -a --exclude CVS --exclude "*.in" $(srcdir)/macbuild/Contents $(DIST)/$(APP_NAME).app  --exclude English.lproj
 	mkdir -p $(DIST)/$(APP_NAME).app/Contents/Resources/$(AB).lproj
-	rsync -a --exclude CVS --exclude "*.in" $(srcdir)/macbuild/Contents/Resources/English.lproj/ $(DIST)/$(APP_NAME).app/Contents/Resources/$(AB).lproj
+	rsync -a --exclude CVS $(srcdir)/macbuild/Contents/Resources/English.lproj/ $(DIST)/$(APP_NAME).app/Contents/Resources/$(AB).lproj
 	sed -e "s/@APP_VERSION@/$(APP_VERSION)/" -e "s/@APP_NAME@/$(APP_NAME)/" -e "s/@MAC_CREATOR_CODE@/$(MAC_CREATOR_CODE)/" $(srcdir)/macbuild/Contents/Info.plist.in > $(DIST)/$(APP_NAME).app/Contents/Info.plist
-# The application name shown in the upper left is found in the file:
+# The application name shown in the upper left is found in the UTF-16 file:
 # MyApp.app/Contents/Resources/English.lproj/InfoPlist.strings
-# We pipe this file through sed for the find and replace, and then use iconv
-# to convert it to UTF-16.
-	sed -e "s/@APP_NAME@/$(APP_NAME)/" $(srcdir)/macbuild/Contents/Resources/English.lproj/InfoPlist.strings.in | \
-	  iconv -f UTF-8 -t UTF-16 > $(DIST)/$(APP_NAME).app/Contents/Resources/$(AB).lproj/InfoPlist.strings
+# We use iconv to do the charset conversion to UTF-8, pipe it through sed for the
+# find and replace, and then use iconv once more to convert it back to UTF-16.
+# Since all future Macs are Intel-based, we make the file UTF-16LE with a BOM.
+	iconv -f UTF-16LE -t UTF-8 $(srcdir)/macbuild/Contents/Resources/English.lproj/InfoPlist.strings.in | \
+	  sed -e "s/@APP_NAME@/$(APP_NAME)/" | \
+	  iconv -f UTF-8 -t UTF-16LE > $(DIST)/$(APP_NAME).app/Contents/Resources/$(AB).lproj/InfoPlist.strings
 	rsync -a $(DIST)/bin/ $(DIST)/$(APP_NAME).app/Contents/MacOS
 	rm -f $(DIST)/$(APP_NAME).app/Contents/MacOS/$(PROGRAM) $(DIST)/$(APP_NAME).app/Contents/MacOS/mangle $(DIST)/$(APP_NAME).app/Contents/MacOS/shlibsign
 	rsync -aL $(PROGRAM) $(DIST)/$(APP_NAME).app/Contents/MacOS
@@ -379,7 +374,10 @@ endif
 
 endif # LIBXUL_SDK
 
+README_FILE = $(topsrcdir)/README.txt
+
 libs::
+	$(INSTALL) $(README_FILE) $(DIST)/bin
 	$(INSTALL) $(topsrcdir)/LICENSE $(DIST)/bin
 
 libs:: $(srcdir)/profile/prefs.js

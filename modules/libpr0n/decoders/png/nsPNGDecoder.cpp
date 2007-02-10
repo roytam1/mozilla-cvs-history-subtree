@@ -21,7 +21,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Stuart Parmenter <stuart@mozilla.com>
+ *   Stuart Parmenter <pavlov@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -46,12 +46,7 @@
 #include "nsIInputStream.h"
 
 #include "imgIContainerObserver.h"
-#include "nsIImage.h"
-#include "nsIInterfaceRequestorUtils.h"
 
-#ifdef MOZ_CAIRO_GFX
-#include "gfxColor.h"
-#endif
 #include "nsColor.h"
 
 #include "nspr.h"
@@ -72,10 +67,7 @@ NS_IMPL_ISUPPORTS1(nsPNGDecoder, imgIDecoder)
 
 nsPNGDecoder::nsPNGDecoder() :
   mPNG(nsnull), mInfo(nsnull),
-#ifndef MOZ_CAIRO_GFX
-  colorLine(nsnull),
-  alphaLine(nsnull),
-#endif
+  colorLine(nsnull), alphaLine(nsnull),
   interlacebuf(nsnull), ibpr(0),
   mError(PR_FALSE)
 {
@@ -83,12 +75,10 @@ nsPNGDecoder::nsPNGDecoder() :
 
 nsPNGDecoder::~nsPNGDecoder()
 {
-#ifndef MOZ_CAIRO_GFX
   if (colorLine)
     nsMemory::Free(colorLine);
   if (alphaLine)
     nsMemory::Free(alphaLine);
-#endif
   if (interlacebuf)
     nsMemory::Free(interlacebuf);
 }
@@ -260,7 +250,7 @@ info_callback(png_structp png_ptr, png_infop info_ptr)
       png_set_gray_to_rgb(png_ptr);
 
 
-#if !defined(MOZ_CAIRO_GFX) && (defined(XP_WIN) || defined(XP_OS2) || defined(XP_BEOS) || defined(MOZ_WIDGET_PHOTON))
+#if defined(XP_WIN) || defined(XP_OS2) || defined(XP_BEOS) || defined(MOZ_WIDGET_PHOTON)
   // windows likes BGR
   png_set_bgr(png_ptr);
 #endif
@@ -321,7 +311,7 @@ info_callback(png_structp png_ptr, png_infop info_ptr)
 
   decoder->mImageLoad->SetImage(decoder->mImage);
 
-  // since the png is only 1 frame, initialize the container to the width and height of the frame
+  // since the png is only 1 frame, initalize the container to the width and height of the frame
   decoder->mImage->Init(width, height, decoder->mObserver);
 
   if (decoder->mObserver)
@@ -343,12 +333,12 @@ info_callback(png_structp png_ptr, png_infop info_ptr)
     }
   }
 
-#if !defined(MOZ_CAIRO_GFX) && (defined(XP_WIN) || defined(XP_OS2) || defined(XP_BEOS) || defined(MOZ_WIDGET_PHOTON))
+#if defined(XP_WIN) || defined(XP_OS2) || defined(XP_BEOS) || defined(MOZ_WIDGET_PHOTON)
   // XXX this works...
   format += 1; // RGB to BGR
 #endif
 
-  // then initialize the frame and append it to the container
+  // then initalize the frame and append it to the container
   nsresult rv = decoder->mFrame->Init(0, 0, width, height, format, 24);
   if (NS_FAILED(rv))
     longjmp(decoder->mPNG->jmpbuf, 5); // NS_ERROR_OUT_OF_MEMORY
@@ -358,15 +348,13 @@ info_callback(png_structp png_ptr, png_infop info_ptr)
   if (decoder->mObserver)
     decoder->mObserver->OnStartFrame(nsnull, decoder->mFrame);
 
-  PRUint32 bpr;
+  PRUint32 bpr, abpr;
   decoder->mFrame->GetImageBytesPerRow(&bpr);
-#ifndef MOZ_CAIRO_GFX
-  PRUint32 abpr;
   decoder->mFrame->GetAlphaBytesPerRow(&abpr);
   decoder->colorLine = (PRUint8 *)nsMemory::Alloc(bpr);
   if (channels > 3)
     decoder->alphaLine = (PRUint8 *)nsMemory::Alloc(abpr);
-#endif
+
   if (interlace_type == PNG_INTERLACE_ADAM7) {
     if (channels > 3)
       decoder->ibpr = channels*width;
@@ -380,6 +368,10 @@ info_callback(png_structp png_ptr, png_infop info_ptr)
 
   return;
 }
+
+
+
+
 
 void
 row_callback(png_structp png_ptr, png_bytep new_row,
@@ -414,6 +406,10 @@ row_callback(png_structp png_ptr, png_bytep new_row,
    */
   nsPNGDecoder *decoder = NS_STATIC_CAST(nsPNGDecoder*, png_get_progressive_ptr(png_ptr));
 
+  PRUint32 bpr, abpr;
+  decoder->mFrame->GetImageBytesPerRow(&bpr);
+  decoder->mFrame->GetAlphaBytesPerRow(&abpr);
+
   png_bytep line;
   if (decoder->interlacebuf) {
     line = decoder->interlacebuf+(row_num*decoder->ibpr);
@@ -429,34 +425,17 @@ row_callback(png_structp png_ptr, png_bytep new_row,
 
     gfx_format format;
     decoder->mFrame->GetFormat(&format);
-#if defined(MOZ_CAIRO_GFX)
-    // we're thebes. we can write stuff directly to the data
-    PRUint8 *imageData;
-    PRUint32 imageDataLength, bpr = width * sizeof(PRUint32);
-    decoder->mFrame->GetImageData(&imageData, &imageDataLength);
-    PRUint32 *cptr32 = (PRUint32*)(imageData + (row_num*bpr));
-#else
     PRUint8 *aptr, *cptr;
-    PRUint32 bpr, abpr;
-    decoder->mFrame->GetImageBytesPerRow(&bpr);
-    decoder->mFrame->GetAlphaBytesPerRow(&abpr);
+
     // The mac specific ifdefs in the code below are there to make sure we
     // always fill in 4 byte pixels right now, which is what the mac always
     // allocates for its pixel buffers in true color mode. This will change
     // when we start storing images with color palettes when they don't need
     // true color support (GIFs).
-#endif
-
     switch (format) {
     case gfxIFormats::RGB:
     case gfxIFormats::BGR:
-      {
-#if defined(MOZ_CAIRO_GFX)
-        for (PRUint32 x=iwidth; x>0; --x) {
-          *cptr32++ = GFX_PACKED_PIXEL(0xFF, line[0], line[1], line[2]);
-          line += 3;
-        }
-#elif defined(XP_MAC) || defined(XP_MACOSX)
+#if defined(XP_MAC) || defined(XP_MACOSX)
         cptr = decoder->colorLine;
         for (PRUint32 x=0; x<iwidth; x++) {
           *cptr++ = 0;
@@ -468,17 +447,10 @@ row_callback(png_structp png_ptr, png_bytep new_row,
 #else
         decoder->mFrame->SetImageData((PRUint8*)line, bpr, row_num*bpr);
 #endif
-      }
       break;
     case gfxIFormats::RGB_A1:
     case gfxIFormats::BGR_A1:
       {
-#if defined(MOZ_CAIRO_GFX)
-        for (PRUint32 x=iwidth; x>0; --x) {
-          *cptr32++ = GFX_PACKED_PIXEL(line[3]?0xFF:0x00, line[0], line[1], line[2]);
-          line += 4;
-        }
-#else
         cptr = decoder->colorLine;
         aptr = decoder->alphaLine;
         memset(aptr, 0, abpr);
@@ -501,18 +473,11 @@ row_callback(png_structp png_ptr, png_bytep new_row,
         }
         decoder->mFrame->SetAlphaData(decoder->alphaLine, abpr, row_num*abpr);
         decoder->mFrame->SetImageData(decoder->colorLine, bpr, row_num*bpr);
-#endif
       }
       break;
     case gfxIFormats::RGB_A8:
     case gfxIFormats::BGR_A8:
       {
-#if defined(MOZ_CAIRO_GFX)
-        for (PRUint32 x=width; x>0; --x) {
-          *cptr32++ = GFX_PACKED_PIXEL(line[3], line[0], line[1], line[2]);
-          line += 4;
-        }
-#else
         cptr = decoder->colorLine;
         aptr = decoder->alphaLine;
         for (PRUint32 x=0; x<iwidth; x++) {
@@ -526,16 +491,31 @@ row_callback(png_structp png_ptr, png_bytep new_row,
         }
         decoder->mFrame->SetAlphaData(decoder->alphaLine, abpr, row_num*abpr);
         decoder->mFrame->SetImageData(decoder->colorLine, bpr, row_num*bpr);
-#endif
       }
+      break;
+    case gfxIFormats::RGBA:
+    case gfxIFormats::BGRA:
+#if defined(XP_MAC) || defined(XP_MACOSX)
+      {
+        cptr = decoder->colorLine;
+        aptr = decoder->alphaLine;
+        for (PRUint32 x=0; x<iwidth; x++) {
+          *cptr++ = 0;
+          *cptr++ = *line++;
+          *cptr++ = *line++;
+          *cptr++ = *line++;
+          *aptr++ = *line++;
+        }
+        decoder->mFrame->SetAlphaData(decoder->alphaLine, abpr, row_num*abpr);
+        decoder->mFrame->SetImageData(decoder->colorLine, bpr, row_num*bpr);
+      }
+#else
+      decoder->mFrame->SetImageData(line, bpr, row_num*bpr);
+#endif
       break;
     }
 
     nsIntRect r(0, row_num, width, 1);
-#if defined(MOZ_CAIRO_GFX)
-    nsCOMPtr<nsIImage> img(do_GetInterface(decoder->mFrame));
-    img->ImageUpdated(nsnull, nsImageUpdateFlags_kBitsChanged, &r);
-#endif
     decoder->mObserver->OnDataAvailable(nsnull, decoder->mFrame, &r);
   }
 }

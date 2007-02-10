@@ -43,6 +43,8 @@
 
 #include "WebBrowserContainer.h"
 
+#include "nsReadableUtils.h"
+
 #include "nsServiceManagerUtils.h"
 #include "nsIWebNavigationInfo.h"
 
@@ -282,7 +284,7 @@ NS_IMETHODIMP CWebBrowserContainer::OnLocationChange(nsIWebProgress* aWebProgres
                                                      nsIRequest* aRequest,
                                                      nsIURI *location)
 {
-//    nsCString aPath;
+//    nsXPIDLCString aPath;
 //    location->GetPath(getter_Copies(aPath));
     return NS_OK;
 }

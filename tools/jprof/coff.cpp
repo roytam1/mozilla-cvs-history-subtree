@@ -13,7 +13,8 @@
  *
  * The Original Code is jprof.
  *
- * The Initial Developer of the Original Code is Kipp E.B. Hickman. 
+ * The Initial Developer of the Original Code is
+ * Kipp E.B. Hickman.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *

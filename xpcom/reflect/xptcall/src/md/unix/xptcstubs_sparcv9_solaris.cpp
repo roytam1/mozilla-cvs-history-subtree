@@ -40,7 +40,6 @@
 /* Implement shared vtbl methods. */
 
 #include "xptcprivate.h"
-#include "xptiprivate.h"
 
 #if defined(sparc) || defined(__sparc__)
 
@@ -60,7 +59,10 @@ PrepareAndDispatch(nsXPTCStubBase* self, PRUint64 methodIndex, PRUint64* args)
 
     NS_ASSERTION(self,"no self");
 
-    self->mEntry->GetMethodInfo(PRUint16(methodIndex), &info);
+    self->GetInterfaceInfo(&iface_info);
+    NS_ASSERTION(iface_info,"no interface info");
+
+    iface_info->GetMethodInfo(PRUint16(methodIndex), &info);
     NS_ASSERTION(info,"no interface info");
 
     paramCount = info->GetParamCount();
@@ -106,7 +108,9 @@ PrepareAndDispatch(nsXPTCStubBase* self, PRUint64 methodIndex, PRUint64* args)
         }
     }
 
-    result = self->mOuter->CallMethod((PRUint16)methodIndex, info, dispatchParams);
+    result = self->CallMethod((PRUint16)methodIndex, info, dispatchParams);
+
+    NS_RELEASE(iface_info);
 
     if(dispatchParams != paramBuffer)
         delete [] dispatchParams;

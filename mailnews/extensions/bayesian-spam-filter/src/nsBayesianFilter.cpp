@@ -85,6 +85,7 @@
 static PRLogModuleInfo *BayesianFilterLogModule = nsnull;
 
 static NS_DEFINE_CID(kParserCID, NS_PARSER_CID);
+static NS_DEFINE_CID(kNavDTDCID, NS_CNAVDTD_CID);
 
 #define kDefaultJunkThreshold .99 // we override this value via a pref
 static const char* kBayesianFilterTokenDelimiters = " \t\n\r\f.";
@@ -273,7 +274,7 @@ static PRBool isDecimalNumber(const char* word)
     if (*p == '-') ++p;
     char c;
     while ((c = *p++)) {
-        if (!isdigit((unsigned char) c))
+        if (!isdigit(c))
             return PR_FALSE;
     }
     return PR_TRUE;
@@ -491,7 +492,7 @@ char_class getCharClass(PRUnichar c)
 
 static PRBool isJapanese(const char* word)
 {
-  nsString text = NS_ConvertUTF8toUTF16(word);
+  nsString text = NS_ConvertUTF8toUCS2(word);
   PRUnichar* p = (PRUnichar*)text.get();
   PRUnichar c;
     
@@ -517,7 +518,7 @@ void Tokenizer::tokenize_japanese_word(char* chunk)
 {
   PR_LOG(BayesianFilterLogModule, PR_LOG_ALWAYS, ("entering tokenize_japanese_word(%s)", chunk));
     
-  nsString srcStr = NS_ConvertUTF8toUTF16(chunk);
+  nsString srcStr = NS_ConvertUTF8toUCS2(chunk);
   const PRUnichar* p1 = srcStr.get();
   const PRUnichar* p2 = p1;
   if(!*p2) return;
@@ -528,7 +529,7 @@ void Tokenizer::tokenize_japanese_word(char* chunk)
     if(cc == getCharClass(*p2)) 
       continue;
    
-    nsCString token = NS_ConvertUTF16toUTF8(p1, p2-p1);
+    nsCString token = NS_ConvertUCS2toUTF8(p1, p2-p1);
     if( (!isDecimalNumber(token.get())) && (!isFWNumeral(p1, p2)))      
       add(PromiseFlatCString(NS_LITERAL_CSTRING("JA:") + token).get());
         
@@ -558,8 +559,12 @@ nsresult Tokenizer::stripHTML(const nsAString& inString, nsAString& outString)
   textSink->Initialize(&outString, flags, 80);
 
   parser->SetContentSink(sink);
+  nsCOMPtr<nsIDTD> dtd = do_CreateInstance(kNavDTDCID,&rv);
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  return parser->Parse(inString, 0, NS_LITERAL_CSTRING("text/html"), PR_TRUE);
+  parser->RegisterDTD(dtd);
+
+  return parser->Parse(inString, 0, NS_LITERAL_CSTRING("text/html"), PR_FALSE, PR_TRUE);
 }
 
 void Tokenizer::tokenize(char* aText)
@@ -570,7 +575,7 @@ void Tokenizer::tokenize(char* aText)
     // uggh but first we have to blow up our string into UCS2
     // since that's what the document encoder wants. UTF8/UCS2, I wish we all
     // spoke the same language here..
-    nsString text = NS_ConvertUTF8toUTF16(aText);
+    nsString text = NS_ConvertUTF8toUCS2(aText);
     nsString strippedUCS2;
     stripHTML(text, strippedUCS2);
     
@@ -584,7 +589,7 @@ void Tokenizer::tokenize(char* aText)
         ++substr_start;
     }
     
-    nsCString strippedStr = NS_ConvertUTF16toUTF8(strippedUCS2);
+    nsCString strippedStr = NS_ConvertUCS2toUTF8(strippedUCS2);
     char * strippedText = (char *) strippedStr.get(); // bleh
     PR_LOG(BayesianFilterLogModule, PR_LOG_ALWAYS, ("tokenize stripped html: %s", strippedText));
 
@@ -610,7 +615,7 @@ void Tokenizer::tokenize(char* aText)
             if (mScanner) {
                 mScanner->Start("UTF-8");
                 // convert this word from UTF-8 into UCS2.
-                NS_ConvertUTF8toUTF16 uword(word);
+                NS_ConvertUTF8toUCS2 uword(word);
                 ToLowerCase(uword);
                 const PRUnichar* utext = uword.get();
                 PRInt32 len = uword.Length(), pos = 0, begin, end;
@@ -618,7 +623,7 @@ void Tokenizer::tokenize(char* aText)
                 while (pos < len) {
                     rv = mScanner->Next(utext, len, pos, PR_TRUE, &begin, &end, &gotUnit);
                     if (NS_SUCCEEDED(rv) && gotUnit) {
-                        NS_ConvertUTF16toUTF8 utfUnit(utext + begin, end - begin);
+                        NS_ConvertUCS2toUTF8 utfUnit(utext + begin, end - begin);
                         add(utfUnit.get());
                         // advance to end of current unit.
                         pos = end;
@@ -742,7 +747,7 @@ NS_IMETHODIMP TokenStreamListener::ProcessHeaders(nsIUTF8StringEnumerator *aHead
 
 NS_IMETHODIMP TokenStreamListener::HandleAttachment(const char *contentType, const char *url, const PRUnichar *displayName, const char *uri, PRBool aIsExternalAttachment)
 {
-    mTokenizer.tokenizeAttachment(contentType, NS_ConvertUTF16toUTF8(displayName).get());
+    mTokenizer.tokenizeAttachment(contentType, NS_ConvertUCS2toUTF8(displayName).get());
     return NS_OK;
 }
 
@@ -902,7 +907,8 @@ NS_IMETHODIMP TokenStreamListener::OnStopRequest(nsIRequest *aRequest, nsISuppor
 NS_IMPL_ISUPPORTS2(nsBayesianFilter, nsIMsgFilterPlugin, nsIJunkMailPlugin)
 
 nsBayesianFilter::nsBayesianFilter()
-    :   mGoodCount(0), mBadCount(0), mTrainingDataDirty(PR_FALSE)
+    :   mGoodCount(0), mBadCount(0),
+        mNumDirtyingMessages(0)
 {
     if (!BayesianFilterLogModule)
       BayesianFilterLogModule = PR_NewLogModule("BayesianFilter");
@@ -917,7 +923,7 @@ nsBayesianFilter::nsBayesianFilter()
     if (mJunkProbabilityThreshold == 0 || mJunkProbabilityThreshold >= 1)
       mJunkProbabilityThreshold = kDefaultJunkThreshold;
 
-    PR_LOG(BayesianFilterLogModule, PR_LOG_ALWAYS, ("junk probability threshold: %f", mJunkProbabilityThreshold));
+    PR_LOG(BayesianFilterLogModule, PR_LOG_ALWAYS, ("junk probabilty threshold: %f", mJunkProbabilityThreshold));
 
     getTrainingFile(getter_AddRefs(mTrainingFile));
 
@@ -938,6 +944,9 @@ nsBayesianFilter::nsBayesianFilter()
     rv = prefs->GetBranch(nsnull, getter_AddRefs(prefBranch));
     NS_ASSERTION(NS_SUCCEEDED(rv),"failed getting preferences branch");
 
+    rv = prefBranch->GetIntPref("mailnews.bayesian_spam_filter.flush.diryting_messages_threshold",&mDirtyingMessageWriteThreshold);
+    if (NS_FAILED(rv) || (mDirtyingMessageWriteThreshold <= 0) )
+        mDirtyingMessageWriteThreshold = DEFAULT_WRITE_TRAINING_DATA_MESSAGES_THRESHOLD;
     rv = prefBranch->GetIntPref("mailnews.bayesian_spam_filter.flush.minimum_interval",&mMinFlushInterval);
     // it is not a good idea to allow a minimum interval of under 1 second
     if (NS_FAILED(rv) || (mMinFlushInterval <= 1000) )
@@ -954,11 +963,15 @@ nsBayesianFilter::nsBayesianFilter()
 void
 nsBayesianFilter::TimerCallback(nsITimer* aTimer, void* aClosure)
 {
-    // we will flush the training data to disk after enough time has passed
-    // since the first time a message has been classified after the last flush
+    // we will flush the training data to disk if it is dirty with
+    // enough messages, and if enough time has passed since the first
+    // time a message has been classified after the last flush
 
     nsBayesianFilter *filter = NS_STATIC_CAST(nsBayesianFilter *, aClosure);
-    filter->writeTrainingData();
+    if (filter->mNumDirtyingMessages > filter->mDirtyingMessageWriteThreshold)
+        filter->writeTrainingData();
+    else 
+        filter->mTimer->InitWithFuncCallback(nsBayesianFilter::TimerCallback, filter, filter->mMinFlushInterval, nsITimer::TYPE_ONE_SHOT);
 }
 
 nsBayesianFilter::~nsBayesianFilter()
@@ -1198,7 +1211,7 @@ void nsBayesianFilter::classifyMessage(Tokenizer& tokenizer, const char* message
 /* void shutdown (); */
 NS_IMETHODIMP nsBayesianFilter::Shutdown()
 {
-    if (mTrainingDataDirty)
+    if (mNumDirtyingMessages > 0)
         writeTrainingData();
     return NS_OK;
 }
@@ -1284,9 +1297,8 @@ void nsBayesianFilter::observeMessage(Tokenizer& tokenizer, const char* messageU
                                       nsMsgJunkStatus oldClassification, nsMsgJunkStatus newClassification,
                                       nsIJunkMailClassificationListener* listener)
 {
+    PRUint32 oldNumDirtyingMessages = mNumDirtyingMessages;
     PR_LOG(BayesianFilterLogModule, PR_LOG_ALWAYS, ("observeMessage(%s) old=%d new=%d", messageURL, oldClassification, newClassification));
-
-    PRBool trainingDataWasDirty = mTrainingDataDirty;
     TokenEnumeration tokens = tokenizer.getTokens();
 
     // Uhoh...if the user is re-training then the message may already be classified and we are classifying it again with the same classification.
@@ -1304,7 +1316,7 @@ void nsBayesianFilter::observeMessage(Tokenizer& tokenizer, const char* messageU
         if (mBadCount > 0) {
             --mBadCount;
             forgetTokens(mBadTokens, tokens);
-            mTrainingDataDirty = PR_TRUE;
+            mNumDirtyingMessages++;
         }
         break;
     case nsIJunkMailPlugin::GOOD:
@@ -1312,7 +1324,7 @@ void nsBayesianFilter::observeMessage(Tokenizer& tokenizer, const char* messageU
         if (mGoodCount > 0) {
             --mGoodCount;
             forgetTokens(mGoodTokens, tokens);
-            mTrainingDataDirty = PR_TRUE;
+            mNumDirtyingMessages++;
         }
         break;
     }
@@ -1324,26 +1336,23 @@ void nsBayesianFilter::observeMessage(Tokenizer& tokenizer, const char* messageU
         // put tokens into junk corpus.
         ++mBadCount;
         rememberTokens(mBadTokens, tokens);
-        mTrainingDataDirty = PR_TRUE;
+        mNumDirtyingMessages++;
         break;
     case nsIJunkMailPlugin::GOOD:
         // put tokens into good corpus.
         ++mGoodCount;
         rememberTokens(mGoodTokens, tokens);
-        mTrainingDataDirty = PR_TRUE;
+        mNumDirtyingMessages++;
         break;
     }
     
     if (listener)
         listener->OnMessageClassified(messageURL, newClassification);
     
-    if (mTrainingDataDirty && !trainingDataWasDirty && ( mTimer != nsnull ))
+    if ( (mNumDirtyingMessages > 0) && (oldNumDirtyingMessages == 0) && ( mTimer != nsnull ) )
     {
-        // if training data became dirty just now, schedule flush
-        // mMinFlushInterval msec from now
-        PR_LOG(
-            BayesianFilterLogModule, PR_LOG_ALWAYS,
-            ("starting training data flush timer %i msec", mMinFlushInterval));
+    	// schedule check for need to flush training data in
+    	// mMinFlushInterval msec from now
         mTimer->InitWithFuncCallback(nsBayesianFilter::TimerCallback, this, mMinFlushInterval, nsITimer::TYPE_ONE_SHOT);
     }
 }
@@ -1398,14 +1407,10 @@ static PRBool writeTokens(FILE* stream, Tokenizer& tokenizer)
     return PR_TRUE;
 }
 
-static PRBool readTokens(FILE* stream, Tokenizer& tokenizer, PRInt64 fileSize)
+static PRBool readTokens(FILE* stream, Tokenizer& tokenizer)
 {
     PRUint32 tokenCount;
     if (readUInt32(stream, &tokenCount) != 1)
-        return PR_FALSE;
-
-    PRInt64 fpos = ftell(stream);
-    if (fpos < 0)
         return PR_FALSE;
 
     PRUint32 bufferSize = 4096;
@@ -1419,24 +1424,17 @@ static PRBool readTokens(FILE* stream, Tokenizer& tokenizer, PRInt64 fileSize)
         PRUint32 size;
         if (readUInt32(stream, &size) != 1)
             break;
-        fpos += 8;
-        if (fpos + size > fileSize) {
-            delete[] buffer;
-            return PR_FALSE;
-        }
         if (size >= bufferSize) {
             delete[] buffer;
-            while (size >= bufferSize) {
-                bufferSize *= 2;
-                if (bufferSize == 0)
-                    return PR_FALSE;
-            }
-            buffer = new char[bufferSize];
+            PRUint32 newBufferSize = 2 * bufferSize;
+            while (size >= newBufferSize)
+                newBufferSize *= 2;
+            buffer = new char[newBufferSize];
             if (!buffer) return PR_FALSE;
+            bufferSize = newBufferSize;
         }
         if (fread(buffer, size, 1, stream) != 1)
             break;
-        fpos += size;
         buffer[size] = '\0';
         tokenizer.add(buffer, count);
     }
@@ -1488,7 +1486,7 @@ void nsBayesianFilter::writeTrainingData()
   else 
   {
     fclose(stream);
-    mTrainingDataDirty = PR_FALSE;
+    mNumDirtyingMessages = 0;
   }
 }
 
@@ -1507,19 +1505,14 @@ void nsBayesianFilter::readTrainingData()
   if (NS_FAILED(rv)) 
     return;
 
-  PRInt64 fileSize;
-  rv = mTrainingFile->GetFileSize(&fileSize);
-  if (NS_FAILED(rv)) 
-    return;
-
   // FIXME:  should make sure that the tokenizers are empty.
   char cookie[4];
   if (!((fread(cookie, sizeof(cookie), 1, stream) == 1) &&
         (memcmp(cookie, kMagicCookie, sizeof(cookie)) == 0) &&
         (readUInt32(stream, &mGoodCount) == 1) &&
         (readUInt32(stream, &mBadCount) == 1) &&
-         readTokens(stream, mGoodTokens, fileSize) &&
-         readTokens(stream, mBadTokens, fileSize))) {
+         readTokens(stream, mGoodTokens) &&
+         readTokens(stream, mBadTokens))) {
       NS_WARNING("failed to read training data.");
       PR_LOG(BayesianFilterLogModule, PR_LOG_ALWAYS, ("failed to read training data."));
   }

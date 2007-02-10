@@ -237,6 +237,7 @@ void AECoreClass::HandleCoreSuiteEvent(const AppleEvent *appleEvent, AppleEvent 
 	err = ::AEGetKeyDesc(appleEvent, keyDirectObject, typeWildCard, &directParameter);
 	ThrowIfOSErr(err);
 
+	DescType	tokenType		= typeNull;
 	DescType	dispatchClass  	= typeNull;
 	
 	// check for null descriptor, which AEResolve doesn't handle well
@@ -346,16 +347,16 @@ void AECoreClass::HandleCoreSuiteEvent(const AppleEvent *appleEvent, AppleEvent 
 	// why is this special-cased?
 	if (dispatchClass == cFile)
 	{
-		AEEventID eventID	= 0;
-		OSType  typeCode 	= 0;
-		Size   actualSize	= 0;
+		AEEventID		eventID	= 0;
+		OSType		typeCode 	= 0;
+		Size			actualSize	= 0;
 		
-		AEGetAttributePtr(appleEvent, keyEventIDAttr,
-                      typeType,
-                      &typeCode,
-                      (Ptr)&eventID, // Get the eventID from the AppleEvent
-                      sizeof(eventID),
-                      &actualSize);
+		OSErr		eventError = AEGetAttributePtr(appleEvent, 	keyEventIDAttr, 
+														typeType, 
+														&typeCode, 
+														(Ptr)&eventID, 	// Get the eventID from the AppleEvent
+														sizeof(eventID), 
+														&actualSize);										  
 	}
 
 

@@ -57,13 +57,9 @@ function isMsgEmailScam(aUrl)
     return isEmailScam;
 
   // Ignore nntp and RSS messages
-  // nsIMsgMailNewsUrl.folder can throw an error, especially if we are opening
-  // a .eml message.
-  try {
-    var serverType = aUrl.folder.server.type;
-    if (serverType == 'nntp' || serverType == 'rss')
-      return isEmailScam;
-  } catch (ex) {}
+  var folder = aUrl.folder;
+  if (folder.server.type == 'nntp' || folder.server.type == 'rss')
+    return isEmailScam;
 
   // loop through all of the link nodes in the message's DOM, looking for phishing URLs...
   var msgDocument = document.getElementById('messagepane').contentDocument;

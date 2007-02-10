@@ -54,14 +54,12 @@
  * */
 
 #include "nsISupports.h"
-#include "nsStringGlue.h"
+#include "nsString.h"
 #include "prtypes.h"
 #include "nsITokenizer.h"
 
 #define NS_IDTD_IID \
-{ 0xcc374204, 0xcea2, 0x41a2, \
-  { 0xb2, 0x7f, 0x83, 0x75, 0xe2, 0xcf, 0x97, 0xcf } }
-
+ { 0xa6cf9053, 0x15b3, 0x11d2,{0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32}}
 
 enum eAutoDetectResult {
     eUnknownDetect,
@@ -90,7 +88,31 @@ class nsIDTD : public nsISupports
 {
 public:
 
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IDTD_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDTD_IID)
+
+
+    NS_IMETHOD_(const nsIID&) GetMostDerivedIID(void) const = 0;
+
+    /**
+     * Call this method if you want the DTD to construct a clone of itself.
+     * @update  gess7/23/98
+     * @param
+     * @return
+     */
+    NS_IMETHOD CreateNewInstance(nsIDTD** aInstancePtrResult) = 0;
+
+    /**
+     * This method is called to determine if the given DTD can parse
+     * a document in a given source-type.
+     * NOTE: Parsing always assumes that the end result will involve
+     *       storing the result in the main content model.
+     * @param aParserContext -- the context for this document (knows
+     *           the content type, document type, parser command, etc).
+     * @return eUnknownDetect if you don't know how to parse it,
+     *         eValidDetect if you do, but someone may have a better idea,
+     *         ePrimaryDetect if you think you know best
+     */
+    NS_IMETHOD_(eAutoDetectResult) CanParse(CParserContext& aParserContext) = 0;
 
     NS_IMETHOD WillBuildModel(const CParserContext& aParserContext,
                               nsITokenizer* aTokenizer,
@@ -178,11 +200,14 @@ public:
     NS_IMETHOD_(void) Terminate() = 0;
 
     NS_IMETHOD_(PRInt32) GetType() = 0;
+
+    NS_IMETHOD CollectSkippedContent(PRInt32 aTag, nsAString& aContent, PRInt32 &aLineNo) = 0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDTD, NS_IDTD_IID)
-
 #define NS_DECL_NSIDTD \
+    NS_IMETHOD_(const nsIID&)  GetMostDerivedIID(void) const;\
+    NS_IMETHOD CreateNewInstance(nsIDTD** aInstancePtrResult);\
+    NS_IMETHOD_(eAutoDetectResult) CanParse(CParserContext& aParserContext);\
     NS_IMETHOD WillBuildModel(  const CParserContext& aParserContext, nsITokenizer* aTokenizer, nsIContentSink* aSink);\
     NS_IMETHOD DidBuildModel(nsresult anErrorCode,PRBool aNotifySink,nsIParser* aParser,nsIContentSink* aSink);\
     NS_IMETHOD BuildModel(nsIParser* aParser,nsITokenizer* aTokenizer,nsITokenObserver* anObserver,nsIContentSink* aSink);\
@@ -191,6 +216,7 @@ NS_DEFINE_STATIC_IID_ACCESSOR(nsIDTD, NS_IDTD_IID)
     NS_IMETHOD WillInterruptParse(nsIContentSink* aSink = 0);\
     NS_IMETHOD_(PRBool) CanContain(PRInt32 aParent,PRInt32 aChild) const;\
     NS_IMETHOD_(PRBool) IsContainer(PRInt32 aTag) const;\
+    NS_IMETHOD CollectSkippedContent(PRInt32 aTag, nsAString& aContent, PRInt32 &aLineNo);\
     NS_IMETHOD_(void)  Terminate();\
     NS_IMETHOD_(PRInt32) GetType();
 #endif /* nsIDTD_h___ */

@@ -40,6 +40,7 @@
 
 #include "nsCOMPtr.h"
 #include "nsHTMLContainerFrame.h"
+#include "nsFormControlHelper.h"
 #include "nsIFormControlFrame.h"
 #include "nsHTMLParts.h"
 
@@ -59,21 +60,19 @@ class nsHTMLButtonControlFrame : public nsHTMLContainerFrame,
                                  public nsIFormControlFrame 
 {
 public:
-  nsHTMLButtonControlFrame(nsStyleContext* aContext);
+  nsHTMLButtonControlFrame();
   ~nsHTMLButtonControlFrame();
 
 
-  virtual void Destroy();
+  NS_IMETHOD  Destroy(nsPresContext *aPresContext);
 
   NS_IMETHOD  QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
-
-  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
-
-  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
 
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
@@ -86,8 +85,16 @@ public:
                          nsGUIEvent* aEvent,
                          nsEventStatus* aEventStatus);
 
-  NS_IMETHOD  Init(nsIContent*      aContent,
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint, nsFramePaintLayer aWhichLayer, nsIFrame** aFrame);
+
+  NS_IMETHOD SetInitialChildList(nsPresContext* aPresContext,
+                                 nsIAtom*        aListName,
+                                 nsIFrame*       aChildList);
+
+  NS_IMETHOD  Init(nsPresContext*  aPresContext,
+                   nsIContent*      aContent,
                    nsIFrame*        aParent,
+                   nsStyleContext*  aContext,
                    nsIFrame*        asPrevInFlow);
 
   virtual nsStyleContext* GetAdditionalStyleContext(PRInt32 aIndex) const;
@@ -104,45 +111,72 @@ public:
   NS_IMETHOD RemoveFrame(nsIAtom*        aListName,
                          nsIFrame*       aOldFrame);
 
+  NS_IMETHOD ReplaceFrame(nsIAtom*        aListName,
+                          nsIFrame*       aOldFrame,
+                          nsIFrame*       aNewFrame);
+
 #ifdef ACCESSIBILITY
   NS_IMETHOD GetAccessible(nsIAccessible** aAccessible);
 #endif
 
-  virtual nsIAtom* GetType() const;
-  
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const {
-    return MakeFrameName(NS_LITERAL_STRING("HTMLButtonControl"), aResult);
+    return MakeFrameName(NS_LITERAL_STRING("ButtonControl"), aResult);
   }
 #endif
 
-  // nsIFormControlFrame
+  NS_IMETHOD_(PRInt32) GetFormControlType() const;
+  NS_IMETHOD GetName(nsAString* aName);
+  NS_IMETHOD GetValue(nsAString* aName);
+  NS_IMETHOD OnContentReset();
+
   void SetFocus(PRBool aOn, PRBool aRepaint);
-  virtual nsresult SetFormProperty(nsIAtom* aName, const nsAString& aValue);
-  virtual nsresult GetFormProperty(nsIAtom* aName, nsAString& aValue) const; 
+  void ScrollIntoView(nsPresContext* aPresContext);
+
+  NS_IMETHOD GetFormContent(nsIContent*& aContent) const;
+  virtual nscoord GetVerticalInsidePadding(nsPresContext* aPresContext,
+                                           float aPixToTwip,
+                                           nscoord aInnerHeight) const;
+  virtual nscoord GetHorizontalInsidePadding(nsPresContext* aPresContext,
+                                             float aPixToTwip, 
+                                             nscoord aInnerWidth,
+                                             nscoord aCharWidth) const;
+
+  // nsIFormControlFrame
+  NS_IMETHOD SetProperty(nsPresContext* aPresContext, nsIAtom* aName, const nsAString& aValue);
+  NS_IMETHOD GetProperty(nsIAtom* aName, nsAString& aValue); 
+  NS_IMETHOD SetSuggestedSize(nscoord aWidth, nscoord aHeight);
 
   // Inserted child content gets its frames parented by our child block
   virtual nsIFrame* GetContentInsertionFrame() {
     return GetFirstChild(nsnull)->GetContentInsertionFrame();
   }
 
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
-
 protected:
+  void ReParentFrameList(nsFrameManager* aFrameManager, nsIFrame* aFrameList);
   virtual PRBool IsReset(PRInt32 type);
   virtual PRBool IsSubmit(PRInt32 type);
   void ReflowButtonContents(nsPresContext* aPresContext,
                             nsHTMLReflowMetrics& aDesiredSize,
                             const nsHTMLReflowState& aReflowState,
                             nsIFrame* aFirstKid,
+                            const nsSize& aAvailSize,
+                            nsReflowReason aReason,
                             nsMargin aFocusPadding,
                             nsReflowStatus& aStatus);
-
+  NS_IMETHOD AddComputedBorderPaddingToDesiredSize(nsHTMLReflowMetrics& aDesiredSize,
+                                                   const nsHTMLReflowState& aSuggestedReflowState);
   NS_IMETHOD_(nsrefcnt) AddRef(void);
   NS_IMETHOD_(nsrefcnt) Release(void);
 
   PRIntn GetSkipSides() const;
+  PRBool mInline;
   nsButtonFrameRenderer mRenderer;
+
+  //Resize Reflow OpitmizationSize;
+  nsSize                mCacheSize;
+  nscoord               mCachedAscent;
+  nscoord               mCachedMaxElementWidth;
 };
 
 #endif

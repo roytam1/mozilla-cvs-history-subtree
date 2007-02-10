@@ -14,14 +14,21 @@ bin/.autoreg
 ;
 ; en-US
 bin/chrome/en-US.jar
-bin/defaults/profile/en-US/*
-bin/defaults/messenger/en-US/*
-bin/defaults/isp/en-US/movemail.rdf
+bin/chrome/en-unix.jar
+bin/chrome/en-win.jar
+
+[regus]
+;
+; US
+bin/chrome/US.jar
+bin/defaults/profile/US/*
+bin/defaults/messenger/US/*
+bin/defaults/isp/US/movemail.rdf
 bin/searchplugins/*
 
 [deflenus]
 ;
-; default files for en-US
+; default files for US
 bin/defaults/profile/bookmarks.html
 bin/defaults/profile/panels.rdf
 bin/defaults/profile/localstore.rdf
@@ -69,6 +76,7 @@ bin/liblber50.so
 
 bin/components/alerts.xpt
 bin/components/accessibility.xpt
+bin/components/accessibility-atk.xpt
 bin/components/bookmarks.xpt
 bin/components/directory.xpt
 bin/components/downloadmanager.xpt
@@ -78,7 +86,6 @@ bin/components/search.xpt
 bin/components/autocomplete.xpt   
 bin/components/appshell.xpt
 bin/components/caps.xpt
-bin/components/nsBrowserContentHandler.js
 bin/components/cookie.xpt
 bin/components/jsdservice.xpt
 bin/components/libjsd.so
@@ -92,7 +99,6 @@ bin/components/dom_loadsave.xpt
 bin/components/dom_html.xpt
 bin/components/dom_range.xpt
 bin/components/dom_sidebar.xpt
-bin/components/dom_storage.xpt
 bin/components/dom_stylesheets.xpt
 bin/components/dom_traversal.xpt
 bin/components/dom_views.xpt
@@ -128,6 +134,7 @@ bin/components/mimetype.xpt
 bin/components/necko_cache.xpt
 bin/components/necko_strconv.xpt
 bin/components/necko_about.xpt
+bin/components/necko_data.xpt
 bin/components/necko_dns.xpt
 bin/components/necko_ftp.xpt
 bin/components/necko_http.xpt
@@ -182,6 +189,7 @@ bin/components/embed_base.xpt
 bin/components/commandhandler.xpt
 bin/components/webbrowserpersist.xpt
 bin/components/windowwatcher.xpt
+bin/components/xmlextras.xpt
 bin/components/nsHelperAppDlg.js
 bin/components/helperAppDlg.xpt
 bin/components/nsProgressDialog.js
@@ -189,7 +197,7 @@ bin/components/progressDlg.xpt
 bin/components/nsDownloadProgressListener.js
 bin/components/filepicker.xpt
 bin/components/mozldap.xpt
-bin/components/suitetypeaheadfind.xpt
+bin/components/typeaheadfind.xpt
 bin/components/nsCloseAllWindows.js
 bin/components/extensions.xpt
 bin/components/nsExtensionManager.js
@@ -201,11 +209,11 @@ bin/components/nsUpdateNotifier.js
 bin/components/plugin.xpt
 bin/components/prefetch.xpt
 bin/copmonents/imgicon.xpt
-bin/components/txEXSLTRegExFunctions.js
 
 bin/chrome/help.jar
 bin/chrome/toolkit.jar
 bin/chrome/comm.jar
+bin/chrome/content-packs.jar
 bin/chrome/modern.jar
 bin/chrome/classic.jar
 bin/chrome/installed-chrome.txt
@@ -283,7 +291,6 @@ bin/res/rdf/loading.gif
 bin/res/html/*
 bin/res/fonts/*
 bin/res/dtd/*
-bin/res/effective_tld_names.dat
 
 ; p3p
 bin/components/p3p.xpt

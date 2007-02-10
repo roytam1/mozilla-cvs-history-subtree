@@ -12,7 +12,7 @@
  * Richard Henderson makes no representations about the suitability of this
  * software for any purpose.  It is provided "as is" without express
  * or implied warranty.
- *
+ * 
  * RICHARD HENDERSON DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
  * INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN
  * NO EVENT SHALL RICHARD HENDERSON BE LIABLE FOR ANY SPECIAL, INDIRECT OR
@@ -27,12 +27,10 @@
 #ifndef _SLIM_INTERNAL_H_
 #define _SLIM_INTERNAL_H_ 1
 
-/* XXX THIS DOCUMENTATION IS BLOODY WRONG. SOMEONE DID NOT ACTUALLY
-       CONSULT WITH THE COMPILERS THEY CLAIMED TO SUPPORT */
 /* This macro marks a symbol as STV_HIDDEN, which prevents it from being
    added to the dynamic symbol table of the shared library.  This prevents
    users of the library from knowingly or unknowingly accessing library
-   internals that may change in future releases.  It also allows the
+   internals that may change in future releases.  It also allows the 
    compiler to generate slightly more efficient code in some cases.
 
    The macro should be placed either immediately before the return type in
@@ -42,8 +40,7 @@
 	somefunction(void);
 
    or after a data name,
-    XXX THIS IS WRONG. YOU CAN NOT DO THIS WITH THE COMPILERS THAT
-        THIS PACKAGE CLAIMS TO SUPPORT.
+
 	extern int somedata pixman_private;
 
    The ELF visibility attribute did not exist before gcc 3.3.  */
@@ -52,9 +49,7 @@
 
 #if (__GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3)) && defined(__ELF__)
 #define pixman_private	__attribute__((__visibility__("hidden")))
-#elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x550)
-#define pixman_private	__hidden
-#else /* not gcc >= 3.3 and not Sun Studio >= 8 */
+#else
 #define pixman_private
 #endif
 
@@ -83,9 +78,8 @@
    level.  */
 
 #if __GNUC__ >= 3 && defined(__ELF__)
-# define slim_hidden_proto(name)	slim_hidden_proto1(name, slim_hidden_int_name(name))
-# define slim_hidden_def(name)		slim_hidden_def1(name, slim_hidden_int_name(name))
-# define slim_hidden_int_name(name) INT_##name
+# define slim_hidden_proto(name)	slim_hidden_proto1(name, INT_##name)
+# define slim_hidden_def(name)		slim_hidden_def1(name, INT_##name)
 # define slim_hidden_proto1(name, internal)				\
   extern __typeof (name) name						\
 	__asm__ (slim_hidden_asmname (internal))			\

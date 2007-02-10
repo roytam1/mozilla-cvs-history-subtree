@@ -21,7 +21,6 @@
  * Contributor(s):
  *   Ben Goodger <ben@mozilla.org> (Original Author)
  *   Asaf Romano <mozilla.mano@sent.com>
- *   Benjamin Smedberg <benjamin@smedbergs.us>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -53,15 +52,13 @@
 #include "nsMacShellService.h"
 #include "nsNetUtil.h"
 #include "nsShellService.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <Carbon/Carbon.h>
 
 #define NETWORK_PREFPANE NS_LITERAL_CSTRING("/System/Library/PreferencePanes/Network.prefPane")
 #define DESKTOP_PREFPANE NS_LITERAL_CSTRING("/System/Library/PreferencePanes/DesktopScreenEffectsPref.prefPane")
-
-#define SAFARI_BUNDLE_IDENTIFIER NS_LITERAL_CSTRING("com.apple.Safari")
 
 // These Launch Services functions are undocumented. We're using them since they're
 // the only way to set the default opener for URLs / file extensions.
@@ -80,7 +77,7 @@ extern "C" {
                                            const FSRef* inBindingRef);
 }
 
-NS_IMPL_ISUPPORTS3(nsMacShellService, nsIMacShellService, nsIShellService, nsIWebProgressListener)
+NS_IMPL_ISUPPORTS4(nsMacShellService, nsIMacShellService, nsIShellService, nsIWebProgressListener, nsIShellService_MOZILLA_1_8_BRANCH)
 
 NS_IMETHODIMP
 nsMacShellService::IsDefaultBrowser(PRBool aStartupCheck, PRBool* aIsDefaultBrowser)
@@ -471,7 +468,7 @@ nsMacShellService::OpenApplicationWithURI(nsILocalFile* aApplication, const nsAC
   if (NS_FAILED(rv))
     return rv;
   
-  const nsCString spec(aURI);
+  const nsPromiseFlatCString& spec = PromiseFlatCString(aURI);
   const UInt8* uriString = (const UInt8*)spec.get();
   CFURLRef uri = ::CFURLCreateWithBytes(NULL, uriString, aURI.Length(),
                                         kCFStringEncodingUTF8, NULL);
@@ -499,36 +496,3 @@ nsMacShellService::OpenApplicationWithURI(nsILocalFile* aApplication, const nsAC
   return err != noErr ? NS_ERROR_FAILURE : NS_OK;
 }
 
-NS_IMETHODIMP
-nsMacShellService::GetDefaultFeedReader(nsILocalFile** _retval)
-{
-  nsresult rv = NS_ERROR_FAILURE;
-  *_retval = nsnull;
-
-  CFURLRef defaultHandlerURL;
-  OSStatus err = ::_LSCopyDefaultSchemeHandlerURL(CFSTR("feed"),
-                                                  &defaultHandlerURL);
-  if (defaultHandlerURL) {
-    nsCOMPtr<nsILocalFileMac> defaultReader =
-      do_CreateInstance("@mozilla.org/file/local;1", &rv);
-    if (NS_SUCCEEDED(rv)) {
-      rv = defaultReader->InitWithCFURL(defaultHandlerURL);
-      if (NS_SUCCEEDED(rv)) {
-        // ASSERT("Safari Is Not a Feed Reader");
-        nsCAutoString bundleIdentifier;
-
-        // don't throw if the bundle has no identifier
-        rv = NS_ERROR_FAILURE;
-        if (NS_FAILED(defaultReader->GetBundleIdentifier(bundleIdentifier)) ||
-            !bundleIdentifier.Equals(SAFARI_BUNDLE_IDENTIFIER)) {
-          NS_ADDREF(*_retval = defaultReader);
-          rv = NS_OK;
-        }
-      }
-    }
-
-    ::CFRelease(defaultHandlerURL);
-  }
-
-  return rv;
-}

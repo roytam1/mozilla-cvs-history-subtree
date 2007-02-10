@@ -43,10 +43,9 @@
 #include "nsIDOMXULDocument.h"
 #include "nsIDOMXULElement.h"
 #include "nsIDocument.h"
-#include "nsGkAtoms.h"
+#include "nsXULAtoms.h"
 #include "nsIPresShell.h"
 #include "nsIFrame.h"
-#include "nsIMenuFrame.h"
 #include "nsIPopupBoxObject.h"
 #include "nsIServiceManager.h"
 #ifdef MOZ_XUL
@@ -57,9 +56,9 @@
 #include "nsIPrivateDOMEvent.h"
 #include "nsPresContext.h"
 #include "nsIScriptContext.h"
-#include "nsPIDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsContentUtils.h"
-#include "nsIRootBox.h"
 
 //////////////////////////////////////////////////////////////////////////
 //// nsISupports
@@ -144,7 +143,7 @@ nsXULTooltipListener::MouseOut(nsIDOMEvent* aMouseEvent)
     nsCOMPtr<nsIDOMNode> targetNode(do_QueryInterface(eventTarget));
 
     // which node is our tooltip on?
-    nsCOMPtr<nsIDOMXULDocument> xulDoc(do_QueryInterface(mCurrentTooltip->GetDocument()));
+    nsCOMPtr<nsIDOMXULDocument2> xulDoc(do_QueryInterface(mCurrentTooltip->GetDocument()));
     if (!xulDoc)     // remotely possible someone could have 
       return NS_OK;  // removed tooltip from dom while it was open
     nsCOMPtr<nsIDOMNode> tooltipNode;
@@ -275,15 +274,16 @@ PRBool nsXULTooltipListener::sShowTooltips = PR_FALSE;
 
 // XXX: This could all be done in the ctor.
 nsresult
-nsXULTooltipListener::Init(nsIContent* aSourceNode)
+nsXULTooltipListener::Init(nsIContent* aSourceNode, nsIRootBox* aRootBox)
 {
+  mRootBox = aRootBox;
   mSourceNode = aSourceNode;
   AddTooltipSupport(aSourceNode);
   
 #ifdef MOZ_XUL
   // if the target is an treechildren, we may have some special
   // case handling to do
-  mIsSourceTree = mSourceNode->Tag() == nsGkAtoms::treechildren;
+  mIsSourceTree = mSourceNode->Tag() == nsXULAtoms::treechildren;
 #endif
 
   // get the initial value of the pref
@@ -304,8 +304,8 @@ nsXULTooltipListener::AddTooltipSupport(nsIContent* aNode)
     return NS_ERROR_NULL_POINTER;
 
   nsCOMPtr<nsIDOMEventTarget> evtTarget(do_QueryInterface(aNode));
-  evtTarget->AddEventListener(NS_LITERAL_STRING("mouseout"), (nsIDOMMouseListener*)this, PR_TRUE);
-  evtTarget->AddEventListener(NS_LITERAL_STRING("mousemove"), (nsIDOMMouseListener*)this, PR_TRUE);
+  evtTarget->AddEventListener(NS_LITERAL_STRING("mouseout"), (nsIDOMMouseListener*)this, PR_FALSE);
+  evtTarget->AddEventListener(NS_LITERAL_STRING("mousemove"), (nsIDOMMouseListener*)this, PR_FALSE);
   
   return NS_OK;
 }
@@ -317,8 +317,8 @@ nsXULTooltipListener::RemoveTooltipSupport(nsIContent* aNode)
     return NS_ERROR_NULL_POINTER;
 
   nsCOMPtr<nsIDOMEventTarget> evtTarget(do_QueryInterface(aNode));
-  evtTarget->RemoveEventListener(NS_LITERAL_STRING("mouseout"), (nsIDOMMouseListener*)this, PR_TRUE);
-  evtTarget->RemoveEventListener(NS_LITERAL_STRING("mousemove"), (nsIDOMMouseListener*)this, PR_TRUE);
+  evtTarget->RemoveEventListener(NS_LITERAL_STRING("mouseout"), (nsIDOMMouseListener*)this, PR_FALSE);
+  evtTarget->RemoveEventListener(NS_LITERAL_STRING("mousemove"), (nsIDOMMouseListener*)this, PR_FALSE);
 
   return NS_OK;
 }
@@ -474,7 +474,7 @@ SetTitletipLabel(nsITreeBoxObject* aTreeBox, nsIContent* aTooltip,
   nsAutoString label;
   view->GetCellText(aRow, aCol, label);
   
-  aTooltip->SetAttr(nsnull, nsGkAtoms::label, label, PR_TRUE);
+  aTooltip->SetAttr(nsnull, nsXULAtoms::label, label, PR_TRUE);
 }
 #endif
 
@@ -506,9 +506,9 @@ nsXULTooltipListener::LaunchTooltip(nsIContent* aTarget, PRInt32 aX, PRInt32 aY)
 #endif
 
       SetTitletipLabel(obx, mCurrentTooltip, mLastTreeRow, mLastTreeCol);
-      mCurrentTooltip->SetAttr(nsnull, nsGkAtoms::titletip, NS_LITERAL_STRING("true"), PR_TRUE);
+      mCurrentTooltip->SetAttr(nsnull, nsXULAtoms::titletip, NS_LITERAL_STRING("true"), PR_TRUE);
     } else
-      mCurrentTooltip->UnsetAttr(nsnull, nsGkAtoms::titletip, PR_TRUE);
+      mCurrentTooltip->UnsetAttr(nsnull, nsXULAtoms::titletip, PR_TRUE);
 #endif
 
     nsCOMPtr<nsIDOMElement> targetEl(do_QueryInterface(aTarget));
@@ -558,110 +558,86 @@ GetImmediateChild(nsIContent* aContent, nsIAtom *aTag, nsIContent** aResult)
 }
 
 nsresult
-nsXULTooltipListener::FindTooltip(nsIContent* aTarget, nsIContent** aTooltip)
+nsXULTooltipListener::GetTooltipFor(nsIContent* aTarget, nsIContent** aTooltip)
 {
   if (!aTarget)
     return NS_ERROR_NULL_POINTER;
 
+  nsCOMPtr<nsIDOMElement> targetEl(do_QueryInterface(aTarget));
+  if (!targetEl)
+    return NS_ERROR_FAILURE; // could be a text node or something
+
   // before we go on, make sure that target node still has a window
   nsCOMPtr<nsIDocument> document = aTarget->GetDocument();
   if (!document) {
-    NS_WARNING("Unable to retrieve the tooltip node document.");
+    NS_ERROR("Unable to retrieve the tooltip node document.");
     return NS_ERROR_FAILURE;
   }
-  nsCOMPtr<nsPIDOMWindow> window = document->GetWindow();
-  if (!window) {
-    return NS_OK;
-  }
+  nsIScriptGlobalObject *global = document->GetScriptGlobalObject();
+  if (global) {
+    nsIScriptContext *context = global->GetContext();
 
-  PRBool closed;
-  window->GetClosed(&closed);
+    if (context) {
+      nsCOMPtr<nsIDOMWindowInternal> domWindow = do_QueryInterface(global);
+      if (!domWindow)
+        return NS_ERROR_FAILURE;
+      else {
+        PRBool needTooltip;
+        targetEl->HasAttribute(NS_LITERAL_STRING("tooltiptext"), &needTooltip);
+        if (needTooltip) {
+          // specifying tooltiptext means we will always use the default tooltip
+           mRootBox->GetDefaultTooltip(aTooltip);
+           NS_IF_ADDREF(*aTooltip);
+           return NS_OK;
+        } else {
+          nsAutoString tooltipId;
+          targetEl->GetAttribute(NS_LITERAL_STRING("tooltip"), tooltipId);
 
-  if (closed) {
-    return NS_OK;
-  }
+          // if tooltip == _child, look for first <tooltip> child
+          if (tooltipId.EqualsLiteral("_child")) {
+            GetImmediateChild(aTarget, nsXULAtoms::tooltip, aTooltip);
+            return NS_OK;
+          } else {
+            if (!tooltipId.IsEmpty()) {
+              // tooltip must be an id, use getElementById to find it
+              nsCOMPtr<nsIDOMDocument> domDocument =
+                do_QueryInterface(document);
+              if (!domDocument) {
+                return NS_ERROR_FAILURE;
+              }
 
-  nsAutoString tooltipText;
-  aTarget->GetAttr(kNameSpaceID_None, nsGkAtoms::tooltiptext, tooltipText);
-  if (!tooltipText.IsEmpty()) {
-    // specifying tooltiptext means we will always use the default tooltip
-    nsIRootBox* rootBox = nsIRootBox::GetRootBox(document->GetShellAt(0));
-    NS_ENSURE_STATE(rootBox);
-    *aTooltip = rootBox->GetDefaultTooltip();
-    if (*aTooltip) {
-      NS_ADDREF(*aTooltip);
-      (*aTooltip)->SetAttr(kNameSpaceID_None, nsGkAtoms::label, tooltipText, PR_TRUE);
-    }
-    return NS_OK;
-  }
+              nsCOMPtr<nsIDOMElement> tooltipEl;
+              domDocument->GetElementById(tooltipId,
+                                          getter_AddRefs(tooltipEl));
 
-  nsAutoString tooltipId;
-  aTarget->GetAttr(kNameSpaceID_None, nsGkAtoms::tooltip, tooltipId);
-
-  // if tooltip == _child, look for first <tooltip> child
-  if (tooltipId.EqualsLiteral("_child")) {
-    GetImmediateChild(aTarget, nsGkAtoms::tooltip, aTooltip);
-    return NS_OK;
-  }
-
-  if (!tooltipId.IsEmpty()) {
-    // tooltip must be an id, use getElementById to find it
-    nsCOMPtr<nsIDOMDocument> domDocument =
-      do_QueryInterface(document);
-    if (!domDocument) {
-      return NS_ERROR_FAILURE;
-    }
-
-    nsCOMPtr<nsIDOMElement> tooltipEl;
-    domDocument->GetElementById(tooltipId, getter_AddRefs(tooltipEl));
-
-    if (tooltipEl) {
+              if (tooltipEl) {
 #ifdef MOZ_XUL
-      mNeedTitletip = PR_FALSE;
+                mNeedTitletip = PR_FALSE;
 #endif
-      CallQueryInterface(tooltipEl, aTooltip);
-      return NS_OK;
-    }
-  }
+
+                nsCOMPtr<nsIContent> tooltipContent(do_QueryInterface(tooltipEl));
+                *aTooltip = tooltipContent;
+                NS_IF_ADDREF(*aTooltip);
+
+                return NS_OK;
+              }
+            }
+          }
+        }
 
 #ifdef MOZ_XUL
-  // titletips should just use the default tooltip
-  if (mIsSourceTree && mNeedTitletip) {
-    nsIRootBox* rootBox = nsIRootBox::GetRootBox(document->GetShellAt(0));
-    NS_ENSURE_STATE(rootBox);
-    NS_IF_ADDREF(*aTooltip = rootBox->GetDefaultTooltip());
-  }
+        // titletips should just use the default tooltip
+        if (mIsSourceTree && mNeedTitletip) {
+          mRootBox->GetDefaultTooltip(aTooltip);
+          NS_IF_ADDREF(*aTooltip);
+          return NS_OK;
+        }
 #endif
+      }
+    }
+  }
 
   return NS_OK;
-}
-
-
-nsresult
-nsXULTooltipListener::GetTooltipFor(nsIContent* aTarget, nsIContent** aTooltip)
-{
-  *aTooltip = nsnull;
-  nsCOMPtr<nsIContent> tooltip;
-  nsresult rv = FindTooltip(aTarget, getter_AddRefs(tooltip));
-  if (NS_FAILED(rv) || !tooltip) {
-    return rv;
-  }
-
-  // Submenus can't be used as tooltips, see bug 288763.
-  nsIContent* parent = tooltip->GetParent();
-  if (parent) {
-    nsIDocument* doc = parent->GetCurrentDoc();
-    nsIPresShell* presShell = doc ? doc->GetShellAt(0) : nsnull;
-    nsIFrame* frame = presShell ? presShell->GetPrimaryFrameFor(parent) : nsnull;
-    if (frame) {
-      nsIMenuFrame* menu = nsnull;
-      CallQueryInterface(frame, &menu);
-      NS_ENSURE_FALSE(menu, NS_ERROR_FAILURE);
-    }
-  }
-
-  tooltip.swap(*aTooltip);
-  return rv;
 }
 
 nsresult

@@ -39,7 +39,7 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
 #include "nsILink.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsIDOMStyleSheet.h"
@@ -56,8 +56,8 @@
 #include "nsIDOMDocumentEvent.h"
 #include "nsIDOMEventTarget.h"
 #include "nsParserUtils.h"
-#include "nsContentUtils.h"
 #include "nsPIDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
 
 class nsHTMLLinkElement : public nsGenericHTMLElement,
                           public nsIDOMHTMLLinkElement,
@@ -72,7 +72,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -107,11 +107,10 @@ public:
   virtual nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                              PRBool aNotify);
 
-  virtual nsresult PostHandleEvent(nsEventChainPostVisitor& aVisitor);
-  virtual PRBool IsLink(nsIURI** aURI) const;
-  virtual void GetLinkTarget(nsAString& aTarget);
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
+  virtual nsresult HandleDOMEvent(nsPresContext* aPresContext,
+                                  nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                                  PRUint32 aFlags,
+                                  nsEventStatus* aEventStatus);
 
 protected:
   virtual void GetStyleSheetURL(PRBool* aIsInline,
@@ -154,7 +153,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLLinkElement, nsGenericHTMLElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLLinkElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLLinkElement)
 
 
 NS_IMETHODIMP
@@ -257,24 +256,37 @@ nsHTMLLinkElement::CreateAndDispatchEvent(nsIDocument* aDoc,
   if (!aDoc)
     return;
 
+  nsAutoString rel;
+  nsAutoString rev;
+  GetAttr(kNameSpaceID_None, nsHTMLAtoms::rel, rel);
+  GetAttr(kNameSpaceID_None, nsHTMLAtoms::rev, rev);
+
   // In the unlikely case that both rev is specified *and* rel=stylesheet,
   // this code will cause the event to fire, on the principle that maybe the
   // page really does want to specify that it's author is a stylesheet. Since
   // this should never actually happen and the performance hit is minimal,
   // doing the "right" thing costs virtually nothing here, even if it doesn't
   // make much sense.
-  static nsIContent::AttrValuesArray strings[] =
-    {&nsGkAtoms::_empty, &nsGkAtoms::stylesheet, nsnull};
-
-  if (!nsContentUtils::HasNonEmptyAttr(this, kNameSpaceID_None,
-                                       nsGkAtoms::rev) &&
-      FindAttrValueIn(kNameSpaceID_None, nsGkAtoms::rel,
-                      strings, eIgnoreCase) != ATTR_VALUE_NO_MATCH)
+  if (rev.IsEmpty() &&
+      (rel.IsEmpty() || rel.LowerCaseEqualsLiteral("stylesheet")))
     return;
 
-  nsContentUtils::DispatchTrustedEvent(aDoc,
-                                       NS_STATIC_CAST(nsIContent*, this),
-                                       aEventName, PR_TRUE, PR_TRUE);
+  nsCOMPtr<nsIDOMDocumentEvent> docEvent(do_QueryInterface(aDoc));
+  nsCOMPtr<nsIDOMEvent> event;
+  docEvent->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
+  if (event) {
+    event->InitEvent(aEventName, PR_TRUE, PR_TRUE);
+    nsCOMPtr<nsIDOMEventTarget> target =
+      do_QueryInterface(NS_STATIC_CAST(nsIDOMNode*, this));
+    if (target) {
+      nsCOMPtr<nsIPrivateDOMEvent> privEvent(do_QueryInterface(event));
+      if (privEvent) {
+        privEvent->SetTrusted(PR_TRUE);
+      }
+      PRBool defaultActionEnabled;
+      target->DispatchEvent(event, &defaultActionEnabled);
+    }
+  }
 }
 
 nsresult
@@ -282,7 +294,7 @@ nsHTMLLinkElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                            nsIAtom* aPrefix, const nsAString& aValue,
                            PRBool aNotify)
 {
-  if (aName == nsGkAtoms::href && kNameSpaceID_None == aNameSpaceID) {
+  if (aName == nsHTMLAtoms::href && kNameSpaceID_None == aNameSpaceID) {
     nsIDocument* doc = GetCurrentDoc();
     if (doc) {
       doc->ForgetLink(this);
@@ -296,12 +308,7 @@ nsHTMLLinkElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   nsresult rv = nsGenericHTMLElement::SetAttr(aNameSpaceID, aName, aPrefix,
                                               aValue, aNotify);
   if (NS_SUCCEEDED(rv)) {
-    UpdateStyleSheet(nsnull, nsnull,
-                     aNameSpaceID == kNameSpaceID_None &&
-                     (aName == nsGkAtoms::rel ||
-                      aName == nsGkAtoms::title ||
-                      aName == nsGkAtoms::media ||
-                      aName == nsGkAtoms::type));
+    UpdateStyleSheet();
   }
 
   return rv;
@@ -314,35 +321,21 @@ nsHTMLLinkElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
   nsresult rv = nsGenericHTMLElement::UnsetAttr(aNameSpaceID, aAttribute,
                                                 aNotify);
   if (NS_SUCCEEDED(rv)) {
-    UpdateStyleSheet(nsnull, nsnull,
-                     aNameSpaceID == kNameSpaceID_None &&
-                     (aAttribute == nsGkAtoms::rel ||
-                      aAttribute == nsGkAtoms::title ||
-                      aAttribute == nsGkAtoms::media ||
-                      aAttribute == nsGkAtoms::type));
+    UpdateStyleSheet();
   }
 
   return rv;
 }
 
 nsresult
-nsHTMLLinkElement::PostHandleEvent(nsEventChainPostVisitor& aVisitor)
+nsHTMLLinkElement::HandleDOMEvent(nsPresContext* aPresContext,
+                           nsEvent* aEvent,
+                           nsIDOMEvent** aDOMEvent,
+                           PRUint32 aFlags,
+                           nsEventStatus* aEventStatus)
 {
-  return PostHandleEventForAnchors(aVisitor);
-}
-
-PRBool
-nsHTMLLinkElement::IsLink(nsIURI** aURI) const
-{
-  return IsHTMLLink(aURI);
-}
-
-void
-nsHTMLLinkElement::GetLinkTarget(nsAString& aTarget)
-{
-  if (!GetAttr(kNameSpaceID_None, nsGkAtoms::target, aTarget)) {
-    GetBaseTarget(aTarget);
-  }
+  return HandleDOMEventForAnchors(aPresContext, aEvent, aDOMEvent,
+                                  aFlags, aEventStatus);
 }
 
 NS_IMETHODIMP
@@ -387,7 +380,7 @@ nsHTMLLinkElement::GetStyleSheetInfo(nsAString& aTitle,
 
   nsAutoString rel;
   nsStringArray linkTypes(4);
-  GetAttr(kNameSpaceID_None, nsGkAtoms::rel, rel);
+  GetAttr(kNameSpaceID_None, nsHTMLAtoms::rel, rel);
   nsStyleLinkElement::ParseLinkTypes(rel, linkTypes);
   // Is it a stylesheet link?
   if (linkTypes.IndexOf(NS_LITERAL_STRING("stylesheet")) < 0) {
@@ -395,7 +388,7 @@ nsHTMLLinkElement::GetStyleSheetInfo(nsAString& aTitle,
   }
 
   nsAutoString title;
-  GetAttr(kNameSpaceID_None, nsGkAtoms::title, title);
+  GetAttr(kNameSpaceID_None, nsHTMLAtoms::title, title);
   title.CompressWhitespace();
   aTitle.Assign(title);
 
@@ -408,12 +401,12 @@ nsHTMLLinkElement::GetStyleSheetInfo(nsAString& aTitle,
     }
   }
 
-  GetAttr(kNameSpaceID_None, nsGkAtoms::media, aMedia);
+  GetAttr(kNameSpaceID_None, nsHTMLAtoms::media, aMedia);
   ToLowerCase(aMedia); // HTML4.0 spec is inconsistent, make it case INSENSITIVE
 
   nsAutoString mimeType;
   nsAutoString notUsed;
-  GetAttr(kNameSpaceID_None, nsGkAtoms::type, aType);
+  GetAttr(kNameSpaceID_None, nsHTMLAtoms::type, aType);
   nsParserUtils::SplitMimeType(aType, mimeType, notUsed);
   if (!mimeType.IsEmpty() && !mimeType.LowerCaseEqualsLiteral("text/css")) {
     return;

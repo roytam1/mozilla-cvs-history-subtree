@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sergei Dolgov <sergei_d@fi.tartu.ee>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -39,42 +38,51 @@
 #ifndef nsAppShell_h__
 #define nsAppShell_h__
 
-#include "nsBaseAppShell.h"
+#include "nsCOMPtr.h"
+#include "nsIAppShell.h"
+#include "nsIEventQueue.h"
+#include "nsSwitchToUIThread.h"
 #include <OS.h>
-
-struct ThreadInterfaceData
-{
-	void*     data;
-	thread_id waitingThread;
-};
-
-struct EventItem
-{
-	int32               code;
-	ThreadInterfaceData ifdata;
-};
-
-struct MethodInfo;
+#include <List.h>
 
 /**
  * Native BeOS Application shell wrapper
  */
 
-class nsAppShell : public nsBaseAppShell
+class nsAppShell : public nsIAppShell
 {
   public:
-	nsAppShell();
-	nsresult        Init();
-protected:
-	virtual void    ScheduleNativeEventCallback();
-	virtual PRBool  ProcessNextNativeEvent(PRBool mayWait);
-	virtual        ~nsAppShell();
+                            nsAppShell(); 
+    virtual                 ~nsAppShell();
 
-private:
-	port_id	       eventport;
-	volatile bool  scheduled;
-	bool           is_port_error;
-	bool           InvokeBeOSMessage(bigtime_t timeout);    
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIAPPSHELL
+
+    virtual void*	GetNativeData(PRUint32 aDataType);
+
+  private:
+    nsCOMPtr<nsIEventQueue> mEventQueue;
+
+    // event priorities
+    enum {
+      PRIORITY_TOP = 0,
+      PRIORITY_SECOND,
+      PRIORITY_THIRD,
+      PRIORITY_NORMAL,
+      PRIORITY_LOW,
+      PRIORITY_LEVELS = 5
+    };
+    
+    void ConsumeRedundantMouseMoveEvent(MethodInfo *pNewEventMInfo);
+    void RetrieveAllEvents(bool blockable);
+    int CountStoredEvents();
+    void *GetNextEvent();
+    
+    port_id					eventport;
+    sem_id					syncsem;
+    BList events[PRIORITY_LEVELS];
+
+    bool is_port_error;
 };
 
 #endif // nsAppShell_h__

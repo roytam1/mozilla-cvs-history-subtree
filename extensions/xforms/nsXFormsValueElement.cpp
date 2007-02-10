@@ -38,7 +38,7 @@
 
 #include "nsIXFormsValueElement.h"
 #include "nsXFormsStubElement.h"
-#include "nsIXTFElementWrapper.h"
+#include "nsIXTFGenericElementWrapper.h"
 #include "nsIDOM3Node.h"
 #include "nsXFormsUtils.h"
 #include "nsIDOMElement.h"
@@ -59,8 +59,8 @@ public:
 
   NS_DECL_ISUPPORTS_INHERITED
 
-  // nsIXTFElement overrides
-  NS_IMETHOD OnCreated(nsIXTFElementWrapper *aWrapper);
+  // nsIXTFGenericElement overrides
+  NS_IMETHOD OnCreated(nsIXTFGenericElementWrapper *aWrapper);
 
   // nsIXFormsValueElement
   NS_DECL_NSIXFORMSVALUEELEMENT
@@ -74,7 +74,7 @@ NS_IMPL_ISUPPORTS_INHERITED1(nsXFormsValueElement,
                              nsIXFormsValueElement)
 
 NS_IMETHODIMP
-nsXFormsValueElement::OnCreated(nsIXTFElementWrapper *aWrapper)
+nsXFormsValueElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
 {
   nsCOMPtr<nsIDOMElement> node;
   aWrapper->GetElementNode(getter_AddRefs(node));

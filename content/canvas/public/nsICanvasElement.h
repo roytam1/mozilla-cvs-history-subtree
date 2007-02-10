@@ -51,7 +51,7 @@ struct _cairo_surface;
 
 class nsICanvasElement : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICANVASELEMENT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICANVASELEMENT_IID)
 
   /**
    * Ask the canvas Element to return the primary frame, if any
@@ -74,7 +74,7 @@ public:
    * into to given cairo_surface_t.
    */
   NS_IMETHOD RenderContextsToSurface (struct _cairo_surface *surf) = 0;
-  
+
   /**
    * Determine whether the canvas is write-only.
    */
@@ -85,7 +85,5 @@ public:
    */
   virtual void SetWriteOnly() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsICanvasElement, NS_ICANVASELEMENT_IID)
 
 #endif /* nsICanvasElement_h___ */

@@ -84,12 +84,14 @@
 
 #define REL_FILE_PREF_SUFFIX NS_LITERAL_CSTRING("-rel")
 
+MOZ_DECL_CTOR_COUNTER(nsMsgIncomingServer)
+
 nsMsgIncomingServer::nsMsgIncomingServer():
     m_rootFolder(0),
-    m_numMsgsDownloaded(0),
     m_prefBranch(0),
     m_biffState(nsIMsgFolder::nsMsgBiffState_NoMail),
     m_serverBusy(PR_FALSE),
+    m_numMsgsDownloaded(0),
     m_canHaveFilters(PR_TRUE),
     m_displayStartupPage(PR_TRUE),
     mPerformingBiff(PR_FALSE)
@@ -769,7 +771,7 @@ nsMsgIncomingServer::GetConstructedPrettyName(PRUnichar **retval)
 NS_IMETHODIMP
 nsMsgIncomingServer::ToString(PRUnichar** aResult) {
   *aResult = ToNewUnicode(NS_LITERAL_STRING("[nsIMsgIncomingServer: ") +
-                          NS_ConvertASCIItoUTF16(m_serverKey) +
+                          NS_ConvertASCIItoUCS2(m_serverKey) +
                           NS_LITERAL_STRING("]"));
   NS_ASSERTION(*aResult, "no server name!");
   return NS_OK;
@@ -887,8 +889,8 @@ nsMsgIncomingServer::GetPasswordWithUI(const PRUnichar * aPromptMessage, const
 
       PRUint32 savePasswordType = (passwordProtectLocalCache) ? nsIAuthPrompt::SAVE_PASSWORD_FOR_SESSION : nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY;
       rv = dialog->PromptPassword(aPromptTitle, aPromptMessage, 
-        NS_ConvertASCIItoUTF16(serverUri).get(), savePasswordType,
-        &uniPassword, okayValue);
+                                  NS_ConvertASCIItoUTF16(serverUri).get(), savePasswordType,
+                                  &uniPassword, okayValue);
       nsAutoString uniPasswordAdopted;
       uniPasswordAdopted.Adopt(uniPassword);
       if (NS_FAILED(rv)) return rv;
@@ -943,7 +945,7 @@ nsMsgIncomingServer::StorePassword()
     rv = CreateServicesForPasswordManager();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = observerService->NotifyObservers(uri, "login-succeeded", NS_ConvertUTF8toUTF16(pwd).get());
+    rv = observerService->NotifyObservers(uri, "login-succeeded", NS_ConvertUTF8toUCS2(pwd).get());
     NS_ENSURE_SUCCESS(rv,rv);
     nsCOMPtr<nsIMsgAccountManager> accountManager = do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID);
     if (accountManager)
@@ -1715,28 +1717,10 @@ nsMsgIncomingServer::GetSearchScope(nsMsgSearchScopeValue *searchScope)
    return NS_OK;
 }
 
-NS_IMETHODIMP
-nsMsgIncomingServer::GetIsSecure(PRBool* aIsSecure)
-{
-  return GetBoolValue("isSecure", aIsSecure);
-}
-
-NS_IMETHODIMP
-nsMsgIncomingServer::SetIsSecure(PRBool aIsSecure)
-{
-  PRBool isSecure;
-  GetBoolValue("isSecure", &isSecure);
-  if (isSecure != aIsSecure) {
-    SetBoolValue("isSecure", aIsSecure);
-    if (m_rootFolder)
-      m_rootFolder->NotifyBoolPropertyChanged(NS_NewAtom("isSecure"), isSecure, aIsSecure);
-  }
-  return NS_OK;
-}
-
 // use the convenience macros to implement the accessors
 NS_IMPL_SERVERPREF_STR(nsMsgIncomingServer, Username, "userName")
 NS_IMPL_SERVERPREF_STR(nsMsgIncomingServer, PrefPassword, "password")
+NS_IMPL_SERVERPREF_BOOL(nsMsgIncomingServer, IsSecure, "isSecure")
 NS_IMPL_SERVERPREF_BOOL(nsMsgIncomingServer, UseSecAuth, "useSecAuth")
 NS_IMPL_SERVERPREF_BOOL(nsMsgIncomingServer, LogonFallback, "logon_fallback")
 NS_IMPL_SERVERPREF_INT(nsMsgIncomingServer, BiffMinutes, "check_time")
@@ -2329,9 +2313,6 @@ NS_IMETHODIMP nsMsgIncomingServer::IsNewHdrDuplicate(nsIMsgDBHdr *aNewHdr, PRBoo
   aNewHdr->GetMessageId(getter_Copies(messageId));
   strHashKey.Append(messageId);
   aNewHdr->GetSubject(getter_Copies(subject));
-  // err on the side of caution and ignore messages w/o subject or messageid.
-  if (subject.IsEmpty() || messageId.IsEmpty())
-    return NS_OK;
   strHashKey.Append(subject);
   nsCStringKey hashKey(strHashKey);
   PRInt32 hashValue = NS_PTR_TO_INT32(m_downloadedHdrs.Get(&hashKey));

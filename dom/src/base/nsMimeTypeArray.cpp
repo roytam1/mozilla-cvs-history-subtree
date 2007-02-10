@@ -133,7 +133,7 @@ nsMimeTypeArray::NamedItem(const nsAString& aName, nsIDOMMimeType** aReturn)
   nsCOMPtr<nsIMIMEService> mimeSrv = do_GetService("@mozilla.org/mime;1");
   if (mimeSrv) {
     nsCOMPtr<nsIMIMEInfo> mimeInfo;
-    mimeSrv->GetFromTypeAndExtension(NS_ConvertUTF16toUTF8(aName), EmptyCString(),
+    mimeSrv->GetFromTypeAndExtension(NS_ConvertUCS2toUTF8(aName), EmptyCString(),
                                      getter_AddRefs(mimeInfo));
     if (mimeInfo) {
       // Now we check whether we can really claim to support this type
@@ -209,12 +209,12 @@ nsresult nsMimeTypeArray::GetMimeTypes()
     if (rv == NS_OK) {
       PRUint32 i;
       for (i = 0; i < pluginCount; i++) {
-        nsCOMPtr<nsIDOMPlugin> plugin;
-        if (NS_SUCCEEDED(pluginArray->Item(i, getter_AddRefs(plugin))) &&
-            plugin) {
+        nsIDOMPlugin* plugin = nsnull;
+        if (pluginArray->Item(i, &plugin) == NS_OK) {
           PRUint32 mimeTypeCount = 0;
           if (plugin->GetLength(&mimeTypeCount) == NS_OK)
             mMimeTypeCount += mimeTypeCount;
+          NS_RELEASE(plugin);
         }
       }
       // now we know how many there are, start gathering them.

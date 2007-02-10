@@ -66,10 +66,6 @@
 #include "jsstr.h"
 #include "jsexn.h"
 
-#if JS_HAS_GENERATORS
-# include "jsiter.h"
-#endif
-
 /* Generic function/call/arguments tinyids -- also reflected bit numbers. */
 enum {
     CALL_ARGUMENTS  = -1,       /* predefined arguments local variable */
@@ -236,13 +232,7 @@ js_GetArgsProperty(JSContext *cx, JSStackFrame *fp, jsid id,
 JSObject *
 js_GetArgsObject(JSContext *cx, JSStackFrame *fp)
 {
-    JSObject *argsobj, *global, *parent;
-
-    /*
-     * We must be in a function activation; the function must be lightweight
-     * or else fp must have a variable object.
-     */
-    JS_ASSERT(fp->fun && (!(fp->fun->flags & JSFUN_HEAVYWEIGHT) || fp->varobj));
+    JSObject *argsobj;
 
     /* Skip eval and debugger frames. */
     while (fp->flags & JSFRAME_SPECIAL)
@@ -256,25 +246,9 @@ js_GetArgsObject(JSContext *cx, JSStackFrame *fp)
     /* Link the new object to fp so it can get actual argument values. */
     argsobj = js_NewObject(cx, &js_ArgumentsClass, NULL, NULL);
     if (!argsobj || !JS_SetPrivate(cx, argsobj, fp)) {
-        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+        cx->newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
-
-    /*
-     * Give arguments an intrinsic scope chain link to fp's global object.
-     * Since the arguments object lacks a prototype because js_ArgumentsClass
-     * is not initialized, js_NewObject won't assign a default parent to it.
-     *
-     * Therefore if arguments is used as the head of an eval scope chain (via
-     * a direct or indirect call to eval(program, arguments)), any reference
-     * to a standard class object in the program will fail to resolve due to
-     * js_GetClassPrototype not being able to find a global object containing
-     * the standard prototype by starting from arguments and following parent.
-     */
-    global = fp->scopeChain;
-    while ((parent = OBJ_GET_PARENT(cx, global)) != NULL)
-        global = parent;
-    STOBJ_SET_PARENT(argsobj, global);
     fp->argsobj = argsobj;
     return argsobj;
 }
@@ -453,7 +427,10 @@ args_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
             if (!js_DefineProperty(cx, obj, INT_JSVAL_TO_JSID(id),
                                    fp->argv[slot],
                                    args_getProperty, args_setProperty,
-                                   0, NULL)) {
+                                   JS_VERSION_IS_ECMA(cx)
+                                   ? 0
+                                   : JSPROP_ENUMERATE,
+                                   NULL)) {
                 return JS_FALSE;
             }
             *objp = obj;
@@ -539,25 +516,6 @@ args_enumerate(JSContext *cx, JSObject *obj)
     return JS_TRUE;
 }
 
-#if JS_HAS_GENERATORS
-/*
- * If a generator-iterator's arguments or call object escapes, it needs to
- * mark its generator object.
- */
-static uint32
-args_or_call_mark(JSContext *cx, JSObject *obj, void *arg)
-{
-    JSStackFrame *fp;
-
-    fp = JS_GetPrivate(cx, obj);
-    if (fp && (fp->flags & JSFRAME_GENERATOR))
-        GC_MARK(cx, FRAME_TO_GENERATOR(fp)->obj, "FRAME_TO_GENERATOR(fp)->obj");
-    return 0;
-}
-#else
-# define args_or_call_mark NULL
-#endif
-
 /*
  * The Arguments class is not initialized via JS_InitClass, and must not be,
  * because its name is "Object".  Per ECMA, that causes instances of it to
@@ -573,14 +531,11 @@ JSClass js_ArgumentsClass = {
     js_Object_str,
     JSCLASS_HAS_PRIVATE | JSCLASS_NEW_RESOLVE | JSCLASS_HAS_RESERVED_SLOTS(1) |
     JSCLASS_HAS_CACHED_PROTO(JSProto_Object),
-    JS_PropertyStub,    args_delProperty,
-    args_getProperty,   args_setProperty,
-    args_enumerate,     (JSResolveOp) args_resolve,
-    JS_ConvertStub,     JS_FinalizeStub,
-    NULL,               NULL,
-    NULL,               NULL,
-    NULL,               NULL,
-    args_or_call_mark,  NULL
+    JS_PropertyStub,  args_delProperty,
+    args_getProperty, args_setProperty,
+    args_enumerate,   (JSResolveOp) args_resolve,
+    JS_ConvertStub,   JS_FinalizeStub,
+    JSCLASS_NO_OPTIONAL_MEMBERS
 };
 
 JSObject *
@@ -605,13 +560,12 @@ js_GetCallObject(JSContext *cx, JSStackFrame *fp, JSObject *parent)
     /* Create the call object and link it to its stack frame. */
     callobj = js_NewObject(cx, &js_CallClass, NULL, parent);
     if (!callobj || !JS_SetPrivate(cx, callobj, fp)) {
-        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+        cx->newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
     fp->callobj = callobj;
 
     /* Make callobj be the scope chain and the variables object. */
-    JS_ASSERT(fp->scopeChain == parent);
     fp->scopeChain = callobj;
     fp->varobj = callobj;
     return callobj;
@@ -937,14 +891,11 @@ JSClass js_CallClass = {
     js_Call_str,
     JSCLASS_HAS_PRIVATE | JSCLASS_NEW_RESOLVE | JSCLASS_IS_ANONYMOUS |
     JSCLASS_HAS_CACHED_PROTO(JSProto_Call),
-    JS_PropertyStub,    JS_PropertyStub,
-    call_getProperty,   call_setProperty,
-    call_enumerate,     (JSResolveOp)call_resolve,
-    call_convert,       JS_FinalizeStub,
-    NULL,               NULL,
-    NULL,               NULL,
-    NULL,               NULL,
-    args_or_call_mark,  NULL,
+    JS_PropertyStub,  JS_PropertyStub,
+    call_getProperty, call_setProperty,
+    call_enumerate,   (JSResolveOp)call_resolve,
+    call_convert,     JS_FinalizeStub,
+    JSCLASS_NO_OPTIONAL_MEMBERS
 };
 
 /*
@@ -1129,7 +1080,7 @@ fun_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
                  * root until then to protect pval in case it is figuratively
                  * up in the air, with no strong refs protecting it.
                  */
-                cx->weakRoots.newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(pval);
+                cx->newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(pval);
                 parentProto = JSVAL_TO_OBJECT(pval);
             }
         }
@@ -1160,7 +1111,7 @@ fun_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
          */
         if (!js_SetClassPrototype(cx, obj, proto,
                                   JSPROP_ENUMERATE | JSPROP_PERMANENT)) {
-            cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+            cx->newborn[GCX_OBJECT] = NULL;
             return JS_FALSE;
         }
         *objp = obj;
@@ -1191,17 +1142,10 @@ fun_finalize(JSContext *cx, JSObject *obj)
     fun = (JSFunction *) JS_GetPrivate(cx, obj);
     if (!fun)
         return;
-
     if (fun->object == obj)
         fun->object = NULL;
 
-    /*
-     * Null-check of i.script is required since the parser sets interpreted
-     * very early.
-     *
-     * Here js_IsAboutToBeFinalized works because obj is finalized before
-     * JSFunction. See comments in js_GC before the finalization loop.
-     */
+    /* Null-check required since the parser sets interpreted very early. */
     if (FUN_INTERPRETED(fun) && fun->u.i.script &&
         js_IsAboutToBeFinalized(cx, fun))
     {
@@ -1267,7 +1211,7 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
     }
 
     /* From here on, control flow must flow through label out. */
-    JS_PUSH_TEMP_ROOT_OBJECT(cx, fun->object, &tvr);
+    JS_PUSH_SINGLE_TEMP_ROOT(cx, fun->object, &tvr);
     ok = JS_TRUE;
 
     if (!JS_XDRUint32(xdr, &nullAtom))
@@ -1417,6 +1361,7 @@ static JSBool
 fun_hasInstance(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
 {
     jsval pval;
+    JSString *str;
 
     if (!OBJ_GET_PROPERTY(cx, obj,
                           ATOM_TO_JSID(cx->runtime->atomState
@@ -1430,8 +1375,11 @@ fun_hasInstance(JSContext *cx, JSObject *obj, jsval v, JSBool *bp)
          * Throw a runtime error if instanceof is called on a function that
          * has a non-object as its .prototype value.
          */
-        js_ReportValueError(cx, JSMSG_BAD_PROTOTYPE,
-                            -1, OBJECT_TO_JSVAL(obj), NULL);
+        str = js_DecompileValueGenerator(cx, -1, OBJECT_TO_JSVAL(obj), NULL);
+        if (str) {
+            JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                                 JSMSG_BAD_PROTOTYPE, JS_GetStringBytes(str));
+        }
         return JS_FALSE;
     }
 
@@ -1578,9 +1526,7 @@ fun_call(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         obj = NULL;
     } else {
         /* Otherwise convert the first arg to 'this' and skip over it. */
-        if (!JSVAL_IS_PRIMITIVE(argv[0]))
-            obj = JSVAL_TO_OBJECT(argv[0]);
-        else if (!js_ValueToObject(cx, argv[0], &obj))
+        if (!js_ValueToObject(cx, argv[0], &obj))
             return JS_FALSE;
         argc--;
         argv++;
@@ -1667,13 +1613,11 @@ fun_apply(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     }
 
     /* Convert the first arg to 'this' and skip over it. */
-    if (!JSVAL_IS_PRIMITIVE(argv[0]))
-        obj = JSVAL_TO_OBJECT(argv[0]);
-    else if (!js_ValueToObject(cx, argv[0], &obj))
+    if (!js_ValueToObject(cx, argv[0], &obj))
         return JS_FALSE;
 
     /* Allocate stack space for fval, obj, and the args. */
-    argc = (uintN)JS_MIN(length, ARRAY_INIT_LIMIT - 1);
+    argc = (uintN)JS_MIN(length, ARGC_LIMIT - 1);
     sp = js_AllocStack(cx, 2 + argc, &mark);
     if (!sp)
         return JS_FALSE;
@@ -1726,8 +1670,8 @@ fun_applyConstructor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     if (!js_GetLengthProperty(cx, aobj, &length))
         return JS_FALSE;
 
-    if (length >= ARRAY_INIT_LIMIT)
-        length = ARRAY_INIT_LIMIT - 1;
+    if (length >= ARGC_LIMIT)
+        length = ARGC_LIMIT - 1;
     newsp = sp = js_AllocStack(cx, 2 + length, &mark);
     if (!sp)
         return JS_FALSE;
@@ -1914,10 +1858,8 @@ Function(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         mark = JS_ARENA_MARK(&cx->tempPool);
         JS_ARENA_ALLOCATE_CAST(cp, jschar *, &cx->tempPool,
                                (args_length+1) * sizeof(jschar));
-        if (!cp) {
-            JS_ReportOutOfMemory(cx);
+        if (!cp)
             return JS_FALSE;
-        }
         collected_args = cp;
 
         /*
@@ -2097,7 +2039,7 @@ js_InitFunctionClass(JSContext *cx, JSObject *obj)
     return proto;
 
 bad:
-    cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+    cx->newborn[GCX_OBJECT] = NULL;
     return NULL;
 }
 
@@ -2140,7 +2082,7 @@ js_NewFunction(JSContext *cx, JSObject *funobj, JSNative native, uintN nargs,
 
     /*
      * Allocate fun after allocating funobj so slot allocation in js_NewObject
-     * does not wipe out fun from newborn[GCX_PRIVATE].
+     * does not wipe out fun from cx->newborn[GCX_PRIVATE].
      */
     fun = (JSFunction *) js_NewGCThing(cx, GCX_PRIVATE, sizeof(JSFunction));
     if (!fun)
@@ -2158,7 +2100,7 @@ js_NewFunction(JSContext *cx, JSObject *funobj, JSNative native, uintN nargs,
 
     /* Link fun to funobj and vice versa. */
     if (!js_LinkFunctionObject(cx, fun, funobj)) {
-        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+        cx->newborn[GCX_OBJECT] = NULL;
         fun = NULL;
     }
 
@@ -2179,7 +2121,7 @@ js_CloneFunctionObject(JSContext *cx, JSObject *funobj, JSObject *parent)
         return NULL;
     fun = (JSFunction *) JS_GetPrivate(cx, funobj);
     if (!js_LinkFunctionObject(cx, fun, newfunobj)) {
-        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+        cx->newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
     return newfunobj;
@@ -2293,31 +2235,37 @@ void
 js_ReportIsNotFunction(JSContext *cx, jsval *vp, uintN flags)
 {
     JSStackFrame *fp;
-    uintN error;
-    const char *name, *source;
+    JSString *str;
+    JSTempValueRooter tvr;
+    const char *bytes, *source;
 
     for (fp = cx->fp; fp && !fp->spbase; fp = fp->down)
         continue;
-    name = NULL;
-    source = NULL;
-    if (flags & JSV2F_ITERATOR) {
-        error = JSMSG_BAD_ITERATOR;
-        name = js_iterator_str;
-        source = js_ValueToPrintableSource(cx, *vp);
-        if (!source)
-            return;
-    } else if (flags & JSV2F_CONSTRUCT) {
-        error = JSMSG_NOT_CONSTRUCTOR;
-    } else {
-        error = JSMSG_NOT_FUNCTION;
+    str = js_DecompileValueGenerator(cx,
+                                     (fp && fp->spbase <= vp && vp < fp->sp)
+                                     ? vp - fp->sp
+                                     : (flags & JSV2F_SEARCH_STACK)
+                                     ? JSDVG_SEARCH_STACK
+                                     : JSDVG_IGNORE_STACK,
+                                     *vp,
+                                     NULL);
+    if (str) {
+        JS_PUSH_SINGLE_TEMP_ROOT(cx, str, &tvr);
+        bytes = JS_GetStringBytes(str);
+        if (flags & JSV2F_ITERATOR) {
+            source = js_ValueToPrintableSource(cx, *vp);
+            if (source) {
+                JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                                     JSMSG_BAD_ITERATOR,
+                                     bytes, js_iterator_str, source);
+            }
+        } else {
+            JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                                 (uintN)((flags & JSV2F_CONSTRUCT)
+                                         ? JSMSG_NOT_CONSTRUCTOR
+                                         : JSMSG_NOT_FUNCTION),
+                                 bytes);
+        }
+        JS_POP_TEMP_ROOT(cx, &tvr);
     }
-
-    js_ReportValueError3(cx, error,
-                         (fp && fp->spbase <= vp && vp < fp->sp)
-                         ? vp - fp->sp
-                         : (flags & JSV2F_SEARCH_STACK)
-                         ? JSDVG_SEARCH_STACK
-                         : JSDVG_IGNORE_STACK,
-                         *vp, NULL,
-                         name, source);
 }

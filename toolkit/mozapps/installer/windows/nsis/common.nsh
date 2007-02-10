@@ -67,11 +67,6 @@ Exch 1   ; exchange the top of the stack with 2 below the top of the stack
 Exch $R9 ; exchange the new $R9 value with the top of the stack
 */
 
-; Modified version of the following MUI macros to support Mozilla localization.
-; MUI_LANGUAGE
-; MUI_LANGUAGEFILE_BEGIN
-; MOZ_MUI_LANGUAGEFILE_END
-; See <NSIS App Dir>/Contrib/Modern UI/System.nsh for more information
 !define MUI_INSTALLOPTIONS_READ "!insertmacro MUI_INSTALLOPTIONS_READ"
 
 !macro MOZ_MUI_LANGUAGE LANGUAGE
@@ -555,8 +550,8 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
     !define ${_MOZFUNC_UN}CanWriteToInstallDir "!insertmacro ${_MOZFUNC_UN}CanWriteToInstallDirCall"
 
     Function ${_MOZFUNC_UN}CanWriteToInstallDir
-      Push $R8
       Push $R7
+      Push $R8
 
       StrCpy $R9 "true"
       IfFileExists "$INSTDIR" 0 checkCreateDir
@@ -582,8 +577,8 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
       end:
       ClearErrors
 
-      Pop $R7
       Pop $R8
+      Pop $R7
       Push $R9
     FunctionEnd
 
@@ -621,6 +616,7 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
     !verbose pop
   !endif
 !macroend
+
 
 /**
  * Checks whether there is sufficient free space available on the installation
@@ -963,16 +959,13 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
 
 /**
  * Posts WM_QUIT to the application's message window which is found using the
- * message window's class. This macro uses the nsProcess plugin available
- * from http://nsis.sourceforge.net/NsProcess_plugin
- *
+ * message window's class.
  * @param   _MSG
  *          The message text to display in the message box.
  * @param   _PROMPT
  *          If false don't prompt the user and automatically exit the
  *          application if it is running.
  *
- * $R6 = return value for nsProcess::_FindProcess and nsProcess::_KillProcess
  * $R7 = value returned from FindWindow
  * $R8 = _PROMPT
  * $R9 = _MSG
@@ -989,42 +982,23 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
       Exch 1
       Exch $R8
       Push $R7
-      Push $R6
 
       loop:
-      Push $R6
-      nsProcess::_FindProcess /NOUNLOAD "${FileMainEXE}"
-      Pop $R6
-      StrCmp $R6 0 0 end
-
+      FindWindow $R7 "${WindowClass}"
+      IntCmp $R7 0 end
       StrCmp $R8 "false" +2 0
       MessageBox MB_OKCANCEL|MB_ICONQUESTION "$R9" IDCANCEL exit 0
 
-      FindWindow $R7 "${WindowClass}"
-      IntCmp $R7 0 +4
       System::Call 'user32::PostMessage(i r17, i ${WM_QUIT}, i 0, i 0)'
       # The amount of time to wait for the app to shutdown before prompting again
-      Sleep 5000
-
-      Push $R6
-      nsProcess::_FindProcess /NOUNLOAD "${FileMainEXE}"
-      Pop $R6
-      StrCmp $R6 0 0 end
-      Push $R6
-      nsProcess::_KillProcess /NOUNLOAD "${FileMainEXE}"
-      Pop $R6
-      Sleep 2000
-
+      Sleep 4000
       Goto loop
 
       exit:
-      nsProcess::_Unload
       Quit
 
       end:
-      nsProcess::_Unload
 
-      Pop $R6
       Pop $R7
       Exch $R8
       Exch 1
@@ -1109,15 +1083,12 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
 
       ClearErrors
       WriteRegStr SHCTX "$R6" "$R7" "$R8"
-
-!ifndef NO_LOG
       IfErrors 0 +3
       FileWrite $fhInstallLog "  ** ERROR Adding Registry String: $R5 | $R6 | $R7 | $R8 **$\r$\n"
       GoTo +4
       IntCmp $R9 1 0 +2
       FileWrite $fhUninstallLog "RegVal: $R5 | $R6 | $R7$\r$\n"
       FileWrite $fhInstallLog "  Added Registry String: $R5 | $R6 | $R7 | $R8$\r$\n"
-!endif
 
       Exch $R5
       Exch 4
@@ -1214,14 +1185,12 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
 
       ClearErrors
       WriteRegDWORD SHCTX "$R6" "$R7" "$R8"
-!ifndef NO_LOG
       IfErrors 0 +3
       FileWrite $fhInstallLog "  ** ERROR Adding Registry DWord: $R5 | $R6 | $R7 | $R8 **$\r$\n"
       GoTo +4
       IntCmp $R5 1 0 +2
       FileWrite $fhUninstallLog "RegVal: $R5 | $R6 | $R7$\r$\n"
       FileWrite $fhInstallLog "  Added Registry DWord: $R5 | $R6 | $R7 | $R8$\r$\n"
-!endif
 
       Exch $R5
       Exch 4
@@ -1318,15 +1287,12 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
 
       ClearErrors
       WriteRegStr HKCR "$R6" "$R7" "$R8"
-
-!ifndef NO_LOG
       IfErrors 0 +3
       FileWrite $fhInstallLog "  ** ERROR Adding Registry String: $R5 | $R6 | $R7 | $R8 **$\r$\n"
       GoTo +4
       IntCmp $R5 1 0 +2
       FileWrite $fhUninstallLog "RegVal: $R5 | $R6 | $R7$\r$\n"
       FileWrite $fhInstallLog "  Added Registry String: $R5 | $R6 | $R7 | $R8$\r$\n"
-!endif
 
       Exch $R5
       Exch 4
@@ -1442,7 +1408,6 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
       ; see definition of RegCreateKey
       System::Call "${RegCreateKey}($R6, '$R8', .r14) .r15"
 
-!ifndef NO_LOG
       ; if $R5 is not 0 then there was an error creating the registry key.
       IntCmp $R5 0 +3
       FileWrite $fhInstallLog "  ** ERROR Adding Registry Key: $R7 | $R8 **$\r$\n"
@@ -1450,7 +1415,6 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
       IntCmp $R9 1 0 +2
       FileWrite $fhUninstallLog "RegKey: $R7 | $R8$\r$\n"
       FileWrite $fhInstallLog "  Added Registry Key: $R7 | $R8$\r$\n"
-!endif
 
       Pop $R4
       Pop $R5
@@ -1612,189 +1576,3 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
   !endif
 !macroend
 
-/**
- * Writes common registry values for a handler using SHCTX.
- * @param   _KEY
- *          The subkey in relation to the key root.
- * @param   _VALOPEN
- *          The path and args to launch the application.
- * @param   _VALICON
- *          The path to an exe that contains an icon and the icon resource id.
- * @param   _DISPNAME
- *          The display name for the handler. If emtpy no value will be set.
- * @param   _ISPROTOCOL
- *          Sets protocol handler specific registry values when "true".
- * @param   _ISDDE
- *          Sets DDE specific registry values when "true".
- *
- * $R3 = string value of the current registry key path.
- * $R4 = _KEY
- * $R5 = _VALOPEN
- * $R6 = _VALICON
- * $R7 = _DISPNAME
- * $R8 = _ISPROTOCOL
- * $R9 = _ISDDE
- */
-!macro AddHandlerValues
-
-  !ifndef ${_MOZFUNC_UN}AddHandlerValues
-    !verbose push
-    !verbose ${_MOZFUNC_VERBOSE}
-    !define ${_MOZFUNC_UN}AddHandlerValues "!insertmacro ${_MOZFUNC_UN}AddHandlerValuesCall"
-
-    Function ${_MOZFUNC_UN}AddHandlerValues
-      Exch $R9
-      Exch 1
-      Exch $R8
-      Exch 2
-      Exch $R7
-      Exch 3
-      Exch $R6
-      Exch 4
-      Exch $R5
-      Exch 5
-      Exch $R4
-      Push $R3
-
-      StrCmp "$R7" "" +6 0
-      ReadRegStr $R3 SHCTX "$R4" "FriendlyTypeName"
-
-      StrCmp "$R3" "" 0 +3
-      WriteRegStr SHCTX "$R4" "" "$R7"
-      WriteRegStr SHCTX "$R4" "FriendlyTypeName" "$R7"
-
-      StrCmp "$R8" "true" 0 +4
-      DeleteRegValue SHCTX "$R4" "EditFlags"
-      WriteRegBin SHCTX "$R4" "EditFlags" 2
-      WriteRegStr SHCTX "$R4" "URL Protocol" ""
-
-      StrCmp "$R9" "true" 0 +13
-      WriteRegStr SHCTX "$R4\DefaultIcon" "" "$R6"
-      WriteRegStr SHCTX "$R4\shell\open\command" "" "$R5"
-      WriteRegStr SHCTX "$R4\shell\open\ddeexec" "" "$\"%1$\",,0,0,,,,"
-      WriteRegStr SHCTX "$R4\shell\open\ddeexec" "NoActivateHandler" ""
-      WriteRegStr SHCTX "$R4\shell\open\ddeexec\Application" "" "${DDEApplication}"
-      WriteRegStr SHCTX "$R4\shell\open\ddeexec\Topic" "" "WWW_OpenURL"
-      ; The ifexec key may have been added by another application so try to
-      ; delete it to prevent it from breaking this app's shell integration.
-      ; Also, IE 6 and below doesn't remove this key when it sets itself as the
-      ; default handler and if this key exists IE's shell integration breaks.
-      DeleteRegKey HKLM "$R4\shell\open\ddeexec\ifexec"
-      DeleteRegKey HKCU "$R4\shell\open\ddeexec\ifexec"
-
-      ClearErrors
-
-      Pop $R3
-      Exch $R4
-      Exch 5
-      Exch $R5
-      Exch 4
-      Exch $R6
-      Exch 3
-      Exch $R7
-      Exch 2
-      Exch $R8
-      Exch 1
-      Exch $R9
-    FunctionEnd
-
-    !verbose pop
-  !endif
-!macroend
-
-!macro AddHandlerValuesCall _KEY _VALOPEN _VALICON _DISPNAME _ISPROTOCOL _ISDDE
-  !verbose push
-  !verbose ${_MOZFUNC_VERBOSE}
-  Push "${_KEY}"
-  Push "${_VALOPEN}"
-  Push "${_VALICON}"
-  Push "${_DISPNAME}"
-  Push "${_ISPROTOCOL}"
-  Push "${_ISDDE}"
-  Call AddHandlerValues
-  !verbose pop
-!macroend
-
-!macro un.AddHandlerValuesCall _KEY _VALOPEN _VALICON _DISPNAME _ISPROTOCOL _ISDDE
-  !verbose push
-  !verbose ${_MOZFUNC_VERBOSE}
-  Push "${_KEY}"
-  Push "${_VALOPEN}"
-  Push "${_VALICON}"
-  Push "${_DISPNAME}"
-  Push "${_ISPROTOCOL}"
-  Push "${_ISDDE}"
-  Call un.AddHandlerValues
-  !verbose pop
-!macroend
-
-!macro un.AddHandlerValues
-  !ifndef un.AddHandlerValues
-    !verbose push
-    !verbose ${_MOZFUNC_VERBOSE}
-    !undef _MOZFUNC_UN
-    !define _MOZFUNC_UN "un."
-
-    !insertmacro AddHandlerValues
-
-    !undef _MOZFUNC_UN
-    !define _MOZFUNC_UN
-    !verbose pop
-  !endif
-!macroend
-
-/**
- * Displays a error message when a file can't be copied.
- *
- * $0 = file name inserted into the error message
- */
-!macro DisplayCopyErrMsg
-
-  !ifndef ${_MOZFUNC_UN}DisplayCopyErrMsg
-    !verbose push
-    !verbose ${_MOZFUNC_VERBOSE}
-    !define ${_MOZFUNC_UN}DisplayCopyErrMsg "!insertmacro ${_MOZFUNC_UN}DisplayCopyErrMsgCall"
-
-    Function ${_MOZFUNC_UN}DisplayCopyErrMsg
-      Exch $0
-
-      MessageBox MB_RETRYCANCEL|MB_ICONQUESTION "$(^FileError_NoIgnore)" IDRETRY +2
-      Quit
-
-      Exch $0
-    FunctionEnd
-
-    !verbose pop
-  !endif
-!macroend
-
-!macro DisplayCopyErrMsgCall _FILE
-  !verbose push
-  !verbose ${_MOZFUNC_VERBOSE}
-  Push "${_FILE}"
-  Call DisplayCopyErrMsg
-  !verbose pop
-!macroend
-
-!macro un.DisplayCopyErrMsgCall _FILE
-  !verbose push
-  !verbose ${_MOZFUNC_VERBOSE}
-  Push "${_FILE}"
-  Call un.DisplayCopyErrMsg
-  !verbose pop
-!macroend
-
-!macro un.DisplayCopyErrMsg
-  !ifndef un.DisplayCopyErrMsg
-    !verbose push
-    !verbose ${_MOZFUNC_VERBOSE}
-    !undef _MOZFUNC_UN
-    !define _MOZFUNC_UN "un."
-
-    !insertmacro DisplayCopyErrMsg
-
-    !undef _MOZFUNC_UN
-    !define _MOZFUNC_UN
-    !verbose pop
-  !endif
-!macroend

@@ -272,10 +272,10 @@ typedef void
  * The signature for JSClass.getObjectOps, used by JS_NewObject's internals
  * to discover the set of high-level object operations to use for new objects
  * of the given class.  All native objects have a JSClass, which is stored as
- * a private (int-tagged) pointer in obj slots. In contrast, all native and
- * host objects have a JSObjectMap at obj->map, which may be shared among a
- * number of objects, and which contains the JSObjectOps *ops pointer used to
- * dispatch object operations from API calls.
+ * a private (int-tagged) pointer in obj->slots[JSSLOT_CLASS].  In contrast,
+ * all native and host objects have a JSObjectMap at obj->map, which may be
+ * shared among a number of objects, and which contains the JSObjectOps *ops
+ * pointer used to dispatch object operations from API calls.
  *
  * Thus JSClass (which pre-dates JSObjectOps in the API) provides a low-level
  * interface to class-specific code and data, while JSObjectOps allows for a
@@ -339,8 +339,8 @@ typedef JSBool
  * literal) string naming the private data member for name, and it must pass
  * the opaque arg parameter through from its caller.
  *
- * For the JSObjectOps.mark hook, the return value is the number of slots in
- * obj to scan. For JSClass.mark, the return value is ignored.
+ * For the JSObjectOps.mark hook, the return value is the number of slots at
+ * obj->slots to scan.  For JSClass.mark, the return value is ignored.
  *
  * NB: JSMarkOp implementations cannot allocate new GC-things (JS_NewObject
  * called from a mark function will fail silently, e.g.).
@@ -495,7 +495,7 @@ typedef JSBool
  * (js_ObjectOps, see jsobj.c) access slots reserved by including a call to
  * the JSCLASS_HAS_RESERVED_SLOTS(n) macro in the JSClass.flags initializer.
  *
- * NB: the slot parameter is a zero-based index into obj slots, unlike the
+ * NB: the slot parameter is a zero-based index into obj->slots[], unlike the
  * index parameter to the JS_GetReservedSlot and JS_SetReservedSlot API entry
  * points, which is a zero-based index into the JSCLASS_RESERVED_SLOTS(clasp)
  * reserved slots that come after the initial well-known slots: proto, parent,
@@ -545,7 +545,7 @@ typedef enum JSContextOp {
 
 /*
  * The possible values for contextOp when the runtime calls the callback are:
- *   JSCONTEXT_NEW      JS_NewContext successfully created a new JSContext
+ *   JSCONTEXT_NEW      JS_NewContext succesfully created a new JSContext
  *                      instance. The callback can initialize the instance as
  *                      required. If the callback returns false, the instance
  *                      will be destroyed and JS_NewContext returns null. In
@@ -568,9 +568,6 @@ typedef enum JSGCStatus {
 
 typedef JSBool
 (* JS_DLL_CALLBACK JSGCCallback)(JSContext *cx, JSGCStatus status);
-
-typedef void
-(* JS_DLL_CALLBACK JSGCThingCallback)(void *thing, uint8 flags, void *closure);
 
 typedef JSBool
 (* JS_DLL_CALLBACK JSBranchCallback)(JSContext *cx, JSScript *script);

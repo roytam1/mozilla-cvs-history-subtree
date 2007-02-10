@@ -61,6 +61,7 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
 #include "nsILocaleService.h"
+#include "plevent.h"
 #include "prmem.h"
 #include "prenv.h"
 #include "prnetdb.h"
@@ -84,6 +85,7 @@
 #include "nsICategoryManager.h"
 #include "nsIXULWindow.h"
 #include "nsIChromeRegistrySea.h"
+#include "nsIEventQueueService.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsBuildID.h"
 #include "nsIWindowCreator.h"
@@ -147,6 +149,10 @@ static NS_DEFINE_CID(kLookAndFeelCID,  NS_LOOKANDFEEL_CID);
 
 extern "C" void ShowOSAlert(const char* aMessage);
 
+#define HELP_SPACER_1   "\t"
+#define HELP_SPACER_2   "\t\t"
+#define HELP_SPACER_4   "\t\t\t\t"
+
 #ifdef DEBUG
 #include "prlog.h"
 #endif
@@ -202,13 +208,7 @@ extern "C" {
 
 # ifndef HAVE___PURE_VIRTUAL
   void __pure_virtual(void) {
-#ifdef WRAP_SYSTEM_INCLUDES
-#pragma GCC visibility push(default)
-#endif
     extern void __cxa_pure_virtual(void);
-#ifdef WRAP_SYSTEM_INCLUDES
-#pragma GCC visibility pop
-#endif
 
     __cxa_pure_virtual();
   }
@@ -305,7 +305,7 @@ nsresult NS_CreateSplashScreen(nsISplashScreen **aResult)
 {
     nsresult rv = NS_OK;
     if (aResult) {
-        *aResult = nsnull;
+        *aResult = 0;
     } else {
         rv = NS_ERROR_NULL_POINTER;
     }
@@ -340,7 +340,7 @@ nsresult NS_CreateNativeAppSupport(nsINativeAppSupport **aResult)
 {
     nsresult rv = NS_OK;
     if (aResult) {
-        *aResult = nsnull;
+        *aResult = 0;
     } else {
         rv = NS_ERROR_NULL_POINTER;
     }
@@ -361,15 +361,27 @@ static nsresult GetNativeAppSupport(nsINativeAppSupport** aNativeApp)
     return *aNativeApp ? NS_OK : NS_ERROR_FAILURE;
 }
 
+/*
+ * This routine translates the nsresult into a platform specific return
+ * code for the application...
+ */
+static int TranslateReturnValue(nsresult aResult)
+{
+  if (NS_SUCCEEDED(aResult)) {
+    return 0;
+  }
+  return 1;
+}
+
 #ifdef XP_MAC
 #include "nsCommandLineServiceMac.h"
 #endif
 
-static inline void
+static void
 PrintUsage(void)
 {
-  fprintf(stderr, "Usage: apprunner <url>\n"
-                  "\t<url>:  a fully defined url string like http:// etc..\n");
+  fprintf(stderr, "Usage: apprunner <url>\n");
+  fprintf(stderr, "\t<url>:  a fully defined url string like http:// etc..\n");
 }
 
 static nsresult OpenWindow(const nsCString& aChromeURL,
@@ -397,7 +409,7 @@ static nsresult OpenWindow(const nsCString& aChromeURL,
 
 #ifdef DEBUG_CMD_LINE
   printf("OpenWindow(%s, %s, %d, %d)\n", aChromeURL.get(),
-                                         NS_ConvertUTF16toUTF8(aAppArgs).get(),
+                                         NS_ConvertUCS2toUTF8(aAppArgs).get(),
                                          aWidth, aHeight);
 #endif /* DEBUG_CMD_LINE */
 
@@ -492,7 +504,7 @@ static void DumpArbitraryHelp()
           if (NS_FAILED(rv)) continue;
 
           if (!commandLineArg.IsEmpty()) {
-            printf("\t%s", commandLineArg.get());
+            printf("%s%s", HELP_SPACER_1, commandLineArg.get());
 
             PRBool handlesArgs = PR_FALSE;
             rv = handler->GetHandlesArgs(&handlesArgs);
@@ -500,7 +512,7 @@ static void DumpArbitraryHelp()
               printf(" <url>");
             }
             if (!helpText.IsEmpty()) {
-              printf("\t\t%s\n", helpText.get());
+              printf("%s%s\n", HELP_SPACER_2, helpText.get());
             }
           }
         }
@@ -608,8 +620,9 @@ LaunchApplicationWithArgs(const char *commandLineArg,
 
 static PRBool IsStartupCommand(const char *arg)
 {
-  if (!arg || (arg[0] == '\0') || (arg[1] == '\0'))
-    return PR_FALSE;
+  if (!arg) return PR_FALSE;
+
+  if (PL_strlen(arg) <= 1) return PR_FALSE;
 
   // windows allows /mail or -mail
   if ((arg[0] == '-')
@@ -910,7 +923,7 @@ static void ShowOSAlertFromFile(int argc, char **argv, const char *alert_filenam
     if (NS_SUCCEEDED(rv) && fileName) {
       fileName->AppendNative(NS_LITERAL_CSTRING("res"));
       fileName->AppendNative(nsDependentCString(alert_filename));
-      PRFileDesc* fd = nsnull;
+      PRFileDesc* fd = 0;
       fileName->OpenNSPRFileDesc(PR_RDONLY, 0664, &fd);
       if (fd) {
         numRead = PR_Read(fd, message, sizeof(message)-1);
@@ -1020,6 +1033,14 @@ static nsresult main1(int argc, char* argv[], nsISupports *nativeApp )
   // the JS engine.  See bugzilla bug 9967 details.
   fpsetmask(0);
 #endif
+
+  NS_TIMELINE_ENTER("init event service");
+  nsCOMPtr<nsIEventQueueService> eventQService(do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv));
+  if (NS_SUCCEEDED(rv)) {
+    // XXX: What if this fails?
+    rv = eventQService->CreateThreadEventQueue();
+  }
+  NS_TIMELINE_LEAVE("init event service");
 
   // Setup an autoreg obserer, so that we can update a progress
   // string in the splash screen
@@ -1243,8 +1264,9 @@ static nsresult main1(int argc, char* argv[], nsISupports *nativeApp )
 // here, or in a native resource file.
 static void DumpHelp(char *appname)
 {
-  printf("Usage: %s [ options ... ] [URL]\n"
-         "       where options include:\n\n", appname);
+  printf("Usage: %s [ options ... ] [URL]\n", appname);
+  printf("       where options include:\n");
+  printf("\n");
 
 #ifdef MOZ_WIDGET_GTK
   /* insert gtk options above moz options, like any other gtk app
@@ -1253,63 +1275,66 @@ static void DumpHelp(char *appname)
    * these straight from a user's gtk version -- but it seems to be
    * what most gtk apps do. -dr
    */
-  printf("GTK options\n"
-         "\t--gdk-debug=FLAGS\t\tGdk debugging flags to set\n"
-         "\t--gdk-no-debug=FLAGS\t\tGdk debugging flags to unset\n"
-         "\t--gtk-debug=FLAGS\t\tGtk+ debugging flags to set\n"
-         "\t--gtk-no-debug=FLAGS\t\tGtk+ debugging flags to unset\n"
-         "\t--gtk-module=MODULE\t\tLoad an additional Gtk module\n"
-         "\t-install\t\tInstall a private colormap\n");
+
+  printf("GTK options\n");
+  printf("%s--gdk-debug=FLAGS%sGdk debugging flags to set\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--gdk-no-debug=FLAGS%sGdk debugging flags to unset\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--gtk-debug=FLAGS%sGtk+ debugging flags to set\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--gtk-no-debug=FLAGS%sGtk+ debugging flags to unset\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--gtk-module=MODULE%sLoad an additional Gtk module\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s-install%sInstall a private colormap\n", HELP_SPACER_1, HELP_SPACER_2);
 
   /* end gtk toolkit options */
 #endif /* MOZ_WIDGET_GTK */
 #if MOZ_WIDGET_XLIB
-  printf("Xlib options\n"
-         "\t-display=DISPLAY\t\tX display to use\n"
-         "\t-visual=VISUALID\t\tX visual to use\n"
-         "\t-install_colormap\t\tInstall own colormap\n"
-         "\t-sync\t\tMake X calls synchronous\n"
-         "\t-no-xshm\t\tDon't use X shared memory extension\n");
+  printf("Xlib options\n");
+  printf("%s-display=DISPLAY%sX display to use\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s-visual=VISUALID%sX visual to use\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s-install_colormap%sInstall own colormap\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s-sync%sMake X calls synchronous\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s-no-xshm%sDon't use X shared memory extension\n", HELP_SPACER_1, HELP_SPACER_2);
 
+  /* end xlib toolkit options */
 #endif /* MOZ_WIDGET_XLIB */
 #ifdef MOZ_X11
-  printf("X11 options\n"
-         "\t--display=DISPLAY\t\tX display to use\n"
-         "\t--sync\t\tMake X calls synchronous\n"
-         "\t--no-xshm\t\tDon't use X shared memory extension\n"
-         "\t--xim-preedit=STYLE\n"
-         "\t--xim-status=STYLE\n");
+  printf("X11 options\n");
+  printf("%s--display=DISPLAY%sX display to use\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--sync%sMake X calls synchronous\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--no-xshm%sDon't use X shared memory extension\n", HELP_SPACER_1, HELP_SPACER_2);
+  printf("%s--xim-preedit=STYLE\n", HELP_SPACER_1);
+  printf("%s--xim-status=STYLE\n", HELP_SPACER_1);
 #endif
 #ifdef XP_UNIX
-  printf("\t--g-fatal-warnings\t\tMake all warnings fatal\n"
-         "\n%s options\n", NS_STRINGIFY(MOZ_APP_DISPLAYNAME));
+  printf("%s--g-fatal-warnings%sMake all warnings fatal\n", HELP_SPACER_1, HELP_SPACER_2);
+
+  printf("\n%s options\n", NS_STRINGIFY(MOZ_APP_DISPLAYNAME));
 #endif
 
-  printf("\t-height <value>\t\tSet height of startup window to <value>.\n"
-         "\t-h or -help\t\tPrint this message.\n"
-         "\t-installer\t\tStart with 4.x migration window.\n"
-         "\t-width <value>\t\tSet width of startup window to <value>.\n"
-         "\t-v or -version\t\tPrint %s version.\n"
-         "\t-CreateProfile <profile>\t\tCreate <profile>.\n"
-         "\t-P <profile>\t\tStart with <profile>.\n"
-         "\t-ProfileWizard\t\tStart with profile wizard.\n"
-         "\t-ProfileManager\t\tStart with profile manager.\n"
-         "\t-SelectProfile\t\tStart with profile selection dialog.\n"
-         "\t-UILocale <locale>\t\tStart with <locale> resources as UI Locale.\n"
-         "\t-contentLocale <locale>\t\tStart with <locale> resources as content Locale.\n", appname);
+  printf("%s-height <value>%sSet height of startup window to <value>.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-h or -help%sPrint this message.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-installer%sStart with 4.x migration window.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-width <value>%sSet width of startup window to <value>.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-v or -version%sPrint %s version.\n",HELP_SPACER_1,HELP_SPACER_2, appname);
+  printf("%s-CreateProfile <profile>%sCreate <profile>.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-P <profile>%sStart with <profile>.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-ProfileWizard%sStart with profile wizard.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-ProfileManager%sStart with profile manager.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-SelectProfile%sStart with profile selection dialog.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-UILocale <locale>%sStart with <locale> resources as UI Locale.\n",HELP_SPACER_1,HELP_SPACER_2);
+  printf("%s-contentLocale <locale>%sStart with <locale> resources as content Locale.\n",HELP_SPACER_1,HELP_SPACER_2);
 #if defined(XP_WIN32) || defined(XP_OS2)
-  printf("\t-console\t\tStart %s with a debugging console.\n",NS_STRINGIFY(MOZ_APP_DISPLAYNAME));
+  printf("%s-console%sStart %s with a debugging console.\n",HELP_SPACER_1,HELP_SPACER_2,NS_STRINGIFY(MOZ_APP_DISPLAYNAME));
 #endif
 #ifdef MOZ_ENABLE_XREMOTE
-  printf("\t-remote <command>\t\tExecute <command> in an already running\n"
-         "\t\t\t\t%s process.  For more info, see:\n"
-         "\n\t\thttp://www.mozilla.org/unix/remote.html\n\n"
-         "\t-splash\t\tEnable splash screen.\n",
-         NS_STRINGIFY(MOZ_APP_DISPLAYNAME));
+  printf("%s-remote <command>%sExecute <command> in an already running\n"
+         "%s%s process.  For more info, see:\n"
+         "\n%shttp://www.mozilla.org/unix/remote.html\n\n",
+         HELP_SPACER_1,HELP_SPACER_1,HELP_SPACER_4,NS_STRINGIFY(MOZ_APP_DISPLAYNAME),HELP_SPACER_2);
+  printf("%s-splash%sEnable splash screen.\n",HELP_SPACER_1,HELP_SPACER_2);
 #else
-  printf("\t-nosplash\t\tDisable splash screen.\n");
+  printf("%s-nosplash%sDisable splash screen.\n",HELP_SPACER_1,HELP_SPACER_2);
 #if defined(XP_WIN) || defined(XP_OS2)
-  printf("\t-quiet\t\tDisable splash screen.\n");
+  printf("%s-quiet%sDisable splash screen.\n",HELP_SPACER_1,HELP_SPACER_2);
 #endif
 #endif
 
@@ -1320,16 +1345,20 @@ static void DumpHelp(char *appname)
 }
 
 
-static inline void DumpVersion()
+static nsresult DumpVersion(char *appname)
 {
+  nsresult rv = NS_OK;
   long buildID = NS_BUILD_ID;  // 10-digit number
-  printf("%s %s, Copyright (c) 2003-2007 mozilla.org", 
-         NS_STRINGIFY(MOZ_APP_DISPLAYNAME), NS_STRINGIFY(MOZ_APP_VERSION));
+
+  printf("%s %s, Copyright (c) 2003-2006 mozilla.org", NS_STRINGIFY(MOZ_APP_DISPLAYNAME), NS_STRINGIFY(MOZ_APP_VERSION));
+
   if(buildID) {
     printf(", build %u\n", (unsigned int)buildID);
   } else {
     printf(" <developer build>\n");
   }
+
+  return rv;
 }
 
 #ifdef MOZ_ENABLE_XREMOTE
@@ -1337,12 +1366,14 @@ static inline void DumpVersion()
 // from main - just to keep types consistent
 static int HandleRemoteArguments(int argc, char* argv[], PRBool *aArgUsed)
 {
-  const char *profile = nsnull;
-  const char *program = nsnull;
-  const char *remote = nsnull;
-  const char *username = nsnull;
+  int i = 0;
 
-  for (int i = 1; i < argc; ++i) {
+  const char *remote = 0;
+  const char *profile = 0;
+  const char *program = 0;
+  const char *username = 0;
+
+  for (i=1; i < argc; i++) {
     if (PL_strcasecmp(argv[i], "-remote") == 0) {
       // someone used a -remote flag
       *aArgUsed = PR_TRUE;
@@ -1465,7 +1496,7 @@ static PRBool HandleDumpArguments(int argc, char* argv[])
         || (PL_strcasecmp(argv[i], "/version") == 0)
 #endif /* XP_WIN || XP_OS2 */
       ) {
-      DumpVersion();
+      DumpVersion(argv[0]);
       return PR_TRUE;
     }
   }
@@ -1518,6 +1549,7 @@ public:
 int main(int argc, char* argv[])
 {
   NS_TIMELINE_MARK("enter main");
+  int i; //Moved here due to portability guideline 20. See bug 258055
 
 #ifdef XP_WIN32
   // Suppress the "DLL Foo could not be found" dialog, such that if dependent
@@ -1576,26 +1608,22 @@ int main(int argc, char* argv[])
   argc = NS_TraceMallocStartupArgs(argc, argv);
 #endif
 
-#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_GTK2) || defined(MOZ_X11)
-  int i;
-#endif
-
 #ifdef MOZ_X11
   /* Init threadsafe mode of Xlib API on demand
    * (currently this is only for testing, future builds may use this by
    * default) */
-  PRBool x11threadsafe;
-  const char *xInitThreads = PR_GetEnv("MOZILLA_X11_XINITTHREADS");
-  if (xInitThreads && *xInitThreads)
-    x11threadsafe = PR_TRUE;
-  else {
-    x11threadsafe = PR_FALSE;
-    for (i = 1; i < argc; ++i)
-      if (PL_strcmp(argv[i], "-xinitthreads") == 0) {
-        x11threadsafe = PR_TRUE;
-        break;
-      }
+  PRBool x11threadsafe = PR_FALSE;
+  for (i=1; i<argc; i++) {
+    if (PL_strcmp(argv[i], "-xinitthreads") == 0) {
+      x11threadsafe = PR_TRUE;
+      break;
+    }
   }
+
+  if (PR_GetEnv("MOZILLA_X11_XINITTHREADS")) {
+    x11threadsafe = PR_TRUE;
+  }
+  
   if (x11threadsafe) {
     if (XInitThreads() == False) {
       fprintf(stderr, "%s: XInitThreads failure.", argv[0]);
@@ -1666,7 +1694,7 @@ int main(int argc, char* argv[])
   // Try to allocate "native app support."
   // Note: this object is not released here.  It is passed to main1 which
   //       has responsibility to release it.
-  nsINativeAppSupport *nativeApp = nsnull;
+  nsINativeAppSupport *nativeApp = 0;
   rv = NS_CreateNativeAppSupport(&nativeApp);
 
   // See if we can run.
@@ -1685,7 +1713,7 @@ int main(int argc, char* argv[])
   }
   // Note: this object is not released here.  It is passed to main1 which
   //       has responsibility to release it.
-  nsISplashScreen *splash = nsnull;
+  nsISplashScreen *splash = 0;
   PRBool dosplash = GetWantSplashScreen(argc, argv);
 
   if (dosplash && !nativeApp) {
@@ -1734,7 +1762,7 @@ int main(int argc, char* argv[])
   NS_ASSERTION(NS_SUCCEEDED(rv), "NS_ShutdownXPCOM failed");
 #endif
 
-  return NS_SUCCEEDED(mainResult) ? 0 : 1;
+  return TranslateReturnValue(mainResult);
 }
 
 #if defined( XP_WIN ) && defined( WIN32 ) && !defined(__GNUC__)

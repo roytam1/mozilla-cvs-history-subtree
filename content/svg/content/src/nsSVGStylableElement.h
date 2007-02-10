@@ -59,8 +59,9 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIDOMSVGSTYLABLE
 
-  // nsIContent
+  // nsIStyledContent
   virtual const nsAttrValue* GetClasses() const;
+  NS_IMETHOD_(PRBool) HasClass(nsIAtom* aClass, PRBool aCaseSensitive) const;
 
 protected:
   nsRefPtr<nsSVGClassValue> mClassName;

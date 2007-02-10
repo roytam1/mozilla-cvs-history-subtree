@@ -39,3 +39,4 @@
 <!ENTITY nodeName.label "Navn:">
 <!ENTITY namespaceURI.label "Navnerom:">
 <!ENTITY nodeType.label "Type:">
+<!ENTITY nodeValue.label "Verdi:">

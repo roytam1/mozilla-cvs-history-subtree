@@ -73,8 +73,9 @@ nsUUIDGenerator::Init()
 
     NS_ENSURE_TRUE(mLock, NS_ERROR_OUT_OF_MEMORY);
 
-    // We're a service, so we're guaranteed that Init() is not going
-    // to be reentered while we're inside Init().
+    // No need to acquire our lock while we mess with stuff here.  If we can't
+    // depend on reasonable locking around Init we're screwed with the
+    // assign-and-check above, anyway.
     
 #if !defined(XP_WIN) && !defined(XP_MACOSX)
     /* initialize random number generator using NSPR random noise */

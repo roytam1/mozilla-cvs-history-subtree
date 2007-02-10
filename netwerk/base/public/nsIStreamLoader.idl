@@ -35,27 +35,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIStreamListener.idl"
+#include "nsISupports.idl"
+#include "nsIChannel.idl"
 
 interface nsIRequest;
+interface nsIURI;
+interface nsILoadGroup;
 interface nsIStreamLoader;
+interface nsIInterfaceRequestor;
 
 [scriptable, uuid(359F7990-D4E9-11d3-A1A5-0050041CAF44)]
 interface nsIStreamLoaderObserver : nsISupports
 {
-    /**
-     * Called when the entire stream has been loaded.
-     *
-     * @param loader the stream loader that loaded the stream.
-     * @param ctxt the context parameter of the underlying channel
-     * @param status the status of the underlying channel
-     * @param resultLength the length of the data loaded
-     * @param result the data
-     *
-     * This method will always be called asynchronously by the
-     * nsIStreamLoader involved, on the thread that called the
-     * loader's init() method.
-     */
     void onStreamComplete(in nsIStreamLoader loader,
                           in nsISupports ctxt,
                           in nsresult status,
@@ -66,24 +57,27 @@ interface nsIStreamLoaderObserver : nsISupports
 /**
  * Asynchronously loads a channel into a memory buffer.
  *
- * To use this interface, first call init() with a nsIStreamLoaderObserver
- * that will be notified when the data has been loaded. Then call asyncOpen()
- * on the channel with the nsIStreamLoader as the listener. The context
- * argument in the asyncOpen() call will be passed to the onStreamComplete()
- * callback.
- *
  * XXX define behaviour for sizes >4 GB
  */
-[scriptable, uuid(8ea7e890-8211-11d9-8bde-f66bad1e3f3a)]
-interface nsIStreamLoader : nsIStreamListener
+[scriptable, uuid(31d37360-8e5a-11d3-93ad-00104ba0fd40)]
+interface nsIStreamLoader : nsISupports
 {
     /**
      * Initialize this stream loader, and start loading the data.
      *
+     * @param aChannel
+     *        A Channel to load data from. This must not be asyncOpen'd yet!
      * @param aObserver
      *        An observer that will be notified when the data is complete.
+     * @param aContext
+     *        May be null. Will be passed to the observer.
+     *
+     * @note Failure to open the channel will be indicated by an async callback
+     *       to the observer.
      */
-    void init(in nsIStreamLoaderObserver aObserver);
+    void init(in nsIChannel aChannel,
+              in nsIStreamLoaderObserver aObserver,
+              in nsISupports aContext);
 
     /**
      * Gets the number of bytes read so far.

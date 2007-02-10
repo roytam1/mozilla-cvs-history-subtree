@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 40; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -52,7 +52,9 @@
 class   nsIAppShell;
 class   nsIToolkit;
 class   nsIFontMetrics;
+class   nsIToolkit;
 class   nsIRenderingContext;
+class   nsIEnumerator;
 class   nsIDeviceContext;
 class   nsIRegion;
 struct  nsRect;
@@ -63,10 +65,6 @@ class   nsIRollupListener;
 class   nsGUIEvent;
 struct  nsColorMap;
 class   imgIContainer;
-
-#ifdef MOZ_CAIRO_GFX
-class   gfxASurface;
-#endif
 
 /**
  * Callback function that processes events.
@@ -94,10 +92,10 @@ typedef nsEventStatus (*PR_CALLBACK EVENT_CALLBACK)(nsGUIEvent *event);
 #define NS_NATIVE_SCREEN      9
 #define NS_NATIVE_SHELLWIDGET 10      // Get the shell GtkWidget
 
-// ebdf8ccf-ada9-457c-ad6c-88e1cb9d4498
+// e7f09105-d21b-406a-89d5-e6b731b8f665
 #define NS_IWIDGET_IID \
-{ 0xebdf8ccf, 0xada9, 0x457c, \
-  { 0xad, 0x6c, 0x88, 0xe1, 0xcb, 0x9d, 0x44, 0x98 } }
+{ 0xe7f09105, 0xd21b, 0x406a, \
+  { 0x89, 0xd5, 0xe6, 0xb7, 0x31, 0xb8, 0xf6, 0x65 } }
 
 
 // Hide the native window systems real window type so as to avoid
@@ -258,7 +256,7 @@ class nsIWidget : public nsISupports {
 
   public:
 
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IWIDGET_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IWIDGET_IID)
 
     nsIWidget()
       : mLastChild(nsnull)
@@ -851,10 +849,8 @@ class nsIWidget : public nsISupports {
     virtual void* GetNativeData(PRUint32 aDataType) = 0;
     virtual void FreeNativeData(void * data, PRUint32 aDataType) = 0;//~~~
     virtual nsIRenderingContext* GetRenderingContext() = 0;
-
-    // GetDeviceContext returns a weak pointer to this widget's device context
     virtual nsIDeviceContext* GetDeviceContext() = 0;
-
+    virtual nsIAppShell *GetAppShell() = 0;
     //@}
 
     /**
@@ -956,6 +952,14 @@ class nsIWidget : public nsISupports {
      */
     NS_IMETHOD DispatchEvent(nsGUIEvent* event, nsEventStatus & aStatus) = 0;
 
+
+    /**
+     * For printing and lightweight widgets
+     *
+     */
+    NS_IMETHOD Paint(nsIRenderingContext& aRenderingContext,
+                     const nsRect& aDirtyRect) = 0;
+   
     /**
      * Enables the dropping of files to a widget (XXX this is temporary)
      *
@@ -972,9 +976,16 @@ class nsIWidget : public nsISupports {
     NS_IMETHOD CaptureMouse(PRBool aCapture) = 0;
 
     /**
-     * Classify the window for the window manager. Mostly for X11.
+     * Gets the window class
+     * implemented in gtk
      */
-    NS_IMETHOD SetWindowClass(const nsAString& xulWinType) = 0;
+    NS_IMETHOD GetWindowClass(char *aClass) = 0;
+
+    /**
+     * Sets the window class
+     * implemented in gtk
+     */
+    NS_IMETHOD SetWindowClass(char *aClass) = 0;
 
     /**
      * Enables/Disables system capture of any and all events that would cause a
@@ -1024,12 +1035,6 @@ class nsIWidget : public nsISupports {
      */
     NS_IMETHOD GetLastInputEventTime(PRUint32& aTime) = 0;
 
-#ifdef MOZ_CAIRO_GFX
-    /**
-     * Get the Thebes surface associated with this widget.
-     */
-    virtual gfxASurface *GetThebesSurface() = 0;
-#endif
 
 protected:
     // keep the list of children.  We also keep track of our siblings.
@@ -1043,7 +1048,5 @@ protected:
     nsCOMPtr<nsIWidget> mNextSibling;
     nsIWidget* mPrevSibling;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIWidget, NS_IWIDGET_IID)
 
 #endif // nsIWidget_h__

@@ -11,14 +11,15 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is Mozilla.org
+# The Original Code is mozilla.org code.
 #
 # The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 2003
+# Netscape Communications.
+# Portions created by the Initial Developer are Copyright (C) 2002
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
+#   Brian Ryner <bryner@brianryner.com>
 #   Daniel Glazman (daniel@glazman.org), on behalf of Lindows.com
 #
 # Alternatively, the contents of this file may be used under the terms of
@@ -37,19 +38,137 @@
 
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
-srcdir	= @srcdir@
+srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-PREF_JS_EXPORTS = $(srcdir)/profile/composer-prefs.js \
-		  $(NULL)
+DIRS		= profile
 
-DIST_FILES = application.ini
-
-DEFINES += \
-    -DCOMPOSER_VERSION=$(COMPOSER_VERSION) \
-    -DMOZ_APP_NAME=$(MOZ_APP_NAME) \
+PREF_JS_EXPORTS = \
+    $(srcdir)/profile/all.js \
+    $(srcdir)/profile/editor.js \
     $(NULL)
 
+ifeq ($(USE_SHORT_LIBNAME), 1)
+PROGRAM = composer$(BIN_SUFFIX)
+else
+PROGRAM = composer-bin$(BIN_SUFFIX)
+endif
+
+REQUIRES = \
+	string \
+	xpcom \
+	xulapp \
+	xpinstall \
+	appshell \
+	$(NULL)
+
+CPPSRCS = nsComposerApp.cpp
+
+# This code removes the console from release builds
+# (unless you've set MOZ_WINCONSOLE=1).
+
+ifndef MOZ_WINCONSOLE
+ifdef MOZ_DEBUG
+MOZ_WINCONSOLE = 1
+else
+MOZ_WINCONSOLE = 0
+endif
+endif
+
+LIBS = \
+	$(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX) \
+	$(MOZ_JS_LIBS) \
+	$(MOZ_COMPONENT_LIBS) \
+	$(TK_LIBS) \
+	$(NULL)
+
+# Add explicit X11 dependency when building against X11 toolkits
+ifneq (,$(filter gtk gtk2 xlib,$(MOZ_WIDGET_TOOLKIT)))
+LIBS += $(XLDFLAGS) $(XLIBS)
+endif
+
+include $(topsrcdir)/config/config.mk
+
+
+## HACK ALERT...I can't seem to get the console to go away in optimized builds
+## the MOZWINCONSOLE lines above are doing anything...for now, force the right
+## subsytem
+
+ifndef MOZ_DEBUG
+WIN32_EXE_LDFLAGS += /SUBSYSTEM:WINDOWS
+endif
+
+ifeq ($(OS_ARCH),WINNT)
+OS_LIBS += $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 oleaut32 version winspool gdi32)
+RCINCLUDE = splash.rc
+ifndef GNU_CC
+RCFLAGS += -DMOZ_STANDALONE_COMPOSER -I$(srcdir)
+else
+RCFLAGS += -DMOZ_STANDALONE_COMPOSER --include-dir $(srcdir)
+endif
+endif
+
 include $(topsrcdir)/config/rules.mk
+
+$(PROGRAM): $(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX)
+
+DESKTOP_ICONS := \
+	editorWindow.xpm \
+	editorWindow16.xpm \
+	$(NULL) 
+
+libs:: $(DESKTOP_ICONS)
+	$(INSTALL) $^ $(DIST)/bin/chrome/icons/default
+
+install:: $(DESKTOP_ICONS)
+	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/chrome/icons/default
+
+ifneq (,$(filter-out OS2 WINNT Darwin,$(OS_ARCH)))
+composer:: mozilla.in Makefile.in Makefile $(DEPTH)/config/autoconf.mk
+	cat $< | sed -e "s|%MOZAPPDIR%|$(mozappdir)|" \
+		-e "s|%MREDIR%|$(mredir)|" \
+		-e "s|mozilla-bin|$(PROGRAM)|g" > $@
+	chmod +x $@
+
+libs:: composer
+	$(INSTALL) $< $(DIST)/bin
+
+install:: composer
+	$(SYSINSTALL) $< $(DESTDIR)$(bindir)
+
+GARBAGE += composer
+endif
+
+ifneq (,$(filter gtk gtk2,$(MOZ_WIDGET_TOOLKIT)))
+ICON_FILES	= \
+		$(srcdir)/mozicon50.xpm \
+		$(srcdir)/mozicon16.xpm \
+		$(NULL)
+
+libs::
+	$(INSTALL) $(ICON_FILES) $(DIST)/bin/icons
+
+install::
+	$(SYSINSTALL) $(IFLAGS1) $(ICON_FILES) $(DESTDIR)$(mozappdir)/icons
+endif
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+
+ifdef MOZ_DEBUG
+APP_NAME = ComposerDebug
+else
+APP_NAME = Composer
+endif
+
+libs:: $(PROGRAM)
+	mkdir -p $(DIST)/$(APP_NAME).app/Contents/MacOS
+	rsync -a $(srcdir)/macbuild/Contents $(DIST)/$(APP_NAME).app
+	rsync -aL $(DIST)/bin/ $(DIST)/$(APP_NAME).app/Contents/MacOS
+	cp -RL $(srcdir)/macbuild/mach.icns $(DIST)/$(APP_NAME).app/Contents/Resources/mach.icns
+	echo -n APPLMOZZ > $(DIST)/$(APP_NAME).app/Contents/PkgInfo
+
+clean clobber::
+	rm -rf $(DIST)/$(APP_NAME).app
+endif

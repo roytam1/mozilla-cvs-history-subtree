@@ -49,10 +49,6 @@
   margin-left: 20px;
 }
 
-.fccReplyFollowsParent {
-  margin-left: 20px;
-}
-
 .selectForOfflineUseButton {
   list-style-image: url("chrome://communicator/skin/icons/offline.gif");
 }

@@ -56,12 +56,14 @@ class nsPresContext;
 class nsProgressMeterFrame : public nsBoxFrame
 {
 public:
-  friend nsIFrame* NS_NewProgressMeterFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewProgressMeterFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
-  NS_IMETHOD SetInitialChildList(nsIAtom*        aListName,
-                                 nsIFrame*       aChildList);
+  NS_IMETHOD SetInitialChildList(nsPresContext* aPresContext,
+                                     nsIAtom*        aListName,
+                                     nsIFrame*       aChildList);
 
-  NS_IMETHOD AttributeChanged(PRInt32 aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent* aChild,
+                              PRInt32 aNameSpaceID,
                               nsIAtom* aAttribute,
                               PRInt32 aModType);
 
@@ -70,7 +72,8 @@ public:
 #endif
 
 protected:
-  nsProgressMeterFrame(nsIPresShell* aPresShell, nsStyleContext* aContext) :
-    nsBoxFrame(aPresShell, aContext) {}
+  nsProgressMeterFrame(nsIPresShell* aPresShell);
   virtual ~nsProgressMeterFrame();
+
+private:
 }; // class nsProgressMeterFrame

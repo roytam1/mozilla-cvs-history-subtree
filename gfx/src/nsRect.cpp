@@ -38,7 +38,6 @@
 #include "nsRect.h"
 #include "nsString.h"
 #include "nsUnitConversion.h"
-#include "nsIDeviceContext.h"
 
 #ifdef MIN
 #undef MIN
@@ -211,21 +210,17 @@ FILE* operator<<(FILE* out, const nsRect& rect)
 {
   nsAutoString tmp;
 
-  // Output the coordinates in fractional pixels so they're easier to read
+  // Output the coordinates in fractional points so they're easier to read
   tmp.AppendLiteral("{");
-  tmp.AppendFloat(NSAppUnitsToFloatPixels(rect.x,
-                       nsIDeviceContext::AppUnitsPerCSSPixel()));
+  tmp.AppendFloat(NSTwipsToFloatPoints(rect.x));
   tmp.AppendLiteral(", ");
-  tmp.AppendFloat(NSAppUnitsToFloatPixels(rect.y,
-                       nsIDeviceContext::AppUnitsPerCSSPixel()));
+  tmp.AppendFloat(NSTwipsToFloatPoints(rect.y));
   tmp.AppendLiteral(", ");
-  tmp.AppendFloat(NSAppUnitsToFloatPixels(rect.width,
-                       nsIDeviceContext::AppUnitsPerCSSPixel()));
+  tmp.AppendFloat(NSTwipsToFloatPoints(rect.width));
   tmp.AppendLiteral(", ");
-  tmp.AppendFloat(NSAppUnitsToFloatPixels(rect.height,
-                       nsIDeviceContext::AppUnitsPerCSSPixel()));
+  tmp.AppendFloat(NSTwipsToFloatPoints(rect.height));
   tmp.AppendLiteral("}");
-  fputs(NS_LossyConvertUTF16toASCII(tmp).get(), out);
+  fputs(NS_LossyConvertUCS2toASCII(tmp).get(), out);
   return out;
 }
 

@@ -52,7 +52,7 @@ MODULE_NAME	= NSS
 EXPORT_LIBRARY	= 1
 META_COMPONENT	= crypto
 GRE_MODULE	= 1
-LIBXUL_LIBRARY	= 1
+MOZILLA_INTERNAL_API = 1
 
 PACKAGE_FILE = pipnss.pkg
 
@@ -90,6 +90,7 @@ CPPSRCS = 				\
   nsCRLManager.cpp \
   nsNSSShutDown.cpp \
   nsNTLMAuthModule.cpp \
+  nsNSSEvent.cpp \
   nsSmartCardMonitor.cpp \
   nsSmartCardEvent.cpp \
   nsStreamCipher.cpp \

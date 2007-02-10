@@ -36,12 +36,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * style sheet and style rule processor representing data from presentational
- * HTML attributes
- */
-
 #ifndef nsHTMLStyleSheet_h_
 #define nsHTMLStyleSheet_h_
 
@@ -181,25 +175,12 @@ private:
     NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
   };
 
-  // this rule handles borders on a <col> when rules is set on its <table>.
-  // This should only be used for <col>s which are in a colgroup or anonymous
-  // cols.
+  // this rule handles borders on a <col> when rules is set on its <table>
   class TableColRule;
   friend class TableColRule;
   class TableColRule: public GenericTableRule {
   public:
     TableColRule() {}
-
-    NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
-  };
-
-  // this rule handles borders on a <col> when rules is set on its <table>.
-  // This should only be used for <col>s which are not in a colgroup.
-  class TableUngroupedColRule;
-  friend class TableUngroupedColRule;
-  class TableUngroupedColRule: public GenericTableRule {
-  public:
-    TableUngroupedColRule() {}
 
     NS_IMETHOD MapRuleInfoInto(nsRuleData* aRuleData);
   };
@@ -214,7 +195,6 @@ private:
   TableRowRule*        mTableRowRule;
   TableColgroupRule*   mTableColgroupRule;
   TableColRule*        mTableColRule;
-  TableUngroupedColRule* mTableUngroupedColRule;
   TableTHRule*         mTableTHRule;
 
   PLDHashTable         mMappedAttrTable;

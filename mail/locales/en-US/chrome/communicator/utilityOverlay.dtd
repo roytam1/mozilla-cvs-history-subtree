@@ -1,4 +1,6 @@
 <!-- these things need to move into utilityOverlay.xul -->
+<!ENTITY  offlineGoOfflineCmd.label                 "Work Offline">
+<!ENTITY  offlineGoOfflineCmd.accesskey             "w">
 
 <!-- LOCALIZATION NOTE : FILE This file contains the global menu items --> 
 
@@ -62,8 +64,6 @@
 <!ENTITY closeCmd.key			"W">  
 <!ENTITY closeCmd.accesskey		"c">
 
-<!ENTITY closeWindow.label "Close Window">
-
 <!ENTITY quitApplicationCmd.label	"Exit"> 
 <!ENTITY quitApplicationCmd.key		"Q"> 
 <!ENTITY quitApplicationCmd.accesskey	"x">
@@ -71,5 +71,3 @@
 <!ENTITY quitApplicationCmdUnix.label	"Quit"> 
 <!ENTITY quitApplicationCmdUnix.accesskey	"q">
 
-<!ENTITY quitApplicationCmdMac.label	"Quit &brandShortName;"> 
-<!ENTITY quitApplicationCmdMac.accesskey	"q">

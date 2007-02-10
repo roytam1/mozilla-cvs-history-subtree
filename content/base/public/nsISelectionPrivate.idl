@@ -39,17 +39,16 @@
 #include "nsISelectionListener.idl"
 #include "nsIEnumerator.idl"
 
+interface nsIFrameSelection;
 interface nsIDOMRange;
 interface nsISelectionListener;
 
 %{C++
-class nsFrameSelection;
 class nsIFrame;
 class nsIPresShell;
 struct nsPoint;
 %}
 
-[ptr] native nsFrameSelection(nsFrameSelection);
 [ptr] native nsIFrame(nsIFrame);
 [ptr] native nsIPresShell(nsIPresShell);
 [ref] native nsPointRef(nsPoint);
@@ -79,7 +78,7 @@ interface nsISelectionPrivate : nsISupports
 
     /* Table selection stuff
        We should probably move this and table-related 
-       items in nsFrameSelection  to a
+       items in nsIFrameSelection  to a 
        new nsITableSelection interface
     */
     const long TABLESELECTION_NONE     = 0; 
@@ -114,6 +113,6 @@ interface nsISelectionPrivate : nsISupports
     /* getFrameSelection
      * Returnes a reference to the frame selection associated with this selection 
      */
-    [noscript] nsFrameSelection getFrameSelection();
+    [noscript] nsIFrameSelection getFrameSelection();
 };
 

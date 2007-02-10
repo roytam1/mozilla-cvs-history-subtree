@@ -43,12 +43,12 @@
 #include "nsIObserverService.h"
 #include "nsISupportsArray.h"
 #include "nsNetscapeProfileMigratorBase.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #define NEED_TO_FIX_4X_COOKIES 1
 #define SECONDS_BETWEEN_1900_AND_1970 2208988800UL
-#endif /* XP_MACOSX */
+#endif /* XP_MAC */
 
 class nsIFile;
 

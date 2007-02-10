@@ -64,17 +64,13 @@ CPPSRCS		= nsAccessibilityFactory.cpp
 LOCAL_INCLUDES	= -I$(srcdir)/../src
 
 SHARED_LIBRARY_LIBS = \
-	../src/base/$(LIB_PREFIX)accessibility_base_s.$(LIB_SUFFIX) \
-	../src/html/$(LIB_PREFIX)accessibility_html_s.$(LIB_SUFFIX) \
-	../src/$(LIB_PREFIX)accessibility_toolkit_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)accessibility_base_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)accessibility_html_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)accessibility_toolkit_s.$(LIB_SUFFIX) \
 	$(NULL)
 
 ifdef MOZ_XUL
-SHARED_LIBRARY_LIBS += ../src/xul/$(LIB_PREFIX)accessibility_xul_s.$(LIB_SUFFIX)
-endif
-
-ifndef DISABLE_XFORMS_HOOKS
-SHARED_LIBRARY_LIBS += ../src/xforms/$(LIB_PREFIX)accessibility_xforms_s.$(LIB_SUFFIX)
+SHARED_LIBRARY_LIBS += $(DIST)/lib/$(LIB_PREFIX)accessibility_xul_s.$(LIB_SUFFIX)
 endif
 
 EXTRA_DSO_LIBS = \
@@ -90,14 +86,6 @@ EXTRA_DSO_LDOPTS =           \
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),gtk2)
 EXTRA_DSO_LDOPTS += $(MOZ_GTK2_LIBS)
-endif
-
-ifeq ($(MOZ_WIDGET_TOOLKIT),cocoa)
-EXTRA_DSO_LDOPTS += -framework Cocoa
-endif
-
-ifeq ($(OS_ARCH),WINNT)
-OS_LIBS += oleaut32.lib
 endif
 
 include $(topsrcdir)/config/rules.mk

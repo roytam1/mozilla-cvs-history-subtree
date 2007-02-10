@@ -40,6 +40,19 @@
 #ifndef nsContentErrors_h___
 #define nsContentErrors_h___
 
+/** Error codes for nsIContent::GetAttr */
+// Returned if the attr exists and has a value
+#define NS_CONTENT_ATTR_HAS_VALUE NS_OK
+
+// Returned if the attr exists but has no value
+#define NS_CONTENT_ATTR_NO_VALUE \
+  NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_CONTENT, 0)
+
+// Returned if the attr does not exist
+#define NS_CONTENT_ATTR_NOT_THERE \
+  NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_CONTENT, 1)
+
+
 /** Error codes for nsHTMLStyleSheet */
 // XXX this is not really used
 #define NS_HTML_STYLE_PROPERTY_NOT_THERE \
@@ -56,7 +69,7 @@
 #define NS_XML_AUTOLINK_UNDEFINED \
   NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_CONTENT, 6)
 
-/** Error codes for nsScriptLoader */
+/** Error codes for nsIScriptLoader */
 #define NS_CONTENT_SCRIPT_IS_EVENTHANDLER \
   NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_CONTENT, 7)
 

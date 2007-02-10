@@ -42,6 +42,7 @@
 #include "nsHTMLButtonControlFrame.h"
 #include "nsCOMPtr.h"
 #include "nsIAnonymousContentCreator.h"
+#include "nsITextContent.h"
 
 #ifdef ACCESSIBILITY
 class nsIAccessible;
@@ -56,7 +57,15 @@ class nsGfxButtonControlFrame : public nsHTMLButtonControlFrame,
                                 public nsIAnonymousContentCreator
 {
 public:
-  nsGfxButtonControlFrame(nsStyleContext* aContext);
+  nsGfxButtonControlFrame();
+
+     //nsIFrame
+  NS_IMETHOD Reflow(nsPresContext*          aCX,
+                    nsHTMLReflowMetrics&     aDesiredSize,
+                    const nsHTMLReflowState& aReflowState,
+                    nsReflowStatus&          aStatus);
+  virtual const nsIID& GetCID();
+  virtual const nsIID& GetIID();
 
   NS_IMETHOD HandleEvent(nsPresContext* aPresContext, 
                          nsGUIEvent* aEvent,
@@ -69,6 +78,8 @@ public:
 
   virtual nsIAtom* GetType() const;
 
+   // nsFormControlFrame
+  NS_IMETHOD SetSuggestedSize(nscoord aWidth, nscoord aHeight);
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
 #endif
@@ -82,13 +93,16 @@ public:
                             nsIContent *      aContent,
                             nsIFrame**        aFrame);
 
-  NS_IMETHOD AttributeChanged(PRInt32         aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent*     aChild,
+                              PRInt32         aNameSpaceID,
                               nsIAtom*        aAttribute,
                               PRInt32         aModType);
 
   virtual PRBool IsLeaf() const;
-
+  
 protected:
+  NS_IMETHOD AddComputedBorderPaddingToDesiredSize(nsHTMLReflowMetrics& aDesiredSize,
+                                                   const nsHTMLReflowState& aSuggestedReflowState);
   nsresult GetDefaultLabel(nsXPIDLString& aLabel);
 
   nsresult GetLabel(nsXPIDLString& aLabel);
@@ -99,8 +113,9 @@ private:
   NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
   NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }
 
-  nsSize mSuggestedSize;
-  nsCOMPtr<nsIContent> mTextContent;
+  nscoord mSuggestedWidth;
+  nscoord mSuggestedHeight;
+  nsCOMPtr<nsITextContent> mTextContent;
 };
 
 

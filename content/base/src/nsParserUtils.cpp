@@ -35,10 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * Namespace class for some static parsing-related methods.
- */
-
 #include "nsParserUtils.h"
 #include "nsIParser.h" // for kQuote et. al.
 #include "jsapi.h"
@@ -64,7 +60,8 @@
 
 PRBool
 nsParserUtils::GetQuotedAttributeValue(const nsString& aSource, nsIAtom *aName,
-                                       nsAString& aValue)
+                                       nsAString& aValue,
+                                       PRBool aComplyWithSpec)
 {
   aValue.Truncate();
 
@@ -114,7 +111,14 @@ nsParserUtils::GetQuotedAttributeValue(const nsString& aSource, nsIAtom *aName,
     // the value is between start and iter.
     
     if (aName->Equals(attrName)) {
-      nsIParserService* parserService = nsContentUtils::GetParserService();
+      if (!aComplyWithSpec) {
+        aValue.Append(start, iter - start);
+
+        return PR_TRUE;
+      }
+
+      nsCOMPtr<nsIParserService_MOZILLA_1_8_BRANCH> parserService =
+        do_QueryInterface(nsContentUtils::GetParserServiceWeakRef());
       NS_ENSURE_TRUE(parserService, PR_FALSE);
 
       // We'll accumulate as many characters as possible (until we hit either
@@ -169,10 +173,12 @@ nsParserUtils::GetQuotedAttributeValue(const nsString& aSource, nsIAtom *aName,
 }
 
 
+// XXX Stolen from nsHTMLContentSink. Needs to be shared.
+// XXXbe share also with nsRDFParserUtils.cpp and nsHTMLContentSink.cpp
 // Returns PR_TRUE if the language name is a version of JavaScript and
 // PR_FALSE otherwise
 PRBool
-nsParserUtils::IsJavaScriptLanguage(const nsString& aName, PRUint32 *aFlags)
+nsParserUtils::IsJavaScriptLanguage(const nsString& aName, const char* *aVersion)
 {
   JSVersion version = JSVERSION_UNKNOWN;
 
@@ -207,7 +213,7 @@ nsParserUtils::IsJavaScriptLanguage(const nsString& aName, PRUint32 *aFlags)
   }
   if (version == JSVERSION_UNKNOWN)
     return PR_FALSE;
-  *aFlags = version;
+  *aVersion = JS_VersionToString(version);
   return PR_TRUE;
 }
 

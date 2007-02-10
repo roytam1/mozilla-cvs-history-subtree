@@ -51,7 +51,6 @@ Any other render format? HTML?
 
 #include "nsCOMPtr.h"
 #include "nsIImage.h"
-#include "nsIInputStream.h"
 
 
 //
@@ -86,39 +85,26 @@ private:
 }; // class nsImageToClipboard
 
 
-struct bitFields {
-    PRUint32 red;
-    PRUint32 green;
-    PRUint32 blue;
-    PRUint8 redLeftShift;
-    PRUint8 redRightShift;
-    PRUint8 greenLeftShift;
-    PRUint8 greenRightShift;
-    PRUint8 blueLeftShift;
-    PRUint8 blueRightShift;
-};
-
 //
 // nsImageFromClipboard
 //
 // A utility class that takes a DIB from the win32 clipboard and does
-// all the bitmap magic to convert it to a PNG or a JPEG in the form of a nsIInputStream
+// all the bitmap magic to create a nsIImage
 //
 class nsImageFromClipboard
 {
 public:
-  nsImageFromClipboard () ;
+  nsImageFromClipboard ( BITMAPV4HEADER* inHeader ) ;
   ~nsImageFromClipboard ( ) ;
   
     // Retrieve the newly created image
-  nsresult GetEncodedImageStream (unsigned char * aClipboardData, nsIInputStream** outImage);
-
+  nsresult GetImage ( nsIImage** outImage ) ;
+  
 private:
 
-  void InvertRows(unsigned char * aInitialBuffer, PRUint32 aSizeOfBuffer, PRUint32 aNumBytesPerRow);
-  nsresult ConvertColorBitMap(unsigned char * aInputBuffer, PBITMAPINFO pBitMapInfo, unsigned char * aOutBuffer);
-  void CalcBitmask(PRUint32 aMask, PRUint8& aBegin, PRUint8& aLength);
-  void CalcBitShift(bitFields * aColorMask);
+  PRUint8* GetDIBBits ( ) ;
+
+  BITMAPV4HEADER* mHeader;
 
 }; // nsImageFromClipboard
 

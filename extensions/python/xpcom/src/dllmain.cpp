@@ -46,12 +46,7 @@
 // (c) 2000, ActiveState corp.
 
 #include "PyXPCOM_std.h"
-#include "nsDirectoryServiceDefs.h"
-#include "nsDirectoryServiceUtils.h"
-#include "nsILocalFile.h"
-#include "nsITimelineService.h"
-
-#include "nspr.h" // PR_fprintf
+#include <prthread.h>
 
 #ifdef XP_WIN
 #ifndef WIN32_LEAN_AND_MEAN
@@ -60,216 +55,185 @@
 #include "windows.h"
 #endif
 
-#ifdef XP_UNIX
-#include <dlfcn.h>
-#include <sys/stat.h>
-#endif
-
+static PRInt32 g_cLockCount = 0;
 static PRLock *g_lockMain = nsnull;
 
-PYXPCOM_EXPORT PyObject *PyXPCOM_Error = NULL;
-PYXPCOM_EXPORT PRBool PyXPCOM_ModuleInitialized = PR_FALSE;
+#ifndef PYXPCOM_USE_PYGILSTATE
 
-PyXPCOM_INTERFACE_DEFINE(Py_nsIComponentManager, nsIComponentManager, PyMethods_IComponentManager)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIInterfaceInfoManager, nsIInterfaceInfoManager, PyMethods_IInterfaceInfoManager)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIEnumerator, nsIEnumerator, PyMethods_IEnumerator)
-PyXPCOM_INTERFACE_DEFINE(Py_nsISimpleEnumerator, nsISimpleEnumerator, PyMethods_ISimpleEnumerator)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIInterfaceInfo, nsIInterfaceInfo, PyMethods_IInterfaceInfo)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIInputStream, nsIInputStream, PyMethods_IInputStream)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIClassInfo, nsIClassInfo, PyMethods_IClassInfo)
-PyXPCOM_INTERFACE_DEFINE(Py_nsIVariant, nsIVariant, PyMethods_IVariant)
+////////////////////////////////////////////////////////////
+// Thread-state helpers/global functions.
+// Only used if there is no Python PyGILState_* API
+//
+static PyThreadState *ptsGlobal = nsnull;
+PyInterpreterState *PyXPCOM_InterpreterState = nsnull;
+PRUintn tlsIndex = 0;
+
+
+// This function must be called at some time when the interpreter lock and state is valid.
+// Called by init{module} functions and also COM factory entry point.
+void PyXPCOM_InterpreterState_Ensure()
+{
+	if (PyXPCOM_InterpreterState==NULL) {
+		PyThreadState *threadStateSave = PyThreadState_Swap(NULL);
+		if (threadStateSave==NULL)
+			Py_FatalError("Can not setup interpreter state, as current state is invalid");
+
+		PyXPCOM_InterpreterState = threadStateSave->interp;
+		PyThreadState_Swap(threadStateSave);
+	}
+}
+
+void PyXPCOM_InterpreterState_Free()
+{
+	PyXPCOM_ThreadState_Free();
+	PyXPCOM_InterpreterState = NULL; // Eek - should I be freeing something?
+}
+
+// This structure is stored in the TLS slot.  At this stage only a Python thread state
+// is kept, but this may change in the future...
+struct ThreadData{
+	PyThreadState *ts;
+};
+
+// Ensure that we have a Python thread state available to use.
+// If this is called for the first time on a thread, it will allocate
+// the thread state.  This does NOT change the state of the Python lock.
+// Returns TRUE if a new thread state was created, or FALSE if a
+// thread state already existed.
+PRBool PyXPCOM_ThreadState_Ensure()
+{
+	ThreadData *pData = (ThreadData *)PR_GetThreadPrivate(tlsIndex);
+	if (pData==NULL) { /* First request on this thread */
+		/* Check we have an interpreter state */
+		if (PyXPCOM_InterpreterState==NULL) {
+				Py_FatalError("Can not setup thread state, as have no interpreter state");
+		}
+		pData = (ThreadData *)nsMemory::Alloc(sizeof(ThreadData));
+		if (!pData)
+			Py_FatalError("Out of memory allocating thread state.");
+		memset(pData, 0, sizeof(*pData));
+		if (NS_FAILED( PR_SetThreadPrivate( tlsIndex, pData ) ) ) {
+			NS_ABORT_IF_FALSE(0, "Could not create thread data for this thread!");
+			Py_FatalError("Could not thread private thread data!");
+		}
+		pData->ts = PyThreadState_New(PyXPCOM_InterpreterState);
+		return PR_TRUE; // Did create a thread state state
+	}
+	return PR_FALSE; // Thread state was previously created
+}
+
+// Asuming we have a valid thread state, acquire the Python lock.
+void PyXPCOM_InterpreterLock_Acquire()
+{
+	ThreadData *pData = (ThreadData *)PR_GetThreadPrivate(tlsIndex);
+	NS_ABORT_IF_FALSE(pData, "Have no thread data for this thread!");
+	PyThreadState *thisThreadState = pData->ts;
+	PyEval_AcquireThread(thisThreadState);
+}
+
+// Asuming we have a valid thread state, release the Python lock.
+void PyXPCOM_InterpreterLock_Release()
+{
+	ThreadData *pData = (ThreadData *)PR_GetThreadPrivate(tlsIndex);
+	NS_ABORT_IF_FALSE(pData, "Have no thread data for this thread!");
+	PyThreadState *thisThreadState = pData->ts;
+	PyEval_ReleaseThread(thisThreadState);
+}
+
+// Free the thread state for the current thread
+// (Presumably previously create with a call to
+// PyXPCOM_ThreadState_Ensure)
+void PyXPCOM_ThreadState_Free()
+{
+	ThreadData *pData = (ThreadData *)PR_GetThreadPrivate(tlsIndex);
+	if (!pData) return;
+	PyThreadState *thisThreadState = pData->ts;
+	PyThreadState_Delete(thisThreadState);
+	PR_SetThreadPrivate(tlsIndex, NULL);
+	nsMemory::Free(pData);
+}
+
+void PyXPCOM_ThreadState_Clear()
+{
+	ThreadData *pData = (ThreadData *)PR_GetThreadPrivate(tlsIndex);
+	PyThreadState *thisThreadState = pData->ts;
+	PyThreadState_Clear(thisThreadState);
+}
+#endif // PYXPCOM_USE_PYGILSTATE
 
 ////////////////////////////////////////////////////////////
 // Lock/exclusion global functions.
 //
-PYXPCOM_EXPORT void
-PyXPCOM_AcquireGlobalLock(void)
+void PyXPCOM_AcquireGlobalLock(void)
 {
 	NS_PRECONDITION(g_lockMain != nsnull, "Cant acquire a NULL lock!");
 	PR_Lock(g_lockMain);
 }
-
-PYXPCOM_EXPORT void
-PyXPCOM_ReleaseGlobalLock(void)
+void PyXPCOM_ReleaseGlobalLock(void)
 {
 	NS_PRECONDITION(g_lockMain != nsnull, "Cant release a NULL lock!");
 	PR_Unlock(g_lockMain);
 }
 
-// Ensure that any paths guaranteed by this package exist on sys.path
-// Only called once as we are first loaded into the process.
-void AddStandardPaths()
+void PyXPCOM_DLLAddRef(void)
 {
-	// Put {bin}\Python on the path if it exists.
-	nsresult rv;
-	nsCOMPtr<nsIFile> aFile;
-	// XXX - this needs more thought for XULRunner - we want to stick the global
-	// 'python' dir on sys.path (for xpcom etc), but also want to support a way
-	// of adding a local application directory (in the case of xulrunner) too.
-	// NS_XPCOM_CURRENT_PROCESS_DIR is the XULRunner app dir (ie, where application.ini lives)
-	// NS_GRE_DIR is the 'bin' dir for XULRunner itself.
-	rv = NS_GetSpecialDirectory(NS_GRE_DIR, getter_AddRefs(aFile));
-	if (NS_FAILED(rv)) {
-		PyXPCOM_LogError("The Python XPCOM loader could not locate the 'bin' directory");
-		return;
-	}
-	aFile->Append(NS_LITERAL_STRING("python"));
-	nsAutoString pathBuf;
-	aFile->GetPath(pathBuf);
-	PyObject *obPath = PySys_GetObject("path");
-	if (!obPath) {
-		PyXPCOM_LogError("The Python XPCOM loader could not get the Python sys.path variable");
-		return;
-	}
-	// XXX - this should use the file-system encoding...
-	NS_LossyConvertUTF16toASCII pathCBuf(pathBuf);
-#ifdef NS_DEBUG
-	PR_fprintf(PR_STDERR,"The Python XPCOM loader is adding '%s' to sys.path\n",
-	           pathCBuf.get());
-#endif
-	PyObject *newStr = PyString_FromString(pathCBuf.get());
-	PyList_Insert(obPath, 0, newStr);
-	Py_XDECREF(newStr);
-	// And now try and get Python to process this directory as a "site dir" 
-	// - ie, look for .pth files, etc
-	nsCAutoString cmdBuf(NS_LITERAL_CSTRING("import site;site.addsitedir(r'"));
-	cmdBuf.Append(pathCBuf);
-	cmdBuf.Append(NS_LITERAL_CSTRING("')\n"));
-	if (0 != PyRun_SimpleString((char *)cmdBuf.get())) {
-		PyXPCOM_LogError("The directory '%s' could not be added as a site directory", pathCBuf.get());
-		PyErr_Clear();
-	}
-	// and somewhat like Python itself (site, citecustomize), we attempt 
-	// to import "sitepyxpcom" ignoring ImportError
-	PyObject *mod = PyImport_ImportModule("sitepyxpcom");
-	if (NULL==mod) {
-		if (!PyErr_ExceptionMatches(PyExc_ImportError))
-			PyXPCOM_LogError("Failed to import 'sitepyxpcom'");
-		PyErr_Clear();
-	} else
-		Py_DECREF(mod);
-}
-
-static PRBool bIsInitialized = PR_FALSE;
-// Our 'entry point' into initialization - just call this any time you
-// like, and the world will be setup!
-PYXPCOM_EXPORT void
-PyXPCOM_EnsurePythonEnvironment(void)
-{
-	// Must be thread-safe - but only while set to FALSE - so check for
-	// set before getting the lock - then check again after!
-	if (bIsInitialized)
-		return;
+	// Must be thread-safe, although cant have the Python lock!
 	CEnterLeaveXPCOMFramework _celf;
-	if (bIsInitialized)
-		return; // another thread beat us to the init.
+	PRInt32 cnt = PR_AtomicIncrement(&g_cLockCount);
+	if (cnt==1) { // First call 
+		if (!Py_IsInitialized()) {
+			Py_Initialize();
+			// Make sure our Windows framework is all setup.
+			PyXPCOM_Globals_Ensure();
+			// Make sure we have _something_ as sys.argv.
+			if (PySys_GetObject("argv")==NULL) {
+				PyObject *path = PyList_New(0);
+				PyObject *str = PyString_FromString("");
+				PyList_Append(path, str);
+				PySys_SetObject("argv", path);
+				Py_XDECREF(path);
+				Py_XDECREF(str);
+			}
 
-#if defined(XP_UNIX) && !defined(XP_MACOSX)
-	/* *sob* - seems necessary to open the .so as RTLD_GLOBAL.  Without
-	this we see:
-	    Traceback (most recent call last):
-	      File "<string>", line 1, in ?
-	      File "/usr/lib/python2.4/logging/__init__.py", line 29, in ?
-	        import sys, os, types, time, string, cStringIO, traceback
-	    ImportError: /usr/lib/python2.4/lib-dynload/time.so: undefined
-	                                                symbol: PyExc_IOError
-
-	On osx, ShaneC writes that is it unnecessary (and fails anyway since 
-	PYTHON_SO is wrong.)  More clues about this welcome!
-	*/
-
-	dlopen(PYTHON_SO,RTLD_NOW | RTLD_GLOBAL);
+			// Must force Python to start using thread locks, as
+			// we are free-threaded (maybe, I think, sometimes :-)
+			PyEval_InitThreads();
+#ifndef PYXPCOM_USE_PYGILSTATE
+			// Release Python lock, as first thing we do is re-get it.
+			ptsGlobal = PyEval_SaveThread();
 #endif
-
-	PRBool bDidInitPython = !Py_IsInitialized(); // well, I will next line, anyway :-)
-	if (bDidInitPython) {
-		NS_TIMELINE_START_TIMER("PyXPCOM: Python initializing");
-		Py_Initialize(); // NOTE: We never finalize Python!!
-#ifndef NS_DEBUG
-		Py_OptimizeFlag = 1;
-#endif // NS_DEBUG
-		// Must force Python to start using thread locks, as
-		// this is certainly a threaded environment we are playing in
-		PyEval_InitThreads();
-
-		NS_TIMELINE_STOP_TIMER("PyXPCOM: Python initializing");
-		NS_TIMELINE_MARK_TIMER("PyXPCOM: Python initializing");
-	}
-	// Get the Python interpreter state
-	NS_TIMELINE_START_TIMER("PyXPCOM: Python threadstate setup");
-	PyGILState_STATE state = PyGILState_Ensure();
-#ifdef MOZ_TIMELINE
-	// If the timeline service is installed, see if we can install our hooks.
-	if (NULL==PyImport_ImportModule("timeline_hook")) {
-		if (!PyErr_ExceptionMatches(PyExc_ImportError))
-			PyXPCOM_LogError("Failed to import 'timeline_hook'");
-		PyErr_Clear(); // but don't care if we can't.
-	}
-#endif
-
-	// Make sure we have _something_ as sys.argv.
-	if (PySys_GetObject("argv")==NULL) {
-		PyObject *path = PyList_New(0);
-		PyObject *str = PyString_FromString("");
-		PyList_Append(path, str);
-		PySys_SetObject("argv", path);
-		Py_XDECREF(path);
-		Py_XDECREF(str);
-	}
-
-	// Add the standard extra paths we assume
-	AddStandardPaths();
-
-	// The exception object pyxpcom uses.
-	if (PyXPCOM_Error == NULL) {
-		PRBool rc = PR_FALSE;
-		PyObject *mod = NULL;
-
-		mod = PyImport_ImportModule("xpcom");
-		if (mod!=NULL) {
-			PyXPCOM_Error = PyObject_GetAttrString(mod, "Exception");
-			Py_DECREF(mod);
+			// NOTE: We never finalize Python!!
 		}
-		rc = (PyXPCOM_Error != NULL);
 	}
-
-	// Register our custom interfaces.
-	Py_nsISupports::InitType();
-	Py_nsIComponentManager::InitType();
-	Py_nsIInterfaceInfoManager::InitType();
-	Py_nsIEnumerator::InitType();
-	Py_nsISimpleEnumerator::InitType();
-	Py_nsIInterfaceInfo::InitType();
-	Py_nsIInputStream::InitType();
-	Py_nsIClassInfo::InitType();
-	Py_nsIVariant::InitType();
-
-	bIsInitialized = PR_TRUE;
-	// import the xpcom module itself to setup the loggers etc.
-	// We must do this after setting bIsInitialized, as it too tries to
-	// initialize!
-	PyImport_ImportModule("xpcom");
-
-	// If we initialized Python, then we will also have acquired the thread
-	// lock.  In that case, we want to leave it unlocked, so other threads
-	// are free to run, even if they aren't running Python code.
-	PyGILState_Release(bDidInitPython ? PyGILState_UNLOCKED : state);
-
-	NS_TIMELINE_STOP_TIMER("PyXPCOM: Python threadstate setup");
-	NS_TIMELINE_MARK_TIMER("PyXPCOM: Python threadstate setup");
+}
+void PyXPCOM_DLLRelease(void)
+{
+	PR_AtomicDecrement(&g_cLockCount);
 }
 
 void pyxpcom_construct(void)
 {
-	// Create the lock we will use to ensure startup thread
-	// safetly, but don't actually initialize Python yet.
 	g_lockMain = PR_NewLock();
+#ifndef PYXPCOM_USE_PYGILSTATE
+	PRStatus status;
+	status = PR_NewThreadPrivateIndex( &tlsIndex, NULL );
+	NS_WARN_IF_FALSE(status==0, "Could not allocate TLS storage");
+	if (NS_FAILED(status)) {
+		PR_DestroyLock(g_lockMain);
+		return; // PR_FALSE;
+	}
+#endif // PYXPCOM_USE_PYGILSTATE
 	return; // PR_TRUE;
 }
 
 void pyxpcom_destruct(void)
 {
 	PR_DestroyLock(g_lockMain);
+#ifndef PYXPCOM_USE_PYGILSTATE
+	// I can't locate a way to kill this - 
+	// should I pass a dtor to PR_NewThreadPrivateIndex??
+	// TlsFree(tlsIndex);
+#endif // PYXPCOM_USE_PYGILSTATE
 }
 
 // Yet another attempt at cross-platform library initialization and finalization.

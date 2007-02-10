@@ -35,8 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* DOM object for element.style */
-
 #ifndef nsDOMCSSAttributeDeclaration_h___
 #define nsDOMCSSAttributeDeclaration_h___
 
@@ -46,13 +44,14 @@
 #include "nsString.h"
 
 class nsIContent;
+class nsIStyledContent;
 class nsICSSLoader;
 class nsICSSParser;
 
 class nsDOMCSSAttributeDeclaration : public nsDOMCSSDeclaration
 {
 public:
-  nsDOMCSSAttributeDeclaration(nsIContent *aContent);
+  nsDOMCSSAttributeDeclaration(nsIStyledContent *aContent);
   ~nsDOMCSSAttributeDeclaration();
 
   // impl AddRef/Release; QI is implemented by our parent class
@@ -76,7 +75,7 @@ protected:
   nsAutoRefCnt mRefCnt;
   NS_DECL_OWNINGTHREAD
 
-  nsIContent *mContent;
+  nsIStyledContent *mContent;
 };
 
 #endif /* nsDOMCSSAttributeDeclaration_h___ */

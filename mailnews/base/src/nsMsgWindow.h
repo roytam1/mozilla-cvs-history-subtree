@@ -67,6 +67,7 @@ public:
 protected:
   nsCOMPtr<nsIMsgHeaderSink> mMsgHeaderSink;
   nsCOMPtr<nsIMsgStatusFeedback> mStatusFeedback;
+  nsCOMPtr<nsIMsgMessagePaneController> mMsgPaneController;
   nsCOMPtr<nsITransactionManager> mTransactionManager;
   nsCOMPtr<nsIMsgFolder> mOpenFolder;
   nsCOMPtr<nsIMsgWindowCommands> mMsgWindowCommands;
@@ -74,7 +75,6 @@ protected:
   // let's not make this a strong ref - we don't own it.
   nsWeakPtr mRootDocShellWeak;
   nsWeakPtr mMessageWindowDocShellWeak;
-  nsWeakPtr mDomWindow; 
 
   nsCString mMailCharacterSet;
   PRBool    mCharsetOverride;

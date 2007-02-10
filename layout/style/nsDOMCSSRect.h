@@ -35,10 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* DOM object representing rectangle values in DOM computed style */
-
-#ifndef nsDOMCSSRect_h_
-#define nsDOMCSSRect_h_
+#ifndef nsCSSRect_h___
+#define nsCSSRect_h___
 
 #include "nsISupports.h"
 #include "nsIDOMRect.h"
@@ -63,4 +61,4 @@ private:
   nsCOMPtr<nsIDOMCSSPrimitiveValue> mLeft;
 };
 
-#endif /* nsDOMCSSRect_h_ */
+#endif /* nsCSSRect_h___ */

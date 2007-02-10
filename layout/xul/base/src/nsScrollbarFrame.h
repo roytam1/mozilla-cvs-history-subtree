@@ -49,13 +49,12 @@
 class nsISupportsArray;
 class nsIScrollbarMediator;
 
-nsIFrame* NS_NewScrollbarFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+nsresult NS_NewScrollbarFrame(nsIPresShell* aPresShell, nsIFrame** aResult) ;
 
 class nsScrollbarFrame : public nsBoxFrame, public nsIScrollbarFrame
 {
 public:
-    nsScrollbarFrame(nsIPresShell* aShell, nsStyleContext* aContext):
-      nsBoxFrame(aShell, aContext), mScrollbarMediator(nsnull) {}
+    nsScrollbarFrame(nsIPresShell* aShell):nsBoxFrame(aShell), mScrollbarMediator(nsnull) {}
 
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const {
@@ -64,7 +63,8 @@ public:
 #endif
 
   // nsIFrame overrides
-  NS_IMETHOD AttributeChanged(PRInt32 aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent* aChild,
+                              PRInt32 aNameSpaceID,
                               nsIAtom* aAttribute,
                               PRInt32 aModType);
 
@@ -88,9 +88,11 @@ public:
                            nsGUIEvent *    aEvent,
                            nsEventStatus*  aEventStatus);
 
-  NS_IMETHOD Init(nsIContent*      aContent,
-                  nsIFrame*        aParent,
-                  nsIFrame*        aPrevInFlow);
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+              nsIContent*      aContent,
+              nsIFrame*        aParent,
+              nsStyleContext*  aContext,
+              nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
@@ -100,8 +102,8 @@ public:
   virtual PRBool IsContainingBlock() const;
 
   // nsIScrollbarFrame
-  virtual void SetScrollbarMediatorContent(nsIContent* aMediator);
-  virtual nsIScrollbarMediator* GetScrollbarMediator();
+  NS_IMETHOD SetScrollbarMediator(nsIScrollbarMediator* aMediator) { mScrollbarMediator = aMediator; return NS_OK; };
+  NS_IMETHOD GetScrollbarMediator(nsIScrollbarMediator** aResult) { *aResult = mScrollbarMediator; return NS_OK; };
 
   // nsBox methods
 
@@ -113,9 +115,8 @@ public:
    * hide the children too.
    */
   virtual PRBool DoesClipChildren() { return PR_TRUE; }
-
 private:
-  nsCOMPtr<nsIContent> mScrollbarMediator;
+  nsIScrollbarMediator* mScrollbarMediator;
 }; // class nsScrollbarFrame
 
 #endif

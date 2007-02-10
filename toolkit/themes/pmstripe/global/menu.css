@@ -133,7 +133,7 @@ menubar > menu {
 }
 
 menubar > menu[_moz-menuactive="true"][open="true"] {
-  color: -moz-MenuBarHoverText;
+  color: -moz-MenuHoverText;
   background-color: -moz-MenuHover;
 }
 

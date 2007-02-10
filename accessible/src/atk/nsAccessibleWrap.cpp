@@ -2,28 +2,28 @@
 /* vim:expandtab:shiftwidth=4:tabstop=4:
  */
 /* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are Copyright (C) 2002
- * the Initial Developer. All Rights Reserved.
+ * The Initial Developer of the Original Code is Sun Microsystems, Inc.
+ * Portions created by Sun Microsystems are Copyright (C) 2002 Sun
+ * Microsystems, Inc. All Rights Reserved.
  *
- * Contributor(s):
- *   Bolian Yin (bolian.yin@sun.com)
- *   John Sun (john.sun@sun.com)
+ * Original Author: Bolian Yin (bolian.yin@sun.com)
+ *
+ * Contributor(s): John Sun (john.sun@sun.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -31,11 +31,11 @@
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
+ * use your version of this file under the terms of the NPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
 
@@ -44,8 +44,6 @@
 #include "nsAppRootAccessible.h"
 #include "nsString.h"
 #include "prprf.h"
-#include "nsRoleMap.h"
-#include "nsStateMap.h"
 
 #include "nsMaiInterfaceComponent.h"
 #include "nsMaiInterfaceAction.h"
@@ -54,14 +52,7 @@
 #include "nsMaiInterfaceSelection.h"
 #include "nsMaiInterfaceValue.h"
 #include "nsMaiInterfaceHypertext.h"
-#include "nsMaiInterfaceHyperlinkImpl.h"
 #include "nsMaiInterfaceTable.h"
-#include "nsXPCOMStrings.h"
-#include "nsComponentManagerUtils.h"
-#include "nsIPersistentProperties2.h"
-#include "nsMaiInterfaceDocument.h"
-
-extern "C" GType g_atk_hyperlink_impl_type; //defined in nsAppRootAccessible.cpp
 
 /* MaiAtkObject */
 
@@ -75,69 +66,6 @@ enum {
   RESIZE,
   RESTORE,
   LAST_SIGNAL
-};
-
-enum MaiInterfaceType {
-    MAI_INTERFACE_COMPONENT, /* 0 */
-    MAI_INTERFACE_ACTION,
-    MAI_INTERFACE_VALUE,
-    MAI_INTERFACE_EDITABLE_TEXT,
-    MAI_INTERFACE_HYPERTEXT,
-    MAI_INTERFACE_HYPERLINK_IMPL,
-    MAI_INTERFACE_SELECTION,
-    MAI_INTERFACE_TABLE,
-    MAI_INTERFACE_TEXT,
-    MAI_INTERFACE_DOCUMENT /* 9 */
-};
-
-static GType GetAtkTypeForMai(MaiInterfaceType type)
-{
-  switch (type) {
-    case MAI_INTERFACE_COMPONENT:
-      return ATK_TYPE_COMPONENT;
-    case MAI_INTERFACE_ACTION:
-      return ATK_TYPE_ACTION;
-    case MAI_INTERFACE_VALUE:
-      return ATK_TYPE_VALUE;
-    case MAI_INTERFACE_EDITABLE_TEXT:
-      return ATK_TYPE_EDITABLE_TEXT;
-    case MAI_INTERFACE_HYPERTEXT:
-      return ATK_TYPE_HYPERTEXT;
-    case MAI_INTERFACE_HYPERLINK_IMPL:
-       return g_atk_hyperlink_impl_type;
-    case MAI_INTERFACE_SELECTION:
-      return ATK_TYPE_SELECTION;
-    case MAI_INTERFACE_TABLE:
-      return ATK_TYPE_TABLE;
-    case MAI_INTERFACE_TEXT:
-      return ATK_TYPE_TEXT;
-    case MAI_INTERFACE_DOCUMENT:
-      return ATK_TYPE_DOCUMENT;
-  }
-  return G_TYPE_INVALID;
-}
-
-static const GInterfaceInfo atk_if_infos[] = {
-    {(GInterfaceInitFunc)componentInterfaceInitCB,
-     (GInterfaceFinalizeFunc) NULL, NULL}, 
-    {(GInterfaceInitFunc)actionInterfaceInitCB,
-     (GInterfaceFinalizeFunc) NULL, NULL},
-    {(GInterfaceInitFunc)valueInterfaceInitCB,
-     (GInterfaceFinalizeFunc) NULL, NULL},
-    {(GInterfaceInitFunc)editableTextInterfaceInitCB,
-     (GInterfaceFinalizeFunc) NULL, NULL},
-    {(GInterfaceInitFunc)hypertextInterfaceInitCB,
-     (GInterfaceFinalizeFunc) NULL, NULL},
-    {(GInterfaceInitFunc)hyperlinkImplInterfaceInitCB,
-     (GInterfaceFinalizeFunc) NULL, NULL},
-    {(GInterfaceInitFunc)selectionInterfaceInitCB,
-     (GInterfaceFinalizeFunc) NULL, NULL},
-    {(GInterfaceInitFunc)tableInterfaceInitCB,
-     (GInterfaceFinalizeFunc) NULL, NULL},
-    {(GInterfaceInitFunc)textInterfaceInitCB,
-     (GInterfaceFinalizeFunc) NULL, NULL},
-    {(GInterfaceInitFunc)documentInterfaceInitCB,
-     (GInterfaceFinalizeFunc) NULL, NULL}
 };
 
 /**
@@ -175,7 +103,6 @@ static void finalizeCB(GObject *aObj);
 static const gchar*        getNameCB (AtkObject *aAtkObj);
 static const gchar*        getDescriptionCB (AtkObject *aAtkObj);
 static AtkRole             getRoleCB(AtkObject *aAtkObj);
-static AtkAttributeSet*    getAttributesCB(AtkObject *aAtkObj);
 static AtkObject*          getParentCB(AtkObject *aAtkObj);
 static gint                getChildCountCB(AtkObject *aAtkObj);
 static AtkObject*          refChildCB(AtkObject *aAtkObj, gint aChildIndex);
@@ -217,8 +144,9 @@ static AtkRelationSet*     refRelationSetCB(AtkObject *aAtkObj);
 */
 G_END_DECLS
 
-static GType GetMaiAtkType(PRUint16 interfacesBits);
-static const char * GetUniqueMaiAtkTypeName(PRUint16 interfacesBits);
+static GType GetMaiAtkType(const PRUint32 & interfaceCount,
+                           MaiInterface **interfaces);
+static const char * GetUniqueMaiAtkTypeName(MaiInterface **interfaces);
 
 static gpointer parent_class = NULL;
 
@@ -255,7 +183,9 @@ PRInt32 nsAccessibleWrap::mAccWrapDeleted = 0;
 nsAccessibleWrap::nsAccessibleWrap(nsIDOMNode* aNode,
                                    nsIWeakReference *aShell)
     : nsAccessible(aNode, aShell),
-      mAtkObject(nsnull)
+      mMaiAtkObject(nsnull),
+      mInterfaces(nsnull),
+      mInterfaceCount(0)
 {
 #ifdef MAI_LOGGING
     ++mAccWrapCreated;
@@ -275,36 +205,45 @@ nsAccessibleWrap::~nsAccessibleWrap()
                    (void*)this, mAccWrapDeleted,
                    (mAccWrapCreated-mAccWrapDeleted)));
 
-    if (mAtkObject) {
-        if (IS_MAI_OBJECT(mAtkObject)) {
-            MAI_ATK_OBJECT(mAtkObject)->accWrap = nsnull;
-        }
-        g_object_unref(mAtkObject);
+    if (mMaiAtkObject) {
+        MAI_ATK_OBJECT(mMaiAtkObject)->accWrap = nsnull;
+        g_object_unref(mMaiAtkObject);
     }
+    if (mInterfaces) {
+        for (int index = 0; index < MAI_INTERFACE_NUM; ++index)
+            delete mInterfaces[index];
+        delete [] mInterfaces;
+    }
+}
+
+NS_IMETHODIMP nsAccessibleWrap::GetExtState(PRUint32 *aState)
+{
+    PRUint32 state;
+    nsAccessible::GetState(&state);
+    if (!(state & STATE_INVISIBLE))
+      *aState |= EXT_STATE_SHOWING;
+    return NS_OK;
 }
 
 NS_IMETHODIMP nsAccessibleWrap::GetNativeInterface(void **aOutAccessible)
 {
     *aOutAccessible = nsnull;
 
-    if (!IsEmbeddedObject(this)) {
-      // We don't create ATK objects for nsIAccessible plain text leaves
-      return NS_ERROR_FAILURE;
-    }
-    if (!mAtkObject) {
-        GType type = GetMaiAtkType(CreateMaiInterfaces());
+    if (!mMaiAtkObject) {
+        CreateMaiInterfaces();
+        GType type = GetMaiAtkType(mInterfaceCount, mInterfaces);
         NS_ENSURE_TRUE(type, NS_ERROR_FAILURE);
-        mAtkObject =
+        mMaiAtkObject =
             NS_REINTERPRET_CAST(AtkObject *,
                                 g_object_new(type, NULL));
-        NS_ENSURE_TRUE(mAtkObject, NS_ERROR_OUT_OF_MEMORY);
+        NS_ENSURE_TRUE(mMaiAtkObject, NS_ERROR_OUT_OF_MEMORY);
 
-        atk_object_initialize(mAtkObject, this);
-        mAtkObject->role = ATK_ROLE_INVALID;
-        mAtkObject->layer = ATK_LAYER_INVALID;
+        atk_object_initialize(mMaiAtkObject, this);
+        mMaiAtkObject->role = ATK_ROLE_INVALID;
+        mMaiAtkObject->layer = ATK_LAYER_INVALID;
     }
 
-    *aOutAccessible = mAtkObject;
+    *aOutAccessible = mMaiAtkObject;
     return NS_OK;
 }
 
@@ -317,40 +256,65 @@ nsAccessibleWrap::GetAtkObject(void)
 }
 
 /* private */
-PRUint16
+nsresult
 nsAccessibleWrap::CreateMaiInterfaces(void)
 {
-    PRUint16 interfacesBits = 0;
-    
+    typedef MaiInterface * MaiInterfacePointer;
+    if (!mInterfaces) {
+        mInterfaces = new MaiInterfacePointer[MAI_INTERFACE_NUM];
+        for (PRUint16 index = 0; index < MAI_INTERFACE_NUM; ++index) {
+            mInterfaces[index] = nsnull;
+        }
+        NS_ENSURE_TRUE(mInterfaces, NS_ERROR_OUT_OF_MEMORY);
+    }
     // Add Interfaces for each nsIAccessible.ext interfaces
 
+    nsresult rv;
+
     // the Component interface are supported by all nsIAccessible
-    interfacesBits |= 1 << MAI_INTERFACE_COMPONENT;
+    MaiInterfaceComponent *maiInterfaceComponent =
+        new MaiInterfaceComponent(this);
+    NS_ENSURE_TRUE(maiInterfaceComponent, NS_ERROR_OUT_OF_MEMORY);
+    rv = AddMaiInterface(maiInterfaceComponent);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     // Add Action interface if the action count is more than zero.
     PRUint8 actionCount = 0;
-    nsresult rv = GetNumActions(&actionCount);
+    rv = GetNumActions(&actionCount);
     if (NS_SUCCEEDED(rv) && actionCount > 0) {
-       interfacesBits |= 1 << MAI_INTERFACE_ACTION; 
+        MaiInterfaceAction *maiInterfaceAction = new MaiInterfaceAction(this);
+        NS_ENSURE_TRUE(maiInterfaceAction, NS_ERROR_OUT_OF_MEMORY);
+        rv = AddMaiInterface(maiInterfaceAction);
+        NS_ENSURE_SUCCESS(rv, rv);
     }
+
 
     PRUint32 accRole;
-    GetRole(&accRole);
+    rv = GetRole(&accRole);
 
-    //nsIAccessibleText
-    nsCOMPtr<nsIAccessibleText> accessInterfaceText;
-    QueryInterface(NS_GET_IID(nsIAccessibleText),
-                   getter_AddRefs(accessInterfaceText));
-    if (accessInterfaceText) {
-        interfacesBits |= 1 << MAI_INTERFACE_TEXT;
-    }
+    if (accRole != nsIAccessible::ROLE_HTML_CONTAINER) {
+        //nsIAccessibleText
+        nsCOMPtr<nsIAccessibleText> accessInterfaceText;
+        QueryInterface(NS_GET_IID(nsIAccessibleText),
+                       getter_AddRefs(accessInterfaceText));
+        if (accessInterfaceText) {
+            MaiInterfaceText *maiInterfaceText = new MaiInterfaceText(this);
+            NS_ENSURE_TRUE(maiInterfaceText, NS_ERROR_OUT_OF_MEMORY);
+            rv = AddMaiInterface(maiInterfaceText);
+            NS_ENSURE_SUCCESS(rv, rv);
+        }
 
-    //nsIAccessibleEditableText
-    nsCOMPtr<nsIAccessibleEditableText> accessInterfaceEditableText;
-    QueryInterface(NS_GET_IID(nsIAccessibleEditableText),
-                   getter_AddRefs(accessInterfaceEditableText));
-    if (accessInterfaceEditableText) {
-        interfacesBits |= 1 << MAI_INTERFACE_EDITABLE_TEXT;
+        //nsIAccessibleEditableText
+        nsCOMPtr<nsIAccessibleEditableText> accessInterfaceEditableText;
+        QueryInterface(NS_GET_IID(nsIAccessibleEditableText),
+                       getter_AddRefs(accessInterfaceEditableText));
+        if (accessInterfaceEditableText) {
+            MaiInterfaceEditableText *maiInterfaceEditableText =
+                new MaiInterfaceEditableText(this);
+            NS_ENSURE_TRUE(maiInterfaceEditableText, NS_ERROR_OUT_OF_MEMORY);
+            rv = AddMaiInterface(maiInterfaceEditableText);
+            NS_ENSURE_SUCCESS(rv, rv);
+        }
     }
 
     //nsIAccessibleSelection
@@ -358,7 +322,11 @@ nsAccessibleWrap::CreateMaiInterfaces(void)
     QueryInterface(NS_GET_IID(nsIAccessibleSelectable),
                    getter_AddRefs(accessInterfaceSelection));
     if (accessInterfaceSelection) {
-        interfacesBits |= 1 << MAI_INTERFACE_SELECTION;
+        MaiInterfaceSelection *maiInterfaceSelection =
+            new MaiInterfaceSelection(this);
+        NS_ENSURE_TRUE(maiInterfaceSelection, NS_ERROR_OUT_OF_MEMORY);
+        rv = AddMaiInterface(maiInterfaceSelection);
+        NS_ENSURE_SUCCESS(rv, rv);
     }
 
     //nsIAccessibleValue
@@ -366,7 +334,10 @@ nsAccessibleWrap::CreateMaiInterfaces(void)
     QueryInterface(NS_GET_IID(nsIAccessibleValue),
                    getter_AddRefs(accessInterfaceValue));
     if (accessInterfaceValue) {
-       interfacesBits |= 1 << MAI_INTERFACE_VALUE; 
+        MaiInterfaceValue *maiInterfaceValue = new MaiInterfaceValue(this);
+        NS_ENSURE_TRUE(maiInterfaceValue, NS_ERROR_OUT_OF_MEMORY);
+        rv = AddMaiInterface(maiInterfaceValue);
+        NS_ENSURE_SUCCESS(rv, rv);
     }
 
     //nsIAccessibleHypertext
@@ -375,41 +346,63 @@ nsAccessibleWrap::CreateMaiInterfaces(void)
     QueryInterface(NS_GET_IID(nsIAccessibleHyperText),
                    getter_AddRefs(accessInterfaceHypertext));
     if (accessInterfaceHypertext) {
-        nsresult rv = accessInterfaceHypertext->GetLinks(&linkCount);
+        rv = accessInterfaceHypertext->GetLinks(&linkCount);
         if (NS_SUCCEEDED(rv) && (linkCount > 0)) {
-            interfacesBits |= 1 << MAI_INTERFACE_HYPERTEXT;
+            MaiInterfaceHypertext *maiInterfaceHypertext =
+                new MaiInterfaceHypertext(this, mWeakShell);
+            NS_ENSURE_TRUE(maiInterfaceHypertext, NS_ERROR_OUT_OF_MEMORY);
+            rv = AddMaiInterface(maiInterfaceHypertext);
+            NS_ENSURE_SUCCESS(rv, rv);
         }
     }
 
-    //nsIAccessibleHyperLink
-    nsCOMPtr<nsIAccessibleHyperLink> accessInterfaceHyperlink;
-    QueryInterface(NS_GET_IID(nsIAccessibleHyperLink),
-                   getter_AddRefs(accessInterfaceHyperlink));
-    if (accessInterfaceHyperlink) {
-       interfacesBits |= 1 << MAI_INTERFACE_HYPERLINK_IMPL;
-    }
-
     //nsIAccessibleTable
-    nsCOMPtr<nsIAccessibleTable> accessInterfaceTable;
-    QueryInterface(NS_GET_IID(nsIAccessibleTable),
-                   getter_AddRefs(accessInterfaceTable));
-    if (accessInterfaceTable) {
-        interfacesBits |= 1 << MAI_INTERFACE_TABLE;
+    if (accRole == nsIAccessible::ROLE_TREE_TABLE) {
+      // In most cases, html table is used as container to arrange the webpage,
+      // not to represent a "real" table with practical colum, colum heaer, row.
+      // So, only add maiInterfaceTable for XUL table.
+      nsCOMPtr<nsIAccessibleTable> accessInterfaceTable;
+      QueryInterface(NS_GET_IID(nsIAccessibleTable),
+                     getter_AddRefs(accessInterfaceTable));
+      if (accessInterfaceTable) {
+          MaiInterfaceTable *maiInterfaceTable = new MaiInterfaceTable(this);
+          NS_ENSURE_TRUE(maiInterfaceTable, NS_ERROR_OUT_OF_MEMORY);
+          rv = AddMaiInterface(maiInterfaceTable);
+          NS_ENSURE_SUCCESS(rv, rv);
+      }
     }
 
-    //nsIAccessibleDocument
-    nsCOMPtr<nsIAccessibleDocument> accessInterfaceDocument;
-    QueryInterface(NS_GET_IID(nsIAccessibleDocument),
-                              getter_AddRefs(accessInterfaceDocument));
-    if (accessInterfaceDocument) {
-        interfacesBits |= 1 << MAI_INTERFACE_DOCUMENT;
-    }
+    return rv;
+}
 
-    return interfacesBits;
+nsresult
+nsAccessibleWrap::AddMaiInterface(MaiInterface *aMaiIface)
+{
+    NS_ENSURE_ARG_POINTER(aMaiIface);
+    MaiInterfaceType aMaiIfaceType = aMaiIface->GetType();
+
+    if ((aMaiIfaceType <= MAI_INTERFACE_INVALID) ||
+        (aMaiIfaceType >= MAI_INTERFACE_NUM))
+        return NS_ERROR_FAILURE;
+
+    // if same type of If has been added, release previous one
+    if (mInterfaces[aMaiIfaceType]) {
+        delete mInterfaces[aMaiIfaceType];
+    }
+    mInterfaces[aMaiIfaceType] = aMaiIface;
+    mInterfaceCount++;
+    return NS_OK;
+}
+MaiInterface *
+nsAccessibleWrap::GetMaiInterface(PRInt16 aIfaceType)
+{
+    NS_ENSURE_TRUE(aIfaceType > MAI_INTERFACE_INVALID, nsnull);
+    NS_ENSURE_TRUE(aIfaceType < MAI_INTERFACE_NUM, nsnull);
+    return mInterfaces[aIfaceType];
 }
 
 static GType
-GetMaiAtkType(PRUint16 interfacesBits)
+GetMaiAtkType(const PRUint32 & interfaceCount, MaiInterface **interfaces)
 {
     GType type;
     static const GTypeInfo tinfo = {
@@ -425,13 +418,16 @@ GetMaiAtkType(PRUint16 interfacesBits)
         NULL /* value table */
     };
 
+    if (interfaceCount == 0)
+        return MAI_TYPE_ATK_OBJECT;
+
     /*
-     * The members we use to register GTypes are GetAtkTypeForMai
-     * and atk_if_infos, which are constant values to each MaiInterface
-     * So we can reuse the registered GType when having
+     * The members we used to register a GType are MaiInterface::GetAtkType()
+     * and MaiInterface::GetInterfaceInfo(), which is the same with different
+     * MaiInterface objects. So we can reuse the registered GType when having
      * the same MaiInterface types.
      */
-    const char *atkTypeName = GetUniqueMaiAtkTypeName(interfacesBits);
+    const char *atkTypeName = GetUniqueMaiAtkTypeName(interfaces);
     type = g_type_from_name(atkTypeName);
     if (type) {
         return type;
@@ -442,39 +438,172 @@ GetMaiAtkType(PRUint16 interfacesBits)
      * given object type to 4095.
      */
     static PRUint16 typeRegCount = 0;
-    if (typeRegCount++ >= 4095) {
-        return G_TYPE_INVALID;
+    if (typeRegCount++ < 4095) {
+        type = g_type_register_static(MAI_TYPE_ATK_OBJECT,
+                                      atkTypeName,
+                                      &tinfo, GTypeFlags(0));
     }
-    type = g_type_register_static(MAI_TYPE_ATK_OBJECT,
-                                  atkTypeName,
-                                  &tinfo, GTypeFlags(0));
+    else {
+        return 0;
+    }
 
-    for (PRUint32 index = 0; index < NS_ARRAY_LENGTH(atk_if_infos); index++) {
-      if (interfacesBits & (1 << index)) {
+    for (int index = 0; index < MAI_INTERFACE_NUM; index++) {
+        if (!interfaces[index])
+            continue;
         g_type_add_interface_static(type,
-                                    GetAtkTypeForMai((MaiInterfaceType)index),
-                                    &atk_if_infos[index]);
-      }
+                                    interfaces[index]->GetAtkType(),
+                                    interfaces[index]->GetInterfaceInfo());
     }
-
     return type;
 }
 
 static const char *
-GetUniqueMaiAtkTypeName(PRUint16 interfacesBits)
+GetUniqueMaiAtkTypeName(MaiInterface **interfaces)
 {
 #define MAI_ATK_TYPE_NAME_LEN (30)     /* 10+sizeof(PRUint16)*8/4+1 < 30 */
 
+    PRUint16 atkTypeNameId = 0;
     static gchar namePrefix[] = "MaiAtkType";   /* size = 10 */
     static gchar name[MAI_ATK_TYPE_NAME_LEN + 1];
 
-    PR_snprintf(name, MAI_ATK_TYPE_NAME_LEN, "%s%x", namePrefix,
-                interfacesBits);
+    for (int index = 0; index < MAI_INTERFACE_NUM; index++) {
+        if (interfaces[index])
+            atkTypeNameId |= 1 << index;
+    }
+    PR_snprintf(name, MAI_ATK_TYPE_NAME_LEN, "%s%x", namePrefix, atkTypeNameId);
     name[MAI_ATK_TYPE_NAME_LEN] = '\0';
 
     MAI_LOG_DEBUG(("MaiWidget::LastedTypeName=%s\n", name));
 
     return name;
+}
+
+/******************************************************************************
+The following nsIAccessible states aren't translated, just ignored.
+  STATE_MIXED:         For a three-state check box.
+  STATE_READONLY:      The object is designated read-only.
+  STATE_HOTTRACKED:    Means its appearance has changed to indicate mouse
+                       over it.
+  STATE_FLOATING:      Not supported yet.
+  STATE_MARQUEED:      Indicate scrolling or moving text or graphics.
+  STATE_ANIMATED:
+  STATE_OFFSCREEN:     Has no on-screen representation.
+  STATE_MOVEABLE:
+  STATE_SELFVOICING:   The object has self-TTS.
+  STATE_LINKED:        The object is formatted as a hyperlink.
+  STATE_TRAVERSE:      The object is a hyperlink that has been visited.
+  STATE_EXTSELECTABLE: Indicates that an object extends its selectioin.
+  STATE_ALERT_LOW:     Not supported yet.
+  STATE_ALERT_MEDIUM:  Not supported yet.
+  STATE_ALERT_HIGH:    Not supported yet.
+  STATE_PROTECTED:     The object is a password-protected edit control.
+  STATE_HASPOPUP:      Object displays a pop-up menu or window when invoked.
+
+Returned AtkStatusSet never contain the following AtkStates.
+  ATK_STATE_ARMED:     Indicates that the object is armed.
+  ATK_STATE_DEFUNCT:   Indicates the user interface object corresponding to
+                       thus object no longer exists.
+  ATK_STATE_HORIZONTAL:Indicates the orientation of this object is horizontal.
+  ATK_STATE_ICONIFIED:
+  ATK_STATE_OPAQUE:     Indicates the object paints every pixel within its
+                        rectangular region
+  ATK_STATE_STALE:      The index associated with this object has changed since
+                        the user accessed the object
+******************************************************************************/
+
+void
+nsAccessibleWrap::TranslateStates(PRUint32 aState, PRUint32 aExtState, void *aAtkStateSet)
+{
+    if (!aAtkStateSet)
+        return;
+    AtkStateSet *state_set = NS_STATIC_CAST(AtkStateSet *, aAtkStateSet);
+
+    if (aState & nsIAccessible::STATE_SELECTED)
+        atk_state_set_add_state (state_set, ATK_STATE_SELECTED);
+
+    if (aState & nsIAccessible::STATE_FOCUSED)
+        atk_state_set_add_state (state_set, ATK_STATE_FOCUSED);
+
+    if (aState & nsIAccessible::STATE_PRESSED)
+        atk_state_set_add_state (state_set, ATK_STATE_PRESSED);
+
+    if (aState & nsIAccessible::STATE_CHECKED)
+        atk_state_set_add_state (state_set, ATK_STATE_CHECKED);
+
+    if (aState & nsIAccessible::STATE_EXPANDED)
+        atk_state_set_add_state (state_set, ATK_STATE_EXPANDED);
+
+    if (aState & nsIAccessible::STATE_COLLAPSED)
+        atk_state_set_add_state (state_set, ATK_STATE_EXPANDABLE);
+                   
+    // The control can't accept input at this time
+    if (aState & nsIAccessible::STATE_BUSY)
+        atk_state_set_add_state (state_set, ATK_STATE_BUSY);
+
+    if (aState & nsIAccessible::STATE_FOCUSABLE)
+        atk_state_set_add_state (state_set, ATK_STATE_FOCUSABLE);
+
+    if (!(aState & nsIAccessible::STATE_INVISIBLE))
+        atk_state_set_add_state (state_set, ATK_STATE_VISIBLE);
+
+    if (aState & nsIAccessible::STATE_SELECTABLE)
+        atk_state_set_add_state (state_set, ATK_STATE_SELECTABLE);
+
+    if (aState & nsIAccessible::STATE_SIZEABLE)
+        atk_state_set_add_state (state_set, ATK_STATE_RESIZABLE);
+
+    if (aState & nsIAccessible::STATE_MULTISELECTABLE)
+        atk_state_set_add_state (state_set, ATK_STATE_MULTISELECTABLE);
+
+    if (!(aState & nsIAccessible::STATE_UNAVAILABLE)) {
+        atk_state_set_add_state (state_set, ATK_STATE_ENABLED);
+        atk_state_set_add_state (state_set, ATK_STATE_SENSITIVE);
+    }
+
+    if (aState & nsIAccessible::STATE_INVALID)
+        atk_state_set_add_state (state_set, ATK_STATE_INVALID);
+
+#ifdef ATK_STATE_DEFAULT
+    if (aState & nsIAccessible::STATE_DEFAULT)
+        atk_state_set_add_state (state_set, ATK_STATE_DEFAULT);
+#endif
+
+#ifdef ATK_STATE_REQUIRED
+    if (aState & nsIAccessible::STATE_REQUIRED)
+        atk_state_set_add_state (state_set, ATK_STATE_REQUIRED);
+#endif
+
+    // The following state is
+    // Extended state flags (for now non-MSAA, for Java and Gnome/ATK support)
+    if (aExtState & nsIAccessible::EXT_STATE_ACTIVE)
+        atk_state_set_add_state (state_set, ATK_STATE_ACTIVE);
+
+    if (aExtState & nsIAccessible::EXT_STATE_EXPANDABLE)
+        atk_state_set_add_state (state_set, ATK_STATE_EXPANDABLE);
+
+    if (aExtState & nsIAccessible::EXT_STATE_MODAL)
+        atk_state_set_add_state (state_set, ATK_STATE_MODAL);
+
+    if (aExtState & nsIAccessible::EXT_STATE_MULTI_LINE)
+        atk_state_set_add_state (state_set, ATK_STATE_MULTI_LINE);
+
+    if (aExtState & nsIAccessible::EXT_STATE_SENSITIVE)
+        atk_state_set_add_state (state_set, ATK_STATE_SENSITIVE);
+
+    if (aExtState & nsIAccessible::EXT_STATE_SHOWING)
+        atk_state_set_add_state (state_set, ATK_STATE_SHOWING);
+
+    if (aExtState & nsIAccessible::EXT_STATE_SINGLE_LINE)
+        atk_state_set_add_state (state_set, ATK_STATE_SINGLE_LINE);
+
+    if (aExtState & nsIAccessible::EXT_STATE_TRANSIENT)
+        atk_state_set_add_state (state_set, ATK_STATE_TRANSIENT);
+
+    if (aExtState & nsIAccessible::EXT_STATE_VERTICAL)
+        atk_state_set_add_state (state_set, ATK_STATE_VERTICAL);
+
+    if (aExtState & nsIAccessible::EXT_STATE_EDITABLE)
+        atk_state_set_add_state (state_set, ATK_STATE_EDITABLE);
 }
 
 PRBool nsAccessibleWrap::IsValidObject()
@@ -498,7 +627,6 @@ classInitCB(AtkObjectClass *aClass)
     aClass->ref_child = refChildCB;
     aClass->get_index_in_parent = getIndexInParentCB;
     aClass->get_role = getRoleCB;
-    aClass->get_attributes = getAttributesCB;
     aClass->ref_state_set = refStateSetCB;
     aClass->ref_relation_set = refRelationSetCB;
 
@@ -576,7 +704,7 @@ classInitCB(AtkObjectClass *aClass)
 void
 initializeCB(AtkObject *aAtkObj, gpointer aData)
 {
-    NS_ASSERTION((IS_MAI_OBJECT(aAtkObj)), "Invalid AtkObject");
+    NS_ASSERTION((MAI_IS_ATK_OBJECT(aAtkObj)), "Invalid AtkObject");
     NS_ASSERTION(aData, "Invalid Data to init AtkObject");
     if (!aAtkObj || !aData)
         return;
@@ -604,7 +732,7 @@ initializeCB(AtkObject *aAtkObj, gpointer aData)
 void
 finalizeCB(GObject *aObj)
 {
-    if (!IS_MAI_OBJECT(aObj))
+    if (!MAI_IS_ATK_OBJECT(aObj))
         return;
     NS_ASSERTION(MAI_ATK_OBJECT(aObj)->accWrap == nsnull, "AccWrap NOT null");
 
@@ -636,10 +764,10 @@ getNameCB(AtkObject *aAtkObj)
     NS_ENSURE_SUCCESS(rv, nsnull);
 
     if (uniName.Length() > 0) {
-        NS_ConvertUTF8toUTF16 objName(aAtkObj->name);
+        NS_ConvertUTF8toUCS2 objName(aAtkObj->name);
         if (!uniName.Equals(objName)) {
             atk_object_set_name(aAtkObj,
-                                NS_ConvertUTF16toUTF8(uniName).get());
+                                NS_ConvertUCS2toUTF8(uniName).get());
         }
     }
     return aAtkObj->name;
@@ -663,7 +791,7 @@ getDescriptionCB(AtkObject *aAtkObj)
         len = uniDesc.Length();
         if (len > 0) {
             atk_object_set_description(aAtkObj,
-                                       NS_ConvertUTF16toUTF8(uniDesc).get());
+                                       NS_ConvertUCS2toUTF8(uniDesc).get());
         }
     }
     return aAtkObj->description;
@@ -674,73 +802,44 @@ getRoleCB(AtkObject *aAtkObj)
 {
     NS_ENSURE_SUCCESS(CheckMaiAtkObject(aAtkObj), ATK_ROLE_INVALID);
 
-#ifdef DEBUG_A11Y
-        nsAccessibleWrap *testAccWrap =
-            NS_REINTERPRET_CAST(MaiAtkObject*, aAtkObj)->accWrap;
-        NS_ASSERTION(nsAccessible::IsTextInterfaceSupportCorrect(testAccWrap), "Does not support nsIAccessibleText when it should");
-#endif
-
     if (aAtkObj->role == ATK_ROLE_INVALID) {
         nsAccessibleWrap *accWrap =
             NS_REINTERPRET_CAST(MaiAtkObject*, aAtkObj)->accWrap;
 
-        PRUint32 accRole, atkRole;
+        PRUint32 accRole;
         nsresult rv = accWrap->GetFinalRole(&accRole);
         NS_ENSURE_SUCCESS(rv, ATK_ROLE_INVALID);
 
-        atkRole = atkRoleMap[accRole]; // map to the actual value
-        NS_ASSERTION(atkRoleMap[nsIAccessible::ROLE_LAST_ENTRY] ==
-                     kROLE_ATK_LAST_ENTRY, "ATK role map skewed");
-        aAtkObj->role = NS_STATIC_CAST(AtkRole, atkRole);
+        //the cross-platform Accessible object returns the same value for
+        //both "ROLE_MENUITEM" and "ROLE_MENUPOPUP"
+        if (accRole == nsIAccessible::ROLE_MENUITEM) {
+            PRInt32 childCount = 0;
+            accWrap->GetChildCount(&childCount);
+            if (childCount > 0)
+                accRole = nsIAccessible::ROLE_MENUPOPUP;
+        }
+        else if (accRole == nsIAccessible::ROLE_LINK) {
+            //ATK doesn't have role-link now
+            //register it on runtime
+            static AtkRole linkRole = (AtkRole)0;
+            if (linkRole == 0) {
+                linkRole = atk_role_register("hyper link");
+            }
+            accRole = linkRole;
+        }
+#ifndef ATK_ROLE_AUTOCOMPLETE
+        else if (accRole == nsIAccessible::ROLE_AUTOCOMPLETE) {
+			accRole = ATK_ROLE_COMBO_BOX;
+		}
+#endif
+#ifndef ATK_ROLE_CAPTION
+        else if (accRole == nsIAccessible::ROLE_CAPTION) {
+			accRole = ATK_ROLE_LABEL;
+		}
+#endif
+        aAtkObj->role = NS_STATIC_CAST(AtkRole, accRole);
     }
     return aAtkObj->role;
-}
-
-AtkAttributeSet *
-GetAttributeSet(nsIAccessible* aAccessible)
-{
-    AtkAttributeSet *objAttributeSet = nsnull;
-    nsCOMPtr<nsIPersistentProperties> attributes;
-    aAccessible->GetAttributes(getter_AddRefs(attributes));
-
-    if (attributes) {
-        nsCOMPtr<nsISimpleEnumerator> propEnum;
-        nsresult rv = attributes->Enumerate(getter_AddRefs(propEnum));
-        NS_ENSURE_SUCCESS(rv, nsnull);
-
-        PRBool hasMore;
-        while (NS_SUCCEEDED(propEnum->HasMoreElements(&hasMore)) && hasMore) {
-            nsCOMPtr<nsISupports> sup;
-            rv = propEnum->GetNext(getter_AddRefs(sup));
-            nsCOMPtr<nsIPropertyElement> propElem(do_QueryInterface(sup));
-            NS_ENSURE_TRUE(propElem, nsnull);
-
-            nsCAutoString name;
-            rv = propElem->GetKey(name);
-            NS_ENSURE_SUCCESS(rv, nsnull);
-
-            nsAutoString value;
-            rv = propElem->GetValue(value);
-            NS_ENSURE_SUCCESS(rv, nsnull);
-
-            AtkAttribute *objAttribute = (AtkAttribute *)g_malloc(sizeof(AtkAttribute));
-            objAttribute->name = g_strdup(name.get());
-            objAttribute->value = g_strdup(NS_ConvertUTF16toUTF8(value).get());
-            objAttributeSet = g_slist_prepend(objAttributeSet, objAttribute);
-        }
-    }
-
-    return objAttributeSet;
-}
-
-AtkAttributeSet *
-getAttributesCB(AtkObject *aAtkObj)
-{
-    NS_ENSURE_SUCCESS(CheckMaiAtkObject(aAtkObj), nsnull);
-    nsAccessibleWrap *accWrap =
-        NS_REINTERPRET_CAST(MaiAtkObject*, aAtkObj)->accWrap;
-
-    return GetAttributeSet(accWrap);
 }
 
 AtkObject *
@@ -773,55 +872,20 @@ getChildCountCB(AtkObject *aAtkObj)
         NS_REINTERPRET_CAST(MaiAtkObject*, aAtkObj)->accWrap;
 
     PRInt32 count = 0;
-    nsCOMPtr<nsIAccessibleHyperText> hyperText;
-    accWrap->QueryInterface(NS_GET_IID(nsIAccessibleHyperText), getter_AddRefs(hyperText));
-    if (hyperText) {
-        // If HyperText, then number of links matches number of children
-        hyperText->GetLinks(&count);
-    }
-    else {
-        nsCOMPtr<nsIAccessibleText> accText;
-        accWrap->QueryInterface(NS_GET_IID(nsIAccessibleText), getter_AddRefs(accText));
-        if (!accText) {    // Accessible text that is not a HyperText has no children
-            accWrap->GetChildCount(&count);
-        }
-    }
+    accWrap->GetChildCount(&count);
     return count;
 }
 
 AtkObject *
 refChildCB(AtkObject *aAtkObj, gint aChildIndex)
 {
-    // aChildIndex should not be less than zero
-    if (aChildIndex < 0) {
-      return nsnull;
-    }
-
-    // XXX Fix this so it is not O(n^2) to walk through the children!
-    // Either we can cache the last accessed child so that we can just GetNextSibling()
-    // or we should cache an array of children in each nsAccessible
-    // (instead of mNextSibling on the children)
     NS_ENSURE_SUCCESS(CheckMaiAtkObject(aAtkObj), nsnull);
     nsAccessibleWrap *accWrap =
         NS_REINTERPRET_CAST(MaiAtkObject*, aAtkObj)->accWrap;
 
     nsresult rv;
     nsCOMPtr<nsIAccessible> accChild;
-    nsCOMPtr<nsIAccessibleHyperText> hyperText;
-    accWrap->QueryInterface(NS_GET_IID(nsIAccessibleHyperText), getter_AddRefs(hyperText));
-    if (hyperText) {
-        // If HyperText, then number of links matches number of children
-        nsCOMPtr<nsIAccessibleHyperLink> hyperLink;
-        rv = hyperText->GetLink(aChildIndex, getter_AddRefs(hyperLink));
-        accChild = do_QueryInterface(hyperLink);
-    }
-    else {
-        nsCOMPtr<nsIAccessibleText> accText;
-        accWrap->QueryInterface(NS_GET_IID(nsIAccessibleText), getter_AddRefs(accText));
-        if (!accText) {  // Accessible Text that is not HyperText has no children
-            rv = accWrap->GetChildAt(aChildIndex, getter_AddRefs(accChild));
-        }
-    }
+    rv = accWrap->GetChildAt(aChildIndex, getter_AddRefs(accChild));
 
     if (NS_FAILED(rv) || !accChild)
         return nsnull;
@@ -844,66 +908,13 @@ refChildCB(AtkObject *aAtkObj, gint aChildIndex)
 gint
 getIndexInParentCB(AtkObject *aAtkObj)
 {
-    // We don't use nsIAccessible::GetIndexInParent() because
-    // for ATK we don't want to include text leaf nodes as children
     NS_ENSURE_SUCCESS(CheckMaiAtkObject(aAtkObj), -1);
     nsAccessibleWrap *accWrap =
         NS_REINTERPRET_CAST(MaiAtkObject*, aAtkObj)->accWrap;
 
-    nsCOMPtr<nsIAccessible> parent;
-    accWrap->GetParent(getter_AddRefs(parent));
-    if (!parent) {
-        return -1; // No parent
-    }
-
-    nsCOMPtr<nsIAccessible> sibling;
-    parent->GetFirstChild(getter_AddRefs(sibling));
-    if (!sibling) {
-        return -1;  // Error, parent has no children
-    }
-
-    PRInt32 currentIndex = 0;
-
-    while (sibling != NS_STATIC_CAST(nsIAccessible*, accWrap)) {
-      NS_ASSERTION(sibling, "Never ran into the same child that we started from");
-
-      if (!sibling) {
-          return -1;
-      }
-      if (nsAccessible::IsEmbeddedObject(sibling)) {
-        ++ currentIndex;
-      }
-
-      nsCOMPtr<nsIAccessible> tempAccessible;
-      sibling->GetNextSibling(getter_AddRefs(tempAccessible));
-      sibling.swap(tempAccessible);
-    }
-
+    PRInt32 currentIndex = -1;
+    accWrap->GetIndexInParent(&currentIndex);
     return currentIndex;
-}
-
-static void TranslateStates(PRUint32 aState, const AtkStateMap *aStateMap,
-                            AtkStateSet *aStateSet)
-{
-  NS_ASSERTION(aStateSet, "Can't pass in null state set");
-
-  // Convert every state to an entry in AtkStateMap
-  PRUint32 stateIndex = 0;
-  PRUint32 bitMask = 1;
-  while (aStateMap[stateIndex].stateMapEntryType != kNoSuchState) {
-    if (aStateMap[stateIndex].atkState) {    // There's potentially an ATK state for this
-      PRBool isStateOn = (aState & bitMask) != 0;
-      if (aStateMap[stateIndex].stateMapEntryType == kMapOpposite) {
-        isStateOn = !isStateOn;
-      }
-      if (isStateOn) {
-        atk_state_set_add_state(aStateSet, aStateMap[stateIndex].atkState);
-      }
-    }
-    // Map extended state
-    bitMask <<= 1;
-    ++ stateIndex;
-  }
 }
 
 AtkStateSet *
@@ -916,19 +927,18 @@ refStateSetCB(AtkObject *aAtkObj)
     nsAccessibleWrap *accWrap =
         NS_REINTERPRET_CAST(MaiAtkObject*, aAtkObj)->accWrap;
 
-    // Map states
-    PRUint32 accState;
+    PRUint32 accState = 0;
     nsresult rv = accWrap->GetFinalState(&accState);
     NS_ENSURE_SUCCESS(rv, state_set);
-    TranslateStates(accState, gAtkStateMap, state_set);
 
-    // Map extended states
-    PRUint32 accExtState;
+    PRUint32 accExtState = 0;
     rv = accWrap->GetExtState(&accExtState);
     NS_ENSURE_SUCCESS(rv, state_set);
 
-    TranslateStates(accExtState, gAtkStateMapExt, state_set);
+    if ((accState == 0) && (accExtState == 0))
+      return state_set;
 
+    nsAccessibleWrap::TranslateStates(accState, accExtState, state_set);
     return state_set;
 }
 
@@ -947,31 +957,19 @@ refRelationSetCB(AtkObject *aAtkObj)
     
     PRUint32 relationType[] = {nsIAccessible::RELATION_LABELLED_BY,
                                nsIAccessible::RELATION_LABEL_FOR,
-                               nsIAccessible::RELATION_NODE_CHILD_OF,
-                               nsIAccessible::RELATION_CONTROLLED_BY,
-                               nsIAccessible::RELATION_CONTROLLER_FOR,
-                               nsIAccessible::RELATION_EMBEDS,
-                               nsIAccessible::RELATION_FLOWS_TO,
-                               nsIAccessible::RELATION_FLOWS_FROM,
-                               nsIAccessible::RELATION_DESCRIBED_BY,
-                               nsIAccessible::RELATION_DESCRIPTION_FOR,
-                               };
+                               nsIAccessible::RELATION_NODE_CHILD_OF};
 
-    for (PRUint32 i = 0; i < NS_ARRAY_LENGTH(relationType); i++) {
-        relation = atk_relation_set_get_relation_by_type(relation_set, NS_STATIC_CAST(AtkRelationType, relationType[i]));
-        if (relation) {
-            atk_relation_set_remove(relation_set, relation);
-        }
-
-        nsIAccessible* accRelated;
-        nsresult rv = accWrap->GetAccessibleRelated(relationType[i], &accRelated);
-        if (NS_SUCCEEDED(rv) && accRelated) {
-            accessible_array[0] = NS_STATIC_CAST(nsAccessibleWrap*, accRelated)->GetAtkObject();
-            relation = atk_relation_new(accessible_array, 1,
-                                        NS_STATIC_CAST(AtkRelationType, relationType[i]));
-            atk_relation_set_add(relation_set, relation);
-            g_object_unref(relation);
-        }
+    for (PRUint32 i = 0; i < NS_ARRAY_LENGTH(relationType); i++) { 
+      if (!atk_relation_set_contains(relation_set, NS_STATIC_CAST(AtkRelationType, relationType[i]))) {
+          nsIAccessible* accRelated;
+          nsresult rv = accWrap->GetAccessibleRelated(relationType[i], &accRelated);
+          if (NS_SUCCEEDED(rv) && accRelated) {
+              accessible_array[0] = NS_STATIC_CAST(nsAccessibleWrap*, accRelated)->GetAtkObject();
+              relation = atk_relation_new(accessible_array, 1,
+                                           NS_STATIC_CAST(AtkRelationType, relationType[i]));
+              atk_relation_set_add(relation_set, relation);
+          }
+      }
     }
 
     return relation_set;
@@ -981,7 +979,7 @@ refRelationSetCB(AtkObject *aAtkObj)
 nsresult
 CheckMaiAtkObject(AtkObject *aAtkObj)
 {
-    NS_ENSURE_ARG(IS_MAI_OBJECT(aAtkObj));
+    NS_ENSURE_ARG(MAI_IS_ATK_OBJECT(aAtkObj));
     nsAccessibleWrap * tmpAccWrap = MAI_ATK_OBJECT(aAtkObj)->accWrap;
     if (tmpAccWrap == nsnull)
         return NS_ERROR_INVALID_POINTER;
@@ -996,7 +994,7 @@ CheckMaiAtkObject(AtkObject *aAtkObj)
 // for it.
 nsAccessibleWrap *GetAccessibleWrap(AtkObject *aAtkObj)
 {
-    NS_ENSURE_TRUE(IS_MAI_OBJECT(aAtkObj), nsnull);
+    NS_ENSURE_TRUE(MAI_IS_ATK_OBJECT(aAtkObj), nsnull);
     nsAccessibleWrap * tmpAccWrap = MAI_ATK_OBJECT(aAtkObj)->accWrap;
     NS_ENSURE_TRUE(tmpAccWrap != nsnull, nsnull);
     NS_ENSURE_TRUE(tmpAccWrap->GetAtkObject() == aAtkObj, nsnull);

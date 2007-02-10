@@ -69,7 +69,7 @@ function setupWizardPanels() {
     }
 
     var pageData = parent.GetPageData();
-   
+  
     // We default this to false, even though we could set it to true if we
     // are going to display the page. However as the accname page will set
     // it to true for us, we'll just default it to false and not work it out

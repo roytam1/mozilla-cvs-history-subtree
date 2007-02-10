@@ -47,6 +47,8 @@
 #include "nsPIDOMWindow.h"
 #include "nsIFocusController.h"
 
+#include "nsIXTFXMLVisualWrapper.h"
+
 #include "nsXFormsUtils.h"
 #include "nsXFormsControlStub.h"
 #include "nsIModelElementPrivate.h"
@@ -69,7 +71,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIXFORMSSWITCHELEMENT
 
-  NS_IMETHOD OnCreated(nsIXTFElementWrapper *aWrapper);
+  NS_IMETHOD OnCreated(nsIXTFBindableElementWrapper *aWrapper);
   NS_IMETHOD ChildInserted(nsIDOMNode *aChild, PRUint32 aIndex);
   NS_IMETHOD ChildAppended(nsIDOMNode *aChild);
   NS_IMETHOD WillRemoveChild(PRUint32 aIndex);
@@ -118,7 +120,7 @@ NS_IMPL_ISUPPORTS_INHERITED1(nsXFormsSwitchElement,
                              nsIXFormsSwitchElement)
 
 NS_IMETHODIMP
-nsXFormsSwitchElement::OnCreated(nsIXTFElementWrapper *aWrapper)
+nsXFormsSwitchElement::OnCreated(nsIXTFBindableElementWrapper *aWrapper)
 {
   nsresult rv = nsXFormsDelegateStub::OnCreated(aWrapper);
   NS_ENSURE_SUCCESS(rv, rv);

@@ -54,7 +54,7 @@ interface nsIDOMRange;
 interface nsISelection : nsISupports
 {
     /**
-     * Returns the node in which the selection begins.
+     * The node representing one end of the selection.
      */
     readonly attribute nsIDOMNode anchorNode;
 
@@ -64,12 +64,12 @@ interface nsISelection : nsISupports
     readonly attribute long anchorOffset;
 
     /**
-     * Returns the node in which the selection ends.
+     * The node with keyboard focus.
      */
     readonly attribute nsIDOMNode focusNode;
 
     /**
-     * The offset within the (text) node where the selection ends.
+     * The offset within the (text) node where focus starts.
      */
     readonly attribute long focusOffset;
 
@@ -99,11 +99,11 @@ interface nsISelection : nsISupports
 
 
     /**
-     * Extends the selection by moving the selection end to the specified node and offset,
-     * preserving the selection begin position. The new selection end result will always
-     * be from the anchorNode to the new focusNode, regardless of direction.
+     * Extends the selection by moving the focus to the specified node and offset,
+     * preserving the anchor postion.  The new selection end result will always
+     * be from the anchor to the new focus, regardless of direction.
      * @param parentNode      The node where the selection will be extended to
-     * @param offset          Where in node to place the offset in the new selection end
+     * @param offset          Where in node to place the offset in the new focused node
      */
     void extend(in nsIDOMNode parentNode, in long offset);
 
@@ -122,12 +122,13 @@ interface nsISelection : nsISupports
     void collapseToEnd();
 
     /**
-     * Indicates whether the node is part of the selection. If partlyContained 
-     * is set to PR_TRUE, the function returns true when some part of the node 
-     * is part of the selection. If partlyContained is set to PR_FALSE, the
-     * function only returns true when the entire node is part of the selection.
+     * The value of entirelyContained determines the detail of the search to determine if
+     * the selection contains the node.  If entirelyContained is set to PR_TRUE, t
+     * or false if
+     * @param node      The node where the selection will be extended to
+     * @param entirelyContained Whether
      */
-    boolean containsNode(in nsIDOMNode node, in boolean partlyContained);
+    boolean containsNode(in nsIDOMNode node, in boolean entirelyContained);
 
     /**
      * Adds all children of the specified node to the selection.

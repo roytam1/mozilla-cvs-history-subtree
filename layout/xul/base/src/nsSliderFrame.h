@@ -52,7 +52,8 @@ class nsISupportsArray;
 class nsITimer;
 class nsSliderFrame;
 
-nsIFrame* NS_NewSliderFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+nsresult NS_NewSliderFrame(nsIPresShell* aPresShell, nsIFrame** aResult) ;
+
 
 class nsSliderMediator : public nsIDOMMouseListener, 
                          public nsITimerCallback
@@ -124,7 +125,7 @@ class nsSliderFrame : public nsBoxFrame
 public:
   friend class nsSliderMediator;
 
-  nsSliderFrame(nsIPresShell* aShell, nsStyleContext* aContext);
+  nsSliderFrame(nsIPresShell* aShell);
   virtual ~nsSliderFrame();
 
 #ifdef DEBUG
@@ -134,9 +135,9 @@ public:
 #endif
 
   // nsIBox
-  virtual nsSize GetPrefSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nsSize GetMinSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nsSize GetMaxSize(nsBoxLayoutState& aBoxLayoutState);
+  NS_IMETHOD GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetMaxSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
   NS_IMETHOD DoLayout(nsBoxLayoutState& aBoxLayoutState);
 
   // nsIFrame overrides
@@ -150,24 +151,25 @@ public:
   NS_IMETHOD  RemoveFrame(nsIAtom*        aListName,
                           nsIFrame*       aOldFrame);
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
-  NS_IMETHOD BuildDisplayListForChildren(nsDisplayListBuilder*   aBuilder,
-                                         const nsRect&           aDirtyRect,
-                                         const nsDisplayListSet& aLists);
-
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
  
-  NS_IMETHOD AttributeChanged(PRInt32 aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent* aChild,
+                              PRInt32 aNameSpaceID,
                               nsIAtom* aAttribute,
                               PRInt32 aModType);
 
   virtual nsresult CurrentPositionChanged(nsPresContext* aPresContext);
 
-  NS_IMETHOD  Init(nsIContent*      aContent,
+  NS_IMETHOD  Init(nsPresContext*  aPresContext,
+                   nsIContent*      aContent,
                    nsIFrame*        aParent,
+                   nsStyleContext*  aContext,
                    nsIFrame*        asPrevInFlow);
 
 
@@ -175,7 +177,12 @@ public:
                          nsGUIEvent* aEvent,
                          nsEventStatus* aEventStatus);
 
-  NS_IMETHOD SetInitialChildList(nsIAtom*        aListName,
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint,
+                              nsFramePaintLayer aWhichLayer,    
+                              nsIFrame**     aFrame);
+
+  NS_IMETHOD SetInitialChildList(nsPresContext* aPresContext,
+                                 nsIAtom*        aListName,
                                  nsIFrame*       aChildList);
 
   NS_IMETHOD MouseDown(nsIDOMEvent* aMouseEvent);
@@ -184,7 +191,6 @@ public:
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; }
 
   static PRInt32 GetCurrentPosition(nsIContent* content);
-  static PRInt32 GetMinPosition(nsIContent* content);
   static PRInt32 GetMaxPosition(nsIContent* content);
   static PRInt32 GetIncrement(nsIContent* content);
   static PRInt32 GetPageIncrement(nsIContent* content);
@@ -223,6 +229,9 @@ private:
   void AddListener();
   void RemoveListener();
   PRBool isDraggingThumb();
+
+  // Convert aEvent->point into our coordinate system
+  nsPoint EventPointInOurCoords(nsEvent* aEvent);
 
   float mRatio;
 

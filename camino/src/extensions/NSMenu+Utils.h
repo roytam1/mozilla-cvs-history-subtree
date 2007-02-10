@@ -20,7 +20,6 @@
  *
  * Contributor(s):
  *   Simon Fraser <smfr@smfr.org>
- *   Ian Leue (froodian) <stridey@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -60,10 +59,10 @@ extern NSString* const NSMenuClosedNotification;
 - (void)setAllItemsEnabled:(BOOL)inEnable startingWithItemAtIndex:(int)inFirstItem includingSubmenus:(BOOL)includeSubmenus;
 
 // return the first item (if any) with the given target and action.
-- (NSMenuItem*)itemWithTarget:(id)anObject andAction:(SEL)actionSelector;
+- (id<NSMenuItem>)itemWithTarget:(id)anObject andAction:(SEL)actionSelector;
 
 // remove items after the given item, or all items if nil
-- (void)removeItemsAfterItem:(NSMenuItem*)inItem;
+- (void)removeItemsAfterItem:(id<NSMenuItem>)inItem;
 
 // remove all items including and after the given index (i.e. all items if index is 0)
 - (void)removeItemsFromIndex:(int)inItemIndex;
@@ -72,22 +71,17 @@ extern NSString* const NSMenuClosedNotification;
 // the param should be the [NSNotification object]
 - (BOOL)isTargetOfMenuDisplayNotification:(id)inObject;
 
-// add command and shift-command alternate menu items with attributes matching the input param
-- (void)addCommandKeyAlternatesForMenuItem:(NSMenuItem *)inMenuItem;
+// create and return an autoreleased alternate menu item
++ (NSMenuItem *)alternateMenuItemWithTitle:(NSString *)title action:(SEL)action target:(id)target modifiers:(int)modifiers;
 
 @end
 
 
 @interface NSMenuItem(ChimeraMenuItemUtils)
 
-- (id)initAlternateWithTitle:(NSString *)title action:(SEL)action target:(id)target modifiers:(int)modifiers;
-
-// create and return an autoreleased alternate menu item
-+ (NSMenuItem *)alternateMenuItemWithTitle:(NSString *)title action:(SEL)action target:(id)target modifiers:(int)modifiers;
-
 - (int)tagRemovingMask:(int)tagMask;
 
 // copy the title and enabled state from the given item
-- (void)takeStateFromItem:(NSMenuItem*)inItem;
+- (void)takeStateFromItem:(id<NSMenuItem>)inItem;
 
 @end

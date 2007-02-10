@@ -43,12 +43,23 @@
 //----------------------------------------------------------------------
 // Global functions and data [declaration]
 
-static const uScanClassID g_JOHABScanClassIDs[] = {
-  u1ByteCharset,
-  uJohabHangulCharset,
-  u2BytesCharset,
-  uJohabSymbolCharset,
-  uJohabSymbolCharset
+static const PRUint16 g_ASCIIShiftTable[] =  {
+  0, u1ByteCharset,
+  ShiftCell(0,0,0,0,0,0,0,0)
+};
+
+static const PRUint16 g_JOHABHangulShiftTable[] =  {
+  0, uJohabHangulCharset,
+  ShiftCell(0,  0, 0, 0, 0, 0, 0, 0)
+};
+static const PRUint16 g_JOHABHangulCompatJamoShiftTable[] =  {
+  0, u2BytesCharset,
+  ShiftCell(0,  0, 0, 0, 0, 0, 0, 0)
+};
+
+static const PRUint16 g_JOHABSymbolShiftTable[] =  {
+  0, uJohabSymbolCharset,
+  ShiftCell(0,  0, 0, 0, 0, 0, 0, 0)
 };
 
 static const uRange g_JOHABRanges[] = {
@@ -61,6 +72,14 @@ static const uRange g_JOHABRanges[] = {
 
 static const PRUint16 g_utJohabJamoMapping[] ={   
 #include "johabjamo.ut"
+};
+
+static const PRUint16 *g_JOHABShiftTableSet [] = {
+  g_ASCIIShiftTable,
+  g_JOHABHangulShiftTable,
+  g_JOHABHangulCompatJamoShiftTable,
+  g_JOHABSymbolShiftTable,
+  g_JOHABSymbolShiftTable
 };
 
 static const PRUint16 *g_JOHABMappingTableSet [] ={
@@ -81,7 +100,7 @@ nsJohabToUnicodeConstructor(nsISupports *aOuter, REFNSIID aIID,
 {
   return CreateMultiTableDecoder(sizeof(g_JOHABRanges) / sizeof(g_JOHABRanges[0]),
                                  (const uRange*) &g_JOHABRanges,
-                                 (uScanClassID*) &g_JOHABScanClassIDs,
+                                 (uShiftTable**) &g_JOHABShiftTableSet, 
                                  (uMappingTable**) &g_JOHABMappingTableSet, 1,
                                  aOuter, aIID, aResult);
 }

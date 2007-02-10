@@ -58,9 +58,7 @@
 #include "nsISupportsPrimitives.h"
 #include "nsXPIDLString.h"
 #include "nsPrimitiveHelpers.h"
-#ifndef MOZ_CAIRO_GFX
 #include "nsIImageMac.h"
-#endif
 #include "nsMemory.h"
 #include "nsMacNativeUnicodeConverter.h"
 #include "nsICharsetConverterManager.h"
@@ -236,7 +234,6 @@ nsClipboard :: SetNativeClipboardData ( PRInt32 aWhichClipboard )
         nsCOMPtr<nsISupports> transferSupports;
         errCode = mTransferable->GetTransferData ( flavorStr, getter_AddRefs(transferSupports), &dataSize );
         nsCOMPtr<nsISupportsInterfacePointer> ptrPrimitive(do_QueryInterface(transferSupports));
-#ifndef MOZ_CAIRO_GFX
         nsCOMPtr<nsIImageMac> image;
         if (ptrPrimitive) {
           nsCOMPtr<nsISupports> primitiveData;
@@ -252,7 +249,6 @@ nsClipboard :: SetNativeClipboardData ( PRInt32 aWhichClipboard )
           }
         }
         else
-#endif
           NS_WARNING ( "Image isn't an nsIImageMac in transferable" );
       }
       else if (strcmp(flavorStr.get(), kURLDataMime) == 0 ||

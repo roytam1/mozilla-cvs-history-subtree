@@ -35,12 +35,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * representation of a declaration block (or style attribute) in a CSS
- * stylesheet
- */
-
 #ifndef nsCSSDeclaration_h___
 #define nsCSSDeclaration_h___
 
@@ -51,6 +45,7 @@
 #include "nsCoord.h"
 #include "nsCSSValue.h"
 #include "nsCSSProps.h"
+#include "nsVoidArray.h"
 #include "nsValueArray.h"
 #include "nsCSSDataBlock.h"
 #include "nsCSSStruct.h"
@@ -153,13 +148,11 @@ private:
   nsCSSDeclaration& operator=(const nsCSSDeclaration& aCopy);
   PRBool operator==(const nsCSSDeclaration& aCopy) const;
 
-  static void AppendImportanceToString(PRBool aIsImportant, nsAString& aString);
+  void     AppendImportanceToString(PRBool aIsImportant, nsAString& aString) const;
   // return whether there was a value in |aValue| (i.e., it had a non-null unit)
   PRBool   AppendValueToString(nsCSSProperty aProperty, nsAString& aResult) const;
   // return whether there was a value in |aValue| (i.e., it had a non-null unit)
-  static PRBool AppendCSSValueToString(nsCSSProperty aProperty,
-                                       const nsCSSValue& aValue,
-                                       nsAString& aResult);
+  PRBool   AppendCSSValueToString(nsCSSProperty aProperty, const nsCSSValue& aValue, nsAString& aResult) const;
 
   // May be called only for properties whose type is eCSSType_Value.
   nsresult GetValueOrImportantValue(nsCSSProperty aProperty, nsCSSValue& aValue) const;

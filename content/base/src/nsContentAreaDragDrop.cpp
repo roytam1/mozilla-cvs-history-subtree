@@ -55,7 +55,7 @@
 #include "nsIDOMNSEvent.h"
 #include "nsIDOMMouseEvent.h"
 #include "nsIDOMAbstractView.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindow.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMDocumentRange.h"
 #include "nsIDOMRange.h"
@@ -79,23 +79,27 @@
 #include "nsIDocShell.h"
 #include "nsIContent.h"
 #include "nsIImageLoadingContent.h"
+#include "nsIXMLContent.h"
 #include "nsINameSpaceManager.h"
 #include "nsUnicharUtils.h"
+#include "nsHTMLAtoms.h"
 #include "nsIURL.h"
 #include "nsIImage.h"
 #include "nsIDocument.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIPresShell.h"
 #include "nsPresContext.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIFrame.h"
+#include "nsLayoutAtoms.h"
+#include "nsIDocumentEncoder.h"
 #include "nsRange.h"
 #include "nsIWebBrowserPersist.h"
 #include "nsEscape.h"
 #include "nsContentUtils.h"
 #include "nsIMIMEService.h"
 #include "imgIRequest.h"
-#include "nsContentCID.h"
 
 // private clipboard data flavors for html copy, used by editor when pasting
 #define kHTMLContext   "text/_moz_htmlcontext"
@@ -352,14 +356,16 @@ nsContentAreaDragDrop::DragOver(nsIDOMEvent* inEvent)
       NS_ASSERTION(sourceDocument, "Confused document object");
       NS_ASSERTION(eventDocument, "Confused document object");
 
-      nsPIDOMWindow* sourceWindow = sourceDocument->GetWindow();
-      nsPIDOMWindow* eventWindow = eventDocument->GetWindow();
+      nsIScriptGlobalObject * sourceGlobal =
+        sourceDocument->GetScriptGlobalObject();
+      nsIScriptGlobalObject* eventGlobal =
+        eventDocument->GetScriptGlobalObject();
 
-      if (sourceWindow && eventWindow) {
+      if (sourceGlobal && eventGlobal) {
         nsCOMPtr<nsIDocShellTreeItem> sourceShell =
-          do_QueryInterface(sourceWindow->GetDocShell());
+          do_QueryInterface(sourceGlobal->GetDocShell());
         nsCOMPtr<nsIDocShellTreeItem> eventShell =
-          do_QueryInterface(eventWindow->GetDocShell());
+          do_QueryInterface(eventGlobal->GetDocShell());
 
         if (sourceShell && eventShell) {
           // Whew.  Almost there.  Get the roots that are of the same type
@@ -556,28 +562,29 @@ nsContentAreaDragDrop::DragDrop(nsIDOMEvent* inMouseEvent)
       if (url.IsEmpty() || url.FindChar(' ') >= 0)
         return NS_OK;
 
-      nsCOMPtr<nsIURI> uri;
-      NS_NewURI(getter_AddRefs(uri), url);
-      if (!uri) {
-        // Not actually a URI
-        return NS_OK;
-      }
-
       nsCOMPtr<nsIDOMDocument> sourceDocument;
       session->GetSourceDocument(getter_AddRefs(sourceDocument));
 
       nsCOMPtr<nsIDocument> sourceDoc(do_QueryInterface(sourceDocument));
-      if (sourceDoc) {
-        rv = nsContentUtils::GetSecurityManager()->
-          CheckLoadURIWithPrincipal(sourceDoc->NodePrincipal(), uri,
-                                    nsIScriptSecurityManager::STANDARD);
+      if (sourceDoc && sourceDoc->GetPrincipal()) {
+        nsCOMPtr<nsIURI> sourceUri;
+        sourceDoc->GetPrincipal()->GetURI(getter_AddRefs(sourceUri));
 
-        if (NS_FAILED(rv)) {
-          // Security check failed, stop event propagation right here
-          // and return the error.
-          inMouseEvent->StopPropagation();
+        if (sourceUri) {
+          nsCAutoString sourceUriStr;
+          sourceUri->GetSpec(sourceUriStr);
 
-          return rv;
+          rv = nsContentUtils::GetSecurityManager()->
+            CheckLoadURIStr(sourceUriStr, NS_ConvertUTF16toUTF8(url),
+                            nsIScriptSecurityManager::STANDARD);
+
+          if (NS_FAILED(rv)) {
+            // Security check failed, stop even propagation right here
+            // and return the error.
+            inMouseEvent->StopPropagation();
+
+            return rv;
+          }
         }
       }
 
@@ -976,14 +983,21 @@ nsTransferableFactory::FindParentLinkNode(nsIDOMNode* inNode)
 //
 // GetAnchorURL
 //
+// Get the url for this anchor. First try the href, and if that's
+// empty, go for the name.
+//
 void
 nsTransferableFactory::GetAnchorURL(nsIDOMNode* inNode, nsAString& outURL)
 {
-  nsCOMPtr<nsIURI> linkURI;
-  nsCOMPtr<nsIContent> content = do_QueryInterface(inNode);
-  if (!content || !content->IsLink(getter_AddRefs(linkURI))) {
+  outURL.Truncate();
+  nsCOMPtr<nsIContent> content(do_QueryInterface(inNode));
+  if (!content) {
     // Not a link
-    outURL.Truncate();
+    return;
+  }
+
+  nsCOMPtr<nsIURI> linkURI = nsContentUtils::GetLinkURI(content);
+  if (!linkURI) {
     return;
   }
 
@@ -1254,8 +1268,7 @@ nsTransferableFactory::Produce(nsITransferable** outTrans)
               CopyUTF8toUTF16(spec, mImageSourceString);
 
               PRBool validExtension;
-              if (extension.IsEmpty() || 
-                  NS_FAILED(mimeInfo->ExtensionExists(extension,
+              if (NS_FAILED(mimeInfo->ExtensionExists(extension,
                                                       &validExtension)) ||
                   !validExtension) {
                 // Fix the file extension in the URL
@@ -1696,7 +1709,8 @@ nsTransferableFactory::SerializeNodeOrSelection(serializationMode inMode,
 
   nsCOMPtr<nsIDOMDocument> domDoc;
   inWindow->GetDocument(getter_AddRefs(domDoc));
-  NS_ENSURE_TRUE(domDoc, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
+  NS_ENSURE_TRUE(doc, NS_ERROR_FAILURE);
 
   nsCOMPtr<nsIDOMRange> range;
   nsCOMPtr<nsISelection> selection;
@@ -1712,9 +1726,9 @@ nsTransferableFactory::SerializeNodeOrSelection(serializationMode inMode,
   }
 
   if (inMode == serializeAsText) {
-    rv = encoder->Init(domDoc, NS_ConvertASCIItoUTF16(textplain), inFlags);
+    rv = encoder->Init(doc, NS_ConvertASCIItoUCS2(textplain), inFlags);
   } else {
-    rv = encoder->Init(domDoc, NS_LITERAL_STRING(kHTMLMime), inFlags);
+    rv = encoder->Init(doc, NS_LITERAL_STRING(kHTMLMime), inFlags);
   }
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1730,6 +1744,6 @@ nsTransferableFactory::SerializeNodeOrSelection(serializationMode inMode,
     return encoder->EncodeToString(outResultString);
   }
 
-  return encoder->EncodeToStringWithContext(outContext, outInfo,
-                                            outResultString);
+  return encoder->EncodeToStringWithContext(outResultString, outContext,
+                                            outInfo);
 }

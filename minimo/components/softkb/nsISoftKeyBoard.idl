@@ -41,6 +41,9 @@
 [scriptable, uuid(0fb2c99e-fde6-4606-a1da-cb61b4144de0)]
 interface nsISoftKeyBoard : nsISupports
 {
+  void show();
+  void hide();
+
   void getWindowRect(out PRInt32 top, out PRInt32 bottom, out PRInt32 left, out PRInt32 right);
 
   void setWindowRect(in PRInt32 top, in PRInt32 bottom, in PRInt32 left, in PRInt32 right);

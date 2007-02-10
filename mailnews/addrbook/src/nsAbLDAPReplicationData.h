@@ -20,7 +20,6 @@
  *
  * Contributor(s):
  *   Dan Mosedale <dan.mosedale@oracle.com>
- *   Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -47,8 +46,6 @@
 #include "nsILocalFile.h"
 #include "nsDirPrefs.h"
 #include "nsIAbLDAPAttributeMap.h"
-#include "nsIAbLDAPDirectory.h"
-#include "nsString.h"
 
 class nsAbLDAPProcessReplicationData : public nsIAbLDAPProcessReplicationData
 {
@@ -77,7 +74,7 @@ protected :
   PRBool          mDBOpen;
   PRBool          mInitialized;
   
-  nsCOMPtr<nsIAbLDAPDirectory> mDirectory;
+  DIR_Server *    mDirServerInfo;
   nsCString       mAuthDN;      // authDN of the user
   nsCString       mAuthPswd;    // pswd of the authDN user
   nsCOMPtr<nsIAbLDAPAttributeMap> mAttrMap; // maps ab properties to ldap attrs

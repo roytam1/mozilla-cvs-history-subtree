@@ -35,7 +35,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsThreadUtils.h"
+#include "nsIThread.h"
 #include "nsSSLThread.h"
 #include "nsAutoLock.h"
 #include "nsNSSIOLayer.h"
@@ -391,7 +391,7 @@ PRStatus nsSSLThread::requestClose(nsNSSSocketInfo *si)
 
   if (requestToCancel)
   {
-    if (NS_IsMainThread())
+    if (nsIThread::IsMainThread())
     {
       requestToCancel->Cancel(NS_ERROR_ABORT);
     }

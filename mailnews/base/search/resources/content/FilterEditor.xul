@@ -51,10 +51,11 @@
   style="width: 52em; height: 34em;"
   windowtype="mailnews:filtereditor"
   persist="width height screenX screenY"
-  buttons="accept,cancel"
+  buttons="accept,cancel,help"
   onload="filterEditorOnLoad();"
   onunload="filterEditorOnUnload();"
-  ondialogaccept="return onAccept();">
+  ondialogaccept="return onAccept();"
+  ondialoghelp="return doHelpButton();">
 
   <dummy class="usesMailWidgets"/>
   <stringbundleset id="stringbundleset">
@@ -67,6 +68,7 @@
   <script type="application/x-javascript" src="chrome://messenger/content/mailCommands.js"/>
   <script type="application/x-javascript" src="chrome://messenger/content/FilterEditor.js"/>
   <script type="application/x-javascript" src="chrome://messenger/content/widgetglue.js"/>
+  <script type="application/x-javascript" src="chrome://help/content/contextHelp.js"/>
 
   <hbox align="center">
     <label value="&filterName.label;" accesskey="&filterName.accesskey;" control="filterName"/>

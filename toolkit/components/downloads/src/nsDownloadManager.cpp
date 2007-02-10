@@ -77,8 +77,9 @@
 /* Outstanding issues/todo:
  * 1. Implement pause/resume.
  */
-
+  
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 static PRBool gStoppingDownloads = PR_FALSE;
 
 #define DOWNLOAD_MANAGER_FE_URL "chrome://mozapps/content/downloads/downloads.xul"
@@ -137,7 +138,8 @@ GetFilePathFromURI(nsIURI *aURI, nsAString &aPath)
 ///////////////////////////////////////////////////////////////////////////////
 // nsDownloadManager
 
-NS_IMPL_ISUPPORTS3(nsDownloadManager, nsIDownloadManager, nsIXPInstallManagerUI, nsIObserver)
+NS_IMPL_ISUPPORTS4(nsDownloadManager, nsIDownloadManager, nsIXPInstallManagerUI, nsIObserver,
+                   nsISupportsWeakReference)
 
 nsDownloadManager::nsDownloadManager() : mBatches(0)
 {
@@ -153,13 +155,9 @@ nsDownloadManager::~nsDownloadManager()
 
   gRDFService->UnregisterDataSource(mDataSource);
 
-#if 0
-  // Temporary fix for orange regression from bug 328159 until I
-  // understand new protocol following bug 326491.  See bug 315421.
   gObserverService->RemoveObserver(this, "quit-application");
   gObserverService->RemoveObserver(this, "quit-application-requested");
   gObserverService->RemoveObserver(this, "offline-requested");
-#endif
 
   NS_IF_RELEASE(gNC_DownloadsRoot);                                             
   NS_IF_RELEASE(gNC_File);                                                      
@@ -233,7 +231,7 @@ nsDownloadManager::Init()
     return rv;
   }
 
-  nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+  nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
   
   rv = bundleService->CreateBundle(DOWNLOAD_MANAGER_BUNDLE, getter_AddRefs(mBundle));
@@ -245,14 +243,12 @@ nsDownloadManager::Init()
   // completely initialized), but the observerservice would still keep a reference
   // to us and notify us about shutdown, which may cause crashes.
   // failure to add an observer is not critical
-  //
-  // These observers will be cleaned up automatically at app shutdown.  We do
-  // not bother explicitly breaking the observers because we are a singleton
-  // that lives for the duration of the app.
-  //
-  gObserverService->AddObserver(this, "quit-application", PR_FALSE);
-  gObserverService->AddObserver(this, "quit-application-requested", PR_FALSE);
-  gObserverService->AddObserver(this, "offline-requested", PR_FALSE);
+  // Note also that we're assuming that the service manager will hold on
+  // to this object until after the "quit-application" notification so
+  // that we actually get notified.
+  gObserverService->AddObserver(this, "quit-application", PR_TRUE);
+  gObserverService->AddObserver(this, "quit-application-requested", PR_TRUE);
+  gObserverService->AddObserver(this, "offline-requested", PR_TRUE);
 
   return NS_OK;
 }
@@ -749,9 +745,9 @@ nsDownloadManager::CancelDownload(const PRUnichar* aPath)
 
   DownloadEnded(aPath, nsnull);
 
-  // Dump the temp file.  This should really be done when the transfer
-  // is cancelled, but there are other cancellation causes that shouldn't
-  // remove this. We need to improve those bits.
+  // dump the temp file.  This should really be done when the transfer
+  // is cancelled, but there's other cancelallation causes that shouldn't 
+  // remove this, we need to improve those bits
   nsCOMPtr<nsILocalFile> tempFile;
   internalDownload->GetTempFile(getter_AddRefs(tempFile));
   if (tempFile) {
@@ -1378,7 +1374,7 @@ nsDownloadManager::ConfirmCancelDownloads(PRInt32 aCount, nsISupportsPRBool* aCa
 {
   nsXPIDLString title, message, quitButton, dontQuitButton;
   
-  nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID);
+  nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID);
   nsCOMPtr<nsIStringBundle> bundle;
   if (bundleService)
     bundleService->CreateBundle(DOWNLOAD_MANAGER_BUNDLE, getter_AddRefs(bundle));
@@ -1842,8 +1838,8 @@ nsDownloadsDataSource::FlushTo(const char* aURI)
 ///////////////////////////////////////////////////////////////////////////////
 // nsDownload
 
-NS_IMPL_ISUPPORTS4(nsDownload, nsIDownload, nsITransfer, nsIWebProgressListener,
-                   nsIWebProgressListener2)
+NS_IMPL_ISUPPORTS5(nsDownload, nsIDownload, nsIDownload_MOZILLA_1_8_BRANCH,
+                   nsITransfer, nsIWebProgressListener, nsIWebProgressListener2)
 
 nsDownload::nsDownload():mDownloadState(nsIDownloadManager::DOWNLOAD_NOTSTARTED),
                          mPercentComplete(0),
@@ -2068,17 +2064,6 @@ nsDownload::OnProgressChange64(nsIWebProgress *aWebProgress,
 
 }
 
-NS_IMETHODIMP
-nsDownload::OnRefreshAttempted(nsIWebProgress *aWebProgress,
-                               nsIURI *aUri,
-                               PRInt32 aDelay,
-                               PRBool aSameUri,
-                               PRBool *allowRefresh)
-{
-  *allowRefresh = PR_TRUE;
-  return NS_OK;
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // nsIWebProgressListener
 
@@ -2119,7 +2104,7 @@ nsDownload::OnStatusChange(nsIWebProgress *aWebProgress,
     // Get title for alert.
     nsXPIDLString title;
     
-    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID, &rv);
     nsCOMPtr<nsIStringBundle> bundle;
     if (bundleService)
       rv = bundleService->CreateBundle(DOWNLOAD_MANAGER_BUNDLE, getter_AddRefs(bundle));
@@ -2225,8 +2210,6 @@ nsDownload::OnStateChange(nsIWebProgress* aWebProgress,
           }
         }
       }
-
-      gObserverService->NotifyObservers(NS_STATIC_CAST(nsIDownload *, this), "dl-done", nsnull);
     }
 
     nsAutoString path;
@@ -2255,6 +2238,8 @@ nsDownload::OnStateChange(nsIWebProgress* aWebProgress,
     }
 #endif
 
+    gObserverService->NotifyObservers(NS_STATIC_CAST(nsIDownload *, this), "dl-done", nsnull);
+
     // break the cycle we created in AddDownload
     mCancelable = nsnull;
 
@@ -2266,8 +2251,9 @@ nsDownload::OnStateChange(nsIWebProgress* aWebProgress,
   if (mDownloadManager->NeedsUIUpdate()) {
     nsCOMPtr<nsIDownloadProgressListener> dpl;
     mDownloadManager->GetInternalListener(getter_AddRefs(dpl));
-    if (dpl)
+    if (dpl) {
       dpl->OnStateChange(aWebProgress, aRequest, aStateFlags, aStatus, this);
+    }
   }
 
   return rv;
@@ -2344,14 +2330,14 @@ nsDownload::GetPercentComplete(PRInt32* aPercentComplete)
 NS_IMETHODIMP
 nsDownload::GetAmountTransferred(PRUint64* aAmountTransferred)
 {
-  *aAmountTransferred = mCurrBytes;
+  *aAmountTransferred = ((PRFloat64)mCurrBytes / 1024.0 + .5);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDownload::GetSize(PRUint64* aSize)
 {
-  *aSize = mMaxBytes;
+  *aSize = ((PRFloat64)mMaxBytes / 1024 + .5);
   return NS_OK;
 }
 
@@ -2409,3 +2395,4 @@ nsDownload::IsPaused()
 {
   return mPaused;
 }
+

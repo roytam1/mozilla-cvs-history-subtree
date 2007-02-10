@@ -5,9 +5,8 @@
 #include "nsIComponentManager.h"
 #include "nsISimpleEnumerator.h"
 #include "nsIServiceManager.h"
-#include "nsServiceManagerUtils.h"
 #include "nsCOMPtr.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "nsILocalFile.h"
 
 #include "mozIStorageService.h"
@@ -17,6 +16,9 @@
 #include "mozIStorageFunction.h"
 
 #include "mozStorageCID.h"
+
+static NS_DEFINE_CID(kmozStorageServiceCID, MOZ_STORAGE_SERVICE_CID);
+static NS_DEFINE_CID(kmozStorageConnectionCID, MOZ_STORAGE_CONNECTION_CID);
 
 #define TEST_CHECK_ERROR(rv) \
         do { if (NS_FAILED(rv)) {              \
@@ -59,7 +61,7 @@ main (int argc, char **argv)
     NS_InitXPCOM2(nsnull, nsnull, nsnull);
 
     nsCOMPtr<mozIStorageService> dbSrv;
-    dbSrv = do_GetService(MOZ_STORAGE_SERVICE_CONTRACTID, &rv);
+    dbSrv = do_GetService(kmozStorageServiceCID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsILocalFile> f;

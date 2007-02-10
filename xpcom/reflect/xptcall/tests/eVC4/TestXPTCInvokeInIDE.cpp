@@ -50,7 +50,7 @@
 #include "nsID.h"
 #include "nsIProxyObjectManager.h"
 #include "nsEmbedAPI.h"
-#include "nsString.h"
+//#include "nsString.h"
 
 #include "InvokeTestTargetInterface.h"
 static NS_DEFINE_IID(kTheCID, INVOKETESTTARGETINTERFACE_IID);
@@ -241,9 +241,10 @@ NS_IMETHODIMP
 InvokeTestTarget::PassTwoStrings(const char *ignore, const char* s1, const char* s2, char** retval)
 {
     const char milk[] = "milk";
-    char *ret = (char*)nsMemory::Alloc(sizeof(milk));
+    char *ret = (char*)malloc(sizeof(milk));
     if (!ret)
       return NS_ERROR_OUT_OF_MEMORY;
+
     strncpy(ret, milk, sizeof(milk));
     printf("\t%s %s", s1, s2);
     *retval = ret;
@@ -253,7 +254,7 @@ InvokeTestTarget::PassTwoStrings(const char *ignore, const char* s1, const char*
 int main()
 {
 
-	NS_InitEmbedding(NULL, NULL);
+	int x = NS_InitEmbedding(NULL, NULL);
 
     InvokeTestTarget *test = new InvokeTestTarget();
 
@@ -270,8 +271,8 @@ int main()
                          (void**)(&proxy));
 
 
-	char* buffer;
-	proxy->PassTwoStrings("", "a", "b", &buffer);
+	char *buffer;
+	proxy->PassTwoStrings("", "a", "b",&buffer);
 
 
     NS_RELEASE(test);
@@ -372,12 +373,9 @@ int x_main()
 
      if (NS_SUCCEEDED(test->PassTwoStrings("", "moo","cow",&outS))) {
        printf(" = %s\n", outS);
-        nsMemory::Free(outS);
+        free(outS);
       } else
         printf("\tFAILED");
-
-
-
 
     printf("calling via invoke:\n");
 

@@ -77,10 +77,6 @@ REQUIRES	= \
 		libpixman \
 		$(NULL)
 
-ifdef MOZ_ENABLE_CAIRO_GFX
-REQUIRES += thebes
-endif
-
 # XXX some platforms can't handle building
 # an empty .a/lib.  Remove this dummy.cpp
 # whenever w have a rendering context
@@ -100,11 +96,9 @@ include $(topsrcdir)/config/rules.mk
 
 CXXFLAGS	+= $(MOZ_CAIRO_CFLAGS) $(TK_CFLAGS)
 
-ifndef MOZ_ENABLE_CAIRO_GFX
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+ifneq (,$(filter mac cocoa,$(MOZ_GFX_TOOLKIT)))
 # needed for nsDrawingSurfaceMac.h
 CXXFLAGS += -I$(topsrcdir)/gfx/src/mac
-endif
 endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT), os2)

@@ -67,6 +67,7 @@
 #include "nsStreamConverter.h"
 #include "nsIMsgSend.h"
 #include "nsIMsgMailNewsUrl.h"
+#include "nsSpecialSystemDirectory.h"
 #include "mozITXTToHTMLConv.h"
 #include "nsCExternalHandlerService.h"
 #include "nsIMIMEService.h"
@@ -99,8 +100,11 @@
 #include "mozISanitizingSerializer.h"
 // </for>
 
+
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 // <for functions="HTML2Plaintext,HTMLSantinize">
 static NS_DEFINE_CID(kParserCID, NS_PARSER_CID);
+static NS_DEFINE_CID(kNavDTDCID, NS_CNAVDTD_CID);
 // </for>
 
 #ifdef HAVE_MIME_DATA_SLOT
@@ -346,6 +350,12 @@ GenerateAttachmentData(MimeObject *object, const char *aMessageURL, MimeDisplayO
     return NS_OK;
   
   nsMsgAttachmentData *tmp = &(aAttachData[attIndex++]);
+  nsresult rv = nsMimeNewURI(&(tmp->url), urlSpec, nsnull);
+
+	PR_FREEIF(urlSpec);
+
+  if ( (NS_FAILED(rv)) || (!tmp->url) )
+    return NS_ERROR_OUT_OF_MEMORY;
 
   tmp->real_type = object->content_type ? nsCRT::strdup(object->content_type) : nsnull;
   tmp->real_encoding = object->encoding ? nsCRT::strdup(object->encoding) : nsnull;
@@ -450,23 +460,6 @@ GenerateAttachmentData(MimeObject *object, const char *aMessageURL, MimeDisplayO
     else
       tmp->real_name = mime_part_address(object);
   }
-  nsCString urlString(urlSpec);
-
-  if (tmp->real_name)
-  {
-    urlString.Append("&filename=");
-    urlString.Append(tmp->real_name);
-    if (tmp->real_type && !strcmp(tmp->real_type, "message/rfc822") &&
-           !StringEndsWith(urlString, NS_LITERAL_CSTRING(".eml"), nsCaseInsensitiveCStringComparator()))
-      urlString.Append(".eml");
-  }
-  nsresult rv = nsMimeNewURI(&(tmp->url), urlString.get(), nsnull);
-
-  PR_FREEIF(urlSpec);
-
-  if ( (NS_FAILED(rv)) || (!tmp->url) )
-    return NS_ERROR_OUT_OF_MEMORY;
-
   ValidateRealName(tmp, object->headers);
 
   return NS_OK;
@@ -679,7 +672,7 @@ nsMimeNewURI(nsIURI** aInstancePtrResult, const char *aSpec, nsIURI *aBase)
   if (nsnull == aInstancePtrResult) 
     return NS_ERROR_NULL_POINTER;
   
-  nsCOMPtr<nsIIOService> pService(do_GetService(NS_IOSERVICE_CONTRACTID, &res));
+  nsCOMPtr<nsIIOService> pService(do_GetService(kIOServiceCID, &res));
   if (NS_FAILED(res)) 
     return NS_ERROR_FACTORY_NOT_REGISTERED;
 
@@ -2006,7 +1999,9 @@ MimeGetStringByID(PRInt32 stringID)
 
   if (!stringBundle)
   {
-    const char* propertyURL = MIME_URL;
+    char* propertyURL = NULL;
+
+    propertyURL = MIME_URL;
 
     nsCOMPtr<nsIStringBundleService> sBundleService = 
              do_GetService(NS_STRINGBUNDLE_CONTRACTID, &res); 
@@ -2193,8 +2188,13 @@ HTML2Plaintext(const nsString& inString, nsString& outString,
   textSink->Initialize(&outString, flags, wrapCol);
 
   parser->SetContentSink(sink);
+  nsCOMPtr<nsIDTD> dtd = do_CreateInstance(kNavDTDCID);
+  NS_ENSURE_TRUE(dtd, NS_ERROR_FAILURE);
 
-  rv = parser->Parse(inString, 0, NS_LITERAL_CSTRING("text/html"), PR_TRUE);
+  parser->RegisterDTD(dtd);
+
+  rv = parser->Parse(inString, 0, NS_LITERAL_CSTRING("text/html"),
+                     PR_FALSE, PR_TRUE);
 
   // Aah! How can NS_ERROR and NS_ABORT_IF_FALSE be no-ops in release builds???
   if (NS_FAILED(rv))
@@ -2252,8 +2252,13 @@ HTMLSanitize(const nsString& inString, nsString& outString,
   sanSink->Initialize(&outString, flags, allowedTags);
 
   parser->SetContentSink(sink);
+  nsCOMPtr<nsIDTD> dtd = do_CreateInstance(kNavDTDCID);
+  NS_ENSURE_TRUE(dtd, NS_ERROR_FAILURE);
 
-  rv = parser->Parse(inString, 0, NS_LITERAL_CSTRING("text/html"), PR_TRUE);
+  parser->RegisterDTD(dtd);
+
+  rv = parser->Parse(inString, 0, NS_LITERAL_CSTRING("text/html"),
+                     PR_FALSE, PR_TRUE);
   if (NS_FAILED(rv))
   {
     NS_ERROR("Parse() failed!");

@@ -40,7 +40,7 @@
 
 #include "nsIMenuBar.h"
 #include "nsIMenuListener.h"
-#include "nsIMutationObserver.h"
+#include "nsIDocumentObserver.h"
 #include "nsIChangeManager.h"
 #include "nsIMenuCommandDispatcher.h"
 #include "nsPresContext.h"
@@ -49,7 +49,12 @@
 #include "nsWeakReference.h"
 #include "nsIContent.h"
 
-#include <Carbon/Carbon.h>
+#include <MacTypes.h>
+#include <UnicodeConverter.h>
+#include <Menus.h>
+#include <CarbonEvents.h>
+
+extern nsWeakPtr gMacMenubarX;
 
 class nsIWidget;
 class nsIDocument;
@@ -71,7 +76,7 @@ namespace MenuHelpersX
 
 class nsMenuBarX :  public nsIMenuBar,
                     public nsIMenuListener,
-                    public nsIMutationObserver,
+                    public nsIDocumentObserver,
                     public nsIChangeManager,
                     public nsIMenuCommandDispatcher,
                     public nsSupportsWeakReference
@@ -96,8 +101,8 @@ public:
     nsEventStatus CheckRebuild(PRBool & aMenuEvent);
     nsEventStatus SetRebuild(PRBool aMenuEvent);
 
-    // nsIMutationObserver
-    NS_DECL_NSIMUTATIONOBSERVER
+    // nsIDocumentObserver
+    NS_DECL_NSIDOCUMENTOBSERVER
 
     NS_IMETHOD Create(nsIWidget * aParent);
 
@@ -133,6 +138,7 @@ protected:
     nsresult CreateAppleMenu ( nsIMenu* inMenu ) ;
 
     nsHashtable             mObserverTable;     // stores observers for content change notification
+    nsHashtable             mCommandMapTable;   // maps CommandIDs to content nodes for CarbonEvent item selection
 
     PRUint32                mNumMenus;
     nsSupportsArray         mMenusArray;        // holds refs

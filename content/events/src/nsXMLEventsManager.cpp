@@ -38,10 +38,11 @@
 
 #include "nsIDOMMutationEvent.h"
 #include "nsXMLEventsManager.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMEventReceiver.h"
+#include "nsIStyledContent.h"
 #include "nsNetUtil.h"
 #include "nsIURL.h"
 #include "nsIDOMEventListener.h"
@@ -52,18 +53,16 @@ PRBool nsXMLEventsListener::InitXMLEventsListener(nsIDocument * aDocument,
                                                   nsXMLEventsManager * aManager,
                                                   nsIContent * aContent)
 {
-  nsresult rv;
   PRInt32 nameSpaceID;
   if (aContent->GetDocument() != aDocument)
     return PR_FALSE;
-  if (aContent->NodeInfo()->Equals(nsGkAtoms::listener,
-                                   kNameSpaceID_XMLEvents))
+  if (aContent->GetNodeInfo()->Equals(nsHTMLAtoms::listener, kNameSpaceID_XMLEvents))
     nameSpaceID = kNameSpaceID_None;
   else
     nameSpaceID = kNameSpaceID_XMLEvents;
   nsAutoString eventType;
-  aContent->GetAttr(nameSpaceID, nsGkAtoms::event, eventType);
-  if (eventType.IsEmpty())
+  nsresult rv = aContent->GetAttr(nameSpaceID, nsHTMLAtoms::_event, eventType);
+  if (rv != NS_CONTENT_ATTR_HAS_VALUE)
     return PR_FALSE;
   nsAutoString handlerURIStr;
   PRBool hasHandlerURI = PR_FALSE;
@@ -71,7 +70,8 @@ PRBool nsXMLEventsListener::InitXMLEventsListener(nsIDocument * aDocument,
   nsAutoString observerID;
   nsAutoString targetIdref;
   
-  if (aContent->GetAttr(nameSpaceID, nsGkAtoms::handler, handlerURIStr)) {
+  if (aContent->GetAttr(nameSpaceID, nsHTMLAtoms::handler, handlerURIStr) != 
+      NS_CONTENT_ATTR_NOT_THERE) {
     hasHandlerURI = PR_TRUE;
     nsCAutoString handlerRef;
     nsCOMPtr<nsIURI> handlerURI;
@@ -103,22 +103,26 @@ PRBool nsXMLEventsListener::InitXMLEventsListener(nsIDocument * aDocument,
   if (!handler)
     return PR_FALSE;
 
-  aContent->GetAttr(nameSpaceID, nsGkAtoms::target, targetIdref);
+  aContent->GetAttr(nameSpaceID, nsHTMLAtoms::target, targetIdref);
 
   PRBool hasObserver = 
-    aContent->GetAttr(nameSpaceID, nsGkAtoms::observer, observerID);
+    aContent->GetAttr(nameSpaceID, nsHTMLAtoms::observer, observerID) != 
+    NS_CONTENT_ATTR_NOT_THERE;
 
+  nsAutoString phase;
   PRBool capture =
-    aContent->AttrValueIs(nameSpaceID, nsGkAtoms::phase,
-                          nsGkAtoms::capture, eCaseMatters);
+    aContent->GetAttr(nameSpaceID, nsHTMLAtoms::phase, phase) !=
+    NS_CONTENT_ATTR_NOT_THERE && phase.Equals(NS_LITERAL_STRING("capture"));
 
+  nsAutoString prop;
   PRBool stopPropagation = 
-    aContent->AttrValueIs(nameSpaceID, nsGkAtoms::propagate,
-                          nsGkAtoms::stop, eCaseMatters);
+    aContent->GetAttr(nameSpaceID, nsHTMLAtoms::propagate, prop) !=
+    NS_CONTENT_ATTR_NOT_THERE && prop.Equals(NS_LITERAL_STRING("stop"));
 
+  nsAutoString cancel;
   PRBool cancelDefault = 
-    aContent->AttrValueIs(nameSpaceID, nsGkAtoms::defaultAction,
-                          nsGkAtoms::cancel, eCaseMatters);
+    aContent->GetAttr(nameSpaceID, nsHTMLAtoms::defaultAction, cancel) !=
+    NS_CONTENT_ATTR_NOT_THERE && cancel.Equals(NS_LITERAL_STRING("cancel"));
 
   nsCOMPtr<nsIContent> observer;
   if (!hasObserver) {
@@ -228,7 +232,7 @@ nsXMLEventsListener::HandleEvent(nsIDOMEvent* aEvent)
     targetMatched = PR_FALSE;
     nsCOMPtr<nsIDOMEventTarget> target;
     aEvent->GetTarget(getter_AddRefs(target));
-    nsCOMPtr<nsIContent> targetEl(do_QueryInterface(target));
+    nsCOMPtr<nsIStyledContent> targetEl(do_QueryInterface(target));
     if (targetEl && targetEl->GetID() == mTarget) 
         targetMatched = PR_TRUE;
   }
@@ -284,7 +288,7 @@ nsXMLEventsManager::~nsXMLEventsManager()
 {
 }
 
-NS_IMPL_ISUPPORTS2(nsXMLEventsManager, nsIDocumentObserver, nsIMutationObserver)
+NS_IMPL_ISUPPORTS1(nsXMLEventsManager, nsIDocumentObserver)
 
 void nsXMLEventsManager::AddXMLEventsContent(nsIContent * aContent)
 {
@@ -331,11 +335,11 @@ nsXMLEventsManager::BeginUpdate(nsIDocument* aDocument, nsUpdateType aUpdateType
 void 
 nsXMLEventsManager::EndUpdate(nsIDocument* aDocument, nsUpdateType aUpdateType) {}
 void 
-nsXMLEventsManager::NodeWillBeDestroyed(const nsINode* aNode)
-{
+nsXMLEventsManager::DocumentWillBeDestroyed(nsIDocument* aDocument){
   mIncomplete.Clear();
   mListeners.Enumerate(EnumAndUnregisterListener, this);
   mListeners.Clear();
+  aDocument->RemoveObserver(this);
 }
 
 void 
@@ -346,11 +350,12 @@ nsXMLEventsManager::EndLoad(nsIDocument* aDocument)
 {
   AddListeners(aDocument);
 }
+NS_IMPL_NSIDOCUMENTOBSERVER_REFLOW_STUB(nsXMLEventsManager)
 NS_IMPL_NSIDOCUMENTOBSERVER_STATE_STUB(nsXMLEventsManager)
 void 
 nsXMLEventsManager::CharacterDataChanged(nsIDocument* aDocument,
                                          nsIContent* aContent,
-                                         CharacterDataChangeInfo* aInfo) {}
+                                         PRBool aAppend) {}
 void
 nsXMLEventsManager::AttributeChanged(nsIDocument* aDocument,
                                      nsIContent* aContent,
@@ -359,19 +364,18 @@ nsXMLEventsManager::AttributeChanged(nsIDocument* aDocument,
                                      PRInt32 aModType)
 {
   if (aNameSpaceID == kNameSpaceID_XMLEvents &&
-      (aAttribute == nsGkAtoms::event ||
-       aAttribute == nsGkAtoms::handler ||
-       aAttribute == nsGkAtoms::target ||
-       aAttribute == nsGkAtoms::observer ||
-       aAttribute == nsGkAtoms::phase ||
-       aAttribute == nsGkAtoms::propagate)) {
+      (aAttribute == nsHTMLAtoms::_event ||
+       aAttribute == nsHTMLAtoms::handler ||
+       aAttribute == nsHTMLAtoms::target ||
+       aAttribute == nsHTMLAtoms::observer ||
+       aAttribute == nsHTMLAtoms::phase ||
+       aAttribute == nsHTMLAtoms::propagate)) {
     RemoveListener(aContent);
     AddXMLEventsContent(aContent);
     nsXMLEventsListener::InitXMLEventsListener(aDocument, this, aContent);
   }
   else {
-    if (aContent->NodeInfo()->Equals(nsGkAtoms::listener,
-                                     kNameSpaceID_XMLEvents)) {
+    if (aContent->GetNodeInfo()->Equals(nsHTMLAtoms::listener, kNameSpaceID_XMLEvents)) {
       RemoveListener(aContent);
       AddXMLEventsContent(aContent);
       nsXMLEventsListener::InitXMLEventsListener(aDocument, this, aContent);
@@ -417,7 +421,7 @@ nsXMLEventsManager::ContentRemoved(nsIDocument* aDocument,
                                    nsIContent* aChild,
                                    PRInt32 aIndexInContainer)
 {
-  if (!aChild || !aChild->IsNodeOfType(nsINode::eELEMENT))
+  if (!aChild || !aChild->IsContentOfType(nsIContent::eELEMENT))
     return;
   //Note, we can't use IDs here, the observer may not always have an ID.
   //And to remember: the same observer can be referenced by many 

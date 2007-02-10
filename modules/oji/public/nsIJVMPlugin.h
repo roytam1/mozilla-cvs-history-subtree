@@ -114,16 +114,14 @@ public:
 	SpendTime(PRUint32 timeMillis) = 0;
 
 	NS_IMETHOD
-#if PR_BYTES_PER_LONG == 8 || PR_BYTES_PER_WORD == 8
+#if PR_BYTES_PER_LONG == 8
 	UnwrapJavaWrapper(JNIEnv* jenv, jobject jobj, jlong* obj) = 0;
 #else
 	UnwrapJavaWrapper(JNIEnv* jenv, jobject jobj, jint* obj) = 0;
 #endif
 
- 	NS_DECLARE_STATIC_IID_ACCESSOR(NS_IJVMPLUGIN_IID)
+ 	NS_DEFINE_STATIC_IID_ACCESSOR(NS_IJVMPLUGIN_IID)
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIJVMPlugin, NS_IJVMPLUGIN_IID)
 
 ////////////////////////////////////////////////////////////////////////////////
 

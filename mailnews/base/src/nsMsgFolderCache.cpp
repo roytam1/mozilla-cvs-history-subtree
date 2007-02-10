@@ -48,8 +48,11 @@
 #include "nsXPIDLString.h"
 #include "nsMsgBaseCID.h"
 
+static NS_DEFINE_CID(kMorkCID, NS_MORK_CID);
+
 const char *kFoldersScope = "ns:msg:db:row:scope:folders:all";	// scope for all folders table
 const char *kFoldersTableKind = "ns:msg:db:table:kind:folders";
+
 
 nsMsgFolderCache::nsMsgFolderCache()
 {
@@ -108,7 +111,7 @@ nsMsgFolderCache::QueryInterface(const nsIID& iid, void **result)
 	if (!gMDBFactory)
 	{
 		nsresult rv;
-		nsCOMPtr <nsIMdbFactoryFactory> factoryfactory = do_CreateInstance(NS_MORK_CONTRACTID, &rv);
+		nsCOMPtr <nsIMdbFactoryFactory> factoryfactory = do_CreateInstance(kMorkCID, &rv);
 		if (NS_SUCCEEDED(rv) && factoryfactory)
 		  rv = factoryfactory->GetMdbFactory(&gMDBFactory);
 	}
@@ -254,7 +257,7 @@ nsresult nsMsgFolderCache::OpenMDB(const char *dbName, PRBool exists)
 				{
 					ret = thumb->DoMore(m_mdbEnv, &outTotal, &outCurrent, &outDone, &outBroken);
 					if (ret != 0)
-					{// mork isn't really doing NS errors yet.
+					{// mork isn't really doing NS erorrs yet.
 						outDone = PR_TRUE;
 						break;
 					}

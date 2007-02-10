@@ -63,7 +63,7 @@
 
 // Misc
 #include "nsEditorUtils.h"
-#include "nsContentCID.h"
+
 
 NS_IMETHODIMP nsPlaintextEditor::PrepareTransferable(nsITransferable **transferable)
 {
@@ -490,9 +490,12 @@ NS_IMETHODIMP nsPlaintextEditor::CanPaste(PRInt32 aSelectionType, PRBool *aCanPa
 nsresult
 nsPlaintextEditor::SetupDocEncoder(nsIDocumentEncoder **aDocEncoder)
 {
-  nsCOMPtr<nsIDOMDocument> domDoc;
-  nsresult rv = GetDocument(getter_AddRefs(domDoc));
+  nsCOMPtr<nsIDOMDocument> domdoc;
+  nsresult rv = GetDocument(getter_AddRefs(domdoc));
   if (NS_FAILED(rv)) return rv;
+	
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
+  if (!doc) return NS_ERROR_FAILURE;
 
   // find out if we're a plaintext control or not
   PRUint32 editorFlags = 0;
@@ -517,7 +520,7 @@ nsPlaintextEditor::SetupDocEncoder(nsIDocumentEncoder **aDocEncoder)
   if (!encoder)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  rv = encoder->Init(domDoc, mimeType, docEncoderFlags);
+  rv = encoder->Init(doc, mimeType, docEncoderFlags);
   if (NS_FAILED(rv)) return rv;
     
   /* get the selection to be dragged */

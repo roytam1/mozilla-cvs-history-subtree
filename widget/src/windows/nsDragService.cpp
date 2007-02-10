@@ -41,7 +41,6 @@
 #include <ole2.h>
 #include <oleidl.h>
 #include <shlobj.h>
-#include <shlwapi.h>
 
 // shellapi.h is needed to build with WIN32_LEAN_AND_MEAN
 #include <shellapi.h>
@@ -60,17 +59,7 @@
 
 #include "nsAutoPtr.h"
 
-#include "nsString.h"
-#include "nsEscape.h"
-#include "nsISupportsPrimitives.h"
-#include "nsNetUtil.h"
-#include "nsIURL.h"
-#include "nsCWebBrowserPersist.h"
-#include "nsIDownload.h"
 #include "nsToolkit.h"
-#include "nsCRT.h"
-#include "nsDirectoryServiceDefs.h"
-#include "nsUnicharUtils.h"
 
 //-------------------------------------------------------------------------
 //
@@ -158,7 +147,6 @@ nsDragService::InvokeDragSession(nsIDOMNode *aDOMNode,
     }
   } // else dragging a single object
 
-  // Kick off the native drag session
   return StartInvokingDragSession(itemToDrag, aActionType);
 }
 
@@ -197,33 +185,8 @@ nsDragService::StartInvokingDragSession(IDataObject * aDataObj,
   // Start dragging
   StartDragSession();
 
-  // check shell32.dll version and do async drag if it is >= 5.0
-  PRUint64 lShellVersion = GetShellVersion();
-  IAsyncOperation *pAsyncOp = NULL;
-  PRBool isAsyncAvailable = LL_UCMP(lShellVersion, >=, LL_INIT(5, 0));
-  if (isAsyncAvailable)
-  {
-    // do async drag
-    if (SUCCEEDED(aDataObj->QueryInterface(IID_IAsyncOperation,
-                                          (void**)&pAsyncOp)))
-      pAsyncOp->SetAsyncMode(TRUE);
-  }
-
   // Call the native D&D method
   HRESULT res = ::DoDragDrop(aDataObj, mNativeDragSrc, effects, &dropRes);
-
-  if (isAsyncAvailable)
-  {
-    // if dragging async
-    // check for async operation
-    BOOL isAsync = FALSE;
-    if (pAsyncOp)
-    {
-      pAsyncOp->InOperation(&isAsync);
-      if (!isAsync)
-        aDataObj->Release();
-    }
-  }
 
   // We're done dragging
   EndDragSession();
@@ -299,7 +262,7 @@ nsDragService::GetNumDropItems(PRUint32 * aNumItems)
       STGMEDIUM stm;
       if (mDataObject->GetData(&fe2, &stm) == S_OK) {
         HDROP hdrop = (HDROP)GlobalLock(stm.hGlobal);
-        *aNumItems = ::DragQueryFileW(hdrop, 0xFFFFFFFF, NULL, 0);
+        *aNumItems = nsToolkit::mDragQueryFile(hdrop, 0xFFFFFFFF, NULL, 0);
         ::GlobalUnlock(stm.hGlobal);
         ::ReleaseStgMedium(&stm);
       }
@@ -488,41 +451,4 @@ nsDragService::EndDragSession()
   NS_IF_RELEASE(mDataObject);
 
   return NS_OK;
-}
-
-// Gets shell version as packed 64 bit int
-PRUint64 nsDragService::GetShellVersion()
-{
-  PRUint64 lVersion = LL_INIT(0, 0);
-  PRUint64 lMinor = lVersion;
-
-  // shell32.dll should be loaded already, so we ae not actually loading the library here
-  PRLibrary *libShell = PR_LoadLibrary("shell32.dll");
-  if (libShell == NULL)
-    return lVersion;
-
-  do
-  {
-    DLLGETVERSIONPROC versionProc = NULL;
-    versionProc = (DLLGETVERSIONPROC)PR_FindFunctionSymbol(libShell, "DllGetVersion");
-    if (versionProc == NULL)
-      break;
-
-    DLLVERSIONINFO versionInfo;
-    ::ZeroMemory(&versionInfo, sizeof(DLLVERSIONINFO));
-    versionInfo.cbSize = sizeof(DLLVERSIONINFO);
-    if (FAILED(versionProc(&versionInfo)))
-      break;
-
-    // why is this?
-    LL_UI2L(lVersion, versionInfo.dwMajorVersion);
-    LL_SHL(lVersion, lVersion, 32);
-    LL_UI2L(lMinor, versionInfo.dwMinorVersion);
-    LL_OR2(lVersion, lMinor);
-  } while (false);
-
-  PR_UnloadLibrary(libShell);
-  libShell = NULL;
-
-  return lVersion;
 }

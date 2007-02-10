@@ -38,6 +38,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
 #include "prlog.h"
@@ -84,6 +85,7 @@
 #include "nsIURL.h"
 #include "nsNetCID.h"
 #include "nsINntpUrl.h"
+#include "nsNewsSummarySpec.h"
 
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
@@ -96,6 +98,9 @@
 #include "nsNativeCharsetUtils.h"
 #include "nsIMsgAccountManager.h"
 
+// we need this because of an egcs 1.0 (and possibly gcc) compiler bug
+// that doesn't allow you to call ::nsISupports::GetIID() inside of a class
+// that multiply inherits from nsISupports
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);
 
@@ -114,7 +119,7 @@ static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);
 
 nsMsgNewsFolder::nsMsgNewsFolder(void) : nsMsgLineBuffer(nsnull, PR_FALSE),
      mExpungedBytes(0), mGettingNews(PR_FALSE),
-    mInitialized(PR_FALSE),
+    mInitialized(PR_FALSE), mOptionLines(""), mUnsubscribedNewsgroupLines(""), 
     m_downloadMessageForOfflineUse(PR_FALSE), m_downloadingMultipleMessages(PR_FALSE), 
     mReadSet(nsnull), mGroupUsername(nsnull), mGroupPassword(nsnull)
 {
@@ -405,7 +410,7 @@ nsMsgNewsFolder::UpdateFolder(nsIMsgWindow *aWindow)
   nsresult rv;
   PRBool getMessagesOnSelect = PR_TRUE;
   nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
-  if (NS_SUCCEEDED(rv))
+  if NS_SUCCEEDED(rv)
     prefBranch->GetBoolPref("news.get_messages_on_select", &getMessagesOnSelect);
   
   // Only if news.get_messages_on_select is true do we get new messages automatically
@@ -595,34 +600,21 @@ NS_IMETHODIMP nsMsgNewsFolder::Delete()
     mDatabase = nsnull;
   }
   
-  nsCOMPtr<nsILocalFile> folderPath;
-  rv = GetFilePath(getter_AddRefs(folderPath));
-
-  if (NS_SUCCEEDED(rv))
-  {
-    nsCOMPtr<nsIFile> summaryPath;
-    rv = GetSummaryFileLocation(folderPath, getter_AddRefs(summaryPath));
-    if (NS_SUCCEEDED(rv))
-    {
-      PRBool exists = PR_FALSE;
-      rv = folderPath->Exists(&exists);
-
-      if (NS_SUCCEEDED(rv) && exists)
-        rv = folderPath->Remove(PR_FALSE);
-
-      if (NS_FAILED(rv))
-        NS_WARNING("Failed to remove News Folder");
-
-      rv = summaryPath->Exists(&exists);
-
-      if (NS_SUCCEEDED(rv) && exists)
-        rv = summaryPath->Remove(PR_FALSE);
-
-      if (NS_FAILED(rv))
-        NS_WARNING("Failed to remove News Folder Summary File");
-    }
-  }
-
+  nsCOMPtr<nsIFileSpec> pathSpec;
+  rv = GetPath(getter_AddRefs(pathSpec));
+  if (NS_FAILED(rv)) return rv;
+  
+  nsFileSpec path;
+  rv = pathSpec->GetFileSpec(&path);
+  if (NS_FAILED(rv)) return rv;
+  
+  // delete local store, if it exists
+  if (path.Exists())
+    path.Delete(PR_FALSE);
+  // Remove summary file.	
+  nsNewsSummarySpec summarySpec(path);
+  summarySpec.Delete(PR_FALSE);
+  
   nsCOMPtr <nsINntpIncomingServer> nntpServer;
   rv = GetNntpServer(getter_AddRefs(nntpServer));
   if (NS_FAILED(rv)) return rv;
@@ -793,6 +785,8 @@ nsMsgNewsFolder::UpdateSummaryFromNNTPInfo(PRInt32 oldest, PRInt32 youngest, PRI
 {
   nsresult rv = NS_OK;
   PRBool newsrcHasChanged = PR_FALSE;
+  PRInt32 oldUnreadMessages = mNumUnreadMessages;
+  PRInt32 oldTotalMessages = mNumTotalMessages;
   
   /* First, mark all of the articles now known to be expired as read. */
   if (oldest > 1) 
@@ -830,15 +824,19 @@ nsMsgNewsFolder::UpdateSummaryFromNNTPInfo(PRInt32 oldest, PRInt32 youngest, PRI
       unread -= deltaInDB;
   }
   
-  PRInt32 pendingUnreadDelta = unread - mNumUnreadMessages - mNumPendingUnreadMessages;
-  PRInt32 pendingTotalDelta = total - mNumTotalMessages - mNumPendingTotalMessages;
-  ChangeNumPendingUnread(pendingUnreadDelta);
-  ChangeNumPendingTotalMessages(pendingTotalDelta);
-
+  mNumUnreadMessages = unread;
+  mNumTotalMessages = total;
 #if 0
   m_nntpHighwater = youngest;
   m_nntpTotalArticles = total;
 #endif
+  
+  //Need to notify listeners that total count changed.
+  if(oldTotalMessages != mNumTotalMessages)
+    NotifyIntPropertyChanged(kTotalMessagesAtom, oldTotalMessages, mNumTotalMessages);
+  
+  if(oldUnreadMessages != mNumUnreadMessages) 
+    NotifyIntPropertyChanged(kTotalUnreadMessagesAtom, oldUnreadMessages, mNumUnreadMessages);
   
   return rv;
 }
@@ -1408,8 +1406,8 @@ nsMsgNewsFolder::GetGroupPasswordWithUI(const PRUnichar * aPromptMessage, const
       if (!mPrevPassword.IsEmpty())
         uniGroupPassword = ToNewUnicode(NS_ConvertASCIItoUTF16(mPrevPassword));
 
-      rv = dialog->PromptPassword(aPromptTitle, aPromptMessage, NS_ConvertASCIItoUTF16(NS_STATIC_CAST(const char*, signonURL)).get(), nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
-                                  &uniGroupPassword, &okayValue);
+       rv = dialog->PromptPassword(aPromptTitle, aPromptMessage, NS_ConvertASCIItoUTF16(NS_STATIC_CAST(const char*, signonURL)).get(), nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
+                                   &uniGroupPassword, &okayValue);
       nsAutoString uniPasswordAdopted;
       uniPasswordAdopted.Adopt(uniGroupPassword);
       if (NS_FAILED(rv)) return rv;
@@ -1470,16 +1468,16 @@ nsMsgNewsFolder::GetGroupUsernameWithUI(const PRUnichar * aPromptMessage, const
     if (dialog) 
     {
       nsXPIDLString uniGroupUsername;
+      
       PRBool okayValue = PR_TRUE;
       
       nsXPIDLCString signonURL;
       rv = CreateNewsgroupUsernameUrlForSignon(mURI.get(), getter_Copies(signonURL));
       if (NS_FAILED(rv)) return rv;
       
-      rv = dialog->Prompt(aPromptTitle, aPromptMessage, NS_ConvertASCIItoUTF16(signonURL).get(), 
+      rv = dialog->Prompt(aPromptTitle, aPromptMessage, NS_ConvertASCIItoUCS2(signonURL).get(), 
         nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY, NS_ConvertASCIItoUTF16(mPrevUsername).get(),
         getter_Copies(uniGroupUsername), &okayValue);
-
       if (NS_FAILED(rv)) return rv;
       
       if (!okayValue) // if the user pressed cancel, just return NULL;
@@ -1489,7 +1487,7 @@ nsMsgNewsFolder::GetGroupUsernameWithUI(const PRUnichar * aPromptMessage, const
       }
       
       // we got a username back, remember it
-      rv = SetGroupUsername(NS_LossyConvertUTF16toASCII(uniGroupUsername).get());
+      rv = SetGroupUsername(NS_LossyConvertUCS2toASCII(uniGroupUsername).get());
       if (NS_FAILED(rv)) return rv;
       
     } // if we got a prompt dialog
@@ -1764,15 +1762,13 @@ NS_IMETHODIMP nsMsgNewsFolder::DownloadMessagesForOffline(nsISupportsArray *mess
 NS_IMETHODIMP nsMsgNewsFolder::NotifyDownloadedLine(const char *line, nsMsgKey keyOfArticle)
 {
   nsresult rv = NS_OK;
-  if (m_downloadMessageForOfflineUse)
+  if (m_downloadMessageForOfflineUse && !m_offlineHeader)
   {
-    if (!m_offlineHeader)
-    {
-      GetMessageHeader(keyOfArticle, getter_AddRefs(m_offlineHeader));
-      rv = StartNewOfflineMessage();
-    }
-    m_numOfflineMsgLines++;
+    GetMessageHeader(keyOfArticle, getter_AddRefs(m_offlineHeader));
+    rv = StartNewOfflineMessage();
   }
+
+  m_numOfflineMsgLines++;
 
   if (m_tempMessageStream)
   {
@@ -1799,13 +1795,6 @@ NS_IMETHODIMP nsMsgNewsFolder::NotifyDownloadedLine(const char *line, nsMsgKey k
   }
                                                                                 
   return rv;
-}
-
-NS_IMETHODIMP nsMsgNewsFolder::NotifyFinishedDownloadinghdrs()
-{
-  ChangeNumPendingTotalMessages(-GetNumPendingTotalMessages());
-  ChangeNumPendingUnread(-GetNumPendingUnread());
-  return NS_OK;  
 }
 
 NS_IMETHODIMP nsMsgNewsFolder::Compact(nsIUrlListener *aListener, nsIMsgWindow *aMsgWindow)
@@ -1850,6 +1839,30 @@ NS_IMETHODIMP nsMsgNewsFolder::GetSortOrder(PRInt32 *order)
   NS_ENSURE_ARG_POINTER(order);
   *order = mSortOrder;
   return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgNewsFolder::GetPersistElided(PRBool *aPersistElided)
+{
+  nsresult rv;
+
+  PRBool isNewsServer = PR_FALSE;
+  rv = GetIsServer(&isNewsServer);
+  NS_ENSURE_SUCCESS(rv,rv);
+ 
+  // persist the open / closed state, if not a server
+  // this doesn't matter right now, but it will if we ever add categories
+  if (!isNewsServer) 
+  {
+    *aPersistElided = PR_TRUE;
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = prefBranch->GetBoolPref("news.persist_server_open_state_in_folderpane", aPersistElided);
+  NS_ENSURE_SUCCESS(rv,rv);
+  return rv;
 }
 
 NS_IMETHODIMP nsMsgNewsFolder::Shutdown(PRBool shutdownChildren)

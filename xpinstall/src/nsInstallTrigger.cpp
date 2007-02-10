@@ -46,7 +46,6 @@
 #include "netCore.h"
 #include "nsIFactory.h"
 #include "nsISupports.h"
-#include "nsPIDOMWindow.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
 
@@ -182,10 +181,13 @@ nsInstallTrigger::HandleContent(const char * aContentType,
 
 
     // Get the global object of the target window for StartSoftwareUpdate
+    nsIScriptGlobalObject* globalObject;
     nsCOMPtr<nsIScriptGlobalObjectOwner> globalObjectOwner = 
                                          do_QueryInterface(aWindowContext);
-    nsIScriptGlobalObject* globalObject =
-      globalObjectOwner ? globalObjectOwner->GetScriptGlobalObject() : nsnull;
+    if ( globalObjectOwner )
+    {
+        globalObject = globalObjectOwner->GetScriptGlobalObject();
+    }
     if ( !globalObject )
         return NS_ERROR_INVALID_ARG;
 
@@ -253,10 +255,9 @@ nsInstallTrigger::HandleContent(const char * aContentType,
     }
     else
     {
-        nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(globalObject));
         nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
         if (os) {
-            os->NotifyObservers(win->GetDocShell(),
+            os->NotifyObservers(globalObject->GetDocShell(), 
                                 "xpinstall-install-blocked", 
                                 NS_LITERAL_STRING("install-chrome").get());
         }
@@ -535,7 +536,7 @@ nsInstallTrigger::CompareVersion(const nsString& aRegName, nsIDOMInstallVersion*
     *aReturn = NOT_FOUND;  // assume failure.
 
     VERSION              cVersion;
-    NS_ConvertUTF16toUTF8 regName(aRegName);
+    NS_ConvertUCS2toUTF8 regName(aRegName);
     REGERR               status;
     nsInstallVersion     regNameVersion;
 
@@ -562,7 +563,7 @@ NS_IMETHODIMP
 nsInstallTrigger::GetVersion(const nsString& component, nsString& version)
 {
     VERSION              cVersion;
-    NS_ConvertUTF16toUTF8 regName(component);
+    NS_ConvertUCS2toUTF8 regName(component);
     REGERR               status;
 
     status = VR_GetVersion( NS_CONST_CAST(char *, regName.get()), &cVersion );

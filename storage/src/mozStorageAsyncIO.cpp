@@ -232,6 +232,7 @@
 
 #include "mozStorageService.h"
 #include "nsAutoLock.h"
+#include "nsEventQueueUtils.h"
 #include "nsIConsoleService.h"
 #include "nsIPrompt.h"
 #include "nsIRunnable.h"
@@ -240,8 +241,7 @@
 #include "nsMemory.h"
 #include "nsNetCID.h"
 #include "nsProxyRelease.h"
-#include "nsThreadUtils.h"
-#include "nsXPCOMCIDInternal.h"
+#include "nsString.h"
 #include "plstr.h"
 #include "prlock.h"
 #include "prcvar.h"
@@ -472,12 +472,12 @@ public:
 
     // this will delay processing the release of the storage service until we
     // get to the main thread.
-    nsCOMPtr<nsIThread> mainThread;
-    nsresult rv = NS_GetMainThread(getter_AddRefs(mainThread));
+    nsCOMPtr<nsIEventQueue> eventQueue;
+    nsresult rv = NS_GetMainEventQ(getter_AddRefs(eventQueue));
     if (NS_SUCCEEDED(rv)) {
       mozIStorageService* service = nsnull;
       mStorageService.swap(service);
-      NS_ProxyRelease(mainThread, service);
+      NS_ProxyRelease(eventQueue, service);
     } else {
       NS_NOTREACHED("No event queue");
     }
@@ -536,7 +536,10 @@ mozStorageService::InitStorageAsyncIO()
   if (! thread)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  nsresult rv = NS_NewThread(&AsyncWriteThreadInstance, thread);
+  nsresult rv = NS_NewThread(&AsyncWriteThreadInstance,
+                             thread,
+                             0,
+                             PR_JOINABLE_THREAD);
   if (NS_FAILED(rv)) {
     AsyncWriteThreadInstance = nsnull;
     return rv;
@@ -624,7 +627,7 @@ mozStorageService::FinishAsyncIO()
   }
 
   // now we join with the writer thread
-  AsyncWriteThreadInstance->Shutdown();
+  AsyncWriteThreadInstance->Join();
 
   // release the thread and enter single-threaded mode
   NS_RELEASE(AsyncWriteThreadInstance);
@@ -1492,7 +1495,7 @@ ProcessOneMessage(AsyncMessage* aMessage)
 //    write queue is empty.
 //
 //    If both of the above variables are false, this procedure runs
-//    indefinitely, waiting for operations to be added to the write queue and
+//    indefinately, waiting for operations to be added to the write queue and
 //    processing them in the order in which they arrive.
 //
 //    An artifical delay of async.ioDelay milliseconds is inserted before each
@@ -1583,34 +1586,98 @@ ProcessAsyncMessages()
 //    This gets dispatched to the main thread so that we can do all the UI
 //    calls there. The prompt service must be called from the main thread.
 
-class nsAsyncWriteErrorDisplayer : public nsRunnable
+class nsAsyncWriteErrorDisplayer : public PLEvent
 {
 public:
-  NS_IMETHOD Run()
-  {
-    nsresult rv;
-    nsCOMPtr<nsIPrompt> prompt = do_CreateInstance(
-        NS_DEFAULTPROMPT_CONTRACTID, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(
-        "@mozilla.org/intl/stringbundle;1", &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIStringBundle> bundle;
-    rv = bundleService->CreateBundle(
-        "chrome://global/locale/storage.properties", getter_AddRefs(bundle));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsXPIDLString message;
-    rv = bundle->GetStringFromName(NS_LITERAL_STRING("storageWriteError").get(),
-                                   getter_Copies(message));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    return prompt->Alert(nsnull, message.get());
-  }
+  nsAsyncWriteErrorDisplayer();
+  nsresult Post();
 };
 
+// HandleWriteErrorDisplayPLEvent
+//
+//    Actually displays the error message
+
+PR_STATIC_CALLBACK(void*)
+HandleWriteErrorDisplayPLEvent(PLEvent* aEvent)
+{
+  nsresult rv;
+  nsCOMPtr<nsIPrompt> prompt = do_CreateInstance(
+      NS_DEFAULTPROMPT_CONTRACTID, &rv);
+  if (NS_FAILED(rv)) {
+    NS_NOTREACHED("Can't get prompt service");
+    return nsnull;
+  }
+
+  nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(
+      "@mozilla.org/intl/stringbundle;1", &rv);
+  if (NS_FAILED(rv)) {
+    NS_NOTREACHED("Can't get string bundle");
+    return nsnull;
+  }
+
+  nsCOMPtr<nsIStringBundle> bundle;
+  rv = bundleService->CreateBundle(
+      "chrome://global/locale/storage.properties", getter_AddRefs(bundle));
+  if (NS_FAILED(rv)) {
+    NS_NOTREACHED("Can't get storage properties");
+    return nsnull;
+  }
+
+  nsXPIDLString message;
+  rv = bundle->GetStringFromName(NS_LITERAL_STRING("storageWriteError").get(),
+                                 getter_Copies(message));
+  if (NS_FAILED(rv)) {
+    NS_NOTREACHED("Can't get error string");
+    return nsnull;
+  }
+
+  prompt->Alert(nsnull, message.get());
+  return nsnull;
+}
+
+PR_STATIC_CALLBACK(void)
+DestroyWriteErrorDisplayerPLEvent(PLEvent* aEvent)
+{
+  nsAsyncWriteErrorDisplayer* displayer = NS_REINTERPRET_CAST(
+      nsAsyncWriteErrorDisplayer*, aEvent);
+  delete displayer;
+}
+
+nsAsyncWriteErrorDisplayer::nsAsyncWriteErrorDisplayer()
+{
+  PL_InitEvent(this, nsnull, HandleWriteErrorDisplayPLEvent,
+               DestroyWriteErrorDisplayerPLEvent);
+}
+
+
+// nsAsyncWriteErrorDisplayer::Post
+//
+//    Post this event to the given UI thread event queue.
+
+nsresult
+nsAsyncWriteErrorDisplayer::Post()
+{
+  nsresult rv;
+
+  nsCOMPtr<nsIEventQueueService> eventQueueService =
+    do_GetService("@mozilla.org/event-queue-service;1", &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIEventQueue> eventQueue;
+  eventQueueService->
+    GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
+                         getter_AddRefs(eventQueue));
+  if (!eventQueue)
+    return NS_ERROR_FAILURE;
+
+  rv = eventQueue->PostEvent(this);
+  if (NS_FAILED(rv)) {
+    PL_DestroyEvent(this);
+    return rv;
+  }
+
+  return NS_OK;
+}
 
 // DisplayAsyncWriteError
 //
@@ -1621,11 +1688,12 @@ public:
 void
 DisplayAsyncWriteError()
 {
-  nsCOMPtr<nsIRunnable> displayer(new nsAsyncWriteErrorDisplayer);
+  nsAsyncWriteErrorDisplayer* displayer = new nsAsyncWriteErrorDisplayer();
   if (! displayer) {
-    NS_WARNING("Unable to create displayer");
+    NS_NOTREACHED("Can't create the event to display a write error");
     return;
   }
-  nsresult rv = NS_DispatchToMainThread(displayer);
-  NS_ASSERTION(NS_SUCCEEDED(rv), "Can't call main thread");
+  if (NS_FAILED(displayer->Post())) {
+    NS_NOTREACHED("Can't call main thread");
+  }
 }

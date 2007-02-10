@@ -49,17 +49,15 @@
         // Apply meta-model rules to this view. 
         ViewConfigurator.configure(this);
 
-        this._controller = new PlacesController(this);
-        this.controllers.appendController(this._controller);
+        this.history = PlacesController.history;
+        this.controllers.appendController(PlacesController);
 
         // Force an initial build. 
         this.place = this.place;
       ]]></constructor>
-
-      <property name="controller"
-                readonly="true"
-                onget="return this._controller;"/>
-
+      
+      <field name="history">null</field>
+      
       <!-- overriding -->
       <property name="view">
         <getter><![CDATA[
@@ -82,7 +80,7 @@
           // existing ones or create new ones. 
           var options = this.getResult().queryOptions;
           if (!options)
-            options = PlacesUtils.history.getNewQueryOptions();
+            options = this.history.getNewQueryOptions();
           return options;
         ]]></body>
       </method>
@@ -100,22 +98,26 @@
             options = optionsFilter.filter(queryNode.getQueries({}), options, 
                                            optionsFilter.historyHandler);
           
-          var query = PlacesUtils.history.getNewQuery();
+          var query = this.history.getNewQuery();
           query.searchTerms = filterString;
           query.onlyBookmarked = onlyBookmarks;
           
-          // Remove "group by folder" from the options list, because
-          // nsNavHistory::RecursiveGroup doesn't support it.
-          function isFolderGrouping(grouping, index, ary) {
-            return grouping != Ci.nsINavHistoryQueryOptions.GROUP_BY_FOLDER;
+          // If we're searching over everything, or this is not an exclusively
+          // bookmarks search, we need to make sure that we remove "group by
+          // folder" from the options list, because otherwise we will end up
+          // with _no_ results if the user searches while a bookmarks folder 
+          // is selected, since the options for the current view say group by
+          // folder and none of the results will match!
+          if (!onlyBookmarks) {
+            var groupings = options.getGroupingMode({});
+            function isFolderGrouping(grouping, index, ary) {
+              return grouping != Ci.nsINavHistoryQueryOptions.GROUP_BY_FOLDER;
+            }
+            var folderGroupings = groupings.filter(isFolderGrouping);
+            options.setGroupingMode(folderGroupings, folderGroupings.length);            
           }
-          var groupings = options.getGroupingMode({});
-          var folderGroupings = groupings.filter(isFolderGrouping);
-          options.setGroupingMode(folderGroupings, folderGroupings.length);
-
-          if (onlyBookmarks && folderRestrict)
+          if (onlyBookmarks)
             query.setFolders(folderRestrict, folderRestrict.length);
-
           this.load([query], options);
         ]]></body>
       </method>
@@ -124,7 +126,11 @@
         <parameter name="queries"/>
         <parameter name="options"/>
         <body><![CDATA[ 
-          var result = PlacesUtils.history.executeQueries(queries, queries.length, 
+          // override with our local options
+          options.excludeItems = this.excludeItems;
+          options.excludeQueries = this.excludeQueries;
+          options.expandQueries = this.expandQueries;
+          var result = this.history.executeQueries(queries, queries.length, 
                                                    options);
 
           var treeviewer = 
@@ -144,14 +150,14 @@
         -->
       <method name="selectPlaceURI">
         <parameter name="placeURI"/>
-        <body><![CDATA[
+        <body><![CDATA[ 
           function findNode(container, placeURI) {
             container.containerOpen = true;
             for (var i = 0; i < container.childCount; ++i) {
               var child = container.getChild(i);
               if (child.uri == placeURI)
                 return child;
-              else if (PlacesUtils.nodeIsContainer(child)) {
+              else if (PlacesController.nodeIsContainer(child)) {
                 var nested = findNode(asContainer(child), placeURI);
                 if (nested)
                   return nested;
@@ -226,14 +232,6 @@
           }
         ]]></body>
       </method>
-
-      <!-- nsIPlacesView -->
-      <method name="getResultNode">
-        <body><![CDATA[
-          return this.getResult().root;
-        ]]></body>
-      </method>
-
       <method name="getResultView">
         <body><![CDATA[
           try {
@@ -256,11 +254,11 @@
           var queriesRef = { };
           var queryCountRef = { };
           var optionsRef = { };
-          PlacesUtils.history.queryStringToQueries(val, queriesRef, queryCountRef, optionsRef);
+          this.history.queryStringToQueries(val, queriesRef, queryCountRef, optionsRef);
           if (queryCountRef.value == 0)
-            queriesRef.value = [PlacesUtils.history.getNewQuery()];
+            queriesRef.value = [this.history.getNewQuery()];
           if (!optionsRef.value)
-            optionsRef.value = PlacesUtils.history.getNewQueryOptions();
+            optionsRef.value = this.history.getNewQueryOptions();
 
           this.load(queriesRef.value, optionsRef.value);
 
@@ -365,7 +363,7 @@
         <body><![CDATA[
           var nodes = this.getSelectionNodes();
           for (var i = nodes.length - 1; i >= 0; i--) {
-            if (PlacesUtils.nodeIsReadOnly(nodes[i].parent))
+            if (PlacesController.nodeIsReadOnly(nodes[i].parent))
               nodes.splice(i, 1);
           }
           return nodes;
@@ -400,7 +398,7 @@
 
           // only URI nodes should be returned
           var node = this.getResultView().nodeForTreeIndex(min.value);
-          if (PlacesUtils.nodeIsURI(node))
+          if (PlacesController.nodeIsURI(node))
             return node;
           return null;
         ]]></getter>
@@ -496,11 +494,11 @@
               // an item at the root is the result itself, which can be QI'ed to 
               // nsINavHistoryResult
               container = lastSelected.parent;
-              var lsi = PlacesUtils.getIndexOfNode(lastSelected);
+              var lsi = PlacesController.getIndexOfNode(lastSelected);
               index = orientation == NHRVO.DROP_BEFORE ? lsi : lsi + 1;
             }
           }
-          if (PlacesUtils.nodeIsFolder(container)) 
+          if (PlacesController.nodeIsFolder(container)) 
             return new InsertionPoint(asFolder(container).folderId, index, orientation);
           return null;
         ]]></body>
@@ -514,6 +512,15 @@
       
       <!-- nsIPlacesView -->
       <field name="childDropTypes">ViewConfig.GENERIC_DROP_TYPES</field>
+      
+      <!-- nsIPlacesView -->
+      <field name="excludeItems">false</field>
+      
+      <!-- nsIPlacesView -->
+      <field name="excludeQueries">false</field>
+      
+      <!-- nsIPlacesView -->
+      <field name="expandQueries">false</field>
       
       <!-- nsIPlacesView -->
       <method name="selectAll">
@@ -584,7 +591,7 @@
                  (child < node.childCount) && (len(indexes) > 0);
                  child++) {
               var childNode = node.getChild(child);
-              if (!PlacesUtils.nodeIsFolder(childNode))
+              if (!PlacesController.nodeIsFolder(childNode))
                 continue;
 
               var childFolder = asFolder(childNode);
@@ -651,11 +658,12 @@
           for (var i = 0; i < nodes.length; ++i) {
             var node = nodes[i];
             
-            // If this node is part of a readonly container (e.g. a livemark) it 
+            // If this node is part of a readonly folder (e.g. a livemark) it 
             // cannot be moved, only copied, so we must change the action used
             // by the drag session.
             var parent = node.parent;
-            if (PlacesUtils.nodeIsReadOnly(parent))
+            if (PlacesController.nodeIsFolder(parent) &&
+                bms.getFolderReadonly(asFolder(parent).folderId)) 
               dragAction.action = Ci.nsIDragService.DRAGDROP_ACTION_COPY;
 
             // "static" top level "special" items cannot be dragged. They are 
@@ -663,7 +671,7 @@
             // root container than user-configurable items. 
             var treeIndex = this.getResultView().treeIndexForNode(nodes[i]);
             if (this.view.getLevel(treeIndex) == 0) {
-              var index = PlacesUtils.getIndexOfNode(nodes[i]);
+              var index = PlacesController.getIndexOfNode(nodes[i]);
               if (index < this.peerDropIndex)
                 throw Cr.NS_OK;
             }
@@ -673,7 +681,7 @@
           if (event.ctrlKey)
             dragAction.action = Ci.nsIDragService.DRAGDROP_ACTION_COPY;
           // Stuff the encoded selection into the transferable data object
-          xferData.data = this._controller.getTransferData(dragAction.action);
+          xferData.data = PlacesController.getTransferData(dragAction.action);
         ]]></body>
       </method>
       
@@ -721,11 +729,15 @@
         Gets the nsINavHistoryResultNode adjacent to the specified InsertionPoint.
         @param    insertionPoint
                   The InsertionPoint where items are being inserted
+        @param    excludeItems
+                  true if leaf nodes should be excluded for this view, false 
+                  otherwise.
         @returns  a nsINavHistoryResultNode that is adjacent to the specified
                   InsertionPoint 
         -->
       <method name="_getInsertionNode">
         <parameter name="insertionPoint"/>
+        <parameter name="excludeItems"/>
         <body><![CDATA[ 
           // The InsertionPoint defines a place within the view hierarchy where 
           // items may be inserted. This function returns the node adjacent to 
@@ -742,7 +754,7 @@
             var foundNode = null;
             for (var i = 0; i < cc; ++i) {
               var node = container.getChild(i);
-              if (PlacesUtils.nodeIsFolder(node)) {
+              if (PlacesController.nodeIsFolder(node)) {
                 var folder = asFolder(node);
                 if (folder.folderId == folderId) {
                   foundNode = node;
@@ -758,14 +770,14 @@
           }
           var folder = null;
           var root = asContainer(this.getResult().root);
-          if (PlacesUtils.nodeIsFolder(root) && 
+          if (PlacesController.nodeIsFolder(root) && 
               asFolder(root).folderId == insertionPoint.folderId)
             folder = root;
           else
             folder = findFolder(insertionPoint.folderId, root);
           
           // Since we find the folder manually, using findFolder instead of 
-          // PlacesUtils.getFolderContents, the folder is not opened for
+          // PlacesController.getFolderContents, the folder is not opened for
           // us. We need to do that ourselves (and remember if it was closed,
           // so that we can close it again later).
           var folderWasOpen = folder.containerOpen;
@@ -794,7 +806,13 @@
       <method name="_getInsertionIndex">
         <parameter name="insertionPoint"/>
         <body><![CDATA[
-          var node = this._getInsertionNode(insertionPoint);
+          // Insert index of insertion and number of rows to insert
+          var excludeItems = this.excludeItems;
+          // This is a bit of a hack. Assume any container you drop into is 
+          // itself showing all item types, not just folders or items. 
+          if (insertionPoint.orientation == NHRVO.DROP_ON)
+            excludeItems = false;
+          var node = this._getInsertionNode(insertionPoint, excludeItems);
           // This is the insertion index of the pivot. 
           if (node)
             return this.getResultView().treeIndexForNode(node);
@@ -813,7 +831,7 @@
           var node = index != -1 ? resultview.nodeForTreeIndex(index) : result.root;
           // Cannot drop before fixed items in the list. 
           if (node.parent == result.root && 
-              PlacesUtils.getIndexOfNode(node) < this._self.peerDropIndex &&
+              PlacesController.getIndexOfNode(node) < this._self.peerDropIndex &&
               orientation != NHRVO.DROP_ON)
             return false;
 
@@ -969,28 +987,16 @@
           }
         ]]></body>
       </method>
-
-      <!-- Since the controller is attached directly to the tree, its state
-           is only available for command updating if the tree is focused, thus
-           edit commands are always enabled. -->
-      <property name="enableEditCommands"
-                readonly="true"
-                onget="return true;"/>
-                
-      <method name="buildContextMenu">
-        <parameter name="aPopup"/>
-        <body><![CDATA[
-          this.controller.buildContextMenu(aPopup);
-        ]]></body>
-      </method>
-
-      <method name="destroyContextMenu">
-        <parameter name="aPopup"/>
-        <body/>
-      </method>
+      
     </implementation>
     <handlers>
-      <handler event="select" action="window.updateCommands('focus');"/>
+      <handler event="focus"><![CDATA[
+        PlacesController.activeView = this;
+        document.commandDispatcher.updateCommands("focus");
+      ]]></handler>
+      <handler event="select"><![CDATA[
+        document.commandDispatcher.updateCommands("select");
+      ]]></handler>
       <handler event="draggesture"><![CDATA[
         // XXXben ew.
         if (event.target.localName == "treechildren")

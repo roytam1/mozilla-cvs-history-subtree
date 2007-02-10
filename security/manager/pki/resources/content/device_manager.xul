@@ -53,10 +53,12 @@
         style="width: 52em; height: 32em;"
         persist="screenX screenY width height"
         onload="LoadModules();"
-        buttons="accept">
+#expand buttons="accept__HELP_BUTTON__"
+        ondialoghelp="openHelp('sec_devices');">
 
 <script type="application/x-javascript" src="chrome://global/content/strres.js"/>
 <script type="application/x-javascript" src="chrome://pippki/content/device_manager.js"/>
+<script type="application/x-javascript" src="chrome://help/content/contextHelp.js"/>
 
 <grid flex="1" style="margin:5px">
   <columns>

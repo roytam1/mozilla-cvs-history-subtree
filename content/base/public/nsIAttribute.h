@@ -40,19 +40,22 @@
 #ifndef nsIAttribute_h___
 #define nsIAttribute_h___
 
-#include "nsINode.h"
+#include "nsISupports.h"
+#include "nsINodeInfo.h"
+#include "nsIContent.h"
+#include "nsPropertyTable.h"
 
+class nsIAtom;
 class nsDOMAttributeMap;
-class nsIContent;
 
 #define NS_IATTRIBUTE_IID  \
-{ 0x68b13198, 0x6d81, 0x4ab6, \
-  { 0xb9, 0x98, 0xd0, 0xa4, 0x55, 0x82, 0x5f, 0xb1 } }
+ {0x4940cc50, 0x2ede, 0x4883,        \
+ {0x95, 0xf5, 0x53, 0xdb, 0x50, 0x50, 0x13, 0x3e}}
 
-class nsIAttribute : public nsINode
+class nsIAttribute : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IATTRIBUTE_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IATTRIBUTE_IID)
 
   virtual void SetMap(nsDOMAttributeMap *aMap) = 0;
   
@@ -68,21 +71,39 @@ public:
 
   virtual nsIContent* GetContent() const = 0;
 
-  /**
-   * Called when our ownerElement is moved into a new document.
-   * Updates the nodeinfo of this node.
+  nsIDocument *GetOwnerDoc() const
+  {
+    nsIContent* content = GetContent();
+    return content ? content->GetOwnerDoc() : mNodeInfo->GetDocument();
+  }
+
+  /*
+   * Methods for manipulating content node properties.  For documentation on
+   * properties, see nsPropertyTable.h.
    */
-  virtual nsresult SetOwnerDocument(nsIDocument* aDocument) = 0;
+  virtual void* GetProperty(nsIAtom  *aPropertyName,
+                            nsresult *aStatus = nsnull) = 0;
+
+  virtual nsresult SetProperty(nsIAtom                   *aPropertyName,
+                               void                      *aValue,
+                               NSPropertyDtorFunc         aDtor = nsnull) = 0;
+
+  virtual nsresult DeleteProperty(nsIAtom *aPropertyName) = 0;
+
+  virtual void* UnsetProperty(nsIAtom  *aPropertyName,
+                              nsresult *aStatus = nsnull) = 0;
 
 protected:
   nsIAttribute(nsDOMAttributeMap *aAttrMap, nsINodeInfo *aNodeInfo)
-    : nsINode(aNodeInfo), mAttrMap(aAttrMap)
+    : mAttrMap(aAttrMap), mNodeInfo(aNodeInfo)
   {
   }
 
   nsDOMAttributeMap *mAttrMap; // WEAK
-};
+  nsCOMPtr<nsINodeInfo> mNodeInfo; // STRONG
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIAttribute, NS_IATTRIBUTE_IID)
+private:
+  nsIAttribute(); // Not to be implemented.
+};
 
 #endif /* nsIAttribute_h___ */

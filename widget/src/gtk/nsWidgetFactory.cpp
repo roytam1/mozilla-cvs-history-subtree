@@ -44,10 +44,13 @@
 #include "nsWidgetsCID.h"
 
 #include "nsWindow.h"
+#include "nsButton.h"
+#include "nsCheckButton.h"
+#include "nsTextWidget.h"
 #include "nsAppShell.h"
-#include "nsAppShellSingleton.h"
 #include "nsToolkit.h"
 #include "nsLookAndFeel.h"
+#include "nsLabel.h"
 #include "nsTransferable.h"
 #include "nsClipboard.h"
 #include "nsClipboardHelper.h"
@@ -55,17 +58,18 @@
 #include "nsDragService.h"
 #include "nsSound.h"
 #include "nsBidiKeyboard.h"
-#include "nsScreenManagerGtk.h"
-#ifdef NATIVE_THEME_SUPPORT
-#include "nsNativeThemeGTK.h"
-#endif
 
 #include "nsGtkIMEHelper.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindow)
 NS_GENERIC_FACTORY_CONSTRUCTOR(ChildWindow)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsButton)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsCheckButton)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsTextWidget)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsAppShell)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsToolkit)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsLookAndFeel)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsLabel)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTransferable)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsClipboard)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsClipboardHelper)
@@ -73,10 +77,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsHTMLFormatConverter)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDragService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSound)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsBidiKeyboard)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsScreenManagerGtk)
-#ifdef NATIVE_THEME_SUPPORT
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsNativeThemeGTK)
-#endif
 
 static const nsModuleComponentInfo components[] =
 {
@@ -88,6 +88,18 @@ static const nsModuleComponentInfo components[] =
     NS_CHILD_CID,
     "@mozilla.org/widgets/child_window/gtk;1",
     ChildWindowConstructor },
+  { "Gtk Button",
+    NS_BUTTON_CID,
+    "@mozilla.org/widgets/button/gtk;1",
+    nsButtonConstructor },
+  { "Gtk Check Button",
+    NS_CHECKBUTTON_CID,
+    "@mozilla.org/widgets/checkbutton/gtk;1",
+    nsCheckButtonConstructor },
+  { "Gtk Text Widget",
+    NS_TEXTFIELD_CID,
+    "@mozilla.org/widgets/textwidget/gtk;1",
+    nsTextWidgetConstructor },
   { "Gtk AppShell",
     NS_APPSHELL_CID,
     "@mozilla.org/widget/appshell/gtk;1",
@@ -100,6 +112,10 @@ static const nsModuleComponentInfo components[] =
     NS_LOOKANDFEEL_CID,
     "@mozilla.org/widget/lookandfeel;1",
     nsLookAndFeelConstructor },
+  { "Gtk Label",
+    NS_LABEL_CID,
+    "@mozilla.org/widget/label/gtk;1",
+    nsLabelConstructor },
   { "Gtk Sound",
     NS_SOUND_CID,
     //    "@mozilla.org/widget/sound/gtk;1"
@@ -131,28 +147,17 @@ static const nsModuleComponentInfo components[] =
   { "Gtk Bidi Keyboard",
     NS_BIDIKEYBOARD_CID,
     "@mozilla.org/widget/bidikeyboard;1",
-    nsBidiKeyboardConstructor },
-  { "Gtk Screen Manager",
-    NS_SCREENMANAGER_CID,
-    "@mozilla.org/gfx/screenmanager;1",
-    nsScreenManagerGtkConstructor },
-#ifdef NATIVE_THEME_SUPPORT
-   { "Native Theme Renderer",
-    NS_THEMERENDERER_CID,
-    "@mozilla.org/chrome/chrome-native-theme;1",
-    nsNativeThemeGTKConstructor }
-#endif
+    nsBidiKeyboardConstructor }
 };
 
 PR_STATIC_CALLBACK(void)
 nsWidgetGTKModuleDtor(nsIModule *self)
 {
   nsWindow::ReleaseGlobals();
+  nsAppShell::ReleaseGlobals();
   nsGtkIMEHelper::Shutdown();
-  nsAppShellShutdown(self);
 }
 
-NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(nsWidgetGTKModule,
-                                   components,
-                                   nsAppShellInit,
-                                   nsWidgetGTKModuleDtor)
+NS_IMPL_NSGETMODULE_WITH_DTOR(nsWidgetGTKModule,
+                              components,
+                              nsWidgetGTKModuleDtor)

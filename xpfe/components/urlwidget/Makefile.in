@@ -59,8 +59,6 @@ REQUIRES	= \
 		  js \
 		  widget \
 		  gfx \
-		  layout \
-		  necko \
 		  $(NULL)
 
 FORCE_STATIC_LIB = 1

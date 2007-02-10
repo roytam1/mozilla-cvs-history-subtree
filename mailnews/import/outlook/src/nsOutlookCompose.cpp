@@ -52,7 +52,6 @@
 #include "nsProxiedService.h"
 #include "nsMsgI18N.h"
 #include "nsNativeCharsetUtils.h"
-#include "nsIOutputStream.h"
 
 #include "nsMsgBaseCID.h"
 #include "nsMsgCompCID.h"
@@ -74,6 +73,9 @@
 
 static NS_DEFINE_CID( kMsgSendCID, NS_MSGSEND_CID);
 static NS_DEFINE_CID( kMsgCompFieldsCID, NS_MSGCOMPFIELDS_CID); 
+static NS_DEFINE_CID( kIOServiceCID, NS_IOSERVICE_CID);
+static NS_DEFINE_CID( kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
+
 
 // We need to do some calculations to set these numbers to something reasonable!
 // Unless of course, CreateAndSendMessage will NEVER EVER leave us in the lurch
@@ -210,7 +212,7 @@ nsOutlookCompose::~nsOutlookCompose()
         NS_ASSERTION(NS_SUCCEEDED(rv),"failed to clear values");
 		if (NS_FAILED(rv)) return;
 
-		NS_WITH_PROXIED_SERVICE(nsIMsgAccountManager, accMgr, NS_MSGACCOUNTMANAGER_CONTRACTID, NS_PROXY_TO_MAIN_THREAD, &rv);
+		NS_WITH_PROXIED_SERVICE(nsIMsgAccountManager, accMgr, NS_MSGACCOUNTMANAGER_CONTRACTID, NS_UI_THREAD_EVENTQ, &rv);
         NS_ASSERTION(NS_SUCCEEDED(rv) && accMgr,"failed to get account manager");
 		if (NS_FAILED(rv) || !accMgr) return;
 
@@ -228,7 +230,7 @@ nsresult nsOutlookCompose::CreateIdentity( void)
 		return( NS_OK);
 
 	nsresult	rv;
-    NS_WITH_PROXIED_SERVICE(nsIMsgAccountManager, accMgr, NS_MSGACCOUNTMANAGER_CONTRACTID, NS_PROXY_TO_MAIN_THREAD, &rv);
+    NS_WITH_PROXIED_SERVICE(nsIMsgAccountManager, accMgr, NS_MSGACCOUNTMANAGER_CONTRACTID, NS_UI_THREAD_EVENTQ, &rv);
     if (NS_FAILED(rv)) return( rv);
 	rv = accMgr->CreateIdentity( &m_pIdentity);
 	nsString	name;
@@ -249,7 +251,7 @@ nsresult nsOutlookCompose::CreateComponents( void)
 	if (!m_pIOService) {
 		IMPORT_LOG0( "Creating nsIOService\n");
 
-		NS_WITH_PROXIED_SERVICE(nsIIOService, service, NS_IOSERVICE_CONTRACTID, NS_PROXY_TO_MAIN_THREAD, &rv);
+		NS_WITH_PROXIED_SERVICE(nsIIOService, service, kIOServiceCID, NS_UI_THREAD_EVENTQ, &rv);
 		if (NS_FAILED(rv)) 
 			return( rv);
 		m_pIOService = service;
@@ -260,11 +262,18 @@ nsresult nsOutlookCompose::CreateComponents( void)
 	if (!m_pMsgSend) {
 		rv = CallCreateInstance( kMsgSendCID, &m_pMsgSend); 
 		if (NS_SUCCEEDED( rv) && m_pMsgSend) {
-      rv = NS_GetProxyForObject( NS_PROXY_TO_MAIN_THREAD, NS_GET_IID(nsIMsgSend),
-                  m_pMsgSend, NS_PROXY_SYNC, (void **)&m_pSendProxy);
-      if (NS_FAILED( rv)) {
-        m_pSendProxy = nsnull;
+			nsCOMPtr<nsIProxyObjectManager> proxyMgr = 
+			         do_GetService(kProxyObjectManagerCID, &rv);
+			if (NS_SUCCEEDED(rv)) {
+				rv = proxyMgr->GetProxyForObject( NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIMsgSend),
+										m_pMsgSend, PROXY_SYNC, (void **)&m_pSendProxy);
+				if (NS_FAILED( rv)) {
+					m_pSendProxy = nsnull;
+				}
+			}
+			if (NS_FAILED( rv)) {
 				NS_RELEASE( m_pMsgSend);
+				m_pMsgSend = nsnull;
 			}
 		}
 	}
@@ -901,10 +910,8 @@ nsresult nsOutlookCompose::CopyComposedMessage( nsCString& fromLine, nsIFileSpec
 	// so that the following will properly copy the rest of the body
 	char	lastChar = 0;
 
-  nsCOMPtr<nsIOutputStream> outStream;
-  pDst->GetOutputStream (getter_AddRefs (outStream));
 	if (NS_SUCCEEDED( rv)) {
-    rv = EscapeFromSpaceLine(outStream, copy.m_pBuffer + copy.m_writeOffset, copy.m_pBuffer+copy.m_bytesInBuf);
+    rv = EscapeFromSpaceLine(pDst, copy.m_pBuffer + copy.m_writeOffset, copy.m_pBuffer+copy.m_bytesInBuf);
 		if (copy.m_bytesInBuf)
 			lastChar = copy.m_pBuffer[copy.m_bytesInBuf - 1];
     if (NS_SUCCEEDED(rv))
@@ -914,7 +921,7 @@ nsresult nsOutlookCompose::CopyComposedMessage( nsCString& fromLine, nsIFileSpec
 	while ((state.offset < state.size) && NS_SUCCEEDED( rv)) {
 		rv = FillMailBuffer( &state, copy);
 		if (NS_SUCCEEDED( rv)) {
-      rv = EscapeFromSpaceLine(outStream, copy.m_pBuffer + copy.m_writeOffset, copy.m_pBuffer+copy.m_bytesInBuf);
+      rv = EscapeFromSpaceLine(pDst, copy.m_pBuffer + copy.m_writeOffset, copy.m_pBuffer+copy.m_bytesInBuf);
 			lastChar = copy.m_pBuffer[copy.m_bytesInBuf - 1];
 			if (NS_SUCCEEDED( rv))
 		    copy.m_writeOffset = copy.m_bytesInBuf;

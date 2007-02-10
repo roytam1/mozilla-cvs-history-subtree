@@ -49,6 +49,7 @@ META_COMPONENT = mail
 MOZILLA_INTERNAL_API = 1
 
 REQUIRES	= xpcom \
+		  xpcom_obsolete \
 		  string \
 		  rdf \
 		  rdfutil \
@@ -109,6 +110,8 @@ CPPSRCS		= \
 		$(NULL)
 
 EXPORTS		= \
+		nsAbBaseCID.h \
+		nsDirPrefs.h \
 		nsAbCardProperty.h \
 		nsAbMDBCardProperty.h \
                 nsVCardObj.h \
@@ -133,20 +136,17 @@ ifdef MOZ_LDAP_XPCOM
 REQUIRES    += mozldap \
                $(NULL)
 
-CPPSRCS		+= \
-		nsAbLDAPDirectory.cpp \
+CPPSRCS		+= nsAbLDAPDirectory.cpp \
 		nsAbLDAPDirFactory.cpp	\
-		nsAbLDAPCard.cpp \
-		nsAbLDAPListenerBase.cpp \
-		nsAbLDAPDirectoryQuery.cpp \
-		nsAbBoolExprToLDAPFilter.cpp \
+                nsAbLDAPCard.cpp \
+                nsAbLDAPDirectoryQuery.cpp \
+                nsAbBoolExprToLDAPFilter.cpp \
 		nsAbLDAPAutoCompFormatter.cpp \
-		nsAbLDAPReplicationService.cpp \
-		nsAbLDAPReplicationQuery.cpp \
-		nsAbLDAPReplicationData.cpp \
-		nsAbLDAPChangeLogQuery.cpp \
-		nsAbLDAPChangeLogData.cpp \
-		nsLDAPAutoCompleteSession.cpp \
+                nsAbLDAPReplicationService.cpp \
+                nsAbLDAPReplicationQuery.cpp \
+                nsAbLDAPReplicationData.cpp \
+                nsAbLDAPChangeLogQuery.cpp \
+                nsAbLDAPChangeLogData.cpp \
 		$(NULL)
 endif
 

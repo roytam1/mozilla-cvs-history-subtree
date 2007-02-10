@@ -2,21 +2,16 @@
    See the file COPYING for copying permission.
 */
 
-#include <stddef.h>
-
 #ifdef COMPILED_FROM_DSP
 #include "winconfig.h"
 #elif defined(MACOS_CLASSIC)
 #include "macconfig.h"
-#elif defined(__amigaos4__)
-#include "amigaconfig.h"
 #else
 #ifdef HAVE_EXPAT_CONFIG_H
 #include <expat_config.h>
 #endif
 #endif /* ndef COMPILED_FROM_DSP */
 
-#include "expat_external.h"
 #include "internal.h"
 #include "xmltok.h"
 #include "nametab.h"
@@ -1251,7 +1246,7 @@ XmlUtf16Encode(int charNum, unsigned short *buf)
 
 struct unknown_encoding {
   struct normal_encoding normal;
-  CONVERTER convert;
+  int (*convert)(void *userData, const char *p);
   void *userData;
   unsigned short utf16[256];
   char utf8[256][4];
@@ -1466,7 +1461,7 @@ static const char KW_UTF_16LE[] = {
 static int FASTCALL
 getEncodingIndex(const char *name)
 {
-  static const char * const encodingNames[] = {
+  static const char *encodingNames[] = {
     KW_ISO_8859_1,
     KW_US_ASCII,
     KW_UTF_8,
@@ -1499,7 +1494,7 @@ getEncodingIndex(const char *name)
 
 
 static int
-initScan(const ENCODING * const *encodingTable,
+initScan(const ENCODING **encodingTable,
          const INIT_ENCODING *enc,
          int state,
          const char *ptr,

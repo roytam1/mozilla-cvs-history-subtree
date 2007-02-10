@@ -21,7 +21,7 @@
  *
  * Contributor(s):
  *   David Haas <haasd@cae.wisc.edu>
- *   Josh Aas <josh@mozilla.com>
+ *   Josh Aas <josha@mac.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -64,21 +64,20 @@ const int kBookmarksContextMenuArrangeSeparatorTag = 100;
   BookmarkImportDlgController*    mImportDlgController;
   NSString*                       mPathToBookmarkFile;
   NSString*                       mMetadataPath;            // where we store spotlight cache (strong)
-
+  
   NSMutableDictionary*            mBookmarkURLMap;          // map of cleaned bookmark url to bookmark item set
   NSMutableDictionary*            mBookmarkFaviconURLMap;   // map of cleaned bookmark favicon url to bookmark item set
-
+  
   // smart folders
   BookmarkFolder*                 mTop10Container;
   BookmarkFolder*                 mRendezvousContainer;
   BookmarkFolder*                 mAddressBookContainer;
-
+  
   BookmarkFolder*                 mLastUsedFolder;
-
+  
   BOOL                            mBookmarksLoaded;
   BOOL                            mShowSiteIcons;
-  BOOL                            mSearchActive;
-
+  
   int                             mNotificationsSuppressedCount;
   NSRecursiveLock*                mNotificationsSuppressedLock;    // make mNotificationsSuppressedCount threadsafe
 }
@@ -99,19 +98,16 @@ const int kBookmarksContextMenuArrangeSeparatorTag = 100;
 + (NSArray*)bookmarkItemsFromSerializableArray:(NSArray*)bmArray;
 
 // Getters/Setters
-- (BookmarkFolder *)rootBookmarks;
-- (BookmarkFolder *)toolbarFolder;
-- (BookmarkFolder *)bookmarkMenuFolder;
-- (BookmarkFolder *)dockMenuFolder;
-- (BookmarkFolder *)top10Folder;
-- (BookmarkFolder *)rendezvousFolder;
-- (BookmarkFolder *)addressBookFolder;
-- (BookmarkFolder *)historyFolder;
+-(BookmarkFolder *) rootBookmarks;
+-(BookmarkFolder *) toolbarFolder;
+-(BookmarkFolder *) bookmarkMenuFolder;
+-(BookmarkFolder *) dockMenuFolder;
+-(BookmarkFolder *) top10Folder;
+-(BookmarkFolder *) rendezvousFolder;
+-(BookmarkFolder *) addressBookFolder;
+-(BookmarkFolder *) historyFolder;
 
 - (BOOL)isUserCollection:(BookmarkFolder *)inFolder;
-
-- (BOOL)searchActive;
-- (void)setSearchActive:(BOOL)inSearching;
 
 // returns NSNotFound if the folder is not a child of the root
 - (unsigned)indexOfContainer:(BookmarkFolder*)inFolder;
@@ -130,18 +126,18 @@ const int kBookmarksContextMenuArrangeSeparatorTag = 100;
 - (BookmarkFolder*)lastUsedBookmarkFolder;
 - (void)setLastUsedBookmarkFolder:(BookmarkFolder*)inFolder;
 
-- (BookmarkItem*)itemWithUUID:(NSString*)uuid;
-- (NSUndoManager *)undoManager;
-- (void)setRootBookmarks:(BookmarkFolder *)anArray;
+-(BookmarkItem*) itemWithUUID:(NSString*)uuid;
+-(NSUndoManager *) undoManager;
+-(void) setRootBookmarks:(BookmarkFolder *)anArray;
 
 // clear visit count on all bookmarks
-- (void)clearAllVisits;
+-(void)clearAllVisits;
 
 // Informational things
-- (NSArray *)resolveBookmarksKeyword:(NSString *)keyword;
-- (NSArray *)searchBookmarksContainer:(BookmarkFolder*)container forString:(NSString *)searchString inFieldWithTag:(int)tag;
-- (BOOL)isDropValid:(NSArray *)items toFolder:(BookmarkFolder *)parent;
-- (NSMenu *)contextMenuForItems:(NSArray*)items fromView:(BookmarkOutlineView *)outlineView target:(id)target;
+-(NSArray *)resolveBookmarksKeyword:(NSString *)keyword;
+-(NSArray *)searchBookmarksContainer:(BookmarkFolder*)container forString:(NSString *)searchString inFieldWithTag:(int)tag;
+-(BOOL) isDropValid:(NSArray *)items toFolder:(BookmarkFolder *)parent;
+-(NSMenu *)contextMenuForItems:(NSArray*)items fromView:(BookmarkOutlineView *)outlineView target:(id)target;
 
 // Utilities
 - (void)copyBookmarksURLs:(NSArray*)bookmarkItems toPasteboard:(NSPasteboard*)aPasteboard;

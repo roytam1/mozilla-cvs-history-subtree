@@ -48,11 +48,16 @@ static const PRUint16 g_ufMappingTable[] = {
 #include "adobeeuro.uf"
 };
 
+static const PRInt16 g_ufShiftTable[] =  {
+  0, u1ByteCharset ,
+  ShiftCell(0,0,0,0,0,0,0,0)
+};
+
 NS_METHOD
 nsUnicodeToAdobeEuroConstructor(nsISupports *aOuter, REFNSIID aIID,
                                 void **aResult) 
 {
-  return CreateTableEncoder(u1ByteCharset,
+  return CreateTableEncoder((uShiftTable*) &g_ufShiftTable, 
                             (uMappingTable*) &g_ufMappingTable, 1,
                             aOuter, aIID, aResult);
 }

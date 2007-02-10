@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* rendering object for replaced elements with bitmap image data */
-
 #ifndef nsImageFrame_h___
 #define nsImageFrame_h___
 
@@ -50,7 +47,8 @@
 
 #include "nsTransform2D.h"
 #include "imgIRequest.h"
-#include "nsStubImageDecoderObserver.h"
+#include "imgIDecoderObserver.h"
+#include "imgIContainerObserver.h"
 
 class nsIFrame;
 class nsImageMap;
@@ -59,26 +57,18 @@ class nsILoadGroup;
 struct nsHTMLReflowState;
 struct nsHTMLReflowMetrics;
 struct nsSize;
-class nsDisplayImage;
 
 class nsImageFrame;
 
-class nsImageListener : public nsStubImageDecoderObserver
+class nsImageListener : public imgIDecoderObserver
 {
 public:
   nsImageListener(nsImageFrame *aFrame);
   virtual ~nsImageListener();
 
   NS_DECL_ISUPPORTS
-  // imgIDecoderObserver (override nsStubImageDecoderObserver)
-  NS_IMETHOD OnStartContainer(imgIRequest *aRequest, imgIContainer *aImage);
-  NS_IMETHOD OnDataAvailable(imgIRequest *aRequest, gfxIImageFrame *aFrame,
-                             const nsRect *aRect);
-  NS_IMETHOD OnStopDecode(imgIRequest *aRequest, nsresult status,
-                          const PRUnichar *statusArg);
-  // imgIContainerObserver (override nsStubImageDecoderObserver)
-  NS_IMETHOD FrameChanged(imgIContainer *aContainer, gfxIImageFrame *newframe,
-                          nsRect * dirtyRect);
+  NS_DECL_IMGIDECODEROBSERVER
+  NS_DECL_IMGICONTAINEROBSERVER
 
   void SetFrame(nsImageFrame *frame) { mFrame = frame; }
 
@@ -93,25 +83,30 @@ private:
 
 class nsImageFrame : public ImageFrameSuper, public nsIImageFrame {
 public:
-  nsImageFrame(nsStyleContext* aContext);
+  nsImageFrame();
 
   // nsISupports 
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
-  virtual void Destroy();
-  NS_IMETHOD Init(nsIContent*      aContent,
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
                   nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
-  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
-  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&          aStatus);
   
+  NS_IMETHOD CanContinueTextRun(PRBool& aContinueTextRun) const;
+
+
   NS_IMETHOD  GetContentForEvent(nsPresContext* aPresContext,
                                  nsEvent* aEvent,
                                  nsIContent** aContent);
@@ -120,7 +115,8 @@ public:
                         nsEventStatus* aEventStatus);
   NS_IMETHOD GetCursor(const nsPoint& aPoint,
                        nsIFrame::Cursor& aCursor);
-  NS_IMETHOD AttributeChanged(PRInt32 aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent* aChild,
+                              PRInt32 aNameSpaceID,
                               nsIAtom* aAttribute,
                               PRInt32 aModType);
 
@@ -129,10 +125,9 @@ public:
 #endif
 
   virtual nsIAtom* GetType() const;
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
-  NS_IMETHOD List(FILE* out, PRInt32 aIndent) const;
+  NS_IMETHOD List(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent) const;
 #endif
 
   NS_IMETHOD GetImageMap(nsPresContext *aPresContext, nsIImageMap **aImageMap);
@@ -147,22 +142,6 @@ public:
     NS_IF_RELEASE(sIOService);
   }
 
-  /**
-   * Function to test whether aContent, which has aStyleContext as its style,
-   * should get an image frame.  Note that this method is only used by the
-   * frame constructor; it's only here because it uses gIconLoad for now.
-   */
-  static PRBool ShouldCreateImageFrameFor(nsIContent* aContent,
-                                          nsStyleContext* aStyleContext);
-  
-  void DisplayAltFeedback(nsIRenderingContext& aRenderingContext,
-                          imgIRequest*         aRequest,
-                          nsPoint              aPt);
-
-  nsRect GetInnerArea() const;
-
-  nsImageMap* GetImageMap(nsPresContext* aPresContext);
-
 protected:
   // nsISupports
   NS_IMETHOD_(nsrefcnt) AddRef(void);
@@ -170,17 +149,15 @@ protected:
 
   virtual ~nsImageFrame();
 
-  void EnsureIntrinsicSize(nsPresContext* aPresContext);
+  virtual void GetDesiredSize(nsPresContext* aPresContext,
+                              const nsHTMLReflowState& aReflowState,
+                              nsHTMLReflowMetrics& aDesiredSize);
 
-  virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
-                             nsSize aCBSize, nscoord aAvailableWidth,
-                             nsSize aMargin, nsSize aBorder, nsSize aPadding,
-                             PRBool aShrinkWrap);
+  nsImageMap* GetImageMap(nsPresContext* aPresContext);
 
   void TriggerLink(nsPresContext* aPresContext,
                    nsIURI* aURI,
                    const nsString& aTargetSpec,
-                   nsINode* aTriggerNode,
                    PRBool aClick);
 
   PRBool IsServerImageMap();
@@ -188,31 +165,25 @@ protected:
   void TranslateEventCoords(const nsPoint& aPoint,
                             nsPoint& aResult);
 
-  PRBool GetAnchorHREFTargetAndNode(nsIURI** aHref, nsString& aTarget,
-                                    nsINode** aNode);
-  /**
-   * Computes the width of the string that fits into the available space
-   *
-   * @param in aLength total length of the string in PRUnichars
-   * @param in aMaxWidth width not to be exceeded
-   * @param out aMaxFit length of the string that fits within aMaxWidth
-   *            in PRUnichars
-   * @return width of the string that fits within aMaxWidth
-   */
-  nscoord MeasureString(const PRUnichar*     aString,
-                        PRInt32              aLength,
-                        nscoord              aMaxWidth,
-                        PRUint32&            aMaxFit,
-                        nsIRenderingContext& aContext);
+  PRBool GetAnchorHREFAndTarget(nsIURI** aHref, nsString& aTarget);
+
+  void MeasureString(const PRUnichar*     aString,
+                     PRInt32              aLength,
+                     nscoord              aMaxWidth,
+                     PRUint32&            aMaxFit,
+                     nsIRenderingContext& aContext);
 
   void DisplayAltText(nsPresContext*      aPresContext,
                       nsIRenderingContext& aRenderingContext,
                       const nsString&      aAltText,
                       const nsRect&        aRect);
 
-  void PaintImage(nsIRenderingContext& aRenderingContext, nsPoint aPt,
-                  const nsRect& aDirtyRect, imgIContainer* aImage);
-                  
+  void DisplayAltFeedback(nsPresContext*      aPresContext,
+                          nsIRenderingContext& aRenderingContext,
+                          imgIRequest*         aRequest);
+
+  nsRect GetInnerArea() const;
+
 protected:
   friend class nsImageListener;
   nsresult OnStartContainer(imgIRequest *aRequest, imgIContainer *aImage);
@@ -261,6 +232,14 @@ private:
    */
   nsRect SourceRectToDest(const nsRect & aRect);
 
+  /**
+   * Function to call when a load fails; this handles things like alt
+   * text, broken image icons, etc.  Returns NS_ERROR_FRAME_REPLACED
+   * if it called CantRenderReplacedElement, NS_OK otherwise.
+   * @param aImageStatus the status of the image (@see nsIContentPolicy)
+   */
+  nsresult HandleLoadError(PRInt16 aImageStatus);
+  
   nsImageMap*         mImageMap;
 
   nsCOMPtr<imgIDecoderObserver> mListener;
@@ -289,6 +268,7 @@ private:
   // is, handle it and return TRUE otherwise, return FALSE (aCompleted
   // is an input arg telling the routine if the request has completed)
   PRBool HandleIconLoads(imgIRequest* aRequest, PRBool aCompleted);
+  void InvalidateIcon();
 
   class IconLoad : public nsIObserver {
     // private class that wraps the data and logic needed for 
@@ -323,11 +303,7 @@ private:
     PRPackedBool     mPrefForceInlineAltText;
     PRPackedBool     mPrefShowPlaceholders;
   };
-  
-public:
   static IconLoad* gIconLoad; // singleton pattern: one LoadIcons instance is used
-  
-  friend class nsDisplayImage;
 };
 
 #endif /* nsImageFrame_h___ */

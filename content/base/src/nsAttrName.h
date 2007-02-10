@@ -36,12 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * Class that represents the name (nodeinfo or atom) of an attribute;
- * using nodeinfos all the time is too slow, so we use atoms when we
- * can.
- */
-
 #ifndef nsAttrName_h___
 #define nsAttrName_h___
 
@@ -148,21 +142,9 @@ public:
     return !IsAtom() && NodeInfo()->Equals(aLocalName, aNamespaceID);
   }
 
-  PRBool Equals(nsINodeInfo* aNodeInfo) const
-  {
-    return Equals(aNodeInfo->NameAtom(), aNodeInfo->NamespaceID());
-  }
-
   PRInt32 NamespaceID() const
   {
     return IsAtom() ? kNameSpaceID_None : NodeInfo()->NamespaceID();
-  }
-
-  PRInt32 NamespaceEquals(PRInt32 aNamespaceID) const
-  {
-    return aNamespaceID == kNameSpaceID_None ?
-           IsAtom() :
-           (!IsAtom() && NodeInfo()->NamespaceEquals(aNamespaceID));
   }
 
   nsIAtom* LocalName() const

@@ -68,14 +68,22 @@
 
 static const PRUnichar kSqrChar = PRUnichar(0x221A);
 
-nsIFrame*
-NS_NewMathMLmrootFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMathMLmrootFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLmrootFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLmrootFrame* it = new (aPresShell) nsMathMLmrootFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
 }
 
-nsMathMLmrootFrame::nsMathMLmrootFrame(nsStyleContext* aContext) :
-  nsMathMLContainerFrame(aContext),
+nsMathMLmrootFrame::nsMathMLmrootFrame() :
   mSqrChar(),
   mBarRect()
 {
@@ -86,20 +94,21 @@ nsMathMLmrootFrame::~nsMathMLmrootFrame()
 }
 
 NS_IMETHODIMP
-nsMathMLmrootFrame::Init(nsIContent*      aContent,
+nsMathMLmrootFrame::Init(nsPresContext*  aPresContext,
+                         nsIContent*      aContent,
                          nsIFrame*        aParent,
+                         nsStyleContext*  aContext,
                          nsIFrame*        aPrevInFlow)
 {
-  nsresult rv = nsMathMLContainerFrame::Init(aContent, aParent, aPrevInFlow);
-  
-  nsPresContext *presContext = GetPresContext();
+  nsresult rv = nsMathMLContainerFrame::Init(aPresContext, aContent, aParent,
+                                             aContext, aPrevInFlow);
 
   // No need to tract the style context given to our MathML char. 
   // The Style System will use Get/SetAdditionalStyleContext() to keep it
   // up-to-date if dynamic changes arise.
   nsAutoString sqrChar; sqrChar.Assign(kSqrChar);
-  mSqrChar.SetData(presContext, sqrChar);
-  ResolveMathMLCharStyle(presContext, mContent, mStyleContext, &mSqrChar, PR_TRUE);
+  mSqrChar.SetData(aPresContext, sqrChar);
+  ResolveMathMLCharStyle(aPresContext, mContent, mStyleContext, &mSqrChar, PR_TRUE);
 
   return rv;
 }
@@ -121,31 +130,47 @@ nsMathMLmrootFrame::TransmitAutomaticData()
 }
 
 NS_IMETHODIMP
-nsMathMLmrootFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                                     const nsRect&           aDirtyRect,
-                                     const nsDisplayListSet& aLists)
+nsMathMLmrootFrame::Paint(nsPresContext*      aPresContext,
+                          nsIRenderingContext& aRenderingContext,
+                          const nsRect&        aDirtyRect,
+                          nsFramePaintLayer    aWhichLayer,
+                          PRUint32             aFlags)
 {
   /////////////
   // paint the content we are square-rooting
-  nsresult rv = nsMathMLContainerFrame::BuildDisplayList(aBuilder, aDirtyRect, aLists);
-  NS_ENSURE_SUCCESS(rv, rv);
-  
+  nsresult rv = nsMathMLContainerFrame::Paint(aPresContext, aRenderingContext, 
+                                              aDirtyRect, aWhichLayer);
   /////////////
   // paint the sqrt symbol
   if (!NS_MATHML_HAS_ERROR(mPresentationData.flags)) {
-    rv = mSqrChar.Display(aBuilder, this, aLists);
-    NS_ENSURE_SUCCESS(rv, rv);
+    mSqrChar.Paint(aPresContext, aRenderingContext,
+                   aDirtyRect, aWhichLayer, this);
 
-    rv = DisplayBar(aBuilder, this, mBarRect, aLists);
-    NS_ENSURE_SUCCESS(rv, rv);
+    if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer &&
+        mStyleContext->GetStyleVisibility()->IsVisible() &&
+        !mBarRect.IsEmpty()) {
+      // paint the overline bar
+      const nsStyleColor* color = GetStyleColor();
+      aRenderingContext.SetColor(color->mColor);
+      aRenderingContext.FillRect(mBarRect);
+    }
 
 #if defined(NS_DEBUG) && defined(SHOW_BOUNDING_BOX)
     // for visual debug
-    nsRect rect;
-    mSqrChar.GetRect(rect);
-    nsBoundingMetrics bm;
-    mSqrChar.GetBoundingMetrics(bm);
-    rv = DisplayBoundingMetrics(aBuilder, this, rect.TopLeft(), bm, aLists);
+    if (NS_MATHML_PAINT_BOUNDING_METRICS(mPresentationData.flags)) {
+      nsRect rect;
+      mSqrChar.GetRect(rect);
+
+      nsBoundingMetrics bm;
+      mSqrChar.GetBoundingMetrics(bm);
+
+      aRenderingContext.SetColor(NS_RGB(255,0,0));
+      nscoord x = rect.x + bm.leftBearing;
+      nscoord y = rect.y;
+      nscoord w = bm.rightBearing - bm.leftBearing;
+      nscoord h = bm.ascent + bm.descent;
+      aRenderingContext.DrawRect(x,y,w,h);
+    }
 #endif
   }
 
@@ -160,13 +185,13 @@ nsMathMLmrootFrame::Reflow(nsPresContext*          aPresContext,
 {
   nsresult rv = NS_OK;
   // ask our children to compute their bounding metrics 
-  nsHTMLReflowMetrics childDesiredSize(
+  nsHTMLReflowMetrics childDesiredSize(aDesiredSize.mComputeMEW,
                       aDesiredSize.mFlags | NS_REFLOW_CALC_BOUNDING_METRICS);
-  nsSize availSize(aReflowState.ComputedWidth(), aReflowState.mComputedHeight);
+  nsSize availSize(aReflowState.mComputedWidth, aReflowState.mComputedHeight);
   nsReflowStatus childStatus;
 
   aDesiredSize.width = aDesiredSize.height = 0;
-  aDesiredSize.ascent = 0;
+  aDesiredSize.ascent = aDesiredSize.descent = 0;
 
   nsBoundingMetrics bmSqr, bmBase, bmIndex;
   nsIRenderingContext& renderingContext = *aReflowState.rendContext;
@@ -177,12 +202,14 @@ nsMathMLmrootFrame::Reflow(nsPresContext*          aPresContext,
   PRInt32 count = 0;
   nsIFrame* baseFrame = nsnull;
   nsIFrame* indexFrame = nsnull;
-  nsHTMLReflowMetrics baseSize;
-  nsHTMLReflowMetrics indexSize;
+  nsHTMLReflowMetrics baseSize(nsnull);
+  nsHTMLReflowMetrics indexSize(nsnull);
   nsIFrame* childFrame = mFrames.FirstChild();
   while (childFrame) {
+    nsReflowReason reason = (childFrame->GetStateBits() & NS_FRAME_FIRST_REFLOW)
+      ? eReflowReason_Initial : aReflowState.reason;
     nsHTMLReflowState childReflowState(aPresContext, aReflowState,
-                                       childFrame, availSize);
+                                       childFrame, availSize, reason);
     rv = ReflowChild(childFrame, aPresContext,
                      childDesiredSize, childReflowState, childStatus);
     //NS_ASSERTION(NS_FRAME_IS_COMPLETE(childStatus), "bad status");
@@ -202,13 +229,13 @@ nsMathMLmrootFrame::Reflow(nsPresContext*          aPresContext,
     count++;
     childFrame = childFrame->GetNextSibling();
   }
+  if (aDesiredSize.mComputeMEW) {
+    aDesiredSize.mMaxElementWidth = childDesiredSize.mMaxElementWidth;
+  }
   if (2 != count) {
     // report an error, encourage people to get their markups in order
     NS_WARNING("invalid markup");
-    rv = ReflowError(renderingContext, aDesiredSize);
-    aStatus = NS_FRAME_COMPLETE;
-    NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
-    return rv;
+    return ReflowError(renderingContext, aDesiredSize);
   }
 
   ////////////
@@ -261,7 +288,7 @@ nsMathMLmrootFrame::Reflow(nsPresContext*          aPresContext,
   // the thickness of the overline
   ruleThickness = bmSqr.ascent;
   // make sure that the rule appears on on screen
-  nscoord onePixel = nsPresContext::CSSPixelsToAppUnits(1);
+  nscoord onePixel = aPresContext->IntScaledPixelsToTwips(1);
   if (ruleThickness < onePixel) {
     ruleThickness = onePixel;
   }
@@ -283,9 +310,9 @@ nsMathMLmrootFrame::Reflow(nsPresContext*          aPresContext,
     PR_MAX(bmBase.width, bmBase.rightBearing); // take also care of the rule
 
   aDesiredSize.ascent = mBoundingMetrics.ascent + leading;
-  aDesiredSize.height = aDesiredSize.ascent +
-    PR_MAX(baseSize.height - baseSize.ascent,
-           mBoundingMetrics.descent + ruleThickness);
+  aDesiredSize.descent =
+    PR_MAX(baseSize.descent, (mBoundingMetrics.descent + ruleThickness));
+  aDesiredSize.height = aDesiredSize.ascent + aDesiredSize.descent;
   aDesiredSize.width = mBoundingMetrics.width;
 
   /////////////
@@ -303,9 +330,8 @@ nsMathMLmrootFrame::Reflow(nsPresContext*          aPresContext,
     indexClearance = 
       indexRaisedAscent - mBoundingMetrics.ascent; // excess gap introduced by a tall index 
     mBoundingMetrics.ascent = indexRaisedAscent;
-    nscoord descent = aDesiredSize.height - aDesiredSize.ascent;
     aDesiredSize.ascent = mBoundingMetrics.ascent + leading;
-    aDesiredSize.height = aDesiredSize.ascent + descent;
+    aDesiredSize.height = aDesiredSize.ascent + aDesiredSize.descent;
   }
 
   // the index is tucked in closer to the radical while making sure
@@ -363,6 +389,9 @@ nsMathMLmrootFrame::Reflow(nsPresContext*          aPresContext,
   aDesiredSize.width = mBoundingMetrics.width;
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
 
+  if (aDesiredSize.mComputeMEW) {
+    aDesiredSize.mMaxElementWidth = aDesiredSize.width;
+  }
   aStatus = NS_FRAME_COMPLETE;
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
   return NS_OK;

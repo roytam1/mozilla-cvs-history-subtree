@@ -52,8 +52,6 @@
 <!DOCTYPE overlay [
 <!ENTITY % messengerDTD SYSTEM "chrome://messenger/locale/messenger.dtd" >
 %messengerDTD;
-<!ENTITY % msgViewPickerDTD SYSTEM "chrome://messenger/locale/msgViewPickerOverlay.dtd" >
-%msgViewPickerDTD;
 <!ENTITY % msgHdrViewPopupDTD SYSTEM "chrome://messenger/locale/msgHdrViewPopup.dtd" >
 %msgHdrViewPopupDTD;
 <!ENTITY % contentAreaCommandsDTD SYSTEM "chrome://communicator/locale/contentAreaCommands.dtd" >
@@ -234,8 +232,6 @@
   <command id="cmd_replySender" oncommand="goDoCommand('cmd_replySender')"/>
   <command id="cmd_replyGroup" oncommand="goDoCommand('cmd_replyGroup')"/>
   <command id="cmd_replyall" oncommand="goDoCommand('cmd_replyall')"/>
-  <command id="cmd_replySenderAndGroup" oncommand="goDoCommand('cmd_replySenderAndGroup')"/>
-  <command id="cmd_replyAllRecipients" oncommand="goDoCommand('cmd_replyAllRecipients')"/>
   <command id="cmd_forward" oncommand="goDoCommand('cmd_forward')"/>
   <command id="cmd_forwardInline" oncommand="goDoCommand('cmd_forwardInline')"/>
   <command id="cmd_forwardAttachment" oncommand="goDoCommand('cmd_forwardAttachment')"/>
@@ -263,7 +259,6 @@
   <command id="button_next"/>
   <command id="button_file"/>
   <command id="cmd_delete"/>
-  <command id="cmd_shiftDelete" oncommand="goDoCommand('cmd_shiftDelete');"/>
   <command id="button_junk"/>
 </commandset>
 
@@ -319,10 +314,8 @@
   <key id="key_cut"/>
   <key id="key_copy"/>
   <key id="key_paste"/>
-  <key id="key_delete"/>
-  <key id="key_shiftDelete"/>
-  <key id="key_delete2"/> <!-- secondary delete key -->
-  <key id="key_shiftDelete2"/>
+  <key id="key_delete" oncommand="goDoCommand('cmd_delete');" shift="false"/>
+  <key id="cmd_shiftDelete" oncommand="goDoCommand('cmd_shiftDelete')"/>
   <key id="key_selectAll"/>
   <key id="key_selectThread" key="&selectThreadCmd.key;"             oncommand="goDoCommand('cmd_selectThread');" modifiers="accel, shift"/>
   
@@ -341,9 +334,9 @@
   <key id="key_nextMsg" key="&nextMsgCmd.key;"                       oncommand="goDoCommand('cmd_nextMsg')"/>
   <key id="key_nextUnreadMsg" key="&nextUnreadMsgCmd.key;"           oncommand="goDoCommand('cmd_nextUnreadMsg')"/>
   <key id="key_expandAllThreads" key="&expandAllThreadsCmd.key;"     oncommand="goDoCommand('cmd_expandAllThreads')"/>
-  <key key="&expandAllThreadsCmd.key;" modifiers="shift" oncommand="goDoCommand('cmd_expandAllThreads')"/>
+  <key key="&expandAllThreadsCmd.key;" modifiers="shift"             oncommand="goDoCommand('cmd_expandAllThreads')"/>
   <key id="key_collapseAllThreads" key="&collapseAllThreadsCmd.key;" oncommand="goDoCommand('cmd_collapseAllThreads')"/>
-  <key key="&collapseAllThreadsCmd.key;" modifiers="shift" oncommand="goDoCommand('cmd_collapseAllThreads')"/>
+  <key key="&collapseAllThreadsCmd.key;" modifiers="shift"           oncommand="goDoCommand('cmd_collapseAllThreads')"/>
   <key id="key_nextUnreadThread" key="&nextUnreadThreadCmd.key;"     oncommand="goDoCommand('cmd_nextUnreadThread')"/>
   <key id="key_previousMsg" key="&previousMsgCmd.key;"               oncommand="goDoCommand('cmd_previousMsg')"/>
   <key id="key_previousUnreadMsg" key="&previousUnreadMsgCmd.key;"   oncommand="goDoCommand('cmd_previousUnreadMsg')"/>
@@ -415,14 +408,10 @@
         label="&contextReplyNewsgroup.label;"
         accesskey="&contextReplyNewsgroup.accesskey;"
         oncommand="MsgReplyGroup(event);"/>
-    <menuitem id="threadPaneContext-replySenderAndNewsgroup"
-        label="&contextReplySenderAndNewsgroup.label;"
-        accesskey="&contextReplySenderAndNewsgroup.accesskey;"
-        oncommand="MsgReplyToSenderAndGroup(event);"/>
     <menuitem id="threadPaneContext-replyAll"
         label="&contextReplyAll.label;"
         accesskey="&contextReplyAll.accesskey;"
-        oncommand="MsgReplyToAllRecipients(event);"/>
+        oncommand="MsgReplyToAllMessage(event);"/>
     <menuitem id="threadPaneContext-forward"
         label="&contextForward.label;"
         accesskey="&contextForward.accesskey;"
@@ -699,10 +688,6 @@
         label="&folderContextEmptyTrash.label;"
         accesskey="&folderContextEmptyTrash.accesskey;"
         oncommand="MsgEmptyTrash();"/>
-    <menuitem id="folderPaneContext-emptyJunk"
-        label="&folderContextEmptyJunk.label;"
-        accesskey="&folderContextEmptyJunk.accesskey;"
-        oncommand="deleteAllInFolder('emptyJunk');"/>
     <menuitem id="folderPaneContext-sendUnsentMessages"
         label="&folderContextSendUnsentMessages.label;"
         accesskey="&folderContextSendUnsentMessages.accesskey;"
@@ -750,7 +735,7 @@
     <menuitem id="messagePaneContext-replyAll"
         label="&contextReplyAll.label;"
         accesskey="&contextReplyAll.accesskey;"
-        oncommand="MsgReplyAll(event);"/>
+        oncommand="MsgReplyToAllMessage(event);"/>
     <menuitem id="messagePaneContext-forward"
         label="&contextForward.label;"
         accesskey="&contextForward.accesskey;"
@@ -1016,7 +1001,7 @@
 
 </popup>
 
-<menubar id="mail-menubar" grippytooltiptext="&menuBar.tooltip;">
+<menubar id="mailMenubar" grippytooltiptext="&menuBar.tooltip;">
   <menu id="menu_File" >
     <menupopup id="menu_FilePopup" onpopupshowing="file_init();">
       <menu id="menu_New">
@@ -1245,22 +1230,21 @@
           <menuitem id="groupBySort" type="radio" name="group" label="&groupBySort.label;" accesskey="&groupBySort.accesskey;" oncommand="MsgGroupBySort();"/>
         </menupopup>
       </menu>
-      <menu id="viewMessageViewMenu" label="&msgsMenu.label;" accesskey="&msgsMenu.accesskey;"
-            observes="mailHideMenus" oncommand="ViewChangeByMenuitem(event.target);">
-        <menupopup id="viewMessagePopup" onpopupshowing="RefreshViewPopup(this, false);">
-          <menuitem id="viewMessageAll"    value="0" type="radio" label="&viewAll.label;" accesskey="&viewAll.accesskey;"/>
-          <menuitem id="viewMessageUnread" value="1" type="radio" label="&viewUnread.label;" accesskey="&viewUnread.accesskey;"/>
+      <menu id="viewMessageViewMenu" label="&msgsMenu.label;"
+            accesskey="&msgsMenu.accesskey;" observes="mailHideMenus">
+        <menupopup id="viewMessageViewPopup" onpopupshowing="InitViewMessageViewMenu()">
+          <menuitem id="viewAll" type="radio" name="viewmessages" label="&viewAll.label;" accesskey="&viewAll.accesskey;" oncommand="ViewMessagesBy('viewPickerAll');"/>
+          <menuitem id="viewUnread" type="radio" name="viewmessages" label="&viewUnread.label;" accesskey="&viewUnread.accesskey;" oncommand="ViewMessagesBy('viewPickerUnread');"/>
           <menuseparator/>
-          <menu id="viewMessageTags" label="&viewTags.label;" accesskey="&viewTags.accesskey;">
-            <menupopup id="viewMessageTagsPopup" onpopupshowing="RefreshTagsPopup(this, false);"/>
-          </menu>
-          <menu id="viewMessageCustomViews" label="&viewCustomViews.label;" accesskey="&viewCustomViews.accesskey;">
-            <menupopup id="viewMessageCustomViewsPopup" onpopupshowing="RefreshCustomViewsPopup(this, false);"/>
-          </menu>
-          <menuseparator/>
-          <menuitem id="viewMessageVirtualFolder" value="7" label="&viewVirtualFolder.label;" accesskey="&viewVirtualFolder.accesskey;"/>
-          <menuitem id="viewMessageCustomize"     value="8" label="&viewCustomizeView.label;" accesskey="&viewCustomizeView.accesskey;"/>
-        </menupopup>
+          <menuitem id="viewLabelMenuItem1" type="radio" name="viewmessages" oncommand="ViewMessagesBy('labelMenuItem1');" />
+          <menuitem id="viewLabelMenuItem2" type="radio" name="viewmessages" oncommand="ViewMessagesBy('labelMenuItem2');" />
+          <menuitem id="viewLabelMenuItem3" type="radio" name="viewmessages" oncommand="ViewMessagesBy('labelMenuItem3');" />
+          <menuitem id="viewLabelMenuItem4" type="radio" name="viewmessages" oncommand="ViewMessagesBy('labelMenuItem4');" />
+          <menuitem id="viewLabelMenuItem5" type="radio" name="viewmessages" oncommand="ViewMessagesBy('labelMenuItem5');" />
+          <menuseparator id="viewLastDefaultView"/>
+          <menuseparator id="viewCreateCustomViewSeparator"/>
+          <menuitem id="viewCreateCustomView" label="&viewCustomView.label;" accesskey="&viewCustomView.accesskey;" oncommand="LaunchCustomizeDialog();" />
+       </menupopup>
       </menu>
       <menu id="viewMessagesMenu" label="&threads.label;"
             accesskey="&threads.accesskey;" observes="mailHideMenus">
@@ -1286,6 +1270,7 @@
            accesskey="&headersAllCmd.accesskey;"
            oncommand="MsgViewAllHeaders();"/>
           <menuitem id="viewnormalheaders"
+           checked="true"
            type="radio"
            name="viewheadergroup"
            label="&headersNormalCmd.label;"
@@ -1420,17 +1405,10 @@
       accesskey="&replyNewsgroupCmd.accesskey;"
       key="key_reply"
       command="cmd_replyGroup"/>
-    <menuitem id="replyallMainMenu" label="&replyToAllMsgCmd.label;"
+    <menuitem label="&replyToAllMsgCmd.label;"
       accesskey="&replyToAllMsgCmd.accesskey;"
       key="key_replyall"
       command="cmd_replyall"/>
-    <menuitem id="replySenderAndNewsgroupMainMenu" label="&replyToSenderAndNewsgroupCmd.label;" 
-      accesskey="&replyToSenderAndNewsgroupCmd.accesskey;"
-      key="key_replyall"
-      command="cmd_replySenderAndGroup"/>
-    <menuitem id="replyAllRecipientsMainMenu" label="&replyToAllRecipientsCmd.label;" 
-      accesskey="&replyToAllRecipientsCmd.accesskey;"
-      command="cmd_replyAllRecipients"/>
     <menuitem label="&forwardMsgCmd.label;"
       accesskey="&forwardMsgCmd.accesskey;"
       key="key_forward"
@@ -1726,50 +1704,9 @@
       </toolbarbutton>
       <toolbarbutton id="button-newmsg" class="toolbarbutton-1" label="&newMsgButton.label;" tooltiptext="&newMsgButton.tooltip;" oncommand="MsgNewMessage(event)"/>
       <toolbarseparator class="toolbarseparator-primary"/>
-      <toolbarbutton class="toolbarbutton-1" id="button-reply"
-                     label="&replyButton.label;"
-                     tooltiptext="&replyButton.tooltip;"
-                     observes="button_reply"
-                     oncommand="MsgReplyMessage(event)">
-        <menupopup>
-          <menuitem label="&replySenderCmd.label;"
-                    accesskey="&replySenderCmd.accesskey;"
-                    command="cmd_replySender"/>
-          <menuitem label="&replyNewsgroupCmd.label;"
-                    accesskey="&replyNewsgroupCmd.accesskey;"
-                    command="cmd_replyGroup" default="true"/>
-        </menupopup>
-      </toolbarbutton>
-      <toolbarbutton class="toolbarbutton-1" id="button-replyall"
-                     label="&replyAllButton.label;"
-                     tooltiptext="&replyAllButton.tooltip;"
-                     tooltiptextmail="&replyAllButton.tooltip;"
-                     tooltiptextnews="&replyAllButtonNews.tooltip;"
-                     observes="button_replyall"
-                     oncommand="MsgReplyToAllMessage(event)">
-        <menupopup>
-          <menuitem label="&replyToSenderAndNewsgroupCmd.label;"
-                    accesskey="&replyToSenderAndNewsgroupCmd.accesskey;"
-                    command="cmd_replySenderAndGroup" default="true"/>
-          <menuitem label="&replyToAllRecipientsCmd.label;"
-                    accesskey="&replyToAllRecipientsCmd.accesskey;"
-                    command="cmd_replyAllRecipients"/>
-        </menupopup>
-      </toolbarbutton>
-      <toolbarbutton class="toolbarbutton-1" id="button-forward"
-                     type="menu-button" label="&forwardButton.label;"
-                     tooltiptext="&forwardButton.tooltip;"
-                     observes="button_forward"
-                     oncommand="MsgForwardMessage(event)">
-        <menupopup onpopupshowing="InitMessageForward(this);">
-          <menuitem label="&forwardAsInline.label;"
-                    accesskey="&forwardAsInline.accesskey;"
-                    command="cmd_forwardInline"/>
-          <menuitem label="&forwardAsAttachmentCmd.label;"
-                    accesskey="&forwardAsAttachmentCmd.accesskey;"
-                    command="cmd_forwardAttachment"/>
-        </menupopup>
-      </toolbarbutton>
+      <toolbarbutton id="button-reply" class="toolbarbutton-1" label="&replyButton.label;" tooltiptext="&replyButton.tooltip;" observes="button_reply" oncommand="MsgReplyMessage(event)"/>
+      <toolbarbutton class="toolbarbutton-1" id="button-replyall" label="&replyAllButton.label;" tooltiptext="&replyAllButton.tooltip;" observes="button_replyall" oncommand="MsgReplyToAllMessage(event)"/>
+      <toolbarbutton class="toolbarbutton-1" id="button-forward" label="&forwardButton.label;" tooltiptext="&forwardButton.tooltip;" observes="button_forward" oncommand="MsgForwardMessage(event)"/>
       <toolbarseparator class="toolbarseparator-primary"/>
       <toolbarbutton type="menu" id="button-file" class="toolbarbutton-1" 
                   label="&fileButton.label;" observes="button_file"
@@ -1838,28 +1775,8 @@
         </template>
         <menupopup/>
       </toolbarbutton>
-      <toolbarbutton class="toolbarbutton-1" id="button-next"
-                     type="menu-button" label="&nextButton.label;"
-                     tooltiptext="&nextButton.tooltip;"
-                     observes="button_next"
-                     oncommand="goDoCommand('button_next')">
-        <menupopup onpopupshowing="InitGoMessagesMenu();">
-          <menuitem label="&nextMsgCmd.label;"
-                    accesskey="&nextMsgCmd.accesskey;"
-                    command="cmd_nextMsg"/>
-          <menuitem label="&nextUnreadMsgCmd.label;"
-                    accesskey="&nextUnreadMsgCmd.accesskey;"
-                    command="cmd_nextUnreadMsg" default="true"/>
-          <menuitem label="&nextFlaggedMsgCmd.label;"
-                    accesskey="&nextFlaggedMsgCmd.accesskey;"
-                    command="cmd_nextFlaggedMsg"/>
-          <menuseparator/>
-          <menuitem label="&nextUnreadThread.label;"
-                    accesskey="&nextUnreadThreadCmd.accesskey;"
-                    command="cmd_nextUnreadThread"/>
-        </menupopup>
-      </toolbarbutton>
-
+      <toolbarbutton class="toolbarbutton-1" id="button-next" label="&nextButton.label;" oncommand="goDoCommand('button_next')" tooltiptext="&nextButton.tooltip;" observes="button_next"/>
+      
       <deck id="button-junk" observes="button_junk"
             oncommand="goDoCommand('button_junk')">
         <toolbarbutton class="toolbarbutton-1"
@@ -1901,7 +1818,7 @@
   </toolbar>
 </toolbox>
 
-<toolbar id="msgLocationToolbar" collapsed="true" persist="collapsed" grippytooltiptext="&locationToolbar.tooltip;">
+<toolbar id="msgLocationToolbar" collapsed="true" persist="collapsed" grippytooltiptext="&locationToolbar.tooltip;" tbalign="stretch">
   <hbox align="center" context="folderPaneContext">
     <image id="locationIcon" class="folderMenuItem"/>
     <menulist id="locationFolders" class="folderMenuItem"
@@ -1931,24 +1848,23 @@
   <hbox id="phishingBar" class="msgNotificationBar" align="center">
     <image id="phishingBarImage"/>
     <description flex="1" class="msgNotificationBarText">&phishingBarMessage.label;</description>
+    <spacer flex="1"/>
     <button label="&removePhishingBarButton.label;" oncommand="MsgIsNotAScam();"/>
   </hbox>
 
   <hbox id="junkBar" class="msgNotificationBar" align="center">
     <image id="junkBarImage"/>
     <description flex="1" class="msgNotificationBarText">&junkBarMessage.label;</description>
+    <spacer flex="1"/>
     <button label="&junkInfoButton.label;" oncommand="MsgJunkMailInfo(false)"/>
     <button label="&junkBarButton.label;" oncommand="JunkSelectedMessages(false);"/>
   </hbox>
 
   <hbox id="remoteContentBar" class="msgNotificationBar" align="center">
     <image id="remoteContentImage"/>
-    <vbox flex="1">
-      <description class="msgNotificationBarText">&remoteContentMessage.label;</description>
-      <label id="allowRemoteContentForAuthorDesc" class="text-link"
-             onclick="allowRemoteContentForSender();"/>
-    </vbox>
-    <button label="&loadRemoteContentButton.label;" oncommand="loadMsgWithRemoteContent();"/>
+    <description flex="1" class="msgNotificationBarText">&remoteContentMessage.label;</description>
+    <spacer flex="1"/>
+    <button label="&loadRemoteContentButton.label;" oncommand="LoadMsgWithRemoteContent();"/>
   </hbox>
 </deck>
 

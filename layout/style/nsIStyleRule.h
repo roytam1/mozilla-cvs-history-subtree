@@ -34,12 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * internal abstract interface for objects providing immutable style
- * information
- */
-
 #ifndef nsIStyleRule_h___
 #define nsIStyleRule_h___
 
@@ -89,7 +83,7 @@ struct nsRuleData;
 
 class nsIStyleRule : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISTYLE_RULE_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISTYLE_RULE_IID)
 
   /**
    * |nsIStyleRule::MapRuleInfoInto| is a request to copy all stylistic
@@ -109,6 +103,5 @@ public:
 #endif
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIStyleRule, NS_ISTYLE_RULE_IID)
 
 #endif /* nsIStyleRule_h___ */

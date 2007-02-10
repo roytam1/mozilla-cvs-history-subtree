@@ -1,3 +1,4 @@
+
 /* nsJARInputStream.h
  * 
  * ***** BEGIN LICENSE BLOCK *****
@@ -13,7 +14,7 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Netscape Communicator source code.
+ * The Original Code is Netscape Communicator source code. The Initial Developer of the Original Code is Netscape Communications Corporation.  Portions created by Netscape are Copyright (C) 1999 Netscape Communications Corporation.  All Rights Reserved.
  *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
@@ -40,61 +41,39 @@
 #ifndef nsJARINPUTSTREAM_h__
 #define nsJARINPUTSTREAM_h__
 
+// {a756724a-1dd1-11b2-90d8-9c98fc2b7ac0}
+#define NS_JARINPUTSTREAM_CID \
+   {0xa756724a, 0x1dd1, 0x11b2, \
+     {0x90, 0xd8, 0x9c, 0x98, 0xfc, 0x2b, 0x7a, 0xc0}}
+
 #include "nsIInputStream.h"
 #include "nsJAR.h"
 
 /*-------------------------------------------------------------------------
- * Class nsJARInputStream declaration. This class defines the type of the
- * object returned by calls to nsJAR::GetInputStream(filename) for the
- * purpose of reading a file item out of a JAR file. 
+ * Class nsJARInputStream declaration. This class defines objects returned
+ * by calls to nsJAR::GetInputStream(filename) for the purpose of reading 
+ * a file item out of a JAR file. 
  *------------------------------------------------------------------------*/
 class nsJARInputStream : public nsIInputStream
 {
   public:
-    nsJARInputStream() : 
-        mFd(nsnull), mInSize(0), mCurPos(0),
-        mClosed(PR_FALSE), mInflate(nsnull), mDirectory(0) { }
-    
-    ~nsJARInputStream() { Close(); }
 
+    nsJARInputStream();
+    virtual ~nsJARInputStream();
+    
+    NS_DEFINE_STATIC_CID_ACCESSOR( NS_JARINPUTSTREAM_CID );
+  
     NS_DECL_ISUPPORTS
     NS_DECL_NSIINPUTSTREAM
    
-    // takes ownership of |fd|, even on failure
-    nsresult InitFile(nsZipArchive* aZip, nsZipItem *item, PRFileDesc *fd);
-
-    nsresult InitDirectory(nsZipArchive* aZip,
-                           const nsACString& aJarDirSpec,
-                           const char* aDir);
+    nsresult 
+    Init(nsJAR* jar, const char* aFilename);
   
-  private:
-    PRFileDesc*   mFd;              // My own file handle, for reading
-    PRUint32      mInSize;          // Size in original file 
-    PRUint32      mCurPos;          // Current position in input 
+  protected:
+    nsZipReadState  mReadInfo;
 
-    struct InflateStruct {
-        PRUint32      mOutSize;     // inflated size 
-        PRUint32      mInCrc;       // CRC as provided by the zipentry
-        PRUint32      mOutCrc;      // CRC as calculated by me
-        z_stream      mZs;          // zip data structure
-        unsigned char mReadBuf[ZIP_BUFLEN]; // Readbuffer to inflate from
-    };
-    struct InflateStruct *   mInflate;
-
-    /* For directory reading */
-    nsZipArchive*           mZip;        // the zipReader
-    PRUint32                mNameLen; // length of dirname
-    nsCAutoString           mBuffer;  // storage for generated text of stream
-    PRUint32                mArrPos;  // current position within mArray
-    nsCStringArray          mArray;   // array of names in (zip) directory
-
-    PRPackedBool    mDirectory;
-    PRPackedBool    mClosed;          // Whether the stream is closed
-
-    nsresult ContinueInflate(char* aBuf, PRUint32 aCount, PRUint32* aBytesRead);
-    nsresult ReadDirectory(char* aBuf, PRUint32 aCount, PRUint32* aBytesRead);
-    PRUint32 CopyDataToBuffer(char* &aBuffer, PRUint32 &aCount);
+    nsJAR*      mJAR;
 };
 
-#endif /* nsJARINPUTSTREAM_h__ */
+#endif /* nsJAR_h__ */
 

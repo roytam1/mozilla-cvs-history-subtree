@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* rendering object for the HTML <canvas> element */
-
 #ifndef nsHTMLCanvasFrame_h___
 #define nsHTMLCanvasFrame_h___
 
@@ -46,36 +43,26 @@
 #include "nsPresContext.h"
 #include "nsIIOService.h"
 
-nsIFrame* NS_NewHTMLCanvasFrame (nsIPresShell* aPresShell, nsStyleContext* aContext);
+nsresult NS_NewHTMLCanvasFrame (nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
 class nsHTMLCanvasFrame : public nsSplittableFrame
 {
 public:
-  nsHTMLCanvasFrame(nsStyleContext* aContext) : nsSplittableFrame(aContext) {}
+  nsHTMLCanvasFrame();
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
-
-  void PaintCanvas(nsIRenderingContext& aRenderingContext,
-                   const nsRect& aDirtyRect, nsPoint aPt);
-                              
-  /* get the size of the canvas's image */
-  nsSize GetCanvasSize();
-
-  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
-  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
-
-  virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
-                             nsSize aCBSize, nscoord aAvailableWidth,
-                             nsSize aMargin, nsSize aBorder, nsSize aPadding,
-                             PRBool aShrinkWrap);
-
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&          aStatus);
   
+  NS_IMETHOD CanContinueTextRun(PRBool& aContinueTextRun) const;
+
+
   NS_IMETHOD GetContentForEvent(nsPresContext* aPresContext,
                                 nsEvent* aEvent,
                                 nsIContent** aContent);
@@ -87,10 +74,9 @@ public:
 #endif
 
   virtual nsIAtom* GetType() const;
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
-  NS_IMETHOD List(FILE* out, PRInt32 aIndent) const;
+  NS_IMETHOD List(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent) const;
 #endif
 
 protected:
@@ -99,6 +85,7 @@ protected:
   nscoord GetContinuationOffset(nscoord* aWidth = 0) const;
 
   nsMargin mBorderPadding;
+  nsSize mCanvasSize;
 };
 
 #endif /* nsHTMLCanvasFrame_h___ */

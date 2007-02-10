@@ -52,9 +52,6 @@ class nsGridCell;
 
 //#define DEBUG_grid 1
 
-/**
- * The grid data structure, i.e., the grid cellmap.
- */
 class nsGrid
 {
 public:
@@ -68,16 +65,18 @@ public:
   void NeedsRebuild(nsBoxLayoutState& aBoxLayoutState);
   void RebuildIfNeeded();
 
-  nsSize GetPrefRowSize(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, PRBool aIsHorizontal = PR_TRUE);
-  nsSize GetMinRowSize(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, PRBool aIsHorizontal = PR_TRUE);
-  nsSize GetMaxRowSize(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, PRBool aIsHorizontal = PR_TRUE);
-  nscoord GetRowFlex(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, PRBool aIsHorizontal = PR_TRUE);
+  nsresult GetPrefRowSize(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, nsSize& aSize, PRBool aIsHorizontal = PR_TRUE);
+  nsresult GetMinRowSize(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, nsSize& aSize, PRBool aIsHorizontal = PR_TRUE);
+  nsresult GetMaxRowSize(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, nsSize& aSize, PRBool aIsHorizontal = PR_TRUE);
+  nsresult GetRowFlex(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, nscoord& aSize, PRBool aIsHorizontal = PR_TRUE);
 
-  nscoord GetPrefRowHeight(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, PRBool aIsHorizontal = PR_TRUE);
-  nscoord GetMinRowHeight(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, PRBool aIsHorizontal = PR_TRUE);
-  nscoord GetMaxRowHeight(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, PRBool aIsHorizontal = PR_TRUE);
+  nsresult GetPrefRowHeight(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, nscoord& aHeight, PRBool aIsHorizontal = PR_TRUE);
+  nsresult GetMinRowHeight(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, nscoord& aHeight, PRBool aIsHorizontal = PR_TRUE);
+  nsresult GetMaxRowHeight(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, nscoord& aHeight, PRBool aIsHorizontal = PR_TRUE);
   void GetRowOffsets(nsBoxLayoutState& aState, PRInt32 aIndex, nscoord& aTop, nscoord& aBottom, PRBool aIsHorizontal = PR_TRUE);
 
+  void RowChildIsDirty(nsBoxLayoutState& aBoxLayoutState, PRInt32 aRowIndex, PRInt32 aColumnIndex, PRBool aIsHorizontal = PR_TRUE);
+  void RowIsDirty(nsBoxLayoutState& aBoxLayoutState, PRInt32 aIndex, PRBool aIsHorizontal = PR_TRUE);
   void RowAddedOrRemoved(nsBoxLayoutState& aBoxLayoutState, PRInt32 aIndex, PRBool aIsHorizontal = PR_TRUE);
   void CellAddedOrRemoved(nsBoxLayoutState& aBoxLayoutState, PRInt32 aIndex, PRBool aIsHorizontal = PR_TRUE);
   void DirtyRows(nsIBox* aRowBox, nsBoxLayoutState& aState);
@@ -90,8 +89,8 @@ public:
 // accessors
   void SetBox(nsIBox* aBox) { mBox = aBox; }
   nsIBox* GetBox() { return mBox; }
-  nsIBox* GetRowsBox() { return mRowsBox; }
-  nsIBox* GetColumnsBox() { return mColumnsBox; }
+  nsIBox* GetRowBox() { return mRowBox; }
+  nsIBox* GetColumnBox() { return mColumnBox; }
   nsGridRow* GetColumns();
   nsGridRow* GetRows();
   PRInt32 GetRowCount(PRInt32 aIsHorizontal = PR_TRUE);
@@ -108,12 +107,12 @@ public:
 
 private:
   void GetPartFromBox(nsIBox* aBox, nsIGridPart** aPart);
-  nsMargin GetBoxTotalMargin(nsIBox* aBox, PRBool aIsHorizontal = PR_TRUE);
+  void GetBoxTotalMargin(nsIBox* aBox, nsMargin& aMargin, PRBool aIsHorizontal = PR_TRUE);
 
   void FreeMap();
   void FindRowsAndColumns(nsIBox** aRows, nsIBox** aColumns);
-  void BuildRows(nsIBox* aBox, PRInt32 aSize, nsGridRow** aColumnsRows, PRBool aIsHorizontal = PR_TRUE);
-  nsGridCell* BuildCellMap(PRInt32 aRows, PRInt32 aColumns);
+  void BuildRows(nsIBox* aBox, PRBool aSize, nsGridRow** aColumnsRows, PRBool aIsHorizontal = PR_TRUE);
+  void BuildCellMap(PRInt32 aRows, PRInt32 aColumns, nsGridCell** aCells);
   void PopulateCellMap(nsGridRow* aRows, nsGridRow* aColumns, PRInt32 aRowCount, PRInt32 aColumnCount, PRBool aIsHorizontal = PR_TRUE);
   void CountRowsColumns(nsIBox* aBox, PRInt32& aRowCount, PRInt32& aComputedColumnCount);
   void SetLargestSize(nsSize& aSize, nscoord aHeight, PRBool aIsHorizontal = PR_TRUE);
@@ -130,10 +129,10 @@ private:
   nsGridRow* mColumns;
 
   // the first in the <grid> that implements the <rows> tag.
-  nsIBox* mRowsBox;
+  nsIBox* mRowBox;
 
   // the first in the <grid> that implements the <columns> tag.
-  nsIBox* mColumnsBox;
+  nsIBox* mColumnBox;
 
   // a flag that is false tells us to rebuild the who grid
   PRBool mNeedsRebuild;

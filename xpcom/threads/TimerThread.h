@@ -41,6 +41,7 @@
 #ifndef TimerThread_h___
 #define TimerThread_h___
 
+#include "nsIEventQueueService.h"
 #include "nsIObserver.h"
 #include "nsIRunnable.h"
 #include "nsIThread.h"
@@ -76,6 +77,9 @@ public:
 
   void UpdateFilter(PRUint32 aDelay, PRIntervalTime aTimeout,
                     PRIntervalTime aNow);
+
+  // For use by nsTimerImpl::Fire()
+  nsCOMPtr<nsIEventQueueService> mEventQueueService;
 
   void DoBeforeSleep();
   void DoAfterSleep();

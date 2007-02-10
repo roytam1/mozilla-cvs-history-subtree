@@ -65,10 +65,18 @@ EXPORTS		= \
 		nsGfxCIID.h \
 		nsIRegion.h \
 		nsDeviceContext.h \
+		nsIDeviceContextSpec.h \
+		nsIDeviceContextSpecFactory.h \
 		nsIDrawingSurface.h \
 		nsITheme.h \
 		nsThemeConstants.h \
 		$(NULL)
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+EXPORTS		+= \
+          nsIPrintingContext.h \
+          $(NULL)
+endif
 
 include $(topsrcdir)/config/rules.mk
 

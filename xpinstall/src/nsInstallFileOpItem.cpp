@@ -50,7 +50,7 @@
 #include "nsWinShortcut.h"
 #endif
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #include <Aliases.h>
 #include <Gestalt.h>
 #include <Resources.h>
@@ -59,7 +59,11 @@
 #include "nsILocalFileMac.h"
 #endif
 
+static NS_DEFINE_CID(kIProcessCID, NS_PROCESS_CID); 
+
 /* Public Methods */
+
+MOZ_DECL_CTOR_COUNTER(nsInstallFileOpItem)
 
 nsInstallFileOpItem::nsInstallFileOpItem(nsInstall*     aInstallObj,
                                          PRInt32        aCommand,
@@ -219,6 +223,10 @@ nsInstallFileOpItem::~nsInstallFileOpItem()
 
   MOZ_COUNT_DTOR(nsInstallFileOpItem);
 }
+
+#ifdef XP_MAC
+#pragma mark -
+#endif
 
 PRInt32 nsInstallFileOpItem::Complete()
 {
@@ -540,6 +548,10 @@ nsInstallFileOpItem::RegisterPackageNode()
 {
     return PR_FALSE;
 }
+
+#ifdef XP_MAC
+#pragma mark -
+#endif
 
 //
 // File operation functions begin here
@@ -957,7 +969,7 @@ nsInstallFileOpItem::NativeFileOpFileExecuteComplete()
   if (mTarget == nsnull)
     return nsInstall::INVALID_ARGUMENTS;
 
-  nsCOMPtr<nsIProcess> process = do_CreateInstance(NS_PROCESS_CONTRACTID);
+  nsCOMPtr<nsIProcess> process = do_CreateInstance(kIProcessCID);
   
   if (!mParams.IsEmpty())
   {
@@ -1327,7 +1339,7 @@ PRInt32
 nsInstallFileOpItem::NativeFileOpMacAliasPrepare()
 {
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
   nsCOMPtr<nsILocalFileMac> targetFile = do_QueryInterface(mTarget);
   nsCOMPtr<nsILocalFileMac> sourceFile = do_QueryInterface(mSrc);
 
@@ -1351,7 +1363,7 @@ nsInstallFileOpItem::NativeFileOpMacAliasPrepare()
     if (NS_FAILED(rv))
         return nsInstall::FILENAME_ALREADY_USED;
   }    
-#endif /* XP_MACOSX */
+#endif /* XP_MAC || XP_MACOSX */
 
     return nsInstall::SUCCESS;
 }
@@ -1360,7 +1372,7 @@ PRInt32
 nsInstallFileOpItem::NativeFileOpMacAliasComplete()
 {
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
   // XXX gestalt to see if alias manager is around
   
   nsCOMPtr<nsILocalFileMac> localFileMacTarget = do_QueryInterface(mTarget);
@@ -1435,7 +1447,7 @@ nsInstallFileOpItem::NativeFileOpMacAliasComplete()
   else
     return nsInstall::SUCCESS;  // non-fatal so prevent internal abort
   
-#endif /* XP_MACOSX */
+#endif /* XP_MAC || XP_MACOSX */
 
   return nsInstall::SUCCESS;
 }
@@ -1443,7 +1455,7 @@ nsInstallFileOpItem::NativeFileOpMacAliasComplete()
 PRInt32
 nsInstallFileOpItem::NativeFileOpMacAliasAbort()
 {  
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
   NativeFileOpFileDeleteComplete(mTarget);
 #endif 
 

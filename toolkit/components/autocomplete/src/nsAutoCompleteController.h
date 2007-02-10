@@ -53,7 +53,7 @@
 #include "nsIRollupListener.h"
 #include "nsIWidget.h"
 
-class nsAutoCompleteController : public nsIAutoCompleteController,
+class nsAutoCompleteController : public nsIAutoCompleteController_MOZILLA_1_8_BRANCH,
                                  public nsIAutoCompleteObserver,
                                  public nsIRollupListener,
                                  public nsITimerCallback,
@@ -62,6 +62,7 @@ class nsAutoCompleteController : public nsIAutoCompleteController,
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIAUTOCOMPLETECONTROLLER
+  NS_DECL_NSIAUTOCOMPLETECONTROLLER_MOZILLA_1_8_BRANCH
   NS_DECL_NSIAUTOCOMPLETEOBSERVER
   NS_DECL_NSIROLLUPLISTENER
   NS_DECL_NSITREEVIEW

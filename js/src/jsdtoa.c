@@ -48,7 +48,6 @@
 #include "jsutil.h" /* Added by JSIFY */
 #include "jspubtd.h"
 #include "jsnum.h"
-#include "jsbit.h"
 
 #ifdef JS_THREADSAFE
 #include "prlock.h"
@@ -541,9 +540,6 @@ static Bigint *s2b(CONST char *s, int32 nd0, int32 nd, ULong y9)
 /* Return the number (0 through 32) of most significant zero bits in x. */
 static int32 hi0bits(register ULong x)
 {
-#ifdef JS_HAS_BUILTIN_BITSCAN32
-    return( (!x) ? 32 : js_bitscan_clz32(x) );
-#else
     register int32 k = 0;
 
     if (!(x & 0xffff0000)) {
@@ -568,7 +564,6 @@ static int32 hi0bits(register ULong x)
             return 32;
     }
     return k;
-#endif /* JS_HAS_BUILTIN_BITSCAN32 */
 }
 
 
@@ -577,15 +572,6 @@ static int32 hi0bits(register ULong x)
  * least significant bit will be set unless y was originally zero. */
 static int32 lo0bits(ULong *y)
 {
-#ifdef JS_HAS_BUILTIN_BITSCAN32
-    int32 k;
-    ULong x = *y;
-
-   if (x>1)
-      *y = ( x >> (k = js_bitscan_ctz32(x)) );
-   else
-      k = ((x ^ 1) << 5);
-#else
     register int32 k;
     register ULong x = *y;
 
@@ -623,7 +609,6 @@ static int32 lo0bits(ULong *y)
             return 32;
     }
     *y = x;
-#endif /* JS_HAS_BUILTIN_BITSCAN32 */
     return k;
 }
 
@@ -1375,16 +1360,16 @@ dig_done:
               case 'i':
               case 'I':
                 if (match(&s,"nfinity")) {
-                    set_word0(rv, 0x7ff00000);
-                    set_word1(rv, 0);
+                    word0(rv) = 0x7ff00000;
+                    word1(rv) = 0;
                     goto ret;
                     }
                 break;
               case 'n':
               case 'N':
                 if (match(&s, "an")) {
-                    set_word0(rv, NAN_WORD0);
-                    set_word1(rv, NAN_WORD1);
+                    word0(rv) = NAN_WORD0;
+                    word1(rv) = NAN_WORD1;
                     goto ret;
                     }
               }
@@ -1454,8 +1439,8 @@ dig_done:
                 rv = HUGE_VAL;
 #else
                 /* Can't trust HUGE_VAL */
-                set_word0(rv, Exp_mask);
-                set_word1(rv, 0);
+                word0(rv) = Exp_mask;
+                word1(rv) = 0;
 #endif
                 if (bd0)
                     goto retfree;
@@ -1880,7 +1865,6 @@ nomem:
     Bfree(bs);
     Bfree(bd0);
     Bfree(delta);
-    RELEASE_DTOA_LOCK();
     *err = JS_DTOA_ENOMEM;
     return 0;
 }
@@ -2397,9 +2381,7 @@ js_dtoa(double d, int mode, JSBool biasUp, int ndigits,
                 goto no_digits;
             goto one_digit;
         }
-
-        /* Use true number of digits to limit looping. */
-        for(i = 1; i<=k+1; i++) {
+        for(i = 1;; i++) {
             L = (Long) (d / ds);
             d -= L*ds;
 #ifdef Check_FLT_ROUNDS
@@ -2424,17 +2406,9 @@ js_dtoa(double d, int mode, JSBool biasUp, int ndigits,
                 }
                 break;
             }
-            d *= 10.;
+            if (!(d *= 10.))
+                break;
         }
-#ifdef DEBUG
-        if (d != 0.0) {
-            fprintf(stderr,
-"WARNING: A loss of precision for double floating point is detected.\n"
-"         The result of any operation on doubles can be meaningless.\n"
-"         A possible cause is missing code to restore FPU state, see\n"
-"         bug 360282 for details.\n");
-        }
-#endif
         goto ret1;
     }
 
@@ -2996,8 +2970,6 @@ JS_dtobasestr(int base, double d)
             if (!b) {
               nomem1:
                 Bfree(b);
-                RELEASE_DTOA_LOCK();
-                free(buffer);
                 return NULL;
             }
             do {
@@ -3032,8 +3004,6 @@ JS_dtobasestr(int base, double d)
                 if (mlo != mhi)
                     Bfree(mlo);
                 Bfree(mhi);
-                RELEASE_DTOA_LOCK();
-                free(buffer);
                 return NULL;
             }
             JS_ASSERT(e < 0);

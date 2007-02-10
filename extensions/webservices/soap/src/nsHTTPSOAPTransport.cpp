@@ -56,7 +56,6 @@
 #include "nsIWebScriptsAccessService.h"
 #include "nsMemory.h"
 #include "nsIDocument.h"
-#include "nsIClassInfoImpl.h"
 
 nsHTTPSOAPTransport::nsHTTPSOAPTransport()
 {
@@ -206,7 +205,7 @@ static nsresult GetTransportURI(nsISOAPCall * aCall, nsAString & aURI)
       rc = uri->GetSpec(spec);
       if (NS_FAILED(rc)) 
         return rc;
-      CopyASCIItoUTF16(spec, sourceURI);
+      CopyASCIItoUCS2(spec, sourceURI);
     }
 
 //  Adding a header to tell the server that it must understand and verify the source of the call

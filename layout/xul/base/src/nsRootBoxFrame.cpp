@@ -49,60 +49,37 @@
 #include "nsIDOMEvent.h"
 #include "nsStyleConsts.h"
 #include "nsIViewManager.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsIEventStateManager.h"
 #include "nsIDeviceContext.h"
 #include "nsIScrollableView.h"
+#include "nsLayoutAtoms.h"
 #include "nsIPresShell.h"
 #include "nsBoxFrame.h"
 #include "nsStackLayout.h"
 #include "nsIRootBox.h"
 #include "nsIContent.h"
 #include "nsXULTooltipListener.h"
-#include "nsFrameManager.h"
 
 // Interface IDs
 
 //#define DEBUG_REFLOW
 
-// static
-nsIRootBox*
-nsIRootBox::GetRootBox(nsIPresShell* aShell)
-{
-  if (!aShell) {
-    return nsnull;
-  }
-  nsIFrame* rootFrame = aShell->FrameManager()->GetRootFrame();
-  if (!rootFrame) {
-    return nsnull;
-  }
-
-  if (rootFrame) {
-    rootFrame = rootFrame->GetFirstChild(nsnull);
-  }
-
-  nsIRootBox* rootBox = nsnull;
-  if (rootFrame) {
-    CallQueryInterface(rootFrame, &rootBox);
-  }
-  return rootBox;
-}
-
 class nsRootBoxFrame : public nsBoxFrame, public nsIRootBox {
 public:
 
-  friend nsIFrame* NS_NewBoxFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewBoxFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
-  nsRootBoxFrame(nsIPresShell* aShell, nsStyleContext *aContext);
+  nsRootBoxFrame(nsIPresShell* aShell);
 
   NS_DECL_ISUPPORTS_INHERITED
 
-  virtual nsIFrame* GetPopupSetFrame();
-  virtual void SetPopupSetFrame(nsIFrame* aPopupSet);
-  virtual nsIContent* GetDefaultTooltip();
-  virtual void SetDefaultTooltip(nsIContent* aTooltip);
-  virtual nsresult AddTooltipSupport(nsIContent* aNode);
-  virtual nsresult RemoveTooltipSupport(nsIContent* aNode);
+  NS_IMETHOD GetPopupSetFrame(nsIFrame** aResult);
+  NS_IMETHOD SetPopupSetFrame(nsIFrame* aPopupSet);
+  NS_IMETHOD GetDefaultTooltip(nsIContent** aResult);
+  NS_IMETHOD SetDefaultTooltip(nsIContent* aTooltip);
+  NS_IMETHOD AddTooltipSupport(nsIContent* aNode);
+  NS_IMETHOD RemoveTooltipSupport(nsIContent* aNode);
 
   NS_IMETHOD AppendFrames(nsIAtom*        aListName,
                           nsIFrame*       aFrameList);
@@ -119,21 +96,19 @@ public:
   NS_IMETHOD HandleEvent(nsPresContext* aPresContext, 
                          nsGUIEvent*     aEvent,
                          nsEventStatus*  aEventStatus);
-
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint, 
+                              nsFramePaintLayer aWhichLayer,
+                              nsIFrame**     aFrame);
 
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::rootFrame
+   * @see nsLayoutAtoms::rootFrame
    */
   virtual nsIAtom* GetType() const;
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
   
 #ifdef DEBUG
-  NS_IMETHOD GetFrameName(nsAString& aResult) const;
+  NS_IMETHOD GetFrameName(nsString& aResult) const;
 #endif
 
   nsIFrame* mPopupSetFrame;
@@ -144,14 +119,24 @@ protected:
 
 //----------------------------------------------------------------------
 
-nsIFrame*
-NS_NewRootBoxFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewRootBoxFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsRootBoxFrame (aPresShell, aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsRootBoxFrame* it = new (aPresShell) nsRootBoxFrame (aPresShell);
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  *aNewFrame = it;
+
+  return NS_OK;
 }
 
-nsRootBoxFrame::nsRootBoxFrame(nsIPresShell* aShell, nsStyleContext* aContext):
-  nsBoxFrame(aShell, aContext, PR_TRUE)
+nsRootBoxFrame::nsRootBoxFrame(nsIPresShell* aShell):nsBoxFrame(aShell, PR_TRUE)
 {
   mPopupSetFrame = nsnull;
 
@@ -232,27 +217,13 @@ nsRootBoxFrame::Reflow(nsPresContext*          aPresContext,
                        const nsHTMLReflowState& aReflowState,
                        nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsRootBoxFrame");
+  DO_GLOBAL_REFLOW_COUNT("nsRootBoxFrame", aReflowState.reason);
 
 #ifdef DEBUG_REFLOW
   gReflows++;
   printf("----Reflow %d----\n", gReflows);
 #endif
   return nsBoxFrame::Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
-}
-
-nsresult
-nsRootBoxFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                                 const nsRect&           aDirtyRect,
-                                 const nsDisplayListSet& aLists)
-{
-  // root boxes don't need a debug border/outline or a selection overlay...
-  // They *may* have a background propagated to them, so force creation
-  // of a background display list element.
-  nsresult rv = DisplayBorderBackgroundOutline(aBuilder, aLists, PR_TRUE);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  return BuildDisplayListForChildren(aBuilder, aDirtyRect, aLists);
 }
 
 NS_IMETHODIMP
@@ -265,35 +236,38 @@ nsRootBoxFrame::HandleEvent(nsPresContext* aPresContext,
     return NS_OK;
   }
 
-  if (aEvent->message == NS_MOUSE_BUTTON_UP) {
+  if (aEvent->message == NS_MOUSE_LEFT_BUTTON_UP ||
+      aEvent->message == NS_MOUSE_MIDDLE_BUTTON_UP ||
+      aEvent->message == NS_MOUSE_RIGHT_BUTTON_UP) {
     nsFrame::HandleEvent(aPresContext, aEvent, aEventStatus);
   }
 
   return NS_OK;
 }
 
-// REVIEW: The override here was doing nothing since nsBoxFrame is our
-// parent class
+NS_IMETHODIMP
+nsRootBoxFrame::GetFrameForPoint(const nsPoint& aPoint, 
+                                   nsFramePaintLayer aWhichLayer,
+                                   nsIFrame**     aFrame)
+{
+  // this should act like a block, so we need to override
+  return nsBoxFrame::GetFrameForPoint(aPoint, aWhichLayer, aFrame);
+}
+
 nsIAtom*
 nsRootBoxFrame::GetType() const
 {
-  return nsGkAtoms::rootFrame;
+  return nsLayoutAtoms::rootFrame;
 }
 
-PRBool
-nsRootBoxFrame::IsFrameOfType(PRUint32 aFlags) const
+NS_IMETHODIMP
+nsRootBoxFrame::GetPopupSetFrame(nsIFrame** aResult)
 {
-  // Override the bogus thing nsBoxFrame does.
-  return !aFlags;
+  *aResult = mPopupSetFrame;
+  return NS_OK;
 }
 
-nsIFrame*
-nsRootBoxFrame::GetPopupSetFrame()
-{
-  return mPopupSetFrame;
-}
-
-void
+NS_IMETHODIMP
 nsRootBoxFrame::SetPopupSetFrame(nsIFrame* aPopupSet)
 {
   // Under normal conditions this should only be called once.  However,
@@ -309,59 +283,38 @@ nsRootBoxFrame::SetPopupSetFrame(nsIFrame* aPopupSet)
   } else {
     NS_NOTREACHED("Popup set is already defined! Only 1 allowed.");
   }
-}
-
-nsIContent*
-nsRootBoxFrame::GetDefaultTooltip()
-{
-  return mDefaultTooltip;
-}
-
-void
-nsRootBoxFrame::SetDefaultTooltip(nsIContent* aTooltip)
-{
-  mDefaultTooltip = aTooltip;
-}
-
-static void
-TooltipListenerPropertyDtor(void *aObject, nsIAtom *aPropertyName,
-                            void *aPropertyValue, void *aData)
-{
-  nsXULTooltipListener* listener =
-    NS_STATIC_CAST(nsXULTooltipListener*, aPropertyValue);
-  if (listener) {
-    listener->RemoveTooltipSupport(NS_STATIC_CAST(nsIContent*, aObject));
-    NS_RELEASE(listener);
-  }
-}
-
-nsresult
-nsRootBoxFrame::AddTooltipSupport(nsIContent* aNode)
-{
-  NS_ENSURE_TRUE(aNode, NS_ERROR_NULL_POINTER);
-  nsRefPtr<nsXULTooltipListener> listener =
-    NS_STATIC_CAST(nsXULTooltipListener*,
-                   aNode->GetProperty(nsGkAtoms::tooltiplistener));
-  if (listener) {
-    // Tooltip listener is already installed.
-    return NS_OK;
-  }
-
-  listener = new nsXULTooltipListener();
-  if (!listener)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  if (NS_SUCCEEDED(listener->Init(aNode))) {
-    nsresult rv = aNode->SetProperty(nsGkAtoms::tooltiplistener, listener,
-                                     TooltipListenerPropertyDtor, PR_TRUE);
-    NS_ENSURE_SUCCESS(rv, rv);
-    nsXULTooltipListener* listenerRef = listener;
-    NS_ADDREF(listenerRef);
-  }
   return NS_OK;
 }
 
-nsresult
+NS_IMETHODIMP
+nsRootBoxFrame::GetDefaultTooltip(nsIContent** aTooltip)
+{
+  *aTooltip = mDefaultTooltip;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsRootBoxFrame::SetDefaultTooltip(nsIContent* aTooltip)
+{
+  mDefaultTooltip = aTooltip;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsRootBoxFrame::AddTooltipSupport(nsIContent* aNode)
+{
+  // listener will be refcounted by dom event targets that
+  // it will add itself to, and destroyed when those targets
+  // are destroyed
+  nsXULTooltipListener* listener = new nsXULTooltipListener();
+  if (!listener)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  listener->Init(aNode, this);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsRootBoxFrame::RemoveTooltipSupport(nsIContent* aNode)
 {
   // XXjh yuck, I'll have to implement a way to get at
@@ -389,7 +342,7 @@ NS_INTERFACE_MAP_END_INHERITING(nsBoxFrame)
 
 #ifdef DEBUG
 NS_IMETHODIMP
-nsRootBoxFrame::GetFrameName(nsAString& aResult) const
+nsRootBoxFrame::GetFrameName(nsString& aResult) const
 {
   return MakeFrameName(NS_LITERAL_STRING("RootBox"), aResult);
 }

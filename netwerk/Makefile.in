@@ -55,6 +55,7 @@ DIRS		= \
 		protocol \
 		system \
 		build \
+		build2 \
 		resources \
 		locales \
 		$(NULL)

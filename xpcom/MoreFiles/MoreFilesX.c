@@ -69,8 +69,6 @@
 		 <1>	 1/25/02	JL		MoreFilesX 1.0
 */
 
-// Modified 2006-01-23 - added this comment.
-
 #if defined(__MACH__)
 	#include <Carbon/Carbon.h>
 	#include <string.h>
@@ -2316,9 +2314,6 @@ BadParameter:
 
 /*****************************************************************************/
 
-// This function exists in Mac OS X 10.5, we cannot re-define it here.
-// We don't use this function, so just don't compile it.
-#if 0
 OSErr
 FSVolumeMount(
 	const void *volMountInfo,
@@ -2342,7 +2337,6 @@ BadParameter:
 
 	return ( result );
 }
-#endif
 
 /*****************************************************************************/
 

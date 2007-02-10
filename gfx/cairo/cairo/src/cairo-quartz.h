@@ -43,13 +43,18 @@
 
 #include <Carbon/Carbon.h>
 
+/* kCGBitmapByteOrder32Host was introduced in the 10.4 SDK.  If the constant
+ * isn't available, use 0, corresponding to kCGBitmapByteOrderDefault. */
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_4
+#define kCGBitmapByteOrder32Host 0
+#endif
+
 CAIRO_BEGIN_DECLS
 
-cairo_public cairo_surface_t *
+cairo_surface_t *
 cairo_quartz_surface_create (CGContextRef    context,
 			     int	     width,
-			     int	     height,
-			     cairo_bool_t    y_grows_down);
+			     int	     height);
 
 CAIRO_END_DECLS
 
@@ -58,3 +63,4 @@ CAIRO_END_DECLS
 #endif /* CAIRO_HAS_QUARTZ_SURFACE */
 
 #endif /* CAIRO_QUARTZ_H */
+

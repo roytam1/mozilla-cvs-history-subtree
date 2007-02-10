@@ -46,8 +46,9 @@
 #include "nsIBindingManager.h"
 #include "nsIObserver.h"
 #include "nsIXSLTProcessor.h"
-#include "nsSyncLoadService.h"
-#include "nsPIDOMWindow.h"
+#include "nsISyncLoadDOMService.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMDocument.h"
 #include "nsIServiceManager.h"
@@ -55,9 +56,8 @@
 #include "nsIContent.h"
 #include "nsIDOMDocumentFragment.h"
 
-NS_IMPL_ISUPPORTS2(nsXMLPrettyPrinter,
-                   nsIDocumentObserver,
-                   nsIMutationObserver)
+NS_IMPL_ISUPPORTS1(nsXMLPrettyPrinter,
+                   nsIDocumentObserver)
 
 nsXMLPrettyPrinter::nsXMLPrettyPrinter() : mDocument(nsnull),
                                            mUpdateDepth(0),
@@ -79,7 +79,7 @@ nsXMLPrettyPrinter::PrettyPrint(nsIDocument* aDocument)
     }
 
     // check if we're in an invisible iframe
-    nsPIDOMWindow *internalWin = aDocument->GetWindow();
+    nsCOMPtr<nsIDOMWindowInternal> internalWin = do_QueryInterface(aDocument->GetScriptGlobalObject());
     nsCOMPtr<nsIDOMElement> frameElem;
     if (internalWin) {
         internalWin->GetFrameElement(getter_AddRefs(frameElem));
@@ -127,9 +127,15 @@ nsXMLPrettyPrinter::PrettyPrint(nsIDocument* aDocument)
                    NS_LITERAL_CSTRING("chrome://global/content/xml/XMLPrettyPrint.xsl"));
     NS_ENSURE_SUCCESS(rv, rv);
 
+    nsCOMPtr<nsIChannel> channel;
+    rv = NS_NewChannel(getter_AddRefs(channel), xslUri, nsnull, nsnull);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     nsCOMPtr<nsIDOMDocument> xslDocument;
-    rv = nsSyncLoadService::LoadDocument(xslUri, nsnull, nsnull, PR_TRUE,
-                                         getter_AddRefs(xslDocument));
+    nsCOMPtr<nsISyncLoadDOMService> loader =
+       do_GetService("@mozilla.org/content/syncload-dom-service;1", &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = loader->LoadLocalDocument(channel, nsnull, getter_AddRefs(xslDocument));
     NS_ENSURE_SUCCESS(rv, rv);
 
     // Transform the document
@@ -268,7 +274,7 @@ nsXMLPrettyPrinter::ContentRemoved(nsIDocument* aDocument,
 }
 
 void
-nsXMLPrettyPrinter::NodeWillBeDestroyed(const nsINode* aNode)
+nsXMLPrettyPrinter::DocumentWillBeDestroyed(nsIDocument* aDocument)
 {
     mDocument = nsnull;
     NS_RELEASE_THIS();

@@ -343,32 +343,31 @@ const NS_LOCALFILEINPUTSTREAM_CONTRACTID =
           "@mozilla.org/network/file-input-stream;1";
 
 
-function RunRTest(aFilename, aIsBaseline, aIsPrinting)
+function RunRTest(aFilename, aIsBaseline)
 {
   if (gRTestURLList) {
     // XXX Does alert work?
     alert("Already running regression test.\n");
     return;
   }
-  dump("Running " + (aIsBaseline?"baseline":"verify") + 
-      (aIsPrinting?" PrintMode":"") + " test for " + aFilename + ".\n");
+
+  dump("Running " + (aIsBaseline?"baseline":"verify") + " test for " + aFilename + ".\n");
 
   var listFile = Components.classes[NS_LOCAL_FILE_CONTRACTID].
                     createInstance(nsILocalFile);
   listFile.persistentDescriptor = aFilename;
-  gRTestURLList = new RTestURLList(listFile, aIsBaseline, aIsPrinting);
+  gRTestURLList = new RTestURLList(listFile, aIsBaseline);
   gRTestURLList.startURL();
 }
 
-function RTestURLList(aLocalFile, aIsBaseline, aIsPrinting) {
-  this.init(aLocalFile, aIsBaseline, aIsPrinting);
+function RTestURLList(aLocalFile, aIsBaseline) {
+  this.init(aLocalFile, aIsBaseline);
 }
 
 RTestURLList.prototype = {
-  init : function(aLocalFile, aIsBaseline, aIsPrinting)
+  init : function(aLocalFile, aIsBaseline)
     {
       this.mIsBaseline = aIsBaseline;
-      this.mIsPrinting = aIsPrinting;
       this.mURLs = new Array();
       this.readFileList(aLocalFile);
       this.mRegressionTester =
@@ -420,16 +419,8 @@ RTestURLList.prototype = {
 
     dump("Writing regression data to " +
          data.QueryInterface(nsILocalFile).persistentDescriptor + "\n");
-    if (this.mIsPrinting) {
-      this.mRegressionTester.dumpFrameModel(gBrowser.contentWindow, data,
-        nsILayoutRegressionTester.DUMP_FLAGS_MASK_PRINT_MODE);
-    }
-    else {
-       this.mRegressionTester.dumpFrameModel(gBrowser.contentWindow, data,
-        nsILayoutRegressionTester.DUMP_FLAGS_MASK_DUMP_STYLE);
-    }
-     
-      
+    this.mRegressionTester.dumpFrameModel(gBrowser.contentWindow, data,
+      nsILayoutRegressionTester.DUMP_FLAGS_MASK_DUMP_STYLE);
 
     if (!this.mIsBaseline) {
       var base_data = this.mCurrentURL.dir.clone();
@@ -439,7 +430,7 @@ RTestURLList.prototype = {
            base_data.QueryInterface(nsILocalFile).persistentDescriptor + "\n");
       var filesDiffer =
         this.mRegressionTester.compareFrameModels(base_data, data,
-          nsILayoutRegressionTester.COMPARE_FLAGS_BRIEF)
+          nsILayoutRegressionTester.COMPARE_FLAGS_VERBOSE)
       dump("Comparison for " + this.mCurrentURL.url + " " +
            (filesDiffer ? "failed" : "passed") + ".\n");
     }
@@ -463,6 +454,5 @@ RTestURLList.prototype = {
   mURLs : null,
   mCurrentURL : null, // url (string), dir (nsIFileURL), relurl (string)
   mIsBaseline : null,
-  mRegressionTester : null,
-  mIsPrinting : null
+  mRegressionTester : null
 }

@@ -314,144 +314,146 @@ GetChar(JSTokenStream *ts)
     if (ts->ungetpos != 0) {
         c = ts->ungetbuf[--ts->ungetpos];
     } else {
-        if (ts->linebuf.ptr == ts->linebuf.limit) {
-            len = PTRDIFF(ts->userbuf.limit, ts->userbuf.ptr, jschar);
-            if (len <= 0) {
-                if (!ts->file) {
-                    ts->flags |= TSF_EOF;
-                    return EOF;
-                }
-
-                /* Fill ts->userbuf so that \r and \r\n convert to \n. */
-                crflag = (ts->flags & TSF_CRFLAG) != 0;
-                len = js_fgets(cbuf, JS_LINE_LIMIT - crflag, ts->file);
+        do {
+            if (ts->linebuf.ptr == ts->linebuf.limit) {
+                len = PTRDIFF(ts->userbuf.limit, ts->userbuf.ptr, jschar);
                 if (len <= 0) {
-                    ts->flags |= TSF_EOF;
-                    return EOF;
-                }
-                olen = len;
-                ubuf = ts->userbuf.base;
-                i = 0;
-                if (crflag) {
-                    ts->flags &= ~TSF_CRFLAG;
-                    if (cbuf[0] != '\n') {
-                        ubuf[i++] = '\n';
-                        len++;
-                        ts->linepos--;
+                    if (!ts->file) {
+                        ts->flags |= TSF_EOF;
+                        return EOF;
                     }
-                }
-                for (j = 0; i < len; i++, j++)
-                    ubuf[i] = (jschar) (unsigned char) cbuf[j];
-                ts->userbuf.limit = ubuf + len;
-                ts->userbuf.ptr = ubuf;
-            }
-            if (ts->listener) {
-                ts->listener(ts->filename, ts->lineno, ts->userbuf.ptr, len,
-                             &ts->listenerTSData, ts->listenerData);
-            }
 
-            nl = ts->saveEOL;
-            if (!nl) {
-                /*
-                 * Any one of \n, \r, or \r\n ends a line (the longest
-                 * match wins).  Also allow the Unicode line and paragraph
-                 * separators.
-                 */
-                for (nl = ts->userbuf.ptr; nl < ts->userbuf.limit; nl++) {
-                    /*
-                     * Try to prevent value-testing on most characters by
-                     * filtering out characters that aren't 000x or 202x.
-                     */
-                    if ((*nl & 0xDFD0) == 0) {
-                        if (*nl == '\n')
-                            break;
-                        if (*nl == '\r') {
-                            if (nl + 1 < ts->userbuf.limit && nl[1] == '\n')
-                                nl++;
-                            break;
+                    /* Fill ts->userbuf so that \r and \r\n convert to \n. */
+                    crflag = (ts->flags & TSF_CRFLAG) != 0;
+                    len = js_fgets(cbuf, JS_LINE_LIMIT - crflag, ts->file);
+                    if (len <= 0) {
+                        ts->flags |= TSF_EOF;
+                        return EOF;
+                    }
+                    olen = len;
+                    ubuf = ts->userbuf.base;
+                    i = 0;
+                    if (crflag) {
+                        ts->flags &= ~TSF_CRFLAG;
+                        if (cbuf[0] != '\n') {
+                            ubuf[i++] = '\n';
+                            len++;
+                            ts->linepos--;
                         }
-                        if (*nl == LINE_SEPARATOR || *nl == PARA_SEPARATOR)
-                            break;
+                    }
+                    for (j = 0; i < len; i++, j++)
+                        ubuf[i] = (jschar) (unsigned char) cbuf[j];
+                    ts->userbuf.limit = ubuf + len;
+                    ts->userbuf.ptr = ubuf;
+                }
+                if (ts->listener) {
+                    ts->listener(ts->filename, ts->lineno, ts->userbuf.ptr, len,
+                                 &ts->listenerTSData, ts->listenerData);
+                }
+
+                nl = ts->saveEOL;
+                if (!nl) {
+                    /*
+                     * Any one of \n, \r, or \r\n ends a line (the longest
+                     * match wins).  Also allow the Unicode line and paragraph
+                     * separators.
+                     */
+                    for (nl = ts->userbuf.ptr; nl < ts->userbuf.limit; nl++) {
+                        /*
+                         * Try to prevent value-testing on most characters by
+                         * filtering out characters that aren't 000x or 202x.
+                         */
+                        if ((*nl & 0xDFD0) == 0) {
+                            if (*nl == '\n')
+                                break;
+                            if (*nl == '\r') {
+                                if (nl + 1 < ts->userbuf.limit && nl[1] == '\n')
+                                    nl++;
+                                break;
+                            }
+                            if (*nl == LINE_SEPARATOR || *nl == PARA_SEPARATOR)
+                                break;
+                        }
                     }
                 }
-            }
 
-            /*
-             * If there was a line terminator, copy thru it into linebuf.
-             * Else copy JS_LINE_LIMIT-1 bytes into linebuf.
-             */
-            if (nl < ts->userbuf.limit)
-                len = PTRDIFF(nl, ts->userbuf.ptr, jschar) + 1;
-            if (len >= JS_LINE_LIMIT) {
-                len = JS_LINE_LIMIT - 1;
-                ts->saveEOL = nl;
-            } else {
-                ts->saveEOL = NULL;
-            }
-            js_strncpy(ts->linebuf.base, ts->userbuf.ptr, len);
-            ts->userbuf.ptr += len;
-            olen = len;
+                /*
+                 * If there was a line terminator, copy thru it into linebuf.
+                 * Else copy JS_LINE_LIMIT-1 bytes into linebuf.
+                 */
+                if (nl < ts->userbuf.limit)
+                    len = PTRDIFF(nl, ts->userbuf.ptr, jschar) + 1;
+                if (len >= JS_LINE_LIMIT) {
+                    len = JS_LINE_LIMIT - 1;
+                    ts->saveEOL = nl;
+                } else {
+                    ts->saveEOL = NULL;
+                }
+                js_strncpy(ts->linebuf.base, ts->userbuf.ptr, len);
+                ts->userbuf.ptr += len;
+                olen = len;
 
-            /*
-             * Make sure linebuf contains \n for EOL (don't do this in
-             * userbuf because the user's string might be readonly).
-             */
-            if (nl < ts->userbuf.limit) {
-                if (*nl == '\r') {
-                    if (ts->linebuf.base[len-1] == '\r') {
-                        /*
-                         * Does the line segment end in \r?  We must check
-                         * for a \n at the front of the next segment before
-                         * storing a \n into linebuf.  This case matters
-                         * only when we're reading from a file.
-                         */
-                        if (nl + 1 == ts->userbuf.limit && ts->file) {
-                            len--;
-                            ts->flags |= TSF_CRFLAG; /* clear NLFLAG? */
-                            if (len == 0) {
-                                /*
-                                 * This can happen when a segment ends in
-                                 * \r\r.  Start over.  ptr == limit in this
-                                 * case, so we'll fall into buffer-filling
-                                 * code.
-                                 */
-                                return GetChar(ts);
+                /*
+                 * Make sure linebuf contains \n for EOL (don't do this in
+                 * userbuf because the user's string might be readonly).
+                 */
+                if (nl < ts->userbuf.limit) {
+                    if (*nl == '\r') {
+                        if (ts->linebuf.base[len-1] == '\r') {
+                            /*
+                             * Does the line segment end in \r?  We must check
+                             * for a \n at the front of the next segment before
+                             * storing a \n into linebuf.  This case matters
+                             * only when we're reading from a file.
+                             */
+                            if (nl + 1 == ts->userbuf.limit && ts->file) {
+                                len--;
+                                ts->flags |= TSF_CRFLAG; /* clear NLFLAG? */
+                                if (len == 0) {
+                                    /*
+                                     * This can happen when a segment ends in
+                                     * \r\r.  Start over.  ptr == limit in this
+                                     * case, so we'll fall into buffer-filling
+                                     * code.
+                                     */
+                                    return GetChar(ts);
+                                }
+                            } else {
+                                ts->linebuf.base[len-1] = '\n';
                             }
-                        } else {
+                        }
+                    } else if (*nl == '\n') {
+                        if (nl > ts->userbuf.base &&
+                            nl[-1] == '\r' &&
+                            ts->linebuf.base[len-2] == '\r') {
+                            len--;
+                            JS_ASSERT(ts->linebuf.base[len] == '\n');
                             ts->linebuf.base[len-1] = '\n';
                         }
-                    }
-                } else if (*nl == '\n') {
-                    if (nl > ts->userbuf.base &&
-                        nl[-1] == '\r' &&
-                        ts->linebuf.base[len-2] == '\r') {
-                        len--;
-                        JS_ASSERT(ts->linebuf.base[len] == '\n');
+                    } else if (*nl == LINE_SEPARATOR || *nl == PARA_SEPARATOR) {
                         ts->linebuf.base[len-1] = '\n';
                     }
-                } else if (*nl == LINE_SEPARATOR || *nl == PARA_SEPARATOR) {
-                    ts->linebuf.base[len-1] = '\n';
                 }
+
+                /* Reset linebuf based on adjusted segment length. */
+                ts->linebuf.limit = ts->linebuf.base + len;
+                ts->linebuf.ptr = ts->linebuf.base;
+
+                /* Update position of linebuf within physical userbuf line. */
+                if (!(ts->flags & TSF_NLFLAG))
+                    ts->linepos += ts->linelen;
+                else
+                    ts->linepos = 0;
+                if (ts->linebuf.limit[-1] == '\n')
+                    ts->flags |= TSF_NLFLAG;
+                else
+                    ts->flags &= ~TSF_NLFLAG;
+
+                /* Update linelen from original segment length. */
+                ts->linelen = olen;
             }
-
-            /* Reset linebuf based on adjusted segment length. */
-            ts->linebuf.limit = ts->linebuf.base + len;
-            ts->linebuf.ptr = ts->linebuf.base;
-
-            /* Update position of linebuf within physical userbuf line. */
-            if (!(ts->flags & TSF_NLFLAG))
-                ts->linepos += ts->linelen;
-            else
-                ts->linepos = 0;
-            if (ts->linebuf.limit[-1] == '\n')
-                ts->flags |= TSF_NLFLAG;
-            else
-                ts->flags &= ~TSF_NLFLAG;
-
-            /* Update linelen from original segment length. */
-            ts->linelen = olen;
-        }
-        c = *ts->linebuf.ptr++;
+            c = *ts->linebuf.ptr++;
+        } while (JS_ISFORMAT(c));
     }
     if (c == '\n')
         ts->lineno++;
@@ -529,7 +531,6 @@ ReportCompileErrorNumber(JSContext *cx, void *handle, uintN flags,
                          uintN errorNumber, JSErrorReport *report,
                          JSBool charArgs, va_list ap)
 {
-    JSTempValueRooter linetvr;
     JSString *linestr = NULL;
     JSTokenStream *ts = NULL;
     JSCodeGenerator *cg = NULL;
@@ -552,7 +553,7 @@ ReportCompileErrorNumber(JSContext *cx, void *handle, uintN flags,
         return JS_FALSE;
     }
 
-    JS_PUSH_TEMP_ROOT_STRING(cx, NULL, &linetvr);
+    js_AddRoot(cx, &linestr, "error line buffer");
 
     switch (flags & JSREPORT_HANDLE) {
       case JSREPORT_TS:
@@ -568,132 +569,133 @@ ReportCompileErrorNumber(JSContext *cx, void *handle, uintN flags,
     }
 
     JS_ASSERT(!ts || ts->linebuf.limit < ts->linebuf.base + JS_LINE_LIMIT);
-    /*
-     * We are typically called with non-null ts and null cg from jsparse.c.
-     * We can be called with null ts from the regexp compilation functions.
-     * The code generator (jsemit.c) may pass null ts and non-null cg.
-     */
-    do {
-        if (ts) {
-            report->filename = ts->filename;
-            if (pn) {
-                report->lineno = pn->pn_pos.begin.lineno;
-                if (report->lineno != ts->lineno)
-                    break;
-            }
-            report->lineno = ts->lineno;
-            linestr = js_NewStringCopyN(cx, ts->linebuf.base,
-                                        PTRDIFF(ts->linebuf.limit,
-                                                ts->linebuf.base,
-                                                jschar),
-                                        0);
-            linetvr.u.string = linestr;
-            report->linebuf = linestr
-                              ? JS_GetStringBytes(linestr)
-                              : NULL;
-            tp = &ts->tokens[(ts->cursor+ts->lookahead) & NTOKENS_MASK].pos;
-            if (pn)
-                tp = &pn->pn_pos;
-
-            /*
-             * FIXME: What should instead happen here is that we should
-             * find error-tokens in userbuf, if !ts->file.  That will
-             * allow us to deliver a more helpful error message, which
-             * includes all or part of the bad string or bad token.  The
-             * code here yields something that looks truncated.
-             * See https://bugzilla.mozilla.org/show_bug.cgi?id=352970
-             */
-            index = 0;
-            if (tp->begin.lineno == tp->end.lineno) {
-                if (tp->begin.index < ts->linepos)
-                    break;
-
-                index = tp->begin.index - ts->linepos;
-            }
-
-            report->tokenptr = linestr ? report->linebuf + index : NULL;
-            report->uclinebuf = linestr ? JS_GetStringChars(linestr) : NULL;
-            report->uctokenptr = linestr ? report->uclinebuf + index : NULL;
-            break;
-        }
-
-        if (cg) {
-            report->filename = cg->filename;
-            report->lineno = CG_CURRENT_LINE(cg);
-            break;
-        }
-
+    onError = cx->errorReporter;
+    if (onError) {
         /*
-         * If we can't find out where the error was based on the current
-         * frame, see if the next frame has a script/pc combo we can use.
+         * We are typically called with non-null ts and null cg from jsparse.c.
+         * We can be called with null ts from the regexp compilation functions.
+         * The code generator (jsemit.c) may pass null ts and non-null cg.
          */
-        for (fp = cx->fp; fp; fp = fp->down) {
-            if (fp->script && fp->pc) {
-                report->filename = fp->script->filename;
-                report->lineno = js_PCToLineNumber(cx, fp->script, fp->pc);
+        do {
+            if (ts) {
+                report->filename = ts->filename;
+                if (pn) {
+                    report->lineno = pn->pn_pos.begin.lineno;
+                    if (report->lineno != ts->lineno)
+                        break;
+                }
+                report->lineno = ts->lineno;
+                linestr = js_NewStringCopyN(cx, ts->linebuf.base,
+                                            PTRDIFF(ts->linebuf.limit,
+                                                    ts->linebuf.base,
+                                                    jschar),
+                                            0);
+                report->linebuf = linestr
+                                  ? JS_GetStringBytes(linestr)
+                                  : NULL;
+                tp = &ts->tokens[(ts->cursor+ts->lookahead) & NTOKENS_MASK].pos;
+                if (pn)
+                    tp = &pn->pn_pos;
+
+                /*
+                 * FIXME: What should instead happen here is that we should
+                 * find error-tokens in userbuf, if !ts->file.  That will
+                 * allow us to deliver a more helpful error message, which
+                 * includes all or part of the bad string or bad token.  The
+                 * code here yields something that looks truncated.
+                 * See https://bugzilla.mozilla.org/show_bug.cgi?id=352970
+                 */
+                index = 0;
+                if (tp->begin.lineno == tp->end.lineno) {
+                    if (tp->begin.index < ts->linepos)
+                        break;
+
+                    index = tp->begin.index - ts->linepos;
+                }
+
+                report->tokenptr = linestr ? report->linebuf + index : NULL;
+                report->uclinebuf = linestr ? JS_GetStringChars(linestr) : NULL;
+                report->uctokenptr = linestr ? report->uclinebuf + index : NULL;
                 break;
             }
-        }
-    } while (0);
 
-    /*
-     * If there's a runtime exception type associated with this error
-     * number, set that as the pending exception.  For errors occuring at
-     * compile time, this is very likely to be a JSEXN_SYNTAXERR.
-     *
-     * If an exception is thrown but not caught, the JSREPORT_EXCEPTION
-     * flag will be set in report.flags.  Proper behavior for an error
-     * reporter is to ignore a report with this flag for all but top-level
-     * compilation errors.  The exception will remain pending, and so long
-     * as the non-top-level "load", "eval", or "compile" native function
-     * returns false, the top-level reporter will eventually receive the
-     * uncaught exception report.
-     *
-     * XXX it'd probably be best if there was only one call to this
-     * function, but there seem to be two error reporter call points.
-     */
-    onError = cx->errorReporter;
+            if (cg) {
+                report->filename = cg->filename;
+                report->lineno = CG_CURRENT_LINE(cg);
+                break;
+            }
 
-    /*
-     * Try to raise an exception only if there isn't one already set --
-     * otherwise the exception will describe the last compile-time error,
-     * which is likely spurious.
-     */
-    if (!ts || !(ts->flags & TSF_ERROR)) {
-        if (js_ErrorToException(cx, message, report))
-            onError = NULL;
-    }
-
-    /*
-     * Suppress any compile-time errors that don't occur at the top level.
-     * This may still fail, as interplevel may be zero in contexts where we
-     * don't really want to call the error reporter, as when js is called
-     * by other code which could catch the error.
-     */
-    if (cx->interpLevel != 0 && !JSREPORT_IS_WARNING(flags))
-        onError = NULL;
-
-    if (onError) {
-        JSDebugErrorHook hook = cx->runtime->debugErrorHook;
+            /*
+             * If we can't find out where the error was based on the current
+             * frame, see if the next frame has a script/pc combo we can use.
+             */
+            for (fp = cx->fp; fp; fp = fp->down) {
+                if (fp->script && fp->pc) {
+                    report->filename = fp->script->filename;
+                    report->lineno = js_PCToLineNumber(cx, fp->script, fp->pc);
+                    break;
+                }
+            }
+        } while (0);
 
         /*
-         * If debugErrorHook is present then we give it a chance to veto
-         * sending the error on to the regular error reporter.
+         * If there's a runtime exception type associated with this error
+         * number, set that as the pending exception.  For errors occuring at
+         * compile time, this is very likely to be a JSEXN_SYNTAXERR.
+         *
+         * If an exception is thrown but not caught, the JSREPORT_EXCEPTION
+         * flag will be set in report.flags.  Proper behavior for an error
+         * reporter is to ignore a report with this flag for all but top-level
+         * compilation errors.  The exception will remain pending, and so long
+         * as the non-top-level "load", "eval", or "compile" native function
+         * returns false, the top-level reporter will eventually receive the
+         * uncaught exception report.
+         *
+         * XXX it'd probably be best if there was only one call to this
+         * function, but there seem to be two error reporter call points.
          */
-        if (hook && !hook(cx, message, report,
-                          cx->runtime->debugErrorHookData)) {
-            onError = NULL;
+
+        /*
+         * Try to raise an exception only if there isn't one already set --
+         * otherwise the exception will describe the last compile-time error,
+         * which is likely spurious.
+         */
+        if (!ts || !(ts->flags & TSF_ERROR)) {
+            if (js_ErrorToException(cx, message, report))
+                onError = NULL;
         }
+
+        /*
+         * Suppress any compile-time errors that don't occur at the top level.
+         * This may still fail, as interplevel may be zero in contexts where we
+         * don't really want to call the error reporter, as when js is called
+         * by other code which could catch the error.
+         */
+        if (cx->interpLevel != 0 && !JSREPORT_IS_WARNING(flags))
+            onError = NULL;
+
+        if (onError) {
+            JSDebugErrorHook hook = cx->runtime->debugErrorHook;
+
+            /*
+             * If debugErrorHook is present then we give it a chance to veto
+             * sending the error on to the regular error reporter.
+             */
+            if (hook && !hook(cx, message, report,
+                              cx->runtime->debugErrorHookData)) {
+                onError = NULL;
+            }
+        }
+        if (onError)
+            (*onError)(cx, message, report);
     }
-    if (onError)
-        (*onError)(cx, message, report);
 
     if (message)
         JS_free(cx, message);
     if (report->ucmessage)
         JS_free(cx, (void *)report->ucmessage);
 
-    JS_POP_TEMP_ROOT(cx, &linetvr);
+    js_RemoveRoot(cx->runtime, &linestr);
 
     if (ts && !JSREPORT_IS_WARNING(flags)) {
         /* Set the error flag to suppress spurious reports. */
@@ -1491,7 +1493,7 @@ retry:
                             c = (JS7_UNHEX(cp[0]) << 4) + JS7_UNHEX(cp[1]);
                             SkipChars(ts, 2);
                         }
-                    } else if (c == '\n') {
+                    } else if (c == '\n' && JS_VERSION_IS_ECMA(cx)) {
                         /* ECMA follows C by removing escaped newlines. */
                         continue;
                     }
@@ -1579,7 +1581,7 @@ retry:
 
       case '=':
         if (MatchChar(ts, c)) {
-            tp->t_op = MatchChar(ts, c) ? JSOP_STRICTEQ : JSOP_EQ;
+            tp->t_op = MatchChar(ts, c) ? JSOP_NEW_EQ : (JSOp)cx->jsop_eq;
             tt = TOK_EQOP;
         } else {
             tp->t_op = JSOP_NOP;
@@ -1589,7 +1591,7 @@ retry:
 
       case '!':
         if (MatchChar(ts, '=')) {
-            tp->t_op = MatchChar(ts, '=') ? JSOP_STRICTNE : JSOP_NE;
+            tp->t_op = MatchChar(ts, '=') ? JSOP_NEW_NE : (JSOp)cx->jsop_ne;
             tt = TOK_EQOP;
         } else {
             tp->t_op = JSOP_NOT;

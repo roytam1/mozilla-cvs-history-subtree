@@ -57,19 +57,23 @@ protected:
   
 
 public:
-  friend nsIFrame* NS_NewResizerFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);  
+  friend nsresult NS_NewResizerFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);  
 
-  nsResizerFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  nsResizerFrame(nsIPresShell* aPresShell);
 
+  
   NS_IMETHOD HandleEvent(nsPresContext* aPresContext, 
                                       nsGUIEvent* aEvent,
                                       nsEventStatus* aEventStatus);
 
-  NS_IMETHOD  Init(nsIContent*      aContent,
+  NS_IMETHOD  Init(nsPresContext*  aPresContext,
+                   nsIContent*      aContent,
                    nsIFrame*        aParent,
+                   nsStyleContext*  aContext,
                    nsIFrame*        asPrevInFlow);
   
-  NS_IMETHOD AttributeChanged(PRInt32 aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent* aChild,
+                              PRInt32 aNameSpaceID,
                               nsIAtom* aAttribute,
                               PRInt32 aModType);
 
@@ -82,6 +86,9 @@ protected:
 protected:
 	eDirection mDirection;
 	nsRect mWidgetRect;
+
+
+
 }; // class nsResizerFrame
 
 #endif /* nsResizerFrame_h___ */

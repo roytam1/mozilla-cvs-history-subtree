@@ -13,8 +13,9 @@
  *
  * The Original Code is Java XPCOM Bindings.
  *
- * The Initial Developer of the Original Code is IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * The Initial Developer of the Original Code is
+ * IBM Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2005
  * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
@@ -39,19 +40,9 @@
 
 void XXXNeverCalled_javaxpcom()
 {
-  MOZILLA_NATIVE(initialize) (nsnull, nsnull);
-
   GRE_NATIVE(initEmbedding) (nsnull, nsnull, nsnull, nsnull, nsnull);
 
   GRE_NATIVE(termEmbedding) (nsnull, nsnull);
-
-  GRE_NATIVE(lockProfileDirectory) (nsnull, nsnull, nsnull);
-
-  GRE_NATIVE(notifyProfile) (nsnull, nsnull);
-
-  GRE_NATIVE(lockProfileDirectory) (nsnull, nsnull, nsnull);
-
-  GRE_NATIVE(notifyProfile) (nsnull, nsnull);
 
   XPCOM_NATIVE(initXPCOM) (nsnull, nsnull, nsnull, nsnull);
 
@@ -70,9 +61,5 @@ void XXXNeverCalled_javaxpcom()
   JAVAPROXY_NATIVE(finalizeProxy) (nsnull, nsnull, nsnull);
 
   JAVAPROXY_NATIVE(isSameXPCOMObject) (nsnull, nsnull, nsnull, nsnull);
-
-  LOCKPROXY_NATIVE(release) (nsnull, nsnull, nsnull);
-
-  MOZILLA_NATIVE(getNativeHandleFromAWT) (nsnull, nsnull, nsnull);
 }
 

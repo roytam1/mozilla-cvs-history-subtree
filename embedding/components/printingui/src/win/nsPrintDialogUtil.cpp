@@ -76,7 +76,7 @@ WIN_LIBS=                                       \
 #include "nsIPrintSettingsWin.h"
 #include "nsUnitConversion.h"
 #include "nsIPrintOptions.h"
-#include "nsWidgetsCID.h"
+#include "nsGfxCIID.h"
 static NS_DEFINE_IID(kPrinterEnumeratorCID, NS_PRINTER_ENUMERATOR_CID);
 
 #include "nsRect.h"
@@ -98,6 +98,8 @@ static NS_DEFINE_IID(kPrinterEnumeratorCID, NS_PRINTER_ENUMERATOR_CID);
 
 // This is for extending the dialog
 #include <dlgs.h>
+
+static NS_DEFINE_CID(kStringBundleServiceCID,  NS_STRINGBUNDLESERVICE_CID);
 
 // For PrintDlgEx
 // needed because there are unicode/ansi versions of this routine
@@ -369,7 +371,7 @@ GetLocalizedBundle(const char * aPropFileName, nsIStringBundle** aStrBundle)
 
   // Create bundle
   nsCOMPtr<nsIStringBundleService> stringService = 
-    do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+    do_GetService(kStringBundleServiceCID, &rv);
   if (NS_SUCCEEDED(rv) && stringService) {
     rv = stringService->CreateBundle(aPropFileName, aStrBundle);
   }
@@ -1001,7 +1003,7 @@ ShowNativePrintDialog(HWND              aHWnd,
     if (prntdlg.Flags & PD_PRINTTOFILE) {
       char* fileName = &(((char *)devnames)[devnames->wOutputOffset]);
       NS_ASSERTION(strcmp(fileName, "FILE:") == 0, "FileName must be `FILE:`");
-      aPrintSettings->SetToFileName(NS_ConvertASCIItoUTF16(fileName).get());
+      aPrintSettings->SetToFileName(NS_ConvertASCIItoUCS2(fileName).get());
       aPrintSettings->SetPrintToFile(PR_TRUE);
     } else {
       // clear "print to file" info
@@ -1341,7 +1343,7 @@ ShowNativePrintDialogEx(HWND              aHWnd,
     if (prntdlg.Flags & PD_PRINTTOFILE) {
       char* fileName = &(((char *)devnames)[devnames->wOutputOffset]);
       NS_ASSERTION(strcmp(fileName, "FILE:") == 0, "FileName must be `FILE:`");
-      aPrintSettings->SetToFileName(NS_ConvertASCIItoUTF16(fileName).get());
+      aPrintSettings->SetToFileName(NS_ConvertASCIItoUCS2(fileName).get());
       aPrintSettings->SetPrintToFile(PR_TRUE);
     } else {
       // clear "print to file" info

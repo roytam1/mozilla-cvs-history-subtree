@@ -57,10 +57,8 @@ class nsGfxRadioControlFrame : public nsFormControlFrame,
 private:
 
 public:
-  nsGfxRadioControlFrame(nsStyleContext* aContext);
+  nsGfxRadioControlFrame();
   ~nsGfxRadioControlFrame();
-
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
    //nsIRadioControlFrame methods
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
@@ -74,20 +72,48 @@ public:
   virtual void SetAdditionalStyleContext(PRInt32 aIndex,
                                          nsStyleContext* aStyleContext);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD HandleEvent(nsPresContext* aPresContext, 
+                         nsGUIEvent* aEvent,
+                         nsEventStatus* aEventStatus);
+  //
+  // XXX: The following paint methods are TEMPORARY. It is being used to get printing working
+  // under windows. Later it may be used to GFX-render the controls to the display. 
+  // Expect this code to repackaged and moved to a new location in the future.
+  //
 
-  void PaintRadioButtonFromStyle(nsIRenderingContext& aRenderingContext, nsPoint aPt,
-                                 const nsRect& aDirtyRect);
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
+
+  virtual void PaintRadioButton(nsPresContext* aPresContext,
+                        nsIRenderingContext& aRenderingContext,
+                        const nsRect& aDirtyRect);
+
+  // nsIFormControlFrame
+  NS_IMETHOD OnContentReset();
+
+  ///XXX: End o the temporary methods
+#ifdef DEBUG_rodsXXX
+  NS_IMETHOD Reflow(nsPresContext*          aCX,
+                    nsHTMLReflowMetrics&     aDesiredSize,
+                    const nsHTMLReflowState& aReflowState,
+                    nsReflowStatus&          aStatus);
+#endif
 
 protected:
-  nsRefPtr<nsStyleContext> mRadioButtonFaceStyle;
+
+    //GFX-rendered state variables
+  nsStyleContext* mRadioButtonFaceStyle;
 
 private:
   NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }
   NS_IMETHOD_(nsrefcnt) Release() { return NS_OK; }
 };
 
+
+
 #endif
+
 

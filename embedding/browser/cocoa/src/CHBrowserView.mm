@@ -746,18 +746,18 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   }
 }
 
--(NSMenu*)contextMenu
+-(NSMenu*)getContextMenu
 {
   if ([[self superview] conformsToProtocol:@protocol(CHBrowserContainer)])
   {
     id<CHBrowserContainer> browserContainer = [self superview];
-  	return [browserContainer contextMenu];
+  	return [browserContainer getContextMenu];
   }
   
   return nil;
 }
 
--(NSWindow*)nativeWindow
+-(NSWindow*)getNativeWindow
 {
   NSWindow* window = [self window];
   if (window)
@@ -768,12 +768,12 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   if (mWindow)
     return mWindow;
   
-  // Finally, see if our parent responds to the nativeWindow selector,
+  // Finally, see if our parent responds to the getNativeWindow selector,
   // and if they do, let them handle it.
   if ([[self superview] conformsToProtocol:@protocol(CHBrowserContainer)])
   {
     id<CHBrowserContainer> browserContainer = [self superview];
-    return [browserContainer nativeWindow];
+    return [browserContainer getNativeWindow];
   }
     
   return nil;

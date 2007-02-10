@@ -29,7 +29,7 @@ typedef struct _mergeRopBits {
     FbBits   ca1, cx1, ca2, cx2;
 } FbMergeRopRec, *FbMergeRopPtr;
 
-extern pixman_private const FbMergeRopRec FbMergeRopBits[16];
+extern const FbMergeRopRec FbMergeRopBits[16] pixman_private;
 
 #define FbDeclareMergeRop() FbBits   _ca1, _cx1, _ca2, _cx2;
 #define FbDeclarePrebuiltMergeRop()	FbBits	_cca, _ccx;
@@ -94,11 +94,11 @@ extern pixman_private const FbMergeRopRec FbMergeRopBits[16];
 #define fbAndStip(rop,fg,pm)	fbAndT(rop,fg,pm,FbStip)
 
 /*
- * Stippling operations;
+ * Stippling operations; 
  */
 
 /* half of table */
-extern pixman_private const pixman_bits_t fbStipple16Bits[256];
+extern const pixman_bits_t fbStipple16Bits[256] pixman_private;
 #define FbStipple16Bits(b) \
     (fbStipple16Bits[(b)&0xff] | fbStipple16Bits[(b) >> 8] << FB_HALFUNIT)
 
@@ -110,7 +110,7 @@ fbStippleTable(int bits);
 
 #define FbStippleRRopMask(dst, b, fa, fx, ba, bx, m) \
     (FbDoMaskRRop(dst, fa, fx, m) & (b)) | (FbDoMaskRRop(dst, ba, bx, m) & ~(b))
-
+						       
 #define FbDoLeftMaskByteStippleRRop(dst, b, fa, fx, ba, bx, lb, l) { \
     FbBits  __xor = ((fx) & (b)) | ((bx) & ~(b)); \
     FbDoLeftMaskByteRRop(dst, lb, l, ((fa) & (b)) | ((ba) & ~(b)), __xor); \
@@ -122,7 +122,7 @@ fbStippleTable(int bits);
 }
 
 #define FbOpaqueStipple(b, fg, bg) (((fg) & (b)) | ((bg) & ~(b)))
-
+    
 /*
  * Compute rop for using tile code for 1-bit dest stipples; modifies
  * existing rop to flip depending on pixel values

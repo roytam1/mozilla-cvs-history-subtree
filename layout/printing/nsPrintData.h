@@ -37,18 +37,52 @@
 #ifndef nsPrintData_h___
 #define nsPrintData_h___
 
+#include "nsPrintObject.h"
+
 // Interfaces
-#include "nsIDOMWindow.h"
 #include "nsIDeviceContext.h"
+#include "nsIDocument.h"
+#include "nsIDOMWindow.h"
+#include "nsIObserver.h"
+#include "nsIPrintProgress.h"
 #include "nsIPrintProgressParams.h"
 #include "nsIPrintOptions.h"
-#include "nsVoidArray.h"
-#include "nsCOMArray.h"
+#include "nsIPrintSettings.h"
+#include "nsIWebProgressListener.h"
+#include "nsIPrintSession.h"
+
+// Other Includes
+#include "nsPrintPreviewListener.h"
+#include "nsIDocShellTreeNode.h"
 
 // Classes
-class nsPrintObject;
-class nsPrintPreviewListener;
-class nsIWebProgressListener;
+class nsIPageSequenceFrame;
+class nsPagePrintTimer;
+
+// Special Interfaces
+#include "nsIDocumentViewer.h"
+#include "nsIDocumentViewerPrint.h"
+
+//---------------------------------------------------
+//-- Object for Caching the Presentation
+//---------------------------------------------------
+class CachedPresentationObj
+{
+public:
+  CachedPresentationObj(nsIPresShell* aShell, nsPresContext* aPC,
+                        nsIViewManager* aVM, nsIWidget* aW):
+    mWindow(aW), mViewManager(aVM), mPresShell(aShell), mPresContext(aPC)
+  {
+  }
+
+  // The order here is important because the order of destruction is the
+  // reverse of the order listed here, and the view manager must outlive
+  // the pres shell.
+  nsCOMPtr<nsIWidget>      mWindow;
+  nsCOMPtr<nsIViewManager> mViewManager;
+  nsCOMPtr<nsIPresShell>   mPresShell;
+  nsCOMPtr<nsPresContext> mPresContext;
+};
 
 //------------------------------------------------------------------------
 // nsPrintData Class
@@ -84,47 +118,62 @@ public:
   // Listener Helper Methods
   void OnEndPrinting();
   void OnStartPrinting();
-  void DoOnProgressChange(PRInt32      aProgess,
-                          PRInt32      aMaxProgress,
-                          PRBool       aDoStartStop,
-                          PRInt32      aFlag);
+  static void DoOnProgressChange(nsVoidArray& aListeners,
+                                 PRInt32      aProgess,
+                                 PRInt32      aMaxProgress,
+                                 PRBool       aDoStartStop = PR_FALSE,
+                                 PRInt32      aFlag = 0);
 
 
   ePrintDataType               mType;            // the type of data this is (Printing or Print Preview)
   nsCOMPtr<nsIDeviceContext>   mPrintDC;
+  nsIView                     *mPrintView;
   FILE                        *mDebugFilePtr;    // a file where information can go to when printing
 
   nsPrintObject *                mPrintObject;
   nsPrintObject *                mSelectedPO;
 
-  nsCOMArray<nsIWebProgressListener> mPrintProgressListeners;
+  nsVoidArray                      mPrintProgressListeners;
+  nsCOMPtr<nsIWebProgressListener> mPrintProgressListener;
+  nsCOMPtr<nsIPrintProgress>       mPrintProgress;
   nsCOMPtr<nsIPrintProgressParams> mPrintProgressParams;
+  PRBool                           mShowProgressDialog;    // means we should try to show it
+  PRPackedBool                     mProgressDialogIsShown; // means it is already being shown
 
   nsCOMPtr<nsIDOMWindow> mCurrentFocusWin; // cache a pointer to the currently focused window
 
   nsVoidArray*                mPrintDocList;
+  nsCOMPtr<nsIDeviceContext>  mPrintDocDC;
+  nsCOMPtr<nsIDOMWindow>      mPrintDocDW;
   PRPackedBool                mIsIFrameSelected;
   PRPackedBool                mIsParentAFrameSet;
+  PRPackedBool                mPrintingAsIsSubDoc;
   PRPackedBool                mOnStartSent;
   PRPackedBool                mIsAborted;           // tells us the document is being aborted
   PRPackedBool                mPreparingForPrint;   // see comments above
   PRPackedBool                mDocWasToBeDestroyed; // see comments above
-  PRPackedBool                mProgressDialogIsShown; // it is being shown
   PRBool                      mShrinkToFit;
   PRInt16                     mPrintFrameType;
+  PRInt32                     mNumPrintableDocs;
+  PRInt32                     mNumDocsPrinted;
   PRInt32                     mNumPrintablePages;
   PRInt32                     mNumPagesPrinted;
   float                       mShrinkRatio;
   float                       mOrigDCScale;
+  float                       mOrigZoom;
 
+  nsCOMPtr<nsIPrintSession>   mPrintSession;
   nsCOMPtr<nsIPrintSettings>  mPrintSettings;
   nsCOMPtr<nsIPrintOptions>   mPrintOptions;
   nsPrintPreviewListener*     mPPEventListeners;
 
   PRUnichar*            mBrandName; //  needed as a substitute name for a document
 
+  nsPagePrintTimer* mPagePrintTimer;
+  nsIPageSequenceFrame* mPageSeqFrame;
+
 private:
-  nsPrintData(); //not implemented
+  nsPrintData() {}
   nsPrintData& operator=(const nsPrintData& aOther); // not implemented
 
 };

@@ -43,6 +43,7 @@
 @import url("chrome://communicator/content/communicator.css");
 @import url("chrome://communicator/skin/brand.css");
 @import url("chrome://communicator/skin/button.css");
+@import url("chrome://communicator/skin/formatting.css");
 @import url("chrome://communicator/skin/toolbar.css");
 
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
@@ -102,38 +103,11 @@
   border: 0px;
   margin: -14px;
   padding: 0px;
-  background-image: url("chrome://communicator/skin/icons/autoscroll.png");
-  background-color: transparent;
+  background-image: url("chrome://communicator/skin/icons/autoscroll.gif");
 }
-
 #autoscroller[scrolldir="NS"] {
-  background-position: left center;
+  background-image: url("chrome://communicator/skin/icons/autoscroll-ns.gif");
 }
-
 #autoscroller[scrolldir="EW"] {
-  background-position: left bottom;
-}
-
-#autoscroller[transparent="true"] {
-  background-position: center top;
-}
-
-#autoscroller[transparent="true"][scrolldir="NS"] {
-  background-position: center center;
-}
-
-#autoscroller[transparent="true"][scrolldir="EW"] {
-  background-position: center bottom;
-}
-
-#autoscroller[translucent="true"] {
-  background-position: right top;
-}
-
-#autoscroller[translucent="true"][scrolldir="NS"] {
-  background-position: right center;
-}
-
-#autoscroller[translucent="true"][scrolldir="EW"] {
-  background-position: right bottom;
+  background-image: url("chrome://communicator/skin/icons/autoscroll-ew.gif");
 }

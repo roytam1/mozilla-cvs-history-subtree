@@ -38,7 +38,11 @@
 
 #include "cairo-path-fixed-private.h"
 
-extern cairo_private const cairo_rectangle_list_t _cairo_rectangles_nil;
+enum _cairo_clip_mode {
+    CAIRO_CLIP_MODE_PATH,
+    CAIRO_CLIP_MODE_REGION,
+    CAIRO_CLIP_MODE_MASK
+};
 
 struct _cairo_clip_path {
     unsigned int	ref_count;
@@ -53,7 +57,7 @@ struct _cairo_clip {
     cairo_clip_mode_t mode;
 
     /*
-     * Mask-based clipping for cases where the backend
+     * Mask-based clipping for cases where the backend 
      * clipping isn't sufficiently able.
      *
      * The rectangle here represents the
@@ -63,7 +67,7 @@ struct _cairo_clip {
      * clip paths
      */
     cairo_surface_t *surface;
-    cairo_rectangle_int16_t surface_rect;
+    cairo_rectangle_t surface_rect;
     /*
      * Surface clip serial number to store
      * in the surface when this clip is set
@@ -89,11 +93,6 @@ _cairo_clip_fini (cairo_clip_t *clip);
 cairo_private void
 _cairo_clip_init_copy (cairo_clip_t *clip, cairo_clip_t *other);
 
-cairo_private void
-_cairo_clip_init_deep_copy (cairo_clip_t    *clip,
-                            cairo_clip_t    *other,
-                            cairo_surface_t *target);
-
 cairo_private cairo_status_t
 _cairo_clip_reset (cairo_clip_t *clip);
 
@@ -106,27 +105,19 @@ _cairo_clip_clip (cairo_clip_t       *clip,
 		  cairo_surface_t    *target);
 
 cairo_private cairo_status_t
-_cairo_clip_intersect_to_rectangle (cairo_clip_t            *clip,
-				    cairo_rectangle_int16_t *rectangle);
+_cairo_clip_intersect_to_rectangle (cairo_clip_t      *clip,
+				    cairo_rectangle_t *rectangle);
 
 cairo_private cairo_status_t
 _cairo_clip_intersect_to_region (cairo_clip_t      *clip,
 				 pixman_region16_t *region);
 
 cairo_private cairo_status_t
-_cairo_clip_combine_to_surface (cairo_clip_t                  *clip,
-				cairo_operator_t               op,
-				cairo_surface_t               *dst,
-				int                            dst_x,
-				int                            dst_y,
-				const cairo_rectangle_int16_t *extents);
-
-cairo_private void
-_cairo_clip_translate (cairo_clip_t  *clip,
-                       cairo_fixed_t  tx,
-                       cairo_fixed_t  ty);
-
-cairo_private cairo_rectangle_list_t*
-_cairo_clip_copy_rectangle_list (cairo_clip_t *clip, cairo_gstate_t *gstate);
+_cairo_clip_combine_to_surface (cairo_clip_t            *clip,
+				cairo_operator_t         operator,
+				cairo_surface_t         *dst,
+				int                      dst_x,
+				int                      dst_y,
+				const cairo_rectangle_t *extents);
 
 #endif /* CAIRO_CLIP_PRIVATE_H */

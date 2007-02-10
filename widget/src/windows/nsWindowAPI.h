@@ -40,6 +40,7 @@
 
 #include <windows.h>
 #include <commdlg.h>
+#include <shellapi.h>
 #include <shlobj.h>
 
 typedef LRESULT (WINAPI *NS_DefWindowProc) (HWND, UINT, WPARAM, LPARAM);
@@ -57,9 +58,10 @@ typedef HWND (WINAPI *NS_CreateWindowEx)
           (DWORD, LPCWSTR, LPCWSTR, DWORD, int, int, int, int, HWND, HMENU, HINSTANCE, LPVOID);
 typedef ATOM (WINAPI *NS_RegisterClass) (CONST WNDCLASSW *); 
 typedef BOOL (WINAPI *NS_UnregisterClass) (LPCWSTR, HINSTANCE); 
-typedef BOOL (WINAPI *NS_SHGetPathFromIDList) (LPCITEMIDLIST, LPWSTR);
 
 #ifndef WINCE
+typedef UINT (WINAPI *NS_DragQueryFile) (HDROP, UINT, LPWSTR, UINT);
+typedef BOOL (WINAPI *NS_SHGetPathFromIDList) (LPCITEMIDLIST, LPWSTR);
 typedef LPITEMIDLIST (WINAPI *NS_SHBrowseForFolder) (LPBROWSEINFOW);
 #endif
 

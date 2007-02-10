@@ -52,7 +52,7 @@
 #include "nsIComponentManager.h"
 #include "nsComponentManagerUtils.h"
 #include "nsServiceManagerUtils.h"
-#include "nsThreadUtils.h"
+#include "nsIEventQueueService.h"
 #include "nsIIOService.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
@@ -65,6 +65,7 @@
 #include "nsIStreamListener.h"
 #include "nsIURL.h"
 #include "nsRDFCID.h"
+#include "plevent.h"
 #include "plstr.h"
 #include "prio.h"
 #include "prthread.h"
@@ -147,6 +148,15 @@ main(int argc, char** argv)
 
     NS_InitXPCOM2(nsnull, nsnull, nsnull);
 
+    // Get netlib off the floor...
+    nsCOMPtr<nsIEventQueueService> theEventQueueService = 
+             do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+    RETURN_IF_FAILED(rv, "EventQueueService");
+
+    nsIEventQueue* eq = nsnull;
+    rv = theEventQueueService->GetThreadEventQueue(NS_CURRENT_THREAD, &eq);
+    RETURN_IF_FAILED(rv, "GetThreadEventQueue");
+
     // Create a stream data source and initialize it on argv[1], which
     // is hopefully a "file:" URL.
     nsCOMPtr<nsIRDFDataSource> ds =
@@ -165,10 +175,9 @@ main(int argc, char** argv)
     RETURN_IF_FAILED(rv, "datasource refresh");
 
     // Pump events until the load is finished
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
     PRBool done = PR_FALSE;
     while (!done) {
-        NS_ENSURE_STATE(NS_ProcessNextEvent(thread));
+        eq->ProcessPendingEvents();
         remote->GetLoaded(&done);
     }
 
@@ -183,6 +192,8 @@ main(int argc, char** argv)
         RETURN_IF_FAILED(rv, "Serialization to NTriples");
         out->Close();
     }
+
+    theEventQueueService->DestroyThreadEventQueue();
 
     return NS_OK;
 }

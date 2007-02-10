@@ -40,6 +40,7 @@
 
 #include "nsEvent.h"
 #include "nsISupports.h"
+#include "nsVoidArray.h"
 
 class nsPresContext;
 class nsIDOMEventListener;
@@ -47,19 +48,19 @@ class nsIScriptContext;
 class nsIDOMEventTarget;
 class nsIDOMEventGroup;
 class nsIAtom;
+struct JSObject;
 
 /*
  * Event listener manager interface.
  */
 #define NS_IEVENTLISTENERMANAGER_IID \
-{ 0x06177dc7, 0x4ad9, 0x493c, \
-  { 0x9c, 0x04, 0x28, 0xf0, 0xf7, 0x39, 0xa0, 0xfe } }
-
+{0xc23b877c, 0xb396, 0x11d9, \
+{0x86, 0xbd, 0x00, 0x11, 0x24, 0x78, 0xd6, 0x26} }
 
 class nsIEventListenerManager : public nsISupports {
 
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IEVENTLISTENERMANAGER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IEVENTLISTENERMANAGER_IID)
 
   /**
   * Sets events listeners of all types.
@@ -101,7 +102,6 @@ public:
   NS_IMETHOD AddScriptEventListener(nsISupports *aObject,
                                     nsIAtom *aName,
                                     const nsAString& aFunc,
-                                    PRUint32 aLanguage,
                                     PRBool aDeferCompilation,
                                     PRBool aPermitUntrustedEvents) = 0;
 
@@ -116,7 +116,7 @@ public:
   * @param the name of an event listener
   */
   NS_IMETHOD RegisterScriptEventListener(nsIScriptContext *aContext,
-                                         void *aScopeObject,
+                                         JSObject *aScopeObject,
                                          nsISupports *aObject,
                                          nsIAtom* aName) = 0;
 
@@ -125,7 +125,7 @@ public:
   * script object for a given event type.
   * @param an event listener */
   NS_IMETHOD CompileScriptEventListener(nsIScriptContext *aContext,
-                                        void *aScopeObject,
+                                        JSObject *aScopeObject,
                                         nsISupports *aObject,
                                         nsIAtom* aName,
                                         PRBool *aDidCompile) = 0;
@@ -138,18 +138,47 @@ public:
   NS_IMETHOD HandleEvent(nsPresContext* aPresContext,
                          nsEvent* aEvent,
                          nsIDOMEvent** aDOMEvent,
-                         nsISupports* aCurrentTarget,
+                         nsIDOMEventTarget* aCurrentTarget,
                          PRUint32 aFlags,
                          nsEventStatus* aEventStatus) = 0;
+
+  /**
+  * Creates a DOM event that can subsequently be passed into HandleEvent.
+  * (used rarely in the situation where methods on the event need to be
+  * invoked prior to the processing of the event).
+  */
+  NS_IMETHOD CreateEvent(nsPresContext* aPresContext,
+                         nsEvent* aEvent,
+                         const nsAString& aEventType,
+                         nsIDOMEvent** aDOMEvent) = 0;
+
+  /**
+  * Changes script listener of specified event types from bubbling
+  * listeners to capturing listeners.
+  * @param event types */
+  NS_IMETHOD CaptureEvent(PRInt32 aEventTypes) = 0;
+
+  /**
+  * Changes script listener of specified event types from capturing
+  * listeners to bubbling listeners.
+  * @param event types */
+  NS_IMETHOD ReleaseEvent(PRInt32 aEventTypes) = 0;
 
   /**
   * Tells the event listener manager that its target (which owns it) is
   * no longer using it (and could go away).
   *
+  * This causes the removal of all event listeners registered by this
+  * instance of the listener manager.  This is important for Bug 323807,
+  * since nsDOMClassInfo::PreserveWrapper (and nsIDOMGCParticipant)
+  * require that we remove all event listeners to remove any weak
+  * references in the nsDOMClassInfo's preserved wrapper table to the
+  * target.
+  *
   * It also clears the weak pointer set by the call to
   * |SetListenerTarget|.
   */
-  NS_IMETHOD Disconnect() = 0;
+  NS_IMETHOD Disconnect(PRBool aUnusedParam = PR_FALSE) = 0;
 
   /**
   * Tells the event listener manager what its target is.  This must be
@@ -174,18 +203,7 @@ public:
    * listeners registered.
    */
   virtual PRBool HasUnloadListeners() = 0;
-
-  /**
-   * Returns the mutation bits depending on which mutation listeners are
-   * registered to this listener manager.
-   * @note If a listener is an nsIDOMMutationListener, all possible mutation
-   *       event bits are returned.
-   */
-  virtual PRUint32 MutationListenerBits() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIEventListenerManager,
-                              NS_IEVENTLISTENERMANAGER_IID)
 
 nsresult
 NS_NewEventListenerManager(nsIEventListenerManager** aInstancePtrResult);

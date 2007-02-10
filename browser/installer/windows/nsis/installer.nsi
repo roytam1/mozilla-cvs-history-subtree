@@ -84,11 +84,6 @@ Var fhUninstallLog
 !insertmacro GetRoot
 !insertmacro DriveSpace
 
-; NSIS provided macros that we have overridden
-!include overrides.nsh
-!insertmacro LocateNoDetails
-!insertmacro TextCompareNoDetails
-
 ; The following includes are custom.
 !include branding.nsi
 !include defines.nsi
@@ -96,20 +91,19 @@ Var fhUninstallLog
 !include locales.nsi
 !include version.nsh
 
-VIAddVersionKey "FileDescription" "${BrandShortName} Installer"
-
 !insertmacro RegCleanMain
 !insertmacro RegCleanUninstall
 !insertmacro CloseApp
 !insertmacro WriteRegStr2
 !insertmacro WriteRegDWORD2
+!insertmacro WriteRegStrHKCR
 !insertmacro CreateRegKey
 !insertmacro CanWriteToInstallDir
 !insertmacro CheckDiskSpace
-!insertmacro AddHandlerValues
-!insertmacro DisplayCopyErrMsg
 
-!include shared.nsh
+!include overrides.nsh
+!insertmacro LocateNoDetails
+!insertmacro TextCompareNoDetails
 
 Name "${BrandFullName}"
 OutFile "setup.exe"
@@ -124,20 +118,16 @@ ReserveFile shortcuts.ini
 ################################################################################
 # Modern User Interface - MUI
 
+; WIZ_IMAGE_SUFFIX, HDR_IMAGE_SUFFIX, and MUI_HEADER_SUFFIX are defined in
+; locales.nsi
 !define MUI_ABORTWARNING
 !define MUI_ICON setup.ico
 !define MUI_UNICON setup.ico
 !define MUI_WELCOMEPAGE_TITLE_3LINES
+!define MUI_WELCOMEFINISHPAGE_BITMAP wizWatermark${WIZ_IMAGE_SUFFIX}.bmp
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_RIGHT
-!define MUI_WELCOMEFINISHPAGE_BITMAP wizWatermark.bmp
-
-; Use a right to left header image when the language is right to left
-!ifdef ${AB_CD}_rtl
-!define MUI_HEADERIMAGE_BITMAP_RTL wizHeaderRTL.bmp
-!else
-!define MUI_HEADERIMAGE_BITMAP wizHeader.bmp
-!endif
+!define MUI_HEADERIMAGE_BITMAP${MUI_HEADER_SUFFIX} wizHeader${HDR_IMAGE_SUFFIX}.bmp
 
 /**
  * Installation Pages
@@ -195,9 +185,8 @@ Section "-Application" Section1
   SetDetailsPrint none
   SetOutPath $INSTDIR
 
-  ; Try to delete the app's main executable and if we can't delete it try to
-  ; close the app. This allows running an instance that is located in another
-  ; directory and prevents the launching of the app during the installation.
+  ; Try to delete the app executable and if we can't delete it try to close the
+  ; app. This allows running an instance that is located in another directory.
   ClearErrors
   ${If} ${FileExists} "$INSTDIR\${FileMainEXE}"
     ${DeleteFile} "$INSTDIR\${FileMainEXE}"
@@ -207,30 +196,9 @@ Section "-Application" Section1
     ${CloseApp} "true" $(WARN_APP_RUNNING_INSTALL)
     ; Try to delete it again to prevent launching the app while we are
     ; installing.
-    ClearErrors
     ${DeleteFile} "$INSTDIR\${FileMainEXE}"
-    ${If} ${Errors}
-      ClearErrors
-      ; Try closing the app a second time
-      ${CloseApp} "true" $(WARN_APP_RUNNING_INSTALL)
-      retry:
-      ClearErrors
-      ${DeleteFile} "$INSTDIR\${FileMainEXE}"
-      ${If} ${Errors}
-        ; Fallback to the FileError_NoIgnore error with retry/cancel options
-        ${DisplayCopyErrMsg} "${FileMainEXE}"
-        GoTo retry
-      ${EndIf}
-    ${EndIf}
+    ClearErrors
   ${EndIf}
-
-  ; During an install Vista checks if a new entry is added under the uninstall
-  ; registry key (e.g. ARP). When the same version of the app is installed on
-  ; top of an existing install the key is deleted / added and the Program
-  ; Compatibility Assistant doesn't see this as a new entry and displays an
-  ; error to the user. See Bug 354000.
-  StrCpy $0 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} (${AppVersion})"
-  DeleteRegKey HKLM "$0"
 
   ; For a "Standard" upgrade without talkback installed add the InstallDisabled
   ; file to the talkback source files so it will be disabled by the extension
@@ -312,10 +280,6 @@ Section "-Application" Section1
 
   ${DeleteFile} "$INSTDIR\install_wizard.log"
   ${DeleteFile} "$INSTDIR\install_status.log"
-
-  RmDir /r "$INSTDIR\updates"
-  ${DeleteFile} "$INSTDIR\updates.xml"
-  ${DeleteFile} "$INSTDIR\active-update.xml"
 
   SetDetailsPrint textonly
   DetailPrint $(STATUS_INSTALL_APP)
@@ -438,34 +402,66 @@ Section "-Application" Section1
   ; MUST add children first so they will be removed first on uninstall so they
   ; will be empty when the key is deleted. This allows the uninstaller to
   ; specify that only empty keys will be deleted.
-  ${SetAppKeys}
 
-  ; XXXrstrong - this should be set in shared.nsh along with "Create Quick
-  ; Launch Shortcut" and Create Desktop Shortcut.
-  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal}\${AppVersion} (${AB_CD})\Uninstall"
+  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal}\${AppVersion} (${AB_CD})\Main"
+  ${WriteRegStr2} $TmpVal "$0" "Install Directory" "$INSTDIR" 0
+  ${WriteRegStr2} $TmpVal "$0" "PathToExe" "$INSTDIR\${FileMainEXE}" 0
+  ${WriteRegStr2} $TmpVal "$0" "Program Folder Path" "$SMPROGRAMS\$StartMenuDir" 0
+  ${WriteRegDWORD2} $TmpVal "$0" "Create Quick Launch Shortcut" $AddQuickLaunchSC 0
+  ${WriteRegDWORD2} $TmpVal "$0" "Create Desktop Shortcut" $AddDesktopSC 0
   ${WriteRegDWORD2} $TmpVal "$0" "Create Start Menu Shortcut" $AddStartMenuSC 0
 
-  ${FixClassKeys}
+  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal}\${AppVersion} (${AB_CD})\Uninstall"
+  ${WriteRegStr2} $TmpVal "$0" "Uninstall Log Folder" "$INSTDIR\uninstall" 0
+  ${WriteRegStr2} $TmpVal "$0" "Description" "${BrandFullNameInternal} (${AppVersion})" 0
 
-  ; The following keys should only be set if we can write to HKLM
-  ${If} $TmpVal == "HKLM"
-    ; Uninstall keys can only exist under HKLM on some versions of windows.
-    ${SetUninstallKeys}
+  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal}\${AppVersion} (${AB_CD})"
+  ${WriteRegStr2} $TmpVal  "$0" "" "${AppVersion} (${AB_CD})" 0
 
-    ; Set the Start Menu Internet and Vista Registered App HKLM registry keys.
-    ${SetStartMenuInternet}
+  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal} ${AppVersion}\bin"
+  ${WriteRegStr2} $TmpVal "$0" "PathToExe" "$INSTDIR\${FileMainEXE}" 0
 
-    ; If we are writing to HKLM and create the quick launch and the desktop
-    ; shortcuts set IconsVisible to 1 otherwise to 0.
-    ${If} $AddQuickLaunchSC == 1
-    ${OrIf} $AddDesktopSC == 1
-      ${StrFilter} "${FileMainEXE}" "+" "" "" $R9
-      StrCpy $0 "Software\Clients\StartMenuInternet\$R9\InstallInfo"
-      WriteRegDWORD HKLM "$0" "IconsVisible" 1
-    ${Else}
-      WriteRegDWORD HKLM "$0" "IconsVisible" 0
-    ${EndIf}
-  ${EndIf}
+  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal} ${AppVersion}\extensions"
+  ${WriteRegStr2} $TmpVal "$0" "Components" "$INSTDIR\components" 0
+  ${WriteRegStr2} $TmpVal "$0" "Plugins" "$INSTDIR\plugins" 0
+
+  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal} ${AppVersion}"
+  ${WriteRegStr2} $TmpVal "$0" "GeckoVer" "${GREVersion}" 0
+
+  StrCpy $0 "Software\Mozilla\${BrandFullNameInternal}"
+  ${WriteRegStr2} $TmpVal "$0" "" "${GREVersion}" 0
+  ${WriteRegStr2} $TmpVal "$0" "CurrentVersion" "${AppVersion} (${AB_CD})" 0
+
+  ; XXXrstrong - there are several values that will be overwritten by and
+  ; overwrite other installs of the same application.
+  ${StrFilter} "${FileMainEXE}" "+" "" "" $R9
+  StrCpy $0 "Software\Clients\StartMenuInternet\$R9"
+  ${WriteRegStr2} $TmpVal "$0" "" "${BrandFullNameInternal}" 0
+
+  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\DefaultIcon"
+  StrCpy $1 "$\"$INSTDIR\${FileMainEXE}$\",0"
+  ${WriteRegStr2} $TmpVal "$0" "" "$1" 0
+
+  ; The Reinstall Command is defined at
+  ; http://msdn.microsoft.com/library/default.asp?url=/library/en-us/shellcc/platform/shell/programmersguide/shell_adv/registeringapps.asp
+  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\InstallInfo"
+  StrCpy $1 "$\"$INSTDIR\uninstall\uninst.exe$\" /ua $\"${AppVersion} (${AB_CD})$\" /hs browser"
+  ${WriteRegStr2} $TmpVal "$0" "HideIconsCommand" "$1" 0
+  ${WriteRegDWORD2} $TmpVal "$0" "IconsVisible" 1 0
+
+  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\InstallInfo"
+  StrCpy $1 "$\"$INSTDIR\${FileMainEXE}$\" -silent -setDefaultBrowser"
+  ${WriteRegStr2} $TmpVal "$0" "ReinstallCommand" "$1" 0
+  StrCpy $1 "$\"$INSTDIR\uninstall\uninst.exe$\" /ua $\"${AppVersion} (${AB_CD})$\" /ss browser"
+  ${WriteRegStr2} $TmpVal "$0" "ShowIconsCommand" "$1" 0
+
+  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\shell\open\command"
+  ${WriteRegStr2} $TmpVal "$0" "" "$INSTDIR\${FileMainEXE}" 0
+
+  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\shell\properties"
+  ${WriteRegStr2} $TmpVal "$0" "" "$(OPTIONS)" 0  
+  StrCpy $0 "Software\Clients\StartMenuInternet\$R9\shell\properties\command"
+  ${WriteRegStr2} $TmpVal "$0" "" "$INSTDIR\${FileMainEXE} -preferences" 0
 
   ; These need special handling on uninstall since they may be overwritten by
   ; an install into a different location.
@@ -473,9 +469,27 @@ Section "-Application" Section1
   ${WriteRegStr2} $TmpVal "$0" "" "$INSTDIR\${FileMainEXE}" 0
   ${WriteRegStr2} $TmpVal "$0" "Path" "$INSTDIR" 0
 
+  StrCpy $0 "MIME\Database\Content Type\application/x-xpinstall;app=firefox"
+  ${WriteRegStrHKCR} "HKCR" "$0" "Extension" ".xpi" 0
+
   StrCpy $0 "Software\Microsoft\MediaPlayer\ShimInclusionList\$R9"
   ${CreateRegKey} "$TmpVal" "$0" 0
 
+  ; Write the uninstall registry keys
+  StrCpy $0 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} (${AppVersion})"
+  StrCpy $1 "$INSTDIR\uninstall\uninst.exe"
+
+  ${WriteRegStr2} $TmpVal "$0" "Comments" "${BrandFullNameInternal}" 0
+  ${WriteRegStr2} $TmpVal "$0" "DisplayIcon" "$INSTDIR\${FileMainEXE},0" 0
+  ${WriteRegStr2} $TmpVal "$0" "DisplayName" "${BrandFullNameInternal} (${AppVersion})" 0
+  ${WriteRegStr2} $TmpVal "$0" "DisplayVersion" "${AppVersion} (${AB_CD})" 0
+  ${WriteRegStr2} $TmpVal "$0" "InstallLocation" "$INSTDIR" 0
+  ${WriteRegStr2} $TmpVal "$0" "Publisher" "Mozilla" 0
+  ${WriteRegStr2} $TmpVal "$0" "UninstallString" "$1" 0
+  ${WriteRegStr2} $TmpVal "$0" "URLInfoAbout" "${URLInfoAbout}" 0
+  ${WriteRegStr2} $TmpVal "$0" "URLUpdateInfo" "${URLUpdateInfo}" 0
+  ${WriteRegDWORD2} $TmpVal "$0" "NoModify" 1 0
+  ${WriteRegDWORD2} $TmpVal "$0" "NoRepair" 1 0
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
 
   ; Create Start Menu shortcuts
@@ -641,16 +655,12 @@ FunctionEnd
 
 Function CopyFile
   StrCpy $R3 $R8 "" $R2
-  retry:
-  ClearErrors
   ${If} $R6 ==  ""
     ${Unless} ${FileExists} "$R1$R3\$R7"
       ClearErrors
       CreateDirectory "$R1$R3\$R7"
       ${If} ${Errors}
         ${LogMsg}  "** ERROR Creating Directory: $R1$R3\$R7 **"
-        ${DisplayCopyErrMsg} "$R7"
-        GoTo retry
       ${Else}
         ${LogMsg}  "Created Directory: $R1$R3\$R7"
       ${EndIf}
@@ -661,32 +671,25 @@ Function CopyFile
       CreateDirectory "$R1$R3"
       ${If} ${Errors}
         ${LogMsg}  "** ERROR Creating Directory: $R1$R3 **"
-        ${DisplayCopyErrMsg} "$R3"
-        GoTo retry
       ${Else}
         ${LogMsg}  "Created Directory: $R1$R3"
       ${EndIf}
     ${EndUnless}
     ${If} ${FileExists} "$R1$R3\$R7"
       Delete "$R1$R3\$R7"
-      ${If} ${Errors}
-        ${DisplayCopyErrMsg} "$R7"
-        GoTo retry
-      ${EndIf}
     ${EndIf}
     ClearErrors
     CopyFiles /SILENT $R9 "$R1$R3"
     ${If} ${Errors}
+      ; XXXrstrong - what should we do if there is an error installing a file?
       ${LogMsg} "** ERROR Installing File: $R1$R3\$R7 **"
-      ${DisplayCopyErrMsg} "$R7"
-      GoTo retry
     ${Else}
       ${LogMsg} "Installed File: $R1$R3\$R7"
     ${EndIf}
     ; If the file is installed into the installation directory remove the
     ; installation directory's path from the file path when writing to the
     ; uninstall.log so it will be a relative path. This allows the same
-    ; helper.exe to be used with zip builds if we supply an uninstall.log.
+    ; uninst.exe to be used with zip builds if we supply an uninstall.log.
     ${WordReplace} "$R1$R3\$R7" "$INSTDIR" "" "+" $R3
     ${LogUninstall} "File: $R3"
   ${EndIf}
@@ -992,7 +995,6 @@ Function .onInit
 
           ReadINIStr $0 $R1 "Install" "CloseAppNoPrompt"
           ${If} $0 == "true"
-            ; Try to close the app if the exe is in use.
             ClearErrors
             ${If} ${FileExists} "$INSTDIR\${FileMainEXE}"
               ${DeleteFile} "$INSTDIR\${FileMainEXE}"
@@ -1000,18 +1002,7 @@ Function .onInit
             ${If} ${Errors}
               ClearErrors
               ${CloseApp} "false" ""
-              ClearErrors
               ${DeleteFile} "$INSTDIR\${FileMainEXE}"
-              ; If unsuccessful try one more time and if it still fails Quit
-              ${If} ${Errors}
-                ClearErrors
-                ${CloseApp} "false" ""
-                ClearErrors
-                ${DeleteFile} "$INSTDIR\${FileMainEXE}"
-                ${If} ${Errors}
-                  Quit
-                ${EndIf}
-              ${EndIf}
             ${EndIf}
           ${EndIf}
 

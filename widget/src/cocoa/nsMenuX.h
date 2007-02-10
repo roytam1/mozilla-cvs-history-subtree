@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Josh Aas <josh@mozilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,35 +35,27 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsMenuX_h_
-#define nsMenuX_h_
+#ifndef nsMenuX_h__
+#define nsMenuX_h__
 
 #include "nsCOMPtr.h"
 #include "nsIMenu.h"
+#include "nsSupportsArray.h"
 #include "nsIMenuListener.h"
 #include "nsIChangeManager.h"
 #include "nsWeakReference.h"
-#include "nsMenuBarX.h"
 
-#import <Carbon/Carbon.h>
-#import <Cocoa/Cocoa.h>
+#include <Menus.h>
+#include <UnicodeConverter.h>
+#include <CarbonEvents.h>
 
 
 class nsIMenuBar;
 class nsIMenuListener;
-class nsMenuX;
 
 
-// MenuDelegate is used to receive Cocoa notifications for
-// setting up carbon events
-@interface MenuDelegate : NSObject
-{
-  nsMenuX* mGeckoMenu; // weak ref
-  EventHandlerRef mEventHandler;
-  BOOL mHaveInstalledCarbonEvents;
-}
-- (id)initWithGeckoMenu:(nsMenuX*)geckoMenu;
-@end
+//static PRInt16      mMacMenuIDCount;    // use GetUniqueMenuID()
+extern PRInt16 mMacMenuIDCount;// = kMacMenuID;
 
 
 class nsMenuX : public nsIMenu,
@@ -84,15 +75,15 @@ public:
     nsEventStatus MenuItemSelected(const nsMenuEvent & aMenuEvent); 
     nsEventStatus MenuSelected(const nsMenuEvent & aMenuEvent); 
     nsEventStatus MenuDeselected(const nsMenuEvent & aMenuEvent); 
-    nsEventStatus MenuConstruct(const nsMenuEvent & aMenuEvent, nsIWidget * aParentWindow, 
+    nsEventStatus MenuConstruct( const nsMenuEvent & aMenuEvent, nsIWidget * aParentWindow, 
                                 void * menuNode, void * aDocShell);
     nsEventStatus MenuDestruct(const nsMenuEvent & aMenuEvent);
     nsEventStatus CheckRebuild(PRBool & aMenuEvent);
     nsEventStatus SetRebuild(PRBool aMenuEvent);
 
     // nsIMenu Methods
-    NS_IMETHOD Create (nsISupports * aParent, const nsAString &aLabel, const nsAString &aAccessKey, 
-                       nsIChangeManager* aManager, nsIDocShell* aShell, nsIContent* aNode);
+    NS_IMETHOD Create ( nsISupports * aParent, const nsAString &aLabel, const nsAString &aAccessKey, 
+                        nsIChangeManager* aManager, nsIDocShell* aShell, nsIContent* aNode ) ;
     NS_IMETHOD GetParent(nsISupports *&aParent);
     NS_IMETHOD GetLabel(nsString &aText);
     NS_IMETHOD SetLabel(const nsAString &aText);
@@ -112,38 +103,40 @@ public:
     NS_IMETHOD GetMenuContent(nsIContent ** aMenuNode);
     NS_IMETHOD SetEnabled(PRBool aIsEnabled);
     NS_IMETHOD GetEnabled(PRBool* aIsEnabled);
+    NS_IMETHOD IsHelpMenu(PRBool* aIsEnabled);
 
     NS_IMETHOD AddMenuItem(nsIMenuItem * aMenuItem);
     NS_IMETHOD AddMenu(nsIMenu * aMenu);
-    NS_IMETHOD ChangeNativeEnabledStatusForMenuItem(nsIMenuItem* aMenuItem, PRBool aEnabled);
-    NS_IMETHOD GetMenuRefAndItemIndexForMenuItem(nsISupports* aMenuItem,
-                                                 void**       aMenuRef,
-                                                 PRUint16*    aMenuItemIndex);
-    NS_IMETHOD SetupIcon();
-    
+
 protected:
-    // Determines how many menus are visible among the siblings that are before me.
-    // It doesn't matter if I am visible.
-    nsresult CountVisibleBefore(PRUint32* outVisibleBefore);
+      // Determines how many menus are visible among the siblings that are before me.
+      // It doesn't matter if I am visible.
+    nsresult CountVisibleBefore ( PRUint32* outVisibleBefore ) ;
 
     // fetch the content node associated with the menupopup item
-    void GetMenuPopupContent(nsIContent** aResult);
+    void GetMenuPopupContent ( nsIContent** aResult ) ;
+
+      // Insert a new item in this menu with index |inItemIndex| with the text |inItemLabel|,
+      // middle-truncated to a certain pixel width with an elipsis.
+    void InsertMenuItemWithTruncation ( nsAutoString & inItemLabel, 
+                                          PRUint32 inItemIndex ) ;
     
     // fire handlers for oncreate/ondestroy
-    PRBool OnDestroy();
-    PRBool OnCreate();
-    PRBool OnDestroyed();
-    PRBool OnCreated();
+    PRBool OnDestroy() ;
+    PRBool OnCreate() ;
+    PRBool OnDestroyed() ;
+    PRBool OnCreated() ;
 
-    void LoadMenuItem(nsIMenu* pParentMenu, nsIContent* menuitemContent);  
-    void LoadSubMenu(nsIMenu * pParentMenu, nsIContent* menuitemContent);
-    void LoadSeparator(nsIContent* menuitemContent);
+    void LoadMenuItem ( nsIMenu* pParentMenu, nsIContent* menuitemContent );  
+    void LoadSubMenu ( nsIMenu * pParentMenu, nsIContent* menuitemContent );
+    void LoadSeparator ( nsIContent* menuitemContent );
 
-    NSMenu* CreateMenuWithGeckoString(nsString& menuTitle);
+    MenuHandle NSStringNewMenu(short menuID, nsString& menuTitle);
 
 protected:
     nsString                    mLabel;
-    nsCOMArray<nsISupports>     mMenuItemsArray;
+    PRUint32                    mNumMenuItems;
+    nsSupportsArray             mMenuItemsArray;        // array holds refs
 
     nsISupports*                mParent;                // weak, my parent owns me
     nsIChangeManager*           mManager;               // weak ref, it will outlive us [menubar]
@@ -151,15 +144,16 @@ protected:
     nsCOMPtr<nsIContent>        mMenuContent;           // the |menu| tag, strong ref
     nsCOMPtr<nsIMenuListener>   mListener;              // strong ref
 
-    // Mac specific
+    // MacSpecific
     PRInt16                     mMacMenuID;
-    NSMenu*                     mMacMenu;               // strong ref, we own it
-    MenuDelegate*               mMenuDelegate;          // strong ref, we keep this around to get events for us
+    MenuHandle                  mMacMenuHandle;
     PRPackedBool                mIsEnabled;
     PRPackedBool                mDestroyHandlerCalled;
     PRPackedBool                mNeedsRebuild;
     PRPackedBool                mConstructed;
     PRPackedBool                mVisible;               // are we visible to the user?
+    
+    EventHandlerRef             mHandler;               // our event handler
 };
 
-#endif // nsMenuX_h_
+#endif // nsMenuX_h__

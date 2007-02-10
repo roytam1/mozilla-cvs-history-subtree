@@ -71,8 +71,6 @@
 # include <sys/param.h>
 # include <OS.h>
 # include <image.h>
-# include <dirent.h>
-# include <FindDirectory.h>
 #endif
 
 #include <sys/stat.h>
@@ -116,7 +114,7 @@ GRE_FindGREFramework(const char* rootPath,
                      PRUint32 propertiesLength,
                      char* buffer, PRUint32 buflen);
 
-#elif defined(XP_UNIX) || defined(XP_BEOS)
+#elif defined(XP_UNIX)
 
 static PRBool
 GRE_GetPathFromConfigDir(const char* dirname,
@@ -166,22 +164,6 @@ GRE_GetGREPathWithProperties(const GREVersionRange *versions,
 #elif XP_WIN
     if (_fullpath(aBuffer, p, aBufLen))
       return NS_OK;
-#elif XP_OS2
-    // realpath on OS/2 returns a unix-ized path, so re-native-ize
-    if (realpath(p, aBuffer)) {
-      for (char* ptr = strchr(aBuffer, '/'); ptr; ptr = strchr(ptr, '/'))
-        *ptr = '\\';
-      return NS_OK;
-    }
-#elif XP_BEOS
-    BPath path;
-    status_t result;
-    result = path.SetTo(p,0,true);
-    if (result == B_OK)
-    {
-      sprintf(aBuffer, path.Path());
-      return NS_OK;
-    }
 #else
     // hope for the best
     // xxxbsmedberg: other platforms should have a "make absolute" function
@@ -323,73 +305,11 @@ GRE_GetGREPathWithProperties(const GREVersionRange *versions,
     return NS_OK;
   }
 
-#elif defined(XP_BEOS)
-  env = getenv("MOZ_GRE_CONF");
-  if (env && GRE_GetPathFromConfigFile(env,
-                                       versions, versionsLength,
-                                       properties, propertiesLength,
-                                       aBuffer, aBufLen)) {
-    return NS_OK;
-  }
-
-  char p[MAXPATHLEN]; 
-  if (find_directory(B_USER_SETTINGS_DIRECTORY, 0, 0, p, MAXPATHLEN)) {
-    char buffer[MAXPATHLEN];
-
-    // Look in B_USER_SETTINGS_DIRECTORY/gre.config
-    snprintf(buffer, sizeof(buffer),
-             "%s" XPCOM_FILE_PATH_SEPARATOR GRE_CONF_NAME, p);
-    
-    if (GRE_GetPathFromConfigFile(buffer,
-                                  versions, versionsLength,
-                                  properties, propertiesLength,
-                                  aBuffer, aBufLen)) {
-      return NS_OK;
-    }
-
-    // Look in B_USER_SETTINGS_DIRECTORY/gre.d/*.conf
-    snprintf(buffer, sizeof(buffer),
-             "%s" XPCOM_FILE_PATH_SEPARATOR GRE_CONF_DIR, p);
-
-    if (GRE_GetPathFromConfigDir(buffer,
-                                 versions, versionsLength,
-                                 properties, propertiesLength,
-                                 aBuffer, aBufLen)) {
-      return NS_OK;
-    }
-  }
-  
-  // Hope Zeta OS and Haiku OS multiuser versions will respect BeBook,
-  // for BeOS R5 COMMON and USER are equal
-  if (find_directory(B_COMMON_SETTINGS_DIRECTORY, 0, 0, p, MAXPATHLEN)) {
-    char buffer[MAXPATHLEN];
-    
-    // Look for a B_COMMON_SETTINGS_DIRECTORY/gre.conf file
-    snprintf(buffer, sizeof(buffer),
-             "%s" XPCOM_FILE_PATH_SEPARATOR GRE_CONF_PATH, p);
-    if (GRE_GetPathFromConfigFile(buffer,
-                                  versions, versionsLength,
-                                  properties, propertiesLength,
-                                  aBuffer, aBufLen)) {
-      return NS_OK;
-    }
-
-    // Look for a group of config files in B_COMMON_SETTINGS_DIRECTORY/gre.d/
-    snprintf(buffer, sizeof(buffer),
-             "%s" XPCOM_FILE_PATH_SEPARATOR GRE_CONF_DIR, p);
-    if (GRE_GetPathFromConfigDir(buffer,
-                                 versions, versionsLength,
-                                 properties, propertiesLength,
-                                 aBuffer, aBufLen)) {
-      return NS_OK;
-    }
-  }
-
 #elif defined(XP_WIN)
   HKEY hRegKey = NULL;
     
   // A couple of key points here:
-  // 1. Note the usage of the "Software\\mozilla.org\\GRE" subkey - this allows
+  // 1. Note the usage of the "Software\\Mozilla\\GRE" subkey - this allows
   //    us to have multiple versions of GREs on the same machine by having
   //    subkeys such as 1.0, 1.1, 2.0 etc. under it.
   // 2. In this sample below we're looking for the location of GRE version 1.2
@@ -492,7 +412,7 @@ GRE_FindGREFramework(const char* rootPath,
   return PR_FALSE;
 }
     
-#elif defined(XP_UNIX) || defined(XP_BEOS)
+#elif defined(XP_UNIX)
 
 static PRBool IsConfFile(const char *filename)
 {
@@ -650,10 +570,9 @@ GRE_GetPathFromRegKey(HKEY aRegKey,
                       PRUint32 propertiesLength,
                       char* aBuffer, PRUint32 aBufLen)
 {
-  // Formerly, GREs were registered at the registry key
-  // HKLM/Software/mozilla.org/GRE/<version> valuepair GreHome=Path.
-  // Nowadays, they are registered in any subkey of
-  // Software/mozilla.org/GRE, with the following valuepairs:
+  // Formerly, GREs were registered at the key HKLM/Software/Mozilla/GRE/<version>
+  // valuepair GreHome=Path. Nowadays, they are registered in any subkey of
+  // Software/Mozilla/GRE, with the following valuepairs:
   //   Version=<version> (REG_SZ)
   //   GreHome=<path>    (REG_SZ or REG_EXPAND_SZ)
   //   <Property>=<value> (REG_SZ)
@@ -663,7 +582,7 @@ GRE_GetPathFromRegKey(HKEY aRegKey,
   // to selecting one GRE over another.
   //
   // When a GRE is being registered, it should try to register itself at
-  // HKLM/Software/mozilla.org/GRE/<Version> first, to preserve compatibility
+  // HKLM/Software/Mozilla/GRE/<Version> first, to preserve compatibility
   // with older glue. If this key is already taken (i.e. there is more than
   // one GRE of that version installed), it should append a unique number to
   // the version, for example:

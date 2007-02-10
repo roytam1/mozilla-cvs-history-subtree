@@ -42,7 +42,6 @@
 #include "nsIXPCScriptable.h"
 #include "xpctest_calljs.h"
 #include "nsISupports.h"
-#include "nsIClassInfoImpl.h"
 
 class xpcTestCallJS : public nsIXPCTestCallJS, public nsIXPCScriptable {
 public:

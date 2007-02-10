@@ -44,10 +44,10 @@
 
 extern "C" int MOZ_XMLIsLetter(const char* ptr);
 extern "C" int MOZ_XMLIsNCNameChar(const char* ptr);
-extern "C" int MOZ_XMLTranslateEntity(const char* ptr, const char* end,
-                                      const char** next, PRUnichar* result);
+extern "C" PRBool MOZ_XMLTranslateEntity(const char* ptr, const char* end,
+                                         const char** next, PRUnichar* result);
 
-class nsParserService : public nsIParserService {
+class nsParserService : public nsIParserService_MOZILLA_1_8_BRANCH {
 public:
   nsParserService();
   virtual ~nsParserService();
@@ -81,7 +81,7 @@ public:
   NS_IMETHOD GetTopicObservers(const nsAString& aTopic,
                                nsIObserverEntry** aEntry);
 
-  nsresult CheckQName(const nsAString& aQName,
+  nsresult CheckQName(const nsASingleFragmentString& aQName,
                       PRBool aNamespaceAware, const PRUnichar** aColon);
 
   PRBool IsXMLLetter(PRUnichar aChar)

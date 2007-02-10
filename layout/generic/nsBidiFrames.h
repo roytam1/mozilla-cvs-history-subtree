@@ -55,9 +55,11 @@ protected:
   virtual ~nsDirectionalFrame();
 
 public:
-  nsDirectionalFrame(nsStyleContext* aContext, PRUnichar aChar);
+  nsDirectionalFrame(PRUnichar aChar);
 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_DIRECTIONAL_FRAME_IID)
+  void* operator new(size_t aSize) CPP_THROW_NEW;
+
+  static const nsIID& GetIID();
 
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
@@ -68,8 +70,6 @@ public:
 private:
   PRUnichar mChar;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsDirectionalFrame, NS_DIRECTIONAL_FRAME_IID)
 
 #endif /* nsBidiFrames_h___ */
 #endif /* IBMBIDI */

@@ -64,18 +64,11 @@ REQUIRES	= gfx \
 		  plugin \
 		  docshell \
 		  webbrowserpersist \
-		  content \
-		  imglib2 \
-		  unicharutil \
-		  layout \
+     		  imglib2 \
 		  $(NULL)
 
 ifdef BUILD_STATIC_LIBS
 EXPORTS		= wdgtos2rc.h
-endif
-
-ifdef MOZ_ENABLE_CAIRO_GFX
-REQUIRES += cairo thebes
 endif
 
 CPPSRCS		= \
@@ -90,10 +83,6 @@ CPPSRCS		= \
 		nsWidgetFactory.cpp \
 		nsWindow.cpp \
 		nsDragService.cpp \
-		nsScreenOS2.cpp	\
-		nsScreenManagerOS2.cpp \
-		nsDeviceContextSpecOS2.cpp \
-		nsPrintOptionsOS2.cpp \
 		$(NULL)
 
 SHARED_LIBRARY_LIBS = \
@@ -108,10 +97,6 @@ EXTRA_DSO_LDOPTS = \
 		$(MOZ_COMPONENT_LIBS) \
 		$(NULL)
 
-ifdef MOZ_ENABLE_CAIRO_GFX
-EXTRA_DSO_LDOPTS += -lthebes
-endif
-
 ifdef ENABLE_TESTS
 HAS_EXTRAEXPORTS = 1
 endif
@@ -120,8 +105,6 @@ include $(topsrcdir)/config/rules.mk
 
 DEFINES		+= -D_IMPL_NS_WIDGET
 
-DEFINES += -DUSE_OS2_TOOLKIT_HEADERS
-
 LOCAL_INCLUDES	= -I. -I$(srcdir)/../xpwidgets -I$(srcdir)
 
 export::
@@ -129,5 +112,3 @@ export::
 	test -f ./res/aliasb.ptr || cp $(srcdir)/res/*.* ./res
 
 ADD_TO_DEF_FILE = cat < $(srcdir)/extradefs.os2 >>$(DEF_FILE)
-
-

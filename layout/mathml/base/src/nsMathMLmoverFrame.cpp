@@ -56,10 +56,23 @@
 // <mover> -- attach an overscript to a base - implementation
 //
 
-nsIFrame*
-NS_NewMathMLmoverFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMathMLmoverFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLmoverFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLmoverFrame* it = new (aPresShell) nsMathMLmoverFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+nsMathMLmoverFrame::nsMathMLmoverFrame()
+{
 }
 
 nsMathMLmoverFrame::~nsMathMLmoverFrame()
@@ -67,18 +80,20 @@ nsMathMLmoverFrame::~nsMathMLmoverFrame()
 }
 
 NS_IMETHODIMP
-nsMathMLmoverFrame::AttributeChanged(PRInt32         aNameSpaceID,
+nsMathMLmoverFrame::AttributeChanged(nsIContent*     aContent,
+                                     PRInt32         aNameSpaceID,
                                      nsIAtom*        aAttribute,
                                      PRInt32         aModType)
 {
-  if (nsGkAtoms::accent_ == aAttribute) {
+  if (nsMathMLAtoms::accent_ == aAttribute) {
     // When we have automatic data to update within ourselves, we ask our
     // parent to re-layout its children
     return ReLayoutChildren(mParent);
   }
 
   return nsMathMLContainerFrame::
-         AttributeChanged(aNameSpaceID, aAttribute, aModType);
+         AttributeChanged(aContent, aNameSpaceID,
+                          aAttribute, aModType);
 }
 
 NS_IMETHODIMP
@@ -183,6 +198,8 @@ XXX The winner is the outermost in conflicting settings like these:
   mPresentationData.baseFrame = baseFrame;
   GetEmbellishDataFrom(baseFrame, mEmbellishData);
 
+  nsAutoString value;
+
   // The default value of accent is false, unless the overscript is embellished
   // and its core <mo> is an accent
   nsEmbellishData embellishData;
@@ -193,12 +210,12 @@ XXX The winner is the outermost in conflicting settings like these:
     mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_ACCENTOVER;
 
   // if we have an accent attribute, it overrides what the overscript said
-  static nsIContent::AttrValuesArray strings[] =
-    {&nsGkAtoms::_true, &nsGkAtoms::_false, nsnull};
-  switch (mContent->FindAttrValueIn(kNameSpaceID_None, nsGkAtoms::accent_,
-                                    strings, eCaseMatters)) {
-    case 0: mEmbellishData.flags |= NS_MATHML_EMBELLISH_ACCENTOVER; break;
-    case 1: mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_ACCENTOVER; break;
+  if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttr(kNameSpaceID_None, 
+                   nsMathMLAtoms::accent_, value)) {
+    if (value.EqualsLiteral("true"))
+      mEmbellishData.flags |= NS_MATHML_EMBELLISH_ACCENTOVER;
+    else if (value.EqualsLiteral("false")) 
+      mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_ACCENTOVER;
   }
 
   // disable the stretch-all flag if we are going to act like a superscript
@@ -260,15 +277,15 @@ nsMathMLmoverFrame::Place(nsIRenderingContext& aRenderingContext,
                                                aRenderingContext,
                                                aPlaceOrigin,
                                                aDesiredSize,
-                                               this, 0, GetPresContext()->PointsToAppUnits(0.5f));
+                                               this);
   }
 
   ////////////////////////////////////
   // Get the children's desired sizes
 
   nsBoundingMetrics bmBase, bmOver;
-  nsHTMLReflowMetrics baseSize;
-  nsHTMLReflowMetrics overSize;
+  nsHTMLReflowMetrics baseSize(nsnull);
+  nsHTMLReflowMetrics overSize(nsnull);
   nsIFrame* overFrame = nsnull;
   nsIFrame* baseFrame = mFrames.FirstChild();
   if (baseFrame)
@@ -281,7 +298,7 @@ nsMathMLmoverFrame::Place(nsIRenderingContext& aRenderingContext,
   GetReflowAndBoundingMetricsFor(baseFrame, baseSize, bmBase);
   GetReflowAndBoundingMetricsFor(overFrame, overSize, bmOver);
 
-  nscoord onePixel = nsPresContext::CSSPixelsToAppUnits(1);
+  nscoord onePixel = GetPresContext()->IntScaledPixelsToTwips(1);
 
   ////////////////////
   // Place Children
@@ -389,11 +406,11 @@ nsMathMLmoverFrame::Place(nsIRenderingContext& aRenderingContext,
   mBoundingMetrics.rightBearing = 
     PR_MAX(dxBase + bmBase.rightBearing, dxOver + bmOver.rightBearing);
 
+  aDesiredSize.descent = baseSize.descent;
   aDesiredSize.ascent = 
     PR_MAX(mBoundingMetrics.ascent + delta2,
            overSize.ascent + bmOver.descent + delta1 + bmBase.ascent);
-  aDesiredSize.height = aDesiredSize.ascent +
-    baseSize.height - baseSize.ascent;
+  aDesiredSize.height = aDesiredSize.ascent + aDesiredSize.descent;
   aDesiredSize.width = mBoundingMetrics.width;
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
 

@@ -37,13 +37,14 @@
 
 #include "nsDeviceContextWin.h"
 #include "nsRenderingContextWin.h"
+#include "nsDeviceContextSpecWin.h"
 #include "nsIServiceManager.h"
 #include "nsCOMPtr.h"
 #include "nsIScreenManager.h"
 #include "nsIScreen.h"
 #include "nsGfxCIID.h"
 #include "nsReadableUtils.h"
-#include "nsISupportsPrimitives.h"
+
 #include "nsString.h"
 
 #if defined(DEBUG_rods) && defined(MOZ_LAYOUTDEBUG)
@@ -309,6 +310,17 @@ NS_IMETHODIMP nsDeviceContextWin :: SetCanonicalPixelScale(float aScale)
 }
 
 
+NS_IMETHODIMP nsDeviceContextWin :: GetScrollBarDimensions(float &aWidth, float &aHeight) const
+{
+  float scale;
+  GetCanonicalPixelScale(scale);
+
+  aWidth  = ::GetSystemMetrics(SM_CXVSCROLL) * mDevUnitsToAppUnits * scale;
+  aHeight = ::GetSystemMetrics(SM_CXHSCROLL) * mDevUnitsToAppUnits * scale;
+
+  return NS_OK;
+}
+
 nsresult nsDeviceContextWin::CopyLogFontToNSFont(HDC* aHDC, const LOGFONT* ptrLogFont,
                                                  nsFont* aFont, PRBool aIsWide) const
 {
@@ -569,13 +581,8 @@ NS_IMETHODIMP nsDeviceContextWin :: CheckFontExistence(const nsString& aFontName
                                    logFont.lfFaceName, sizeof(logFont.lfFaceName), nsnull, nsnull);
 
   // somehow the WideCharToMultiByte failed, let's try the old code
-  if(0 == outlen) {
-    nsFixedCString logFontStr(logFont.lfFaceName, LF_FACESIZE);
-    LossyCopyUTF16toASCII(aFontName, logFontStr);
-    if (logFontStr.get() != logFont.lfFaceName) {
-      return NS_ERROR_FAILURE; // the font name is too large
-    }
-  }
+  if(0 == outlen)
+    aFontName.ToCString(logFont.lfFaceName, LF_FACESIZE);
 
   ::EnumFontFamiliesEx(hdc, &logFont, (FONTENUMPROC)fontcallback, (LPARAM)&isthere, 0);
 
@@ -694,13 +701,23 @@ NS_IMETHODIMP nsDeviceContextWin :: GetDeviceContextFor(nsIDeviceContextSpec *aD
   }
 
   devConWin->mSpec = aDevice;
-
   NS_ADDREF(aDevice);
+ 
+  char*   devicename;
+  char*   drivername;
+
+  nsDeviceContextSpecWin* devSpecWin = NS_STATIC_CAST(nsDeviceContextSpecWin*, aDevice);
+  devSpecWin->GetDeviceName(devicename); // sets pointer do not free
+  devSpecWin->GetDriverName(drivername); // sets pointer do not free
 
   HDC dc = NULL;
-  nsCOMPtr<nsISupportsVoid> supVoid = do_QueryInterface(aDevice);
-  supVoid->GetData((void**)&dc);
- 
+  LPDEVMODE devmode;
+  devSpecWin->GetDevMode(devmode);
+  NS_ASSERTION(devmode, "DevMode can't be NULL here");
+  if (devmode) {
+    dc = ::CreateDC(drivername, devicename, NULL, devmode);
+  }
+
   return devConWin->Init(dc, this); // take ownership of the DC
 }
 

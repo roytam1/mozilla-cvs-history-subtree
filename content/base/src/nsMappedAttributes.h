@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * A unique per-element set of attributes that is used as an
- * nsIStyleRule; used to implement presentational attributes.
- */
-
 #ifndef nsMappedAttributes_h___
 #define nsMappedAttributes_h___
 
@@ -95,9 +90,7 @@ public:
     NS_ASSERTION(aPos < mAttrCount, "out-of-bounds");
     return &Attrs()[aPos].mValue;
   }
-  // Remove the attr at position aPos.  The value of the attr is placed in
-  // aValue; any value that was already in aValue is destroyed.
-  void RemoveAttrAt(PRUint32 aPos, nsAttrValue& aValue);
+  void RemoveAttrAt(PRUint32 aPos);
   const nsAttrName* GetExistingAttrNameFromQName(const nsACString& aName) const;
   PRInt32 IndexOfAttr(nsIAtom* aLocalName, PRInt32 aNamespaceID) const;
   

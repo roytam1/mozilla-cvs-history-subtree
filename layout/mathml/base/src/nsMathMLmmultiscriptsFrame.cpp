@@ -53,10 +53,23 @@
 // <mmultiscripts> -- attach prescripts and tensor indices to a base - implementation
 //
 
-nsIFrame*
-NS_NewMathMLmmultiscriptsFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMathMLmmultiscriptsFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLmmultiscriptsFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLmmultiscriptsFrame* it = new (aPresShell) nsMathMLmmultiscriptsFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+nsMathMLmmultiscriptsFrame::nsMathMLmmultiscriptsFrame()
+{
 }
 
 nsMathMLmmultiscriptsFrame::~nsMathMLmmultiscriptsFrame()
@@ -84,7 +97,7 @@ nsMathMLmmultiscriptsFrame::TransmitAutomaticData()
   nsAutoVoidArray subScriptFrames;
   nsIFrame* childFrame = mFrames.FirstChild();
   while (childFrame) {
-    if (childFrame->GetContent()->Tag() == nsGkAtoms::mprescripts_) {
+    if (childFrame->GetContent()->Tag() == nsMathMLAtoms::mprescripts_) {
       // mprescripts frame
     }
     else if (0 == count) {
@@ -121,18 +134,16 @@ nsMathMLmmultiscriptsFrame::ProcessAttributes()
 
   // check if the subscriptshift attribute is there
   nsAutoString value;
-  GetAttribute(mContent, mPresentationData.mstyle,
-               nsGkAtoms::subscriptshift_, value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                   nsMathMLAtoms::subscriptshift_, value)) {
     nsCSSValue cssValue;
     if (ParseNumericValue(value, cssValue) && cssValue.IsLengthUnit()) {
       mSubScriptShift = CalcLength(GetPresContext(), mStyleContext, cssValue);
     }
   }
   // check if the superscriptshift attribute is there
-  GetAttribute(mContent, mPresentationData.mstyle,
-               nsGkAtoms::superscriptshift_, value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                   nsMathMLAtoms::superscriptshift_, value)) {
     nsCSSValue cssValue;
     if (ParseNumericValue(value, cssValue) && cssValue.IsLengthUnit()) {
       mSupScriptShift = CalcLength(GetPresContext(), mStyleContext, cssValue);
@@ -170,8 +181,8 @@ nsMathMLmmultiscriptsFrame::Place(nsIRenderingContext& aRenderingContext,
 
   // scriptspace from TeX for extra spacing after sup/subscript (0.5pt in plain TeX)
   // forced to be at least 1 pixel here
-  nscoord onePixel = nsPresContext::CSSPixelsToAppUnits(1);
-  nscoord scriptSpace = PR_MAX(GetPresContext()->PointsToAppUnits(0.5f), onePixel);
+  nscoord onePixel = GetPresContext()->IntScaledPixelsToTwips(1);
+  nscoord scriptSpace = PR_MAX(NSFloatPointsToTwips(0.5f), onePixel);
 
   /////////////////////////////////////
   // first the shift for the subscript
@@ -245,9 +256,9 @@ nsMathMLmmultiscriptsFrame::Place(nsIRenderingContext& aRenderingContext,
   nscoord maxSubScriptShift = subScriptShift;
   nscoord maxSupScriptShift = supScriptShift;
   PRInt32 count = 0;
-  nsHTMLReflowMetrics baseSize;
-  nsHTMLReflowMetrics subScriptSize;
-  nsHTMLReflowMetrics supScriptSize;
+  nsHTMLReflowMetrics baseSize (nsnull);
+  nsHTMLReflowMetrics subScriptSize (nsnull);
+  nsHTMLReflowMetrics supScriptSize (nsnull);
   nsIFrame* baseFrame = nsnull;
   nsIFrame* subScriptFrame = nsnull;
   nsIFrame* supScriptFrame = nsnull;
@@ -258,12 +269,12 @@ nsMathMLmmultiscriptsFrame::Place(nsIRenderingContext& aRenderingContext,
 
   mBoundingMetrics.width = 0;
   mBoundingMetrics.ascent = mBoundingMetrics.descent = -0x7FFFFFFF;
-  nscoord ascent = -0x7FFFFFFF, descent = -0x7FFFFFFF;
+  aDesiredSize.ascent = aDesiredSize.descent = -0x7FFFFFFF;
   aDesiredSize.width = aDesiredSize.height = 0;
 
   nsIFrame* childFrame = mFrames.FirstChild();
   while (childFrame) {
-    if (childFrame->GetContent()->Tag() == nsGkAtoms::mprescripts_) {
+    if (childFrame->GetContent()->Tag() == nsMathMLAtoms::mprescripts_) {
       if (mprescriptsFrame) {
         // duplicate <mprescripts/> found
         // report an error, encourage people to get their markups in order
@@ -302,7 +313,8 @@ nsMathMLmmultiscriptsFrame::Place(nsIRenderingContext& aRenderingContext,
           trySubScriptShift = PR_MAX(minSubScriptShift,subScriptShift);
           mBoundingMetrics.descent =
             PR_MAX(mBoundingMetrics.descent,bmSubScript.descent);
-          descent = PR_MAX(descent,subScriptSize.height - subScriptSize.ascent);
+          aDesiredSize.descent =
+            PR_MAX(aDesiredSize.descent,subScriptSize.descent);
           width = bmSubScript.width + scriptSpace;
           rightBearing = bmSubScript.rightBearing;
         }
@@ -322,7 +334,8 @@ nsMathMLmmultiscriptsFrame::Place(nsIRenderingContext& aRenderingContext,
             PR_MAX(minSupScriptShift,PR_MAX(minShiftFromXHeight,supScriptShift));
           mBoundingMetrics.ascent =
             PR_MAX(mBoundingMetrics.ascent,bmSupScript.ascent);
-          ascent = PR_MAX(ascent,supScriptSize.ascent);
+          aDesiredSize.ascent =
+            PR_MAX(aDesiredSize.ascent,supScriptSize.ascent);
           width = PR_MAX(width, bmSupScript.width + scriptSpace);
           rightBearing = PR_MAX(rightBearing, bmSupScript.rightBearing);
 
@@ -392,9 +405,10 @@ nsMathMLmmultiscriptsFrame::Place(nsIRenderingContext& aRenderingContext,
 
   // get the reflow metrics ...
   aDesiredSize.ascent =
-    PR_MAX(ascent+maxSupScriptShift,baseSize.ascent);
-  aDesiredSize.height = aDesiredSize.ascent +
-    PR_MAX(descent+maxSubScriptShift,baseSize.height - baseSize.ascent);
+    PR_MAX(aDesiredSize.ascent+maxSupScriptShift,baseSize.ascent);
+  aDesiredSize.descent =
+    PR_MAX(aDesiredSize.descent+maxSubScriptShift,baseSize.descent);
+  aDesiredSize.height = aDesiredSize.ascent + aDesiredSize.descent;
   aDesiredSize.width = mBoundingMetrics.width;
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
 

@@ -50,9 +50,6 @@
 class nsGridLayout2;
 class nsBoxLayoutState;
 
-/**
- * The row (or column) data structure in the grid cellmap.
- */
 class nsGridRow
 {
 public:

@@ -37,9 +37,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* rules in a CSS stylesheet other than style rules (e.g., @import rules) */
-
 #ifndef nsCSSRules_h_
 #define nsCSSRules_h_
 
@@ -47,7 +44,7 @@
 #include "nsICSSGroupRule.h"
 #include "nsCOMPtr.h"
 #include "nsAutoPtr.h"
-#include "nsCOMArray.h"
+#include "nsISupportsArray.h"
 #include "nsIDOMCSSMediaRule.h"
 #include "nsIDOMCSSMozDocumentRule.h"
 #include "nsString.h"
@@ -84,10 +81,9 @@ public:
   NS_IMETHOD AppendStyleRule(nsICSSRule* aRule);
   NS_IMETHOD StyleRuleCount(PRInt32& aCount) const;
   NS_IMETHOD GetStyleRuleAt(PRInt32 aIndex, nsICSSRule*& aRule) const;
-  NS_IMETHOD EnumerateRulesForwards(RuleEnumFunc aFunc, void * aData) const;
+  NS_IMETHOD EnumerateRulesForwards(nsISupportsArrayEnumFunc aFunc, void * aData) const;
   NS_IMETHOD DeleteStyleRuleAt(PRUint32 aIndex);
-  NS_IMETHOD InsertStyleRulesAt(PRUint32 aIndex,
-                                nsCOMArray<nsICSSRule>& aRules);
+  NS_IMETHOD InsertStyleRulesAt(PRUint32 aIndex, nsISupportsArray* aRules);
   NS_IMETHOD ReplaceStyleRule(nsICSSRule *aOld, nsICSSRule *aNew);
 
 protected:
@@ -104,7 +100,7 @@ protected:
                       PRUint32* _retval);
   nsresult DeleteRule(PRUint32 aIndex);
 
-  nsCOMArray<nsICSSRule> mRules;
+  nsCOMPtr<nsISupportsArray> mRules;
   CSSGroupRuleRuleListImpl* mRuleCollection;
 };
 
@@ -187,7 +183,7 @@ public:
     URL(const URL& aOther)
       : func(aOther.func)
       , url(aOther.url)
-      , next(aOther.next ? new URL(*aOther.next) : nsnull)
+      , next(new URL(*aOther.next))
     {
     }
     ~URL() { delete next; }

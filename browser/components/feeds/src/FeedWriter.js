@@ -21,9 +21,8 @@
 # Contributor(s):
 #   Ben Goodger <beng@google.com>
 #   Jeff Walden <jwalden+code@mit.edu>
-#   Asaf Romano <mano@mozilla.com>
+#   Asaf Romano <mozilla.mano@sent.com>
 #   Robert Sayre <sayrer@gmail.com>
-#   Michael Ventnor <m.ventnor@gmail.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -59,26 +58,10 @@ function LOG(str) {
     dump("*** Feeds: " + str + "\n");
 }
 
-/**
- * Wrapper function for nsIIOService::newURI.
- * @param aURLSpec
- *        The URL string from which to create an nsIURI.
- * @returns an nsIURI object, or null if the creation of the URI failed.
- */
-function makeURI(aURLSpec, aCharset) {
-  var ios = Cc["@mozilla.org/network/io-service;1"].
-            getService(Ci.nsIIOService);
-  try {
-    return ios.newURI(aURLSpec, aCharset, null);
-  } catch (ex) { }
-
-  return null;
-}
-
-
 const XML_NS = "http://www.w3.org/XML/1998/namespace"
 const HTML_NS = "http://www.w3.org/1999/xhtml";
 const XUL_NS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
+const AAA_NS = "http://www.w3.org/2005/07/aaa";
 const TYPE_MAYBE_FEED = "application/vnd.mozilla.maybe.feed";
 const URI_BUNDLE = "chrome://browser/locale/feeds/subscribe.properties";
 
@@ -94,8 +77,6 @@ const FW_CONTRACTID = "@mozilla.org/browser/feeds/result-writer;1";
 
 const TITLE_ID = "feedTitleText";
 const SUBTITLE_ID = "feedSubtitleText";
-
-const ICON_DATAURL_PREFIX = "data:image/x-icon;base64,";
 
 function FeedWriter() {
 }
@@ -136,7 +117,7 @@ FeedWriter.prototype = {
     var secman = 
         Cc["@mozilla.org/scriptsecuritymanager;1"].
         getService(Ci.nsIScriptSecurityManager);    
-    const flags = Ci.nsIScriptSecurityManager.DISALLOW_INHERIT_PRINCIPAL;
+    const flags = Ci.nsIScriptSecurityManager.DISALLOW_SCRIPT_OR_DATA;
     try {
       secman.checkLoadURIStr(this._window.location.href, uri, flags);
       // checkLoadURIStr will throw if the link URI should not be loaded per 
@@ -147,15 +128,12 @@ FeedWriter.prototype = {
       // Not allowed to load this link because secman.checkLoadURIStr threw
     }
   },
-
-  __bundle: null,
+  
   get _bundle() {
-    if (!this.__bundle) {
-      this.__bundle = Cc["@mozilla.org/intl/stringbundle;1"].
-                      getService(Ci.nsIStringBundleService).
-                      createBundle(URI_BUNDLE);
-    }
-    return this.__bundle;
+    var sbs = 
+        Cc["@mozilla.org/intl/stringbundle;1"].
+        getService(Ci.nsIStringBundleService);
+    return sbs.createBundle(URI_BUNDLE);
   },
   
   _getFormattedString: function FW__getFormattedString(key, params) {
@@ -181,11 +159,11 @@ FeedWriter.prototype = {
 
   _setCheckboxCheckedState: function FW__setCheckboxCheckedState(aCheckbox, aValue) {
     // see checkbox.xml
-    var change = (aValue != (aCheckbox.getAttribute('checked') == 'true'));
+    var change = (aValue != (aCheckbox.getAttributeNS('', 'checked') == 'true'));
     if (aValue)
-      aCheckbox.setAttribute('checked', 'true');
+      aCheckbox.setAttributeNS('', 'checked', 'true');
     else
-      aCheckbox.removeAttribute('checked');
+      aCheckbox.removeAttributeNS('', 'checked');
 
     if (change) {
       var event = this._document.createEvent('Events');
@@ -195,7 +173,7 @@ FeedWriter.prototype = {
   },
 
   // For setting and getting the file expando property, we need to keep a
-  // reference to explict XPCNativeWrappers around the associated menuitems
+  // reference to an explict XPCNativeWrapper around the associated menuitems
   _selectedApplicationItemWrapped: null,
   get selectedApplicationItemWrapped() {
     if (!this._selectedApplicationItemWrapped) {
@@ -206,6 +184,7 @@ FeedWriter.prototype = {
     return this._selectedApplicationItemWrapped;
   },
 
+#ifdef XP_WIN
   _defaultSystemReaderItemWrapped: null,
   get defaultSystemReaderItemWrapped() {
     if (!this._defaultSystemReaderItemWrapped) {
@@ -218,27 +197,7 @@ FeedWriter.prototype = {
 
     return this._defaultSystemReaderItemWrapped;
   },
-
-   /**
-   * Returns a date suitable for displaying in the feed preview. 
-   * If the date cannot be parsed, the return value is "false".
-   * @param   dateString
-   *          A date as extracted from a feed entry. (entry.updated)
-   */
-  _parseDate: function FW__parseDate(dateString) {
-    // Convert the date into the user's local time zone
-    dateObj = new Date(dateString);
-
-    // Make sure the date we're given is valid.
-    if (!dateObj.getTime())
-      return false;
-
-    var dateService = Cc["@mozilla.org/intl/scriptabledateformat;1"].
-                      getService(Ci.nsIScriptableDateFormat);
-    return dateService.FormatDateTime("", dateService.dateFormatLong, dateService.timeFormatNoSeconds,
-                                      dateObj.getFullYear(), dateObj.getMonth()+1, dateObj.getDate(),
-                                      dateObj.getHours(), dateObj.getMinutes(), dateObj.getSeconds());
-  },
+#endif
 
   /**
    * Writes the feed title into the preview document.
@@ -320,14 +279,6 @@ FeedWriter.prototype = {
         var title = this._document.createElementNS(HTML_NS, "h3");
         title.appendChild(a);
         entryContainer.appendChild(title);
-
-        var lastUpdated = this._parseDate(entry.updated);
-        if (lastUpdated) {
-          var dateDiv = this._document.createElementNS(HTML_NS, "div");
-          dateDiv.setAttribute("class", "lastUpdated");
-          title.appendChild(dateDiv);
-          dateDiv.textContent = lastUpdated;
-        }
       }
 
       var body = this._document.createElementNS(HTML_NS, "p");
@@ -371,6 +322,10 @@ FeedWriter.prototype = {
     var feedService = 
         Cc["@mozilla.org/browser/feeds/result-service;1"].
         getService(Ci.nsIFeedResultService);
+        
+    var ios = 
+        Cc["@mozilla.org/network/io-service;1"].
+        getService(Ci.nsIIOService);
  
     try {
       var result = 
@@ -418,7 +373,7 @@ FeedWriter.prototype = {
     }
 #endif
 #ifdef XP_MACOSX
-    var lfm = file.QueryInterface(Ci.nsILocalFileMac);
+    var lfm = file.QueryInterface(Components.interfaces.nsILocalFileMac_MOZILLA_1_8_BRANCH);
     try {
       return lfm.bundleDisplayName;
     }
@@ -436,7 +391,7 @@ FeedWriter.prototype = {
   /**
    * Get moz-icon url for a file
    * @param   file
-   *          A nsIFile object for which the moz-icon:// is returned
+   *          A nsIFile to look up the name of
    * @returns moz-icon url of the given file as a string
    */
   _getFileIconURL: function FW__getFileIconURL(file) {
@@ -454,12 +409,18 @@ FeedWriter.prototype = {
    *   @param aMenuItem
    *          The menuitem on which the attributes should be set
    *   @param aFile
-   *          The menuitem's associated file
+   *          the menuitem associated file object
    */
   _initMenuItemWithFile: function(aMenuItem, aFile) {
-    aMenuItem.setAttribute("label", this._getFileDisplayName(aFile));
-    aMenuItem.setAttribute("image", this._getFileIconURL(aFile));
+    var label = this._getFileDisplayName(aFile);
+    aMenuItem.setAttribute("label", label);
+    aMenuItem.setAttribute("src",
+                          this._getFileIconURL(aFile));
+    aMenuItem.setAttribute("handlerType", "client");
     aMenuItem.file = aFile;
+
+    // a11y
+    aMenuItem.setAttribute("title", label);
   },
 
   /**
@@ -481,12 +442,12 @@ FeedWriter.prototype = {
           //          just don't know how to do that via script...
           // XXXmano TBD: can probably add this to nsIShellService
 #ifdef XP_WIN
-#expand           if (fp.file.leafName != "__MOZ_APP_NAME__.exe") {
+          if (fp.file.leafName != "firefox.exe") {
 #else
 #ifdef XP_MACOSX
-#expand           if (fp.file.leafName != "__MOZ_APP_DISPLAYNAME__.app") {
+          if (fp.file.leafName != "Firefox.app") {
 #else
-#expand           if (fp.file.leafName != "__MOZ_APP_NAME__-bin") {
+          if (fp.file.leafName != "firefox-bin") {
 #endif
 #endif
             var selectedAppMenuItem = this.selectedApplicationItemWrapped;
@@ -527,7 +488,11 @@ FeedWriter.prototype = {
       if (handlersMenuList) {
         var handlerName = this._getSelectedItemFromMenulist(handlersMenuList)
                               .getAttribute("label");
-        checkbox.setAttribute("label", this._getFormattedString("alwaysUse", [handlerName]));
+        var label = this._getFormattedString("alwaysUse", [handlerName]);
+        checkbox.setAttribute("label", label);
+
+        // Needed for a11y
+        checkbox.setAttribute("title", label);
       }
     }
   },
@@ -543,32 +508,41 @@ FeedWriter.prototype = {
       return;
     }
 
-    if (event.type == "command") {
-      switch (event.target.id) {
-        case "subscribeButton":
-          this.subscribe();
-          break;
-        case "chooseApplicationMenuItem":
-          /* Bug 351263: Make sure to not steal focus if the "Choose
-           * Application" item is being selected with the keyboard. We do this
-           * by ignoring command events while the dropdown is closed (user
-           * arrowing through the combobox), but handling them while the
-           * combobox dropdown is open (user pressed enter when an item was
-           * selected). If we don't show the filepicker here, it will be shown
-           * when clicking "Subscribe Now".
-           */
-          if (this._document.getElementById("handlersMenuList")
-                  .getAttribute("open") == "true") {
-            if (!this._chooseClientApp()) {
-              // Select the (per-prefs) selected handler if no application was
-              // selected
-              this._setSelectedHandler();
-            }
-          }
-          break;
-        default:
-          this._setAlwaysUseLabel();
+    switch (event.type) {
+      case "command" : {
+        switch (event.target.id) {
+          case "subscribeButton":
+            this.subscribe();
+            break;
+          case "chooseApplicationMenuItem":
+            // For keyboard-only users, we only show the file picker once the 
+            // subscribe button is pressed. See click event handling for the
+            // mouse-case.
+            break;
+          default:
+            event.target.parentNode.parentNode.setAttributeNS
+              (AAA_NS, "valuenow", event.target.getAttribute("label"));
+
+            this._setAlwaysUseLabel();
+        }
+        break;
       }
+      case "click": {
+        if (event.target.id == "chooseApplicationMenuItem") {
+          if (!this._chooseClientApp()) {
+            // Select the (per-prefs) selected handler if no application was selected
+            this._setSelectedHandler();
+          }
+        }
+      }
+      case "CheckboxStateChange": {
+        // Needed for a11y
+        var checkbox = this._document.getElementById("alwaysUse");
+        if (checkbox.getAttributeNS("", "checked") == "true")
+          checkbox.setAttributeNS(AAA_NS, "checked", "true");
+        else
+          checkbox.setAttributeNS(AAA_NS, "checked", "false");
+       }
     }
   },
 
@@ -587,7 +561,7 @@ FeedWriter.prototype = {
       case "web": {
         var handlersMenuList = this._document.getElementById("handlersMenuList");
         if (handlersMenuList) {
-          var url = prefs.getComplexValue(PREF_SELECTED_WEB, Ci.nsISupportsString).data;
+          var url = prefs.getCharPref(PREF_SELECTED_WEB);
           var handlers =
             handlersMenuList.getElementsByAttribute("webhandlerurl", url);
           if (handlers.length == 0) {
@@ -612,6 +586,7 @@ FeedWriter.prototype = {
             selectedAppMenuItem.hidden = false;
             selectedAppMenuItem.doCommand();
 
+#ifdef XP_WIN
             // Only show the default reader menuitem if the default reader
             // isn't the selected application
             var defaultHandlerMenuItem = this.defaultSystemReaderItemWrapped;
@@ -619,6 +594,7 @@ FeedWriter.prototype = {
               defaultHandlerMenuItem.hidden =
                 defaultHandlerMenuItem.file.path == selectedApp.path;
             }
+#endif
             break;
           }
         }
@@ -644,19 +620,20 @@ FeedWriter.prototype = {
     menuItem = this._document.createElementNS(XUL_NS, "menuitem");
     menuItem.id = "selectedAppMenuItem";
     menuItem.className = "menuitem-iconic";
-    menuItem.setAttribute("handlerType", "client");
     handlersMenuPopup.appendChild(menuItem);
 
     var selectedApplicationItem = this.selectedApplicationItemWrapped;
+    // a11y
+    selectedApplicationItem.setAttributeNS("http://www.w3.org/TR/xhtml2",
+                                           "role", "wairole:listitem");
+    selectedApplicationItem.setAttributeNS(AAA_NS, "selected", "false");
     try {
       var prefs = Cc["@mozilla.org/preferences-service;1"].
                   getService(Ci.nsIPrefBranch);
       selectedApp = prefs.getComplexValue(PREF_SELECTED_APP,
                                           Ci.nsILocalFile);
-
-      if (selectedApp.exists()) {
+      if (selectedApp.exists())
         this._initMenuItemWithFile(selectedApplicationItem, selectedApp);
-      }
       else {
         // Hide the menuitem if the last selected application doesn't exist
         selectedApplicationItem.hidden = true;
@@ -667,31 +644,65 @@ FeedWriter.prototype = {
       selectedApplicationItem.hidden = true;
     }
 
-    // List the default feed reader
-    var defaultReader = null;
+#ifdef XP_WIN
+    // On Windows, also list the default feed reader
+    var defaultReader;
     try {
-      var defaultReader = Cc["@mozilla.org/browser/shell-service;1"].
-                          getService(Ci.nsIShellService).defaultFeedReader;
-      menuItem = this._document.createElementNS(XUL_NS, "menuitem");
-      menuItem.id = "defaultHandlerMenuItem";
-      menuItem.className = "menuitem-iconic";
-      menuItem.setAttribute("handlerType", "client");
-      handlersMenuPopup.appendChild(menuItem);
+      const WRK = Ci.nsIWindowsRegKey;
+      var regKey =
+          Cc["@mozilla.org/windows-registry-key;1"].createInstance(WRK);
+      regKey.open(WRK.ROOT_KEY_CLASSES_ROOT, 
+                  "feed\\shell\\open\\command", WRK.ACCESS_READ);
+      var path = regKey.readStringValue("");
+      if (path.charAt(0) == "\"") {
+        // Everything inside the quotes
+        path = path.substr(1);
+        path = path.substr(0, path.indexOf("\""));
+      }
+      else {
+        // Everything up to the first space
+        path = path.substr(0, path.indexOf(" "));
+      }
 
-      var defaultSystemReaderItem = this.defaultSystemReaderItemWrapped;
-      this._initMenuItemWithFile(defaultSystemReaderItem, defaultReader);
+      defaultReader = Cc["@mozilla.org/file/local;1"].
+                      createInstance(Ci.nsILocalFile);
+      defaultReader.initWithPath(path);
 
-      // Hide the default reader item if it points to the same application
-      // as the last-selected application
-      if (selectedApp && selectedApp.path == defaultReader.path)
-        defaultSystemReaderItem.hidden = true;
+      if (defaultReader.exists()) {
+        menuItem = this._document.createElementNS(XUL_NS, "menuitem");
+        menuItem.id = "defaultHandlerMenuItem";
+        menuItem.className = "menuitem-iconic";
+        // a11y
+        menuItem.setAttributeNS("http://www.w3.org/TR/xhtml2",
+                                "role", "wairole:listitem");
+        handlersMenuPopup.appendChild(menuItem);
+
+        var defaultSystemReaderItem = this.defaultSystemReaderItemWrapped;
+        this._initMenuItemWithFile(defaultSystemReaderItem, defaultReader);
+
+        // Hide the default reader item if it points to the same application
+        // as the last-selected application
+        if (selectedApp && selectedApp.path == defaultReader.path)
+          defaultSystemReaderItem.hidden = true;
+      }
     }
-    catch(ex) { /* no default reader */ }
+    catch (e) {
+      LOG("No feed handler registered on system");
+    }
+#endif
 
     // "Choose Application..." menuitem
     menuItem = this._document.createElementNS(XUL_NS, "menuitem");
     menuItem.id = "chooseApplicationMenuItem";
-    menuItem.setAttribute("label", this._getString("chooseApplicationMenuItem"));
+
+    var chooseAppItemLabel = this._getString("chooseApplicationMenuItem");
+    menuItem.setAttribute("label", chooseAppItemLabel);
+    // a11y
+    menuItem.setAttributeNS("http://www.w3.org/TR/xhtml2",
+                            "role", "wairole:listitem");
+    menuItem.setAttribute("title", chooseAppItemLabel);
+    menuItem.addEventListener("click", this, false);
+
     handlersMenuPopup.appendChild(menuItem);
 
     // separator
@@ -704,31 +715,39 @@ FeedWriter.prototype = {
       getService(Ci.nsIWebContentConverterService);
     var handlers = wccr.getContentHandlers(TYPE_MAYBE_FEED, {});
     if (handlers.length != 0) {
+      var ios = Cc["@mozilla.org/network/io-service;1"].
+                getService(Ci.nsIIOService);
       for (var i = 0; i < handlers.length; ++i) {
         menuItem = this._document.createElementNS(XUL_NS, "menuitem");
         menuItem.className = "menuitem-iconic";
         menuItem.setAttribute("label", handlers[i].name);
         menuItem.setAttribute("handlerType", "web");
         menuItem.setAttribute("webhandlerurl", handlers[i].uri);
-        handlersMenuPopup.appendChild(menuItem);
 
-        // For privacy reasons we cannot set the image attribute directly
-        // to the icon url, see Bug 358878
-        var uri = makeURI(handlers[i].uri);
-        if (uri && /^https?/.test(uri.scheme))
-          new iconDataURIGenerator(uri.prePath + "/favicon.ico", menuItem)
+        var uri = ios.newURI(handlers[i].uri, null, null);
+        menuItem.setAttribute("src", uri.prePath + "/favicon.ico");
+
+        // a11y
+        menuItem.setAttribute("title", handlers[i].name);
+        menuItem.setAttributeNS("http://www.w3.org/TR/xhtml2",
+                                "role", "wairole:listitem");
+
+        handlersMenuPopup.appendChild(menuItem);
       }
     }
-
-    this._setSelectedHandler();
-
-    // "Always use..." checkbox initial state
-    this._setAlwaysUseCheckedState();
-    this._setAlwaysUseLabel();
 
     // We update the "Always use.." checkbox label whenever the selected item
     // in the list is changed
     handlersMenuPopup.addEventListener("command", this, false);
+    this._setSelectedHandler();
+
+    // "Always use..." checkbox initial state
+    this._setAlwaysUseLabel();
+    this._setAlwaysUseCheckedState();
+
+    // Syncs xul:checked with aaa:checked, needed for a11y
+    var checkbox = this._document.getElementById("alwaysUse");
+    checkbox.addEventListener("CheckboxStateChange", this, false);
 
     // Set up the "Subscribe Now" button
     this._document
@@ -749,26 +768,21 @@ FeedWriter.prototype = {
       prefs.setBoolPref(PREF_SHOW_FIRST_RUN_UI, false);
     }
   },
-  
+
   /**
    * Returns the original URI object of the feed and ensures that this
    * component is only ever invoked from the preview document.  
    * @param window 
    *        The window of the document invoking the BrowserFeedWriter
    */
-  _getOriginalURI: function FW__getOriginalURI(window) {
+  _getOriginalURI: function FW__getOriginalURI(window) {  
     var chan = 
         window.QueryInterface(Ci.nsIInterfaceRequestor).
         getInterface(Ci.nsIWebNavigation).
-        QueryInterface(Ci.nsIDocShell).currentDocumentChannel;
-
-    const SUBSCRIBE_PAGE_URI = "chrome://browser/content/feeds/subscribe.xhtml";
-    var uri = makeURI(SUBSCRIBE_PAGE_URI);
-    var resolvedURI = Cc["@mozilla.org/chrome/chrome-registry;1"].
-                      getService(Ci.nsIChromeRegistry).
-                      convertChromeURL(uri);
-
-    if (resolvedURI.equals(chan.URI))
+        QueryInterface(Ci.nsIDocShell_MOZILLA_1_8_BRANCH).
+        currentDocumentChannel;
+    const kPrefix = "jar:file:";
+    if (chan.URI.spec.substring(0, kPrefix.length) == kPrefix)
       return chan.originalURI;
     else
       return null;
@@ -788,25 +802,24 @@ FeedWriter.prototype = {
     window = new XPCNativeWrapper(window);
 
     this._feedURI = this._getOriginalURI(window);
-    if (!this._feedURI)
+     if (!this._feedURI)
       return;
     try {
       this._window = window;
       this._document = window.document;
-      
+        
       LOG("Subscribe Preview: feed uri = " + this._window.location.href);
-      
-      // Set up the subscription UI
+       
+      // Set up the displayed handler
       this._initSubscriptionUI();
       var prefs =   
-        Cc["@mozilla.org/preferences-service;1"].
-        getService(Ci.nsIPrefBranch2);
+      Cc["@mozilla.org/preferences-service;1"].
+      getService(Ci.nsIPrefBranch2);
       prefs.addObserver(PREF_SELECTED_ACTION, this, false);
       prefs.addObserver(PREF_SELECTED_READER, this, false);
-      prefs.addObserver(PREF_SELECTED_WEB, this, false);
       prefs.addObserver(PREF_SELECTED_APP, this, false);
       
-      // Set up the feed content
+       // Set up the feed content
       var container = this._getContainer();
       if (!container)
         return;
@@ -821,7 +834,7 @@ FeedWriter.prototype = {
       this._removeFeedFromCache();
     }
   },
-
+  
   /**
    * See nsIFeedWriter
    */
@@ -837,7 +850,7 @@ FeedWriter.prototype = {
     prefs.removeObserver(PREF_SELECTED_APP, this);
     this._removeFeedFromCache();
   },
-
+      
   _removeFeedFromCache: function FW__removeFeedFromCache() {
     if (this._feedURI) {
       var feedService = 
@@ -846,8 +859,8 @@ FeedWriter.prototype = {
       feedService.removeFeedResult(this._feedURI);
       this._feedURI = null;
     }
-  },
-
+  },  
+  
   subscribe: function FW_subscribe() {
     // Subscribe to the feed using the selected handler and save prefs
     var prefs =   
@@ -857,8 +870,8 @@ FeedWriter.prototype = {
     var useAsDefault = this._document.getElementById("alwaysUse")
                                      .getAttribute("checked");
 
-    var handlersMenuList = this._document.getElementById("handlersMenuList");
-    var selectedItem = this._getSelectedItemFromMenulist(handlersMenuList);
+    var selectedItem =
+      this._getSelectedItemFromMenulist(this._document.getElementById("handlersMenuList"));
 
     // Show the file picker before subscribing if the
     // choose application menuitem was choosen using the keyboard
@@ -866,18 +879,13 @@ FeedWriter.prototype = {
       if (!this._chooseClientApp())
         return;
       
-      selectedItem = this._getSelectedItemFromMenulist(handlersMenuList);
+      selectedItem = this._getSelectedItemFromMenulist(this._document.getElementById("handlersMenuList"));
     }
 
     if (selectedItem.hasAttribute("webhandlerurl")) {
       var webURI = selectedItem.getAttribute("webhandlerurl");
       prefs.setCharPref(PREF_SELECTED_READER, "web");
-
-      var supportsString = Cc["@mozilla.org/supports-string;1"].
-                           createInstance(Ci.nsISupportsString);
-      supportsString.data = webURI;
-      prefs.setComplexValue(PREF_SELECTED_WEB, Ci.nsISupportsString,
-                            supportsString);
+      prefs.setCharPref(PREF_SELECTED_WEB, webURI);
 
       var wccr = 
         Cc["@mozilla.org/embeddor.implemented/web-content-handler-registrar;1"].
@@ -898,11 +906,13 @@ FeedWriter.prototype = {
           prefs.setComplexValue(PREF_SELECTED_APP, Ci.nsILocalFile, 
                                 this.selectedApplicationItemWrapped.file);
           break;
+#ifdef XP_WIN
         case "defaultHandlerMenuItem":
           prefs.setCharPref(PREF_SELECTED_READER, "client");
           prefs.setComplexValue(PREF_SELECTED_APP, Ci.nsILocalFile, 
                                 this.defaultSystemReaderItemWrapped.file);
           break;
+#endif
         case "liveBookmarksMenuItem":
           defaultHandler = "bookmarks";
           prefs.setCharPref(PREF_SELECTED_READER, "bookmarks");
@@ -928,7 +938,7 @@ FeedWriter.prototype = {
     else
       prefs.setCharPref(PREF_SELECTED_ACTION, "ask");
   },
-
+  
   /**
    * See nsIObserver
    */
@@ -950,8 +960,8 @@ FeedWriter.prototype = {
           this._setAlwaysUseCheckedState();
       }
     } 
-  },
-
+  },  
+  
   /**
    * See nsIClassInfo
    */
@@ -981,111 +991,6 @@ FeedWriter.prototype = {
   }
 };
 
-function iconDataURIGenerator(aURISpec, aElement) {
-  var ios = Cc["@mozilla.org/network/io-service;1"].
-            getService(Ci.nsIIOService);
-  var chan = ios.newChannelFromURI(makeURI(aURISpec));
-  chan.notificationCallbacks = this;
-  chan.asyncOpen(this, null);
-
-  this._channel = chan;
-  this._bytes = [];
-  this._element = aElement;
-}
-iconDataURIGenerator.prototype = {
-  _channel: null,
-  _countRead: 0,
-  _stream: null,
-
-  QueryInterface: function FW_IDUG_loadQI(aIID) {
-    if (aIID.equals(Ci.nsISupports)           ||
-        aIID.equals(Ci.nsIRequestObserver)    ||
-        aIID.equals(Ci.nsIStreamListener)     ||
-        aIID.equals(Ci.nsIChannelEventSink)   ||
-        aIID.equals(Ci.nsIInterfaceRequestor) ||
-        aIID.equals(Ci.nsIBadCertListener)    ||
-        // See bug 358878 comment 11
-        aIID.equals(Ci.nsIPrompt)             ||
-        // See FIXME comment below
-        aIID.equals(Ci.nsIHttpEventSink)      ||
-        aIID.equals(Ci.nsIProgressEventSink)  ||
-        false)
-      return this;
-
-    throw Cr.NS_ERROR_NO_INTERFACE;
-  },
-
-  // nsIRequestObserver
-  onStartRequest: function FW_IDUG_loadStartR(aRequest, aContext) {
-    this._stream = Cc["@mozilla.org/binaryinputstream;1"].
-                   createInstance(Ci.nsIBinaryInputStream);
-  },
-
-  onStopRequest: function FW_IDUG_loadStopR(aRequest, aContext, aStatusCode) {
-    var requestFailed = !Components.isSuccessCode(aStatusCode);
-    if (!requestFailed && (aRequest instanceof Ci.nsIHttpChannel))
-      requestFailed = !aRequest.requestSucceeded;
-
-    if (!requestFailed && this._countRead != 0) {
-      var str = String.fromCharCode.apply(null, this._bytes);
-      try {
-        var dataURI = ICON_DATAURL_PREFIX + btoa(str);
-        this._element.setAttribute("image", dataURI);
-      }
-      catch(ex) {}
-    }
-    this._channel = null;
-    this._element  = null;
-  },
-
-  // nsIStreamListener
-  onDataAvailable: function FW_IDUG_loadDAvailable(aRequest, aContext,
-                                                   aInputStream, aOffset,
-                                                   aCount) {
-    this._stream.setInputStream(aInputStream);
-
-    // Get a byte array of the data
-    this._bytes = this._bytes.concat(this._stream.readByteArray(aCount));
-    this._countRead += aCount;
-  },
-
-  // nsIChannelEventSink
-  onChannelRedirect: function FW_IDUG_loadCRedirect(aOldChannel, aNewChannel,
-                                                    aFlags) {
-    this._channel = aNewChannel;
-  },
-
-  // nsIInterfaceRequestor
-  getInterface: function FW_IDUG_load_GI(aIID) {
-    return this.QueryInterface(aIID);
-  },
-
-  // nsIBadCertListener
-  confirmUnknownIssuer: function FW_IDUG_load_CUI(aSocketInfo, aCert,
-                                                  aCertAddType) {
-    return false;
-  },
-
-  confirmMismatchDomain: function FW_IDUG_load_CMD(aSocketInfo, aTargetURL,
-                                                   aCert) {
-    return false;
-  },
-
-  confirmCertExpired: function FW_IDUG_load_CCE(aSocketInfo, aCert) {
-    return false;
-  },
-
-  notifyCrlNextupdate: function FW_IDUG_load_NCN(aSocketInfo, aTargetURL, aCert) {
-  },
-
-  // FIXME: bug 253127
-  // nsIHttpEventSink
-  onRedirect: function (aChannel, aNewChannel) { },
-  // nsIProgressEventSink
-  onProgress: function (aRequest, aContext, aProgress, aProgressMax) { },
-  onStatus: function (aRequest, aContext, aStatus, aStatusArg) { }
-};
-
 var Module = {
   QueryInterface: function M_QueryInterface(iid) {
     if (iid.equals(Ci.nsIModule) ||
@@ -1093,14 +998,14 @@ var Module = {
       return this;
     throw Cr.NS_ERROR_NO_INTERFACE;
   },
-
+  
   getClassObject: function M_getClassObject(cm, cid, iid) {
     if (!iid.equals(Ci.nsIFactory))
       throw Cr.NS_ERROR_NOT_IMPLEMENTED;
     
     if (cid.equals(FW_CLASSID))
       return new GenericComponentFactory(FeedWriter);
-
+      
     throw Cr.NS_ERROR_NO_INTERFACE;
   },
   
@@ -1116,12 +1021,12 @@ var Module = {
     catman.addCategoryEntry("JavaScript global constructor",
                             "BrowserFeedWriter", FW_CONTRACTID, true, true);
   },
-
+  
   unregisterSelf: function M_unregisterSelf(cm, location, type) {
     var cr = cm.QueryInterface(Ci.nsIComponentRegistrar);
     cr.unregisterFactoryLocation(FW_CLASSID, location);
   },
-
+  
   canUnload: function M_canUnload(cm) {
     return true;
   }

@@ -69,7 +69,7 @@ interface nsIBookmarkTransactionManager : nsISupports
    * 
    */
   void createAndCommitTxn(in unsigned long aType,
-                          in AString aAction,
+                          in aString aAction,
                           in nsIRDFNode aItem,
                           in long aIndex,
                           in nsIRDFResource aParent,

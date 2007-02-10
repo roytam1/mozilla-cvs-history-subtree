@@ -81,7 +81,7 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectUnicodeAddress(const PRUnichar *aAddr
 {
   NS_ENSURE_ARG_POINTER(aAddress);
   // convert the unicode string to UTF-8...
-  nsresult rv = CollectAddress(NS_ConvertUTF16toUTF8(aAddress).get(), aCreateCard, aSendFormat);
+  nsresult rv = CollectAddress(NS_ConvertUCS2toUTF8(aAddress).get(), aCreateCard, aSendFormat);
   NS_ENSURE_SUCCESS(rv,rv);
   return rv;
 }
@@ -151,7 +151,7 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *aAddress, PRBool 
         rv = AutoCollectScreenName(senderCard, curAddress, &modifiedCard);
         NS_ASSERTION(NS_SUCCEEDED(rv), "failed to set screenname");
 
-        rv = senderCard->SetPrimaryEmail(NS_ConvertASCIItoUTF16(curAddress).get());
+        rv = senderCard->SetPrimaryEmail(NS_ConvertASCIItoUCS2(curAddress).get());
         NS_ASSERTION(NS_SUCCEEDED(rv), "failed to set email");
 
         if (aSendFormat != nsIAbPreferMailFormat::unknown)
@@ -167,12 +167,8 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *aAddress, PRBool 
     else if (existingCard && !emailAddressIn2ndEmailColumn) { 
       // address is already in the AB, so update the names
       PRBool setNames = PR_FALSE;
-      
-      if (!unquotedName.IsEmpty())
-      {
-        rv = SetNamesForCard(existingCard, unquotedName.get(), &setNames);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to set names");
-      }
+      rv = SetNamesForCard(existingCard, unquotedName.get(), &setNames);
+      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to set names");
 
       PRBool setScreenName = PR_FALSE; 
       rv = AutoCollectScreenName(existingCard, curAddress, &setScreenName);
@@ -194,8 +190,8 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *aAddress, PRBool 
         }
       }
 
-      if ((setScreenName || setNames || setPreferMailFormat) && m_directory)
-        m_directory->ModifyCard(existingCard);
+      if (setScreenName || setNames || setPreferMailFormat)
+        existingCard->EditCardToDatabase(m_abURI.get());
     }
 
     curName += strlen(curName) + 1;
@@ -268,16 +264,16 @@ nsAbAddressCollecter::SetNamesForCard(nsIAbCard *senderCard, const char *fullNam
   if (!displayName.IsEmpty())
     return NS_OK;
 
-  senderCard->SetDisplayName(NS_ConvertUTF8toUTF16(fullName).get());
+  senderCard->SetDisplayName(NS_ConvertUTF8toUCS2(fullName).get());
   *aModifiedCard = PR_TRUE;
 
   rv = SplitFullName(fullName, &firstName, &lastName);
   if (NS_SUCCEEDED(rv))
   {
-    senderCard->SetFirstName(NS_ConvertUTF8toUTF16(firstName).get());
+    senderCard->SetFirstName(NS_ConvertUTF8toUCS2(firstName).get());
     
     if (lastName)
-      senderCard->SetLastName(NS_ConvertUTF8toUTF16(lastName).get());
+      senderCard->SetLastName(NS_ConvertUTF8toUCS2(lastName).get());
   }
   PR_FREEIF(firstName);
   PR_FREEIF(lastName);

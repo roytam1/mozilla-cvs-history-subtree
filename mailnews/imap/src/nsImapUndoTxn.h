@@ -43,7 +43,7 @@
 #include "nsIImapService.h"
 #include "nsIImapIncomingServer.h"
 #include "nsIUrlListener.h"
-#include "nsIEventTarget.h"
+#include "nsIEventQueue.h"
 #include "nsMsgTxn.h"
 #include "nsMsgKeyArray.h"
 #include "nsIMsgOfflineImapOperation.h"
@@ -58,13 +58,13 @@
 class nsImapMoveCopyMsgTxn : public nsMsgTxn
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IMAPMOVECOPYMSGTXN_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMAPMOVECOPYMSGTXN_IID)
 
   nsImapMoveCopyMsgTxn();
   nsImapMoveCopyMsgTxn(nsIMsgFolder* srcFolder, nsMsgKeyArray* srcKeyArray,
                        const char* srcMsgIdString, nsIMsgFolder* dstFolder,
                        PRBool idsAreUids, PRBool isMove, 
-                       nsIEventTarget *eventTarget, 
+                       nsIEventQueue *eventQueue, 
                        nsIUrlListener *urlListener);
   virtual ~nsImapMoveCopyMsgTxn();
 
@@ -82,7 +82,7 @@ public:
   nsresult Init(nsIMsgFolder* srcFolder, nsMsgKeyArray* srcKeyArray,
                 const char* srcMsgIdString, nsIMsgFolder* dstFolder,
                 PRBool idsAreUids, PRBool isMove, 
-                nsIEventTarget *eventTarget, 
+                nsIEventQueue *eventQueue, 
                 nsIUrlListener *urlListener);
 
 protected:
@@ -94,7 +94,7 @@ protected:
   nsCString m_srcMsgIdString;
   nsWeakPtr m_dstFolder;
   nsCString m_dstMsgIdString;
-  nsCOMPtr<nsIEventTarget> m_eventTarget;
+  nsCOMPtr<nsIEventQueue> m_eventQueue;
   nsCOMPtr<nsIUrlListener> m_urlListener;
   PRBool m_idsAreUids;
   PRBool m_isMove;
@@ -104,8 +104,6 @@ protected:
   nsresult GetImapDeleteModel(nsIMsgFolder* aFolder, nsMsgImapDeleteModel *aDeleteModel);
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsImapMoveCopyMsgTxn, NS_IMAPMOVECOPYMSGTXN_IID)
-
 class nsImapOfflineTxn : public nsImapMoveCopyMsgTxn
 {
 public:
@@ -114,7 +112,7 @@ public:
                        PRBool isMove,
                        nsOfflineImapOperationType opType,
                        nsIMsgDBHdr *srcHdr,
-                       nsIEventTarget *eventTarget, 
+                       nsIEventQueue *eventQueue, 
                        nsIUrlListener *urlListener);
   virtual ~nsImapOfflineTxn();
 

@@ -247,7 +247,7 @@ nsScriptNameSpaceManager::FillHash(nsICategoryManager *aCategoryManager,
           s->mAlias = new nsGlobalNameStruct::ConstructorAlias;
           if (!s->mAlias) {
             // Free entry
-            NS_ConvertASCIItoUTF16 key(categoryEntry);
+            NS_ConvertASCIItoUCS2 key(categoryEntry);
             PL_DHashTableOperate(&mGlobalNames,
                                  &key,
                                  PL_DHASH_REMOVE);
@@ -291,8 +291,8 @@ nsScriptNameSpaceManager::FillHash(nsICategoryManager *aCategoryManager,
 nsresult
 nsScriptNameSpaceManager::FillHashWithDOMInterfaces()
 {
-  nsCOMPtr<nsIInterfaceInfoManager>
-    iim(do_GetService(NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID));
+  nsCOMPtr<nsIInterfaceInfoManager> iim =
+    dont_AddRef(XPTI_GetInterfaceInfoManager());
   NS_ENSURE_TRUE(iim, NS_ERROR_UNEXPECTED);
 
   // First look for all interfaces whose name starts with nsIDOM
@@ -349,8 +349,8 @@ nsScriptNameSpaceManager::RegisterExternalInterfaces(PRBool aAsProto)
     do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIInterfaceInfoManager>
-    iim(do_GetService(NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID));
+  nsCOMPtr<nsIInterfaceInfoManager> iim =
+    dont_AddRef(XPTI_GetInterfaceInfoManager());
   NS_ENSURE_TRUE(iim, NS_ERROR_NOT_AVAILABLE);
 
   nsCOMPtr<nsISimpleEnumerator> enumerator;
@@ -502,11 +502,6 @@ nsScriptNameSpaceManager::Init()
   return NS_OK;
 }
 
-struct NameSetClosure {
-  nsIScriptContext* ctx;
-  nsresult rv;
-};
-
 PR_STATIC_CALLBACK(PLDHashOperator)
 NameSetInitCallback(PLDHashTable *table, PLDHashEntryHdr *hdr,
                     PRUint32 number, void *arg)
@@ -519,12 +514,9 @@ NameSetInitCallback(PLDHashTable *table, PLDHashEntryHdr *hdr,
       do_CreateInstance(entry->mGlobalName.mCID, &rv);
     NS_ENSURE_SUCCESS(rv, PL_DHASH_NEXT);
 
-    NameSetClosure *closure = NS_STATIC_CAST(NameSetClosure *, arg);
-    closure->rv = ns->InitializeNameSet(closure->ctx);
-    if (NS_FAILED(closure->rv)) {
-      NS_ERROR("Initing external script classes failed!");
-      return PL_DHASH_STOP;
-    }
+    rv = ns->InitializeNameSet(NS_STATIC_CAST(nsIScriptContext *, arg));
+    NS_WARN_IF_FALSE(NS_SUCCEEDED(rv),
+                     "Initing external script classes failed!");
   }
 
   return PL_DHASH_NEXT;
@@ -533,12 +525,9 @@ NameSetInitCallback(PLDHashTable *table, PLDHashEntryHdr *hdr,
 nsresult
 nsScriptNameSpaceManager::InitForContext(nsIScriptContext *aContext)
 {
-  NameSetClosure closure;
-  closure.ctx = aContext;
-  closure.rv = NS_OK;
-  PL_DHashTableEnumerate(&mGlobalNames, NameSetInitCallback, &closure);
+  PL_DHashTableEnumerate(&mGlobalNames, NameSetInitCallback, aContext);
 
-  return closure.rv;
+  return NS_OK;
 }
 
 nsresult

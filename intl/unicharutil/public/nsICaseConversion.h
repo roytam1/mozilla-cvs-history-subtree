@@ -40,6 +40,7 @@
 
 #include "nsISupports.h"
 #include "nscore.h"
+#include "nsString.h"
 
 // {07D3D8E0-9614-11d2-B3AD-00805F8A6670}
 #define NS_ICASECONVERSION_IID \
@@ -50,7 +51,7 @@ class nsICaseConversion : public nsISupports {
 
 public: 
 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICASECONVERSION_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICASECONVERSION_IID)
 
   // Convert one Unicode character into upper case
   NS_IMETHOD ToUpper( PRUnichar aChar, PRUnichar* aReturn) = 0;
@@ -75,7 +76,5 @@ public:
   // to strcasecmp
   NS_IMETHOD CaseInsensitiveCompare(const PRUnichar* aLeft, const PRUnichar* aRight, PRUint32 aLength, PRInt32* aResult) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsICaseConversion, NS_ICASECONVERSION_IID)
 
 #endif  /* nsICaseConversion_h__ */

@@ -46,8 +46,8 @@ class nsIContent;
 
 // IID for the nsIListControlFrame class
 #define NS_ILISTCONTROLFRAME_IID    \
-{ 0x4de9ab73, 0x31b5, 0x4d92, \
- { 0xb7, 0xe4, 0x73, 0xb4, 0x4d, 0xcb, 0xfc, 0xda } }
+{ 0xf44db101, 0xa73c, 0x11d2,  \
+  { 0x8d, 0xcf, 0x0, 0x60, 0x97, 0x3, 0xc1, 0x4e } }
 
 /** 
   * nsIListControlFrame is the interface for frame-based listboxes.
@@ -55,62 +55,73 @@ class nsIContent;
 class nsIListControlFrame : public nsISupports {
 
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ILISTCONTROLFRAME_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ILISTCONTROLFRAME_IID)
 
   /**
    * Sets the ComboBoxFrame
    *
    */
-  virtual void SetComboboxFrame(nsIFrame* aComboboxFrame) = 0;
+  NS_IMETHOD SetComboboxFrame(nsIFrame* aComboboxFrame) = 0;
 
   /**
    * Get the display string for an item
    */
-  virtual void GetOptionText(PRInt32 aIndex, nsAString & aStr) = 0;
+  NS_IMETHOD GetOptionText(PRInt32 aIndex, nsAString & aStr) = 0;
 
   /**
    * Get the Selected Item's index
    *
    */
-  virtual PRInt32 GetSelectedIndex() = 0;
+  NS_IMETHOD GetSelectedIndex(PRInt32* aIndex) = 0;
 
   /**
    * Initiates mouse capture for the listbox
    *
    */
-  virtual void CaptureMouseEvents(PRBool aGrabMouseEvents) = 0;
+  NS_IMETHOD CaptureMouseEvents(nsPresContext* aPresContext, PRBool aGrabMouseEvents) = 0;
 
   /**
-   * Returns the height of a single row in the list.  This is the
-   * maximum of the heights of all the options/optgroups.
+   * Returns the maximum width and height of an item in the listbox
    */
-  virtual nscoord GetHeightOfARow() = 0;
+
+  NS_IMETHOD GetMaximumSize(nsSize &aSize) = 0;
 
   /**
    * Returns the number of options in the listbox
    */
 
-  virtual PRInt32 GetNumberOfOptions() = 0; 
+  NS_IMETHOD GetNumberOfOptions(PRInt32* aNumOptions) = 0; 
 
   /**
    * 
    */
-  virtual void SyncViewWithFrame() = 0;
+  NS_IMETHOD SyncViewWithFrame() = 0;
 
   /**
    * Called by combobox when it's about to drop down
    */
-  virtual void AboutToDropDown() = 0;
+  NS_IMETHOD AboutToDropDown() = 0;
 
   /**
    * Called by combobox when it's about to roll up
    */
-  virtual void AboutToRollup() = 0;
+  NS_IMETHOD AboutToRollup() = 0;
 
   /**
    * Fire on change (used by combobox)
    */
-  virtual void FireOnChange() = 0;
+  NS_IMETHOD FireOnChange() = 0;
+
+  /**
+   *
+   */
+  NS_IMETHOD SetOverrideReflowOptimization(PRBool aValue) = 0;
+
+  /**
+   *  Return the the frame that the options will be inserted into
+   */
+  NS_IMETHOD GetOptionsContainer(nsPresContext* aPresContext,
+                                 nsIFrame** aFrame) = 0;
 
   /**
    * Tell the selected list to roll up and ensure that the proper index is
@@ -118,15 +129,8 @@ public:
    *
    * @param aIndex the index to actually select
    */
-  virtual void ComboboxFinish(PRInt32 aIndex) = 0;
-
-  /**
-   * Notification that the content has been reset
-   */
-  virtual void OnContentReset() = 0;
+  NS_IMETHOD ComboboxFinish(PRInt32 aIndex) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIListControlFrame, NS_ILISTCONTROLFRAME_IID)
 
 #endif
 

@@ -232,7 +232,7 @@ var DefaultController =
       case "cmd_downloadFlagged":
       case "cmd_downloadSelected":
       case "cmd_synchronizeOffline":
-        return MailOfflineMgr.isOnline();
+        return(CheckOnline());
 
       case "cmd_watchThread":
       case "cmd_killThread":
@@ -325,12 +325,9 @@ var DefaultController =
         return (GetNumSelectedMessages() > 0 );
       case "cmd_markAsJunk":
       case "cmd_markAsNotJunk":
+      case "cmd_recalculateJunkScore":
         // can't do news on junk yet.
         return (GetNumSelectedMessages() > 0 && !isNewsURI(GetFirstSelectedMessage()));
-      case "cmd_recalculateJunkScore":
-        if (GetNumSelectedMessages() > 0)
-          gDBView.getCommandStatus(nsMsgViewCommandType.runJunkControls, enabled, checkStatus);
-        return enabled.value;
       case "cmd_applyFilters":
         if (gDBView)
           gDBView.getCommandStatus(nsMsgViewCommandType.applyFilters, enabled, checkStatus);
@@ -421,11 +418,11 @@ var DefaultController =
       case "cmd_close":
         return true;
       case "cmd_downloadFlagged":
-        return(IsFolderSelected() && MailOfflineMgr.isOnline());
+        return(CheckOnline());
       case "cmd_downloadSelected":
-        return (IsFolderSelected() && MailOfflineMgr.isOnline() && GetNumSelectedMessages() > 0);
+        return (IsFolderSelected() && CheckOnline() && GetNumSelectedMessages() > 0);
       case "cmd_synchronizeOffline":
-        return MailOfflineMgr.isOnline() && IsAccountOfflineEnabled();       
+        return CheckOnline() && IsAccountOfflineEnabled();       
       case "cmd_settingsOffline":
         return IsAccountOfflineEnabled();
       case "cmd_moveToFolderAgain":
@@ -654,7 +651,7 @@ var DefaultController =
         MsgApplyFilters(null);
         return;
       case "cmd_runJunkControls":
-        filterFolderForJunk();
+        analyzeFolderForJunk();
         return;
       case "cmd_deleteJunk":
         deleteJunkInFolder();
@@ -675,7 +672,7 @@ var DefaultController =
           MsgSynchronizeOffline();
           break;
       case "cmd_settingsOffline":
-          MailOfflineMgr.openOfflineAccountSettings();
+          MsgSettingsOffline();
           break;
       case "cmd_moveToFolderAgain":
           var folderId = pref.getCharPref("mail.last_msg_movecopy_target_uri");
@@ -986,7 +983,9 @@ function MsgNextFlaggedMessage()
 
 function MsgNextUnreadThread()
 {
-  GoNextMessage(nsMsgNavigationType.nextUnreadThread, true);
+	//First mark the current thread as read.  Then go to the next one.
+	MsgMarkThreadAsRead();
+	GoNextMessage(nsMsgNavigationType.nextUnreadThread, true);
 }
 
 function MsgPreviousMessage()

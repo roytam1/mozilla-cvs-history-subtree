@@ -46,9 +46,11 @@
 #include "nsString.h"
 #include "nsITimer.h"
 
-#include "nsIPrefBranch.h"
+#include "nsIPref.h"
 
 class nsIFile;
+class nsIPrefBranch;
+class nsIPrefService;
 class nsIFileSpec;
 class nsFileSpec;
 
@@ -63,7 +65,7 @@ class nsFileSpec;
 
 //Interfaces Needed
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #define IMAP_MAIL_FILTER_FILE_NAME_FORMAT_IN_4x "%s Rules" 
 #endif
 
@@ -106,7 +108,7 @@ private:
   PRInt64 mMaxProgress;
   PRInt64 mCurrentProgress;
   
-  nsCOMPtr<nsIPrefBranch> mPrefs;
+  nsCOMPtr<nsIPref> mPrefs;
   nsCOMPtr<nsILocalFile> m_prefsFile;
 protected:
   nsresult ProcessPrefsCallback(const char* oldProfilePathStr, const char * newProfilePathStr);

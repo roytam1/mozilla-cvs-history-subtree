@@ -56,7 +56,8 @@
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #include "nsIFile.h"
-#include "nsStringEnumerator.h"
+#include "nsIEnumerator.h"
+#include "nsVoidArray.h"
 #include "nsHashtable.h"
 #include "nsAutoLock.h"
 #include "nsIZipReader.h"
@@ -72,21 +73,6 @@
 class nsIInputStream;
 class nsJARManifestItem;
 class nsZipReaderCache;
-
-/* For mManifestStatus */
-typedef enum
-{
-  JAR_MANIFEST_NOT_PARSED = 0,
-  JAR_VALID_MANIFEST      = 1,
-  JAR_INVALID_SIG         = 2,
-  JAR_INVALID_UNKNOWN_CA  = 3,
-  JAR_INVALID_MANIFEST    = 4,
-  JAR_INVALID_ENTRY       = 5,
-  JAR_NO_MANIFEST         = 6,
-  JAR_NOT_SIGNED          = 7
-} JARManifestStatusType;
-
-PRTime GetModTime(PRUint16 aDate, PRUint16 aTime);
 
 /*-------------------------------------------------------------------------
  * Class nsJAR declaration. 
@@ -111,8 +97,6 @@ class nsJAR : public nsIZipReader, public nsIJAR
 
     NS_DECL_NSIJAR
 
-    nsresult GetJarPath(nsACString& aResult);
-
     PRIntervalTime GetReleaseTime() {
         return mReleaseTime;
     }
@@ -133,6 +117,7 @@ class nsJAR : public nsIZipReader, public nsIJAR
       mCache = cache;
     }
 
+    PRFileDesc* OpenFile();
   protected:
     //-- Private data members
     nsCOMPtr<nsIFile>        mZipFile;        // The zip/jar file on disk
@@ -143,19 +128,20 @@ class nsJAR : public nsIZipReader, public nsIJAR
     PRInt16                  mGlobalStatus;   // Global signature verification status
     PRIntervalTime           mReleaseTime;    // used by nsZipReaderCache for flushing entries
     nsZipReaderCache*        mCache;          // if cached, this points to the cache it's contained in
-    PRLock*                  mLock;	
+	PRLock*					 mLock;	
     PRInt32                  mTotalItemsInManifest;
+    PRFileDesc*              mFd;
     
     //-- Private functions
-    PRFileDesc* OpenFile();
-
     nsresult ParseManifest(nsISignatureVerifier* verifier);
     void     ReportError(const char* aFilename, PRInt16 errorCode);
     nsresult LoadEntry(const char* aFilename, char** aBuf, 
                        PRUint32* aBufLen = nsnull);
     PRInt32  ReadLine(const char** src); 
-    nsresult ParseOneFile(const char* filebuf, PRInt16 aFileType);
-    nsresult VerifyEntry(nsJARManifestItem* aEntry, const char* aEntryData, 
+    nsresult ParseOneFile(nsISignatureVerifier* verifier,
+                          const char* filebuf, PRInt16 aFileType);
+    nsresult VerifyEntry(nsISignatureVerifier* verifier,
+                         nsJARManifestItem* aEntry, const char* aEntryData, 
                          PRUint32 aLen);
 
     nsresult CalculateDigest(const char* aInBuf, PRUint32 aInBufLen,
@@ -177,18 +163,13 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIZIPENTRY
     
-    nsJARItem(nsZipItem* aZipItem);
-    virtual ~nsJARItem() {};
+    void Init(nsZipItem* aZipItem);
 
-private:
-    PRUint32     mSize;             /* size in original file */
-    PRUint32     mRealsize;         /* inflated size */
-    PRUint32     mCrc32;
-    PRUint16     mDate;
-    PRUint16     mTime;
-    PRUint8      mCompression;
-    PRPackedBool mIsDirectory; 
-    PRPackedBool mIsSynthetic;
+    nsJARItem();
+    virtual ~nsJARItem();
+
+    private:
+    nsZipItem* mZipItem;
 };
 
 /**
@@ -197,21 +178,20 @@ private:
  * Enumerates a list of files in a zip archive 
  * (based on a pattern match in its member nsZipFind).
  */
-class nsJAREnumerator : public nsIUTF8StringEnumerator
+class nsJAREnumerator : public nsISimpleEnumerator
 {
 public:
     NS_DECL_ISUPPORTS
-    NS_DECL_NSIUTF8STRINGENUMERATOR
+    NS_DECL_NSISIMPLEENUMERATOR
 
-    nsJAREnumerator(nsZipFind *aFind) : mFind(aFind), mCurr(nsnull) { 
-      NS_ASSERTION(mFind, "nsJAREnumerator: Missing zipFind.");
-    }
+    nsJAREnumerator(nsZipFind *aFind);
+    virtual ~nsJAREnumerator();
 
-private:
+protected:
+    nsZipArchive *mArchive; // pointer extracted from mFind for efficiency
     nsZipFind    *mFind;
-    const char*   mCurr;    // pointer to an name owned by mArchive -- DON'T delete
-
-    ~nsJAREnumerator() { delete mFind; }
+    nsZipItem    *mCurr;    // raw pointer to an nsZipItem owned by mArchive -- DON'T delete
+    PRBool        mIsCurrStale;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -250,3 +230,4 @@ protected:
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif /* nsJAR_h__ */
+

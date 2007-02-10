@@ -41,27 +41,71 @@
 #include "nsIEventListenerManager.h"
 #include "jsapi.h"
 #include "nsCOMPtr.h"
-#include "nsAutoPtr.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOM3EventTarget.h"
 #include "nsHashtable.h"
 #include "nsIScriptContext.h"
-#include "nsCycleCollectionParticipant.h"
+#include "nsJSUtils.h"
 
 class nsIDOMEvent;
-class nsVoidArray;
 class nsIAtom;
-struct EventTypeData;
 
 typedef struct {
-  nsRefPtr<nsIDOMEventListener> mListener;
-  PRUint32                      mEventType;
-  nsCOMPtr<nsIAtom>             mTypeAtom;
-  PRUint16                      mFlags;
-  PRUint16                      mGroupFlags;
-  PRBool                        mHandlerIsString;
-  const EventTypeData*          mTypeData;
+  // The nsMarkedJSFunctionHolder does magic to avoid holding strong
+  // references to listeners implemented in JS.  Instead, it protects
+  // them from garbage collection using nsDOMClassInfo::PreserveWrapper,
+  // which protects the event listener from garbage collection as long
+  // as it is still reachable from JS using C++ getters.  (It exposes
+  // reachability information to the JS GC instead of treating the C++
+  // reachability information as own-in root-out, which creates roots
+  // that cause reference cycles to entrain garbage.)
+  nsMarkedJSFunctionHolder<nsIDOMEventListener> mListener;
+
+  PRUint16 mFlags;
+  PRUint16 mGroupFlags;
+  PRUint8  mSubType;
+  PRUint8  mHandlerIsString;
+  PRUint8  mSubTypeCapture;
 } nsListenerStruct;
+
+//These define the internal type of the EventListenerManager
+//No listener type defined, should happen only at creation
+#define NS_ELM_NONE   0
+//Simple indicates only a single event listener group type (i.e. mouse, key) 
+#define NS_ELM_SINGLE 1
+//Multi indicates any number of listener group types accessed as member vars
+#define NS_ELM_MULTI  2
+//Hash indicates any number of listener group types accessed out of a hash
+#define NS_ELM_HASH   4
+
+enum EventArrayType {
+  eEventArrayType_Mouse = 0,
+  eEventArrayType_MouseMotion = 1,
+  eEventArrayType_ContextMenu = 2,
+  eEventArrayType_Key = 3,
+  eEventArrayType_Load = 4,
+  eEventArrayType_Focus = 5,
+  eEventArrayType_Form = 6,
+  eEventArrayType_Drag = 7,
+  eEventArrayType_Paint = 8,
+  eEventArrayType_Text = 9,
+  eEventArrayType_Composition = 10,
+  eEventArrayType_XUL = 11,
+  eEventArrayType_Scroll = 12,
+  eEventArrayType_Mutation = 13,
+  eEventArrayType_DOMUI = 14,
+  eEventArrayType_PageTransition = 15,
+#ifdef MOZ_SVG
+  eEventArrayType_SVG = 16,
+  eEventArrayType_SVGZoom = 17,
+#endif // MOZ_SVG
+  eEventArrayType_Hash,
+  eEventArrayType_None
+};
+
+//Keep this in line with event array types, not counting
+//types HASH and NONE
+#define EVENT_ARRAY_TYPE_LENGTH eEventArrayType_Hash
 
 /*
  * Event listener manager
@@ -76,7 +120,7 @@ public:
   nsEventListenerManager();
   virtual ~nsEventListenerManager();
 
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_ISUPPORTS
 
   /**
   * Sets events listeners of all types. 
@@ -97,39 +141,51 @@ public:
   NS_IMETHOD AddScriptEventListener(nsISupports *aObject,
                                     nsIAtom *aName,
                                     const nsAString& aFunc,
-                                    PRUint32 aLanguage,
                                     PRBool aDeferCompilation,
                                     PRBool aPermitUntrustedEvents);
   NS_IMETHOD RegisterScriptEventListener(nsIScriptContext *aContext,
-                                         void *aScopeObject,
+                                         JSObject *aScopeObject,
                                          nsISupports *aObject,
                                          nsIAtom* aName);
   NS_IMETHOD RemoveScriptEventListener(nsIAtom *aName);
   NS_IMETHOD CompileScriptEventListener(nsIScriptContext *aContext,
-                                        void *aScopeObject,
+                                        JSObject *aScopeObject,
                                         nsISupports *aObject,
                                         nsIAtom* aName, PRBool *aDidCompile);
+
+  NS_IMETHOD CaptureEvent(PRInt32 aEventTypes);
+  NS_IMETHOD ReleaseEvent(PRInt32 aEventTypes);
 
   NS_IMETHOD HandleEvent(nsPresContext* aPresContext, 
                          nsEvent* aEvent, 
                          nsIDOMEvent** aDOMEvent,
-                         nsISupports* aCurrentTarget,
+                         nsIDOMEventTarget* aCurrentTarget,
                          PRUint32 aFlags,
                          nsEventStatus* aEventStatus);
 
-  NS_IMETHOD Disconnect();
+  NS_IMETHOD CreateEvent(nsPresContext* aPresContext, 
+                         nsEvent* aEvent,
+                         const nsAString& aEventType,
+                         nsIDOMEvent** aDOMEvent);
+
+  NS_IMETHOD Disconnect(PRBool aUnusedParam = PR_FALSE);
 
   NS_IMETHOD SetListenerTarget(nsISupports* aTarget);
 
-  NS_IMETHOD HasMutationListeners(PRBool* aListener);
+  NS_IMETHOD HasMutationListeners(PRBool* aListener)
+  {
+    *aListener = (GetListenersByType(eEventArrayType_Mutation, nsnull,
+                                     PR_FALSE) != nsnull);
+    return NS_OK;
+  }
 
   NS_IMETHOD GetSystemEventGroupLM(nsIDOMEventGroup** aGroup);
 
   virtual PRBool HasUnloadListeners();
 
-  virtual PRUint32 MutationListenerBits();
-
-  static PRUint32 GetIdentifierForEvent(nsIAtom* aEvent);
+  static nsresult GetIdentifiersForType(nsIAtom* aType,
+                                        EventArrayType* aArrayType,
+                                        PRInt32* aSubType);
 
   // nsIDOMEventTarget
   NS_DECL_NSIDOMEVENTTARGET
@@ -142,74 +198,198 @@ public:
                                    const nsIID& aIID);
   NS_IMETHOD RemoveEventListenerByIID(nsIDOMEventListener *aListener,
                                       const nsIID& aIID);
-  NS_IMETHOD GetListenerManager(PRBool aCreateIfNotFound,
-                                nsIEventListenerManager** aResult);
+  NS_IMETHOD GetListenerManager(nsIEventListenerManager** aInstancePtrResult);
   NS_IMETHOD HandleEvent(nsIDOMEvent *aEvent);
   NS_IMETHOD GetSystemEventGroup(nsIDOMEventGroup** aGroup);
 
   static void Shutdown();
 
-  NS_DECL_CYCLE_COLLECTION_CLASS(nsEventListenerManager)
-
 protected:
   nsresult HandleEventSubType(nsListenerStruct* aListenerStruct,
                               nsIDOMEventListener* aListener,
                               nsIDOMEvent* aDOMEvent,
-                              nsISupports* aCurrentTarget,
+                              nsIDOMEventTarget* aCurrentTarget,
+                              PRUint32 aSubType,
                               PRUint32 aPhaseFlags);
   nsresult CompileEventHandlerInternal(nsIScriptContext *aContext,
-                                       void *aScopeObject,
+                                       JSObject *aScopeObject,
                                        nsISupports *aObject,
                                        nsIAtom *aName,
                                        nsListenerStruct *aListenerStruct,
-                                       nsISupports* aCurrentTarget);
-  nsListenerStruct* FindJSEventListener(PRUint32 aEventType, nsIAtom* aTypeAtom);
+                                       nsIDOMEventTarget* aCurrentTarget,
+                                       PRUint32 aSubType);
+  nsListenerStruct* FindJSEventListener(EventArrayType aType);
   nsresult SetJSEventListener(nsIScriptContext *aContext,
-                              void *aScopeGlobal,
-                              nsISupports *aObject,
+                              JSObject *aScopeObject, nsISupports *aObject,
                               nsIAtom* aName, PRBool aIsString,
                               PRBool aPermitUntrustedEvents);
   nsresult AddEventListener(nsIDOMEventListener *aListener, 
-                            PRUint32 aType,
-                            nsIAtom* aTypeAtom,
-                            const EventTypeData* aTypeData,
+                            EventArrayType aType, 
+                            PRInt32 aSubType,
+                            nsHashKey* aKey,
                             PRInt32 aFlags,
                             nsIDOMEventGroup* aEvtGrp);
   nsresult RemoveEventListener(nsIDOMEventListener *aListener,
-                               PRUint32 aType,
-                               nsIAtom* aUserType,
-                               const EventTypeData* aTypeData,
+                               EventArrayType aType,
+                               PRInt32 aSubType,
+                               nsHashKey* aKey,
                                PRInt32 aFlags,
                                nsIDOMEventGroup* aEvtGrp);
+  void ReleaseListeners(nsVoidArray** aListeners);
   nsresult RemoveAllListeners();
-  const EventTypeData* GetTypeDataForIID(const nsIID& aIID);
-  const EventTypeData* GetTypeDataForEventName(nsIAtom* aName);
+  nsresult FlipCaptureBit(PRInt32 aEventTypes, PRBool aInitCapture);
+  nsVoidArray* GetListenersByType(EventArrayType aType, nsHashKey* aKey, PRBool aCreate);
+  EventArrayType GetTypeForIID(const nsIID& aIID);
   nsresult FixContextMenuEvent(nsPresContext* aPresContext,
-                               nsISupports* aCurrentTarget,
+                               nsIDOMEventTarget* aCurrentTarget,
                                nsEvent* aEvent,
                                nsIDOMEvent** aDOMEvent);
   PRBool PrepareToUseCaretPosition(nsIWidget* aEventWidget,
-                                   nsIPresShell* aShell,
-                                   nsPoint& aTargetPt);
+                                   nsEvent* aEvent,
+                                   nsIPresShell* aShell);
   void GetCoordinatesFor(nsIDOMElement *aCurrentEl, nsPresContext *aPresContext,
                          nsIPresShell *aPresShell, nsPoint& aTargetPt);
   nsresult GetDOM2EventGroup(nsIDOMEventGroup** aGroup);
-  PRBool ListenerCanHandle(nsListenerStruct* aLs, nsEvent* aEvent);
 
-  nsVoidArray       mListeners;
-  nsISupports*      mTarget;  //WEAK
-  PRPackedBool      mListenersRemoved;
-  PRPackedBool      mListenerRemoved;
-  PRPackedBool      mHandlingEvent;
-  PRPackedBool      mMayHaveMutationListeners;
-  // These two member variables are used to cache the information
-  // about the last event which was handled but for which event listener manager
-  // didn't have event listeners.
-  PRUint32          mNoListenerForEvent;
-  nsCOMPtr<nsIAtom> mNoListenerForEventAtom;
+  PRUint8 mManagerType;
+  PRPackedBool mListenersRemoved;
 
-  static PRUint32   mInstanceCount;
-  static jsval      sAddListenerID;
+  EventArrayType mSingleListenerType;
+  nsVoidArray* mSingleListener;
+  nsVoidArray* mMultiListeners;
+  nsHashtable* mGenericListeners;
+  static PRUint32 mInstanceCount;
+
+  nsISupports* mTarget;  //WEAK
+
+  static jsval sAddListenerID;
 };
+
+
+//Set of defines for distinguishing event handlers within listener groupings
+//XXX Current usage allows no more than 7 types per listener grouping
+
+#define NS_EVENT_BITS_NONE    0x00
+
+//nsIDOMMouseListener
+#define NS_EVENT_BITS_MOUSE_NONE        0x00
+#define NS_EVENT_BITS_MOUSE_MOUSEDOWN   0x01
+#define NS_EVENT_BITS_MOUSE_MOUSEUP     0x02
+#define NS_EVENT_BITS_MOUSE_CLICK       0x04
+#define NS_EVENT_BITS_MOUSE_DBLCLICK    0x08
+#define NS_EVENT_BITS_MOUSE_MOUSEOVER   0x10
+#define NS_EVENT_BITS_MOUSE_MOUSEOUT    0x20
+
+//nsIDOMMouseMotionListener
+#define NS_EVENT_BITS_MOUSEMOTION_NONE        0x00
+#define NS_EVENT_BITS_MOUSEMOTION_MOUSEMOVE   0x01
+#define NS_EVENT_BITS_MOUSEMOTION_DRAGMOVE    0x02
+
+//nsIDOMContextMenuListener
+#define NS_EVENT_BITS_CONTEXTMENU_NONE   0x00
+#define NS_EVENT_BITS_CONTEXTMENU        0x01
+
+//nsIDOMKeyListener
+#define NS_EVENT_BITS_KEY_NONE      0x00
+#define NS_EVENT_BITS_KEY_KEYDOWN   0x01
+#define NS_EVENT_BITS_KEY_KEYUP     0x02
+#define NS_EVENT_BITS_KEY_KEYPRESS  0x04
+
+//nsIDOMTextListener
+#define NS_EVENT_BITS_TEXT_NONE      0x00
+#define NS_EVENT_BITS_TEXT_TEXT      0x01
+
+//nsIDOMCompositionListener
+#define NS_EVENT_BITS_COMPOSITION_NONE           0x00
+#define NS_EVENT_BITS_COMPOSITION_START          0x01
+#define NS_EVENT_BITS_COMPOSITION_END            0x02
+#define NS_EVENT_BITS_COMPOSITION_QUERY          0x04
+#define NS_EVENT_BITS_COMPOSITION_RECONVERSION   0x08
+#define NS_EVENT_BITS_COMPOSITION_QUERYCARETRECT 0x10
+
+//nsIDOMFocusListener
+#define NS_EVENT_BITS_FOCUS_NONE    0x00
+#define NS_EVENT_BITS_FOCUS_FOCUS   0x01
+#define NS_EVENT_BITS_FOCUS_BLUR    0x02
+
+//nsIDOMFormListener
+#define NS_EVENT_BITS_FORM_NONE     0x00
+#define NS_EVENT_BITS_FORM_SUBMIT   0x01
+#define NS_EVENT_BITS_FORM_RESET    0x02
+#define NS_EVENT_BITS_FORM_CHANGE   0x04
+#define NS_EVENT_BITS_FORM_SELECT   0x08
+#define NS_EVENT_BITS_FORM_INPUT    0x10
+
+//nsIDOMLoadListener
+#define NS_EVENT_BITS_LOAD_NONE              0x00
+#define NS_EVENT_BITS_LOAD_LOAD              0x01
+#define NS_EVENT_BITS_LOAD_UNLOAD            0x02
+#define NS_EVENT_BITS_LOAD_ABORT             0x04
+#define NS_EVENT_BITS_LOAD_ERROR             0x08
+#define NS_EVENT_BITS_LOAD_BEFORE_UNLOAD     0x10
+
+//nsIDOMXULListener
+#define NS_EVENT_BITS_XUL_NONE               0x00
+#define NS_EVENT_BITS_XUL_POPUP_SHOWING      0x01
+#define NS_EVENT_BITS_XUL_CLOSE              0x02
+#define NS_EVENT_BITS_XUL_POPUP_HIDING       0x04
+#define NS_EVENT_BITS_XUL_COMMAND            0x08
+#define NS_EVENT_BITS_XUL_BROADCAST          0x10
+#define NS_EVENT_BITS_XUL_COMMAND_UPDATE     0x20
+#define NS_EVENT_BITS_XUL_POPUP_SHOWN        0x40
+#define NS_EVENT_BITS_XUL_POPUP_HIDDEN       0x80
+
+//nsIScrollListener
+#define NS_EVENT_BITS_SCROLLPORT_NONE             0x00
+#define NS_EVENT_BITS_SCROLLPORT_OVERFLOW         0x01
+#define NS_EVENT_BITS_SCROLLPORT_UNDERFLOW        0x02
+#define NS_EVENT_BITS_SCROLLPORT_OVERFLOWCHANGED  0x04
+
+//nsIDOMDragListener
+#define NS_EVENT_BITS_DRAG_NONE     0x00
+#define NS_EVENT_BITS_DRAG_ENTER    0x01
+#define NS_EVENT_BITS_DRAG_OVER     0x02
+#define NS_EVENT_BITS_DRAG_EXIT     0x04
+#define NS_EVENT_BITS_DRAG_DROP     0x08
+#define NS_EVENT_BITS_DRAG_GESTURE  0x10
+
+//nsIDOMPaintListener
+#define NS_EVENT_BITS_PAINT_NONE    0x00
+#define NS_EVENT_BITS_PAINT_PAINT   0x01
+#define NS_EVENT_BITS_PAINT_RESIZE  0x02
+#define NS_EVENT_BITS_PAINT_SCROLL  0x04
+
+//nsIDOMMutationListener
+// These bits are found in nsMutationEvent.h.
+
+//nsIDOMContextMenuListener
+#define NS_EVENT_BITS_CONTEXT_NONE  0x00
+#define NS_EVENT_BITS_CONTEXT_MENU  0x01
+
+// nsIDOMUIListener
+#define NS_EVENT_BITS_UI_NONE      0x00
+#define NS_EVENT_BITS_UI_ACTIVATE  0x01
+#define NS_EVENT_BITS_UI_FOCUSIN   0x02
+#define NS_EVENT_BITS_UI_FOCUSOUT  0x04
+
+// nsIDOMPageTransitionListener
+#define NS_EVENT_BITS_PAGETRANSITION_NONE 0x00
+#define NS_EVENT_BITS_PAGETRANSITION_SHOW 0x01
+#define NS_EVENT_BITS_PAGETRANSITION_HIDE 0x02
+
+#ifdef MOZ_SVG
+// nsIDOMSVGEventListener
+#define NS_EVENT_BITS_SVG_NONE      0x00
+#define NS_EVENT_BITS_SVG_LOAD      0x01
+#define NS_EVENT_BITS_SVG_UNLOAD    0x02
+#define NS_EVENT_BITS_SVG_ABORT     0x04
+#define NS_EVENT_BITS_SVG_ERROR     0x08
+#define NS_EVENT_BITS_SVG_RESIZE    0x10
+#define NS_EVENT_BITS_SVG_SCROLL    0x20
+
+// nsIDOMSVGZoomEventListener
+#define NS_EVENT_BITS_SVGZOOM_NONE  0x00
+#define NS_EVENT_BITS_SVGZOOM_ZOOM  0x01
+#endif // MOZ_SVG
 
 #endif // nsEventListenerManager_h__

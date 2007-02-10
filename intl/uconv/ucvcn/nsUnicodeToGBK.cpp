@@ -56,6 +56,15 @@
 // Global table initialization function defined in gbku.h
 //-------------------------------------------------------------
 
+static const PRInt16 g_2BytesShiftTable[] = {
+ 0, u2BytesCharset,
+ ShiftCell(0,0,0,0,0,0,0,0)
+};
+static const PRInt16 g_4BytesGB18030ShiftTable[] = {
+ 0, u4BytesGB18030Charset,
+ ShiftCell(0,0,0,0,0,0,0,0)
+};
+
 //-----------------------------------------------------------------------
 //  Private class used by nsUnicodeToGB18030 and nsUnicodeToGB18030Font0
 //    nsUnicodeToGB18030Uniq2Bytes
@@ -67,7 +76,7 @@ class nsUnicodeToGB18030Uniq2Bytes : public nsTableEncoderSupport
 {
 public: 
   nsUnicodeToGB18030Uniq2Bytes() 
-    : nsTableEncoderSupport(u2BytesCharset,
+    : nsTableEncoderSupport((uShiftTable*) &g_2BytesShiftTable,
                             (uMappingTable*) &g_uf_gb18030_2bytes, 2) {};
 protected: 
 };
@@ -82,7 +91,7 @@ class nsUnicodeTo4BytesGB18030 : public nsTableEncoderSupport
 {
 public: 
   nsUnicodeTo4BytesGB18030()
-    : nsTableEncoderSupport(u4BytesGB18030Charset, 
+    : nsTableEncoderSupport( (uShiftTable*) &g_4BytesGB18030ShiftTable,
                              (uMappingTable*) &g_uf_gb18030_4bytes, 4) {};
 protected: 
 };
@@ -97,7 +106,7 @@ class nsUnicodeToGBKUniq2Bytes : public nsTableEncoderSupport
 {
 public: 
   nsUnicodeToGBKUniq2Bytes()
-    : nsTableEncoderSupport(u2BytesCharset, 
+    : nsTableEncoderSupport( (uShiftTable*) &g_2BytesShiftTable,
                              (uMappingTable*) &g_uf_gbk_2bytes, 2) {};
 protected: 
 };
@@ -118,8 +127,8 @@ PRBool nsUnicodeToGB18030::EncodeSurrogate(
   PRUnichar aSurrogateLow,
   char* aOut)
 {
-  if( NS_IS_HIGH_SURROGATE(aSurrogateHigh) && 
-      NS_IS_LOW_SURROGATE(aSurrogateLow) )
+  if( IS_HIGH_SURROGATE(aSurrogateHigh) && 
+      IS_LOW_SURROGATE(aSurrogateLow) )
   {
     // notice that idx does not include the 0x10000 
     PRUint32 idx = ((aSurrogateHigh - (PRUnichar)0xD800) << 10 ) |
@@ -169,7 +178,7 @@ NS_IMETHODIMP nsUnicodeToGB18030Font0::FillInfo(PRUint32 *aInfo)
 //  nsUnicodeToGB18030Font1
 //-----------------------------------------------------------------------
 nsUnicodeToGB18030Font1::nsUnicodeToGB18030Font1()
-  : nsTableEncoderSupport(u2BytesCharset,
+    : nsTableEncoderSupport( (uShiftTable*) &g_2BytesShiftTable,
                              (uMappingTable*) &g_uf_gb18030_4bytes, 4)
 {
 
@@ -337,8 +346,8 @@ PRBool nsUnicodeToGBK::TryExtensionEncoder(
   PRInt32 *aOutLen
 )
 {
-  if( NS_IS_HIGH_SURROGATE(aChar) || 
-      NS_IS_LOW_SURROGATE(aChar) )
+  if( IS_HIGH_SURROGATE(aChar) || 
+      IS_LOW_SURROGATE(aChar) )
   {
     // performance tune for surrogate characters
     return PR_FALSE;
@@ -362,8 +371,8 @@ PRBool nsUnicodeToGBK::Try4BytesEncoder(
   PRInt32 *aOutLen
 )
 {
-  if( NS_IS_HIGH_SURROGATE(aChar) || 
-      NS_IS_LOW_SURROGATE(aChar) )
+  if( IS_HIGH_SURROGATE(aChar) || 
+      IS_LOW_SURROGATE(aChar) )
   {
     // performance tune for surrogate characters
     return PR_FALSE;
@@ -449,7 +458,7 @@ NS_IMETHODIMP nsUnicodeToGBK::ConvertNoBuff(
           // we still cannot map. Let's try to
           // call the delegated GB18030 4 byte converter 
           aOutLen = 4;
-          if( NS_IS_HIGH_SURROGATE(unicode) )
+          if( IS_HIGH_SURROGATE(unicode) )
           {
             if((iSrcLength+1) < *aSrcLength ) {
               if(EncodeSurrogate(aSrc[0],aSrc[1], aDest)) {
@@ -469,9 +478,9 @@ NS_IMETHODIMP nsUnicodeToGBK::ConvertNoBuff(
               break; // this will go to afterwhileloop
             }
           } else {
-            if( NS_IS_LOW_SURROGATE(unicode) )
+            if( IS_LOW_SURROGATE(unicode) )
             {
-              if(NS_IS_HIGH_SURROGATE(mSurrogateHigh)) {
+              if(IS_HIGH_SURROGATE(mSurrogateHigh)) {
                 if(EncodeSurrogate(mSurrogateHigh, aSrc[0], aDest)) {
                   iDestLength += aOutLen;
                   aDest += aOutLen;

@@ -35,7 +35,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsNSSCertCache.h"
-#include "nsNSSCertificate.h"
 #include "nsAutoLock.h"
 #include "cert.h"
 #include "nsCOMPtr.h"
@@ -70,6 +69,9 @@ void nsNSSCertCache::destructorSafeDestroyNSSReference()
   if (isAlreadyShutDown())
     return;
 
+  if (mCertList) {
+    CERT_DestroyCertList(mCertList);
+  }
   if (mutex) {
     PR_DestroyLock(mutex);
     mutex = nsnull;
@@ -83,54 +85,25 @@ nsNSSCertCache::CacheAllCerts()
   if (isAlreadyShutDown())
     return NS_ERROR_NOT_AVAILABLE;
 
+  {
+    nsAutoLock lock(mutex);
+    if (mCertList) {
+      CERT_DestroyCertList(mCertList);
+      mCertList = nsnull;
+    }
+  }
+
   nsCOMPtr<nsIInterfaceRequestor> cxt = new PipUIContext();
   
   CERTCertList *newList = PK11_ListCerts(PK11CertListUnique, cxt);
 
   if (newList) {
     nsAutoLock lock(mutex);
-    mCertList = new nsNSSCertList(newList, PR_TRUE); // adopt
+    mCertList = newList;
   }
   
   return NS_OK;
 }
-
-NS_IMETHODIMP
-nsNSSCertCache::CacheCertList(nsIX509CertList *list)
-{
-  nsNSSShutDownPreventionLock locker;
-  if (isAlreadyShutDown())
-    return NS_ERROR_NOT_AVAILABLE;
-
-  {
-    nsAutoLock lock(mutex);
-    mCertList = list;
-    //NS_ADDREF(mCertList);
-  }
-  
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsNSSCertCache::GetX509CachedCerts(nsIX509CertList **list)
-{
-  nsNSSShutDownPreventionLock locker;
-  if (isAlreadyShutDown())
-    return NS_ERROR_NOT_AVAILABLE;
-
-  {
-    nsAutoLock lock(mutex);
-    if (!mCertList) {
-      return NS_ERROR_NOT_AVAILABLE;
-    }
-    *list = mCertList;
-    NS_ADDREF(*list);
-  }
-  
-  return NS_OK;
-}
-
-
 
 void* nsNSSCertCache::GetCachedCerts()
 {
@@ -138,5 +111,5 @@ void* nsNSSCertCache::GetCachedCerts()
     return nsnull;
 
   nsAutoLock lock(mutex);
-  return mCertList->GetRawCertList();
+  return mCertList;
 }

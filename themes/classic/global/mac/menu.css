@@ -56,13 +56,13 @@ menuitem {
 
 menuitem[default="true"] {
   font-weight: bold;
-}
-
+}  
+  
 menu[disabled="true"],
 menuitem[disabled="true"],
 menu[_moz-menuactive="true"][disabled="true"],
 menuitem[_moz-menuactive="true"][disabled="true"] {
-  color: -moz-mac-menutextdisable !important;
+  color: GrayText !important;
 }
 
 .menu-iconic,
@@ -73,8 +73,10 @@ menuitem[_moz-menuactive="true"][disabled="true"] {
 /* ..... internal content .... */
 
 .menu-text, 
-.menu-iconic-text {
-  margin: 0px 4px 0px 0px !important;
+.menu-accel,
+.menu-iconic-text,
+.menu-iconic-accel {
+  margin: 0px 2px 0px 0px !important;
   color: inherit;
 }
 
@@ -83,15 +85,8 @@ menuitem[_moz-menuactive="true"][disabled="true"] {
   font-weight: inherit;
 }
 
-.menu-accel,
-.menu-iconic-accel {
-  margin: 0px 2px 0px 2px !important;
-  padding-right: 10px;
-  color: inherit;
-}
-
 .menu-iconic-left {
-  margin: 2px 4px 1px 18px !important;
+  margin: 1px 2px 1px 18px !important;
   color: inherit;
 }
 
@@ -104,13 +99,23 @@ menuitem[type="radio"] > .menu-iconic-left {
 
 .menu-description {
   font-style: italic;
-  color: -moz-mac-menutextdisable;
+  color: GrayText;
   margin-left: 1ex !important;
 }
 
+.menu-accel {
+  margin-left: 4px;
+  padding-right: 14px;
+}
+
+.menu-iconic-accel {
+  margin-left: 4px;
+  padding-right: 14px;
+}
+
 .menu-iconic-icon {
-  min-width: 16px;
-  min-height: 16px;
+  width: 16px;
+  height: 16px;
   list-style-image: inherit;
 }
 
@@ -165,7 +170,7 @@ menupopup > menu,
 popup > menu,
 menupopup > menuitem,
 popup > menuitem {
-  padding: 0px 3px 2px 3px !important;
+  padding: 1px 3px 1px 3px;
   max-width: 42em;
 }
 
@@ -183,24 +188,22 @@ menuitem[checked="true"] {
   -moz-image-region: auto;
 }
 
-menuitem[checked="true"][_moz-menuactive="true"] {
-  list-style-image: url("chrome://global/skin/menu/menu-check-hov.png");
+menuitem[checked="true"][disabled="true"] {
+  list-style-image: url("chrome://global/skin/menu/menu-check-dis.png");
   -moz-image-region: auto;
 }
 
-menuitem[checked="true"][disabled="true"] {
-  list-style-image: url("chrome://global/skin/menu/menu-check-dis.png");
+menuitem[checked="true"][_moz-menuactive="true"] {
+  list-style-image: url("chrome://global/skin/menu/menu-check-hov.png");
   -moz-image-region: auto;
 }
 
 /* ::::: menuitems in menulists ::::: */
 
 menulist > menupopup > menuitem,
-menulist > menupopup > menu,
-.menulist-menupopup > menuitem,
-.menulist-menupopup > menu {
+.menulist-menupopup > menuitem {
   max-width: none;
-  padding-right: 28px !important;
+  padding-right: 20px;
   font: message-box;
 }
 

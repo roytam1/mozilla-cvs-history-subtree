@@ -11,6 +11,8 @@
 <!-- MAIN MENU ITEMS -->
 
 <!ENTITY mnFile.label "Fájl">
+<!ENTITY mnWindows.label "Ablak vizsgálata">
+<!ENTITY mnWindows.accesskey "A">
 <!ENTITY mnFile.accesskey "F">
   <!ENTITY cmdShowOpenURLDialog.label "URL vizsgálata...">
   <!ENTITY cmdShowOpenURLDialog.accesskey "u">

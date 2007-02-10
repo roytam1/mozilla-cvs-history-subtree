@@ -43,72 +43,46 @@ VPATH   = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-# These component dirs are built for all apps (including suite)
+# These component dirs are built for all apps (including seamonkey)
 
 ifdef MOZ_ENABLE_XREMOTE
 DIRS += remote
 endif
-DIRS += urlformatter
 
 # These component dirs are built only for XUL apps
 
 ifdef MOZ_XUL_APP
 DIRS += \
 	alerts \
-	filepicker \
 	console \
-	viewconfig \
+	filepicker \
 	typeaheadfind \
+	printing \
+	viewsource \
+	viewconfig \
+	urlformatter \
 	$(NULL)
-
-ifdef MOZ_FEEDS
-DIRS += feeds
-endif
-
-ifdef MOZ_PLACES
-DIRS += places
-endif
-
-ifdef NS_PRINTING
-DIRS +=	printing
-endif
-
-ifdef MOZ_VIEW_SOURCE
-DIRS +=	viewsource
-endif
 
 ifdef MOZ_THUNDERBIRD
 DIRS += autocomplete/public
 else
 DIRS +=	\
-	cookie \
-	$(NULL)
-
-ifndef MOZ_SUITE
-# XXX Suite doesn't want these just yet
-ifdef MOZ_XUL
-DIRS += \
 	autocomplete \
+	cookie \
+	help \
 	history \
 	passwordmgr \
 	satchel \
 	$(NULL)
-endif # MOZ_XUL
-endif # MOZ_SUITE
 endif # MOZ_THUNDERBIRD
 
-ifdef MOZ_XUL
-DIRS += help
+ifdef MOZ_FEEDS
+DIRS += feeds
 endif
 
-ifndef MOZ_SUITE
-# XXX Suite doesn't want these just yet
 ifdef MOZ_XPINSTALL
-ifdef MOZ_RDF
 DIRS +=	downloads
 endif
-endif
-endif # MOZ_SUITE
 
 ifdef MOZ_URL_CLASSIFIER
 DIRS += url-classifier
@@ -125,10 +99,6 @@ EXTRA_PP_COMPONENTS = nsDefaultCLH.js
 endif # MOZ_XUL_APP
 
 ifdef MOZ_SUITE
-DIRS += autocomplete/public
-endif
-
-ifeq ($(MOZ_BUILD_APP),camino)
 DIRS += autocomplete/public
 endif
 

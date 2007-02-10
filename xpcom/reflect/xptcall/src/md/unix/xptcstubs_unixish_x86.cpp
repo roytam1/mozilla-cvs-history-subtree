@@ -39,7 +39,6 @@
 
 #include "xptcprivate.h"
 #include "xptc_platforms_unixish_x86.h"
-#include "xptiprivate.h"
 
 static nsresult
 PrepareAndDispatch(nsXPTCStubBase* self, uint32 methodIndex, PRUint32* args)
@@ -48,6 +47,7 @@ PrepareAndDispatch(nsXPTCStubBase* self, uint32 methodIndex, PRUint32* args)
 
     nsXPTCMiniVariant paramBuffer[PARAM_BUFFER_COUNT];
     nsXPTCMiniVariant* dispatchParams = NULL;
+    nsIInterfaceInfo* iface_info = NULL;
     const nsXPTMethodInfo* info;
     PRUint8 paramCount;
     PRUint8 i;
@@ -55,7 +55,10 @@ PrepareAndDispatch(nsXPTCStubBase* self, uint32 methodIndex, PRUint32* args)
 
     NS_ASSERTION(self,"no self");
 
-    self->mEntry->GetMethodInfo(PRUint16(methodIndex), &info);
+    self->GetInterfaceInfo(&iface_info);
+    NS_ASSERTION(iface_info,"no interface info");
+
+    iface_info->GetMethodInfo(PRUint16(methodIndex), &info);
     NS_ASSERTION(info,"no interface info");
 
     paramCount = info->GetParamCount();
@@ -89,8 +92,9 @@ PrepareAndDispatch(nsXPTCStubBase* self, uint32 methodIndex, PRUint32* args)
         }
     }
 
-    result = self->mOuter->
-        CallMethod((PRUint16)methodIndex, info, dispatchParams);
+    result = self->CallMethod((PRUint16)methodIndex, info, dispatchParams);
+
+    NS_RELEASE(iface_info);
 
     if(dispatchParams != paramBuffer)
         delete [] dispatchParams;
@@ -100,38 +104,34 @@ PrepareAndDispatch(nsXPTCStubBase* self, uint32 methodIndex, PRUint32* args)
 
 #ifdef __GNUC__         /* Gnu Compiler. */
 
-#ifdef KEEP_STACK_16_BYTE_ALIGNED
+#ifdef XP_MACOSX
 /* Make sure the stack is 16-byte aligned.  Do that by aligning to 16 bytes and
  * then subtracting 4 so the three subsequent pushes result in a 16-byte aligned
  * stack. */
-#define ALIGN_STACK_DECL \
-  unsigned int saved_esp;
+#define ALIGN_STACK	\
+    "addl $0x4, %%esp\n\t" \
+    "andl $0xfffffff0, %%esp\n\t" \
+    "subl $0x4, %%esp\n\t"
 
-#define ALIGN_STACK_SAVE \
-  "movl %%esp, %3\n\t"
+#define REGS_TRASHED	\
+	, "%esp"
 
-#define ALIGN_STACK_ALIGN \
-  "addl $0x4, %%esp\n\t" \
-  "andl $0xfffffff0, %%esp\n\t" \
-  "subl $0x4, %%esp\n\t"
+#define SAVE_STACK \
+  unsigned int saved_esp; \
+  __asm__ __volatile__( \
+    "movl %%esp, %0\n\t" \
+    : "=r"(saved_esp));
 
-#define STACK_RESTORE \
-  "movl %3, %%esp\n"
-
-#define ALIGN_STACK_REGS_IN \
-  , "=r"(saved_esp) /* 3 */
-
-#define ALIGN_STACK_REGS_OUT \
-  , "3"(saved_esp)
-
+#define RESTORE_STACK	\
+ __asm__ __volatile__( \
+    "movl %0, %%esp\n\t" \
+    : \
+    : "r"(saved_esp));
 #else
-#define ALIGN_STACK_DECL
-#define ALIGN_STACK_SAVE
-#define ALIGN_STACK_ALIGN
-#define STACK_RESTORE \
-  "addl $12, %%esp\n"
-#define ALIGN_STACK_REGS_IN
-#define ALIGN_STACK_REGS_OUT
+#define ALIGN_STACK
+#define REGS_TRASHED
+#define SAVE_STACK
+#define RESTORE_STACK
 #endif
 
 #define STUB_ENTRY(n) \
@@ -140,25 +140,24 @@ nsresult nsXPTCStubBase::Stub##n() \
   register nsresult (*method) (nsXPTCStubBase *, uint32, PRUint32 *) = PrepareAndDispatch; \
   int temp0, temp1; \
   register nsresult result; \
-  ALIGN_STACK_DECL \
+  SAVE_STACK \
   __asm__ __volatile__( \
-    ALIGN_STACK_SAVE \
-    ALIGN_STACK_ALIGN \
+    ALIGN_STACK \
     "leal   0x0c(%%ebp), %%ecx\n\t"    /* args */ \
     "pushl  %%ecx\n\t" \
     "pushl  $"#n"\n\t"                 /* method index */ \
     "movl   0x08(%%ebp), %%ecx\n\t"    /* this */ \
     "pushl  %%ecx\n\t" \
     "call   *%%edx\n\t"                /* PrepareAndDispatch */ \
-    STACK_RESTORE                      /* "addl $12, %%esp" or restore saved */ \
+    "addl   $12, %%esp" \
     : "=a" (result),    /* %0 */ \
       "=&c" (temp0),    /* %1 */ \
       "=d" (temp1)      /* %2 */ \
-      ALIGN_STACK_REGS_IN \
     : "2" (method)      /* %2 */ \
-      ALIGN_STACK_REGS_OUT \
     : "memory" \
+	REGS_TRASHED \
 	); \
+	RESTORE_STACK \
     return result; \
 }
 

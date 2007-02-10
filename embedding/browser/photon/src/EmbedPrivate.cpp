@@ -261,7 +261,7 @@ EmbedPrivate::Setup()
 	supportsWeak = do_QueryInterface(mProgressGuard);
 	nsCOMPtr<nsIWeakReference> weakRef;
 	supportsWeak->GetWeakReference(getter_AddRefs(weakRef));
-	webBrowser->AddWebBrowserListener(weakRef, NS_GET_IID(nsIWebProgressListener));
+	webBrowser->AddWebBrowserListener(weakRef, nsIWebProgressListener::GetIID());
 
 	// set ourselves as the parent uri content listener
 	nsCOMPtr<nsIURIContentListener> uriListener;
@@ -326,7 +326,7 @@ EmbedPrivate::Destroy(void)
   nsCOMPtr<nsIWeakReference> weakRef;
   supportsWeak->GetWeakReference(getter_AddRefs(weakRef));
   webBrowser->RemoveWebBrowserListener(weakRef,
-				       NS_GET_IID(nsIWebProgressListener));
+				       nsIWebProgressListener::GetIID());
   weakRef = nsnull;
   supportsWeak = nsnull;
 
@@ -966,13 +966,13 @@ static void mozilla_set_default_pref( nsIPref *pref )
 */
 
 	/* translation set = Western European (ISO 8859-1) */
-	pref->SetUnicharPref( "intl.charset.default", NS_ConvertASCIItoUTF16("iso8859-1").get());
+	pref->SetUnicharPref( "intl.charset.default", NS_ConvertASCIItoUCS2("iso8859-1").get());
 
 	/* HTML Options */
-	pref->SetUnicharPref( "browser.visited_color", NS_ConvertASCIItoUTF16("#008080").get() );
-	pref->SetUnicharPref( "browser.anchor_color", NS_ConvertASCIItoUTF16("#0000ff").get() );
-	pref->SetUnicharPref( "browser.display.foreground_color", NS_ConvertASCIItoUTF16("#000000").get() );
-	pref->SetUnicharPref( "browser.display.background_color", NS_ConvertASCIItoUTF16("#ffffff").get() );
+	pref->SetUnicharPref( "browser.visited_color", NS_ConvertASCIItoUCS2("#008080").get() );
+	pref->SetUnicharPref( "browser.anchor_color", NS_ConvertASCIItoUCS2("#0000ff").get() );
+	pref->SetUnicharPref( "browser.display.foreground_color", NS_ConvertASCIItoUCS2("#000000").get() );
+	pref->SetUnicharPref( "browser.display.background_color", NS_ConvertASCIItoUCS2("#ffffff").get() );
 
 	pref->SetCharPref( "font.name.serif.x-western", "serif" );
 	pref->SetCharPref( "font.name.sans-serif.x-western", "sans-serif" );

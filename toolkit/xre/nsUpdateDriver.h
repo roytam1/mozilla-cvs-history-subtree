@@ -55,10 +55,9 @@ class nsIFile;
  * The argc and argv passed to this function should be what is needed to
  * relaunch the current process.
  *
- * This function does not modify appDir.
+ * This function does not modify greDir or appDir.
  */
 NS_HIDDEN_(nsresult) ProcessUpdates(nsIFile *greDir, nsIFile *appDir,
-                                    nsIFile *updRootDir,
                                     int argc, char **argv);
 
 #endif  // nsUpdateDriver_h__

@@ -34,50 +34,13 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * rendering object for the point that anchors out-of-flow rendering
- * objects such as floats and absolutely positioned elements
- */
-
-/*
- * Destruction of a placeholder and its out-of-flow must observe the
- * following constraints:
- *
- * - The mapping from the out-of-flow to the placeholder must be
- *   removed from the frame manager before the placeholder is destroyed.
- * - The mapping from the out-of-flow to the placeholder must be
- *   removed from the frame manager before the out-of-flow is destroyed.
- * - The placeholder must be removed from the frame tree, or have the
- *   mapping from it to its out-of-flow cleared, before the out-of-flow
- *   is destroyed (so that the placeholder will not point to a destroyed
- *   frame while it's in the frame tree).
- *
- * Therefore the safe order of teardown is to:
- *
- * 1)  Unregister the placeholder from the frame manager.
- * 2)  Destroy the placeholder
- * 3)  Destroy the out of flow
- *
- * In certain cases it may be possible to replace step (2) with:
- *
- * 2') Null out the mOutOfFlowFrame pointer in the placeholder
- *
- * and add
- *
- * 4) Destroy the placeholder
- *
- * but this is somewhat dangerous, since lots of code assumes that
- * placeholders point to something useful.
- */
-
 #ifndef nsPlaceholderFrame_h___
 #define nsPlaceholderFrame_h___
 
 #include "nsSplittableFrame.h"
-#include "nsGkAtoms.h"
+#include "nsLayoutAtoms.h"
 
-nsIFrame* NS_NewPlaceholderFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+nsresult NS_NewPlaceholderFrame(nsIPresShell* aPresShell, nsIFrame**  aInstancePtrResult);
 
 /**
  * Implementation of a frame that's used as a placeholder for a frame that
@@ -88,8 +51,8 @@ public:
   /**
    * Create a new placeholder frame
    */
-  friend nsIFrame* NS_NewPlaceholderFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
-  nsPlaceholderFrame(nsStyleContext* aContext) : nsSplittableFrame(aContext) {}
+  friend nsresult NS_NewPlaceholderFrame(nsIPresShell* aPresShell, nsIFrame**  aInstancePtrResult);
+  nsPlaceholderFrame();
   virtual ~nsPlaceholderFrame();
 
   // Get/Set the associated out of flow frame
@@ -97,37 +60,27 @@ public:
   void       SetOutOfFlowFrame(nsIFrame* aFrame) {mOutOfFlowFrame = aFrame;}
 
   // nsIHTMLReflow overrides
-  // We need to override GetMinWidth and GetPrefWidth because XUL uses
-  // placeholders not within lines.
-  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
-  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
-  virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
-                                 InlineMinWidthData *aData);
-  virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
-                                  InlinePrefWidthData *aData);
   NS_IMETHOD Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus& aStatus);
 
-  virtual void Destroy();
-  virtual nsSplittableType GetSplittableType() const;
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
   // nsIFrame overrides
-#if defined(DEBUG) || (defined(MOZ_REFLOW_PERF_DSP) && defined(MOZ_REFLOW_PERF))
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
-#endif // DEBUG || (MOZ_REFLOW_PERF_DSP && MOZ_REFLOW_PERF)
-  
 #ifdef DEBUG
-  NS_IMETHOD List(FILE* out, PRInt32 aIndent) const;
-#endif // DEBUG
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
+  NS_IMETHOD List(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent) const;
+#endif
 
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::placeholderFrame
+   * @see nsLayoutAtoms::placeholderFrame
    */
   virtual nsIAtom* GetType() const;
 
@@ -137,8 +90,6 @@ public:
 
   virtual PRBool IsEmpty() { return PR_TRUE; }
   virtual PRBool IsSelfEmpty() { return PR_TRUE; }
-
-  virtual PRBool CanContinueTextRun() const;
 
 #ifdef ACCESSIBILITY
   NS_IMETHOD  GetAccessible(nsIAccessible** aAccessible)
@@ -155,7 +106,7 @@ public:
    */
   static nsIFrame* GetRealFrameFor(nsIFrame* aFrame) {
     NS_PRECONDITION(aFrame, "Must have a frame to work with");
-    if (aFrame->GetType() == nsGkAtoms::placeholderFrame) {
+    if (aFrame->GetType() == nsLayoutAtoms::placeholderFrame) {
       return GetRealFrameForPlaceholder(aFrame);
     }
     return aFrame;
@@ -165,7 +116,7 @@ public:
    * @return the out-of-flow for aFrame, which is known to be a placeholder
    */
   static nsIFrame* GetRealFrameForPlaceholder(nsIFrame* aFrame) {
-    NS_PRECONDITION(aFrame->GetType() == nsGkAtoms::placeholderFrame,
+    NS_PRECONDITION(aFrame->GetType() == nsLayoutAtoms::placeholderFrame,
                     "Must have placeholder frame as input");
     nsIFrame* outOfFlow =
       NS_STATIC_CAST(nsPlaceholderFrame*, aFrame)->GetOutOfFlowFrame();

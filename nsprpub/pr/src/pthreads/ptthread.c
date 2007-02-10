@@ -620,17 +620,7 @@ PR_IMPLEMENT(PRStatus) PR_JoinThread(PRThread *thred)
     return (0 == rv) ? PR_SUCCESS : PR_FAILURE;
 }  /* PR_JoinThread */
 
-PR_IMPLEMENT(void) PR_DetachThread(void)
-{
-    void *thred;
-    int rv;
-
-    _PT_PTHREAD_GETSPECIFIC(pt_book.key, thred);
-    if (NULL == thred) return;
-    _pt_thread_death(thred);
-    rv = pthread_setspecific(pt_book.key, NULL);
-    PR_ASSERT(0 == rv);
-}  /* PR_DetachThread */
+PR_IMPLEMENT(void) PR_DetachThread(void) { }  /* PR_DetachThread */
 
 PR_IMPLEMENT(PRThread*) PR_GetCurrentThread(void)
 {
@@ -749,19 +739,19 @@ PR_IMPLEMENT(PRStatus) PR_Interrupt(PRThread *thred)
 
 PR_IMPLEMENT(void) PR_ClearInterrupt(void)
 {
-    PRThread *me = PR_GetCurrentThread();
+    PRThread *me = PR_CurrentThread();
     me->state &= ~PT_THREAD_ABORTED;
 }  /* PR_ClearInterrupt */
 
 PR_IMPLEMENT(void) PR_BlockInterrupt(void)
 {
-    PRThread *me = PR_GetCurrentThread();
+    PRThread *me = PR_CurrentThread();
     _PT_THREAD_BLOCK_INTERRUPT(me);
 }  /* PR_BlockInterrupt */
 
 PR_IMPLEMENT(void) PR_UnblockInterrupt(void)
 {
-    PRThread *me = PR_GetCurrentThread();
+    PRThread *me = PR_CurrentThread();
     _PT_THREAD_UNBLOCK_INTERRUPT(me);
 }  /* PR_UnblockInterrupt */
 
@@ -934,79 +924,9 @@ void _PR_InitThreads(
     PR_SetThreadPriority(thred, priority);
 }  /* _PR_InitThreads */
 
-#ifdef __GNUC__
-/*
- * GCC supports the constructor and destructor attributes as of
- * version 2.5.
- */
-static void _PR_Fini(void) __attribute__ ((destructor));
-#elif defined(__SUNPRO_C)
-/*
- * Sun Studio compiler
- */
-#pragma fini(_PR_Fini)
-static void _PR_Fini(void);
-#elif defined(HPUX)
-/*
- * Current versions of HP C compiler define __HP_cc.
- * HP C compiler A.11.01.20 doesn't define __HP_cc.
- */
-#if defined(__ia64) || defined(_LP64)
-#pragma FINI "_PR_Fini"
-static void _PR_Fini(void);
-#else
-/*
- * Only HP-UX 10.x style initializers are supported in 32-bit links.
- * Need to use the +I PR_HPUX10xInit linker option.
- */
-#include <dl.h>
-
-static void _PR_Fini(void);
-
-void PR_HPUX10xInit(shl_t handle, int loading)
-{
-    /*
-     * This function is called when a shared library is loaded as well
-     * as when the shared library is unloaded.  Note that it may not
-     * be called when the user's program terminates.
-     *
-     * handle is the shl_load API handle for the shared library being
-     * initialized.
-     *
-     * loading is non-zero at startup and zero at termination.
-     */
-    if (loading) {
-	/* ... do some initializations ... */
-    } else {
-	_PR_Fini();
-    }
-}
-#endif
-#elif defined(AIX)
-/* Need to use the -binitfini::_PR_Fini linker option. */
-#endif
-
-void _PR_Fini(void)
-{
-    void *thred;
-    int rv;
-
-    if (!_pr_initialized) return;
-
-    _PT_PTHREAD_GETSPECIFIC(pt_book.key, thred);
-    if (NULL != thred)
-    {
-        _pt_thread_death(thred);
-        rv = pthread_setspecific(pt_book.key, NULL);
-        PR_ASSERT(0 == rv);
-    }
-    /* TODO: free other resources used by NSPR */
-    /* _pr_initialized = PR_FALSE; */
-}  /* _PR_Fini */
-
 PR_IMPLEMENT(PRStatus) PR_Cleanup(void)
 {
-    PRThread *me = PR_GetCurrentThread();
+    PRThread *me = PR_CurrentThread();
     int rv;
     PR_LOG(_pr_thread_lm, PR_LOG_MIN, ("PR_Cleanup: shutting down NSPR"));
     PR_ASSERT(me->state & PT_THREAD_PRIMORD);
@@ -1174,14 +1094,14 @@ static void init_pthread_gc_support(void)
 PR_IMPLEMENT(void) PR_SetThreadGCAble(void)
 {
     PR_Lock(pt_book.ml);
-	PR_GetCurrentThread()->state |= PT_THREAD_GCABLE;
+	PR_CurrentThread()->state |= PT_THREAD_GCABLE;
     PR_Unlock(pt_book.ml);
 }
 
 PR_IMPLEMENT(void) PR_ClearThreadGCAble(void)
 {
     PR_Lock(pt_book.ml);
-	PR_GetCurrentThread()->state &= (~PT_THREAD_GCABLE);
+	PR_CurrentThread()->state &= (~PT_THREAD_GCABLE);
     PR_Unlock(pt_book.ml);
 }
 
@@ -1196,7 +1116,7 @@ PR_IMPLEMENT(PRStatus) PR_EnumerateThreads(PREnumerator func, void *arg)
     PRIntn count = 0;
     PRStatus rv = PR_SUCCESS;
     PRThread* thred = pt_book.first;
-    PRThread *me = PR_GetCurrentThread();
+    PRThread *me = PR_CurrentThread();
 
     PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS, ("Begin PR_EnumerateThreads\n"));
     /*
@@ -1283,7 +1203,7 @@ static void null_signal_handler(PRIntn sig)
 
 static void suspend_signal_handler(PRIntn sig)
 {
-	PRThread *me = PR_GetCurrentThread();
+	PRThread *me = PR_CurrentThread();
 
 	PR_ASSERT(me != NULL);
 	PR_ASSERT(_PT_IS_GCABLE_THREAD(me));
@@ -1462,7 +1382,7 @@ PR_IMPLEMENT(void) PR_SuspendAll(void)
     PRIntervalTime stime, etime;
 #endif
     PRThread* thred = pt_book.first;
-    PRThread *me = PR_GetCurrentThread();
+    PRThread *me = PR_CurrentThread();
     int rv;
 
     rv = pthread_once(&pt_gc_support_control, init_pthread_gc_support);
@@ -1508,7 +1428,7 @@ PR_IMPLEMENT(void) PR_ResumeAll(void)
     PRIntervalTime stime, etime;
 #endif
     PRThread* thred = pt_book.first;
-    PRThread *me = PR_GetCurrentThread();
+    PRThread *me = PR_CurrentThread();
     PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS, ("Begin PR_ResumeAll\n"));
     /*
      * Resume all previously suspended GC able threads.

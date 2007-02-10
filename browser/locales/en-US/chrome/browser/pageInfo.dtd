@@ -35,6 +35,10 @@
 # ***** END LICENSE BLOCK *****
 -->
 
+<!ENTITY  preface               "Info for: "> 
+
+<!ENTITY  title                 "Page Info"> 
+<!ENTITY  description           "Information about the current page"> 
 <!ENTITY  pageInfoWindow.width  "425">
 <!ENTITY  pageInfoWindow.height "470">
 
@@ -47,7 +51,7 @@
 <!ENTITY  closeWindow.key       "w">
 
 <!ENTITY  generalTab            "General">
-<!ENTITY  generalTab.accesskey  "G">
+<!ENTITY  generalAccesskey      "G">
 <!ENTITY  generalTitle          "Title:">
 <!ENTITY  generalURL            "Address:">
 <!ENTITY  generalMode           "Render Mode:">
@@ -64,7 +68,7 @@
 <!ENTITY  generalMetaContent    "Content">
 
 <!ENTITY  formsTab              "Forms">
-<!ENTITY  formsTab.accesskey    "F">
+<!ENTITY  formsAccesskey        "F">
 <!ENTITY  formAction            "Form Action">
 <!ENTITY  formMethod            "Method">
 <!ENTITY  formName              "Name">
@@ -78,7 +82,7 @@
 <!ENTITY  formCValue            "Current Value">
 
 <!ENTITY  linksTab              "Links">
-<!ENTITY  linksTab.accesskey    "L">
+<!ENTITY  linksAccesskey        "L">
 <!ENTITY  linkNo                "No.">
 <!ENTITY  linkName              "Name">
 <!ENTITY  linkAddress           "Address">
@@ -87,7 +91,7 @@
 <!ENTITY  linkAccessKey         "Access Key">
 
 <!ENTITY  mediaTab              "Media">
-<!ENTITY  mediaTab.accesskey    "M">
+<!ENTITY  mediaAccesskey        "M">
 <!ENTITY  mediaHeader           "Images on this page">
 <!ENTITY  mediaURL              "Address:">
 <!ENTITY  mediaBase             "Base Address:">
@@ -106,7 +110,7 @@
 <!ENTITY  mediaTitle            "Title:">
 <!ENTITY  mediaLongdesc         "Long Description:">
 <!ENTITY  mediaSaveAs           "Save As...">
-<!ENTITY  mediaSaveAs.accesskey "A">
+<!ENTITY  mediaSaveAs.accesskey "S">
 <!ENTITY  mediaPreview          "Media Preview:">
 
 <!ENTITY  framesTab             "Frames">

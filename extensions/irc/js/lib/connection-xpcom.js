@@ -44,8 +44,6 @@ const NS_ERROR_UNKNOWN_HOST = NS_ERROR_MODULE_NETWORK + 30;
 const NS_ERROR_CONNECTION_REFUSED = NS_ERROR_MODULE_NETWORK + 13;
 const NS_ERROR_NET_TIMEOUT = NS_ERROR_MODULE_NETWORK + 14;
 const NS_ERROR_NET_RESET = NS_ERROR_MODULE_NETWORK + 20;
-const NS_ERROR_UNKNOWN_PROXY_HOST = NS_ERROR_MODULE_NETWORK + 42;
-const NS_ERROR_PROXY_CONNECTION_REFUSED = NS_ERROR_MODULE_NETWORK + 72;
 
 const NS_NET_STATUS_RESOLVING_HOST = NS_ERROR_MODULE_NETWORK + 3;
 const NS_NET_STATUS_CONNECTED_TO = NS_ERROR_MODULE_NETWORK + 4;
@@ -161,7 +159,7 @@ function CBSConnection (binary)
     if (!ASSERT(!this.binaryMode || this.workingBinaryStreams,
                 "Unable to use binary streams in this build."))
     {
-        throw ("Unable to use binary streams in this build.");
+        return null;
     }
 }
 
@@ -186,7 +184,7 @@ function bc_connect(host, port, config, observer)
 
     function getProxyFor(uri)
     {
-        uri = ios.newURI(uri, null, null);
+        var uri = ios.newURI(uri, null, null);
         // As of 2005-03-25, 'examineForProxy' was replaced by 'resolve'.
         if ("resolve" in pps)
             return pps.resolve(uri, 0);
@@ -445,16 +443,8 @@ function bc_readdata(timeout, count)
 
     var rv;
 
-    if (!("_sInputStream" in this)) {
-        this._sInputStream = toSInputStream(this._inputStream);
-        dump("OMG, setting up _sInputStream!\n");
-    }
-
     try
     {
-        // XPCshell h4x
-        if (typeof count == "undefined")
-            count = this._sInputStream.available();
         if (this.binaryMode)
             rv = this._sInputStream.readBytes(count);
         else

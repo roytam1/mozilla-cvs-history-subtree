@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * Storage of the children and attributes of a DOM node; storage for
- * the two is unified to minimize footprint.
- */
-
 #ifndef nsAttrAndChildArray_h___
 #define nsAttrAndChildArray_h___
 
@@ -48,7 +43,6 @@
 #include "nsAttrName.h"
 #include "nsAttrValue.h"
 
-class nsINode;
 class nsIContent;
 class nsMappedAttributes;
 class nsHTMLStyleSheet;
@@ -94,7 +88,7 @@ public:
   }
   nsresult InsertChildAt(nsIContent* aChild, PRUint32 aPos);
   void RemoveChildAt(PRUint32 aPos);
-  PRInt32 IndexOfChild(nsINode* aPossibleChild) const;
+  PRInt32 IndexOfChild(nsIContent* aPossibleChild) const;
 
   PRUint32 AttrCount() const;
   const nsAttrValue* GetAttr(nsIAtom* aLocalName, PRInt32 aNamespaceID = kNameSpaceID_None) const;
@@ -102,17 +96,8 @@ public:
   nsresult SetAttr(nsIAtom* aLocalName, const nsAString& aValue);
   nsresult SetAndTakeAttr(nsIAtom* aLocalName, nsAttrValue& aValue);
   nsresult SetAndTakeAttr(nsINodeInfo* aName, nsAttrValue& aValue);
-
-  // Remove the attr at position aPos.  The value of the attr is placed in
-  // aValue; any value that was already in aValue is destroyed.
-  nsresult RemoveAttrAt(PRUint32 aPos, nsAttrValue& aValue);
-
-  // Returns attribute name at given position, *not* out-of-bounds safe
-  const nsAttrName* AttrNameAt(PRUint32 aPos) const;
-
-  // Returns attribute name at given position or null if aPos is out-of-bounds
+  nsresult RemoveAttrAt(PRUint32 aPos);
   const nsAttrName* GetSafeAttrNameAt(PRUint32 aPos) const;
-
   // aName is UTF-8 encoded
   const nsAttrName* GetExistingAttrNameFromQName(const nsACString& aName) const;
   PRInt32 IndexOfAttr(nsIAtom* aLocalName, PRInt32 aNamespaceID = kNameSpaceID_None) const;

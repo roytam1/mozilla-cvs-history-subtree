@@ -61,16 +61,14 @@
 
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
+#include "nsVoidArray.h"
 #include "nsHashSets.h"
 #include "nsCRT.h"
-#include "nsAutoPtr.h"
 #include "nsPrintfCString.h"
 #include "nsAutoLock.h"
 #include "nsSSLThread.h"
 #include "nsNSSShutDown.h"
 #include "nsNSSCertHelper.h"
-#include "nsNSSCleaner.h"
-#include "nsThreadUtils.h"
 
 #include "ssl.h"
 #include "secerr.h"
@@ -90,8 +88,6 @@
                        //Uses PR_LOG except on Mac where
                        //we always write out to our own
                        //file.
-
-NSSCleanupAutoPtrClass(CERTCertificate, CERT_DestroyCertificate)
 
 /* SSM_UserCertChoice: enum for cert choice info */
 typedef enum {ASK, AUTO} SSM_UserCertChoice;
@@ -304,12 +300,16 @@ nsNSSSocketInfo::SetNotificationCallbacks(nsIInterfaceRequestor* aCallbacks)
     return NS_OK;
   }
 
+  nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
+  if (!proxyman) 
+    return NS_ERROR_FAILURE;
+
   nsCOMPtr<nsIInterfaceRequestor> proxiedCallbacks;
-  NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
-                       NS_GET_IID(nsIInterfaceRequestor),
-                       NS_STATIC_CAST(nsIInterfaceRequestor*,aCallbacks),
-                       NS_PROXY_SYNC,
-                       getter_AddRefs(proxiedCallbacks));
+  proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
+                              NS_GET_IID(nsIInterfaceRequestor),
+                              NS_STATIC_CAST(nsIInterfaceRequestor*,aCallbacks),
+                              PROXY_SYNC,
+                              getter_AddRefs(proxiedCallbacks));
 
   mCallbacks = proxiedCallbacks;
   return NS_OK;
@@ -435,7 +435,7 @@ nsresult nsNSSSocketInfo::SetFileDescPtr(PRFileDesc* aFilePtr)
 
 nsresult nsNSSSocketInfo::GetSSLStatus(nsISupports** _result)
 {
-  NS_ENSURE_ARG_POINTER(_result);
+  NS_ASSERTION(_result, "non-NULL destination required");
 
   *_result = mSSLStatus;
   NS_IF_ADDREF(*_result);
@@ -501,31 +501,36 @@ void nsSSLIOLayerHelpers::Cleanup()
 static nsresult
 displayAlert(nsAFlatString &formattedString, nsNSSSocketInfo *infoObject)
 {
-  // The interface requestor object may not be safe, so proxy the call to get
-  // the nsIPrompt.
+	
+	// The interface requestor object may not be safe, so
+    // proxy the call to get the nsIPrompt.
 
-  nsCOMPtr<nsIInterfaceRequestor> proxiedCallbacks;
-  NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
-                       NS_GET_IID(nsIInterfaceRequestor),
-                       NS_STATIC_CAST(nsIInterfaceRequestor*, infoObject),
-                       NS_PROXY_SYNC,
-                       getter_AddRefs(proxiedCallbacks));
+     nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
+     if (!proxyman) 
+       return NS_ERROR_FAILURE;
+ 
+     nsCOMPtr<nsIInterfaceRequestor> proxiedCallbacks;
+     proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
+                                 NS_GET_IID(nsIInterfaceRequestor),
+                                 NS_STATIC_CAST(nsIInterfaceRequestor*,infoObject),
+                                 PROXY_SYNC,
+                                 getter_AddRefs(proxiedCallbacks));
 
-  nsCOMPtr<nsIPrompt> prompt (do_GetInterface(proxiedCallbacks));
-  if (!prompt)
-    return NS_ERROR_NO_INTERFACE;
+     nsCOMPtr<nsIPrompt> prompt (do_GetInterface(proxiedCallbacks));
+  
+     if (!prompt)
+       return NS_ERROR_NO_INTERFACE;
 
-  // Finally, get a proxy for the nsIPrompt
-
-  nsCOMPtr<nsIPrompt> proxyPrompt;
-  NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
-                       NS_GET_IID(nsIPrompt),
-                       prompt,
-                       NS_PROXY_SYNC,
-                       getter_AddRefs(proxyPrompt));
-
-  proxyPrompt->Alert(nsnull, formattedString.get());
-  return NS_OK;
+     nsCOMPtr<nsIPrompt> proxyPrompt;
+     // Finally, get a proxy for the nsIPrompt
+     proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
+                                 NS_GET_IID(nsIPrompt),
+                                 prompt,
+                                 PROXY_SYNC,
+                                 getter_AddRefs(proxyPrompt));
+     proxyPrompt->Alert(nsnull, formattedString.get());
+     return NS_OK;
+     
 }
 
 static nsresult
@@ -546,11 +551,11 @@ nsHandleSSLError(nsNSSSocketInfo *socketInfo, PRInt32 err)
 
   char buf[80];
   PR_snprintf(buf, 80, "%ld", err);
-  NS_ConvertASCIItoUTF16 errorCode(buf);
+  NS_ConvertASCIItoUCS2 errorCode(buf);
 
   nsXPIDLCString hostName;
   socketInfo->GetHostName(getter_Copies(hostName));
-  NS_ConvertASCIItoUTF16 hostNameU(hostName);
+  NS_ConvertASCIItoUCS2 hostNameU(hostName);
 
   NS_DEFINE_CID(StringBundleServiceCID,  NS_STRINGBUNDLESERVICE_CID);
   nsCOMPtr<nsIStringBundleService> service = 
@@ -1317,14 +1322,16 @@ static PRInt32 PR_CALLBACK PSMRecv(PRFileDesc *fd, void *buf, PRInt32 amount,
     return -1;
   }
 
+  if (flags != PR_MSG_PEEK)
+  {
+    PR_SetError(PR_UNKNOWN_ERROR, 0);
+    return -1;
+  }
+
   nsNSSSocketInfo *socketInfo = (nsNSSSocketInfo*)fd->secret;
   NS_ASSERTION(socketInfo,"nsNSSSocketInfo was null for an fd");
 
-  if (flags == PR_MSG_PEEK) {
-    return nsSSLThread::requestRecvMsgPeek(socketInfo, buf, amount, flags, timeout);
-  }
-
-  return fd->lower->methods->recv(fd->lower, buf, amount, flags, timeout);
+  return nsSSLThread::requestRecvMsgPeek(socketInfo, buf, amount, flags, timeout);
 }
 
 static PRInt32 PR_CALLBACK PSMSend(PRFileDesc *fd, const void *buf, PRInt32 amount,
@@ -1336,7 +1343,8 @@ static PRInt32 PR_CALLBACK PSMSend(PRFileDesc *fd, const void *buf, PRInt32 amou
     return -1;
   }
 
-  return fd->lower->methods->send(fd->lower, buf, amount, flags, timeout);
+  PR_SetError(PR_UNKNOWN_ERROR, 0);
+  return -1;
 }
 
 static PRStatus PR_CALLBACK PSMConnectcontinue(PRFileDesc *fd, PRInt16 out_flags)
@@ -1515,13 +1523,12 @@ nsContinueDespiteCertError(nsNSSSocketInfo  *infoObject,
   infoObject->GetNotificationCallbacks(getter_AddRefs(callbacks));
   if (callbacks) {
     nsCOMPtr<nsIBadCertListener> handler = do_GetInterface(callbacks);
-    if (handler) {
-      NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+    if (handler)
+      NS_GetProxyForObject(NS_UI_THREAD_EVENTQ,
                            NS_GET_IID(nsIBadCertListener),
                            handler,
-                           NS_PROXY_SYNC,
+                           PROXY_SYNC,
                            (void**)&badCertHandler);
-    }
   }
   if (!badCertHandler) {
     rv = getNSSDialogs((void**)&badCertHandler, 
@@ -1608,7 +1615,7 @@ nsContinueDespiteCertError(nsNSSSocketInfo  *infoObject,
   default:
     nsHandleSSLError(infoObject,error);
     retVal = PR_FALSE;
-    rv = NS_ERROR_FAILURE;
+
   }
   if (retVal && addType != nsIBadCertListener::UNINIT_ADD_FLAG) {
     addCertToDB(peerCert, addType);
@@ -2089,26 +2096,6 @@ loser:
 	return ret;
 }
 
-static PRBool hasExplicitKeyUsageNonRepudiation(CERTCertificate *cert)
-{
-  /* There is no extension, v1 or v2 certificate */
-  if (!cert->extensions)
-    return PR_FALSE;
-
-  SECStatus srv;
-  SECItem keyUsageItem;
-  keyUsageItem.data = NULL;
-
-  srv = CERT_FindKeyUsageExtension(cert, &keyUsageItem);
-  if (srv == SECFailure)
-    return PR_FALSE;
-
-  unsigned char keyUsage = keyUsageItem.data[0];
-  PORT_Free (keyUsageItem.data);
-
-  return (keyUsage & KU_NON_REPUDIATION);
-}
-
 /*
  * Function: SECStatus SSM_SSLGetClientAuthData()
  * Purpose: this callback function is used to pull client certificate
@@ -2145,7 +2132,7 @@ SECStatus nsNSS_SSLGetClientAuthData(void* arg, PRFileDesc* socket,
   char* extracted = NULL;
   PRIntn keyError = 0; /* used for private key retrieval error */
   SSM_UserCertChoice certChoice;
-  PRInt32 NumberOfCerts = 0;
+  PRUint32 NumberOfCerts = 0;
 	
   /* do some argument checking */
   if (socket == NULL || caNames == NULL || pRetCert == NULL ||
@@ -2192,7 +2179,7 @@ SECStatus nsNSS_SSLGetClientAuthData(void* arg, PRFileDesc* socket,
 
     /* find all user certs that are valid and for SSL */
     certList = CERT_FindUserCertsByUsage(CERT_GetDefaultCertDB(), 
-                                         certUsageSSLClient, PR_FALSE,
+                                         certUsageSSLClient, PR_TRUE,
                                          PR_TRUE, wincx);
     if (certList == NULL) {
       goto noCert;
@@ -2211,9 +2198,6 @@ SECStatus nsNSS_SSLGetClientAuthData(void* arg, PRFileDesc* socket,
       goto noCert;
     }
 
-    CERTCertificate* low_prio_nonrep_cert = NULL;
-    CERTCertificateCleaner low_prio_cleaner(low_prio_nonrep_cert);
-
     /* loop through the list until we find a cert with a key */
     while (!CERT_LIST_END(node, certList)) {
       /* if the certificate has restriction and we do not satisfy it
@@ -2229,16 +2213,9 @@ SECStatus nsNSS_SSLGetClientAuthData(void* arg, PRFileDesc* socket,
 
       privKey = PK11_FindKeyByAnyCert(node->cert, wincx);
       if (privKey != NULL) {
-        if (hasExplicitKeyUsageNonRepudiation(node->cert)) {
-          // Not a prefered cert
-          if (!low_prio_nonrep_cert) // did not yet find a low prio cert
-            low_prio_nonrep_cert = CERT_DupCertificate(node->cert);
-        }
-        else {
-          // this is a good cert to present
+          /* this is a good cert to present */
           cert = CERT_DupCertificate(node->cert);
           break;
-        }
       }
       keyError = PR_GetError();
       if (keyError == SEC_ERROR_BAD_PASSWORD) {
@@ -2247,11 +2224,6 @@ SECStatus nsNSS_SSLGetClientAuthData(void* arg, PRFileDesc* socket,
       }
 
       node = CERT_LIST_NEXT(node);
-    }
-
-    if (!cert && low_prio_nonrep_cert) {
-      cert = low_prio_nonrep_cert;
-      low_prio_nonrep_cert = NULL; // take it away from the cleaner
     }
 
     if (cert == NULL) {
@@ -2330,15 +2302,15 @@ SECStatus nsNSS_SSLGetClientAuthData(void* arg, PRFileDesc* socket,
 
     /* Get CN and O of the subject and O of the issuer */
     char *ccn = CERT_GetCommonName(&serverCert->subject);
-    NS_ConvertUTF8toUTF16 cn(ccn);
+    NS_ConvertUTF8toUCS2 cn(ccn);
     if (ccn) PORT_Free(ccn);
 
     char *corg = CERT_GetOrgName(&serverCert->subject);
-    NS_ConvertUTF8toUTF16 org(corg);
+    NS_ConvertUTF8toUCS2 org(corg);
     if (corg) PORT_Free(corg);
 
     char *cissuer = CERT_GetOrgName(&serverCert->issuer);
-    NS_ConvertUTF8toUTF16 issuer(cissuer);
+    NS_ConvertUTF8toUCS2 issuer(cissuer);
     if (cissuer) PORT_Free(cissuer);
 
     CERT_DestroyCertificate(serverCert);

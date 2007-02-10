@@ -63,7 +63,10 @@ nsCommonWidget::~nsCommonWidget()
 nsIWidget *
 nsCommonWidget::GetParent(void)
 {
-    return mParent;
+    nsIWidget *retval;
+    retval = mParent;
+    NS_IF_ADDREF(retval);
+    return retval;
 }
 
 void
@@ -78,8 +81,8 @@ void
 nsCommonWidget::InitButtonEvent(nsMouseEvent &aEvent,
                                 GdkEventButton *aGdkEvent)
 {
-    aEvent.refPoint.x = nscoord(aGdkEvent->x);
-    aEvent.refPoint.y = nscoord(aGdkEvent->y);
+    aEvent.point.x = nscoord(aGdkEvent->x);
+    aEvent.point.y = nscoord(aGdkEvent->y);
 
     aEvent.isShift   = (aGdkEvent->state & GDK_SHIFT_MASK)
         ? PR_TRUE : PR_FALSE;
@@ -89,8 +92,6 @@ nsCommonWidget::InitButtonEvent(nsMouseEvent &aEvent,
         ? PR_TRUE : PR_FALSE;
     aEvent.isMeta    = (aGdkEvent->state & GDK_MOD4_MASK)
         ? PR_TRUE : PR_FALSE;
-
-    aEvent.time = aGdkEvent->time;
 
     switch (aGdkEvent->type) {
     case GDK_2BUTTON_PRESS:
@@ -128,8 +129,8 @@ nsCommonWidget::InitMouseScrollEvent(nsMouseScrollEvent &aEvent,
         break;
     }
 
-    aEvent.refPoint.x = nscoord(aGdkEvent->x);
-    aEvent.refPoint.y = nscoord(aGdkEvent->y);
+    aEvent.point.x = nscoord(aGdkEvent->x);
+    aEvent.point.y = nscoord(aGdkEvent->y);
 
     aEvent.isShift   = (aGdkEvent->state & GDK_SHIFT_MASK)
         ? PR_TRUE : PR_FALSE;
@@ -140,7 +141,6 @@ nsCommonWidget::InitMouseScrollEvent(nsMouseScrollEvent &aEvent,
     aEvent.isMeta    = (aGdkEvent->state & GDK_MOD4_MASK)
         ? PR_TRUE : PR_FALSE;
     
-    aEvent.time = aGdkEvent->time;
 }
 
 void
@@ -155,7 +155,6 @@ nsCommonWidget::InitKeyEvent(nsKeyEvent &aEvent, GdkEventKey *aGdkEvent)
         ? PR_TRUE : PR_FALSE;
     aEvent.isMeta    = (aGdkEvent->state & GDK_MOD4_MASK)
         ? PR_TRUE : PR_FALSE;
-
     aEvent.time      = aGdkEvent->time;
 }
 
@@ -197,8 +196,8 @@ nsCommonWidget::DispatchResizeEvent(nsRect &aRect, nsEventStatus &aStatus)
     nsSizeEvent event(PR_TRUE, NS_SIZE, this);
 
     event.windowSize = &aRect;
-    event.refPoint.x = aRect.x;
-    event.refPoint.y = aRect.y;
+    event.point.x = aRect.x;
+    event.point.y = aRect.y;
     event.mWinWidth = aRect.width;
     event.mWinHeight = aRect.height;
 

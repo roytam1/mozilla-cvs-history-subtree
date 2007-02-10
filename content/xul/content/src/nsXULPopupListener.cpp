@@ -45,7 +45,7 @@
  */
 
 #include "nsCOMPtr.h"
-#include "nsGkAtoms.h"
+#include "nsXULAtoms.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMXULElement.h"
 #include "nsIDOMNodeList.h"
@@ -57,6 +57,7 @@
 #include "nsContentCID.h"
 #include "nsContentUtils.h"
 
+#include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMXULDocument.h"
@@ -81,7 +82,6 @@
 #include "nsPIDOMWindow.h"
 
 #include "nsIFrame.h"
-#include "nsIMenuFrame.h"
 
 // on win32 and os/2, context menus come up on mouse up. On other platforms,
 // they appear on mouse down. Certain bits of code care about this difference.
@@ -240,12 +240,15 @@ XULPopupListenerImpl::PreLaunchPopup(nsIDOMEvent* aMouseEvent)
       // The user wants his contextmenus.  Let's make sure that this is a website
       // and not chrome since there could be places in chrome which don't want
       // contextmenus.
-      nsCOMPtr<nsINode> node = do_QueryInterface(targetNode);
-      if (node) {
+      nsCOMPtr<nsIDocument> doc;
+      nsCOMPtr<nsIPrincipal> prin;
+      nsContentUtils::GetDocumentAndPrincipal(targetNode,
+                                              getter_AddRefs(doc),
+                                              getter_AddRefs(prin));
+      if (prin) {
         nsCOMPtr<nsIPrincipal> system;
-        nsContentUtils::GetSecurityManager()->
-          GetSystemPrincipal(getter_AddRefs(system));
-        if (node->NodePrincipal() != system) {
+        nsContentUtils::GetSecurityManager()->GetSystemPrincipal(getter_AddRefs(system));
+        if (prin != system) {
           // This isn't chrome.  Cancel the preventDefault() and
           // let the event go forth.
           preventDefault = PR_FALSE;
@@ -267,15 +270,15 @@ XULPopupListenerImpl::PreLaunchPopup(nsIDOMEvent* aMouseEvent)
   if (popupType == eXULPopupType_popup) {
     nsCOMPtr<nsIContent> targetContent = do_QueryInterface(target);
     nsIAtom *tag = targetContent->Tag();
-    if (tag == nsGkAtoms::menu || tag == nsGkAtoms::menuitem)
+    if (tag == nsXULAtoms::menu || tag == nsXULAtoms::menuitem)
       return NS_OK;
   }
 
   // Get the document with the popup.
   nsCOMPtr<nsIContent> content = do_QueryInterface(mElement);
 
-  // Turn the document into a XUL document so we can use SetPopupNode.
-  nsCOMPtr<nsIDOMXULDocument> xulDocument = do_QueryInterface(content->GetDocument());
+  // Turn the document into a XUL document so we can use SetPopupNode
+  nsCOMPtr<nsIDOMXULDocument2> xulDocument = do_QueryInterface(content->GetDocument());
   if (!xulDocument) {
     NS_ERROR("Popup attached to an element that isn't in XUL!");
     return NS_ERROR_FAILURE;
@@ -285,8 +288,6 @@ XULPopupListenerImpl::PreLaunchPopup(nsIDOMEvent* aMouseEvent)
   // CLEAR THE POPUP EVENT BEFORE THIS FUNCTION EXITS
   xulDocument->SetPopupNode( targetNode );
   xulDocument->SetTrustedPopupEvent( aMouseEvent );
-
-  nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aMouseEvent));
 
   switch (popupType) {
     case eXULPopupType_popup:
@@ -301,16 +302,16 @@ XULPopupListenerImpl::PreLaunchPopup(nsIDOMEvent* aMouseEvent)
       break;
     case eXULPopupType_context:
 
-      // Time to launch a context menu
+    // Time to launch a context menu
 #ifndef NS_CONTEXT_MENU_IS_MOUSEUP
-      // If the context menu launches on mousedown,
-      // we have to fire focus on the content we clicked on
-      FireFocusOnTargetContent(targetNode);
+    // If the context menu launches on mousedown,
+    // we have to fire focus on the content we clicked on
+    FireFocusOnTargetContent(targetNode);
 #endif
-      LaunchPopup(aMouseEvent);
-      aMouseEvent->StopPropagation();
-      aMouseEvent->PreventDefault();
-      break;
+    LaunchPopup(aMouseEvent);
+    aMouseEvent->StopPropagation();
+    aMouseEvent->PreventDefault();
+    break;
   }
   xulDocument->SetTrustedPopupEvent(nsnull);
   return NS_OK;
@@ -335,7 +336,8 @@ XULPopupListenerImpl::FireFocusOnTargetContent(nsIDOMNode* aTargetNode)
     nsCOMPtr<nsPresContext> context = shell->GetPresContext();
  
     nsCOMPtr<nsIContent> content = do_QueryInterface(aTargetNode);
-    nsIFrame* targetFrame = shell->GetPrimaryFrameFor(content);
+    nsIFrame* targetFrame;
+    shell->GetPrimaryFrameFor(content, &targetFrame);
     if (!targetFrame) return NS_ERROR_FAILURE;
       
     PRBool suppressBlur = PR_FALSE;
@@ -348,8 +350,7 @@ XULPopupListenerImpl::FireFocusOnTargetContent(nsIDOMNode* aTargetNode)
     nsIFrame* currFrame = targetFrame;
     // Look for the nearest enclosing focusable frame.
     while (currFrame) {
-        PRInt32 tabIndexUnused;
-        if (currFrame->IsFocusable(&tabIndexUnused, PR_TRUE)) {
+        if (currFrame->IsFocusable()) {
           newFocus = currFrame->GetContent();
           nsCOMPtr<nsIDOMElement> domElement(do_QueryInterface(newFocus));
           if (domElement) {
@@ -366,7 +367,8 @@ XULPopupListenerImpl::FireFocusOnTargetContent(nsIDOMNode* aTargetNode)
       // Lock to scroll by SetFocus. See bug 309075.
       nsCOMPtr<nsIFocusController> focusController = nsnull;
       PRBool isAlreadySuppressed = PR_FALSE;
-      nsPIDOMWindow *ourWindow = doc->GetWindow();
+      nsCOMPtr<nsPIDOMWindow> ourWindow =
+        do_QueryInterface(doc->GetScriptGlobalObject());
       if (ourWindow) {
         focusController = ourWindow->GetRootFocusController();
         if (focusController) {
@@ -530,7 +532,7 @@ XULPopupListenerImpl::LaunchPopup(PRInt32 aClientX, PRInt32 aClientY)
   if (identifier.EqualsLiteral("_child")) {
     nsCOMPtr<nsIContent> popup;
 
-    GetImmediateChild(content, nsGkAtoms::menupopup, getter_AddRefs(popup));
+    GetImmediateChild(content, nsXULAtoms::menupopup, getter_AddRefs(popup));
     if (popup)
       popupContent = do_QueryInterface(popup);
     else {
@@ -545,8 +547,9 @@ XULPopupListenerImpl::LaunchPopup(PRInt32 aClientX, PRInt32 aClientY)
           list->Item(ctr, getter_AddRefs(node));
           nsCOMPtr<nsIContent> childContent(do_QueryInterface(node));
 
-          if (childContent->NodeInfo()->Equals(nsGkAtoms::menupopup,
-                                               kNameSpaceID_XUL)) {
+          nsINodeInfo *ni = childContent->GetNodeInfo();
+
+          if (ni && ni->Equals(nsXULAtoms::menupopup, kNameSpaceID_XUL)) {
             popupContent = do_QueryInterface(childContent);
             break;
           }
@@ -564,23 +567,9 @@ XULPopupListenerImpl::LaunchPopup(PRInt32 aClientX, PRInt32 aClientY)
   if ( !popupContent )
     return NS_OK;
 
-  // Submenus can't be used as context menus or popups, bug 288763.
-  // Similar code also in nsXULTooltipListener::GetTooltipFor.
-  nsCOMPtr<nsIContent> popup = do_QueryInterface(popupContent);
-  nsIContent* parent = popup->GetParent();
-  if (parent) {
-    nsIDocument* doc = parent->GetCurrentDoc();
-    nsIPresShell* presShell = doc ? doc->GetShellAt(0) : nsnull;
-    nsIFrame* frame = presShell ? presShell->GetPrimaryFrameFor(parent) : nsnull;
-    if (frame) {
-      nsIMenuFrame* menu = nsnull;
-      CallQueryInterface(frame, &menu);
-      NS_ENSURE_FALSE(menu, NS_OK);
-    }
-  }
-
   // We have some popup content. Obtain our window.
-  nsPIDOMWindow *domWindow = document->GetWindow();
+  nsCOMPtr<nsIDOMWindowInternal> domWindow =
+    do_QueryInterface(document->GetScriptGlobalObject());
 
   if (domWindow) {
     // Find out if we're anchored.

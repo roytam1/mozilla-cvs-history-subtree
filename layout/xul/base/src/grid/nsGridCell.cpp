@@ -58,102 +58,120 @@ nsGridCell::~nsGridCell()
     MOZ_COUNT_DTOR(nsGridCell);
 }
 
-nsSize
-nsGridCell::GetPrefSize(nsBoxLayoutState& aState)
+nsresult
+nsGridCell::GetPrefSize(nsBoxLayoutState& aState, nsSize& aPref)
 {
-  nsSize sum(0,0);
+  aPref.width = 0;
+  aPref.height = 0;
 
-  // take our 2 children and add them up.
+  // take ours 2 children and add them up.
   // we are as wide as the widest child plus its left offset
   // we are tall as the tallest child plus its top offset
 
-  if (mBoxInColumn) {
-    nsSize pref = mBoxInColumn->GetPrefSize(aState);
+  nsSize pref(0,0);
 
+  if (mBoxInColumn) {
+    mBoxInColumn->GetPrefSize(aState, pref);      
     nsBox::AddMargin(mBoxInColumn, pref);
     nsStackLayout::AddOffset(aState, mBoxInColumn, pref);
 
-    nsBoxLayout::AddLargestSize(sum, pref);
+    nsBoxLayout::AddLargestSize(aPref, pref);
   }
 
   if (mBoxInRow) {
-    nsSize pref = mBoxInRow->GetPrefSize(aState);
+    mBoxInRow->GetPrefSize(aState, pref);
 
     nsBox::AddMargin(mBoxInRow, pref);
     nsStackLayout::AddOffset(aState, mBoxInRow, pref);
 
-    nsBoxLayout::AddLargestSize(sum, pref);
+    nsBoxLayout::AddLargestSize(aPref, pref);
   }
 
-  return sum;
+  return NS_OK;
 }
 
-nsSize
-nsGridCell::GetMinSize(nsBoxLayoutState& aState)
+nsresult
+nsGridCell::GetMinSize(nsBoxLayoutState& aState, nsSize& aMin)
 {
-  nsSize sum(0, 0);
+  aMin.width = 0;
+  aMin.height = 0;
 
-  // take our 2 children and add them up.
+  // take ours 2 children and add them up.
   // we are as wide as the widest child plus its left offset
   // we are tall as the tallest child plus its top offset
 
+  nsSize min(0,0);
+
   if (mBoxInColumn) {
-    nsSize min = mBoxInColumn->GetMinSize(aState);
+    mBoxInColumn->GetMinSize(aState, min);      
 
     nsBox::AddMargin(mBoxInColumn, min);
     nsStackLayout::AddOffset(aState, mBoxInColumn, min);
 
-    nsBoxLayout::AddLargestSize(sum, min);
+    nsBoxLayout::AddLargestSize(aMin, min);
   }
 
   if (mBoxInRow) {
-    nsSize min = mBoxInRow->GetMinSize(aState);
+    mBoxInRow->GetMinSize(aState, min);
 
     nsBox::AddMargin(mBoxInRow, min);
     nsStackLayout::AddOffset(aState, mBoxInRow, min);
 
-    nsBoxLayout::AddLargestSize(sum, min);
+    nsBoxLayout::AddLargestSize(aMin, min);
   }
 
-  return sum;
+  return NS_OK;
 }
 
-nsSize
-nsGridCell::GetMaxSize(nsBoxLayoutState& aState)
+nsresult
+nsGridCell::GetMaxSize(nsBoxLayoutState& aState, nsSize& aMax)
 {
-  nsSize sum(NS_INTRINSICSIZE, NS_INTRINSICSIZE);
+  aMax.width = NS_INTRINSICSIZE;
+  aMax.height = NS_INTRINSICSIZE;
 
-  // take our 2 children and add them up.
+  // take ours 2 children and add them up.
   // we are as wide as the smallest child plus its left offset
   // we are tall as the shortest child plus its top offset
 
+  nsSize max(NS_INTRINSICSIZE,NS_INTRINSICSIZE);
+
   if (mBoxInColumn) {
-    nsSize max = mBoxInColumn->GetMaxSize(aState);
+    mBoxInColumn->GetMaxSize(aState, max);      
+
  
     nsBox::AddMargin(mBoxInColumn, max);
     nsStackLayout::AddOffset(aState, mBoxInColumn, max);
 
-    nsBoxLayout::AddSmallestSize(sum, max);
+    nsBoxLayout::AddSmallestSize(aMax, max);
   }
 
   if (mBoxInRow) {
-    nsSize max = mBoxInRow->GetMaxSize(aState);
+    mBoxInRow->GetMaxSize(aState, max);
 
     nsBox::AddMargin(mBoxInRow, max);
     nsStackLayout::AddOffset(aState, mBoxInRow, max);
 
-    nsBoxLayout::AddSmallestSize(sum, max);
+    nsBoxLayout::AddSmallestSize(aMax, max);
   }
 
-  return sum;
+  return NS_OK;
 }
 
 
-PRBool
-nsGridCell::IsCollapsed(nsBoxLayoutState& aState)
+nsresult
+nsGridCell::IsCollapsed(nsBoxLayoutState& aState, PRBool& aIsCollapsed)
 {
-  return ((mBoxInColumn && mBoxInColumn->IsCollapsed(aState)) ||
-          (mBoxInRow && mBoxInRow->IsCollapsed(aState)));
+  PRBool c1 = PR_FALSE, c2 = PR_FALSE;
+
+  if (mBoxInColumn) 
+    mBoxInColumn->IsCollapsed(aState, c1);
+
+  if (mBoxInRow) 
+    mBoxInRow->IsCollapsed(aState, c2);
+
+  aIsCollapsed = (c1 || c2);
+
+  return NS_OK;
 }
 
 

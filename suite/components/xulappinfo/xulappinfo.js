@@ -4,11 +4,9 @@ const XULAPPINFO_CID = Components.ID("{f8b59582-5808-4e6e-a467-339e9c82756f}");
 const nsIXULAppInfo = Components.interfaces.nsIXULAppInfo;
 const nsIComponentRegistrar = Components.interfaces.nsIComponentRegistrar;
 const nsIFactory = Components.interfaces.nsIFactory;
-const nsISupports = Components.interfaces.nsISupports;
 
 function XULAppInfoService()
-{
-}
+{}
 
 XULAppInfoService.prototype.vendor = "mozilla.org";
 XULAppInfoService.prototype.ID = "{92650c4d-4b8e-4d2a-b7eb-24ecf4f6b63a}";

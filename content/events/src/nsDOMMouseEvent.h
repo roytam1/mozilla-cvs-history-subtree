@@ -51,7 +51,6 @@ class nsDOMMouseEvent : public nsIDOMMouseEvent,
 {
 public:
   nsDOMMouseEvent(nsPresContext* aPresContext, nsInputEvent* aEvent);
-  virtual ~nsDOMMouseEvent();
 
   NS_DECL_ISUPPORTS_INHERITED
 
@@ -63,6 +62,10 @@ public:
 
   // Specific implementation for a mouse event.
   NS_IMETHOD GetWhich(PRUint32 *aWhich);
+
+protected:
+  // These are used for internal data for user created events
+  PRInt16 mButton;
 };
 
 #endif // nsDOMMouseEvent_h__

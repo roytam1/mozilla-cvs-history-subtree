@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -74,9 +74,9 @@ protected:
     nsXPIDLCString mLogin; // authenticate to the LDAP server as...
     nsCOMPtr<nsILDAPURL> mDirectoryUrl; // the URL for the server
     PRUint32 mProtocolVersion; // version of LDAP (see nsILDAPConnection.idl)
-    nsCOMPtr <nsILDAPMessageListener> mListener;
 
 private:
+    nsCOMPtr <nsILDAPMessageListener> mListener;
     PRBool mInitialized;
 
     PRLock* mLock;

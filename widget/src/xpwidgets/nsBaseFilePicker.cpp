@@ -39,7 +39,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsCOMPtr.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIInterfaceRequestorUtils.h"
@@ -59,7 +60,10 @@
 
 #include "nsBaseFilePicker.h"
 
+
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 #define FILEPICKER_PROPERTIES "chrome://global/locale/filepicker.properties"
+
 
 nsBaseFilePicker::nsBaseFilePicker()
 {
@@ -75,9 +79,9 @@ nsIWidget *nsBaseFilePicker::DOMWindowToWidget(nsIDOMWindow *dw)
 {
   nsCOMPtr<nsIWidget> widget;
 
-  nsCOMPtr<nsPIDOMWindow> window = do_QueryInterface(dw);
-  if (window) {
-    nsCOMPtr<nsIBaseWindow> baseWin(do_QueryInterface(window->GetDocShell()));
+  nsCOMPtr<nsIScriptGlobalObject> sgo = do_QueryInterface(dw);
+  if (sgo) {
+    nsCOMPtr<nsIBaseWindow> baseWin(do_QueryInterface(sgo->GetDocShell()));
 
     while (!widget && baseWin) {
       baseWin->GetParentWidget(getter_AddRefs(widget));
@@ -89,11 +93,11 @@ nsIWidget *nsBaseFilePicker::DOMWindowToWidget(nsIDOMWindow *dw)
         nsCOMPtr<nsIDocShellTreeItem> parent;
         docShellAsItem->GetSameTypeParent(getter_AddRefs(parent));
 
-        window = do_GetInterface(parent);
-        if (!window)
+        sgo = do_GetInterface(parent);
+        if (!sgo)
           return nsnull;
 
-        baseWin = do_QueryInterface(window->GetDocShell());
+        baseWin = do_QueryInterface(sgo->GetDocShell());
       }
     }
   }
@@ -124,7 +128,7 @@ NS_IMETHODIMP
 nsBaseFilePicker::AppendFilters(PRInt32 aFilterMask)
 {
   nsresult rv;
-  nsCOMPtr<nsIStringBundleService> stringService = do_GetService(NS_STRINGBUNDLE_CONTRACTID);
+  nsCOMPtr<nsIStringBundleService> stringService = do_GetService(kStringBundleServiceCID);
   nsCOMPtr<nsIStringBundle> stringBundle;
 
   rv = stringService->CreateBundle(FILEPICKER_PROPERTIES, getter_AddRefs(stringBundle));

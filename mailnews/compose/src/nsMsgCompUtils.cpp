@@ -53,7 +53,7 @@
 #include "nsMsgComposeStringBundle.h"
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
-#include "nsDirectoryServiceDefs.h"
+#include "nsSpecialSystemDirectory.h"
 #include "nsIDocumentEncoder.h"    // for editor output flags
 #include "nsIURI.h"
 #include "nsNetCID.h"
@@ -68,6 +68,9 @@
 #include "nsIXULAppInfo.h"
 #include "nsXULAppAPI.h"
 #endif
+
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+static NS_DEFINE_CID(kHTTPHandlerCID, NS_HTTPPROTOCOLHANDLER_CID);
 
 NS_IMPL_ISUPPORTS1(nsMsgCompUtils, nsIMsgCompUtils)
 
@@ -119,16 +122,12 @@ nsMsgCreateTempFileSpec(const char *tFileName)
   if ((!tFileName) || (!*tFileName))
     tFileName = "nsmail.tmp";
 
-  nsFileSpec *tmpSpec = new nsFileSpec;
-  
-  if (NS_FAILED(GetSpecialDirectoryWithFileName(NS_OS_TEMP_DIR,
-                                                tFileName,
-                                                tmpSpec)))
-  {
-    delete tmpSpec;
-    return nsnull;
-  }
+  nsFileSpec *tmpSpec = new nsFileSpec(nsSpecialSystemDirectory(nsSpecialSystemDirectory::OS_TemporaryDirectory));
 
+  if (!tmpSpec)
+    return nsnull;
+
+  *tmpSpec += tFileName;
   tmpSpec->MakeUnique();
 
   return tmpSpec;
@@ -145,28 +144,15 @@ nsMsgCreateTempFileName(const char *tFileName)
   if ((!tFileName) || (!*tFileName))
     tFileName = "nsmail.tmp";
 
-  nsCOMPtr<nsIFile> tmpFile;
+  nsFileSpec tmpSpec = nsSpecialSystemDirectory(nsSpecialSystemDirectory::OS_TemporaryDirectory); 
+  tmpSpec += tFileName;
+  tmpSpec.MakeUnique();
 
-  nsresult rv = GetSpecialDirectoryWithFileName(NS_OS_TEMP_DIR,
-                                                tFileName,
-                                                getter_AddRefs(tmpFile));
-  if (NS_FAILED(rv))
-    return nsnull;
-
-  rv = tmpFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 00600);
-  if (NS_FAILED(rv))
-    return nsnull;
-
-  nsXPIDLCString tempString;
-  rv = tmpFile->GetNativePath(tempString);
-  if (NS_FAILED(rv))
-    return nsnull;
-  
-  char *tString = (char *)PL_strdup(tempString.get());
+  char *tString = (char *)PL_strdup(tmpSpec.GetNativePathCString());
   if (!tString)
     return PL_strdup("mozmail.tmp");  // No need to I18N
-
-  return tString;
+  else
+    return tString;
 }
 
 static PRBool mime_headers_use_quoted_printable_p = PR_FALSE;
@@ -390,15 +376,18 @@ mime_generate_headers (nsMsgCompFields *fields,
         PRInt32 receipt_header_type = nsIMsgMdnGenerator::eDntType;
         fields->GetReceiptHeaderType(&receipt_header_type);
 
-      // nsIMsgMdnGenerator::eDntType = MDN Disposition-Notification-To: ;
-      // nsIMsgMdnGenerator::eRrtType = Return-Receipt-To: ;
-      // nsIMsgMdnGenerator::eDntRrtType = both MDN DNT and RRT headers .
-      if (receipt_header_type != nsIMsgMdnGenerator::eRrtType)
-        ENCODE_AND_PUSH(
-	  "Disposition-Notification-To: ", PR_TRUE, pFrom, charset, usemime);
-      if (receipt_header_type != nsIMsgMdnGenerator::eDntType)
-        ENCODE_AND_PUSH(
-	  "Return-Receipt-To: ", PR_TRUE, pFrom, charset, usemime);
+        // nsIMsgMdnGenerator::eDntType = MDN Disposition-Notification-To: ;
+        // nsIMsgMdnGenerator::eRrtType  = Return-Receipt-To: ; 
+        // nsIMsgMdnGenerator::eDntRrtType = both MDN DNT & RRT headers
+      if (receipt_header_type == nsIMsgMdnGenerator::eRrtType) {
+RRT_HEADER:
+        ENCODE_AND_PUSH("Return-Receipt-To: ", PR_TRUE, pFrom, charset, usemime);
+      }
+      else  {
+        ENCODE_AND_PUSH("Disposition-Notification-To: ", PR_TRUE, pFrom, charset, usemime);
+        if (receipt_header_type == nsIMsgMdnGenerator::eDntRrtType)
+          goto RRT_HEADER;
+      }
     }
 
 #ifdef SUPPORT_X_TEMPLATE_NAME
@@ -483,7 +472,7 @@ mime_generate_headers (nsMsgCompFields *fields,
   }
 
 
-  nsCOMPtr<nsIHttpProtocolHandler> pHTTPHandler = do_GetService(NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "http", &rv); 
+  nsCOMPtr<nsIHttpProtocolHandler> pHTTPHandler = do_GetService(kHTTPHandlerCID, &rv); 
   if (NS_SUCCEEDED(rv) && pHTTPHandler)
   {
     nsCAutoString userAgentString;
@@ -693,29 +682,25 @@ mime_generate_headers (nsMsgCompFields *fields,
     ENCODE_AND_PUSH("Subject: ", PR_FALSE, pSubject, charset, usemime);
   }
   
-  // Skip no or empty priority.
-  if (pPriority && *pPriority) {
-    nsMsgPriorityValue priorityValue;
+  if (pPriority && *pPriority)
+    if (!PL_strcasestr(pPriority, "normal")) {
+      PUSH_STRING ("X-Priority: ");
+      /* Important: do not change the order of the 
+      * following if statements
+      */
+      if (PL_strcasestr (pPriority, "highest"))
+        PUSH_STRING("1 (");
+      else if (PL_strcasestr(pPriority, "high"))
+        PUSH_STRING("2 (");
+      else if (PL_strcasestr(pPriority, "lowest"))
+        PUSH_STRING("5 (");
+      else if (PL_strcasestr(pPriority, "low"))
+        PUSH_STRING("4 (");
 
-    NS_MsgGetPriorityFromString(pPriority, priorityValue);
-
-    // Skip default priority.
-    if (priorityValue != nsMsgPriority::Default) {
-      nsCAutoString priorityName;
-      nsCAutoString priorityValueString;
-
-      NS_MsgGetPriorityValueString(priorityValue, priorityValueString);
-      NS_MsgGetUntranslatedPriorityName(priorityValue, priorityName);
-
-      // Output format: [X-Priority: <pValue> (<pName>)]
-      PUSH_STRING("X-Priority: ");
-      PUSH_STRING(priorityValueString.get());
-      PUSH_STRING(" (");
-      PUSH_STRING(priorityName.get());
+      PUSH_STRING (pPriority);
       PUSH_STRING(")");
-      PUSH_NEWLINE();
+      PUSH_NEWLINE ();
     }
-  }
 
   if (pReference && *pReference) {
     PUSH_STRING ("References: ");
@@ -1692,6 +1677,8 @@ msg_pick_real_name (nsMsgAttachmentHandler *attachment, const PRUnichar *propose
   nsUnescape (attachment->m_real_name);
   }
 
+  PRInt32 parmFolding = 0;
+
   /* Now a special case for attaching uuencoded files...
 
    If we attach a file "foo.txt.uu", we will send it out with
@@ -1756,7 +1743,7 @@ nsMsgNewURL(nsIURI** aInstancePtrResult, const char * aSpec)
   nsresult rv = NS_OK;
   if (nsnull == aInstancePtrResult) 
     return NS_ERROR_NULL_POINTER;
-  nsCOMPtr<nsIIOService> pNetService(do_GetService(NS_IOSERVICE_CONTRACTID, &rv)); 
+  nsCOMPtr<nsIIOService> pNetService(do_GetService(kIOServiceCID, &rv)); 
   if (NS_SUCCEEDED(rv) && pNetService)
   {
     if (PL_strstr(aSpec, "://") == nsnull && strncmp(aSpec, "data:", 5))
@@ -2069,7 +2056,7 @@ ConvertBufToPlainText(nsString &aConBuf, PRBool formatflowed /* = PR_FALSE */)
 
     parser->SetContentSink(sink);
 
-    parser->Parse(aConBuf, 0, NS_LITERAL_CSTRING("text/html"), PR_TRUE);
+    parser->Parse(aConBuf, 0, NS_LITERAL_CSTRING("text/html"), PR_FALSE, PR_TRUE);
     //
     // Now if we get here, we need to get from ASCII text to 
     // UTF-8 format or there is a problem downstream...
@@ -2131,7 +2118,7 @@ nsMsgParseSubjectFromFile(nsFileSpec* fileSpec)
  *
  * We will use format=flowed unless prefs tells us not to do
  * or if a charset which are known to have problems with
- * format=flowed is specified. (See bug 26734 in Bugzilla)
+ * format=flowed is specifed. (See bug 26734 in Bugzilla)
  */
 PRBool UseFormatFlowed(const char *charset)
 {

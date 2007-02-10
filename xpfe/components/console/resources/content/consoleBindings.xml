@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 
-<!DOCTYPE bindings SYSTEM "chrome://global/locale/console.dtd">
+<!DOCTYPE window SYSTEM "chrome://global/locale/console.dtd">
 
 <bindings id="consoleBindings"
           xmlns="http://www.mozilla.org/xbl"
@@ -261,13 +261,12 @@
         <parameter name="aChar"/>
         <parameter name="aCol"/>
         <body><![CDATA[
-          if (--aCol <= 0)
-            return "";
-
-          for (var i = 2; i < aCol; i += i)
-            aChar += aChar;
-
-          return aChar + aChar.slice(0, aCol - aChar.length);
+          var str = "";
+          if (aCol)
+            for (var i = 1; i < aCol; ++i)
+              str += aChar;
+          
+          return str;
         ]]></body>
       </method>
           

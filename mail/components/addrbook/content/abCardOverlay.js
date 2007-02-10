@@ -38,7 +38,7 @@
 
 const kNonVcardFields =
         ["nickNameContainer", "secondaryEmailContainer", "screenNameContainer",
-         "homeAddressGroup", "customFields", "allowRemoteContent"];
+         "homeAddressGroup", "customFields"];
 
 const kPhoneticFields =
         ["PhoneticLastName", "PhoneticLabel1", "PhoneticSpacer1",
@@ -91,6 +91,7 @@ const kVcardFields =
 var gEditCard;
 var gOnSaveListeners = new Array();
 var gOkCallback = null;
+var gAddressBookBundle;
 var gHideABPicker = false;
 
 function OnLoadNewCard()
@@ -139,11 +140,6 @@ function OnLoadNewCard()
     if ("aimScreenName" in window.arguments[0])
       gEditCard.card.aimScreenName = window.arguments[0].aimScreenName;
     
-    if ("allowRemoteContent" in window.arguments[0]) {
-      gEditCard.card.allowRemoteContent = window.arguments[0].allowRemoteContent;
-      window.arguments[0].allowRemoteContent = false;
-    }
-
     if ("okCallback" in window.arguments[0])
       gOkCallback = window.arguments[0].okCallback;
 
@@ -236,15 +232,14 @@ function EditCardOKButton()
   
   CheckAndSetCardValues(gEditCard.card, document, false);
 
-  directory.modifyCard(gEditCard.card);
+  gEditCard.card.editCardToDatabase(gEditCard.abURI);
   
-  for (i=0; i < foundDirectoriesCount; i++) {
+  for (i=0; i<foundDirectoriesCount; i++) {
       // Update the addressLists item for this card
       foundDirectories[i].directory.addressLists.
               SetElementAt(foundDirectories[i].index, gEditCard.card);
   }
-                                        
-  NotifySaveListeners(directory);
+  NotifySaveListeners();
 
   // callback to allow caller to update
   if (gOkCallback)
@@ -295,22 +290,18 @@ function OnLoadEditCard()
       {
         // Set all the editable vcard fields to read only
         for (var i = kVcardFields.length; i-- > 0; )
-          document.getElementById(kVcardFields[i][0]).readOnly = true;
+          document.getElementById(kVcardFields[i][0]).readonly = true;
 
         // And the phonetic fields
-        document.getElementById(kPhoneticFields[0]).readOnly = true;
-        document.getElementById(kPhoneticFields[3]).readOnly = true;
+        document.getElementById(kPhoneticFields[0]).readonly = true;
+        document.getElementById(kPhoneticFields[3]).readonly = true;
 
         // Also disable the mail format popup.
-        document.getElementById("PreferMailFormatPopup").disabled = true;      
+        document.getElementById("PreferMailFormatPopup").disabled = true;
 
         document.documentElement.buttons = "accept";
         document.documentElement.removeAttribute("ondialogaccept");
       }
-      
-      // hide  remote content in HTML field for remote directories
-      if (directory.isRemote)
-        document.getElementById('allowRemoteContent').hidden = true;
     }
   }
 }
@@ -324,7 +315,7 @@ function RegisterSaveListener(func)
 
 // this is used by people who extend the ab card dialog
 // like Netscape does for screenname
-function NotifySaveListeners(directory)
+function NotifySaveListeners()
 {
   if (!gOnSaveListeners.length)
     return;
@@ -334,7 +325,7 @@ function NotifySaveListeners(directory)
 
   // the save listeners might have tweaked the card
   // in which case we need to commit it.
-  directory.modifyCard(gEditCard.card);
+  gEditCard.card.editCardToDatabase(gEditCard.abURI);
 }
 
 function InitPhoneticFields()
@@ -355,8 +346,7 @@ function InitEditCard()
 {
   InitPhoneticFields();
 
-  InitCommonJS();
-
+  gAddressBookBundle = document.getElementById("bundle_addressBook");
   // Create gEditCard object that contains global variables for the current js
   //   file.
   gEditCard = new Object();
@@ -410,8 +400,6 @@ function NewCardOKButton()
       // the card that got created.
       gEditCard.card = GetDirectoryFromURI(uri).addCard(gEditCard.card);
       NotifySaveListeners();
-      if ("arguments" in window && window.arguments[0])
-        window.arguments[0].allowRemoteContent = gEditCard.card.allowRemoteContent;
     }
   }
 
@@ -431,10 +419,6 @@ function GetCardValues(cardproperty, doc)
   var popup = document.getElementById("PreferMailFormatPopup");
   if (popup)
     popup.value = cardproperty.preferMailFormat;
-    
-  var allowRemoteContentEl = document.getElementById("allowRemoteContent");
-  if (allowRemoteContentEl)
-    allowRemoteContentEl.checked = cardproperty.allowRemoteContent;
 
   // get phonetic fields if exist
   try {
@@ -472,11 +456,7 @@ function CheckAndSetCardValues(cardproperty, doc, check)
   var popup = document.getElementById("PreferMailFormatPopup");
   if (popup)
     cardproperty.preferMailFormat = popup.value;
-    
-  var allowRemoteContentEl = document.getElementById("allowRemoteContent");
-  if (allowRemoteContentEl)
-    cardproperty.allowRemoteContent = allowRemoteContentEl.checked;
-    
+
   // set phonetic fields if exist
   try {
     cardproperty.phoneticFirstName = doc.getElementById("PhoneticFirstName").value;
@@ -510,11 +490,13 @@ function CheckCardRequiredDataPresence(doc)
   // filled in: email address, first name, last name, display name,
   //            organization (company name).
   var primaryEmail = doc.getElementById("PrimaryEmail");
-  if (primaryEmail.textLength == 0 &&
-      doc.getElementById("FirstName").textLength == 0 &&
-      doc.getElementById("LastName").textLength == 0 &&
-      doc.getElementById("DisplayName").textLength == 0 &&
-      doc.getElementById("Company").textLength == 0)
+  var primaryEmailValue = primaryEmail.value;
+  var primaryEmailValueLength = primaryEmailValue.length;
+  if (primaryEmailValueLength == 0 &&
+      doc.getElementById("FirstName").value.length == 0 &&
+      doc.getElementById("LastName").value.length == 0 &&
+      doc.getElementById("DisplayName").value.length == 0 &&
+      doc.getElementById("Company").value.length == 0)
   {
     Components
       .classes["@mozilla.org/embedcomp/prompt-service;1"]
@@ -530,7 +512,11 @@ function CheckCardRequiredDataPresence(doc)
   // Simple checks that the primary email should be of the form |user@host|.
   // Note: if the length of the primary email is 0 then we skip the check
   // as some other field must have something as per the check above.
-  if (primaryEmail.textLength != 0 && !/.@./.test(primaryEmail.value))
+  var primaryEmailValueAtLastIndex = primaryEmailValue.lastIndexOf("@");
+  if (!((primaryEmailValueLength == 0) ||
+        ((primaryEmailValueLength >= 3) &&
+         (primaryEmailValueAtLastIndex > 0) &&
+         (primaryEmailValueAtLastIndex < primaryEmailValueLength - 1))))
   {
     Components
       .classes["@mozilla.org/embedcomp/prompt-service;1"]

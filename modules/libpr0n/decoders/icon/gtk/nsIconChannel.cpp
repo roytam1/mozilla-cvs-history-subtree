@@ -60,8 +60,10 @@ extern "C" {
 
 #include "nsIStringBundle.h"
 
+#include "nsEscape.h"
 #include "nsNetUtil.h"
 #include "nsIURL.h"
+#include "nsIStringStream.h"
 
 #include "nsIconChannel.h"
 
@@ -83,75 +85,43 @@ moz_gdk_pixbuf_to_channel(GdkPixbuf* aPixbuf, nsIURI *aURI,
                  NS_ERROR_UNEXPECTED);
 
   const int n_channels = 4;
-#ifdef MOZ_CAIRO_GFX
-  gsize buf_size = 2 + n_channels * height * width;
-#else
   gsize buf_size = 3 + n_channels * height * width;
-#endif
   PRUint8 * const buf = (PRUint8*)NS_Alloc(buf_size);
   NS_ENSURE_TRUE(buf, NS_ERROR_OUT_OF_MEMORY);
   PRUint8 *out = buf;
 
   *(out++) = width;
   *(out++) = height;
-#ifndef MOZ_CAIRO_GFX
   *(out++) = 8; // bits of alpha per pixel
-#endif
   
   const guchar * const pixels = gdk_pixbuf_get_pixels(aPixbuf);
   int rowextra = gdk_pixbuf_get_rowstride(aPixbuf) - width * n_channels;
 
   // encode the RGB data and the A data
   const guchar * in = pixels;
-#ifndef MOZ_CAIRO_GFX
   PRUint8 *alpha_out = out + height * width * 3;
 #ifdef DEBUG
   PRUint8 * const alpha_start = alpha_out;
 #endif
-#endif
   for (int y = 0; y < height; ++y, in += rowextra) {
     for (int x = 0; x < width; ++x) {
-#ifdef MOZ_CAIRO_GFX
-      PRUint8 r = *(in++);
-      PRUint8 g = *(in++);
-      PRUint8 b = *(in++);
-      PRUint8 a = *(in++);
-#define DO_PREMULTIPLY(c_) PRUint8(PRUint16(c_) * PRUint16(a) / PRUint16(255))
-#ifdef IS_LITTLE_ENDIAN
-      *(out++) = DO_PREMULTIPLY(b);
-      *(out++) = DO_PREMULTIPLY(g);
-      *(out++) = DO_PREMULTIPLY(r);
-      *(out++) = a;
-#else
-      *(out++) = a;
-      *(out++) = DO_PREMULTIPLY(r);
-      *(out++) = DO_PREMULTIPLY(g);
-      *(out++) = DO_PREMULTIPLY(b);
-#endif
-#undef DO_PREMULTIPLY
-#else
       *(out++) = *(in++); // R
       *(out++) = *(in++); // G
       *(out++) = *(in++); // B
       *(alpha_out++) = *(in++); // A
-#endif
     }
   }
 
-#ifdef MOZ_CAIRO_GFX
-  NS_ASSERTION(out == buf + buf_size, "size miscalculation");
-#else
   NS_ASSERTION(out == alpha_start && alpha_out == buf + buf_size,
                "size miscalculation");
-#endif
 
   nsresult rv;
-  nsCOMPtr<nsIStringInputStream> stream =
-    do_CreateInstance("@mozilla.org/io/string-input-stream;1", &rv);
+  nsCOMPtr<nsIInputStream> stream;
+  rv = NS_NewByteInputStream(getter_AddRefs(stream), (char*)buf, buf_size);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = stream->AdoptData((char*)buf, buf_size);
-  NS_ENSURE_SUCCESS(rv, rv);
+  nsCOMPtr<nsIStringInputStream> sstream = do_QueryInterface(stream);
+  sstream->AdoptData((char*)buf, buf_size); // previous call was |ShareData|
 
   rv = NS_NewInputStreamChannel(aChannel, aURI, stream,
                                 NS_LITERAL_CSTRING("image/icon"));
@@ -231,14 +201,14 @@ nsIconChannel::InitWithGnome(nsIMozIconURI *aIconURI)
     nsCOMPtr<nsIStringBundle> bundle;
     bundleService->CreateBundle("chrome://branding/locale/brand.properties",
                                 getter_AddRefs(bundle));
-    nsAutoString appName;
+    nsXPIDLString appName;
 
     if (bundle) {
       bundle->GetStringFromName(NS_LITERAL_STRING("brandShortName").get(),
                                 getter_Copies(appName));
     } else {
       NS_WARNING("brand.properties not present, using default application name");
-      appName.Assign(NS_LITERAL_STRING("Gecko"));
+      appName.AssignLiteral("Gecko");
     }
 
     char* empty[] = { "" };

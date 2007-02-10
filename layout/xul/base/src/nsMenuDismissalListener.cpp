@@ -39,10 +39,6 @@
 #include "nsMenuDismissalListener.h"
 #include "nsIMenuParent.h"
 #include "nsMenuFrame.h"
-#include "nsIPopupBoxObject.h"
-
-
-nsMenuDismissalListener* nsMenuDismissalListener::sInstance = nsnull;
 
 /*
  * nsMenuDismissalListener implementation
@@ -50,13 +46,7 @@ nsMenuDismissalListener* nsMenuDismissalListener::sInstance = nsnull;
 
 NS_IMPL_ADDREF(nsMenuDismissalListener)
 NS_IMPL_RELEASE(nsMenuDismissalListener)
-NS_INTERFACE_MAP_BEGIN(nsMenuDismissalListener)
-  NS_INTERFACE_MAP_ENTRY(nsIDOMMouseListener)
-  NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
-  NS_INTERFACE_MAP_ENTRY(nsIMenuRollup)
-  NS_INTERFACE_MAP_ENTRY(nsIRollupListener)
-  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMMouseListener)
-NS_INTERFACE_MAP_END
+NS_IMPL_QUERY_INTERFACE3(nsMenuDismissalListener, nsIDOMMouseListener, nsIMenuRollup, nsIRollupListener)
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -67,29 +57,17 @@ nsMenuDismissalListener::nsMenuDismissalListener() :
   mMenuParent = nsnull;
 }
 
+////////////////////////////////////////////////////////////////////////
 nsMenuDismissalListener::~nsMenuDismissalListener() 
 {
 }
 
-nsMenuDismissalListener*
-nsMenuDismissalListener::GetInstance()
+////////////////////////////////////////////////////////////////////////
+nsresult
+nsMenuDismissalListener::MouseDown(nsIDOMEvent* aMouseEvent)
 {
-  if (!sInstance) {
-    sInstance = new nsMenuDismissalListener();
-    NS_IF_ADDREF(sInstance);
-  }
-  return sInstance;
+  return NS_OK;
 }
-
-/* static */ void
-nsMenuDismissalListener::Shutdown()
-{
-  if (sInstance) {
-    sInstance->Unregister();
-    NS_RELEASE(sInstance);
-  }
-}
-
 
 nsIMenuParent*
 nsMenuDismissalListener::GetCurrentMenuParent()
@@ -103,15 +81,24 @@ nsMenuDismissalListener::SetCurrentMenuParent(nsIMenuParent* aMenuParent)
   if (aMenuParent == mMenuParent)
     return;
 
-  mMenuParent = aMenuParent;
-
-  if (!aMenuParent) {
-    Shutdown();
-    return;
-  }
-
+  nsCOMPtr<nsIRollupListener> kungFuDeathGrip = this;
   Unregister();
-  Register();
+  
+  mMenuParent = aMenuParent;
+  if (!aMenuParent)
+    return;
+
+  nsCOMPtr<nsIWidget> widget;
+  aMenuParent->GetWidget(getter_AddRefs(widget));
+  if (!widget)
+    return;
+
+  PRBool consumeOutsideClicks = PR_FALSE;
+  aMenuParent->ConsumeOutsideClicks(consumeOutsideClicks);
+  widget->CaptureRollupEvents(this, PR_TRUE, consumeOutsideClicks);
+  mWidget = widget;
+
+  NS_ADDREF(nsMenuFrame::sDismissalListener = this);
 }
 
 NS_IMETHODIMP
@@ -125,7 +112,7 @@ nsMenuDismissalListener::Rollup()
       Release();
     }
     else
-      Shutdown();
+      Unregister();
   }
   return NS_OK;
 }
@@ -185,40 +172,41 @@ nsMenuDismissalListener::GetSubmenuWidgetChain(nsISupportsArray **_retval)
   return NS_OK; 
 }
 
-
-void
-nsMenuDismissalListener::Register()
+#if 0
+NS_IMETHODIMP
+nsMenuDismissalListener::FirstMenuParent(nsIMenuParent * *_retval)
 {
-  if (mWidget)
-    return;
-
-  nsCOMPtr<nsIWidget> widget;
-  mMenuParent->GetWidget(getter_AddRefs(widget));
-  if (!widget) {
-    Shutdown();
-    return;
-  }
-
-  PRBool consumeOutsideClicks = PR_FALSE;
-  mMenuParent->ConsumeOutsideClicks(consumeOutsideClicks);
-  widget->CaptureRollupEvents(this, PR_TRUE, consumeOutsideClicks);
-  mWidget = widget;
-
-  mMenuParent->AttachedDismissalListener();
+  NS_IF_ADDREF(*_retval = mMenuParent);
+  
+  return NS_OK;
 }
 
-void
+
+NS_IMETHODIMP
+nsMenuDismissalListener::NextMenuParent(nsIMenuParent * inCurrent, nsIMenuParent * *_retval)
+{
+//XXX for now don't return anything in the chain
+  *_retval = nsnull;
+  return NS_OK;
+}
+#endif
+
+NS_IMETHODIMP
 nsMenuDismissalListener::Unregister()
 {
   if (mWidget) {
     mWidget->CaptureRollupEvents(this, PR_FALSE, PR_FALSE);
     mWidget = nsnull;
   }
+  
+  NS_RELEASE(nsMenuFrame::sDismissalListener);
+  return NS_OK;
 }
 
-void
+NS_IMETHODIMP
 nsMenuDismissalListener::EnableListener(PRBool aEnabled)
 {
   mEnabled = aEnabled;
+  return NS_OK;
 }
 

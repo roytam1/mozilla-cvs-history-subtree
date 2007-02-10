@@ -39,16 +39,32 @@
 
 @interface DraggableImageAndTextCell : NSButtonCell
 {
-  NSAttributedString* mSavedStandardTitle;
-  NSPoint             mTrackingStart;
-  float               mClickHoldTimeoutSeconds;
-  BOOL                mIsDraggable;
-  BOOL                mLastClickHoldTimedOut;
-
-  SEL                 mClickHoldAction;
+  NSImage         *mImage;
+  NSMutableString *mTruncLabelString;
+  NSPoint         mTrackingStart;
+  int             mLabelStringWidth;      // -1 if not known
+  float           mImagePadding;
+  float           mImageSpace;
+  float           mImageAlpha;
+  float						mClickHoldTimeoutSeconds;
+  BOOL            mTruncateLabel;
+  BOOL            mIsDraggable;
+  BOOL						mLastClickHoldTimedOut;
+  
+  SEL             mClickHoldAction;
 }
 
 - (id)initTextCell:(NSString*)aString;
+
+- (void)setImagePadding:(float)padding;
+- (void)setImageSpace:(float)space;
+- (void)setImageAlpha:(float)alpha;
+
+//- (void)setImage:(NSImage *)anImage;
+//- (NSImage *)image;
+
+- (BOOL)labelTruncates;
+- (void)setLabelTruncates:(BOOL)inTruncates;
 
 - (BOOL)isDraggable;
 - (void)setDraggable:(BOOL)inDraggable;

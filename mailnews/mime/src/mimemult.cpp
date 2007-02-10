@@ -47,7 +47,7 @@
 #include "nsMimeStringResources.h"
 #include "nsMimeTypes.h"
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
   extern MimeObjectClass mimeMultipartAppleDoubleClass;
 #endif
 
@@ -57,7 +57,7 @@ MimeDefClass(MimeMultipart, MimeMultipartClass,
 
 static int MimeMultipart_initialize (MimeObject *);
 static void MimeMultipart_finalize (MimeObject *);
-static int MimeMultipart_parse_line (const char *line, PRInt32 length, MimeObject *);
+static int MimeMultipart_parse_line (char *line, PRInt32 length, MimeObject *);
 static int MimeMultipart_parse_eof (MimeObject *object, PRBool abort_p);
 
 static MimeMultipartBoundaryType MimeMultipart_check_boundary(MimeObject *,
@@ -65,7 +65,7 @@ static MimeMultipartBoundaryType MimeMultipart_check_boundary(MimeObject *,
 															  PRInt32);
 static int MimeMultipart_create_child(MimeObject *);
 static PRBool MimeMultipart_output_child_p(MimeObject *, MimeObject *);
-static int MimeMultipart_parse_child_line (MimeObject *, const char *, PRInt32,
+static int MimeMultipart_parse_child_line (MimeObject *, char *, PRInt32,
 										   PRBool);
 static int MimeMultipart_close_child(MimeObject *);
 
@@ -145,7 +145,7 @@ int MimeWriteAString(MimeObject *obj, const nsACString &string)
 }
 
 static int
-MimeMultipart_parse_line (const char *line, PRInt32 length, MimeObject *obj)
+MimeMultipart_parse_line (char *line, PRInt32 length, MimeObject *obj)
 {
   MimeMultipart *mult = (MimeMultipart *) obj;
   int status = 0;
@@ -207,8 +207,7 @@ MimeMultipart_parse_line (const char *line, PRInt32 length, MimeObject *obj)
         // check if this is a sub-part of a part we're stripping.
         for (PRInt32 partIndex = 0; partIndex < obj->options->state->partsToStrip.Count(); partIndex++)
         {
-          nsCString *curPartToStrip = obj->options->state->partsToStrip.CStringAt(partIndex);
-          if (newPart.Find(*curPartToStrip) == 0 && (newPart.Length() == curPartToStrip->Length() || newPart.CharAt(curPartToStrip->Length()) == '.'))
+          if (newPart.Find(*obj->options->state->partsToStrip.CStringAt(partIndex)) == 0)
           {
             obj->options->state->strippingPart = PR_TRUE;
             if (partIndex < obj->options->state->detachToFiles.Count())
@@ -541,7 +540,7 @@ MimeMultipart_create_child(MimeObject *obj)
 	{  
 	  status = body->clazz->parse_begin(body);
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
     /* if we are saving an apple double attachment, we need to set correctly the conten type of the channel */
     if (mime_typep(obj, (MimeObjectClass *) &mimeMultipartAppleDoubleClass))
     {
@@ -633,7 +632,7 @@ MimeMultipart_close_child(MimeObject *object)
 
 
 static int
-MimeMultipart_parse_child_line (MimeObject *obj, const char *line, PRInt32 length,
+MimeMultipart_parse_child_line (MimeObject *obj, char *line, PRInt32 length,
 								PRBool first_line_p)
 {
   MimeContainer *cont = (MimeContainer *) obj;

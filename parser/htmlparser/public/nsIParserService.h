@@ -39,7 +39,7 @@
 #define nsIParserService_h__
 
 #include "nsISupports.h"
-#include "nsStringGlue.h"
+#include "nsString.h"
 #include "nsHTMLTags.h"
 #include "nsIElementObserver.h"
 
@@ -50,16 +50,16 @@ class nsIParserNode;
 
 // {90a92e37-abd6-441b-9b39-4064d98e1ede}
 #define NS_IPARSERSERVICE_IID \
-{ 0x90a92e37, 0xabd6, 0x441b, { 0x9b, 0x39, 0x40, 0x64, 0xd9, 0x8e, 0x1e, 0xde } }
+{ 0x90a92e37, 0xabd6, 0x441b, { 0x9b, 0x39, 0x40, 0x64, 0xd9, 0x8e, 0x1e, 0xde } };
 
 // {78081E70-AD53-11d5-8498-0010A4E0C706}
 #define NS_IOBSERVERENTRY_IID \
-{ 0x78081e70, 0xad53, 0x11d5, { 0x84, 0x98, 0x00, 0x10, 0xa4, 0xe0, 0xc7, 0x06 } }
+{ 0x78081e70, 0xad53, 0x11d5, { 0x84, 0x98, 0x00, 0x10, 0xa4, 0xe0, 0xc7, 0x06 } };
 
 
 class nsIObserverEntry : public nsISupports {
  public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IOBSERVERENTRY_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IOBSERVERENTRY_IID)
 
   NS_IMETHOD Notify(nsIParserNode* aNode,
                     nsIParser* aParser,
@@ -69,11 +69,9 @@ class nsIObserverEntry : public nsISupports {
 };
 
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIObserverEntry, NS_IOBSERVERENTRY_IID)
-
 class nsIParserService : public nsISupports {
  public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IPARSERSERVICE_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IPARSERSERVICE_IID)
 
   /**
    * Looks up the nsHTMLTag enum value corresponding to the tag in aAtom. The
@@ -155,11 +153,25 @@ class nsIParserService : public nsISupports {
   NS_IMETHOD GetTopicObservers(const nsAString& aTopic,
                                nsIObserverEntry** aEntry) = 0;
 
-  virtual nsresult CheckQName(const nsAString& aQName,
+  virtual nsresult CheckQName(const nsASingleFragmentString& aQName,
                               PRBool aNamespaceAware,
                               const PRUnichar** aColon) = 0;
   virtual PRBool IsXMLLetter(PRUnichar aChar) = 0;
   virtual PRBool IsXMLNCNameChar(PRUnichar aChar) = 0;
+};
+
+/**
+ * A temporary interface to allow adding new methods without changing existing
+ * interfaces for Gecko 1.8.1. After the 1.8.1 release this interface should
+ * not be used.
+ */
+
+#define NS_IPARSERSERVICE_MOZILLA_1_8_BRANCH_IID \
+{ 0x9b70db61, 0x3fd2, 0x4a2e, { 0x99, 0x25, 0x76, 0xdf, 0x06, 0x18, 0xd6, 0x6d } }
+
+class nsIParserService_MOZILLA_1_8_BRANCH : public nsIParserService {
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IPARSERSERVICE_MOZILLA_1_8_BRANCH_IID)
 
   /**
    * Decodes an entity into a UTF-16 character. If a ; is found between aStart
@@ -180,7 +192,5 @@ class nsIParserService : public nsISupports {
                                 const PRUnichar** aNext,
                                 PRUnichar* aResult) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIParserService, NS_IPARSERSERVICE_IID)
 
 #endif // nsIParserService_h__

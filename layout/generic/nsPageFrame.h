@@ -38,6 +38,7 @@
 #define nsPageFrame_h___
 
 #include "nsContainerFrame.h"
+#include "nsIPrintSettings.h"
 #include "nsLeafFrame.h"
 
 class nsSharedPageData;
@@ -46,23 +47,30 @@ class nsSharedPageData;
 class nsPageFrame : public nsContainerFrame {
 
 public:
-  friend nsIFrame* NS_NewPageFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewPageFrame(nsIPresShell* aPresShell, nsIFrame** aResult);
+
+  // nsIFrame
+  NS_IMETHOD  SetInitialChildList(nsPresContext* aPresContext,
+                                  nsIAtom*        aListName,
+                                  nsIFrame*       aChildList);
 
   NS_IMETHOD  Reflow(nsPresContext*      aPresContext,
                      nsHTMLReflowMetrics& aDesiredSize,
                      const nsHTMLReflowState& aMaxSize,
                      nsReflowStatus&      aStatus);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD  Paint(nsPresContext*      aPresContext,
+                    nsIRenderingContext& aRenderingContext,
+                    const nsRect&        aDirtyRect,
+                    nsFramePaintLayer    aWhichLayer,
+                    PRUint32             aFlags = 0);
 
   virtual PRBool IsContainingBlock() const;
 
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::pageFrame
+   * @see nsLayoutAtoms::pageFrame
    */
   virtual nsIAtom* GetType() const;
   
@@ -77,18 +85,17 @@ public:
   // Tell the page which page number it is out of how many
   virtual void  SetPageNumInfo(PRInt32 aPageNumber, PRInt32 aTotalPages);
 
+  virtual void  SuppressHeadersAndFooters(PRBool aDoSup) { mSupressHF = aDoSup; }
+  virtual void  SetClipRect(nsRect* aClipRect);
+
   virtual void SetSharedPageData(nsSharedPageData* aPD);
 
-  void PaintPrintPreviewBackground(nsIRenderingContext& aRenderingContext,
-                                   nsPoint aPt);
-  void PaintHeaderFooter(nsIRenderingContext& aRenderingContext,
-                         nsPoint aPt);
-  void PaintPageContent(nsIRenderingContext& aRenderingContext,
-                        const nsRect&        aDirtyRect,
-                        nsPoint              aPt);
+// XXX Part of Temporary fix for Bug 127263
+  static  void   SetCreateWidget(PRBool aDoCreateWidget)  { mDoCreateWidget = aDoCreateWidget; }
+  static  PRBool GetCreateWidget()                        { return mDoCreateWidget; }
 
 protected:
-  nsPageFrame(nsStyleContext* aContext);
+  nsPageFrame();
   virtual ~nsPageFrame();
 
   typedef enum {
@@ -101,7 +108,9 @@ protected:
                        PRInt32              aJust,
                        const nsString&      aStr);
 
-  void DrawHeaderFooter(nsIRenderingContext& aRenderingContext,
+  void DrawHeaderFooter(nsPresContext*      aPresContext,
+                        nsIRenderingContext& aRenderingContext,
+                        nsIFrame *           aFrame,
                         nsHeaderFooterEnum   aHeaderFooter,
                         PRInt32              aJust,
                         const nsString&      sStr,
@@ -110,27 +119,43 @@ protected:
                         nscoord              aAscent,
                         nscoord              aWidth);
 
-  void DrawHeaderFooter(nsIRenderingContext& aRenderingContext,
+  void DrawHeaderFooter(nsPresContext*      aPresContext,
+                        nsIRenderingContext& aRenderingContext,
+                        nsIFrame *           aFrame,
                         nsHeaderFooterEnum   aHeaderFooter,
-                        const nsString&      aStrLeft,
-                        const nsString&      aStrRight,
-                        const nsString&      aStrCenter,
+                        PRInt32              aJust,
+                        const nsString&      aStr1,
+                        const nsString&      aStr2,
+                        const nsString&      aStr3,
                         const nsRect&        aRect,
                         nscoord              aAscent,
                         nscoord              aHeight);
 
   void ProcessSpecialCodes(const nsString& aStr, nsString& aNewStr);
 
+  nsCOMPtr<nsIPrintSettings> mPrintOptions;
   PRInt32     mPageNum;
   PRInt32     mTotNumPages;
+  nsMargin    mMargin;
+
+  PRPackedBool mSupressHF;
+  nsRect       mClipRect;
 
   nsSharedPageData* mPD;
+
+// XXX Part of Temporary fix for Bug 127263
+  static PRBool mDoCreateWidget;
+
+private:
+  void DrawBackground(nsPresContext* aPresContext,
+                      nsIRenderingContext& aRenderingContext,
+                      const nsRect&  aDirtyRect);
 };
 
 
 class nsPageBreakFrame : public nsLeafFrame {
 
-  nsPageBreakFrame(nsStyleContext* aContext);
+  nsPageBreakFrame();
   ~nsPageBreakFrame();
 
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
@@ -142,11 +167,12 @@ class nsPageBreakFrame : public nsLeafFrame {
 
 protected:
 
-  virtual nscoord GetIntrinsicWidth();
-
+    virtual void GetDesiredSize(nsPresContext*        aPresContext,
+                              const nsHTMLReflowState& aReflowState,
+                              nsHTMLReflowMetrics&     aDesiredSize);
     PRBool mHaveReflowed;
 
-    friend nsIFrame* NS_NewPageBreakFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+    friend nsresult NS_NewPageBreakFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 };
 
 #endif /* nsPageFrame_h___ */

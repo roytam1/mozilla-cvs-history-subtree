@@ -53,11 +53,9 @@
 #include "nscore.h"
 #include "nsXPCOM.h"
 #include "nsAutoPtr.h"
-#include "nsCycleCollectionParticipant.h"
-#include "nsCycleCollector.h"
 #include "nsISupports.h"
 #include "nsIServiceManager.h"
-#include "nsIClassInfoImpl.h"
+#include "nsIClassInfo.h"
 #include "nsIComponentManager.h"
 #include "nsIComponentRegistrar.h"
 #include "nsISupportsPrimitives.h"
@@ -73,7 +71,7 @@
 #include "nsCOMPtr.h"
 #include "nsIModule.h"
 #include "nsAutoLock.h"
-#include "nsXPTCUtils.h"
+#include "xptcall.h"
 #include "jsapi.h"
 #include "jsdhash.h"
 #include "jsprf.h"
@@ -95,8 +93,9 @@
 #include "nsReadableUtils.h"
 #include "nsXPIDLString.h"
 
-#include "nsThreadUtils.h"
+#include "nsIThread.h"
 #include "nsIJSContextStack.h"
+#include "prthread.h"
 #include "nsDeque.h"
 #include "nsVoidArray.h"
 
@@ -110,11 +109,8 @@
 #include "nsSupportsArray.h"
 
 #include "nsIXPCScriptNotify.h"  // used to notify: ScriptEvaluated
-
 #ifndef XPCONNECT_STANDALONE
 #define XPC_USE_SECURITY_CHECKED_COMPONENT
-#include "nsIScriptObjectPrincipal.h"
-#include "nsIPrincipal.h"
 #endif
 
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
@@ -145,7 +141,7 @@
 #define DEBUG_xpc_hacker
 #endif
 
-#if defined(DEBUG_brendan)
+#if defined(DEBUG_brendan) || defined(DEBUG_bzbarsky)
 #define DEBUG_XPCNativeWrapper 1
 #endif
 
@@ -172,7 +168,7 @@
 //#define XPC_TRACK_AUTOMARKINGPTR_STATS
 #endif
 
-#if defined(DEBUG_dbaron) || defined(DEBUG_bzbarsky) // only part of DEBUG_xpc_hacker!
+#if defined(DEBUG_dbaron) // only part of DEBUG_xpc_hacker!
 #define XPC_DUMP_AT_SHUTDOWN
 #endif
 
@@ -294,7 +290,7 @@ public:
                         {nsAutoMonitor::DestroyMonitor(lock);}
 
     XPCAutoLock(XPCLock* lock)
-#ifdef DEBUG_jband
+#ifdef DEBUG
         : nsAutoLockBase(lock ? (void*) lock : (void*) this, eAutoMonitor),
 #else
         : nsAutoLockBase(lock, eAutoMonitor),
@@ -422,16 +418,15 @@ private:
 
 const PRBool OBJ_IS_GLOBAL = PR_TRUE;
 const PRBool OBJ_IS_NOT_GLOBAL = PR_FALSE;
-struct JSObjectRefcounts;
 
-class nsXPConnect : public nsIXPConnect,
-                    public nsSupportsWeakReference,
-                    public nsCycleCollectionLanguageRuntime
+class nsXPConnect : public nsIXPConnect_MOZILLA_1_8_BRANCH,
+                    public nsSupportsWeakReference
 {
 public:
     // all the interface method declarations...
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCONNECT
+    NS_DECL_NSIXPCONNECT_MOZILLA_1_8_BRANCH
 
     // non-interface implementation
 public:
@@ -450,6 +445,9 @@ public:
                                     nsXPConnect* xpc = nsnull);
 
     static JSBool IsISupportsDescendant(nsIInterfaceInfo* info);
+
+    static PRThread* GetMainThread()
+        {return gMainThread ? gMainThread : FindMainThread();}
 
     nsIXPCSecurityManager* GetDefaultSecurityManager() const
         {return mDefaultSecurityManager;}
@@ -474,14 +472,6 @@ public:
     nsresult GetInfoForIID(const nsIID * aIID, nsIInterfaceInfo** info);
     nsresult GetInfoForName(const char * name, nsIInterfaceInfo** info);
 
-    // from nsCycleCollectionLanguageRuntime
-    nsresult BeginCycleCollection();
-    nsresult Root(const nsDeque &nodes);
-    nsresult Unlink(const nsDeque &nodes);
-    nsresult Unroot(const nsDeque &nodes);
-    nsresult Traverse(void *p, nsCycleCollectionTraversalCallback &cb);
-    nsresult FinishCycleCollection();
-
 #ifdef XPC_IDISPATCH_SUPPORT
 public:
     static PRBool IsIDispatchEnabled();
@@ -499,14 +489,14 @@ private:
     // Singleton instance
     static nsXPConnect*      gSelf;
     static JSBool            gOnceAliveNowDead;
+    static PRThread*         gMainThread;
 
     XPCJSRuntime*            mRuntime;
-    nsCOMPtr<nsIInterfaceInfoSuperManager> mInterfaceInfoManager;
+    nsIInterfaceInfoSuperManager* mInterfaceInfoManager;
     nsIThreadJSContextStack* mContextStack;
     nsIXPCSecurityManager*   mDefaultSecurityManager;
     PRUint16                 mDefaultSecurityManagerFlags;
     JSBool                   mShuttingDown;
-    JSObjectRefcounts*       mObjRefcounts;
 
 #ifdef XPC_TOOLS_SUPPORT
     nsCOMPtr<nsIXPCToolsProfiler> mProfiler;
@@ -764,7 +754,7 @@ public:
 
     nsIXPCSecurityManager* GetAppropriateSecurityManager(PRUint16 flags) const
         {
-            NS_ASSERTION(CallerTypeIsKnown(),"missing caller type set somewhere");
+            NS_WARN_IF_FALSE(CallerTypeIsKnown(),"missing caller type set somewhere");
             if(!CallerTypeIsJavaScript())
                 return nsnull;
             if(mSecurityManager)
@@ -1066,13 +1056,6 @@ public:
     JSObject*
     GetPrototypeJSObject() const {return mPrototypeJSObject;}
 
-#ifndef XPCONNECT_STANDALONE
-    nsIPrincipal*
-    GetPrincipal() const
-    {return mScriptObjectPrincipal ?
-         mScriptObjectPrincipal->GetPrincipal() : nsnull;}
-#endif
-    
     JSObject*
     GetPrototypeJSFunction() const {return mPrototypeJSFunction;}
 
@@ -1136,22 +1119,9 @@ private:
     ClassInfo2WrappedNativeProtoMap* mWrappedNativeProtoMap;
     nsXPCComponents*                 mComponents;
     XPCWrappedNativeScope*           mNext;
-    // The JS global object for this scope.  If non-null, this will be the
-    // default parent for the XPCWrappedNatives that have us as the scope,
-    // unless a PreCreate hook overrides it.  Note that this _may_ be null (see
-    // constructor).
     JSObject*                        mGlobalJSObject;
     JSObject*                        mPrototypeJSObject;
     JSObject*                        mPrototypeJSFunction;
-
-#ifndef XPCONNECT_STANDALONE
-    // The script object principal instance corresponding to our current global
-    // JS object.
-    // XXXbz what happens if someone calls JS_SetPrivate on mGlobalJSObject.
-    // How do we deal?  Do we need to?  I suspect this isn't worth worrying
-    // about, since all of our scope objects are verified as not doing that.
-    nsCOMPtr<nsIScriptObjectPrincipal> mScriptObjectPrincipal;
-#endif
 };
 
 /***************************************************************************/
@@ -1846,14 +1816,9 @@ private:
 class XPCWrappedNative : public nsIXPConnectWrappedNative
 {
 public:
-    NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+    NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCONNECTJSOBJECTHOLDER
     NS_DECL_NSIXPCONNECTWRAPPEDNATIVE
-    NS_DECL_CYCLE_COLLECTION_CLASS(XPCWrappedNative)
-
-#ifndef XPCONNECT_STANDALONE
-    virtual nsIPrincipal* GetObjectPrincipal() const;
-#endif
 
     JSBool
     IsValid() const {return nsnull != mFlatJSObject;}
@@ -2111,8 +2076,11 @@ private:
     XPCWrappedNativeTearOffChunk mFirstChunk;
     JSObject*                    mNativeWrapper;
 
+#ifdef XPC_CHECK_WRAPPER_THREADSAFETY
 public:
-    nsCOMPtr<nsIThread>          mThread; // Don't want to overload _mOwningThread
+    PRThread*          mThread; // Don't want to overload _mOwningThread
+    static PRThread*   gMainThread;
+#endif
 };
 
 /***************************************************************************
@@ -2132,12 +2100,9 @@ public:
 class nsIXPCWrappedJSClass : public nsISupports
 {
 public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IXPCONNECT_WRAPPED_JS_CLASS_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IXPCONNECT_WRAPPED_JS_CLASS_IID)
     NS_IMETHOD DebugDump(PRInt16 depth) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIXPCWrappedJSClass,
-                              NS_IXPCONNECT_WRAPPED_JS_CLASS_IID)
 
 /*************************/
 // nsXPCWrappedJSClass represents the sharable factored out common code and
@@ -2168,7 +2133,7 @@ public:
     JSObject* GetRootJSObject(XPCCallContext& ccx, JSObject* aJSObj);
 
     NS_IMETHOD CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
-                          const XPTMethodDescriptor* info,
+                          const nsXPTMethodInfo* info,
                           nsXPTCMiniVariant* params);
 
     JSObject*  CallQueryInterfaceOnJSObject(XPCCallContext& ccx,
@@ -2204,7 +2169,7 @@ private:
     enum SizeMode {GET_SIZE, GET_LENGTH};
 
     JSBool GetArraySizeFromParam(JSContext* cx,
-                                 const XPTMethodDescriptor* method,
+                                 const nsXPTMethodInfo* method,
                                  const nsXPTParamInfo& param,
                                  uint16 methodIndex,
                                  uint8 paramIndex,
@@ -2213,7 +2178,7 @@ private:
                                  JSUint32* result);
 
     JSBool GetInterfaceTypeFromParam(JSContext* cx,
-                                     const XPTMethodDescriptor* method,
+                                     const nsXPTMethodInfo* method,
                                      const nsXPTParamInfo& param,
                                      uint16 methodIndex,
                                      const nsXPTType& type,
@@ -2240,8 +2205,8 @@ private:
 // nsXPCWrappedJS objects are chained together to represent the various
 // interface on the single underlying (possibly aggregate) JSObject.
 
-class nsXPCWrappedJS : protected nsAutoXPTCStub,
-                       public nsIXPConnectWrappedJS,
+class nsXPCWrappedJS : public nsXPTCStubBase,
+                       public nsWeakRefToIXPConnectWrappedJS,
                        public nsSupportsWeakReference,
                        public nsIPropertyBag
 {
@@ -2249,12 +2214,16 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCONNECTJSOBJECTHOLDER
     NS_DECL_NSIXPCONNECTWRAPPEDJS
-    NS_DECL_NSISUPPORTSWEAKREFERENCE
+    NS_DECL_NSIXPCONNECTWRAPPEDJS_MOZILLA_1_8_BRANCH
+    //NS_DECL_NSISUPPORTSWEAKREFERENCE // methods also on nsIXPConnectWrappedJS
     NS_DECL_NSIPROPERTYBAG
-    NS_DECL_CYCLE_COLLECTION_CLASS(nsXPCWrappedJS)
+
+    // Note that both nsXPTCStubBase and nsIXPConnectWrappedJS declare
+    // GetInterfaceInfo methods with the same sig. So, the declaration
+    // for it here comes from the NS_DECL_NSIXPCONNECTWRAPPEDJS macro
 
     NS_IMETHOD CallMethod(PRUint16 methodIndex,
-                          const XPTMethodDescriptor *info,
+                          const nsXPTMethodInfo* info,
                           nsXPTCMiniVariant* params);
 
     /*
@@ -2270,7 +2239,6 @@ public:
                  nsISupports* aOuter,
                  nsXPCWrappedJS** wrapper);
 
-    nsISomeInterface* GetXPTCStub() { return mXPTCStub; }
     JSObject* GetJSObject() const {return mJSObj;}
     nsXPCWrappedJSClass*  GetClass() const {return mClass;}
     REFNSIID GetIID() const {return GetClass()->GetIID();}
@@ -2384,7 +2352,7 @@ private:
 class XPCConvert
 {
 public:
-    static JSBool IsMethodReflectable(const XPTMethodDescriptor& info);
+    static JSBool IsMethodReflectable(const nsXPTMethodInfo& info);
 
     /**
      * Convert a native object into a jsval.
@@ -2872,7 +2840,6 @@ public:
          mResolvingWrapper = w; return old;}
 
     void Cleanup();
-    void ReleaseNatives();
 
     PRBool IsValid() const {return mJSContextStack != nsnull;}
 
@@ -2929,8 +2896,6 @@ private:
 #ifdef XPC_CHECK_WRAPPER_THREADSAFETY
     JSUint32             mWrappedNativeThreadsafetyReportDepth;
 #endif
-    PRThread*            mThread;
-    nsVoidArray          mNativesToReleaseArray;
 
     static PRLock*           gLock;
     static XPCPerThreadData* gThreads;
@@ -2978,16 +2943,15 @@ private:
 
 #ifndef XPCONNECT_STANDALONE
 #include "nsIScriptSecurityManager.h"
+#include "nsIPrincipal.h"
+#include "nsIScriptObjectPrincipal.h"
 
-class BackstagePass : public nsIScriptObjectPrincipal,
-                      public nsIXPCScriptable,
-                      public nsIClassInfo
+class BackstagePass : public nsIScriptObjectPrincipal, public nsIXPCScriptable
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIXPCSCRIPTABLE
-  NS_DECL_NSICLASSINFO
-
+  
   virtual nsIPrincipal* GetPrincipal() {
     return mPrincipal;
   }
@@ -3005,12 +2969,11 @@ private:
 
 #else
 
-class BackstagePass : public nsIXPCScriptable, public nsIClassInfo
+class BackstagePass : public nsIXPCScriptable
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIXPCSCRIPTABLE
-  NS_DECL_NSICLASSINFO
 
   BackstagePass()
   {
@@ -3049,8 +3012,7 @@ class nsJSRuntimeServiceImpl : public nsIJSRuntimeService,
 // 'Components' object
 
 class nsXPCComponents : public nsIXPCComponents,
-                        public nsIXPCScriptable,
-                        public nsIClassInfo
+                        public nsIXPCScriptable
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
                       , public nsISecurityCheckedComponent
 #endif
@@ -3059,7 +3021,6 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCCOMPONENTS
     NS_DECL_NSIXPCSCRIPTABLE
-    NS_DECL_NSICLASSINFO
 
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
     NS_DECL_NSISECURITYCHECKEDCOMPONENT
@@ -3095,8 +3056,7 @@ private:
 
 class nsXPCComponents_Interfaces :
             public nsIScriptableInterfaces,
-            public nsIXPCScriptable,
-            public nsIClassInfo
+            public nsIXPCScriptable
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
           , public nsISecurityCheckedComponent
 #endif
@@ -3106,7 +3066,6 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSISCRIPTABLEINTERFACES
     NS_DECL_NSIXPCSCRIPTABLE
-    NS_DECL_NSICLASSINFO
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
     NS_DECL_NSISECURITYCHECKEDCOMPONENT
 #endif
@@ -3552,19 +3511,16 @@ class XPCVariant : public nsIVariant
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIVARIANT
-    // If this class ever implements nsIWritableVariant, take special care with
-    // the case when mJSVal is JSVAL_STRING, since we don't own the data in
-    // that case.
 
     // We #define and iid so that out module local code can use QI to detect 
     // if a given nsIVariant is in fact an XPCVariant. 
-    NS_DECLARE_STATIC_IID_ACCESSOR(XPCVARIANT_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(XPCVARIANT_IID)
 
     static XPCVariant* newVariant(XPCCallContext& ccx, jsval aJSVal);
 
     jsval GetJSVal() const {return mJSVal;}
 
-    XPCVariant(JSRuntime* aJSRuntime);
+    XPCVariant();
 
     /**
      * Convert a variant into a jsval.
@@ -3589,41 +3545,7 @@ protected:
 protected:
     nsDiscriminatedUnion mData;
     jsval                mJSVal;
-
-    // For faster GC-thing locking and unlocking
-    JSRuntime*           mJSRuntime;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(XPCVariant, XPCVARIANT_IID)
-
-/***************************************************************************/
-#ifndef XPCONNECT_STANDALONE
-
-#define PRINCIPALHOLDER_IID \
-{0xbf109f49, 0xf94a, 0x43d8, {0x93, 0xdb, 0xe4, 0x66, 0x49, 0xc5, 0xd9, 0x7d}}
-
-class PrincipalHolder : public nsIScriptObjectPrincipal
-{
-public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(PRINCIPALHOLDER_IID)
-
-    PrincipalHolder(nsIPrincipal *holdee)
-        : mHoldee(holdee)
-    {
-    }
-    virtual ~PrincipalHolder() { }
-
-    NS_DECL_ISUPPORTS
-
-    nsIPrincipal *GetPrincipal();
-
-private:
-    nsCOMPtr<nsIPrincipal> mHoldee;
-};
-
-NS_DEFINE_STATIC_IID_ACCESSOR(PrincipalHolder, PRINCIPALHOLDER_IID)
-
-#endif /* !XPCONNECT_STANDALONE */
 
 /***************************************************************************/
 // Utilities
@@ -3633,56 +3555,11 @@ JSBool xpc_IsReportableErrorCode(nsresult code);
 JSObject* xpc_CloneJSFunction(XPCCallContext &ccx, JSObject *funobj,
                               JSObject *parent);
 
-#ifndef XPCONNECT_STANDALONE
-
-// Helper for creating a sandbox object to use for evaluating
-// untrusted code completely separated from all other code in the
-// system using xpc_EvalInSandbox(). Takes the JSContext on which to
-// do setup etc on, puts the sandbox object in *vp (which must be
-// rooted by the caller), and uses the principal that's either
-// directly passed in prinOrSop or indirectly as an
-// nsIScriptObjectPrincipal holding the principal. If no principal is
-// reachable through prinOrSop, a new null principal will be created
-// and used.
-nsresult
-xpc_CreateSandboxObject(JSContext * cx, jsval * vp, nsISupports *prinOrSop);
-
-// Helper for evaluating scripts in a sandbox object created with
-// xpc_CreateSandboxObject(). The caller is responsible of ensuring
-// that *rval doesn't get collected during the call or usage after the
-// call. This helper will use filename and lineNo for error reporting,
-// and if no filename is provided it will use the codebase from the
-// principal and line number 1 as a fallback.
-nsresult
-xpc_EvalInSandbox(JSContext *cx, JSObject *sandbox, const nsAString& source,
-                  const char *filename, PRInt32 lineNo, jsval *rval);
-#endif /* !XPCONNECT_STANDALONE */
-
 /***************************************************************************/
 // Inlined utilities.
 
 inline JSBool
 xpc_ForcePropertyResolve(JSContext* cx, JSObject* obj, jsval idval);
-
-inline jsval
-GetRTStringByIndex(JSContext *cx, uintN index);
-
-nsISupports *
-XPC_GetIdentityObject(JSContext *cx, JSObject *obj);
-
-PRBool
-IsXPCSafeJSObjectWrapperClass(JSClass *clazz);
-
-JSObject *
-XPC_SJOW_GetUnsafeObject(JSContext *cx, JSObject *obj);
-
-JSBool
-XPC_SJOW_Construct(JSContext *cx, JSObject *obj, uintN, jsval *argv,
-                   jsval *rval);
-
-PRBool
-XPC_SJOW_AttachNewConstructorObject(XPCCallContext &ccx,
-                                    JSObject *aGlobalObject);
 
 #ifdef XPC_IDISPATCH_SUPPORT
 // IDispatch specific classes

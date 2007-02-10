@@ -60,6 +60,7 @@ PACKAGE_FILE = vcard.pkg
 META_COMPONENT = mail
 
 REQUIRES	= xpcom \
+                  xpcom_obsolete \
 		  string \
 		  mime \
 		  msgbase \
@@ -95,10 +96,11 @@ else
 EXTRA_DSO_LIBS = msgbaseutil
 endif
 
+EXTRA_DSO_LIBS += mimecthglue_s
+
 EXTRA_DSO_LDOPTS = \
 		$(LIBS_DIR) \
 		$(EXTRA_DSO_LIBS) \
-		../glue/$(LIB_PREFIX)mimecthglue_s.$(LIB_SUFFIX) \
 		$(MOZ_COMPONENT_LIBS) \
 		$(MOZ_XPCOM_OBSOLETE_LIBS) \
 		$(NULL)

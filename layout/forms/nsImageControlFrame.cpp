@@ -37,6 +37,7 @@
 #include "nsCOMPtr.h"
 #include "nsIImageControlFrame.h"
 #include "nsImageFrame.h"
+#include "nsFormControlHelper.h"
 #include "nsIFormControlFrame.h"
 #include "nsIFormControl.h"
 #include "nsHTMLParts.h"
@@ -47,16 +48,16 @@
 #include "nsLeafFrame.h"
 #include "nsCSSRendering.h"
 #include "nsISupports.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsIDeviceContext.h"
 #include "nsIFontMetrics.h"
 #include "nsIImage.h"
 #include "nsStyleConsts.h"
 #include "nsFormControlFrame.h"
 #include "nsGUIEvent.h"
+#include "nsLayoutAtoms.h"
 #include "nsIServiceManager.h"
 #include "nsContainerFrame.h"
-#include "nsLayoutUtils.h"
 #ifdef ACCESSIBILITY
 #include "nsIAccessibilityService.h"
 #endif
@@ -67,10 +68,10 @@ class nsImageControlFrame : public nsImageControlFrameSuper,
                             public nsIImageControlFrame
 {
 public:
-  nsImageControlFrame(nsStyleContext* aContext);
+  nsImageControlFrame();
   ~nsImageControlFrame();
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext *aPresContext);
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
@@ -83,7 +84,6 @@ public:
                          nsEventStatus* aEventStatus);
 
   virtual nsIAtom* GetType() const;
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
 #ifdef ACCESSIBILITY
   NS_IMETHOD GetAccessible(nsIAccessible** aAccessible);
@@ -97,10 +97,29 @@ public:
 
   NS_IMETHOD GetCursor(const nsPoint&    aPoint,
                        nsIFrame::Cursor& aCursor);
-  // nsIFormContromFrame
-  virtual void SetFocus(PRBool aOn, PRBool aRepaint);
-  virtual nsresult SetFormProperty(nsIAtom* aName, const nsAString& aValue);
-  virtual nsresult GetFormProperty(nsIAtom* aName, nsAString& aValue) const; 
+
+  NS_IMETHOD_(PRInt32) GetFormControlType() const;
+
+  NS_IMETHOD GetName(nsAString* aName);
+
+  void SetFocus(PRBool aOn, PRBool aRepaint);
+  void ScrollIntoView(nsPresContext* aPresContext);
+
+  NS_IMETHOD GetFormContent(nsIContent*& aContent) const;
+  virtual nscoord GetVerticalInsidePadding(nsPresContext* aPresContext,
+                                           float aPixToTwip,
+                                           nscoord aInnerHeight) const;
+  virtual nscoord GetHorizontalInsidePadding(nsPresContext* aPresContext,
+                                             float aPixToTwip, 
+                                             nscoord aInnerWidth,
+                                             nscoord aCharWidth) const;
+
+
+        // nsIFormControlFrame
+  NS_IMETHOD SetProperty(nsPresContext* aPresContext, nsIAtom* aName, const nsAString& aValue);
+  NS_IMETHOD GetProperty(nsIAtom* aName, nsAString& aValue); 
+  NS_IMETHOD SetSuggestedSize(nscoord aWidth, nscoord aHeight);
+  NS_IMETHOD OnContentReset();
 
   // nsIImageControlFrame
   NS_IMETHOD GetClickedX(PRInt32* aX);
@@ -114,8 +133,7 @@ protected:
 };
 
 
-nsImageControlFrame::nsImageControlFrame(nsStyleContext* aContext):
-  nsImageControlFrameSuper(aContext)
+nsImageControlFrame::nsImageControlFrame()
 {
   mLastClickPoint = nsPoint(0,0);
 }
@@ -124,17 +142,27 @@ nsImageControlFrame::~nsImageControlFrame()
 {
 }
 
-void
-nsImageControlFrame::Destroy()
+NS_IMETHODIMP
+nsImageControlFrame::Destroy(nsPresContext *aPresContext)
 {
-  nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
-  nsImageControlFrameSuper::Destroy();
+  nsFormControlFrame::RegUnRegAccessKey(aPresContext, NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
+
+  return nsImageControlFrameSuper::Destroy(aPresContext);
 }
 
-nsIFrame*
-NS_NewImageControlFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewImageControlFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsImageControlFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsImageControlFrame* it = new (aPresShell) nsImageControlFrame;
+  if (!it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
 }
 
 // Frames are not refcounted, no need to AddRef
@@ -163,10 +191,10 @@ NS_IMETHODIMP nsImageControlFrame::GetAccessible(nsIAccessible** aAccessible)
   nsCOMPtr<nsIAccessibilityService> accService = do_GetService("@mozilla.org/accessibilityService;1");
 
   if (accService) {
-    if (mContent->Tag() == nsGkAtoms::button) {
+    if (mContent->Tag() == nsHTMLAtoms::button) {
       return accService->CreateHTML4ButtonAccessible(NS_STATIC_CAST(nsIFrame*, this), aAccessible);
     }
-    else if (mContent->Tag() == nsGkAtoms::input) {
+    else if (mContent->Tag() == nsHTMLAtoms::input) {
       return accService->CreateHTMLButtonAccessible(NS_STATIC_CAST(nsIFrame*, this), aAccessible);
     }
   }
@@ -190,13 +218,7 @@ nsrefcnt nsImageControlFrame::Release(void)
 nsIAtom*
 nsImageControlFrame::GetType() const
 {
-  return nsGkAtoms::imageControlFrame; 
-}
-
-PRBool
-nsImageControlFrame::IsFrameOfType(PRUint32 aFlags) const
-{
-  return !(aFlags & ~(eReplaced));
+  return nsLayoutAtoms::imageControlFrame; 
 }
 
 NS_METHOD
@@ -205,10 +227,10 @@ nsImageControlFrame::Reflow(nsPresContext*         aPresContext,
                            const nsHTMLReflowState& aReflowState,
                            nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsImageControlFrame");
+  DO_GLOBAL_REFLOW_COUNT("nsImageControlFrame", aReflowState.reason);
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
-  if (mState & NS_FRAME_FIRST_REFLOW) {
-    nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
+  if (aReflowState.reason == eReflowReason_Initial) {
+    nsFormControlFrame::RegUnRegAccessKey(aPresContext, NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
   }
   return nsImageControlFrameSuper::Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
 }
@@ -230,19 +252,20 @@ nsImageControlFrame::HandleEvent(nsPresContext* aPresContext,
   if (uiStyle->mUserInput == NS_STYLE_USER_INPUT_NONE || uiStyle->mUserInput == NS_STYLE_USER_INPUT_DISABLED)
     return nsFrame::HandleEvent(aPresContext, aEvent, aEventStatus);
 
-  if (mContent->HasAttr(kNameSpaceID_None, nsGkAtoms::disabled)) { // XXX cache disabled
+  if (nsFormControlHelper::GetDisabled(mContent)) { // XXX cache disabled
     return NS_OK;
   }
 
   *aEventStatus = nsEventStatus_eIgnore;
 
-  if (aEvent->eventStructType == NS_MOUSE_EVENT &&
-      aEvent->message == NS_MOUSE_BUTTON_UP &&
-      NS_STATIC_CAST(nsMouseEvent*, aEvent)->button == nsMouseEvent::eLeftButton) {
-    // Store click point for GetNamesValues
-    // Do this on MouseUp because the specs don't say and that's what IE does
-    nsPoint pt = nsLayoutUtils::GetEventCoordinatesRelativeTo(aEvent, this);
-    TranslateEventCoords(pt, mLastClickPoint);
+  switch (aEvent->message) {
+    case NS_MOUSE_LEFT_BUTTON_UP:
+    {
+      // Store click point for GetNamesValues
+      // Do this on MouseUp because the specs don't say and that's what IE does
+      TranslateEventCoords(aEvent->point, mLastClickPoint);
+      break;
+    }
   }
   return nsImageControlFrameSuper::HandleEvent(aPresContext, aEvent,
                                                aEventStatus);
@@ -251,6 +274,30 @@ nsImageControlFrame::HandleEvent(nsPresContext* aPresContext,
 void 
 nsImageControlFrame::SetFocus(PRBool aOn, PRBool aRepaint)
 {
+}
+
+void
+nsImageControlFrame::ScrollIntoView(nsPresContext* aPresContext)
+{
+  if (aPresContext) {
+    nsIPresShell *presShell = aPresContext->GetPresShell();
+    if (presShell) {
+      presShell->ScrollFrameIntoView(this,
+                   NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE,NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE);
+    }
+  }
+}
+
+NS_IMETHODIMP_(PRInt32)
+nsImageControlFrame::GetFormControlType() const
+{
+  return NS_FORM_INPUT_IMAGE;
+}
+
+NS_IMETHODIMP
+nsImageControlFrame::GetName(nsAString* aResult)
+{
+  return nsFormControlHelper::GetName(mContent, aResult);
 }
 
 NS_IMETHODIMP
@@ -268,18 +315,55 @@ nsImageControlFrame::GetCursor(const nsPoint&    aPoint,
   return NS_OK;
 }
 
-nsresult
-nsImageControlFrame::SetFormProperty(nsIAtom* aName,
-                                     const nsAString& aValue)
+NS_IMETHODIMP
+nsImageControlFrame::GetFormContent(nsIContent*& aContent) const
+{
+  aContent = GetContent();
+  NS_IF_ADDREF(aContent);
+  return NS_OK;
+}
+
+nscoord 
+nsImageControlFrame::GetVerticalInsidePadding(nsPresContext* aPresContext,
+                                              float aPixToTwip, 
+                                              nscoord aInnerHeight) const
+{
+   return 0;
+}
+
+nscoord 
+nsImageControlFrame::GetHorizontalInsidePadding(nsPresContext* aPresContext,
+                                               float aPixToTwip, 
+                                               nscoord aInnerWidth,
+                                               nscoord aCharWidth) const
+{
+  return 0;
+}
+
+NS_IMETHODIMP nsImageControlFrame::SetProperty(nsPresContext* aPresContext,
+                                               nsIAtom* aName,
+                                               const nsAString& aValue)
 {
   return NS_OK;
 }
 
-nsresult
-nsImageControlFrame::GetFormProperty(nsIAtom* aName,
-                                     nsAString& aValue) const
+NS_IMETHODIMP nsImageControlFrame::GetProperty(nsIAtom* aName,
+                                               nsAString& aValue)
 {
   aValue.Truncate();
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImageControlFrame::SetSuggestedSize(nscoord aWidth, nscoord aHeight)
+{
+//  mSuggestedWidth = aWidth;
+//  mSuggestedHeight = aHeight;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsImageControlFrame::OnContentReset()
+{
   return NS_OK;
 }
 

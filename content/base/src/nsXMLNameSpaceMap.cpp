@@ -36,16 +36,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * A class for keeping track of prefix-to-namespace-id mappings
- */
-
 #include "nsXMLNameSpaceMap.h"
 #include "nsIAtom.h"
 #include "nsCOMPtr.h"
 #include "nsINameSpaceManager.h"
 #include "nsContentUtils.h"
-#include "nsGkAtoms.h"
+#include "nsLayoutAtoms.h"
 
 struct nsNameSpaceEntry
 {
@@ -62,9 +58,9 @@ nsXMLNameSpaceMap::Create()
   nsXMLNameSpaceMap *map = new nsXMLNameSpaceMap();
   NS_ENSURE_TRUE(map, nsnull);
 
-  nsresult rv = map->AddPrefix(nsGkAtoms::xmlns,
+  nsresult rv = map->AddPrefix(nsLayoutAtoms::xmlnsNameSpace,
                                kNameSpaceID_XMLNS);
-  rv |= map->AddPrefix(nsGkAtoms::xml, kNameSpaceID_XML);
+  rv |= map->AddPrefix(nsLayoutAtoms::xmlNameSpace, kNameSpaceID_XML);
 
   if (NS_FAILED(rv)) {
     delete map;
@@ -115,8 +111,8 @@ nsresult
 nsXMLNameSpaceMap::AddPrefix(nsIAtom *aPrefix, nsString &aURI)
 {
   PRInt32 id;
-  nsresult rv = nsContentUtils::NameSpaceManager()->RegisterNameSpace(aURI,
-                                                                      id);
+  nsresult rv = nsContentUtils::GetNSManagerWeakRef()->RegisterNameSpace(aURI,
+                                                                         id);
 
   NS_ENSURE_SUCCESS(rv, rv);
 

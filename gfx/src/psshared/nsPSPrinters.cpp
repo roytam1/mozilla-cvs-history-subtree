@@ -39,6 +39,7 @@
 #include "nscore.h"
 #include "nsCUPSShim.h"
 #include "nsIDeviceContext.h"       // GFX error codes
+#include "nsIDeviceContextSpecPS.h" // NS_POSTSCRIPT_DRIVER_NAME
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
 #include "nsIServiceManager.h"
@@ -53,8 +54,6 @@
 #define NS_CUPS_PRINTER "CUPS/"
 #define NS_CUPS_PRINTER_LEN (sizeof(NS_CUPS_PRINTER) - 1)
 
-/* dummy printer name for the gfx/src/ps driver */
-#define NS_POSTSCRIPT_DRIVER_NAME "PostScript/"
 
 /* Initialize the printer manager object */
 nsresult
@@ -81,7 +80,7 @@ PRBool
 nsPSPrinterList::Enabled()
 {
     const char *val = PR_GetEnv("MOZILLA_POSTSCRIPT_ENABLED");
-    if (val && (val[0] == '0' || !PL_strcasecmp(val, "false")))
+    if (val && (val[0] == '0' || !strcasecmp(val, "false")))
         return PR_FALSE;
 
     // is the PS module enabled?

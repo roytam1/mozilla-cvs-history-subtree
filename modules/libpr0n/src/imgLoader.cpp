@@ -46,7 +46,6 @@
 #include "nsICachingChannel.h"
 #include "nsIProxyObjectManager.h"
 #include "nsIServiceManager.h"
-#include "nsThreadUtils.h"
 #include "nsXPIDLString.h"
 #include "nsCRT.h"
 
@@ -357,10 +356,26 @@ NS_IMETHODIMP imgLoader::LoadImage(nsIURI *aURI,
   }
 
   //
-  // Get the current thread...  This is used as a cacheId to prevent
-  // sharing requests which are being loaded across multiple threads...
+  // Get the current EventQueue...  This is used as a cacheId to prevent
+  // sharing requests which are being loaded across multiple event queues...
   //
-  void *cacheId = NS_GetCurrentThread();
+  nsCOMPtr<nsIEventQueueService> eventQService;
+  nsCOMPtr<nsIEventQueue> activeQ;
+
+  eventQService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+  if (NS_FAILED(rv)) {
+    NS_IF_RELEASE(request);
+    return rv;
+  }
+
+  rv = eventQService->ResolveEventQueue(NS_CURRENT_EVENTQ,
+                                        getter_AddRefs(activeQ));
+  if (NS_FAILED(rv)) {
+    NS_IF_RELEASE(request);
+    return rv;
+  }
+
+  void *cacheId = activeQ.get();
   if (request && !request->IsReusable(cacheId)) {
     //
     // The current request is still being loaded and lives on a different
@@ -487,13 +502,7 @@ NS_IMETHODIMP imgLoader::LoadImage(nsIURI *aURI,
       imgCache::Put(aURI, request, getter_AddRefs(entry));
     }
 
-    // Create a loadgroup for this new channel.  This way if the channel
-    // is redirected, we'll have a way to cancel the resulting channel.
-    nsCOMPtr<nsILoadGroup> loadGroup =
-        do_CreateInstance(NS_LOADGROUP_CONTRACTID);
-    newChannel->SetLoadGroup(loadGroup);
-
-    request->Init(aURI, loadGroup, entry, cacheId, aCX);
+    request->Init(newChannel, entry, cacheId, aCX);
 
     // create the proxy listener
     ProxyListener *pl = new ProxyListener(NS_STATIC_CAST(nsIStreamListener *, request));
@@ -613,15 +622,27 @@ NS_IMETHODIMP imgLoader::LoadImageWithChannel(nsIChannel *channel, imgIDecoderOb
   if (request) {
     // we have this in our cache already.. cancel the current (document) load
 
+    /* XXX If |*listener| is null when we return here, the caller should 
+       probably cancel the channel instead of us doing it here.
+    */
     channel->Cancel(NS_IMAGELIB_ERROR_LOAD_ABORTED); // this should fire an OnStopRequest
 
     *listener = nsnull; // give them back a null nsIStreamListener
   } else {
     //
-    // Get the current Thread...  This is used as a cacheId to prevent
-    // sharing requests which are being loaded across multiple threads...
+    // Get the current EventQueue...  This is used as a cacheId to prevent
+    // sharing requests which are being loaded across multiple event queues...
     //
-    nsIThread *thread = NS_GetCurrentThread();
+    nsCOMPtr<nsIEventQueueService> eventQService;
+    nsCOMPtr<nsIEventQueue> activeQ;
+
+    eventQService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+    if (NS_FAILED(rv)) 
+      return rv;
+        
+    rv = eventQService->ResolveEventQueue(NS_CURRENT_EVENTQ, getter_AddRefs(activeQ));
+    if (NS_FAILED(rv))
+      return rv;
 
     NS_NEWXPCOM(request, imgRequest);
     if (!request) return NS_ERROR_OUT_OF_MEMORY;
@@ -630,12 +651,7 @@ NS_IMETHODIMP imgLoader::LoadImageWithChannel(nsIChannel *channel, imgIDecoderOb
 
     imgCache::Put(uri, request, getter_AddRefs(entry));
 
-    // XXX(darin):  I'm not sure that using the original URI is correct here.
-    // Perhaps we should use the same URI that indexes the cache?  Or, perhaps
-    // the cache should use the original URI?  See bug 89419.
-    nsCOMPtr<nsIURI> originalURI;
-    channel->GetOriginalURI(getter_AddRefs(originalURI));
-    request->Init(originalURI, channel, entry, thread, aCX);
+    request->Init(channel, entry, activeQ.get(), aCX);
 
     ProxyListener *pl = new ProxyListener(NS_STATIC_CAST(nsIStreamListener *, request));
     if (!pl) {
@@ -721,10 +737,7 @@ NS_IMETHODIMP imgLoader::SupportImageWithMimeType(const char* aMimeType, PRBool 
   return reg->IsContractIDRegistered(decoderId.get(),  _retval);
 }
 
-NS_IMETHODIMP imgLoader::GetMIMETypeFromContent(nsIRequest* aRequest,
-                                                const PRUint8* aContents,
-                                                PRUint32 aLength,
-                                                nsACString& aContentType)
+NS_IMETHODIMP imgLoader::GetMIMETypeFromContent(const PRUint8* aContents, PRUint32 aLength, nsACString& aContentType)
 {
   return GetMimeTypeFromContent((const char*)aContents, aLength, aContentType);
 }
@@ -951,6 +964,14 @@ NS_IMETHODIMP imgCacheValidator::OnStartRequest(nsIRequest *aRequest, nsISupport
   mRequest->mValidator = nsnull;
   NS_RELEASE(mRequest); // assigns null
 
+  nsresult rv;
+  nsCOMPtr<nsIEventQueueService> eventQService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsIEventQueue> activeQ;
+  rv = eventQService->ResolveEventQueue(NS_CURRENT_EVENTQ, getter_AddRefs(activeQ));
+  if (NS_FAILED(rv)) return rv;
+
   imgRequest *request;
   NS_NEWXPCOM(request, imgRequest);
   if (!request) return NS_ERROR_OUT_OF_MEMORY;
@@ -958,12 +979,7 @@ NS_IMETHODIMP imgCacheValidator::OnStartRequest(nsIRequest *aRequest, nsISupport
 
   imgCache::Put(uri, request, getter_AddRefs(entry));
 
-  // XXX(darin):  I'm not sure that using the original URI is correct here.
-  // Perhaps we should use the same URI that indexes the cache?  Or, perhaps
-  // the cache should use the original URI?  See bug 89419.
-  nsCOMPtr<nsIURI> originalURI;
-  channel->GetOriginalURI(getter_AddRefs(originalURI));
-  request->Init(originalURI, channel, entry, NS_GetCurrentThread(), mContext);
+  request->Init(channel, entry, activeQ.get(), mContext);
 
   ProxyListener *pl = new ProxyListener(NS_STATIC_CAST(nsIStreamListener *, request));
   if (!pl) {

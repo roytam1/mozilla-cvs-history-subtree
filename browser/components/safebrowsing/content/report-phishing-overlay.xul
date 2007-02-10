@@ -39,18 +39,12 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<!DOCTYPE overlay [
-<!ENTITY % reportphishDTD SYSTEM "chrome://browser/locale/safebrowsing/report-phishing.dtd">
-%reportphishDTD;
-<!ENTITY % safebrowsingDTD SYSTEM "chrome://browser/locale/safebrowsing/phishing-afterload-warning-message.dtd">
-%safebrowsingDTD;
-]>
+<!DOCTYPE overlay SYSTEM "chrome://browser/locale/safebrowsing/report-phishing.dtd">
 
 <overlay id="reportPhishingMenuOverlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <broadcasterset id="mainBroadcasterSet">
     <broadcaster id="reportPhishingBroadcaster" disabled="true"/>
-    <broadcaster id="reportPhishingErrorBroadcaster" disabled="true"/>
   </broadcasterset>
   <menupopup id="menu_HelpPopup">
     <menuitem id="menu_HelpPopup_reportPhishingtoolmenu"
@@ -58,14 +52,7 @@
               accesskey="&reportPhishSiteMenu.accesskey;"
               insertbefore="aboutSeparator"
               observes="reportPhishingBroadcaster"
-              oncommand="openUILinkIn(safebrowsing.getReportURL('Phish'), 'tab');"
-              onclick="checkForMiddleClick(this, event);"/>
-    <menuitem id="menu_HelpPopup_reportPhishingErrortoolmenu"
-              label="&safeb.palm.notforgery.label;..."
-              accesskey="&reportPhishSiteMenu.accesskey;"
-              insertbefore="aboutSeparator"
-              observes="reportPhishingErrorBroadcaster"
-              oncommand="openUILinkIn(safebrowsing.getReportURL('Error'), 'tab');"
+              oncommand="openUILinkIn(safebrowsing.getReportPhishingURL(), 'tab');"
               onclick="checkForMiddleClick(this, event);"/>
   </menupopup>
 </overlay>

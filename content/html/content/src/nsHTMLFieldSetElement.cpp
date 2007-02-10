@@ -38,6 +38,7 @@
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsIForm.h"
@@ -55,7 +56,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLFormElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLFormElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLFormElement::)
@@ -71,7 +72,6 @@ public:
   NS_IMETHOD Reset();
   NS_IMETHOD SubmitNamesValues(nsIFormSubmission* aFormSubmission,
                                nsIContent* aSubmitElement);
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 };
 
 // construction, destruction
@@ -106,7 +106,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_END
 // nsIDOMHTMLFieldSetElement
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLFieldSetElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLFieldSetElement)
 
 
 // nsIDOMHTMLFieldSetElement

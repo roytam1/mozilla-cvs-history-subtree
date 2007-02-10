@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* keywords used within CSS property values */
-
 #ifndef nsCSSKeywords_h___
 #define nsCSSKeywords_h___
 

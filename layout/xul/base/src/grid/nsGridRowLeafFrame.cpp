@@ -48,14 +48,27 @@
 #include "nsBoxLayoutState.h"
 #include "nsGridLayout2.h"
 
-nsIFrame*
-NS_NewGridRowLeafFrame(nsIPresShell* aPresShell,
-                       nsStyleContext* aContext,
-                       PRBool aIsRoot,
-                       nsIBoxLayout* aLayoutManager)
+nsresult
+NS_NewGridRowLeafFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRBool aIsRoot, nsIBoxLayout* aLayoutManager)
 {
-    return new (aPresShell) nsGridRowLeafFrame (aPresShell, aContext, aIsRoot, aLayoutManager);
+    NS_PRECONDITION(aNewFrame, "null OUT ptr");
+    if (nsnull == aNewFrame) {
+        return NS_ERROR_NULL_POINTER;
+    }
+    nsGridRowLeafFrame* it = new (aPresShell) nsGridRowLeafFrame (aPresShell, aIsRoot, aLayoutManager);
+    if (nsnull == it)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    *aNewFrame = it;
+    return NS_OK;
+
 } 
+
+nsGridRowLeafFrame::nsGridRowLeafFrame(nsIPresShell* aPresShell, PRBool aIsRoot, nsIBoxLayout* aLayoutManager)
+:nsBoxFrame(aPresShell, aIsRoot, aLayoutManager)
+{
+
+}
 
 /*
  * Our border and padding could be affected by our columns or rows.
@@ -76,13 +89,14 @@ nsGridRowLeafFrame::GetBorderAndPadding(nsMargin& aBorderAndPadding)
   if (!part)
     return rv;
     
+  nsGrid* grid = nsnull;
   PRInt32 index = 0;
-  nsGrid* grid = part->GetGrid(this, &index);
+  part->GetGrid(this, &grid, &index);
 
   if (!grid) 
     return rv;
 
-  PRBool isHorizontal = IsHorizontal();
+  PRInt32 isHorizontal = IsHorizontal();
 
   nsBoxLayoutState state((nsPresContext*) GetPresContext());
 

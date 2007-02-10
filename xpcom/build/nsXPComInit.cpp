@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/* vim:set ts=4 sw=4 sts=4 ci et: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -39,9 +38,7 @@
 
 #include "nsXPCOM.h"
 #include "nsXPCOMPrivate.h"
-#include "nsXPCOMCIDInternal.h"
 #include "nscore.h"
-#include "nsIClassInfoImpl.h"
 #include "nsStaticComponents.h"
 #include "prlink.h"
 #include "nsCOMPtr.h"
@@ -63,7 +60,6 @@
 
 #include "nsSupportsArray.h"
 #include "nsArray.h"
-#include "nsINIParserImpl.h"
 #include "nsSupportsPrimitives.h"
 #include "nsConsoleService.h"
 #include "nsExceptionService.h"
@@ -73,15 +69,14 @@
 #include "nsIServiceManager.h"
 #include "nsGenericFactory.h"
 
-#include "nsThreadManager.h"
-#include "nsThreadPool.h"
+#include "nsEventQueueService.h"
+#include "nsEventQueue.h"
 
 #include "nsIProxyObjectManager.h"
 #include "nsProxyEventPrivate.h"  // access to the impl of nsProxyObjectManager for the generic factory registration.
 
 #include "xptinfo.h"
 #include "nsIInterfaceInfoManager.h"
-#include "xptiprivate.h"
 
 #include "nsTimerImpl.h"
 #include "TimerThread.h"
@@ -90,6 +85,8 @@
 #include "nsProcess.h"
 #include "nsEnvironment.h"
 #include "nsVersionComparatorImpl.h"
+
+#include "nsEmptyEnumerator.h"
 
 #include "nsILocalFile.h"
 #include "nsLocalFile.h"
@@ -100,11 +97,8 @@
 #include "nsDirectoryServiceDefs.h"
 #include "nsCategoryManager.h"
 #include "nsICategoryManager.h"
-#include "nsMultiplexInputStream.h"
-
 #include "nsStringStream.h"
-extern NS_METHOD nsStringInputStreamConstructor(nsISupports *, REFNSIID, void **);
-NS_DECL_CLASSINFO(nsStringInputStream)
+#include "nsMultiplexInputStream.h"
 
 #include "nsFastLoadService.h"
 
@@ -115,7 +109,6 @@ NS_DECL_CLASSINFO(nsStringInputStream)
 
 #include "nsHashPropertyBag.h"
 
-#include "nsUnicharInputStream.h"
 #include "nsVariant.h"
 
 #include "nsUUIDGenerator.h"
@@ -153,10 +146,10 @@ extern void _FreeAutoLockStatics();
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kMemoryCID, NS_MEMORY_CID);
-static NS_DEFINE_CID(kINIParserFactoryCID, NS_INIPARSERFACTORY_CID);
-static NS_DEFINE_CID(kSimpleUnicharStreamFactoryCID, NS_SIMPLE_UNICHAR_STREAM_FACTORY_CID);
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsProcess)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsEventQueueServiceImpl, Init)
 
 #define NS_ENVIRONMENT_CLASSNAME "Environment Service"
 
@@ -204,6 +197,7 @@ NS_DECL_CLASSINFO(nsConsoleService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAtomService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsExceptionService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTimerImpl)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsTimerManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsBinaryOutputStream)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsBinaryInputStream)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsStorageStream)
@@ -219,43 +213,26 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsTimelineService)
 
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsHashPropertyBag, Init)
 
-NS_GENERIC_AGGREGATED_CONSTRUCTOR_INIT(nsProperties, Init)
-
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsUUIDGenerator, Init)
-
 #ifdef XP_MACOSX
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMacUtilsImpl)
 #endif
 
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsUUIDGenerator, Init)
+
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSystemInfo, Init)
-
-static NS_METHOD
-nsThreadManagerGetSingleton(nsISupports* outer,
-                            const nsIID& aIID,
-                            void* *aInstancePtr)
-{
-    NS_ASSERTION(aInstancePtr, "null outptr");
-    NS_ENSURE_TRUE(!outer, NS_ERROR_NO_AGGREGATION);
-
-    return nsThreadManager::get()->QueryInterface(aIID, aInstancePtr);
-}
-NS_DECL_CLASSINFO(nsThreadManager)
-
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsThreadPool)
-NS_DECL_CLASSINFO(nsThreadPool)
 
 static NS_METHOD
 nsXPTIInterfaceInfoManagerGetSingleton(nsISupports* outer,
                                        const nsIID& aIID,
                                        void* *aInstancePtr)
 {
-    NS_ASSERTION(aInstancePtr, "null outptr");
+    NS_ENSURE_ARG_POINTER(aInstancePtr);
     NS_ENSURE_TRUE(!outer, NS_ERROR_NO_AGGREGATION);
 
-    nsCOMPtr<nsIInterfaceInfoManager> iim
-        (xptiInterfaceInfoManager::GetInterfaceInfoManagerNoAddRef());
-    if (!iim)
+    nsCOMPtr<nsIInterfaceInfoManager> iim(dont_AddRef(XPTI_GetInterfaceInfoManager()));
+    if (!iim) {
         return NS_ERROR_FAILURE;
+    }
 
     return iim->QueryInterface(aIID, aInstancePtr);
 }
@@ -314,8 +291,8 @@ static PRBool CheckUpdateFile()
         return PR_FALSE;
     }
 
-    if (NS_FAILED(compregFile->Exists(&exists)) || !exists)
-        return PR_TRUE;
+    // Don't need to check whether compreg exists; if it doesn't
+    // we won't even be here.
 
     PRInt64 compregModTime, autoregModTime;
     compregFile->GetLastModifiedTime(&compregModTime);
@@ -359,7 +336,7 @@ static const nsModuleComponentInfo components[] = {
     COMPONENT(PIPE, nsPipeConstructor),
 
 #define NS_PROPERTIES_CLASSNAME  "Properties"
-    COMPONENT(PROPERTIES, nsPropertiesConstructor),
+    COMPONENT(PROPERTIES, nsProperties::Create),
 
 #define NS_PERSISTENTPROPERTIES_CID NS_IPERSISTENTPROPERTIES_CID /* sigh */
     COMPONENT(PERSISTENTPROPERTIES, nsPersistentProperties::Create),
@@ -376,11 +353,15 @@ static const nsModuleComponentInfo components[] = {
 #endif
     COMPONENT(OBSERVERSERVICE, nsObserverService::Create),
     COMPONENT(GENERICFACTORY, nsGenericFactory::Create),
+    COMPONENT(EVENTQUEUESERVICE, nsEventQueueServiceImplConstructor),
+    COMPONENT(EVENTQUEUE, nsEventQueueImpl::Create),
+    COMPONENT(THREAD, nsThread::Create),
 
 #define NS_XPCOMPROXY_CID NS_PROXYEVENT_MANAGER_CID
     COMPONENT(XPCOMPROXY, nsProxyObjectManager::Create),
 
     COMPONENT(TIMER, nsTimerImplConstructor),
+    COMPONENT(TIMERMANAGER, nsTimerManagerConstructor),
 
 #define COMPONENT_SUPPORTS(TYPE, Type)                                         \
   COMPONENT(SUPPORTS_##TYPE, nsSupports##Type##ImplConstructor)
@@ -411,14 +392,7 @@ static const nsModuleComponentInfo components[] = {
     COMPONENT(PROCESS, nsProcessConstructor),
     COMPONENT(ENVIRONMENT, nsEnvironment::Create),
 
-    COMPONENT_CI_FLAGS(THREADMANAGER, nsThreadManagerGetSingleton,
-                       nsThreadManager,
-                       nsIClassInfo::THREADSAFE | nsIClassInfo::SINGLETON),
-    COMPONENT_CI_FLAGS(THREADPOOL, nsThreadPoolConstructor,
-                       nsThreadPool, nsIClassInfo::THREADSAFE),
-
-    COMPONENT_CI_FLAGS(STRINGINPUTSTREAM, nsStringInputStreamConstructor,
-                       nsStringInputStream, nsIClassInfo::THREADSAFE),
+    COMPONENT(STRINGINPUTSTREAM, nsStringInputStreamConstructor),
     COMPONENT(MULTIPLEXINPUTSTREAM, nsMultiplexInputStreamConstructor),
 
 #ifndef MOZ_NO_FAST_LOAD
@@ -452,40 +426,55 @@ const int components_length = sizeof(components) / sizeof(components[0]);
 
 // gDebug will be freed during shutdown.
 static nsIDebug* gDebug = nsnull;
-
-EXPORT_XPCOM_API(nsresult)
-NS_GetDebug(nsIDebug** result)
+nsresult NS_COM NS_GetDebug(nsIDebug** result)
 {
-    return nsDebugImpl::Create(nsnull, 
-                               NS_GET_IID(nsIDebug), 
-                               (void**) result);
+    nsresult rv = NS_OK;
+    if (!gDebug)
+    {
+        rv = nsDebugImpl::Create(nsnull, 
+                                 NS_GET_IID(nsIDebug), 
+                                 (void**)&gDebug);
+    }
+    NS_IF_ADDREF(*result = gDebug);
+    return rv;
 }
 
-EXPORT_XPCOM_API(nsresult)
-NS_GetTraceRefcnt(nsITraceRefcnt** result)
+#ifdef NS_BUILD_REFCNT_LOGGING
+// gTraceRefcnt will be freed during shutdown.
+static nsITraceRefcnt* gTraceRefcnt = nsnull;
+#endif
+
+nsresult NS_COM NS_GetTraceRefcnt(nsITraceRefcnt** result)
 {
-    return nsTraceRefcntImpl::Create(nsnull, 
-                                     NS_GET_IID(nsITraceRefcnt), 
-                                     (void**) result);
+#ifdef NS_BUILD_REFCNT_LOGGING
+    nsresult rv = NS_OK;
+    if (!gTraceRefcnt)
+    {
+        rv = nsTraceRefcntImpl::Create(nsnull, 
+                                       NS_GET_IID(nsITraceRefcnt), 
+                                       (void**)&gTraceRefcnt);
+    }
+    NS_IF_ADDREF(*result = gTraceRefcnt);
+    return rv;
+#else
+    return NS_ERROR_NOT_INITIALIZED;
+#endif
 }
 
-EXPORT_XPCOM_API(nsresult)
-NS_InitXPCOM(nsIServiceManager* *result,
+nsresult NS_COM NS_InitXPCOM(nsIServiceManager* *result,
                              nsIFile* binDirectory)
 {
     return NS_InitXPCOM3(result, binDirectory, nsnull, nsnull, 0);
 }
 
-EXPORT_XPCOM_API(nsresult)
-NS_InitXPCOM2(nsIServiceManager* *result,
+nsresult NS_COM NS_InitXPCOM2(nsIServiceManager* *result,
                               nsIFile* binDirectory,
                               nsIDirectoryServiceProvider* appFileLocationProvider)
 {
     return NS_InitXPCOM3(result, binDirectory, appFileLocationProvider, nsnull, 0);
 }
 
-EXPORT_XPCOM_API(nsresult)
-NS_InitXPCOM3(nsIServiceManager* *result,
+nsresult NS_COM NS_InitXPCOM3(nsIServiceManager* *result,
                               nsIFile* binDirectory,
                               nsIDirectoryServiceProvider* appFileLocationProvider,
                               nsStaticModuleInfo const *staticComponents,
@@ -503,15 +492,21 @@ NS_InitXPCOM3(nsIServiceManager* *result,
      // We are not shutting down
     gXPCOMShuttingDown = PR_FALSE;
 
-    NS_LogInit();
+#ifdef NS_BUILD_REFCNT_LOGGING
+    nsTraceRefcntImpl::Startup();
+#endif
 
     // Establish the main thread here.
-    rv = nsThreadManager::get()->Init();
+    rv = nsIThread::SetMainThread();
     if (NS_FAILED(rv)) return rv;
 
     // Set up the timer globals/timer thread
     rv = nsTimerImpl::Startup();
     NS_ENSURE_SUCCESS(rv, rv);
+
+    // Startup the memory manager
+    rv = nsMemoryImpl::Startup();
+    if (NS_FAILED(rv)) return rv;
 
 #ifndef WINCE
     // If the locale hasn't already been setup by our embedder,
@@ -531,60 +526,64 @@ NS_InitXPCOM3(nsIServiceManager* *result,
     if (NS_FAILED(rv))
         return rv;
 
-    nsCOMPtr<nsIFile> xpcomLib;
-            
-    PRBool value;
-    if (binDirectory)
-    {
-        rv = binDirectory->IsDirectory(&value);
-
-        if (NS_SUCCEEDED(rv) && value) {
-            nsDirectoryService::gService->Set(NS_XPCOM_INIT_CURRENT_PROCESS_DIR, binDirectory);
-            binDirectory->Clone(getter_AddRefs(xpcomLib));
-        }
-    }
-    else {
-        nsDirectoryService::gService->Get(NS_XPCOM_CURRENT_PROCESS_DIR, 
-                                          NS_GET_IID(nsIFile), 
-                                          getter_AddRefs(xpcomLib));
-    }
-
-    if (xpcomLib) {
-        xpcomLib->AppendNative(nsDependentCString(XPCOM_DLL));
-        nsDirectoryService::gService->Set(NS_XPCOM_LIBRARY_FILE, xpcomLib);
-    }
-    
-    if (appFileLocationProvider) {
-        rv = nsDirectoryService::gService->RegisterProvider(appFileLocationProvider);
-        if (NS_FAILED(rv)) return rv;
-    }
-
-    NS_ASSERTION(nsComponentManagerImpl::gComponentManager == NULL, "CompMgr not null at init");
-
     // Create the Component/Service Manager
-    nsComponentManagerImpl *compMgr = new nsComponentManagerImpl();
-    if (compMgr == NULL)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(compMgr);
-    
-    rv = compMgr->Init(staticComponents, componentCount);
-    if (NS_FAILED(rv))
+    nsComponentManagerImpl *compMgr = NULL;
+
+    if (nsComponentManagerImpl::gComponentManager == NULL)
     {
-        NS_RELEASE(compMgr);
-        return rv;
-    }
+        compMgr = new nsComponentManagerImpl();
+        if (compMgr == NULL)
+            return NS_ERROR_OUT_OF_MEMORY;
+        NS_ADDREF(compMgr);
+        
+        nsCOMPtr<nsIFile> xpcomLib;
+                
+        PRBool value;
+        if (binDirectory)
+        {
+            rv = binDirectory->IsDirectory(&value);
 
-    nsComponentManagerImpl::gComponentManager = compMgr;
+            if (NS_SUCCEEDED(rv) && value) {
+                nsDirectoryService::gService->Set(NS_XPCOM_INIT_CURRENT_PROCESS_DIR, binDirectory);
+                binDirectory->Clone(getter_AddRefs(xpcomLib));
+            }
+        }
+        else {
+            nsDirectoryService::gService->Get(NS_XPCOM_CURRENT_PROCESS_DIR, 
+                                              NS_GET_IID(nsIFile), 
+                                              getter_AddRefs(xpcomLib));
+        }
 
-    if (result) {
-        nsIServiceManager *serviceManager =
-            NS_STATIC_CAST(nsIServiceManager*, compMgr);
+        if (xpcomLib) {
+            xpcomLib->AppendNative(nsDependentCString(XPCOM_DLL));
+            nsDirectoryService::gService->Set(NS_XPCOM_LIBRARY_FILE, xpcomLib);
+        }
+        
+        if (appFileLocationProvider) {
+            rv = nsDirectoryService::gService->RegisterProvider(appFileLocationProvider);
+            if (NS_FAILED(rv)) return rv;
+        }
 
-        NS_ADDREF(*result = serviceManager);
+        rv = compMgr->Init(staticComponents, componentCount);
+        if (NS_FAILED(rv))
+        {
+            NS_RELEASE(compMgr);
+            return rv;
+        }
+
+        nsComponentManagerImpl::gComponentManager = compMgr;
+
+        if (result) {
+            nsIServiceManager *serviceManager =
+                NS_STATIC_CAST(nsIServiceManager*, compMgr);
+
+            NS_ADDREF(*result = serviceManager);
+        }
     }
 
     nsCOMPtr<nsIMemory> memory;
     NS_GetMemoryManager(getter_AddRefs(memory));
+    // dougt - these calls will be moved into a new interface when nsIComponentManager is frozen.
     rv = compMgr->RegisterService(kMemoryCID, memory);
     if (NS_FAILED(rv)) return rv;
 
@@ -615,45 +614,112 @@ NS_InitXPCOM3(nsIServiceManager* *result,
       if ( NS_FAILED(rv) ) return rv;
     }
 
+    // what I want to do here is QI for a Component Registration Manager.  Since this
+    // has not been invented yet, QI to the obsolete manager.  Kids, don't do this at home.
     nsCOMPtr<nsIComponentRegistrar> registrar = do_QueryInterface(
         NS_STATIC_CAST(nsIComponentManager*,compMgr), &rv);
     if (registrar) {
         for (int i = 0; i < components_length; i++)
             RegisterGenericFactory(registrar, &components[i]);
-
-        nsCOMPtr<nsIFactory> iniParserFactory(new nsINIParserFactory());
-        if (iniParserFactory)
-            registrar->RegisterFactory(kINIParserFactoryCID, 
-                                       "nsINIParserFactory",
-                                       NS_INIPARSERFACTORY_CONTRACTID, 
-                                       iniParserFactory);
-
-        registrar->
-          RegisterFactory(kSimpleUnicharStreamFactoryCID,
-                          "nsSimpleUnicharStreamFactory",
-                          NS_SIMPLE_UNICHAR_STREAM_FACTORY_CONTRACTID,
-                          nsSimpleUnicharStreamFactory::GetInstance());
     }
+    rv = nsComponentManagerImpl::gComponentManager->ReadPersistentRegistry();
+#ifdef DEBUG    
+    if (NS_FAILED(rv)) {
+        printf("No Persistent Registry Found.\n");        
+    }
+#endif
 
-    // Pay the cost at startup time of starting this singleton.
-    nsIInterfaceInfoManager* iim =
-        xptiInterfaceInfoManager::GetInterfaceInfoManagerNoAddRef();
-
-    if (CheckUpdateFile() || NS_FAILED(
-        nsComponentManagerImpl::gComponentManager->ReadPersistentRegistry())) {
-        // If the component registry is out of date, malformed, or incomplete,
-        // autoregister the default component directories.
-        (void) iim->AutoRegisterInterfaces();
+    if ( NS_FAILED(rv) || CheckUpdateFile()) {
+        // if we find no persistent registry, we will try to autoregister
+        // the default components directory.
         nsComponentManagerImpl::gComponentManager->AutoRegister(nsnull);
+
+        // If the application is using a GRE, then, 
+        // auto register components in the GRE directory as well.
+        //
+        // The application indicates that it's using an GRE by
+        // returning a valid nsIFile when queried (via appFileLocProvider)
+        // for the NS_GRE_DIR atom as shown below
+        //
+
+        if ( appFileLocationProvider ) {
+            nsCOMPtr<nsIFile> greDir;
+            PRBool persistent = PR_TRUE;
+
+            appFileLocationProvider->GetFile(NS_GRE_DIR, &persistent, getter_AddRefs(greDir));
+
+            if (greDir) {
+#ifdef DEBUG_dougt
+                printf("start - Registering GRE components\n");
+#endif
+                rv = nsDirectoryService::gService->Get(NS_GRE_COMPONENT_DIR,
+                                                       NS_GET_IID(nsIFile),
+                                                       getter_AddRefs(greDir));
+                if (NS_FAILED(rv)) {
+                    NS_ERROR("Could not get GRE components directory!");
+                    return rv;
+                }
+
+                // If the GRE contains any loaders, we want to know about it so that we can cause another
+                // autoregistration of the applications component directory.
+                int loaderCount = nsComponentManagerImpl::gComponentManager->GetLoaderCount();
+                rv = nsComponentManagerImpl::gComponentManager->AutoRegister(greDir);
+                
+                if (loaderCount != nsComponentManagerImpl::gComponentManager->GetLoaderCount()) 
+                    nsComponentManagerImpl::gComponentManager->AutoRegisterNonNativeComponents(nsnull);        
+
+#ifdef DEBUG_dougt
+                printf("end - Registering GRE components\n");
+#endif          
+                if (NS_FAILED(rv)) {
+                    NS_ERROR("Could not AutoRegister GRE components");
+                    return rv;
+                }
+            }
+        }
+
+        //
+        // If additional component directories have been specified, then
+        // register them as well.
+        //
+
+        nsCOMPtr<nsISimpleEnumerator> dirList;
+        nsDirectoryService::gService->Get(NS_XPCOM_COMPONENT_DIR_LIST,
+                                          NS_GET_IID(nsISimpleEnumerator),
+                                          getter_AddRefs(dirList));
+        if (dirList) {
+            PRBool hasMore;
+            while (NS_SUCCEEDED(dirList->HasMoreElements(&hasMore)) && hasMore) {
+                nsCOMPtr<nsISupports> elem;
+                dirList->GetNext(getter_AddRefs(elem));
+                if (elem) {
+                    nsCOMPtr<nsIFile> dir = do_QueryInterface(elem);
+                    if (dir)
+                        nsComponentManagerImpl::gComponentManager->AutoRegister(dir);
+
+                    // XXX should we worry about new component loaders being
+                    // XXX defined by this process?
+                }
+            }
+        }
+
+
+        // Make sure the compreg file's mod time is current.
+        nsCOMPtr<nsIFile> compregFile;
+        rv = nsDirectoryService::gService->Get(NS_XPCOM_COMPONENT_REGISTRY_FILE,
+                                               NS_GET_IID(nsIFile),
+                                               getter_AddRefs(compregFile));
+        compregFile->SetLastModifiedTime(PR_Now() / 1000);
     }
+    
+    // Pay the cost at startup time of starting this singleton.
+    nsIInterfaceInfoManager* iim = XPTI_GetInterfaceInfoManager();
+    NS_IF_RELEASE(iim);
 
     // After autoreg, but before we actually instantiate any components,
     // add any services listed in the "xpcom-directory-providers" category
     // to the directory service.
     nsDirectoryService::gService->RegisterCategoryProviders();
-
-    // Initialize memory flusher
-    nsMemoryImpl::InitFlusher();
 
     // Notify observers of xpcom autoregistration start
     NS_CreateServicesFromCategory(NS_XPCOM_STARTUP_OBSERVER_ID, 
@@ -664,92 +730,100 @@ NS_InitXPCOM3(nsIServiceManager* *result,
 }
 
 
+static nsVoidArray* gExitRoutines;
+
+static void CallExitRoutines()
+{
+    if (!gExitRoutines)
+        return;
+
+    PRInt32 count = gExitRoutines->Count();
+    for (PRInt32 i = 0; i < count; i++) {
+        XPCOMExitRoutine func = (XPCOMExitRoutine) gExitRoutines->ElementAt(i);
+        func();
+    }
+    gExitRoutines->Clear();
+    delete gExitRoutines;
+    gExitRoutines = nsnull;
+}
+
+nsresult NS_COM
+NS_RegisterXPCOMExitRoutine(XPCOMExitRoutine exitRoutine, PRUint32 priority)
+{
+    // priority are not used right now.  It will need to be implemented as more
+    // classes are moved into the glue library --dougt
+    if (!gExitRoutines) {
+        gExitRoutines = new nsVoidArray();
+        if (!gExitRoutines) {
+            NS_WARNING("Failed to allocate gExitRoutines");
+            return NS_ERROR_FAILURE;
+        }
+    }
+
+    PRBool okay = gExitRoutines->AppendElement((void*)exitRoutine);
+    return okay ? NS_OK : NS_ERROR_FAILURE;
+}
+
+nsresult NS_COM
+NS_UnregisterXPCOMExitRoutine(XPCOMExitRoutine exitRoutine)
+{
+    if (!gExitRoutines)
+        return NS_ERROR_FAILURE;
+
+    PRBool okay = gExitRoutines->RemoveElement((void*)exitRoutine);
+    return okay ? NS_OK : NS_ERROR_FAILURE;
+}
+
+
 //
 // NS_ShutdownXPCOM()
 //
 // The shutdown sequence for xpcom would be
 //
-// - Notify "xpcom-shutdown" for modules to release primary (root) references
-// - Shutdown XPCOM timers
-// - Notify "xpcom-shutdown-threads" for thread joins
-// - Shutdown the event queues
 // - Release the Global Service Manager
 //   - Release all service instances held by the global service manager
 //   - Release the Global Service Manager itself
 // - Release the Component Manager
 //   - Release all factories cached by the Component Manager
-//   - Notify module loaders to shut down
 //   - Unload Libraries
 //   - Release Contractid Cache held by Component Manager
 //   - Release dll abstraction held by Component Manager
 //   - Release the Registry held by Component Manager
 //   - Finally, release the component manager itself
 //
-EXPORT_XPCOM_API(nsresult)
-NS_ShutdownXPCOM(nsIServiceManager* servMgr)
+nsresult NS_COM NS_ShutdownXPCOM(nsIServiceManager* servMgr)
 {
-    NS_ENSURE_STATE(NS_IsMainThread());
-
-    nsresult rv;
-    nsCOMPtr<nsISimpleEnumerator> moduleLoaders;
 
     // Notify observers of xpcom shutting down
+    nsresult rv = NS_OK;
     {
         // Block it so that the COMPtr will get deleted before we hit
         // servicemanager shutdown
-
-        nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-        NS_ENSURE_STATE(thread);
-
-        nsRefPtr<nsObserverService> observerService;
-        CallGetService("@mozilla.org/observer-service;1",
-                       (nsObserverService**) getter_AddRefs(observerService));
-
-        if (observerService)
+        nsCOMPtr<nsIObserverService> observerService =
+                 do_GetService("@mozilla.org/observer-service;1", &rv);
+        if (NS_SUCCEEDED(rv))
         {
             nsCOMPtr<nsIServiceManager> mgr;
             rv = NS_GetServiceManager(getter_AddRefs(mgr));
             if (NS_SUCCEEDED(rv))
             {
-                (void) observerService->
-                    NotifyObservers(mgr, NS_XPCOM_SHUTDOWN_OBSERVER_ID,
-                                    nsnull);
+                (void) observerService->NotifyObservers(mgr,
+                                                        NS_XPCOM_SHUTDOWN_OBSERVER_ID,
+                                                        nsnull);
             }
-        }
-
-        NS_ProcessPendingEvents(thread);
-
-        if (observerService)
-            (void) observerService->
-                NotifyObservers(nsnull, NS_XPCOM_SHUTDOWN_THREADS_OBSERVER_ID,
-                                nsnull);
-
-        NS_ProcessPendingEvents(thread);
-
-        // Shutdown the timer thread and all timers that might still be alive before
-        // shutting down the component manager
-        nsTimerImpl::Shutdown();
-
-        NS_ProcessPendingEvents(thread);
-
-        // Shutdown all remaining threads.  This method does not return until
-        // all threads created using the thread manager (with the exception of
-        // the main thread) have exited.
-        nsThreadManager::get()->Shutdown();
-
-        NS_ProcessPendingEvents(thread);
-
-        // We save the "xpcom-shutdown-loaders" observers to notify after
-        // the observerservice is gone.
-        if (observerService) {
-            observerService->
-                EnumerateObservers(NS_XPCOM_SHUTDOWN_LOADERS_OBSERVER_ID,
-                                   getter_AddRefs(moduleLoaders));
-
-            observerService->Shutdown();
         }
     }
 
+    // grab the event queue so that we can process events one last time before exiting
+    nsCOMPtr <nsIEventQueue> currentQ;
+    {
+        nsCOMPtr<nsIEventQueueService> eventQService =
+                 do_GetService(kEventQueueServiceCID, &rv);
+
+        if (eventQService) {
+            eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(currentQ));
+        }
+    }
     // XPCOM is officially in shutdown mode NOW
     // Set this only after the observers have been notified as this
     // will cause servicemanager to become inaccessible.
@@ -767,39 +841,27 @@ NS_ShutdownXPCOM(nsIServiceManager* servMgr)
         nsComponentManagerImpl::gComponentManager->FreeServices();
     }
 
+    if (currentQ) {
+        currentQ->ProcessPendingEvents();
+        currentQ = 0;
+    }
+    
     nsProxyObjectManager::Shutdown();
 
     // Release the directory service
     NS_IF_RELEASE(nsDirectoryService::gService);
-
-    nsCycleCollector_shutdown();
-
-    if (moduleLoaders) {
-        PRBool more;
-        nsCOMPtr<nsISupports> el;
-        while (NS_SUCCEEDED(moduleLoaders->HasMoreElements(&more)) &&
-               more) {
-            moduleLoaders->GetNext(getter_AddRefs(el));
-
-            // Don't worry about weak-reference observers here: there is
-            // no reason for weak-ref observers to register for
-            // xpcom-shutdown-loaders
-
-            nsCOMPtr<nsIObserver> obs(do_QueryInterface(el));
-            if (obs)
-                (void) obs->Observe(nsnull,
-                                    NS_XPCOM_SHUTDOWN_LOADERS_OBSERVER_ID,
-                                    nsnull);
-        }
-
-        moduleLoaders = nsnull;
-    }
 
     // Shutdown nsLocalFile string conversion
     NS_ShutdownLocalFile();
 #ifdef XP_UNIX
     NS_ShutdownNativeCharsetUtils();
 #endif
+
+    // Shutdown the timer thread and all timers that might still be alive before
+    // shutting down the component manager
+    nsTimerImpl::Shutdown();
+
+    CallExitRoutines();
 
     // Shutdown xpcom. This will release all loaders and cause others holding
     // a refcount to the component manager to release it.
@@ -813,14 +875,14 @@ NS_ShutdownXPCOM(nsIServiceManager* servMgr)
     // Do this _after_ shutting down the component manager, because the
     // JS component loader will use XPConnect to call nsIModule::canUnload,
     // and that will spin up the InterfaceInfoManager again -- bad mojo
-    xptiInterfaceInfoManager::FreeInterfaceInfoManager();
+    XPTI_FreeInterfaceInfoManager();
 
     // Finally, release the component manager last because it unloads the
     // libraries:
     if (nsComponentManagerImpl::gComponentManager) {
       nsrefcnt cnt;
       NS_RELEASE2(nsComponentManagerImpl::gComponentManager, cnt);
-      NS_ASSERTION(cnt == 0, "Component Manager being held past XPCOM shutdown.");
+      NS_WARN_IF_FALSE(cnt == 0, "Component Manager being held past XPCOM shutdown.");
     }
     nsComponentManagerImpl::gComponentManager = nsnull;
 
@@ -830,11 +892,19 @@ NS_ShutdownXPCOM(nsIServiceManager* servMgr)
 
     ShutdownSpecialSystemDirectory();
 
+    EmptyEnumeratorImpl::Shutdown();
+    nsMemoryImpl::Shutdown();
+
+    nsThread::Shutdown();
     NS_PurgeAtomTable();
 
     NS_IF_RELEASE(gDebug);
 
-    NS_LogTerm();
+#ifdef NS_BUILD_REFCNT_LOGGING
+    nsTraceRefcntImpl::DumpStatistics();
+    nsTraceRefcntImpl::ResetStatistics();
+    nsTraceRefcntImpl::Shutdown();
+#endif
 
 #ifdef GC_LEAK_DETECTOR
     // Shutdown the Leak detector.

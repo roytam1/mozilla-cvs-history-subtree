@@ -79,6 +79,7 @@ public:
 
   NS_IMETHOD SetMsgComposeAndSendObject(nsIMsgSend *obj);
   
+  nsCOMPtr<nsISupports> mCopyObject;
   PRBool                          mCopyInProgress;
 
 private:
@@ -92,6 +93,8 @@ private:
 class nsMsgCopy : public nsIUrlListener
 {
 public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMSGCOPY_IID)
+
   nsMsgCopy();
   virtual ~nsMsgCopy();
 
@@ -128,6 +131,7 @@ public:
   //
   nsIFileSpec                     *mFileSpec;     // the file we are sending...
   nsMsgDeliverMode                mMode;
+  nsCOMPtr<CopyListener>          mCopyListener;
   nsCOMPtr<nsIMsgFolder>          mDstFolder;
   nsCOMPtr<nsIMsgDBHdr>           mMsgToReplace;
   PRBool                          mIsDraft;

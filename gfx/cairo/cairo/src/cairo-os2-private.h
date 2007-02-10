@@ -1,7 +1,6 @@
-/* vim: set sw=4 sts=4 et cin: */
 /* cairo - a vector graphics library with display and print output
  *
- * Copyright (c) 2005-2006 netlabs.org
+ * Copyright © 2005 Red Hat, Inc
  *
  * This library is free software; you can redistribute it and/or
  * modify it either under the terms of the GNU Lesser General Public
@@ -28,11 +27,10 @@
  *
  * The Original Code is the cairo graphics library.
  *
- * The Initial Developer of the Original Code is
- *     Doodle <doodle@scenergy.dfmk.hu>
+ * The Initial Developer of the Original Code is Red Hat, Inc.
  *
  * Contributor(s):
- *     Peter Weilbacher <mozilla@Weilbacher.org>
+ *	Doodle <doodle@scenergy.dfmk.hu>
  */
 
 #ifndef CAIRO_OS2_PRIVATE_H
@@ -44,9 +42,9 @@
 #define INCL_WIN
 #define INCL_GPI
 #ifdef __WATCOMC__
-# include <os2.h>
+#include <os2.h>
 #else
-# include <os2emx.h>
+#include <os2emx.h>
 #endif
 
 #include <cairo-os2.h>
@@ -54,24 +52,25 @@
 
 typedef struct _cairo_os2_surface
 {
-    cairo_surface_t        base;
+  cairo_surface_t        base;
 
-    /* Mutex semaphore to protect private fields from concurrent access */
-    HMTX                   hmtx_use_private_fields;
-    /* Private fields: */
-    HPS                    hps_client_window;
-    HWND                   hwnd_client_window;
-    BITMAPINFO2            bitmap_info;
-    unsigned char         *pixels;
-    cairo_image_surface_t *image_surface;
-    int                    pixel_array_lend_count;
-    HEV                    hev_pixel_array_came_back;
+  /* Mutex semaphore to protect private fields from concurrent access */
+  HMTX                   hmtxUsePrivateFields;
+  /* Private fields: */
+  HPS                    hpsClientWindow;
+  HWND                   hwndClientWindow;
+  BITMAPINFO2            bmi2BitmapInfo;
+  unsigned char         *pchPixels;
+  cairo_image_surface_t *pImageSurface;
+  int                    iPixelArrayLendCounter;
+  HEV                    hevPixelArrayCameBack;
 
-    RECTL                  rcl_dirty_area;
-    cairo_bool_t           dirty_area_present;
+  RECTL                  rclDirtyArea;
+  int                    bDirtyAreaPresent;
 
-    /* General flags: */
-    cairo_bool_t           blit_as_changes;
+  /* General flags: */
+  int                    bBlitAsChanges;
+
 } cairo_os2_surface_t;
 
 #endif /* CAIRO_OS2_PRIVATE_H */

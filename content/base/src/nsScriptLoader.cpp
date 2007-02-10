@@ -37,10 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * A class that handles loading and evaluation of <script> elements.
- */
-
 #include "nsScriptLoader.h"
 #include "nsIDOMCharacterData.h"
 #include "nsParserUtils.h"
@@ -48,11 +44,11 @@
 #include "nsICharsetConverterManager.h"
 #include "nsIUnicodeDecoder.h"
 #include "nsIContent.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsNetUtil.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
-#include "nsIScriptRuntime.h"
+#include "nsINodeInfo.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIPrincipal.h"
 #include "nsContentPolicyUtils.h"
@@ -61,44 +57,36 @@
 #include "nsIScriptElement.h"
 #include "nsIDOMHTMLScriptElement.h"
 #include "nsIDocShell.h"
-#include "jscntxt.h"
+#include "jsapi.h"
 #include "nsContentUtils.h"
 #include "nsUnicharUtils.h"
 #include "nsAutoPtr.h"
-#include "nsIXPConnect.h"
-#include "nsContentErrors.h"
-#include "nsIParser.h"
-#include "nsThreadUtils.h"
+
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 //////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////
 
-// If aMaybeCertPrincipal is a cert principal and aNewPrincipal is not the same
-// as aMaybeCertPrincipal, downgrade aMaybeCertPrincipal to a codebase
-// principal.  Return the downgraded principal, or aMaybeCertPrincipal if no
-// downgrade was needed.
 static already_AddRefed<nsIPrincipal>
-MaybeDowngradeToCodebase(nsIPrincipal *aMaybeCertPrincipal,
-                         nsIPrincipal *aNewPrincipal)
+IntersectPrincipalCerts(nsIPrincipal *aOld, nsIPrincipal *aNew)
 {
-  NS_PRECONDITION(aMaybeCertPrincipal, "Null old principal!");
-  NS_PRECONDITION(aNewPrincipal, "Null new principal!");
+  NS_PRECONDITION(aOld, "Null old principal!");
+  NS_PRECONDITION(aNew, "Null new principal!");
 
-  nsIPrincipal *principal = aMaybeCertPrincipal;
+  nsIPrincipal *principal = aOld;
 
   PRBool hasCert;
-  aMaybeCertPrincipal->GetHasCertificate(&hasCert);
+  aOld->GetHasCertificate(&hasCert);
   if (hasCert) {
     PRBool equal;
-    aMaybeCertPrincipal->Equals(aNewPrincipal, &equal);
+    aOld->Equals(aNew, &equal);
     if (!equal) {
       nsCOMPtr<nsIURI> uri, domain;
-      aMaybeCertPrincipal->GetURI(getter_AddRefs(uri));
-      aMaybeCertPrincipal->GetDomain(getter_AddRefs(domain));
+      aOld->GetURI(getter_AddRefs(uri));
+      aOld->GetDomain(getter_AddRefs(domain));
 
-      nsContentUtils::GetSecurityManager()->GetCodebasePrincipal(uri,
-                                                                 &principal);
+      nsContentUtils::GetSecurityManager()->GetCodebasePrincipal(uri, &principal);
       if (principal && domain) {
         principal->SetDomain(domain);
       }
@@ -119,49 +107,76 @@ MaybeDowngradeToCodebase(nsIPrincipal *aMaybeCertPrincipal,
 class nsScriptLoadRequest : public nsISupports {
 public:
   nsScriptLoadRequest(nsIScriptElement* aElement,
-                      PRUint32 aVersion)
-    : mElement(aElement),
-      mLoading(PR_TRUE), mWasPending(PR_FALSE),
-      mIsInline(PR_TRUE),
-      mJSVersion(aVersion), mLineNo(1)
-  {
-  }
+                      nsIScriptLoaderObserver* aObserver,
+                      const char* aVersionString,
+                      PRBool aHasE4XOption);
+  virtual ~nsScriptLoadRequest();
 
   NS_DECL_ISUPPORTS
 
-  void FireScriptAvailable(nsresult aResult)
-  {
-    mElement->ScriptAvailable(aResult, mElement, mIsInline, mWasPending,
-                              mURI, mLineNo);
-  }
-  void FireScriptEvaluated(nsresult aResult)
-  {
-    mElement->ScriptEvaluated(aResult, mElement, mIsInline, mWasPending);
-  }
+  void FireScriptAvailable(nsresult aResult,
+                           const nsAFlatString& aScript);
+  void FireScriptEvaluated(nsresult aResult);
 
   nsCOMPtr<nsIScriptElement> mElement;
+  nsCOMPtr<nsIScriptLoaderObserver> mObserver;
   PRPackedBool mLoading;             // Are we still waiting for a load to complete?
   PRPackedBool mWasPending;          // Processed immediately or pending
   PRPackedBool mIsInline;            // Is the script inline or loaded?
+  PRPackedBool mHasE4XOption;        // Has E4X=1 script type parameter
   nsString mScriptText;              // Holds script for loaded scripts
-  PRUint32 mJSVersion;
+  const char* mJSVersion;            // We don't own this string
   nsCOMPtr<nsIURI> mURI;
   PRInt32 mLineNo;
 };
 
+nsScriptLoadRequest::nsScriptLoadRequest(nsIScriptElement* aElement,
+                                         nsIScriptLoaderObserver* aObserver,
+                                         const char* aVersionString,
+                                         PRBool aHasE4XOption) :
+  mElement(aElement), mObserver(aObserver),
+  mLoading(PR_TRUE), mWasPending(PR_FALSE),
+  mIsInline(PR_TRUE), mHasE4XOption(aHasE4XOption),
+  mJSVersion(aVersionString), mLineNo(1)
+{
+}
+
+nsScriptLoadRequest::~nsScriptLoadRequest()
+{
+}
+
+
 // The nsScriptLoadRequest is passed as the context to necko, and thus
 // it needs to be threadsafe. Necko won't do anything with this
 // context, but it will AddRef and Release it on other threads.
+
 NS_IMPL_THREADSAFE_ISUPPORTS0(nsScriptLoadRequest)
+
+void
+nsScriptLoadRequest::FireScriptAvailable(nsresult aResult,
+                                         const nsAFlatString& aScript)
+{
+  if (mObserver) {
+    mObserver->ScriptAvailable(aResult, mElement, mIsInline, mWasPending,
+                               mURI, mLineNo,
+                               aScript);
+  }
+}
+
+void
+nsScriptLoadRequest::FireScriptEvaluated(nsresult aResult)
+{
+  if (mObserver) {
+    mObserver->ScriptEvaluated(aResult, mElement, mIsInline, mWasPending);
+  }
+}
 
 //////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////
 
-nsScriptLoader::nsScriptLoader(nsIDocument *aDocument)
-  : mDocument(aDocument),
-    mBlockerCount(0),
-    mEnabled(PR_TRUE)
+nsScriptLoader::nsScriptLoader()
+  : mDocument(nsnull), mEnabled(PR_TRUE)
 {
 }
 
@@ -169,12 +184,103 @@ nsScriptLoader::~nsScriptLoader()
 {
   mObservers.Clear();
 
-  for (PRInt32 i = 0; i < mPendingRequests.Count(); i++) {
-    mPendingRequests[i]->FireScriptAvailable(NS_ERROR_ABORT);
+  PRInt32 count = mPendingRequests.Count();
+  for (PRInt32 i = 0; i < count; i++) {
+    nsScriptLoadRequest* req = mPendingRequests[i];
+    if (req) {
+      req->FireScriptAvailable(NS_ERROR_ABORT, EmptyString());
+    }
   }
+
+  mPendingRequests.Clear();
 }
 
-NS_IMPL_ISUPPORTS1(nsScriptLoader, nsIStreamLoaderObserver)
+NS_INTERFACE_MAP_BEGIN(nsScriptLoader)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIScriptLoader)
+  NS_INTERFACE_MAP_ENTRY(nsIScriptLoader)
+  NS_INTERFACE_MAP_ENTRY(nsIStreamLoaderObserver)
+NS_INTERFACE_MAP_END
+
+NS_IMPL_ADDREF(nsScriptLoader)
+NS_IMPL_RELEASE(nsScriptLoader)
+
+/* void init (in nsIDocument aDocument); */
+NS_IMETHODIMP
+nsScriptLoader::Init(nsIDocument *aDocument)
+{
+  mDocument = aDocument;
+
+  return NS_OK;
+}
+
+/* void dropDocumentReference (); */
+NS_IMETHODIMP
+nsScriptLoader::DropDocumentReference()
+{
+  mDocument = nsnull;
+
+  return NS_OK;
+}
+
+/* void addObserver (in nsIScriptLoaderObserver aObserver); */
+NS_IMETHODIMP
+nsScriptLoader::AddObserver(nsIScriptLoaderObserver *aObserver)
+{
+  NS_ENSURE_ARG(aObserver);
+
+  mObservers.AppendObject(aObserver);
+
+  return NS_OK;
+}
+
+/* void removeObserver (in nsIScriptLoaderObserver aObserver); */
+NS_IMETHODIMP
+nsScriptLoader::RemoveObserver(nsIScriptLoaderObserver *aObserver)
+{
+  NS_ENSURE_ARG(aObserver);
+
+  mObservers.RemoveObject(aObserver);
+
+  return NS_OK;
+}
+
+PRBool
+nsScriptLoader::InNonScriptingContainer(nsIScriptElement* aScriptElement)
+{
+  nsCOMPtr<nsIDOMNode> node(do_QueryInterface(aScriptElement));
+  nsCOMPtr<nsIDOMNode> parent;
+
+  node->GetParentNode(getter_AddRefs(parent));
+  while (parent) {
+    nsCOMPtr<nsIContent> content(do_QueryInterface(parent));
+    if (!content) {
+      break;
+    }
+
+    nsINodeInfo *nodeInfo = content->GetNodeInfo();
+    NS_ASSERTION(nodeInfo, "element without node info");
+
+    if (nodeInfo) {
+      nsIAtom *localName = nodeInfo->NameAtom();
+
+      // XXX noframes and noembed are currently unconditionally not
+      // displayed and processed. This might change if we support either
+      // prefs or per-document container settings for not allowing
+      // frames or plugins.
+      if (content->IsContentOfType(nsIContent::eHTML) &&
+          ((localName == nsHTMLAtoms::iframe) ||
+           (localName == nsHTMLAtoms::noframes) ||
+           (localName == nsHTMLAtoms::noembed))) {
+        return PR_TRUE;
+      }
+    }
+
+    node = parent;
+    node->GetParentNode(getter_AddRefs(parent));
+  }
+
+  return PR_FALSE;
+}
 
 // Helper method for checking if the script element is an event-handler
 // This means that it has both a for-attribute and a event-attribute.
@@ -184,25 +290,40 @@ NS_IMPL_ISUPPORTS1(nsScriptLoader, nsIStreamLoaderObserver)
 // This is how IE seems to filter out a window's onload handler from a
 // <script for=... event=...> element.
 
-static PRBool
-IsScriptEventHandler(nsIScriptElement *aScriptElement)
+PRBool
+nsScriptLoader::IsScriptEventHandler(nsIScriptElement *aScriptElement)
 {
   nsCOMPtr<nsIContent> contElement = do_QueryInterface(aScriptElement);
-  NS_ASSERTION(contElement, "nsIScriptElement isn't nsIContent");
-
-  nsAutoString forAttr, eventAttr;
-  if (!contElement->GetAttr(kNameSpaceID_None, nsGkAtoms::_for, forAttr) ||
-      !contElement->GetAttr(kNameSpaceID_None, nsGkAtoms::event, eventAttr)) {
-    return PR_FALSE;
+  if (!contElement ||
+      !contElement->HasAttr(kNameSpaceID_None, nsHTMLAtoms::_event) ||
+      !contElement->HasAttr(kNameSpaceID_None, nsHTMLAtoms::_for)) {
+      return PR_FALSE;
   }
 
-  const nsAString& for_str = nsContentUtils::TrimWhitespace(forAttr);
+  nsAutoString str;
+  nsresult rv = contElement->GetAttr(kNameSpaceID_None, nsHTMLAtoms::_for,
+                                     str);
+  NS_ENSURE_SUCCESS(rv, PR_FALSE);
+
+  const nsAString& for_str = nsContentUtils::TrimWhitespace(str);
+
   if (!for_str.LowerCaseEqualsLiteral("window")) {
     return PR_TRUE;
   }
 
   // We found for="window", now check for event="onload".
-  const nsAString& event_str = nsContentUtils::TrimWhitespace(eventAttr, PR_FALSE);
+
+  rv = contElement->GetAttr(kNameSpaceID_None, nsHTMLAtoms::_event, str);
+  NS_ENSURE_SUCCESS(rv, PR_FALSE);
+
+  const nsAString& event_str = nsContentUtils::TrimWhitespace(str, PR_FALSE);
+
+  if (event_str.Length() < 6) {
+    // String too short, can't be "onload".
+
+    return PR_TRUE;
+  }
+
   if (!StringBeginsWith(event_str, NS_LITERAL_STRING("onload"),
                         nsCaseInsensitiveStringComparator())) {
     // It ain't "onload.*".
@@ -227,18 +348,43 @@ IsScriptEventHandler(nsIScriptElement *aScriptElement)
 }
 
 /* void processScriptElement (in nsIScriptElement aElement, in nsIScriptLoaderObserver aObserver); */
-nsresult
-nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement)
+NS_IMETHODIMP
+nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement,
+                                     nsIScriptLoaderObserver *aObserver)
 {
+  PRBool fireErrorNotification;
+  nsresult rv = DoProcessScriptElement(aElement, aObserver,
+                                       &fireErrorNotification);
+  if (fireErrorNotification) {
+    // Note that rv _can_ be a success code here.  It just can't be NS_OK.
+    NS_ASSERTION(rv != NS_OK, "Firing error notification for NS_OK?");
+    FireErrorNotification(rv, aElement, aObserver);
+  }
+
+  return rv;  
+}
+
+nsresult
+nsScriptLoader::DoProcessScriptElement(nsIScriptElement *aElement,
+                                       nsIScriptLoaderObserver *aObserver,
+                                       PRBool* aFireErrorNotification)
+{
+  // Default to firing the error notification until we've actually gotten to
+  // loading or running the script.
+  *aFireErrorNotification = PR_TRUE;
+  
+  NS_ENSURE_ARG(aElement);
+
   // We need a document to evaluate scripts.
   NS_ENSURE_TRUE(mDocument, NS_ERROR_FAILURE);
 
-  // Check to see if scripts has been turned off.
-  if (!mEnabled || !mDocument->IsScriptEnabled()) {
+  // Check to see that the element is not in a container that
+  // suppresses script evaluation within it and that we should be
+  // evaluating scripts for this document in the first place.
+  if (!mEnabled || !mDocument->IsScriptEnabled() ||
+      InNonScriptingContainer(aElement)) {
     return NS_ERROR_NOT_AVAILABLE;
   }
-
-  NS_ASSERTION(!aElement->IsMalformed(), "Executing malformed script");
 
   // Check that the script is not an eventhandler
   if (IsScriptEventHandler(aElement)) {
@@ -247,17 +393,10 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement)
 
   // Script evaluation can also be disabled in the current script
   // context even though it's enabled in the document.
-  // XXX - still hard-coded for JS here, even though another language
-  // may be specified.  Should this check be made *after* we examine
-  // the attributes to locate the script-type?
-  // For now though, if JS is disabled we assume every language is
-  // disabled.
-  // XXX is this different from the mDocument->IsScriptEnabled() call?
   nsIScriptGlobalObject *globalObject = mDocument->GetScriptGlobalObject();
   if (globalObject)
   {
-    nsIScriptContext *context = globalObject->GetScriptContext(
-                                          nsIProgrammingLanguage::JAVASCRIPT);
+    nsIScriptContext *context = globalObject->GetContext();
 
     // If scripts aren't enabled in the current context, there's no
     // point in going on.
@@ -266,15 +405,35 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement)
     }
   }
 
-  // Default script language is whatever the root content specifies
-  // (which may come from a header or http-meta tag)
-  PRUint32 typeID = mDocument->GetRootContent()->GetScriptTypeID();
-  PRUint32 version = 0;
+  PRBool isJavaScript = PR_TRUE;
+  PRBool hasE4XOption = PR_FALSE;
+  const char* jsVersionString = nsnull;
   nsAutoString language, type, src;
+
+  // "language" is a deprecated attribute of HTML, so we check it only for
+  // HTML script elements.
+  nsCOMPtr<nsIDOMHTMLScriptElement> htmlScriptElement =
+    do_QueryInterface(aElement);
+  if (htmlScriptElement) {
+    // Check the language attribute first, so type can trump language.
+    htmlScriptElement->GetAttribute(NS_LITERAL_STRING("language"), language);
+    if (!language.IsEmpty()) {
+      isJavaScript = nsParserUtils::IsJavaScriptLanguage(language,
+                                                         &jsVersionString);
+
+      // IE, Opera, etc. do not respect language version, so neither should
+      // we at this late date in the browser wars saga.  Note that this change
+      // affects HTML but not XUL or SVG (but note also that XUL has its own
+      // code to check nsParserUtils::IsJavaScriptLanguage -- that's probably
+      // a separate bug, one we may not be able to fix short of XUL2).  See
+      // bug 255895 (https://bugzilla.mozilla.org/show_bug.cgi?id=255895).
+      jsVersionString = ::JS_VersionToString(JSVERSION_DEFAULT);
+    }
+  }
+
   nsresult rv = NS_OK;
 
   // Check the type attribute to determine language and version.
-  // If type exists, it trumps the deprecated 'language='
   aElement->GetScriptType(type);
   if (!type.IsEmpty()) {
     nsCOMPtr<nsIMIMEHeaderParam> mimeHdrParser =
@@ -289,7 +448,6 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement)
                                      mimeType);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // Javascript keeps the fast path, optimized for most-likely type
     // Table ordered from most to least likely JS MIME types.
     // See bug 62485, feel free to add <script type="..."> survey data to it,
     // or to a new bug once 62485 is closed.
@@ -302,54 +460,39 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement)
       nsnull
     };
 
-    PRBool isJavaScript = PR_FALSE;
+    isJavaScript = PR_FALSE;
     for (PRInt32 i = 0; jsTypes[i]; i++) {
       if (mimeType.LowerCaseEqualsASCII(jsTypes[i])) {
         isJavaScript = PR_TRUE;
         break;
       }
     }
-    if (isJavaScript)
-      typeID = nsIProgrammingLanguage::JAVASCRIPT;
-    else {
-      // Use the object factory to locate a matching language.
-      nsCOMPtr<nsIScriptRuntime> runtime;
-      rv = NS_GetScriptRuntime(mimeType, getter_AddRefs(runtime));
-      if (NS_FAILED(rv) || runtime == nsnull) {
-        // Failed to get the explicitly specified language
-        NS_WARNING("Failed to find a scripting language");
-        typeID = nsIProgrammingLanguage::UNKNOWN;
-      } else
-        typeID = runtime->GetScriptTypeID();
-    }
-    if (typeID != nsIProgrammingLanguage::UNKNOWN) {
-      // Get the version string, and ensure the language supports it.
-      nsAutoString versionName;
+
+    if (isJavaScript) {
+      JSVersion jsVersion = JSVERSION_DEFAULT;
+      nsAutoString value;
       rv = mimeHdrParser->GetParameter(typeAndParams, "version",
                                        EmptyCString(), PR_FALSE, nsnull,
-                                       versionName);
+                                       value);
       if (NS_FAILED(rv)) {
-        // no version attribute - version remains 0.
         if (rv != NS_ERROR_INVALID_ARG)
           return rv;
       } else {
-        nsCOMPtr<nsIScriptRuntime> runtime;
-        rv = NS_GetScriptRuntimeByID(typeID, getter_AddRefs(runtime));
-        if (NS_FAILED(rv)) {
-          NS_ERROR("Failed to locate the language with this ID");
-          return rv;
-        }
-        rv = runtime->ParseVersion(versionName, &version);
-        if (NS_FAILED(rv)) {
-          NS_WARNING("This script language version is not supported - ignored");
-          typeID = nsIProgrammingLanguage::UNKNOWN;
+        if (value.Length() != 3 || value[0] != '1' || value[1] != '.')
+          jsVersion = JSVERSION_UNKNOWN;
+        else switch (value[2]) {
+          case '0': jsVersion = JSVERSION_1_0; break;
+          case '1': jsVersion = JSVERSION_1_1; break;
+          case '2': jsVersion = JSVERSION_1_2; break;
+          case '3': jsVersion = JSVERSION_1_3; break;
+          case '4': jsVersion = JSVERSION_1_4; break;
+          case '5': jsVersion = JSVERSION_1_5; break;
+          case '6': jsVersion = JSVERSION_1_6; break;
+          case '7': jsVersion = JSVERSION_1_7; break;
+          default:  jsVersion = JSVERSION_UNKNOWN;
         }
       }
-    }
-
-    // Some js specifics yet to be abstracted.
-    if (typeID == nsIProgrammingLanguage::JAVASCRIPT) {
-      nsAutoString value;
+      jsVersionString = ::JS_VersionToString(jsVersion);
 
       rv = mimeHdrParser->GetParameter(typeAndParams, "e4x",
                                        EmptyCString(), PR_FALSE, nsnull,
@@ -359,67 +502,30 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement)
           return rv;
       } else {
         if (value.Length() == 1 && value[0] == '1')
-          // This means that we need to set JSOPTION_XML in the JS options.
-          // We re-use our knowledge of the implementation to reuse
-          // JSVERSION_HAS_XML as a safe version flag.
-          // If version has JSVERSION_UNKNOWN (-1), then this is still OK.
-          version |= JSVERSION_HAS_XML;
-      }
-    }
-  } else {
-    // no 'type=' element
-    // "language" is a deprecated attribute of HTML, so we check it only for
-    // HTML script elements.
-    nsCOMPtr<nsIDOMHTMLScriptElement> htmlScriptElement =
-      do_QueryInterface(aElement);
-    if (htmlScriptElement) {
-      htmlScriptElement->GetAttribute(NS_LITERAL_STRING("language"), language);
-      if (!language.IsEmpty()) {
-        if (nsParserUtils::IsJavaScriptLanguage(language, &version))
-          typeID = nsIProgrammingLanguage::JAVASCRIPT;
-        else
-          typeID = nsIProgrammingLanguage::UNKNOWN;
-        // IE, Opera, etc. do not respect language version, so neither should
-        // we at this late date in the browser wars saga.  Note that this change
-        // affects HTML but not XUL or SVG (but note also that XUL has its own
-        // code to check nsParserUtils::IsJavaScriptLanguage -- that's probably
-        // a separate bug, one we may not be able to fix short of XUL2).  See
-        // bug 255895 (https://bugzilla.mozilla.org/show_bug.cgi?id=255895).
-        NS_ASSERTION(JSVERSION_DEFAULT == 0,
-                     "We rely on all languages having 0 as a version default");
-        version = 0;
+          hasE4XOption = PR_TRUE;
       }
     }
   }
 
-  // If we don't know the language, we don't know how to evaluate
-  if (typeID == nsIProgrammingLanguage::UNKNOWN) {
+  // If this isn't JavaScript, we don't know how to evaluate.
+  // XXX How and where should we deal with other scripting languages?
+  //     See bug 255942 (https://bugzilla.mozilla.org/show_bug.cgi?id=255942).
+  if (!isJavaScript) {
     return NS_ERROR_NOT_AVAILABLE;
   }
-  // If not from a chrome document (which is always trusted), we need some way 
-  // of checking the language is "safe".  Currently the only other language 
-  // impl is Python, and that is *not* safe in untrusted code - so fixing 
-  // this isn't a priority.!
-  // See also similar code in nsXULContentSink.cpp
-  if (typeID != nsIProgrammingLanguage::JAVASCRIPT &&
-      !nsContentUtils::IsChromeDoc(mDocument)) {
-    NS_WARNING("Untrusted language called from non-chrome - ignored");
-    return NS_ERROR_NOT_AVAILABLE;
-  }
-
-  nsCOMPtr<nsIContent> eltContent(do_QueryInterface(aElement));
-  eltContent->SetScriptTypeID(typeID);
 
   // Create a request object for this script
-  nsRefPtr<nsScriptLoadRequest> request = new nsScriptLoadRequest(aElement, version);
+  nsRefPtr<nsScriptLoadRequest> request = new nsScriptLoadRequest(aElement, aObserver, jsVersionString, hasE4XOption);
   NS_ENSURE_TRUE(request, NS_ERROR_OUT_OF_MEMORY);
 
   // First check to see if this is an external script
   nsCOMPtr<nsIURI> scriptURI = aElement->GetScriptURI();
   if (scriptURI) {
     // Check that the containing page is allowed to load this URI.
+    nsIPrincipal *docPrincipal = mDocument->GetPrincipal();
+    NS_ENSURE_TRUE(docPrincipal, NS_ERROR_UNEXPECTED);
     rv = nsContentUtils::GetSecurityManager()->
-      CheckLoadURIWithPrincipal(mDocument->NodePrincipal(), scriptURI,
+      CheckLoadURIWithPrincipal(docPrincipal, scriptURI,
                                 nsIScriptSecurityManager::ALLOW_CHROME);
 
     NS_ENSURE_SUCCESS(rv, rv);
@@ -432,10 +538,9 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement)
                                      scriptURI,
                                      docURI,
                                      aElement,
-                                     NS_LossyConvertUTF16toASCII(type),
+                                     NS_LossyConvertUCS2toASCII(type),
                                      nsnull,    //extra
-                                     &shouldLoad,
-                                     nsContentUtils::GetContentPolicy());
+                                     &shouldLoad);
       if (NS_FAILED(rv) || NS_CP_REJECTED(shouldLoad)) {
         if (NS_FAILED(rv) || shouldLoad != nsIContentPolicy::REJECT_TYPE) {
           return NS_ERROR_CONTENT_BLOCKED;
@@ -448,11 +553,13 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement)
       request->mWasPending = PR_TRUE;
       request->mLoading = PR_TRUE;
 
+      // Add the request to our pending requests list
+      mPendingRequests.AppendObject(request);
+
       nsCOMPtr<nsILoadGroup> loadGroup = mDocument->GetDocumentLoadGroup();
       nsCOMPtr<nsIStreamLoader> loader;
 
-      nsCOMPtr<nsPIDOMWindow> window(do_QueryInterface(globalObject));
-      nsIDocShell *docshell = window->GetDocShell();
+      nsIDocShell *docshell = globalObject->GetDocShell();
 
       nsCOMPtr<nsIInterfaceRequestor> prompter(do_QueryInterface(docshell));
 
@@ -460,22 +567,25 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement)
       rv = NS_NewChannel(getter_AddRefs(channel),
                          scriptURI, nsnull, loadGroup,
                          prompter, nsIRequest::LOAD_NORMAL);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(channel));
-      if (httpChannel) {
-        // HTTP content negotation has little value in this context.
-        httpChannel->SetRequestHeader(NS_LITERAL_CSTRING("Accept"),
-                                      NS_LITERAL_CSTRING("*/*"),
-                                      PR_FALSE);
-        httpChannel->SetReferrer(mDocument->GetDocumentURI());
+      if (NS_SUCCEEDED(rv)) {
+        nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(channel));
+        if (httpChannel) {
+          // HTTP content negotation has little value in this context.
+          httpChannel->SetRequestHeader(NS_LITERAL_CSTRING("Accept"),
+                                        NS_LITERAL_CSTRING("*/*"),
+                                        PR_FALSE);
+          httpChannel->SetReferrer(mDocument->GetDocumentURI());
+        }
+        rv = NS_NewStreamLoader(getter_AddRefs(loader), channel, this, request);
+      }
+      if (NS_FAILED(rv)) {
+        mPendingRequests.RemoveObject(request);
+        return rv;
       }
 
-      rv = NS_NewStreamLoader(getter_AddRefs(loader), this);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      rv = channel->AsyncOpen(loader, request);
-      NS_ENSURE_SUCCESS(rv, rv);
+      // At this point we've successfully started the load, so we need not call
+      // FireErrorNotification anymore.
+      *aFireErrorNotification = PR_FALSE;
     }
   } else {
     request->mLoading = PR_FALSE;
@@ -486,28 +596,63 @@ nsScriptLoader::ProcessScriptElement(nsIScriptElement *aElement)
 
     // If we've got existing pending requests, add ourselves
     // to this list.
-    if (ReadyToExecuteScripts() && mPendingRequests.Count() == 0) {
-      NS_ASSERTION(!request->mWasPending, "should not be pending");
-      return ProcessRequest(request);
+    if (mPendingRequests.Count() > 0) {
+      request->mWasPending = PR_TRUE;
+      NS_ENSURE_TRUE(mPendingRequests.AppendObject(request),
+                     NS_ERROR_OUT_OF_MEMORY);
+    }
+    else {
+      request->mWasPending = PR_FALSE;
+      rv = ProcessRequest(request);
     }
 
-    request->mWasPending = PR_TRUE;
+    // We're either going to, or have run this inline script, so we shouldn't
+    // call FireErrorNotification for it.
+    *aFireErrorNotification = PR_FALSE;
   }
 
-  // Add the request to our pending requests list
-  NS_ENSURE_TRUE(mPendingRequests.AppendObject(request),
-                 NS_ERROR_OUT_OF_MEMORY);
+  return rv;
+}
 
-  // Added as pending request, now we can send blocking back
-  return NS_ERROR_HTMLPARSER_BLOCK;
+nsresult
+nsScriptLoader::GetCurrentScript(nsIScriptElement **aElement)
+{
+  NS_ENSURE_ARG_POINTER(aElement);
+  *aElement = mCurrentScript;
+
+  NS_IF_ADDREF(*aElement);
+
+  return NS_OK;
+}
+
+void
+nsScriptLoader::FireErrorNotification(nsresult aResult,
+                                      nsIScriptElement* aElement,
+                                      nsIScriptLoaderObserver* aObserver)
+{
+  PRInt32 count = mObservers.Count();
+  for (PRInt32 i = 0; i < count; i++) {
+    nsCOMPtr<nsIScriptLoaderObserver> observer = mObservers[i];
+
+    if (observer) {
+      observer->ScriptAvailable(aResult, aElement,
+                                PR_TRUE, PR_FALSE,
+                                nsnull, 0,
+                                EmptyString());
+    }
+  }
+
+  if (aObserver) {
+    aObserver->ScriptAvailable(aResult, aElement,
+                               PR_TRUE, PR_FALSE,
+                               nsnull, 0,
+                               EmptyString());
+  }
 }
 
 nsresult
 nsScriptLoader::ProcessRequest(nsScriptLoadRequest* aRequest)
 {
-  NS_ASSERTION(ReadyToExecuteScripts(),
-               "Caller forgot to check ReadyToExecuteScripts()");
-
   NS_ENSURE_ARG(aRequest);
   nsAFlatString* script;
   nsAutoString textData;
@@ -524,7 +669,7 @@ nsScriptLoader::ProcessRequest(nsScriptLoadRequest* aRequest)
     script = &aRequest->mScriptText;
   }
 
-  FireScriptAvailable(NS_OK, aRequest);
+  FireScriptAvailable(NS_OK, aRequest, *script);
   nsresult rv = EvaluateScript(aRequest, *script);
   FireScriptEvaluated(rv, aRequest);
 
@@ -533,26 +678,36 @@ nsScriptLoader::ProcessRequest(nsScriptLoadRequest* aRequest)
 
 void
 nsScriptLoader::FireScriptAvailable(nsresult aResult,
-                                    nsScriptLoadRequest* aRequest)
+                                    nsScriptLoadRequest* aRequest,
+                                    const nsAFlatString& aScript)
 {
-  for (PRInt32 i = 0; i < mObservers.Count(); i++) {
-    nsCOMPtr<nsIScriptLoaderObserver> obs = mObservers[i];
-    obs->ScriptAvailable(aResult, aRequest->mElement,
-                         aRequest->mIsInline, aRequest->mWasPending,
-                         aRequest->mURI, aRequest->mLineNo);
+  PRInt32 count = mObservers.Count();
+  for (PRInt32 i = 0; i < count; i++) {
+    nsCOMPtr<nsIScriptLoaderObserver> observer = mObservers[i];
+
+    if (observer) {
+      observer->ScriptAvailable(aResult, aRequest->mElement,
+                                aRequest->mIsInline, aRequest->mWasPending,
+                                aRequest->mURI, aRequest->mLineNo,
+                                aScript);
+    }
   }
 
-  aRequest->FireScriptAvailable(aResult);
+  aRequest->FireScriptAvailable(aResult, aScript);
 }
 
 void
 nsScriptLoader::FireScriptEvaluated(nsresult aResult,
                                     nsScriptLoadRequest* aRequest)
 {
-  for (PRInt32 i = 0; i < mObservers.Count(); i++) {
-    nsCOMPtr<nsIScriptLoaderObserver> obs = mObservers[i];
-    obs->ScriptEvaluated(aResult, aRequest->mElement,
-                         aRequest->mIsInline, aRequest->mWasPending);
+  PRInt32 count = mObservers.Count();
+  for (PRInt32 i = 0; i < count; i++) {
+    nsCOMPtr<nsIScriptLoaderObserver> observer = mObservers[i];
+
+    if (observer) {
+      observer->ScriptEvaluated(aResult, aRequest->mElement,
+                                aRequest->mIsInline, aRequest->mWasPending);
+    }
   }
 
   aRequest->FireScriptEvaluated(aResult);
@@ -572,23 +727,18 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
   nsIScriptGlobalObject *globalObject = mDocument->GetScriptGlobalObject();
   NS_ENSURE_TRUE(globalObject, NS_ERROR_FAILURE);
 
-  // Get the script-type to be used by this element.
-  nsCOMPtr<nsIContent> scriptContent(do_QueryInterface(aRequest->mElement));
-  NS_ASSERTION(scriptContent, "no content - what is default script-type?");
-  PRUint32 stid = scriptContent ? scriptContent->GetScriptTypeID() :
-                                  nsIProgrammingLanguage::JAVASCRIPT;
-  // and make sure we are setup for this type of script.
-  rv = globalObject->EnsureScriptEnvironment(stid);
-  if (NS_FAILED(rv))
-    return rv;
-
   // Make sure context is a strong reference since we access it after
   // we've executed a script, which may cause all other references to
   // the context to go away.
-  nsCOMPtr<nsIScriptContext> context = globalObject->GetScriptContext(stid);
+  nsCOMPtr<nsIScriptContext> context = globalObject->GetContext();
   if (!context) {
     return NS_ERROR_FAILURE;
   }
+
+  nsIPrincipal *principal = mDocument->GetPrincipal();
+  // We can survive without a principal, but we really should
+  // have one.
+  NS_ASSERTION(principal, "principal required for document");
 
   nsCAutoString url;
 
@@ -602,63 +752,61 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
   PRBool oldProcessingScriptTag = context->GetProcessingScriptTag();
   context->SetProcessingScriptTag(PR_TRUE);
 
+  JSContext *cx = (JSContext *)context->GetNativeContext();
+  uint32 options = ::JS_GetOptions(cx);
+  JSBool changed = (aRequest->mHasE4XOption ^ !!(options & JSOPTION_XML));
+  if (changed) {
+    ::JS_SetOptions(cx,
+                    aRequest->mHasE4XOption
+                    ? options | JSOPTION_XML
+                    : options & ~JSOPTION_XML);
+  }
+
   // Update our current script.
   nsCOMPtr<nsIScriptElement> oldCurrent = mCurrentScript;
   mCurrentScript = aRequest->mElement;
 
   PRBool isUndefined;
-  rv = context->EvaluateString(aScript,
-                          globalObject->GetScriptGlobal(stid),
-                          mDocument->NodePrincipal(), url.get(),
-                          aRequest->mLineNo, aRequest->mJSVersion, nsnull,
-                          &isUndefined);
+  rv = context->EvaluateString(aScript, globalObject->GetGlobalJSObject(),
+                               principal, url.get(), aRequest->mLineNo,
+                               aRequest->mJSVersion, nsnull, &isUndefined);
 
   // Put the old script back in case it wants to do anything else.
   mCurrentScript = oldCurrent;
 
-  JSContext *cx = nsnull; // Initialize this to keep GCC happy.
-  if (stid == nsIProgrammingLanguage::JAVASCRIPT) {
-    cx = (JSContext *)context->GetNativeContext();
-    ::JS_BeginRequest(cx);
-    ::JS_ReportPendingException(cx);
+  ::JS_ReportPendingException(cx);
+  if (changed) {
+    ::JS_SetOptions(cx, options);
   }
 
   context->SetProcessingScriptTag(oldProcessingScriptTag);
 
-  if (stid == nsIProgrammingLanguage::JAVASCRIPT) {
-    nsCOMPtr<nsIXPCNativeCallContext> ncc;
-    nsContentUtils::XPConnect()->
-      GetCurrentNativeCallContext(getter_AddRefs(ncc));
+  nsCOMPtr<nsIXPCNativeCallContext> ncc;
+  nsContentUtils::XPConnect()->
+    GetCurrentNativeCallContext(getter_AddRefs(ncc));
 
-    if (ncc) {
-      NS_ASSERTION(!::JS_IsExceptionPending(cx),
-                   "JS_ReportPendingException wasn't called");
-      ncc->SetExceptionWasThrown(PR_FALSE);
-    }
-    ::JS_EndRequest(cx);
+  if (ncc) {
+    ncc->SetExceptionWasThrown(PR_FALSE);
   }
+
   return rv;
 }
 
 void
-nsScriptLoader::ProcessPendingRequestsAsync()
+nsScriptLoader::ProcessPendingReqests()
 {
-  if (mPendingRequests.Count()) {
-    nsCOMPtr<nsIRunnable> ev = new nsRunnableMethod<nsScriptLoader>(this,
-      &nsScriptLoader::ProcessPendingRequests);
-
-    NS_DispatchToCurrentThread(ev);
+  if (mPendingRequests.Count() == 0) {
+    return;
   }
-}
 
-void
-nsScriptLoader::ProcessPendingRequests()
-{
-  nsRefPtr<nsScriptLoadRequest> request;
-  while (ReadyToExecuteScripts() && mPendingRequests.Count() &&
-         !(request = mPendingRequests[0])->mLoading) {
+  nsRefPtr<nsScriptLoadRequest> request = mPendingRequests[0];
+  while (request && !request->mLoading) {
     mPendingRequests.RemoveObjectAt(0);
     ProcessRequest(request);
+    if (mPendingRequests.Count() == 0) {
+      return;
+    }
+    request = mPendingRequests[0];
   }
 }
 
@@ -733,7 +881,7 @@ nsScriptLoader::ConvertToUTF16(nsIChannel* aChannel, const PRUint8* aData,
   }
 
   nsCOMPtr<nsICharsetConverterManager> charsetConv =
-    do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv);
+    do_GetService(kCharsetConverterManagerCID, &rv);
 
   nsCOMPtr<nsIUnicodeDecoder> unicodeDecoder;
 
@@ -791,96 +939,120 @@ NS_IMETHODIMP
 nsScriptLoader::OnStreamComplete(nsIStreamLoader* aLoader,
                                  nsISupports* aContext,
                                  nsresult aStatus,
-                                 PRUint32 aStringLen,
-                                 const PRUint8* aString)
+                                 PRUint32 stringLen,
+                                 const PRUint8* string)
 {
+  nsresult rv;
   nsScriptLoadRequest* request = NS_STATIC_CAST(nsScriptLoadRequest*, aContext);
   NS_ASSERTION(request, "null request in stream complete handler");
-  NS_ENSURE_TRUE(request, NS_ERROR_FAILURE);
-
-  nsresult rv = PrepareLoadedRequest(request, aLoader, aStatus, aStringLen,
-                                     aString);
-  if (NS_FAILED(rv)) {
-    mPendingRequests.RemoveObject(request);
-    FireScriptAvailable(rv, request);
+  if (!request) {
+    return NS_ERROR_FAILURE;
   }
 
-  // Process our request and/or any pending ones
-  ProcessPendingRequests();
-
-  return NS_OK;
-}
-
-nsresult
-nsScriptLoader::PrepareLoadedRequest(nsScriptLoadRequest* aRequest,
-                                     nsIStreamLoader* aLoader,
-                                     nsresult aStatus,
-                                     PRUint32 aStringLen,
-                                     const PRUint8* aString)
-{
   if (NS_FAILED(aStatus)) {
-    return aStatus;
+    mPendingRequests.RemoveObject(request);
+    FireScriptAvailable(aStatus, request, EmptyString());
+    ProcessPendingReqests();
+    return NS_OK;
   }
 
   // If we don't have a document, then we need to abort further
   // evaluation.
   if (!mDocument) {
-    return NS_ERROR_NOT_AVAILABLE;
+    mPendingRequests.RemoveObject(request);
+    FireScriptAvailable(NS_ERROR_NOT_AVAILABLE, request,
+                        EmptyString());
+    ProcessPendingReqests();
+    return NS_OK;
   }
 
   // If the load returned an error page, then we need to abort
   nsCOMPtr<nsIRequest> req;
-  nsresult rv = aLoader->GetRequest(getter_AddRefs(req));
+  rv = aLoader->GetRequest(getter_AddRefs(req));
   NS_ASSERTION(req, "StreamLoader's request went away prematurely");
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsIHttpChannel> httpChannel = do_QueryInterface(req);
+  if (NS_FAILED(rv)) return rv;  // XXX Should this remove the pending request?
+  nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(req));
   if (httpChannel) {
     PRBool requestSucceeded;
     rv = httpChannel->GetRequestSucceeded(&requestSucceeded);
     if (NS_SUCCEEDED(rv) && !requestSucceeded) {
-      return NS_ERROR_NOT_AVAILABLE;
+      mPendingRequests.RemoveObject(request);
+      FireScriptAvailable(NS_ERROR_NOT_AVAILABLE, request,
+                          EmptyString());
+      ProcessPendingReqests();
+      return NS_OK;
     }
   }
 
   nsCOMPtr<nsIChannel> channel = do_QueryInterface(req);
-  if (aStringLen) {
+  if (stringLen) {
     // Check the charset attribute to determine script charset.
     nsAutoString hintCharset;
-    aRequest->mElement->GetScriptCharset(hintCharset);
-    rv = ConvertToUTF16(channel, aString, aStringLen, hintCharset, mDocument,
-                        aRequest->mScriptText);
+    request->mElement->GetScriptCharset(hintCharset);
+    rv = ConvertToUTF16(channel, string, stringLen, hintCharset, mDocument,
+                        request->mScriptText);
 
     NS_ASSERTION(NS_SUCCEEDED(rv),
                  "Could not convert external JavaScript to Unicode!");
-    NS_ENSURE_SUCCESS(rv, rv);
+    if (NS_FAILED(rv)) {
+      mPendingRequests.RemoveObject(request);
+      FireScriptAvailable(rv, request, EmptyString());
+      ProcessPendingReqests();
+      return NS_OK;
+    }
 
-    // -- Merge the principal of the script file with that of the document; if
-    // the script has a non-cert principal, the document's principal should be
-    // downgraded.
+    //-- Merge the principal of the script file with that of the document
     if (channel) {
       nsCOMPtr<nsISupports> owner;
       channel->GetOwner(getter_AddRefs(owner));
       nsCOMPtr<nsIPrincipal> principal = do_QueryInterface(owner);
 
       if (principal) {
-        nsCOMPtr<nsIPrincipal> newPrincipal =
-          MaybeDowngradeToCodebase(mDocument->NodePrincipal(), principal);
+        nsIPrincipal *docPrincipal = mDocument->GetPrincipal();
+        if (docPrincipal) {
+          nsCOMPtr<nsIPrincipal> newPrincipal =
+              IntersectPrincipalCerts(docPrincipal, principal);
 
-        mDocument->SetPrincipal(newPrincipal);
+          mDocument->SetPrincipal(newPrincipal);
+        } else {
+          mPendingRequests.RemoveObject(request);
+          FireScriptAvailable(rv, request, EmptyString());
+          ProcessPendingReqests();
+          return NS_OK;
+        }
       }
     }
   }
 
-  // This assertion could fire errorously if we ran out of memory when
-  // inserting the request in the array. However it's an unlikely case
-  // so if you see this assertion it is likely something else that is
-  // wrong, especially if you see it more than once.
-  NS_ASSERTION(mPendingRequests.IndexOf(aRequest) >= 0,
-               "aRequest should be pending!");
 
-  // Mark this as loaded
-  aRequest->mLoading = PR_FALSE;
+  // If we're not the first in the pending list, we mark ourselves
+  // as loaded and just stay on the list.
+  NS_ASSERTION(mPendingRequests.Count() > 0, "aContext is a pending request!");
+  if (mPendingRequests[0] != request) {
+    request->mLoading = PR_FALSE;
+    return NS_OK;
+  }
 
+  mPendingRequests.RemoveObject(request);
+  ProcessRequest(request);
+
+  // Process any pending requests
+  ProcessPendingReqests();
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsScriptLoader::GetEnabled(PRBool *aEnabled)
+{
+  NS_ENSURE_ARG_POINTER(aEnabled);
+  *aEnabled = mEnabled;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsScriptLoader::SetEnabled(PRBool aEnabled)
+{
+  mEnabled = aEnabled;
   return NS_OK;
 }

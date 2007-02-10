@@ -17,14 +17,14 @@
 
 <html id="feedHandler"
       xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-      xmlns:aaa="http://www.w3.org/2005/07/aaa">
+      xmlns:xhtml2="http://www.w3.org/TR/xhtml2"
+      xmlns:wairole="http://www.w3.org/2005/01/wai-rdf/GUIRoleTaxonomy#"
+      xmlns:aaa="http://www.w3.org/2005/07/aaa"
+      xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
   <head>
     <title>&feedPage.title;</title>
-    <link rel="stylesheet"
-          href="chrome://browser/skin/feeds/subscribe.css"
-          type="text/css"
-          media="all"/>
+    <link rel="stylesheet" href="chrome://browser/skin/feeds/subscribe.css" 
+          type="text/css" media="all"/>
     <script type="application/x-javascript"
             src="chrome://browser/content/feeds/subscribe.js"/>
   </head>
@@ -40,8 +40,7 @@
 
 <!-- XXXmano this has to be in one line. Otherwise you would see
      how much XUL-in-XHTML sucks, see bug 348830 -->
-<div id="feedSubscribeLine"><xul:vbox><xul:hbox align="center"><xul:description id="subscribeUsingDescription">&subscribeUsing;</xul:description><xul:menulist id="handlersMenuList" aaa:labelledby="subscribeUsingDescription"><xul:menupopup menugenerated="true" id="handlersMenuPopup"><xul:menuitem id="liveBookmarksMenuItem" label="&feedLiveBookmarks;" class="menuitem-iconic" image="chrome://browser/skin/page-livemarks.png" selected="true"/><xul:menuseparator/></xul:menupopup></xul:menulist></xul:hbox><xul:hbox><xul:checkbox id="alwaysUse" checked="false"/></xul:hbox><xul:hbox align="center"><xul:spacer flex="1"/><span><xul:button label="&feedSubscribeNow;" id="subscribeButton"/></span></xul:hbox></xul:vbox></div></div>
-
+<div id="feedSubscribeLine"><xul:vbox><xul:hbox align="center"><xul:label value="&subscribeUsing;" id="subscribeUsingDescription"/><xul:menulist id="handlersMenuList" aaa:valuenow="&feedLiveBookmarks;" aaa:labelledby="subscribeUsingDescription" xhtml2:role="wairole:combobox" aaa:multiselect="false"><xul:menupopup menugenerated="true" id="handlersMenuPopup"><xul:menuitem class="menuitem-iconic" id="liveBookmarksMenuItem" label="&feedLiveBookmarks;" title="&feedLiveBookmarks;" src="chrome://browser/skin/page-livemarks.png" selected="true" xhtml2:role="wairole:listitem"/><xul:menuseparator/></xul:menupopup></xul:menulist></xul:hbox><xul:hbox><xul:checkbox id="alwaysUse" xhtml2:role="wairole:checkbox" aaa:checked="false" checked="false"/></xul:hbox><xul:hbox align="center"><xul:spacer flex="1"/><xul:button label="&feedSubscribeNow;" title="&feedSubscribeNow;" id="subscribeButton" xhtml2:role="wairole:button"/></xul:hbox></xul:vbox></div></div>
     </div>
 
     <!-- XXXben - get rid of me when the feed processor is bug free! -->

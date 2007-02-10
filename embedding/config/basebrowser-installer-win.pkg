@@ -69,7 +69,6 @@ components\gfx.xpt
 ; layout
 moz_art_lgpl.dll
 components\gkcontent.dll
-components\gkgfxthebes.dll                   
 components\gklayout.dll                   
 components\gkparser.dll                 
 components\layout_base.xpt              
@@ -140,8 +139,8 @@ components\shistory.xpt
 
 ; optional typeaheadfind 
 ; (docs at http://www.mozilla.org/projects/ui/accessibility/typeaheadfind.html)
-;components\suitetypeaheadfind.dll
-;components\suitetypeaheadfind.xpt
+;components\typeaheadfind.dll
+;components\typeaheadfind.xpt
 
 ; rdf
 components\rdf.dll
@@ -156,7 +155,6 @@ res\wincharset.properties
 
 ; required i18n libraries
 components\i18n.dll
-components\chardet.dll
 components\intl.xpt
 components\locale.xpt
 components\uconv.dll
@@ -194,6 +192,7 @@ components\txtsvc.xpt
 components\necko.dll                    
 components\necko.xpt                    
 components\necko_about.xpt              
+components\necko_data.xpt               
 components\necko_dns.xpt                
 components\necko_http.xpt               
 components\necko_res.xpt                
@@ -203,6 +202,7 @@ components\necko_strconv.xpt
 components\necko_cache.xpt              
 
 ; optional for FTP support
+components\necko2.dll
 components\necko_ftp.xpt
 
 ; plugins
@@ -230,8 +230,9 @@ freebl3.dll
 ssl3.dll
 nssckbi.dll
 
-; xmlextras, optional for XPointer support
+; xmlextras, optional for XMLHttpRequest support
 components\xmlextras.dll
+components\xmlextras.xpt
 
 ; 
 ; res:
@@ -293,6 +294,3 @@ res\cmessage.txt
 ; storage
 components\storage.xpt
 components\strgcmps.dll
-
-; Effective TLD
-res\effective_tld_names.dat

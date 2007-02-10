@@ -39,9 +39,22 @@
 #define nsFormControlFrame_h___
 
 #include "nsIFormControlFrame.h"
+#include "nsFormControlHelper.h"
+#include "nsISupports.h"
+#include "nsIWidget.h"
 #include "nsLeafFrame.h"
+#include "nsCoord.h"
+#include "nsPresContext.h"
+#include "nsCOMPtr.h"
 
+class nsIView;
+class nsPresContext;
+class nsStyleCoord;
+
+#define CSS_NOTSET -1
 #define ATTR_NOTSET -1
+
+#define NS_FORMSIZE_NOTSET -1
 
 #ifdef DEBUG_rods
 
@@ -79,7 +92,7 @@ public:
     * @param aContent the content representing this frame
     * @param aParentFrame the parent frame
     */
-  nsFormControlFrame(nsStyleContext*);
+  nsFormControlFrame();
 
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
@@ -91,7 +104,22 @@ public:
                          nsGUIEvent* aEvent,
                          nsEventStatus* aEventStatus);
 
-  NS_IMETHOD SetInitialChildList(nsIAtom*        aListName,
+   /**
+    * Draw this frame within the context of a presentation context and rendering context
+    * @see nsIFrame::Paint
+    */
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
+
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint,
+                              nsFramePaintLayer aWhichLayer,
+                              nsIFrame** aFrame);
+
+  NS_IMETHOD SetInitialChildList(nsPresContext* aPresContext,
+                                 nsIAtom*        aListName,
                                  nsIFrame*       aChildList);
 
   NS_IMETHOD DidReflow(nsPresContext*           aPresContext,
@@ -107,19 +135,95 @@ public:
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&      aStatus);
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext *aPresContext);
 
   // new behavior
 
+  /**
+    * Get the class id of the widget associated with this frame
+    * @return the class id
+    */
+  virtual const nsIID& GetCID(); 
+
+  /**
+    * Get the interface id of widget associated with this frame
+    * @return the interface id
+    */
+  virtual const nsIID& GetIID(); 
+
+  NS_IMETHOD_(PRInt32) GetFormControlType() const;
+  NS_IMETHOD GetName(nsAString* aName);
+  NS_IMETHOD GetValue(nsAString* aName);
+
+  /**
+    * Respond to a enter key being pressed
+    */
+  virtual void EnterPressed(nsPresContext* aPresContext) {} 
+
+  /**
+    * Respond to a control change (e.g. combo box close-up)
+    */
+  virtual void ControlChanged(nsPresContext* aPresContext) {}
+
+  /**
+    * Chance to Initialize to a defualt value
+    */
+  virtual void InitializeControl(nsPresContext* aPresContext);
+
   virtual void SetFocus(PRBool aOn = PR_TRUE, PRBool aRepaint = PR_FALSE);
+  virtual void ScrollIntoView(nsPresContext* aPresContext);
 
-  // nsIFormControlFrame
-  virtual nsresult SetFormProperty(nsIAtom* aName, const nsAString& aValue);
+  /**
+    * Perform opertations before the widget associated with this frame has been
+    * created.
+    */
+  virtual nsWidgetInitData* GetWidgetInitData(nsPresContext* aPresContext);  
 
-  virtual nsresult GetFormProperty(nsIAtom* aName, nsAString& aValue) const; 
-  
+  void GetWidgetSize(nsSize& aSize) const { aSize.width  = mWidgetSize.width; 
+                                            aSize.height = mWidgetSize.height; }
+
+  // XXX similar functionality needs to be added to widget library and these
+  //     need to change to use it.
+  static  nscoord GetScrollbarWidth(float aPixToTwip);
+
+  virtual nsresult GetSizeFromContent(PRInt32* aSize) const;
+  NS_IMETHOD GetMaxLength(PRInt32* aSize);
+
+  virtual void SetClickPoint(nscoord aX, nscoord aY);
+
+  NS_IMETHOD GetFormContent(nsIContent*& aContent) const;
+
+   /**
+    * Get the width and height of this control based on CSS 
+    * @param aPresContext the presentation context
+    * @param aSize the size that this frame wants, set by this method. values of -1 
+    * for aSize.width or aSize.height indicate unset values.
+    */
+  static void GetStyleSize(nsPresContext* aContext,
+                            const nsHTMLReflowState& aReflowState,
+                            nsSize& aSize);
+
+    // nsIFormControlFrame
+  NS_IMETHOD SetProperty(nsPresContext* aPresContext, nsIAtom* aName, const nsAString& aValue);
+
+  NS_IMETHOD GetProperty(nsIAtom* aName, nsAString& aValue); 
+  // Resize Reflow Optimiaztion Methods
+  static void SetupCachedSizes(nsSize& aCacheSize,
+                               nscoord& aCachedAscent,
+                               nscoord& aCachedMaxElementWidth,
+                               nsHTMLReflowMetrics& aDesiredSize);
+
+  static void SkipResizeReflow(nsSize& aCacheSize,
+                               nscoord& aCachedAscent,
+                               nscoord& aCachedMaxElementWidth,
+                               nsSize& aCachedAvailableSize,
+                               nsHTMLReflowMetrics& aDesiredSize,
+                               const nsHTMLReflowState& aReflowState,
+                               nsReflowStatus& aStatus,
+                               PRBool& aBailOnWidth,
+                               PRBool& aBailOnHeight);
   // AccessKey Helper function
-  static nsresult RegUnRegAccessKey(nsIFrame * aFrame, PRBool aDoReg);
+  static nsresult RegUnRegAccessKey(nsPresContext* aPresContext, nsIFrame * aFrame, PRBool aDoReg);
 
   /**
    * Helper routine to that returns the height of the screen
@@ -139,8 +243,22 @@ protected:
 
   virtual ~nsFormControlFrame();
 
-  virtual nscoord GetIntrinsicWidth();
-  virtual nscoord GetIntrinsicHeight();
+  /** 
+    * Get the size that this frame would occupy without any constraints
+    * @param aPresContext the presentation context
+    * @param aDesiredSize the size desired by this frame, to be set by this method
+    * @param aMaxSize the maximum size available for this frame
+    */
+  virtual void GetDesiredSize(nsPresContext* aPresContext,
+                              const nsHTMLReflowState& aReflowState,
+                              nsHTMLReflowMetrics& aDesiredSize);
+
+  virtual void GetDesiredSize(nsPresContext* aPresContext,
+                              const nsHTMLReflowState& aReflowState,
+                              nsHTMLReflowMetrics& aDesiredLayoutSize,
+                              nsSize& aDesiredWidgetSize);
+
+  NS_IMETHOD SetSuggestedSize(nscoord aWidth, nscoord aHeight);
 
 //
 //-------------------------------------------------------------------------------------
@@ -151,11 +269,50 @@ protected:
     * Get the state of the checked attribute.
     * @param aState set to PR_TRUE if the checked attribute is set,
     * PR_FALSE if the checked attribute has been removed
+    * @returns NS_OK or NS_CONTENT_ATTR_HAS_VALUE
     */
 
-  void GetCurrentCheckState(PRBool* aState);
+  nsresult GetCurrentCheckState(PRBool* aState);
+ 
+   /**
+    * Set the state of the checked attribute.
+    * @param aState set to PR_TRUE to set the attribute,
+    * PR_FALSE to unset the attribute
+    * @returns NS_OK or NS_CONTENT_ATTR_HAS_VALUE
+    */
 
+  nsresult SetCurrentCheckState(PRBool aState);
+
+   /**
+    * Get the state of the defaultchecked attribute.
+    * @param aState set to PR_TRUE if the defaultchecked attribute is set,
+    * PR_FALSE if the checked attribute has been removed
+    * @returns NS_OK or NS_CONTENT_ATTR_HAS_VALUE
+    */
+ 
+  nsresult GetDefaultCheckState(PRBool* aState);
+
+   /**
+    * Set the state of the checked attribute.
+    * @param aState set to PR_TRUE to set the checked attribute 
+    * PR_FALSE to unset it
+    * @returns NS_OK 
+    */
+
+  nsresult SetDefaultCheckState(PRBool aState);
+
+  nsSize       mWidgetSize;
   PRBool       mDidInit;
+  nsPoint      mLastClickPoint;
+  nscoord      mSuggestedWidth;
+  nscoord      mSuggestedHeight;
+
+  nsPresContext * mPresContext;
+
+  // Reflow Optimization
+  nsSize       mCacheSize;
+  nscoord      mCachedAscent;
+  nscoord      mCachedMaxElementWidth;
 
 private:
   NS_IMETHOD_(nsrefcnt) AddRef() { return NS_OK; }

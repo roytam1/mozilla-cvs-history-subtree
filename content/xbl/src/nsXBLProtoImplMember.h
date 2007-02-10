@@ -52,6 +52,8 @@ class nsIScriptContext;
 struct JSRuntime;
 class nsIJSRuntimeService;
 
+MOZ_DECL_CTOR_COUNTER(nsXBLTextWithLineNumber)
+
 struct nsXBLTextWithLineNumber
 {
   PRUnichar* mText;
@@ -114,7 +116,7 @@ public:
                                  void* aClassObject)=0;
 
 protected:
-  friend class nsAutoGCRoot;
+  friend struct nsAutoGCRoot;
   
   nsXBLProtoImplMember* mNext;  // The members of an implementation are chained.
   PRUnichar* mName;               // The name of the field, method, or property.

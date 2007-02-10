@@ -69,10 +69,10 @@ static PyTypeObject PyInterfaceType_Type = {
 	0,			/*tp_hash*/
 	0,			/*tp_call*/
 	0,			/*tp_str*/
-	0,			/* tp_getattro */
-	0,			/*tp_setattro */
-	0,			/* tp_as_buffer */
-	0,			/* tp_flags */
+	0,			/*tp_xxx1*/
+	0,			/*tp_xxx2*/
+	0,			/*tp_xxx3*/
+	0,			/*tp_xxx4*/
 	"Define the behavior of a PythonCOM Interface type.",
 };
 
@@ -102,6 +102,7 @@ PyXPCOM_TypeObject::Py_setattr(PyObject *op, char *name, PyObject *v)
 /*static*/int
 PyXPCOM_TypeObject::Py_cmp(PyObject *self, PyObject *other)
 {
+	// @comm NOTE: Copied from COM - have not confirmed these rules are true for XPCOM
 	// @comm As per the XPCOM rules for object identity, both objects are queried for nsISupports, and these values compared.
 	// The only meaningful test is for equality - the result of other comparisons is undefined
 	// (ie, determined by the object's relative addresses in memory.
@@ -140,17 +141,15 @@ PyXPCOM_TypeObject::Py_repr(PyObject *self)
 	Py_nsISupports *pis = (Py_nsISupports *)self;
 	// Try and get the IID name.
 	char *iid_repr;
-	nsCOMPtr<nsIInterfaceInfoManager> iim(do_GetService(
-	                      NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID));
+	nsCOMPtr<nsIInterfaceInfoManager> iim = XPTI_GetInterfaceInfoManager();
 	if (iim!=nsnull)
 		iim->GetNameForIID(&pis->m_iid, &iid_repr);
 	if (iid_repr==nsnull)
-		// no IIM available, or it doesn't know the name.
+		// no IIM available, or it doesnt know the name.
 		iid_repr = pis->m_iid.ToString();
 	// XXX - need some sort of buffer overflow.
 	char buf[512];
-	sprintf(buf, "<XPCOM object (%s) at 0x%p/0x%p>",
-	        iid_repr, (void *)self, (void *)pis->m_obj.get());
+	sprintf(buf, "<XPCOM object (%s) at 0x%p/0x%p>", iid_repr, self, pis->m_obj);
 	nsMemory::Free(iid_repr);
 	return PyString_FromString(buf);
 }
@@ -200,24 +199,9 @@ PyXPCOM_TypeObject::PyXPCOM_TypeObject( const char *name, PyXPCOM_TypeObject *pB
     		0,                                           /* tp_as_number*/
 		0,                                           /* tp_as_sequence */
 		0,                                           /* tp_as_mapping */
-		Py_hash,                                     /* tp_hash */
+		Py_hash,					     /* tp_hash */
 		0,                                           /* tp_call */
 		Py_str,                                      /* tp_str */
-		0,                                           /* tp_getattro */
-		0,                                           /*tp_setattro */
-		0,                                           /* tp_as_buffer */
-		0,                                           /* tp_flags */
-		0,                                           /* tp_doc */
-		0,                                           /* tp_traverse */
-		0,                                           /* tp_clear */
-		0,                                           /* tp_richcompare */
-		0,                                           /* tp_weaklistoffset */
-		0,                                           /* tp_iter */
-		0,                                           /* tp_iternext */
-		0,                                           /* tp_methods */
-		0,                                           /* tp_members */
-		0,                                           /* tp_getset */
-		0,                                           /* tp_base */
 	};
 
 	*((PyTypeObject *)this) = type_template;
@@ -228,7 +212,7 @@ PyXPCOM_TypeObject::PyXPCOM_TypeObject( const char *name, PyXPCOM_TypeObject *pB
 	baseType = pBase;
 	ctor = thector;
 
-	// cast away const, as Python doesn't use it.
+	// cast away const, as Python doesnt use it.
 	tp_name = (char *)name;
 	tp_basicsize = typeSize;
 }

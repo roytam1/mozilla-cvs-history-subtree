@@ -81,13 +81,13 @@ XPTC__InvokebyIndex PROC
     mov     rcx, rsp
 
     ;
-    ; 2nd parameter is parameter count
+    ; 2nd paramter is parameter count
     ;
 
     mov     edx, r8d
 
     ;
-    ; 3rd parameter is params
+    ; 3rd paramter is params
     ;
 
     mov     r8, r9
@@ -112,21 +112,21 @@ XPTC__InvokebyIndex PROC
 noparams:
 
     ;
-    ; 1st parameter (this)
+    ; 1st paramter (this)
     ;
 
     mov     rcx, [rbp+8]     ; that
 
     ;
-    ; calculate call address
+    ; calcurate call address
     ;
 
     mov     rbx, [rcx]
     mov     eax, [rbp+16]    ; methodIndex
 
     ;
-    ; Now current stack has parameter list
-    ; But, since callee function backups parameters, make space into stack.
+    ; Now current stack has paramter list
+    ; But, since callee function backups paramters, make space into stack.
 
     sub     rsp, 8
 

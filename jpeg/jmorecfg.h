@@ -201,7 +201,6 @@ typedef unsigned int JDIMENSION;
 
 /* Mozilla mod: make external functions be DLL-able via JRI_PUBLIC_API(),
  * and supply extern "C" for C++ users of the C-compiled IJG library.
- * (Well, not anymore, but there's still a modification here.)
  */
 #include "prtypes.h"
 
@@ -209,10 +208,11 @@ typedef unsigned int JDIMENSION;
 #define METHODDEF(type)		static type PR_CALLBACK
 /* a function used only in its module: */
 #define LOCAL(type)		static type
-
+/* a function referenced thru EXTERNs: */
+#define GLOBAL(type)		PR_IMPLEMENT(type)
+/* a reference to a GLOBAL function: */
 PR_BEGIN_EXTERN_C
-#define GLOBAL(type) type
-#define EXTERN(type) extern type
+#define EXTERN(type)		PR_EXTERN(type)
 PR_END_EXTERN_C
 
 

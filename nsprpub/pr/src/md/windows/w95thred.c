@@ -38,14 +38,6 @@
 #include "primpl.h"
 #include <process.h>  /* for _beginthreadex() */
 
-#if _MSC_VER <= 1200
-/*
- * VC++ 6.0 doesn't have DWORD_PTR.
- */
-
-typedef DWORD DWORD_PTR;
-#endif /* _MSC_VER <= 1200 */
-
 /* --- globals ------------------------------------------------ */
 #ifdef _PR_USE_STATIC_TLS
 __declspec(thread) struct PRThread  *_pr_thread_last_run;
@@ -232,7 +224,7 @@ _PR_MD_EXIT(PRIntn status)
 
 PRInt32 _PR_MD_SETTHREADAFFINITYMASK(PRThread *thread, PRUint32 mask )
 {
-    DWORD_PTR rv;
+    int rv;
 
     rv = SetThreadAffinityMask(thread->md.handle, mask);
 
@@ -241,15 +233,10 @@ PRInt32 _PR_MD_SETTHREADAFFINITYMASK(PRThread *thread, PRUint32 mask )
 
 PRInt32 _PR_MD_GETTHREADAFFINITYMASK(PRThread *thread, PRUint32 *mask)
 {
-    BOOL rv;
-    DWORD_PTR process_mask;
-    DWORD_PTR system_mask;
+    PRInt32 rv, system_mask;
 
-    rv = GetProcessAffinityMask(GetCurrentProcess(),
-            &process_mask, &system_mask);
-    if (rv)
-        *mask = (PRUint32)process_mask;
-
+    rv = GetProcessAffinityMask(GetCurrentProcess(), mask, &system_mask);
+    
     return rv?0:-1;
 }
 

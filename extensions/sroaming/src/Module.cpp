@@ -51,4 +51,4 @@ static const nsModuleComponentInfo components[] =
 };
 
 
-NS_IMPL_NSGETMODULE(nsSessionRoaming, components)
+NS_IMPL_NSGETMODULE(Module, components)

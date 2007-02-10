@@ -8,10 +8,11 @@
   <!-- bound to <description>s -->
   <binding id="text-base" extends="chrome://global/content/bindings/general.xml#basecontrol">
     <implementation implements="nsIDOMXULDescriptionElement, nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULText;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULTextAccessible(this);
           ]]>
         </getter>
       </property>

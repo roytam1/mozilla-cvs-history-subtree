@@ -41,8 +41,6 @@ topsrcdir       = @top_srcdir@
 srcdir          = @srcdir@
 VPATH           = @srcdir@
 
-DIRS		= standalone
-
 MODULE          = embed_base
 LIBRARY_NAME    = embed_base_s
 XPIDL_MODULE	= embed_base
@@ -81,9 +79,17 @@ XPIDLSRCS	    = \
                 nsIWindowProvider.idl \
                 $(NULL)
 
-include $(srcdir)/objs.mk
+CPPSRCS         = \
+                nsEmbedAPI.cpp \
+                $(NULL)
 
-CPPSRCS += $(EMBED_CPPSRCS)
+ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH)))
+CPPSRCS		+= nsEmbedWin32.cpp
+endif
+
+ifeq ($(OS_ARCH),OS2)
+CPPSRCS		+= nsEmbedOS2.cpp
+endif
 
 # we don't want the shared lib, but we want to force the creation of a
 # static lib.
@@ -92,3 +98,4 @@ FORCE_STATIC_LIB = 1
 include $(topsrcdir)/config/rules.mk
 
 CXXFLAGS += $(MOZ_TOOLKIT_REGISTRY_CFLAGS)
+

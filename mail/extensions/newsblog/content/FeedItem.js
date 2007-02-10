@@ -75,9 +75,9 @@ const REMOTE_STYLE = "\n\
       iframe {\n\
         position: fixed;\n\
         top: 0;\n\
+        right: 0;\n\
+        bottom: 0;\n\
         left: 0;\n\
-        width: 100%;\n\
-        height: 100%;\n\
         border: none;\n\
       }\n\
 ";
@@ -252,16 +252,6 @@ FeedItem.prototype =
     var itemResource = rdf.GetResource(itemURI);
 
     var downloaded = ds.GetTarget(itemResource, FZ_STORED, true);
-
-    // Backward compatibility: we might have stored this item before isStoredWithId
-    // has been turned on for RSS 2.0 (bug 354345). Check whether this item has been
-    // stored with its URL.
-    if (!downloaded && itemURI != this.mURL)
-    {
-      itemResource = rdf.GetResource(this.mURL);
-      downloaded = ds.GetTarget(itemResource, FZ_STORED, true);
-    }
-
     if (!downloaded || downloaded.QueryInterface(Components.interfaces.nsIRDFLiteral).Value == "false") 
     {
       // HACK ALERT: before we give up, try to work around an entity escaping bug in RDF
@@ -299,12 +289,6 @@ FeedItem.prototype =
     var itemURI = this.itemUniqueURI;
     var resource = rdf.GetResource(itemURI);
     
-    // Backward compatibility: we might have stored this item before isStoredWithId
-    // has been turned on for RSS 2.0 (bug 354345). Check whether this item has been
-    // stored with its URL.
-    if (!ds.GetTarget(resource, FZ_STORED, true) && itemURI != this.mURL)
-      resource = rdf.GetResource(this.mURL);
-
     if (!ds.HasAssertion(resource, FZ_FEED, rdf.GetResource(this.feed.url), true))
       ds.Assert(resource, FZ_FEED, rdf.GetResource(this.feed.url), true);
     

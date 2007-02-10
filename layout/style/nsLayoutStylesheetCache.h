@@ -43,7 +43,7 @@
 #include "nsIObserver.h"
 
 class nsIFile;
-class nsICSSLoader;
+
 
 class nsLayoutStylesheetCache
  : public nsIObserver
@@ -69,7 +69,6 @@ private:
                         PRBool aEnableUnsafeRules);
 
   static nsLayoutStylesheetCache* gStyleCache;
-  static nsICSSLoader* gCSSLoader;
   nsCOMPtr<nsICSSStyleSheet> mScrollbarsSheet;
   nsCOMPtr<nsICSSStyleSheet> mFormsSheet;
   nsCOMPtr<nsICSSStyleSheet> mUserContentSheet;

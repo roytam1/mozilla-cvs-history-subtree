@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 sw=2 et tw=78: */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,6 +40,7 @@
 
 /**
  * MODULE NOTES:
+ * @update  gess 4/1/98
  *  
  *  This class defines the iparser interface. This XPCOM
  *  inteface is all that parser clients ever need to see.
@@ -51,14 +51,13 @@
 #include "nsIStreamListener.h"
 #include "nsIDTD.h"
 #include "nsIInputStream.h"
-#include "nsStringGlue.h"
+#include "nsHashtable.h"
 #include "nsVoidArray.h"
 
-// {26C4ABBE-A462-4110-A0A6-244BF39AE7D4}
-#define NS_IPARSER_IID \
-{ 0x26c4abbe, 0xa462, 0x4110, \
-  { 0xa0, 0xa6, 0x24, 0x4b, 0xf3, 0x9a, 0xe7, 0xd4 } }
-
+// {22039D29-2798-4412-9EA6-A11B41BA27D0}
+#define NS_IPARSER_IID      \
+{ 0x22039d29, 0x2798, 0x4412, \
+{ 0x9e, 0xa6, 0xa1, 0x1b, 0x41, 0xba, 0x27, 0xd0 } }
 
 // {41421C60-310A-11d4-816F-000064657374}
 #define NS_IDEBUG_DUMP_CONTENT_IID \
@@ -78,6 +77,13 @@ enum eParserCommands {
   eViewFragment,
   eViewErrors
 };
+
+enum eCRCQuality {
+  eCRCGood = 0,
+  eCRCFair,
+  eCRCPoor
+};
+
 
 enum eParserDocType {
   ePlainText = 0,
@@ -121,20 +127,30 @@ enum eStreamState {eNone,eOnStart,eOnDataAvail,eOnStop};
  */
 class nsIDebugDumpContent : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IDEBUG_DUMP_CONTENT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDEBUG_DUMP_CONTENT_IID)
   NS_IMETHOD DumpContentModel()=0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDebugDumpContent, NS_IDEBUG_DUMP_CONTENT_IID)
 
 /**
  *  This class defines the iparser interface. This XPCOM
  *  inteface is all that parser clients ever need to see.
+ *  
+ *  @update  gess 3/25/98
  */
 class nsIParser : public nsISupports {
   public:
 
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IPARSER_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IPARSER_IID)
+
+    /**
+     *  Call this method if you have a DTD that you want to share with the parser.
+	   *  Registered DTD's get remembered until the system shuts down.
+     *  
+     *  @update  gess 3/25/98
+     *  @param   aDTD -- ptr DTD that you're publishing the services of
+     */
+    NS_IMETHOD RegisterDTD(nsIDTD* aDTD)=0;
+
 
     /**
      * Select given content sink into parser for parser output
@@ -195,11 +211,11 @@ class nsIParser : public nsISupports {
      */
     NS_IMETHOD GetDTD(nsIDTD** aDTD) = 0;
 
-    /**************************************************************************
-     *  Parse methods always begin with an input source, and perform
-     *  conversions until you wind up being emitted to the given contentsink
-     *  (which may or may not be a proxy for the NGLayout content model).
-     ************************************************************************/
+    /******************************************************************************************
+     *  Parse methods always begin with an input source, and perform conversions 
+     *  until you wind up being emitted to the given contentsink (which may or may not
+     *  be a proxy for the NGLayout content model).
+     ******************************************************************************************/
     
     // Call this method to resume the parser from the blocked state.
     NS_IMETHOD ContinueParsing() = 0;
@@ -226,21 +242,20 @@ class nsIParser : public nsISupports {
     
     NS_IMETHOD Parse(nsIURI* aURL,
                      nsIRequestObserver* aListener = nsnull,
+                     PRBool aEnableVerify = PR_FALSE,
                      void* aKey = 0,
                      nsDTDMode aMode = eDTDMode_autodetect) = 0;
     NS_IMETHOD Parse(nsIInputStream* aStream,
                      const nsACString& aMimeType,
+                     PRBool aEnableVerify = PR_FALSE,
                      void* aKey = 0,
                      nsDTDMode aMode = eDTDMode_autodetect) = 0;
     NS_IMETHOD Parse(const nsAString& aSourceBuffer,
                      void* aKey,
                      const nsACString& aMimeType,
+                     PRBool aEnableVerify,
                      PRBool aLastCall,
                      nsDTDMode aMode = eDTDMode_autodetect) = 0;
-
-    // Return a key, suitable for passing into one of the Parse methods above,
-    // that will cause this parser to use the root context.
-    NS_IMETHOD_(void *) GetRootContextKey() = 0;
     
     NS_IMETHOD Terminate(void) = 0;
 
@@ -293,8 +308,6 @@ class nsIParser : public nsISupports {
 
     NS_IMETHOD CancelParsingEvents() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIParser, NS_IPARSER_IID)
 
 /* ===========================================================*
   Some useful constants...

@@ -638,7 +638,7 @@ nsNntpIncomingServer::PerformExpand(nsIMsgWindow *aMsgWindow)
   nsresult rv; 
   PRBool updateUnreadOnExpand = PR_TRUE;
   nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
-  if (NS_SUCCEEDED(rv))
+  if NS_SUCCEEDED(rv)
     prefBranch->GetBoolPref("news.update_unread_on_expand", &updateUnreadOnExpand);
   
   // Only if news.update_unread_on_expand is true do we update the unread counts
@@ -2032,13 +2032,6 @@ nsNntpIncomingServer::CycleCell(PRInt32 row, nsITreeColumn* col)
 
 NS_IMETHODIMP 
 nsNntpIncomingServer::IsEditable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
-{
-    *_retval = PR_FALSE;
-    return NS_OK;
-}
-
-NS_IMETHODIMP 
-nsNntpIncomingServer::IsSelectable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
 {
     *_retval = PR_FALSE;
     return NS_OK;

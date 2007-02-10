@@ -62,6 +62,7 @@ public:
     NS_DECL_NSIMSGSEARCHTERM
 
     
+	void StripQuotedPrintable (unsigned char*);
 	PRInt32 GetNextIMAPOfflineMsgLine (char * buf, int bufferSize, int msgOffset, nsIMsgDBHdr * msg, nsIMsgDatabase * db);
 
 

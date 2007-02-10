@@ -166,12 +166,8 @@ nsresult nsMacCommandLine::Initialize(int& argc, char**& argv)
   
   // Here, we may actually get useful args.
   // Copy them first to mArgv.
-  for (int arg = 0; arg < argc; arg++) {
-    char* flag = argv[arg];
-    // don't pass on the psn (Process Serial Number) flag from the OS
-    if (strncmp(flag, "-psn_", 5) != 0)
-      AddToCommandLine(flag);
-  }
+  for (int arg = 0; arg < argc; arg++)
+    AddToCommandLine(argv[arg]);
 
   // Set up AppleEvent handling.
   OSErr err = CreateAEHandlerClasses(false);
@@ -188,6 +184,9 @@ nsresult nsMacCommandLine::Initialize(int& argc, char**& argv)
   // Spin a native event loop to allow AE handlers for waiting events to be
   // called
   ProcessAppleEvents();
+
+  if (GetCurrentKeyModifiers() & optionKey)
+    AddToCommandLine("-p");
 
   // we've started up now
   mStartedUp = PR_TRUE;
@@ -292,10 +291,10 @@ nsresult nsMacCommandLine::AddToCommandLine(const char* inOptionString, const FS
 
   ::CFRelease(url);
 
-  AddToCommandLine(inOptionString);  
+  AddToCommandLine(inOptionString);
   AddToCommandLine((char*)buffer);
 
-  return NS_OK;
+   return NS_OK;
 }
 
 //----------------------------------------------------------------------------------------
@@ -384,7 +383,7 @@ OSErr nsMacCommandLine::OpenURL(const char* aURL)
     browserURL.Assign("chrome://navigator/content/navigator.xul");
   }
      
-  rv = OpenWindow(browserURL.get(), NS_ConvertASCIItoUTF16(aURL).get());
+  rv = OpenWindow(browserURL.get(), NS_ConvertASCIItoUCS2(aURL).get());
   if (NS_FAILED(rv))
     return errAEEventNotHandled;
     

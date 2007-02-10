@@ -14,8 +14,8 @@
 # The Original Code is mozilla.org code
 #
 # The Initial Developer of the Original Code is
-# Håkan Waara <hwaara@gmail.com>
-# Portions created by the Initial Developer are Copyright (C) 2006
+# Aaron Leventhal
+# Portions created by the Initial Developer are Copyright (C) 2003
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
@@ -46,13 +46,11 @@ LIBRARY_NAME = accessibility_toolkit_s
 LIBXUL_LIBRARY = 1
 
 REQUIRES	= content \
-		  layout \
 		  docshell \
 		  dom \
 		  editor \
 		  gfx \
 		  intl \
-		  locale \
 		  string \
 		  uriloader \
 		  view \
@@ -60,18 +58,13 @@ REQUIRES	= content \
 		  xpcom \
 		  necko \
 		  $(NULL)
-  
-  
-CMMSRCS = nsAccessNodeWrap.mm \
-          nsDocAccessibleWrap.mm \
-          nsRootAccessibleWrap.mm \
-          nsAccessibleWrap.mm \
-          mozAccessible.mm \
-          mozDocAccessible.mm \
-          mozActionElements.mm \
-          mozTextAccessible.mm \
-          $(NULL)
-          
+
+CPPSRCS = \
+  nsAccessNodeWrap.cpp \
+  nsAccessibleWrap.cpp \
+  nsDocAccessibleWrap.cpp \
+  nsRootAccessibleWrap.cpp \
+  $(NULL)
 
 EXPORTS = \
   nsAccessNodeWrap.h \
@@ -82,13 +75,6 @@ EXPORTS = \
   nsHTMLFormControlAccessibleWrap.h \
   nsXULMenuAccessibleWrap.h \
   nsXULTreeAccessibleWrap.h \
-  mozDocAccessible.h \
-  mozAccessible.h \
-  mozAccessibleWrapper.h \
-  mozAccessibleProtocol.h \
-  mozActionElements.h \
-  mozTextAccessible.h \
-  nsRoleMap.h \
   $(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a static lib.

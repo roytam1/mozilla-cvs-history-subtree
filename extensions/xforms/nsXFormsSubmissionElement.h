@@ -84,14 +84,13 @@ public:
     : mElement(nsnull),
       mSubmissionActive(PR_FALSE),
       mIsReplaceInstance(PR_FALSE),
-      mIsSOAPRequest(PR_FALSE),
       mFormat(0)
   {}
 
-  // nsIXTFElement overrides
+  // nsIXTFGenericElement overrides
   NS_IMETHOD OnDestroyed();
   NS_IMETHOD HandleDefault(nsIDOMEvent *aEvent, PRBool *aHandled);
-  NS_IMETHOD OnCreated(nsIXTFElementWrapper *aWrapper);
+  NS_IMETHOD OnCreated(nsIXTFGenericElementWrapper *aWrapper);
 
   NS_HIDDEN_(already_AddRefed<nsIModelElementPrivate>) GetModel();
 
@@ -148,7 +147,6 @@ private:
   PRPackedBool                     mSubmissionActive;
    // Valid when mSubmissionActive == PR_TRUE
   PRPackedBool                     mIsReplaceInstance;
-  PRPackedBool                     mIsSOAPRequest;
   // Valid when mSubmissionActive == PR_TRUE
   PRUint32                         mFormat;
   nsCOMPtr<nsIXFormsSubmitElement> mActivator;

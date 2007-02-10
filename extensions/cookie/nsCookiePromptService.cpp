@@ -43,7 +43,7 @@
 #include "nsIServiceManager.h"
 #include "nsString.h"
 #include "nsIDialogParamBlock.h"
-#include "nsIMutableArray.h"
+#include "nsArray.h"
 
 /****************************************************************
  ************************ nsCookiePromptService *****************
@@ -74,12 +74,12 @@ nsCookiePromptService::CookieDialog(nsIDOMWindow *aParent,
   // since we're setting PRInt32's here, we have to sanitize the PRBool's first.
   // (myBool != PR_FALSE) is guaranteed to return either 1 or 0.
   block->SetInt(nsICookieAcceptDialog::ACCEPT_COOKIE, 1);
-  block->SetString(nsICookieAcceptDialog::HOSTNAME, NS_ConvertUTF8toUTF16(aHostname).get());
+  block->SetString(nsICookieAcceptDialog::HOSTNAME, NS_ConvertUTF8toUCS2(aHostname).get());
   block->SetInt(nsICookieAcceptDialog::COOKIESFROMHOST, aCookiesFromHost);
   block->SetInt(nsICookieAcceptDialog::CHANGINGCOOKIE, aChangingCookie != PR_FALSE);
   
-  nsCOMPtr<nsIMutableArray> objects =
-    do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
+  nsCOMPtr<nsIMutableArray> objects;
+  rv = NS_NewArray(getter_AddRefs(objects));
   if (NS_FAILED(rv)) return rv;
 
   rv = objects->AppendElement(aCookie, PR_FALSE);

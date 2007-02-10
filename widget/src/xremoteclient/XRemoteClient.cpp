@@ -173,7 +173,6 @@ XRemoteClient::Shutdown (void)
 nsresult
 XRemoteClient::SendCommand (const char *aProgram, const char *aUsername,
                             const char *aProfile, const char *aCommand,
-                            const char* aDesktopStartupID,
                             char **aResponse, PRBool *aWindowFound)
 {
   PR_LOG(sRemoteLm, PR_LOG_DEBUG, ("XRemoteClient::SendCommand"));
@@ -199,7 +198,7 @@ XRemoteClient::SendCommand (const char *aProgram, const char *aUsername,
 
     if (NS_SUCCEEDED(rv)) {
       // send our command
-      rv = DoSendCommand(w, aCommand, aDesktopStartupID, aResponse, &destroyed);
+      rv = DoSendCommand(w, aCommand, aResponse, &destroyed);
 
       // if the window was destroyed, don't bother trying to free the
       // lock.
@@ -218,7 +217,6 @@ nsresult
 XRemoteClient::SendCommandLine (const char *aProgram, const char *aUsername,
                                 const char *aProfile,
                                 PRInt32 argc, char **argv,
-                                const char* aDesktopStartupID,
                                 char **aResponse, PRBool *aWindowFound)
 {
   PR_LOG(sRemoteLm, PR_LOG_DEBUG, ("XRemoteClient::SendCommandLine"));
@@ -244,7 +242,7 @@ XRemoteClient::SendCommandLine (const char *aProgram, const char *aUsername,
 
     if (NS_SUCCEEDED(rv)) {
       // send our command
-      rv = DoSendCommandLine(w, argc, argv, aDesktopStartupID, aResponse, &destroyed);
+      rv = DoSendCommandLine(w, argc, argv, aResponse, &destroyed);
 
       // if the window was destroyed, don't bother trying to free the
       // lock.
@@ -645,7 +643,6 @@ XRemoteClient::FreeLock(Window aWindow)
 
 nsresult
 XRemoteClient::DoSendCommand(Window aWindow, const char *aCommand,
-                             const char* aDesktopStartupID,
                              char **aResponse, PRBool *aDestroyed)
 {
   *aDestroyed = PR_FALSE;
@@ -654,28 +651,9 @@ XRemoteClient::DoSendCommand(Window aWindow, const char *aCommand,
      ("(writing " MOZILLA_COMMAND_PROP " \"%s\" to 0x%x)\n",
       aCommand, (unsigned int) aWindow));
 
-  // We add the DESKTOP_STARTUP_ID setting as an extra line of
-  // the command string. Firefox ignores all lines but the first.
-  static char desktopStartupPrefix[] = "\nDESKTOP_STARTUP_ID=";
-
-  PRInt32 len = strlen(aCommand);
-  if (aDesktopStartupID) {
-    len += sizeof(desktopStartupPrefix) - 1 + strlen(aDesktopStartupID);
-  }
-  char* buffer = (char*)malloc(len + 1);
-  if (!buffer)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  strcpy(buffer, aCommand);
-  if (aDesktopStartupID) {
-    strcat(buffer, desktopStartupPrefix);
-    strcat(buffer, aDesktopStartupID);
-  }
-
   XChangeProperty (mDisplay, aWindow, mMozCommandAtom, XA_STRING, 8,
-           PropModeReplace, (unsigned char *)buffer, len);
-
-  free(buffer);
+           PropModeReplace, (unsigned char *)aCommand,
+           strlen(aCommand));
 
   if (!WaitForResponse(aWindow, aResponse, aDestroyed, mMozCommandAtom))
     return NS_ERROR_FAILURE;
@@ -685,7 +663,7 @@ XRemoteClient::DoSendCommand(Window aWindow, const char *aCommand,
 
 /* like strcpy, but return the char after the final null */
 static char*
-estrcpy(const char* s, char* d)
+estrcpy(char* s, char* d)
 {
   while (*s)
     *d++ = *s++;
@@ -696,7 +674,6 @@ estrcpy(const char* s, char* d)
 
 nsresult
 XRemoteClient::DoSendCommandLine(Window aWindow, PRInt32 argc, char **argv,
-                                 const char* aDesktopStartupID,
                                  char **aResponse, PRBool *aDestroyed)
 {
   int i;
@@ -713,16 +690,9 @@ XRemoteClient::DoSendCommandLine(Window aWindow, PRInt32 argc, char **argv,
   // [argc][offsetargv0][offsetargv1...]<workingdir>\0<argv[0]>\0argv[1]...\0
   // (offset is from the beginning of the buffer)
 
-  static char desktopStartupPrefix[] = " DESKTOP_STARTUP_ID=";
-
   PRInt32 argvlen = strlen(cwdbuf);
-  for (i = 0; i < argc; ++i) {
-    PRInt32 len = strlen(argv[i]);
-    if (i == 0 && aDesktopStartupID) {
-      len += sizeof(desktopStartupPrefix) - 1 + strlen(aDesktopStartupID);
-    }
-    argvlen += len;
-  }
+  for (i = 0; i < argc; ++i)
+    argvlen += strlen(argv[i]);
 
   PRInt32* buffer = (PRInt32*) malloc(argvlen + argc + 1 +
                                       sizeof(PRInt32) * (argc + 1));
@@ -738,10 +708,6 @@ XRemoteClient::DoSendCommandLine(Window aWindow, PRInt32 argc, char **argv,
   for (int i = 0; i < argc; ++i) {
     buffer[i + 1] = TO_LITTLE_ENDIAN32(bufend - ((char*) buffer));
     bufend = estrcpy(argv[i], bufend);
-    if (i == 0 && aDesktopStartupID) {
-      bufend = estrcpy(desktopStartupPrefix, bufend - 1);
-      bufend = estrcpy(aDesktopStartupID, bufend - 1);
-    }
   }
 
 #ifdef DEBUG_bsmedberg

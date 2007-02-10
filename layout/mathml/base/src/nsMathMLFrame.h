@@ -95,8 +95,6 @@ public:
     return NS_OK;
   }
 
-  virtual eMathMLFrameType GetMathMLFrameType();
-
   NS_IMETHOD
   Stretch(nsIRenderingContext& aRenderingContext,
           nsStretchDirection   aStretchDirection,
@@ -204,16 +202,12 @@ public:
                           nsPresentationData& aPresentationData,
                           PRBool              aClimbTree = PR_TRUE);
 
-  // helper used by <mstyle> and <mtable> to see if they have a displaystyle attribute 
-  static void
-  FindAttrDisplaystyle(nsIContent*         aContent,
-                       nsPresentationData& aPresentationData);
-
   // helper to check if a content has an attribute. If content is nsnull or if
   // the attribute is not there, check if the attribute is on the mstyle hierarchy
-  // @return PR_TRUE  --if attribute exists
-  //         PR_FALSE --if attribute doesn't exist
-  static PRBool
+  // @return NS_CONTENT_ATTR_HAS_VALUE --if attribute has non-empty value, attr="value"
+  //         NS_CONTENT_ATTR_NO_VALUE  --if attribute has empty value, attr=""
+  //         NS_CONTENT_ATTR_NOT_THERE --if attribute is not there
+  static nsresult
   GetAttribute(nsIContent* aContent,
                nsIFrame*   aMathMLmstyleFrame,          
                nsIAtom*    aAttributeAtom,
@@ -234,18 +228,6 @@ public:
   ParseNamedSpaceValue(nsIFrame*   aMathMLmstyleFrame,
                        nsString&   aString,
                        nsCSSValue& aCSSValue);
-
-  static eMathMLFrameType
-  GetMathMLFrameTypeFor(nsIFrame* aFrame)
-  {
-    if (aFrame->IsFrameOfType(nsIFrame::eMathML)) {
-      nsIMathMLFrame* mathMLFrame;
-      CallQueryInterface(aFrame, &mathMLFrame);
-      if (mathMLFrame)
-        return mathMLFrame->GetMathMLFrameType();
-    }
-    return eMathMLFrameType_UNKNOWN;
-  }
 
   // estimate of the italic correction
   static void
@@ -436,36 +418,13 @@ public:
   // helpers to map attributes into CSS rules (work-around to bug 69409 which
   // is not scheduled to be fixed anytime soon)
   static PRInt32
-  MapCommonAttributesIntoCSS(nsPresContext* aPresContext,
-                             nsIContent*    aContent);
+  MapAttributesIntoCSS(nsPresContext* aPresContext,
+                       nsIContent*     aContent);
   static PRInt32
-  MapCommonAttributesIntoCSS(nsPresContext* aPresContext,
-                             nsIFrame*      aFrame);
- 
-  // helper used by all AttributeChanged() methods. It handles
-  // those attributes that are common to all tags.
-  // @return true if the attribue is handled.
-  static PRBool
-  CommonAttributeChangedFor(nsPresContext* aPresContext,
-                            nsIContent*    aContent,
-                            nsIAtom*       aAttribute);
+  MapAttributesIntoCSS(nsPresContext* aPresContext,
+                       nsIFrame*       aFrame);
 
 protected:
-#if defined(NS_DEBUG) && defined(SHOW_BOUNDING_BOX)
-  nsresult DisplayBoundingMetrics(nsDisplayListBuilder* aBuilder,
-                                  nsIFrame* aFrame, const nsPoint& aPt,
-                                  const nsBoundingMetrics& aMetrics,
-                                  const nsDisplayListSet& aLists);
-#endif
-
-  /**
-   * Display a solid rectangle in the frame's text color. Used for drawing
-   * fraction separators and root/sqrt overbars.
-   */
-  nsresult DisplayBar(nsDisplayListBuilder* aBuilder,
-                      nsIFrame* aFrame, const nsRect& aRect,
-                      const nsDisplayListSet& aLists);
-
   // information about the presentation policy of the frame
   nsPresentationData mPresentationData;
 

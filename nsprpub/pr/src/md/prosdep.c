@@ -63,8 +63,7 @@ static void GetPageSize(void)
 
     /* Get page size */
 #ifdef XP_UNIX
-#if defined SUNOS4 || defined BSDI || defined AIX \
-        || defined LINUX || defined __GNU__ || defined __GLIBC__ \
+#if defined SUNOS4 || defined LINUX || defined BSDI || defined AIX \
         || defined FREEBSD || defined NETBSD || defined OPENBSD \
         || defined DARWIN || defined NEXTSTEP
     _pr_pageSize = getpagesize();

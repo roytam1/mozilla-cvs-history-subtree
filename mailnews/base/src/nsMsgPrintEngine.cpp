@@ -50,7 +50,7 @@
 #include "nsReadableUtils.h"
 #include "nsIDocShell.h"
 #include "nsIDOMDocument.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsIDocumentViewer.h"
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
@@ -69,8 +69,12 @@
 #include "nsIXULWindow.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
-#include "nsThreadUtils.h"
-#include "nsAutoPtr.h"
+
+// For PLEvents
+#include "plevent.h"
+#include "nsIEventQueue.h"
+#include "nsIEventQueueService.h"
+#include "nsIServiceManager.h"
 
 // Interfaces Needed
 #include "nsIBaseWindow.h"
@@ -264,11 +268,11 @@ nsMsgPrintEngine::SetWindow(nsIDOMWindowInternal *aWin)
 
   mWindow = aWin;
 
-  nsCOMPtr<nsPIDOMWindow> win( do_QueryInterface(aWin) );
-  NS_ENSURE_TRUE(win, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIScriptGlobalObject> globalObj( do_QueryInterface(aWin) );
+  NS_ENSURE_TRUE(globalObj, NS_ERROR_FAILURE);
 
   nsCOMPtr<nsIDocShellTreeItem> docShellAsItem =
-    do_QueryInterface(win->GetDocShell());
+    do_QueryInterface(globalObj->GetDocShell());
   NS_ENSURE_TRUE(docShellAsItem, NS_ERROR_FAILURE);
 
   nsCOMPtr<nsIDocShellTreeItem> rootAsItem;
@@ -305,12 +309,12 @@ nsMsgPrintEngine::ShowWindow(PRBool aShow)
 
   NS_ENSURE_TRUE(mWindow, NS_ERROR_NOT_INITIALIZED);
 
-  nsCOMPtr <nsPIDOMWindow> win = do_QueryInterface(mWindow, &rv);
+  nsCOMPtr <nsIScriptGlobalObject> globalScript = do_QueryInterface(mWindow, &rv);
 
   NS_ENSURE_SUCCESS(rv,rv);
 
   nsCOMPtr <nsIDocShellTreeItem> treeItem =
-    do_QueryInterface(win->GetDocShell(), &rv);
+    do_QueryInterface(globalScript->GetDocShell(), &rv);
   NS_ENSURE_SUCCESS(rv,rv);
 
   nsCOMPtr <nsIDocShellTreeOwner> treeOwner;
@@ -713,7 +717,7 @@ nsMsgPrintEngine::PrintMsgWindow()
       else
       {
         // Tell the user we started printing...
-        PRUnichar *msg = GetString(NS_ConvertASCIItoUTF16(kMsgKeys[mMsgInx]).get());
+        PRUnichar *msg = GetString(NS_ConvertASCIItoUCS2(kMsgKeys[mMsgInx]).get());
         SetStatusMessage( msg );
         CRTFREEIF(msg)
       }
@@ -722,61 +726,110 @@ nsMsgPrintEngine::PrintMsgWindow()
 }
 
 //---------------------------------------------------------------
-//-- Event Notification
+//-- PLEvent Notification
 //---------------------------------------------------------------
-
-//---------------------------------------------------------------
-class nsPrintMsgWindowEvent : public nsRunnable
-{
-public:
-  nsPrintMsgWindowEvent(nsMsgPrintEngine *mpe)
-    : mMsgPrintEngine(mpe)
-  {}
-
-  NS_IMETHOD Run()
-  {
-    if (mMsgPrintEngine) 
-      mMsgPrintEngine->PrintMsgWindow();
-    return NS_OK;
-  }
-
-private:
-  nsRefPtr<nsMsgPrintEngine> mMsgPrintEngine;
-};
-
 //-----------------------------------------------------------
-class nsStartNextPrintOpEvent : public nsRunnable
+PRBool
+FireEvent(nsMsgPrintEngine* aMPE, PLHandleEventProc handler, PLDestroyEventProc destructor)
 {
-public:
-  nsStartNextPrintOpEvent(nsMsgPrintEngine *mpe)
-    : mMsgPrintEngine(mpe)
-  {}
+  static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
-  NS_IMETHOD Run()
+  nsCOMPtr<nsIEventQueueService> event_service = do_GetService(kEventQueueServiceCID);
+
+  if (!event_service) 
   {
-    if (mMsgPrintEngine) 
-      mMsgPrintEngine->StartNextPrintOperation();
-    return NS_OK;
+    NS_WARNING("Failed to get event queue service");
+    return PR_FALSE;
   }
 
-private:
-  nsRefPtr<nsMsgPrintEngine> mMsgPrintEngine;
-};
+  nsCOMPtr<nsIEventQueue> event_queue;
+
+  event_service->GetThreadEventQueue(NS_CURRENT_THREAD,
+                                     getter_AddRefs(event_queue));
+
+  if (!event_queue) 
+  {
+    NS_WARNING("Failed to get event queue from service");
+    return PR_FALSE;
+  }
+
+  PLEvent *event = new PLEvent;
+
+  if (!event) 
+  {
+    NS_WARNING("Out of memory?");
+    return PR_FALSE;
+  }
+
+  PL_InitEvent(event, aMPE, handler, destructor);
+
+  // The event owns the msgPrintEngine pointer now.
+  NS_ADDREF(aMPE);
+
+  if (NS_FAILED(event_queue->PostEvent(event)))
+  {
+    NS_WARNING("Failed to post event");
+    PL_DestroyEvent(event);
+    return PR_FALSE;
+  }
+
+  return PR_TRUE;
+}
+
+void PR_CALLBACK HandlePLEventPrintMsgWindow(PLEvent* aEvent)
+{
+  nsMsgPrintEngine *msgPrintEngine = (nsMsgPrintEngine*)PL_GetEventOwner(aEvent);
+
+  NS_ASSERTION(msgPrintEngine, "The event owner is null.");
+  if (msgPrintEngine) 
+  {
+    msgPrintEngine->PrintMsgWindow();
+  }
+}
+
+//------------------------------------------------------------------------
+void PR_CALLBACK DestroyPLEventPrintMsgWindow(PLEvent* aEvent)
+{
+  nsMsgPrintEngine *msgPrintEngine = (nsMsgPrintEngine*)PL_GetEventOwner(aEvent);
+  NS_IF_RELEASE(msgPrintEngine);
+
+  delete aEvent;
+}
 
 //-----------------------------------------------------------
 PRBool
 nsMsgPrintEngine::FirePrintEvent()
 {
-  nsCOMPtr<nsIRunnable> event = new nsPrintMsgWindowEvent(this);
-  return NS_SUCCEEDED(NS_DispatchToCurrentThread(event));
+  return FireEvent(this, (PLHandleEventProc)::HandlePLEventPrintMsgWindow, 
+                         (PLDestroyEventProc)::DestroyPLEventPrintMsgWindow);
+}
+
+void PR_CALLBACK HandlePLEventStartNext(PLEvent* aEvent)
+{
+  nsMsgPrintEngine *msgPrintEngine = (nsMsgPrintEngine*)PL_GetEventOwner(aEvent);
+
+  NS_ASSERTION(msgPrintEngine, "The event owner is null.");
+  if (msgPrintEngine) 
+  {
+    msgPrintEngine->StartNextPrintOperation();
+  }
+}
+
+//------------------------------------------------------------------------
+void PR_CALLBACK DestroyPLEventStartNext(PLEvent* aEvent)
+{
+  nsMsgPrintEngine *msgPrintEngine = (nsMsgPrintEngine*)PL_GetEventOwner(aEvent);
+  NS_IF_RELEASE(msgPrintEngine);
+
+  delete aEvent;
 }
 
 //-----------------------------------------------------------
 PRBool
 nsMsgPrintEngine::FireStartNextEvent()
 {
-  nsCOMPtr<nsIRunnable> event = new nsStartNextPrintOpEvent(this);
-  return NS_DispatchToCurrentThread(event);
+  return FireEvent(this, (PLHandleEventProc)::HandlePLEventStartNext, 
+                         (PLDestroyEventProc)::DestroyPLEventStartNext);
 }
 
 /* void setStartupPPObserver (in nsIObserver startupPPObs); */

@@ -46,6 +46,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpctools
 LIBRARY_NAME	= xpctools
+MOZILLA_INTERNAL_API = 1
 
 REQUIRES	= xpcom \
 		  xpconnect \
@@ -54,7 +55,7 @@ REQUIRES	= xpcom \
 		  $(NULL)
 MODULE_NAME	= xpctools
 IS_COMPONENT	= 1
-FORCE_SHARED_LIB = 1
+EXPORT_LIBRARY	= 1
 
 CPPSRCS		= \
 		nsXPCToolsCompiler.cpp \
@@ -65,9 +66,8 @@ CPPSRCS		= \
 include $(topsrcdir)/config/config.mk
 
 EXTRA_DSO_LDOPTS += \
-		$(XPCOM_GLUE_LDOPTS) \
+		$(MOZ_COMPONENT_LIBS) \
 		$(MOZ_JS_LIBS) \
-		$(NSPR_LIBS) \
 		$(NULL)
 
 include $(topsrcdir)/config/rules.mk

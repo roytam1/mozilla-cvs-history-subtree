@@ -64,7 +64,7 @@ class nsIURI;
 
 class nsIFormSubmitObserver : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IFORMSUBMITOBSERVER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IFORMSUBMITOBSERVER_IID)
 
   /*
    *   Subject calls the observer when the form is submitted
@@ -78,9 +78,6 @@ public:
   NS_IMETHOD Notify(nsIContent* formNode, nsIDOMWindowInternal* window, nsIURI* actionURL, PRBool* cancelSubmit) = 0;
 
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIFormSubmitObserver,
-                              NS_IFORMSUBMITOBSERVER_IID)
 
 #endif /* nsIFormSubmitObserver_h__ */
 

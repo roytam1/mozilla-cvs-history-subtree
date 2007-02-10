@@ -42,8 +42,6 @@
 #include "nsIScriptContext.h"
 #include "nsAString.h"
 
-class nsScriptObjectHolder;
-
 #define NS_ISCRIPTOBJECTOWNER_IID \
 { /* 8f6bca7e-ce42-11d1-b724-00600891d8c9 */ \
 0x8f6bca7e, 0xce42, 0x11d1, \
@@ -61,8 +59,7 @@ class nsScriptObjectHolder;
  */
 class nsIScriptObjectOwner : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISCRIPTOBJECTOWNER_IID)
-
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTOBJECTOWNER_IID)
   /**
    * Return the script object associated with this object.
    * Create a script object if not present.
@@ -88,9 +85,6 @@ public:
   NS_IMETHOD SetScriptObject(void* aScriptObject) = 0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIScriptObjectOwner,
-                              NS_ISCRIPTOBJECTOWNER_IID)
-
 class nsIAtom;
 
 #define NS_ISCRIPTEVENTHANDLEROWNER_IID \
@@ -107,7 +101,7 @@ class nsIAtom;
 class nsIScriptEventHandlerOwner : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISCRIPTEVENTHANDLEROWNER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTEVENTHANDLEROWNER_IID)
 
   /**
    * Compile the specified event handler, and bind it to aTarget using
@@ -119,28 +113,25 @@ public:
    * @param aBody the handler script body
    * @param aURL the URL or filename for error messages
    * @param aLineNo the starting line number of the script for error messages
-   * @param aHandler the holder for the compiled, bound handler object
+   * @param aHandler the compiled, bound handler object
    */
   virtual nsresult CompileEventHandler(nsIScriptContext* aContext,
-                                       nsISupports* aTarget,
+                                       void* aTarget,
                                        nsIAtom *aName,
                                        const nsAString& aBody,
                                        const char* aURL,
                                        PRUint32 aLineNo,
-                                       nsScriptObjectHolder &aHandler) = 0;
+                                       void** aHandler) = 0;
 
   /**
    * Retrieve an already-compiled event handler that can be bound to a
    * target object using a script context.
    *
    * @param aName the name of the event handler to retrieve
-   * @param aHandler the holder for the compiled event handler.
+   * @param aHandler the compiled event handler
    */
   virtual nsresult GetCompiledEventHandler(nsIAtom *aName,
-                                           nsScriptObjectHolder &aHandler) = 0;
+                                           void** aHandler) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIScriptEventHandlerOwner,
-                              NS_ISCRIPTEVENTHANDLEROWNER_IID)
 
 #endif // nsIScriptObjectOwner_h__

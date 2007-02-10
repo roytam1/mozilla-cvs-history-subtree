@@ -72,7 +72,7 @@
 #include "nsIMsgComposeService.h"
 #include "nsMsgI18N.h"
 #include "nsNativeCharsetUtils.h"
-#include "nsDirectoryServiceDefs.h"
+#include "nsSpecialSystemDirectory.h"
 #include "nsIMsgMessageService.h"
 #include "nsMsgUtils.h"
 #include "nsXPIDLString.h"
@@ -121,22 +121,12 @@ nsFileSpec *
 nsMsgCreateTempFileSpec(const char *tFileName)
 {
   //Calling NS_MsgHashIfNecessary so that when Replies are forwarded - the ':' in the subject line doesn't cause problems
-  nsCOMPtr<nsIFile> tmpFile;
-  nsresult rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(tmpFile));
-  if (NS_FAILED(rv))
-    return nsnull;
-
-  nsCOMPtr<nsIFileSpec> tmpFileSpec;
-  rv = NS_NewFileSpecFromIFile(tmpFile, getter_AddRefs(tmpFileSpec));
-
-  if (NS_FAILED(rv))
-    return nsnull;
-  
-  nsFileSpec *tmpSpec = new nsFileSpec;
-  tmpFileSpec->GetFileSpec(tmpSpec);
+  nsFileSpec *tmpSpec = new nsFileSpec(nsSpecialSystemDirectory(nsSpecialSystemDirectory::OS_TemporaryDirectory));
+  NS_ASSERTION(tmpSpec, "out of memory");
   if (!tmpSpec)
     return nsnull;
 
+  nsresult rv = NS_OK;
   nsCAutoString tempName;
   if ((!tFileName) || (!*tFileName)) {
     tempName = SAFE_TMP_FILENAME;
@@ -428,12 +418,8 @@ CreateCompositionFields(const char        *from,
   
   if (priority) {
     val = MIME_DecodeMimeHeader(priority, charset, PR_FALSE, PR_TRUE);
-    nsMsgPriorityValue priorityValue;
-    NS_MsgGetPriorityFromString(val ? val : priority, priorityValue);
+    cFields->SetPriority(val ? val : priority);
     PR_FREEIF(val);
-    nsCAutoString priorityName;
-    NS_MsgGetUntranslatedPriorityName(priorityValue, priorityName);
-    cFields->SetPriority(priorityName.get());
   }
   
   if (newspost_url) {
@@ -696,9 +682,9 @@ mime_fix_up_html_address( char **addr)
 static void 
 mime_intl_insert_message_header_1(char        **body, 
                                   char        **hdr_value,
-                                  const char  *hdr_str, 
+                                  char        *hdr_str, 
                                   const char  *html_hdr_str,
-                                  const char  *mailcharset,
+                                  char        *mailcharset,
                                   PRBool      htmlEdit)
 {
   if (!body || !hdr_value || !hdr_str)
@@ -1566,7 +1552,7 @@ mime_parse_stream_complete (nsMIMESession *stream)
           mdd->mailcharset);
       }
       // setting the charset while we are creating the composition fields
-      //fields->SetCharacterSet(NS_ConvertASCIItoUTF16(mdd->mailcharset));
+      //fields->SetCharacterSet(NS_ConvertASCIItoUCS2(mdd->mailcharset));
 
       // convert from UTF-8 to UTF-16
       if (body)
@@ -1582,17 +1568,23 @@ mime_parse_stream_complete (nsMIMESession *stream)
       //
       if (mdd->format_out == nsMimeOutput::nsMimeMessageEditorTemplate)
       {
+#ifdef NS_DEBUG
+        printf("RICHIE: Time to create the EDITOR with this template - HAS a body!!!!\n");
+#endif
         fields->SetDraftId(mdd->url_name);
-        CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Template, composeFormat, mdd->identity, mdd->originalMsgURI);
+        CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Template, composeFormat, mdd->identity, nsnull);
       }
       else
       {
+#ifdef NS_DEBUG
+        printf("Time to create the composition window WITH a body!!!!\n");
+#endif
         if (mdd->forwardInline)
           CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::ForwardInline, composeFormat, mdd->identity, mdd->originalMsgURI);
-        else
+          else
         {
           fields->SetDraftId(mdd->url_name);
-          CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Draft, composeFormat, mdd->identity, mdd->originalMsgURI);
+          CreateTheComposeWindow(fields, newAttachData, nsIMsgCompType::Draft, composeFormat, mdd->identity, nsnull);
         }
       }
     }

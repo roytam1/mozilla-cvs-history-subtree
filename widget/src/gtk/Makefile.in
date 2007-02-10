@@ -52,8 +52,6 @@ LIBXUL_LIBRARY = 1
 
 PACKAGE_FILE = widget_gtk.pkg
 
-NATIVE_THEME_SUPPORT = 1
-
 REQUIRES	= xpcom \
 		  string \
 		  appshell \
@@ -65,11 +63,7 @@ REQUIRES	= xpcom \
 		  view \
 		  util \
 		  unicharutil \
-		  content \
-		  layout \
-		  locale \
 		  $(NULL)
-
 ifdef NS_TRACE_MALLOC
 REQUIRES	+= tracemalloc
 endif
@@ -80,20 +74,23 @@ CSRCS		= \
 CPPSRCS		= \
 		nsAppShell.cpp \
 		nsBidiKeyboard.cpp \
+		nsButton.cpp \
+		nsCheckButton.cpp \
 		nsClipboard.cpp \
 		nsDragService.cpp \
 		nsGtkEventHandler.cpp \
 		nsGtkUtils.cpp \
 		nsKeyboardUtils.cpp \
+		nsLabel.cpp \
 		nsLookAndFeel.cpp \
 		nsSound.cpp \
+		nsTextHelper.cpp \
+		nsTextWidget.cpp \
 		nsToolkit.cpp \
 		nsWidget.cpp \
 		nsWidgetFactory.cpp \
 		nsWindow.cpp \
 		nsGtkIMEHelper.cpp \
-		nsScreenGtk.cpp \
-		nsScreenManagerGtk.cpp \
 		$(NULL)
 
 SHARED_LIBRARY_LIBS = $(DIST)/lib/libxpwidgets_s.a
@@ -112,12 +109,6 @@ EXTRA_DSO_LDOPTS = \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS +=  -L$(DIST)/lib -lgtksuperwin $(MOZ_GTK_LDFLAGS)
-
-ifdef NATIVE_THEME_SUPPORT
-CSRCS		+= gtkdrawing.c
-CPPSRCS		+= nsNativeThemeGTK.cpp
-DEFINES		+= -DNATIVE_THEME_SUPPORT
-endif
 
 include $(topsrcdir)/config/rules.mk
 

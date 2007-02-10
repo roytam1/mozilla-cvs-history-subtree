@@ -43,7 +43,6 @@
 #include "jsapi.h"
 #include "nsIJSContextStack.h"
 
-class nsIDOMWindow;
 class nsIDOMNode;
 class nsIDOMElement;
 class nsIDocShell;
@@ -57,11 +56,7 @@ class GeckoUtils
 
     static void GatherTextUnder(nsIDOMNode* aNode, nsString& aResult);
     static void GetEnclosingLinkElementAndHref(nsIDOMNode* aNode, nsIDOMElement** aLinkContent, nsString& aHref);
-
-    // Returns whether or not the given protocol ('http', 'file', 'mailto', etc.)
-    // is handled internally. Returns PR_TRUE in error cases.
-    static PRBool isProtocolInternal(const char* aProtocol);
-
+  
     /* Ouputs the docshell |aDocShell|'s URI as a nsACString. */
     static void GetURIForDocShell(nsIDocShell* aDocShell, nsACString& aURI);
   
@@ -73,9 +68,6 @@ class GeckoUtils
        found somewhere in a document's docshell tree.  NOTE: Addrefs the found docshell! 
     */
     static void FindDocShellForURI(nsIURI *aURI, nsIDocShell *aRoot, nsIDocShell **outMatch);
-    
-    /* Finds the preferred size (ie the minimum size where scrollbars are not needed) of the content window. */
-    static void GetIntrisicSize(nsIDOMWindow* aWindow, PRInt32* outWidth, PRInt32* outHeight);
 };
 
 /* Stack-based utility that will push a null JSContext onto the JS stack during the

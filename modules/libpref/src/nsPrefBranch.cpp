@@ -68,9 +68,9 @@ struct EnumerateData {
 };
 
 struct PrefCallbackData {
-  nsPrefBranch     *pBranch;
-  nsIObserver      *pObserver;
-  nsIWeakReference *pWeakRef;
+  nsIPrefBranch *pBranch;
+  nsISupports   *pObserver;
+  PRBool        bIsWeakRef;
 };
 
 
@@ -262,7 +262,7 @@ NS_IMETHODIMP nsPrefBranch::GetComplexValue(const char *aPrefName, const nsIID &
       } else {
         rv = GetCharPref(aPrefName, getter_Copies(utf8String));
         if (NS_SUCCEEDED(rv)) {
-          rv = theString->SetData(NS_ConvertUTF8toUTF16(utf8String).get());
+          rv = theString->SetData(NS_ConvertUTF8toUCS2(utf8String).get());
         }
       }
       if (NS_SUCCEEDED(rv)) {
@@ -340,7 +340,7 @@ NS_IMETHODIMP nsPrefBranch::GetComplexValue(const char *aPrefName, const nsIID &
     nsCOMPtr<nsISupportsString> theString(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv));
 
     if (NS_SUCCEEDED(rv)) {
-      rv = theString->SetData(NS_ConvertUTF8toUTF16(utf8String));
+      rv = theString->SetData(NS_ConvertUTF8toUCS2(utf8String));
       if (NS_SUCCEEDED(rv)) {
         nsISupportsString *temp = theString;
 
@@ -385,8 +385,6 @@ NS_IMETHODIMP nsPrefBranch::SetComplexValue(const char *aPrefName, const nsIID &
 
   if (aType.Equals(NS_GET_IID(nsILocalFile))) {
     nsCOMPtr<nsILocalFile> file = do_QueryInterface(aValue);
-    if (!file)
-      return NS_NOINTERFACE;
     nsCAutoString descriptorString;
 
     rv = file->GetPersistentDescriptor(descriptorString);
@@ -404,7 +402,7 @@ NS_IMETHODIMP nsPrefBranch::SetComplexValue(const char *aPrefName, const nsIID &
     nsCOMPtr<nsILocalFile> file;
     relFilePref->GetFile(getter_AddRefs(file));
     if (!file)
-      return NS_NOINTERFACE;
+      return NS_ERROR_FAILURE;
     nsCAutoString relativeToKey;
     (void) relFilePref->GetRelativeToKey(relativeToKey);
 
@@ -437,7 +435,7 @@ NS_IMETHODIMP nsPrefBranch::SetComplexValue(const char *aPrefName, const nsIID &
 
       rv = theString->GetData(wideString);
       if (NS_SUCCEEDED(rv)) {
-        rv = SetCharPref(aPrefName, NS_ConvertUTF16toUTF8(wideString).get());
+        rv = SetCharPref(aPrefName, NS_ConvertUCS2toUTF8(wideString).get());
       }
     }
     return rv;
@@ -451,7 +449,7 @@ NS_IMETHODIMP nsPrefBranch::SetComplexValue(const char *aPrefName, const nsIID &
 
       rv = theString->GetData(getter_Copies(wideString));
       if (NS_SUCCEEDED(rv)) {
-        rv = SetCharPref(aPrefName, NS_ConvertUTF16toUTF8(wideString).get());
+        rv = SetCharPref(aPrefName, NS_ConvertUCS2toUTF8(wideString).get());
       }
     }
     return rv;
@@ -461,8 +459,6 @@ NS_IMETHODIMP nsPrefBranch::SetComplexValue(const char *aPrefName, const nsIID &
   // This is deprecated and you should not be using it
   if (aType.Equals(NS_GET_IID(nsIFileSpec))) {
     nsCOMPtr<nsIFileSpec> file = do_QueryInterface(aValue);
-    if (!file)
-      return NS_NOINTERFACE;
     nsXPIDLCString descriptorString;
 
     rv = file->GetPersistentDescriptorString(getter_Copies(descriptorString));
@@ -638,10 +634,11 @@ NS_IMETHODIMP nsPrefBranch::AddObserver(const char *aDomain, nsIObserver *aObser
   if (nsnull == pCallback)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  pCallback->pBranch = this;
-  pCallback->pObserver = aObserver;
+  pCallback->pBranch = NS_STATIC_CAST(nsIPrefBranch *, this);
+  pCallback->bIsWeakRef = aHoldWeak;
 
   // hold a weak reference to the observer if so requested
+  nsCOMPtr<nsISupports> observerRef;
   if (aHoldWeak) {
     nsCOMPtr<nsISupportsWeakReference> weakRefFactory = do_QueryInterface(aObserver);
     if (!weakRefFactory) {
@@ -650,11 +647,12 @@ NS_IMETHODIMP nsPrefBranch::AddObserver(const char *aDomain, nsIObserver *aObser
       return NS_ERROR_INVALID_ARG;
     }
     nsCOMPtr<nsIWeakReference> tmp = do_GetWeakReference(weakRefFactory);
-    NS_ADDREF(pCallback->pWeakRef = tmp);
+    observerRef = tmp;
   } else {
-    pCallback->pWeakRef = nsnull;
-    NS_ADDREF(pCallback->pObserver);
+    observerRef = aObserver;
   }
+  pCallback->pObserver = observerRef;
+  NS_ADDREF(pCallback->pObserver);
 
   mObservers->AppendElement(pCallback);
   mObserverDomains.AppendCString(nsCString(aDomain));
@@ -688,7 +686,18 @@ NS_IMETHODIMP nsPrefBranch::RemoveObserver(const char *aDomain, nsIObserver *aOb
   for (i = 0; i < count; i++) {
     pCallback = (PrefCallbackData *)mObservers->ElementAt(i);
     if (pCallback) {
-      if (pCallback->pObserver == aObserver) {
+     nsCOMPtr<nsISupports> observerRef;
+     if (pCallback->bIsWeakRef) {
+       nsCOMPtr<nsISupportsWeakReference> weakRefFactory = do_QueryInterface(aObserver);
+       if (weakRefFactory) {
+         nsCOMPtr<nsIWeakReference> tmp = do_GetWeakReference(aObserver);
+         observerRef = tmp;
+       }
+     }
+     if (!observerRef)
+       observerRef = aObserver;
+
+      if (pCallback->pObserver == observerRef) {
         mObserverDomains.CStringAt(i, domain);
         if (domain.Equals(aDomain)) {
           // We must pass a fully qualified preference name to remove the callback
@@ -699,11 +708,7 @@ NS_IMETHODIMP nsPrefBranch::RemoveObserver(const char *aDomain, nsIObserver *aOb
             // what we're trying to remove ourselves right now.
             mObservers->RemoveElementAt(i);
             mObserverDomains.RemoveCStringAt(i);
-            if (pCallback->pWeakRef) {
-              NS_RELEASE(pCallback->pWeakRef);
-            } else {
-              NS_RELEASE(pCallback->pObserver);
-            }
+            NS_RELEASE(pCallback->pObserver);
             nsMemory::Free(pCallback);
           }
           return rv;
@@ -727,27 +732,31 @@ NS_IMETHODIMP nsPrefBranch::Observe(nsISupports *aSubject, const char *aTopic, c
 PR_STATIC_CALLBACK(nsresult) NotifyObserver(const char *newpref, void *data)
 {
   PrefCallbackData *pData = (PrefCallbackData *)data;
+  nsPrefBranch *prefBranch = NS_STATIC_CAST(nsPrefBranch *, pData->pBranch);
 
   // remove any root this string may contain so as to not confuse the observer
   // by passing them something other than what they passed us as a topic
-  PRUint32 len = pData->pBranch->GetRootLength();
+  PRUint32 len = prefBranch->GetRootLength();
   nsCAutoString suffix(newpref + len);  
 
   nsCOMPtr<nsIObserver> observer;
-  if (pData->pWeakRef) {
-    observer = do_QueryReferent(pData->pWeakRef);
+  if (pData->bIsWeakRef) {
+    nsIWeakReference *weakRef = NS_STATIC_CAST(nsIWeakReference *, pData->pObserver);
+    observer = do_QueryReferent(weakRef);
     if (!observer) {
       // this weak referenced observer went away, remove them from the list
-      pData->pBranch->RemoveObserver(newpref, pData->pObserver);
+      nsCOMPtr<nsIPrefBranch2> pbi = do_QueryInterface(pData->pBranch);
+      if (pbi) {
+        observer = NS_STATIC_CAST(nsIObserver *, pData->pObserver);
+        pbi->RemoveObserver(newpref, observer);
+      }
       return NS_OK;
     }
-  } else {
-    observer = pData->pObserver;
-  }
+  } else
+    observer = NS_STATIC_CAST(nsIObserver *, pData->pObserver);
 
-  observer->Observe(NS_STATIC_CAST(nsIPrefBranch *, pData->pBranch),
-                    NS_PREFBRANCH_PREFCHANGE_TOPIC_ID,
-                    NS_ConvertASCIItoUTF16(suffix).get());
+  observer->Observe(pData->pBranch, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID,
+                    NS_ConvertASCIItoUCS2(suffix).get());
   return NS_OK;
 }
 
@@ -775,11 +784,7 @@ void nsPrefBranch::freeObserverList(void)
           // what we're trying to remove right now.
           mObservers->ReplaceElementAt(nsnull, i);
           PREF_UnregisterCallback(pref, NotifyObserver, pCallback);
-          if (pCallback->pWeakRef) {
-            NS_RELEASE(pCallback->pWeakRef);
-          } else {
-            NS_RELEASE(pCallback->pObserver);
-          }
+          NS_RELEASE(pCallback->pObserver);
           nsMemory::Free(pCallback);
         }
       }

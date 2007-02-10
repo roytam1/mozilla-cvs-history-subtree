@@ -261,7 +261,8 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
         {
             case JSGC_BEGIN:
             {
-                if(self->GetMainThreadOnlyGC() && !NS_IsMainThread())
+                if(self->GetMainThreadOnlyGC() &&
+                   PR_GetCurrentThread() != nsXPConnect::GetMainThread())
                 {
                     return JS_FALSE;
                 }
@@ -294,10 +295,6 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                                      XPCPerThreadData::IterateThreads(&iterp)))
                         {
                             // Mark those AutoMarkingPtr lists!
-                            // XXX This should be in a JSGC_MARK_BEGIN
-                            // callback, in case other callbacks use
-                            // JSGC_MARK_END (or a close phase before it)
-                            // to determine what is about to be finalized.
                             thread->MarkAutoRootsBeforeJSFinalize(cx);
                         }
                     }
@@ -945,10 +942,7 @@ XPCJSRuntime::SyncXPCContextList(JSContext* cx /* = nsnull */)
 
         // if it is our first context then we need to generate our string ids
         if(!mStrIDs[0])
-        {
-            JSAutoRequest ar(cur);
             GenerateStringIDs(cur);
-        }
 
         if(cx && cx == cur)
             found = xpcc;

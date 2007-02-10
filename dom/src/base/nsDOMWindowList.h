@@ -53,7 +53,11 @@ public:
   virtual ~nsDOMWindowList();
 
   NS_DECL_ISUPPORTS
-  NS_DECL_NSIDOMWINDOWCOLLECTION
+
+  //nsIDOMWindowCollection interface
+  NS_IMETHOD GetLength(PRUint32* aLength);
+  NS_IMETHOD Item(PRUint32 aIndex, nsIDOMWindow** aReturn);
+  NS_IMETHOD NamedItem(const nsAString& aName, nsIDOMWindow** aReturn);
 
   //local methods
   NS_IMETHOD SetDocShell(nsIDocShell* aDocShell);

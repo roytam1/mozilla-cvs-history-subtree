@@ -54,6 +54,8 @@ PACKAGE_FILE = gfxbeos.pkg
 
 CPPSRCS		= \
 		nsDeviceContextBeOS.cpp \
+		nsDeviceContextSpecFactoryB.cpp \
+		nsDeviceContextSpecB.cpp \
 		nsDrawingSurfaceBeOS.cpp \
 		nsFontMetricsBeOS.cpp \
 		nsGfxFactoryBeOS.cpp \
@@ -61,6 +63,9 @@ CPPSRCS		= \
 		nsRenderingContextBeOS.cpp \
 		nsImageBeOS.cpp \
 		nsRegionBeOS.cpp \
+		nsScreenBeOS.cpp \
+		nsScreenManagerBeOS.cpp \
+		nsPrintOptionsBeOS.cpp \
 		$(NULL)
 
 REQUIRES	= xpcom \

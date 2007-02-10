@@ -105,8 +105,16 @@ nsDeviceContextQt::~nsDeviceContextQt()
 NS_IMETHODIMP nsDeviceContextQt::Init(nsNativeWidget aNativeWidget)
 {
   PRBool  bCleanUp = PR_FALSE;
+  QWidget *pWidget  = nsnull;
 
   mWidget = (QWidget*)aNativeWidget;
+
+  if (mWidget != nsnull)
+    pWidget = mWidget;
+  else {
+    pWidget = new QWidget();
+    bCleanUp = PR_TRUE;
+  }
 
   nsresult ignore;
   nsCOMPtr<nsIScreenManager> sm(do_GetService("@mozilla.org/gfx/screenmanager;1",
@@ -157,8 +165,13 @@ NS_IMETHODIMP nsDeviceContextQt::Init(nsNativeWidget aNativeWidget)
   }
 #endif
 
+  QStyle &style = pWidget->style();
+  mScrollbarWidth = mScrollbarHeight = style.pixelMetric(QStyle::PM_ScrollBarExtent);
+
   DeviceContextImpl::CommonInit();
 
+  if (bCleanUp)
+    delete pWidget;
   return NS_OK;
 }
 
@@ -217,6 +230,17 @@ nsDeviceContextQt::SupportsNativeWidgets(PRBool &aSupportsWidgets)
   // read the comments in the mac code for this
   // ##############
   aSupportsWidgets = PR_TRUE;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsDeviceContextQt::GetScrollBarDimensions(float &aWidth,
+                                                        float &aHeight) const
+{
+  float scale;
+  GetCanonicalPixelScale(scale);
+  aWidth = mScrollbarWidth * mPixelsToTwips * scale;
+  aHeight = mScrollbarHeight * mPixelsToTwips * scale;
 
   return NS_OK;
 }
@@ -447,7 +471,7 @@ nsDeviceContextQt::Observe(nsISupports* aSubject, const char* aTopic,
   nsCOMPtr<nsIPrefBranch> prefBranch(do_QueryInterface(aSubject));
   NS_ASSERTION(prefBranch,
                "All pref change observer subjects implement nsIPrefBranch");
-  nsCAutoString prefName(NS_LossyConvertUTF16toASCII(aData).get());
+  nsCAutoString prefName(NS_LossyConvertUCS2toASCII(aData).get());
 
   if (prefName.Equals(NS_LITERAL_CSTRING("layout.css.dpi"))) {
     PRInt32 dpi;

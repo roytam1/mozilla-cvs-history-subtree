@@ -725,31 +725,6 @@ var BookmarksMenuDNDObserver = {
 var BookmarksToolbar = 
 {
   /////////////////////////////////////////////////////////////////////////////
-  // make bookmarks toolbar act like menus
-  openMenuButton: null,
-  autoOpenMenu: function (aTarget)
-  {
-    if (this.openMenuButton &&
-        this.openMenuButton != aTarget &&
-        aTarget.localName == "toolbarbutton" &&
-        (aTarget.type == "menu" ||
-         aTarget.type == "menu-button")) {
-      this.openMenuButton.open = false;
-      aTarget.open = true;
-    }
-  },
-  onMenuOpen: function (aTarget)
-  {
-    if (aTarget.parentNode.localName == "toolbarbutton")
-      this.openMenuButton = aTarget.parentNode;
-  },
-  onMenuClose: function (aTarget)
-  {
-    if (aTarget.parentNode.localName == "toolbarbutton")
-      this.openMenuButton = null;
-  },
-
-  /////////////////////////////////////////////////////////////////////////////
   // returns the node of the last visible bookmark on the toolbar -->
   getLastVisibleBookmark: function ()
   {
@@ -780,8 +755,9 @@ var BookmarksToolbar =
   {
     if (!event) // timer callback case
       BookmarksToolbarRDFObserver._overflowTimerInEffect = false;
-    else if (event.target != window)
-      return; // only interested in chrome resizes
+    // XXXcst - work around bug 295340 (broken event targets) on 1.8 branch
+    //else if (event.target != document)
+    //  return; // only interested in chrome resizes
 
     var buttons = document.getElementById("bookmarks-ptf");
     if (!buttons)

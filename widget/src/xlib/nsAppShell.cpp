@@ -411,7 +411,7 @@ NS_IMETHODIMP nsAppShell::ListenToEventQueue(nsIEventQueue *aQueue,
                                 HandleQueueXtProc,
                                 (XtPointer)mEventQueue);
 
-/* This hack would not be necessary if we would have a hashtable function
+/* This hack would not be neccesary if we would have a hashtable function
  * which returns success/failure in a separate var ...
  */
 #define NEVER_BE_ZERO_MAGIC (54321) 
@@ -595,8 +595,8 @@ nsAppShell::HandleMotionNotifyEvent(XEvent *event, nsWidget *aWidget)
   nsMouseEvent mevent(PR_TRUE, NS_MOUSE_MOVE, aWidget, nsMouseEvent::eReal);
   XEvent aEvent;
 
-  mevent.refPoint.x = event->xmotion.x;
-  mevent.refPoint.y = event->xmotion.y;
+  mevent.point.x = event->xmotion.x;
+  mevent.point.y = event->xmotion.y;
 
   mevent.isShift = mShiftDown;
   mevent.isControl = mCtrlDown;
@@ -610,8 +610,8 @@ nsAppShell::HandleMotionNotifyEvent(XEvent *event, nsWidget *aWidget)
                           win,
                           ButtonMotionMask,
                           &aEvent)) {
-    mevent.refPoint.x = aEvent.xmotion.x;
-    mevent.refPoint.y = aEvent.xmotion.y;
+    mevent.point.x = aEvent.xmotion.x;
+    mevent.point.y = aEvent.xmotion.y;
   }
   NS_ADDREF(aWidget);
   aWidget->DispatchMouseEvent(mevent);
@@ -622,7 +622,6 @@ void
 nsAppShell::HandleButtonEvent(XEvent *event, nsWidget *aWidget)
 {
   PRUint32 eventType = 0;
-  PRInt16 button = nsMouseEvent::eLeftButton;
   PRBool currentlyDragging = mDragging;
   nsMouseScrollEvent scrollEvent(PR_TRUE, NS_MOUSE_SCROLL, aWidget);
 
@@ -632,28 +631,26 @@ nsAppShell::HandleButtonEvent(XEvent *event, nsWidget *aWidget)
                                        (event->type == ButtonPress ? "ButtonPress" : "ButtonRelease")));
   switch(event->type) {
   case ButtonPress:
-    eventType = NS_MOUSE_BUTTON_DOWN;
     switch(event->xbutton.button) {
     case 1:
-      button = nsMouseEvent::eLeftButton;
+      eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
       mDragging = PR_TRUE;
       break;
     case 2:
-      button = nsMouseEvent::eMiddleButton;
+      eventType = NS_MOUSE_MIDDLE_BUTTON_DOWN;
       break;
     case 3:
       /* look back into this in case anything actually needs a
        * NS_MOUSE_RIGHT_BUTTON_DOWN */
       eventType = NS_CONTEXTMENU;
-      button = nsMouseEvent::eRightButton;
       break;
     case 4:
     case 5:
       scrollEvent.delta = (event->xbutton.button == 4) ? -3 : 3;
       scrollEvent.scrollFlags = nsMouseScrollEvent::kIsVertical;
 
-      scrollEvent.refPoint.x = event->xbutton.x;
-      scrollEvent.refPoint.y = event->xbutton.y;
+      scrollEvent.point.x = event->xbutton.x;
+      scrollEvent.point.y = event->xbutton.y;
 
       scrollEvent.isShift = mShiftDown;
       scrollEvent.isControl = mCtrlDown;
@@ -667,17 +664,16 @@ nsAppShell::HandleButtonEvent(XEvent *event, nsWidget *aWidget)
     }
     break;
   case ButtonRelease:
-    eventType = NS_MOUSE_BUTTON_UP;
     switch(event->xbutton.button) {
     case 1:
-      button = nsMouseEvent::eLeftButton;
+      eventType = NS_MOUSE_LEFT_BUTTON_UP;
       mDragging = PR_FALSE;
       break;
     case 2:
-      button = nsMouseEvent::eMiddleButton;
+      eventType = NS_MOUSE_MIDDLE_BUTTON_UP;
       break;
     case 3:
-      button = nsMouseEvent::eRightButton;
+      eventType = NS_MOUSE_RIGHT_BUTTON_UP;
       break;
     case 4:
     case 5:
@@ -687,13 +683,12 @@ nsAppShell::HandleButtonEvent(XEvent *event, nsWidget *aWidget)
   }
 
   nsMouseEvent mevent(PR_TRUE, eventType, aWidget, nsMouseEvent::eReal);
-  mevent.button = button;
   mevent.isShift = mShiftDown;
   mevent.isControl = mCtrlDown;
   mevent.isAlt = mAltDown;
   mevent.isMeta = mMetaDown;
-  mevent.refPoint.x = event->xbutton.x;
-  mevent.refPoint.y = event->xbutton.y;
+  mevent.point.x = event->xbutton.x;
+  mevent.point.y = event->xbutton.y;
   mevent.time = PR_Now();
   
   // If we are waiting longer than 1 sec for the second click, this is not a
@@ -783,8 +778,8 @@ nsAppShell::HandleConfigureNotifyEvent(XEvent *event, nsWidget *aWidget)
   nsSizeEvent sevent(PR_TRUE, NS_SIZE, aWidget);
   sevent.windowSize = new nsRect (event->xconfigure.x, event->xconfigure.y,
                                   event->xconfigure.width, event->xconfigure.height);
-  sevent.refPoint.x = event->xconfigure.x;
-  sevent.refPoint.y = event->xconfigure.y;
+  sevent.point.x = event->xconfigure.x;
+  sevent.point.y = event->xconfigure.y;
   sevent.mWinWidth = event->xconfigure.width;
   sevent.mWinHeight = event->xconfigure.height;
   // XXX fix sevent.time
@@ -874,7 +869,7 @@ nsAppShell::HandleKeyPressEvent(XEvent *event, nsWidget *aWidget)
       break;
   }
 
-  // Don't dispatch events for modifier keys pressed ALONE
+  // Dont dispatch events for modifier keys pressed ALONE
   if (nsKeyCode::KeyCodeIsModifier(event->xkey.keycode))
   {
     return;
@@ -947,7 +942,7 @@ nsAppShell::HandleKeyReleaseEvent(XEvent *event, nsWidget *aWidget)
       break;
   }
 
-  // Don't dispatch events for modifier keys pressed ALONE
+  // Dont dispatch events for modifier keys pressed ALONE
   if (nsKeyCode::KeyCodeIsModifier(event->xkey.keycode))
   {
     return;
@@ -961,8 +956,8 @@ nsAppShell::HandleKeyReleaseEvent(XEvent *event, nsWidget *aWidget)
   keyEvent.isControl = (event->xkey.state & ControlMask) ? 1 : 0;
   keyEvent.isAlt = (event->xkey.state & Mod1Mask) ? 1 : 0;
   keyEvent.isMeta = (event->xkey.state & Mod1Mask) ? 1 : 0;
-  keyEvent.refPoint.x = event->xkey.x;
-  keyEvent.refPoint.y = event->xkey.y;
+  keyEvent.point.x = event->xkey.x;
+  keyEvent.point.y = event->xkey.y;
 
   NS_ADDREF(aWidget);
 
@@ -1032,8 +1027,8 @@ nsAppShell::HandleEnterEvent(XEvent *event, nsWidget *aWidget)
                           nsMouseEvent::eReal);
 
   enterEvent.time = event->xcrossing.time;
-  enterEvent.refPoint.x = nscoord(event->xcrossing.x);
-  enterEvent.refPoint.y = nscoord(event->xcrossing.y);
+  enterEvent.point.x = nscoord(event->xcrossing.x);
+  enterEvent.point.y = nscoord(event->xcrossing.y);
   
   // make sure this is in focus. This will do until I rewrite all the 
   // focus routines. KenF
@@ -1064,8 +1059,8 @@ nsAppShell::HandleLeaveEvent(XEvent *event, nsWidget *aWidget)
                           nsMouseEvent::eReal);
 
   leaveEvent.time = event->xcrossing.time;
-  leaveEvent.refPoint.x = nscoord(event->xcrossing.x);
-  leaveEvent.refPoint.y = nscoord(event->xcrossing.y);
+  leaveEvent.point.x = nscoord(event->xcrossing.x);
+  leaveEvent.point.y = nscoord(event->xcrossing.y);
   
   NS_ADDREF(aWidget);
   aWidget->DispatchWindowEvent(leaveEvent);
@@ -1150,8 +1145,8 @@ void nsAppShell::HandleDragMotionEvent(XEvent *event, nsWidget *aWidget) {
 
     nsMouseEvent mevent(PR_TRUE, NS_DRAGDROP_OVER, aWidget,
                         nsMouseEvent::eReal);
-    mevent.refPoint.x = event->xmotion.x;
-    mevent.refPoint.y = event->xmotion.y;
+    mevent.point.x = event->xmotion.x;
+    mevent.point.y = event->xmotion.y;
 
     NS_ADDREF(aWidget);
     aWidget->DispatchMouseEvent(mevent);
@@ -1176,8 +1171,8 @@ void nsAppShell::HandleDragEnterEvent(XEvent *event, nsWidget *aWidget) {
     nsMouseEvent enterEvent(PR_TRUE, NS_DRAGDROP_ENTER, aWidget,
                             nsMouseEvent::eReal);
   
-    enterEvent.refPoint.x = event->xcrossing.x;
-    enterEvent.refPoint.y = event->xcrossing.y;
+    enterEvent.point.x = event->xcrossing.x;
+    enterEvent.point.y = event->xcrossing.y;
   
     NS_ADDREF(aWidget);
     aWidget->DispatchWindowEvent(enterEvent);
@@ -1204,8 +1199,8 @@ void nsAppShell::HandleDragLeaveEvent(XEvent *event, nsWidget *aWidget) {
     nsMouseEvent leaveEvent(PR_TRUE, NS_DRAGDROP_EXIT, aWidget,
                             nsMouseEvent::eReal);
   
-    leaveEvent.refPoint.x = event->xcrossing.x;
-    leaveEvent.refPoint.y = event->xcrossing.y;
+    leaveEvent.point.x = event->xcrossing.x;
+    leaveEvent.point.y = event->xcrossing.y;
   
     NS_ADDREF(aWidget);
     aWidget->DispatchWindowEvent(leaveEvent);
@@ -1219,7 +1214,7 @@ void nsAppShell::HandleDragDropEvent(XEvent *event, nsWidget *aWidget) {
   nsresult rv;
   nsCOMPtr<nsIDragService> dragService( do_GetService(kCDragServiceCID, &rv) );
 
-  // FIXME: Don't think the currentlyDragging check is required. KenF
+  // FIXME: Dont think the currentlyDragging check is required. KenF
   if (NS_SUCCEEDED(rv)) {
     nsCOMPtr<nsIDragSessionXlib> dragServiceXlib;
     dragServiceXlib = do_QueryInterface(dragService);
@@ -1231,8 +1226,8 @@ void nsAppShell::HandleDragDropEvent(XEvent *event, nsWidget *aWidget) {
   if (currentlyDragging) {
     nsMouseEvent mevent(PR_TRUE, NS_DRAGDROP_DROP, aWidget,
                         nsMouseEvent::eReal);
-    mevent.refPoint.x = event->xbutton.x;
-    mevent.refPoint.y = event->xbutton.y;
+    mevent.point.x = event->xbutton.x;
+    mevent.point.y = event->xbutton.y;
   
     NS_IF_ADDREF(aWidget);
     aWidget->DispatchMouseEvent(mevent);

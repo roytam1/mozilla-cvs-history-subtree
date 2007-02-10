@@ -60,19 +60,18 @@ class CToken;
 class nsIParserFilter : public nsISupports {
   public:
 
-   NS_DECLARE_STATIC_IID_ACCESSOR(NS_IPARSERFILTER_IID)
+   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IPARSERFILTER_IID)
       
    NS_IMETHOD RawBuffer(const char * buffer, PRUint32 * buffer_length) = 0;
 
    NS_IMETHOD WillAddToken(CToken & token) = 0;
 
-   NS_IMETHOD ProcessTokens( /* don't know what goes here yet */ void ) = 0;
+   NS_IMETHOD ProcessTokens( /* dont know what goes here yet */ void ) = 0;
 
    NS_IMETHOD Finish() = 0;
 
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIParserFilter, NS_IPARSERFILTER_IID)
 
 
 #endif

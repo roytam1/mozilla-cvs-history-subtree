@@ -52,6 +52,9 @@
 #include "nsEnumeratorUtils.h"
 #include "nsCRT.h"
 
+
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+
 NS_IMPL_ISUPPORTS1(nsFilePicker, nsIFilePicker)
 
 char nsFilePicker::mLastUsedDirectory[PATH_MAX+1] = { 0 };
@@ -143,11 +146,11 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
     initialDir.AppendWithConversion( mDefault );
   }
 
-	nsCAutoString extensionBuffer('*');
+	char extensionBuffer[MAX_EXTENSION_LENGTH+1] = "*";
 	if( !mFilterList.IsEmpty() ) {
 		char *text = ToNewUTF8String( mFilterList );
 		if( text ) {
-			extensionBuffer.Truncate(0);
+			extensionBuffer[0] = 0;
 
 			/* eliminate the ';' and the duplicates */
 			char buffer[MAX_EXTENSION_LENGTH+1], buf[MAX_EXTENSION_LENGTH+1], *q, *delims = "; ", *dummy;
@@ -155,8 +158,8 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
 			q = strtok_r( buffer, delims, &dummy );
 			while( q ) {
 				sprintf( buf, "%s ", q );
-				if ( !strstr(extensionBuffer.get(), buf ) )
-					extensionBuffer.Append(buf);
+				if( !strstr( extensionBuffer, buf ) )
+					strcat( extensionBuffer, buf );
 				q = strtok_r( NULL, delims, &dummy );
 				}
 
@@ -167,10 +170,10 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
 		// Someone was cool and told us what to do
 		char *convertedExt = ToNewUTF8String( mDefaultExtension );
 		if (!convertedExt) {
-			LossyCopyUTF16toASCII(mDefaultExtension, extensionBuffer);
+			mDefaultExtension.ToCString(extensionBuffer, MAX_EXTENSION_LENGTH);
 			}
 		else {
-			extensionBuffer.Assign(convertedExt);
+			PL_strncpyz(extensionBuffer, convertedExt, MAX_EXTENSION_LENGTH+1);
 			nsMemory::Free( convertedExt );
 			}
 		}
@@ -179,7 +182,7 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *aReturnVal)
 	memset( &info, 0, sizeof( info ) );
 
 	if( PtFileSelection( mParentWidget, NULL, title, initialDir.get(),
-		extensionBuffer.get(), btn1, "&Cancel", "nsd", &info, flags ) ) {
+		extensionBuffer, btn1, "&Cancel", "nsd", &info, flags ) ) {
 			if (title) nsMemory::Free( title );
 			return NS_ERROR_FAILURE;
 			}

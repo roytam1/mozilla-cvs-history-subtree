@@ -1,29 +1,29 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  * http://www.mozilla.org/MPL/
- * 
+ *
  * Software distributed under the License is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
  * License.
- * 
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
+ *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998-1999
  * the Initial Developer. All Rights Reserved.
- * 
+ *
  * Contributor(s):
- * 
+ *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -32,7 +32,7 @@
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the MPL, the GPL or the LGPL.
- * 
+ *
  * ***** END LICENSE BLOCK ***** */
 
 /*
@@ -75,6 +75,7 @@ static void LDAP_CALLBACK prldap_shared_disposehandle( LDAP *ld,
 	struct lextiof_session_private *sessionarg );
 static PRLDAPIOSessionArg *prldap_session_arg_alloc( void );
 static void prldap_session_arg_free( PRLDAPIOSessionArg **prsesspp );
+static PRLDAPIOSocketArg *prldap_socket_arg_alloc( PRLDAPIOSessionArg *sessionarg );
 static void prldap_socket_arg_free( PRLDAPIOSocketArg **prsockpp );
 static void *prldap_safe_realloc( void *ptr, PRUint32 size );
 
@@ -198,37 +199,15 @@ prldap_write( int s, const void *buf, int len,
 	struct lextiof_socket_private *socketarg )
 {
     PRIntervalTime	prit;
-    char		*ptr = (char *)buf;
-    int			rest = len;
 
     prit = prldap_timeout2it( LDAP_X_IO_TIMEOUT_NO_TIMEOUT,
 			socketarg->prsock_io_max_timeout );
 
-    while ( rest > 0 ) {
-	int rval;
-	if ( rest > PRLDAP_MAX_SEND_SIZE ) {
-	    len = PRLDAP_MAX_SEND_SIZE;
-	} else {
-	    len = rest;
-	}
-	/*
-	 * Note the 4th parameter (flags) to PR_Send() has been obsoleted and
-	 * must always be 0
-	 */
-	rval = PR_Send( PRLDAP_GET_PRFD(socketarg), ptr, len, 0, prit );
-	if ( 0 > rval ) {
-	    return rval;
-	}
-
-	if ( 0 == rval ) {
-	    break;
-	}
-
-	ptr += rval;
-	rest -= rval;
-    }
-
-    return (int)( ptr - (char *)buf );
+    /*
+     * Note the 4th parameter (flags) to PR_Send() has been obsoleted and
+     * must always be 0
+     */
+    return( PR_Send( PRLDAP_GET_PRFD(socketarg), buf, len, 0, prit ));
 }
 
 
@@ -322,13 +301,18 @@ prldap_poll( LDAP_X_PollFD fds[], int nfds, int timeout,
  */
 static int
 prldap_try_one_address( struct lextiof_socket_private *prsockp,
-    PRNetAddr *addrp, int timeout, unsigned long options )
+    PRNetAddr *addrp, int port, int timeout, unsigned long options )
 {
     /*
-     * Open a TCP socket:
+     * Set up address and open a TCP socket:
      */
+    if ( PR_SUCCESS != PR_SetNetAddr( PR_IpAddrNull, /* don't touch IP addr. */
+		PRLDAP_DEFAULT_ADDRESS_FAMILY, (PRUint16)port, addrp )) { 
+	return( -1 );
+    }
+
     if (( prsockp->prsock_prfd = PR_OpenTCPSocket(
-		PR_NetAddrFamily(addrp) )) == NULL ) {
+		PRLDAP_DEFAULT_ADDRESS_FAMILY )) == NULL ) {
 	return( -1 );
     }
 
@@ -371,8 +355,7 @@ prldap_try_one_address( struct lextiof_socket_private *prsockp,
      * Try to open the TCP connection itself:
      */
     if ( PR_SUCCESS != PR_Connect( prsockp->prsock_prfd, addrp,
-                prldap_timeout2it( timeout, prsockp->prsock_io_max_timeout ))
-                && PR_IN_PROGRESS_ERROR != PR_GetError() ) {
+		prldap_timeout2it( timeout, prsockp->prsock_io_max_timeout ))) {
 	PR_Close( prsockp->prsock_prfd );
 	prsockp->prsock_prfd = NULL;
 	return( -1 );
@@ -398,11 +381,11 @@ prldap_connect( const char *hostlist, int defport, int timeout,
 	struct lextiof_socket_private **socketargp )
 {
     int					rc, parse_err, port;
-    char				*host;
+    char				*host, hbuf[ PR_NETDB_BUF_SIZE ];
     struct ldap_x_hostlist_status	*status;
     struct lextiof_socket_private	*prsockp;
     PRNetAddr				addr;
-    PRAddrInfo 				*infop = NULL;
+    PRHostEnt				hent;
 
     if ( 0 != ( options & LDAP_X_EXTIOF_OPT_SECURE )) {
 	prldap_set_system_errno( EINVAL );
@@ -419,37 +402,36 @@ prldap_connect( const char *hostlist, int defport, int timeout,
 		&status );
 		rc < 0 && LDAP_SUCCESS == parse_err && NULL != host;
 		parse_err = ldap_x_hostlist_next( &host, &port, status )) {
-	/*
-	 * First, call PR_GetAddrInfoByName; PR_GetAddrInfoByName could 
-	 * support both IPv4 and IPv6 addresses depending upon the system's
-	 * configuration.  All available addresses are returned and each of
-	 * them is examined in prldap_try_one_address till it succeeds.
-	 * Then, try converting the string address, in case the string
-	 * address was not successfully handled in PR_GetAddrInfoByName.
-	 */
-	if ( NULL != ( infop =
-	      PR_GetAddrInfoByName( host, PR_AF_UNSPEC, 
-				    (PR_AI_ADDRCONFIG|PR_AI_NOCANONNAME) ))) {
-	    void *enump = NULL;
-	    do {
-		memset( &addr, 0, sizeof( addr ));
-		enump = PR_EnumerateAddrInfo( enump, infop, port, &addr );
-		if ( NULL == enump ) {
-		    break;
+
+	if ( PR_SUCCESS == PR_StringToNetAddr( host, &addr )) {
+		
+		if ( PRLDAP_DEFAULT_ADDRESS_FAMILY == PR_AF_INET6 &&
+				PR_AF_INET == PR_NetAddrFamily( &addr )) {
+			PRUint32	ipv4ip = addr.inet.ip;
+			memset( &addr, 0, sizeof(addr));
+			PR_ConvertIPv4AddrToIPv6( ipv4ip, &addr.ipv6.ip );
+			addr.ipv6.family = PR_AF_INET6;
+			
 		}
-		rc = prldap_try_one_address( prsockp, &addr, timeout, options );
-	    } while ( rc < 0 );
-	    PR_FreeAddrInfo( infop );
-	} else if ( PR_SUCCESS == PR_StringToNetAddr( host, &addr )) {
-	    PRLDAP_SET_PORT( &addr, port );
-	    rc = prldap_try_one_address( prsockp, &addr, timeout, options );
+	    rc = prldap_try_one_address( prsockp, &addr, port,
+			timeout, options );
+	} else {
+	    if ( PR_SUCCESS == PR_GetIPNodeByName( host,
+			PRLDAP_DEFAULT_ADDRESS_FAMILY, PR_AI_DEFAULT | PR_AI_ALL, hbuf, 
+			sizeof( hbuf ), &hent )) {
+		PRIntn enumIndex = 0;
+
+		while ( rc < 0 && ( enumIndex = PR_EnumerateHostEnt(
+			    enumIndex, &hent, (PRUint16)port, &addr )) > 0 ) {
+		    rc = prldap_try_one_address( prsockp, &addr, port,
+				timeout, options );
+		}
+	    }
 	}
+
 	ldap_memfree( host );
     }
 
-    if ( host ) {
-		ldap_memfree( host );
-	}
     ldap_x_hostlist_statusfree( status );
 
     if ( rc < 0 ) {
@@ -608,46 +590,9 @@ prldap_session_arg_from_ld( LDAP *ld, PRLDAPIOSessionArg **sessargpp )
 
 
 /*
- * Given an LDAP session handle, retrieve a socket argument.
- * Returns an LDAP error code.
- */
-int
-prldap_socket_arg_from_ld( LDAP *ld, PRLDAPIOSocketArg **sockargpp )
-{
-    Sockbuf *sbp;
-    struct lber_x_ext_io_fns    extiofns;
-
-    if ( NULL == ld || NULL == sockargpp ) {
-        /* XXXmcs: NULL ld's are not supported */
-        ldap_set_lderrno( ld, LDAP_PARAM_ERROR, NULL, NULL );
-        return( LDAP_PARAM_ERROR );
-    }
-
-    if ( ldap_get_option( ld, LDAP_X_OPT_SOCKBUF, (void *)&sbp ) < 0 ) {
-        return( ldap_get_lderrno( ld, NULL, NULL ));
-    }
-
-    memset( &extiofns, 0, sizeof(extiofns));
-    extiofns.lbextiofn_size = LBER_X_EXTIO_FNS_SIZE;
-    if ( ber_sockbuf_get_option( sbp, LBER_SOCKBUF_OPT_EXT_IO_FNS,
-        (void *)&extiofns ) < 0 ) {
-        return( ldap_get_lderrno( ld, NULL, NULL ));
-    }
-
-    if ( NULL == extiofns.lbextiofn_socket_arg ) {
-        ldap_set_lderrno( ld, LDAP_LOCAL_ERROR, NULL, NULL );
-        return( LDAP_LOCAL_ERROR );
-    }
-
-    *sockargpp = extiofns.lbextiofn_socket_arg;
-    return( LDAP_SUCCESS );
-}
-
-
-/*
  * Allocate a socket argument.
  */
-PRLDAPIOSocketArg *
+static PRLDAPIOSocketArg *
 prldap_socket_arg_alloc( PRLDAPIOSessionArg *sessionarg )
 {
     PRLDAPIOSocketArg		*prsockp;
@@ -721,24 +666,3 @@ prldap_get_io_max_timeout( PRLDAPIOSessionArg *prsessp, int *io_max_timeoutp )
 
     return( rc );
 }
-
-/* Check if NSPR layer has been installed for a LDAP session.
- * Simply check whether prldap_connect() I/O function is installed 
- */
-PRBool
-prldap_is_installed( LDAP *ld )
-{
-    struct ldap_x_ext_io_fns iofns;
-
-    /* Retrieve current I/O functions */
-    memset( &iofns, 0, sizeof(iofns));
-    iofns.lextiof_size = LDAP_X_EXTIO_FNS_SIZE;
-    if ( ld == NULL || ldap_get_option( ld, LDAP_X_OPT_EXTIO_FN_PTRS, (void *)&iofns )
-	 != 0 ||  iofns.lextiof_connect != prldap_connect ) 
-    {
-	return( PR_FALSE );
-    }
-    
-    return( PR_TRUE );
-}
-

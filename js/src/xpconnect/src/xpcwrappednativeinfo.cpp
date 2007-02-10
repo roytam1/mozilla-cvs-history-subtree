@@ -180,8 +180,6 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
         callback = XPC_WN_GetterSetter;
     }
 
-    JSAutoRequest ar(cx);
-
     JSFunction *fun = JS_NewFunction(cx, callback, argc, flags, nsnull,
                                      iface->GetMemberName(ccx, this));
     if(!fun)

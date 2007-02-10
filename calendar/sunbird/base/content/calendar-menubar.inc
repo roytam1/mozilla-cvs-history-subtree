@@ -98,6 +98,13 @@
                      accesskey="&calendar.export.calendar.accesskey;"
                      observes="ask_and_export_calendar"/>
            <menuseparator id="calendar-importexport-sep"/>
+           <!-- Disable this until Sunbird gets mail support
+           <menuitem id="calendar-mail-event"
+                     key="send_event_key"
+                     label="&event.mail.event;"
+                     accesskey="&event.mail.event.accesskey;"
+                     observes="send_event_command"/>
+           -->
            <menuitem id="calendar-publish-menu"
                      label="&calendar.publish.selection.label;"
                      accesskey="&calendar.publish.selection.accesskey;"
@@ -463,12 +470,6 @@
            <menuitem accesskey="&releaseCmd.accesskey;"
                      label="&releaseCmd.label;"
                      oncommand="openReleaseNotes();"/>
-           <menuseparator id="menu_HelpUpdatesSeparator"/>
-           <menuitem id="checkForUpdates"
-                     class="menuitem-iconic"
-                     label="&updateCmd.label;"
-                     accesskey="&updateCmd.accesskey;"
-                     oncommand="sbCheckForUpdates();"/>
 
 # On Mac OS X, the "About Sunbird" menuitem belongs under the "Sunbird" menu.
 # We hide it (and its separator) here, but we don't ifdef the entire menuitem

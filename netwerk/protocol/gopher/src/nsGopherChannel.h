@@ -41,31 +41,74 @@
 #ifndef nsGopherChannel_h__
 #define nsGopherChannel_h__
 
-#include "nsBaseChannel.h"
+#include "nsGopherHandler.h"
+#include "nsXPIDLString.h"
+#include "nsString.h"
+#include "nsCOMPtr.h"
+
+#include "nsILoadGroup.h"
+#include "nsIInputStream.h"
+#include "nsIInterfaceRequestor.h"
+#include "nsIInterfaceRequestorUtils.h"
+#include "nsIChannel.h"
+#include "nsIURI.h"
+#include "nsIURL.h"
+#include "nsIPrompt.h"
+#include "nsIStreamListener.h"
+#include "nsISocketTransport.h"
+#include "nsIProgressEventSink.h"
 #include "nsIProxyInfo.h"
-#include "nsIProxiedChannel.h"
+#include "nsIStringBundle.h"
+#include "nsIInputStreamPump.h"
 
-class nsGopherChannel : public nsBaseChannel, public nsIProxiedChannel {
+class nsGopherChannel : public nsIChannel,
+                        public nsIStreamListener,
+                        public nsITransportEventSink {
 public:
-    nsGopherChannel(nsIURI *uri, nsIProxyInfo *pi) : mProxyInfo(pi) {
-        SetURI(uri);
-    }
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIREQUEST
+    NS_DECL_NSICHANNEL
+    NS_DECL_NSISTREAMLISTENER
+    NS_DECL_NSIREQUESTOBSERVER
+    NS_DECL_NSITRANSPORTEVENTSINK
 
-    NS_DECL_ISUPPORTS_INHERITED
-    NS_DECL_NSIPROXIEDCHANNEL
+    // nsGopherChannel methods:
+    nsGopherChannel();
+    virtual ~nsGopherChannel();
 
-    nsIProxyInfo *ProxyInfo() { return mProxyInfo; }
+    nsresult Init(nsIURI* uri, nsIProxyInfo* proxyInfo);
 
 protected:
-    virtual ~nsGopherChannel() {}
+    nsCOMPtr<nsIURI>                    mOriginalURI;
+    nsCOMPtr<nsIInterfaceRequestor>     mCallbacks;
+    nsCOMPtr<nsIProgressEventSink>      mProgressSink;
+    nsCOMPtr<nsIURI>                    mUrl;
+    nsCOMPtr<nsIStreamListener>         mListener;
+    PRUint32                            mLoadFlags;
+    nsCOMPtr<nsILoadGroup>              mLoadGroup;
+    nsCString                           mContentType;
+    nsCString                           mContentCharset;
+    nsCString                           mContentTypeHint;
+    PRInt32                             mContentLength;
+    nsCOMPtr<nsISupports>               mOwner; 
 
-    virtual nsresult OpenContentStream(PRBool async, nsIInputStream **result);
-    virtual PRBool GetStatusArg(nsresult status, nsString &statusArg);
+    nsXPIDLCString                      mHost;
+    PRInt32                             mPort;
+    char                                mType;
+    nsCString                           mSelector;
+    nsCString                           mRequest;
 
-private:
-    nsresult SendRequest(nsIOutputStream *stream);
+    nsCOMPtr<nsISupports>               mListenerContext;
+    nsCOMPtr<nsISocketTransport>        mTransport;
+    nsCOMPtr<nsIInputStreamPump>        mPump;
+    nsCOMPtr<nsIProxyInfo>              mProxyInfo;
+    nsCOMPtr<nsIStringBundle>           mStringBundle;
 
-    nsCOMPtr<nsIProxyInfo> mProxyInfo;
+    nsresult                            mStatus;
+    PRBool                              mIsPending;
+
+    nsresult SendRequest();
+    nsresult PushStreamConverters(nsIStreamListener *, nsIStreamListener **);
 };
 
 #endif // !nsGopherChannel_h__

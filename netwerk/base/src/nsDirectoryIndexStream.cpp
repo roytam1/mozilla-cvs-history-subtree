@@ -69,6 +69,8 @@ static PRLogModuleInfo* gLog;
 #include "nsCRT.h"
 #include "nsNativeCharsetUtils.h"
 
+static NS_DEFINE_CID(kCollationFactoryCID, NS_COLLATIONFACTORY_CID);
+
 // NOTE: This runs on the _file transport_ thread.
 // The problem is that now that we're actually doing something with the data,
 // we want to do stuff like i18n sorting. However, none of the collation stuff
@@ -80,7 +82,7 @@ static PRLogModuleInfo* gLog;
 //#define THREADSAFE_I18N
 
 nsDirectoryIndexStream::nsDirectoryIndexStream()
-    : mOffset(0), mStatus(NS_OK), mPos(0)
+    : mOffset(0), mPos(0)
 {
 #ifdef PR_LOGGING
     if (! gLog)
@@ -91,15 +93,18 @@ nsDirectoryIndexStream::nsDirectoryIndexStream()
            ("nsDirectoryIndexStream[%p]: created", this));
 }
 
-static int PR_CALLBACK compare(nsIFile* aElement1,
-                               nsIFile* aElement2,
+static int PR_CALLBACK compare(const void* aElement1,
+                               const void* aElement2,
                                void* aData)
 {
+    nsIFile* a = (nsIFile*)aElement1;
+    nsIFile* b = (nsIFile*)aElement2;
+
     if (!NS_IsNativeUTF8()) {
         // don't check for errors, because we can't report them anyway
         nsAutoString name1, name2;
-        aElement1->GetLeafName(name1);
-        aElement2->GetLeafName(name2);
+        a->GetLeafName(name1);
+        b->GetLeafName(name2);
 
         // Note - we should do the collation to do sorting. Why don't we?
         // Because that is _slow_. Using TestProtocols to list file:///dev/
@@ -117,8 +122,8 @@ static int PR_CALLBACK compare(nsIFile* aElement1,
     }
 
     nsCAutoString name1, name2;
-    aElement1->GetNativeLeafName(name1);
-    aElement2->GetNativeLeafName(name2);
+    a->GetNativeLeafName(name1);
+    b->GetNativeLeafName(name2);
 
     return Compare(name1, name2);
 }
@@ -160,8 +165,11 @@ nsDirectoryIndexStream::Init(nsIFile* aDir)
         rv = iter->GetNext(getter_AddRefs(elem));
         if (NS_SUCCEEDED(rv)) {
             nsCOMPtr<nsIFile> file = do_QueryInterface(elem);
-            if (file)
-                mArray.AppendObject(file); // addrefs
+            if (file) {
+                nsIFile* f = file;
+                NS_ADDREF(f);
+                mArray.AppendElement(f);
+            }
         }
     }
 
@@ -174,7 +182,7 @@ nsDirectoryIndexStream::Init(nsIFile* aDir)
     rv = ls->GetApplicationLocale(getter_AddRefs(locale));
     if (NS_FAILED(rv)) return rv;
     
-    nsCOMPtr<nsICollationFactory> cf = do_CreateInstance(NS_COLLATIONFACTORY_CONTRACTID,
+    nsCOMPtr<nsICollationFactory> cf = do_CreateInstance(kCollationFactoryCID,
                                                          &rv);
     if (NS_FAILED(rv)) return rv;
 
@@ -201,6 +209,12 @@ nsDirectoryIndexStream::Init(nsIFile* aDir)
 
 nsDirectoryIndexStream::~nsDirectoryIndexStream()
 {
+    PRInt32 i;
+    for (i=0; i<mArray.Count(); ++i) {
+        nsIFile* elem = (nsIFile*)mArray.ElementAt(i);
+        NS_RELEASE(elem);
+    }
+
     PR_LOG(gLog, PR_LOG_DEBUG,
            ("nsDirectoryIndexStream[%p]: destroyed", this));
 }
@@ -230,16 +244,12 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsDirectoryIndexStream, nsIInputStream)
 NS_IMETHODIMP
 nsDirectoryIndexStream::Close()
 {
-    mStatus = NS_BASE_STREAM_CLOSED;
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDirectoryIndexStream::Available(PRUint32* aLength)
 {
-    if (NS_FAILED(mStatus))
-        return mStatus;
-
     // If there's data in our buffer, use that
     if (mOffset < (PRInt32)mBuf.Length()) {
         *aLength = mBuf.Length() - mOffset;
@@ -254,13 +264,6 @@ nsDirectoryIndexStream::Available(PRUint32* aLength)
 NS_IMETHODIMP
 nsDirectoryIndexStream::Read(char* aBuf, PRUint32 aCount, PRUint32* aReadCount)
 {
-    if (mStatus == NS_BASE_STREAM_CLOSED) {
-        *aReadCount = 0;
-        return NS_OK;
-    }
-    if (NS_FAILED(mStatus))
-        return mStatus;
-
     PRUint32 nread = 0;
 
     // If anything is enqueued (or left-over) in mBuf, then feed it to
@@ -280,10 +283,8 @@ nsDirectoryIndexStream::Read(char* aBuf, PRUint32 aCount, PRUint32* aReadCount)
         while (PRUint32(mBuf.Length()) < aCount) {
             PRBool more = mPos < mArray.Count();
             if (!more) break;
-
-            // don't addref, for speed - an addref happened when it
-            // was placed in the array, so it's not going to go stale
-            nsIFile* current = mArray.ObjectAt(mPos);
+            
+            nsCOMPtr<nsIFile> current = (nsIFile*)mArray.ElementAt(mPos);
             ++mPos;
 
 #ifdef PR_LOGGING

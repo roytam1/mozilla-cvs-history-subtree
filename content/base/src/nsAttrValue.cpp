@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * A struct that represents the value (type and actual data) of an
- * attribute.
- */
-
 #include "nsAttrValue.h"
 #include "nsIAtom.h"
 #include "nsUnicharUtils.h"
@@ -48,13 +43,12 @@
 #include "nsCSSDeclaration.h"
 #include "nsIHTMLDocument.h"
 #include "nsIDocument.h"
-#include "nsTPtrArray.h"
 
 #ifdef MOZ_SVG
 #include "nsISVGValue.h"
 #endif
 
-nsTPtrArray<const nsAttrValue::EnumTable>* nsAttrValue::sEnumTableArray = nsnull;
+nsVoidArray* nsAttrValue::sEnumTableArray = nsnull;
 
 nsAttrValue::nsAttrValue()
     : mBits(0)
@@ -98,7 +92,7 @@ nsAttrValue::Init()
 {
   NS_ASSERTION(!sEnumTableArray, "nsAttrValue already initialized");
 
-  sEnumTableArray = new nsTPtrArray<const EnumTable>;
+  sEnumTableArray = new nsVoidArray;
   NS_ENSURE_TRUE(sEnumTableArray, NS_ERROR_OUT_OF_MEMORY);
   
   return NS_OK;
@@ -319,8 +313,7 @@ nsAttrValue::ToString(nsAString& aResult) const
     }
     case eAtom:
     {
-      nsIAtom *atom = NS_STATIC_CAST(nsIAtom*, GetPtr());
-      atom->ToString(aResult);
+      NS_STATIC_CAST(nsIAtom*, GetPtr())->ToString(aResult);
 
       break;
     }
@@ -351,8 +344,8 @@ nsAttrValue::ToString(nsAString& aResult) const
     case eEnum:
     {
       PRInt16 val = GetEnumValue();
-      const EnumTable* table = sEnumTableArray->
-          ElementAt(GetIntInternal() & NS_ATTRVALUE_ENUMTABLEINDEX_MASK);
+      EnumTable* table = NS_STATIC_CAST(EnumTable*, sEnumTableArray->
+          FastElementAt(GetIntInternal() & NS_ATTRVALUE_ENUMTABLEINDEX_MASK));
       while (table->tag) {
         if (table->value == val) {
           aResult.AssignASCII(table->tag);
@@ -377,8 +370,8 @@ nsAttrValue::ToString(nsAString& aResult) const
     case eCSSStyleRule:
     {
       aResult.Truncate();
-      MiscContainer *container = GetMiscContainer();
-      nsCSSDeclaration* decl = container->mCSSStyleRule->GetDeclaration();
+      nsCSSDeclaration* decl = 
+        GetMiscContainer()->mCSSStyleRule->GetDeclaration();
       if (decl) {
         decl->ToString(aResult);
       }
@@ -615,113 +608,6 @@ nsAttrValue::Equals(const nsAttrValue& aOther) const
   }
 }
 
-PRBool
-nsAttrValue::Equals(const nsAString& aValue,
-                    nsCaseTreatment aCaseSensitive) const
-{
-  switch (BaseType()) {
-    case eStringBase:
-    {
-      nsStringBuffer* str = NS_STATIC_CAST(nsStringBuffer*, GetPtr());
-      if (str) {
-        nsDependentString dep(NS_STATIC_CAST(PRUnichar*, str->Data()),
-                              str->StorageSize()/sizeof(PRUnichar) - 1);
-        return aCaseSensitive == eCaseMatters ? aValue.Equals(dep) :
-          aValue.Equals(dep, nsCaseInsensitiveStringComparator());
-      }
-      return aValue.IsEmpty();
-    }
-    case eAtomBase:
-      // Need a way to just do case-insensitive compares on atoms..
-      if (aCaseSensitive == eCaseMatters) {
-        return NS_STATIC_CAST(nsIAtom*, GetPtr())->Equals(aValue);;
-      }
-    default:
-      break;
-  }
-
-  nsAutoString val;
-  ToString(val);
-  return aCaseSensitive == eCaseMatters ? val.Equals(aValue) :
-    val.Equals(aValue, nsCaseInsensitiveStringComparator());
-}
-
-PRBool
-nsAttrValue::Equals(nsIAtom* aValue, nsCaseTreatment aCaseSensitive) const
-{
-  if (aCaseSensitive != eCaseMatters) {
-    // Need a better way to handle this!
-    nsAutoString value;
-    aValue->ToString(value);
-    return Equals(value, aCaseSensitive);
-  }
-  
-  switch (BaseType()) {
-    case eStringBase:
-    {
-      nsStringBuffer* str = NS_STATIC_CAST(nsStringBuffer*, GetPtr());
-      if (str) {
-        nsDependentString dep(NS_STATIC_CAST(PRUnichar*, str->Data()),
-                              str->StorageSize()/sizeof(PRUnichar) - 1);
-        return aValue->Equals(dep);
-      }
-      return aValue->EqualsUTF8(EmptyCString());
-    }
-    case eAtomBase:
-    {
-      return NS_STATIC_CAST(nsIAtom*, GetPtr()) == aValue;
-    }
-    default:
-      break;
-  }
-
-  nsAutoString val;
-  ToString(val);
-  return aValue->Equals(val);
-}
-
-PRBool
-nsAttrValue::Contains(nsIAtom* aValue, nsCaseTreatment aCaseSensitive) const
-{
-  switch (BaseType()) {
-    case eAtomBase:
-    {
-      nsIAtom* atom = GetAtomValue();
-
-      if (aCaseSensitive == eCaseMatters) {
-        return aValue == atom;
-      }
-
-      const char *val1, *val2;
-      aValue->GetUTF8String(&val1);
-      atom->GetUTF8String(&val2);
-
-      return nsCRT::strcasecmp(val1, val2) == 0;
-    }
-    default:
-    {
-      if (Type() == eAtomArray) {
-        nsCOMArray<nsIAtom>* array = GetAtomArrayValue();
-        if (aCaseSensitive == eCaseMatters) {
-          return array->IndexOf(aValue) >= 0;
-        }
-
-        const char *val1, *val2;
-        aValue->GetUTF8String(&val1);
-
-        for (PRInt32 i = 0, count = array->Count(); i < count; ++i) {
-          array->ObjectAt(i)->GetUTF8String(&val2);
-          if (nsCRT::strcasecmp(val1, val2) == 0) {
-            return PR_TRUE;
-          }
-        }
-      }
-    }
-  }
-
-  return PR_FALSE;
-}
-
 void
 nsAttrValue::ParseAtom(const nsAString& aValue)
 {
@@ -833,17 +719,21 @@ nsAttrValue::ParseEnumValue(const nsAString& aValue,
 {
   ResetIfSet();
 
+  // Have to const cast here since nsVoidArray can't deal with constpointers
+  EnumTable* tableStart = NS_CONST_CAST(EnumTable*, aTable);
+
+  nsAutoString val(aValue);
   while (aTable->tag) {
-    if (aCaseSensitive ? aValue.EqualsASCII(aTable->tag) :
-                         aValue.LowerCaseEqualsASCII(aTable->tag)) {
+    if (aCaseSensitive ? val.EqualsASCII(aTable->tag) :
+                         val.EqualsIgnoreCase(aTable->tag)) {
 
       // Find index of EnumTable
-      PRInt16 index = sEnumTableArray->IndexOf(aTable);
+      PRInt16 index = sEnumTableArray->IndexOf(tableStart);
       if (index < 0) {
-        index = sEnumTableArray->Length();
+        index = sEnumTableArray->Count();
         NS_ASSERTION(index <= NS_ATTRVALUE_ENUMTABLEINDEX_MAXVALUE,
                      "too many enum tables");
-        if (!sEnumTableArray->AppendElement(aTable)) {
+        if (!sEnumTableArray->AppendElement(tableStart)) {
           return PR_FALSE;
         }
       }
@@ -956,7 +846,9 @@ nsAttrValue::ParseColor(const nsAString& aString, nsIDocument* aDocument)
   }
 
   // Check if we are in compatibility mode
-  if (aDocument->GetCompatibilityMode() == eCompatibility_NavQuirks) {
+  // XXX evil NS_HexToRGB and NS_LooseHexToRGB take nsString as argument!
+  nsCOMPtr<nsIHTMLDocument> doc(do_QueryInterface(aDocument));
+  if (doc && doc->GetCompatibilityMode() == eCompatibility_NavQuirks) {
     NS_LooseHexToRGB(colorStr, &color);
   }
   else {

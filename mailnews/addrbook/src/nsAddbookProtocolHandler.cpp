@@ -46,10 +46,11 @@
 
 #include "nsAddbookUrl.h"
 #include "nsAddbookProtocolHandler.h"
+#include "nsIFileSpec.h"
 #include "nsCOMPtr.h"
 #include "nsAbBaseCID.h"
 #include "nsNetUtil.h"
-#include "nsStringStream.h"
+#include "nsIStringStream.h"
 #include "nsIAddrBookSession.h"
 #include "nsIAbMDBCard.h"
 #include "nsIAbDirectory.h"
@@ -85,7 +86,7 @@ NS_IMETHODIMP nsAddbookProtocolHandler::GetDefaultPort(PRInt32 *aDefaultPort)
 
 NS_IMETHODIMP nsAddbookProtocolHandler::GetProtocolFlags(PRUint32 *aUritype)
 {
-  *aUritype = URI_STD | URI_LOADABLE_BY_ANYONE;
+  *aUritype = URI_STD;
   return NS_OK;
 }
 
@@ -124,7 +125,7 @@ nsAddbookProtocolHandler::GenerateXMLOutputChannel( nsString &aOutput,
 {
   nsIChannel                *channel;
   nsCOMPtr<nsIInputStream>  inStr;
-  NS_ConvertUTF16toUTF8 utf8String(aOutput.get());
+  NS_ConvertUCS2toUTF8 utf8String(aOutput.get());
 
   nsresult rv = NS_NewCStringInputStream(getter_AddRefs(inStr), utf8String);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -258,7 +259,7 @@ nsAddbookProtocolHandler::BuildDirectoryXML(nsIAbDirectory *aDirectory,
   NS_ENSURE_ARG_POINTER(aDirectory);
 
   nsresult rv;    
-  nsCOMPtr<nsISimpleEnumerator> cardsEnumerator;
+  nsCOMPtr<nsIEnumerator> cardsEnumerator;
   nsCOMPtr<nsIAbCard> card;
 
   aOutput.AppendLiteral("<?xml version=\"1.0\"?>\n"
@@ -286,10 +287,9 @@ nsAddbookProtocolHandler::BuildDirectoryXML(nsIAbDirectory *aDirectory,
   if (NS_SUCCEEDED(rv) && cardsEnumerator)
   {
     nsCOMPtr<nsISupports> item;
-    PRBool more;
-    while (NS_SUCCEEDED(cardsEnumerator->HasMoreElements(&more)) && more)
+    for (rv = cardsEnumerator->First(); NS_SUCCEEDED(rv); rv = cardsEnumerator->Next())
     {
-      rv = cardsEnumerator->GetNext(getter_AddRefs(item));
+      rv = cardsEnumerator->CurrentItem(getter_AddRefs(item));
       if (NS_SUCCEEDED(rv))
       {
         nsCOMPtr <nsIAbCard> card = do_QueryInterface(item);

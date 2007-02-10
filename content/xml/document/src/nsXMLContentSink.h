@@ -42,9 +42,8 @@
 #include "nsIXMLContentSink.h"
 #include "nsIExpatSink.h"
 #include "nsIDocumentTransformer.h"
-#include "nsTArray.h"
+#include "nsCOMArray.h"
 #include "nsCOMPtr.h"
-#include "nsCRT.h"
 
 
 class nsIDocument;
@@ -60,11 +59,6 @@ typedef enum {
   eXMLContentSinkState_InEpilog
 } XMLContentSinkState;
 
-struct StackNode {
-  nsCOMPtr<nsIContent> mContent;
-  PRUint32 mNumFlushed;
-};
-
 class nsXMLContentSink : public nsContentSink,
                          public nsIXMLContentSink,
                          public nsITransformObserver,
@@ -73,8 +67,6 @@ class nsXMLContentSink : public nsContentSink,
 public:
   nsXMLContentSink();
   virtual ~nsXMLContentSink();
-
-  NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
 
   nsresult Init(nsIDocument* aDoc,
                 nsIURI* aURL,
@@ -87,30 +79,29 @@ public:
   NS_DECL_NSIEXPATSINK
 
   // nsIContentSink
-  NS_IMETHOD WillTokenize(void);
   NS_IMETHOD WillBuildModel(void);
   NS_IMETHOD DidBuildModel(void);
   NS_IMETHOD WillInterrupt(void);
   NS_IMETHOD WillResume(void);
   NS_IMETHOD SetParser(nsIParser* aParser);  
-  virtual void FlushPendingNotifications(mozFlushType aType);
+  virtual void FlushPendingNotifications(mozFlushType aType) { }
   NS_IMETHOD SetDocumentCharset(nsACString& aCharset);
   virtual nsISupports *GetTarget();
 
   // nsITransformObserver
-  NS_IMETHOD OnDocumentCreated(nsIDocument *aResultDocument);
-  NS_IMETHOD OnTransformDone(nsresult aResult, nsIDocument *aResultDocument);
+  NS_IMETHOD OnDocumentCreated(nsIDOMDocument *aResultDocument);
+  NS_IMETHOD OnTransformDone(nsresult aResult, nsIDOMDocument *aResultDocument);
 
   static void ParsePIData(const nsString &aData, nsString &aHref,
                           nsString &aTitle, nsString &aMedia,
                           PRBool &aIsAlternate);
 
 protected:
-  virtual void MaybeStartLayout();
   void StartLayout();
 
   virtual nsresult AddAttributes(const PRUnichar** aNode, nsIContent* aContent);
   nsresult AddText(const PRUnichar* aString, PRInt32 aLength);
+  nsresult ProcessEndSCRIPTTag(nsIContent* aContent, nsIContent* aParent);
 
   virtual PRBool OnOpenContainer(const PRUnichar **aAtts, 
                                  PRUint32 aAttsCount, 
@@ -129,7 +120,8 @@ protected:
 
   // aParent is allowed to be null here if this is the root content
   // being closed
-  virtual nsresult CloseElement(nsIContent* aContent);
+  virtual nsresult CloseElement(nsIContent* aContent, nsIContent* aParent,
+                                PRBool* aAppendContent);
 
   virtual nsresult FlushText(PRBool aCreateTextNode=PR_TRUE,
                              PRBool* aDidFlush=nsnull);
@@ -137,22 +129,11 @@ protected:
   nsresult AddContentAsLeaf(nsIContent *aContent);
 
   nsIContent* GetCurrentContent();
-  StackNode & GetCurrentStackNode();
-  nsresult PushContent(nsIContent *aContent);
-  void PopContent();
+  PRInt32 PushContent(nsIContent *aContent);
+  already_AddRefed<nsIContent> PopContent();
 
   nsresult ProcessBASETag(nsIContent* aContent);
 
-  nsresult FlushTags();
-
-  void UpdateChildCounts();
-
-  void DidAddContent()
-  {
-    if (IsTimeToNotify()) {
-      FlushTags();	
-    }
-  }
   
   // nsContentSink override
   virtual nsresult ProcessStyleLink(nsIContent* aElement,
@@ -164,12 +145,8 @@ protected:
 
   nsresult LoadXSLStyleSheet(nsIURI* aUrl);
 
-  PRBool CanStillPrettyPrint();
-
   nsresult MaybePrettyPrint();
   
-  PRBool IsMonolithicContainer(nsINodeInfo* aNodeInfo);
-
   nsIContent*      mDocElement;
   PRUnichar*       mText;
 
@@ -179,19 +156,18 @@ protected:
   
   PRInt32 mTextLength;
   PRInt32 mTextSize;
+  PRUint32 mScriptLineNo;
   
-  PRInt32 mNotifyLevel;
-
   PRUint8 mConstrainSize : 1;
+  PRUint8 mInTitle : 1;
   PRUint8 mPrettyPrintXML : 1;
   PRUint8 mPrettyPrintHasSpecialRoot : 1;
   PRUint8 mPrettyPrintHasFactoredElements : 1;
   PRUint8 mHasProcessedBase : 1;
   PRUint8 mAllowAutoXLinks : 1;
-  PRUint8 unused : 2;  // bits available if someone needs one
+  PRUint8 unused : 1;  // bit available if someone needs one
   
-  nsTArray<StackNode>              mContentStack;
-
+  nsCOMArray<nsIContent>           mContentStack;
   nsCOMPtr<nsIDocumentTransformer> mXSLTProcessor;
 };
 

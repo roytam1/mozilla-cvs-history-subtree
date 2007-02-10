@@ -63,6 +63,7 @@ static NSString* XPCOMShutDownNotificationName = @"XPCOMShutDown";
 
 // prefs for keychain password autofill
 static const char* const gUseKeychainPref = "chimera.store_passwords_with_keychain";
+static const char* const gAutoFillEnabledPref = "chimera.keychain_passwords_autofill";
 
 // network.cookie.lifetimePolicy settings
 const int kAcceptCookiesNormally = 0;
@@ -70,6 +71,50 @@ const int kWarnAboutCookies = 1;
 
 // sort order indicators
 const int kSortReverse = 1;
+
+//
+// category on NSTableView for 10.2+ that reveals private api points to
+// get the sort indicators. These are named images on 10.3 but we can use
+// these as a good fallback
+//
+@interface NSTableView(Undocumented)
++ (NSImage*)_defaultTableHeaderSortImage;
++ (NSImage*)_defaultTableHeaderReverseSortImage;
+@end
+
+@interface NSTableView(Extensions)
++ (NSImage*)indicatorImage:(BOOL)inSortAscending;
+@end
+
+@implementation NSTableView(Extensions)
+
+//
+// +indicatorImage:
+//
+// Tries two different methods to get the sort indicator image. First it tries
+// the named image, which is only available on 10.3+. If that fails, it tries a
+// private api available on 10.2+. If that fails, setting the indicator to a nil
+// image is still fine, it just clears it.
+//
++ (NSImage*)indicatorImage:(BOOL)inSortAscending
+{
+  NSImage* image = nil;
+  if (inSortAscending) {
+    image = [NSImage imageNamed:@"NSAscendingSortIndicator"];
+    if (!image && [NSTableView respondsToSelector:@selector(_defaultTableHeaderSortImage)])
+      image = [NSTableView _defaultTableHeaderSortImage];
+  }
+  else {
+    image = [NSImage imageNamed:@"NSDescendingSortIndicator"];
+    if (!image && [NSTableView respondsToSelector:@selector(_defaultTableHeaderReverseSortImage)])
+      image = [NSTableView _defaultTableHeaderReverseSortImage];
+  }
+  return image;
+}
+
+@end
+
+#pragma mark -
 
 @interface OrgMozillaChimeraPreferencePrivacy(Private)
 
@@ -272,10 +317,19 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
   mCookieManager = cm.get();
   NS_IF_ADDREF(mCookieManager);
 
-  // Keychain checkbox
+  // Keychain checkboxes
   PRBool storePasswords = PR_TRUE;
   mPrefService->GetBoolPref(gUseKeychainPref, &storePasswords);
   [mStorePasswords setState:(storePasswords ? NSOnState : NSOffState)];
+
+  PRBool autoFillPasswords = PR_TRUE;
+  mPrefService->GetBoolPref(gAutoFillEnabledPref, &autoFillPasswords);
+  if(storePasswords)
+    [mAutoFillPasswords setState:(autoFillPasswords ? NSOnState : NSOffState)];
+  else {
+    [mAutoFillPasswords setState:NSOffState];
+    [mAutoFillPasswords setEnabled:NO];
+  }
 
   // set up policy popups
   NSPopUpButtonCell *popupButtonCell = [mPermissionColumn dataCell];
@@ -327,29 +381,28 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
   
   [mCookiesTable setDeleteAction:@selector(removeCookies:)];
   [mCookiesTable setTarget:self];
-  
-  CookieDateFormatter* cookieDateFormatter = [[CookieDateFormatter alloc] initWithDateFormat:@"%b %d, %Y" allowNaturalLanguage:NO];
-  [[[mCookiesTable tableColumnWithIdentifier:@"Expires"] dataCell] setFormatter:cookieDateFormatter];
-  [cookieDateFormatter release];
 
   // start sorted by host
   mCachedCookies->Sort(compareCookieHosts, nsnull);
   NSTableColumn* sortedColumn = [mCookiesTable tableColumnWithIdentifier:@"Website"];
   [mCookiesTable setHighlightedTableColumn:sortedColumn];
   if ([mCookiesTable respondsToSelector:@selector(setIndicatorImage:inTableColumn:)])
-    [mCookiesTable setIndicatorImage:[NSImage imageNamed:@"NSAscendingSortIndicator"] inTableColumn:sortedColumn];
+    [mCookiesTable setIndicatorImage:[NSTableView indicatorImage:YES] inTableColumn:sortedColumn];
   mSortedAscending = YES;
   
   // ensure a row is selected (cocoa doesn't do this for us, but will keep
   // us from unselecting a row once one is set; go figure).
   [mCookiesTable selectRow: 0 byExtendingSelection: NO];
   
-  [mCookiesTable setUsesAlternatingRowBackgroundColors:YES];
-  NSArray* columns = [mCookiesTable tableColumns];
-  if (columns) {
-    int numColumns = [columns count];
-    for (int i = 0; i < numColumns; ++i)
-      [[[columns objectAtIndex:i] dataCell] setDrawsBackground:NO];
+  // use alternating row colors on 10.3+
+  if ([mCookiesTable respondsToSelector:@selector(setUsesAlternatingRowBackgroundColors:)]) {
+    [mCookiesTable setUsesAlternatingRowBackgroundColors:YES];
+    NSArray* columns = [mCookiesTable tableColumns];
+    if (columns) {
+      int numColumns = [columns count];
+      for (int i = 0; i < numColumns; ++i)
+        [[[columns objectAtIndex:i] dataCell] setDrawsBackground:NO];
+    }
   }
   
   //clear the filter field
@@ -537,14 +590,16 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
   NSTableColumn* sortedColumn = [mPermissionsTable tableColumnWithIdentifier:@"Website"];
   [mPermissionsTable setHighlightedTableColumn:sortedColumn];
   if ([mPermissionsTable respondsToSelector:@selector(setIndicatorImage:inTableColumn:)])
-    [mPermissionsTable setIndicatorImage:[NSImage imageNamed:@"NSAscendingSortIndicator"] inTableColumn:sortedColumn];
+    [mPermissionsTable setIndicatorImage:[NSTableView indicatorImage:YES] inTableColumn:sortedColumn];
   mSortedAscending = YES;
   
   // ensure a row is selected (cocoa doesn't do this for us, but will keep
   // us from unselecting a row once one is set; go figure).
   [mPermissionsTable selectRow:0 byExtendingSelection:NO];
   
-  [mPermissionsTable setUsesAlternatingRowBackgroundColors:YES];
+  // use alternating row colors on 10.3+
+  if ([mPermissionsTable respondsToSelector:@selector(setUsesAlternatingRowBackgroundColors:)])
+    [mPermissionsTable setUsesAlternatingRowBackgroundColors:YES];
   
   //clear the filter field
   [mPermissionFilterField setStringValue: @""];
@@ -730,10 +785,15 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
       } else if ([[aTableColumn identifier] isEqualToString: @"Expires"]) {
         PRUint64 expires = 0;
         mCachedCookies->ObjectAt(rowIndex)->GetExpires(&expires);
-        // If expires is 0, it's a session cookie.
-        // We use a custom formatter to display a localised string in this case.
-        NSDate *date = [NSDate dateWithTimeIntervalSince1970:(NSTimeInterval)expires];
-        return date;   // special case return
+        if (expires == 0) {
+          // if expires is 0, it's a session cookie; display as expiring on the current date.
+          // It's not perfect, but it's better than showing the epoch.
+          NSDate *date = [NSDate date];
+          return date;   // special case return
+        } else {
+          NSDate *date = [NSDate dateWithTimeIntervalSince1970: (NSTimeInterval)expires];
+          return date;   // special case return
+        }
       } else if ([[aTableColumn identifier] isEqualToString: @"Value"]) {
         mCachedCookies->ObjectAt(rowIndex)->GetValue(cookieVal);
       }
@@ -850,8 +910,7 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
   // adjust sort indicator on new column, removing from old column
   if ([aTableView respondsToSelector:@selector(setIndicatorImage:inTableColumn:)]) {
     [aTableView setIndicatorImage:nil inTableColumn:[aTableView highlightedTableColumn]];
-    NSImage *sortIndicator = [NSImage imageNamed:(mSortedAscending ? @"NSAscendingSortIndicator" : @"NSDescendingSortIndicator")];
-    [aTableView setIndicatorImage:sortIndicator inTableColumn:aTableColumn];
+    [aTableView setIndicatorImage:[NSTableView indicatorImage:mSortedAscending] inTableColumn:aTableColumn];
   }
   
   if (aTableView == mPermissionsTable) {
@@ -940,6 +999,26 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
     return;
   mPrefService->SetBoolPref("chimera.store_passwords_with_keychain",
                             ([mStorePasswords state] == NSOnState) ? PR_TRUE : PR_FALSE);
+
+  if([mStorePasswords state] == NSOnState)
+    [mAutoFillPasswords setState:([self getBooleanPref:"chimera.keychain_passwords_autofill" withSuccess:NULL] ? NSOnState : NSOffState)];
+  else
+    [mAutoFillPasswords setState:NSOffState];
+
+  [mAutoFillPasswords setEnabled:([mStorePasswords state] == NSOnState)];
+}
+
+//
+// clickAutoFillPasswords
+//
+// Set pref if autofill is enabled
+//
+-(IBAction) clickAutoFillPasswords:(id)sender
+{
+  if (!mPrefService)
+    return;
+  mPrefService->SetBoolPref("chimera.keychain_passwords_autofill",
+                            ([mAutoFillPasswords state] == NSOnState) ? PR_TRUE : PR_FALSE);
 }
 
 -(IBAction) launchKeychainAccess:(id)sender
@@ -1143,21 +1222,6 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
     return ([[mPermissionFilterField stringValue] length] == 0);
 
   return YES;
-}
-
-@end
-
-#pragma mark -
-
-@implementation CookieDateFormatter
-
-- (NSString*)stringForObjectValue:(id)anObject
-{
-  if ([(NSDate*)anObject timeIntervalSince1970] == 0)
-    return NSLocalizedStringFromTableInBundle(@"CookieExpiresOnQuit", nil,
-                                              [NSBundle bundleForClass:[self class]], nil);
-  else
-    return [super stringForObjectValue:anObject];
 }
 
 @end

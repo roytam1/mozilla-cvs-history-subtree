@@ -54,9 +54,9 @@ MOZILLA_INTERNAL_API = 1
 PACKAGE_FILE = addrbook.pkg
 
 REQUIRES	= xpcom \
+		  xpcom_obsolete \
 		  string \
 		  necko \
-		  pref \
 		  mime \
 		  rdf \
 		  msgbase \
@@ -81,8 +81,10 @@ DEFINES		+= -DMOZ_LDAP_XPCOM
 endif
 
 SHARED_LIBRARY_LIBS = \
-	../src/$(LIB_PREFIX)addrbook_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)addrbook_s.$(LIB_SUFFIX) \
 	$(NULL)
+
+EXTRA_DSO_LIBS = rdfutil_s
 
 ifeq ($(USE_SHORT_LIBNAME),1)
 EXTRA_DSO_LIBS += msgbsutl
@@ -92,7 +94,6 @@ endif
 
 EXTRA_DSO_LDOPTS = \
 	$(LIBS_DIR) \
-	$(DEPTH)/rdf/util/src/$(LIB_PREFIX)rdfutil_s.$(LIB_SUFFIX) \
 	$(EXTRA_DSO_LIBS) \
 	$(MOZ_UNICHARUTIL_LIBS) \
 	$(MOZ_COMPONENT_LIBS) \

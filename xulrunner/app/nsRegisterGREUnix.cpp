@@ -38,15 +38,13 @@
 #include "nsRegisterGRE.h"
 #include "nsXPCOMGlue.h"
 
-#include "nsXPCOM.h"
 #include "nsIFile.h"
 #include "nsILocalFile.h"
 
 #include "nsBuildID.h"
 #include "nsAppRunner.h" // for MAXPATHLEN
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "nsINIParser.h"
-#include "nsCOMPtr.h"
 
 #include "prio.h"
 #include "prprf.h"
@@ -145,7 +143,7 @@ RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation,
     PR_snprintf(root, MAXPATHLEN, "%s/.gre.d", home);
   }
 
-  nsCString greHome;
+  nsCAutoString greHome;
   rv = aLocation->GetNativePath(greHome);
   if (NS_FAILED(rv))
     return rv;

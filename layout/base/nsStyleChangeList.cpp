@@ -35,11 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * a list of the recomputation that needs to be done in response to a
- * style change
- */
-
 #include "nsStyleChangeList.h"
 #include "nsStyleConsts.h"
 #include "nsIFrame.h"
@@ -47,6 +42,8 @@
 #include "nsCRT.h"
 
 static const PRUint32 kGrowArrayBy = 10;
+
+MOZ_DECL_CTOR_COUNTER(nsStyleChangeList)
 
 nsStyleChangeList::nsStyleChangeList(void)
   : mArray(mBuffer),

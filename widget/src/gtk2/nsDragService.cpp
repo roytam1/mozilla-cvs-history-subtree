@@ -793,12 +793,13 @@ nsDragService::IsTargetContextList(void)
     return retval;
 }
 
-// Maximum time to wait for a "drag_received" arrived, in microseconds
+// Maximum time to wait for a "drag_recieved" arrived, in microseconds
 #define NS_DND_TIMEOUT 500000
 
 void
 nsDragService::GetTargetDragData(GdkAtom aFlavor)
 {
+    gtk_grab_add(mHiddenWidget);
     PR_LOG(sDragLm, PR_LOG_DEBUG, ("getting data flavor %d\n", aFlavor));
     PR_LOG(sDragLm, PR_LOG_DEBUG, ("mLastWidget is %p and mLastContext is %p\n",
                                    mTargetWidget, mTargetDragContext));
@@ -816,6 +817,7 @@ nsDragService::GetTargetDragData(GdkAtom aFlavor)
         gtk_main_iteration();
     }
     PR_LOG(sDragLm, PR_LOG_DEBUG, ("finished inner iteration\n"));
+    gtk_grab_remove(mHiddenWidget);
 }
 
 void

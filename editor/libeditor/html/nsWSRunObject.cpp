@@ -207,11 +207,11 @@ nsWSRunObject::InsertBreak(nsCOMPtr<nsIDOMNode> *aInOutParent,
     // handle any changes needed to ws run after inserted br
     if (!afterRun)
     {
-      // don't need to do anything.  just insert break.  ws won't change.
+      // dont need to do anything.  just insert break.  ws wont change.
     }
     else if (afterRun->mType & eTrailingWS)
     {
-      // don't need to do anything.  just insert break.  ws won't change.
+      // dont need to do anything.  just insert break.  ws wont change.
     }
     else if (afterRun->mType & eLeadingWS)
     {
@@ -244,11 +244,11 @@ nsWSRunObject::InsertBreak(nsCOMPtr<nsIDOMNode> *aInOutParent,
     // handle any changes needed to ws run before inserted br
     if (!beforeRun)
     {
-      // don't need to do anything.  just insert break.  ws won't change.
+      // dont need to do anything.  just insert break.  ws wont change.
     }
     else if (beforeRun->mType & eLeadingWS)
     {
-      // don't need to do anything.  just insert break.  ws won't change.
+      // dont need to do anything.  just insert break.  ws wont change.
     }
     else if (beforeRun->mType & eTrailingWS)
     {
@@ -304,11 +304,11 @@ nsWSRunObject::InsertText(const nsAString& aStringToInsert,
     // handle any changes needed to ws run after inserted text
     if (!afterRun)
     {
-      // don't need to do anything.  just insert text.  ws won't change.
+      // dont need to do anything.  just insert text.  ws wont change.
     }
     else if (afterRun->mType & eTrailingWS)
     {
-      // don't need to do anything.  just insert text.  ws won't change.
+      // dont need to do anything.  just insert text.  ws wont change.
     }
     else if (afterRun->mType & eLeadingWS)
     {
@@ -328,11 +328,11 @@ nsWSRunObject::InsertText(const nsAString& aStringToInsert,
     // handle any changes needed to ws run before inserted text
     if (!beforeRun)
     {
-      // don't need to do anything.  just insert text.  ws won't change.
+      // dont need to do anything.  just insert text.  ws wont change.
     }
     else if (beforeRun->mType & eLeadingWS)
     {
-      // don't need to do anything.  just insert text.  ws won't change.
+      // dont need to do anything.  just insert text.  ws wont change.
     }
     else if (beforeRun->mType & eTrailingWS)
     {
@@ -426,7 +426,7 @@ nsWSRunObject::InsertText(const nsAString& aStringToInsert,
     {
       if (prevWS)
       {
-        theString.SetCharAt(nbsp, j-1);  // j-1 can't be negative because prevWS starts out false
+        theString.SetCharAt(nbsp, j-1);  // j-1 cant be negative because prevWS starts out false
       }
       else
       {
@@ -707,8 +707,8 @@ nsWSRunObject::GetWSNodes()
   // first look backwards to find preceding ws nodes
   if (mHTMLEditor->IsTextNode(mNode))
   {
-    nsCOMPtr<nsIContent> textNode(do_QueryInterface(mNode));
-    const nsTextFragment *textFrag = textNode->GetText();
+    nsCOMPtr<nsITextContent> textNode(do_QueryInterface(mNode));
+    const nsTextFragment *textFrag = textNode->Text();
     
     res = PrependNodeToList(mNode);
     NS_ENSURE_SUCCESS(res, res);
@@ -767,11 +767,9 @@ nsWSRunObject::GetWSNodes()
       {
         res = PrependNodeToList(priorNode);
         NS_ENSURE_SUCCESS(res, res);
-        nsCOMPtr<nsIContent> textNode(do_QueryInterface(priorNode));
-        const nsTextFragment *textFrag;
-        if (!textNode || !(textFrag = textNode->GetText())) {
-          return NS_ERROR_NULL_POINTER;
-        }
+        nsCOMPtr<nsITextContent> textNode(do_QueryInterface(priorNode));
+        if (!textNode) return NS_ERROR_NULL_POINTER;
+        const nsTextFragment *textFrag = textNode->Text();
         PRUint32 len = textNode->TextLength();
 
         if (len < 1)
@@ -840,9 +838,9 @@ nsWSRunObject::GetWSNodes()
   // then look ahead to find following ws nodes
   if (mHTMLEditor->IsTextNode(mNode))
   {
-    // don't need to put it on list. it already is from code above
-    nsCOMPtr<nsIContent> textNode(do_QueryInterface(mNode));
-    const nsTextFragment *textFrag = textNode->GetText();
+    // dont need to put it on list. it already is from code above
+    nsCOMPtr<nsITextContent> textNode(do_QueryInterface(mNode));
+    const nsTextFragment *textFrag = textNode->Text();
 
     PRUint32 len = textNode->TextLength();
     if (mOffset<len)
@@ -901,11 +899,9 @@ nsWSRunObject::GetWSNodes()
       {
         res = AppendNodeToList(nextNode);
         NS_ENSURE_SUCCESS(res, res);
-        nsCOMPtr<nsIContent> textNode(do_QueryInterface(nextNode));
-        const nsTextFragment *textFrag;
-        if (!textNode || !(textFrag = textNode->GetText())) {
-          return NS_ERROR_NULL_POINTER;
-        }
+        nsCOMPtr<nsITextContent> textNode(do_QueryInterface(nextNode));
+        if (!textNode) return NS_ERROR_NULL_POINTER;
+        const nsTextFragment *textFrag = textNode->Text();
         PRUint32 len = textNode->TextLength();
 
         if (len < 1)
@@ -1446,11 +1442,6 @@ nsWSRunObject::PrepareToDeleteRangePriv(nsWSRunObject* aEndObject)
                                address_of(wsEndNode), &wsEndOffset);
         NS_ENSURE_SUCCESS(res, res);
         point.mTextNode = do_QueryInterface(wsStartNode);
-        if (!point.mTextNode->IsNodeOfType(nsINode::eDATA_NODE)) {
-          // Not sure if this is needed, but it'll maintain the same
-          // functionality
-          point.mTextNode = nsnull;
-        }
         point.mOffset = wsStartOffset;
         res = ConvertToNBSP(point, eOutsideUserSelectAll);
         NS_ENSURE_SUCCESS(res, res);
@@ -1502,11 +1493,6 @@ nsWSRunObject::PrepareToSplitAcrossBlocksPriv()
                              address_of(wsEndNode), &wsEndOffset);
       NS_ENSURE_SUCCESS(res, res);
       point.mTextNode = do_QueryInterface(wsStartNode);
-      if (!point.mTextNode->IsNodeOfType(nsINode::eDATA_NODE)) {
-        // Not sure if this is needed, but it'll maintain the same
-        // functionality
-        point.mTextNode = nsnull;
-      }
       point.mOffset = wsStartOffset;
       res = ConvertToNBSP(point);
       NS_ENSURE_SUCCESS(res, res);
@@ -1689,11 +1675,6 @@ nsWSRunObject::GetCharAfter(WSPoint &aPoint, WSPoint *outPoint)
     nsIDOMNode* node = mNodeArray[idx+1];
     if (!node) return NS_ERROR_FAILURE;
     outPoint->mTextNode = do_QueryInterface(node);
-    if (!outPoint->mTextNode->IsNodeOfType(nsINode::eDATA_NODE)) {
-      // Not sure if this is needed, but it'll maintain the same
-      // functionality
-      outPoint->mTextNode = nsnull;
-    }
     outPoint->mOffset = 0;
     outPoint->mChar = GetCharAt(outPoint->mTextNode, 0);
   }
@@ -1919,17 +1900,19 @@ nsWSRunObject::FindRun(nsIDOMNode *aNode, PRInt32 aOffset, WSFragment **outRun, 
 }
 
 PRUnichar 
-nsWSRunObject::GetCharAt(nsIContent *aTextNode, PRInt32 aOffset)
+nsWSRunObject::GetCharAt(nsITextContent *aTextNode, PRInt32 aOffset)
 {
   // return 0 if we can't get a char, for whatever reason
   if (!aTextNode)
     return 0;
-
-  PRUint32 len = aTextNode->TextLength();
-  if (aOffset < 0 || aOffset >= len) 
+    
+  const nsTextFragment *textFrag = aTextNode->Text();
+  
+  PRUint32 len = textFrag->GetLength();
+  if (aOffset < 0 || aOffset>=len) 
     return 0;
     
-  return aTextNode->GetText()->CharAt(aOffset);
+  return textFrag->CharAt(aOffset);
 }
 
 nsresult 
@@ -1971,12 +1954,12 @@ nsWSRunObject::GetWSPointAfter(nsIDOMNode *aNode, PRInt32 aOffset, WSPoint *outP
   if (curNum == mNodeArray.Count()) {
     // they asked for past our range (it's after the last node). GetCharAfter
     // will do the work for us when we pass it the last index of the last node.
-    nsCOMPtr<nsIContent> textNode(do_QueryInterface(mNodeArray[curNum-1]));
+    nsCOMPtr<nsITextContent> textNode(do_QueryInterface(mNodeArray[curNum-1]));
     WSPoint point(textNode, textNode->TextLength(), 0);
     return GetCharAfter(point, outPoint);
   } else {
     // The char after the point of interest is the first character of our range.
-    nsCOMPtr<nsIContent> textNode(do_QueryInterface(mNodeArray[curNum]));
+    nsCOMPtr<nsITextContent> textNode(do_QueryInterface(mNodeArray[curNum]));
     WSPoint point(textNode, 0, 0);
     return GetCharAfter(point, outPoint);
   }
@@ -2021,16 +2004,16 @@ nsWSRunObject::GetWSPointBefore(nsIDOMNode *aNode, PRInt32 aOffset, WSPoint *out
   if (curNum == mNodeArray.Count()) {
     // get the point before the end of the last node, we can pass the length
     // of the node into GetCharBefore, and it will return the last character.
-    nsCOMPtr<nsIContent> textNode(do_QueryInterface(mNodeArray[curNum - 1]));
+    nsCOMPtr<nsITextContent> textNode(do_QueryInterface(mNodeArray[curNum - 1]));
     WSPoint point(textNode, textNode->TextLength(), 0);
     return GetCharBefore(point, outPoint);
   } else {
     // we can just ask the current node for the point immediately before it,
     // it will handle moving to the previous node (if any) and returning the
     // appropriate character
-    nsCOMPtr<nsIContent> textNode(do_QueryInterface(mNodeArray[curNum]));
+    nsCOMPtr<nsITextContent> textNode(do_QueryInterface(mNodeArray[curNum]));
     WSPoint point(textNode, 0, 0);
-    return GetCharAfter(point, outPoint);
+    return GetCharBefore(point, outPoint);
   }
 }
 

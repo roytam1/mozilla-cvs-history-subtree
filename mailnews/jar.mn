@@ -1,6 +1,5 @@
-#ifdef MOZ_SUITE
+#ifndef MOZ_XUL_APP
 messenger.jar:
-# XXX we need to provide new chrome registry versions of these contents.rdf
 *   content/messenger/contents.rdf                                             (base/resources/content/contents.rdf)
 *   content/messenger-region/contents.rdf                                      (base/resources/content/contents-region.rdf)
     content/messenger/addressbook/pref-addressing.xul                          (addrbook/prefs/resources/content/pref-addressing.xul)
@@ -74,7 +73,7 @@ messenger.jar:
     content/messenger/pref-receipts.js                                         (base/prefs/resources/content/pref-receipts.js)
     content/messenger/pref-character_encoding.xul                              (base/prefs/resources/content/pref-character_encoding.xul)
     content/messenger/pref-offline.xul                                         (base/prefs/resources/content/pref-offline.xul)
-*   content/messenger/AccountWizard.xul                                        (base/prefs/resources/content/AccountWizard.xul)
+    content/messenger/AccountWizard.xul                                        (base/prefs/resources/content/AccountWizard.xul)
     content/messenger/AccountWizard.js                                         (base/prefs/resources/content/AccountWizard.js)
     content/messenger/aw-accounttype.js                                        (base/prefs/resources/content/aw-accounttype.js)
     content/messenger/aw-identity.js                                           (base/prefs/resources/content/aw-identity.js)
@@ -176,12 +175,12 @@ messenger.jar:
     content/messenger/messengercompose/askSendFormat.xul                       (compose/resources/content/askSendFormat.xul)
     content/messenger/messengercompose/sendProgress.xul                        (compose/resources/content/sendProgress.xul)
     content/messenger/messengercompose/sendProgress.js                         (compose/resources/content/sendProgress.js)
+    content/messenger/messengercompose/mailComposeBindings.xml                 (compose/resources/content/mailComposeBindings.xml)
     content/messenger/messengercompose/MsgAttachPage.xul                       (compose/resources/content/MsgAttachPage.xul)
     content/messenger/messengercompose/MsgAttachPage.js                        (compose/resources/content/MsgAttachPage.js)
     content/messenger/messengercompose/mailComposeExtrasOverlay.xul            (compose/resources/content/mailComposeExtrasOverlay.xul)
-    content/messenger/messengercompose/mailComposeEditorOverlay.xul            (compose/resources/content/mailComposeEditorOverlay.xul)
     content/messenger/importDialog.js                                          (import/resources/content/importDialog.js)
-*   content/messenger/importDialog.xul                                         (import/resources/content/importDialog.xul)
+    content/messenger/importDialog.xul                                         (import/resources/content/importDialog.xul)
     content/messenger/fieldMapImport.xul                                       (import/resources/content/fieldMapImport.xul)
     content/messenger/fieldMapImport.js                                        (import/resources/content/fieldMapImport.js)
     content/messenger/attach.js                                                (mime/emitters/resources/content/attach.js)
@@ -194,7 +193,6 @@ messenger.jar:
 
 en-US.jar:
 *   locale/en-US/messenger/contents.rdf                                (base/resources/locale/en-US/contents.rdf)
-    locale/en-US/messenger/addressbook/ldapAutoCompErrs.properties     (addrbook/resources/locale/en-US/ldapAutoCompErrs.properties)
     locale/en-US/messenger/addressbook/abAddressBookNameDialog.dtd     (addrbook/resources/locale/en-US/abAddressBookNameDialog.dtd)
     locale/en-US/messenger/addressbook/abCardOverlay.dtd               (addrbook/resources/locale/en-US/abCardOverlay.dtd)
     locale/en-US/messenger/addressbook/abCardViewOverlay.dtd           (addrbook/resources/locale/en-US/abCardViewOverlay.dtd)
@@ -246,7 +244,6 @@ en-US.jar:
     locale/en-US/messenger/messengercompose/addressingWidgetOverlay.dtd (compose/resources/locale/en-US/addressingWidgetOverlay.dtd)
     locale/en-US/messenger/messengercompose/askSendFormat.dtd           (compose/resources/locale/en-US/askSendFormat.dtd)
     locale/en-US/messenger/messengercompose/sendProgress.dtd            (compose/resources/locale/en-US/sendProgress.dtd)
-    locale/en-US/messenger/messengercompose/mailComposeEditorOverlay.dtd (compose/resources/locale/en-US/mailComposeEditorOverlay.dtd)
     locale/en-US/messenger/messengercompose/MsgAttachPage.dtd           (compose/resources/locale/en-US/MsgAttachPage.dtd)
     locale/en-US/messenger/messengercompose/composeMsgs.properties      (compose/resources/locale/en-US/composeMsgs.properties)
     locale/en-US/messenger/imapMsgs.properties                          (imap/resources/locale/en-US/imapMsgs.properties)
@@ -297,6 +294,9 @@ en-US.jar:
     locale/en-US/messenger-mapi/pref-mailnewsOverlay.dtd                (mapi/resources/locale/en-US/pref-mailnewsOverlay.dtd)
     locale/en-US/messenger-mapi/mapi.properties                         (mapi/resources/locale/en-US/mapi.properties)
 *   locale/en-US/messenger-mapi/contents.rdf                            (mapi/resources/locale/en-US/contents.rdf)
-*   locale/en-US/messenger-region/contents.rdf                          (base/resources/locale/en-US/contents-region.rdf)
-    locale/en-US/messenger-region/region.properties                     (base/resources/locale/en-US/region.properties)
+
+US.jar:
+*   locale/US/messenger-region/contents.rdf                             (base/resources/locale/en-US/contents-region.rdf)
+    locale/US/messenger-region/region.properties                        (base/resources/locale/en-US/region.properties)
 #endif
+

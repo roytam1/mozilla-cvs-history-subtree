@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * a class that walks the lexicographic tree of rule nodes as style
- * rules are matched
- */
-
 #include "nsRuleNode.h"
 
 class nsRuleWalker {

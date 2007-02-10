@@ -52,11 +52,9 @@ LIBXUL_LIBRARY	= 1
 PACKAGE_FILE = appcomps.pkg
 PACKAGE_VARS += MOZ_PHOENIX
 
-ifndef MOZ_XUL_APP
-ifneq (,$(filter $(MOZ_WIDGET_TOOLKIT),windows gtk gtk2))
+ifneq (,$(filter $(MOZ_GFX_TOOLKIT),windows gtk gtk2))
 ALERTS_SERVICE=1
 DEFINES += -DALERTS_SERVICE
-endif
 endif
 
 REQUIRES	= xpcom \
@@ -82,69 +80,103 @@ REQUIRES	= xpcom \
 		  browser \
 		  txmgr \
 		  chardet \
-		  autocomplete \
 		  $(NULL)
 
+ifndef MOZ_PHOENIX
+ifndef MOZ_XULRUNNER
+REQUIRES += history downloadmanager
+endif
+endif
+
 CPPSRCS		= nsModule.cpp
+
+ifdef MOZ_LDAP_XPCOM
+REQUIRES	+= mozldap
+DEFINES		+= -DMOZ_LDAP_XPCOM
+endif
 
 ifdef MOZ_PERF_METRICS
 EXTRA_DSO_LIBS	+= mozutil_s
 endif
 
-# General includes
-SHARED_LIBRARY_LIBS += ../directory/$(LIB_PREFIX)directory_s.$(LIB_SUFFIX)
-LOCAL_INCLUDES += -I$(srcdir)/../directory
+SHARED_LIBRARY_LIBS = \
+	$(DIST)/lib/$(LIB_PREFIX)directory_s.$(LIB_SUFFIX) \
+	$(NULL)
 
-# Non-Mac Browser requirements
 ifneq ($(MOZ_BUILD_APP),macbrowser)
-SHARED_LIBRARY_LIBS += ../../browser/src/$(LIB_PREFIX)mozbrwsr_s.$(LIB_SUFFIX)
-LOCAL_INCLUDES += -I$(srcdir)/../../browser/src
+SHARED_LIBRARY_LIBS += \
+	$(DIST)/lib/$(LIB_PREFIX)appcompintl_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)windowds_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)mozbrwsr_s.$(LIB_SUFFIX) \
+	$(NULL)
+endif
+
+ifndef MOZ_PHOENIX
+ifndef MOZ_XULRUNNER
+SHARED_LIBRARY_LIBS += \
+	$(DIST)/lib/$(LIB_PREFIX)autocomplete_s.$(LIB_SUFFIX) \
+	$(NULL)
+
+ifneq ($(MOZ_BUILD_APP),macbrowser)
+SHARED_LIBRARY_LIBS += \
+	$(DIST)/lib/$(LIB_PREFIX)bookmarks_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)downloadmanager_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)history_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)related_s.$(LIB_SUFFIX) \
+	../startup/src/$(LIB_PREFIX)appstartup_s.$(LIB_SUFFIX) \
+	$(NULL)
 endif
 
 ifdef ALERTS_SERVICE
-SHARED_LIBRARY_LIBS += ../alerts/src/$(LIB_PREFIX)alerts_s.$(LIB_SUFFIX)
-LOCAL_INCLUDES += -I$(srcdir)/../alerts/src
-endif # ALERTS_SERVICE
-
-# Suite specific includes
-ifdef MOZ_SUITE
-REQUIRES += history downloadmanager
-
 SHARED_LIBRARY_LIBS += \
-	../download-manager/src/$(LIB_PREFIX)downloadmanager_s.$(LIB_SUFFIX) \
-	../history/src/$(LIB_PREFIX)history_s.$(LIB_SUFFIX) \
-	../related/src/$(LIB_PREFIX)related_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)alerts_s.$(LIB_SUFFIX) \
 	$(NULL)
-LOCAL_INCLUDES += \
-	-I$(srcdir)/../download-manager/src \
-	-I$(srcdir)/../history/src       \
-	-I$(srcdir)/../related/src       \
-	$(NULL)
+endif # ALERTS_SERVICE
 
 ifeq ($(OS_ARCH),WINNT)
 SHARED_LIBRARY_LIBS += \
-	../urlwidget/$(LIB_PREFIX)urlwidgt_s.$(LIB_SUFFIX) \
-	../winhooks/$(LIB_PREFIX)winhooks_s.$(LIB_SUFFIX) \
-	$(NULL)
-LOCAL_INCLUDES += \
-	-I$(srcdir)/../urlwidget \
-	-I$(srcdir)/../winhooks \
+	$(DIST)/lib/$(LIB_PREFIX)urlwidgt_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)winhooks_s.$(LIB_SUFFIX) \
 	$(NULL)
 endif # WINNT
 
-# XXX When Suite becomes a full XUL App this section can be removed.
-ifndef MOZ_XUL_APP
-SHARED_LIBRARY_LIBS += ../startup/src/$(LIB_PREFIX)appstartup_s.$(LIB_SUFFIX)
-LOCAL_INCLUDES += -I$(srcdir)/../startup/src
+endif # MOZ_XULRUNNER
+endif # MOZ_PHOENIX
 
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-SHARED_LIBRARY_LIBS += ../../bootstrap/appleevents/$(LIB_PREFIX)appleevents_s.$(LIB_SUFFIX)
-EXTRA_DSO_LDOPTS += $(TK_LIBS)
+LOCAL_INCLUDES	= \
+	-I$(srcdir)/../../browser/src \
+	-I$(srcdir)/../directory         \
+	-I$(srcdir)/../windowds \
+	$(NULL)
+
+ifndef MOZ_PHOENIX
+ifndef MOZ_XULRUNNER
+LOCAL_INCLUDES += \
+  -I$(srcdir)/../autocomplete/src  \
+  -I$(srcdir)/../bookmarks/src     \
+  -I$(srcdir)/../download-manager/src \
+  -I$(srcdir)/../history/src       \
+	-I$(srcdir)/../related/src       \
+	-I$(srcdir)/../startup/src \
+	-I$(srcdir)/../alerts/src \
+  $(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+LOCAL_INCLUDES += \
+	-I$(srcdir)/../urlwidget \
+  -I$(srcdir)/../winhooks \
+  $(NULL)
 endif
 
-endif # MOZ_XUL_APP
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+ifneq ($(MOZ_BUILD_APP),macbrowser)
+SHARED_LIBRARY_LIBS += $(DIST)/lib/$(LIB_PREFIX)appleevents_s.$(LIB_SUFFIX)
+EXTRA_DSO_LDOPTS += $(TK_LIBS)
+endif
+endif
 
-endif # MOZ_SUITE
+endif # MOZ_XULRUNNER
+endif # MOZ_PHOENIX
 
 ifeq ($(OS_ARCH),WINNT)
 OS_LIBS	+= $(call EXPAND_LIBNAME,ole32 shell32)

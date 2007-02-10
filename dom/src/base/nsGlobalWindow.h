@@ -50,7 +50,6 @@
 #include "nsWeakReference.h"
 #include "nsHashtable.h"
 #include "nsDataHashtable.h"
-#include "nsCycleCollectionParticipant.h"
 
 // Interfaces Needed
 #include "nsDOMWindowList.h"
@@ -58,6 +57,7 @@
 #include "nsIBrowserDOMWindow.h"
 #include "nsIChromeEventHandler.h"
 #include "nsIControllers.h"
+#include "nsIObserver.h"
 #include "nsIDocShellTreeOwner.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIDOMClientInformation.h"
@@ -75,7 +75,6 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
 #include "nsIScriptObjectPrincipal.h"
-#include "nsIScriptTimeoutHandler.h"
 #include "nsITimer.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsPIDOMWindow.h"
@@ -92,9 +91,11 @@
 #include "nsSize.h"
 #include "mozFlushType.h"
 #include "prclist.h"
+#include "nsIObserver.h"
 #include "nsIDOMStorage.h"
 #include "nsIDOMStorageList.h"
 #include "nsIDOMStorageWindow.h"
+#include "nsIDOMGCParticipant.h"
 
 #define DEFAULT_HOME_PAGE "www.mozilla.org"
 #define PREF_BROWSER_STARTUP_HOMEPAGE "browser.startup.homepage"
@@ -105,7 +106,8 @@ class nsIContent;
 class nsPresContext;
 class nsIDOMEvent;
 class nsIScrollableView;
-class nsIArray;
+
+typedef struct nsTimeout nsTimeout;
 
 class nsBarProp;
 class nsLocation;
@@ -114,84 +116,6 @@ class nsScreen;
 class nsHistory;
 class nsIDocShellLoadInfo;
 class WindowStateHolder;
-class nsGlobalWindowObserver;
-class nsGlobalWindow;
-
-// permissible values for CheckOpenAllow
-enum OpenAllowValue {
-  allowNot = 0,     // the window opening is denied
-  allowNoAbuse,     // allowed: not a popup
-  allowWhitelisted  // allowed: it's whitelisted or popup blocking is disabled
-};
-
-extern nsresult
-NS_CreateJSTimeoutHandler(nsIScriptContext *aContext,
-                          PRBool aIsInterval,
-                          PRInt32 *aInterval,
-                          nsIScriptTimeoutHandler **aRet);
-
-/*
- * Timeout struct that holds information about each script
- * timeout.  Holds a strong reference to an nsIScriptTimeoutHandler, which
- * abstracts the language specific cruft.
- */
-struct nsTimeout : PRCList
-{
-  nsTimeout();
-  ~nsTimeout();
-
-  nsrefcnt Release();
-  nsrefcnt AddRef();
-
-  nsTimeout* Next() {
-    // Note: might not actually return an nsTimeout.  Use IsTimeout to check.
-    return NS_STATIC_CAST(nsTimeout*, PR_NEXT_LINK(this));
-  }
-
-  nsTimeout* Prev() {
-    // Note: might not actually return an nsTimeout.  Use IsTimeout to check.
-    return NS_STATIC_CAST(nsTimeout*, PR_PREV_LINK(this));
-  }
-
-  // Window for which this timeout fires
-  nsRefPtr<nsGlobalWindow> mWindow;
-
-  // The actual timer object
-  nsCOMPtr<nsITimer> mTimer;
-
-  // True if the timeout was cleared
-  PRPackedBool mCleared;
-
-  // True if this is one of the timeouts that are currently running
-  PRPackedBool mRunning;
-
-  // Returned as value of setTimeout()
-  PRUint32 mPublicId;
-
-  // Non-zero interval in milliseconds if repetitive timeout
-  PRUint32 mInterval;
-
-  // Nominal time (in microseconds since the epoch) to run this
-  // timeout
-  PRTime mWhen;
-
-  // Principal with which to execute
-  nsCOMPtr<nsIPrincipal> mPrincipal;
-
-  // stack depth at which timeout is firing
-  PRUint32 mFiringDepth;
-
-  // The popup state at timeout creation time if not created from
-  // another timeout
-  PopupControlState mPopupState;
-
-  // The language-specific information about the callback.
-  nsCOMPtr<nsIScriptTimeoutHandler> mScriptHandler;
-
-private:
-  // reference count for shared usage
-  PRInt32 mRefCnt;
-};
 
 //*****************************************************************************
 // nsGlobalWindow: Global Object for Scripting
@@ -212,17 +136,19 @@ private:
 // belonging to the same outer window, but that's an unimportant
 // side effect of inheriting PRCList).
 
-class nsGlobalWindow : public nsPIDOMWindow,
+class nsGlobalWindow : public nsPIDOMWindow_MOZILLA_1_8_BRANCH,
                        public nsIScriptGlobalObject,
                        public nsIDOMJSWindow,
                        public nsIScriptObjectPrincipal,
                        public nsIDOMEventReceiver,
+                       public nsIDOMGCParticipant,
                        public nsIDOM3EventTarget,
                        public nsIDOMNSEventTarget,
                        public nsIDOMViewCSS,
                        public nsIDOMStorageWindow,
                        public nsSupportsWeakReference,
                        public nsIInterfaceRequestor,
+                       public nsIObserver,
                        public PRCListStr
 {
 public:
@@ -232,26 +158,28 @@ public:
   void ReallyCloseWindow();
 
   // nsISupports
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_ISUPPORTS
 
   // nsIScriptGlobalObject
+  virtual void SetContext(nsIScriptContext *aContext);
   virtual nsIScriptContext *GetContext();
-  virtual JSObject *GetGlobalJSObject();
-
-  virtual nsresult EnsureScriptEnvironment(PRUint32 aLangID);
-
-  virtual nsIScriptContext *GetScriptContext(PRUint32 lang);
-  virtual void *GetScriptGlobal(PRUint32 lang);
-
-  // Set a new script language context for this global.  The native global
-  // for the context is created by the context's GetNativeGlobal() method.
-  virtual nsresult SetScriptContext(PRUint32 lang, nsIScriptContext *aContext);
-  
+  virtual nsresult SetNewDocument(nsIDOMDocument *aDocument,
+                                  nsISupports *aState,
+                                  PRBool aRemoveEventListeners,
+                                  PRBool aClearScopeHint);
+  virtual void SetDocShell(nsIDocShell* aDocShell);
+  virtual nsIDocShell *GetDocShell();
+  virtual void SetOpenerWindow(nsIDOMWindowInternal *aOpener);
   virtual void SetGlobalObjectOwner(nsIScriptGlobalObjectOwner* aOwner);
   virtual nsIScriptGlobalObjectOwner *GetGlobalObjectOwner();
-  virtual void OnFinalize(PRUint32 aLangID, void *aScriptGlobal);
+  virtual nsresult HandleDOMEvent(nsPresContext* aPresContext,
+                                  nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                                  PRUint32 aFlags,
+                                  nsEventStatus* aEventStatus);
+  virtual JSObject *GetGlobalJSObject();
+  virtual void OnFinalize(JSObject *aJSObject);
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts);
-  virtual nsresult SetNewArguments(nsIArray *aArguments);
+  virtual nsresult SetNewArguments(PRUint32 aArgc, void* aArgv);
 
   // nsIScriptObjectPrincipal
   virtual nsIPrincipal* GetPrincipal();
@@ -282,45 +210,39 @@ public:
                                    const nsIID& aIID);
   NS_IMETHOD RemoveEventListenerByIID(nsIDOMEventListener *aListener,
                                       const nsIID& aIID);
-  NS_IMETHOD GetListenerManager(PRBool aCreateIfNotFound,
-                                nsIEventListenerManager** aResult);
+  NS_IMETHOD GetListenerManager(nsIEventListenerManager** aInstancePtrResult);
   NS_IMETHOD HandleEvent(nsIDOMEvent *aEvent);
   NS_IMETHOD GetSystemEventGroup(nsIDOMEventGroup** aGroup);
 
+  // nsIDOMGCParticipant
+  virtual nsIDOMGCParticipant* GetSCCIndex();
+  virtual void AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray);
+
   // nsPIDOMWindow
   virtual NS_HIDDEN_(nsPIDOMWindow*) GetPrivateRoot();
+  virtual NS_HIDDEN_(nsresult) GetObjectProperty(const PRUnichar* aProperty,
+                                                 nsISupports** aObject);
   virtual NS_HIDDEN_(nsresult) Activate();
   virtual NS_HIDDEN_(nsresult) Deactivate();
   virtual NS_HIDDEN_(nsIFocusController*) GetRootFocusController();
 
-  virtual NS_HIDDEN_(void) SetOpenerScriptPrincipal(nsIPrincipal* aPrincipal);
-  virtual NS_HIDDEN_(nsIPrincipal*) GetOpenerScriptPrincipal();
+  virtual NS_HIDDEN_(void) SetOpenerScriptURL(nsIURI* aURI);
 
   virtual NS_HIDDEN_(PopupControlState) PushPopupControlState(PopupControlState state, PRBool aForce) const;
   virtual NS_HIDDEN_(void) PopPopupControlState(PopupControlState state) const;
   virtual NS_HIDDEN_(PopupControlState) GetPopupControlState() const;
+  virtual NS_HIDDEN_(OpenAllowValue) GetOpenAllow(const nsAString &aName);
 
   virtual NS_HIDDEN_(nsresult) SaveWindowState(nsISupports **aState);
   virtual NS_HIDDEN_(nsresult) RestoreWindowState(nsISupports *aState);
-  virtual NS_HIDDEN_(nsresult) ResumeTimeouts();
-  virtual NS_HIDDEN_(nsresult) FireDelayedDOMEvents();
 
   virtual NS_HIDDEN_(PRBool) WouldReuseInnerWindow(nsIDocument *aNewDocument);
 
-  virtual NS_HIDDEN_(nsresult) PreHandleEvent(nsEventChainPreVisitor& aVisitor);
-  virtual NS_HIDDEN_(nsresult) PostHandleEvent(nsEventChainPostVisitor& aVisitor);
-  virtual NS_HIDDEN_(nsresult) DispatchDOMEvent(nsEvent* aEvent,
-                                                nsIDOMEvent* aDOMEvent,
-                                                nsPresContext* aPresContext,
-                                                nsEventStatus* aEventStatus);
-
-  virtual NS_HIDDEN_(void) SetDocShell(nsIDocShell* aDocShell);
-  virtual NS_HIDDEN_(nsresult) SetNewDocument(nsIDocument *aDocument,
-                                  nsISupports *aState,
-                                  PRBool aClearScopeHint);
+  // nsPIDOMWindow_MOZILLA_1_8_BRANCH
   virtual NS_HIDDEN_(void) SetOpenerWindow(nsIDOMWindowInternal *aOpener,
                                            PRBool aOriginalOpener);
-  virtual NS_HIDDEN_(void) EnsureSizeUpToDate();
+
+  virtual NS_HIDDEN_(nsresult) FireDelayedDOMEvents();
 
   virtual NS_HIDDEN_(void) EnterModalState();
   virtual NS_HIDDEN_(void) LeaveModalState();
@@ -336,6 +258,9 @@ public:
 
   // nsIInterfaceRequestor
   NS_DECL_NSIINTERFACEREQUESTOR
+
+  // nsIObserver
+  NS_DECL_NSIOBSERVER
 
   // Object Management
   nsGlobalWindow(nsGlobalWindow *aOuterWindow);
@@ -355,16 +280,6 @@ public:
     return mContext;
   }
 
-  nsIScriptContext *GetScriptContextInternal(PRUint32 aLangID)
-  {
-    NS_ASSERTION(NS_STID_VALID(aLangID), "Invalid language");
-    if (mOuterWindow) {
-      return GetOuterWindowInternal()->mScriptContexts[NS_STID_INDEX(aLangID)];
-    }
-
-    return mScriptContexts[NS_STID_INDEX(aLangID)];
-  }
-
   nsGlobalWindow *GetOuterWindowInternal()
   {
     return NS_STATIC_CAST(nsGlobalWindow *, GetOuterWindow());
@@ -375,9 +290,13 @@ public:
     return NS_STATIC_CAST(nsGlobalWindow *, mInnerWindow);
   }
 
-  nsGlobalWindow *EnsureInnerWindowInternal()
+  nsIDocShell *GetDocShellInternal()
   {
-    return NS_STATIC_CAST(nsGlobalWindow *, EnsureInnerWindow());
+    if (mOuterWindow) {
+      return GetOuterWindowInternal()->mDocShell;
+    }
+
+    return mDocShell;
   }
 
   PRBool IsFrozen() const
@@ -385,24 +304,10 @@ public:
     return mIsFrozen;
   }
 
-  PRBool IsCreatingInnerWindow() const
-  {
-    return  mCreatingInnerWindow;
-  }
-
-  nsresult Observe(nsISupports* aSubject, const char* aTopic,
-                   const PRUnichar* aData);
-
   static void ShutDown();
   static PRBool IsCallerChrome();
-  static void CloseBlockScriptTerminationFunc(nsISupports *aRef);
-
-  static void RunPendingTimeoutsRecursive(nsGlobalWindow *aTopWindow,
-                                          nsGlobalWindow *aWindow);
 
   friend class WindowStateHolder;
-
-  NS_DECL_CYCLE_COLLECTION_CLASS(nsGlobalWindow)
 
 protected:
   // Object Management
@@ -410,12 +315,15 @@ protected:
   void CleanUp();
   void ClearControllers();
 
-  void FreeInnerObjects(PRBool aClearScope);
+  void FreeInnerObjects(JSContext *cx);
 
-  nsresult SetNewDocument(nsIDocument *aDocument,
+  nsresult SetNewDocument(nsIDOMDocument *aDocument,
                           nsISupports *aState,
+                          PRBool aRemoveEventListeners,
                           PRBool aClearScopeHint,
                           PRBool aIsInternalCall);
+
+  PRBool WouldReuseInnerWindow(nsIDocument *aNewDocument, PRBool useDocURI);
 
   // Get the parent, returns null if this is a toplevel window
   nsIDOMWindowInternal *GetParentInternal();
@@ -466,8 +374,6 @@ protected:
    * @param argc The number of arguments in argv.
    * @param aExtraArgument Another way to pass arguments in.  This is mutually
    *                       exclusive with the argv/argc approach.
-   * @param aJSCallerContext The calling script's context. This must be nsnull
-   *                         when aCalledNoScript is true.
    * @param aReturn [out] The window that was opened, if any.
    *
    * @note that the boolean args are const because the function shouldn't be
@@ -480,33 +386,20 @@ protected:
                                     PRBool aDialog,
                                     PRBool aCalledNoScript,
                                     PRBool aDoJSFixups,
-                                    nsIArray *argv,
+                                    jsval *argv, PRUint32 argc,
                                     nsISupports *aExtraArgument,
                                     nsIPrincipal *aCalleePrincipal,
-                                    JSContext *aJSCallerContext,
                                     nsIDOMWindow **aReturn);
 
   static void CloseWindow(nsISupports* aWindow);
   static void ClearWindowScope(nsISupports* aWindow);
 
   // Timeout Functions
-  // Language agnostic timeout function (all args passed)
-  nsresult SetTimeoutOrInterval(nsIScriptTimeoutHandler *aHandler,
-                                PRInt32 interval,
-                                PRBool aIsInterval, PRInt32 *aReturn);
-  nsresult ClearTimeoutOrInterval(PRInt32 aTimerID);
-
-  // JS specific timeout functions (JS args grabbed from context).
   nsresult SetTimeoutOrInterval(PRBool aIsInterval, PRInt32* aReturn);
-  nsresult ClearTimeoutOrInterval();
-
-  // The timeout implementation functions.
   void RunTimeout(nsTimeout *aTimeout);
-
+  nsresult ClearTimeoutOrInterval();
   void ClearAllTimeouts();
-  // Insert aTimeout into the list, before all timeouts that would
-  // fire after it, but no earlier than mTimeoutInsertionPoint, if any.
-  void InsertTimeoutIntoList(nsTimeout *aTimeout);
+  void InsertTimeoutIntoList(nsTimeout **aInsertionPoint, nsTimeout *aTimeout);
   static void TimerCallback(nsITimer *aTimer, void *aClosure);
 
   // Helper Functions
@@ -515,7 +408,8 @@ protected:
   nsresult GetWebBrowserChrome(nsIWebBrowserChrome** aBrowserChrome);
   // GetScrollInfo does not flush.  Callers should do it themselves as needed,
   // depending on which info they actually want off the scrollable view.
-  nsresult GetScrollInfo(nsIScrollableView** aScrollableView);
+  nsresult GetScrollInfo(nsIScrollableView** aScrollableView, float* aP2T,
+                         float* aT2P);
   nsresult SecurityCheckURL(const char *aURL);
   nsresult BuildURIfromBase(const char *aURL,
                             nsIURI **aBuiltURI,
@@ -524,11 +418,10 @@ protected:
   OpenAllowValue CheckOpenAllow(PopupControlState aAbuseLevel);
   void     FireAbuseEvents(PRBool aBlocked, PRBool aWindow,
                            const nsAString &aPopupURL,
-                           const nsAString &aPopupWindowName,
                            const nsAString &aPopupWindowFeatures);
-  void FireOfflineStatusEvent();
-  
+
   void FlushPendingNotifications(mozFlushType aType);
+  void EnsureSizeUpToDate();
   void EnsureReflowFlushAndPaint();
   nsresult CheckSecurityWidthAndHeight(PRInt32* width, PRInt32* height);
   nsresult CheckSecurityLeftAndTop(PRInt32* left, PRInt32* top);
@@ -567,6 +460,7 @@ protected:
   already_AddRefed<nsIWidget> GetMainWidget();
 
   void SuspendTimeouts();
+  virtual nsresult ResumeTimeouts();
 
   void Freeze()
   {
@@ -580,20 +474,6 @@ protected:
   }
 
   PRBool IsInModalState();
-
-  nsTimeout* FirstTimeout() {
-    // Note: might not actually return an nsTimeout.  Use IsTimeout to check.
-    return NS_STATIC_CAST(nsTimeout*, PR_LIST_HEAD(&mTimeouts));
-  }
-
-  nsTimeout* LastTimeout() {
-    // Note: might not actually return an nsTimeout.  Use IsTimeout to check.
-    return NS_STATIC_CAST(nsTimeout*, PR_LIST_TAIL(&mTimeouts));
-  }
-
-  PRBool IsTimeout(PRCList* aList) {
-    return aList != &mTimeouts;
-  }
 
   // When adding new member variables, be careful not to create cycles
   // through JavaScript.  If there is any chance that a member variable
@@ -622,21 +502,12 @@ protected:
   PRPackedBool                  mHadOriginalOpener : 1;
   PRPackedBool                  mIsPopupSpam : 1;
 
-  // Indicates whether scripts are allowed to close this window.
-  PRPackedBool                  mBlockScriptedClosingFlag : 1;
+  PRUint32                      mModalStateDepth;
 
-  // Track what sorts of events we need to fire when thawed
-  PRPackedBool                  mFireOfflineStatusChangeEventOnThaw : 1;
-
-  // Indicates whether we're in the middle of creating an initializing
-  // a new inner window object.
-  PRPackedBool                  mCreatingInnerWindow : 1;
-  
   nsCOMPtr<nsIScriptContext>    mContext;
   nsCOMPtr<nsIDOMWindowInternal> mOpener;
   nsCOMPtr<nsIControllers>      mControllers;
-  nsCOMPtr<nsIArray>            mArguments;
-  nsCOMPtr<nsIArray>            mArgumentsLast;
+  JSObject*                     mArguments;
   nsRefPtr<nsNavigator>         mNavigator;
   nsRefPtr<nsScreen>            mScreen;
   nsRefPtr<nsHistory>           mHistory;
@@ -651,34 +522,26 @@ protected:
   nsRefPtr<nsLocation>          mLocation;
   nsString                      mStatus;
   nsString                      mDefaultStatus;
-  // index 0->language_id 1, so index MAX-1 == language_id MAX
-  nsCOMPtr<nsIScriptContext>    mScriptContexts[NS_STID_ARRAY_UBOUND];
-  void *                        mScriptGlobals[NS_STID_ARRAY_UBOUND];
-  nsGlobalWindowObserver*       mObserver;
 
   nsIScriptGlobalObjectOwner*   mGlobalObjectOwner; // Weak Reference
+  nsIDocShell*                  mDocShell;  // Weak Reference
   nsCOMPtr<nsIDOMCrypto>        mCrypto;
   nsCOMPtr<nsIDOMPkcs11>        mPkcs11;
 
-
   nsCOMPtr<nsIDOMStorageList>   gGlobalStorageList;
 
-  nsCOMPtr<nsISupports>         mInnerWindowHolders[NS_STID_ARRAY_UBOUND];
-  nsCOMPtr<nsIPrincipal> mOpenerScriptPrincipal; // strong; used to determine
-                                                 // whether to clear scope
+  nsCOMPtr<nsIXPConnectJSObjectHolder> mInnerWindowHolder;
 
   // These member variable are used only on inner windows.
   nsCOMPtr<nsIEventListenerManager> mListenerManager;
-  PRCList                       mTimeouts;
-  // If mTimeoutInsertionPoint is non-null, insertions should happen after it.
-  nsTimeout*                    mTimeoutInsertionPoint;
+  nsTimeout*                    mTimeouts;
+  nsTimeout**                   mTimeoutInsertionPoint;
   PRUint32                      mTimeoutPublicIdCounter;
   PRUint32                      mTimeoutFiringDepth;
   nsCOMPtr<nsIDOMStorage>       mSessionStorage;
 
   // These member variables are used on both inner and the outer windows.
   nsCOMPtr<nsIPrincipal> mDocumentPrincipal;
-  nsCOMPtr<nsIDocument> mDoc;  // For fast access to principals
   JSObject* mJSObject;
 
   nsDataHashtable<nsStringHashKey, PRBool> *mPendingStorageEvents;
@@ -689,6 +552,7 @@ protected:
 
   friend class nsDOMScriptableHelper;
   friend class nsDOMWindowUtils;
+  static nsIScriptSecurityManager *sSecMan;
   static nsIFactory *sComputedDOMStyleFactory;
 };
 
@@ -715,11 +579,104 @@ protected:
   nsCOMPtr<nsIBrowserDOMWindow> mBrowserDOMWindow;
 };
 
+/*
+ * Timeout struct that holds information about each JavaScript
+ * timeout.
+ */
+struct nsTimeout
+{
+  nsTimeout()
+  {
+#ifdef DEBUG_jst
+    {
+      extern int gTimeoutCnt;
+
+      ++gTimeoutCnt;
+    }
+#endif
+
+    memset(this, 0, sizeof(*this));
+
+    MOZ_COUNT_CTOR(nsTimeout);
+  }
+
+  ~nsTimeout()
+  {
+#ifdef DEBUG_jst
+    {
+      extern int gTimeoutCnt;
+
+      --gTimeoutCnt;
+    }
+#endif
+
+    MOZ_COUNT_DTOR(nsTimeout);
+  }
+
+  void Release(nsIScriptContext* aContext);
+  void AddRef();
+
+  // Window for which this timeout fires
+  nsGlobalWindow *mWindow;
+
+  // The JS expression to evaluate or function to call, if !mExpr
+  JSString *mExpr;
+  JSObject *mFunObj;
+
+  // The actual timer object
+  nsCOMPtr<nsITimer> mTimer;
+
+  // Function actual arguments and argument count
+  jsval *mArgv;
+  PRUint16 mArgc;
+
+  // True if the timeout was cleared
+  PRPackedBool mCleared;
+
+  // True if this is one of the timeouts that are currently running
+  PRPackedBool mRunning;
+
+  // Returned as value of setTimeout()
+  PRUint32 mPublicId;
+
+  // Non-zero interval in milliseconds if repetitive timeout
+  PRInt32 mInterval;
+
+  // Nominal time (in microseconds since the epoch) to run this
+  // timeout
+  PRTime mWhen;
+
+  // Principal with which to execute
+  nsCOMPtr<nsIPrincipal> mPrincipal;
+
+  // filename, line number and JS language version string of the
+  // caller of setTimeout()
+  char *mFileName;
+  PRUint32 mLineNo;
+  const char *mVersion;
+
+  // stack depth at which timeout is firing
+  PRUint32 mFiringDepth;
+
+  // Pointer to the next timeout in the linked list of scheduled
+  // timeouts
+  nsTimeout *mNext;
+
+  // The popup state at timeout creation time if not created from
+  // another timeout
+  PopupControlState mPopupState;
+
+private:
+  // reference count for shared usage
+  PRInt32 mRefCnt;
+};
+
 //*****************************************************************************
 // nsNavigator: Script "navigator" object
 //*****************************************************************************
 
 class nsNavigator : public nsIDOMNavigator,
+                    public nsIDOMNavigator_MOZILLA_1_8_BRANCH,
                     public nsIDOMJSNavigator,
                     public nsIDOMClientInformation
 {
@@ -729,6 +686,7 @@ public:
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIDOMNAVIGATOR
+  NS_DECL_NSIDOMNAVIGATOR_MOZILLA_1_8_BRANCH
   NS_DECL_NSIDOMJSNAVIGATOR
   NS_DECL_NSIDOMCLIENTINFORMATION
   

@@ -53,6 +53,7 @@ XPIDLSRCS = inIDOMView.idl \
             inISearchProcess.idl \
             inISearchObserver.idl \
             inICSSValueSearch.idl \
+            inIFileSearch.idl \
             inIDOMUtils.idl \
 	    $(NULL)
 

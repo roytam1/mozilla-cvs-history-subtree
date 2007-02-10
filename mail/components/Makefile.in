@@ -44,12 +44,8 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS    = compose preferences addrbook migration
 
-ifneq (,$(filter windows gtk2 mac cocoa, $(MOZ_WIDGET_TOOLKIT)))
+ifneq (,$(filter gtk2 mac cocoa, $(MOZ_WIDGET_TOOLKIT)))
 DIRS += shell
-endif
-
-ifdef MOZ_SAFE_BROWSING
-DIRS += phishing 
 endif
 
 DIRS += build

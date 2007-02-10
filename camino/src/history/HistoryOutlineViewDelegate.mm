@@ -189,7 +189,7 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
     return;
   }
 
-  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:sender];
+  BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
   BOOL openInTabs       = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
   BOOL cmdKeyDown       = (([[NSApp currentEvent] modifierFlags] & NSCommandKeyMask) != 0);
   
@@ -250,7 +250,7 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 {
   NSArray* itemsArray = [mHistoryOutlineView selectedItems];
 
-  BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:aSender];
+  BOOL backgroundLoad = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
 
   NSEnumerator* itemsEnum = [itemsArray objectEnumerator];
   HistoryItem* curItem;
@@ -266,7 +266,7 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 {
   NSArray* itemsArray = [mHistoryOutlineView selectedItems];
 
-  BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:aSender];
+  BOOL backgroundLoad = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
 
   NSEnumerator* itemsEnum = [itemsArray objectEnumerator];
   HistoryItem* curItem;
@@ -283,18 +283,20 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 
   // make url array
   NSMutableArray* urlArray = [NSMutableArray arrayWithCapacity:[itemsArray count]];
-
+  
   NSEnumerator* itemsEnum = [itemsArray objectEnumerator];
   id curItem;
-  while ((curItem = [itemsEnum nextObject])) {
+  while ((curItem = [itemsEnum nextObject]))
+  {
     if ([curItem isKindOfClass:[HistorySiteItem class]])
       [urlArray addObject:[curItem url]];
   }
 
   // make new window
-  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:aSender];
+  BOOL loadNewTabsInBackgroundPref = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
+
   NSWindow* behindWindow = nil;
-  if (loadInBackground)
+  if (loadNewTabsInBackgroundPref)
     behindWindow = [mBrowserWindowController window];
 
   [[NSApp delegate] openBrowserWindowWithURLs:urlArray behind:behindWindow allowPopups:NO];
@@ -398,7 +400,6 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 
   NSMenu*     contextMenu = [[[NSMenu alloc] initWithTitle:@"notitle"] autorelease];
   NSMenuItem* menuItem = nil;
-  NSMenuItem* shiftMenuItem = nil;
   NSString*   menuTitle = nil;
 
   if (numSiteItems > 1)
@@ -409,12 +410,6 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
   [menuItem setTarget:self];
   [contextMenu addItem:menuItem];
 
-  shiftMenuItem = [NSMenuItem alternateMenuItemWithTitle:menuTitle
-                                                  action:@selector(openHistoryItemInNewWindow:)
-                                                  target:self
-                                               modifiers:([menuItem keyEquivalentModifierMask] | NSShiftKeyMask)];
-  [contextMenu addItem:shiftMenuItem];
-
   if (numSiteItems > 1)
     menuTitle = NSLocalizedString(@"Open in New Tabs", @"");
   else
@@ -423,24 +418,12 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
   [menuItem setTarget:self];
   [contextMenu addItem:menuItem];
 
-  shiftMenuItem = [NSMenuItem alternateMenuItemWithTitle:menuTitle
-                                                  action:@selector(openHistoryItemInNewTab:)
-                                                  target:self
-                                               modifiers:([menuItem keyEquivalentModifierMask] | NSShiftKeyMask)];
-  [contextMenu addItem:shiftMenuItem];
-
   if (numSiteItems > 1)
   {
     menuTitle = NSLocalizedString(@"Open in Tabs in New Window", @"");
     menuItem = [[[NSMenuItem alloc] initWithTitle:menuTitle action:@selector(openHistoryItemsInTabsInNewWindow:) keyEquivalent:@""] autorelease];
     [menuItem setTarget:self];
     [contextMenu addItem:menuItem];
-
-    shiftMenuItem = [NSMenuItem alternateMenuItemWithTitle:menuTitle
-                                                    action:@selector(openHistoryItemsInTabsInNewWindow:)
-                                                    target:self
-                                                 modifiers:([menuItem keyEquivalentModifierMask] | NSShiftKeyMask)];
-    [contextMenu addItem:shiftMenuItem];
   }
 
   // space
@@ -468,10 +451,7 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 
 - (unsigned int)outlineView:(NSOutlineView *)outlineView draggingSourceOperationMaskForLocal:(BOOL)localFlag
 {
-  if (localFlag)
-    return NSDragOperationGeneric;
-
-  return (NSDragOperationGeneric | NSDragOperationCopy | NSDragOperationLink);
+  return NSDragOperationGeneric;
 }
 
 - (void)outlineViewItemDidExpand:(NSNotification *)notification
@@ -488,23 +468,27 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 
 #pragma mark -
 
-- (BOOL)validateMenuItem:(NSMenuItem*)menuItem
+- (BOOL)validateMenuItem:(id <NSMenuItem>)menuItem
 {
-  // Window actions are disabled while a sheet is showing
-  if ([[mBrowserWindowController window] attachedSheet])
-    return NO;  
-
   SEL action = [menuItem action];
 
-  if (action == @selector(openHistoryItem:) ||
-      action == @selector(openHistoryItemInNewWindow:) ||
-      action == @selector(openHistoryItemInNewTab:) ||
-      action == @selector(openHistoryItemsInTabsInNewWindow:) ||
-      action == @selector(deleteHistoryItems:) ||
-      action == @selector(copyURLs:))
-  {
+  if (action == @selector(openHistoryItem:))
     return [self anyHistorySiteItemsSelected];
-  }
+
+  if (action == @selector(openHistoryItemInNewWindow:))
+    return [self anyHistorySiteItemsSelected];
+
+  if (action == @selector(openHistoryItemInNewTab:))
+    return [self anyHistorySiteItemsSelected];
+
+  if (action == @selector(openHistoryItemsInTabsInNewWindow:))
+    return [self anyHistorySiteItemsSelected];
+  
+  if (action == @selector(deleteHistoryItems:))
+    return [self anyHistorySiteItemsSelected];
+
+  if (action == @selector(copyURLs:))
+    return [self anyHistorySiteItemsSelected];
 
   return YES;
 }
@@ -580,16 +564,14 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 
 - (BOOL)anyHistorySiteItemsSelected
 {
-  NSIndexSet* selectedIndexes = [mHistoryOutlineView selectedRowIndexes];
-  unsigned int currentRow = [selectedIndexes firstIndex];
-
-  while (currentRow != NSNotFound) {
-    if ([[mHistoryOutlineView itemAtRow:currentRow] isKindOfClass:[HistorySiteItem class]])
+  NSEnumerator* rowEnum = [mHistoryOutlineView selectedRowEnumerator];
+  int currentRow;
+  while ((currentRow = [[rowEnum nextObject] intValue]))
+  {
+    HistoryItem * item = [mHistoryOutlineView itemAtRow:currentRow];
+    if ([item isKindOfClass:[HistorySiteItem class]])
       return YES;
-
-    currentRow = [selectedIndexes indexGreaterThanIndex:currentRow];
   }
-
   return NO;
 }
 

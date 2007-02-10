@@ -11,9 +11,10 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the JavaScript 2 Prototype.
+ * The Original Code is jprof.
  *
- * The Initial Developer of the Original Code is James L. Nance.
+ * The Initial Developer of the Original Code is
+ * James L. Nance.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *

@@ -55,8 +55,11 @@
 
 #include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
+#include "nsICharsetDetector.h"
 
 // just for CIDs
+#include "nsIUnicodeDecodeHelper.h"
+#include "nsIUnicodeEncodeHelper.h"
 #include "nsCharsetConverterManager.h"
 
 #ifdef MOZ_USE_NATIVE_UCONV
@@ -296,13 +299,13 @@ nsCharsetConverterManager::GetList(const nsACString& aCategory,
   nsresult rv;
   nsCAutoString alias;
 
-  nsCOMPtr<nsICategoryManager> catman = do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
-  if (NS_FAILED(rv))
-    return rv;
-
   nsCStringArray* array = new nsCStringArray;
   if (!array)
     return NS_ERROR_OUT_OF_MEMORY;
+
+  nsCOMPtr<nsICategoryManager> catman = do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
   
   nsCOMPtr<nsISimpleEnumerator> enumerator;
   catman->EnumerateCategory(PromiseFlatCString(aCategory).get(), 
@@ -353,7 +356,7 @@ nsCharsetConverterManager::GetEncoderList(nsIUTF8StringEnumerator ** aResult)
 NS_IMETHODIMP
 nsCharsetConverterManager::GetCharsetDetectorList(nsIUTF8StringEnumerator** aResult)
 {
-  return GetList(NS_LITERAL_CSTRING("charset-detectors"),
+  return GetList(NS_LITERAL_CSTRING(NS_CHARSET_DETECTOR_CATEGORY),
                  NS_LITERAL_CSTRING("chardet."), aResult);
 }
 

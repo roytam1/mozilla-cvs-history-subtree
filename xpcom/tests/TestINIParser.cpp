@@ -37,7 +37,6 @@
 
 #include <string.h>
 
-#include "nsXPCOM.h"
 #include "nsINIParser.h"
 #include "nsILocalFile.h"
 

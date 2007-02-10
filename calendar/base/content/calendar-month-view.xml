@@ -162,28 +162,6 @@
         }
         this.parentBox.addDropShadows();
 
-        // Mozilla doesn't provide any generic way for us to listen for the
-        // drag-end.  Add this listener for a best approximation of listening
-        // for that case.
-        var monthbox = this.parentBox;
-        monthbox.monthView.dropListener = function checkStillDragging() {
-            var dragService = Components.classes["@mozilla.org/widget/dragservice;1"]
-                                        .getService(Components.interfaces.nsIDragService);
-            var session;
-            try {
-                session = dragService.getCurrentSession();
-            } catch (ex) {}
-            if (!session) {
-                monthbox.removeDropShadows();
-                monthbox.addItem(item);
-                window.removeEventListener("mouseover",
-                                           monthbox.monthView.dropListener,
-                                           true);
-            }
-        };
-        window.addEventListener("mouseover",
-                                monthbox.monthView.dropListener, true);
-
         dragService.invokeDragSession(this, supArray, null, action);
       ]]></handler>
     </handlers>
@@ -599,15 +577,7 @@
          }
 
          this.removeDropShadows();
-
-         window.removeEventListener("mouseover",
-                                    this.monthView.dropListener, true);
-
          this.monthView.controller.modifyOccurrence(item, newStart, newEnd);
-      ]]></handler>
-
-      <handler event="click" button="0"><![CDATA[
-        this.monthView.setSelectedItems(0, []);
       ]]></handler>
     </handlers>
   </binding>
@@ -1069,20 +1039,8 @@
       <property name="monthgridrows" readonly="true"
 	onget="return document.getAnonymousElementByAttribute(this, 'anonid', 'monthgridrows');"/>
 
-      <field name="mRefreshQueue">[]</field>
-      <field name="mRefreshPending">false</field>
-
-      <method name="popRefreshQueue">
+      <method name="refresh">
         <body><![CDATA[
-          if (this.mRefreshPending) {
-            return;
-          }
-
-          var refreshJob = this.mRefreshQueue.pop();
-          if (!refreshJob) {
-            return;
-          }
-
           if (!this.startDate || !this.endDate)
             return;
 
@@ -1099,21 +1057,11 @@
           else
             filter |= this.mCalendar.ITEM_FILTER_TYPE_EVENT;
 
-          this.mRefreshPending = true;
-
           this.mCalendar.getItems(filter,
                                   0,
                                   this.startDate,
                                   this.queryEndDate,
                                   this.mOperationListener);
-        ]]></body>
-      </method>
-
-      <method name="refresh">
-        <body><![CDATA[
-          var refreshJob = {};
-          this.mRefreshQueue.push(refreshJob);
-          this.popRefreshQueue();
         ]]></body>
       </method>
 
@@ -1361,17 +1309,10 @@
           function isNotItem(a) {
               return !a.hasSameIds(aItem);
           }
-          var oldLength = this.mSelectedItems.length;
           this.mSelectedItems = this.mSelectedItems.filter(isNotItem);
 
           for each (box in boxes) {
             box.box.deleteItem(aItem);
-          }
-
-          // If a deleted event was selected, we need to announce that the
-          // selection changed.
-          if (oldLength != this.mSelectedItems.length) {
-              this.fireEvent("itemselect", this.mSelectedItems);
           }
         ]]></body>
       </method>
@@ -1402,13 +1343,7 @@
             return this;
           },
   
-          onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail) {
-            // signal that the current operation finished.
-            this.calView.mRefreshPending = false;
-
-            // immediately start the next job on the queue.
-            this.calView.popRefreshQueue();
-          },
+          onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail) {},
           onGetResult: function(aCalendar, aStatus, aItemType, aDetail, aCount, aItems) {
             if (!Components.isSuccessCode(aStatus))
               return;
@@ -1479,10 +1414,6 @@
             for each (var occ in occs)
               this.calView.doDeleteItem(occ);
 
-            if (aNewItem instanceof Components.interfaces.calITodo &&
-                !this.mTasksInView) {
-                return;
-            }
             occs = aNewItem.getOccurrencesBetween(this.calView.startDate,
                                                   this.calView.queryEndDate,
                                                   {});

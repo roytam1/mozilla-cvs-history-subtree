@@ -52,9 +52,12 @@
 #include "nsIStreamConverterService.h"
 #include "nsITXTToHTMLConv.h"
 #include "nsIProgressEventSink.h"
-#include "nsThreadUtils.h"
+#include "nsEventQueueUtils.h"
 #include "nsNetUtil.h"
 #include "nsCRT.h"
+
+static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
+static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 
 #define BUFFER_SEG_SIZE (4*1024)
 #define BUFFER_MAX_SIZE (64*1024)
@@ -71,12 +74,11 @@ nsFingerChannel::~nsFingerChannel()
 {
 }
 
-NS_IMPL_ISUPPORTS5(nsFingerChannel, 
+NS_IMPL_ISUPPORTS4(nsFingerChannel, 
                    nsIChannel, 
                    nsIRequest,
                    nsIStreamListener, 
-                   nsIRequestObserver,
-                   nsIProxiedChannel)
+                   nsIRequestObserver)
 
 nsresult
 nsFingerChannel::Init(nsIURI *uri, nsIProxyInfo *proxyInfo)
@@ -209,14 +211,15 @@ nsFingerChannel::AsyncOpen(nsIStreamListener *aListener, nsISupports *ctxt)
     nsresult rv = NS_CheckPortSafety(mPort, "finger");
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-    NS_ENSURE_STATE(thread);
+    nsCOMPtr<nsIEventQueue> eventQ;
+    rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ));
+    if (NS_FAILED(rv)) return rv;
 
     //
     // create transport
     //
     nsCOMPtr<nsISocketTransportService> sts = 
-             do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID, &rv);
+             do_GetService(kSocketTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
     rv = sts->CreateTransport(nsnull, 0, mHost, mPort, mProxyInfo,
@@ -224,7 +227,7 @@ nsFingerChannel::AsyncOpen(nsIStreamListener *aListener, nsISupports *ctxt)
     if (NS_FAILED(rv)) return rv;
 
     // not fatal if this fails
-    mTransport->SetEventSink(this, thread);
+    mTransport->SetEventSink(this, eventQ);
 
     rv = WriteRequest(mTransport);
     if (NS_FAILED(rv)) return rv;
@@ -233,7 +236,7 @@ nsFingerChannel::AsyncOpen(nsIStreamListener *aListener, nsISupports *ctxt)
     // create TXT to HTML stream converter
     //
     nsCOMPtr<nsIStreamConverterService> scs = 
-             do_GetService(NS_STREAMCONVERTERSERVICE_CONTRACTID, &rv);
+             do_GetService(kStreamConverterServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsIStreamListener> convListener;
@@ -450,18 +453,6 @@ nsFingerChannel::OnTransportStatus(nsITransport *trans, nsresult status,
             mProgressSink->OnProgress(this, nsnull, progress, progressMax);
         }
     }
-    return NS_OK;
-}
-
-//-----------------------------------------------------------------------------
-// nsIProxiedChannel methods
-//-----------------------------------------------------------------------------
-
-NS_IMETHODIMP
-nsFingerChannel::GetProxyInfo(nsIProxyInfo** aProxyInfo)
-{
-    *aProxyInfo = mProxyInfo;
-    NS_IF_ADDREF(*aProxyInfo);
     return NS_OK;
 }
 

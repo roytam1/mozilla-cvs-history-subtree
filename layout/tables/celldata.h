@@ -41,8 +41,6 @@
 #include "nsCoord.h"
 
 class nsTableCellFrame;
-class nsCellMap;
-class BCCellData;
 
 /** 
   * Data stored by nsCellMap to rationalize rowspan and colspan cells.
@@ -50,6 +48,14 @@ class BCCellData;
 class CellData
 {
 public:
+  /** Public constructor.
+    * @param aOrigCell  the table cell frame which will be stored in mOrigCell.   
+    */
+  CellData(nsTableCellFrame* aOrigCell);
+
+  /** destructor */
+  ~CellData(); //the constructor and destructor are implemented in nsCellMap.cpp
+
   /** Initialize the mOrigCell pointer 
     * @param aOrigCell  the table cell frame which will be stored in mOrigCell.   
     */ 
@@ -143,18 +149,6 @@ public:
     */
   nsTableCellFrame* GetCellFrame() const;
 
-private:
-  friend class nsCellMap;
-  friend class BCCellData;
-
-  /** constructor.
-    * @param aOrigCell  the table cell frame which will be stored in mOrigCell.   
-    */
-  CellData(nsTableCellFrame* aOrigCell);  // implemented in nsCellMap.cpp
-
-  /** destructor */
-  ~CellData(); // implemented in nsCellMap.cpp
-  
 protected:
 
   // this union relies on the assumption that an object (not primitive type) does

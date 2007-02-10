@@ -66,7 +66,10 @@
         <caption label="&pref.calendar.timezones.list.caption;"/>
 
         <menulist id="calendar.timezone.menulist"
-                  preference="calendar.timezone.local">
+                  preference="calendar.timezone.local"
+                  onselect="document.getElementById('paneTimezones').userChangedValue(event.target);"
+                  onsynctopreference="return gTimezonesPane.getTimezoneResult();"
+                  onsyncfrompreference="gTimezonesPane.setTimezone();">
             <menupopup>
                 <menuitem label="&pref.timezone.Africa.Abidjan;"
                           value="/mozilla.org/20070129_1/Africa/Abidjan"/>

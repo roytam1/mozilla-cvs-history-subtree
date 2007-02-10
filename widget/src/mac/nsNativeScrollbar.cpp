@@ -164,7 +164,7 @@ nsNativeScrollbar::DoScrollAction(ControlPartCode part)
   if (mOnDestroyCalled)
     return;
 
-  nsCOMPtr<nsIWidget> parent ( GetParent() );
+  nsCOMPtr<nsIWidget> parent ( dont_AddRef(GetParent()) );
   if (!parent)
   {
     // parent disappeared while scrolling was in progress.  Handling Destroy
@@ -328,53 +328,49 @@ nsNativeScrollbar::DispatchMouseEvent(nsMouseEvent &aEvent)
   PRBool eatEvent = PR_FALSE;
   switch (aEvent.message)
   {
-    case NS_MOUSE_DOUBLECLICK:
-    case NS_MOUSE_BUTTON_DOWN:
-      if (aEvent.button == nsMouseEvent::eLeftButton) {
-        mMouseDownInScroll = PR_TRUE;
-        NS_ASSERTION(this != 0, "NULL nsNativeScrollbar2");
-        ::SetControlReference(mControl, (UInt32) this);
-        StartDraw();
+    case NS_MOUSE_LEFT_DOUBLECLICK:
+    case NS_MOUSE_LEFT_BUTTON_DOWN:
+      mMouseDownInScroll = PR_TRUE;
+      NS_ASSERTION(this != 0, "NULL nsNativeScrollbar2");
+      ::SetControlReference(mControl, (UInt32) this);
+      StartDraw();
+      {
+        Point thePoint;
+        thePoint.h = aEvent.point.x;
+        thePoint.v = aEvent.point.y;
+        mClickedPartCode = ::TestControl(mControl, thePoint);
+        if (mClickedPartCode > 0)
+          ::HiliteControl(mControl, mClickedPartCode);
+
+        switch (mClickedPartCode)
         {
-          Point thePoint;
-          thePoint.h = aEvent.refPoint.x;
-          thePoint.v = aEvent.refPoint.y;
-          mClickedPartCode = ::TestControl(mControl, thePoint);
-          if (mClickedPartCode > 0)
-            ::HiliteControl(mControl, mClickedPartCode);
-  
-          switch (mClickedPartCode)
-          {
-            case kControlUpButtonPart:
-            case kControlDownButtonPart:
-            case kControlPageUpPart:
-            case kControlPageDownPart:
-            case kControlIndicatorPart:
-              // We are assuming Appearance 1.1 or later, so we
-              // have the "live scroll" variant of the scrollbar,
-              // which lets you pass the action proc to TrackControl
-              // for the thumb (this was illegal in previous
-              // versions of the defproc).
-              ::TrackControl(mControl, thePoint, ScrollbarActionProc());
-              ::HiliteControl(mControl, 0);
-              // We don't dispatch the mouseDown event because mouseUp is eaten
-              // by TrackControl anyway and the only messages the app really
-              // cares about are the NS_SCROLLBAR_xxx messages.
-              eatEvent = PR_TRUE;
-              break;
-          }
-          SetPosition(mValue);
+          case kControlUpButtonPart:
+          case kControlDownButtonPart:
+          case kControlPageUpPart:
+          case kControlPageDownPart:
+          case kControlIndicatorPart:
+            // We are assuming Appearance 1.1 or later, so we
+            // have the "live scroll" variant of the scrollbar,
+            // which lets you pass the action proc to TrackControl
+            // for the thumb (this was illegal in previous
+            // versions of the defproc).
+            ::TrackControl(mControl, thePoint, ScrollbarActionProc());
+            ::HiliteControl(mControl, 0);
+            // We don't dispatch the mouseDown event because mouseUp is eaten
+            // by TrackControl anyway and the only messages the app really
+            // cares about are the NS_SCROLLBAR_xxx messages.
+            eatEvent = PR_TRUE;
+            break;
         }
-        EndDraw();
+        SetPosition(mValue);
       }
+      EndDraw();
       break;
 
 
-    case NS_MOUSE_BUTTON_UP:
-      if (aEvent.button == nsMouseEvent::eLeftButton) {
-        mMouseDownInScroll = PR_FALSE;
-        mClickedPartCode = 0;
-      }
+    case NS_MOUSE_LEFT_BUTTON_UP:
+      mMouseDownInScroll = PR_FALSE;
+      mClickedPartCode = 0;
       break;
 
     case NS_MOUSE_EXIT:

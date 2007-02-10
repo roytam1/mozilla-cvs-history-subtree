@@ -53,22 +53,24 @@
 #include "nsIDocShellLoadInfo.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIDocShellTreeOwner.h"
-#include "nsIDocumentLoader.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMWindow.h"
 #include "nsIDOMChromeWindow.h"
 #include "nsIDOMWindowInternal.h"
-#include "nsIScriptObjectPrincipal.h"
 #include "nsIScreen.h"
 #include "nsIScreenManager.h"
 #include "nsIScriptContext.h"
+#include "nsIEventQueue.h"
+#include "nsIEventQueueService.h"
 #include "nsIGenericFactory.h"
 #include "nsIJSContextStack.h"
 #include "nsIObserverService.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptSecurityManager.h"
+#include "nsISupportsArray.h"
 #include "nsXPCOM.h"
+#include "nsISupportsPrimitives.h"
 #include "nsIURI.h"
 #include "nsIWebBrowser.h"
 #include "nsIWebBrowserChrome.h"
@@ -81,16 +83,29 @@
 #include "nsIContentViewer.h"
 #include "nsIDocumentViewer.h"
 #include "nsIWindowProvider.h"
-#include "nsIMutableArray.h"
-#include "nsISupportsArray.h"
 
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
 
 #include "jsinterp.h" // for js_AllocStack() and js_FreeStack()
 
+#ifdef XP_UNIX
+// please see bug 78421 for the eventual "right" fix for this
+#define HAVE_LAME_APPSHELL
+#endif
+
+#ifdef HAVE_LAME_APPSHELL
+#include "nsIAppShell.h"
+// for NS_APPSHELL_CID
+#include <nsWidgetsCID.h>
+#endif
+
 #ifdef USEWEAKREFS
 #include "nsIWeakReference.h"
+#endif
+
+#ifdef HAVE_LAME_APPSHELL
+static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
 #endif
 
 static const char *sJSStackContractID="@mozilla.org/js/xpc/ContextStack;1";
@@ -263,6 +278,74 @@ void nsWatcherWindowEnumerator::WindowRemoved(nsWatcherWindowEntry *inInfo) {
 }
 
 /****************************************************************
+ ********************* EventQueueAutoPopper *********************
+ ****************************************************************/
+
+class EventQueueAutoPopper {
+public:
+  EventQueueAutoPopper();
+  ~EventQueueAutoPopper();
+
+  nsresult Push();
+
+protected:
+  nsCOMPtr<nsIEventQueueService> mService;
+  nsCOMPtr<nsIEventQueue>        mQueue;
+#ifdef HAVE_LAME_APPSHELL
+  nsCOMPtr<nsIAppShell>          mAppShell;
+#endif
+};
+
+EventQueueAutoPopper::EventQueueAutoPopper() : mQueue(nsnull)
+{
+}
+
+EventQueueAutoPopper::~EventQueueAutoPopper()
+{
+#ifdef HAVE_LAME_APPSHELL
+  if (mAppShell) {
+    if (mQueue)
+      mAppShell->ListenToEventQueue(mQueue, PR_FALSE);
+    mAppShell->Spindown();
+    mAppShell = nsnull;
+  }
+#endif
+
+  if(mQueue)
+    mService->PopThreadEventQueue(mQueue);
+}
+
+nsresult EventQueueAutoPopper::Push()
+{
+  if (mQueue) // only once
+    return NS_ERROR_FAILURE;
+
+  mService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID);
+  if (!mService)
+    return NS_ERROR_FAILURE;
+
+  // push a new queue onto it
+  mService->PushThreadEventQueue(getter_AddRefs(mQueue));
+  if (!mQueue)
+    return NS_ERROR_FAILURE;
+
+#ifdef HAVE_LAME_APPSHELL
+  // listen to the event queue
+  mAppShell = do_CreateInstance(kAppShellCID);
+  if (!mAppShell)
+    return NS_ERROR_FAILURE;
+
+  mAppShell->Create(0, nsnull);
+  mAppShell->Spinup();
+
+  // listen to the new queue
+  mAppShell->ListenToEventQueue(mQueue, PR_TRUE);
+#endif
+
+  return NS_OK;
+}
+
+/****************************************************************
  ********************** JSContextAutoPopper *********************
  ****************************************************************/
 
@@ -315,16 +398,31 @@ nsresult JSContextAutoPopper::Push(JSContext *cx)
 }
 
 /****************************************************************
+ ************************** AutoFree ****************************
+ ****************************************************************/
+
+class AutoFree {
+public:
+  AutoFree(void *aPtr) : mPtr(aPtr) {
+  }
+  ~AutoFree() {
+    if (mPtr)
+      nsMemory::Free(mPtr);
+  }
+  void Invalidate() {
+    mPtr = 0;
+  }
+private:
+  void *mPtr;
+};
+
+/****************************************************************
  *********************** nsWindowWatcher ************************
  ****************************************************************/
 
 NS_IMPL_ADDREF(nsWindowWatcher)
 NS_IMPL_RELEASE(nsWindowWatcher)
-NS_IMPL_QUERY_INTERFACE4(nsWindowWatcher,
-                         nsIWindowWatcher,
-                         nsIPromptFactory,
-                         nsIAuthPromptAdapterFactory,
-                         nsPIWindowWatcher)
+NS_IMPL_QUERY_INTERFACE2(nsWindowWatcher, nsIWindowWatcher, nsPIWindowWatcher)
 
 nsWindowWatcher::nsWindowWatcher() :
         mEnumeratorList(),
@@ -361,58 +459,29 @@ nsWindowWatcher::OpenWindow(nsIDOMWindow *aParent,
                             nsISupports *aArguments,
                             nsIDOMWindow **_retval)
 {
-  nsCOMPtr<nsIArray> argsArray;
-  PRUint32 argc = 0;
-  if (aArguments) {
-    // aArguments is allowed to be either an nsISupportsArray or an nsIArray
-    // (in which case it is treated as argv) or any other COM object (in which
-    // case it becomes argv[0]).
-    nsresult rv;
+  PRUint32  argc;
+  jsval    *argv = nsnull;
+  JSContext *cx;
+  void *mark;
 
-    nsCOMPtr<nsISupportsArray> supArray(do_QueryInterface(aArguments));
-    if (!supArray) {
-      nsCOMPtr<nsIArray> array(do_QueryInterface(aArguments));
-      if (!array) {
-        nsCOMPtr<nsIMutableArray> muteArray;
-        argsArray = muteArray = do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
-        if (NS_FAILED(rv))
-          return rv;
-        rv = muteArray->AppendElement(aArguments, PR_FALSE);
-        if (NS_FAILED(rv))
-          return rv;
-        argc = 1;
-      } else {
-        rv = array->GetLength(&argc);
-        if (NS_FAILED(rv))
-          return rv;
-        if (argc > 0)
-          argsArray = array;
-      }
-    } else {
-      // nsISupports array - copy into nsIArray...
-      rv = supArray->Count(&argc);
-      if (NS_FAILED(rv))
-        return rv;
-      // But only create an arguments array if there's at least one element in
-      // the supports array.
-      if (argc > 0) {
-        nsCOMPtr<nsIMutableArray> muteArray;
-        argsArray = muteArray = do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
-        if (NS_FAILED(rv))
-          return rv;
-        for (PRUint32 i = 0; i < argc; i++) {
-          nsCOMPtr<nsISupports> elt(dont_AddRef(supArray->ElementAt(i)));
-          rv = muteArray->AppendElement(elt, PR_FALSE);
-          if (NS_FAILED(rv))
-            return rv;
-        }
-      }
+  // This kungFuDeathGrip is filled when we are using aParent's context. It
+  // prevents the context from being destroyed before we're truly done with
+  // it.
+  nsCOMPtr<nsIScriptContext> kungFuDeathGrip;
+
+  nsresult rv = ConvertSupportsTojsvals(aParent, aArguments, &argc, &argv, &cx,
+                                        &mark, getter_AddRefs(kungFuDeathGrip));
+  if (NS_SUCCEEDED(rv)) {
+    PRBool dialog = argc == 0 ? PR_FALSE : PR_TRUE;
+    rv = OpenWindowJSInternal(aParent, aUrl, aName, aFeatures, dialog, argc,
+                              argv, PR_FALSE, _retval);
+
+    if (argv) {
+      js_FreeStack(cx, mark);
     }
   }
 
-  PRBool dialog = (argc != 0);
-  return OpenWindowJSInternal(aParent, aUrl, aName, aFeatures, dialog, 
-                              argsArray, PR_FALSE, _retval);
+  return rv;
 }
 
 struct SizeSpec {
@@ -462,21 +531,11 @@ nsWindowWatcher::OpenWindowJS(nsIDOMWindow *aParent,
                               const char *aName,
                               const char *aFeatures,
                               PRBool aDialog,
-                              nsIArray *argv,
+                              PRUint32 argc,
+                              jsval *argv,
                               nsIDOMWindow **_retval)
 {
-  if (argv) {
-    PRUint32 argc;
-    nsresult rv = argv->GetLength(&argc);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    // For compatibility with old code, no arguments implies that we shouldn't
-    // create an arguments object on the new window at all.
-    if (argc == 0)
-      argv = nsnull;
-  }
-
-  return OpenWindowJSInternal(aParent, aUrl, aName, aFeatures, aDialog,
+  return OpenWindowJSInternal(aParent, aUrl, aName, aFeatures, aDialog, argc,
                               argv, PR_TRUE, _retval);
 }
 
@@ -486,7 +545,8 @@ nsWindowWatcher::OpenWindowJSInternal(nsIDOMWindow *aParent,
                                       const char *aName,
                                       const char *aFeatures,
                                       PRBool aDialog,
-                                      nsIArray *argv,
+                                      PRUint32 argc,
+                                      jsval *argv,
                                       PRBool aCalledFromJS,
                                       nsIDOMWindow **_retval)
 {
@@ -504,6 +564,7 @@ nsWindowWatcher::OpenWindowJSInternal(nsIDOMWindow *aParent,
   nsCOMPtr<nsIURI>                uriToLoad;        // from aUrl, if any
   nsCOMPtr<nsIDocShellTreeOwner>  parentTreeOwner;  // from the parent window, if any
   nsCOMPtr<nsIDocShellTreeItem>   newDocShellItem;  // from the new window
+  EventQueueAutoPopper            queueGuard;
   JSContextAutoPopper             callerContextGuard;
 
   NS_ENSURE_ARG_POINTER(_retval);
@@ -623,10 +684,13 @@ nsWindowWatcher::OpenWindowJSInternal(nsIDOMWindow *aParent,
       parentChrome->IsWindowModal(&weAreModal);
 
     if (weAreModal) {
-      windowIsModal = PR_TRUE;
-      // in case we added this because weAreModal
-      chromeFlags |= nsIWebBrowserChrome::CHROME_MODAL |
-        nsIWebBrowserChrome::CHROME_DEPENDENT;
+      rv = queueGuard.Push();
+      if (NS_SUCCEEDED(rv)) {
+        windowIsModal = PR_TRUE;
+        // in case we added this because weAreModal
+        chromeFlags |= nsIWebBrowserChrome::CHROME_MODAL |
+          nsIWebBrowserChrome::CHROME_DEPENDENT;
+      }
     }
 
     NS_ASSERTION(mWindowCreator,
@@ -720,12 +784,12 @@ nsWindowWatcher::OpenWindowJSInternal(nsIDOMWindow *aParent,
     }
   }
 
-  if (aDialog && argv) {
-    // Set the args on the new object.
-    nsCOMPtr<nsIScriptGlobalObject> scriptGlobal(do_QueryInterface(*_retval));
-    NS_ENSURE_TRUE(scriptGlobal, NS_ERROR_UNEXPECTED);
-    rv = scriptGlobal->SetNewArguments(argv);
-    NS_ENSURE_SUCCESS(rv, rv);
+  if (aDialog && argc > 0) {
+    rv = AttachArguments(*_retval, argc, argv);
+
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
   }
 
   /* allow a window that we found by name to keep its name (important for cases
@@ -795,42 +859,6 @@ nsWindowWatcher::OpenWindowJSInternal(nsIDOMWindow *aParent,
     }
   }
 
-  // Now we have to set the right opener principal on the new window.  Note
-  // that we have to do this _before_ starting any URI loads, thanks to the
-  // sync nature of javascript: loads.  Since this is the only place where we
-  // set said opener principal, we need to do it for all URIs, including
-  // chrome ones.  So to deal with the mess that is bug 79775, just press on in
-  // a reasonable way even if GetSubjectPrincipal fails.  In that case, just
-  // use a null subjectPrincipal.
-  nsCOMPtr<nsIPrincipal> subjectPrincipal;
-  if (NS_FAILED(sm->GetSubjectPrincipal(getter_AddRefs(subjectPrincipal)))) {
-    subjectPrincipal = nsnull;
-  }
-
-  if (windowIsNew) {
-    // Now set the opener principal on the new window.  Note that we need to do
-    // this no matter whether we were opened from JS; if there is nothing on
-    // the JS stack, just use the principal of our parent window.  In those
-    // cases we do _not_ set the parent window principal as the owner of the
-    // load--since we really don't know who the owner is, just leave it null.
-    nsIPrincipal* newWindowPrincipal = subjectPrincipal;
-    if (!newWindowPrincipal && aParent) {
-      nsCOMPtr<nsIScriptObjectPrincipal> sop(do_QueryInterface(aParent));
-      if (sop) {
-        newWindowPrincipal = sop->GetPrincipal();
-      }
-    }
-
-    nsCOMPtr<nsPIDOMWindow> newWindow = do_QueryInterface(*_retval);
-#ifdef DEBUG
-    nsCOMPtr<nsPIDOMWindow> newDebugWindow = do_GetInterface(newDocShell);
-    NS_ASSERTION(newWindow == newDebugWindow, "Different windows??");
-#endif
-    if (newWindow) {
-      newWindow->SetOpenerScriptPrincipal(newWindowPrincipal);
-    }
-  }
-
   if (uriToLoad) { // get the script principal and pass it to docshell
     JSContextAutoPopper contextGuard;
 
@@ -850,8 +878,15 @@ nsWindowWatcher::OpenWindowJSInternal(nsIDOMWindow *aParent,
     newDocShell->CreateLoadInfo(getter_AddRefs(loadInfo));
     NS_ENSURE_TRUE(loadInfo, NS_ERROR_FAILURE);
 
-    if (subjectPrincipal) {
-      loadInfo->SetOwner(subjectPrincipal);
+    if (!uriToLoadIsChrome) {
+      nsCOMPtr<nsIPrincipal> principal;
+      if (NS_FAILED(sm->GetSubjectPrincipal(getter_AddRefs(principal))))
+        return NS_ERROR_FAILURE;
+
+      if (principal) {
+        nsCOMPtr<nsISupports> owner(do_QueryInterface(principal));
+        loadInfo->SetOwner(owner);
+      }
     }
 
     // Set the new window's referrer from the calling context's document:
@@ -963,47 +998,6 @@ nsWindowWatcher::GetNewAuthPrompter(nsIDOMWindow *aParent, nsIAuthPrompt **_retv
 }
 
 NS_IMETHODIMP
-nsWindowWatcher::GetPrompt(nsIDOMWindow *aParent, const nsIID& aIID,
-                           void **_retval)
-{
-  if (aIID.Equals(NS_GET_IID(nsIPrompt)))
-    return NS_NewPrompter(NS_REINTERPRET_CAST(nsIPrompt**, _retval), aParent);
-  if (aIID.Equals(NS_GET_IID(nsIAuthPrompt)))
-    return NS_NewAuthPrompter(NS_REINTERPRET_CAST(nsIAuthPrompt**, _retval),
-                              aParent);
-  if (aIID.Equals(NS_GET_IID(nsIAuthPrompt2))) {
-    nsresult rv = NS_NewAuthPrompter2(NS_REINTERPRET_CAST(nsIAuthPrompt2**,
-                                                          _retval),
-                                      aParent);
-    if (rv == NS_NOINTERFACE) {
-      // Return an wrapped nsIAuthPrompt (if we can)
-      nsCOMPtr<nsIAuthPrompt> prompt;
-      rv = NS_NewAuthPrompter(getter_AddRefs(prompt), aParent);
-      if (NS_SUCCEEDED(rv)) {
-        NS_WrapAuthPrompt(prompt,
-                          NS_REINTERPRET_CAST(nsIAuthPrompt2**, _retval));
-        if (!*_retval)
-          rv = NS_ERROR_NOT_AVAILABLE;
-      }
-    }
-
-    return rv;
-  }
-
-  return NS_NOINTERFACE;
-}
-
-NS_IMETHODIMP
-nsWindowWatcher::CreateAdapter(nsIAuthPrompt* aPrompt, nsIAuthPrompt2** _retval)
-{
-  *_retval = new AuthPromptWrapper(aPrompt);
-  if (!*_retval)
-    return NS_ERROR_OUT_OF_MEMORY;
-  NS_ADDREF(*_retval);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
 nsWindowWatcher::SetWindowCreator(nsIWindowCreator *creator)
 {
   mWindowCreator = creator; // it's an nsCOMPtr, so this is an ownership ref
@@ -1111,7 +1105,7 @@ nsWindowWatcher::RemoveWindow(nsIDOMWindow *aWindow)
     RemoveWindow(info);
     return NS_OK;
   }
-  NS_WARNING("requested removal of nonexistent window");
+  NS_WARNING("requested removal of nonexistent window\n");
   return NS_ERROR_INVALID_ARG;
 }
 
@@ -1331,8 +1325,7 @@ void nsWindowWatcher::CheckWindowName(nsString& aName)
 
 #define NS_CALCULATE_CHROME_FLAG_FOR(feature, flag)               \
     prefBranch->GetBoolPref(feature, &forceEnable);               \
-    if (forceEnable && !aDialog &&                                \
-        !(isChrome && aHasChromeParent)) {                        \
+    if (forceEnable && !(isChrome && aHasChromeParent)) {         \
       chromeFlags |= flag;                                        \
     } else {                                                      \
       chromeFlags |= WinHasOption(aFeatures, feature,             \
@@ -1693,34 +1686,15 @@ nsWindowWatcher::ReadyOpenedDocShellItem(nsIDocShellTreeItem *aOpenedItem,
   nsresult rv = NS_ERROR_FAILURE;
 
   *aOpenedWindow = 0;
-  nsCOMPtr<nsPIDOMWindow> piOpenedWindow(do_GetInterface(aOpenedItem));
-  if (piOpenedWindow) {
+  nsCOMPtr<nsIScriptGlobalObject> globalObject(do_GetInterface(aOpenedItem));
+  if (globalObject) {
     if (aParent) {
       nsCOMPtr<nsIDOMWindowInternal> internalParent(do_QueryInterface(aParent));
-      piOpenedWindow->SetOpenerWindow(internalParent, aWindowIsNew); // damnit
-
-      if (aWindowIsNew) {
-#ifdef DEBUG
-        // Assert that we're not loading things right now.  If we are, when
-        // that load completes it will clobber whatever principals we set up
-        // on this new window!
-        nsCOMPtr<nsIDocumentLoader> docloader =
-          do_QueryInterface(aOpenedItem);
-        NS_ASSERTION(docloader, "How can we not have a docloader here?");
-
-        nsCOMPtr<nsIChannel> chan;
-        docloader->GetDocumentChannel(getter_AddRefs(chan));
-        NS_ASSERTION(!chan, "Why is there a document channel?");
-#endif
-
-        nsCOMPtr<nsIDocument> doc =
-          do_QueryInterface(piOpenedWindow->GetExtantDocument());
-        if (doc) {
-          doc->SetIsInitialDocument(PR_TRUE);
-        }
-      }
+      nsCOMPtr<nsPIDOMWindow_MOZILLA_1_8_BRANCH> branchWindow =
+        do_QueryInterface(globalObject);
+      branchWindow->SetOpenerWindow(internalParent, aWindowIsNew); // damnit
     }
-    rv = CallQueryInterface(piOpenedWindow, aOpenedWindow);
+    rv = CallQueryInterface(globalObject, aOpenedWindow);
   }
   return rv;
 }
@@ -1968,15 +1942,342 @@ nsWindowWatcher::SizeOpenedDocShellItem(nsIDocShellTreeItem *aDocShellItem,
   treeOwnerAsWin->SetVisibility(PR_TRUE);
 }
 
+// attach the given array of JS values to the given window, as a property array
+// named "arguments"
+nsresult
+nsWindowWatcher::AttachArguments(nsIDOMWindow *aWindow,
+                                 PRUint32 argc, jsval *argv)
+{
+  if (argc == 0)
+    return NS_OK;
+
+  nsCOMPtr<nsIScriptGlobalObject> scriptGlobal(do_QueryInterface(aWindow));
+  NS_ENSURE_TRUE(scriptGlobal, NS_ERROR_UNEXPECTED);
+
+  // Just ask the global to attach the args for us
+  return scriptGlobal->SetNewArguments(argc, NS_STATIC_CAST(void*, argv));
+}
+
+nsresult
+nsWindowWatcher::ConvertSupportsTojsvals(nsIDOMWindow *aWindow,
+                                         nsISupports *aArgs,
+                                         PRUint32 *aArgc, jsval **aArgv,
+                                         JSContext **aUsedContext,
+                                         void **aMarkp,
+                                         nsIScriptContext **aScriptContext)
+{
+  nsresult rv = NS_OK;
+
+  *aArgv = nsnull;
+  *aArgc = 0;
+
+  // copy the elements in aArgsArray into the JS array
+  // window.arguments in the new window
+
+  if (!aArgs)
+    return NS_OK;
+
+  PRUint32 argCtr, argCount;
+  nsCOMPtr<nsISupportsArray> argsArray(do_QueryInterface(aArgs));
+
+  if (argsArray) {
+    argsArray->Count(&argCount);
+    if (argCount == 0)
+      return NS_OK;
+  } else
+    argCount = 1; // the nsISupports which is not an array
+
+  JSContext           *cx;
+  JSContextAutoPopper  contextGuard;
+
+  cx = GetJSContextFromWindow(aWindow);
+  if (cx) {
+    // Our caller needs to hold a strong ref to keep this context alive.
+    *aScriptContext = GetScriptContextFromJSContext(cx);
+    NS_ASSERTION(*aScriptContext,
+                 "The window's context doesn't have a script context?");
+    NS_ADDREF(*aScriptContext);
+  } else {
+    *aScriptContext = nsnull;
+  }
+  if (!cx)
+    cx = GetJSContextFromCallStack();
+  if (!cx) {
+    rv = contextGuard.Push();
+    if (NS_FAILED(rv))
+      return rv;
+    cx = contextGuard.get();
+  }
+
+  jsval *argv = js_AllocStack(cx, argCount, aMarkp);
+  NS_ENSURE_TRUE(argv, NS_ERROR_OUT_OF_MEMORY);
+
+  if (argsArray)
+    for (argCtr = 0; argCtr < argCount && NS_SUCCEEDED(rv); argCtr++) {
+      nsCOMPtr<nsISupports> s(dont_AddRef(argsArray->ElementAt(argCtr)));
+      rv = AddSupportsTojsvals(s, cx, argv + argCtr);
+    }
+  else
+    rv = AddSupportsTojsvals(aArgs, cx, argv);
+
+  if (NS_FAILED(rv)) {
+    js_FreeStack(cx, *aMarkp);
+
+    return rv;
+  }
+
+  *aUsedContext = cx;
+  *aArgv = argv;
+  *aArgc = argCount;
+  return NS_OK;
+}
+
+nsresult
+nsWindowWatcher::AddInterfaceTojsvals(nsISupports *aArg,
+                                      JSContext *cx,
+                                      jsval *aArgv)
+{
+  nsresult rv;
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
+  rv = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), aArg,
+              NS_GET_IID(nsISupports), getter_AddRefs(wrapper));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  JSObject *obj;
+  rv = wrapper->GetJSObject(&obj);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  *aArgv = OBJECT_TO_JSVAL(obj);
+  return NS_OK;
+}
+
+nsresult
+nsWindowWatcher::AddSupportsTojsvals(nsISupports *aArg,
+                                     JSContext *cx, jsval *aArgv)
+{
+  if (!aArg) {
+    *aArgv = JSVAL_NULL;
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsISupportsPrimitive> argPrimitive(do_QueryInterface(aArg));
+  if (!argPrimitive)
+    return AddInterfaceTojsvals(aArg, cx, aArgv);
+
+  PRUint16 type;
+  argPrimitive->GetType(&type);
+
+  switch(type) {
+    case nsISupportsPrimitive::TYPE_CSTRING : {
+      nsCOMPtr<nsISupportsCString> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      nsCAutoString data;
+
+      p->GetData(data);
+
+      
+      JSString *str = ::JS_NewStringCopyN(cx, data.get(), data.Length());
+      NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
+
+      *aArgv = STRING_TO_JSVAL(str);
+
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_STRING : {
+      nsCOMPtr<nsISupportsString> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      nsAutoString data;
+
+      p->GetData(data);
+
+      // cast is probably safe since wchar_t and jschar are expected
+      // to be equivalent; both unsigned 16-bit entities
+      JSString *str =
+        ::JS_NewUCStringCopyN(cx,
+                              NS_REINTERPRET_CAST(const jschar *,data.get()),
+                              data.Length());
+      NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
+
+      *aArgv = STRING_TO_JSVAL(str);
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_PRBOOL : {
+      nsCOMPtr<nsISupportsPRBool> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      PRBool data;
+
+      p->GetData(&data);
+
+      *aArgv = BOOLEAN_TO_JSVAL(data);
+
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_PRUINT8 : {
+      nsCOMPtr<nsISupportsPRUint8> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      PRUint8 data;
+
+      p->GetData(&data);
+
+      *aArgv = INT_TO_JSVAL(data);
+
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_PRUINT16 : {
+      nsCOMPtr<nsISupportsPRUint16> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      PRUint16 data;
+
+      p->GetData(&data);
+
+      *aArgv = INT_TO_JSVAL(data);
+
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_PRUINT32 : {
+      nsCOMPtr<nsISupportsPRUint32> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      PRUint32 data;
+
+      p->GetData(&data);
+
+      *aArgv = INT_TO_JSVAL(data);
+
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_CHAR : {
+      nsCOMPtr<nsISupportsChar> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      char data;
+
+      p->GetData(&data);
+
+      JSString *str = ::JS_NewStringCopyN(cx, &data, 1);
+      NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
+
+      *aArgv = STRING_TO_JSVAL(str);
+
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_PRINT16 : {
+      nsCOMPtr<nsISupportsPRInt16> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      PRInt16 data;
+
+      p->GetData(&data);
+
+      *aArgv = INT_TO_JSVAL(data);
+
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_PRINT32 : {
+      nsCOMPtr<nsISupportsPRInt32> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      PRInt32 data;
+
+      p->GetData(&data);
+
+      *aArgv = INT_TO_JSVAL(data);
+
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_FLOAT : {
+      nsCOMPtr<nsISupportsFloat> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      float data;
+
+      p->GetData(&data);
+
+      jsdouble *d = ::JS_NewDouble(cx, data);
+
+      *aArgv = DOUBLE_TO_JSVAL(d);
+
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_DOUBLE : {
+      nsCOMPtr<nsISupportsDouble> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      double data;
+
+      p->GetData(&data);
+
+      jsdouble *d = ::JS_NewDouble(cx, data);
+
+      *aArgv = DOUBLE_TO_JSVAL(d);
+
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_INTERFACE_POINTER : {
+      nsCOMPtr<nsISupportsInterfacePointer> p(do_QueryInterface(argPrimitive));
+      NS_ENSURE_TRUE(p, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsISupports> data;
+      nsIID *iid = nsnull;
+
+      p->GetData(getter_AddRefs(data));
+      p->GetDataIID(&iid);
+      NS_ENSURE_TRUE(iid, NS_ERROR_UNEXPECTED);
+
+      AutoFree iidGuard(iid); // Free iid upon destruction.
+
+      nsresult rv;
+      nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
+      rv = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), data,
+                           *iid, getter_AddRefs(wrapper));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      JSObject *obj;
+      rv = wrapper->GetJSObject(&obj);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      *aArgv = OBJECT_TO_JSVAL(obj);
+
+      break;
+    }
+    case nsISupportsPrimitive::TYPE_ID :
+    case nsISupportsPrimitive::TYPE_PRUINT64 :
+    case nsISupportsPrimitive::TYPE_PRINT64 :
+    case nsISupportsPrimitive::TYPE_PRTIME :
+    case nsISupportsPrimitive::TYPE_VOID : {
+      NS_WARNING("Unsupported primitive type used");
+      *aArgv = JSVAL_NULL;
+      break;
+    }
+    default : {
+      NS_WARNING("Unknown primitive type used");
+      *aArgv = JSVAL_NULL;
+      break;
+    }
+  }
+  return NS_OK;
+}
+
 void
 nsWindowWatcher::GetWindowTreeItem(nsIDOMWindow *inWindow,
                                    nsIDocShellTreeItem **outTreeItem)
 {
   *outTreeItem = 0;
 
-  nsCOMPtr<nsPIDOMWindow> window(do_QueryInterface(inWindow));
-  if (window) {
-    nsIDocShell *docshell = window->GetDocShell();
+  nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(inWindow));
+  if (sgo) {
+    nsIDocShell *docshell = sgo->GetDocShell();
     if (docshell)
       CallQueryInterface(docshell, outTreeItem);
   }

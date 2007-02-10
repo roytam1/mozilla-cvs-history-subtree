@@ -63,6 +63,10 @@
 
 #include "nsIDeviceSupport.h"
 
+#ifdef XP_WIN
+#include "windows.h"
+#endif
+
 class nsDeviceSupport : public nsIDeviceSupport
 {
 public:

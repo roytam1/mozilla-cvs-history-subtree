@@ -54,7 +54,7 @@ class nsPIDOMWindow;
 class nsIController;
 class nsIControllers;
 
-class nsFocusController : public nsIFocusController, 
+class nsFocusController : public nsIFocusController_MOZILLA_1_8_BRANCH,
                           public nsIDOMFocusListener,
                           public nsSupportsWeakReference
 {
@@ -115,8 +115,8 @@ public:
 protected:
   nsCOMPtr<nsIDOMElement> mCurrentElement; // [OWNER]
   nsCOMPtr<nsIDOMElement> mPreviousElement; // [OWNER]
-  nsCOMPtr<nsPIDOMWindow> mCurrentWindow; // [OWNER]
-  nsCOMPtr<nsPIDOMWindow> mPreviousWindow; // [OWNER]
+  nsCOMPtr<nsIDOMWindowInternal> mCurrentWindow; // [OWNER]
+  nsCOMPtr<nsIDOMWindowInternal> mPreviousWindow; // [OWNER]
   nsCOMPtr<nsIDOMNode> mPopupNode; // [OWNER]
   nsCOMPtr<nsIDOMEvent> mPopupEvent;
 

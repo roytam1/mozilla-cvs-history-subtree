@@ -34,21 +34,29 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
 #ifndef DeleteObserver_h__
 #define DeleteObserver_h__
 
 #include "prtypes.h"
 class nsVoidArray;
 
+//-------------------------------------------------------------------------
+//
+//-------------------------------------------------------------------------
+//
 // This is a small utility class which allows to notify an object
 // (the "observer") holding a reference on another object 
 // (the "observed") that the observed object has been deleted.
 //
 // As you imagine, it's reserved to cases where XPCOM refCouting doesn't fit.
-// It is used by the MacEventHandler to hold references to the focused widget,
-// the last widget hit, and the last widget pointed to.
+// It is used by the MacEventHandler and the Toolkit to hold references
+// on the focused widget and the the last widget hit.
 
+
+
+//-------------------------------------------------------------------------
+//
+//-------------------------------------------------------------------------
 
 class nsDeleteObserver
 {
@@ -56,6 +64,9 @@ public:
 		virtual void	NotifyDelete(void* aDeletedObject) = 0;
 };
 
+//-------------------------------------------------------------------------
+//
+//-------------------------------------------------------------------------
 
 class nsDeleteObserved
 {
@@ -70,5 +81,6 @@ private:
 	nsVoidArray*			mDeleteObserverArray;
 	void*							mObject;
 };
+
 
 #endif //DeleteObserver_h__

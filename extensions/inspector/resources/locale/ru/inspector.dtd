@@ -46,4 +46,6 @@
 <!ENTITY mnSearchPlugins.label "Расширения">
 <!ENTITY mnView.accesskey "В">
 <!ENTITY mnView.label "Вид">
+<!ENTITY mnWindows.accesskey "И">
+<!ENTITY mnWindows.label "Исследовать окно">
 <!ENTITY thDOMNodes.label "Узлы DOM">

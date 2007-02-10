@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Alec Flett <alecf@netscape.com>
- *   Benjamin Smedberg <benjamin@smedbergs.us>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -39,70 +38,74 @@
 
 #ifndef nsUnicharUtils_h__
 #define nsUnicharUtils_h__
+#ifndef nsAString_h___
+#include "nsAString.h"
+#endif
+#include "nsReadableUtils.h"
 
-#include "nsStringGlue.h"
+void ToLowerCase( nsAString& );
+void ToUpperCase( nsAString& );
 
-/* (0x3131u <= (u) && (u) <= 0x318eu) => Hangul Compatibility Jamo */
-/* (0xac00u <= (u) && (u) <= 0xd7a3u) => Hangul Syllables          */
-#define IS_CJ_CHAR(u) \
-  ((0x2e80u <= (u) && (u) <= 0x312fu) || \
-   (0x3190u <= (u) && (u) <= 0xabffu) || \
-   (0xf900u <= (u) && (u) <= 0xfaffu) || \
-   (0xff00u <= (u) && (u) <= 0xffefu) )
+void ToLowerCase( nsASingleFragmentString& );
+void ToUpperCase( nsASingleFragmentString& );
 
-void ToLowerCase(nsAString&);
-void ToUpperCase(nsAString&);
+void ToLowerCase( nsString& );
+void ToUpperCase( nsString& );
 
-void ToLowerCase(const nsAString& aSource, nsAString& aDest);
-void ToUpperCase(const nsAString& aSource, nsAString& aDest);
+void ToLowerCase( const nsAString& aSource, nsAString& aDest );
+void ToUpperCase( const nsAString& aSource, nsAString& aDest );
+
+class nsCaseInsensitiveStringComparator
+    : public nsStringComparator
+  {
+    public:
+      virtual int operator()( const PRUnichar*, const PRUnichar*, PRUint32 aLength ) const;
+      virtual int operator()( PRUnichar, PRUnichar ) const;
+  };
+
+inline PRBool CaseInsensitiveFindInReadable( const nsAString& aPattern,
+                                             nsAString::const_iterator& aSearchStart,
+                                             nsAString::const_iterator& aSearchEnd ) {
+  return FindInReadable(aPattern, aSearchStart, aSearchEnd,
+                        nsCaseInsensitiveStringComparator());
+}
+
+inline PRBool CaseInsensitiveFindInReadable( const nsAString& aPattern,
+                                             const nsAString& aHay ) {
+  nsAString::const_iterator searchBegin, searchEnd;
+  return FindInReadable(aPattern, 
+                        aHay.BeginReading(searchBegin),
+                        aHay.EndReading(searchEnd),
+                        nsCaseInsensitiveStringComparator());
+}
 
 PRUnichar ToUpperCase(PRUnichar);
 PRUnichar ToLowerCase(PRUnichar);
 
 inline PRBool IsUpperCase(PRUnichar c) {
-  return ToLowerCase(c) != c;
+    return ToLowerCase(c) != c;
 }
 
 inline PRBool IsLowerCase(PRUnichar c) {
-  return ToUpperCase(c) != c;
+    return ToUpperCase(c) != c;
 }
 
-#ifdef MOZILLA_INTERNAL_API
+#define IS_HIGH_SURROGATE(u)  ((PRUnichar)(u) >= (PRUnichar)0xd800 && (PRUnichar)(u) <= (PRUnichar)0xdbff)
+#define IS_LOW_SURROGATE(u)  ((PRUnichar)(u) >= (PRUnichar)0xdc00 && (PRUnichar)(u) <= (PRUnichar)0xdfff)
 
-class nsCaseInsensitiveStringComparator : public nsStringComparator
-{
-public:
-  virtual int operator() (const PRUnichar*,
-                          const PRUnichar*,
-                          PRUint32 aLength) const;
-  virtual int operator() (PRUnichar,
-                          PRUnichar) const;
-};
+#define SURROGATE_TO_UCS4(h, l)  ((((PRUint32)(h)-(PRUint32)0xd800) << 10) +  \
+                                    (PRUint32)(l) - (PRUint32)(0xdc00) + 0x10000)
 
-inline PRBool
-CaseInsensitiveFindInReadable(const nsAString& aPattern,
-                              nsAString::const_iterator& aSearchStart,
-                              nsAString::const_iterator& aSearchEnd)
-{
-  return FindInReadable(aPattern, aSearchStart, aSearchEnd,
-                        nsCaseInsensitiveStringComparator());
-}
+#define H_SURROGATE(s) ((PRUnichar)(((PRUint32)s - (PRUint32)0x10000) >> 10) + (PRUnichar)0xd800)
+#define L_SURROGATE(s) ((PRUnichar)(((PRUint32)s - (PRUint32)0x10000) & 0x3ff) + (PRUnichar)0xdc00)
+#define IS_IN_BMP(ucs) ((PRUint32)ucs < 0x10000)
 
-inline PRBool
-CaseInsensitiveFindInReadable(const nsAString& aPattern,
-                              const nsAString& aHay)
-{
-  nsAString::const_iterator searchBegin, searchEnd;
-  return FindInReadable(aPattern, aHay.BeginReading(searchBegin),
-                        aHay.EndReading(searchEnd),
-                        nsCaseInsensitiveStringComparator());
-}
-
-#else // MOZILLA_INTERNAL_API
-
-NS_HIDDEN_(PRInt32)
-CaseInsensitiveCompare(const PRUnichar *a, const PRUnichar *b, PRUint32 len);
-
-#endif // MOZILLA_INTERNAL_API
+/* (0x3131u <= (u) && (u) <= 0x318eu) => Hangul Compatibility Jamo */
+/* (0xac00u <= (u) && (u) <= 0xd7a3u) => Hangul Syllables          */
+#define IS_CJ_CHAR(u) \
+         ((0x2e80u <= (u) && (u) <= 0x312fu) || \
+          (0x3190u <= (u) && (u) <= 0xabffu) || \
+          (0xf900u <= (u) && (u) <= 0xfaffu) || \
+          (0xff00u <= (u) && (u) <= 0xffefu) )
 
 #endif  /* nsUnicharUtils_h__ */

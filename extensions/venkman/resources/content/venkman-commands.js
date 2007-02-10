@@ -63,19 +63,6 @@ function initCommands()
          ["clear-script",   cmdClearScript,                                  0],
          ["clear-instance", cmdClearInstance,                                0],
          ["close",          cmdClose,                              CMD_CONSOLE],
-         ["cmd-undo",          "cmd-docommand cmd_undo",                     0],
-         ["cmd-redo",          "cmd-docommand cmd_redo",                     0],
-         ["cmd-cut",           "cmd-docommand cmd_cut",                      0],
-         ["cmd-copy",          "cmd-docommand cmd_copy",                     0],
-         ["cmd-paste",         "cmd-docommand cmd_paste",                    0],
-         ["cmd-delete",        "cmd-docommand cmd_delete",                   0],
-         ["cmd-selectall",     "cmd-docommand cmd_selectAll",                0],
-         ["cmd-copy-link-url", "cmd-docommand cmd_copyLink",                 0],
-         ["cmd-mozilla-prefs", "cmd-docommand cmd_mozillaPrefs",             0],
-         ["cmd-prefs",         "cmd-docommand cmd_venkmanPrefs",             0],
-         ["cmd-venkman-prefs", "cmd-docommand cmd_venkmanPrefs",             0],
-         ["cmd-venkman-opts",  "cmd-docommand cmd_venkmanPrefs",             0],
-         ["cmd-docommand",     cmdDoCommand,                                 0],
          ["commands",       cmdCommands,                           CMD_CONSOLE],
          ["cont",           cmdCont,              CMD_CONSOLE | CMD_NEED_STACK],
          ["debug-script",   cmdSetScriptFlag,                                0],
@@ -108,7 +95,6 @@ function initCommands()
          ["frame",          cmdFrame,             CMD_CONSOLE | CMD_NEED_STACK],
          ["gc",             cmdGC,                                 CMD_CONSOLE],
          ["help",           cmdHelp,                               CMD_CONSOLE],
-         ["inspect",        cmdInspect,                            CMD_CONSOLE],
          ["loadd",          cmdLoadd,                              CMD_CONSOLE],
          ["move-view",      cmdMoveView,                           CMD_CONSOLE],
          ["mozilla-help",   cmdMozillaHelp,                                  0],
@@ -135,7 +121,6 @@ function initCommands()
          ["save-settings",  cmdSaveSettings,                       CMD_CONSOLE],
          ["scan-source",    cmdScanSource,                                   0],
          ["scope",          cmdScope,             CMD_CONSOLE | CMD_NEED_STACK],
-         ["show-profile",   cmdShowProfile,                        CMD_CONSOLE],
          ["this-expr",      cmdThisExpr,                           CMD_CONSOLE],
          ["toggle-float",   cmdToggleFloat,                        CMD_CONSOLE],
          ["toggle-view",    cmdToggleView,                         CMD_CONSOLE],
@@ -153,7 +138,6 @@ function initCommands()
          ["profile-tb",               "profile toggle",                      0],
          ["this",                     "props this",                CMD_CONSOLE],
          ["toggle-chrome",            "chrome-filter toggle",                0],
-         ["toggle-forcescriptload",   "toggle-pref profile.forceScriptLoad", 0],
          ["toggle-ias",               "startup-init toggle",                 0],
          ["toggle-pprint",            "pprint toggle",                       0],
          ["toggle-profile",           "profile toggle",                      0],
@@ -703,20 +687,6 @@ function cmdCont (e)
     console.jsds.exitNestedEventLoop();
 }
 
-function cmdDoCommand(e)
-{
-    if (e.cmdName == "cmd_mozillaPrefs")
-    {
-        goPreferences('navigator', 
-                      'chrome://communicator/content/pref/pref-navigator.xul', 
-                      'navigator');
-    }
-    else
-    {
-        doCommand(e.cmdName);
-    }
-}
-
 function cmdEMode (e)
 {    
     if (e.mode != null)
@@ -1209,28 +1179,6 @@ function cmdHook(e)
     /* empty function used for "hook" commands. */
 }
 
-function cmdInspect(e)
-{
-    var key, value;
-    if ("jsdValue" in e)
-    {
-        key = e.propertyName;
-        value = e.jsdValue.getWrappedValue();
-    }
-    else if ("expression" in e)
-    {
-        key = e.expression;
-        value = evalInTargetScope(e.expression, true).getWrappedValue();
-    }
-    if (!value || !isDOMThing(value))
-    {
-        display(getMsg(MSN_ERR_NOT_A_DOM_NODE, key), MT_ERROR);
-        return;
-    }
-    window.openDialog("chrome://inspector/content/", "_blank",
-                      "chrome,all,dialog=no", value);
-}
-
 function cmdLoadd (e)
 {
     var ex;
@@ -1519,8 +1467,6 @@ function cmdRestoreLayout (e)
         else
         {
             layout = console.prefs[prefName];
-            if (layout == "")
-                layout = DEFAULT_VURLS;
         }
     }
     
@@ -1702,6 +1648,7 @@ function cmdSaveProfile (e)
     
     var file = fopen (e.targetFile, ">");
 
+    var templateName;
     var ary = file.localFile.path.match(/\.([^.]+)$/);
 
     if (ary)
@@ -1709,9 +1656,52 @@ function cmdSaveProfile (e)
     else
         ext = "txt";
 
-    var rv = writeProfile(e, file, ext, onComplete);
+    templateName = templatePfx + ext;
+    var templateFile;
+    if (templateName in console.prefs)
+        templateFile = console.prefs[templateName];
+    else
+        templateFile = console.prefs[templatePfx + "txt"];
+    
+    var reportTemplate = console.profiler.loadTemplate(templateFile);
 
-    return rv.localFile;
+    var scriptInstanceList = new Array();
+    
+    var j;
+
+    if (!("urlList" in e) || e.urlList.length == 0)
+    {
+        if ("url" in e && e.url)
+            e.urlList = [e.url];
+        else
+            e.urlList = keys(console.scriptManagers);
+    }
+    
+    e.urlList = e.urlList.sort();
+    
+    for (i = 0; i < e.urlList.length; ++i)
+    {
+        var url = e.urlList[i];
+        if (!ASSERT (url in console.scriptManagers, "url not loaded"))
+            continue;
+        var manager = console.scriptManagers[url];
+        for (j in manager.instances)
+            scriptInstanceList.push (manager.instances[j]);
+    }
+
+    var rangeList;
+    if (("profile.ranges." + ext) in console.prefs)
+        rangeList = console.prefs["profile.ranges." + ext].split(",");
+    else
+        rangeList = console.prefs["profile.ranges.default"].split(",");
+    
+    var profileReport = new ProfileReport (reportTemplate, file, rangeList,
+                                           scriptInstanceList);
+    profileReport.onComplete = onComplete;
+    
+    console.profiler.generateReport (profileReport);
+
+    return file.localFile;
 }
 
 function cmdSaveSettings(e)
@@ -1749,82 +1739,6 @@ function cmdScope ()
         displayProperties (getCurrentFrame().scope);
     
     return true;
-}
-
-function cmdShowProfile(e)
-{
-    function onComplete(i)
-    {
-        // We need a window since the current browserwindow could be disabled
-        // by us if a script in it is stopped, so we can't do anything there.
-        var w = window.open("about:blank");
-        w.wrappedJSObject.document.open();
-        w.wrappedJSObject.document.write(fileString.str);
-        w.wrappedJSObject.document.close();
-    };
-
-    // In order not to create files, we hack in a small wrapper around a big string:
-    var fileString = {
-        str: "",
-        write: function _write(_str) { this.str += _str; }
-    };
-
-    writeProfile(e, fileString, "html", onComplete);
-}
-
-function writeProfile(e, file, type, onComplete)
-{
-    // Get us a template
-    if (!type)
-        type = "txt";
-
-    var templatePfx = "profile.template.";
-    var templateName = templatePfx + type;
-    var templateFile;
-    if (templateName in console.prefs)
-        templateFile = console.prefs[templateName];
-    else
-        templateFile = console.prefs[templatePfx + "txt"];
-    
-    var reportTemplate = console.profiler.loadTemplate(templateFile);
-
-    // Get a list of scripts we profiled.
-    var scriptInstanceList = new Array();
-    
-    if (!("urlList" in e) || e.urlList.length == 0)
-    {
-        if ("url" in e && e.url)
-            e.urlList = [e.url];
-        else
-            e.urlList = keys(console.scriptManagers);
-    }
-    
-    e.urlList = e.urlList.sort();
-
-    var i, j;
-    for (i = 0; i < e.urlList.length; ++i)
-    {
-        var url = e.urlList[i];
-        if (!ASSERT(url in console.scriptManagers, "url not loaded"))
-            continue;
-        var manager = console.scriptManagers[url];
-        for (j in manager.instances)
-            scriptInstanceList.push(manager.instances[j]);
-    }
-
-    var rangeList;
-    if (("profile.ranges." + type) in console.prefs)
-        rangeList = console.prefs["profile.ranges." + type].split(",");
-    else
-        rangeList = console.prefs["profile.ranges.default"].split(",");
-    
-    var profileReport = new ProfileReport(reportTemplate, file, rangeList,
-                                          scriptInstanceList);
-    profileReport.onComplete = onComplete;
-    
-    console.profiler.generateReport(profileReport);
-
-    return file;
 }
 
 function cmdThisExpr(e)

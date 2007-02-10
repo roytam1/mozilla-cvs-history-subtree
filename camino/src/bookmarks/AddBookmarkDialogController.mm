@@ -42,9 +42,9 @@
 #import "BookmarkManager.h"
 
 #import "BookmarkViewController.h"
-#import "UserDefaults.h"
 
 #import "AddBookmarkDialogController.h"
+
 
 NSString* const kAddBookmarkItemURLKey        = @"url";
 NSString* const kAddBookmarkItemTitleKey      = @"title";
@@ -55,8 +55,6 @@ NSString* const kAddBookmarkItemPrimaryTabKey = @"primary";
 + (NSString*)bookmarkUrlForItem:(NSDictionary*)inItem;
 + (NSString*)bookmarkTitleForItem:(NSDictionary*)inItem;
 + (NSDictionary*)primaryBookmarkItem:(NSArray*)inItems;
-
-- (void)updateTitle:(BOOL)isTabGroup;
 
 - (void)buildBookmarksFolderPopup;
 - (void)createBookmarks;
@@ -72,26 +70,13 @@ NSString* const kAddBookmarkItemPrimaryTabKey = @"primary";
 + (AddBookmarkDialogController*)sharedAddBookmarkDialogController
 {
   static AddBookmarkDialogController* sSharedController = nil;
-  if (!sSharedController) {
+  if (!sSharedController)
+  {
     sSharedController = [[AddBookmarkDialogController alloc] initWithWindowNibName:@"AddBookmark"];
     [sSharedController window];   // force nib loading
   }
-
+  
   return sSharedController;
-}
-
-- (id)initWithWindowNibName:(NSString*)windowNibName
-{
-  if ((self = [super initWithWindowNibName:windowNibName])) {
-    // Remember the last bookmark folder used in the dialog's popup menu
-    NSString* uuid = [[NSUserDefaults standardUserDefaults] objectForKey:USER_DEFAULTS_LAST_SELECTED_BM_FOLDER];
-    if (uuid && ![uuid isEqualToString:@""]) {
-      BookmarkFolder* foundFolder = (BookmarkFolder*)[[[BookmarkManager sharedBookmarkManager] rootBookmarks] itemWithUUID:uuid];
-      if (foundFolder)
-        [self setDefaultParentFolder:foundFolder andIndex:-1];
-    }
-  }
-  return self;
 }
 
 - (void)awakeFromNib
@@ -103,20 +88,15 @@ NSString* const kAddBookmarkItemPrimaryTabKey = @"primary";
 - (void)dealloc
 {
   [mTabGroupCheckbox release];
-  [mInitialParentFolder release];
-
+  
   [super dealloc];
 }
 
 - (IBAction)confirmAddBookmark:(id)sender
 {
-  BookmarkItem* selectedItem = [[mParentFolderPopup selectedItem] representedObject];
-  [[NSUserDefaults standardUserDefaults] setObject:[selectedItem UUID] forKey:USER_DEFAULTS_LAST_SELECTED_BM_FOLDER];
-  [self setDefaultParentFolder:(BookmarkFolder*)selectedItem andIndex:-1];
-
   [[self window] orderOut:self];
   [NSApp endSheet:[self window] returnCode:1];
-
+  
   [self createBookmarks];
   [self clearState];
 }
@@ -135,26 +115,14 @@ NSString* const kAddBookmarkItemPrimaryTabKey = @"primary";
 
 - (IBAction)toggleTabGroup:(id)sender
 {
-  BOOL isTabGroup = ([mTabGroupCheckbox state] == NSOnState);
-  [self updateTitle:isTabGroup];
-}
+  NSString* defaultGroupTitle = [NSString stringWithFormat:NSLocalizedString(@"defaultTabGroupTitle", @"[%d tabs] %@"), [mBookmarkItems count], mDefaultTitle];
 
-- (void)makeTabGroup:(BOOL)isTabGroup
-{
-  [mTabGroupCheckbox setState:(isTabGroup ? NSOnState : NSOffState)];
-  [self updateTitle:isTabGroup];
-}
-
-- (void)updateTitle:(BOOL)isTabGroup
-{
-  NSString* defaultGroupTitle = [NSString stringWithFormat:NSLocalizedString(@"defaultTabGroupTitle", @"[%d tabs] %@"),
-                                                           [mBookmarkItems count],
-                                                           mDefaultTitle];
-
-  // If the title is unedited, update to the default name
+  // if title is unedited and we're bookmarking a tab group, prepend a prefix to indicate this
   if ([[mTitleField stringValue] isEqualToString:mDefaultTitle] ||
       [[mTitleField stringValue] isEqualToString:defaultGroupTitle])
-    [mTitleField setStringValue:(isTabGroup ? defaultGroupTitle : mDefaultTitle)];
+  {
+    [mTitleField setStringValue:([mTabGroupCheckbox state] == NSOnState) ? defaultGroupTitle : mDefaultTitle];
+  }
 }
 
 - (void)setDefaultTitle:(NSString*)aString
@@ -183,25 +151,27 @@ NSString* const kAddBookmarkItemPrimaryTabKey = @"primary";
 
   [mBookmarkItems autorelease];
   mBookmarkItems = [inItems retain];
-
+  
   mCreatingFolder = inIsFolder;
-
+  
   // set title field
   if (mCreatingFolder)
-    [self setDefaultTitle:NSLocalizedString(@"NewBookmarkFolder", nil)];
+    [self setDefaultTitle:NSLocalizedString(@"NewBookmarkFolder", @"")];
   else
     [self setDefaultTitle:[AddBookmarkDialogController bookmarkTitleForItem:[AddBookmarkDialogController primaryBookmarkItem:inItems]]];
 
   [mTitleField setStringValue:mDefaultTitle];
 
   // setup tab checkbox
-  if (!mCreatingFolder) {
+  if (!mCreatingFolder)
+  {
     if (![mTabGroupCheckbox superview])
       [[[self window] contentView] addSubview:mTabGroupCheckbox];
 
     [mTabGroupCheckbox setEnabled:([inItems count] > 1)];
   }
-  else {
+  else
+  {
     [mTabGroupCheckbox removeFromSuperview];
   }
 
@@ -234,14 +204,15 @@ NSString* const kAddBookmarkItemPrimaryTabKey = @"primary";
 {
   NSEnumerator* itemsEnum = [inItems objectEnumerator];
   id curItem;
-  while ((curItem = [itemsEnum nextObject])) {
+  while ((curItem = [itemsEnum nextObject]))
+  {
     if ([[curItem objectForKey:kAddBookmarkItemPrimaryTabKey] boolValue])
       return curItem;
   }
-
+  
   if ([inItems count] > 0)
     return [inItems objectAtIndex:0];
-
+ 
   return nil;
  }
 
@@ -250,14 +221,22 @@ NSString* const kAddBookmarkItemPrimaryTabKey = @"primary";
   BookmarkManager* bookmarkManager = [BookmarkManager sharedBookmarkManager];
   [mParentFolderPopup removeAllItems];
   [[bookmarkManager rootBookmarks] buildFlatFolderList:[mParentFolderPopup menu] depth:1];
-
+  
   BookmarkFolder* initialFolder = mInitialParentFolder;
   if (!initialFolder)
     initialFolder = [bookmarkManager lastUsedBookmarkFolder];
 
-  int initialItemIndex = [[mParentFolderPopup menu] indexOfItemWithRepresentedObject:initialFolder];
-  if (initialItemIndex != -1)
+  if (initialFolder)
+  {
+    int initialItemIndex = [[mParentFolderPopup menu] indexOfItemWithRepresentedObject:initialFolder];
+    if (initialItemIndex != -1)
+      [mParentFolderPopup selectItemAtIndex:initialItemIndex];
+  }
+  else if ([mParentFolderPopup numberOfItems] > 0)
+  {
+    int initialItemIndex = [[mParentFolderPopup menu] indexOfItemWithRepresentedObject:[bookmarkManager toolbarFolder]];
     [mParentFolderPopup selectItemAtIndex:initialItemIndex];
+  }
 
   [mParentFolderPopup synchronizeTitleAndSelectedItem];
 }
@@ -268,18 +247,22 @@ NSString* const kAddBookmarkItemPrimaryTabKey = @"primary";
   NSString*       titleString  = [mTitleField stringValue];
 
   BookmarkItem* newItem = nil;
-  unsigned int  insertPosition = (mInitialParentFolderIndex != -1) ? mInitialParentFolderIndex : [parentFolder count];
-
-  if (mCreatingFolder) {
-    newItem = [parentFolder addBookmarkFolder:titleString inPosition:insertPosition isGroup:NO];
+  unsigned int  folderPosition = (mInitialParentFolderIndex != -1) ? mInitialParentFolderIndex : [parentFolder count];
+  
+  if (mCreatingFolder)
+  {
+    newItem = [parentFolder addBookmarkFolder:titleString inPosition:folderPosition isGroup:NO];
   }
-  else {
-    if (([mBookmarkItems count] > 1) && ([mTabGroupCheckbox state] == NSOnState)) {
+  else
+  {
+    if (([mBookmarkItems count] > 1) && ([mTabGroupCheckbox state] == NSOnState))
+    {
       // bookmark all tabs
-      BookmarkFolder* newGroup = [parentFolder addBookmarkFolder:titleString inPosition:insertPosition isGroup:YES];
+      BookmarkFolder* newGroup = [parentFolder addBookmarkFolder:titleString inPosition:folderPosition isGroup:YES];
 
       unsigned int numItems = [mBookmarkItems count];
-      for (unsigned int i = 0; i < numItems; i++) {
+      for (unsigned int i = 0; i < numItems; i++)
+      {
         id curItem = [mBookmarkItems objectAtIndex:i];
         NSString* itemURL   = [AddBookmarkDialogController bookmarkUrlForItem:curItem];
         NSString* itemTitle = [AddBookmarkDialogController bookmarkTitleForItem:curItem];
@@ -287,15 +270,16 @@ NSString* const kAddBookmarkItemPrimaryTabKey = @"primary";
         newItem = [newGroup addBookmark:itemTitle url:itemURL inPosition:i isSeparator:NO];
       }
     }
-    else {
+    else
+    {
       id curItem = [AddBookmarkDialogController primaryBookmarkItem:mBookmarkItems];
 
       NSString* itemURL   = [AddBookmarkDialogController bookmarkUrlForItem:curItem];
 
-      newItem = [parentFolder addBookmark:titleString url:itemURL inPosition:insertPosition isSeparator:NO];
-    }
+      newItem = [parentFolder addBookmark:titleString url:itemURL inPosition:folderPosition isSeparator:NO];
+    }  
   }
-
+  
   [mBookmarkViewController revealItem:newItem scrollIntoView:YES selecting:YES byExtendingSelection:NO];
   [[BookmarkManager sharedBookmarkManager] setLastUsedBookmarkFolder:parentFolder];
 }
@@ -305,6 +289,8 @@ NSString* const kAddBookmarkItemPrimaryTabKey = @"primary";
   [mTitleField setStringValue:@""];
   [mTabGroupCheckbox setState:NSOffState];
 
+  [mInitialParentFolder release];
+  mInitialParentFolder = nil;
   mInitialParentFolderIndex = -1;
 
   mCreatingFolder = NO;

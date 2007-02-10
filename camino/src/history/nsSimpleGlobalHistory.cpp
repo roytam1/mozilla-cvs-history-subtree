@@ -497,19 +497,13 @@ nsSimpleGlobalHistory::~nsSimpleGlobalHistory()
 //
 //   nsISupports methods
 
-NS_IMPL_ADDREF(nsSimpleGlobalHistory)
-NS_IMPL_RELEASE(nsSimpleGlobalHistory)
-
-NS_INTERFACE_MAP_BEGIN(nsSimpleGlobalHistory)
-  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIGlobalHistory2, nsIGlobalHistory3)
-  NS_INTERFACE_MAP_ENTRY(nsIGlobalHistory3)
-  NS_INTERFACE_MAP_ENTRY(nsIBrowserHistory)
-  NS_INTERFACE_MAP_ENTRY(nsIHistoryItems)
-  NS_INTERFACE_MAP_ENTRY(nsIObserver)
-  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
-  NS_INTERFACE_MAP_ENTRY(nsIAutoCompleteSession)
-  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIBrowserHistory)
-NS_INTERFACE_MAP_END
+NS_IMPL_ISUPPORTS6(nsSimpleGlobalHistory,
+                   nsIGlobalHistory2,
+                   nsIBrowserHistory,
+                   nsIHistoryItems,
+                   nsIObserver,
+                   nsISupportsWeakReference,
+                   nsIAutoCompleteSession)
 
 //----------------------------------------------------------------------
 //
@@ -955,10 +949,10 @@ nsSimpleGlobalHistory::SetRowValue(nsIMdbRow *aRow, mdb_column aCol,
   PRInt32 len = (nsCRT::strlen(aValue) * sizeof(PRUnichar));
   PRUnichar *swapval = nsnull;
 
-  // eventually turn this on when we're confident in mork's ability
+  // eventually turn this on when we're confident in mork's abilitiy
   // to handle yarn forms properly
 #if 0
-  NS_ConvertUTF16toUTF8 utf8Value(aValue);
+  NS_ConvertUCS2toUTF8 utf8Value(aValue);
   printf("Storing utf8 value %s\n", utf8Value.get());
   mdbYarn yarn = { (void *)utf8Value.get(), utf8Value.Length(), utf8Value.Length(), 0, 1, nsnull };
 #else
@@ -1584,56 +1578,6 @@ nsSimpleGlobalHistory::MarkPageAsTyped(nsIURI *aURI)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsSimpleGlobalHistory::AddDocumentRedirect(nsIChannel *aOldChannel,
-                                           nsIChannel *aNewChannel,
-                                           PRInt32 aFlags,
-                                           PRBool aTopLevel)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-nsSimpleGlobalHistory::SetURIGeckoFlags(nsIURI *aURI, PRUint32 aFlags)
-{
-  nsCAutoString spec;
-  nsresult rv = aURI->GetSpec(spec);
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsIMdbRow> row;
-  rv = FindRow(kToken_URLColumn, spec.get(), getter_AddRefs(row));
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  rv = SetRowValue(row, kToken_GeckoFlagsColumn, (PRInt32)aFlags);
-  SetDirty();
-  return rv;
-}
-
-NS_IMETHODIMP
-nsSimpleGlobalHistory::GetURIGeckoFlags(nsIURI *aURI, PRUint32* aFlags)
-{
-  nsCAutoString spec;
-  nsresult rv = aURI->GetSpec(spec);
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsIMdbRow> row;
-  rv = FindRow(kToken_URLColumn, spec.get(), getter_AddRefs(row));
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  if (!HasCell(mEnv, row, kToken_GeckoFlagsColumn))
-    return NS_ERROR_FAILURE;
-
-  PRInt32 val;
-  mdb_err err = GetRowValue(row, kToken_GeckoFlagsColumn, &val);
-  NS_ENSURE_TRUE(err == 0, NS_ERROR_FAILURE);
-  *aFlags = val;
-  return NS_OK;
-}
-
 //----------------------------------------------------------------------
 //
 // nsGlobalHistory
@@ -1696,7 +1640,8 @@ nsSimpleGlobalHistory::OpenDB()
   rv = NS_GetSpecialDirectory(NS_APP_HISTORY_50_FILE, getter_AddRefs(historyFile));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIMdbFactoryFactory> factoryfactory = do_CreateInstance(NS_MORK_CONTRACTID, &rv);
+  static NS_DEFINE_CID(kMorkCID, NS_MORK_CID);
+  nsCOMPtr<nsIMdbFactoryFactory> factoryfactory = do_CreateInstance(kMorkCID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = factoryfactory->GetMdbFactory(&gMdbFactory);
@@ -2023,9 +1968,6 @@ nsSimpleGlobalHistory::CreateTokens()
   if (err != 0) return NS_ERROR_FAILURE;
 
   err = mStore->StringToToken(mEnv, "Typed", &kToken_TypedColumn);
-  if (err != 0) return NS_ERROR_FAILURE;
-
-  err = mStore->StringToToken(mEnv, "GeckoFlags", &kToken_GeckoFlagsColumn);
   if (err != 0) return NS_ERROR_FAILURE;
 
   // meta-data tokens
@@ -2356,7 +2298,7 @@ nsSimpleGlobalHistory::RowMatches(nsIMdbRow *aRow, SearchQueryData *aQuery)
       rowVal.BeginReading(start);
       rowVal.EndReading(end);
   
-      NS_ConvertUTF16toUTF8 utf8Value(term->text);
+      NS_ConvertUCS2toUTF8 utf8Value(term->text);
       
       if (term->method.Equals("is")) {
         if (!utf8Value.Equals(rowVal, nsCaseInsensitiveCStringComparator()))
@@ -2473,13 +2415,13 @@ protected:
   mdb_column mTypedColumn;
   mdb_column mCommentColumn;
   AutocompleteExcludeData* mExclude;
-  const nsACString& mSelectValue;
+  const nsACString &mSelectValue;
   PRBool mMatchOnlyTyped;
 
 public:
   HistoryAutoCompleteEnumerator(nsSimpleGlobalHistory* aHistory,
-                                nsIMdbTable* aTable,
-                                mdb_column aURLColumn,
+                         nsIMdbTable* aTable,
+                         mdb_column aURLColumn,
                          mdb_column aCommentColumn,
                          mdb_column aHiddenColumn,
                          mdb_column aTypedColumn,
@@ -2492,9 +2434,9 @@ public:
     mTypedColumn(aTypedColumn),
     mCommentColumn(aCommentColumn),
     mExclude(aExclude),
-    mSelectValue(aSelectValue), 
+    mSelectValue(aSelectValue),
     mMatchOnlyTyped(aMatchOnlyTyped) 
-  {}
+    {}
 
 protected:
   virtual PRBool    IsResult(nsIMdbRow* aRow);
@@ -2512,7 +2454,7 @@ HistoryAutoCompleteEnumerator::IsResult(nsIMdbRow* aRow)
 
   nsCAutoString url;
   mHistory->GetRowValue(aRow, mURLColumn, url);
-  return mHistory->AutoCompleteCompare(url, mSelectValue, mExclude);
+  return mHistory->AutoCompleteCompare(url, mSelectValue, mExclude); ;
 }
 
 // Size of visit count boost to give to urls which are sites or paths
@@ -2889,7 +2831,7 @@ nsSimpleGlobalHistory::AutoCompleteSortComparison(nsIHistoryItem *item1, nsIHist
       // Check if string is prefixed.  Note: the parameters of the Find() 
       // method specify the url is searched at the 0th character and if there
       // is no match the rest of the url is not searched.
-      if (StringBeginsWith(url1, kIgnoredPrefixes[0]))
+      if (url1.Find(kIgnoredPrefixes[i], 0, 1) == 0)
       {
         // found a match - record post prefix position
         postPrefix1 = kIgnoredPrefixes[i].Length();
@@ -2904,7 +2846,7 @@ nsSimpleGlobalHistory::AutoCompleteSortComparison(nsIHistoryItem *item1, nsIHist
       // Check if string is prefixed.  Note: the parameters of the Find() 
       // method specify the url is searched at the 0th character and if there
       // is no match the rest of the url is not searched.
-      if (StringBeginsWith(url2, kIgnoredPrefixes[0]))
+      if (url2.Find(kIgnoredPrefixes[i], 0, 1) == 0)
       {
         // found a match - record post prefix position
         postPrefix2 = kIgnoredPrefixes[i].Length();

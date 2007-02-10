@@ -44,7 +44,7 @@
 #include "nsString.h"
 #include "mozIStorageConnection.h"
 
-#include "nsIMutableArray.h"
+#include "nsIArray.h"
 
 #include <sqlite3.h>
 

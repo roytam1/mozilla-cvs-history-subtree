@@ -42,16 +42,20 @@
 #include "nsIAtom.h"
 #include "nsILineIterator.h"
 #include "nsTablePainter.h"
-#include "nsTArray.h"
 
 class nsTableFrame;
 class nsTableRowFrame;
 class nsTableCellFrame;
+#ifdef DEBUG_TABLE_REFLOW_TIMING
+class nsReflowTimer;
+#endif
 
 struct nsRowGroupReflowState {
   const nsHTMLReflowState& reflowState;  // Our reflow state
 
   nsTableFrame* tableFrame;
+
+  nsReflowReason reason;
 
   // The available size (computed from the parent)
   nsSize availSize;
@@ -65,6 +69,7 @@ struct nsRowGroupReflowState {
   {
     availSize.width  = reflowState.availableWidth;
     availSize.height = reflowState.availableHeight;
+    reason = reflowState.reason;
     y = 0;  
   }
 
@@ -80,12 +85,10 @@ struct nsRowGroupReflowState {
 // thead or tfoot should be repeated on every printed page
 #define NS_ROWGROUP_REPEATABLE           0x80000000
 #define NS_ROWGROUP_HAS_STYLE_HEIGHT     0x40000000
+// we need a 3rd pass reflow to deal with pct height nested tables 
+#define NS_ROWGROUP_NEED_SPECIAL_REFLOW  0x20000000
 // the next is also used on rows (see nsTableRowGroupFrame::InitRepeatedFrame)
 #define NS_REPEATED_ROW_OR_ROWGROUP      0x10000000
-#define NS_ROWGROUP_HAS_ROW_CURSOR       0x08000000
-
-#define MIN_ROWS_NEEDING_CURSOR 20
-
 /**
  * nsTableRowGroupFrame is the frame that maps row groups 
  * (HTML tags THEAD, TFOOT, and TBODY). This class cannot be reused
@@ -101,16 +104,23 @@ public:
   // nsISupports
   NS_DECL_ISUPPORTS_INHERITED
 
-  /** instantiate a new instance of nsTableRowFrame.
-    * @param aPresShell the pres shell for this frame
+  // default constructor supplied by the compiler
+
+  /** instantiate a new instance of nsTableRowGroupFrame.
+    * @param aResult    the new object is returned in this out-param
+    * @param aContent   the table object to map
+    * @param aParent    the parent of the new frame
     *
-    * @return           the frame that was created
+    * @return  NS_OK if the frame was properly allocated, otherwise an error code
     */
-  friend nsIFrame* NS_NewTableRowGroupFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult 
+  NS_NewTableRowGroupFrame(nsIPresShell* aPresShell, nsIFrame** aResult);
   virtual ~nsTableRowGroupFrame();
 
-  NS_IMETHOD Init(nsIContent*      aContent,
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
                   nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD AppendFrames(nsIAtom*        aListName,
@@ -123,13 +133,22 @@ public:
   NS_IMETHOD RemoveFrame(nsIAtom*        aListName,
                          nsIFrame*       aOldFrame);
 
-  virtual nsMargin GetUsedMargin() const;
-  virtual nsMargin GetUsedBorder() const;
-  virtual nsMargin GetUsedPadding() const;
+  /** @see nsIFrame::Paint */
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  // row groups don't paint their own background -- the cells do
+  virtual PRBool CanPaintBackground() { return PR_FALSE; }
+
+  /**
+   * Find the correct descendant frame.
+   * Return PR_TRUE if a frame containing the point is found.
+   * @see nsContainerFrame::GetFrameForPoint
+   */
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint, nsFramePaintLayer aWhichLayer, nsIFrame** aFrame);
 
    /** calls Reflow for all of its child rows.
     * Rows are all set to the same width and stacked vertically.
@@ -148,7 +167,7 @@ public:
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::tableRowGroupFrame
+   * @see nsLayoutAtoms::tableRowGroupFrame
    */
   virtual nsIAtom* GetType() const;
 
@@ -191,9 +210,11 @@ public:
   /**
    * Get the total height of all the row rects
    */
+  nscoord GetHeightOfRows();
   nscoord GetHeightBasis(const nsHTMLReflowState& aReflowState);
   
-  nsMargin* GetBCBorderWidth(nsMargin& aBorder);
+  nsMargin* GetBCBorderWidth(float     aPixelsToTwips,
+                             nsMargin& aBorder);
 
   /**
    * Gets inner border widths before collapsing with cell borders
@@ -201,24 +222,14 @@ public:
    * GetContinuousBCBorderWidth will not overwrite aBorder.top
    * see nsTablePainter about continuous borders
    */
-  void GetContinuousBCBorderWidth(nsMargin& aBorder);
+  void GetContinuousBCBorderWidth(float     aPixelsToTwips,
+                                  nsMargin& aBorder);
   /**
    * Sets full border widths before collapsing with cell borders
    * @param aForSide - side to set; only right, left, and bottom valid
    */
   void SetContinuousBCBorderWidth(PRUint8     aForSide,
                                   BCPixelSize aPixelValue);
-  /**
-    * Adjust to the effect of visibibility:collapse on the row group and
-    * its children
-    * @return              additional shift upward that should be applied to
-    *                      subsequent rowgroups due to rows and this rowgroup
-    *                      being collapsed
-    * @param aYTotalOffset the total amount that the rowgroup is shifted up
-    * @param aWidth        new width of the rowgroup
-    */
-  nscoord CollapseRowGroupIfNecessary(nscoord aYTotalOffset,
-                                      nscoord        aWidth);
 
 // nsILineIterator methods
 public:
@@ -248,63 +259,13 @@ public:
 #endif
   NS_IMETHOD GetNextSiblingOnLine(nsIFrame*& aFrame, PRInt32 aLineNumber);
 
-  // row cursor methods to speed up searching for the row(s)
-  // containing a point. The basic idea is that we set the cursor
-  // property if the rows' y and yMosts are non-decreasing (considering only
-  // rows with nonempty overflowAreas --- empty overflowAreas never participate
-  // in event handling or painting), and the rowgroup has sufficient number of
-  // rows. The cursor property points to a "recently used" row. If we get a
-  // series of requests that work on rows "near" the cursor, then we can find
-  // those nearby rows quickly by starting our search at the cursor.
-  // This code is based on the line cursor code in nsBlockFrame. It's more general
-  // though, and could be extracted and used elsewhere.
-  struct FrameCursorData {
-    nsTArray<nsIFrame*> mFrames;
-    PRUint32            mCursorIndex;
-    nscoord             mOverflowAbove;
-    nscoord             mOverflowBelow;
-    
-    FrameCursorData()
-      : mFrames(MIN_ROWS_NEEDING_CURSOR), mCursorIndex(0), mOverflowAbove(0),
-        mOverflowBelow(0) {}
-
-    PRBool AppendFrame(nsIFrame* aFrame);
-    
-    void FinishBuildingCursor() {
-      mFrames.Compact();
-    }
-  };
-
-  // Clear out row cursor because we're disturbing the rows (e.g., Reflow)
-  void ClearRowCursor();
-
-  /**
-   * Get the first row that might contain y-coord 'aY', or nsnull if you must search
-   * all rows.
-   * The actual row returned might not contain 'aY', but if not, it is guaranteed
-   * to be before any row which does contain 'aY'.
-   * aOverflowAbove is the maximum over all rows of -row.GetOverflowRect().y.
-   * To find all rows that intersect the vertical interval aY/aYMost, call
-   * GetFirstRowContaining(aY, &overflowAbove), and then iterate through all
-   * rows until reaching a row where row->GetRect().y - overflowAbove >= aYMost.
-   * That row and all subsequent rows cannot intersect the interval.
-   */
-  nsIFrame* GetFirstRowContaining(nscoord aY, nscoord* aOverflowAbove);
-
-  /**
-   * Set up the row cursor. After this, call AppendFrame for every
-   * child frame in sibling order. Ensure that the child frame y and YMost values
-   * form non-decreasing sequences (should always be true for table rows);
-   * if this is violated, call ClearRowCursor(). If we return nsnull, then we
-   * decided not to use a cursor or we already have one set up.
-   */
-  FrameCursorData* SetupRowCursor();
 
 protected:
-  nsTableRowGroupFrame(nsStyleContext* aContext);
+  nsTableRowGroupFrame();
 
   void InitChildReflowState(nsPresContext&    aPresContext, 
                             PRBool             aBorderCollapse,
+                            float              aPixelsToTwips,
                             nsHTMLReflowState& aReflowState);
   
   /** implement abstract method on nsHTMLContainerFrame */
@@ -317,13 +278,49 @@ protected:
 
   void CalculateRowHeights(nsPresContext*          aPresContext, 
                            nsHTMLReflowMetrics&     aDesiredSize,
-                           const nsHTMLReflowState& aReflowState);
+                           const nsHTMLReflowState& aReflowState,
+                           nsTableRowFrame*         aStartRowFrameIn = nsnull);
 
-  void DidResizeRows(nsHTMLReflowMetrics& aDesiredSize);
+  void DidResizeRows(nsPresContext&          aPresContext,
+                     const nsHTMLReflowState& aReflowState,
+                     nsHTMLReflowMetrics&     aDesiredSize,
+                     nsTableRowFrame*         aStartRowFrameIn = nsnull);
 
-  void SlideChild(nsRowGroupReflowState& aReflowState,
-                  nsIFrame*              aKidFrame);
+  /** Incremental Reflow attempts to do column balancing with the minimum number of reflow
+    * commands to child elements.  This is done by processing the reflow command,
+    * rebalancing column widths (if necessary), then comparing the resulting column widths
+    * to the prior column widths and reflowing only those cells that require a reflow.
+    *
+    * @see Reflow
+    */
+  NS_IMETHOD IncrementalReflow(nsPresContext*        aPresContext,
+                               nsHTMLReflowMetrics&   aDesiredSize,
+                               nsRowGroupReflowState& aReflowState,
+                               nsReflowStatus&        aStatus);
+
+  NS_IMETHOD IR_TargetIsChild(nsPresContext*        aPresContext,
+                              nsHTMLReflowMetrics&   aDesiredSize,
+                              nsRowGroupReflowState& aReflowState,
+                              nsReflowStatus&        aStatus,
+                              nsIFrame*              aNextFrame);
+
+  NS_IMETHOD IR_TargetIsMe(nsPresContext*        aPresContext,
+                           nsHTMLReflowMetrics&   aDesiredSize,
+                           nsRowGroupReflowState& aReflowState,
+                           nsReflowStatus&        aStatus);
+
+  NS_IMETHOD IR_StyleChanged(nsPresContext*        aPresContext,
+                             nsHTMLReflowMetrics&   aDesiredSize,
+                             nsRowGroupReflowState& aReflowState,
+                             nsReflowStatus&        aStatus);
+
+  nsresult AdjustSiblingsAfterReflow(nsRowGroupReflowState& aReflowState,
+                                     nsIFrame*              aKidFrame,
+                                     nscoord                aDeltaY);
   
+  nsresult RecoverState(nsRowGroupReflowState& aReflowState,
+                        nsIFrame*              aKidFrame);
+
   /**
    * Reflow the frames we've already created
    *
@@ -336,6 +333,9 @@ protected:
                            nsHTMLReflowMetrics&   aDesiredSize,
                            nsRowGroupReflowState& aReflowState,
                            nsReflowStatus&        aStatus,
+                           nsTableRowFrame*       aStartFrame,
+                           PRBool                 aDirtyOnly,
+                           nsTableRowFrame**      aFirstRowReflowed   = nsnull,
                            PRBool*                aPageBreakBeforeEnd = nsnull);
 
   nsresult SplitRowGroup(nsPresContext*          aPresContext,
@@ -382,6 +382,13 @@ public:
   void   SetRepeatable(PRBool aRepeatable);
   PRBool HasStyleHeight() const;
   void   SetHasStyleHeight(PRBool aValue);
+  PRBool NeedSpecialReflow() const;
+  void   SetNeedSpecialReflow(PRBool aValue);
+
+#ifdef DEBUG_TABLE_REFLOW_TIMING
+public:
+  nsReflowTimer* mTimer;
+#endif
 };
 
 
@@ -396,6 +403,20 @@ inline void nsTableRowGroupFrame::SetRepeatable(PRBool aRepeatable)
     mState |= NS_ROWGROUP_REPEATABLE;
   } else {
     mState &= ~NS_ROWGROUP_REPEATABLE;
+  }
+}
+
+inline PRBool nsTableRowGroupFrame::NeedSpecialReflow() const
+{
+  return (mState & NS_ROWGROUP_NEED_SPECIAL_REFLOW) == NS_ROWGROUP_NEED_SPECIAL_REFLOW;
+}
+
+inline void nsTableRowGroupFrame::SetNeedSpecialReflow(PRBool aValue)
+{
+  if (aValue) {
+    mState |= NS_ROWGROUP_NEED_SPECIAL_REFLOW;
+  } else {
+    mState &= ~NS_ROWGROUP_NEED_SPECIAL_REFLOW;
   }
 }
 
@@ -414,9 +435,9 @@ inline void nsTableRowGroupFrame::SetHasStyleHeight(PRBool aValue)
 }
 
 inline void
-nsTableRowGroupFrame::GetContinuousBCBorderWidth(nsMargin& aBorder)
+nsTableRowGroupFrame::GetContinuousBCBorderWidth(float     aPixelsToTwips,
+                                                 nsMargin& aBorder)
 {
-  PRInt32 aPixelsToTwips = nsPresContext::AppUnitsPerCSSPixel();
   aBorder.right = BC_BORDER_LEFT_HALF_COORD(aPixelsToTwips,
                                             mRightContBorderWidth);
   aBorder.bottom = BC_BORDER_TOP_HALF_COORD(aPixelsToTwips,

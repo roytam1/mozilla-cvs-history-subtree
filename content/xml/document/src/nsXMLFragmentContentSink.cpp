@@ -45,14 +45,13 @@
 #include "nsIParser.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocumentFragment.h"
-#include "nsIContent.h"
-#include "nsGkAtoms.h"
+#include "nsIXMLContent.h"
+#include "nsHTMLAtoms.h"
 #include "nsINodeInfo.h"
 #include "nsNodeInfoManager.h"
 #include "nsContentCreatorFunctions.h"
 #include "nsDOMError.h"
 #include "nsIConsoleService.h"
-#include "nsIScriptError.h"
 #include "nsServiceManagerUtils.h"
 #include "nsContentUtils.h"
 #include "nsIScriptSecurityManager.h"
@@ -67,8 +66,6 @@ class nsXMLFragmentContentSink : public nsXMLContentSink,
 public:
   nsXMLFragmentContentSink(PRBool aAllContent = PR_FALSE);
   virtual ~nsXMLFragmentContentSink();
-
-  NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
 
   // nsISupports
   NS_DECL_ISUPPORTS_INHERITED
@@ -85,16 +82,13 @@ public:
                                   const PRUnichar *aEncoding,
                                   PRInt32 aStandalone);
   NS_IMETHOD ReportError(const PRUnichar* aErrorText, 
-                         const PRUnichar* aSourceText,
-                         nsIScriptError *aError,
-                         PRBool *_retval);
+                         const PRUnichar* aSourceText);
 
   // nsIContentSink
   NS_IMETHOD WillBuildModel(void);
   NS_IMETHOD DidBuildModel();
   NS_IMETHOD SetDocumentCharset(nsACString& aCharset);
   virtual nsISupports *GetTarget();
-  NS_IMETHOD DidProcessATokenImpl();
 
   // nsIXMLContentSink
 
@@ -112,9 +106,8 @@ protected:
   virtual nsresult CreateElement(const PRUnichar** aAtts, PRUint32 aAttsCount,
                                  nsINodeInfo* aNodeInfo, PRUint32 aLineNumber,
                                  nsIContent** aResult, PRBool* aAppendContent);
-  virtual nsresult CloseElement(nsIContent* aContent);
-
-  void MaybeStartLayout();
+  virtual nsresult CloseElement(nsIContent* aContent, nsIContent* aParent,
+                                PRBool* aAppendContent);
 
   // nsContentSink overrides
   virtual nsresult ProcessStyleLink(nsIContent* aElement,
@@ -202,7 +195,8 @@ NS_IMETHODIMP
 nsXMLFragmentContentSink::DidBuildModel()
 {
   if (mAllContent) {
-    PopContent();  // remove mRoot pushed above
+    // Need the nsCOMPtr to properly release
+    nsCOMPtr<nsIContent> root = PopContent();  // remove mRoot pushed above
   }
 
   nsCOMPtr<nsIParser> kungFuDeathGrip(mParser);
@@ -247,10 +241,13 @@ nsXMLFragmentContentSink::CreateElement(const PRUnichar** aAtts, PRUint32 aAttsC
                                 aNodeInfo, aLineNumber,
                                 aResult, aAppendContent);
 
-  // When we aren't grabbing all of the content we, never open a doc
+  // Make sure that scripts are added immediately, not on close.
+  *aAppendContent = PR_TRUE;
+
+  // However, when we aren't grabbing all of the content we, never open a doc
   // element, we run into trouble on the first element, so we don't append,
   // and simply push this onto the content stack.
-  if (!mAllContent && mContentStack.Length() == 0) {
+  if (!mAllContent && mContentStack.Count() == 0) {
     *aAppendContent = PR_FALSE;
   }
 
@@ -258,16 +255,14 @@ nsXMLFragmentContentSink::CreateElement(const PRUnichar** aAtts, PRUint32 aAttsC
 }
 
 nsresult
-nsXMLFragmentContentSink::CloseElement(nsIContent* aContent)
+nsXMLFragmentContentSink::CloseElement(nsIContent* aContent,
+                                       nsIContent* aParent,
+                                       PRBool* aAppendContent)
 {
   // don't do fancy stuff in nsXMLContentSink
-  return NS_OK;
-}
+  *aAppendContent = PR_FALSE;
 
-void
-nsXMLFragmentContentSink::MaybeStartLayout()
-{
-  return;
+  return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -316,23 +311,23 @@ nsXMLFragmentContentSink::HandleXMLDeclaration(const PRUnichar *aVersion,
 
 NS_IMETHODIMP
 nsXMLFragmentContentSink::ReportError(const PRUnichar* aErrorText, 
-                                      const PRUnichar* aSourceText,
-                                      nsIScriptError *aError,
-                                      PRBool *_retval)
+                                      const PRUnichar* aSourceText)
 {
-  NS_PRECONDITION(aError && aSourceText && aErrorText, "Check arguments!!!");
-
-  // The expat driver should report the error.
-  *_retval = PR_TRUE;
-
   mParseError = PR_TRUE;
+  // The following error reporting is copied from nsXBLContentSink::ReportError()
+
+  nsCOMPtr<nsIConsoleService> consoleService =
+    do_GetService(NS_CONSOLESERVICE_CONTRACTID);
+  if (consoleService) {
+    consoleService->LogStringMessage(aErrorText);
+  }
 
 #ifdef DEBUG
   // Report the error to stderr.
   fprintf(stderr,
           "\n%s\n%s\n\n",
-          NS_LossyConvertUTF16toASCII(aErrorText).get(),
-          NS_LossyConvertUTF16toASCII(aSourceText).get());
+          NS_LossyConvertUCS2toASCII(aErrorText).get(),
+          NS_LossyConvertUCS2toASCII(aSourceText).get());
 #endif
 
   // The following code is similar to the cleanup in nsXMLContentSink::ReportError()
@@ -432,15 +427,10 @@ nsXMLFragmentContentSink::DidBuildContent()
     if (!mParseError) {
       FlushText();
     }
-    PopContent();
+    // Need the nsCOMPtr to properly release
+    nsCOMPtr<nsIContent> root = PopContent();
   }
 
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXMLFragmentContentSink::DidProcessATokenImpl()
-{
   return NS_OK;
 }
 
@@ -589,7 +579,7 @@ nsXHTMLParanoidFragmentSink::AddAttributes(const PRUnichar** aAtts,
   // use this to check for safe URIs in the few attributes that allow them
   nsIScriptSecurityManager* secMan = nsContentUtils::GetSecurityManager();
   nsCOMPtr<nsIURI> baseURI;
-  PRUint32 flags = nsIScriptSecurityManager::DISALLOW_INHERIT_PRINCIPAL;
+  PRUint32 flags = nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA;
 
   // scrub URI attributes that point at dangerous content
   // We have to do this here, because this is where we have a base URI,
@@ -615,7 +605,7 @@ nsXHTMLParanoidFragmentSink::AddAttributes(const PRUnichar** aAtts,
       rv = NS_NewURI(getter_AddRefs(attrURI), nsDependentString(aAtts[1]),
                      nsnull, baseURI);
       if (NS_SUCCEEDED(rv)) {
-        rv = secMan->CheckLoadURIWithPrincipal(mTargetDocument->NodePrincipal(),
+        rv = secMan->CheckLoadURIWithPrincipal(mTargetDocument->GetPrincipal(),
                                                attrURI, flags);
       }
     }
@@ -659,8 +649,8 @@ nsXHTMLParanoidFragmentSink::HandleStartElement(const PRUnichar *aName,
   // <script> or <style>
   nsCOMPtr<nsIAtom> name = nodeInfo->NameAtom();
   if (mSkipLevel != 0 ||
-      name == nsGkAtoms::script ||
-      name == nsGkAtoms::style) {
+      name == nsHTMLAtoms::script ||
+      name == nsHTMLAtoms::style) {
     ++mSkipLevel; // track this so we don't spew script text
     return NS_OK;
   }  
@@ -678,12 +668,9 @@ nsXHTMLParanoidFragmentSink::HandleStartElement(const PRUnichar *aName,
     NS_ENSURE_SUCCESS(rv, rv);
     
     name = nodeInfo->NameAtom();
-    // Add if it's xmlns, xml:, aaa:, xhtml2:role, or on the HTML whitelist
+    // Add if it's xmlns, xml:, or on the HTML whitelist
     if (nameSpaceID == kNameSpaceID_XMLNS ||
         nameSpaceID == kNameSpaceID_XML ||
-        nameSpaceID == kNameSpaceID_WAIProperties ||
-        (nameSpaceID == kNameSpaceID_XHTML2_Unofficial &&
-         name == nsGkAtoms::role) ||
         sAllowedAttributes && sAllowedAttributes->GetEntry(name)) {
       allowedAttrs.AppendElement(aAtts[i]);
       allowedAttrs.AppendElement(aAtts[i + 1]);

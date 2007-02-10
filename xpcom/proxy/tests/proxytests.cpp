@@ -39,13 +39,10 @@
 #include <stdio.h>
 
 #include "nsXPCOM.h"
-#include "nsXPCOMCIDInternal.h"
 #include "nsIComponentManager.h"
 #include "nsIComponentRegistrar.h"
 #include "nsIServiceManager.h"
-#include "nsAutoPtr.h"
 #include "nsCOMPtr.h"
-#include "nsCOMArray.h"
 
 #include "nscore.h"
 #include "nspr.h"
@@ -53,31 +50,10 @@
 
 #include "nsITestProxy.h"
 
-#include "nsIRunnable.h"
 #include "nsIProxyObjectManager.h"
-#include "nsIThreadPool.h"
-#include "nsXPCOMCIDInternal.h"
-#include "nsComponentManagerUtils.h"
-#include "nsServiceManagerUtils.h"
-#include "nsThreadUtils.h"
+#include "nsIEventQueueService.h"
 
-#include "prlog.h"
-#ifdef PR_LOGGING
-static PRLogModuleInfo *sLog = PR_NewLogModule("Test");
-#define LOG(args) PR_LOG(sLog, PR_LOG_DEBUG, args)
-#else
-#define LOG(args) printf args
-#endif
-
-static nsresult
-GetThreadFromPRThread(PRThread *prthread, nsIThread **result)
-{
-  LOG(("TEST: GetThreadFromPRThread [%p]\n", prthread));
-
-  nsCOMPtr<nsIThreadManager> tm = do_GetService(NS_THREADMANAGER_CONTRACTID);
-  NS_ENSURE_STATE(tm);
-  return tm->GetThreadFromPRThread(prthread, result);
-}
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 /***************************************************************************/
 /* nsTestXPCFoo                                                            */
@@ -101,7 +77,7 @@ NS_IMPL_ISUPPORTS1(nsTestXPCFoo, nsITestProxy)
 
 NS_IMETHODIMP nsTestXPCFoo::Test(PRInt32 p1, PRInt32 p2, PRInt32* retval)
 {
-    LOG(("TEST: Thread (%d) Test Called successfully! Party on...\n", p1));
+    printf("Thread (%d) Test Called successfully! Party on...\n", p1);
     *retval = p1+p2;
     return NS_OK;
 }
@@ -109,7 +85,7 @@ NS_IMETHODIMP nsTestXPCFoo::Test(PRInt32 p1, PRInt32 p2, PRInt32* retval)
 
 NS_IMETHODIMP nsTestXPCFoo::Test2()
 {
-    LOG(("TEST: The quick brown netscape jumped over the old lazy ie..\n"));
+    printf("The quick brown netscape jumped over the old lazy ie..\n");
 
     return NS_OK;
 }
@@ -125,7 +101,7 @@ NS_IMETHODIMP nsTestXPCFoo::Test3(nsISupports *p1, nsISupports **p2)
         test->Test2();
         PRInt32 a;
         test->Test( 1, 2, &a);
-        LOG(("TEST: \n1+2=%d\n",a));
+        printf("\n1+2=%d\n",a);
     }
 
 
@@ -155,31 +131,28 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsTestXPCFoo2, nsITestProxy)
 
 NS_IMETHODIMP nsTestXPCFoo2::Test(PRInt32 p1, PRInt32 p2, PRInt32* retval)
 {
-    LOG(("TEST: calling back to caller!\n"));
+    printf("calling back to caller!\n\n");
 
     nsCOMPtr<nsIProxyObjectManager> manager =
             do_GetService(NS_XPCOMPROXY_CONTRACTID);
 
-    LOG(("TEST: ProxyObjectManager: %p \n", (void *) manager.get()));
+    printf("ProxyObjectManager: %p \n", (void *) manager.get());
     
     PR_ASSERT(manager);
 
-    nsCOMPtr<nsIThread> thread;
-    GetThreadFromPRThread((PRThread *) p1, getter_AddRefs(thread));
-    NS_ENSURE_STATE(thread);
-
     nsCOMPtr<nsITestProxy> proxyObject;
-    manager->GetProxyForObject(thread, NS_GET_IID(nsITestProxy), this, NS_PROXY_SYNC, (void**)&proxyObject);
+    manager->GetProxyForObject((nsIEventQueue*)p1, NS_GET_IID(nsITestProxy),
+                               this, PROXY_SYNC, (void**)&proxyObject);
     proxyObject->Test3(nsnull, nsnull);
     
-    LOG(("TEST: Deleting Proxy Object\n"));
+    printf("Deleting Proxy Object\n");
     return NS_OK;
 }
 
 
 NS_IMETHODIMP nsTestXPCFoo2::Test2()
 {
-    LOG(("TEST: nsTestXPCFoo2::Test2() called\n"));
+    printf("nsTestXPCFoo2::Test2() called\n");
 
     return NS_OK;
 }
@@ -187,17 +160,17 @@ NS_IMETHODIMP nsTestXPCFoo2::Test2()
 
 NS_IMETHODIMP nsTestXPCFoo2::Test3(nsISupports *p1, nsISupports **p2)
 {
-    LOG(("TEST: Got called"));
+    printf("Got called");
     return NS_OK;
 }
 
 
 
-#if 0
-struct ArgsStruct {
-    nsIThread* thread;
-    PRInt32    threadNumber;
-};
+typedef struct _ArgsStruct
+{
+    nsIEventQueue* queue;
+    PRInt32           threadNumber;
+}ArgsStruct;
 
 
 
@@ -224,9 +197,9 @@ void TestCase_TwoClassesOneInterface(void *arg)
     PR_ASSERT(foo2);
     
     
-    manager->GetProxyForObject(argsStruct->thread, NS_GET_IID(nsITestProxy), foo, NS_PROXY_SYNC, (void**)&proxyObject);
+    manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
     
-    manager->GetProxyForObject(argsStruct->thread, NS_GET_IID(nsITestProxy), foo2, NS_PROXY_SYNC, (void**)&proxyObject2);
+    manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy), foo2, PROXY_SYNC, (void**)&proxyObject2);
 
     
     
@@ -267,16 +240,17 @@ void TestCase_TwoClassesOneInterface(void *arg)
 
     PR_Sleep( PR_MillisecondsToInterval(1000) );  // If your thread goes away, your stack goes away.  Only use ASYNC on calls that do not have out parameters
 }
-#endif
 
 
 
-void TestCase_NestedLoop(nsIThread *thread, PRInt32 index)
+void TestCase_NestedLoop(void *arg)
 {
+    ArgsStruct *argsStruct = (ArgsStruct*) arg;
+
     nsCOMPtr<nsIProxyObjectManager> manager =
             do_GetService(NS_XPCOMPROXY_CONTRACTID);
 
-    LOG(("TEST: ProxyObjectManager: %p\n", (void *) manager.get()));
+    printf("ProxyObjectManager: %p\n", (void *) manager.get());
     
     PR_ASSERT(manager);
 
@@ -286,30 +260,40 @@ void TestCase_NestedLoop(nsIThread *thread, PRInt32 index)
     PR_ASSERT(foo);
     
     
-    manager->GetProxyForObject(thread, NS_GET_IID(nsITestProxy), foo, NS_PROXY_SYNC, (void**)&proxyObject);
+    manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
     
     if (proxyObject)
     {
         // release ownership of the real object. 
         
         nsresult rv;
+        PRInt32 threadNumber = argsStruct->threadNumber;
         
-        LOG(("TEST: Deleting real Object (%d)\n", index));
+        printf("Deleting real Object (%d)\n", threadNumber);
         NS_RELEASE(foo);
    
         PRInt32 retval;
         
-        LOG(("TEST: Getting EventThread...\n"));
+        printf("Getting EventQueue...\n");
 
-        //nsCOMPtr<nsIThread> curThread = do_GetCurrentThread();
-        PRThread *curThread = PR_GetCurrentThread();
-        if (curThread)
+        nsIEventQueue* eventQ;
+        nsCOMPtr<nsIEventQueueService> eventQService = 
+                 do_GetService(kEventQueueServiceCID, &rv);
+        if (NS_SUCCEEDED(rv)) 
         {
-            LOG(("TEST: Thread (%d) Prior to calling proxyObject->Test.\n", index));
-            rv = proxyObject->Test(NS_PTR_TO_INT32((void*)curThread), 0, &retval);   // XXX broken on 64-bit arch
-            LOG(("TEST: Thread (%d) proxyObject error: %x.\n", index, rv));
+            rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &eventQ);
+            if (NS_FAILED(rv))
+                rv = eventQService->CreateThreadEventQueue();
+            if (NS_FAILED(rv))
+                return;
+            else
+                rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &eventQ);
+        
+            printf("Thread (%d) Prior to calling proxyObject->Test.\n", threadNumber);
+            rv = proxyObject->Test(NS_PTR_TO_INT32(eventQ), 0, &retval);   
+            printf("Thread (%d) proxyObject error: %d.\n", threadNumber, rv);
 
-            LOG(("TEST: Deleting Proxy Object (%d)\n", index));
+            printf("Deleting Proxy Object (%d)\n", threadNumber );
             NS_RELEASE(proxyObject);
         }    
 
@@ -318,7 +302,34 @@ void TestCase_NestedLoop(nsIThread *thread, PRInt32 index)
 }
 
 
-#if 0
+
+void TestCase_2(void *arg)
+{
+
+    ArgsStruct *argsStruct = (ArgsStruct*) arg;
+
+    nsCOMPtr<nsIProxyObjectManager> manager =
+            do_GetService(NS_XPCOMPROXY_CONTRACTID);
+    
+    PR_ASSERT(manager);
+
+    nsITestProxy         *proxyObject;
+
+    manager->GetProxy(argsStruct->queue,
+                            NS_GET_IID(nsITestProxy),   // should be CID!
+                            nsnull, 
+                            NS_GET_IID(nsITestProxy), 
+                            PROXY_SYNC, 
+                            (void**)&proxyObject);
+    
+    if (proxyObject != nsnull)
+    {
+        NS_RELEASE(proxyObject);
+    }
+}
+
+
+
 void TestCase_nsISupports(void *arg)
 {
 
@@ -334,7 +345,7 @@ void TestCase_nsISupports(void *arg)
     
     PR_ASSERT(foo);
 
-     manager->GetProxyForObject(argsStruct->thread, NS_GET_IID(nsITestProxy), foo, NS_PROXY_SYNC, (void**)&proxyObject);
+     manager->GetProxyForObject(argsStruct->queue, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
     
     if (proxyObject != nsnull)
     {   
@@ -352,140 +363,96 @@ void TestCase_nsISupports(void *arg)
         NS_RELEASE(proxyObject);
     }
 }
-#endif
+
+
+
+
 
 /***************************************************************************/
 /* ProxyTest                                                               */
 /***************************************************************************/
 
-class ProxyTest : public nsIRunnable
+static void PR_CALLBACK ProxyTest( void *arg )
 {
-public:
-    NS_DECL_ISUPPORTS
+   //TestCase_TwoClassesOneInterface(arg);
+   // TestCase_2(arg);
+   //TestCase_nsISupports(arg);
+   TestCase_NestedLoop(arg);
 
-    ProxyTest(PRThread *eventLoopThread, PRInt32 index)
-        : mEventLoopThread(eventLoopThread)
-        , mIndex(index)
-    {}
+   NS_RELEASE( ((ArgsStruct*) arg)->queue);
+   free((void*) arg);
+}
 
-    NS_IMETHOD Run()
-    {
-        //TestCase_TwoClassesOneInterface(arg);
-        //TestCase_nsISupports(arg);
-        nsCOMPtr<nsIThread> thread;
-        GetThreadFromPRThread(mEventLoopThread, getter_AddRefs(thread));
-        TestCase_NestedLoop(thread, mIndex);
+nsIEventQueue *gEventQueue = nsnull;
 
-        return NS_OK;
-    }
-
-private:
-    PRThread *mEventLoopThread;
-    PRInt32 mIndex;
-};
-NS_IMPL_THREADSAFE_ISUPPORTS1(ProxyTest, nsIRunnable)
-
-class TestSyncProxyToSelf : public nsIRunnable
+static void PR_CALLBACK EventLoop( void *arg )
 {
-public:
-    NS_DECL_ISUPPORTS
+    nsresult rv;
+    printf("Creating EventQueue...\n");
 
-    NS_IMETHOD Run()
-    {
-        LOG(("TEST: Verifing calling Proxy on eventQ thread.\n"));
-
-        nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-
-        nsITestProxy *proxyObject;
-        nsTestXPCFoo *foo = new nsTestXPCFoo();
-        NS_ENSURE_STATE(foo);
-
-        nsCOMPtr<nsIProxyObjectManager> manager =
-                do_GetService(NS_XPCOMPROXY_CONTRACTID);
-
-        manager->GetProxyForObject(thread,
-                                   NS_GET_IID(nsITestProxy), foo,
-                                   NS_PROXY_SYNC, (void**)&proxyObject);
-
-        PRInt32 a;
-        proxyObject->Test(1, 2, &a);
-        proxyObject->Test2();
-        
-        NS_RELEASE(proxyObject);
-        delete foo;
-
-        LOG(("TEST: End of Verification calling Proxy on eventQ thread.\n"));
-
-        return NS_OK;
+    nsIEventQueue* eventQ;
+    nsCOMPtr<nsIEventQueueService> eventQService = 
+             do_GetService(kEventQueueServiceCID, &rv);
+    if (NS_SUCCEEDED(rv)) {
+      rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &eventQ);
+      if (NS_FAILED(rv))
+          rv = eventQService->CreateThreadEventQueue();
+      if (NS_FAILED(rv))
+          return;
+      else
+          rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &eventQ);
     }
-};
-NS_IMPL_THREADSAFE_ISUPPORTS1(TestSyncProxyToSelf, nsIRunnable)
+    if (NS_FAILED(rv)) return;
 
-//---------------------------------------------------------------------------
-// Test to make sure we can call methods on a "main thread only" object from
-// a background thread.
+    rv = eventQ->QueryInterface(NS_GET_IID(nsIEventQueue), (void**)&gEventQueue);
+    if (NS_FAILED(rv)) return;
+     
 
-class MainThreadOnly : public nsIRunnable {
-public:
-    NS_DECL_ISUPPORTS
-    NS_IMETHOD Run() {
-        NS_ASSERTION(NS_IsMainThread(), "method called on wrong thread");
-        *mNumRuns -= 1;
-        return NS_OK;
-    }
-    MainThreadOnly(PRUint32 *numRuns) : mNumRuns(numRuns) {}
-    ~MainThreadOnly() {
-        NS_ASSERTION(NS_IsMainThread(), "method called on wrong thread");
-    }
-    PRBool IsDone() { return mNumRuns == 0; }
-private:
-    PRUint32 *mNumRuns;
-};
-NS_IMPL_ISUPPORTS1(MainThreadOnly, nsIRunnable)  // not threadsafe!
-
-static nsresult
-RunApartmentTest()
-{
-    LOG(("RunApartmentTest: start\n"));
-
-    const PRUint32 numDispatched = 160;
-
-    PRUint32 numCompleted = 0;
-    nsCOMPtr<nsIRunnable> obj = new MainThreadOnly(&numCompleted);
+    printf("Verifing calling Proxy on eventQ thread.\n");
 
     nsCOMPtr<nsIProxyObjectManager> manager =
             do_GetService(NS_XPCOMPROXY_CONTRACTID);
+    
+    PR_ASSERT(manager);
 
-    nsCOMPtr<nsIRunnable> objProxy;
-    manager->GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD,
-                               NS_GET_IID(nsIRunnable),
-                               obj,
-                               NS_PROXY_ASYNC,
-                               getter_AddRefs(objProxy));
-    nsCOMPtr<nsIThread> thread;
-    NS_NewThread(getter_AddRefs(thread));
+    nsITestProxy         *proxyObject;
+    nsTestXPCFoo*         foo   = new nsTestXPCFoo();
+    
+    PR_ASSERT(foo);
 
-    obj = nsnull;
+    manager->GetProxyForObject(gEventQueue, NS_GET_IID(nsITestProxy), foo, PROXY_SYNC, (void**)&proxyObject);
 
-    nsCOMPtr<nsIThreadPool> pool = do_CreateInstance(NS_THREADPOOL_CONTRACTID);
+    PRInt32 a;
+    proxyObject->Test(1, 2, &a);
+    proxyObject->Test2();
 
-    pool->SetThreadLimit(8);
-    for (PRUint32 i = 0; i < numDispatched; ++i)
-        pool->Dispatch(objProxy, NS_DISPATCH_NORMAL);
+    
+    NS_RELEASE(proxyObject);
+    delete foo;
 
-    objProxy = nsnull;
+    printf("End of Verification calling Proxy on eventQ thread.\n");
 
-    nsCOMPtr<nsIThread> curThread = do_GetCurrentThread();
-    while (numCompleted < numDispatched) {
-        NS_ProcessNextEvent(curThread);
+
+    printf("Looping for events.\n");
+
+    PLEvent* event = nsnull;
+    
+    while ( PR_SUCCESS == PR_Sleep( PR_MillisecondsToInterval(1)) )
+    {
+        rv = gEventQueue->GetEvent(&event);
+        if (NS_FAILED(rv))
+            return;
+		gEventQueue->HandleEvent(event);
     }
 
-    pool->Shutdown();
+    gEventQueue->ProcessPendingEvents(); 
 
-    LOG(("RunApartmentTest: end\n"));
-    return NS_OK;
+    printf("Closing down Event Queue.\n");
+    delete gEventQueue;
+    gEventQueue = nsnull;
+
+    printf("End looping for events.\n\n");
 }
-
 
 int
 main(int argc, char **argv)
@@ -495,59 +462,72 @@ main(int argc, char **argv)
     if (argc > 1)
         numberOfThreads = atoi(argv[1]);
 
-    NS_InitXPCOM2(nsnull, nsnull, nsnull);
+    nsCOMPtr<nsIServiceManager> servMan;
+    NS_InitXPCOM2(getter_AddRefs(servMan), nsnull, nsnull);
+    nsCOMPtr<nsIComponentRegistrar> registrar = do_QueryInterface(servMan);
+    NS_ASSERTION(registrar, "Null nsIComponentRegistrar");
+    registrar->AutoRegister(nsnull);
+    
+    static PRThread** threads = (PRThread**) calloc(sizeof(PRThread*), numberOfThreads);
+    static PRThread*  aEventThread;
+    
+    aEventThread =   PR_CreateThread(PR_USER_THREAD,
+                                     EventLoop,
+                                     NULL,
+                                     PR_PRIORITY_NORMAL,
+                                     PR_GLOBAL_THREAD,
+                                     PR_JOINABLE_THREAD,
+                                     0 );
 
-    // Scope code so everything is destroyed before we run call NS_ShutdownXPCOM
+    
+    PR_Sleep(PR_MillisecondsToInterval(1000));
+
+    NS_ASSERTION(gEventQueue, "no main event queue"); // BAD BAD BAD.  EVENT THREAD DID NOT CREATE QUEUE.  This may be a timing issue, set the 
+                            // sleep about longer, and try again.
+
+    printf("Spawn Threads:\n");
+    for (PRInt32 spawn = 0; spawn < numberOfThreads; spawn++)
     {
-        nsCOMPtr<nsIComponentRegistrar> registrar;
-        NS_GetComponentRegistrar(getter_AddRefs(registrar));
-        registrar->AutoRegister(nsnull);
 
-        RunApartmentTest();
-
-        nsCOMPtr<nsIThread> eventLoopThread;
-        NS_NewThread(getter_AddRefs(eventLoopThread));
-
-        nsCOMPtr<nsIRunnable> test = new TestSyncProxyToSelf();
-        eventLoopThread->Dispatch(test, NS_DISPATCH_NORMAL);
-
-        PRThread *eventLoopPRThread;
-        eventLoopThread->GetPRThread(&eventLoopPRThread);
-        PR_ASSERT(eventLoopPRThread);
+        ArgsStruct *args = (ArgsStruct *) malloc (sizeof(ArgsStruct));
         
-        LOG(("TEST: Spawn Threads:\n"));
-        nsCOMArray<nsIThread> threads;
-        for (PRInt32 spawn = 0; spawn < numberOfThreads; spawn++)
-        {
-            test = new ProxyTest(eventLoopPRThread, spawn);
+        args->queue = gEventQueue;
+        NS_ADDREF(args->queue);
+        args->threadNumber = spawn;
 
-            nsCOMPtr<nsIThread> thread;
-            NS_NewThread(getter_AddRefs(thread), test);
+        threads[spawn]  =   PR_CreateThread(PR_USER_THREAD,
+                                            ProxyTest,
+                                            args,
+                                            PR_PRIORITY_NORMAL,
+                                            PR_GLOBAL_THREAD,
+                                            PR_JOINABLE_THREAD,
+                                            0 );
 
-            threads.AppendObject(thread);
+        printf("\tThread (%d) spawned\n", spawn);
 
-            LOG(("TEST: \tThread (%d) spawned\n", spawn));
-
-            PR_Sleep( PR_MillisecondsToInterval(250) );
-        }
-
-        LOG(("TEST: All Threads Spawned.\n"));
-        
-        LOG(("TEST: Wait for threads.\n"));
-        for (PRInt32 i = 0; i < numberOfThreads; i++)
-        {
-            LOG(("TEST: Thread (%d) Join...\n", i));
-            nsresult rv = threads[i]->Shutdown();
-            LOG(("TEST: Thread (%d) Joined. (error: %x).\n", i, rv));
-        }
-
-        LOG(("TEST: Shutting down event loop thread\n"));
-        eventLoopThread->Shutdown();
+        PR_Sleep( PR_MillisecondsToInterval(250) );
     }
 
-    LOG(("TEST: Calling Cleanup.\n"));
-    NS_ShutdownXPCOM(nsnull);
+    printf("All Threads Spawned.\n\n");
+    
+   
+    
+   printf("Wait for threads.\n");
+    for (PRInt32 i = 0; i < numberOfThreads; i++)
+    {
+        PRStatus rv;
+        printf("Thread (%d) Join...\n", i);
+        rv = PR_JoinThread(threads[i]);
+        printf("Thread (%d) Joined. (error: %d).\n", i, rv);
+    }
 
-    LOG(("TEST: Return zero.\n"));
+    PR_Interrupt(aEventThread);
+    PR_JoinThread(aEventThread);
+    
+
+    printf("Calling Cleanup.\n");
+    PR_Cleanup();
+
+    printf("Return zero.\n");
     return 0;
 }

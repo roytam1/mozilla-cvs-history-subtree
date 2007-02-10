@@ -54,7 +54,6 @@
 #include "nsIStringBundle.h"
 #include "nsWeakReference.h"
 #include "nsInterfaceHashtable.h"
-#include "nsIAccessibilityService.h"
 
 class nsIPresShell;
 class nsPresContext;
@@ -62,7 +61,6 @@ class nsIAccessibleDocument;
 class nsIFrame;
 class nsIDOMNodeList;
 class nsITimer;
-class nsRootAccessible;
 
 #define ACCESSIBLE_BUNDLE_URL "chrome://global-platform/locale/accessible.properties"
 #define PLATFORM_KEYS_BUNDLE_URL "chrome://global-platform/locale/platformKeys.properties"
@@ -99,7 +97,9 @@ class nsAccessNode: public nsIAccessNode, public nsPIAccessNode
     nsAccessNode(nsIDOMNode *, nsIWeakReference* aShell);
     virtual ~nsAccessNode();
 
-    NS_DECL_ISUPPORTS
+    NS_IMETHOD QueryInterface(REFNSIID aIID, void** aInstancePtr);
+    NS_IMETHOD_(nsrefcnt) AddRef(void);
+    NS_IMETHOD_(nsrefcnt) Release(void);
     NS_DECL_NSIACCESSNODE
     NS_DECL_NSPIACCESSNODE
 
@@ -117,17 +117,16 @@ class nsAccessNode: public nsIAccessNode, public nsPIAccessNode
 
     // Static cache methods for global document cache
     static already_AddRefed<nsIAccessibleDocument> GetDocAccessibleFor(nsIWeakReference *aPresShell);
-    static already_AddRefed<nsIAccessibleDocument> GetDocAccessibleFor(nsISupports *aContainer, PRBool aCanCreate = PR_FALSE);
+    static already_AddRefed<nsIAccessibleDocument> GetDocAccessibleFor(nsISupports *aContainer);
     static already_AddRefed<nsIAccessibleDocument> GetDocAccessibleFor(nsIDOMNode *aNode);
 
     static already_AddRefed<nsIDocShellTreeItem> GetDocShellTreeItemFor(nsIDOMNode *aStartNode);
-    static already_AddRefed<nsIDOMNode> GetDOMNodeForContainer(nsISupports *aContainer);
     static already_AddRefed<nsIPresShell> GetPresShellFor(nsIDOMNode *aStartNode);
     
     // Return PR_TRUE if there is a role attribute
     static PRBool HasRoleAttribute(nsIContent *aContent)
     {
-      return (aContent->IsNodeOfType(nsINode::eHTML) && aContent->HasAttr(kNameSpaceID_None, nsAccessibilityAtoms::role)) ||
+      return (aContent->IsContentOfType(nsIContent::eHTML) && aContent->HasAttr(kNameSpaceID_None, nsAccessibilityAtoms::role)) ||
               aContent->HasAttr(kNameSpaceID_XHTML, nsAccessibilityAtoms::role) ||
               aContent->HasAttr(kNameSpaceID_XHTML2_Unofficial, nsAccessibilityAtoms::role);
     }
@@ -136,19 +135,12 @@ class nsAccessNode: public nsIAccessNode, public nsPIAccessNode
     static PRBool GetRoleAttribute(nsIContent *aContent, nsAString& aRole)
     {
       aRole.Truncate();
-      return (aContent->IsNodeOfType(nsINode::eHTML) && aContent->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::role, aRole)) ||
-              aContent->GetAttr(kNameSpaceID_XHTML, nsAccessibilityAtoms::role, aRole) ||
-              aContent->GetAttr(kNameSpaceID_XHTML2_Unofficial, nsAccessibilityAtoms::role, aRole);
+      return (aContent->IsContentOfType(nsIContent::eHTML) && aContent->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::role, aRole) != NS_CONTENT_ATTR_NOT_THERE) ||
+              aContent->GetAttr(kNameSpaceID_XHTML, nsAccessibilityAtoms::role, aRole) != NS_CONTENT_ATTR_NOT_THERE ||
+              aContent->GetAttr(kNameSpaceID_XHTML2_Unofficial, nsAccessibilityAtoms::role, aRole) != NS_CONTENT_ATTR_NOT_THERE;
     }
 
-    static void GetComputedStyleDeclaration(const nsAString& aPseudoElt,
-                                            nsIDOMElement *aElement,
-                                            nsIDOMCSSStyleDeclaration **aCssDecl);
-
-    already_AddRefed<nsRootAccessible> GetRootAccessible();
-
     static nsIDOMNode *gLastFocusedNode;
-    static nsIAccessibilityService* GetAccService();
 
 protected:
     nsresult MakeAccessNode(nsIDOMNode *aNode, nsIAccessNode **aAccessNode);
@@ -159,7 +151,10 @@ protected:
     nsCOMPtr<nsIDOMNode> mDOMNode;
     nsCOMPtr<nsIWeakReference> mWeakShell;
 
-#ifdef DEBUG_A11Y
+    PRInt32 mRefCnt;
+    NS_DECL_OWNINGTHREAD
+
+#ifdef DEBUG
     PRBool mIsInitialized;
 #endif
 
@@ -169,12 +164,8 @@ protected:
     static nsITimer *gDoCommandTimer;
     static PRBool gIsAccessibilityActive;
     static PRBool gIsCacheDisabled;
-    static PRBool gIsFormFillEnabled;
 
     static nsInterfaceHashtable<nsVoidHashKey, nsIAccessNode> gGlobalDocAccessibleCache;
-
-private:
-  static nsIAccessibilityService *sAccService;
 };
 
 #endif

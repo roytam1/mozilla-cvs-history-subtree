@@ -56,7 +56,6 @@
 #include "nsIDOMEventListener.h"
 #include "nsIContent.h"
 #include "nsAutoPtr.h"
-#include "nsSelectsAreaFrame.h"
 
 class nsIDOMHTMLSelectElement;
 class nsIDOMHTMLOptionsCollection;
@@ -80,7 +79,7 @@ class nsListControlFrame : public nsHTMLScrollFrame,
                            public nsISelectControlFrame
 {
 public:
-  friend nsIFrame* NS_NewListControlFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewListControlFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
    // nsISupports
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
@@ -90,46 +89,40 @@ public:
                          nsGUIEvent* aEvent,
                          nsEventStatus* aEventStatus);
   
-  NS_IMETHOD SetInitialChildList(nsIAtom*        aListName,
+  NS_IMETHOD SetInitialChildList(nsPresContext* aPresContext,
+                                 nsIAtom*        aListName,
                                  nsIFrame*       aChildList);
-
-  // Our min width is our pref width
-  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
 
   NS_IMETHOD Reflow(nsPresContext*          aCX,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&          aStatus);
 
-  NS_IMETHOD Init(nsIContent*      aContent,
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                   nsIContent*      aContent,
                    nsIFrame*        aParent,
+                   nsStyleContext*  aContext,
                    nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD DidReflow(nsPresContext*           aPresContext, 
                        const nsHTMLReflowState*  aReflowState, 
                        nsDidReflowStatus         aStatus);
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext *aPresContext);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
 
   virtual nsIFrame* GetContentInsertionFrame();
 
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::scrollFrame
+   * @see nsLayoutAtoms::scrollFrame
    */
   virtual nsIAtom* GetType() const;
-
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
-
-  virtual PRBool IsContainingBlock() const;
-
-  virtual void InvalidateInternal(const nsRect& aDamageRect,
-                                  nscoord aX, nscoord aY, nsIFrame* aForChild,
-                                  PRBool aImmediate);
 
 #ifdef DEBUG
     // nsIFrameDebug
@@ -137,9 +130,23 @@ public:
 #endif
 
     // nsIFormControlFrame
-  virtual nsresult SetFormProperty(nsIAtom* aName, const nsAString& aValue);
-  virtual nsresult GetFormProperty(nsIAtom* aName, nsAString& aValue) const; 
+  NS_IMETHOD_(PRInt32) GetFormControlType() const;
+  NS_IMETHOD GetName(nsAString* aName);
+  NS_IMETHOD SetProperty(nsPresContext* aPresContext, nsIAtom* aName, const nsAString& aValue);
+  NS_IMETHOD GetProperty(nsIAtom* aName, nsAString& aValue); 
+  NS_IMETHOD GetMultiple(PRBool* aResult, nsIDOMHTMLSelectElement* aSelect = nsnull);
+  NS_IMETHOD GetFormContent(nsIContent*& aContent) const;
+  NS_IMETHOD OnContentReset();
+
   virtual void SetFocus(PRBool aOn = PR_TRUE, PRBool aRepaint = PR_FALSE);
+  virtual void ScrollIntoView(nsPresContext* aPresContext);
+  virtual nscoord GetVerticalInsidePadding(nsPresContext* aPresContext,
+                                           float aPixToTwip,
+                                           nscoord aInnerHeight) const;
+  virtual nscoord GetHorizontalInsidePadding(nsPresContext* aPresContext,
+                                             float aPixToTwip, 
+                                             nscoord aInnerWidth,
+                                             nscoord aCharWidth) const;
 
   virtual nsGfxScrollFrameInner::ScrollbarStyles GetScrollbarStyles() const;
 
@@ -152,18 +159,20 @@ public:
   virtual PRIntn GetSkipSides() const;
 
     // nsIListControlFrame
-  virtual void SetComboboxFrame(nsIFrame* aComboboxFrame);
-  virtual PRInt32 GetSelectedIndex(); 
-  virtual void GetOptionText(PRInt32 aIndex, nsAString & aStr);
-  virtual void CaptureMouseEvents(PRBool aGrabMouseEvents);
-  virtual nscoord GetHeightOfARow();
-  virtual PRInt32 GetNumberOfOptions();  
-  virtual void SyncViewWithFrame();
-  virtual void AboutToDropDown();
-  virtual void AboutToRollup();
-  virtual void FireOnChange();
-  virtual void ComboboxFinish(PRInt32 aIndex);
-  virtual void OnContentReset();
+  NS_IMETHOD SetComboboxFrame(nsIFrame* aComboboxFrame);
+  NS_IMETHOD GetSelectedIndex(PRInt32* aIndex); 
+  NS_IMETHOD GetOptionText(PRInt32 aIndex, nsAString & aStr);
+  NS_IMETHOD CaptureMouseEvents(nsPresContext* aPresContext, PRBool aGrabMouseEvents);
+  NS_IMETHOD GetMaximumSize(nsSize &aSize);
+  NS_IMETHOD SetSuggestedSize(nscoord aWidth, nscoord aHeight);
+  NS_IMETHOD GetNumberOfOptions(PRInt32* aNumOptions);  
+  NS_IMETHOD SyncViewWithFrame();
+  NS_IMETHOD AboutToDropDown();
+  NS_IMETHOD AboutToRollup();
+  NS_IMETHOD SetOverrideReflowOptimization(PRBool aValue) { mOverrideReflowOpt = aValue; return NS_OK; }
+  NS_IMETHOD GetOptionsContainer(nsPresContext* aPresContext, nsIFrame** aFrame);
+  NS_IMETHOD FireOnChange();
+  NS_IMETHOD ComboboxFinish(PRInt32 aIndex);
 
   // nsISelectControlFrame
   NS_IMETHOD AddOption(nsPresContext* aPresContext, PRInt32 index);
@@ -173,6 +182,8 @@ public:
   NS_IMETHOD OnOptionSelected(nsPresContext* aPresContext,
                               PRInt32 aIndex,
                               PRBool aSelected);
+  NS_IMETHOD GetDummyFrame(nsIFrame** aFrame);
+  NS_IMETHOD SetDummyFrame(nsIFrame* aFrame);
   NS_IMETHOD OnSetSelectedIndex(PRInt32 aOldIndex, PRInt32 aNewIndex);
 
   // mouse event listeners
@@ -187,47 +198,17 @@ public:
   nsresult KeyPress(nsIDOMEvent* aKeyEvent);
 
   // Static Methods
-  static already_AddRefed<nsIDOMHTMLOptionsCollection>
-    GetOptions(nsIContent * aContent);
-  static already_AddRefed<nsIDOMHTMLOptionElement>
-    GetOption(nsIDOMHTMLOptionsCollection* aOptions, PRInt32 aIndex);
-  static already_AddRefed<nsIContent>
-    GetOptionAsContent(nsIDOMHTMLOptionsCollection* aCollection,PRInt32 aIndex);
+  static nsIDOMHTMLSelectElement* GetSelect(nsIContent * aContent);
+  static nsIDOMHTMLOptionsCollection* GetOptions(nsIContent * aContent, nsIDOMHTMLSelectElement* aSelect = nsnull);
+  static nsIDOMHTMLOptionElement* GetOption(nsIDOMHTMLOptionsCollection* aOptions, PRInt32 aIndex);
+  static already_AddRefed<nsIContent> GetOptionAsContent(nsIDOMHTMLOptionsCollection* aCollection,PRInt32 aIndex);
 
   static void ComboboxFocusSet();
 
   // Helper
-  PRBool IsFocused() { return this == mFocused; }
+  void SetPassId(PRInt16 aId)  { mPassId = aId; }
 
-  /**
-   * Function to paint the focus rect when our nsSelectsAreaFrame is painting.
-   * @param aPt the offset of this frame, relative to the rendering reference
-   * frame
-   */
-  void PaintFocus(nsIRenderingContext& aRC, nsPoint aPt);
-
-  /**
-   * Function to calculate the height a row, for use with the "size" attribute.
-   * Can't be const because GetNumberOfOptions() isn't const.
-   */
-  nscoord CalcHeightOfARow();
-
-  /**
-   * Function to ask whether we're currently in what might be the
-   * first pass of a two-pass reflow.
-   */
-  PRBool MightNeedSecondPass() const {
-    return mMightNeedSecondPass;
-  }
-
-  void SetSuppressScrollbarUpdate(PRBool aSuppress) {
-    nsHTMLScrollFrame::SetSuppressScrollbarUpdate(aSuppress);
-  }
-
-  /**
-   * Return whether the list is in dropdown mode.
-   */
-  PRBool IsInDropDownMode() const;
+  void PaintFocus(nsIRenderingContext& aRC, nsFramePaintLayer aWhichLayer);
 
 #ifdef ACCESSIBILITY
   void FireMenuItemActiveEvent(); // Inform assistive tech what got focused
@@ -236,7 +217,6 @@ public:
 protected:
   // Returns PR_FALSE if calling it destroyed |this|.
   PRBool     UpdateSelection();
-  PRBool     GetMultiple(nsIDOMHTMLSelectElement* aSelect = nsnull) const;
   void       DropDownToggleKey(nsIDOMEvent* aKeyEvent);
   nsresult   IsOptionDisabled(PRInt32 anIndex, PRBool &aIsDisabled);
   nsresult   ScrollToFrame(nsIContent * aOptElement);
@@ -247,41 +227,24 @@ protected:
                                        PRInt32 aNumOptions, PRInt32 aDoAdjustInc, PRInt32 aDoAdjustIncNext);
   virtual void ResetList(PRBool aAllowScrolling);
 
-  nsListControlFrame(nsIPresShell* aShell, nsIDocument* aDocument, nsStyleContext* aContext);
+  nsListControlFrame(nsIPresShell* aShell, nsIDocument* aDocument);
   virtual ~nsListControlFrame();
 
   // Utility methods
   nsresult GetSizeAttribute(PRInt32 *aSize);
   nsIContent* GetOptionFromContent(nsIContent *aContent);
   nsresult GetIndexFromDOMEvent(nsIDOMEvent* aMouseEvent, PRInt32& aCurIndex);
-  already_AddRefed<nsIContent> GetOptionContent(PRInt32 aIndex) const;
-  PRBool   IsContentSelected(nsIContent* aContent) const;
-  PRBool   IsContentSelectedByIndex(PRInt32 aIndex) const;
+  already_AddRefed<nsIContent> GetOptionContent(PRInt32 aIndex);
+  PRBool   IsContentSelected(nsIContent* aContent);
+  PRBool   IsContentSelectedByIndex(PRInt32 aIndex);
   PRBool   IsOptionElement(nsIContent* aContent);
   PRBool   CheckIfAllFramesHere();
   PRInt32  GetIndexFromContent(nsIContent *aContent);
   PRBool   IsLeftButton(nsIDOMEvent* aMouseEvent);
 
-  // aNumOptions is the number of options we have; if we have none,
-  // we'll just guess at a row height based on our own style.
-  nscoord  CalcFallbackRowHeight(PRInt32 aNumOptions);
-
-  // CalcIntrinsicHeight computes our intrinsic height (taking the "size"
-  // attribute into account).  This should only be called in non-dropdown mode.
-  nscoord CalcIntrinsicHeight(nscoord aHeightOfARow, PRInt32 aNumberOfOptions);
-
   // Dropped down stuff
   void     SetComboboxItem(PRInt32 aIndex);
-
-  /**
-   * Method to reflow ourselves as a dropdown list.  This differs from
-   * reflow as a listbox because the criteria for needing a second
-   * pass are different.  This will be called from Reflow() as needed.
-   */
-  nsresult ReflowAsDropdown(nsPresContext*           aPresContext,
-                            nsHTMLReflowMetrics&     aDesiredSize,
-                            const nsHTMLReflowState& aReflowState,
-                            nsReflowStatus&          aStatus);
+  PRBool   IsInDropDownMode() const;
 
   // Selection
   PRBool   SetOptionsSelectedFromFrame(PRInt32 aStartIndex,
@@ -297,19 +260,13 @@ protected:
   PRBool   HandleListSelection(nsIDOMEvent * aDOMEvent, PRInt32 selectedIndex);
   void     InitSelectionRange(PRInt32 aClickedIndex);
 
-  nsSelectsAreaFrame* GetOptionsContainer() const {
-    return NS_STATIC_CAST(nsSelectsAreaFrame*, GetScrolledFrame());
-  }
-
-  nscoord HeightOfARow() {
-    return GetOptionsContainer()->HeightOfARow();
-  }
-  
   // Data Members
   PRInt32      mStartSelectionIndex;
   PRInt32      mEndSelectionIndex;
 
   nsIComboboxControlFrame *mComboboxFrame;
+  nscoord      mMaxWidth;
+  nscoord      mMaxHeight;
   PRInt32      mNumDisplayRows;
   PRPackedBool mChangesSinceDragStart:1;
   PRPackedBool mButtonDown:1;
@@ -323,22 +280,27 @@ protected:
   PRPackedBool mNeedToReset:1;
   PRPackedBool mPostChildrenLoadedReset:1;
 
+  PRPackedBool mOverrideReflowOpt:1;
+
   //bool value for multiple discontiguous selection
   PRPackedBool mControlSelectMode:1;
 
-  // True if we're in the middle of a reflow and might need a second
-  // pass.  This only happens for auto heights.
-  PRPackedBool mMightNeedSecondPass:1;
-
-  // The last computed height we reflowed at if we're a combobox dropdown.
-  // XXXbz should we be using a subclass here?  Or just not worry
-  // about the extra member on listboxes?
-  nscoord mLastDropdownComputedHeight;
+  PRInt16 mPassId;
+  nscoord mCachedDesiredMEW;
 
   nsRefPtr<nsListEventListener> mEventListener;
 
+  nsIFrame* mDummyFrame;
+
+  //Resize Reflow OpitmizationSize;
+  nsSize       mCacheSize;
+  nscoord      mCachedAscent;
+  nscoord      mCachedMaxElementWidth;
+  nsSize       mCachedUnconstrainedSize;
+  nsSize       mCachedAvailableSize;
+
   static nsListControlFrame * mFocused;
-  
+
 #ifdef DO_REFLOW_COUNTER
   PRInt32 mReflowId;
 #endif

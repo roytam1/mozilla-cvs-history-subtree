@@ -46,10 +46,9 @@
 
 
 // IID for the nsIImage interface
-// {DE2628F9-6023-4443-A4C9-CE0CE6DA0628}
-#define NS_IIMAGEMAC_IID \
- { 0xDE2628F9, 0x6023, 0x4443, \
-   { 0xA4, 0xC9, 0xCE, 0x0C, 0xE6, 0xDA, 0x06, 0x28 } };
+// {80b2f600-f140-11d4-bb6f-d472847e8dbc}
+#define NS_IIMAGEMAC_IID      \
+    { 0x80b2f600, 0xf140, 0x11d4, { 0xbb, 0x6f, 0xd4, 0x72, 0x84, 0x7e, 0x8d, 0xbc } };
 
 
 // 
@@ -61,7 +60,7 @@
 class nsIImageMac : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IIMAGEMAC_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IIMAGEMAC_IID)
 
     // Convert to the os-native PICT format. Most likely
     // used for clipboard. The caller is responsible for
@@ -73,12 +72,21 @@ public:
     // used for clipboard.  
   NS_IMETHOD ConvertFromPICT ( PicHandle inPicture ) = 0;
 
+}; // nsIImageMac
+
+
+// {27000483-8846-4F3D-9B18-EA0C4CB2979D}
+#define NS_IIMAGEMAC_MOZILLA_1_8_BRANCH_IID \
+{ 0x27000483, 0x8846, 0x4F3D, \
+  { 0x9B, 0x18, 0xEA, 0x0C, 0x4C, 0xB2, 0x97, 0x9D } };
+
+class nsIImageMac_MOZILLA_1_8_BRANCH: public nsIImageMac
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IIMAGEMAC_MOZILLA_1_8_BRANCH_IID)
+
     // Get the underlying CGImageRef.  The object that is returned is
     // not retained.
   NS_IMETHOD GetCGImageRef(CGImageRef* aCGImageRef) = 0;
-
-}; // nsIImageMac
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIImageMac, NS_IIMAGEMAC_IID)
-
+};
 #endif

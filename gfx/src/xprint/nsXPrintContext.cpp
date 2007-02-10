@@ -712,7 +712,7 @@ nsXPrintContext::SetupPrintContext(nsIDeviceContextSpecXp *aSpec)
 
   /* Remember the last used printer as new "default" printer as long this
    * Mozilla instance is running */
-  uEnv->Set(NS_LITERAL_STRING("XPRINTER"), NS_ConvertUTF8toUTF16(printername));
+  uEnv->Set(NS_LITERAL_STRING("XPRINTER"), NS_ConvertUTF8toUCS2(printername));
 
   PR_LOG(nsXPrintContextLM, PR_LOG_DEBUG, 
          ("nsXPrintContext::SetupPrintContext: name='%s', display='%s', vendor='%s', release=%ld\n",
@@ -843,7 +843,7 @@ nsXPrintContext::SetResolution(const char *resolution_name)
 NS_IMETHODIMP
 nsXPrintContext::BeginDocument( PRUnichar * aTitle, PRUnichar* aPrintToFileName, PRInt32 aStartPage, PRInt32 aEndPage )
 {
-  PR_LOG(nsXPrintContextLM, PR_LOG_DEBUG, ("nsXPrintContext::BeginDocument(aTitle='%s')\n", ((aTitle)?(NS_ConvertUTF16toUTF8(aTitle).get()):("<NULL>"))));
+  PR_LOG(nsXPrintContextLM, PR_LOG_DEBUG, ("nsXPrintContext::BeginDocument(aTitle='%s')\n", ((aTitle)?(NS_ConvertUCS2toUTF8(aTitle).get()):("<NULL>"))));
   
   nsXPIDLCString job_title;
        
@@ -852,7 +852,7 @@ nsXPrintContext::BeginDocument( PRUnichar * aTitle, PRUnichar* aPrintToFileName,
     /* Note that this is _only_ a _hack_ until bug 73446 
      * ("RFE: Need NS_ConvertUCS2ToLocalEncoding() and 
      * NS_ConvertLocalEncodingToUCS2()") is implemented...) */
-    job_title.Assign(NS_ConvertUTF16toUTF8(aTitle));
+    job_title.Assign(NS_ConvertUCS2toUTF8(aTitle));
   }
   else
   {
@@ -1014,7 +1014,7 @@ PRUint8 *ComposeAlphaImage(
 /* unfortunately this code does not work for some strange reason ... */
 #ifdef XPRINT_NOT_NOW
   XGCValues gcv;
-  memset(&gcv, 0, sizeof(XGCValues)); /* this may be unnecessary */
+  memset(&gcv, 0, sizeof(XGCValues)); /* this may be unneccesary */
   XGetGCValues(mPDisplay, *xgc, GCForeground, &gcv);
   
   /* should be replaced by xxlibrgb_query_color() */
@@ -1125,7 +1125,7 @@ nsXPrintContext::DrawImage(Drawable aDrawable, xGC *xgc, nsIImage *aImage,
     NS_ASSERTION((aSrcWidth != 0) && (aSrcHeight != 0) &&
       (aSWidth != 0)   && (aSHeight != 0) ||
       (aDWidth != 0)   && (aDHeight != 0), 
-      "nsXPrintContext::DrawImage(): Image with zero source||dest width||height suppressed\n");
+      "nsXPrintContext::DrawImage(): Image with zero source||dest width||height supressed\n");
     return NS_OK;
   }
 
@@ -1229,7 +1229,7 @@ nsXPrintContext::DrawImageBitsScaled(Drawable aDrawable, xGC *xgc, nsIImage *aIm
   if (aDWidth==0 || aDHeight==0)
   {
     NS_ASSERTION((aDWidth==0 || aDHeight==0), 
-                 "nsXPrintContext::DrawImageBitsScaled(): Image with zero dest width||height suppressed\n");
+                 "nsXPrintContext::DrawImageBitsScaled(): Image with zero dest width||height supressed\n");
     return NS_OK;
   }
   
@@ -1386,7 +1386,7 @@ nsXPrintContext::DrawImageBits(Drawable aDrawable, xGC *xgc,
 
   if( (aWidth == 0) || (aHeight == 0) )
   {
-    NS_ASSERTION((aWidth != 0) && (aHeight != 0), "Image with zero width||height suppressed.");
+    NS_ASSERTION((aWidth != 0) && (aHeight != 0), "Image with zero width||height supressed.");
     return NS_OK;
   }
   
@@ -1425,9 +1425,9 @@ nsXPrintContext::DrawImageBits(Drawable aDrawable, xGC *xgc,
      * low to high address in memory. */
     x_image->byte_order = MSBFirst;
 
-    // Write into the pixmap that is underneath gdk's alpha_pixmap
+    // Write into the pixemap that is underneath gdk's alpha_pixmap
     // the image we just created.
-    memset(&gcv, 0, sizeof(XGCValues)); /* this may be unnecessary */
+    memset(&gcv, 0, sizeof(XGCValues)); /* this may be unneccesary */
     XGetGCValues(mPDisplay, *xgc, GCForeground|GCBackground, &gcv);
     gcv.function = GXcopy;
     gc = XCreateGC(mPDisplay, alpha_pixmap, GCForeground|GCBackground|GCFunction, &gcv);
@@ -1446,7 +1446,7 @@ nsXPrintContext::DrawImageBits(Drawable aDrawable, xGC *xgc,
   {
     /* create copy of GC before start to playing with it... */
     XGCValues gcv;  
-    memset(&gcv, 0, sizeof(XGCValues)); /* this may be unnecessary */
+    memset(&gcv, 0, sizeof(XGCValues)); /* this may be unneccesary */
     XGetGCValues(mPDisplay, *xgc, GCForeground|GCBackground, &gcv);
     gcv.function      = GXcopy;
     gcv.clip_mask     = alpha_pixmap;

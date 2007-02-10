@@ -128,8 +128,9 @@ nsresult nsMailboxProtocol::OpenMultipleMsgTransport(PRUint32 offset, PRInt32 si
 {
   nsresult rv;
 
+  NS_DEFINE_CID(kStreamTransportServiceCID, NS_STREAMTRANSPORTSERVICE_CID);
   nsCOMPtr<nsIStreamTransportService> serv =
-      do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
+      do_GetService(kStreamTransportServiceCID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // XXX 64-bit
@@ -212,13 +213,17 @@ nsresult nsMailboxProtocol::Initialize(nsIURI * aURL)
     }
   }
   
+#if defined(XP_MAC)
+  m_lineStreamBuffer = new nsMsgLineStreamBuffer(OUTPUT_BUFFER_SIZE, PR_TRUE, PR_TRUE, '\r');
+#else
   m_lineStreamBuffer = new nsMsgLineStreamBuffer(OUTPUT_BUFFER_SIZE, PR_TRUE);
+#endif
   
   m_nextState = MAILBOX_READ_FOLDER;
   m_initialState = MAILBOX_READ_FOLDER;
   mCurrentProgress = 0;
   
-  NS_NewFileSpecFromIFile(m_tempMsgFile, getter_AddRefs(m_tempMessageFile));
+  NS_NewFileSpecWithSpec(m_tempMsgFileSpec, getter_AddRefs(m_tempMessageFile));
   return rv;
 }
 

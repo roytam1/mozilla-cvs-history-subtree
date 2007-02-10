@@ -49,9 +49,9 @@ extern NSString* const kAddBookmarkItemPrimaryTabKey;   // NSNumber with book, t
   IBOutlet NSTextField*     mTitleField;
   IBOutlet NSPopUpButton*   mParentFolderPopup;
   IBOutlet NSButton*        mTabGroupCheckbox;
-
+  
   BookmarkViewController*   mBookmarkViewController;    // not retained
-
+  
   BookmarkFolder*           mInitialParentFolder;
   int                       mInitialParentFolderIndex;
   NSArray*                  mBookmarkItems;   // array of NSDictionary
@@ -66,7 +66,6 @@ extern NSString* const kAddBookmarkItemPrimaryTabKey;   // NSNumber with book, t
 - (IBAction)parentFolderChanged:(id)sender;
 - (IBAction)toggleTabGroup:(id)sender;
 
-- (void)makeTabGroup:(BOOL)isTabGroup;
 - (void)setDefaultParentFolder:(BookmarkFolder*)inFolder andIndex:(int)inIndex;
 - (void)setBookmarkViewController:(BookmarkViewController*)inBMViewController;
 

@@ -40,13 +40,16 @@
 
 #include "nsID.h"
 #include "nsISupports.h"
-#include "nsIHashable.h"
 #include "nsCOMPtr.h"
 #include "pldhash.h"
 #include NEW_H
 
-#include "nsStringGlue.h"
-#include "nsCRTGlue.h"
+#ifdef MOZILLA_INTERNAL_API
+#include "nsAString.h"
+#include "nsString.h"
+#else
+#include "nsStringAPI.h"
+#endif
 
 #include <stdlib.h>
 #include <string.h>
@@ -66,8 +69,7 @@
 
 NS_COM_GLUE PRUint32 HashString(const nsAString& aStr);
 NS_COM_GLUE PRUint32 HashString(const nsACString& aStr);
-NS_COM_GLUE PRUint32 HashString(const char* aKey);
-NS_COM_GLUE PRUint32 HashString(const PRUnichar* aKey);
+NS_COM_GLUE PRUint32 HashCString(const char* aKey);
 
 /**
  * hashkey wrapper using nsAString KeyType
@@ -227,42 +229,6 @@ private:
 };
 
 /**
- * hashkey wrapper using void* KeyType, that sets key to NULL upon
- * destruction. Relevant only in cases where a memory pointer-scanner
- * like valgrind might get confused about stale references.
- *
- * @see nsTHashtable::EntryType for specification
- */
-
-class nsClearingVoidPtrHashKey : public PLDHashEntryHdr
-{
-public:
-  typedef const void* KeyType;
-  typedef const void* KeyTypePointer;
-
-  nsClearingVoidPtrHashKey(const void* key) :
-    mKey(key) { }
-  nsClearingVoidPtrHashKey(const nsClearingVoidPtrHashKey& toCopy) :
-    mKey(toCopy.mKey) { }
-  ~nsClearingVoidPtrHashKey() { mKey = NULL; }
-
-  KeyType GetKey() const { return mKey; }
-  KeyTypePointer GetKeyPointer() const { return mKey; }
-  
-  PRBool KeyEquals(KeyTypePointer aKey) const { return aKey == mKey; }
-
-  static KeyTypePointer KeyToPointer(KeyType aKey) { return aKey; }
-  static PLDHashNumber HashKey(KeyTypePointer aKey)
-  {
-    return NS_PTR_TO_INT32(aKey) >>2;
-  }
-  enum { ALLOW_MEMMOVE = PR_TRUE };
-
-private:
-  const void* mKey;
-};
-
-/**
  * hashkey wrapper using nsID KeyType
  *
  * @see nsTHashtable::EntryType for specification
@@ -318,7 +284,7 @@ public:
   }
 
   static const char* KeyToPointer(const char* aKey) { return aKey; }
-  static PLDHashNumber HashKey(const char* aKey) { return HashString(aKey); }
+  static PLDHashNumber HashKey(const char* aKey) { return HashCString(aKey); }
   enum { ALLOW_MEMMOVE = PR_TRUE };
 
 private:
@@ -348,86 +314,12 @@ public:
   }
 
   static KeyTypePointer KeyToPointer(KeyType aKey) { return aKey; }
-  static PLDHashNumber HashKey(KeyTypePointer aKey) { return HashString(aKey); }
+  static PLDHashNumber HashKey(KeyTypePointer aKey) { return HashCString(aKey); }
 
   enum { ALLOW_MEMMOVE = PR_TRUE };
 
 private:
   const char* mKey;
-};
-
-/**
- * hashkey wrapper for const PRUnichar*; at construction, this class duplicates
- * a string pointed to by the pointer so that it doesn't matter whether or not
- * the string lives longer than the hash table.
- */
-class nsUnicharPtrHashKey : public PLDHashEntryHdr
-{
-public:
-  typedef const PRUnichar* KeyType;
-  typedef const PRUnichar* KeyTypePointer;
-
-  nsUnicharPtrHashKey(const PRUnichar* aKey) : mKey(NS_strdup(aKey)) { }
-  nsUnicharPtrHashKey(const nsUnicharPtrHashKey& toCopy) : mKey(NS_strdup(toCopy.mKey)) { }
-  ~nsUnicharPtrHashKey() { if (mKey) NS_Free(NS_CONST_CAST(PRUnichar *, mKey)); }
-
-  const PRUnichar* GetKey() const { return mKey; }
-  const PRUnichar* GetKeyPointer() const { return mKey; }
-  PRBool KeyEquals(KeyTypePointer aKey) const
-  {
-    return !NS_strcmp(mKey, aKey);
-  }
-
-  static KeyTypePointer KeyToPointer(KeyType aKey) { return aKey; }
-  static PLDHashNumber HashKey(KeyTypePointer aKey) { return HashString(aKey); }
-
-  enum { ALLOW_MEMMOVE = PR_TRUE };
-
-private:
-  const PRUnichar* mKey;
-};
-
-/**
- * Hashtable key class to use with objects that support nsIHashable
- */
-class nsHashableHashKey : public PLDHashEntryHdr
-{
-public:
-    typedef nsIHashable* KeyType;
-    typedef const nsIHashable* KeyTypePointer;
-
-    nsHashableHashKey(const nsIHashable* aKey) :
-        mKey(NS_CONST_CAST(nsIHashable*, aKey)) { }
-    nsHashableHashKey(const nsHashableHashKey& toCopy) :
-        mKey(toCopy.mKey) { }
-    ~nsHashableHashKey() { }
-
-    nsIHashable* GetKey() const { return mKey; }
-    const nsIHashable* GetKeyPointer() const { return mKey; }
-
-    PRBool KeyEquals(const nsIHashable* aKey) const {
-        PRBool eq;
-        if (NS_SUCCEEDED(mKey->Equals(NS_CONST_CAST(nsIHashable*,aKey), &eq))) {
-            return eq;
-        }
-        return PR_FALSE;
-    }
-
-    static const nsIHashable* KeyToPointer(nsIHashable* aKey) { return aKey; }
-    static PLDHashNumber HashKey(const nsIHashable* aKey) {
-        PRUint32 code = 8888; // magic number if GetHashCode fails :-(
-#ifdef NS_DEBUG
-        nsresult rv =
-#endif
-        NS_CONST_CAST(nsIHashable*,aKey)->GetHashCode(&code);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "GetHashCode should not throw!");
-        return code;
-    }
-    
-    enum { ALLOW_MEMMOVE = PR_TRUE };
-
-private:
-    nsCOMPtr<nsIHashable> mKey;
 };
 
 #endif // nsTHashKeys_h__

@@ -52,7 +52,7 @@ interface nsIEventTarget;
  * necessary that a non-blocking nsIInputStream implementation also implement
  * nsIAsyncInputStream.
  */
-[scriptable, uuid(a5f255ab-4801-4161-8816-277ac92f6ad1)]
+[scriptable, uuid(15a15329-00de-44e8-ab06-0d0b0d43dc5b)]
 interface nsIAsyncInputStream : nsIInputStream
 {
     /**
@@ -91,8 +91,7 @@ interface nsIAsyncInputStream : nsIInputStream
      * event will be dispatched when the stream becomes readable or closed.
      * 
      * @param aCallback
-     *        This object is notified when the stream becomes ready.  This
-     *        parameter may be null to clear an existing callback.
+     *        This object is notified when the stream becomes ready.
      * @param aFlags
      *        This parameter specifies optional flags passed in to configure
      *        the behavior of this method.  Pass zero to specify no flags.

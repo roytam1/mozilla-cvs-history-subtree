@@ -39,7 +39,7 @@
 #include "nsILoadGroup.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
-#include "nsIStringStream.h"
+#include "nsIByteArrayInputStream.h"
 #include "nsIStreamListener.h"
 #include "nsIInputStreamPump.h"
 #include "nsEmbedString.h"
@@ -181,6 +181,8 @@ GeckoProtocolChannel::~GeckoProtocolChannel()
 //        nsMemory::Free(mData);
 }
 
+static NS_DEFINE_CID(kSimpleURICID, NS_SIMPLEURI_CID);
+
 NS_METHOD GeckoProtocolHandlerImpl::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
 {
     GeckoProtocolHandlerImpl *impl = new GeckoProtocolHandlerImpl();
@@ -218,9 +220,6 @@ NS_IMETHODIMP GeckoProtocolHandlerImpl::GetDefaultPort(PRInt32 *aDefaultPort)
 /* readonly attribute unsigned long protocolFlags; */
 NS_IMETHODIMP GeckoProtocolHandlerImpl::GetProtocolFlags(PRUint32 *aProtocolFlags)
 {
-    // XXXbz Not setting any of the protocol security flags for now, because I
-    // have no idea what this is used for.  Whoever uses it should set the
-    // flags.
     *aProtocolFlags = URI_NORELATIVE | URI_NOAUTH;
     return NS_OK;
 }
@@ -230,7 +229,7 @@ NS_IMETHODIMP GeckoProtocolHandlerImpl::NewURI(const nsACString & aSpec, const c
 {
     nsresult rv;
     nsIURI* url;
-    rv = CallCreateInstance(NS_SIMPLEURI_CONTRACTID, &url);
+    rv = CallCreateInstance(kSimpleURICID, &url);
     if (NS_FAILED(rv))
         return rv;
     rv = url->SetSpec(aSpec);
@@ -370,14 +369,10 @@ GeckoProtocolChannel::AsyncOpen(nsIStreamListener *aListener, nsISupports *aCont
                 mURI, NS_STATIC_CAST(nsIChannel *,this), mContentType, &mData, &mContentLength);
             if (NS_FAILED(rv)) return rv;
             
-            rv = NS_NewByteInputStream(getter_AddRefs(mContentStream),
-                                       (char *) mData, mContentLength,
-                                       NS_ASSIGNMENT_ADOPT);
-            if (NS_FAILED(rv)) {
-                nsMemory::Free(mData);
-                mData = nsnull;
-                return rv;
-            }
+            nsCOMPtr<nsIByteArrayInputStream> stream;
+            rv = NS_NewByteArrayInputStream(getter_AddRefs(stream), (char *) mData, mContentLength);
+            if (NS_FAILED(rv)) return rv;
+            mContentStream = do_QueryInterface(stream);
 
             mListenerContext = aContext;
             mListener = aListener;

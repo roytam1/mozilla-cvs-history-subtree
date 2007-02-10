@@ -46,20 +46,10 @@ interface nsPIAccessible : nsISupports
   [noscript] void setParent(in nsIAccessible aAccParent);
   [noscript] void setFirstChild(in nsIAccessible aAccFirstChild);
   [noscript] void setNextSibling(in nsIAccessible aAccNextSibling);
-  // Return parent only if cached
-  [noscript] void getCachedParent(out nsIAccessible aAccParent);
 
   /**
    * Set the child count to -1 (unknown) and null out cached child pointers
    */
   [noscript] void invalidateChildren();
   [noscript] void fireToolkitEvent(in unsigned long aEvent, in nsIAccessible aTarget, in voidPtr aData);
-
-  /**
-   * Return true if there are accessible children in anonymous content
-   */
-  [noscript] readonly attribute boolean allowsAnonChildAccessibles;
-
-  [noscript] void testChildCache(in nsIAccessible aCachedChild); // Assert if child not in parent's cache
 };
-

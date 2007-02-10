@@ -49,7 +49,8 @@
 #include "nsIScriptContext.h"
 #include "nsContentUtils.h"
 #include "nsIScriptSecurityManager.h"
-#include "nsIXPConnect.h"
+
+MOZ_DECL_CTOR_COUNTER(nsXBLProtoImplMethod)
 
 nsXBLProtoImplMethod::nsXBLProtoImplMethod(const PRUnichar* aName) :
   nsXBLProtoImplMember(aName), 
@@ -155,7 +156,6 @@ nsXBLProtoImplMethod::InstallMember(nsIScriptContext* aContext,
   // now we want to reevaluate our property using aContext and the script object for this window...
   if (mJSMethodObject && targetClassObject) {
     nsDependentString name(mName);
-    JSAutoRequest ar(cx);
     JSObject * method = ::JS_CloneFunctionObject(cx, mJSMethodObject, globalObject);
     if (!method) {
       return NS_ERROR_OUT_OF_MEMORY;
@@ -193,8 +193,15 @@ nsXBLProtoImplMethod::CompileMember(nsIScriptContext* aContext, const nsCString&
   if (!mUncompiledMethod)
     return NS_OK;
 
-  // Don't install method if no name was supplied.
-  if (!mName) {
+  // Don't install method if no name or body was supplied.
+  if (!(mName && mUncompiledMethod->mBodyText.GetText())) {
+    delete mUncompiledMethod;
+    mUncompiledMethod = nsnull;
+    return NS_OK;
+  }
+
+  nsDependentString body(mUncompiledMethod->mBodyText.GetText());
+  if (body.IsEmpty()) {
     delete mUncompiledMethod;
     mUncompiledMethod = nsnull;
     return NS_OK;
@@ -225,15 +232,9 @@ nsXBLProtoImplMethod::CompileMember(nsIScriptContext* aContext, const nsCString&
     argPos++;
   }
 
-  // Get the body
-  nsDependentString body;
-  PRUnichar *bodyText = mUncompiledMethod->mBodyText.GetText();
-  if (bodyText)
-    body.Rebind(bodyText);
-
   // Now that we have a body and args, compile the function
   // and then define it.
-  NS_ConvertUTF16toUTF8 cname(mName);
+  NS_ConvertUCS2toUTF8 cname(mName);
   nsCAutoString functionUri(aClassStr);
   PRInt32 hash = functionUri.RFindChar('#');
   if (hash != kNotFound) {
@@ -319,14 +320,14 @@ nsXBLProtoImplAnonymousMethod::Execute(nsIContent* aBoundElement)
   rv = wrapper->GetJSObject(&thisObject);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  JSAutoRequest ar(cx);
-
   // Clone the function object, using thisObject as the parent so "this" is in
   // the scope chain of the resulting function (for backwards compat to the
   // days when this was an event handler).
-  JSObject* method = ::JS_CloneFunctionObject(cx, mJSMethodObject, thisObject);
-  if (!method)
+  JSObject* method = ::JS_CloneFunctionObject(cx, mJSMethodObject,
+                                              thisObject);
+  if (!method) {
     return NS_ERROR_OUT_OF_MEMORY;
+  }
 
   // Now call the method
 
@@ -334,8 +335,7 @@ nsXBLProtoImplAnonymousMethod::Execute(nsIContent* aBoundElement)
   nsCxPusher pusher(aBoundElement);
 
   // Check whether it's OK to call the method.
-  rv = nsContentUtils::GetSecurityManager()->CheckFunctionAccess(cx, method,
-                                                                 thisObject);
+  rv = nsContentUtils::GetSecurityManager()->CheckFunctionAccess(cx, method, thisObject);
 
   JSBool ok = JS_TRUE;
   if (NS_SUCCEEDED(rv)) {

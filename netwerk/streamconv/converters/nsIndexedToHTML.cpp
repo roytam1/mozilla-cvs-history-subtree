@@ -39,8 +39,7 @@
 
 #include "nsIndexedToHTML.h"
 #include "nsNetUtil.h"
-#include "netCore.h"
-#include "nsStringStream.h"
+#include "nsIStringStream.h"
 #include "nsIFileURL.h"
 #include "nsEscape.h"
 #include "nsIDirIndex.h"
@@ -56,6 +55,8 @@ NS_IMPL_THREADSAFE_ISUPPORTS4(nsIndexedToHTML,
                               nsIStreamConverter,
                               nsIRequestObserver,
                               nsIStreamListener)
+
+static NS_DEFINE_CID(kDateTimeFormatCID, NS_DATETIMEFORMAT_CID);
 
 static void ConvertNonAsciiToNCR(const nsAString& in, nsAFlatString& out)
 {
@@ -99,13 +100,15 @@ nsIndexedToHTML::Init(nsIStreamListener* aListener) {
 
     mListener = aListener;
 
-    mDateTime = do_CreateInstance(NS_DATETIMEFORMAT_CONTRACTID, &rv);
+    mDateTime = do_CreateInstance(kDateTimeFormatCID, &rv);
 
     nsCOMPtr<nsIStringBundleService> sbs =
         do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) return rv;
-    rv = sbs->CreateBundle(NECKO_MSGS_URL, getter_AddRefs(mBundle));
+    rv = sbs->CreateBundle("chrome://necko/locale/necko.properties",
+                           getter_AddRefs(mBundle));
 
+    mRowCount = 0;
     mExpectAbsLoc = PR_FALSE;
 
     return rv;
@@ -231,21 +234,6 @@ nsIndexedToHTML::OnStartRequest(nsIRequest* request, nsISupports *aContext) {
 
     } else if (NS_SUCCEEDED(uri->SchemeIs("gopher", &isScheme)) && isScheme) {
         mExpectAbsLoc = PR_TRUE;
-    } else if (NS_SUCCEEDED(uri->SchemeIs("jar", &isScheme)) && isScheme) {
-        nsCAutoString path;
-        rv = uri->GetPath(path);
-        if (NS_FAILED(rv)) return rv;
-
-        // a top-level jar directory URL is of the form jar:foo.zip!/
-        // path will be of the form foo.zip!/, and its last two characters
-        // will be "!/"
-        //XXX this won't work correctly when the name of the directory being
-        //XXX displayed ends with "!", but then again, jar: URIs don't deal
-        //XXX particularly well with such directories anyway
-        if (!StringEndsWith(path, NS_LITERAL_CSTRING("!/"))) {
-            rv = uri->Resolve(NS_LITERAL_CSTRING(".."), parentStr);
-            if (NS_FAILED(rv)) return rv;
-        }
     }
     else {
         // default behavior for other protocols is to assume the channel's
@@ -334,32 +322,10 @@ nsIndexedToHTML::OnStartRequest(nsIRequest* request, nsISupports *aContext) {
     ConvertNonAsciiToNCR(title, strNCR);
     buffer.Append(strNCR);
 
-    buffer.AppendLiteral("</title>");    
-
-    // If there is a quote character in the baseUri, then
-    // lets not add a base URL.  The reason for this is that
-    // if we stick baseUri containing a quote into a quoted
-    // string, the quote character will prematurely close
-    // the base href string.  This is a fall-back check;
-    // that's why it is OK to not use a base rather than
-    // trying to play nice and escaping the quotes.  See bug
-    // 358128.
-
-    if (baseUri.FindChar('"') == kNotFound)
-    {
-        // Great, the baseUri does not contain a char that
-        // will prematurely close the string.  Go ahead an
-        // add a base href.
-        buffer.AppendLiteral("<base href=\"");
-        AppendASCIItoUTF16(baseUri, buffer);
-        buffer.AppendLiteral("\"/>\n");
-    }
-    else
-    {
-        NS_ERROR("broken protocol handler didn't escape double-quote.");
-    }
-
-    buffer.AppendLiteral("<style type=\"text/css\">\n"
+    buffer.AppendLiteral("</title><base href=\"");    
+    AppendASCIItoUTF16(baseUri, buffer);
+    buffer.AppendLiteral("\"/>\n"
+                         "<style type=\"text/css\">\n"
                          "img { border: 0; padding: 0 2px; vertical-align: text-bottom; }\n"
                          "td  { font-family: monospace; padding: 2px 3px; text-align: right; vertical-align: bottom; white-space: pre; }\n"
                          "td:first-child { text-align: left; padding: 2px 10px 2px 3px; }\n"
@@ -489,7 +455,7 @@ nsIndexedToHTML::FormatInputStream(nsIRequest* aRequest, nsISupports *aContext, 
                                       inputData, 0, dstLength);
     }
     else {
-      NS_ConvertUTF16toUTF8 utf8Buffer(aBuffer);
+      NS_ConvertUCS2toUTF8 utf8Buffer(aBuffer);
       rv = NS_NewCStringInputStream(getter_AddRefs(inputData), utf8Buffer);
       NS_ENSURE_SUCCESS(rv, rv);
       rv = mListener->OnDataAvailable(aRequest, aContext,
@@ -506,6 +472,10 @@ nsIndexedToHTML::OnDataAvailable(nsIRequest *aRequest,
                                  PRUint32 aCount) {
     return mParser->OnDataAvailable(aRequest, aCtxt, aInput, aOffset, aCount);
 }
+
+// This defines the number of rows we are going to have per table
+// splitting this up makes things faster, by helping layout
+#define ROWS_PER_TABLE 250
 
 NS_IMETHODIMP
 nsIndexedToHTML::OnIndexAvailable(nsIRequest *aRequest,
@@ -546,7 +516,7 @@ nsIndexedToHTML::OnIndexAvailable(nsIRequest *aRequest,
     // need to escape links
     nsCAutoString escapeBuf;
 
-    NS_ConvertUTF16toUTF8 utf8UnEscapeSpec(unEscapeSpec);
+    NS_ConvertUCS2toUTF8 utf8UnEscapeSpec(unEscapeSpec);
 
     // now minimally re-escape the location...
     PRUint32 escFlags;
@@ -560,16 +530,12 @@ nsIndexedToHTML::OnIndexAvailable(nsIRequest *aRequest,
     }
     else {
         // escape as relative
-        // esc_Directory is needed for protocols which allow the same name for
-        // both a directory and a file and distinguish between the two by a
-        // trailing '/' -- without it, the trailing '/' will be escaped, and
-        // links from within that directory will be incorrect
-        escFlags = esc_Forced | esc_OnlyASCII | esc_AlwaysCopy | esc_FileBaseName | esc_Colon | esc_Directory;
+        escFlags = esc_Forced | esc_OnlyASCII | esc_AlwaysCopy | esc_FileBaseName | esc_Colon;
     }
     NS_EscapeURL(utf8UnEscapeSpec.get(), utf8UnEscapeSpec.Length(), escFlags, escapeBuf);
-
+  
     AppendUTF8toUTF16(escapeBuf, pushBuffer);
-
+    
     pushBuffer.AppendLiteral("\"><img src=\"");
 
     switch (type) {
@@ -632,6 +598,13 @@ nsIndexedToHTML::OnIndexAvailable(nsIRequest *aRequest,
 
     pushBuffer.AppendLiteral("</td>\n</tr>\n");
 
+    // Split this up to avoid slow layout performance with large tables
+    // - bug 85381
+    if (++mRowCount > ROWS_PER_TABLE) {
+        pushBuffer.AppendLiteral("</table>\n<table>\n");
+        mRowCount = 0;
+    }
+    
     return FormatInputStream(aRequest, aCtxt, pushBuffer);
 }
 
@@ -648,6 +621,12 @@ nsIndexedToHTML::OnInformationAvailable(nsIRequest *aRequest,
     nsMemory::Free(escaped);
     pushBuffer.AppendLiteral("</td>\n <td></td>\n <td></td>\n <td></td>\n</tr>\n");
     
+    // Split this up to avoid slow layout performance with large tables
+    // - bug 85381
+    if (++mRowCount > ROWS_PER_TABLE) {
+        pushBuffer.AppendLiteral("</table>\n<table>\n");
+        mRowCount = 0;
+    }   
     return FormatInputStream(aRequest, aCtxt, pushBuffer);
 }
 

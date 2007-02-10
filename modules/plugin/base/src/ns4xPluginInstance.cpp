@@ -50,8 +50,10 @@
 #include "nsPluginLogging.h"
 
 #include "nsPIPluginInstancePeer.h"
+#include "nsIDOMWindow.h"
 #include "nsPIDOMWindow.h"
 #include "nsIDocument.h"
+#include "nsIScriptGlobalObject.h"
 
 #include "nsJSNPRuntime.h"
 
@@ -229,6 +231,11 @@ void ns4xPluginStreamListener::CallURLNotify(NPReason reason)
     ("NPP URLNotify called: this=%p, npp=%p, notify=%p, reason=%d, url=%s\n",
     this, npp, mNotifyData, reason, mNotifyURL));
   }
+
+  // Let's not leak this stream listener. Release the reference to the stream listener 
+  // added for the notify callback in NewNotifyStream. 
+  // Note: This may destroy us if we are not being destroyed already.
+  NS_RELEASE_THIS();
 }
 
 
@@ -643,7 +650,7 @@ ns4xPluginStreamListener::OnFileAvailable(nsIPluginStreamInfo* pluginInfo,
 
   const NPPluginFuncs *callbacks = nsnull;
   mInst->GetCallbacks(&callbacks);
-  if(!callbacks || !callbacks->asfile)
+  if(!callbacks && !callbacks->asfile)
     return NS_ERROR_FAILURE;
   
   NPP npp;
@@ -878,10 +885,11 @@ NS_IMETHODIMP ns4xPluginInstance::Stop(void)
 
   // Make sure the plugin didn't leave popups enabled.
   if (mPopupStates.Count() > 0) {
-    nsCOMPtr<nsPIDOMWindow> window = GetDOMWindow();
+    nsCOMPtr<nsIDOMWindow> window = GetDOMWindow();
+    nsCOMPtr<nsPIDOMWindow> piwindow = do_QueryInterface(window);
 
-    if (window) {
-      window->PopPopupControlState(openAbused);
+    if (piwindow) {
+      piwindow->PopPopupControlState(openAbused);
     }
   }
 
@@ -935,7 +943,7 @@ NS_IMETHODIMP ns4xPluginInstance::Stop(void)
     return NS_OK;
 }
 
-already_AddRefed<nsPIDOMWindow>
+already_AddRefed<nsIDOMWindow>
 ns4xPluginInstance::GetDOMWindow()
 {
   nsCOMPtr<nsPIPluginInstancePeer> pp (do_QueryInterface(mPeer));
@@ -957,8 +965,14 @@ ns4xPluginInstance::GetDOMWindow()
     return nsnull;
   }
 
-  nsPIDOMWindow *window = doc->GetWindow();
-  NS_IF_ADDREF(window);
+  nsIScriptGlobalObject *sgo = doc->GetScriptGlobalObject();
+
+  if (!sgo) {
+    return nsnull;
+  }
+
+  nsIDOMWindow *window;
+  CallQueryInterface(sgo, &window);
 
   return window;
 }
@@ -983,7 +997,7 @@ nsresult ns4xPluginInstance::InitializePlugin(nsIPluginInstancePeer* peer)
     
     // nsPluginTagType_Object or Applet may also have PARAM tags
     // Note: The arrays handed back by GetParameters() are
-    // crafted specially to be directly behind the arrays from GetAttributes()
+    // crafted specially to be directly behind the arrays from GetAtributes()
     // with a null entry as a separator. This is for 4.x backwards compatibility!
     // see bug 111008 for details
     if (tagtype != nsPluginTagType_Embed) {
@@ -1050,7 +1064,7 @@ nsresult ns4xPluginInstance::InitializePlugin(nsIPluginInstancePeer* peer)
           // and free it at line #2096, so it couldn't be a const ptr to string literal
           char *val = (char*) values[i];
           if (val && *val) {
-            // we cannot just *val=0, it won't be free properly in such case
+            // we cannot just *val=0, it wont be free properly in such case
             val[0] = '0';
             val[1] = 0;
           }
@@ -1138,18 +1152,16 @@ NS_IMETHODIMP ns4xPluginInstance::SetWindow(nsPluginWindow* window)
   }
 
   // Allocate and fill out the ws_info data
-  if (!window->ws_info || !mXtBin) {
-    if (!window->ws_info) {
+  if (!window->ws_info) {
 #ifdef NS_DEBUG
-      printf("About to create new ws_info...\n");
+    printf("About to create new ws_info...\n");
 #endif    
 
-      // allocate a new NPSetWindowCallbackStruct structure at ws_info
-      window->ws_info = (NPSetWindowCallbackStruct *)PR_MALLOC(sizeof(NPSetWindowCallbackStruct));
+    // allocate a new NPSetWindowCallbackStruct structure at ws_info
+    window->ws_info = (NPSetWindowCallbackStruct *)PR_MALLOC(sizeof(NPSetWindowCallbackStruct));
 
-      if (!window->ws_info)
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
+    if (!window->ws_info)
+      return NS_ERROR_OUT_OF_MEMORY;
 
     ws = (NPSetWindowCallbackStruct *)window->ws_info;
 
@@ -1378,11 +1390,9 @@ NS_IMETHODIMP ns4xPluginInstance::Print(nsPluginPrint* platformPrint)
     }
   }
 
-  if(fCallbacks->print) {
-      NS_TRY_SAFE_CALL_VOID(CallNPP_PrintProc(fCallbacks->print,
-                                              &fNPP,
-                                              thePrint), fLibrary, this);
-  }
+  NS_TRY_SAFE_CALL_VOID(CallNPP_PrintProc(fCallbacks->print,
+                                          &fNPP,
+                                          thePrint), fLibrary, this);
 
   NPP_PLUGIN_LOG(PLUGIN_LOG_NORMAL,
   ("NPP PrintProc called: this=%p, pDC=%p, [x=%d,y=%d,w=%d,h=%d], clip[t=%d,b=%d,l=%d,r=%d]\n",
@@ -1411,7 +1421,7 @@ NS_IMETHODIMP ns4xPluginInstance::HandleEvent(nsPluginEvent* event, PRBool* hand
   PRInt16 result = 0;
   
   if (fCallbacks->event) {
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
     result = CallNPP_HandleEventProc(fCallbacks->event,
                                      &fNPP,
                                      (void*) event->event);
@@ -1607,18 +1617,20 @@ ns4xPluginInstance::GetFormValue(nsAString& aValue)
 void
 ns4xPluginInstance::PushPopupsEnabledState(PRBool aEnabled)
 {
-  nsCOMPtr<nsPIDOMWindow> window = GetDOMWindow();
-  if (!window)
+  nsCOMPtr<nsIDOMWindow> window = GetDOMWindow();
+  nsCOMPtr<nsPIDOMWindow> piwindow = do_QueryInterface(window);
+
+  if (!piwindow)
     return;
 
   PopupControlState oldState =
-    window->PushPopupControlState(aEnabled ? openAllowed : openAbused,
-                                  PR_TRUE);
+    piwindow->PushPopupControlState(aEnabled ? openAllowed : openAbused,
+                                    PR_TRUE);
 
   if (!mPopupStates.AppendElement(NS_INT32_TO_PTR(oldState))) {
     // Appending to our state stack failed, push what we just popped.
 
-    window->PopPopupControlState(oldState);
+    piwindow->PopPopupControlState(oldState);
   }
 }
 
@@ -1633,14 +1645,16 @@ ns4xPluginInstance::PopPopupsEnabledState()
     return;
   }
 
-  nsCOMPtr<nsPIDOMWindow> window = GetDOMWindow();
-  if (!window)
+  nsCOMPtr<nsIDOMWindow> window = GetDOMWindow();
+  nsCOMPtr<nsPIDOMWindow> piwindow = do_QueryInterface(window);
+
+  if (!piwindow)
     return;
 
   PopupControlState oldState =
     (PopupControlState)NS_PTR_TO_INT32(mPopupStates[last]);
 
-  window->PopPopupControlState(oldState);
+  piwindow->PopPopupControlState(oldState);
 
   mPopupStates.RemoveElementAt(last);
 }

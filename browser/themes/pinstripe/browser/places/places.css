@@ -37,11 +37,6 @@
   -moz-appearance: listbox;
 }
 
-treechildren::-moz-tree-image(title) {
-  width: 16px;
-  height: 16px;
-}
-
 treechildren::-moz-tree-image(title, container),
 treechildren::-moz-tree-image(title, open) {
   padding-right: 2px;
@@ -67,6 +62,13 @@ treechildren::-moz-tree-cell-text(date, session-continue) {
   color:white;
 }
 
+treechildren::-moz-tree-image(title, separator) {
+  list-style-image: none;
+  width: 0px !important;
+  height: 0px !important;
+  margin: 0px;
+}
+
 treechildren::-moz-tree-cell-text(title, separator) {
   color: ThreeDShadow;
   margin: 0px 5px;
@@ -85,6 +87,7 @@ treechildren::-moz-tree-cell-text(title, separator, selected, focus) {
   margin-left: 0px;
   margin-top: 0px;
 }
+
 
 .commandGroupButton.first {
   margin-right: -10px;
@@ -113,29 +116,6 @@ treechildren::-moz-tree-cell-text(title, separator, selected, focus) {
 /* Search Bar */
 #searchbar {
   margin: 6px -4px 0px 2px;
-}
-
-.textbox-input-closebutton {
-  -moz-appearance: none;
-  margin: 1px 2px 1px 1px;
-  min-width: 0;
-  background-color: transparent;
-  border: none;
-  padding: 0 !important;
-  list-style-image: url("chrome://global/skin/icons/closetab.png");
-  width: 16px;
-  height: 16px;
-  cursor: default;
-}
-
-.textbox-input-closebutton > .button-box {
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.textbox-input-closebutton:hover:active {
-  list-style-image: url("chrome://global/skin/icons/closetab-active.png");
 }
 
 .small {
@@ -249,111 +229,4 @@ treechildren::-moz-tree-cell-text(title, separator, selected, focus) {
 
 .no-margin-button {
   min-width:0em;
-}
-
-/**
- * mainToolbar
- * style rules are (mostly) copied over from bookmarkManager.css.
- */
-#mainToolbar toolbarbutton {
-  list-style-image: url("chrome://browser/skin/places/organizer-toolbar.png");
-  -moz-box-orient: vertical;
-}
-
-/* new bookmark */
-#newbookmark {
-  -moz-image-region: rect(0px, 168px, 24px, 144px);
-}
-#newbookmark:not([disabled="true"]):hover {
-  -moz-image-region: rect(24px, 168px, 48px, 144px);
-}
-#newbookmark[disabled="true"] {
-  -moz-image-region: rect(48px, 168px, 72px, 144px);
-}
-#newbookmark:not([disabled="true"]):hover:active {
-  -moz-image-region: rect(72px, 168px, 96px, 144px);
-}
-
-/* new folder */
-#newfolder {
-  -moz-image-region: rect(0px, 24px, 24px, 0px);
-}
-#newfolder:not([disabled="true"]):hover {
-  -moz-image-region: rect(24px, 24px, 48px, 0px);
-}
-#newfolder[disabled="true"] {
-  -moz-image-region: rect(48px, 24px, 72px, 0px);
-}
-#newfolder:not([disabled="true"]):hover:active {
-  -moz-image-region: rect(72px, 24px, 96px, 0px);
-}
-
-/* new separator */
-#newseparator {
-  -moz-image-region: rect(0px, 48px, 24px, 24px);
-}
-#newseparator:not([disabled="true"]):hover {
-  -moz-image-region: rect(24px, 48px, 48px, 24px);
-}
-#newseparator[disabled="true"] {
-  -moz-image-region: rect(48px, 48px, 72px, 24px);
-}
-#newseparator:not([disabled="true"]):hover:active {
-  -moz-image-region: rect(72px, 48px, 96px, 24px);
-}
-
-/* moveBookmark */
-#moveBookmark {
-  -moz-image-region: rect(0px, 72px, 24px, 48px);
-}
-#moveBookmark:not([disabled="true"]):hover {
-  -moz-image-region: rect(24px, 72px, 48px, 48px);
-}
-#moveBookmark[disabled="true"] {
-  -moz-image-region: rect(48px, 72px, 72px, 48px);
-}
-#moveBookmark:not([disabled="true"]):hover:active {
-  -moz-image-region: rect(72px, 72px, 96px, 48px);
-}
-
-/* properties */
-#properties {
-  -moz-image-region: rect(0px, 96px, 24px, 72px);
-}
-#properties:not([disabled="true"]):hover {
-  -moz-image-region: rect(24px, 96px, 48px, 72px);
-}
-#properties[disabled="true"] {
-  -moz-image-region: rect(48px, 96px, 72px, 72px);
-}
-#properties:not([disabled="true"]):hover:active {
-  -moz-image-region: rect(72px, 96px, 96px, 72px);
-}
-
-/* rename */
-#rename {
-  -moz-image-region: rect(0px, 120px, 24px, 96px);
-}
-#rename:not([disabled="true"]):hover {
-  -moz-image-region: rect(24px, 120px, 48px, 96px);
-}
-#rename[disabled="true"] {
-  -moz-image-region: rect(48px, 120px, 72px, 96px);
-}
-#rename:not([disabled="true"]):hover:active {
-  -moz-image-region: rect(72px, 120px, 96px, 96px);
-}
-
-/* delete */
-#delete {
-  -moz-image-region: rect(0px, 144px, 24px, 120px);
-}
-#delete:not([disabled="true"]):hover {
-  -moz-image-region: rect(24px, 144px, 48px, 120px);
-}
-#delete[disabled="true"] {
-  -moz-image-region: rect(48px, 144px, 72px, 120px);
-}
-#delete:not([disabled="true"]):hover:active {
-  -moz-image-region: rect(72px, 144px, 96px, 120px);
 }

@@ -111,8 +111,8 @@ extern "C" {
 
 typedef struct position {
   /* first line and first column are 0 not 1 */
-  XML_Size lineNumber;
-  XML_Size columnNumber;
+  unsigned long lineNumber;
+  unsigned long columnNumber;
 } POSITION;
 
 typedef struct {
@@ -281,8 +281,7 @@ int FASTCALL XmlUtf8Encode(int charNumber, char *buf);
 int FASTCALL XmlUtf16Encode(int charNumber, unsigned short *buf);
 int XmlSizeOfUnknownEncoding(void);
 
-
-typedef int (XMLCALL *CONVERTER) (void *userData, const char *p);
+typedef int (*CONVERTER)(void *userData, const char *p);
 
 ENCODING *
 XmlInitUnknownEncoding(void *mem,

@@ -66,8 +66,7 @@
 #include "nsClipboard.h"
 #include "nsIRollupListener.h"
 
-#include "nsIPrefService.h"
-#include "nsIPrefBranch.h"
+#include "nsIPref.h"
 
 #include "nsICharsetConverterManager.h"
 #include "nsIPlatformCharset.h"
@@ -83,7 +82,6 @@
 
 #include "nsIDragService.h"
 #include "nsIDragSessionGTK.h"
-#include "nsAutoPtr.h"
 
 #include "nsGtkIMEHelper.h"
 #include "nsKeyboardUtils.h"
@@ -306,7 +304,8 @@ nsWindow::nsWindow()
   if (!gGlobalsInitialized) {
     gGlobalsInitialized = PR_TRUE;
 
-    nsCOMPtr<nsIPrefBranch> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
+    // check to see if we should set our raise pref
+    nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID);
     if (prefs) {
       PRBool val = PR_TRUE;
       nsresult rv;
@@ -1273,7 +1272,7 @@ GdkCursor *nsWindow::GtkCreateCursor(nsCursor aCursorType)
       break;
   }
 
-  /* if by now we don't have a xcursor, this means we have to make a custom one */
+  /* if by now we dont have a xcursor, this means we have to make a custom one */
   if (newType != 0xff) {
     gdk_color_parse("#000000", &fg);
     gdk_color_parse("#ffffff", &bg);
@@ -2975,8 +2974,8 @@ nsWindow::HandleXlibConfigureNotifyEvent(XEvent *event)
     nsSizeEvent sevent(PR_TRUE, NS_SIZE, this);
     sevent.windowSize = new nsRect (event->xconfigure.x, event->xconfigure.y,
                                     event->xconfigure.width, event->xconfigure.height);
-    sevent.refPoint.x = event->xconfigure.x;
-    sevent.refPoint.y = event->xconfigure.y;
+    sevent.point.x = event->xconfigure.x;
+    sevent.point.y = event->xconfigure.y;
     sevent.mWinWidth = event->xconfigure.width;
     sevent.mWinHeight = event->xconfigure.height;
     // XXX fix sevent.time
@@ -3258,8 +3257,8 @@ gint nsWindow::OnDragMotionSignal      (GtkWidget *      aWidget,
   // now that we have initialized the event update our drag status
   UpdateDragStatus(event, aDragContext, dragService);
 
-  event.refPoint.x = retx;
-  event.refPoint.y = rety;
+  event.point.x = retx;
+  event.point.y = rety;
 
   innerMostWidget->AddRef();
 
@@ -3398,8 +3397,8 @@ nsWindow::OnDragDropSignal        (GtkWidget        *aWidget,
   // now that we have initialized the event update our drag status
   UpdateDragStatus(event, aDragContext, dragService);
 
-  event.refPoint.x = retx;
-  event.refPoint.y = rety;
+  event.point.x = retx;
+  event.point.y = rety;
 
   innerMostWidget->DispatchMouseEvent(event);
 
@@ -3407,8 +3406,8 @@ nsWindow::OnDragDropSignal        (GtkWidget        *aWidget,
 
   event.message = NS_DRAGDROP_DROP;
   event.widget = innerMostWidget;
-  event.refPoint.x = retx;
-  event.refPoint.y = rety;
+  event.point.x = retx;
+  event.point.y = rety;
 
   innerMostWidget->DispatchMouseEvent(event);
 
@@ -3516,8 +3515,15 @@ nsWindow::OnDragEnter(nscoord aX, nscoord aY)
 #ifdef DEBUG_DND_EVENTS
   g_print("nsWindow::OnDragEnter\n");
 #endif /* DEBUG_DND_EVENTS */
+  
+  nsMouseEvent event(PR_TRUE, NS_DRAGDROP_ENTER, this, nsMouseEvent::eReal);
 
-  nsRefPtr<nsWindow> kungFuDeathGrip(this);
+  event.point.x = aX;
+  event.point.y = aY;
+
+  AddRef();
+
+  DispatchMouseEvent(event);
 
   nsCOMPtr<nsIDragService> dragService = do_GetService(kCDragServiceCID);
 
@@ -3526,12 +3532,7 @@ nsWindow::OnDragEnter(nscoord aX, nscoord aY)
     dragService->StartDragSession();
   }
 
-  nsMouseEvent event(PR_TRUE, NS_DRAGDROP_ENTER, this, nsMouseEvent::eReal);
-
-  event.refPoint.x = aX;
-  event.refPoint.y = aY;
-
-  DispatchMouseEvent(event);
+  Release();
 }
 
 void

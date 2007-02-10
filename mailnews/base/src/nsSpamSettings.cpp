@@ -59,6 +59,8 @@
 #include "nsIStringBundle.h"
 #include "nsDateTimeFormatCID.h"
 
+static NS_DEFINE_CID(kDateTimeFormatCID,    NS_DATETIMEFORMAT_CID);
+
 nsSpamSettings::nsSpamSettings()
 {
   mLevel = 0;
@@ -132,7 +134,7 @@ NS_IMETHODIMP nsSpamSettings::GetManualMarkMode(PRInt32 *aManualMarkMode)
 }
 
 NS_IMETHODIMP nsSpamSettings::GetLoggingEnabled(PRBool *aLoggingEnabled)
-{
+{ 
   NS_ENSURE_ARG_POINTER(aLoggingEnabled);
   nsresult rv;
   nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
@@ -220,9 +222,9 @@ nsSpamSettings::SetLogStream(nsIOutputStream *aLogStream)
   return NS_OK;
 }
 
-#define LOG_HEADER "<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head>"
-#define LOG_HEADER_LEN (strlen(LOG_HEADER))
-
+ #define LOG_HEADER "<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head>"
+ #define LOG_HEADER_LEN (strlen(LOG_HEADER))
+ 
 NS_IMETHODIMP
 nsSpamSettings::GetLogStream(nsIOutputStream **aLogStream)
 {
@@ -239,23 +241,7 @@ nsSpamSettings::GetLogStream(nsIOutputStream **aLogStream)
                                    logFile,
                                    PR_CREATE_FILE | PR_WRONLY | PR_APPEND,
                                    0600);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    PRInt64 fileSize;
-    rv = logFile->GetFileSize(&fileSize);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
-    PRUint32 fileLen;
-    LL_L2UI(fileLen, fileSize);
-    // write the header at the start
-    if (fileLen == 0)
-    {
-      PRUint32 writeCount;
-      
-      rv = mLogStream->Write(LOG_HEADER, LOG_HEADER_LEN, &writeCount);
-      NS_ENSURE_SUCCESS(rv, rv);
-      NS_ASSERTION(writeCount == LOG_HEADER_LEN, "failed to write out log header");
-    }
+    NS_ENSURE_SUCCESS(rv,rv);
   }
  
   NS_ADDREF(*aLogStream = mLogStream);
@@ -283,18 +269,18 @@ NS_IMETHODIMP nsSpamSettings::Initialize(nsIMsgIncomingServer *aServer)
   NS_ENSURE_SUCCESS(rv, rv);
   rv = SetMoveTargetMode(moveTargetMode);
   NS_ENSURE_SUCCESS(rv, rv);
-    
+
   nsXPIDLCString spamActionTargetAccount;
   rv = aServer->GetCharValue("spamActionTargetAccount", getter_Copies(spamActionTargetAccount));
   NS_ENSURE_SUCCESS(rv, rv);
   rv = SetActionTargetAccount(spamActionTargetAccount);    
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
   nsXPIDLCString spamActionTargetFolder;
   rv = aServer->GetCharValue("spamActionTargetFolder", getter_Copies(spamActionTargetFolder));
   NS_ENSURE_SUCCESS(rv, rv);
   rv = SetActionTargetFolder(spamActionTargetFolder);
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
   PRBool useWhiteList;
   rv = aServer->GetBoolValue("useWhiteList", &useWhiteList);
@@ -306,25 +292,25 @@ NS_IMETHODIMP nsSpamSettings::Initialize(nsIMsgIncomingServer *aServer)
   rv = aServer->GetCharValue("whiteListAbURI", getter_Copies(whiteListAbURI));
   NS_ENSURE_SUCCESS(rv, rv);
   rv = SetWhiteListAbURI(whiteListAbURI);
-  NS_ENSURE_SUCCESS(rv, rv);
-
+  NS_ENSURE_SUCCESS(rv,rv);
+  
   PRBool purgeSpam;
   rv = aServer->GetBoolValue("purgeSpam", &purgeSpam);
   NS_ENSURE_SUCCESS(rv, rv);
   rv = SetPurge(purgeSpam);
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
   PRInt32 purgeSpamInterval;
   rv = aServer->GetIntValue("purgeSpamInterval", &purgeSpamInterval);
   NS_ENSURE_SUCCESS(rv, rv);
   rv = SetPurgeInterval(purgeSpamInterval);
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
   PRBool useServerFilter;
   rv = aServer->GetBoolValue("useServerFilter", &useServerFilter);
   NS_ENSURE_SUCCESS(rv, rv);
   rv = SetUseServerFilter(useServerFilter);
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
   nsXPIDLCString serverFilterName;
   rv = aServer->GetCharValue("serverFilterName", getter_Copies(serverFilterName));
@@ -332,7 +318,7 @@ NS_IMETHODIMP nsSpamSettings::Initialize(nsIMsgIncomingServer *aServer)
     SetServerFilterName(serverFilterName);
   PRInt32 serverFilterTrustFlags = 0;
   rv = aServer->GetIntValue("serverFilterTrustFlags", &serverFilterTrustFlags);
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_SUCCESS(rv,rv);
   rv = SetServerFilterTrustFlags(serverFilterTrustFlags);
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -347,7 +333,7 @@ nsresult nsSpamSettings::UpdateJunkFolderState()
   // on the old spam folder
   nsXPIDLCString newJunkFolderURI;
   rv = GetSpamFolderURI(getter_Copies(newJunkFolderURI));
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_SUCCESS(rv,rv);
 
   if (!mCurrentJunkFolderURI.IsEmpty() && !mCurrentJunkFolderURI.Equals(newJunkFolderURI))
   {
@@ -362,8 +348,8 @@ nsresult nsSpamSettings::UpdateJunkFolderState()
       // is not a the junk folder for another account
       // the same goes for set flag.  have fun with all that.
       oldJunkFolder->ClearFlag(MSG_FOLDER_FLAG_JUNK);
-    }
   }
+}
 
   mCurrentJunkFolderURI = newJunkFolderURI;
 
@@ -412,7 +398,7 @@ NS_IMETHODIMP nsSpamSettings::Clone(nsISpamSettings *aSpamSettings)
   rv = aSpamSettings->GetWhiteListAbURI(getter_Copies(whiteListAbURI)); 
   NS_ENSURE_SUCCESS(rv,rv);
   mWhiteListAbURI = whiteListAbURI;
-
+  
   aSpamSettings->GetServerFilterName(mServerFilterName);
   aSpamSettings->GetServerFilterTrustFlags(&mServerFilterTrustFlags);
 
@@ -517,7 +503,7 @@ NS_IMETHODIMP nsSpamSettings::LogJunkHit(nsIMsgDBHdr *aMsgHdr, PRBool aMoveMessa
 
   if (!mDateFormatter)
   {
-    mDateFormatter = do_CreateInstance(NS_DATETIMEFORMAT_CONTRACTID, &rv);
+    mDateFormatter = do_CreateInstance(kDateTimeFormatCID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
     if (!mDateFormatter)
     {

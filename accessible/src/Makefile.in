@@ -44,20 +44,18 @@ VPATH = @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),gtk2)
-PLATFORM_DIR = atk
+DIRS += atk
 else
 ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
-PLATFORM_DIR = msaa
+DIRS += msaa
 else
-ifeq ($(MOZ_WIDGET_TOOLKIT),cocoa)
-PLATFORM_DIR += mac
+ifeq ($(MOZ_WIDGET_TOOLKIT),mac)
+DIRS += mac
 else
-PLATFORM_DIR += other
+DIRS += other
 endif
 endif
 endif
-
-DIRS += $(PLATFORM_DIR)
 
 DIRS += \
   base \
@@ -68,11 +66,5 @@ ifdef MOZ_XUL
 DIRS +=   xul
 endif
 
-ifndef DISABLE_XFORMS_HOOKS
-DIRS +=   xforms
-endif
-
 include $(topsrcdir)/config/rules.mk
 
-libs::
-	$(NSINSTALL) $(PLATFORM_DIR)/$(LIB_PREFIX)accessibility_toolkit_s.$(LIB_SUFFIX) .

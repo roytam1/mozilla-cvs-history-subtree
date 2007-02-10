@@ -60,7 +60,6 @@
 #define NS_MSGCONTENTPOLICY_CONTRACTID "@mozilla.org/messenger/content-policy;1"
 
 class nsIMsgDBHdr;
-class nsIDocShell;
 
 class nsMsgContentPolicy : public nsIContentPolicy,
                            public nsIObserver,
@@ -78,21 +77,14 @@ public:
 
 protected:
   PRBool   mBlockRemoteImages;
+  PRBool   mUseRemoteImageWhiteList;
+  nsXPIDLCString mRemoteImageWhiteListURI;
   PRBool   mAllowPlugins;
   nsAdoptingCString  mTrustedMailDomains;
 
-  PRBool IsTrustedDomain(nsIURI * aContentLocation);
-  nsresult AllowRemoteContentForSender(nsIMsgDBHdr * aMsgHdr, PRBool * aAllowForSender);
-  nsresult AllowRemoteContentForMsgHdr(nsIMsgDBHdr * aMsgHdr, nsIURI * aRequestingLocation, nsIURI * aContentLocation, PRInt16 *aDecision);
-  nsresult MailShouldLoad(nsIURI * aRequestingLocation, nsIURI * aContentLocation, PRInt16 * aDecision);
-  nsresult ComposeShouldLoad(nsIDocShell * aRootDocShell, nsISupports *aRequestingContext, 
-                             nsIURI * aContentLocation, PRInt16 * aDecision);
-
-  nsresult GetRootDocShellForContext(nsISupports * aRequestingContext, nsIDocShell ** aDocShell);
-  nsresult GetMessagePaneURI(nsIDocShell * aRootDocShell, nsIURI ** aURI);
+  nsresult IsSenderInWhiteList(nsIMsgDBHdr * aMsgHdr, PRBool * aWhiteListed);
+  nsresult IsTrustedDomain(nsIURI * aContentLocation, PRBool * aTrustedDomain);
 };
-
-#ifdef MOZ_THUNDERBIRD
 
 /* 2C4B5CC1-8C0F-4080-92A7-D133CC30F43B */
 #define NS_MSGCOOKIEPOLICY_CID \
@@ -109,7 +101,5 @@ public:
 
   virtual ~nsMsgCookiePolicy() {}
 };
-
-#endif
 
 #endif // _nsMsgContentPolicy_H_

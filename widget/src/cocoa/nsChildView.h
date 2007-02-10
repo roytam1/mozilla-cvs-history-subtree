@@ -35,23 +35,16 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsChildView_h_
-#define nsChildView_h_
+#ifndef nsChildView_h__
+#define nsChildView_h__
 
-// formal protocols
-#include "mozView.h"
-#ifdef ACCESSIBILITY
-#include "nsIAccessible.h"
-#include "mozAccessibleProtocol.h"
-#endif
+#import "mozView.h"
 
-#include "nsAutoPtr.h"
 #include "nsISupports.h"
 #include "nsBaseWidget.h"
 #include "nsIPluginWidget.h"
 #include "nsIEventSink.h"
 #include "nsIScrollableView.h"
-#include "nsWeakPtr.h"
 
 #include "nsIWidget.h"
 #include "nsIKBStateControl.h"
@@ -60,13 +53,11 @@
 #include "nsIMouseListener.h"
 #include "nsIEventListener.h"
 #include "nsString.h"
-#include "nsIDragService.h"
+
 #include "nsIMenuBar.h"
 
 #include "nsplugindefs.h"
-#import <Quickdraw.h>
-
-class gfxASurface;
+#include <Quickdraw.h>
 
 #define NSRGB_2_COLOREF(color) \
             RGB(NS_GET_R(color),NS_GET_G(color),NS_GET_B(color))
@@ -78,27 +69,26 @@ struct nsPluginPort;
 
 class nsChildView;
 
-@interface ChildView : NSView<
-#ifdef ACCESSIBILITY
-                              mozAccessible,
-#endif
-                              mozView, NSTextInput>
+
+@interface ChildView : NSQuickDrawView<mozView, NSTextInput>
 {
 @private
-  NSWindow* mWindow; // shortcut to the top window, [WEAK]
+  NSWindow*       mWindow;    // shortcut to the top window, [WEAK]
   
-  // the nsChildView that created the view. It retains this NSView, so
-  // the link back to it must be weak.
+    // the nsChildView that created the view. It retains this NSView, so
+    // the link back to it must be weak.
   nsChildView* mGeckoChild;
-    
-  // tag for our mouse enter/exit tracking rect
+  
+    // allows us to redispatch events back to a centralized location
+  nsIEventSink* mEventSink;
+  
+    // tag for our mouse enter/exit tracking rect
   NSTrackingRectTag mMouseEnterExitTag;
 
   // Whether we're a plugin view.
   BOOL mIsPluginView;
 
   NSEvent* mCurKeyEvent;   // only valid during a keyDown
-  PRBool  mKeyHandled;
   
   // needed for NSTextInput implementation
   NSRange mMarkedRange;
@@ -106,31 +96,19 @@ class nsChildView;
   BOOL mInComposition;
   BOOL mIgnoreDoCommand;
 
+  BOOL mToggleMouseMoveEventWatching;
+
   BOOL mInHandScroll; // true for as long as we are hand scrolling
   // hand scroll locations
   NSPoint mHandScrollStartMouseLoc;
   nscoord mHandScrollStartScrollX, mHandScrollStartScrollY;
-  
-  // when menuForEvent: is called, we store its event here (strong)
-  NSEvent* mLastMenuForEventEvent;
-  
-  // rects that were invalidated during a draw, so have pending drawing
-  NSMutableArray* mPendingDirtyRects;
-  BOOL mPendingFullDisplay;
-
-  // Holds our drag service across multiple drag calls. The reference to the
-  // service is obtained when the mouse enters the view and is released when
-  // the mouse exits or there is a drop. This prevents us from having to
-  // re-establish the connection to the service manager many times per second
-  // when handling |draggingUpdated:| messages.
-  nsIDragService* mDragService;
 }
 
-// these are sent to the first responder when the window key status changes
+// these are sent to the first responder when the window key status
+// changes
 - (void)viewsWindowDidBecomeKey;
 - (void)viewsWindowDidResignKey;
 
-- (BOOL)isComposing;
 @end
 
 
@@ -160,8 +138,6 @@ public:
   NS_IMETHOD              ResetInputState();
   NS_IMETHOD              SetIMEOpenState(PRBool aState);
   NS_IMETHOD              GetIMEOpenState(PRBool* aState);
-  NS_IMETHOD              SetIMEEnabled(PRBool aState);
-  NS_IMETHOD              GetIMEEnabled(PRBool* aState);
   NS_IMETHOD              CancelIMEComposition();
  
   // nsIWidget interface
@@ -195,7 +171,7 @@ public:
   NS_IMETHOD              Destroy();
 
   NS_IMETHOD              Show(PRBool aState);
-  NS_IMETHOD              IsVisible(PRBool& outState);
+  NS_IMETHOD              IsVisible(PRBool & aState);
 
   virtual nsIWidget*      GetParent(void);
   
@@ -230,13 +206,15 @@ public:
   NS_IMETHOD              BeginResizingChildren(void);
   NS_IMETHOD              EndResizingChildren(void);
 
-  static  PRBool          ConvertStatus(nsEventStatus aStatus)
-                          { return aStatus == nsEventStatus_eConsumeNoDefault; }
+  static  PRBool          ConvertStatus(nsEventStatus aStatus);
   NS_IMETHOD              DispatchEvent(nsGUIEvent* event, nsEventStatus & aStatus);
   virtual PRBool          DispatchMouseEvent(nsMouseEvent &aEvent);
 
+  virtual void            StartDraw(nsIRenderingContext* aRenderingContext = nsnull);
+  virtual void            EndDraw();
   NS_IMETHOD              Update();
-
+  virtual void            UpdateWidget(nsRect& aRect, nsIRenderingContext* aContext);
+  
   virtual void      ConvertToDeviceCoordinates(nscoord &aX, nscoord &aY);
   void              LocalToWindowCoordinate(nsPoint& aPoint)            { ConvertToDeviceCoordinates(aPoint.x, aPoint.y); }
   void              LocalToWindowCoordinate(nscoord& aX, nscoord& aY)   { ConvertToDeviceCoordinates(aX, aY); }
@@ -270,16 +248,14 @@ public:
   virtual PRBool    DispatchWindowEvent(nsGUIEvent &event,nsEventStatus &aStatus);
   virtual void      AcceptFocusOnClick(PRBool aBool) { mAcceptFocusOnClick = aBool;};
   PRBool            AcceptFocusOnClick() { return mAcceptFocusOnClick;};
+  void              Flash(nsPaintEvent  &aEvent);
   
+  void              RemovedFromWindow();
+  void              AddedToWindow();
+
   void              LiveResizeStarted();
   void              LiveResizeEnded();
   
-#ifdef ACCESSIBILITY
-  void              GetDocumentAccessible(nsIAccessible** aAccessible);
-#endif
-
-  virtual gfxASurface* GetThebesSurface();
-
 protected:
 
   PRBool            ReportDestroyEvent();
@@ -290,10 +266,15 @@ protected:
 
   virtual PRBool    OnPaint(nsPaintEvent & aEvent);
 
-  // override to create different kinds of child views. Autoreleases, so
-  // caller must retain.
+    // override to create different kinds of child views. Autoreleases, so
+    // caller must retain.
   virtual NSView*   CreateCocoaView(NSRect inFrame);
   void              TearDownView();
+
+    // Find a quickdraw port in which to draw (needed by GFX until it
+    // is converted to Cocoa). This MUST be overridden if CreateCocoaView()
+    // does not create something that inherits from NSQuickDrawView!
+  virtual GrafPtr   GetQuickDrawPort();   // gets plugin port or view's port
 
   // return qdPort for a focussed ChildView, and null otherwise
   GrafPtr           GetChildViewQuickDrawPort();
@@ -304,19 +285,16 @@ protected:
 
   NSView<mozView>*      mParentView;
   nsIWidget*            mParentWidget;
+  
+  nsIFontMetrics*       mFontMetrics;
+  nsIRenderingContext*  mTempRenderingContext;
 
-#ifdef ACCESSIBILITY
-  // weak ref to this childview's associated mozAccessible for speed reasons 
-  // (we get queried for it *a lot* but don't want to own it)
-  nsWeakPtr             mAccessible;
-#endif
-
-  nsRefPtr<gfxASurface> mTempThebesSurface;
-
+  PRPackedBool          mDestroyCalled;
   PRPackedBool          mDestructorCalled;
   PRPackedBool          mVisible;
 
   PRPackedBool          mDrawing;
+  PRPackedBool          mTempRenderingContextMadeHere;
     
   PRPackedBool          mAcceptFocusOnClick;
   PRPackedBool          mLiveResizeInProgress;
@@ -324,7 +302,8 @@ protected:
   
   nsPluginPort*         mPluginPort;
   RgnHandle             mVisRgn;
+    
 };
 
 
-#endif // nsChildView_h_
+#endif // nsChildView_h__

@@ -46,6 +46,7 @@
 #include "nsIScriptContext.h"
 #include "nsHTMLStyleSheet.h"
 #include "nsIHTMLCSSStyleSheet.h"
+#include "nsIEventQueueService.h"
 
 class nsIParser;
 class nsIDOMNode;
@@ -57,14 +58,13 @@ class nsXMLDocument : public nsDocument,
                       public nsIChannelEventSink
 {
 public:
-  nsXMLDocument(const char* aContentType = "application/xml");
+  nsXMLDocument();
   virtual ~nsXMLDocument();
 
   NS_DECL_ISUPPORTS_INHERITED
 
   virtual void Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
-  virtual void ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup,
-                          nsIPrincipal* aPrincipal);
+  virtual void ResetToURI(nsIURI *aURI, nsILoadGroup *aLoadGroup);
 
   virtual nsresult StartDocumentLoad(const char* aCommand, nsIChannel* channel,
                                      nsILoadGroup* aLoadGroup,
@@ -95,10 +95,10 @@ public:
 
   virtual nsresult Init();
 
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
-
 protected:
   virtual nsresult GetLoadGroup(nsILoadGroup **aLoadGroup);
+
+  nsCOMPtr<nsIEventQueueService> mEventQService;
 
   nsCOMPtr<nsIScriptContext> mScriptContext;
 

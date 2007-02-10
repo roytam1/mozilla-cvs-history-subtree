@@ -37,17 +37,20 @@
 #include "nsIStreamListener.h"
 #include "nsIInputStream.h"
 #include "nsIURL.h"
-#include "nsServiceManagerUtils.h"
-#include "nsComponentManagerUtils.h"
-#include "nsThreadUtils.h"
 
 #include "nsNetCID.h"
 #include "nsCOMPtr.h"
 #include "nsIIOService.h"
 #include "nsIChannel.h"
 #include "nsILocalFile.h"
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
-#include "nsStringAPI.h"
+#include "nsIEventQueueService.h"
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+static nsIEventQueue* gEventQ = nsnull;
+
+#include "nsString.h"
+#include "nsReadableUtils.h"
 #include "nsCRT.h"
 #include "prprf.h"
 
@@ -175,7 +178,7 @@ public:
 
   nsresult Init(nsILocalFile *aDirectory);
 
-  nsresult Grab(const nsCString& aURL);
+  nsresult Grab(const nsAFlatCString& aURL);
 
 protected:
   nsILocalFile* NextFile(const char* aExtension);
@@ -213,10 +216,17 @@ PageGrabber::NextFile(const char* aExtension)
 }
 
 nsresult
-PageGrabber::Grab(const nsCString& aURL)
+PageGrabber::Grab(const nsAFlatCString& aURL)
 {
   nsresult rv;
+  // Create the Event Queue for this thread...
   // Unix needs this
+  nsCOMPtr<nsIEventQueueService> eventQService =
+           do_GetService(kEventQueueServiceCID, &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &gEventQ);
+
   nsCOMPtr<nsILocalFile> file = NextFile("html");
   if (!file) {
     return NS_ERROR_OUT_OF_MEMORY;
@@ -230,13 +240,13 @@ PageGrabber::Grab(const nsCString& aURL)
   fputs(aURL.get(), stdout);
   nsAutoString path;
   file->GetPath(path);
-  NS_ConvertUTF16toUTF8 cpath(path);
+  NS_ConvertUCS2toUTF8 cpath(path);
   printf(" to %s\n", cpath.get());
 
   // Create the URL object...
   nsCOMPtr<nsIURI> url;
 
-  nsCOMPtr<nsIIOService> ioService(do_GetService(NS_IOSERVICE_CONTRACTID, &rv));
+  nsCOMPtr<nsIIOService> ioService(do_GetService(kIOServiceCID, &rv));
   if (NS_FAILED(rv)) return rv;
 
   rv = ioService->NewURI(aURL, nsnull, nsnull, getter_AddRefs(url));
@@ -259,10 +269,10 @@ PageGrabber::Grab(const nsCString& aURL)
   }
     
   // Enter the message pump to allow the URL load to proceed.
-  nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
   while ( !copier->IsDone() ) {
-    if (!NS_ProcessNextEvent(thread))
-      break;
+    PLEvent *gEvent;
+    gEventQ->WaitForEvent(&gEvent);
+    gEventQ->HandleEvent(gEvent);
   }
 
   rv = copier->HaveError() ? NS_ERROR_FAILURE : NS_OK;

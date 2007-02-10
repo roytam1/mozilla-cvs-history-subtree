@@ -1,10 +1,5 @@
 <?xml version="1.0"?>
 
-<!DOCTYPE bindings [
-<!ENTITY % notificationDTD SYSTEM "chrome://global/locale/notification.dtd">
-%notificationDTD;
-]>
-
 <bindings id="notificationBindings"
           xmlns="http://www.mozilla.org/xbl"
           xmlns:xbl="http://www.mozilla.org/xbl"
@@ -36,7 +31,7 @@
 
       <field name="_timer">null</field>
       <field name="_closedNotification">null</field>
-      <field name="_blockingCanvas">null</field>
+      <field name="_blockBox">null</field>
 
       <property name="notificationsHidden"
                 onget="return this.getAttribute('notificationshidden') == 'true';">
@@ -182,7 +177,6 @@
               if (this._closedNotification)
                 this._closedNotification.parentNode.
                   removeChild(this._closedNotification);
-              this._setBlockingState(this.currentNotification);
             }
 
             var height = aNotification.boxObject.height;
@@ -230,7 +224,7 @@
                 done = true;
               }
               else {
-                aNotification.style.marginTop = (margin + change).toFixed(4) + "px";
+                aNotification.style.marginTop = (margin + change) + "px";
                 if (opacitychange)
                   aNotification.style.opacity =
                     Number(aNotification.style.opacity) + opacitychange;
@@ -242,7 +236,6 @@
                 if (self._closedNotification)
                   self._closedNotification.parentNode.
                     removeChild(self._closedNotification);
-                self._setBlockingState(self.currentNotification);
               }
             }
 
@@ -251,62 +244,9 @@
         </body>
       </method>
 
-      <method name="_setBlockingState">
-        <parameter name="aNotification"/>
-        <body>
-          <![CDATA[
-            var isblock = aNotification &&
-                          aNotification.priority == this.PRIORITY_CRITICAL_BLOCK;
-            var canvas = this._blockingCanvas;
-            if (isblock) {
-              if (!canvas)
-                canvas = document.createElementNS("http://www.w3.org/1999/xhtml", "canvas");
-              const XULNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-              var content = this.firstChild;
-              if (!content ||
-                   content.namespaceURI != XULNS ||
-                   content.localName != "browser")
-                return;
-
-              var width = content.boxObject.width;
-              var height = content.boxObject.height;
-              content.collapsed = true;
-
-              canvas.setAttribute("width", width);
-              canvas.setAttribute("height", height);
-              canvas.setAttribute("flex", "1");
-
-              this.appendChild(canvas);
-              this._blockingCanvas = canvas;
-
-              var bgcolor = "white";
-              try {
-                var prefService = Components.classes["@mozilla.org/preferences-service;1"].
-                                    getService(Components.interfaces.nsIPrefBranch);
-                bgcolor = prefService.getCharPref("browser.display.background_color");
-
-                var win = content.contentWindow;
-                var context = canvas.getContext("2d");
-                context.globalAlpha = 0.5;
-                context.drawWindow(win, win.scrollX, win.scrollY,
-                                   width, height, bgcolor);
-              }
-              catch(ex) { };
-            }
-            else if (canvas) {
-              canvas.parentNode.removeChild(canvas);
-              this._blockingCanvas = null;
-              var content = this.firstChild;
-              if (content)
-                content.collapsed = false;
-            }
-          ]]>
-        </body>
-      </method>
-
     </implementation>
   </binding>
-
+      
   <binding id="notification">
     <content>
       <xul:hbox class="notification-inner outset" flex="1" xbl:inherits="type">
@@ -318,9 +258,8 @@
           <children/>
         </xul:hbox>
         <xul:toolbarbutton ondblclick="event.stopPropagation();"
-                           class="messageCloseButton tabbable"
+                           class="messageCloseButton"
                            xbl:inherits="hidden=hideclose"
-                           tooltiptext="&closeNotification.tooltip;"
                            oncommand="document.getBindingParent(this).close();"/>
       </xul:hbox>
     </content>
@@ -328,10 +267,11 @@
       <stylesheet src="chrome://global/skin/notification.css"/>
     </resources>
     <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible" readonly="true">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULAlert;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULAlertAccessible(this);
           ]]>
         </getter>
       </property>

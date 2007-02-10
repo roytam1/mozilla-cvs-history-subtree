@@ -49,13 +49,16 @@
 #include "nsIDOMEvent.h"
 #include "nsStyleConsts.h"
 #include "nsIViewManager.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
+#include "nsXULAtoms.h"
 #include "nsIEventStateManager.h"
 #include "nsIDeviceContext.h"
 #include "nsIScrollableView.h"
+#include "nsLayoutAtoms.h"
 #include "nsIPresShell.h"
 #include "nsBoxFrame.h"
 #include "nsStackLayout.h"
+#include "nsIRootBox.h"
 #include "nsIAnonymousContentCreator.h"
 #include "nsINodeInfo.h"
 #include "nsIServiceManager.h"
@@ -70,11 +73,9 @@
 class nsDocElementBoxFrame : public nsBoxFrame, public nsIAnonymousContentCreator {
 public:
 
-  friend nsIFrame* NS_NewBoxFrame(nsIPresShell* aPresShell,
-                                  nsStyleContext* aContext);
+  friend nsresult NS_NewBoxFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
-  nsDocElementBoxFrame(nsIPresShell* aShell, nsStyleContext* aContext)
-    :nsBoxFrame(aShell, aContext, PR_TRUE) {}
+  nsDocElementBoxFrame(nsIPresShell* aShell);
 
   NS_DECL_ISUPPORTS_INHERITED
 
@@ -85,7 +86,6 @@ public:
                             nsIContent *      aContent,
                             nsIFrame**        aFrame) { if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }
 
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
 #endif
@@ -93,10 +93,25 @@ public:
 
 //----------------------------------------------------------------------
 
-nsIFrame*
-NS_NewDocElementBoxFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewDocElementBoxFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsDocElementBoxFrame (aPresShell, aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsDocElementBoxFrame* it = new (aPresShell) nsDocElementBoxFrame (aPresShell);
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  *aNewFrame = it;
+
+  return NS_OK;
+}
+
+nsDocElementBoxFrame::nsDocElementBoxFrame(nsIPresShell* aShell):nsBoxFrame(aShell, PR_TRUE)
+{
 }
 
 NS_IMETHODIMP
@@ -111,7 +126,7 @@ nsDocElementBoxFrame::CreateAnonymousContent(nsPresContext* aPresContext,
 
   // create the top-secret popupgroup node. shhhhh!
   nsCOMPtr<nsINodeInfo> nodeInfo;
-  nsresult rv = nodeInfoManager->GetNodeInfo(nsGkAtoms::popupgroup,
+  nsresult rv = nodeInfoManager->GetNodeInfo(nsXULAtoms::popupgroup,
                                              nsnull, kNameSpaceID_XUL,
                                              getter_AddRefs(nodeInfo));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -123,14 +138,14 @@ nsDocElementBoxFrame::CreateAnonymousContent(nsPresContext* aPresContext,
   aAnonymousItems.AppendElement(content);
 
   // create the top-secret default tooltip node. shhhhh!
-  rv = nodeInfoManager->GetNodeInfo(nsGkAtoms::tooltip, nsnull,
+  rv = nodeInfoManager->GetNodeInfo(nsXULAtoms::tooltip, nsnull,
                                     kNameSpaceID_XUL, getter_AddRefs(nodeInfo));
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = NS_NewXULElement(getter_AddRefs(content), nodeInfo);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  content->SetAttr(nsnull, nsGkAtoms::_default, NS_LITERAL_STRING("true"), PR_FALSE);
+  content->SetAttr(nsnull, nsXULAtoms::defaultz, NS_LITERAL_STRING("true"), PR_FALSE);
   aAnonymousItems.AppendElement(content);
   
   return NS_OK;
@@ -151,13 +166,6 @@ nsDocElementBoxFrame::Release(void)
 NS_INTERFACE_MAP_BEGIN(nsDocElementBoxFrame)
   NS_INTERFACE_MAP_ENTRY(nsIAnonymousContentCreator)
 NS_INTERFACE_MAP_END_INHERITING(nsBoxFrame)
-
-PRBool
-nsDocElementBoxFrame::IsFrameOfType(PRUint32 aFlags) const
-{
-  // Override nsBoxFrame.
-  return !aFlags;
-}
 
 #ifdef DEBUG
 NS_IMETHODIMP

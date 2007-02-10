@@ -93,7 +93,7 @@ function GetServer(uri)
 
 function setTitleFromFolder(msgfolder, subject)
 {
-    var wintype = document.documentElement.getAttribute('windowtype');
+    var wintype = document.firstChild.getAttribute('windowtype');
     var title; 
 
     // If we are showing the mail:3pane. Never include the subject of the selected
@@ -173,8 +173,7 @@ function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
     msgWindow.openFolder = null;
 
     ClearThreadPane();
-    UpdateStatusQuota(null);
-
+    
     // Load AccountCentral page here.
     ShowAccountCentral();
 
@@ -348,10 +347,10 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
   if (gSearchSession && !gVirtualFolderTerms) // another var might be better...
   {
     viewDebug("doing a xf folder search in rerootFolder\n");
-    ViewChangeByFolder(newFolder);
-    gPreQuickSearchView = null; // don't remember the cross folder search
-    ScrollToMessageAfterFolderLoad(newFolder);
+    gDBView.searchSession = gSearchSession;
+    gSearchSession.search(msgWindow);
   }
+
 }
 
 function SwitchView(command)
@@ -359,7 +358,7 @@ function SwitchView(command)
   // when switching thread views, we might be coming out of quick search
   // or a message view.
   // first set view picker to all
-  ViewChangeByValue(kViewItemAll);
+  ViewMessagesBy("viewPickerAll");
 
   // clear the QS text, if we need to
   ClearQSIfNecessary();
@@ -482,68 +481,6 @@ function UpdateStatusMessageCounts(folder)
 
   }
 
-}
-
-var gQuotaUICache;
-function UpdateStatusQuota(folder)
-{
-  if (!(folder && // no folder selected
-        folder instanceof Components.interfaces.nsIMsgImapMailFolder)) // POP etc.
-  {
-    if (typeof(gQuotaUICache) == "object") // ever shown quota
-      gQuotaUICache.panel.hidden = true;
-    return;
-  }
-  folder = folder.QueryInterface(Components.interfaces.nsIMsgImapMailFolder);
-
-  // get element references and prefs
-  if (typeof(gQuotaUICache) != "object")
-  {
-    gQuotaUICache = new Object();
-    gQuotaUICache.meter = document.getElementById("quotaMeter");
-    gQuotaUICache.panel = document.getElementById("quotaPanel");
-    gQuotaUICache.label = document.getElementById("quotaLabel");
-    const kBranch = "mail.quota.mainwindow_threshold.";
-    gQuotaUICache.showTreshold = gPrefBranch.getIntPref(kBranch + "show");
-    gQuotaUICache.warningTreshold = gPrefBranch.getIntPref(kBranch + "warning");
-    gQuotaUICache.criticalTreshold = gPrefBranch.getIntPref(kBranch + "critical");
-  }
-
-  var valid = {value: null};
-  var used = {value: null};
-  var max = {value: null};
-  try {
-    // get data from backend
-    folder.getQuota(valid, used, max);
-  } catch (e) { dump(e + "\n"); }
-  if (valid.value && max.value > 0)
-  {
-    var percent = Math.round(used.value / max.value * 100);
-
-    // show in UI
-    if (percent < gQuotaUICache.showTreshold)
-      gQuotaUICache.panel.hidden = true;
-    else
-    {
-      gQuotaUICache.panel.hidden = false;
-      gQuotaUICache.meter.setAttribute("value", percent);
-           // do not use value property, because that is imprecise (3%)
-           // for optimization that we don't need here
-      var label = gMessengerBundle.getFormattedString("percent", [percent]);
-      var tooltip = gMessengerBundle.getFormattedString("quotaTooltip",
-           [used.value, max.value]);
-      gQuotaUICache.label.value = label;
-      gQuotaUICache.label.tooltipText = tooltip;
-      if (percent < gQuotaUICache.warningTreshold)
-        gQuotaUICache.panel.removeAttribute("alert");
-      else if (percent < gQuotaUICache.criticalTreshold)
-        gQuotaUICache.panel.setAttribute("alert", "warning");
-      else
-        gQuotaUICache.panel.setAttribute("alert", "critical");
-    }
-  }
-  else
-    gQuotaUICache.panel.hidden = true;
 }
 
 function ConvertColumnIDToSortType(columnID)
@@ -671,7 +608,8 @@ function ConvertSortTypeToColumnID(sortKey)
       columnID = "threadCol";
       break;
     case nsMsgViewSortType.byId:
-      columnID = "idCol";
+      // there is no orderReceivedCol, so return null
+      columnID = null;
       break;
     case nsMsgViewSortType.byJunkStatus:
       columnID = "junkStatusCol";
@@ -789,8 +727,6 @@ function CreateDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
   gDBView.suppressMsgDisplay = IsMessagePaneCollapsed();
 
   UpdateSortIndicators(gCurSortType, sortOrder);
-  var ObserverService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
-  ObserverService.notifyObservers(msgFolder, "MsgCreateDBView", viewType + ":" + viewFlags);
 }
 
 //------------------------------------------------------------
@@ -1069,6 +1005,35 @@ function Undo()
 function Redo()
 {
     messenger.Redo(msgWindow);
+}
+var mailOfflineObserver = {
+  observe: function(subject, topic, state) {
+    // sanity checks
+    if (topic != "network:offline-status-changed") return;
+    MailOfflineStateChanged(state == "offline");
+  }
+}
+
+function AddMailOfflineObserver() 
+{
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService); 
+  observerService.addObserver(mailOfflineObserver, "network:offline-status-changed", false);
+
+  try {
+    // Stop automatic management of the offline status.
+    // XXX need to watch the link status changes and manage
+    // offline mode accordingly.
+    var ioService = Components.classes["@mozilla.org/network/io-service;1"].
+      getService(Components.interfaces.nsIIOService2);
+    ioService.manageOfflineStatus = false;
+  } catch (ex) {
+  }
+}
+
+function RemoveMailOfflineObserver()
+{
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService); 
+  observerService.removeObserver(mailOfflineObserver,"network:offline-status-changed");
 }
 
 function getSearchTermString(searchTerms)

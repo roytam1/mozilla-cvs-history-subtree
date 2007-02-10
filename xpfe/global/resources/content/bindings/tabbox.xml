@@ -13,7 +13,7 @@
 
   <binding id="tabbox" display="xul:box"
            extends="chrome://global/content/bindings/tabbox.xml#tab-base">
-    <implementation implements="nsIDOMEventListener, nsIAccessibleProvider">
+    <implementation implements="nsIAccessibleProvider">
       <property name="accessible">
         <getter>
           <![CDATA[
@@ -110,10 +110,10 @@
         </setter>
       </property>
 
-      <method name="handleEvent">
-        <parameter name="event"/>
-        <body>
-        <![CDATA[
+      <field name="_keyEventHandler" readonly="true">
+      <![CDATA[({
+        tabbox: this,
+        handleEvent: function handleEvent(event) {
           if (!event.isTrusted) {
             // Don't let untrusted events mess with tabs.
             return;
@@ -124,24 +124,24 @@
           switch (event.keyCode) {
             case event.DOM_VK_TAB:
               if (event.ctrlKey && !event.altKey && !event.metaKey)
-                if (this._tabs && this.handleCtrlTab) {
-                  this._tabs.advanceSelectedTab(event.shiftKey ? -1 : 1);
+                if (this.tabbox._tabs && this.tabbox.handleCtrlTab) {
+                  this.tabbox._tabs.advanceSelectedTab(event.shiftKey ? -1 : 1);
                   event.stopPropagation();
                   event.preventDefault();
                 }
               break;
             case event.DOM_VK_PAGE_UP:
               if (event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey)
-                if (this._tabs && this.handleCtrlPageUpDown) {
-                  this._tabs.advanceSelectedTab(-1);
+                if (this.tabbox._tabs && this.tabbox.handleCtrlPageUpDown) {
+                  this.tabbox._tabs.advanceSelectedTab(-1);
                   event.stopPropagation();
                   event.preventDefault();
                 }
               break;
             case event.DOM_VK_PAGE_DOWN:
               if (event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey)
-                if (this._tabs && this.handleCtrlPageUpDown) {
-                  this._tabs.advanceSelectedTab(1);
+                if (this.tabbox._tabs && this.tabbox.handleCtrlPageUpDown) {
+                  this.tabbox._tabs.advanceSelectedTab(1);
                   event.stopPropagation();
                   event.preventDefault();
                 }
@@ -167,9 +167,9 @@
                 }
               break;
           }
-        ]]>
-        </body>
-      </method>
+        }
+      })]]>
+      </field>
 
       <field name="_eventNode">this</field>
 
@@ -177,8 +177,8 @@
         <setter>
           <![CDATA[
             if (val != this._eventNode) {
-              val.addEventListener("keypress", this, false);
-              this._eventNode.removeEventListener("keypress", this, false);
+              val.addEventListener("keypress", this._keyEventHandler, false);
+              this._eventNode.removeEventListener("keypress", this._keyEventHandler, false);
               this._eventNode = val;
             }
             return val;
@@ -192,11 +192,11 @@
           case "window": this._eventNode = window; break;
           case "document": this._eventNode = document; break;
         }
-        this._eventNode.addEventListener("keypress", this, false);
+        this._eventNode.addEventListener("keypress", this._keyEventHandler, false);
       </constructor>
 
       <destructor>
-        this._eventNode.removeEventListener("keypress", this, false);
+        this._eventNode.removeEventListener("keypress", this._keyEventHandler, false);
       </destructor>
     </implementation>
   </binding>
@@ -225,10 +225,11 @@
       ]]>
       </constructor>
       
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULTabs;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULTabsAccessible(this);
           ]]>
         </getter>
       </property>
@@ -353,13 +354,13 @@
         <body>
         <![CDATA[
           var startTab = this.selectedItem;
-          var next = aDir < 0 ? startTab.previousSibling : startTab.nextSibling;
+          var next = startTab[aDir == -1 ? "previousSibling" : "nextSibling"];
 
           while (next != startTab && (!next || next.getAttribute("hidden"))) {
             if (next && next.getAttribute("hidden"))
-              next = aDir < 0 ? next.previousSibling : next.nextSibling;
+              next = next[aDir == -1 ? "previousSibling" : "nextSibling"];
             if (!next)
-              next = aDir < 0 ? this.lastChild : this.firstChild;
+              next = aDir == 1 ? this.childNodes[0] : this.childNodes[this.childNodes.length - 1];
           }
 
           if (next && next != startTab) {
@@ -416,14 +417,6 @@
         </body>
       </method>
     </implementation>
-
-    <handlers>
-      <handler event="DOMMouseScroll" phase="capturing">
-      <![CDATA[
-        this.advanceSelectedTab(event.detail);
-      ]]>
-      </handler>
-    </handlers>
   </binding>
   
   <binding id="tabs-closebutton" 
@@ -449,10 +442,11 @@
   <binding id="tabpanels"
            extends="chrome://global/content/bindings/tabbox.xml#tab-base">
     <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULTabPanels;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULTabPanelsAccessible(this);
           ]]>
         </getter>
       </property>
@@ -507,16 +501,17 @@
            extends="chrome://global/content/bindings/tabbox.xml#tab-base">
     <content>
       <xul:hbox class="tab-middle box-inherit" xbl:inherits="align,dir,pack,orient,selected" flex="1">
-        <xul:image class="tab-icon" xbl:inherits="validate,src=image" anonid="tab-icon"/>
+        <xul:image class="tab-icon" xbl:inherits="validate,src=image"/>
         <xul:label class="tab-text" xbl:inherits="value=label,accesskey,crop,disabled" flex="1"/>
       </xul:hbox>
     </content>
     
     <implementation implements="nsIDOMXULSelectControlItemElement, nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULTab;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULTabAccessible(this);
           ]]>
         </getter>
       </property>

@@ -384,8 +384,6 @@ nsresult nsMsgQuickSearchDBView::GetFirstMessageHdrToDisplayInThread(nsIMsgThrea
               break;
             level++;
           }
-          else // if we can't find the parent, don't loop forever.
-            break;
         }
         if (level < minLevel)
         {
@@ -401,7 +399,6 @@ nsresult nsMsgQuickSearchDBView::GetFirstMessageHdrToDisplayInThread(nsIMsgThrea
 
 nsresult nsMsgQuickSearchDBView::SortThreads(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder)
 {
-  // we don't handle grouping in quick search views yet.
   if (m_viewFlags & nsMsgViewFlagsType::kGroupBySort)
     return NS_OK;
 

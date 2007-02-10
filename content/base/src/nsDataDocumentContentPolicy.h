@@ -34,13 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * Content policy implementation that prevents all loads of images,
- * subframes, etc from documents loaded as data (eg documents loaded
- * via XMLHttpRequest).
- */
-
 #ifndef nsDataDocumentContentPolicy_h__
 #define nsDataDocumentContentPolicy_h__
 

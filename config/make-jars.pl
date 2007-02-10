@@ -203,25 +203,6 @@ sub foreignPlatformFile
    return 0;
 }
 
-sub foreignPlatformPath
-{
-   my ($jarpath) = @_;
-   
-   if (!$win32 && index($jarpath, "-platform/win") != -1) {
-     return 1;
-   }
-   
-   if (!$unix && index($jarpath, "-platform/unix") != -1) {
-     return 1; 
-   }
-
-   if (!$macos && index($jarpath, "-platform/mac") != -1) {
-     return 1;
-   }
-
-   return 0;
-}
-
 sub zipErrorCheck($$)
 {
     my ($err,$lockfile) = @_;
@@ -444,7 +425,7 @@ sub EnsureFileInDir
         #print "copying $destPath, from $srcPath\n";
         my $dir = "";
         my $file;
-        if ($destPath =~ /(.+)[\\\/]([\w\d.\-\_]+)/) {
+        if ($destPath =~ /([\w\d.\-\_\\\/\+]+)[\\\/]([\w\d.\-\_]+)/) {
             $dir = $1;
             $file = $2;
         }
@@ -470,7 +451,7 @@ sub EnsureFileInDir
         unlink $destPath;       # in case we had a symlink on unix
         if ($preproc) {
             my $preproc_flags = '';
-            if ($srcPath =~ /\.css$/o) {
+            if ($srcFile =~ /\.css$/o) {
                 $preproc_flags = '--marker=%';
             }
 
@@ -534,7 +515,7 @@ start:
                 my $srcPath = defined($2) ? substr($2, 1, -1) : $2;
                 EnsureFileInDir("$chromeDir/$jarfile", $baseFilesDir, $dest, $srcPath, 0, 0);
                 $args = "$args$dest ";
-                if (!foreignPlatformFile($jarfile) && !foreignPlatformPath($dest) && $autoreg &&
+                if (!foreignPlatformFile($jarfile)  && $autoreg &&
                     $dest =~ /([\w\d.\-\_\+]+)\/([\w\d.\-\_\\\/]+)contents.rdf/)
                 {
                     my $chrome_type = $1;
@@ -546,8 +527,7 @@ start:
                 my $srcPath = defined($2) ? substr($2, 1, -1) : $2;
                 EnsureFileInDir("$chromeDir/$jarfile", $baseFilesDir, $dest, $srcPath, 1, 0);
                 $overrides = "$overrides$dest ";
-                if (!foreignPlatformFile($jarfile) && !foreignPlatformPath($dest) && $autoreg &&
-                    $dest =~ /([\w\d.\-\_\+]+)\/([\w\d.\-\_\\\/]+)contents.rdf/)
+                if (!foreignPlatformFile($jarfile)  && $autoreg && $dest =~ /([\w\d.\-\_\+]+)\/([\w\d.\-\_\\\/]+)contents.rdf/)
                 {
                     my $chrome_type = $1;
                     my $pkg_name = $2;
@@ -559,8 +539,7 @@ start:
                 my $srcPath = defined($2) ? substr($2, 1, -1) : $2;
                 EnsureFileInDir("$chromeDir/$jarfile", $baseFilesDir, $dest, $srcPath, 1, 1);
                 $overrides = "$overrides$dest ";
-                if (!foreignPlatformFile($jarfile) && !foreignPlatformPath($dest) && $autoreg &&
-                    $dest =~ /([\w\d.\-\_\+]+)\/([\w\d.\-\_\\\/]+)contents.rdf/)
+                if (!foreignPlatformFile($jarfile)  && $autoreg && $dest =~ /([\w\d.\-\_\+]+)\/([\w\d.\-\_\\\/]+)contents.rdf/)
                 {
                     my $chrome_type = $1;
                     my $pkg_name = $2;

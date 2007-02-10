@@ -48,8 +48,6 @@
  * 04/20/2000       IBM Corp.      OS/2 VisualAge build.
  */
 
-/* part of nsFrameManager, to work around header inclusionordering */
-
 #ifndef _nsFrameManagerBase_h_
 #define _nsFrameManagerBase_h_
 

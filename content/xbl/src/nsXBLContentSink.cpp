@@ -41,14 +41,17 @@
 #include "nsIBindingManager.h"
 #include "nsIDOMNode.h"
 #include "nsIParser.h"
-#include "nsGkAtoms.h"
+#include "nsXBLAtoms.h"
 #include "nsINameSpaceManager.h"
+#include "nsHTMLAtoms.h"
+#include "nsLayoutAtoms.h"
 #include "nsHTMLTokens.h"
 #include "nsIURI.h"
 #include "nsTextFragment.h"
 #ifdef MOZ_XUL
 #include "nsXULElement.h"
 #endif
+#include "nsXULAtoms.h"
 #include "nsXBLProtoImplProperty.h"
 #include "nsXBLProtoImplMethod.h"
 #include "nsXBLProtoImplField.h"
@@ -107,12 +110,6 @@ nsXBLContentSink::Init(nsIDocument* aDoc,
   nsresult rv;
   rv = nsXMLContentSink::Init(aDoc, aURI, aContainer, nsnull);
   return rv;
-}
-
-void
-nsXBLContentSink::MaybeStartLayout()
-{
-  return;
 }
 
 nsresult
@@ -174,11 +171,10 @@ nsXBLContentSink::FlushText(PRBool aCreateTextNode,
   }
 
   nsIContent* content = GetCurrentContent();
-  if (content &&
-      (content->NodeInfo()->NamespaceEquals(kNameSpaceID_XBL) ||
-       (content->NodeInfo()->NamespaceEquals(kNameSpaceID_XUL) &&
-        content->Tag() != nsGkAtoms::label &&
-        content->Tag() != nsGkAtoms::description))) {
+  if (content && (content->GetNodeInfo()->NamespaceEquals(kNameSpaceID_XBL) || (
+      content->GetNodeInfo()->NamespaceEquals(kNameSpaceID_XUL) &&
+      content->Tag() != nsXULAtoms::label &&
+      content->Tag() != nsXULAtoms::description))) {
 
     PRBool isWS = PR_TRUE;
     if (mTextLength > 0) {
@@ -206,34 +202,36 @@ nsXBLContentSink::FlushText(PRBool aCreateTextNode,
 
 NS_IMETHODIMP
 nsXBLContentSink::ReportError(const PRUnichar* aErrorText, 
-                              const PRUnichar* aSourceText,
-                              nsIScriptError *aError,
-                              PRBool *_retval)
+                              const PRUnichar* aSourceText)
 {
-  NS_PRECONDITION(aError && aSourceText && aErrorText, "Check arguments!!!");
-
-  // XXX FIXME This function overrides and calls on
-  // nsXMLContentSink::ReportError, and probably should die.  See bug 347826.
-
   // XXX We should make sure the binding has no effect, but that it also
   // gets destroyed properly without leaking.  Perhaps we should even
   // ensure that the content that was bound is displayed with no
   // binding.
 
+  // Report the error to the error console.
+  nsCOMPtr<nsIConsoleService> consoleService =
+    do_GetService(NS_CONSOLESERVICE_CONTRACTID);
+  if (consoleService) {
+    // XXX It would be nice if the parser didn't pre-format it for us,
+    // because then we could create a instance of nsIScriptError and the
+    // error console would format this much more nicely for us.
+    // However, that would require duplicating even more code between
+    // the XML content sink and the XUL content sink.
+
+    consoleService->LogStringMessage(aErrorText);
+  }
+
 #ifdef DEBUG
   // Report the error to stderr.
   fprintf(stderr,
           "\n%s\n%s\n\n",
-          NS_LossyConvertUTF16toASCII(aErrorText).get(),
-          NS_LossyConvertUTF16toASCII(aSourceText).get());
+          NS_LossyConvertUCS2toASCII(aErrorText).get(),
+          NS_LossyConvertUCS2toASCII(aSourceText).get());
 #endif
 
   // Most of what this does won't be too useful, but whatever...
-  // nsXMLContentSink::ReportError will handle the console logging.
-  return nsXMLContentSink::ReportError(aErrorText, 
-                                       aSourceText, 
-                                       aError,
-                                       _retval);
+  return nsXMLContentSink::ReportError(aErrorText, aSourceText);
 }
 
 nsresult
@@ -309,55 +307,55 @@ nsXBLContentSink::HandleEndElement(const PRUnichar *aName)
       if (mState == eXBL_Error) {
         // Check whether we've opened this tag before; we may not have if
         // it was a real XBL tag before the error occured.
-        if (!GetCurrentContent()->NodeInfo()->Equals(localName,
-                                                     nameSpaceID)) {
+        if (!GetCurrentContent()->GetNodeInfo()->Equals(localName,
+                                                        nameSpaceID)) {
           // OK, this tag was never opened as far as the XML sink is
           // concerned.  Just drop the HandleEndElement
           return NS_OK;
         }
       }
       else if (mState == eXBL_InHandlers) {
-        if (localName == nsGkAtoms::handlers) {
+        if (localName == nsXBLAtoms::handlers) {
           mState = eXBL_InBinding;
           mHandler = nsnull;
         }
-        else if (localName == nsGkAtoms::handler)
+        else if (localName == nsXBLAtoms::handler)
           mSecondaryState = eXBL_None;
         return NS_OK;
       }
       else if (mState == eXBL_InResources) {
-        if (localName == nsGkAtoms::resources)
+        if (localName == nsXBLAtoms::resources)
           mState = eXBL_InBinding;
         return NS_OK;
       }
       else if (mState == eXBL_InImplementation) {
-        if (localName == nsGkAtoms::implementation)
+        if (localName == nsXBLAtoms::implementation)
           mState = eXBL_InBinding;
-        else if (localName == nsGkAtoms::property) {
+        else if (localName == nsXBLAtoms::property) {
           mSecondaryState = eXBL_None;
           mProperty = nsnull;
         }
-        else if (localName == nsGkAtoms::method) {
+        else if (localName == nsXBLAtoms::method) {
           mSecondaryState = eXBL_None;
           mMethod = nsnull;
         }
-        else if (localName == nsGkAtoms::field) {
+        else if (localName == nsXBLAtoms::field) {
           mSecondaryState = eXBL_None;
           mField = nsnull;
         }
-        else if (localName == nsGkAtoms::constructor ||
-                 localName == nsGkAtoms::destructor)
+        else if (localName == nsXBLAtoms::constructor ||
+                 localName == nsXBLAtoms::destructor)
           mSecondaryState = eXBL_None;
-        else if (localName == nsGkAtoms::getter ||
-                 localName == nsGkAtoms::setter)
+        else if (localName == nsXBLAtoms::getter ||
+                 localName == nsXBLAtoms::setter)
           mSecondaryState = eXBL_InProperty;
-        else if (localName == nsGkAtoms::parameter ||
-                 localName == nsGkAtoms::body)
+        else if (localName == nsXBLAtoms::parameter ||
+                 localName == nsXBLAtoms::body)
           mSecondaryState = eXBL_InMethod;
         return NS_OK;
       }
       else if (mState == eXBL_InBindings &&
-               localName == nsGkAtoms::bindings) {
+               localName == nsXBLAtoms::bindings) {
         mState = eXBL_InDocument;
       }
       
@@ -365,7 +363,7 @@ nsXBLContentSink::HandleEndElement(const PRUnichar *aName)
       if (NS_FAILED(rv))
         return rv;
 
-      if (mState == eXBL_InBinding && localName == nsGkAtoms::binding) {
+      if (mState == eXBL_InBinding && localName == nsXBLAtoms::binding) {
         mState = eXBL_InBindings;
         if (mBinding) {  // See comment in HandleStartElement()
           mBinding->Initialize();
@@ -411,7 +409,7 @@ nsXBLContentSink::OnOpenContainer(const PRUnichar **aAtts,
   }
 
   PRBool ret = PR_TRUE;
-  if (aTagName == nsGkAtoms::bindings) {
+  if (aTagName == nsXBLAtoms::bindings) {
     ENSURE_XBL_STATE(mState == eXBL_InDocument);
       
     NS_NewXBLDocumentInfo(mDocument, &mDocInfo);
@@ -435,40 +433,40 @@ nsXBLContentSink::OnOpenContainer(const PRUnichar **aAtts,
     NS_RELEASE(info); // We keep a weak ref. We've created a cycle between doc/binding manager/doc info.
     mState = eXBL_InBindings;
   }
-  else if (aTagName == nsGkAtoms::binding) {
+  else if (aTagName == nsXBLAtoms::binding) {
     ENSURE_XBL_STATE(mState == eXBL_InBindings);
     mState = eXBL_InBinding;
   }
-  else if (aTagName == nsGkAtoms::handlers) {
+  else if (aTagName == nsXBLAtoms::handlers) {
     ENSURE_XBL_STATE(mState == eXBL_InBinding && mBinding);
     mState = eXBL_InHandlers;
     ret = PR_FALSE;
   }
-  else if (aTagName == nsGkAtoms::handler) {
+  else if (aTagName == nsXBLAtoms::handler) {
     ENSURE_XBL_STATE(mState == eXBL_InHandlers);
     mSecondaryState = eXBL_InHandler;
     ConstructHandler(aAtts, aLineNumber);
     ret = PR_FALSE;
   }
-  else if (aTagName == nsGkAtoms::resources) {
+  else if (aTagName == nsXBLAtoms::resources) {
     ENSURE_XBL_STATE(mState == eXBL_InBinding && mBinding);
     mState = eXBL_InResources;
     // Note that this mState will cause us to return false, so no need
     // to set ret to false.
   }
-  else if (aTagName == nsGkAtoms::stylesheet || aTagName == nsGkAtoms::image) {
+  else if (aTagName == nsXBLAtoms::stylesheet || aTagName == nsXBLAtoms::image) {
     ENSURE_XBL_STATE(mState == eXBL_InResources);
     NS_ASSERTION(mBinding, "Must have binding here");
     ConstructResource(aAtts, aTagName);
   }
-  else if (aTagName == nsGkAtoms::implementation) {
+  else if (aTagName == nsXBLAtoms::implementation) {
     ENSURE_XBL_STATE(mState == eXBL_InBinding && mBinding);
     mState = eXBL_InImplementation;
     ConstructImplementation(aAtts);
     // Note that this mState will cause us to return false, so no need
     // to set ret to false.
   }
-  else if (aTagName == nsGkAtoms::constructor) {
+  else if (aTagName == nsXBLAtoms::constructor) {
     ENSURE_XBL_STATE(mState == eXBL_InImplementation &&
                      mSecondaryState == eXBL_None);
     NS_ASSERTION(mBinding, "Must have binding here");
@@ -482,7 +480,7 @@ nsXBLContentSink::OnOpenContainer(const PRUnichar **aAtts,
       AddMember(newMethod);
     }
   }
-  else if (aTagName == nsGkAtoms::destructor) {
+  else if (aTagName == nsXBLAtoms::destructor) {
     ENSURE_XBL_STATE(mState == eXBL_InImplementation &&
                      mSecondaryState == eXBL_None);
     NS_ASSERTION(mBinding, "Must have binding here");
@@ -495,45 +493,45 @@ nsXBLContentSink::OnOpenContainer(const PRUnichar **aAtts,
       AddMember(newMethod);
     }
   }
-  else if (aTagName == nsGkAtoms::field) {
+  else if (aTagName == nsXBLAtoms::field) {
     ENSURE_XBL_STATE(mState == eXBL_InImplementation &&
                      mSecondaryState == eXBL_None);
     NS_ASSERTION(mBinding, "Must have binding here");
     mSecondaryState = eXBL_InField;
     ConstructField(aAtts, aLineNumber);
   }
-  else if (aTagName == nsGkAtoms::property) {
+  else if (aTagName == nsXBLAtoms::property) {
     ENSURE_XBL_STATE(mState == eXBL_InImplementation &&
                      mSecondaryState == eXBL_None);
     NS_ASSERTION(mBinding, "Must have binding here");
     mSecondaryState = eXBL_InProperty;
     ConstructProperty(aAtts);
   }
-  else if (aTagName == nsGkAtoms::getter) {
+  else if (aTagName == nsXBLAtoms::getter) {
     ENSURE_XBL_STATE(mSecondaryState == eXBL_InProperty && mProperty);
     NS_ASSERTION(mState == eXBL_InImplementation, "Unexpected state");
     mProperty->SetGetterLineNumber(aLineNumber);
     mSecondaryState = eXBL_InGetter;
   }
-  else if (aTagName == nsGkAtoms::setter) {
+  else if (aTagName == nsXBLAtoms::setter) {
     ENSURE_XBL_STATE(mSecondaryState == eXBL_InProperty && mProperty);
     NS_ASSERTION(mState == eXBL_InImplementation, "Unexpected state");
     mProperty->SetSetterLineNumber(aLineNumber);
     mSecondaryState = eXBL_InSetter;
   }
-  else if (aTagName == nsGkAtoms::method) {
+  else if (aTagName == nsXBLAtoms::method) {
     ENSURE_XBL_STATE(mState == eXBL_InImplementation &&
                      mSecondaryState == eXBL_None);
     NS_ASSERTION(mBinding, "Must have binding here");
     mSecondaryState = eXBL_InMethod;
     ConstructMethod(aAtts);
   }
-  else if (aTagName == nsGkAtoms::parameter) {
+  else if (aTagName == nsXBLAtoms::parameter) {
     ENSURE_XBL_STATE(mSecondaryState == eXBL_InMethod && mMethod);
     NS_ASSERTION(mState == eXBL_InImplementation, "Unexpected state");
     ConstructParameter(aAtts);
   }
-  else if (aTagName == nsGkAtoms::body) {
+  else if (aTagName == nsXBLAtoms::body) {
     ENSURE_XBL_STATE(mSecondaryState == eXBL_InMethod && mMethod);
     NS_ASSERTION(mState == eXBL_InImplementation, "Unexpected state");
     // stash away the line number
@@ -551,7 +549,7 @@ nsXBLContentSink::ConstructBinding()
 {
   nsCOMPtr<nsIContent> binding = GetCurrentContent();
   nsAutoString id;
-  binding->GetAttr(kNameSpaceID_None, nsGkAtoms::id, id);
+  binding->GetAttr(kNameSpaceID_None, nsHTMLAtoms::id, id);
   NS_ConvertUTF16toUTF8 cid(id);
 
   nsresult rv = NS_OK;
@@ -564,7 +562,7 @@ nsXBLContentSink::ConstructBinding()
     rv = mBinding->Init(cid, mDocInfo, binding);
     if (NS_SUCCEEDED(rv)) {
       mDocInfo->SetPrototypeBinding(cid, mBinding);
-      binding->UnsetAttr(kNameSpaceID_None, nsGkAtoms::id, PR_FALSE);
+      binding->UnsetAttr(kNameSpaceID_None, nsHTMLAtoms::id, PR_FALSE);
     } else {
       delete mBinding;
       mBinding = nsnull;
@@ -621,45 +619,36 @@ nsXBLContentSink::ConstructHandler(const PRUnichar **aAtts, PRUint32 aLineNumber
     }
 
     // Is this attribute one of the ones we care about?
-    if (localName == nsGkAtoms::event)
+    if (localName == nsXBLAtoms::event)
       event = aAtts[1];
-    else if (localName == nsGkAtoms::modifiers)
+    else if (localName == nsXBLAtoms::modifiers)
       modifiers = aAtts[1];
-    else if (localName == nsGkAtoms::button)
+    else if (localName == nsXBLAtoms::button)
       button = aAtts[1];
-    else if (localName == nsGkAtoms::clickcount)
+    else if (localName == nsXBLAtoms::clickcount)
       clickcount = aAtts[1];
-    else if (localName == nsGkAtoms::keycode)
+    else if (localName == nsXBLAtoms::keycode)
       keycode = aAtts[1];
-    else if (localName == nsGkAtoms::key || localName == nsGkAtoms::charcode)
+    else if (localName == nsXBLAtoms::key || localName == nsXBLAtoms::charcode)
       charcode = aAtts[1];
-    else if (localName == nsGkAtoms::phase)
+    else if (localName == nsXBLAtoms::phase)
       phase = aAtts[1];
-    else if (localName == nsGkAtoms::command)
+    else if (localName == nsXBLAtoms::command)
       command = aAtts[1];
-    else if (localName == nsGkAtoms::action)
+    else if (localName == nsXBLAtoms::action)
       action = aAtts[1];
-    else if (localName == nsGkAtoms::group)
+    else if (localName == nsXBLAtoms::group)
       group = aAtts[1];
-    else if (localName == nsGkAtoms::preventdefault)
+    else if (localName == nsXBLAtoms::preventdefault)
       preventdefault = aAtts[1];
-    else if (localName == nsGkAtoms::allowuntrusted)
+    else if (localName == nsXBLAtoms::allowuntrusted)
       allowuntrusted = aAtts[1];
   }
 
-  if (command && !mIsChromeOrResource) {
+  if (command && !mIsChromeOrResource)
     // Make sure the XBL doc is chrome or resource if we have a command
     // shorthand syntax.
-    mState = eXBL_Error;
-    nsContentUtils::ReportToConsole(nsContentUtils::eXBL_PROPERTIES,
-                                    "CommandNotInChrome", nsnull, 0,
-                                    mDocumentURI,
-                                    EmptyString() /* source line */,
-                                    aLineNumber, 0 /* column number */,
-                                    nsIScriptError::errorFlag,
-                                    "XBL Content Sink");
     return; // Don't even make this handler.
-  }
 
   // All of our pointers are now filled in. Construct our handler with all of
   // these parameters.
@@ -684,8 +673,6 @@ nsXBLContentSink::ConstructHandler(const PRUnichar **aAtts, PRUint32 aLineNumber
     // Adjust our mHandler pointer to point to the new last handler in the
     // chain.
     mHandler = newHandler;
-  } else {
-    mState = eXBL_Error;
   }
 }
 
@@ -697,7 +684,7 @@ nsXBLContentSink::ConstructResource(const PRUnichar **aAtts,
     return;
 
   const PRUnichar* src = nsnull;
-  if (FindValue(aAtts, nsGkAtoms::src, &src)) {
+  if (FindValue(aAtts, nsHTMLAtoms::src, &src)) {
     mBinding->AddResource(aResourceType, nsDependentString(src));
   }
 }
@@ -724,25 +711,28 @@ nsXBLContentSink::ConstructImplementation(const PRUnichar **aAtts)
     }
 
     // Is this attribute one of the ones we care about?
-    if (localName == nsGkAtoms::name) {
+    if (localName == nsXBLAtoms::name) {
       name = aAtts[1];
     }
-    else if (localName == nsGkAtoms::implements) {
+    else if (localName == nsXBLAtoms::implements) {
       // Only allow implementation of interfaces via XBL if the principal of
       // our XBL document has UniversalXPConnect privileges.  No principal
       // means no privs!
       
-      // XXX this api is so badly tied to JS it's not even funny.  We don't
-      // have a concept of enabling capabilities on a per-principal basis,
-      // but only on a per-principal-and-JS-stackframe basis!  So for now
-      // this is basically equivalent to testing that we have the system
-      // principal, since there is no JS stackframe in sight here...
-      PRBool hasUniversalXPConnect;
-      nsresult rv = mDocument->NodePrincipal()->
-        IsCapabilityEnabled("UniversalXPConnect", nsnull,
-                            &hasUniversalXPConnect);
-      if (NS_SUCCEEDED(rv) && hasUniversalXPConnect) {
-        mBinding->ConstructInterfaceTable(nsDependentString(aAtts[1]));
+      nsIPrincipal* principal = mDocument->GetPrincipal();
+      if (principal) {
+        // XXX this api is so badly tied to JS it's not even funny.  We don't
+        // have a concept of enabling capabilities on a per-principal basis,
+        // but only on a per-principal-and-JS-stackframe basis!  So for now
+        // this is basically equivalent to testing that we have the system
+        // principal, since there is no JS stackframe in sight here...
+        PRBool hasUniversalXPConnect;
+        nsresult rv = principal->IsCapabilityEnabled("UniversalXPConnect",
+                                                     nsnull,
+                                                     &hasUniversalXPConnect);
+        if (NS_SUCCEEDED(rv) && hasUniversalXPConnect) {
+          mBinding->ConstructInterfaceTable(nsDependentString(aAtts[1]));
+        }
       }
     }
   }
@@ -767,22 +757,20 @@ nsXBLContentSink::ConstructField(const PRUnichar **aAtts, PRUint32 aLineNumber)
     }
 
     // Is this attribute one of the ones we care about?
-    if (localName == nsGkAtoms::name) {
+    if (localName == nsXBLAtoms::name) {
       name = aAtts[1];
     }
-    else if (localName == nsGkAtoms::readonly) {
+    else if (localName == nsXBLAtoms::readonly) {
       readonly = aAtts[1];
     }
   }
 
-  if (name) {
-    // All of our pointers are now filled in. Construct our field with all of
-    // these parameters.
-    mField = new nsXBLProtoImplField(name, readonly);
-    if (mField) {
-      mField->SetLineNumber(aLineNumber);
-      AddMember(mField);
-    }
+  // All of our pointers are now filled in. Construct our field with all of
+  // these parameters.
+  mField = new nsXBLProtoImplField(name, readonly);
+  if (mField) {
+    mField->SetLineNumber(aLineNumber);
+    AddMember(mField);
   }
 }
 
@@ -805,16 +793,16 @@ nsXBLContentSink::ConstructProperty(const PRUnichar **aAtts)
     }
 
     // Is this attribute one of the ones we care about?
-    if (localName == nsGkAtoms::name) {
+    if (localName == nsXBLAtoms::name) {
       name = aAtts[1];
     }
-    else if (localName == nsGkAtoms::readonly) {
+    else if (localName == nsXBLAtoms::readonly) {
       readonly = aAtts[1];
     }
-    else if (localName == nsGkAtoms::onget) {
+    else if (localName == nsXBLAtoms::onget) {
       onget = aAtts[1];
     }
-    else if (localName == nsGkAtoms::onset) {
+    else if (localName == nsXBLAtoms::onset) {
       onset = aAtts[1];
     }
   }
@@ -835,7 +823,7 @@ nsXBLContentSink::ConstructMethod(const PRUnichar **aAtts)
   mMethod = nsnull;
 
   const PRUnichar* name = nsnull;
-  if (FindValue(aAtts, nsGkAtoms::name, &name)) {
+  if (FindValue(aAtts, nsXBLAtoms::name, &name)) {
     mMethod = new nsXBLProtoImplMethod(name);
   }
 
@@ -851,7 +839,7 @@ nsXBLContentSink::ConstructParameter(const PRUnichar **aAtts)
     return;
 
   const PRUnichar* name = nsnull;
-  if (FindValue(aAtts, nsGkAtoms::name, &name)) {
+  if (FindValue(aAtts, nsXBLAtoms::name, &name)) {
     mMethod->AddParameter(nsDependentString(name));
   }
 }
@@ -876,9 +864,6 @@ nsXBLContentSink::CreateElement(const PRUnichar** aAtts, PRUint32 aAttsCount,
     return NS_ERROR_OUT_OF_MEMORY;
 
   prototype->mNodeInfo = aNodeInfo;
-  // XXX - we need to do exactly what the XUL content-sink does (eg,
-  // look for 'type', 'version' etc attributes)
-  prototype->mScriptTypeID = nsIProgrammingLanguage::JAVASCRIPT;
 
   AddAttributesToXULPrototype(aAtts, aAttsCount, prototype);
 
@@ -898,7 +883,7 @@ nsresult
 nsXBLContentSink::AddAttributes(const PRUnichar** aAtts,
                                 nsIContent* aContent)
 {
-  if (aContent->IsNodeOfType(nsINode::eXUL))
+  if (aContent->IsContentOfType(nsIContent::eXUL))
     return NS_OK; // Nothing to do, since the proto already has the attrs.
 
   return nsXMLContentSink::AddAttributes(aAtts, aContent);

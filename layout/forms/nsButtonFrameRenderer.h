@@ -57,22 +57,23 @@ class nsStyleChangeList;
 class nsButtonFrameRenderer {
 public:
 
-         nsButtonFrameRenderer();
-   virtual ~nsButtonFrameRenderer();
-
-   /**
-    * Create display list items for the button
-    */
-   nsresult DisplayButton(nsDisplayListBuilder* aBuilder,
-                          nsDisplayList* aBackground, nsDisplayList* aForeground);
+	  nsButtonFrameRenderer();
+      virtual ~nsButtonFrameRenderer();
 
 
-        void PaintOutlineAndFocusBorders(nsPresContext* aPresContext,
+   // These three functions all assume a "background" layer within the
+   // button, which is itself in the foreground layer.
+	 virtual void PaintButton(nsPresContext* aPresContext,
+							  nsIRenderingContext& aRenderingContext,
+							  const nsRect& aDirtyRect,
+							  const nsRect& aRect);
+
+	 virtual void PaintOutlineAndFocusBorders(nsPresContext* aPresContext,
 						  nsIRenderingContext& aRenderingContext,
 						  const nsRect& aDirtyRect,
 						  const nsRect& aRect);
 
-        void PaintBorderAndBackground(nsPresContext* aPresContext,
+	 virtual void PaintBorderAndBackground(nsPresContext* aPresContext,
 						  nsIRenderingContext& aRenderingContext,
 						  const nsRect& aDirtyRect,
 						  const nsRect& aRect);
@@ -113,6 +114,8 @@ private:
   nsRefPtr<nsStyleContext> mOuterFocusStyle;
 
 	nsFrame* mFrame;
+
+  nsRect mOutlineRect;
 };
 
 

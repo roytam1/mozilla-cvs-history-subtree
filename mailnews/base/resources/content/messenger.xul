@@ -44,6 +44,7 @@
 <?xul-overlay href="chrome://messenger/content/mailWindowOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/mailOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
+<?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 
 <!DOCTYPE window [
 <!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd" >
@@ -84,6 +85,7 @@
 <script type="application/x-javascript" src="chrome://messenger/content/mail-offline.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/phishingDetector.js"/>
 <script type="application/x-javascript" src="chrome://communicator/content/contentAreaClick.js"/>
+<script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
 <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/searchBar.js"/>
 
@@ -136,7 +138,7 @@
 <popup id="messagePaneContext"/>
 
   <toolbox id="mailToolbarToolbox" class="toolbox-top">
-    <menubar id="mail-menubar"/>
+    <menubar id="mailMenubar"/>
     <toolbar id="msgToolbar"/>
     <toolbar id="msgLocationToolbar"/>
   </toolbox>

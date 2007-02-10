@@ -41,10 +41,11 @@ problems and installation issues with Firefox.
 
 ================================================================================
 
-- This release requires the C runtime DLLs (libc-0.6.1) from
-  ftp://ftp.netlabs.org/pub/gcc/libc-0.6.1-csd1.zip
-  in order to run.  You can unpack them in the same directory as the
-  Firefox executable or somewhere else in your LIBPATH.
+- This release requires updated C runtime DLLs (libc-0.5.1) from
+     http://www.innotek.de/products/gccos2/download/gccos2download_e.html
+  in order to run. By default the installation routine places them in \OS2\DLL 
+  on your bootdrive, but you can put them in the same directory as Firefox's
+  executable, or somewhere else in your LIBPATH.
 
 - Minimum hardware requirements
   + Pentium class processor
@@ -99,15 +100,14 @@ OS/2 Installation Instructions
 
      1. Click the "Zip" link on the site you're downloading Firefox from
      to download the ZIP package to your machine. This file is typically called 
-     firefox-x.x.x.en-US.os2.zip where the "x.x.x" is replaced by the Firefox
-     version.
+     firefox-os2-*.zip where the "*" is replaced by the Firefox version.
 
      2. Navigate to where you downloaded the file and unpack it using your
      favorite unzip tool.
 
      3. Keep in mind that the unzip process creates a directory "firefox"
-     below the location you point it to, e.g.
-        unzip firefox-1.0.1.en-US.os2.zip -d c:\firefox-1.0.1
+     below the location you point it to, i.e. 
+        unzip firefox-os2-1.0.1.zip -d c:\firefox-1.0.1
      will unpack Firefox into c:\firefox-1.0.1\firefox.
 
      4. Make sure that you are _not_ unpacking over an old installation. This is

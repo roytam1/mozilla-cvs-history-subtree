@@ -38,6 +38,8 @@
 #include "msgCore.h"
 #include "nsUint8Array.h"
 
+MOZ_DECL_CTOR_COUNTER(nsUint8Array)
+
 nsUint8Array::nsUint8Array()
 {
 	m_pData = nsnull;

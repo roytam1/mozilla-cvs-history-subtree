@@ -24,16 +24,14 @@ my $module="SeaMonkeyAll";
 my $maxdirs=5;
 my $rootdir = "";
 my $hours = 0;
-my @dirs = ();
-my $dirlocal = 0;
+my $dir = '';
 
-&GetOptions('d=s@' => \@dirs, 'h=s' => \$hours, 'm=s' => \$module, 'r=s' => \$branch, 'l' => \$dirlocal);
+&GetOptions('d=s' => \$dir, 'h=s' => \$hours, 'm=s' => \$module, 'r=s' => \$branch);
 
-#print "dirs = (@dirs), hours = ($hours), module = ($module), branch = ($branch), dirlocal = ($dirlocal)\n";
-if (scalar(@dirs) > 0) {
-  # put .fast-update in the first directory listed
-  $filename = "$dirs[0]/$filename";
-  $filename =~ s#mozilla/*##;
+#print "dir = ($dir), hours = ($hours), module = ($module), branch = ($branch)\n";
+if ($dir) {
+  chdir '..';
+  chdir $dir;
 }
 
 if (!$hours) {
@@ -99,21 +97,15 @@ if ($branch) {
 
 my $url = "http://bonsai.mozilla.org/cvsquery.cgi?module=${module}&branch=${branch}&branchtype=match&sortby=File&date=hours&hours=${hours}&cvsroot=%2Fcvsroot";
 
-my $dir_string = "";
-if (scalar(@dirs) > 0) {
-  $dir_string = join(' ', @dirs);
-  my $esc_dir = escape($dir_string);
+my $esc_dir = escape($dir);
+if ($dir) {
   $url .= "&dir=$esc_dir";
-}
-if ($dirlocal) {
-  $url .= "&dirtype=local";
 }
 
 print "Contacting bonsai for updates to ${module} ";
 print "on the ${branch} branch " if ($branch);
 print "in the last ${hours} hours ";
 print "within the $rootdir directory..\n" if ($rootdir);
-print "\n" unless ($rootdir);
 #print "url = $url\n";
 
 # first try wget, then try lynx, then try curl
@@ -150,7 +142,6 @@ while (<CHECKINS>) {
   if (/js_file_menu\((.*),\s*\'(.*)\'\s*,\s*(.*),\s*(.*),\s*(.*),\s*(.*)\)/) {
     my ($repos, $dir, $file, $rev, $branch, $event) =
       ($1, $2, $3, $4, $5, $6);
-    $dir =~ s/\/Attic$//;
     push @dirlist, $dir;
   }
 }
@@ -192,7 +183,7 @@ foreach $dir (sort @dirlist) {
 
 my $status = 0;
 if (scalar(@uniquedirs)) {
-  print "Updating tree... (" . scalar(@uniquedirs) . " directories)\n";
+  print "Updating tree..($#uniquedirs directories)\n";
   my $i=0;
   my $dirlist = "";
   foreach $dir (sort @uniquedirs) {
@@ -218,18 +209,11 @@ else {
 close CHECKINS;
 if ($status == 0) {
   set_last_update_time($filename, $start_time);
-  print "successfully updated ";
+  print "successfully updated $module/$dir\n";
 }
 else {
-  print "error while updating ";
+  print "error while updating $module/$dir\n";
 }
-if ($module ne "all") {
-  print "$module/";
-}
-if (scalar(@dirs) > 0) {
-  print $dir_string;
-}
-print "\n";
 
 exit $status;
 

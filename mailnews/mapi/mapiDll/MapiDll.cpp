@@ -42,6 +42,7 @@
 #include <mapidefs.h>
 #include <mapi.h>
 #include "msgMapi.h"
+#include "msgMapiMain.h"
 
 #define MAX_RECIPS  100
 #define MAX_FILES   100
@@ -119,7 +120,7 @@ BOOL InitMozillaReference(nsIMapi **aRetValue)
     if ((*aRetValue) && (*aRetValue)->IsValid() == S_OK)
          return TRUE;
 
-    HRESULT hRes = ::CoInitialize(NULL) ;
+    HRESULT hRes = ::CoInitialize(nsnull) ;
 
     hRes = ::CoCreateInstance(CLSID_CMapiImp, NULL, CLSCTX_LOCAL_SERVER,
                                          IID_nsIMapi, (LPVOID *)aRetValue);

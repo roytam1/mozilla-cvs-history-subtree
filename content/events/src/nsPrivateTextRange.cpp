@@ -87,26 +87,50 @@ NS_METHOD nsPrivateTextRange::SetRangeType(PRUint16 aRangeType)
 	return NS_OK;
 }
 
-NS_IMPL_ISUPPORTS1(nsPrivateTextRangeList, nsIPrivateTextRangeList)
 
-void nsPrivateTextRangeList::AppendTextRange(nsRefPtr<nsPrivateTextRange>& aRange)
+nsPrivateTextRangeList::nsPrivateTextRangeList(PRUint16 aLength,
+                                               nsIPrivateTextRange** aList)
+:	mLength(aLength), mList(aList)
 {
-	mList.AppendElement(aRange);
+        if(! aList) {
+           NS_WARN_IF_FALSE(!aLength, "Geez, this deosn't make sense");
+           mLength = 0;
+        }
+
 }
+
+nsPrivateTextRangeList::~nsPrivateTextRangeList(void)
+{
+	int	i;
+        if(mList) {
+		for(i=0;i<mLength;i++)
+			mList[i]->Release();
+		delete [] mList;
+	}
+
+}
+
+NS_IMPL_ISUPPORTS1(nsPrivateTextRangeList, nsIPrivateTextRangeList)
 
 NS_METHOD nsPrivateTextRangeList::GetLength(PRUint16* aLength)
 {
-	*aLength = NS_STATIC_CAST(PRUint16, mList.Length());
+	*aLength = mLength;
 	return NS_OK;
 }
 
 NS_METHOD nsPrivateTextRangeList::Item(PRUint16 aIndex, nsIPrivateTextRange** aReturn)
 {
-	*aReturn = mList.ElementAt(aIndex);
-	if (*aReturn) {
-		NS_ADDREF(*aReturn);
-		return NS_OK;
+	if (aIndex>=mLength) {
+		*aReturn = nsnull;
+		return NS_ERROR_FAILURE;
 	}
-	return NS_ERROR_FAILURE;
+
+	mList[aIndex]->AddRef();
+	*aReturn = mList[aIndex];
+
+	return NS_OK;
 }
+
+
+
 

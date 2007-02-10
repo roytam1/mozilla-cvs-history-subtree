@@ -52,6 +52,7 @@ var messenger;
 var pref;
 var prefServices;
 var statusFeedback;
+var messagePaneController;
 var msgWindow;
 
 var msgComposeService;
@@ -121,6 +122,8 @@ function OnMailWindowUnload()
 
   msgDS = accountManagerDataSource.QueryInterface(Components.interfaces.nsIMsgRDFDataSource);
   msgDS.window = null;
+
+
   msgWindow.closeWindow();
 }
 
@@ -151,7 +154,6 @@ function CreateMailWindowGlobals()
 
   statusFeedback = Components.classes[statusFeedbackContractID].createInstance();
   statusFeedback = statusFeedback.QueryInterface(Components.interfaces.nsIMsgStatusFeedback);
-  statusFeedback.setWrappedStatusFeedback(window.MsgStatusFeedback);
 
   /*
     not in use unless we want the lock button back
@@ -205,17 +207,15 @@ function CreateMailWindowGlobals()
 
 function InitMsgWindow()
 {
-  msgWindow.windowCommands = new nsMsgWindowCommands();
-  // set the domWindow before setting the status feedback and header sink objects
-  msgWindow.domWindow = window;  
+  msgWindow.messagePaneController = new nsMessagePaneController();
   msgWindow.statusFeedback = statusFeedback;
   msgWindow.msgHeaderSink = messageHeaderSink;
+  msgWindow.SetDOMWindow(window);
   mailSession.AddMsgWindow(msgWindow);
 
   var messagepane = document.getElementById("messagepane");
   messagepane.docShell.allowAuth = false;
-  msgWindow.rootDocShell.allowAuth = true;
-  msgWindow.rootDocShell.appType = Components.interfaces.nsIDocShell.APP_TYPE_MAIL;
+  msgWindow.rootDocShell.allowAuth = true; 
 }
 
 function messagePaneOnClick(event)
@@ -266,7 +266,7 @@ function messagePaneOnClick(event)
   if (isPhishingURL(ceParams.linkNode, false, href))
     return false;
 
-  openAsExternal(href);
+  openTopBrowserWith(href);
   return true;
 }
 
@@ -353,7 +353,7 @@ nsMsgStatusFeedback.prototype =
         this.statusTextFld.label = status;
       }
     },
-  setOverLink : function(link, context)
+  setOverLink : function(link)
     {
       this.ensureStatusFields();
       this.statusTextFld.label = link;
@@ -362,7 +362,6 @@ nsMsgStatusFeedback.prototype =
     {
       if (iid.equals(Components.interfaces.nsIMsgStatusFeedback) ||
           iid.equals(Components.interfaces.nsIXULBrowserWindow) ||
-          iid.equals(Components.interfaces.nsISupportsWeakReference) ||
           iid.equals(Components.interfaces.nsISupports))
         return this;
       throw Components.results.NS_NOINTERFACE;
@@ -469,7 +468,10 @@ nsMsgStatusFeedback.prototype =
         this.statusBar.value = percentage;
         this.statusBar.label = Math.round(percentage) + "%";
       }
-    }
+    },
+  closeWindow : function(percent)
+    {
+  }
 }
 
 
@@ -486,17 +488,29 @@ nsMsgWindowCommands.prototype =
       return this;
     throw Components.results.NS_NOINTERFACE;
   },
-  
-  selectFolder: function(folderUri)
+  SelectFolder: function(folderUri)
   {
     SelectFolder(folderUri);
   },
-  
-  selectMessage: function(messageUri)
+  SelectMessage: function(messageUri)
   {
     SelectMessage(messageUri);
+  }
+}
+
+function nsMessagePaneController()
+{
+}
+
+nsMessagePaneController.prototype =
+{
+  QueryInterface : function(iid)
+  {
+    if (iid.equals(Components.interfaces.nsIMsgMessagePaneController) ||
+        iid.equals(Components.interfaces.nsISupports))
+      return this;
+    throw Components.results.NS_NOINTERFACE;
   },
-  
   clearMsgPane: function()
   {
     if (gDBView)
@@ -504,7 +518,7 @@ nsMsgWindowCommands.prototype =
     else
       setTitleFromFolder(null,null);
     ClearMessagePane();
-  }  
+  }
 }
 
 function StopUrls()
@@ -585,12 +599,7 @@ function ShowingThreadPane()
     var threadPaneSplitter = document.getElementById("threadpane-splitter");
     threadPaneSplitter.collapsed = false;
     if (!threadPaneSplitter.hidden && threadPaneSplitter.getAttribute("state") != "collapsed")
-    {
         GetMessagePane().collapsed = false;
-        // XXX We need to force the tree to refresh its new height
-        // so that it will correctly scroll to the newest message
-        GetThreadTree().boxObject.height;
-    }
     document.getElementById("key_toggleMessagePane").removeAttribute("disabled");
 }
 

@@ -46,8 +46,7 @@
 #include "nsReadableUtils.h"
 #include "nsISupportsUtils.h"
 #include "nsLDAPBERValue.h"
-#include "nsILDAPErrors.h"
-#include "nsIClassInfoImpl.h"
+
 
 NS_IMPL_THREADSAFE_ADDREF(nsLDAPMessage)
 NS_IMPL_THREADSAFE_RELEASE(nsLDAPMessage)
@@ -681,3 +680,4 @@ nsLDAPMessage::GetMatchedDn(nsACString & aMatchedDn)
     aMatchedDn.Assign(mMatchedDn);
     return NS_OK;
 }
+

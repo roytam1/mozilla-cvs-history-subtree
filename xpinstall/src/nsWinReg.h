@@ -46,6 +46,8 @@
 
 #include "jsapi.h"
 
+#include "plevent.h"
+
 #include "nsString.h"
 #include "nsHashtable.h"
 

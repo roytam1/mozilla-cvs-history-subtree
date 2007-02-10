@@ -40,13 +40,12 @@
 #include "nsCOMPtr.h"
 #include "nsIPipe.h"
 #include "nsIEventTarget.h"
-#include "nsIRunnable.h"
 #include "nsAutoLock.h"
 #include "nsString.h"
 
 //-----------------------------------------------------------------------------
 
-class nsInputStreamReadyEvent : public nsIRunnable
+class nsInputStreamReadyEvent : public PLEvent
                               , public nsIInputStreamCallback
 {
 public:
@@ -62,28 +61,28 @@ public:
 private:
     ~nsInputStreamReadyEvent()
     {
-        if (!mCallback)
-            return;
-        //
-        // whoa!!  looks like we never posted this event.  take care to
-        // release mCallback on the correct thread.  if mTarget lives on the
-        // calling thread, then we are ok.  otherwise, we have to try to 
-        // proxy the Release over the right thread.  if that thread is dead,
-        // then there's nothing we can do... better to leak than crash.
-        //
-        PRBool val;
-        nsresult rv = mTarget->IsOnCurrentThread(&val);
-        if (NS_FAILED(rv) || !val) {
-            nsCOMPtr<nsIInputStreamCallback> event;
-            NS_NewInputStreamReadyEvent(getter_AddRefs(event), mCallback,
-                                        mTarget);
-            mCallback = 0;
-            if (event) {
-                rv = event->OnInputStreamReady(nsnull);
-                if (NS_FAILED(rv)) {
-                    NS_NOTREACHED("leaking stream event");
-                    nsISupports *sup = event;
-                    NS_ADDREF(sup);
+        if (mCallback) {
+            nsresult rv;
+            //
+            // whoa!!  looks like we never posted this event.  take care to
+            // release mCallback on the correct thread.  if mTarget lives on the
+            // calling thread, then we are ok.  otherwise, we have to try to 
+            // proxy the Release over the right thread.  if that thread is dead,
+            // then there's nothing we can do... better to leak than crash.
+            //
+            PRBool val;
+            rv = mTarget->IsOnCurrentThread(&val);
+            if (NS_FAILED(rv) || !val) {
+                nsCOMPtr<nsIInputStreamCallback> event;
+                NS_NewInputStreamReadyEvent(getter_AddRefs(event), mCallback, mTarget);
+                mCallback = 0;
+                if (event) {
+                    rv = event->OnInputStreamReady(nsnull);
+                    if (NS_FAILED(rv)) {
+                        NS_NOTREACHED("leaking stream event");
+                        nsISupports *sup = event;
+                        NS_ADDREF(sup);
+                    }
                 }
             }
         }
@@ -94,23 +93,17 @@ public:
     {
         mStream = stream;
 
-        nsresult rv =
-            mTarget->Dispatch(this, NS_DISPATCH_NORMAL);
-        if (NS_FAILED(rv)) {
-            NS_WARNING("Dispatch failed");
+        // will be released when event is handled
+        NS_ADDREF_THIS();
+
+        PL_InitEvent(this, nsnull, EventHandler, EventCleanup);
+
+        if (NS_FAILED(mTarget->PostEvent(this))) {
+            NS_WARNING("PostEvent failed");
+            NS_RELEASE_THIS();
             return NS_ERROR_FAILURE;
         }
 
-        return NS_OK;
-    }
-
-    NS_IMETHOD Run()
-    {
-        if (mCallback) {
-            if (mStream)
-                mCallback->OnInputStreamReady(mStream);
-            mCallback = nsnull;
-        }
         return NS_OK;
     }
 
@@ -118,14 +111,30 @@ private:
     nsCOMPtr<nsIAsyncInputStream>    mStream;
     nsCOMPtr<nsIInputStreamCallback> mCallback;
     nsCOMPtr<nsIEventTarget>         mTarget;
+
+    PR_STATIC_CALLBACK(void *) EventHandler(PLEvent *plevent)
+    {
+        nsInputStreamReadyEvent *ev = (nsInputStreamReadyEvent *) plevent;
+        // bypass event delivery if this is a cleanup event...
+        if (ev->mCallback)
+            ev->mCallback->OnInputStreamReady(ev->mStream);
+        ev->mCallback = 0;
+        return NULL;
+    }
+
+    PR_STATIC_CALLBACK(void) EventCleanup(PLEvent *plevent)
+    {
+        nsInputStreamReadyEvent *ev = (nsInputStreamReadyEvent *) plevent;
+        NS_RELEASE(ev);
+    }
 };
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsInputStreamReadyEvent, nsIRunnable,
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsInputStreamReadyEvent,
                               nsIInputStreamCallback)
 
 //-----------------------------------------------------------------------------
 
-class nsOutputStreamReadyEvent : public nsIRunnable
+class nsOutputStreamReadyEvent : public PLEvent
                                , public nsIOutputStreamCallback
 {
 public:
@@ -141,55 +150,57 @@ public:
 private:
     ~nsOutputStreamReadyEvent()
     {
-        if (!mCallback)
-            return;
-        //
-        // whoa!!  looks like we never posted this event.  take care to
-        // release mCallback on the correct thread.  if mTarget lives on the
-        // calling thread, then we are ok.  otherwise, we have to try to 
-        // proxy the Release over the right thread.  if that thread is dead,
-        // then there's nothing we can do... better to leak than crash.
-        //
-        PRBool val;
-        nsresult rv = mTarget->IsOnCurrentThread(&val);
-        if (NS_FAILED(rv) || !val) {
-            nsCOMPtr<nsIOutputStreamCallback> event;
-            NS_NewOutputStreamReadyEvent(getter_AddRefs(event), mCallback,
-                                         mTarget);
-            mCallback = 0;
-            if (event) {
-                rv = event->OnOutputStreamReady(nsnull);
-                if (NS_FAILED(rv)) {
-                    NS_NOTREACHED("leaking stream event");
-                    nsISupports *sup = event;
-                    NS_ADDREF(sup);
+        if (mCallback) {
+            nsresult rv;
+            //
+            // whoa!!  looks like we never posted this event.  take care to
+            // release mCallback on the correct thread.  if mTarget lives on the
+            // calling thread, then we are ok.  otherwise, we have to try to 
+            // proxy the Release over the right thread.  if that thread is dead,
+            // then there's nothing we can do... better to leak than crash.
+            //
+            PRBool val;
+            rv = mTarget->IsOnCurrentThread(&val);
+            if (NS_FAILED(rv) || !val) {
+                nsCOMPtr<nsIOutputStreamCallback> event;
+                NS_NewOutputStreamReadyEvent(getter_AddRefs(event), mCallback, mTarget);
+                mCallback = 0;
+                if (event) {
+                    rv = event->OnOutputStreamReady(nsnull);
+                    if (NS_FAILED(rv)) {
+                        NS_NOTREACHED("leaking stream event");
+                        nsISupports *sup = event;
+                        NS_ADDREF(sup);
+                    }
                 }
             }
         }
     }
 
 public:
+    void Init(nsIOutputStreamCallback *callback, nsIEventTarget *target)
+    {
+        mCallback = callback;
+        mTarget = target;
+
+        PL_InitEvent(this, nsnull, EventHandler, EventCleanup);
+    }
+
     NS_IMETHOD OnOutputStreamReady(nsIAsyncOutputStream *stream)
     {
         mStream = stream;
 
-        nsresult rv =
-            mTarget->Dispatch(this, NS_DISPATCH_NORMAL);
-        if (NS_FAILED(rv)) {
+        // this will be released when the event is handled
+        NS_ADDREF_THIS();
+
+        PL_InitEvent(this, nsnull, EventHandler, EventCleanup);
+
+        if (NS_FAILED(mTarget->PostEvent(this))) {
             NS_WARNING("PostEvent failed");
+            NS_RELEASE_THIS();
             return NS_ERROR_FAILURE;
         }
 
-        return NS_OK;
-    }
-
-    NS_IMETHOD Run()
-    {
-        if (mCallback) {
-            if (mStream)
-                mCallback->OnOutputStreamReady(mStream);
-            mCallback = nsnull;
-        }
         return NS_OK;
     }
 
@@ -197,9 +208,24 @@ private:
     nsCOMPtr<nsIAsyncOutputStream>    mStream;
     nsCOMPtr<nsIOutputStreamCallback> mCallback;
     nsCOMPtr<nsIEventTarget>          mTarget;
+
+    PR_STATIC_CALLBACK(void *) EventHandler(PLEvent *plevent)
+    {
+        nsOutputStreamReadyEvent *ev = (nsOutputStreamReadyEvent *) plevent;
+        if (ev->mCallback)
+            ev->mCallback->OnOutputStreamReady(ev->mStream);
+        ev->mCallback = 0;
+        return NULL;
+    }
+
+    PR_STATIC_CALLBACK(void) EventCleanup(PLEvent *ev)
+    {
+        nsOutputStreamReadyEvent *event = (nsOutputStreamReadyEvent *) ev;
+        NS_RELEASE(event);
+    }
 };
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsOutputStreamReadyEvent, nsIRunnable,
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsOutputStreamReadyEvent,
                               nsIOutputStreamCallback)
 
 //-----------------------------------------------------------------------------
@@ -209,8 +235,6 @@ NS_NewInputStreamReadyEvent(nsIInputStreamCallback **event,
                             nsIInputStreamCallback *callback,
                             nsIEventTarget *target)
 {
-    NS_ASSERTION(callback, "null callback");
-    NS_ASSERTION(target, "null target");
     nsInputStreamReadyEvent *ev = new nsInputStreamReadyEvent(callback, target);
     if (!ev)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -223,8 +247,6 @@ NS_NewOutputStreamReadyEvent(nsIOutputStreamCallback **event,
                              nsIOutputStreamCallback *callback,
                              nsIEventTarget *target)
 {
-    NS_ASSERTION(callback, "null callback");
-    NS_ASSERTION(target, "null target");
     nsOutputStreamReadyEvent *ev = new nsOutputStreamReadyEvent(callback, target);
     if (!ev)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -238,7 +260,6 @@ NS_NewOutputStreamReadyEvent(nsIOutputStreamCallback **event,
 // abstract stream copier...
 class nsAStreamCopier : public nsIInputStreamCallback
                       , public nsIOutputStreamCallback
-                      , public nsIRunnable
 {
 public:
     NS_DECL_ISUPPORTS
@@ -365,20 +386,26 @@ public:
         return NS_OK;
     }
 
-    // continuation event handler
-    NS_IMETHOD Run()
+    PR_STATIC_CALLBACK(void*) HandleContinuationEvent(PLEvent *event)
     {
-        Process();
+        nsAStreamCopier *self = (nsAStreamCopier *) event->owner;
+        self->Process();
 
         // clear "in process" flag and post any pending continuation event
-        nsAutoLock lock(mLock);
-        mEventInProcess = PR_FALSE;
-        if (mEventIsPending) {
-            mEventIsPending = PR_FALSE;
-            PostContinuationEvent_Locked();
+        nsAutoLock lock(self->mLock);
+        self->mEventInProcess = PR_FALSE;
+        if (self->mEventIsPending) {
+            self->mEventIsPending = PR_FALSE;
+            self->PostContinuationEvent_Locked();
         }
+        return nsnull;
+    }
 
-        return NS_OK;
+    PR_STATIC_CALLBACK(void) DestroyContinuationEvent(PLEvent *event)
+    {
+        nsAStreamCopier *self = (nsAStreamCopier *) event->owner;
+        NS_RELEASE(self);
+        delete event;
     }
 
     nsresult PostContinuationEvent()
@@ -400,11 +427,23 @@ public:
         if (mEventInProcess)
             mEventIsPending = PR_TRUE;
         else {
-            rv = mTarget->Dispatch(this, NS_DISPATCH_NORMAL);
-            if (NS_SUCCEEDED(rv))
-                mEventInProcess = PR_TRUE;
-            else
-                NS_WARNING("unable to post continuation event");
+            PLEvent *event = new PLEvent;
+            if (!event)
+                rv = NS_ERROR_OUT_OF_MEMORY;
+            else {
+                NS_ADDREF_THIS();
+                PL_InitEvent(event, this,
+                             HandleContinuationEvent,
+                             DestroyContinuationEvent);
+
+                rv = mTarget->PostEvent(event);
+                if (NS_SUCCEEDED(rv))
+                    mEventInProcess = PR_TRUE;
+                else {
+                    NS_ERROR("unable to post continuation event");
+                    PL_DestroyEvent(event);
+                }
+            }
         }
         return rv;
     }
@@ -423,10 +462,9 @@ protected:
     PRPackedBool                   mEventIsPending;
 };
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsAStreamCopier,
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsAStreamCopier,
                               nsIInputStreamCallback,
-                              nsIOutputStreamCallback,
-                              nsIRunnable)
+                              nsIOutputStreamCallback)
 
 class nsStreamCopierIB : public nsAStreamCopier
 {

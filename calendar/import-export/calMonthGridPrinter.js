@@ -148,7 +148,7 @@ function monthPrint_format(aStream, aStart, aEnd, aCount, aItems, aTitle) {
 
     while (date.compare(end) <= 0) {
         var monthName = calGetString("dateFormat", "month." + (date.month +1)+ ".name");
-        monthName += " " + date.year;
+        monthName += " " + start.year;
         body.appendChild(
                      <table border='0' width='100%' class='main-table'>
                          <tr> 
@@ -212,14 +212,14 @@ function monthPrint_getHTML(aStart, aItems) {
     var firstDate = aStart.startOfMonth.startOfWeek.clone();
     firstDate.day += weekStart;
     firstDate.normalize();
-    if (aStart.startOfMonth.weekday < weekStart) {
+    if (firstDate.weekday < weekStart) {
         // Go back one week to make sure we display this day
         firstDate.day -= 7;
         firstDate.normalize();
     }
 
     var lastDate = aStart.endOfMonth.endOfWeek.clone();
-    if (aStart.endOfMonth.weekday < weekStart) {
+    if (lastDate.weekday < weekStart) {
         // Go back one week so we don't display any extra days
         lastDate.day -= 7;
         lastDate.normalize();
@@ -259,7 +259,7 @@ function makeHTMLWeek(date, sortedList, targetMonth) {
         var day = <td align='left' valign='top' class={myClass} height='100' width='100'/>
         var innerTable = <table valign='top' style='font-size: 10px;'/>
         var dateLabel = <tr valign='top'>
-                            <td valign='top' align='left'>{date.day}</td>
+                            <td valign='top' align='right'>{date.day}</td>
                         </tr>
         innerTable.appendChild(dateLabel);
         for each (var item in sortedList) {
@@ -310,14 +310,12 @@ function makeHTMLWeek(date, sortedList, targetMonth) {
                 catColor = pb2.getCharPref("calendar.category.color."+item.getProperty("CATEGORIES").toLowerCase());
             } catch(ex) {}
 
-            var style = 'font-size: 11px; text-align: left;';
-            style += ' background-color: ' + calColor + ';';
-            style += ' color: ' + getContrastingTextColor(calColor);
+            var style = 'font-size: 11px; background-color: ' + calColor + ';';
             if (catColor) {
                 style += ' border: solid ' + catColor + ' 2px;';
             }
             var item = <tr>
-                           <td valign='top' style={style}>{time} {item.title}</td>
+                           <td valign='top' align='center' style={style}>{time} {item.title}</td>
                        </tr>;
             innerTable.appendChild(item);
         }

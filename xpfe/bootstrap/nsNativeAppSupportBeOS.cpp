@@ -22,7 +22,6 @@
  * Contributor(s):
  *   Takashi Toyoshima <toyoshim@be-in.org>
  *   Fredrik Holmqvist <thesuckiestemail@yahoo.se>
- *   Sergei Dolgov <sergei_d@fi.tartu.ee>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -41,12 +40,14 @@
 //This define requires DebugConsole (see BeBits.com) to be installed
 //#define DC_PROGRAMNAME "seamonkey-bin"
 
+#include "nsStringSupport.h"
 #include "nsNativeAppSupportBase.h"
 #include "nsIObserver.h"
 
 #include "nsICmdLineService.h"
 #include "nsIBrowserDOMWindow.h"
-#include "nsPIDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsIDOMChromeWindow.h"
 #include "nsIWindowMediator.h"
 #include "nsIURI.h"
@@ -82,7 +83,6 @@
 #define DEBUG_SPLASH 1
 #endif
 
-// Two static helpers 
 static nsresult
 GetMostRecentWindow(const PRUnichar* aType, nsIDOMWindowInternal** aWindow)
 {
@@ -106,8 +106,9 @@ GetMostRecentWindow(const PRUnichar* aType, nsIDOMWindowInternal** aWindow)
 static nsresult
 ActivateWindow(nsIDOMWindowInternal* aWindow)
 {
-	nsCOMPtr<nsPIDOMWindow> window(do_QueryInterface(aWindow));
+	nsCOMPtr<nsIScriptGlobalObject> window(do_QueryInterface(aWindow));
 	NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
+
 	nsCOMPtr<nsIBaseWindow> baseWindow(do_QueryInterface(window->GetDocShell()));
 	NS_ENSURE_TRUE(baseWindow, NS_ERROR_FAILURE);
 	nsCOMPtr<nsIWidget> mainWidget;
@@ -122,6 +123,7 @@ ActivateWindow(nsIDOMWindowInternal* aWindow)
 	return NS_OK;
 }
 // End static helpers
+
 class nsNativeAppSupportBeOS : public nsNativeAppSupportBase,  public nsIObserver
 {
 public:
@@ -130,7 +132,8 @@ public:
 	NS_DECL_ISUPPORTS
 	NS_DECL_NSINATIVEAPPSUPPORT
 	NS_DECL_NSIOBSERVER
-	static void HandleCommandLine( int32 argc, char **argv ); 
+	static void HandleCommandLine( int32 argc, char **argv );
+    
 private:
 	static nsresult OpenBrowserWindow(const char *args);
 	nsresult LoadBitmap();
@@ -247,7 +250,7 @@ public:
 		}
 		return "application/x-vnd.Mozilla-SeaMonkey";
 	}
-    
+
 	char *GetAppFile()
 	{
 		image_info info;
@@ -261,22 +264,23 @@ private:
 	sem_id init;
 	bool appEnabled;
 	nsVoidArray mMessage;
+
 }; //class nsBeOSApp
 
 // Create and return an instance of class nsNativeAppSupportBeOS.
 nsresult
 NS_CreateNativeAppSupport(nsINativeAppSupport **aResult) 
 {
-	if (!aResult) 
-		return NS_ERROR_NULL_POINTER;
+    if(!aResult) 
+        return NS_ERROR_NULL_POINTER;
+    
+    nsNativeAppSupportBeOS *pNative = new nsNativeAppSupportBeOS();
+    if (!pNative)
+        return NS_ERROR_OUT_OF_MEMORY;
 
-	nsNativeAppSupportBeOS *pNative = new nsNativeAppSupportBeOS();
-	if (!pNative)
-		return NS_ERROR_OUT_OF_MEMORY;
-
-	*aResult = pNative;
-	NS_ADDREF(*aResult);
-	return NS_OK;
+    *aResult = pNative;
+    NS_ADDREF(*aResult);
+    return NS_OK;
 }
 
 nsNativeAppSupportBeOS::nsNativeAppSupportBeOS()
@@ -285,7 +289,7 @@ nsNativeAppSupportBeOS::nsNativeAppSupportBeOS()
 
 nsNativeAppSupportBeOS::~nsNativeAppSupportBeOS()
 {
-	if (window != NULL) 
+	if (window != NULL)
 		HideSplashScreen();
 }
 
@@ -308,8 +312,8 @@ void nsNativeAppSupportBeOS::HandleCommandLine(int32 argc, char **argv)
 	nsCOMPtr<nsIAppStartup> appStartup (do_GetService(NS_APPSTARTUP_CONTRACTID, &rv));
 	if (NS_FAILED(rv)) return;
 	nsCOMPtr<nsIAppStartup> appStartupProxy;
-	rv = NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD, NS_GET_IID(nsIAppStartup), 
-								appStartup, NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
+	rv = NS_GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIAppStartup), 
+								appStartup, PROXY_ASYNC | PROXY_ALWAYS,
 								getter_AddRefs(appStartupProxy));
 	nsCOMPtr<nsINativeAppSupport> nativeApp;
 	rv = appStartup->GetNativeAppSupport(getter_AddRefs(nativeApp));
@@ -345,7 +349,6 @@ void nsNativeAppSupportBeOS::HandleCommandLine(int32 argc, char **argv)
 			rv = OpenBrowserWindow(urlToLoad.get());
 	}
 }
-
 
 // Open the argument URL in the most recently used Navigator window.
 nsresult
@@ -411,10 +414,10 @@ nsNativeAppSupportBeOS::OpenBrowserWindow(const char *args)
 #endif
 	nsCOMPtr<nsIBrowserDOMWindow> bwinProxy;
 	rv = NS_GetProxyForObject(
-			NS_PROXY_TO_MAIN_THREAD,
+			NS_UI_THREAD_EVENTQ,
 			NS_GET_IID(nsIBrowserDOMWindow),
 			bwin, 
-			NS_PROXY_ASYNC | NS_PROXY_ALWAYS, 
+			PROXY_ASYNC | PROXY_ALWAYS, 
 			getter_AddRefs(bwinProxy));
 	
 	if (NS_FAILED(rv))
@@ -434,16 +437,15 @@ NS_IMETHODIMP nsNativeAppSupportBeOS::Start(PRBool *aResult)
 {
 	NS_ENSURE_ARG(aResult);
 	NS_ENSURE_TRUE(be_app == NULL, NS_ERROR_NOT_INITIALIZED);
+	
 	sem_id initsem = create_sem(0, "Mozilla BApplication init");
 	if (initsem < B_OK)
 		return NS_ERROR_FAILURE;
-	thread_id tid = spawn_thread(nsBeOSApp::Main, "Mozilla BApplication",
-								B_NORMAL_PRIORITY,
-								(void *)initsem);
+	thread_id tid = spawn_thread(nsBeOSApp::Main, "Mozilla BApplication", B_NORMAL_PRIORITY, (void *)initsem);
 	*aResult = PR_TRUE;
 	if (tid < B_OK || B_OK != resume_thread(tid))
 		*aResult = PR_FALSE;
-	
+
 	if (B_OK != acquire_sem(initsem))
 		*aResult = PR_FALSE;
 
@@ -452,77 +454,66 @@ NS_IMETHODIMP nsNativeAppSupportBeOS::Start(PRBool *aResult)
 	return *aResult == PR_TRUE ? NS_OK : NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::Stop(PRBool *aResult) 
+NS_IMETHODIMP nsNativeAppSupportBeOS::Stop(PRBool *aResult) 
 {
 	NS_ENSURE_ARG(aResult);
 	NS_ENSURE_TRUE(be_app, NS_ERROR_NOT_INITIALIZED);
 	// Do we need it here?
 	//Quit();
 	*aResult = PR_TRUE;
-	 return NS_OK;
+	return NS_OK;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::Quit() 
+NS_IMETHODIMP nsNativeAppSupportBeOS::Quit() 
 {
 	be_app_messenger.SendMessage(B_QUIT_REQUESTED);
 	return NS_OK;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::EnsureProfile(nsICmdLineService* args)
+NS_IMETHODIMP nsNativeAppSupportBeOS::EnsureProfile(nsICmdLineService* args)
 {
 	// TODO: Needs some code for -turbo mode
 	return NS_OK;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::ReOpen()
+NS_IMETHODIMP nsNativeAppSupportBeOS::ReOpen()
 {
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::OnLastWindowClosing()
+NS_IMETHODIMP nsNativeAppSupportBeOS::OnLastWindowClosing()
 {
 	return NS_OK;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::GetIsServerMode(PRBool *aIsServerMode) 
+NS_IMETHODIMP nsNativeAppSupportBeOS::GetIsServerMode(PRBool *aIsServerMode)
 {
 	aIsServerMode = PR_FALSE;
 	return NS_OK;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::SetIsServerMode(PRBool aIsServerMode) 
+NS_IMETHODIMP nsNativeAppSupportBeOS::SetIsServerMode(PRBool aIsServerMode)
 {
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::StartServerMode() 
+NS_IMETHODIMP nsNativeAppSupportBeOS::StartServerMode()
 {
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::SetShouldShowUI(PRBool aShouldShowUI) 
+NS_IMETHODIMP nsNativeAppSupportBeOS::SetShouldShowUI(PRBool aShouldShowUI)
 {
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::GetShouldShowUI(PRBool *aShouldShowUI) 
+NS_IMETHODIMP nsNativeAppSupportBeOS::GetShouldShowUI(PRBool *aShouldShowUI)
 {
 	*aShouldShowUI = PR_TRUE;
 	return NS_OK;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::ShowSplashScreen() 
+NS_IMETHODIMP nsNativeAppSupportBeOS::ShowSplashScreen()
 {
 #ifdef DEBUG_SPLASH
 	puts("nsNativeAppSupportBeOS::ShowSplashScreen()");
@@ -558,8 +549,7 @@ nsNativeAppSupportBeOS::ShowSplashScreen()
 	return NS_OK;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::HideSplashScreen()
+NS_IMETHODIMP nsNativeAppSupportBeOS::HideSplashScreen()
 {
 #ifdef DEBUG_SPLASH
 	puts("nsNativeAppSupportBeOS::HideSplashScreen()");
@@ -581,10 +571,9 @@ nsNativeAppSupportBeOS::HideSplashScreen()
 	return NS_OK;
 }
 
-NS_IMETHODIMP
-nsNativeAppSupportBeOS::Observe(nsISupports *aSubject,
-								const char *aTopic,
-								const PRUnichar *someData)
+NS_IMETHODIMP nsNativeAppSupportBeOS::Observe(nsISupports *aSubject,
+												const char *aTopic,
+												const PRUnichar *someData)
 {
 	if (!bitmap)
 		return NS_OK;
@@ -619,8 +608,7 @@ nsNativeAppSupportBeOS::Observe(nsISupports *aSubject,
 	return NS_OK;
 }
 
-nsresult
-nsNativeAppSupportBeOS::LoadBitmap()
+nsresult nsNativeAppSupportBeOS::LoadBitmap()
 {
 	BResources *rsrc = be_app->AppResources();
 	if (NULL == rsrc)

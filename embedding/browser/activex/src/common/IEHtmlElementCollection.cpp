@@ -43,6 +43,8 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMHtmlElement.h"
 
+#include "nsString.h"
+
 #include "IEHtmlElement.h"
 #include "IEHtmlElementCollection.h"
 

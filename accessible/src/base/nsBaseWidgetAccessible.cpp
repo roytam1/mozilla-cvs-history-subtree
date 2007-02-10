@@ -42,7 +42,6 @@
 #include "nsIAccessibleDocument.h"
 #include "nsAccessibleWrap.h"
 #include "nsGUIEvent.h"
-#include "nsHyperTextAccessible.h"
 #include "nsILink.h"
 #include "nsIFrame.h"
 #include "nsINameSpaceManager.h"
@@ -50,6 +49,77 @@
 #include "nsIPresShell.h"
 #include "nsIServiceManager.h"
 #include "nsIURI.h"
+
+// ------------
+// nsBlockAccessible
+// ------------
+
+nsBlockAccessible::nsBlockAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell):nsAccessibleWrap(aNode, aShell)
+{
+}
+
+NS_IMPL_ISUPPORTS_INHERITED0(nsBlockAccessible, nsAccessible)
+
+/* nsIAccessible accGetAt (in long x, in long y); */
+NS_IMETHODIMP nsBlockAccessible::GetChildAtPoint(PRInt32 tx, PRInt32 ty,
+                                                 nsIAccessible **aChildAtPoint)
+{
+  *aChildAtPoint = nsnull;
+  nsCOMPtr<nsIAccessible> childAtPoint;
+
+  // We're going to find the child that contains coordinates (tx,ty)
+  PRInt32 x,y,w,h;
+  GetBounds(&x,&y,&w,&h);  // Get bounds for this accessible
+  if (tx >= x && tx < x + w && ty >= y && ty < y + h)
+  {
+    // It's within this nsIAccessible, let's drill down
+    nsCOMPtr<nsIAccessible> child;
+    nsCOMPtr<nsIAccessible> next;
+    GetFirstChild(getter_AddRefs(child));
+    PRInt32 cx,cy,cw,ch;  // Child bounds
+
+    while(child) {
+      child->GetBounds(&cx,&cy,&cw,&ch);
+      
+      // if there are multiple accessibles the contain the point 
+      // and they overlap then pick the one with a frame that contans the point
+      
+      // For example, A point that's in block #2 is also in block #1, but we want to return #2:
+      // [[block #1 is long wrapped text that continues to
+      // another line]]  [[here is a shorter block #2]]
+
+      if (tx >= cx && tx < cx + cw && ty >= cy && ty < cy + ch) 
+      {
+        // See whether one of the frames for this accessible
+        // contains this screen point
+        if (!childAtPoint) {
+          // Default in case accessible doesn't have a frame such as
+          // tree items or combo box dropdown markers
+          childAtPoint = child;
+        }
+        nsCOMPtr<nsPIAccessNode> accessNode(do_QueryInterface(child));
+        if (accessNode) {
+          nsIFrame *frame = accessNode->GetFrame();
+          while (frame) {
+            if (frame->GetScreenRectExternal().Contains(tx, ty)) {
+              childAtPoint = child;
+              break; // Definitely in this accessible, since one of its frame matches the point
+            }
+            frame = frame->GetNextInFlow();
+          }
+        }
+      }
+      child->GetNextSibling(getter_AddRefs(next));
+      child = next;
+    }
+
+    *aChildAtPoint = childAtPoint ? childAtPoint : this;
+    NS_ADDREF(*aChildAtPoint);
+  }
+
+  return NS_OK;
+}
+
 
 //-------------
 // nsLeafAccessible
@@ -83,27 +153,21 @@ NS_IMETHODIMP nsLeafAccessible::GetChildCount(PRInt32 *_retval)
   return NS_OK;
 }
 
-/* readonly attribute boolean allowsAnonChildAccessibles; */
-NS_IMETHODIMP
-nsLeafAccessible::GetAllowsAnonChildAccessibles(PRBool *aAllowsAnonChildren)
-{
-  *aAllowsAnonChildren = PR_FALSE;
-  return NS_OK;
-}
 
 //----------------
 // nsLinkableAccessible
 //----------------
 
 nsLinkableAccessible::nsLinkableAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell) :
-  nsHyperTextAccessible(aNode, aShell),
+  nsAccessibleWrap(aNode, aShell),
   mActionContent(nsnull),
   mIsLink(PR_FALSE),
   mIsOnclick(PR_FALSE)
 {
+  CacheActionContent();
 }
 
-NS_IMPL_ISUPPORTS_INHERITED0(nsLinkableAccessible, nsHyperTextAccessible)
+NS_IMPL_ISUPPORTS_INHERITED0(nsLinkableAccessible, nsAccessible)
 
 NS_IMETHODIMP nsLinkableAccessible::TakeFocus()
 { 
@@ -117,7 +181,7 @@ NS_IMETHODIMP nsLinkableAccessible::TakeFocus()
 /* long GetState (); */
 NS_IMETHODIMP nsLinkableAccessible::GetState(PRUint32 *aState)
 {
-  nsHyperTextAccessible::GetState(aState);
+  nsAccessible::GetState(aState);
   if (mIsLink) {
     *aState |= STATE_LINKED;
     nsCOMPtr<nsILink> link = do_QueryInterface(mActionContent);
@@ -132,7 +196,8 @@ NS_IMETHODIMP nsLinkableAccessible::GetState(PRUint32 *aState)
     PRUint32 role;
     GetRole(&role);
     if (role != ROLE_LINK) {
-      nsCOMPtr<nsIAccessible> parentAccessible(GetParent());
+      nsCOMPtr<nsIAccessible> parentAccessible;
+      GetParent(getter_AddRefs(parentAccessible));
       if (parentAccessible) {
         PRUint32 orState = 0;
         parentAccessible->GetFinalState(&orState);
@@ -144,10 +209,7 @@ NS_IMETHODIMP nsLinkableAccessible::GetState(PRUint32 *aState)
     *aState &= ~STATE_FOCUSABLE; // Links must have href or tabindex
   }
 
-  // XXX What if we're in a contenteditable container?
-  //     We may need to go up the parent chain unless a better API is found
-  nsCOMPtr<nsIAccessible> docAccessible = 
-    do_QueryInterface(nsCOMPtr<nsIAccessibleDocument>(GetDocAccessible()));
+  nsCOMPtr<nsIAccessibleDocument> docAccessible(GetDocAccessible());
   if (docAccessible) {
     PRBool isEditable;
     docAccessible->GetIsEditable(&isEditable);
@@ -243,45 +305,20 @@ void nsLinkableAccessible::CacheActionContent()
       if (uri) {
         mActionContent = walkUpContent;
         mIsLink = PR_TRUE;
-        break;
       }
     }
     if (walkUpContent->HasAttr(kNameSpaceID_None,
                             nsAccessibilityAtoms::onclick)) {
       mActionContent = walkUpContent;
       mIsOnclick = PR_TRUE;
-      break;
     }
   }
-}
-
-// nsIAccessibleHyperLink::GetURI()
-NS_IMETHODIMP nsLinkableAccessible::GetURI(PRInt32 aIndex, nsIURI **aURI)
-{
-  // XXX Also implement this for nsHTMLImageAccessible file names
-  *aURI = nsnull;
-  if (aIndex != 0 || !mIsLink || !SameCOMIdentity(mDOMNode, mActionContent)) {
-    return NS_ERROR_FAILURE;
-  }
-
-  nsCOMPtr<nsILink> link(do_QueryInterface(mActionContent));
-  if (link) {
-    return link->GetHrefURI(aURI);
-  }
-
-  return NS_ERROR_FAILURE;
-}
-
-NS_IMETHODIMP nsLinkableAccessible::Init()
-{
-  CacheActionContent();
-  return nsHyperTextAccessible::Init();
 }
 
 NS_IMETHODIMP nsLinkableAccessible::Shutdown()
 {
   mActionContent = nsnull;
-  return nsHyperTextAccessible::Shutdown();
+  return nsAccessibleWrap::Shutdown();
 }
 
 //---------------------

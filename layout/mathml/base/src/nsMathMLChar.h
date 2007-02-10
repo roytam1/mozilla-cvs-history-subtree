@@ -99,15 +99,12 @@ public:
   }
 
   nsresult
-  Display(nsDisplayListBuilder*   aBuilder,
-          nsIFrame*               aForFrame,
-          const nsDisplayListSet& aLists,
-          const nsRect*           aSelectedRect = nsnull);
-          
-  void PaintForeground(nsPresContext* aPresContext,
-                       nsIRenderingContext& aRenderingContext,
-                       nsPoint aPt,
-                       PRBool aIsSelected);
+  Paint(nsPresContext*      aPresContext,
+        nsIRenderingContext& aRenderingContext,
+        const nsRect&        aDirtyRect,
+        nsFramePaintLayer    aWhichLayer,
+        nsIFrame*            aForFrame,
+        const nsRect*        aSelectedRect = nsnull);
 
   // This is the method called to ask the char to stretch itself.
   // @param aContainerSize - IN - suggested size for the stretched char
@@ -181,7 +178,7 @@ public:
   }
 
   // Hooks to access the extra leaf style contexts given to the MathMLChars.
-  // They provide an interface to make them accessible to the Style System via
+  // They provide an interface to make them acessible to the Style System via
   // the Get/Set AdditionalStyleContext() APIs. Owners of MathMLChars
   // should honor these APIs.
   nsStyleContext* GetStyleContext() const;

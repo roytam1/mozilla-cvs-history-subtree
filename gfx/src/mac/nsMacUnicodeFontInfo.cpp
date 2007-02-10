@@ -84,6 +84,8 @@ NS_IMETHODIMP nsFontCleanupObserver::Observe(nsISupports *aSubject, const char *
   return NS_OK;
 }
 
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+
 static nsIPersistentProperties* gFontEncodingProperties = nsnull;
 static nsICharsetConverterManager* gCharsetManager = nsnull;
 static nsObjectHashtable* gFontMaps = nsnull;
@@ -368,7 +370,7 @@ static PRBool FillFontInfoFromCMAP(FMFont aFont, PRUint32 *aFontInfo, FourCharCo
 
   p = buf + offset;
   PRUint16 format = GET_SHORT(p);
-  NS_ASSERTION((kSFNTLookupSegmentArray == format), "hit some unknown format");
+  NS_ASSERTION((kSFNTLookupSegmentArray == format), "hit some unknow format");
   switch(format) {
     case kSFNTLookupSegmentArray: // format 4
     {
@@ -496,7 +498,7 @@ GetEncoding(const nsCString& aFontName, nsACString& aValue)
     // init the property now
     rv = NS_LoadPersistentPropertiesFromURISpec(&gFontEncodingProperties,
          NS_LITERAL_CSTRING("resource://gre/res/fonts/fontEncoding.properties"));
-    if (NS_FAILED(rv))
+    if NS_FAILED(rv)
       return rv;
   }
 
@@ -509,7 +511,7 @@ GetEncoding(const nsCString& aFontName, nsACString& aValue)
   nsAutoString value;
   rv = gFontEncodingProperties->GetStringProperty(name, value);
   if (NS_SUCCEEDED(rv))
-    LossyCopyUTF16toASCII(value, aValue);
+    CopyUCS2toASCII(value, aValue);
   return rv;
 }
 
@@ -527,7 +529,7 @@ GetConverter(const nsCString& aFontName, nsIUnicodeEncoder** aConverter)
   
   if (!gCharsetManager)
   {
-    rv = CallGetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &gCharsetManager);
+    rv = CallGetService(kCharsetConverterManagerCID, &gCharsetManager);
     if(NS_FAILED(rv)) return rv;
   }
   
@@ -563,7 +565,7 @@ nsresult
 nsMacUnicodeFontInfo::GetConverterAndCCMap(const nsString& aFontName, nsIUnicodeEncoder** aConverter,
     PRUint16** aCCMap)
 {
-    if(NS_SUCCEEDED(GetConverter(NS_ConvertUTF16toUTF8(aFontName), aConverter)) && *aConverter)
+    if(NS_SUCCEEDED(GetConverter(NS_ConvertUCS2toUTF8(aFontName), aConverter)) && *aConverter)
     {
         // make sure we have the hashtable
         if(!gFontMaps)

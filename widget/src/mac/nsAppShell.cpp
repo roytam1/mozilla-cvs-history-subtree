@@ -20,8 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Darin Fisher <darin@meer.net>
- *   Mark Mentovai <mark@moxienet.com>
+ *  Mark Mentovai <mark@moxienet.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,169 +37,129 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * Runs the main native Carbon run loop, interrupting it as needed to process
- * Gecko events.
+ * Runs the main native Carbon run loop.
  */
 
 #include "nsAppShell.h"
-#include "nsIToolkit.h"
 #include "nsToolkit.h"
 #include "nsMacMessagePump.h"
 
 #include <Carbon/Carbon.h>
 
-enum {
-  kEventClassMoz = 'MOZZ',
-  kEventMozNull  = 0,
-};
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsAppShell, nsIAppShell)
 
-// nsAppShell implementation
+nsMacMessagePump* nsAppShell::sMacPump;
+nsAppShell* nsAppShell::sMacPumpOwner;
 
 nsAppShell::nsAppShell()
-: mCFRunLoop(NULL)
-, mCFRunLoopSource(NULL)
-, mRunningEventLoop(PR_FALSE)
 {
 }
 
 nsAppShell::~nsAppShell()
 {
-  if (mCFRunLoopSource) {
-    ::CFRunLoopRemoveSource(mCFRunLoop, mCFRunLoopSource,
-                            kCFRunLoopCommonModes);
-    ::CFRelease(mCFRunLoopSource);
+  if (sMacPumpOwner == this) {
+    delete sMacPump;
+    sMacPump = NULL;
   }
-
-  if (mCFRunLoop)
-    ::CFRelease(mCFRunLoop);
 }
 
-// Init
-//
-// Set up the transitional WaitNextEvent handler and the CFRunLoopSource
-// used to interrupt the main Carbon event loop.
-//
-// public
-nsresult
-nsAppShell::Init()
+NS_IMETHODIMP
+nsAppShell::Create(int* argc, char** argv)
 {
-  // The message pump is only used for its EventRecord dispatcher.  It is
-  // used by the transitional WaitNextEvent handler.
-
   nsresult rv = NS_GetCurrentToolkit(getter_AddRefs(mToolkit));
   if (NS_FAILED(rv))
-    return rv;
+   return rv;
 
-  nsIToolkit *toolkit = mToolkit.get();
-  mMacPump = new nsMacMessagePump(NS_STATIC_CAST(nsToolkit*, toolkit));
-  if (!mMacPump.get())
-    return NS_ERROR_OUT_OF_MEMORY;
+  nsIToolkit* toolkit = mToolkit.get();
 
-  // Add a CFRunLoopSource to the main native run loop.  The source is
-  // responsible for interrupting the run loop when Gecko events are ready.
-
-  // Silly Carbon, why do you require a cast here?
-  mCFRunLoop = (CFRunLoopRef)::GetCFRunLoopFromEventLoop(::GetMainEventLoop());
-  NS_ENSURE_STATE(mCFRunLoop);
-  ::CFRetain(mCFRunLoop);
-
-  CFRunLoopSourceContext context;
-  bzero(&context, sizeof(context));
-  // context.version = 0;
-  context.info = this;
-  context.perform = ProcessGeckoEvents;
-  
-  mCFRunLoopSource = ::CFRunLoopSourceCreate(kCFAllocatorDefault, 0, &context);
-  NS_ENSURE_STATE(mCFRunLoopSource);
-
-  ::CFRunLoopAddSource(mCFRunLoop, mCFRunLoopSource, kCFRunLoopCommonModes);
-
-  return nsBaseAppShell::Init();
-}
-
-// ScheduleNativeEventCallback
-//
-// Called (possibly on a non-main thread) when Gecko has an event that
-// needs to be processed.  The Gecko event needs to be processed on the
-// main thread, so the native run loop must be interrupted.
-//
-// protected virtual
-void
-nsAppShell::ScheduleNativeEventCallback()
-{
-  // This will invoke ProcessGeckoEvents on the main thread.
-
-  NS_ADDREF_THIS();
-  ::CFRunLoopSourceSignal(mCFRunLoopSource);
-  ::CFRunLoopWakeUp(mCFRunLoop);
-}
-
-// ProcessNextNativeEvent
-//
-// If aMayWait is false, process a single native event.  If it is true, run
-// the native run loop until stopped by ProcessGeckoEvents.
-//
-// Returns true if more events are waiting in the native event queue.
-//
-// protected virtual
-PRBool
-nsAppShell::ProcessNextNativeEvent(PRBool aMayWait)
-{
-  PRBool eventProcessed = PR_FALSE;
-  PRBool wasRunningEventLoop = mRunningEventLoop;
-
-  mRunningEventLoop = aMayWait;
-  EventTimeout waitUntil = kEventDurationNoWait;
-  if (aMayWait)
-    waitUntil = kEventDurationForever;
-
-  do {
-    EventRef carbonEvent;
-    OSStatus err = ::ReceiveNextEvent(0, nsnull, waitUntil, PR_TRUE,
-                                      &carbonEvent);
-    if (err == noErr) {
-      ::SendEventToEventTarget(carbonEvent, ::GetEventDispatcherTarget());
-      ::ReleaseEvent(carbonEvent);
-      eventProcessed = PR_TRUE;
-    }
-  } while (mRunningEventLoop);
-
-  mRunningEventLoop = wasRunningEventLoop;
-
-  return eventProcessed;
-}
-
-// ProcessGeckoEvents
-//
-// The "perform" target of mCFRunLoop, called when mCFRunLoopSource is
-// signalled from ScheduleNativeEventCallback.
-//
-// Arrange for Gecko events to be processed.  They will either be processed
-// after the main run loop returns (if we own the run loop) or on
-// NativeEventCallback (if an embedder owns the loop).
-//
-// protected static
-void
-nsAppShell::ProcessGeckoEvents(void* aInfo)
-{
-  nsAppShell* self = NS_STATIC_CAST(nsAppShell*, aInfo);
-
-  if (self->mRunningEventLoop) {
-    self->mRunningEventLoop = PR_FALSE;
-
-    // The run loop is sleeping.  ::ReceiveNextEvent() won't return until
-    // it's given a reason to wake up.  Awaken it by posting a bogus event.
-    EventRef bogusEvent;
-    OSStatus err = ::CreateEvent(nsnull, kEventClassMoz, kEventMozNull, 0,
-                                 kEventAttributeNone, &bogusEvent);
-    if (err == noErr) {
-      ::PostEventToQueue(::GetMainEventQueue(), bogusEvent,
-                         kEventPriorityStandard);
-      ::ReleaseEvent(bogusEvent);
-    }
+  if (!sMacPump) {
+    sMacPump = new nsMacMessagePump(NS_STATIC_CAST(nsToolkit*, toolkit));
+    if (sMacPump)
+      sMacPumpOwner = this;
+    else
+      return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  self->NativeEventCallback();
+  return NS_OK;
+}
 
-  NS_RELEASE(self);
+NS_IMETHODIMP
+nsAppShell::Run()
+{
+  if (!sMacPump)
+    return NS_ERROR_NOT_INITIALIZED;
+
+  PRBool wasProcessing = sMacPump->ProcessEvents(PR_TRUE);
+  ::RunApplicationEventLoop();
+  sMacPump->ProcessEvents(wasProcessing);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppShell::Exit()
+{
+  ::QuitApplicationEventLoop();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppShell::Spinup()
+{
+  // Nothing to do
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppShell::Spindown()
+{
+  // Nothing to do
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppShell::ListenToEventQueue(nsIEventQueue* aQueue, PRBool aListen)
+{
+  // Nothing to do
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppShell::GetNativeEvent(PRBool& aRealEvent, void*& aEvent)
+{
+  aRealEvent = PR_FALSE;
+  aEvent = nsnull;
+
+  EventRef carbonEvent;
+  OSStatus err =
+   ::ReceiveNextEvent(0, nsnull, 0.1, PR_TRUE, &carbonEvent);
+  if (err == noErr && carbonEvent) {
+    aRealEvent = PR_TRUE;
+    aEvent = carbonEvent;
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsAppShell::DispatchNativeEvent(PRBool aRealEvent, void* aEvent)
+{
+  if (aRealEvent) {
+    EventRef carbonEvent = NS_STATIC_CAST(EventRef, aEvent);
+
+    if (!sMacPump)
+      return NS_ERROR_NOT_INITIALIZED;
+
+    PRBool wasProcessing = sMacPump->ProcessEvents(PR_TRUE);
+    ::SendEventToEventTarget(carbonEvent, ::GetEventDispatcherTarget());
+    sMacPump->ProcessEvents(wasProcessing);
+
+    // This can be bad, but the only way DispatchNativeEvent is ever
+    // used, it's tightly coupled to GetNativeEvent and is only called
+    // once.  This is really the only good place to release it and
+    // avoid leaking.
+    ::ReleaseEvent(carbonEvent);
+  }
+
+  return NS_OK;
 }

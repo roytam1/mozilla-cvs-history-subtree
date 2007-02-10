@@ -11,10 +11,11 @@
     </resources>
 
     <implementation implements="nsIDOMXULSelectControlElement, nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULRadioGroup;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULRadioGroupAccessible(this);
           ]]>
         </getter>
       </property>
@@ -123,12 +124,9 @@
 
           if (!alreadySelected && focused) {
             // Only report if actual change
-            var myEvent;
-            if (val) {
-              myEvent = document.createEvent("Events");
-              myEvent.initEvent("RadioStateChange", true, true);
-              val.dispatchEvent(myEvent);
-            }
+            var myEvent = document.createEvent("Events");
+            myEvent.initEvent("RadioStateChange", true, true);
+            val.dispatchEvent(myEvent);
 
             if (previousItem) {
               myEvent = document.createEvent("Events");
@@ -291,6 +289,13 @@
     </implementation>
     
     <handlers>
+      <handler event="select">
+        <![CDATA[
+          //XXXblake this should not be necessary
+          //         initEvent was supposed to prevent this from bubbling
+          event.stopPropagation();
+        ]]>
+      </handler>
       <handler event="mousedown">
         if (this.disabled)
           event.preventDefault();
@@ -391,10 +396,11 @@
           }
         ]]>
       </destructor>
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULRadioButton;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULRadioButtonAccessible(this);
           ]]>
         </getter>
       </property>

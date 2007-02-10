@@ -26,7 +26,6 @@
  *   racham@netscape.com
  *   hwaara@chello.se
  *   bienvenu@nventure.com
- *   Matthew Willis <mattwillis@gmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -46,7 +45,7 @@ var gRedirectorType = "";
 var gServer;
 var gObserver;
 
-function onInit(aPageId, aServerId) 
+function onInit() 
 {
     initServerType();
 
@@ -54,7 +53,6 @@ function onInit(aPageId, aServerId)
     setupMailOnServerUI();
     setupFixedUI();
     setupNotifyUI();
-    setupImapDeleteUI(aServerId);
 }
 
 function onPreInit(account, accountValues)
@@ -313,64 +311,4 @@ function BrowseForNewsrc()
 
   if (fp.show() != nsIFilePicker.returnCancel)
     newsrcTextBox.value = fp.file.path;
-}
-
-function setupImapDeleteUI(aServerId)
-{
-  // read delete_model preference
-  var deleteModel = document.getElementById("imap.deleteModel").getAttribute("value");
-  selectImapDeleteModel(deleteModel)
-
-  // read trash_folder_name preference
-  var trashFolderName = getTrashFolderName();
-
-  // set folderPicker menulist
-  document.getElementById("msgTrashFolderPicker").setAttribute("ref", aServerId);
-  var trashFolderUri = aServerId+"/"+trashFolderName;
-  SetFolderPicker(trashFolderUri,"msgTrashFolderPicker");
-}
-
-function selectImapDeleteModel(choice)
-{
-  // set deleteModel to selected mode
-  document.getElementById("imap.deleteModel").setAttribute("value", choice);
-
-  switch (choice)
-  {
-    case "0" : // markDeleted
-      // disable folderPicker
-      document.getElementById("msgTrashFolderPicker").setAttribute("disabled", "true");
-      break;  
-    case "1" : // moveToTrashFolder
-      // enable folderPicker
-      document.getElementById("msgTrashFolderPicker").removeAttribute("disabled");
-      break;
-    case "2" : // deleteImmediately
-      // disable folderPicker
-      document.getElementById("msgTrashFolderPicker").setAttribute("disabled", "true");
-      break;
-    default :
-      dump("Error in enabling/disabling server.TrashFolderPicker\n");
-      break;
-  }
-}
-
-// Capture any menulist changes from folderPicker
-function folderPickerChange(radioItemId)
-{
-  var trashFolderPickerUri = document.getElementById(radioItemId).getAttribute("uri");
-  var trashFolderName = GetMsgFolderFromUri(trashFolderPickerUri, true);
-  document.getElementById("imap.trashFolderName").setAttribute("value",trashFolderName.name);
-}
-
-// Get trash_folder_name from prefs
-function getTrashFolderName()
-{
-  var trashFolderName = document.getElementById("imap.trashFolderName").getAttribute("value");
-  // if the preference hasn't been set, set it to a sane default
-  if (!trashFolderName) {
-    trashFolderName = "Trash";
-    document.getElementById("imap.trashFolderName").setAttribute("value",trashFolderName);
-  }
-  return trashFolderName;
 }

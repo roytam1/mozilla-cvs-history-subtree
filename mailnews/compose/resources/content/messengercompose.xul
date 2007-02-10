@@ -47,6 +47,7 @@
 
 <?xul-overlay href="chrome://global/content/charsetOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
+<?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/contentAreaContextOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/sidebar/sidebarOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/messengercompose/addressingWidgetOverlay.xul"?>
@@ -94,10 +95,12 @@
 <script type="application/x-javascript" src="chrome://messenger/content/widgetglue.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/mail-offline.js"/>
 <script type="application/x-javascript" src="chrome://editor/content/editor.js"/>
+<script type="application/x-javascript" src="chrome://editor/content/editorInlineSpellCheck.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/messengercompose/MsgComposeCommands.js"/>
 
 <!-- drag and drop -->
 <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
+<script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
 
 <commandset id="composeCommands">
   <commandset id="msgComposeCommandUpdate"
@@ -138,7 +141,7 @@
   <command id="cmd_print" oncommand="goDoCommand('cmd_print')"/>
 
   <!-- Edit Menu -->
-  <!--command id="cmd_pasteQuote"/  DO NOT INCLUDE THOSE COMMANDS ELSE THE EDIT MENU WILL BE BROKEN! -->
+  <!--command id="cmd_pasteQuote"/  DO NOT INCLUDE THOSE PBROCASTER ESLE THE EDIT MENU WILL BE BROKEN! -->
   <!--command id="cmd_find"/-->
   <!--command id="cmd_findNext"/-->
   <command id="cmd_rewrap"  oncommand="goDoCommand('cmd_rewrap')"/>
@@ -181,7 +184,6 @@
   <key id="key_copy"/>
   <key id="key_paste"/>
   <key id="key_delete"/>
-  <key id="key_delete2"/>
   <key id="key_selectAll"/>
   <key id="key_find"  key="&findCmd.key;"  command="cmd_find" modifiers="accel"/>
   <key id="key_findNext"  key="&findAgainCmd.key;" command="cmd_findNext" modifiers="accel"/>
@@ -210,13 +212,13 @@
 
 <popup id="sidebarPopup"/>
 
-<popup id="msgComposeContext" onpopupshowing="openEditorContextMenu(this);">
+<popup id="msgComposeContext" onpopupshowing="openEditorContextMenu();">
   <menuitem id="spellCheckNoSuggestions" label="&spellCheckNoSuggestions.label;" disabled="true"/>
   <menuseparator id="spellCheckAddSep"/>
   <menuitem id="spellCheckAddToDictionary" label="&spellCheckAddToDictionary.label;" accesskey="&spellCheckAddToDictionary.accesskey;"
-            oncommand="InlineSpellCheckerUI.addToDictionary();"/>  
+            oncommand="InlineSpellChecker.addToDictionary(null,null);"/>  
   <menuitem id="spellCheckIgnoreWord" label="&spellCheckIgnoreWord.label;" accesskey="&spellCheckIgnoreWord.accesskey;"
-            oncommand="InlineSpellCheckerUI.ignoreWord()"/>  
+            oncommand="InlineSpellChecker.ignoreWord(null, null)"/>  
   <menuseparator id="spellCheckSuggestionsSeparator"/>
 
   <menuitem label="&undo.label;" accesskey="&undo.accesskey;" command="cmd_undo"/>
@@ -341,7 +343,7 @@
           <menuitem label="&checkSpellingCmd.label;" id="menu_checkspelling" accesskey="&checkSpellingCmd.accesskey;" key="key_checkspelling" command="cmd_spelling"/>
           <menuitem label="&enableInlineSpellChecker.label;" id="menu_inlineSpellCheck"
                     accesskey="&enableInlineSpellChecker.accesskey;" type="checkbox"
-                    oncommand="InlineSpellCheckerUI.enabled = !InlineSpellCheckerUI.enabled"/>
+                    oncommand="ToggleInlineSpellChecker(event.target)"/>
           <menuitem label="&quoteCmd.label;" accesskey="&quoteCmd.accesskey;" command="cmd_quoteMessage"/>
           <menuseparator/>
           <menuitem id="returnReceiptMenu" type="checkbox" label="&returnReceiptMenu.label;" accesskey="&returnReceiptMenu.accesskey;" checked="false" oncommand="ToggleReturnReceipt(event.target)"/>
@@ -354,12 +356,12 @@
             </menupopup>
           </menu>
           <menu id="priorityMenu" label="&priorityMenu.label;" accesskey="&priorityMenu.accesskey;" oncommand="PriorityMenuSelect(event.target);">
-            <menupopup onpopupshowing="updatePriorityMenu(this);">
-              <menuitem type="radio" name="priority" label="&highestPriorityCmd.label;" accesskey="&highestPriorityCmd.accesskey;" value="Highest"/>
-              <menuitem type="radio" name="priority" label="&highPriorityCmd.label;" accesskey="&highPriorityCmd.accesskey;" value="High"/>
-              <menuitem type="radio" name="priority" label="&normalPriorityCmd.label;" accesskey="&normalPriorityCmd.accesskey;" value="Normal"/>
-              <menuitem type="radio" name="priority" label="&lowPriorityCmd.label;" accesskey="&lowPriorityCmd.accesskey;" value="Low"/>
-              <menuitem type="radio" name="priority" label="&lowestPriorityCmd.label;" accesskey="&lowestPriorityCmd.accesskey;" value="Lowest"/>
+            <menupopup>
+              <menuitem type="radio" name="priority" label="&lowestPriorityCmd.label;" accesskey="&lowestPriorityCmd.accesskey;" id="priority_lowest"/>
+              <menuitem type="radio" name="priority" label="&lowPriorityCmd.label;" accesskey="&lowPriorityCmd.accesskey;" id="priority_low"/>
+              <menuitem type="radio" name="priority" label="&normalPriorityCmd.label;" accesskey="&normalPriorityCmd.accesskey;" id="priority_normal" checked="true"/>
+              <menuitem type="radio" name="priority" label="&highPriorityCmd.label;" accesskey="&highPriorityCmd.accesskey;" id="priority_high"/>
+              <menuitem type="radio" name="priority" label="&highestPriorityCmd.label;" accesskey="&highestPriorityCmd.accesskey;" id="priotity_highest"/>
             </menupopup>
           </menu>
           <menu id="maileditCharsetMenu" />
@@ -491,7 +493,7 @@
         <vbox flex="1" id="addresses-box">
           <hbox align="center">
             <label value="&fromAddr.label;" accesskey="&fromAddr.accesskey;" control="msgIdentity"/>
-            <menulist id="msgIdentity" type="description" flex="1" oncommand="LoadIdentity(false);">
+            <menulist id="msgIdentity" label="..." flex="1" oncommand="LoadIdentity(false);">
               <menupopup id="msgIdentityPopup"/>
             </menulist>
           </hbox> 

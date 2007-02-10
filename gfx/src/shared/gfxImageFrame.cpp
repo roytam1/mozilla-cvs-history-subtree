@@ -43,7 +43,7 @@
 NS_IMPL_ISUPPORTS2(gfxImageFrame, gfxIImageFrame, nsIInterfaceRequestor)
 
 gfxImageFrame::gfxImageFrame() :
-  mInitialized(PR_FALSE),
+  mInitalized(PR_FALSE),
   mMutable(PR_TRUE),
   mHasBackgroundColor(PR_FALSE),
   mTimeout(100),
@@ -61,7 +61,7 @@ gfxImageFrame::~gfxImageFrame()
 /* void init (in PRInt32 aX, in PRInt32 aY, in PRInt32 aWidth, in PRInt32 aHeight, in gfx_format aFormat); */
 NS_IMETHODIMP gfxImageFrame::Init(PRInt32 aX, PRInt32 aY, PRInt32 aWidth, PRInt32 aHeight, gfx_format aFormat,gfx_depth aDepth)
 {
-  if (mInitialized)
+  if (mInitalized)
     return NS_ERROR_FAILURE;
 
   if (aWidth <= 0 || aHeight <= 0) {
@@ -133,7 +133,7 @@ NS_IMETHODIMP gfxImageFrame::Init(PRInt32 aX, PRInt32 aY, PRInt32 aWidth, PRInt3
 
   default:
 #ifdef DEBUG
-    printf("unsupported gfx_format\n");
+    printf("unsupposed gfx_format\n");
 #endif
     break;
   }
@@ -141,9 +141,7 @@ NS_IMETHODIMP gfxImageFrame::Init(PRInt32 aX, PRInt32 aY, PRInt32 aWidth, PRInt3
   rv = mImage->Init(aWidth, aHeight, depth, maskReq);
   if (NS_FAILED(rv)) return rv;
 
-  mTopToBottom = mImage->GetIsRowOrderTopToBottom();
-
-  mInitialized = PR_TRUE;
+  mInitalized = PR_TRUE;
   return NS_OK;
 }
 
@@ -151,17 +149,17 @@ NS_IMETHODIMP gfxImageFrame::Init(PRInt32 aX, PRInt32 aY, PRInt32 aWidth, PRInt3
 /* attribute boolean mutable */
 NS_IMETHODIMP gfxImageFrame::GetMutable(PRBool *aMutable)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
-  NS_ASSERTION(mInitialized, "gfxImageFrame::GetMutable called on non-inited gfxImageFrame");
+  NS_ASSERTION(mInitalized, "gfxImageFrame::GetMutable called on non-inited gfxImageFrame");
   *aMutable = mMutable;
   return NS_OK;
 }
 
 NS_IMETHODIMP gfxImageFrame::SetMutable(PRBool aMutable)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   mMutable = aMutable;
@@ -175,7 +173,7 @@ NS_IMETHODIMP gfxImageFrame::SetMutable(PRBool aMutable)
 /* readonly attribute PRInt32 x; */
 NS_IMETHODIMP gfxImageFrame::GetX(PRInt32 *aX)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aX = mOffset.x;
@@ -185,7 +183,7 @@ NS_IMETHODIMP gfxImageFrame::GetX(PRInt32 *aX)
 /* readonly attribute PRInt32 y; */
 NS_IMETHODIMP gfxImageFrame::GetY(PRInt32 *aY)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aY = mOffset.y;
@@ -196,7 +194,7 @@ NS_IMETHODIMP gfxImageFrame::GetY(PRInt32 *aY)
 /* readonly attribute PRInt32 width; */
 NS_IMETHODIMP gfxImageFrame::GetWidth(PRInt32 *aWidth)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aWidth = mSize.width;
@@ -206,7 +204,7 @@ NS_IMETHODIMP gfxImageFrame::GetWidth(PRInt32 *aWidth)
 /* readonly attribute PRInt32 height; */
 NS_IMETHODIMP gfxImageFrame::GetHeight(PRInt32 *aHeight)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aHeight = mSize.height;
@@ -216,7 +214,7 @@ NS_IMETHODIMP gfxImageFrame::GetHeight(PRInt32 *aHeight)
 /* void getRect(in nsRectRef rect); */
 NS_IMETHODIMP gfxImageFrame::GetRect(nsIntRect &aRect)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   aRect.SetRect(mOffset.x, mOffset.y, mSize.width, mSize.height);
@@ -227,7 +225,7 @@ NS_IMETHODIMP gfxImageFrame::GetRect(nsIntRect &aRect)
 /* readonly attribute gfx_format format; */
 NS_IMETHODIMP gfxImageFrame::GetFormat(gfx_format *aFormat)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aFormat = mFormat;
@@ -237,7 +235,7 @@ NS_IMETHODIMP gfxImageFrame::GetFormat(gfx_format *aFormat)
 /* readonly attribute boolean needsBackground; */
 NS_IMETHODIMP gfxImageFrame::GetNeedsBackground(PRBool *aNeedsBackground)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aNeedsBackground = (mFormat != gfxIFormats::RGB && 
@@ -250,7 +248,7 @@ NS_IMETHODIMP gfxImageFrame::GetNeedsBackground(PRBool *aNeedsBackground)
 /* readonly attribute unsigned long imageBytesPerRow; */
 NS_IMETHODIMP gfxImageFrame::GetImageBytesPerRow(PRUint32 *aBytesPerRow)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aBytesPerRow = mImage->GetLineStride();
@@ -260,7 +258,7 @@ NS_IMETHODIMP gfxImageFrame::GetImageBytesPerRow(PRUint32 *aBytesPerRow)
 /* readonly attribute unsigned long imageDataLength; */
 NS_IMETHODIMP gfxImageFrame::GetImageDataLength(PRUint32 *aBitsLength)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aBitsLength = mImage->GetLineStride() * mSize.height;
@@ -270,7 +268,7 @@ NS_IMETHODIMP gfxImageFrame::GetImageDataLength(PRUint32 *aBitsLength)
 /* void getImageData([array, size_is(length)] out PRUint8 bits, out unsigned long length); */
 NS_IMETHODIMP gfxImageFrame::GetImageData(PRUint8 **aData, PRUint32 *length)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   NS_ASSERTION(mMutable, "trying to get data on an immutable frame");
@@ -284,99 +282,56 @@ NS_IMETHODIMP gfxImageFrame::GetImageData(PRUint8 **aData, PRUint32 *length)
 /* void setImageData ([array, size_is (length), const] in PRUint8 data, in unsigned long length, in long offset); */
 NS_IMETHODIMP gfxImageFrame::SetImageData(const PRUint8 *aData, PRUint32 aLength, PRInt32 aOffset)
 {
-  return SetData(aData, aLength, aOffset, PR_FALSE);
-}
-
-nsresult gfxImageFrame::SetData(const PRUint8 *aData, PRUint32 aLength, 
-                                PRInt32 aOffset, PRBool aSetAlpha)
-{
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   NS_ASSERTION(mMutable, "trying to set data on an immutable frame");
-  NS_ASSERTION(!(aOffset<0), "can't have a negative offset");
-  if (!mMutable || aOffset < 0)
+  if (!mMutable)
     return NS_ERROR_FAILURE;
-
-  if (aSetAlpha && !mImage->GetHasAlphaMask())
-    return NS_ERROR_NOT_INITIALIZED;
 
   if (aLength == 0)
     return NS_OK;
 
-  mImage->LockImagePixels(aSetAlpha);
-  PRUint8 *imgData = aSetAlpha ? mImage->GetAlphaBits() : mImage->GetBits();
-  const PRUint32 rowStride = aSetAlpha ? mImage->GetAlphaLineStride() : mImage->GetLineStride();
-  const PRUint32 dataLength = rowStride * mSize.height;
-  const PRUint32 numRowsToSet = 1 + ((aLength-1) / rowStride);
-  const PRUint32 firstRowToSet = (aOffset / rowStride);
+  PRInt32 row_stride = mImage->GetLineStride();
 
-  // Independent from which order the rows are sorted in, 
-  // the number of bytes to set + offset should never exceed the image data space
-  if ((((PRUint32)aOffset + aLength) > dataLength) || !imgData) {
-    mImage->UnlockImagePixels(aSetAlpha);
+  mImage->LockImagePixels(PR_FALSE);
+  PRUint8 *imgData = mImage->GetBits();
+  PRInt32 imgLen = row_stride * mSize.height;
+
+  PRInt32 newOffset;
+#ifdef MOZ_PLATFORM_IMAGES_BOTTOM_TO_TOP
+  // Adjust: We need offset to be top-down rows & LTR within each row
+  PRUint32 yOffset = ((PRUint32)(aOffset / row_stride)) * row_stride;
+  newOffset = ((mSize.height - 1) * row_stride) - yOffset + (aOffset % row_stride);
+#else
+  newOffset = aOffset;
+#endif
+
+  if (((newOffset + (PRInt32)aLength) > imgLen) || !imgData) {
+    mImage->UnlockImagePixels(PR_FALSE);
     return NS_ERROR_FAILURE;
   }
 
-  if (mTopToBottom) {
-    // Easy situation
-    if (aData)
-      memcpy(imgData + aOffset, aData, aLength);
-    else
-      memset(imgData + aOffset, 0, aLength);
-  } else {
-    // Rows are stored in reverse order (BottomToTop) from those supplied (TopToBottom)
-    // yOffset is the offset into the reversed image data for firstRowToSet
-    PRUint32 xOffset = aOffset % rowStride;
-    PRUint32 yOffset = (mSize.height - firstRowToSet - 1) * rowStride;
-    if (aData) {
-      // Set the image data in reverse order
-      for (PRUint32 i=0; i<numRowsToSet; i++) {
-        PRUint32 lengthOfRowToSet = rowStride - xOffset;
-        lengthOfRowToSet = PR_MIN(lengthOfRowToSet, aLength);
-        memcpy(imgData + yOffset + xOffset, aData, lengthOfRowToSet);
-        aData += lengthOfRowToSet;
-        aLength -= lengthOfRowToSet;
-        yOffset -= rowStride;
-        xOffset = 0;
-      }
-    } else {
-      // Clear the image data in reverse order
-      if (xOffset) {
-        // First row, if not starting at first column
-        PRUint32 lengthOfRowToSet = rowStride - xOffset;
-        lengthOfRowToSet = PR_MIN(lengthOfRowToSet, aLength);
-        memset(imgData + yOffset + xOffset, 0, lengthOfRowToSet);
-        aLength -= lengthOfRowToSet;
-        yOffset -= rowStride;
-      }
-      if (aLength > rowStride) {
-        // Zero all the whole rows
-        const PRUint32 wholeRows = rowStride * (PRUint32)(aLength / rowStride);
-        memset(imgData + yOffset - (wholeRows - rowStride), 0, wholeRows);
-        aLength -= wholeRows;
-        yOffset -= wholeRows;
-      }
-      if (aLength) {
-        // Last incomplete row
-        memset(imgData + yOffset, 0, aLength);
-      }
-    }
-  }
-  mImage->UnlockImagePixels(aSetAlpha);
+  if (aData)
+    memcpy(imgData + newOffset, aData, aLength);
+  else
+    memset(imgData + newOffset, 0, aLength);
+  mImage->UnlockImagePixels(PR_FALSE);
 
-  if (!aSetAlpha) {
-    // adjust for aLength < rowStride
-    nsIntRect r(0, firstRowToSet, mSize.width, numRowsToSet);
-    mImage->ImageUpdated(nsnull, nsImageUpdateFlags_kBitsChanged, &r);
-  }
+  PRInt32 row = (aOffset / row_stride);
+
+  // adjust for aLength < row_stride
+  PRInt32 numnewrows = ((aLength - 1) / row_stride) + 1;
+  nsIntRect r(0, row, mSize.width, numnewrows);
+  mImage->ImageUpdated(nsnull, nsImageUpdateFlags_kBitsChanged, &r);
+
   return NS_OK;
 }
 
 /* void lockImageData (); */
 NS_IMETHODIMP gfxImageFrame::LockImageData()
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   return mImage->LockImagePixels(PR_FALSE);
@@ -385,7 +340,7 @@ NS_IMETHODIMP gfxImageFrame::LockImageData()
 /* void unlockImageData (); */
 NS_IMETHODIMP gfxImageFrame::UnlockImageData()
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   return mImage->UnlockImagePixels(PR_FALSE);
@@ -394,7 +349,7 @@ NS_IMETHODIMP gfxImageFrame::UnlockImageData()
 /* readonly attribute unsigned long alphaBytesPerRow; */
 NS_IMETHODIMP gfxImageFrame::GetAlphaBytesPerRow(PRUint32 *aBytesPerRow)
 {
-  if (!mInitialized || !mImage->GetHasAlphaMask())
+  if (!mInitalized || !mImage->GetHasAlphaMask())
     return NS_ERROR_NOT_INITIALIZED;
 
   *aBytesPerRow = mImage->GetAlphaLineStride();
@@ -404,7 +359,7 @@ NS_IMETHODIMP gfxImageFrame::GetAlphaBytesPerRow(PRUint32 *aBytesPerRow)
 /* readonly attribute unsigned long alphaDataLength; */
 NS_IMETHODIMP gfxImageFrame::GetAlphaDataLength(PRUint32 *aBitsLength)
 {
-  if (!mInitialized || !mImage->GetHasAlphaMask())
+  if (!mInitalized || !mImage->GetHasAlphaMask())
     return NS_ERROR_NOT_INITIALIZED;
 
   *aBitsLength = mImage->GetAlphaLineStride() * mSize.height;
@@ -414,7 +369,7 @@ NS_IMETHODIMP gfxImageFrame::GetAlphaDataLength(PRUint32 *aBitsLength)
 /* void getAlphaData([array, size_is(length)] out PRUint8 bits, out unsigned long length); */
 NS_IMETHODIMP gfxImageFrame::GetAlphaData(PRUint8 **aData, PRUint32 *length)
 {
-  if (!mInitialized || !mImage->GetHasAlphaMask())
+  if (!mInitalized || !mImage->GetHasAlphaMask())
     return NS_ERROR_NOT_INITIALIZED;
 
   NS_ASSERTION(mMutable, "trying to get data on an immutable frame");
@@ -428,13 +383,45 @@ NS_IMETHODIMP gfxImageFrame::GetAlphaData(PRUint8 **aData, PRUint32 *length)
 /* void setAlphaData ([array, size_is (length), const] in PRUint8 data, in unsigned long length, in long offset); */
 NS_IMETHODIMP gfxImageFrame::SetAlphaData(const PRUint8 *aData, PRUint32 aLength, PRInt32 aOffset)
 {
-  return SetData(aData, aLength, aOffset, PR_TRUE);
+  if (!mInitalized || !mImage->GetHasAlphaMask())
+    return NS_ERROR_NOT_INITIALIZED;
+
+  NS_ASSERTION(mMutable, "trying to set data on an immutable frame");
+  if (!mMutable)
+    return NS_ERROR_FAILURE;
+
+  PRInt32 row_stride = mImage->GetAlphaLineStride();
+
+  mImage->LockImagePixels(PR_TRUE);
+  PRUint8 *alphaData = mImage->GetAlphaBits();
+  PRInt32 alphaLen = row_stride * mSize.height;
+
+  PRInt32 offset;
+#ifdef MOZ_PLATFORM_IMAGES_BOTTOM_TO_TOP
+  // Adjust: We need offset to be top-down rows & LTR within each row
+  PRUint32 yOffset = ((PRUint32)(aOffset / row_stride)) * row_stride;
+  offset = ((mSize.height - 1) * row_stride) - yOffset + (aOffset % row_stride);
+#else
+  offset = aOffset;
+#endif
+
+  if (((offset + (PRInt32)aLength) > alphaLen) || !alphaData) {
+    mImage->UnlockImagePixels(PR_TRUE);
+    return NS_ERROR_FAILURE;
+  }
+
+  if (aData)
+    memcpy(alphaData + offset, aData, aLength);
+  else
+    memset(alphaData + offset, 0, aLength);
+  mImage->UnlockImagePixels(PR_TRUE);
+  return NS_OK;
 }
 
 /* void lockAlphaData (); */
 NS_IMETHODIMP gfxImageFrame::LockAlphaData()
 {
-  if (!mInitialized || !mImage->GetHasAlphaMask())
+  if (!mInitalized || !mImage->GetHasAlphaMask())
     return NS_ERROR_NOT_INITIALIZED;
 
   return mImage->LockImagePixels(PR_TRUE);
@@ -443,7 +430,7 @@ NS_IMETHODIMP gfxImageFrame::LockAlphaData()
 /* void unlockAlphaData (); */
 NS_IMETHODIMP gfxImageFrame::UnlockAlphaData()
 {
-  if (!mInitialized || !mImage->GetHasAlphaMask())
+  if (!mInitalized || !mImage->GetHasAlphaMask())
     return NS_ERROR_NOT_INITIALIZED;
 
   return mImage->UnlockImagePixels(PR_TRUE);
@@ -456,7 +443,7 @@ NS_IMETHODIMP gfxImageFrame::UnlockAlphaData()
 /* void drawTo */
 NS_IMETHODIMP gfxImageFrame::DrawTo(gfxIImageFrame* aDst, PRInt32 aDX, PRInt32 aDY, PRInt32 aDWidth, PRInt32 aDHeight)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   nsCOMPtr<nsIImage> img(do_GetInterface(aDst));
@@ -467,7 +454,7 @@ NS_IMETHODIMP gfxImageFrame::DrawTo(gfxIImageFrame* aDst, PRInt32 aDX, PRInt32 a
 /* attribute long timeout; */
 NS_IMETHODIMP gfxImageFrame::GetTimeout(PRInt32 *aTimeout)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   // Ensure a minimal time between updates so we don't throttle the UI thread.
@@ -493,7 +480,7 @@ NS_IMETHODIMP gfxImageFrame::GetTimeout(PRInt32 *aTimeout)
 
 NS_IMETHODIMP gfxImageFrame::SetTimeout(PRInt32 aTimeout)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   mTimeout = aTimeout;
@@ -503,7 +490,7 @@ NS_IMETHODIMP gfxImageFrame::SetTimeout(PRInt32 aTimeout)
 /* attribute long frameDisposalMethod; */
 NS_IMETHODIMP gfxImageFrame::GetFrameDisposalMethod(PRInt32 *aFrameDisposalMethod)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aFrameDisposalMethod = mDisposalMethod;
@@ -511,7 +498,7 @@ NS_IMETHODIMP gfxImageFrame::GetFrameDisposalMethod(PRInt32 *aFrameDisposalMetho
 }
 NS_IMETHODIMP gfxImageFrame::SetFrameDisposalMethod(PRInt32 aFrameDisposalMethod)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   mDisposalMethod = aFrameDisposalMethod;
@@ -521,7 +508,7 @@ NS_IMETHODIMP gfxImageFrame::SetFrameDisposalMethod(PRInt32 aFrameDisposalMethod
 /* attribute gfx_color backgroundColor; */
 NS_IMETHODIMP gfxImageFrame::GetBackgroundColor(gfx_color *aBackgroundColor)
 {
-  if (!mInitialized || !mHasBackgroundColor)
+  if (!mInitalized || !mHasBackgroundColor)
     return NS_ERROR_NOT_INITIALIZED;
 
   *aBackgroundColor = mBackgroundColor;
@@ -529,7 +516,7 @@ NS_IMETHODIMP gfxImageFrame::GetBackgroundColor(gfx_color *aBackgroundColor)
 }
 NS_IMETHODIMP gfxImageFrame::SetBackgroundColor(gfx_color aBackgroundColor)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   mBackgroundColor = aBackgroundColor;
@@ -539,7 +526,7 @@ NS_IMETHODIMP gfxImageFrame::SetBackgroundColor(gfx_color aBackgroundColor)
 
 NS_IMETHODIMP gfxImageFrame::GetInterface(const nsIID & aIID, void * *result)
 {
-  if (!mInitialized)
+  if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
   NS_ENSURE_ARG_POINTER(result);

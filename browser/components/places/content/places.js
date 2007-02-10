@@ -21,7 +21,6 @@
  * Contributor(s):
  *   Ben Goodger <beng@google.com>
  *   Annie Sullivan <annie.sullivan@gmail.com>
- *   Asaf Romano <mano@mozilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -52,7 +51,7 @@ function selectPlaceURI(placeURI) {
 var PlacesOrganizer = {
   _places: null,
   _content: null,
-
+  
   init: function PO_init() {
     this._places = document.getElementById("placesList");
     this._content = document.getElementById("placeContent");  
@@ -65,18 +64,11 @@ var PlacesOrganizer = {
     if ("arguments" in window)
       placeURI = window.arguments[0];
     selectPlaceURI(placeURI);
-
-    /**
-     * XXXmano: this used to be a hack which allowed using few places commands
-     * when the search field is focused. Re-implementing it would probably
-     * require adding a controller to the searchbox which would forward over
-     * those commands to the places tree controller.
-     *
-     * // Initialize the active view so that all commands work properly without
-     * // the user needing to explicitly click in a view (since the search box is
-     * // focused by default). 
-     * PlacesController.activeView = this._places;
-     */
+    
+    // Initialize the active view so that all commands work properly without
+    // the user needing to explicitly click in a view (since the search box is
+    // focused by default). 
+    PlacesController.activeView = this._places;
 
     // Set up the search UI.
     PlacesSearchBox.init();
@@ -85,9 +77,6 @@ var PlacesOrganizer = {
     PlacesQueryBuilder.init();
   },
   
-  destroy: function PO_destroy() {
-    OptionsFilter.destroy();
-  },
   
   HEADER_TYPE_SHOWING: 1,
   HEADER_TYPE_SEARCH: 2,
@@ -104,9 +93,9 @@ var PlacesOrganizer = {
    */
   setHeaderText: function PO_setHeaderText(type, text) {
     NS_ASSERT(type == 1 || type == 2 || type == 3, "Invalid Header Type");
+    var bundle = document.getElementById("placeBundle");
     var prefix = document.getElementById("showingPrefix");
-    prefix.setAttribute("value",
-                        PlacesUtils.getString("headerTextPrefix" + type));
+    prefix.setAttribute("value", bundle.getString("headerTextPrefix" + type));
     
     var contentTitle = document.getElementById("contentTitle");
     contentTitle.setAttribute("value", text);
@@ -141,8 +130,8 @@ var PlacesOrganizer = {
   loadPlaceURI: function PO_loadPlaceURI() {
     var placeURI = document.getElementById("placeURI");
     var queriesRef = { }, optionsRef = { };
-    PlacesUtils.history.queryStringToQueries(placeURI.value, 
-                                             queriesRef, { }, optionsRef);
+    PlacesController.history.queryStringToQueries(placeURI.value, 
+                                                  queriesRef, { }, optionsRef);
     
     var autoFilterResults = document.getElementById("autoFilterResults");
     if (autoFilterResults.checked) {
@@ -168,9 +157,9 @@ var PlacesOrganizer = {
     var queries = queryNode.getQueries({});
     var options = queryNode.queryOptions;
     var loadedURI = document.getElementById("loadedURI");
-    loadedURI.value =
-      PlacesUtils.history.queriesToQueryString(queries, queries.length, 
-                                               options);
+    loadedURI.value = 
+      PlacesController.history.queriesToQueryString(queries, queries.length, 
+                                                    options);
   },
   
   /**
@@ -185,12 +174,8 @@ var PlacesOrganizer = {
     var node = asQuery(this._places.selectedNode);
     LOG("Node URI: " + node.uri);
     var queries = node.getQueries({});
-
-    // Items are only excluded on the left pane
-    var options = node.queryOptions.clone();
-    options.excludeItems = false;
     this._content.load(queries, 
-                       OptionsFilter.filter(queries, options, null));
+                       OptionsFilter.filter(queries, node.queryOptions, null));
     
     // Make sure the query builder is hidden.
     PlacesQueryBuilder.hide();
@@ -206,8 +191,9 @@ var PlacesOrganizer = {
     // Update the "Find in <current collection>" command and the gray text in
     // the search box in the toolbar if the active collection is the current
     // collection.
-    var findCommand = document.getElementById("OrganizerCommand_find:current");
-    var findLabel = PlacesUtils.getFormattedString("findInPrefix", [node.title]);
+    var strings = document.getElementById("placeBundle");
+    var findCommand = document.getElementById("placesCmd_find:current");
+    var findLabel = strings.getFormattedString("findInPrefix", [node.title]);
     findCommand.setAttribute("label", findLabel);
     if (PlacesSearchBox.filterCollection == "collection") {
       PlacesSearchBox.updateCollectionTitle(node.title);
@@ -223,23 +209,21 @@ var PlacesOrganizer = {
    *          The mouse event.
    */
   onTreeClick: function PO_onTreeClicked(event) {
-    var currentView = event.currentTarget;
-    var controller = currentView.controller;
-
     // If the user clicked on a tree column header, update the sorting 
     // preferences to reflect their choices.
     if (event.target.localName == "treecol") {
       OptionsFilter.update(this._content.getResult());
       return;
     }
-    if (currentView.hasSingleSelection && event.button == 1) {
-      if (PlacesUtils.nodeIsURI(currentView.selectedNode))
-        controller.openSelectedNodeWithEvent(event);
-      else if (PlacesUtils.nodeIsContainer(currentView.selectedNode)) {
+    var v = PlacesController.activeView;
+    if (v.hasSingleSelection && event.button == 1) {
+      if (PlacesController.nodeIsURI(v.selectedNode))
+        PlacesController.mouseLoadURI(event);
+      else if (PlacesController.nodeIsContainer(v.selectedNode)) {
         // The command execution function will take care of seeing the 
         // selection is a folder/container and loading its contents in 
         // tabs for us. 
-        controller.openLinksInTabs();
+        PlacesController.openLinksInTabs();
       }
     }
   },
@@ -266,32 +250,15 @@ var PlacesOrganizer = {
    */
   exportBookmarks: function PO_export() {
     var fp = Cc["@mozilla.org/filepicker;1"].
-            createInstance(Ci.nsIFilePicker);
+               createInstance(Ci.nsIFilePicker);
     fp.init(window, "", Ci.nsIFilePicker.modeSave);
     fp.appendFilters(Ci.nsIFilePicker.filterHTML);
     fp.defaultString = "bookmarks.html";
     if (fp.show() != Ci.nsIFilePicker.returnCancel) {
       var bms = Cc["@mozilla.org/browser/nav-bookmarks-service;1"].
-                getService(Ci.nsINavBookmarksService);
+                  getService(Ci.nsINavBookmarksService);
       bms.exportBookmarksHTML(fp.file);
     }
-  },
-
-  updateStatusBarForView: function G_updateStatusBarForView(aView) {
-    var statusText = "";
-    var selectedNode = aView.selectedNode;
-    if (selectedNode) {
-      if (PlacesUtils.nodeIsFolder(selectedNode)) {
-        var childsCount =
-          PlacesUtils.getFolderContents(asFolder(selectedNode).folderId)
-                     .childCount;
-        statusText = PlacesUtils.getFormattedString("status_foldercount",
-                                                    [childsCount]);
-      }
-      else if (PlacesUtils.nodeIsBookmark(selectedNode))
-        statusText = selectedNode.uri;
-    }
-    document.getElementById("status").label = statusText;
   }
 };
 
@@ -361,12 +328,13 @@ var PlacesSearchBox = {
    *          The title of the current collection.
    */
   updateCollectionTitle: function PSB_updateCollectionTitle(title) {
+    var strings = document.getElementById("placeBundle");
     if (title) {
       this.searchFilter.grayText = 
-        PlacesUtils.getFormattedString("searchCurrentDefault", [title]);
+        strings.getFormattedString("searchCurrentDefault", [title]);
     }
     else
-      this.searchFilter.grayText = PlacesUtils.getString("searchDefault");
+      this.searchFilter.grayText = strings.getString("searchDefault");
   },
   
   /**
@@ -402,8 +370,9 @@ var PlacesSearchBox = {
    * Set up the gray text in the search bar as the Places View loads. 
    */
   init: function PSB_init() {
+    var placeBundle = document.getElementById("placeBundle");
     var searchFilter = this.searchFilter;
-    searchFilter.grayText = PlacesUtils.getString("searchDefault");
+    searchFilter.grayText = placeBundle.getString("searchDefault");
     searchFilter.reset();
     searchFilter.focus();
   },
@@ -534,7 +503,7 @@ var PlacesQueryBuilder = {
     
     // Update the "can add more criteria" command to make sure various +
     // buttons are disabled.
-    var command = document.getElementById("OrganizerCommand_find:moreCriteria");
+    var command = document.getElementById("placesCmd_search:moreCriteria");
     if (this._numRows >= this._maxRows)
       command.setAttribute("disabled", "true");
     else
@@ -848,7 +817,7 @@ var PlacesQueryBuilder = {
     var queryType = document.getElementById("advancedSearchType").selectedItem.value;
     var queries = [];
     if (queryType == "and")
-      queries.push(PlacesUtils.history.getNewQuery());
+      queries.push(PlacesController.history.getNewQuery());
     var updated = 0;
     for (var i = 1; updated < this._numRows; ++i) {
       var prefix = "advancedSearch" + i;
@@ -864,7 +833,7 @@ var PlacesQueryBuilder = {
         if (queryType == "and")
           query = queries[0];
         else
-          query = PlacesUtils.history.getNewQuery();
+          query = PlacesController.history.getNewQuery();
         
         var querySubject = querySubjectElement.value;
         this._queryBuilders[querySubject](query, prefix);
@@ -951,16 +920,11 @@ var ViewMenu = {
    *          the type of the menuitem, e.g. "radio" or "checkbox". 
    *          Can be null (no-type). 
    *          Checkboxes are checked if the column is visible.
-   * @param   propertyPrefix
-   *          If propertyPrefix is non-null:
-   *          propertyPrefix + column ID + ".label" will be used to get the
-   *          localized label string.
-   *          propertyPrefix + column ID + ".accesskey" will be used to get the
-   *          localized accesskey.
-   *          If propertyPrefix is null, the column label is used as label and
-   *          no accesskey is assigned.
+   * @param   labelFormat
+   *          A format string to be applied to item labels. If null, no format
+   *          is used. 
    */
-  fillWithColumns: function VM_fillWithColumns(event, startID, endID, type, propertyPrefix) {
+  fillWithColumns: function VM_fillWithColumns(event, startID, endID, type, labelFormat) {
     var popup = event.target;  
     var pivot = this._clean(popup, startID, endID);
     
@@ -968,25 +932,21 @@ var ViewMenu = {
     // so track whether or not we find a column that is sort-active. 
     var isSorted = false;
     var content = document.getElementById("placeContent");
+    var strings = document.getElementById("placeBundle");
     var columns = content.columns;
     for (var i = 0; i < columns.count; ++i) {
       var column = columns.getColumnAt(i).element;
       var menuitem = document.createElementNS(XUL_NS, "menuitem");
       menuitem.id = "menucol_" + column.id;
-      menuitem.setAttribute("column", column.id);
       var label = column.getAttribute("label");
-      if (propertyPrefix) {
-        var menuitemPrefix = propertyPrefix + column.id;
-        label = PlacesUtils.getString(menuitemPrefix + ".label");
-        var accesskey = PlacesUtils.getString(menuitemPrefix + ".accesskey");
-        menuitem.setAttribute("accesskey", accesskey);
-      }
+      if (labelFormat)
+        label = strings.getFormattedString(labelFormat, [label]);
       menuitem.setAttribute("label", label);
       if (type == "radio") {
         menuitem.setAttribute("type", "radio");
         menuitem.setAttribute("name", "columns");
         // This column is the sort key. Its item is checked. 
-        if (column.getAttribute("sortDirection") != "") {
+        if (column.hasAttribute("sortDirection")) {
           menuitem.setAttribute("checked", "true");
           isSorted = true;
         }
@@ -994,10 +954,10 @@ var ViewMenu = {
       else if (type == "checkbox") {
         menuitem.setAttribute("type", "checkbox");
         // Cannot uncheck the primary column. 
-        if (column.primary)
+        if (column.getAttribute("primary") == "true")
           menuitem.setAttribute("disabled", "true");
         // Items for visible columns are checked. 
-        if (column.hidden)
+        if (column.getAttribute("hidden") != "true")
           menuitem.setAttribute("checked", "true");
       }
       if (pivot)
@@ -1012,7 +972,7 @@ var ViewMenu = {
    * Set up the content of the view menu.
    */
   populate: function VM_populate(event) {
-    this.fillWithColumns(event, "viewUnsorted", "directionSeparator", "radio", "view.sortBy.");
+    this.fillWithColumns(event, "viewUnsorted", "directionSeparator", "radio", "sortByPrefix");
     
     var sortColumn = this._getSortColumn();
     var viewSortAscending = document.getElementById("viewSortAscending");
@@ -1081,60 +1041,61 @@ var ViewMenu = {
   
   /**
    * Sorts the view by the specified key.
-   * @param   aColumnID
-   *          The ID of the colum that is the sort key. Can be null - the
-   *          current sort column id or "title" will be used.
-   * @param   aDirection
+   * @param   element
+   *          The menuitem element for the column that is the sort key. 
+   *          Can be null - the primary column will be sorted. 
+   * @param   direction
    *          The direction to sort - "ascending" or "descending". 
-   *          Can be null - the last direction or descending will be used.
-   *
-   * If both aColumnID and aDirection are null, the view will be unsorted.
+   *          Can be null - the last direction will be used.
+   *          If both element and direction are null, the view will be
+   *          unsorted. 
    */
-  setSortColumn: function VM_setSortColumn(aColumnID, aDirection) {
-    var result = document.getElementById("placeContent").getResult();
-    if (!aColumnID && !aDirection) {
-      result.sortingMode = Ci.nsINavHistoryQueryOptions.SORT_BY_NONE;
+  setSortColumn: function VM_setSortColumn(element, direction) {
+    const PREFIX = "menucol_";
+    // Validate the click - check to see if it was on a valid sort item.
+    if (element && 
+        (element.id.substring(0, PREFIX.length) != PREFIX &&
+         element.id != "viewSortDescending" && 
+         element.id != "viewSortAscending"))
       return;
+    
+    // If both element and direction are null, all will be unsorted.
+    var unsorted = !element && !direction;
+    // If only the element is null, the currently sorted column will be sorted 
+    // with the specified direction, if there is no currently sorted column, 
+    // the primary column will be sorted with the specified direction. 
+    if (!element && direction) {
+      element = this._getSortColumn();
+      if (!element)
+        element = document.getElementById("title");
+    }
+    else if (element && !direction) {
+      var elementID = element.id.substr(PREFIX.length, element.id.length);
+      element = document.getElementById(elementID);
+      // If direction is null, use the default (ascending)
+      direction = "ascending";
     }
 
-    var sortColumn = this._getSortColumn();
-    if (!aDirection) {
-      aDirection = sortColumn ?
-                   sortColumn.getAttribute("sortDirection") : "descending";
+    var content = document.getElementById("placeContent");      
+    var columns = content.columns;
+    for (var i = 0; i < columns.count; ++i) {
+      var column = columns.getColumnAt(i).element;
+      if (unsorted) {
+        column.removeAttribute("sortActive");
+        column.removeAttribute("sortDirection");
+        content.getResult().sortAll(Ci.nsINavHistoryQueryOptions.SORT_BY_NONE);
+      }
+      else if (column.id == element.id) {
+        // We need to do this to ensure the UI updates properly next time it is built.
+        if (column.getAttribute("sortDirection") != direction) {
+          column.setAttribute("sortActive", "true");
+          column.setAttribute("sortDirection", direction);
+        }
+        var columnObj = content.columns.getColumnFor(column);
+        content.view.cycleHeader(columnObj);
+        break;
+      }
     }
-    else if (!aColumnID)
-      aColumnID = sortColumn ? sortColumn.id : "title";
-
-    var sortingMode;
-    switch (aColumnID) {
-      case "title":
-        if (aDirection == "descending")
-          sortingMode = Ci.nsINavHistoryQueryOptions.SORT_BY_TITLE_DESCENDING;
-        else
-          sortingMode = Ci.nsINavHistoryQueryOptions.SORT_BY_TITLE_ASCENDING;
-        break;
-      case "url":
-        if (aDirection == "descending")
-          sortingMode = Ci.nsINavHistoryQueryOptions.SORT_BY_URI_DESCENDING;
-        else
-          sortingMode = Ci.nsINavHistoryQueryOptions.SORT_BY_URI_ASCENDING;
-        break;
-      case "date":
-        if (aDirection == "descending")
-          sortingMode = Ci.nsINavHistoryQueryOptions.SORT_BY_DATE_DESCENDING;
-        else
-          sortingMode = Ci.nsINavHistoryQueryOptions.SORT_BY_DATE_ASCENDING;
-        break;      
-      case "visitCount":
-        if (aDirection == "descending")
-          sortingMode = Ci.nsINavHistoryQueryOptions.SORT_BY_VISITCOUNT_DESCENDING;
-        else
-          sortingMode = Ci.nsINavHistoryQueryOptions.SORT_BY_VISITCOUNT_ASCENDING;
-        break;
-      default:
-        throw("Invalid Column");
-    }
-    result.sortingMode = sortingMode;
   }
 };
 
@@ -1185,18 +1146,19 @@ var Groupers = {
    * Initializes groupings for various vie types. 
    */
   init: function G_init() {
+    var placeBundle = document.getElementById("placeBundle");
     this.defaultGrouper = 
-      new GroupingConfig(null, PlacesUtils.getString("defaultGroupOnLabel"),
-                         PlacesUtils.getString("defaultGroupOnAccesskey"),
-                         PlacesUtils.getString("defaultGroupOffLabel"),
-                         PlacesUtils.getString("defaultGroupOffAccesskey"),
+      new GroupingConfig(null, placeBundle.getString("defaultGroupOnLabel"),
+                         placeBundle.getString("defaultGroupOnAccesskey"),
+                         placeBundle.getString("defaultGroupOffLabel"),
+                         placeBundle.getString("defaultGroupOffAccesskey"),
                          "Groupers.groupBySite()",
                          "Groupers.groupByPage()", false);
     var subscriptionConfig = 
-      new GroupingConfig("livemark/", PlacesUtils.getString("livemarkGroupOnLabel"),
-                         PlacesUtils.getString("livemarkGroupOnAccesskey"),
-                         PlacesUtils.getString("livemarkGroupOffLabel"),
-                         PlacesUtils.getString("livemarkGroupOffAccesskey"),
+      new GroupingConfig("livemark/", placeBundle.getString("livemarkGroupOnLabel"),
+                         placeBundle.getString("livemarkGroupOnAccesskey"),
+                         placeBundle.getString("livemarkGroupOffLabel"),
+                         placeBundle.getString("livemarkGroupOffAccesskey"),
                          "Groupers.groupByFeed()",
                          "Groupers.groupByPost()", false);
     this.annotationGroupers.push(subscriptionConfig);

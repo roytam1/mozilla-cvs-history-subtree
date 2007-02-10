@@ -44,47 +44,50 @@ class nsIDOMWindow;
 class nsIDOMEventListener;
 class nsIEventListenerManager;
 class nsIDOMEvent;
-class nsEventChainPreVisitor;
-class nsEventChainPostVisitor;
 
+#include "nsGUIEvent.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOM3EventTarget.h"
 #include "nsIDOMNSEventTarget.h"
 #include "nsIChromeEventHandler.h"
 #include "nsIEventListenerManager.h"
 #include "nsPIWindowRoot.h"
+#include "nsIDOMGCParticipant.h"
 #include "nsIFocusController.h"
 #include "nsIDOMEventTarget.h"
-#include "nsCycleCollectionParticipant.h"
 
 class nsWindowRoot : public nsIDOMEventReceiver,
                      public nsIDOM3EventTarget,
                      public nsIDOMNSEventTarget,
                      public nsIChromeEventHandler,
-                     public nsPIWindowRoot
+                     public nsPIWindowRoot,
+                     public nsIDOMGCParticipant
 {
 public:
   nsWindowRoot(nsIDOMWindow* aWindow);
   virtual ~nsWindowRoot();
 
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_ISUPPORTS
   NS_DECL_NSIDOMEVENTTARGET
   NS_DECL_NSIDOM3EVENTTARGET
   NS_DECL_NSIDOMNSEVENTTARGET
-  NS_DECL_NSICHROMEEVENTHANDLER
 
-  // nsIDOMEventReceiver
+  NS_IMETHOD HandleChromeEvent(nsPresContext* aPresContext,
+                               nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                               PRUint32 aFlags, nsEventStatus* aEventStatus);
+
   NS_IMETHOD AddEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID);
   NS_IMETHOD RemoveEventListenerByIID(nsIDOMEventListener *aListener, const nsIID& aIID);
-  NS_IMETHOD GetListenerManager(PRBool aCreateIfNotFound,
-                                nsIEventListenerManager** aResult);
+  NS_IMETHOD GetListenerManager(nsIEventListenerManager** aInstancePtrResult);
   NS_IMETHOD HandleEvent(nsIDOMEvent *aEvent);
   NS_IMETHOD GetSystemEventGroup(nsIDOMEventGroup** aGroup);
 
+  // nsIDOMGCParticipant
+  virtual nsIDOMGCParticipant* GetSCCIndex();
+  virtual void AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray);
+
   // nsPIWindowRoot
   NS_IMETHOD GetFocusController(nsIFocusController** aResult);
-
-  NS_DECL_CYCLE_COLLECTION_CLASS(nsWindowRoot)
 
 protected:
   // Members

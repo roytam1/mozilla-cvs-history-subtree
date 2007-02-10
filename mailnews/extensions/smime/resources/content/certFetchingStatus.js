@@ -55,7 +55,6 @@ var gLdapServerURL;
 var gLdapConnection;
 var gCertDB;
 var gLdapOperation;
-var gLogin;
 
 function onLoad()
 {
@@ -82,13 +81,6 @@ function search()
     Components.classes["@mozilla.org/network/ldap-url;1"]
       .createInstance().QueryInterface(Components.interfaces.nsILDAPURL);
 
-  // get the login to authenticate as, if there is one
-  try {
-    gLogin = prefs.getComplexValue(gDirectoryPref + ".auth.dn", Components.interfaces.nsISupportsString).data;
-  } catch (ex) {
-    // if we don't have this pref, no big deal
-  }
-
   try {
     gLdapServerURL.spec = prefs.getCharPref(gDirectoryPref + ".uri");
 
@@ -98,8 +90,8 @@ function search()
     gLdapConnection.init(
       gLdapServerURL.asciiHost,
       gLdapServerURL.port,
-      gLdapServerURL.options & gLdapServerURL.OPT_SECURE,
-      gLogin,
+      gLdapServerURL.options,
+      null,
       getProxyOnUIThread(new boundListener(),
                             Components.interfaces.nsILDAPMessageListener),
       null, Components.interfaces.nsILDAPConnection.VERSION3);
@@ -147,36 +139,11 @@ function getLDAPOperation()
                             Components.interfaces.nsILDAPMessageListener),
                         null);
 }
-
-function getPassword()
-{
-  // we only need a password if we are using credentials
-  if (gLogin)
-  {
-    var windowWatcherSvc = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                            .getService(Components.interfaces.nsIWindowWatcher);
-    var authPrompter = windowWatcherSvc.getNewAuthPrompter(window.QueryInterface(Components.interfaces.nsIDOMWindow));    
-    var strBundle = document.getElementById('bundle_ldap');
-    var password = { value: "" };
-    
-    // nsLDAPAutocompleteSession uses asciiHost instead of host for the prompt text, I think we should be
-    // consistent. 
-    if (authPrompter.promptPassword(strBundle.getString("authPromptTitle"),  
-                                     strBundle.getFormattedString("authPromptText", [gLdapServerURL.asciiHost]),
-                                     gLdapServerURL.spec,
-                                     authPrompter.SAVE_PASSWORD_PERMANENTLY,
-                                     password))
-      return password.value;       
-  }
-  
-  return null;
-}
-
 function kickOffBind()
 {
   try {
     getLDAPOperation();
-    gLdapOperation.simpleBind(getPassword());
+    gLdapOperation.simpleBind(null);
   }
   catch (e) {
     window.close();
@@ -314,15 +281,19 @@ ldapMessageListener.prototype.onLDAPInit =
 
 
 function getProxyOnUIThread(aObject, aInterface) {
-    var mainThread = Components.
-            classes["@mozilla.org/thread-manager;1"].
-            getService().mainThread;
+    var eventQSvc = Components.
+            classes["@mozilla.org/event-queue-service;1"].
+            getService(Components.interfaces.nsIEventQueueService);
+
+    var uiQueue = eventQSvc.
+            getSpecialEventQueue(Components.interfaces.
+            nsIEventQueueService.UI_THREAD_EVENT_QUEUE);
 
     var proxyMgr = Components.
             classes["@mozilla.org/xpcomproxy;1"].
             getService(Components.interfaces.nsIProxyObjectManager);
 
-    return proxyMgr.getProxyForObject(mainThread,
+    return proxyMgr.getProxyForObject(uiQueue,
             aInterface, aObject, 5);
-    // 5 == NS_PROXY_ALWAYS | NS_PROXY_SYNC
+    // 5 == PROXY_ALWAYS | PROXY_SYNC
 }

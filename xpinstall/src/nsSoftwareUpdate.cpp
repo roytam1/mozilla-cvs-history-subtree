@@ -78,15 +78,22 @@
 #include "nsIScriptNameSpaceManager.h"
 #include "nsIScriptExternalNameSet.h"
 
+#include "nsIEventQueueService.h"
+#include "nsIProxyObjectManager.h"
+#include "nsProxiedService.h"
 #include "nsIChromeRegistry.h"
 
 #include "nsCURILoader.h"
 
-extern "C" void PR_CALLBACK RunChromeInstallOnThread(void *data);
+extern "C" void RunChromeInstallOnThread(void *data);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Globals
 ////////////////////////////////////////////////////////////////////////////////
+
+
+
+static NS_DEFINE_CID(kIProcessCID, NS_PROCESS_CID);
 
 nsSoftwareUpdate* nsSoftwareUpdate::mInstance = nsnull;
 nsCOMPtr<nsIFile> nsSoftwareUpdate::mProgramDir = nsnull;
@@ -198,7 +205,11 @@ nsSoftwareUpdate::Shutdown()
         {
             nsCOMPtr<nsIFile> tmp;
             rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(tmp));
+#if defined (XP_MAC)
+            tmp->AppendNative(ESSENTIAL_FILES);
+#endif
             pathToCleanupUtility = do_QueryInterface(tmp);
+
         }
         else
         {
@@ -211,7 +222,7 @@ nsSoftwareUpdate::Shutdown()
 
         //Create the Process framework
         pathToCleanupUtility->AppendNative(CLEANUP_UTIL);
-        nsCOMPtr<nsIProcess> cleanupProcess = do_CreateInstance(NS_PROCESS_CONTRACTID);
+        nsCOMPtr<nsIProcess> cleanupProcess = do_CreateInstance(kIProcessCID);
         rv = cleanupProcess->Init(pathToCleanupUtility);
         if (NS_SUCCEEDED(rv))
         {

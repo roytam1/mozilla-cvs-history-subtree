@@ -45,15 +45,175 @@
 #include <iprtrmib.h>
 #include <time.h>
 #include "prmem.h"
+#include "prthread.h"
 #include "plstr.h"
-#include "nsThreadUtils.h"
+#include "nsEventQueueUtils.h"
 #include "nsIObserverService.h"
 #include "nsServiceManagerUtils.h"
 #include "nsNotifyAddrListener.h"
 #include "nsString.h"
 
-#include <iptypes.h>
-#include <iphlpapi.h>
+// Unfortunately, this header file is not available in older SDKs.
+// #include <IPTypes.h>
+
+#define MAX_ADAPTER_DESCRIPTION_LENGTH  128 // arb.
+#define MAX_ADAPTER_NAME_LENGTH         256 // arb.
+#define MAX_ADAPTER_ADDRESS_LENGTH      8   // arb.
+
+#define GAA_FLAG_SKIP_ANYCAST       0x0002
+#define GAA_FLAG_SKIP_MULTICAST     0x0004
+#define GAA_FLAG_SKIP_DNS_SERVER    0x0008
+#define GAA_FLAG_SKIP_FRIENDLY_NAME 0x0020
+
+#define IF_TYPE_SOFTWARE_LOOPBACK       24
+
+typedef enum {
+    IpPrefixOriginOther = 0,
+    IpPrefixOriginManual,
+    IpPrefixOriginWellKnown,
+    IpPrefixOriginDhcp,
+    IpPrefixOriginRouterAdvertisement
+} IP_PREFIX_ORIGIN;
+
+typedef enum {
+    IpSuffixOriginOther = 0,
+    IpSuffixOriginManual,
+    IpSuffixOriginWellKnown,
+    IpSuffixOriginDhcp,
+    IpSuffixOriginLinkLayerAddress,
+    IpSuffixOriginRandom
+} IP_SUFFIX_ORIGIN;
+
+typedef enum {
+    IpDadStateInvalid    = 0,
+    IpDadStateTentative,
+    IpDadStateDuplicate,
+    IpDadStateDeprecated,
+    IpDadStatePreferred
+} IP_DAD_STATE;
+
+typedef struct _IP_ADAPTER_UNICAST_ADDRESS {
+    union {
+        ULONGLONG Alignment;
+        struct {
+            ULONG Length;
+            DWORD Flags;
+        } s;
+    } u;
+    struct _IP_ADAPTER_UNICAST_ADDRESS *Next;
+    SOCKET_ADDRESS Address;
+
+    IP_PREFIX_ORIGIN PrefixOrigin;
+    IP_SUFFIX_ORIGIN SuffixOrigin;
+    IP_DAD_STATE DadState;
+
+    ULONG ValidLifetime;
+    ULONG PreferredLifetime;
+    ULONG LeaseLifetime;
+} IP_ADAPTER_UNICAST_ADDRESS, *PIP_ADAPTER_UNICAST_ADDRESS;
+
+typedef struct _IP_ADAPTER_ANYCAST_ADDRESS {
+    union {
+        ULONGLONG Alignment;
+        struct {
+            ULONG Length;
+            DWORD Flags;
+        } s;
+    } u;
+    struct _IP_ADAPTER_ANYCAST_ADDRESS *Next;
+    SOCKET_ADDRESS Address;
+} IP_ADAPTER_ANYCAST_ADDRESS, *PIP_ADAPTER_ANYCAST_ADDRESS;
+
+typedef struct _IP_ADAPTER_MULTICAST_ADDRESS {
+    union {
+        ULONGLONG Alignment;
+        struct {
+            ULONG Length;
+            DWORD Flags;
+        } s;
+    } u;
+    struct _IP_ADAPTER_MULTICAST_ADDRESS *Next;
+    SOCKET_ADDRESS Address;
+} IP_ADAPTER_MULTICAST_ADDRESS, *PIP_ADAPTER_MULTICAST_ADDRESS;
+
+typedef struct _IP_ADAPTER_DNS_SERVER_ADDRESS {
+    union {
+        ULONGLONG Alignment;
+        struct {
+            ULONG Length;
+            DWORD Reserved;
+        } s;
+    } u;
+    struct _IP_ADAPTER_DNS_SERVER_ADDRESS *Next;
+    SOCKET_ADDRESS Address;
+} IP_ADAPTER_DNS_SERVER_ADDRESS, *PIP_ADAPTER_DNS_SERVER_ADDRESS;
+
+typedef enum {
+    IfOperStatusUp = 1,
+    IfOperStatusDown,
+    IfOperStatusTesting,
+    IfOperStatusUnknown,
+    IfOperStatusDormant,
+    IfOperStatusNotPresent,
+    IfOperStatusLowerLayerDown
+} IF_OPER_STATUS;
+
+typedef struct _IP_ADAPTER_ADDRESSES {
+    union {
+        ULONGLONG Alignment;
+        struct {
+            ULONG Length;
+            DWORD IfIndex;
+        } s;
+    } u;
+    struct _IP_ADAPTER_ADDRESSES *Next;
+    PCHAR AdapterName;
+    PIP_ADAPTER_UNICAST_ADDRESS FirstUnicastAddress;
+    PIP_ADAPTER_ANYCAST_ADDRESS FirstAnycastAddress;
+    PIP_ADAPTER_MULTICAST_ADDRESS FirstMulticastAddress;
+    PIP_ADAPTER_DNS_SERVER_ADDRESS FirstDnsServerAddress;
+    PWCHAR DnsSuffix;
+    PWCHAR Description;
+    PWCHAR FriendlyName;
+    BYTE PhysicalAddress[MAX_ADAPTER_ADDRESS_LENGTH];
+    DWORD PhysicalAddressLength;
+    DWORD Flags;
+    DWORD Mtu;
+    DWORD IfType;
+    IF_OPER_STATUS OperStatus;
+} IP_ADAPTER_ADDRESSES, *PIP_ADAPTER_ADDRESSES;
+
+typedef struct {
+    char String[4 * 4];
+} IP_ADDRESS_STRING, *PIP_ADDRESS_STRING, IP_MASK_STRING, *PIP_MASK_STRING;
+
+typedef struct _IP_ADDR_STRING {
+    struct _IP_ADDR_STRING* Next;
+    IP_ADDRESS_STRING IpAddress;
+    IP_MASK_STRING IpMask;
+    DWORD Context;
+} IP_ADDR_STRING, *PIP_ADDR_STRING;
+
+typedef struct _IP_ADAPTER_INFO {
+    struct _IP_ADAPTER_INFO* Next;
+    DWORD ComboIndex;
+    char AdapterName[MAX_ADAPTER_NAME_LENGTH + 4];
+    char Description[MAX_ADAPTER_DESCRIPTION_LENGTH + 4];
+    UINT AddressLength;
+    BYTE Address[MAX_ADAPTER_ADDRESS_LENGTH];
+    DWORD Index;
+    UINT Type;
+    UINT DhcpEnabled;
+    PIP_ADDR_STRING CurrentIpAddress;
+    IP_ADDR_STRING IpAddressList;
+    IP_ADDR_STRING GatewayList;
+    IP_ADDR_STRING DhcpServer;
+    BOOL HaveWins;
+    IP_ADDR_STRING PrimaryWinsServer;
+    IP_ADDR_STRING SecondaryWinsServer;
+    time_t LeaseObtained;
+    time_t LeaseExpires;
+} IP_ADAPTER_INFO, *PIP_ADAPTER_INFO;
 
 typedef DWORD (WINAPI *GetAdaptersAddressesFunc)(ULONG, DWORD, PVOID,
                                                  PIP_ADAPTER_ADDRESSES,
@@ -114,6 +274,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS3(nsNotifyAddrListener,
 nsNotifyAddrListener::nsNotifyAddrListener()
     : mLinkUp(PR_TRUE)  // assume true by default
     , mStatusKnown(PR_FALSE)
+    , mThread(0)
     , mShutdownEvent(nsnull)
 {
     mOSVerInfo.dwOSVersionInfoSize = sizeof(mOSVerInfo);
@@ -210,7 +371,8 @@ nsNotifyAddrListener::Init(void)
     mShutdownEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     NS_ENSURE_TRUE(mShutdownEvent, NS_ERROR_OUT_OF_MEMORY);
 
-    rv = NS_NewThread(getter_AddRefs(mThread), this);
+    rv = NS_NewThread(getter_AddRefs(mThread), this, 0,
+                      PR_JOINABLE_THREAD);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
@@ -230,7 +392,7 @@ nsNotifyAddrListener::Shutdown(void)
 
     SetEvent(mShutdownEvent);
 
-    nsresult rv = mThread->Shutdown();
+    nsresult rv = mThread->Join();
 
     // Have to break the cycle here, otherwise nsNotifyAddrListener holds
     // onto the thread and the thread holds onto the nsNotifyAddrListener
@@ -249,26 +411,52 @@ nsNotifyAddrListener::Shutdown(void)
 nsresult
 nsNotifyAddrListener::SendEventToUI(const char *aEventID)
 {
-    if (!aEventID)
-        return NS_ERROR_NULL_POINTER;
-
     nsresult rv;
-    nsCOMPtr<nsIRunnable> event = new ChangeEvent(this, aEventID);
-    if (NS_FAILED(rv = NS_DispatchToMainThread(event)))
-        NS_WARNING("Failed to dispatch ChangeEvent");
+
+    if (!aEventID) return NS_ERROR_NULL_POINTER;
+
+    nsCOMPtr<nsIEventQueue> eq;
+    rv = NS_GetMainEventQ(getter_AddRefs(eq));
+    if (NS_FAILED(rv))
+        return rv;
+
+    ChangeEvent *event = new ChangeEvent(aEventID);
+    if (!event)
+        return NS_ERROR_OUT_OF_MEMORY;
+    // AddRef this because it is being placed in the PLEvent; it'll be Released
+    // when DestroyInterfaceEvent is called
+    NS_ADDREF_THIS();
+    PL_InitEvent(event, this, HandleInterfaceEvent, DestroyInterfaceEvent);
+
+    if (NS_FAILED(rv = eq->PostEvent(event))) {
+        NS_ERROR("failed to post event to UI EventQueue");
+        PL_DestroyEvent(event);
+    }
     return rv;
 }
 
-NS_IMETHODIMP
-nsNotifyAddrListener::ChangeEvent::Run()
+/*static*/ void *PR_CALLBACK
+nsNotifyAddrListener::HandleInterfaceEvent(PLEvent *aEvent)
 {
+    ChangeEvent *event = NS_STATIC_CAST(ChangeEvent *, aEvent);
+
     nsCOMPtr<nsIObserverService> observerService =
         do_GetService("@mozilla.org/observer-service;1");
     if (observerService)
         observerService->NotifyObservers(
-                mService, NS_NETWORK_LINK_TOPIC,
-                NS_ConvertASCIItoUTF16(mEventID).get());
-    return NS_OK;
+            NS_STATIC_CAST(nsINetworkLinkService *, PL_GetEventOwner(aEvent)),
+            NS_NETWORK_LINK_TOPIC,
+            NS_ConvertASCIItoUTF16(event->mEventID).get());
+    return nsnull;
+}
+
+/*static*/ void PR_CALLBACK
+nsNotifyAddrListener::DestroyInterfaceEvent(PLEvent *aEvent)
+{
+    nsNotifyAddrListener *self =
+        NS_STATIC_CAST(nsNotifyAddrListener *, PL_GetEventOwner(aEvent));
+    NS_RELEASE(self);
+    delete aEvent;
 }
 
 DWORD

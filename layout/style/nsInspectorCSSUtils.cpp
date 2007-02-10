@@ -37,13 +37,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* XPCOM interface to provide some internal information to DOM inspector */
-
 #include "nsInspectorCSSUtils.h"
 #include "nsIStyleRule.h"
 #include "nsRuleNode.h"
 #include "nsString.h"
-#include "nsGkAtoms.h"
+#include "nsLayoutAtoms.h"
 #include "nsIDocument.h"
 #include "nsIPresShell.h"
 #include "nsAutoPtr.h"
@@ -52,7 +50,7 @@
 #include "nsXBLBinding.h"
 #include "nsXBLPrototypeBinding.h"
 #include "nsIDOMElement.h"
-#include "nsIMutableArray.h"
+#include "nsArray.h"
 
 nsInspectorCSSUtils::nsInspectorCSSUtils()
 {
@@ -137,7 +135,7 @@ nsInspectorCSSUtils::GetStyleContextForFrame(nsIFrame* aFrame)
      * frame" actually inherits style from the "inner frame" so we can
      * just move one level up in the style context hierarchy....
      */
-    if (aFrame->GetType() == nsGkAtoms::tableOuterFrame)
+    if (aFrame->GetType() == nsLayoutAtoms::tableOuterFrame)
         return styleContext->GetParent();
 
     return styleContext;
@@ -150,8 +148,9 @@ nsInspectorCSSUtils::GetStyleContextForContent(nsIContent* aContent,
                                                nsIPresShell* aPresShell)
 {
     if (!aPseudo) {
+        nsIFrame* frame = nsnull;
         aPresShell->FlushPendingNotifications(Flush_StyleReresolves);
-        nsIFrame* frame = aPresShell->GetPrimaryFrameFor(aContent);
+        aPresShell->GetPrimaryFrameFor(aContent, &frame);
         if (frame) {
             nsStyleContext* result = GetStyleContextForFrame(frame);
             // this function returns an addrefed style context
@@ -174,7 +173,7 @@ nsInspectorCSSUtils::GetStyleContextForContent(nsIContent* aContent,
 
     nsStyleSet *styleSet = aPresShell->StyleSet();
 
-    if (!aContent->IsNodeOfType(nsINode::eELEMENT)) {
+    if (!aContent->IsContentOfType(nsIContent::eELEMENT)) {
         NS_ASSERTION(!aPseudo, "Shouldn't have a pseudo for a non-element!");
         return styleSet->ResolveStyleForNonElement(parentContext);
     }
@@ -210,9 +209,7 @@ nsInspectorCSSUtils::GetBindingURLs(nsIDOMElement *aElement,
 {
     *aResult = nsnull;
 
-    nsCOMPtr<nsIMutableArray> urls = do_CreateInstance(NS_ARRAY_CONTRACTID);
-    if (!urls)
-        return NS_ERROR_FAILURE;
+    nsCOMArray<nsIURI> urls;
 
     nsCOMPtr<nsIContent> content = do_QueryInterface(aElement);
     NS_ASSERTION(content, "elements must implement nsIContent");
@@ -223,12 +220,13 @@ nsInspectorCSSUtils::GetBindingURLs(nsIDOMElement *aElement,
             ownerDoc->BindingManager()->GetBinding(content);
 
         while (binding) {
-            urls->AppendElement(binding->PrototypeBinding()->BindingURI(),
-                                PR_FALSE);
+            urls.AppendObject(binding->PrototypeBinding()->BindingURI());
             binding = binding->GetBaseBinding();
         }
     }
 
-    NS_ADDREF(*aResult = urls);
-    return NS_OK;
+    nsIMutableArray *mutableResult = nsnull;
+    nsresult rv = NS_NewArray(&mutableResult, urls);
+    *aResult = mutableResult;
+    return rv;
 }

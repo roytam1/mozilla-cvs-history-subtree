@@ -312,4 +312,3 @@ function ValidateAndPreviewImage(ShowErrorMessage)
   // Set the pref data so pref code saves it 
   gDialog.BackgroundImageData.setAttribute("value", backgroundImage ? backgroundImage : "");
 }
-

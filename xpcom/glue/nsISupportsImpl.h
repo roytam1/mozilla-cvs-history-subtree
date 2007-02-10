@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -62,8 +61,7 @@
 #endif
 
 #include "nsDebug.h"
-#include "nsTraceRefcnt.h"
-#include "nsCycleCollector.h"
+#include "nsTraceRefcnt.h" 
 
 ////////////////////////////////////////////////////////////////////////////////
 // Macros to help detect thread-safety:
@@ -90,103 +88,6 @@ private:
 
 #endif // NS_DEBUG
 
-#define NS_PURPLE_BIT ((PRUint32)(1 << 31))
-
-#define NS_PURPLE_MASK (~NS_PURPLE_BIT)
-#define NS_PURPLE_BIT_SET(x) ((x) & (NS_PURPLE_BIT))
-#define NS_SET_PURPLE_BIT(x) ((x) |= (NS_PURPLE_BIT))
-#define NS_CLEAR_PURPLE_BIT(x) ((x) &= (NS_PURPLE_MASK))
-#define NS_VALUE_WITHOUT_PURPLE_BIT(x) ((x) & (NS_PURPLE_MASK))
-
-
-// Support for ISupports classes which interact with cycle collector.
-
-class nsCycleCollectingAutoRefCnt {
-
-public:
-  nsCycleCollectingAutoRefCnt()
-    : mValue(0)
-  {}
-
-  nsCycleCollectingAutoRefCnt(nsrefcnt aValue)
-    : mValue(aValue)
-  {
-    NS_CLEAR_PURPLE_BIT(mValue);
-  }
-
-  nsrefcnt incr(nsISupports *owner)
-  {
-    if (NS_UNLIKELY(mValue == NS_PURPLE_BIT)) {
-      // The sentinel value "purple bit alone, refcount 0" means
-      // that we're stabilized, during finalization. In this
-      // state we lie about our actual refcount if anyone asks
-      // and say it's 1, which is basically true: the caller who
-      // is deleting us has a reference still.
-      return 1;
-    }
-
-    nsrefcnt tmp = get();
-    PRBool purple = NS_STATIC_CAST(PRBool, NS_PURPLE_BIT_SET(mValue));
-
-    if (NS_UNLIKELY(purple)) {
-      NS_ASSERTION(tmp != 0, "purple ISupports pointer with zero refcnt");
-      nsCycleCollector_forget(owner);
-    }
-
-    mValue = tmp + 1;
-    return mValue;
-  }
-
-  void stabilizeForDeletion(nsISupports *owner)
-  {
-    mValue = NS_PURPLE_BIT;
-  }
-
-  nsrefcnt decr(nsISupports *owner)
-  {
-    if (NS_UNLIKELY(mValue == NS_PURPLE_BIT))
-      return 1;
-
-    nsrefcnt tmp = get();
-    PRBool purple = NS_STATIC_CAST(PRBool, NS_PURPLE_BIT_SET(mValue));
-
-    if (NS_UNLIKELY(tmp > 1 && !purple)) {
-      nsCycleCollector_suspect(owner);
-      purple = PR_TRUE;
-
-    } else if (NS_UNLIKELY(tmp == 1 && purple)) {
-      nsCycleCollector_forget(owner);
-      purple = PR_FALSE;
-
-    } else {
-      NS_ASSERTION(tmp >= 1, "decr() called with zero refcnt");
-    }
-
-    mValue = tmp - 1;
-
-    if (purple)
-      NS_SET_PURPLE_BIT(mValue);
-
-    return get();
-  }
-
-  nsrefcnt get() const
-  {
-    if (NS_UNLIKELY(mValue == NS_PURPLE_BIT))
-      return 1;
-
-    return NS_VALUE_WITHOUT_PURPLE_BIT(mValue);
-  }
-
-  operator nsrefcnt() const
-  {
-    return get();
-  }
-
- private:
-  nsrefcnt mValue;
-};
-
 class nsAutoRefCnt {
 
  public:
@@ -196,7 +97,7 @@ class nsAutoRefCnt {
     // only support prefix increment/decrement
     nsrefcnt operator++() { return ++mValue; }
     nsrefcnt operator--() { return --mValue; }
-
+    
     nsrefcnt operator=(nsrefcnt aValue) { return (mValue = aValue); }
     operator nsrefcnt() const { return mValue; }
     nsrefcnt get() const { return mValue; }
@@ -222,17 +123,6 @@ public:                                                                       \
   NS_IMETHOD_(nsrefcnt) Release(void);                                        \
 protected:                                                                    \
   nsAutoRefCnt mRefCnt;                                                       \
-  NS_DECL_OWNINGTHREAD                                                        \
-public:
-
-#define NS_DECL_CYCLE_COLLECTING_ISUPPORTS                                    \
-public:                                                                       \
-  NS_IMETHOD QueryInterface(REFNSIID aIID,                                    \
-                            void** aInstancePtr);                             \
-  NS_IMETHOD_(nsrefcnt) AddRef(void);                                         \
-  NS_IMETHOD_(nsrefcnt) Release(void);                                        \
-protected:                                                                    \
-  nsCycleCollectingAutoRefCnt mRefCnt;                                        \
   NS_DECL_OWNINGTHREAD                                                        \
 public:
 
@@ -339,125 +229,12 @@ NS_IMETHODIMP_(nsrefcnt) _class::Release(void)                                \
 }
 
 
-#define NS_IMPL_CYCLE_COLLECTING_ADDREF_AMBIGUOUS(_class, _basetype)          \
-NS_IMETHODIMP_(nsrefcnt) _class::AddRef(void)                                 \
-{                                                                             \
-  NS_PRECONDITION(PRInt32(mRefCnt) >= 0, "illegal refcnt");                   \
-  NS_ASSERT_OWNINGTHREAD(_class);                                             \
-  mRefCnt.incr(NS_STATIC_CAST(_basetype *, this));                            \
-  NS_LOG_ADDREF(this, mRefCnt, #_class, sizeof(*this));                       \
-  return mRefCnt;                                                             \
-}
-
-#define NS_IMPL_CYCLE_COLLECTING_ADDREF(_class)      \
-  NS_IMPL_CYCLE_COLLECTING_ADDREF_AMBIGUOUS(_class, _class)
-
-#define NS_IMPL_CYCLE_COLLECTING_RELEASE_FULL(_class, _basetype, _destroy)    \
-NS_IMETHODIMP_(nsrefcnt) _class::Release(void)                                \
-{                                                                             \
-  NS_PRECONDITION(0 != mRefCnt, "dup release");                               \
-  NS_ASSERT_OWNINGTHREAD(_class);                                             \
-  mRefCnt.decr(NS_STATIC_CAST(_basetype *, this));		              \
-  NS_LOG_RELEASE(this, mRefCnt, #_class);                                     \
-  if (mRefCnt == 0) {                                                         \
-    mRefCnt.stabilizeForDeletion(NS_STATIC_CAST(_basetype *, this));          \
-    _destroy;                                                                 \
-    return 0;                                                                 \
-  }                                                                           \
-  return mRefCnt;                                                             \
-}
-
-#define NS_IMPL_CYCLE_COLLECTING_RELEASE_WITH_DESTROY(_class, _destroy)       \
-  NS_IMPL_CYCLE_COLLECTING_RELEASE_FULL(_class, _class, _destroy)
-
-#define NS_IMPL_CYCLE_COLLECTING_RELEASE_AMBIGUOUS_WITH_DESTROY(_class, _basetype, _destroy)         \
-  NS_IMPL_CYCLE_COLLECTING_RELEASE_FULL(_class, _basetype, _destroy)
-
-#define NS_IMPL_CYCLE_COLLECTING_RELEASE_AMBIGUOUS(_class, _basetype)         \
-  NS_IMPL_CYCLE_COLLECTING_RELEASE_FULL(_class, _basetype, NS_DELETEXPCOM(this))
-
-#define NS_IMPL_CYCLE_COLLECTING_RELEASE(_class)       \
-  NS_IMPL_CYCLE_COLLECTING_RELEASE_FULL(_class, _class, NS_DELETEXPCOM(this))
-
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/**
- * There are two ways of implementing QueryInterface, and we use both:
- *
- * Table-driven QueryInterface uses a static table of IID->offset mappings
- * and a shared helper function. Using it tends to reduce codesize and improve
- * runtime performance (due to processor cache hits).
- *
- * Macro-driven QueryInterface generates a QueryInterface function directly
- * using common macros. This is necessary if special QueryInterface features
- * are being used (such as tearoffs and conditional interfaces).
- *
- * These methods can be combined into a table-driven function call followed
- * by custom code for tearoffs and conditionals.
+/*
+ * Some convenience macros for implementing QueryInterface
  */
-
-struct QITableEntry
-{
-  const nsIID *iid;     // null indicates end of the QITableEntry array
-  PROffset32   offset;
-};
-
-NS_COM_GLUE nsresult NS_FASTCALL
-NS_TableDrivenQI(void* aThis, const QITableEntry* entries,
-                 REFNSIID aIID, void **aInstancePtr);
-
-/**
- * Implement table-driven queryinterface
- */
-
-#define NS_INTERFACE_TABLE_HEAD(_class)                                       \
-NS_IMETHODIMP _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)      \
-{                                                                             \
-  NS_ASSERTION(aInstancePtr,                                                  \
-               "QueryInterface requires a non-NULL destination!");            \
-  nsresult rv = NS_ERROR_FAILURE;;
-
-#define NS_INTERFACE_TABLE_BEGIN                                              \
-  static const QITableEntry table[] = {
-
-#define NS_INTERFACE_TABLE_ENTRY(_class, _interface)                          \
-  { &_interface::COMTypeInfo<int>::kIID,                                      \
-    NS_REINTERPRET_CAST(char*,                                                \
-                        NS_STATIC_CAST(_interface*, (_class*) 0x1000)) -      \
-    NS_REINTERPRET_CAST(char*, (_class*) 0x1000)                              \
-  },
-
-#define NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, _interface, _implClass)    \
-  { &_interface::COMTypeInfo<int>::kIID,                                      \
-    NS_REINTERPRET_CAST(char*,                                                \
-                        NS_STATIC_CAST(_interface*,                           \
-                                       NS_STATIC_CAST(_implClass*,            \
-                                                      (_class*) 0x1000))) -   \
-    NS_REINTERPRET_CAST(char*, (_class*) 0x1000)                              \
-  },
-
-#define NS_INTERFACE_TABLE_END                                                \
-  { nsnull, 0 } };                                                            \
-  rv = NS_TableDrivenQI(NS_STATIC_CAST(void*, this),                          \
-                        table, aIID, aInstancePtr);
-
-#define NS_INTERFACE_TABLE_TAIL                                               \
-  return rv;                                                                  \
-}
-
-#define NS_INTERFACE_TABLE_TAIL_INHERITING(_baseclass)                        \
-  if (NS_SUCCEEDED(rv))                                                       \
-    return rv;                                                                \
-  return _baseclass::QueryInterface(aIID, aInstancePtr);                      \
-}
-
-#define NS_INTERFACE_TABLE_TAIL_USING_AGGREGATOR(_aggregator)                 \
-  if (NS_SUCCEEDED(rv))                                                       \
-    return rv;                                                                \
-  NS_ASSERTION(_aggregator, "null aggregator");                               \
-  return _aggregator->QueryInterface(aIID, aInstancePtr)                      \
-}
 
 /**
  * This implements query interface with two assumptions: First, the
@@ -568,158 +345,134 @@ NS_IMETHODIMP _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)      \
   NS_IMPL_QUERY_TAIL_USING_AGGREGATOR(_aggregator)
 
 #define NS_IMPL_QUERY_INTERFACE0(_class)                                      \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, nsISupports)                             \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(nsISupports)                                       \
+  NS_INTERFACE_MAP_END
 
 #define NS_IMPL_QUERY_INTERFACE1(_class, _i1)                                 \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i1)                                     \
-    NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, nsISupports, _i1)              \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i1)                                               \
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, _i1)                        \
+  NS_INTERFACE_MAP_END
 
 #define NS_IMPL_QUERY_INTERFACE2(_class, _i1, _i2)                            \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i1)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i2)                                     \
-    NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, nsISupports, _i1)              \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i1)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i2)                                               \
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, _i1)                        \
+  NS_INTERFACE_MAP_END
 
 #define NS_IMPL_QUERY_INTERFACE3(_class, _i1, _i2, _i3)                       \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i1)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i2)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i3)                                     \
-    NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, nsISupports, _i1)              \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i1)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i2)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i3)                                               \
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, _i1)                        \
+  NS_INTERFACE_MAP_END
 
 #define NS_IMPL_QUERY_INTERFACE4(_class, _i1, _i2, _i3, _i4)                  \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i1)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i2)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i3)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i4)                                     \
-    NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, nsISupports, _i1)              \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i1)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i2)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i3)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i4)                                               \
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, _i1)                        \
+  NS_INTERFACE_MAP_END
 
 #define NS_IMPL_QUERY_INTERFACE5(_class, _i1, _i2, _i3, _i4, _i5)             \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i1)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i2)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i3)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i4)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i5)                                     \
-    NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, nsISupports, _i1)              \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i1)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i2)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i3)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i4)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i5)                                               \
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, _i1)                        \
+  NS_INTERFACE_MAP_END
 
 #define NS_IMPL_QUERY_INTERFACE6(_class, _i1, _i2, _i3, _i4, _i5, _i6)        \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i1)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i2)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i3)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i4)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i5)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i6)                                     \
-    NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, nsISupports, _i1)              \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i1)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i2)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i3)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i4)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i5)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i6)                                               \
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, _i1)                        \
+  NS_INTERFACE_MAP_END
 
 #define NS_IMPL_QUERY_INTERFACE7(_class, _i1, _i2, _i3, _i4, _i5, _i6, _i7)   \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i1)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i2)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i3)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i4)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i5)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i6)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i7)                                     \
-    NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, nsISupports, _i1)              \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i1)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i2)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i3)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i4)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i5)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i6)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i7)                                               \
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, _i1)                        \
+  NS_INTERFACE_MAP_END
 
 #define NS_IMPL_QUERY_INTERFACE8(_class, _i1, _i2, _i3, _i4, _i5, _i6,        \
                                  _i7, _i8)                                    \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i1)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i2)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i3)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i4)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i5)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i6)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i7)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i8)                                     \
-    NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, nsISupports, _i1)              \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i1)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i2)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i3)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i4)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i5)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i6)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i7)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i8)                                               \
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, _i1)                        \
+  NS_INTERFACE_MAP_END
 
 #define NS_IMPL_QUERY_INTERFACE9(_class, _i1, _i2, _i3, _i4, _i5, _i6,        \
                                  _i7, _i8, _i9)                               \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i1)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i2)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i3)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i4)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i5)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i6)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i7)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i8)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i9)                                     \
-    NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, nsISupports, _i1)              \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i1)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i2)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i3)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i4)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i5)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i6)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i7)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i8)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i9)                                               \
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, _i1)                        \
+  NS_INTERFACE_MAP_END
 
 #define NS_IMPL_QUERY_INTERFACE10(_class, _i1, _i2, _i3, _i4, _i5, _i6,       \
                                   _i7, _i8, _i9, _i10)                        \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i1)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i2)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i3)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i4)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i5)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i6)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i7)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i8)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i9)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i10)                                    \
-    NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, nsISupports, _i1)              \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i1)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i2)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i3)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i4)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i5)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i6)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i7)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i8)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i9)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i10)                                              \
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, _i1)                        \
+  NS_INTERFACE_MAP_END
 
 #define NS_IMPL_QUERY_INTERFACE11(_class, _i1, _i2, _i3, _i4, _i5, _i6,       \
                                   _i7, _i8, _i9, _i10, _i11)                  \
-  NS_INTERFACE_TABLE_HEAD(_class)                                             \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i1)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i2)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i3)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i4)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i5)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i6)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i7)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i8)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i9)                                     \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i10)                                    \
-    NS_INTERFACE_TABLE_ENTRY(_class, _i12)                                    \
-    NS_INTERFACE_TABLE_ENTRY_AMBIGUOUS(_class, nsISupports, _i1)              \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL
+  NS_INTERFACE_MAP_BEGIN(_class)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i1)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i2)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i3)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i4)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i5)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i6)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i7)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i8)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i9)                                               \
+    NS_INTERFACE_MAP_ENTRY(_i10)                                              \
+    NS_INTERFACE_MAP_ENTRY(_i11)                                              \
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, _i1)                        \
+  NS_INTERFACE_MAP_END
 
 
 #define NS_IMPL_THREADSAFE_QUERY_INTERFACE0  NS_IMPL_QUERY_INTERFACE0
@@ -734,17 +487,6 @@ NS_IMETHODIMP _class::QueryInterface(REFNSIID aIID, void** aInstancePtr)      \
 #define NS_IMPL_THREADSAFE_QUERY_INTERFACE9  NS_IMPL_QUERY_INTERFACE9
 #define NS_IMPL_THREADSAFE_QUERY_INTERFACE10  NS_IMPL_QUERY_INTERFACE10
 #define NS_IMPL_THREADSAFE_QUERY_INTERFACE11  NS_IMPL_QUERY_INTERFACE11
-
-#define NS_IMPL_QUERY_INTERFACE_INHERITED7(Class,Super,i1,i2,i3,i4,i5,i6,i7)  \
-  NS_IMPL_QUERY_HEAD(Class)                                                   \
-  NS_IMPL_QUERY_BODY(i1)                                                      \
-  NS_IMPL_QUERY_BODY(i2)                                                      \
-  NS_IMPL_QUERY_BODY(i3)                                                      \
-  NS_IMPL_QUERY_BODY(i4)                                                      \
-  NS_IMPL_QUERY_BODY(i5)                                                      \
-  NS_IMPL_QUERY_BODY(i6)                                                      \
-  NS_IMPL_QUERY_BODY(i7)                                                      \
-  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                        \
 
 /**
  * Declare that you're going to inherit from something that already
@@ -786,65 +528,53 @@ NS_IMETHODIMP_(nsrefcnt) Class::Release(void)                                 \
 }                                                                             \
 
 #define NS_IMPL_QUERY_INTERFACE_INHERITED0(Class, Super)                      \
-  NS_INTERFACE_TABLE_HEAD(Class)                                              \
-  NS_INTERFACE_TABLE_TAIL_INHERITING(Super)
+  NS_IMPL_QUERY_HEAD(Class)                                                   \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                        \
 
 #define NS_IMPL_QUERY_INTERFACE_INHERITED1(Class, Super, i1)                  \
-  NS_INTERFACE_TABLE_HEAD(Class)                                              \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(Class, i1)                                       \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL_INHERITING(Super)
+  NS_IMPL_QUERY_HEAD(Class)                                                   \
+  NS_IMPL_QUERY_BODY(i1)                                                      \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                        \
 
 #define NS_IMPL_QUERY_INTERFACE_INHERITED2(Class, Super, i1, i2)              \
-  NS_INTERFACE_TABLE_HEAD(Class)                                              \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(Class, i1)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i2)                                       \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL_INHERITING(Super)
+  NS_IMPL_QUERY_HEAD(Class)                                                   \
+  NS_IMPL_QUERY_BODY(i1)                                                      \
+  NS_IMPL_QUERY_BODY(i2)                                                      \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                        \
 
 #define NS_IMPL_QUERY_INTERFACE_INHERITED3(Class, Super, i1, i2, i3)          \
-  NS_INTERFACE_TABLE_HEAD(Class)                                              \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(Class, i1)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i2)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i3)                                       \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL_INHERITING(Super)
+  NS_IMPL_QUERY_HEAD(Class)                                                   \
+  NS_IMPL_QUERY_BODY(i1)                                                      \
+  NS_IMPL_QUERY_BODY(i2)                                                      \
+  NS_IMPL_QUERY_BODY(i3)                                                      \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                        \
 
 #define NS_IMPL_QUERY_INTERFACE_INHERITED4(Class, Super, i1, i2, i3, i4)      \
-  NS_INTERFACE_TABLE_HEAD(Class)                                              \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(Class, i1)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i2)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i3)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i4)                                       \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL_INHERITING(Super)
+  NS_IMPL_QUERY_HEAD(Class)                                                   \
+  NS_IMPL_QUERY_BODY(i1)                                                      \
+  NS_IMPL_QUERY_BODY(i2)                                                      \
+  NS_IMPL_QUERY_BODY(i3)                                                      \
+  NS_IMPL_QUERY_BODY(i4)                                                      \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                        \
 
 #define NS_IMPL_QUERY_INTERFACE_INHERITED5(Class,Super,i1,i2,i3,i4,i5)        \
-  NS_INTERFACE_TABLE_HEAD(Class)                                              \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(Class, i1)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i2)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i3)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i4)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i5)                                       \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL_INHERITING(Super)
+  NS_IMPL_QUERY_HEAD(Class)                                                   \
+  NS_IMPL_QUERY_BODY(i1)                                                      \
+  NS_IMPL_QUERY_BODY(i2)                                                      \
+  NS_IMPL_QUERY_BODY(i3)                                                      \
+  NS_IMPL_QUERY_BODY(i4)                                                      \
+  NS_IMPL_QUERY_BODY(i5)                                                      \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                        \
 
 #define NS_IMPL_QUERY_INTERFACE_INHERITED6(Class,Super,i1,i2,i3,i4,i5,i6)     \
-  NS_INTERFACE_TABLE_HEAD(Class)                                              \
-  NS_INTERFACE_TABLE_BEGIN                                                    \
-    NS_INTERFACE_TABLE_ENTRY(Class, i1)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i2)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i3)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i4)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i5)                                       \
-    NS_INTERFACE_TABLE_ENTRY(Class, i6)                                       \
-  NS_INTERFACE_TABLE_END                                                      \
-  NS_INTERFACE_TABLE_TAIL_INHERITING(Super)
+  NS_IMPL_QUERY_HEAD(Class)                                                   \
+  NS_IMPL_QUERY_BODY(i1)                                                      \
+  NS_IMPL_QUERY_BODY(i2)                                                      \
+  NS_IMPL_QUERY_BODY(i3)                                                      \
+  NS_IMPL_QUERY_BODY(i4)                                                      \
+  NS_IMPL_QUERY_BODY(i5)                                                      \
+  NS_IMPL_QUERY_BODY(i6)                                                      \
+  NS_IMPL_QUERY_TAIL_INHERITING(Super)                                        \
 
 /**
  * Convenience macros for implementing all nsISupports methods for
@@ -951,11 +681,6 @@ NS_IMETHODIMP_(nsrefcnt) Class::Release(void)                                 \
 
 #define NS_IMPL_ISUPPORTS_INHERITED6(Class, Super, i1, i2, i3, i4, i5, i6)    \
     NS_IMPL_QUERY_INTERFACE_INHERITED6(Class, Super, i1, i2, i3, i4, i5, i6)  \
-    NS_IMPL_ADDREF_INHERITED(Class, Super)                                    \
-    NS_IMPL_RELEASE_INHERITED(Class, Super)                                   \
-
-#define NS_IMPL_ISUPPORTS_INHERITED7(Class, Super, i1, i2, i3, i4, i5, i6, i7) \
-    NS_IMPL_QUERY_INTERFACE_INHERITED7(Class, Super, i1, i2, i3, i4, i5, i6, i7) \
     NS_IMPL_ADDREF_INHERITED(Class, Super)                                    \
     NS_IMPL_RELEASE_INHERITED(Class, Super)                                   \
 

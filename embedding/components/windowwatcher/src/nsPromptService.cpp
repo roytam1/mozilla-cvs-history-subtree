@@ -36,7 +36,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsPromptService.h"
-#include "nsPrompt.h"
 
 #include "nsDialogParamBlock.h"
 #include "nsIComponentManager.h"
@@ -53,6 +52,8 @@ static const char kSelectPromptURL[] = "chrome://global/content/selectDialog.xul
 static const char kQuestionIconClass[] = "question-icon";
 static const char kAlertIconClass[] = "alert-icon";
 static const char kWarningIconClass[] = "message-icon";
+
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 #define kCommonDialogsProperties "chrome://global/locale/commonDialogs.properties"
 
@@ -84,7 +85,7 @@ private:
  ************************ nsPromptService ***********************
  ****************************************************************/
 
-NS_IMPL_ISUPPORTS4(nsPromptService, nsIPromptService, nsIPromptService2,
+NS_IMPL_ISUPPORTS3(nsPromptService, nsIPromptService,
                    nsPIPromptService, nsINonBlockingAlertService)
 
 nsPromptService::nsPromptService() {
@@ -125,7 +126,7 @@ nsPromptService::Alert(nsIDOMWindow *parent,
   block->SetString(eDialogTitle, dialogTitle);
 
   nsString url;
-  NS_ConvertASCIItoUTF16 styleClass(kAlertIconClass);
+  NS_ConvertASCIItoUCS2 styleClass(kAlertIconClass);
   block->SetString(eIconClass, styleClass.get());
 
   rv = DoDialog(parent, block, kPromptURL);
@@ -160,7 +161,7 @@ nsPromptService::AlertCheck(nsIDOMWindow *parent,
 
   block->SetString(eDialogTitle, dialogTitle);
 
-  NS_ConvertASCIItoUTF16 styleClass(kAlertIconClass);
+  NS_ConvertASCIItoUCS2 styleClass(kAlertIconClass);
   block->SetString(eIconClass, styleClass.get());
   block->SetString(eCheckboxMsg, checkMsg);
   block->SetInt(eCheckboxState, *checkValue);
@@ -199,7 +200,7 @@ nsPromptService::Confirm(nsIDOMWindow *parent,
   
   block->SetString(eDialogTitle, dialogTitle);
 
-  NS_ConvertASCIItoUTF16 styleClass(kQuestionIconClass);
+  NS_ConvertASCIItoUCS2 styleClass(kQuestionIconClass);
   block->SetString(eIconClass, styleClass.get());
   
   rv = DoDialog(parent, block, kPromptURL);
@@ -238,7 +239,7 @@ nsPromptService::ConfirmCheck(nsIDOMWindow *parent,
 
   block->SetString(eDialogTitle, dialogTitle);
 
-  NS_ConvertASCIItoUTF16 styleClass(kQuestionIconClass);
+  NS_ConvertASCIItoUCS2 styleClass(kQuestionIconClass);
   block->SetString(eIconClass, styleClass.get());
   block->SetString(eCheckboxMsg, checkMsg);
   block->SetInt(eCheckboxState, *checkValue);
@@ -332,7 +333,7 @@ nsPromptService::ConfirmEx(nsIDOMWindow *parent,
   }
   block->SetInt(eNumberButtons, numberButtons);
   
-  block->SetString(eIconClass, NS_ConvertASCIItoUTF16(kQuestionIconClass).get());
+  block->SetString(eIconClass, NS_ConvertASCIItoUCS2(kQuestionIconClass).get());
 
   if (checkMsg && checkValue) {
     block->SetString(eCheckboxMsg, checkMsg);
@@ -390,7 +391,7 @@ nsPromptService::Prompt(nsIDOMWindow *parent,
 
   block->SetString(eDialogTitle, dialogTitle);
 
-  NS_ConvertASCIItoUTF16 styleClass(kQuestionIconClass);
+  NS_ConvertASCIItoUCS2 styleClass(kQuestionIconClass);
   block->SetString(eIconClass, styleClass.get());
   block->SetInt(eNumberEditfields, 1);
   if (*value)
@@ -454,7 +455,7 @@ nsPromptService::PromptUsernameAndPassword(nsIDOMWindow *parent,
 
   block->SetString(eDialogTitle, dialogTitle);
 
-  NS_ConvertASCIItoUTF16 styleClass(kQuestionIconClass);
+  NS_ConvertASCIItoUCS2 styleClass(kQuestionIconClass);
   block->SetString(eIconClass, styleClass.get());
   block->SetInt( eNumberEditfields, 2 );
   if (*username)
@@ -525,7 +526,7 @@ NS_IMETHODIMP nsPromptService::PromptPassword(nsIDOMWindow *parent,
   block->SetString(eDialogTitle, dialogTitle);
 
   nsString url;
-  NS_ConvertASCIItoUTF16 styleClass(kQuestionIconClass);
+  NS_ConvertASCIItoUCS2 styleClass(kQuestionIconClass);
   block->SetString(eIconClass, styleClass.get());
   block->SetInt(eNumberEditfields, 1);
   block->SetInt(eEditField1Password, 1);
@@ -557,36 +558,6 @@ NS_IMETHODIMP nsPromptService::PromptPassword(nsIDOMWindow *parent,
       block->GetInt(eCheckboxState, checkValue);  
   }
   return rv;
-}
-
-
-NS_IMETHODIMP
-nsPromptService::PromptAuth(nsIDOMWindow* aParent,
-                            nsIChannel* aChannel,
-                            PRUint32 aLevel,
-                            nsIAuthInformation* aAuthInfo,
-                            const PRUnichar* aCheckLabel,
-                            PRBool* aCheckValue,
-                            PRBool *retval)
-{
-  return nsPrompt::PromptPasswordAdapter(this, aParent, aChannel,
-                                         aLevel, aAuthInfo,
-                                         aCheckLabel, aCheckValue,
-                                         retval);
-}
-
-NS_IMETHODIMP
-nsPromptService::AsyncPromptAuth(nsIDOMWindow* aParent,
-                                 nsIChannel* aChannel,
-                                 nsIAuthPromptCallback* aCallback,
-                                 nsISupports* aContext,
-                                 PRUint32 aLevel,
-                                 nsIAuthInformation* aAuthInfo,
-                                 const PRUnichar* aCheckLabel,
-                                 PRBool* aCheckValue,
-                                 nsICancelable** retval)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
@@ -695,13 +666,13 @@ nsPromptService::GetLocaleString(const char *aKey, PRUnichar **aResult)
 {
   nsresult rv;
 
-  nsCOMPtr<nsIStringBundleService> stringService = do_GetService(NS_STRINGBUNDLE_CONTRACTID);
+  nsCOMPtr<nsIStringBundleService> stringService = do_GetService(kStringBundleServiceCID);
   nsCOMPtr<nsIStringBundle> stringBundle;
  
   rv = stringService->CreateBundle(kCommonDialogsProperties, getter_AddRefs(stringBundle));
   if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 
-  rv = stringBundle->GetStringFromName(NS_ConvertASCIItoUTF16(aKey).get(), aResult);
+  rv = stringBundle->GetStringFromName(NS_ConvertASCIItoUCS2(aKey).get(), aResult);
 
   return rv;
 }

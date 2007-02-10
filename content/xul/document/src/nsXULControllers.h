@@ -52,6 +52,9 @@
 #include "nsISupportsArray.h"
 #include "nsISecurityCheckedComponent.h"
 
+class nsIDOMXULCommandDispatcher;
+
+
 /* non-XPCOM class for holding controllers and their IDs */
 class nsXULControllerData
 {
@@ -99,6 +102,7 @@ protected:
     void        DeleteControllers();
 
     nsVoidArray mControllers;
+    nsWeakPtr mCommandDispatcher;
     PRUint32    mCurControllerID;
 };
 

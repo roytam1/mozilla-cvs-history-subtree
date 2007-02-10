@@ -56,13 +56,30 @@ const static char* start_url = "chrome://minimo/content/minimo.xul";
 //const static char* start_url = "resource://gre/res/start.html";
 //const static char* start_url = "resource://gre/res/1.html";
 
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
 
-void OpenNewTab(char* url)
+void ErrorAlert(const char* message)
+{
+  // this needs to be a low-resource quick dialog that does
+  // not use anything in mozilla/gecko
+
+#ifdef WINCE
+  MessageBox(0, 
+             message, 
+             "ERROR", 
+             MB_APPLMODAL);
+#else
+  printf("ERROR!!: %s\n", message);
+#endif
+
+}
+
+PRBool isChromeAvaiable()
 {
   nsCOMPtr<nsIWindowWatcher> wwatch = do_GetService(NS_WINDOWWATCHER_CONTRACTID);
   if (!wwatch)
-    return;
+    return PR_FALSE;
   
   nsCOMPtr<nsIDOMWindow> fosterParent;
   wwatch->GetActiveWindow(getter_AddRefs(fosterParent));
@@ -71,30 +88,8 @@ void OpenNewTab(char* url)
   nsCOMPtr<nsIDocShellTreeItem> rootItem = do_QueryInterface(navNav);
   nsCOMPtr<nsIDOMWindow> rootWin(do_GetInterface(rootItem));
   nsCOMPtr<nsIDOMChromeWindow> chromeWin(do_QueryInterface(rootWin));
-  
-  if (!chromeWin)
-  {
-    // We are currently starting up.  Save this url request as a startup page.
-    nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
-    if (!prefBranch)
-      return;
-    
-    prefBranch->SetCharPref("browser.startup.homepage.override", url);
-    return;
-  }
-  
-  nsCOMPtr<nsIBrowserDOMWindow> bwin;    
-  chromeWin->GetBrowserDOMWindow(getter_AddRefs(bwin));
-  
-  nsCOMPtr<nsIURI> uri;
-  nsDependentCString urlStr(url);
-  NS_NewURI(getter_AddRefs(uri), urlStr, 0, 0);
-  
-  nsCOMPtr<nsIDOMWindow> newBrowserWindow;
-  bwin->OpenURI(uri, 0,
-                nsIBrowserDOMWindow::OPEN_CURRENTWINDOW,
-                nsIBrowserDOMWindow::OPEN_EXTERNAL,
-                getter_AddRefs(newBrowserWindow));
+
+  return (PRBool)chromeWin.get();
 }
 
 class ApplicationObserver: public nsIObserver 
@@ -120,6 +115,10 @@ ApplicationObserver::ApplicationObserver(nsIAppShell* aAppShell)
   
   nsCOMPtr<nsIObserverService> os = do_GetService("@mozilla.org/observer-service;1");
   
+  
+  os->AddObserver(this, "nsIEventQueueActivated", PR_FALSE);
+  os->AddObserver(this, "nsIEventQueueDestroyed", PR_FALSE);
+  
   os->AddObserver(this, "xul-window-registered", PR_FALSE);
   os->AddObserver(this, "xul-window-destroyed", PR_FALSE);
   os->AddObserver(this, "xul-window-visible", PR_FALSE);
@@ -136,7 +135,31 @@ NS_IMPL_ISUPPORTS1(ApplicationObserver, nsIObserver)
 NS_IMETHODIMP
 ApplicationObserver::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar *aData)
 {
-  if (!strcmp(aTopic, "xul-window-visible"))
+  if (!strcmp(aTopic, "nsIEventQueueActivated")) 
+  {
+    nsCOMPtr<nsIEventQueue> eq(do_QueryInterface(aSubject));
+    if (eq)
+    {
+      PRBool isNative = PR_TRUE;
+      // we only add native event queues to the appshell
+      eq->IsQueueNative(&isNative);
+      if (isNative)
+        mAppShell->ListenToEventQueue(eq, PR_TRUE);
+    }
+  } 
+  else if (!strcmp(aTopic, "nsIEventQueueDestroyed")) 
+  {
+    nsCOMPtr<nsIEventQueue> eq(do_QueryInterface(aSubject));
+    if (eq) 
+    {
+      PRBool isNative = PR_TRUE;
+      // we only remove native event queues from the appshell
+      eq->IsQueueNative(&isNative);
+      if (isNative)
+        mAppShell->ListenToEventQueue(eq, PR_FALSE);
+    }
+  } 
+  else if (!strcmp(aTopic, "xul-window-visible"))
   {
     KillSplashScreen();
   }
@@ -479,7 +502,56 @@ LRESULT CALLBACK BrowserWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM l
   if (message == WM_COPYDATA) 
   {
     COPYDATASTRUCT *cds = (COPYDATASTRUCT*)lParam;
-    OpenNewTab((char*)cds->lpData);
+    char* command = (char*)cds->lpData;
+
+    if (!strncmp(command, "URL", 3))
+    {
+      if (!isChromeAvaiable())
+      {
+        // We are currently starting up.  Save this url request as a startup page.
+        nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
+        if (!prefBranch)
+          return 0;
+        
+        prefBranch->SetCharPref("browser.startup.homepage.override", command+3);
+        return 0;
+      }
+      
+      nsCOMPtr<nsIObserverService> os = do_GetService("@mozilla.org/observer-service;1");
+      os->NotifyObservers(nsnull, "open-url", NS_ConvertUTF8toUTF16(command+3).get());
+      return 0;
+    }
+    
+    if (!strncmp(command, "ABM", 3))
+    {
+      nsCOMPtr<nsIObserverService> os = do_GetService("@mozilla.org/observer-service;1");
+      os->NotifyObservers(nsnull, "add-bm", NS_ConvertUTF8toUTF16(command+3).get());
+      return 0;
+    }
+
+    if (!strncmp(command, "OOM", 3))
+    {
+#ifdef WINCE
+      SHCloseApps(512*1024); // Ask the system for another 512kb.
+#endif
+
+      nsMemory::HeapMinimize(PR_TRUE);
+      
+      // dump image cache.
+      nsCOMPtr<imgICache> ic = do_GetService("@mozilla.org/image/cache;1");
+      if (ic)
+      {
+        ic->ClearCache(FALSE);
+        ic->ClearCache(TRUE);
+      }
+
+      nsCOMPtr<nsIObserverService> os = do_GetService("@mozilla.org/observer-service;1");
+      if (os)
+        os->NotifyObservers(nsnull, "low-mem", nsnull);
+
+      return 0;
+    }
+
     return 0;
   }
   
@@ -695,7 +767,7 @@ _library Libraries[] =
   {
     {  L"schannel.dll",    NULL },
     {  NULL, NULL },
-  };
+};
 
 void LoadKnownLibs()
 {
@@ -704,10 +776,12 @@ void LoadKnownLibs()
     Libraries[i].module = LoadLibraryW(Libraries[i].name);
     if (!Libraries[i].module)
     {
+#if 0
       MessageBox(0, 
                  "Preload library failed to load.", 
                  "Lib Load Failed", 
                  MB_APPLMODAL);
+#endif
     }
   }
 }
@@ -722,6 +796,7 @@ void UnloadKnownLibs()
 
 int main(int argc, char *argv[])
 {
+
 #ifdef WINCE
   CreateListenerWindow();
 #endif
@@ -730,71 +805,125 @@ int main(int argc, char *argv[])
   gtk_set_locale();
   gtk_init(&argc, &argv);
 #endif
-
+  
 #ifdef HACKY_PRE_LOAD_LIBRARY
   LoadKnownLibs();
 #endif
   
   CreateSplashScreen();
   
+#ifdef WINCE
+  Sleep(1);
+#endif
+  
 #ifdef _BUILD_STATIC_BIN
   NS_InitEmbedding(nsnull, nsnull, kPStaticModules, kStaticModuleCount);
 #else
   NS_InitEmbedding(nsnull, nsnull);
 #endif
-
-    // Choose the new profile
-  if (NS_FAILED(StartupProfile()))
-    return 1;
   
+  // Choose the new profile
+  if (NS_FAILED(StartupProfile()))
+  {
+    KillSplashScreen();
+    ErrorAlert("Could not start Minimo. (1)!");
+    return -1;
+  }
+
   DoPreferences();
   OverrideComponents();
   
   NS_TIMELINE_ENTER("appStartup");
-  nsCOMPtr<nsIAppShell> appShell = do_GetService(kAppShellCID);
+  nsCOMPtr<nsIAppShell> appShell = do_CreateInstance(kAppShellCID);
   if (!appShell)
   {
     // if we can't get the nsIAppShell, then we should auto reg.
     nsCOMPtr<nsIComponentRegistrar> registrar;
     NS_GetComponentRegistrar(getter_AddRefs(registrar));
     if (!registrar)
+    {
+      KillSplashScreen();
+      ErrorAlert("Could not start Minimo. (2)!");
       return -1;
-
+    }
+    
     registrar->AutoRegister(nsnull);
-
-	appShell = do_GetService(kAppShellCID);
-
+    
+	appShell = do_CreateInstance(kAppShellCID);
+    
 	if (!appShell)
-		return 1;
+    {
+      KillSplashScreen();
+      ErrorAlert("Could not start Minimo. (3)!");
+      return -1;
+    }
   }
-
+  
+  appShell->Create(nsnull, nsnull);
+  
+  nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
+  if (!prefBranch)
+  {
+    KillSplashScreen();
+    ErrorAlert("Could not start Minimo. (4)!");
+    return -1;
+  }
+  
+  //////////////////////////////////////////////////////////////////////////
+  // NOTE: this enforces the classic skin.
+  unsigned long x, y;
+  GetScreenSize(&x, &y);
+  if (x >= 400 || y >= 400)
+    prefBranch->SetCharPref("general.skins.selectedSkin", "classic-vga/1.0");
+  else
+    prefBranch->SetCharPref("general.skins.selectedSkin", "classic/1.0");
+  //////////////////////////////////////////////////////////////////////////
+    
   ApplicationObserver *appObserver = new ApplicationObserver(appShell);
   if (!appObserver)
-    return 1;
+  {
+    KillSplashScreen();
+    ErrorAlert("Could not start Minimo. (5)!");
+    return -1;
+  }
+
   NS_ADDREF(appObserver);
   
   WindowCreator *creatorCallback = new WindowCreator(appShell);
   if (!creatorCallback)
-    return 1;
+  {
+    KillSplashScreen();
+    ErrorAlert("Could not start Minimo. (6)!");
+    return -1;
+  }
   
   nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
   wwatch->SetWindowCreator(creatorCallback);
   
   nsCOMPtr<nsIDOMWindow> newWindow;
-  wwatch->OpenWindow(nsnull, start_url, "_blank", "chrome,dialog=no,all", nsnull, getter_AddRefs(newWindow));
-  
-  appShell->Run();
-  
+  nsresult rv = wwatch->OpenWindow(nsnull, start_url, "_blank", "chrome,dialog=no,all", nsnull, getter_AddRefs(newWindow));
+
+  if (NS_FAILED(rv))
+  {
+    KillSplashScreen();
+    ErrorAlert("Could not start Minimo. (7)!");
+    return -1;
+  }
+
+  rv = appShell->Run();
+
+  if (NS_FAILED(rv))
+  {
+    KillSplashScreen();
+    return -1;
+  }
+
   appShell = nsnull;
   wwatch = nsnull;
   newWindow = nsnull;
   
   delete appObserver;
   delete creatorCallback;
-  
-  nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
-  if (!prefBranch)
-    return -1;
   
   PRBool dumpJSConsole = PR_FALSE;
   

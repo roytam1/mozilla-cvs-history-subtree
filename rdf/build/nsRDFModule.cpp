@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Benjamin Smedberg <benjamin@smedbergs.us>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -41,15 +40,15 @@
 
 #include "nsRDFModule.h"
 #include "nsIFactory.h"
-#include "nsRDFService.h"
 #include "nsIRDFContainer.h"
 #include "nsIRDFContainerUtils.h"
 #include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFContentSink.h"
+#include "nsIRDFService.h"
 #include "nsISupports.h"
 #include "nsRDFBaseDataSources.h"
 #include "nsRDFBuiltInDataSources.h"
-#include "nsFileSystemDataSource.h"
+#include "nsIRDFFileSystem.h"
 #include "nsRDFCID.h"
 #include "nsIComponentManager.h"
 #include "rdf.h"
@@ -93,7 +92,9 @@ CreateNew##_func(nsISupports* aOuter, REFNSIID aIID, void **aResult) \
 extern nsresult
 NS_NewDefaultResource(nsIRDFResource** aResult);
 
+MAKE_CTOR(RDFService,RDFService,RDFService)
 MAKE_CTOR(RDFXMLDataSource,RDFXMLDataSource,RDFDataSource)
+MAKE_CTOR(RDFFileSystemDataSource,RDFFileSystemDataSource,RDFDataSource)
 MAKE_CTOR(RDFCompositeDataSource,RDFCompositeDataSource,RDFCompositeDataSource)
 MAKE_CTOR(RDFContainer,RDFContainer,RDFContainer)
 
@@ -146,7 +147,7 @@ static const nsModuleComponentInfo components[] =
      "RDF File System Data Source", 
      NS_RDFFILESYSTEMDATASOURCE_CID,
      NS_RDF_DATASOURCE_CONTRACTID_PREFIX "files", 
-     FileSystemDataSource::Create
+     CreateNewRDFFileSystemDataSource
     },
     
     { "RDF In-Memory Data Source", 
@@ -191,7 +192,7 @@ static const nsModuleComponentInfo components[] =
     { "RDF Service", 
       NS_RDFSERVICE_CID,
       NS_RDF_CONTRACTID "/rdf-service;1",
-      RDFServiceImpl::CreateSingleton
+      CreateNewRDFService 
     },
 
     { "RDF/XML Parser",
@@ -217,25 +218,4 @@ static const nsModuleComponentInfo components[] =
       NS_LOCALSTORE_CONTRACTID, NS_NewLocalStore },
 };
 
-static nsresult
-StartupRDFModule(nsIModule* unused)
-{
-    if (RDFServiceImpl::gRDFService) {
-        NS_ERROR("Leaked the RDF service from a previous startup.");
-        RDFServiceImpl::gRDFService = nsnull;
-    }
-
-    return NS_OK;
-}
-
-static void
-ShutdownRDFModule(nsIModule* unused)
-{
-    if (RDFServiceImpl::gRDFService) {
-        // XXX make this an assertion!
-        NS_WARNING("Leaking the RDF Service.");
-    }
-}
-
-NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(nsRDFModule, components,
-                                   StartupRDFModule, ShutdownRDFModule)
+NS_IMPL_NSGETMODULE(nsRDFModule, components)

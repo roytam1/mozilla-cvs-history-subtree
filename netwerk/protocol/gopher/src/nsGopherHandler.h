@@ -60,8 +60,12 @@ public:
     NS_DECL_NSIPROXIEDPROTOCOLHANDLER
 
     // nsGopherHandler methods:
-    nsGopherHandler() {}
+    nsGopherHandler();
+    virtual ~nsGopherHandler();
 
+    // Define a Create method to be used with a factory:
+    static NS_METHOD Create(nsISupports* aOuter, const nsIID& aIID,
+                            void* *aResult);
 protected:
     nsCOMPtr<nsIProtocolProxyService> mProxySvc;
 };

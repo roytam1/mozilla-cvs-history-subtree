@@ -42,6 +42,7 @@
 #include "nsTransform2D.h"
 #include "nsIRegion.h"
 #include "nsIFontMetrics.h"
+#include "nsUnicharUtils.h"
 #include <stdlib.h>
 
 
@@ -115,10 +116,12 @@ nsresult nsRenderingContextImpl::AllocateBackbuffer(const nsRect &aRequestedSize
     } else {
       SelectOffScreenDrawingSurface(gBackbuffer);
 
+      float p2t;
       nsCOMPtr<nsIDeviceContext>  dx;
       GetDeviceContext(*getter_AddRefs(dx));
+      p2t = dx->DevUnitsToAppUnits();
       nsRect bounds = aRequestedSize;
-      bounds *= dx->AppUnitsPerDevPixel();
+      bounds *= p2t;
 
       SetClipRect(bounds, nsClipCombine_kReplace);
     }
@@ -182,15 +185,6 @@ NS_IMETHODIMP nsRenderingContextImpl::PopTranslation(PushedTranslation* aState)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsRenderingContextImpl::SetTranslation(nscoord aX, nscoord aY)
-{
-  nsTransform2D *theTransform; 
-  GetCurrentTransform(theTransform);
-  NS_ASSERTION(theTransform != nsnull, "The rendering context transform is null");
-  theTransform->SetTranslation(aX, aY);
-  return NS_OK;
-}
-
 PRBool nsRenderingContextImpl::RectFitsInside(const nsRect& aRect, PRInt32 aWidth, PRInt32 aHeight) const
 {
   if (aRect.width > aWidth)
@@ -227,16 +221,17 @@ void nsRenderingContextImpl::GetDrawingSurfaceSize(const nsRect& aMaxBackbufferS
 void nsRenderingContextImpl::CalculateDiscreteSurfaceSize(const nsRect& aMaxBackbufferSize, const nsRect& aRequestedSize, nsRect& aSurfaceSize) 
 {
   // Get the height and width of the screen
-  nscoord height;
-  nscoord width;
+  PRInt32 height;
+  PRInt32 width;
 
   nsCOMPtr<nsIDeviceContext>  dx;
   GetDeviceContext(*getter_AddRefs(dx));
   dx->GetDeviceSurfaceDimensions(width, height);
 
-  PRInt32 p2a = dx->AppUnitsPerDevPixel();
-  PRInt32 screenHeight = NSAppUnitsToIntPixels(height, p2a);
-  PRInt32 screenWidth = NSAppUnitsToIntPixels(width, p2a);
+  float devUnits;
+  devUnits = dx->DevUnitsToAppUnits();
+  PRInt32 screenHeight = NSToIntRound(float( height) / devUnits );
+  PRInt32 screenWidth = NSToIntRound(float( width) / devUnits );
 
   // These tests must go from smallest rectangle to largest rectangle.
 
@@ -311,20 +306,14 @@ NS_IMETHODIMP nsRenderingContextImpl::DrawImage(imgIContainer *aImage, const nsR
   nsRect dr = aDestRect;
   mTranMatrix->TransformCoord(&dr.x, &dr.y, &dr.width, &dr.height);
 
-  // We should NOT be transforming the source rect (which is based on the image
-  // origin) using the rendering context's translation!
-  // However, given that we are, remember that the transformation of a
-  // height depends on the position, since what we are really doing is
-  // transforming the edges.  So transform *with* a translation, based
-  // on the origin of the *destination* rect, and then fix up the
-  // origin.
-  nsRect sr(aDestRect.TopLeft(), aSrcRect.Size());
+  nsRect sr = aSrcRect;
   mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
   
   if (sr.IsEmpty() || dr.IsEmpty())
     return NS_OK;
 
-  sr.MoveTo(aSrcRect.TopLeft());
+  sr.x = aSrcRect.x;
+  sr.y = aSrcRect.y;
   mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
 
   nsCOMPtr<gfxIImageFrame> iframe;
@@ -524,7 +513,7 @@ static PRInt32 FindSafeLength(nsRenderingContextImpl* aContext,
 
   // Ensure that we don't break inside a cluster or inside a surrogate pair
   while (len > 0 &&
-         (NS_IS_LOW_SURROGATE(aString[len]) || (clusterHint && !buffer[len]))) {
+         (IS_LOW_SURROGATE(aString[len]) || (clusterHint && !buffer[len]))) {
     len--;
   }
   if (len == 0) {

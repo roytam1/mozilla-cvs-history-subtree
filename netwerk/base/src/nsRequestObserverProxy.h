@@ -41,8 +41,8 @@
 
 #include "nsIRequestObserver.h"
 #include "nsIRequestObserverProxy.h"
+#include "nsIEventQueue.h"
 #include "nsIRequest.h"
-#include "nsThreadUtils.h"
 #include "nsCOMPtr.h"
 
 class nsARequestObserverEvent;
@@ -54,31 +54,44 @@ public:
     NS_DECL_NSIREQUESTOBSERVER
     NS_DECL_NSIREQUESTOBSERVERPROXY
 
-    nsRequestObserverProxy() {}
+    nsRequestObserverProxy() { }
+    virtual ~nsRequestObserverProxy();
 
     nsIRequestObserver *Observer() { return mObserver; }
 
     nsresult FireEvent(nsARequestObserverEvent *);
-    nsIEventTarget *Target() { return mTarget; } // debugging aid
-    void SetTarget(nsIEventTarget *target) { mTarget = target; }
+    nsIEventQueue *EventQueue() { return mEventQ.get(); } // debugging aid
+    nsresult SetEventQueue(nsIEventQueue *);
 
 protected:
-    virtual ~nsRequestObserverProxy();
-
     nsCOMPtr<nsIRequestObserver> mObserver;
-    nsCOMPtr<nsIEventTarget>     mTarget;
+    nsCOMPtr<nsIEventQueue>      mEventQ;
 
     friend class nsOnStartRequestEvent;
     friend class nsOnStopRequestEvent;
 };
 
-class nsARequestObserverEvent : public nsRunnable
+class nsARequestObserverEvent
 {
 public:
     nsARequestObserverEvent(nsIRequest *, nsISupports *);
+    virtual ~nsARequestObserverEvent() {}
+
+    static nsARequestObserverEvent *FromPLEvent(PLEvent *p)
+        { return (nsARequestObserverEvent *)
+            ( (char *) p - offsetof(nsARequestObserverEvent, mEvent) ); }
+    PLEvent *GetPLEvent() { return &mEvent; }
+
+    /**
+     * Implement this method to add code to handle the event
+     */
+    virtual void HandleEvent() = 0;
 
 protected:
-    virtual ~nsARequestObserverEvent() {}
+    static void PR_CALLBACK HandlePLEvent(PLEvent *);
+    static void PR_CALLBACK DestroyPLEvent(PLEvent *);
+
+    PLEvent mEvent; // this _must_ be the first data member
 
     nsCOMPtr<nsIRequest>  mRequest;
     nsCOMPtr<nsISupports> mContext;

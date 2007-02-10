@@ -55,14 +55,15 @@
 #include "nsICSSStyleSheet.h"
 #include "nsDOMAttribute.h"
 #include "nsDOMClassInfo.h"
-#include "nsDOMScriptObjectFactory.h"
 #include "nsEventListenerManager.h"
 #include "nsFrame.h"
 #include "nsGenericElement.h"  // for nsDOMEventRTTearoff
 #include "nsGenericHTMLElement.h"
 #include "nsGlobalWindow.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsImageFrame.h"
+#include "nsJSEnvironment.h"
+#include "nsLayoutAtoms.h"
 #include "nsLayoutStylesheetCache.h"
 #include "nsNodeInfo.h"
 #include "nsRange.h"
@@ -73,8 +74,8 @@
 #include "nsStyleSet.h"
 #include "nsTextControlFrame.h"
 #include "nsTextTransformer.h"
+#include "nsXBLAtoms.h"
 #include "nsXBLWindowKeyHandler.h"
-#include "txMozillaXSLTProcessor.h"
 #include "nsDOMStorage.h"
 
 #ifdef MOZ_XUL
@@ -88,24 +89,18 @@
 #endif
 
 #ifdef MOZ_SVG
-PRBool NS_SVGEnabled();
+#include "nsSVGAtoms.h"
+#include "nsSVGUtils.h"
 #endif
 
 #ifndef MOZ_NO_INSPECTOR_APIS
 #include "inDOMView.h"
 #endif
 
-#ifdef MOZ_CAIRO_GFX
-#include "gfxTextRunCache.h"
-#endif
-
 #include "nsError.h"
 #include "nsTraceRefcnt.h"
 
 static nsrefcnt sLayoutStaticRefcnt;
-#ifdef MOZ_CAIRO_GFX
-static PRBool initedGfxTextRunCache;
-#endif
 
 nsresult
 nsLayoutStatics::Initialize()
@@ -119,22 +114,21 @@ nsLayoutStatics::Initialize()
 
   nsresult rv;
 
-  nsDOMScriptObjectFactory::Startup();
+  nsJSEnvironment::Startup();
   rv = nsContentUtils::Init();
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsContentUtils");
+
+    Shutdown();
+
     return rv;
   }
-
   rv = nsAttrValue::Init();
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsAttrValue");
-    return rv;
-  }
 
-  rv = nsTextFragment::Init();
-  if (NS_FAILED(rv)) {
-    NS_ERROR("Could not initialize nsTextFragment");
+    Shutdown();
+
     return rv;
   }
 
@@ -145,7 +139,10 @@ nsLayoutStatics::Initialize()
   nsCSSKeywords::AddRefTable();
   nsCSSProps::AddRefTable();
   nsColorNames::AddRefTable();
-  nsGkAtoms::AddRefAtoms();
+  nsHTMLAtoms::AddRefAtoms();
+  nsXBLAtoms::AddRefAtoms();
+  nsLayoutAtoms::AddRefAtoms();
+  nsXULAtoms::AddRefAtoms();
 
 #ifndef MOZ_NO_INSPECTOR_APIS
   inDOMView::InitAtoms();
@@ -155,34 +152,37 @@ nsLayoutStatics::Initialize()
   rv = nsXULContentUtils::Init();
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsXULContentUtils");
+
+    Shutdown();
+
     return rv;
   }
 #endif
 
 #ifdef MOZ_MATHML
   nsMathMLOperators::AddRefTable();
+  nsMathMLAtoms::AddRefAtoms();
 #endif
 
 #ifdef MOZ_SVG
-  if (NS_SVGEnabled())
+  if (nsSVGUtils::SVGEnabled())
     nsContentDLF::RegisterSVG();
+  nsSVGAtoms::AddRefAtoms();
+#ifdef MOZ_SVG_RENDERER_LIBART
+  NS_InitSVGRendererLibartGlobals();
+#endif
+#ifdef MOZ_SVG_RENDERER_GDIPLUS
+  NS_InitSVGRendererGDIPlusGlobals();
+#endif
 #endif
 
 #ifdef DEBUG
   nsFrame::DisplayReflowStartup();
 #endif
   rv = nsTextTransformer::Initialize();
-  if (NS_FAILED(rv)) {
-    NS_ERROR("Could not initialize nsTextTransformer");
-    return rv;
-  }
-  nsDOMAttribute::Initialize();
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = txMozillaXSLTProcessor::Init();
-  if (NS_FAILED(rv)) {
-    NS_ERROR("Could not initialize txMozillaXSLTProcessor");
-    return rv;
-  }
+  nsDOMAttribute::Initialize();
 
   rv = nsDOMStorageManager::Initialize();
   if (NS_FAILED(rv)) {
@@ -190,15 +190,6 @@ nsLayoutStatics::Initialize()
     return rv;
   }
 
-#ifdef MOZ_CAIRO_GFX
-  rv = gfxTextRunCache::Init();
-  initedGfxTextRunCache = PR_TRUE;  
-  if (NS_FAILED(rv)) {
-    NS_ERROR("Could not initialize gfxTextRunCache");
-    return rv;
-  }
-#endif
-  
   return NS_OK;
 }
 
@@ -206,9 +197,8 @@ void
 nsLayoutStatics::Shutdown()
 {
   nsDOMStorageManager::Shutdown();
-  txMozillaXSLTProcessor::Shutdown();
   nsDOMAttribute::Shutdown();
-  nsDOMEventRTTearoff::Shutdown();
+  nsGenericElement::Shutdown();
   nsEventListenerManager::Shutdown();
   nsContentList::Shutdown();
   nsComputedDOMStyle::Shutdown();
@@ -237,6 +227,15 @@ nsLayoutStatics::Shutdown()
   nsMathMLOperators::ReleaseTable();
 #endif
 
+#ifdef MOZ_SVG
+#ifdef MOZ_SVG_RENDERER_LIBART
+  NS_FreeSVGRendererLibartGlobals();
+#endif
+#ifdef MOZ_SVG_RENDERER_GDIPLUS
+  NS_FreeSVGRendererGDIPlusGlobals();
+#endif
+#endif
+
   nsCSSFrameConstructor::ReleaseGlobals();
   nsTextTransformer::Shutdown();
   nsSpaceManager::Shutdown();
@@ -247,8 +246,6 @@ nsLayoutStatics::Shutdown()
   NS_IF_RELEASE(nsContentDLF::gUAStyleSheet);
   NS_IF_RELEASE(nsRuleNode::gLangService);
   nsGenericHTMLElement::Shutdown();
-
-  nsTextFragment::Shutdown();
 
   nsAttrValue::Shutdown();
   nsContentUtils::Shutdown();
@@ -261,12 +258,6 @@ nsLayoutStatics::Shutdown()
   nsTextControlFrame::ShutDown();
   nsXBLWindowKeyHandler::ShutDown();
   nsAutoCopyListener::Shutdown();
-
-#ifdef MOZ_CAIRO_GFX
-  if (initedGfxTextRunCache) {
-    gfxTextRunCache::Shutdown();
-  }  
-#endif
 }
 
 void

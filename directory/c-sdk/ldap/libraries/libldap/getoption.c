@@ -1,29 +1,29 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  * http://www.mozilla.org/MPL/
- * 
+ *
  * Software distributed under the License is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
  * License.
- * 
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
+ *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998-1999
  * the Initial Developer. All Rights Reserved.
- * 
+ *
  * Contributor(s):
- * 
+ *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -32,7 +32,7 @@
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the MPL, the GPL or the LGPL.
- * 
+ *
  * ***** END LICENSE BLOCK ***** */
 #include "ldap-int.h"
 
@@ -129,11 +129,6 @@ ldap_get_option( LDAP *ld, int option, void *optdata )
 		    LDAP_GET_BITOPT( ld, LDAP_BITOPT_RECONNECT );
 		break;
 
-	case LDAP_OPT_NOREBIND:
-		*((int *) optdata) =
-		    LDAP_GET_BITOPT( ld, LDAP_BITOPT_NOREBIND );
-		break;
-
 #ifdef LDAP_ASYNC_IO
 	case LDAP_OPT_ASYNC_CONNECT:
 		*((int *) optdata) =
@@ -141,11 +136,7 @@ ldap_get_option( LDAP *ld, int option, void *optdata )
 		break;
 #endif /* LDAP_ASYNC_IO */
 
-        /* stuff in the sockbuf */
-        case LDAP_X_OPT_SOCKBUF:
-                *((Sockbuf **) optdata) = ld->ld_sbp;
-                break;
-
+	/* stuff in the sockbuf */
 	case LDAP_OPT_DESC:
 		if ( ber_sockbuf_get_option( ld->ld_sbp,
 		    LBER_SOCKBUF_OPT_DESC, optdata ) != 0 ) {
@@ -218,26 +209,11 @@ ldap_get_option( LDAP *ld, int option, void *optdata )
 	    rc = -1;
 	  }
 	  break;
-	  
-	/* get socketargp in extended i/o function */
-	case LDAP_X_OPT_SOCKETARG:
-	  if ( ber_sockbuf_get_option( ld->ld_sbp,LBER_SOCKBUF_OPT_SOCK_ARG, optdata)	    
-		 != 0 ) {
-		LDAP_SET_LDERRNO( ld, LDAP_LOCAL_ERROR, NULL, NULL );
-		rc = -1;
-	   }
-	   	break;
 
 	/* thread function pointers */
 	case LDAP_OPT_THREAD_FN_PTRS:
 		/* struct copy */
 		*((struct ldap_thread_fns *) optdata) = ld->ld_thread;
-		break;
-
-	/* extra thread function pointers */
-	case LDAP_OPT_EXTRA_THREAD_FN_PTRS:
-		/* struct copy */
-		*((struct ldap_extra_thread_fns *) optdata) = ld->ld_thread2;
 		break;
 
 	/* DNS function pointers */
@@ -296,61 +272,6 @@ ldap_get_option( LDAP *ld, int option, void *optdata )
         case LDAP_X_OPT_CONNECT_TIMEOUT:
                 *((int *) optdata) = ld->ld_connect_timeout;
                 break;
-
-#ifdef LDAP_SASLIO_HOOKS
-	/* SASL options */
-	case LDAP_OPT_X_SASL_MECH:
-		*((char **) optdata) = nsldapi_strdup(ld->ld_def_sasl_mech);
-		break;
-	case LDAP_OPT_X_SASL_REALM:
-		*((char **) optdata) = nsldapi_strdup(ld->ld_def_sasl_realm);
-		break;
-	case LDAP_OPT_X_SASL_AUTHCID:
-		*((char **) optdata) = nsldapi_strdup(ld->ld_def_sasl_authcid);
-		break;
-	case LDAP_OPT_X_SASL_AUTHZID:
-		*((char **) optdata) = nsldapi_strdup(ld->ld_def_sasl_authzid);
-		break;
-	case LDAP_OPT_X_SASL_SSF:
-		{
-			int sc;
-			sasl_ssf_t      *ssf;
-			sasl_conn_t     *ctx;
-			if( ld->ld_defconn == NULL ) {
-				return -1;
-			}
-			ctx = (sasl_conn_t *)(ld->ld_defconn->lconn_sasl_ctx);
-			if ( ctx == NULL ) {
-				return -1;
-			}
-			sc = sasl_getprop( ctx, SASL_SSF, (const void **) &ssf );
-			if ( sc != SASL_OK ) {
-				return -1;
-			}
-			*((sasl_ssf_t *) optdata) = *ssf;
-		}
-		break;
-	case LDAP_OPT_X_SASL_SSF_MIN:
-		*((sasl_ssf_t *) optdata) = ld->ld_sasl_secprops.min_ssf;
-		break;
-	case LDAP_OPT_X_SASL_SSF_MAX:
-		*((sasl_ssf_t *) optdata) = ld->ld_sasl_secprops.max_ssf;
-		break;
-	case LDAP_OPT_X_SASL_MAXBUFSIZE:
-		*((sasl_ssf_t *) optdata) = ld->ld_sasl_secprops.maxbufsize;
-		break;
-	case LDAP_OPT_X_SASL_SSF_EXTERNAL:
-	case LDAP_OPT_X_SASL_SECPROPS:
-		/*
-		 * These options are write only.  Making these options
-		 * read/write would expose semi-private interfaces of libsasl
-		 * for which there are no cross platform/standardized
-		 * definitions.
-		 */
-		LDAP_SET_LDERRNO( ld, LDAP_PARAM_ERROR, NULL, NULL );
-		rc = -1;
-		break;
-#endif
 
 	default:
 		LDAP_SET_LDERRNO( ld, LDAP_PARAM_ERROR, NULL, NULL );

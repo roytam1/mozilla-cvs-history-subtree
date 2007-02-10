@@ -224,8 +224,9 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
   if (!presShell)
     return NS_ERROR_FAILURE;
 
-  nsIFrame* selectFrame = presShell->GetPrimaryFrameFor(selContent);
-  if (!selectFrame)
+  nsIFrame* selectFrame;
+  nsresult rv = presShell->GetPrimaryFrameFor(selContent, &selectFrame);
+  if (NS_FAILED(rv) || !selectFrame)
     return NS_ERROR_FAILURE;
   
   nsIntRect selectRect = selectFrame->GetScreenRectExternal();
@@ -235,9 +236,9 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
   if (!mainScreen)
     return NS_ERROR_FAILURE;
 
-  // y-flip and subtract the control height to convert to cocoa coords
+  // y-flip to convert to cocoa coords
   NSRect mainScreenFrame = [mainScreen frame];
-  selectScreenRect.origin.y = NSMaxY(mainScreenFrame) - selectScreenRect.origin.y - selectScreenRect.size.height;
+  selectScreenRect.origin.y = NSMaxY(mainScreenFrame) - selectScreenRect.origin.y;
 
   // convert to window coords
   NSRect selectFrameRect = selectScreenRect;

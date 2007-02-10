@@ -41,8 +41,9 @@
 #include "nsStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsCSSRendering.h"
+#include "nsLayoutAtoms.h"
 #include "nsIContent.h"
 #include "nsIDOMHTMLTableColElement.h"
 
@@ -52,16 +53,11 @@
 #define COL_CONSTRAINT_BITS           0x07000000 // uses bits 25-27
 #define COL_CONSTRAINT_OFFSET         24
 
-nsTableColFrame::nsTableColFrame(nsStyleContext* aContext) : nsFrame(aContext)
+nsTableColFrame::nsTableColFrame()
+  : nsFrame()
 {
   SetColType(eColContent);
-  ResetMinCoord();
-  ResetPrefCoord();
-  ResetPrefPercent();
-  ResetSpanMinCoord();
-  ResetSpanPrefCoord();
-  ResetSpanPrefPercent();
-  ResetFinalWidth();
+  ResetSizingInfo();
 }
 
 nsTableColFrame::~nsTableColFrame()
@@ -79,6 +75,33 @@ nsTableColFrame::SetColType(nsTableColType aType)
 {
   PRUint32 type = aType - eColContent;
   mState |= (type << COL_TYPE_OFFSET);
+}
+
+nsColConstraint 
+nsTableColFrame::GetConstraint() const
+{ 
+  return (nsColConstraint)((mState & COL_CONSTRAINT_BITS) >> COL_CONSTRAINT_OFFSET);
+}
+
+void 
+nsTableColFrame::SetConstraint(nsColConstraint aConstraint)
+{ 
+  PRUint32 con = aConstraint - eNoConstraint;
+  mState |= (con << COL_CONSTRAINT_OFFSET);
+}
+
+// XXX what about other style besides width
+nsStyleCoord nsTableColFrame::GetStyleWidth() const
+{
+  nsStyleCoord styleWidth = GetStylePosition()->mWidth;
+  if (eStyleUnit_Auto == styleWidth.GetUnit()) {
+    styleWidth = GetParent()->GetStylePosition()->mWidth;
+  }
+
+  nsStyleCoord returnWidth;
+  returnWidth.mUnit  = styleWidth.mUnit;
+  returnWidth.mValue = styleWidth.mValue;
+  return returnWidth;
 }
 
 void nsTableColFrame::SetContinuousBCBorderWidth(PRUint8     aForSide,
@@ -99,22 +122,57 @@ void nsTableColFrame::SetContinuousBCBorderWidth(PRUint8     aForSide,
   }
 }
 
+void nsTableColFrame::ResetSizingInfo()
+{
+  memset(mWidths, WIDTH_NOT_SET, NUM_WIDTHS * sizeof(PRInt32));
+  SetConstraint(eNoConstraint);
+}
+
+NS_METHOD 
+nsTableColFrame::Paint(nsPresContext*      aPresContext,
+                       nsIRenderingContext& aRenderingContext,
+                       const nsRect&        aDirtyRect,
+                       nsFramePaintLayer    aWhichLayer,
+                       PRUint32             aFlags)
+{
+  PRBool isVisible;
+  if (NS_SUCCEEDED(IsVisibleForPainting(aPresContext, aRenderingContext, PR_FALSE, &isVisible)) && !isVisible) {
+    return NS_OK;
+  }
+
+  return NS_OK;
+}
+
+// override, since we want to act like a block
+NS_IMETHODIMP
+nsTableColFrame::GetFrameForPoint(const nsPoint& aPoint,
+                          nsFramePaintLayer aWhichLayer,
+                          nsIFrame** aFrame)
+{
+  return NS_ERROR_FAILURE;
+}
+
 NS_METHOD nsTableColFrame::Reflow(nsPresContext*          aPresContext,
                                   nsHTMLReflowMetrics&     aDesiredSize,
                                   const nsHTMLReflowState& aReflowState,
                                   nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsTableColFrame");
+  DO_GLOBAL_REFLOW_COUNT("nsTableColFrame", aReflowState.reason);
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   aDesiredSize.width=0;
   aDesiredSize.height=0;
   const nsStyleVisibility* colVis = GetStyleVisibility();
   PRBool collapseCol = (NS_STYLE_VISIBILITY_COLLAPSE == colVis->mVisible);
   if (collapseCol) {
-    nsTableFrame* tableFrame = nsTableFrame::GetTableFrame(this);
+    nsTableFrame* tableFrame = nsnull;
+    nsTableFrame::GetTableFrame(this, tableFrame);
     if (tableFrame)  {
-      tableFrame->SetNeedToCollapse(PR_TRUE);
+      tableFrame->SetNeedToCollapseColumns(PR_TRUE);
     }    
+  }
+  if (aDesiredSize.mComputeMEW)
+  {
+    aDesiredSize.mMaxElementWidth=0;
   }
   aStatus = NS_FRAME_COMPLETE;
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
@@ -124,6 +182,47 @@ NS_METHOD nsTableColFrame::Reflow(nsPresContext*          aPresContext,
 PRInt32 nsTableColFrame::GetSpan()
 {
   return GetStyleTable()->mSpan;
+}
+
+nscoord nsTableColFrame::GetWidth(PRUint32 aWidthType)
+{
+  NS_ASSERTION(aWidthType < NUM_WIDTHS, "GetWidth: bad width type");
+  return mWidths[aWidthType];
+}
+
+void nsTableColFrame::SetWidth(PRUint32 aWidthType,
+                               nscoord  aWidth)
+{
+  NS_ASSERTION(aWidthType < NUM_WIDTHS, "SetWidth: bad width type");
+  mWidths[aWidthType] = aWidth;
+#ifdef MY_DEBUG
+  if (aWidth > 0) {
+    nscoord minWidth = GetMinWidth();
+    if ((MIN_CON != aWidthType) && (aWidth < minWidth)) {
+      printf("non min width set to lower than min \n");
+    }
+  }
+#endif
+}
+
+nscoord nsTableColFrame::GetMinWidth()
+{
+  return PR_MAX(mWidths[MIN_CON], mWidths[MIN_ADJ]);
+}
+
+nscoord nsTableColFrame::GetDesWidth()
+{
+  return PR_MAX(mWidths[DES_CON], mWidths[DES_ADJ]);
+}
+
+nscoord nsTableColFrame::GetFixWidth()
+{
+  return PR_MAX(mWidths[FIX], mWidths[FIX_ADJ]);
+}
+
+nscoord nsTableColFrame::GetPctWidth()
+{
+  return PR_MAX(mWidths[PCT], mWidths[PCT_ADJ]);
 }
 
 #ifdef DEBUG
@@ -136,8 +235,8 @@ void nsTableColFrame::Dump(PRInt32 aIndent)
   }
   indent[aIndent] = 0;
 
-  printf("%s**START COL DUMP**\n%s colIndex=%d coltype=",
-    indent, indent, mColIndex);
+  printf("%s**START COL DUMP**\n%s colIndex=%d constraint=%d coltype=",
+    indent, indent, mColIndex, GetConstraint());
   nsTableColType colType = GetColType();
   switch (colType) {
   case eColContent:
@@ -153,29 +252,43 @@ void nsTableColFrame::Dump(PRInt32 aIndent)
     printf(" anonymous-cell ");
     break;
   }
-  printf("\nm:%d c:%d p:%d sm:%d sc:%d sp:%d f:%d",
-         GetMinCoord(), GetPrefCoord(), GetPrefPercent(),
-         GetSpanMinCoord(), GetSpanPrefCoord(), GetSpanPrefPercent(),
-         GetFinalWidth());
+  printf("\n%s widths=", indent);
+  for (PRInt32 widthX = 0; widthX < NUM_WIDTHS; widthX++) {
+    printf("%d ", mWidths[widthX]);
+  }
   printf("\n%s**END COL DUMP** ", indent);
   delete [] indent;
 }
 #endif
 /* ----- global methods ----- */
 
-nsIFrame* 
-NS_NewTableColFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult 
+NS_NewTableColFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsTableColFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsTableColFrame* it = new (aPresShell) nsTableColFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
-nsTableColFrame::Init(nsIContent*      aContent,
+nsTableColFrame::Init(nsPresContext*  aPresContext,
+                      nsIContent*      aContent,
                       nsIFrame*        aParent,
+                      nsStyleContext*  aContext,
                       nsIFrame*        aPrevInFlow)
 {
-  // Let the base class do its initialization
-  nsresult rv = nsFrame::Init(aContent, aParent, aPrevInFlow);
+  nsresult  rv;
+
+  // Let the the base class do its initialization
+  rv = nsFrame::Init(aPresContext, aContent, aParent, aContext,
+                     aPrevInFlow);
 
   // record that children that are ignorable whitespace should be excluded 
   mState |= NS_FRAME_EXCLUDE_IGNORABLE_WHITESPACE;
@@ -188,7 +301,7 @@ nsTableColFrame::GetNextCol() const
 {
   nsIFrame* childFrame = GetNextSibling();
   while (childFrame) {
-    if (nsGkAtoms::tableColFrame == childFrame->GetType()) {
+    if (nsLayoutAtoms::tableColFrame == childFrame->GetType()) {
       return (nsTableColFrame*)childFrame;
     }
     childFrame = childFrame->GetNextSibling();
@@ -199,7 +312,7 @@ nsTableColFrame::GetNextCol() const
 nsIAtom*
 nsTableColFrame::GetType() const
 {
-  return nsGkAtoms::tableColFrame;
+  return nsLayoutAtoms::tableColFrame;
 }
 
 #ifdef DEBUG

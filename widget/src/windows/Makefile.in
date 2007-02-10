@@ -67,14 +67,8 @@ REQUIRES	= xpcom \
 			xuldoc \
 			view \
 			imglib2 \
-			uriloader \
-			webbrowserpersist \
 			unicharutil \
 			$(NULL)
-
-ifdef MOZ_ENABLE_CAIRO_GFX
-REQUIRES += thebes cairo
-endif
 
 CPPSRCS		= \
 	L_Ienumfe.cpp  \
@@ -82,17 +76,10 @@ CPPSRCS		= \
 	nsAppShell.cpp       \
 	nsLookAndFeel.cpp    \
 	nsToolkit.cpp        \
-	nsKeyboardLayout.cpp \
 	nsDataObj.cpp  \
 	nsDataObjCollection.cpp  \
 	nsClipboard.cpp      \
-	nsNativeThemeWin.cpp \
 	nsFilePicker.cpp     \
-	nsScreenWin.cpp	\
-	nsScreenManagerWin.cpp \
-	nsPrintOptionsWin.cpp \
-	nsPrintSettingsWin.cpp \
-	nsDeviceContextSpecWin.cpp \
 	$(NULL)
 
 ifneq ($(OS_ARCH), WINCE)
@@ -103,7 +90,6 @@ CPPSRCS += \
 	nsImageClipboard.cpp \
 	nsBidiKeyboard.cpp   \
 	nsSound.cpp          \
-	nsIdleServiceWin.cpp    \
 	$(NULL)
 endif
 
@@ -117,11 +103,7 @@ endif # BUILD_STATIC_LIBS
 
 EXPORTS		= nsdefs.h
 
-LOCAL_INCLUDES	= \
-		-I. \
-		-I$(srcdir)/../xpwidgets \
-		-I$(srcdir) \
-		$(NULL)
+LOCAL_INCLUDES	= -I. -I$(srcdir)/../xpwidgets -I$(srcdir)
 
 FORCE_STATIC_LIB = 1
 

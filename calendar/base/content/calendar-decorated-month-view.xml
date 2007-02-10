@@ -151,6 +151,9 @@
 
                     viewElement.showDate(aDate);
 
+                    if (this.mWorkdaysOnly) {
+                        this.removeNonWorkdays();
+                    }
                     this.setNavLabels(aDate);
                 ]]></body>
             </method>
@@ -206,6 +209,12 @@
                         }
                     }
                     document.getAnonymousElementByAttribute(this, "anonid", "nav-control").setNames(nameArray);
+                ]]></body>
+            </method>
+            <method name="removeNonWorkdays">
+                <body><![CDATA[
+                    // Not supported yet
+                    return;
                 ]]></body>
             </method>
 

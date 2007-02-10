@@ -69,11 +69,11 @@ typedef pixman_triangle_t	xTriangle;
 */
 #define RENDER 1
 /*
-#define FB_SHIFT IC_SHIFT
+#define FB_SHIFT IC_SHIFT 
 #define FB_MASK IC_MASK
 #define FB_ALLONES IC_ALLONES
-#define FbMaskBits IcMaskBits
 */
+//#define FbMaskBits IcMaskBits
 
 /* XXX: We changed some function and field names which makes for some
  * ugly hacks... */
@@ -121,5 +121,6 @@ fbRasterizeEdges (pixman_bits_t		*buf,
 		  RenderEdge	 	*r,
 		  pixman_fixed16_16_t	t,
 		  pixman_fixed16_16_t	b);
+
 
 #endif

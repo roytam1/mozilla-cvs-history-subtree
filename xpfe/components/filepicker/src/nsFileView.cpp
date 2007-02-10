@@ -57,7 +57,7 @@
 #include "nsIAutoCompleteSearch.h"
 #include "nsISimpleEnumerator.h"
 #include "nsAutoPtr.h"
-#include "nsIMutableArray.h"
+#include "nsArray.h"
 
 #include "nsWildCard.h"
 
@@ -77,6 +77,7 @@ public:
 
   nsStringArray mValues;
   nsAutoString mSearchString;
+  PRInt32 mSlashPos;
   PRUint16 mSearchResult;
 };
 
@@ -84,29 +85,29 @@ NS_IMPL_ISUPPORTS1(nsFileResult, nsIAutoCompleteResult)
 
 nsFileResult::nsFileResult(const nsAString& aSearchString,
                            const nsAString& aSearchParam):
-  mSearchString(aSearchString)
+  mSearchString(aSearchString),
+  mSlashPos(mSearchString.RFindChar('/'))
 {
   if (aSearchString.IsEmpty())
     mSearchResult = RESULT_IGNORED;
   else {
-    PRInt32 slashPos = mSearchString.RFindChar('/');
     mSearchResult = RESULT_FAILURE;
     nsCOMPtr<nsILocalFile> directory;
-    nsDependentSubstring parent(Substring(mSearchString, 0, slashPos + 1));
-    if (!parent.IsEmpty() && parent.First() == '/')
+    nsDependentSubstring parent(Substring(mSearchString, 0, mSlashPos + 1));
+    if (mSlashPos != kNotFound)
       NS_NewLocalFile(parent, PR_TRUE, getter_AddRefs(directory));
     if (!directory) {
       if (NS_FAILED(NS_NewLocalFile(aSearchParam, PR_TRUE, getter_AddRefs(directory))))
         return;
-      if (slashPos > 0)
-        directory->AppendRelativePath(Substring(mSearchString, 0, slashPos));
+      if (mSlashPos > 0)
+        directory->AppendRelativePath(Substring(mSearchString, 0, mSlashPos));
     }
     nsCOMPtr<nsISimpleEnumerator> dirEntries;
     if (NS_FAILED(directory->GetDirectoryEntries(getter_AddRefs(dirEntries))))
       return;
     mSearchResult = RESULT_NOMATCH;
     PRBool hasMore = PR_FALSE;
-    nsDependentSubstring prefix(Substring(mSearchString, slashPos + 1));
+    nsDependentSubstring prefix(Substring(mSearchString, mSlashPos + 1));
     while (NS_SUCCEEDED(dirEntries->HasMoreElements(&hasMore)) && hasMore) {
       nsCOMPtr<nsISupports> nextItem;
       dirEntries->GetNext(getter_AddRefs(nextItem));
@@ -212,6 +213,8 @@ nsFileComplete::StopSearch()
 #define NS_FILEVIEW_CID { 0xa5570462, 0x1dd1, 0x11b2, \
                          { 0x9d, 0x19, 0xdf, 0x30, 0xa2, 0x7f, 0xbd, 0xc4 } }
 
+static NS_DEFINE_CID(kDateTimeFormatCID, NS_DATETIMEFORMAT_CID);
+
 class nsFileView : public nsIFileView,
                    public nsITreeView
 {
@@ -291,7 +294,7 @@ nsFileView::Init()
   NS_NewISupportsArray(getter_AddRefs(mFileList));
   NS_NewISupportsArray(getter_AddRefs(mDirList));
   NS_NewISupportsArray(getter_AddRefs(mFilteredFiles));
-  mDateFormatter = do_CreateInstance(NS_DATETIMEFORMAT_CONTRACTID);
+  mDateFormatter = do_CreateInstance(kDateTimeFormatCID);
 
   return NS_OK;
 }
@@ -508,9 +511,7 @@ nsFileView::GetSelectedFiles(nsIArray** aFiles)
   PRUint32 dirCount;
   mDirList->Count(&dirCount);
 
-  nsCOMPtr<nsIMutableArray> fileArray =
-    do_CreateInstance(NS_ARRAY_CONTRACTID);
-  NS_ENSURE_STATE(fileArray);
+  nsCOMArray<nsIFile> fileArray;
 
   for (PRInt32 range = 0; range < numRanges; ++range) {
     PRInt32 rangeBegin, rangeEnd;
@@ -527,11 +528,13 @@ nsFileView::GetSelectedFiles(nsIArray** aFiles)
       }
 
       if (curFile)
-        fileArray->AppendElement(curFile, PR_FALSE);
+        fileArray.AppendObject(curFile);
     }
   }
 
-  NS_ADDREF(*aFiles = fileArray);
+  nsIMutableArray* outArray;
+  NS_NewArray(&outArray, fileArray);  // addrefs, return the reference
+  *aFiles = outArray;
   return NS_OK;
 }
 
@@ -765,14 +768,6 @@ nsFileView::IsEditable(PRInt32 aRow, nsITreeColumn* aCol,
                        PRBool* aIsEditable)
 {
   *aIsEditable = PR_FALSE;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFileView::IsSelectable(PRInt32 aRow, nsITreeColumn* aCol,
-                         PRBool* aIsSelectable)
-{
-  *aIsSelectable = PR_FALSE;
   return NS_OK;
 }
 

@@ -49,9 +49,6 @@
   <!ENTITY cmdToggleWhitespaceNodes.label "Pokaż węzły zawierające niewidoczne znaki">
   <!ENTITY cmdToggleWhitespaceNodes.accesskey "W">
 
-  <!ENTITY cmdToggleAccessibleNodes.label "Show Accessible Nodes">
-  <!ENTITY cmdToggleAccessibleNodes.accesskey "c">
-
   <!ENTITY cmdFlashSelected.label "Wyróżnij wybrany element">
 
   <!ENTITY cmdToggleAttributes.label "Pokaż atrybuty">
@@ -85,14 +82,6 @@
   <!ENTITY findNodesSearchBy.label "Szukaj po">
   <!ENTITY findNodesDirection.label "Kierunek">
   <!ENTITY findNodesDirectionUp.label "Góra">
-  <!ENTITY findNodesDirectionDown.label "Dół">
+  <!ENTITY findNodesDirectionDown.label "Dól">
   <!ENTITY findNodesFind.label "Znajdź">
   <!ENTITY findNodesCancel.label "Anuluj">
-
-  <!ENTITY mnEditPasteMenu.label "Wklej">
-  <!ENTITY mnEditPasteBefore.label "Przed tym elementem">
-  <!ENTITY mnEditPasteAfter.label "Za tym elementem">
-  <!ENTITY mnEditPasteReplace.label "Zamiast tego elementu">
-  <!ENTITY mnEditPasteFirstChild.label "Jako pierwszy element potomny">
-  <!ENTITY mnEditPasteLastChild.label "Jako ostatni element potomny">
-  <!ENTITY mnEditPasteAsParent.label "Jako element nadrzędny">

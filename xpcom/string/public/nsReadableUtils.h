@@ -82,6 +82,14 @@ NS_COM void AppendUTF8toUTF16( const nsACString& aSource, nsAString& aDest );
 NS_COM void AppendUTF16toUTF8( const PRUnichar* aSource, nsACString& aDest );
 NS_COM void AppendUTF8toUTF16( const char* aSource, nsAString& aDest );
 
+// Backward compatibility
+inline 
+NS_COM void CopyUCS2toASCII( const nsAString& aSource, nsACString& aDest )
+{ LossyCopyUTF16toASCII(aSource, aDest); }
+inline 
+NS_COM void CopyASCIItoUCS2( const nsACString& aSource, nsAString& aDest )
+{ CopyASCIItoUTF16(aSource, aDest); }
+
   /**
    * Returns a new |char| buffer containing a zero-terminated copy of |aSource|.
    *
@@ -272,7 +280,7 @@ NS_COM void ToUpperCase( const nsACString& aSource, nsACString& aDest );
 NS_COM void ToLowerCase( const nsACString& aSource, nsACString& aDest );
 
   /**
-   * Finds the leftmost occurrence of |aPattern|, if any in the range |aSearchStart|..|aSearchEnd|.
+   * Finds the leftmost occurance of |aPattern|, if any in the range |aSearchStart|..|aSearchEnd|.
    *
    * Returns |PR_TRUE| if a match was found, and adjusts |aSearchStart| and |aSearchEnd| to
    * point to the match.  If no match was found, returns |PR_FALSE| and makes |aSearchStart == aSearchEnd|.
@@ -306,7 +314,7 @@ inline PRBool FindInReadable( const nsACString& aPattern, const nsACString& aSou
 NS_COM PRBool CaseInsensitiveFindInReadable( const nsACString& aPattern, nsACString::const_iterator&, nsACString::const_iterator& );
 
   /**
-   * Finds the rightmost occurrence of |aPattern| 
+   * Finds the rightmost occurance of |aPattern| 
    * Returns |PR_TRUE| if a match was found, and adjusts |aSearchStart| and |aSearchEnd| to
    * point to the match.  If no match was found, returns |PR_FALSE| and makes |aSearchStart == aSearchEnd|.
    *
@@ -317,7 +325,7 @@ NS_COM PRBool RFindInReadable( const nsAString& aPattern, nsAString::const_itera
 NS_COM PRBool RFindInReadable( const nsACString& aPattern, nsACString::const_iterator&, nsACString::const_iterator&, const nsCStringComparator& = nsDefaultCStringComparator() );
 
    /**
-   * Finds the leftmost occurrence of |aChar|, if any in the range 
+   * Finds the leftmost occurance of |aChar|, if any in the range 
    * |aSearchStart|..|aSearchEnd|.
    *
    * Returns |PR_TRUE| if a match was found, and adjusts |aSearchStart| to
@@ -356,26 +364,12 @@ NS_COM const nsAFlatString& EmptyString();
 NS_COM const nsAFlatCString& EmptyCString();
 
 
-   /**
-   * Compare a UTF-8 string to an UTF-16 string.
-   *
-   * Returns 0 if the strings are equal, -1 if aUTF8String is less
-   * than aUTF16Count, and 1 in the reverse case.  In case of fatal
-   * error (eg the strings are not valid UTF8 and UTF16 respectively),
-   * this method will return PR_INT32_MIN.
-   */
-NS_COM PRInt32
-CompareUTF8toUTF16(const nsASingleFragmentCString& aUTF8String,
-                   const nsASingleFragmentString& aUTF16String);
-
-NS_COM void
-AppendUCS4ToUTF16(const PRUint32 aSource, nsAString& aDest);
-
 template<class T>
 inline PRBool EnsureStringLength(T& aStr, PRUint32 aLen)
 {
     aStr.SetLength(aLen);
     return (aStr.Length() == aLen);
 }
+
 
 #endif // !defined(nsReadableUtils_h___)

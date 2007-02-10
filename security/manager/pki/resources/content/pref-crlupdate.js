@@ -210,6 +210,11 @@ function onCancel()
   return true;
 }
 
+function doHelpButton()
+{
+  openHelp("validation-crl-auto-update-prefs");
+}
+
 function onAccept()
 {
    if(!validatePrefs())

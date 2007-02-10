@@ -66,35 +66,39 @@ NS_IMPL_ISUPPORTS1(AppDirServiceProvider, nsIDirectoryServiceProvider)
 // nsIDirectoryServiceProvider implementation 
 
 NS_IMETHODIMP
-AppDirServiceProvider::GetFile(const char *prop, PRBool *persistent, nsIFile **_retval)
+AppDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFile **_retval)
 {    
   nsCOMPtr<nsILocalFile>  localFile;
   nsresult rv = NS_ERROR_FAILURE;
 
   *_retval = nsnull;
-  *persistent = PR_TRUE;
+  *persistant = PR_TRUE;
   
   if (strcmp(prop, NS_APP_APPLICATION_REGISTRY_DIR) == 0 ||
       strcmp(prop, NS_APP_USER_PROFILES_ROOT_DIR)   == 0)
   {
     rv = GetProfileDirectory(getter_AddRefs(localFile));
   }
-  else if (strcmp(prop, NS_APP_APPLICATION_REGISTRY_FILE) == 0) {
+  else if (strcmp(prop, NS_APP_APPLICATION_REGISTRY_FILE) == 0)
+  {
     rv = GetProfileDirectory(getter_AddRefs(localFile));
     if (NS_SUCCEEDED(rv))
       rv = localFile->AppendNative(APP_REGISTRY_NAME);
   }
-  else if (strcmp(prop, NS_XPCOM_COMPONENT_REGISTRY_FILE) == 0) {
+  else if (strcmp(prop, NS_XPCOM_COMPONENT_REGISTRY_FILE) == 0)
+  {
     rv = GetProfileDirectory(getter_AddRefs(localFile));
     if (NS_SUCCEEDED(rv))
       rv = localFile->AppendNative(COMPONENT_REGISTRY_NAME);
   }
-  else if (strcmp(prop, NS_XPCOM_XPTI_REGISTRY_FILE) == 0) {
+  else if (strcmp(prop, NS_XPCOM_XPTI_REGISTRY_FILE) == 0)
+  {
     rv = GetProfileDirectory(getter_AddRefs(localFile));
     if (NS_SUCCEEDED(rv))
       rv = localFile->AppendNative(XPTI_REGISTRY_NAME);
   }
-  else if (strcmp(prop, NS_APP_CACHE_PARENT_DIR) == 0) {
+  else if (strcmp(prop, NS_APP_CACHE_PARENT_DIR) == 0)
+  {
     rv = GetParentCacheDirectory(getter_AddRefs(localFile));
   }
 
@@ -114,16 +118,20 @@ AppDirServiceProvider::GetProfileDirectory(nsILocalFile** outFolder)
   nsresult rv = NS_OK;
   
   // Init and cache the profile directory; we'll get queried for it a lot of times.
-  if (!mProfileDir) {
-    if (mIsCustomProfile) {
+  if (!mProfileDir)
+  {
+    if (mIsCustomProfile)
+    {
       rv = NS_NewLocalFile(NS_ConvertUTF8toUTF16(mName), PR_FALSE, getter_AddRefs(mProfileDir));
       
-      if (NS_FAILED(rv)) {
+      if (NS_FAILED(rv))
+      {
         NS_WARNING ("Couldn't use the specified custom path!");
         return rv;
       }
     }
-    else {
+    else
+    {
       // if this is not a custom profile path, we have a product name, and we'll use
       // Application Support/<mName> as our profile dir.
       rv = GetSystemDirectory(kApplicationSupportFolderType, getter_AddRefs(mProfileDir));
@@ -138,7 +146,7 @@ AppDirServiceProvider::GetProfileDirectory(nsILocalFile** outFolder)
   } // end lazy init
   
   nsCOMPtr<nsIFile> profileDir;
-  rv = mProfileDir->Clone(getter_AddRefs(profileDir));
+	rv = mProfileDir->Clone(getter_AddRefs(profileDir));
   NS_ENSURE_SUCCESS(rv, rv);
   
   return CallQueryInterface(profileDir, outFolder);

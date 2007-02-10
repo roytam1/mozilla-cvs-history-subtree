@@ -42,6 +42,8 @@
 
 /* Public Methods */
 
+MOZ_DECL_CTOR_COUNTER(nsWinProfileItem)
+
 nsWinProfileItem::nsWinProfileItem(nsWinProfile* profileObj, 
                                    nsString sectionName,
                                    nsString keyName,
@@ -101,7 +103,9 @@ char* nsWinProfileItem::toString()
   result->AppendLiteral("=");
   result->Append(*mValue);
 
-  resultCString = ToNewCString(*result);
+  resultCString = new char[result->Length() + 1];
+  if(resultCString != nsnull)
+      result->ToCString(resultCString, result->Length() + 1);
   
   if (result)   delete result;
   if (filename) delete filename;

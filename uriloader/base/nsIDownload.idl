@@ -45,7 +45,7 @@ interface nsICancelable;
 interface nsIWebProgressListener;
 interface nsIMIMEInfo;
 
-[scriptable, uuid(07910093-d70b-4621-9888-b811f42293c3)]
+[scriptable, uuid(9e1fd9f2-9727-4926-85cd-f16c375bba6d)]
 interface nsIDownload : nsITransfer {
     
     /**
@@ -60,12 +60,12 @@ interface nsIDownload : nsITransfer {
     readonly attribute PRInt32 percentComplete;
 
     /**
-     * The amount of bytes downloaded so far.
+     * The amount of kbytes downloaded so far.
      */
     readonly attribute PRUint64 amountTransferred;
 
     /**
-     * The size of file in bytes.
+     * The size of file in kbytes.
      * Unknown size is represented by 0.
      */
     readonly attribute PRUint64 size;
@@ -95,18 +95,22 @@ interface nsIDownload : nsITransfer {
      * The time a transfer was started.
      */
     readonly attribute long long startTime;
-
-    /**
-     * The speed of the transfer in bytes/sec.
-     */
-    readonly attribute double speed;
-
+    
     /**
      * Optional. If set, it will contain the target's relevant MIME information.
      * This includes it's MIME Type, helper app, and whether that helper should be
      * executed.
      */
     readonly attribute nsIMIMEInfo MIMEInfo;
+};
+
+[scriptable, uuid(ff76f0c7-caaf-4e64-8896-154348322696)]
+interface nsIDownload_MOZILLA_1_8_BRANCH : nsIDownload {
+
+    /**
+     * The speed of the transfer in bytes/sec.
+     */
+    readonly attribute double speed;
 };
 
 %{C++

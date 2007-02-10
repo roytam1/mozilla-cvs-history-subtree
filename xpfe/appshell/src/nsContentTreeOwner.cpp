@@ -67,9 +67,9 @@
 #include "nsIPrefBranch.h"
 #include "nsIWebNavigation.h"
 
+// Needed for nsIDocument::FlushPendingNotifications(...)
 #include "nsIDOMDocument.h"
-#include "nsIScriptObjectPrincipal.h"
-#include "nsIURI.h"
+#include "nsIDocument.h"
 
 // CIDs
 static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
@@ -121,17 +121,10 @@ NS_INTERFACE_MAP_BEGIN(nsContentTreeOwner)
    NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeOwner_MOZILLA_1_8_BRANCH)
    NS_INTERFACE_MAP_ENTRY(nsIBaseWindow)
    NS_INTERFACE_MAP_ENTRY(nsIWebBrowserChrome)
-   NS_INTERFACE_MAP_ENTRY(nsIWebBrowserChrome2)
    NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
    NS_INTERFACE_MAP_ENTRY(nsIWindowProvider)
-   // NOTE: This is using aggregation because there are some properties and
-   // method on nsIBaseWindow (which we implement) and on
-   // nsIEmbeddingSiteWindow (which we also implement) that have the same name.
-   // And it just so happens that we want different behavior for these methods
-   // and properties depending on the interface through which they're called
-   // (SetFocus() is a good example here).  If it were not for that, we could
-   // ditch the aggregation and just deal with not being able to use NS_DECL_*
-   // macros for this stuff....
+   // XXXbz why not just implement those interfaces directly on this object?
+   // Should file a followup and fix.
    NS_INTERFACE_MAP_ENTRY_AGGREGATED(nsIEmbeddingSiteWindow, mSiteWindow2)
    NS_INTERFACE_MAP_ENTRY_AGGREGATED(nsIEmbeddingSiteWindow2, mSiteWindow2)
 NS_INTERFACE_MAP_END
@@ -255,7 +248,7 @@ NS_IMETHODIMP nsContentTreeOwner::FindItemWithName(const PRUnichar* aName,
        if (win) {
          PRInt32 count = win->mTargetableShells.Count();
          PRInt32 i;
-         for (i = 0; i < count && !*aFoundItem; ++i) {
+         for (i = 0; i < count; ++i) {
            nsCOMPtr<nsIDocShellTreeItem> shellAsTreeItem =
              do_QueryReferent(win->mTargetableShells[i]);
            if (shellAsTreeItem) {
@@ -411,12 +404,10 @@ nsContentTreeOwner::GetPersistence(PRBool* aPersistPosition,
 }
 
 //*****************************************************************************
-// nsContentTreeOwner::nsIWebBrowserChrome2
+// nsContentTreeOwner::nsIWebBrowserChrome
 //*****************************************************************************   
 
-NS_IMETHODIMP nsContentTreeOwner::SetStatusWithContext(PRUint32 aStatusType,
-                                                       const nsAString &aStatusText,
-                                                       nsISupports *aStatusContext)
+NS_IMETHODIMP nsContentTreeOwner::SetStatus(PRUint32 aStatusType, const PRUnichar* aStatus)
 {
   // We only allow the status to be set from the primary content shell
   if (!mPrimary && aStatusType != STATUS_LINK)
@@ -425,39 +416,23 @@ NS_IMETHODIMP nsContentTreeOwner::SetStatusWithContext(PRUint32 aStatusType,
   nsCOMPtr<nsIXULBrowserWindow> xulBrowserWindow;
   mXULWindow->GetXULBrowserWindow(getter_AddRefs(xulBrowserWindow));
 
-  if (xulBrowserWindow)
-  {
-    switch(aStatusType)
-    {
-    case STATUS_SCRIPT:
-      xulBrowserWindow->SetJSStatus(aStatusText);
-      break;
-    case STATUS_SCRIPT_DEFAULT:
-      xulBrowserWindow->SetJSDefaultStatus(aStatusText);
-      break;
-    case STATUS_LINK:
-      {
-        nsCOMPtr<nsIDOMElement> element = do_QueryInterface(aStatusContext);
-        xulBrowserWindow->SetOverLink(aStatusText, element);
-        break;
-      }
-    }
-  }
+   if (xulBrowserWindow)
+   {
+     switch(aStatusType)
+     {
+     case STATUS_SCRIPT:
+       xulBrowserWindow->SetJSStatus(aStatus);
+       break;
+     case STATUS_SCRIPT_DEFAULT:
+       xulBrowserWindow->SetJSDefaultStatus(aStatus);
+       break;
+     case STATUS_LINK:
+       xulBrowserWindow->SetOverLink(aStatus);
+       break;
+     }
+   }
 
   return NS_OK;
-}
-
-//*****************************************************************************
-// nsContentTreeOwner::nsIWebBrowserChrome
-//*****************************************************************************   
-
-NS_IMETHODIMP nsContentTreeOwner::SetStatus(PRUint32 aStatusType,
-                                            const PRUnichar* aStatus)
-{
-  return SetStatusWithContext(aStatusType,
-      aStatus ? NS_STATIC_CAST(const nsString &, nsDependentString(aStatus))
-              : EmptyString(),
-      nsnull);
 }
 
 NS_IMETHODIMP nsContentTreeOwner::SetWebBrowser(nsIWebBrowser* aWebBrowser)
@@ -697,7 +672,7 @@ NS_IMETHODIMP nsContentTreeOwner::SetTitle(const PRUnichar* aTitle)
       nsCOMPtr<nsIDocShellTreeItem> dsitem;
       GetPrimaryContentShell(getter_AddRefs(dsitem));
       nsCOMPtr<nsIDOMDocument> domdoc(do_GetInterface(dsitem));
-      nsCOMPtr<nsIScriptObjectPrincipal> doc(do_QueryInterface(domdoc));
+      nsCOMPtr<nsIDocument> doc(do_QueryInterface(domdoc));
       if (doc) {
         nsCOMPtr<nsIURI> uri;
         nsIPrincipal* principal = doc->GetPrincipal();

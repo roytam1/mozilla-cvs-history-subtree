@@ -40,6 +40,14 @@
 #include "nsIURL.h"
 #include "nsNetCID.h"
 #include "nsIServiceManager.h"
+#include "nsCOMPtr.h"
+#include "nsXPIDLString.h"
+#include "nsString.h"
+
+#include "nsAbQueryStringToExpression.h"
+#include "nsAbBoolExprToLDAPFilter.h"
+
+
 
 nsAbDirectoryRDFResource::nsAbDirectoryRDFResource () :
     nsRDFResource (),
@@ -56,7 +64,8 @@ NS_IMPL_ISUPPORTS_INHERITED0(nsAbDirectoryRDFResource, nsRDFResource)
 
 NS_IMETHODIMP nsAbDirectoryRDFResource::Init(const char* aURI)
 {
-  nsresult rv = nsRDFResource::Init (aURI);
+    nsresult rv;
+    rv = nsRDFResource::Init (aURI);
     NS_ENSURE_SUCCESS(rv, rv);
 
     mURINoQuery = aURI;
@@ -69,24 +78,23 @@ NS_IMETHODIMP nsAbDirectoryRDFResource::Init(const char* aURI)
 
     mIsValidURI = PR_TRUE;
 
-  nsCOMPtr<nsIURL> url = do_QueryInterface(uri, &rv);
+    nsCOMPtr<nsIURL> url = do_QueryInterface(uri);
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCAutoString queryString;
     rv = url->GetQuery (queryString);
-  NS_ENSURE_SUCCESS(rv, rv);
 
     nsCAutoString path;
     rv = url->GetPath (path);
-  NS_ENSURE_SUCCESS(rv, rv);
-
     mPath = path;
 
-  if (!queryString.IsEmpty())
+    PRUint32 queryStringLength;
+    if (queryString.get () && (queryStringLength = queryString.Length ()))
     {
-    mPath.Truncate(path.Length() - queryString.Length() - 1);
+        int pathLength = path.Length () - queryStringLength - 1;
+        mPath.Truncate (pathLength);
 
-    mURINoQuery.Truncate(mURINoQuery.Length() - queryString.Length() - 1);
+        mURINoQuery.Truncate (mURINoQuery.Length () - queryStringLength - 1);
 
         mQueryString = queryString;
 
@@ -97,3 +105,4 @@ NS_IMETHODIMP nsAbDirectoryRDFResource::Init(const char* aURI)
 
     return rv;
 }
+

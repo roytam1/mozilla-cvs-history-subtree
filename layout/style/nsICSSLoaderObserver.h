@@ -34,43 +34,22 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* internal interface for observing CSS style sheet loads */
-
 #ifndef nsICSSLoaderObserver_h___
 #define nsICSSLoaderObserver_h___
 
 #include "nsISupports.h"
 
 #define NS_ICSSLOADEROBSERVER_IID     \
-{ 0xf5e8eb0f, 0x4c44, 0x49d5,       \
-{0xb1, 0xe9, 0xab, 0x39, 0x23, 0x93, 0xc0, 0xf8} }
+{ 0xa6cf9116, 0x15b3, 0x11d2,       \
+{0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32} }
 
 class nsICSSStyleSheet;
 
 class nsICSSLoaderObserver : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICSSLOADEROBSERVER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICSSLOADEROBSERVER_IID)
 
-  /**
-   * StyleSheetLoaded is called after aSheet is marked complete and before any
-   * load events associated with aSheet are fired.
-   * @param aSheet the sheet that was loaded. Guaranteed to always be
-   *        non-null, even if aStatus indicates failure.
-   * @param aWasAlternate whether the sheet was an alternate.  This will always
-   *        match the value LoadStyleLink or LoadInlineStyle returned in
-   *        aIsAlternate if one of those methods were used to load the sheet,
-   *        and will always be false otherwise.
-   * @param aStatus is a success code if the sheet loaded successfully and a
-   *        failure code otherwise.  Note that successful load of aSheet
-   *        doesn't indicate anything about whether the data actually parsed
-   *        as CSS, and doesn't indicate anything about the status of any child
-   *        sheets of aSheet.
-   */
-  NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet* aSheet, PRBool aWasAlternate,
-                              nsresult aStatus) = 0;
+  NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet*aSheet, PRBool aNotify) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsICSSLoaderObserver, NS_ICSSLOADEROBSERVER_IID)
 
 #endif // nsICSSLoaderObserver_h___

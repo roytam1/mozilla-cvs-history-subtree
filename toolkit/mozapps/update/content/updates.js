@@ -20,7 +20,6 @@
  *
  * Contributor(s):
  *  Ben Goodger <ben@mozilla.org> (Original Author)
- *  Asaf Romano <mozilla.mano@sent.com>
  *  Jeff Walden <jwalden+code@mit.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -47,7 +46,7 @@ const PREF_UPDATE_NAGTIMER_DL       = "app.update.nagTimer.download";
 const PREF_UPDATE_NAGTIMER_RESTART  = "app.update.nagTimer.restart";
 const PREF_APP_UPDATE_LOG_BRANCH    = "app.update.log.";
 const PREF_UPDATE_TEST_LOOP         = "app.update.test.loop";
-const PREF_UPDATE_NEVER_BRANCH      = "app.update.never.";
+const PREF_UPDATE_NEVER_BRANCH      = "app.update.never."
 
 const UPDATE_TEST_LOOP_INTERVAL     = 2000;
 
@@ -73,7 +72,7 @@ var gLogEnabled = { };
  *          The string to write to the error console..
  */  
 function LOG(module, string) {
-  if (module in gLogEnabled || "all" in gLogEnabled) {
+  if (module in gLogEnabled) {
     dump("*** " + module + ":" + string + "\n");
     gConsole.logStringMessage(string);
   }
@@ -231,11 +230,7 @@ var gUpdates = {
     // major version again, unless they manually do "Check for Updates..."
     // which, will clear the "never" pref for the version presented
     // so that if they do "Later", we will remind them later.
-    //
-    // fix for bug #359093
-    // version might one day come back from AUS as an 
-    // arbitrary (and possibly non ascii) string, so we need to encode it
-    var neverPrefName = PREF_UPDATE_NEVER_BRANCH + encodeURIComponent(gUpdates.update.version);
+    var neverPrefName = PREF_UPDATE_NEVER_BRANCH + gUpdates.update.version;
     gPref.setBoolPref(neverPrefName, true);
     this.wiz.cancel();
   },
@@ -521,7 +516,7 @@ var gUpdates = {
     }
     tm.registerTimer(timerID, (new Callback(gUpdates.update, methodName)), 
                      timerInterval);
-  }
+  },
 }
 
 /**
@@ -648,22 +643,24 @@ var gUpdatesAvailablePage = {
    * Initialize.
    */
   onPageShow: function() {
-    // disable the "next" button, as we don't want the user to
+    // disable the "next" button, as we don't want the user to 
     // be able to progress with the update util we show them the details
     // which might include a warning about incompatible add-ons
-    // disable the "back" button, as well (note the call to setButtons()
+    // disable the "back" button, as well (note the call to setButtons() 
     // below does this, too).  This just leaves the cancel button
     // until we are ready
     gUpdates.wiz.getButton("next").disabled = true;
     gUpdates.wiz.getButton("back").disabled = true;
 
+    var update = gUpdates.update.QueryInterface(
+                            Components.interfaces.nsIUpdate_MOZILLA_1_8_BRANCH);
     var updateName = gUpdates.strings.getFormattedString("updateName", 
-      [gUpdates.brandName, gUpdates.update.version]);
-    if (gUpdates.update.channel == "nightly")
-      updateName = updateName + " nightly (" + gUpdates.update.buildID + ")";
+      [gUpdates.brandName, update.version]);
+    if (update.channel == "nightly")
+      updateName = updateName + " nightly (" + update.buildID + ")";
     var updateNameElement = document.getElementById("updateName");
     updateNameElement.value = updateName;
-    var severity = gUpdates.update.type;
+    var severity = update.type;
     var updateTypeElement = document.getElementById("updateType");
     updateTypeElement.setAttribute("severity", severity);
  
@@ -671,8 +668,8 @@ var gUpdatesAvailablePage = {
     if (severity == "major") {
       // for major updates, use the brandName and the version for the intro
       intro = gUpdates.strings.getFormattedString(
-        "introType_major_app_and_version", 
-        [gUpdates.brandName, gUpdates.update.version]);
+        "introType_" + severity + "_app_and_version", 
+        [gUpdates.brandName, update.version]);
 
       this._updateMoreInfoContent = 
         document.getElementById("updateMoreInfoContent");
@@ -681,17 +678,17 @@ var gUpdatesAvailablePage = {
       // so that when attempting to download the url, we can show
       // the formatted "Download..." string
       this._updateMoreInfoContent.update_name = gUpdates.brandName;
-      this._updateMoreInfoContent.update_version = gUpdates.update.version;
-      this._updateMoreInfoContent.url = gUpdates.update.detailsURL;
+      this._updateMoreInfoContent.update_version = update.version;
+      this._updateMoreInfoContent.url = update.detailsURL;
     }
     else {
       // for minor updates, do not include the version
       // just use the brandName for the intro
       intro = gUpdates.strings.getFormattedString(
-        "introType_minor_app", [gUpdates.brandName]);
+        "introType_" + severity + "_app", [gUpdates.brandName]);
 
       var updateMoreInfoURL = document.getElementById("updateMoreInfoURL");
-      updateMoreInfoURL.href = gUpdates.update.detailsURL; 
+      updateMoreInfoURL.href = update.detailsURL; 
     }
 
     var updateTitle = gUpdates.strings
@@ -707,7 +704,7 @@ var gUpdatesAvailablePage = {
     
     var em = Components.classes["@mozilla.org/extensions/manager;1"]
                        .getService(Components.interfaces.nsIExtensionManager);
-    var items = em.getIncompatibleItemList("", gUpdates.update.version,
+    var items = em.getIncompatibleItemList("", update.version,
                                            nsIUpdateItem.TYPE_ADDON, false, 
                                            { });
     if (items.length > 0) {
@@ -715,7 +712,7 @@ var gUpdatesAvailablePage = {
       // warning message.
       var incompatibleWarning = document.getElementById("incompatibleWarning");
       incompatibleWarning.hidden = false;
-      
+
       this._incompatibleItems = items;
     }
     
@@ -725,7 +722,7 @@ var gUpdatesAvailablePage = {
 
     var licenseAccepted;
     try {
-      licenseAccepted = gUpdates.update.getProperty("licenseAccepted");
+      licenseAccepted = update.getProperty("licenseAccepted");
     }
     catch (e) {
       gUpdates.update.setProperty("licenseAccepted", "false");
@@ -766,11 +763,7 @@ var gUpdatesAvailablePage = {
       // and then at a later point, did "Check for Updates..." 
       // and then hit "Later".  If we don't clear the "never" pref
       // "Later" will never happen.
-      //
-      // fix for bug #359093
-      // version might one day come back from AUS as an 
-      // arbitrary (and possibly non ascii) string, so we need to encode it
-      var neverPrefName = PREF_UPDATE_NEVER_BRANCH + encodeURIComponent(gUpdates.update.version);
+      var neverPrefName = PREF_UPDATE_NEVER_BRANCH + gUpdates.update.version;
       gPref.setBoolPref(neverPrefName, false);
     }
     else {
@@ -824,10 +817,10 @@ var gLicensePage = {
    */
   onPageShow: function() {
     this._licenseContent = document.getElementById("licenseContent");
-    
+
     // the license radiogroup is disabled until the EULA is downloaded
     document.getElementById("acceptDeclineLicense").disabled = true;
-
+    
     gUpdates.setButtons(null, true, null, true, null, true, null, 
                         false, false, null, false, null, false);
 
@@ -844,7 +837,7 @@ var gLicensePage = {
    * When the license document has loaded
    */
   onLicenseLoad: function() {
-    // on the load event, disable or enable the radiogroup based on 
+    // on the load event, disable or enable the radiogroup based on
     // the state of the licenseContent.  note, you may get multiple
     // onLoad events
     document.getElementById("acceptDeclineLicense").disabled =
@@ -862,7 +855,7 @@ var gLicensePage = {
     gUpdates.wiz.getButton("next").disabled = !licenseAccepted;
     gUpdates.wiz.canAdvance = licenseAccepted;
   },
-  
+
   /**
    * When the user accepts the license by hitting "Next"
    */
@@ -1622,20 +1615,20 @@ var gFinishedPage = {
   onWizardFinish: function() {
     // Do the restart
     LOG("UI:FinishedPage" , "onWizardFinish: Restarting Application...");
-    
-    // disable the "finish" (Restart) and "cancel" (Later) buttons
-    // because the Software Update wizard is still up at the point,
+
+    // disable the "finish" (Restart) and "cancel" (Later) buttons 
+    // because the Software Update wizard is still up at the point, 
     // and will remain up until we return and we close the
-    // window with a |window.close()| in wizard.xml
+    // window with a |window.close()| in wizard.xml 
     // (it was the firing the "wizardfinish" event that got us here.)
     // This prevents the user from switching back
     // to the Software Update dialog and clicking "Restart" or "Later"
-    // when dealing with the "confirm close" prompts.
+    // when dealing with the "confirm close" prompts.  
     // See bug #350299 for more details.
     gUpdates.wiz.getButton("finish").disabled = true;
     gUpdates.wiz.getButton("cancel").disabled = true;
 
-    // This process is *extremely* broken. There should be some nice 
+    // This process is *extremely* retarded. There should be some nice 
     // integrated system for determining whether or not windows are allowed
     // to close or not, and what happens when that happens. We need to 
     // jump through all these hoops (duplicated from globalOverlay.js) to
@@ -1687,10 +1680,11 @@ var gFinishedPage = {
     ps.alert(window, gUpdates.strings.getString("restartLaterTitle"), 
              message);
 
-    var interval = getPref("getIntPref", PREF_UPDATE_NAGTIMER_RESTART, 1800);
+    var interval = getPref("getIntPref", PREF_UPDATE_NAGTIMER_RESTART, 
+                           18000000);
     gUpdates.registerNagTimer("restart-nag-timer", interval, 
                               "showUpdateComplete");
-  }
+  },
 };
 
 /**
@@ -1718,13 +1712,13 @@ var gInstalledPage = {
     gUpdates.setButtons(null, true, null, true, null, false, "hideButton",
                         true, false, null, false, null, false);
     gUpdates.wiz.getButton("finish").focus();
-  }
+  },
 };
 
 /**
  * Called as the application shuts down due to being quit from the File->Quit 
  * menu item.
- * XXXben this API is broken.
+ * XXXben this API is retarded.
  */
 function tryToClose() {
   var cp = gUpdates.wiz.currentPage;
@@ -1742,3 +1736,4 @@ function tryToClose() {
 function setCurrentPage(pageid) {
   gUpdates.wiz.currentPage = document.getElementById(pageid);
 }
+

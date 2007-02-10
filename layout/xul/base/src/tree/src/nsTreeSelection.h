@@ -43,7 +43,6 @@
 #define nsTreeSelection_h__
 
 #include "nsITreeSelection.h"
-#include "nsITreeColumns.h"
 #include "nsITimer.h"
 
 class nsITreeBoxObject;
@@ -70,7 +69,6 @@ protected:
 
   PRBool mSuppressed; // Whether or not we should be firing onselect events.
   PRInt32 mCurrentIndex; // The item to draw the rect around. The last one clicked, etc.
-  nsCOMPtr<nsITreeColumn> mCurrentColumn;
   PRInt32 mShiftSelectPivot; // Used when multiple SHIFT+selects are performed to pivot on.
 
   nsTreeRange* mFirstRange; // Our list of ranges.

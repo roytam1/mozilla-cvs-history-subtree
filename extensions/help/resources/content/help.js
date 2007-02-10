@@ -199,15 +199,9 @@ function contentClick(event) {
   if (target.href.lastIndexOf("chrome:", 0) == 0)
     return true;
 
-  var formatter = Components.classes["@mozilla.org/toolkit/URLFormatterService;1"]
-                  .getService(Components.interfaces.nsIURLFormatter);
-  var uri = target.href;
-  if (/^x-moz-url-link:/.test(uri))
-    uri = formatter.formatURLPref(RegExp.rightContext);
-
   const loadFlags = Components.interfaces.nsIWebNavigation.LOAD_FLAGS_IS_LINK;
   try {
-    helpExternal.webNavigation.loadURI(uri, loadFlags, null, null, null);
+    helpExternal.webNavigation.loadURI(target.href, loadFlags, null, null, null);
   } catch (e) {}
   return false;
 }
@@ -446,7 +440,7 @@ nsHelpStatusHandler.prototype =
 
   setJSStatus : function(status) {},
   setJSDefaultStatus : function(status) {},
-  setOverLink : function(link, context) {}
+  setOverLink : function(link) {}
 }
 
 function UpdateBackForwardButtons()

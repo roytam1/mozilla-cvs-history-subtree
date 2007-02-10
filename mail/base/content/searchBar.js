@@ -114,6 +114,15 @@ var gSearchNotificationListener =
           vFolder.updateSummaryTotals(true); // force update from db.
           var msgdb = vFolder.getMsgDatabase(msgWindow);
           msgdb.Commit(MSG_DB_LARGE_COMMIT);
+
+          // load the last used mail view for the folder...
+          var result = dbFolderInfo.getUint32Property("current-view", 0);
+          // do this on a timeout so that we don't issue a new search
+          // synchronously with the previous search's onSearchDone notification
+          // because that can cause a confusing sequence of onSearchDone and 
+          // onNewSearch notifications.
+          setTimeout('ViewChangeByValue('+result+')', 0);
+
           // now that we have finished loading a virtual folder, scroll to the correct message
           ScrollToMessageAfterFolderLoad(vFolder);
         }
@@ -177,10 +186,9 @@ function createQuickSearchView()
     }
     // if grouped by sort, turn that off, as well as threaded, since we don't
     // group quick search results yet.
-    var viewFlags = gDBView.viewFlags;
-    if (viewFlags & nsMsgViewFlagsType.kGroupBySort)
-      viewFlags &= ~(nsMsgViewFlagsType.kGroupBySort | nsMsgViewFlagsType.kThreadedDisplay);
-    CreateDBView(gDBView.msgFolder, (gXFVirtualFolderTerms) ? nsMsgViewType.eShowVirtualFolderResults : nsMsgViewType.eShowQuickSearchResults, viewFlags, gDBView.sortType, gDBView.sortOrder);
+    if (gDBView.viewFlags & nsMsgViewFlagsType.kGroupBySort)
+      gDBView.viewFlags &= ~(nsMsgViewFlagsType.kGroupBySort | nsMsgViewFlagsType.kThreadedDisplay);
+    CreateDBView(gDBView.msgFolder, (gXFVirtualFolderTerms) ? nsMsgViewType.eShowVirtualFolderResults : nsMsgViewType.eShowQuickSearchResults, gDBView.viewFlags, gDBView.sortType, gDBView.sortOrder);
   }
 }
 
@@ -231,8 +239,8 @@ function onEnterInSearchBar()
       restorePreSearchView();
      
      if (gSearchInput)
-       gSearchInput.showingSearchCriteria = true;
-   
+     gSearchInput.showingSearchCriteria = true;
+     
      gQSViewIsDirty = false;
      return;
    }
@@ -351,7 +359,7 @@ function createSearchTermsWithList(aTermsArray)
   var selectedFolder = GetThreadPaneFolder();
   var ioService = Components.classes["@mozilla.org/network/io-service;1"]
                   .getService(Components.interfaces.nsIIOService);
-  
+
   var termsArray = aTermsArray.QueryInterface(Components.interfaces.nsISupportsArray);
 
   if (gXFVirtualFolderTerms)
@@ -661,6 +669,19 @@ function Search(str)
 
   gSearchInput.value = str;  //on input does not get fired for some reason
   onSearchInput(true);
+}
+
+// When the front end has finished loading a virtual folder, it calls openVirtualFolder
+// to actually perform the folder search. We use this method instead of calling Search("") directly
+// from FolderLoaded in order to avoid moving focus into the search bar.
+function loadVirtualFolder()
+{
+  // bit of a hack...if the underlying real folder is loaded with the same view value
+  // as the value for the virtual folder being searched, then ViewChangeByValue
+  // fails to change the view because it thinks the view is already correctly loaded.
+  // so set gCurrentViewValue back to All. 
+  gCurrentViewValue = 0;
+  onEnterInSearchBar();
 }
 
 // helper methods for the quick search drop down menu

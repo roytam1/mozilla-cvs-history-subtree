@@ -565,19 +565,17 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
 
 nsPluginInstallerWizard.prototype.loadURL = function (aUrl){
   // Check if the page where the plugin came from can load aUrl before
-  // loading it, and do *not* allow loading URIs that would inherit our
-  // principal.
-  
-  var pluginPagePrincipal =
-    window.opener.content.document.nodePrincipal;
+  // loading it, and do *not* allow loading javascript: or data: URIs.
+  var pluginPage = window.opener.content.location.href;
 
   const nsIScriptSecurityManager =
     Components.interfaces.nsIScriptSecurityManager;
-  var secMan = Components.classes["@mozilla.org/scriptsecuritymanager;1"]
-                         .getService(nsIScriptSecurityManager);
+  var secMan =
+    Components.classes["@mozilla.org/scriptsecuritymanager;1"]
+    .getService(nsIScriptSecurityManager);
 
-  secMan.checkLoadURIStrWithPrincipal(pluginPagePrincipal, aUrl,
-    nsIScriptSecurityManager.DISALLOW_INHERIT_PRINCIPAL);
+  secMan.checkLoadURIStr(pluginPage, aUrl,
+                         nsIScriptSecurityManager.DISALLOW_SCRIPT_OR_DATA);
 
   window.opener.open(aUrl);
 }

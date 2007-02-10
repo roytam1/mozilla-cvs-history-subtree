@@ -50,6 +50,8 @@
 
 #include "nsPhGfxLog.h"
 
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+
 #define NS_TO_PH_RGB(ns) (ns & 0xff) << 16 | (ns & 0xff00) | ((ns >> 16) & 0xff)
 
 nscoord nsDeviceContextPh::mDpi = 96;
@@ -186,7 +188,7 @@ void nsDeviceContextPh :: CommonInit( nsNativeDeviceContext aDC ) {
     PRInt32 prefVal = -1;
     nsresult res;
 
-    nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &res));
+    nsCOMPtr<nsIPref> prefs(do_GetService(kPrefCID, &res));
     if( NS_SUCCEEDED( res ) && prefs ) {
       res = prefs->GetIntPref("layout.css.dpi", &prefVal);
       if( NS_FAILED( res ) ) {
@@ -205,6 +207,10 @@ void nsDeviceContextPh :: CommonInit( nsNativeDeviceContext aDC ) {
 	/* Turn off virtual console support... */
 	mWidthFloat  = (float) aWidth;
 	mHeightFloat = (float) aHeight;
+    
+  /* Revisit: the scroll bar sizes is a gross guess based on Phab */
+  mScrollbarHeight = 17;
+  mScrollbarWidth  = 17;
 	}
 
 NS_IMETHODIMP nsDeviceContextPh :: CreateRenderingContext( nsIRenderingContext *&aContext ) {
@@ -435,7 +441,7 @@ printf( "\t\tFound it in cache it exists\n" );
 			else if( value == 2 ) { /* the font doesn't exist and you already asked this before */
 				delete [] fontName;
 #ifdef DEBUG_Adrian
-printf( "\t\tFound it in cache it doesn't exist\n" );
+printf( "\t\tFound it in cache it doesnt exist\n" );
 #endif
 				return NS_ERROR_FAILURE;
 				}
@@ -536,7 +542,7 @@ int nsDeviceContextPh::prefChanged( const char *aPref, void *aClosure ) {
 
   if( nsCRT::strcmp(aPref, "layout.css.dpi")==0 )  {
     PRInt32 dpi;
-    nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &rv));
+    nsCOMPtr<nsIPref> prefs(do_GetService(kPrefCID, &rv));
     rv = prefs->GetIntPref(aPref, &dpi);
     if( NS_SUCCEEDED( rv ) ) context->SetDPI( dpi ); 
 		}

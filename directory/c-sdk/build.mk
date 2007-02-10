@@ -1,30 +1,30 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
-# The contents of this file are subject to the Mozilla Public License Version 
-# 1.1 (the "License"); you may not use this file except in compliance with 
-# the License. You may obtain a copy of the License at 
+#
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS" basis,
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 # for the specific language governing rights and limitations under the
 # License.
-# 
+#
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
-# 
+#
 # The Initial Developer of the Original Code is
 # Netscape Communications Corporation.
 # Portions created by the Initial Developer are Copyright (C) 1998-1999
 # the Initial Developer. All Rights Reserved.
-# 
+#
 # Contributor(s):
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
-# either of the GNU General Public License Version 2 or later (the "GPL"),
-# or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+# either the GNU General Public License Version 2 or later (the "GPL"), or
+# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
 # in which case the provisions of the GPL or the LGPL are applicable instead
 # of those above. If you wish to allow use of your version of this file only
 # under the terms of either the GPL or the LGPL, and not to allow others to
@@ -33,8 +33,8 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
-# ***** END LICENSE BLOCK ***** 
+#
+# ***** END LICENSE BLOCK *****
 
 # some vendors may wish to override COMPVERSIONDIR from the command-line
 #
@@ -45,7 +45,7 @@ COMPVERSIONDIR = $(DEPTH)/directory/c-sdk
 endif
 
 DEFAULT_VENDOR_NAME=mozilla.org
-DEFAULT_VENDOR_VERSION=602
+DEFAULT_VENDOR_VERSION=500
 
 ifndef VENDOR_NAME
 VENDOR_NAME	= $(DEFAULT_VENDOR_NAME)
@@ -120,14 +120,6 @@ ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
 SOFTOKN_LIBNAME	= softokn$(NSSVERS)
 endif
 SSL_LIBNAME	= ssl$(NSSVERS)
-
-ifeq ($(OS_ARCH), WINNT)
-DYNAMICNSS = $(addsuffix .$(LIB_SUFFIX),$(SSL_LIBNAME) $(NSS_LIBNAME))
-else
-DYNAMICNSS = $(addprefix -l,$(SSL_LIBNAME) $(NSS_LIBNAME) $(SOFTOKN_LIBNAME))
-endif
-NSSLINK = $(NSS_LIBS) $(DYNAMICNSS)
-
 HYBRID_LIBNAME	= freebl_hybrid_$(NSSVERS)
 PURE32_LIBNAME	= freebl_pure32_$(NSSVERS)
 
@@ -138,9 +130,7 @@ COPYFREEBL      = 1
 endif
 endif
 ifeq ($(OS_ARCH), HP-UX)
-ifneq ($(OS_TEST),ia64)
 COPYFREEBL      = 1
-endif
 endif
 endif
 
@@ -148,52 +138,62 @@ endif
 SVRCOREVERS	=
 SVRCOREVERS_SUFFIX =
 SVRCORE_LIBNAME	= svrcore$(SVRCOREVERS)
-ifeq ($(OS_ARCH), WINNT)
-SVRCORE_LINK = $(SVRCORE_LIBS) $(SVRCORE_LIBNAME).$(LIB_SUFFIX)
-else
-SVRCORE_LINK = $(SVRCORE_LIBS) -l$(SVRCORE_LIBNAME)
-endif
-
-# sasl library
-ifdef SASL_LIBS
-SASL_LINK = $(SASL_LIBS)
-endif
 
 #
 # NSPR library
 #
 
+ifeq ($(OS_TARGET), WIN95)
+PLC_BASENAME=plc$(NSPR_LIBVERSION)
+PLDS_BASENAME=plds$(NSPR_LIBVERSION)
+NSPR_BASENAME=nspr$(NSPR_LIBVERSION)
+else
+PLC_BASENAME=libplc$(NSPR_LIBVERSION)
+PLDS_BASENAME=libplds$(NSPR_LIBVERSION)
+NSPR_BASENAME=libnspr$(NSPR_LIBVERSION)
+endif
+
 PLCBASE=plc$(NSPR_LIBVERSION)
 PLDSBASE=plds$(NSPR_LIBVERSION)
 NSPRBASE=nspr$(NSPR_LIBVERSION)
 
-ifeq ($(OS_ARCH), WINNT)
-PLC_BASENAME=lib$(PLCBASE)
-PLDS_BASENAME=lib$(PLDSBASE)
-NSPR_BASENAME=lib$(NSPRBASE)
-DYNAMICNSPR = $(PLC_BASENAME).$(LIB_SUFFIX) $(PLDS_BASENAME).$(LIB_SUFFIX) $(NSPR_BASENAME).$(LIB_SUFFIX)
-else
-PLC_BASENAME=$(PLCBASE)
-PLDS_BASENAME=$(PLDSBASE)
-NSPR_BASENAME=$(NSPRBASE)
 DYNAMICNSPR = -l$(PLCBASE) -l$(PLDSBASE) -l$(NSPRBASE)
-endif
 
-# use the NSPRLINK macro in other makefiles to define the linker command line
-# the mozilla client build likes to set the makefile macro directly
-ifdef LIBS_ALREADY_SET
-NSPRLINK = $(NSPR_LIBS)
+PLC_LIBNAME=plc$(NSPR_LIBVERSION)
+PLDS_LIBNAME=plds$(NSPR_LIBVERSION)
+NSPR_LIBNAME=nspr$(NSPR_LIBVERSION)
+
+#
+# NLS library
+#
+ifeq ($(OS_ARCH), WINNT)
+NSCNV_LIBNAME	=nscnv32$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSJPN_LIBNAME	=nsjpn32$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSCCK_LIBNAME	=nscck32$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSSB_LIBNAME	=nssb32$(NLS_LIBVERSION).$(LIB_SUFFIX)
 else
-NSPRLINK = $(NSPR_LIBS) $(DYNAMICNSPR)
+NSCNV_LIBNAME	=libnscnv$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSJPN_LIBNAME	=libnsjpn$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSCCK_LIBNAME	=libnscck$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSSB_LIBNAME	=libnssb$(NLS_LIBVERSION).$(LIB_SUFFIX)
 endif
 
-# why the redundant definitions?  apparently, all of these basename/libname macros are so that
-# the ldapsdk can create a package containing all of the nspr shared libs/dlls - I don't think
-# we should do this anymore, we should just depend on the user installing nspr first - then we
-# can get rid of all of this junk
-PLC_LIBNAME=$(PLCBASE)
-PLDS_LIBNAME=$(PLDSBASE)
-NSPR_LIBNAME=$(NSPRBASE)
+ifdef RELEASE_TREE
+LIBNLS_INCLUDES_LOC = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
+else
+LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
+
+endif
+LIBNLS_DIR	    = ../../../../../dist/libnls$(NLS_LIBVERSION)
+ifeq ($(COMPONENT_PULL_METHOD), FTP)
+LIBNLS_INCLUDES =../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/include
+LIBNLS_LIBDIR	=../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/lib
+else
+LIBNLS_INCLUDES =../../../../../dist/public/libnls
+LIBNLS_LIBDIR	=../../../../../dist/$(OBJDIR_NAME)/libnls
+endif
 
 RM              = rm -f
 SED             = sed
@@ -211,6 +211,11 @@ else
 LDAP_DEBUG	= -DLDAP_DEBUG
 endif
 
+ifdef HAVE_LIBNLS
+HAVELIBNLS	= -DHAVE_LIBNLS
+else
+HAVELIBNLS	=
+endif
 
 ifdef BUILD_CLU
 BUILDCLU	= 1
@@ -221,7 +226,7 @@ endif
 #
 # DEFS are included in CFLAGS
 #
-DEFS            = $(PLATFORMCFLAGS) $(LDAP_DEBUG) \
+DEFS            = $(PLATFORMCFLAGS) $(LDAP_DEBUG) $(HAVELIBNLS) \
                   $(CLDAP) $(DEFNETSSL) $(NOLIBLCACHE) \
                   $(LDAP_REFERRALS) $(LDAP_DNS) $(STR_TRANSLATION) \
                   $(LIBLDAP_CHARSETS) $(LIBLDAP_DEF_CHARSET) \
@@ -262,13 +267,8 @@ USE_DLL_EXPORTS_FILE	= 1
 endif
 
 ifeq ($(OS_ARCH), SunOS)
-ifndef NS_USE_GCC
 DLLEXPORTS_PREFIX=-Blocal -M
 USE_DLL_EXPORTS_FILE	= 1
-# else
-# use the --version-script GNU ld argument - need to add support for
-# GNU (linux and solaris and ???) to genexports.pl et. al.
-endif # NS_USE_GCC
 endif
 
 ifeq ($(OS_ARCH), IRIX)
@@ -293,63 +293,38 @@ endif
 
 ifeq ($(OS_ARCH),ReliantUNIX)
 DL=-ldl
-ifdef RPATHFLAG
-USE_LD_RUN_PATH=1
-endif
-USE_CCC_TO_LINK=1
-CCC=$(CXX)
 endif
 
 ifeq ($(OS_ARCH),UnixWare)
 DL=
 endif
 
+RPATHFLAG = ..:../lib:../../lib:../../../lib:../../../../lib
+
 ifeq ($(OS_ARCH), SunOS)
+# include $ORIGIN in run time library path (work on Solaris 8 10/01 and later
+RPATHFLAG := \$$ORIGIN/../lib:\$$ORIGIN/../../lib:$(RPATHFLAG)
 
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
-# Also, use the C++ compiler to link for 64-bit builds.
-ifeq ($(USE_64), 1)
-USE_CCC_TO_LINK=1
-ifdef RPATHFLAG
-RPATHFLAG_PREFIX=-R:
-endif
-else
-ifdef RPATHFLAG
 RPATHFLAG_PREFIX=-Wl,-R,
-endif
-endif
-
-ifdef NS_USE_GCC
-USE_CCC_TO_LINK=1
-ifdef RPATHFLAG
-RPATHFLAG_PREFIX=-Wl,-R,
-endif
-endif
 
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
-ifdef RPATHFLAG
 LDRPATHFLAG_PREFIX=-R
-endif
 
 # OS network libraries
 PLATFORMLIBS+=-lresolv -lsocket -lnsl -lgen -ldl -lposix4
 endif
 
 ifeq ($(OS_ARCH), OSF1)
-# Use the C++ compiler to link
-USE_CCC_TO_LINK=1
-
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
-ifdef RPATHFLAG
 RPATHFLAG_PREFIX=-Wl,-rpath,
 
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
 LDRPATHFLAG_PREFIX=-rpath
-endif
 
 # allow for unresolved symbols
 DLL_LDFLAGS += -expect_unresolved "*"
@@ -358,15 +333,12 @@ endif # OSF1
 ifeq ($(OS_ARCH), AIX)
 # Flags to set runtime shared library search path.  For example:
 # $(CC) $(RPATHFLAG_PREFIX)../..$(RPATHFLAG_EXTRAS)
-ifdef RPATHFLAG
 RPATHFLAG_PREFIX=-blibpath:
 RPATHFLAG_EXTRAS=:/usr/lib:/lib
 
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
 LDRPATHFLAG_PREFIX=-blibpath:/usr/lib:/lib:
-endif
-
 DLL_LDFLAGS= -bM:SRE -bnoentry \
     -L.:/usr/lib/threads:/usr/lpp/xlC/lib:/usr/lib:/lib
 DLL_EXTRA_LIBS= -bI:/usr/lib/lowsys.exp -lC_r -lC -lpthreads -lc_r -lm \
@@ -376,10 +348,6 @@ EXE_EXTRA_LIBS= -bI:/usr/lib/syscalls.exp -lsvld -lpthreads
 endif # AIX
 
 ifeq ($(OS_ARCH), HP-UX)
-# Use the C++ compiler to link
-USE_CCC_TO_LINK=1
-
-ifdef RPATHFLAG
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
 RPATHFLAG_PREFIX=-Wl,+s,+b,
@@ -387,7 +355,6 @@ RPATHFLAG_PREFIX=-Wl,+s,+b,
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
 LDRPATHFLAG_PREFIX=+s +b
-endif
 
 # we need to link in the rt library to get sem_*()
 PLATFORMLIBS += -lrt
@@ -396,38 +363,15 @@ PLATFORMCFLAGS=
 endif # HP-UX
 
 ifeq ($(OS_ARCH), Linux)
-# Use the C++ compiler to link
-USE_CCC_TO_LINK=1
-
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
-ifdef RPATHFLAG
 RPATHFLAG_PREFIX=-Wl,-rpath,
 
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
 # note, there is a trailing space
 LDRPATHFLAG_PREFIX=-rpath
-endif # RPATHFLAG
 endif # Linux
-
-ifeq ($(OS_ARCH), Darwin)
-# Darwin doesn't use RPATH.
-#ifdef RPATHFLAG
-RPATHFLAG_PREFIX=
-#endif
-
-# Use the C++ compiler to link
-USE_CCC_TO_LINK=1
-endif # Darwin
-
-# Use the C++ compiler to link... or not.
-ifdef USE_CCC_TO_LINK
-CC_FOR_LINK=$(CCC)
-else
-CC_FOR_LINK=$(CC)
-endif
-
 
 #
 # XXX: does anyone know of a better way to solve the "LINK_LIB2" problem? -mcs
@@ -438,10 +382,9 @@ endif
 ifeq ($(OS_ARCH), WINNT)
 
 ifdef NS_USE_GCC
-LINK_EXE	= $(CC_FOR_LINK) -o $@ $(LDFLAGS) $(LCFLAGS) $(DEPLIBS) \
-	$(filter %.$(OBJ_SUFFIX),$^) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
+LINK_EXE	= $(CC) -o $@ $(LDFLAGS) $(LCFLAGS) $(DEPLIBS) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 LINK_LIB	= $(AR) cr $@ $(OBJS)
-LINK_DLL	= $(CC_FOR_LINK) -shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(@:.$(DLL_SUFFIX)=.$(LIB_SUFFIX)) $(LLFLAGS) $(DLL_LDFLAGS) -o $@ $(OBJS) $(EXTRA_LIBS) $(EXTRA_DLL_LIBS)
+LINK_DLL	= $(CC) -shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(@:.$(DLL_SUFFIX)=.$(LIB_SUFFIX)) $(LLFLAGS) $(DLL_LDFLAGS) -o $@ $(OBJS) $(EXTRA_LIBS) $(EXTRA_DLL_LIBS)
 else
 DEBUG_LINK_OPT=-DEBUG
 ifeq ($(BUILD_OPT), 1)
@@ -459,20 +402,9 @@ endif
 LINK_EXE        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) -OUT:"$@" -MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
     $(LCFLAGS) -NOLOGO $(DEBUG_FLAGS) -INCREMENTAL:NO \
     -NODEFAULTLIB:MSVCRTD -SUBSYSTEM:$(SUBSYSTEM) $(DEPLIBS) \
-    $(filter %.$(OBJ_SUFFIX),$^) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
-
-# AR is set when doing an autoconf build
-ifdef AR
-LINK_LIB        = $(CYGWIN_WRAPPER) $(AR) $(OBJS)
-else
+    $(EXTRA_LIBS) $(PLATFORMLIBS) $(OBJS)
 LINK_LIB        = $(CYGWIN_WRAPPER) lib -OUT:"$@"  $(OBJS)
-endif
-
-ifndef LD
-LD=link
-endif
-
-LINK_DLL        = $(CYGWIN_WRAPPER) $(LD) $(DEBUG_LINK_OPT) -nologo -MAP -DLL $(DEBUG_FLAGS) \
+LINK_DLL        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) -nologo -MAP -DLL $(DEBUG_FLAGS) \
         $(ML_DEBUG) -SUBSYSTEM:$(SUBSYSTEM) $(LLFLAGS) $(DLL_LDFLAGS) \
         $(EXTRA_LIBS) -out:"$@" $(OBJS)
 endif # NS_USE_GCC
@@ -494,27 +426,13 @@ else
 
 LINK_LIB        = $(RM) $@; $(AR) $(AR_FLAGS) $(OBJS); $(RANLIB) $@
 LINK_LIB2       = $(RM) $@; $(AR) $@ $(OBJS2); $(RANLIB) $@
-ifneq ($(LD),$(CC))
 ifdef SONAMEFLAG_PREFIX
-LINK_DLL        = $(LD) $(DSO_LDOPTS) $(LDRPATHFLAG_PREFIX)$(RPATHFLAG) $(ALDFLAGS) \
-                        $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
+LINK_DLL        = $(LD) $(DSO_LDOPTS) $(ALDFLAGS) $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
                         -o $@ $(SONAMEFLAG_PREFIX)$(notdir $@) $(OBJS)
 else # SONAMEFLAG_PREFIX
-LINK_DLL        = $(LD) $(DSO_LDOPTS) $(LDRPATHFLAG_PREFIX)$(RPATHFLAG) $(ALDFLAGS) \
-                        $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
+LINK_DLL        = $(LD) $(DSO_LDOPTS) $(ALDFLAGS) $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
                         -o $@ $(OBJS)
 endif # SONAMEFLAG_PREFIX
-else  # $(CC) is used to link libs
-ifdef SONAMEFLAG_PREFIX
-LINK_DLL        = $(LD) $(DSO_LDOPTS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) $(ALDFLAGS) \
-                        $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
-                        -o $@ $(SONAMEFLAG_PREFIX)$(notdir $@) $(OBJS)
-else # SONAMEFLAG_PREFIX
-LINK_DLL        = $(LD) $(DSO_LDOPTS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) $(ALDFLAGS) \
-                        $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
-                        -o $@ $(OBJS)
-endif # SONAMEFLAG_PREFIX
-endif # LD!CC
 endif #!os2
 
 ifeq ($(OS_ARCH), OSF1)
@@ -535,40 +453,52 @@ ifeq ($(OS_ARCH), HP-UX)
 #    needs this).
 # 2) Add a "-Wl,-E" option so the linker gets a "-E" flag.  This makes symbols
 #    in an executable visible to shared libraries loaded at runtime.
-LINK_EXE        = $(CC_FOR_LINK) -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@ $(filter %.$(OBJ_SUFFIX),$^) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
+LINK_EXE        = $(CCC) -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 
 ifeq ($(USE_64), 1)
-ifeq ($(OS_RELEASE), B.11.23)
-LINK_EXE        = $(CC_FOR_LINK) -DHPUX_ACC -D__STDC_EXT__ -D_POSIX_C_SOURCE=199506L  +DD64 -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@ $(filter %.$(OBJ_SUFFIX),$^) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
-else
-LINK_EXE        = $(CC_FOR_LINK) -DHPUX_ACC -D__STDC_EXT__ -D_POSIX_C_SOURCE=199506L  +DA2.0W +DS2.0 -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@ $(filter %.$(OBJ_SUFFIX),$^) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
-endif
+LINK_EXE        = $(CCC) -DHPUX_ACC -D__STDC_EXT__ -D_POSIX_C_SOURCE=199506L  +DA2.0W +DS2.0 -Wl,-E $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 endif
 
 else # HP-UX
 # everything except HPUX
+ifeq ($(OS_ARCH), ReliantUNIX)
+# Use the C++ compiler for linking if at least ONE object is C++
+export LD_RUN_PATH=$(RPATHFLAG)
+LINK_EXE      = $(CXX) $(ALDFLAGS) $(LDFLAGS) -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 
+else # ReliantUNIX
 ifdef USE_LD_RUN_PATH
 #does RPATH differently.  instead we export RPATHFLAG as LD_RUN_PATH
 #see ns/netsite/ldap/clients/tools/Makefile for an example
 export LD_RUN_PATH=$(RPATHFLAG)
-LINK_EXE        = $(CC_FOR_LINK) $(ALDFLAGS) $(LDFLAGS) \
-                        -o $@ $(filter %.$(OBJ_SUFFIX),$^) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
-LINK_EXE_NOLIBSOBJS     =  $(CC_FOR_LINK) $(ALDFLAGS) $(LDFLAGS) -o $@
+LINK_EXE        = $(CC) $(ALDFLAGS) $(LDFLAGS) \
+                        -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
+LINK_EXE_NOLIBSOBJS     =  $(CC) $(ALDFLAGS) $(LDFLAGS) -o $@
 else # USE_LD_RUN_PATH
-LINK_EXE        = $(CC_FOR_LINK) $(ALDFLAGS) $(LDFLAGS) \
+LINK_EXE        = $(CC) $(ALDFLAGS) $(LDFLAGS) \
                         $(RPATHFLAG_PREFIX)$(RPATHFLAG)$(RPATHFLAG_EXTRAS) \
-                        -o $@ $(filter %.$(OBJ_SUFFIX),$^) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
-LINK_EXE_NOLIBSOBJS     = $(CC_FOR_LINK) $(ALDFLAGS) $(LDFLAGS) \
+                        -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
+LINK_EXE_NOLIBSOBJS     = $(CC) $(ALDFLAGS) $(LDFLAGS) \
                         $(RPATHFLAG_PREFIX)$(RPATHFLAG)$(RPATHFLAG_EXTRAS) -o $@
 endif # USE_LD_RUN_PATH
+endif # ReliantUNIX
 endif # HP-UX
 endif # WINNT
 
-ifndef PERL
-PERL = perl
+ifeq ($(OS_ARCH), OSF1)
+LINK_EXE        = $(CCC) $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) \
+        -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 endif
 
+ifeq ($(OS_ARCH), SunOS)
+ifeq ($(USE_64), 1)
+LINK_EXE        = $(CCC) $(ALDFLAGS) $(LDFLAGS)  -R:$(RPATHFLAG)\
+        -o $@ $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
+endif
+endif
+
+
+PERL ?= perl
 #
 # shared library symbol export definitions
 #

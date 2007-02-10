@@ -58,6 +58,7 @@
 #include "nsIProxyObjectManager.h"
 #include "nsIStreamConverterService.h"
 #include "nsICacheSession.h"
+#include "nsIEventQueueService.h"
 #include "nsICookieService.h"
 #include "nsIIDNService.h"
 #include "nsITimer.h"
@@ -160,15 +161,16 @@ public:
         return mConnMgr->ProcessPendingQ(cinfo);
     }
 
-    nsresult GetSocketThreadTarget(nsIEventTarget **target)
+    nsresult GetSocketThreadEventTarget(nsIEventTarget **target)
     {
-        return mConnMgr->GetSocketThreadTarget(target);
+        return mConnMgr->GetSocketThreadEventTarget(target);
     }
 
     //
     // The HTTP handler caches pointers to specific XPCOM services, and
     // provides the following helper routines for accessing those services:
     //
+    nsresult GetCurrentEventQ(nsIEventQueue **);
     nsresult GetStreamConverterService(nsIStreamConverterService **);
     nsresult GetIOService(nsIIOService** service);
     nsICookieService * GetCookieService(); // not addrefed
@@ -219,6 +221,7 @@ private:
 
     // cached services
     nsCOMPtr<nsIIOService>              mIOService;
+    nsCOMPtr<nsIEventQueueService>      mEventQueueService;
     nsCOMPtr<nsIStreamConverterService> mStreamConvSvc;
     nsCOMPtr<nsIObserverService>        mObserverService;
     nsCOMPtr<nsICookieService>          mCookieService;

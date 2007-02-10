@@ -336,7 +336,7 @@ calItemBase.prototype = {
                 },
 
                 getNext: function() {
-                    if (!this.currentItem)
+                    if (!currentItem)
                         throw Components.results.NS_ERROR_UNEXPECTED;
 
                     var rval = this.currentItem;
@@ -653,11 +653,9 @@ calItemBase.prototype = {
 
         if (this.mOrganizer)
             icalcomp.addProperty(this.mOrganizer.icalProperty);
-        var attendees = this.getAttendees({});
-        if (attendees.length > 0) {
-          for (var i = 0; i < attendees.length; i++) {
-            icalcomp.addProperty(attendees[i].icalProperty);
-          }
+        if (this.mAttendees) {
+            for (var i = 0; i < this.mAttendees.length; i++)
+                icalcomp.addProperty(this.mAttendees[i].icalProperty);
         }
 
         if (this.mGeneration) {

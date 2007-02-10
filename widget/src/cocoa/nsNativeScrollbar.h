@@ -35,17 +35,16 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsNativeScrollbar_h_
-#define nsNativeScrollbar_h_
 
-#import <Carbon/Carbon.h>
-#import <Cocoa/Cocoa.h>
+#ifndef nsNativeScrollbar_h__
+#define nsNativeScrollbar_h__
 
-#include "mozView.h"
 #include "nsChildView.h"
 
 #include "nsINativeScrollbar.h"
 #include "nsIContent.h"
+
+#import "mozView.h"
 
 class nsIScrollbarMediator;
 
@@ -78,16 +77,18 @@ protected:
 
   // nsWindow Interface
   virtual PRBool DispatchMouseEvent(nsMouseEvent &aEvent);
-  NS_IMETHOD Enable(PRBool aState);
+  NS_IMETHOD Show(PRBool bState);
+  NS_IMETHOD Enable(PRBool bState);
   NS_IMETHOD IsEnabled(PRBool* outState);
   
-  NSScroller* GetControl() { return (NSScroller*)mView; }
+  NSScroller* GetControl() { return mView; }
 
   void UpdateContentPosition(PRUint32 inNewPos);
   
   void RecreateHorizontalScrollbar();
 
   virtual NSView*   CreateCocoaView(NSRect inFrame);
+  virtual GrafPtr   GetQuickDrawPort();
 
   void              UpdateScroller();
   
@@ -119,10 +120,6 @@ private:
 
     // YES when we're in a tracking loop
   BOOL      mInTracking;
-
-  // rects that were invalidated during a draw, so have pending drawing
-  NSMutableArray* mPendingDirtyRects;
-  BOOL mPendingFullDisplay;
 }
 
   // default initializer
@@ -135,4 +132,4 @@ private:
 @end
 
 
-#endif // nsNativeScrollbar_h_
+#endif // nsNativeScrollbar_

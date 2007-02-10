@@ -56,6 +56,21 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <Carbon/Carbon.h>
 
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
+#define kWindowFadeTransitionEffect 4
+#define kEventWindowTransitionCompleted 89
+
+typedef struct TransitionWindowOptions {
+  UInt32    version;
+  EventTime duration;
+  WindowRef window;
+  void*     userData;
+} TransitionWindowOptions;
+
+#define kEventParamWindowPartCode 'wpar'
+#define typeWindowPartCode        'wpar'
+#endif
+
 #if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4
 // http://developer.apple.com/qa/qa2005/qa1453.html
 // These are not defined in early versions of the 10.4/10.4u SDK (as of Xcode
@@ -209,7 +224,7 @@ nsMacWindow::DragReceiveHandler (WindowPtr theWindow, void *handlerRefCon,
 } // DragReceiveHandler
 
 
-NS_IMPL_ISUPPORTS_INHERITED4(nsMacWindow, Inherited, nsIEventSink, nsPIWidgetMac, nsPIEventSinkStandalone, 
+NS_IMPL_ISUPPORTS_INHERITED5(nsMacWindow, Inherited, nsIEventSink, nsPIWidgetMac, nsPIWidgetMac_MOZILLA_1_8_BRANCH, nsPIEventSinkStandalone, 
                                           nsIMacTextInputEventSink)
 
 
@@ -228,6 +243,7 @@ nsMacWindow::nsMacWindow() : Inherited()
   , mResizeIsFromUs(PR_FALSE)
   , mShown(PR_FALSE)
   , mSheetNeedsShow(PR_FALSE)
+  , mSheetShown(PR_FALSE)
   , mInPixelMouseScroll(PR_FALSE)
   , mMacEventHandler(nsnull)
 #if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_3
@@ -314,14 +330,15 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
     // When creating a popup window, aNativeParent is not a WindowPtr but
     // an nsIWidget, so walk up that tree to the top-level window and get
     // the dispatch handler.
-    nsIWidget* widget = NS_STATIC_CAST(nsIWidget*, aNativeParent);
+    nsCOMPtr<nsIWidget> widget = NS_STATIC_CAST(nsIWidget*, aNativeParent);
     nsIWidget* topWidget = nsnull;
 
-    while (widget && (widget = widget->GetParent()))
+    while (widget && (widget = dont_AddRef(widget->GetParent())))
       topWidget = widget;
 
     if (topWidget) {
-      nsCOMPtr<nsPIWidgetMac> parentMacWindow = do_QueryInterface(topWidget);
+      nsCOMPtr<nsPIWidgetMac_MOZILLA_1_8_BRANCH> parentMacWindow =
+       do_QueryInterface(topWidget);
 
       if (parentMacWindow)
         parentMacWindow->GetEventDispatchHandler(&eventDispatchHandler);
@@ -386,6 +403,7 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
         if (aInitData)
         {
           // We never give dialog boxes a close box.
+
           switch (aInitData->mBorderStyle)
           {
             case eBorderStyle_none:
@@ -889,6 +907,20 @@ nsMacWindow::WindowEventHandler ( EventHandlerCallRef inHandlerChain, EventRef i
       break;
 
       case kEventWindowActivated:
+      {
+        // This cooperates with the sheet case in Show to avoid activating
+        // sheets prematurely.  The activate event sent by ShowSheetWindow
+        // will be ignored, but Show will set mSheetShown and send another
+        // activate event to ensure that activation occurs.
+        if (self->mWindowType != eWindowType_sheet ||
+            self->mSheetShown) {
+          self->mMacEventHandler->HandleActivateEvent(inEvent);
+        }
+        ::CallNextEventHandler(inHandlerChain, inEvent);
+        retVal = noErr; // do default processing, but consume
+      }
+      break;
+
       case kEventWindowDeactivated:
       {
         self->mMacEventHandler->HandleActivateEvent(inEvent);
@@ -940,7 +972,7 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
 {
   // Mac OS X sheet support
   nsIWidget *parentWidget = mParent;
-  nsCOMPtr<nsPIWidgetMac> piParentWidget ( do_QueryInterface(parentWidget) );
+  nsCOMPtr<nsPIWidgetMac_MOZILLA_1_8_BRANCH> piParentWidget ( do_QueryInterface(parentWidget) );
   WindowRef parentWindowRef = (parentWidget) ?
     reinterpret_cast<WindowRef>(parentWidget->GetNativeData(NS_NATIVE_DISPLAY)) : nsnull;
 
@@ -952,7 +984,7 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
   if (aState && !mBounds.IsEmpty()) {
     if (mIsSheet) {
       if (parentWindowRef) {
-        WindowPtr top = parentWindowRef;
+        WindowPtr top = GetWindowTop(parentWindowRef);
         if (piParentWidget) {
           PRBool parentIsSheet = PR_FALSE;
           if (NS_SUCCEEDED(piParentWidget->GetIsSheet(&parentIsSheet)) &&
@@ -964,6 +996,7 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
             // be displayed again when it has no more child sheets.
             ::GetSheetWindowParent(parentWindowRef, &top);
             ::HideSheetWindow(parentWindowRef);
+            piParentWidget->SetSheetShown(PR_FALSE);
           }
         }
 
@@ -983,6 +1016,16 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
             mSheetNeedsShow = PR_FALSE;
 
             ::ShowSheetWindow(mWindowPtr, top);
+
+            // ShowSheetWindow sends an activate event, which could potentially
+            // cause the modal loop to run.  In some cases, this will occur
+            // before the sheet is actually displayed, resulting in a loop
+            // waiting for input from the user that is impossible to achieve.
+            // As a workaround, the activate event sent by ShowSheetWindow
+            // will not be handled by Gecko, and instead another activate
+            // event will be sent once the sheet is known to be displayed.
+            mSheetShown = PR_TRUE;
+            ::ActivateWindow(mWindowPtr, true);
           }
           UpdateWindowMenubar(parentWindowRef, PR_FALSE);
           mMacEventHandler->GetEventDispatchHandler()->DispatchGuiEvent(this, NS_GOTFOCUS);
@@ -1042,6 +1085,7 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
         ::GetSheetWindowParent(mWindowPtr, &sheetParent);
 
         ::HideSheetWindow(mWindowPtr);
+        mSheetShown = PR_FALSE;
 
         mMacEventHandler->GetEventDispatchHandler()->DispatchGuiEvent(this, NS_DEACTIVATE);
 
@@ -1063,6 +1107,11 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
           // it.  It wasn't sent any deactivate events when it was hidden, so
           // don't call through Show, just let the OS put it back up.
           ::ShowSheetWindow(parentWindowRef, sheetParent);
+
+          // See the other ShowSheetWindow call above for an explanation of
+          // why this is done.
+          piParentWidget->SetSheetShown(PR_TRUE);
+          ::ActivateWindow(parentWindowRef, true);
         }
         else {
           // Sheet, that was hard.  No more siblings or parents, going back
@@ -1092,11 +1141,6 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
     }
     else {
       if (mWindowPtr) {
-#ifndef MOZ_SUNBIRD
-// XXX bug 348146 - Hiding and showing the popup rapidly screws up
-//                  Sunbird's datepicker as the hide isn't finished
-//                  before we try to show. We need to fix this.
-//
         static TransitionWindowWithOptions_type transitionFunc;
         if (mWindowType == eWindowType_popup) {
           // Popups will hide by fading out with TransitionWindowWithOptions,
@@ -1140,7 +1184,6 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
                          PR_TRUE, &transitionOptions);
         }
         else
-#endif
           ::HideWindow(mWindowPtr);
       }
       mShown = PR_FALSE;
@@ -1606,6 +1649,24 @@ nsMacWindow::GetMenuBar(nsIMenuBar **_retval)
   return(NS_OK);
 }
 
+//-------------------------------------------------------------------------
+//
+// getter/setter for window to ignore the next deactivate event received
+// if a Mac OS X sheet is being opened
+//
+//-------------------------------------------------------------------------
+NS_IMETHODIMP
+nsMacWindow::GetIgnoreDeactivate(PRBool *_retval)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsMacWindow::SetIgnoreDeactivate(PRBool ignoreDeactivate)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 NS_IMETHODIMP
 nsMacWindow::GetIsSheet(PRBool *_retval)
 {
@@ -1897,12 +1958,22 @@ nsMacWindow::HandleUpdateActiveInputArea(const nsAString & text,
   *_retval = eventNotHandledErr;
   NS_ENSURE_TRUE(mMacEventHandler.get(), NS_ERROR_FAILURE);
   const nsPromiseFlatString& buffer = PromiseFlatString(text);
-  // ignore script and language information for now. 
+  // ignore script and langauge information for now. 
   nsresult res = mMacEventHandler->UnicodeHandleUpdateInputArea(buffer.get(), buffer.Length(), fixLen, (TextRangeArray*) hiliteRng);
   // we will lost the real OSStatus for now untill we change the nsMacEventHandler
   if (NS_SUCCEEDED(res))
     *_retval = noErr;
   return res;
+}
+
+/* OSStatus HandleUpdateActiveInputAreaForNonUnicode (in string text, in long textLength, in short script, in short language, in long fixLen, in voidPtr hiliteRng); */
+NS_IMETHODIMP 
+nsMacWindow::HandleUpdateActiveInputAreaForNonUnicode(const nsACString & text, 
+                                                      PRInt16 script, PRInt16 language, 
+                                                      PRInt32 fixLen, void * hiliteRng, 
+                                                      OSStatus *_retval)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* OSStatus HandleUnicodeForKeyEvent (in wstring text, in long textLength, in short script, in short language, in voidPtr keyboardEvent); */
@@ -1913,7 +1984,7 @@ nsMacWindow::HandleUnicodeForKeyEvent(const nsAString & text,
 {
   *_retval = eventNotHandledErr;
   NS_ENSURE_TRUE(mMacEventHandler.get(), NS_ERROR_FAILURE);
-  // ignore language information for now. 
+  // ignore langauge information for now. 
   // we will lost the real OSStatus for now untill we change the nsMacEventHandler
   EventRecord* eventPtr = (EventRecord*)keyboardEvent;
   const nsPromiseFlatString& buffer = PromiseFlatString(text);
@@ -2009,7 +2080,7 @@ nsMacWindow::DispatchMenuEvent ( void* anEvent, PRInt32 aNativeResult, PRBool *_
 // The drag manager has let us know that something related to a drag has
 // occurred in this window. It could be any number of things, ranging from 
 // a drop, to a drag enter/leave, or a drag over event. The actual event
-// is passed in |aMessage| and is passed along to our event handler so Gecko
+// is passed in |aMessage| and is passed along to our event hanlder so Gecko
 // knows about it.
 //
 NS_IMETHODIMP
@@ -2067,8 +2138,8 @@ nsMacWindow::ComeToFront()
 {
   nsZLevelEvent event(PR_TRUE, NS_SETZLEVEL, this);
 
-  event.refPoint.x = mBounds.x;
-  event.refPoint.y = mBounds.y;
+  event.point.x = mBounds.x;
+  event.point.y = mBounds.y;
   event.time = PR_IntervalNow();
 
   event.mImmediate = PR_TRUE;
@@ -2378,5 +2449,19 @@ nsMacWindow::KeyEventHandler(EventHandlerCallRef aHandlerCallRef,
 NS_IMETHODIMP
 nsMacWindow::GetEventDispatchHandler(nsMacEventDispatchHandler** aEventDispatchHandler) {
   *aEventDispatchHandler = mMacEventHandler->GetEventDispatchHandler();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMacWindow::GetSheetShown(PRBool *aSheetShown)
+{
+  *aSheetShown = mSheetShown;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMacWindow::SetSheetShown(PRBool aSheetShown)
+{
+  mSheetShown = aSheetShown;
   return NS_OK;
 }

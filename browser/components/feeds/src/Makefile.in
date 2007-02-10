@@ -43,13 +43,6 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE = browser_feeds
 LIBRARY_NAME = browser_feeds_s
-FORCE_STATIC_LIB = 1
-FORCE_USE_PIC = 1
-
-DEFINES += \
-	-DMOZ_APP_NAME=$(MOZ_APP_NAME) \
-	-DMOZ_APP_DISPLAYNAME=$(MOZ_APP_DISPLAYNAME) \
-	$(NULL)
 
 EXTRA_PP_COMPONENTS = \
 	FeedConverter.js \
@@ -57,10 +50,14 @@ EXTRA_PP_COMPONENTS = \
 	WebContentConverter.js \
 	$(NULL)
 
-REQUIRES = xpcom string necko caps js xpconnect mimetype
+REQUIRES = xpcom string necko caps js xpconnect
 
 CPPSRCS = nsFeedSniffer.cpp nsAboutFeeds.cpp
 
 LOCAL_INCLUDES = -I$(srcdir)/../../build
+
+FORCE_STATIC_LIB = 1
+
+MOZILLA_INTERNAL_API = 1
 
 include $(topsrcdir)/config/rules.mk

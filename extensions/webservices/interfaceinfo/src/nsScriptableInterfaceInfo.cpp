@@ -39,7 +39,6 @@
 /* nsIScriptableInteraceInfo family implementations. */
 
 #include "iixprivate.h"
-#include "nsServiceManagerUtils.h"
 
 /***************************************************************************/
 static inline
@@ -550,8 +549,9 @@ NameTester(nsIInterfaceInfoManager* manager, const void* data,
 static nsresult
 FindInfo(InfoTester tester, const void* data, nsIInterfaceInfo** info)
 {
-    nsCOMPtr<nsIInterfaceInfoManager>
-        iim(do_GetService(NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID));
+    nsCOMPtr<nsIInterfaceInfoManager> iim = 
+        dont_AddRef(XPTI_GetInterfaceInfoManager());
+    
     if(!iim)
         return NS_ERROR_UNEXPECTED;
 

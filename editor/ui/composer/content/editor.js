@@ -121,7 +121,7 @@ function ShowHideToolbarSeparators(toolbar) {
 
 function ShowHideToolbarButtons()
 {
-  var array = gPrefs.getChildList(kEditorToolbarPrefs, {});
+  var array = GetPrefs().getChildList(kEditorToolbarPrefs, {});
   for (var i in array) {
     var prefName = array[i];
     var id = prefName.substr(kEditorToolbarPrefs.length) + "Button";
@@ -168,13 +168,13 @@ nsPrefListener.prototype =
     // verify that we're changing a button pref
     if (topic != "nsPref:changed") return;
     
-    var editor = GetCurrentEditor();
-    if (prefName == kUseCssPref)
+    if (prefName.substr(0, kUseCssPref.length) == kUseCssPref)
     {
       var cmd = document.getElementById("cmd_highlight");
       if (cmd) {
-        var useCSS = gPrefs.getBoolPref(prefName);
-
+        var prefs = GetPrefs();
+        var useCSS = prefs.getBoolPref(prefName);
+        var editor = GetCurrentEditor();
         if (useCSS && editor) {
           var mixedObj = {};
           var state = editor.getHighlightColorState(mixedObj);
@@ -189,18 +189,23 @@ nsPrefListener.prototype =
         if (editor)
           editor.isCSSEnabled = useCSS;
       }
-    }
-    else if (prefName.substr(0, kEditorToolbarPrefs.length) == kEditorToolbarPrefs)
+     }
+     else if (prefName.substr(0, kEditorToolbarPrefs.length) == kEditorToolbarPrefs)
+     {
+       var id = prefName.substr(kEditorToolbarPrefs.length) + "Button";
+       var button = document.getElementById(id);
+       if (button) {
+         button.hidden = !gPrefs.getBoolPref(prefName);
+         ShowHideToolbarSeparators(button.parentNode);
+       }
+     }
+    else if (prefName.substr(0, kCRInParagraphsPref.length) == kCRInParagraphsPref)
     {
-      var id = prefName.substr(kEditorToolbarPrefs.length) + "Button";
-      var button = document.getElementById(id);
-      if (button) {
-        button.hidden = !gPrefs.getBoolPref(prefName);
-        ShowHideToolbarSeparators(button.parentNode);
-      }
-    }
-    else if (editor && (prefName == kCRInParagraphsPref))
-      editor.returnInParagraphCreatesNewParagraph = gPrefs.getBoolPref(prefName);
+      var crInParagraphCreatesParagraph = gPrefs.getBoolPref(prefName);
+      var editor = GetCurrentEditor();
+      if (editor)
+        editor.returnInParagraphCreatesNewParagraph = crInParagraphCreatesParagraph;
+    }   
   }
 }
 
@@ -404,10 +409,8 @@ var gEditorDocumentObserver =
         // Things for just the Web Composer application
         if (IsWebComposer())
         {
-          InlineSpellCheckerUI.init(editor);
-          document.getElementById('menu_inlinespellcheck').setAttribute('disabled', !InlineSpellCheckerUI.canSpellCheck);
-
-          editor.returnInParagraphCreatesNewParagraph = gPrefs.getBoolPref(kCRInParagraphsPref);
+          var prefs = GetPrefs();
+          editor.returnInParagraphCreatesNewParagraph = prefs.getBoolPref(kCRInParagraphsPref);
 
           // Set focus to content window if not a mail composer
           // Race conditions prevent us from setting focus here
@@ -565,9 +568,10 @@ function EditorStartup()
 
   // hide Highlight button if we are in an HTML editor with CSS mode off
   // and tell the editor if a CR in a paragraph creates a new paragraph
+  var prefs = GetPrefs();
   var cmd = document.getElementById("cmd_highlight");
   if (cmd) {
-    var useCSS = gPrefs.getBoolPref(kUseCssPref);
+    var useCSS = prefs.getBoolPref(kUseCssPref);
     if (!useCSS && is_HTMLEditor) {
       cmd.collapsed = true;
     }
@@ -1317,7 +1321,8 @@ function GetBackgroundElementWithColor()
   }
   else
   {
-    var IsCSSPrefChecked = gPrefs.getBoolPref(kUseCssPref);
+    var prefs = GetPrefs();
+    var IsCSSPrefChecked = prefs.getBoolPref(kUseCssPref);
     if (IsCSSPrefChecked && IsHTMLEditor())
     {
       var selection = editor.selection;
@@ -1711,7 +1716,6 @@ function SetEditMode(mode)
 
   // must have editor if here!
   var editor = GetCurrentEditor();
-  var inlineSpellCheckItem = document.getElementById('menu_inlinespellcheck');
 
   // Switch the UI mode before inserting contents
   //   so user can't type in source window while new window is being filled
@@ -1748,14 +1752,14 @@ function SetEditMode(mode)
     // Get the entire document's source string
 
     var flags = (editor.documentCharacterSet == "ISO-8859-1")
-      ? kOutputEncodeLatin1Entities
-      : kOutputEncodeBasicEntities;
+      ? 32768  // OutputEncodeLatin1Entities
+      : 16384; // OutputEncodeBasicEntities
     try { 
       var encodeEntity = gPrefs.getCharPref("editor.encode_entity");
       switch (encodeEntity) {
-        case "basic"  : flags = kOutputEncodeBasicEntities; break;
-        case "latin1" : flags = kOutputEncodeLatin1Entities; break;
-        case "html"   : flags = kOutputEncodeHTMLEntities; break;
+        case "basic"  : flags = 16384; break; // OutputEncodeBasicEntities
+        case "latin1" : flags = 32768; break; // OutputEncodeLatin1Entities
+        case "html"   : flags = 65536; break; // OutputEncodeHTMLEntities
         case "none"   : flags = 0;     break;
       }
     } catch (e) { }
@@ -1763,11 +1767,11 @@ function SetEditMode(mode)
     try { 
       var prettyPrint = gPrefs.getBoolPref("editor.prettyprint");
       if (prettyPrint)
-        flags |= kOutputFormatted;
+        flags |= 2; // OutputFormatted
 
     } catch (e) {}
 
-    flags |= kOutputLFLineBreak;
+    flags |= 1024; // OutputLFLineBreak
     var source = editor.outputToString(kHTMLMimeType, flags);
     var start = source.search(/<html/i);
     if (start == -1) start = 0;
@@ -1784,10 +1788,6 @@ function SetEditMode(mode)
     // Only rebuild document if a change was made in source window
     if (IsHTMLSourceChanged())
     {
-      // Disable spell checking when rebuilding source
-      InlineSpellCheckerUI.enabled = false;
-      inlineSpellCheckItem.removeAttribute('checked');
-
       // Reduce the undo count so we don't use too much memory
       //   during multiple uses of source window 
       //   (reinserting entire doc caches all nodes)
@@ -1799,7 +1799,7 @@ function SetEditMode(mode)
       try {
         // We are coming from edit source mode,
         //   so transfer that back into the document
-        source = gSourceTextEditor.outputToString(kTextMimeType, kOutputLFLineBreak);
+        source = gSourceTextEditor.outputToString(kTextMimeType, 1024); // OutputLFLineBreak
         editor.rebuildDocumentFromSource(source);
 
         // Get the text for the <title> from the newly-parsed document
@@ -1836,20 +1836,6 @@ function SetEditMode(mode)
 
     gContentWindow.focus();
   }
-
-  switch (mode) {
-    case kDisplayModePreview:
-      // Disable spell checking when previewing
-      InlineSpellCheckerUI.enabled = false;
-      inlineSpellCheckItem.removeAttribute('checked');
-      // fall through
-    case kDisplayModeSource:
-      inlineSpellCheckItem.setAttribute('disabled', 'true');
-      break;
-    default:
-      inlineSpellCheckItem.setAttribute('disabled', !InlineSpellCheckerUI.canSpellCheck);
-      break;
-  }
 }
 
 function CancelHTMLSource()
@@ -1865,7 +1851,7 @@ function FinishHTMLSource()
   //Or RebuildDocumentFromSource() will fail.
   if (IsInHTMLSourceMode())
   {
-    var htmlSource = gSourceTextEditor.outputToString(kTextMimeType, kOutputLFLineBreak);
+    var htmlSource = gSourceTextEditor.outputToString(kTextMimeType, 1024); // OutputLFLineBreak
     if (htmlSource.length > 0)
     {
       var beginHead = htmlSource.indexOf("<head");

@@ -117,7 +117,7 @@ struct nsViewZIndex {
 class nsIView
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IVIEW_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IVIEW_IID)
 
   /**
    * See if this view is scrollable.
@@ -377,7 +377,5 @@ protected:
 
   virtual ~nsIView() {}
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIView, NS_IVIEW_IID)
 
 #endif

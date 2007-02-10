@@ -22,7 +22,6 @@
  * Contributor(s):
  *  Darin Fisher <darin@meer.net>
  *  Boris Zbarsky <bzbarsky@mit.edu>
- *  Jeff Walden <jwalden+code@mit.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,13 +37,15 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* This file contains common code that is loaded with each test file.
- * See http://developer.mozilla.org/en/docs/Writing_xpcshell-based_unit_tests
- * for more information
- */
+// This file contains common code that is loaded with each test file.
 
+const nsIEventQueueService = Components.interfaces.nsIEventQueueService;
+const nsIEventQueue        = Components.interfaces.nsIEventQueue;
+
+var _eqs;
 var _quit = false;
 var _fail = false;
+var _running_event_loop = false;
 var _tests_pending = 0;
 
 function _TimerCallback(expr) {
@@ -63,38 +64,45 @@ _TimerCallback.prototype = {
   }
 };
 
-function _do_main() {
-  if (_quit)
-    return;
-
-  dump("*** running event loop\n");
-  var thr = Components.classes["@mozilla.org/thread-manager;1"]
-                      .getService().currentThread;
-
-  while (!_quit)
-    thr.processNextEvent(true);
-
-  while (thr.hasPendingEvents())
-    thr.processNextEvent(true);
-}
-
-function _do_quit() {
-  dump("*** exiting\n");
-
-  _quit = true;
-}
-
-/************** Functions to be used from the tests **************/
-
 function do_timeout(delay, expr) {
   var timer = Components.classes["@mozilla.org/timer;1"]
                         .createInstance(Components.interfaces.nsITimer);
   timer.initWithCallback(new _TimerCallback(expr), delay, timer.TYPE_ONE_SHOT);
 }
 
+function do_main() {
+  if (_quit)
+    return;
+
+  dump("*** running event loop\n");
+  var eq = _eqs.getSpecialEventQueue(_eqs.CURRENT_THREAD_EVENT_QUEUE);
+
+  _running_event_loop = true;
+  eq.eventLoop();  // unblocked via interrupt from do_quit()
+  _running_event_loop = false;
+
+  // process any remaining events before exiting
+  eq.processPendingEvents();
+  eq.stopAcceptingEvents();
+  eq.processPendingEvents();
+}
+
+function do_quit() {
+  dump("*** exiting\n");
+
+  _quit = true;
+
+  if (_running_event_loop) {
+    // interrupt the current thread to make eventLoop return.
+    var thr = Components.classes["@mozilla.org/thread;1"]
+                        .createInstance(Components.interfaces.nsIThread);
+    thr.currentThread.interrupt();
+  }
+}
+
 function do_throw(text) {
   _fail = true;
-  _do_quit();
+  do_quit();
   dump("*** CHECK FAILED: " + text + "\n");
   var frame = Components.stack;
   while (frame != null) {
@@ -104,22 +112,14 @@ function do_throw(text) {
   throw Components.results.NS_ERROR_ABORT;
 }
 
-function do_check_neq(left, right) {
-  if (left == right)
-    do_throw(left + " != " + right);
+function do_check_neq(_left, _right) {
+  if (_left == _right)
+    do_throw(_left + " != " + _right);
 }
 
-function do_check_eq(left, right) {
-  if (left != right)
-    do_throw(left + " == " + right);
-}
-
-function do_check_true(condition) {
-  do_check_eq(condition, true);
-}
-
-function do_check_false(condition) {
-  do_check_eq(condition, false);
+function do_check_eq(_left, _right) {
+  if (_left != _right)
+    do_throw(_left + " == " + _right);
 }
 
 function do_test_pending() {
@@ -130,45 +130,10 @@ function do_test_pending() {
 function do_test_finished() {
   dump("*** test finished\n");
   if (--_tests_pending == 0)
-    _do_quit();
+    do_quit();
 }
 
-function do_import_script(topsrcdirRelativePath) {
-  var scriptPath = environment["TOPSRCDIR"];
-  if (scriptPath.charAt(scriptPath.length - 1) != "/")
-    scriptPath += "/";
-  scriptPath += topsrcdirRelativePath;
-
-  load(scriptPath);
-}
-
-function do_get_file(path) {
-  var comps = path.split("/");
-  try {
-    // The following always succeeds on Windows because we use cygpath with
-    // the -a (absolute) modifier to generate NATIVE_TOPSRCDIR.
-    var lf = Components.classes["@mozilla.org/file/local;1"]
-                       .createInstance(Components.interfaces.nsILocalFile);
-    lf.initWithPath(environment["NATIVE_TOPSRCDIR"]);
-  } catch (e) {
-    // Relative -- and not-Windows per above
-    lf = Components.classes["@mozilla.org/file/directory_service;1"]
-                   .getService(Components.interfaces.nsIProperties)
-                   .get("CurWorkD", Components.interfaces.nsILocalFile);
-
-    // We can't use appendRelativePath because it's not supposed to work with
-    // paths containing "..", and this path might contain "..".
-    var topsrcdirComps = environment["NATIVE_TOPSRCDIR"].split("/");
-    Array.prototype.unshift.apply(comps, topsrcdirComps);
-  }
-
-  for (var i = 0, sz = comps.length; i < sz; i++) {
-    // avoids problems if either path ended with /
-    if (comps[i].length > 0)
-      lf.append(comps[i]);
-  }
-
-  do_check_true(lf.exists());
-
-  return lf;
-}
+// setup the main thread event queue
+_eqs = Components.classes["@mozilla.org/event-queue-service;1"]
+                 .getService(nsIEventQueueService);
+_eqs.createMonitoredThreadEventQueue();

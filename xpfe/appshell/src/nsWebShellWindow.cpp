@@ -42,6 +42,7 @@
 #include "nsLayoutCID.h"
 #include "nsContentCID.h"
 #include "nsIWeakReference.h"
+#include "nsIDocumentLoader.h"
 
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
@@ -54,11 +55,10 @@
 #include "nsReadableUtils.h"
 
 #include "nsEscape.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsPIDOMWindow.h"
 #include "nsIDOMEventTarget.h"
-#include "nsIDOMEventReceiver.h"
-#include "nsIPrivateDOMEvent.h"
-#include "nsIEventListenerManager.h"
 #include "nsIDOMFocusListener.h"
 #include "nsIWebNavigation.h"
 #include "nsIWindowWatcher.h"
@@ -76,9 +76,17 @@
 #include "nsIDOMNodeList.h"
 
 #include "nsIMenuBar.h"
+#include "nsIMenu.h"
+#include "nsIMenuItem.h"
 #include "nsIMenuListener.h"
 #include "nsITimer.h"
 
+// For JS Execution
+#include "nsIScriptGlobalObjectOwner.h"
+#include "nsIJSContextStack.h"
+
+#include "nsIEventQueueService.h"
+#include "plevent.h"
 #include "prmem.h"
 #include "prlock.h"
 
@@ -94,9 +102,12 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMElement.h"
+#include "nsIDocumentLoader.h"
 #include "nsIDocumentLoaderFactory.h"
 #include "nsIObserverService.h"
 #include "prprf.h"
+//#include "nsIDOMHTMLInputElement.h"
+//#include "nsIDOMHTMLImageElement.h"
 
 #include "nsIContent.h" // for menus
 
@@ -111,7 +122,17 @@
 
 #include "nsIMarkupDocumentViewer.h"
 
-#if defined(XP_MACOSX)
+
+// HACK for M4, should be removed by M5
+// ... its now M15
+#if defined(XP_MAC) || defined(XP_MACOSX)
+#include <Menus.h>
+#endif
+#include "nsIMenuItem.h"
+#include "nsIDOMXULDocument.h"
+// End hack
+
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #define USE_NATIVE_MENUS
 #endif
 
@@ -234,7 +255,7 @@ nsresult nsWebShellWindow::Initialize(nsIXULWindow* aParent,
     rv = aUrl->GetSpec(tmpStr);
     if (NS_FAILED(rv)) return rv;
 
-    NS_ConvertUTF8toUTF16 urlString(tmpStr);
+    NS_ConvertUTF8toUCS2 urlString(tmpStr);
     nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
     NS_ENSURE_TRUE(webNav, NS_ERROR_FAILURE);
     rv = webNav->LoadURI(urlString.get(),
@@ -464,10 +485,10 @@ nsWebShellWindow::HandleEvent(nsGUIEvent *aEvent)
             // on eventWindow. -bryner
             nsCOMPtr<nsIXULWindow> kungFuDeathGrip(eventWindow);
 
-            focusController->SetSuppressFocus(PR_TRUE, "Activation Suppression");
-
             nsCOMPtr<nsIDOMWindowInternal> domWindow = 
               do_QueryInterface(piWin);
+
+            focusController->SetSuppressFocus(PR_TRUE, "Activation Suppression");
 
             NS_ASSERTION(domWindow,
                          "windows must support nsIDOMWindowInternal");
@@ -496,8 +517,9 @@ nsWebShellWindow::HandleEvent(nsGUIEvent *aEvent)
   return result;
 }
 
-#ifdef USE_NATIVE_MENUS
-static void LoadNativeMenus(nsIDOMDocument *aDOMDoc, nsIWidget *aParentWindow, nsIDocShell *aDocShell)
+//----------------------------------------
+void nsWebShellWindow::LoadNativeMenus(nsIDOMDocument *aDOMDoc,
+                                       nsIWidget *aParentWindow) 
 {
   // Find the menubar tag (if there is more than one, we ignore all but
   // the first).
@@ -505,6 +527,7 @@ static void LoadNativeMenus(nsIDOMDocument *aDOMDoc, nsIWidget *aParentWindow, n
   aDOMDoc->GetElementsByTagNameNS(NS_LITERAL_STRING("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"),
                                   NS_LITERAL_STRING("menubar"),
                                   getter_AddRefs(menubarElements));
+
   
   nsCOMPtr<nsIDOMNode> menubarNode;
   if (menubarElements)
@@ -522,9 +545,8 @@ static void LoadNativeMenus(nsIDOMDocument *aDOMDoc, nsIWidget *aParentWindow, n
 
   // fake event
   nsMenuEvent fake(PR_TRUE, 0, nsnull);
-  menuListener->MenuConstruct(fake, aParentWindow, menubarNode, aDocShell);
+  menuListener->MenuConstruct(fake, aParentWindow, menubarNode, mDocShell);
 }
-#endif
 
 void
 nsWebShellWindow::SetPersistenceTimer(PRUint32 aDirtyFlags)
@@ -612,7 +634,7 @@ nsWebShellWindow::OnStateChange(nsIWebProgress *aProgress,
   nsCOMPtr<nsIDOMDocument> menubarDOMDoc(GetNamedDOMDoc(NS_LITERAL_STRING("this"))); // XXX "this" is a small kludge for code reused
   if (menubarDOMDoc)
   {
-    LoadNativeMenus(menubarDOMDoc, mWindow, mDocShell);
+    LoadNativeMenus(menubarDOMDoc, mWindow);
   }
 #endif // USE_NATIVE_MENUS
 
@@ -777,9 +799,9 @@ PRBool nsWebShellWindow::ExecuteCloseHandler()
      than it otherwise would.) */
   nsCOMPtr<nsIXULWindow> kungFuDeathGrip(this);
 
-  nsCOMPtr<nsPIDOMWindow> window(do_GetInterface(mDocShell));
+  nsCOMPtr<nsIScriptGlobalObject> globalObject(do_GetInterface(mDocShell));
 
-  if (window) {
+  if (globalObject) {
     nsCOMPtr<nsIContentViewer> contentViewer;
     mDocShell->GetContentViewer(getter_AddRefs(contentViewer));
     nsCOMPtr<nsIDocumentViewer> docViewer(do_QueryInterface(contentViewer));
@@ -792,8 +814,8 @@ PRBool nsWebShellWindow::ExecuteCloseHandler()
       nsMouseEvent event(PR_TRUE, NS_XUL_CLOSE, nsnull,
                          nsMouseEvent::eReal);
 
-      nsresult rv =
-        window->DispatchDOMEvent(&event, nsnull, presContext, &status);
+      nsresult rv = globalObject->HandleDOMEvent(presContext, &event, nsnull,
+                                                 NS_EVENT_FLAG_INIT, &status);
       if (NS_SUCCEEDED(rv) && status == nsEventStatus_eConsumeNoDefault)
         return PR_TRUE;
       // else fall through and return PR_FALSE

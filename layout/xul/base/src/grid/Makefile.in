@@ -53,8 +53,6 @@ REQUIRES	= xpcom \
 		  locale \
 		  view \
 		  necko \
-		  dom \
-		  webshell \
 		  $(NULL)
 
 CPPSRCS	= \

@@ -28,7 +28,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nscore.h"
+#include "prtypes.h"
 
 class nsIWebBrowserChrome;
 

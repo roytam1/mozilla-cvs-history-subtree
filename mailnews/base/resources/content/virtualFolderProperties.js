@@ -243,9 +243,11 @@ function chooseFoldersToSearch()
   // for those folders. Otherwise fall back to the preselectedfolderURI which is the parent folder
   // for this new virtual folder.
   var srchFolderUriArray = gSearchFolderURIs.split('|');    
+  var folder  = GetMsgFolderFromUri(srchFolderUriArray[0] ? srchFolderUriArray[0] : window.arguments[0].preselectedURI, false);
   var dialog = window.openDialog("chrome://messenger/content/virtualFolderListDialog.xul", "",
                                  "chrome,titlebar,modal,centerscreen,resizable",
-                                 {searchFolderURIs:gSearchFolderURIs,
+                                 {serverURI:folder.rootFolder.URI,
+                                  searchFolderURIs:gSearchFolderURIs,
                                   okCallback:onFolderListDialogCallback}); 
 }
 

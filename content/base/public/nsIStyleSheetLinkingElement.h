@@ -43,17 +43,16 @@
 class nsIParser;
 class nsIDocument;
 class nsICSSLoaderObserver;
-class nsIURI;
 
 #define NS_ISTYLESHEETLINKINGELEMENT_IID          \
-  {0x259f8226, 0x8dd7, 0x11db,                    \
-  {0x98, 0x5e, 0x92, 0xb7, 0x56, 0xd8, 0x95, 0x93}}
+  {0xa6cf90e9, 0x15b3, 0x11d2,                    \
+  {0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32}}
 
 class nsIStyleSheet;
 
 class nsIStyleSheetLinkingElement : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISTYLESHEETLINKINGELEMENT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISTYLESHEETLINKINGELEMENT_IID)
 
   /**
    * Used to make the association between a style sheet and
@@ -91,14 +90,12 @@ public:
    *                     from one document to another).
    * @param aObserver    observer to notify once the stylesheet is loaded.
    *                     It might be notified before the function returns.
-   * @param aForceUpdate If true, force the update even if the URI did not change
    */
   NS_IMETHOD UpdateStyleSheet(nsIDocument *aOldDocument,
-                              nsICSSLoaderObserver* aObserver,
-                              PRBool aForceUpdate = PR_FALSE) = 0;
+                              nsICSSLoaderObserver* aObserver) = 0;
 
   /**
-   * Tells this element whether to update the stylesheet when the
+   * Tells this element wether to update the stylesheet when the
    * element's properties change.
    *
    * @param aEnableUpdates update on changes or not.
@@ -112,22 +109,10 @@ public:
    */
   NS_IMETHOD GetCharset(nsAString& aCharset) = 0;
 
-  /**
-   * Tells this element to use a different base URI. This is used for
-   * proper loading of xml-stylesheet processing instructions in XUL overlays
-   * and is only currently used by nsXMLStylesheetPI.
-   *
-   * @param aNewBaseURI the new base URI, nsnull to use the default base URI.
-   */
-  virtual void OverrideBaseURI(nsIURI* aNewBaseURI) = 0;
-
   // This doesn't entirely belong here since they only make sense for
   // some types of linking elements, but it's a better place than
   // anywhere else.
   virtual void SetLineNumber(PRUint32 aLineNumber) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIStyleSheetLinkingElement,
-                              NS_ISTYLESHEETLINKINGELEMENT_IID)
 
 #endif // nsILinkingElement_h__

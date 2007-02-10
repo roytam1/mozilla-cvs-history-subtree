@@ -37,7 +37,7 @@
 #include "nsIDOMHTMLOptGroupElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsIFrame.h"
@@ -47,7 +47,7 @@
 
 #include "nsISelectElement.h"
 #include "nsIDOMHTMLSelectElement.h"
-#include "nsEventDispatcher.h"
+
 
 /**
  * The implementation of &lt;optgroup&gt;
@@ -63,7 +63,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -74,26 +74,43 @@ public:
   // nsIDOMHTMLOptGroupElement
   NS_DECL_NSIDOMHTMLOPTGROUPELEMENT
 
-  // nsGenericElement
+  // nsIContent
   virtual nsresult InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
                                  PRBool aNotify);
+  virtual nsresult AppendChildTo(nsIContent* aKid, PRBool aNotify);
   virtual nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify);
 
-  // nsIContent
-  virtual nsresult PreHandleEvent(nsEventChainPreVisitor& aVisitor);
-
+  virtual nsresult HandleDOMEvent(nsPresContext* aPresContext,
+                                  nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                                  PRUint32 aFlags,
+                                  nsEventStatus* aEventStatus);
   virtual PRInt32 IntrinsicState() const;
- 
+
+  nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                   const nsAString& aValue, PRBool aNotify)
+  {
+    return SetAttr(aNameSpaceID, aName, nsnull, aValue, aNotify);
+  }
+  virtual nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                           nsIAtom* aPrefix, const nsAString& aValue,
+                           PRBool aNotify)
+  {
+    nsresult rv = nsGenericHTMLElement::SetAttr(aNameSpaceID, aName, aPrefix,
+                                                aValue, aNotify);
+
+    AfterSetAttr(aNameSpaceID, aName, &aValue, aNotify);
+    return rv;
+  }
+
   virtual nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                              PRBool aNotify)
   {
     nsresult rv = nsGenericHTMLElement::UnsetAttr(aNameSpaceID, aAttribute,
                                                   aNotify);
-      
+
     AfterSetAttr(aNameSpaceID, aAttribute, nsnull, aNotify);
     return rv;
   }
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 
 protected:
 
@@ -101,13 +118,13 @@ protected:
    * Get the select content element that contains this option
    * @param aSelectElement the select element [OUT]
    */
-  nsIContent* GetSelect();
- 
+  void GetSelect(nsISelectElement **aSelectElement);
+
   /**
    * Called when an attribute has just been changed
    */
-  virtual nsresult AfterSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
-                                const nsAString* aValue, PRBool aNotify);
+  void AfterSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                    const nsAString* aValue, PRBool aNotify);
 };
 
 
@@ -136,7 +153,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLOptGroupElement,
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLOptGroupElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLOptGroupElement)
 
 
 NS_IMPL_BOOL_ATTR(nsHTMLOptGroupElement, Disabled, disabled)
@@ -144,18 +161,20 @@ NS_IMPL_STRING_ATTR(nsHTMLOptGroupElement, Label, label)
 
 
 nsresult
-nsHTMLOptGroupElement::PreHandleEvent(nsEventChainPreVisitor& aVisitor)
+nsHTMLOptGroupElement::HandleDOMEvent(nsPresContext* aPresContext,
+                                      nsEvent* aEvent,
+                                      nsIDOMEvent** aDOMEvent,
+                                      PRUint32 aFlags,
+                                      nsEventStatus* aEventStatus)
 {
-  aVisitor.mCanHandle = PR_FALSE;
   // Do not process any DOM events if the element is disabled
-  // XXXsmaug This is not the right thing to do. But what is?
   PRBool disabled;
   nsresult rv = GetDisabled(&disabled);
   if (NS_FAILED(rv) || disabled) {
     return rv;
   }
 
-  nsIFrame* frame = GetPrimaryFrame();
+  nsIFrame* frame = GetPrimaryFrame(PR_FALSE);
   if (frame) {
     const nsStyleUserInterface* uiStyle = frame->GetStyleUserInterface();
     if (uiStyle->mUserInput == NS_STYLE_USER_INPUT_NONE ||
@@ -164,50 +183,77 @@ nsHTMLOptGroupElement::PreHandleEvent(nsEventChainPreVisitor& aVisitor)
     }
   }
 
-  return nsGenericHTMLElement::PreHandleEvent(aVisitor);
+  return nsGenericHTMLElement::HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
+                                              aFlags, aEventStatus);
 }
 
-nsIContent*
-nsHTMLOptGroupElement::GetSelect()
+PRInt32
+nsHTMLOptGroupElement::IntrinsicState() const
 {
-  nsIContent* parent = this;
-  while ((parent = parent->GetParent()) &&
-         parent->IsNodeOfType(eHTML)) {
-    if (parent->Tag() == nsGkAtoms::select) {
-      return parent;
-    }
-    if (parent->Tag() != nsGkAtoms::optgroup) {
+  PRInt32 state = nsGenericHTMLElement::IntrinsicState();
+
+  PRBool disabled;
+  GetBoolAttr(nsHTMLAtoms::disabled, &disabled);
+  if (disabled) {
+    state |= NS_EVENT_STATE_DISABLED;
+    state &= ~NS_EVENT_STATE_ENABLED;
+  } else {
+    state &= ~NS_EVENT_STATE_DISABLED;
+    state |= NS_EVENT_STATE_ENABLED;
+  }
+
+  return state;
+}
+
+void
+nsHTMLOptGroupElement::GetSelect(nsISelectElement **aSelectElement)
+{
+  *aSelectElement = nsnull;
+  for (nsIContent* parent = GetParent(); parent; parent = parent->GetParent()) {
+    CallQueryInterface(parent, aSelectElement);
+    if (*aSelectElement) {
       break;
     }
   }
-  
-  return nsnull;
 }
 
-nsresult
+void
 nsHTMLOptGroupElement::AfterSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                                     const nsAString* aValue, PRBool aNotify)
 {
   if (aNotify && aNameSpaceID == kNameSpaceID_None &&
-      aName == nsGkAtoms::disabled) {
+      aName == nsHTMLAtoms::disabled) {
     nsIDocument* document = GetCurrentDoc();
     if (document) {
-      mozAutoDocUpdate upd(document, UPDATE_CONTENT_STATE, PR_TRUE);
+      mozAutoDocUpdate(document, UPDATE_CONTENT_STATE, PR_TRUE);
       document->ContentStatesChanged(this, nsnull, NS_EVENT_STATE_DISABLED |
                                      NS_EVENT_STATE_ENABLED);
     }
   }
-
-  return nsGenericHTMLElement::AfterSetAttr(aNameSpaceID, aName, aValue,
-                                            aNotify); 
 }
- 
+
+// nsIContent
 nsresult
-nsHTMLOptGroupElement::InsertChildAt(nsIContent* aKid,
-                                     PRUint32 aIndex,
+nsHTMLOptGroupElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
+{
+  // Since we're appending, the relevant option index to add after is found
+  // *after* this optgroup.
+  nsCOMPtr<nsISelectElement> sel;
+  GetSelect(getter_AddRefs(sel));
+  if (sel) {
+    sel->WillAddOptions(aKid, this, GetChildCount());
+  }
+
+  // Actually perform the append
+  return nsGenericHTMLElement::AppendChildTo(aKid, aNotify);
+}
+
+nsresult
+nsHTMLOptGroupElement::InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
                                      PRBool aNotify)
 {
-  nsCOMPtr<nsISelectElement> sel = do_QueryInterface(GetSelect());
+  nsCOMPtr<nsISelectElement> sel;
+  GetSelect(getter_AddRefs(sel));
   if (sel) {
     sel->WillAddOptions(aKid, this, aIndex);
   }
@@ -218,27 +264,11 @@ nsHTMLOptGroupElement::InsertChildAt(nsIContent* aKid,
 nsresult
 nsHTMLOptGroupElement::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
 {
-  nsCOMPtr<nsISelectElement> sel = do_QueryInterface(GetSelect());
+  nsCOMPtr<nsISelectElement> sel;
+  GetSelect(getter_AddRefs(sel));
   if (sel) {
     sel->WillRemoveOptions(this, aIndex);
   }
 
   return nsGenericHTMLElement::RemoveChildAt(aIndex, aNotify);
-}
-
-PRInt32
-nsHTMLOptGroupElement::IntrinsicState() const
-{
-  PRInt32 state = nsGenericHTMLElement::IntrinsicState();
-  PRBool disabled;
-  GetBoolAttr(nsGkAtoms::disabled, &disabled);
-  if (disabled) {
-    state |= NS_EVENT_STATE_DISABLED;
-    state &= ~NS_EVENT_STATE_ENABLED;
-  } else {
-    state &= ~NS_EVENT_STATE_DISABLED;
-    state |= NS_EVENT_STATE_ENABLED;
-  }
-
-  return state;
 }

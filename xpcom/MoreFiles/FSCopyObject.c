@@ -44,8 +44,6 @@
 	Copyright © 2002 Apple Computer, Inc., All Rights Reserved
 */
 
-// Modified 2006-01-23 - added this comment.
-
 #include "FSCopyObject.h"
 #include <UnicodeConverter.h>
 #include <stddef.h>

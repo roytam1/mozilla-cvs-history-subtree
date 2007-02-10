@@ -128,7 +128,10 @@ private:
   nsresult TagConvertible(nsIDOMNode *node,  PRInt32 *_retval);
   nsresult _BodyConvertible(nsIDOMNode *node, PRInt32 *_retval);
 
+
+#if !defined(XP_MAC)
   PRBool IsLastWindow();
+#endif /* XP_MAC */
  
        // Helper function. Parameters are not checked.
   PRBool                                    mConvertStructs;    // for TagConvertible
@@ -160,8 +163,6 @@ private:
 
   nsCOMPtr<nsIMsgSendListener>              mExternalSendListener;
   nsCString                                 mSmtpPassword;
-    
-  PRBool                                    mInsertingQuotedContent;
     
   friend class QuotingOutputStreamListener;
 	friend class nsMsgComposeSendListener;

@@ -140,6 +140,8 @@ function init() {
   strBundle = document.getElementById("bundle_help");
   emptySearchText = strBundle.getString("emptySearchText");
 
+  gFindBar.initFindBar();
+
   // Get the content pack, base URL, and help topic
   var helpTopic = defaultTopic;
   if ("arguments" in window && 
@@ -553,7 +555,7 @@ nsHelpStatusHandler.prototype = {
 
     setJSStatus : function(status) {},
     setJSDefaultStatus : function(status) {},
-    setOverLink : function(link, context) {}
+    setOverLink : function(link) {}
 }
 
 function UpdateBackForwardButtons() {

@@ -71,7 +71,16 @@ private:
   InsertElementTxn();
 
 public:
-  NS_DECL_EDITTXN
+
+  virtual ~InsertElementTxn();
+
+  NS_IMETHOD DoTransaction(void);
+
+  NS_IMETHOD UndoTransaction(void);
+
+  NS_IMETHOD Merge(nsITransaction *aTransaction, PRBool *aDidMerge);
+
+  NS_IMETHOD GetTxnDescription(nsAString& aTxnDescription);
 
 protected:
   

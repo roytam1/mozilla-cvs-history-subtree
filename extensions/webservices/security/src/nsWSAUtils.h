@@ -39,6 +39,7 @@
 #define nsWSAUtils_h__
 
 #include "nsIDNSListener.h"
+#include "nsIEventQueueService.h"
 #include "nsIURI.h"
 #include "nsCOMPtr.h"
 #include "nsString.h"

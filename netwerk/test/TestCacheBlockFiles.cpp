@@ -29,6 +29,19 @@
 
 #include "prclist.h"
 
+#if defined(XP_MAC)
+#include <SIOUX.h>
+#include "macstdlibextras.h"
+    // Set up the toolbox and (if DEBUG) the console.  Do this in a static initializer,
+    // to make it as unlikely as possible that somebody calls printf() before we get initialized.
+static struct MacInitializer    {   MacInitializer()
+                                    {
+                                        InitializeMacToolbox();
+                                        InitializeSIOUX(true);
+                                    } } gInitializer;
+#endif // XP_MAC
+
+
 /**
  *  StressTest()
  */
@@ -186,6 +199,11 @@ main(void)
 {
 //	OSErr	err;
     printf("hello world\n");
+
+#if defined(XP_MAC)
+    SIOUXSettings.autocloseonquit = false;
+	SIOUXSettings.asktosaveonclose = false;
+#endif
 
     unsigned long now = time(0);
     srand(now);

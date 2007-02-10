@@ -76,11 +76,6 @@ public:
   static void GetTreeBoxObject(nsIDOMNode* aDOMNode, nsITreeBoxObject** aBoxObject);
   static nsresult GetColumnCount(nsITreeBoxObject* aBoxObject, PRInt32 *aCount);
 
-  static PRBool IsColumnHidden(nsITreeColumn *aColumn);
-  static already_AddRefed<nsITreeColumn> GetNextVisibleColumn(nsITreeColumn *aColumn);
-  static already_AddRefed<nsITreeColumn> GetFirstVisibleColumn(nsITreeBoxObject *aTree);
-  static already_AddRefed<nsITreeColumn> GetLastVisibleColumn(nsITreeBoxObject *aTree);
-
 protected:
   nsCOMPtr<nsITreeBoxObject> mTree;
   nsCOMPtr<nsITreeView> mTreeView;
@@ -95,8 +90,6 @@ protected:
 class nsXULTreeitemAccessible : public nsLeafAccessible
 {
 public:
-  enum { eAction_Click = 0, eAction_Expand = 1 };
-
   NS_DECL_ISUPPORTS_INHERITED
 
   nsXULTreeitemAccessible(nsIAccessible *aParent, nsIDOMNode *aDOMNode, nsIWeakReference *aShell, PRInt32 aRow, nsITreeColumn* aColumn = nsnull);
@@ -117,7 +110,8 @@ public:
 
   NS_IMETHOD DoAction(PRUint8 index);
   NS_IMETHOD GetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height);
-  NS_IMETHOD SetSelected(PRBool aSelect); 
+  NS_IMETHOD RemoveSelection(void); 
+  NS_IMETHOD TakeSelection(void); 
   NS_IMETHOD TakeFocus(void); 
 
   NS_IMETHOD GetAccessibleRelated(PRUint32 aRelationType, nsIAccessible **aRelated);
@@ -134,8 +128,6 @@ protected:
 class nsXULTreeColumnsAccessible : public nsAccessibleWrap
 {
 public:
-  enum { eAction_Click = 0 };
-
   NS_DECL_ISUPPORTS_INHERITED
 
   nsXULTreeColumnsAccessible(nsIDOMNode* aDOMNode, nsIWeakReference* aShell);
@@ -156,8 +148,6 @@ public:
 class nsXULTreeColumnitemAccessible : public nsLeafAccessible
 {
 public:
-  enum { eAction_Click = 0 };
-
   NS_DECL_ISUPPORTS_INHERITED
 
   nsXULTreeColumnitemAccessible(nsIDOMNode* aDOMNode, nsIWeakReference* aShell);

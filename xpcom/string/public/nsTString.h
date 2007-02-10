@@ -266,6 +266,18 @@ class nsTString_CharT : public nsTSubstring_CharT
       NS_COM PRBool EqualsIgnoreCase( const char* aString, PRInt32 aCount=-1 ) const;
 
 
+        /**
+         * Copies data from internal buffer onto given char* buffer
+         *
+         * NOTE: This only copies as many chars as will fit in given buffer (clips)
+         * @param aBuf is the buffer where data is stored
+         * @param aBuflength is the max # of chars to move to buffer
+         * @param aOffset is the offset to copy from
+         * @return ptr to given buffer
+         */
+
+      NS_COM char* ToCString( char* aBuf, PRUint32 aBufLength, PRUint32 aOffset=0 ) const;
+
 #endif // !CharT_is_PRUnichar
 
         /**
@@ -329,7 +341,7 @@ class nsTString_CharT : public nsTSubstring_CharT
 
 
         /**
-         *  These methods are used to remove all occurrences of the
+         *  These methods are used to remove all occurances of the
          *  characters found in aSet from this string.
          *  
          *  @param  aSet -- characters to be cut from this
@@ -409,8 +421,6 @@ class nsTString_CharT : public nsTSubstring_CharT
         /**
          * Append the given float to this string 
          */
-
-      NS_COM void AppendFloat( float aFloat );
 
       NS_COM void AppendFloat( double aFloat );
 
@@ -636,7 +646,7 @@ class nsTGetterCopies_CharT
     public:
       typedef CharT char_type;
 
-      nsTGetterCopies_CharT(nsTSubstring_CharT& str)
+      nsTGetterCopies_CharT(nsTXPIDLString_CharT& str)
         : mString(str), mData(nsnull) {}
 
       ~nsTGetterCopies_CharT()
@@ -650,13 +660,13 @@ class nsTGetterCopies_CharT
         }
 
     private:
-      nsTSubstring_CharT&      mString;
+      nsTXPIDLString_CharT& mString;
       char_type*            mData;
   };
 
 inline
 nsTGetterCopies_CharT
-getter_Copies( nsTSubstring_CharT& aString )
+getter_Copies( nsTXPIDLString_CharT& aString )
   {
     return nsTGetterCopies_CharT(aString);
   }

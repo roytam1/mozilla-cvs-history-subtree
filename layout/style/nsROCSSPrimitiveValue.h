@@ -35,8 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* DOM object representing values in DOM computed style */
-
 #ifndef nsROCSSPrimitiveValue_h___
 #define nsROCSSPrimitiveValue_h___
 
@@ -65,7 +63,7 @@ public:
   NS_DECL_NSIDOMCSSVALUE
 
   // nsROCSSPrimitiveValue
-  nsROCSSPrimitiveValue(PRInt32 aAppUnitsPerInch);
+  nsROCSSPrimitiveValue(float aP2T);
   virtual ~nsROCSSPrimitiveValue();
 
   void SetNumber(float aValue)
@@ -96,16 +94,18 @@ public:
     mType = CSS_PERCENTAGE;
   }
 
-  void SetAppUnits(nscoord aValue)
+  void SetTwips(nscoord aValue)
   {
     Reset();
-    mValue.mAppUnits = aValue;
+    mValue.mTwips = aValue;
     mType = CSS_PX;
   }
 
-  void SetAppUnits(float aValue)
+  void SetTwips(float aValue)
   {
-    SetAppUnits(NSToCoordRound(aValue));
+    Reset();
+    mValue.mTwips = nscoord(aValue);
+    mType = CSS_PX;
   }
 
   void SetIdent(nsIAtom* aAtom)
@@ -160,7 +160,7 @@ public:
     mType = CSS_URI;
   }
 
-  void SetColor(nsDOMCSSRGBColor* aColor)
+  void SetColor(nsIDOMRGBColor* aColor)
   {
     NS_PRECONDITION(aColor, "Null RGBColor being set!");
     Reset();
@@ -220,16 +220,16 @@ private:
   PRUint16 mType;
 
   union {
-    nscoord         mAppUnits;
+    nscoord         mTwips;
     float           mFloat;
-    nsDOMCSSRGBColor* mColor;
+    nsIDOMRGBColor* mColor;
     nsIDOMRect*     mRect;
     PRUnichar*      mString;
     nsIURI*         mURI;
     nsIAtom*        mAtom;
   } mValue;
   
-  PRInt32 mAppUnitsPerInch;
+  float mT2P;
 };
 
 #endif /* nsROCSSPrimitiveValue_h___ */

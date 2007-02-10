@@ -66,13 +66,13 @@ extern JSClass FileSpecObjectClass;
 
 extern JSClass FileOpClass;
 
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 GetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp);
 
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 SetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp);
 
-JS_STATIC_DLL_CALLBACK(void)
+PR_STATIC_CALLBACK(void)
 FinalizeInstall(JSContext *cx, JSObject *obj);
 
 /***********************************************************************/
@@ -120,7 +120,7 @@ JSObject *gFileOpObject = nsnull;
 //
 // Install Properties Getter
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 GetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
   nsInstall *a = (nsInstall*)JS_GetPrivate(cx, obj);
@@ -213,7 +213,7 @@ GetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 //
 // Install Properties Setter
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 SetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
   nsInstall *a = (nsInstall*)JS_GetPrivate(cx, obj);
@@ -238,7 +238,7 @@ SetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 }
 
 
-static void JS_DLL_CALLBACK FinalizeInstall(JSContext *cx, JSObject *obj)
+static void PR_CALLBACK FinalizeInstall(JSContext *cx, JSObject *obj)
 {
     nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
     delete nativeThis;
@@ -371,7 +371,7 @@ void ConvertJSvalToVersionString(nsString& versionString, JSContext* cx, jsval a
 //
 // Native method AbortInstall
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallAbortInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -411,7 +411,7 @@ InstallAbortInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 //
 // Native method AddDirectory
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallAddDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -565,7 +565,7 @@ InstallAddDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 //
 // Native method AddSubcomponent
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -728,7 +728,7 @@ InstallAddSubcomponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 //
 // Native method DeleteComponent
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallDeleteComponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   // this function was once documented but never supported. Return an error,
@@ -740,7 +740,7 @@ InstallDeleteComponent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 //
 // Native method Execute
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -807,7 +807,7 @@ InstallExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
 //
 // Native method FinalizeInstall
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallFinalizeInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -838,7 +838,7 @@ InstallFinalizeInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 //
 // Native method Gestalt
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallGestalt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -881,7 +881,7 @@ InstallGestalt(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rva
 //
 // Native method GetComponentFolder
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallGetComponentFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -955,7 +955,7 @@ InstallGetComponentFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 //
 // Native method GetFolder
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallGetFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1058,7 +1058,7 @@ InstallGetFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
 //
 // Native method GetLastError
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallGetLastError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1087,7 +1087,7 @@ InstallGetLastError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 //
 // Native method GetWinProfile
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallGetWinProfile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   *rval = JSVAL_NULL;
@@ -1128,7 +1128,7 @@ InstallGetWinProfile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
 //
 // Native method GetWinRegistry
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallGetWinRegistry(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   *rval = JSVAL_NULL;
@@ -1155,7 +1155,7 @@ InstallGetWinRegistry(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
 //
 // Native method LoadResources
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallLoadResources(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1191,7 +1191,7 @@ InstallLoadResources(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsva
 //
 // Native method Patch
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallPatch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1304,7 +1304,7 @@ InstallPatch(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 //         int  type,
 //         FileSpecObject chrome,
 //         String extraPath)
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallRegisterChrome(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   // If there's no private data, this must be the prototype, so ignore
@@ -1341,7 +1341,7 @@ InstallRegisterChrome(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
     ConvertJSValToStr(path, cx, argv[2]);
   }
 
-  *rval = INT_TO_JSVAL(nativeThis->RegisterChrome(chrome, chromeType, NS_ConvertUTF16toUTF8(path).get()));
+  *rval = INT_TO_JSVAL(nativeThis->RegisterChrome(chrome, chromeType, NS_ConvertUCS2toUTF8(path).get()));
 
   return JS_TRUE;
 }
@@ -1350,7 +1350,7 @@ InstallRegisterChrome(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
 //
 // Native method RefreshPlugins
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallRefreshPlugins(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1376,7 +1376,7 @@ InstallRefreshPlugins(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
 //
 // Native method ResetError
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallResetError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1403,7 +1403,7 @@ InstallResetError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
 //
 // Native method SetPackageFolder
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallSetPackageFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1463,7 +1463,7 @@ InstallSetPackageFolder(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 //
 // Native method StartInstall
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1517,7 +1517,7 @@ InstallStartInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
 //
 // Native method Uninstall
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallUninstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1558,7 +1558,7 @@ InstallUninstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *r
 
 /*START HACK FOR DEBUGGING UNTIL ALERTS WORK*/
 
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallTRACE(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsAutoString b0;
@@ -1580,7 +1580,7 @@ InstallTRACE(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 //
 // Native method LogComment
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallLogComment(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1613,7 +1613,7 @@ InstallLogComment(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *
 //
 // Native method InstallAlert
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallAlert(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1649,7 +1649,7 @@ InstallAlert(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 //
 // Native method InstallConfirm
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallConfirm(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1867,64 +1867,64 @@ static JSConstDoubleSpec install_constants[] =
 static JSFunctionSpec InstallMethods[] =
 {
 /*START HACK FOR DEBUGGING UNTIL ALERTS WORK*/
-  {"TRACE",                     InstallTRACE,                   1,0,0},
+  {"TRACE",                     InstallTRACE,                   1},
 /*END HACK FOR DEBUGGING UNTIL ALERTS WORK*/
   // -- new forms that match prevailing javascript style --
-  {"addDirectory",              InstallAddDirectory,            6,0,0},
-  {"addFile",                   InstallAddSubcomponent,         6,0,0},
-  {"alert",                     InstallAlert,                   1,0,0},
-  {"cancelInstall",             InstallAbortInstall,            1,0,0},
-  {"confirm",                   InstallConfirm,                 8,0,0},
-  {"execute",                   InstallExecute,                 2,0,0},
-  {"gestalt",                   InstallGestalt,                 1,0,0},
-  {"getComponentFolder",        InstallGetComponentFolder,      2,0,0},
-  {"getFolder",                 InstallGetFolder,               2,0,0},
-  {"getLastError",              InstallGetLastError,            0,0,0},
-  {"getWinProfile",             InstallGetWinProfile,           2,0,0},
-  {"getWinRegistry",            InstallGetWinRegistry,          0,0,0},
-  {"initInstall",               InstallStartInstall,            4,0,0},
-  {"loadResources",             InstallLoadResources,           1,0,0},
-  {"logComment",                InstallLogComment,              1,0,0},
-  {"patch",                     InstallPatch,                   5,0,0},
-  {"performInstall",            InstallFinalizeInstall,         0,0,0},
-  {"registerChrome",            InstallRegisterChrome,          2,0,0},
-  {"refreshPlugins",            InstallRefreshPlugins,          1,0,0},
-  {"resetError",                InstallResetError,              1,0,0},
-//  {"selectChrome",              InstallSelectChrome,            2,0,0},
-  {"setPackageFolder",          InstallSetPackageFolder,        1,0,0},
-  {"uninstall",                 InstallUninstall,               1,0,0},
+  {"addDirectory",              InstallAddDirectory,            6},
+  {"addFile",                   InstallAddSubcomponent,         6},
+  {"alert",                     InstallAlert,                   1},
+  {"cancelInstall",             InstallAbortInstall,            1},
+  {"confirm",                   InstallConfirm,                 8},
+  {"execute",                   InstallExecute,                 2},
+  {"gestalt",                   InstallGestalt,                 1},
+  {"getComponentFolder",        InstallGetComponentFolder,      2},
+  {"getFolder",                 InstallGetFolder,               2},
+  {"getLastError",              InstallGetLastError,            0},
+  {"getWinProfile",             InstallGetWinProfile,           2},
+  {"getWinRegistry",            InstallGetWinRegistry,          0},
+  {"initInstall",               InstallStartInstall,            4},
+  {"loadResources",             InstallLoadResources,           1},
+  {"logComment",                InstallLogComment,              1},
+  {"patch",                     InstallPatch,                   5},
+  {"performInstall",            InstallFinalizeInstall,         0},
+  {"registerChrome",            InstallRegisterChrome,          2},
+  {"refreshPlugins",            InstallRefreshPlugins,          1},
+  {"resetError",                InstallResetError,              1},
+//  {"selectChrome",              InstallSelectChrome,            2},
+  {"setPackageFolder",          InstallSetPackageFolder,        1},
+  {"uninstall",                 InstallUninstall,               1},
 
   // the raw file methods are deprecated, use the File object instead
-  {"dirCreate",                 InstallFileOpDirCreate,                1,0,0},
-  {"dirGetParent",              InstallFileOpDirGetParent,             1,0,0},
-  {"dirRemove",                 InstallFileOpDirRemove,                2,0,0},
-  {"dirRename",                 InstallFileOpDirRename,                2,0,0},
-  {"fileCopy",                  InstallFileOpFileCopy,                 2,0,0},
-  {"fileDelete",                InstallFileOpFileRemove,               1,0,0},
-  {"fileExists",                InstallFileOpFileExists,               1,0,0},
-  {"fileExecute",               InstallFileOpFileExecute,              2,0,0},
-  {"fileGetNativeVersion",      InstallFileOpFileGetNativeVersion,     1,0,0},
-  {"fileGetDiskSpaceAvailable", InstallFileOpFileGetDiskSpaceAvailable,1,0,0},
-  {"fileGetModDate",            InstallFileOpFileGetModDate,           1,0,0},
-  {"fileGetSize",               InstallFileOpFileGetSize,              1,0,0},
-  {"fileIsDirectory",           InstallFileOpFileIsDirectory,          1,0,0},
-  {"fileIsWritable",            InstallFileOpFileIsWritable,           1,0,0},
-  {"fileIsFile",                InstallFileOpFileIsFile,               1,0,0},
-  {"fileModDateChanged",        InstallFileOpFileModDateChanged,       2,0,0},
-  {"fileMove",                  InstallFileOpFileMove,                 2,0,0},
-  {"fileRename",                InstallFileOpFileRename,               2,0,0},
-  {"fileWindowsShortcut",       InstallFileOpFileWindowsShortcut,      7,0,0},
-  {"fileMacAlias",              InstallFileOpFileMacAlias,             2,0,0},
-  {"fileUnixLink",              InstallFileOpFileUnixLink,             2,0,0},
+  {"dirCreate",                 InstallFileOpDirCreate,                1},
+  {"dirGetParent",              InstallFileOpDirGetParent,             1},
+  {"dirRemove",                 InstallFileOpDirRemove,                2},
+  {"dirRename",                 InstallFileOpDirRename,                2},
+  {"fileCopy",                  InstallFileOpFileCopy,                 2},
+  {"fileDelete",                InstallFileOpFileRemove,               1},
+  {"fileExists",                InstallFileOpFileExists,               1},
+  {"fileExecute",               InstallFileOpFileExecute,              2},
+  {"fileGetNativeVersion",      InstallFileOpFileGetNativeVersion,     1},
+  {"fileGetDiskSpaceAvailable", InstallFileOpFileGetDiskSpaceAvailable,1},
+  {"fileGetModDate",            InstallFileOpFileGetModDate,           1},
+  {"fileGetSize",               InstallFileOpFileGetSize,              1},
+  {"fileIsDirectory",           InstallFileOpFileIsDirectory,          1},
+  {"fileIsWritable",            InstallFileOpFileIsWritable,           1},
+  {"fileIsFile",                InstallFileOpFileIsFile,               1},
+  {"fileModDateChanged",        InstallFileOpFileModDateChanged,       2},
+  {"fileMove",                  InstallFileOpFileMove,                 2},
+  {"fileRename",                InstallFileOpFileRename,               2},
+  {"fileWindowsShortcut",       InstallFileOpFileWindowsShortcut,      7},
+  {"fileMacAlias",              InstallFileOpFileMacAlias,             2},
+  {"fileUnixLink",              InstallFileOpFileUnixLink,             2},
 
   // -- documented but never supported --
-  {"deleteRegisteredFile",      InstallDeleteComponent,         1,0,0},
+  {"deleteRegisteredFile",      InstallDeleteComponent,         1},
 
   // -- obsolete forms for temporary compatibility --
-  {"abortInstall",              InstallAbortInstall,            1,0,0},
-  {"finalizeInstall",           InstallFinalizeInstall,         0,0,0},
-  {"startInstall",              InstallStartInstall,            4,0,0},
-  {nsnull,nsnull,0,0,0}
+  {"abortInstall",              InstallAbortInstall,            1},
+  {"finalizeInstall",           InstallFinalizeInstall,         0},
+  {"startInstall",              InstallStartInstall,            4},
+  {0}
 };
 
 

@@ -20,7 +20,6 @@
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Benjamin Smedberg <benjamin@smedbergs.us>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -60,6 +59,12 @@ ifndef INCLUDED_INSURE_MK
 ifdef MOZ_INSURIFYING
 include $(topsrcdir)/config/insure.mk
 endif
+endif
+
+# SUBMAKEFILES: List of Makefiles for next level down.
+#   This is used to update or create the Makefiles before invoking them.
+ifneq ($(DIRS)$(TOOL_DIRS),)
+SUBMAKEFILES		:= $(addsuffix /Makefile, $(TOOL_DIRS) $(filter-out $(STATIC_MAKEFILES), $(DIRS)))
 endif
 
 # FINAL_TARGET specifies the location into which we copy end-user-shipped
@@ -131,7 +136,7 @@ FINAL_LINK_LIBS = $(DEPTH)/config/final-link-libs
 FINAL_LINK_COMPS = $(DEPTH)/config/final-link-comps
 FINAL_LINK_COMP_NAMES = $(DEPTH)/config/final-link-comp-names
 
-MOZ_UNICHARUTIL_LIBS = $(LIBXUL_DIST)/lib/$(LIB_PREFIX)unicharutil_s.$(LIB_SUFFIX)
+MOZ_UNICHARUTIL_LIBS = $(DIST)/lib/$(LIB_PREFIX)unicharutil_s.$(LIB_SUFFIX)
 MOZ_REGISTRY_LIBS          = $(DIST)/lib/$(LIB_PREFIX)mozreg_s.$(LIB_SUFFIX)
 MOZ_WIDGET_SUPPORT_LIBS    = $(DIST)/lib/$(LIB_PREFIX)widgetsupport_s.$(LIB_SUFFIX)
 
@@ -155,10 +160,8 @@ endif
 
 ifdef MOZ_DEBUG
   _DEBUG_CFLAGS += $(MOZ_DEBUG_ENABLE_DEFS)
-  XULPPFLAGS += $(MOZ_DEBUG_ENABLE_DEFS)
 else
   _DEBUG_CFLAGS += $(MOZ_DEBUG_DISABLE_DEFS)
-  XULPPFLAGS += $(MOZ_DEBUG_DISABLE_DEFS)
 endif
 
 # determine if -g should be passed to the compiler, based on
@@ -217,7 +220,7 @@ OS_CFLAGS += $(_DEBUG_CFLAGS)
 OS_CXXFLAGS += $(_DEBUG_CFLAGS)
 OS_LDFLAGS += $(_DEBUG_LDFLAGS)
 
-# MOZ_PROFILE equivs for win32
+# MOZ_PROFILE & MOZ_COVERAGE equivs for win32
 ifeq ($(OS_ARCH)_$(GNU_CC),WINNT_)
 ifdef MOZ_DEBUG
 ifneq (,$(MOZ_BROWSE_INFO)$(MOZ_BSCFILE))
@@ -249,6 +252,17 @@ WIN32_EXE_LDFLAGS += -FIXED:NO
 OS_LDFLAGS += -OPT:NOICF
 endif
 
+# if MOZ_COVERAGE is set, we handle pdb files slightly differently
+ifdef MOZ_COVERAGE
+MOZ_OPTIMIZE_FLAGS=-Zi -O1 -UDEBUG -DNDEBUG
+OS_LDFLAGS = -DEBUG -PDB:NONE -OPT:REF -OPT:nowin98
+_ORDERFILE := $(wildcard $(srcdir)/win32.order)
+ifneq (,$(_ORDERFILE))
+OS_LDFLAGS += -ORDER:@$(srcdir)/win32.order
+endif
+endif
+# MOZ_COVERAGE
+
 #
 # Handle trace-malloc in optimized builds.
 # No opt to give sane callstacks.
@@ -263,44 +277,47 @@ endif # MOZ_DEBUG
 endif # WINNT && !GNU_CC
 
 
+#
+# -ffunction-sections is needed to reorder functions using a GNU ld
+# script.
+#
+ifeq ($(MOZ_REORDER),1)
+  OS_CFLAGS += -ffunction-sections
+  OS_CXXFLAGS += -ffunction-sections
+endif
+
 # If we're applying MOZ_PROFILE_GENERATE to a non-static build, then we
 # need to create a static build _with_ PIC.  This allows us to generate
 # profile data that will still be valid when the object files are linked into
 # shared libraries.
 ifdef MOZ_PROFILE_GENERATE
+ifdef BUILD_SHARED_LIBS
+BUILD_SHARED_LIBS=
 BUILD_STATIC_LIBS=1
+MOZ_STATIC_COMPONENT_LIBS=1
 STATIC_BUILD_PIC=1
+endif
 endif
 
 #
 # Build using PIC by default
 # Do not use PIC if not building a shared lib (see exceptions below)
 #
-
-ifndef BUILD_STATIC_LIBS
+#ifeq (,$(PROGRAM)$(SIMPLE_PROGRAMS)$(HOST_PROGRAM)$(HOST_SIMPLE_PROGRAMS))
+ifneq (,$(BUILD_SHARED_LIBS)$(FORCE_SHARED_LIB)$(FORCE_USE_PIC))
 _ENABLE_PIC=1
 endif
-ifneq (,$(FORCE_SHARED_LIB)$(FORCE_USE_PIC))
-_ENABLE_PIC=1
-endif
-
-# In Firefox, all components are linked into either libxul or the static
-# meta-component, and should be compiled with PIC.
-ifdef MOZ_META_COMPONENT
-_ENABLE_PIC=1
-endif
+#endif
 
 # If module is going to be merged into the nsStaticModule, 
 # make sure that the entry points are translated and 
 # the module is built static.
 
 ifdef IS_COMPONENT
-ifdef EXPORT_LIBRARY
-ifneq (,$(BUILD_STATIC_LIBS))
+ifneq (,$(MOZ_STATIC_COMPONENT_LIBS))
 ifdef MODULE_NAME
 DEFINES += -DXPCOM_TRANSLATE_NSGM_ENTRY_POINT=1
 FORCE_STATIC_LIB=1
-endif
 endif
 endif
 endif
@@ -393,10 +410,11 @@ DEFINES += \
 		-D_IMPL_NS_COM \
 		-DEXPORT_XPT_API \
 		-DEXPORT_XPTC_API \
+		-DEXPORT_XPTI_API \
 		-D_IMPL_NS_COM_OBSOLETE \
 		-D_IMPL_NS_GFX \
 		-D_IMPL_NS_WIDGET \
-		-DIMPL_XREAPI \
+		-DIMPL_XULAPI \
 		-DIMPL_NS_NET \
 		$(NULL)
 
@@ -416,7 +434,7 @@ DEFINES += \
 		-D_IMPL_NS_COM_OBSOLETE \
 		-D_IMPL_NS_GFX \
 		-D_IMPL_NS_WIDGET \
-		-DIMPL_XREAPI \
+		-DIMPL_XULAPI \
 		-DIMPL_NS_NET \
 		$(NULL)
 endif
@@ -430,8 +448,8 @@ endif
 # Force _all_ exported methods to be |_declspec(dllexport)| when we're
 # building them into the executable.
 
-ifeq (,$(filter-out WINNT WINCE OS2, $(OS_ARCH)))
-ifdef BUILD_STATIC_LIBS
+ifeq (,$(filter-out WINNT WINCE, $(OS_ARCH)))
+ifdef MOZ_STATIC_COMPONENT_LIBS
 DEFINES += \
         -D_IMPL_NS_GFX \
         -D_IMPL_NS_MSG_BASE \
@@ -491,27 +509,24 @@ NFSPWD		= $(CONFIG_TOOLS)/nfspwd
 PURIFY		= purify $(PURIFYOPTIONS)
 QUANTIFY	= quantify $(QUANTIFYOPTIONS)
 ifdef CROSS_COMPILE
-XPIDL_COMPILE 	= $(CYGWIN_WRAPPER) $(LIBXUL_DIST)/host/bin/host_xpidl$(HOST_BIN_SUFFIX)
-XPIDL_LINK	= $(CYGWIN_WRAPPER) $(LIBXUL_DIST)/host/bin/host_xpt_link$(HOST_BIN_SUFFIX)
+XPIDL_COMPILE 	= $(CYGWIN_WRAPPER) $(DIST)/host/bin/host_xpidl$(HOST_BIN_SUFFIX)
+XPIDL_LINK	= $(CYGWIN_WRAPPER) $(DIST)/host/bin/host_xpt_link$(HOST_BIN_SUFFIX)
 else
-XPIDL_COMPILE 	= $(CYGWIN_WRAPPER) $(LIBXUL_DIST)/bin/xpidl$(BIN_SUFFIX)
-XPIDL_LINK	= $(CYGWIN_WRAPPER) $(LIBXUL_DIST)/bin/xpt_link$(BIN_SUFFIX)
+XPIDL_COMPILE 	= $(CYGWIN_WRAPPER) $(DIST)/bin/xpidl$(BIN_SUFFIX)
+XPIDL_LINK	= $(CYGWIN_WRAPPER) $(DIST)/bin/xpt_link$(BIN_SUFFIX)
 endif
 
 # Java macros
 JAVA_GEN_DIR  = _javagen
 JAVA_DIST_DIR = $(DEPTH)/$(JAVA_GEN_DIR)
-JAVA_IFACES_PKG_NAME = org/mozilla/interfaces
+JAVA_IFACES_PKG_NAME = org/mozilla/xpcom
 
-REQ_INCLUDES	= $(foreach d,$(REQUIRES),-I$(DIST)/include/$d) -I$(DIST)/include 
-ifdef LIBXUL_SDK
-REQ_INCLUDES_SDK = $(foreach d,$(REQUIRES),-I$(LIBXUL_SDK)/include/$d) -I$(LIBXUL_SDK)/include
-endif
+REQ_INCLUDES	= $(foreach d,$(REQUIRES),-I$(DIST)/include/$d)
 
-INCLUDES	= $(LOCAL_INCLUDES) $(REQ_INCLUDES) $(REQ_INCLUDES_SDK) -I$(PUBLIC) $(OS_INCLUDES)
+INCLUDES	= $(LOCAL_INCLUDES) $(REQ_INCLUDES) -I$(PUBLIC) -I$(DIST)/include $(OS_INCLUDES)
 
 ifndef MOZILLA_INTERNAL_API
-INCLUDES	+= -I$(LIBXUL_DIST)/sdk/include
+INCLUDES	+= -I$(DIST)/sdk/include
 endif
 
 CFLAGS		= $(OS_CFLAGS)
@@ -604,9 +619,6 @@ ifneq ($(MOZ_OS2_TOOLS),VACPP)
 ifneq (WINNT_,$(OS_ARCH)_$(GNU_CC))
 ifneq (,$(filter-out WINCE,$(OS_ARCH)))
 LIBS_DIR	= -L$(DIST)/bin -L$(DIST)/lib
-ifdef LIBXUL_SDK
-LIBS_DIR	+= -L$(LIBXUL_SDK)/bin -L$(LIBXUL_SDK)/lib
-endif
 endif
 endif
 endif
@@ -617,11 +629,6 @@ ifdef MODULE
 PUBLIC		= $(DIST)/include/$(MODULE)
 else
 PUBLIC		= $(DIST)/include
-endif
-
-XPIDL_FLAGS = -I$(srcdir) -I$(IDL_DIR)
-ifdef LIBXUL_SDK
-XPIDL_FLAGS += -I$(LIBXUL_SDK)/idl
 endif
 
 SDK_PUBLIC  = $(DIST)/sdk/include
@@ -650,7 +657,7 @@ endif
 ifndef CROSS_COMPILE
 ifdef USE_ELF_DYNSTR_GC
 ifdef MOZ_COMPONENTS_VERSION_SCRIPT_LDFLAGS
-ELF_DYNSTR_GC 	= $(DEPTH)/config/elf-dynstr-gc
+ELF_DYNSTR_GC 	= $(DIST)/bin/elf-dynstr-gc
 endif
 endif
 endif
@@ -748,8 +755,8 @@ endif
 # static version of the same library.
 ifeq ($(GNU_LD)$(OS_ARCH),WINNT)
 ifdef IS_COMPONENT
-LDFLAGS += -IMPLIB:fake.lib
-DELETE_AFTER_LINK = fake.lib fake.exp
+LDFLAGS += -IMPLIB:fake-import
+DELETE_AFTER_LINK = fake-import.exp
 endif
 endif
 

@@ -52,16 +52,9 @@
   min-height: 50px;
 }
 
-.alertBox[orient="horizontal"] > .alertImageBox {
-  -moz-margin-start: 4px;
-  -moz-margin-end: 6px;
+.alertImageBox {
+  margin-left: 4px;
   min-height: 46px;
-}
-
-.alertBox[orient="vertical"] > .alertImageBox {
-  margin-top: 6px;
-  margin-bottom: 4px;
-  min-width: 46px;
 }
 
 .alertTitle {
@@ -75,7 +68,7 @@
 }
 
 .alertText {
-  -moz-margin-end: 6px;
+  margin-right: 6px;
 }
 
 .alertText[clickable="true"] {

@@ -68,7 +68,6 @@
 #include "nsReadableUtils.h"
 #include "nsCRT.h"
 #include "nsDOMError.h"
-#include "nsEventDispatcher.h"
 
 #ifdef PR_LOGGING
 static PRLogModuleInfo* gLog;
@@ -412,7 +411,7 @@ nsXULCommandDispatcher::UpdateCommands(const nsAString& aEventName)
 
       nsEvent event(PR_TRUE, NS_XUL_COMMAND_UPDATE);
 
-      nsEventDispatcher::Dispatch(content, context, &event, nsnull, &status);
+      content->HandleDOMEvent(context, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
     }
   }
   return NS_OK;

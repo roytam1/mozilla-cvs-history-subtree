@@ -35,7 +35,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 #include "nsCOMPtr.h"
-#include "nsGkAtoms.h"
+#include "nsLayoutAtoms.h"
 
 #include "nsFrameTraversal.h"
 #include "nsFrameList.h"
@@ -51,16 +51,15 @@ public:
 
   NS_IMETHOD Last();
   
-  NS_IMETHOD Next();
+  NS_IMETHOD Next()=0;
 
-  NS_IMETHOD Prev();
+  NS_IMETHOD Prev()=0;
 
   NS_IMETHOD CurrentItem(nsISupports **aItem);
 
   NS_IMETHOD IsDone();//what does this mean??off edge? yes
 
-  nsFrameIterator(nsPresContext* aPresContext, nsIFrame *aStart,
-                  nsIteratorType aType, PRBool aLockScroll, PRBool aFollowOOFs);
+  nsFrameIterator();
 
 protected:
   void      setCurrent(nsIFrame *aFrame){mCurrent = aFrame;}
@@ -71,55 +70,6 @@ protected:
   void      setLast(nsIFrame *aFrame){mLast = aFrame;}
   PRInt8    getOffEdge(){return mOffEdge;}
   void      setOffEdge(PRInt8 aOffEdge){mOffEdge = aOffEdge;}
-  void      SetLockInScrollView(PRBool aLockScroll){mLockScroll = aLockScroll;}
-
-  /*
-   Our own versions of the standard frame tree navigation
-   methods, which, if the iterator is following out-of-flows,
-   apply the following rules for placeholder frames:
-   
-   - If a frame HAS a placeholder frame, getting its parent
-   gets the placeholder's parent.
-   
-   - If a frame's first child or next/prev sibling IS a
-   placeholder frame, then we instead return the real frame.
-   
-   - If a frame HAS a placeholder frame, getting its next/prev
-   sibling gets the placeholder frame's next/prev sibling.
-   
-   These are all applied recursively to support multiple levels of
-   placeholders.
-   */  
-  
-  nsIFrame* GetParentFrame(nsIFrame* aFrame);
-
-  nsIFrame* GetFirstChild(nsIFrame* aFrame);
-  nsIFrame* GetLastChild(nsIFrame* aFrame);
-
-  nsIFrame* GetNextSibling(nsIFrame* aFrame);
-  nsIFrame* GetPrevSibling(nsIFrame* aFrame);
-
-  /*
-   These methods are overridden by the bidi visual iterator to have the
-   semantics of "get first child in visual order", "get last child in visual
-   order", "get next sibling in visual order" and "get previous sibling in visual
-   order".
-  */
-  
-  virtual nsIFrame* GetFirstChildInner(nsIFrame* aFrame);
-  virtual nsIFrame* GetLastChildInner(nsIFrame* aFrame);  
-
-  virtual nsIFrame* GetNextSiblingInner(nsIFrame* aFrame);
-  virtual nsIFrame* GetPrevSiblingInner(nsIFrame* aFrame);
-
-  nsIFrame* GetPlaceholderFrame(nsIFrame* aFrame);
-  PRBool    IsPopupFrame(nsIFrame* aFrame);
-
-  nsPresContext* mPresContext;
-  PRPackedBool mLockScroll;
-  PRPackedBool mFollowOOFs;
-  nsIteratorType mType;
-
 private:
   nsIFrame *mStart;
   nsIFrame *mCurrent;
@@ -128,23 +78,91 @@ private:
 };
 
 
+/*
+class nsFastFrameIterator: public nsFrameIterator
+{
+  nsFastFrameIterator(nsIFrame *start);
+private :
+  
+  virtual nsresult Next();
 
-// Bidi visual iterator
-class nsVisualIterator: public nsFrameIterator
+  virtual nsresult Prev();
+
+}
+*/
+
+class nsLeafIterator: public nsFrameIterator
 {
 public:
-  nsVisualIterator(nsPresContext* aPresContext, nsIFrame *aStart,
-                   nsIteratorType aType, PRBool aLockScroll, PRBool aFollowOOFs) :
-  nsFrameIterator(aPresContext, aStart, aType, aLockScroll, aFollowOOFs) {};
-
-protected:
-  nsIFrame* GetFirstChildInner(nsIFrame* aFrame);
-  nsIFrame* GetLastChildInner(nsIFrame* aFrame);  
+  nsLeafIterator(nsPresContext* aPresContext, nsIFrame *start);
+  void SetExtensive(PRBool aExtensive) {mExtensive = aExtensive;}
+  PRBool GetExtensive(){return mExtensive;}
+  void   SetLockInScrollView(PRBool aLockScroll){mLockScroll = aLockScroll;}
+private :
   
-  nsIFrame* GetNextSiblingInner(nsIFrame* aFrame);
-  nsIFrame* GetPrevSiblingInner(nsIFrame* aFrame);  
+  NS_IMETHOD Next();
+
+  NS_IMETHOD Prev();
+
+  nsPresContext* mPresContext;
+  PRPackedBool mExtensive;
+  PRBool mLockScroll;
 };
 
+class nsFocusIterator : public nsFrameIterator
+{
+public:
+  nsFocusIterator(nsPresContext* aPresContext, nsIFrame* aStart);
+private:
+  NS_IMETHOD Next();
+  NS_IMETHOD Prev();
+  NS_IMETHOD Last();
+
+  /*
+    Our own versions of the standard frame tree navigation
+    methods, which apply the following rules for placeholder
+    frames:
+
+     - If a frame HAS a placeholder frame, getting its parent
+       gets the placeholder's parent.
+
+     - If a frame's first child or next/prev sibling IS a
+       placeholder frame, then we instead return the real frame.
+
+     - If a frame HAS a placeholder frame, getting its next/prev
+       sibling gets the placeholder frame's next/prev sibling.
+
+    These are all applied recursively to support multiple levels of
+    placeholders.
+  */
+
+  nsIFrame* GetParentFrame(nsIFrame* aFrame);
+  nsIFrame* GetFirstChild(nsIFrame* aFrame);
+  nsIFrame* GetNextSibling(nsIFrame* aFrame);
+  nsIFrame* GetPrevSibling(nsIFrame* aFrame);
+
+  nsIFrame* GetPlaceholderFrame(nsIFrame* aFrame);
+  PRBool    IsPopupFrame(nsIFrame* aFrame);
+
+  nsPresContext* mPresContext;
+};
+
+#ifdef IBMBIDI // Simon
+
+class nsVisualIterator: public nsFrameIterator
+{
+  public:
+    nsVisualIterator(nsPresContext* aPresContext, nsIFrame *start);
+  private :
+
+    NS_IMETHOD Next();
+
+    NS_IMETHOD Prev();
+
+    nsPresContext* mPresContext;
+};
+
+#endif
 /************IMPLEMENTATIONS**************/
 
 nsresult NS_CreateFrameTraversal(nsIFrameTraversal** aResult)
@@ -164,27 +182,65 @@ nsresult NS_CreateFrameTraversal(nsIFrameTraversal** aResult)
 
 nsresult
 NS_NewFrameTraversal(nsIBidirectionalEnumerator **aEnumerator,
+                     nsTraversalType aType,
                      nsPresContext* aPresContext,
                      nsIFrame *aStart,
-                     nsIteratorType aType,
-                     PRBool aVisual,
-                     PRBool aLockInScrollView,
-                     PRBool aFollowOOFs)
+                     PRBool aLockInScrollView)
 {
   if (!aEnumerator || !aStart)
     return NS_ERROR_NULL_POINTER;
-  nsFrameIterator *trav;
-  if (aVisual) {
-    trav = new nsVisualIterator(aPresContext, aStart, aType,
-                                aLockInScrollView, aFollowOOFs);
-  } else {
-    trav = new nsFrameIterator(aPresContext, aStart, aType,
-                               aLockInScrollView, aFollowOOFs);
+  switch(aType)
+  {
+  case LEAF: {
+    nsLeafIterator *trav = new nsLeafIterator(aPresContext, aStart);
+    if (!trav)
+      return NS_ERROR_OUT_OF_MEMORY;
+    trav->SetLockInScrollView(aLockInScrollView);
+    *aEnumerator = NS_STATIC_CAST(nsIBidirectionalEnumerator*, trav);
+    NS_ADDREF(trav);
+    trav->SetExtensive(PR_FALSE);
   }
-  if (!trav)
-    return NS_ERROR_OUT_OF_MEMORY;
-  *aEnumerator = NS_STATIC_CAST(nsIBidirectionalEnumerator*, trav);
-  NS_ADDREF(trav);
+  break;
+  case EXTENSIVE:{
+    nsLeafIterator *trav = new nsLeafIterator(aPresContext, aStart);
+    if (!trav)
+      return NS_ERROR_OUT_OF_MEMORY;
+    *aEnumerator = NS_STATIC_CAST(nsIBidirectionalEnumerator*, trav);
+    NS_ADDREF(trav);
+    trav->SetExtensive(PR_TRUE);
+  }
+  break;
+  case FOCUS: {
+    nsFocusIterator *trav = new nsFocusIterator(aPresContext, aStart);
+    if (!trav)
+      return NS_ERROR_OUT_OF_MEMORY;
+    *aEnumerator = NS_STATIC_CAST(nsIBidirectionalEnumerator*, trav);
+    NS_ADDREF(trav);
+  }
+  break;
+#ifdef IBMBIDI
+  case VISUAL:{
+    nsVisualIterator *trav = new nsVisualIterator(aPresContext, aStart);
+    if (!trav)
+      return NS_ERROR_OUT_OF_MEMORY;
+    *aEnumerator = NS_STATIC_CAST(nsIBidirectionalEnumerator*, trav);
+    NS_ADDREF(trav);
+              }
+    break;
+#endif
+#if 0
+  case FASTEST:{
+    nsFastestTraversal *trav = new nsFastestTraversal(aStart);
+    if (!trav)
+      return NS_ERROR_NOMEMORY;
+    *aEnumerator = NS_STATIC_CAST(nsIBidirectionalEnumerator*, trav);
+    NS_ADDREF(trav);
+               }
+#endif
+  default:
+    return NS_ERROR_NOT_IMPLEMENTED;
+    break;
+  }
   return NS_OK;
 }
 
@@ -200,36 +256,25 @@ nsFrameTraversal::~nsFrameTraversal()
 NS_IMPL_ISUPPORTS1(nsFrameTraversal,nsIFrameTraversal)
 
 NS_IMETHODIMP 
- nsFrameTraversal::NewFrameTraversal(nsIBidirectionalEnumerator **aEnumerator,
-                                     nsPresContext* aPresContext,
-                                     nsIFrame *aStart,
-                                     PRInt32 aType,
-                                     PRBool aVisual,
-                                     PRBool aLockInScrollView,
-                                     PRBool aFollowOOFs)
+nsFrameTraversal::NewFrameTraversal(nsIBidirectionalEnumerator **aEnumerator,
+                              PRUint32 aType,
+                              nsPresContext* aPresContext,
+                              nsIFrame *aStart)
 {
-  return NS_NewFrameTraversal(aEnumerator, aPresContext, aStart,
-                              NS_STATIC_CAST(nsIteratorType, aType),
-                              aVisual, aLockInScrollView, aFollowOOFs);  
+  return NS_NewFrameTraversal(aEnumerator, NS_STATIC_CAST(nsTraversalType,
+                                                          aType),
+                              aPresContext, aStart,PR_FALSE);  
 }
 
-// nsFrameIterator implementation
-
+/*********nsFrameIterator************/
 NS_IMPL_ISUPPORTS2(nsFrameIterator, nsIEnumerator, nsIBidirectionalEnumerator)
 
-nsFrameIterator::nsFrameIterator(nsPresContext* aPresContext, nsIFrame *aStart,
-                                 nsIteratorType aType, PRBool aLockInScrollView,
-                                 PRBool aFollowOOFs)
+nsFrameIterator::nsFrameIterator()
 {
-  mPresContext = aPresContext;
-  if (aFollowOOFs && aStart)
-    aStart = nsPlaceholderFrame::GetRealFrameFor(aStart);
-  setStart(aStart);
-  setCurrent(aStart);
-  setLast(aStart);
-  mType = aType;
-  SetLockInScrollView(aLockInScrollView);
-  mFollowOOFs = aFollowOOFs;
+  mOffEdge = 0;
+  mLast = nsnull;
+  mCurrent = nsnull;
+  mStart = nsnull;
 }
 
 
@@ -264,249 +309,186 @@ nsFrameIterator::First()
   return NS_OK;
 }
 
-static PRBool
-IsRootFrame(nsIFrame* aFrame)
-{
-  nsIAtom* atom = aFrame->GetType();
-  return (atom == nsGkAtoms::canvasFrame) ||
-         (atom == nsGkAtoms::rootFrame);
-}
+
 
 NS_IMETHODIMP
 nsFrameIterator::Last()
 {
-  nsIFrame* result;
-  nsIFrame* parent = getCurrent();
-  while (!IsRootFrame(parent) && (result = GetParentFrame(parent)))
-    parent = result;
-  
-  while ((result = GetLastChild(parent))) {
-    parent = result;
-  }
-  
-  setCurrent(parent);
+  return NS_ERROR_FAILURE;
+}
+
+
+
+/*********LEAFITERATOR**********/
+
+
+nsLeafIterator::nsLeafIterator(nsPresContext* aPresContext, nsIFrame *aStart)
+  : mPresContext(aPresContext)
+{
+  setStart(aStart);
+  setCurrent(aStart);
+  setLast(aStart);
+  SetLockInScrollView(PR_FALSE);
+}
+
+static PRBool
+IsRootFrame(nsIFrame* aFrame)
+{
+  nsIAtom* atom = aFrame->GetType();
+  return (atom == nsLayoutAtoms::canvasFrame) ||
+         (atom == nsLayoutAtoms::rootFrame);
+}
+
+NS_IMETHODIMP
+nsLeafIterator::Next()
+{
+//recursive-oid method to get next frame
+  nsIFrame *result = nsnull;
+  nsIFrame *parent = getCurrent();
   if (!parent)
+    parent = getLast();
+  if (!mExtensive)
+  {
+    while (nsnull != (result = parent->GetFirstChild(nsnull)))
+    {
+      parent = result;
+    }
+  }
+  if (parent != getCurrent())
+  {
+    result = parent;
+  }
+  else {
+    while(parent) {
+      result = parent->GetNextSibling();
+      if (result) {
+        parent = result;
+        while (nsnull != (result = parent->GetFirstChild(nsnull)))
+          {
+            parent = result;
+          }
+        result = parent;
+        break;
+      }
+      else
+      {
+        result = parent->GetParent();
+        if (!result || IsRootFrame(result)) {
+          result = nsnull;
+          break;
+        }
+        else 
+        {
+          parent = result;
+          // check if  FrameType of result is TextInputFrame
+          if (mLockScroll) //lock the traversal when we hit a scroll frame
+          {
+            if ( result->GetType() == nsLayoutAtoms::scrollFrame )
+              return NS_ERROR_FAILURE;
+          }
+          if (mExtensive)
+            break;
+        }  
+      }
+    }
+  }
+  setCurrent(result);
+  if (!result)
     setOffEdge(1);
   return NS_OK;
 }
 
+
+
+
 NS_IMETHODIMP
-nsFrameIterator::Next()
+nsLeafIterator::Prev()
 {
-  // recursive-oid method to get next frame
+//recursive-oid method to get prev frame
   nsIFrame *result = nsnull;
   nsIFrame *parent = getCurrent();
   if (!parent)
     parent = getLast();
 
-  if (mType == eLeaf) {
-    // Drill down to first leaf
-    while ((result = GetFirstChild(parent))) {
-      parent = result;
-    }
-  } else if (mType == ePreOrder) {
-    result = GetFirstChild(parent);
-    if (result)
-      parent = result;
-  }
-
-  if (parent != getCurrent()) {
-    result = parent;
-  } else {
-    while (parent) {
-      result = GetNextSibling(parent);
-      if (result) {
-        if (mType != ePreOrder) {
+  while (parent){
+    nsIFrame *grandParent = parent->GetParent();
+    if (grandParent) 
+    {
+      // check if  FrameType of grandParent is TextInputFrame
+      if (mLockScroll) //lock the traversal when we hit a scroll frame
+      {
+        nsIAtom* atom = grandParent->GetType();
+  #ifdef DEBUG_skamio
+        if ( atom ) 
+        {
+          nsAutoString aString;
+          res = atom->ToString(aString);
+          if ( NS_SUCCEEDED(res) ) {
+            printf("%s:%d\n", __FILE__, __LINE__);
+            printf("FrameType: %s\n", NS_ConvertUCS2toUTF8(aString).get());
+          }
+        }
+  #endif
+        if ( atom == nsLayoutAtoms::scrollFrame ) 
+          return NS_ERROR_FAILURE;
+      }
+      result = grandParent->GetFirstChild(nsnull);
+      nsFrameList list(result);
+      result = list.GetPrevSiblingFor(parent);
+      if (result)
+      {
+        parent = result;
+        while (nsnull != (result = parent->GetFirstChild(nsnull)))
+        {
           parent = result;
-          while ((result = GetFirstChild(parent))) {
+          while ((result = parent->GetNextSibling()) != nsnull)
+          {
             parent = result;
           }
-          result = parent;
         }
+        result = parent;
         break;
       }
-      else {
-        result = GetParentFrame(parent);
-        if (!result || IsRootFrame(result) ||
-            (mLockScroll && result->GetType() == nsGkAtoms::scrollFrame)) {
-          result = nsnull;
-          break;
-        }
-        if (mType == ePostOrder)
-          break;
-        parent = result;
+      else if (!(result = parent->GetParent()))
+      {
+        result = nsnull;
+        break;
       }
+      else 
+      {
+        parent = result;
+        if (mExtensive)
+          break;
+      }
+    }
+    else
+    {
+      setLast(parent);
+      result = nsnull;
+      break;
     }
   }
 
   setCurrent(result);
-  if (!result) {
-    setOffEdge(1);
-    setLast(parent);
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsFrameIterator::Prev()
-{
-  // recursive-oid method to get prev frame
-  nsIFrame *result = nsnull;
-  nsIFrame *parent = getCurrent();
-  if (!parent)
-    parent = getLast();
-
-  if (mType == eLeaf) {
-    // Drill down to last leaf
-    while ((result = GetLastChild(parent))) {
-      parent = result;
-    }
-  } else if (mType == ePostOrder) {
-    result = GetLastChild(parent);
-    if (result)
-      parent = result;
-  }
-  
-  if (parent != getCurrent()) {
-    result = parent;
-  } else {
-    while (parent) {
-      result = GetPrevSibling(parent);
-      if (result) {
-        if (mType != ePostOrder) {
-          parent = result;
-          while ((result = GetLastChild(parent))) {
-            parent = result;
-          }
-          result = parent;
-        }
-        break;
-      } else {
-        result = GetParentFrame(parent);
-        if (!result || IsRootFrame(result) ||
-            (mLockScroll && result->GetType() == nsGkAtoms::scrollFrame)) {
-          result = nsnull;
-          break;
-        }
-        if (mType == ePreOrder)
-          break;
-        parent = result;
-      }
-    }
-  }
-
-  setCurrent(result);
-  if (!result) {
+  if (!result)
     setOffEdge(-1);
-    setLast(parent);
-  }
   return NS_OK;
 }
 
-nsIFrame*
-nsFrameIterator::GetParentFrame(nsIFrame* aFrame)
+nsFocusIterator::nsFocusIterator(nsPresContext* aPresContext, nsIFrame* aStart)
+  : mPresContext(aPresContext)
 {
-  if (mFollowOOFs)
-    aFrame = GetPlaceholderFrame(aFrame);
-  if (aFrame)
-    return aFrame->GetParent();
-  
-  return nsnull;
+  nsIFrame* start = aStart;
+  if (aStart)
+    start = nsPlaceholderFrame::GetRealFrameFor(aStart);
+
+  setStart(start);
+  setCurrent(start);
+  setLast(start);
 }
 
 nsIFrame*
-nsFrameIterator::GetFirstChild(nsIFrame* aFrame)
-{
-  nsIFrame* result = GetFirstChildInner(aFrame);
-  if (result && mFollowOOFs) {
-    result = nsPlaceholderFrame::GetRealFrameFor(result);
-    
-    if (result && IsPopupFrame(result))
-      result = GetNextSibling(result);
-  }
-  return result;
-}
-
-nsIFrame*
-nsFrameIterator::GetLastChild(nsIFrame* aFrame)
-{
-  nsIFrame* result = GetLastChildInner(aFrame);
-  if (result && mFollowOOFs) {
-    result = nsPlaceholderFrame::GetRealFrameFor(result);
-    
-    if (result && IsPopupFrame(result))
-      result = GetNextSibling(result);
-  }
-  return result;
-}
-
-nsIFrame*
-nsFrameIterator::GetNextSibling(nsIFrame* aFrame)
-{
-  nsIFrame* result = nsnull;
-  if (mFollowOOFs)
-    aFrame = GetPlaceholderFrame(aFrame);
-  if (aFrame) {
-    result = GetNextSiblingInner(aFrame);
-    if (result && mFollowOOFs)
-      result = nsPlaceholderFrame::GetRealFrameFor(result);
-  }
-
-  if (result && mFollowOOFs && IsPopupFrame(result))
-    result = GetNextSibling(result);
-
-  return result;
-}
-
-nsIFrame*
-nsFrameIterator::GetPrevSibling(nsIFrame* aFrame)
-{
-  nsIFrame* result = nsnull;
-  if (mFollowOOFs)
-    aFrame = GetPlaceholderFrame(aFrame);
-  if (aFrame) {
-    result = GetPrevSiblingInner(aFrame);
-    if (result && mFollowOOFs)
-      result = nsPlaceholderFrame::GetRealFrameFor(result);
-  }
-
-  if (result && mFollowOOFs && IsPopupFrame(result))
-    result = GetPrevSibling(result);
-
-  return result;
-}
-
-nsIFrame*
-nsFrameIterator::GetFirstChildInner(nsIFrame* aFrame) {
-  return aFrame->GetFirstChild(nsnull);
-}
-
-nsIFrame*
-nsFrameIterator::GetLastChildInner(nsIFrame* aFrame) {
-  nsIFrame* child = aFrame->GetFirstChild(nsnull);
-  if (!child)
-    return nsnull;
-  nsFrameList list(child);
-  return list.LastChild();
-}
-
-nsIFrame*
-nsFrameIterator::GetNextSiblingInner(nsIFrame* aFrame) {
-  return aFrame->GetNextSibling();
-}
-
-nsIFrame*
-nsFrameIterator::GetPrevSiblingInner(nsIFrame* aFrame) {
-  nsIFrame* parent = GetParentFrame(aFrame);
-  if (!parent)
-    return nsnull;
-  nsFrameList list(parent->GetFirstChild(nsnull));
-  return list.GetPrevSiblingFor(aFrame);
-}
-
-
-nsIFrame*
-nsFrameIterator::GetPlaceholderFrame(nsIFrame* aFrame)
+nsFocusIterator::GetPlaceholderFrame(nsIFrame* aFrame)
 {
   nsIFrame* result = aFrame;
   nsIPresShell *presShell = mPresContext->GetPresShell();
@@ -524,45 +506,265 @@ nsFrameIterator::GetPlaceholderFrame(nsIFrame* aFrame)
 }
 
 PRBool
-nsFrameIterator::IsPopupFrame(nsIFrame* aFrame)
+nsFocusIterator::IsPopupFrame(nsIFrame* aFrame)
 {
   return (aFrame->GetStyleDisplay()->mDisplay == NS_STYLE_DISPLAY_POPUP);
 }
 
-// nsVisualIterator implementation
-
 nsIFrame*
-nsVisualIterator::GetFirstChildInner(nsIFrame* aFrame) {
-  nsIFrame* child = aFrame->GetFirstChild(nsnull);
-  if (!child)
-    return nsnull;
-  nsFrameList list(child);
-  return list.GetNextVisualFor(nsnull);
+nsFocusIterator::GetParentFrame(nsIFrame* aFrame)
+{
+  nsIFrame* placeholder = GetPlaceholderFrame(aFrame);
+  if (placeholder)
+    return placeholder->GetParent();
+
+  return nsnull;
 }
 
 nsIFrame*
-nsVisualIterator::GetLastChildInner(nsIFrame* aFrame) {
-  nsIFrame* child = aFrame->GetFirstChild(nsnull);
-  if (!child)
-    return nsnull;
-  nsFrameList list(child);
-  return list.GetPrevVisualFor(nsnull);
+nsFocusIterator::GetFirstChild(nsIFrame* aFrame)
+{
+  nsIFrame* result = aFrame->GetFirstChild(nsnull);
+  if (result)
+    result = nsPlaceholderFrame::GetRealFrameFor(result);
+
+  if (result && IsPopupFrame(result))
+    result = GetNextSibling(result);
+
+  return result;
 }
 
 nsIFrame*
-nsVisualIterator::GetNextSiblingInner(nsIFrame* aFrame) {
-  nsIFrame* parent = GetParentFrame(aFrame);
+nsFocusIterator::GetNextSibling(nsIFrame* aFrame)
+{
+  nsIFrame* result = nsnull;
+  nsIFrame* placeholder = GetPlaceholderFrame(aFrame);
+  if (placeholder) {
+    result = placeholder->GetNextSibling();
+    if (result)
+      result = nsPlaceholderFrame::GetRealFrameFor(result);
+  }
+
+  if (result && IsPopupFrame(result))
+    result = GetNextSibling(result);
+
+  return result;
+}
+
+nsIFrame*
+nsFocusIterator::GetPrevSibling(nsIFrame* aFrame)
+{
+  nsIFrame* result = 0;
+  nsIFrame* placeholder = GetPlaceholderFrame(aFrame);
+  if (placeholder) {
+    nsIFrame* parent = GetParentFrame(placeholder);
+    if (parent) {
+      nsFrameList list(parent->GetFirstChild(nsnull));
+      result = list.GetPrevSiblingFor(placeholder);
+      if (result)
+        result = nsPlaceholderFrame::GetRealFrameFor(result);
+    }
+  }
+
+  if (result && IsPopupFrame(result))
+    result = GetPrevSibling(result);
+
+  return result;
+}
+
+NS_IMETHODIMP
+nsFocusIterator::Next()
+{
+  nsIFrame* result = 0;
+  nsIFrame* parent = getCurrent();
   if (!parent)
-    return nsnull;
-  nsFrameList list(parent->GetFirstChild(nsnull));
-  return list.GetNextVisualFor(aFrame);
+    parent = getLast();
+
+  if ((result = GetFirstChild(parent)))
+    parent = result;
+
+  result = parent;
+  if (result == getCurrent()) {
+    while (result) {
+      if ((parent = GetNextSibling(result))) {
+        result = parent;
+        break;
+       } else {
+        parent = result;
+        result = GetParentFrame(parent);
+        if (!result || IsRootFrame(result)) {
+          result = nsnull;
+          break;
+        }
+      }
+    }
+
+    if (!result) {
+      setLast(parent);
+    }
+  }
+
+  setCurrent(result);
+  if (!result)
+    setOffEdge(1);
+  return NS_OK;
 }
 
-nsIFrame*
-nsVisualIterator::GetPrevSiblingInner(nsIFrame* aFrame) {
-  nsIFrame* parent = GetParentFrame(aFrame);
+NS_IMETHODIMP
+nsFocusIterator::Prev()
+{
+  nsIFrame *result = nsnull;
+  nsIFrame *parent = getCurrent();
   if (!parent)
-    return nsnull;
-  nsFrameList list(parent->GetFirstChild(nsnull));
-  return list.GetPrevVisualFor(aFrame);
+    parent = getLast();
+  if (parent) {
+    if ((result = GetPrevSibling(parent))) {
+      parent = result;
+      while ((result = GetFirstChild(parent))) {
+        parent = result;
+        while ((result = GetNextSibling(parent)))
+          parent = result;
+      }
+      result = parent;
+    } else if (!(result = GetParentFrame(parent))) {
+      result = 0;
+      setLast(parent);
+    }
+  }
+
+  setCurrent(result);
+  if (!result)
+    setOffEdge(-1);
+  return NS_OK;
 }
+
+NS_IMETHODIMP
+nsFocusIterator::Last()
+{
+  nsIFrame* result;
+  nsIFrame* parent = getCurrent();
+  while (!IsRootFrame(parent) && (result = GetParentFrame(parent)))
+    parent = result;
+
+  while ((result = GetFirstChild(parent))) {
+    parent = result;
+    while ((result = GetNextSibling(parent)))
+      parent = result;
+  }
+
+  setCurrent(parent);
+  if (!parent)
+    setOffEdge(1);
+  return NS_OK;
+}
+
+#ifdef IBMBIDI
+
+/*********VISUALITERATOR**********/
+
+nsVisualIterator::nsVisualIterator(nsPresContext* aPresContext, nsIFrame *aStart)
+: mPresContext(aPresContext)
+{
+  setStart(aStart);
+  setCurrent(aStart);
+  setLast(aStart);
+}
+
+NS_IMETHODIMP
+   nsVisualIterator::Next()
+{
+  //recursive-oid method to get next frame
+  nsIFrame *result = nsnull;
+  nsIFrame *parent = getCurrent();
+  if (!parent)
+    parent = getLast();
+  while (nsnull != (result = parent->GetFirstChild(nsnull)))
+  {
+    parent = result;
+  }
+  if (parent != getCurrent())
+  {
+    result = parent;
+  }
+  else {
+    while(parent) {
+      nsIFrame *grandParent = parent->GetParent();
+      if (grandParent) {
+        nsFrameList list(grandParent->GetFirstChild(nsnull));
+        result = list.GetNextVisualFor(parent);
+        if (result){
+          parent = result;
+          while (nsnull != (result = parent->GetFirstChild(nsnull))) {
+            parent = result;
+          }
+          result = parent;
+          break;
+        }
+        else if (!(result = parent->GetParent()) || IsRootFrame(result)) {
+          result = nsnull;
+          break;
+        }
+        else 
+        {
+          parent = result;
+        }
+      } 
+      else{
+        setLast(parent);
+        result = nsnull;
+        break;
+      }
+    }
+  }
+
+  setCurrent(result);
+  if (!result)
+    setOffEdge(-1);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+   nsVisualIterator::Prev()
+{
+  //recursive-oid method to get prev frame
+  nsIFrame *result = nsnull;
+  nsIFrame *parent = getCurrent();
+  if (!parent)
+    parent = getLast();
+  while(parent){
+    nsIFrame *grandParent = parent->GetParent();
+    if (grandParent) {
+      nsFrameList list(grandParent->GetFirstChild(nsnull));
+      result = list.GetPrevVisualFor(parent);
+      if (result){
+        parent = result;
+        while (nsnull != (result = parent->GetFirstChild(nsnull))) {
+          parent = result;
+          while ((result = parent->GetNextSibling()) != nsnull) {
+            parent = result;
+          }
+        }
+        result = parent;
+        break;
+      }
+      else if (!(result = parent->GetParent())) {
+        break;
+      }
+      else 
+      {
+        parent = result;
+      }
+    }
+    else{
+      setLast(parent);
+      result = nsnull;
+      break;
+    }
+  }
+
+  setCurrent(result);
+  if (!result)
+    setOffEdge(-1);
+  return NS_OK;
+}
+#endif

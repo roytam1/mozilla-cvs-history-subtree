@@ -53,9 +53,10 @@ const PREF_APP_UPDATE_URL_DETAILS         = "app.update.url.details";
 const PREF_APP_UPDATE_CHANNEL             = "app.update.channel";
 const PREF_APP_UPDATE_SHOW_INSTALLED_UI   = "app.update.showInstalledUI";
 const PREF_APP_UPDATE_LASTUPDATETIME_FMT  = "app.update.lastUpdateTime.%ID%";
+const PREF_APP_EXTENSIONS_VERSION         = "app.extensions.version";
 const PREF_GENERAL_USERAGENT_LOCALE       = "general.useragent.locale";
 const PREF_APP_UPDATE_INCOMPATIBLE_MODE   = "app.update.incompatible.mode";
-const PREF_UPDATE_NEVER_BRANCH            = "app.update.never.";
+const PREF_UPDATE_NEVER_BRANCH            = "app.update.never."
 const PREF_PARTNER_BRANCH                 = "app.partner.";
 
 const URI_UPDATE_PROMPT_DIALOG  = "chrome://mozapps/content/update/updates.xul";
@@ -65,11 +66,6 @@ const URI_UPDATES_PROPERTIES    = "chrome://mozapps/locale/update/updates.proper
 const URI_UPDATE_NS             = "http://www.mozilla.org/2005/app-update";
 
 const KEY_APPDIR          = "XCurProcD";
-#ifdef XP_WIN
-const KEY_LOCALDATA       = "DefProfLRt";
-const KEY_PROGRAMFILES    = "ProgF";
-const KEY_UAPPDATA        = "UAppData";
-#endif
 
 const DIR_UPDATES         = "updates";
 const FILE_UPDATE_STATUS  = "update.status";
@@ -129,19 +125,38 @@ var gOSVersion  = null;
 var gConsole    = null;
 var gLogEnabled = { };
 
-// shared code for suppressing bad cert dialogs
-#include ../../shared/src/badCertHandler.js
-
 /**
  * Logs a string to the error console. 
  * @param   string
  *          The string to write to the error console..
  */  
 function LOG(module, string) {
-  if (module in gLogEnabled || "all" in gLogEnabled) {
+  if (module in gLogEnabled) {
     dump("*** " + module + ": " + string + "\n");
     gConsole.logStringMessage(string);
   }
+}
+
+/**
+ * Only allow built-in certs for HTTPS connections.  See bug 340198.
+ */
+function checkCert(channel) {
+  if (!channel.originalURI.schemeIs("https"))  // bypass
+    return;
+
+  const Ci = Components.interfaces;  
+  var cert =
+      channel.securityInfo.QueryInterface(Ci.nsISSLStatusProvider).
+      SSLStatus.QueryInterface(Ci.nsISSLStatus).serverCert;
+
+  var issuer = cert.issuer;
+  while (issuer && !cert.equals(issuer)) {
+    cert = issuer;
+    issuer = cert.issuer;
+  }
+
+  if (!issuer || issuer.tokenName != "Builtin Object Token")
+    throw "cert issuer is not built-in";
 }
 
 /**
@@ -185,7 +200,7 @@ function getURLSpecFromFile(file) {
  *          parent directories that need to be created.
  */
 function getDir(key, pathArray) {
-  return getDirInternal(key, pathArray, true, false);
+  return getDirInternal(key, pathArray, true);
 }
 
 /**
@@ -200,21 +215,7 @@ function getDir(key, pathArray) {
  *          requested does not exist, it is NOT created.
  */
 function getDirNoCreate(key, pathArray) {
-  return getDirInternal(key, pathArray, false, false);
-}
-
-/**
- * Gets the specified directory at the specified hierarchy under the 
- * update root directory.
- * @param   pathArray
- *          An array of path components to locate beneath the directory 
- *          specified by |key|
- * @return  nsIFile object for the location specified. If the directory
- *          requested does not exist, it is created, along with any
- *          parent directories that need to be created.
- */
-function getUpdateDir(pathArray) {
-  return getDirInternal(KEY_APPDIR, pathArray, true, true);
+  return getDirInternal(key, pathArray, false);
 }
 
 /**
@@ -229,27 +230,12 @@ function getUpdateDir(pathArray) {
  *          true if the directory hierarchy specified in |pathArray|
  *          should be created if it does not exist,
  *          false otherwise.
- * @param   update
- *          true if finding the update directory,
- *          false otherwise.
  * @return  nsIFile object for the location specified. 
  */
-function getDirInternal(key, pathArray, shouldCreate, update) {
+function getDirInternal(key, pathArray, shouldCreate) {
   var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"]
                               .getService(Components.interfaces.nsIProperties);
-  var dir = fileLocator.get(key, Components.interfaces.nsILocalFile);
-#ifdef XP_WIN
-  if (update) {
-    var programFilesDir = fileLocator.get(KEY_PROGRAMFILES,
-        Components.interfaces.nsILocalFile);
-    if (programFilesDir.contains(dir, true)) {
-      var relativePath = dir.getRelativeDescriptor(programFilesDir);
-      var userLocalDir = fileLocator.get(KEY_LOCALDATA,
-          Components.interfaces.nsILocalFile).parent;
-      dir.setRelativeDescriptor(userLocalDir, relativePath);
-    }
-  }
-#endif
+  var dir = fileLocator.get(key, Components.interfaces.nsIFile);
   for (var i = 0; i < pathArray.length; ++i) {
     dir.append(pathArray[i]);
     if (shouldCreate && !dir.exists())
@@ -272,22 +258,6 @@ function getDirInternal(key, pathArray, shouldCreate, update) {
  */
 function getFile(key, pathArray) {
   var file = getDir(key, pathArray.slice(0, -1));
-  file.append(pathArray[pathArray.length - 1]);
-  return file;
-}
-
-/**
- * Gets the file at the speciifed hierarchy under the update root directory.
- * @param   pathArray
- *          An array of path components to locate beneath the directory 
- *          specified by |key|. The last item in this array must be the
- *          leaf name of a file.
- * @return  nsIFile object for the file specified. The file is NOT created
- *          if it does not exist, however all required directories along 
- *          the way are.
- */
-function getUpdateFile(pathArray) {
-  var file = getUpdateDir(pathArray.slice(0, -1));
   file.append(pathArray[pathArray.length - 1]);
   return file;
 }
@@ -339,36 +309,18 @@ function getStatusTextFromCode(code, defaultCode) {
 
 /**
  * Get the Active Updates directory
- * @param   key
- *          The Directory Service Key (optional).
- *          If used, don't search local appdata on Win32 and don't create dir.
  * @returns The active updates directory, as a nsIFile object
  */
-function getUpdatesDir(key) {
+function getUpdatesDir() {
   // Right now, we only support downloading one patch at a time, so we always
   // use the same target directory.
   var fileLocator =
       Components.classes["@mozilla.org/file/directory_service;1"].
       getService(Components.interfaces.nsIProperties);
-  var appDir;
-  if (key)
-    appDir = fileLocator.get(key, Components.interfaces.nsILocalFile);
-  else {
-    appDir = fileLocator.get(KEY_APPDIR, Components.interfaces.nsILocalFile);
-#ifdef XP_WIN
-    var programFilesDir = fileLocator.get(KEY_PROGRAMFILES,
-        Components.interfaces.nsILocalFile);
-    if (programFilesDir.contains(appDir, true)) {
-      var relativePath = appDir.getRelativeDescriptor(programFilesDir);
-      var userLocalDir = fileLocator.get(KEY_LOCALDATA,
-          Components.interfaces.nsILocalFile).parent;
-      appDir.setRelativeDescriptor(userLocalDir, relativePath);
-    }
-#endif
-  }
+  var appDir = fileLocator.get(KEY_APPDIR, Components.interfaces.nsIFile);
   appDir.append(DIR_UPDATES);
   appDir.append("0");
-  if (!appDir.exists() && !key)
+  if (!appDir.exists())
     appDir.create(nsILocalFile.DIRECTORY_TYPE, PERMS_DIRECTORY);
   return appDir;
 }
@@ -405,20 +357,17 @@ function writeStatusFile(dir, state) {
 
 /**
  * Removes the Updates Directory
- * @param   key
- *          The Directory Service Key under which update directory resides
- *          (optional).
  */
-function cleanUpUpdatesDir(key) {
+function cleanUpUpdatesDir() {
   // Bail out if we don't have appropriate permissions
   var updateDir;
   try {
-    updateDir = getUpdatesDir(key);
+    updateDir = getUpdatesDir();
   }
   catch (e) {
     return;
   }
-
+        
   var e = updateDir.directoryEntries;
   while (e.hasMoreElements()) {
     var f = e.getNext().QueryInterface(Components.interfaces.nsIFile);
@@ -457,11 +406,8 @@ function cleanUpUpdatesDir(key) {
 
 /**
  * Clean up updates list and the updates directory.
- * @param   key
- *          The Directory Service Key under which update directory resides
- *          (optional).
  */
-function cleanupActiveUpdate(key) {
+function cleanupActiveUpdate() {
   // Move the update from the Active Update list into the Past Updates list.
   var um = 
       Components.classes["@mozilla.org/updates/update-manager;1"].
@@ -470,7 +416,7 @@ function cleanupActiveUpdate(key) {
   um.saveUpdates();
 
   // Now trash the updates directory, since we're done with it
-  cleanUpUpdatesDir(key);
+  cleanUpUpdatesDir();
 }
 
 /**
@@ -653,7 +599,6 @@ function UpdatePatch(patch) {
         LOG("UpdatePatch", "0-sized patch!");
         throw Components.results.NS_ERROR_ILLEGAL_VALUE;
       }
-      // fall through
     default:
       this[attr.name] = attr.value;
       break;
@@ -772,7 +717,7 @@ function Update(update) {
   this._patches = [];
   this.installDate = 0;
   this.isCompleteUpdate = false;
-  this.channel = "default"
+  this.channel = "default";
 
   // Null <update>, assume this is a message container and do no 
   // further initialization
@@ -976,7 +921,8 @@ Update.prototype = {
    * See nsISupports.idl
    */
   QueryInterface: function(iid) {
-    if (!iid.equals(Components.interfaces.nsIUpdate) &&
+    if (!iid.equals(Components.interfaces.nsIUpdate_MOZILLA_1_8_BRANCH) &&
+        !iid.equals(Components.interfaces.nsIUpdate) &&
         !iid.equals(Components.interfaces.nsIPropertyBag) &&
         !iid.equals(Components.interfaces.nsIWritablePropertyBag) &&
         !iid.equals(Components.interfaces.nsISupports))
@@ -1122,30 +1068,6 @@ UpdateService.prototype = {
     if (status == "null")
       status = null;
 
-    var updRootKey = null;
-#ifdef XP_WIN
-    function findPreviousUpdate(key) {
-      var updateDir = getUpdatesDir(key);
-      if (updateDir.exists()) {
-        status = readStatusFile(updateDir);
-        // Previous download should succeed. Otherwise, we will not be here!
-        if (status == STATE_SUCCEEDED)
-          updRootKey = key;
-        else
-          status = null;
-      }
-    }
-
-    // required when updating from Fx 2.0.0.1 to 2.0.0.3 (or later)
-    // on Windows Vista.
-    if (status == null)
-      findPreviousUpdate(KEY_UAPPDATA);
-
-    // required to migrate from older versions.
-    if (status == null)
-      findPreviousUpdate(KEY_APPDIR);
-#endif
-
     if (status == STATE_DOWNLOADING) {
       LOG("UpdateService", "_postUpdateProcessing: Downloading patch, resuming...");
     }
@@ -1189,20 +1111,14 @@ UpdateService.prototype = {
         LOG("UpdateService", "_postUpdateProcessing: Install Succeeded, Showing UI");
         prompter.showUpdateInstalled(update);
 
-#ifdef MOZ_PHOENIX
-        // for now, this is firefox only.  
-        // we need to fix both nsPostUpdateWin.js and 
-        // the uninstaller to work for thunderbird and sunbird
-        //
         // Perform platform-specific post-update processing.
         if (POST_UPDATE_CONTRACTID in Components.classes) {
           Components.classes[POST_UPDATE_CONTRACTID].
               createInstance(Components.interfaces.nsIRunnable).run();
         }
-#endif
-
+        
         // Done with this update. Clean it up.
-        cleanupActiveUpdate(updRootKey);
+        cleanupActiveUpdate();
       }
       else {
         // If we hit an error, then the error code will be included in the
@@ -1374,7 +1290,7 @@ UpdateService.prototype = {
     catch (e) {
       licenseAccepted = false;
     }
-    
+
     var updateEnabled = getPref("getBoolPref", PREF_APP_UPDATE_ENABLED, true);
     if (!updateEnabled) {
       LOG("Checker", "_shouldPrompt: Not prompting because update is " + 
@@ -1460,7 +1376,7 @@ UpdateService.prototype = {
     var update = this.selectUpdate(updates, updates.length);
     if (!update)
       return;
-    
+
     // check if the user said "never" to this version
     // this check is done here, and not in selectUpdate() so that
     // the user can get an upgrade they said "never" to if they
@@ -1473,11 +1389,7 @@ UpdateService.prototype = {
     // note, the never decision should only apply to major updates
     // see bug #350636 for a scenario where this could potentially
     // be an issue
-    //
-    // fix for bug #359093
-    // version might one day come back from AUS as an 
-    // arbitrary (and possibly non ascii) string, so we need to encode it
-    var neverPrefName = PREF_UPDATE_NEVER_BRANCH + encodeURIComponent(update.version);
+    var neverPrefName = PREF_UPDATE_NEVER_BRANCH + update.version;
     var never = getPref("getBoolPref", neverPrefName, false);
     if (never && update.type == "major")
       return;
@@ -1511,7 +1423,7 @@ UpdateService.prototype = {
    */
   get canUpdate() {
     try {
-      var appDirFile = getUpdateFile([FILE_PERMS_TEST]);
+      var appDirFile = getFile(KEY_APPDIR, [FILE_PERMS_TEST]);
       if (!appDirFile.exists()) {
         appDirFile.create(nsILocalFile.NORMAL_FILE_TYPE, PERMS_FILE);
         appDirFile.remove(false);
@@ -1620,7 +1532,8 @@ UpdateService.prototype = {
  */
 function UpdateManager() {
   // Ensure the Active Update file is loaded
-  var updates = this._loadXMLFileIntoArray(getUpdateFile([FILE_UPDATE_ACTIVE]));
+  var updates = this._loadXMLFileIntoArray(getFile(KEY_APPDIR, 
+    [FILE_UPDATE_ACTIVE]));
   if (updates.length > 0)
     this._activeUpdate = updates[0];
 }
@@ -1687,7 +1600,7 @@ UpdateManager.prototype = {
    */
   _ensureUpdates: function() {
     if (!this._updates) {
-      this._updates = this._loadXMLFileIntoArray(getUpdateFile(
+      this._updates = this._loadXMLFileIntoArray(getFile(KEY_APPDIR, 
                         [FILE_UPDATES_DB]));
 
       // Make sure that any active update is part of our updates list
@@ -1717,14 +1630,16 @@ UpdateManager.prototype = {
    * See nsIUpdateService.idl
    */
   get activeUpdate() {
-    if (this._activeUpdate &&
-        this._activeUpdate.channel != getUpdateChannel()) {
-      // User switched channels, clear out any old active updates and remove
-      // partial downloads
-      this._activeUpdate = null;
+    if (this._activeUpdate) {
+      this._activeUpdate.QueryInterface(Components.interfaces.nsIUpdate_MOZILLA_1_8_BRANCH);
+      if (this._activeUpdate.channel != getUpdateChannel()) {
+        // User switched channels, clear out any old active updates and remove
+        // partial downloads
+        this._activeUpdate = null;
       
-      // Destroy the updates directory, since we're done with it.
-      cleanUpUpdatesDir();
+        // Destroy the updates directory, since we're done with it.
+        cleanUpUpdatesDir();
+      }
     }
     return this._activeUpdate;
   },
@@ -1738,7 +1653,7 @@ UpdateManager.prototype = {
     }
     else
       this._writeUpdatesToXMLFile([this._activeUpdate], 
-                                  getUpdateFile([FILE_UPDATE_ACTIVE]));
+                                  getFile(KEY_APPDIR, [FILE_UPDATE_ACTIVE]));
     return activeUpdate;
   },
   
@@ -1810,10 +1725,10 @@ UpdateManager.prototype = {
    */
   saveUpdates: function() {
     this._writeUpdatesToXMLFile([this._activeUpdate], 
-                                getUpdateFile([FILE_UPDATE_ACTIVE]));
+                                getFile(KEY_APPDIR, [FILE_UPDATE_ACTIVE]));
     if (this._updates) {
-      this._writeUpdatesToXMLFile(this._updates.slice(0, 10), 
-                                  getUpdateFile([FILE_UPDATES_DB]));
+      this._writeUpdatesToXMLFile(this._updates, 
+                                  getFile(KEY_APPDIR, [FILE_UPDATES_DB]));
     }
   },
   
@@ -1828,6 +1743,65 @@ UpdateManager.prototype = {
   }
 };
 
+/**
+ * This class implements nsIBadCertListener.  It's job is to prevent "bad cert"
+ * security dialogs from being shown to the user.  It is better to simply fail
+ * if the certificate is bad.  See bug 304286.
+ */
+function BadCertHandler() {
+}
+BadCertHandler.prototype = {
+  /**
+   * See nsIBadCertListener
+   */
+  confirmUnknownIssuer: function(socketInfo, cert, certAddType) {
+    return false;
+  },
+
+  confirmMismatchDomain: function(socketInfo, targetURL, cert) {
+    return false;
+  },
+
+  confirmCertExpired: function(socketInfo, cert) {
+    return false;
+  },
+
+  notifyCrlNextupdate: function(socketInfo, targetURL, cert) {
+  },
+
+  /**
+   * See nsIChannelEventSink
+   */
+  onChannelRedirect: function(oldChannel, newChannel, flags) {
+    // make sure the certificate of the old channel checks out before we follow
+    // a redirect from it.  See bug 340198.
+    checkCert(oldChannel);
+  },
+
+  /**
+   * See nsIInterfaceRequestor
+   */
+  getInterface: function(iid) {
+    if (iid.equals(Components.interfaces.nsIBadCertListener) ||
+        iid.equals(Components.interfaces.nsIChannelEventSink))
+      return this;
+
+    Components.returnCode = Components.results.NS_ERROR_NO_INTERFACE;
+    return null;
+  },
+
+  /**
+   * See nsISupports
+   */
+  QueryInterface: function(iid) {
+    if (!iid.equals(Components.interfaces.nsIBadCertListener) &&
+        !iid.equals(Components.interfaces.nsIChannelEventSink) &&
+        !iid.equals(Components.interfaces.nsIInterfaceRequestor) &&
+        !iid.equals(Components.interfaces.nsISupports))
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    return this;
+  }
+};
 
 /**
  * Checker
@@ -1846,7 +1820,7 @@ Checker.prototype = {
    * The nsIUpdateCheckListener callback
    */
   _callback : null,
-  
+ 
   /**
    * The URL of the update service XML file to connect to that contains details
    * about available updates.
@@ -1891,7 +1865,7 @@ Checker.prototype = {
   checkForUpdates: function(listener, force) {
     if (!listener)
       throw Components.results.NS_ERROR_NULL_POINTER;
-      
+    
     if (!this.updateURL || (!this.enabled && !force))
       return;
       
@@ -2192,7 +2166,7 @@ Downloader.prototype = {
     // to select ourselves. 
     var selectedPatch = update.selectedPatch;
     
-    var state = readStatusFile(updateDir);
+    var state = readStatusFile(updateDir)
 
     // If this is a patch that we know about, then select it.  If it is a patch
     // that we do not know about, then remove it and use our default logic.
@@ -2755,8 +2729,8 @@ UpdatePrompt.prototype = {
             getService(Components.interfaces.nsIStringBundleService);
         var updateBundle = sbs.createBundle(URI_UPDATES_PROPERTIES);
         var title = updateBundle.GetStringFromName("updaterIOErrorTitle");
-        var text = updateBundle.formatStringFromName("updaterIOErrorMsg",
-                                                     [gApp.name, gApp.name], 2);
+        var text = updateBundle.formatStringFromName("updaterIOErrorText",
+                                                     [gApp.name], 1);
         var ww =
             Components.classes["@mozilla.org/embedcomp/window-watcher;1"].
             getService(Components.interfaces.nsIWindowWatcher);

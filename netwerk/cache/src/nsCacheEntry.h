@@ -43,7 +43,6 @@
 
 #include "nsICache.h"
 #include "nsICacheEntryDescriptor.h"
-#include "nsIThread.h"
 #include "nsCacheMetaData.h"
 
 #include "nspr.h"
@@ -104,13 +103,15 @@ public:
      * Data accessors
      */
     nsISupports *Data()                           { return mData; }
-    void         SetData( nsISupports * data);
+    void         SetData( nsISupports *  data)    { mData = data; }
 
     PRUint32 DataSize()                           { return mDataSize; }
     void     SetDataSize( PRUint32  size)         { mDataSize = size; }
 
     void     TouchData();
     
+    void     SetThread(PRThread *aThread)         { mThread = aThread; }
+
     /**
      * Meta data accessors
      */
@@ -239,8 +240,8 @@ private:
     PRUint32                mDataSize;       // 4
     nsCacheDevice *         mCacheDevice;    // 4
     nsCOMPtr<nsISupports>   mSecurityInfo;   // 
-    nsISupports *           mData;           // strong ref
-    nsCOMPtr<nsIThread>     mThread;
+    nsCOMPtr<nsISupports>   mData;           // 
+    PRThread *              mThread;
     nsCacheMetaData         mMetaData;       // 4
     PRCList                 mRequestQ;       // 8
     PRCList                 mDescriptorQ;    // 8

@@ -61,16 +61,13 @@
 #include "nsIRequest.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsIInterfaceRequestor.h"
-#include "nsThreadUtils.h"
 #include "nsAutoPtr.h"
 
 // used to manage our in memory data source of helper applications
-#ifdef MOZ_RDF
 #include "nsRDFCID.h"
 #include "rdf.h"
 #include "nsIRDFService.h"
 #include "nsIRDFRemoteDataSource.h"
-#endif //MOZ_RDF
 #include "nsHelperAppRDF.h"
 #include "nsIMIMEInfo.h"
 #include "nsDirectoryServiceDefs.h"
@@ -87,7 +84,6 @@
 #include "nsIHttpChannel.h"
 #include "nsIEncodedChannel.h"
 #include "nsIMultiPartChannel.h"
-#include "nsIFileChannel.h"
 #include "nsIObserverService.h" // so we can be a profile change observer
 #include "nsIPropertyBag2.h" // for the 64-bit content length
 
@@ -95,9 +91,7 @@
 #include "nsILocalFileMac.h"
 #include "nsIInternetConfigService.h"
 #include "nsIAppleFileDecoder.h"
-#elif defined(XP_OS2)
-#include "nsILocalFileOS2.h"
-#endif
+#endif // defined(XP_MAC) || defined (XP_MACOSX)
 
 #include "nsIPluginHost.h" // XXX needed for ext->type mapping (bug 233289)
 #include "nsEscape.h"
@@ -134,9 +128,7 @@ static const char NEVER_ASK_PREF_BRANCH[] = "browser.helperApps.neverAsk.";
 static const char NEVER_ASK_FOR_SAVE_TO_DISK_PREF[] = "saveToDisk";
 static const char NEVER_ASK_FOR_OPEN_FILE_PREF[]    = "openFile";
 
-#ifdef MOZ_RDF
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
-#endif
 static NS_DEFINE_CID(kPluginManagerCID, NS_PLUGINMANAGER_CID);
 
 /**
@@ -519,7 +511,6 @@ nsExternalHelperAppService::~nsExternalHelperAppService()
 
 nsresult nsExternalHelperAppService::InitDataSource()
 {
-#ifdef MOZ_RDF
   nsresult rv = NS_OK;
 
   // don't re-initialize the data source if we've already done so...
@@ -572,9 +563,6 @@ nsresult nsExternalHelperAppService::InitDataSource()
   mDataSourceInitialized = PR_TRUE;
 
   return rv;
-#else
-  return NS_ERROR_NOT_AVAILABLE;
-#endif
 }
 
 NS_IMETHODIMP nsExternalHelperAppService::DoContent(const nsACString& aMimeContentType,
@@ -714,7 +702,6 @@ NS_IMETHODIMP nsExternalHelperAppService::ApplyDecodingForExtension(const nsACSt
   return NS_OK;
 }
 
-#ifdef MOZ_RDF
 nsresult nsExternalHelperAppService::FillTopLevelProperties(nsIRDFResource * aContentTypeNodeResource, 
                                                             nsIRDFService * aRDFService, nsIMIMEInfo * aMIMEInfo)
 {
@@ -863,11 +850,9 @@ nsresult nsExternalHelperAppService::FillContentHandlerProperties(const char * a
 
   return rv;
 }
-#endif /* MOZ_RDF */
 
 PRBool nsExternalHelperAppService::MIMETypeIsInDataSource(const char * aContentType)
 {
-#ifdef MOZ_RDF
   nsresult rv = InitDataSource();
   if (NS_FAILED(rv)) return PR_FALSE;
   
@@ -899,13 +884,11 @@ PRBool nsExternalHelperAppService::MIMETypeIsInDataSource(const char * aContentT
     
     if (NS_SUCCEEDED(rv) && exists) return PR_TRUE;
   }
-#endif
   return PR_FALSE;
 }
 
 nsresult nsExternalHelperAppService::GetMIMEInfoForMimeTypeFromDS(const nsACString& aContentType, nsIMIMEInfo * aMIMEInfo)
 {
-#ifdef MOZ_RDF
   NS_ENSURE_ARG_POINTER(aMIMEInfo);
   nsresult rv = InitDataSource();
   if (NS_FAILED(rv)) return rv;
@@ -954,9 +937,6 @@ nsresult nsExternalHelperAppService::GetMIMEInfoForMimeTypeFromDS(const nsACStri
   }
 
   return rv;
-#else
-  return NS_ERROR_NOT_AVAILABLE;
-#endif /* MOZ_RDF */
 }
 
 nsresult nsExternalHelperAppService::GetMIMEInfoForExtensionFromDS(const nsACString& aFileExtension, nsIMIMEInfo * aMIMEInfo)
@@ -972,7 +952,6 @@ nsresult nsExternalHelperAppService::GetMIMEInfoForExtensionFromDS(const nsACStr
 PRBool nsExternalHelperAppService::GetTypeFromDS(const nsACString& aExtension,
                                                  nsACString& aType)
 {
-#ifdef MOZ_RDF
   nsresult rv = InitDataSource();
   if (NS_FAILED(rv))
     return PR_FALSE;
@@ -1006,7 +985,6 @@ PRBool nsExternalHelperAppService::GetTypeFromDS(const nsACString& aExtension,
       return PR_TRUE;
     }
   }  // if we have a node in the graph for this extension
-#endif /* MOZ_RDF */
   return PR_FALSE;
 }
 
@@ -1100,26 +1078,47 @@ NS_IMETHODIMP nsExternalHelperAppService::LoadUrl(nsIURI * aURL)
 //  that existing callers aren't expecting. We must do it on an event
 //  callback to make sure we don't hang someone up.
 
-class nsExternalLoadRequest : public nsRunnable {
-  public:
-    nsExternalLoadRequest(nsIURI *uri, nsIPrompt *prompt)
-      : mURI(uri), mPrompt(prompt) {}
-
-    NS_IMETHOD Run() {
-      if (sSrv && sSrv->isExternalLoadOK(mURI, mPrompt))
-        sSrv->LoadUriInternal(mURI);
-      return NS_OK;
-    }
-
-  private:
-    nsCOMPtr<nsIURI>    mURI;
-    nsCOMPtr<nsIPrompt> mPrompt;
+struct extLoadRequest : PLEvent {
+    nsCOMPtr<nsIURI>        uri;
+    nsCOMPtr<nsIPrompt>     prompt;
 };
+
+void *PR_CALLBACK
+nsExternalHelperAppService::handleExternalLoadEvent(PLEvent *event)
+{
+  extLoadRequest* req = NS_STATIC_CAST(extLoadRequest*, event);
+  if (req && sSrv && sSrv->isExternalLoadOK(req->uri, req->prompt))
+    sSrv->LoadUriInternal(req->uri);
+
+  return nsnull;
+}
+
+static void PR_CALLBACK destroyExternalLoadEvent(PLEvent *event)
+{
+  delete NS_STATIC_CAST(extLoadRequest*, event);
+}
 
 NS_IMETHODIMP nsExternalHelperAppService::LoadURI(nsIURI * aURL, nsIPrompt * aPrompt)
 {
-  nsCOMPtr<nsIRunnable> event = new nsExternalLoadRequest(aURL, aPrompt);
-  return NS_DispatchToCurrentThread(event);
+  // post external load event
+  nsCOMPtr<nsIEventQueue> eventQ;
+  nsresult rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ));
+  if (NS_FAILED(rv))
+    return rv;
+
+  extLoadRequest *event = new extLoadRequest;
+  if (!event)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  event->uri    = aURL;
+  event->prompt = aPrompt;
+  PL_InitEvent(event, nsnull, handleExternalLoadEvent, destroyExternalLoadEvent);
+
+  rv = eventQ->PostEvent(event);
+  if (NS_FAILED(rv))
+    PL_DestroyEvent(event);
+
+  return rv;
 }
 
 // helper routines used by LoadURI to check whether we're allowed
@@ -1245,14 +1244,14 @@ PRBool nsExternalHelperAppService::promptForScheme(nsIURI* aURI,
 
     while (charIdx < uri.Length()) {
       // Don't insert characters in the middle of a surrogate pair.
-      if (NS_IS_LOW_SURROGATE(uri[charIdx]))
+      if (IS_LOW_SURROGATE(uri[charIdx]))
         --charIdx;
 
       if (numCharsToCrop > 0 && lineIdx == maxLines / 2) {
         NS_NAMED_LITERAL_STRING(ellipsis, "\n...\n");
 
         // Don't end the crop in the middle of a surrogate pair.
-        if (NS_IS_HIGH_SURROGATE(uri[charIdx + numCharsToCrop - 1]))
+        if (IS_HIGH_SURROGATE(uri[charIdx + numCharsToCrop - 1]))
           ++numCharsToCrop;
 
         uri.Replace(charIdx, numCharsToCrop, ellipsis);
@@ -1372,13 +1371,11 @@ nsExternalHelperAppService::Observe(nsISupports *aSubject, const char *aTopic, c
 {
   if (!strcmp(aTopic, "profile-before-change")) {
     ExpungeTemporaryFiles();
-#ifdef MOZ_RDF
     nsCOMPtr <nsIRDFRemoteDataSource> flushableDataSource = do_QueryInterface(mOverRideDataSource);
     if (flushableDataSource)
       flushableDataSource->Flush();
     mOverRideDataSource = nsnull;
     mDataSourceInitialized = PR_FALSE;
-#endif
   }
   return NS_OK;
 }
@@ -1442,7 +1439,7 @@ nsExternalAppHandler::~nsExternalAppHandler()
 
 NS_IMETHODIMP nsExternalAppHandler::SetWebProgressListener(nsIWebProgressListener2 * aWebProgressListener)
 { 
-  // this call back means we've successfully brought up the 
+  // this call back means we've succesfully brought up the 
   // progress window so set the appropriate flag, even though
   // aWebProgressListener might be null
   
@@ -1495,22 +1492,6 @@ void nsExternalAppHandler::RetargetLoadNotifications(nsIRequest *request)
   if (!aChannel)
     return;
 
-  // we need to store off the original (pre redirect!) channel that initiated the load. We do
-  // this so later on, we can pass any refresh urls associated with the original channel back to the 
-  // window context which started the whole process. More comments about that are listed below....
-  // HACK ALERT: it's pretty bogus that we are getting the document channel from the doc loader. 
-  // ideally we should be able to just use mChannel (the channel we are extracting content from) or
-  // the default load channel associated with the original load group. Unfortunately because
-  // a redirect may have occurred, the doc loader is the only one with a ptr to the original channel 
-  // which is what we really want....
-
-  // Note that we need to do this before removing aChannel from the loadgroup,
-  // since that would mess with the original channel on the loader.
-  nsCOMPtr<nsIDocumentLoader> origContextLoader =
-    do_GetInterface(mWindowContext);
-  if (origContextLoader)
-    origContextLoader->GetDocumentChannel(getter_AddRefs(mOriginalChannel));
-
   nsCOMPtr<nsILoadGroup> oldLoadGroup;
   aChannel->GetLoadGroup(getter_AddRefs(oldLoadGroup));
 
@@ -1520,6 +1501,18 @@ void nsExternalAppHandler::RetargetLoadNotifications(nsIRequest *request)
   aChannel->SetLoadGroup(nsnull);
   aChannel->SetNotificationCallbacks(nsnull);
 
+  // we need to store off the original (pre redirect!) channel that initiated the load. We do
+  // this so later on, we can pass any refresh urls associated with the original channel back to the 
+  // window context which started the whole process. More comments about that are listed below....
+  // HACK ALERT: it's pretty bogus that we are getting the document channel from the doc loader. 
+  // ideally we should be able to just use mChannel (the channel we are extracting content from) or
+  // the default load channel associated with the original load group. Unfortunately because
+  // a redirect may have occurred, the doc loader is the only one with a ptr to the original channel 
+  // which is what we really want....
+  nsCOMPtr<nsIDocumentLoader> origContextLoader =
+    do_GetInterface(mWindowContext);
+  if (origContextLoader)
+    origContextLoader->GetDocumentChannel(getter_AddRefs(mOriginalChannel));
 }
 
 #define SALT_SIZE 8
@@ -1662,13 +1655,9 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIRequest *request, nsISuppo
   mRequest = request;
 
   nsCOMPtr<nsIChannel> aChannel = do_QueryInterface(request);
-  
-  nsresult rv;
-  
-  nsCOMPtr<nsIFileChannel> fileChan(do_QueryInterface(request));
-  mIsFileChannel = fileChan != nsnull;
 
   // Get content length
+  nsresult rv;
   nsCOMPtr<nsIPropertyBag2> props(do_QueryInterface(request, &rv));
   if (props) {
     rv = props->GetPropertyAsInt64(NS_CHANNEL_PROP_CONTENT_LENGTH,
@@ -2159,7 +2148,7 @@ nsresult nsExternalAppHandler::ExecuteDesiredAction()
     {
       if (!mCanceled)
       {
-        mWebProgressListener->OnProgressChange64(nsnull, nsnull, mProgress, mContentLength, mProgress, mContentLength);
+        mWebProgressListener->OnProgressChange64(nsnull, nsnull, mContentLength, mContentLength, mContentLength, mContentLength);
       }
       mWebProgressListener->OnStateChange(nsnull, nsnull, nsIWebProgressListener::STATE_STOP, NS_OK);
     }
@@ -2285,13 +2274,13 @@ nsresult nsExternalAppHandler::MoveFile(nsIFile * aNewFileLocation)
       fileToUse->Remove(PR_FALSE);
 
      // extract the new leaf name from the file location
-     nsAutoString fileName;
-     fileToUse->GetLeafName(fileName);
+     nsCAutoString fileName;
+     fileToUse->GetNativeLeafName(fileName);
      nsCOMPtr<nsIFile> directoryLocation;
      rv = fileToUse->GetParent(getter_AddRefs(directoryLocation));
      if (directoryLocation)
      {
-       rv = mTempFile->MoveTo(directoryLocation, fileName);
+       rv = mTempFile->MoveToNative(directoryLocation, fileName);
      }
      if (NS_FAILED(rv))
      {
@@ -2301,19 +2290,6 @@ nsresult nsExternalAppHandler::MoveFile(nsIFile * aNewFileLocation)
        SendStatusChange(kWriteError, rv, nsnull, path);
        Cancel(rv); // Cancel (and clean up temp file).
      }
-#if defined(XP_OS2)
-     else
-     {
-       // tag the file with its source URI
-       nsCOMPtr<nsILocalFileOS2> localFileOS2 = do_QueryInterface(fileToUse);
-       if (localFileOS2)
-       {
-         nsCAutoString url;
-         mSourceUrl->GetSpec(url);
-         localFileOS2->SetFileSource(url);
-       }
-     }
-#endif
   }
 
   return rv;
@@ -2374,17 +2350,17 @@ NS_IMETHODIMP nsExternalAppHandler::SaveToDisk(nsIFile * aNewFileLocation, PRBoo
     mFinalFileDestination->Clone(getter_AddRefs(movedFile));
     if (movedFile) {
       // Get the old leaf name and append .part to it
-      nsAutoString name;
-      mFinalFileDestination->GetLeafName(name);
+      nsCAutoString name;
+      mFinalFileDestination->GetNativeLeafName(name);
       name.AppendLiteral(".part");
-      movedFile->SetLeafName(name);
+      movedFile->SetNativeLeafName(name);
 
       nsCOMPtr<nsIFile> dir;
       movedFile->GetParent(getter_AddRefs(dir));
 
       mOutStream->Close();
 
-      rv = mTempFile->MoveTo(dir, name);
+      rv = mTempFile->MoveToNative(dir, name);
       if (NS_SUCCEEDED(rv)) // if it failed, we just continue with $TEMP
         mTempFile = movedFile;
       rv = NS_NewLocalFileOutputStream(getter_AddRefs(mOutStream), mTempFile,
@@ -2484,7 +2460,7 @@ NS_IMETHODIMP nsExternalAppHandler::LaunchWithApplication(nsIFile * aApplication
   // Now check if the file is local, in which case we won't bother with saving
   // it to a temporary directory and just launch it from where it is
   nsCOMPtr<nsIFileURL> fileUrl(do_QueryInterface(mSourceUrl));
-  if (fileUrl && mIsFileChannel)
+  if (fileUrl)
   {
     Cancel(NS_BINDING_ABORTED);
     nsCOMPtr<nsIFile> file;
@@ -2640,7 +2616,8 @@ nsresult nsExternalAppHandler::MaybeCloseWindow()
     nsCOMPtr<nsIDOMWindowInternal> opener;
     internalWindow->GetOpener(getter_AddRefs(opener));
 
-    if (opener) {
+    PRBool isClosed;
+    if (opener && NS_SUCCEEDED(opener->GetClosed(&isClosed)) && !isClosed) {
       mWindowContext = do_GetInterface(opener);
 
       // Now close the old window.  Do it on a timer so that we don't run
@@ -2960,7 +2937,7 @@ nsresult nsExternalHelperAppService::GetMIMEInfoForMimeTypeFromExtras(const nsAC
       {
           // This is the one. Set attributes appropriately.
           aMIMEInfo->SetFileExtensions(nsDependentCString(extraMimeEntries[index].mFileExtensions));
-          aMIMEInfo->SetDescription(NS_ConvertASCIItoUTF16(extraMimeEntries[index].mDescription));
+          aMIMEInfo->SetDescription(NS_ConvertASCIItoUCS2(extraMimeEntries[index].mDescription));
           aMIMEInfo->SetMacType(extraMimeEntries[index].mMactype);
           aMIMEInfo->SetMacCreator(extraMimeEntries[index].mMacCreator);
 

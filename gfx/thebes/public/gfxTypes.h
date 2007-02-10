@@ -39,20 +39,13 @@
 #define GFX_TYPES_H
 
 #include "prtypes.h"
-
 /**
  * Currently needs to be 'double' for Cairo compatibility. Could
  * become 'float', perhaps, in some configurations.
  */
 typedef double gfxFloat;
 
-#if defined(MOZ_ENABLE_LIBXUL) || defined(MOZ_STATIC_BUILD)
-# define THEBES_API
-#elif defined(IMPL_THEBES)
-# define THEBES_API NS_EXPORT
-#else
-# define THEBES_API NS_IMPORT
-#endif
+
 
 /**
  * Define refcounting for Thebes.  For now use the stuff from nsISupportsImpl
@@ -61,27 +54,33 @@ typedef double gfxFloat;
 #include "nsISupportsImpl.h"
 #include "nsAutoPtr.h"
 
-#define THEBES_INLINE_DECL_REFCOUNTING(_class)                                \
-public:                                                                       \
-    nsrefcnt AddRef(void) {                                                   \
-        NS_PRECONDITION(PRInt32(mRefCnt) >= 0, "illegal refcnt");             \
-        ++mRefCnt;                                                            \
-        NS_LOG_ADDREF(this, mRefCnt, #_class, sizeof(*this));                 \
-        return mRefCnt;                                                       \
-    }                                                                         \
-    nsrefcnt Release(void) {                                                  \
-        NS_PRECONDITION(0 != mRefCnt, "dup release");                         \
-        --mRefCnt;                                                            \
-        NS_LOG_RELEASE(this, mRefCnt, #_class);                               \
-        if (mRefCnt == 0) {                                                   \
-            mRefCnt = 1; /* stabilize */                                      \
-            NS_DELETEXPCOM(this);                                             \
-            return 0;                                                         \
-        }                                                                     \
-        return mRefCnt;                                                       \
-    }                                                                         \
-protected:                                                                    \
-    nsAutoRefCnt mRefCnt;                                                     \
+#define THEBES_IMPL_REFCOUNTING(_class)                          \
+    NS_IMPL_ADDREF(_class)                                       \
+    NS_IMPL_RELEASE(_class)
+
+#define THEBES_DECL_REFCOUNTING_ABSTRACT                         \
+public:                                                          \
+  NS_IMETHOD_(nsrefcnt) AddRef(void) = 0;                        \
+  NS_IMETHOD_(nsrefcnt) Release(void) = 0;                       \
+protected:                                                       \
+  nsAutoRefCnt mRefCnt;                                          \
+  NS_DECL_OWNINGTHREAD                                           \
 public:
+
+
+#define THEBES_DECL_REFCOUNTING                                  \
+public:                                                          \
+  NS_IMETHOD_(nsrefcnt) AddRef(void);                            \
+  NS_IMETHOD_(nsrefcnt) Release(void);                           \
+protected:                                                       \
+  nsAutoRefCnt mRefCnt;                                          \
+  NS_DECL_OWNINGTHREAD                                           \
+public:
+
+#define THEBES_DECL_ISUPPORTS_INHERITED                          \
+public:                                                          \
+  NS_IMETHOD_(nsrefcnt) AddRef(void);                            \
+  NS_IMETHOD_(nsrefcnt) Release(void);                           \
+
 
 #endif /* GFX_TYPES_H */

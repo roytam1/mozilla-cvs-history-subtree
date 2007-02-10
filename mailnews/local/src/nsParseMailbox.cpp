@@ -89,6 +89,7 @@
 #include "nsICryptoHash.h"
 
 static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
+static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 
 /* the following macros actually implement addref, release and query interface for our component. */
@@ -117,7 +118,7 @@ NS_IMETHODIMP nsMsgMailboxParser::OnStartRequest(nsIRequest *request, nsISupport
     // we have an error.
     nsresult rv = NS_OK;
 
-    nsCOMPtr<nsIIOService> ioServ(do_GetService(NS_IOSERVICE_CONTRACTID, &rv));
+    nsCOMPtr<nsIIOService> ioServ(do_GetService(kIOServiceCID, &rv));
 
     nsCOMPtr<nsIMailboxUrl> runningUrl = do_QueryInterface(ctxt, &rv);
 
@@ -475,28 +476,6 @@ nsParseMailMessageState::nsParseMailMessageState()
   m_position = 0;
   m_IgnoreXMozillaStatus = PR_FALSE;
   m_state = nsIMsgParseMailMsgState::ParseBodyState;
-
-  // setup handling of custom db headers, headers that are added to .msf files
-  // as properties of the nsMsgHdr objects, controlled by the 
-  // pref mailnews.customDBHeaders, a space-delimited list of headers.
-  // E.g., if mailnews.customDBHeaders is "X-Spam-Score", and we're parsing
-  // a mail message with the X-Spam-Score header, we'll set the 
-  // "x-spam-score" property of nsMsgHdr to the value of the header.
-  m_customDBHeaderValues = nsnull;
-  nsXPIDLCString customDBHeaders;
-  nsCOMPtr<nsIPrefBranch> pPrefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
-  if (pPrefBranch)
-  {
-     pPrefBranch->GetCharPref("mailnews.customDBHeaders",  getter_Copies(customDBHeaders));
-     ToLowerCase(customDBHeaders);
-     m_customDBHeaders.ParseString(customDBHeaders, " ");
-     if (m_customDBHeaders.Count())
-     {
-       m_customDBHeaderValues = new struct message_header [m_customDBHeaders.Count()];
-       if (!m_customDBHeaderValues)
-         m_customDBHeaders.Clear();
-     }
-  }
   Clear();
 
   m_HeaderAddressParser = do_GetService(NS_MAILNEWS_MIME_HEADER_PARSER_CONTRACTID);
@@ -506,7 +485,6 @@ nsParseMailMessageState::~nsParseMailMessageState()
 {
   ClearAggregateHeader (m_toList);
   ClearAggregateHeader (m_ccList);
-  delete [] m_customDBHeaderValues;
 }
 
 void nsParseMailMessageState::Init(PRUint32 fileposition)
@@ -546,10 +524,6 @@ NS_IMETHODIMP nsParseMailMessageState::Clear()
   ClearAggregateHeader (m_ccList);
   m_headers.ResetWritePos();
   m_envelope.ResetWritePos();
-  m_receivedTime = LL_ZERO;
-  for (PRInt32 i = 0; i < m_customDBHeaders.Count(); i++)
-    m_customDBHeaderValues[i].length = 0;
-
   return NS_OK;
 }
 
@@ -876,8 +850,7 @@ int nsParseMailMessageState::ParseHeaders ()
     char *end;
     char *value = 0;
     struct message_header *header = 0;
-    struct message_header receivedBy;
-
+    
     if (! colon)
       break;
     
@@ -930,11 +903,6 @@ int nsParseMailMessageState::ParseHeaders ()
         header = &m_mdn_dnt;
       else if (!nsCRT::strncasecmp("Reply-To", buf, end - buf))
         header = &m_replyTo;
-      else if (!nsCRT::strncasecmp("Received", buf, end - buf))
-      {
-        header = &receivedBy;
-        header->length = 0;
-      }
       break;
     case 'S': case 's':
       if (!nsCRT::strncasecmp ("Subject", buf, end - buf))
@@ -972,15 +940,6 @@ int nsParseMailMessageState::ParseHeaders ()
         header = &m_keywords;
       break;
     }
-    if (!header && m_customDBHeaders.Count())
-    {
-      nsDependentCSubstring headerStr(buf, end);
-
-      ToLowerCase(headerStr);
-      PRInt32 customHeaderIndex = m_customDBHeaders.IndexOf(headerStr);
-      if (customHeaderIndex != kNotFound)
-        header = & m_customDBHeaderValues[customHeaderIndex];
-    }
     
     buf = colon + 1;
     while (*buf == ' ' || *buf == '\t')
@@ -989,9 +948,6 @@ int nsParseMailMessageState::ParseHeaders ()
     value = buf;
     if (header)
       header->value = value;
-    else
-    {
-    }
     
 SEARCH_NEWLINE:
     while (*buf != 0 && *buf != nsCRT::CR && *buf != nsCRT::LF)
@@ -1038,26 +994,9 @@ SEARCH_NEWLINE:
       while (header->length > 0 &&
         IS_SPACE (header->value [header->length - 1]))
         ((char *) header->value) [--header->length] = 0;
-      if (header == &receivedBy && LL_IS_ZERO(m_receivedTime))
-      {
-        // parse Received: header for date.
-        // We trust the first header as that is closest to recipient,
-        // and less likely to be spoofed.
-        nsCAutoString receivedHdr(header->value, header->length);
-        PRInt32 lastSemicolon = receivedHdr.RFindChar(';');
-        if (lastSemicolon != kNotFound)
-        {
-          nsCAutoString receivedDate;
-          receivedHdr.Right(receivedDate, receivedHdr.Length() - lastSemicolon - 1);
-          receivedDate.Trim(" \t\b\r\n");
-          PRTime resultTime;
-          if (PR_ParseTimeString (receivedDate.get(), PR_FALSE, &resultTime) == PR_SUCCESS)
-            m_receivedTime = resultTime;
-        }
-      }
     }
-  }
-  return 0;
+        }
+        return 0;
 }
 
 int nsParseMailMessageState::ParseEnvelope (const char *line, PRUint32 line_size)
@@ -1443,19 +1382,11 @@ int nsParseMailMessageState::FinalizeHeaders()
         else if (inReplyTo != nsnull)
           m_newMsgHdr->SetReferences(inReplyTo->value);
         
-        if (!LL_IS_ZERO(m_receivedTime))
-          m_newMsgHdr->SetDate(m_receivedTime);
-        else 
-        {
-          // if there's no date, or it's mal-formed, use now as the time.
-          // PR_ParseTimeString won't touch resultTime unless it succeeds.
-          // (this doesn't affect local messages, because we use the envelope
-          // date if there's no Date: header, but it would affect IMAP msgs
-          // w/o a Date: hdr or Received: headers)
-          PRTime resultTime = PR_Now();
-          if (date) 
-            PR_ParseTimeString (date->value, PR_FALSE, &resultTime);
-          m_newMsgHdr->SetDate(resultTime);
+        if (date) {
+          PRTime resultTime;
+          PRStatus timeStatus = PR_ParseTimeString (date->value, PR_FALSE, &resultTime);
+          if (PR_SUCCESS == timeStatus)
+            m_newMsgHdr->SetDate(resultTime);
         }
         if (priority)
           m_newMsgHdr->SetPriorityString(priority->value);
@@ -1463,11 +1394,6 @@ int nsParseMailMessageState::FinalizeHeaders()
           m_newMsgHdr->SetPriority(nsMsgPriority::none);
         if (keywords)
           m_newMsgHdr->SetStringProperty("keywords", keywords->value);
-        for (PRInt32 i = 0; i < m_customDBHeaders.Count(); i++)
-        {
-          if (m_customDBHeaderValues[i].length)
-            m_newMsgHdr->SetStringProperty((m_customDBHeaders[i])->get(), m_customDBHeaderValues[i].value);
-        }
         if (content_type)
         {
           char *substring = PL_strstr(content_type->value, "charset");
@@ -1679,9 +1605,6 @@ PRInt32 nsParseNewMailState::PublishMsgHeader(nsIMsgWindow *msgWindow)
                   m_inboxFileStream->seek(m_inboxFileSpec.GetFileSize());
   
                 m_mailDB->RemoveHeaderMdbRow(m_newMsgHdr);
-                // tell parser we've truncated the inbox.
-                nsParseMailMessageState::Init(msgOffset);
-
               }
               break;
             case nsIMsgIncomingServer::moveDupsToTrash:
@@ -1718,20 +1641,11 @@ PRInt32 nsParseNewMailState::PublishMsgHeader(nsIMsgWindow *msgWindow)
           m_newMsgHdr->OrFlags(MSG_FLAG_NEW, &newFlags);
         
         m_mailDB->AddNewHdrToDB(m_newMsgHdr, PR_TRUE);
-        NotifyGlobalListeners(m_newMsgHdr);
       }
     } // if it was moved by imap filter, m_parseMsgState->m_newMsgHdr == nsnull
     m_newMsgHdr = nsnull;
   }
   return 0;
-}
-
-void nsParseNewMailState::NotifyGlobalListeners(nsIMsgDBHdr *newHdr)
-{
-  if (!m_notificationService)
-    m_notificationService = do_GetService("@mozilla.org/messenger/msgnotificationservice;1");
-  if (m_notificationService)
-    m_notificationService->NotifyItemAdded(newHdr);
 }
 
 nsresult nsParseNewMailState::GetTrashFolder(nsIMsgFolder **pTrashFolder)
@@ -2026,7 +1940,7 @@ NS_IMETHODIMP nsParseNewMailState::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWi
         break;
       case nsMsgFilterAction::FetchBodyFromPop3Server:
         {
-      	  PRUint32 flags = 0;
+	  PRUint32 flags = 0;
           nsCOMPtr <nsIMsgFolder> downloadFolder;
           msgHdr->GetFolder(getter_AddRefs(downloadFolder));
           nsCOMPtr <nsIMsgLocalMailFolder> localFolder = do_QueryInterface(downloadFolder);
@@ -2045,7 +1959,7 @@ NS_IMETHODIMP nsParseNewMailState::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWi
             msgIsNew = PR_FALSE;
             // Don't do anything else in this filter, wait until we
             // have the full message.
-            *applyMore = PR_FALSE;
+	    *applyMore = PR_FALSE;
           }
         }
         break;
@@ -2060,8 +1974,7 @@ NS_IMETHODIMP nsParseNewMailState::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWi
   {
     PRInt32 numNewMessages;
     m_downloadFolder->GetNumNewMessages(PR_FALSE, &numNewMessages);
-    if (numNewMessages > 0)
-      m_downloadFolder->SetNumNewMessages(numNewMessages - 1);
+    m_downloadFolder->SetNumNewMessages(numNewMessages - 1);
   }
   return rv;
 }
@@ -2337,7 +2250,6 @@ nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr,
         }
       }
       destMailDB->AddNewHdrToDB(newHdr, PR_TRUE);
-      NotifyGlobalListeners(newHdr);
       m_msgToForwardOrReply = newHdr;
     }
   }

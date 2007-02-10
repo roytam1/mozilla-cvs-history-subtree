@@ -43,6 +43,7 @@
 #include "nsISocketTransportService.h"
 #include "nsISocketTransport.h"
 #include "nsXPIDLString.h"
+#include "nsSpecialSystemDirectory.h"
 #include "nsILoadGroup.h"
 #include "nsIIOService.h"
 #include "nsNetUtil.h"
@@ -58,11 +59,12 @@
 #include "nsIStringBundle.h"
 #include "nsIProtocolProxyService.h"
 #include "nsIProxyInfo.h"
-#include "nsThreadUtils.h"
+#include "nsEventQueueUtils.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
-#include "nsDirectoryServiceDefs.h"
-#include "nsMsgUtils.h"
+
+static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
+static NS_DEFINE_CID(kStreamTransportServiceCID, NS_STREAMTRANSPORTSERVICE_CID);
 
 NS_IMPL_THREADSAFE_ADDREF(nsMsgProtocol)
 NS_IMPL_THREADSAFE_RELEASE(nsMsgProtocol)
@@ -85,10 +87,9 @@ nsMsgProtocol::nsMsgProtocol(nsIURI * aURL)
   m_readCount = 0;
   mLoadFlags = 0;
   m_socketIsOpen = PR_FALSE;
-
-  GetSpecialDirectoryWithFileName(NS_OS_TEMP_DIR, "tempMessage.eml",
-                                  getter_AddRefs(m_tempMsgFile));
-
+		
+  m_tempMsgFileSpec = nsSpecialSystemDirectory(nsSpecialSystemDirectory::OS_TemporaryDirectory);
+  m_tempMsgFileSpec += "tempMessage.eml";
   mSuppressListenerNotifications = PR_FALSE;
   InitFromURI(aURL);
 }
@@ -125,7 +126,7 @@ nsMsgProtocol::OpenNetworkSocketWithInfo(const char * aHostName,
   NS_ENSURE_ARG(aHostName);
 
   nsresult rv = NS_OK;
-  nsCOMPtr<nsISocketTransportService> socketService (do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID));
+  nsCOMPtr<nsISocketTransportService> socketService (do_GetService(kSocketTransportServiceCID));
   NS_ENSURE_TRUE(socketService, NS_ERROR_FAILURE);
   
   // with socket connections we want to read as much data as arrives
@@ -141,7 +142,10 @@ nsMsgProtocol::OpenNetworkSocketWithInfo(const char * aHostName,
   strans->SetSecurityCallbacks(callbacks);
 
   // creates cyclic reference!
-  strans->SetEventSink(this, NS_GetCurrentThread());
+  nsCOMPtr<nsIEventQueue> eventQ;
+  NS_GetCurrentEventQ(getter_AddRefs(eventQ));
+  if (eventQ)
+    strans->SetEventSink(this, eventQ);
 
   m_socketIsOpen = PR_FALSE;
   m_transport = strans;
@@ -263,7 +267,7 @@ nsresult nsMsgProtocol::OpenFileSocket(nsIURI * aURL, PRUint32 aStartPosition, P
 
   // create input stream transport
   nsCOMPtr<nsIStreamTransportService> sts =
-      do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
+      do_GetService(kStreamTransportServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
 
   rv = sts->CreateInputTransport(stream, nsInt64(aStartPosition),
@@ -559,7 +563,8 @@ NS_IMETHODIMP nsMsgProtocol::GetURI(nsIURI* *aURI)
  
 NS_IMETHODIMP nsMsgProtocol::Open(nsIInputStream **_retval)
 {
-  return NS_ImplementChannelOpen(this, _retval);
+  NS_NOTREACHED("Open");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP nsMsgProtocol::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
@@ -735,7 +740,7 @@ nsMsgProtocol::OnTransportStatus(nsITransport *transport, nsresult status,
 
 NS_IMETHODIMP nsMsgProtocol::IsPending(PRBool *result)
 {
-    *result = m_channelListener != nsnull;
+    *result = PR_TRUE;
     return NS_OK; 
 }
 
@@ -893,7 +898,7 @@ nsresult nsMsgProtocol::DoGSSAPIStep1(const char *service, const char *username,
     m_authModule = do_CreateInstance(NS_AUTH_MODULE_CONTRACTID_PREFIX "sasl-gssapi", &rv);
     NS_ENSURE_SUCCESS(rv,rv);
 
-    m_authModule->Init(service, nsIAuthModule::REQ_DEFAULT, nsnull, NS_ConvertUTF8toUTF16(username).get(), nsnull);
+    m_authModule->Init(service, nsIAuthModule::REQ_DEFAULT, nsnull, NS_ConvertUTF8toUCS2(username).get(), nsnull);
 
     void *outBuf;
     PRUint32 outBufLen;
@@ -978,8 +983,8 @@ nsresult nsMsgProtocol::DoNtlmStep1(const char *username, const char *password, 
     if (NS_FAILED(rv) || !m_authModule)
         return rv;
 
-    m_authModule->Init(nsnull, 0, nsnull, NS_ConvertUTF8toUTF16(username).get(),
-                       NS_ConvertUTF8toUTF16(password).get());
+    m_authModule->Init(nsnull, 0, nsnull, NS_ConvertUTF8toUCS2(username).get(),
+                       NS_ConvertUTF8toUCS2(password).get());
 
     void *outBuf;
     PRUint32 outBufLen;
@@ -1088,7 +1093,7 @@ public:
 
         // try to write again...
         if (NS_SUCCEEDED(rv))
-          rv = aOutStream->AsyncWait(this, 0, 0, mMsgProtocol->mProviderThread);
+          rv = aOutStream->AsyncWait(this, 0, 0, mMsgProtocol->mProviderEventQ);
 
         NS_ASSERTION(NS_SUCCEEDED(rv) || rv == NS_BINDING_ABORTED, "unexpected error writing stream");
         return NS_OK;
@@ -1187,7 +1192,7 @@ NS_IMETHODIMP nsMsgFilePostHelper::OnDataAvailable(nsIRequest * /* aChannel */, 
     // things off again.
     mProtInstance->mSuspendedWrite = PR_FALSE;
     mProtInstance->mAsyncOutStream->AsyncWait(mProtInstance->mProvider, 0, 0,
-                                              mProtInstance->mProviderThread);
+                                              mProtInstance->mProviderEventQ);
   } 
 
   return NS_OK;
@@ -1454,7 +1459,7 @@ nsresult nsMsgAsyncWriteProtocol::SetupTransportState()
       PR_TRUE, 
       PR_TRUE);
     
-    rv = NS_GetCurrentThread(getter_AddRefs(mProviderThread));
+    rv = NS_GetCurrentEventQ(getter_AddRefs(mProviderEventQ));
     if (NS_FAILED(rv)) return rv;
     
     nsMsgProtocolStreamProvider *provider;
@@ -1472,7 +1477,7 @@ nsresult nsMsgAsyncWriteProtocol::SetupTransportState()
     if (NS_FAILED(rv)) return rv;
     
     // wait for the output stream to become writable
-    rv = mAsyncOutStream->AsyncWait(mProvider, 0, 0, mProviderThread);
+    rv = mAsyncOutStream->AsyncWait(mProvider, 0, 0, mProviderEventQ);
 	} // if m_transport
 
 	return rv;
@@ -1494,7 +1499,7 @@ nsresult nsMsgAsyncWriteProtocol::CloseSocket()
 
   mAsyncOutStream = 0;
   mProvider = 0;
-  mProviderThread = 0;
+  mProviderEventQ = 0;
 	return rv;
 }
 
@@ -1536,7 +1541,7 @@ PRInt32 nsMsgAsyncWriteProtocol::SendData(nsIURI * aURL, const char * dataBuffer
       // data to write (i.e. the pipe went empty). So resume the channel to kick
       // things off again.
       mSuspendedWrite = PR_FALSE;
-      mAsyncOutStream->AsyncWait(mProvider, 0, 0, mProviderThread);
+      mAsyncOutStream->AsyncWait(mProvider, 0, 0, mProviderEventQ);
     } 
     return NS_OK;
   }

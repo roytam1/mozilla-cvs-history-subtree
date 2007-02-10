@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim:set ts=2 sw=2 sts=2 et cin: */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -21,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  Darin Fisher <darin@meer.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -40,36 +38,65 @@
 #ifndef nsFileChannel_h__
 #define nsFileChannel_h__
 
-#include "nsBaseChannel.h"
 #include "nsIFileChannel.h"
+#include "nsIFileURL.h"
 #include "nsIUploadChannel.h"
+#include "nsIRequest.h"
+#include "nsIInterfaceRequestor.h"
+#include "nsIProgressEventSink.h"
+#include "nsILoadGroup.h"
+#include "nsIStreamListener.h"
+#include "nsIInputStream.h"
+#include "nsITransport.h"
+#include "nsCOMPtr.h"
+#include "nsString.h"
+#include "nsHashPropertyBag.h"
 
-class nsFileChannel : public nsBaseChannel
+class nsFileChannel : public nsHashPropertyBag
                     , public nsIFileChannel
                     , public nsIUploadChannel
+                    , public nsIStreamListener
+                    , public nsITransportEventSink
 {
 public: 
-  NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_NSIFILECHANNEL
-  NS_DECL_NSIUPLOADCHANNEL
+    NS_DECL_ISUPPORTS_INHERITED
+    NS_DECL_NSIREQUEST
+    NS_DECL_NSICHANNEL
+    NS_DECL_NSIFILECHANNEL
+    NS_DECL_NSIUPLOADCHANNEL
+    NS_DECL_NSIREQUESTOBSERVER
+    NS_DECL_NSISTREAMLISTENER
+    NS_DECL_NSITRANSPORTEVENTSINK
 
-  nsFileChannel(nsIURI *uri) {
-    SetURI(uri);
-  }
+    nsFileChannel();
+    virtual ~nsFileChannel() {}
 
-protected:
-  // Called to construct a blocking file input stream for the given file.  This
-  // method also returns a best guess at the content-type for the data stream.
-  // NOTE: If the channel has a type hint set, contentType will be left
-  // untouched. The caller should not use it in that case.
-  nsresult MakeFileInputStream(nsIFile *file, nsCOMPtr<nsIInputStream> &stream,
-                               nsCString &contentType);
-
-  virtual nsresult OpenContentStream(PRBool async, nsIInputStream **result);
+    nsresult Init(nsIURI *uri);
 
 private:
-  nsCOMPtr<nsIInputStream> mUploadStream;
-  PRInt64 mUploadLength;
+
+    nsresult GetClonedFile(nsIFile **);
+    nsresult EnsureStream();
+
+    nsCOMPtr<nsIFileURL>            mURL;
+    nsCOMPtr<nsIURI>                mOriginalURI;
+    nsCOMPtr<nsISupports>           mOwner;
+    nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
+    nsCOMPtr<nsIProgressEventSink>  mProgressSink;
+    nsCOMPtr<nsILoadGroup>          mLoadGroup;
+    nsCOMPtr<nsIStreamListener>     mListener;
+    nsCOMPtr<nsISupports>           mListenerContext;
+    nsCString                       mContentType;
+    nsCString                       mContentCharset;
+    PRInt32                         mContentLength;
+    PRInt32                         mUploadLength;
+    PRUint32                        mLoadFlags;
+    nsresult                        mStatus;
+
+    nsCOMPtr<nsIRequest>            mRequest;
+    nsCOMPtr<nsIInputStream>        mStream;
+    PRBool                          mIsDir;
+    PRBool                          mUploading;
 };
 
 #endif // !nsFileChannel_h__

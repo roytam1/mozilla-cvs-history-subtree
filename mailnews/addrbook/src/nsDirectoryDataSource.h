@@ -125,8 +125,6 @@ protected:
     nsIRDFNode **target);
 	nsresult createDirectoryIsWriteableNode(nsIAbDirectory *directory,
                                             nsIRDFNode **target);
-  nsresult createDirectorySupportsMailingListsNode(nsIAbDirectory* directory,
-                                                   nsIRDFNode **target);
   nsresult createDirectoryTreeNameSortNode(nsIAbDirectory *directory,
                                             nsIRDFNode **target);
 	nsresult getDirectoryArcLabelsOut(nsIAbDirectory *directory,
@@ -151,13 +149,13 @@ protected:
 
   nsCOMPtr<nsIRDFResource> kNC_Child;
   nsCOMPtr<nsIRDFResource> kNC_DirName;
+  nsCOMPtr<nsIRDFResource> kNC_CardChild;
   nsCOMPtr<nsIRDFResource> kNC_DirUri;
   nsCOMPtr<nsIRDFResource> kNC_IsMailList;
   nsCOMPtr<nsIRDFResource> kNC_IsRemote;
   nsCOMPtr<nsIRDFResource> kNC_IsSecure;
   nsCOMPtr<nsIRDFResource> kNC_IsWriteable;
   nsCOMPtr<nsIRDFResource> kNC_DirTreeNameSort;
-  nsCOMPtr<nsIRDFResource> kNC_SupportsMailingLists;
   nsCOMPtr<nsICollation> mCollationKeyGenerator;
   
   // commands
@@ -172,5 +170,8 @@ protected:
 private:
   nsresult Cleanup();
 };
+
+nsresult NS_NewAbDirectoryDataSource(const nsIID& iid, void **result);
+
 
 #endif

@@ -79,13 +79,12 @@ function loginPageInit() {
       // retrieve data from previously entered pages
       var type = parent.getCurrentServerType(pageData);
 
-      protocolinfo = Components.classes["@mozilla.org/messenger/protocol/info;1?type=" + type]
-                               .getService(Components.interfaces.nsIMsgProtocolInfo);
+      dump("type = " + type + "\n");
+      protocolinfo = Components.classes["@mozilla.org/messenger/protocol/info;1?type=" + type].getService(Components.interfaces.nsIMsgProtocolInfo);
 
       if (protocolinfo.requiresUsername) {
         // since we require a username, use the uid from the email address
-        loginNameInput.value = parent.getUsernameFromEmail(pageData.identity.email.value, gCurrentAccountData &&
-                                                           gCurrentAccountData.incomingServerUserNameRequiresDomain);
+        loginNameInput.value = parent.getUsernameFromEmail(pageData.identity.email.value);
       }
     }
 

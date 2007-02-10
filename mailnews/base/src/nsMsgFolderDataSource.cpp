@@ -64,7 +64,7 @@
 #include "nsIMsgHdr.h"
 #include "nsTraceRefcnt.h"
 #include "nsIMsgFolder.h" // TO include biffState enum. Change to bool later...
-#include "nsIMutableArray.h"
+#include "nsArray.h"
 #include "nsIPop3IncomingServer.h"
 #include "nsINntpIncomingServer.h"
 #include "nsTextFormatter.h"
@@ -142,7 +142,6 @@ nsIAtom * nsMsgFolderDataSource::kNameAtom = nsnull;
 nsIAtom * nsMsgFolderDataSource::kSynchronizeAtom = nsnull;
 nsIAtom * nsMsgFolderDataSource::kOpenAtom = nsnull;
 nsIAtom * nsMsgFolderDataSource::kIsDeferredAtom = nsnull;
-nsIAtom * nsMsgFolderDataSource::kIsSecureAtom = nsnull;
 nsIAtom * nsMsgFolderDataSource::kCanFileMessagesAtom = nsnull;
 nsIAtom * nsMsgFolderDataSource::kInVFEditSearchScopeAtom = nsnull;
 
@@ -228,7 +227,6 @@ nsMsgFolderDataSource::nsMsgFolderDataSource()
     kSynchronizeAtom             = NS_NewAtom("Synchronize");
     kOpenAtom                    = NS_NewAtom("open");
     kIsDeferredAtom              = NS_NewAtom("isDeferred");
-    kIsSecureAtom                = NS_NewAtom("isSecure");
     kCanFileMessagesAtom         = NS_NewAtom("canFileMessages");
     kInVFEditSearchScopeAtom     = NS_NewAtom("inVFEditSearchScope");
 
@@ -318,7 +316,6 @@ nsMsgFolderDataSource::~nsMsgFolderDataSource (void)
     NS_RELEASE(kSynchronizeAtom);
     NS_RELEASE(kOpenAtom);
     NS_RELEASE(kIsDeferredAtom);
-    NS_RELEASE(kIsSecureAtom);
     NS_RELEASE(kCanFileMessagesAtom);
     NS_RELEASE(kInVFEditSearchScopeAtom);
 
@@ -534,7 +531,13 @@ NS_IMETHODIMP nsMsgFolderDataSource::GetTargets(nsIRDFResource* source,
       (kNC_SyncDisabled == property) ||
       (kNC_CanSearchMessages == property))
     {
-      return NS_NewSingletonEnumerator(targets, property);
+      nsSingletonEnumerator* cursor =
+        new nsSingletonEnumerator(property);
+      if (cursor == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+      NS_ADDREF(cursor);
+      *targets = cursor;
+      rv = NS_OK;
     }
   }
   if(!*targets)
@@ -556,7 +559,8 @@ NS_IMETHODIMP nsMsgFolderDataSource::Assert(nsIRDFResource* source,
   //We don't handle tv = PR_FALSE at the moment.
   if(NS_SUCCEEDED(rv) && tv)
     return DoFolderAssert(folder, property, target);
-  return NS_ERROR_FAILURE;
+  else
+    return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP nsMsgFolderDataSource::Unassert(nsIRDFResource* source,
@@ -728,9 +732,9 @@ nsMsgFolderDataSource::GetAllCmds(nsIRDFResource* source,
   nsCOMPtr<nsIMsgFolder> folder(do_QueryInterface(source, &rv));
   if (NS_FAILED(rv)) return rv;
 
-  nsCOMPtr<nsIMutableArray> cmds =
-    do_CreateInstance(NS_ARRAY_CONTRACTID);
-  NS_ENSURE_STATE(cmds);
+  nsCOMPtr<nsIMutableArray> cmds;
+  NS_NewArray(getter_AddRefs(cmds));
+  if (!cmds) return rv;
 
   cmds->AppendElement(kNC_Delete, PR_FALSE);
   cmds->AppendElement(kNC_ReallyDelete, PR_FALSE);
@@ -991,8 +995,6 @@ nsMsgFolderDataSource::OnItemBoolPropertyChanged(nsIRDFResource *resource,
       NotifyPropertyChanged(resource, kNC_Open, literalNode);
     else if (kIsDeferredAtom == property) 
       NotifyPropertyChanged(resource, kNC_IsDeferred, literalNode, oldLiteralNode);
-    else if (kIsSecureAtom == property)
-      NotifyPropertyChanged(resource, kNC_IsSecure, literalNode, oldLiteralNode);
     else if (kCanFileMessagesAtom == property)
       NotifyPropertyChanged(resource, kNC_CanFileMessages, literalNode, oldLiteralNode);
     else if (kInVFEditSearchScopeAtom == property)
@@ -1222,7 +1224,7 @@ nsMsgFolderDataSource::createFolderServerTypeNode(nsIMsgFolder* folder,
   rv = server->GetType(getter_Copies(serverType));
   if (NS_FAILED(rv)) return rv;
 
-  createNode(NS_ConvertASCIItoUTF16(serverType).get(), target, getRDFService());
+  createNode(NS_ConvertASCIItoUCS2(serverType).get(), target, getRDFService());
   return NS_OK;
 }
 
@@ -1261,7 +1263,7 @@ nsMsgFolderDataSource::createFolderRedirectorTypeNode(nsIMsgFolder* folder,
   rv = server->GetRedirectorType(getter_Copies(redirectorType));
   if (NS_FAILED(rv)) return rv;
 
-  createNode(NS_ConvertASCIItoUTF16(redirectorType).get(), target, getRDFService());
+  createNode(NS_ConvertASCIItoUCS2(redirectorType).get(), target, getRDFService());
   return NS_OK;
 }
 
@@ -1634,7 +1636,7 @@ nsMsgFolderDataSource::createCharsetNode(nsIMsgFolder *folder, nsIRDFNode **targ
   nsXPIDLCString charset;
   nsresult rv = folder->GetCharset(getter_Copies(charset));
   if (NS_SUCCEEDED(rv))
-    createNode(NS_ConvertASCIItoUTF16(charset).get(), target, getRDFService());
+    createNode(NS_ConvertASCIItoUCS2(charset).get(), target, getRDFService());
   else
     createNode(EmptyString().get(), target, getRDFService());
   return NS_OK;
@@ -2170,7 +2172,7 @@ nsresult nsMsgFolderDataSource::DoFolderAssert(nsIMsgFolder *folder, nsIRDFResou
       const PRUnichar* value;
       rv = literal->GetValueConst(&value);
       if(NS_SUCCEEDED(rv))
-        rv = folder->SetCharset(NS_LossyConvertUTF16toASCII(value).get());
+        rv = folder->SetCharset(NS_LossyConvertUCS2toASCII(value).get());
     }
     else
       rv = NS_ERROR_FAILURE;
@@ -2368,7 +2370,11 @@ NS_IMETHODIMP nsMsgFlatFolderDataSource::GetTargets(nsIRDFResource* source,
       return NS_NewArrayEnumerator(targets, allFolders);
     }
   }
-  return NS_NewSingletonEnumerator(targets, property);
+  nsSingletonEnumerator* cursor = new nsSingletonEnumerator(property);
+  if (cursor == nsnull)
+    return NS_ERROR_OUT_OF_MEMORY;
+  NS_ADDREF(*targets = cursor);
+  return NS_OK;
 }
 
 
@@ -2619,24 +2625,6 @@ PRBool nsMsgRecentFoldersDataSource::WantsThisFolder(nsIMsgFolder *folder)
   return m_folders.IndexOf(folder) != kNotFound;
 }
 
-NS_IMETHODIMP nsMsgRecentFoldersDataSource::OnItemAdded(nsIRDFResource *parentItem, nsISupports *item)
-{
-  // if we've already built the recent folder array, we should add this item to the array
-  // since just added items are by definition new.
-  // I think this means newly discovered imap folders (ones w/o msf files) will
-  // get added, but maybe that's OK.
-  if (m_builtRecentFolders)
-  {
-    nsCOMPtr<nsIMsgFolder> folder(do_QueryInterface(item));
-    if (folder && m_folders.IndexOf(folder) == kNotFound)
-    {
-      m_folders.AppendObject(folder);
-      nsCOMPtr<nsIRDFResource> resource = do_QueryInterface(item);
-      NotifyObservers(kNC_RecentFolders, kNC_Child, resource, nsnull, PR_TRUE, PR_FALSE);
-    }
-  }
-  return nsMsgFlatFolderDataSource::OnItemAdded(parentItem, item);
-}
 
 
 nsresult nsMsgRecentFoldersDataSource::NotifyPropertyChanged(nsIRDFResource *resource, 

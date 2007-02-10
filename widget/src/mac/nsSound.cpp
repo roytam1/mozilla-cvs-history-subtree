@@ -230,7 +230,7 @@ nsSound::Init()
 }
 
 NS_IMETHODIMP
-nsSound::PlaySystemSound(const nsAString &aSoundName)
+nsSound::PlaySystemSound(const char *aSoundName)
 {
   nsCOMPtr<nsISupports> requestSupports;
   
@@ -242,8 +242,7 @@ nsSound::PlaySystemSound(const nsAString &aSoundName)
   requestSupports = NS_STATIC_CAST(nsITimerCallback*, soundRequest);
   
   Str255  soundResource;
-  nsresult rv = GetSoundResourceName(NS_ConvertUTF16toUTF8(aSoundName).get(),
-                                     soundResource);
+  nsresult rv = GetSoundResourceName(aSoundName, soundResource);
   if (NS_FAILED(rv))
     return Beep();
   
@@ -792,6 +791,7 @@ nsMovieSoundRequest::GetFileFormat(const char* inData, long inDataSize, const ns
 {
   OSType    fileFormat = kQTFileTypeMovie;    // Default to just treating it like a movie.
                                               // Hopefully QuickTime will be able to import it.
+  
   if (inDataSize >= 16)
   {
     OSType firstFourBytes = PR_ntohl(*(OSType *)inData);
@@ -799,7 +799,7 @@ nsMovieSoundRequest::GetFileFormat(const char* inData, long inDataSize, const ns
     // look for WAVE
     if (firstFourBytes == 'RIFF')
     {
-      const char* dataPtr = inData + 8; // skip RIFF and length bytes
+      const char* dataPtr = inData + 8; // skip RIFF and length bytes  
 
       if (PR_ntohl(*(OSType *)dataPtr) == 'WAVE')
         return kQTFileTypeWave;

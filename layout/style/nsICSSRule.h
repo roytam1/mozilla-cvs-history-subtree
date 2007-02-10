@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* internal interface for all rule types in a CSS style sheet */
-
 #ifndef nsICSSRule_h___
 #define nsICSSRule_h___
 
@@ -51,10 +48,10 @@ class nsAString;
 #define NS_ICSS_RULE_IID     \
 {0xb9791e20, 0x1a04, 0x11d3, {0x80, 0x5a, 0x00, 0x60, 0x08, 0x15, 0x9b, 0x5a}}
 
-// inheriting from nsIStyleRule is only for style rules, not other rule types
+
 class nsICSSRule : public nsIStyleRule {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICSS_RULE_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICSS_RULE_IID)
   enum {
     UNKNOWN_RULE = 0,
     STYLE_RULE = 1,
@@ -79,8 +76,6 @@ public:
   // supposed to have a DOM rule representation (and our code wouldn't work).
   NS_IMETHOD GetDOMRule(nsIDOMCSSRule** aDOMRule) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsICSSRule, NS_ICSS_RULE_IID)
 
 /* Define global NS_New* functions for rules that don't need their own
    interfaces here */

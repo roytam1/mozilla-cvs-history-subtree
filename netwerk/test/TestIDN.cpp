@@ -42,9 +42,8 @@
 #include "nsIIDNService.h"
 #include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
-#include "nsServiceManagerUtils.h"
 #include "nsNetCID.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 
 int main(int argc, char **argv) {
     if (test_common_init(&argc, &argv) != 0)
@@ -61,18 +60,17 @@ int main(int argc, char **argv) {
         nsCAutoString buf;
         nsresult rv = converter->ConvertUTF8toACE(NS_LITERAL_CSTRING(plain), buf);
         NS_ASSERTION(NS_SUCCEEDED(rv), "error ConvertUTF8toACE");
-        NS_ASSERTION(buf.Equals(NS_LITERAL_CSTRING(encoded)), 
+        NS_ASSERTION(buf.Equals(NS_LITERAL_CSTRING(encoded), nsCaseInsensitiveCStringComparator()), 
                      "encode result incorrect");
         printf("encoded = %s\n", buf.get());
 
         buf.Truncate();
         rv = converter->ConvertACEtoUTF8(NS_LITERAL_CSTRING(encoded), buf);
         NS_ASSERTION(NS_SUCCEEDED(rv), "error ConvertACEtoUTF8");
-        NS_ASSERTION(buf.Equals(NS_LITERAL_CSTRING(plain)), 
+        NS_ASSERTION(buf.Equals(NS_LITERAL_CSTRING(plain), nsCaseInsensitiveCStringComparator()), 
                      "decode result incorrect");
         printf("decoded = ");
-        NS_ConvertUTF8toUTF16 utf(buf);
-        const PRUnichar *u = utf.get();
+        NS_ConvertUTF8toUCS2 u(buf);
         for (int i = 0; u[i]; i++) {
           printf("U+%.4X ", u[i]);
         }

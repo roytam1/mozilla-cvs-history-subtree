@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Mats Palmgren <mats.palmgren@bredband.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -72,50 +71,22 @@
 #include "nsRect.h"
 #include "nsPoint.h"
 #include "nsIWidget.h"
-#ifndef MOZ_WIDGET_COCOA
 #include "nsCarbonHelpers.h"
-#endif
+#include "nsGfxUtils.h"
+
 // file save stuff
 #include "nsNetUtil.h"
 #include "nsILocalFileMac.h"
 
 #include "nsIDOMElement.h"
-#ifndef MOZ_CAIRO_GFX
 #include "nsIImageMac.h"
-#endif
 #include "nsIImage.h"
 #include "nsMacNativeUnicodeConverter.h"
 #include "nsICharsetConverterManager.h"
 #include "nsStylClipboardUtils.h"
 
-//
-// Get the primary frame for a content node in the current document.
-//
-static nsIFrame*
-GetPrimaryFrameFor(nsIContent* aContent)
-{
-  nsIFrame* result = nsnull;
-  nsIDocument* doc = aContent->GetCurrentDoc();
-  if (doc) {
-    nsIPresShell* presShell = doc->GetShellAt(0);
-    if (presShell) {
-      result = presShell->GetPrimaryFrameFor(aContent);
-    }
-  }
-  return result;
-}
-
 static const PRUint32 kPrivateFlavorMask = 0xffff0000;
 static const PRUint32 kPrivateFlavorTag = 'MZ..' & kPrivateFlavorMask;
-
-
-static void
-SetPortToKnownGoodPort()
-{
-    WindowPtr firstWindow = GetWindowList();
-    if (firstWindow)
-      ::SetGWorld(::GetWindowPort(firstWindow), ::GetMainDevice());
-}
 
 
 // we need our own stuff for MacOS because of nsIDragSessionMac.
@@ -162,15 +133,14 @@ nsDragService::ComputeGlobalRectFromFrame ( nsIDOMNode* aDOMNode, Rect & outScre
 {
   NS_ASSERTION ( aDOMNode, "Oopps, no DOM node" );
 
-  nsCOMPtr<nsIContent> content = do_QueryInterface(aDOMNode);
-
 // this isn't so much of an issue as long as we're just dragging around outlines,
 // but it is when we are showing the text being drawn. Comment it out for now
 // but leave it around when we turn this all back on (pinkerton).
 #if USE_TRANSLUCENT_DRAGGING && defined(MOZ_XUL)
   // until bug 41237 is fixed, only do translucent dragging if the drag is in
   // the chrome or it's a link.
-  if (!content || !content->IsNodeOfType(nsINode::eXUL)) {
+  nsCOMPtr<nsIContent> content = do_QueryInterface(aDOMNode);
+  if (!content || !content->IsContentOfType(nsIContent::eXUL)) {
     // the link node is the parent of the node we have (which is probably text or image).
     nsCOMPtr<nsIDOMNode> parent;
     aDOMNode->GetParentNode ( getter_AddRefs(parent) );
@@ -187,12 +157,11 @@ nsDragService::ComputeGlobalRectFromFrame ( nsIDOMNode* aDOMNode, Rect & outScre
   
   outScreenRect.left = outScreenRect.right = outScreenRect.top = outScreenRect.bottom = 0;
 
-  if (!content)
-    return PR_FALSE;
-
   // Get the frame for this content node (note: frames are not refcounted)
-  nsIFrame *frame = ::GetPrimaryFrameFor(content);
-  if (!frame)
+  nsIFrame *aFrame = nsnull;
+  nsCOMPtr<nsPresContext> presContext;
+  GetFrameFromNode ( aDOMNode, &aFrame, getter_AddRefs(presContext) );
+  if ( !aFrame || !presContext )
     return PR_FALSE;
   
   //
@@ -200,12 +169,12 @@ nsDragService::ComputeGlobalRectFromFrame ( nsIDOMNode* aDOMNode, Rect & outScre
   // coordinates.
   //
   
-  nsRect rect = frame->GetRect();
+  nsRect rect = aFrame->GetRect();
 
   // Find offset from our view
 	nsIView *containingView = nsnull;
 	nsPoint	viewOffset(0,0);
-	frame->GetOffsetFromView(viewOffset, &containingView);
+	aFrame->GetOffsetFromView(viewOffset, &containingView);
   NS_ASSERTION(containingView, "No containing view!");
   if ( !containingView )
     return PR_FALSE;
@@ -214,7 +183,8 @@ nsDragService::ComputeGlobalRectFromFrame ( nsIDOMNode* aDOMNode, Rect & outScre
   nsPoint widgetOffset;
   nsIWidget* aWidget = containingView->GetNearestWidget ( &widgetOffset );
 
-  float t2p = frame->GetPresContext()->TwipsToPixels();
+  float t2p = 1.0;
+  t2p = presContext->TwipsToPixels();
 
   // Shift our offset rect by offset into our view, and
   // the view's offset to the closest widget. Then convert that to global coordinates.
@@ -244,7 +214,7 @@ NS_IMETHODIMP
 nsDragService::InvokeDragSession (nsIDOMNode *aDOMNode, nsISupportsArray * aTransferableArray, nsIScriptableRegion * aDragRgn, PRUint32 aActionType)
 {
 #ifdef MOZ_WIDGET_COCOA
-  SetPortToKnownGoodPort();
+  nsGraphicsUtils::SetPortToKnownGoodPort();
   GrafPtr port;
   GDHandle handle;
   ::GetGWorld(&port, &handle);
@@ -347,7 +317,7 @@ nsDragService::BuildDragRegion ( nsIScriptableRegion* inRegion, nsIDOMNode* inNo
     inRegion->GetRegion(getter_AddRefs(geckoRegion));
     
 #ifdef MOZ_WIDGET_COCOA
-  SetPortToKnownGoodPort();
+  nsGraphicsUtils::SetPortToKnownGoodPort();
   GrafPtr port;
   GDHandle handle;
   ::GetGWorld(&port, &handle);
@@ -817,7 +787,7 @@ nsDragService::DragSendDataProc(FlavorType inFlavor, void* inRefCon, ItemReferen
             }
           }
         }
-        // make the data accessible to the DragManager
+        // make the data accessable to the DragManager
         retVal = ::SetDragItemFlavorData ( inDragRef, inItemRef, inFlavor, data, dataSize, 0 );
         NS_ASSERTION ( retVal == noErr, "SDIFD failed in DragSendDataProc" );
     }
@@ -940,7 +910,6 @@ nsDragService::GetDataForFlavor(nsISupportsArray* inDragItems, DragReference inD
     
     nsCOMPtr<nsISupports> primitiveData;
     ptrPrimitive->GetData(getter_AddRefs(primitiveData));
-#ifndef MOZ_CAIRO_GFX
     nsCOMPtr<nsIImageMac> image = do_QueryInterface(primitiveData);
     if (!image) return cantGetFlavorErr; 
       
@@ -962,9 +931,6 @@ nsDragService::GetDataForFlavor(nsISupportsArray* inDragItems, DragReference inD
       retVal = cantGetFlavorErr;
 
     ::KillPicture(picture);
-#else
-    retVal = cantGetFlavorErr;
-#endif
     return retVal;
   }
     
@@ -1141,7 +1107,7 @@ nsDragService::ExtractDataFromOS ( DragReference inDragRef, ItemReference inItem
       }
       else {
         #ifdef NS_DEBUG
-          printf("nsDragService: Error getting data out of drag manager, #%d\n", err);
+          printf("nsDragService: Error getting data out of drag manager, #%ld\n", err);
         #endif
         retval = NS_ERROR_FAILURE;
       }

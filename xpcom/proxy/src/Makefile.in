@@ -54,10 +54,10 @@ CPPSRCS		= \
 		nsProxyEventClass.cpp \
 		nsProxyEventObject.cpp \
 		nsProxyObjectManager.cpp \
+		nsProxyRelease.cpp \
 		$(NULL)
 
-DEFINES		+=  -D_IMPL_NS_COM -DEXPORT_XPTC_API
-LOCAL_INCLUDES += -I$(top_srcdir)/xpcom/threads/
+DEFINES		+=  -D_IMPL_NS_COM -DEXPORT_XPTC_API -DEXPORT_XPTI_API
 
 # No shared lib; Force creation of static lib
 FORCE_STATIC_LIB = 1
@@ -66,5 +66,3 @@ FORCE_STATIC_LIB = 1
 FORCE_USE_PIC	= 1
 
 include $(topsrcdir)/config/rules.mk
-
-LOCAL_INCLUDES += -I$(srcdir)/../../reflect/xptinfo/src

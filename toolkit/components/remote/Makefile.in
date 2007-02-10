@@ -56,13 +56,11 @@ REQUIRES = \
 	string \
 	appcomps \
 	toolkitcomps \
-        appshell \
-        layout \
+	appcomps \
 	xulapp \
 	widget \
 	gfx \
 	dom \
-	layout \
 	docshell \
 	$(NULL)
 

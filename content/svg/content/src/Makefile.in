@@ -63,28 +63,27 @@ REQUIRES	= xpcom \
 		  webshell \
 		  unicharutil \
 		  imglib2 \
-		  docshell \
-		  thebes
+		  docshell
 
 CPPSRCS		= \
 		nsDOMSVGZoomEvent.cpp \
 		nsDOMSVGEvent.cpp \
-		nsSVGAElement.cpp \
 		nsSVGAngle.cpp \
 		nsSVGAnimatedAngle.cpp \
 		nsSVGAnimatedEnumeration.cpp \
-		nsSVGAnimatedInteger.cpp \
+		nsSVGAnimatedLength.cpp \
 		nsSVGAnimatedLengthList.cpp \
+		nsSVGAnimatedNumber.cpp \
 		nsSVGAnimatedNumberList.cpp \
 		nsSVGAnimatedRect.cpp \
 		nsSVGAnimatedPreserveAspectRatio.cpp \
 		nsSVGAnimatedString.cpp \
 		nsSVGAnimatedTransformList.cpp \
+		nsSVGAtoms.cpp \
 		nsSVGCircleElement.cpp \
 		nsSVGClassValue.cpp \
 		nsSVGClipPathElement.cpp \
 		nsSVGCoordCtxProvider.cpp \
-		nsSVGDataParser.cpp \
 		nsSVGDefsElement.cpp \
 		nsSVGDescElement.cpp \
 		nsSVGElement.cpp \
@@ -92,32 +91,25 @@ CPPSRCS		= \
 		nsSVGEllipseElement.cpp \
 		nsSVGEnum.cpp \
 		nsSVGFeatures.cpp \
-		nsSVGFilterElement.cpp \
-		nsSVGFilters.cpp \
 		nsSVGGElement.cpp \
+		nsSVGGenericStringValue.cpp \
 		nsSVGGradientElement.cpp \
 		nsSVGGraphicElement.cpp \
 		nsSVGImageElement.cpp \
 		nsSVGLength.cpp \
-		nsSVGLength2.cpp \
 		nsSVGLengthList.cpp \
 		nsSVGLineElement.cpp \
 		nsSVGMarkerElement.cpp \
-		nsSVGMaskElement.cpp \
 		nsSVGMatrix.cpp \
 		nsSVGMetadataElement.cpp \
 		nsSVGNumber.cpp \
-		nsSVGNumber2.cpp \
 		nsSVGNumberList.cpp \
 		nsSVGPathDataParser.cpp \
 		nsSVGPathElement.cpp \
-		nsSVGPathGeometryElement.cpp \
 		nsSVGPathSeg.cpp \
 		nsSVGPathSegList.cpp \
-		nsSVGPatternElement.cpp \
 		nsSVGPoint.cpp \
 		nsSVGPointList.cpp \
-		nsSVGPolyElement.cpp \
 		nsSVGPolygonElement.cpp \
 		nsSVGPolylineElement.cpp \
 		nsSVGPreserveAspectRatio.cpp \
@@ -129,7 +121,6 @@ CPPSRCS		= \
 		nsSVGSVGElement.cpp \
 		nsSVGStopElement.cpp \
 		nsSVGStyleElement.cpp \
-		nsSVGSwitchElement.cpp \
 		nsSVGSymbolElement.cpp \
 		nsSVGTSpanElement.cpp \
 		nsSVGTextElement.cpp \
@@ -137,7 +128,6 @@ CPPSRCS		= \
 		nsSVGTitleElement.cpp \
 		nsSVGTransform.cpp \
 		nsSVGTransformList.cpp \
-		nsSVGTransformListParser.cpp \
 		nsSVGUseElement.cpp \
 		nsSVGValue.cpp \
 		$(NULL)
@@ -154,25 +144,25 @@ FORCE_STATIC_LIB = 1
 EXPORTS =  			\
 	nsIDOMSVGListener.h \
 	nsIDOMSVGZoomListener.h \
-	nsISVGFilter.h             \
 	nsISVGTextContentMetrics.h \
 	nsISVGValue.h              \
 	nsISVGValueObserver.h      \
 	nsISVGValueUtils.h         \
+	nsSVGTypeCIDs.h            \
 	nsSVGCoordCtxProvider.h    \
 	nsSVGCoordCtx.h            \
 	nsSVGNumber.h              \
 	nsSVGRect.h                \
 	nsSVGPoint.h               \
 	nsSVGMatrix.h              \
-	nsISVGEnum.h               \
+	nsSVGAtomList.h            \
+	nsSVGAtoms.h               \
+	nsISVGPathFlatten.h        \
 	$(NULL)
 
 
 include $(topsrcdir)/config/rules.mk
 
-CFLAGS		+= $(MOZ_CAIRO_CFLAGS)
-CXXFLAGS	+= $(MOZ_CAIRO_CFLAGS)
 
 INCLUDES += 	\
 		-I$(srcdir)/../../../shared/public \

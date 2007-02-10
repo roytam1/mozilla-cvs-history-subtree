@@ -68,10 +68,6 @@ function initNetworks()
         displayName:  "quakenet",
         isupportsKey: "",
         servers: [{hostname: "irc.quakenet.org", port:6667}]};
-    networks["ircnet"] = {
-        displayName:  "ircnet",
-        isupportsKey: "",
-        servers: [{hostname: "irc.ircnet.com", port:6667}]};
     networks["freenode"] = {
         displayName:  "freenode",
         isupportsKey: "",
@@ -85,10 +81,6 @@ function initNetworks()
         isupportsKey: "",
         servers: [{hostname: "irc.prison.net", port: 6667},
                   {hostname: "irc.magic.ca", port: 6667}]};
-    networks["hispano"] = {
-        displayName:  "hispano",
-        isupportsKey: "",
-        servers: [{hostname: "irc.irc-hispano.org", port: 6667}]};
 
     for (var name in networks)
         networks[name].name = name;
@@ -106,7 +98,7 @@ function initNetworks()
         if (networksLoader.open("<"))
         {
             var item = networksLoader.deserialize();
-            if (isinstance(item, Array))
+            if (item instanceof Array)
                 userNetworkList = item;
             else
                 dd("Malformed networks file!");

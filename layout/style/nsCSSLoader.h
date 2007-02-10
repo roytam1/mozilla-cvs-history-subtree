@@ -46,8 +46,6 @@
  * 04/20/2000       IBM Corp.      OS/2 VisualAge build.
  */
 
-/* loading of CSS style sheets using the network APIs */
-
 #ifndef nsCSSLoader_h__
 #define nsCSSLoader_h__
 
@@ -62,7 +60,6 @@ class nsICSSImportRule;
 class nsMediaList;
 
 #include "nsICSSLoader.h"
-#include "nsIRunnable.h"
 #include "nsIUnicharStreamLoader.h"
 #include "nsCOMPtr.h"
 #include "nsCOMArray.h"
@@ -70,15 +67,13 @@ class nsMediaList;
 #include "nsURIHashKey.h"
 #include "nsInterfaceHashtable.h"
 #include "nsDataHashtable.h"
-#include "nsAutoPtr.h"
-#include "nsTArray.h"
 
 /**
  * OVERALL ARCHITECTURE
  *
  * The CSS Loader gets requests to load various sorts of style sheets:
  * inline style from <style> elements, linked style, @import-ed child
- * sheets, non-document sheets.  The loader handles the following tasks:
+ * sheets, agent sheets.  The loader handles the following tasks:
  *
  * 1) Checking whether the load is allowed: CheckLoadAllowed()
  * 2) Creation of the actual style sheet objects: CreateSheet()
@@ -105,8 +100,7 @@ class nsMediaList;
  * Data needed to properly load a stylesheet *
  *********************************************/
 
-class SheetLoadData : public nsIRunnable,
-                      public nsIUnicharStreamLoaderObserver
+class SheetLoadData : public nsIUnicharStreamLoaderObserver
 {
 public:
   virtual ~SheetLoadData(void);
@@ -117,7 +111,6 @@ public:
                 nsIURI* aURI,
                 nsICSSStyleSheet* aSheet,
                 nsIStyleSheetLinkingElement* aOwningElement,
-                PRBool aIsAlternate,
                 nsICSSLoaderObserver* aObserver);                 
 
   // Data for loading a sheet linked from an @import rule
@@ -127,7 +120,7 @@ public:
                 SheetLoadData* aParentData,
                 nsICSSLoaderObserver* aObserver);                 
 
-  // Data for loading a non-document sheet
+  // Data for loading an agent sheet
   SheetLoadData(CSSLoaderImpl* aLoader,
                 nsIURI* aURI,
                 nsICSSStyleSheet* aSheet,
@@ -138,7 +131,6 @@ public:
   already_AddRefed<nsIURI> GetReferrerURI();
   
   NS_DECL_ISUPPORTS
-  NS_DECL_NSIRUNNABLE
   NS_DECL_NSIUNICHARSTREAMLOADEROBSERVER
 
   // Hold a ref to the CSSLoader so we can call back to it to let it
@@ -175,39 +167,30 @@ public:
   PRUint32                   mPendingChildren;
 
   // mSyncLoad is true when the load needs to be synchronous -- right
-  // now only for LoadSheetSync and children of sync loads.
-  PRPackedBool               mSyncLoad : 1;
+  // now only for LoadAgentSheet with no observer
+  PRPackedBool               mSyncLoad;
 
-  // mIsNonDocumentSheet is true if the load was triggered by LoadSheetSync or
-  // LoadSheet or an @import from such a sheet.  Non-document sheet loads can
-  // proceed even if we have no document.
-  PRPackedBool               mIsNonDocumentSheet : 1;
+  // mIsAgent is true if the load was triggered by LoadAgentSheet or
+  // an @import from an agent sheet.  Agent loads can proceed even if
+  // we have no document.
+  PRPackedBool               mIsAgent;
 
   // mIsLoading is true from the moment we are placed in the loader's
   // "loading datas" table (right after the async channel is opened)
   // to the moment we are removed from said table (due to the load
   // completing or being cancelled).
-  PRPackedBool               mIsLoading : 1;
+  PRPackedBool               mIsLoading; // Set once the data is in the "loading" table
 
   // mIsCancelled is set to true when a sheet load is stopped by
   // Stop() or StopLoadingSheet().  SheetLoadData::OnStreamComplete()
   // checks this to avoid parsing sheets that have been cancelled and
   // such.
-  PRPackedBool               mIsCancelled : 1;
-
-  // mMustNotify is true if the load data is being loaded async and
-  // the original function call that started the load has returned.
-  // XXXbz sort our relationship with load/error events!
-  PRPackedBool               mMustNotify : 1;
-  
-  // mWasAlternate is true if the sheet was an alternate when the load data was
-  // created.
-  PRPackedBool               mWasAlternate : 1;
+  PRPackedBool               mIsCancelled;
   
   // mAllowUnsafeRules is true if we should allow unsafe rules to be parsed
   // in the loaded sheet.
-  PRPackedBool               mAllowUnsafeRules : 1;
-  
+  PRPackedBool               mAllowUnsafeRules;
+
   // This is the element that imported the sheet.  Needed to get the
   // charset set on it.
   nsCOMPtr<nsIStyleSheetLinkingElement> mOwningElement;
@@ -233,7 +216,8 @@ enum StyleSheetState {
  * Loader Declaration *
  **********************/
 
-class CSSLoaderImpl : public nsICSSLoader
+class CSSLoaderImpl : public nsICSSLoader,
+                      public nsICSSLoader_MOZILLA_1_8_BRANCH
 {
 public:
   CSSLoaderImpl(void);
@@ -259,34 +243,31 @@ public:
   NS_IMETHOD LoadInlineStyle(nsIContent* aElement,
                              nsIUnicharInputStream* aStream, 
                              PRUint32 aLineNumber,
-                             const nsSubstring& aTitle,
-                             const nsSubstring& aMedia,
+                             const nsSubstring& aTitle, 
+                             const nsSubstring& aMedia, 
                              nsIParser* aParserToUnblock,
-                             nsICSSLoaderObserver* aObserver,
-                             PRBool* aCompleted,
-                             PRBool* aIsAlternate);
+                             PRBool& aCompleted,
+                             nsICSSLoaderObserver* aObserver);
 
   NS_IMETHOD LoadStyleLink(nsIContent* aElement,
                            nsIURI* aURL, 
                            const nsSubstring& aTitle, 
-                           const nsSubstring& aMedia,
-                           PRBool aHasAlternateRel,
+                           const nsSubstring& aMedia, 
                            nsIParser* aParserToUnblock,
-                           nsICSSLoaderObserver* aObserver,
-                           PRBool* aIsAlternate);
+                           PRBool& aCompleted,
+                           nsICSSLoaderObserver* aObserver);
 
   NS_IMETHOD LoadChildSheet(nsICSSStyleSheet* aParentSheet,
                             nsIURI* aURL, 
                             nsMediaList* aMedia,
                             nsICSSImportRule* aRule);
 
-  NS_IMETHOD LoadSheetSync(nsIURI* aURL, PRBool aAllowUnsafeRules,
-                           nsICSSStyleSheet** aSheet);
+  // nsICSSLoader_MOZILLA_1_8_BRANCH
+  NS_IMETHOD LoadSheetSync(nsIURI* aURL, PRBool aAllowUnsafeRules, nsICSSStyleSheet** aSheet);
 
-  NS_IMETHOD LoadSheet(nsIURI* aURL, nsICSSLoaderObserver* aObserver,
-                       nsICSSStyleSheet** aSheet);
+  NS_IMETHOD LoadAgentSheet(nsIURI* aURL, nsICSSStyleSheet** aSheet);
 
-  NS_IMETHOD LoadSheet(nsIURI* aURL, nsICSSLoaderObserver* aObserver);
+  NS_IMETHOD LoadAgentSheet(nsIURI* aURL, nsICSSLoaderObserver* aObserver);
 
   // stop loading all sheets
   NS_IMETHOD Stop(void);
@@ -305,10 +286,7 @@ public:
   NS_IMETHOD SetEnabled(PRBool aEnabled);
 
   // local helper methods (some are public for access from statics)
-
-  // IsAlternate can change our currently selected style set if none
-  // is selected and aHasAlternateRel is false.
-  PRBool IsAlternate(const nsAString& aTitle, PRBool aHasAlternateRel);
+  PRBool IsAlternate(const nsAString& aTitle);
 
 private:
   nsresult CheckLoadAllowed(nsIURI* aSourceURI,
@@ -326,14 +304,10 @@ private:
 
   // Pass in either a media string or the nsMediaList from the
   // CSSParser.  Don't pass both.
-  // If aIsAlternate is non-null, this method will set *aIsAlternate to
-  // correspond to the sheet's enabled state (which it will set no matter what)
   nsresult PrepareSheet(nsICSSStyleSheet* aSheet,
                         const nsSubstring& aTitle,
                         const nsSubstring& aMediaString,
-                        nsMediaList* aMediaList,
-                        PRBool aHasAlternateRel = PR_FALSE,
-                        PRBool *aIsAlternate = nsnull);
+                        nsMediaList* aMediaList);
 
   nsresult InsertSheetInDoc(nsICSSStyleSheet* aSheet,
                             nsIContent* aLinkingContent,
@@ -343,28 +317,12 @@ private:
                             nsICSSStyleSheet* aParentSheet,
                             nsICSSImportRule* aParentRule);
 
-  nsresult InternalLoadNonDocumentSheet(nsIURI* aURL,
-                                        PRBool aAllowUnsafeRules,
-                                        nsICSSStyleSheet** aSheet,
-                                        nsICSSLoaderObserver* aObserver);
-
-  // Post a load event for aObserver to be notified about aSheet.  The
-  // notification will be sent with status NS_OK unless the load event is
-  // canceled at some point (in which case it will be sent with
-  // NS_BINDING_ABORTED).  aWasAlternate indicates the state when the load was
-  // initiated, not the state at some later time.  aURI should be the URI the
-  // sheet was loaded from (may be null for inline sheets).
-  nsresult PostLoadEvent(nsIURI* aURI,
-                         nsICSSStyleSheet* aSheet,
-                         nsICSSLoaderObserver* aObserver,
-                         nsIParser* aParserToUnblock,
-                         PRBool aWasAlternate);
+  nsresult InternalLoadAgentSheet(nsIURI* aURL,
+                                  nsICSSStyleSheet** aSheet,
+                                  PRBool aAllowUnsafeRules,
+                                  nsICSSLoaderObserver* aObserver);
+  
 public:
-  // Handle an event posted by PostLoadEvent
-  void HandleLoadEvent(SheetLoadData* aEvent);
-
-  // Note: LoadSheet is responsible for releasing aLoadData and setting the
-  // sheet to complete on failure.
   nsresult LoadSheet(SheetLoadData* aLoadData, StyleSheetState aSheetState);
 
 protected:
@@ -377,7 +335,7 @@ protected:
                       PRBool& aCompleted);
 
 public:
-  void SheetComplete(SheetLoadData* aLoadData, nsresult aStatus);
+  void SheetComplete(SheetLoadData* aLoadData, PRBool aSucceeded);
 
   static nsCOMArray<nsICSSParser>* gParsers;  // array of idle CSS parsers
 
@@ -403,9 +361,6 @@ private:
   // some.  Allocate some storage, what the hell.
   nsAutoVoidArray   mParsingDatas;
 
-  // The array of posted stylesheet loaded events (SheetLoadDatas) we have.
-  // Note that these are rare.
-  nsTArray<nsRefPtr<SheetLoadData> > mPostedEvents;
 };
 
 #endif // nsCSSLoader_h__

@@ -59,6 +59,7 @@
 #endif
 #include "nsReadableUtils.h"
 
+#include "nsIPref.h"
 #include "nsClipboard.h"
 
 #include <errno.h>
@@ -239,14 +240,6 @@ NS_IMETHODIMP nsWidget::GetIMEOpenState(PRBool* aState) {
   return NS_ERROR_NOT_IMPLEMENTED;
 	}
 
-NS_IMETHODIMP nsWidget::SetIMEEnabled(PRBool aState) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-	}
-
-NS_IMETHODIMP nsWidget::GetIMEEnabled(PRBool* aState) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-	}
-
 NS_IMETHODIMP nsWidget::CancelIMEComposition() {
   return NS_ERROR_NOT_IMPLEMENTED;
 	}
@@ -387,8 +380,8 @@ PRBool nsWidget::OnResize( nsRect &aRect ) {
 		nsRect *foo = new nsRect(0, 0, aRect.width, aRect.height);
 		event.windowSize = foo;
 
-		event.refPoint.x = 0;
-		event.refPoint.y = 0;
+		event.point.x = 0;
+		event.point.y = 0;
 		event.mWinWidth = aRect.width;
 		event.mWinHeight = aRect.height;
   
@@ -407,8 +400,8 @@ PRBool nsWidget::OnResize( nsRect &aRect ) {
 PRBool nsWidget::OnMove( PRInt32 aX, PRInt32 aY ) {
   nsGUIEvent event(PR_TRUE, 0, nsnull);
   InitEvent(event, NS_MOVE);
-  event.refPoint.x = aX;
-  event.refPoint.y = aY;
+  event.point.x = aX;
+  event.point.y = aY;
   return DispatchWindowEvent(&event);
 	}
 
@@ -720,8 +713,7 @@ NS_IMETHODIMP nsWidget::DispatchEvent( nsGUIEvent *aEvent, nsEventStatus &aStatu
 void nsWidget::InitMouseEvent(PhPointerEvent_t *aPhButtonEvent,
                               nsWidget * aWidget,
                               nsMouseEvent &anEvent,
-                              PRUint32   aEventType,
-                              PRInt16    aButton)
+                              PRUint32   aEventType)
 {
   anEvent.message = aEventType;
   anEvent.widget  = aWidget;
@@ -732,10 +724,9 @@ void nsWidget::InitMouseEvent(PhPointerEvent_t *aPhButtonEvent,
     anEvent.isControl = ( aPhButtonEvent->key_mods & Pk_KM_Ctrl )  ? PR_TRUE : PR_FALSE;
     anEvent.isAlt =     ( aPhButtonEvent->key_mods & Pk_KM_Alt )   ? PR_TRUE : PR_FALSE;
 		anEvent.isMeta =		PR_FALSE;
-    anEvent.refPoint.x =   aPhButtonEvent->pos.x; 
-    anEvent.refPoint.y =   aPhButtonEvent->pos.y;
+    anEvent.point.x =   aPhButtonEvent->pos.x; 
+    anEvent.point.y =   aPhButtonEvent->pos.y;
     anEvent.clickCount = aPhButtonEvent->click_count;
-    anEvent.button = aButton;
   	}
 	}
 
@@ -758,11 +749,15 @@ PRBool nsWidget::DispatchMouseEvent( nsMouseEvent& aEvent ) {
   if (nsnull != mMouseListener) {
 
     switch (aEvent.message) {
-      case NS_MOUSE_BUTTON_DOWN:
+      case NS_MOUSE_LEFT_BUTTON_DOWN:
+      case NS_MOUSE_MIDDLE_BUTTON_DOWN:
+      case NS_MOUSE_RIGHT_BUTTON_DOWN:
         result = ConvertStatus(mMouseListener->MousePressed(aEvent));
         break;
 
-      case NS_MOUSE_BUTTON_UP:
+      case NS_MOUSE_LEFT_BUTTON_UP:
+      case NS_MOUSE_MIDDLE_BUTTON_UP:
+      case NS_MOUSE_RIGHT_BUTTON_UP:
         result = ConvertStatus(mMouseListener->MouseReleased(aEvent));
         result = ConvertStatus(mMouseListener->MouseClicked(aEvent));
         break;
@@ -1023,14 +1018,11 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
           ScreenToWidgetPos( ptrev->pos );
 
           if( ptrev->buttons & Ph_BUTTON_SELECT ) // Normally the left mouse button
-						InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_BUTTON_DOWN,
-							       nsMouseEvent::eLeftButton);
+						InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_DOWN );
           else if( ptrev->buttons & Ph_BUTTON_MENU ) // the right button
-						InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_BUTTON_DOWN,
-	  						       nsMouseEvent::eRightButton);
+						InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_RIGHT_BUTTON_DOWN );
           else // middle button
-						InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_BUTTON_DOWN,
-							       nsMouseEvent::eMiddleButton);
+						InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_MIDDLE_BUTTON_DOWN );
 
 		  		result = DispatchMouseEvent(theMouseEvent);
 
@@ -1038,8 +1030,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 					if( ptrev->buttons & Ph_BUTTON_MENU ) {
 						nsMouseEvent contextMenuEvent(PR_TRUE, 0, nsnull,
                                                       nsMouseEvent::eReal);
-						InitMouseEvent(ptrev, this, contextMenuEvent, NS_CONTEXTMENU,
-							       nsMouseEvent::eRightButton);
+						InitMouseEvent( ptrev, this, contextMenuEvent, NS_CONTEXTMENU );
 						result = DispatchMouseEvent( contextMenuEvent );
 						}
       	  }
@@ -1065,14 +1056,11 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 				  if (ptrev) {
 					  ScreenToWidgetPos( ptrev->pos );
 					  if ( ptrev->buttons & Ph_BUTTON_SELECT ) // Normally the left mouse button
-						 InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_BUTTON_UP,
-						 	        nsMouseEvent::eLeftButton);
+						 InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_UP );
 					  else if( ptrev->buttons & Ph_BUTTON_MENU ) // the right button
-						 InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_BUTTON_UP,
-						 	        nsMouseEvent::eRightButton);
+						 InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_RIGHT_BUTTON_UP );
 					  else // middle button
-						 InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE__BUTTON_UP,
-						 	        nsMouseEvent::eMiddleButton);
+						 InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_MIDDLE_BUTTON_UP );
 					  
 					  result = DispatchMouseEvent(theMouseEvent);
 				  }
@@ -1088,7 +1076,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 		case Ph_EV_PTR_MOTION_BUTTON:
       	{
         PhPointerEvent_t* ptrev = (PhPointerEvent_t*) PhGetData( event );
-	    	nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
+	    	nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal;
 
         if( ptrev ) {
 
@@ -1130,8 +1118,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
                                                nsMouseEvent::eReal);
               PhPointerEvent_t* ptrev2 = (PhPointerEvent_t*) PhGetData( event );
               ScreenToWidgetPos( ptrev2->pos );
-              InitMouseEvent(ptrev2, this, theMouseEvent, NS_MOUSE_BUTTON_UP,
-                             nsMouseEvent::eLeftButton);
+              InitMouseEvent(ptrev2, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_UP );
               result = DispatchMouseEvent(theMouseEvent);
             	}
 							break;
@@ -1272,8 +1259,8 @@ void nsWidget::DispatchDragDropEvent( PhEvent_t *phevent, PRUint32 aEventType, P
 
   InitEvent( event, aEventType );
 
-  event.refPoint.x = pos->x;
-  event.refPoint.y = pos->y;
+  event.point.x = pos->x;
+  event.point.y = pos->y;
 
 	PhDndEvent_t *dnd = ( PhDndEvent_t * ) PhGetData( phevent );
   event.isControl = ( dnd->key_mods & Pk_KM_Ctrl ) ? PR_TRUE : PR_FALSE;
@@ -1283,7 +1270,7 @@ void nsWidget::DispatchDragDropEvent( PhEvent_t *phevent, PRUint32 aEventType, P
 
 	event.widget = this;
 
-///* ATENTIE */ printf("DispatchDragDropEvent pos=%d %d widget=%p\n", event.refPoint.x, event.refPoint.y, this );
+///* ATENTIE */ printf("DispatchDragDropEvent pos=%d %d widget=%p\n", event.point.x, event.point.y, this );
 
   DispatchEvent( &event, status );
 	}

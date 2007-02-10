@@ -83,7 +83,7 @@ nsLDAPProtocolHandler::GetDefaultPort(PRInt32 *result)
 NS_IMETHODIMP
 nsLDAPProtocolHandler::GetProtocolFlags(PRUint32 *result)
 {
-  *result = URI_NORELATIVE | URI_DANGEROUS_TO_LOAD;
+  *result = URI_NORELATIVE;
   return NS_OK;
 }
 

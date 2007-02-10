@@ -73,7 +73,6 @@ treechildren, treeitem, treeseparator, treerow, treecell {
 button,
 checkbox,
 colorpicker[type="button"],
-datepicker[type="grid"],
 menulist,
 radiogroup,
 tree,
@@ -83,7 +82,7 @@ iframe {
   -moz-user-focus: normal;
 }
 
-menulist[editable="true"] {
+menulist[editable] {
   -moz-user-focus: ignore;
 }
 
@@ -111,10 +110,6 @@ button {
   -moz-binding: url("chrome://global/content/bindings/button.xml#button");
 }
 
-button[type="repeat"] {
-  -moz-binding: url("chrome://global/content/bindings/button.xml#button-repeat");
-}
-
 button[type="menu"] {
   -moz-binding: url("chrome://global/content/bindings/button.xml#menu");
 }
@@ -135,6 +130,10 @@ toolbarbutton[type="menu"] {
 
 toolbarbutton[type="menu-button"] {
   -moz-binding: url("chrome://global/content/bindings/toolbarbutton.xml#menu-button");
+}
+
+dropmarker[type="menu-button"] {
+  -moz-binding: url("chrome://global/content/bindings/toolbarbutton.xml#dropmarker");
 }
 
 /******** browser, editor, iframe ********/
@@ -552,6 +551,7 @@ treecolpicker {
 
 tree {
   -moz-box-orient: vertical;
+  -moz-user-select: none;
   min-width: 0px;
   min-height: 0px;
   width: 10px;
@@ -569,11 +569,6 @@ treecol {
 treecol[hidden="true"] {
   visibility: collapse;
   display: -moz-box;
-}
-
-.tree-scrollable-columns {
-  /* Yes, Virginia, this makes it scrollable */
-  overflow: hidden;
 }
 
 /********** deck & stack *********/
@@ -620,10 +615,6 @@ tab {
   -moz-binding: url("chrome://global/content/bindings/tabbrowser.xml#tabbrowser-tabs");
 }
 
-.tabbrowser-arrowscrollbox {
-  -moz-binding: url("chrome://global/content/bindings/tabbrowser.xml#tabbrowser-arrowscrollbox");
-}
-
 .tabbrowser-tabs > .tabbrowser-tab {
   -moz-binding: url("chrome://global/content/bindings/tabbrowser.xml#tabbrowser-tab");
 }
@@ -631,6 +622,10 @@ tab {
 .tabbrowser-tabs > .tabbrowser-tab > .tab-close-button,
 .tabs-closebutton-box > .tabs-closebutton {
   -moz-binding: url("chrome://global/content/bindings/tabbrowser.xml#tabbrowser-close-tab-button");
+}
+
+.tabbrowser-arrowscrollbox {
+  -moz-binding: url("chrome://global/content/bindings/tabbrowser.xml#tabbrowser-arrowscrollbox");
 }
 
 .tab-close-button {
@@ -653,7 +648,6 @@ tabpanels {
 .tabs-alltabs-popup {
   -moz-binding: url("chrome://global/content/bindings/tabbrowser.xml#tabbrowser-alltabs-popup");
 }
-
 
 /********** progressmeter **********/
 
@@ -722,16 +716,8 @@ html|*.textbox-textarea {
   -moz-binding: url("chrome://global/content/bindings/textbox.xml#input-box");
 }
 
-.textbox-input-box[spellcheck="true"] {
-  -moz-binding: url("chrome://global/content/bindings/textbox.xml#input-box-spell");
-}
-
 textbox[type="timed"] {
   -moz-binding: url("chrome://global/content/bindings/textbox.xml#timed-textbox");
-}
-
-textbox[type="number"] {
-  -moz-binding: url("chrome://global/content/bindings/numberbox.xml#numberbox");
 }
 
 /********** autocomplete textbox **********/
@@ -741,8 +727,6 @@ textbox[type="number"] {
 %ifdef MOZ_THUNDERBIRD
 %define AUTOCOMPLETE_OLD_STYLE
 %elifdef MOZ_STANDALONE_COMPOSER
-%define AUTOCOMPLETE_OLD_STYLE
-%elifdef MOZ_SUITE
 %define AUTOCOMPLETE_OLD_STYLE
 %endif
 
@@ -808,9 +792,13 @@ popup[type="autocomplete"] {
   -moz-binding: url("chrome://global/content/bindings/autocomplete.xml#history-dropmarker");
 }
 
+/* To be overridden by themes that use a background for the dropmarker (e.g. winstripe): */
+.autocomplete-dropmarker-bkgnd {
+  background-image: none;
+  list-style-image: none;
+}
+
 %endif
-
-
 
 /* the C++ implementation of widgets is too eager to make popups visible.
    this causes problems (bug 120155 and others), thus this workaround: */
@@ -848,7 +836,7 @@ menulist {
   -moz-binding: url("chrome://global/content/bindings/menulist.xml#menulist");
 }
 
-menulist[editable="true"] {
+menulist[editable] {
   -moz-binding: url("chrome://global/content/bindings/menulist.xml#menulist-editable");
 }
 
@@ -864,7 +852,7 @@ menulist > menupopup > menuitem {
   -moz-binding: url("chrome://global/content/bindings/menu.xml#menuitem-iconic-noaccel");
 }
 
-dropmarker {
+dropmarker[type="menu"] {
   -moz-binding: url("chrome://global/content/bindings/general.xml#dropmarker");
 }
 
@@ -893,16 +881,13 @@ scrollbar {
   direction: ltr;
 }
 
-thumb {
+thumb 
+{
   -moz-binding: url(chrome://global/content/bindings/scrollbar.xml#thumb);
   display: -moz-box !important;
 }
 
-.scale-thumb {
-  -moz-binding: url(chrome://global/content/bindings/scale.xml#scalethumb);
-}
-
-scrollbar, scrollbarbutton, scrollcorner, slider, thumb, scale {
+scrollbar, scrollbarbutton, scrollcorner, slider, thumb {
   -moz-user-select: none;
 }
 
@@ -916,15 +901,6 @@ scrollcorner[hidden="true"] {
 
 scrollbar[value="hidden"] {
   visibility: hidden;
-}
-
-scale {
-  -moz-binding: url(chrome://global/content/bindings/scale.xml#scale);
-}
-
-.scale-slider {
-  -moz-binding: url(chrome://global/content/bindings/scale.xml#scaleslider);
-  -moz-user-focus: normal;
 }
 
 /******** scrollbox ********/
@@ -977,10 +953,6 @@ statusbarpanel {
 
 spinbuttons {
   -moz-binding: url("chrome://global/content/bindings/spinbuttons.xml#spinbuttons");
-}
-
-.spinbuttons-button {
-  -moz-user-focus: ignore;
 }
 
 /********** stringbundle **********/
@@ -1045,6 +1017,18 @@ prefwindow {
 prefpane {
   -moz-binding: url("chrome://global/content/bindings/preferences.xml#prefpane");  
   -moz-box-orient: vertical;
+  opacity: 0.0;
+}
+
+prefpane[selected="true"] {
+  opacity: 0.0;
+}
+
+prefwindow[animate="off"] > prefpane,
+prefwindow[animate="off"] > prefpane[selected="true"],
+prefwindow[type="child"] > prefpane,
+prefwindow[type="child"] > prefpane[selected="true"] {
+  opacity: 1.0;
 }
 
 prefwindow > .paneDeckContainer {
@@ -1102,26 +1086,3 @@ richlistitem {
   -moz-binding: url('chrome://global/content/bindings/richlistbox.xml#richlistitem');
 }
 
-/********** datepicker and timepicker ********/
-
-datepicker {
-  -moz-binding: url('chrome://global/content/bindings/datetimepicker.xml#datepicker');
-}
-
-datepicker[type="popup"] {
-  -moz-binding: url('chrome://global/content/bindings/datetimepicker.xml#datepicker-popup');
-}
-
-datepicker[type="grid"] {
-  -moz-binding: url('chrome://global/content/bindings/datetimepicker.xml#datepicker-grid');
-}
-
-timepicker {
-  -moz-binding: url('chrome://global/content/bindings/datetimepicker.xml#timepicker');
-}
-
-
-/*********** findbar ************/
-findbar {
-  -moz-binding: url('chrome://global/content/bindings/findbar.xml#findbar');
-}

@@ -42,18 +42,17 @@
 
 #include "nsDebug.h"
 
+#include "plevent.h"
+#include "nsIEventQueueService.h"
+
 #include "nsIPluginInstancePeer.h"
 #include "nsPluginSafety.h"
 #include "nsPluginNativeWindow.h"
-#include "nsThreadUtils.h"
-#include "nsAutoPtr.h"
-#include "nsTWeakRef.h"
 
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kCPluginManagerCID, NS_PLUGINMANAGER_CID); // needed for NS_TRY_SAFE_CALL
 
 #define NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION "MozillaPluginWindowPropertyAssociation"
-
-typedef nsTWeakRef<class nsPluginNativeWindowOS2> PluginWindowWeakRef;
 
 extern "C" {
 PVOID APIENTRY WinQueryProperty(HWND hwnd, PCSZ  pszNameOrAtom);
@@ -67,21 +66,20 @@ BOOL  APIENTRY WinSetProperty(HWND hwnd, PCSZ  pszNameOrAtom,
 /**
  *  PLEvent handling code
  */
-class PluginWindowEvent : public nsRunnable {
+class PluginWindowEvent : public PLEvent {
 public:
   PluginWindowEvent();
-  void Init(const PluginWindowWeakRef &ref, HWND hWnd, ULONG msg, MPARAM mp1, MPARAM mp2);
+  void Init(HWND hWnd, ULONG msg, MPARAM mp1, MPARAM mp2);
   void Clear();
   HWND   GetWnd()    { return mWnd; };
   ULONG   GetMsg()    { return mMsg; };
   MPARAM GetWParam() { return mWParam; };
   MPARAM GetLParam() { return mLParam; };
-  PRBool InUse()     { return (mWnd!=NULL || mMsg!=0); };
-
-  NS_IMETHOD Run();
+  PRBool GetIsAlloced() { return mIsAlloced; };
+  void   SetIsAlloced(PRBool aIsAlloced) { mIsAlloced = aIsAlloced; };
+  PRBool InUse() { return (mWnd!=NULL || mMsg!=0); };
 
 protected:
-  PluginWindowWeakRef mPluginWindowRef;
   HWND   mWnd;
   ULONG  mMsg;
   MPARAM mWParam;
@@ -102,12 +100,10 @@ void PluginWindowEvent::Clear()
   mLParam = 0;
 }
 
-void PluginWindowEvent::Init(const PluginWindowWeakRef &ref, HWND aWnd,
-                             ULONG aMsg, MPARAM mp1, MPARAM mp2)
+void PluginWindowEvent::Init(HWND aWnd, ULONG aMsg, MPARAM mp1, MPARAM mp2)
 {
   NS_ASSERTION(aWnd!=NULL && aMsg!=0, "invalid plugin event value");
   NS_ASSERTION(mWnd==NULL && mMsg==0 && mWParam==0 && mLParam==0,"event already in use");
-  mPluginWindowRef = ref;
   mWnd    = aWnd;
   mMsg    = aMsg;
   mWParam = mp1;
@@ -139,12 +135,13 @@ private:
 public:
   // locals
   PFNWP GetWindowProc();
+  nsresult GetEventService(nsCOMPtr<nsIEventQueueService> &aEventService);
   PluginWindowEvent * GetPluginWindowEvent(HWND aWnd, ULONG aMsg, MPARAM mp1, MPARAM mp2);
 
 private:
   PFNWP mPluginWinProc;
-  PluginWindowWeakRef mWeakRef;
-  nsRefPtr<PluginWindowEvent> mCachedPluginWindowEvent;
+  nsCOMPtr<nsIEventQueueService> mEventService;
+  PluginWindowEvent mPluginWindowEvent;
 
 public:
   nsPluginType mPluginType;
@@ -159,10 +156,17 @@ static PRBool ProcessFlashMessageDelayed(nsPluginNativeWindowOS2 * aWin,
     return PR_FALSE; // no need to delay
 
   // do stuff
-  nsCOMPtr<nsIRunnable> pwe = aWin->GetPluginWindowEvent(hWnd, msg, mp1, mp2);
-  if (pwe) {
-    NS_DispatchToCurrentThread(pwe);
-    return PR_TRUE;  
+  nsCOMPtr<nsIEventQueueService> eventService;
+  if (NS_SUCCEEDED(aWin->GetEventService(eventService))) {
+    nsCOMPtr<nsIEventQueue> eventQueue;  
+    eventService->GetThreadEventQueue(PR_GetCurrentThread(), getter_AddRefs(eventQueue));
+    if (eventQueue) {
+      PluginWindowEvent *pwe = aWin->GetPluginWindowEvent(hWnd, msg, mp1, mp2);
+      if (pwe) {
+        eventQueue->PostEvent(pwe);
+        return PR_TRUE;  
+      }
+    }
   }
   return PR_FALSE;
 }
@@ -234,14 +238,21 @@ nsPluginNativeWindowOS2::nsPluginNativeWindowOS2() : nsPluginNativeWindow()
   height = 0; 
 
   mPluginWinProc = NULL;
+  mPluginWindowEvent.SetIsAlloced(PR_FALSE);
   mPluginType = nsPluginType_Unknown;
 }
 
 nsPluginNativeWindowOS2::~nsPluginNativeWindowOS2()
 {
-  // clear weak reference to self to prevent any pending events from
-  // dereferencing this.
-  mWeakRef.forget();
+  // clear any pending events to avoid dangling pointers
+  nsCOMPtr<nsIEventQueueService> eventService(do_GetService(kEventQueueServiceCID));
+  if (eventService) {
+    nsCOMPtr<nsIEventQueue> eventQueue;  
+    eventService->GetThreadEventQueue(PR_GetCurrentThread(), getter_AddRefs(eventQueue));
+    if (eventQueue) {
+      eventQueue->RevokeEvents(this);
+    }
+  }
 }
 
 PFNWP nsPluginNativeWindowOS2::GetWindowProc()
@@ -249,39 +260,63 @@ PFNWP nsPluginNativeWindowOS2::GetWindowProc()
   return mPluginWinProc;
 }
 
-NS_IMETHODIMP PluginWindowEvent::Run()
+PR_STATIC_CALLBACK(void*)
+PluginWindowEvent_Handle(PLEvent* self)
 {
-  nsPluginNativeWindowOS2 *win = mPluginWindowRef.get();
-  if (!win)
-    return NS_OK;
+  if (!self)
+    return nsnull;
 
-  HWND hWnd = GetWnd();
+  PluginWindowEvent *event = NS_STATIC_CAST(PluginWindowEvent*, self);
+  
+  HWND hWnd = event->GetWnd();
   if (!hWnd)
-    return NS_OK;
+    return nsnull;
 
-  nsCOMPtr<nsIPluginInstance> inst;
-  win->GetPluginInstance(inst);
-  NS_TRY_SAFE_CALL_VOID((win->GetWindowProc()) 
-                       (hWnd, 
-                        GetMsg(), 
-                        GetWParam(), 
-                        GetLParam()),
-                        nsnull, inst);
-  Clear();
+  nsPluginNativeWindowOS2 * win = (nsPluginNativeWindowOS2 *)::WinQueryProperty(hWnd, NS_PLUGIN_WINDOW_PROPERTY_ASSOCIATION);
+  if (win) {
+    nsCOMPtr<nsIPluginInstance> inst;
+    win->GetPluginInstance(inst);
+    NS_TRY_SAFE_CALL_VOID((win->GetWindowProc())
+                         (hWnd, 
+                          event->GetMsg(), 
+                          event->GetWParam(), 
+                          event->GetLParam()),
+                          nsnull, inst);
+  }
+
+  return nsnull;
+}
+
+PR_STATIC_CALLBACK(void)
+PluginWindowEvent_Destroy(PLEvent* self)
+{
+  if (!self)
+    return;
+
+  PluginWindowEvent *event = NS_STATIC_CAST(PluginWindowEvent*, self);
+  if (event->GetIsAlloced()) {
+    delete event;
+  }
+  else
+    event->Clear();
+}
+
+nsresult nsPluginNativeWindowOS2::GetEventService(nsCOMPtr<nsIEventQueueService> &aEventService)
+{
+  if (!mEventService) {
+    mEventService = do_GetService(kEventQueueServiceCID);
+    if (!mEventService)
+      return NS_ERROR_FAILURE;
+  }
+  aEventService = mEventService;
   return NS_OK;
 }
 
 PluginWindowEvent*
 nsPluginNativeWindowOS2::GetPluginWindowEvent(HWND aWnd, ULONG aMsg, MPARAM aMp1, MPARAM aMp2)
 {
-  if (!mWeakRef) {
-    mWeakRef = this;
-    if (!mWeakRef)
-      return nsnull;
-  }
-
   PluginWindowEvent *event;
-  if (!mCachedPluginWindowEvent || mCachedPluginWindowEvent->InUse()) {
+  if (mPluginWindowEvent.InUse()) {
     // We have the ability to alloc if needed in case in the future some plugin
     // should post multiple PostMessages. However, this could lead to many
     // alloc's per second which could become a performance issue. If/when this
@@ -290,13 +325,15 @@ nsPluginNativeWindowOS2::GetPluginWindowEvent(HWND aWnd, ULONG aMsg, MPARAM aMp1
     event = new PluginWindowEvent();
     if (!event)
       return nsnull;
+
+    event->SetIsAlloced(PR_TRUE);
   }
   else {
-    event = mCachedPluginWindowEvent;
+    event = &mPluginWindowEvent;
   }
-  NS_ADDREF(event);
 
-  event->Init(mWeakRef, aWnd, aMsg, aMp1, aMp2);
+  event->Init(aWnd, aMsg, aMp1, aMp2);
+  PL_InitEvent(event, (void *)this, &PluginWindowEvent_Handle, PluginWindowEvent_Destroy);
   return event;
 };
 

@@ -155,12 +155,16 @@ button[type="menu-button"] {
 .button-menu-dropmarker,
 .button-menubutton-dropmarker {
   margin: 1px;
-  background-color: transparent !important;
-  border: none !important;
+  background-image: url("chrome://global/skin/arrow/arrow-dn.gif");
   min-width:9px;
   min-height:5px;
 }
   
+.button-menu-dropmarker[disabled="true"],
+.button-menubutton-dropmarker[disabled="true"] {
+  background-image: url("chrome://global/skin/arrow/arrow-dn-dis.gif");
+}
+
 .button-menubutton-dropmarker[open="true"] {
   margin: 2px 0px 0px 2px;
 }

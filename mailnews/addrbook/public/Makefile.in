@@ -55,9 +55,11 @@ XPIDLSRCS	= \
 		nsIAddrDBListener.idl \
 		nsIAddrDatabase.idl \
 		nsIAddressBook.idl \
+		nsIAbBase.idl \
 		nsIAddrBookSession.idl \
 		nsIAbAutoCompleteSession.idl \
 		nsIAbAddressCollecter.idl \
+		nsIAbUpgrader.idl \
 		nsIAddbookUrl.idl \
 		nsIAbDirFactory.idl	\
 		nsIAbDirFactoryService.idl	\
@@ -68,23 +70,17 @@ XPIDLSRCS	= \
 		nsIAbView.idl \
 		nsIMsgVCardService.idl \
 		nsIAbLDIFService.idl \
-		nsIAbLDAPAttributeMap.idl \
 		$(NULL)
 ifdef MOZ_LDAP_XPCOM
 XPIDLSRCS       += \
 		nsILDAPPrefsService.idl \
-		nsILDAPAutoCompleteSession.idl \
-		nsILDAPAutoCompFormatter.idl \
 		nsIAbLDAPAutoCompFormatter.idl \
                 nsIAbLDAPReplicationService.idl \
                 nsIAbLDAPReplicationQuery.idl \
                 nsIAbLDAPReplicationData.idl \
+		nsIAbLDAPAttributeMap.idl \
 		nsIAbLDAPDirectory.idl \
 		$(NULL)
 endif
-
-EXPORTS		= \
-		nsAbBaseCID.h \
-		$(NULL)
 
 include $(topsrcdir)/config/rules.mk

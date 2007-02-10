@@ -55,25 +55,6 @@
 #include <time.h>
 #endif
 
-/* 
- * The COUNT_LEAPS macro counts the number of leap years passed by
- * till the start of the given year Y.  At the start of the year 4
- * A.D. the number of leap years passed by is 0, while at the start of
- * the year 5 A.D. this count is 1. The number of years divisible by
- * 100 but not divisible by 400 (the non-leap years) is deducted from
- * the count to get the correct number of leap years.
- *
- * The COUNT_DAYS macro counts the number of days since 01/01/01 till the
- * start of the given year Y. The number of days at the start of the year
- * 1 is 0 while the number of days at the start of the year 2 is 365
- * (which is ((2)-1) * 365) and so on. The reference point is 01/01/01
- * midnight 00:00:00.
- */
-
-#define COUNT_LEAPS(Y)   ( ((Y)-1)/4 - ((Y)-1)/100 + ((Y)-1)/400 )
-#define COUNT_DAYS(Y)  ( ((Y)-1)*365 + COUNT_LEAPS(Y) )
-#define DAYS_BETWEEN_YEARS(A, B)  (COUNT_DAYS(B) - COUNT_DAYS(A))
-
 
 
 
@@ -277,6 +258,8 @@ PR_ImplodeTime(const PRExplodedTime *exploded)
     PRInt64 secPerDay, usecPerSec;
     PRInt64 temp;
     PRInt64 numSecs64;
+    PRInt32 fourYears;
+    PRInt32 remainder;
     PRInt32 numDays;
     PRInt32 numSecs;
 
@@ -284,8 +267,27 @@ PR_ImplodeTime(const PRExplodedTime *exploded)
     copy = *exploded;
     PR_NormalizeTime(&copy, PR_GMTParameters);
 
-    numDays = DAYS_BETWEEN_YEARS(1970, copy.tm_year);
-    
+    fourYears = (copy.tm_year - 1970) / 4;
+    remainder = (copy.tm_year - 1970) % 4;
+    if (remainder < 0) {
+        remainder += 4;
+        fourYears--;
+    }
+    numDays = fourYears * (4 * 365 + 1);
+    switch (remainder) {
+        case 0:
+            break;
+        case 1:  /* 1970 */
+            numDays += 365;
+            break;
+        case 2:  /* 1970-1 */
+            numDays += 365 * 2;
+            break;
+        case 3:  /* 1970-2 */
+            numDays += 365 * 3 + 1;
+            break;
+    }
+
     numSecs = copy.tm_yday * 86400 + copy.tm_hour * 3600
             + copy.tm_min * 60 + copy.tm_sec;
 
@@ -401,6 +403,8 @@ PR_IMPLEMENT(void)
 PR_NormalizeTime(PRExplodedTime *time, PRTimeParamFn params)
 {
     int daysInMonth;
+    PRInt32 fourYears;
+    PRInt32 remainder;
     PRInt32 numDays;
 
     /* Get back to GMT */
@@ -488,8 +492,26 @@ PR_NormalizeTime(PRExplodedTime *time, PRTimeParamFn params)
     /* Recompute yday and wday */
     time->tm_yday = time->tm_mday +
             lastDayOfMonth[IsLeapYear(time->tm_year)][time->tm_month];
-	    
-    numDays = DAYS_BETWEEN_YEARS(1970, time->tm_year) + time->tm_yday;
+    fourYears = (time->tm_year - 1970) / 4;
+    remainder = (time->tm_year - 1970) % 4;
+    if (remainder < 0) {
+        remainder += 4;
+        fourYears--;
+    }
+    numDays = fourYears * (4 * 365 + 1);
+    switch (remainder) {
+        case 0:
+            break;
+        case 1:
+            numDays += 365;  /* 1970 */
+            break;
+        case 2:
+            numDays += 365 + 365;  /* 1970 and 1971 */
+            break;
+        case 3:
+            numDays += 365 + 365 + 366; /* 1970-2 */
+    }
+    numDays += time->tm_yday;
     time->tm_wday = (numDays + 4) % 7;
     if (time->tm_wday < 0) {
         time->tm_wday += 7;
@@ -631,7 +653,6 @@ PR_LocalTimeParameters(const PRExplodedTime *gmt)
     time_t secs;
     PRTime secs64;
     PRInt64 usecPerSec;
-    PRInt64 usecPerSec_1;
     PRInt64 maxInt32;
     PRInt64 minInt32;
     PRInt32 dayOffset;
@@ -678,16 +699,7 @@ PR_LocalTimeParameters(const PRExplodedTime *gmt)
 
     secs64 = PR_ImplodeTime(gmt);    /* This is still in microseconds */
     LL_I2L(usecPerSec, PR_USEC_PER_SEC);
-    LL_I2L(usecPerSec_1, PR_USEC_PER_SEC - 1);
-    /* Convert to seconds, truncating down (3.1 -> 3 and -3.1 -> -4) */
-    if (LL_GE_ZERO(secs64)) {
-        LL_DIV(secs64, secs64, usecPerSec);
-    } else {
-        LL_NEG(secs64, secs64);
-        LL_ADD(secs64, secs64, usecPerSec_1);
-        LL_DIV(secs64, secs64, usecPerSec);
-        LL_NEG(secs64, secs64);
-    }
+    LL_DIV(secs64, secs64, usecPerSec);   /* Convert to seconds */
     LL_I2L(maxInt32, PR_INT32_MAX);
     LL_I2L(minInt32, PR_INT32_MIN);
     if (LL_CMP(secs64, >, maxInt32) || LL_CMP(secs64, <, minInt32)) {

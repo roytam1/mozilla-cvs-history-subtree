@@ -57,6 +57,7 @@
 #include "nspr.h"
 #include "nscore.h"
 #include "nsCOMPtr.h"
+#include "nsIEventQueueService.h"
 #include "nsIIOService.h"
 #include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
@@ -81,7 +82,7 @@
 #include "nsChannelProperties.h"
 
 #include "nsISimpleEnumerator.h"
-#include "nsStringAPI.h"
+#include "nsXPIDLString.h"
 #include "nsNetUtil.h"
 #include "prlog.h"
 #include "prtime.h"
@@ -96,11 +97,13 @@ static PRLogModuleInfo *gTestLog = nsnull;
 #endif
 #define LOG(args) PR_LOG(gTestLog, PR_LOG_DEBUG, args)
 
+static NS_DEFINE_CID(kEventQueueServiceCID,      NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
 
 //static PRTime gElapsedTime; // enable when we time it...
 static int gKeepRunning = 0;
 static PRBool gVerbose = PR_FALSE;
+static nsIEventQueue* gEventQ = nsnull;
 static PRBool gAskUserForInput = PR_FALSE;
 static PRBool gResume = PR_FALSE;
 static PRUint64 gStartAt = 0;
@@ -137,19 +140,6 @@ SetHttpProxy(const char *proxy)
     prefs->SetIntPref("network.proxy.type", 1); // manual proxy config
   }
   LOG(("connecting via proxy=%s:%d\n", proxyHost.get(), port));
-  return NS_OK;
-}
-
-static nsresult
-SetPACFile(const char* pacURL)
-{
-  nsCOMPtr<nsIPrefBranch> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
-  if (prefs)
-  {
-    prefs->SetCharPref("network.proxy.autoconfig_url", pacURL);
-    prefs->SetIntPref("network.proxy.type", 2); // PAC file
-  }
-  LOG(("connecting using PAC file %s\n", pacURL));
   return NS_OK;
 }
 
@@ -304,7 +294,7 @@ TestAuthPrompt::PromptUsernameAndPassword(const PRUnichar *dialogTitle,
     fgets(buf, sizeof(buf), stdin);
     n = strlen(buf);
     buf[n-1] = '\0'; // trim trailing newline
-    *user = NS_StringCloneData(NS_ConvertUTF8toUTF16(buf));
+    *user = ToNewUnicode(nsDependentCString(buf));
 
     const char *p;
 #ifdef XP_UNIX
@@ -316,7 +306,7 @@ TestAuthPrompt::PromptUsernameAndPassword(const PRUnichar *dialogTitle,
     buf[n-1] = '\0'; // trim trailing newline
     p = buf;
 #endif
-    *pwd = NS_StringCloneData(NS_ConvertUTF8toUTF16(p));
+    *pwd = ToNewUnicode(nsDependentCString(p));
 
     // zap buf 
     memset(buf, 0, sizeof(buf));
@@ -501,6 +491,29 @@ InputTestConsumer::OnDataAvailable(nsIRequest *request,
   return NS_OK;
 }
 
+PR_STATIC_CALLBACK(void) DecrementDestroyHandler(PLEvent *self) 
+{
+    PR_Free(self);
+}
+
+
+PR_STATIC_CALLBACK(void*) DecrementEventHandler(PLEvent *self) 
+{
+    gKeepRunning--;
+    return nsnull;
+}
+
+void FireDecrement()
+{
+    PLEvent *event = PR_NEW(PLEvent);
+    PL_InitEvent(event, 
+               nsnull,
+               DecrementEventHandler,
+               DecrementDestroyHandler);
+
+    gEventQ->PostEvent(event);
+}
+
 NS_IMETHODIMP
 InputTestConsumer::OnStopRequest(nsIRequest *request, nsISupports* context,
                                  nsresult aStatus)
@@ -546,8 +559,7 @@ InputTestConsumer::OnStopRequest(nsIRequest *request, nsISupports* context,
     LOG(("\nFinished loading: UNKNOWN URL. Status Code: %x\n", aStatus));
   }
 
-  if (--gKeepRunning == 0)
-    QuitPumpingEvents();
+  FireDecrement();
   return NS_OK;
 }
 
@@ -683,7 +695,7 @@ nsresult StartLoadingURL(const char* aUrlString)
                                  info);
 
         if (NS_SUCCEEDED(rv)) {
-            gKeepRunning++;
+            gKeepRunning += 1;
         }
         else {
             LOG(("ERROR: AsyncOpen failed [rv=%x]\n", rv));
@@ -695,34 +707,6 @@ nsresult StartLoadingURL(const char* aUrlString)
     return rv;
 }
 
-static PRInt32
-FindChar(nsCString& buffer, char c)
-{
-    const char *b;
-    PRInt32 len = NS_CStringGetData(buffer, &b);
-
-    for (PRInt32 offset = 0; offset < len; ++offset) {
-        if (b[offset] == c)
-            return offset;
-    }
-
-    return -1;
-}
-        
-
-static void
-StripChar(nsCString& buffer, char c)
-{
-    const char *b;
-    PRUint32 len = NS_CStringGetData(buffer, &b) - 1;
-
-    for (; len > 0; --len) {
-        if (b[len] == c) {
-            buffer.Cut(len, 1);
-            NS_CStringGetData(buffer, &b);
-        }
-    }
-}
 
 nsresult LoadURLsFromFile(char *aFileName)
 {
@@ -731,7 +715,7 @@ nsresult LoadURLsFromFile(char *aFileName)
     PRFileDesc* fd;
     char buffer[1024];
     nsCString fileBuffer;
-    nsCString urlString;
+    nsCAutoString urlString;
 
     fd = PR_Open(aFileName, PR_RDONLY, 777);
     if (!fd) {
@@ -744,11 +728,11 @@ nsresult LoadURLsFromFile(char *aFileName)
         if (len>0) {
             fileBuffer.Append(buffer, len);
             // Treat each line as a URL...
-            while ((offset = FindChar(fileBuffer, '\n')) != -1) {
-                urlString = StringHead(fileBuffer, offset);
+            while ((offset = fileBuffer.FindChar('\n')) != -1) {
+                fileBuffer.Left(urlString, offset);
                 fileBuffer.Cut(0, offset+1);
 
-                StripChar(urlString, '\r');
+                urlString.StripChars("\r");
                 if (urlString.Length()) {
                     LOG(("\t%s\n", urlString.get()));
                     rv = StartLoadingURL(urlString.get());
@@ -758,7 +742,7 @@ nsresult LoadURLsFromFile(char *aFileName)
     } while (len>0);
 
     // If anything is left in the fileBuffer, treat it as a URL...
-    StripChar(fileBuffer, '\r');
+    fileBuffer.StripChars("\r");
     if (fileBuffer.Length()) {
         LOG(("\t%s\n", fileBuffer.get()));
         StartLoadingURL(fileBuffer.get());
@@ -789,9 +773,7 @@ main(int argc, char* argv[])
 
     nsresult rv= (nsresult)-1;
     if (argc < 2) {
-        printf("usage: %s [-verbose] [-file <name>] [-resume <startoffset>"
-               "[-entityid <entityid>]] [-proxy <proxy>] [-pac <pacURL>]"
-               "[-console] <url> <url> ... \n", argv[0]);
+        printf("usage: %s [-verbose] [-file <name>] [-resume <startoffset> [-entityid <entityid>]] [-proxy <proxy>] [-console] <url> <url> ... \n", argv[0]);
         return -1;
     }
 
@@ -808,6 +790,13 @@ main(int argc, char* argv[])
     if (NS_FAILED(rv)) return rv;
 
     {
+        // Create the Event Queue for this thread...
+        nsCOMPtr<nsIEventQueueService> eventQService =
+                 do_GetService(kEventQueueServiceCID, &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &gEventQ);
+
         int i;
         LOG(("Trying to load:\n"));
         for (i=1; i<argc; i++) {
@@ -844,16 +833,15 @@ main(int argc, char* argv[])
                 continue;
             }
 
-            if (PL_strcasecmp(argv[i], "-pac") == 0) {
-                SetPACFile(argv[++i]);
-                continue;
-            }
-
             LOG(("\t%s\n", argv[i]));
             rv = StartLoadingURL(argv[i]);
         }
-        // Enter the message pump to allow the URL load to proceed.
-        PumpEvents();
+      // Enter the message pump to allow the URL load to proceed.
+        while ( gKeepRunning ) {
+            PLEvent *gEvent;
+            gEventQ->WaitForEvent(&gEvent);
+            gEventQ->HandleEvent(gEvent);
+        }
     } // this scopes the nsCOMPtrs
     // no nsCOMPtrs are allowed to be alive when you call NS_ShutdownXPCOM
     NS_ShutdownXPCOM(nsnull);

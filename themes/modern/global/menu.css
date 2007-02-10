@@ -91,8 +91,8 @@ menuitem[_moz-menuactive="true"][disabled="true"] {
 }
 
 .menu-iconic-icon {
-  min-width: 16px;
-  min-height: 16px;
+  width: 16px;
+  height: 16px;
   list-style-image: inherit;
 }
 
@@ -167,7 +167,7 @@ popup > menuitem[_moz-menuactive="true"] {
 menulist > menupopup > menuitem,
 .menulist-menupopup > menu,
 menulist > menupopup > menu {
-  padding-right: 30px;
+  padding-right: 26px;
   padding-top: 1px;
   padding-bottom: 1px;
   max-width: none;
@@ -231,6 +231,7 @@ menuseparator {
 menulist > menupopup > menuseparator,
 .menulist-menupopup > menuseparator {
   margin: 2px 0;
+  border-top: 1px solid #000000;
   border-bottom: none;
 }
 

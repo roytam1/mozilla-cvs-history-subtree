@@ -49,12 +49,9 @@ class nsIScrollableView;
 
 class nsIScrollableViewProvider : public nsISupports {
  public: 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISCROLLABLEVIEWPROVIDER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCROLLABLEVIEWPROVIDER_IID)
 
   virtual nsIScrollableView* GetScrollableView() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIScrollableViewProvider,
-                              NS_ISCROLLABLEVIEWPROVIDER_IID)
 
 #endif /* _nsIScrollableViewProvider_h */

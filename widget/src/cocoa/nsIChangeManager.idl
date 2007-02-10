@@ -44,8 +44,6 @@
 interface nsIContent;
 interface nsIDocument;
 
-// These interfaces are used by our menu code so we only have to have one
-// nsIDocumentObserver.
 
 //
 // nsIChangeObserver
@@ -54,13 +52,11 @@ interface nsIDocument;
 // its corresponding content object.
 // (NOTE: If we need more things, we can add them later)
 //
-[uuid(f5734700-fb27-11da-974d-0800200c9a66)]
+[scriptable, uuid(d8cf3bd0-1dd1-11b2-a837-fec5f865b071)]
 interface nsIChangeObserver : nsISupports
 {
-  void AttributeChanged(in nsIDocument aDocument,
-                        in long aNameSpaceID,
-                        in nsIContent aContent,
-                        in nsIAtom aAttribute);
+  void AttributeChanged ( in nsIDocument aDocument,
+                           in long aNameSpaceID, in nsIAtom aAttribute ) ;
 
   void ContentRemoved ( in nsIDocument aDocument, in nsIContent aChild, 
                           in long aIndexInContainer ) ;
@@ -78,10 +74,10 @@ interface nsIChangeObserver : nsISupports
 // to be notified when content objects change or children added/removed, etc.
 //
 // We use a central manager to redirect for performance reasons, to avoid
-// every menu/item from getting a call when any change to the document happens.
+// every meny/item from getting a call when any change to the document happens.
 //
 
-[uuid(fb31c7e0-1dd1-11b2-8a61-f4697ef53c88)]
+[scriptable, uuid(fb31c7e0-1dd1-11b2-8a61-f4697ef53c88)]
 interface nsIChangeManager : nsISupports
 {
   void Register ( in nsIContent aContent, in nsIChangeObserver aMenuObject ) ;
@@ -89,4 +85,6 @@ interface nsIChangeManager : nsISupports
   
   nsIChangeObserver Lookup ( in nsIContent aContent ) ;
   
-}; // nsIChangeManager
+}; // nsPIChangeManager
+
+

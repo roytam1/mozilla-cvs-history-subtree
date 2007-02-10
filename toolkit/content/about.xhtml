@@ -4,8 +4,8 @@
   "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd" [
 <!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd" >
 %brandDTD;
-<!ENTITY % aboutDTD SYSTEM "chrome://global/locale/about.dtd" >
-%aboutDTD;
+<!ENTITY % licenseDTD SYSTEM "chrome://global/locale/license.dtd" >
+%licenseDTD;
 <!ENTITY % globalDTD SYSTEM "chrome://global/locale/global.dtd">
 %globalDTD;
 ]>
@@ -82,6 +82,7 @@
       }
       catch (ex) { /* no release notes URL for you without bug 349985 being fixed */ }
 
+      // add build identifier
       var ua = navigator.userAgent;
       if (ua) {
         var list = document.getElementById("aboutPageList");
@@ -89,7 +90,7 @@
         listItem.appendChild(document.createTextNode("&about.buildIdentifier;"));
         // replace the shortened 8-digit build id in the UA with the full 10-digit 
         // build id from navigator.buildID
-        var newUA = ua.replace(/\/\d{8}/, "/" + navigator.buildID);
+        var newUA = ua.replace(/\/\d{8}/, '/'+navigator.buildID);
         listItem.appendChild(document.createTextNode(newUA));
       }
     </script>

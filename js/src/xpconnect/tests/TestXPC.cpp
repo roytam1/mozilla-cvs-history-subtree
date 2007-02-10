@@ -42,8 +42,6 @@
 
 #include <stdio.h>
 
-#include "nsComponentManagerUtils.h"
-#include "nsServiceManagerUtils.h"
 #include "nsIXPConnect.h"
 #include "nsIScriptError.h"
 #include "nsIServiceManager.h"
@@ -54,9 +52,8 @@
 #include "nsMemory.h"
 #include "nsIXPCSecurityManager.h"
 #include "nsICategoryManager.h"
+#include "nsString.h"
 #include "nsIVariant.h"
-#include "nsStringAPI.h"
-#include "nsEmbedString.h"
 
 #include "jsapi.h"
 
@@ -116,9 +113,9 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 }
 
 static JSFunctionSpec glob_functions[] = {
-    {"print",           Print,          0,0,0},
-    {"load",            Load,           1,0,0},
-    {nsnull,nsnull,0,0,0}
+    {"print",           Print,          0},
+    {"load",            Load,           1},
+    {0}
 };
 
 static JSClass global_class = {
@@ -518,7 +515,7 @@ TestArgFormatter(JSContext* jscontext, JSObject* glob, nsIXPConnect* xpc)
         goto out;
     }
 
-    if(!d_in.Equals(d_out))
+    if(d_in != d_out)
     {
         printf(" JS to native for %%is returned the wrong value -- FAILED!\n");
         goto out;

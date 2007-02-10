@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *  Conrad Carlen <ccarlen@netscape.com>
- *  Mark Mentovai <mark@moxienet.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -51,7 +50,7 @@
 [ptr] native FSRefPtr(FSRef);
       native CFURLRef(CFURLRef);
 
-[scriptable, uuid(748f3ffe-27d9-4402-9de9-494badbeebf4)]
+[uuid(614c3010-1dd2-11b2-be04-bcd57a64ffc9)]
 interface nsILocalFileMac : nsILocalFile
 {
    /**
@@ -65,7 +64,7 @@ interface nsILocalFileMac : nsILocalFile
     * @param   aCFURL         the CoreFoundation URL
     *
     */
-  [noscript] void initWithCFURL(in CFURLRef aCFURL);
+    void initWithCFURL(in CFURLRef aCFURL);
 
    /**
     * initWithFSRef
@@ -77,7 +76,7 @@ interface nsILocalFileMac : nsILocalFile
     * @param   aFSRef         the native file spec
     *
     */
-  [noscript] void initWithFSRef([const] in FSRefPtr aFSRef);
+    void initWithFSRef([const] in FSRefPtr aFSRef);
 
    /**
     * initWithFSSpec
@@ -88,7 +87,7 @@ interface nsILocalFileMac : nsILocalFile
     * @param   aFileSpec       the native file spec
     *
     */
-  [noscript] void initWithFSSpec([const] in FSSpecPtr aFileSpec);
+    void initWithFSSpec([const] in FSSpecPtr aFileSpec);
 
    /**
     * initToAppWithCreatorCode
@@ -100,7 +99,7 @@ interface nsILocalFileMac : nsILocalFile
     * @param   aAppCreator     the signature of the app
     *
     */
-  [noscript] void initToAppWithCreatorCode(in OSType aAppCreator);
+    void initToAppWithCreatorCode(in OSType aAppCreator);
 
     /**
     * getCFURL
@@ -118,7 +117,7 @@ interface nsILocalFileMac : nsILocalFile
     * @return
     *  
     */ 
-  [noscript] CFURLRef getCFURL();
+    CFURLRef getCFURL();
  
     /**
     * getFSRef
@@ -135,7 +134,7 @@ interface nsILocalFileMac : nsILocalFile
     * @return
     *  
     */ 
-  [noscript] FSRef getFSRef();
+    FSRef getFSRef();
    
    /**
     * getFSSpec
@@ -150,7 +149,7 @@ interface nsILocalFileMac : nsILocalFile
     * @return
     *  
     */ 
-  [noscript] FSSpec getFSSpec();
+    FSSpec getFSSpec();
 
    /**
     * fileSizeWithResFork
@@ -160,12 +159,12 @@ interface nsILocalFileMac : nsILocalFile
     * as returned by GetFileSize()
     *
     */
-   readonly attribute PRInt64 fileSizeWithResFork;
+    readonly attribute PRInt64 fileSizeWithResFork;
     
    /**
     * Use with SetFileType() to specify the signature of current process
     */
-   const unsigned long CURRENT_PROCESS_CREATOR = 0x8000000;
+    const unsigned long CURRENT_PROCESS_CREATOR = 0x8000000;
     
    /**
     * fileType, creator
@@ -173,8 +172,8 @@ interface nsILocalFileMac : nsILocalFile
     * File type and creator attributes
     *
     */
-   [noscript] attribute OSType fileType;
-   [noscript] attribute OSType fileCreator;
+    attribute OSType fileType;
+    attribute OSType fileCreator;
     
    /**
     * setFileTypeAndCreatorFromMIMEType
@@ -185,7 +184,7 @@ interface nsILocalFileMac : nsILocalFile
     * @param   aMIMEType
     *
     */
-   void setFileTypeAndCreatorFromMIMEType(in string aMIMEType);
+    void setFileTypeAndCreatorFromMIMEType(in string aMIMEType);
     
    /**
     * setFileTypeAndCreatorFromExtension
@@ -196,7 +195,7 @@ interface nsILocalFileMac : nsILocalFile
     * @param   aExtension
     *
     */
-   void setFileTypeAndCreatorFromExtension(in string aExtension);
+    void setFileTypeAndCreatorFromExtension(in string aExtension);
     
    /**
     * launchWithDoc
@@ -207,7 +206,7 @@ interface nsILocalFileMac : nsILocalFile
     * @param   aLaunchInBackground TRUE if the application should not come to the front.
     *
     */
-   void launchWithDoc(in nsILocalFile aDocToLoad, in boolean aLaunchInBackground);
+    void launchWithDoc(in nsILocalFile aDocToLoad, in boolean aLaunchInBackground);
 
    /**
     * openDocWithApp
@@ -220,7 +219,7 @@ interface nsILocalFileMac : nsILocalFile
     * @param   aLaunchInBackground TRUE if the application should not come to the front.
     *
     */
-   void openDocWithApp(in nsILocalFile aAppToOpenWith, in boolean aLaunchInBackground);
+    void openDocWithApp(in nsILocalFile aAppToOpenWith, in boolean aLaunchInBackground);
 
    /**
     * isPackage
@@ -228,22 +227,19 @@ interface nsILocalFileMac : nsILocalFile
     * returns true if a directory is determined to be a package under Mac OS 9/X
     *
     */
-   boolean isPackage();
+    boolean isPackage();
+};
 
-   /**
-    * bundleDisplayName
-    *
-    * returns the display name of the application bundle (usually the human 
-    * readable name of the application)
-    */
-   readonly attribute AString bundleDisplayName;
-
-   /**
-    * bundleIdentifier
-    *
-    * returns the identifier of the bundle
-    */
-   readonly attribute AUTF8String bundleIdentifier;
+[scriptable, uuid(BB388DF7-F29B-478E-9639-F54D3B8A4A30)]
+interface nsILocalFileMac_MOZILLA_1_8_BRANCH : nsISupports
+{
+  /**
+   * bundleDisplayName
+   *
+   * returns the display name of the application bundle (usually the human 
+   * readable name of the application)
+   */
+  readonly attribute AString bundleDisplayName;
 };
 
 %{C++
@@ -255,8 +251,5 @@ NS_EXPORT const char* NS_TruncNodeName(const char *aNode, char *outBuf);
 #endif
 
 NS_EXPORT nsresult NS_NewLocalFileWithFSSpec(const FSSpec* inSpec, PRBool followSymlinks, nsILocalFileMac* *result);
-
-// NS_NewLocalFileWithFSRef is available since Mozilla 1.8.1.
-NS_EXPORT nsresult NS_NewLocalFileWithFSRef(const FSRef* aFSRef, PRBool aFollowSymlinks, nsILocalFileMac** result);
 }
 %}

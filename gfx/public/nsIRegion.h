@@ -77,7 +77,7 @@ typedef struct
 class nsIRegion : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IREGION_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IREGION_IID)
 
   virtual nsresult Init(void) = 0;
 
@@ -274,7 +274,5 @@ public:
    **/
   NS_IMETHOD GetNumRects(PRUint32 *aRects) const = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIRegion, NS_IREGION_IID)
 
 #endif  // nsIRegion_h___ 

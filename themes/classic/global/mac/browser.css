@@ -39,6 +39,17 @@ tab[busy] {
   list-style-image: url("chrome://communicator/skin/icons/loading.gif");
 }
 
+tab[selected="true"] {
+  -moz-user-focus: normal;
+}
+
+tab:focus {
+  outline: 3px solid -moz-mac-focusring;
+  outline-offset: -3px;
+  -moz-outline-radius-topleft:  5px;
+  -moz-outline-radius-topright: 5px;
+}
+
 /* ::::: close button ::::: */
 
 .tabs-closebutton {

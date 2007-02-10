@@ -54,7 +54,6 @@
 #include "nsIDNSListener.h"
 #include "nsIDNSRecord.h"
 #include "nsICancelable.h"
-#include "nsIClassInfo.h"
 
 class nsSocketTransport;
 
@@ -132,14 +131,12 @@ private:
 class nsSocketTransport : public nsASocketHandler
                         , public nsISocketTransport
                         , public nsIDNSListener
-                        , public nsIClassInfo
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSITRANSPORT
     NS_DECL_NSISOCKETTRANSPORT
     NS_DECL_NSIDNSLISTENER
-    NS_DECL_NSICLASSINFO
 
     nsSocketTransport();
 

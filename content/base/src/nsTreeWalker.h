@@ -37,40 +37,43 @@
  *
  * ***** END LICENSE BLOCK ***** */
  
-/*
- * Implementation of DOM Traversal's nsIDOMTreeWalker
- */
-
 #ifndef nsTreeWalker_h___
 #define nsTreeWalker_h___
 
+/*
+ * nsTreeWalker.h: interface of the nsTreeWalker object.
+ */
+
+#include "nsIDOMNode.h"
 #include "nsIDOMTreeWalker.h"
+#include "nsIDOMNodeFilter.h"
 #include "nsCOMPtr.h"
 #include "nsVoidArray.h"
+#include "nsIDOMGCParticipant.h"
 #include "nsJSUtils.h"
 
-class nsINode;
-class nsIDOMNode;
-class nsIDOMNodeFilter;
-
-class nsTreeWalker : public nsIDOMTreeWalker
+class nsTreeWalker : public nsIDOMTreeWalker, public nsIDOMGCParticipant
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIDOMTREEWALKER
 
-    nsTreeWalker(nsINode *aRoot,
+    // nsIDOMGCParticipant
+    virtual nsIDOMGCParticipant* GetSCCIndex();
+    virtual void AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray);
+
+    nsTreeWalker(nsIDOMNode *aRoot,
                  PRUint32 aWhatToShow,
                  nsIDOMNodeFilter *aFilter,
                  PRBool aExpandEntityReferences);
     virtual ~nsTreeWalker();
     /* additional members */
 private:
-    nsCOMPtr<nsINode> mRoot;
+    nsCOMPtr<nsIDOMNode> mRoot;
     PRUint32 mWhatToShow;
-    nsCOMPtr<nsIDOMNodeFilter> mFilter;
+    nsMarkedJSFunctionHolder<nsIDOMNodeFilter> mFilter;
     PRBool mExpandEntityReferences;
-    nsCOMPtr<nsINode> mCurrentNode;
+    nsCOMPtr<nsIDOMNode> mCurrentNode;
     
     /*
      * Array with all child indexes up the tree. This should only be
@@ -94,10 +97,10 @@ private:
      * @param _retval   Returned node. Null if no child is found
      * @returns         Errorcode
      */
-    nsresult FirstChildOf(nsINode* aNode,
+    nsresult FirstChildOf(nsIDOMNode* aNode,
                           PRBool aReversed,
                           PRInt32 aIndexPos,
-                          nsINode** _retval);
+                          nsIDOMNode** _retval);
 
     /*
      * Finds the following sibling of aNode and returns it. If a sibling
@@ -109,10 +112,10 @@ private:
      * @param _retval   Returned node. Null if no sibling is found
      * @returns         Errorcode
      */
-    nsresult NextSiblingOf(nsINode* aNode,
+    nsresult NextSiblingOf(nsIDOMNode* aNode,
                            PRBool aReversed,
                            PRInt32 aIndexPos,
-                           nsINode** _retval);
+                           nsIDOMNode** _retval);
                            
     /*
      * Finds the next node in document order of aNode and returns it.
@@ -124,10 +127,10 @@ private:
      * @param _retval   Returned node. Null if no node is found
      * @returns         Errorcode
      */
-    nsresult NextInDocumentOrderOf(nsINode* aNode,
+    nsresult NextInDocumentOrderOf(nsIDOMNode* aNode,
                                    PRBool aReversed,
                                    PRInt32 aIndexPos,
-                                   nsINode** _retval);
+                                   nsIDOMNode** _retval);
 
     /*
      * Finds the first child of aNode after child N and returns it. If a
@@ -141,11 +144,11 @@ private:
      * @param _retval   Returned node. Null if no child is found
      * @returns         Errorcode
      */
-    nsresult ChildOf(nsINode* aNode,
+    nsresult ChildOf(nsIDOMNode* aNode,
                      PRInt32 childNum,
                      PRBool aReversed,
                      PRInt32 aIndexPos,
-                     nsINode** _retval);
+                     nsIDOMNode** _retval);
 
     /*
      * Tests if and how a node should be filtered. Uses mWhatToShow and
@@ -154,7 +157,7 @@ private:
      * @param _filtered Returned filtervalue. See nsIDOMNodeFilter.idl
      * @returns         Errorcode
      */
-    nsresult TestNode(nsINode* aNode, PRInt16* _filtered);
+    nsresult TestNode(nsIDOMNode* aNode, PRInt16* _filtered);
     
     /*
      * Gets the child index of a node within it's parent. Gets a possible index
@@ -164,11 +167,13 @@ private:
      * @param aChild    node to get the index of
      * @param aIndexPos position in mPossibleIndexes that contains the possible.
      *                  index
-     * @returns         resulting index
+     * @param _childNum returned index
+     * @returns         Errorcode
      */
-    PRInt32 IndexOf(nsINode* aParent,
-                    nsINode* aChild,
-                    PRInt32 aIndexPos);
+    nsresult IndexOf(nsIDOMNode* aParent,
+                     nsIDOMNode* aChild,
+                     PRInt32 aIndexPos,
+                     PRInt32* _childNum);
 
     /*
      * Sets the child index at the specified level. It doesn't matter if this
@@ -176,11 +181,8 @@ private:
      * @param aIndexPos   position in mPossibleIndexes to set
      * @param aChildIndex child index at specified position
      */
-    void SetChildIndex(PRInt32 aIndexPos, PRInt32 aChildIndex)
-    {
-        mPossibleIndexes.ReplaceElementAt(NS_INT32_TO_PTR(aChildIndex),
-                                          aIndexPos);
-    }
+    void SetChildIndex(PRInt32 aIndexPos, PRInt32 aChildIndex);
+
 };
 
 // Make a new nsIDOMTreeWalker object

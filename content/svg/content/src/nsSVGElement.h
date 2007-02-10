@@ -54,18 +54,13 @@
 #include "nsISVGContent.h"
 #include "nsICSSStyleRule.h"
 
-class nsSVGCoordCtx;
-class nsSVGLength2;
-class nsSVGNumber2;
-
-class nsSVGElement : public nsGenericElement,    // nsIContent
+class nsSVGElement : public nsGenericElement,    // :nsIXMLContent:nsIStyledContent:nsIContent
                      public nsISVGValueObserver, 
                      public nsSupportsWeakReference, // :nsISupportsWeakReference
                      public nsISVGContent
 {
 protected:
   nsSVGElement(nsINodeInfo *aNodeInfo);
-  nsresult Init();
   virtual ~nsSVGElement();
 
 public:
@@ -81,11 +76,19 @@ public:
                               PRBool aNullParent = PR_TRUE);
   virtual nsIAtom *GetIDAttributeName() const;
   virtual nsIAtom *GetClassAttributeName() const;
+  nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                   const nsAString& aValue, PRBool aNotify)
+  {
+    return SetAttr(aNameSpaceID, aName, nsnull, aValue, aNotify);
+  }
+  virtual nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                           nsIAtom* aPrefix, const nsAString& aValue,
+                           PRBool aNotify);
   virtual nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                              PRBool aNotify);
-
-  virtual PRBool IsNodeOfType(PRUint32 aFlags) const;
-
+  
+  virtual PRBool IsContentOfType(PRUint32 aFlags) const;
+  
   NS_IMETHOD WalkContentStyleRules(nsRuleWalker* aRuleWalker);
   NS_IMETHOD SetInlineStyleRule(nsICSSStyleRule* aStyleRule, PRBool aNotify);
   virtual nsICSSStyleRule* GetInlineStyleRule();
@@ -98,8 +101,6 @@ public:
   static const MappedAttributeEntry sViewportsMap[];
   static const MappedAttributeEntry sMarkersMap[];
   static const MappedAttributeEntry sColorMap[];
-  static const MappedAttributeEntry sFiltersMap[];
-  static const MappedAttributeEntry sFEFloodMap[];
   
   // nsIDOMNode
   NS_IMETHOD IsSupported(const nsAString& aFeature, const nsAString& aVersion, PRBool* aReturn);
@@ -120,27 +121,35 @@ public:
   // implementation inherited from nsSupportsWeakReference
 
   // nsISVGContent
-  nsSVGCoordCtx *GetCtxByType(PRUint16 aCtxType);
-
   virtual void ParentChainChanged(); 
-  virtual void DidChangeLength(PRUint8 aAttrEnum, PRBool aDoSetAttr);
-  virtual void DidChangeNumber(PRUint8 aAttrEnum, PRBool aDoSetAttr);
-
-  void GetAnimatedLengthValues(float *aFirst, ...);
-  void GetAnimatedNumberValues(float *aFirst, ...);
-
-  virtual void RecompileScriptEventListeners();
-
+  
 protected:
-  virtual nsresult BeforeSetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
-                                 const nsAString* aValue, PRBool aNotify);
-  virtual nsresult AfterSetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
-                                const nsAString* aValue, PRBool aNotify);
-  virtual PRBool ParseAttribute(PRInt32 aNamespaceID, nsIAtom* aAttribute,
-                                const nsAString& aValue, nsAttrValue& aResult);
-
   // Hooks for subclasses
   virtual PRBool IsEventName(nsIAtom* aName);
+
+  /**
+   * Set attribute and (if needed) notify documentobservers and fire off
+   * mutation events.
+   *
+   * @param aNamespaceID  namespace of attribute
+   * @param aAttribute    local-name of attribute
+   * @param aPrefix       aPrefix of attribute
+   * @param aOldValue     previous value of attribute. Only needed if
+   *                      aFireMutation is true.
+   * @param aParsedValue  parsed new value of attribute
+   * @param aModification is this a attribute-modification or addition. Only
+   *                      needed if aFireMutation or aNotify is true.
+   * @param aFireMutation should mutation-events be fired?
+   * @param aNotify       should we notify document-observers?
+   */
+  nsresult SetAttrAndNotify(PRInt32 aNamespaceID,
+                            nsIAtom* aAttribute,
+                            nsIAtom* aPrefix,
+                            const nsAString& aOldValue,
+                            nsAttrValue& aParsedValue,
+                            PRBool aModification,
+                            PRBool aFireMutation,
+                            PRBool aNotify);
 
   void UpdateContentStyleRule();
   nsISVGValue* GetMappedAttribute(PRInt32 aNamespaceID, nsIAtom* aName);
@@ -150,56 +159,8 @@ protected:
   static PRBool IsGraphicElementEventName(nsIAtom* aName);
   static nsIAtom* GetEventNameForAttr(nsIAtom* aAttr);
 
-  // The following two structures should be protected, but VC6
-  // doesn't allow children of nsSVGElement to access them.
-public:
-  struct LengthInfo {
-    nsIAtom** mName;
-    float     mDefaultValue;
-    PRUint16  mDefaultUnitType;
-    PRUint8   mCtxType;
-  };
-
-  struct LengthAttributesInfo {
-    nsSVGLength2* mLengths;
-    LengthInfo*   mLengthInfo;
-    PRUint32      mLengthCount;
-
-    LengthAttributesInfo(nsSVGLength2 *aLengths,
-                         LengthInfo *aLengthInfo,
-                         PRUint32 aLengthCount) :
-      mLengths(aLengths), mLengthInfo(aLengthInfo), mLengthCount(aLengthCount)
-      {}
-  };
-
-  struct NumberInfo {
-    nsIAtom** mName;
-    float     mDefaultValue;
-  };
-
-  struct NumberAttributesInfo {
-    nsSVGNumber2* mNumbers;
-    NumberInfo*   mNumberInfo;
-    PRUint32      mNumberCount;
-
-    NumberAttributesInfo(nsSVGNumber2 *aNumbers,
-                         NumberInfo *aNumberInfo,
-                         PRUint32 aNumberCount) :
-      mNumbers(aNumbers), mNumberInfo(aNumberInfo), mNumberCount(aNumberCount)
-      {}
-  };
-
-protected:
-  virtual LengthAttributesInfo GetLengthInfo();
-  virtual NumberAttributesInfo GetNumberInfo();
-
-  static nsresult ReportAttributeParseFailure(nsIDocument* aDocument,
-                                              nsIAtom* aAttribute,
-                                              const nsAString& aValue);
   nsCOMPtr<nsICSSStyleRule> mContentStyleRule;
   nsAttrAndChildArray mMappedAttributes;
-
-  PRPackedBool mSuppressNotification;
 };
 
 /**

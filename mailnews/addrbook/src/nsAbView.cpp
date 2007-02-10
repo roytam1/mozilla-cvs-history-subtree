@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Paul Sandoz <paul.sandoz@sun.com>
- *   Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -52,7 +51,6 @@
 #include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
 #include "nsITreeColumns.h"
-#include "nsCRT.h"
 
 #include "nsIPrefService.h"
 #include "nsIPrefBranch2.h"
@@ -72,6 +70,8 @@
 
 // also, our default primary sort
 #define GENERATED_NAME_COLUMN_ID "GeneratedName" 
+
+static NS_DEFINE_CID(kCollationFactoryCID, NS_COLLATIONFACTORY_CID);
 
 NS_IMPL_ISUPPORTS4(nsAbView, nsIAbView, nsITreeView, nsIAbListener, nsIObserver)
 
@@ -195,13 +195,7 @@ NS_IMETHODIMP nsAbView::Init(const char *aURI, PRBool aSearchView, nsIAbViewList
   NS_ENSURE_ARG_POINTER(result);
 
   mURI = aURI;
-  mAbViewListener = nsnull;
-  if (mTree)
-  {
-    // try and speed deletion of old cards by disconnecting the tree from us
-    mTreeSelection->ClearSelection();
-    mTree->SetView(nsnull);
-  }
+  mAbViewListener = abViewListener;
 
   // clear out old cards
   PRInt32 i = mCards.Count();
@@ -270,7 +264,6 @@ NS_IMETHODIMP nsAbView::Init(const char *aURI, PRBool aSearchView, nsIAbViewList
   rv = abSession->AddAddressBookListener(this, nsIAddrBookSession::all);
   NS_ENSURE_SUCCESS(rv,rv);
   
-  mAbViewListener = abViewListener;
   if (mAbViewListener && !mSuppressCountChange) {
     rv = mAbViewListener->OnCountChanged(mCards.Count());
     NS_ENSURE_SUCCESS(rv,rv);
@@ -290,7 +283,7 @@ NS_IMETHODIMP nsAbView::GetDirectory(nsIAbDirectory **aDirectory)
 nsresult nsAbView::EnumerateCards()
 {
   nsresult rv;    
-  nsCOMPtr<nsISimpleEnumerator> cardsEnumerator;
+  nsCOMPtr<nsIEnumerator> cardsEnumerator;
   nsCOMPtr<nsIAbCard> card;
 
   if (!mDirectory)
@@ -300,10 +293,9 @@ nsresult nsAbView::EnumerateCards()
   if (NS_SUCCEEDED(rv) && cardsEnumerator)
   {
     nsCOMPtr<nsISupports> item;
-    PRBool more;
-    while (NS_SUCCEEDED(cardsEnumerator->HasMoreElements(&more)) && more)
+    for (rv = cardsEnumerator->First(); NS_SUCCEEDED(rv); rv = cardsEnumerator->Next())
     {
-      rv = cardsEnumerator->GetNext(getter_AddRefs(item));
+      rv = cardsEnumerator->CurrentItem(getter_AddRefs(item));
       if (NS_SUCCEEDED(rv))
       {
         nsCOMPtr <nsIAbCard> card = do_QueryInterface(item);
@@ -475,7 +467,7 @@ nsresult nsAbView::GetCardValue(nsIAbCard *card, const PRUnichar *colID, PRUnich
     NS_ENSURE_SUCCESS(rv,rv);
   }
   else {
-      rv = card->GetCardValue(NS_LossyConvertUTF16toASCII(colID).get(), _retval);
+      rv = card->GetCardValue(NS_LossyConvertUCS2toASCII(colID).get(), _retval);
   }
   return rv;
 }
@@ -568,11 +560,6 @@ NS_IMETHODIMP nsAbView::CycleCell(PRInt32 row, nsITreeColumn* col)
 }
 
 NS_IMETHODIMP nsAbView::IsEditable(PRInt32 row, nsITreeColumn* col, PRBool* _retval)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsAbView::IsSelectable(PRInt32 row, nsITreeColumn* col, PRBool* _retval)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -786,7 +773,7 @@ nsresult nsAbView::GenerateCollationKeysForCard(const PRUnichar *colID, AbCard *
     rv = localeSvc->GetApplicationLocale(getter_AddRefs(locale));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr <nsICollationFactory> factory = do_CreateInstance(NS_COLLATIONFACTORY_CONTRACTID, &rv); 
+    nsCOMPtr <nsICollationFactory> factory = do_CreateInstance(kCollationFactoryCID, &rv); 
     NS_ENSURE_SUCCESS(rv, rv);
 
     rv = factory->CreateCollation(locale, getter_AddRefs(mCollationKeyGenerator));

@@ -39,206 +39,126 @@
 #ifndef __NS_SVGPATHDATAPARSER_H__
 #define __NS_SVGPATHDATAPARSER_H__
 
-#include "nsSVGDataParser.h"
 #include "nsCOMPtr.h"
 #include "nsVoidArray.h"
-#include "nsCOMArray.h"
 #include "nsIDOMSVGPathSeg.h"
-#include "nsTArray.h"
-#include <cairo.h>
-
-class nsSVGPathList;
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGPathDataParser: a simple recursive descent parser that builds
 // nsIDOMPathSegs from path data strings. The grammar for path data
 // can be found in SVG CR 20001102, chapter 8.
 
-class nsSVGPathDataParser : public nsSVGDataParser
+class nsSVGPathDataParser
 {
+public:
+  nsSVGPathDataParser(nsVoidArray* data);
+  nsresult Parse(const char* str);
+
 protected:
-  // Path data storage
-  virtual nsresult StoreMoveTo(PRBool absCoords, float x, float y) = 0;
-  virtual nsresult StoreClosePath() = 0;
-  virtual nsresult StoreLineTo(PRBool absCoords, float x, float y) = 0;
-  virtual nsresult StoreHLineTo(PRBool absCoords, float x) = 0;
-  virtual nsresult StoreVLineTo(PRBool absCoords, float y) = 0;
-  virtual nsresult StoreCurveTo(PRBool absCoords, float x, float y,
-                                float x1, float y1, float x2, float y2) = 0;
-  virtual nsresult StoreSmoothCurveTo(PRBool absCoords, float x, float y,
-                                      float x2, float y2) = 0;
-  virtual nsresult StoreQuadCurveTo(PRBool absCoords, float x, float y,
-                                    float x1, float y1) = 0;
-  virtual nsresult StoreSmoothQuadCurveTo(PRBool absCoords,
-                                          float x, float y) = 0;
-  virtual nsresult StoreEllipticalArc(PRBool absCoords, float x, float y,
-                                      float r1, float r2, float angle,
-                                      PRBool largeArcFlag, PRBool sweepFlag) = 0;
-  nsresult  Match();
- 
-  nsresult MatchCoordPair(float* aX, float* aY);
-  PRBool IsTokenCoordPairStarter();
+  nsVoidArray *mData;
+  
+  const char* inputpos;
+  
+  char tokenval;
+  const char* tokenpos;
+  enum { DIGIT, WSP, COMMA, POINT, SIGN, OTHER, END } tokentype;
+  
 
-  nsresult MatchCoord(float* aX);
-  PRBool IsTokenCoordStarter();
+  // helpers
+  nsresult AppendSegment(nsIDOMSVGPathSeg* seg);
+  void getNextToken();
+  void windBack(const char* pos);
+  nsresult match(char tok);
 
-  nsresult MatchFlag(PRBool* f);
 
-  nsresult MatchSvgPath();
+  nsresult matchSvgPath();
   
-  nsresult MatchSubPaths();
-  PRBool IsTokenSubPathsStarter();
+  nsresult matchSubPaths();
+  PRBool isTokenSubPathsStarter();
   
-  nsresult MatchSubPath();
-  PRBool IsTokenSubPathStarter();
+  nsresult matchSubPath();
+  PRBool isTokenSubPathStarter();
   
-  nsresult MatchSubPathElements();
-  PRBool IsTokenSubPathElementsStarter();
+  nsresult matchSubPathElements();
+  PRBool isTokenSubPathElementsStarter();
 
-  nsresult MatchSubPathElement();
-  PRBool IsTokenSubPathElementStarter();
+  nsresult matchSubPathElement();
+  PRBool isTokenSubPathElementStarter();
 
-  nsresult MatchMoveto();
-  nsresult MatchMovetoArgSeq(PRBool absCoords);
+  nsresult matchMoveto();
+  nsresult matchMovetoArgSeq(PRBool absCoords);
   
-  nsresult MatchClosePath();
+  nsresult matchClosePath();
   
-  nsresult MatchLineto();
+  nsresult matchLineto();
   
-  nsresult MatchLinetoArgSeq(PRBool absCoords);
-  PRBool IsTokenLinetoArgSeqStarter();
+  nsresult matchLinetoArgSeq(PRBool absCoords);
+  PRBool isTokenLinetoArgSeqStarter();
   
-  nsresult MatchHorizontalLineto();
-  nsresult MatchHorizontalLinetoArgSeq(PRBool absCoords);
+  nsresult matchHorizontalLineto();
+  nsresult matchHorizontalLinetoArgSeq(PRBool absCoords);
   
-  nsresult MatchVerticalLineto();
-  nsresult MatchVerticalLinetoArgSeq(PRBool absCoords);
+  nsresult matchVerticalLineto();
+  nsresult matchVerticalLinetoArgSeq(PRBool absCoords);
   
-  nsresult MatchCurveto();
-  nsresult MatchCurvetoArgSeq(PRBool absCoords);
-  nsresult MatchCurvetoArg(float* x, float* y, float* x1,
+  nsresult matchCurveto();
+  nsresult matchCurvetoArgSeq(PRBool absCoords);
+  nsresult matchCurvetoArg(float* x, float* y, float* x1,
                            float* y1, float* x2, float* y2);
-  PRBool IsTokenCurvetoArgStarter();
+  PRBool isTokenCurvetoArgStarter();
   
-  nsresult MatchSmoothCurveto();
-  nsresult MatchSmoothCurvetoArgSeq(PRBool absCoords);
-  nsresult MatchSmoothCurvetoArg(float* x, float* y, float* x2, float* y2);
-  PRBool IsTokenSmoothCurvetoArgStarter();
+  nsresult matchSmoothCurveto();
+  nsresult matchSmoothCurvetoArgSeq(PRBool absCoords);
+  nsresult matchSmoothCurvetoArg(float* x, float* y, float* x2, float* y2);
+  PRBool isTokenSmoothCurvetoArgStarter();
   
-  nsresult MatchQuadBezierCurveto();
-  nsresult MatchQuadBezierCurvetoArgSeq(PRBool absCoords);  
-  nsresult MatchQuadBezierCurvetoArg(float* x, float* y, float* x1, float* y1);
-  PRBool IsTokenQuadBezierCurvetoArgStarter();
+  nsresult matchQuadBezierCurveto();
+  nsresult matchQuadBezierCurvetoArgSeq(PRBool absCoords);  
+  nsresult matchQuadBezierCurvetoArg(float* x, float* y, float* x1, float* y1);
+  PRBool isTokenQuadBezierCurvetoArgStarter();
   
-  nsresult MatchSmoothQuadBezierCurveto();  
-  nsresult MatchSmoothQuadBezierCurvetoArgSeq(PRBool absCoords);
+  nsresult matchSmoothQuadBezierCurveto();  
+  nsresult matchSmoothQuadBezierCurvetoArgSeq(PRBool absCoords);
   
-  nsresult MatchEllipticalArc();  
-  nsresult MatchEllipticalArcArgSeq(PRBool absCoords);
-  nsresult MatchEllipticalArcArg(float* x, float* y,
+  nsresult matchEllipticalArc();  
+  nsresult matchEllipticalArcArgSeq(PRBool absCoords);
+  nsresult matchEllipticalArcArg(float* x, float* y,
                                  float* r1, float* r2, float* angle,
                                  PRBool* largeArcFlag, PRBool* sweepFlag);
-  PRBool IsTokenEllipticalArcArgStarter();
+  PRBool isTokenEllipticalArcArgStarter();
   
- };
-
-class nsSVGPathDataParserToInternal : public nsSVGPathDataParser
-{
-public:
-  nsSVGPathDataParserToInternal(nsSVGPathList *data) : mPathData(data) {}
-  virtual nsresult Parse(const nsAString &aValue);
-
-protected:
-  virtual nsresult StoreMoveTo(PRBool absCoords, float x, float y);
-  virtual nsresult StoreClosePath();
-  virtual nsresult StoreLineTo(PRBool absCoords, float x, float y);
-  virtual nsresult StoreHLineTo(PRBool absCoords, float x);
-  virtual nsresult StoreVLineTo(PRBool absCoords, float y);
-  virtual nsresult StoreCurveTo(PRBool absCoords, float x, float y,
-                                float x1, float y1, float x2, float y2);
-  virtual nsresult StoreSmoothCurveTo(PRBool absCoords, float x, float y,
-                                      float x2, float y2);
-  virtual nsresult StoreQuadCurveTo(PRBool absCoords, float x, float y,
-                                    float x1, float y1);
-  virtual nsresult StoreSmoothQuadCurveTo(PRBool absCoords,
-                                          float x, float y);
-  virtual nsresult StoreEllipticalArc(PRBool absCoords, float x, float y,
-                                      float r1, float r2, float angle,
-                                      PRBool largeArcFlag, PRBool sweepFlag);
-
-private:
-  nsSVGPathList *mPathData;
-  PRUint16 mPrevSeg;       // previous segment type for "smooth" segments"
-  float mPx, mPy;          // current point
-  float mCx, mCy;          // last control point for "smooth" segments
-  float mStartX, mStartY;  // start of current subpath, for closepath
-
-  // information used to construct PathList 
-  nsTArray<PRUint8> mCommands;
-  nsTArray<float>   mArguments;
-  PRUint32          mNumArguments;
-  PRUint32          mNumCommands;
-
-  // Pathdata helpers
-  nsresult ConvertArcToCurves(float x2, float y2, float rx, float ry,
-                              float angle, PRBool largeArcFlag, PRBool sweepFlag);
-
-  nsresult PathEnsureSpace(PRUint32 aNumArgs);
-  void PathAddCommandCode(PRUint8 aCommand);
-  nsresult PathMoveTo(float x, float y);
-  nsresult PathLineTo(float x, float y);
-  nsresult PathCurveTo(float x1, float y1, float x2, float y2, float x3, float y3);
-  nsresult PathClose();
-  nsresult PathFini();
-};
-
-class nsSVGPathDataParserToDOM : public nsSVGPathDataParser
-{
-public:
-  nsSVGPathDataParserToDOM(nsCOMArray<nsIDOMSVGPathSeg>* data) : mData(data) {}
-
-protected:
-  virtual nsresult StoreMoveTo(PRBool absCoords, float x, float y);
-  virtual nsresult StoreClosePath();
-  virtual nsresult StoreLineTo(PRBool absCoords, float x, float y);
-  virtual nsresult StoreHLineTo(PRBool absCoords, float x);
-  virtual nsresult StoreVLineTo(PRBool absCoords, float y);
-  virtual nsresult StoreCurveTo(PRBool absCoords, float x, float y,
-                                float x1, float y1, float x2, float y2);
-  virtual nsresult StoreSmoothCurveTo(PRBool absCoords, float x, float y,
-                                      float x2, float y2);
-  virtual nsresult StoreQuadCurveTo(PRBool absCoords, float x, float y,
-                                    float x1, float y1);
-  virtual nsresult StoreSmoothQuadCurveTo(PRBool absCoords,
-                                          float x, float y);
-  virtual nsresult StoreEllipticalArc(PRBool absCoords, float x, float y,
-                                      float r1, float r2, float angle,
-                                      PRBool largeArcFlag, PRBool sweepFlag);
-
-private:
-  nsresult AppendSegment(nsIDOMSVGPathSeg* seg);
-
-  nsCOMArray<nsIDOMSVGPathSeg>* mData;
-};
-
-class nsSVGArcConverter
-{
-public:
-  nsSVGArcConverter(float x1, float y1,
-                    float x2, float y2,
-                    float rx, float ry,
-                    float angle,
-                    PRBool largeArcFlag,
-                    PRBool sweepFlag);
-  PRBool GetNextSegment(float *x1, float *y1,
-                        float *x2, float *y2,
-                        float *x3, float *y3);
-protected:
-  PRInt32 mNumSegs, mSegIndex;
-  float mTheta, mDelta, mT;
-  float mSinPhi, mCosPhi;
-  float mX1, mY1, mRx, mRy, mCx, mCy;
-
+  nsresult matchCoordPair(float* x, float* y);
+  PRBool isTokenCoordPairStarter();
+  
+  nsresult matchCoord(float* x);
+  PRBool isTokenCoordStarter();
+  
+  nsresult matchNonNegativeNumber(float* x);
+  PRBool isTokenNonNegativeNumberStarter();
+  
+  nsresult matchNumber(float* x);
+  PRBool isTokenNumberStarter();
+  
+  nsresult matchFlag(PRBool* f);
+  
+  nsresult matchCommaWsp();
+  PRBool isTokenCommaWspStarter();
+  
+  nsresult matchIntegerConst();
+  
+  nsresult matchFloatingPointConst();
+  
+  nsresult matchFractConst();
+  
+  nsresult matchExponent();
+  PRBool isTokenExponentStarter();
+  
+  nsresult matchDigitSeq();
+  PRBool isTokenDigitSeqStarter();
+  
+  nsresult matchWsp();
+  PRBool isTokenWspStarter();
+  
 };
 
 #endif // __NS_SVGPATHDATAPARSER_H__

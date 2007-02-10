@@ -48,10 +48,19 @@
 #include "nsDeviceContextMac.h"
 #include "nsRegionMac.h"
 #include "nsScriptableRegion.h"
+#include "nsNativeThemeMac.h"
+#include "nsDeviceContextSpecX.h"
+#include "nsPrintOptionsX.h"
+#include "nsPrintSessionX.h"
+#include "nsDeviceContextSpecFactoryM.h"
+#include "nsScreenManagerMac.h"
 #include "nsBlender.h"
 #include "nsCOMPtr.h"
 #include "nsUnicodeMappingUtil.h"
 #include "gfxImageFrame.h"
+#ifdef MOZ_WIDGET_COCOA
+#include "nsQDFlushManager.h"
+#endif
 
 #include "nsIGenericFactory.h"
 
@@ -63,9 +72,18 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsImageMac)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsRegionMac)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsBlender)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDrawingSurfaceMac)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsDeviceContextSpecX)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPrintOptionsX, Init)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPrintSessionX, Init)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsDeviceContextSpecFactoryMac)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontEnumeratorMac)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontList)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsScreenManagerMac)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsNativeThemeMac)
 NS_GENERIC_FACTORY_CONSTRUCTOR(gfxImageFrame)
+#ifdef MOZ_WIDGET_COCOA
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsQDFlushManager)
+#endif
 
 static NS_IMETHODIMP
 nsScriptableRegionConstructor(nsISupports* aOuter, REFNSIID aIID, void** aResult)
@@ -114,6 +132,22 @@ static const nsModuleComponentInfo components[] =
     NS_DRAWING_SURFACE_CID,
     "@mozilla.org/gfx/drawing-surface;1",
     nsDrawingSurfaceMacConstructor },
+  { "nsDeviceContextSpec",
+    NS_DEVICE_CONTEXT_SPEC_CID,
+    "@mozilla.org/gfx/devicecontextspec;1",
+    nsDeviceContextSpecXConstructor },
+  { "nsDeviceContextSpecFactory",
+    NS_DEVICE_CONTEXT_SPEC_FACTORY_CID,
+    "@mozilla.org/gfx/devicecontextspecfactory;1",
+    nsDeviceContextSpecFactoryMacConstructor },
+  { "PrintSettings Service",
+    NS_PRINTSETTINGSSERVICE_CID,
+    "@mozilla.org/gfx/printsettings-service;1",
+    nsPrintOptionsXConstructor },
+  { "Print Session",
+    NS_PRINTSESSION_CID,
+    "@mozilla.org/gfx/printsession;1",
+    nsPrintSessionXConstructor },
   { "nsFontEnumerator",
     NS_FONT_ENUMERATOR_CID,
     "@mozilla.org/gfx/fontenumerator;1",
@@ -122,10 +156,24 @@ static const nsModuleComponentInfo components[] =
     NS_FONTLIST_CID,
     "@mozilla.org/gfx/fontlist;1",
     nsFontListConstructor },
+  { "nsScreenManager",
+    NS_SCREENMANAGER_CID,
+    "@mozilla.org/gfx/screenmanager;1",
+    nsScreenManagerMacConstructor },
   { "windows image frame",
     GFX_IMAGEFRAME_CID,
     "@mozilla.org/gfx/image/frame;2",
     gfxImageFrameConstructor, },
+  { "Native Theme Renderer", 
+    NS_THEMERENDERER_CID,
+    "@mozilla.org/chrome/chrome-native-theme;1", 
+    nsNativeThemeMacConstructor },
+#ifdef MOZ_WIDGET_COCOA
+  { NS_QDFLUSHMANAGER_CLASSNAME,
+    NS_QDFLUSHMANAGER_CID,
+    NS_QDFLUSHMANAGER_CONTRACTID,
+    nsQDFlushManagerConstructor },
+#endif
 };
 
 PR_STATIC_CALLBACK(void)

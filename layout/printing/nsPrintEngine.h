@@ -43,18 +43,33 @@
 #include "nsPrintData.h"
 
 // Interfaces
+#include "nsIDeviceContext.h"
 #include "nsIDocument.h"
 #include "nsIDOMWindow.h"
 #include "nsIObserver.h"
+#include "nsIPrintProgress.h"
+#include "nsIPrintProgressParams.h"
+#include "nsIPrintOptions.h"
+#include "nsIPrintSettings.h"
+#include "nsIWebProgressListener.h"
+#include "nsISelectionListener.h"
+
+// Other Includes
+#include "nsPrintPreviewListener.h"
+#include "nsIDocShellTreeNode.h"
 
 // Classes
-class nsPagePrintTimer;
-class nsIDocShellTreeNode;
-class nsIDeviceContext;
-class nsIDocumentViewerPrint;
-class nsPrintObject;
-class nsIDocShell;
 class nsIPageSequenceFrame;
+class nsPagePrintTimer;
+
+// Special Interfaces
+#include "nsIWebBrowserPrint.h"
+#include "nsIDocumentViewer.h"
+#include "nsIDocumentViewerPrint.h"
+
+#ifdef MOZ_LAYOUTDEBUG
+#include "nsIDebugObject.h"
+#endif
 
 //------------------------------------------------------------------------
 // nsPrintEngine Class
@@ -70,32 +85,19 @@ class nsIPageSequenceFrame;
 //   because the document is no longer stable.
 // 
 //------------------------------------------------------------------------
-class nsPrintEngine : public nsIObserver
+class nsPrintEngine : public nsIWebBrowserPrint, public nsIObserver
 {
 public:
+  //NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
+
   // nsISupports interface...
   NS_DECL_ISUPPORTS
 
+  // nsIWebBrowserPrint
+  NS_DECL_NSIWEBBROWSERPRINT
+
   // nsIObserver
   NS_DECL_NSIOBSERVER
-
-  // Old nsIWebBrowserPrint methods; not cleaned up yet
-  NS_IMETHOD Print(nsIPrintSettings*       aPrintSettings,
-                   nsIWebProgressListener* aWebProgressListener);
-  NS_IMETHOD PrintPreview(nsIPrintSettings* aPrintSettings,
-                          nsIDOMWindow *aChildDOMWin,
-                          nsIWebProgressListener* aWebProgressListener);
-  NS_IMETHOD GetIsFramesetDocument(PRBool *aIsFramesetDocument);
-  NS_IMETHOD GetIsIFrameSelected(PRBool *aIsIFrameSelected);
-  NS_IMETHOD GetIsRangeSelection(PRBool *aIsRangeSelection);
-  NS_IMETHOD GetIsFramesetFrameSelected(PRBool *aIsFramesetFrameSelected);
-  NS_IMETHOD GetPrintPreviewNumPages(PRInt32 *aPrintPreviewNumPages);
-  NS_IMETHOD EnumerateDocumentNames(PRUint32* aCount, PRUnichar*** aResult);
-  static nsresult GetGlobalPrintSettings(nsIPrintSettings** aPrintSettings);
-  NS_IMETHOD GetDoingPrint(PRBool *aDoingPrint);
-  NS_IMETHOD GetDoingPrintPreview(PRBool *aDoingPrintPreview);
-  NS_IMETHOD GetCurrentPrintSettings(nsIPrintSettings **aCurrentPrintSettings);
-
 
   // This enum tells indicates what the default should be for the title
   // if the title from the document is null
@@ -105,21 +107,28 @@ public:
     eDocTitleDefURLDoc
   };
 
+
   nsPrintEngine();
-  ~nsPrintEngine();
+  virtual ~nsPrintEngine();
 
   void Destroy();
   void DestroyPrintingData();
 
-  nsresult Initialize(nsIDocumentViewerPrint* aDocViewerPrint, 
+  nsresult Initialize(nsIDocumentViewer*      aDocViewer, 
+                      nsIDocumentViewerPrint* aDocViewerPrint, 
                       nsISupports*            aContainer,
                       nsIDocument*            aDocument,
                       nsIDeviceContext*       aDevContext,
+                      nsPresContext*         aPresContext,
+                      nsIWidget*              aWindow,
                       nsIWidget*              aParentWidget,
                       FILE*                   aDebugFile);
 
   nsresult GetSeqFrameAndCountPages(nsIFrame*& aSeqFrame, PRInt32& aCount);
-
+  PRBool   IsOldPrintPreviewPres()
+  {
+    return mOldPrtPreview != nsnull;
+  }
   //
   // The following three methods are used for printing...
   //
@@ -127,38 +136,65 @@ public:
   nsresult GetSelectionDocument(nsIDeviceContextSpec * aDevSpec,
                                 nsIDocument ** aNewDoc);
 
-  nsresult SetupToPrintContent();
+  nsresult SetupToPrintContent(nsIDeviceContext* aDContext,
+                               nsIDOMWindow* aCurrentFocusedDOMWin);
   nsresult EnablePOsForPrinting();
   nsPrintObject* FindSmallestSTF();
 
   PRBool   PrintDocContent(nsPrintObject* aPO, nsresult& aStatus);
-  nsresult DoPrint(nsPrintObject * aPO);
+  nsresult DoPrint(nsPrintObject * aPO, PRBool aDoSyncPrinting,
+                   PRBool& aDonePrinting);
+  void SetPrintAsIs(nsPrintObject* aPO, PRBool aAsIs = PR_TRUE);
 
-  void SetPrintPO(nsPrintObject* aPO, PRBool aPrint);
+  enum ePrintFlags {
+    eSetPrintFlag = 1U,
+    eSetHiddenFlag = 2U
+  };
+  void SetPrintPO(nsPrintObject* aPO, PRBool aPrint,
+                  PRBool aIsHidden = PR_FALSE,
+                  PRUint32 aFlags = eSetPrintFlag);
 
   void TurnScriptingOn(PRBool aDoTurnOn);
   PRBool CheckDocumentForPPCaching();
   void InstallPrintPreviewListener();
 
   // nsIDocumentViewerPrint Printing Methods
-  PRBool   PrintPage(nsPrintObject* aPOect, PRBool& aInRange);
+  PRBool   PrintPage(nsPresContext* aPresContext,
+                     nsIPrintSettings* aPrintSettings,
+                     nsPrintObject* aPOect, PRBool& aInRange);
   PRBool   DonePrintingPages(nsPrintObject* aPO, nsresult aResult);
 
   //---------------------------------------------------------------------
   void BuildDocTree(nsIDocShellTreeNode * aParentNode,
                     nsVoidArray *         aDocList,
                     nsPrintObject *         aPO);
-  nsresult ReflowDocList(nsPrintObject * aPO, PRBool aSetPixelScale);
+  nsresult ReflowDocList(nsPrintObject * aPO, PRBool aSetPixelScale,
+                         PRBool aDoCalcShrink);
+  void SetClipRect(nsPrintObject*  aPO,
+                   const nsRect& aClipRect,
+                   nscoord       aOffsetX,
+                   nscoord       aOffsetY,
+                   PRBool        aDoingSetClip);
 
-  nsresult ReflowPrintObject(nsPrintObject * aPO);
-
+  nsresult ReflowPrintObject(nsPrintObject * aPO, PRBool aDoCalcShrink);
+  nsresult CalcPageFrameLocation(nsIPresShell * aPresShell,
+                                  nsPrintObject*   aPO);
+  nsPrintObject * FindPrintObjectByDS(nsPrintObject* aPO, nsIDocShell * aDocShell);
+  void MapContentForPO(nsPrintObject*   aRootObject,
+                       nsIPresShell*  aPresShell,
+                       nsIContent*    aContent);
+  void MapContentToWebShells(nsPrintObject* aRootPO, nsPrintObject* aPO);
   void CheckForChildFrameSets(nsPrintObject* aPO);
+  nsresult MapSubDocFrameLocations(nsPrintObject* aPO);
 
-  void CalcNumPrintablePages(PRInt32& aNumPages);
+  void CalcNumPrintableDocsAndPages(PRInt32& aNumDocs, PRInt32& aNumPages);
+  void DoProgressForAsIsFrames();
+  void DoProgressForSeparateFrames();
   void ShowPrintProgress(PRBool aIsForPrinting, PRBool& aDoNotify);
   nsresult CleanupOnFailure(nsresult aResult, PRBool aIsPrinting);
   nsresult FinishPrintPreview();
   static void CloseProgressDialog(nsIWebProgressListener* aWebProgressListener);
+
   void SetDocAndURLIntoProgress(nsPrintObject* aPO,
                                 nsIPrintProgressParams* aParams);
   void ElipseLongString(PRUnichar *& aStr, const PRUint32 aLen, PRBool aDoFront);
@@ -172,16 +208,19 @@ public:
 
 
   // Timer Methods
-  nsresult StartPagePrintTimer(nsPrintObject* aPO);
+  nsresult StartPagePrintTimer(nsPresContext * aPresContext,
+                               nsIPrintSettings* aPrintSettings,
+                               nsPrintObject*     aPO,
+                               PRUint32         aDelay);
 
   PRBool IsWindowsInOurSubTree(nsIDOMWindow * aDOMWindow);
-  static PRBool IsParentAFrameSet(nsIDocShell * aParent);
+  PRBool IsParentAFrameSet(nsIDocShell * aParent);
   PRBool IsThereAnIFrameSelected(nsIDocShell* aDocShell,
                                  nsIDOMWindow* aDOMWin,
                                  PRPackedBool& aIsParentFrameSet);
 
-  static nsPrintObject* FindPrintObjectByDOMWin(nsPrintObject* aParentObject,
-                                                nsIDOMWindow* aDOMWin);
+  nsPrintObject* FindPrintObjectByDOMWin(nsPrintObject* aParentObject,
+                                         nsIDOMWindow* aDOMWin);
 
   // get the currently infocus frame for the document viewer
   already_AddRefed<nsIDOMWindow> FindFocusedDOMWindow();
@@ -192,23 +231,57 @@ public:
   static void GetDocumentTitleAndURL(nsIDocument* aDoc,
                                      PRUnichar** aTitle,
                                      PRUnichar** aURLStr);
-  void GetDisplayTitleAndURL(nsPrintObject*    aPO,
-                             PRUnichar**       aTitle,
-                             PRUnichar**       aURLStr,
-                             eDocTitleDefault  aDefType);
+  static void GetDisplayTitleAndURL(nsPrintObject*      aPO, 
+                                    nsIPrintSettings* aPrintSettings, 
+                                    const PRUnichar*  aBrandName,
+                                    PRUnichar**       aTitle, 
+                                    PRUnichar**       aURLStr,
+                                    eDocTitleDefault  aDefType = eDocTitleDefNone);
   static void ShowPrintErrorDialog(nsresult printerror,
                                    PRBool aIsPrinting = PR_TRUE);
+  static void GetPresShellAndRootContent(nsIDocShell *  aDocShell,
+                                         nsIPresShell** aPresShell,
+                                         nsIContent**   aContent);
 
   static PRBool HasFramesetChild(nsIContent* aContent);
 
   PRBool   CheckBeforeDestroy();
   nsresult Cancelled();
 
-  nsIWidget* GetPrintPreviewWindow() {return mPrtPreview->mPrintObject->mWindow;}
+  nsresult ShowDocList(PRBool aShow);
 
-  nsIViewManager* GetPrintPreviewViewManager() {return mPrtPreview->mPrintObject->mViewManager;}
+  void GetNewPresentation(nsCOMPtr<nsIPresShell>& aShell, 
+                          nsCOMPtr<nsPresContext>& aPC, 
+                          nsCOMPtr<nsIViewManager>& aVM, 
+                          nsCOMPtr<nsIWidget>& aW);
+
+  // CachedPresentationObj is used to cache the presentation
+  // so we can bring it back later
+  PRBool HasCachedPres()
+  {
+    return mIsCachingPresentation && mCachedPresObj;
+  }
+  PRBool IsCachingPres()
+  {
+    return mIsCachingPresentation;
+  }
+  void SetCacheOldPres(PRBool aDoCache)
+  {
+    mIsCachingPresentation = aDoCache;
+  }
+  void CachePresentation(nsIPresShell* aShell, nsPresContext* aPC,
+                         nsIViewManager* aVM, nsIWidget* aW);
+  void GetCachedPresentation(nsCOMPtr<nsIPresShell>& aShell, 
+                             nsCOMPtr<nsPresContext>& aPC, 
+                             nsCOMPtr<nsIViewManager>& aVM, 
+                             nsCOMPtr<nsIWidget>& aW);
 
   static nsIPresShell* GetPresShellFor(nsIDocShell* aDocShell);
+
+  void SetDialogParent(nsIDOMWindow* aDOMWin)
+  {
+    mDialogParentWin = aDOMWin;
+  }
 
   // These calls also update the DocViewer
   void SetIsPrinting(PRBool aIsPrinting);
@@ -230,11 +303,25 @@ public:
     return mIsCreatingPrintPreview;
   }
 
+#ifdef MOZ_LAYOUTDEBUG
+  static nsresult TestRuntimeErrorCondition(PRInt16  aRuntimeID, 
+                                            nsresult aCurrentErrorCode, 
+                                            nsresult aNewErrorCode);
+
+  static PRBool IsDoingRuntimeTesting();
+  static void InitializeTestRuntimeError();
+protected:
+  static PRBool mIsDoingRuntimeTesting;
+
+  static nsCOMPtr<nsIDebugObject> mLayoutDebugObj; // always de-referenced with the destructor
+#endif
+
 protected:
   void FirePrintCompletionEvent();
-  static nsresult GetSeqFrameAndCountPagesInternal(nsPrintObject*  aPO,
-                                                   nsIFrame*&      aSeqFrame,
-                                                   PRInt32&        aCount);
+  nsresult ShowDocListInternal(nsPrintObject* aPO, PRBool aShow);
+  nsresult GetSeqFrameAndCountPagesInternal(nsPrintObject*  aPO,
+                                            nsIFrame*&      aSeqFrame,
+                                            PRInt32&        aCount);
 
   static nsresult FindSelectionBoundsWithList(nsPresContext* aPresContext,
                                               nsIRenderingContext& aRC,
@@ -267,19 +354,22 @@ protected:
                                            PRInt32&              aEndPageNum,
                                            nsRect&               aEndRect);
 
-  static void MapContentForPO(nsPrintObject* aPO, nsIContent* aContent);
+  static nsIFrame * FindFrameByType(nsPresContext* aPresContext,
+                                    nsIFrame *      aParentFrame,
+                                    nsIAtom *       aType,
+                                    nsRect&         aRect,
+                                    nsRect&         aChildRect);
 
-  static void MapContentToWebShells(nsPrintObject* aRootPO, nsPrintObject* aPO);
-
-  static void SetPrintAsIs(nsPrintObject* aPO, PRBool aAsIs = PR_TRUE);
-
-  // Static member variables
+  // Static memeber variables
   PRBool mIsCreatingPrintPreview;
   PRBool mIsDoingPrinting;
 
   nsIDocumentViewerPrint* mDocViewerPrint; // [WEAK] it owns me!
+  nsIDocumentViewer*      mDocViewer;      // [WEAK] it owns me!
   nsISupports*            mContainer;      // [WEAK] it owns me!
   nsIDeviceContext*       mDeviceContext;  // not ref counted
+  nsPresContext*         mPresContext;    // not ref counted
+  nsCOMPtr<nsIWidget>     mWindow;      
   
   nsPrintData*            mPrt;
   nsPagePrintTimer*       mPagePrintTimer;
@@ -292,12 +382,26 @@ protected:
   nsPrintData*            mOldPrtPreview;
 
   nsCOMPtr<nsIDocument>   mDocument;
+  nsCOMPtr<nsIDOMWindow>  mDialogParentWin;
 
+  PRBool                      mIsCachingPresentation;
+  CachedPresentationObj*      mCachedPresObj;
   FILE* mDebugFile;
 
 private:
   nsPrintEngine& operator=(const nsPrintEngine& aOther); // not implemented
 
 };
+
+#ifdef MOZ_LAYOUTDEBUG
+#define INIT_RUNTIME_ERROR_CHECKING() nsPrintEngine::InitializeTestRuntimeError();
+#define CHECK_RUNTIME_ERROR_CONDITION(_name, _currerr, _newerr) \
+  if (nsPrintEngine::IsDoingRuntimeTesting()) { \
+    _currerr = nsPrintEngine::TestRuntimeErrorCondition(_name, _currerr, _newerr); \
+  }
+#else
+#define CHECK_RUNTIME_ERROR_CONDITION(_name, _currerr, _newerr)
+#define INIT_RUNTIME_ERROR_CHECKING()
+#endif
 
 #endif /* nsPrintEngine_h___ */

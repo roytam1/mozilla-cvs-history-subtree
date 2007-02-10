@@ -12,8 +12,6 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
- *
  * The Initial Developer of the Original Code is
  * Mozilla Corporation.
  * Portions created by the Initial Developer are Copyright (C) 2006
@@ -73,8 +71,7 @@ public:
   GetKeyValue(const nsAString& aDomain,
               const nsAString& aKey,
               nsAString& aValue,
-              PRBool* aSecure,
-              nsAString& aOwner);
+              PRBool* aSecure);
 
   /**
    * Set the value and secure flag for a key in storage.
@@ -83,9 +80,7 @@ public:
   SetKey(const nsAString& aDomain,
          const nsAString& aKey,
          const nsAString& aValue,
-         PRBool aSecure,
-         const nsAString& aOwner,
-         PRInt32 aQuota);
+         PRBool aSecure);
 
   /**
    * Set the secure flag for a key in storage. Does nothing if the key was
@@ -101,9 +96,7 @@ public:
    */
   nsresult
   RemoveKey(const nsAString& aDomain,
-            const nsAString& aKey,
-            const nsAString& aOwner,
-            PRInt32 aKeyUsage);
+            const nsAString& aKey);
 
   /**
    * Removes all keys from storage. Used when clearing storage.
@@ -112,8 +105,6 @@ public:
   RemoveAll();
 
 protected:
-
-  nsresult GetUsage(const nsAString &aOwner, PRInt32 *aUsage);
 
   nsCOMPtr<mozIStorageConnection> mConnection;
 
@@ -124,10 +115,6 @@ protected:
   nsCOMPtr<mozIStorageStatement> mSetSecureStatement;
   nsCOMPtr<mozIStorageStatement> mRemoveKeyStatement;
   nsCOMPtr<mozIStorageStatement> mRemoveAllStatement;
-  nsCOMPtr<mozIStorageStatement> mGetUsageStatement;
-
-  nsAutoString mCachedOwner;
-  PRInt32 mCachedUsage;
 };
 
 #endif /* nsDOMStorageDB_h___ */

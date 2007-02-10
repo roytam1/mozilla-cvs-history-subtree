@@ -151,13 +151,6 @@ nsDownloadListener::GetStartTime(PRInt64 *aStartTime)
   return NS_OK;
 }
 
-/* readonly attribute double speed; */
-NS_IMETHODIMP
-nsDownloadListener::GetSpeed(double* aSpeed)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 /* readonly attribute nsIMIMEInfo MIMEInfo; */
 NS_IMETHODIMP
 nsDownloadListener::GetMIMEInfo(nsIMIMEInfo * *aMIMEInfo)
@@ -219,6 +212,7 @@ nsDownloadListener::OnProgressChange64(nsIWebProgress *aWebProgress,
 
 }
 
+
 /* void onLocationChange (in nsIWebProgress aWebProgress, in nsIRequest aRequest, in nsIURI location); */
 NS_IMETHODIMP 
 nsDownloadListener::OnLocationChange(nsIWebProgress *aWebProgress, 
@@ -265,18 +259,6 @@ nsDownloadListener::OnStateChange(nsIWebProgress *aWebProgress,  nsIRequest *aRe
     DownloadDone();
   }
   return NS_OK; 
-}
-
-/* boolean onRefreshAttempted (in nsIWebProgress aWebProgress, in nsIURI aRefreshURI, in long aDelay, in boolean aSameURI); */
-NS_IMETHODIMP
-nsDownloadListener::OnRefreshAttempted(nsIWebProgress *aWebProgress,
-                                       nsIURI *aUri,
-                                       PRInt32 aDelay,
-                                       PRBool aSameUri,
-                                       PRBool *allowRefresh)
-{
-    *allowRefresh = PR_TRUE;
-    return NS_OK;
 }
 
 #pragma mark -

@@ -49,7 +49,6 @@
 
 #define STRICT
 
-#undef _WIN32_WINNT
 #define _WIN32_WINNT 0x0400
 #define _ATL_APARTMENT_THREADED
 #define _ATL_STATIC_REGISTRY
@@ -60,22 +59,12 @@
 //#define _ATL_DEBUG_QI
 
 // ATL headers
-// The ATL headers that come with the platform SDK have bad for scoping
-#if _MSC_VER >= 1400
-#pragma conform(forScope, push, atlhack, off)
-#endif
-
 #include <atlbase.h>
 //You may derive a class from CComModule and use it if you want to override
 //something, but do not change the name of _Module
 extern CComModule _Module;
 #include <atlcom.h>
 #include <atlctl.h>
-
-#if _MSC_VER >= 1400
-#pragma conform(forScope, pop, atlhack)
-#endif
-
 #include <mshtml.h>
 #include <mshtmhst.h>
 #include <docobj.h>

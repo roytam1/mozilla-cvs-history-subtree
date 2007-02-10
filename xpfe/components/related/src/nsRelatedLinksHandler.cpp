@@ -73,6 +73,8 @@
 
 static NS_DEFINE_CID(kRDFServiceCID,              NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID,   NS_RDFINMEMORYDATASOURCE_CID);
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_CID(kPrefCID,                    NS_PREF_CID);
 
 static const char kURINC_RelatedLinksRoot[] = "NC:RelatedLinks";
 
@@ -213,7 +215,7 @@ RelatedLinksStreamListener::Init()
     }
 
 		nsICharsetConverterManager *charsetConv;
-		rv = CallGetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &charsetConv);
+		rv = CallGetService(kCharsetConverterManagerCID, &charsetConv);
 		if (NS_SUCCEEDED(rv))
 		{
 			rv = charsetConv->GetUnicodeDecoderRaw("UTF-8",
@@ -381,7 +383,7 @@ RelatedLinksStreamListener::OnDataAvailable(nsIRequest *request, nsISupports *ct
 		if (oneLiner.IsEmpty())	break;
 
 #if 0
-		printf("RL: '%s'\n", NS_LossyConvertUTF16toASCII(oneLiner).get());
+		printf("RL: '%s'\n", NS_LossyConvertUCS2toASCII(oneLiner).get());
 #endif
 
 		// yes, very primitive RDF parsing follows
@@ -494,7 +496,7 @@ RelatedLinksStreamListener::OnDataAvailable(nsIRequest *request, nsISupports *ct
 		{
 
 #if 0
-			printf("RL: '%s'  -  '%s'\n", NS_LossyConvertUTF16toASCII(title).get(), NS_LossyConvertUTF16toASCII(child).get());
+			printf("RL: '%s'  -  '%s'\n", NS_LossyConvertUCS2toASCII(title).get(), NS_LossyConvertUCS2toASCII(child).get());
 #endif
 			const PRUnichar	*url = child.get();
 			if (nsnull != url)
@@ -631,7 +633,7 @@ RelatedLinksHandlerImpl::Init()
 		gRDFService->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "child"),
                              &kNC_Child);
 
-		nsCOMPtr<nsIPref> prefServ(do_GetService(NS_PREF_CONTRACTID, &rv));
+		nsCOMPtr<nsIPref> prefServ(do_GetService(kPrefCID, &rv));
 		mRLServerURL = new nsString();
 		if (NS_SUCCEEDED(rv) && (prefServ))
 		{
@@ -894,6 +896,9 @@ RelatedLinksHandlerImpl::ArcLabelsOut(nsIRDFResource *aSource,
 	rv = NS_NewISupportsArray(getter_AddRefs(array));
 	if (NS_FAILED(rv)) return rv;
 
+	nsISimpleEnumerator* result = new nsArrayEnumerator(array);
+	if (! result)	return(NS_ERROR_OUT_OF_MEMORY);
+
 	PRBool	hasValueFlag = PR_FALSE;
 	if ((aSource == kNC_RelatedLinksRoot) || 
 		(NS_SUCCEEDED(rv = mInner->HasAssertion(aSource, kRDF_type,
@@ -902,8 +907,9 @@ RelatedLinksHandlerImpl::ArcLabelsOut(nsIRDFResource *aSource,
 	{
 		array->AppendElement(kNC_Child);
 	}
-
-	return NS_NewArrayEnumerator(aLabels, array);
+	NS_ADDREF(result);
+	*aLabels = result;
+	return(NS_OK);
 }
 
 

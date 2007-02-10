@@ -66,7 +66,7 @@ static int MimeObject_initialize (MimeObject *);
 static void MimeObject_finalize (MimeObject *);
 static int MimeObject_parse_begin (MimeObject *);
 static int MimeObject_parse_buffer (const char *, PRInt32, MimeObject *);
-static int MimeObject_parse_line (const char *, PRInt32, MimeObject *);
+static int MimeObject_parse_line (char *, PRInt32, MimeObject *);
 static int MimeObject_parse_eof (MimeObject *, PRBool);
 static int MimeObject_parse_end (MimeObject *, PRBool);
 static PRBool MimeObject_displayable_inline_p (MimeObjectClass *clazz,
@@ -181,8 +181,8 @@ MimeObject_finalize (MimeObject *obj)
 
   if (obj->options && obj->options->state)
 	{
-	  delete obj->options->state;
-	  obj->options->state = nsnull;
+	  PR_Free(obj->options->state);
+	  obj->options->state = 0;
 	}
 }
 
@@ -286,7 +286,7 @@ MimeObject_parse_buffer (const char *buffer, PRInt32 size, MimeObject *obj)
 
 
 static int
-MimeObject_parse_line (const char *line, PRInt32 length, MimeObject *obj)
+MimeObject_parse_line (char *line, PRInt32 length, MimeObject *obj)
 {
   /* This method should never be called. */
   NS_ASSERTION(0, "shouldn't call this method");

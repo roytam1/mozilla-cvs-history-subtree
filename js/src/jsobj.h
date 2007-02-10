@@ -57,7 +57,8 @@ JS_BEGIN_EXTERN_C
 struct JSObjectMap {
     jsrefcount  nrefs;          /* count of all referencing objects */
     JSObjectOps *ops;           /* high level object operation vtable */
-    uint32      freeslot;       /* index of next free slot in object */
+    uint32      nslots;         /* length of obj->slots vector */
+    uint32      freeslot;       /* index of next free obj->slots element */
 };
 
 /* Shorthand macros for frequently-made calls. */
@@ -110,16 +111,25 @@ struct JSObjectMap {
         }                                                                     \
     JS_END_MACRO
 
-#define JS_INITIAL_NSLOTS   6
-
 /*
- * When JSObject.dslots is not null, JSObject.dslots[-1] records the number of
- * available slots.
+ * In the original JS engine design, obj->slots pointed to a vector of length
+ * JS_INITIAL_NSLOTS words if obj->map was shared with a prototype object,
+ * else of length obj->map->nslots.  With the advent of JS_GetReservedSlot,
+ * JS_SetReservedSlot, and JSCLASS_HAS_RESERVED_SLOTS (see jsapi.h), the size
+ * of the minimum length slots vector in the case where map is shared cannot
+ * be constant.  This length starts at JS_INITIAL_NSLOTS, but may advance to
+ * include all the reserved slots.
+ *
+ * Therefore slots must be self-describing.  Rather than tag its low order bit
+ * (a bit is all we need) to distinguish initial length from reserved length,
+ * we do "the BSTR thing": over-allocate slots by one jsval, and store the
+ * *net* length (counting usable slots, which have non-negative obj->slots[]
+ * indices) in obj->slots[-1].  All code that sets obj->slots must be aware of
+ * this hack -- you have been warned, and jsobj.c has been updated!
  */
 struct JSObject {
     JSObjectMap *map;
-    jsval       fslots[JS_INITIAL_NSLOTS];
-    jsval       *dslots;        /* dynamically allocated slots */
+    jsval       *slots;
 };
 
 #define JSSLOT_PROTO        0
@@ -133,71 +143,30 @@ struct JSObject {
 #define JSSLOT_FREE(clasp)  (JSSLOT_START(clasp)                              \
                              + JSCLASS_RESERVED_SLOTS(clasp))
 
-/*
- * STOBJ prefix means Single Threaded Object. Use the following fast macros to
- * directly manipulate slots in obj when only one thread can access obj and
- * when obj->map->freeslot can be inconsistent with slots.
- */
+#define JS_INITIAL_NSLOTS   5
 
-#define STOBJ_NSLOTS(obj)                                                     \
-    ((obj)->dslots ? (uint32)(obj)->dslots[-1] : (uint32)JS_INITIAL_NSLOTS)
+#ifdef DEBUG
+#define MAP_CHECK_SLOT(map,slot) \
+    JS_ASSERT((uint32)slot < JS_MIN((map)->freeslot, (map)->nslots))
+#define OBJ_CHECK_SLOT(obj,slot) \
+    MAP_CHECK_SLOT((obj)->map, slot)
+#else
+#define OBJ_CHECK_SLOT(obj,slot) ((void)0)
+#endif
 
-#define STOBJ_GET_SLOT(obj,slot)                                              \
-    ((slot) < JS_INITIAL_NSLOTS                                               \
-     ? (obj)->fslots[(slot)]                                                  \
-     : (JS_ASSERT((slot) < (uint32)(obj)->dslots[-1]),                        \
-        (obj)->dslots[(slot) - JS_INITIAL_NSLOTS]))
-
-#define STOBJ_SET_SLOT(obj,slot,value)                                        \
-    ((slot) < JS_INITIAL_NSLOTS                                               \
-     ? (obj)->fslots[(slot)] = (value)                                        \
-     : (JS_ASSERT((slot) < (uint32)(obj)->dslots[-1]),                        \
-        (obj)->dslots[(slot) - JS_INITIAL_NSLOTS] = (value)))
-
-#define STOBJ_GET_PROTO(obj) \
-    JSVAL_TO_OBJECT((obj)->fslots[JSSLOT_PROTO])
-#define STOBJ_SET_PROTO(obj,proto) \
-    ((obj)->fslots[JSSLOT_PROTO] = OBJECT_TO_JSVAL(proto))
-
-#define STOBJ_GET_PARENT(obj) \
-    JSVAL_TO_OBJECT((obj)->fslots[JSSLOT_PARENT])
-#define STOBJ_SET_PARENT(obj,parent) \
-    ((obj)->fslots[JSSLOT_PARENT] = OBJECT_TO_JSVAL(parent))
-
-#define STOBJ_GET_CLASS(obj) \
-    ((JSClass *)JSVAL_TO_PRIVATE((obj)->fslots[JSSLOT_CLASS]))
-
-#define OBJ_CHECK_SLOT(obj,slot)                                              \
-    JS_ASSERT(slot < (obj)->map->freeslot)
-
-/*
- * Macros for accessing slots in obj while obj is locked (if thread-safe) and
- * when slot must be bound by the map->freeslot.
- */
-#define LOCKED_OBJ_NSLOTS(obj)                                                \
-   JS_MIN((obj)->map->freeslot, STOBJ_NSLOTS(obj))
-
+/* Fast macros for accessing obj->slots while obj is locked (if thread-safe). */
 #define LOCKED_OBJ_GET_SLOT(obj,slot) \
-    (OBJ_CHECK_SLOT(obj, slot), STOBJ_GET_SLOT(obj, slot))
+    (OBJ_CHECK_SLOT(obj, slot), (obj)->slots[slot])
 #define LOCKED_OBJ_SET_SLOT(obj,slot,value) \
-    (OBJ_CHECK_SLOT(obj, slot), STOBJ_SET_SLOT(obj, slot, value))
-
+    (OBJ_CHECK_SLOT(obj, slot), (obj)->slots[slot] = (value))
 #define LOCKED_OBJ_GET_PROTO(obj) \
-    (OBJ_CHECK_SLOT(obj, JSSLOT_PROTO), STOBJ_GET_PROTO(obj))
-#define LOCKED_OBJ_SET_PROTO(obj,proto) \
-    (OBJ_CHECK_SLOT(obj, JSSLOT_PROTO), STOBJ_SET_PROTO(obj, proto))
-
-#define LOCKED_OBJ_GET_PARENT(obj) \
-    (OBJ_CHECK_SLOT(obj, JSSLOT_PARENT), STOBJ_GET_PARENT(obj))
-#define LOCKED_OBJ_SET_PARENT(obj,parent) \
-    (OBJ_CHECK_SLOT(obj, JSSLOT_PARENT), STOBJ_SET_PARENT(obj, parent))
-
+    JSVAL_TO_OBJECT(LOCKED_OBJ_GET_SLOT(obj, JSSLOT_PROTO))
 #define LOCKED_OBJ_GET_CLASS(obj) \
-    (OBJ_CHECK_SLOT(obj, JSSLOT_CLASS), STOBJ_GET_CLASS(obj))
+    ((JSClass *)JSVAL_TO_PRIVATE(LOCKED_OBJ_GET_SLOT(obj, JSSLOT_CLASS)))
 
 #ifdef JS_THREADSAFE
 
-/* Thread-safe functions and wrapper macros for accessing slots in obj. */
+/* Thread-safe functions and wrapper macros for accessing obj->slots. */
 #define OBJ_GET_SLOT(cx,obj,slot)                                             \
     (OBJ_CHECK_SLOT(obj, slot),                                               \
      (OBJ_IS_NATIVE(obj) && OBJ_SCOPE(obj)->ownercx == cx)                    \
@@ -219,8 +188,9 @@ struct JSObject {
  * a finalizer.
  *
  * The GC runs only when all threads except the one on which the GC is active
- * are suspended at GC-safe points, so calling STOBJ_GET_SLOT from the GC's
- * thread is safe when rt->gcRunning is set. See jsgc.c for details.
+ * are suspended at GC-safe points, so there is no hazard in directly accessing
+ * obj->slots[slot] from the GC's thread, once rt->gcRunning has been set.  See
+ * jsgc.c for details.
  */
 #define THREAD_IS_RUNNING_GC(rt, thread)                                      \
     ((rt)->gcRunning && (rt)->gcThread == (thread))
@@ -230,22 +200,16 @@ struct JSObject {
 
 #define GC_AWARE_GET_SLOT(cx, obj, slot)                                      \
     ((OBJ_IS_NATIVE(obj) && CX_THREAD_IS_RUNNING_GC(cx))                      \
-     ? STOBJ_GET_SLOT(obj, slot)                                              \
+     ? (obj)->slots[slot]                                                     \
      : OBJ_GET_SLOT(cx, obj, slot))
 
 #else   /* !JS_THREADSAFE */
 
 #define OBJ_GET_SLOT(cx,obj,slot)       LOCKED_OBJ_GET_SLOT(obj,slot)
 #define OBJ_SET_SLOT(cx,obj,slot,value) LOCKED_OBJ_SET_SLOT(obj,slot,value)
-#define GC_AWARE_GET_SLOT(cx,obj,slot)  STOBJ_GET_SLOT(obj,slot)
+#define GC_AWARE_GET_SLOT(cx,obj,slot)  LOCKED_OBJ_GET_SLOT(obj,slot)
 
 #endif /* !JS_THREADSAFE */
-
-#define GC_AWARE_GET_PROTO(cx, obj)                                           \
-    JSVAL_TO_OBJECT(GC_AWARE_GET_SLOT(cx, obj, JSSLOT_PROTO))
-
-#define GC_AWARE_GET_PARENT(cx, obj)                                          \
-    JSVAL_TO_OBJECT(GC_AWARE_GET_SLOT(cx, obj, JSSLOT_PARENT))
 
 /* Thread-safe proto, parent, and class access macros. */
 #define OBJ_GET_PROTO(cx,obj) \
@@ -258,12 +222,8 @@ struct JSObject {
 #define OBJ_SET_PARENT(cx,obj,parent) \
     OBJ_SET_SLOT(cx, obj, JSSLOT_PARENT, OBJECT_TO_JSVAL(parent))
 
-/*
- * Class is invariant and comes from the fixed JSCLASS_SLOT. Thus no locking
- * is necessary to read it.
- */
-#define GC_AWARE_GET_CLASS(cx, obj)     STOBJ_GET_CLASS(obj)
-#define OBJ_GET_CLASS(cx,obj)           STOBJ_GET_CLASS(obj)
+#define OBJ_GET_CLASS(cx,obj) \
+    ((JSClass *)JSVAL_TO_PRIVATE(OBJ_GET_SLOT(cx, obj, JSSLOT_CLASS)))
 
 /* Test whether a map or object is native. */
 #define MAP_IS_NATIVE(map)                                                    \
@@ -515,19 +475,6 @@ js_FindIdentifierBase(JSContext *cx, jsid id);
 
 extern JSObject *
 js_FindVariableScope(JSContext *cx, JSFunction **funp);
-
-/*
- * NB: js_NativeGet and js_NativeSet are called with the scope containing sprop
- * (pobj's scope for Get, obj's for Set) locked, and on successful return, that
- * scope is again locked.  But on failure, both functions return false with the
- * scope containing sprop unlocked.
- */
-extern JSBool
-js_NativeGet(JSContext *cx, JSObject *obj, JSObject *pobj,
-             JSScopeProperty *sprop, jsval *vp);
-
-extern JSBool
-js_NativeSet(JSContext *cx, JSObject *obj, JSScopeProperty *sprop, jsval *vp);
 
 extern JSBool
 js_GetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp);

@@ -493,10 +493,7 @@ function bv_getcx(cx)
 console.views.breaks.getCellProperties =
 function bv_cellprops (index, col, properties)
 {
-    if (typeof col == "object")
-        col = col.id;
-
-    if (col == "breaks:col-0")
+    if (col.id == "breaks:col-0")
     {
         var row = this.childData.locateChildByVisualRow(index);
         if (row.type == "future")
@@ -546,9 +543,6 @@ function lv_init ()
                            enabledif: "has('jsdValue') && " +
                                       "cx.jsdValue.jsType == TYPE_OBJECT"}],
          ["-"],
-         ["inspect", {visibleif: "isDOMIInstalled()",
-                      enabledif: "has('jsdValue') && " + 
-                                 "isDOMThing(cx.jsdValue.getWrappedValue())"}],
          ["find-creator",
                  {enabledif: "cx.target instanceof ValueRecord && " +
                   "cx.target.jsType == jsdIValue.TYPE_OBJECT  && " +
@@ -777,10 +771,7 @@ function lv_rowcommand(rec)
 console.views.locals.getCellProperties =
 function lv_cellprops (index, col, properties)
 {
-    if (typeof col == "object")
-        col = col.id;
-
-    if (col != "locals:col-0")
+    if (col.id != "locals:col-0")
         return null;
     
     var row = this.childData.locateChildByVisualRow(index);
@@ -1101,7 +1092,7 @@ function scv_hookChromeFilter(e)
                         if ("parentRecord" in rec)
                             continue;
                         //dd ("cmdChromeFilter: append " +
-                        //    xtv_formatRecord(rec, ""));
+                        //    tov_formatRecord(rec, ""));
                         nodes.appendChild(rec);
                     }
                 }
@@ -1274,9 +1265,7 @@ function scv_click (e)
         var treeBox = console.views.scripts.tree;
         treeBox.getCellAt(e.clientX, e.clientY, rowIndex, col, childElt);
         var prop;
-        if (typeof col.value == "object")
-            col.value = col.value.id;
-        switch (col.value)
+        switch (col.value.id)
         {
             case "scripts:col-0":
                 prop = "functionName";
@@ -1326,10 +1315,7 @@ function scv_setmode (flag)
 console.views.scripts.getCellProperties =
 function scv_cellprops (index, col, properties)
 {
-    if (typeof col == "object")
-        col = col.id;
-
-    if (col != "scripts:col-0")
+    if (col.id != "scripts:col-0")
         return null;
     
     var row = this.childData.locateChildByVisualRow(index);
@@ -1663,7 +1649,7 @@ function ss_hookDisplay (e)
     if (sessionView.messageCount == console.prefs["sessionView.maxHistory"])
         sessionView.outputTBody.removeChild(sessionView.outputTBody.firstChild);
     
-    sessionView.outputTBody.appendChild(sessionView.adoptNode(msgRow));
+    sessionView.outputTBody.appendChild(msgRow);
     sessionView.scrollDown();
 }
 
@@ -1763,9 +1749,7 @@ function ss_syncframe ()
     if (this.outputTable.firstChild)
         this.outputTable.removeChild (this.outputTable.firstChild);
 
-    // Make sure the entire table body belongs to the right document.
-    this.adoptNode(this.outputTBody, this.outputDocument);
-    this.outputTable.appendChild(this.outputTBody);
+    this.outputTable.appendChild (this.outputTBody);
     this.scrollDown();
 }
 
@@ -1774,33 +1758,6 @@ function ss_scroll()
 {
     if (this.outputWindow)
         this.outputWindow.scrollTo(0, this.outputDocument.height);
-}
-
-console.views.session.adoptNode =
-function ss_adoptnode(node, doc)
-{
-    // Assume the node is about to added as a session message, so use that doc.
-    if (typeof doc == "undefined")
-        doc = this.outputTBody.ownerDocument;
-
-    try
-    {
-        doc.adoptNode(node);
-    }
-    catch(ex)
-    {
-        dd(formatException(ex));
-        var err = ex.name;
-        // TypeError from before adoptNode was added; NOT_IMPL after.
-        if ((err == "TypeError") || (err == "NS_ERROR_NOT_IMPLEMENTED"))
-            console.views.session.adoptNode = ss_adoptnode_noop;
-    }
-    return node;
-}
-
-function ss_adoptnode_noop(node, doc)
-{
-    return node;
 }
 
 console.views.session.onShow =
@@ -2226,10 +2183,7 @@ function sv_getcx(cx)
 console.views.stack.getCellProperties =
 function sv_cellprops (index, col, properties)
 {
-    if (typeof col == "object")
-        col = col.id;
-
-    if (col != "stack:col-0")
+    if (col.id != "stack:col-0")
         return;
 
     var row = this.childData.locateChildByVisualRow(index);
@@ -3724,10 +3678,7 @@ function sv_click (e)
         if (row.value == -1)
           return;
         
-        if (typeof col.value == "object")
-            colID = col.value.id;
-        else
-            colID = col.value;
+        colID = col.value.id;
         row = row.value;
         
         if (colID == "source:col-0")
@@ -4023,10 +3974,7 @@ function sv_cellprops (row, col, properties)
     if (!line)
         return;
     
-    if (typeof col == "object")
-        col = col.id;
-
-    if (col == "source:col-0")
+    if (col.id == "source:col-0")
     {
         if ("lineMap" in this.childData && row in this.childData.lineMap)
         {
@@ -4075,10 +4023,7 @@ function sv_getcelltext (row, col)
         row < 0 || row > this.childData.lines.length)
         return "";
     
-    if (typeof col == "object")
-        col = col.id;
-
-    var ary = col.match (/:(.*)/);
+    var ary = col.id.match (/:(.*)/);
     if (ary)
         col = ary[1];
     
@@ -4131,9 +4076,6 @@ function wv_init()
                            enabledif: "has('jsdValue') && " +
                                       "cx.jsdValue.jsType == TYPE_OBJECT"}],
          ["-"],
-         ["inspect", {visibleif: "isDOMIInstalled()",
-                      enabledif: "has('jsdValue') && " + 
-                                 "isDOMThing(cx.jsdValue.getWrappedValue())"}],
          ["find-creator",
                  {enabledif: "cx.target instanceof ValueRecord && " +
                   "cx.target.jsType == jsdIValue.TYPE_OBJECT  && " +
@@ -4195,10 +4137,7 @@ function onHide()
 console.views.watches.getCellProperties =
 function wv_cellprops (index, col, properties)
 {
-    if (typeof col == "object")
-        col = col.id;
-
-    if (col != "watches:col-0")
+    if (col.id != "watches:col-0")
         return null;
     
     var row = this.childData.locateChildByVisualRow(index);
@@ -4522,10 +4461,7 @@ function winv_hide ()
 console.views.windows.getCellProperties =
 function winv_cellprops (index, col, properties)
 {
-    if (typeof col == "object")
-        col = col.id;
-
-    if (col == "windows:col-0")
+    if (col.id == "windows:col-0")
     {
         var row = this.childData.locateChildByVisualRow(index);
         if (row)

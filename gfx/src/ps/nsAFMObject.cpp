@@ -217,13 +217,13 @@ nsAFMObject :: nsAFMObject()
 nsAFMObject :: ~nsAFMObject()
 {
 
-  if (mPSFontInfo){
-    if(mPSFontInfo->mAFMCharMetrics){
-      delete [] mPSFontInfo->mAFMCharMetrics;
-    }
-    delete mPSFontInfo;
+  if(mPSFontInfo->mAFMCharMetrics){
+    delete [] mPSFontInfo->mAFMCharMetrics;
   }
 
+  if(mPSFontInfo){
+    delete mPSFontInfo;
+  }
 }
 
 /** ---------------------------------------------------
@@ -330,7 +330,7 @@ PRUint32    i = gNumSubstituteMap;
   for (k=0;k<fontNames.Count() && !found;k++) {
     char * fontName = (char*)fontNames[k];
     for(i=0;i<gNumSubstituteMap;i++) {
-      //printf("Looking for Name[%s] Checking [%s]\n", NS_LossyConvertUTF16toASCII(name).get(),gSubstituteMap[i].name);
+      //printf("Looking for Name[%s] Checking [%s]\n", NS_LossyConvertUCS2toASCII(name).get(),gSubstituteMap[i].name);
       if(!nsCRT::strcasecmp(fontName, gSubstituteMap[i].name) && 
          (aFontName.style != NS_FONT_STYLE_NORMAL)== gSubstituteMap[i].italic &&
          NS_IS_BOLD(aFontName.weight) == gSubstituteMap[i].bold) {
@@ -349,7 +349,7 @@ PRUint32    i = gNumSubstituteMap;
   if(i == gNumSubstituteMap){
 
 #ifdef DEBUG
-    printf(" NO FONT WAS FOUND Name[%s]\n", NS_LossyConvertUTF16toASCII(aFontName.name).get());
+    printf(" NO FONT WAS FOUND Name[%s]\n", NS_LossyConvertUCS2toASCII(aFontName.name).get());
 #endif
     if(aFontName.style == NS_FONT_STYLE_NORMAL){
       ourfont = NS_IS_BOLD(aFontName.weight) ? 1 : 0;
@@ -446,7 +446,7 @@ char* AFMFileName= ToNewUTF8String(aFontName.name); // file we will open
             break;
 	        case kNotice:
 	          mPSFontInfo->mNotice = GetAFMString();
-            // we really don't want to keep this around...
+            // we really dont want to keep this around...
             delete [] mPSFontInfo->mNotice;
             mPSFontInfo->mNotice = 0;
 	          break;
@@ -509,7 +509,7 @@ char* AFMFileName= ToNewUTF8String(aFontName.name); // file we will open
 	        case kEndDirection:
 	          break;
 	        case kStartCharMetrics:
-	          GetAFMInt(&mPSFontInfo->mNumCharacters);     // number of characters that follow
+	          GetAFMInt(&mPSFontInfo->mNumCharacters);     // number of charaters that follow
             mPSFontInfo->mAFMCharMetrics = new AFMscm[mPSFontInfo->mNumCharacters];
             memset(mPSFontInfo->mAFMCharMetrics,0,sizeof(AFMscm)*mPSFontInfo->mNumCharacters);
 	          ReadCharMetrics (mPSFontInfo,mPSFontInfo->mNumCharacters);

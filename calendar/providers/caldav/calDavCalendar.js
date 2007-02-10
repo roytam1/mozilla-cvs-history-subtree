@@ -64,7 +64,6 @@ function calDavCalendar() {
     this.wrappedJSObject = this;
     this.mObservers = Array();
     this.unmappedProperties = [];
-    this.mUriParams = null;
 }
 
 // some shorthand
@@ -166,11 +165,6 @@ calDavCalendar.prototype = {
         return false;
     },
 
-    // mUriParams stores trailing ?parameters from the
-    // supplied calendar URI. Needed for (at least) Cosmo
-    // tickets
-    mUriParams: null,
-
     // attribute nsIURI uri;
     mUri: null,
     get uri() { return this.mUri; },
@@ -178,23 +172,10 @@ calDavCalendar.prototype = {
 
     get mCalendarUri() { 
         calUri = this.mUri.clone();
-        var parts = calUri.spec.split('?');
-        if (parts.length > 1) {
-            calUri.spec = parts.shift();
-            this.mUriParams = '?' + parts.join('?');
-        }
         if (calUri.spec.charAt(calUri.spec.length-1) != '/') {
             calUri.spec += "/";
         }
         return calUri;
-    },
-    
-    mMakeUri: function caldav_makeUri(aInsertString) {
-        var spec = this.mCalendarUri.spec + aInsertString;
-        if (this.mUriParams) {
-            return spec + this.mUriParams;
-        }
-        return spec;
     },
 
     refresh: function() {
@@ -207,8 +188,8 @@ calDavCalendar.prototype = {
 
     // void addObserver( in calIObserver observer );
     addObserver: function (aObserver, aItemFilter) {
-        for each (obs in this.mObservers) {
-            if (compareObjects(obs, aObserver, Ci.calIObserver)) {
+        for each (obs in aObserver) {
+            if (obs == aObserver) {
                 return;
             }
         }
@@ -250,7 +231,7 @@ calDavCalendar.prototype = {
         // XXX how are we REALLY supposed to figure this out?
         var locationPath = aItem.id + ".ics";
         var itemUri = this.mCalendarUri.clone();
-        itemUri.spec = this.mMakeUri(locationPath);
+        itemUri.spec = itemUri.spec + locationPath;
         LOG("itemUri.spec = " + itemUri.spec);
         var eventResource = new WebDavResource(itemUri);
 
@@ -314,7 +295,7 @@ calDavCalendar.prototype = {
         // do WebDAV put
         var webSvc = Components.classes['@mozilla.org/webdav/service;1']
             .getService(Components.interfaces.nsIWebDAVService);
-        webSvc.putFromString(eventResource, "text/calendar; charset=utf-8",
+        webSvc.putFromString(eventResource, "text/calendar", 
                              aItem.icalString, listener, this, null);
 
         return;
@@ -353,11 +334,11 @@ calDavCalendar.prototype = {
 
         var eventUri = this.mCalendarUri.clone();
         try {
-            eventUri.spec = this.mMakeUri(aNewItem.getProperty("X-MOZ-LOCATIONPATH"));
+            eventUri.spec = this.mCalendarUri.spec + aNewItem.getProperty("X-MOZ-LOCATIONPATH");
             LOG("using X-MOZ-LOCATIONPATH: " + eventUri.spec);
         } catch (ex) {
             // XXX how are we REALLY supposed to figure this out?
-            eventUri.spec = this.mMakeUri(aNewItem.id + ".ics");
+            eventUri.spec = eventUri.spec + aNewItem.id + ".ics";
         }
 
         if (aOldItem.parentItem.generation != aNewItem.generation) {
@@ -444,7 +425,7 @@ calDavCalendar.prototype = {
         LOG("modifyItem: aNewItem.icalString = " + aNewItem.icalString);
         var webSvc = Components.classes['@mozilla.org/webdav/service;1']
             .getService(Components.interfaces.nsIWebDAVService);
-        webSvc.putFromString(eventResource, "text/calendar; charset=utf-8",
+        webSvc.putFromString(eventResource, "text/calendar",
                              modifiedItemICS, listener, this, null);
 
         return;
@@ -469,11 +450,12 @@ calDavCalendar.prototype = {
 
         var eventUri = this.mCalendarUri.clone();
         try {
-            eventUri.spec = this.mMakeUri(aItem.getProperty("X-MOZ-LOCATIONPATH"));
+            eventUri.spec = this.mCalendarUri.spec +
+                            aItem.getProperty("X-MOZ-LOCATIONPATH");
             LOG("using X-MOZ-LOCATIONPATH: " + eventUri.spec);
         } catch (ex) {
             // XXX how are we REALLY supposed to figure this out?
-            eventUri.spec = this.mMakeUri(aItem.id + ".ics");
+            eventUri.spec = eventUri.spec + aItem.id + ".ics";
         }
 
         var eventResource = new WebDavResource(eventUri);
@@ -736,11 +718,11 @@ calDavCalendar.prototype = {
                         items = [ item ];
                     }
                     rv = Components.results.NS_OK;
-                } else if (item instanceof Ci.calIEvent) {
+                } else if (item.QueryInterface(Ci.calIEvent)) {
                     iid = Ci.calIEvent;
                     rv = Components.results.NS_OK;
                     items = [ item ];
-                } else if (item instanceof Ci.calITodo) {
+                } else if (item.QueryInterface(Ci.calITodo)) {
                     iid = Ci.calITodo;
                     rv = Components.results.NS_OK;
                     items = [ item ];
@@ -824,7 +806,6 @@ calDavCalendar.prototype = {
 
         // construct the resource we want to search against
         var calendarDirUri = this.mCalendarUri.clone();
-        calendarDirUri.spec = this.mMakeUri('');
         LOG("report uri = " + calendarDirUri.spec);
         var calendarDirResource = new WebDavResource(calendarDirUri);
 
@@ -941,7 +922,10 @@ calDavCalendar.prototype = {
     // nsIInterfaceRequestor impl
     getInterface: function(iid) {
         if (iid.equals(Components.interfaces.nsIAuthPrompt)) {
-            return new calAuthPrompt();
+            // use the window watcher service to get a nsIAuthPrompt impl
+            return Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                             .getService(Components.interfaces.nsIWindowWatcher)
+                             .getNewAuthPrompter(null);
         }
         else if (iid.equals(Components.interfaces.nsIPrompt)) {
             // use the window watcher service to get a nsIPrompt impl
@@ -958,7 +942,9 @@ calDavCalendar.prototype = {
                              .getService(Components.interfaces.nsIWindowWatcher)
                              .getNewPrompter(null);
         } else if (!isOnBranch && iid.equals(Components.interfaces.nsIAuthPrompt2)) {
-            return new calAuthPrompt();
+            return Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                             .getService(Components.interfaces.nsIPromptFactory)
+                             .getPrompt(null, iid)
         }
         throw Components.results.NS_ERROR_NO_INTERFACE;
     },

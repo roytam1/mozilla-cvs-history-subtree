@@ -45,9 +45,6 @@
 #include "nsISupports.h"
 #include "nsColor.h"
 #include "nsCoord.h"
-#include "nsRect.h"
-#include "nsPoint.h"
-#include "nsSize.h"
 #include "nsIDrawingSurface.h"
 #include <stdio.h>
 
@@ -60,14 +57,11 @@ class nsIRegion;
 class nsIAtom;
 
 struct nsFont;
+struct nsPoint;
+struct nsRect;
 struct nsTextDimensions;
 #ifdef MOZ_MATHML
 struct nsBoundingMetrics;
-#endif
-
-#ifdef MOZ_CAIRO_GFX
-class gfxASurface;
-class gfxContext;
 #endif
 
 /* gfx2 */
@@ -109,7 +103,7 @@ typedef enum
 class nsIRenderingContext : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IRENDERING_CONTEXT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IRENDERING_CONTEXT_IID)
 
   //TBD: bind/unbind, transformation of scalars (hacky), 
   //potential drawmode for selection, polygons. MMP
@@ -130,33 +124,13 @@ public:
    */
   NS_IMETHOD Init(nsIDeviceContext* aContext, nsIDrawingSurface* aSurface) = 0;
 
-#ifdef MOZ_CAIRO_GFX
-  /**
-   * Initialize the RenderingContext
-   * @param aContext the device context to use for the drawing.
-   * @param aThebesSurface the Thebes gfxASurface to which to draw
-   * @result The result of the initialization, NS_Ok if no errors
-   */
-  NS_IMETHOD Init(nsIDeviceContext* aContext, gfxASurface* aThebesSurface) = 0;
-
-  /**
-   * Initialize the RenderingContext
-   * @param aContext the device context to use for the drawing.
-   * @param aThebesContext an existing thebes context to use for the drawing
-   * @result The result of the initialization, NS_Ok if no errors
-   */
-  NS_IMETHOD Init(nsIDeviceContext* aContext, gfxContext* aThebesContext) = 0;
-#endif
-
   /**
    * Reset the rendering context
    */
   NS_IMETHOD Reset(void) = 0;
 
   /**
-   * Get the DeviceContext that this RenderingContext was initialized
-   * with.  This function addrefs the device context.  Though it might
-   * be better if it just returned it directly, without addrefing.   
+   * Get the DeviceContext that this RenderingContext was initialized with
    * @result the device context
    */
   NS_IMETHOD GetDeviceContext(nsIDeviceContext *& aDeviceContext) = 0;
@@ -211,12 +185,6 @@ public:
    * Get and and set RenderingContext to this graphical state
    */
   NS_IMETHOD PopState(void) = 0;
-
-  // XXX temporary
-  NS_IMETHOD PushFilter(const nsRect& aRect, PRBool aAreaIsOpaque, float aOpacity)
-  { return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD PopFilter()
-  { return NS_ERROR_NOT_IMPLEMENTED; }
 
   /**
    * Tells if a given rectangle is visible within the rendering context
@@ -337,13 +305,6 @@ public:
    * @param aY The vertical translation
    */
   NS_IMETHOD Translate(nscoord aX, nscoord aY) = 0;
-  
-  /**
-   * Set the translation compoennt of the current transformation matrix.
-   * Useful to set it to a known pixel value without incurring roundoff
-   * errors.
-   */
-  NS_IMETHOD SetTranslation(nscoord aX, nscoord aY) = 0;
 
   /**
    *  Add in a scale to the RenderingContext's transformation matrix
@@ -740,19 +701,9 @@ public:
    */
   NS_IMETHOD CopyOffScreenBits(nsIDrawingSurface* aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
                                const nsRect &aDestBounds, PRUint32 aCopyFlags) = 0;
+  //~~~
+  NS_IMETHOD RetrieveCurrentNativeGraphicData(void** ngd) = 0;
 
-  enum GraphicDataType {
-    NATIVE_CAIRO_CONTEXT = 1,
-    NATIVE_GDK_DRAWABLE = 2,
-    NATIVE_WINDOWS_DC = 3,
-    NATIVE_MAC_THING = 4,
-    NATIVE_THEBES_CONTEXT = 5
-  };
-  /**
-   * Retrieve the native graphic data given by aType. Return
-   * nsnull if not available.
-   */
-  virtual void* GetNativeGraphicData(GraphicDataType aType) = 0;
 
   /**
    * Get a drawing surface used as a backbuffer.
@@ -825,12 +776,6 @@ public:
    * right-to-left base direction
    */
   NS_IMETHOD SetRightToLeftText(PRBool aIsRTL) = 0;
-
-  /**
-   * This sets the direction of the text; all characters should be
-   * overridden to have this direction.
-   */
-  virtual void SetTextRunRTL(PRBool aIsRTL) {}
 
   /**
    *  Draw a portion of an image, scaling it to fit within a specified rect.
@@ -950,8 +895,6 @@ public:
   NS_IMETHOD RenderEPS(const nsRect& aRect, FILE *aDataFile) = 0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIRenderingContext, NS_IRENDERING_CONTEXT_IID)
-
 //modifiers for text rendering
 
 #define NS_DRAWSTRING_NORMAL            0x0
@@ -1005,17 +948,6 @@ NS_DEFINE_STATIC_IID_ACCESSOR(nsIRenderingContext, NS_IRENDERING_CONTEXT_IID)
  * visual order if characters and word spacing are to be applied.
  */
 #define NS_RENDERING_HINT_REORDER_SPACED_TEXT 0x40
-
-/**
- * This bit, when set, indicates that gfx is using the new gfxTextRun API
- * underneath.
- * In particular, only single-direction text runs should be passed to
- * string methods, and the direction set by SetTextRunRTL will be honoured
- * for all characters in the string.
- * XXX TEMPORARY This will go away when all gfx implementations implement
- * gfxTextRun properly.
- */
-#define NS_RENDERING_HINT_NEW_TEXT_RUNS 0x80
 
 //flags for copy CopyOffScreenBits
 

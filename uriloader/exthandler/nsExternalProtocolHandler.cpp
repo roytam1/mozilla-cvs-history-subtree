@@ -51,11 +51,16 @@
 #include "nsIStringBundle.h"
 #include "nsIPrefService.h"
 #include "nsIPrompt.h"
+#include "nsEventQueueUtils.h"
 #include "nsNetUtil.h"
 
 // used to dispatch urls to default protocol handlers
 #include "nsCExternalHandlerService.h"
 #include "nsIExternalProtocolService.h"
+
+static NS_DEFINE_CID(kSimpleURICID, NS_SIMPLEURI_CID);
+
+
 
 ////////////////////////////////////////////////////////////////////////
 // a stub channel implemenation which will map calls to AsyncRead and OpenInputStream
@@ -355,7 +360,7 @@ PRBool nsExternalProtocolHandler::HaveProtocolHandler(nsIURI * aURI)
 NS_IMETHODIMP nsExternalProtocolHandler::GetProtocolFlags(PRUint32 *aUritype)
 {
     // Make it norelative since it is a simple uri
-    *aUritype = URI_NORELATIVE | URI_NOAUTH | URI_LOADABLE_BY_ANYONE;
+    *aUritype = URI_NORELATIVE;
     return NS_OK;
 }
 
@@ -365,7 +370,7 @@ NS_IMETHODIMP nsExternalProtocolHandler::NewURI(const nsACString &aSpec,
                                                 nsIURI **_retval)
 {
   nsresult rv;
-  nsCOMPtr<nsIURI> uri = do_CreateInstance(NS_SIMPLEURI_CONTRACTID, &rv);
+  nsCOMPtr<nsIURI> uri = do_CreateInstance(kSimpleURICID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
   
   rv = uri->SetSpec(aSpec);

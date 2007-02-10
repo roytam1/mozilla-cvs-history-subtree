@@ -46,8 +46,9 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIProgressEventSink.h"
 #include "nsIAsyncInputStream.h"
-#include "nsIThread.h"
+#include "nsIEventQueue.h"
 #include "nsCOMPtr.h"
+#include "nsInt64.h"
 
 class nsInputStreamPump : public nsIInputStreamPump
                         , public nsIInputStreamCallback
@@ -102,11 +103,11 @@ protected:
     nsCOMPtr<nsILoadGroup>        mLoadGroup;
     nsCOMPtr<nsIStreamListener>   mListener;
     nsCOMPtr<nsISupports>         mListenerContext;
-    nsCOMPtr<nsIThread>           mTargetThread;
+    nsCOMPtr<nsIEventQueue>       mEventQ;
     nsCOMPtr<nsIInputStream>      mStream;
     nsCOMPtr<nsIAsyncInputStream> mAsyncStream;
-    PRUint64                      mStreamOffset;
-    PRUint64                      mStreamLength;
+    nsUint64                      mStreamOffset;
+    nsUint64                      mStreamLength;
     PRUint32                      mSegSize;
     PRUint32                      mSegCount;
     nsresult                      mStatus;

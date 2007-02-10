@@ -74,7 +74,6 @@ var ResultsPaneController =
       case "cmd_delete":
       case "button_delete":
       case "button_edit":
-      case "cmd_newlist":
         return true;
       default:
         return false;
@@ -122,15 +121,6 @@ var ResultsPaneController =
         return (enabled && (numSelected > 0));
       case "button_edit":
         return (GetSelectedCardIndex() != -1);
-      case "cmd_newlist":
-        var selectedDir = GetSelectedDirectory();
-        if (selectedDir) {
-          var abDir = GetDirectoryFromURI(selectedDir);
-          if (abDir) {
-            return abDir.supportsMailingLists;
-          }
-        }
-        return false;
       default:
         return false;
     }
@@ -149,9 +139,6 @@ var ResultsPaneController =
         break;
       case "button_edit":
         AbEditSelectedCard();
-        break;
-      case "cmd_newlist":
-        AbNewList();
         break;
     }
   },
@@ -175,7 +162,6 @@ var DirPaneController =
       case "cmd_delete":
       case "button_delete":
       case "button_edit":
-      case "cmd_newlist":
         return true;
       default:
         return false;
@@ -184,8 +170,6 @@ var DirPaneController =
 
   isCommandEnabled: function(command)
   {
-    var selectedDir;
-
     switch (command) {
       case "cmd_selectAll":
         // the dirTree pane
@@ -196,7 +180,7 @@ var DirPaneController =
         return (gAbView != null);
       case "cmd_delete":
       case "button_delete":
-        selectedDir = GetSelectedDirectory();
+        var selectedDir = GetSelectedDirectory();
         if (command == "cmd_delete" && selectedDir) {
           goSetMenuValue(command, GetDirectoryFromURI(selectedDir).isMailList ? "valueList" : "valueAddressBook");
         }
@@ -209,14 +193,14 @@ var DirPaneController =
           // disable the delete button.
           if (selectedDir.lastIndexOf(kLdapUrlPrefix, 0) == 0)
           {
+            var prefName = selectedDir.substr(kLdapUrlPrefix.length);
             var disable = false;
             try {
-              var prefName = selectedDir.substr(kLdapUrlPrefix.length);
-              disable = gPrefs.getBoolPref(prefName + ".disable_delete");
-            }
-            catch(ex) {
-              // if this preference is not set its ok.
-            }
+	            disable = gPrefs.getBoolPref(prefName + ".disable_delete");
+	        }
+	        catch(ex){
+	          // if this preference is not set its ok.
+	        }
             if (disable)
               return false;
           }
@@ -226,15 +210,6 @@ var DirPaneController =
           return false;
       case "button_edit":
         return (GetSelectedDirectory() != null);
-      case "cmd_newlist":
-        selectedDir = GetSelectedDirectory();
-        if (selectedDir) {
-          var abDir = GetDirectoryFromURI(selectedDir);
-          if (abDir) {
-            return abDir.supportsMailingLists;
-          }
-        }
-        return false;
       default:
         return false;
     }
@@ -253,9 +228,6 @@ var DirPaneController =
         break;
       case "button_edit":
         AbEditSelectedDirectory();
-        break;
-      case "cmd_newlist":
-        AbNewList();
         break;
     }
   },
@@ -287,7 +259,8 @@ function AbEditSelectedDirectory()
       goEditListDialog(dirUri, null, selecteduri, UpdateCardView);
     }
     else {
-      if (directory instanceof Components.interfaces.nsIAbLDAPDirectory) {
+      var properties = directory.directoryProperties;
+      if (properties.dirType == kLDAPDirectory) {
         var args = { selectedDirectory: directory.dirName,
                      selectedDirectoryString: null};
         args.selectedDirectoryString = selecteduri.substr(kLdapUrlPrefix.length);
@@ -333,7 +306,7 @@ function GetSelectedCardTypes()
     return kNothingSelected; // no view
 
   var count = cards.length;
-  if (count == 0)
+  if (!count)
     return kNothingSelected;  // nothing selected
 
   var mailingListCnt = 0;
@@ -375,7 +348,7 @@ function AbDelete()
   gAbView.deleteSelectedCards();
 }
 
-function AbNewCard()
+function AbNewCard(abListItem)
 {
   goNewCardDialog(GetSelectedDirectory());
 }
@@ -402,7 +375,10 @@ function GetSelectedCardIndex()
 function GetSelectedCard()
 {
   var index = GetSelectedCardIndex();
-  return (index == -1) ? null : gAbView.getCardFromRow(index);
+  if (index == -1)
+    return null;
+  else 
+    return gAbView.getCardFromRow(index);
 }
 
 function AbEditSelectedCard()
@@ -412,8 +388,11 @@ function AbEditSelectedCard()
 
 function AbEditCard(card)
 {
-  // Need a card,
   if (!card)
+    return;
+
+  // Not allowing AOL special groups to be edited.
+  if (card.isASpecialGroup)
     return;
 
   if (card.isMailList) {
@@ -480,6 +459,7 @@ function goToggleSplitter( id, elementID )
   if ( splitter )
   {
     var attribValue = splitter.getAttribute("state") ;
+
     if ( attribValue == "collapsed" )
     {
       splitter.setAttribute("state", "open" );
@@ -507,13 +487,16 @@ function GetSelectedAddressesFromDirTree()
 
   if (dirTree.currentIndex >= 0) {
     var selectedResource = dirTree.builderView.getResourceAtIndex(dirTree.currentIndex);
-    var directory = GetDirectoryFromURI(selectedResource.Value);
+    var mailingListUri = selectedResource.Value;
+    var directory = GetDirectoryFromURI(mailingListUri);
     if (directory.isMailList) {
       var listCardsCount = directory.addressLists.Count();
       var cards = new Array(listCardsCount);
-      for (var i = 0; i < listCardsCount; ++i)
-        cards[i] = directory.addressLists.QueryElementAt(
-                     i, Components.interfaces.nsIAbCard);
+      for ( var i = 0;  i < listCardsCount; i++ ) {
+        var card = directory.addressLists.GetElementAt(i);
+        card = card.QueryInterface(Components.interfaces.nsIAbCard);
+        cards[i] = card;
+      }
       addresses = GetAddressesForCards(cards);
     }
   }
@@ -523,7 +506,8 @@ function GetSelectedAddressesFromDirTree()
 
 function GetSelectedAddresses()
 {
-  return GetAddressesForCards(GetSelectedAbCards());
+  var selectedCards = GetSelectedAbCards();
+  return GetAddressesForCards(selectedCards);
 }
 
 // Generate a comma separated list of addresses from a given
@@ -552,7 +536,8 @@ function GetAddressesForCards(cards)
 function GetNumSelectedCards()
 {
  try {
-   return gAbView.selection.count;
+   var treeSelection = gAbView.selection;
+   return treeSelection.count;
  }
  catch (ex) {
  }
@@ -616,8 +601,10 @@ function GetSelectedAbCards()
     var start = new Object;
     var end = new Object;
     abView.selection.getRangeAt(i,start,end);
-    for (j = start.value; j <= end.value; ++j)
-      cards[current++] = abView.getCardFromRow(j);
+    for (j=start.value;j<=end.value;j++) {
+      cards[current] = abView.getCardFromRow(j);
+      current++;
+    }
   }
   return cards;
 }
@@ -626,9 +613,9 @@ function SelectFirstAddressBook()
 {
   dirTree.view.selection.select(0);
 
-  ChangeDirectoryByURI(GetSelectedDirectory());
-  gAbResultsTree.focus();
-}
+    ChangeDirectoryByURI(GetSelectedDirectory());
+    gAbResultsTree.focus();
+  }
 
 function SelectFirstCard()
 {
@@ -738,12 +725,22 @@ function GetAbView()
   return gAbView;
 }
 
+// this will return the complete search uri if a quick search is currently being 
+// done. to get the uri of the directory only, use GetSelectedDirectory().
+function GetAbViewURI()
+{
+  if (gAbView)
+    return gAbView.URI;
+  else 
+    return null;
+}
+
 function ChangeDirectoryByURI(uri)
 {
   if (!uri)
     uri = kPersonalAddressbookURI;
 
-  if (gAbView && gAbView.URI == uri)
+  if (gAbView && GetAbViewURI() == uri)
     return;
   
   SetAbView(uri, false);
@@ -816,7 +813,7 @@ function InvalidateResultsPane()
     gAbResultsTree.treeBoxObject.invalidate();
 }
 
-function AbNewList()
+function AbNewList(abListItem)
 {
   goNewListDialog(GetSelectedDirectory());
 }
@@ -893,7 +890,10 @@ function GenerateAddressFromCard(card)
   if (card.isMailList) 
   {
     var directory = GetDirectoryFromURI(card.mailListURI);
-    email = directory.description || card.displayName;
+    if(directory.description)
+      email = directory.description;
+    else
+      email = card.displayName;
   }
   else 
     email = card.primaryEmail;
@@ -902,7 +902,8 @@ function GenerateAddressFromCard(card)
 
 function GetDirectoryFromURI(uri)
 {
-  return rdf.GetResource(uri).QueryInterface(Components.interfaces.nsIAbDirectory);
+  var directory = rdf.GetResource(uri).QueryInterface(Components.interfaces.nsIAbDirectory);
+  return directory;
 }
 
 // returns null if abURI is not a mailing list URI

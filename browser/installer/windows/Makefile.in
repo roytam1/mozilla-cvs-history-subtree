@@ -56,23 +56,28 @@ INSTALLER_FILES = \
 	app.tag \
 	nsis/installer.nsi \
 	nsis/uninstaller.nsi \
-	nsis/shared.nsh \
 	$(NULL)
 
 BRANDING_FILES = \
 	branding.nsi \
 	wizHeader.bmp \
+	wizHeader2.bmp \
+	wizHeader3.bmp \
+	wizHeader4.bmp \
 	wizHeaderRTL.bmp \
 	wizWatermark.bmp \
+	wizWatermark2.bmp \
+	wizWatermark3.bmp \
+	wizWatermark4.bmp \
 	$(NULL)
 
 DEFINES += \
 	-DAB_CD=$(AB_CD) \
 	-DPKG_BASENAME=$(PKG_BASENAME) \
 	-DMOZ_APP_VERSION=$(MOZ_APP_VERSION) \
-	-DMOZ_APP_NAME=$(MOZ_APP_NAME) \
 	-DMOZ_APP_DISPLAYNAME=${MOZ_APP_DISPLAYNAME} \
 	-DMOZILLA_VERSION=${MOZILLA_VERSION} \
+	-DMOZ_BRANDING_DIRECTORY=${MOZ_BRANDING_DIRECTORY} \
 	$(NULL)
 
 include $(topsrcdir)/config/config.mk
@@ -125,6 +130,12 @@ ifndef MOZ_BRANDING_DIRECTORY
 	cp $(srcdir)/Watermrk.bmp  $(DIST)/branding/Watermrk.bmp
 	cp $(srcdir)/nsis/branding.nsi $(DIST)/branding/branding.nsi
 	cp $(srcdir)/wizHeader.bmp     $(DIST)/branding/wizHeader.bmp
+	cp $(srcdir)/wizHeader2.bmp    $(DIST)/branding/wizHeader2.bmp
+	cp $(srcdir)/wizHeader3.bmp    $(DIST)/branding/wizHeader3.bmp
+	cp $(srcdir)/wizHeader4.bmp    $(DIST)/branding/wizHeader4.bmp
 	cp $(srcdir)/wizHeaderRTL.bmp  $(DIST)/branding/wizHeaderRTL.bmp
 	cp $(srcdir)/wizWatermark.bmp  $(DIST)/branding/wizWatermark.bmp
+	cp $(srcdir)/wizWatermark2.bmp $(DIST)/branding/wizWatermark2.bmp
+	cp $(srcdir)/wizWatermark3.bmp $(DIST)/branding/wizWatermark3.bmp
+	cp $(srcdir)/wizWatermark4.bmp $(DIST)/branding/wizWatermark4.bmp
 endif

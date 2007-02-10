@@ -49,8 +49,8 @@ DIRS =						\
 	events					\
 	stylesheets				\
 	views					\
-	sidebar                                 \
 	css					\
+        sidebar                                 \
 	traversal				\
 	range					\
 	xbl					\

@@ -115,63 +115,9 @@
       <field name="mEndDate">null</field>
       <field name="mStartHour">8</field>
       <field name="mEndHour">19</field>
-      <field name="mStartHourDefault">8</field>
-      <field name="mEndHourDefault">19</field>
-
-      <field name="mForce24Hours">false</field>
-      <field name="mZoomFactor">100</field>
-
-      <property name="zoomFactor">
-        <getter>
-          <![CDATA[
-          return this.mZoomFactor;
-          ]]>
-        </getter>
-        <setter>
-          <![CDATA[
-          this.mZoomFactor = val;
-          var hours = document.getAnonymousElementByAttribute(this, "anonid", "hours");
-          while(hours.childNodes.length > 1) {
-            hours.removeChild(hours.lastChild);
-          }
-          return val;
-          ]]>
-        </setter>
-      </property>
-      
-      <property name="force24Hours">
-        <getter>
-          <![CDATA[
-          return this.mForce24Hours;
-          ]]>
-        </getter>
-        <setter>
-          <![CDATA[
-          this.mForce24Hours = val;
-          this.initTimeRange();
-
-          var hours = document.getAnonymousElementByAttribute(this, "anonid", "hours");
-          while(hours.childNodes.length > 1) {
-            hours.removeChild(hours.lastChild);
-          }
-
-          return val;
-        ]]>
-        </setter>
-      </property>
 
       <constructor>
         <![CDATA[
-          this.initTimeRange();
-        ]]>
-      </constructor>
-
-      <method name="initTimeRange">
-        <body>
-          <![CDATA[
-          this.mStartHour = this.mStartHourDefault;
-          this.mEndHour = this.mEndHourDefault;
-
           var pb2 = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch2);
 
           // get default start/end times from prefs and set on the
@@ -182,14 +128,8 @@
             this.mStartHour = pb2.getIntPref("calendar.view.defaultstarthour");
             this.mEndHour = pb2.getIntPref("calendar.view.defaultendhour");
           } catch (ex) {}
-          
-          if(this.force24Hours) {
-            this.mStartHour = 0;
-            this.mEndHour = 24;
-          }
-          ]]>
-        </body>
-      </method>
+        ]]>
+      </constructor>
 
       <property name="startDate">
         <setter>
@@ -213,15 +153,6 @@
         </setter>
       </property>
 
-      <property name="dayHeight">
-        <getter>
-          <![CDATA[
-          var day = document.getAnonymousElementByAttribute(this, "anonid", "day");
-          return day.boxObject.height;
-        ]]>
-        </getter>
-      </property>
-
       <property name="date">
         <setter>
           <![CDATA[
@@ -237,33 +168,39 @@
 
           // first set the formatted date string as title
           var day = document.getAnonymousElementByAttribute(this, "anonid", "day");
-          var value = (this.mZoomFactor > 100) ?
-            this.mDateFormatter.formatDateShort(date) :
-            this.mDateFormatter.formatDateLong(date);
+          var value = this.mDateFormatter.formatDateLong(date);
           day.setAttribute("value",value);
-
+          
           // now create as many 'hour' elements as needed
-          var step_in_minutes = Math.floor(60 * this.mZoomFactor / 100);
           var hours = document.getAnonymousElementByAttribute(this, "anonid", "hours");
           date.hour = this.mStartHour;
           if(hours.childNodes.length <= 1) {
             var template = hours.childNodes[0];
             var time = this.mDateFormatter.formatTime(date);
             template.setAttribute("value",time);
-            date.minute += step_in_minutes;
-            date.normalize();
-            var count = Math.ceil((this.mEndHour-this.mStartHour)*60/step_in_minutes);
-            var remain = count-1;
-            while(remain--) {
+            date.hour++;
+            while(date.hour < this.mEndHour) {
               var newNode = template.cloneNode(false);
               var value = this.mDateFormatter.formatTime(date);
               newNode.setAttribute("value",value);
               hours.appendChild(newNode);
-              date.minute += step_in_minutes;
-              date.normalize();
+              date.hour++;
             }
           }
           
+          // last but not least set the 'scheduled' attribute according
+          // to the specified start- and enddate.
+          var numChilds = hours.childNodes.length;
+          for(var i=0; i<numChilds; i++) {
+            var hour = hours.childNodes[i];
+            date.hour = i + this.mStartHour;
+            if (date.compare(this.mStartDate) >= 0 && date.compare(this.mEndDate) < 0) {
+              hour.setAttribute("scheduled","true");
+            } else {
+              hour.removeAttribute("scheduled");
+            }
+          }
+
           return val;
           ]]>
         </setter>
@@ -278,8 +215,9 @@
   ########################################################################
   -->
   <binding id="freebusy-timebar" extends="xul:box">
-
     <content>
+
+
       <xul:listbox anonid="listbox" seltype="multiple" rows="1" flex="1" disabled="true">
         <xul:listcols>
           <xul:listcol id="day-column" flex="1"/>
@@ -292,8 +230,8 @@
           </xul:listcell>
         </xul:listitem>
       </xul:listbox>
-    </content>
 
+    </content>
     <implementation>
 
       <field name="mNumDays">0</field>
@@ -304,65 +242,6 @@
       <field name="mScrollOffset">0</field>
       <field name="mStartHour">8</field>
       <field name="mEndHour">19</field>
-      <field name="mStartHourDefault">8</field>
-      <field name="mEndHourDefault">19</field>
-
-      <field name="mForce24Hours">false</field>
-      <field name="mZoomFactor">100</field>
-
-      <property name="zoomFactor">
-        <getter>
-          <![CDATA[
-          return this.mZoomFactor;
-          ]]>
-        </getter>
-        <setter>
-          <![CDATA[
-          this.mZoomFactor = val;
-
-          var template = document.getAnonymousElementByAttribute(this, "anonid", "template");
-          var parent = template.parentNode;
-          while(parent.childNodes.length > 1) {
-            parent.removeChild(parent.lastChild);
-          }
-
-          template.force24Hours = this.mForce24Hours;
-          template.zoomFactor = this.mZoomFactor;
-          
-          this.onLoad();
-          
-          return val;
-          ]]>
-        </setter>
-      </property>      
-
-      <property name="force24Hours">
-        <getter>
-          <![CDATA[
-          return this.mForce24Hours;
-          ]]>
-        </getter>
-        <setter>
-          <![CDATA[
-          this.mForce24Hours = val;
-          this.initTimeRange();
-
-          var template = document.getAnonymousElementByAttribute(this, "anonid", "template");
-
-          var parent = template.parentNode;
-          while(parent.childNodes.length > 1) {
-            parent.removeChild(parent.lastChild);
-          }
-
-          template.force24Hours = this.mForce24Hours;
-          template.zoomFactor = this.mZoomFactor;
-          
-          this.onLoad();
-          
-          return val;
-        ]]>
-        </setter>
-      </property>
 
       <property name="contentWidth">
         <getter>
@@ -490,18 +369,29 @@
       <constructor>
         <![CDATA[
           var args = window.arguments[0];
-          var startTime = args.startTime;
-          var endTime = args.endTime;
+          var item = args.calendarEvent;
 
-          this.initTimeRange();
+          if (isToDo(item))
+            return;
+         
+          var pb2 = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch2);
+
+          // get default start/end times from prefs and set on the
+          // view.  if we hit an error (eg because sunbird's pref
+          // infrastructure hasn't created the pref yet), the
+          // defaults will do
+          try {
+            this.mStartHour = pb2.getIntPref("calendar.view.defaultstarthour");
+            this.mEndHour = pb2.getIntPref("calendar.view.defaultendhour");
+          } catch (ex) {}
 
           // the basedate is the date/time from which the display
           // of the timebar starts. the range is the number of days
           // we should be able to show. the start- and enddate
           // is the time the event is scheduled for.
           var kDefaultTimezone = calendarDefaultTimezone();
-          this.startDate = startTime.getInTimezone(kDefaultTimezone);
-          this.endDate = endTime.getInTimezone(kDefaultTimezone);
+          this.startDate = item.startDate.getInTimezone(kDefaultTimezone);
+          this.endDate = item.endDate.getInTimezone(kDefaultTimezone);
           this.mRange = Number(this.getAttribute("range"));
 
           var self = this;
@@ -534,90 +424,39 @@
       <method name="onLoad">
         <body>
           <![CDATA[
-            this.initialize();
-            
-            var template = document.getAnonymousElementByAttribute(this, "anonid", "template");
-            var event = document.createEvent('Events'); 
-            event.initEvent('timebar', true, false);
-            event.details = this.contentWidth;
-            event.height = template.dayHeight;
-            this.dispatchEvent(event);
-          ]]>
-        </body>
-      </method>
-
-      <method name="initialize">
-        <body>
-          <![CDATA[
             var args = window.arguments[0];
-            var startTime = args.startTime;
-            var endTime = args.endTime;
-            var calendar = args.calendar;
+            var item = args.calendarEvent;
+            var calendar = item.calendar;
 
             var kDefaultTimezone = calendarDefaultTimezone();
-            this.startDate = startTime.getInTimezone(kDefaultTimezone);
-            this.endDate = endTime.getInTimezone(kDefaultTimezone);
+            this.startDate = item.startDate.getInTimezone(kDefaultTimezone);
+            this.endDate = item.endDate.getInTimezone(kDefaultTimezone);
             
             // set the number of 'freebusy-day'-elements we need to fill up the content box.
-            // TODO: hardcoded value
-            this.mNumDays = 4 * this.mZoomFactor / 100;
-            if(this.mNumDays < 2)
-              this.mNumDays = 2;
+            this.mNumDays = 2;
             
             // now create those elements and set their date property.
             var date = this.mStartDate.clone();
             var template = document.getAnonymousElementByAttribute(this, "anonid", "template");
-            template.force24Hours = this.mForce24Hours;
-            template.zoomFactor = this.mZoomFactor;
             template.startDate = this.mStartDate;
             template.endDate = this.mEndDate;
             template.date = date;
             var parent = template.parentNode;
-            if(parent.childNodes.length <= 1) {
-              var count = this.mNumDays-1;
-              if(count > 0) {
-                for(var i=0; i<count; i++) {
-                  date.day++;
-                  date.normalize();
-                  var newNode = template.cloneNode(false);
-                  newNode.force24Hours = this.mForce24Hours;
-                  newNode.zoomFactor = this.mZoomFactor;
-                  newNode.startDate = this.mStartDate;
-                  newNode.endDate = this.mEndDate;
-                  newNode.date = date;
-                  parent.appendChild(newNode);
-                }
+            var count = this.mNumDays-1;
+            if(count > 0) {
+              for(var i=0; i<count; i++) {
+                date.day++;
+                date.normalize();
+                var newNode = template.cloneNode(false);
+                newNode.startDate = this.mStartDate;
+                newNode.endDate = this.mEndDate;
+                newNode.date = date;
+                parent.appendChild(newNode);
               }
             }
           ]]>
         </body>
       </method>
-
-      <method name="initTimeRange">
-        <body>
-          <![CDATA[
-          this.mStartHour = this.mStartHourDefault;
-          this.mEndHour = this.mEndHourDefault;
-
-          var pb2 = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch2);
-
-          // get default start/end times from prefs and set on the
-          // view.  if we hit an error (eg because sunbird's pref
-          // infrastructure hasn't created the pref yet), the
-          // defaults will do
-          try {
-            this.mStartHour = pb2.getIntPref("calendar.view.defaultstarthour");
-            this.mEndHour = pb2.getIntPref("calendar.view.defaultendhour");
-          } catch (ex) {}
-          
-          if(this.force24Hours) {
-            this.mStartHour = 0;
-            this.mEndHour = 24;
-          }
-          ]]>
-        </body>
-      </method>
-
     </implementation>
   </binding>
 
@@ -637,63 +476,12 @@
     <implementation>
 
       <field name="mState">null</field>
-      <field name="mEntries">null</field>
       <field name="mOffset">0</field>
       <field name="mStartDate">null</field>
       <field name="mEndDate">null</field>
       <field name="mRange">0</field>
       <field name="mStartHour">8</field>
       <field name="mEndHour">19</field>
-      <field name="mStartHourDefault">8</field>
-      <field name="mEndHourDefault">19</field>
-
-      <field name="mForce24Hours">false</field>
-      <field name="mZoomFactor">100</field>
-
-      <property name="zoomFactor">
-        <getter>
-          <![CDATA[
-          return this.mZoomFactor;
-          ]]>
-        </getter>
-        <setter>
-          <![CDATA[
-          this.mZoomFactor = val;
-
-          var hours = document.getAnonymousElementByAttribute(this, "anonid", "hours");
-          while(hours.childNodes.length > 1) {
-            hours.removeChild(hours.lastChild);
-          }
-
-          this.onLoad();
-
-          return val;
-          ]]>
-        </setter>
-      </property>
-      
-      <property name="force24Hours">
-        <getter>
-          <![CDATA[
-          return this.mForce24Hours;
-          ]]>
-        </getter>
-        <setter>
-          <![CDATA[
-          this.mForce24Hours = val;
-          this.initTimeRange();
-          
-          var hours = document.getAnonymousElementByAttribute(this, "anonid", "hours");
-          while(hours.childNodes.length > 1) {
-            hours.removeChild(hours.lastChild);
-          }
-
-          this.onLoad();
-          
-          return val;
-        ]]>
-        </setter>
-      </property>
 
       <property name="startDate">
         <setter>
@@ -717,20 +505,12 @@
         </setter>
       </property>
 
-      <property name="numHours">
-        <getter>
-          <![CDATA[
-            var numHours = this.mEndHour - this.mStartHour;
-            return Math.floor(numHours * 100 / this.mZoomFactor);
-          ]]>
-        </getter>
-      </property>      
-      
       <property name="contentWidth">
         <getter>
           <![CDATA[
           var hours = document.getAnonymousElementByAttribute(this, "anonid", "hours");
-          return (hours.childNodes[1].boxObject.x-hours.childNodes[0].boxObject.x)*this.numHours;
+          var numHours = this.mEndHour - this.mStartHour;
+          return (hours.childNodes[1].boxObject.x-hours.childNodes[0].boxObject.x)*numHours;
         ]]>
         </getter>
       </property>
@@ -747,7 +527,8 @@
       <property name="dayOffset">
         <setter>
           <![CDATA[
-          this.mOffset = val*this.numHours;
+          var numHours = this.mEndHour - this.mStartHour;
+          this.mOffset = val*numHours;
           this.showState();
           return val;
         ]]>
@@ -767,8 +548,6 @@
           <![CDATA[
           // how much pixels spans a single day
           var oneday = this.contentWidth;
-          if(oneday <= 0)
-            return val;
                     
           // the difference in pixels between the content and the container.
           var shift = (oneday*this.mRange)-(this.containerWidth);
@@ -795,10 +574,25 @@
 
       <constructor>
         <![CDATA[
-          this.initTimeRange();
+          var pb2 = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch2);
+
+          // get default start/end times from prefs and set on the
+          // view.  if we hit an error (eg because sunbird's pref
+          // infrastructure hasn't created the pref yet), the
+          // defaults will do
+          try {
+            this.mStartHour = pb2.getIntPref("calendar.view.defaultstarthour");
+            this.mEndHour = pb2.getIntPref("calendar.view.defaultendhour");
+          } catch (ex) {}
 
           this.mRange = Number(this.getAttribute("range"));
-                  
+        
+          var numHours = this.mEndHour - this.mStartHour;
+          this.mState = new Array(this.mRange*numHours);
+          for(var i=0; i<this.mState.length; i++) {
+            this.mState[i] = 0;
+          }
+          
           this.onLoad();
         ]]>
       </constructor>
@@ -806,13 +600,6 @@
       <method name="onLoad">
         <body>
           <![CDATA[
-          var numHours = this.mEndHour - this.mStartHour;
-          this.mState = new Array(this.mRange*numHours);
-          for(var i=0; i<this.mState.length; i++) {
-            this.mState[i] = 0;
-          }
-          
-          var step_in_minutes = Math.floor(60 * this.mZoomFactor / 100);
           var formatter = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
                                     .getService(Components.interfaces.calIDateTimeFormatter);
           var date = jsDateToDateTime(new Date());
@@ -824,27 +611,18 @@
             var template = hours.childNodes[0];
             var time = formatter.formatTime(date);
             template.setAttribute("value",time);
-            date.minute += step_in_minutes;
-            date.normalize();
-            // TODO: hardcoded value
-            var num_days = 4 * this.mZoomFactor / 100;
-            if(num_days < 2)
-              num_days = 2;
-            var count = Math.ceil((this.mEndHour-this.mStartHour)*60/step_in_minutes);
-            var remain = count-1;              
-            for(var day=1; day<=num_days; day++) {
-              while(remain--) {
+            date.hour++;
+            for(var day=1; day<=2; day++) {
+              while(date.hour < this.mEndHour) {
                 var newNode = template.cloneNode(false);
                 var value = formatter.formatTime(date);
                 newNode.setAttribute("value",value);
                 hours.appendChild(newNode);
-                date.minute += step_in_minutes;
-                date.normalize();
+                date.hour++;
               }
               date.hour = this.mStartHour;
               date.day++;
               date.normalize();
-              remain = count;
             }
           }
           ]]>
@@ -856,128 +634,55 @@
         <body>
           <![CDATA[
 
-          //var cs = Components.classes["@mozilla.org/consoleservice;1"].getService(Components.interfaces.nsIConsoleService);
-
           // this method gets called from onGetFreeBusyTimes() as a result
           // from the wcap connector. the argument denotes the requested
           // freebusy times. we need to set our state array according to this
           // result. after the state has been updated we call showState()
           // which will map the entries to attributes on the xul elements.
           if(aEntries) {
-
-            // remember the free/busy array which is used to find a
-            // new time for an event. we store this array only if
-            // the provider returned a valid array. in any other case
-            // (temporarily clean the display) we keep the last know result.
-            this.mEntries = aEntries;
-
-            var kDefaultTimezone = calendarDefaultTimezone();
             
             var start = this.mStartDate.clone();
             start.hour = 0;
             start.minute = 0;
             start.second = 0;
-            start.timezone = kDefaultTimezone;
-            start.normalize();
             var end = start.clone();
             end.day += this.mRange;
-            end.timezone = kDefaultTimezone;
-            end.normalize();
 
             // first of all set all state slots to 'free'
             for(var i=0; i<this.mState.length; i++) {
               this.mState[i] = 1;
             }
 
-            var numHours = this.numHours;
+            var numHours = this.mEndHour - this.mStartHour;
 
             // iterate all incoming freebusy entries
             for each(var entry in aEntries) {
             
               // first of all make sure that the given intervall is
               // within the intervall we're currently displaying.
-              if(true) {
-              
-                var rangeStart = entry.start.getInTimezone(kDefaultTimezone);
-                var rangeEnd = entry.end.getInTimezone(kDefaultTimezone);
-                rangeStart.normalize();
-                rangeEnd.normalize();
-                
-                //cs.logStringMessage(rangeStart.toString()+" "+rangeEnd.toString());
-                
-                if(rangeStart.compare(start) >= 0) {
-                  if(rangeEnd.compare(end) < 0) {
+              if(entry.isBusyEntry) {
+                if(entry.dtRangeStart.compare(start) >= 0) {
+                  if(entry.dtRangeEnd.compare(end) < 0) {
+            
+                    // ok, this is an entry we're interested in. find out
+                    // which hours are actually occupied.
+                    var offset = entry.dtRangeStart.subtractDate(start);
+                    var duration = entry.dtRangeEnd.subtractDate(entry.dtRangeStart);
+                    var startHours = Math.floor(offset.inSeconds / 3600);
+                    var endHours = startHours +
+                                   Math.ceil((duration.inSeconds / 3600) +
+                                   (offset.inSeconds / 3600 % startHours));
+
+                    // set all affected state slots to 'busy'
+                    for(var i=startHours; i<endHours; i++) {
                     
-                    var rangeDuration = rangeEnd.subtractDate(rangeStart);
-                    var rangeStartHour = rangeStart.hour;
-                    var rangeEndHour = rangeStartHour + (rangeDuration.inSeconds / 3600);
-
-                    if((rangeStartHour < this.mEndHour) && (rangeEndHour >= this.mStartHour)) {
-
-                      //cs.logStringMessage("This busy slot is in range");
-
-                      var dayingrid = start.clone();
-                      dayingrid.year = rangeStart.year;
-                      dayingrid.month = rangeStart.month;
-                      dayingrid.day = rangeStart.day;
-                      dayingrid.getInTimezone(kDefaultTimezone);
-                      dayingrid.normalize();
-              
-                      // ok, this is an entry we're interested in. find out
-                      // which hours are actually occupied.
-                      var offset = rangeStart.subtractDate(dayingrid);
-                      
-                      // calculate how many days we're offset from the
-                      // start of the grid. eliminate hours in case
-                      // we encounter the daylight-saving hop.
-                      var dayoffset = dayingrid.subtractDate(start);
-                      dayoffset.hours = 0;
-                      
-                      // add both offsets to find the total offset.
-                      // dayoffset -> offset in days from start of grid
-                      // offset -> offset in hours from start of current day
-                      offset.addDuration(dayoffset);
-                      
-                      var duration = rangeEnd.subtractDate(rangeStart);
-                      var start_in_minutes = Math.floor(offset.inSeconds / 60);
-                      var end_in_minutes = Math.ceil((duration.inSeconds / 60) +
-                                                     (offset.inSeconds / 60));
-                        
-                      var minute2offset = function(value,fNumHours,numHours,start_hour,zoomfactor) {
-                      
-                        // 'value' is some integer in the interval [0,range*24*60].
-                        // we need to map this offset into our array which
-                        // holds elements for 'range' days with [start,end] hours each.
-                        var minutes_per_day = 24*60;
-                        var day = (value-(value%minutes_per_day))/minutes_per_day;
-                        var minute = Math.floor(value%minutes_per_day) - (start_hour*60);
-                        
-                        if(minute < 0)
-                          minute = 0;
-                        if(minute >= (numHours*60))
-                          minute = (numHours*60)-1;
-                          
-                        // how to get from minutes to offset?
-                        // 60 = 100%, 30 = 50%, 15 = 25%, etc.
-                        var minutes_per_block = 60 * zoomfactor / 100;
-                        
-                        var block = Math.floor(minute / minutes_per_block);
-                        
-                        return Math.ceil(fNumHours)*day+block;
-                      }
-                      
-                      // number of hours (fractional representation)
-                      var numHours = this.mEndHour - this.mStartHour;
-                      var fNumHours = numHours * 100 / this.mZoomFactor;
-                      
-                      var start_offset = minute2offset(start_in_minutes,fNumHours,numHours,this.mStartHour,this.mZoomFactor);
-                      var end_offset = minute2offset(end_in_minutes-1,fNumHours,numHours,this.mStartHour,this.mZoomFactor);
-
-                      //cs.logStringMessage("Blocking from "+start_offset+" until "+end_offset);
-
-                      // set all affected state slots to 'busy'
-                      for(var i=start_offset; i<=end_offset; i++) {
-                        this.mState[i] = 2;
+                      // 'i' is some integer in the interval [0,range*24].
+                      // we need to map this offset into our array which
+                      // holds elements for 'range' days with [start,end] hours each.
+                      var day = (i-(i%24))/24;
+                      var hour = Math.floor(i%24) - this.mStartHour;
+                      if(hour >= 0 && hour < numHours) {
+                        this.mState[numHours*day+hour] = 2;
                       }
                     }
                   }
@@ -1016,100 +721,135 @@
       </method>
 
       <method name="nextSlot">
-        <parameter name="aStartTime"/>
-        <parameter name="aEndTime"/>
-        <parameter name="allDay"/>
+        <parameter name="aTime"/>
         <body>
           <![CDATA[
-            //var cs = Components.classes["@mozilla.org/consoleservice;1"].getService(Components.interfaces.nsIConsoleService);
-
-            var newTime = aStartTime.clone();
-            var duration = aEndTime.subtractDate(aStartTime);
-            var newEndTime = newTime.clone();
-            newEndTime.addDuration(duration);
-
-            var kDefaultTimezone = calendarDefaultTimezone();
+            // aTime is some time expected to be in the start/end range.
+            // we return the modified time to not conflict with any busy entries.
+            // time won't change if no free area could be found.
+            var duration = this.mEndDate.subtractDate(this.mStartDate);
+            var numHours = Math.ceil(duration.inSeconds / 3600);
             
-            //cs.logStringMessage("nextSlot for "+newTime.toString());
+            // now for some tricky part. currently we're only taking the working
+            // hours into account when finding a new possible new time for the item.
+            // but what happens if we're given an intervall that is larger than the
+            // one spanned by the working hours? this needs to be addressed later.
+            // the algorithm just assumes that everything outside of the working
+            // hours is marked as 'free'.
+            var maxHours = this.mEndHour-this.mStartHour;
+            var offset = numHours > maxHours ? numHours - maxHours : 0;
+            numHours -= offset;
+
+            // prepare datetime-objects corrosponding to the free/busy-grid display.
+            var start = this.mStartDate.clone();
+            start.hour = 0;
+            start.minute = 0;
+            start.second = 0;
+            var base = start.clone();
+            var end = start.clone();
+            end.day += this.mRange;
             
-            if(this.mEntries) {
+            while(start.compare(end) != 0) {
             
-              for each(var entry in this.mEntries) {
-              
-                // first of all make sure that the given intervall is
-                // within the intervall we're currently displaying.
-                if(true) {
-                
-                  var rangeStart = entry.start.getInTimezone(kDefaultTimezone);
-                  var rangeEnd = entry.end.getInTimezone(kDefaultTimezone);
-                  rangeStart.normalize();
-                  rangeEnd.normalize();
+              // we're only interested in times that are greater or equal
+              // than the time passed as argument to the function.
+              if(start.compare(aTime) >= 0) {
 
-                  //cs.logStringMessage("checking with "+rangeStart.toString()+" "+rangeEnd.toString());
-
-                  var isZeroLength = !newTime.compare(newEndTime);
-                  if ((isZeroLength &&
-                       newTime.compare(rangeStart) >= 0 &&
-                       newTime.compare(rangeEnd) < 0) ||
-                      (!isZeroLength &&
-                       newTime.compare(rangeEnd) < 0 &&
-                       newEndTime.compare(rangeStart) > 0)) {
-
-                    // current range of event conflicts with another event.
-                    // we need to find a new time for this event. a trivial approach
-                    // is to set the new start-time of the event equal to the end-time
-                    // of the conflict-range. all-day events need to be considered
-                    // separately, in which case we skip to the next day.
-                    newTime = rangeEnd.clone();
-                    if(allDay) {
-                      if(!((newTime.hour == 0) && (newTime.minute == 0) && (newTime.second == 0))) {
-                        newTime.day += 1;
-                        newTime.hour = 0;
-                        newTime.minute = 0;
-                        newTime.second = 0;
-                      }
-                      newTime.normalize();
+                if(start.hour >= this.mStartHour) {
+                  if((start.hour+numHours) <= this.mEndHour) {
+                  
+                    // time could be considered as a possible candidate,
+                    // we need to check if 'numHours' are free from here on.
+                    var numHoursPerDay = this.mEndHour - this.mStartHour;
+                    var startCheck = (start.day-base.day)*numHoursPerDay+(start.hour-this.mStartHour);
+                    var endCheck = startCheck+numHours;
+                    while(startCheck < endCheck) {
+                      if(this.mState[startCheck] == 2)
+                        break;
+                      startCheck++;
                     }
-                    newEndTime = newTime.clone();
-                    newEndTime.addDuration(duration);
 
-                    //cs.logStringMessage("conflict with "+rangeStart.toString()+" "+rangeEnd.toString()+" moving to "+newTime.toString());
+                    // return if a new free slot has been found.
+                    if(startCheck == endCheck) {
+                      return start;
+                    }
                   }
                 }
               }
+            
+              start.hour++;
+              start.normalize();
             }
-
-            //cs.logStringMessage("result for this row is "+newTime.toString());
-            return newTime;
+            
+            return null;
           ]]>
         </body>
       </method>
 
-      <method name="initTimeRange">
+      <method name="previousSlot">
+        <parameter name="aTime"/>
         <body>
           <![CDATA[
-          this.mStartHour = this.mStartHourDefault;
-          this.mEndHour = this.mEndHourDefault;
+            // aTime is some time expected to be in the start/end range.
+            // we return the modified time to not conflict with any busy entries.
+            // time won't change if no free area could be found.
+            var duration = this.mEndDate.subtractDate(this.mStartDate);
+            var numHours = Math.ceil(duration.inSeconds / 3600);
 
-          var pb2 = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch2);
+            // now for some tricky part. currently we're only taking the working
+            // hours into account when finding a new possible new time for the item.
+            // but what happens if we're given an intervall that is larger than the
+            // one spanned by the working hours? this needs to be addressed later.
+            // the algorithm just assumes that everything outside of the working
+            // hours is marked as 'free'.
+            var maxHours = this.mEndHour-this.mStartHour;
+            var offset = numHours > maxHours ? numHours - maxHours : 0;
+            numHours -= offset;
 
-          // get default start/end times from prefs and set on the
-          // view.  if we hit an error (eg because sunbird's pref
-          // infrastructure hasn't created the pref yet), the
-          // defaults will do
-          try {
-            this.mStartHour = pb2.getIntPref("calendar.view.defaultstarthour");
-            this.mEndHour = pb2.getIntPref("calendar.view.defaultendhour");
-          } catch (ex) {}
-          
-          if(this.force24Hours) {
-            this.mStartHour = 0;
-            this.mEndHour = 24;
-          }
+            var start = this.mStartDate.clone();
+            start.hour = 0;
+            start.minute = 0;
+            start.second = 0;
+            var base = start.clone();
+            var end = start.clone();
+            start.day += this.mRange;
+            
+            while(start.compare(end) != 0) {
+            
+              // we're only interested in times that are less or equal
+              // than the time passed as argument to the function.
+              if(start.compare(aTime) <= 0) {
+              
+                if(start.hour >= this.mStartHour) {
+                  if((start.hour+numHours) <= this.mEndHour) {
+              
+                    // time could be considered as a possible candidate,
+                    // we need to check if 'numHours' are free from here on.
+                    var numHoursPerDay = this.mEndHour - this.mStartHour;
+                    var startCheck = (start.day-base.day)*numHoursPerDay+(start.hour-this.mStartHour);
+                    var endCheck = startCheck+numHours;
+                    while(startCheck < endCheck) {
+                      if(this.mState[startCheck] == 2)
+                        break;
+                      startCheck++;
+                    }
+
+                    // return if a new free slot has been found.
+                    if(startCheck == endCheck)
+                      return start;
+                  }
+                }
+              }
+            
+              start.hour--;
+              start.normalize();
+            }
+            
+            return aTime;
           ]]>
         </body>
       </method>
-
+      
     </implementation>
   </binding>
 
@@ -1120,14 +860,9 @@
 
   <!-- id's are evil, use anonid -->
   <binding id="freebusy-grid">
-
     <content>
-      <xul:listbox anonid="listbox"
-                   seltype="multiple"
-                   rows="-1"
-                   disabled="true"
-                   flex="1"
-                   style="min-width: 50em; min-height: 30em">
+
+      <xul:listbox anonid="listbox" seltype="multiple" rows="-1" flex="1" disabled="true">
         <xul:listcols>
           <xul:listcol id="grid-column" flex="1"/>
         </xul:listcols>
@@ -1137,8 +872,8 @@
           </xul:listcell>
         </xul:listitem>
       </xul:listbox>
-    </content>
 
+    </content>
     <implementation>
 
       <field name="mContentHeight">0</field>
@@ -1147,89 +882,14 @@
       <field name="mMaxFreeBusy">0</field>
       <field name="mCalendar">null</field>
       <field name="mConsoleService">null</field>
+      <field name="mFreeBusySequence">0</field>
       <field name="mFreeBusy">null</field>
-      <field name="mPendingRequests">null</field>
       <field name="mStartDate">null</field>
       <field name="mEndDate">null</field>
       <field name="mScrollOffset">0</field>
       <field name="mRange">0</field>
       <field name="mStartHour">8</field>
       <field name="mEndHour">19</field>
-      <field name="mStartHourDefault">8</field>
-      <field name="mEndHourDefault">19</field>
-
-      <field name="mForce24Hours">false</field>
-      <field name="mZoomFactor">100</field>
-
-      <property name="zoomFactor">
-        <getter>
-          <![CDATA[
-          return this.mZoomFactor;
-          ]]>
-        </getter>
-        <setter>
-          <![CDATA[
-          this.mZoomFactor = val;
-
-          for (var i=1; i<=this.mMaxFreeBusy; i++) {
-            var freebusy = this.getFreeBusyElement(i);
-            freebusy.zoomFactor = this.mZoomFactor;
-          }
-
-          this.forceRefresh();
-
-          return val;
-          ]]>
-        </setter>
-      </property>
-      
-      <property name="force24Hours">
-        <getter>
-          <![CDATA[
-          return this.mForce24Hours;
-          ]]>
-        </getter>
-        <setter>
-          <![CDATA[
-          this.mForce24Hours = val;
-          this.initTimeRange();
-
-          for (var i=1; i<=this.mMaxFreeBusy; i++) {
-            var freebusy = this.getFreeBusyElement(i);
-            freebusy.force24Hours = this.mForce24Hours;
-          }
-          
-          return val;
-        ]]>
-        </setter>
-      </property>
-
-      <property name="firstVisibleRow">
-        <getter>
-          <![CDATA[
-            var listbox = document.getAnonymousElementByAttribute(this, "anonid", "listbox");
-            return listbox.getIndexOfFirstVisibleRow();
-          ]]>
-        </getter>
-        <setter>
-          <![CDATA[
-          var listbox = document.getAnonymousElementByAttribute(this, "anonid", "listbox");
-          listbox.scrollToIndex(val);
-          return val;
-          ]]>
-        </setter>
-      </property>
-
-      <property name="ratio">
-        <setter>
-          <![CDATA[
-          var listbox = document.getAnonymousElementByAttribute(this, "anonid", "listbox");
-          var rowcount = listbox.getRowCount();
-          listbox.scrollToIndex(Math.floor(rowcount*val));
-          return val;
-          ]]>
-        </setter>
-      </property>
 
       <field name="mFreeBusyListener">
         <![CDATA[
@@ -1245,10 +905,13 @@
             return this;
           },
   
-          onRequestResult: function(request,entries) {
+          onGetFreeBusyTimes: function(rc,requestId,calId,count,entries) {
 
-            // delegate to the binding
-            this.binding.onFreeBusy(request,entries);
+            if (rc == Components.results.NS_OK) {
+
+              // delegate to the binding
+              this.binding.onFreeBusy(requestId,calId,count,entries);
+            }
           }
         })
       ]]>
@@ -1257,36 +920,42 @@
       <constructor>
         <![CDATA[
           var args = window.arguments[0];
+          var item = args.calendarEvent;
 
-          this.initTimeRange();
+          if (isToDo(item))
+            return;
+
+          var pb2 = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch2);
+
+          // get default start/end times from prefs and set on the
+          // view.  if we hit an error (eg because sunbird's pref
+          // infrastructure hasn't created the pref yet), the
+          // defaults will do
+          try {
+            this.mStartHour = pb2.getIntPref("calendar.view.defaultstarthour");
+            this.mEndHour = pb2.getIntPref("calendar.view.defaultendhour");
+          } catch (ex) {}
 
           this.mRange = Number(this.getAttribute("range"));
         
           this.mMaxFreeBusy = 0;
+          this.mFreeBusySequence = 0;
           this.mFreeBusy = [];
-          this.mPendingRequests = [];
-
+          
           var self = this;
           var load = function loadHandler() { self.onLoad(); };
           window.addEventListener("load", load, true);
-          var unload = function unloadHandler() { self.onUnload(); };
-          window.addEventListener("unload", unload, true);
-          
+
           this.mConsoleService = Components.classes["@mozilla.org/consoleservice;1"].getService(Components.interfaces.nsIConsoleService);
         ]]>
       </constructor>
 
       <property name="startDate">
-        <getter>
-          <![CDATA[
-            return this.mStartDate;
-          ]]>
-        </getter>
         <setter>
           <![CDATA[
           this.mStartDate = val.clone();
           this.mStartDate.makeImmutable();
-          for (var i=1; i <= this.mMaxFreeBusy; i++) {
+          for (i=1; i <= this.mMaxFreeBusy; i++) {
             this.getFreeBusyElement(i).startDate = val;
           }
           return val;
@@ -1295,16 +964,11 @@
       </property>
 
       <property name="endDate">
-        <getter>
-          <![CDATA[
-            return this.mEndDate;
-          ]]>
-        </getter>
         <setter>
           <![CDATA[
           this.mEndDate = val.clone();
           this.mEndDate.makeImmutable();
-          for (var i=1; i <= this.mMaxFreeBusy; i++) {
+          for (i=1; i <= this.mMaxFreeBusy; i++) {
             this.getFreeBusyElement(i).endDate = val;
           }
           return val;
@@ -1320,39 +984,17 @@
         </getter>
       </property>
 
+      <!-- Called after the DOM has been constructed -->
       <method name="onLoad">
         <body>
           <![CDATA[
-            this.onInitialize();
-          ]]>
-        </body>
-      </method>
-
-      <method name="onUnload">
-        <body>
-          <![CDATA[
-            // cancel pending free/busy requests
-            for each(var request in this.mPendingRequests) {
-              request.cancel(null);
-            }
-
-            this.mFreeBusy = [];
-            this.mPendingRequests = [];
-          ]]>
-        </body>
-      </method>
-
-      <method name="onInitialize">
-        <body>
-          <![CDATA[
             var args = window.arguments[0];
-            var startTime = args.startTime;
-            var endTime = args.endTime;
-            var calendar = args.calendar;
+            var item = args.calendarEvent;
+            var calendar = item.calendar;
 
             var kDefaultTimezone = calendarDefaultTimezone();
-            this.startDate = startTime.getInTimezone(kDefaultTimezone);
-            this.endDate = endTime.getInTimezone(kDefaultTimezone);
+            this.startDate = item.startDate.getInTimezone(kDefaultTimezone);
+            this.endDate = item.endDate.getInTimezone(kDefaultTimezone);
 
             // query for the wcap interface, the appropriate functionality of this interface
             // should be migrated to some other generic one instead of relying on the wcap provider.
@@ -1363,9 +1005,23 @@
 
             var listbox = document.getAnonymousElementByAttribute(this, "anonid", "listbox");
             var template = document.getAnonymousElementByAttribute(this, "anonid", "item");
-            this.appendNewRow(listbox,template,null);
+
+            // detach the template item from the listbox, but hold the reference.
+            // until this function returns we add at least a single copy of this template back again.
             listbox.removeChild(template);
+
+            var attendees = item.getAttendees({});
+            if(attendees.length > 0) {
+                for each(var attendee in attendees) {
+                  this.appendNewRow(listbox,template,null);
+                  template = document.getAnonymousElementByAttribute(this, "anonid", "item");
+                }
+            }
+            else {
+              this.appendNewRow(listbox,template,null);
+            }
           
+            this.fitDummyRows();
             this.updateFreeBusy();
           ]]>
         </body>
@@ -1417,9 +1073,6 @@
             // propagate start/enddate to the new row.
             grid.startDate = this.mStartDate;
             grid.endDate = this.mEndDate;
-            
-            grid.force24Hours = this.mForce24Hours;
-            grid.zoomFactor = this.mZoomFactor;
 
             // We always clone the first row.  The problem is that the first row
             // could be focused.  When we clone that row, we end up with a cloned
@@ -1519,9 +1172,10 @@
                                "### " + (msg ? msg : ""));
                     this.mConsoleService.logStringMessage(str);
                                             
-                    var request = this.mCalendar.session.getFreeBusyTimes(calid,start,end,true,this.mFreeBusyListener);
-                    this.mFreeBusy[request.id] = i;
-                    this.mPendingRequests.push(request);
+                    this.mFreeBusy.push(i);
+                    this.mFreeBusySequence = this.mFreeBusy.length-1;
+                    
+                    this.mCalendar.session.getFreeBusyTimes(calid,start,end,true,this.mFreeBusyListener,true,this.mFreeBusySequence);
                   }
                 }
                 catch (ex) {
@@ -1535,32 +1189,26 @@
 
       <!-- onFreeBusy(), called with the result set from getFreeBusyTimes() -->
       <method name="onFreeBusy">
-        <parameter name="request"/>
+        <parameter name="sequenceId"/>
+        <parameter name="calId"/>
+        <parameter name="count"/>
         <parameter name="entries"/>
         <body>
           <![CDATA[
-            // find request in list of pending requests and remove from queue
-            var queue = this.mPendingRequests;
-            for(var i=0; i<queue.length; i++) {
-              if(queue[i] == request) {
-                queue.splice(i,1);
-                break;
-              }
-            }
+            var row = this.mFreeBusy[sequenceId];
 
-            if (request.status == Components.results.NS_OK) {
-              var row = this.mFreeBusy[request.id];
-              if(row) {
-                var freebusy = this.getFreeBusyElement(row);
+            var msg = "response for <"+calId+"> on row <"+row+"> - sequence <"+sequenceId+">";
+            var str = ("\n### freebusy log " + new Date() +
+                       "### " + (msg ? msg : ""));
+            this.mConsoleService.logStringMessage(str);
+
+            if(row) {
+              var freebusy = this.getFreeBusyElement(row);
+              var fieldValue = freebusy.getAttribute("calid");
+              if (fieldValue.indexOf(calId) == 0) {
                 freebusy.onFreeBusy(entries);
               }
             }
-
-            // reset map<row-id,request-id> if currently no further
-            // requests are pending. this basically shrinks the array
-            // in order to get rid of all previously remembered relationships.
-            if(!queue.length)
-              this.mFreeBusy = [];
           ]]>
         </body>
       </method>
@@ -1568,46 +1216,16 @@
       <method name="nextSlot">
         <body>
           <![CDATA[
-          //var cs = Components.classes["@mozilla.org/consoleservice;1"].getService(Components.interfaces.nsIConsoleService);
-
-          var startTime = this.mStartDate.clone();
-          var endTime = this.mEndDate.clone();
-          
-          startTime.isDate = false;
-          endTime.isDate = false;
-          
-          var allDay = this.mStartDate.isDate;
-          var step_in_minutes = Math.floor(60 * this.zoomFactor / 100);
-          if(allDay) {
-            step_in_minutes = 60 * 24;
-            endTime.day += 1;
-            endTime.normalize();
-          }
-
-          var duration = endTime.subtractDate(startTime);
-            
-          startTime.minute += step_in_minutes;
-          startTime.normalize();
-          
-          if(startTime.hour < this.mStartHour) {
-            startTime.hour = this.mStartHour;
-            startTime.minute = 0;
-            startTime.normalize();
-          }
-            
-          endTime = startTime.clone();
-          endTime.addDuration(duration);
-          if(endTime.hour > this.mEndHour) {
-            startTime.day += 1;
-            startTime.hour = this.mStartHour;
-            startTime.minute = 0;
-            startTime.normalize();
-            endTime = startTime.clone();
-            endTime.addDuration(duration);
-            if(endTime.hour > this.mEndHour) {
-              return this.mStartDate.clone();
-            }
-          }
+          // start with the startdate of the item, slightly
+          // shifted towards the future since we are interested
+          // in a different startdate scheduled later.
+          var time = this.mStartDate.clone();
+          time.isDate = false;
+          if(time.hour < this.mStartHour)
+            time.hour = this.mStartHour;
+          time.minute++;
+          time.normalize();
+          var base = time.clone();
 
           // now iterate all freebusy-rows and ask each one
           // if it wants to modify the suggested time slot.
@@ -1616,37 +1234,12 @@
           var recheck = false;
           do {
             recheck = false;
-
-            //cs.logStringMessage("new suggestion is "+startTime.toString());
-            
             for (var i=1; i <= this.mMaxFreeBusy; i++) {
               var row = this.getFreeBusyElement(i);
-              var newTime = row.nextSlot(startTime,endTime,allDay);
+              var newTime = row.nextSlot(time);
               if (newTime) {
-                if(newTime.compare(startTime) != 0) {
-
-                  startTime = newTime;
-
-                  if(startTime.hour < this.mStartHour) {
-                    startTime.hour = this.mStartHour;
-                    startTime.minute = 0;
-                    startTime.normalize();
-                  }
-
-                  endTime = startTime.clone();
-                  endTime.addDuration(duration);
-
-                  if(endTime.hour > this.mEndHour) {
-                    startTime.day += 1;
-                    startTime.hour = this.mStartHour;
-                    startTime.minute = 0;
-                    startTime.normalize();
-                    endTime = startTime.clone();
-                    endTime.addDuration(duration);
-                  }
-
-                  //cs.logStringMessage("conflict on row "+i+" new suggestion is "+startTime.toString());
-
+                if(newTime.compare(time) != 0) {
+                  time = newTime;
                   recheck = true;
                 }
               } else {
@@ -1659,22 +1252,22 @@
 
           // return the unmodifed startdate of the item
           // in case no possible match was found.
-          if(startTime.compare(this.mStartDate) == 0)
+          if(time.compare(base) == 0)
             return this.mStartDate.clone();
 
           // special case for allday events - if the original
           // datetime was indeed a date we need to carry this
           // state over to the calculated datetime.
           if (this.mStartDate.isDate) {
-            startTime.isDate = true;
-            startTime.normalize();
+            time.hour = 0;
+            time.isDate = true;
           }
 
           // in case the new starttime happens to be scheduled
           // on a different day, we also need to update the
           // complete freebusy informations and appropriate
-          // underlying arrays holding the informaion.
-          if(this.mStartDate.day != startTime.day) {
+          // underlying arrays holding the information.
+          if(base.day != time.day) {
             for (var i=1; i <= this.mMaxFreeBusy; i++) {
               var row = this.getFreeBusyElement(i);
               row.setAttribute("dirty","true");
@@ -1683,23 +1276,78 @@
           }
 
           // return the new starttime of the item.
-          return startTime;
+          return time;
           ]]>
         </body>
       </method>
 
-      <method name="forceRefresh">
+      <method name="previousSlot">
         <body>
           <![CDATA[
+          // start with the startdate of the item, slightly
+          // shifted towards the past since we are interested
+          // in a different startdate scheduled earlier.
+          var time = this.mStartDate.clone();
+          time.isDate = false;
+          if(time.hour < this.mStartHour)
+            time.hour = this.mStartHour;
+          time.minute--;
+          var base = time.clone();
+
+          // now iterate all freebusy-rows and ask each one
+          // if it wants to modify the suggested time slot.
+          // we keep iterating the rows until all of them
+          // are happy with it.
+          var recheck = false;
+          do {
+            recheck = false;
+            for (var i=1; i <= this.mMaxFreeBusy; i++) {
+              var row = this.getFreeBusyElement(i);
+              var newTime = row.previousSlot(time);
+              if (newTime) {
+                if(newTime.compare(time) != 0) {
+                  time = newTime;
+                  recheck = true;
+                }
+              } else {
+                // a new slot could not be found
+                // and the given time was also invalid.
+                return this.mStartDate.clone();
+              }
+            }
+          } while(recheck);
+          
+          // return the unmodifed startdate of the item
+          // in case no possible match was found.
+          if(time.compare(base) == 0)
+            return this.mStartDate.clone();
+            
+          // special case for allday events - if the original
+          // datetime was indeed a date we need to carry this
+          // state over to the calculated datetime.
+          if (this.mStartDate.isDate) {
+            time.hour = 0;
+            time.isDate = true;
+          }
+            
+          // in case the new starttime happens to be scheduled
+          // on a different day, we also need to update the
+          // complete freebusy informations and appropriate
+          // underlying arrays holding the information.
+          if(base.day != time.day) {
             for (var i=1; i <= this.mMaxFreeBusy; i++) {
               var row = this.getFreeBusyElement(i);
               row.setAttribute("dirty","true");
             }
             this.updateFreeBusy();
+          }
+          
+          // return the new starttime of the item.
+          return time;
           ]]>
         </body>
       </method>
-
+      
       <!-- This method returns the <xul:listitem> at row numer 'aRow' -->
       <method name="getListItem">
         <parameter name="aRow"/>
@@ -1776,12 +1424,8 @@
       <method name="fitDummyRows">
         <body>
           <![CDATA[
-            var self = this;
-            var func = function func() {
-              self.calcContentHeight();
-              self.createOrRemoveDummyRows();
-            }
-            setTimeout(func,0);
+            this.calcContentHeight();
+            this.createOrRemoveDummyRows();
           ]]>
         </body>
       </method>
@@ -1873,32 +1517,6 @@
           ]]>
         </getter>
       </property>
-
-      <method name="initTimeRange">
-        <body>
-          <![CDATA[
-          this.mStartHour = this.mStartHourDefault;
-          this.mEndHour = this.mEndHourDefault;
-
-          var pb2 = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch2);
-
-          // get default start/end times from prefs and set on the
-          // view.  if we hit an error (eg because sunbird's pref
-          // infrastructure hasn't created the pref yet), the
-          // defaults will do
-          try {
-            this.mStartHour = pb2.getIntPref("calendar.view.defaultstarthour");
-            this.mEndHour = pb2.getIntPref("calendar.view.defaultendhour");
-          } catch (ex) {}
-          
-          if(this.force24Hours) {
-            this.mStartHour = 0;
-            this.mEndHour = 24;
-          }
-          ]]>
-        </body>
-      </method>
-
     </implementation>
   </binding>
 

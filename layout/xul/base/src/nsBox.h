@@ -57,18 +57,20 @@ public:
 
   static void Shutdown();
 
-  virtual nsSize GetPrefSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nsSize GetMinSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nsSize GetMaxSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nscoord GetFlex(nsBoxLayoutState& aBoxLayoutState);
-  virtual nscoord GetBoxAscent(nsBoxLayoutState& aBoxLayoutState);
+  NS_IMETHOD GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetMaxSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetFlex(nsBoxLayoutState& aBoxLayoutState, nscoord& aFlex);
+  NS_IMETHOD GetAscent(nsBoxLayoutState& aBoxLayoutState, nscoord& aAscent);
 
   virtual nsSize GetMinSizeForScrollArea(nsBoxLayoutState& aBoxLayoutState);
 
-  virtual PRBool IsCollapsed(nsBoxLayoutState& aBoxLayoutState);
+  NS_IMETHOD IsCollapsed(nsBoxLayoutState& aBoxLayoutState, PRBool& aCollapsed);
 
   NS_IMETHOD SetBounds(nsBoxLayoutState& aBoxLayoutState, const nsRect& aRect,
                        PRBool aRemoveOverflowArea = PR_FALSE);
+
+  NS_IMETHOD MarkDirty(nsBoxLayoutState& aState);
 
   NS_IMETHOD GetBorder(nsMargin& aBorderAndPadding);
   NS_IMETHOD GetPadding(nsMargin& aBorderAndPadding);
@@ -81,10 +83,14 @@ public:
   NS_IMETHOD GetHAlign(Halignment& aAlign);
 
 
+  NS_IMETHOD NeedsRecalc();
+  NS_IMETHOD RelayoutDirtyChild(nsBoxLayoutState& aState, nsIBox* aChild);
   NS_IMETHOD RelayoutChildAtOrdinal(nsBoxLayoutState& aState, nsIBox* aChild);
 
-  virtual PRBool GetMouseThrough() const;
+  NS_IMETHOD GetMouseThrough(PRBool& aMouseThrough);
 
+  NS_IMETHOD MarkChildrenStyleChange();
+  NS_IMETHOD MarkStyleChange(nsBoxLayoutState& aState);
 #ifdef DEBUG_LAYOUT
   NS_IMETHOD GetInset(nsMargin& aInset);
   NS_IMETHOD GetDebugBoxAt(const nsPoint& aPoint, nsIBox** aBox);
@@ -94,6 +100,8 @@ public:
   NS_IMETHOD DumpBox(FILE* out);
   NS_HIDDEN_(void) PropagateDebug(nsBoxLayoutState& aState);
 #endif
+  NS_IMETHOD ChildrenMustHaveWidgets(PRBool& aMust) const;
+  NS_IMETHOD GetIndexOf(nsIBox* aChild, PRInt32* aIndex);
 
   nsBox();
   virtual ~nsBox();
@@ -137,6 +145,9 @@ protected:
   virtual void ListBox(nsAutoString& aResult);
 #endif
   
+  virtual PRBool HasStyleChange();
+  virtual void SetStyleChangeFlag(PRBool aDirty);
+
   virtual PRBool GetWasCollapsed(nsBoxLayoutState& aState);
   virtual void SetWasCollapsed(nsBoxLayoutState& aState, PRBool aWas);
   virtual PRBool GetDefaultFlex(PRInt32& aFlex);
@@ -170,7 +181,7 @@ private:
 #define NS_BOX_ASSERTION(box,expr,str) \
   if (!(expr)) { \
        box->DumpBox(stdout); \
-       NS_DebugBreak(NSDebugAssertion, str, #expr, __FILE__, __LINE__); \
+       NSGlue_Assertion(str, #expr, __FILE__, __LINE__); \
   }
 #else
 #define NS_BOX_ASSERTION(box,expr,str) {}

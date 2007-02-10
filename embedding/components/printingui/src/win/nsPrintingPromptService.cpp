@@ -41,7 +41,7 @@
 #include "nsPrintingPromptService.h"
 #include "nsIPrintingPromptService.h"
 #include "nsIFactory.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindow.h"
 #include "nsReadableUtils.h"
 #include "nsIEmbeddingSiteWindow.h"
 #include "nsIServiceManager.h"
@@ -65,6 +65,7 @@
 #include "nsIWebBrowserChrome.h"
 #include "nsIDocShellTreeOwner.h"
 #include "nsIDocShellTreeItem.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDocShell.h"
 #include "nsIInterfaceRequestorUtils.h"
 
@@ -152,10 +153,10 @@ nsPrintingPromptService::GetHWNDForDOMWindow(nsIDOMWindow *aWindow)
     }
 
     // Now we might be the Browser so check this path
-    nsCOMPtr<nsPIDOMWindow> window(do_QueryInterface(aWindow));
+    nsCOMPtr<nsIScriptGlobalObject> scriptGlobal(do_QueryInterface(aWindow));
 
     nsCOMPtr<nsIDocShellTreeItem> treeItem =
-        do_QueryInterface(window->GetDocShell());
+        do_QueryInterface(scriptGlobal->GetDocShell());
     if (!treeItem) return nsnull;
 
     nsCOMPtr<nsIDocShellTreeOwner> treeOwner;

@@ -37,15 +37,13 @@
 
 #include "nsRegisterGRE.h"
 
-#include "nsXPCOM.h"
 #include "nsIFile.h"
 #include "nsILocalFile.h"
 
 #include "nsBuildID.h"
 #include "nsAppRunner.h" // for MAXPATHLEN
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "nsXPCOMGlue.h"
-#include "nsCOMPtr.h"
 
 #include "prio.h"
 
@@ -56,7 +54,7 @@ static const char kRegFileGlobal[] = "global.reginfo";
 static const char kRegFileUser[] = "user.reginfo";
 
 static nsresult
-MakeVersionKey(HKEY root, const char* keyname, const nsCString &grehome,
+MakeVersionKey(HKEY root, const char* keyname, const nsCAutoString &grehome,
                const GREProperty *aProperties, PRUint32 aPropertiesLen)
 {
   HKEY  subkey;
@@ -106,7 +104,7 @@ RegisterXULRunner(PRBool aRegisterGlobally, nsIFile* aLocation,
   PRBool irv;
   int i;
 
-  nsCString greHome;
+  nsCAutoString greHome;
   rv = aLocation->GetNativePath(greHome);
   if (NS_FAILED(rv))
     return rv;

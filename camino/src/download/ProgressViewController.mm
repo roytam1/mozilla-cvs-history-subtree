@@ -22,7 +22,7 @@
  * Contributor(s):
  *   Calum Robinson <calumr@mac.com>
  *   Simon Fraser <sfraser@netscape.com>
- *   Josh Aas <josh@mozilla.com>
+ *   Josh Aas <josha@mac.com>
  *   Nick Kreeger <nick.kreeger@park.edu>
  *   Bruce Davidson <mozilla@transoceanic.org.uk>
  *
@@ -343,7 +343,7 @@ static void FileSystemNotificationProc(FNMessage message, OptionBits flags, void
 
 -(IBAction)remove:(id)sender
 {
-  [mProgressWindowController removeDownload:self suppressRedraw:NO];
+  [mProgressWindowController removeDownload:self];
 }
 
 // Called just before the view will be shown to the user
@@ -373,7 +373,8 @@ static void FileSystemNotificationProc(FNMessage message, OptionBits flags, void
     mDownloadTime = -[mStartTime timeIntervalSinceNow];
     [mProgressBar stopAnimation:self];
     
-    // get the Finder to update
+    // get the Finder to update - doesn't work on some earlier version of Mac OS X
+    // (I think it was fixed by 10.2.2 or so)
     [[NSWorkspace sharedWorkspace] noteFileSystemChanged:mDestPath];
     
     mRefreshIcon = YES; // let the icon know to update
@@ -400,7 +401,7 @@ static void FileSystemNotificationProc(FNMessage message, OptionBits flags, void
                                                                      withSuccess:NULL];
   
   if (!mUserCancelled && !mDownloadFailed && downloadRemoveActionValue == kRemoveUponSuccessfulDownloadPrefValue)
-    [mProgressWindowController removeDownload:self suppressRedraw:NO];
+    [mProgressWindowController removeDownload:self];
 }
 
 // this handles lots of things - all of the status updates
@@ -661,7 +662,7 @@ static void FileSystemNotificationProc(FNMessage message, OptionBits flags, void
   return [menu autorelease];    
 }
 
-- (BOOL)validateMenuItem:(NSMenuItem*)menuItem
+- (BOOL)validateMenuItem:(id <NSMenuItem>)menuItem
 {
   SEL action = [menuItem action];
   if (action == @selector(cancel:)) {

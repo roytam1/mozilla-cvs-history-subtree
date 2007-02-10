@@ -69,7 +69,6 @@ TestListener.prototype = {
     }
 
     ran += 1;
-    result = null;
   }
 }
 

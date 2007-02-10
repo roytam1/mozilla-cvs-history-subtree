@@ -57,6 +57,8 @@
 @class BookmarkFolder;
 @class BookmarkItem;
 
+@class SearchTextField;
+
 // Tags for arrange menu items
 enum
 {
@@ -90,10 +92,9 @@ enum
 
 /* This is how focus works in the history and bookmarks view:
 
-   1. When someone invokes the history or bookmarks view in setActiveOutlineView:, we make sure
-      that the controls before know about it (setting the right nextKeyView, etc).
-   2. The initial focus is set by contentView:usedForURL: and is normally set to the Search
-      field unless setItemToRevealOnLoad: is used.
+   1. when someone invokes the history or bookmarks view in setActiveOutlineView:, we make sure
+     that the controls before know about it (setting the right nextKeyView, etc).
+   2. The initial focus is set to the search textfield in contentView:usedForURL:
    3. Other than that, the whole responder chain is set up in the nib.
 */
 
@@ -115,13 +116,13 @@ enum
 
   IBOutlet NSMenu*          mQuickSearchMenuBookmarks;
   IBOutlet NSMenu*          mQuickSearchMenuHistory;
-
-  IBOutlet NSSearchField*   mSearchField;
+  
+  IBOutlet SearchTextField* mSearchField;
 
   IBOutlet NSSplitView*     mContainersSplit;
 
   IBOutlet ExtendedTableView*     mContainersTableView;
-
+  
   // the bookmarks and history outliners are swapped in and out of this container
   IBOutlet NSView*        mOutlinerHostView;
 
@@ -138,22 +139,19 @@ enum
 
   BOOL                    mSetupComplete;       // have we been fully initialized?
   BOOL                    mSplittersRestored;   // splitters can only be positioned after we resize to fit the window
-
+  
   BOOL                    mBookmarkUpdatesDisabled;
-
+  
   NSMutableDictionary*    mExpandedStates;
 
   BookmarkFolder*         mActiveRootCollection;
   BookmarkFolder*         mRootBookmarks;
   NSArray*                mSearchResultArray;
-  int                     mSearchTag;
   int                     mOpenActionFlag;
-
+  
   BookmarkItem*           mItemToReveal;
-
+  
   HistoryDataSource*      mHistoryDataSource;
-
-  NSImage*                mSeparatorImage;
 }
 
 + (NSAttributedString*)greyStringWithItemCount:(int)itemCount;
@@ -163,52 +161,50 @@ enum
 //
 // IBActions
 //
-- (IBAction)toggleIsDockMenuFolder:(id)aSender;
-- (IBAction)addCollection:(id)aSender;
-- (IBAction)addBookmarkSeparator:(id)aSender;
-- (IBAction)addBookmarkFolder:(id)aSender;
-- (IBAction)openBookmark:(id)aSender;
-- (IBAction)openBookmarkInNewTab:(id)aSender;
-- (IBAction)openBookmarkInNewWindow:(id)aSender;
-- (IBAction)openBookmarksInTabsInNewWindow:(id)aSender;
-- (IBAction)deleteBookmarks:(id)aSender;
-- (IBAction)showBookmarkInfo:(id)aSender;
-- (IBAction)revealBookmark:(id)aSender;
-- (IBAction)cut:(id)aSender;
-- (IBAction)copy:(id)aSender;
-- (IBAction)paste:(id)aSender;
-- (IBAction)delete:(id)aSender;
-- (IBAction)searchStringChanged:(id)aSender;
+-(IBAction) setAsDockMenuFolder:(id)aSender;
+-(IBAction) addCollection:(id)aSender;
+-(IBAction) addBookmarkSeparator:(id)aSender;
+-(IBAction) addBookmarkFolder:(id)aSender;
+-(IBAction) openBookmark: (id)aSender;
+-(IBAction) openBookmarkInNewTab:(id)aSender;
+-(IBAction) openBookmarkInNewWindow:(id)aSender;
+-(IBAction) openBookmarksInTabsInNewWindow:(id)aSender;
+-(IBAction) deleteBookmarks:(id)aSender;
+-(IBAction) showBookmarkInfo:(id)aSender;
+-(IBAction) locateBookmark:(id)aSender;
+-(IBAction) cut:(id)aSender;
+-(IBAction) copy:(id)aSender;
+-(IBAction) paste:(id)aSender;
+-(IBAction) delete:(id)aSender;
 
 // uses the tag of the sender to determine the sort order
-- (IBAction)arrange:(id)aSender;
+-(IBAction) arrange:(id)aSender;
 
-- (IBAction)copyURLs:(id)aSender;
+-(IBAction) copyURLs:(id)aSender;
 
-- (IBAction)quicksearchPopupChanged:(id)aSender;
+-(IBAction) quicksearchPopupChanged:(id)aSender;
 - (void)resetSearchField;
-- (void)focusSearchField;
 
-- (NSView*)bookmarksEditingView;
+-(NSView*)bookmarksEditingView;
 
-- (int)containerCount;
-- (void)selectLastContainer;
-- (BOOL)haveSelectedRow;
-- (int)numberOfSelectedRows;
+-(int) containerCount;
+-(void) selectLastContainer;
+-(BOOL) haveSelectedRow;
+-(int)numberOfSelectedRows;
 
-- (void)setActiveCollection:(BookmarkFolder *)aFolder;
-- (BookmarkFolder *)activeCollection;
+-(void) setActiveCollection:(BookmarkFolder *)aFolder;
+-(BookmarkFolder *)activeCollection;
 
 - (BookmarkFolder *)selectedItemFolderAndIndex:(int*)outIndex;
 - (void)revealItem:(BookmarkItem*)item scrollIntoView:(BOOL)inScroll selecting:(BOOL)inSelectItem byExtendingSelection:(BOOL)inExtendSelection;
 
 - (void)setItemToRevealOnLoad:(BookmarkItem*)inItem;
 
-- (void)deleteCollection:(id)aSender;
-- (void)completeSetup;
-- (void)ensureBookmarks;
+-(void)deleteCollection:(id)aSender;
+-(void)completeSetup;
+-(void)ensureBookmarks;
 
-- (BOOL)canPasteFromPasteboard:(NSPasteboard*)aPasteboard;
-- (void)copyBookmarks:(NSArray*)bookmarkItemsToCopy toPasteboard:(NSPasteboard*)aPasteboard;
+-(BOOL) canPasteFromPasteboard:(NSPasteboard*)aPasteboard;
+-(void) copyBookmarks:(NSArray*)bookmarkItemsToCopy toPasteboard:(NSPasteboard*)aPasteboard;
 
 @end

@@ -49,9 +49,9 @@
 
 class nsMathMLmoFrame : public nsMathMLTokenFrame {
 public:
-  friend nsIFrame* NS_NewMathMLmoFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLmoFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
-  virtual eMathMLFrameType GetMathMLFrameType();
+  virtual nsIAtom* GetType() const;
 
   virtual void
   SetAdditionalStyleContext(PRInt32          aIndex, 
@@ -59,9 +59,12 @@ public:
   virtual nsStyleContext*
   GetAdditionalStyleContext(PRInt32 aIndex) const;
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD
+  Paint(nsPresContext*      aPresContext,
+        nsIRenderingContext& aRenderingContext,
+        const nsRect&        aDirtyRect,
+        nsFramePaintLayer    aWhichLayer,
+        PRUint32             aFlags = 0);
 
   NS_IMETHOD
   InheritAutomaticData(nsIFrame* aParent);
@@ -75,10 +78,13 @@ public:
          const nsHTMLReflowState& aReflowState,
          nsReflowStatus&          aStatus);
 
-  virtual void MarkIntrinsicWidthsDirty();
+  NS_IMETHOD
+  ReflowDirtyChild(nsIPresShell* aPresShell,
+                   nsIFrame*     aChild);
 
   NS_IMETHOD
-  AttributeChanged(PRInt32         aNameSpaceID,
+  AttributeChanged(nsIContent*     aContent,
+                   PRInt32         aNameSpaceID,
                    nsIAtom*        aAttribute,
                    PRInt32         aModType);
 
@@ -91,7 +97,7 @@ public:
           nsHTMLReflowMetrics& aDesiredStretchSize);
 
 protected:
-  nsMathMLmoFrame(nsStyleContext* aContext) : nsMathMLTokenFrame(aContext) {}
+  nsMathMLmoFrame();
   virtual ~nsMathMLmoFrame();
   
   virtual PRIntn GetSkipSides() const { return 0; }
@@ -103,7 +109,7 @@ protected:
 
   // overload the base method so that we can setup our nsMathMLChar
   virtual void
-  ProcessTextData(PRBool aComputeStyleChange);
+  ProcessTextData(nsPresContext* aPresContext);
 
   // helper to get our 'form' and lookup in the Operator Dictionary to fetch 
   // our default data that may come from there, and to complete the setup

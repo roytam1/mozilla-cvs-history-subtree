@@ -56,7 +56,6 @@ REQUIRES	= xpcom \
 		  content \
 		  gfx \
 		  widget \
-		  view \
 		  webshell \
 		  locale \
 		  intl \
@@ -66,14 +65,13 @@ REQUIRES	= xpcom \
 		  webbrwsr \
 		  windowwatcher \
 		  pref \
-		  js \
 		  $(NULL)
 
 LOCAL_INCLUDES = \
 	-I$(srcdir)/../../../style \
 	-I$(srcdir)/../../../base \
 	-I$(srcdir)/../../../generic \
-	-I$(srcdir)/../../../tables \
+        -I$(srcdir)/../../../tables \
 	-I$(srcdir)/../../content/src \
 	-I$(srcdir)/../../../xul/base/src \
 	$(NULL)

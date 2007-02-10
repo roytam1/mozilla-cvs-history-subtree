@@ -23,7 +23,7 @@
 # Contributor(s):
 #   Stuart Parmenter <pavlov@netscape.com>
 #   Brian Ryner <bryner@brianryner.com>
-#   Jan Varga <varga@ku.sk>
+#   Jan Varga <varga@nixcorp.com>
 #   Peter Annema <disttsc@bart.nl>
 #   Johann Petrak <johann@ai.univie.ac.at>
 #   Akkana Peck <akkana@netscape.com>
@@ -43,18 +43,18 @@
 # ***** END LICENSE BLOCK *****
 
 const nsIFilePicker       = Components.interfaces.nsIFilePicker;
-const nsIProperties       = Components.interfaces.nsIProperties;
-const NS_DIRECTORYSERVICE_CONTRACTID = "@mozilla.org/file/directory_service;1";
+const nsIDirectoryServiceProvider = Components.interfaces.nsIDirectoryServiceProvider;
+const nsIDirectoryServiceProvider_CONTRACTID = "@mozilla.org/file/directory_service;1";
 const nsITreeBoxObject = Components.interfaces.nsITreeBoxObject;
 const nsIFileView = Components.interfaces.nsIFileView;
-const NS_FILEVIEW_CONTRACTID = "@mozilla.org/filepicker/fileview;1";
+const nsFileView_CONTRACTID = "@mozilla.org/filepicker/fileview;1";
 const nsITreeView = Components.interfaces.nsITreeView;
 const nsILocalFile = Components.interfaces.nsILocalFile;
 const nsIFile = Components.interfaces.nsIFile;
-const NS_LOCAL_FILE_CONTRACTID = "@mozilla.org/file/local;1";
-const NS_PROMPTSERVICE_CONTRACTID = "@mozilla.org/embedcomp/prompt-service;1";
+const nsLocalFile_CONTRACTID = "@mozilla.org/file/local;1";
+const nsIPromptService_CONTRACTID = "@mozilla.org/embedcomp/prompt-service;1";
 
-var sfile = Components.classes[NS_LOCAL_FILE_CONTRACTID].createInstance(nsILocalFile);
+var sfile = Components.classes[nsLocalFile_CONTRACTID].createInstance(nsILocalFile);
 var retvals;
 var filePickerMode;
 var homeDir;
@@ -74,7 +74,7 @@ function filepickerLoad() {
 
   textInput = document.getElementById("textInput");
   okButton = document.documentElement.getButton("accept");
-  treeView = Components.classes[NS_FILEVIEW_CONTRACTID].createInstance(nsIFileView);
+  treeView = Components.classes[nsFileView_CONTRACTID].createInstance(nsIFileView);
 
   if (window.arguments) {
     var o = window.arguments[0];
@@ -105,7 +105,6 @@ function filepickerLoad() {
   if (filePickerMode == nsIFilePicker.modeGetFolder) {
     var textInputLabel = document.getElementById("textInputLabel");
     textInputLabel.value = gFilePickerBundle.getString("dirTextInputLabel");
-    textInputLabel.accessKey = gFilePickerBundle.getString("dirTextInputAccesskey");
   }
   
   if ((filePickerMode == nsIFilePicker.modeOpen) ||
@@ -140,13 +139,16 @@ function filepickerLoad() {
     treeView.showOnlyDirectories = true;
   }
 
-  // The dialog defaults to an "open" icon, change it to "save" if applicable
+  // set up the right icon
   if (filePickerMode == nsIFilePicker.modeSave)
-    okButton.setAttribute("icon", "save");
+    okButton.setAttribute("icon","save");
+  else
+    okButton.setAttribute("icon","open");
 
   // start out with a filename sort
   handleColumnClick("FilenameColumn");
 
+  document.documentElement.setAttribute("ondialogcancel", "return onCancel();");
   try {
     setOKAction();
   } catch (exception) {
@@ -164,7 +166,8 @@ function filepickerLoad() {
 
   // Start out with the ok button disabled since nothing will be
   // selected and nothing will be in the text field.
-  okButton.disabled = filePickerMode != nsIFilePicker.modeGetFolder;
+  okButton.disabled = true;
+  textInput.focus();
 
   // This allows the window to show onscreen before we begin
   // loading the file list
@@ -174,17 +177,17 @@ function filepickerLoad() {
 
 function setInitialDirectory(directory)
 {
-  // Start in the user's home directory
-  var dirService = Components.classes[NS_DIRECTORYSERVICE_CONTRACTID]
-                             .getService(nsIProperties);
-  homeDir = dirService.get("Home", Components.interfaces.nsIFile);
+  // get the home dir
+  var dirServiceProvider = Components.classes[nsIDirectoryServiceProvider_CONTRACTID]
+                                     .getService(nsIDirectoryServiceProvider);
+  var persistent = new Object();
+  homeDir = dirServiceProvider.getFile("Home", persistent);
 
   if (directory) {
     sfile.initWithPath(directory);
-    if (!sfile.exists() || !sfile.isDirectory())
-      directory = false;
   }
-  if (!directory) {
+  if (!directory || !(sfile.exists() && sfile.isDirectory())) {
+    // Start in the user's home directory
     sfile.initWithPath(homeDir.path);
   }
 
@@ -213,7 +216,7 @@ function showErrorDialog(titleStrName, messageStrName, file)
   var errorMessage =
     gFilePickerBundle.getFormattedString(messageStrName, [file.path]);
   var promptService =
-    Components.classes[NS_PROMPTSERVICE_CONTRACTID].getService(Components.interfaces.nsIPromptService);
+    Components.classes[nsIPromptService_CONTRACTID].getService(Components.interfaces.nsIPromptService);
 
   promptService.alert(window, errorTitle, errorMessage);
 }
@@ -221,9 +224,23 @@ function showErrorDialog(titleStrName, messageStrName, file)
 function openOnOK()
 {
   var dir = treeView.selectedFiles.queryElementAt(0, nsIFile);
+  if (!dir.isReadable()) {
+    showErrorDialog("errorOpenFileDoesntExistTitle",
+                    "errorDirNotReadableMessage",
+                    dir);
+    return false;
+  }
+
   if (dir)
     gotoDirectory(dir);
 
+  retvals.fileList = new Array(dir);
+
+  retvals.buttonStatus = nsIFilePicker.returnCancel;
+  
+  var filterMenuList = document.getElementById("filterMenuList");
+  retvals.filterIndex = filterMenuList.selectedIndex;
+  
   return false;
 }
 
@@ -315,8 +332,8 @@ function selectOnOK()
             gFilePickerBundle.getFormattedString("confirmFileReplacing",
                                                  [file.path]);
           
-          promptService = Components.classes[NS_PROMPTSERVICE_CONTRACTID].getService(Components.interfaces.nsIPromptService);
-          var rv = promptService.confirm(window, confirmTitle, message);
+          promptService = Components.classes[nsIPromptService_CONTRACTID].getService(Components.interfaces.nsIPromptService);
+          var rv = promptService.confirm(window, title, message);
           if (rv) {
             ret = nsIFilePicker.returnReplace;
             retvals.directory = file.parent.path;
@@ -357,7 +374,7 @@ function selectOnOK()
             errorMessage =
               gFilePickerBundle.getFormattedString("saveWithoutPermissionMessage_dir", [parent.path]);
           }
-          promptService = Components.classes[NS_PROMPTSERVICE_CONTRACTID].getService(Components.interfaces.nsIPromptService);
+          promptService = Components.classes[nsIPromptService_CONTRACTID].getService(Components.interfaces.nsIPromptService);
           promptService.alert(window, errorTitle, errorMessage);
           ret = nsIFilePicker.returnCancel;
         }
@@ -490,10 +507,11 @@ function onKeypress(e) {
 }
 
 function doEnabling() {
-  if (filePickerMode != nsIFilePicker.modeGetFolder)
   // Maybe add check if textInput.value would resolve to an existing
   // file or directory in .modeOpen. Too costly I think.
-    okButton.disabled = (textInput.value == "")
+  var enable = (textInput.value != "");
+
+  okButton.disabled = !enable;
 }
 
 function onTreeFocus(event) {
@@ -505,7 +523,7 @@ function setOKAction(file) {
   var buttonLabel;
   var buttonIcon = "open"; // used in all but one case
 
-  if (file && file.isDirectory()) {
+  if (file && file.isDirectory() && filePickerMode != nsIFilePicker.modeGetFolder) {
     document.documentElement.setAttribute("ondialogaccept", "return openOnOK();");
     buttonLabel = gFilePickerBundle.getString("openButtonLabel");
   }
@@ -567,7 +585,7 @@ function onFileSelected(/* nsIArray */ selectedFileList) {
   if (validFileSelected) {
     setOKAction(file);
     okButton.disabled = invalidSelection;
-  } else if (filePickerMode != nsIFilePicker.modeGetFolder)
+  } else
     okButton.disabled = (textInput.value == "");
 }
 
@@ -600,7 +618,7 @@ function onDirectoryChanged(target)
 {
   var path = target.getAttribute("label");
 
-  var file = Components.classes[NS_LOCAL_FILE_CONTRACTID].createInstance(nsILocalFile);
+  var file = Components.classes[nsLocalFile_CONTRACTID].createInstance(nsILocalFile);
   file.initWithPath(path);
 
   if (!sfile.equals(file)) {
@@ -655,7 +673,7 @@ function goHome() {
 function newDir() {
   var file;
   var promptService =
-    Components.classes[NS_PROMPTSERVICE_CONTRACTID].getService(Components.interfaces.nsIPromptService);
+    Components.classes[nsIPromptService_CONTRACTID].getService(Components.interfaces.nsIPromptService);
   var dialogTitle =
     gFilePickerBundle.getString("promptNewDirTitle");
   var dialogMsg =
@@ -730,6 +748,7 @@ function gotoDirectory(directory) {
 
   window.setCursor("auto");
 
+  treeView.QueryInterface(nsITreeView).selection.clearSelection();
   if (filePickerMode == nsIFilePicker.modeGetFolder) {
     textInput.value = "";
   }
@@ -744,7 +763,7 @@ function toggleShowHidden(event) {
 
 // from the current directory and whatever was entered
 // in the entry field, try to make a new path. This
-// uses "/" as the directory separator, "~" as a shortcut
+// uses "/" as the directory seperator, "~" as a shortcut
 // for the home directory (but only when seen at the start
 // of a path), and ".." to denote the parent directory.
 // returns an array of the files listed,
@@ -809,18 +828,7 @@ function processPathEntry(path, fileArray)
   var filePath;
   var file;
 
-  try {
-    file = sfile.clone().QueryInterface(nsILocalFile);
-  } catch(e) {
-    dump("Couldn't clone\n"+e);
-    return false;
-  }
-
-  var tilde_file = file.clone();
-  tilde_file.append("~");
-  if (path[0] == '~' &&                        // Expand ~ to $HOME, except:
-      !(path == "~" && tilde_file.exists()) && // If ~ was entered and such a file exists, don't expand
-      (path.length == 1 || path[1] == "/"))    // We don't want to expand ~file to ${HOME}file
+  if (path[0] == '~') 
     filePath = homeDir.path + path.substring(1);
   else
     filePath = path;
@@ -828,6 +836,13 @@ function processPathEntry(path, fileArray)
   // Unescape quotes
   filePath = filePath.replace(/\\\"/g, "\"");
   
+  try{
+    file = sfile.clone().QueryInterface(nsILocalFile);
+  } catch(e) {
+    dump("Couldn't clone\n"+e);
+    return false;
+  }
+
   if (filePath[0] == '/')   /* an absolute path was entered */
     file.initWithPath(filePath);
   else if ((filePath.indexOf("/../") > 0) ||

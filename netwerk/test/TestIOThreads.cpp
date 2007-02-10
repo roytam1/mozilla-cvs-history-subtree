@@ -35,12 +35,10 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "TestCommon.h"
-#include "nsXPCOM.h"
 #include "nsIServiceManager.h"
-#include "nsServiceManagerUtils.h"
 #include "nsIEventTarget.h"
 #include "nsCOMPtr.h"
-#include "nsNetCID.h"
+#include "plevent.h"
 #include "prlog.h"
 
 #if defined(PR_LOGGING)
@@ -51,37 +49,33 @@ static PRLogModuleInfo *gTestLog = nsnull;
 #endif
 #define LOG(args) PR_LOG(gTestLog, PR_LOG_DEBUG, args)
 
-class nsIOEvent : public nsIRunnable {
-public:
-    NS_DECL_ISUPPORTS
+PR_STATIC_CALLBACK(void *) HandleEvent(PLEvent *event)
+{
+    LOG(("HandleEvent:%d\n", NS_PTR_TO_INT32(event->owner)));
+    return nsnull;
+}
 
-    nsIOEvent(int i) : mIndex(i) {}
-
-    NS_IMETHOD Run() {
-        LOG(("Run [%d]\n", mIndex));
-        return NS_OK;
-    }
-
-private:
-    int mIndex;
-};
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsIOEvent, nsIRunnable)
+PR_STATIC_CALLBACK(void) DestroyEvent(PLEvent *event)
+{
+    delete event;
+}
 
 static nsresult RunTest()
 {
     nsresult rv;
-    nsCOMPtr<nsIEventTarget> target =
-        do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
+    nsCOMPtr<nsIEventTarget> target = do_GetService("@mozilla.org/network/io-thread-pool;1", &rv);
     if (NS_FAILED(rv))
         return rv;
 
     for (int i=0; i<10; ++i) {
-        nsCOMPtr<nsIRunnable> event = new nsIOEvent(i); 
-        LOG(("Dispatch %d\n", i));
-        target->Dispatch(event, NS_DISPATCH_NORMAL);
+        PLEvent *event = new PLEvent(); 
+        PL_InitEvent(event, (void *) i, HandleEvent, DestroyEvent);
+        LOG(("PostEvent:%d\n", i));
+        if (NS_FAILED(target->PostEvent(event)))
+            PL_DestroyEvent(event);
     }
 
-    return NS_OK;
+    return rv;
 }
 
 int main(int argc, char **argv)

@@ -41,14 +41,12 @@
 #include "nsIDOMParser.h"
 #include "nsCOMPtr.h"
 #include "nsIURI.h"
+#include "nsIEventQueueService.h"
 #include "nsIDOMLoadListener.h"
 #include "nsWeakReference.h"
-#include "nsIJSNativeInitializer.h"
 
 class nsDOMParser : public nsIDOMParser,
-                    public nsIDOMParserJS,
                     public nsIDOMLoadListener,
-                    public nsIJSNativeInitializer,
                     public nsSupportsWeakReference
 {
 public: 
@@ -60,9 +58,6 @@ public:
   // nsIDOMParser
   NS_DECL_NSIDOMPARSER
 
-  // nsIDOMParserJS
-  NS_DECL_NSIDOMPARSERJS
-
   // nsIDOMEventListener
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
 
@@ -73,31 +68,10 @@ public:
   NS_IMETHOD Abort(nsIDOMEvent* aEvent);
   NS_IMETHOD Error(nsIDOMEvent* aEvent);
 
-  // nsIJSNativeInitializer
-  NS_IMETHOD Initialize(JSContext *cx, JSObject *obj, 
-                        PRUint32 argc, jsval *argv);
-
 private:
-  class AttemptedInitMarker {
-  public:
-    AttemptedInitMarker(PRPackedBool* aAttemptedInit) :
-      mAttemptedInit(aAttemptedInit)
-    {}
-
-    ~AttemptedInitMarker() {
-      *mAttemptedInit = PR_TRUE;
-    }
-
-  private:
-    PRPackedBool* mAttemptedInit;
-  };
-  
-  nsCOMPtr<nsIPrincipal> mPrincipal;
-  nsCOMPtr<nsIURI> mDocumentURI;
   nsCOMPtr<nsIURI> mBaseURI;
-  
-  PRPackedBool mLoopingForSyncLoad;
-  PRPackedBool mAttemptedInit;
+  nsCOMPtr<nsIEventQueueService> mEventQService;
+  PRBool mLoopingForSyncLoad;
 };
 
 #endif

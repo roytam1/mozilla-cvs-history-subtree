@@ -106,7 +106,8 @@ nsresult nsOSHelperAppService::LoadUriInternal(nsIURI * aURL)
 		// Get the Spec
 		nsCAutoString spec;
 		aURL->GetSpec(spec);
-		const char* args[] = { spec.get() };
+		char* arg[1];
+		arg[0] = (char *) spec.get();
 		
 		//Launch the app		
 		BMimeType protocol;
@@ -116,11 +117,11 @@ nsresult nsOSHelperAppService::LoadUriInternal(nsIURI * aURL)
 			if(protocol.IsInstalled())
 			{
 				isInstalled = true;	
-				be_roster->Launch(protoStr.String(), NS_ARRAY_LENGTH(args), (char **)args);
+				be_roster->Launch(protoStr.String(), 1, arg);
 			}
 		}
 		if ((!isInstalled) && (!strcmp("mailto", scheme.get())))
-			be_roster->Launch("text/x-email", NS_ARRAY_LENGTH(args), (char **)args);
+			be_roster->Launch("text/x-email", 1, arg);
 	}
 	return rv;
 }
@@ -154,12 +155,12 @@ nsresult nsOSHelperAppService::SetMIMEInfoForType(const char *aMIMEType, nsMIMEI
 
 		char desc[B_MIME_TYPE_LENGTH + 1];
 		if (mimeType.GetShortDescription(desc) == B_OK) {
-			mimeInfo->SetDescription(NS_ConvertUTF8toUTF16(desc));
+			mimeInfo->SetDescription(NS_ConvertUTF8toUCS2(desc));
 		} else {
 			if (mimeType.GetLongDescription(desc) == B_OK) {
-				mimeInfo->SetDescription(NS_ConvertUTF8toUTF16(desc));
+				mimeInfo->SetDescription(NS_ConvertUTF8toUCS2(desc));
 			} else {
-				mimeInfo->SetDescription(NS_ConvertUTF8toUTF16(aMIMEType));
+				mimeInfo->SetDescription(NS_ConvertUTF8toUCS2(aMIMEType));
 			}
 		}
 		
@@ -180,12 +181,12 @@ nsresult nsOSHelperAppService::SetMIMEInfoForType(const char *aMIMEType, nsMIMEI
 
 				LOG(("    Got our path!\n"));
 				nsCOMPtr<nsIFile> handlerFile;
-				rv = GetFileTokenForPath(NS_ConvertUTF8toUTF16(path.Path()).get(), getter_AddRefs(handlerFile));
+				rv = GetFileTokenForPath(NS_ConvertUTF8toUCS2(path.Path()).get(), getter_AddRefs(handlerFile));
 
 				if (NS_SUCCEEDED(rv)) {
 					mimeInfo->SetDefaultApplication(handlerFile);
 					mimeInfo->SetPreferredAction(nsIMIMEInfo::useSystemDefault);
-					mimeInfo->SetDefaultDescription(NS_ConvertUTF8toUTF16(path.Leaf()));
+					mimeInfo->SetDefaultDescription(NS_ConvertUTF8toUCS2(path.Leaf()));
 					LOG(("    Preferred App: %s\n",path.Leaf()));
 					doSave = false;
 				}
@@ -213,10 +214,41 @@ nsresult nsOSHelperAppService::GetMimeInfoFromExtension(const char *aFileExt,
 
 	LOG(("Here we do an extension lookup for '%s'\n", aFileExt));
 
-	BMimeType mimeType;
+	BString fileExtToUse(aFileExt);
+	if (fileExtToUse.ByteAt(0) != '.')
+		fileExtToUse.Prepend(".");
 
-	if (BMimeType::GuessMimeType(aFileExt, &mimeType)  == B_OK)
-		return SetMIMEInfoForType(mimeType.Type(), _retval);
+
+	BMessage mimeData;
+	BMessage extData;
+	BMimeType mimeType;
+	int32 mimeIndex = 0;
+	int32 extIndex = 0;
+	bool found = false;
+	BString mimeStr;
+	BString extStr;
+	// Get a list of all registered MIME types
+	if (BMimeType::GetInstalledTypes(&mimeData) == B_OK) {
+		// check to see if the given MIME type is registerred
+		while (!found && mimeData.FindString("types",mimeIndex,&mimeStr) == B_OK) {
+			if ((mimeType.SetTo(mimeStr.String()) == B_OK) &&
+			        (mimeType.GetFileExtensions(&extData) == B_OK)) {
+				extIndex = 0;
+				while (!found && extData.FindString("extensions",extIndex,&extStr) == B_OK) {
+					if (extStr.ByteAt(0) != '.')
+						extStr.Prepend(".");
+					if (fileExtToUse.ICompare(extStr) == 0)
+						found = true;
+					else
+						extIndex++;
+				}
+			}
+			mimeIndex++;
+		}
+		if (found) {
+			return SetMIMEInfoForType(mimeStr.String(), _retval);
+		}
+	}
 
 	// Extension not found
 	return NS_ERROR_FAILURE;
@@ -229,11 +261,25 @@ nsresult nsOSHelperAppService::GetMimeInfoFromMIMEType(const char *aMIMEType,
 		return NS_ERROR_INVALID_ARG;
 
 	LOG(("Here we do a mimetype lookup for '%s'\n", aMIMEType));
-	
-	BMimeType mimeType(aMIMEType);
-	if (mimeType.IsInstalled())
-		return SetMIMEInfoForType(aMIMEType, _retval);
-	
+
+	BMessage data;
+	int32 index = 0;
+	bool found = false;
+	BString strData;
+	// Get a list of all registerred MIME types
+	if (BMimeType::GetInstalledTypes(&data) == B_OK) {
+		// check to see if the given MIME type is registerred
+		while (!found && data.FindString("types",index,&strData) == B_OK) {
+			if (strData == aMIMEType)
+				found = true;
+			else
+				index++;
+		}
+		if (found) {
+			return SetMIMEInfoForType(aMIMEType, _retval);
+		}
+	}
+
 	return NS_ERROR_FAILURE;
 }
 

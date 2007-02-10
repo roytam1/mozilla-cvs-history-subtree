@@ -68,14 +68,14 @@
                  sortActive="true"
                  sortDirection="ascending"
                  sortResource="http://home.netscape.com/NC-rdf#DirTreeNameSort">
-        <template>
-        <rule nc:IsWriteable="false"/>
-        <rule nc:SupportsMailingLists="true">
+        <template> 
+        <rule nc:IsWriteable="false"/> 
+        <rule nc:IsMailList="false">
           <menuitem uri="..."
                     label="rdf:http://home.netscape.com/NC-rdf#DirName"
                     value="rdf:http://home.netscape.com/NC-rdf#DirUri"/>
         </rule>
-        </template>
+        </template> 
       </menupopup>
     </menulist>
   </hbox>
@@ -117,7 +117,7 @@
                    searchSessions="addrbook" timeout="300" maxrows="4" 
                    autoFill="true" autoFillAfterMatch="true" forceComplete="true"
                    minResultsForPopup="3"
-                   ontextentered="awRecipientTextCommand(eventParam, this)"
+                   ontextcommand="awRecipientTextCommand(eventParam, this)"
                    oninput="setupLdapAutocompleteSession();"
                    onkeypress="handleKeyPress(this, event);"
                    onkeydown="awRecipientKeyDown(event, this);"

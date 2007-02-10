@@ -1,5 +1,4 @@
 /* -*- Mode: c++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 sw=2 et tw=78: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,10 +37,11 @@
 #include "nsCOMPtr.h"
 #include "nsContentDLF.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsIComponentManager.h"
 #include "nsIComponentRegistrar.h"
 #include "nsICategoryManager.h"
+#include "nsIDocumentLoader.h"
 #include "nsIDocumentLoaderFactory.h"
 #include "nsIDocument.h"
 #include "nsIDocumentViewer.h"
@@ -56,6 +56,9 @@
 #include "nsICSSLoader.h"
 #include "nsCRT.h"
 #include "nsIViewSourceChannel.h"
+
+#include "nsRDFCID.h"
+#include "nsIRDFResource.h"
 
 #include "imgILoader.h"
 
@@ -113,7 +116,7 @@ static const char* const gSVGTypes[] = {
   0
 };
 
-PRBool NS_SVGEnabled();
+#include "nsSVGUtils.h"
 #endif
 
 static const char* const gRDFTypes[] = {
@@ -193,7 +196,7 @@ nsContentDLF::CreateInstance(const char* aCommand,
     }
 
 #ifdef MOZ_SVG
-    if (NS_SVGEnabled()) {
+    if (nsSVGUtils::SVGEnabled()) {
       for (typeIndex = 0; gSVGTypes[typeIndex] && !knownType; ++typeIndex) {
         if (type.Equals(gSVGTypes[typeIndex])) {
           knownType = PR_TRUE;
@@ -241,7 +244,7 @@ nsContentDLF::CreateInstance(const char* aCommand,
   }
 
 #ifdef MOZ_SVG
-  if (NS_SVGEnabled()) {
+  if (nsSVGUtils::SVGEnabled()) {
     // Try SVG
     typeIndex = 0;
     while(gSVGTypes[typeIndex]) {
@@ -319,9 +322,7 @@ nsContentDLF::CreateInstanceForDocument(nsISupports* aContainer,
 }
 
 NS_IMETHODIMP
-nsContentDLF::CreateBlankDocument(nsILoadGroup *aLoadGroup,
-                                  nsIPrincipal* aPrincipal,
-                                  nsIDocument **aDocument)
+nsContentDLF::CreateBlankDocument(nsILoadGroup *aLoadGroup, nsIDocument **aDocument)
 {
   *aDocument = nsnull;
 
@@ -335,7 +336,7 @@ nsContentDLF::CreateBlankDocument(nsILoadGroup *aLoadGroup,
     nsCOMPtr<nsIURI> uri;
     NS_NewURI(getter_AddRefs(uri), NS_LITERAL_CSTRING("about:blank"));
     if (uri) {
-      blankDoc->ResetToURI(uri, aLoadGroup, aPrincipal);
+      blankDoc->ResetToURI(uri, aLoadGroup);
       rv = NS_OK;
     }
   }
@@ -349,29 +350,28 @@ nsContentDLF::CreateBlankDocument(nsILoadGroup *aLoadGroup,
     nsCOMPtr<nsINodeInfo> htmlNodeInfo;
 
     // generate an html html element
-    nim->GetNodeInfo(nsGkAtoms::html, 0, kNameSpaceID_None,
+    nim->GetNodeInfo(nsHTMLAtoms::html, 0, kNameSpaceID_None,
                      getter_AddRefs(htmlNodeInfo));
     nsCOMPtr<nsIContent> htmlElement = NS_NewHTMLHtmlElement(htmlNodeInfo);
 
     // generate an html head element
-    nim->GetNodeInfo(nsGkAtoms::head, 0, kNameSpaceID_None,
+    nim->GetNodeInfo(nsHTMLAtoms::head, 0, kNameSpaceID_None,
                      getter_AddRefs(htmlNodeInfo));
     nsCOMPtr<nsIContent> headElement = NS_NewHTMLHeadElement(htmlNodeInfo);
 
     // generate an html body element
-    nim->GetNodeInfo(nsGkAtoms::body, 0, kNameSpaceID_None,
+    nim->GetNodeInfo(nsHTMLAtoms::body, 0, kNameSpaceID_None,
                      getter_AddRefs(htmlNodeInfo));
     nsCOMPtr<nsIContent> bodyElement = NS_NewHTMLBodyElement(htmlNodeInfo);
 
     // blat in the structure
     if (htmlElement && headElement && bodyElement) {
-      NS_ASSERTION(blankDoc->GetChildCount() == 0,
-                   "Shouldn't have children");
-      rv = blankDoc->AppendChildTo(htmlElement, PR_FALSE);
+      rv = blankDoc->SetRootContent(htmlElement);
       if (NS_SUCCEEDED(rv)) {
         rv = htmlElement->AppendChildTo(headElement, PR_FALSE);
 
         if (NS_SUCCEEDED(rv)) {
+          bodyElement->SetContentID(blankDoc->GetAndIncrementContentID());
           // XXXbz Why not notifying here?
           htmlElement->AppendChildTo(bodyElement, PR_FALSE);
         }
@@ -407,7 +407,7 @@ nsContentDLF::CreateDocument(const char* aCommand,
   if (nsnull != aURL) {
     nsAutoString tmp;
     aURL->ToString(tmp);
-    fputs(NS_LossyConvertUTF16toASCII(tmp).get(), stdout);
+    fputs(NS_LossyConvertUCS2toASCII(tmp).get(), stdout);
     printf(": creating document\n");
   }
 #endif
@@ -444,7 +444,29 @@ nsContentDLF::CreateDocument(const char* aCommand,
   return rv;
 }
 
-// ...note, this RDF document is a XUL document :-)
+// ...common work for |CreateRDFDocument| and |CreateXULDocumentFromStream|
+nsresult
+nsContentDLF::CreateRDFDocument(nsISupports* aExtraInfo,
+                                nsCOMPtr<nsIDocument>* doc,
+                                nsCOMPtr<nsIDocumentViewer>* docv)
+{
+  nsresult rv = NS_ERROR_FAILURE;
+    
+  // Create the XUL document
+  *doc = do_CreateInstance(kXULDocumentCID, &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  // Create the image content viewer...
+  rv = NS_NewDocumentViewer(getter_AddRefs(*docv));
+  if (NS_FAILED(rv)) return rv;
+
+  // Load the UA style sheet if we haven't already done that
+  (*docv)->SetUAStyleSheet(gUAStyleSheet);
+
+  return NS_OK;
+}
+
+// ...note, this RDF document _may_ be XUL :-)
 nsresult
 nsContentDLF::CreateRDFDocument(const char* aCommand,
                                 nsIChannel* aChannel,
@@ -455,16 +477,12 @@ nsContentDLF::CreateRDFDocument(const char* aCommand,
                                 nsIStreamListener** aDocListener,
                                 nsIContentViewer** aDocViewer)
 {
-  nsresult rv;
-  nsCOMPtr<nsIDocument> doc = do_CreateInstance(kXULDocumentCID, &rv);
-  if (NS_FAILED(rv)) return rv;
-
+  nsCOMPtr<nsIDocument> doc;
   nsCOMPtr<nsIDocumentViewer> docv;
-  rv = NS_NewDocumentViewer(getter_AddRefs(docv));
-  if (NS_FAILED(rv)) return rv;
-
-  // Load the UA style sheet if we haven't already done that
-  docv->SetUAStyleSheet(gUAStyleSheet);
+  nsresult rv = CreateRDFDocument(aExtraInfo, address_of(doc), address_of(docv));
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
 
   nsCOMPtr<nsIURI> aURL;
   rv = aChannel->GetURI(getter_AddRefs(aURL));
@@ -624,7 +642,8 @@ nsContentDLF::EnsureUAStyleSheet()
   NS_NewCSSLoader(getter_AddRefs(cssLoader));
   if (!cssLoader)
     return NS_ERROR_OUT_OF_MEMORY;
-  rv = cssLoader->LoadSheetSync(uri, PR_TRUE, &gUAStyleSheet);
+  nsCOMPtr<nsICSSLoader_MOZILLA_1_8_BRANCH> loader = do_QueryInterface(cssLoader);
+  rv = loader->LoadSheetSync(uri, PR_TRUE, &gUAStyleSheet);
 #ifdef DEBUG
   if (NS_FAILED(rv))
     printf("*** open of %s failed: error=%x\n", UA_CSS_URL, rv);

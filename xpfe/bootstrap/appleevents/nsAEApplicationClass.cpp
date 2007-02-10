@@ -190,7 +190,7 @@ void AEApplicationClass::HandleCount(AEDesc *token, const AppleEvent *appleEvent
 	err = GetObjectClassFromAppleEvent(appleEvent, &objectClass);
 	ThrowIfOSErr(err);
 
-	// Make sure we got & handled all of the required parameters
+	// Make sure we got & handled all of the required paramters
 	err = CheckForUnusedParameters(appleEvent);
 	ThrowIfOSErr(err);
 	
@@ -338,11 +338,11 @@ void AEApplicationClass::HandleReOpen(AEDesc *token, const AppleEvent *appleEven
   if (!nas) ThrowIfOSErr(errAEEventNotHandled);
 #else
   nsCOMPtr<nsIAppStartup> appStartup(do_GetService(NS_APPSTARTUP_CONTRACTID));
-  NS_ASSERTION(appStartup, "Failed to get appstartup service");
+  NS_WARN_IF_FALSE(appStartup, "Failed to get appstartup service");
   if(!appStartup) ThrowIfOSErr(errAEEventNotHandled);
   
   rv = appStartup->GetNativeAppSupport(getter_AddRefs(nas));
-  NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to get NativeAppSupport");  
+  NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "Failed to get NativeAppSupport");  
   if(NS_FAILED(rv)) ThrowIfOSErr(errAEEventNotHandled);
 #endif
 

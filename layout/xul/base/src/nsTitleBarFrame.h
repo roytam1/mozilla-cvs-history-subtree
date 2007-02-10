@@ -44,23 +44,25 @@ class nsTitleBarFrame : public nsBoxFrame
 {
 
 public:
-  friend nsIFrame* NS_NewTitleBarFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);  
+  friend nsresult NS_NewTitleBarFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);  
 
-  nsTitleBarFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  nsTitleBarFrame(nsIPresShell* aPresShell);
 
-  NS_IMETHOD  Init(nsIContent*      aContent,
+  NS_IMETHOD  Init(nsPresContext*  aPresContext,
+                   nsIContent*      aContent,
                    nsIFrame*        aParent,
+                   nsStyleContext*  aContext,
                    nsIFrame*        asPrevInFlow);
 
-  NS_IMETHOD BuildDisplayListForChildren(nsDisplayListBuilder*   aBuilder,
-                                         const nsRect&           aDirtyRect,
-                                         const nsDisplayListSet& aLists);
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint, 
+                              nsFramePaintLayer aWhichLayer,
+                              nsIFrame**     aFrame);
 
   NS_IMETHOD HandleEvent(nsPresContext* aPresContext, 
                                       nsGUIEvent* aEvent,
                                       nsEventStatus* aEventStatus);
 
-  virtual PRBool GetMouseThrough() const { return PR_FALSE; }
+  NS_IMETHOD GetMouseThrough(PRBool& aMouseThrough);
 
   virtual void MouseClicked(nsPresContext* aPresContext, nsGUIEvent* aEvent);
 

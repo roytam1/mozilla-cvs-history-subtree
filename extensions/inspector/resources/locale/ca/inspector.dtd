@@ -7,6 +7,8 @@
 <!ENTITY btnFind.tooltip "Cerqueu un node per inspeccionar per identificador, etiqueta o atribut">
 <!-- MAIN MENU ITEMS -->
 <!ENTITY mnFile.label "Fitxer">
+<!ENTITY mnWindows.label "Inspecciona una finestra">
+<!ENTITY mnWindows.accesskey "n">
 <!ENTITY mnFile.accesskey "F">
 <!ENTITY cmdShowOpenURLDialog.label "Inspecciona un URL">
 <!ENTITY cmdShowOpenURLDialog.accesskey "U">

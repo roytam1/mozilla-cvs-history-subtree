@@ -157,7 +157,8 @@ function showNeedSetupInfo()
     promptService.confirmEx(window,
       gBrandBundle.getString("brandShortName"),
       gBundle.getString("NeedSetup"), 
-      ifps.STD_YES_NO_BUTTONS,
+      (ifps.BUTTON_POS_0 * ifps.BUTTON_TITLE_YES
+       + ifps.BUTTON_POS_1 * ifps.BUTTON_TITLE_NO),
       0,
       0,
       0,

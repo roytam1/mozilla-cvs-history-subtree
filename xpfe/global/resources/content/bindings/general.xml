@@ -207,16 +207,17 @@
 
   <binding id="iframe">
     <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.OuterDoc;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createOuterDocAccessible(this);
           ]]>
         </getter>
       </property>
       <property name="docShell"
                 readonly="true"
-                onget="return this.boxObject.QueryInterface(Components.interfaces.nsIContainerBoxObject).docShell"/>
+                onget="return this.boxObject.QueryInterface(Components.interfaces.nsIIFrameBoxObject).docShell"/>
       <property name="contentWindow"
                 readonly="true"
                 onget="return this.docShell.QueryInterface(Components.interfaces.nsIInterfaceRequestor).getInterface(Components.interfaces.nsIDOMWindow);"/>
@@ -262,10 +263,11 @@
     </content>
 
     <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULStatusBar;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULStatusBarAccessible(this);
           ]]>
         </getter>
       </property>
@@ -279,10 +281,11 @@
     </content>
 
     <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULButton;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULButtonAccessible(this);
           ]]>
         </getter>
       </property>
@@ -302,10 +305,11 @@
       <property name="src"
                 onget="return this.getAttribute('src');"
                 onset="this.setAttribute('src',val); return val;"/>
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULImage;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULImageAccessible(this);
           ]]>
         </getter>
       </property>
@@ -349,20 +353,17 @@
     </implementation>
   </binding>
 
-  <binding id="dropmarker" extends="xul:button">
-    <resources>
-      <stylesheet src="chrome://global/skin/dropmarker.css"/>
-    </resources>
-
+  <binding id="dropmarker">
     <content>
       <xul:image class="dropmarker-icon"/>
     </content>
 
     <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULDropmarker;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULDropmarkerAccessible(this);
           ]]>
         </getter>
       </property>

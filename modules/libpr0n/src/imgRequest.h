@@ -47,7 +47,7 @@
 #include "imgIDecoderObserver.h"
 
 #include "nsICacheEntryDescriptor.h"
-#include "nsIRequest.h"
+#include "nsIChannel.h"
 #include "nsIProperties.h"
 #include "nsIStreamListener.h"
 #include "nsIURI.h"
@@ -81,8 +81,7 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  nsresult Init(nsIURI *aURI,
-                nsIRequest *aRequest,
+  nsresult Init(nsIChannel *aChannel,
                 nsICacheEntryDescriptor *aCacheEntry,
                 void *aCacheId,
                 void *aLoadId);
@@ -101,10 +100,6 @@ public:
   // currently being loaded on the same event queue as the new request
   // being made...
   PRBool IsReusable(void *aCacheId) { return !mLoading || (aCacheId == mCacheId); }
-
-  // get the current or last network status from our
-  // internal nsIChannel.
-  nsresult GetNetworkStatus();
 
 private:
   friend class imgRequestProxy;
@@ -148,7 +143,7 @@ public:
   NS_DECL_NSIREQUESTOBSERVER
 
 private:
-  nsCOMPtr<nsIRequest> mRequest;
+  nsCOMPtr<nsIChannel> mChannel;
   nsCOMPtr<nsIURI> mURI;
   nsCOMPtr<imgIContainer> mImage;
   nsCOMPtr<imgIDecoder> mDecoder;
@@ -159,9 +154,10 @@ private:
   PRPackedBool mLoading;
   PRPackedBool mProcessing;
   PRPackedBool mHadLastPart;
-  PRUint32 mNetworkStatus;
+
   PRUint32 mImageStatus;
   PRUint32 mState;
+
   nsCString mContentType;
 
   nsCOMPtr<nsICacheEntryDescriptor> mCacheEntry; /* we hold on to this to this so long as we have observers */

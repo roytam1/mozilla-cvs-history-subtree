@@ -48,14 +48,44 @@
 #include "nsNetCID.h"
 #include "nsAboutProtocolUtils.h"
 #include "nsNetError.h"
-#include "nsNetUtil.h"
-#include "nsSimpleNestedURI.h"
 
 static NS_DEFINE_CID(kSimpleURICID,     NS_SIMPLEURI_CID);
 
 ////////////////////////////////////////////////////////////////////////////////
 
+nsAboutProtocolHandler::nsAboutProtocolHandler()
+{
+}
+
+nsresult
+nsAboutProtocolHandler::Init()
+{
+    return NS_OK;
+}
+
+nsAboutProtocolHandler::~nsAboutProtocolHandler()
+{
+}
+
 NS_IMPL_ISUPPORTS1(nsAboutProtocolHandler, nsIProtocolHandler)
+
+NS_METHOD
+nsAboutProtocolHandler::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
+{
+    if (aOuter)
+        return NS_ERROR_NO_AGGREGATION;
+
+    nsAboutProtocolHandler* ph = new nsAboutProtocolHandler();
+    if (ph == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(ph);
+    nsresult rv = ph->Init();
+    if (NS_SUCCEEDED(rv)) {
+        rv = ph->QueryInterface(aIID, aResult);
+    }
+    NS_RELEASE(ph);
+    return rv;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsIProtocolHandler methods:
@@ -77,7 +107,7 @@ nsAboutProtocolHandler::GetDefaultPort(PRInt32 *result)
 NS_IMETHODIMP
 nsAboutProtocolHandler::GetProtocolFlags(PRUint32 *result)
 {
-    *result = URI_NORELATIVE | URI_NOAUTH | URI_DANGEROUS_TO_LOAD;
+    *result = URI_NORELATIVE | URI_NOAUTH;
     return NS_OK;
 }
 
@@ -87,75 +117,36 @@ nsAboutProtocolHandler::NewURI(const nsACString &aSpec,
                                nsIURI *aBaseURI,
                                nsIURI **result)
 {
-    *result = nsnull;
     nsresult rv;
 
-    // Use a simple URI to parse out some stuff first
-    nsCOMPtr<nsIURI> url = do_CreateInstance(kSimpleURICID, &rv);
+    nsIURI* url;
+    rv = CallCreateInstance(kSimpleURICID, &url);
     if (NS_FAILED(rv)) return rv;
 
     rv = url->SetSpec(aSpec);
     if (NS_FAILED(rv)) {
+        NS_RELEASE(url);
         return rv;
     }
 
-    // Unfortunately, people create random about: URIs that don't correspond to
-    // about: modules...  Since those URIs will never open a channel, might as
-    // well consider them unsafe for better perf, and just in case.
-    PRBool isSafe = PR_FALSE;
-    
-    nsCOMPtr<nsIAboutModule> aboutMod;
-    rv = NS_GetAboutModule(url, getter_AddRefs(aboutMod));
-    if (NS_SUCCEEDED(rv)) {
-        // The standard return case
-        PRUint32 flags;
-        rv = aboutMod->GetURIFlags(url, &flags);
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        isSafe =
-            ((flags & nsIAboutModule::URI_SAFE_FOR_UNTRUSTED_CONTENT) != 0);
-    }
-
-    if (isSafe) {
-        // We need to indicate that this baby is safe.  Use an inner URI that
-        // no one but the security manager will see.  Make sure to preserve our
-        // path, in case someone decides to hardcode checks for particular
-        // about: URIs somewhere.
-        nsCAutoString spec;
-        rv = url->GetPath(spec);
-        NS_ENSURE_SUCCESS(rv, rv);
-        
-        spec.Insert("moz-safe-about:", 0);
-
-        nsCOMPtr<nsIURI> inner;
-        rv = NS_NewURI(getter_AddRefs(inner), spec);
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        nsSimpleNestedURI* outer = new nsSimpleNestedURI(inner);
-        NS_ENSURE_TRUE(outer, NS_ERROR_OUT_OF_MEMORY);
-
-        // Take a ref to it in the COMPtr we plan to return
-        url = outer;
-
-        rv = outer->SetSpec(aSpec);
-        NS_ENSURE_SUCCESS(rv, rv);
-    }
-
-    // We don't want to allow mutation, since it would allow safe and
-    // unsafe URIs to change into each other...
-    NS_TryToSetImmutable(url);
-    url.swap(*result);
-    return NS_OK;
+    *result = url;
+    return rv;
 }
 
 NS_IMETHODIMP
 nsAboutProtocolHandler::NewChannel(nsIURI* uri, nsIChannel* *result)
 {
     NS_ENSURE_ARG_POINTER(uri);
-
     // about:what you ask?
-    nsCOMPtr<nsIAboutModule> aboutMod;
-    nsresult rv = NS_GetAboutModule(uri, getter_AddRefs(aboutMod));
+    nsresult rv;
+    nsCAutoString contractID;
+    rv = NS_GetAboutModuleName(uri, contractID);
+    if (NS_FAILED(rv)) return rv;
+
+    // look up a handler to deal with "what"
+    contractID.Insert(NS_LITERAL_CSTRING(NS_ABOUT_MODULE_CONTRACTID_PREFIX), 0);
+
+    nsCOMPtr<nsIAboutModule> aboutMod(do_GetService(contractID.get(), &rv));
     if (NS_SUCCEEDED(rv)) {
         // The standard return case:
         return aboutMod->NewChannel(uri, result);
@@ -179,69 +170,4 @@ nsAboutProtocolHandler::AllowPort(PRInt32 port, const char *scheme, PRBool *_ret
     *_retval = PR_FALSE;
     return NS_OK;
 }
-
 ////////////////////////////////////////////////////////////////////////////////
-// Safe about protocol handler impl
-
-NS_IMPL_ISUPPORTS1(nsSafeAboutProtocolHandler, nsIProtocolHandler)
-
-// nsIProtocolHandler methods:
-
-NS_IMETHODIMP
-nsSafeAboutProtocolHandler::GetScheme(nsACString &result)
-{
-    result.AssignLiteral("moz-safe-about");
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSafeAboutProtocolHandler::GetDefaultPort(PRInt32 *result)
-{
-    *result = -1;        // no port for moz-safe-about: URLs
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSafeAboutProtocolHandler::GetProtocolFlags(PRUint32 *result)
-{
-    *result = URI_NORELATIVE | URI_NOAUTH | URI_LOADABLE_BY_ANYONE;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSafeAboutProtocolHandler::NewURI(const nsACString &aSpec,
-                                   const char *aCharset, // ignore charset info
-                                   nsIURI *aBaseURI,
-                                   nsIURI **result)
-{
-    nsresult rv;
-
-    nsCOMPtr<nsIURI> url = do_CreateInstance(kSimpleURICID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = url->SetSpec(aSpec);
-    if (NS_FAILED(rv)) {
-        return rv;
-    }
-
-    NS_TryToSetImmutable(url);
-    
-    *result = nsnull;
-    url.swap(*result);
-    return rv;
-}
-
-NS_IMETHODIMP
-nsSafeAboutProtocolHandler::NewChannel(nsIURI* uri, nsIChannel* *result)
-{
-    *result = nsnull;
-    return NS_ERROR_NOT_AVAILABLE;
-}
-
-NS_IMETHODIMP 
-nsSafeAboutProtocolHandler::AllowPort(PRInt32 port, const char *scheme, PRBool *_retval)
-{
-    // don't override anything.  
-    *_retval = PR_FALSE;
-    return NS_OK;
-}

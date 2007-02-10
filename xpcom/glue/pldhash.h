@@ -48,8 +48,6 @@ PR_BEGIN_EXTERN_C
 
 #if defined(__GNUC__) && defined(__i386__) && (__GNUC__ >= 3) && !defined(XP_OS2)
 #define PL_DHASH_FASTCALL __attribute__ ((regparm (3),stdcall))
-#elif defined(XP_WIN)
-#define PL_DHASH_FASTCALL __fastcall
 #else
 #define PL_DHASH_FASTCALL
 #endif
@@ -455,30 +453,6 @@ PL_DHashTableSetAlphaBounds(PLDHashTable *table,
 #define PL_DHASH_MIN_ALPHA(table, k)                                          \
     ((float)((table)->entrySize / sizeof(void *) - 1)                         \
      / ((table)->entrySize / sizeof(void *) + (k)))
-
-/*
- * Default max/min alpha, and macros to compute the value for the |capacity|
- * parameter to PL_NewDHashTable and PL_DHashTableInit, given default or any
- * max alpha, such that adding entryCount entries right after initializing the
- * table will not require a reallocation (so PL_DHASH_ADD can't fail for those
- * PL_DHashTableOperate calls).
- *
- * NB: PL_DHASH_CAP is a helper macro meant for use only in PL_DHASH_CAPACITY.
- * Don't use it directly!
- */
-#define PL_DHASH_DEFAULT_MAX_ALPHA 0.75
-#define PL_DHASH_DEFAULT_MIN_ALPHA 0.25
-
-#define PL_DHASH_CAP(entryCount, maxAlpha)                                    \
-    ((PRUint32)((double)(entryCount) / (maxAlpha)))
-
-#define PL_DHASH_CAPACITY(entryCount, maxAlpha)                               \
-    (PL_DHASH_CAP(entryCount, maxAlpha) +                                     \
-     (((PL_DHASH_CAP(entryCount, maxAlpha) * (uint8)(0x100 * (maxAlpha)))     \
-       >> 8) < (entryCount)))
-
-#define PL_DHASH_DEFAULT_CAPACITY(entryCount)                                 \
-    PL_DHASH_CAPACITY(entryCount, PL_DHASH_DEFAULT_MAX_ALPHA)
 
 /*
  * Finalize table's data, free its entry storage using table->ops->freeTable,

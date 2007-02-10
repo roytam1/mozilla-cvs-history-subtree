@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *    Sergei Dolgov <sergei_d@fi.tartu.ee>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -37,10 +36,13 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsToolkit.h"
+#include "nsWindow.h"
 #include "prmon.h"
+#include "prtime.h"
+#include "nsGUIEvent.h"
 #include "nsSwitchToUIThread.h"
+#include "plevent.h"
 #include "prprf.h"
-#include "nsWidgetAtoms.h"
 
 // 
 // Static thread local storage index of the Toolkit 
@@ -76,9 +78,7 @@ void nsToolkit::RunPump(void* arg)
   int32		code;
   char		portname[64];
   ThreadInterfaceData id;
-#ifdef DEBUG
-  printf("TK-RunPump\n");
-#endif
+
   ThreadInitInfo *info = (ThreadInitInfo*)arg;
   PR_EnterMonitor(info->monitor);
 
@@ -93,15 +93,32 @@ void nsToolkit::RunPump(void* arg)
   PR_snprintf(portname, sizeof(portname), "event%lx", 
               (long unsigned) PR_GetCurrentThread());
 
-  port_id event = create_port(200, portname);
+  port_id event = create_port(100, portname);
 
-  while(read_port_etc(event, &code, &id, sizeof(id), B_TIMEOUT, 1000) >= 0)
+  while(read_port(event, &code, &id, sizeof(id)) >= 0)
   {
+    switch(code)
+    {
+      case WM_CALLMETHOD :
+        {
           MethodInfo *mInfo = (MethodInfo *)id.data;
           mInfo->Invoke();
           if(id.waitingThread != 0)
             resume_thread(id.waitingThread);
           delete mInfo;
+        }
+        break;
+      case 'natv' :	// native queue PLEvent
+        {
+          PREventQueue *queue = (PREventQueue *)id.data;
+          PR_ProcessPendingEvents(queue);
+        }
+        break;
+
+      default :
+        printf("nsToolkit::RunPump - UNKNOWN EVENT\n");
+        break;
+    }
   }
 }
 
@@ -133,6 +150,7 @@ void nsToolkit::Kill()
   if(localthread)
   {
     GetInterface();
+
     // interrupt message flow
     close_port(eventport);
   }
@@ -145,9 +163,6 @@ void nsToolkit::Kill()
 //-------------------------------------------------------------------------
 void nsToolkit::CreateUIThread()
 {
-#ifdef DEBUG
-  printf("TK-CUIT\n");
-#endif
   PRMonitor *monitor = ::PR_NewMonitor();
 	
   PR_EnterMonitor(monitor);
@@ -186,10 +201,8 @@ void nsToolkit::CreateUIThread()
 //-------------------------------------------------------------------------
 NS_METHOD nsToolkit::Init(PRThread *aThread)
 {
-#ifdef DEBUG
-  printf("TKInit\n");
-#endif
   Kill();
+
   // Store the thread ID of the thread containing the message pump.  
   // If no thread is provided create one
   if (NULL != aThread) 
@@ -200,22 +213,18 @@ NS_METHOD nsToolkit::Init(PRThread *aThread)
   else 
   {
     localthread = true;
+
     // create a thread where the message pump will run
     CreateUIThread();
   }
 
   cached = false;
 
-  nsWidgetAtoms::RegisterAtoms();
-
   return NS_OK;
 }
 
 void nsToolkit::GetInterface()
 {
-#ifdef DEBUG
-  printf("TK-GI\n");
-#endif
   if(! cached)
   {
     char portname[64];
@@ -229,46 +238,24 @@ void nsToolkit::GetInterface()
   }
 }
 
-// Synchronous version, not in use at the moment
-bool nsToolkit::CallMethod(MethodInfo *info)
+void nsToolkit::CallMethod(MethodInfo *info)
 {
-#ifdef DEBUG
-  printf("TK-CM\n");
-#endif
   ThreadInterfaceData id;
 
   GetInterface();
 
   id.data = info;
   id.waitingThread = find_thread(NULL);
-  // Check message count to not exceed the port's capacity.
-  // There seems to be a BeOS bug that allows more 
-  // messages on a port than its capacity.
-  port_info portinfo;
-  if (get_port_info(eventport, &portinfo) != B_OK)
+  if(write_port(eventport, WM_CALLMETHOD, &id, sizeof(id)) == B_OK)
   {
-    return false;
+    // semantics for CallMethod are that it should be synchronous
+    suspend_thread(id.waitingThread);
   }
-  
-  if (port_count(eventport) < portinfo.capacity - 20) 
-  {
-    // If we cannot write inside 5 seconds, something is really wrong.
-    if(write_port_etc(eventport, WM_CALLMETHOD, &id, sizeof(id), B_TIMEOUT, 5000000) == B_OK)
-    {
-      // semantics for CallMethod are that it should be synchronous
-   	  suspend_thread(id.waitingThread);
-      return true;
-    }
-  }
-  return false;
 }
 
 // to be used only from a BView or BWindow
-bool nsToolkit::CallMethodAsync(MethodInfo *info)
+void nsToolkit::CallMethodAsync(MethodInfo *info)
 {
-#ifdef DEBUG
-	printf("CMA\n");
-#endif
   ThreadInterfaceData id;
 
   GetInterface();
@@ -282,17 +269,13 @@ bool nsToolkit::CallMethodAsync(MethodInfo *info)
   port_info portinfo;
   if (get_port_info(eventport, &portinfo) != B_OK)
   {
-    return false;
+    return;
   }
   
   if (port_count(eventport) < portinfo.capacity - 20) 
   {
-    if(write_port_etc(eventport, WM_CALLMETHOD, &id, sizeof(id), B_TIMEOUT, 0) == B_OK)
-    {
-      return true;
-    }
+    write_port_etc(eventport, WM_CALLMETHOD, &id, sizeof(id), B_TIMEOUT, 0);
   }
-  return false;
 }
 
 //------------------------------------------------------------------------- 
@@ -306,9 +289,7 @@ NS_METHOD NS_GetCurrentToolkit(nsIToolkit* *aResult)
   nsIToolkit* toolkit = nsnull; 
   nsresult rv = NS_OK; 
   PRStatus status; 
-#ifdef DEBUG
-  printf("TK-GetCTK\n");
-#endif
+
   // Create the TLS index the first time through... 
   if (0 == gToolkitTLSIndex)  
   { 

@@ -65,15 +65,7 @@
 #include "nsReadableUtils.h"
 #include "nsIObserverService.h"
 #include "nsIObserver.h"
-#include "nsIPromptService2.h"
-#include "nsIWindowWatcher.h"
-#include "nsIAuthInformation.h"
-#include "nsIProxiedChannel.h"
-#include "nsIProxyInfo.h"
-#include "nsIIDNService.h"
-#include "nsNetCID.h"
 #include "nsCRT.h"
-#include "nsPromptUtils.h"
 
 //#define SINGSIGN_LOGGING
 #ifdef SINGSIGN_LOGGING
@@ -585,36 +577,6 @@ si_CheckGetUsernamePassword
   }
 }
 
-static nsresult
-si_CheckPromptAuth
-  (nsIPromptService2* aService, nsIDOMWindow* aParent, nsIChannel* aChannel,
-   PRUint32 aLevel, nsIAuthInformation* aAuthInfo, PRBool* remembered)
-{
-  PRUnichar* check_string;
-  if (SI_GetBoolPref(pref_Crypto, PR_FALSE)) {
-    check_string = Wallet_Localize("SaveTheseValuesEncrypted");
-  } else {
-    check_string = Wallet_Localize("SaveTheseValuesObscured");
-  }
-
-  PRBool confirmed = PR_FALSE;  
-  nsresult rv = aService->PromptAuth(aParent, aChannel, aLevel,
-                                     aAuthInfo, check_string,
-                                     remembered, &confirmed);
-  if (check_string)
-    Recycle(check_string);
-  
-  if (NS_FAILED(rv))
-    return rv;
-
-  if (confirmed) {
-    return NS_OK;
-  } else {
-    return NS_ERROR_FAILURE; /* user pressed cancel */
-  }
-}
-
-
 
 /********************
  * Utility Routines *
@@ -695,6 +657,8 @@ SecondsFromPRTime(PRTime prTime) {
   return seconds;
 }
 
+MOZ_DECL_CTOR_COUNTER(si_SignonDataStruct)
+
 si_SignonDataStruct::si_SignonDataStruct()
   : isPassword(PR_FALSE)
 {
@@ -704,6 +668,8 @@ si_SignonDataStruct::~si_SignonDataStruct()
 {
   MOZ_COUNT_DTOR(si_SignonDataStruct);
 }
+
+MOZ_DECL_CTOR_COUNTER(si_SignonUserStruct)
 
 class si_SignonUserStruct {
 public:
@@ -722,6 +688,8 @@ public:
   nsVoidArray signonData_list; // elements are si_SignonDataStruct
 };
 
+MOZ_DECL_CTOR_COUNTER(si_SignonURLStruct)
+
 class si_SignonURLStruct {
 public:
   si_SignonURLStruct() : passwordRealm(NULL), chosen_user(NULL)
@@ -736,6 +704,8 @@ public:
   si_SignonUserStruct* chosen_user; /* this is a state variable */
   nsVoidArray signonUser_list;
 };
+
+MOZ_DECL_CTOR_COUNTER(si_Reject)
 
 class si_Reject {
 public:
@@ -816,8 +786,8 @@ si_DumpUserList(nsVoidArray &list)
     for (j=0; j<data_count; ++j) {
       si_SignonDataStruct *data = (si_SignonDataStruct *) user->signonData_list[j];
       LOG(("  (%s,%s)\n",
-          NS_ConvertUTF16toUTF8(data->name).get(),
-          NS_ConvertUTF16toUTF8(data->value).get()));
+          NS_ConvertUCS2toUTF8(data->name).get(),
+          NS_ConvertUCS2toUTF8(data->value).get()));
     }
   }
 }
@@ -2142,7 +2112,7 @@ si_SaveSignonDataLocked(char * state, PRBool notify) {
   if (notify) {
     nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
     if (os) {
-      os->NotifyObservers(nsnull, "signonChanged", NS_ConvertASCIItoUTF16(state).get());
+      os->NotifyObservers(nsnull, "signonChanged", NS_ConvertASCIItoUCS2(state).get());
     }
   }
 
@@ -2269,10 +2239,12 @@ si_RememberSignonData
     }
 
     if (j<signonData->Count()) {
-      if (si_OkToSave(passwordRealm, legacyRealm, data->value, window)) {
+      data2 = NS_STATIC_CAST(si_SignonDataStruct*, signonData->ElementAt(j));
+
+      if (si_OkToSave(passwordRealm, legacyRealm, data2->value, window)) {
         // remove legacy password entry if found
-        if (legacyRealm && si_CheckForUser(legacyRealm, data->value)) {
-          si_RemoveUser(legacyRealm, data->value, PR_TRUE, PR_FALSE, PR_TRUE);
+        if (legacyRealm && si_CheckForUser(legacyRealm, data2->value)) {
+          si_RemoveUser(legacyRealm, data2->value, PR_TRUE, PR_FALSE, PR_TRUE);
         }
         Wallet_GiveCaveat(window, nsnull);
         for (j=0; j<signonData->Count(); j++) {
@@ -2406,8 +2378,8 @@ si_RestoreSignonData(nsIPrompt* dialog,
     for (PRInt32 i=0; i<dataCount; i++) {
       data = NS_STATIC_CAST(si_SignonDataStruct*, user->signonData_list.ElementAt(i));
       LOG(("  got [name=%s value=%s]\n",
-              NS_LossyConvertUTF16toASCII(data->name).get(),
-              NS_LossyConvertUTF16toASCII(data->value).get()));
+              NS_LossyConvertUCS2toASCII(data->name).get(),
+              NS_LossyConvertUCS2toASCII(data->value).get()));
       if(!correctedName.IsEmpty() && (data->name == correctedName)) {
         nameFound = PR_TRUE;
       }
@@ -2461,8 +2433,8 @@ si_RestoreSignonData(nsIPrompt* dialog,
     for (PRInt32 i=0; i<dataCount; i++) {
       data = NS_STATIC_CAST(si_SignonDataStruct*, user->signonData_list.ElementAt(i));
       LOG(("  got [name=%s value=%s]\n",
-              NS_LossyConvertUTF16toASCII(data->name).get(),
-              NS_LossyConvertUTF16toASCII(data->value).get()));
+              NS_LossyConvertUCS2toASCII(data->name).get(),
+              NS_LossyConvertUCS2toASCII(data->value).get()));
       if(!correctedName.IsEmpty() && (data->name == correctedName)) {
         nsAutoString password;
         if (NS_SUCCEEDED(Wallet_Decrypt(data->value, password))) {
@@ -2494,7 +2466,7 @@ SINGSIGN_RestoreSignonData(nsIPrompt* dialog, nsIURI* passwordRealm, const PRUni
   si_RestoreSignonData(dialog, realm.get(), legacyRealm.get(), name, value, formNumber, elementNumber);
 
   LOG(("exit SINGSIGN_RestoreSignonData [value=%s]\n",
-      *value ? NS_LossyConvertUTF16toASCII(*value).get() : "(null)"));
+      *value ? NS_LossyConvertUCS2toASCII(*value).get() : "(null)"));
 }
 
 /*
@@ -2531,7 +2503,7 @@ si_RememberSignonDataFromBrowser(const char* passwordRealm, const nsString& user
  * Check for remembered data from a previous browser-generated password dialog
  * restore it if so
  */
-static PRBool
+static void
 si_RestoreOldSignonDataFromBrowser
     (nsIPrompt* dialog, const char* passwordRealm, PRBool pickFirstUser, nsString& username, nsString& password) {
   si_SignonUserStruct* user;
@@ -2540,17 +2512,17 @@ si_RestoreOldSignonDataFromBrowser
   /* get the data from previous time this URL was visited */
   si_lock_signon_list();
   if (!username.IsEmpty()) {
-    user = si_GetSpecificUser(passwordRealm, username, NS_ConvertASCIItoUTF16(USERNAMEFIELD));
+    user = si_GetSpecificUser(passwordRealm, username, NS_ConvertASCIItoUCS2(USERNAMEFIELD));
   } else {
     si_LastFormForWhichUserHasBeenSelected = -1;
-    user = si_GetUser(dialog, passwordRealm, nsnull, pickFirstUser, NS_ConvertASCIItoUTF16(USERNAMEFIELD), 0);
+    user = si_GetUser(dialog, passwordRealm, nsnull, pickFirstUser, NS_ConvertASCIItoUCS2(USERNAMEFIELD), 0);
   }
   if (!user) {
     /* leave original username and password from caller unchanged */
     /* username = 0; */
     /* *password = 0; */
     si_unlock_signon_list();
-    return PR_FALSE;
+    return;
   }
 
   /* restore the data from previous time this URL was visited */
@@ -2567,7 +2539,6 @@ si_RestoreOldSignonDataFromBrowser
     }
   }
   si_unlock_signon_list();
-  return PR_TRUE;
 }
 
 PRBool
@@ -2815,88 +2786,6 @@ SINGSIGN_Prompt
   *pressedOK = PR_TRUE;
   return NS_OK;
 }
-
-nsresult
-SINGSIGN_PromptAuth
-    (nsIPromptService2* aService, nsIDOMWindow* aParent, nsIChannel* aChannel,
-     PRUint32 aLevel, nsIAuthInformation* aAuthInfo, PRBool* retval) {
-
-  nsCAutoString key;
-  NS_GetAuthKey(aChannel, aAuthInfo, key);
-
-  /* do only the dialog if signon preference is not enabled */
-  if (!si_GetSignonRememberingPref()){
-    return aService->PromptAuth(aParent, aChannel, aLevel,
-                                aAuthInfo, nsnull, nsnull,
-                                retval);
-  }
-
-  /* prefill with previous username/password if any */
-  /* this needs a dialog to choose between multiple usernames */
-  nsCOMPtr<nsIPrompt> prompt;
-  nsresult rv;
-  nsCOMPtr<nsIWindowWatcher> wwatcher =
-    do_GetService(NS_WINDOWWATCHER_CONTRACTID, &rv);
-  wwatcher->GetNewPrompter(aParent, getter_AddRefs(prompt));
-
-  // If we have a domain, insert a "domain\" in front of the username
-  // for the lookup
-  nsAutoString domain, username, password;
-  aAuthInfo->GetDomain(domain);
-  aAuthInfo->GetUsername(username);
-  if (!domain.IsEmpty()) {
-    domain.Append(PRUnichar('\\'));
-    username.Insert(domain, 0);
-  }
-  // Offer saving the data iff we had previously stored information
-  PRBool checked = si_RestoreOldSignonDataFromBrowser(prompt,
-                                                      key.get(),
-                                                      PR_FALSE,
-                                                      username,
-                                                      password);
-
-  PRUint32 flags = 0;
-  aAuthInfo->GetFlags(&flags);
-
-  if (checked) {
-    NS_SetAuthInfo(aAuthInfo, username, password);
-    // If we were only asked for a password, return immediately
-    // (to match SINGSIGN_PromptPassword)
-    if (flags & nsIAuthInformation::ONLY_PASSWORD)
-      return NS_OK;
-  }
-
-  PRBool remembered = checked;
-  rv = si_CheckPromptAuth(aService, aParent, aChannel, aLevel,
-                          aAuthInfo, &checked);
-  if (NS_FAILED(rv)) {
-    /* user pressed Cancel */
-    *retval = PR_FALSE;
-    return NS_OK;
-  }
-
-  /* Get the newly entered data back */
-  aAuthInfo->GetDomain(domain);
-  aAuthInfo->GetUsername(username);
-  aAuthInfo->GetPassword(password);
-  if (!domain.IsEmpty()) {
-    domain.Append(PRUnichar('\\'));
-    username.Insert(domain, 0);
-  }
-
-  if (checked) {
-    Wallet_GiveCaveat(nsnull, prompt);
-    si_RememberSignonDataFromBrowser (key.get(), username, password);
-  } else if (remembered) {
-    /* a login was remembered but user unchecked the box; we forget the remembered login */
-    si_RemoveUser(key.get(), username, PR_TRUE, PR_FALSE, PR_TRUE);  
-  }
-
-  /* cleanup and return */
-  *retval = PR_TRUE;
-  return NS_OK;
-}
-
 
 /*****************
  * Signon Viewer *

@@ -44,7 +44,7 @@ function EditorGetText()
 {
   try {
     dump("Getting text\n");
-    var  outputText = GetCurrentEditor().outputToString("text/plain", kOutputFormatted);
+    var  outputText = GetCurrentEditor().outputToString("text/plain", 2);
     dump("<<" + outputText + ">>\n");
   } catch (e) {}
 }
@@ -53,7 +53,7 @@ function EditorGetHTML()
 {
   try {
     dump("Getting HTML\n");
-    var  outputHTML = GetCurrentEditor().outputToString("text/html", kOutputEncodeW3CEntities);
+    var  outputHTML = GetCurrentEditor().outputToString("text/html", 256);
     dump(outputHTML + "\n");
   } catch (e) {}
 }
@@ -83,7 +83,7 @@ function EditorTestSelection()
   // 3rd param = column to wrap
   dump(selection.QueryInterface(Components.interfaces.nsISelectionPrivate)
        .toStringWithFormat("text/plain",
-                           kOutputFormatted | kOutputSelectionOnly,
+                           3,  // OutputFormatted & gOutputSelectionOnly
                            0) + "\n");
 
   var output, i;
@@ -103,19 +103,19 @@ function EditorTestSelection()
   var editor = GetCurrentEditor();
 
   dump("====== Selection as unformatted text ==========\n");
-  output = editor.outputToString("text/plain", kOutputSelectionOnly);
+  output = editor.outputToString("text/plain", 1);
   dump(output + "\n\n");
 
   dump("====== Selection as formatted text ============\n");
-  output = editor.outputToString("text/plain", kOutputFormatted | kOutputSelectionOnly);
+  output = editor.outputToString("text/plain", 3);
   dump(output + "\n\n");
 
   dump("====== Selection as HTML ======================\n");
-  output = editor.outputToString("text/html", kOutputSelectionOnly);
+  output = editor.outputToString("text/html", 1);
   dump(output + "\n\n");
 
   dump("====== Selection as prettyprinted HTML ========\n");
-  output = editor.outputToString("text/html", kOutputFormatted | kOutputSelectionOnly);
+  output = editor.outputToString("text/html", 3);
   dump(output + "\n\n");
 
   dump("====== Length and status =====================\n");

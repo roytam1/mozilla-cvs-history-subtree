@@ -62,9 +62,14 @@
 // lots of includes required for the nsPrefMigration.cpp code that we copied:
 #include "nsICharsetConverterManager.h"
 #include "nsIPlatformCharset.h"
+#include "nsIPref.h"
 #include "nsIFileSpec.h"
 #include "nsFileSpec.h"
 #include "nsFileStream.h"
+
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 #define MIGRATION_PROPERTIES_URL "chrome://messenger/locale/migration/migration.properties"
 
@@ -93,7 +98,7 @@
 #define HOME_ENVIRONMENT_VARIABLE         "HOME"
 #define PROFILE_HOME_ENVIRONMENT_VARIABLE "PROFILE_HOME"
 #define DEFAULT_UNIX_PROFILE_NAME         "default"
-#elif defined(XP_MACOSX)
+#elif defined(XP_MAC) || defined(XP_MACOSX)
 #define OLDREG_NAME               "Netscape Registry"
 #define OLDREG_DIR                NS_MAC_PREFS_DIR
 #define PREF_FILE_NAME_IN_4x      "Netscape Preferences"
@@ -138,6 +143,7 @@
 #endif /* XP_UNIX */
 
 #define PREMIGRATION_PREFIX "premigration."
+#define ADDRBOOK_FILE_EXTENSION_IN_4X  ".na2"
 #define PREF_FILE_HEADER_STRING "# Mozilla User Preferences    " 
 #define MAX_PREF_LEN 1024
 
@@ -315,6 +321,7 @@ NS_IMETHODIMP
 nsDogbertProfileMigrator::Migrate(PRUint16 aItems, nsIProfileStartup* aStartup, const PRUnichar* aProfile)
 {
   nsresult rv = NS_OK;
+  PRBool aReplace = aStartup ? PR_TRUE : PR_FALSE;
 
   if (!mTargetProfile) {
     GetProfilePath(aStartup, mTargetProfile);
@@ -539,9 +546,7 @@ nsresult nsDogbertProfileMigrator::CopyPreferences()
 {
   // Load the source pref file
 
-  nsresult rv;
-  mPrefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
+  mPrefs = do_GetService(kPrefServiceCID);
 
   nsCAutoString oldProfDirStr;
   nsCAutoString newProfDirStr;
@@ -633,13 +638,10 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
 
   PRInt64  DriveID[MAX_DRIVES];
   PRUint32 SpaceRequired[MAX_DRIVES];
-
+  
 #if defined(NS_DEBUG)
   printf("*Entered Actual Migration routine*\n");
 #endif
-
-  nsCOMPtr<nsIPrefService> prefService = do_QueryInterface(mPrefs, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
 
   for (int i=0; i < MAX_DRIVES; i++)
   {
@@ -708,10 +710,10 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
   if (NS_FAILED(rv)) return rv;
 
   //Clear the prefs in case a previous set was read in.
-  prefService->ResetPrefs();
+  mPrefs->ResetPrefs();
 
   //Now read the prefs from the prefs file in the system directory
-  prefService->ReadUserPrefs(m_prefsFile);
+  mPrefs->ReadUserPrefs(m_prefsFile);
 
   // Start computing the sizes required for migration
   //
@@ -938,11 +940,11 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
       NS_FileSpecToIFile(&newPOPMailPathSpec,
                          getter_AddRefs(newPOPMailPathFile));
       
-      rv = mPrefs->SetComplexValue(PREF_MAIL_DIRECTORY, NS_GET_IID(nsILocalFile), newPOPMailPathFile); 
+      rv = mPrefs->SetFileXPref(PREF_MAIL_DIRECTORY, newPOPMailPathFile); 
       if (NS_FAILED(rv)) return rv;
     }
 
-    mPrefs->GetCharPref(PREF_NETWORK_HOSTS_POP_SERVER, &popServerName);
+    mPrefs->CopyCharPref(PREF_NETWORK_HOSTS_POP_SERVER, &popServerName);
 
     nsCAutoString popServerNamewithoutPort(popServerName);
     PRInt32 colonPos = popServerNamewithoutPort.FindChar(':');
@@ -993,7 +995,7 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
       NS_FileSpecToIFile(&newIMAPLocalMailPathSpec,
                          getter_AddRefs(newIMAPLocalMailPathFile));
       
-      rv = mPrefs->SetComplexValue(PREF_MAIL_DIRECTORY, NS_GET_IID(nsILocalFile), newIMAPLocalMailPathFile); 
+      rv = mPrefs->SetFileXPref(PREF_MAIL_DIRECTORY, newIMAPLocalMailPathFile); 
       if (NS_FAILED(rv)) return rv;
     }
 
@@ -1033,7 +1035,7 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
       NS_FileSpecToIFile(&newIMAPMailPathSpec,
                          getter_AddRefs(newIMAPMailPathFile));
       
-      rv = mPrefs->SetComplexValue(PREF_MAIL_IMAP_ROOT_DIR, NS_GET_IID(nsILocalFile), newIMAPMailPathFile);
+      rv = mPrefs->SetFileXPref(PREF_MAIL_IMAP_ROOT_DIR, newIMAPMailPathFile);
       if (NS_FAILED(rv)) return rv;
     }
    }
@@ -1048,7 +1050,7 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
       NS_FileSpecToIFile(&oldIMAPLocalMailPathSpec,
                          getter_AddRefs(oldIMAPLocalMailPathFile));
 
-      rv = mPrefs->SetComplexValue(PREF_MAIL_DIRECTORY, NS_GET_IID(nsILocalFile), oldIMAPLocalMailPathFile);
+      rv = mPrefs->SetFileXPref(PREF_MAIL_DIRECTORY, oldIMAPLocalMailPathFile);
       if (NS_FAILED(rv)) return rv;
     }
     {
@@ -1060,7 +1062,7 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
       NS_FileSpecToIFile(&oldIMAPMailPathSpec,
                          getter_AddRefs(oldIMAPMailPathFile));
 
-      rv = mPrefs->SetComplexValue(PREF_MAIL_IMAP_ROOT_DIR, NS_GET_IID(nsILocalFile), oldIMAPMailPathFile);
+      rv = mPrefs->SetFileXPref(PREF_MAIL_IMAP_ROOT_DIR, oldIMAPMailPathFile);
       if (NS_FAILED(rv)) return rv;
     }
    }
@@ -1095,7 +1097,7 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
       NS_FileSpecToIFile(&newMOVEMAILPathSpec,
                          getter_AddRefs(newMOVEMAILPathFile));
       
-      rv = mPrefs->SetComplexValue(PREF_MAIL_DIRECTORY, NS_GET_IID(nsILocalFile), newMOVEMAILPathFile); 
+      rv = mPrefs->SetFileXPref(PREF_MAIL_DIRECTORY, newMOVEMAILPathFile); 
       if (NS_FAILED(rv)) return rv;
     }
 
@@ -1146,7 +1148,7 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
     NS_FileSpecToIFile(&newNewsPathSpec,
                        getter_AddRefs(newNewsPathFile));
     
-    rv = mPrefs->SetComplexValue(PREF_NEWS_DIRECTORY, NS_GET_IID(nsILocalFile), newNewsPathFile); 
+    rv = mPrefs->SetFileXPref(PREF_NEWS_DIRECTORY, newNewsPathFile); 
     if (NS_FAILED(rv)) return rv;
   }
 
@@ -1166,7 +1168,7 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
   }
   
   // just copy what we need
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
   rv = DoTheCopy(oldProfilePath, newProfilePath, SECURITY_PATH, PR_TRUE);
   if (NS_FAILED(rv)) return rv;
 #else
@@ -1176,9 +1178,13 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
   if (NS_FAILED(rv)) return rv;
   rv = DoTheCopy(oldProfilePath, newProfilePath, PSM_SECMODULE_DB);
   if (NS_FAILED(rv)) return rv;
-#endif /* XP_MACOSX */
+#endif /* XP_MAC */
 
-#ifdef XP_MACOSX
+  // Copy the addrbook files.
+  rv = CopyFilesByPattern(oldProfilePath, newProfilePath, ADDRBOOK_FILE_EXTENSION_IN_4X);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+#if defined(XP_MAX) || defined(XP_MACOSX)
   // Copy the Mac filter rule files which sits at the top level dir of a 4.x profile.
   if(serverType == IMAP_4X_MAIL_TYPE) {
     rv = CopyFilesByPattern(oldProfilePath, newProfilePath, MAC_RULES_FILE_ENDING_STRING_IN_4X);
@@ -1269,9 +1275,9 @@ nsDogbertProfileMigrator::ProcessPrefsCallback(const char* oldProfilePathStr, co
   rv = newPrefsFile->AppendNative(NS_LITERAL_CSTRING(PREF_FILE_NAME_IN_5x));
   if (NS_FAILED(rv)) return rv;
 
-  rv = prefService->SavePrefFile(newPrefsFile);
+  rv=mPrefs->SavePrefFile(newPrefsFile);
   if (NS_FAILED(rv)) return rv;
-  rv = prefService->ResetPrefs();
+  rv=mPrefs->ResetPrefs();
   if (NS_FAILED(rv)) return rv;
 
   PRBool flagExists = PR_FALSE;
@@ -1501,7 +1507,7 @@ nsresult nsDogbertProfileMigrator::DoTheCopyAndRename(nsIFileSpec * aPathSpec, P
   rv = NS_FileSpecToIFile(&path, getter_AddRefs(localFileDirectory));
   if (NS_FAILED(rv))
     return rv;
-  nsAutoString newName = NS_ConvertUTF8toUTF16(aNewName);
+  nsAutoString newName = NS_ConvertUTF8toUCS2(aNewName);
   localFileOld->CopyTo(localFileDirectory, newName);
 
   return NS_OK;
@@ -1547,7 +1553,7 @@ nsresult nsDogbertProfileMigrator::AddFileCopyToList(nsFileSpec * aOldPath, nsFi
   fileTransactionEntry* fileEntry = new fileTransactionEntry;
   fileEntry->srcFile = do_QueryInterface(oldPathFile);
   fileEntry->destFile = do_QueryInterface(newPathFile);
-  fileEntry->newName = NS_ConvertUTF8toUTF16(newName);
+  fileEntry->newName = NS_ConvertUTF8toUCS2(newName);
   mFileCopyTransactions->AppendElement((void*) fileEntry);
 
   return NS_OK;
@@ -1701,7 +1707,7 @@ nsresult nsDogbertProfileMigrator::RenameAndMove4xPopFile(nsIFileSpec * profileP
   nsFileSpec migratedPopDirectory;
   rv = profilePath->GetFileSpec(&migratedPopDirectory);
   migratedPopDirectory += NEW_MAIL_DIR_NAME;
-  mPrefs->GetCharPref(PREF_NETWORK_HOSTS_POP_SERVER, &popServerName);
+  mPrefs->CopyCharPref(PREF_NETWORK_HOSTS_POP_SERVER, &popServerName);
   migratedPopDirectory += popServerName;
   PR_FREEIF(popServerName);
 
@@ -1768,7 +1774,7 @@ nsresult nsDogbertProfileMigrator::RenameAndMove4xImapFilterFiles(nsIFileSpec * 
   nsresult rv;
   char *hostList=nsnull;
 
-  rv = mPrefs->GetCharPref(PREF_4X_NETWORK_HOSTS_IMAP_SERVER, &hostList);
+  rv = mPrefs->CopyCharPref(PREF_4X_NETWORK_HOSTS_IMAP_SERVER, &hostList);
   if (NS_FAILED(rv)) return rv;
 
   if (!hostList || !*hostList) return NS_OK; 
@@ -1827,12 +1833,8 @@ nsresult nsDogbertProfileMigrator::GetPremigratedFilePref(const char *pref_name,
   if (!pref_name) return NS_ERROR_FAILURE;
   char premigration_pref[MAX_PREF_LEN];
   PR_snprintf(premigration_pref,MAX_PREF_LEN,"%s%s",PREMIGRATION_PREFIX,pref_name);
-
-  nsCOMPtr<nsILocalFile> preMigrationFile;
-  rv = mPrefs->GetComplexValue((const char *)premigration_pref, NS_GET_IID(nsILocalFile), getter_AddRefs(preMigrationFile));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  return NS_NewFileSpecFromIFile(preMigrationFile, path);;
+  rv = mPrefs->GetFilePref((const char *)premigration_pref, path);
+  return rv;
 }
 
 #endif /* NEED_TO_COPY_AND_RENAME_NEWSRC_FILES */
@@ -1849,7 +1851,7 @@ nsresult nsDogbertProfileMigrator::DetermineOldPath(nsIFileSpec *profilePath, co
 	if (NS_FAILED(rv)) return rv;
 	
 	/* get the string bundle, and get the appropriate localized string out of it */
-	nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+	nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID, &rv);
 	if (NS_FAILED(rv)) return rv;
 
   nsCOMPtr<nsIStringBundle> bundle;
@@ -1966,7 +1968,7 @@ nsDogbertProfileMigrator::GetDirFromPref(nsIFileSpec * oldProfilePath, nsIFileSp
   
   nsCOMPtr <nsIFileSpec> oldPrefPath;
   nsXPIDLCString oldPrefPathStr;
-  rv = mPrefs->GetCharPref(pref, getter_Copies(oldPrefPathStr));
+  rv = mPrefs->CopyCharPref(pref,getter_Copies(oldPrefPathStr));
   if (NS_FAILED(rv)) return rv;
   
   // the default on the mac was "".  doing GetFileXPref on that would return
@@ -1977,7 +1979,7 @@ nsDogbertProfileMigrator::GetDirFromPref(nsIFileSpec * oldProfilePath, nsIFileSp
   if (NS_FAILED(rv)) return rv;
   
   nsCOMPtr <nsILocalFile> oldPrefPathFile;
-  rv = mPrefs->GetComplexValue(pref, NS_GET_IID(nsILocalFile), getter_AddRefs(oldPrefPathFile));
+  rv = mPrefs->GetFileXPref(pref, getter_AddRefs(oldPrefPathFile));
   if (NS_FAILED(rv)) return rv;
   
   // convert nsILocalFile to nsIFileSpec
@@ -2081,7 +2083,7 @@ nsresult nsDogbertProfileMigrator::SetPremigratedFilePref(const char *pref_name,
   NS_ASSERTION(exists, "the path does not exist.  see bug #55444");
   if (!exists) return NS_OK;
   
-  rv = mPrefs->SetComplexValue((const char *)premigration_pref, NS_GET_IID(nsILocalFile), pathFile);
+	rv = mPrefs->SetFileXPref((const char *)premigration_pref, pathFile);
 	return rv;
 }
 
@@ -2190,7 +2192,7 @@ static nsresult ConvertStringToUTF8(const char* aCharset, const char* inString, 
 
   nsresult rv;
   // convert result to unicode
-  nsCOMPtr<nsICharsetConverterManager> ccm = do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv);
+  nsCOMPtr<nsICharsetConverterManager> ccm = do_GetService(kCharsetConverterManagerCID, &rv);
 
   if(NS_SUCCEEDED(rv)) {
     nsCOMPtr <nsIUnicodeDecoder> decoder; // this may be cached
@@ -2224,14 +2226,14 @@ static nsresult ConvertStringToUTF8(const char* aCharset, const char* inString, 
   return rv;
 }
 
-nsresult ConvertPrefToUTF8(const char *prefname, nsIPrefBranch *prefs, const char* charSet)
+nsresult ConvertPrefToUTF8(const char *prefname, nsIPref *prefs, const char* charSet)
 {
   nsresult rv;
 
   if (!prefname || !prefs) return NS_ERROR_FAILURE;  
   nsXPIDLCString prefval;
 
-  rv = prefs->GetCharPref(prefname, getter_Copies(prefval));
+  rv = prefs->CopyCharPref(prefname, getter_Copies(prefval));
   if (NS_FAILED(rv)) return rv;
 
   if (prefval.IsEmpty()) 
@@ -2259,46 +2261,40 @@ static PRBool charEndsWith(const char *str, const char *endStr)
     return PR_FALSE;
 }
 
-static void getFontPrefs(nsIPrefBranch *prefs, nsCStringArray *data)
+static void fontPrefEnumerationFunction(const char *name, void *data)
 {
-  PRUint32 count, i;
-  char** childPrefs;
-  prefs->GetChildList("intl.font", &count, &childPrefs);
-
-  for (i = 0; i < count; ++i)
-  {
-    if (charEndsWith(childPrefs[i], ".fixed_font") || charEndsWith(childPrefs[i], ".prop_font"))
-      data->AppendCString(nsDependentCString(childPrefs[i]));
+  nsCStringArray *arr;
+  arr = (nsCStringArray *)data;
+  if (charEndsWith(name,".fixed_font") || charEndsWith(name,".prop_font")) {
+    nsCString str(name);
+    arr->AppendCString(str);
   }
 }
 
-static void getLdapPrefs(nsIPrefBranch *prefs, nsCStringArray *data)
+static void ldapPrefEnumerationFunction(const char *name, void *data)
 {
-  PRUint32 count, i;
-  char** childPrefs;
-  prefs->GetChildList("ldap_2.servers", &count, &childPrefs);
-
-  for (i = 0; i < count; ++i)
-  {
-    // we only want to convert "ldap_2.servers.*.description"
-    if (charEndsWith(childPrefs[i], ".description"))
-      data->AppendCString(nsDependentCString(childPrefs[i]));
+  nsCStringArray *arr;
+  arr = (nsCStringArray *)data;
+  // we only want to convert "ldap_2.servers.*.description"
+  if (charEndsWith(name,".description")) {
+    nsCString str(name);
+    arr->AppendCString(str);
   }
 }
 
-static void getVCardPrefs(nsIPrefBranch *prefs, nsCStringArray *data)
+static void vCardPrefEnumerationFunction(const char *name, void *data)
 {
-  PRUint32 count, i;
-  char** childPrefs;
-  prefs->GetChildList("mail.identity.vcard", &count, &childPrefs);
+  nsCStringArray *arr;
+  arr = (nsCStringArray *)data;
 
   // the 4.x vCard prefs might need converting
-  for (i = 0; i < count; ++i)
-    data->AppendCString(nsDependentCString(childPrefs[i]));
+  nsCString str(name);
+  arr->AppendCString(str);
 }
 
+
 typedef struct {
-    nsIPrefBranch *prefs;
+    nsIPref *prefs;
     const char* charSet;
 } PrefEnumerationClosure;
 
@@ -2316,9 +2312,10 @@ nsresult nsPrefConverter::ConvertPrefsToUTF8()
   nsresult rv;
 
   nsCStringArray prefsToMigrate;
-  nsCOMPtr<nsIPrefBranch> prefs(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
+  nsCOMPtr<nsIPref> prefs(do_GetService(kPrefServiceCID, &rv));
 
   if(NS_FAILED(rv)) return rv;
+  if (!prefs) return NS_ERROR_FAILURE;
 
   nsCAutoString charSet;
   rv = GetPlatformCharset(charSet);
@@ -2330,9 +2327,9 @@ nsresult nsPrefConverter::ConvertPrefsToUTF8()
     prefsToMigrate.AppendCString(prefnameStr);
   }
 
-  getFontPrefs(prefs, &prefsToMigrate);
-  getLdapPrefs(prefs, &prefsToMigrate);
-  getVCardPrefs(prefs, &prefsToMigrate);
+  prefs->EnumerateChildren("intl.font",fontPrefEnumerationFunction,(void *)(&prefsToMigrate));
+  prefs->EnumerateChildren("ldap_2.servers",ldapPrefEnumerationFunction,(void *)(&prefsToMigrate));
+  prefs->EnumerateChildren("mail.identity.vcard",vCardPrefEnumerationFunction,(void *)(&prefsToMigrate));
 
   PrefEnumerationClosure closure;
 

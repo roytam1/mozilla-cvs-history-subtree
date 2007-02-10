@@ -57,7 +57,7 @@ class nsIURI;
  */
 class nsILink : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ILINK_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ILINK_IID)
 
   /**
    * Get the cached state of the link.  If the state is unknown, 
@@ -101,7 +101,5 @@ public:
    */
   NS_IMETHOD LinkRemoved() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsILink, NS_ILINK_IID)
 
 #endif /* nsILink_h___ */

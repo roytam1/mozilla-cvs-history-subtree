@@ -46,19 +46,6 @@ function MakeTestInterface()
     return new clazz(iface);
 }    
 
-// Taken from http://www.svendtofte.com/code/usefull_prototypes/prototypes.js
-Array.prototype.compareArrays = function(arr) {
-    if (this.length != arr.length) return false;
-    for (var i = 0; i < arr.length; i++) {
-        if (this[i].compareArrays) { //likely nested array
-            if (!this[i].compareArrays(arr[i])) return false;
-            else continue;
-        }
-        if (this[i] != arr[i]) return false;
-    }
-    return true;
-}
-
 var c = new MakeTestInterface();
 
 if (c.boolean_value != 1)
@@ -68,7 +55,7 @@ if (c.boolean_value != false)
 	throw("boolean_value has wrong new value");
 
 // Python's own test does thorough testing of all numeric types
-// Won't bother from here!
+// Wont bother from here!
 
 if (c.char_value != 'a')
 	throw("char_value has wrong initial value");
@@ -143,21 +130,5 @@ v2[3] = 6;
 if (c.SumArrays(v.length, v, v2) != 21)
 	throw("Could not sum an array of integers!");
 
-var count = new Object();
-count.value = 0;
-var out = [];
-c.DoubleStringArray(count, out);
 
-v = new Array();
-var v2 = c.CopyVariant(v);
-if (!v.compareArrays(v2))
-	throw("Could not copy an empty array of nsIVariant");
-
-v = new Array();
-v[0] = 1;
-v[1] = "test";
-var v2 = c.CopyVariant(v);
-if (!v.compareArrays(v2))
-	throw("Could not copy an empty array of nsIVariant");
-
-print("OK: javascript successfully tested the Python test component.");
+print("javascript successfully tested the Python test component.");

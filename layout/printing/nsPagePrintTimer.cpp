@@ -36,25 +36,27 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsPagePrintTimer.h"
+#include "nsPrintEngine.h"
 #include "nsIContentViewer.h"
 #include "nsIServiceManager.h"
-#include "nsPrintEngine.h"
 
 NS_IMPL_ISUPPORTS1(nsPagePrintTimer, nsITimerCallback)
 
 nsPagePrintTimer::nsPagePrintTimer() :
-  mPrintEngine(nsnull),
-  mPrintObj(nsnull),
+  mDocViewerPrint(nsnull), 
+  mPresContext(nsnull), 
+  mPrintSettings(nsnull), 
   mDelay(0)
 {
 }
 
 nsPagePrintTimer::~nsPagePrintTimer()
 {
-  // "Destroy" the document viewer; this normally doesn't actually
-  // destroy it because of the IncrementDestroyRefCount call below
-  // XXX This is messy; the document viewer should use a single approach
-  // to keep itself alive during printing
+  if (mTimer) {
+    mTimer->Cancel();
+  }
+  mPrintEngine->SetIsPrinting(PR_FALSE); // this will notify the DV also
+
   nsCOMPtr<nsIContentViewer> cv(do_QueryInterface(mDocViewerPrint));
   if (cv) {
     cv->Destroy();
@@ -80,14 +82,13 @@ nsPagePrintTimer::StartTimer(PRBool aUseDelay)
 NS_IMETHODIMP
 nsPagePrintTimer::Notify(nsITimer *timer)
 {
-  if (mDocViewerPrint) {
+  if (mPresContext && mDocViewerPrint) {
     PRPackedBool initNewTimer = PR_TRUE;
     // Check to see if we are done
-    // inRange will be true if a page is actually printed
-    PRBool inRange;
     // donePrinting will be true if it completed successfully or
     // if the printing was cancelled
-    PRBool donePrinting = mPrintEngine->PrintPage(mPrintObj, inRange);
+    PRBool inRange;
+    PRBool donePrinting = mPrintEngine->PrintPage(mPresContext, mPrintSettings, mPrintObj, inRange);
     if (donePrinting) {
       // now clean up print or print the next webshell
       if (mPrintEngine->DonePrintingPages(mPrintObj, NS_OK)) {
@@ -95,10 +96,7 @@ nsPagePrintTimer::Notify(nsITimer *timer)
       }
     }
 
-    // Note that the Stop() destroys this after the print job finishes
-    // (The PrintEngine stops holding a reference when DonePrintingPages
-    // returns true.)
-    Stop(); 
+    Stop();
     if (initNewTimer) {
       nsresult result = StartTimer(inRange);
       if (NS_FAILED(result)) {
@@ -113,19 +111,29 @@ nsPagePrintTimer::Notify(nsITimer *timer)
 void 
 nsPagePrintTimer::Init(nsPrintEngine*          aPrintEngine,
                        nsIDocumentViewerPrint* aDocViewerPrint,
+                       nsPresContext*         aPresContext,
+                       nsIPrintSettings*       aPrintSettings,
+                       nsPrintObject*          aPO,
                        PRUint32                aDelay)
 {
   mPrintEngine     = aPrintEngine;
   mDocViewerPrint  = aDocViewerPrint;
-  mDelay           = aDelay;
 
-  mDocViewerPrint->IncrementDestroyRefCount();
+  mPresContext     = aPresContext;
+  mPrintSettings   = aPrintSettings;
+  mPrintObj        = aPO;
+  mDelay           = aDelay;
 }
 
 nsresult 
-nsPagePrintTimer::Start(nsPrintObject* aPO)
+nsPagePrintTimer::Start(nsPrintEngine*          aPrintEngine,
+                        nsIDocumentViewerPrint* aDocViewerPrint,
+                        nsPresContext*         aPresContext,
+                        nsIPrintSettings*       aPrintSettings,
+                        nsPrintObject*          aPO,
+                        PRUint32                aDelay)
 {
-  mPrintObj = aPO;
+  Init(aPrintEngine, aDocViewerPrint, aPresContext, aPrintSettings, aPO, aDelay);
   return StartTimer(PR_FALSE);
 }
 

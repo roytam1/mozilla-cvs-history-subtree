@@ -105,7 +105,6 @@ static const int kEscapeKeyCode = 53;
 // Pass command-return off to the controller so that locations/searches may be opened in a new tab.
 // Pass command-plus off to the controller to enlarge the text size.
 // Pass command-1..9 to the controller to load that bookmark bar item
-// Pass command-D off to the controller to add a bookmark
 - (BOOL)performKeyEquivalent:(NSEvent *)theEvent
 {
   BrowserWindowController* windowController = (BrowserWindowController*)[self delegate];
@@ -127,25 +126,11 @@ static const int kEscapeKeyCode = 53;
     if (cmdKeyIsDown) {
       // use |forceReuse| to disable looking at the modifier keys since we know the command
       // key is down right now.
-      handled = [windowController loadBookmarkBarIndex:(keyChar - '1') openBehavior:eBookmarkOpenBehavior_ForceReuse];
+      [windowController loadBookmarkBarIndex:(keyChar - '1') openBehavior:eBookmarkOpenBehavior_ForceReuse];
+      handled = YES;
     }
   }
-  //Alpha shortcuts need to be handled differently because layouts like Dvorak-Qwerty Command give
-  //completely different characters depending on whether or not you ignore the modifiers
-  else {
-    keyString = [theEvent characters];
-    keyChar = [keyString characterAtIndex:0];
-    if (keyChar == 'd') {
-      unsigned int standardModifierKeys = NSShiftKeyMask | NSControlKeyMask | NSAlternateKeyMask | NSCommandKeyMask;
-      if ((([theEvent modifierFlags] & standardModifierKeys) == NSCommandKeyMask) &&
-          [windowController validateActionBySelector:@selector(addBookmark:)])
-      {
-        [windowController addBookmark:nil];
-        handled = YES;
-      }
-    }
-  }
-
+  
   if (handled)
     return YES;
 

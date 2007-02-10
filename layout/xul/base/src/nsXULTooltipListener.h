@@ -46,6 +46,7 @@
 #include "nsIContent.h"
 #include "nsIDOMElement.h"
 #include "nsITimer.h"
+#include "nsIRootBox.h"
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #ifdef MOZ_XUL
@@ -96,7 +97,9 @@ public:
   // nsIDOMEventListener
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
 
-  nsresult Init(nsIContent* aSourceNode);
+  nsresult Init(nsIContent* aSourceNode, nsIRootBox* aRootBox);
+  nsresult SetDefaultTooltip(nsIContent* aDefaultTooltip);
+  nsresult GetDefaultTooltip(nsIContent** aDefaultTooltip);
   nsresult AddTooltipSupport(nsIContent* aNode);
   nsresult RemoveTooltipSupport(nsIContent* aNode);
 
@@ -118,14 +121,11 @@ protected:
   nsresult LaunchTooltip(nsIContent* aTarget, PRInt32 aX, PRInt32 aY);
   nsresult HideTooltip();
   nsresult DestroyTooltip();
-  // This method tries to find a tooltip for aTarget.
-  nsresult FindTooltip(nsIContent* aTarget, nsIContent** aTooltip);
-  // This method calls FindTooltip and checks that the tooltip
-  // can be really used (i.e. tooltip is not a menu).
   nsresult GetTooltipFor(nsIContent* aTarget, nsIContent** aTooltip);
 
   static int ToolbarTipsPrefChanged(const char *aPref, void *aClosure);
 
+  nsIRootBox* mRootBox;
   nsIContent* mSourceNode;
   nsCOMPtr<nsIContent> mTargetNode;
   nsCOMPtr<nsIContent> mCurrentTooltip;

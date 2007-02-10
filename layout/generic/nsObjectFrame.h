@@ -34,42 +34,39 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* rendering objects for replaced elements implemented by a plugin */
-
 #ifndef nsObjectFrame_h___
 #define nsObjectFrame_h___
 
-#ifdef XP_WIN
-#include <windows.h>
-#endif
-
+#include "nsHTMLParts.h"
+#include "nsHTMLContainerFrame.h"
+#include "nsPresContext.h"
+#include "nsIPresShell.h"
+#include "nsIPluginHost.h"
+#include "nsplugin.h"
+#include "nsIWidget.h"
 #include "nsIObjectFrame.h"
-#include "nsFrame.h"
 
 #ifdef ACCESSIBILITY
 class nsIAccessible;
 #endif
 
 class nsPluginInstanceOwner;
-class nsIPluginHost;
-class nsIPluginInstance;
-class nsPresContext;
 
-#define nsObjectFrameSuper nsFrame
+#define nsObjectFrameSuper nsHTMLContainerFrame
 
 class nsObjectFrame : public nsObjectFrameSuper, public nsIObjectFrame {
 public:
-  friend nsIFrame* NS_NewObjectFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
-
   // nsISupports 
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
-  NS_IMETHOD Init(nsIContent* aContent,
+  NS_IMETHOD SetInitialChildList(nsPresContext* aPresContext,
+                                 nsIAtom* aListName,
+                                 nsIFrame* aChildList);
+  NS_IMETHOD Init(nsPresContext* aPresContext,
+                  nsIContent* aContent,
                   nsIFrame* aParent,
+                  nsStyleContext* aContext,
                   nsIFrame* aPrevInFlow);
-  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
-  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   NS_IMETHOD Reflow(nsPresContext* aPresContext,
                     nsHTMLReflowMetrics& aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -77,36 +74,30 @@ public:
   NS_IMETHOD DidReflow(nsPresContext* aPresContext,
                        const nsHTMLReflowState* aReflowState,
                        nsDidReflowStatus aStatus);
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
-
-  void PrintPlugin(nsIRenderingContext& aRenderingContext,
-                   const nsRect& aDirtyRect);
-  void PaintPlugin(nsIRenderingContext& aRenderingContext,
-                   const nsRect& aDirtyRect);
+  NS_IMETHOD Paint(nsPresContext* aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect& aDirtyRect,
+                   nsFramePaintLayer aWhichLayer,
+                   PRUint32 aFlags = 0);
 
   NS_IMETHOD  HandleEvent(nsPresContext* aPresContext,
                           nsGUIEvent* aEvent,
                           nsEventStatus* aEventStatus);
 
   virtual nsIAtom* GetType() const;
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
   virtual PRBool SupportsVisibilityHidden() { return PR_FALSE; }
   virtual PRBool NeedsView() { return PR_TRUE; }
   virtual nsresult CreateWidgetForView(nsIView* aView);
 
+  virtual PRBool IsLeaf() const;
+  
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
 #endif
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
   NS_IMETHOD GetPluginInstance(nsIPluginInstance*& aPluginInstance);
-  virtual nsresult Instantiate(nsIChannel* aChannel, nsIStreamListener** aStreamListener);
-  virtual nsresult Instantiate(const char* aMimeType, nsIURI* aURI);
-  virtual void StopPlugin();
-
 
   /* fail on any requests to get a cursor from us because plugins set their own! see bug 118877 */
   NS_IMETHOD GetCursor(const nsPoint& aPoint, nsIFrame::Cursor& aCursor) 
@@ -114,6 +105,9 @@ public:
     return NS_ERROR_NOT_IMPLEMENTED;
   };
 
+  //i18n helper
+  nsresult MakeAbsoluteURL(nsIURI* *aFullURI, nsString aSrc,
+                           nsIURI* aBaseURI);
   // accessibility support
 #ifdef ACCESSIBILITY
   NS_IMETHOD GetAccessible(nsIAccessible** aAccessible);
@@ -124,18 +118,49 @@ public:
 
   //local methods
   nsresult CreateWidget(nscoord aWidth, nscoord aHeight, PRBool aViewOnly);
+  nsIURI* GetFullURL()
+  {
+    return mFullURL;
+  }
+
+  /**
+   * Get the MIME type used for rendering content for this frame.
+   * This may get the type via the URL's extension.
+   */
+  NS_HIDDEN_(nsresult) GetMIMEType(nsACString& aType);
+
+
 
   // for a given aRoot, this walks the frame tree looking for the next outFrame
   static nsIObjectFrame* GetNextObjectFrame(nsPresContext* aPresContext,
                                             nsIFrame* aRoot);
+
+  void FixUpURLS(const nsString &name, nsAString &value);
+
+  void PluginNotAvailable(const char *aMimeType);
+
+  // Returns true if this object frame links to content that we have
+  // no enabled plugin for, that means not even the default plugin.
+  PRBool IsBroken() const
+  {
+    return mIsBrokenPlugin;
+  }
+
+  virtual PRBool IsContainingBlock() const
+  {
+    // Broken plugins are containing blocks.
+
+    return IsBroken();
+  }
 
 protected:
   // nsISupports
   NS_IMETHOD_(nsrefcnt) AddRef(void);
   NS_IMETHOD_(nsrefcnt) Release(void);
 
-  nsObjectFrame(nsStyleContext* aContext) : nsObjectFrameSuper(aContext) {}
   virtual ~nsObjectFrame();
+
+  virtual PRIntn GetSkipSides() const;
 
   // NOTE:  This frame class does not inherit from |nsLeafFrame|, so
   // this is not a virtual method implementation.
@@ -143,16 +168,28 @@ protected:
                       const nsHTMLReflowState& aReflowState,
                       nsHTMLReflowMetrics& aDesiredSize);
 
-  nsresult InstantiatePlugin(nsIPluginHost* aPluginHost, 
+  nsresult InstantiateWidget(nsPresContext* aPresContext,
+                             nsHTMLReflowMetrics& aMetrics,
+                             const nsHTMLReflowState& aReflowState,
+                             nsCID aWidgetCID);
+
+  nsresult InstantiatePlugin(nsPresContext* aPresContext,
+                             nsHTMLReflowMetrics& aMetrics,
+                             const nsHTMLReflowState& aReflowState,
+                             nsIPluginHost* aPluginHost, 
                              const char* aMimetype,
                              nsIURI* aURL);
 
-  /**
-   * Adjust the plugin's idea of its size, using aSize as its new size.
-   * (aSize must be in twips)
-   */
-  void FixupWindow(const nsSize& aSize);
+  nsresult ReinstantiatePlugin(nsPresContext* aPresContext, 
+                               nsHTMLReflowMetrics& aMetrics, 
+                               const nsHTMLReflowState& aReflowState);
 
+  nsresult HandleChild(nsPresContext* aPresContext,
+                       nsHTMLReflowMetrics& aMetrics,
+                       const nsHTMLReflowState& aReflowState,
+                       nsReflowStatus& aStatus,
+                       nsIFrame* child);
+ 
   PRBool IsFocusable(PRInt32 *aTabIndex = nsnull, PRBool aWithMouse = PR_FALSE);
 
   // check attributes and optionally CSS to see if we should display anything
@@ -162,15 +199,16 @@ protected:
 
   nsPoint GetWindowOriginInPixels(PRBool aWindowless);
 
-  /**
-   * Makes sure that mInstanceOwner is valid and without a current plugin
-   * instance. Essentially, this prepares the frame to receive a new plugin.
-   */
-  NS_HIDDEN_(nsresult) PrepareInstanceOwner();
+  void CreateDefaultFrames(nsPresContext *aPresContext,
+                           nsHTMLReflowMetrics& aMetrics,
+                           const nsHTMLReflowState& aReflowState);
 
   friend class nsPluginInstanceOwner;
 private:
   nsPluginInstanceOwner *mInstanceOwner;
+  nsCOMPtr<nsIURI>      mFullURL;
+  nsIFrame              *mFirstChild;
+  nsCOMPtr<nsIWidget>   mWidget;
   nsRect                mWindowlessRect;
 
 #ifdef DEBUG
@@ -178,6 +216,8 @@ private:
   // to the underlying problem described in bug 136927.
   PRBool mInstantiating;
 #endif
+
+  PRPackedBool          mIsBrokenPlugin;
 };
 
 

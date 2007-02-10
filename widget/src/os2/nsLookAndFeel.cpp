@@ -89,31 +89,11 @@ nsresult nsLookAndFeel::NativeGetColor(const nsColorID aID, nscolor &aColor)
         idx = SYSCLR_WINDOWTEXT;
         break;
     case eColor_TextSelectBackground:
-    case eColor_IMESelectedRawTextBackground:
-    case eColor_IMESelectedConvertedTextBackground:
         idx = SYSCLR_HILITEBACKGROUND;
         break;
     case eColor_TextSelectForeground:
-    case eColor_IMESelectedRawTextForeground:
-    case eColor_IMESelectedConvertedTextForeground:
         idx = SYSCLR_HILITEFOREGROUND;
         break;
-    case eColor_IMERawInputBackground:
-    case eColor_IMEConvertedTextBackground:
-        aColor = NS_TRANSPARENT;
-        return NS_OK;
-    case eColor_IMERawInputForeground:
-    case eColor_IMEConvertedTextForeground:
-        aColor = NS_SAME_AS_FOREGROUND_COLOR;
-        return NS_OK;
-    case eColor_IMERawInputUnderline:
-    case eColor_IMEConvertedTextUnderline:
-        aColor = NS_SAME_AS_FOREGROUND_COLOR;
-        return NS_OK;
-    case eColor_IMESelectedRawTextUnderline:
-    case eColor_IMESelectedConvertedTextUnderline:
-        aColor = NS_TRANSPARENT;
-        return NS_OK;
 
     // New CSS 2 Color definitions
     case eColor_activeborder:
@@ -223,7 +203,6 @@ nsresult nsLookAndFeel::NativeGetColor(const nsColorID aID, nscolor &aColor)
       idx = SYSCLR_MENUHILITEBGND;
       break;
     case eColor__moz_menuhovertext:
-    case eColor__moz_menubarhovertext:
       idx = SYSCLR_MENUHILITE;
       break;
     default:
@@ -350,7 +329,7 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
     default:
         aMetric = 0;
         res = NS_ERROR_FAILURE;
-  }
+    }
   return res;
 }
 
@@ -386,13 +365,10 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricFloatID aID, float & aMetri
     case eMetricFloat_ButtonHorizontalInsidePadding:
         aMetric = 0.25f;
         break;
-    case eMetricFloat_IMEUnderlineRelativeSize:
-        aMetric = 1.0f;
-        break;
     default:
         aMetric = -1.0;
         res = NS_ERROR_FAILURE;
-  }
+    }
   return res;
 }
 

@@ -40,11 +40,6 @@
 #include <gtk/gtkprivate.h>
 #include <stdio.h>
 
-#ifdef ACCESSIBILITY
-#include <atk/atk.h>
-#include "maiRedundantObjectFactory.h"
-#endif 
-
 /* init methods */
 static void moz_container_class_init          (MozContainerClass *klass);
 static void moz_container_init                (MozContainer      *container);
@@ -105,13 +100,6 @@ moz_container_get_type(void)
         moz_container_type = g_type_register_static (GTK_TYPE_CONTAINER,
                                                      "MozContainer",
                                                      &moz_container_info, 0);
-#ifdef ACCESSIBILITY
-        /* Set a factory to return accessible object with ROLE_REDUNDANT for
-         * MozContainer, so that gail won't send focus notification for it */
-        atk_registry_set_factory_type(atk_get_default_registry(),
-                                      moz_container_type,
-                                      mai_redundant_object_factory_get_type());
-#endif
     }
 
     return moz_container_type;

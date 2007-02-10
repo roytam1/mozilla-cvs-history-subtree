@@ -1,7 +1,3 @@
-; XXXThis is the Configuration file for Suite builds with MOZ_XUL_APP=0
-; set. For MOZ_XUL_APP=1 see suite/installer/unix/config.it
-; Changes should be reflected in both files.
-
 ;-------------------------------------------------------------------------
 [General]
 ;-------------------------------------------------------------------------
@@ -55,13 +51,15 @@ C2=Component2
 C3=Component3
 C4=Component5
 C5=Component6
-C6=Component10
+C6=Component7
+C7=Component10
+;C8=Component12
 
 [Setup Type1]
 ; *** LOCALIZE ME BABY ***
 Description Short=Complete
 ; *** LOCALIZE ME BABY ***
-Description Long=Navigator, Mail & News, Chatzilla, Debugger, Inspector, and Reporter
+Description Long=Navigator, Mail & News, Spellchecker, Chatzilla, Debugger, Inspector, and Reporter
 C0=Component0
 C1=Component1
 C2=Component2
@@ -73,6 +71,8 @@ C7=Component7
 C8=Component8
 C9=Component9
 C10=Component10
+C11=Component11
+;C12=Component12
 
 [Setup Type2]
 ; *** LOCALIZE ME BABY ***
@@ -84,7 +84,8 @@ C1=Component1
 C2=Component3 
 C3=Component5
 C4=Component6
-C5=Component10
+C5=Component7
+;C6=Component12
 
 [Setup Type3]
 ; *** LOCALIZE ME BABY ***
@@ -102,6 +103,8 @@ C7=Component7
 C8=Component8
 C9=Component9
 C10=Component10
+C11=Component11
+;C12=Component12
 
 
 ;-------------------------------------------------------------------------
@@ -182,6 +185,16 @@ Attributes=SELECTED|INVISIBLE
 URL0=$URLPath$
 
 [Component7]
+Description Short=US Regional Pack
+; *** LOCALIZE ME BABY ***
+Description Long=Regional contents for US users
+Archive=regus.xpi
+$InstallSize$:regus
+$InstallSizeArchive$:regus.xpi
+Attributes=SELECTED|INVISIBLE
+URL0=$URLPath$
+
+[Component8]
 Description Short=Debugger
 ; *** LOCALIZE ME BABY ***
 Description Long=for debugging JavaScript
@@ -191,7 +204,7 @@ $InstallSizeArchive$:venkman.xpi
 Attributes=SELECTED
 URL0=$URLPath$
 
-[Component8]
+[Component9]
 Description Short=Inspector
 ; *** LOCALIZE ME BABY ***
 Description Long=DOM Inspector
@@ -201,7 +214,17 @@ $InstallSizeArchive$:inspector.xpi
 Attributes=SELECTED
 URL0=$URLPath$
 
-[Component9]
+[Component10]
+Description Short=Spellchecker
+; *** LOCALIZE ME BABY ***
+Description Long=Spellchecker
+Archive=spellcheck.xpi
+$InstallSize$:spellcheck
+$InstallSizeArchive$:spellcheck.xpi
+Attributes=SELECTED
+URL0=$URLPath$
+
+[Component11]
 Description Short=Website Reporter
 ; *** LOCALIZE ME BABY ***
 Description Long=Website Reporter
@@ -211,7 +234,7 @@ $InstallSizeArchive$:reporter.xpi
 Attributes=SELECTED
 URL0=$URLPath$
 
-[Component10]
+[Component12]
 Description Short=Quality Feedback Agent
 ; *** LOCALIZE ME BABY ***
 Description Long=for reporting $AppDisplayName$ crash information

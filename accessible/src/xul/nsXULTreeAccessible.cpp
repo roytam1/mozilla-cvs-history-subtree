@@ -42,85 +42,13 @@
 #include "nsITreeSelection.h"
 #include "nsITreeColumns.h"
 #include "nsXULTreeAccessibleWrap.h"
-#include "nsIMutableArray.h"
-#include "nsComponentManagerUtils.h"
+#include "nsArray.h"
 
 #ifdef MOZ_ACCESSIBILITY_ATK
 #include "nsIAccessibleTable.h"
 #endif
 
 #define kMaxTreeColumns 100
-
-/* static */
-PRBool nsXULTreeAccessible::IsColumnHidden(nsITreeColumn *aColumn)
-{
-  nsCOMPtr<nsIDOMElement> element;
-  aColumn->GetElement(getter_AddRefs(element));
-  nsCOMPtr<nsIContent> content = do_QueryInterface(element);
-  return content->AttrValueIs(kNameSpaceID_None, nsAccessibilityAtoms::hidden,
-                              nsAccessibilityAtoms::_true, eCaseMatters);
-}
-
-/* static */
-already_AddRefed<nsITreeColumn> nsXULTreeAccessible::GetNextVisibleColumn(nsITreeColumn *aColumn)
-{
-  // Skip hidden columns.
-  nsCOMPtr<nsITreeColumn> nextColumn;
-  aColumn->GetNext(getter_AddRefs(nextColumn));
-  while (nextColumn && IsColumnHidden(nextColumn)) {
-    nsCOMPtr<nsITreeColumn> tempColumn;
-    nextColumn->GetNext(getter_AddRefs(tempColumn));
-    nextColumn.swap(tempColumn);
-  }
-
-  nsITreeColumn *retCol = nsnull;
-  nextColumn.swap(retCol);
-  return retCol;
-}
-
-/* static */
-already_AddRefed<nsITreeColumn> nsXULTreeAccessible::GetFirstVisibleColumn(nsITreeBoxObject *aTree)
-{
-  nsCOMPtr<nsITreeColumns> cols;
-  nsCOMPtr<nsITreeColumn> column;
-  aTree->GetColumns(getter_AddRefs(cols));
-  if (cols) {
-    cols->GetFirstColumn(getter_AddRefs(column));
-  }
-
-  if (column && IsColumnHidden(column)) {
-    column = GetNextVisibleColumn(column);
-  }
-  NS_ENSURE_TRUE(column, nsnull);
-
-  nsITreeColumn *retCol = nsnull;
-  column.swap(retCol);
-  return retCol;
-}
-
-/* static */
-already_AddRefed<nsITreeColumn> nsXULTreeAccessible::GetLastVisibleColumn(nsITreeBoxObject *aTree)
-{
-  nsCOMPtr<nsITreeColumns> cols;
-  nsCOMPtr<nsITreeColumn> column;
-  aTree->GetColumns(getter_AddRefs(cols));
-  if (cols) {
-    cols->GetLastColumn(getter_AddRefs(column));
-  }
-
-  // Skip hidden columns.
-  while (column && IsColumnHidden(column)) {
-    nsCOMPtr<nsITreeColumn> tempColumn;
-    column->GetPrevious(getter_AddRefs(tempColumn));
-    column.swap(tempColumn);
-  }
-  NS_ENSURE_TRUE(column, nsnull);
-
-  nsITreeColumn *retCol = nsnull;
-  column.swap(retCol);
-  return retCol;
-}
-
 // ---------- nsXULTreeAccessible ----------
 
 nsXULTreeAccessible::nsXULTreeAccessible(nsIDOMNode *aDOMNode, nsIWeakReference *aShell):
@@ -255,8 +183,7 @@ NS_IMETHODIMP nsXULTreeAccessible::GetFirstChild(nsIAccessible **aFirstChild)
     PRInt32 rowCount;
     mTreeView->GetRowCount(&rowCount);
     if (rowCount > 0) {
-      nsCOMPtr<nsITreeColumn> column = GetFirstVisibleColumn(mTree);
-      return GetCachedTreeitemAccessible(0, column, aFirstChild);
+      return GetCachedTreeitemAccessible(0, nsnull, aFirstChild);
     }
   }
 
@@ -270,8 +197,7 @@ NS_IMETHODIMP nsXULTreeAccessible::GetLastChild(nsIAccessible **aLastChild)
   PRInt32 rowCount;
   mTreeView->GetRowCount(&rowCount);
   if (rowCount > 0) {
-    nsCOMPtr<nsITreeColumn> column = GetLastVisibleColumn(mTree);
-    return GetCachedTreeitemAccessible(rowCount - 1, column, aLastChild);
+    return GetCachedTreeitemAccessible(rowCount - 1, nsnull, aLastChild);
   }
   else // if there is not any rows, use treecols as tree's last child
     nsAccessible::GetLastChild(aLastChild);
@@ -286,11 +212,10 @@ NS_IMETHODIMP nsXULTreeAccessible::GetChildCount(PRInt32 *aAccChildCount)
 
   nsAccessible::GetChildCount(aAccChildCount);
 
-  if (*aAccChildCount != eChildCountUninitialized) {
-    PRInt32 rowCount;
-    mTreeView->GetRowCount(&rowCount);
-    *aAccChildCount += rowCount;
-  }
+  PRInt32 rowCount;
+  mTreeView->GetRowCount(&rowCount);
+  *aAccChildCount += rowCount;
+
   return NS_OK;
 }
 
@@ -323,9 +248,10 @@ NS_IMETHODIMP nsXULTreeAccessible::GetSelectedChildren(nsIArray **_retval)
   mTreeView->GetSelection(getter_AddRefs(selection));
   if (!selection)
     return NS_ERROR_FAILURE;
-  nsCOMPtr<nsIMutableArray> selectedAccessibles =
-    do_CreateInstance(NS_ARRAY_CONTRACTID);
-  NS_ENSURE_STATE(selectedAccessibles);
+  nsCOMPtr<nsIMutableArray> selectedAccessibles;
+  NS_NewArray(getter_AddRefs(selectedAccessibles));
+  if (!selectedAccessibles)
+    return NS_ERROR_OUT_OF_MEMORY;
 
   PRInt32 rowIndex, rowCount;
   PRBool isSelected;
@@ -489,11 +415,8 @@ NS_IMETHODIMP nsXULTreeAccessible::GetCachedTreeitemAccessible(PRInt32 aRow, nsI
   if (!accessNode)
   {
     accessNode = new nsXULTreeitemAccessibleWrap(this, mDOMNode, mWeakShell, aRow, col);
-    nsCOMPtr<nsPIAccessNode> privateAccessNode(do_QueryInterface(accessNode));
-    if (!privateAccessNode)
+    if (! accessNode)
       return NS_ERROR_OUT_OF_MEMORY;
-    nsresult rv = privateAccessNode->Init();
-    NS_ENSURE_SUCCESS(rv, rv);
     PutCacheEntry(*mAccessNodeCache, (void*)(aRow * kMaxTreeColumns + columnIndex), accessNode);
   }
   nsCOMPtr<nsIAccessible> accessible(do_QueryInterface(accessNode));
@@ -505,7 +428,7 @@ nsresult nsXULTreeAccessible::GetColumnCount(nsITreeBoxObject* aBoxObject, PRInt
 {
   NS_ENSURE_TRUE(aBoxObject, NS_ERROR_FAILURE);
   nsCOMPtr<nsITreeColumns> treeColumns;
-  aBoxObject->GetColumns(getter_AddRefs(treeColumns));
+  nsresult rv = aBoxObject->GetColumns(getter_AddRefs(treeColumns));
   NS_ENSURE_TRUE(treeColumns, NS_ERROR_FAILURE);
   return treeColumns->GetCount(aCount);
 }
@@ -515,6 +438,7 @@ nsresult nsXULTreeAccessible::GetColumnCount(nsITreeBoxObject* aBoxObject, PRInt
 nsXULTreeitemAccessible::nsXULTreeitemAccessible(nsIAccessible *aParent, nsIDOMNode *aDOMNode, nsIWeakReference *aShell, PRInt32 aRow, nsITreeColumn* aColumn)
   : nsLeafAccessible(aDOMNode, aShell)
 {
+  Init(); // Add ourselves to cache using GetUniqueID() override
   mParent = aParent;  // xxx todo: do we need this? We already have mParent on nsAccessible
 
   nsXULTreeAccessible::GetTreeBoxObject(aDOMNode, getter_AddRefs(mTree));
@@ -547,14 +471,7 @@ NS_IMETHODIMP nsXULTreeitemAccessible::Shutdown()
 NS_IMETHODIMP nsXULTreeitemAccessible::GetName(nsAString& aName)
 {
   NS_ENSURE_TRUE(mTree && mTreeView, NS_ERROR_FAILURE);
-  mTreeView->GetCellText(mRow, mColumn, aName);
-  
-  // if still no name try cell value
-  if (aName.IsEmpty()) {
-    mTreeView->GetCellValue(mRow, mColumn, aName);
-  }
-  
-  return NS_OK;
+  return mTreeView->GetCellText(mRow, mColumn, aName);
 }
 
 NS_IMETHODIMP nsXULTreeitemAccessible::GetUniqueID(void **aUniqueID)
@@ -621,7 +538,7 @@ NS_IMETHODIMP nsXULTreeitemAccessible::GetState(PRUint32 *_retval)
   return NS_OK;
 }
 
-// "activate" (xor "cycle") action is available for all treeitems
+// "activate" action is available for all treeitems
 // "expand/collapse" action is avaible for treeitem which is container
 NS_IMETHODIMP nsXULTreeitemAccessible::GetNumActions(PRUint8 *_retval)
 {
@@ -629,9 +546,9 @@ NS_IMETHODIMP nsXULTreeitemAccessible::GetNumActions(PRUint8 *_retval)
   PRBool isContainer;
   mTreeView->IsContainer(mRow, &isContainer);
   if (isContainer)
-    *_retval = 2;
+    *_retval = eDouble_Action;
   else
-    *_retval = 1;
+    *_retval = eSingle_Action;
 
   return NS_OK;
 }
@@ -639,17 +556,10 @@ NS_IMETHODIMP nsXULTreeitemAccessible::GetNumActions(PRUint8 *_retval)
 // Return the name of our actions
 NS_IMETHODIMP nsXULTreeitemAccessible::GetActionName(PRUint8 index, nsAString& _retval)
 {
-  NS_ENSURE_TRUE(mColumn && mTree && mTreeView, NS_ERROR_FAILURE);
+  NS_ENSURE_TRUE(mTree && mTreeView, NS_ERROR_FAILURE);
 
   if (index == eAction_Click) {
-    PRBool isCycler;
-    mColumn->GetCycler(&isCycler);
-    if (isCycler) {
-      nsAccessible::GetTranslatedString(NS_LITERAL_STRING("cycle"), _retval);
-    }
-    else {
-      nsAccessible::GetTranslatedString(NS_LITERAL_STRING("activate"), _retval);
-    }
+    nsAccessible::GetTranslatedString(NS_LITERAL_STRING("activate"), _retval);
     return NS_OK;
   }
   else if (index == eAction_Expand) {
@@ -706,12 +616,16 @@ NS_IMETHODIMP nsXULTreeitemAccessible::GetNextSibling(nsIAccessible **aNextSibli
   PRInt32 row = mRow;
   nsCOMPtr<nsITreeColumn> column;
 #ifdef MOZ_ACCESSIBILITY_ATK
-  column = nsXULTreeAccessible::GetNextVisibleColumn(mColumn);
-
+  rv = mColumn->GetNext(getter_AddRefs(column));
+  NS_ENSURE_SUCCESS(rv, rv);
+  
   if (!column) {
     if (mRow < rowCount -1) {
       row++;
-      column = nsXULTreeAccessible::GetFirstVisibleColumn(mTree);
+      nsCOMPtr<nsITreeColumns> cols;
+      mTree->GetColumns(getter_AddRefs(cols));
+      if (cols)
+        cols->GetFirstColumn(getter_AddRefs(column));
     } else {
       // the next sibling of the last treeitem is null
       return NS_OK;
@@ -753,7 +667,10 @@ NS_IMETHODIMP nsXULTreeitemAccessible::GetPreviousSibling(nsIAccessible **aPrevi
   
   if (!column && mRow > 0) {
     row--;
-    column = nsXULTreeAccessible::GetLastVisibleColumn(mTree);
+    nsCOMPtr<nsITreeColumns> cols;
+    mTree->GetColumns(getter_AddRefs(cols));
+    if (cols)
+      cols->GetLastColumn(getter_AddRefs(column));
   }
 #else
   if (--row < 0) {
@@ -768,24 +685,16 @@ NS_IMETHODIMP nsXULTreeitemAccessible::GetPreviousSibling(nsIAccessible **aPrevi
 
 NS_IMETHODIMP nsXULTreeitemAccessible::DoAction(PRUint8 index)
 {
-  NS_ENSURE_TRUE(mColumn && mTree && mTreeView, NS_ERROR_FAILURE);
+  NS_ENSURE_TRUE(mTree && mTreeView, NS_ERROR_FAILURE);
 
   if (index == eAction_Click) {
-    nsresult rv = NS_OK;
-    PRBool isCycler;
-    mColumn->GetCycler(&isCycler);
-    if (isCycler) {
-      rv = mTreeView->CycleCell(mRow, mColumn);
-    } 
-    else {
-      nsCOMPtr<nsITreeSelection> selection;
-      mTreeView->GetSelection(getter_AddRefs(selection));
-      if (selection) {
-        rv = selection->Select(mRow);
-        mTree->EnsureRowIsVisible(mRow);
-      }
+    nsCOMPtr<nsITreeSelection> selection;
+    mTreeView->GetSelection(getter_AddRefs(selection));
+    if (selection) {
+      nsresult rv = selection->Select(mRow);
+      mTree->EnsureRowIsVisible(mRow);
+      return rv;
     }
-    return rv;
   }
   else if (index == eAction_Expand) {
     PRBool isContainer;
@@ -848,7 +757,7 @@ NS_IMETHODIMP nsXULTreeitemAccessible::GetBounds(PRInt32 *x, PRInt32 *y, PRInt32
   return NS_OK;
 }
 
-NS_IMETHODIMP nsXULTreeitemAccessible::SetSelected(PRBool aSelect)
+NS_IMETHODIMP nsXULTreeitemAccessible::RemoveSelection()
 {
   NS_ENSURE_TRUE(mTree && mTreeView, NS_ERROR_FAILURE);
 
@@ -857,7 +766,23 @@ NS_IMETHODIMP nsXULTreeitemAccessible::SetSelected(PRBool aSelect)
   if (selection) {
     PRBool isSelected;
     selection->IsSelected(mRow, &isSelected);
-    if (isSelected != aSelect)
+    if (isSelected)
+      selection->ToggleSelect(mRow);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsXULTreeitemAccessible::TakeSelection()
+{
+  NS_ENSURE_TRUE(mTree && mTreeView, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsITreeSelection> selection;
+  mTreeView->GetSelection(getter_AddRefs(selection));
+  if (selection) {
+    PRBool isSelected;
+    selection->IsSelected(mRow, &isSelected);
+    if (! isSelected)
       selection->ToggleSelect(mRow);
   }
 
@@ -930,7 +855,7 @@ NS_IMETHODIMP nsXULTreeColumnsAccessible::GetRole(PRUint32 *_retval)
 
 NS_IMETHODIMP nsXULTreeColumnsAccessible::GetNumActions(PRUint8 *_retval)
 {
-  *_retval = 1;
+  *_retval = eSingle_Action;
   return NS_OK;
 }
 
@@ -959,10 +884,9 @@ NS_IMETHODIMP nsXULTreeColumnsAccessible::GetNextSibling(nsIAccessible **aNextSi
         PRInt32 rowCount;
         treeView->GetRowCount(&rowCount);
         if (rowCount > 0) {
-          nsCOMPtr<nsITreeColumn> column = nsXULTreeAccessible::GetFirstVisibleColumn(tree);
           nsCOMPtr<nsIAccessibleTreeCache> treeCache(do_QueryInterface(mParent));
           NS_ENSURE_TRUE(treeCache, NS_ERROR_FAILURE);
-          ret = treeCache->GetCachedTreeitemAccessible(0, column, aNextSibling);
+          ret = treeCache->GetCachedTreeitemAccessible(0, nsnull, aNextSibling);
         }
       }
     }
@@ -1012,7 +936,7 @@ NS_IMETHODIMP nsXULTreeColumnitemAccessible::GetRole(PRUint32 *_retval)
 
 NS_IMETHODIMP nsXULTreeColumnitemAccessible::GetNumActions(PRUint8 *_retval)
 {
-  *_retval = 1;
+  *_retval = eSingle_Action;
   return NS_OK;
 }
 

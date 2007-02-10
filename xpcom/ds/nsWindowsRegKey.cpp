@@ -40,6 +40,7 @@
 #include <shlwapi.h>
 #include <stdlib.h>
 #include "nsWindowsRegKey.h"
+#include "nsNativeCharsetUtils.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
 
@@ -51,10 +52,23 @@
 
 //-----------------------------------------------------------------------------
 
+// This class simplifies conversion from unicode to native charset somewhat.
+class PromiseNativeString : public nsCAutoString
+{
+public:
+  PromiseNativeString(const nsAString &input)
+  {
+    NS_CopyUnicodeToNative(input, *this);
+  }
+};
+
+//-----------------------------------------------------------------------------
+
 // According to MSDN, the following limits apply (in characters excluding room
 // for terminating null character):
 #define MAX_KEY_NAME_LEN     255
-#define MAX_VALUE_NAME_LEN   16383
+#define MAX_VALUE_NAME_LEN_W 16383
+#define MAX_VALUE_NAME_LEN_A 255
 
 class nsWindowsRegKey : public nsIWindowsRegKey
 {
@@ -67,6 +81,8 @@ public:
     , mWatchEvent(NULL)
     , mWatchRecursive(FALSE)
   {
+    if (sUseUnicode == -1)
+      GlobalInit();
   }
 
 private:
@@ -78,7 +94,35 @@ private:
   HKEY   mKey;
   HANDLE mWatchEvent;
   BOOL   mWatchRecursive;
+
+  static int sUseUnicode;
+
+  static void GlobalInit();
 };
+
+int
+nsWindowsRegKey::sUseUnicode = -1;  // undetermined
+
+void
+nsWindowsRegKey::GlobalInit()
+{
+#ifdef DEBUG
+  // In debug builds, allow explicit use of ANSI methods for testing purposes.
+  if (getenv("WINREG_USE_ANSI")) {
+    sUseUnicode = PR_FALSE;
+    return;
+  }
+#endif
+
+  // Find out if we are running on a unicode enabled version of Windows
+  OSVERSIONINFOA osvi = {0};
+  osvi.dwOSVersionInfoSize = sizeof(osvi);
+  if (!GetVersionExA(&osvi)) {
+    sUseUnicode = PR_FALSE;
+  } else {
+    sUseUnicode = (osvi.dwPlatformId >= VER_PLATFORM_WIN32_NT);
+  }
+}
 
 NS_IMPL_ISUPPORTS1(nsWindowsRegKey, nsIWindowsRegKey)
 
@@ -116,8 +160,15 @@ nsWindowsRegKey::Open(PRUint32 rootKey, const nsAString &path, PRUint32 mode)
 {
   Close();
 
-  LONG rv = RegOpenKeyExW((HKEY) rootKey, PromiseFlatString(path).get(), 0,
-                          (REGSAM) mode, &mKey);
+  LONG rv;
+
+  if (sUseUnicode) {
+    rv = RegOpenKeyExW((HKEY) rootKey, PromiseFlatString(path).get(), 0,
+                       (REGSAM) mode, &mKey);
+  } else {
+    rv = RegOpenKeyExA((HKEY) rootKey, PromiseNativeString(path).get(), 0,
+                       (REGSAM) mode, &mKey);
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -128,9 +179,16 @@ nsWindowsRegKey::Create(PRUint32 rootKey, const nsAString &path, PRUint32 mode)
   Close();
 
   DWORD disposition;
-  LONG rv = RegCreateKeyExW((HKEY) rootKey, PromiseFlatString(path).get(), 0,
-                            NULL, REG_OPTION_NON_VOLATILE, (REGSAM) mode, NULL,
-                            &mKey, &disposition);
+  LONG rv;
+  if (sUseUnicode) {
+    rv = RegCreateKeyExW((HKEY) rootKey, PromiseFlatString(path).get(), 0,
+                         NULL, REG_OPTION_NON_VOLATILE, (REGSAM) mode, NULL,
+                         &mKey, &disposition);
+  } else {
+    rv = RegCreateKeyExA((HKEY) rootKey, PromiseNativeString(path).get(), 0,
+                         NULL, REG_OPTION_NON_VOLATILE, (REGSAM) mode, NULL,
+                         &mKey, &disposition);
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -176,8 +234,11 @@ nsWindowsRegKey::GetChildCount(PRUint32 *result)
 {
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
+  // We just use the 'A' version of this function here since there are no
+  // string parameters that we care about.
+  
   DWORD numSubKeys;
-  LONG rv = RegQueryInfoKeyW(mKey, NULL, NULL, NULL, &numSubKeys, NULL, NULL,
+  LONG rv = RegQueryInfoKeyA(mKey, NULL, NULL, NULL, &numSubKeys, NULL, NULL,
                              NULL, NULL, NULL, NULL, NULL);
   NS_ENSURE_STATE(rv == ERROR_SUCCESS);
 
@@ -191,17 +252,30 @@ nsWindowsRegKey::GetChildName(PRUint32 index, nsAString &result)
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
   FILETIME lastWritten;
+  LONG rv;
 
-  PRUnichar nameBuf[MAX_KEY_NAME_LEN + 1];
-  DWORD nameLen = sizeof(nameBuf) / sizeof(nameBuf[0]);
+  if (sUseUnicode) {
+    PRUnichar nameBuf[MAX_KEY_NAME_LEN + 1];
+    DWORD nameLen = sizeof(nameBuf) / sizeof(nameBuf[0]);
 
-  LONG rv = RegEnumKeyExW(mKey, index, nameBuf, &nameLen, NULL, NULL, NULL,
-                          &lastWritten);
-  if (rv != ERROR_SUCCESS)
-    return NS_ERROR_NOT_AVAILABLE;  // XXX what's the best error code here?
+    rv = RegEnumKeyExW(mKey, index, nameBuf, &nameLen, NULL, NULL, NULL,
+                       &lastWritten);
+    if (rv != ERROR_SUCCESS)
+      return NS_ERROR_NOT_AVAILABLE;  // XXX what's the best error code here?
 
-  result.Assign(nameBuf, nameLen);
- 
+    result.Assign(nameBuf, nameLen);
+  } else {
+    char nameBuf[MAX_KEY_NAME_LEN + 1];
+    DWORD nameLen = sizeof(nameBuf) / sizeof(nameBuf[0]);
+
+    rv = RegEnumKeyExA(mKey, index, nameBuf, &nameLen, NULL, NULL, NULL,
+                       &lastWritten);
+
+    if (rv != ERROR_SUCCESS)
+      return NS_ERROR_NOT_AVAILABLE;  // XXX what's the best error code here?
+
+    NS_CopyNativeToUnicode(nsDependentCString(nameBuf, nameLen), result);
+  }
   return NS_OK;
 }
 
@@ -214,9 +288,15 @@ nsWindowsRegKey::HasChild(const nsAString &name, PRBool *result)
   // rights.  Perhaps there is a more efficient way to do this?
 
   HKEY key;
-  LONG rv = RegOpenKeyExW(mKey, PromiseFlatString(name).get(), 0,
-                          STANDARD_RIGHTS_READ, &key);
+  LONG rv;
 
+  if (sUseUnicode) {
+    rv = RegOpenKeyExW(mKey, PromiseFlatString(name).get(), 0,
+                       STANDARD_RIGHTS_READ, &key);
+  } else {
+    rv = RegOpenKeyExA(mKey, PromiseNativeString(name).get(), 0,
+                       STANDARD_RIGHTS_READ, &key);
+  }
   if (*result = (rv == ERROR_SUCCESS && key))
     RegCloseKey(key);
 
@@ -228,8 +308,11 @@ nsWindowsRegKey::GetValueCount(PRUint32 *result)
 {
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
+  // We just use the 'A' version of this function here since there are no
+  // string parameters that we care about.
+
   DWORD numValues;
-  LONG rv = RegQueryInfoKeyW(mKey, NULL, NULL, NULL, NULL, NULL, NULL,
+  LONG rv = RegQueryInfoKeyA(mKey, NULL, NULL, NULL, NULL, NULL, NULL,
                              &numValues, NULL, NULL, NULL, NULL);
   NS_ENSURE_STATE(rv == ERROR_SUCCESS);
 
@@ -242,15 +325,27 @@ nsWindowsRegKey::GetValueName(PRUint32 index, nsAString &result)
 {
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
-  PRUnichar nameBuf[MAX_VALUE_NAME_LEN];
-  DWORD nameLen = sizeof(nameBuf) / sizeof(nameBuf[0]);
+  if (sUseUnicode) {
+    PRUnichar nameBuf[MAX_VALUE_NAME_LEN_W];
+    DWORD nameLen = sizeof(nameBuf) / sizeof(nameBuf[0]);
 
-  LONG rv = RegEnumValueW(mKey, index, nameBuf, &nameLen, NULL, NULL, NULL,
-                          NULL);
-  if (rv != ERROR_SUCCESS)
-    return NS_ERROR_NOT_AVAILABLE;  // XXX what's the best error code here?
+    LONG rv = RegEnumValueW(mKey, index, nameBuf, &nameLen, NULL, NULL, NULL,
+                            NULL);
+    if (rv != ERROR_SUCCESS)
+      return NS_ERROR_NOT_AVAILABLE;  // XXX what's the best error code here?
 
-  result.Assign(nameBuf, nameLen);
+    result.Assign(nameBuf, nameLen);
+  } else {
+    char nameBuf[MAX_VALUE_NAME_LEN_A];
+    DWORD nameLen = sizeof(nameBuf) / sizeof(nameBuf[0]);
+
+    LONG rv = RegEnumValueA(mKey, index, nameBuf, &nameLen, NULL, NULL, NULL,
+                            NULL);
+    if (rv != ERROR_SUCCESS)
+      return NS_ERROR_NOT_AVAILABLE;  // XXX what's the best error code here?
+
+    NS_CopyNativeToUnicode(nsDependentCString(nameBuf, nameLen), result);
+  }
 
   return NS_OK;
 }
@@ -260,8 +355,14 @@ nsWindowsRegKey::HasValue(const nsAString &name, PRBool *result)
 {
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
-  LONG rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0, NULL, NULL,
-                             NULL);
+  LONG rv;
+  if (sUseUnicode) {
+    rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0, NULL, NULL,
+                          NULL);
+  } else {
+    rv = RegQueryValueExA(mKey, PromiseNativeString(name).get(), 0, NULL, NULL,
+                          NULL);
+  }
 
   *result = (rv == ERROR_SUCCESS);
   return NS_OK;
@@ -272,7 +373,12 @@ nsWindowsRegKey::RemoveChild(const nsAString &name)
 {
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
-  LONG rv = RegDeleteKeyW(mKey, PromiseFlatString(name).get());
+  LONG rv;
+  if (sUseUnicode) {
+    rv = RegDeleteKeyW(mKey, PromiseFlatString(name).get());
+  } else {
+    rv = RegDeleteKeyA(mKey, PromiseNativeString(name).get());
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -282,7 +388,12 @@ nsWindowsRegKey::RemoveValue(const nsAString &name)
 {
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
-  LONG rv = RegDeleteValueW(mKey, PromiseFlatString(name).get());
+  LONG rv;
+  if (sUseUnicode) {
+    rv = RegDeleteValueW(mKey, PromiseFlatString(name).get());
+  } else {
+    rv = RegDeleteValueA(mKey, PromiseNativeString(name).get());
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -292,8 +403,14 @@ nsWindowsRegKey::GetValueType(const nsAString &name, PRUint32 *result)
 {
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
-  LONG rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0,
-                             (LPDWORD) result, NULL, NULL);
+  LONG rv;
+  if (sUseUnicode) {
+    rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0,
+                          (LPDWORD) result, NULL, NULL);
+  } else {
+    rv = RegQueryValueExA(mKey, PromiseNativeString(name).get(), 0,
+                          (LPDWORD) result, NULL, NULL);
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -304,38 +421,70 @@ nsWindowsRegKey::ReadStringValue(const nsAString &name, nsAString &result)
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
   DWORD type, size;
+  LONG rv;
+  
+  if (sUseUnicode) {
+    const nsString &flatName = PromiseFlatString(name);
 
-  const nsString &flatName = PromiseFlatString(name);
+    rv = RegQueryValueExW(mKey, flatName.get(), 0, &type, NULL, &size);
+    if (rv != ERROR_SUCCESS)
+      return NS_ERROR_FAILURE;
 
-  LONG rv = RegQueryValueExW(mKey, flatName.get(), 0, &type, NULL, &size);
-  if (rv != ERROR_SUCCESS)
-    return NS_ERROR_FAILURE;
+    // This must be a string type in order to fetch the value as a string.
+    // We're being a bit forgiving here by allowing types other than REG_SZ.
+    NS_ENSURE_STATE(type == REG_SZ ||
+                    type == REG_EXPAND_SZ ||
+                    type == REG_MULTI_SZ);
 
-  // This must be a string type in order to fetch the value as a string.
-  // We're being a bit forgiving here by allowing types other than REG_SZ.
-  NS_ENSURE_STATE(type == REG_SZ ||
-                  type == REG_EXPAND_SZ ||
-                  type == REG_MULTI_SZ);
+    // The buffer size must be a multiple of 2.
+    NS_ENSURE_STATE(size % 2 == 0);
 
-  // The buffer size must be a multiple of 2.
-  NS_ENSURE_STATE(size % 2 == 0);
+    if (size == 0) {
+      result.Truncate();
+      return NS_OK;
+    }
 
-  if (size == 0) {
-    result.Truncate();
-    return NS_OK;
+    // |size| includes room for the terminating null character
+    DWORD resultLen = size / 2 - 1;
+
+    result.SetLength(resultLen);
+    nsAString::iterator begin;
+    result.BeginWriting(begin);
+    if (begin.size_forward() != resultLen)
+      return NS_ERROR_OUT_OF_MEMORY;
+
+    rv = RegQueryValueExW(mKey, flatName.get(), 0, NULL, (LPBYTE) begin.get(),
+                          &size);
+  } else {
+    PromiseNativeString nativeName(name);
+
+    rv = RegQueryValueExA(mKey, nativeName.get(), 0, &type, NULL, &size);
+    if (rv != ERROR_SUCCESS)
+      return NS_ERROR_FAILURE;
+
+    // This must be a string type in order to fetch the value as a string.
+    // We're being a bit forgiving here by allowing types other than REG_SZ.
+    NS_ENSURE_STATE(type == REG_SZ ||
+                    type == REG_EXPAND_SZ ||
+                    type == REG_MULTI_SZ);
+
+    if (size == 0) {
+      result.Truncate();
+      return NS_OK;
+    }
+
+    nsCAutoString buf;
+    buf.SetLength(size - 1);
+    nsACString::iterator begin;
+    buf.BeginWriting(begin);
+    if (begin.size_forward() != (size - 1))
+      return NS_ERROR_OUT_OF_MEMORY;
+
+    rv = RegQueryValueExA(mKey, nativeName.get(), 0, NULL,
+                          (LPBYTE) begin.get(), &size);
+    if (rv == ERROR_SUCCESS)
+      NS_CopyNativeToUnicode(buf, result);
   }
-
-  // |size| includes room for the terminating null character
-  DWORD resultLen = size / 2 - 1;
-
-  result.SetLength(resultLen);
-  nsAString::iterator begin;
-  result.BeginWriting(begin);
-  if (begin.size_forward() != resultLen)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  rv = RegQueryValueExW(mKey, flatName.get(), 0, NULL, (LPBYTE) begin.get(),
-                        &size);
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -346,8 +495,15 @@ nsWindowsRegKey::ReadIntValue(const nsAString &name, PRUint32 *result)
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
   DWORD size = sizeof(*result);
-  LONG rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0, NULL,
-                             (LPBYTE) result, &size);
+  LONG rv;
+  
+  if (sUseUnicode) {
+    rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0, NULL,
+                          (LPBYTE) result, &size);
+  } else {
+    rv = RegQueryValueExA(mKey, PromiseNativeString(name).get(), 0, NULL,
+                          (LPBYTE) result, &size);
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -358,8 +514,15 @@ nsWindowsRegKey::ReadInt64Value(const nsAString &name, PRUint64 *result)
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
   DWORD size = sizeof(*result);
-  LONG rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0, NULL,
-                             (LPBYTE) result, &size);
+  LONG rv;
+
+  if (sUseUnicode) {
+    rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0, NULL,
+                          (LPBYTE) result, &size);
+  } else {
+    rv = RegQueryValueExA(mKey, PromiseNativeString(name).get(), 0, NULL,
+                          (LPBYTE) result, &size);
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -370,9 +533,15 @@ nsWindowsRegKey::ReadBinaryValue(const nsAString &name, nsACString &result)
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
   DWORD size;
-  LONG rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0,
-                             NULL, NULL, &size);
+  LONG rv;
 
+  if (sUseUnicode) {
+    rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0,
+                          NULL, NULL, &size);
+  } else {
+    rv = RegQueryValueExA(mKey, PromiseNativeString(name).get(), 0,
+                          NULL, NULL, &size);
+  }
   if (rv != ERROR_SUCCESS)
     return NS_ERROR_FAILURE;
 
@@ -382,8 +551,13 @@ nsWindowsRegKey::ReadBinaryValue(const nsAString &name, nsACString &result)
   if (begin.size_forward() != size)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0, NULL,
-                        (LPBYTE) begin.get(), &size);
+  if (sUseUnicode) {
+    rv = RegQueryValueExW(mKey, PromiseFlatString(name).get(), 0, NULL,
+                          (LPBYTE) begin.get(), &size);
+  } else {
+    rv = RegQueryValueExA(mKey, PromiseNativeString(name).get(), 0, NULL,
+                          (LPBYTE) begin.get(), &size);
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -393,12 +567,23 @@ nsWindowsRegKey::WriteStringValue(const nsAString &name, const nsAString &value)
 {
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
-  // Need to indicate complete size of buffer including null terminator.
-  const nsString &flatValue = PromiseFlatString(value);
+  LONG rv;
 
-  LONG rv = RegSetValueExW(mKey, PromiseFlatString(name).get(), 0, REG_SZ,
-                           (const BYTE *) flatValue.get(),
-                           (flatValue.Length() + 1) * sizeof(PRUnichar));
+  // Need to indicate complete size of buffer including null terminator.
+
+  if (sUseUnicode) {
+    const nsString &flatValue = PromiseFlatString(value);
+
+    rv = RegSetValueExW(mKey, PromiseFlatString(name).get(), 0, REG_SZ,
+                        (const BYTE *) flatValue.get(),
+                        (flatValue.Length() + 1) * sizeof(PRUnichar));
+  } else {
+    PromiseNativeString nativeValue(value);
+
+    rv = RegSetValueExA(mKey, PromiseNativeString(name).get(), 0, REG_SZ,
+                        (const BYTE *) nativeValue.get(),
+                        (nativeValue.Length() + 1) * sizeof(char));
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -408,8 +593,15 @@ nsWindowsRegKey::WriteIntValue(const nsAString &name, PRUint32 value)
 {
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
-  LONG rv = RegSetValueExW(mKey, PromiseFlatString(name).get(), 0, REG_DWORD,
-                           (const BYTE *) &value, sizeof(value));
+  LONG rv;
+  
+  if (sUseUnicode) {
+    rv = RegSetValueExW(mKey, PromiseFlatString(name).get(), 0, REG_DWORD,
+                        (const BYTE *) &value, sizeof(value));
+  } else {
+    rv = RegSetValueExA(mKey, PromiseNativeString(name).get(), 0, REG_DWORD,
+                        (const BYTE *) &value, sizeof(value));
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -419,8 +611,15 @@ nsWindowsRegKey::WriteInt64Value(const nsAString &name, PRUint64 value)
 {
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
-  LONG rv = RegSetValueExW(mKey, PromiseFlatString(name).get(), 0, REG_QWORD,
-                           (const BYTE *) &value, sizeof(value));
+  LONG rv;
+
+  if (sUseUnicode) {
+    rv = RegSetValueExW(mKey, PromiseFlatString(name).get(), 0, REG_QWORD,
+                        (const BYTE *) &value, sizeof(value));
+  } else {
+    rv = RegSetValueExA(mKey, PromiseNativeString(name).get(), 0, REG_QWORD,
+                        (const BYTE *) &value, sizeof(value));
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }
@@ -431,8 +630,15 @@ nsWindowsRegKey::WriteBinaryValue(const nsAString &name, const nsACString &value
   NS_ENSURE_TRUE(mKey, NS_ERROR_NOT_INITIALIZED);
 
   const nsCString &flatValue = PromiseFlatCString(value);
-  LONG rv = RegSetValueExW(mKey, PromiseFlatString(name).get(), 0, REG_BINARY,
-                           (const BYTE *) flatValue.get(), flatValue.Length());
+  LONG rv;
+
+  if (sUseUnicode) {
+    rv = RegSetValueExW(mKey, PromiseFlatString(name).get(), 0, REG_BINARY,
+                        (const BYTE *) flatValue.get(), flatValue.Length());
+  } else {
+    rv = RegSetValueExA(mKey, PromiseNativeString(name).get(), 0, REG_BINARY,
+                        (const BYTE *) flatValue.get(), flatValue.Length());
+  }
 
   return (rv == ERROR_SUCCESS) ? NS_OK : NS_ERROR_FAILURE;
 }

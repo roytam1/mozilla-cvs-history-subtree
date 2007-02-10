@@ -43,10 +43,10 @@
 # This perl script builds the xpi, config.ini, and js files.
 #
 
-# Make sure there are at least seven arguments
-if(@ARGV < 7)
+# Make sure there are at least six arguments
+if(@ARGV < 6)
 {
-  die "usage: $0 <default version> <URL path> <staging path> <dist install path> <app name> <app display name> <config.it location>
+  die "usage: $0 <default version> <URL path> <staging path> <dist install path> <app name> <app display name>
 
        default version   : julian based date version
                            ie: 5.0.0.99257
@@ -63,9 +63,6 @@ if(@ARGV < 7)
 
        app display name  : the display name to use
 
-       config.it location: the location of the configuration file to use as
-                           input for config.ini
-
        \n";
 }
 
@@ -75,7 +72,6 @@ $inStagePath      = $ARGV[2];
 $inDistPath       = $ARGV[3];
 $inAppName        = $ARGV[4];
 $inAppDisplayName = $ARGV[5];
-$inConfigItLoc    = $ARGV[6];
 
 # Check for existance of staging path
 if(!(-e "$inStagePath"))
@@ -98,8 +94,10 @@ MakeXpiFile("chatzilla");
 MakeXpiFile("talkback");
 MakeXpiFile("deflenus");
 MakeXpiFile("langenus");
+MakeXpiFile("regus");
 MakeXpiFile("venkman");
 MakeXpiFile("inspector");
+MakeXpiFile("spellcheck");
 MakeXpiFile("reporter");
 
 # Make the config.ini file
@@ -113,7 +111,7 @@ exit(0);
 sub MakeConfigFile
 {
   # Make config.ini file
-  if(system("perl makecfgini.pl $inConfigItLoc/config.it $inDefaultVersion $inStagePath $inDistPath $inURLPath $inAppName $inAppDisplayName") != 0)
+  if(system("perl makecfgini.pl config.it $inDefaultVersion $inStagePath $inDistPath $inURLPath $inAppName $inAppDisplayName") != 0)
   {
     exit(1);
   }

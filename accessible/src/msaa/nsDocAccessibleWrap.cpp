@@ -62,7 +62,7 @@
 //----- nsDocAccessibleWrap -----
 
 nsDocAccessibleWrap::nsDocAccessibleWrap(nsIDOMNode *aDOMNode, nsIWeakReference *aShell): 
-  nsDocAccessible(aDOMNode, aShell)
+  nsDocAccessible(aDOMNode, aShell), mWasAnchor(PR_FALSE)
 {
 }
 
@@ -165,12 +165,16 @@ STDMETHODIMP nsDocAccessibleWrap::get_accChild(
 
 NS_IMETHODIMP nsDocAccessibleWrap::Shutdown()
 {
+  if (mDocLoadTimer) {
+    mDocLoadTimer->Cancel();
+    mDocLoadTimer = nsnull;
+  }
   return nsDocAccessible::Shutdown();
 }
 
 NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent, nsIAccessible* aAccessible, void* aData)
 {
-#ifdef DEBUG_A11Y
+#ifdef DEBUG
   // Ensure that we're only firing events that we intend to
   PRUint32 supportedEvents[] = {
     nsIAccessibleEvent::EVENT_SHOW,
@@ -180,7 +184,6 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent, nsIAccessib
     nsIAccessibleEvent::EVENT_STATE_CHANGE,
     nsIAccessibleEvent::EVENT_NAME_CHANGE,
     nsIAccessibleEvent::EVENT_DESCRIPTIONCHANGE,
-    nsIAccessibleEvent::EVENT_LOCATION_CHANGE,
     nsIAccessibleEvent::EVENT_VALUE_CHANGE,
     nsIAccessibleEvent::EVENT_SELECTION,
     nsIAccessibleEvent::EVENT_SELECTION_ADD,
@@ -203,7 +206,7 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent, nsIAccessib
     }
   }
   if (!found) {
-    // NS_WARNING("Event not supported!");
+    NS_WARNING("Event not supported!");
   }
 #endif
   if (!mWeakShell) {   // Means we're not active
@@ -274,6 +277,7 @@ PRInt32 nsDocAccessibleWrap::GetChildIDFor(nsIAccessible* aAccessible)
 {
   // A child ID of the window is required, when we use NotifyWinEvent, so that the 3rd party application
   // can call back and get the IAccessible the event occured on.
+  // We use the unique ID exposed through nsIContent::GetContentID()
 
   void *uniqueID;
   nsCOMPtr<nsIAccessNode> accessNode(do_QueryInterface(aAccessible));
@@ -332,12 +336,36 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireAnchorJumpEvent()
   // the can only relate events back to their internal model if it's a leaf.
   // There is usually an accessible for the focus node, but if it's an empty text node
   // we have to move forward in the document to get one
-  nsDocAccessible::FireAnchorJumpEvent();
-  if (!mIsAnchorJumped)
+  if (!mIsContentLoaded || !mDocument) {
     return NS_OK;
+  }
+  nsCOMPtr<nsISupports> container = mDocument->GetContainer();
+  nsCOMPtr<nsIWebNavigation> webNav(do_GetInterface(container));
+  nsCAutoString theURL;
+  if (webNav) {
+    nsCOMPtr<nsIURI> pURI;
+    webNav->GetCurrentURI(getter_AddRefs(pURI));
+    if (pURI) {
+      pURI->GetSpec(theURL);
+    }
+  }
+  const char kHash = '#';
+  PRBool hasAnchor = PR_FALSE;
+  PRInt32 hasPosition = theURL.FindChar(kHash);
+  if (hasPosition > 0 && hasPosition < (PRInt32)theURL.Length() - 1) {
+    hasAnchor = PR_TRUE;
+  }
+
+  // mWasAnchor is set when the previous URL included a named anchor.
+  // This way we still know to fire the EVENT_SCROLLINGSTART event when we
+  // move from a named anchor back to the top.
+  if (!mWasAnchor && !hasAnchor) {
+    return NS_OK;
+  }
+  mWasAnchor = hasAnchor;
 
   nsCOMPtr<nsIDOMNode> focusNode;
-  if (mIsAnchor) {
+  if (hasAnchor) {
     nsCOMPtr<nsISelectionController> selCon(do_QueryReferent(mWeakShell));
     if (!selCon) {
       return NS_OK;
@@ -359,6 +387,95 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireAnchorJumpEvent()
     privateAccessible->FireToolkitEvent(nsIAccessibleEvent::EVENT_SCROLLINGSTART,
                                         accessible, nsnull);
   }
+  return NS_OK;
+}
+
+void nsDocAccessibleWrap::DocLoadCallback(nsITimer *aTimer, void *aClosure)
+{
+  // Doc has finished loading, fire "load finished" event
+  // By using short timer we can wait for MS Windows to make the window visible,
+  // which it does asynchronously. This avoids confusing the screen reader with a
+  // hidden window. Waiting also allows us to see of the document has focus,
+  // which is important because we only fire doc loaded events for focused documents.
+
+  nsDocAccessibleWrap *docAcc =
+    NS_REINTERPRET_CAST(nsDocAccessibleWrap*, aClosure);
+  if (!docAcc) {
+    return;
+  }
+
+  // Fire doc finished event
+  nsCOMPtr<nsIDOMNode> docDomNode;
+  docAcc->GetDOMNode(getter_AddRefs(docDomNode));
+  nsCOMPtr<nsIDocument> doc(do_QueryInterface(docDomNode));
+  if (doc) {
+    nsCOMPtr<nsISupports> container = doc->GetContainer();
+    nsCOMPtr<nsIDocShellTreeItem> docShellTreeItem = do_QueryInterface(container);
+    if (!docShellTreeItem) {
+      return;
+    }
+    nsCOMPtr<nsIDocShellTreeItem> sameTypeRoot;
+    docShellTreeItem->GetSameTypeRootTreeItem(getter_AddRefs(sameTypeRoot));
+    if (sameTypeRoot != docShellTreeItem) {
+      // A frame or iframe has finished loading new content
+      docAcc->InvalidateCacheSubtree(nsnull, nsIAccessibleEvent::EVENT_REORDER);
+      return;
+    }
+
+    // Fire STATE_CHANGE event for doc load finish if focus is in same doc tree
+    if (gLastFocusedNode) {
+      nsCOMPtr<nsIDocShellTreeItem> focusedTreeItem =
+        GetDocShellTreeItemFor(gLastFocusedNode);
+      if (focusedTreeItem) {
+        nsCOMPtr<nsIDocShellTreeItem> sameTypeRootOfFocus;
+        focusedTreeItem->GetSameTypeRootTreeItem(getter_AddRefs(sameTypeRootOfFocus));
+        if (sameTypeRoot == sameTypeRootOfFocus) {
+          docAcc->FireToolkitEvent(nsIAccessibleEvent::EVENT_STATE_CHANGE,
+                                  docAcc, nsnull);
+          docAcc->FireAnchorJumpEvent();
+        }
+      }
+    }
+  }
+}
+
+NS_IMETHODIMP nsDocAccessibleWrap::FireDocLoadingEvent(PRBool aIsFinished)
+{
+  if (!mDocument || !mWeakShell)
+    return NS_OK;  // Document has been shut down
+
+  if (mIsContentLoaded == aIsFinished) {
+    return NS_OK;  // Already fired the event
+  }
+
+  nsDocAccessible::FireDocLoadingEvent(aIsFinished);
+
+  if (aIsFinished) {
+    // Use short timer before firing state change event for finished doc,
+    // because the window is made visible asynchronously by Microsoft Windows
+    if (!mDocLoadTimer) {
+      mDocLoadTimer = do_CreateInstance("@mozilla.org/timer;1");
+    }
+    if (mDocLoadTimer) {
+      mDocLoadTimer->InitWithFuncCallback(DocLoadCallback, this, 0,
+                                          nsITimer::TYPE_ONE_SHOT);
+    }
+  }
+  else {
+    nsCOMPtr<nsIDocShellTreeItem> treeItem = GetDocShellTreeItemFor(mDOMNode);
+    if (!treeItem) {
+      return NS_OK;
+    }
+
+    nsCOMPtr<nsIDocShellTreeItem> sameTypeRoot;
+    treeItem->GetSameTypeRootTreeItem(getter_AddRefs(sameTypeRoot));
+    if (sameTypeRoot != treeItem) {
+      return NS_OK; // We only fire MSAA doc loading events for root content frame
+    }
+
+    FireToolkitEvent(nsIAccessibleEvent::EVENT_STATE_CHANGE, this, nsnull);
+  }
+
   return NS_OK;
 }
 
@@ -409,9 +526,6 @@ STDMETHODIMP nsDocAccessibleWrap::get_docType(/* [out] */ BSTR __RPC_FAR *aDocTy
 STDMETHODIMP nsDocAccessibleWrap::get_nameSpaceURIForID(/* [in] */  short aNameSpaceID,
   /* [out] */ BSTR __RPC_FAR *aNameSpaceURI)
 {
-  if (aNameSpaceID < 0) {
-    return E_FAIL;  // -1 is kNameSpaceID_Unknown
-  }
   *aNameSpaceURI = NULL;
   nsAutoString nameSpaceURI;
   if (NS_SUCCEEDED(GetNameSpaceURIForID(aNameSpaceID, nameSpaceURI))) {

@@ -40,7 +40,7 @@
 #include "nsPKIParamBlock.h"
 #include "nsIServiceManager.h"
 #include "nsIDialogParamBlock.h"
-#include "nsIMutableArray.h"
+#include "nsIArray.h"
 
 NS_IMPL_THREADSAFE_ISUPPORTS2(nsPKIParamBlock, nsIPKIParamBlock,
                                                nsIDialogParamBlock)

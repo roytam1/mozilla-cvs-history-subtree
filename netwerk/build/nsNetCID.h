@@ -61,6 +61,20 @@
 #define NS_NETUTIL_CONTRACTID \
     "@mozilla.org/network/util;1"
 
+// service implementing nsIEventTarget.  events dispatched to this event
+// target will be executed on one of necko's background i/o threads.
+#define NS_IOTHREADPOOL_CLASSNAME \
+    "nsIOThreadPool"
+#define NS_IOTHREADPOOL_CONTRACTID \
+    "@mozilla.org/network/io-thread-pool;1"
+#define NS_IOTHREADPOOL_CID                          \
+{ /* f1d62b49-5051-48e2-9155-c3509428461e */         \
+    0xf1d62b49,                                      \
+    0x5051,                                          \
+    0x48e2,                                          \
+    {0x91, 0x55, 0xc3, 0x50, 0x94, 0x28, 0x46, 0x1e} \
+}
+
 // service implementing nsIProtocolProxyService and nsPIProtocolProxyService.
 #define NS_PROTOCOLPROXYSERVICE_CLASSNAME \
     "nsProtocolProxyService"
@@ -111,16 +125,6 @@
      0x2f7b,                                          \
      0x11d3,                                          \
      {0x8c, 0xd0, 0x00, 0x60, 0xb0, 0xfc, 0x14, 0xa3} \
-}
-
-// component inheriting from the simple URI component and also
-// implementing nsINestedURI.
-#define NS_SIMPLENESTEDURI_CID                           \
-{ /* 56388dad-287b-4240-a785-85c394012503 */             \
-     0x56388dad,                                         \
-     0x287b,                                             \
-     0x4240,                                             \
-     { 0xa7, 0x85, 0x85, 0xc3, 0x94, 0x01, 0x25, 0x03 }  \
 }
 
 // component implementing nsIStandardURL, nsIURI, nsIURL, nsISerializable,
@@ -203,6 +207,19 @@
     0x4701,                                          \
     0x4ba1,                                          \
     {0xb1, 0xd6, 0x53, 0x88, 0xe0, 0x41, 0xfb, 0x67} \
+}
+
+// DEPRECATED component implementing nsIAsyncStreamListener.
+#define NS_ASYNCSTREAMLISTENER_CLASSNAME \
+    "nsAsyncStreamListener"
+#define NS_ASYNCSTREAMLISTENER_CONTRACTID \
+    "@mozilla.org/network/async-stream-listener;1"
+#define NS_ASYNCSTREAMLISTENER_CID                   \
+{ /* 60047bb2-91c0-11d3-8cd9-0060b0fc14a3 */         \
+    0x60047bb2,                                      \
+    0x91c0,                                          \
+    0x11d3,                                          \
+    {0x8c, 0xd9, 0x00, 0x60, 0xb0, 0xfc, 0x14, 0xa3} \
 }
 
 // component implementing nsIStreamListenerTee.
@@ -599,30 +616,6 @@
 }
 
 /******************************************************************************
- * netwerk/protocol/about/ classes
- */
-
-#define NS_ABOUTPROTOCOLHANDLER_CLASSNAME \
-    "About Protocol Handler"
-#define NS_ABOUTPROTOCOLHANDLER_CID                  \
-{ /* 9e3b6c90-2f75-11d3-8cd0-0060b0fc14a3 */         \
-    0x9e3b6c90,                                      \
-    0x2f75,                                          \
-    0x11d3,                                          \
-    {0x8c, 0xd0, 0x00, 0x60, 0xb0, 0xfc, 0x14, 0xa3} \
-}
-
-#define NS_SAFEABOUTPROTOCOLHANDLER_CLASSNAME \
-    "Safe About Protocol Handler"
-#define NS_SAFEABOUTPROTOCOLHANDLER_CID              \
-{ /* 1423e739-782c-4081-b5d8-fe6fba68c0ef */         \
-    0x1423e739,                                      \
-    0x782c,                                          \
-    0x4081,                                          \
-    {0xb5, 0xd8, 0xfe, 0x6f, 0xba, 0x68, 0xc0, 0xef} \
-}
-
-/******************************************************************************
  * netwerk/dns/ classes
  */
 
@@ -650,19 +643,6 @@
     0x456b,                                          \
     {0x8c, 0x31, 0x28, 0x65, 0xfb, 0xb6, 0x8c, 0x91} \
 }
-
-#define NS_EFFECTIVETLDSERVICE_CLASSNAME \
-    "nsEffectiveTLDService"
-#define NS_EFFECTIVETLDSERVICE_CONTRACTID \
-    "@mozilla.org/network/effective-tld-service;1"
-#define NS_EFFECTIVETLDSERVICE_CID \
-{ /* cb9abbae-66b6-4609-8594-5c4ff300888e */         \
-    0xcb9abbae,                                      \
-    0x66b6,                                          \
-    0x4609,                                          \
-    {0x85, 0x94, 0x5c, 0x4f, 0xf3, 0x00, 0x88, 0x8e} \
-}
-
 
 /******************************************************************************
  * netwerk/mime classes
@@ -753,13 +733,19 @@
     { 0xa6, 0x18, 0x00, 0x10, 0xa4, 0x01, 0xeb, 0x10 } \
 }
 
+/**
+ * General-purpose content sniffer component. Use with CreateInstance.
+ *
+ * Implements nsIContentSniffer_MOZILLA_1_8_BRANCH
+ */
+#define NS_GENERIC_CONTENT_SNIFFER \
+    "@mozilla.org/network/content-sniffer;1"
+
 /******************************************************************************
  * netwerk/streamconv classes
  */
 
 // service implementing nsIStreamConverterService
-#define NS_STREAMCONVERTERSERVICE_CONTRACTID \
-    "@mozilla.org/streamConverters;1"
 #define NS_STREAMCONVERTERSERVICE_CID                \
 { /* 892FFEB0-3F80-11d3-A16C-0050041CAF44 */         \
     0x892ffeb0,                                      \
@@ -768,63 +754,31 @@
     {0xa1, 0x6c, 0x00, 0x50, 0x04, 0x1c, 0xaf, 0x44} \
 }
 
-/**
- * General-purpose content sniffer component. Use with CreateInstance.
- *
- * Implements nsIContentSniffer
- */
-#define NS_GENERIC_CONTENT_SNIFFER \
-    "@mozilla.org/network/content-sniffer;1"
-
 /******************************************************************************
  * netwerk/system classes
  */
 
 // service implementing nsINetworkLinkService
-#define NS_NETWORK_LINK_SERVICE_CLASSNAME "Network Link Status"
-#define NS_NETWORK_LINK_SERVICE_CID    \
-  { 0x75a500a2,                                        \
-    0x0030,                                            \
-    0x40f7,                                            \
-    { 0x86, 0xf8, 0x63, 0xf2, 0x25, 0xb9, 0x40, 0xae } \
-  }
-  
+#define NS_NETWORK_LINK_SERVICE_CLASSNAME \
+    "Network Link Status"
+#define NS_NETWORK_LINK_SERVICE_CID                  \
+{ /* 75a500a2-0030-40f7-86f8-63f225b940ae */         \
+    0x75a500a2,                                      \
+    0x0030,                                          \
+    0x40f7,                                          \
+    {0x86, 0xf8, 0x63, 0xf2, 0x25, 0xb9, 0x40, 0xae} \
+}
+
 /******************************************************************************
  * Contracts that can be implemented by necko users.
  */
 
 /**
- * This contract ID will be gotten as a service and gets the opportunity to look
- * at and veto all redirects that are processed by necko.
- *
- * Must implement nsIChannelEventSink
- */
-#define NS_GLOBAL_CHANNELEVENTSINK_CONTRACTID \
-  "@mozilla.org/netwerk/global-channel-event-sink;1"
-
-/**
  * This contract ID will be gotten as a service implementing nsINetworkLinkService
  * and monitored by IOService for automatic online/offline management.
- *
- * Must implement nsINetworkLinkService
  */
 #define NS_NETWORK_LINK_SERVICE_CONTRACTID \
-  "@mozilla.org/network/network-link-service;1"
-
-/**
- * This contract ID is used when Necko needs to wrap an nsIAuthPrompt as
- * nsIAuthPrompt2. Implementing it is required for backwards compatibility
- * with Versions before 1.9.
- *
- * Must implement nsIAuthPromptAdapterFactory
- */
-#define NS_AUTHPROMPT_ADAPTER_FACTORY_CONTRACTID \
-  "@mozilla.org/network/authprompt-adapter-factory;1"
-
-/**
- * Must implement nsICryptoHash.
- */
-#define NS_CRYPTO_HASH_CONTRACTID "@mozilla.org/security/hash;1"
+    "@mozilla.org/network/network-link-service;1"
 
 /******************************************************************************
  * Categories
@@ -839,7 +793,8 @@
 
 /**
  * Services in this category will get told about each load that happens and get
- * the opportunity to override the detected MIME type via nsIContentSniffer.
+ * the opportunity to override the detected MIME type via
+ * nsIContentSniffer_MOZILLA_1_8_BRANCH.
  * Services should not set the MIME type on the channel directly, but return the
  * new type. If getMIMETypeFromContent throws an exception, the type will remain
  * unchanged.

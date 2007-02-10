@@ -56,9 +56,8 @@ textbox[type="autocomplete"] {
 
 .autocomplete-history-dropmarker {
   margin: 2px;
-  padding: 0;
-  border: none !important;
-  background-color: transparent !important;
+  -moz-box-align: center;
+  list-style-image: url("chrome://global/skin/arrow/arrow-dn.gif");
 }
 
 .autocomplete-history-dropmarker[open="true"] {

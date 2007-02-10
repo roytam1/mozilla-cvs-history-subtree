@@ -993,7 +993,7 @@ sub expand_test_list_entry {
         }
 
     } else {
-        die ("Don't know what to do with list entry '$entry'.\n");
+        die ("Dont know what to do with list entry '$entry'.\n");
     }
 
     return @retval;

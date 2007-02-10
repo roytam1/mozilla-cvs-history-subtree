@@ -135,9 +135,6 @@
  *    to all implementations - the compiler will _not_ warn but it will crash.
  *  - This has no effect for inline functions or functions which take a
  *    variable number of arguments.
- *  - __fastcall on windows should not be applied to class
- *    constructors/destructors - use the NS_CONSTRUCTOR_FASTCALL macro for
- *    constructors/destructors.
  *
  * Examples: int NS_FASTCALL func1(char *foo);
  *           NS_HIDDEN_(int) NS_FASTCALL func2(char *foo);
@@ -145,13 +142,8 @@
 
 #if defined(__i386__) && defined(__GNUC__) && (__GNUC__ >= 3) && !defined(XP_OS2)
 #define NS_FASTCALL __attribute__ ((regparm (3), stdcall))
-#define NS_CONSTRUCTOR_FASTCALL __attribute__ ((regparm (3), stdcall))
-#elif defined(XP_WIN)
-#define NS_FASTCALL __fastcall
-#define NS_CONSTRUCTOR_FASTCALL
 #else
 #define NS_FASTCALL
-#define NS_CONSTRUCTOR_FASTCALL
 #endif
 
 /*
@@ -167,15 +159,14 @@
 #ifdef NS_WIN32
 
 #define NS_IMPORT __declspec(dllimport)
-#define NS_IMPORT_(type) __declspec(dllimport) type __stdcall
+#define NS_IMPORT_(type) type __declspec(dllimport) __stdcall
 #define NS_EXPORT __declspec(dllexport)
-#define NS_EXPORT_(type) __declspec(dllexport) type __stdcall
+#define NS_EXPORT_(type) type __declspec(dllexport) __stdcall
 #define NS_IMETHOD_(type) virtual type __stdcall
 #define NS_IMETHODIMP_(type) type __stdcall
 #define NS_METHOD_(type) type __stdcall
 #define NS_CALLBACK_(_type, _name) _type (__stdcall * _name)
 #define NS_STDCALL __stdcall
-#define NS_FROZENCALL __cdecl
 
 /*
   These are needed to mark static members in exported classes, due to
@@ -184,21 +175,6 @@
 
 #define NS_EXPORT_STATIC_MEMBER_(type) type
 #define NS_IMPORT_STATIC_MEMBER_(type) type
-
-#elif defined(XP_OS2) && defined(__declspec)
-
-#define NS_IMPORT __declspec(dllimport)
-#define NS_IMPORT_(type) type __declspec(dllimport)
-#define NS_EXPORT __declspec(dllexport)
-#define NS_EXPORT_(type) type __declspec(dllexport)
-#define NS_IMETHOD_(type) virtual type
-#define NS_IMETHODIMP_(type) type
-#define NS_METHOD_(type) type
-#define NS_CALLBACK_(_type, _name) _type (* _name)
-#define NS_STDCALL
-#define NS_FROZENCALL
-#define NS_EXPORT_STATIC_MEMBER_(type) NS_EXTERNAL_VIS_(type)
-#define NS_IMPORT_STATIC_MEMBER_(type) NS_EXTERNAL_VIS_(type)
 
 #else
 
@@ -211,7 +187,6 @@
 #define NS_METHOD_(type) type
 #define NS_CALLBACK_(_type, _name) _type (* _name)
 #define NS_STDCALL
-#define NS_FROZENCALL
 #define NS_EXPORT_STATIC_MEMBER_(type) NS_EXTERNAL_VIS_(type)
 #define NS_IMPORT_STATIC_MEMBER_(type) NS_EXTERNAL_VIS_(type)
 
@@ -256,29 +231,11 @@
  * Import/Export macros for XPCOM APIs
  */
 
-#ifdef __cplusplus
-#define NS_EXTERN_C extern "C"
-#else
-#define NS_EXTERN_C
-#endif
-
-#define EXPORT_XPCOM_API(type) NS_EXTERN_C NS_EXPORT type NS_FROZENCALL
-#define IMPORT_XPCOM_API(type) NS_EXTERN_C NS_IMPORT type NS_FROZENCALL
-#define GLUE_XPCOM_API(type) NS_EXTERN_C NS_HIDDEN_(type) NS_FROZENCALL
-
 #ifdef _IMPL_NS_COM
-#define XPCOM_API(type) EXPORT_XPCOM_API(type)
-#elif defined(XPCOM_GLUE)
-#define XPCOM_API(type) GLUE_XPCOM_API(type)
-#else
-#define XPCOM_API(type) IMPORT_XPCOM_API(type)
-#endif
-
-#ifdef MOZ_ENABLE_LIBXUL
-#define NS_COM
-#elif defined(_IMPL_NS_COM)
 #define NS_COM NS_EXPORT
-#elif defined(XPCOM_GLUE)
+#elif  defined(_IMPL_NS_COM_OFF)
+#define NS_COM
+#elif  defined(XPCOM_GLUE)
 #define NS_COM
 #else
 #define NS_COM NS_IMPORT
@@ -296,11 +253,7 @@
 #  define nsAString nsAString_internal
 #  define nsACString nsACString_internal
 #else
-#  ifdef HAVE_VISIBILITY_ATTRIBUTE
-#    define NS_COM_GLUE NS_VISIBILITY_HIDDEN
-#  else
-#    define NS_COM_GLUE
-#  endif
+#  define NS_COM_GLUE
 #endif
 
 
@@ -325,20 +278,6 @@
  * Generic XPCOM result data type
  */
 typedef PRUint32 nsresult;
-
-/**
- * Reference count values
- *
- * This is the return type for AddRef() and Release() in nsISupports.
- * IUnknown of COM returns an unsigned long from equivalent functions.
- * The following ifdef exists to maintain binary compatibility with
- * IUnknown.
- */
-#if defined(XP_WIN) && PR_BYTES_PER_LONG == 4
-typedef unsigned long nsrefcnt;
-#else
-typedef PRUint32 nsrefcnt;
-#endif
 
 /**
  * The preferred symbol for null.
@@ -423,6 +362,14 @@ typedef PRUint32 nsrefcnt;
   #define NS_SPECIALIZE_TEMPLATE
 #endif
 
+/* unix and beos now determine this automatically */
+#if ! defined XP_UNIX && ! defined XP_BEOS && !defined(XP_OS2)
+#ifndef HAVE_CPP_NEW_CASTS
+#define HAVE_CPP_NEW_CASTS 1 /* we'll be optimistic. */
+#endif
+#endif
+
+#if defined(HAVE_CPP_NEW_CASTS)
 #define NS_STATIC_CAST(__type, __ptr)      static_cast< __type >(__ptr)
 #define NS_CONST_CAST(__type, __ptr)       const_cast< __type >(__ptr)
 
@@ -430,6 +377,45 @@ typedef PRUint32 nsrefcnt;
 #define NS_REINTERPRET_NONPOINTER_CAST(__type, __obj) reinterpret_cast< __type >(__obj)
 #define NS_REINTERPRET_CAST(__type, __expr)           reinterpret_cast< __type >(__expr)
 
+#else
+#define NS_STATIC_CAST(__type, __ptr)      ((__type)(__ptr))
+#define NS_CONST_CAST(__type, __ptr)       ((__type)(__ptr))
+
+#define NS_REINTERPRET_POINTER_CAST(__type, __ptr)     ((__type)((void*)(__ptr)))
+#define NS_REINTERPRET_NONPOINTER_CAST(__type, __obj)  ((__type)(__obj))
+
+  /* Note: the following is only appropriate for pointers. */
+#define NS_REINTERPRET_CAST(__type, __expr)            NS_REINTERPRET_POINTER_CAST(__type, __expr)
+  /*
+    Why cast to a |void*| first?  Well, when old-style casting from
+    a pointer to a base to a pointer to a derived class, the cast will be
+    ambiguous if the source pointer type appears multiple times in the
+    destination, e.g.,
+    
+      class Base {};
+      class Derived : public Base, public Base {};
+      
+      void foo( Base* b )
+        {
+          ((Derived*)b)->some_derived_member ... // Error: Ambiguous, expand from which |Base|?
+        }
+
+    an old-style cast (like |static_cast|) will change the pointer, but
+    here, doesn't know how.  The cast to |void*| prevents it from thinking
+    it needs to expand the original pointer.
+
+    The cost is, |NS_REINTERPRET_CAST| is no longer appropriate for non-pointer
+    conversions.  Also, mis-applying |NS_REINTERPRET_CAST| to cast |this| to something
+    will still expand the pointer to the outer object in standards complying compilers.
+  */
+
+  /*
+    No sense in making an NS_DYNAMIC_CAST() macro: you can't duplicate
+    the semantics. So if you want to dynamic_cast, then just use it
+    "straight", no macro.
+  */
+#endif
+ 
 /* 
  * Use these macros to do 64bit safe pointer conversions.
  */
@@ -456,17 +442,14 @@ typedef PRUint32 nsrefcnt;
  *    ... non-expected code path ...
  *  }
  *
- * These macros are guaranteed to always return 0 or 1.
- * The NS_FAILED/NS_SUCCEEDED macros depends on this.
- * @return 0 or 1
  */
 
 #if defined(__GNUC__) && (__GNUC__ > 2)
-#define NS_LIKELY(x)    (__builtin_expect(!!(x), 1))
-#define NS_UNLIKELY(x)  (__builtin_expect(!!(x), 0))
+#define NS_LIKELY(x)    (__builtin_expect((x), 1))
+#define NS_UNLIKELY(x)  (__builtin_expect((x), 0))
 #else
-#define NS_LIKELY(x)    (!!(x))
-#define NS_UNLIKELY(x)  (!!(x))
+#define NS_LIKELY(x)    (x)
+#define NS_UNLIKELY(x)  (x)
 #endif
 
 #endif /* nscore_h___ */

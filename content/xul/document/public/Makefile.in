@@ -59,6 +59,7 @@ EXPORTS		= \
 		nsIXULContentSink.h \
 		nsIXULDocument.h \
 		nsIXULPrototypeCache.h \
+		nsIXULPrototypeDocument.h \
 		$(NULL)
 endif
 

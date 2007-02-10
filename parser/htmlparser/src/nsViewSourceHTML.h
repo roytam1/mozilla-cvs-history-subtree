@@ -52,6 +52,11 @@
 #include "nsDTDUtils.h"
 #include "nsParserNode.h"
 
+#define NS_VIEWSOURCE_HTML_IID      \
+  {0xb6003010, 0x7932, 0x11d2, \
+  {0x80, 0x1b, 0x0, 0x60, 0x8, 0xbf, 0xc4, 0x89 }}
+
+
 class nsIParserNode;
 class nsParser;
 class nsITokenizer;
@@ -83,6 +88,7 @@ private:
                       PRBool aTagInError);
     
     nsresult WriteAttributes(PRInt32 attrCount, PRBool aOwnerInError);
+    nsresult GenerateSummary();
     void StartNewPreBlock(void);
     // Utility method for adding attributes to the nodes we generate
     void AddAttrToNode(nsCParserStartNode& aNode,
@@ -97,6 +103,19 @@ protected:
     PRInt32             mLineNumber;
     nsITokenizer*       mTokenizer; // weak
 
+    PRInt32             mStartTag;
+    PRInt32             mEndTag;
+    PRInt32             mCommentTag;
+    PRInt32             mCDATATag;
+    PRInt32             mMarkupDeclaration;
+    PRInt32             mDocTypeTag;
+    PRInt32             mPITag;
+    PRInt32             mEntityTag;
+    PRInt32             mText;
+    PRInt32             mKey;
+    PRInt32             mValue;
+    PRInt32             mPopupTag;
+    PRInt32             mSummaryTag;
     PRPackedBool        mSyntaxHighlight;
     PRPackedBool        mWrapLongLines;
     PRPackedBool        mHasOpenRoot;
@@ -106,10 +125,19 @@ protected:
     eParserCommands     mParserCommand;   //tells us to viewcontent/viewsource/viewerrors...
     eParserDocType      mDocType;
     nsCString           mMimeType;  
+    PRInt32             mErrorCount;
+    PRInt32             mTagCount;
 
     nsString            mFilename;
+    nsString            mTags;
+    nsString            mErrors;
 
     PRUint32            mTokenCount;
 };
 
+extern nsresult NS_NewViewSourceHTML(nsIDTD** aInstancePtrResult);
+
 #endif 
+
+
+

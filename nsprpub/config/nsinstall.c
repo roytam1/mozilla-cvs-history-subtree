@@ -98,7 +98,7 @@ my_getcwd (char *buf, size_t size)
 }
 #endif /* NEXTSTEP */
 
-#if defined(LINUX) || defined(__GNU__) || defined(__GLIBC__) 
+#ifdef LINUX
 #include <getopt.h>
 #endif
 

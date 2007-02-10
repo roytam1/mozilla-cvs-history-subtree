@@ -53,15 +53,14 @@
 #include "nsToolkitBase.h"
 #include "nsWidgetAtoms.h"
 
+#include "nsIEventQueue.h"
+#include "nsIEventQueueService.h"
 #include "nsIObserverService.h"
 #include "nsIServiceManager.h"
-#include "nsIPrefBranch2.h"
-#include "nsIPrefBranch.h"
-#include "nsIPrefService.h"
-#include "nsIObserver.h"
+#include "nsIPref.h"
 
 
-static io_connect_t gRootPort = MACH_PORT_NULL;
+static io_connect_t gRootPort = nsnull;
 
 static const char kQuartzRenderingPref[] = "browser.quartz.enable";
 static const char kAllFontSizesPref[] = "browser.quartz.enable.all_font_sizes";
@@ -87,7 +86,7 @@ nsToolkitBase::~nsToolkitBase()
   PR_SetThreadPrivate(gToolkitTLSIndex, nsnull);
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsToolkitBase, nsIToolkit, nsIObserver);
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsToolkitBase, nsIToolkit);
 
 NS_IMETHODIMP
 nsToolkitBase::Init(PRThread * aThread)
@@ -102,21 +101,21 @@ nsToolkitBase::Init(PRThread * aThread)
   RegisterForSleepWakeNotifcations();
   SetupQuartzRendering();
 
-  nsCOMPtr<nsIPrefBranch2> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
+  nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID);
   if (prefs) {
-    prefs->AddObserver(kQuartzRenderingPref, this, PR_FALSE);  
-    prefs->AddObserver(kAllFontSizesPref, this, PR_FALSE);
+    prefs->RegisterCallback(kQuartzRenderingPref, QuartzChangedCallback, nsnull);  
+    prefs->RegisterCallback(kAllFontSizesPref, QuartzChangedCallback, nsnull);
   }
   return NS_OK;
 }
 
+
+//
+// QuartzChangedCallback
 //
 // The pref changed, reset the app to use quartz rendering as dictated by the pref
 //
-NS_IMETHODIMP
-nsToolkitBase::Observe(nsISupports*     aSubject,
-                       const char*      aTopic,
-                       const PRUnichar* aData)
+int nsToolkitBase::QuartzChangedCallback(const char* pref, void* data)
 {
   SetupQuartzRendering();
   return NS_OK;
@@ -146,7 +145,7 @@ void nsToolkitBase::SetupQuartzRendering()
   // the pref isn't found, assume we want it on. That way, we have to explicitly put
   // in a pref to disable it, rather than force everyone who wants it to carry around
   // an extra pref.
-  nsCOMPtr<nsIPrefBranch> prefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
+  nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID);
   if (!prefs)
     return;
 
@@ -215,7 +214,7 @@ nsToolkitBase::RegisterForSleepWakeNotifcations()
   NS_ASSERTION(!mSleepWakeNotificationRLS, "Already registered for sleep/wake");
 
   gRootPort = ::IORegisterForSystemPower(0, &notifyPortRef, ToolkitSleepWakeCallback, &mPowerNotifier);
-  if (gRootPort == MACH_PORT_NULL)
+  if (gRootPort == NULL)
   {
     NS_ASSERTION(0, "IORegisterForSystemPower failed");
     return NS_ERROR_FAILURE;

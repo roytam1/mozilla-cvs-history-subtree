@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * A struct that represents the value (type and actual data) of an
- * attribute.
- */
-
 #ifndef nsAttrValue_h___
 #define nsAttrValue_h___
 
@@ -48,7 +43,7 @@
 #include "nsString.h"
 #include "nsStringBuffer.h"
 #include "nsColor.h"
-#include "nsCaseTreatment.h"
+#include "nsCOMArray.h"
 
 typedef unsigned long PtrBits;
 class nsAString;
@@ -56,8 +51,6 @@ class nsIAtom;
 class nsICSSStyleRule;
 class nsISVGValue;
 class nsIDocument;
-template<class E> class nsCOMArray;
-template<class E> class nsTPtrArray;
 
 #define NS_ATTRVALUE_MAX_STRINGLENGTH_ATOM 12
 
@@ -162,14 +155,6 @@ public:
 
   PRUint32 HashValue() const;
   PRBool Equals(const nsAttrValue& aOther) const;
-  PRBool Equals(const nsAString& aValue, nsCaseTreatment aCaseSensitive) const;
-  PRBool Equals(nsIAtom* aValue, nsCaseTreatment aCaseSensitive) const;
-
-  /**
-   * Returns true if this AttrValue is equal to the given atom, or is an
-   * array which contains the given atom.
-   */
-  PRBool Contains(nsIAtom* aValue, nsCaseTreatment aCaseSensitive) const;
 
   void ParseAtom(const nsAString& aValue);
   void ParseAtomArray(const nsAString& aValue);
@@ -285,7 +270,7 @@ private:
   PRBool EnsureEmptyMiscContainer();
   PRBool EnsureEmptyAtomArray();
 
-  static nsTPtrArray<const EnumTable>* sEnumTableArray;
+  static nsVoidArray* sEnumTableArray;
 
   PtrBits mBits;
 };

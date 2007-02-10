@@ -48,7 +48,6 @@
 #include "nsIProtocolHandler.h"
 #include "nsIMsgProtocolInfo.h"
 
-class nsIMsgMailNewsUrl;
 
 class nsPop3Service : public nsIPop3Service,
                       public nsIProtocolHandler,
@@ -56,28 +55,27 @@ class nsPop3Service : public nsIPop3Service,
 {
 public:
 
-  nsPop3Service();
-  virtual ~nsPop3Service();
-  
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIPOP3SERVICE
-  NS_DECL_NSIPROTOCOLHANDLER
-  NS_DECL_NSIMSGPROTOCOLINFO
+	nsPop3Service();
+	virtual ~nsPop3Service();
+	
+	NS_DECL_ISUPPORTS
+    NS_DECL_NSIPOP3SERVICE
+    NS_DECL_NSIPROTOCOLHANDLER
+    NS_DECL_NSIMSGPROTOCOLINFO
 
 protected:
-  nsresult GetMail(PRBool downloadNewMail,
-                   nsIMsgWindow* aMsgWindow, 
-                   nsIUrlListener * aUrlListener,
-                   nsIMsgFolder *inbox, 
-                   nsIPop3IncomingServer *popServer,
-                   nsIURI ** aURL);
-  // convience function to make constructing of the pop3 url easier...
-  nsresult BuildPop3Url(const char * urlSpec, nsIMsgFolder *inbox,
-                    nsIPop3IncomingServer *, nsIUrlListener * aUrlListener,
-                    nsIURI ** aUrl, nsIMsgWindow *aMsgWindow);
+        nsresult GetMail(PRBool downloadNewMail,
+                         nsIMsgWindow* aMsgWindow, 
+                         nsIUrlListener * aUrlListener,
+                         nsIMsgFolder *inbox, 
+                         nsIPop3IncomingServer *popServer,
+                         nsIURI ** aURL);
+	// convience function to make constructing of the pop3 url easier...
+	nsresult BuildPop3Url(const char * urlSpec, nsIMsgFolder *inbox,
+                          nsIPop3IncomingServer *, nsIUrlListener * aUrlListener,
+                          nsIURI ** aUrl, nsIMsgWindow *aMsgWindow);
 
-  nsresult RunPopUrl(nsIMsgIncomingServer * aServer, nsIURI * aUrlToRun);
-  void AlertServerBusy(nsIMsgMailNewsUrl *url);
+	nsresult RunPopUrl(nsIMsgIncomingServer * aServer, nsIURI * aUrlToRun);
 };
 
 #endif /* nsPop3Service_h___ */

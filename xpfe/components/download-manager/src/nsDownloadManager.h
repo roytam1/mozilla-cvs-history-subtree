@@ -49,6 +49,7 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMEventListener.h"
 #include "nsIRDFContainerUtils.h"
+#include "nsIWebProgressListener.h"
 #include "nsIURI.h"
 #include "nsILocalFile.h"
 #include "nsRefPtrHashtable.h"
@@ -58,7 +59,6 @@
 #include "nsIProgressDialog.h"
 #include "nsIMIMEInfo.h"
 #include "nsISound.h"
-#include "nsAutoPtr.h"
  
 enum DownloadState { NOTSTARTED = -1, DOWNLOADING, FINISHED, FAILED, CANCELED };
 
@@ -105,7 +105,7 @@ private:
   friend class nsDownload;
 };
 
-class nsDownload : public nsIDownload,
+class nsDownload : public nsIDownload_MOZILLA_1_8_BRANCH,
                    public nsIObserver
 {
 public:
@@ -113,6 +113,7 @@ public:
   NS_DECL_NSIWEBPROGRESSLISTENER2
   NS_DECL_NSITRANSFER
   NS_DECL_NSIDOWNLOAD
+  NS_DECL_NSIDOWNLOAD_MOZILLA_1_8_BRANCH
   NS_DECL_NSIOBSERVER
   NS_DECL_ISUPPORTS
 
@@ -127,7 +128,7 @@ public:
   nsresult Resume();
   void DisplayDownloadFinishedAlert();
 
-  void SetDialogListener(nsIDownloadProgressListener* aInternalListener) {
+  void SetDialogListener(nsIWebProgressListener2* aInternalListener) {
     mDialogListener = aInternalListener;
   }
   void SetDialog(nsIProgressDialog* aDialog) {
@@ -139,8 +140,8 @@ public:
   }
 
   struct TransferInformation {
-    PRInt64 mCurrBytes, mMaxBytes;
-    TransferInformation(PRInt64 aCurr, PRInt64 aMax) :
+    PRUint64 mCurrBytes, mMaxBytes;
+    TransferInformation(PRUint64 aCurr, PRUint64 aMax) :
       mCurrBytes(aCurr),
       mMaxBytes(aMax)
       {}
@@ -163,13 +164,13 @@ public:
     mLastUpdate = aStartTime;
   }
 private:
-  nsRefPtr<nsDownloadManager> mDownloadManager;
+  nsDownloadManager* mDownloadManager;
 
   nsString mDisplayName;
 
   nsCOMPtr<nsIURI> mTarget;
   nsCOMPtr<nsIURI> mSource;
-  nsCOMPtr<nsIDownloadProgressListener> mDialogListener;
+  nsCOMPtr<nsIWebProgressListener2> mDialogListener;
   nsCOMPtr<nsICancelable> mCancelable;
   nsCOMPtr<nsIRequest> mRequest;
   nsCOMPtr<nsIProgressDialog> mDialog;

@@ -49,10 +49,9 @@
 #include "nsXFormsSubmissionElement.h"
 #include "nsXFormsAtoms.h"
 #include "nsIInstanceElementPrivate.h"
-#include "nsIXTFElementWrapper.h"
+#include "nsIXTFGenericElementWrapper.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMElement.h"
-#include "nsIDOMAttr.h"
 #include "nsIDOMText.h"
 #include "nsIDOMCDATASection.h"
 #include "nsIDOMEvent.h"
@@ -67,7 +66,6 @@
 #include "nsIDOMDOMImplementation.h"
 #include "nsIDOMProcessingInstruction.h"
 #include "nsIDOMParser.h"
-#include "nsIAttribute.h"
 #include "nsComponentManagerUtils.h"
 #include "nsStringStream.h"
 #include "nsIDocShell.h"
@@ -94,7 +92,6 @@
 #include "nsIPermissionManager.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
-#include "nsIMIMEHeaderParam.h"
 #include "nsIExternalProtocolService.h"
 #include "nsEscape.h"
 #include "nsAutoPtr.h"
@@ -320,10 +317,10 @@ nsXFormsSubmissionElement::SetActivator(nsIXFormsSubmitElement* aActivator)
   return NS_OK;
 }
 
-// nsIXTFElement
+// nsIXTFGenericElement
 
 NS_IMETHODIMP
-nsXFormsSubmissionElement::OnCreated(nsIXTFElementWrapper *aWrapper)
+nsXFormsSubmissionElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
 {
   aWrapper->SetNotificationMask(nsIXTFElement::NOTIFY_HANDLE_DEFAULT);
 
@@ -502,9 +499,7 @@ nsXFormsSubmissionElement::LoadReplaceInstance(nsIChannel *channel)
   nsCOMPtr<nsIURI> uri;
   nsresult rv = channel->GetURI(getter_AddRefs(uri));
   NS_ENSURE_SUCCESS(rv, rv);
-
-  // XXXbz is this the right principal?
-  rv = parser->Init(nsnull, uri, nsnull);
+  rv = parser->SetBaseURI(uri);
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIDOMDocument> newDoc;
@@ -628,7 +623,6 @@ nsXFormsSubmissionElement::Submit()
   NS_ENSURE_STATE(mElement);
 
   nsresult rv;
-  mIsSOAPRequest = PR_FALSE;
 
   //
   // 1. ensure that we are not currently processing a xforms-submit (see E37)
@@ -807,52 +801,10 @@ nsXFormsSubmissionElement::SerializeDataXML(nsIDOMDocument  *data,
   nsAutoString mediaType;
   mElement->GetAttribute(NS_LITERAL_STRING("mediatype"), mediaType);
 
-  // Check for preference, disabling SOAP requests
-  PRBool enableExperimental = PR_FALSE;
-  nsCOMPtr<nsIPrefBranch> pref = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
-  if (NS_SUCCEEDED(rv) && pref) {
-    PRBool val;
-    if (NS_SUCCEEDED(pref->GetBoolPref("xforms.enableExperimentalFeatures",
-                                       &val)))
-      enableExperimental = val;
-  }
-
-  // Check for SOAP Envelope and handle SOAP
-  if (enableExperimental) {
-    nsAutoString nodeName, nodeNS;
-    data->GetLocalName(nodeName);
-    data->GetNamespaceURI(nodeNS);
-    if (nodeName.Equals(NS_LITERAL_STRING("Envelope")) &&
-        nodeNS.Equals(NS_LITERAL_STRING(NS_NAMESPACE_SOAP_ENVELOPE))) {
-      mIsSOAPRequest = PR_TRUE;
-      nsXFormsUtils::ReportError(NS_LITERAL_STRING("warnSOAP"), mElement,
-                                 nsIScriptError::warningFlag);
-      contentType.AssignLiteral("text/xml");
-
-      if (!mediaType.IsEmpty()) {
-        // copy charset from mediatype
-        nsAutoString charset;
-        nsCOMPtr<nsIMIMEHeaderParam> mimeHdrParser =
-          do_GetService("@mozilla.org/network/mime-hdrparam;1");
-        NS_ENSURE_STATE(mimeHdrParser);
-        rv = mimeHdrParser->GetParameter(NS_ConvertUTF16toUTF8(mediaType),
-                                         "charset", EmptyCString(), PR_FALSE,
-                                         nsnull, charset);
-        if (NS_SUCCEEDED(rv) && !charset.IsEmpty()) {
-          contentType.AppendLiteral("; charset=");
-          contentType.Append(NS_ConvertUTF16toUTF8(charset));
-        }
-      }
-    }
-  }
-
-  // Handle non-SOAP requests
-  if (!mIsSOAPRequest) {
-    if (mediaType.IsEmpty())
-      contentType.AssignLiteral("application/xml");
-    else
-      CopyUTF16toUTF8(mediaType, contentType);
-  }
+  if (mediaType.IsEmpty())
+    contentType.AssignLiteral("application/xml");
+  else
+    CopyUTF16toUTF8(mediaType, contentType);
   
   nsCOMPtr<nsIStorageStream> storage;
   NS_NewStorageStream(4096, PR_UINT32_MAX, getter_AddRefs(storage));
@@ -1190,33 +1142,20 @@ nsXFormsSubmissionElement::CreatePurgedDoc(nsIDOMNode      *source,
   }
 
   // recursively walk the source document, copying nodes as appropriate
-  nsCOMPtr<nsIModelElementPrivate> model = GetModel();
-  NS_ENSURE_STATE(model);
-  nsresult rv = NS_OK;
+  nsCOMPtr<nsIDOMNode> startNode;
   // if it is a document, get the root element
   if (sourceDoc) {
-    // Iterate over document child nodes to preserve document level
-    // processing instructions and comment nodes.
-    nsCOMPtr<nsIDOMNode> curDocNode, node, destChild;
-    sourceDoc->GetFirstChild(getter_AddRefs(curDocNode));
-    PRUint16 type;
-    while (curDocNode) {
-      curDocNode->GetNodeType(&type);
-      if (type == nsIDOMNode::ELEMENT_NODE) {
-        rv = CopyChildren(model, curDocNode, doc, doc, cdataElements, 0);
-        NS_ENSURE_SUCCESS(rv, rv);
-      } else {
-        doc->ImportNode(curDocNode, PR_FALSE, getter_AddRefs(destChild));
-        doc->AppendChild(destChild, getter_AddRefs(node));
-      }
-
-      curDocNode->GetNextSibling(getter_AddRefs(node));
-      curDocNode.swap(node);
-    }
+    nsCOMPtr<nsIDOMElement> elm;
+    sourceDoc->GetDocumentElement(getter_AddRefs(elm));
+    startNode = elm;
   } else {
-    rv = CopyChildren(model, source, doc, doc, cdataElements, 0);
-    NS_ENSURE_SUCCESS(rv, rv);
+    startNode = source;
   }
+
+  nsCOMPtr<nsIModelElementPrivate> model = GetModel();
+  NS_ENSURE_STATE(model);
+  nsresult rv = CopyChildren(model, startNode, doc, doc, cdataElements, 0);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   NS_ADDREF(*result = doc);
   return NS_OK;
@@ -1230,112 +1169,35 @@ nsXFormsSubmissionElement::CreateAttachments(nsIModelElementPrivate *aModel,
   nsCOMPtr<nsIDOMNode> currentNode(aNode);
 
   while (currentNode) {
-    PRUint16 currentNodeType;
-    nsresult rv = currentNode->GetNodeType(&currentNodeType);
-    NS_ENSURE_SUCCESS(rv, rv);
-
     // If |currentNode| is an element node of type 'xsd:anyURI', we need to
     // generate a ContentID for the child of this element, and append a new
     // attachment to the attachments array.
 
     PRUint32 encType;
+    nsresult rv;
     if (NS_SUCCEEDED(GetElementEncodingType(currentNode, &encType, aModel)) &&
         encType == ELEMENT_ENCTYPE_URI) {
       // ok, looks like we have a local file to upload
 
-      // uploadFileProperty can exist on attribute nodes if an upload is bound
-      // to an attribute.  But we'll have to look for such attributes as we
-      // we encounter the element nodes that contain them.  We won't reach
-      // attributes walking the child/sibling chain of nodes.  So here just
-      // test for nsIContent.
-      void* uploadFileProperty = nsnull;
       nsCOMPtr<nsIContent> content = do_QueryInterface(currentNode);
-      if (content) {
-        uploadFileProperty =
-          content->GetProperty(nsXFormsAtoms::uploadFileProperty);
-      }
+      NS_ENSURE_STATE(content);
 
-      nsIFile *file = NS_STATIC_CAST(nsIFile *, uploadFileProperty);
+      nsIFile *file =
+        NS_STATIC_CAST(nsIFile *,
+                       content->GetProperty(nsXFormsAtoms::uploadFileProperty));
       // NOTE: this value may be null if a file hasn't been selected.
 
-      if (uploadFileProperty) {
-        nsCString cid;
-        cid.AssignLiteral("cid:");
-        MakeMultipartContentID(cid);
-  
-        nsCOMPtr<nsIDOMNode> childNode;
-      
-        switch (currentNodeType) {
+      nsCString cid;
+      MakeMultipartContentID(cid);
 
-        case nsIDOMNode::TEXT_NODE:
-        case nsIDOMNode::CDATA_SECTION_NODE:
-        case nsIDOMNode::PROCESSING_INSTRUCTION_NODE:
-        case nsIDOMNode::COMMENT_NODE:
-          rv = currentNode->SetNodeValue(NS_ConvertUTF8toUTF16(cid));
-          NS_ENSURE_SUCCESS(rv, rv);
-      
-          break;
-      
-        case nsIDOMNode::ELEMENT_NODE:
-      
-          rv = currentNode->GetFirstChild(getter_AddRefs(childNode));
-          NS_ENSURE_SUCCESS(rv, rv);
-      
-          // shouldn't have to worry about the case of there not being a child
-          // node here.  If uploadFileProperty is set then that means that
-          // the node that 'currentNode' was cloned from has has gone through
-          // through model.SetNodeValue, so should already have a text node
-          // as the first child and no extraneous text nodes
-          // following the first one.  We'll check to make sure, though.
-          PRUint16 childType;
-          rv = childNode->GetNodeType(&childType);
-          NS_ENSURE_SUCCESS(rv, rv);
-      
-          if (childType == nsIDOMNode::TEXT_NODE ||
-              childType == nsIDOMNode::CDATA_SECTION_NODE) {
-            rv = childNode->SetNodeValue(NS_ConvertUTF8toUTF16(cid));
-            NS_ENSURE_SUCCESS(rv, rv);
-          } else {
-            return NS_ERROR_UNEXPECTED;
-          }
-        }
-        aAttachments->Append(file, cid);
-      }
-    }
+      nsAutoString cidURI;
+      cidURI.AssignLiteral("cid:");
+      AppendASCIItoUTF16(cid, cidURI);
 
-    // look to see if the element node has any attributes with an
-    // uploadFileProperty on it.
-    if (currentNodeType == nsIDOMNode::ELEMENT_NODE) {
-      PRBool hasAttributes = PR_FALSE;
-      currentNode->HasAttributes(&hasAttributes);
-      if (hasAttributes) {
-        nsCOMPtr<nsIDOMNamedNodeMap> attrs;
-        currentNode->GetAttributes(getter_AddRefs(attrs));
-        NS_ENSURE_STATE(attrs);
-        PRUint32 length;
-        attrs->GetLength(&length);
-        nsCOMPtr<nsIDOMNode> attrDOMNode;
-        for (PRUint32 i = 0; i < length; ++i) {
-          attrs->Item(i, getter_AddRefs(attrDOMNode));
-          NS_ENSURE_STATE(attrDOMNode);
-          nsCOMPtr<nsIAttribute> attr = do_QueryInterface(attrDOMNode);
-          NS_ENSURE_STATE(attr);
-          void *uploadFileProperty =
-            attr->GetProperty(nsXFormsAtoms::uploadFileProperty);
-  
-          if (!uploadFileProperty) {
-            continue;
-          }
+      aAttachments->Append(file, cid);
 
-          nsIFile *file = NS_STATIC_CAST(nsIFile *, uploadFileProperty);
-          nsCString cid;
-          cid.AssignLiteral("cid:");
-          MakeMultipartContentID(cid);
-          rv = attrDOMNode->SetNodeValue(NS_ConvertUTF8toUTF16(cid));
-          NS_ENSURE_SUCCESS(rv, rv);
-          aAttachments->Append(file, cid);
-        }
-      }
+      rv = currentNode->SetNodeValue(cidURI);
+      NS_ENSURE_SUCCESS(rv, rv);
     }
 
     nsCOMPtr<nsIDOMNode> child;
@@ -1353,14 +1215,6 @@ nsXFormsSubmissionElement::CreateAttachments(nsIModelElementPrivate *aModel,
   return NS_OK;
 }
       
-static void
-ReleaseObject(void    *aObject,
-              nsIAtom *aPropertyName,
-              void    *aPropertyValue,
-              void    *aData)
-{
-  NS_STATIC_CAST(nsISupports *, aPropertyValue)->Release();
-}
 
 nsresult
 nsXFormsSubmissionElement::CopyChildren(nsIModelElementPrivate *aModel,
@@ -1423,8 +1277,6 @@ nsXFormsSubmissionElement::CopyChildren(nsIModelElementPrivate *aModel,
             aDest->AppendChild(destChild, getter_AddRefs(node));
           }
         }
-
-        break;
       }
 
       default: {
@@ -1446,104 +1298,6 @@ nsXFormsSubmissionElement::CopyChildren(nsIModelElementPrivate *aModel,
           nsXFormsUtils::ReportError(NS_LITERAL_STRING("warnSubmitInvalidNode"),
                                      currentNode, nsIScriptError::warningFlag);
           return NS_ERROR_ILLEGAL_VALUE;
-        }
-
-        // If this node has attributes, make sure that we don't copy any
-        // that aren't relevant, etc.
-        PRBool hasAttrs = PR_FALSE;
-        currentNode->HasAttributes(&hasAttrs);
-        if ((type == nsIDOMNode::ELEMENT_NODE) && hasAttrs) {
-          nsCOMPtr<nsIDOMNamedNodeMap> attrMap;
-          nsCOMPtr<nsIDOMNode> attrDOMNode, tempNode;
-        
-          currentNode->GetAttributes(getter_AddRefs(attrMap));
-          NS_ENSURE_STATE(attrMap);
-        
-          nsresult rv = NS_OK;
-          PRUint32 length;
-          nsCOMPtr<nsIDOMElement> destElem(do_QueryInterface(destChild));
-          attrMap->GetLength(&length);
-        
-          for (PRUint32 run = 0; run < length; ++run) {
-            attrMap->Item(run, getter_AddRefs(attrDOMNode));
-            NS_ENSURE_STATE(attrDOMNode);
-            aModel->HandleInstanceDataNode(attrDOMNode, &handleNodeResult);
-
-            if (handleNodeResult ==
-                       nsIModelElementPrivate::SUBMIT_ABORT_SUBMISSION) {
-              // abort
-              nsXFormsUtils::ReportError(NS_LITERAL_STRING("warnSubmitInvalidNode"),
-                                         currentNode, nsIScriptError::warningFlag);
-              return NS_ERROR_ILLEGAL_VALUE;
-            }
-
-            nsAutoString localName, namespaceURI;
-
-            rv = attrDOMNode->GetLocalName(localName);
-            NS_ENSURE_SUCCESS(rv, rv);
-            rv = attrDOMNode->GetNamespaceURI(namespaceURI);
-            NS_ENSURE_SUCCESS(rv, rv);
-
-            if (handleNodeResult == nsIModelElementPrivate::SUBMIT_SKIP_NODE) {
-              rv = destElem->RemoveAttributeNS(namespaceURI, localName);
-              NS_ENSURE_SUCCESS(rv, rv);
-            } else {
-              // the cloning does not copy any properties of the currentNode. If
-              // the attribute node has an uploadFileProperty we need to copy it
-              // to the submission document so that local files will be attached
-              // properly when the submission format is multipart-related.
-              void* uploadFileProperty = nsnull;
-              nsCOMPtr<nsIAttribute> attrNode(do_QueryInterface(attrDOMNode));
-              if (attrNode) {
-                uploadFileProperty =
-                  attrNode->GetProperty(nsXFormsAtoms::uploadFileProperty);
-                if (uploadFileProperty) {
-                  nsCOMPtr<nsIDOMAttr> destDOMAttr;
-                  rv = destElem->GetAttributeNodeNS(
-                    namespaceURI, localName, getter_AddRefs(destDOMAttr));
-                  NS_ENSURE_SUCCESS(rv, rv);
-                  nsCOMPtr<nsIAttribute> destAttribute(
-                    do_QueryInterface(destDOMAttr));
-                  if (destAttribute) {
-                    // Clone the local file so the same pointer isn't released
-                    // twice
-                    nsIFile *file =
-                      NS_STATIC_CAST(nsIFile *, uploadFileProperty);
-                    nsIFile *fileCopy = nsnull;
-                    nsresult rv = file->Clone(&fileCopy);
-                    NS_ENSURE_SUCCESS(rv, rv);
-                    destAttribute->SetProperty(
-                      nsXFormsAtoms::uploadFileProperty, fileCopy,
-                      ReleaseObject);
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        // ImportNode does not copy any properties of the currentNode. If the
-        // node has an uploadFileProperty we need to copy it to the submission
-        // document so that local files will be attached properly when the
-        // submission format is multipart-related.
-        void* uploadFileProperty = nsnull;
-        nsCOMPtr<nsIContent> currentNodeContent(do_QueryInterface(currentNode));
-        if (currentNodeContent) {
-          uploadFileProperty =
-            currentNodeContent->GetProperty(nsXFormsAtoms::uploadFileProperty);
-          if (uploadFileProperty) {
-            nsCOMPtr<nsIContent> destChildContent(do_QueryInterface(destChild));
-            if (destChildContent) {
-              // Clone the local file so the same pointer isn't released twice.
-              nsIFile *file = NS_STATIC_CAST(nsIFile *, uploadFileProperty);
-              nsIFile *fileCopy = nsnull;
-              nsresult rv = file->Clone(&fileCopy);
-              NS_ENSURE_SUCCESS(rv, rv);
-              destChildContent->SetProperty(nsXFormsAtoms::uploadFileProperty,
-                                            fileCopy,
-                                            ReleaseObject);
-            }
-          }
         }
 
         aDest->AppendChild(destChild, getter_AddRefs(node));
@@ -1902,19 +1656,12 @@ nsXFormsSubmissionElement::AppendMultipartFormData(nsIDOMNode *data,
     nsCOMPtr<nsIInputStream> fileStream;
     if (encType == ELEMENT_ENCTYPE_URI)
     {
-      void* uploadFileProperty = nsnull;
       nsCOMPtr<nsIContent> content = do_QueryInterface(data);
-      if (content) {
-        uploadFileProperty =
-          content->GetProperty(nsXFormsAtoms::uploadFileProperty);
-      } else {
-        nsCOMPtr<nsIAttribute> attr = do_QueryInterface(data);
-        NS_ENSURE_STATE(attr);
-        uploadFileProperty =
-          attr->GetProperty(nsXFormsAtoms::uploadFileProperty);
-      }
-      
-      nsIFile *file = NS_STATIC_CAST(nsIFile *, uploadFileProperty);
+      NS_ENSURE_STATE(content);
+
+      nsIFile *file =
+          NS_STATIC_CAST(nsIFile *,
+                         content->GetProperty(nsXFormsAtoms::uploadFileProperty));
 
       nsAutoString leafName;
       if (file)
@@ -2007,6 +1754,9 @@ nsXFormsSubmissionElement::GetElementEncodingType(nsIDOMNode             *node,
                                                   nsIModelElementPrivate *aModel)
 {
   *encType = ELEMENT_ENCTYPE_STRING; // default
+
+  nsCOMPtr<nsIDOMElement> element = do_QueryInterface(node);
+  NS_ENSURE_STATE(element);
 
   // check for 'xsd:base64Binary', 'xsd:hexBinary', or 'xsd:anyURI'
   nsAutoString type, nsuri;
@@ -2214,29 +1964,6 @@ nsXFormsSubmissionElement::SendData(const nsCString &uriSpec,
 
     rv = httpChannel->SetRequestMethod(NS_LITERAL_CSTRING("POST"));
     NS_ENSURE_SUCCESS(rv, rv);
-
-    if (mIsSOAPRequest) {
-      nsCOMPtr<nsIMIMEHeaderParam> mimeHdrParser =
-        do_GetService("@mozilla.org/network/mime-hdrparam;1");
-      NS_ENSURE_STATE(mimeHdrParser);
-
-      nsAutoString mediatype, action;
-      mElement->GetAttribute(NS_LITERAL_STRING("mediatype"),
-                             mediatype);
-      if (!mediatype.IsEmpty()) {
-        
-        rv = mimeHdrParser->GetParameter(NS_ConvertUTF16toUTF8(mediatype),
-                                         "action", EmptyCString(), PR_FALSE,
-                                         nsnull, action);
-      }
-      if (action.IsEmpty()) {
-        action.AssignLiteral(" ");
-      }
-      rv = httpChannel->SetRequestHeader(NS_LITERAL_CSTRING("SOAPAction"),
-                                         NS_ConvertUTF16toUTF8(action),
-                                         PR_FALSE);
-      NS_ENSURE_SUCCESS(rv, rv);
-    }
   }
 
   // set loadGroup and notificationCallbacks

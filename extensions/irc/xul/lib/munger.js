@@ -75,16 +75,16 @@ function initMunger()
     munger.addRule (".mirc-reverse", /(\x16)/, mircReverseColor);
     munger.addRule ("ctrl-char", /([\x01-\x1f])/, showCtrlChar);
     munger.addRule ("link", client.linkRE, insertLink);
-    munger.addRule (".mailto",
+    munger.addRule ("mailto",
        /(?:\s|\W|^)((mailto:)?[^<>\[\]()\'\"\s\u201d]+@[^.<>\[\]()\'\"\s\u201d]+\.[^<>\[\]()\'\"\s\u201d]+)/i,
-                    insertMailToLink, false);
+                    insertMailToLink);
     munger.addRule ("bugzilla-link",
-                    /(?:\s|\W|^)(bug\s+(?:#?\d+|#[^\s,]{1,20}))/i,
+                    /(?:\s|\W|^)(bug\s+(?:#?\d{3,6}|#[^\s,]{1,20}))/i,
                     insertBugzillaLink);
     munger.addRule ("channel-link",
                 /(?:\s|\W|^)[@+]?(#[^<>\[\](){}\"\s\u201d]*[^:,.<>\[\](){}\'\"\s\u201d])/i,
                     insertChannelLink);
-    munger.addRule("talkback-link", /(?:\W|^)(TB\d{8,}[A-Z]?)(?:\W|$)/,
+    munger.addRule("talkback-link", /(?:\W|^)(TB\d+[A-Z]?)(?:\W|$)/,
                    insertTalkbackLink);
     
     munger.addRule ("face",
@@ -123,7 +123,7 @@ function CMungerEntry (name, regex, className, enable, tagName)
     this.enabledDefault = this.enabled;
     this.tagName = (tagName) ? tagName : "html:span";
 
-    if (isinstance(regex, RegExp))
+    if (regex instanceof RegExp)
         this.regex = regex;
     else
         this.lambdaMatch = regex;

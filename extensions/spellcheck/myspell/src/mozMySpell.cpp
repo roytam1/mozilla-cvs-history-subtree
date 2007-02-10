@@ -63,6 +63,7 @@
 #include "nsIObserverService.h"
 #include "nsISimpleEnumerator.h"
 #include "nsIDirectoryEnumerator.h"
+#include "nsIFile.h"
 #include "nsDirectoryServiceUtils.h"
 #include "nsDirectoryServiceDefs.h"
 #include "mozISpellI18NManager.h"
@@ -71,6 +72,9 @@
 #include "nsUnicharUtils.h"
 #include "nsCRT.h"
 #include <stdlib.h>
+
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_CID(kUnicharUtilCID, NS_UNICHARUTIL_CID);
 
 NS_IMPL_ISUPPORTS3(mozMySpell,
                    mozISpellCheckingEngine,
@@ -122,7 +126,7 @@ NS_IMETHODIMP mozMySpell::SetDictionary(const PRUnichar *aDictionary)
   if (mDictionary.Equals(aDictionary))
     return NS_OK;
 
-  nsIFile* affFile = mDictionaries.GetWeak(aDictionary);
+  nsIFile* affFile = mDictionaries.GetWeak(nsDependentString(aDictionary));
   if (!affFile)
     return NS_ERROR_FILE_NOT_FOUND;
 
@@ -166,6 +170,7 @@ NS_IMETHODIMP mozMySpell::SetDictionary(const PRUnichar *aDictionary)
   rv = ccm->GetUnicodeEncoder(mMySpell->get_dic_encoding(),
                               getter_AddRefs(mEncoder));
   NS_ENSURE_SUCCESS(rv, rv);
+
 
   if (mEncoder)
     mEncoder->SetOutputErrorBehavior(mEncoder->kOnError_Signal, nsnull, '?');
@@ -246,10 +251,10 @@ struct AppendNewStruct
 };
 
 static PLDHashOperator
-AppendNewString(const PRUnichar *aString, nsIFile* aFile, void* aClosure)
+AppendNewString(const nsAString& aString, nsIFile* aFile, void* aClosure)
 {
   AppendNewStruct *ans = (AppendNewStruct*) aClosure;
-  ans->dics[ans->count] = NS_strdup(aString);
+  ans->dics[ans->count] = ToNewUnicode(aString);
   if (!ans->dics[ans->count]) {
     ans->failed = PR_TRUE;
     return PL_DHASH_STOP;
@@ -379,7 +384,7 @@ mozMySpell::LoadDictionariesFromDir(nsIFile* aDir)
     printf("Adding dictionary: %s\n", NS_ConvertUTF16toUTF8(dict).get());
 #endif
 
-    mDictionaries.Put(dict.get(), file);
+    mDictionaries.Put(dict, file);
   }
 }
 

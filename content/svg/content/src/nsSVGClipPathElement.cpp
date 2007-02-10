@@ -36,7 +36,7 @@
 
 #include "nsSVGGraphicElement.h"
 #include "nsIDOMSVGClipPathElement.h"
-#include "nsGkAtoms.h"
+#include "nsSVGAtoms.h"
 #include "nsSVGAnimatedEnumeration.h"
 #include "nsSVGEnum.h"
 
@@ -49,6 +49,7 @@ protected:
   friend nsresult NS_NewSVGClipPathElement(nsIContent **aResult,
                                            nsINodeInfo *aNodeInfo);
   nsSVGClipPathElement(nsINodeInfo *aNodeInfo);
+  virtual ~nsSVGClipPathElement();
   nsresult Init();
 
 public:
@@ -58,11 +59,9 @@ public:
   NS_DECL_NSIDOMSVGCLIPPATHELEMENT
 
   // xxx I wish we could use virtual inheritance
-  NS_FORWARD_NSIDOMNODE(nsSVGClipPathElementBase::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsSVGClipPathElementBase::)
   NS_FORWARD_NSIDOMELEMENT(nsSVGClipPathElementBase::)
   NS_FORWARD_NSIDOMSVGELEMENT(nsSVGClipPathElementBase::)
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 
 protected:
 
@@ -100,6 +99,9 @@ nsSVGClipPathElement::nsSVGClipPathElement(nsINodeInfo *aNodeInfo)
 {
 }
 
+nsSVGClipPathElement::~nsSVGClipPathElement()
+{
+}
 
 nsresult
 nsSVGClipPathElement::Init()
@@ -109,8 +111,8 @@ nsSVGClipPathElement::Init()
 
   // Define enumeration mappings
   static struct nsSVGEnumMapping gUnitMap[] = {
-    {&nsGkAtoms::objectBoundingBox, nsIDOMSVGClipPathElement::SVG_CPUNITS_OBJECTBOUNDINGBOX},
-    {&nsGkAtoms::userSpaceOnUse, nsIDOMSVGClipPathElement::SVG_CPUNITS_USERSPACEONUSE},
+    {&nsSVGAtoms::objectBoundingBox, nsIDOMSVGClipPathElement::SVG_CPUNITS_OBJECTBOUNDINGBOX},
+    {&nsSVGAtoms::userSpaceOnUse, nsIDOMSVGClipPathElement::SVG_CPUNITS_USERSPACEONUSE},
     {nsnull, 0}
   };
 
@@ -123,7 +125,7 @@ nsSVGClipPathElement::Init()
     NS_ENSURE_SUCCESS(rv,rv);
     rv = NS_NewSVGAnimatedEnumeration(getter_AddRefs(mClipPathUnits), units);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = AddMappedSVGValue(nsGkAtoms::clipPathUnits, mClipPathUnits);
+    rv = AddMappedSVGValue(nsSVGAtoms::clipPathUnits, mClipPathUnits);
     NS_ENSURE_SUCCESS(rv,rv);
   }
 
@@ -142,5 +144,5 @@ NS_IMETHODIMP nsSVGClipPathElement::GetClipPathUnits(nsIDOMSVGAnimatedEnumeratio
 //----------------------------------------------------------------------
 // nsIDOMNode methods
 
-NS_IMPL_ELEMENT_CLONE_WITH_INIT(nsSVGClipPathElement)
+NS_IMPL_DOM_CLONENODE_WITH_INIT(nsSVGClipPathElement)
 

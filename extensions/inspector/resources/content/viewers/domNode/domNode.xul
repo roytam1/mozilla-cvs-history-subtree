@@ -16,8 +16,9 @@
   
   <!--============================= SCRIPTS ============================= -->
 
-  <script type="application/x-javascript" src="chrome://inspector/content/utils.js"/>
   <script type="application/x-javascript" src="chrome://inspector/content/viewers/domNode/domNode.js"/>
+
+  <script type="application/x-javascript" src="chrome://inspector/content/utils.js"/>
   <script type="application/x-javascript" src="chrome://inspector/content/jsutil/xpcom/XPCU.js"/>
   <script type="application/x-javascript" src="chrome://inspector/content/jsutil/events/ObserverManager.js"/>
 
@@ -39,29 +40,27 @@
  
   <deck id="dkContent" flex="1">
     <vbox id="bxElement">
-      <grid id="olNodeInfo">
+      <grid>
         <columns>
           <column/>
           <column flex="1"/>
         </columns>
         <rows>
           <row>
-            <label value="&nodeName.label;"
-                   for="tx_nodeName"
-                   class="olNodeInfoLabel"/>
-            <textbox id="tx_nodeName" readonly="true" class="plain"/>
+            <label value="&nodeName.label;" />
+            <textbox id="tx_nodeName" readonly="true"/>
           </row>
           <row>
-            <label value="&namespaceURI.label;"
-                   for="tx_namespace"
-                   class="olNodeInfoLabel"/>
-            <textbox id="tx_namespace" readonly="true" class="plain"/>
+            <label value="&namespaceURI.label;" />
+            <textbox id="tx_namespace" readonly="true"/>
           </row>
           <row>
-            <label value="&nodeType.label;"
-                   for="tx_nodeType"
-                   class="olNodeInfoLabel"/>
-            <textbox id="tx_nodeType" readonly="true" class="plain"/>
+            <label value="&nodeType.label;" />
+            <textbox id="tx_nodeType" readonly="true"/>
+          </row>
+          <row>
+            <label value="&nodeValue.label;" />
+            <textbox id="tx_nodeValue" readonly="true"/>
           </row>
         </rows>
       </grid>
@@ -73,35 +72,10 @@
             contextmenu="ppAttrContext"
             onselect="viewer.pane.panelset.updateAllCommands()">
         <treecols>
-          <!-- These labels don't need to be localized since they are defined
-                 by DOM APIs -->
-          <treecol id="colNodeName"
-                   label="nodeName"
-                   persist="width,hidden,ordinal"
-                   flex="1"/>
+          <!-- These labels don't need to be localized since they are defined by DOM APIs -->
+          <treecol id="colNodeName" label="nodeName" persist="width,hidden,ordinal" flex="1"/>
           <splitter class="tree-splitter"/>
-          <treecol id="colLocalName"
-                   hidden="true"
-                   label="localName"
-                   persist="width,hidden,ordinal"
-                   flex="1"/>
-          <splitter class="tree-splitter"/>
-          <treecol id="colPrefix"
-                   hidden="true"
-                   label="prefix"
-                   persist="width,hidden,ordinal"
-                   flex="1"/>
-          <splitter class="tree-splitter"/>
-          <treecol id="colNamespaceURI"
-                   hidden="true"
-                   label="namespaceURI"
-                   persist="width,hidden,ordinal"
-                   flex="1"/>
-          <splitter class="tree-splitter"/>
-          <treecol id="colNodeValue"
-                   label="nodeValue"
-                   persist="width,hidden,ordinal"
-                   flex="1"/>
+          <treecol id="colNodeValue" label="nodeValue" persist="width,hidden,ordinal" flex="1"/>
         </treecols>
         <treechildren id="olAttrBody"
                       alternatingbackground="true"
@@ -111,8 +85,7 @@
     </vbox>
 
     <vbox id="bxText">
-      <textbox id="txbTextNodeValue" multiline="true" flex="1"
-               onchange="viewer.pane.panelset.execCommand('cmdEditNodeValue');"/>
+      <textbox id="txbTextNodeValue" multiline="true" readonly="true" flex="1"/>
     </vbox>
   </deck>
 </page>

@@ -66,7 +66,6 @@
 #include "prmem.h"
 #include "plbase64.h"
 #include "prnetdb.h"
-#include "prsystem.h"
 #include "nsEscape.h"
 #include "nsMsgUtils.h"
 #include "nsIPipe.h"
@@ -313,7 +312,6 @@ void nsSmtpProtocol::Initialize(nsIURI * aURL)
         smtpServer->GetAuthMethod(&m_prefAuthMethod);
         smtpServer->GetTrySSL(&m_prefTrySSL);
         smtpServer->GetTrySecAuth(&m_prefTrySecAuth);
-        smtpServer->GetHelloArgument(getter_Copies(m_helloArgument));
     }
 
     rv = RequestOverrideInfo(smtpServer);
@@ -354,51 +352,33 @@ void nsSmtpProtocol::Initialize(nsIURI * aURL)
         return;
 }
 
-void nsSmtpProtocol::AppendHelloArgument(nsACString& aResult)
+void nsSmtpProtocol::GetUserDomainName(nsACString& aResult)
 {
   nsresult rv;
   
-  // is a custom EHLO/HELO argument configured for the transport to be used?
-  if (!m_helloArgument.IsEmpty())
+  PRNetAddr iaddr; // IP address for this connection
+  // our transport is always a nsISocketTransport
+  nsCOMPtr<nsISocketTransport> socketTransport = do_QueryInterface(m_transport); 
+  // should return the interface ip of the SMTP connection
+  // minimum case - see bug 68877 and RFC 2821, chapter 4.1.1.1
+  rv = socketTransport->GetSelfAddr(&iaddr);
+
+  if (NS_SUCCEEDED(rv))
   {
-      aResult += m_helloArgument;
-  }
-  else
-  {
-      // is a FQDN known for this system?
-      char hostName[256];
-      PR_GetSystemInfo(PR_SI_HOSTNAME_UNTRUNCATED, hostName, sizeof hostName);
-      if ((hostName[0] != '\0') && (strchr(hostName, '.') != NULL))
-      {
-          aResult += hostName;
-      }
+    // turn it into a string
+    char ipAddressString[64];
+    if (PR_NetAddrToString(&iaddr, ipAddressString, sizeof(ipAddressString)) == PR_SUCCESS) 
+    {
+      NS_ASSERTION(PR_IsNetAddrType(&iaddr, PR_IpAddrV4Mapped) == PR_FALSE,
+        "unexpected IPv4-mapped IPv6 address");
+
+      if (iaddr.raw.family == PR_AF_INET6)   // IPv6 style address?
+        aResult.AssignLiteral("[IPv6:");
       else
-      {
-          PRNetAddr iaddr; // IP address for this connection
-          // our transport is always a nsISocketTransport
-          nsCOMPtr<nsISocketTransport> socketTransport = do_QueryInterface(m_transport); 
-          // should return the interface ip of the SMTP connection
-          // minimum case - see bug 68877 and RFC 2821, chapter 4.1.1.1
-          rv = socketTransport->GetSelfAddr(&iaddr);
+        aResult.AssignLiteral("[");
 
-          if (NS_SUCCEEDED(rv))
-          {
-              // turn it into a string
-              char ipAddressString[64];
-              if (PR_NetAddrToString(&iaddr, ipAddressString, sizeof(ipAddressString)) == PR_SUCCESS) 
-              {
-                  NS_ASSERTION(PR_IsNetAddrType(&iaddr, PR_IpAddrV4Mapped) == PR_FALSE,
-                               "unexpected IPv4-mapped IPv6 address");
-
-                  if (iaddr.raw.family == PR_AF_INET6)   // IPv6 style address?
-                      aResult.AppendLiteral("[IPv6:");
-                  else
-                      aResult.AppendLiteral("[");
-
-                  aResult.Append(nsDependentCString(ipAddressString) + NS_LITERAL_CSTRING("]"));
-              }
-          }
-      }
+      aResult.Append(nsDependentCString(ipAddressString) + NS_LITERAL_CSTRING("]"));
+    }
   }
 }
 
@@ -525,6 +505,7 @@ PRInt32 nsSmtpProtocol::SmtpResponse(nsIInputStream * inputStream, PRUint32 leng
 PRInt32 nsSmtpProtocol::ExtensionLoginResponse(nsIInputStream * inputStream, PRUint32 length) 
 {
   PRInt32 status = 0;
+  nsCAutoString buffer("EHLO ");
   
   if (m_responseCode != 220)
   {
@@ -533,18 +514,20 @@ PRInt32 nsSmtpProtocol::ExtensionLoginResponse(nsIInputStream * inputStream, PRU
 #endif
     nsExplainErrorDetails(m_runningURL, NS_ERROR_SMTP_GREETING,
                           m_responseText.get());
+
     NS_ASSERTION(NS_SUCCEEDED(rv), "failed to explain SMTP error");
 
     m_urlErrorState = NS_ERROR_BUT_DONT_SHOW_ALERT;
     return(NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER);
   }
   
-  nsCAutoString buffer("EHLO ");
-  AppendHelloArgument(buffer);
+  nsCAutoString domainName;
+  GetUserDomainName(domainName);
+
+  buffer += domainName;
   buffer += CRLF;
   
   nsCOMPtr<nsIURI> url = do_QueryInterface(m_runningURL);
-
   status = SendData(url, buffer.get());
   
   m_nextState = SMTP_RESPONSE;
@@ -560,21 +543,9 @@ PRInt32 nsSmtpProtocol::SendHeloResponse(nsIInputStream * inputStream, PRUint32 
   nsCAutoString buffer;
   nsresult rv;
   
-  if (m_responseCode != 250)
-  {
-#ifdef DEBUG
-    nsresult rv =
-#endif
-    nsExplainErrorDetails(m_runningURL, NS_ERROR_SMTP_SERVER_ERROR,
-                          m_responseText.get());
-    NS_ASSERTION(NS_SUCCEEDED(rv), "failed to explain SMTP error");
-
-    m_urlErrorState = NS_ERROR_BUT_DONT_SHOW_ALERT;
-    return(NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER);
-  }
-
   // extract the email address from the identity
   nsXPIDLCString emailAddress;
+  
   nsCOMPtr <nsIMsgIdentity> senderIdentity;
   rv = m_runningURL->GetSenderIdentity(getter_AddRefs(senderIdentity));
   if (NS_FAILED(rv) || !senderIdentity)
@@ -586,6 +557,10 @@ PRInt32 nsSmtpProtocol::SendHeloResponse(nsIInputStream * inputStream, PRUint32 
   {
     senderIdentity->GetEmail(getter_Copies(emailAddress));
   }
+  
+  /* don't check for a HELO response because it can be bogus and
+  * we don't care
+  */
   
   if(!((const char *)emailAddress) || CHECK_SIMULATED_ERROR(SIMULATED_SEND_ERROR_16))
   {
@@ -668,16 +643,14 @@ PRInt32 nsSmtpProtocol::SendHeloResponse(nsIInputStream * inputStream, PRUint32 
 PRInt32 nsSmtpProtocol::SendEhloResponse(nsIInputStream * inputStream, PRUint32 length)
 {
     PRInt32 status = 0;
+    nsCAutoString buffer;
     nsCOMPtr<nsIURI> url = do_QueryInterface(m_runningURL);
 
     if (m_responseCode != 250)
     {
-        /* EHLO must not be implemented by the server, so fall back to the HELO case
-         * if command is unrecognized or unimplemented.
-         */
-        if (m_responseCode == 500 || m_responseCode == 502)
+        /* EHLO must not be implemented by the server so fall back to the HELO case */
+        if (m_responseCode >= 500 && m_responseCode < 550)
         {
-            /* STARTTLS is only available when advertised which requires EHLO */
             if (m_prefTrySSL == PREF_SECURE_ALWAYS_STARTTLS)
             {
                 m_nextState = SMTP_ERROR_DONE;
@@ -685,32 +658,32 @@ PRInt32 nsSmtpProtocol::SendEhloResponse(nsIInputStream * inputStream, PRUint32 
                 return(NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER);
             }
 
-            nsCAutoString buffer("HELO ");
-            AppendHelloArgument(buffer);
+            buffer = "HELO ";
+            nsCAutoString domainName;
+            GetUserDomainName(domainName);
+
+            buffer += domainName;
             buffer += CRLF;
-
             status = SendData(url, buffer.get());
-
-            m_nextState = SMTP_RESPONSE;
-            m_nextStateAfterResponse = SMTP_SEND_HELO_RESPONSE;
-            SetFlag(SMTP_PAUSE_FOR_READ);
-            return (status);
         }
-        /* e.g. getting 421 "Server says unauthorized, bye" or
-         * 501 "Syntax error in EHLOs parameters or arguments"
-         */
+        // e.g. getting 421 "Server says unauthorized, bye"
         else
         {
 #ifdef DEBUG
             nsresult rv = 
 #endif
-            nsExplainErrorDetails(m_runningURL, NS_ERROR_SMTP_SERVER_ERROR,
-                                  m_responseText.get());
+            nsExplainErrorDetails(m_runningURL,
+                          NS_ERROR_SMTP_SERVER_ERROR, m_responseText.get());
             NS_ASSERTION(NS_SUCCEEDED(rv), "failed to explain SMTP error");
 
             m_urlErrorState = NS_ERROR_BUT_DONT_SHOW_ALERT;
             return(NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER);
         }
+
+        m_nextState = SMTP_RESPONSE;
+        m_nextStateAfterResponse = SMTP_SEND_HELO_RESPONSE;
+        SetFlag(SMTP_PAUSE_FOR_READ);
+        return (status);
     }
 
     PRInt32 responseLength = m_responseText.Length();
@@ -745,6 +718,7 @@ PRInt32 nsSmtpProtocol::SendEhloResponse(nsIInputStream * inputStream, PRUint32 
 
             if(m_prefTrySecAuth)
             {
+
                 if (responseLine.Find("GSSAPI", PR_TRUE, 5) >= 0)
                     SetFlag(SMTP_AUTH_GSSAPI_ENABLED);
 
@@ -845,7 +819,7 @@ PRInt32 nsSmtpProtocol::ProcessAuth()
         if(TestFlag(SMTP_EHLO_STARTTLS_ENABLED))
         {
             // Do not try to combine SMTPS with STARTTLS.
-            // If PREF_SECURE_ALWAYS_SMTPS is set,
+            // PREF_SECURE_ALWAYS_SMTPS is used,
             // we are alrady using a secure connection.
             // Do not attempt to do STARTTLS,
             // even if server offers it.
@@ -895,24 +869,11 @@ PRInt32 nsSmtpProtocol::ProcessAuth()
         else if (TestFlag(SMTP_AUTH_LOGIN_ENABLED) ||
             TestFlag(SMTP_AUTH_MSN_ENABLED))
             m_nextState = SMTP_SEND_AUTH_LOGIN_STEP0;
-        /* potential security flaw when using DIGEST_MD5 (and maybe GSSAPI)
-         * where not only the client is authenticated by the server
-         * but also vice versa. Faked server could just not advertise
-         * any mechanism to bypass authentication process.
-         */
         else
-        {
             m_nextState = SMTP_SEND_HELO_RESPONSE;
-            // fake to 250 because SendHeloResponse() tests for this
-            m_responseCode = 250;
-        }
     }
     else
-    {
         m_nextState = SMTP_SEND_HELO_RESPONSE;
-        // fake to 250 because SendHeloResponse() tests for this
-        m_responseCode = 250;
-    }
 
     return NS_OK;
 }
@@ -939,8 +900,6 @@ PRInt32 nsSmtpProtocol::AuthLoginResponse(nsIInputStream * stream, PRUint32 leng
   {
     case 2:
       m_nextState = SMTP_SEND_HELO_RESPONSE;
-      // fake to 250 because SendHeloResponse() tests for this
-      m_responseCode = 250;
       break;
     case 3:
       m_nextState = SMTP_SEND_AUTH_LOGIN_STEP2;
@@ -1347,7 +1306,7 @@ PRInt32 nsSmtpProtocol::SendRecipientResponse()
     rv = nsExplainErrorDetails(m_runningURL,
      (m_responseCode == 452) ? NS_ERROR_SMTP_TEMP_SIZE_EXCEEDED :
     ((m_responseCode == 552) ? NS_ERROR_SMTP_PERM_SIZE_EXCEEDED_2 :
-                               NS_ERROR_SENDING_RCPT_COMMAND),
+                               NS_ERROR_SENDING_FROM_COMMAND),
                                m_responseText.get());
 
     NS_ASSERTION(NS_SUCCEEDED(rv), "failed to explain SMTP error");
@@ -1759,19 +1718,9 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer )
     */
     if(status < 0 && m_nextState != SMTP_FREE)
     {
-      nsCOMPtr<nsIURI> url = do_QueryInterface(m_runningURL);
-      // send a quit command to close the connection with the server.
-      if (SendData(url, "QUIT"CRLF) == NS_OK)
-      {
-        m_nextState = SMTP_RESPONSE;
-        m_nextStateAfterResponse = SMTP_ERROR_DONE;
-      }
-      else
-      {
       m_nextState = SMTP_ERROR_DONE;
       /* don't exit! loop around again and do the free case */
       ClearFlag(SMTP_PAUSE_FOR_READ);
-    }
     }
   } /* while(!SMTP_PAUSE_FOR_READ) */
 
@@ -1820,7 +1769,7 @@ nsSmtpProtocol::GetPassword(char **aPassword)
     rv = smtpServer->GetUsername(getter_Copies(username));
     NS_ENSURE_SUCCESS(rv, rv);
     
-    NS_ConvertASCIItoUTF16 usernameUTF16(username);
+    NS_ConvertASCIItoUCS2 usernameUTF16(username);
     const PRUnichar *formatStrings[] =
     {
       usernameUTF16.get(),
@@ -1920,7 +1869,7 @@ nsSmtpProtocol::GetUsernamePassword(char **aUsername, char **aPassword)
 
     const PRUnichar *formatStrings[] =
     {
-      NS_ConvertASCIItoUTF16(hostname).get(),
+      NS_ConvertASCIItoUCS2(hostname).get(),
       nsnull
     };
 

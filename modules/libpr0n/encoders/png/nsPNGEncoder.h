@@ -36,6 +36,10 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "imgIEncoder.h"
+#ifdef MOZILLA_1_8_BRANCH
+#define imgIEncoder imgIEncoder_MOZILLA_1_8_BRANCH
+#define NS_DECL_IMGIENCODER NS_DECL_IMGIENCODER_MOZILLA_1_8_BRANCH
+#endif
 
 #include <png.h>
 

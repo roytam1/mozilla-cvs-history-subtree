@@ -49,7 +49,7 @@
   * For XUL descriptions and labels
   */
 nsXULTextAccessible::nsXULTextAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell):
-nsHyperTextAccessible(aDomNode, aShell)
+nsTextAccessibleWrap(aDomNode, aShell)
 { 
 }
 
@@ -60,8 +60,8 @@ NS_IMETHODIMP nsXULTextAccessible::GetName(nsAString& aName)
   if (!content) {
     return NS_ERROR_FAILURE;  // Node shut down
   }
-  if (!content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::value,
-                        aName)) {
+  nsresult rv = content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::value, aName);
+  if (rv == NS_CONTENT_ATTR_NOT_THERE) {
     // if the value doesn't exist, flatten the inner content as the name (for descriptions)
     return AppendFlatStringFromSubtree(content, &aName);
   }
@@ -69,13 +69,11 @@ NS_IMETHODIMP nsXULTextAccessible::GetName(nsAString& aName)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsXULTextAccessible::GetState(PRUint32 *aState)
+NS_IMETHODIMP nsXULTextAccessible::GetState(PRUint32 *_retval)
 {
-  nsHyperTextAccessible::GetState(aState);
-
-  // Labels and description have read only state
+  // Labels and description can only have read only state
   // They are not focusable or selectable
-  *aState |= STATE_READONLY;
+  *_retval = STATE_READONLY;
   return NS_OK;
 }
 
@@ -87,9 +85,11 @@ nsLeafAccessible(aDomNode, aShell)
 { 
 }
 
-NS_IMETHODIMP nsXULTooltipAccessible::GetName(nsAString& aName)
+NS_IMETHODIMP nsXULTooltipAccessible::GetName(nsAString& _retval)
 {
-  return GetXULName(aName, PR_TRUE);
+  //XXX, kyle.yuan@sun.com, we don't know how to get at this information at the moment,
+  //  because it is not loaded until it shows.
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsXULTooltipAccessible::GetState(PRUint32 *_retval)
@@ -110,32 +110,16 @@ NS_IMETHODIMP nsXULTooltipAccessible::GetRole(PRUint32 *_retval)
  * For XUL text links
  */
 nsXULLinkAccessible::nsXULLinkAccessible(nsIDOMNode *aDomNode, nsIWeakReference *aShell):
-nsLinkableAccessible(aDomNode, aShell)
+nsXULTextAccessible(aDomNode, aShell)
 {
 }
 
 NS_IMETHODIMP nsXULLinkAccessible::GetValue(nsAString& aValue)
 {
   if (mIsLink) {
-    mActionContent->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::href, aValue);
-    return NS_OK;
+    return mActionContent->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::href, aValue);
   }
   return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsXULLinkAccessible::GetName(nsAString& aName)
-{ 
-  nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
-  if (!content) {
-    return NS_ERROR_FAILURE;  // Node shut down
-  }
-  if (!content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::value,
-                        aName)) {
-    // if the value doesn't exist, flatten the inner content as the name (for descriptions)
-    return AppendFlatStringFromSubtree(content, &aName);
-  }
-  // otherwise, use the value attribute as the name (for labels)
-  return NS_OK;
 }
 
 NS_IMETHODIMP nsXULLinkAccessible::GetRole(PRUint32 *aRole)

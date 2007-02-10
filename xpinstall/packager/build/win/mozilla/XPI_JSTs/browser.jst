@@ -397,6 +397,7 @@ function upgradeCleanup()
   deleteThisFile("Components", "chardetc.dll");
   deleteThisFile("Components", "evntloop.dll");
   deleteThisFile("Components", "nativapp.dll");
+  deleteThisFile("Components", "universalchardet.dll");
   deleteThisFile("Components", "ucvja.dll");
   deleteThisFile("Components", "ucvko.dll");
   deleteThisFile("Components", "ucvtw.dll");
@@ -415,6 +416,7 @@ function upgradeCleanup()
   deleteThisFile("Components", "imgppm.dll");
   deleteThisFile("Components", "imgmng.dll");
   deleteThisFile("Components", "ucharuti.dll");
+  deleteThisFile("Components", "chardet.dll");
   deleteThisFile("Components", "lwbrk.dll");
   deleteThisFile("Components", "nslocale.dll");
   deleteThisFile("Components", "strres.dll");
@@ -483,6 +485,7 @@ if(verifyDiskSpace(fProgram, srDest))
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/autoconfig/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/cookie/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/wallet/");
+    registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","content-packs.jar"), "content/content-packs/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/communicator/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/communicator-region/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/editor/");

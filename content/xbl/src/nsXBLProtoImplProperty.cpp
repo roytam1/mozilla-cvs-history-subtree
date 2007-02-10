@@ -49,6 +49,8 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsContentUtils.h"
 
+MOZ_DECL_CTOR_COUNTER(nsXBLProtoImplProperty)
+
 nsXBLProtoImplProperty::nsXBLProtoImplProperty(const PRUnichar* aName,
                                                const PRUnichar* aGetter, 
                                                const PRUnichar* aSetter,
@@ -192,7 +194,6 @@ nsXBLProtoImplProperty::InstallMember(nsIScriptContext* aContext,
   // now we want to reevaluate our property using aContext and the script object for this window...
   if ((mJSGetterObject || mJSSetterObject) && targetClassObject) {
     JSObject * getter = nsnull;
-    JSAutoRequest ar(cx);
     if (mJSGetterObject)
       if (!(getter = ::JS_CloneFunctionObject(cx, mJSGetterObject, globalObject)))
         return NS_ERROR_OUT_OF_MEMORY;
@@ -251,7 +252,7 @@ nsXBLProtoImplProperty::CompileMember(nsIScriptContext* aContext, const nsCStrin
       JSObject* getterObject = nsnull;
       rv = aContext->CompileFunction(aClassObject,
                                      NS_LITERAL_CSTRING("get_") +
-                                     NS_ConvertUTF16toUTF8(mName),
+                                     NS_ConvertUCS2toUTF8(mName),
                                      0,
                                      nsnull,
                                      getter, 
@@ -303,7 +304,7 @@ nsXBLProtoImplProperty::CompileMember(nsIScriptContext* aContext, const nsCStrin
       JSObject* setterObject = nsnull;
       rv = aContext->CompileFunction(aClassObject,
                                      NS_LITERAL_CSTRING("set_") +
-                                     NS_ConvertUTF16toUTF8(mName),
+                                     NS_ConvertUCS2toUTF8(mName),
                                      1,
                                      gPropertyArgs,
                                      setter, 

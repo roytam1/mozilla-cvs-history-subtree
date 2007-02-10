@@ -57,6 +57,8 @@
 
 #include "nsGtkUtils.h" // for nsGtkUtils::gdk_keyboard_get_modifiers()
 
+#include "nsIPref.h"
+
 static void
 ConvertKeyEventToContextMenuEvent(const nsKeyEvent* inKeyEvent,
                                   nsMouseEvent* outCMEvent);
@@ -75,7 +77,7 @@ nsWidget *nsWidget::sFocusWindow = 0;
 guint32 nsWidget::sLastEventTime = 0;
 
 // we should convert the context key to context menu event in the OnKey member
-// function, and dispatch the NS_CONTEXTMENU instead of a normal key event.
+// function, and dispatch the NS_CONTEXTMENU_KEY instead of a normal key event.
 PRBool nsWidget::OnKey(nsKeyEvent &aEvent)
 {
 
@@ -122,9 +124,7 @@ ConvertKeyEventToContextMenuEvent(const nsKeyEvent* inKeyEvent,
 {
   *(nsInputEvent *)outCMEvent = *(nsInputEvent *)inKeyEvent;
   outCMEvent->eventStructType = NS_MOUSE_EVENT;
-  outCMEvent->message = NS_CONTEXTMENU;
-  outCMEvent->button = nsMouseEvent::eRightButton;
-  outCMEvent->context = nsMouseEvent::eContextMenuKey;
+  outCMEvent->message = NS_CONTEXTMENU_KEY;
   outCMEvent->isShift = outCMEvent->isControl = PR_FALSE;
   outCMEvent->isAlt = outCMEvent->isMeta = PR_FALSE;
   outCMEvent->clickCount = 0;
@@ -424,7 +424,10 @@ nsWidget::OnDestroySignal(GtkWidget* aGtkWidget)
 
 nsIWidget* nsWidget::GetParent(void)
 {
-  return mParent;
+  nsIWidget *ret;
+  ret = mParent;
+  NS_IF_ADDREF(ret);
+  return ret;
 }
 
 //-------------------------------------------------------------------------
@@ -682,8 +685,8 @@ PRBool nsWidget::OnResize(nsRect &aRect)
   nsRect *foo = new nsRect(0, 0, aRect.width, aRect.height);
   event.windowSize = foo;
 
-  event.refPoint.x = 0;
-  event.refPoint.y = 0;
+  event.point.x = 0;
+  event.point.y = 0;
   event.mWinWidth = aRect.width;
   event.mWinHeight = aRect.height;
   
@@ -717,8 +720,8 @@ PRBool nsWidget::OnMove(PRInt32 aX, PRInt32 aY)
 
     nsGUIEvent event(PR_TRUE, NS_MOVE, this);
     InitEvent(event);
-    event.refPoint.x = aX;
-    event.refPoint.y = aY;
+    event.point.x = aX;
+    event.point.y = aY;
     PRBool result = DispatchWindowEvent(&event);
     return result;
 }
@@ -1148,7 +1151,7 @@ NS_IMETHODIMP nsWidget::InvalidateRegion(const nsIRegion *aRegion, PRBool aIsSyn
     }
   }
 
-  // drop the const.. what's the right thing to do here?
+  // drop the const.. whats the right thing to do here?
   ((nsIRegion*)aRegion)->FreeRects(regionRectSet);
 
   return NS_OK;
@@ -1404,22 +1407,38 @@ void nsWidget::InitEvent(nsGUIEvent& event, nsPoint* aPoint)
 
     if (ge != nsnull) {
       //       ::ScreenToClient(mWnd, &cpos);
-      event.refPoint.x = PRInt32(ge->configure.x);
-      event.refPoint.y = PRInt32(ge->configure.y);
+      event.point.x = PRInt32(ge->configure.x);
+      event.point.y = PRInt32(ge->configure.y);
     }  
   }    
   else {                      // use the point override if provided
-    event.refPoint.x = aPoint->x;
-    event.refPoint.y = aPoint->y;
+    event.point.x = aPoint->x;
+    event.point.y = aPoint->y;
   }
 
   event.time = gdk_event_get_time(ge);
 
-  //    mLastPoint.x = event.refPoint.x;
-  //    mLastPoint.y = event.refPoint.y;
+  //    mLastPoint.x = event.point.x;
+  //    mLastPoint.y = event.point.y;
 
   if (ge)
     gdk_event_free(ge);
+}
+
+PRBool nsWidget::ConvertStatus(nsEventStatus aStatus)
+{
+  switch(aStatus) {
+  case nsEventStatus_eIgnore:
+    return(PR_FALSE);
+  case nsEventStatus_eConsumeNoDefault:
+    return(PR_TRUE);
+  case nsEventStatus_eConsumeDoDefault:
+    return(PR_FALSE);
+  default:
+    NS_ASSERTION(0, "Illegal nsEventStatus enumeration value");
+    break;
+  }
+  return PR_FALSE;
 }
 
 PRBool nsWidget::DispatchWindowEvent(nsGUIEvent* event)
@@ -1574,7 +1593,7 @@ PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
 //         result = ConvertStatus(mMouseListener->MouseMoved(aEvent));
 //         nsRect rect;
 //         GetBounds(rect);
-//         if (rect.Contains(event.refPoint.x, event.refPoint.y)) {
+//         if (rect.Contains(event.point.x, event.point.y)) {
 //           if (mCurrentWindow == NULL || mCurrentWindow != this) {
 //             printf("Mouse enter");
 //             mCurrentWindow = this;
@@ -1585,11 +1604,15 @@ PRBool nsWidget::DispatchMouseEvent(nsMouseEvent& aEvent)
 
       } break;
 
-      case NS_MOUSE_BUTTON_DOWN:
+      case NS_MOUSE_LEFT_BUTTON_DOWN:
+      case NS_MOUSE_MIDDLE_BUTTON_DOWN:
+      case NS_MOUSE_RIGHT_BUTTON_DOWN:
         result = ConvertStatus(mMouseListener->MousePressed(aEvent));
         break;
 
-      case NS_MOUSE_BUTTON_UP:
+      case NS_MOUSE_LEFT_BUTTON_UP:
+      case NS_MOUSE_MIDDLE_BUTTON_UP:
+      case NS_MOUSE_RIGHT_BUTTON_UP:
         result = ConvertStatus(mMouseListener->MouseReleased(aEvent));
         result = ConvertStatus(mMouseListener->MouseClicked(aEvent));
         break;
@@ -1733,8 +1756,8 @@ nsWidget::OnMotionNotifySignal(GdkEventMotion * aGdkMotionEvent)
     x = (gint) aGdkMotionEvent->x;
     y = (gint) aGdkMotionEvent->y;
 
-    event.refPoint.x = nscoord(x);
-    event.refPoint.y = nscoord(y);
+    event.point.x = nscoord(x);
+    event.point.y = nscoord(y);
     event.widget = this;
   }
 
@@ -1753,8 +1776,8 @@ nsWidget::OnMotionNotifySignal(GdkEventMotion * aGdkMotionEvent)
       
       // The event coords will be the initial *widget* coords plus the 
       // root difference computed above.
-      event.refPoint.x = nscoord(sButtonMotionWidgetX + diffX);
-      event.refPoint.y = nscoord(sButtonMotionWidgetY + diffY);
+      event.point.x = nscoord(sButtonMotionWidgetX + diffX);
+      event.point.y = nscoord(sButtonMotionWidgetY + diffY);
     }
   }
   else
@@ -1803,8 +1826,8 @@ nsWidget::OnEnterNotifySignal(GdkEventCrossing * aGdkCrossingEvent)
 
   if (aGdkCrossingEvent != NULL) 
   {
-    event.refPoint.x = nscoord(aGdkCrossingEvent->x);
-    event.refPoint.y = nscoord(aGdkCrossingEvent->y);
+    event.point.x = nscoord(aGdkCrossingEvent->x);
+    event.point.y = nscoord(aGdkCrossingEvent->y);
     event.time = aGdkCrossingEvent->time;
   }
 
@@ -1837,8 +1860,8 @@ nsWidget::OnLeaveNotifySignal(GdkEventCrossing * aGdkCrossingEvent)
 
   if (aGdkCrossingEvent != NULL) 
   {
-    event.refPoint.x = nscoord(aGdkCrossingEvent->x);
-    event.refPoint.y = nscoord(aGdkCrossingEvent->y);
+    event.point.x = nscoord(aGdkCrossingEvent->x);
+    event.point.y = nscoord(aGdkCrossingEvent->y);
     event.time = aGdkCrossingEvent->time;
   }
 
@@ -1856,7 +1879,6 @@ nsWidget::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
 {
   nsMouseScrollEvent scrollEvent(PR_TRUE, NS_MOUSE_SCROLL, this);
   PRUint32 eventType = 0;
-  PRInt16 button = nsMouseEvent::eLeftButton;
 
   // If you double click in GDK, it will actually generate a single
   // click event before sending the double click event, and this is
@@ -1883,19 +1905,18 @@ nsWidget::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
     // Triple click.
   case GDK_3BUTTON_PRESS:
 
-    eventType = NS_MOUSE_BUTTON_DOWN;
     switch (aGdkButtonEvent->button)  // Which button?
     {
     case 1:
-      button = nsMouseEvent::eLeftButton;
+      eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
       break;
 
     case 2:
-      button = nsMouseEvent::eMiddleButton;
+      eventType = NS_MOUSE_MIDDLE_BUTTON_DOWN;
       break;
 
     case 3:
-      button = nsMouseEvent::eRightButton;
+      eventType = NS_MOUSE_RIGHT_BUTTON_DOWN;
       break;
 
     case 4:
@@ -1912,8 +1933,8 @@ nsWidget::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
       else
         scrollEvent.delta = 3;
 
-      scrollEvent.refPoint.x = nscoord(aGdkButtonEvent->x);
-      scrollEvent.refPoint.y = nscoord(aGdkButtonEvent->y);
+      scrollEvent.point.x = nscoord(aGdkButtonEvent->x);
+      scrollEvent.point.y = nscoord(aGdkButtonEvent->y);
       
       scrollEvent.isShift = (aGdkButtonEvent->state & GDK_SHIFT_MASK) ? PR_TRUE : PR_FALSE;
       scrollEvent.isControl = (aGdkButtonEvent->state & GDK_CONTROL_MASK) ? PR_TRUE : PR_FALSE;
@@ -1928,7 +1949,7 @@ nsWidget::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
 
       // Single-click default.
     default:
-      button = nsMouseEvent::eLeftButton;
+      eventType = NS_MOUSE_LEFT_BUTTON_DOWN;
       break;
     }
     break;
@@ -1939,7 +1960,6 @@ nsWidget::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
 
   nsMouseEvent event(PR_TRUE, eventType, this, nsMouseEvent::eReal);
   InitMouseEvent(aGdkButtonEvent, event);
-  event.button = button;
 
   // Set the button motion target and remeber the widget and root coords
   sButtonMotionTarget = this;
@@ -1963,7 +1983,7 @@ nsWidget::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
 
   // if we're a right-button-down on linux, we're trying to
   // popup a context menu. send that event to gecko also.
-  if (button == nsMouseEvent::eRightButton) {
+  if (eventType == NS_MOUSE_RIGHT_BUTTON_DOWN) {
     nsMouseEvent contextMenuEvent(PR_TRUE, NS_CONTEXTMENU, this,
                                   nsMouseEvent::eReal);
     InitMouseEvent(aGdkButtonEvent, contextMenuEvent);
@@ -1977,19 +1997,20 @@ nsWidget::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
 /* virtual */ void
 nsWidget::OnButtonReleaseSignal(GdkEventButton * aGdkButtonEvent)
 {
-  PRUint16 button;
+  PRUint32 eventType = 0;
+
   switch (aGdkButtonEvent->button)
   {
   case 1:
-    button = nsMouseEvent::eLeftButton;
+    eventType = NS_MOUSE_LEFT_BUTTON_UP;
     break;
 	  
   case 2:
-    button = nsMouseEvent::eMiddleButton;
+    eventType = NS_MOUSE_MIDDLE_BUTTON_UP;
     break;
 	  
   case 3:
-    button = nsMouseEvent::eRightButton;
+    eventType = NS_MOUSE_RIGHT_BUTTON_UP;
     break;
 
   case 4:
@@ -2001,12 +2022,11 @@ nsWidget::OnButtonReleaseSignal(GdkEventButton * aGdkButtonEvent)
     return;
 
   default:
-    button = nsMouseEvent::eLeftButton;
+    eventType = NS_MOUSE_LEFT_BUTTON_UP;
     break;
 	}
 
-  nsMouseEvent event(PR_TRUE, NS_MOUSE_BUTTON_UP, this, nsMouseEvent::eReal);
-  event.button = button;
+  nsMouseEvent event(PR_TRUE, eventType, this, nsMouseEvent::eReal);
   InitMouseEvent(aGdkButtonEvent, event);
 
   if (sButtonMotionTarget) {
@@ -2019,8 +2039,8 @@ nsWidget::OnButtonReleaseSignal(GdkEventButton * aGdkButtonEvent)
     event.widget = sButtonMotionTarget;
 
     // see comments in nsWidget::OnMotionNotifySignal
-    event.refPoint.x = nscoord(sButtonMotionWidgetX + diffX);
-    event.refPoint.y = nscoord(sButtonMotionWidgetY + diffY);
+    event.point.x = nscoord(sButtonMotionWidgetX + diffX);
+    event.point.y = nscoord(sButtonMotionWidgetY + diffY);
   }
 
   // Drop the motion target before dispatching the event so that we
@@ -2112,8 +2132,8 @@ nsWidget::InitMouseEvent(GdkEventButton * aGdkButtonEvent,
                          nsMouseEvent &anEvent)
 {
   if (aGdkButtonEvent != NULL) {
-    anEvent.refPoint.x = nscoord(aGdkButtonEvent->x);
-    anEvent.refPoint.y = nscoord(aGdkButtonEvent->y);
+    anEvent.point.x = nscoord(aGdkButtonEvent->x);
+    anEvent.point.y = nscoord(aGdkButtonEvent->y);
 
     anEvent.isShift = (aGdkButtonEvent->state & GDK_SHIFT_MASK) ? PR_TRUE : PR_FALSE;
     anEvent.isControl = (aGdkButtonEvent->state & GDK_CONTROL_MASK) ? PR_TRUE : PR_FALSE;
@@ -2371,14 +2391,6 @@ NS_IMETHODIMP nsWidget::SetIMEOpenState(PRBool aState) {
 }
 
 NS_IMETHODIMP nsWidget::GetIMEOpenState(PRBool* aState) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsWidget::SetIMEEnabled(PRBool aState) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsWidget::GetIMEEnabled(PRBool* aState) {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 

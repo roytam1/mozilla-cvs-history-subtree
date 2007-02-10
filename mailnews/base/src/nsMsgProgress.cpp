@@ -112,7 +112,7 @@ NS_IMETHODIMP nsMsgProgress::OpenProgressDialog(nsIDOMWindowInternal *parent, ns
 
     // Open the dialog.
     nsCOMPtr<nsIDOMWindow> newWindow;
-    rv = parent->OpenDialog(NS_ConvertASCIItoUTF16(dialogURL),
+    rv = parent->OpenDialog(NS_ConvertASCIItoUCS2(dialogURL),
                             NS_LITERAL_STRING("_blank"),
                             NS_LITERAL_STRING("chrome,titlebar,dependent"),
                             array, getter_AddRefs(newWindow));
@@ -345,7 +345,14 @@ NS_IMETHODIMP nsMsgProgress::ShowProgress(PRInt32 percent)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMsgProgress::SetWrappedStatusFeedback(nsIMsgStatusFeedback * aJSStatusFeedback)
+/* [noscript] void setDocShell (in nsIDocShell shell, in nsIDOMWindowInternal window); */
+NS_IMETHODIMP nsMsgProgress::SetDocShell(nsIDocShell *shell, nsIDOMWindow *window)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void closeWindow (); */
+NS_IMETHODIMP nsMsgProgress::CloseWindow()
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }

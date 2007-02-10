@@ -47,9 +47,6 @@
 
 JS_BEGIN_EXTERN_C
 
-/* Generous sanity-bound on length (in elements) of array initialiser. */
-#define ARRAY_INIT_LIMIT        JS_BIT(24)
-
 extern JSBool
 js_IdIsIndex(jsval id, jsuint *indexp);
 
@@ -81,21 +78,14 @@ extern JSBool
 js_IsArrayLike(JSContext *cx, JSObject *obj, JSBool *answerp, jsuint *lengthp);
 
 /*
- * JS-specific merge sort function.
+ * JS-specific heap sort function.
  */
 typedef JSBool (*JSComparator)(void *arg, const void *a, const void *b,
                                int *result);
-/*
- * NB: vec is the array to be sorted, tmp is temporary space at least as big
- * as vec. Both should be GC-rooted if appropriate.
- *
- * The sorted result is in vec. vec may be in an inconsistent state if the
- * comparator function cmp returns an error inside a comparison, so remember
- * to check the return value of this function.
- */
+
 extern JSBool
-js_MergeSort(void *vec, size_t nel, size_t elsize, JSComparator cmp,
-             void *arg, void *tmp);
+js_HeapSort(void *vec, size_t nel, void *pivot, size_t elsize,
+            JSComparator cmp, void *arg);
 
 JS_END_EXTERN_C
 

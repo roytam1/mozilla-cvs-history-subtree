@@ -106,26 +106,6 @@ function initMenus()
         ]
     };
 
-    var Mozilla = "(console.host == 'Mozilla')";
-
-    console.menuSpecs["mainmenu:edit"] = {
-        label: MSG_MNU_EDIT,
-        items:
-        [
-         ["cmd-undo",      {enabledif: "getCommandEnabled('cmd_undo')"}],
-         ["cmd-redo",      {enabledif: "getCommandEnabled('cmd_redo')"}],
-         ["-"],
-         ["cmd-cut",       {enabledif: "getCommandEnabled('cmd_cut')"}],
-         ["cmd-copy",      {enabledif: "getCommandEnabled('cmd_copy')"}],
-         ["cmd-paste",     {enabledif: "getCommandEnabled('cmd_paste')"}],
-         ["cmd-delete",    {enabledif: "getCommandEnabled('cmd_delete')"}],
-         ["-"],
-         ["cmd-selectall", {enabledif: "getCommandEnabled('cmd_selectAll')"}],
-         ["-",                 {visibleif: Mozilla}],
-         ["cmd-mozilla-prefs", {visibleif: Mozilla}]
-        ]
-    };
-
     console.menuSpecs["mainmenu:view"] = {
         label: MSG_MNU_VIEW,
         items:
@@ -183,13 +163,8 @@ function initMenus()
          ["toggle-profile",
                  {type: "checkbox",
                   checkedif: "console.jsds.flags & COLLECT_PROFILE_DATA"}],
-         ["toggle-forcescriptload",
-                 {type: "checkbox",
-                  checkedif: "console.prefs['profile.forceScriptLoad']"}],
-         ["-"],
          ["clear-profile"],
-         ["save-profile"],
-         ["show-profile"]
+         ["save-profile"]
         ]
     };
 

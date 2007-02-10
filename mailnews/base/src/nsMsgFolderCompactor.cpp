@@ -43,6 +43,7 @@
 #include "nsIFileSpec.h"
 #include "nsIStreamListener.h"
 #include "nsIMsgMessageService.h"
+#include "nsLocalFolderSummarySpec.h"
 #include "nsFileStream.h"
 #include "nsMsgDBCID.h"
 #include "nsMsgUtils.h"
@@ -109,10 +110,9 @@ void nsFolderCompactState::CleanupTempFilesAfterError()
   CloseOutputStream();
   if (m_db)
     m_db->ForceClosed();
-  nsFileSpec summaryFile;
-  GetSummaryFileLocation(m_fileSpec, &summaryFile); 
+  nsLocalFolderSummarySpec summarySpec(m_fileSpec);
   m_fileSpec.Delete(PR_FALSE);
-  summaryFile.Delete(PR_FALSE);
+  summarySpec.Delete(PR_FALSE);
 }
 
 nsresult nsFolderCompactState::BuildMessageURI(const char *baseURI, PRUint32 key, nsCString& uri)
@@ -371,9 +371,8 @@ nsFolderCompactState::FinishCompact()
     // All okay time to finish up the compact process
   nsresult rv = NS_OK;
   nsCOMPtr<nsIFileSpec> pathSpec;
-  nsCOMPtr<nsIDBFolderInfo> folderInfo; 
+  nsCOMPtr<nsIDBFolderInfo> folderInfo;
   nsFileSpec fileSpec;
-  nsFileSpec summaryFile;
 
     // get leaf name and database name of the folder
   rv = m_folder->GetPath(getter_AddRefs(pathSpec));
@@ -384,10 +383,9 @@ nsFolderCompactState::FinishCompact()
   PRBool ignored;
   fileSpec.ResolveSymlink(ignored);
 
-  GetSummaryFileLocation(fileSpec, &summaryFile);
-  
+  nsLocalFolderSummarySpec summarySpec(fileSpec);
   nsXPIDLCString leafName;
-  nsCAutoString dbName(summaryFile.GetLeafName());
+  nsCAutoString dbName(summarySpec.GetLeafName());
 
   pathSpec->GetLeafName(getter_Copies(leafName));
 
@@ -404,8 +402,7 @@ nsFolderCompactState::FinishCompact()
   m_db->ForceClosed();
   m_db = nsnull;
 
-  nsFileSpec newSummaryFile;
-  GetSummaryFileLocation(m_fileSpec, &newSummaryFile);
+  nsLocalFolderSummarySpec newSummarySpec(m_fileSpec);
 
   nsCOMPtr <nsIDBFolderInfo> transferInfo;
   m_folder->GetDBTransferInfo(getter_AddRefs(transferInfo));
@@ -417,8 +414,8 @@ nsFolderCompactState::FinishCompact()
   PRBool folderRenameSucceeded = PR_FALSE;
   PRBool msfRenameSucceeded = PR_FALSE;
     // remove the old folder and database
-  summaryFile.Delete(PR_FALSE);
-  if (!summaryFile.Exists())
+  summarySpec.Delete(PR_FALSE);
+  if (!summarySpec.Exists())
   {
     fileSpec.Delete(PR_FALSE);
     if (!fileSpec.Exists())
@@ -430,7 +427,7 @@ nsFolderCompactState::FinishCompact()
       if (NS_SUCCEEDED(rv))
       {
         folderRenameSucceeded = PR_TRUE;
-        rv = newSummaryFile.Rename(dbName.get());
+        rv = newSummarySpec.Rename(dbName.get());
         NS_ASSERTION(NS_SUCCEEDED(rv), "error renaming compacted folder's db");
         msfRenameSucceeded = NS_SUCCEEDED(rv);
       }
@@ -440,7 +437,7 @@ nsFolderCompactState::FinishCompact()
   if (!folderRenameSucceeded)
     m_fileSpec.Delete(PR_FALSE);
   if (!msfRenameSucceeded)
-    newSummaryFile.Delete(PR_FALSE);
+    newSummarySpec.Delete(PR_FALSE);
   rv = ReleaseFolderLock();
   NS_ASSERTION(NS_SUCCEEDED(rv),"folder lock not released successfully");
   if (msfRenameSucceeded && folderRenameSucceeded)

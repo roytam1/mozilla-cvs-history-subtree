@@ -69,7 +69,13 @@ REQUIRES	= xpcom \
 		  locale \
 		  $(NULL)
 
+EXPORTS		= \
+		nsXBLAtomList.h \
+		nsXBLAtoms.h \
+		$(NULL)
+
 CPPSRCS		= \
+    nsXBLAtoms.cpp \
     nsXBLBinding.cpp \
     nsXBLPrototypeBinding.cpp \
     nsXBLPrototypeResources.cpp \
@@ -81,7 +87,9 @@ CPPSRCS		= \
     nsXBLProtoImplField.cpp \
     nsXBLProtoImpl.cpp \
     nsXBLEventHandler.cpp \
+    nsXBLWindowHandler.cpp \
     nsXBLWindowKeyHandler.cpp \
+    nsXBLWindowDragHandler.cpp \
     nsXBLPrototypeHandler.cpp \
     nsXBLService.cpp \
     nsBindingManager.cpp \

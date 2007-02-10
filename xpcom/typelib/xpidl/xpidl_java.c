@@ -130,7 +130,8 @@ static char* nonIDLIfaces[] = {
     "nsIScriptElement",
     "nsIFrameSelection",
     "nsIWidget",
-    "nsIMenuItem"
+    "nsIMenuItem",
+    "nsIMenuBar"
 };
 #define NONIDLS(state)      (((struct java_priv_data *)state->priv)->nonIDLIfaces)
 #endif
@@ -303,7 +304,7 @@ interface_declaration(TreeState *state)
             " * %s.idl\n */\n", state->basename);
 
     /* package name (namespace) */
-    fputs("\npackage org.mozilla.interfaces;\n\n", state->file);
+    fputs("\npackage org.mozilla.xpcom;\n\n", state->file);
 
 
     iid = IDL_tree_property_get(IDL_INTERFACE(interface).ident, "uuid");

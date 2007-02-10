@@ -61,6 +61,7 @@
 #include "rdf.h"
 #include "nsMessengerBootstrap.h"
 #include "nsMessenger.h"
+#include "nsMsgGroupRecord.h"
 #include "nsIContentViewer.h"
 #include "nsIUrlListenerManager.h"
 #include "nsUrlListenerManager.h"
@@ -104,8 +105,6 @@
 #include "nsRssIncomingServer.h"
 #include "nsRssService.h"
 #include "nsMsgTagService.h"
-#include "nsMsgFolderNotificationService.h"
-#include "nsMailDirProvider.h"
 
 #ifdef XP_WIN
 #include "nsMessengerWinIntegration.h"
@@ -115,9 +114,6 @@
 #endif
 #ifdef XP_MACOSX
 #include "nsMessengerOSXIntegration.h"
-#endif
-#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_GTK2)
-#include "nsMessengerUnixIntegration.h"
 #endif
 #include "nsCURILoader.h"
 #include "nsMessengerContentHandler.h"
@@ -141,6 +137,12 @@
 #include "nsAddbookProtocolHandler.h"
 #include "nsAddbookUrl.h"
 
+#if defined(XP_WIN) && !defined(__MINGW32__)
+#include "nsAbOutlookDirectory.h"
+#include "nsAbOutlookCard.h"
+#include "nsAbOutlookDirFactory.h"
+#endif
+
 #include "nsAbDirectoryQuery.h"
 #include "nsAbBooleanExpression.h"
 #include "nsAbDirectoryQueryProxy.h"
@@ -158,16 +160,6 @@
 #include "nsAbLDAPReplicationData.h"
 #include "nsAbLDAPChangeLogQuery.h"
 #include "nsAbLDAPChangeLogData.h"
-#include "nsLDAPAutoCompleteSession.h"
-#endif
-
-#if defined(XP_WIN) && !defined(__MINGW32__)
-#include "nsAbOutlookDirFactory.h"
-// These two cause windows.h to be included, if not placed after *DirFactory.h
-// then this can cause problems with CreateDirectory not being
-// defined.
-#include "nsAbOutlookDirectory.h"
-#include "nsAbOutlookCard.h"
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -193,6 +185,8 @@
 #include "nsMsgAttachment.h"
 #include "nsMsgSend.h"
 #include "nsMsgQuote.h"
+#include "nsIMsgDraft.h"
+#include "nsMsgCreate.h"
 #include "nsURLFetcher.h"
 #include "nsSmtpServer.h"
 #include "nsSmtpDataSource.h"
@@ -339,9 +333,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgOfflineManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgProgress)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSpamSettings)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgTagService)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgFolderNotificationService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCidProtocolHandler)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsMailDirProvider)
 #ifdef XP_WIN
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerWinIntegration, Init)
 #endif
@@ -351,14 +343,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerOS2Integration, Init)
 #ifdef XP_MACOSX
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerOSXIntegration, Init)
 #endif
-#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_GTK2)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerUnixIntegration, Init)
-#endif
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMessengerContentHandler)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgContentPolicy, Init)
-#ifdef MOZ_THUNDERBIRD
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgCookiePolicy)
-#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 // addrbook factories
@@ -400,7 +387,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPReplicationQuery)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPProcessReplicationData)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPChangeLogQuery)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPProcessChangeLogData)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsLDAPAutoCompleteSession)
 #endif
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbDirectoryQueryProxy)
@@ -426,6 +412,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgCompFields)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgAttachment)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgComposeAndSend)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgSendLater)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgDraft)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgComposeService, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgComposeContentHandler)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgQuote)
@@ -845,22 +832,9 @@ static const nsModuleComponentInfo gComponents[] = {
       NS_MSGTAGSERVICE_CONTRACTID,
       nsMsgTagServiceConstructor,
     },
-    { "Msg Notification Service", NS_MSGNOTIFICATIONSERVICE_CID,
-      NS_MSGNOTIFICATIONSERVICE_CONTRACTID,
-      nsMsgFolderNotificationServiceConstructor,
-    },
-  
     { "cid protocol", NS_CIDPROTOCOL_CID,
       NS_CIDPROTOCOLHANDLER_CONTRACTID,
       nsCidProtocolHandlerConstructor,
-    },
-    {
-      "mail director provider",
-      MAILDIRPROVIDER_CID,
-      NS_MAILDIRPROVIDER_CONTRACTID,
-      nsMailDirProviderConstructor,
-      nsMailDirProvider::Register,
-      nsMailDirProvider::Unregister
     },
 #ifdef XP_WIN
     { "Windows OS Integration", NS_MESSENGERWININTEGRATION_CID,
@@ -880,12 +854,6 @@ static const nsModuleComponentInfo gComponents[] = {
       nsMessengerOSXIntegrationConstructor,
     },
 #endif
-#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_GTK2)
-    { "Unix OS Integration", NS_MESSENGERUNIXINTEGRATION_CID,
-      NS_MESSENGEROSINTEGRATION_CONTRACTID,
-      nsMessengerUnixIntegrationConstructor,
-    },
-#endif
     { "application/x-message-display content handler",
        NS_MESSENGERCONTENTHANDLER_CID,
        NS_MESSENGERCONTENTHANDLER_CONTRACTID,
@@ -896,13 +864,11 @@ static const nsModuleComponentInfo gComponents[] = {
        NS_MSGCONTENTPOLICY_CONTRACTID,
        nsMsgContentPolicyConstructor,
        RegisterContentPolicy, UnregisterContentPolicy },
-#ifdef MOZ_THUNDERBIRD
     { "mail cookie policy enforcer",
       NS_MSGCOOKIEPOLICY_CID,
       NS_COOKIEPERMISSION_CONTRACTID,
       nsMsgCookiePolicyConstructor
     },
-#endif
     
     ////////////////////////////////////////////////////////////////////////////////
     // addrbook components
@@ -979,10 +945,6 @@ static const nsModuleComponentInfo gComponents[] = {
       NS_ABLDAPSACDIRFACTORY_CONTRACTID, nsAbLDAPDirFactoryConstructor },
     { "Address book LDAP autocomplete formatter", NS_ABLDAPAUTOCOMPFORMATTER_CID,
       NS_ABLDAPAUTOCOMPFORMATTER_CONTRACTID,nsAbLDAPAutoCompFormatterConstructor },
-    { "LDAP Autocomplete Session",
-      NS_LDAPAUTOCOMPLETESESSION_CID,
-      "@mozilla.org/autocompleteSession;1?type=ldap",
-      nsLDAPAutoCompleteSessionConstructor },
 #endif
     { "The directory query proxy interface", NS_ABDIRECTORYQUERYPROXY_CID,
       NS_ABDIRECTORYQUERYPROXY_CONTRACTID, nsAbDirectoryQueryProxyConstructor},
@@ -1015,6 +977,8 @@ static const nsModuleComponentInfo gComponents[] = {
       NS_MSGCOMPFIELDS_CONTRACTID, nsMsgCompFieldsConstructor },
     { "Msg Compose Attachment", NS_MSGATTACHMENT_CID, 
       NS_MSGATTACHMENT_CONTRACTID, nsMsgAttachmentConstructor },
+    { "Msg Draft", NS_MSGDRAFT_CID, 
+      NS_MSGDRAFT_CONTRACTID, nsMsgDraftConstructor },
     { "Msg Send", NS_MSGSEND_CID,
       NS_MSGSEND_CONTRACTID, nsMsgComposeAndSendConstructor },
     { "Msg Send Later", NS_MSGSENDLATER_CID,
@@ -1246,21 +1210,7 @@ static const nsModuleComponentInfo gComponents[] = {
     // mdn  components
     ////////////////////////////////////////////////////////////////////////////////
     { "MIME VCard Handler", NS_VCARD_CONTENT_TYPE_HANDLER_CID, "@mozilla.org/mimecth;1?type=text/x-vcard",
-       nsVCardMimeContentTypeHandlerConstructor, },
-
-#ifdef MOZ_SUITE
-    ////////////////////////////////////////////////////////////////////////////////
-    // suite general startup
-    ////////////////////////////////////////////////////////////////////////////////
-    { "Messenger Bootstrapper", NS_MESSENGERBOOTSTRAP_CID,
-      NS_MAILSTARTUPHANDLER_CONTRACTID, nsMessengerBootstrapConstructor },
-    { "Address Book", NS_ADDRESSBOOK_CID,
-      NS_ADDRESSBOOKSTARTUPHANDLER_CONTRACTID, nsAddressBookConstructor },
-    { "Compose Service", NS_MSGCOMPOSESERVICE_CID,
-      NS_MSGCOMPOSESTARTUPHANDLER_CONTRACTID, nsMsgComposeServiceConstructor },
-    { "NNTP Service", NS_NNTPSERVICE_CID,
-      NS_NEWSSTARTUPHANDLER_CONTRACTID, nsNntpServiceConstructor },
-#endif
+       nsVCardMimeContentTypeHandlerConstructor, }
 };
 
 PR_STATIC_CALLBACK(void) nsMailModuleDtor(nsIModule* self)

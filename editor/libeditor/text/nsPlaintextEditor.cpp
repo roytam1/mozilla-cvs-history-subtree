@@ -75,7 +75,7 @@
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
 #include "nsUnicharUtils.h"
-#include "nsContentCID.h"
+
 #include "nsAOLCiter.h"
 #include "nsInternetCiter.h"
 
@@ -94,12 +94,6 @@ nsPlaintextEditor::nsPlaintextEditor()
 , mWrapColumn(0)
 , mMaxTextLength(-1)
 , mInitTriggerCounter(0)
-, mNewlineHandling(nsIPlaintextEditor::eNewlinesPasteToFirst)
-#ifdef XP_WIN
-, mCaretStyle(1)
-#else
-, mCaretStyle(0)
-#endif
 {
 } 
 
@@ -141,21 +135,7 @@ NS_IMETHODIMP nsPlaintextEditor::Init(nsIDOMDocument *aDoc,
     // Init the base editor
     res = nsEditor::Init(aDoc, aPresShell, aRoot, aSelCon, aFlags);
   }
-
-  // check the "single line editor newline handling"
-  // and "caret behaviour in selection" prefs
-  nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
-  if (prefBranch)
-  {
-    prefBranch->GetIntPref("editor.singleLine.pasteNewlines",
-                           &mNewlineHandling);
-    prefBranch->GetIntPref("layout.selection.caret_style", &mCaretStyle);
-#ifdef XP_WIN
-    if (mCaretStyle == 0)
-      mCaretStyle = 1;
-#endif
-  }
-
+  
   if (NS_FAILED(rulesRes)) return rulesRes;
   return res;
 }
@@ -229,7 +209,7 @@ nsPlaintextEditor::SetDocumentCharacterSet(const nsACString & characterSet)
               // set attribute to <original prefix> charset=text/html
               result = nsEditor::SetAttribute(metaElement, content,
                                               Substring(originalStart, start) +
-                                              charsetEquals + NS_ConvertASCIItoUTF16(characterSet)); 
+                                              charsetEquals + NS_ConvertASCIItoUCS2(characterSet)); 
               if (NS_SUCCEEDED(result)) 
                 newMetaCharset = PR_FALSE; 
               break; 
@@ -260,7 +240,7 @@ nsPlaintextEditor::SetDocumentCharacterSet(const nsACString & characterSet)
                 if (NS_SUCCEEDED(result)) { 
                   // not undoable, undo should undo CreateNode 
                   result = metaElement->SetAttribute(NS_LITERAL_STRING("content"),
-                                                     NS_LITERAL_STRING("text/html;charset=") + NS_ConvertASCIItoUTF16(characterSet)); 
+                                                     NS_LITERAL_STRING("text/html;charset=") + NS_ConvertASCIItoUCS2(characterSet)); 
                 } 
               } 
             } 
@@ -643,33 +623,6 @@ NS_IMETHODIMP nsPlaintextEditor::DeleteSelection(nsIEditor::EDirection aAction)
   nsAutoPlaceHolderBatch batch(this, gDeleteTxnName);
   nsAutoRules beginRulesSniffing(this, kOpDeleteSelection, aAction);
 
-  // pre-process
-  nsCOMPtr<nsISelection> selection;
-  result = GetSelection(getter_AddRefs(selection));
-  if (NS_FAILED(result)) return result;
-  if (!selection) return NS_ERROR_NULL_POINTER;
-
-  // If there is an existing selection when an extended delete is requested,
-  //  platforms that use "caret-style" caret positioning collapse the
-  //  selection to the  start and then create a new selection.
-  //  Platforms that use "selection-style" caret positioning just delete the
-  //  existing selection without extending it.
-  PRBool bCollapsed;
-  result  = selection->GetIsCollapsed(&bCollapsed);
-  if (NS_FAILED(result)) return result;
-  if (!bCollapsed &&
-      (aAction == eNextWord || aAction == ePreviousWord ||
-       aAction == eToBeginningOfLine || aAction == eToEndOfLine))
-    if (mCaretStyle == 1)
-    {
-      result = selection->CollapseToStart();
-      if (NS_FAILED(result)) return result;
-    }
-    else
-    { 
-      aAction = eNone;
-    }
-
   // If it's one of these modes,
   // we have to extend the selection first.
   // This needs to happen inside selection batching,
@@ -677,20 +630,34 @@ NS_IMETHODIMP nsPlaintextEditor::DeleteSelection(nsIEditor::EDirection aAction)
   if (aAction == eNextWord || aAction == ePreviousWord
       || aAction == eToBeginningOfLine || aAction == eToEndOfLine)
   {
+    if (!mPresShellWeak) return NS_ERROR_NOT_INITIALIZED;
+    nsCOMPtr<nsIPresShell> ps = do_QueryReferent(mPresShellWeak);
+    if (!ps) return NS_ERROR_NOT_INITIALIZED;
+
+    PRUint8 caretBidiLevel;
+    result = ps->GetCaretBidiLevel(&caretBidiLevel);
+    if (NS_FAILED(result)) return result;
+    
     nsCOMPtr<nsISelectionController> selCont (do_QueryReferent(mSelConWeak));
     if (!selCont)
       return NS_ERROR_NO_INTERFACE;
 
     switch (aAction)
     {
+        // if caret has odd Bidi level, i.e. text is right-to-left,
+        // reverse the effect of ePreviousWord and eNextWord
         case eNextWord:
-          result = selCont->WordExtendForDelete(PR_TRUE);
+          result = (caretBidiLevel & 1) ?
+                   selCont->WordMove(PR_FALSE, PR_TRUE) :
+                   selCont->WordMove(PR_TRUE, PR_TRUE);
           // DeleteSelectionImpl doesn't handle these actions
           // because it's inside batching, so don't confuse it:
           aAction = eNone;
           break;
         case ePreviousWord:
-          result = selCont->WordExtendForDelete(PR_FALSE);
+          result = (caretBidiLevel & 1) ?
+                   selCont->WordMove(PR_TRUE, PR_TRUE) :
+                   selCont->WordMove(PR_FALSE, PR_TRUE);
           aAction = eNone;
           break;
         case eToBeginningOfLine:
@@ -708,6 +675,12 @@ NS_IMETHODIMP nsPlaintextEditor::DeleteSelection(nsIEditor::EDirection aAction)
     }
     NS_ENSURE_SUCCESS(result, result);
   }
+
+  // pre-process
+  nsCOMPtr<nsISelection> selection;
+  result = GetSelection(getter_AddRefs(selection));
+  if (NS_FAILED(result)) return result;
+  if (!selection) return NS_ERROR_NULL_POINTER;
 
   nsTextRulesInfo ruleInfo(nsTextEditRules::kDeleteSelection);
   ruleInfo.collapsedAction = aAction;
@@ -783,13 +756,6 @@ NS_IMETHODIMP nsPlaintextEditor::InsertLineBreak()
   res = GetSelection(getter_AddRefs(selection));
   if (NS_FAILED(res)) return res;
   if (!selection) return NS_ERROR_NULL_POINTER;
-
-  // Batching the selection and moving nodes out from under the caret causes
-  // caret turds. Ask the shell to invalidate the caret now to avoid the turds.
-  nsCOMPtr<nsIPresShell> shell;
-  res = GetPresShell(getter_AddRefs(shell));
-  if (NS_FAILED(res)) return res;
-  shell->MaybeInvalidateCaretPosition();
 
   nsTextRulesInfo ruleInfo(nsTextEditRules::kInsertBreak);
   PRBool cancel, handled;
@@ -1048,28 +1014,7 @@ nsPlaintextEditor::SetWrapWidth(PRInt32 aWrapColumn)
   return rootElement->SetAttribute(styleName, styleValue);
 }
 
-//
-// Get the newline handling for this editor
-//
-NS_IMETHODIMP 
-nsPlaintextEditor::GetNewlineHandling(PRInt32 *aNewlineHandling)
-{
-  NS_ENSURE_ARG_POINTER(aNewlineHandling);
 
-  *aNewlineHandling = mNewlineHandling;
-  return NS_OK;
-}
-
-//
-// Change the newline handling for this editor
-// 
-NS_IMETHODIMP 
-nsPlaintextEditor::SetNewlineHandling(PRInt32 aNewlineHandling)
-{
-  mNewlineHandling = aNewlineHandling;
-  
-  return NS_OK;
-}
 
 #ifdef XP_MAC
 #pragma mark -
@@ -1196,10 +1141,7 @@ nsPlaintextEditor::GetAndInitDocEncoder(const nsAString& aFormatType,
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsIDocument *doc = presShell->GetDocument();
-  nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(doc);
-  NS_ASSERTION(domDoc, "Need a document");
-
-  rv = docEncoder->Init(domDoc, aFormatType, aFlags);
+  rv = docEncoder->Init(doc, aFormatType, aFlags);
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (!aCharset.IsEmpty()
@@ -1230,7 +1172,13 @@ nsPlaintextEditor::GetAndInitDocEncoder(const nsAString& aFormatType,
     NS_ENSURE_TRUE(rootElement, NS_ERROR_FAILURE);
     if (!nsTextEditUtils::IsBody(rootElement))
     {
-      rv = docEncoder->SetContainerNode(rootElement);
+      nsCOMPtr<nsIDOMRange> range (do_CreateInstance("@mozilla.org/content/range;1", &rv));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      rv = range->SelectNodeContents(rootElement);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      rv = docEncoder->SetRange(range);
       NS_ENSURE_SUCCESS(rv, rv);
     }
   }

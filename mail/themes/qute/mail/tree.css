@@ -82,8 +82,7 @@ treechildren::-moz-tree-row(selected, current, focus) {
   border: 1px dotted #C0C0C0;
 }
 
-tree[seltype="cell"] > treechildren::-moz-tree-row,
-tree[seltype="text"] > treechildren::-moz-tree-row {
+tree[selstyle="primary"] > treechildren::-moz-tree-row {
   border: none;
   background-color: transparent;
 }
@@ -94,8 +93,7 @@ treechildren::-moz-tree-cell {
   padding: 0px 2px 0px 2px;
 }
 
-tree[seltype="cell"] > treechildren::-moz-tree-cell-text,
-tree[seltype="text"] > treechildren::-moz-tree-cell-text,
+tree[selstyle="primary"] > treechildren::-moz-tree-cell-text,
 treechildren::-moz-tree-cell-text {
   color: inherit;
 }
@@ -104,24 +102,12 @@ treechildren::-moz-tree-cell-text(selected) {
   color: -moz-DialogText;
 }
 
-tree[seltype="cell"] > treechildren::-moz-tree-cell {
-  border: 1px solid transparent;
-  padding: 0px 1px 0px 1px;
-}
-
-tree[seltype="text"] > treechildren::-moz-tree-cell-text {
+tree[selstyle="primary"] > treechildren::-moz-tree-cell-text(primary) {
   border: 1px solid transparent;
   padding: 0px 1px 1px 1px;
 }
 
-tree[seltype="cell"] > treechildren::-moz-tree-cell(active, selected) {
-  background-color: -moz-Dialog;
-}
-tree[seltype="cell"] > treechildren::-moz-tree-cell-text(active, selected) {
-  color: -moz-DialogText;
-}
-
-tree[seltype="text"] > treechildren::-moz-tree-cell-text(active, selected) {
+tree[selstyle="primary"] > treechildren::-moz-tree-cell-text(primary, selected) {
   background-color: -moz-Dialog;
   color: -moz-DialogText;
 }
@@ -130,44 +116,27 @@ treechildren::-moz-tree-cell-text(selected, focus) {
   color: HighlightText;
 }
 
-tree[seltype="cell"] > treechildren::-moz-tree-cell(active, selected, focus) {
-  background-color: Highlight;
-}
-tree[seltype="cell"] > treechildren::-moz-tree-cell-text(active, selected, focus) {
-  color: HighlightText;
-}
-
-tree[seltype="text"] > treechildren::-moz-tree-cell-text(active, selected, focus) {
+tree[selstyle="primary"] > treechildren::-moz-tree-cell-text(primary, selected, focus) {
   background-color: Highlight;
   color: HighlightText;
 }
 
-tree[seltype="cell"] > treechildren::-moz-tree-cell(active, current, focus) {
+tree[selstyle="primary"] > treechildren::-moz-tree-cell-text(primary, current, focus) {
   border: 1px dotted #000000;
 }
 
-tree[seltype="text"] > treechildren::-moz-tree-cell-text(active, current, focus) {
-  border: 1px dotted #000000;
-}
-
-tree[seltype="cell"] > treechildren::-moz-tree-cell(active, selected, current, focus) {
-  border: 1px dotted #C0C0C0;
-}
-
-tree[seltype="text"] > treechildren::-moz-tree-cell-text(active, selected, current, focus) {
+tree[selstyle="primary"] > treechildren::-moz-tree-cell-text(primary, selected, current, focus) {
   border: 1px dotted #C0C0C0;
 }
 
 
 /* ::::: lines connecting cells ::::: */
 
-tree[seltype="cell"] > treechildren::-moz-tree-line,
-tree[seltype="text"] > treechildren::-moz-tree-line,
+tree[selstyle="primary"] > treechildren::-moz-tree-line,
 treechildren::-moz-tree-line {
   border: 1px dotted ThreeDShadow;
 }
 
-tree[seltype="cell"] > treechildren::-moz-tree-line(active, selected, focus),
 treechildren::-moz-tree-line(selected, focus) {
   border: 1px dotted HighlightText;
 }
@@ -183,8 +152,7 @@ treechildren::-moz-tree-separator {
 
 /* ::::: drop feedback ::::: */
 
-tree[seltype="cell"] > treechildren::-moz-tree-cell-text(primary, dropOn),
-tree[seltype="text"] > treechildren::-moz-tree-cell-text(primary, dropOn),
+tree[selstyle="primary"] > treechildren::-moz-tree-cell-text(primary, dropOn),
 treechildren::-moz-tree-cell-text(primary, dropOn) {
   background-color: Highlight;
   color: HighlightText;

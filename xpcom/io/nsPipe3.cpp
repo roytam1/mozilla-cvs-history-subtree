@@ -364,7 +364,6 @@ nsPipe::Init(PRBool nonBlockingIn,
 NS_IMETHODIMP
 nsPipe::GetInputStream(nsIAsyncInputStream **aInputStream)
 {
-    NS_ENSURE_TRUE(mMonitor, NS_ERROR_NOT_INITIALIZED);
     NS_ADDREF(*aInputStream = &mInput);
     return NS_OK;
 }
@@ -372,7 +371,6 @@ nsPipe::GetInputStream(nsIAsyncInputStream **aInputStream)
 NS_IMETHODIMP
 nsPipe::GetOutputStream(nsIAsyncOutputStream **aOutputStream)
 {
-    NS_ENSURE_TRUE(mMonitor, NS_ERROR_NOT_INITIALIZED);
     NS_ADDREF(*aOutputStream = &mOutput);
     return NS_OK;
 }
@@ -415,7 +413,7 @@ nsPipe::GetReadSegment(const char *&segment, PRUint32 &segmentLen)
 void
 nsPipe::AdvanceReadCursor(PRUint32 bytesRead)
 {
-    NS_ASSERTION(bytesRead, "don't call if no bytes read");
+    NS_ASSERTION(bytesRead, "dont call if no bytes read");
 
     nsPipeEvents events;
     {
@@ -513,7 +511,7 @@ nsPipe::GetWriteSegment(char *&segment, PRUint32 &segmentLen)
 void
 nsPipe::AdvanceWriteCursor(PRUint32 bytesWritten)
 {
-    NS_ASSERTION(bytesWritten, "don't call if no bytes written");
+    NS_ASSERTION(bytesWritten, "dont call if no bytes written");
 
     nsPipeEvents events;
     {
@@ -671,7 +669,8 @@ nsPipeInputStream::AddRef(void)
 NS_IMETHODIMP_(nsrefcnt)
 nsPipeInputStream::Release(void)
 {
-    if (PR_AtomicDecrement((PRInt32 *)&mReaderRefCnt) == 0)
+    nsrefcnt count = PR_AtomicDecrement((PRInt32 *)&mReaderRefCnt);
+    if (count == 0)
         Close();
     return mPipe->Release();
 }
@@ -766,7 +765,7 @@ nsPipeInputStream::ReadSegments(nsWriteSegmentFun writer,
             if (NS_FAILED(rv) || writeCount == 0) {
                 count = 0;
                 // any errors returned from the writer end here: do not
-                // propagate to the caller of ReadSegments.
+                // propogate to the caller of ReadSegments.
                 rv = NS_OK;
                 break;
             }
@@ -786,10 +785,24 @@ nsPipeInputStream::ReadSegments(nsWriteSegmentFun writer,
     return rv;
 }
 
+static NS_METHOD
+nsWriteToRawBuffer(nsIInputStream* inStr,
+                   void *closure,
+                   const char *fromRawSegment,
+                   PRUint32 offset,
+                   PRUint32 count,
+                   PRUint32 *writeCount)
+{
+    char *toBuf = (char*)closure;
+    memcpy(&toBuf[offset], fromRawSegment, count);
+    *writeCount = count;
+    return NS_OK;
+}
+
 NS_IMETHODIMP
 nsPipeInputStream::Read(char* toBuf, PRUint32 bufLen, PRUint32 *readCount)
 {
-    return ReadSegments(NS_CopySegmentToBuffer, toBuf, bufLen, readCount);
+    return ReadSegments(nsWriteToRawBuffer, toBuf, bufLen, readCount);
 }
 
 NS_IMETHODIMP
@@ -814,9 +827,6 @@ nsPipeInputStream::AsyncWait(nsIInputStreamCallback *callback,
         // replace a pending callback
         mCallback = 0;
         mCallbackFlags = 0;
-
-        if (!callback)
-            return NS_OK;
 
         nsCOMPtr<nsIInputStreamCallback> proxy;
         if (target) {
@@ -850,12 +860,6 @@ nsPipeInputStream::Seek(PRInt32 whence, PRInt64 offset)
 NS_IMETHODIMP
 nsPipeInputStream::Tell(PRInt64 *offset)
 {
-    nsAutoMonitor mon(mPipe->mMonitor);
-
-    // return error if pipe closed
-    if (!mAvailable && NS_FAILED(mPipe->mStatus))
-        return mPipe->mStatus;
-
     *offset = mLogicalOffset;
     return NS_OK;
 }
@@ -1022,7 +1026,8 @@ nsPipeOutputStream::AddRef()
 NS_IMETHODIMP_(nsrefcnt)
 nsPipeOutputStream::Release()
 {
-    if (PR_AtomicDecrement((PRInt32 *)&mWriterRefCnt) == 0)
+    nsrefcnt count = PR_AtomicDecrement((PRInt32 *)&mWriterRefCnt);
+    if (count == 0)
         Close();
     return mPipe->Release();
 }
@@ -1097,7 +1102,7 @@ nsPipeOutputStream::WriteSegments(nsReadSegmentFun reader,
             if (NS_FAILED(rv) || readCount == 0) {
                 count = 0;
                 // any errors returned from the reader end here: do not
-                // propagate to the caller of WriteSegments.
+                // propogate to the caller of WriteSegments.
                 rv = NS_OK;
                 break;
             }
@@ -1189,9 +1194,6 @@ nsPipeOutputStream::AsyncWait(nsIOutputStreamCallback *callback,
         mCallback = 0;
         mCallbackFlags = 0;
 
-        if (!callback)
-            return NS_OK;
-
         nsCOMPtr<nsIOutputStreamCallback> proxy;
         if (target) {
             nsresult rv = NS_NewOutputStreamReadyEvent(getter_AddRefs(proxy),
@@ -1224,11 +1226,6 @@ nsPipeOutputStream::Seek(PRInt32 whence, PRInt64 offset)
 NS_IMETHODIMP
 nsPipeOutputStream::Tell(PRInt64 *offset)
 {
-    nsAutoMonitor mon(mPipe->mMonitor);
-
-    if (NS_FAILED(mPipe->mStatus))
-        return mPipe->mStatus;
-
     *offset = mLogicalOffset;
     return NS_OK;
 }
@@ -1241,36 +1238,6 @@ nsPipeOutputStream::SetEOF()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-NS_COM nsresult
-NS_NewPipe(nsIInputStream **pipeIn,
-           nsIOutputStream **pipeOut,
-           PRUint32 segmentSize,
-           PRUint32 maxSize,
-           PRBool nonBlockingInput,
-           PRBool nonBlockingOutput,
-           nsIMemory *segmentAlloc)
-{
-    if (segmentSize == 0)
-        segmentSize = DEFAULT_SEGMENT_SIZE;
-
-    // Handle maxSize of PR_UINT32_MAX as a special case
-    PRUint32 segmentCount;
-    if (maxSize == PR_UINT32_MAX)
-        segmentCount = PR_UINT32_MAX;
-    else
-        segmentCount = maxSize / segmentSize;
-
-    nsIAsyncInputStream *in;
-    nsIAsyncOutputStream *out;
-    nsresult rv = NS_NewPipe2(&in, &out, nonBlockingInput, nonBlockingOutput,
-                              segmentSize, segmentCount, segmentAlloc);
-    if (NS_FAILED(rv)) return rv;
-
-    *pipeIn = in;
-    *pipeOut = out;
-    return NS_OK;
-}
 
 NS_COM nsresult
 NS_NewPipe2(nsIAsyncInputStream **pipeIn,

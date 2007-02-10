@@ -14,11 +14,10 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
- * Sun Microsystem.
- * Portions created by the Initial Developer are Copyright (C) 2003
- * the Initial Developer. All Rights Reserved.
- *
+ * The Initial Developer of the Original Code is Sun Microsystem.
+ * Portions created by Sun Microsystem are Copyright (C) 2003 by
+ * Sun Microsystem. All Rights Reserved.
+ *    
  * Contributor(s):
  *   Joshua Xia <joshua.xia@sun.com>
  *
@@ -28,11 +27,11 @@
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
+ * use your version of this file under the terms of the NPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
 
@@ -41,6 +40,8 @@
 #include "nsJVMAuthTools.h"
 #include "nsIHttpAuthManager.h"
 
+static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+static NS_DEFINE_IID(kIJVMAUTHTOOLSIID, NS_IJVMAUTHTOOLS_IID);
 static NS_DEFINE_CID(kHttpAuthManagerCID, NS_HTTPAUTHMANAGER_CID);
 
 //---------------------------------------------------
@@ -93,9 +94,46 @@ nsJVMAuthTools::~nsJVMAuthTools(void)
 {
 }
 
-NS_INTERFACE_MAP_BEGIN_AGGREGATED(nsJVMAuthTools)
-    NS_INTERFACE_MAP_ENTRY(nsIJVMAuthTools)
-NS_INTERFACE_MAP_END
+NS_METHOD
+nsJVMAuthTools::Create(nsISupports* outer,
+                       const nsIID& aIID,
+                       void* *aInstancePtr)
+{
+    if (!aInstancePtr)
+        return NS_ERROR_INVALID_POINTER;
+    *aInstancePtr = nsnull;
+
+    if (outer && !aIID.Equals(kISupportsIID))
+        return NS_ERROR_INVALID_ARG; 
+
+    nsJVMAuthTools* authtools = new nsJVMAuthTools(outer);
+    if (authtools == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    nsresult rv = authtools->AggregatedQueryInterface(aIID, aInstancePtr);
+    if(NS_FAILED(rv))
+        delete authtools;
+
+    return rv;
+}
+
+NS_METHOD
+nsJVMAuthTools::AggregatedQueryInterface(const nsIID& aIID,
+                                         void** aInstancePtr)
+{
+    if (aIID.Equals(kIJVMAUTHTOOLSIID)) {
+        *aInstancePtr = this;
+        AddRef();
+        return NS_OK;
+    }
+    
+    if (aIID.Equals(kISupportsIID)) {
+        *aInstancePtr = GetInner();
+        NS_ADDREF((nsISupports*)*aInstancePtr);
+        return NS_OK;
+    }
+    return NS_NOINTERFACE;
+}
 
 NS_METHOD
 nsJVMAuthTools::GetAuthenticationInfo(const char* protocol,
@@ -174,8 +212,8 @@ nsJVMAuthTools::SetAuthenticationInfo(const char* protocol,
                                                realmString,
                                                EmptyCString(),
                                                EmptyString(), 
-                                               NS_ConvertUTF8toUTF16(username),
-                                               NS_ConvertUTF8toUTF16(password));
+                                               NS_ConvertUTF8toUCS2(username),
+                                               NS_ConvertUTF8toUCS2(password));
     return rv;
 }
 

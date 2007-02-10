@@ -46,9 +46,11 @@
 
 #include "nsISpatialNavigation.h"
 
+#include "nsArray.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
 #include "nsFrameTraversal.h"
+#include "nsHTMLAtoms.h"
 #include "nsIArray.h"
 #include "nsIBaseWindow.h"
 #include "nsICategoryManager.h"
@@ -104,6 +106,7 @@
 #include "nsILineIterator.h"
 #include "nsILocalFile.h"
 #include "nsINameSpaceManager.h"
+#include "nsINodeInfo.h"
 #include "nsIObserver.h"
 #include "nsIPrefBranchInternal.h"
 #include "nsIPrefService.h"
@@ -117,6 +120,7 @@
 #include "nsIWebBrowser.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsIWindowWatcher.h"
+#include "nsLayoutAtoms.h"
 #include "nsLayoutCID.h"
 #include "nsPIDOMWindow.h"
 #include "nsStyleContext.h"
@@ -201,12 +205,7 @@ enum {
 // Utils
 
 nscoord* lo_parse_coord_list          (char *str, PRInt32* value_cnt);
-nsresult createFrameTraversal         (nsPresContext* aPresContext,
-                                       PRInt32 aType,
-                                       PRBool aVisual,
-                                       PRBool aLockInScrollView,
-                                       PRBool aFollowOOFs,
-                                       nsIBidirectionalEnumerator** outTraversal);
+nsresult createFrameTraversal         (PRUint32 type, nsPresContext* presContext, nsIBidirectionalEnumerator** outTraversal);
 nsresult getEventTargetFromWindow     (nsIDOMWindow* aWindow, nsIDOM3EventTarget** aEventTarget, nsIDOMEventGroup** aSystemGroup);
 void     getContentFromFrame          (nsIContent* c, nsIContent** outContent);
 nsresult getFrameForContent           (nsIContent* aContent, nsIFrame** aFrame);

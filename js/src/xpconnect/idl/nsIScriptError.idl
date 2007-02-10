@@ -36,7 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * nsIConsoleMessage subclass for representing JavaScript errors and warnings.
+ * nsIConsole message subclass for representing JavaScript errors and warnings.
  */
 
 

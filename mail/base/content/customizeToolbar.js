@@ -49,8 +49,6 @@ var gToolboxDocument = null;
 var gToolbox = null;
 var gCurrentDragOverItem = null;
 var gToolboxChanged = false;
-var gPreviousMode = null;
-var gPreviousIconSize = null;
 
 function onLoad()
 {
@@ -69,16 +67,19 @@ function onLoad()
 function onUnload(aEvent)
 {
   removeToolboxListeners();
-  unwrapToolbarItems(true);
+  unwrapToolbarItems();
   persistCurrentSets();
   
   notifyParentComplete();
+
+  window.close();
 }
 
 function onCancel()
 {
   // restore the saved toolbarset for each customizeable toolbar
-  unwrapToolbarItems(false);
+
+  // Restore the defaultset for fixed toolbars.
   var toolbar = gToolbox.firstChild;
   while (toolbar) {
     if (isCustomizableToolbar(toolbar)) {
@@ -93,9 +94,11 @@ function onCancel()
     toolbar = toolbar.nextSibling;
   }
 
-  // restore the previous mode and iconsize
-  updateIconSize(gPreviousIconSize == "small");
-  updateToolbarMode(gPreviousMode);
+  // Now rebuild the palette.
+  buildPalette();
+
+  // Now re-wrap the items on the toolbar.
+  wrapToolbarItems();
 
   repositionDialog();
   gToolboxChanged = true;
@@ -113,20 +116,20 @@ function initDialog()
 {
   document.getElementById("main-box").collapsed = false;
   
-  gPreviousMode = gToolbox.getAttribute("mode");
-  document.getElementById("modelist").value = gPreviousMode;
-  gPreviousIconSize = gToolbox.getAttribute("iconsize");
+  var mode = gToolbox.getAttribute("mode");
+  document.getElementById("modelist").value = mode;
+  var iconSize = gToolbox.getAttribute("iconsize");
   var smallIconsCheckbox = document.getElementById("smallicons");
-  if (gPreviousMode == "text")
+  if (mode == "text")
     smallIconsCheckbox.disabled = true;
   else
-    smallIconsCheckbox.checked = gPreviousIconSize == "small";
+    smallIconsCheckbox.checked = iconSize == "small"; 
 
   // Build up the palette of other items.
   buildPalette();
 
   // Wrap all the items on the toolbar in toolbarpaletteitems.
-  wrapToolbarItems(true);
+  wrapToolbarItems();
 }
 
 function repositionDialog()
@@ -218,13 +221,13 @@ function persistCurrentSets()
 /**
  * Wraps all items in all customizable toolbars in a toolbox.
  */
-function wrapToolbarItems(aStorePreviousSet)
+function wrapToolbarItems()
 {
   for (var i = 0; i < gToolbox.childNodes.length; ++i) {
     var toolbar = getToolbarAt(i);
     if (isCustomizableToolbar(toolbar)) {
-      if (aStorePreviousSet)
-        toolbar.setAttribute('previousset', toolbar.currentSet);
+      // save off the current set for each toolbar in case the user hits cancel
+      toolbar.setAttribute('previousset', toolbar.currentSet);
 
       for (var k = 0; k < toolbar.childNodes.length; ++k) {
         var item = toolbar.childNodes[k];
@@ -245,19 +248,17 @@ function wrapToolbarItems(aStorePreviousSet)
 /**
  * Unwraps all items in all customizable toolbars in a toolbox.
  */
- function unwrapToolbarItems(aRemovePreviousSet)
+ function unwrapToolbarItems()
 {
   for (var i = 0; i < gToolbox.childNodes.length; ++i) {
     var toolbar = getToolbarAt(i);
     if (isCustomizableToolbar(toolbar)) {
-      if (aRemovePreviousSet)
-        toolbar.removeAttribute('previousset');
-
+      toolbar.removeAttribute('previousset'); // remove previous set attribute
       for (var k = 0; k < toolbar.childNodes.length; ++k) {
         var paletteItem = toolbar.childNodes[k];
         var toolbarItem = paletteItem.firstChild;
 
-        if (toolbarItem && isToolbarItem(toolbarItem)) {
+        if (isToolbarItem(toolbarItem)) {
           var nextSibling = paletteItem.nextSibling;
 
           if (paletteItem.hasAttribute("itemcommand"))
@@ -306,7 +307,6 @@ function wrapPaletteItem(aPaletteItem, aCurrentRow, aSpacer)
   wrapper.setAttribute("minheight", "0");
   wrapper.setAttribute("minwidth", "0");
 
-  document.adoptNode(aPaletteItem);
   wrapper.appendChild(aPaletteItem);
   
   // XXX We need to call this AFTER the palette item has been appended
@@ -329,8 +329,7 @@ function wrapPaletteItem(aPaletteItem, aCurrentRow, aSpacer)
 function wrapToolbarItem(aToolbarItem)
 {
   var wrapper = createWrapper(aToolbarItem.id);
-  gToolboxDocument.adoptNode(wrapper);
-
+  
   cleanupItemForToolbar(aToolbarItem, wrapper);
   wrapper.flex = aToolbarItem.flex;
 
@@ -577,7 +576,6 @@ function setDragActive(aItem, aValue)
 function restoreDefaultSet()
 {
   // Restore the defaultset for fixed toolbars.
-  unwrapToolbarItems(false);
   var toolbar = gToolbox.firstChild;
   while (toolbar) {
     if (isCustomizableToolbar(toolbar)) {
@@ -591,12 +589,6 @@ function restoreDefaultSet()
     }
     toolbar = toolbar.nextSibling;
   }
-
-  // Restore the default icon size (large) and mode (icons and text).
-  updateIconSize(false);
-  document.getElementById("smallicons").checked = false;
-  updateToolbarMode("full");
-  document.getElementById("modelist").value = "full";
 
   // Remove all of the customized toolbars.
   var child = gToolbox.lastChild;
@@ -613,8 +605,8 @@ function restoreDefaultSet()
   // Now rebuild the palette.
   buildPalette();
 
-  // Now re-wrap the items on the toolbar, but don't clobber previousset.
-  wrapToolbarItems(false);
+  // Now re-wrap the items on the toolbar.
+  wrapToolbarItems();
 
   repositionDialog();
   gToolboxChanged = true;
@@ -652,7 +644,14 @@ function updateToolbarMode(aModeValue)
   }
 
   var iconSizeCheckbox = document.getElementById("smallicons");
-  iconSizeCheckbox.disabled = aModeValue == "text";
+  if (aModeValue == "text") {
+    iconSizeCheckbox.disabled = true;
+    iconSizeCheckbox.checked = false;
+    updateIconSize(false);
+  }
+  else {
+    iconSizeCheckbox.disabled = false;
+  }
 
   repositionDialog();
 }
@@ -829,7 +828,6 @@ var toolbarDNDObserver =
       
       // Create a new wrapper for the item. We don't know the id yet.
       var wrapper = createWrapper("");
-      gToolboxDocument.adoptNode(wrapper);
 
       // Ask the toolbar to clone the item's template, place it inside the wrapper, and insert it in the toolbar.
       var newItem = toolbar.insertItem(draggedItemId, gCurrentDragOverItem == toolbar ? null : gCurrentDragOverItem, wrapper);

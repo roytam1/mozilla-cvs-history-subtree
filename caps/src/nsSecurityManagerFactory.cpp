@@ -44,7 +44,6 @@
 #include "nsIPrincipal.h"
 #include "nsPrincipal.h"
 #include "nsSystemPrincipal.h"
-#include "nsNullPrincipal.h"
 #include "nsIScriptNameSpaceManager.h"
 #include "nsIScriptExternalNameSet.h"
 #include "nsIScriptContext.h"
@@ -54,8 +53,6 @@
 #include "nsIServiceManager.h"
 #include "nsString.h"
 #include "nsPrefsCID.h"
-#include "nsNetCID.h"
-#include "nsIClassInfoImpl.h"
 
 ///////////////////////
 // nsSecurityNameSet //
@@ -271,15 +268,14 @@ netscape_security_invalidate(JSContext *cx, JSObject *obj, uintN argc,
 }
 
 static JSFunctionSpec PrivilegeManager_static_methods[] = {
-    { "isPrivilegeEnabled", netscape_security_isPrivilegeEnabled,   1,0,0},
-    { "enablePrivilege",    netscape_security_enablePrivilege,      1,0,0},
-    { "disablePrivilege",   netscape_security_disablePrivilege,     1,0,0},
-    { "revertPrivilege",    netscape_security_revertPrivilege,      1,0,0},
+    { "isPrivilegeEnabled", netscape_security_isPrivilegeEnabled,   1},
+    { "enablePrivilege",    netscape_security_enablePrivilege,      1},
+    { "disablePrivilege",   netscape_security_disablePrivilege,     1},
+    { "revertPrivilege",    netscape_security_revertPrivilege,      1},
     //-- System Cert Functions
-    { "setCanEnablePrivilege", netscape_security_setCanEnablePrivilege,
-                                                                    2,0,0},
-    { "invalidate",            netscape_security_invalidate,        1,0,0},
-    {nsnull,nsnull,0,0,0}
+    { "setCanEnablePrivilege", netscape_security_setCanEnablePrivilege,   2},
+    { "invalidate",            netscape_security_invalidate,              1},
+    {0}
 };
 
 /*
@@ -298,7 +294,6 @@ nsSecurityNameSet::InitializeNameSet(nsIScriptContext* aScriptContext)
      */
     JSObject *obj = global;
     JSObject *proto;
-    JSAutoRequest ar(cx);
     while ((proto = JS_GetPrototype(cx, obj)) != nsnull)
         obj = proto;
     JSClass *objectClass = JS_GetClass(cx, obj);
@@ -344,11 +339,11 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsPrincipal)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSecurityNameSet)
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsSystemPrincipal,
     nsScriptSecurityManager::SystemPrincipalSingletonConstructor)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsNullPrincipal, Init)
+
 
 NS_DECL_CLASSINFO(nsPrincipal)
 NS_DECL_CLASSINFO(nsSystemPrincipal)
-NS_DECL_CLASSINFO(nsNullPrincipal)
+
 
 static NS_IMETHODIMP
 Construct_nsIScriptSecurityManager(nsISupports *aOuter, REFNSIID aIID, 
@@ -427,20 +422,6 @@ static const nsModuleComponentInfo capsComponentInfo[] =
       nsIClassInfo::MAIN_THREAD_ONLY
     },
 
-    { NS_SCRIPTSECURITYMANAGER_CLASSNAME,
-      NS_SCRIPTSECURITYMANAGER_CID,
-      NS_GLOBAL_CHANNELEVENTSINK_CONTRACTID,
-      Construct_nsIScriptSecurityManager,
-      RegisterSecurityNameSet,
-      nsnull,
-      nsnull,
-      nsnull,
-      nsnull,
-      nsnull,
-      nsIClassInfo::MAIN_THREAD_ONLY
-    },
-
-
 
     { NS_PRINCIPAL_CLASSNAME, 
       NS_PRINCIPAL_CID, 
@@ -469,19 +450,6 @@ static const nsModuleComponentInfo capsComponentInfo[] =
       nsIClassInfo::EAGER_CLASSINFO
     },
 
-    { NS_NULLPRINCIPAL_CLASSNAME, 
-      NS_NULLPRINCIPAL_CID, 
-      NS_NULLPRINCIPAL_CONTRACTID,
-      nsNullPrincipalConstructor,
-      nsnull,
-      nsnull,
-      nsnull,
-      NS_CI_INTERFACE_GETTER_NAME(nsNullPrincipal),
-      nsnull,
-      &NS_CLASSINFO_NAME(nsNullPrincipal),
-      nsIClassInfo::MAIN_THREAD_ONLY | nsIClassInfo::EAGER_CLASSINFO
-    },
-
     { "Security Script Name Set",
       NS_SECURITYNAMESET_CID,
       NS_SECURITYNAMESET_CONTRACTID,
@@ -505,3 +473,4 @@ CapsModuleDtor(nsIModule* thisModules)
 
 NS_IMPL_NSGETMODULE_WITH_DTOR(nsSecurityManagerModule, capsComponentInfo,
                               CapsModuleDtor)
+

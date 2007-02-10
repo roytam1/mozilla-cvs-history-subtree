@@ -87,6 +87,4 @@ private:
   nsCOMPtr<nsUrlClassifierDBServiceWorker> mWorker;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsUrlClassifierDBService, NS_URLCLASSIFIERDBSERVICE_CID)
-
 #endif // nsUrlClassifierDBService_h_

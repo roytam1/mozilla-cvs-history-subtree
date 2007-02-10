@@ -100,7 +100,7 @@ protected:
   nsCOMPtr<nsIUnicodeDecoder>      mDecoder; 
 
   // Hashtable matches dictionary name to .aff file
-  nsInterfaceHashtable<nsUnicharPtrHashKey, nsIFile> mDictionaries;
+  nsInterfaceHashtable<nsStringHashKey, nsIFile> mDictionaries;
   nsString  mDictionary;
   nsString  mLanguage;
 

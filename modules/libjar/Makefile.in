@@ -53,15 +53,12 @@ DIRS		= standalone
 ifndef MINIMO
 # we don't care about the installer for MINIMO
 ifndef MOZ_ENABLE_LIBXUL
+MOZ_STATIC_COMPONENT_LIBS=
 BUILD_STATIC_LIBS=
+BUILD_SHARED_LIBS=1
 endif
 endif
 endif
-
-ifdef ENABLE_TESTS
-TOOL_DIRS += test
-endif
-
 
 MODULE		= jar
 LIBRARY_NAME	= jar$(VERSION_NUMBER)

@@ -37,7 +37,7 @@
 
 #include "nsIDOMCDATASection.h"
 #include "nsGenericDOMDataNode.h"
-#include "nsGkAtoms.h"
+#include "nsLayoutAtoms.h"
 #include "nsIDocument.h"
 #include "nsContentUtils.h"
 
@@ -46,7 +46,7 @@ class nsXMLCDATASection : public nsGenericDOMDataNode,
                           public nsIDOMCDATASection
 {
 public:
-  nsXMLCDATASection(nsINodeInfo *aNodeInfo);
+  nsXMLCDATASection(nsNodeInfoManager *aNodeInfoManager);
   virtual ~nsXMLCDATASection();
 
   // nsISupports
@@ -65,11 +65,17 @@ public:
   // Empty interface
 
   // nsIContent
-  virtual PRBool IsNodeOfType(PRUint32 aFlags) const;
+  virtual nsIAtom *Tag() const;
+  virtual PRBool IsContentOfType(PRUint32 aFlags) const;
 #ifdef DEBUG
   virtual void List(FILE* out, PRInt32 aIndent) const;
   virtual void DumpContent(FILE* out, PRInt32 aIndent,PRBool aDumpAll) const;
 #endif
+
+  virtual already_AddRefed<nsITextContent> CloneContent(PRBool aCloneText,
+                                                        nsNodeInfoManager *aNodeInfoManager);
+
+protected:
 };
 
 nsresult
@@ -80,13 +86,7 @@ NS_NewXMLCDATASection(nsIContent** aInstancePtrResult,
 
   *aInstancePtrResult = nsnull;
 
-  nsCOMPtr<nsINodeInfo> ni;
-  nsresult rv = aNodeInfoManager->GetNodeInfo(nsGkAtoms::cdataTagName,
-                                              nsnull, kNameSpaceID_None,
-                                              getter_AddRefs(ni));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsXMLCDATASection *instance = new nsXMLCDATASection(ni);
+  nsXMLCDATASection *instance = new nsXMLCDATASection(aNodeInfoManager);
   if (!instance) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -96,8 +96,8 @@ NS_NewXMLCDATASection(nsIContent** aInstancePtrResult,
   return NS_OK;
 }
 
-nsXMLCDATASection::nsXMLCDATASection(nsINodeInfo *aNodeInfo)
-  : nsGenericDOMDataNode(aNodeInfo)
+nsXMLCDATASection::nsXMLCDATASection(nsNodeInfoManager *aNodeInfoManager)
+  : nsGenericDOMDataNode(aNodeInfoManager)
 {
 }
 
@@ -108,6 +108,7 @@ nsXMLCDATASection::~nsXMLCDATASection()
 
 // QueryInterface implementation for nsXMLCDATASection
 NS_INTERFACE_MAP_BEGIN(nsXMLCDATASection)
+  NS_INTERFACE_MAP_ENTRY(nsITextContent)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
   NS_INTERFACE_MAP_ENTRY(nsIDOMCharacterData)
   NS_INTERFACE_MAP_ENTRY(nsIDOMText)
@@ -119,10 +120,16 @@ NS_IMPL_ADDREF_INHERITED(nsXMLCDATASection, nsGenericDOMDataNode)
 NS_IMPL_RELEASE_INHERITED(nsXMLCDATASection, nsGenericDOMDataNode)
 
 
-PRBool
-nsXMLCDATASection::IsNodeOfType(PRUint32 aFlags) const
+nsIAtom *
+nsXMLCDATASection::Tag() const
 {
-  return !(aFlags & ~(eCONTENT | eTEXT | eDATA_NODE));
+  return nsLayoutAtoms::cdataTagName;
+}
+
+PRBool
+nsXMLCDATASection::IsContentOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~eTEXT);
 }
 
 NS_IMETHODIMP
@@ -151,13 +158,27 @@ nsXMLCDATASection::GetNodeType(PRUint16* aNodeType)
   return NS_OK;
 }
 
-nsGenericDOMDataNode*
-nsXMLCDATASection::CloneDataNode(nsINodeInfo *aNodeInfo, PRBool aCloneText) const
+NS_IMETHODIMP
+nsXMLCDATASection::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
-  nsXMLCDATASection *it = new nsXMLCDATASection(aNodeInfo);
-  if (it && aCloneText) {
+  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE, mNodeInfoManager);
+  NS_ENSURE_TRUE(textContent, NS_ERROR_OUT_OF_MEMORY);
+
+  return CallQueryInterface(textContent, aReturn);
+}
+
+already_AddRefed<nsITextContent> 
+nsXMLCDATASection::CloneContent(PRBool aCloneText, nsNodeInfoManager *aNodeInfoManager)
+{
+  nsXMLCDATASection* it = new nsXMLCDATASection(aNodeInfoManager);
+  if (!it)
+    return nsnull;
+
+  if (aCloneText) {
     it->mText = mText;
   }
+
+  NS_ADDREF(it);
 
   return it;
 }
@@ -166,6 +187,8 @@ nsXMLCDATASection::CloneDataNode(nsINodeInfo *aNodeInfo, PRBool aCloneText) cons
 void
 nsXMLCDATASection::List(FILE* out, PRInt32 aIndent) const
 {
+  NS_PRECONDITION(IsInDoc(), "bad content");
+
   PRInt32 index;
   for (index = aIndent; --index >= 0; ) fputs("  ", out);
 
@@ -173,7 +196,7 @@ nsXMLCDATASection::List(FILE* out, PRInt32 aIndent) const
 
   nsAutoString tmp;
   ToCString(tmp, 0, mText.GetLength());
-  fputs(NS_LossyConvertUTF16toASCII(tmp).get(), out);
+  fputs(NS_LossyConvertUCS2toASCII(tmp).get(), out);
 
   fputs(">\n", out);
 }

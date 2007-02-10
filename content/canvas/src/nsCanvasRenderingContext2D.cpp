@@ -71,7 +71,6 @@
 #include "nsIImage.h"
 #include "nsIFrame.h"
 #include "nsDOMError.h"
-#include "nsIScriptError.h"
 
 #include "nsICSSParser.h"
 
@@ -92,12 +91,8 @@
 #include "nsIPresShell.h"
 #include "nsIDOMWindow.h"
 #include "nsPIDOMWindow.h"
-#include "nsIDocShell.h"
-#include "nsIDocShellTreeItem.h"
-#include "nsIDocShellTreeNode.h"
 #include "nsIXPConnect.h"
 #include "jsapi.h"
-#include "jsnum.h"
 
 #include "nsTArray.h"
 
@@ -167,9 +162,7 @@ _cairo_win32_surface_create_dib (cairo_format_t format,
 #define CG_BITMAP_BYTE_ORDER_FLAG kCGBitmapByteOrder32Host
 #endif
 
-#ifndef MOZ_CAIRO_GFX
 #include "nsDrawingSurfaceMac.h"
-#endif
 
 #endif
 
@@ -181,47 +174,6 @@ static NS_DEFINE_IID(kBlenderCID, NS_BLENDER_CID);
 
 static PRBool CheckSaneImageSize (PRInt32 width, PRInt32 height);
 static PRBool CheckSaneSubrectSize (PRInt32 x, PRInt32 y, PRInt32 w, PRInt32 h, PRInt32 realWidth, PRInt32 realHeight);
-
-/* Float validation stuff */
-
-#define VALIDATE(_f)  if (!JSDOUBLE_IS_FINITE(_f)) return PR_FALSE
-
-/* These must take doubles as args, because JSDOUBLE_IS_FINITE expects
- * to take the address of its argument; we can't cast/convert in the
- * macro.
- */
-
-static PRBool FloatValidate (double f1) {
-    VALIDATE(f1);
-    return PR_TRUE;
-}
-
-static PRBool FloatValidate (double f1, double f2) {
-    VALIDATE(f1); VALIDATE(f2);
-    return PR_TRUE;
-}
-
-static PRBool FloatValidate (double f1, double f2, double f3) {
-    VALIDATE(f1); VALIDATE(f2); VALIDATE(f3);
-    return PR_TRUE;
-}
-
-static PRBool FloatValidate (double f1, double f2, double f3, double f4) {
-    VALIDATE(f1); VALIDATE(f2); VALIDATE(f3); VALIDATE(f4);
-    return PR_TRUE;
-}
-
-static PRBool FloatValidate (double f1, double f2, double f3, double f4, double f5) {
-    VALIDATE(f1); VALIDATE(f2); VALIDATE(f3); VALIDATE(f4); VALIDATE(f5);
-    return PR_TRUE;
-}
-
-static PRBool FloatValidate (double f1, double f2, double f3, double f4, double f5, double f6) {
-    VALIDATE(f1); VALIDATE(f2); VALIDATE(f3); VALIDATE(f4); VALIDATE(f5); VALIDATE(f6);
-    return PR_TRUE;
-}
-
-#undef VALIDATE
 
 /**
  ** nsCanvasGradient
@@ -256,9 +208,6 @@ public:
                              const nsAString& colorstr)
     {
         nscolor color;
-
-        if (!FloatValidate(offset))
-            return NS_ERROR_DOM_SYNTAX_ERR;
 
         if (offset < 0.0 || offset > 1.0)
             return NS_ERROR_DOM_INDEX_SIZE_ERR;
@@ -592,22 +541,28 @@ nsCanvasRenderingContext2D::SetStyleFromVariant(nsIVariant* aStyle, PRInt32 aWhi
     rv = aStyle->GetDataType(&paramType);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (paramType == nsIDataType::VTYPE_DOMSTRING ||
-        paramType == nsIDataType::VTYPE_WSTRING_SIZE_IS) {
-        nsAutoString str;
-
-        if (paramType == nsIDataType::VTYPE_DOMSTRING) {
-            rv = aStyle->GetAsDOMString(str);
-        } else {
-            rv = aStyle->GetAsAString(str);
-        }
+    if (paramType == nsIDataType::VTYPE_DOMSTRING) {
+        nsString str;
+        rv = aStyle->GetAsDOMString(str);
         NS_ENSURE_SUCCESS(rv, rv);
 
         rv = mCSSParser->ParseColorString(str, nsnull, 0, PR_TRUE, &color);
-        if (NS_FAILED(rv)) {
-            // Error reporting happens inside the CSS parser
-            return NS_OK;
-        }
+        if (NS_FAILED(rv))
+            return NS_ERROR_DOM_SYNTAX_ERR;
+
+        CurrentState().SetColorStyle(aWhichStyle, color);
+
+        mDirtyStyle[aWhichStyle] = PR_TRUE;
+        return NS_OK;
+    } else if (paramType == nsIDataType::VTYPE_WSTRING_SIZE_IS) {
+        nsAutoString str;
+
+        rv = aStyle->GetAsAString(str);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        rv = mCSSParser->ParseColorString(str, nsnull, 0, PR_TRUE, &color);
+        if (NS_FAILED(rv))
+            return NS_ERROR_DOM_SYNTAX_ERR;
 
         CurrentState().SetColorStyle(aWhichStyle, color);
 
@@ -635,16 +590,7 @@ nsCanvasRenderingContext2D::SetStyleFromVariant(nsIVariant* aStyle, PRInt32 aWhi
         }
     }
 
-    nsContentUtils::ReportToConsole(
-        nsContentUtils::eDOM_PROPERTIES,
-        "UnexpectedCanvasVariantStyle",
-        nsnull, 0,
-        nsnull,
-        EmptyString(), 0, 0,
-        nsIScriptError::warningFlag,
-        "Canvas");
-
-    return NS_OK;
+    return NS_ERROR_DOM_SYNTAX_ERR;
 }
 
 void
@@ -657,14 +603,11 @@ nsCanvasRenderingContext2D::StyleColorToString(const nscolor& aColor, nsAString&
                                         NS_GET_B(aColor)),
                         aStr);
     } else {
-        // "%0.5f" in nsPrintfCString would use the locale-specific
-        // decimal separator. That's why we have to do this:
-        PRUint32 alpha = NS_GET_A(aColor) * 100000 / 255;
-        CopyUTF8toUTF16(nsPrintfCString(100, "rgba(%d, %d, %d, 0.%d)",
+        CopyUTF8toUTF16(nsPrintfCString(100, "rgba(%d,%d,%d,%0.2f)",
                                         NS_GET_R(aColor),
                                         NS_GET_G(aColor),
                                         NS_GET_B(aColor),
-                                        alpha),
+                                        NS_GET_A(aColor) / 255.0f),
                         aStr);
     }
 }
@@ -799,7 +742,7 @@ nsCanvasRenderingContext2D::SetDimensions(PRInt32 width, PRInt32 height)
     mHeight = height;
 
 #ifdef MOZ_CAIRO_GFX
-    mThebesSurface = gfxPlatform::GetPlatform()->CreateOffscreenSurface(gfxIntSize(width, height), gfxASurface::ImageFormatARGB32);
+    mThebesSurface = gfxPlatform::GetPlatform()->CreateOffscreenSurface(width, height, gfxASurface::ImageFormatARGB32);
     mThebesContext = new gfxContext(mThebesSurface);
 
     mSurface = mThebesSurface->CairoSurface();
@@ -973,8 +916,8 @@ nsCanvasRenderingContext2D::Render(nsIRenderingContext *rc)
     nsTransform2D *tx = nsnull;
     rc->GetCurrentTransform(tx);
 
-    nsCOMPtr<nsIDeviceContext> dctx;
-    rc->GetDeviceContext(*getter_AddRefs(dctx));
+    nsIDeviceContext *dctx;
+    rc->GetDeviceContext(dctx);
 
     // Until we can use the quartz2 surface, mac will be different,
     // since we'll use CG to render.
@@ -1026,7 +969,7 @@ nsCanvasRenderingContext2D::Render(nsIRenderingContext *rc)
                                                  NULL);
     CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
     img = CGImageCreate (mWidth, mHeight, 8, 32, mWidth * 4, rgb,
-                         (CGImageAlphaInfo)(kCGImageAlphaPremultipliedFirst | CG_BITMAP_BYTE_ORDER_FLAG),
+                         kCGImageAlphaPremultipliedFirst | CG_BITMAP_BYTE_ORDER_FLAG,
                          dataProvider, NULL, false, kCGRenderingIntentDefault);
     CGColorSpaceRelease (rgb);
     CGDataProviderRelease (dataProvider);
@@ -1154,8 +1097,7 @@ nsCanvasRenderingContext2D::GetCanvas(nsIDOMHTMLCanvasElement **canvas)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::Save()
 {
-    ContextState state = CurrentState();
-    mStyleStack.AppendElement(state);
+    mStyleStack.AppendElement(CurrentState());
     cairo_save (mCairo);
     mSaveCount++;
     return NS_OK;
@@ -1184,9 +1126,6 @@ nsCanvasRenderingContext2D::Restore()
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::Scale(float x, float y)
 {
-    if (!FloatValidate(x,y))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_scale (mCairo, x, y);
     return NS_OK;
 }
@@ -1194,9 +1133,6 @@ nsCanvasRenderingContext2D::Scale(float x, float y)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::Rotate(float angle)
 {
-    if (!FloatValidate(angle))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_rotate (mCairo, angle);
     return NS_OK;
 }
@@ -1204,34 +1140,7 @@ nsCanvasRenderingContext2D::Rotate(float angle)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::Translate(float x, float y)
 {
-    if (!FloatValidate(x,y))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_translate (mCairo, x, y);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsCanvasRenderingContext2D::Transform(float m11, float m12, float m21, float m22, float dx, float dy)
-{
-    if (!FloatValidate(m11,m12,m21,m22,dx,dy))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
-    cairo_matrix_t mat;
-    cairo_matrix_init (&mat, m11, m12, m21, m22, dx, dy);
-    cairo_transform (mCairo, &mat);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsCanvasRenderingContext2D::SetTransform(float m11, float m12, float m21, float m22, float dx, float dy)
-{
-    if (!FloatValidate(m11,m12,m21,m22,dx,dy))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
-    cairo_matrix_t mat;
-    cairo_matrix_init (&mat, m11, m12, m21, m22, dx, dy);
-    cairo_set_matrix (mCairo, &mat);
     return NS_OK;
 }
 
@@ -1242,9 +1151,6 @@ nsCanvasRenderingContext2D::SetTransform(float m11, float m12, float m21, float 
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::SetGlobalAlpha(float aGlobalAlpha)
 {
-    if (!FloatValidate(aGlobalAlpha))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     // ignore invalid values, as per spec
     if (aGlobalAlpha < 0.0 || aGlobalAlpha > 1.0)
         return NS_OK;
@@ -1337,9 +1243,6 @@ NS_IMETHODIMP
 nsCanvasRenderingContext2D::CreateLinearGradient(float x0, float y0, float x1, float y1,
                                                  nsIDOMCanvasGradient **_retval)
 {
-    if (!FloatValidate(x0,y0,x1,y1))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_pattern_t *gradpat = nsnull;
     gradpat = cairo_pattern_create_linear ((double) x0, (double) y0, (double) x1, (double) y1);
     nsCanvasGradient *grad = new nsCanvasGradient(gradpat, mCSSParser);
@@ -1356,9 +1259,6 @@ NS_IMETHODIMP
 nsCanvasRenderingContext2D::CreateRadialGradient(float x0, float y0, float r0, float x1, float y1, float r1,
                                                  nsIDOMCanvasGradient **_retval)
 {
-    if (!FloatValidate(x0,y0,r0,x1,y1,r1))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_pattern_t *gradpat = nsnull;
     gradpat = cairo_pattern_create_radial ((double) x0, (double) y0, (double) r0,
                                            (double) x1, (double) y1, (double) r1);
@@ -1427,8 +1327,6 @@ nsCanvasRenderingContext2D::CreatePattern(nsIDOMHTMLElement *image,
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::SetShadowOffsetX(float x)
 {
-    if (!FloatValidate(x))
-        return NS_ERROR_DOM_SYNTAX_ERR;
     // XXX ERRMSG we need to report an error to developers here! (bug 329026)
     return NS_OK;
 }
@@ -1443,8 +1341,6 @@ nsCanvasRenderingContext2D::GetShadowOffsetX(float *x)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::SetShadowOffsetY(float y)
 {
-    if (!FloatValidate(y))
-        return NS_ERROR_DOM_SYNTAX_ERR;
     // XXX ERRMSG we need to report an error to developers here! (bug 329026)
     return NS_OK;
 }
@@ -1459,8 +1355,6 @@ nsCanvasRenderingContext2D::GetShadowOffsetY(float *y)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::SetShadowBlur(float blur)
 {
-    if (!FloatValidate(blur))
-        return NS_ERROR_DOM_SYNTAX_ERR;
     // XXX ERRMSG we need to report an error to developers here! (bug 329026)
     return NS_OK;
 }
@@ -1493,9 +1387,6 @@ nsCanvasRenderingContext2D::GetShadowColor(nsAString& color)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::ClearRect(float x, float y, float w, float h)
 {
-    if (!FloatValidate(x,y,w,h))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_save (mCairo);
     cairo_set_operator (mCairo, CAIRO_OPERATOR_CLEAR);
     cairo_new_path (mCairo);
@@ -1509,9 +1400,6 @@ nsCanvasRenderingContext2D::ClearRect(float x, float y, float w, float h)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::FillRect(float x, float y, float w, float h)
 {
-    if (!FloatValidate(x,y,w,h))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_new_path (mCairo);
     cairo_rectangle (mCairo, x, y, w, h);
 
@@ -1524,9 +1412,6 @@ nsCanvasRenderingContext2D::FillRect(float x, float y, float w, float h)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::StrokeRect(float x, float y, float w, float h)
 {
-    if (!FloatValidate(x,y,w,h))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_new_path (mCairo);
     cairo_rectangle (mCairo, x, y, w, h);
 
@@ -1580,9 +1465,6 @@ nsCanvasRenderingContext2D::Clip()
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::MoveTo(float x, float y)
 {
-    if (!FloatValidate(x,y))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_move_to(mCairo, x, y);
     return NS_OK;
 }
@@ -1590,9 +1472,6 @@ nsCanvasRenderingContext2D::MoveTo(float x, float y)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::LineTo(float x, float y)
 {
-    if (!FloatValidate(x,y))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_line_to(mCairo, x, y);
     return NS_OK;
 }
@@ -1600,9 +1479,6 @@ nsCanvasRenderingContext2D::LineTo(float x, float y)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::QuadraticCurveTo(float cpx, float cpy, float x, float y)
 {
-    if (!FloatValidate(cpx,cpy,x,y))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     double cx, cy;
 
     // we will always have a current point, since beginPath forces
@@ -1624,9 +1500,6 @@ nsCanvasRenderingContext2D::BezierCurveTo(float cp1x, float cp1y,
                                           float cp2x, float cp2y,
                                           float x, float y)
 {
-    if (!FloatValidate(cp1x,cp1y,cp2x,cp2y,x,y))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_curve_to(mCairo, cp1x, cp1y, cp2x, cp2y, x, y);
     return NS_OK;
 }
@@ -1634,9 +1507,6 @@ nsCanvasRenderingContext2D::BezierCurveTo(float cp1x, float cp1y,
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::ArcTo(float x1, float y1, float x2, float y2, float radius)
 {
-    if (!FloatValidate(x1,y1,x2,y2,radius))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     if (radius <= 0)
         return NS_ERROR_DOM_INDEX_SIZE_ERR;
 
@@ -1724,9 +1594,6 @@ nsCanvasRenderingContext2D::ArcTo(float x1, float y1, float x2, float y2, float 
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::Arc(float x, float y, float r, float startAngle, float endAngle, int ccw)
 {
-    if (!FloatValidate(x,y,r,startAngle,endAngle))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     if (ccw)
         cairo_arc_negative (mCairo, x, y, r, startAngle, endAngle);
     else
@@ -1737,9 +1604,6 @@ nsCanvasRenderingContext2D::Arc(float x, float y, float r, float startAngle, flo
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::Rect(float x, float y, float w, float h)
 {
-    if (!FloatValidate(x,y,w,h))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_rectangle (mCairo, x, y, w, h);
     return NS_OK;
 }
@@ -1751,9 +1615,6 @@ nsCanvasRenderingContext2D::Rect(float x, float y, float w, float h)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::SetLineWidth(float width)
 {
-    if (!FloatValidate(width))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_set_line_width(mCairo, width);
     return NS_OK;
 }
@@ -1841,9 +1702,6 @@ nsCanvasRenderingContext2D::GetLineJoin(nsAString& joinstyle)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::SetMiterLimit(float miter)
 {
-    if (!FloatValidate(miter))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     cairo_set_miter_limit(mCairo, miter);
     return NS_OK;
 }
@@ -1859,9 +1717,6 @@ nsCanvasRenderingContext2D::GetMiterLimit(float *miter)
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::IsPointInPath(float x, float y, PRBool *retVal)
 {
-    if (!FloatValidate(x,y))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     *retVal = (PRBool) cairo_in_fill(mCairo, x, y);
     return NS_OK;
 }
@@ -1962,11 +1817,6 @@ nsCanvasRenderingContext2D::DrawImage()
     }
 #undef GET_ARG
 
-    if (!FloatValidate(sx,sy,sw,sh))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-    if (!FloatValidate(dx,dy,dw,dh))
-        return NS_ERROR_DOM_SYNTAX_ERR;
-
     // check args
     if (sx < 0.0 || sy < 0.0 ||
         sw < 0.0 || sw > (double) imgWidth ||
@@ -1992,7 +1842,9 @@ nsCanvasRenderingContext2D::DrawImage()
     cairo_paint_with_alpha(mCairo, CurrentState().globalAlpha);
     cairo_restore(mCairo);
 
-#if 1
+#if 0
+    // Disabled workaround because of a fix in cairo-win32-surface.
+
     // XXX cairo bug workaround; force a clip update on mCairo.
     // Otherwise, a pixman clip gets left around somewhere, and pixman
     // (Render) does source clipping as well -- so we end up
@@ -2528,37 +2380,6 @@ CheckSaneSubrectSize (PRInt32 x, PRInt32 y, PRInt32 w, PRInt32 h, PRInt32 realWi
     return PR_TRUE;
 }
 
-static void
-FlushLayoutForTree(nsIDOMWindow* aWindow)
-{
-    // Note that because FlushPendingNotifications flushes parents, this
-    // is O(N^2) in docshell tree depth.  However, the docshell tree is
-    // usually pretty shallow.
-
-    nsCOMPtr<nsIDOMDocument> domDoc;
-    aWindow->GetDocument(getter_AddRefs(domDoc));
-    nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
-    if (doc) {
-        doc->FlushPendingNotifications(Flush_Layout);
-    }
-
-    nsCOMPtr<nsPIDOMWindow> piWin = do_QueryInterface(aWindow);
-    nsCOMPtr<nsIDocShellTreeNode> node =
-        do_QueryInterface(piWin->GetDocShell());
-    if (node) {
-        PRInt32 i = 0, i_end;
-        node->GetChildCount(&i_end);
-        for (; i < i_end; ++i) {
-            nsCOMPtr<nsIDocShellTreeItem> item;
-            node->GetChildAt(i, getter_AddRefs(item));
-            nsCOMPtr<nsIDOMWindow> win = do_GetInterface(item);
-            if (win) {
-                FlushLayoutForTree(win);
-            }
-        }
-    }
-}
-
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::DrawWindow(nsIDOMWindow* aWindow, PRInt32 aX, PRInt32 aY,
                                        PRInt32 aW, PRInt32 aH, 
@@ -2577,14 +2398,39 @@ nsCanvasRenderingContext2D::DrawWindow(nsIDOMWindow* aWindow, PRInt32 aX, PRInt3
     // -- rendering the user's theme and then extracting the results
     // -- rendering native anonymous content (e.g., file input paths;
     // scrollbars should be allowed)
-    if (!nsContentUtils::IsCallerTrustedForRead()) {
-      // not permitted to use DrawWindow
-      // XXX ERRMSG we need to report an error to developers here! (bug 329026)
+    nsCOMPtr<nsIScriptSecurityManager> ssm =
+        do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
+    if (!ssm)
+        return NS_ERROR_FAILURE;
+
+    PRBool isTrusted = PR_FALSE;
+    PRBool isChrome = PR_FALSE;
+    PRBool hasCap = PR_FALSE;
+
+    // The secman really should handle UniversalXPConnect case, since that
+    // should include UniversalBrowserRead... doesn't right now, though.
+    if ((NS_SUCCEEDED(ssm->SubjectPrincipalIsSystem(&isChrome)) && isChrome) ||
+        (NS_SUCCEEDED(ssm->IsCapabilityEnabled("UniversalBrowserRead", &hasCap)) && hasCap) ||
+        (NS_SUCCEEDED(ssm->IsCapabilityEnabled("UniversalXPConnect", &hasCap)) && hasCap))
+    {
+        isTrusted = PR_TRUE;
+    }
+
+    if (!isTrusted) {
+        // not permitted to use DrawWindow
+        // XXX ERRMSG we need to report an error to developers here! (bug 329026)
         return NS_ERROR_DOM_SECURITY_ERR;
     }
     
     // Flush layout updates
-    FlushLayoutForTree(aWindow);
+    nsCOMPtr<nsIDOMDocument> domDoc;
+    aWindow->GetDocument(getter_AddRefs(domDoc));
+    if (domDoc) {
+        nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
+        if (doc) {
+            doc->FlushPendingNotifications(Flush_Layout);
+        }
+    }
 
     nsCOMPtr<nsPresContext> presContext;
 #ifdef MOZILLA_1_8_BRANCH
@@ -2619,6 +2465,10 @@ nsCanvasRenderingContext2D::DrawWindow(nsIDOMWindow* aWindow, PRInt32 aX, PRInt3
     nsresult rv = mCSSParser->ParseColorString(PromiseFlatString(aBGColor),
                                                nsnull, 0, PR_TRUE, &bgColor);
     NS_ENSURE_SUCCESS(rv, rv);
+    
+    float p2t = presContext->PixelsToTwips();
+    nsRect r(aX, aY, aW, aH);
+    r.ScaleRoundOut(p2t);
 
 #ifndef MOZILLA_1_8_BRANCH    
     nsIPresShell* presShell = presContext->PresShell();
@@ -2630,8 +2480,7 @@ nsCanvasRenderingContext2D::DrawWindow(nsIDOMWindow* aWindow, PRInt32 aX, PRInt3
     //mThebesContext->Rectangle(gfxRect(0, 0, aW, aH));
     //mThebesContext->Clip();
 
-    // XXX vlad says this shouldn't both be COLOR_ALPHA but that it is a workaround for some bug
-    mThebesContext->PushGroup(NS_GET_A(bgColor) == 0xff ? gfxASurface::CONTENT_COLOR_ALPHA : gfxASurface::CONTENT_COLOR_ALPHA);
+    mThebesContext->PushGroup(NS_GET_A(bgColor) == 0xff ? gfxContext::CONTENT_COLOR_ALPHA : gfxContext::CONTENT_COLOR_ALPHA);
 
     // draw background color
     if (NS_GET_A(bgColor) > 0) {
@@ -2646,12 +2495,9 @@ nsCanvasRenderingContext2D::DrawWindow(nsIDOMWindow* aWindow, PRInt32 aX, PRInt3
     mThebesContext->SetOperator(gfxContext::OPERATOR_OVER);
 
     nsIFrame* rootFrame = presShell->FrameManager()->GetRootFrame();
-    if (rootFrame) {
-        // XXX This shadows the other |r|, above.
-        nsRect r(nsPresContext::CSSPixelsToAppUnits(aX),
-                 nsPresContext::CSSPixelsToAppUnits(aY),
-                 nsPresContext::CSSPixelsToAppUnits(aW),
-                 nsPresContext::CSSPixelsToAppUnits(aH));
+    if (0 && rootFrame) {
+        nsRect r(aX, aY, aW, aH);
+        r.ScaleRoundOut(presContext->PixelsToTwips());
 
         nsDisplayListBuilder builder(rootFrame, PR_FALSE, PR_FALSE);
         nsDisplayList list;
@@ -2667,7 +2513,7 @@ nsCanvasRenderingContext2D::DrawWindow(nsIDOMWindow* aWindow, PRInt32 aX, PRInt3
 
         rv = rootFrame->BuildDisplayListForStackingContext(&builder, r, &list);      
         if (NS_SUCCEEDED(rv)) {
-            float t2p = presContext->AppUnitsPerDevPixel();
+            float t2p = presContext->TwipsToPixels();
             // Ensure that r.x,r.y gets drawn at (0,0)
             mThebesContext->Save();
             mThebesContext->Translate(gfxPoint(-r.x*t2p, -r.y*t2p));
@@ -2791,8 +2637,8 @@ nsCanvasRenderingContext2D::DrawNativeSurfaces(nsIDrawingSurface* aBlackSurface,
         // There is transparency. Use the blender to recover alphas.
         nsCOMPtr<nsIBlender> blender = do_CreateInstance(kBlenderCID, &rv);
         NS_ENSURE_SUCCESS(rv, rv);
-        nsCOMPtr<nsIDeviceContext> dc;
-        aBlackContext->GetDeviceContext(*getter_AddRefs(dc));
+        nsIDeviceContext* dc = nsnull;
+        aBlackContext->GetDeviceContext(dc);
         rv = blender->Init(dc);
         NS_ENSURE_SUCCESS(rv, rv);
         
@@ -2907,11 +2753,6 @@ nsCanvasRenderingContext2D::DrawNativeSurfaces(nsIDrawingSurface* aBlackSurface,
 #define NATIVE_SURFACE_IS_BIG_ENDIAN
 #endif
 
-// OS/2 needs this painted the other way around
-#ifdef XP_OS2
-#define NATIVE_SURFACE_IS_VERTICALLY_FLIPPED
-#endif
-
     // Convert the data
     PRUint8* dest = tmpBuf;
     PRInt32 index = 0;
@@ -2921,11 +2762,7 @@ nsCanvasRenderingContext2D::DrawNativeSurfaces(nsIDrawingSurface* aBlackSurface,
     PRUint32 BScale = ComputeScaleFactor(format.mBlueCount);
     
     for (PRInt32 i = 0; i < aSurfaceSize.height; ++i) {
-#ifdef NATIVE_SURFACE_IS_VERTICALLY_FLIPPED
-        PRUint8* src = data + (aSurfaceSize.height-1 - i)*rowSpan;
-#else
         PRUint8* src = data + i*rowSpan;
-#endif
         for (PRInt32 j = 0; j < aSurfaceSize.width; ++j) {
             /* v is the pixel value */
 #ifdef NATIVE_SURFACE_IS_BIG_ENDIAN
@@ -2970,14 +2807,36 @@ nsCanvasRenderingContext2D::DrawNativeSurfaces(nsIDrawingSurface* aBlackSurface,
 NS_IMETHODIMP
 nsCanvasRenderingContext2D::GetImageData()
 {
-    if (mCanvasElement->IsWriteOnly() && !nsContentUtils::IsCallerTrustedForRead()) {
-      // not permitted to use DrawWindow
-      // XXX ERRMSG we need to report an error to developers here! (bug 329026)
-      return NS_ERROR_DOM_SECURITY_ERR;
+    nsresult rv;
+
+    if (mCanvasElement->IsWriteOnly()) {
+        nsCOMPtr<nsIScriptSecurityManager> ssm =
+            do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
+        if (!ssm)
+            return NS_ERROR_FAILURE;
+
+        PRBool isTrusted = PR_FALSE;
+        PRBool isChrome = PR_FALSE;
+        PRBool hasCap = PR_FALSE;
+
+        // The secman really should handle UniversalXPConnect case, since that
+        // should include UniversalBrowserRead... doesn't right now, though.
+        if ((NS_SUCCEEDED(ssm->SubjectPrincipalIsSystem(&isChrome)) && isChrome) ||
+            (NS_SUCCEEDED(ssm->IsCapabilityEnabled("UniversalBrowserRead", &hasCap)) && hasCap) ||
+            (NS_SUCCEEDED(ssm->IsCapabilityEnabled("UniversalXPConnect", &hasCap)) && hasCap))
+        {
+            isTrusted = PR_TRUE;
+        }
+
+        if (!isTrusted) {
+            // not permitted to use DrawWindow
+            // XXX ERRMSG we need to report an error to developers here! (bug 329026)
+            return NS_ERROR_DOM_SECURITY_ERR;
+        }
     }
 
     nsCOMPtr<nsIXPCNativeCallContext> ncc;
-    nsresult rv = nsContentUtils::XPConnect()->
+    rv = nsContentUtils::XPConnect()->
         GetCurrentNativeCallContext(getter_AddRefs(ncc));
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -3212,5 +3071,5 @@ nsCanvasRenderingContext2D::PutImageData()
         cairo_surface_destroy (imgsurf);
     }
 
-    return Redraw();
+    return NS_OK;
 }

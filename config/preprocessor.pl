@@ -39,9 +39,9 @@ while ($_ = $ARGV[0], defined($_) && /^-./) {
     last if /^--$/os;
     if (/^-D(.*)$/os) { 
         for ($1) {
-            if (/^([\w\.]+)=(.*)$/os) {
+            if (/^(\w+)=(.*)$/os) {
                 $stack->define($1, $2);
-            } elsif (/^([\w\.]+)$/os) {
+            } elsif (/^(\w+)$/os) {
                 $stack->define($1, 1);
             } else {
                 die "$0: invalid argument to -D: $_\n";
@@ -93,7 +93,7 @@ use File::Spec::Unix; # on all platforms, because the #include syntax is unix-ba
 
 # Note: Ideally we would use File::Spec 0.8. When this becomes
 # possible, add "0.8" to the first "use" line above, then replace
-# occurrences of "::_0_8::" with "->" below. And remove the code for
+# occurances of "::_0_8::" with "->" below. And remove the code for
 # File::Spec 0.8 much lower down the file.
 
 sub include {
@@ -183,18 +183,6 @@ sub fatal {
 
 package stack;
 
-# condition evaluated just prior to this context was false
-use constant COND_FALSE => 0;
-
-# condition evaluated just prior to this context was true
-use constant COND_TRUE => 1;
-
-# some prior condition at this level already evaluated to true (or a
-# parent condition evaluated to false or must be ignored), so we're
-# ignoring all remaining conditions at current level (and nested
-# conditions, too)
-use constant COND_COMPLETED => 2;
-
 sub new {
     return bless {
         'variables' => {
@@ -207,9 +195,9 @@ sub new {
         'filters' => {
             # filters
         },
-        'values' => [], # the value of the last condition evaluated at the nth level
-        'lastConditionState' => [], # whether the condition in the nth-level context was true, false, or not applicable
-        'conditionState' => COND_TRUE,
+        'values' => [], # the value of the last condition evaluated at the nth lewel
+        'lastPrinting' => [], # whether we were printing at the n-1th level
+        'printing' => 1, # whether we are currently printing at the Nth level
         'dependencies' => 0, # whether we are showing dependencies
         'lineEndings' => "\n", # default to platform conventions
     };
@@ -223,28 +211,28 @@ sub newline {
 sub define {
     my $self = shift;
     my($variable, $value) = @_;
-    die "not a valid variable name: '$variable'\n" if $variable =~ m/[^\w\.]/;
+    die "not a valid variable name: '$variable'\n" if $variable =~ m/\W/;
     $self->{'variables'}->{$variable} = $value;
 }
 
 sub defined {
     my $self = shift;
     my($variable) = @_;
-    die "not a valid variable name: '$variable'\n" if $variable =~ m/[^\w\.]/;
+    die "not a valid variable name: '$variable'\n" if $variable =~ m/\W/;
     return defined($self->{'variables'}->{$variable});
 }
 
 sub undefine {
     my $self = shift;
     my($variable) = @_;
-    die "not a valid variable name: '$variable'\n" if $variable =~ m/[^\w\.]/;
+    die "not a valid variable name: '$variable'\n" if $variable =~ m/\W/;
     delete($self->{'variables'}->{$variable});
 }
 
 sub get {
     my $self = shift;
     my($variable, $required) = @_;
-    die "not a valid variable name: '$variable'\n" if $variable =~ m/[^\w\.]/;
+    die "not a valid variable name: '$variable'\n" if $variable =~ m/\W/;
     my $value = $self->{'variables'}->{$variable};
     if (defined($value)) {
         return $value;
@@ -254,42 +242,28 @@ sub get {
     }
 }
 
-sub replace {
-    my $self = shift;
-    my ($value) = @_;
-
-    ${$self->{'values'}}[-1] = $value;
-    $self->{'conditionState'} = $self->{'conditionState'} != COND_FALSE
-                              ? COND_COMPLETED
-                              : $value ? COND_TRUE : COND_FALSE;
-}
-
 sub push {
     my $self = shift;
     my($value) = @_;
-
     push(@{$self->{'values'}}, $value);
-    my $lastCondition = $self->{'conditionState'};
-    push(@{$self->{'lastConditionState'}}, $lastCondition);
-    $self->{'conditionState'} = $lastCondition != COND_TRUE
-                              ? COND_COMPLETED
-                              : $value ? COND_TRUE : COND_FALSE;
+    push(@{$self->{'lastPrinting'}}, $self->{'printing'});
+    $self->{'printing'} = $value && $self->{'printing'};
 }
 
 sub pop {
     my $self = shift;
-    $self->{'conditionState'} = pop(@{$self->{'lastConditionState'}});
+    $self->{'printing'} = pop(@{$self->{'lastPrinting'}});
     return pop(@{$self->{'values'}});
 }
 
 sub enabled {
     my $self = shift;
-    return $self->{'conditionState'} == COND_TRUE;
+    return $self->{'printing'};
 }
 
 sub disabled {
     my $self = shift;
-    return $self->{'conditionState'} != COND_TRUE;
+    return not $self->{'printing'};
 }
 
 sub filter {
@@ -355,65 +329,36 @@ sub undef {
 
 sub ifdef {
     my $stack = shift;
-    my $variable = shift;
-    my $replace = defined(shift);
-    die "argument expected\n" unless defined($variable);
-    if ($replace) {
-        $stack->replace($stack->defined($variable));
-    } else {
-        $stack->push($stack->defined($variable));
-    }
+    die "argument expected\n" unless @_;
+    $stack->push($stack->defined(@_));
 }
 
 sub ifndef {
     my $stack = shift;
-    my $variable = shift;
-    my $replace = defined(shift);
-    die "argument expected\n" unless defined($variable);
-    if ($replace) {
-        $stack->replace(not $stack->defined($variable));
-    } else {
-        $stack->push(not $stack->defined($variable));
-    }
+    die "argument expected\n" unless @_;
+    $stack->push(not $stack->defined(@_));
 }
 
 sub if {
     my $stack = shift;
     die "argument expected\n" unless @_;
     my $argument = shift;
-    my $replace = defined(shift);
     for ($argument) {
         /^(\w+)==(.*)$/os && do {
             # equality
-            if ($replace) {
-                return $stack->replace($stack->get($1) eq $2);
-            } else {
-                return $stack->push($stack->get($1) eq $2);
-            }
+            return $stack->push($stack->get($1) eq $2);
         };
         /^(\w+)!=(.*)$/os && do {
             # inequality
-            if ($replace) {
-                return $stack->replace($stack->get($1) ne $2);
-            } else {
-                return $stack->push($stack->get($1) ne $2);
-            }
+            return $stack->push($stack->get($1) ne $2);
         };
         /^(\w+)$/os && do {
             # true value
-            if ($replace) {
-                return $stack->replace($stack->get($1));
-            } else {
-                return $stack->push($stack->get($1));
-            }
+            return $stack->push($stack->get($1));
         };
         /^!(\w+)$/os && do {
             # false value
-            if ($replace) {
-                return $stack->replace(not $stack->get($1));
-            } else {
-                return $stack->push(not $stack->get($1));
-            }
+            return $stack->push(not $stack->get($1));
         };
         die "invalid argument: '$_'\n";
     }
@@ -422,25 +367,37 @@ sub if {
 sub else {
     my $stack = shift;
     die "argument unexpected\n" if @_;
-    $stack->replace(1);
+    $stack->push(not $stack->pop);
 }
 
 sub elif {
     my $stack = shift;
     die "argument expected\n" unless @_;
-    &if($stack, @_, 1);
+    if ($stack->pop) {
+        $stack->push(0);
+    } else {
+        &if($stack, @_);
+    }
 }
 
 sub elifdef {
     my $stack = shift;
     die "argument expected\n" unless @_;
-    &ifdef($stack, @_, 1);
+    if ($stack->pop) {
+        $stack->push(0);
+    } else {
+        &ifdef($stack, @_);
+    }
 }
 
 sub elifndef {
     my $stack = shift;
     die "argument expected\n" unless @_;
-    &ifndef($stack, @_, 1);
+    if ($stack->pop) {
+        $stack->push(0);
+    } else {
+        &ifndef($stack, @_);
+    }
 }
 
 sub endif {

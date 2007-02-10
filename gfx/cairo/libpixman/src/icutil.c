@@ -28,7 +28,7 @@ pixman_bits_t
 fbReplicatePixel (Pixel p, int bpp)
 {
     pixman_bits_t  b = p;
-
+    
     b &= FbFullMask (bpp);
     while (bpp < FB_UNIT)
     {
@@ -69,6 +69,7 @@ const FbMergeRopRec FbMergeRopBits[16] = {
 			 (FB_ALLONES >> ((FB_UNIT - ((x) + (w))) & FB_MASK)))
 
 #define Mask(x,w)	BitsMask((x)*(w),(w))
+
 
 #define SelMask(b,n,w)	((((b) >> n) & 1) * Mask(n,w))
 
@@ -281,5 +282,5 @@ fbStippleTable(int bits)
     case 8:
 	return fbStipple8Bits;
     }
-    return NULL;
+    return 0;
 }

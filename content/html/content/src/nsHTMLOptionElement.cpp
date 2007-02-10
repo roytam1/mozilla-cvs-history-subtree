@@ -43,12 +43,13 @@
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsIFormControl.h"
 #include "nsIForm.h"
 #include "nsIDOMText.h"
+#include "nsITextContent.h"
 #include "nsIDOMNode.h"
 #include "nsGenericElement.h"
 #include "nsIDOMHTMLCollection.h"
@@ -64,10 +65,10 @@
 #include "nsIDOMHTMLSelectElement.h"
 #include "nsNodeInfoManager.h"
 #include "nsCOMPtr.h"
+#include "nsLayoutAtoms.h"
 #include "nsIEventStateManager.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
-#include "nsContentCreatorFunctions.h"
 
 /**
  * Implementation of &lt;option&gt;
@@ -86,7 +87,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -113,6 +114,22 @@ public:
   // nsIContent
   virtual PRInt32 IntrinsicState() const;
 
+  nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                   const nsAString& aValue, PRBool aNotify)
+  {
+    return SetAttr(aNameSpaceID, aName, nsnull, aValue, aNotify);
+  }
+  virtual nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                           nsIAtom* aPrefix, const nsAString& aValue,
+                           PRBool aNotify)
+  {
+    nsresult rv = nsGenericHTMLElement::SetAttr(aNameSpaceID, aName, aPrefix,
+                                                aValue, aNotify);
+
+    AfterSetAttr(aNameSpaceID, aName, &aValue, aNotify);
+    return rv;
+  }
+
   virtual nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                              PRBool aNotify)
   {
@@ -122,22 +139,27 @@ public:
     AfterSetAttr(aNameSpaceID, aAttribute, nsnull, aNotify);
     return rv;
   }
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 
 protected:
+  /**
+   * Get the primary frame associated with this content
+   * @return the primary frame associated with this content
+   */
+  nsIFormControlFrame *GetSelectFrame() const;
+
   /**
    * Get the select content element that contains this option, this
    * intentionally does not return nsresult, all we care about is if
    * there's a select associated with this option or not.
    * @param aSelectElement the select element (out param)
    */
-  nsIContent* GetSelect();
+  void GetSelect(nsIDOMHTMLSelectElement **aSelectElement) const;
 
   /**
    * Called when an attribute has just been changed
    */
-  virtual nsresult AfterSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
-                                const nsAString* aValue, PRBool aNotify);
+  void AfterSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
+                    const nsAString* aValue, PRBool aNotify);
   PRPackedBool mIsInitialized;
   PRPackedBool mIsSelected;
 };
@@ -157,7 +179,7 @@ NS_NewHTMLOptionElement(nsINodeInfo *aNodeInfo, PRBool aFromParser)
       do_QueryInterface(nsContentUtils::GetDocumentFromCaller());
     NS_ENSURE_TRUE(doc, nsnull);
 
-    rv = doc->NodeInfoManager()->GetNodeInfo(nsGkAtoms::option, nsnull,
+    rv = doc->NodeInfoManager()->GetNodeInfo(nsHTMLAtoms::option, nsnull,
                                              kNameSpaceID_None,
                                              getter_AddRefs(nodeInfo));
     NS_ENSURE_SUCCESS(rv, nsnull);
@@ -194,7 +216,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLOptionElement, nsGenericHTMLElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLOptionElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLOptionElement)
 
 
 NS_IMETHODIMP
@@ -203,7 +225,10 @@ nsHTMLOptionElement::GetForm(nsIDOMHTMLFormElement** aForm)
   NS_ENSURE_ARG_POINTER(aForm);
   *aForm = nsnull;
 
-  nsCOMPtr<nsIFormControl> selectControl = do_QueryInterface(GetSelect());
+  nsCOMPtr<nsIDOMHTMLSelectElement> selectElement;
+  GetSelect(getter_AddRefs(selectElement));
+
+  nsCOMPtr<nsIFormControl> selectControl(do_QueryInterface(selectElement));
 
   if (selectControl) {
     selectControl->GetForm(aForm);
@@ -221,7 +246,7 @@ nsHTMLOptionElement::SetSelectedInternal(PRBool aValue, PRBool aNotify)
   if (aNotify) {
     nsIDocument* document = GetCurrentDoc();
     if (document) {
-      mozAutoDocUpdate upd(document, UPDATE_CONTENT_STATE, aNotify);
+      mozAutoDocUpdate(document, UPDATE_CONTENT_STATE, aNotify);
       document->ContentStatesChanged(this, nsnull, NS_EVENT_STATE_CHECKED);
     }
   }
@@ -232,16 +257,17 @@ nsHTMLOptionElement::SetSelectedInternal(PRBool aValue, PRBool aNotify)
 NS_IMETHODIMP
 nsHTMLOptionElement::SetValue(const nsAString& aValue)
 {
-  SetAttr(kNameSpaceID_None, nsGkAtoms::value, aValue, PR_TRUE);
+  SetAttr(kNameSpaceID_None, nsHTMLAtoms::value, aValue, PR_TRUE);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsHTMLOptionElement::GetValue(nsAString& aValue)
 {
+  nsresult rv = GetAttr(kNameSpaceID_None, nsHTMLAtoms::value, aValue);
   // If the value attr is there, that is *exactly* what we use.  If it is
   // not, we compress whitespace .text.
-  if (!GetAttr(kNameSpaceID_None, nsGkAtoms::value, aValue)) {
+  if (NS_CONTENT_ATTR_NOT_THERE == rv) {
     GetText(aValue);
   }
 
@@ -278,7 +304,9 @@ nsHTMLOptionElement::SetSelected(PRBool aValue)
 {
   // Note: The select content obj maintains all the PresState
   // so defer to it to get the answer
-  nsCOMPtr<nsISelectElement> selectInt = do_QueryInterface(GetSelect());
+  nsCOMPtr<nsIDOMHTMLSelectElement> selectElement;
+  GetSelect(getter_AddRefs(selectElement));
+  nsCOMPtr<nsISelectElement> selectInt(do_QueryInterface(selectElement));
   if (selectInt) {
     PRInt32 index;
     GetIndex(&index);
@@ -306,8 +334,9 @@ nsHTMLOptionElement::GetIndex(PRInt32* aIndex)
   *aIndex = -1; // -1 indicates the index was not found
 
   // Get our containing select content object.
-  nsCOMPtr<nsIDOMHTMLSelectElement> selectElement =
-    do_QueryInterface(GetSelect());
+  nsCOMPtr<nsIDOMHTMLSelectElement> selectElement;
+
+  GetSelect(getter_AddRefs(selectElement));
 
   if (selectElement) {
     // Get the options from the select object.
@@ -343,8 +372,8 @@ nsHTMLOptionElement::GetAttributeChangeHint(const nsIAtom* aAttribute,
   nsChangeHint retval =
       nsGenericHTMLElement::GetAttributeChangeHint(aAttribute, aModType);
 
-  if (aAttribute == nsGkAtoms::label ||
-      aAttribute == nsGkAtoms::text) {
+  if (aAttribute == nsHTMLAtoms::label ||
+      aAttribute == nsHTMLAtoms::text) {
     NS_UpdateHint(retval, NS_STYLE_HINT_REFLOW);
   }
   return retval;
@@ -353,10 +382,27 @@ nsHTMLOptionElement::GetAttributeChangeHint(const nsIAtom* aAttribute,
 NS_IMETHODIMP
 nsHTMLOptionElement::GetText(nsAString& aText)
 {
+  PRUint32 i, numNodes = GetChildCount();
+
+  aText.Truncate();
+
   nsAutoString text;
-  nsContentUtils::GetNodeTextContent(this, PR_FALSE, text);
+  for (i = 0; i < numNodes; i++) {
+    nsCOMPtr<nsIDOMText> domText(do_QueryInterface(GetChildAt(i)));
+
+    if (domText) {
+      nsresult rv = domText->GetData(text);
+      if (NS_FAILED(rv)) {
+        aText.Truncate();
+        return rv;
+      }
+
+      aText.Append(text);
+    }
+  }
 
   // XXX No CompressWhitespace for nsAString.  Sad.
+  text = aText;
   text.CompressWhitespace(PR_TRUE, PR_TRUE);
   aText = text;
 
@@ -366,7 +412,35 @@ nsHTMLOptionElement::GetText(nsAString& aText)
 NS_IMETHODIMP
 nsHTMLOptionElement::SetText(const nsAString& aText)
 {
-  return nsContentUtils::SetNodeTextContent(this, aText, PR_TRUE);
+  PRUint32 i, numNodes = GetChildCount();
+  PRBool usedExistingTextNode = PR_FALSE;  // Do we need to create a text node?
+  nsresult rv = NS_OK;
+
+  for (i = 0; i < numNodes; i++) {
+    nsCOMPtr<nsIDOMText> domText(do_QueryInterface(GetChildAt(i)));
+
+    if (domText) {
+      rv = domText->SetData(aText);
+
+      if (NS_SUCCEEDED(rv)) {
+        usedExistingTextNode = PR_TRUE;
+      }
+
+      break;
+    }
+  }
+
+  if (!usedExistingTextNode) {
+    nsCOMPtr<nsITextContent> text;
+    rv = NS_NewTextNode(getter_AddRefs(text), mNodeInfo->NodeInfoManager());
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    text->SetText(aText, PR_TRUE);
+
+    rv = AppendChildTo(text, PR_TRUE);
+  }
+
+  return rv;
 }
 
 PRInt32
@@ -382,14 +456,8 @@ nsHTMLOptionElement::IntrinsicState() const
     state |= NS_EVENT_STATE_CHECKED;
   }
 
-  // Also calling a non-const interface method (for :default)
-  NS_CONST_CAST(nsHTMLOptionElement*, this)->GetDefaultSelected(&selected);
-  if (selected) {
-    state |= NS_EVENT_STATE_DEFAULT;
-  }
-
   PRBool disabled;
-  GetBoolAttr(nsGkAtoms::disabled, &disabled);
+  GetBoolAttr(nsHTMLAtoms::disabled, &disabled);
   if (disabled) {
     state |= NS_EVENT_STATE_DISABLED;
     state &= ~NS_EVENT_STATE_ENABLED;
@@ -401,46 +469,61 @@ nsHTMLOptionElement::IntrinsicState() const
   return state;
 }
 
-// Get the select content element that contains this option
-nsIContent*
-nsHTMLOptionElement::GetSelect()
+// Options don't have frames - get the select content node
+// then call nsGenericHTMLElement::GetFormControlFrameFor()
+
+nsIFormControlFrame *
+nsHTMLOptionElement::GetSelectFrame() const
 {
-  nsIContent* parent = this;
-  while ((parent = parent->GetParent()) &&
-         parent->IsNodeOfType(eHTML)) {
-    if (parent->Tag() == nsGkAtoms::select) {
-      return parent;
-    }
-    if (parent->Tag() != nsGkAtoms::optgroup) {
+  if (!GetParent()) {
+    return nsnull;
+  }
+
+  nsIDocument* currentDoc = GetCurrentDoc();
+  if (!currentDoc) {
+    return nsnull;
+  }
+
+  nsCOMPtr<nsIDOMHTMLSelectElement> selectElement;
+
+  GetSelect(getter_AddRefs(selectElement));
+
+  nsCOMPtr<nsIContent> selectContent(do_QueryInterface(selectElement));
+
+  if (!selectContent) {
+    return nsnull;
+  }
+
+  return GetFormControlFrameFor(selectContent, currentDoc, PR_FALSE);
+}
+
+// Get the select content element that contains this option
+void
+nsHTMLOptionElement::GetSelect(nsIDOMHTMLSelectElement **aSelectElement) const
+{
+  *aSelectElement = nsnull;
+
+  for (nsIContent* parent = GetParent(); parent; parent = parent->GetParent()) {
+    CallQueryInterface(parent, aSelectElement);
+    if (*aSelectElement) {
       break;
     }
   }
-  
-  return nsnull;
 }
 
-nsresult
+void
 nsHTMLOptionElement::AfterSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                                   const nsAString* aValue, PRBool aNotify)
 {
   if (aNotify && aNameSpaceID == kNameSpaceID_None &&
-      (aName == nsGkAtoms::disabled || aName == nsGkAtoms::selected)) {
-    PRInt32 states;
-    if (aName == nsGkAtoms::disabled) {
-      states = NS_EVENT_STATE_DISABLED | NS_EVENT_STATE_ENABLED;
-    } else {
-      states = NS_EVENT_STATE_DEFAULT;
-    }
-    
+      aName == nsHTMLAtoms::disabled) {
     nsIDocument* document = GetCurrentDoc();
     if (document) {
-      mozAutoDocUpdate upd(document, UPDATE_CONTENT_STATE, PR_TRUE);
-      document->ContentStatesChanged(this, nsnull, states);
+      mozAutoDocUpdate(document, UPDATE_CONTENT_STATE, PR_TRUE);
+      document->ContentStatesChanged(this, nsnull, NS_EVENT_STATE_DISABLED |
+                                     NS_EVENT_STATE_ENABLED);
     }
   }
-
-  return nsGenericHTMLElement::AfterSetAttr(aNameSpaceID, aName, aValue,
-                                            aNotify);
 }
 
 NS_IMETHODIMP    
@@ -456,7 +539,7 @@ nsHTMLOptionElement::Initialize(JSContext* aContext,
     JSString* jsstr = JS_ValueToString(aContext, argv[0]);
     if (jsstr) {
       // Create a new text node and append it to the option
-      nsCOMPtr<nsIContent> textContent;
+      nsCOMPtr<nsITextContent> textContent;
       result = NS_NewTextNode(getter_AddRefs(textContent),
                               mNodeInfo->NodeInfoManager());
       if (NS_FAILED(result)) {
@@ -482,7 +565,7 @@ nsHTMLOptionElement::Initialize(JSContext* aContext,
         nsAutoString value(NS_REINTERPRET_CAST(const PRUnichar*,
                                                JS_GetStringChars(jsstr)));
 
-        result = SetAttr(kNameSpaceID_None, nsGkAtoms::value, value,
+        result = SetAttr(kNameSpaceID_None, nsHTMLAtoms::value, value,
                          PR_FALSE);
         if (NS_FAILED(result)) {
           return result;
@@ -496,7 +579,7 @@ nsHTMLOptionElement::Initialize(JSContext* aContext,
                                           argv[2],
                                           &defaultSelected)) &&
             (JS_TRUE == defaultSelected)) {
-          result = SetAttr(kNameSpaceID_None, nsGkAtoms::selected,
+          result = SetAttr(kNameSpaceID_None, nsHTMLAtoms::selected,
                            EmptyString(), PR_FALSE);
           NS_ENSURE_SUCCESS(result, result);
         }

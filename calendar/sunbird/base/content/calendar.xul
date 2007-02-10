@@ -84,7 +84,9 @@
 
 <!-- GENERAL CONTEXT MENU -->
 <popup id="context-menu"
-       onpopupshowing="document.getElementById('is_editable').hidden = (document.popupNode.getAttribute('id') == 'lefthandcalendar')">
+       onpopuphidden="gNewDateVariable = null;"
+       onpopupshowing="dump(document.popupNode.getAttribute('id'));
+                       document.getElementById('is_editable').hidden = (document.popupNode.getAttribute('id') == 'lefthandcalendar')">
 
   <menuitem label="&calendar.context.newevent.label;"
             accesskey="&calendar.context.newevent.accesskey;"
@@ -149,6 +151,13 @@
             label="&calendar.displaytodos.checkbox.label;"
             accesskey="&calendar.displaytodos.checkbox.accesskey;"
             observes="toggle_tasks_in_view"/>
+            
+<!-- Disable this until Sunbird gets mail support
+  <menuseparator/>
+  <menuitem label="&calendar.context.emailevent.label;"
+            accesskey="&calendar.context.emailevent.accesskey;"
+            observes="send_event_command"/>
+-->
 </popup>
 
 <!-- TASK ITEM CONTEXT MENU -->
@@ -266,8 +275,7 @@
 
 <commandset id="commands"/>
 
-<toolbox id="calendar-toolbox" class="toolbox-top" mode="full"
-         defaultmode="full">
+<toolbox id="calendar-toolbox" class="toolbox-top">
   <!-- Menu -->
   <toolbar type="menubar" id="main-menubar" class="chromeclass-menubar" customizable="true"
            defaultset="menubar-items"
@@ -409,7 +417,7 @@
       </toolbaritem>
   </toolbarpalette>
   <toolbar class="toolbar-primary chromeclass-toolbar" id="calendar-bar"
-           iconsize="large"
+           iconsize="big"
            defaultset="calendar-new-event-button,calendar-new-task-button,calendar-edit-event-button,calendar-delete-event-button,separator,calendar-go-to-today-button,separator,calendar-day-view-button,calendar-week-view-button,calendar-multiweek-view-button,calendar-month-view-button,spring,throbber-box"
            customizable="true" mode="full"
            toolbarname="&calendar.maintoolbar.name;" accesskey="&calendar.maintoolbar.accesskey;"
@@ -565,7 +573,8 @@
     </vbox>
 
     <splitter id="calendar-splitter" collapse="before" persist="state"
-              class="chromeclass-extrachrome sidebar-splitter" orient="horizontal"/>
+              class="chromeclass-extrachrome sidebar-splitter" orient="horizontal"
+              onmouseup="setTimeout( 'gCalendarWindow.onMouseUpCalendarSplitter()', 1 );"/>
          
     <vbox flex="1">
       <vbox id="bottom-events-box" persist="height">
@@ -659,7 +668,7 @@
       </vbox>
 
       <splitter id="calendar-view-splitter" collapse="before" persist="state"
-                class="chromeclass-extrachrome sidebar-splitter" orient="vertical" onmouseup="setTimeout('refreshEventTree();', 10 );">
+                class="chromeclass-extrachrome sidebar-splitter" orient="vertical" onmouseup="setTimeout( 'gCalendarWindow.onMouseUpCalendarViewSplitter()', 1 );">
         <grippy class="sidebar-splitter-grippy"/>
       </splitter>
 

@@ -52,8 +52,6 @@ REQUIRES  = xpcom \
             string \
             windowwatcher \
             dom \
-            widget \
-            gfx \
             $(NULL)
 
 CPPSRCS   = \

@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Seth Spitzer <sspitzer@netscape.com>
- *   Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -37,6 +36,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+/* nsFileSpec is declared in nsIAbDirectory.idl */
 #include "nsIAddrDBAnnouncer.idl"
 #include "nsIAbCard.idl"
 #include "nsIAbDirectory.idl"
@@ -65,9 +65,10 @@ interface nsIMdbRow;
 #define kNicknameColumn           "NickName"
 #define kPriEmailColumn           "PrimaryEmail"
 #define k2ndEmailColumn           "SecondEmail"
+#define kDefaultEmailColumn       "DefaultEmail"
+#define kCardTypeColumn           "CardType"
 #define kPreferMailFormatColumn   "PreferMailFormat"
 #define kPopularityIndexColumn    "PopularityIndex"
-#define kAllowRemoteContentColumn "AllowRemoteContent"
 #define kWorkPhoneColumn          "WorkPhone"
 #define kHomePhoneColumn          "HomePhone"
 #define kFaxColumn                "FaxNumber"
@@ -128,7 +129,7 @@ interface nsIMdbRow;
 
 %}
 
-[scriptable, uuid(14d89995-e6c5-11d8-9a39-000a95dc234c)]
+[scriptable, uuid(ca536e0e-1dd1-11b2-951a-e02b86e4f60e)]
 interface nsAddrDBCommitType 
 {
   const long kSmallCommit = 0;
@@ -137,60 +138,26 @@ interface nsAddrDBCommitType
   const long kCompressCommit = 3;
 };
 
-[scriptable, uuid(E59ABE11-1E97-46ec-A1C4-500971BBC4B4)]
+[scriptable, uuid(4B4C5384-1852-4f33-AA2D-CAB5D4C6E6BC)]
 interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 
-  /**
-   * Path to the address book database that this instance represents.
-   */
-  attribute nsIFile dbPath;
+	[noscript] attribute nsFileSpec dbPath;
 	nsIAddrDatabase open(in nsIFile dbFile, in boolean create, in boolean upgrading);
              
 	void close(in boolean forceCommit);
-
-  /**
-   * Open the MDB database synchronously creating it if required. If
-   * successful, this routine will set up the m_mdbStore and m_mdbEnv of the
-   * database object so other database calls can work.
-   *
-   * @param     dbName                      The location of the database file
-   *                                        to open.
-   * @param     create                      If set to true, will create the
-   *                                        database file if it does not
-   *                                        already exist.
-   * @exception NS_ERROR_FILE_NOT_FOUND     The file was not found at the
-   *                                        specified location (and create was
-   *                                        false).
-   * @exception NS_ERROR_FILE_ACCESS_DENIED The file could not be opened as
-   *                                        access was denied.
-   */
-  void openMDB(in nsIFile dbName, in boolean create);
+	[noscript] void openMDB(in nsFileSpec dbName, in boolean create);
 	void closeMDB(in boolean commit);
 
 	void commit(in unsigned long commitType);
 	void forceClosed();
 
 	void createNewCardAndAddToDB(in nsIAbCard newCard, in boolean aNotify);
+	void createNewCardAndAddToDBWithKey(in nsIAbCard newCard, in boolean aNotify, out unsigned long key);	
 	void createNewListCardAndAddToDB(in nsIAbDirectory list, in unsigned long listRowID, in nsIAbCard newCard, in boolean aNotify);
 	void createMailListAndAddToDB(in nsIAbDirectory newList, in boolean aNotify);
-
-  /**
-   * Enumerate the cards in the directory. The enumerator will return the
-   * cards associated with mailing lists too.
-   *
-   * @param directory the directory of which to enumerate the cards.
-   * @return an enumerator.
-   */
-	nsISimpleEnumerator enumerateCards(in nsIAbDirectory directory);
-
-  /**
-   * Enumerate the cards associated with the mailing lists in the directory.
-   *
-   * @param directory the directory of which to enumerate the cards.
-   * @return an enumerator.
-   */
-	nsISimpleEnumerator enumerateListAddresses(in nsIAbDirectory directory);
-
+  void createMailListAndAddToDBWithKey(in nsIAbDirectory newList, in boolean aNotify, out PRUint32 key);
+	nsIEnumerator enumerateCards(in nsIAbDirectory directory);
+	nsIEnumerator enumerateListAddresses(in nsIAbDirectory directory);
 	void getMailingListsFromDB(in nsIAbDirectory parentDir);
 	void deleteCard(in nsIAbCard card, in boolean aNotify);
 	void editCard(in nsIAbCard card, in boolean aNotify);
@@ -201,9 +168,9 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	void deleteCardFromMailList(in nsIAbDirectory mailList, in nsIAbCard card, in boolean aNotify);
 	readonly attribute wstring directoryName;
 
-  /**
-   * aUTF8Value needs to be in UTF-8
-   */
+    /**
+	 * aUTF8Value needs to be in UTF-8
+	 */
 	nsIAbCard getCardFromAttribute(in nsIAbDirectory directory, in string aName, in string aUTF8Value, in boolean caseInsensitive);
 
 	PRBool findMailListbyUnicodeName(in wstring listName);
@@ -222,6 +189,8 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	[noscript] void addNickName(in nsIMdbRow row, in string value);
 	[noscript] void addPrimaryEmail(in nsIMdbRow row, in string value);
 	[noscript] void add2ndEmail(in nsIMdbRow row, in string value);
+  [noscript] void addDefaultEmail(in nsIMdbRow row, in string value);
+  [noscript] void addCardType(in nsIMdbRow row, in string value);
 	[noscript] void addWorkPhone(in nsIMdbRow row, in string value);
 	[noscript] void addHomePhone(in nsIMdbRow row, in string value);
 	[noscript] void addFaxNumber(in nsIMdbRow row, in string value);
@@ -267,29 +236,43 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	[noscript] void addNotes(in nsIMdbRow row, in string value);
 	[noscript] void addPreferMailFormat(in nsIMdbRow row, in unsigned long value);
 	[noscript] void addPopularityIndex(in nsIMdbRow row, in unsigned long value);
-  [noscript] void addAllowRemoteContent(in nsIMdbRow row, in boolean value);
 
 	[noscript] void addListName(in nsIMdbRow row, in string value);
 	[noscript] void addListNickName(in nsIMdbRow row, in string value);
 	[noscript] void addListDescription(in nsIMdbRow row, in string value);
 	[noscript] void addListDirNode(in nsIMdbRow listRow);
 
-  /**
-   * use for getting and setting generic string attributes
-   * like _AimScreenName
-   */
-  void setCardValue(in nsIAbCard card, in string name, in wstring value, in boolean notify);
-  wstring getCardValue(in nsIAbCard card, in string name);
+    /**
+     * use for getting and setting generic string attributes
+     * like _AimScreenName
+     */
+    void setCardValue(in nsIAbCard card, in string name, in wstring value, in boolean notify);
+    wstring getCardValue(in nsIAbCard card, in string name);
 
-  void getDeletedCardList(out unsigned long aCount, out nsISupportsArray aDeletedList); 
-  void getDeletedCardCount(out unsigned long count); 
+    void getDeletedCardList(out unsigned long aCount, out nsISupportsArray aDeletedList); 
+    void getDeletedCardCount(out unsigned long count); 
 
-  void AddListCardColumnsToRow(in nsIAbCard aPCard,
-                               in nsIMdbRow aPListRow,
-                               in unsigned long aPos,
-                               out nsIAbCard aPNewCard,
-                               in boolean aInMailingList);
-  void InitCardFromRow(in nsIAbCard aNewCard,in nsIMdbRow aCardRow);
-  void SetListAddressTotal(in nsIMdbRow aListRow, in PRUint32 aTotal);
-  nsIMdbRow FindRowByCard(in nsIAbCard aCard);
+    /**
+     * used for adding a string attributes to a row.
+     * used during LDIF and addressbook import.
+     *
+     * @param aRow
+     *        The row we're adding the column to
+     * @param aLDIFAttributeName
+     *        The column name  (examples: mozillaCategory, 
+     *                                    mozilla_AimScreenName)
+     * @param aColValue
+     *        The column value (example: jabroni316)
+     */
+    [noscript] void addRowValue(in nsIMdbRow aRow, in ACString aLDIFAttributeName, in AString aColValue);
+
+    void AddListCardColumnsToRow(in nsIAbCard aPCard,
+                                            in nsIMdbRow aPListRow,
+                                            in unsigned long aPos,
+                                            out nsIAbCard aPNewCard,
+                                            in boolean aInMailingList);
+    void InitCardFromRow(in nsIAbCard aNewCard,in nsIMdbRow aCardRow);
+    void SetListAddressTotal(in nsIMdbRow aListRow, in PRUint32 aTotal);
+    nsIMdbRow FindRowByCard(in nsIAbCard aCard);
+
 };

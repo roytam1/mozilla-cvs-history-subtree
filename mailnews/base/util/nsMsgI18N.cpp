@@ -64,6 +64,9 @@
 #include "nsFileSpec.h"
 #include "plstr.h"
 
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_CID(kEntityConverterCID, NS_ENTITYCONVERTER_CID);
+
 //
 // International functions necessary for composition
 //
@@ -265,7 +268,7 @@ PRBool nsMsgI18Nstateful_charset(const char *charset)
 PRBool nsMsgI18Nmultibyte_charset(const char *charset)
 {
   nsresult res;
-  nsCOMPtr <nsICharsetConverterManager> ccm = do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &res);
+  nsCOMPtr <nsICharsetConverterManager> ccm = do_GetService(kCharsetConverterManagerCID, &res);
   PRBool result = PR_FALSE;
 
   if (NS_SUCCEEDED(res)) {
@@ -288,7 +291,7 @@ PRBool nsMsgI18Ncheck_data_in_charset_range(const char *charset, const PRUnichar
   nsresult res;
   PRBool result = PR_TRUE;
   
-  nsCOMPtr <nsICharsetConverterManager> ccm = do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &res);
+  nsCOMPtr <nsICharsetConverterManager> ccm = do_GetService(kCharsetConverterManagerCID, &res);
 
   if (NS_SUCCEEDED(res)) {
     nsCOMPtr <nsIUnicodeEncoder> encoder;
@@ -367,11 +370,16 @@ nsMsgI18NParseMetaCharset(nsFileSpec* fileSpec)
     if (PL_strstr(buffer, "META") && 
         PL_strstr(buffer, "HTTP-EQUIV") && 
         PL_strstr(buffer, "CONTENT-TYPE") && 
-        PL_strstr(buffer, "CHARSET")) { 
-      char *cp = PL_strstr(PL_strstr(buffer, "CHARSET"), "=");
-      char *newStr;
-      char *token = cp ? nsCRT::strtok(cp + 1, " \"\'", &newStr) : nsnull;
-      if (token) { 
+        PL_strstr(buffer, "CHARSET") 
+        ) 
+    { 
+      char *cp = PL_strstr(PL_strstr(buffer, "CHARSET"), "=") + 1; 
+      char seps[]   = " \"\'"; 
+      char *token; 
+      char* newStr; 
+      token = nsCRT::strtok(cp, seps, &newStr); 
+      if (token != NULL) 
+      { 
         PL_strncpy(charset, token, sizeof(charset));
         charset[sizeof(charset)-1] = '\0';
 
@@ -397,7 +405,7 @@ nsresult nsMsgI18NConvertToEntity(const nsString& inString, nsString* outString)
   nsresult res;
 
   outString->Truncate();
-  nsCOMPtr <nsIEntityConverter> entityConv = do_CreateInstance(NS_ENTITYCONVERTER_CONTRACTID, &res);
+  nsCOMPtr <nsIEntityConverter> entityConv = do_CreateInstance(kEntityConverterCID, &res);
   if(NS_SUCCEEDED(res)) {
     PRUnichar *entities = NULL;
     res = entityConv->ConvertToEntities(inString.get(), nsIEntityConverter::html40Latin1, &entities);

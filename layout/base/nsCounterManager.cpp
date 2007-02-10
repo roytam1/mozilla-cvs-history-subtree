@@ -36,8 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* implementation of CSS counters (for numbering things) */
-
 #include "nsCounterManager.h"
 #include "nsBulletFrame.h" // legacy location for list style type to text code
 #include "nsContentUtils.h"
@@ -46,8 +44,6 @@
 // Should be called immediately after calling |Insert|.
 void nsCounterUseNode::Calc(nsCounterList *aList)
 {
-    NS_ASSERTION(!aList->IsDirty(),
-                 "Why are we calculating with a dirty list?");
     mValueAfter = aList->ValueBefore(this);
 }
 
@@ -55,8 +51,6 @@ void nsCounterUseNode::Calc(nsCounterList *aList)
 // Should be called immediately after calling |Insert|.
 void nsCounterChangeNode::Calc(nsCounterList *aList)
 {
-    NS_ASSERTION(!aList->IsDirty(),
-                 "Why are we calculating with a dirty list?");
     if (mType == RESET) {
         mValueAfter = mChangeValue;
     } else {
@@ -88,7 +82,7 @@ nsCounterUseNode::GetText(nsString& aResult)
         nsBulletFrame::AppendCounterText(style, n->mValueAfter, aResult);
         if (i == 0)
             break;
-        NS_ASSERTION(mAllCounters, "yikes, separator is uninitialized");
+        NS_ASSERTION(mAllCounters, "yikes, separator is uninitalized");
         aResult.Append(separator);
     }
 }
@@ -239,12 +233,7 @@ nsCounterManager::AddResetOrIncrement(nsIFrame *aFrame, PRInt32 aIndex,
         // list.
         return PR_TRUE;
     }
-
-    // Don't call Calc() if the list is already dirty -- it'll be recalculated
-    // anyway, and trying to calculate with a dirty list doesn't work.
-    if (NS_LIKELY(!counterList->IsDirty())) {
-        node->Calc(counterList);
-    }
+    node->Calc(counterList);
     return PR_FALSE;
 }
 

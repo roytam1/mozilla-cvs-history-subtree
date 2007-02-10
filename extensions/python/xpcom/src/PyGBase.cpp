@@ -48,21 +48,23 @@
 
 #include "PyXPCOM_std.h"
 #include <nsIModule.h>
+#include <nsIComponentLoader.h>
 #include <nsIInputStream.h>
 
 static PRInt32 cGateways = 0;
-
-PYXPCOM_EXPORT PRInt32 _PyXPCOM_GetGatewayCount(void)
+PRInt32 _PyXPCOM_GetGatewayCount(void)
 {
 	return cGateways;
 }
 
 extern PyG_Base *MakePyG_nsIModule(PyObject *);
+extern PyG_Base *MakePyG_nsIComponentLoader(PyObject *instance);
 extern PyG_Base *MakePyG_nsIInputStream(PyObject *instance);
 
 static char *PyXPCOM_szDefaultGatewayAttributeName = "_com_instance_default_gateway_";
-static PyG_Base *GetDefaultGateway(PyObject *instance);
-static PRBool CheckDefaultGateway(PyObject *real_inst, REFNSIID iid, nsISupports **ret_gateway);
+PyG_Base *GetDefaultGateway(PyObject *instance);
+void AddDefaultGateway(PyObject *instance, nsISupports *gateway);
+PRBool CheckDefaultGateway(PyObject *real_inst, REFNSIID iid, nsISupports **ret_gateway);
 
 /*static*/ nsresult 
 PyG_Base::CreateNew(PyObject *pPyInstance, const nsIID &iid, void **ppResult)
@@ -75,6 +77,8 @@ PyG_Base::CreateNew(PyObject *pPyInstance, const nsIID &iid, void **ppResult)
 	// Hack for few extra gateways we support.
 	if (iid.Equals(NS_GET_IID(nsIModule)))
 		ret = MakePyG_nsIModule(pPyInstance);
+	else if (iid.Equals(NS_GET_IID(nsIComponentLoader)))
+		ret = MakePyG_nsIComponentLoader(pPyInstance);
 	else if (iid.Equals(NS_GET_IID(nsIInputStream)))
 		ret = MakePyG_nsIInputStream(pPyInstance);
 	else
@@ -140,7 +144,9 @@ PyG_Base::PyG_Base(PyObject *instance, const nsIID &iid)
 		Py_XDECREF(real_repr);
 	}
 #endif // DEBUG_LIFETIMES
-	Py_XINCREF(instance); // instance should never be NULL - but what's an X between friends!
+	Py_XINCREF(instance); // instance should never be NULL - but whats an X between friends!
+
+	PyXPCOM_DLLAddRef();
 
 #ifdef DEBUG_FULL
 	LogF("PyGatewayBase: created %s", m_pPyObject ? m_pPyObject->ob_type->tp_name : "<NULL>");
@@ -160,13 +166,14 @@ PyG_Base::~PyG_Base()
 	if (m_pBaseObject)
 		m_pBaseObject->Release();
 	if (m_pWeakRef) {
-		// Need to ensure some other thread isn't doing a QueryReferent on
+		// Need to ensure some other thread isnt doing a QueryReferent on
 		// our weak reference at the same time
 		CEnterLeaveXPCOMFramework _celf;
 		PyXPCOM_GatewayWeakReference *p = (PyXPCOM_GatewayWeakReference *)(nsISupports *)m_pWeakRef;
 		p->m_pBase = nsnull;
 		m_pWeakRef = nsnull;
 	}
+	PyXPCOM_DLLRelease();
 }
 
 // Get the correct interface pointer for this object given the IID.
@@ -220,7 +227,7 @@ PyG_Base::AutoWrapPythonInstance(PyObject *ob, const nsIID &iid, nsISupports **p
 		// Check we _now_ have a default gateway
 		{
 			nsISupports *temp = NULL;
-			NS_ABORT_IF_FALSE(CheckDefaultGateway(ob, iid, &temp), "Auto-wrapped object didn't get a default gateway!");
+			NS_ABORT_IF_FALSE(CheckDefaultGateway(ob, iid, &temp), "Auto-wrapped object didnt get a default gateway!");
 			if (temp) temp->Release();
 		}
 #endif
@@ -239,7 +246,7 @@ done:
 // object in one of the xpcom.client.Interface objects, allowing 
 // natural usage of the interface from Python clients.
 // Note that piid will usually be NULL - this is because the runtime
-// reflection interfaces don't provide this information to me.
+// reflection interfaces dont provide this information to me.
 // In this case, the Python code may choose to lookup the complete
 // interface info to obtain the IID.
 // It is expected (but should not be assumed) that the method info
@@ -261,25 +268,15 @@ PyG_Base::MakeInterfaceParam(nsISupports *pis,
 	// But if it ever triggers, the poor Python code has no real hope
 	// of returning something useful, so we should at least do our
 	// best to provide the useful data.
-	NS_ASSERTION( ((piid != NULL) ^ (d != NULL)) == 1, "No information on the interface available - Python's gunna have a hard time doing much with it!");
+	NS_WARN_IF_FALSE( ((piid != NULL) ^ (d != NULL)) == 1, "No information on the interface available - Python's gunna have a hard time doing much with it!");
 	PyObject *obIID = NULL;
 	PyObject *obISupports = NULL;
 	PyObject *obParamDesc = NULL;
 	PyObject *result = NULL;
 
 	// get the basic interface first, as if we fail, we can try and use this.
-	// If we don't know the IID, we must explicitly query for nsISupports.
-	nsCOMPtr<nsISupports> piswrap;
-	nsIID iid_check;
-	if (piid) {
-		iid_check = *piid;
-		piswrap = pis;
-	} else {
-		iid_check = NS_GET_IID(nsISupports);
-		pis->QueryInterface(iid_check, getter_AddRefs(piswrap));
-	}
-
-	obISupports = Py_nsISupports::PyObjectFromInterface(piswrap, iid_check, PR_FALSE);
+	nsIID iid_check = piid ? *piid : NS_GET_IID(nsISupports);
+	obISupports = Py_nsISupports::PyObjectFromInterface(pis, iid_check, PR_TRUE, PR_FALSE);
 	if (!obISupports)
 		goto done;
 	if (piid==NULL) {
@@ -303,7 +300,7 @@ PyG_Base::MakeInterfaceParam(nsISupports *pis,
 				       paramIndex);
 done:
 	if (PyErr_Occurred()) {
-		NS_ASSERTION(result==NULL, "Have an error, but also a result!");
+		NS_WARN_IF_FALSE(result==NULL, "Have an error, but also a result!");
 		PyXPCOM_LogError("Wrapping an interface object for the gateway failed\n");
 	}
 	Py_XDECREF(obIID);
@@ -313,7 +310,7 @@ done:
 		// return our obISupports.  If NULL, we are really hosed and nothing we can do.
 		return obISupports;
 	}
-	// Don't need to return this - we have a better result.
+	// Dont need to return this - we have a better result.
 	Py_XDECREF(obISupports);
 	return result;
 }
@@ -353,11 +350,7 @@ PyG_Base::QueryInterface(REFNSIID iid, void** ppv)
 		CEnterLeavePython celp;
 
 		PyObject * ob = Py_nsIID::PyObjectFromIID(iid);
-		// must say this is an 'internal' call, else we recurse QI into
-		// oblivion.
-		PyObject * this_interface_ob = Py_nsISupports::PyObjectFromInterface(
-		                                       (nsIXPTCProxy *)this,
-		                                       iid, PR_FALSE, PR_TRUE);
+		PyObject * this_interface_ob = Py_nsISupports::PyObjectFromInterface((nsIInternalPython *)this, NS_GET_IID(nsISupports), PR_TRUE, PR_FALSE);
 		if ( !ob || !this_interface_ob) {
 			Py_XDECREF(ob);
 			Py_XDECREF(this_interface_ob);
@@ -366,7 +359,7 @@ PyG_Base::QueryInterface(REFNSIID iid, void** ppv)
 
 		PyObject *result = PyObject_CallMethod(m_pPyObject, "_QueryInterface_",
 		                                                    "OO", 
-		                                                    this_interface_ob, ob);
+								    this_interface_ob, ob);
 		Py_DECREF(ob);
 		Py_DECREF(this_interface_ob);
 
@@ -386,7 +379,7 @@ PyG_Base::QueryInterface(REFNSIID iid, void** ppv)
 			Py_DECREF(result);
 		} else {
 			NS_ABORT_IF_FALSE(PyErr_Occurred(), "Got NULL result, but no Python error flagged!");
-			NS_ASSERTION(!supports, "Have failure with success flag set!");
+			NS_WARN_IF_FALSE(!supports, "Have failure with success flag set!");
 			PyXPCOM_LogError("The _QueryInterface_ processing failed.\n");
 			// supports remains false.
 			// We have reported the error, and are returning to COM,
@@ -437,7 +430,6 @@ PyG_Base::GetWeakReference(nsIWeakReference **ret)
 	if (ret==nsnull) return NS_ERROR_INVALID_POINTER;
 	if (!m_pWeakRef) {
 		// First query for a weak reference - create it.
-		// XXX - this looks like it needs thread safety!?
 		m_pWeakRef = new PyXPCOM_GatewayWeakReference(this);
 		NS_ABORT_IF_FALSE(m_pWeakRef, "Shouldn't be able to fail creating a weak reference!");
 		if (!m_pWeakRef)
@@ -456,17 +448,17 @@ nsresult PyG_Base::HandleNativeGatewayError(const char *szMethodName)
 		// good error reporting is critical for users to know WTF 
 		// is going on - especially with TypeErrors etc in their
 		// return values (ie, after the Python code has successfully
-		// exited, but we encountered errors unpacking their
+		// existed, but we encountered errors unpacking their
 		// result values for the COM caller - there is literally no 
 		// way to catch these exceptions from Python code, as their
-		// is no Python function directly on the call-stack)
+		// is no Python function on the call-stack)
 
 		// First line of attack in an error is to call-back on the policy.
 		// If the callback of the error handler succeeds and returns an
 		// integer (for the nsresult), we take no further action.
 
-		// If this callback fails, we log _2_ exceptions - the error
-		// handler error, and the original error.
+		// If this callback fails, we log _2_ exceptions - the error handler
+		// error, and the original error.
 
 		PRBool bProcessMainError = PR_TRUE; // set to false if our exception handler does its thing!
 		PyObject *exc_typ, *exc_val, *exc_tb;
@@ -578,7 +570,7 @@ nsresult PyG_Base::InvokeNativeViaPolicyInternal(
 		ppResult = &temp;
 	nsresult nr = do_dispatch(m_pPyObject, ppResult, szMethodName, szFormat, va);
 
-	// If temp is NULL, they provided a buffer, and we don't touch it.
+	// If temp is NULL, they provided a buffer, and we dont touch it.
 	// If not NULL, *ppResult = temp, and _we_ do own it.
 	Py_XDECREF(temp);
 	return nr;
@@ -603,6 +595,101 @@ nsresult PyG_Base::InvokeNativeViaPolicy(
 	return nr == NS_OK ? NS_OK : HandleNativeGatewayError(szMethodName);
 }
 
+nsresult PyG_Base::InvokeNativeGetViaPolicy(
+	const char *szPropertyName,
+	PyObject **ppResult /* = NULL */
+	)
+{
+	PyObject *ob_ret = NULL;
+	nsresult ret = NS_OK;
+	PyObject *real_ob = NULL;
+	if ( m_pPyObject == NULL || szPropertyName == NULL )
+		return NS_ERROR_NULL_POINTER;
+	// First see if we have a method of that name.
+	char buf[256];
+	strcpy(buf, "get_");
+	strncat(buf, szPropertyName, sizeof(buf)*sizeof(buf[0])-strlen(buf)-1);
+	buf[sizeof(buf)/sizeof(buf[0])-1] = '\0';
+	ret = InvokeNativeViaPolicyInternal(buf, ppResult, nsnull, nsnull);
+	if (ret == NS_PYXPCOM_NO_SUCH_METHOD) {
+		// No method of that name - just try a property.
+		// Bit to a hack here to maintain the use of a policy.
+		// We actually get the policies underlying object
+		// to make the call on.
+		real_ob = PyObject_GetAttrString(m_pPyObject, "_obj_");
+		if (real_ob == NULL) {
+			PyErr_Format(PyExc_AttributeError, "The policy object does not have an '_obj_' attribute.");
+			ret = HandleNativeGatewayError(szPropertyName);
+			goto done;
+		}
+		ob_ret = PyObject_GetAttrString(real_ob, (char *)szPropertyName);
+		if (ob_ret==NULL) {
+			PyErr_Format(PyExc_AttributeError, 
+				     "The object does not have a 'get_%s' function, or a '%s attribute.", 
+				     szPropertyName, szPropertyName);
+		} else {
+			ret = NS_OK;
+			if (ppResult)
+				*ppResult = ob_ret;
+			else
+				Py_XDECREF(ob_ret);
+		}
+	}
+	if (ret != NS_OK)
+		ret = HandleNativeGatewayError(szPropertyName);
+
+done:
+	Py_XDECREF(real_ob);
+	return ret;
+}
+
+nsresult PyG_Base::InvokeNativeSetViaPolicy(
+	const char *szPropertyName,
+	...
+	)
+{
+	if ( m_pPyObject == NULL || szPropertyName == NULL )
+		return NS_ERROR_NULL_POINTER;
+	nsresult ret = NS_OK;
+	PyObject *real_ob = NULL;
+	char buf[256];
+	strcpy(buf, "set_");
+	strncat(buf, szPropertyName, sizeof(buf)*sizeof(buf[0])-strlen(buf)-1);
+	buf[sizeof(buf)/sizeof(buf[0])-1] = '\0';
+	va_list va;
+	va_start(va, szPropertyName);
+	ret = InvokeNativeViaPolicyInternal(buf, NULL, "O", va);
+	va_end(va);
+	if (ret == NS_PYXPCOM_NO_SUCH_METHOD) {
+		// No method of that name - just try a property.
+		// Bit to a hack here to maintain the use of a policy.
+		// We actually get the policies underlying object
+		// to make the call on.
+		real_ob = PyObject_GetAttrString(m_pPyObject, "_obj_");
+		if (real_ob == NULL) {
+			PyErr_Format(PyExc_AttributeError, "The policy object does not have an '_obj_' attribute.");
+			ret = HandleNativeGatewayError(szPropertyName);
+			goto done;
+		}
+		va_list va2;
+		va_start(va2, szPropertyName);
+		PyObject *arg = va_arg( va2, PyObject *);
+		va_end(va2);
+		if (PyObject_SetAttrString(real_ob, (char *)szPropertyName, arg) == 0)
+			ret = NS_OK;
+		else {
+			PyErr_Format(PyExc_AttributeError, 
+				     "The object does not have a 'set_%s' function, or a '%s attribute.", 
+				     szPropertyName, szPropertyName);
+		}
+	}
+	if (ret != NS_OK)
+		ret = HandleNativeGatewayError(szPropertyName);
+done:
+	Py_XDECREF(real_ob);
+	return ret;
+}
+
 // Get at the underlying Python object.
 PyObject *PyG_Base::UnwrapPythonObject(void)
 {
@@ -613,10 +700,10 @@ PyObject *PyG_Base::UnwrapPythonObject(void)
 
  Some special support to help with object identity.
 
-  In the simplest case, assume a Python XPCOM object is
+  In the simplest case, assume a Python COM object is
   supporting a function "nsIWhatever GetWhatever()",
   so implements it as:
-    return self
+    return this
   it is almost certain they intend returning
   the same COM OBJECT to the caller!  Thus, if a user of this COM
   object does:
@@ -626,7 +713,7 @@ PyObject *PyG_Base::UnwrapPythonObject(void)
 
   We almost certainly expect p1==p2==foo.
 
-  We previously _did_ have special support for the "self"
+  We previously _did_ have special support for the "this"
   example above, but this implements a generic scheme that
   works for _all_ objects.
 
@@ -709,7 +796,7 @@ PRBool CheckDefaultGateway(PyObject *real_inst, REFNSIID iid, nsISupports **ret_
 	return PR_FALSE;
 }
 
-PYXPCOM_EXPORT void AddDefaultGateway(PyObject *instance, nsISupports *gateway)
+void AddDefaultGateway(PyObject *instance, nsISupports *gateway)
 {
 	// NOTE: Instance is the _policy_!
 	PyObject *real_inst = PyObject_GetAttrString(instance, "_obj_");
@@ -720,11 +807,12 @@ PYXPCOM_EXPORT void AddDefaultGateway(PyObject *instance, nsISupports *gateway)
 		NS_ABORT_IF_FALSE(swr, "Our gateway failed with a weak reference query");
 		// Create the new default gateway - get a weak reference for our gateway.
 		if (swr) {
-			nsCOMPtr<nsIWeakReference> pWeakReference;
-			swr->GetWeakReference( getter_AddRefs(pWeakReference) );
+			nsIWeakReference *pWeakReference = NULL;
+			swr->GetWeakReference( &pWeakReference );
 			if (pWeakReference) {
 				PyObject *ob_new_weak = Py_nsISupports::PyObjectFromInterface(pWeakReference, 
 										   NS_GET_IID(nsIWeakReference),
+										   PR_FALSE, /* bAddRef */
 										   PR_FALSE ); /* bMakeNicePyObject */
 				// pWeakReference reference consumed.
 				if (ob_new_weak) {

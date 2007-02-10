@@ -60,16 +60,11 @@ interface nsIDOMJSWindow : nsISupports
   void                      clearTimeout();
   void                      clearInterval();
 
-  /**
-   * This method is here for backwards compatibility with 4.x only,
-   * its implementation is a no-op
-   */
+  // This method is here for backwards compatibility with 4.x only,
+  // it's implementation is a no-op
   void                      setResizable(in boolean resizable);
 
-  /**
-   * @deprecated These are old Netscape 4 methods. Do not use,
-   *             the implementation is no-op.
-   */
+  // These are 4.x event related methods. Deprecated.
   void                      captureEvents(in long eventFlags);
   void                      releaseEvents(in long eventFlags);
   void                      routeEvent(in nsIDOMEvent evt);

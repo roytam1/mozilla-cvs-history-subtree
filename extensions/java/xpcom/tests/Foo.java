@@ -13,8 +13,9 @@
  *
  * The Original Code is Java XPCOM Bindings.
  *
- * The Initial Developer of the Original Code is IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * The Initial Developer of the Original Code is
+ * IBM Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2004
  * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,10 +35,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-import org.mozilla.xpcom.Mozilla;
-import org.mozilla.xpcom.nsISupports;
+import org.mozilla.xpcom.*;
 
-public class Foo implements nsISupports {
+public class Foo implements IFoo {
 
   static int gCount;
   int mID;
@@ -54,9 +54,10 @@ public class Foo implements nsISupports {
   // nsISupports implementation
   public nsISupports queryInterface(String aIID)
   {
-    return Mozilla.queryInterface(this, aIID);
+    return XPCOM.queryInterface(this, aIID);
   }
 
+  // IFoo implementation
   public int getId()
   {
     return mID;

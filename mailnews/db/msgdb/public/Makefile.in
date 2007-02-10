@@ -45,7 +45,6 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= msgdb
 
 EXPORTS		= \
-		nsMsgDBCID.h \
 		nsMsgHdr.h \
 		nsMsgDatabase.h \
 		nsMailDatabase.h \

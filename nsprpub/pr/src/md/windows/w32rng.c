@@ -59,8 +59,8 @@ CurrentClockTickTime(LPDWORD lpdwHigh, LPDWORD lpdwLow)
 extern PRSize _PR_MD_GetRandomNoise( void *buf, PRSize size )
 {
     DWORD   dwHigh, dwLow, dwVal;
-    size_t  n = 0;
-    size_t  nBytes;
+    int     n = 0;
+    int     nBytes;
     time_t  sTime;
 
     if (size <= 0)

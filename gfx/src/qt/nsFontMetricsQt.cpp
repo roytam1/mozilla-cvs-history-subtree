@@ -305,8 +305,9 @@ static nsresult EnumFonts(nsIAtom *aLangGroup,const char *aGeneric,
             i++;
         }
         else {
-            // OOM. Decrease the count to prevent consumers from doing UMRs.
+            // OOM. Decrease the count and resize the array accordingly.
             count--;
+            array = (PRUnichar**)nsMemory::Realloc((void*)array, count * sizeof(PRUnichar*));
         }
     }
 

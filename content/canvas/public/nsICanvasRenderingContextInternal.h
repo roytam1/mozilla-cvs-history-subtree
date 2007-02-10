@@ -52,7 +52,7 @@ struct _cairo_surface;
 
 class nsICanvasRenderingContextInternal : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICANVASRENDERINGCONTEXTINTERNAL_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICANVASRENDERINGCONTEXTINTERNAL_IID)
 
   // This method should NOT hold a ref to aParentCanvas; it will be called
   // with nsnull when the element is going away.
@@ -78,8 +78,5 @@ public:
                             const nsAString& aEncoderOptions,
                             nsIInputStream **aStream) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsICanvasRenderingContextInternal,
-                              NS_ICANVASRENDERINGCONTEXTINTERNAL_IID)
 
 #endif /* nsICanvasRenderingContextInternal_h___ */

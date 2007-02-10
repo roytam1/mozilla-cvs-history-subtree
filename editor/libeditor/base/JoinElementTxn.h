@@ -75,7 +75,20 @@ protected:
   JoinElementTxn();
 
 public:
-  NS_DECL_EDITTXN
+
+  virtual ~JoinElementTxn();
+
+  NS_IMETHOD DoTransaction(void);
+
+  NS_IMETHOD UndoTransaction(void);
+
+//  NS_IMETHOD RedoTransaction(void);
+
+  NS_IMETHOD GetIsTransient(PRBool *aIsTransient);
+
+  NS_IMETHOD Merge(nsITransaction *aTransaction, PRBool *aDidMerge);
+
+  NS_IMETHOD GetTxnDescription(nsAString& aTxnDescription);
 
 protected:
   

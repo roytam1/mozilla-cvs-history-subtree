@@ -40,7 +40,7 @@
 #include "nsIConsoleListener.idl"
 #include "nsIConsoleMessage.idl"
 
-[scriptable, uuid(883472a0-ea9b-11da-8ad9-0800200c9a66)]
+[scriptable, uuid(a647f184-1dd1-11b2-a9d1-8537b201161b)]
 interface nsIConsoleService : nsISupports
 {
     void logMessage(in nsIConsoleMessage message);
@@ -71,7 +71,16 @@ interface nsIConsoleService : nsISupports
      * Each registered listener should also be unregistered.
      */
     void unregisterListener(in nsIConsoleListener listener);
+};
 
+/**
+ * Temporary interface for Gecko 1.8.1.
+ *
+ * @status TEMPORARY
+ */
+[scriptable, uuid(3c3f3e30-ebd5-11da-8ad9-0800200c9a66)]
+interface nsIConsoleService_MOZILLA_1_8_BRANCH : nsIConsoleService
+{
     /**
      * Clear the message buffer (e.g. for privacy reasons).
      */

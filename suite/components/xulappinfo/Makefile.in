@@ -45,7 +45,7 @@ include $(DEPTH)/config/autoconf.mk
 
 DEFINES += -DMOZ_APP_DISPLAYNAME=$(MOZ_APP_DISPLAYNAME) \
 	-DMOZ_APP_VERSION=$(MOZ_APP_VERSION) \
-	-DTOOLKIT_EM_VERSION=$(shell $(PERL) $(topsrcdir)/config/milestone.pl --topsrcdir=$(topsrcdir))
+	-DTOOLKIT_EM_VERSION=$(shell $(PERL) $(topsrcdir)/config/milestone.pl --emversion --topsrcdir=$(topsrcdir))
 
 MODULE		= xulappinfo
 XPIDL_MODULE	= xulappinfo
@@ -53,8 +53,6 @@ XPIDL_MODULE	= xulappinfo
 XPIDLSRCS	= nsIXULAppInfo.idl
 
 EXTRA_PP_COMPONENTS = xulappinfo.js
-
-GARBAGE += nsIXULAppInfo.idl
 
 include $(topsrcdir)/config/rules.mk
 

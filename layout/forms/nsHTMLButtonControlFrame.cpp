@@ -39,6 +39,7 @@
 
 #include "nsCOMPtr.h"
 #include "nsHTMLContainerFrame.h"
+#include "nsFormControlHelper.h"
 #include "nsIFormControlFrame.h"
 #include "nsHTMLParts.h"
 #include "nsIFormControl.h"
@@ -50,7 +51,7 @@
 #include "nsLeafFrame.h"
 #include "nsCSSRendering.h"
 #include "nsISupports.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsCSSAnonBoxes.h"
 #include "nsIImage.h"
 #include "nsStyleConsts.h"
@@ -61,6 +62,7 @@
 #include "nsFormControlFrame.h"
 #include "nsFrameManager.h"
 #include "nsINameSpaceManager.h"
+#include "nsReflowPath.h"
 #include "nsIServiceManager.h"
 #include "nsIDOMHTMLButtonElement.h"
 #include "nsIDOMHTMLInputElement.h"
@@ -68,40 +70,72 @@
 #ifdef ACCESSIBILITY
 #include "nsIAccessibilityService.h"
 #endif
-#include "nsDisplayList.h"
 
-nsIFrame*
-NS_NewHTMLButtonControlFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewHTMLButtonControlFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsHTMLButtonControlFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsHTMLButtonControlFrame* it = new (aPresShell) nsHTMLButtonControlFrame;
+  if (!it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
 }
 
-nsHTMLButtonControlFrame::nsHTMLButtonControlFrame(nsStyleContext* aContext)
-  : nsHTMLContainerFrame(aContext)
+nsHTMLButtonControlFrame::nsHTMLButtonControlFrame()
+  : nsHTMLContainerFrame()
 {
+  mInline = PR_TRUE;
+
+  mCacheSize.width             = -1;
+  mCacheSize.height            = -1;
+  mCachedMaxElementWidth       = -1;
 }
 
 nsHTMLButtonControlFrame::~nsHTMLButtonControlFrame()
 {
 }
 
-void
-nsHTMLButtonControlFrame::Destroy()
+NS_IMETHODIMP
+nsHTMLButtonControlFrame::Destroy(nsPresContext *aPresContext)
 {
-  nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
-  nsHTMLContainerFrame::Destroy();
+  nsFormControlFrame::RegUnRegAccessKey(aPresContext, NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
+  return nsHTMLContainerFrame::Destroy(aPresContext);
 }
 
 NS_IMETHODIMP
-nsHTMLButtonControlFrame::Init(
+nsHTMLButtonControlFrame::Init(nsPresContext*  aPresContext,
               nsIContent*      aContent,
               nsIFrame*        aParent,
+              nsStyleContext*  aContext,
               nsIFrame*        aPrevInFlow)
 {
-  nsresult  rv = nsHTMLContainerFrame::Init(aContent, aParent, aPrevInFlow);
-  if (NS_SUCCEEDED(rv)) {
-    mRenderer.SetFrame(this, GetPresContext());
+  nsresult  rv = nsHTMLContainerFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+  mRenderer.SetFrame(this,aPresContext);
+   // cache our display type
+  mInline = (NS_STYLE_DISPLAY_BLOCK != GetStyleDisplay()->mDisplay);
+
+  PRUint32 flags = NS_BLOCK_SPACE_MGR;
+  if (mInline) {
+    flags |= NS_BLOCK_SHRINK_WRAP;
   }
+
+  nsIFrame* areaFrame;
+  nsIPresShell *shell = aPresContext->PresShell();
+  NS_NewAreaFrame(shell, &areaFrame, flags);
+  mFrames.SetFrames(areaFrame);
+
+  // Resolve style and initialize the frame
+  nsRefPtr<nsStyleContext> styleContext;
+  styleContext = shell->StyleSet()->ResolvePseudoStyleFor(mContent,
+                                                          nsCSSAnonBoxes::buttonContent,
+                                                          mStyleContext);
+  mFrames.FirstChild()->Init(aPresContext, mContent, this, styleContext, nsnull);
+
   return rv;
 }
 
@@ -152,10 +186,42 @@ NS_IMETHODIMP nsHTMLButtonControlFrame::GetAccessible(nsIAccessible** aAccessibl
 }
 #endif
 
-nsIAtom*
-nsHTMLButtonControlFrame::GetType() const
+
+NS_IMETHODIMP_(PRInt32)
+nsHTMLButtonControlFrame::GetFormControlType() const
 {
-  return nsGkAtoms::HTMLButtonControlFrame;
+  return nsFormControlHelper::GetType(mContent);
+}
+
+NS_IMETHODIMP
+nsHTMLButtonControlFrame::GetName(nsAString* aResult)
+{
+  return nsFormControlHelper::GetName(mContent, aResult);
+}
+
+NS_IMETHODIMP
+nsHTMLButtonControlFrame::GetValue(nsAString* aResult)
+{
+  return nsFormControlHelper::GetValueAttr(mContent, aResult);
+}
+
+void
+nsHTMLButtonControlFrame::ReParentFrameList(nsFrameManager* aFrameManager,
+                                            nsIFrame* aFrameList)
+{
+  // get the new parent context from the first child: that is the
+  // frame that the subsequent children will be made children of
+  nsStyleContext* newParentContext = mFrames.FirstChild()->GetStyleContext();
+
+  // Set the parent for each of the child frames
+  for (nsIFrame* frame = aFrameList; frame; frame = frame->GetNextSibling()) {
+    frame->SetParent(mFrames.FirstChild());
+    // now reparent the contexts for the reparented frame too
+    aFrameManager->ReParentStyleContext(frame);
+  }
+
+  // Set NS_FRAME_HAS_CHILD_WITH_VIEW on the area frame if needed, bug 276236.
+  mFrames.FirstChild()->AddStateBits(GetStateBits() & NS_FRAME_HAS_CHILD_WITH_VIEW);
 }
 
 PRBool
@@ -183,6 +249,19 @@ nsHTMLButtonControlFrame::SetFocus(PRBool aOn, PRBool aRepaint)
 {
 }
 
+void
+nsHTMLButtonControlFrame::ScrollIntoView(nsPresContext* aPresContext)
+{
+  if (aPresContext) {
+    nsIPresShell *presShell = aPresContext->GetPresShell();
+    if (presShell) {
+     presShell->ScrollFrameIntoView(this,
+                   NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE,NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE);
+
+    }
+  }
+}
+
 NS_IMETHODIMP
 nsHTMLButtonControlFrame::HandleEvent(nsPresContext* aPresContext, 
                                       nsGUIEvent*     aEvent,
@@ -200,76 +279,93 @@ nsHTMLButtonControlFrame::HandleEvent(nsPresContext* aPresContext,
 
 
 NS_IMETHODIMP
-nsHTMLButtonControlFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                                           const nsRect&           aDirtyRect,
-                                           const nsDisplayListSet& aLists)
+nsHTMLButtonControlFrame::GetFrameForPoint(const nsPoint& aPoint,
+                                           nsFramePaintLayer aWhichLayer,
+                                           nsIFrame** aFrame)
 {
-  nsDisplayList onTop;
-  if (IsVisibleForPainting(aBuilder)) {
-    nsresult rv = mRenderer.DisplayButton(aBuilder, aLists.BorderBackground(), &onTop);
-    NS_ENSURE_SUCCESS(rv, rv);
+  if (aWhichLayer == NS_FRAME_PAINT_LAYER_FOREGROUND &&
+      mRect.Contains(aPoint)) {
+    if (GetStyleVisibility()->IsVisible()) {
+      *aFrame = this;
+      return NS_OK;
+    }
   }
-  
-  nsDisplayListCollection set;
-  // Do not allow the child subtree to receive events.
-  if (!aBuilder->IsForEventDelivery()) {
-    nsresult rv =
-      BuildDisplayListForChild(aBuilder, mFrames.FirstChild(), aDirtyRect, set,
-                               DISPLAY_CHILD_FORCE_PSEUDO_STACKING_CONTEXT);
-    NS_ENSURE_SUCCESS(rv, rv);
-    // That should put the display items in set.Content()
-  }
-  
-  // Put the foreground outline and focus rects on top of the children
-  set.Content()->AppendToTop(&onTop);
+  return NS_ERROR_FAILURE;
+}
 
+NS_IMETHODIMP
+nsHTMLButtonControlFrame::SetInitialChildList(nsPresContext* aPresContext,
+                                              nsIAtom*        aListName,
+                                              nsIFrame*       aChildList)
+{
+  // NOTE: the whole reparenting should not need to happen: see bugzilla bug 51767
+  ReParentFrameList(aPresContext->FrameManager(), aChildList);
+  
+  return mFrames.FirstChild()->SetInitialChildList(aPresContext, aListName, aChildList);
+}
+
+NS_IMETHODIMP
+nsHTMLButtonControlFrame::Paint(nsPresContext*      aPresContext,
+                                nsIRenderingContext& aRenderingContext,
+                                const nsRect&        aDirtyRect,
+                                nsFramePaintLayer    aWhichLayer,
+                                PRUint32             aFlags)
+{
+  PRBool isVisible;
+  if (aWhichLayer != NS_FRAME_PAINT_LAYER_FOREGROUND ||
+      (NS_SUCCEEDED(IsVisibleForPainting(aPresContext, aRenderingContext, PR_TRUE, &isVisible)) && !isVisible)) {
+    return NS_OK;
+  }
+
+  nsRect rect(0, 0, mRect.width, mRect.height);
+  mRenderer.PaintButton(aPresContext, aRenderingContext, aDirtyRect, rect);
+
+#if 0 // old way
+  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, NS_FRAME_PAINT_LAYER_BACKGROUND);
+  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, NS_FRAME_PAINT_LAYER_FLOATS);
+  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, NS_FRAME_PAINT_LAYER_FOREGROUND);
+
+#else // temporary
     // XXX This is temporary
-  // clips to its size minus the border 
+  // clips to it's size minus the border 
   // but the real problem is the FirstChild (the AreaFrame)
   // isn't being constrained properly
   // Bug #17474
-  nsMargin border = GetStyleBorder()->GetBorder();
-  nsRect rect(aBuilder->ToReferenceFrame(this), GetSize());
+  const nsStyleBorder* borderStyle = GetStyleBorder();
+  nsMargin border;
+  border.SizeTo(0, 0, 0, 0);
+  borderStyle->CalcBorderFor(this, border);
+
   rect.Deflate(border);
-  
-  nsresult rv = OverflowClip(aBuilder, set, aLists, rect);
-  NS_ENSURE_SUCCESS(rv, rv);
-  
-  rv = DisplayOutline(aBuilder, aLists);
-  NS_ENSURE_SUCCESS(rv, rv);
+  aRenderingContext.PushState();
+
+  aRenderingContext.SetClipRect(rect, nsClipCombine_kIntersect);
+
+  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, NS_FRAME_PAINT_LAYER_BACKGROUND);
+  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, NS_FRAME_PAINT_LAYER_FLOATS);
+  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, NS_FRAME_PAINT_LAYER_FOREGROUND);
+
+  aRenderingContext.PopState();
+
+#endif
+
+  // Paint outline
+  const nsStyleOutline* outlineStyle = GetStyleOutline();
+  nsCSSRendering::PaintOutline(aPresContext, aRenderingContext, this,
+                               aDirtyRect, rect, *borderStyle, *outlineStyle,
+                               mStyleContext, 0);
 
   // to draw border when selected in editor
-  return DisplaySelectionOverlay(aBuilder, aLists);
+  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
 }
 
-nscoord
-nsHTMLButtonControlFrame::GetMinWidth(nsIRenderingContext* aRenderingContext)
+NS_IMETHODIMP 
+nsHTMLButtonControlFrame::AddComputedBorderPaddingToDesiredSize(nsHTMLReflowMetrics& aDesiredSize,
+                                                                const nsHTMLReflowState& aSuggestedReflowState)
 {
-  nscoord result;
-  DISPLAY_MIN_WIDTH(this, result);
-
-  nsIFrame* kid = mFrames.FirstChild();
-  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                                                kid,
-                                                nsLayoutUtils::MIN_WIDTH);
-
-  result += mRenderer.GetAddedButtonBorderAndPadding().LeftRight();
-
-  return result;
-}
-
-nscoord
-nsHTMLButtonControlFrame::GetPrefWidth(nsIRenderingContext* aRenderingContext)
-{
-  nscoord result;
-  DISPLAY_PREF_WIDTH(this, result);
-  
-  nsIFrame* kid = mFrames.FirstChild();
-  result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                                                kid,
-                                                nsLayoutUtils::PREF_WIDTH);
-  result += mRenderer.GetAddedButtonBorderAndPadding().LeftRight();
-  return result;
+  aDesiredSize.width  += aSuggestedReflowState.mComputedBorderPadding.left + aSuggestedReflowState.mComputedBorderPadding.right;
+  aDesiredSize.height += aSuggestedReflowState.mComputedBorderPadding.top + aSuggestedReflowState.mComputedBorderPadding.bottom;
+  return NS_OK;
 }
 
 NS_IMETHODIMP 
@@ -278,61 +374,120 @@ nsHTMLButtonControlFrame::Reflow(nsPresContext* aPresContext,
                                const nsHTMLReflowState& aReflowState,
                                nsReflowStatus& aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsHTMLButtonControlFrame");
+  DO_GLOBAL_REFLOW_COUNT("nsHTMLButtonControlFrame", aReflowState.reason);
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
-  NS_PRECONDITION(aReflowState.ComputedWidth() != NS_INTRINSICSIZE,
-                  "Should have real computed width by now");
-
-  if (mState & NS_FRAME_FIRST_REFLOW) {
-    nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
+  if (eReflowReason_Initial == aReflowState.reason) {
+    nsFormControlFrame::RegUnRegAccessKey(aPresContext, NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
   }
+
+#if 0
+  nsresult skiprv = nsFormControlFrame::SkipResizeReflow(mCacheSize, mCachedMaxElementWidth, aPresContext, 
+                                                         aDesiredSize, aReflowState, aStatus);
+  if (NS_SUCCEEDED(skiprv)) {
+    return skiprv;
+  }
+#endif
 
   // Reflow the child
   nsIFrame* firstKid = mFrames.FirstChild();
+  nsSize availSize(aReflowState.mComputedWidth, NS_INTRINSICSIZE);
 
-  // XXXbz Eventually we may want to check-and-bail if
-  // !aReflowState.ShouldReflowAllKids() &&
-  // !(firstKid->GetStateBits() &
-  //   (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)).
-  // We'd need to cache our ascent for that, of course.
-  
+  // Indent the child inside us by the the focus border. We must do this separate from the
+  // regular border.
   nsMargin focusPadding = mRenderer.GetAddedButtonBorderAndPadding();
+
   
-  // Reflow the contents of the button.
+  if (NS_INTRINSICSIZE != availSize.width) {
+    availSize.width -= focusPadding.left + focusPadding.right;
+    availSize.width = PR_MAX(availSize.width,0);
+  }
+  if (NS_AUTOHEIGHT != availSize.height) {
+    availSize.height -= focusPadding.top + focusPadding.bottom;
+    availSize.height = PR_MAX(availSize.height,0);
+  }
+  
+  // XXX Proper handling of incremental reflow...
+  nsReflowReason reason = aReflowState.reason;
+  if (eReflowReason_Incremental == reason) {
+    // See if it's targeted at us
+    nsHTMLReflowCommand *command = aReflowState.path->mReflowCommand;
+    if (command) {
+      // I'm not sure what exactly this Invalidate is for
+      Invalidate(nsRect(0,0,mRect.width,mRect.height), PR_FALSE);
+
+      nsReflowType  reflowType;
+      command->GetType(reflowType);
+      if (eReflowType_StyleChanged == reflowType) {
+        reason = eReflowReason_StyleChange;
+      }
+      else {
+        reason = eReflowReason_Resize;
+      }
+    }
+  }
+
+  // Reflow the contents of the button a first time.
   ReflowButtonContents(aPresContext, aDesiredSize, aReflowState, firstKid,
-                       focusPadding, aStatus);
+                       availSize, reason, focusPadding, aStatus);
 
-  aDesiredSize.width = aReflowState.ComputedWidth();
+  // If we just performed the first pass of a shrink-wrap reflow (which will have
+  // found the requested size of the children, but not placed them), perform
+  // the second pass of a shrink-wrap reflow (which places the children
+  // within this parent button which has now shrink-wrapped around them).
+  if (availSize.width == NS_SHRINKWRAPWIDTH) {
+    nsSize newAvailSize(aDesiredSize.width, NS_INTRINSICSIZE);
 
-  // If computed use the computed value.
+    ReflowButtonContents(aPresContext, aDesiredSize, aReflowState, firstKid,
+                         newAvailSize, eReflowReason_Resize, focusPadding, aStatus);
+  }
+
+  // If computed use the computed values.
+  if (aReflowState.mComputedWidth != NS_INTRINSICSIZE) 
+    aDesiredSize.width = aReflowState.mComputedWidth;
+  else 
+    aDesiredSize.width  += focusPadding.left + focusPadding.right;
+
   if (aReflowState.mComputedHeight != NS_INTRINSICSIZE) 
     aDesiredSize.height = aReflowState.mComputedHeight;
   else
-    aDesiredSize.height += focusPadding.TopBottom();
-  
-  aDesiredSize.width += aReflowState.mComputedBorderPadding.LeftRight();
-  aDesiredSize.height += aReflowState.mComputedBorderPadding.TopBottom();
+    aDesiredSize.height += focusPadding.top + focusPadding.bottom;
 
-  // Make sure we obey min/max-height.  Note that we do this after adjusting
-  // for borderpadding, since buttons have border-box sizing...
+  AddComputedBorderPaddingToDesiredSize(aDesiredSize, aReflowState);
 
-  // XXXbz unless someone overrides that, of course!  We should really consider
-  // exposing nsHTMLReflowState::AdjustComputed* or something.
-  aDesiredSize.height = NS_CSS_MINMAX(aDesiredSize.height,
-                                      aReflowState.mComputedMinHeight,
-                                      aReflowState.mComputedMaxHeight);
+  //aDesiredSize.width  += aReflowState.mComputedBorderPadding.left + aReflowState.mComputedBorderPadding.right;
+  //aDesiredSize.height += aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom;
 
-  aDesiredSize.ascent +=
-    aReflowState.mComputedBorderPadding.top + focusPadding.top;
+  if (aDesiredSize.mComputeMEW) {
+    aDesiredSize.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
+  }
 
-  aDesiredSize.mOverflowArea =
-    nsRect(0, 0, aDesiredSize.width, aDesiredSize.height);
+  // Make sure we obey min/max-width and min/max-height
+  if (aDesiredSize.width > aReflowState.mComputedMaxWidth) {
+    aDesiredSize.width = aReflowState.mComputedMaxWidth;
+  }
+  if (aDesiredSize.width < aReflowState.mComputedMinWidth) {
+    aDesiredSize.width = aReflowState.mComputedMinWidth;
+  } 
+
+  if (aDesiredSize.height > aReflowState.mComputedMaxHeight) {
+    aDesiredSize.height = aReflowState.mComputedMaxHeight;
+  }
+  if (aDesiredSize.height < aReflowState.mComputedMinHeight) {
+    aDesiredSize.height = aReflowState.mComputedMinHeight;
+  }
+
+  aDesiredSize.ascent  += aReflowState.mComputedBorderPadding.top + focusPadding.top;
+  aDesiredSize.descent = aDesiredSize.height - aDesiredSize.ascent;
+
+  aDesiredSize.mOverflowArea = nsRect(0, 0, aDesiredSize.width, aDesiredSize.height);
   ConsiderChildOverflow(aDesiredSize.mOverflowArea, firstKid);
   FinishAndStoreOverflow(&aDesiredSize);
 
   aStatus = NS_FRAME_COMPLETE;
 
+  nsFormControlFrame::SetupCachedSizes(mCacheSize, mCachedAscent,
+                                       mCachedMaxElementWidth, aDesiredSize);
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
   return NS_OK;
 }
@@ -342,48 +497,25 @@ nsHTMLButtonControlFrame::ReflowButtonContents(nsPresContext* aPresContext,
                                                nsHTMLReflowMetrics& aDesiredSize,
                                                const nsHTMLReflowState& aReflowState,
                                                nsIFrame* aFirstKid,
+                                               const nsSize& aAvailSize,
+                                               nsReflowReason aReason,
                                                nsMargin aFocusPadding,
                                                nsReflowStatus& aStatus)
 {
-  nsSize availSize(aReflowState.ComputedWidth(), NS_INTRINSICSIZE);
-
-  // Indent the child inside us by the focus border. We must do this separate
-  // from the regular border.
-  availSize.width -= aFocusPadding.LeftRight();
-  availSize.width = PR_MAX(availSize.width,0);
-  
-  // See whether out availSize's width is big enough.  If it's smaller than our
-  // intrinsic min width, that means that the kid wouldn't really fit; for a
-  // better look in such cases we adjust the available width and our left
-  // offset to allow the kid to spill left into our padding.
-  nscoord xoffset = aFocusPadding.left + aReflowState.mComputedBorderPadding.left;
-  nscoord extrawidth = GetMinWidth(aReflowState.rendContext) -
-    aReflowState.ComputedWidth();
-  if (extrawidth > 0) {
-    nscoord extraleft = extrawidth / 2;
-    nscoord extraright = extrawidth - extraleft;
-    NS_ASSERTION(extraright >=0, "How'd that happen?");
-    
-    // Do not allow the extras to be bigger than the relevant padding
-    extraleft = PR_MIN(extraleft, aReflowState.mComputedPadding.left);
-    extraright = PR_MIN(extraright, aReflowState.mComputedPadding.right);
-    xoffset -= extraleft;
-    availSize.width += extraleft + extraright;
-  }
-  
-  nsHTMLReflowState reflowState(aPresContext, aReflowState, aFirstKid,
-                                availSize);
+  nsHTMLReflowState reflowState(aPresContext, aReflowState, aFirstKid, aAvailSize, aReason);
 
   ReflowChild(aFirstKid, aPresContext, aDesiredSize, reflowState,
-              xoffset,
+              aFocusPadding.left + aReflowState.mComputedBorderPadding.left,
               aFocusPadding.top + aReflowState.mComputedBorderPadding.top,
               0, aStatus);
   
-  // calculate the min internal height so the contents gets centered correctly.
-  // XXXbz this assumes border-box sizing.
-  nscoord minInternalHeight = aReflowState.mComputedMinHeight -
-    aReflowState.mComputedBorderPadding.TopBottom();
-  minInternalHeight = PR_MAX(minInternalHeight, 0);
+  // calculate the min internal size so the contents gets centered correctly
+  // minInternalWidth is not being used at all and causes a warning--commenting
+  // out until someone wants it.
+  //  nscoord minInternalWidth  = aReflowState.mComputedMinWidth  == 0?0:aReflowState.mComputedMinWidth - 
+  //    (aReflowState.mComputedBorderPadding.left + aReflowState.mComputedBorderPadding.right);
+  nscoord minInternalHeight = aReflowState.mComputedMinHeight == 0?0:aReflowState.mComputedMinHeight - 
+    (aReflowState.mComputedBorderPadding.top + aReflowState.mComputedBorderPadding.bottom);
 
   // center child vertically
   nscoord yoff = 0;
@@ -396,17 +528,35 @@ nsHTMLButtonControlFrame::ReflowButtonContents(nsPresContext* aPresContext,
     yoff = (minInternalHeight - aDesiredSize.height) / 2;
   }
 
+  // Adjust the ascent by our offset (since we moved the child's
+  // baseline by that much).
+  aDesiredSize.ascent += yoff;
+  
+  // Place the child.  If we have a non-intrinsic width, we want to
+  // reduce the left padding as needed to try and fit the text in the
+  // button
+  nscoord xoffset = aFocusPadding.left + aReflowState.mComputedBorderPadding.left;
+  if (aReflowState.mComputedWidth != NS_INTRINSICSIZE) {
+    // First, how much did we "overflow"?  This is the width of our
+    // kid plus our special focus stuff (which did not get accounted
+    // for in calculating aReflowState.mComputedWidth minus the width
+    // we're forced to be.
+    nscoord extrawidth =
+      aDesiredSize.width + aFocusPadding.left + aFocusPadding.right
+      - aReflowState.mComputedWidth;
+    if (extrawidth > 0) {
+      // Split it evenly between right and left
+      extrawidth /= 2;
+      // But do not shoot out the left side of the button, please
+      extrawidth = PR_MIN(extrawidth, aReflowState.mComputedPadding.left);
+      xoffset -= extrawidth;
+    }
+  }
+  
   // Place the child
   FinishReflowChild(aFirstKid, aPresContext, &reflowState, aDesiredSize,
                     xoffset,
                     yoff + aFocusPadding.top + aReflowState.mComputedBorderPadding.top, 0);
-
-  if (aDesiredSize.ascent == nsHTMLReflowMetrics::ASK_FOR_BASELINE)
-    aDesiredSize.ascent = aFirstKid->GetBaseline();
-
-  // Adjust the baseline by our offset (since we moved the child's
-  // baseline by that much).
-  aDesiredSize.ascent += yoff;
 }
 
 /* virtual */ PRBool
@@ -421,19 +571,45 @@ nsHTMLButtonControlFrame::GetSkipSides() const
   return 0;
 }
 
-nsresult nsHTMLButtonControlFrame::SetFormProperty(nsIAtom* aName, const nsAString& aValue)
+NS_IMETHODIMP
+nsHTMLButtonControlFrame::GetFormContent(nsIContent*& aContent) const
 {
-  if (nsGkAtoms::value == aName) {
-    return mContent->SetAttr(kNameSpaceID_None, nsGkAtoms::value,
+  aContent = GetContent();
+  NS_IF_ADDREF(aContent);
+  return NS_OK;
+}
+
+nscoord 
+nsHTMLButtonControlFrame::GetVerticalInsidePadding(nsPresContext* aPresContext,
+                                                   float aPixToTwip, 
+                                                   nscoord aInnerHeight) const
+{
+   return 0;
+}
+
+nscoord 
+nsHTMLButtonControlFrame::GetHorizontalInsidePadding(nsPresContext* aPresContext,
+                                               float aPixToTwip, 
+                                               nscoord aInnerWidth,
+                                               nscoord aCharWidth) const
+{
+  return 0;
+}
+
+NS_IMETHODIMP nsHTMLButtonControlFrame::SetProperty(nsPresContext* aPresContext,
+                                                    nsIAtom* aName, const nsAString& aValue)
+{
+  if (nsHTMLAtoms::value == aName) {
+    return mContent->SetAttr(kNameSpaceID_None, nsHTMLAtoms::value,
                              aValue, PR_TRUE);
   }
   return NS_OK;
 }
 
-nsresult nsHTMLButtonControlFrame::GetFormProperty(nsIAtom* aName, nsAString& aValue) const
+NS_IMETHODIMP nsHTMLButtonControlFrame::GetProperty(nsIAtom* aName, nsAString& aValue)
 {
-  if (nsGkAtoms::value == aName)
-    mContent->GetAttr(kNameSpaceID_None, nsGkAtoms::value, aValue);
+  if (nsHTMLAtoms::value == aName)
+    mContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::value, aValue);
 
   return NS_OK;
 }
@@ -451,12 +627,22 @@ nsHTMLButtonControlFrame::SetAdditionalStyleContext(PRInt32 aIndex,
   mRenderer.SetStyleContext(aIndex, aStyleContext);
 }
 
+
+NS_IMETHODIMP nsHTMLButtonControlFrame::SetSuggestedSize(nscoord aWidth, nscoord aHeight)
+{
+//  mSuggestedWidth = aWidth;
+//  mSuggestedHeight = aHeight;
+  return NS_OK;
+}
+
+
+
 NS_IMETHODIMP 
 nsHTMLButtonControlFrame::AppendFrames(nsIAtom*        aListName,
                                        nsIFrame*       aFrameList)
 {
-  NS_NOTREACHED("unsupported operation");
-  return NS_ERROR_UNEXPECTED;
+  ReParentFrameList(GetPresContext()->FrameManager(), aFrameList);
+  return mFrames.FirstChild()->AppendFrames(aListName, aFrameList);
 }
 
 NS_IMETHODIMP
@@ -464,20 +650,28 @@ nsHTMLButtonControlFrame::InsertFrames(nsIAtom*        aListName,
                                        nsIFrame*       aPrevFrame,
                                        nsIFrame*       aFrameList)
 {
-  NS_NOTREACHED("unsupported operation");
-  return NS_ERROR_UNEXPECTED;
+  ReParentFrameList(GetPresContext()->FrameManager(), aFrameList);
+  return mFrames.FirstChild()->InsertFrames(aListName, aPrevFrame, aFrameList);
 }
 
 NS_IMETHODIMP
 nsHTMLButtonControlFrame::RemoveFrame(nsIAtom*        aListName,
                                       nsIFrame*       aOldFrame)
 {
-  NS_NOTREACHED("unsupported operation");
-  return NS_ERROR_UNEXPECTED;
+  return mFrames.FirstChild()->RemoveFrame(aListName, aOldFrame);
 }
 
-PRBool
-nsHTMLButtonControlFrame::IsFrameOfType(PRUint32 aFlags) const
+NS_IMETHODIMP
+nsHTMLButtonControlFrame::ReplaceFrame(nsIAtom*        aListName,
+                                       nsIFrame*       aOldFrame,
+                                       nsIFrame*       aNewFrame)
 {
-  return !(aFlags & ~(eReplaced | eReplacedContainsBlock));
+  ReParentFrameList(GetPresContext()->FrameManager(), aNewFrame);
+  return mFrames.FirstChild()->ReplaceFrame(aListName, aOldFrame, aNewFrame);
+}
+
+NS_IMETHODIMP
+nsHTMLButtonControlFrame::OnContentReset()
+{
+  return NS_OK;
 }

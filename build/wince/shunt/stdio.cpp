@@ -210,7 +210,6 @@ MOZCE_SHUNT_API int mozce_printf(const char * format, ...)
     
     return 1;
 #endif
-
     return 0;
 }
 

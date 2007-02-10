@@ -38,13 +38,41 @@
 #include "nsStreamLoader.h"
 #include "nsIInputStream.h"
 #include "nsIChannel.h"
+#include "nsProxiedService.h"
+
+static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
 
 NS_IMETHODIMP
-nsStreamLoader::Init(nsIStreamLoaderObserver* observer)
+nsStreamLoader::Init(nsIChannel *channel,
+                     nsIStreamLoaderObserver* observer,
+                     nsISupports* context)
 {
+  NS_ENSURE_ARG_POINTER(channel);
   NS_ENSURE_ARG_POINTER(observer);
+
+  nsresult rv = channel->AsyncOpen(this, context);
+
+  if (NS_FAILED(rv) && observer) {
+    // don't callback synchronously as it puts the caller
+    // in a recursive situation and breaks the asynchronous
+    // semantics of nsIStreamLoader
+    nsresult rv2 = NS_OK;
+    nsCOMPtr<nsIProxyObjectManager> pIProxyObjectManager = 
+             do_GetService(kProxyObjectManagerCID, &rv2);
+    if (NS_FAILED(rv2)) return rv2;
+
+    nsCOMPtr<nsIStreamLoaderObserver> pObserver;
+    rv2 = pIProxyObjectManager->GetProxyForObject(NS_CURRENT_EVENTQ, 
+              NS_GET_IID(nsIStreamLoaderObserver), observer, 
+              PROXY_ASYNC | PROXY_ALWAYS, getter_AddRefs(pObserver));
+    if (NS_FAILED(rv2)) return rv2;
+
+    rv = pObserver->OnStreamComplete(this, context, rv, 0, nsnull);
+  }
+
   mObserver = observer;
-  return NS_OK;
+  mContext  = context;
+  return rv;
 }
 
 NS_METHOD
@@ -75,8 +103,8 @@ nsStreamLoader::GetNumBytesRead(PRUint32* aNumBytes)
 NS_IMETHODIMP 
 nsStreamLoader::GetRequest(nsIRequest **aRequest)
 {
-  NS_IF_ADDREF(*aRequest = mRequest);
-  return NS_OK;
+    NS_IF_ADDREF(*aRequest = mRequest);
+    return NS_OK;
 }
 
 NS_IMETHODIMP 
@@ -84,14 +112,13 @@ nsStreamLoader::OnStartRequest(nsIRequest* request, nsISupports *ctxt)
 {
   nsCOMPtr<nsIChannel> chan( do_QueryInterface(request) );
   if (chan) {
-    PRInt32 contentLength = -1;
-    chan->GetContentLength(&contentLength);
-    if (contentLength >= 0) {
-      // preallocate buffer
-      mData.SetCapacity(contentLength + 1);
-    }
+      PRInt32 contentLength = -1;
+      chan->GetContentLength(&contentLength);
+      if (contentLength >= 0) {
+          // preallocate buffer
+          mData.SetCapacity(contentLength + 1);
+      }
   }
-  mContext = ctxt;
   return NS_OK;
 }
 

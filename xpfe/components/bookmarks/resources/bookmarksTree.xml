@@ -47,7 +47,7 @@
      Before use, these must be initialized by calling initServices() and 
      initBMService() -->
 
-<!DOCTYPE bindings [
+<!DOCTYPE window [
   <!ENTITY % bookmarksDTD SYSTEM "chrome://communicator/locale/bookmarks/bookmarks.dtd" >
   %bookmarksDTD;
 ]>
@@ -430,7 +430,7 @@
 
           var target = BookmarksUtils.getBrowserTargetFromEvent(aEvent);
           if (target)
-            BookmarksCommand.openBookmark(selection, target, this.db, aEvent);
+            BookmarksCommand.openBookmark(selection, target, this.db);
         ]]></body>
       </method>
 
@@ -442,7 +442,7 @@
           if (!this._selection.isContainer[0]) {
             var target = BookmarksUtils.getBrowserTargetFromEvent(aEvent);
             if (target)
-              BookmarksCommand.openBookmark(this._selection, target, this.db, aEvent)
+              BookmarksCommand.openBookmark(this._selection, target, this.db)
           }
         ]]></body>
       </method>

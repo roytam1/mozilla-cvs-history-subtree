@@ -80,12 +80,10 @@ private:
                                         nsIWeakReference* aData,
                                         void* aClosure);
 
-  static const char* HandleCommand(char* aCommand, nsIDOMWindow* aWindow,
-                                   PRUint32 aTimestamp);
+  static const char* HandleCommand(char* aCommand, nsIDOMWindow* aWindow);
 
 #ifdef MOZ_XUL_APP
-  static const char* HandleCommandLine(char* aBuffer, nsIDOMWindow* aWindow,
-                                       PRUint32 aTimestamp);
+  static const char* HandleCommandLine(char* aBuffer, nsIDOMWindow* aWindow);
 #endif
 
   static gboolean HandlePropertyChange(GtkWidget *widget,

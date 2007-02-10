@@ -54,23 +54,23 @@ class nsScrollbarButtonFrame : public nsButtonBoxFrame,
                                public nsITimerCallback
 {
 public:
-  nsScrollbarButtonFrame(nsIPresShell* aPresShell, nsStyleContext* aContext):
-    nsButtonBoxFrame(aPresShell, aContext) {}
+  nsScrollbarButtonFrame(nsIPresShell* aPresShell);
 
   // Overrides
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
-  friend nsIFrame* NS_NewScrollbarButtonFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewScrollBarButtonFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   NS_IMETHOD HandleEvent(nsPresContext* aPresContext, 
                          nsGUIEvent* aEvent,
                          nsEventStatus* aEventStatus);
 
+
   static nsresult GetChildWithTag(nsPresContext* aPresContext,
                                   nsIAtom* atom, nsIFrame* start, nsIFrame*& result);
   static nsresult GetParentWithTag(nsIAtom* atom, nsIFrame* start, nsIFrame*& result);
 
-  PRBool HandleButtonPress(nsPresContext* aPresContext,
+  NS_IMETHOD HandlePress(nsPresContext* aPresContext,
                          nsGUIEvent *    aEvent,
                          nsEventStatus*  aEventStatus);
 
@@ -95,8 +95,7 @@ public:
 
 protected:
   virtual void MouseClicked(nsPresContext* aPresContext, nsGUIEvent* aEvent);
-  void DoButtonAction(PRBool aSmoothScroll);
-  PRInt32 mIncrement;
+  virtual void MouseClicked();
 
   
 }; // class nsTabFrame

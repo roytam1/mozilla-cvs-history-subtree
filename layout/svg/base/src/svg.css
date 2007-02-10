@@ -38,6 +38,11 @@
 
 @namespace url(http://www.w3.org/2000/svg);
 
+a {
+  -moz-binding:url('chrome://global/content/svg/svgBindings.xml#a'); 
+  cursor: pointer;
+}
+               
 svg {
   /* XXX see bugs #71191 and #172574 before applying xbl binding to
      either 'svg' or 'svg:not(:root)'
@@ -56,15 +61,4 @@ switch {
 
 svg:not(:root), symbol, image, marker, pattern, foreignObject {
  overflow: hidden;
-}
-
-foreignObject {
-  margin: 0 ! important;
-  padding: 0 ! important;
-  border: none ! important;
-}
-
-*|*::-moz-svg-foreign-content {
-  display: block !important;
-  position: static !important;
 }

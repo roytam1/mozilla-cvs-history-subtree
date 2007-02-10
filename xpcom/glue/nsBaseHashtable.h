@@ -276,7 +276,7 @@ public:
   ~nsBaseHashtableMT();
 
   PRBool Init(PRUint32 initSize = PL_DHASH_MIN_SIZE);
-  PRBool IsInitialized() const { return mLock != nsnull; }
+  PRBool IsInitialized() const { return (PRBool) mLock; }
   PRUint32 Count() const;
   PRBool Get(KeyType aKey, UserDataType* pData) const;
   PRBool Put(KeyType aKey, UserDataType aData);
@@ -366,7 +366,7 @@ nsBaseHashtableMT<KeyClass,DataType,UserDataType>::Init(PRUint32 initSize)
     return PR_FALSE;
 
   this->mLock = PR_NewLock();
-  NS_ASSERTION(this->mLock, "Error creating lock during nsBaseHashtableL::Init()");
+  NS_WARN_IF_FALSE(this->mLock, "Error creating lock during nsBaseHashtableL::Init()");
 
   return (this->mLock != nsnull);
 }

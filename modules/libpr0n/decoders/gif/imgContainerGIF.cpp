@@ -48,10 +48,6 @@
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsMemory.h"
 
-#ifdef MOZ_CAIRO_GFX
-#include "gfxContext.h"
-#endif
-
 NS_IMPL_ISUPPORTS2(imgContainerGIF, imgIContainer, nsITimerCallback)
 
 //******************************************************************************
@@ -245,19 +241,18 @@ NS_IMETHODIMP imgContainerGIF::SetAnimationMode(PRUint16 aAnimationMode)
                aAnimationMode == imgIContainer::kLoopOnceAnimMode,
                "Wrong Animation Mode is being set!");
 
-  switch (mAnimationMode = aAnimationMode) {
-    case kDontAnimMode:
-      StopAnimation();
-      break;
-    case kNormalAnimMode:
-      if (mLoopCount != 0 || mCurrentAnimationFrameIndex + 1 < mFrames.Count())
-        StartAnimation();
-      break;
-    case kLoopOnceAnimMode:
-      if (mCurrentAnimationFrameIndex + 1 < mFrames.Count())
-        StartAnimation();
-      break;
+  if (mAnimationMode == kNormalAnimMode &&
+      (aAnimationMode == kDontAnimMode ||
+       aAnimationMode == kLoopOnceAnimMode)) {
+    StopAnimation();
+  } else if (aAnimationMode == kNormalAnimMode &&
+             (mAnimationMode == kDontAnimMode ||
+              mAnimationMode == kLoopOnceAnimMode)) {
+    mAnimationMode = aAnimationMode;
+    StartAnimation();
+    return NS_OK;
   }
+  mAnimationMode = aAnimationMode;
 
   return NS_OK;
 }
@@ -850,6 +845,16 @@ void imgContainerGIF::SetMaskVisibility(gfxIImageFrame *aFrame,
   if (!aFrame)
     return;
 
+  nsresult res;
+  PRUint8* alphaData;
+  PRUint32 alphaDataLength;
+  aFrame->LockAlphaData();
+  res = aFrame->GetAlphaData(&alphaData, &alphaDataLength);
+  if (!alphaData || !alphaDataLength || NS_FAILED(res)) {
+    aFrame->UnlockAlphaData();
+    return;
+  }
+
   PRInt32 frameWidth;
   PRInt32 frameHeight;
   aFrame->GetWidth(&frameWidth);
@@ -859,37 +864,6 @@ void imgContainerGIF::SetMaskVisibility(gfxIImageFrame *aFrame,
   const PRInt32 height = PR_MIN(aHeight, frameHeight - aY);
 
   if (width <= 0 || height <= 0) {
-    return;
-  }
-
-#ifdef MOZ_CAIRO_GFX
-  PRUint8* alphaData;
-  PRUint32 alphaDataLength;
-  const PRUint8 setMaskTo = aVisible ? 0xFF : 0x00;
-
-  aFrame->LockImageData();
-  nsresult res = aFrame->GetImageData(&alphaData, &alphaDataLength);
-  if (NS_SUCCEEDED(res)) {
-#ifdef IS_LITTLE_ENDIAN
-    alphaData += aY*frameWidth*4 + 3;
-#else
-    alphaData += aY*frameWidth*4;
-#endif
-    for (PRInt32 j = height; j > 0; --j) {
-      for (PRInt32 i = (aX+width-1)*4; i >= aX; i -= 4) {
-        alphaData[i] = setMaskTo;
-      }
-      alphaData += frameWidth*4;
-    }
-  }
-  aFrame->UnlockImageData();
-
-#else
-  PRUint8* alphaData;
-  PRUint32 alphaDataLength;
-  aFrame->LockAlphaData();
-  nsresult res = aFrame->GetAlphaData(&alphaData, &alphaDataLength);
-  if (!alphaData || !alphaDataLength || NS_FAILED(res)) {
     aFrame->UnlockAlphaData();
     return;
   }
@@ -969,7 +943,7 @@ void imgContainerGIF::SetMaskVisibility(gfxIImageFrame *aFrame,
   } // if aVisible
 
   aFrame->UnlockAlphaData();
-#endif
+  return;
 }
 
 //******************************************************************************
@@ -982,28 +956,12 @@ void imgContainerGIF::SetMaskVisibility(gfxIImageFrame *aFrame, PRBool aVisible)
   PRUint32 alphaDataLength;
   const PRUint8 setMaskTo = aVisible ? 0xFF : 0x00;
 
-#ifdef MOZ_CAIRO_GFX
-  aFrame->LockImageData();
-  nsresult res = aFrame->GetImageData(&alphaData, &alphaDataLength);
-  if (NS_SUCCEEDED(res)) {
-    for (PRUint32 i = 0; i < alphaDataLength; i+=4) {
-#ifdef IS_LITTLE_ENDIAN
-      alphaData[i+3] = setMaskTo;
-#else
-      alphaData[i] = setMaskTo;
-#endif
-    }
-  }
-  aFrame->UnlockImageData();
-
-#else  
-
   aFrame->LockAlphaData();
   nsresult res = aFrame->GetAlphaData(&alphaData, &alphaDataLength);
   if (NS_SUCCEEDED(res) && alphaData && alphaDataLength)
     memset(alphaData, setMaskTo, alphaDataLength);
   aFrame->UnlockAlphaData();
-#endif
+  return;
 }
 
 //******************************************************************************
@@ -1012,20 +970,29 @@ void imgContainerGIF::BlackenFrame(gfxIImageFrame *aFrame)
 {
   if (!aFrame)
     return;
-#ifdef MOZ_CAIRO_GFX
-  PRInt32 widthFrame;
-  PRInt32 heightFrame;
-  aFrame->GetWidth(&widthFrame);
-  aFrame->GetHeight(&heightFrame);
 
-  BlackenFrame(aFrame, 0, 0, widthFrame, heightFrame);
+  aFrame->LockImageData();
 
-#else
+  PRUint8* aData;
   PRUint32 aDataLength;
 
-  aFrame->GetImageDataLength(&aDataLength);
-  aFrame->SetImageData(nsnull, aDataLength, 0);
-#endif
+  aFrame->GetImageData(&aData, &aDataLength);
+  memset(aData, 0, aDataLength);
+
+  nsCOMPtr<nsIInterfaceRequestor> ireq(do_QueryInterface(aFrame));
+  if (ireq) {
+    PRInt32 width;
+    PRInt32 height;
+    aFrame->GetWidth(&width);
+    aFrame->GetHeight(&height);
+
+    nsCOMPtr<nsIImage> img(do_GetInterface(ireq));
+    nsIntRect r(0, 0, width, height);
+
+    img->ImageUpdated(nsnull, nsImageUpdateFlags_kBitsChanged, &r);
+  }
+
+  aFrame->UnlockImageData();
 }
 
 //******************************************************************************
@@ -1036,23 +1003,7 @@ void imgContainerGIF::BlackenFrame(gfxIImageFrame *aFrame,
   if (!aFrame)
     return;
 
-#ifdef MOZ_CAIRO_GFX
-  nsCOMPtr<nsIImage> img(do_GetInterface(aFrame));
-  if (!img)
-    return;
-
-  nsRefPtr<gfxASurface> surf;
-  img->GetSurface(getter_AddRefs(surf));
-
-  nsRefPtr<gfxContext> ctx = new gfxContext(surf);
-  ctx->SetColor(gfxRGBA(0, 0, 0));
-  ctx->Rectangle(gfxRect(aX, aY, aWidth, aHeight));
-  ctx->Fill();
-
-  nsIntRect r(aX, aY, aWidth, aHeight);
-  img->ImageUpdated(nsnull, nsImageUpdateFlags_kBitsChanged, &r);
-
-#else // MOZ_CAIRO_GFX
+  aFrame->LockImageData();
 
   PRInt32 widthFrame;
   PRInt32 heightFrame;
@@ -1063,6 +1014,7 @@ void imgContainerGIF::BlackenFrame(gfxIImageFrame *aFrame,
   const PRInt32 height = PR_MIN(aHeight, (heightFrame - aY));
 
   if (width <= 0 || height <= 0) {
+    aFrame->UnlockImageData();
     return;
   }
 
@@ -1077,10 +1029,21 @@ void imgContainerGIF::BlackenFrame(gfxIImageFrame *aFrame,
   const PRUint32 bprToWrite = width * bpp;
   const PRUint32 xOffset = aX * bpp; // offset into row to start writing
 
-  for (PRInt32 y = 0; y < height; y++) {
-    aFrame->SetImageData(nsnull, bprToWrite, ((y + aY) * bpr) + xOffset);
+  PRUint8* tmpRow = NS_STATIC_CAST(PRUint8*, nsMemory::Alloc(bprToWrite));
+
+  if (!tmpRow) {
+    aFrame->UnlockImageData();
+    return;
   }
-#endif // MOZ_CAIRO_GFX
+
+  memset(tmpRow, 0, bprToWrite);
+
+  for (PRInt32 y = 0; y < height; y++) {
+    aFrame->SetImageData(tmpRow, bprToWrite, ((y + aY) * bpr) + xOffset);
+  }
+  nsMemory::Free(tmpRow);
+
+  aFrame->UnlockImageData();
 }
 
 
@@ -1111,7 +1074,6 @@ PRBool imgContainerGIF::CopyFrameImage(gfxIImageFrame *aSrcFrame,
   memcpy(aDataDest, aDataSrc, aDataLengthSrc);
   aDstFrame->UnlockImageData();
 
-#ifndef MOZ_CAIRO_GFX
   // Copy Alpha/Mask Over
   // If no mask, lockAlpha will tell us
   if (NS_SUCCEEDED(aDstFrame->LockAlphaData())) {
@@ -1124,7 +1086,6 @@ PRBool imgContainerGIF::CopyFrameImage(gfxIImageFrame *aSrcFrame,
 
     aDstFrame->UnlockAlphaData();
   }
-#endif
 
   // Tell the image that it's data has been updated
   nsCOMPtr<nsIInterfaceRequestor> ireq(do_QueryInterface(aDstFrame));

@@ -46,13 +46,13 @@
 #include "nsXMLProcessingInstruction.h"
 #include "nsUnicharUtils.h"
 #include "nsParserUtils.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 
 class nsXMLStylesheetPI : public nsXMLProcessingInstruction,
                           public nsStyleLinkElement
 {
 public:
-  nsXMLStylesheetPI(nsINodeInfo *aNodeInfo, const nsAString& aData);
+  nsXMLStylesheetPI(nsNodeInfoManager *aNodeInfoManager, const nsAString& aData);
   virtual ~nsXMLStylesheetPI();
 
   // nsISupports
@@ -60,6 +60,7 @@ public:
 
   // nsIDOMNode
   NS_IMETHOD SetNodeValue(const nsAString& aData);
+  NS_IMETHOD CloneNode(PRBool aDeep, nsIDOMNode** aReturn);
 
   // nsIContent
   virtual nsresult BindToTree(nsIDocument* aDocument, nsIContent* aParent,
@@ -67,24 +68,17 @@ public:
                               PRBool aCompileEventHandlers);
   virtual void UnbindFromTree(PRBool aDeep = PR_TRUE,
                               PRBool aNullParent = PR_TRUE);
-
-  // nsIStyleSheetLinkingElement
-  virtual void OverrideBaseURI(nsIURI* aNewBaseURI);
-
+  
   // nsStyleLinkElement
   NS_IMETHOD GetCharset(nsAString& aCharset);
 
 protected:
-  nsCOMPtr<nsIURI> mOverriddenBaseURI;
-
   void GetStyleSheetURL(PRBool* aIsInline,
                         nsIURI** aURI);
   void GetStyleSheetInfo(nsAString& aTitle,
                          nsAString& aType,
                          nsAString& aMedia,
                          PRBool* aIsAlternate);
-  virtual nsGenericDOMDataNode* CloneDataNode(nsINodeInfo *aNodeInfo,
-                                              PRBool aCloneText) const;
 };
 
 // nsISupports implementation
@@ -99,9 +93,9 @@ NS_IMPL_ADDREF_INHERITED(nsXMLStylesheetPI, nsXMLProcessingInstruction)
 NS_IMPL_RELEASE_INHERITED(nsXMLStylesheetPI, nsXMLProcessingInstruction)
 
 
-nsXMLStylesheetPI::nsXMLStylesheetPI(nsINodeInfo *aNodeInfo,
+nsXMLStylesheetPI::nsXMLStylesheetPI(nsNodeInfoManager *aNodeInfoManager,
                                      const nsAString& aData)
-  : nsXMLProcessingInstruction(aNodeInfo, NS_LITERAL_STRING("xml-stylesheet"),
+  : nsXMLProcessingInstruction(aNodeInfoManager, NS_LITERAL_STRING("xml-stylesheet"),
                                aData)
 {
 }
@@ -143,9 +137,25 @@ nsXMLStylesheetPI::SetNodeValue(const nsAString& aNodeValue)
 {
   nsresult rv = nsGenericDOMDataNode::SetNodeValue(aNodeValue);
   if (NS_SUCCEEDED(rv)) {
-    UpdateStyleSheet(nsnull, nsnull, PR_TRUE);
+    UpdateStyleSheet();
   }
   return rv;
+}
+
+NS_IMETHODIMP
+nsXMLStylesheetPI::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
+{
+  nsAutoString data;
+  GetData(data);
+
+  nsXMLStylesheetPI *pi = new nsXMLStylesheetPI(mNodeInfoManager, data);
+  if (!pi) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  NS_ADDREF(*aReturn = pi);
+
+  return NS_OK;
 }
 
 // nsStyleLinkElement
@@ -153,13 +163,7 @@ nsXMLStylesheetPI::SetNodeValue(const nsAString& aNodeValue)
 NS_IMETHODIMP
 nsXMLStylesheetPI::GetCharset(nsAString& aCharset)
 {
-  return GetAttrValue(nsGkAtoms::charset, aCharset) ? NS_OK : NS_ERROR_FAILURE;
-}
-
-/* virtual */ void
-nsXMLStylesheetPI::OverrideBaseURI(nsIURI* aNewBaseURI)
-{
-  mOverriddenBaseURI = aNewBaseURI;
+  return GetAttrValue(nsHTMLAtoms::charset, aCharset) ? NS_OK : NS_ERROR_FAILURE;
 }
 
 void
@@ -170,7 +174,7 @@ nsXMLStylesheetPI::GetStyleSheetURL(PRBool* aIsInline,
   *aURI = nsnull;
 
   nsAutoString href;
-  GetAttrValue(nsGkAtoms::href, href);
+  GetAttrValue(nsHTMLAtoms::href, href);
   if (href.IsEmpty()) {
     return;
   }
@@ -179,10 +183,10 @@ nsXMLStylesheetPI::GetStyleSheetURL(PRBool* aIsInline,
   nsCAutoString charset;
   nsIDocument *document = GetOwnerDoc();
   if (document) {
-    baseURL = mOverriddenBaseURI ? mOverriddenBaseURI.get() : document->GetBaseURI();
+    baseURL = document->GetBaseURI();
     charset = document->GetDocumentCharacterSet();
   } else {
-    baseURL = mOverriddenBaseURI;
+    baseURL = nsnull;
   }
 
   NS_NewURI(aURI, href, charset.get(), baseURL);
@@ -207,10 +211,10 @@ nsXMLStylesheetPI::GetStyleSheetInfo(nsAString& aTitle,
   nsAutoString data;
   GetData(data);
 
-  nsParserUtils::GetQuotedAttributeValue(data, nsGkAtoms::title, aTitle);
+  nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::title, aTitle);
 
   nsAutoString alternate;
-  nsParserUtils::GetQuotedAttributeValue(data, nsGkAtoms::alternate, alternate);
+  nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::alternate, alternate);
 
   // if alternate, does it have title?
   if (alternate.EqualsLiteral("yes")) {
@@ -221,10 +225,10 @@ nsXMLStylesheetPI::GetStyleSheetInfo(nsAString& aTitle,
     *aIsAlternate = PR_TRUE;
   }
 
-  nsParserUtils::GetQuotedAttributeValue(data, nsGkAtoms::media, aMedia);
+  nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::media, aMedia);
 
   nsAutoString type;
-  nsParserUtils::GetQuotedAttributeValue(data, nsGkAtoms::type, type);
+  nsParserUtils::GetQuotedAttributeValue(data, nsHTMLAtoms::type, type);
 
   nsAutoString mimeType, notUsed;
   nsParserUtils::SplitMimeType(type, mimeType, notUsed);
@@ -240,15 +244,6 @@ nsXMLStylesheetPI::GetStyleSheetInfo(nsAString& aTitle,
   return;
 }
 
-nsGenericDOMDataNode*
-nsXMLStylesheetPI::CloneDataNode(nsINodeInfo *aNodeInfo, PRBool aCloneText) const
-{
-  nsAutoString data;
-  nsGenericDOMDataNode::GetData(data);
-
-  return new nsXMLStylesheetPI(aNodeInfo, data);
-}
-
 nsresult
 NS_NewXMLStylesheetProcessingInstruction(nsIContent** aInstancePtrResult,
                                          nsNodeInfoManager *aNodeInfoManager,
@@ -258,14 +253,7 @@ NS_NewXMLStylesheetProcessingInstruction(nsIContent** aInstancePtrResult,
 
   *aInstancePtrResult = nsnull;
   
-  nsCOMPtr<nsINodeInfo> ni;
-  nsresult rv =
-    aNodeInfoManager->GetNodeInfo(nsGkAtoms::processingInstructionTagName,
-                                  nsnull, kNameSpaceID_None,
-                                  getter_AddRefs(ni));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsXMLStylesheetPI *instance = new nsXMLStylesheetPI(ni, aData);
+  nsXMLStylesheetPI *instance = new nsXMLStylesheetPI(aNodeInfoManager, aData);
   if (!instance) {
     return NS_ERROR_OUT_OF_MEMORY;
   }

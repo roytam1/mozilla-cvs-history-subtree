@@ -49,10 +49,11 @@
 </broadcasterset>
 
 <commandset id="calendar_commands">
-  <command id="new_command" oncommand="createEventWithDialog()"/>
+  <command id="new_command" oncommand="newEvent()"/>
   <command id="delete_command" oncommand="deleteEventCommand( )" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="delete_command_no_confirm" oncommand="deleteEventCommand( true )" disabled="true" disabledwhennoeventsselected="true"/>
-  <command id="modify_command" oncommand="modifyEventWithDialog(currentView().getSelectedItems({})[0])" disabled="true" disabledwhennoeventsselected="true"/>
+  <command id="modify_command" oncommand="editEvent()" disabled="true" disabledwhennoeventsselected="true"/>
+  <command id="send_event_command" oncommand="sendEvent()" disabled="true" disabledwhennoeventsselected="true"/>
   <command id="cmd_pageSetup" oncommand="PrintUtils.showPageSetup();"/>
   <command id="print_command" oncommand="calPrint()"/>
   
@@ -63,7 +64,7 @@
   <command id="paste_command" oncommand="pasteFromClipboard()"/>
   <command id="select_all_command" oncommand="selectAllEvents()"/>
 
-  <command id="new_todo_command" oncommand="createTodoWithDialog()"/>
+  <command id="new_todo_command" oncommand="newToDo()"/>
   <command id="modify_todo_command" oncommand="editToDo()"/>
   <command id="delete_todo_command" oncommand="deleteToDoCommand()" disabled="true"/>
 
@@ -73,8 +74,8 @@
   <command id="delete_calendar_command" oncommand="deleteCalendar(event)"/>
   <command id="find_new_calendar_command" oncommand="goFindNewCalendars()"/>
 
-  <command id="next_command" oncommand="moveView(1)"/>
-  <command id="previous_command" oncommand="moveView(-1)"/>
+  <command id="next_command" oncommand="gCalendarWindow.currentView.goToNext()"/>
+  <command id="previous_command" oncommand="gCalendarWindow.currentView.goToPrevious()"/>
   <command id="go_today_command" oncommand="gCalendarWindow.goToToday()"/>
   <command id="go_date_command" oncommand="gCalendarWindow.pickAndGoToDate()"/>
 
@@ -126,6 +127,11 @@
   <key id="new_calendar_key"     key="&calendar.new.server.key;"         observes="new_calendar_command"  modifiers="accel"/>
   <key id="open_calendar_key"    key="&calendar.open.file.key;"          observes="open_local_calendar_command" modifiers="accel"/>
   <key id="key_close"            key="&calendar.menu.options.close.key;" observes="close_calendar_command"      modifiers="accel"/>
+#ifdef XP_MACOSX
+  <key id="send_event_key"       key="&event.mail.event.key;"            observes="send_event_command"          modifiers="shift, accel"/>
+#else
+  <key id="send_event_key"       key="&event.mail.event.key;"            observes="send_event_command"          modifiers="accel"/>
+#endif
   <key id="print_key"            key="&calendar.print.key;"              observes="print_command"               modifiers="accel"/>
 
   <key id="undo_key"             key="&calendar.undo.key;"               observes="undo_command"                modifiers="accel"/>

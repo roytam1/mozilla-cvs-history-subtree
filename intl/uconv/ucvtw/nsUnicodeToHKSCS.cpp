@@ -44,12 +44,18 @@
 
 
 
+static const PRUint16 gBig5HKSCSShiftTable[] =  {
+  0, u2BytesCharset,
+  ShiftCell(0,   0, 0, 0, 0, 0, 0, 0),
+};
+
+
 static const PRUint16 *g_Big5HKSCSMappingTable[] = {
   g_ufBig5HKSCSMapping
 };
 
-static const uScanClassID g_Big5HKSCSScanClassIDs[] =  {
-  u2BytesCharset
+static const PRUint16 *g_Big5HKSCSShiftTable[] =  {
+  gBig5HKSCSShiftTable
 };
 
 //----------------------------------------------------------------------
@@ -60,7 +66,7 @@ nsUnicodeToHKSCSConstructor(nsISupports *aOuter, REFNSIID aIID,
                                 void **aResult)
 {
   return CreateMultiTableEncoder(1,
-                                 (uScanClassID*) &g_Big5HKSCSScanClassIDs,
+                                 (uShiftTable**) &g_Big5HKSCSShiftTable,
                                  (uMappingTable**) &g_Big5HKSCSMappingTable,
                                  2 /* max length = src * 2 */,
                                  aOuter, aIID, aResult);

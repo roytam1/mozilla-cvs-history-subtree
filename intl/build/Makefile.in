@@ -55,10 +55,15 @@ PACKAGE_VARS = MOZ_MATHML
 REQUIRES	= xpcom \
 		  string \
 		  unicharutil \
+		  chardet \
 		  uconv \
 		  lwbrk \
 		  intl \
 		  locale \
+		  htmlparser \
+		  content \
+		  widget \
+		  webshell \
 		  necko \
 		  $(NULL)
 
@@ -78,6 +83,7 @@ endif
 endif
 
 LOCAL_INCLUDES = \
+			-I$(srcdir)/../chardet/src \
 			-I$(srcdir)/../lwbrk/src \
 			-I$(srcdir)/../unicharutil/src \
 			-I$(srcdir)/../strres/src \
@@ -86,11 +92,12 @@ LOCAL_INCLUDES = \
 			$(NULL)
 
 SHARED_LIBRARY_LIBS = \
-			../lwbrk/src/$(LIB_PREFIX)lwbrk_s.$(LIB_SUFFIX) \
-			../unicharutil/src/$(LIB_PREFIX)ucharucomp_s.$(LIB_SUFFIX) \
-			../strres/src/$(LIB_PREFIX)strres_s.$(LIB_SUFFIX) \
-			../locale/src/$(LIB_PREFIX)nslocale_s.$(LIB_SUFFIX) \
-			../locale/src/$(LOCALE_DIR)/$(LIB_PREFIX)platlocale_s.$(LIB_SUFFIX) \
+			$(DIST)/lib/$(LIB_PREFIX)chardet_s.$(LIB_SUFFIX) \
+			$(DIST)/lib/$(LIB_PREFIX)lwbrk_s.$(LIB_SUFFIX) \
+			$(DIST)/lib/$(LIB_PREFIX)ucharucomp_s.$(LIB_SUFFIX) \
+			$(DIST)/lib/$(LIB_PREFIX)strres_s.$(LIB_SUFFIX) \
+			$(DIST)/lib/$(LIB_PREFIX)nslocale_s.$(LIB_SUFFIX) \
+			$(DIST)/lib/$(LIB_PREFIX)platlocale_s.$(LIB_SUFFIX) \
 			$(NULL)
 
 EXTRA_DSO_LDOPTS = \

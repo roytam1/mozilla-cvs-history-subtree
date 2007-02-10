@@ -41,7 +41,6 @@
 #include "xpctest_multiple.h"
 #include "nsISupports.h"
 #include "xpctest_private.h"
-#include "nsIClassInfoImpl.h"
 
 class xpcTestParentOne : public nsIXPCTestParentOne {
 public: 

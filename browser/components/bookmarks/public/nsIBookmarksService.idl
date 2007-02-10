@@ -46,8 +46,9 @@
 
 interface nsIArray;
 interface nsIRDFResource;
+interface nsITransactionManager;
 
-[scriptable, uuid(202d7078-994b-4fe2-a9f9-64cab23af7e9)]
+[scriptable, uuid(ccc48346-429d-4931-94dc-beb1afcea292)]
 interface nsIBookmarksService : nsISupports
 {
     const unsigned long BOOKMARK_DEFAULT_TYPE   = 0;
@@ -107,10 +108,19 @@ interface nsIBookmarksService : nsISupports
     
     string resolveKeyword(in wstring aName, out wstring aPostData);
 
+    readonly attribute nsITransactionManager transactionManager;
+
     //XXXpch: to be removed.
     void addBookmarkImmediately(in wstring aURI, in wstring aTitle, in long bmType, in wstring docCharset);
     boolean isBookmarked(in string aURL);
 
+};
+
+[scriptable, uuid(c8d4603a-960a-43e3-a0fa-b3746a270e0e)]
+interface nsIBookmarksService_MOZILLA_1_8_BRANCH : nsIBookmarksService
+{
+    nsIRDFResource createSeparatorInContainer(in nsIRDFResource aFolder,
+                                              in long aIndex);
 };
 
 %{C++

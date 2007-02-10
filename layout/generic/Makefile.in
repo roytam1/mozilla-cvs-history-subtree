@@ -49,8 +49,6 @@ REQUIRES	= xpcom \
 		  string \
 		  dom \
 		  content \
-		  thebes \
-		  cairo \
 		  gfx \
 		  widget \
 		  locale \
@@ -83,10 +81,6 @@ ifdef SUNCTL
 REQUIRES	+= ctl
 endif
 
-ifdef MOZ_ENABLE_CAIRO_GFX
-REQUIRES	+= thebes cairo
-endif
-
 EXPORTS		= \
 		nsFrameList.h \
 		nsHTMLParts.h \
@@ -105,7 +99,7 @@ EXPORTS		= \
 		nsIScrollableFrame.h \
 		nsIScrollableViewProvider.h \
 		nsIStatefulFrame.h \
-		nsFrameSelection.h \
+		nsReflowType.h \
 		$(NULL)
 
 ifdef IBMBIDI
@@ -137,6 +131,7 @@ CPPSRCS		= \
 		nsHTMLCanvasFrame.cpp \
 		nsHTMLContainerFrame.cpp \
 		nsHTMLFrame.cpp \
+		nsHTMLReflowCommand.cpp \
 		nsHTMLReflowState.cpp \
 		nsImageFrame.cpp \
 		nsImageMap.cpp \
@@ -149,11 +144,13 @@ CPPSRCS		= \
 		nsPageContentFrame.cpp \
 		nsPageFrame.cpp \
 		nsPlaceholderFrame.cpp \
+		nsReflowPath.cpp \
 		nsSelection.cpp \
 		nsSimplePageSequence.cpp \
 		nsSpaceManager.cpp \
 		nsSpacerFrame.cpp \
 		nsSplittableFrame.cpp \
+		nsTextFrame.cpp \
 		nsTextTransformer.cpp \
 		nsViewportFrame.cpp \
 		$(NULL)
@@ -162,21 +159,6 @@ ifdef IBMBIDI
 CPPSRCS		+= \
 		nsBidiFrames.cpp \
 		$(NULL)
-endif
-
-# set this to 1 to enable the new text frame
-MOZ_ENABLE_NEW_TEXT_FRAME =
-
-ifdef MOZ_ENABLE_NEW_TEXT_FRAME
-CPPSRCS   += \
-          nsTextFrameThebes.cpp \
-          nsTextRunTransformations.cpp \
-          nsTextFrameUtils.cpp \
-    $(NULL)
-else
-CPPSRCS   += \
-          nsTextFrame.cpp \
-    $(NULL)
 endif
 
 RESOURCES_HTML = \
@@ -209,7 +191,6 @@ LOCAL_INCLUDES += \
 		-I$(srcdir)/../../content/xul/content/src \
 		-I$(srcdir)/../../content/base/src \
 		-I$(srcdir)/../../content/html/content/src \
-		$(MOZ_CAIRO_CFLAGS) \
 		$(NULL)
 
 libs::

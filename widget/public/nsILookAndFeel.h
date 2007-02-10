@@ -44,15 +44,14 @@
 struct nsSize;
 
 
-// {BEC234D0-AAA5-430D-8435-B10100F78003}
+// {ED0B4802-9F50-4f69-9509-6949C69999E4}
 #define NS_ILOOKANDFEEL_IID \
-{ 0xbec234d0, 0xaaa5, 0x430d, \
-    { 0x84, 0x35, 0xb1, 0x01, 0x00, 0xf7, 0x80, 0x03} }
-
+{ 0xed0b4802, 0x9f50, 0x4f69, \
+    { 0x95, 0x9, 0x69, 0x49, 0xc6, 0x99, 0x99, 0xe4 } }
 
 class nsILookAndFeel: public nsISupports {
 public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_ILOOKANDFEEL_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_ILOOKANDFEEL_IID)
 
   // When modifying this list, also modify nsXPLookAndFeel::sColorPrefs
   // in widget/src/xpwidgts/nsXPLookAndFeel.cpp.
@@ -75,19 +74,6 @@ public:
     eColor_TextSelectForeground,
     eColor_TextSelectBackgroundDisabled,
     eColor_TextSelectBackgroundAttention,
-
-    eColor_IMERawInputBackground,
-    eColor_IMERawInputForeground,
-    eColor_IMERawInputUnderline,
-    eColor_IMESelectedRawTextBackground,
-    eColor_IMESelectedRawTextForeground,
-    eColor_IMESelectedRawTextUnderline,
-    eColor_IMEConvertedTextBackground,
-    eColor_IMEConvertedTextForeground,
-    eColor_IMEConvertedTextUnderline,
-    eColor_IMESelectedConvertedTextBackground,
-    eColor_IMESelectedConvertedTextForeground,
-    eColor_IMESelectedConvertedTextUnderline,
 
     // New CSS 2 color definitions
     eColor_activeborder,
@@ -133,7 +119,6 @@ public:
     eColor__moz_buttonhovertext,                             //used to button text, when mouse is over
     eColor__moz_menuhover,                                   //used to menu item background, when mouse is over
     eColor__moz_menuhovertext,                               //used to menu item text, when mouse is over
-    eColor__moz_menubarhovertext,                            //used to menu bar item text, when mouse is over
 
     //colours needed by Mac Classic skin
     eColor__moz_mac_focusring,				//ring around text fields and lists
@@ -199,49 +184,19 @@ public:
     eMetric_ScrollArrowStyle,                             // position of scroll arrows in a scrollbar
     eMetric_ScrollSliderStyle,                            // is scroll thumb proportional or fixed?
 
-    eMetric_ScrollButtonLeftMouseButtonAction,            // each button can take one of four values:
-    eMetric_ScrollButtonMiddleMouseButtonAction,          // 0 - scrolls one  line, 1 - scrolls one page
-    eMetric_ScrollButtonRightMouseButtonAction,           // 2 - scrolls to end, 3 - button ignored
- 
     eMetric_TreeOpenDelay,                                // delay for opening spring loaded folders
     eMetric_TreeCloseDelay,                               // delay for closing spring loaded folders
     eMetric_TreeLazyScrollDelay,                          // delay for triggering the tree scrolling
     eMetric_TreeScrollDelay,                              // delay for scrolling the tree
     eMetric_TreeScrollLinesMax,                           // the maximum number of lines to be scrolled at ones
-    eMetric_TabFocusModel,                                // What type of tab-order to use
-
-    /*
-     * eMetric_AlertNotificationOrigin indicates from which corner of the
-     * screen alerts slide in, and from which direction (horizontal/vertical).
-     * 0, the default, represents bottom right, sliding vertically.
-     * Use any bitwise combination of the following constants:
-     * NS_ALERT_HORIZONTAL (1), NS_ALERT_LEFT (2), NS_ALERT_TOP (4).
-     *
-     *       6       4
-     *     +-----------+
-     *    7|           |5
-     *     |           |
-     *    3|           |1
-     *     +-----------+
-     *       2       0
-     */
-    eMetric_AlertNotificationOrigin
+    eMetric_TabFocusModel                                 // What type of tab-order to use
   } nsMetricID;
 
   enum {
-    eMetric_ScrollArrowStartBackward = 0x1000,
-    eMetric_ScrollArrowStartForward = 0x0100,
-    eMetric_ScrollArrowEndBackward = 0x0010,
-    eMetric_ScrollArrowEndForward = 0x0001,
-    eMetric_ScrollArrowStyleSingle =                      // single arrow at each end
-      eMetric_ScrollArrowStartBackward|eMetric_ScrollArrowEndForward, 
-    eMetric_ScrollArrowStyleBothAtBottom =                // both arrows at bottom/right, none at top/left
-      eMetric_ScrollArrowEndBackward|eMetric_ScrollArrowEndForward,
-    eMetric_ScrollArrowStyleBothAtEachEnd =               // both arrows at both ends
-      eMetric_ScrollArrowEndBackward|eMetric_ScrollArrowEndForward|
-      eMetric_ScrollArrowStartBackward|eMetric_ScrollArrowStartForward,
-    eMetric_ScrollArrowStyleBothAtTop =                   // both arrows at top/left, none at bottom/right
-      eMetric_ScrollArrowStartBackward|eMetric_ScrollArrowStartForward
+    eMetric_ScrollArrowStyleSingle,                       // single arrow at each end
+    eMetric_ScrollArrowStyleBothAtBottom,                 // both arrows at bottom/right, none at top/left
+    eMetric_ScrollArrowStyleBothAtEachEnd,                // both arrows at both ends
+    eMetric_ScrollArrowStyleBothAtTop                     // both arrows at top/left, none at bottom/right
   };
   enum {
     eMetric_ScrollThumbStyleNormal,
@@ -258,18 +213,13 @@ public:
     eMetricFloat_ListVerticalInsidePadding,
     eMetricFloat_ListHorizontalInsidePadding,
     eMetricFloat_ButtonVerticalInsidePadding,
-    eMetricFloat_ButtonHorizontalInsidePadding,
-    eMetricFloat_IMEUnderlineRelativeSize
+    eMetricFloat_ButtonHorizontalInsidePadding
   } nsMetricFloatID;
 
   NS_IMETHOD GetColor(const nsColorID aID, nscolor &aColor) = 0;
   NS_IMETHOD GetMetric(const nsMetricID aID, PRInt32 & aMetric) = 0;
   NS_IMETHOD GetMetric(const nsMetricFloatID aID, float & aMetric) = 0;
-  virtual PRUnichar GetPasswordCharacter()
-  {
-    return PRUnichar('*');
-  }
-
+  
   NS_IMETHOD LookAndFeelChanged() = 0;
 
 
@@ -300,35 +250,11 @@ public:
 #endif
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsILookAndFeel, NS_ILOOKANDFEEL_IID)
-
-
 	// On the Mac, GetColor(eColor_TextSelectForeground, color) returns this
 	// constant to specify that the foreground color should not be changed
 	// (ie. a colored text keeps its colors  when selected).
 	// Of course if other plaforms work like the Mac, they can use it too.
 #define NS_DONT_CHANGE_COLOR 	NS_RGB(0x01, 0x01, 0x01)
 
-// --------------------------------
-//  Special colors for eColor_IME*
-// --------------------------------
-
-// For background color only.
-#define NS_TRANSPARENT                NS_RGBA(0x01, 0x00, 0x00, 0x00)
-// For foreground color only.
-#define NS_SAME_AS_FOREGROUND_COLOR   NS_RGBA(0x02, 0x00, 0x00, 0x00)
-#define NS_40PERCENT_FOREGROUND_COLOR NS_RGBA(0x03, 0x00, 0x00, 0x00)
-
-#define NS_IS_IME_SPECIAL_COLOR(c) ((c) == NS_TRANSPARENT || \
-                                    (c) == NS_SAME_AS_FOREGROUND_COLOR || \
-                                    (c) == NS_40PERCENT_FOREGROUND_COLOR)
-
-// ------------------------------------------
-//  Bits for eMetric_AlertNotificationOrigin
-// ------------------------------------------
-
-#define NS_ALERT_HORIZONTAL 1
-#define NS_ALERT_LEFT       2
-#define NS_ALERT_TOP        4
 
 #endif /* __nsILookAndFeel */

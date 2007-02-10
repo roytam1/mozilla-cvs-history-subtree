@@ -59,7 +59,6 @@
 #include "nsQuickSort.h"
 #include "nsEnumeratorUtils.h"
 #include "nsIProxyObjectManager.h"
-#include "nsThreadUtils.h"
 
 class nsIComponentLoaderManager;
 
@@ -199,8 +198,7 @@ PLDHashOperator PR_CALLBACK
 EntryEnumerator::enumfunc_createenumerator(CategoryLeaf* aLeaf, void* userArg)
 {
   EntryEnumerator* mythis = NS_STATIC_CAST(EntryEnumerator*, userArg);
-  if (aLeaf->nonpValue)
-    mythis->mArray[mythis->mCount++] = aLeaf->GetKey();
+  mythis->mArray[mythis->mCount++] = aLeaf->GetKey();
 
   return PL_DHASH_NEXT;
 }
@@ -318,18 +316,6 @@ CategoryNode::AddLeaf(const char* aEntryName,
     if (!arenaValue) {
       rv = NS_ERROR_OUT_OF_MEMORY;
     } else {
-      if (_retval) {
-        const char *toDup = leaf->nonpValue ? leaf->nonpValue : leaf->pValue;
-        if (toDup) {
-          *_retval = ToNewCString(nsDependentCString(toDup));
-          if (!*_retval)
-            return NS_ERROR_OUT_OF_MEMORY;
-        }
-        else {
-          *_retval = nsnull;
-        }
-      }
-
       leaf->nonpValue = arenaValue;
       if (aPersist)
         leaf->pValue = arenaValue;
@@ -547,13 +533,12 @@ nsCategoryManager::NotifyObservers( const char *aTopic,
     return;
 
   nsCOMPtr<nsIObserverService> obsProxy;
-  NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+  NS_GetProxyForObject(NS_UI_THREAD_EVENTQ,
                        NS_GET_IID(nsIObserverService),
                        observerService,
-                       NS_PROXY_ASYNC,
+                       PROXY_ASYNC,
                        getter_AddRefs(obsProxy));
-  if (!obsProxy)
-    return;
+  if (!obsProxy) return;
 
   if (aEntryName) {
     nsCOMPtr<nsISupportsCString> entry

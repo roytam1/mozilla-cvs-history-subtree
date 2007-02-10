@@ -43,8 +43,7 @@
 #include "smime.h"
 #include "cms.h"
 #include "nsICMSMessageErrors.h"
-#include "nsIArray.h"
-#include "nsArrayUtils.h"
+#include "nsArray.h"
 #include "nsCertVerificationThread.h"
 
 #include "prlog.h"
@@ -529,7 +528,7 @@ NS_IMETHODIMP nsCMSMessage::CreateEncrypted(nsIArray * aRecipientCerts)
   SECOidTag bulkAlgTag;
   int keySize;
   PRUint32 i;
-  nsCOMPtr<nsIX509Cert2> nssRecipientCert;
+  nsNSSCertificate *nssRecipientCert;
   nsresult rv = NS_ERROR_FAILURE;
 
   // Check the recipient certificates //
@@ -544,7 +543,9 @@ NS_IMETHODIMP nsCMSMessage::CreateEncrypted(nsIArray * aRecipientCerts)
   for (i=0; i<recipientCertCount; i++) {
     nsCOMPtr<nsIX509Cert> x509cert = do_QueryElementAt(aRecipientCerts, i);
 
-    nssRecipientCert = do_QueryInterface(x509cert);
+    nssRecipientCert = 
+      NS_STATIC_CAST(nsNSSCertificate*, 
+                     NS_STATIC_CAST(nsIX509Cert*, x509cert));
 
     if (!nssRecipientCert)
       return NS_ERROR_FAILURE;
@@ -621,22 +622,16 @@ NS_IMETHODIMP nsCMSMessage::CreateSigned(nsIX509Cert* aSigningCert, nsIX509Cert*
   NSSCMSSignedData *sigd;
   NSSCMSSignerInfo *signerinfo;
   CERTCertificate *scert = nsnull, *ecert = nsnull;
-  nsCOMPtr<nsIX509Cert2> aSigningCert2 = do_QueryInterface(aSigningCert);
   nsresult rv = NS_ERROR_FAILURE;
 
   /* Get the certs */
-  if (aSigningCert2) {
-    scert = aSigningCert2->GetCert();
-  }
+  scert = NS_STATIC_CAST(nsNSSCertificate*, aSigningCert)->GetCert();
   if (!scert) {
     return NS_ERROR_FAILURE;
   }
 
   if (aEncryptCert) {
-    nsCOMPtr<nsIX509Cert2> aEncryptCert2 = do_QueryInterface(aEncryptCert);
-    if (aEncryptCert2) {
-      ecert = aEncryptCert2->GetCert();
-    }
+    ecert = NS_STATIC_CAST(nsNSSCertificate*, aEncryptCert)->GetCert();
   }
 
   CERTCertificateCleaner ecertCleaner(ecert);

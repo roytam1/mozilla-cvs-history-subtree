@@ -57,11 +57,6 @@
 #include "nsIServiceManager.h"
 #include "nsITreeColumns.h"
 
-#ifdef ACCESSIBILITY
-#include "nsIAccessible.h"
-#include "nsIAccessibilityService.h"
-#endif
-
 ////////////////////////////////////////////////////////////////////////
 // inDOMViewNode
 
@@ -118,13 +113,11 @@ nsIAtom* inDOMView::kDocumentNodeAtom = nsnull;
 nsIAtom* inDOMView::kDocumentTypeNodeAtom = nsnull;
 nsIAtom* inDOMView::kDocumentFragmentNodeAtom = nsnull;
 nsIAtom* inDOMView::kNotationNodeAtom = nsnull;
-nsIAtom* inDOMView::kAccessibleNodeAtom = nsnull;
 
 inDOMView::inDOMView() :
   mShowAnonymous(PR_FALSE),
   mShowSubDocuments(PR_FALSE),
   mShowWhitespaceNodes(PR_TRUE),
-  mShowAccessibleNodes(PR_FALSE),
   mWhatToShow(nsIDOMNodeFilter::SHOW_ALL)
 {
 }
@@ -147,8 +140,7 @@ inDOMView::~inDOMView()
   {"DOCUMENT_NODE", &inDOMView::kDocumentNodeAtom},
   {"DOCUMENT_TYPE_NODE", &inDOMView::kDocumentTypeNodeAtom},
   {"DOCUMENT_FRAGMENT_NODE", &inDOMView::kDocumentFragmentNodeAtom},
-  {"NOTATION_NODE", &inDOMView::kNotationNodeAtom},
-  {"ACCESSIBLE_NODE", &inDOMView::kAccessibleNodeAtom}
+  {"NOTATION_NODE", &inDOMView::kNotationNodeAtom}
 };
 
 /* static */ void
@@ -163,7 +155,7 @@ inDOMView::InitAtoms()
 NS_IMPL_ISUPPORTS3(inDOMView,
                    inIDOMView,
                    nsITreeView,
-                   nsIMutationObserver)
+                   nsIDocumentObserver)
 
 ////////////////////////////////////////////////////////////////////////
 // inIDOMView
@@ -184,9 +176,9 @@ inDOMView::SetRootNode(nsIDOMNode* aNode)
 
   if (mRootDocument) {
     // remove previous document observer
-    nsCOMPtr<nsINode> doc(do_QueryInterface(mRootDocument));
+    nsCOMPtr<nsIDocument> doc(do_QueryInterface(mRootDocument));
     if (doc)
-      doc->RemoveMutationObserver(this);
+      doc->RemoveObserver(this);
   }
 
   RemoveAllNodes();
@@ -212,9 +204,9 @@ inDOMView::SetRootNode(nsIDOMNode* aNode)
     }
 
     // add document observer
-    nsCOMPtr<nsINode> doc(do_QueryInterface(mRootDocument));
+    nsCOMPtr<nsIDocument> doc(do_QueryInterface(mRootDocument));
     if (doc)
-      doc->AddMutationObserver(this);
+      doc->AddObserver(this);
   } else {
     mRootDocument = nsnull;
   }
@@ -284,20 +276,6 @@ NS_IMETHODIMP
 inDOMView::SetShowWhitespaceNodes(PRBool aShowWhitespaceNodes)
 {
   mShowWhitespaceNodes = aShowWhitespaceNodes;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-inDOMView::GetShowAccessibleNodes(PRBool *aShowAccessibleNodes)
-{
-  *aShowAccessibleNodes = mShowAccessibleNodes;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-inDOMView::SetShowAccessibleNodes(PRBool aShowAccessibleNodes)
-{
-  mShowAccessibleNodes = aShowAccessibleNodes;
   return NS_OK;
 }
 
@@ -392,22 +370,6 @@ inDOMView::GetCellProperties(PRInt32 row, nsITreeColumn* col, nsISupportsArray *
       properties->AppendElement(kNotationNodeAtom);
       break;
   }
-
-#ifdef ACCESSIBILITY
-  if (mShowAccessibleNodes) {
-    nsCOMPtr<nsIAccessibilityService> accService(
-      do_GetService("@mozilla.org/accessibilityService;1"));
-    NS_ENSURE_TRUE(accService, NS_ERROR_FAILURE);
-
-    nsCOMPtr<nsIAccessible> accessible;
-    nsresult rv =
-      accService->GetAttachedAccessibleFor(node->node,
-                                           getter_AddRefs(accessible));
-    if (NS_SUCCEEDED(rv) && accessible)
-      properties->AppendElement(kAccessibleNodeAtom);
-  }
-#endif
-
   return NS_OK;
 }
 
@@ -527,18 +489,10 @@ inDOMView::GetParentIndex(PRInt32 rowIndex, PRInt32 *_retval)
   RowToNode(rowIndex, &node);
   if (!node) return NS_ERROR_FAILURE;
 
-  // GetParentIndex returns -1 if there is no parent  
-  *_retval = -1;
-  
   inDOMViewNode* checkNode = nsnull;
-  PRInt32 i = rowIndex - 1;
+  PRUint32 i = rowIndex - 1;
   do {
-    nsresult rv = RowToNode(i, &checkNode);
-    if (NS_FAILED(rv)) {
-      // No parent. Just break out.
-      break;
-    }
-    
+    RowToNode(i, &checkNode);
     if (checkNode == node->parent) {
       *_retval = i;
       return NS_OK;
@@ -639,13 +593,6 @@ inDOMView::IsEditable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
   return NS_OK;
 }
 
-
-NS_IMETHODIMP
-inDOMView::IsSelectable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
-{
-  return NS_OK;
-}
-
 NS_IMETHODIMP
 inDOMView::IsSeparator(PRInt32 index, PRBool *_retval)
 {
@@ -690,18 +637,17 @@ inDOMView::PerformActionOnCell(const PRUnichar* action, PRInt32 row, nsITreeColu
 }
 
 ///////////////////////////////////////////////////////////////////////
-// nsIMutationObserver
+// nsIDocumentObserver
+
+NS_IMPL_NSIDOCUMENTOBSERVER_CORE_STUB(inDOMView)
+NS_IMPL_NSIDOCUMENTOBSERVER_LOAD_STUB(inDOMView)
+NS_IMPL_NSIDOCUMENTOBSERVER_REFLOW_STUB(inDOMView)
+NS_IMPL_NSIDOCUMENTOBSERVER_STATE_STUB(inDOMView)
+NS_IMPL_NSIDOCUMENTOBSERVER_STYLE_STUB(inDOMView)
 
 void
-inDOMView::NodeWillBeDestroyed(const nsINode* aNode)
-{
-  NS_NOTREACHED("Document destroyed while we're holding a strong ref to it");
-}
-
-void
-inDOMView::AttributeChanged(nsIDocument *aDocument, nsIContent* aContent,
-                            PRInt32 aNameSpaceID, nsIAtom* aAttribute,
-                            PRInt32 aModType)
+inDOMView::AttributeChanged(nsIDocument *aDocument, nsIContent* aContent, PRInt32 aNameSpaceID,
+                            nsIAtom* aAttribute, PRInt32 aModType)
 {
   if (!mTree) {
     return;
@@ -734,19 +680,18 @@ inDOMView::AttributeChanged(nsIDocument *aDocument, nsIContent* aContent,
     inDOMViewNode* contentNode = nsnull;
     PRInt32 contentRow;
     PRInt32 attrRow;
-    if (mRootNode == content &&
-        !(mWhatToShow & nsIDOMNodeFilter::SHOW_ELEMENT)) {
+    if (NS_FAILED(NodeToRow(content, &contentRow))) {
+      return;
+    }
+    RowToNode(contentRow, &contentNode);
+    if (!contentRow || !contentNode->isOpen) {
+      return;
+    }
+    if (mRootNode == content) {
       // if this view has a root node but is not displaying it,
       // it is ok to act as if the changed attribute is on the root.
       attrRow = attrCount - 1;
     } else {
-      if (NS_FAILED(NodeToRow(content, &contentRow))) {
-        return;
-      }
-      RowToNode(contentRow, &contentNode);
-      if (!contentNode->isOpen) {
-        return;
-      }
       attrRow = contentRow + attrCount;
     }
 
@@ -817,22 +762,15 @@ inDOMView::ContentAppended(nsIDocument *aDocument,
     return;
   }
 
-  PRUint32 count = aContainer->GetChildCount();
-  NS_ASSERTION((PRUint32)aNewIndexInContainer < count,
-               "Bogus aNewIndexInContainer");
+  nsIContent *child = aContainer->GetChildAt(aNewIndexInContainer);
 
-  while ((PRUint32)aNewIndexInContainer < count) {
-    nsIContent *child = aContainer->GetChildAt(aNewIndexInContainer);
-
-    ContentInserted(aDocument, aContainer, child, aNewIndexInContainer);
-    ++aNewIndexInContainer;
-  }
+  ContentInserted(aDocument, aContainer, child, aNewIndexInContainer);
 }
 
 void
 inDOMView::CharacterDataChanged(nsIDocument *aDocument,
                                 nsIContent* aContent,
-                                CharacterDataChangeInfo* aInfo)
+                                PRBool aAppend)
 {
 }
 
@@ -862,16 +800,6 @@ inDOMView::ContentInserted(nsIDocument *aDocument, nsIContent* aContainer,
   inDOMViewNode* parentNode = nsnull;
   if (NS_FAILED(rv = RowToNode(parentRow, &parentNode)))
     return;
-
-  if (!parentNode->isOpen) {
-    // Parent is not open, so don't bother creating tree rows for the
-    // kids.  But do indicate that it's now a container, if needed.
-    if (!parentNode->isContainer) {
-      parentNode->isContainer = PR_TRUE;
-      mTree->InvalidateRow(parentRow);
-    }
-    return;
-  }
 
   // get the previous sibling of the inserted content
   nsCOMPtr<nsIDOMNode> previous;
@@ -932,29 +860,13 @@ inDOMView::ContentRemoved(nsIDocument *aDocument, nsIContent* aContainer, nsICon
   if (NS_FAILED(rv = RowToNode(row, &oldNode)))
     return;
 
-  // The parent may no longer be a container.  Note that we don't want
-  // to access oldNode after calling RemoveNode, so do this now.
-  inDOMViewNode* parentNode = oldNode->parent;
-  
-  // Keep track of how many rows we are removing.  It's at least one,
-  // but if we're open it's more.
-  PRInt32 oldCount = GetRowCount();
-  
   if (oldNode->isOpen)
     CollapseNode(row);
 
   RemoveLink(oldNode);
   RemoveNode(row);
 
-  nsINode* container = NODE_FROM(aContainer, aDocument);
-  if (container->GetChildCount() == 0) {
-    // Fix up the parent
-    parentNode->isContainer = PR_FALSE;
-    parentNode->isOpen = PR_FALSE;
-    mTree->InvalidateRow(NodeToRow(parentNode));
-  }
-    
-  mTree->RowCountChanged(row, GetRowCount() - oldCount);
+  mTree->RowCountChanged(row, -1);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -972,12 +884,6 @@ PRInt32
 inDOMView::GetRowCount()
 {
   return mNodes.Count();
-}
-
-PRInt32
-inDOMView::NodeToRow(inDOMViewNode* aNode)
-{
-  return mNodes.IndexOf(aNode);
 }
 
 inDOMViewNode*
@@ -1104,10 +1010,7 @@ void
 inDOMView::CollapseNode(PRInt32 aRow)
 {
   inDOMViewNode* node = nsnull;
-  nsresult rv = RowToNode(aRow, &node);
-  if (NS_FAILED(rv)) {
-    return;
-  }
+  RowToNode(aRow, &node);
 
   PRInt32 row = 0;
   GetLastDescendantOf(node, aRow, &row);
@@ -1292,7 +1195,7 @@ inDOMView::AppendKidsToArray(nsIDOMNodeList* aKids,
   PRUint16 nodeType = 0;
 
   // Try and get DOM Utils in case we don't have one yet.
-  if (!mShowWhitespaceNodes && !mDOMUtils) {
+  if (mShowWhitespaceNodes && !mDOMUtils) {
     mDOMUtils = do_CreateInstance("@mozilla.org/inspector/dom-utils;1");
   }
 

@@ -122,13 +122,12 @@ function showMailIntegrationDialog() {
     }
 }
 
-function verifyAccounts(wizardcallback) 
-{
-  //check to see if the function is called with the callback and if so set the global variable gReturnmycall to true
-  if(wizardcallback)
+function verifyAccounts(wizardcallback) {
+//check to see if the function is called with the callback and if so set the global variable gReturnmycall to true
+    if(wizardcallback)
 		gReturnmycall = true;
 	var openWizard = false;
-  var prefillAccount;
+    var prefillAccount;
 	var state=true;
 	var ret = true;
     
@@ -166,7 +165,7 @@ function verifyAccounts(wizardcallback)
           if (!adminUrl)
             newProfile = false;
         }
-        if ((newProfile  && !accountCount) || accountCount == invalidAccounts.length) {
+        if (newProfile || accountCount == invalidAccounts.length) {
             try {
                   var messengerMigrator = Components.classes[messengerMigratorContractID].getService(Components.interfaces.nsIMessengerMigrator); 
                   messengerMigrator.UpgradePrefs();
@@ -216,14 +215,8 @@ function verifyAccounts(wizardcallback)
             messengerMigrator.createLocalMailAccount(false /* false, since we are not migrating */);
           }
         }
-        
-        // This will only succeed on SeaMonkey windows builds
-        var mapiRegistryProgID = "@mozilla.org/mapiregistry;1" 
-        if (mapiRegistryProgID in Components.classes)
-        {
-          // hack, set a time out to do this, so that the window can load first
-          setTimeout(showMailIntegrationDialog, 0);
-        }
+        // hack, set a time out to do this, so that the window can load first
+        setTimeout("showMailIntegrationDialog();",0);
 
         return ret;
     }

@@ -42,15 +42,15 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+ifndef MOZ_XUL_APP
 DIRS		= classic modern 
+endif
 
 include $(topsrcdir)/config/rules.mk
 
-ifndef MOZ_XUL_APP
 # select classic as the default skin
 libs::
 	echo skin,install,select,classic/1.0 >> $(DIST)/bin/chrome/installed-chrome.txt
 
 install::
 	echo skin,install,select,classic/1.0 >> $(DESTDIR)$(mozappdir)/chrome/installed-chrome.txt
-endif

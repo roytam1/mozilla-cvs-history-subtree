@@ -42,7 +42,6 @@
 #include "nsHashtable.h"
 #include "nsIPref.h"
 #include "nsReadableUtils.h"
-#include "prprf.h"
 
 #include <errno.h>
 #include <string.h>
@@ -56,6 +55,8 @@ static nsIPref* gPref = nsnull;
 
 #undef USER_DEFINED
 #define USER_DEFINED "x-user-def"
+
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
 nsFontMetricsPh::nsFontMetricsPh()
 {
@@ -85,7 +86,7 @@ nsFontMetricsPh::nsFontMetricsPh()
 
 static nsresult InitGlobals()
 {
-  CallGetService(NS_PREF_CONTRACTID, &gPref);
+  CallGetService(kPrefCID, &gPref);
   if (!gPref) return NS_ERROR_FAILURE;
 
 	gFontMetricsCache = new nsHashtable();
@@ -163,16 +164,11 @@ printf( "\n\n\t\t\tIn nsFontMetricsPh::Init str=%s\n", str );
 	const char *cstring;
 	aLangGroup->GetUTF8String( &cstring );
 	
-	char *prop = PR_smprintf( "font.name.%s.%s", str, cstring );
-		
-	char *font_default = NULL;
-	if( prop )
-		{
-		gPref->CopyCharPref( prop, &font_default );
-		PR_smprintf_free( prop );
-		}
-	else gPref->CopyCharPref( "font.name.serif.x-western", &font_default );
+	char prop[256];
+	sprintf( prop, "font.name.%s.%s", str, cstring );
 
+	char *font_default = NULL;
+	gPref->CopyCharPref( prop, &font_default );
 	if( font_default )
 		{
 		free (str);

@@ -143,7 +143,7 @@
         <parameter name="aEventType"/>
         <body>
           var e = document.createEvent("Events");
-          e.initEvent(this.eventPrefix + aEventType, true, true);
+          e.initEvent(this.eventPrefix + aEventType, false, true);
           this.dispatchEvent(e);
         </body>
       </method>
@@ -616,7 +616,7 @@
         <xul:vbox flex="1" class="addonTextBox">
           <xul:hbox class="addon-name-version" xbl:inherits="name, version"/>
           <xul:progressmeter class="extension-item-progress" xbl:inherits="value=progress"/>
-          <xul:label class="extension-item-status" xbl:inherits="value=status" value="&installWaiting.label;"/>
+          <xul:label class="extension-item-status" xbl:inherits="value=status"/>
         </xul:vbox>
       </xul:hbox>
     </content>  
@@ -632,10 +632,12 @@
       <xul:label class="viewButtonLabel" xbl:inherits="value=label"/>
     </content>
     <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULListitem;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"]
+                                       .getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULListitemAccessible(this);
           ]]>
         </getter>
       </property>

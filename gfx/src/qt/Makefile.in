@@ -70,11 +70,13 @@ REQUIRES	= xpcom \
 
 CPPSRCS		= \
 		nsDeviceContextQt.cpp \
+		nsDeviceContextSpecFactoryQt.cpp \
 		nsDeviceContextSpecQt.cpp \
 		nsDrawingSurfaceQt.cpp \
 		nsFontMetricsQt.cpp \
 		nsGfxFactoryQt.cpp \
 		nsImageQt.cpp \
+		nsNativeThemeQt.cpp \
 		nsRegionQt.cpp \
 		nsRenderingContextQt.cpp \
 		nsScreenManagerQt.cpp \

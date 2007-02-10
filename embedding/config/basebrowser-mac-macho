@@ -72,6 +72,7 @@ components/dom_traversal.xpt
 components/dom_views.xpt
 components/dom_xbl.xpt
 components/dom_xul.xpt
+components/dom_storage.xpt
 
 ; editor
 components/libeditor.dylib                   
@@ -87,10 +88,9 @@ components/windowwatcher.xpt
 components/txtsvc.xpt
 
 ; gfx
-components/libgkgfxthebes.dylib                     
+components/libgfx_mac.dylib                     
 components/gfx.xpt 
 libgkgfx.dylib 
-libthebes.dylib 
 
 ; jar
 components/libjar50.dylib
@@ -111,8 +111,10 @@ components/layout_printing.xpt
 libmozz.dylib
 components/libnecko.dylib                    
 components/necko.xpt                    
+components/libnecko2.dylib                   
 components/necko_about.xpt              
 components/necko_cache.xpt              
+components/necko_data.xpt               
 components/necko_dns.xpt                
 components/necko_ftp.xpt                
 components/necko_http.xpt               
@@ -178,14 +180,13 @@ components/shistory.xpt
 
 ; optional typeaheadfind 
 ; (docs at http://www.mozilla.org/projects/ui/accessibility/typeaheadfind.html)
-;components/suitetypeaheadfind.shlb
-;components/suitetypeaheadfind.xpt
+;components/typeaheadfind.shlb
+;components/typeaheadfind.xpt
 
 ; required l10n libraries
 
 components/libuconv.dylib
 components/libi18n.dylib
-components/libchardet.dylib
 components/uconv.xpt
 components/unicharutil.xpt
 components/intl.xpt
@@ -209,8 +210,9 @@ components/libwidget_mac.dylib
 components/widget.xpt
 libwidget.rsrc
 
-; xmlextras, optional for XPointer support
+; xmlextras, optional for XMLHttpRequest support
 components/libxmlextras.dylib
+components/xmlextras.xpt
 
 ; xpconnect
 components/libxpconnect.dylib
@@ -246,6 +248,7 @@ res/entityTables/htmlEntityVersions.properties
 res/entityTables/html40Latin1.properties
 res/entityTables/html40Symbols.properties
 res/entityTables/transliterate.properties
+res/fonts/fontEncoding.properties
 
 ;
 ; Optional for MathML
@@ -270,7 +273,5 @@ components/p3p.xpt
 
 ; svg
 components/dom_svg.xpt
+components/gksvgrenderer.xpt
 res/svg.css
-
-; Effective TLD
-res/effective_tld_names.dat

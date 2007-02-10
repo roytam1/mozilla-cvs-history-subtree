@@ -1,6 +1,5 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/* vim:set ts=4 sw=4 sts=4 ci et: */
-/*
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -61,17 +60,14 @@
 #include "ProxyJNI.h"
 #include "nsIPluginHost.h"
 #include "nsIServiceManager.h"
-#include "nsIThreadManager.h"
-#include "nsIThread.h"
-#include "nsXPCOMCIDInternal.h"
-#include "nsAutoLock.h"
-#include "nsAutoPtr.h"
+#include "nsIEventQueueService.h"
 
 // All these interfaces are necessary just to get the damn
 // nsIWebBrowserChrome to send the "Starting Java" message to the status
 // bar.
 #include "nsIWindowWatcher.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsPresContext.h"
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
@@ -103,9 +99,13 @@ extern "C" int XP_JAVA_GENERAL_FAILURE;
 extern "C" int XP_JAVA_STARTUP_FAILED;
 extern "C" int XP_JAVA_DEBUGGER_FAILED;
 
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
+
 static NS_DEFINE_CID(kJVMManagerCID, NS_JVMMANAGER_CID);
 
 static NS_DEFINE_CID(kPluginManagerCID, NS_PLUGINMANAGER_CID);
+
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 // FIXME -- need prototypes for these functions!!! XXX
 #ifdef XP_MAC
@@ -118,7 +118,7 @@ void stopAsyncCursors(void);
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIJVMManagerIID, NS_IJVMMANAGER_IID);
-static NS_DEFINE_IID(kIJVMThreadManagerIID, NS_IJVMTHREADMANAGER_IID);
+static NS_DEFINE_IID(kIThreadManagerIID, NS_ITHREADMANAGER_IID);
 static NS_DEFINE_IID(kILiveConnectManagerIID, NS_ILIVECONNECTMANAGER_IID);
 static NS_DEFINE_IID(kIJVMPluginIID, NS_IJVMPLUGIN_IID);
 
@@ -191,7 +191,7 @@ nsJVMManager::ShowJavaConsole(void)
     
     if (!fStartupMessagePosted) {
         PRUnichar *messageUni;
-        nsCOMPtr<nsIStringBundleService> strings(do_GetService(NS_STRINGBUNDLE_CONTRACTID));
+        nsCOMPtr<nsIStringBundleService> strings(do_GetService(kStringBundleServiceCID));
         nsCOMPtr<nsIStringBundle> regionalBundle;
         
         rv = this->GetChrome(getter_AddRefs(chrome));
@@ -228,7 +228,7 @@ nsJVMManager::ShowJavaConsole(void)
     return NS_OK;
 }
     
-// nsIJVMThreadManager:
+// nsIThreadManager:
 
 NS_METHOD
 nsJVMManager::GetCurrentThread(PRThread* *threadID)
@@ -292,95 +292,77 @@ nsJVMManager::CreateThread(PRThread **outThread, nsIRunnable* runnable)
 	return (thread != NULL ?  NS_OK : NS_ERROR_FAILURE);
 }
 
-class nsJVMSyncEvent : public nsIRunnable
-{
-public:
-    NS_DECL_ISUPPORTS
+struct JVMRunnableEvent : PLEvent {
+	JVMRunnableEvent(nsIRunnable* runnable);
+	~JVMRunnableEvent();
 
-    nsJVMSyncEvent() : mMonitor(nsnull), mRealEvent(nsnull) {
-    }
-
-    ~nsJVMSyncEvent() {
-        nsAutoMonitor::DestroyMonitor(mMonitor);
-    }
-
-    nsresult Init(nsIRunnable *realEvent) {
-        mMonitor = nsAutoMonitor::NewMonitor("nsJVMSyncEvent");
-        if (!mMonitor)
-            return NS_ERROR_OUT_OF_MEMORY;
-
-        mRealEvent = realEvent;
-        return NS_OK;
-    }
-
-    void Wait() {
-        nsAutoMonitor mon(mMonitor);
-        while (mRealEvent)
-            mon.Wait();
-    }
-
-    NS_IMETHOD Run() {
-        mRealEvent->Run();
-
-        nsAutoMonitor mon(mMonitor);
-        mRealEvent = nsnull;
-        mon.Notify();
-        return NS_OK;
-    }
-
-    PRMonitor   *mMonitor;
-    nsIRunnable *mRealEvent;  // non-owning reference
+	nsIRunnable* mRunnable;	
 };
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsJVMSyncEvent, nsIRunnable)
+
+static void PR_CALLBACK
+handleRunnableEvent(JVMRunnableEvent* aEvent)
+{
+	aEvent->mRunnable->Run();
+}
+
+static void PR_CALLBACK
+destroyRunnableEvent(JVMRunnableEvent* aEvent)
+{
+	delete aEvent;
+}
+
+JVMRunnableEvent::JVMRunnableEvent(nsIRunnable* runnable)
+	:	mRunnable(runnable)
+{
+	NS_ADDREF(mRunnable);
+	PL_InitEvent(this, nsnull, PLHandleEventProc(handleRunnableEvent), PLDestroyEventProc(&destroyRunnableEvent));
+}
+
+JVMRunnableEvent::~JVMRunnableEvent()
+{
+	NS_RELEASE(mRunnable);
+}
 
 NS_METHOD
-nsJVMManager::PostEvent(PRThread* prthread, nsIRunnable* runnable, PRBool async)
+nsJVMManager::PostEvent(PRThread* thread, nsIRunnable* runnable, PRBool async)
 {
     nsresult rv;
-    nsCOMPtr<nsIThreadManager> mgr =
-            do_GetService(NS_THREADMANAGER_CONTRACTID, &rv);
+    nsCOMPtr<nsIEventQueueService> eventService = 
+             do_GetService(kEventQueueServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    // Maintain backwards compatibility with earlier versions of Mozilla that
-    // supported special pointer constants for the current and main threads.
-    nsCOMPtr<nsIThread> thread;
-    if (prthread == (PRThread *) 0) {
-        rv = mgr->GetCurrentThread(getter_AddRefs(thread));
-    } else if (prthread == (PRThread *) 1) {
-        rv = mgr->GetMainThread(getter_AddRefs(thread));
-    } else {
-        rv = mgr->GetThreadFromPRThread(prthread, getter_AddRefs(thread));
-    }
+    nsCOMPtr<nsIEventQueue> eventQueue = NULL;
+    rv = eventService->GetThreadEventQueue(thread, getter_AddRefs(eventQueue));
     if (NS_FAILED(rv)) return rv;
 
-    NS_ENSURE_STATE(thread);
+    JVMRunnableEvent* runnableEvent = new JVMRunnableEvent(runnable);
+    if (runnableEvent == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    if (async)
+        eventQueue->PostEvent(runnableEvent);
+    else
+        eventQueue->PostSynchronousEvent(runnableEvent, nsnull);
+    return rv;
+}
 
-    nsRefPtr<nsJVMSyncEvent> syncEv;
-    if (!async) {
-        // Maybe we can just invoke the runnable directly...
-        PRBool isCur;
-        if (NS_SUCCEEDED(thread->IsOnCurrentThread(&isCur)) && isCur) {
-            runnable->Run();
-            return NS_OK;
-        }
+NS_METHOD
+nsJVMManager::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
+{
+	 if (!aInstancePtr)
+		  return NS_ERROR_INVALID_POINTER;
+	 *aInstancePtr = nsnull;
 
-        // Otherwise, use a wrapper event to wait for the actual event to run.
-        syncEv = new nsJVMSyncEvent();
-        if (!syncEv)
-            return NS_ERROR_OUT_OF_MEMORY;
-        rv = syncEv->Init(runnable);
-        if (NS_FAILED(rv)) return rv;
+    if (outer && !aIID.Equals(kISupportsIID))
+        return NS_ERROR_INVALID_ARG; 
+    nsJVMManager* jvmmgr = new nsJVMManager(outer);
+    if (jvmmgr == NULL)
+        return NS_ERROR_OUT_OF_MEMORY;
 
-        runnable = syncEv;
-    }
+	 nsresult rv = jvmmgr->AggregatedQueryInterface(aIID, aInstancePtr);
+	 if(NS_FAILED(rv))
+		  delete jvmmgr;
 
-    rv = thread->Dispatch(runnable, NS_DISPATCH_NORMAL);
-    if (NS_FAILED(rv)) return rv;
-
-    if (!async)
-        syncEv->Wait();
-
-    return NS_OK;
+	 return rv;
 }
 
 nsJVMManager::nsJVMManager(nsISupports* outer)
@@ -417,7 +399,7 @@ nsJVMManager::~nsJVMManager()
     }
 }
 
-nsresult
+NS_METHOD
 nsJVMManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
     if (aIID.Equals(kIJVMManagerIID)) {
@@ -425,8 +407,8 @@ nsJVMManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
         NS_ADDREF_THIS();
         return NS_OK;
     }
-    if (aIID.Equals(kIJVMThreadManagerIID)) {
-        *aInstancePtr = (void*) NS_STATIC_CAST(nsIJVMThreadManager*, this);
+    if (aIID.Equals(kIThreadManagerIID)) {
+        *aInstancePtr = (void*) NS_STATIC_CAST(nsIThreadManager*, this);
         NS_ADDREF_THIS();
         return NS_OK;
     }
@@ -436,7 +418,7 @@ nsJVMManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
         return NS_OK;
     }
     if (aIID.Equals(kISupportsIID)) {
-        *aInstancePtr = InnerObject();
+        *aInstancePtr = GetInner();
         NS_ADDREF((nsISupports*)*aInstancePtr);
         return NS_OK;
     }
@@ -811,12 +793,12 @@ nsJVMManager::GetChrome(nsIWebBrowserChrome **theChrome)
     }
     nsCOMPtr<nsIDOMWindow> domWindow;
     windowWatcher->GetActiveWindow(getter_AddRefs(domWindow));
-    nsCOMPtr<nsPIDOMWindow> window =
+    nsCOMPtr<nsIScriptGlobalObject> scriptObject =
         do_QueryInterface(domWindow, &rv);
-    if (!window) {
+    if (!scriptObject) {
         return rv;
     }
-    nsIDocShell *docShell = window->GetDocShell();
+    nsIDocShell *docShell = scriptObject->GetDocShell();
     if (!docShell) {
         return NS_OK;
     }
@@ -863,7 +845,7 @@ nsJVMManager::GetJVMStatus(void)
     return fStatus;
 }
 
-extern "C" NS_VISIBILITY_DEFAULT nsresult JSJ_RegisterLiveConnectFactory(void);
+extern "C" nsresult JSJ_RegisterLiveConnectFactory(void);
 
 PRBool
 nsJVMManager::MaybeStartupLiveConnect(void)

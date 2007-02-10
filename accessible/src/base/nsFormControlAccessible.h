@@ -41,10 +41,23 @@
 
 #include "nsBaseWidgetAccessible.h"
 
-typedef nsLeafAccessible nsFormControlAccessible;
+/**
+  * This supports name and state information for both XUL and HTML
+  *   widgets. Designed to be a base class for the impls of XUL
+  *   and HTML form widget Accessibles
+  */
+class nsFormControlAccessible : public nsAccessibleWrap
+{
+public:
+  nsFormControlAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell);
+  NS_DECL_ISUPPORTS_INHERITED
+  NS_IMETHOD GetFirstChild(nsIAccessible **_retval);
+  NS_IMETHOD GetLastChild(nsIAccessible **_retval);
+  NS_IMETHOD GetChildCount(PRInt32 *_retval);
+};
 
 /**
-  * nsRadioButtonAccessible
+  *
   */
 class nsRadioButtonAccessible : public nsFormControlAccessible
 {
@@ -54,8 +67,6 @@ public:
   NS_IMETHOD GetRole(PRUint32 *_retval); 
   NS_IMETHOD GetNumActions(PRUint8 *_retval);
   NS_IMETHOD GetActionName(PRUint8 index, nsAString& _retval);
-  NS_IMETHOD DoAction(PRUint8 aIndex);
-  enum { eAction_Click = 0 };
 };
 
 

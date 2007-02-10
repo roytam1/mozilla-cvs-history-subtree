@@ -2,29 +2,28 @@
 /* vim:expandtab:shiftwidth=4:tabstop=4:
  */
 /* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are Copyright (C) 2002
- * the Initial Developer. All Rights Reserved.
+ * The Initial Developer of the Original Code is Sun Microsystems, Inc.
+ * Portions created by Sun Microsystems are Copyright (C) 2002 Sun
+ * Microsystems, Inc. All Rights Reserved.
  *
- * Contributor(s):
- *   Bolian Yin (bolian.yin@sun.com)
- *   John Sun (john.sun@sun.com)
- *   Ginn Chen (ginn.chen@sun.com)
+ * Original Author: Bolian Yin (bolian.yin@sun.com)
+ *
+ * Contributor(s): John Sun (john.sun@sun.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -32,25 +31,21 @@
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
+ * use your version of this file under the terms of the NPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsMai.h"
-#include "nsAutoPtr.h"
-#include "nsRootAccessible.h"
 #include "nsDocAccessibleWrap.h"
 #include "nsAccessibleEventData.h"
 
 #include <atk/atk.h>
 #include <glib.h>
 #include <glib-object.h>
-
-#include "nsStateMap.h"
 
 //----- nsDocAccessibleWrap -----
 
@@ -60,24 +55,28 @@
  */
 static char * sAtkPropertyNameArray[PROP_LAST] = {
     0,
-    "accessible-name",
-    "accessible-description",
-    "accessible-parent",
-    "accessible-value",
-    "accessible-role",
-    "accessible-layer",
-    "accessible-mdi-zorder",
-    "accessible-table-caption",
-    "accessible-table-column-description",
-    "accessible-table-column-header",
-    "accessible-table-row-description",
-    "accessible-table-row-header",
-    "accessible-table-summary"
+    "accessible_name",
+    "accessible_description",
+    "accessible_parent",
+    "accessible_value",
+    "accessible_role",
+    "accessible_layer",
+    "accessible_mdi_zorder",
+    "accessible_table_caption",
+    "accessible_table_column_description",
+    "accessible_table_column_header",
+    "accessible_table_row_description",
+    "accessible_table_row_header",
+    "accessible_table_summary"
 };
+
+static  AtkStateType TranslateAState(PRUint32 aState, PRUint32 aExtState);
+
+NS_IMPL_ISUPPORTS_INHERITED2(nsDocAccessibleWrap, nsDocAccessible, nsIAccessibleText, nsIAccessibleEditableText)
 
 nsDocAccessibleWrap::nsDocAccessibleWrap(nsIDOMNode *aDOMNode,
                                          nsIWeakReference *aShell): 
-  nsDocAccessible(aDOMNode, aShell), mActivated(PR_FALSE)
+  nsDocAccessible(aDOMNode, aShell), nsAccessibleEditableText(aDOMNode)
 {
 }
 
@@ -106,53 +105,52 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
 
     switch (aEvent) {
     case nsIAccessibleEvent::EVENT_FOCUS:
-      {
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_FOCUS\n"));
-        nsRefPtr<nsRootAccessible> rootAccWrap = accWrap->GetRootAccessible();
-        if (rootAccWrap && rootAccWrap->mActivated) {
-          atk_focus_tracker_notify(accWrap->GetAtkObject());
-        }
+        atk_focus_tracker_notify(accWrap->GetAtkObject());
         rv = NS_OK;
-      } break;
+        break;
 
     case nsIAccessibleEvent::EVENT_STATE_CHANGE:
-      {
+        AtkStateChange *pAtkStateChange;
+        AtkStateType atkState;
+
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_STATE_CHANGE\n"));
-        NS_ASSERTION(aEventData, "Event needs event data");
         if (!aEventData)
             break;
 
-        StateChange *pStateChange = NS_REINTERPRET_CAST(StateChange *, aEventData);
-        PRInt32 stateIndex = AtkStateMap::GetStateIndexFor(pStateChange->state);
-        if (stateIndex >= 0) {
-          const AtkStateMap *atkStateMap = pStateChange->isExtendedState ? gAtkStateMapExt : gAtkStateMap;
-          NS_ASSERTION(atkStateMap[stateIndex].stateMapEntryType != kNoSuchState, "No such state");
-          if (atkStateMap[stateIndex].atkState != kNone) {
-            NS_ASSERTION(atkStateMap[stateIndex].stateMapEntryType != kNoStateChange,
-                         "State changes should not fired for this state");
-            if (atkStateMap[stateIndex].stateMapEntryType == kMapOpposite) {
-              pStateChange->enable = !pStateChange->enable;
-            }
-            // Fire state change for first state if there is one to map
-            atk_object_notify_state_change(accWrap->GetAtkObject(),
-                                           atkStateMap[stateIndex].atkState, pStateChange->enable);
-          }
+        pAtkStateChange = NS_REINTERPRET_CAST(AtkStateChange *, aEventData);
+
+        switch (pAtkStateChange->state) {
+        case nsIAccessible::STATE_INVISIBLE:
+            atkState = ATK_STATE_VISIBLE;
+            pAtkStateChange->enable = !pAtkStateChange->enable;
+            break;
+        case nsIAccessible::STATE_UNAVAILABLE:
+            atkState = ATK_STATE_ENABLED;
+            pAtkStateChange->enable = !pAtkStateChange->enable;
+            break;
+        case nsIAccessible::STATE_READONLY:
+            atkState = ATK_STATE_EDITABLE;
+            pAtkStateChange->enable = !pAtkStateChange->enable;
+            break;
+        default:
+            atkState = TranslateAState(pAtkStateChange->state, pAtkStateChange->extState);
         }
+
+        atk_object_notify_state_change(accWrap->GetAtkObject(),
+                                       atkState, pAtkStateChange->enable);
         rv = NS_OK;
-      }
-      break;
+        break;
       
         /*
          * More complex than I ever thought.
          * Need handle them separately.
          */
     case nsIAccessibleEvent::EVENT_ATK_PROPERTY_CHANGE :
-      {
         AtkPropertyChange *pAtkPropChange;
-        AtkPropertyValues values = { NULL };
+        AtkPropertyValues values;
 
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_ATK_PROPERTY_CHANGE\n"));
-        NS_ASSERTION(aEventData, "Event needs event data");
         if (!aEventData)
             break;
 
@@ -195,22 +193,6 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
                                                  pAtkPropChange->newvalue));
             rv = NS_OK;
             break;
-        case PROP_VALUE:
-            {
-              // Old value not used for anything other than state change events
-              nsCOMPtr<nsIAccessibleValue> accValue(do_QueryInterface(aAccessible, &rv));
-              if (!NS_SUCCEEDED(rv)) {
-                break;
-              }
-              double newValue;
-              rv = accValue->GetCurrentValue(&newValue);
-              if (!NS_SUCCEEDED(rv)) {
-                break;
-              }
-              g_value_init(&values.new_value, G_TYPE_DOUBLE);
-              g_value_set_double(&values.new_value, newValue);
-            }
-            break;
   
             //Perhaps need more cases in the future
         default:
@@ -227,7 +209,7 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
                                   &values, NULL);
             g_free (signal_name);
         }
-      }
+
         break;
 
     case nsIAccessibleEvent::EVENT_ATK_SELECTION_CHANGE:
@@ -241,7 +223,6 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
         AtkTextChange *pAtkTextChange;
 
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_ATK_TEXT_CHANGE\n"));
-        NS_ASSERTION(aEventData, "Event needs event data");
         if (!aEventData)
             break;
 
@@ -263,7 +244,6 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
 
     case nsIAccessibleEvent::EVENT_ATK_TEXT_CARET_MOVE:
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_ATK_TEXT_CARET_MOVE\n"));
-        NS_ASSERTION(aEventData, "Event needs event data");
         if (!aEventData)
             break;
 
@@ -284,7 +264,6 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
 
     case nsIAccessibleEvent::EVENT_ATK_TABLE_ROW_INSERT:
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_ATK_TABLE_ROW_INSERT\n"));
-        NS_ASSERTION(aEventData, "Event needs event data");
         if (!aEventData)
             break;
 
@@ -301,7 +280,6 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
         
     case nsIAccessibleEvent::EVENT_ATK_TABLE_ROW_DELETE:
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_ATK_TABLE_ROW_DELETE\n"));
-        NS_ASSERTION(aEventData, "Event needs event data");
         if (!aEventData)
             break;
 
@@ -325,7 +303,6 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
 
     case nsIAccessibleEvent::EVENT_ATK_TABLE_COLUMN_INSERT:
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_ATK_TABLE_COLUMN_INSERT\n"));
-        NS_ASSERTION(aEventData, "Event needs event data");
         if (!aEventData)
             break;
 
@@ -342,7 +319,6 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
 
     case nsIAccessibleEvent::EVENT_ATK_TABLE_COLUMN_DELETE:
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_ATK_TABLE_COLUMN_DELETE\n"));
-        NS_ASSERTION(aEventData, "Event needs event data");
         if (!aEventData)
             break;
 
@@ -425,20 +401,22 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
          */
     case nsIAccessibleEvent::EVENT_MENUSTART:
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_MENUSTART\n"));
+        atk_focus_tracker_notify(accWrap->GetAtkObject());
+        g_signal_emit_by_name(accWrap->GetAtkObject(),
+                              "selection_changed");
         rv = NS_OK;
         break;
 
     case nsIAccessibleEvent::EVENT_MENUEND:
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_MENUEND\n"));
+        g_signal_emit_by_name(accWrap->GetAtkObject(),
+                              "selection_changed");
         rv = NS_OK;
         break;
 
     case nsIAccessibleEvent::EVENT_ATK_WINDOW_ACTIVATE:
       {
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_ATK_WINDOW_ACTIVATED\n"));
-        nsDocAccessibleWrap *accDocWrap =
-          NS_STATIC_CAST(nsDocAccessibleWrap *, aAccessible);
-        accDocWrap->mActivated = PR_TRUE;
         AtkObject *accessible = accWrap->GetAtkObject();
         guint id = g_signal_lookup ("activate", MAI_TYPE_ATK_OBJECT);
         g_signal_emit(accessible, id, 0);
@@ -448,66 +426,11 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
     case nsIAccessibleEvent::EVENT_ATK_WINDOW_DEACTIVATE:
       {
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_ATK_WINDOW_DEACTIVATED\n"));
-        nsDocAccessibleWrap *accDocWrap =
-          NS_STATIC_CAST(nsDocAccessibleWrap *, aAccessible);
-        accDocWrap->mActivated = PR_FALSE;
         AtkObject *accessible = accWrap->GetAtkObject();
         guint id = g_signal_lookup ("deactivate", MAI_TYPE_ATK_OBJECT);
         g_signal_emit(accessible, id, 0);
         rv = NS_OK;
       } break;
-
-    case nsIAccessibleEvent::EVENT_DOCUMENT_LOAD_COMPLETE:
-      {
-        MAI_LOG_DEBUG(("\n\nReceived: EVENT_DOCUMENT_LOAD_COMPLETE\n"));
-        g_signal_emit_by_name (accWrap->GetAtkObject(),
-                               "load_complete");
-        rv = NS_OK;
-      } break;
-
-    case nsIAccessibleEvent::EVENT_DOCUMENT_RELOAD:
-      {
-        MAI_LOG_DEBUG(("\n\nReceived: EVENT_DOCUMENT_RELOAD\n"));
-        g_signal_emit_by_name (accWrap->GetAtkObject(),
-                               "reload");
-        rv = NS_OK;
-      } break;
-
-    case nsIAccessibleEvent::EVENT_DOCUMENT_LOAD_STOPPED:
-      {
-        MAI_LOG_DEBUG(("\n\nReceived: EVENT_DOCUMENT_LOAD_STOPPED\n"));
-        g_signal_emit_by_name (accWrap->GetAtkObject(),
-                               "load_stopped");
-        rv = NS_OK;
-      } break;
-
-    case nsIAccessibleEvent::EVENT_DOCUMENT_ATTRIBUTES_CHANGED:
-      {
-        MAI_LOG_DEBUG(("\n\nReceived: EVENT_DOCUMENT_ATTRIBUTES_CHANGED\n"));
-        g_signal_emit_by_name (accWrap->GetAtkObject(),
-                               "attributes_changed");
-        rv = NS_OK;
-      } break;
-
-    case nsIAccessibleEvent::EVENT_SHOW:
-    case nsIAccessibleEvent::EVENT_MENUPOPUPSTART:
-        MAI_LOG_DEBUG(("\n\nReceived: EVENT_SHOW\n"));
-        atk_object_notify_state_change(accWrap->GetAtkObject(),
-                                       ATK_STATE_VISIBLE, PR_TRUE);
-        atk_object_notify_state_change(accWrap->GetAtkObject(),
-                                       ATK_STATE_SHOWING, PR_TRUE);
-        rv = NS_OK;
-        break;
-
-    case nsIAccessibleEvent::EVENT_HIDE:
-    case nsIAccessibleEvent::EVENT_MENUPOPUPEND:
-        MAI_LOG_DEBUG(("\n\nReceived: EVENT_HIDE\n"));
-        atk_object_notify_state_change(accWrap->GetAtkObject(),
-                                       ATK_STATE_VISIBLE, PR_FALSE);
-        atk_object_notify_state_change(accWrap->GetAtkObject(),
-                                       ATK_STATE_SHOWING, PR_FALSE);
-        rv = NS_OK;
-        break;
 
     default:
         // Don't transfer others
@@ -516,4 +439,119 @@ NS_IMETHODIMP nsDocAccessibleWrap::FireToolkitEvent(PRUint32 aEvent,
     }
 
     return rv;
+}
+
+/* static */
+AtkStateType
+TranslateAState(PRUint32 aState, PRUint32 aExtState)
+{
+    switch (aState) {
+    case nsIAccessible::STATE_SELECTED:
+        return ATK_STATE_SELECTED;
+    case nsIAccessible::STATE_FOCUSED:
+        return ATK_STATE_FOCUSED;
+    case nsIAccessible::STATE_PRESSED:
+        return ATK_STATE_PRESSED;
+    case nsIAccessible::STATE_CHECKED:
+        return ATK_STATE_CHECKED;
+    case nsIAccessible::STATE_EXPANDED:
+        return ATK_STATE_EXPANDED;
+    case nsIAccessible::STATE_COLLAPSED:
+        return ATK_STATE_EXPANDABLE;
+        // The control can't accept input at this time
+    case nsIAccessible::STATE_BUSY:
+        return ATK_STATE_BUSY;
+    case nsIAccessible::STATE_FOCUSABLE:
+        return ATK_STATE_FOCUSABLE;
+    case nsIAccessible::STATE_SELECTABLE:
+        return ATK_STATE_SELECTABLE;
+    case nsIAccessible::STATE_SIZEABLE:
+        return ATK_STATE_RESIZABLE;
+    case nsIAccessible::STATE_MULTISELECTABLE:
+        return ATK_STATE_MULTISELECTABLE;
+
+#if 0
+        // The following states are opposite the MSAA states.
+        // We need to deal with them specially
+    case nsIAccessible::STATE_INVISIBLE:
+        return !ATK_STATE_VISIBLE;
+
+    case nsIAccessible::STATE_UNAVAILABLE:
+        return !ATK_STATE_ENABLED;
+
+    case nsIAccessible::STATE_READONLY:
+        return !ATK_STATE_EDITABLE;
+#endif
+    }
+
+    // The following state is
+    // Extended state flags (for non-MSAA, for Java and Gnome/ATK support)
+    switch (aExtState) {
+    case nsIAccessible::EXT_STATE_ACTIVE:
+        return ATK_STATE_ACTIVE;
+    case nsIAccessible::EXT_STATE_EXPANDABLE:
+        return ATK_STATE_EXPANDABLE;
+#if 0
+        // Need change definitions in nsIAccessible.idl to avoid
+        // duplicate value
+    case nsIAccessible::EXT_STATE_MODAL:
+        return ATK_STATE_MODAL;
+#endif
+    case nsIAccessible::EXT_STATE_MULTI_LINE:
+        return ATK_STATE_MULTI_LINE;
+    case nsIAccessible::EXT_STATE_SENSITIVE:
+        return ATK_STATE_SENSITIVE;
+    case nsIAccessible::EXT_STATE_SHOWING:
+        return ATK_STATE_SHOWING;
+    case nsIAccessible::EXT_STATE_SINGLE_LINE:
+        return ATK_STATE_SINGLE_LINE;
+    case nsIAccessible::EXT_STATE_TRANSIENT:
+        return ATK_STATE_TRANSIENT;
+    case nsIAccessible::EXT_STATE_VERTICAL:
+        return ATK_STATE_VERTICAL;
+    }
+    return ATK_STATE_INVALID;
+}
+
+NS_IMETHODIMP nsDocAccessibleWrap::Shutdown()
+{
+    nsAccessibleEditableText::ShutdownEditor();
+    return nsDocAccessible::Shutdown();
+}
+
+NS_IMETHODIMP nsDocAccessibleWrap::GetRole(PRUint32 *_retval)
+{
+    PRBool isEditable;
+    GetIsEditable(&isEditable);
+
+    if (isEditable)
+        *_retval = ROLE_TEXT;
+    else
+        *_retval = ROLE_HTML_CONTAINER;
+
+    return NS_OK;
+}
+
+void nsDocAccessibleWrap::CheckForEditor()
+{
+    nsDocAccessible::CheckForEditor();
+    if (mEditor)
+        SetEditor(mEditor); // set editor for nsAccessibleEditableText
+}
+
+NS_IMETHODIMP nsDocAccessibleWrap::FireDocLoadingEvent(PRBool aIsFinished)
+{
+  if (!mDocument || !mWeakShell)
+    return NS_OK;  // Document has been shut down
+
+  if (!aIsFinished) {
+    // Load has been verified, it will occur, about to commence
+    AtkChildrenChange childrenData;
+    childrenData.index = -1;
+    childrenData.child = 0;
+    childrenData.add = PR_FALSE;
+    FireToolkitEvent(nsIAccessibleEvent::EVENT_REORDER, this, &childrenData);
+  }
+
+  return nsDocAccessible::FireDocLoadingEvent(aIsFinished);
 }

@@ -41,7 +41,7 @@
 #include "ipcCID.h"
 #include "ipcLockCID.h"
 
-#include "nsThreadUtils.h"
+#include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentRegistrar.h"
 
@@ -72,6 +72,8 @@ static const nsID kTestTargetID =
     } \
     PR_END_MACRO
 
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+static nsIEventQueue* gEventQ = nsnull;
 static PRBool gKeepRunning = PR_TRUE;
 static ipcIService *gIpcServ = nsnull;
 static ipcILockService *gIpcLockServ = nsnull;
@@ -199,6 +201,17 @@ int main(int argc, char **argv)
         if (registrar)
             registrar->AutoRegister(nsnull);
 
+        // Create the Event Queue for this thread...
+        nsCOMPtr<nsIEventQueueService> eqs =
+                 do_GetService(kEventQueueServiceCID, &rv);
+        RETURN_IF_FAILED(rv, "do_GetService(EventQueueService)");
+
+        rv = eqs->CreateMonitoredThreadEventQueue();
+        RETURN_IF_FAILED(rv, "CreateMonitoredThreadEventQueue");
+
+        rv = eqs->GetThreadEventQueue(NS_CURRENT_THREAD, &gEventQ);
+        RETURN_IF_FAILED(rv, "GetThreadEventQueue");
+
         printf("*** getting ipc service\n");
         nsCOMPtr<ipcIService> ipcServ(do_GetService(IPC_SERVICE_CONTRACTID, &rv));
         RETURN_IF_FAILED(rv, "do_GetService(ipcServ)");
@@ -300,17 +313,19 @@ int main(int argc, char **argv)
         rv = gIpcLockServ->AcquireLock("foo", PR_TRUE);
         printf("*** sync AcquireLock returned [rv=%x]\n", rv);
 
-        nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-
-        while (gKeepRunning)
-            NS_ProcessNextEvent(thread);
+        PLEvent *ev;
+        while (gKeepRunning) {
+            gEventQ->WaitForEvent(&ev);
+            gEventQ->HandleEvent(ev);
+        }
 
         NS_RELEASE(gIpcServ);
 
         printf("*** processing remaining events\n");
 
         // process any remaining events
-        NS_ProcessPendingEvents(thread);
+        while (NS_SUCCEEDED(gEventQ->GetEvent(&ev)) && ev)
+            gEventQ->HandleEvent(ev);
 
         printf("*** done\n");
     } // this scopes the nsCOMPtrs

@@ -26,7 +26,6 @@
  *   John Bandhauer <jband@netscape.com>
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *   IBM Corp.
- *   Dan Mosedale <dan.mosedale@oracle.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -45,8 +44,6 @@
 /* XPConnect JavaScript interactive shell. */
 
 #include <stdio.h>
-#include "nsServiceManagerUtils.h"
-#include "nsComponentManagerUtils.h"
 #include "nsIXPConnect.h"
 #include "nsIXPCScriptable.h"
 #include "nsIInterfaceInfo.h"
@@ -352,16 +349,16 @@ Clear(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 }
 
 static JSFunctionSpec glob_functions[] = {
-    {"print",           Print,          0,0,0},
-    {"load",            Load,           1,0,0},
-    {"quit",            Quit,           0,0,0},
-    {"version",         Version,        1,0,0},
-    {"build",           BuildDate,      0,0,0},
-    {"dumpXPC",         DumpXPC,        1,0,0},
-    {"dump",            Dump,           1,0,0},
-    {"gc",              GC,             0,0,0},
-    {"clear",           Clear,          1,0,0},
-    {nsnull,nsnull,0,0,0}
+    {"print",           Print,          0},
+    {"load",            Load,           1},
+    {"quit",            Quit,           0},
+    {"version",         Version,        1},
+    {"build",           BuildDate,      0},
+    {"dumpXPC",         DumpXPC,        1},
+    {"dump",            Dump,           1},
+    {"gc",              GC,             0},
+    {"clear",           Clear,          1},
+    {0}
 };
 
 JSClass global_class = {
@@ -385,8 +382,7 @@ env_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
         return JS_FALSE;
     name = JS_GetStringBytes(idstr);
     value = JS_GetStringBytes(valstr);
-#if defined XP_WIN || defined HPUX || defined OSF1 || defined IRIX \
-    || defined SCO
+#if defined XP_WIN || defined HPUX || defined OSF1 || defined IRIX
     {
         char *waste = JS_smprintf("%s=%s", name, value);
         if (!waste) {
@@ -556,8 +552,7 @@ GetLine(JSContext *cx, char *bufp, FILE *file, const char *prompt) {
 }
 
 static void
-ProcessFile(JSContext *cx, JSObject *obj, const char *filename, FILE *file,
-            JSBool forceTTY)
+ProcessFile(JSContext *cx, JSObject *obj, const char *filename, FILE *file)
 {
     JSScript *script;
     jsval result;
@@ -566,9 +561,7 @@ ProcessFile(JSContext *cx, JSObject *obj, const char *filename, FILE *file,
     char *bufp, buffer[4096];
     JSString *str;
 
-    if (forceTTY) {
-        file = stdin;
-    } else if (!isatty(fileno(file))) {
+    if (!isatty(fileno(file))) {
         /*
          * It's not interactive - just execute it.
          *
@@ -596,7 +589,6 @@ ProcessFile(JSContext *cx, JSObject *obj, const char *filename, FILE *file,
             JS_DestroyScript(cx, script);
         }
         DoEndRequest(cx);
-
         return;
     }
 
@@ -644,21 +636,36 @@ ProcessFile(JSContext *cx, JSObject *obj, const char *filename, FILE *file,
                     else
                         ok = JS_FALSE;
                 }
+#if 0
+#if JS_HAS_ERROR_EXCEPTIONS
+                /*
+                 * Require that any time we return failure, an exception has
+                 * been set.
+                 */
+                JS_ASSERT(ok || JS_IsExceptionPending(cx));
+    
+                /*
+                 * Also that any time an exception has been set, we've
+                 * returned failure.
+                 */
+                JS_ASSERT(!JS_IsExceptionPending(cx) || !ok);
+#endif /* JS_HAS_ERROR_EXCEPTIONS */
+#endif
             }
             JS_DestroyScript(cx, script);
         }
         DoEndRequest(cx);
     } while (!hitEOF && !gQuitting);
-
     fprintf(gOutFile, "\n");
+    return;
 }
 
 static void
-Process(JSContext *cx, JSObject *obj, const char *filename, JSBool forceTTY)
+Process(JSContext *cx, JSObject *obj, const char *filename)
 {
     FILE *file;
 
-    if (forceTTY || !filename || strcmp(filename, "-") == 0) {
+    if (!filename || strcmp(filename, "-") == 0) {
         file = stdin;
     } else {
         file = fopen(filename, "r");
@@ -671,14 +678,14 @@ Process(JSContext *cx, JSObject *obj, const char *filename, JSBool forceTTY)
         }
     }
 
-    ProcessFile(cx, obj, filename, file, forceTTY);
+    ProcessFile(cx, obj, filename, file);
 }
 
 static int
 usage(void)
 {
     fprintf(gErrFile, "%s\n", JS_GetImplementationVersion());
-    fprintf(gErrFile, "usage: xpcshell [-PswWxCi] [-v version] [-f scriptfile] [-e script] [scriptfile] [scriptarg...]\n");
+    fprintf(gErrFile, "usage: xpcshell [-PswWxC] [-v version] [-f scriptfile] [-e script] [scriptfile] [scriptarg...]\n");
     return 2;
 }
 
@@ -693,12 +700,11 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
     JSObject *argsObj;
     char *filename = NULL;
     JSBool isInteractive = JS_TRUE;
-    JSBool forceTTY = JS_FALSE;
 
     rcfile = fopen(rcfilename, "r");
     if (rcfile) {
         printf("[loading '%s'...]\n", rcfilename);
-        ProcessFile(cx, obj, rcfilename, rcfile, JS_FALSE);
+        ProcessFile(cx, obj, rcfilename, rcfile);
     }
 
     /*
@@ -790,7 +796,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
             if (++i == argc) {
                 return usage();
             }
-            Process(cx, obj, argv[i], JS_FALSE);
+            Process(cx, obj, argv[i]);
             /*
              * XXX: js -f foo.js should interpret foo.js and then
              * drop into interactive mode, but that breaks test
@@ -798,9 +804,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
              */
             isInteractive = JS_FALSE;
             break;
-        case 'i':
-            isInteractive = forceTTY = JS_TRUE;
-            break;
+
         case 'e':
         {
             jsval rval;
@@ -826,7 +830,7 @@ ProcessArgs(JSContext *cx, JSObject *obj, char **argv, int argc)
     }
 
     if (filename || isInteractive)
-        Process(cx, obj, filename, forceTTY);
+        Process(cx, obj, filename);
     return gExitCode;
 }
 
@@ -1083,19 +1087,12 @@ main(int argc, char **argv, char **envp)
             NS_ASSERTION(glob == nsnull, "bad GetJSObject?");
             return 1;
         }
-
-        JS_BeginRequest(cx);
-
-        if (!JS_DefineFunctions(cx, glob, glob_functions)) {
-            JS_EndRequest(cx);
+        if (!JS_DefineFunctions(cx, glob, glob_functions))
             return 1;
-        }
 
         envobj = JS_DefineObject(cx, glob, "environment", &env_class, NULL, 0);
-        if (!envobj || !JS_SetPrivate(cx, envobj, envp)) {
-            JS_EndRequest(cx);
+        if (!envobj || !JS_SetPrivate(cx, envobj, envp))
             return 1;
-        }
 
         argc--;
         argv++;

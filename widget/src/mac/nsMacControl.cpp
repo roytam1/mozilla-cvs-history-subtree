@@ -71,6 +71,8 @@ void DumpControlState(ControlHandle inControl, const char* message)
 }
 #endif
 
+
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 // TODO: leaks, need to release when unloading the dll
 nsIUnicodeEncoder * nsMacControl::mUnicodeEncoder = nsnull;
 nsIUnicodeDecoder * nsMacControl::mUnicodeDecoder = nsnull;
@@ -228,9 +230,9 @@ PRBool  nsMacControl::DispatchMouseEvent(nsMouseEvent &aEvent)
 	PRBool eatEvent = PR_FALSE;
 	switch (aEvent.message)
 	{
-		case NS_MOUSE_DOUBLECLICK:
-		case NS_MOUSE_BUTTON_DOWN:
-			if (aEvent.button == nsMouseEvent::eLeftButton && mEnabled)
+		case NS_MOUSE_LEFT_DOUBLECLICK:
+		case NS_MOUSE_LEFT_BUTTON_DOWN:
+			if (mEnabled)
 			{
 				mMouseInButton = PR_TRUE;
 				mWidgetArmed = PR_TRUE;
@@ -238,20 +240,17 @@ PRBool  nsMacControl::DispatchMouseEvent(nsMouseEvent &aEvent)
 			}
 			break;
 
-		case NS_MOUSE_BUTTON_UP:
-			if (aEvent.button == nsMouseEvent::eLeftButton)
-			{
+		case NS_MOUSE_LEFT_BUTTON_UP:
 			// if the widget was not armed, eat the event
 			if (!mWidgetArmed)
 				eatEvent = PR_TRUE;
 			// if the mouseUp happened on another widget, eat the event too
 			// (the widget which got the mouseDown is always notified of the mouseUp)
-			if (!mMouseInButton)
+			if (! mMouseInButton)
 				eatEvent = PR_TRUE;
 			mWidgetArmed = PR_FALSE;
 			if (mMouseInButton)
 				Invalidate(PR_TRUE);
-			}
 			break;
 
 		case NS_MOUSE_EXIT:
@@ -479,7 +478,7 @@ void nsMacControl::StringToStr255(const nsAString& aText, Str255& aStr255)
 		GetFileSystemCharset(fileSystemCharset);
 
 		nsCOMPtr<nsICharsetConverterManager> ccm = 
-		         do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv); 
+		         do_GetService(kCharsetConverterManagerCID, &rv); 
 		if (NS_SUCCEEDED(rv)) {
 			rv = ccm->GetUnicodeEncoderRaw(fileSystemCharset.get(), &mUnicodeEncoder);
             if (NS_SUCCEEDED(rv)) {
@@ -499,7 +498,7 @@ void nsMacControl::StringToStr255(const nsAString& aText, Str255& aStr255)
 
 	if (NS_FAILED(rv)) {
 //		NS_ASSERTION(0, "error: charset conversion");
-		NS_LossyConvertUTF16toASCII buffer(Substring(aText,0,254));
+		NS_LossyConvertUCS2toASCII buffer(Substring(aText,0,254));
 		PRInt32 len = buffer.Length();
 		memcpy(&aStr255[1], buffer.get(), len);
 		aStr255[0] = len;
@@ -521,7 +520,7 @@ void nsMacControl::Str255ToString(const Str255& aStr255, nsString& aText)
 		GetFileSystemCharset(fileSystemCharset);
 
 		nsCOMPtr<nsICharsetConverterManager> ccm = 
-		         do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv); 
+		         do_GetService(kCharsetConverterManagerCID, &rv); 
 		if (NS_SUCCEEDED(rv)) {
 			rv = ccm->GetUnicodeDecoderRaw(fileSystemCharset.get(), &mUnicodeDecoder);
 		}

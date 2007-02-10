@@ -42,7 +42,7 @@
 
 <!DOCTYPE dialog [
   <!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
-  <!ENTITY % sanitizeDTD SYSTEM "chrome://browser/locale/sanitize.dtd">
+  <!ENTITY % sanitizeDTD SYSTEM "chrome://browser/locale/preferences/sanitize.dtd">
   %brandDTD;
   %sanitizeDTD;
 ]>
@@ -50,7 +50,8 @@
 <prefwindow id="SanitizeDialog" type="child"
             xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
             dlgbuttons="accept,cancel,help"
-            title="&sanitizeDialog.title;">
+            title="&sanitizeDialog.title;"><!--
+            style="width: &window.width; !important;"-->
 
   <prefpane id="SanitizeDialogPane"
             helpTopic="prefs-clear-private-data" helpURI="chrome://browser/locale/help/help.rdf">
@@ -73,8 +74,8 @@
     <checkbox label="&itemDownloads.label;"
               accesskey="&itemDownloads.accesskey;"
               preference="privacy.item.downloads"/>
-    <checkbox label="&itemFormSearchHistory.label;"
-              accesskey="&itemFormSearchHistory.accesskey;"
+    <checkbox label="&itemFormData.label;"
+              accesskey="&itemFormData.accesskey;"
               preference="privacy.item.formdata"/>
     <checkbox label="&itemCache.label;"
               accesskey="&itemCache.accesskey;"

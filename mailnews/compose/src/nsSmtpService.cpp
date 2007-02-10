@@ -306,7 +306,7 @@ nsSmtpService::AllowPort(PRInt32 port, const char *scheme, PRBool *_retval)
 
 NS_IMETHODIMP nsSmtpService::GetProtocolFlags(PRUint32 *result)
 {
-    *result = URI_NORELATIVE | ALLOWS_PROXY | URI_LOADABLE_BY_ANYONE;
+    *result = URI_NORELATIVE | ALLOWS_PROXY;
     return NS_OK; 	
 }
 
@@ -402,24 +402,29 @@ nsSmtpService::loadSmtpServers()
 
       // Tokenize the data and add each smtp server if it is not already there 
       // in the user's current smtp server list
-      nsCStringArray servers;
-      servers.ParseString(tempServerList.get(), SERVER_DELIMITER);
+      char *tempSmtpServerStr;
+      char *tempSmtpServersStr = nsCRT::strdup(tempServerList.get());
+      char *tempToken = nsCRT::strtok(tempSmtpServersStr, SERVER_DELIMITER, &tempSmtpServerStr);
+
       nsCAutoString tempSmtpServer;
-      for (PRInt32 i = 0; i < servers.Count(); i++)
-      {
-          if (servers.IndexOf(* (servers[i])) == i) {
-            tempSmtpServer.Assign(* (servers[i]));
+      while (tempToken) {
+        if (*tempToken) {
+          if (serverList.IsEmpty() || !strstr(serverList.get(), tempToken)) {
+            tempSmtpServer.Assign(tempToken);
             tempSmtpServer.StripWhitespace();
             if (!serverList.IsEmpty())
               serverList += SERVER_DELIMITER;
             serverList += tempSmtpServer;
           }
+        }
+        tempToken = nsCRT::strtok(tempSmtpServerStr, SERVER_DELIMITER, &tempSmtpServerStr);
       }
+      nsCRT::free(tempSmtpServersStr);
     }
     else {
       serverList = tempServerList;
     }
-
+      
     // We need to check if we have any pre-configured smtp servers so that
     // those servers can be appended to the list. 
     nsXPIDLCString appendServerList;
@@ -614,7 +619,7 @@ nsSmtpService::GetDefaultServer(nsISmtpServer **aServer)
           // nothing in the array, we had better create a new server
           // (which will add it to the array & prefs anyway)
           if (count == 0)
-              return nsnull;//if there are no smtp servers then don't create one for the default.
+              return nsnull;//if there are no smtp servers then dont create one for the default.
           else
               rv = mSmtpServers->QueryElementAt(0, NS_GET_IID(nsISmtpServer),
                                                 (void **)getter_AddRefs(mDefaultSmtpServer));
@@ -715,11 +720,6 @@ nsSmtpService::GetServerByKey(const char* aKey, nsISmtpServer **aResult)
 {
     NS_ENSURE_ARG_POINTER(aResult);
 
-    if (!aKey || !*aKey)
-    {
-      NS_ASSERTION(PR_FALSE, "bad key");
-      return NS_ERROR_FAILURE;
-    }
     findServerByKeyEntry entry;
     entry.key = aKey;
     entry.server = nsnull;

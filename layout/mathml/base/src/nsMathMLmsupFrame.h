@@ -49,7 +49,7 @@
 
 class nsMathMLmsupFrame : public nsMathMLContainerFrame {
 public:
-  friend nsIFrame* NS_NewMathMLmsupFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLmsupFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   NS_IMETHOD
   TransmitAutomaticData();
@@ -65,11 +65,11 @@ public:
                     PRBool               aPlaceOrigin,
                     nsHTMLReflowMetrics& aDesiredSize,
                     nsIFrame*            aForFrame,
-                    nscoord              aUserSupScriptShift,
-                    nscoord              aScriptSpace);
+                    nscoord              aUserSupScriptShift = 0,
+                    nscoord              aScriptSpace = NSFloatPointsToTwips(0.5f));
 
 protected:
-  nsMathMLmsupFrame(nsStyleContext* aContext) : nsMathMLContainerFrame(aContext) {}
+  nsMathMLmsupFrame();
   virtual ~nsMathMLmsupFrame();
   
   virtual PRIntn GetSkipSides() const { return 0; }

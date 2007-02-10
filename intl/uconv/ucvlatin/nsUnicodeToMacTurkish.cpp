@@ -45,11 +45,16 @@ static const PRUint16 g_MacTurkishMappingTable[] = {
 #include "macturki.uf"
 };
 
+static const PRInt16 g_MacTurkishShiftTable[] =  {
+  1, u1ByteCharset ,
+  ShiftCell(0,0,0,0,0,0,0,0)
+};
+
 NS_METHOD
 nsUnicodeToMacTurkishConstructor(nsISupports *aOuter, REFNSIID aIID,
                                  void **aResult) 
 {
-  return CreateTableEncoder(u1ByteCharset,
+  return CreateTableEncoder((uShiftTable*) &g_MacTurkishShiftTable, 
                             (uMappingTable*) &g_MacTurkishMappingTable, 1,
                             aOuter, aIID, aResult);
 }

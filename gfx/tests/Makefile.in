@@ -57,8 +57,10 @@ CPPSRCS		= \
 
 SIMPLE_PROGRAMS	= $(CPPSRCS:.cpp=$(BIN_SUFFIX))
 
+EXTRA_DSO_LIBS	= gkgfx
+
 LIBS		= \
-		$(call EXPAND_LIBNAME_PATH,gkgfx,../src) \
+		$(EXTRA_DSO_LIBS) \
 		$(XPCOM_LIBS) \
 		$(MOZ_JS_LIBS) \
 		$(TK_LIBS) \

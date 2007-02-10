@@ -24,7 +24,6 @@
  *   Dean Tessman <dean_tessman@hotmail.com>
  *   Brian Ryner <bryner@brianryner.com>
  *   Jan Varga <varga@ku.sk>
- *   Nate Nielsen <nielsen@memberwebs.com>
  *   Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -42,6 +41,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsLeafBoxFrame.h"
+#include "nsPITreeBoxObject.h"
 #include "nsITreeView.h"
 #include "nsICSSPseudoComparator.h"
 #include "nsIScrollbarMediator.h"
@@ -69,8 +69,6 @@ struct nsTreeImageCacheEntry
   nsCOMPtr<imgIDecoderObserver> listener;
 };
 
-static NS_DEFINE_CID(kTreeColumnImplCID, NS_TREECOLUMN_IMPL_CID);
-
 // The actual frame that paints the cells and rows.
 class nsTreeBodyFrame : public nsLeafBoxFrame,
                         public nsITreeBoxObject,
@@ -79,14 +77,14 @@ class nsTreeBodyFrame : public nsLeafBoxFrame,
                         public nsIReflowCallback
 {
 public:
-  nsTreeBodyFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  nsTreeBodyFrame(nsIPresShell* aPresShell);
   virtual ~nsTreeBodyFrame();
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSITREEBOXOBJECT
 
   // nsIBox
-  virtual nsSize GetMinSize(nsBoxLayoutState& aBoxLayoutState);
+  NS_IMETHOD GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
   NS_IMETHOD SetBounds(nsBoxLayoutState& aBoxLayoutState, const nsRect& aRect,
                        PRBool aRemoveOverflowArea = PR_FALSE);
 
@@ -102,11 +100,9 @@ public:
   NS_IMETHOD VisibilityChanged(nsISupports* aScrollbar, PRBool aVisible) { Invalidate(); return NS_OK; };
 
   // Overridden from nsIFrame to cache our pres context.
-  NS_IMETHOD Init(nsIContent*     aContent,
-                  nsIFrame*       aParent,
-                  nsIFrame*       aPrevInFlow);
-  virtual void Destroy();
-
+  NS_IMETHOD Init(nsPresContext* aPresContext, nsIContent* aContent,
+                  nsIFrame* aParent, nsStyleContext* aContext, nsIFrame* aPrevInFlow);
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
   NS_IMETHOD GetCursor(const nsPoint& aPoint,
                        nsIFrame::Cursor& aCursor);
 
@@ -114,24 +110,15 @@ public:
                          nsGUIEvent* aEvent,
                          nsEventStatus* aEventStatus);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  // Painting methods.
+  // Paint is the generic nsIFrame paint method.  We override this method
+  // to paint our contents (our rows and cells).
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
 
-  friend nsIFrame* NS_NewTreeBodyFrame(nsIPresShell* aPresShell);
-
-  struct ScrollParts {
-    nsIScrollbarFrame* mVScrollbar;
-    nsIContent*        mVScrollbarContent;
-    nsIScrollbarFrame* mHScrollbar;
-    nsIContent*        mHScrollbarContent;
-    nsIScrollableView* mColumnsScrollableView;
-  };
-
-  void PaintTreeBody(nsIRenderingContext& aRenderingContext,
-                     const nsRect& aDirtyRect, nsPoint aPt);
-
-protected:
   // This method paints a specific column background of the tree.
   void PaintColumn(nsTreeColumn*        aColumn,
                    const nsRect&        aColumnRect,
@@ -142,10 +129,9 @@ protected:
   // This method paints a single row in the tree.
   void PaintRow(PRInt32              aRowIndex,
                 const nsRect&        aRowRect,
-                nsPresContext*       aPresContext,
+                nsPresContext*      aPresContext,
                 nsIRenderingContext& aRenderingContext,
-                const nsRect&        aDirtyRect,
-                nsPoint              aPt);
+                const nsRect&        aDirtyRect);
 
   // This method paints a single separator in the tree.
   void PaintSeparator(PRInt32              aRowIndex,
@@ -158,11 +144,10 @@ protected:
   void PaintCell(PRInt32              aRowIndex, 
                  nsTreeColumn*        aColumn,
                  const nsRect&        aCellRect,
-                 nsPresContext*       aPresContext,
+                 nsPresContext*      aPresContext,
                  nsIRenderingContext& aRenderingContext,
                  const nsRect&        aDirtyRect,
-                 nscoord&             aCurrX,
-                 nsPoint              aPt);
+                 nscoord&             aCurrX);
 
   // This method paints the twisty inside a cell in the primary column of an tree.
   void PaintTwisty(PRInt32              aRowIndex,
@@ -223,7 +208,15 @@ protected:
                             const nsRect&        aRect,
                             const nsRect&        aDirtyRect);
 
+  friend nsresult NS_NewTreeBodyFrame(nsIPresShell* aPresShell, 
+                                          nsIFrame** aNewFrame);
 
+  struct ScrollParts {
+    nsIScrollbarFrame* mVScrollbar;
+    nsIContent*        mVScrollbarContent;
+  };
+
+protected:
   PRInt32 GetLastVisibleRow() {
     return mTopRowIndex + mPageLength;
   };
@@ -231,11 +224,6 @@ protected:
   // An internal hit test.  aX and aY are expected to be in twips in the
   // coordinate system of this frame.
   PRInt32 GetRowAt(nscoord aX, nscoord aY);
-
-  void AdjustForCellText(nsAutoString& aText,
-                         PRInt32 aRowIndex,  nsTreeColumn* aColumn,
-                         nsIRenderingContext& aRenderingContext,
-                         nsRect& aTextRect);
 
   // A helper used when hit testing.
   nsIAtom* GetItemWithinCellAt(nscoord aX, const nsRect& aCellRect,
@@ -246,15 +234,6 @@ protected:
   void GetCellAt(nscoord aX, nscoord aY, PRInt32* aRow, nsTreeColumn** aCol,
                  nsIAtom** aChildElt);
 
-  // Retrieve the area for the twisty for a cell.
-  nsITheme* GetTwistyRect(PRInt32 aRowIndex,
-                          nsTreeColumn* aColumn,
-                          nsRect& aImageRect,
-                          nsRect& aTwistyRect,
-                          nsPresContext* aPresContext,
-                          nsIRenderingContext& aRenderingContext,
-                          nsStyleContext* aTwistyContext);
-
   // Fetch an image from the image cache.
   nsresult GetImage(PRInt32 aRowIndex, nsTreeColumn* aCol, PRBool aUseContext,
                     nsStyleContext* aStyleContext, PRBool& aAllowImageRegions, imgIContainer** aResult);
@@ -262,12 +241,6 @@ protected:
   // Returns the size of a given image.   This size *includes* border and
   // padding.  It does not include margins.
   nsRect GetImageSize(PRInt32 aRowIndex, nsTreeColumn* aCol, PRBool aUseContext, nsStyleContext* aStyleContext);
-
-  // Returns the destination size of the image, not including borders and padding.
-  nsSize GetImageDestSize(nsStyleContext* aStyleContext, PRBool useImageRegion, imgIContainer* image);
-
-  // Returns the source rectangle of the image to be displayed.
-  nsRect GetImageSourceRect(nsStyleContext* aStyleContext, PRBool useImageRegion, imgIContainer* image);
 
   // Returns the height of rows in the tree.
   PRInt32 GetRowHeight();
@@ -277,9 +250,6 @@ protected:
 
   // Calculates our width/height once border and padding have been removed.
   void CalcInnerBox();
-
-  // Calculate the total width of our scrollable portion
-  nscoord CalcHorzWidth(const ScrollParts& aParts);
 
   // Looks up a style context in the style cache.  On a cache miss we resolve
   // the pseudo-styles passed in and place them into the cache.
@@ -293,25 +263,22 @@ protected:
   ScrollParts GetScrollParts();
 
   // Update the curpos of the scrollbar.
-  void UpdateScrollbars(const ScrollParts& aParts);
+  void UpdateScrollbar(const ScrollParts& aParts);
 
   // Update the maxpos of the scrollbar.
-  void InvalidateScrollbars(const ScrollParts& aParts);
+  void InvalidateScrollbar(const ScrollParts& aParts);
 
-  // Check overflow and generate events.
-  void CheckOverflow(const ScrollParts& aParts);
+  // Check vertical overflow.
+  void CheckVerticalOverflow();
 
   // Use to auto-fill some of the common properties without the view having to do it.
   // Examples include container, open, selected, and focus.
   void PrefillPropertyArray(PRInt32 aRowIndex, nsTreeColumn* aCol);
 
-  // Our internal scroll method, used by all the public scroll methods.
   nsresult ScrollInternal(const ScrollParts& aParts, PRInt32 aRow);
   nsresult ScrollToRowInternal(const ScrollParts& aParts, PRInt32 aRow);
-  nsresult ScrollToColumnInternal(const ScrollParts& aParts, nsITreeColumn* aCol);
-  nsresult ScrollHorzInternal(const ScrollParts& aParts, PRInt32 aPosition);
   nsresult EnsureRowIsVisibleInternal(const ScrollParts& aParts, PRInt32 aRow);
-  
+
   // Convert client pixels into twips in our coordinate space.
   void AdjustClientCoordsToBoxCoordSpace(PRInt32 aX, PRInt32 aY,
                                          nscoord* aResultX, nscoord* aResultY);
@@ -327,17 +294,10 @@ protected:
   // Get the base element, <tree> or <select>
   nsIContent* GetBaseElement();
 
-  nsresult GetCellWidth(PRInt32 aRow, nsTreeColumn* aCol,
-                        nsIRenderingContext* aRenderingContext,
-                        nscoord& aDesiredSize, nscoord& aCurrentSize);
+  void GetCellWidth(PRInt32 aRow, nsTreeColumn* aCol,
+                    nsIRenderingContext* aRenderingContext,
+                    nscoord& aDesiredSize, nscoord& aCurrentSize);
   nscoord CalcMaxRowWidth();
-
-  // Translate the given rect horizontally from tree coordinates into the
-  // coordinate system of our nsTreeBodyFrame.  If clip is true, then clip the
-  // rect to its intersection with mInnerBox in the horizontal direction.
-  // Return whether the result has a nonempty intersection with mInnerBox
-  // after projecting both onto the horizontal coordinate axis.
-  PRBool OffsetForHorzScroll(nsRect& rect, PRBool clip);
 
   PRBool CanAutoScroll(PRInt32 aRowIndex);
 
@@ -357,15 +317,6 @@ protected:
       InvalidateRow(aRow + aOrientation);
   };
 
-  already_AddRefed<nsTreeColumn> GetColumnImpl(nsITreeColumn* aUnknownCol) {
-    if (!aUnknownCol)
-      return nsnull;
-
-    nsTreeColumn* col;
-    aUnknownCol->QueryInterface(kTreeColumnImplCID, (void**)&col);
-    return col;
-  }
-
   // Create a new timer. This method is used to delay various actions like
   // opening/closing folders or tree scrolling.
   // aID is type of the action, aFunc is the function to be called when
@@ -383,8 +334,11 @@ protected:
   static void ScrollCallback(nsITimer *aTimer, void *aClosure);
 
 protected: // Data Members
+  // Our cached pres context.
+  nsPresContext* mPresContext;
+
   // The cached box object parent.
-  nsCOMPtr<nsITreeBoxObject> mTreeBoxObject;
+  nsCOMPtr<nsPITreeBoxObject> mTreeBoxObject;
 
   // Cached column information.
   nsRefPtr<nsTreeColumns> mColumns;
@@ -411,12 +365,6 @@ protected: // Data Members
   PRInt32 mTopRowIndex;
   PRInt32 mPageLength;
 
-  // The horizontal scroll position
-  nscoord mHorzPosition;
-  // Our desired horizontal width (the width for which we actually have tree
-  // columns).
-  nscoord mHorzWidth;
-
   // Cached heights and indent info.
   nsRect mInnerBox;
   PRInt32 mRowHeight;
@@ -433,7 +381,6 @@ protected: // Data Members
   PRPackedBool mHasFixedRowCount;
 
   PRPackedBool mVerticalOverflow;
-  PRPackedBool mHorizontalOverflow;
 
   PRPackedBool mReflowCallbackPosted;
 

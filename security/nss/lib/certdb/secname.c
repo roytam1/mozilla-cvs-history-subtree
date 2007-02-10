@@ -432,7 +432,7 @@ CERT_CopyName(PRArenaPool *arena, CERTName *to, CERTName *from)
 	    return rv;
 	}
 	while ((frdn = *rdns++) != NULL) {
-	    trdn = CERT_CreateRDN(arena, NULL);
+	    trdn = CERT_CreateRDN(arena, 0);
 	    if (!trdn) {
 		rv = SECFailure;
 		break;
@@ -612,7 +612,6 @@ CERT_DecodeAVAValue(const SECItem *derAVAValue)
           PLArenaPool      *newarena          = NULL;
 
     if (!derAVAValue || !derAVAValue->len || !derAVAValue->data) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return NULL;
     }
 
@@ -644,7 +643,6 @@ CERT_DecodeAVAValue(const SECItem *derAVAValue)
 	    theTemplate = SEC_UTF8StringTemplate;
 	    break;
 	default:
-	    PORT_SetError(SEC_ERROR_INVALID_AVA);
 	    return NULL;
     }
 

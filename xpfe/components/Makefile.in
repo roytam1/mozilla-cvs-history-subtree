@@ -66,15 +66,9 @@ endif
 
 DIRS = \
         find \
-        filepicker \
-        $(NULL)
-
-ifdef MOZ_RDF
-DIRS += \
         intl \
         windowds \
         $(NULL)
-endif
 
 ifdef MOZ_HAVE_BROWSER
 DIRS += \
@@ -83,30 +77,34 @@ DIRS += \
         killAll \
         $(NULL)
 
+TOOL_DIRS = \
+        filepicker \
+        $(NULL)
+
 ifndef MOZ_PHOENIX
 ifndef MOZ_XULRUNNER
 DIRS += \
         related \
+        prefwindow \
+        console \
+        updates \
         autocomplete \
+        bookmarks \
         download-manager \
         history \
         sidebar \
-        $(NULL)
-ifndef MOZ_XUL_APP
-DIRS += \
-        console \
-        updates \
         startup \
         alerts \
         extensions \
         $(NULL)
 endif
 endif
-endif
 
-ifdef MOZ_SUITE
 ifeq ($(OS_ARCH),WINNT)
+ifndef MOZ_PHOENIX
+ifndef MOZ_XULRUNNER
 DIRS += urlwidget winhooks
+endif
 endif
 endif
 
@@ -117,10 +115,19 @@ else
 # !MOZ_HAVE_BROWSER
 
 DIRS += \
+        filepicker \
         autocomplete \
+        console \
         history/public \
         bookmarks/public \
         $(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+DIRS += winhooks
+endif
+
+# build2 should be last
+DIRS += build2
 
 endif
 

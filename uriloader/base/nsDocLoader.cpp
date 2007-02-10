@@ -42,7 +42,6 @@
 #include "nsCURILoader.h"
 #include "nsNetUtil.h"
 #include "nsIHttpChannel.h"
-#include "nsIWebProgressListener2.h"
 
 #include "nsIServiceManager.h"
 #include "nsXPIDLString.h"
@@ -63,6 +62,7 @@
 #include "nsITransport.h"
 #include "nsISocketTransport.h"
 
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 static NS_DEFINE_CID(kThisImplCID, NS_THIS_DOCLOADER_IMPL_CID);
 
 #if defined(PR_LOGGING)
@@ -311,12 +311,6 @@ nsDocLoader::Stop(void)
   if (mLoadGroup)
     rv = mLoadGroup->Cancel(NS_BINDING_ABORTED);
 
-  // Clear out mChildrenInOnload.  We want to make sure to fire our
-  // onload at this point, and there's no issue with mChildrenInOnload
-  // after this, since mDocumentRequest will be null after the
-  // DocLoaderIsEmpty() call.
-  mChildrenInOnload.Clear();
-
   // Make sure to call DocLoaderIsEmpty now so that we reset mDocumentRequest,
   // etc, as needed.  We could be getting into here from a subframe onload, in
   // which case the call to DocLoaderIsEmpty() is coming but hasn't quite
@@ -326,8 +320,6 @@ nsDocLoader::Stop(void)
 
   // XXXbz If the child frame loadgroups were requests in mLoadgroup, I suspect
   // we wouldn't need the call here....
-
-  NS_ASSERTION(!IsBusy(), "Shouldn't be busy here");
   DocLoaderIsEmpty();
   
   return rv;
@@ -342,31 +334,21 @@ nsDocLoader::IsBusy()
   //
   // A document loader is busy if either:
   //
-  //   1. One of its children is in the middle of an onload handler.  Note that
-  //      the handler may have already removed this child from mChildList!
-  //   2. It is currently loading a document and either has parts of it still
-  //      loading, or has a busy child docloader.
+  //   1. It is currently loading a document (ie. one or more URIs)
+  //   2. One of it's child document loaders is busy...
   //
 
-  if (mChildrenInOnload.Count()) {
-    return PR_TRUE;
-  }
-
   /* Is this document loader busy? */
-  if (!mIsLoadingDocument) {
-    return PR_FALSE;
-  }
-  
-  PRBool busy;
-  rv = mLoadGroup->IsPending(&busy);
-  if (NS_FAILED(rv)) {
-    return PR_FALSE;
-  }
-  if (busy) {
-    return PR_TRUE;
+  if (mIsLoadingDocument) {
+    PRBool busy;
+    rv = mLoadGroup->IsPending(&busy);
+    if (NS_FAILED(rv))
+      return PR_FALSE;
+    if (busy)
+      return PR_TRUE;
   }
 
-  /* check its child document loaders... */
+  /* Otherwise, check its child document loaders... */
   PRInt32 count, i;
 
   count = mChildList.Count();
@@ -377,7 +359,7 @@ nsDocLoader::IsBusy()
     // This is a safe cast, because we only put nsDocLoader objects into the
     // array
     if (loader && NS_STATIC_CAST(nsDocLoader*, loader)->IsBusy())
-      return PR_TRUE;
+        return PR_TRUE;
   }
 
   return PR_FALSE;
@@ -749,23 +731,15 @@ void nsDocLoader::DocLoaderIsEmpty()
       // 
       mLoadGroup->SetDefaultLoadRequest(nsnull); 
 
-      // Take a ref to our parent now so that we can call DocLoaderIsEmpty() on
-      // it even if our onload handler removes us from the docloader tree.
-      nsRefPtr<nsDocLoader> parent = mParent;
+      //
+      // Do nothing after firing the OnEndDocumentLoad(...). The document
+      // loader may be loading a *new* document - if LoadDocument()
+      // was called from a handler!
+      //
+      doStopDocumentLoad(docRequest, loadGroupStatus);
 
-      // Note that if calling ChildEnteringOnload() on the parent returns false
-      // then calling our onload handler is not safe.  That can only happen on
-      // OOM, so that's ok.
-      if (!parent || parent->ChildEnteringOnload(this)) {
-        // Do nothing with our state after firing the
-        // OnEndDocumentLoad(...). The document loader may be loading a *new*
-        // document - if LoadDocument() was called from a handler!
-        //
-        doStopDocumentLoad(docRequest, loadGroupStatus);
-
-        if (parent) {
-          parent->ChildDoneWithOnload(this);
-        }
+      if (mParent) {
+        mParent->DocLoaderIsEmpty();
       }
     }
   }
@@ -1086,7 +1060,7 @@ NS_IMETHODIMP nsDocLoader::OnStatus(nsIRequest* aRequest, nsISupports* ctxt,
     }
     
     nsresult rv;
-    nsCOMPtr<nsIStringBundleService> sbs = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+    nsCOMPtr<nsIStringBundleService> sbs = do_GetService(kStringBundleServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
     nsXPIDLString msg;
     rv = sbs->FormatStatusMessage(aStatus, aStatusArg, getter_Copies(msg));
@@ -1326,66 +1300,6 @@ nsDocLoader::FireOnStatusChange(nsIWebProgress* aWebProgress,
   if (mParent) {
     mParent->FireOnStatusChange(aWebProgress, aRequest, aStatus, aMessage);
   }
-}
-
-PRBool
-nsDocLoader::RefreshAttempted(nsIWebProgress* aWebProgress,
-                              nsIURI *aURI,
-                              PRInt32 aDelay,
-                              PRBool aSameURI)
-{
-  /*
-   * Returns true if the refresh may proceed,
-   * false if the refresh should be blocked.
-   *
-   * First notify any listeners of the refresh attempt...
-   *
-   * Iterate the elements from back to front so that if items
-   * get removed from the list it won't affect our iteration
-   */
-  PRBool allowRefresh = PR_TRUE;
-  PRInt32 count = mListenerInfoList.Count();
-
-  while (--count >= 0) {
-    nsListenerInfo *info;
-
-    info = NS_STATIC_CAST(nsListenerInfo*,mListenerInfoList.SafeElementAt(count));
-    if (!info || !(info->mNotifyMask & nsIWebProgress::NOTIFY_REFRESH)) {
-      continue;
-    }
-
-    nsCOMPtr<nsIWebProgressListener> listener =
-      do_QueryReferent(info->mWeakListener);
-    if (!listener) {
-      // the listener went away. gracefully pull it out of the list.
-      mListenerInfoList.RemoveElementAt(count);
-      delete info;
-      continue;
-    }
-
-    nsCOMPtr<nsIWebProgressListener2> listener2 =
-      do_QueryReferent(info->mWeakListener);
-    if (!listener2)
-      continue;
-
-    PRBool listenerAllowedRefresh;
-    nsresult listenerRV = listener2->OnRefreshAttempted(
-        aWebProgress, aURI, aDelay, aSameURI, &listenerAllowedRefresh);
-    if (NS_FAILED(listenerRV))
-      continue;
-
-    allowRefresh = allowRefresh && listenerAllowedRefresh;
-  }
-
-  mListenerInfoList.Compact();
-
-  // Pass the notification up to the parent...
-  if (mParent) {
-    allowRefresh = allowRefresh &&
-      mParent->RefreshAttempted(aWebProgress, aURI, aDelay, aSameURI);
-  }
-
-  return allowRefresh;
 }
 
 nsListenerInfo * 

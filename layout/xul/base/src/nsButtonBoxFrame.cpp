@@ -43,35 +43,55 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMXULButtonElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsINameSpaceManager.h"
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
 #include "nsGUIEvent.h"
 #include "nsIEventStateManager.h"
+#include "nsXULAtoms.h"
 #include "nsIDOMElement.h"
-#include "nsDisplayList.h"
 
 //
 // NS_NewXULButtonFrame
 //
-// Creates a new Button frame and returns it
+// Creates a new Button frame and returns it in |aNewFrame|
 //
-nsIFrame*
-NS_NewButtonBoxFrame (nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewButtonBoxFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame )
 {
-  return new (aPresShell) nsButtonBoxFrame(aPresShell, aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsButtonBoxFrame* it = new (aPresShell) nsButtonBoxFrame(aPresShell);
+  if (nsnull == it)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  // it->SetFlags(aFlags);
+  *aNewFrame = it;
+  return NS_OK;
+  
 } // NS_NewXULButtonFrame
 
+nsButtonBoxFrame::nsButtonBoxFrame(nsIPresShell* aPresShell)
+:nsBoxFrame(aPresShell, PR_FALSE)
+{
+}
+
 NS_IMETHODIMP
-nsButtonBoxFrame::BuildDisplayListForChildren(nsDisplayListBuilder*   aBuilder,
-                                              const nsRect&           aDirtyRect,
-                                              const nsDisplayListSet& aLists)
+nsButtonBoxFrame::GetMouseThrough(PRBool& aMouseThrough)
+{
+  aMouseThrough = PR_FALSE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsButtonBoxFrame::GetFrameForPoint(const nsPoint& aPoint, 
+                                    nsFramePaintLayer aWhichLayer,
+                                    nsIFrame**     aFrame)
 {
   // override, since we don't want children to get events
-  if (aBuilder->IsForEventDelivery())
-    return NS_OK;
-  return nsBoxFrame::BuildDisplayListForChildren(aBuilder, aDirtyRect, aLists);
+  return nsFrame::GetFrameForPoint(aPoint, aWhichLayer, aFrame);
 }
 
 NS_IMETHODIMP
@@ -125,10 +145,8 @@ nsButtonBoxFrame::HandleEvent(nsPresContext* aPresContext,
       }
       break;
 
-    case NS_MOUSE_CLICK:
-      if (NS_IS_MOUSE_LEFT_CLICK(aEvent)) {
-        MouseClicked(aPresContext, aEvent);
-      }
+    case NS_MOUSE_LEFT_CLICK:
+      MouseClicked(aPresContext, aEvent);
       break;
   }
 
@@ -139,8 +157,9 @@ void
 nsButtonBoxFrame::DoMouseClick(nsGUIEvent* aEvent, PRBool aTrustEvent) 
 {
   // Don't execute if we're disabled.
-  if (mContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::disabled,
-                            nsGkAtoms::_true, eCaseMatters))
+  nsAutoString disabled;
+  mContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::disabled, disabled);
+  if (disabled.EqualsLiteral("true"))
     return;
 
   // Execute the oncommand event handler.

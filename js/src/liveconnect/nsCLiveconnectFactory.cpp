@@ -92,8 +92,7 @@ nsCLiveconnectFactory::CreateInstance(nsISupports *aOuter, REFNSIID aIID, void *
 	if (liveconnect == NULL)
 		return NS_ERROR_OUT_OF_MEMORY;
 		
-    nsISupports* inner = liveconnect->InnerObject();
-    nsresult result = inner->QueryInterface(aIID, aResult);
+	nsresult result = liveconnect->AggregatedQueryInterface(aIID, aResult);
 	if (NS_FAILED(result))
 		delete liveconnect;
 

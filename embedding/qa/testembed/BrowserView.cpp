@@ -709,7 +709,7 @@ void CBrowserView::OnFileSaveAs()
 
 void CBrowserView::OpenURL(const char* pUrl)
 {
-    OpenURL(NS_ConvertASCIItoUTF16(pUrl).get());
+    OpenURL(NS_ConvertASCIItoUCS2(pUrl).get());
 }
 
 void CBrowserView::OpenURL(const PRUnichar* pUrl)
@@ -773,9 +773,7 @@ void CBrowserView::OnCopyLinkLocation()
 	if(!pszClipData)
 		return;
 
-	nsFixedCString clipDataStr(pszClipData, mCtxMenuLinkUrl.Length() + 1);
-	LossyCopyUTF16toASCII(mCtxMenuLinkUrl, clipDataStr);
-	NS_ASSERTION(clipDataStr.get() == pszClipData, "buffer too small");
+	mCtxMenuLinkUrl.ToCString(pszClipData, mCtxMenuLinkUrl.Length() + 1);
 
 	GlobalUnlock(hClipData);
 

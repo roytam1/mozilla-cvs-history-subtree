@@ -1,7 +1,6 @@
 <!ENTITY sanitizeDialog.title         "Clear Private Data">
 
 <!ENTITY sanitizeItems.label          "Clear the following items now:">
-<!ENTITY clearDataSettings.label      "When I ask &brandShortName; to clear my private data, it should erase:">
 
 <!-- XXX rearrange entities to match physical layout when l10n isn't an issue -->
 
@@ -19,4 +18,3 @@
 <!ENTITY itemDownloads.accesskey      "D">
 <!ENTITY itemSessions.label           "Authenticated Sessions">
 <!ENTITY itemSessions.accesskey       "S">
-<!ENTITY window.width                 "30em">

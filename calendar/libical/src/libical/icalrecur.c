@@ -442,10 +442,7 @@ struct icalrecurrencetype icalrecurrencetype_from_string(const char* str)
 	} else if (strcmp(name,"UNTIL") == 0){
 	    parser.rt.until = icaltime_from_string(value);
 	} else if (strcmp(name,"INTERVAL") == 0){
-	    short v = (short)atoi(value);
-	    if (v > 0) {
-		parser.rt.interval = v;
-	    }
+	    parser.rt.interval = (short)atoi(value);
 	} else if (strcmp(name,"WKST") == 0){
 	    parser.rt.week_start = icalrecur_string_to_weekday(value);
       sort_bydayrules(parser.rt.by_day,parser.rt.week_start);
@@ -1531,7 +1528,6 @@ static int next_month(icalrecur_iterator* impl)
       if ( day > days_in_month){
           impl->last.day = 1;
           increment_month(impl);
-          impl->last.day--; /* Go back one day, so searches next month start at day 1 */
           data_valid = 0; /* signal that impl->last is invalid */
       }
 

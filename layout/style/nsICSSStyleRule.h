@@ -35,12 +35,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * representation of CSS style rules (selectors+declaration) and CSS
- * selectors
- */
-
 #ifndef nsICSSStyleRule_h___
 #define nsICSSStyleRule_h___
 
@@ -160,7 +154,7 @@ private:
   void AppendNegationToString(nsAString& aString);
   void ToStringInternal(nsAString& aString, nsICSSStyleSheet* aSheet,
                         PRBool aIsPseudoElem,
-                        PRBool aIsNegated) const;
+                        PRIntn aNegatedIndex) const;
 
 public:
   PRInt32         mNameSpace;
@@ -225,7 +219,7 @@ private:
 
 class nsICSSStyleRule : public nsICSSRule {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICSS_STYLE_RULE_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICSS_STYLE_RULE_IID)
 
   // null for style attribute
   virtual nsCSSSelectorList* Selector(void) = 0;
@@ -257,8 +251,6 @@ public:
   virtual nsresult GetSelectorText(nsAString& aSelectorText) = 0;
   virtual nsresult SetSelectorText(const nsAString& aSelectorText) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsICSSStyleRule, NS_ICSS_STYLE_RULE_IID)
 
 nsresult
 NS_NewCSSStyleRule(nsICSSStyleRule** aInstancePtrResult,

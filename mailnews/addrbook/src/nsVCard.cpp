@@ -93,10 +93,8 @@ DFARS 252.227-7013 or 48 CFR 52.227-19, as applicable.
  */
 #include "nsVCard.h"
 #include "nsVCardObj.h"
+#include "nsFileStream.h"
 #include "prprf.h"
-#include "nscore.h"
-#include <string.h>
-#include <ctype.h>
 
 #ifndef lint
 char yysccsid[] = "@(#)yaccpar	1.4 (Berkeley) 02/25/90";
@@ -225,6 +223,7 @@ static void lexPushMode(enum LexMode mode);
 static void enterProps(const char *s);
 static void enterAttr(const char *s1, const char *s2);
 static void enterValues(const char *value);
+static void mime_error_(char *s); 
 
 /*#line 250 "vcc.y" */
 typedef union {
@@ -534,6 +533,7 @@ static void enterAttr(const char *s1, const char *s2)
 
 struct LexBuf {
 	/* input */
+    nsInputFileStream  *inputFile;
     char *inputString;
     unsigned long curPos;
     unsigned long inputLen;
@@ -586,8 +586,17 @@ static int lexGetc_()
     return EOF;
   else if (lexBuf.inputString)
     return *(lexBuf.inputString + lexBuf.curPos++);
+  else 
+  {
+    char        c;
+    nsresult    status;
 
-  return -1;
+    status = lexBuf.inputFile->read(&c, 1);
+    if (status != 1)
+      return -1;
+    else
+      return c;  
+  }
 }
 
 static int lexGeta()
@@ -869,7 +878,12 @@ static int match_begin_name(int end) {
     return 0;
     }
 
-void initLex(const char *inputstring, unsigned long inputlen)
+#if defined(XP_MAC) && defined(__MWERKS__)
+#pragma warn_possunwant off
+#pragma require_prototypes off
+#endif
+
+void initLex(const char *inputstring, unsigned long inputlen, nsInputFileStream *inputFile)
     {
     /* initialize lex mode stack */
     lexBuf.lexModeStack[lexBuf.lexModeStackTop=0] = L_NORMAL;
@@ -878,6 +892,7 @@ void initLex(const char *inputstring, unsigned long inputlen)
     lexBuf.inputString = (char*) inputstring;
     lexBuf.inputLen = inputlen;
     lexBuf.curPos = 0;
+    lexBuf.inputFile = inputFile;
 
     lexBuf.len = 0;
     lexBuf.getPtr = 0;
@@ -974,8 +989,7 @@ static char * lexGetDataFromBase64()
 			bytes = (unsigned char*)PR_Realloc(bytes,bytesMax);
 			}
 			if (bytes == 0) {
-			  mime_error("out of memory while processing BASE64 data\n");
-                          break;
+			mime_error("out of memory while processing BASE64 data\n");
 			}
 		    }
 		if (bytes) {
@@ -1193,7 +1207,7 @@ static int yylex() {
 			    }
 			}
 		    else {
-			/* unknown token */
+			/* unknow token */
 			return 0;
 			}
 		    break;
@@ -1227,9 +1241,45 @@ static VObject* parse_MIMEHelper()
 /******************************************************************************/
 VObject* parse_MIME(const char *input, unsigned long len)
     {
-    initLex(input, len);
+    initLex(input, len, 0);
     return parse_MIMEHelper();
     }
+
+
+VObject* parse_MIME_FromFile(nsInputFileStream *file)
+{
+  VObject *result;	
+  long startPos;
+  
+  initLex(0,(unsigned long)-1,file);
+  startPos = file->tell();
+  if (!(result = parse_MIMEHelper())) {
+    file->seek(startPos);
+  }
+  return result;
+}
+
+VObject* parse_MIME_FromFileName(nsFileSpec *fname)
+{
+#if !defined(MOZADDRSTANDALONE)
+  nsInputFileStream *fp = new nsInputFileStream(*fname);
+  if (fp) 
+  {
+    VObject* o = parse_MIME_FromFile(fp);
+    fp->close();
+    return o;
+  }
+  else {
+    char msg[80];
+    PR_snprintf(msg, sizeof(msg), "Can't open file for reading\n");
+    mime_error_(msg);
+    return 0;
+  }
+#else
+  NS_ASSERTION(FALSE, "1.5 <rhp@netscape.com> 06 Jan 2000 08:00");
+  return 0;
+#endif
+}
 
 static MimeErrorHandler mimeErrorHandler;
 
@@ -1246,6 +1296,13 @@ void mime_error(char *s)
     mimeErrorHandler(msg);
   }
 }
+
+void mime_error_(char *s)
+    {
+    if (mimeErrorHandler) {
+	mimeErrorHandler(s);
+	}
+    }
 
 /*#line 1221 "y_tab.c"*/
 #define YYABORT goto yyabort

@@ -40,8 +40,6 @@ import xpcom.components
 import xpcom._xpcom
 import xpcom.nsError
 
-MakeVariant = xpcom._xpcom.MakeVariant
-
 try:
     import gc
 except ImportError:
@@ -115,7 +113,7 @@ def test_string_attribute(ob, attr_name, expected_init, is_dumb_sz = False, asci
 def test_attribute_failure(ob, attr_name, new_value, expected_exception):
     try:
         setattr(ob, attr_name, new_value)
-        print_error("*** Setting attribute '%s' to '%r' didn't yield an exception!" % (attr_name, new_value) )
+        print_error("*** Setting attribute '%s' to '%r' didnt yield an exception!" % (attr_name, new_value) )
     except:
         exc_typ = sys.exc_info()[0]
         exc_val = sys.exc_info()[1]
@@ -182,7 +180,7 @@ def test_base_interface(c):
 
     test_attribute(c, "long_value",  5, 7)
     test_attribute(c, "long_value",  5, 0)
-    test_attribute(c, "long_value",  5, -1, -1) # 32 bit signed.
+    test_attribute(c, "long_value",  5, 0xFFFFFFFF, -1) # 32 bit signed.
     test_attribute(c, "long_value",  5, -1) # 32 bit signed.
     test_attribute(c, "long_value",  5, 0L)
     test_attribute(c, "long_value",  5, 1L)
@@ -192,7 +190,7 @@ def test_base_interface(c):
 
     test_attribute(c, "ulong_value", 6, 7)
     test_attribute(c, "ulong_value", 6, 0)
-    test_attribute(c, "ulong_value", 6, -1) # 32 bit signed.
+    test_attribute(c, "ulong_value", 6, 0xFFFFFFFF) # 32 bit signed.
     test_attribute_failure(c, "ulong_value", "boo", ValueError)
     
     test_attribute(c, "long_long_value", 7, 8)
@@ -307,15 +305,15 @@ def test_base_interface(c):
     test_constant(c, "Two", 2)
     test_constant(c, "MinusOne", -1)
     test_constant(c, "BigLong", 0x7FFFFFFF)
-    test_constant(c, "BiggerLong", -1)
-    test_constant(c, "BigULong", -1)
+    test_constant(c, "BiggerLong", 0xFFFFFFFF)
+    test_constant(c, "BigULong", 0xFFFFFFFF)
     # Test the components.Interfaces semantics
     i = xpcom.components.interfaces.nsIPythonTestInterface
     test_constant(i, "One", 1)
     test_constant(i, "Two", 2)
     test_constant(i, "MinusOne", -1)
     test_constant(i, "BigLong", 0x7FFFFFFF)
-    test_constant(i, "BigULong", -1)
+    test_constant(i, "BigULong", 0xFFFFFFFF)
 
 def test_derived_interface(c, test_flat = 0):
     val = "Hello\0there"
@@ -394,7 +392,6 @@ def test_derived_interface(c, test_flat = 0):
     test_method(c.AppendArray, ([1,2,3],), [1,2,3])
     test_method(c.AppendArray, ([1,2,3],[4,5,6]), [1,2,3,4,5,6])
 
-    test_method(c.CopyVariant, ([],), [])
     test_method(c.CopyVariant, (None,), None)
     test_method(c.CopyVariant, (1,), 1)
     test_method(c.CopyVariant, (1.0,), 1.0)
@@ -409,21 +406,10 @@ def test_derived_interface(c, test_flat = 0):
     test_method(c.CopyVariant, (("foo","bar"),), ["foo", "bar"])
     test_method(c.CopyVariant, ((component_iid,component_iid),), [component_iid,component_iid])
     test_method(c.CopyVariant, ((c,c),), [c,c])
-    sup = c.queryInterface(xpcom.components.interfaces.nsISupports)._comobj_
-    test_method(c.CopyVariant, ((sup, sup),), [sup,sup])
-    test_method(c.CopyVariant, ([1,"test"],), [1,"test"])
     test_method(c.AppendVariant, (1,2), 3)
     test_method(c.AppendVariant, ((1,2),(3,4)), 10)
     test_method(c.AppendVariant, ("bar", "foo"), "foobar")
     test_method(c.AppendVariant, (None, None), None)
-
-    test_method(c.SumVariants, ([],), None)
-    test_method(c.SumVariants, ([1,2,3],), 6)
-    test_method(c.SumVariants, (['foo', 'bar'],), 'foobar')
-    # We previously had trouble working out the IID of interface arrays, so
-    # had to pass an explicitly wrapped variant - let's check that still works.
-    test_method(c.SumVariants, ([MakeVariant(1),MakeVariant(2),MakeVariant(3)],), 6)
-    test_method(c.SumVariants, ([MakeVariant('foo'), MakeVariant('bar')],), 'foobar')
 
     if not test_flat:
         c = c.queryInterface(xpcom.components.interfaces.nsIPythonTestInterfaceDOMStrings)
@@ -455,7 +441,7 @@ def do_test_failures():
     try:
         ret = c.do_nsISupportsIs( xpcom._xpcom.IID_nsIInterfaceInfoManager )
         print "*** got", ret, "***"
-        raise RuntimeError, "We worked when using an IID we don't support!?!"
+        raise RuntimeError, "We worked when using an IID we dont support!?!"
     except xpcom.Exception, details:
         if details.errno != xpcom.nsError.NS_ERROR_NO_INTERFACE:
             raise RuntimeError, "Wrong COM exception type: %r" % (details,)
@@ -505,20 +491,29 @@ def test_from_js():
         raise RuntimeError, "Can not find '%s'" % (fname,)
     # Note we _dont_ pump the test output out, as debug "xpcshell" spews
     # extra debug info that will cause our output comparison to fail.
-    data = os.popen('xpcshell "' + fname + '"').readlines()
-    good = 0
-    for line in data:
-        if line.strip() == "OK: javascript successfully tested the Python test component.":
-            good = 1
-    if not good:
-        print "** The javascript test appeared to fail!  Test output follows **"
-        print "".join(data)
-        print "** End of javascript test output **"
-        raise RuntimeError, "test failed"
+    try:
+        data = os.popen('xpcshell "' + fname + '"').readlines()
+        good = 0
+        for line in data:
+            if line.strip() == "javascript successfully tested the Python test component.":
+                good = 1
+        if good:
+            print "Javascript could successfully use the Python test component."
+        else:
+            print "** The javascript test appeared to fail!  Test output follows **"
+            print "".join(data)
+            print "** End of javascript test output **"
+
+    except os.error, why:
+        print "Error executing the javascript test program:", why
+        
 
 def doit(num_loops = -1):
+    if "-v" in sys.argv: # Hack the verbose flag for the server
+        xpcom.verbose = 1
     # Do the test lots of times - can help shake-out ref-count bugs.
-    if num_loops == -1: num_loops = 5
+    print "Testing the Python.TestComponent component"
+    if num_loops == -1: num_loops = 10
     for i in xrange(num_loops):
         test_all()
 
@@ -540,40 +535,38 @@ def doit(num_loops = -1):
     # Sometimes we get spurious counts off by 1 or 2.
     # This can't indicate a real leak, as we have looped
     # more than twice!
-    if abs(lost)>3: # 2 or 3 :)
+    if abs(lost)>2:
         print "*** Lost %d references" % (lost,)
 
     # sleep to allow the OS to recover
     time.sleep(1)
     mem_lost = getmemusage() - mem_usage
     # working set size is fickle, and when we were leaking strings, this test
-    # would report a leak of 100MB.  So we allow a 3MB buffer - but even this
+    # would report a leak of 100MB.  So we allow a 2MB buffer - but even this
     # may still occasionally report spurious warnings.  If you are really
     # worried, bump the counter to a huge value, and if there is a leak it will
     # show.
-    if mem_lost > 3000000:
+    if mem_lost > 2000000:
         print "*** Lost %.6f MB of memory" % (mem_lost/1000000.0,)
 
-    assert num_errors==0, "There were %d errors testing the Python component" % (num_errors,)
+    if num_errors:
+        print "There were", num_errors, "errors testing the Python component :-("
+    else:
+        print "The Python test component worked!"
 
-def suite():
-    from pyxpcom_test_tools import suite_from_functions
-    return suite_from_functions(doit, test_from_js)
+# regrtest doesnt like if __name__=='__main__' blocks - it fails when running as a test!
+num_iters = -1
+if __name__=='__main__' and len(sys.argv) > 1:
+    num_iters = int(sys.argv[1])
+
+doit(num_iters)
+test_from_js()
 
 if __name__=='__main__':
-    num_iters = 10 # times times is *lots* - we do a fair bit of work!
-    if __name__=='__main__' and len(sys.argv) > 1:
-        num_iters = int(sys.argv[1])
-
-    if "-v" in sys.argv: # Hack the verbose flag for the server
-        xpcom.verbose = 1
-
-    print "Testing the Python.TestComponent component"
-    doit(num_iters)
-    print "The Python test component worked."
-    test_from_js()
-    print "JS successfully used our Python test component."
+    # But we can only do this if _not_ testing - otherwise we
+    # screw up any tests that want to run later.
     xpcom._xpcom.NS_ShutdownXPCOM()
     ni = xpcom._xpcom._GetInterfaceCount()
     ng = xpcom._xpcom._GetGatewayCount()
-    print "test completed with %d interfaces and %d objects." % (ni, ng)
+    if ni or ng:
+        print "********* WARNING - Leaving with %d/%d objects alive" % (ni,ng)

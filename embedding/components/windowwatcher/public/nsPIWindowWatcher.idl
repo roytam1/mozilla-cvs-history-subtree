@@ -46,7 +46,6 @@ interface nsIDOMWindow;
 interface nsISimpleEnumerator;
 interface nsIWebBrowserChrome;
 interface nsIDocShellTreeItem;
-interface nsIArray;
 
 %{C++
 #include "jspubtd.h"
@@ -85,7 +84,9 @@ interface nsPIWindowWatcher : nsISupports
              aUrl in it (if aUrl is not null) and return it.
       @param aFeatures window features from JS window.open. can be null.
       @param aDialog use dialog defaults (see nsIDOMWindowInternal::openDialog)
-      @param aArgs Window argument
+      @param argc count of argv arguments
+      @param argv extra JS arguments, if any
+                  (see nsIDOMWindowInternal::openDialog)
       @return the new window
 
       @note This method may examine the JS context stack for purposes of
@@ -98,7 +99,7 @@ interface nsPIWindowWatcher : nsISupports
   */
   nsIDOMWindow openWindowJS(in nsIDOMWindow aParent, in string aUrl,
                in string aName, in string aFeatures, in boolean aDialog,
-               in nsIArray aArgs);
+               in PRUint32 argc, in jsvalptr argv);
 
   /**
    * Find a named docshell tree item amongst all windows registered

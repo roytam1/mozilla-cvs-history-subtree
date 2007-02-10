@@ -37,7 +37,7 @@
 #include "nsIDOMHTMLElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsIAtom.h"
@@ -54,7 +54,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -64,8 +64,6 @@ public:
 
   virtual nsresult GetInnerHTML(nsAString& aInnerHTML);
   virtual nsresult SetInnerHTML(const nsAString& aInnerHTML);
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 };
 
 
@@ -92,15 +90,15 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLSpanElement, nsGenericHTMLElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLSpanElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLSpanElement)
 
 
 nsresult
 nsHTMLSpanElement::GetInnerHTML(nsAString& aInnerHTML)
 {
-  if (mNodeInfo->Equals(nsGkAtoms::xmp) ||
-      mNodeInfo->Equals(nsGkAtoms::plaintext)) {
-    nsContentUtils::GetNodeTextContent(this, PR_FALSE, aInnerHTML);
+  if (mNodeInfo->Equals(nsHTMLAtoms::xmp) ||
+      mNodeInfo->Equals(nsHTMLAtoms::plaintext)) {
+    GetContentsAsText(aInnerHTML);
     return NS_OK;
   }
 
@@ -110,9 +108,9 @@ nsHTMLSpanElement::GetInnerHTML(nsAString& aInnerHTML)
 nsresult
 nsHTMLSpanElement::SetInnerHTML(const nsAString& aInnerHTML)
 {
-  if (mNodeInfo->Equals(nsGkAtoms::xmp) ||
-      mNodeInfo->Equals(nsGkAtoms::plaintext)) {
-    return nsContentUtils::SetNodeTextContent(this, aInnerHTML, PR_TRUE);
+  if (mNodeInfo->Equals(nsHTMLAtoms::xmp) ||
+      mNodeInfo->Equals(nsHTMLAtoms::plaintext)) {
+    return ReplaceContentsWithText(aInnerHTML, PR_TRUE);
   }
 
   return nsGenericHTMLElement::SetInnerHTML(aInnerHTML);
@@ -126,7 +124,7 @@ public:
   nsHTMLUnknownElement(nsINodeInfo *aNodeInfo);
 
   NS_IMETHOD QueryInterface(REFNSIID aIID, void** aInstancePtr);
-  nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
+  NS_IMETHOD CloneNode(PRBool aDeep, nsIDOMNode** aReturn);
 };
 
 NS_INTERFACE_MAP_BEGIN(nsHTMLUnknownElement)
@@ -142,4 +140,4 @@ nsHTMLUnknownElement::nsHTMLUnknownElement(nsINodeInfo *aNodeInfo)
 NS_IMPL_NS_NEW_HTML_ELEMENT(Unknown)
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLUnknownElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLUnknownElement)

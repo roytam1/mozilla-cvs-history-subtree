@@ -50,7 +50,7 @@
 class nsIFile;
 class nsICookieManager2;
 class nsIRDFResource;
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
 class nsINavBookmarksService;
 #else
 class nsIBookmarksService;
@@ -89,8 +89,8 @@ protected:
   nsresult AddDataToFormHistory(const nsAString& aKey, PRUnichar* data, unsigned long len);
 
   nsresult CopyFavorites(PRBool aReplace);
-  void     ResolveShortcut(const nsString &aFileName, char** aOutURL);
-#ifdef MOZ_PLACES_BOOKMARKS
+  void     ResolveShortcut(const nsAFlatString &aFileName, char** aOutURL);
+#ifdef MOZ_PLACES
   nsresult ParseFavoritesFolder(nsIFile* aDirectory, 
                                 PRInt64 aParentFolder,
                                 nsINavBookmarksService* aBookmarksService,

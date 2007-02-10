@@ -113,7 +113,7 @@ function getRDFProperty(aID, aProperty)
 function fireEventForElement(aElement, aEventType)
 {
   var e = document.createEvent("Events");
-  e.initEvent("download-" + aEventType, true, true);
+  e.initEvent("download-" + aEventType, false, true);
   
   aElement.dispatchEvent(e);
 }
@@ -445,7 +445,7 @@ function onDownloadRetry(aEvent)
     var f = getLocalFileFromNativePathOrUrl(aEvent.target.id);
     saveURL(src, f, null, true, true);
   }
-  
+
   gDownloadViewController.onCommandUpdate();
 
   // retry always places the item in the first spot
@@ -575,7 +575,7 @@ function Startup()
   // Finally, update the UI. 
   gDownloadsView.database.AddDataSource(gDownloadManager.datasource);
   gDownloadsView.builder.rebuild();
-  
+
   // downloads can finish before Startup() does, so check if the window should close
   autoClose();
 }

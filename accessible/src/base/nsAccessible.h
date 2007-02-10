@@ -43,9 +43,7 @@
 #include "nsAccessibilityAtoms.h"
 #include "nsIAccessible.h"
 #include "nsPIAccessible.h"
-#include "nsIAccessibleHyperLink.h"
 #include "nsIAccessibleSelectable.h"
-#include "nsIAccessibleValue.h"
 #include "nsIDOMNodeList.h"
 #include "nsINameSpaceManager.h"
 #include "nsWeakReference.h"
@@ -63,7 +61,7 @@ class nsIAtom;
 
 // Saves a data member -- if child count equals this value we haven't
 // cached children or child count yet
-enum { eChildCountUninitialized = -1 };
+enum { eChildCountUninitialized = 0xffffffff };
 
 struct nsStateMapEntry
 {
@@ -116,60 +114,49 @@ struct nsRoleMapEntry
 class nsAccessible : public nsAccessNodeWrap, 
                      public nsIAccessible, 
                      public nsPIAccessible,
-                     public nsIAccessibleHyperLink,
-                     public nsIAccessibleSelectable,
-                     public nsIAccessibleValue
+                     public nsIAccessibleSelectable
 {
 public:
+  // to eliminate the confusion of "magic numbers" -- if ( 0 ){ foo; }
+  enum { eAction_Switch=0, eAction_Jump=0, eAction_Click=0, eAction_Select=0, eAction_Expand=1 };
+  // how many actions
+  enum { eNo_Action=0, eSingle_Action=1, eDouble_Action=2 }; 
+
   nsAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell);
   virtual ~nsAccessible();
 
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIACCESSIBLE
   NS_DECL_NSPIACCESSIBLE
-  NS_DECL_NSIACCESSIBLEHYPERLINK
   NS_DECL_NSIACCESSIBLESELECTABLE
-  NS_DECL_NSIACCESSIBLEVALUE
 
   // nsIAccessNode
   NS_IMETHOD Init();
   NS_IMETHOD Shutdown();
 
-  NS_IMETHOD GetState(PRUint32 *aState);  // Must support GetFinalState()
+  // Support GetFinalState(), GetFinalValue()
+  NS_IMETHOD GetState(PRUint32 *aState);
+  NS_IMETHOD GetValue(nsAString & aValue);
 
 #ifdef MOZ_ACCESSIBILITY_ATK
+  static nsresult GetParentBlockNode(nsIPresShell *aPresShell, nsIDOMNode *aCurrentNode, nsIDOMNode **aBlockNode);
+  static nsIFrame* GetParentBlockFrame(nsIFrame *aFrame);
   static PRBool FindTextFrame(PRInt32 &index, nsPresContext *aPresContext, nsIFrame *aCurFrame, 
                                    nsIFrame **aFirstTextFrame, const nsIFrame *aTextFrame);
 #endif
 
-#ifdef DEBUG_A11Y
-  static PRBool IsTextInterfaceSupportCorrect(nsIAccessible *aAccessible);
-#endif
-
   static PRBool IsCorrectFrameType(nsIFrame* aFrame, nsIAtom* aAtom);
-  static PRUint32 State(nsIAccessible *aAcc) { PRUint32 state; aAcc->GetFinalState(&state); return state; }
-  static PRUint32 Role(nsIAccessible *aAcc) { PRUint32 role; aAcc->GetFinalRole(&role); return role; }
-  static PRBool IsText(nsIAccessible *aAcc) { PRUint32 role = Role(aAcc); return role == ROLE_TEXT_LEAF || role == ROLE_STATICTEXT; }
-  static PRBool IsEmbeddedObject(nsIAccessible *aAcc) { PRUint32 role = Role(aAcc); return role != ROLE_TEXT_LEAF && role != ROLE_WHITESPACE && role != ROLE_STATICTEXT; }
-  static PRInt32 TextLength(nsIAccessible *aAccessible);
-  
-  already_AddRefed<nsIAccessible> GetParent() {
-    nsIAccessible *parent = nsnull;
-    GetParent(&parent);
-    return parent;
-  }
 
 protected:
   PRBool MappedAttrState(nsIContent *aContent, PRUint32 *aStateInOut, nsStateMapEntry *aStateMapEntry);
   virtual nsIFrame* GetBoundsFrame();
   virtual void GetBoundsRect(nsRect& aRect, nsIFrame** aRelativeFrame);
-  PRBool IsVisible(PRBool *aIsOffscreen); 
+  PRBool IsPartiallyVisible(PRBool *aIsOffscreen); 
   nsresult GetTextFromRelationID(nsIAtom *aIDAttrib, nsString &aName);
 
   static nsIContent *GetContentPointingTo(const nsAString *aId,
                                           nsIContent *aLookContent,
                                           nsIAtom *forAttrib,
-                                          nsIContent *aExcludeContent = nsnull,
                                           PRUint32 aForAttribNamespace = kNameSpaceID_None,
                                           nsIAtom *aTagType = nsAccessibilityAtoms::label);
   static nsIContent *GetXULLabelContent(nsIContent *aForNode,
@@ -191,22 +178,14 @@ protected:
   // helper method to verify frames
   static nsresult GetFullKeyName(const nsAString& aModifierName, const nsAString& aKeyName, nsAString& aStringOut);
   static nsresult GetTranslatedString(const nsAString& aKey, nsAString& aStringOut);
+  void GetScreenOrigin(nsPresContext *aPresContext, nsIFrame *aFrame, nsRect *aRect);
   nsresult AppendFlatStringFromSubtreeRecurse(nsIContent *aContent, nsAString *aFlatString);
-
-  // Helpers for dealing with children
-  virtual void CacheChildren();
-  
-  // nsCOMPtr<>& is useful here, because getter_AddRefs() nulls the comptr's value, and NextChild
-  // depends on the passed-in comptr being null or already set to a child (finding the next sibling).
-  nsIAccessible *NextChild(nsCOMPtr<nsIAccessible>& aAccessible);
-    
-  already_AddRefed<nsIAccessible> GetNextWithState(nsIAccessible *aStart, PRUint32 matchState);
+  virtual void CacheChildren(PRBool aWalkAnonContent);
 
   // Selection helpers
+  already_AddRefed<nsIAccessible> GetNextWithState(nsIAccessible *aStart, PRUint32 matchState);
   static already_AddRefed<nsIAccessible> GetMultiSelectFor(nsIDOMNode *aNode);
-
-  // Hyperlink helpers
-  virtual nsresult GetLinkOffset(PRInt32* aStartOffset, PRInt32* aEndOffset);
+  nsresult SetNonTextSelection(PRBool aSelect);
 
   // For accessibles that have actions
   static void DoCommandCallback(nsITimer *aTimer, void *aClosure);
@@ -220,7 +199,7 @@ protected:
   nsCOMPtr<nsIAccessible> mParent;
   nsIAccessible *mFirstChild, *mNextSibling;
   nsRoleMapEntry *mRoleMapEntry; // Non-null indicates author-supplied role; possibly state & value as well
-  PRInt32 mAccChildCount;
+  PRUint32 mAccChildCount;
 
   static nsRoleMapEntry gWAIRoleMap[];
   static nsStateMapEntry gUnivStateMap[];

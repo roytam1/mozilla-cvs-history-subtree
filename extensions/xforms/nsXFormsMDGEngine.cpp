@@ -380,16 +380,14 @@ nsXFormsMDGEngine::Recalculate(nsCOMArray<nsIDOMNode> *aChangedNodes)
     switch (g->mType) {
     case eModel_calculate:
       if (g->HasExpr()) {
-        nsCOMPtr<nsISupports> result;
+        nsCOMPtr<nsIDOMXPathResult> xpath_res;
         rv = g->mExpression->EvaluateWithContext(g->mContextNode,
                                                  g->mContextPosition,
                                                  g->mContextSize,
                                                  nsIDOMXPathResult::STRING_TYPE,
                                                  nsnull,
-                                                 getter_AddRefs(result));
+                                                 getter_AddRefs(xpath_res));
         NS_ENSURE_SUCCESS(rv, rv);
-
-        nsCOMPtr<nsIDOMXPathResult> xpath_res = do_QueryInterface(result);
         NS_ENSURE_STATE(xpath_res);
         
         nsAutoString nodeval;
@@ -674,7 +672,6 @@ nsXFormsMDGEngine::SetNodeValueInternal(nsIDOMNode       *aContextNode,
     break;
 
   case nsIDOMNode::ELEMENT_NODE:
-
     rv = aContextNode->GetFirstChild(getter_AddRefs(childNode));
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -685,41 +682,19 @@ nsXFormsMDGEngine::SetNodeValueInternal(nsIDOMNode       *aContextNode,
       PRUint16 childType;
       rv = childNode->GetNodeType(&childType);
       NS_ENSURE_SUCCESS(rv, rv);
-
-      if (childType == nsIDOMNode::TEXT_NODE ||
-          childType == nsIDOMNode::CDATA_SECTION_NODE) {
+      
+      if (   childType == nsIDOMNode::TEXT_NODE
+          || childType == nsIDOMNode::CDATA_SECTION_NODE) {
         rv = childNode->SetNodeValue(aNodeValue);
         NS_ENSURE_SUCCESS(rv, rv);
-
-        // Remove all leading text child nodes except first one (see
-        // nsXFormsUtils::GetNodeValue method for motivation).
-        nsCOMPtr<nsIDOMNode> siblingNode;
-        while (true) {
-          rv = childNode->GetNextSibling(getter_AddRefs(siblingNode));
-          NS_ENSURE_SUCCESS(rv, rv);
-          if (!siblingNode)
-            break;
-
-          rv = siblingNode->GetNodeType(&childType);
-          NS_ENSURE_SUCCESS(rv, rv);
-          if (childType != nsIDOMNode::TEXT_NODE &&
-              childType != nsIDOMNode::CDATA_SECTION_NODE) {
-            break;
-          }
-          nsCOMPtr<nsIDOMNode> stubNode;
-          rv = aContextNode->RemoveChild(siblingNode,
-                                         getter_AddRefs(stubNode));
-          NS_ENSURE_SUCCESS(rv, rv);
-        }
       } else {
         // Not a text child, create a new one
         rv = CreateNewChild(aContextNode, aNodeValue, childNode);
         NS_ENSURE_SUCCESS(rv, rv);
       }
     }
-
     break;
-
+          
   default:
     /// Unsupported nodeType
     /// @todo Should return more specific error? (XXX)
@@ -1064,7 +1039,7 @@ nsXFormsMDGEngine::BooleanExpression(nsXFormsMDGNode* aNode, PRBool& state)
   NS_ENSURE_ARG_POINTER(aNode);
   NS_ENSURE_TRUE(aNode->mExpression, NS_ERROR_FAILURE);
   
-  nsCOMPtr<nsISupports> retval;
+  nsISupports* retval;
   nsresult rv;
 
   rv = aNode->mExpression->EvaluateWithContext(aNode->mContextNode,
@@ -1072,7 +1047,7 @@ nsXFormsMDGEngine::BooleanExpression(nsXFormsMDGNode* aNode, PRBool& state)
                                                aNode->mContextSize,
                                                nsIDOMXPathResult::BOOLEAN_TYPE,
                                                nsnull,
-                                               getter_AddRefs(retval));
+                                               &retval);
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIDOMXPathResult> xpath_res = do_QueryInterface(retval);

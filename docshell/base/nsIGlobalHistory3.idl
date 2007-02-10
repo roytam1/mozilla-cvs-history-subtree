@@ -40,13 +40,6 @@
 #include "nsIGlobalHistory2.idl"
 interface nsIChannel;
 
-%{C++
-
-// This is NOT part of the interface! It could change.
-#define NS_GECKO_FLAG_NEEDS_VERTICAL_SCROLLBAR (1 << 0)
-
-%}
-
 /**
  * Provides information about global history to gecko, extending GlobalHistory2
  */
@@ -86,18 +79,4 @@ interface nsIGlobalHistory3 : nsIGlobalHistory2
                            in nsIChannel aNewChannel,
                            in PRInt32 aFlags,
                            in boolean aTopLevel);
-
-  /**
-   * Get the Gecko flags for this URI. These flags are used by Gecko as hints
-   * to optimize page loading. Not all histories have them; this need not be
-   * supported (just return NS_ERROR_NOT_IMPLEMENTED. These flags are opaque
-   * and should not be interpreted by the history engine.
-   */
-  unsigned long getURIGeckoFlags(in nsIURI aURI);
-
-  /**
-   * Set the Gecko flags for this URI. May fail if the history entry
-   * doesn't have any flags or if there is no entry for the URI.
-   */
-  void setURIGeckoFlags(in nsIURI aURI, in unsigned long aFlags);
 };

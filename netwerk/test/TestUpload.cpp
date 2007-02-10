@@ -41,12 +41,14 @@
 #endif
 
 #include "nsIComponentRegistrar.h"
+#include "nsIEventQueueService.h"
 #include "nsIIOService.h"
 #include "nsIServiceManager.h"
 #include "nsNetUtil.h"
 
 #include "nsIUploadChannel.h"
 
+static NS_DEFINE_CID(kEventQueueServiceCID,      NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 #include "prlog.h"
@@ -57,6 +59,9 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static PRLogModuleInfo *gTestLog = nsnull;
 #endif
 #define LOG(args) PR_LOG(gTestLog, PR_LOG_DEBUG, args)
+
+static int gKeepRunning = 1;
+static nsIEventQueue* gEventQ = nsnull;
 
 //-----------------------------------------------------------------------------
 // InputTestConsumer
@@ -121,7 +126,7 @@ InputTestConsumer::OnStopRequest(nsIRequest *request, nsISupports* context,
                                  nsresult aStatus)
 {
     LOG(("InputTestConsumer::OnStopRequest [status=%x]\n", aStatus));
-    QuitPumpingEvents();
+    gKeepRunning = PR_FALSE;
     return NS_OK;
 }
 
@@ -152,6 +157,13 @@ main(int argc, char* argv[])
         NS_ASSERTION(registrar, "Null nsIComponentRegistrar");
         if (registrar)
             registrar->AutoRegister(nsnull);
+
+        // Create the Event Queue for this thread...
+        nsCOMPtr<nsIEventQueueService> eventQService =
+                 do_GetService(kEventQueueServiceCID, &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &gEventQ);
 
         nsCOMPtr<nsIIOService> ioService(do_GetService(kIOServiceCID, &rv));
         // first thing to do is create ourselves a stream that
@@ -188,7 +200,11 @@ main(int argc, char* argv[])
 
         channel->AsyncOpen(listener, nsnull);
 
-        PumpEvents();
+        while ( gKeepRunning ) {
+            PLEvent *gEvent;
+            gEventQ->WaitForEvent(&gEvent);
+            gEventQ->HandleEvent(gEvent);
+        }
     } // this scopes the nsCOMPtrs
     // no nsCOMPtrs are allowed to be alive when you call NS_ShutdownXPCOM
     rv = NS_ShutdownXPCOM(nsnull);

@@ -469,9 +469,10 @@ nsresult nsMsgSearchTerm::OutputValue(nsCString &outputStr)
       }
     case nsMsgSearchAttrib::Priority:
       {
-        nsCAutoString priority;
-        NS_MsgGetUntranslatedPriorityName(m_value.u.priority, priority);
-        outputStr += priority;
+        nsAutoString priority;
+        NS_MsgGetUntranslatedPriorityName( m_value.u.priority, 
+          &priority);
+        outputStr.AppendWithConversion(priority);
         break;
       }
     case nsMsgSearchAttrib::HasAttachmentStatus:
@@ -563,7 +564,7 @@ nsresult nsMsgSearchTerm::ParseValue(char *inStream)
       m_value.u.msgStatus = NS_MsgGetStatusValueFromName(inStream);
       break;
     case nsMsgSearchAttrib::Priority:
-      NS_MsgGetPriorityFromString(inStream, m_value.u.priority);
+      NS_MsgGetPriorityFromString(inStream, &m_value.u.priority);
       break;
     case nsMsgSearchAttrib::AgeInDays:
       m_value.u.age = atoi(inStream);
@@ -677,6 +678,64 @@ nsresult nsMsgSearchTerm::DeStreamNew (char *inStream, PRInt16 /*length*/)
 }
 
 
+void nsMsgSearchTerm::StripQuotedPrintable (unsigned char *src)
+{
+  // decode quoted printable text in place
+  
+  if (!*src)
+    return;
+  unsigned char *dest = src;
+  int srcIdx = 0, destIdx = 0;
+  
+  while (src[srcIdx] != 0)
+  {
+    if (src[srcIdx] == '=')
+    {
+      unsigned char *token = &src[srcIdx];
+      unsigned char c = 0;
+      
+      // decode the first quoted char
+      if (token[1] >= '0' && token[1] <= '9')
+        c = token[1] - '0';
+      else if (token[1] >= 'A' && token[1] <= 'F')
+        c = token[1] - ('A' - 10);
+      else if (token[1] >= 'a' && token[1] <= 'f')
+        c = token[1] - ('a' - 10);
+      else
+      {
+        // first char after '=' isn't hex. copy the '=' as a normal char and keep going
+        dest[destIdx++] = src[srcIdx++]; // aka token[0]
+        continue;
+      }
+      
+      // decode the second quoted char
+      c = (c << 4);
+      if (token[2] >= '0' && token[2] <= '9')
+        c += token[2] - '0';
+      else if (token[2] >= 'A' && token[2] <= 'F')
+        c += token[2] - ('A' - 10);
+      else if (token[2] >= 'a' && token[2] <= 'f')
+        c += token[2] - ('a' - 10);
+      else
+      {
+        // second char after '=' isn't hex. copy the '=' as a normal char and keep going
+        dest[destIdx++] = src[srcIdx++]; // aka token[0]
+        continue;
+      }
+      
+      // if we got here, we successfully decoded a quoted printable sequence,
+      // so bump each pointer past it and move on to the next char;
+      dest[destIdx++] = c; 
+      srcIdx += 3;
+      
+    }
+    else
+      dest[destIdx++] = src[srcIdx++];
+  }
+  
+  dest[destIdx] = src[srcIdx]; // null terminate
+}
+
 // Looks in the MessageDB for the user specified arbitrary header, if it finds the header, it then looks for a match against
 // the value for the header. 
 nsresult nsMsgSearchTerm::MatchArbitraryHeader (nsIMsgSearchScopeTerm *scope,
@@ -711,7 +770,7 @@ nsresult nsMsgSearchTerm::MatchArbitraryHeader (nsIMsgSearchScopeTerm *scope,
   {
     char * buf_end = (char *) (buf.get() + buf.Length());
     int headerLength = m_arbitraryHeader.Length();
-    PRBool isContinuationHeader = NS_IsAsciiWhitespace(buf.CharAt(0));
+    PRBool isContinuationHeader = nsCRT::IsAsciiSpace(buf.CharAt(0));
     // this handles wrapped header lines, which start with whitespace. 
     // If the line starts with whitespace, then we use the current header.
     if (!isContinuationHeader)
@@ -805,7 +864,7 @@ nsresult nsMsgSearchTerm::MatchBody (nsIMsgSearchScopeTerm *scope, PRUint32 offs
     {
       // Do in-place decoding of quoted printable
       if (isQuotedPrintable)
-        MsgStripQuotedPrintable ((unsigned char*)buf.get());
+        StripQuotedPrintable ((unsigned char*)buf.get());
       nsCString  compare(buf);
       //				ConvertToUnicode(charset, buf, compare);
       if (!compare.IsEmpty()) {
@@ -1547,12 +1606,21 @@ nsresult nsMsgSearchScopeTerm::InitializeAdapter (nsISupportsArray *termList)
         m_adapter = new nsMsgSearchOfflineMail (this, termList);
       break;
     case nsMsgSearchScope::newsEx:
+#ifdef DOING_EXNEWSSEARCH
+        if (m_folder->KnowsSearchNntpExtension())
+          m_adapter = new nsMsgSearchNewsEx (this, termList);
+        else
+          m_adapter = new nsMsgSearchNews(this, termList);
+#endif
       NS_ASSERTION(PR_FALSE, "not supporting newsEx yet");
       break;
     case nsMsgSearchScope::news:
           m_adapter = new nsMsgSearchNews (this, termList);
         break;
     case nsMsgSearchScope::allSearchableGroups:
+#ifdef DOING_EXNEWSSEARCH
+      m_adapter = new msMsgSearchNewsEx (this, termList);
+#endif
       NS_ASSERTION(PR_FALSE, "not supporting allSearchableGroups yet");
       break;
     case nsMsgSearchScope::LDAP:
@@ -1690,16 +1758,168 @@ nsresult nsMsgResultElement::GetValue (nsMsgSearchAttribValue attrib,
         err = NS_ERROR_OUT_OF_MEMORY;
     }
   }
+#ifdef HAVE_SEARCH_PORT
+  // No need to store the folderInfo separately; we can always get it if/when
+  // we need it. This code is to support "view thread context" in the search dialog
+  if (SearchError_ScopeAgreement == err && attrib == nsMsgSearchAttrib::FolderInfo)
+  {
+    nsMsgFolderInfo *targetFolder = m_adapter->FindTargetFolder (this);
+    if (targetFolder)
+    {
+      *outValue = new nsMsgSearchValue;
+      if (*outValue)
+      {
+        (*outValue)->u.folder = targetFolder;
+        (*outValue)->attribute = nsMsgSearchAttrib::FolderInfo;
+        err = NS_OK;
+      }
+    }
+  }
+#endif
   return err;
 }
 
-nsresult nsMsgResultElement::GetPrettyName (nsMsgSearchValue **value)
+
+nsresult
+nsMsgResultElement::GetValueRef (nsMsgSearchAttribValue attrib,
+                                 nsIMsgSearchValue* *aResult) const 
 {
-  return GetValue (nsMsgSearchAttrib::Location, value);
+  nsCOMPtr<nsIMsgSearchValue> value;
+  PRUint32 count;
+  m_valueList->Count(&count);
+  nsresult rv;
+  for (PRUint32 i = 0; i < count; i++)
+  {
+    rv = m_valueList->QueryElementAt(i, NS_GET_IID(nsIMsgSearchValue),
+      getter_AddRefs(value));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "bad element of array");
+    if (NS_FAILED(rv)) continue;
+    
+    nsMsgSearchAttribValue valueAttribute;
+    value->GetAttrib(&valueAttribute);
+    if (attrib == valueAttribute) {
+      *aResult = value;
+      NS_ADDREF(*aResult);
+    }
+  }
+  return NS_ERROR_FAILURE;
 }
 
+
+nsresult nsMsgResultElement::GetPrettyName (nsMsgSearchValue **value)
+{
+  nsresult err = GetValue (nsMsgSearchAttrib::Location, value);
+#ifdef HAVE_SEARCH_PORT
+  if (NS_OK == err)
+  {
+    nsMsgFolderInfo *folder = m_adapter->m_scope->m_folder;
+    nsMsgNewsHost *host = NULL;
+    if (folder)
+    {
+      // Find the news host because only the host knows whether pretty
+      // names are supported. 
+      if (FOLDER_CONTAINERONLY == folder->GetType())
+        host = ((nsMsgNewsFolderInfoContainer*) folder)->GetHost();
+      else if (folder->IsNews())
+        host = folder->GetNewsFolderInfo()->GetHost();
+      
+      // Ask the host whether it knows pretty names. It isn't strictly
+      // necessary to avoid calling folder->GetPrettiestName() since it
+      // does the right thing. But we do have to find the folder from the host.
+      if (host && host->QueryExtension ("LISTPNAMES"))
+      {
+        folder = host->FindGroup ((*value)->u.string);
+        if (folder)
+        {
+          char *tmp = nsCRT::strdup (folder->GetPrettiestName());
+          if (tmp)
+          {
+            XP_FREE ((*value)->u.string);
+            (*value)->u.utf8SstringZ = tmp;
+          }
+        }
+      }
+    }
+  }
+#endif // HAVE_SEARCH_PORT
+  return err;
+}
+
+int nsMsgResultElement::CompareByFolderInfoPtrs (const void *e1, const void *e2)
+{
+#ifdef HAVE_SEARCH_PORT
+  nsMsgResultElement * re1 = *(nsMsgResultElement **) e1;
+  nsMsgResultElement * re2 = *(nsMsgResultElement **) e2;
+  
+  // get the src folder for each one
+  
+  const nsMsgSearchValue * v1 = re1->GetValueRef(attribFolderInfo);
+  const nsMsgSearchValue * v2 = re2->GetValueRef(attribFolderInfo);
+  
+  if (!v1 || !v2)
+    return 0;
+  
+  return (v1->u.folder - v2->u.folder);
+#else
+  return -1;
+#endif // HAVE_SEARCH_PORT
+}
+
+
+
+int nsMsgResultElement::Compare (const void *e1, const void *e2)
+{
+  int ret = 0;
+    return ret;
+}
+
+#ifdef HAVE_SEARCH_PORT
+MWContextType nsMsgResultElement::GetContextType ()
+{
+  MWContextType type=(MWContextType)0;
+  switch (m_adapter->m_scope->m_attribute)
+  {
+  case nsMsgSearchScopeMailFolder:
+    type = MWContextMailMsg;
+    break;
+  case nsMsgSearchScopeOfflineNewsgroup:    // added by mscott could be bug fix...
+  case nsMsgSearchScopeNewsgroup:
+  case nsMsgSearchScopeAllSearchableGroups:
+    type = MWContextNewsMsg;
+    break;
+  case nsMsgSearchScopeLdapDirectory:
+    type = MWContextBrowser;
+    break;
+  default:
+    NS_ASSERTION(PR_FALSE, "invalid scope"); // should never happen
+  }
+  return type;
+}
+
+#endif
 nsresult nsMsgResultElement::Open (void *window)
 {
+#ifdef HAVE_SEARCH_PORT
+  // ###phil this is a little ugly, but I'm not inclined to invest more in it
+  // until the libnet rework is done and I know what kind of context we'll end up with
+  
+  if (window)
+  {
+    if (m_adapter->m_scope->m_attribute != nsMsgSearchScopeLdapDirectory)
+    {
+      msgPane = (MSG_MessagePane *) window; 
+      PR_ASSERT (MSG_MESSAGEPANE == msgPane->GetPaneType());
+      return m_adapter->OpenResultElement (msgPane, this);
+    }
+    else
+    {
+      context = (MWContext*) window;
+      PR_ASSERT (MWContextBrowser == context->type);
+      msg_SearchLdap *thisAdapter = (msg_SearchLdap*) m_adapter;
+      return thisAdapter->OpenResultElement (context, this);
+    }
+  }
+#endif
   return NS_ERROR_NULL_POINTER;
 }
 

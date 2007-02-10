@@ -71,8 +71,7 @@ interface nsIDOMNSHTMLDocument : nsISupports
   void                      clear();
 
   /**
-   * @deprecated These are old Netscape 4 methods. Do not use,
-   *             the implementation is no-op.
+   * @deprecated These are old Netscape 4 methods.
    */
   void                      captureEvents(in long eventFlags);
   void                      releaseEvents(in long eventFlags);

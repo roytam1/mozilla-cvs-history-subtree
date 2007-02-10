@@ -85,7 +85,8 @@ nsFocusController::~nsFocusController(void)
 {
 }
 
-NS_IMPL_ISUPPORTS4(nsFocusController, nsIFocusController, nsIDOMFocusListener,
+NS_IMPL_ISUPPORTS5(nsFocusController, nsIFocusController,
+                   nsIFocusController_MOZILLA_1_8_BRANCH, nsIDOMFocusListener,
                    nsIDOMEventListener, nsSupportsWeakReference)
 
 NS_IMETHODIMP
@@ -152,19 +153,24 @@ nsFocusController::RewindFocusState()
 NS_IMETHODIMP
 nsFocusController::SetFocusedWindow(nsIDOMWindowInternal* aWindow)
 {
-  nsCOMPtr<nsPIDOMWindow> win = do_QueryInterface(aWindow);
+  nsCOMPtr<nsPIDOMWindow> pwin = do_QueryInterface(aWindow);
 
-  if (win) {
-    win = win->GetOuterWindow();
+  if (pwin) {
+    pwin = pwin->GetOuterWindow();
   }
 
-  NS_ASSERTION(!win || !win->IsInnerWindow(),
+  NS_ASSERTION(!pwin || !pwin->IsInnerWindow(),
                "Uh, inner window can't have focus!");
 
+  nsCOMPtr<nsIDOMWindowInternal> win = do_QueryInterface(pwin);
+
   if (win && (mCurrentWindow != win)) {
-    nsCOMPtr<nsIBaseWindow> basewin = do_QueryInterface(win->GetDocShell());
-    if (basewin)
-      basewin->SetFocus();
+    nsCOMPtr<nsIScriptGlobalObject> sgo = do_QueryInterface(win);
+    if (sgo) {
+      nsCOMPtr<nsIBaseWindow> basewin = do_QueryInterface(sgo->GetDocShell());
+      if (basewin)
+        basewin->SetFocus();
+    }
   }
 
   if (mCurrentWindow) {
@@ -401,7 +407,14 @@ nsFocusController::GetWindowFromDocument(nsIDOMDocument* aDocument)
   if (!doc)
     return NS_OK;
 
-  return doc->GetWindow();
+  nsCOMPtr<nsPIDOMWindow> win =
+    do_QueryInterface(doc->GetScriptGlobalObject());
+
+  if (win && win->IsInnerWindow()) {
+    return win->GetOuterWindow();
+  }
+
+  return win;
 }
 
 NS_IMETHODIMP
@@ -506,7 +519,7 @@ nsFocusController::SetSuppressFocus(PRBool aSuppressFocus, const char* aReason)
   // focus on the currently focused window
   if (!mSuppressFocus) {
     // Always update commands if we have a current element
-    // and mNeedUpdateCommands is true (checked in nsFC::UpdateCommands)
+    mNeedUpdateCommands = mNeedUpdateCommands || mCurrentElement;
     UpdateCommands();
   }
   
@@ -536,8 +549,7 @@ nsFocusController::SetActive(PRBool aActive)
       UpdateWWActiveWindow();
     else
       mUpdateWindowWatcher = PR_TRUE;
-  } else
-    mUpdateWindowWatcher = PR_FALSE;
+  }
 
   return NS_OK;
 }
@@ -557,8 +569,10 @@ nsFocusController::UpdateWWActiveWindow()
   if (!wwatch) return;
 
   // This gets the toplevel DOMWindow
+  nsCOMPtr<nsIScriptGlobalObject> sgo = do_QueryInterface(mCurrentWindow);
+
   nsCOMPtr<nsIDocShellTreeItem> docShellAsItem =
-    do_QueryInterface(mCurrentWindow->GetDocShell());
+    do_QueryInterface(sgo->GetDocShell());
   if (!docShellAsItem) return;
 
   nsCOMPtr<nsIDocShellTreeItem> rootItem;
@@ -606,5 +620,3 @@ nsFocusController::SetPopupEvent(nsIDOMEvent* aEvent)
   mPopupEvent = aEvent;
   return NS_OK;
 }
-
-  

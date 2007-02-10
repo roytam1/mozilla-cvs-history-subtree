@@ -78,9 +78,8 @@ protected:
                               // ownership is implied. MMP.
 };
 
-// inherit visibility from the NS_GFX class declaration
-#undef IMETHOD_VISIBILITY
-#define IMETHOD_VISIBILITY
+#undef  IMETHOD_VISIBILITY
+#define IMETHOD_VISIBILITY NS_VISIBILITY_DEFAULT
 
 class NS_GFX DeviceContextImpl : public nsIDeviceContext,
                                  public nsIObserver,
@@ -100,9 +99,15 @@ public:
   NS_IMETHOD  CreateRenderingContext(nsIDrawingSurface* aSurface, nsIRenderingContext *&aContext);
   NS_IMETHOD  CreateRenderingContextInstance(nsIRenderingContext *&aContext);
 
+  NS_IMETHOD  GetCanonicalPixelScale(float &aScale) const;
+  NS_IMETHOD  SetCanonicalPixelScale(float aScale);
+
   NS_IMETHOD  GetMetricsFor(const nsFont& aFont, nsIAtom* aLangGroup,
                             nsIFontMetrics*& aMetrics);
   NS_IMETHOD  GetMetricsFor(const nsFont& aFont, nsIFontMetrics*& aMetrics);
+
+  NS_IMETHOD  SetZoom(float aZoom);
+  NS_IMETHOD  GetZoom(float &aZoom) const;
 
   NS_IMETHOD FirstExistingFont(const nsFont& aFont, nsString& aFaceName);
 
@@ -127,9 +132,6 @@ public:
   NS_IMETHOD SetUseAltDC(PRUint8 aValue, PRBool aOn);
 #endif
 
-  NS_IMETHOD PrepareNativeWidget(nsIWidget *aWidget, void **aOut);
-  NS_IMETHOD ClearCachedSystemFonts();
-
 private:
   /* Helper methods for |CreateRenderingContext|&co. */
   nsresult InitRenderingContext(nsIRenderingContext *aContext, nsIWidget *aWindow);
@@ -148,7 +150,9 @@ protected:
 
   nsFontCache       *mFontCache;
   nsCOMPtr<nsIAtom> mLocaleLangGroup; // XXX temp fix for performance bug - erik
+  float             mZoom;
   nsHashtable*      mFontAliasTable;
+  float             mCPixelScale;
 
 #ifdef NS_PRINT_PREVIEW
   nsCOMPtr<nsIDeviceContext> mAltDC;
@@ -162,7 +166,7 @@ public:
 #endif
 };
 
-#undef IMETHOD_VISIBILITY
+#undef  IMETHOD_VISIBILITY
 #define IMETHOD_VISIBILITY NS_VISIBILITY_HIDDEN
 
 #endif /* nsDeviceContext_h___ */

@@ -109,13 +109,12 @@ public:
 
 #include "nsCOMPtr.h"
 #include "nsIInterfaceRequestorUtils.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "nsNetUtil.h"
 
 #include "nsIContent.h"
 #include "nsIURI.h"
 #include "nsIDocument.h"
-#include "nsIScriptObjectPrincipal.h"
 #include "nsIDOMWindow.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMDocument.h"
@@ -825,7 +824,7 @@ END_COM_MAP()
         if (!scriptContext)
             return E_UNEXPECTED;
 
-        nsCOMPtr<nsIScriptObjectPrincipal> doc(do_QueryInterface(domDocument));
+        nsCOMPtr<nsIDocument> doc(do_QueryInterface(domDocument));
         if (!doc)
             return E_UNEXPECTED;
 
@@ -1842,8 +1841,8 @@ END_COM_MAP()
 
                         nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMElement));
 
-                        lh->OnLinkClick(content, uri,
-                                        szTargetFrame ? szTargetFrame : mUseTarget);
+                        lh->OnLinkClick(content, eLinkVerb_Replace,
+                            uri, szTargetFrame ? szTargetFrame : mUseTarget);
                     }
                 }
                 hr = S_OK;

@@ -51,14 +51,12 @@ class nsIScrollbarListener : public nsISupports {
 
 public:
 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISCROLLBARLISTENER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCROLLBARLISTENER_IID)
   
   NS_IMETHOD PositionChanged(nsPresContext* aPresContext, PRInt32 aOldIndex, PRInt32& aNewIndex) = 0;
 
   NS_IMETHOD PagedUpDown() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIScrollbarListener, NS_ISCROLLBARLISTENER_IID)
 
 #endif
 

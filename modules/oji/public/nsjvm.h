@@ -58,7 +58,7 @@
 #include "nsISymantecDebugManager.h"
 #include "nsISymantecDebugger.h"
 #include "nsILiveconnect.h"
-#include "nsIJVMThreadManager.h"
+#include "nsIThreadManager.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 

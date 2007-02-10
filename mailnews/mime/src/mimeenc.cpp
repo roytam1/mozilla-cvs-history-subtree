@@ -100,11 +100,6 @@ mime_decode_qp_buffer (MimeDecoderData *data, const char *buffer, PRInt32 length
 	 trailing whitespace which remains must have been introduced
 	 by a stupid gateway. */
 
-  /* Treat null bytes as spaces when format_out is
-   nsMimeOutput::nsMimeMessageBodyDisplay (see bug 243199 comment 7) */
-  PRBool treatNullAsSpace = data->objectToDecode &&
-                            data->objectToDecode->options->format_out == nsMimeOutput::nsMimeMessageBodyDisplay;
-
   while (length > 0 || i != 0)
 	{
 	  while (i < 3 && length > 0)
@@ -182,8 +177,10 @@ mime_decode_qp_buffer (MimeDecoderData *data, const char *buffer, PRInt32 length
 			  if (in > out) *out++ = token[2];
 			  continue;
 			}
-
-			*out++ = c ? (char) c : ((treatNullAsSpace) ? ' ' : (char) c);
+		  /* treat null bytes as spaces per bug 243199 comment 7 */
+		  *out++ = c || (data->objectToDecode && 
+                      data->objectToDecode->options->format_out != nsMimeOutput::nsMimeMessageBodyDisplay)
+                    ? (char) c : ' ';
 		}
 	  else
 		{

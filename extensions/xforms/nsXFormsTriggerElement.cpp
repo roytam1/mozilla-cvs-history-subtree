@@ -36,6 +36,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsIXTFXMLVisual.h"
 #include "nsIDOM3Node.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMUIEvent.h"
@@ -48,6 +49,7 @@
 #include "nsIDOMAbstractView.h"
 #include "nsCOMPtr.h"
 #include "nsString.h"
+#include "nsIXTFXMLVisualWrapper.h"
 #include "nsXFormsAtoms.h"
 #include "nsXFormsUtils.h"
 #include "nsXFormsControlStub.h"
@@ -113,12 +115,14 @@ nsXFormsSubmitElement::HandleDefault(nsIDOMEvent *aEvent, PRBool *aHandled)
   nsAutoString submissionID;
   mElement->GetAttribute(submission, submissionID);
 
+  nsCOMPtr<nsIDOMDocument> ownerDoc;
+  mElement->GetOwnerDocument(getter_AddRefs(ownerDoc));
+  NS_ENSURE_STATE(ownerDoc);
+
   nsCOMPtr<nsIDOMElement> submissionElement;
-  nsXFormsUtils::GetElementByContextId(mElement, submissionID,
-                                       getter_AddRefs(submissionElement));
-
+  ownerDoc->GetElementById(submissionID, getter_AddRefs(submissionElement));
   nsCOMPtr<nsIXFormsSubmissionElement> xfSubmission(do_QueryInterface(submissionElement));
-
+  
   if (!xfSubmission) {
     const PRUnichar *strings[] = { submissionID.get(), submission.get() };
     nsXFormsUtils::ReportError(NS_LITERAL_STRING("idRefError"),

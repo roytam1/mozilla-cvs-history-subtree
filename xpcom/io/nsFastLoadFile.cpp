@@ -52,7 +52,6 @@
 #include "nsISeekableStream.h"
 #include "nsISerializable.h"
 #include "nsIStreamBufferAccess.h"
-#include "nsIClassInfo.h"
 
 #include "nsBinaryStream.h"
 #include "nsFastLoadFile.h"
@@ -104,7 +103,7 @@ static void trace_mux(char mode, const char *format, ...)
 #define FLETCHER_ACCUMULATE(A,B,U)      ONES_COMPLEMENT_ACCUMULATE(A, U);     \
                                         ONES_COMPLEMENT_ACCUMULATE(B, A)
 
-PRUint32
+PR_IMPLEMENT(PRUint32)
 NS_AccumulateFastLoadChecksum(PRUint32 *aChecksum,
                               const PRUint8* aBuffer,
                               PRUint32 aLength,
@@ -225,7 +224,7 @@ NS_AccumulateFastLoadChecksum(PRUint32 *aChecksum,
     return aLength;
 }
 
-PRUint32
+PR_IMPLEMENT(PRUint32)
 NS_AddFastLoadChecksums(PRUint32 sum1, PRUint32 sum2, PRUint32 sum2ByteCount)
 {
     PRUint32 A1 = sum1 & 0xffff;
@@ -266,6 +265,8 @@ NS_IMPL_ISUPPORTS_INHERITED5(nsFastLoadFileReader,
                              nsIFastLoadReadControl,
                              nsISeekableStream,
                              nsIFastLoadFileReader)
+
+MOZ_DECL_CTOR_COUNTER(nsFastLoadFileReader)
 
 nsresult
 nsFastLoadFileReader::ReadHeader(nsFastLoadHeader *aHeader)
@@ -1241,6 +1242,8 @@ NS_IMPL_ISUPPORTS_INHERITED4(nsFastLoadFileWriter,
                              nsIFastLoadFileControl,
                              nsIFastLoadWriteControl,
                              nsISeekableStream)
+
+MOZ_DECL_CTOR_COUNTER(nsFastLoadFileWriter)
 
 struct nsIDMapEntry : public PLDHashEntryHdr {
     NSFastLoadID    mFastID;            // 1 + nsFastLoadFooter::mIDMap index

@@ -44,13 +44,12 @@ include $(DEPTH)/config/autoconf.mk
 
 PROGRAM		= nsztool$(BIN_SUFFIX)
 REQUIRES	= $(ZLIB_REQUIRES)
+EXTRA_DSO_LIBS	= mozz_s
 USE_STATIC_LIBS = 1
 
 CSRCS		= nsztool.c
 
-LIBS = \
-	$(DEPTH)/modules/zlib/standalone/$(LIB_PREFIX)mozz_s.$(LIB_SUFFIX) \
-	$(NULL)
+LIBS		= $(EXTRA_DSO_LIBS)
 
 NO_DIST_INSTALL	= 1
 

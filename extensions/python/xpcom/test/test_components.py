@@ -39,7 +39,6 @@
 """
 
 import xpcom.components
-from pyxpcom_test_tools import suite_from_functions, testmain
 
 if not __debug__:
     raise RuntimeError, "This test uses assert, so must be run in debug mode"
@@ -64,14 +63,16 @@ def test_interfaces():
     assert len(xpcom.components.interfaces.keys()) == len(xpcom.components.interfaces.values()) == \
                len(xpcom.components.interfaces.items()) == len(xpcom.components.interfaces) == \
                num_fetched, "The collection lengths were wrong"
-    assert num_nsisupports == 1, "Didn't find exactly 1 nsiSupports!"
+    if num_nsisupports != 1:
+        print "Didnt find exactly 1 nsiSupports!"
+    print "The interfaces object appeared to work!"
 
 def test_classes():
     # Need a well-known contractID here?
     prog_id = "@mozilla.org/supports-array;1"
     clsid = xpcom.components.ID("{bda17d50-0d6b-11d3-9331-00104ba0fd40}")
 
-    # Check we can create the instance (don't check we can do anything with it tho!)
+    # Check we can create the instance (dont check we can do anything with it tho!)
     klass = xpcom.components.classes[prog_id]
     instance = klass.createInstance()
     
@@ -80,7 +81,8 @@ def test_classes():
     for name, klass in xpcom.components.classes.items():
         num_fetched = num_fetched + 1
         if name == prog_id:
-            assert klass.clsid == clsid, "Eeek - didn't get the correct IID - got %s" %klass.clsid
+            if klass.clsid != clsid:
+                print "Eeek - didn't get the correct IID - got", klass.clsid
             num_mine = num_mine + 1
 
 # xpcom appears to add charset info to the contractid!?         
@@ -93,17 +95,18 @@ def test_classes():
     else:
         raise RuntimeError, "The collection lengths were wrong"
     if num_fetched <= 0:
-        raise RuntimeError, "Didn't get any classes!!!"
+        raise RuntimeError, "Didnt get any classes!!!"
     if num_mine != 1:
-        raise RuntimeError, "Didn't find exactly 1 of my contractid! (%d)" % (num_mine,)
+        raise RuntimeError, "Didnt find exactly 1 of my contractid! (%d)" % (num_mine,)
+    print "The classes object appeared to work!"
     
 def test_id():
     id = xpcom.components.ID(str(xpcom._xpcom.IID_nsISupports))
     assert id == xpcom._xpcom.IID_nsISupports
+    print "The ID function appeared to work!"
     
-# Make this test run under our std test suite
-def suite():
-    return suite_from_functions(test_interfaces, test_classes, test_id)
 
-if __name__=='__main__':
-    testmain()
+# regrtest doesnt like if __name__=='__main__' blocks - it fails when running as a test!
+test_interfaces()
+test_classes()
+test_id()

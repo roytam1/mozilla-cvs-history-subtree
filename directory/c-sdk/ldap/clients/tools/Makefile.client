@@ -1,30 +1,30 @@
 # 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
-# The contents of this file are subject to the Mozilla Public License Version 
-# 1.1 (the "License"); you may not use this file except in compliance with 
-# the License. You may obtain a copy of the License at 
+#
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
 # http://www.mozilla.org/MPL/
-# 
+#
 # Software distributed under the License is distributed on an "AS IS" basis,
 # WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 # for the specific language governing rights and limitations under the
 # License.
-# 
+#
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
-# 
+#
 # The Initial Developer of the Original Code is
 # Netscape Communications Corporation.
 # Portions created by the Initial Developer are Copyright (C) 1998-1999
 # the Initial Developer. All Rights Reserved.
-# 
+#
 # Contributor(s):
-# 
+#
 # Alternatively, the contents of this file may be used under the terms of
-# either of the GNU General Public License Version 2 or later (the "GPL"),
-# or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+# either the GNU General Public License Version 2 or later (the "GPL"), or
+# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
 # in which case the provisions of the GPL or the LGPL are applicable instead
 # of those above. If you wish to allow use of your version of this file only
 # under the terms of either the GPL or the LGPL, and not to allow others to
@@ -33,8 +33,8 @@
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
 # the terms of any one of the MPL, the GPL or the LGPL.
-# 
-# ***** END LICENSE BLOCK ***** 
+#
+# ***** END LICENSE BLOCK *****
 
 NS_DEPTH        = ../../../..
 DEPTH		= ../../../../..
@@ -70,8 +70,12 @@ endif
 
 ifeq ($(LDAP_TOOL_ARGPIN),1)
 INCLUDES += -I../../../../../dist/public/svrcore
-DEFS+=-DLDAP_TOOL_ARGPIN -DLDAP_TOOL_PKCS11
+CFLAGS+=-DLDAP_TOOL_ARGPIN -DLDAP_TOOL_PKCS11
 SVRCORE_LINK=-l$(SVRCORE_LIBNAME) 
+endif
+
+ifdef HAVE_LIBNLS
+INCLUDES	+= -I$(LIBNLS_INCLUDES)
 endif
 
 ifeq ($(OS_ARCH), WINNT)
@@ -104,14 +108,22 @@ LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.o)
 LDAPSEARCH_OBJ		= $(addprefix $(OBJDEST)/, ldapsearch.o)
 LDAPCOMPARE_OBJ         = $(addprefix $(OBJDEST)/, ldapcompare.o)
 LDAPCMP_OBJ     	= $(addprefix $(OBJDEST)/, ldapcmp.o)
+ifeq ($(OS_ARCH), HP-UX)
+LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
+			  $(addprefix $(OBJDEST)/, fileurl.o) 
+else
 LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
 			  $(addprefix $(OBJDEST)/, convutf8.o) \
 			  $(addprefix $(OBJDEST)/, fileurl.o) 
-
+endif
 ifeq ($(LDAP_TOOL_ARGPIN),1)
 LDAPTOOLCOMMON_OBJ	+= $(addprefix $(OBJDEST)/, argpin.o) \
 			   $(addprefix $(OBJDEST)/, ntuserpin.o)
 endif
+endif
+
+ifeq ($(OS_ARCH), HP-UX)
+LDAPTOOLCPPCOMMON_OBJ   = $(addprefix $(OBJDEST)/, convutf8.o)
 endif
 
 CLIENT_OBJS = $(LDAPDELETE_OBJ) $(LDAPMODIFY_OBJ) \
@@ -142,7 +154,7 @@ EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
              -L$(NSCP_DISTDIR)/lib $(SVRCORE_LINK) \
 	     $(LDAPTOOLS_NSS_LINK) \
-	     -lthread -lposix4 -lsocket \
+	     -lthread -lposix4 -lsocket -lnls \
 	     -ldl -lresolv -lgen 
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
@@ -204,8 +216,36 @@ EXTRA_LIBS = -L$(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
              -L$(NSCP_DISTDIR)/lib $(SVRCORE_LINK) \
 	     $(LDAPTOOLS_NSS_LINK) \
 	     -ldl -brtl -lpthreads -lc_r -lm
-EXTRA_LIBS += -liconv
 EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
+endif
+
+ifdef HAVE_LIBNLS
+ifeq ($(OS_ARCH), WINNT)
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+else
+ifeq ($(OS_ARCH), SunOS)
+OS_VERS		:= $(shell uname -r)
+ifeq ($(OS_VERS),5.6)
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -lC \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+else
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -lCrun \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+endif
+else
+endif
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+endif
 endif
 
 LDTOOLS_LIBS += $(EXTRA_LIBS)
@@ -213,9 +253,9 @@ LIBLOCATION   = $(NSCP_DISTDIR)/$(OBJDIR_NAME)/lib
 
 ###########################################################################
 
-all::	$(OBJDEST) libdir $(BINS)
+all::	$(BINS) $(OBJDEST) linklibnls libdir $(BINS)
 
-libdir:
+libdir: linklibnls
 ifeq ($(OS_ARCH), WINNT)
 	$(NSINSTALL) $(LIBLOCATION)/$(LDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(LIBLOCATION)/$(PRLDAP_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
@@ -275,9 +315,41 @@ ifeq ($(COPYFREEBL), 1)
 endif
 endif
 
+linklibnls: FORCE
+ifneq ($(COMPONENT_PULL_METHOD), FTP)
+ifeq ($(HAVE_LIBNLS), 1)
+	$(RM) -f $(LIBNLS_INCLUDES)
+	$(RM) -f $(LIBNLS_LIBDIR)
+	ln -s $(LIBNLS_INCLUDES_LOC) $(LIBNLS_INCLUDES)
+	ln -s $(LIBNLS_LIB_LOC) $(LIBNLS_LIBDIR)
+endif
+else
+ifeq ($(HAVE_LIBNLS), 1)
+	@echo "Pulling libnls......"
+# The following shell script recalculates $(NLS_INCLUDE), $(NLS_LIBPATH) and
+# $(NLS_VERSION_FILE)
+	sh ../../build/compver.sh $(LIBNLS_DIR) $(LIBNLS_RELDATE) \
+	$(OBJDIR_NAME) ../../../../dist ldapsdk \
+	/share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME) \
+	libnls$(NLS_LIBVERSION) \
+	"include lib conv$(NLS_LIBVERSION) locale$(NLS_LIBVERSION)" \
+	../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/locale$(NLS_LIBVERSION)/index.txt
+endif
+endif
+
 $(LDAPTOOLCOMMON_OBJ):
 
+ifeq ($(OS_ARCH), HP-UX)
+$(LDAPTOOLCPPCOMMON_OBJ): convutf8.cpp
+ifneq ($(USE_64), 1)
+	/opt/aCC/bin/aCC -ext -DHPUX_ACC -D__STDC_EXT__ -D_POSIX_C_SOURCE=199506L -c -DHPUX11 -DHPUX11_00 +DAportable +DS1.1 -D_LARGEFILE64_SOURCE -D_PR_HAVE_OFF64_T -DNO_NODELOCK -DNO_LIBLCACHE -DXP_UNIX -DHPUX -DMCC_HTTPD -DNS_DOMESTIC -DNET_SSL -DCLIENT_AUTH -DNSPR20 -D_PR_NTHREAD -D_PR_USECPU -D_REENTRANT -DNS_DS -DSPAPI20 -DBUILD_NUM=\"01.081.1519\" -DCPU_hppa -DOS_hpux -D_NO_THREADS_ -Dhpux -Dhpux -D_HPUX_SOURCE -D_REENTRANT -Aa -DLDAP_REFERRALS -DLDAP_LDBM -DLDAP_LDIF -DLDBM_USE_DBBTREE -DSLAPD_PASSWD_SHA1 -D__DBINTERFACE_PRIVATE -DNO_LIBLCACHE -DNS_DIRECTORY -DNET_SSL -DUSE_NSPR_MT -O $(INCLUDES) convutf8.cpp -o $(OBJDIR_NAME)/convutf8.o
+else
+	/opt/aCC/bin/aCC -DHPUX_ACC -D__STDC_EXT__ -D_POSIX_C_SOURCE=199506L  +DA2.0W +DS2.0 -c -DHPUX11 -DHPUX11_00 -DIS_64 +e +DA2.0W +DS2.0 -D_LARGEFILE64_SOURCE -D_PR_HAVE_OFF64_T -DNO_NODELOCK  -DNO_LIBLCACHE -DXP_UNIX -DHPUX -DMCC_DEBUG -g -DMCC_HTTPD -DNS_DOMESTIC -DNET_SSL -DCLIENT_AUTH -DNSPR20 -D_PR_NTHREAD -D_PR_USECPU -D_REENTRANT -DNS_DS -DSPAPI20 -DBUILD_NUM=\"01.081.1617\" -DCPU_hppa -DOS_hpux -D_NO_THREADS_ -Dhpux -Dhpux -D_HPUX_SOURCE -D_REENTRANT -Aa -DLDAP_DEBUG -DLDAP_REFERRALS -DLDAP_LDBM -DLDAP_LDIF -DLDBM_USE_DBBTREE -DSLAPD_PASSWD_SHA1 -D__DBINTERFACE_PRIVATE -DNO_LIBLCACHE  -DNS_DIRECTORY -DNET_SSL -DUSE_NSPR_MT $(INCLUDES) -g convutf8.cpp -o $(OBJDIR_NAME)/convutf8.o
+endif
+else
 $(LDAPTOOLCPPCOMMON_OBJ):
+
+endif
 
 $(LDAPCOMPARE):	$(LDAPCOMPARE_OBJ) $(LDAPTOOLCOMMON_OBJ) \
 		$(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
@@ -318,7 +390,7 @@ install:: $(OBJDEST) libdir $(BINS)
 #
 # Simple, local dependencies
 #
-LDAPTOOL_COMMON_DEPS = ldaptool.h Makefile.client
+LDAPTOOL_COMMON_DEPS = ldaptool.h Makefile
 $(LDAPTOOLCOMMON_OBJ):	$(LDAPTOOL_COMMON_DEPS)
 $(LDAPDELETE_OBJ):	$(LDAPTOOL_COMMON_DEPS)
 $(LDAPMODIFY_OBJ):	$(LDAPTOOL_COMMON_DEPS) fileurl.h

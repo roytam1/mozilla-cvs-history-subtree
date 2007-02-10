@@ -267,7 +267,7 @@ nsClipboard::GetData(nsITransferable *aTransferable, PRInt32 aWhichClipboard)
                 gchar* new_text = wait_for_text(clipboard);
                 if (new_text) {
                     // Convert utf-8 into our unicode format.
-                    NS_ConvertUTF8toUTF16 ucs2string(new_text);
+                    NS_ConvertUTF8toUCS2 ucs2string(new_text);
                     data = (guchar *)ToNewUnicode(ucs2string);
                     length = ucs2string.Length() * 2;
                     g_free(new_text);
@@ -471,7 +471,7 @@ nsClipboard::SelectionGetEvent (GtkWidget        *aWidget,
     else if (aSelectionData->selection == GDK_SELECTION_CLIPBOARD)
         whichClipboard = kGlobalClipboard;
     else
-        return; // THAT AIN'T NO CLIPBOARD I EVER HEARD OF
+        return; // THAT AINT NO CLIPBOARD I EVER HEARD OF
 
     nsCOMPtr<nsITransferable> trans = GetTransferable(whichClipboard);
     
@@ -572,7 +572,7 @@ nsClipboard::SelectionClearEvent (GtkWidget         *aWidget,
     else if (aEvent->selection == GDK_SELECTION_CLIPBOARD)
         whichClipboard = kGlobalClipboard;
     else
-        return; // THAT AIN'T NO CLIPBOARD I EVER HEARD OF
+        return; // THAT AINT NO CLIPBOARD I EVER HEARD OF
 
     EmptyClipboard(whichClipboard);
 }
@@ -625,7 +625,7 @@ void ConvertHTMLtoUCS2(guchar * data, PRInt32 dataLength,
         *unicodeData = NS_REINTERPRET_CAST(PRUnichar*,
                        nsMemory::Alloc((outUnicodeLen + sizeof('\0')) *
                        sizeof(PRUnichar)));
-        if (*unicodeData) {
+        if (unicodeData) {
             memcpy(*unicodeData, data + sizeof(PRUnichar),
                    outUnicodeLen * sizeof(PRUnichar));
             (*unicodeData)[outUnicodeLen] = '\0';
@@ -662,7 +662,7 @@ void ConvertHTMLtoUCS2(guchar * data, PRInt32 dataLength,
             *unicodeData = NS_REINTERPRET_CAST(PRUnichar*,
                            nsMemory::Alloc((outUnicodeLen + sizeof('\0')) *
                            sizeof(PRUnichar)));
-            if (*unicodeData) {
+            if (unicodeData) {
                 PRInt32 numberTmp = dataLength;
                 decoder->Convert((const char *)data, &numberTmp,
                                  *unicodeData, &outUnicodeLen);

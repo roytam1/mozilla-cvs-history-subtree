@@ -114,7 +114,7 @@ interface nsIUpdatePatch : nsISupports
  * that the front end and other application services can use to learn more 
  * about what is going on.
  */
-[scriptable, uuid(8e5822a6-c5d4-4537-be0a-9c95ba13ea2f)]
+[scriptable, uuid(b0fb539e-f4ab-4ea1-bd75-e6d2813e5fc1)]
 interface nsIUpdate : nsISupports
 {
   /**
@@ -168,11 +168,6 @@ interface nsIUpdate : nsISupports
    * The URL to the Update Service that supplied this update.
    */
   attribute AString serviceURL;
-
-  /**
-   * The channel used to retrieve this update from the Update Service.
-   */
-  attribute AString channel;
 
   /**
    * Whether or not the update being downloaded is a complete replacement of
@@ -243,6 +238,20 @@ interface nsIUpdate : nsISupports
    * @returns The DOM Element created by the serialization process
    */
   nsIDOMElement serialize(in nsIDOMDocument updates);
+};
+
+/**
+ * A MOZILLA_1_8_BRANCH-specific interface that adds the 'channel' attribute
+ * to the nsIUpdate interface. This attribute has been added to nsIUpdate on
+ * the trunk.
+ */
+[scriptable, uuid(5b61356d-8411-48c0-863f-7b038eb0e4a8)]
+interface nsIUpdate_MOZILLA_1_8_BRANCH : nsIUpdate
+{
+  /**
+   * The channel used to retrieve this update from the Update Service.
+   */
+  attribute AString channel;
 };
 
 /**

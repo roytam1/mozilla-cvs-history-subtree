@@ -41,14 +41,14 @@
 <window id="alertNotification"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         windowtype="alert:alert"
-        pack="start"
+        align="start"
         onload="onAlertLoad()">
   
   <script type="application/x-javascript" src="chrome://communicator/content/alerts/alert.js"/>
 
-  <box id="alertBox" class="alertBox">
+  <hbox id="alertBox" class="alertBox">
     
-    <hbox class="alertImageBox" align="center" pack="center">
+    <hbox class="alertImageBox" align="center" valign="center">
       <image id="alertImage"/>
     </hbox>
 
@@ -57,7 +57,7 @@
       <label id="alertTextLabel" class="alertText plain" onclick="onAlertClick();"/>
     </vbox>
 
-  </box>
+  </hbox>
 
   <!-- This method is called inline because we want to make sure we establish the width
        and height of the alert before we fire the onload handler. -->

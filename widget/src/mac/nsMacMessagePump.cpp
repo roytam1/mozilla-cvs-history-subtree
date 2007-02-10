@@ -69,6 +69,7 @@ nsMacMessagePump::nsMacMessagePump(nsToolkit *aToolkit)
 : mToolkit(aToolkit)
 , mMouseClickEventHandler(NULL)
 , mWNETransitionEventHandler(NULL)
+, mProcessEvents(PR_FALSE)
 {
   NS_ASSERTION(mToolkit, "No toolkit");
   
@@ -138,6 +139,13 @@ nsMacMessagePump::~nsMacMessagePump()
   nsMacTSMMessagePump::Shutdown();
 }
 
+PRBool nsMacMessagePump::ProcessEvents(PRBool aProcessEvents)
+{
+  PRBool wasProcessing = mProcessEvents;
+  mProcessEvents = aProcessEvents;
+  return wasProcessing;
+}
+
 //=================================================================
 /*  Dispatch a single event
  *  @param   anEvent - the event to dispatch
@@ -147,6 +155,9 @@ PRBool nsMacMessagePump::DispatchEvent(EventRecord *anEvent)
 {
   PRBool handled = PR_FALSE;
 
+  if (!mProcessEvents)
+    return handled;
+  
   switch(anEvent->what) {
     // diskEvt is gone in Carbon, and so is unhandled here.
     // keyUp, keyDown, and autoKey now have Carbon event handlers in

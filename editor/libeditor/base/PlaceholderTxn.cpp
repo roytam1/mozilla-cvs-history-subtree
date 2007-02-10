@@ -52,8 +52,31 @@ PlaceholderTxn::PlaceholderTxn() :  EditAggregateTxn(),
 }
 
 
-NS_IMPL_ISUPPORTS_INHERITED2(PlaceholderTxn, EditAggregateTxn,
-                             nsIAbsorbingTransaction, nsISupportsWeakReference)
+PlaceholderTxn::~PlaceholderTxn()
+{
+  delete mStartSel;
+}
+
+NS_IMPL_ADDREF_INHERITED(PlaceholderTxn, EditAggregateTxn)
+NS_IMPL_RELEASE_INHERITED(PlaceholderTxn, EditAggregateTxn)
+
+//NS_IMPL_QUERY_INTERFACE_INHERITED1(Class, Super, AdditionalInterface)
+NS_IMETHODIMP PlaceholderTxn::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+{
+  if (!aInstancePtr) return NS_ERROR_NULL_POINTER;
+ 
+  if (aIID.Equals(NS_GET_IID(nsIAbsorbingTransaction))) {
+    *aInstancePtr = (nsISupports*)(nsIAbsorbingTransaction*)(this);
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  if (aIID.Equals(NS_GET_IID(nsISupportsWeakReference))) {
+    *aInstancePtr = (nsISupports*)(nsISupportsWeakReference*) this;
+    NS_ADDREF_THIS();
+    return NS_OK;
+  }
+  return EditAggregateTxn::QueryInterface(aIID, aInstancePtr);
+}
 
 NS_IMETHODIMP PlaceholderTxn::Init(nsIAtom *aName, nsSelectionState *aSelState, nsIEditor *aEditor)
 {
@@ -126,7 +149,7 @@ NS_IMETHODIMP PlaceholderTxn::Merge(nsITransaction *aTransaction, PRBool *aDidMe
   EditTxn *editTxn = (EditTxn*)aTransaction;  //XXX: hack, not safe!  need nsIEditTransaction!
   // determine if this incoming txn is a placeholder txn
   nsCOMPtr<nsIAbsorbingTransaction> plcTxn;// = do_QueryInterface(editTxn);
-  // can't do_QueryInterface() above due to our broken transaction interfaces.
+  // cant do_QueryInterface() above due to our broken transaction interfaces.
   // instead have to brute it below. ugh. 
   editTxn->QueryInterface(NS_GET_IID(nsIAbsorbingTransaction), getter_AddRefs(plcTxn));
 

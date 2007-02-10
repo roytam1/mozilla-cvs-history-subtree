@@ -49,8 +49,8 @@ struct nsSize;
 
 // IID for the nsIScrollableView interface
 #define NS_ISCROLLABLEVIEW_IID    \
-{ 0x1fcd151c, 0x5e26, 0x4c9d, \
-{ 0xa5, 0x2c, 0x87, 0x43, 0x7d, 0x7b, 0x1c, 0xe8 } }
+{ 0x36083bcf, 0x61d7, 0x4c24, \
+{ 0xa6, 0xd4, 0x2f, 0x05, 0xba, 0x2c, 0x1b, 0x51 } }
 
 /**
  * A scrolling view allows an arbitrary view that you supply to be scrolled
@@ -64,7 +64,7 @@ struct nsSize;
  */
 class nsIScrollableView {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISCROLLABLEVIEW_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCROLLABLEVIEW_IID)
 
   /**
    * Create the controls used to allow scrolling. Call this method
@@ -176,16 +176,6 @@ public:
   NS_IMETHOD ScrollByWhole(PRBool aTop) = 0;
 
   /**
-   * Scroll the view left or right by aNumLinesX pixels.  Positive values move 
-   * right.  Scroll the view up or down by aNumLinesY pixels.  Positive values
-   * move down.  Prevents scrolling off the end of the view.
-   * @param aNumLinesX number of lines to scroll the view horizontally
-   * @param aNumLinesY number of lines to scroll the view vertically
-   * @return error status
-   */
-  NS_IMETHOD ScrollByPixels(PRInt32 aNumPixelsX, PRInt32 aNumPixelsY) = 0;
-
-  /**
    * Check the view can scroll from current offset.
    * @param aHorizontal If checking to Left or to Right, true. Otherwise, false.
    * @param aForward    If checking to Right or Bottom, true. Otherwise, false.
@@ -210,8 +200,6 @@ public:
   NS_IMETHOD RemoveScrollPositionListener(nsIScrollPositionListener* aListener) = 0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIScrollableView, NS_ISCROLLABLEVIEW_IID)
-
 //regardless of the transparency or opacity settings
 //for this view, it can always be scrolled via a blit
 #define NS_SCROLL_PROPERTY_ALWAYS_BLIT    0x0001
@@ -219,5 +207,26 @@ NS_DEFINE_STATIC_IID_ACCESSOR(nsIScrollableView, NS_ISCROLLABLEVIEW_IID)
 //regardless of the transparency or opacity settings
 //for this view, it can never be scrolled via a blit
 #define NS_SCROLL_PROPERTY_NEVER_BLIT     0x0002
+
+// {A1985DF6-047A-4DD7-A21A-C72559470323}
+#define NS_ISCROLLABLEVIEW_MOZILLA_1_8_BRANCH_IID \
+{ 0xA1985DF6, 0x047A, 0x4DD7, \
+{ 0xA2, 0x1A, 0xC7, 0x25, 0x59, 0x47, 0x03, 0x23 } }
+
+class nsIScrollableView_MOZILLA_1_8_BRANCH : public nsIScrollableView
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCROLLABLEVIEW_MOZILLA_1_8_BRANCH_IID)
+
+  /**
+   * Scroll the view left or right by aNumLinesX pixels.  Positive values move 
+   * right.  Scroll the view up or down by aNumLinesY pixels.  Positive values
+   * move down.  Prevents scrolling off the end of the view.
+   * @param aNumLinesX number of lines to scroll the view horizontally
+   * @param aNumLinesY number of lines to scroll the view vertically
+   * @return error status
+   */
+  NS_IMETHOD ScrollByPixels(PRInt32 aNumPixelsX, PRInt32 aNumPixelsY) = 0;
+};
 
 #endif

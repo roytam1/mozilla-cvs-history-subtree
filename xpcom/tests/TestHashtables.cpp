@@ -43,9 +43,8 @@
 
 #include "nsCOMPtr.h"
 #include "nsISupports.h"
+#include "nsCRT.h"
 #include "nsCOMArray.h"
-
-#include <stdio.h>
 
 class TestUniChar // for nsClassHashtable
 {
@@ -106,7 +105,7 @@ public:
   const char* GetKeyPointer() const { return mNode->mStr; }
   PRBool KeyEquals(const char* aEntity) const { return !strcmp(mNode->mStr, aEntity); }
   static const char* KeyToPointer(const char* aEntity) { return aEntity; }
-  static PLDHashNumber HashKey(const char* aEntity) { return HashString(aEntity); }
+  static PLDHashNumber HashKey(const char* aEntity) { return nsCRT::HashCode(aEntity); }
   enum { ALLOW_MEMMOVE = PR_TRUE };
 
   const EntityNode* mNode;
@@ -225,7 +224,7 @@ nsCEnum(const nsACString& aKey, nsAutoPtr<TestUniChar>& aData, void* userArg) {
 class IFoo : public nsISupports
   {
     public:
-      NS_DECLARE_STATIC_IID_ACCESSOR(NS_IFOO_IID)
+      NS_DEFINE_STATIC_IID_ACCESSOR(NS_IFOO_IID)
 
     public:
       IFoo();
@@ -248,8 +247,6 @@ class IFoo : public nsISupports
       static unsigned int total_destructions_;
       nsCString mString;
   };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(IFoo, NS_IFOO_IID)
 
 unsigned int IFoo::total_constructions_;
 unsigned int IFoo::total_destructions_;
@@ -288,21 +285,24 @@ IFoo::AddRef()
 nsrefcnt
 IFoo::Release()
   {
-    int newcount = --refcount_;
-    if ( newcount == 0 )
+    int wrap_message = (refcount_ == 1);
+    if ( wrap_message )
       printf(">>");
-
+      
+    --refcount_;
     printf("IFoo@%p::Release(), refcount --> %d\n",
            NS_STATIC_CAST(void*, this), refcount_);
 
-    if ( newcount == 0 )
+    if ( !refcount_ )
       {
         printf("  delete IFoo@%p\n", NS_STATIC_CAST(void*, this));
-        printf("<<IFoo@%p::Release()\n", NS_STATIC_CAST(void*, this));
         delete this;
       }
 
-    return newcount;
+    if ( wrap_message )
+      printf("  delete IFoo@%p\n", NS_STATIC_CAST(void*, this));
+
+    return refcount_;
   }
 
 nsresult

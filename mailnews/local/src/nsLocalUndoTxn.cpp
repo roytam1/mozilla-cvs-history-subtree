@@ -44,8 +44,10 @@
 #include "nsIImapService.h"
 #include "nsIUrlListener.h"
 #include "nsIMsgLocalMailFolder.h"
+#include "nsIEventQueueService.h"
 #include "nsIMsgMailSession.h"
-#include "nsThreadUtils.h"
+
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 nsLocalMoveCopyMsgTxn::nsLocalMoveCopyMsgTxn()  : m_srcIsImap4(PR_FALSE)
 {
@@ -178,29 +180,36 @@ nsLocalMoveCopyMsgTxn::UndoImapDeleteFlag(nsIMsgFolder* folder,
                     msgIds.Append(',');
                 msgIds.AppendInt((PRInt32) keyArray.GetAt(i));
             }
-            nsIThread *thread = NS_GetCurrentThread();
-            if (thread)
+            nsCOMPtr<nsIEventQueue> eventQueue;
+            nsCOMPtr<nsIEventQueueService> pEventQService = 
+                     do_GetService(kEventQueueServiceCID, &rv);
+            if (NS_SUCCEEDED(rv) && pEventQService)
             {
-                // This is to make sure that we are in the selected state
-                // when executing the imap url; we don't want to load the
-                // folder so use lite select to do the trick
-                rv = imapService->LiteSelectFolder(thread, folder,
-                                                   urlListener, nsnull);
-                if (!deleteFlag)
-                    rv =imapService->AddMessageFlags(thread, folder,
-                                                    urlListener, nsnull,
-                                                    msgIds.get(),
-                                                    kImapMsgDeletedFlag,
-                                                    PR_TRUE);
-                else
-                    rv = imapService->SubtractMessageFlags(thread,
-                                                          folder,
-                                                     urlListener, nsnull,
-                                                     msgIds.get(),
-                                                     kImapMsgDeletedFlag,
-                                                     PR_TRUE);
-                if (NS_SUCCEEDED(rv) && m_msgWindow)
-                    folder->UpdateFolder(m_msgWindow);
+                pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
+                                              getter_AddRefs(eventQueue));
+                if (eventQueue)
+                {
+                    // This is to make sure that we are in the selected state
+                    // when executing the imap url; we don't want to load the
+                    // folder so use lite select to do the trick
+                    rv = imapService->LiteSelectFolder(eventQueue, folder,
+                                                       urlListener, nsnull);
+                    if (!deleteFlag)
+                        rv =imapService->AddMessageFlags(eventQueue, folder,
+                                                        urlListener, nsnull,
+                                                        msgIds.get(),
+                                                        kImapMsgDeletedFlag,
+                                                        PR_TRUE);
+                    else
+                        rv = imapService->SubtractMessageFlags(eventQueue,
+                                                              folder,
+                                                         urlListener, nsnull,
+                                                         msgIds.get(),
+                                                         kImapMsgDeletedFlag,
+                                                         PR_TRUE);
+                    if (NS_SUCCEEDED(rv) && m_msgWindow)
+                        folder->UpdateFolder(m_msgWindow);
+                }
             }
         }
         rv = NS_OK; // always return NS_OK to indicate that the src is imap
@@ -465,10 +474,11 @@ NS_IMETHODIMP nsLocalUndoFolderListener::OnItemPropertyFlagChanged(nsIMsgDBHdr *
     return NS_OK;
 }
 
-NS_IMETHODIMP nsLocalUndoFolderListener::OnItemEvent(nsIMsgFolder *aItem, nsIAtom *aEvent)
+NS_IMETHODIMP nsLocalUndoFolderListener::OnItemEvent(nsIMsgFolder *item, nsIAtom *event)
 {
-  if (mTxn && mFolder && aItem == mFolder &&
-      aEvent->EqualsUTF8(NS_LITERAL_CSTRING("FolderLoaded")))
+  nsCOMPtr <nsIAtom> folderLoadedAtom = do_GetAtom("FolderLoaded");
+  nsCOMPtr <nsIMsgFolder> itemFolder = do_QueryInterface(item);
+  if (mTxn && mFolder && folderLoadedAtom == event && item == mFolder)
     return mTxn->UndoTransactionInternal();
 
   return NS_ERROR_FAILURE;

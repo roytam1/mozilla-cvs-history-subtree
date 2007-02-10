@@ -43,6 +43,10 @@
 #include "xpidl.h"
 #include <limits.h>
 
+#ifdef XP_MAC
+#include <stat.h>
+#endif
+
 static gboolean parsed_empty_file;
 
 /*
@@ -61,6 +65,10 @@ xpidl_process_node(TreeState *state)
         return handler(state);
     return TRUE;
 }
+
+#if defined(XP_MAC) && defined(XPIDL_PLUGIN)
+extern void mac_warning(const char* warning_message);
+#endif
 
 static int
 msg_callback(int level, int num, int line, const char *file,
@@ -81,7 +89,11 @@ msg_callback(int level, int num, int line, const char *file,
         file = "<unknown file>";
     warning_message = g_strdup_printf("%s:%d: %s\n", file, line, message);
 
+#if defined(XP_MAC) && defined(XPIDL_PLUGIN)
+    mac_warning(warning_message);
+#else
     fputs(warning_message, stderr);
+#endif
 
     g_free(warning_message);
     return 1;
@@ -114,55 +126,61 @@ typedef struct input_callback_state {
 } input_callback_state;
 
 static FILE *
-fopen_from_includes(char **filename, const char *mode,
+fopen_from_includes(const char *filename, const char *mode,
                     IncludePathEntry *include_path)
 {
     IncludePathEntry *current_path = include_path;
     char *pathname;
     FILE *inputfile;
-    if (!strcmp(*filename, "-"))
+    if (!strcmp(filename, "-"))
         return stdin;
 
-    if ((*filename)[0] != '/') {
+    if (filename[0] != '/') {
         while (current_path) {
             pathname = g_strdup_printf("%s" G_DIR_SEPARATOR_S "%s",
-                                       current_path->directory, *filename);
+                                       current_path->directory, filename);
             if (!pathname)
                 return NULL;
             inputfile = fopen(pathname, mode);
-            if (inputfile) {
-                free(*filename);
-                *filename = xpidl_strdup(pathname);
-                g_free(pathname);
-                return inputfile;
-            }
             g_free(pathname);
+            if (inputfile)
+                return inputfile;
             current_path = current_path->next;
         }
     } else {
-        inputfile = fopen(*filename, mode);
+        inputfile = fopen(filename, mode);
         if (inputfile)
             return inputfile;
     }
     return NULL;
 }
 
+#if defined(XP_MAC) && defined(XPIDL_PLUGIN)
+extern FILE* mac_fopen(const char* filename, const char *mode);
+#endif
+
 static input_data *
-new_input_data(char **filename, IncludePathEntry *include_path)
+new_input_data(const char *filename, IncludePathEntry *include_path)
 {
     input_data *new_data;
     FILE *inputfile;
     char *buffer = NULL;
     size_t offset = 0;
     size_t buffer_size;
+#ifdef XP_MAC
+    size_t i;
+#endif
 
-#if defined(XP_OS2) || defined(XP_WIN32)
+#if defined(XP_MAC) && defined(XPIDL_PLUGIN)
+    /* on Mac, fopen knows how to find files. */
+    inputfile = fopen(filename, "r");
+#elif defined(XP_OS2) || defined(XP_WIN32)
     /*
      * if filename is fully qualified (starts with driver letter), then
      * just call fopen();  else, go with fopen_from_includes()
      */
-    if( (*filename)[1] == ':' )
-      inputfile = fopen(*filename, "r");
+    if( filename[1] == ':' )
+      inputfile = fopen(filename, "r");
     else
       inputfile = fopen_from_includes(filename, "r", include_path);
 #else
@@ -171,6 +189,20 @@ new_input_data(char **filename, IncludePathEntry *include_path)
 
     if (!inputfile)
         return NULL;
+
+#ifdef XP_MAC
+    {
+        struct stat input_stat;
+        if (fstat(fileno(inputfile), &input_stat))
+            return NULL;
+        buffer = malloc(input_stat.st_size + 1);
+        if (!buffer)
+            return NULL;
+        offset = fread(buffer, 1, input_stat.st_size, inputfile);
+        if (ferror(inputfile))
+            return NULL;
+    }
+#else
     /*
      * Rather than try to keep track of many different varieties of state
      * around the boundaries of a circular buffer, we just read in the entire
@@ -193,20 +225,29 @@ new_input_data(char **filename, IncludePathEntry *include_path)
         }
         offset += just_read;
     }
+#endif
 
     fclose(inputfile);
+
+#ifdef XP_MAC
+    /*
+     * libIDL doesn't speak '\r' properly - always make sure lines end with
+     * '\n'.
+     */
+    for (i = 0; i < offset; i++) {
+        if (buffer[i] == '\r')
+            buffer[i] = '\n';
+    }
+#endif
 
     new_data = xpidl_malloc(sizeof (struct input_data));
     new_data->point = new_data->buf = buffer;
     new_data->max = buffer + offset;
     *new_data->max = '\0';
-    new_data->filename = *filename;
+    new_data->filename = xpidl_strdup(filename);
     /* libIDL expects the line number to be that of the *next* line */
     new_data->lineno = 2;
     new_data->next = NULL;
-
-    if (deps)
-        fprintf(deps, " \\\n\t%s", *filename);
 
     return new_data;
 }
@@ -372,8 +413,7 @@ NextIsInclude(input_callback_state *callback_state, char **startp,
         filename = xpidl_strdup(filename);
         g_hash_table_insert(callback_state->already_included,
                             filename, (void *)TRUE);
-        filename = xpidl_strdup(filename);
-        new_data = new_input_data(&filename, callback_state->include_path);
+        new_data = new_input_data(filename, callback_state->include_path);
         if (!new_data) {
             char *error_message;
             IDL_file_get(&scratch, (int *)&data->lineno);
@@ -383,7 +423,6 @@ NextIsInclude(input_callback_state *callback_state, char **startp,
             msg_callback(IDL_ERROR, 0,
                          data->lineno, scratch, error_message);
             g_free(error_message);
-            free(filename);
             return -1;
         }
 
@@ -446,11 +485,10 @@ input_callback(IDL_input_reason reason, union IDL_input_data *cb_data,
     input_data *new_data = NULL;
     unsigned int len, copy;
     int rv;
-    char *start, *filename;
+    char *start;
 
     switch(reason) {
       case IDL_INPUT_REASON_INIT:
-        filename = xpidl_strdup(cb_data->init.filename);
         if (data == NULL || data->next == NULL) {
             /*
              * This is the first file being processed.  As it's the target
@@ -466,15 +504,15 @@ input_callback(IDL_input_reason reason, union IDL_input_data *cb_data,
             first_entry.directory = callback_state->include_path->directory;
             first_entry.next = NULL;
 
-            new_data = new_input_data(&filename, &first_entry);
+            new_data = new_input_data(cb_data->init.filename,
+                                               &first_entry);
         } else {
-            new_data = new_input_data(&filename, callback_state->include_path);
+            new_data = new_input_data(cb_data->init.filename,
+                                               callback_state->include_path);
         }
 
-        if (!new_data) {
-            free(filename);
+        if (!new_data)
             return -1;
-        }
 
         IDL_file_set(new_data->filename, (int)new_data->lineno);
         callback_state->input_stack = new_data;

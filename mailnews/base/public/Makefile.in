@@ -46,7 +46,6 @@ MODULE		= msgbase
 
 EXPORTS		= \
 		msgCore.h \
-		nsMsgBaseCID.h \
 		nsMsgFolderFlags.h \
 		nsMsgHeaderMasks.h \
 		nsMsgMessageFlags.h \
@@ -64,6 +63,7 @@ XPIDLSRCS	= \
 		nsIMsgFolderCache.idl \
 		nsIMsgFolderCacheElement.idl \
 		nsIMsgFolderCompactor.idl \
+		nsIMsgGroupRecord.idl \
 		nsIMsgHost.idl \
 		nsIMsgIdentity.idl \
 		nsIMsgIncomingServer.idl \
@@ -79,8 +79,6 @@ XPIDLSRCS	= \
 		nsIMsgPurgeService.idl \
 		nsIMsgCopyService.idl \
 		nsIMsgCopyServiceListener.idl \
-		nsIMsgFolderListener.idl \
-                nsIMsgFolderNotificationService.idl \
 		nsIMsgStatusFeedback.idl \
 		nsIMsgMailNewsUrl.idl \
 		nsIMsgWindow.idl \

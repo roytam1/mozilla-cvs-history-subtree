@@ -109,28 +109,23 @@ CPPSRCS		= \
 		StdAfx.cpp       \
 		$(NULL)
 
-LIBS		= \
-	$(DEPTH)/profile/dirserviceprovider/standalone/$(LIB_PREFIX)profdirserviceprovidersa_s.$(LIB_SUFFIX) \
-	$(NULL)
+EXTRA_DSO_LIBS	= embed_base_s profdirserviceprovidersa_s
 
 ifdef NS_TRACE_MALLOC
-LIBS		+= $(DIST)/lib/$(LIB_PREFIX)tracemalloc.$(LIB_SUFFIX)
+EXTRA_DSO_LIBS	+= tracemalloc
 endif
 
-LIBS		+= \
+LIBS		= \
+		$(EXTRA_DSO_LIBS) \
 		$(MOZ_UNICHARUTIL_LIBS) \
 		$(NULL)
 
 ifdef GRE_BUILD
 LIBS += \
-		 $(DEPTH)/embedding/base/standalone/$(LIB_PREFIX)embed_base_standalone.$(LIB_SUFFIX) \
-		 $(XPCOM_STANDALONE_GLUE_LDOPTS) \
+		 $(DIST)/lib/$(LIB_PREFIX)xpcomglue.$(LIB_SUFFIX) \
 		 $(NULL)
 else
-LIBS += \
-		 $(DEPTH)/embedding/base/$(LIB_PREFIX)embed_base_s.$(LIB_SUFFIX) \
-		 $(XPCOM_LIBS) \
-		 $(NULL)
+LIBS += $(XPCOM_LIBS)
 ifdef BUILD_STATIC_LIBS
 LIBS += $(MOZ_JS_LIBS)
 endif
@@ -166,6 +161,7 @@ include $(topsrcdir)/config/config.mk
 # when building the mozcomps meta component
 ifneq (,$(filter mozcomps,$(MOZ_META_COMPONENTS)))
 BUILD_STATIC_LIBS=
+BUILD_SHARED_LIBS=1
 endif
 
 ifdef BUILD_STATIC_LIBS

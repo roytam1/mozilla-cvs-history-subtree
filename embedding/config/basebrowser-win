@@ -71,7 +71,6 @@ components\xpconnect.xpt
 ; 
 gkgfx.dll
 components\gkgfxwin.dll      
-components\gkgfxthebes.dll
 components\gkwidget.dll   
 components\widget.xpt
 components\gfx.xpt                      
@@ -149,8 +148,8 @@ components\shistory.xpt
 
 ; optional typeaheadfind 
 ; (docs at http://www.mozilla.org/projects/ui/accessibility/typeaheadfind.html)
-;components\suitetypeaheadfind.dll
-;components\suitetypeaheadfind.xpt
+;components\typeaheadfind.dll
+;components\typeaheadfind.xpt
 
 ; rdf
 components\rdf.dll
@@ -166,7 +165,6 @@ res\wincharset.properties
 
 ; required i18n libraries
 components\i18n.dll
-components\chardet.dll
 components\intl.xpt
 components\locale.xpt
 components\uconv.dll
@@ -184,7 +182,6 @@ components\dom_html.xpt
 components\dom_loadsave.xpt
 components\dom_range.xpt
 components\dom_sidebar.xpt
-components\dom_storage.xpt
 components\dom_stylesheets.xpt
 components\dom_traversal.xpt
 components\dom_views.xpt
@@ -204,6 +201,7 @@ components\txtsvc.xpt
 components\necko.dll                    
 components\necko.xpt                    
 components\necko_about.xpt              
+components\necko_data.xpt               
 components\necko_dns.xpt                
 components\necko_ftp.xpt
 components\necko_http.xpt               
@@ -212,6 +210,9 @@ components\necko_strconv.xpt
 
 ; cache
 components\necko_cache.xpt              
+
+; optional for gopher/viewsource/etc support
+; components\necko2.dll
 
 ; plugins
 ; Optional - only if you need plugin support
@@ -246,8 +247,9 @@ freebl3.dll
 ssl3.dll
 nssckbi.dll
 
-; xmlextras, optional for XPointer support
+; xmlextras, optional for XMLHttpRequest support
 components\xmlextras.dll
+components\xmlextras.xpt
 
 ; 
 ; res:
@@ -302,6 +304,3 @@ res\html\gopher-unknown.gif
 ; p3p
 components\p3p.dll
 components\p3p.xpt
-
-; Effective TLD
-res\effective_tld_names.dat

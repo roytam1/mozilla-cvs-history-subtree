@@ -52,9 +52,6 @@ class nsGridRow;
 class nsBoxLayoutState;
 class nsGridCell;
 
-/**
- * The nsIBoxLayout implementation for a grid.
- */
 class nsGridLayout2 : public nsStackLayout, 
                       public nsIGridPart
 {
@@ -65,20 +62,19 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   NS_IMETHOD Layout(nsIBox* aBox, nsBoxLayoutState& aBoxLayoutState);
-  NS_IMETHOD IntrinsicWidthsDirty(nsIBox* aBox, nsBoxLayoutState& aBoxLayoutState);
 
-  virtual nsGridRowGroupLayout* CastToRowGroupLayout() { return nsnull; }
-  virtual nsGridLayout2* CastToGridLayout() { return this; }
-  virtual nsGrid* GetGrid(nsIBox* aBox, PRInt32* aIndex, nsGridRowLayout* aRequestor=nsnull);
-  virtual void GetParentGridPart(nsIBox* aBox, nsIBox** aParentBox, nsIGridPart** aParentGridPart) { NS_NOTREACHED("Should not be called"); }
+  NS_IMETHOD CastToRowGroupLayout(nsGridRowGroupLayout** aRowGroup);
+  NS_IMETHOD CastToGridLayout(nsGridLayout2** aGrid);
+  NS_IMETHOD GetGrid(nsIBox* aBox, nsGrid** aList, PRInt32* aIndex, nsGridRowLayout* aRequestor=nsnull);
+  NS_IMETHOD GetParentGridPart(nsIBox* aBox, nsIBox** aParentBox, nsIGridPart** aParentGridPart);
   NS_IMETHOD GetMinSize(nsIBox* aBox, nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
   NS_IMETHOD GetPrefSize(nsIBox* aBox, nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
   NS_IMETHOD GetMaxSize(nsIBox* aBox, nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
-  virtual void CountRowsColumns(nsIBox* aBox, PRInt32& aRowCount, PRInt32& aComputedColumnCount) { NS_NOTREACHED("Should not be called"); }
-  virtual void DirtyRows(nsIBox* aBox, nsBoxLayoutState& aState) { NS_NOTREACHED("Should not be called"); }
-  virtual PRInt32 BuildRows(nsIBox* aBox, nsGridRow* aRows) { NS_NOTREACHED("Should not be called"); return 0; }
-  virtual nsMargin GetTotalMargin(nsIBox* aBox, PRBool aIsHorizontal);
-  virtual Type GetType() { return eGrid; }
+  NS_IMETHOD CountRowsColumns(nsIBox* aBox, PRInt32& aRowCount, PRInt32& aComputedColumnCount);
+  NS_IMETHOD DirtyRows(nsIBox* aBox, nsBoxLayoutState& aState);
+  NS_IMETHOD BuildRows(nsIBox* aBox, nsGridRow* aRows, PRInt32* aCount);
+  NS_IMETHOD GetTotalMargin(nsIBox* aBox, nsMargin& aMargin, PRBool aIsHorizontal);
+  NS_IMETHOD GetRowCount(PRInt32& aRowCount);
   NS_IMETHOD ChildrenInserted(nsIBox* aBox, nsBoxLayoutState& aState,
                               nsIBox* aPrevBox, nsIBox* aChildList);
   NS_IMETHOD ChildrenAppended(nsIBox* aBox, nsBoxLayoutState& aState,

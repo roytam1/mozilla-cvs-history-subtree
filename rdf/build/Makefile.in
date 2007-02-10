@@ -43,6 +43,7 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= rdf
+ifdef MOZ_XUL
 
 LIBRARY_NAME	= rdf
 EXPORT_LIBRARY  = 1
@@ -68,15 +69,10 @@ CPPSRCS		= \
 # XXX Note dependencies on implementation headers for factory functions
 
 SHARED_LIBRARY_LIBS = \
-		../base/src/$(LIB_PREFIX)rdfbase_s.$(LIB_SUFFIX) \
-		../datasource/src/$(LIB_PREFIX)rdfdatasource_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)rdfbase_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)rdfdatasource_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)rdfutil_s.$(LIB_SUFFIX) \
 		$(NULL)
-
-ifndef MOZ_ENABLE_LIBXUL
-SHARED_LIBRARY_LIBS += \
-		../util/src/$(LIB_PREFIX)rdfutil_s.$(LIB_SUFFIX) \
-		$(NULL)
-endif
 
 EXTRA_DSO_LDOPTS = \
 		$(LIBS_DIR) \
@@ -84,6 +80,7 @@ EXTRA_DSO_LDOPTS = \
 		$(MOZ_UNICHARUTIL_LIBS) \
 		$(MOZ_COMPONENT_LIBS) \
 		$(NULL)
+endif
 
 EXPORTS		= nsRDFCID.h
 

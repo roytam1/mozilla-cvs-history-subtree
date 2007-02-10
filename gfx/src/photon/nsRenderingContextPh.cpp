@@ -498,7 +498,6 @@ NS_IMETHODIMP nsRenderingContextPh :: FillRect( nscoord aX, nscoord aY, nscoord 
 	
 	mTranMatrix->TransformCoord( &x, &y, &w, &h );
 
-	PgSetGC( NULL );
 /* ATENTIE */ PhDCSetCurrent( mSurfaceDC );
 	
 	UpdateGC();
@@ -772,7 +771,7 @@ NS_IMETHODIMP nsRenderingContextPh :: GetWidth(const char* aString, PRUint32 aLe
 
 NS_IMETHODIMP nsRenderingContextPh :: GetWidth( const PRUnichar *aString, PRUint32 aLength, nscoord &aWidth, PRInt32 *aFontID ) 
 {
-	NS_ConvertUTF16toUTF8    theUnicodeString (aString, aLength);
+	NS_ConvertUCS2toUTF8    theUnicodeString (aString, aLength);
 	const char *s = theUnicodeString.get();
 	return GetWidth( s, strlen(s), aWidth );
 }
@@ -783,7 +782,7 @@ NS_IMETHODIMP nsRenderingContextPh::GetTextDimensions(const PRUnichar* aString, 
 	mFontMetrics->GetMaxAscent(aDimensions.ascent);
 	mFontMetrics->GetMaxDescent(aDimensions.descent);
 		
-	NS_ConvertUTF16toUTF8    theUnicodeString (aString, aLength);
+	NS_ConvertUCS2toUTF8    theUnicodeString (aString, aLength);
 	const char *s = theUnicodeString.get();
 	return GetWidth( s, strlen(s), aDimensions.width );
 }

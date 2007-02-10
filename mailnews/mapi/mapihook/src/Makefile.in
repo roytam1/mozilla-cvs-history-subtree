@@ -77,18 +77,27 @@ REQUIRES	= xpcom \
 		  embed_base \
 		  $(NULL)
 
+EXPORTS		= \
+		msgMapiFactory.h \
+		msgMapiHook.h \
+		msgMapiImp.h \
+		msgMapiMain.h \
+		msgMapiSupport.h \
+		nsMapiRegistry.h \
+		nsMapiRegistryUtils.h \
+		Registry.h \
+		$(NULL)
+
 CPPSRCS		= \
 		msgMapiFactory.cpp \
 		msgMapiHook.cpp \
 		msgMapiImp.cpp \
 		msgMapiMain.cpp \
 		msgMapiSupport.cpp \
+		nsMapiRegistry.cpp \
+		nsMapiRegistryUtils.cpp \
 		Registry.cpp \
 		$(NULL)
-
-ifndef MOZ_THUNDERBIRD
-CPPSRCS        += nsMapiRegistry.cpp nsMapiRegistryUtils.cpp
-endif
 
 LOBJS		= ../build/msgMapi_i.$(OBJ_SUFFIX)
 
@@ -101,7 +110,7 @@ EXTRA_DSO_LIBS	= msgbaseutil
 endif
 
 else
-SHARED_LIBRARY_LIBS = ../../../base/util/$(LIB_PREFIX)msgbsutl_s.$(LIB_SUFFIX)
+SHARED_LIBRARY_LIBS = $(DIST)/lib/$(LIB_PREFIX)msgbsutl_s.$(LIB_SUFFIX)
 endif
 
 EXTRA_DSO_LDOPTS= \

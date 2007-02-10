@@ -78,7 +78,7 @@
 #if defined(XP_WIN) || defined(XP_OS2)
 #include "nsEudoraWin32.h"
 #endif
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #include "nsEudoraMac.h"
 #endif
 
@@ -128,7 +128,7 @@ private:
 #if defined(XP_WIN) || defined(XP_OS2)
 	nsEudoraWin32	m_eudora;
 #endif
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 	nsEudoraMac		m_eudora;
 #endif
 	PRUint32		m_bytes;
@@ -164,7 +164,7 @@ public:
 	NS_IMETHOD FindAddressBooks(nsIFileSpec *location, nsISupportsArray **_retval);
 	
 	/* nsISupports GetFieldMap (in nsIImportABDescriptor source); */
-	NS_IMETHOD InitFieldMap(nsIImportFieldMap *fieldMap)
+	NS_IMETHOD InitFieldMap(nsIFileSpec *location, nsIImportFieldMap *fieldMap)
 		{ return( NS_ERROR_FAILURE); }
 	
 	/* void ImportAddressBook (in nsIImportABDescriptor source, in nsIAddrDatabase destination, in nsIImportFieldMap fieldMap, in boolean isAddrLocHome, out wstring errorLog, out wstring successLog, out boolean fatalError); */
@@ -191,7 +191,7 @@ private:
 #if defined(XP_WIN) || defined(XP_OS2)
 	nsEudoraWin32	m_eudora;
 #endif
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 	nsEudoraMac		m_eudora;
 #endif
 	PRUint32		m_bytes;

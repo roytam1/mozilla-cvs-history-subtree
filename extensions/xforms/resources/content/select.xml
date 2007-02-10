@@ -23,7 +23,6 @@
    - Contributor(s):
    -  Doron Rosenberg <doronr@us.ibm.com>
    -  Olli Pettay <Olli.Pettay@helsinki.fi>
-   -  Alexander Surkov <surkov.alexander@gmail.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -39,12 +38,8 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<bindings id="xformsSelectBindings"
-          xmlns="http://www.mozilla.org/xbl"
-          xmlns:html="http://www.w3.org/1999/xhtml"
-          xmlns:xbl="http://www.mozilla.org/xbl">
-
 <!--
+
   This file implements the "abstract" UI class for XForms select controls. It
   have "pure virtual" functions that it expect to be implemented by concrete
   application and returned in the getElementControl() call. An example is the
@@ -57,8 +52,7 @@
 
     readonly - set/get readonly state
 
-    editor - return nsIEditor object if native widget contains editor, otherwise
-             return null
+    selectedIndex - selects item by index / returns index of first selected item
 
     appendItem(label, value, group) - appends item, returns item control
       @param label - label control
@@ -89,24 +83,20 @@
       @param value - item value
 -->
 
-  <!-- BASE for select/select1 elements. -->
-  <binding id="xformswidget-selectcontrols-base"
+<bindings id="xformsSelectBindings"
+          xmlns="http://www.mozilla.org/xbl"
+          xmlns:html="http://www.w3.org/1999/xhtml"
+          xmlns:xbl="http://www.mozilla.org/xbl">
+
+  <!-- SELECT BASE -->
+  <binding id="xformswidget-select-base"
            extends="chrome://xforms/content/xforms.xml#xformswidget-base">
 
-    <implementation implements="nsIXFormsNSEditableElement, nsIAccessibleProvider">
+    <implementation implements="nsIXFormsUIWidget">
 
-    <!-- nsIAccessibleProvider -->
-      <property name="accessibleType" readonly="true">
-       <getter>
-         return Components.interfaces.nsIAccessibleProvider.XFormsSelect;
-       </getter>
-      </property>
-
-     <!-- nsIXFormsNSEditableElement -->
-      <property name="editor" readonly="true"
-                onget="return this.control.editor;"/>
-
-     <!-- nsIXFormsUIWidget -->
+      <property name="selectedIndex"
+                onget="return this.control.selectedIndex"
+                onset="this.control.selectedIndex = val;"/>
 
       <!-- Make sure we don't refresh while we are refreshing (race condition).
            This happens when we are inside a repeat for example. We use the
@@ -187,12 +177,6 @@
         </body>
       </method>
 
-      <method name="getCurrentValue">
-        <body>
-          throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-        </body>
-      </method>
-
       <property name="incremental">
         <getter>
           <![CDATA[
@@ -217,9 +201,9 @@
           this.setAttribute("selection", val);
 
           if (val == "open")
-            this.control.allowFreeEntry(true);
+            this.control.allowFreeEnry(true);
           else
-            this.control.allowFreeEntry(false);
+            this.control.allowFreeEnry(false);
         </setter>
       </property>
 
@@ -320,7 +304,21 @@
           this._selectedElementArray = new Array();
 
           if (!aContainsNonText) {
-            var selectedArray = this._getValuesArray();
+            // replace new line (\n), tabs (\t) and carriage returns (\r) with
+            // "".
+            var value = "";
+            var accessValue = this.accessors.getValue();
+            if (accessValue)
+              value = accessValue.replace(/\n|\t|\r/g, " ");
+
+            // get an array of values selected in the bound node
+            var selectedArray = value.split(/\s/);
+
+            // when the string is empty, split returns an array containing
+            // one empty string, rather than an empty array.  We'll allow that
+            // into the defaultHash so that xforms-out-of-range will be
+            // correctly generated if none of the items in the select have
+            // an empty string as a value
 
             for (var run = 0; run < selectedArray.length; run++) {
               this._defaultHash[selectedArray[run]] = {hits: 0}
@@ -331,7 +329,6 @@
           var boundNode = this.accessors.getBoundNode();
           var child = boundNode ? boundNode.firstChild : null;
 
-          var childcount = 0;
           for (; child; child = child.nextSibling) {
             var type = child.nodeType;
 
@@ -346,38 +343,28 @@
                 nonWhitespace = !(/^\s*$/.test(string));
               }
               if (nonWhitespace) {
-                if (++childcount > 1 && this.localName == "select1")
-                  break;
+                // replace new line (\n), tabs (\t) and carriage returns (\r)
+                // with " ".
+                var value = string.replace(/\n|\t|\r/g, " ");
 
-                // When the string is empty, the method returns an array
-                // containing one empty string, rather than an empty array.
-                // We'll allow that into the defaultHash so that
-                // 'xforms-out-of-range' will be correctly generated if none of
-                // the items in the select have an empty string as a value.
-                var selectedArray = this._getValuesArray(string);
+                // get an array of values selected in the bound node
+                var selectedArray = value.split(" ");
 
+                // when the string is empty, split returns an array containing
+                // one empty string, rather than an empty array.  We'll allow
+                // that into the defaultHash so that xforms-out-of-range will be
+                // correctly generated if none of the items in the select have
+                // an empty string as a value
+    
                 for (var run = 0; run < selectedArray.length; run++) {
                   this._defaultHash[selectedArray[run]] = {hits: 0}
                 }
               }
             } else {
-              if (++childcount > 1 && this.localName == "select1")
-                  break;
-
               // if it's not a text node, we'll assume that we are looking at
               // a node worth comparing.  As such, look for an
               // item with a copy element that might match this node.
               this._selectedElementArray.push({element: child, hits: 0});
-            }
-          }
-
-          if (this.localName == "select1") {
-            var outOfRange = childcount > 1;
-            if (outOfRange != this._outOfRange) {
-              this._outOfRange = outOfRange;
-              this.accessors.setInRange(!outOfRange);
-              if (outOfRange)
-                return;
             }
           }
         ]]></body>
@@ -485,7 +472,7 @@
             var labelText = item.labelText;
             var textNode = this.ownerDocument.createTextNode(labelText);
 
-            var controlitem =
+            var controlitem = 
               this.control.appendItem(textNode, valueText);
 
             var selected = false;
@@ -592,77 +579,18 @@
 
       <method name="_updateDefaultValues">
         <body>
-        <![CDATA[
-          var selectedArray = this._getValuesArray();
+          <![CDATA[
+          // get an array of values selected in the bound node
+          var selectedArray = new Array();
+          if (this.accessors.getValue())
+            selectedArray = this.accessors.getValue().split(" ");
 
           // store the values in a hash for quick access
           this._defaultHash = new Object();
           for (var run = 0; run < selectedArray.length; run++) {
             this._defaultHash[selectedArray[run]] = {hits: 0}
           }
-        ]]>
-        </body>
-      </method>
-
-      <!-- Return an array of values to be selected for the given string or of
-        the bound node if string argument is omitted. -->
-      <method name="_getValuesArray">
-        <parameter name="aValue"/>
-        <body>
-          // When the instance value is empty, then we return an array
-          // containing one empty string, rather than an empty array.  We'll
-          // allow that into the defaultHash so that 'xforms-out-of-range' event
-          // will be correctly generated if none of the items in the select have
-          // an empty string as a value.
-
-          if (!aValue) {
-            aValue = this.accessors.getValue();
-            if (!aValue) {
-              aValue = "";
-            }
-          }
-
-          if (this.localName == "select1")
-            return [aValue];
-
-          // A limitation of the XML Schema list datatypes is that white space
-          // characters in the storage values (the value element) are always
-          // interpreted as separators between individual data values.
-          // Therefore, authors should avoid using white space characters within
-          // storage values with list simpleContent.
-
-          // Replace new line (\n), tabs (\t) and carriage returns (\r) with
-          // space (" ").
-          aValue = aValue.replace(/\n|\t|\r/g, " ");
-
-          return aValue.split(/\s/);
-        </body>
-      </method>
-
-      <!-- Updates the instance data bound to this control.
-
-        @param aIncremental - if true then it means the update is additional and
-          instance data will be updated only if @incremental attribute value of
-          this control is not false.
-      -->
-      <method name="updateInstanceData">
-        <parameter name="aIncremental"/>
-        <body>
-        <![CDATA[
-          // Fire 'xfroms-select'/'xforms-deselect' events and unselect illegaly
-          // selected items.
-          var copySelectedOrDeselected = new Boolean();
-          copySelectedOrDeselected.value = false;
-          var contentEnvelope =
-            this._processSelectedValues(copySelectedOrDeselected);
-
-          if (!aIncremental || this.incremental) {
-            if (contentEnvelope) {
-              this._setBoundValue(contentEnvelope,
-                                  copySelectedOrDeselected.value);
-            }
-          }
-        ]]>
+          ]]>
         </body>
       </method>
 
@@ -750,8 +678,6 @@
             return null;
           }
 
-          var contentDocument = contentEnvelope.ownerDocument;
-
           var selectedValues = "";
           if (this.selection == "open") {
             selectedValues = this.control.getFreeEntryValues();
@@ -795,7 +721,7 @@
                 } else {
                   copyNode = item.copyNode;
                   if (copyNode) {
-                    var clone = contentDocument.importNode(copyNode, true);
+                    var clone = copyNode.cloneNode(true);
                     contentEnvelope.appendChild(clone);
 
                     if (!options[i].wasSelected) {
@@ -808,7 +734,7 @@
                 }
               } else {
                 // not a copyItem, so grab the item's value and append it to our
-                // space separated list.
+                // space seperated list.
                 selectedValues += options[i].control.
                   QueryInterface(Components.interfaces.nsIXFormsSelectChild).value;
               }
@@ -834,7 +760,7 @@
           // write out the text nodes before we handle copy
           if (boundType == Node.ELEMENT_NODE) {
             if (selectedValues.length > 0) {
-              var textNode = contentDocument.createTextNode(selectedValues);
+              var textNode = document.createTextNode(selectedValues);
               if (copyNode) {
                 // making sure all selected 'values' are in the first text node
                 // under the bound node.
@@ -882,25 +808,19 @@
         <parameter name="aElement"/>
         <parameter name="aName"/>
         <body>
-        <![CDATA[
+          var ev = document.createEvent("Events");
+          ev.initEvent(aName, true, false);
+          var elm = aElement;
           // per http://www.w3.org/TR/2005/PER-xforms-20051006/index-all.html#evt-select
           // we send the event to the itemset if it is a parent.
-          var parent = this.ownerDocument.getBindingParent(aElement);
-          var elm = parent && parent.localName == "itemset" ? parent : aElement;
-          return this.dispatchXFormsNotificationEvent(aName, elm);
-        ]]>
+          if (elm.parentNode.localName == "itemset")
+            elm = elm.parentNode;
+          elm.dispatchEvent(ev);
+          return true;
         </body>
       </method>
 
-      <!-- Array of objects that contains objects for all items of this control,
-        serves to keep xforms items and native items together.
-        Object has next properties:
-          control - xforms:item element
-          option - native widget for xforms:item
-          wasSelected - flag specifies whether native item was selected or not.
-      -->
       <field name="_controlArray">new Array()</field>
-
       <field name="_selectedElementArray">new Array()</field>
       <field name="_defaultHash">null</field>
       <field name="_accessorValueCache">null</field>
@@ -917,162 +837,6 @@
   </binding>
 
 
-  <!-- SELECT BASE
-    Implements nsIXFormsNSSelectElement interface.
-  -->
-  <binding id="xformswidget-select-base"
-           extends="#xformswidget-selectcontrols-base">
-
-    <implementation implements="nsIXFormsNSSelectElement">
-
-    <!-- nsIXFormsNSSelectElement -->
-      <property name="selectedItems" readonly="true">
-        <getter>
-        <![CDATA[
-          var items = [];
-          for (var i = 0; i < this._controlArray.length; i++) {
-            var nativeitem = this._controlArray[i].option;
-            if (this.control.isItemSelected(nativeitem)) {
-              var item = this._controlArray[i].control;
-              items.push(item);
-            }
-          }
-          return items;
-        ]]>
-        </getter>
-      </property>
-
-      <method name="addItemToSelection">
-        <parameter name="aItem"/>
-        <body>
-          var nativeitem = this.getNativeItem(aItem);
-          if (!this.control.isItemSelected(nativeitem)) {
-            this.control.addItemToSelection(nativeitem);
-            this.updateInstanceData();
-          }
-        </body>
-      </method>
-
-      <method name="removeItemFromSelection">
-        <parameter name="aItem"/>
-        <body>
-          var nativeitem = this.getNativeItem(aItem);
-          if (this.control.isItemSelected(nativeitem)) {
-            this.control.removeItemFromSelection(nativeitem);
-            this.updateInstanceData();
-          }
-        </body>
-      </method>
-
-      <method name="clearSelection">
-        <body>
-        <![CDATA[
-          changed = false;
-          for (var i = 0; i < this._controlArray.length; i++) {
-            var nativeitem = this._controlArray[i].option;
-            if (this.control.isItemSelected(nativeitem)) {
-              this.control.removeItemFromSelection(nativeitem);
-              changed = true;
-            }
-          }
-          if (changed)
-            this.updateInstanceData();
-        ]]>
-        </body>
-      </method>
-
-      <method name="selectAll">
-        <body>
-        <![CDATA[
-          var changed = false;
-          for (var i = 0; i < this._controlArray.length; i++) {
-            var nativeitem = this._controlArray[i].option;
-            if (!this.control.isItemSelected(nativeitem)) {
-              this.control.addItemToSelection(nativeitem);
-              changed = true;
-            }
-          }
-          if (changed)
-            this.updateInstanceData();
-        ]]>
-        </body>
-      </method>
-
-      <method name="isItemSelected">
-        <parameter name="aItem"/>
-        <body>
-          return this.control.isItemSelected(this.getNativeItem(aItem));
-        </body>
-      </method>
-
-    <!-- private -->
-      <method name="getNativeItem">
-        <parameter name="aItem"/>
-        <body>
-          <![CDATA[
-            for (var i = 0; i < this._controlArray.length; i++) {
-              if (this._controlArray[i].control == aItem)
-                return this._controlArray[i].option;
-            }
-            return null;
-          ]]>
-        </body>
-      </method>
-    </implementation>
-  </binding>
-
-
-  <!-- SELECT1 BASE
-    Implements nsIXFormsNSSelect1Element interface.
-  -->
-  <binding id="xformswidget-select1-base"
-           extends="#xformswidget-selectcontrols-base">
-
-    <implementation implements="nsIXFormsNSSelect1Element">
-      <property name="selectedItem">
-        <getter>
-        <![CDATA[
-          for (var i = 0; i < this._controlArray.length; i++) {
-            var nativeitem = this._controlArray[i].option;
-            var item = this._controlArray[i].control;
-            if (this.control.isItemSelected(nativeitem)) {
-              return item;
-            }
-          }
-          return null;
-        ]]>
-        </getter>
-        <setter>
-        <![CDATA[
-          var changed = false;
-          for (var i = 0; i < this._controlArray.length; i++) {
-            var nativeitem = this._controlArray[i].option;
-            var item = this._controlArray[i].control;
-            if (!this.control.isItemSelected(nativeitem)) {
-              if (item == val) {
-                this.control.addItemToSelection(nativeitem);
-                if (changed)
-                  break;
-                changed = true;
-              }
-            } else {
-              if (item != val) {
-                this.control.removeItemFromSelection(nativeitem);
-                if (changed)
-                  break;
-                changed = true;
-              }
-            }
-          }
-          if (changed)
-            this.updateInstanceData();
-        ]]>
-        </setter>
-      </property>
-    </implementation>
-  </binding>
-
-
   <!-- BASE CONTROL WIDGET FOR XFORMS SELECTS
     The 'controlwidget-base' is the base binding of underlying controls. Thease
     underlying controls implement functionality asked for by object returned by
@@ -1085,15 +849,6 @@
   -->
   <binding id="controlwidget-base">
     <implementation>
-
-      <!-- Return nsIEditor object if native widget contains editor.
-        Of the widgets that extend this binding, only the
-        xforms:select1[appearance='minimal'] implementation for XUL has an
-        editor.
-      -->
-      <property name="editor" readonly="true"
-                onget="return null"/>
-
       <!-- Return parent xf:select/xf:select1 control. -->
       <property name="parentControl" readonly="true">
         <getter>
@@ -1143,13 +898,6 @@
         </setter>
       </property>
 
-      <!-- Advance focus to native widget. -->
-      <method name="focus">
-        <body>
-          this.control.focus();
-        </body>
-      </method>
-
       <!-- Update instance data to native control widget value.
         @param aIncremental - will be true if this function is called because
           the user selected a new value in the native control widget. It will be
@@ -1168,7 +916,18 @@
           if (this.parentControl.incremental && !aIncremental)
             return;
 
-          this.parentControl.updateInstanceData(aIncremental);
+          // Fire 'xfroms-select'/'xforms-deselect' events and unselect illegaly
+          // selected items.
+          var copySelectedOrDeselected = new Boolean();
+          copySelectedOrDeselected.value = false;
+          var contentEnvelope =
+            this.parentControl._processSelectedValues(copySelectedOrDeselected);
+
+          if (!aIncremental || this.parentControl.incremental) {
+            if (contentEnvelope) {
+              this.parentControl._setBoundValue(contentEnvelope, copySelectedOrDeselected.value);
+            }
+          }
         ]]>
         </body>
       </method>
@@ -1177,8 +936,7 @@
       <method name="dispatchDOMUIEvent">
         <parameter name="aType"/>
         <body>
-          if (this.parentControl)
-            this.parentControl.dispatchDOMUIEvent(aType);
+          this.parentControl.dispatchDOMUIEvent(aType);
         </body>
       </method>
 

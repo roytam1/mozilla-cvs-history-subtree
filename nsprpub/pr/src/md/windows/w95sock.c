@@ -46,7 +46,7 @@
 #define CONNECT_FD  3
 
 static PRInt32 socket_io_wait(
-    PROsfd osfd, 
+    PRInt32 osfd, 
     PRInt32 fd_type,
     PRIntervalTime timeout);
 
@@ -54,7 +54,7 @@ static PRInt32 socket_io_wait(
 /* --- SOCKET IO --------------------------------------------------------- */
 
 
-PROsfd
+PRInt32
 _PR_MD_SOCKET(int af, int type, int flags)
 {
     SOCKET sock;
@@ -65,7 +65,7 @@ _PR_MD_SOCKET(int af, int type, int flags)
     if (sock == INVALID_SOCKET ) 
     {
         _PR_MD_MAP_SOCKET_ERROR(WSAGetLastError());
-        return (PROsfd)sock;
+        return (PRInt32)sock;
     }
 
     /*
@@ -78,7 +78,7 @@ _PR_MD_SOCKET(int af, int type, int flags)
         return -1;
     }
 
-    return (PROsfd)sock;
+    return (PRInt32)sock;
 }
 
 /*
@@ -86,7 +86,7 @@ _PR_MD_SOCKET(int af, int type, int flags)
 **
 */
 PRInt32
-_MD_CloseSocket(PROsfd osfd)
+_MD_CloseSocket(PRInt32 osfd)
 {
     PRInt32 rv;
 
@@ -109,24 +109,23 @@ _MD_SocketAvailable(PRFileDesc *fd)
     return result;
 }
 
-PROsfd _MD_Accept(
+PRInt32 _MD_Accept(
     PRFileDesc *fd, 
     PRNetAddr *raddr, 
     PRUint32 *rlen,
     PRIntervalTime timeout )
 {
-    PROsfd osfd = fd->secret->md.osfd;
-    SOCKET sock;
+    PRInt32 osfd = fd->secret->md.osfd;
     PRInt32 rv, err;
 
-    while ((sock = accept(osfd, (struct sockaddr *) raddr, rlen)) == -1) 
+    while ((rv = accept(osfd, (struct sockaddr *) raddr, rlen)) == -1) 
     {
         err = WSAGetLastError();
         if ((err == WSAEWOULDBLOCK) && (!fd->secret->nonblocking))
         {
             if ((rv = socket_io_wait(osfd, READ_FD, timeout)) < 0)
             {
-                break;
+                return(-1);
             }
         }
         else
@@ -135,14 +134,14 @@ PROsfd _MD_Accept(
             break;
         }
     }
-    return(sock);
+    return(rv);
 } /* end _MD_accept() */
 
 PRInt32
 _PR_MD_CONNECT(PRFileDesc *fd, const PRNetAddr *addr, PRUint32 addrlen, 
                PRIntervalTime timeout)
 {
-    PROsfd osfd = fd->secret->md.osfd;
+    PRInt32 osfd = fd->secret->md.osfd;
     PRInt32 rv;
     int     err;
 
@@ -202,7 +201,7 @@ PRInt32
 _PR_MD_RECV(PRFileDesc *fd, void *buf, PRInt32 amount, PRIntn flags, 
             PRIntervalTime timeout)
 {
-    PROsfd osfd = fd->secret->md.osfd;
+    PRInt32 osfd = fd->secret->md.osfd;
     PRInt32 rv, err;
     int osflags;
 
@@ -236,7 +235,7 @@ PRInt32
 _PR_MD_SEND(PRFileDesc *fd, const void *buf, PRInt32 amount, PRIntn flags,
             PRIntervalTime timeout)
 {
-    PROsfd osfd = fd->secret->md.osfd;
+    PRInt32 osfd = fd->secret->md.osfd;
     PRInt32 rv, err;
     PRInt32 bytesSent = 0;
 
@@ -280,7 +279,7 @@ PRInt32
 _PR_MD_SENDTO(PRFileDesc *fd, const void *buf, PRInt32 amount, PRIntn flags,
               const PRNetAddr *addr, PRUint32 addrlen, PRIntervalTime timeout)
 {
-    PROsfd osfd = fd->secret->md.osfd;
+    PRInt32 osfd = fd->secret->md.osfd;
     PRInt32 rv, err;
     PRInt32 bytesSent = 0;
 
@@ -325,7 +324,7 @@ PRInt32
 _PR_MD_RECVFROM(PRFileDesc *fd, void *buf, PRInt32 amount, PRIntn flags,
                 PRNetAddr *addr, PRUint32 *addrlen, PRIntervalTime timeout)
 {
-    PROsfd osfd = fd->secret->md.osfd;
+    PRInt32 osfd = fd->secret->md.osfd;
     PRInt32 rv, err;
 
     while ((rv = recvfrom( osfd, buf, amount, 0, (struct sockaddr *) addr,
@@ -470,7 +469,7 @@ _MD_MakeNonblock(PRFileDesc *f)
 #define _PR_INTERRUPT_CHECK_INTERVAL_SECS 5
 
 static PRInt32 socket_io_wait(
-    PROsfd osfd, 
+    PRInt32 osfd, 
     PRInt32 fd_type,
     PRIntervalTime timeout)
 {
@@ -501,13 +500,13 @@ static PRInt32 socket_io_wait(
                 switch( fd_type )
                 {
                     case READ_FD:
-                        rv = _MD_SELECT(0, &rd_wr, NULL, NULL, &tv);
+                        rv = _MD_SELECT(osfd + 1, &rd_wr, NULL, NULL, &tv);
                         break;
                     case WRITE_FD:
-                        rv = _MD_SELECT(0, NULL, &rd_wr, NULL, &tv);
+                        rv = _MD_SELECT(osfd + 1, NULL, &rd_wr, NULL, &tv);
                         break;
                     case CONNECT_FD:
-                        rv = _MD_SELECT(0, NULL, &rd_wr, &ex, &tv);
+                        rv = _MD_SELECT(osfd + 1, NULL, &rd_wr, &ex, &tv);
                         break;
                     default:
                         PR_ASSERT(0);
@@ -581,13 +580,13 @@ static PRInt32 socket_io_wait(
                 switch( fd_type )
                 {
                     case READ_FD:
-                        rv = _MD_SELECT(0, &rd_wr, NULL, NULL, &tv);
+                        rv = _MD_SELECT(osfd + 1, &rd_wr, NULL, NULL, &tv);
                         break;
                     case WRITE_FD:
-                        rv = _MD_SELECT(0, NULL, &rd_wr, NULL, &tv);
+                        rv = _MD_SELECT(osfd + 1, NULL, &rd_wr, NULL, &tv);
                         break;
                     case CONNECT_FD:
-                        rv = _MD_SELECT(0, NULL, &rd_wr, &ex, &tv);
+                        rv = _MD_SELECT(osfd + 1, NULL, &rd_wr, &ex, &tv);
                         break;
                     default:
                         PR_ASSERT(0);

@@ -46,6 +46,7 @@
 #include <stdlib.h>
 
 #include "nsIWidget.h"
+#include "nsIPref.h"
 #include "nsCRT.h"
 
 #include <Pt.h>

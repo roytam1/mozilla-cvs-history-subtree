@@ -41,7 +41,7 @@
 
 #include "nsDOMUIEvent.h"
 #include "nsIPrivateTextEvent.h"
-#include "nsPrivateTextRange.h"
+#include "nsIPrivateTextRange.h"
 
 class nsDOMTextEvent : public nsDOMUIEvent,
                        public nsIPrivateTextEvent
@@ -61,7 +61,7 @@ public:
   
 protected:
   nsString mText;
-  nsRefPtr<nsPrivateTextRangeList> mTextRange;
+  nsCOMPtr<nsIPrivateTextRangeList> mTextRange;
 };
 
 #endif // nsDOMTextEvent_h__

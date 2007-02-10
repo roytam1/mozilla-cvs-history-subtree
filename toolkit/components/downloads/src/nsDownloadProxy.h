@@ -154,11 +154,6 @@ public:
     return mInner->GetTargetFile(aTargetFile);
   }
 
-  NS_IMETHODIMP GetSpeed(double* aSpeed)
-  {
-    return mInner->GetSpeed(aSpeed);
-  }
-
   NS_IMETHODIMP OnStateChange(nsIWebProgress* aWebProgress,
                               nsIRequest* aRequest, PRUint32 aStateFlags,
                               PRUint32 aStatus)
@@ -222,15 +217,7 @@ public:
     return NS_OK;
   }
 
-  NS_IMETHODIMP OnRefreshAttempted(nsIWebProgress *aWebProgress,
-                                   nsIURI *aUri,
-                                   PRInt32 aDelay,
-                                   PRBool aSameUri,
-                                   PRBool *allowRefresh)
-  {
-    *allowRefresh = PR_TRUE;
-    return NS_OK;
-  }
+
 
   NS_IMETHODIMP OnSecurityChange(nsIWebProgress *aWebProgress,
                                  nsIRequest *aRequest, PRUint32 aState)

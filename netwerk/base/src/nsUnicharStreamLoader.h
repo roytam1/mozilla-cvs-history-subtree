@@ -40,13 +40,15 @@
 #define nsUnicharStreamLoader_h__
 
 #include "nsIUnicharStreamLoader.h"
+#include "nsIStreamListener.h"
 #include "nsCOMPtr.h"
 #include "nsIChannel.h"
 #include "nsString.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
 
-class nsUnicharStreamLoader : public nsIUnicharStreamLoader
+class nsUnicharStreamLoader : public nsIUnicharStreamLoader,
+                              public nsIStreamListener
 {
 public:
   NS_DECL_ISUPPORTS

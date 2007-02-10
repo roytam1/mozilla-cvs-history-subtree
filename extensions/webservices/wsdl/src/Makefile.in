@@ -44,7 +44,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE    = websrvcs
 LIBRARY_NAME	= websrvcswsdl_s
-LIBXUL_LIBRARY = 1
+MOZILLA_INTERNAL_API = 1
 
 REQUIRES	= xpcom \
 		  string \
@@ -53,7 +53,6 @@ REQUIRES	= xpcom \
 		  caps \
 		  widget \
 		  content \
-		  layout \
 		  js \
 		  necko \
 		  pref \

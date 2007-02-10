@@ -71,15 +71,12 @@ protected:
   nsIntSize mSize;
 
 private:
-  nsresult  SetData(const PRUint8 *aData, PRUint32 aLength, 
-                    PRInt32 aOffset, PRBool aSetAlpha);
-
+  /* private members */
   nsCOMPtr<nsIImage> mImage;
 
-  PRPackedBool mInitialized;
+  PRPackedBool mInitalized;
   PRPackedBool mMutable;
   PRPackedBool mHasBackgroundColor;
-  PRPackedBool mTopToBottom;
   gfx_format   mFormat;
 
   PRInt32 mTimeout; // -1 means display forever

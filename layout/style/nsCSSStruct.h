@@ -35,13 +35,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * temporary (expanded) representation of the property-value pairs
- * within a CSS declaration using during parsing and mutation, and
- * representation of complex values for CSS properties
- */
-
 #ifndef nsCSSStruct_h___
 #define nsCSSStruct_h___
 
@@ -67,6 +60,9 @@ struct nsCSSFont : public nsCSSStruct {
   nsCSSFont(void);
   nsCSSFont(const nsCSSFont& aCopy);
   ~nsCSSFont(void);
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
 
   nsCSSValue mFamily;
   nsCSSValue mStyle;
@@ -97,6 +93,9 @@ struct nsCSSColor : public nsCSSStruct  {
   nsCSSColor(void);
   nsCSSColor(const nsCSSColor& aCopy);
   ~nsCSSColor(void);
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
 
   nsCSSValue      mColor;
   nsCSSValue      mBackColor;
@@ -113,10 +112,29 @@ struct nsCSSColor : public nsCSSStruct  {
 struct nsRuleDataColor : public nsCSSColor {
 };
 
+// Should be replaced with nsCSSValueList and nsCSSValue::Array.
+struct nsCSSShadow {
+  nsCSSShadow(void);
+  nsCSSShadow(const nsCSSShadow& aCopy);
+  ~nsCSSShadow(void);
+
+  static PRBool Equal(nsCSSShadow* aList1, nsCSSShadow* aList2);
+
+  nsCSSValue mColor;
+  nsCSSValue mXOffset;
+  nsCSSValue mYOffset;
+  nsCSSValue mRadius;
+  nsCSSShadow*  mNext;
+};
+
 struct nsCSSText : public nsCSSStruct  {
   nsCSSText(void);
   nsCSSText(const nsCSSText& aCopy);
   ~nsCSSText(void);
+
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
 
   nsCSSValue mWordSpacing;
   nsCSSValue mLetterSpacing;
@@ -125,7 +143,7 @@ struct nsCSSText : public nsCSSStruct  {
   nsCSSValue mTextAlign;
   nsCSSValue mTextIndent;
   nsCSSValue mDecoration;
-  nsCSSValueList* mTextShadow; // NEW
+  nsCSSShadow* mTextShadow; // NEW
   nsCSSValue mUnicodeBidi;  // NEW
   nsCSSValue mLineHeight;
   nsCSSValue mWhiteSpace;
@@ -138,6 +156,10 @@ struct nsCSSRect {
   nsCSSRect(void);
   nsCSSRect(const nsCSSRect& aCopy);
   ~nsCSSRect();
+#ifdef DEBUG
+  void List(FILE* out = 0, nsCSSProperty aPropID = eCSSProperty_UNKNOWN, PRInt32 aIndent = 0) const;
+  void List(FILE* out, PRInt32 aIndent, const nsCSSProperty aTRBL[]) const;
+#endif
 
   PRBool operator==(const nsCSSRect& aOther) const {
     return mTop == aOther.mTop &&
@@ -179,6 +201,8 @@ struct nsCSSRect {
   static const side_type sides[4];
 };
 
+MOZ_DECL_CTOR_COUNTER(nsCSSValuePair)
+
 struct nsCSSValuePair {
   nsCSSValuePair()
   {
@@ -210,6 +234,10 @@ struct nsCSSValuePair {
     mYValue = aValue;
   }
 
+#ifdef DEBUG
+  void AppendToString(nsAString& aString, nsCSSProperty aPropName) const;
+#endif
+  
   nsCSSValue mXValue;
   nsCSSValue mYValue;
 };
@@ -218,6 +246,10 @@ struct nsCSSValueListRect {
   nsCSSValueListRect(void);
   nsCSSValueListRect(const nsCSSValueListRect& aCopy);
   ~nsCSSValueListRect();
+#ifdef DEBUG
+  void List(FILE* out = 0, nsCSSProperty aPropID = eCSSProperty_UNKNOWN, PRInt32 aIndent = 0) const;
+  void List(FILE* out, PRInt32 aIndent, const nsCSSProperty aTRBL[]) const;
+#endif
 
   nsCSSValueList* mTop;
   nsCSSValueList* mRight;
@@ -232,6 +264,10 @@ struct nsCSSDisplay : public nsCSSStruct  {
   nsCSSDisplay(void);
   nsCSSDisplay(const nsCSSDisplay& aCopy);
   ~nsCSSDisplay(void);
+
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
 
   nsCSSValue mDirection;
   nsCSSValue mDisplay;
@@ -260,6 +296,10 @@ struct nsCSSMargin : public nsCSSStruct  {
   nsCSSMargin(void);
   nsCSSMargin(const nsCSSMargin& aCopy);
   ~nsCSSMargin(void);
+
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
 
   nsCSSRect   mMargin;
   nsCSSValue  mMarginStart;
@@ -296,6 +336,10 @@ struct nsCSSPosition : public nsCSSStruct  {
   nsCSSPosition(const nsCSSPosition& aCopy);
   ~nsCSSPosition(void);
 
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
+
   nsCSSValue  mWidth;
   nsCSSValue  mMinWidth;
   nsCSSValue  mMaxWidth;
@@ -315,6 +359,10 @@ struct nsCSSList : public nsCSSStruct  {
   nsCSSList(const nsCSSList& aCopy);
   ~nsCSSList(void);
 
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
+
   nsCSSValue mType;
   nsCSSValue mImage;
   nsCSSValue mPosition;
@@ -328,6 +376,10 @@ struct nsCSSTable : public nsCSSStruct  { // NEW
   nsCSSTable(void);
   nsCSSTable(const nsCSSTable& aCopy);
   ~nsCSSTable(void);
+
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
 
   nsCSSValue mBorderCollapse;
   nsCSSValuePair mBorderSpacing;
@@ -349,6 +401,10 @@ struct nsCSSBreaks : public nsCSSStruct  { // NEW
   nsCSSBreaks(const nsCSSBreaks& aCopy);
   ~nsCSSBreaks(void);
 
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
+
   nsCSSValue mOrphans;
   nsCSSValue mWidows;
   nsCSSValue mPage;
@@ -365,6 +421,10 @@ struct nsCSSPage : public nsCSSStruct  { // NEW
   nsCSSPage(void);
   nsCSSPage(const nsCSSPage& aCopy);
   ~nsCSSPage(void);
+
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
 
   nsCSSValue mMarks;
   nsCSSValuePair mSize;
@@ -404,6 +464,10 @@ struct nsCSSContent : public nsCSSStruct  {
   nsCSSContent(const nsCSSContent& aCopy);
   ~nsCSSContent(void);
 
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
+
   nsCSSValueList*   mContent;
   nsCSSCounterData* mCounterIncrement;
   nsCSSCounterData* mCounterReset;
@@ -418,6 +482,10 @@ struct nsCSSUserInterface : public nsCSSStruct  { // NEW
   nsCSSUserInterface(void);
   nsCSSUserInterface(const nsCSSUserInterface& aCopy);
   ~nsCSSUserInterface(void);
+
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
 
   nsCSSValue      mUserInput;
   nsCSSValue      mUserModify;
@@ -435,6 +503,10 @@ struct nsCSSAural : public nsCSSStruct  { // NEW
   nsCSSAural(void);
   nsCSSAural(const nsCSSAural& aCopy);
   ~nsCSSAural(void);
+
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
 
   nsCSSValue mAzimuth;
   nsCSSValue mElevation;
@@ -464,6 +536,10 @@ struct nsCSSXUL : public nsCSSStruct  {
   nsCSSXUL(const nsCSSXUL& aCopy);
   ~nsCSSXUL(void);
 
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
+
   nsCSSValue  mBoxAlign;
   nsCSSValue  mBoxDirection;
   nsCSSValue  mBoxFlex;
@@ -480,6 +556,10 @@ struct nsCSSColumn : public nsCSSStruct  {
   nsCSSColumn(const nsCSSColumn& aCopy);
   ~nsCSSColumn(void);
 
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
+
   nsCSSValue  mColumnCount;
   nsCSSValue  mColumnWidth;
   nsCSSValue  mColumnGap;
@@ -494,26 +574,24 @@ struct nsCSSSVG : public nsCSSStruct {
   nsCSSSVG(const nsCSSSVG& aCopy);
   ~nsCSSSVG(void);
 
+#ifdef DEBUG
+  void List(FILE* out = stdout, PRInt32 aIndent = 0) const;
+#endif
+
   nsCSSValue mClipPath;
   nsCSSValue mClipRule;
-  nsCSSValue mColorInterpolation;
-  nsCSSValue mColorInterpolationFilters;
   nsCSSValue mDominantBaseline;
-  nsCSSValuePair mFill;
+  nsCSSValue mFill;
   nsCSSValue mFillOpacity;
   nsCSSValue mFillRule;
-  nsCSSValue mFilter;
-  nsCSSValue mFloodColor;
-  nsCSSValue mFloodOpacity;
   nsCSSValue mMarkerEnd;
   nsCSSValue mMarkerMid;
   nsCSSValue mMarkerStart;
-  nsCSSValue mMask;
   nsCSSValue mPointerEvents;
   nsCSSValue mShapeRendering;
   nsCSSValue mStopColor;
   nsCSSValue mStopOpacity;
-  nsCSSValuePair mStroke;
+  nsCSSValue mStroke;
   nsCSSValueList *mStrokeDasharray;
   nsCSSValue mStrokeDashoffset;
   nsCSSValue mStrokeLinecap;

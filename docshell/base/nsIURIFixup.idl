@@ -44,7 +44,7 @@ interface nsIURI;
 /**
  * Interface implemented by objects capable of fixing up strings into URIs
  */
-[scriptable, uuid(773081ac-9f81-4bdb-9e7a-5e87b4361f09)]
+[scriptable, uuid(2EFD4A40-A5E1-11d4-9589-0020183BF181)]
 interface nsIURIFixup : nsISupports
 {
     /** No fixup flags. */
@@ -84,7 +84,11 @@ interface nsIURIFixup : nsISupports
      * @param aFixupFlags Flags that govern ways the URI may be fixed up.
      */
     nsIURI createFixupURI(in AUTF8String aURIText, in unsigned long aFixupFlags);
+};
 
+[scriptable, uuid(6ca37983-16aa-4013-b753-77b770ff93d6)]
+interface nsIURIFixup_MOZILLA_1_8_BRANCH : nsIURIFixup
+{
     /**
      * Converts the specified keyword string into a URI.  Note that it's the
      * caller's responsibility to check whether keywords are enabled and

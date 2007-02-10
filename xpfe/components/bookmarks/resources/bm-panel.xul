@@ -48,6 +48,7 @@
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/bookmarks/bookmarksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
+<?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 
 <!DOCTYPE page SYSTEM "chrome://communicator/locale/bookmarks/bookmarks.dtd">
 
@@ -66,6 +67,7 @@
 
   <!-- Bookmarks Panel Drag & Drop -->
   <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
+  <script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
 
   <!-- context menu, tooltips, etc -->
   <popupset id="bookmarksPopupset"/>
@@ -81,11 +83,7 @@
                 oncommandupdate="document.getElementById('bookmarks-view').onCommandUpdate();">
     </commandset>                
     <commandset id="bookmarksItems"/>
-    <command id="cmd_undo"/>
-    <command id="cmd_redo"/>
   </commands>
-
-  <keyset id="bookmarks-tasksKeys"/>
   
   <hbox id="panel-bar" class="toolbar">
     <toolbarbutton id="btnAddBookmark" label="&command.addBookmark.label;"

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "nsCRT.h" /* should be "plstr.h"? */
 #include "nsNetUtil.h"
+#include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentRegistrar.h"
 #include "nsISupportsArray.h"
@@ -52,6 +53,8 @@ load_sync(nsISupportsArray *urls)
 //-----------------------------------------------------------------------------
 
 static int gRequestCount = 0;
+static nsIEventQueue *gEventQ = 0;
+
 
 class MyListener : public nsIStreamListener
 {
@@ -92,6 +95,18 @@ MyListener::OnDataAvailable(nsIRequest *req, nsISupports *ctx,
     return NS_OK;
 }
 
+static void *PR_CALLBACK
+ShutdownEvent_Handler(PLEvent *ev)
+{
+    return nsnull;
+}
+
+static void PR_CALLBACK
+ShutdownEvent_Cleanup(PLEvent *ev)
+{
+    delete ev;
+}
+
 NS_IMETHODIMP
 MyListener::OnStopRequest(nsIRequest *req, nsISupports *ctx, nsresult status)
 {
@@ -102,7 +117,11 @@ MyListener::OnStopRequest(nsIRequest *req, nsISupports *ctx, nsresult status)
     }
     if (--gRequestCount == 0) {
         // post shutdown event
-        QuitPumpingEvents();
+        PLEvent *ev = new PLEvent;
+        PL_InitEvent(ev, nsnull,
+                ShutdownEvent_Handler,
+                ShutdownEvent_Cleanup);
+        gEventQ->PostEvent(ev);
     }
     return NS_OK;
 }
@@ -130,9 +149,29 @@ load_async_1(nsISupports *element, void *data)
 static nsresult
 load_async(nsISupportsArray *urls)
 {
+    nsresult rv;
+
+    // Create the Event Queue for this thread...
+    nsCOMPtr<nsIEventQueueService> eqs(
+            do_GetService("@mozilla.org/event-queue-service;1", &rv) );
+    if (NS_FAILED(rv)) return rv;
+
+    rv = eqs->CreateMonitoredThreadEventQueue();
+    if (NS_FAILED(rv)) return rv;
+
+    rv = eqs->GetThreadEventQueue(NS_CURRENT_THREAD, &gEventQ);
+    if (NS_FAILED(rv)) return rv;
+
     urls->EnumerateForwards(load_async_1, nsnull);
 
-    PumpEvents();
+    while (1) {
+        PLEvent *ev;
+        gEventQ->WaitForEvent(&ev);
+        if (gRequestCount == 0)
+            break;
+        gEventQ->HandleEvent(ev);
+    }
+    NS_RELEASE(gEventQ);
     return NS_OK;
 }
 

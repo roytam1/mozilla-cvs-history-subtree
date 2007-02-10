@@ -37,22 +37,142 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsSVGGenericContainerFrame.h"
-#include "nsSVGUtils.h"
 
 //----------------------------------------------------------------------
 // nsSVGGenericContainerFrame Implementation
 
-nsIFrame*
-NS_NewSVGGenericContainerFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsStyleContext* aContext)
+nsresult
+NS_NewSVGGenericContainerFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsSVGGenericContainerFrame(aContext);
+  nsSVGGenericContainerFrame* it = new (aPresShell) nsSVGGenericContainerFrame;
+  if (nsnull == it)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  *aNewFrame = it;
+
+  return NS_OK;
+}
+
+nsSVGGenericContainerFrame::nsSVGGenericContainerFrame()
+{
+#ifdef DEBUG
+//  printf("nsSVGGenericContainerFrame CTOR\n");
+#endif
+}
+
+nsSVGGenericContainerFrame::~nsSVGGenericContainerFrame()
+{
+#ifdef DEBUG
+//  printf("~nsSVGGenericContainerFrame\n");
+#endif
+}
+
+nsresult nsSVGGenericContainerFrame::Init()
+{
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
+// nsISupports methods
+
+NS_INTERFACE_MAP_BEGIN(nsSVGGenericContainerFrame)
+  NS_INTERFACE_MAP_ENTRY(nsISVGChildFrame)
+  NS_INTERFACE_MAP_ENTRY(nsISVGContainerFrame)
+NS_INTERFACE_MAP_END_INHERITING(nsSVGGenericContainerFrameBase)
+
+
+//----------------------------------------------------------------------
 // nsIFrame methods
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
+                  nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
+                  nsIFrame*        aPrevInFlow)
+{
+  nsresult rv;
+  rv = nsSVGGenericContainerFrameBase::Init(aPresContext, aContent, aParent,
+                             aContext, aPrevInFlow);
+
+  Init();
+  
+  return rv;
+}
+
 
 NS_IMETHODIMP
-nsSVGGenericContainerFrame::AttributeChanged(PRInt32         aNameSpaceID,
+nsSVGGenericContainerFrame::AppendFrames(nsIAtom*        aListName,
+                                         nsIFrame*       aFrameList)
+{
+  // append == insert at end:
+  return InsertFrames(aListName, mFrames.LastChild(), aFrameList);  
+}
+
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::InsertFrames(nsIAtom*        aListName,
+                                         nsIFrame*       aPrevFrame,
+                                         nsIFrame*       aFrameList)
+{
+  nsIFrame* lastNewFrame = nsnull;
+  {
+    nsFrameList tmpList(aFrameList);
+    lastNewFrame = tmpList.LastChild();
+  }
+  
+  // Insert the new frames
+  mFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
+
+  // call InitialUpdate() on all new frames:
+  nsIFrame* end = nsnull;
+  if (lastNewFrame)
+    end = lastNewFrame->GetNextSibling();
+
+  for (nsIFrame*kid=aFrameList; kid != end; kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      SVGFrame->InitialUpdate(); 
+    }
+  }
+  
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::RemoveFrame(nsIAtom*        aListName,
+                                        nsIFrame*       aOldFrame)
+{
+  nsCOMPtr<nsISVGRendererRegion> dirty_region;
+  
+  nsISVGChildFrame* SVGFrame=nsnull;
+  aOldFrame->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+
+  if (SVGFrame)
+    dirty_region = SVGFrame->GetCoveredRegion();
+
+  PRBool result = mFrames.DestroyFrame(GetPresContext(), aOldFrame);
+
+  nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+  NS_ASSERTION(outerSVGFrame, "no outer svg frame");
+  if (dirty_region && outerSVGFrame)
+    outerSVGFrame->InvalidateRegion(dirty_region, PR_TRUE);
+
+  NS_ASSERTION(result, "didn't find frame to delete");
+  return result ? NS_OK : NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::ReplaceFrame(nsIAtom*        aListName,
+                                         nsIFrame*       aOldFrame,
+                                         nsIFrame*       aNewFrame)
+{
+  NS_NOTYETIMPLEMENTED("nsSVGGenericContainerFrame::ReplaceFrame");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::AttributeChanged(nsIContent*     aChild,
+                                             PRInt32         aNameSpaceID,
                                              nsIAtom*        aAttribute,
                                              PRInt32         aModType)
 {
@@ -60,7 +180,7 @@ nsSVGGenericContainerFrame::AttributeChanged(PRInt32         aNameSpaceID,
     nsAutoString str;
     aAttribute->ToString(str);
     printf("** nsSVGGenericContainerFrame::AttributeChanged(%s)\n",
-           NS_LossyConvertUTF16toASCII(str).get());
+           NS_LossyConvertUCS2toASCII(str).get());
 #endif
 
   return NS_OK;
@@ -69,19 +189,197 @@ nsSVGGenericContainerFrame::AttributeChanged(PRInt32         aNameSpaceID,
 nsIAtom *
 nsSVGGenericContainerFrame::GetType() const
 {
-  return nsGkAtoms::svgGenericContainerFrame;
+  return nsLayoutAtoms::svgGenericContainerFrame;
+}
+
+PRBool
+nsSVGGenericContainerFrame::IsFrameOfType(PRUint32 aFlags) const
+{
+  return !(aFlags & ~nsIFrame::eSVG);
 }
 
 //----------------------------------------------------------------------
-// nsSVGContainerFrame methods:
+// nsISVGChildFrame methods
+
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips)
+{
+#ifdef DEBUG
+//  printf("nsSVGGenericContainer(%p)::Paint\n", this);
+#endif
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame)
+      SVGFrame->PaintSVG(canvas, dirtyRectTwips);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::GetFrameForPointSVG(float x, float y, nsIFrame** hit)
+{
+#ifdef DEBUG
+//  printf("nsSVGGenericContainerFrame(%p)::GetFrameForPoint\n", this);
+#endif
+  *hit = nsnull;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      nsIFrame* temp=nsnull;
+      nsresult rv = SVGFrame->GetFrameForPointSVG(x, y, &temp);
+      if (NS_SUCCEEDED(rv) && temp) {
+        *hit = temp;
+        // return NS_OK; can't return. we need reverse order but only
+        // have a singly linked list...
+      }
+    }
+  }
+  
+  return *hit ? NS_OK : NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP_(already_AddRefed<nsISVGRendererRegion>)
+nsSVGGenericContainerFrame::GetCoveredRegion()
+{
+  nsISVGRendererRegion *accu_region=nsnull;
+  
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      nsCOMPtr<nsISVGRendererRegion> dirty_region = SVGFrame->GetCoveredRegion();
+      if (dirty_region) {
+        if (accu_region) {
+          nsCOMPtr<nsISVGRendererRegion> temp = dont_AddRef(accu_region);
+          dirty_region->Combine(temp, &accu_region);
+        }
+        else {
+          accu_region = dirty_region;
+          NS_IF_ADDREF(accu_region);
+        }
+      }
+    }
+    kid = kid->GetNextSibling();
+  }
+  
+  return accu_region;
+}
+
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::InitialUpdate()
+{
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      SVGFrame->InitialUpdate();
+    }
+    kid = kid->GetNextSibling();
+  }
+  return NS_OK;
+}  
+
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::NotifyCanvasTMChanged()
+{
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      SVGFrame->NotifyCanvasTMChanged();
+    }
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::NotifyRedrawSuspended()
+{
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      SVGFrame->NotifyRedrawSuspended();
+    }
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::NotifyRedrawUnsuspended()
+{
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      SVGFrame->NotifyRedrawUnsuspended();
+    }
+  }
+ return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGenericContainerFrame::GetBBox(nsIDOMSVGRect **_retval)
+{
+  *_retval = nsnull;
+  return NS_ERROR_FAILURE;
+}
+
+//----------------------------------------------------------------------
+// nsISVGContainerFrame methods:
+
+nsISVGOuterSVGFrame *
+nsSVGGenericContainerFrame::GetOuterSVGFrame()
+{
+  NS_ASSERTION(mParent, "null parent");
+  
+  nsISVGContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), (void**)&containerFrame);
+  if (!containerFrame) {
+    NS_ERROR("invalid container");
+    return nsnull;
+  }
+
+  return containerFrame->GetOuterSVGFrame();  
+}
 
 already_AddRefed<nsIDOMSVGMatrix>
 nsSVGGenericContainerFrame::GetCanvasTM()
 {
   NS_ASSERTION(mParent, "null parent");
   
-  nsSVGContainerFrame *containerFrame = NS_STATIC_CAST(nsSVGContainerFrame*,
-                                                       mParent);
+  nsISVGContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), (void**)&containerFrame);
+  if (!containerFrame) {
+    NS_ERROR("invalid container");
+    return nsnull;
+  }
 
   return containerFrame->GetCanvasTM();  
 }
+
+already_AddRefed<nsSVGCoordCtxProvider>
+nsSVGGenericContainerFrame::GetCoordContextProvider()
+{
+  NS_ASSERTION(mParent, "null parent");
+  
+  nsISVGContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), (void**)&containerFrame);
+  if (!containerFrame) {
+    NS_ERROR("invalid container");
+    return nsnull;
+  }
+
+  return containerFrame->GetCoordContextProvider();  
+}
+

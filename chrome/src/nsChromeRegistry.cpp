@@ -102,7 +102,6 @@
 #include "nsIXULAppInfo.h"
 #include "nsIXULRuntime.h"
 
-#ifdef MOZ_XUL
 // keep all the RDF stuff together, in case we can remove it in the far future
 #include "rdf.h"
 #include "nsRDFCID.h"
@@ -116,15 +115,6 @@
 #include "nsIRDFContainer.h"
 #include "nsIRDFContainerUtils.h"
 
-#define CHROME_URI "http://www.mozilla.org/rdf/chrome#"
-
-DEFINE_RDF_VOCAB(CHROME_URI, CHROME, packages);
-DEFINE_RDF_VOCAB(CHROME_URI, CHROME, package);
-DEFINE_RDF_VOCAB(CHROME_URI, CHROME, name);
-DEFINE_RDF_VOCAB(CHROME_URI, CHROME, platformPackage);
-
-#endif
-
 #define UILOCALE_CMD_LINE_ARG "UILocale"
 
 #define MATCH_OS_LOCALE_PREF "intl.locale.matchOS"
@@ -135,6 +125,13 @@ static NS_DEFINE_CID(kCSSLoaderCID, NS_CSS_LOADER_CID);
 static NS_DEFINE_CID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
 
 nsChromeRegistry* nsChromeRegistry::gChromeRegistry;
+
+#define CHROME_URI "http://www.mozilla.org/rdf/chrome#"
+
+DEFINE_RDF_VOCAB(CHROME_URI, CHROME, packages);
+DEFINE_RDF_VOCAB(CHROME_URI, CHROME, package);
+DEFINE_RDF_VOCAB(CHROME_URI, CHROME, name);
+DEFINE_RDF_VOCAB(CHROME_URI, CHROME, platformPackage);
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -430,20 +427,13 @@ nsChromeRegistry::~nsChromeRegistry()
   gChromeRegistry = nsnull;
 }
 
-NS_INTERFACE_MAP_BEGIN(nsChromeRegistry)
-  NS_INTERFACE_MAP_ENTRY(nsIChromeRegistry)
-  NS_INTERFACE_MAP_ENTRY(nsIXULChromeRegistry)
-  NS_INTERFACE_MAP_ENTRY(nsIToolkitChromeRegistry)
-#ifdef MOZ_XUL
-  NS_INTERFACE_MAP_ENTRY(nsIXULOverlayProvider)
-#endif
-  NS_INTERFACE_MAP_ENTRY(nsIObserver)
-  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
-  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIChromeRegistry)
-NS_INTERFACE_MAP_END
-
-NS_IMPL_ADDREF(nsChromeRegistry)
-NS_IMPL_RELEASE(nsChromeRegistry)
+NS_IMPL_THREADSAFE_ISUPPORTS6(nsChromeRegistry,
+                              nsIChromeRegistry,
+                              nsIXULChromeRegistry,
+                              nsIToolkitChromeRegistry,
+                              nsIXULOverlayProvider,
+                              nsIObserver,
+                              nsISupportsWeakReference)
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsIChromeRegistry methods:
@@ -795,7 +785,6 @@ nsChromeRegistry::GetLocalesForPackage(const nsACString& aPackage,
   return rv;
 }
 
-#ifdef MOZ_XUL
 NS_IMETHODIMP
 nsChromeRegistry::GetStyleOverlays(nsIURI *aChromeURL,
                                    nsISimpleEnumerator **aResult)
@@ -816,7 +805,6 @@ nsChromeRegistry::GetXULOverlays(nsIURI *aChromeURL, nsISimpleEnumerator **aResu
 
   return NS_NewArrayEnumerator(aResult, *parray);
 }
-#endif // MOZ_XUL
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -842,10 +830,6 @@ static void FlushSkinBindingsForWindow(nsIDOMWindowInternal* aWindow)
 // XXXbsmedberg: move this to nsIWindowMediator
 NS_IMETHODIMP nsChromeRegistry::RefreshSkins()
 {
-  nsCOMPtr<nsICSSLoader> cssLoader(do_CreateInstance(kCSSLoaderCID));
-  if (!cssLoader)
-    return NS_OK;
-
   nsCOMPtr<nsIWindowMediator> windowMediator
     (do_GetService(NS_WINDOWMEDIATOR_CONTRACTID));
   if (!windowMediator)
@@ -876,7 +860,7 @@ NS_IMETHODIMP nsChromeRegistry::RefreshSkins()
     if (protoWindow) {
       nsCOMPtr<nsIDOMWindowInternal> domWindow = do_QueryInterface(protoWindow);
       if (domWindow)
-        RefreshWindow(domWindow, cssLoader);
+        RefreshWindow(domWindow);
     }
     windowEnumerator->HasMoreElements(&more);
   }
@@ -904,8 +888,7 @@ static PRBool IsChromeURI(nsIURI* aURI)
 }
 
 // XXXbsmedberg: move this to windowmediator
-nsresult nsChromeRegistry::RefreshWindow(nsIDOMWindowInternal* aWindow,
-                                         nsICSSLoader* aCSSLoader)
+nsresult nsChromeRegistry::RefreshWindow(nsIDOMWindowInternal* aWindow)
 {
   // Deal with our subframes first.
   nsCOMPtr<nsIDOMWindowCollection> frames;
@@ -917,7 +900,7 @@ nsresult nsChromeRegistry::RefreshWindow(nsIDOMWindowInternal* aWindow,
     nsCOMPtr<nsIDOMWindow> childWin;
     frames->Item(j, getter_AddRefs(childWin));
     nsCOMPtr<nsIDOMWindowInternal> childInt(do_QueryInterface(childWin));
-    RefreshWindow(childInt, aCSSLoader);
+    RefreshWindow(childInt);
   }
 
   nsresult rv;
@@ -952,7 +935,7 @@ nsresult nsChromeRegistry::RefreshWindow(nsIDOMWindowInternal* aWindow,
       if (IsChromeURI(uri)) {
         // Reload the sheet.
         nsCOMPtr<nsICSSStyleSheet> newSheet;
-        rv = aCSSLoader->LoadSheetSync(uri, PR_TRUE, getter_AddRefs(newSheet));
+        rv = LoadStyleSheetWithURL(uri, PR_TRUE, getter_AddRefs(newSheet));
         if (NS_FAILED(rv)) return rv;
         if (newSheet) {
           rv = newAgentSheets.AppendObject(newSheet) ? NS_OK : NS_ERROR_FAILURE;
@@ -1004,7 +987,7 @@ nsresult nsChromeRegistry::RefreshWindow(nsIDOMWindowInternal* aWindow,
       // XXX what about chrome sheets that have a title or are disabled?  This
       // only works by sheer dumb luck.
       // XXXbz this should really use the document's CSSLoader!
-      aCSSLoader->LoadSheetSync(uri, getter_AddRefs(newSheet));
+      LoadStyleSheetWithURL(uri, PR_FALSE, getter_AddRefs(newSheet));
       // Even if it's null, we put in in there.
       newSheets.AppendObject(newSheet);
     }
@@ -1071,6 +1054,17 @@ nsChromeRegistry::ReloadChrome()
     }
   }
   return rv;
+}
+
+nsresult
+nsChromeRegistry::LoadStyleSheetWithURL(nsIURI* aURL, PRBool aEnableUnsafeRules, nsICSSStyleSheet** aSheet)
+{
+  *aSheet = nsnull;
+
+  nsCOMPtr<nsICSSLoader_MOZILLA_1_8_BRANCH> cssLoader = do_GetService(kCSSLoaderCID);
+  if (!cssLoader) return NS_ERROR_FAILURE;
+
+  return cssLoader->LoadSheetSync(aURL, aEnableUnsafeRules, aSheet);
 }
 
 NS_IMETHODIMP
@@ -1417,7 +1411,6 @@ NS_IMETHODIMP nsChromeRegistry::Observe(nsISupports *aSubject, const char *aTopi
   return rv;
 }
 
-#ifdef MOZ_XUL
 static nsresult
 GetContainerEnumerator(nsIRDFDataSource* ds, nsIRDFResource* res,
                        nsISimpleEnumerator* *aResult, PRInt32 *aCountResult = nsnull)
@@ -1815,18 +1808,6 @@ nsChromeRegistry::ProcessOverlays(PRFileDesc *fd, nsIRDFDataSource* aDS,
   }
 }
 
-#else // MOZ_XUL
-
-NS_IMETHODIMP
-nsChromeRegistry::ProcessContentsManifest(nsIURI* aOldManifest, nsIURI* aFile,
-                                          nsIURI* aBaseURI, PRBool aAppend,
-                                          PRBool aSkinOnly)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-#endif // MOZ_XUL
-
 nsresult
 nsChromeRegistry::ProcessManifest(nsILocalFile* aManifest, PRBool aSkinOnly)
 {
@@ -2050,16 +2031,6 @@ CheckVersionFlag(const nsSubstring& aFlag, const nsSubstring& aData,
   return PR_TRUE;
 }
 
-static void
-EnsureLowerCase(char *aBuf)
-{
-  for (; *aBuf; ++aBuf) {
-    char ch = *aBuf;
-    if (ch >= 'A' && ch <= 'Z')
-      *aBuf = ch + 'a' - 'A';
-  }
-}
-
 nsresult
 nsChromeRegistry::ProcessManifestBuffer(char *buf, PRInt32 length,
                                         nsILocalFile* aManifest,
@@ -2124,8 +2095,6 @@ nsChromeRegistry::ProcessManifestBuffer(char *buf, PRInt32 length,
                               "Warning: Malformed content registration.");
         continue;
       }
-
-      EnsureLowerCase(package);
 
       // NOTE: We check for platform and xpcnativewrappers modifiers on
       // content packages, but they are *applied* to content|skin|locale.
@@ -2201,8 +2170,6 @@ nsChromeRegistry::ProcessManifestBuffer(char *buf, PRInt32 length,
         continue;
       }
 
-      EnsureLowerCase(package);
-
       TriState stAppVersion = eUnspecified;
       TriState stApp = eUnspecified;
 
@@ -2250,8 +2217,6 @@ nsChromeRegistry::ProcessManifestBuffer(char *buf, PRInt32 length,
                               "Warning: Malformed skin registration.");
         continue;
       }
-
-      EnsureLowerCase(package);
 
       TriState stAppVersion = eUnspecified;
       TriState stApp = eUnspecified;
@@ -2423,7 +2388,7 @@ nsChromeRegistry::ProcessManifestBuffer(char *buf, PRInt32 length,
       nsCOMPtr<nsIURI> chromeuri, resolveduri;
       rv  = io->NewURI(nsDependentCString(chrome), nsnull, nsnull,
                       getter_AddRefs(chromeuri));
-      rv |= io->NewURI(nsDependentCString(resolved), nsnull, manifestURI,
+      rv |= io->NewURI(nsDependentCString(resolved), nsnull, nsnull,
                        getter_AddRefs(resolveduri));
       if (NS_FAILED(rv))
         continue;

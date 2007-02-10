@@ -1,4 +1,6 @@
 /*
+ * $Id$
+ *
  * Copyright © 2004 Keith Packard
  *
  * Permission to use, copy, modify, distribute, and sell this software and its
@@ -60,6 +62,7 @@
 #undef DefineAlpha
 #undef rasterizeEdges
 #undef N_BITS
+
 
 /*
  * 1 bit alpha
@@ -126,7 +129,7 @@ fbRasterizeEdges8 (FbBits	*buf,
         CARD8 *ap = (CARD8 *) line;
 	xFixed	lx, rx;
 	int	lxi, rxi;
-
+	
 	/* clip X */
 	lx = l->x;
 	if (lx < 0)
@@ -134,7 +137,7 @@ fbRasterizeEdges8 (FbBits	*buf,
 	rx = r->x;
 	if (xFixedToInt (rx) >= width)
 	    rx = IntToxFixed (width);
-
+	
 	/* Skip empty (or backwards) sections */
 	if (rx > lx)
 	{

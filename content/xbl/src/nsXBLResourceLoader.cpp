@@ -52,7 +52,7 @@
 #include "nsIXBLDocumentInfo.h"
 #include "nsIURI.h"
 #include "nsNetUtil.h"
-#include "nsGkAtoms.h"
+#include "nsXBLAtoms.h"
 #include "nsFrameManager.h"
 #include "nsStyleContext.h"
 #include "nsXBLPrototypeBinding.h"
@@ -109,7 +109,7 @@ nsXBLResourceLoader::LoadResources(PRBool* aResult)
                             doc->GetDocumentCharacterSet().get(), docURL)))
       continue;
 
-    if (curr->mType == nsGkAtoms::image) {
+    if (curr->mType == nsXBLAtoms::image) {
       if (!nsContentUtils::CanLoadImage(url, doc, doc)) {
         // We're not permitted to load this image, move on...
         continue;
@@ -123,7 +123,7 @@ nsXBLResourceLoader::LoadResources(PRBool* aResult)
                                 nsIRequest::LOAD_BACKGROUND,
                                 getter_AddRefs(req));
     }
-    else if (curr->mType == nsGkAtoms::stylesheet) {
+    else if (curr->mType == nsXBLAtoms::stylesheet) {
       // Kick off the load of the stylesheet.
 
       // Always load chrome synchronously
@@ -132,19 +132,24 @@ nsXBLResourceLoader::LoadResources(PRBool* aResult)
       if (NS_SUCCEEDED(url->SchemeIs("chrome", &chrome)) && chrome)
       {
         nsCOMPtr<nsICSSStyleSheet> sheet;
-        rv = cssLoader->LoadSheetSync(url, getter_AddRefs(sheet));
+        rv = cssLoader->LoadAgentSheet(url, getter_AddRefs(sheet));
         NS_ASSERTION(NS_SUCCEEDED(rv), "Load failed!!!");
         if (NS_SUCCEEDED(rv))
         {
-          rv = StyleSheetLoaded(sheet, PR_FALSE, NS_OK);
+          rv = StyleSheetLoaded(sheet, PR_TRUE);
           NS_ASSERTION(NS_SUCCEEDED(rv), "Processing the style sheet failed!!!");
         }
       }
       else
       {
-        rv = cssLoader->LoadSheet(url, this);
-        if (NS_SUCCEEDED(rv))
-          ++mPendingSheets;
+        PRBool doneLoading;
+        NS_NAMED_LITERAL_STRING(empty, "");
+        rv = cssLoader->LoadStyleLink(nsnull, url, empty, empty,
+                                      nsnull, doneLoading, this);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Load failed!!!");
+
+        if (!doneLoading)
+          mPendingSheets++;
       }
     }
   }
@@ -159,9 +164,7 @@ nsXBLResourceLoader::LoadResources(PRBool* aResult)
 
 // nsICSSLoaderObserver
 NS_IMETHODIMP
-nsXBLResourceLoader::StyleSheetLoaded(nsICSSStyleSheet* aSheet,
-                                      PRBool aWasAlternate,
-                                      nsresult aStatus)
+nsXBLResourceLoader::StyleSheetLoaded(nsICSSStyleSheet* aSheet, PRBool aNotify)
 {
   if (!mResources) {
     // Our resources got destroyed -- just bail out
@@ -252,7 +255,8 @@ nsXBLResourceLoader::NotifyBoundElements()
         // will happen.
         nsIPresShell *shell = doc->GetShellAt(0);
         if (shell) {
-          nsIFrame* childFrame = shell->GetPrimaryFrameFor(content);
+          nsIFrame* childFrame;
+          shell->GetPrimaryFrameFor(content, &childFrame);
           if (!childFrame) {
             // Check to see if it's in the undisplayed content map.
             nsStyleContext* sc =

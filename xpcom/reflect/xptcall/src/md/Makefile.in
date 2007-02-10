@@ -42,10 +42,10 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-ifeq ($(OS_ARCH),OS2)
+ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
 DIRS = os2
 else
-ifeq ($(OS_ARCH),WINNT)
+ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
 DIRS = win32
 else
 DIRS = unix

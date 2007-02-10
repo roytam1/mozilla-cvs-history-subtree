@@ -48,9 +48,6 @@ CRCCheck on
 
 !addplugindir ./
 
-; prevents compiling of the reg write logging.
-!define NO_LOG
-
 Var TmpVal
 
 ; Other included files may depend upon these includes!
@@ -62,12 +59,7 @@ Var TmpVal
 !include WordFunc.nsh
 !include MUI.nsh
 
-!insertmacro GetOptions
 !insertmacro GetParameters
-!insertmacro StrFilter
-!insertmacro WordFind
-!insertmacro WordReplace
-
 !insertmacro un.LineFind
 !insertmacro un.TrimNewLines
 
@@ -78,24 +70,13 @@ Var TmpVal
 !include locales.nsi
 !include version.nsh
 
-; This is named BrandShortName helper because we use this for software update
-; post update cleanup.
-VIAddVersionKey "FileDescription" "${BrandShortName} Helper"
-
-!insertmacro AddHandlerValues
-!insertmacro RegCleanMain
-!insertmacro RegCleanUninstall
-!insertmacro WriteRegStr2
-!insertmacro WriteRegDWORD2
 !insertmacro un.RegCleanMain
 !insertmacro un.RegCleanUninstall
 !insertmacro un.CloseApp
 !insertmacro un.GetSecondInstallPath
 
-!include shared.nsh
-
 Name "${BrandFullName}"
-OutFile "helper.exe"
+OutFile "uninst.exe"
 InstallDirRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} (${AppVersion})" "InstallLocation"
 InstallDir "$PROGRAMFILES\${BrandFullName}"
 ShowUnInstDetails nevershow
@@ -103,20 +84,16 @@ ShowUnInstDetails nevershow
 ################################################################################
 # Modern User Interface - MUI
 
+; WIZ_IMAGE_SUFFIX, HDR_IMAGE_SUFFIX, and MUI_HEADER_SUFFIX are defined in
+; locales.nsi
 !define MUI_ABORTWARNING
 !define MUI_ICON setup.ico
 !define MUI_UNICON setup.ico
 !define MUI_WELCOMEPAGE_TITLE_3LINES
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP wizWatermark${WIZ_IMAGE_SUFFIX}.bmp
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_RIGHT
-!define MUI_UNWELCOMEFINISHPAGE_BITMAP wizWatermark.bmp
-
-; Use a right to left header image when the language is right to left
-!ifdef ${AB_CD}_rtl
-!define MUI_HEADERIMAGE_BITMAP_RTL wizHeaderRTL.bmp
-!else
-!define MUI_HEADERIMAGE_BITMAP wizHeader.bmp
-!endif
+!define MUI_HEADERIMAGE_BITMAP${MUI_HEADER_SUFFIX} wizHeader${HDR_IMAGE_SUFFIX}.bmp
 
 /**
  * Uninstall Pages
@@ -191,19 +168,18 @@ Section "Uninstall"
   ; installing even if there is another install of Firefox that is set as the
   ; default browser. Now the key is always updated on install but it is only
   ; removed if it refers to this install location.
-  ${If} "$INSTDIR" == "$R1"
+  ${If} $INSTDIR == $R1
     ; XXXrstrong - if there is another installation of the same app ideally we
     ; would just modify these values. The GetSecondInstallPath macro could be
     ; made to provide enough information to do this.
     DeleteRegKey HKLM "Software\Clients\StartMenuInternet\${FileMainEXE}"
-    DeleteRegValue HKLM "Software\RegisteredApplications" "${AppRegName}"
   ${EndIf}
 
   StrCpy $0 "Software\Microsoft\Windows\CurrentVersion\App Paths\${FileMainEXE}"
   ${If} $R9 == "false"
     DeleteRegKey HKLM "$0"
     DeleteRegKey HKCU "$0"
-    StrCpy $0 "Software\Microsoft\MediaPlayer\ShimInclusionList\${FileMainEXE}"
+    StrCpy $0 "Software\Microsoft\MediaPlayer\ShimInclusionList\$R9"
     DeleteRegKey HKLM "$0"
     DeleteRegKey HKCU "$0"
     StrCpy $0 "MIME\Database\Content Type\application/x-xpinstall;app=firefox"
@@ -216,7 +192,7 @@ Section "Uninstall"
     Push $R0
     ${GetParentDir}
     Pop $R1
-    ${If} "$INSTDIR" == "$R1"
+    ${If} $INSTDIR == $R1
       WriteRegStr HKLM "$0" "" "$R9"
       Push $R9
       ${GetParentDir}
@@ -388,14 +364,8 @@ Function un.preInstFiles
     ClearErrors
     ${un.CloseApp} "true" $(WARN_APP_RUNNING_UNINSTALL)
     ; Delete the app exe to prevent launching the app while we are uninstalling.
-    ClearErrors
     ${DeleteFile} "$INSTDIR\${FileMainEXE}"
-    ${If} ${Errors}
-      ClearErrors
-      ${un.CloseApp} "true" $(WARN_APP_RUNNING_UNINSTALL)
-      ClearErrors
-      ${DeleteFile} "$INSTDIR\${FileMainEXE}"
-    ${EndIf}
+    ClearErrors
   ${EndIf}
 FunctionEnd
 
@@ -439,57 +409,61 @@ Function .onInit
   ${EndUnless}
   ${GetParameters} $R0
 
-  ${Switch} $R0
-    ${Case} "/HideShortcuts"
-      ${HideShortcuts}
-      StrCpy $R1 "true"
-      ${Break}
-    ${Case} "/ShowShortcuts"
-      ${ShowShortcuts}
-      StrCpy $R1 "true"
-      ${Break}
-    ${Case} "/SetAsDefaultAppUser"
-      ${SetAsDefaultAppUser}
-      StrCpy $R1 "true"
-      ${Break}
-    ${Case} "/SetAsDefaultAppGlobal"
-      ${SetAsDefaultAppGlobal}
-      StrCpy $R1 "true"
-      ${Break}
-    ${Default}
-      ClearErrors
-      ${Unless} "$R0" == ""
-        ${WordReplace} "$R0" "$\"" "" "+" $R0
-        ClearErrors
-        ${GetOptions} "$R0" "/PostUpdate" $R2
-        ${Unless} ${Errors}
-          ${PostUpdate}
-          ClearErrors
-          ${GetOptions} "$R0" "/UninstallLog=" $R2
-          ${Unless} ${Errors}
-            ${Unless} "$R2" == ""
-              GetFullPathName $R3 "$R2"
-              ${If} ${FileExists} "$R3"
-                Delete "$INSTDIR\uninstall\*wizard*"
-                Delete "$INSTDIR\uninstall\uninstall.log"
-                CopyFiles /SILENT "$R3" "$INSTDIR\uninstall\"
-                Push $R3
-                ${GetParentDir}
-                Pop $R4
-                Delete "$R3"
-                RmDir "$R4"
-              ${EndIf}
-            ${EndUnless}
-          ${EndUnless}
-          StrCpy $R1 "true"
+  StrCpy $R1 "Software\Clients\StartMenuInternet\${FileMainEXE}\InstallInfo"
+  SetShellVarContext all  ; Set $DESKTOP to All Users
+
+  ; Hide icons - initiated from Set Program Access and Defaults
+  ${If} $R0 == '/ua "${AppVersion} (${AB_CD})" /hs browser'
+    WriteRegDWORD HKLM $R1 "IconsVisible" 0
+    ${Unless} ${FileExists} "$DESKTOP\${BrandFullName}.lnk"
+      SetShellVarContext current  ; Set $DESKTOP to the current user's desktop
+    ${EndUnless}
+
+    ${If} ${FileExists} "$DESKTOP\${BrandFullName}.lnk"
+      ShellLink::GetShortCutArgs "$DESKTOP\${BrandFullName}.lnk"
+      Pop $0
+      ${If} $0 == ""
+        ShellLink::GetShortCutTarget "$DESKTOP\${BrandFullName}.lnk"
+        Pop $0
+        ${If} $0 == "$INSTDIR\${FileMainEXE}"
+          Delete "$DESKTOP\${BrandFullName}.lnk"
+        ${EndIf}
+      ${EndIf}
+    ${EndIf}
+
+    ${If} ${FileExists} "$QUICKLAUNCH\${BrandFullName}.lnk"
+      ShellLink::GetShortCutArgs "$QUICKLAUNCH\${BrandFullName}.lnk"
+      Pop $0
+      ${If} $0 == ""
+        ShellLink::GetShortCutTarget "$QUICKLAUNCH\${BrandFullName}.lnk"
+        Pop $0
+        ${If} $0 == "$INSTDIR\${FileMainEXE}"
+          Delete "$QUICKLAUNCH\${BrandFullName}.lnk"
+        ${EndIf}
+      ${EndIf}
+    ${EndIf}
+    Abort
+  ${EndIf}
+
+  ; Show icons - initiated from Set Program Access and Defaults
+  ${If} $R0 == '/ua "${AppVersion} (${AB_CD})" /ss browser'
+    WriteRegDWORD HKLM $R1 "IconsVisible" 1
+    ${Unless} ${FileExists} "$DESKTOP\${BrandFullName}.lnk"
+      CreateShortCut "$DESKTOP\${BrandFullName}.lnk" "$INSTDIR\${FileMainEXE}" "" "$INSTDIR\${FileMainEXE}" 0
+      ShellLink::SetShortCutWorkingDirectory "$DESKTOP\${BrandFullName}.lnk" "$INSTDIR"
+      ${Unless} ${FileExists} "$DESKTOP\${BrandFullName}.lnk"
+        SetShellVarContext current  ; Set $DESKTOP to the current user's desktop
+        ${Unless} ${FileExists} "$DESKTOP\${BrandFullName}.lnk"
+          CreateShortCut "$DESKTOP\${BrandFullName}.lnk" "$INSTDIR\${FileMainEXE}" "" "$INSTDIR\${FileMainEXE}" 0
+          ShellLink::SetShortCutWorkingDirectory "$DESKTOP\${BrandFullName}.lnk" "$INSTDIR"
         ${EndUnless}
       ${EndUnless}
-      ${Break}
-  ${EndSwitch}
-
-  ${If} $R1 == "true"
-    System::Call "shell32::SHChangeNotify(i, i, i, i) v (0x08000000, 0, 0, 0)"
-    Quit
+    ${EndUnless}
+    ${Unless} ${FileExists} "$QUICKLAUNCH\${BrandFullName}.lnk"
+      CreateShortCut "$QUICKLAUNCH\${BrandFullName}.lnk" "$INSTDIR\${FileMainEXE}" "" "$INSTDIR\${FileMainEXE}" 0
+      ShellLink::SetShortCutWorkingDirectory "$QUICKLAUNCH\${BrandFullName}.lnk" "$INSTDIR"
+    ${EndUnless}
+    Abort
   ${EndIf}
 
   ; If we made it this far then this installer is being used as an uninstaller.

@@ -109,6 +109,8 @@ public:
   nsCOMPtr<nsIFontMetrics> mFontMetrics;
 };
 
+MOZ_DECL_CTOR_COUNTER(GraphicsState)
+
 GraphicsState::GraphicsState() :
   mMatrix(nsnull),
   mColor(NS_RGB(0, 0, 0)),
@@ -253,7 +255,7 @@ nsRenderingContextXlib::GetHints(PRUint32& aResult)
 {
   PRUint32 result = 0;
 
-  // Most X servers implement 8 bit text rendering a lot faster than
+  // Most X servers implement 8 bit text rendering alot faster than
   // XChar2b rendering. In addition, we can avoid the PRUnichar to
   // XChar2b conversion. So we set this bit...
   result |= NS_RENDERING_HINT_FAST_8BIT_TEXT;
@@ -676,7 +678,7 @@ nsRenderingContextXlib::SetLineStyle(nsLineStyle aLineStyle)
   PR_LOG(RenderingContextXlibLM, PR_LOG_DEBUG, ("nsRenderingContextXlib::SetLineStyle()\n"));
 
   if (aLineStyle != mCurrentLineStyle) {
-    /* XXX this isn't done in gtk, copy from there when ready
+    /* XXX this isnt done in gtk, copy from there when ready
     switch(aLineStyle)
       { 
       case nsLineStyle_kSolid:
@@ -2325,6 +2327,14 @@ nsRenderingContextXlib::CopyOffScreenBits(nsIDrawingSurface* aSrcSurf, PRInt32 a
               drect.width, drect.height,
               drect.x, drect.y);
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsRenderingContextXlib::RetrieveCurrentNativeGraphicData(void ** ngd)
+{
+  PR_LOG(RenderingContextXlibLM, PR_LOG_DEBUG, ("nsRenderingContextXlib::RetrieveCurrentNativeGraphicData()\n"));
+  *ngd = nsnull;
   return NS_OK;
 }
 

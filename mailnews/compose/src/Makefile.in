@@ -51,7 +51,6 @@ REQUIRES	= xpcom \
 		  xpcom_obsolete \
 		  string \
 		  dom \
-		  layout \
 		  js \
 		  editor \
 		  uriloader \
@@ -100,6 +99,7 @@ CPPSRCS		= \
 		nsMsgSendPart.cpp \
 		nsMsgSendReport.cpp \
 		nsSmtpService.cpp \
+		nsMsgCreate.cpp \
 		nsMsgCopy.cpp \
 		nsMsgSendLater.cpp \
 		nsMsgDeliveryListener.cpp \
@@ -123,7 +123,35 @@ CPPSRCS		= \
 		$(NULL)
 
 EXPORTS		= \
+		nsMsgCompCID.h \
+		nsSmtpUrl.h \
+		nsSmtpProtocol.h \
+		nsSmtpService.h \
+		nsMsgCreate.h \
+		nsMsgCopy.h \
+		nsMsgSendLater.h \
+		nsMsgDeliveryListener.h \
 		nsMsgComposeStringBundle.h \
+		nsMsgEncoders.h \
+		nsMsgCompUtils.h \
+		nsMsgComposeService.h \
+		nsMsgComposeParams.h \
+		nsMsgComposeProgressParams.h \
+		nsMsgComposeContentHandler.h \
+		nsMsgCompose.h \
+		nsMsgCompFields.h \
+		nsMsgAttachment.h \
+		nsMsgAttachmentHandler.h \
+		nsMsgPrompts.h \
+		nsMsgQuote.h \
+		nsMsgRecipientArray.h \
+		nsURLFetcher.h \
+		nsMsgSend.h \
+		nsMsgSendReport.h \
+		nsMsgSimulateError.h \
+		nsSmtpServer.h \
+		nsSmtpDataSource.h \
+		nsSmtpDelegateFactory.h \
 		$(NULL)
 
 # MacOSX requires the MoreFiles module
@@ -132,6 +160,8 @@ REQUIRES += macmorefiles \
 		$(NULL)
 CPPSRCS += nsMsgAppleDoubleEncode.cpp \
 		nsMsgAppleEncode.cpp \
+		$(NULL)
+EXPORTS += nsMsgAppleDouble.h \
 		$(NULL)
 endif
 

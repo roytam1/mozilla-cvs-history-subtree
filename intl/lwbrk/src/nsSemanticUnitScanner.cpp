@@ -83,12 +83,18 @@ NS_IMETHODIMP nsSemanticUnitScanner::Next(const PRUnichar *text, PRInt32 length,
        return NS_OK;
     }
 
-    PRInt32 next;
+    PRUint32 next;
+    PRBool needMoreText;
     // find the next "word"
-    next = NextWord(text, (PRUint32) length, (PRUint32) pos);
+    nsresult res = NextWord(text, (PRUint32) length, (PRUint32) pos, 
+        &next, &needMoreText);
+
+    NS_ASSERTION(NS_SUCCEEDED(res), "nsSampleWordBreaker::Next failed");
+    if (NS_FAILED(res)) 
+        return res;
 
     // if we don't have enough text to make decision, return 
-    if (next == NS_WORDBREAKER_NEED_MORE_TEXT) {
+    if (needMoreText) {
        *begin = pos;
        *end = isLastBuffer ? length : pos;
        *_retval = isLastBuffer;

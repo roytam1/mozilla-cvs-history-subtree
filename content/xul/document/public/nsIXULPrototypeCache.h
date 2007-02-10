@@ -48,6 +48,7 @@
 #include "nsISupports.h"
 class nsICSSStyleSheet;
 class nsIURI;
+class nsIXULPrototypeDocument;
 class nsIXULDocument;
 class nsCString;
 class nsIDocument;
@@ -58,29 +59,26 @@ class nsIFastLoadService;
 #define NS_XULPROTOTYPECACHE_CID \
 { 0x3a0a0fc1, 0x8349, 0x11d3, { 0xbe, 0x47, 0x0, 0x10, 0x4b, 0xde, 0x60, 0x48 } }
 
-// {f023a1fd-9869-4e91-8e6d-3255b75aec70}
+// {CD196299-18E9-4642-AD43-666315C4D241}
 #define NS_IXULPROTOTYPECACHE_IID \
-{ 0xf023a1fd, 0x9869, 0x4e91, { 0x8e, 0x6d, 0x32, 0x55, 0xb7, 0x5a, 0xec, 0x70 } }
+{ 0xcd196299, 0x18e9, 0x4642, { 0xad, 0x43, 0x66, 0x63, 0x15, 0xc4, 0xd2, 0x41 } };
 
-// Need to deCOMtaminate this - bug 364329
 
 class nsIXULPrototypeCache : public nsISupports
 {
 public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IXULPROTOTYPECACHE_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IXULPROTOTYPECACHE_IID);
 
-    /**
-     * Whether the document at the specified URI is in the cache.
-     */
-    virtual PRBool IsCached(nsIURI* aURI) = 0;
+    NS_IMETHOD GetPrototype(nsIURI* aURI, nsIXULPrototypeDocument** _result) = 0;
+    NS_IMETHOD PutPrototype(nsIXULPrototypeDocument* aDocument) = 0;
     NS_IMETHOD FlushPrototypes() = 0;
 
     NS_IMETHOD GetStyleSheet(nsIURI* aURI, nsICSSStyleSheet** _result) = 0;
     NS_IMETHOD PutStyleSheet(nsICSSStyleSheet* aStyleSheet) = 0;
     NS_IMETHOD FlushStyleSheets() = 0;
 
-    NS_IMETHOD GetScript(nsIURI* aURI, PRUint32 *aLangID, void** aScriptObject) = 0;
-    NS_IMETHOD PutScript(nsIURI* aURI, PRUint32 aLangID, void* aScriptObject) = 0;
+    NS_IMETHOD GetScript(nsIURI* aURI, void** aScriptObject) = 0;
+    NS_IMETHOD PutScript(nsIURI* aURI, void* aScriptObject) = 0;
     NS_IMETHOD FlushScripts() = 0;
 
     NS_IMETHOD GetXBLDocumentInfo(nsIURI* aURL, nsIXBLDocumentInfo** aResult) = 0;
@@ -113,9 +111,13 @@ public:
      * Remove a XULDocument from the set of loading documents
      */
     NS_IMETHOD RemoveFromFastLoadSet(nsIURI* aDocumentURI) = 0;
+
+    /** 
+     * Write Prototype Document to FastLoad file
+     */
+    NS_IMETHOD WritePrototype(nsIXULPrototypeDocument* aDocument) = 0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIXULPrototypeCache, NS_IXULPROTOTYPECACHE_IID)
 
 NS_IMETHODIMP
 NS_NewXULPrototypeCache(nsISupports* aOuter, REFNSIID aIID, void** aResult);
@@ -127,7 +129,7 @@ const char XUL_FASTLOAD_FILE_BASENAME[] = "XUL";
 // (opaque to XPCOM FastLoad code) format of XUL-specific XDR serializations.
 // See also JSXDR_BYTECODE_VERSION in jsxdrapi.h, which tracks incompatible JS
 // bytecode version changes.
-#define XUL_FASTLOAD_FILE_VERSION       (0xfeedbeef - 22)
+#define XUL_FASTLOAD_FILE_VERSION       (0xfeedbeef - 21)
 
 #define XUL_SERIALIZATION_BUFFER_SIZE   (64 * 1024)
 #define XUL_DESERIALIZATION_BUFFER_SIZE (8 * 1024)

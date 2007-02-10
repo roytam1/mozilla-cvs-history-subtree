@@ -47,56 +47,14 @@
 
 /***************************************************************************/
 
-NS_IMPL_CYCLE_COLLECTION_CLASS(XPCWrappedNative)
-
-NS_IMETHODIMP
-NS_CYCLE_COLLECTION_CLASSNAME(XPCWrappedNative)::Traverse(nsISupports *s,
-                                                          nsCycleCollectionTraversalCallback &cb)
-{
-    XPCWrappedNative *tmp = NS_STATIC_CAST(XPCWrappedNative*, s);
-    cb.DescribeNode(tmp->mRefCnt.get(), sizeof(XPCWrappedNative), "XPCWrappedNative");
-
-    if (tmp->mRefCnt.get() > 1) {
-
-        // If our refcount is > 1, our reference to the flat JS object is
-        // considered "strong", and we're going to traverse it. 
-        //
-        // If our refcount is <= 1, our reference to the flat JS object is
-        // considered "weak", and we're *not* going to traverse it.
-        //
-        // This reasoning is in line with the slightly confusing lifecycle rules
-        // for XPCWrappedNatives, described in a larger comment below and also
-        // on our wiki at http://wiki.mozilla.org/XPConnect_object_wrapping 
-
-        JSObject *obj = nsnull;
-        nsresult rv = tmp->GetJSObject(&obj);
-        if (NS_SUCCEEDED(rv) && obj) {
-            cb.NoteScriptChild(nsIProgrammingLanguage::JAVASCRIPT, obj);
-        }
-    }
-
-    if (tmp->GetIdentityObject()) {
-        cb.NoteXPCOMChild(tmp->GetIdentityObject());
-    }
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-NS_CYCLE_COLLECTION_CLASSNAME(XPCWrappedNative)::Unlink(nsISupports *s)
-{
-    // NB: We might unlink our outgoing references in the future; for
-    // now we do nothing. This is a harmless conservative behavior; it
-    // just means that we rely on the cycle being broken by some of
-    // the external XPCOM objects' unlink() methods, not our
-    // own. Typically *any* unlinking will break the cycle.
-    return NS_OK;
-}
-
-
 #ifdef XPC_CHECK_CLASSINFO_CLAIMS
 static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper);
 #else
 #define DEBUG_CheckClassInfoClaims(wrapper) ((void)0)
+#endif
+
+#ifdef XPC_CHECK_WRAPPER_THREADSAFETY
+PRThread* XPCWrappedNative::gMainThread = nsnull;
 #endif
 
 #ifdef XPC_TRACK_WRAPPER_STATS
@@ -458,13 +416,13 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         return rv;
     }
 
-#if DEBUG_xpc_leaks
+#if DEBUG_XPCNativeWrapper
     {
         char* s = wrapper->ToString(ccx);
         NS_ASSERTION(wrapper->GetFlatJSObject(), "eh?");
         printf("Created wrapped native %s, flat JSObject is %p\n",
                s, (void*)wrapper->GetFlatJSObject());
-        if(s)
+        if (s)
             JS_smprintf_free(s);
     }
 #endif
@@ -859,9 +817,12 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent, JSBool isGlobal,
     }
 
 #ifdef XPC_CHECK_WRAPPER_THREADSAFETY
-    mThread = do_GetCurrentThread();
+    if(!gMainThread)
+        gMainThread = nsXPConnect::GetMainThread();
 
-    if(HasProto() && GetProto()->ClassIsMainThreadOnly() && !NS_IsMainThread())
+    mThread = PR_GetCurrentThread();
+
+    if(HasProto() && GetProto()->ClassIsMainThreadOnly() && gMainThread != mThread)
         DEBUG_ReportWrapperThreadSafetyError(ccx,
             "MainThread only wrapper created on the wrong thread", this);
 #endif
@@ -874,7 +835,6 @@ NS_INTERFACE_MAP_BEGIN(XPCWrappedNative)
   NS_INTERFACE_MAP_ENTRY(nsIXPConnectWrappedNative)
   NS_INTERFACE_MAP_ENTRY(nsIXPConnectJSObjectHolder)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXPConnectWrappedNative)
-  NS_INTERFACE_MAP_ENTRY_CYCLE_COLLECTION(XPCWrappedNative)
 NS_INTERFACE_MAP_END_THREADSAFE
 
 NS_IMPL_THREADSAFE_ADDREF(XPCWrappedNative)
@@ -1300,12 +1260,6 @@ return_tearoff:
 
             return XPCNativeWrapper::GetWrappedNative(cx, cur);
         }
-
-        JSObject *unsafeObj;
-        if(IsXPCSafeJSObjectWrapperClass(clazz) &&
-           (unsafeObj = JS_GetParent(cx, cur)))
-            return GetWrappedNativeOfJSObject(cx, unsafeObj, funobj, pobj2,
-                                              pTearOff);
     }
 
     // If we didn't find a wrapper using the given funobj and obj, try
@@ -1314,7 +1268,7 @@ return_tearoff:
     JSClass *clazz = JS_GET_CLASS(cx, obj);
 
     if((clazz->flags & JSCLASS_IS_EXTENDED) &&
-        ((JSExtendedClass*)clazz)->outerObject)
+       ((JSExtendedClass*)clazz)->outerObject)
     {
         JSObject *outer = ((JSExtendedClass*)clazz)->outerObject(cx, obj);
 
@@ -1556,7 +1510,7 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
 
                         proto = JS_GetPrototype(ccx, jso);
 
-                        NS_ASSERTION(proto && proto != our_proto,
+                        NS_WARN_IF_FALSE(proto && proto != our_proto,
                             "!!! xpconnect/xbl check - wrapper has no special proto");
 
                         PRBool found_our_proto = PR_FALSE;
@@ -1566,7 +1520,7 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
                             found_our_proto = proto == our_proto;
                         }
 
-                        NS_ASSERTION(found_our_proto,
+                        NS_WARN_IF_FALSE(found_our_proto,
                             "!!! xpconnect/xbl check - wrapper has extra proto");
                     }
                     else
@@ -2211,8 +2165,8 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
         AutoJSSuspendRequest req(ccx);  // scoped suspend of request
 
         // do the invoke
-        invokeResult = NS_InvokeByIndex(callee, vtblIndex,
-                                        paramCount, dispatchParams);
+        invokeResult = XPTC_InvokeByIndex(callee, vtblIndex,
+                                          paramCount, dispatchParams);
         // resume non-blocking JS operations now
     }
 
@@ -2436,20 +2390,6 @@ NS_IMETHODIMP XPCWrappedNative::GetJSObjectPrototype(JSObject * *aJSObjectProtot
                 GetProto()->GetJSProtoObject() : GetFlatJSObject();
     return NS_OK;
 }
-
-#ifndef XPCONNECT_STANDALONE
-nsIPrincipal*
-XPCWrappedNative::GetObjectPrincipal() const
-{
-    nsIPrincipal* principal = GetScope()->GetPrincipal();
-#ifdef DEBUG
-    nsCOMPtr<nsIScriptObjectPrincipal> objPrin(do_QueryInterface(mIdentity));
-    NS_ASSERTION(!objPrin || objPrin->GetPrincipal() == principal,
-                 "Principal mismatch.  Expect bad things to happen");
-#endif
-    return principal;
-}
-#endif
 
 /* readonly attribute nsIXPConnect XPConnect; */
 NS_IMETHODIMP XPCWrappedNative::GetXPConnect(nsIXPConnect * *aXPConnect)
@@ -2777,8 +2717,6 @@ static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper)
             NS_RELEASE(ptr);
             continue;
         }
-        if(rv == NS_ERROR_OUT_OF_MEMORY)
-            continue;
 
         // Houston, We have a problem...
 
@@ -2795,7 +2733,7 @@ static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper)
         }
 
 
-        printf("\n!!! Object's nsIClassInfo lies about its interfaces!!!\n"
+        printf("\n!!! Object's nsIClassInfo lies about it's interfaces!!!\n"
                "   classname: %s \n"
                "   contractid: %s \n"
                "   unimplemented interface name: %s\n\n",
@@ -3164,17 +3102,18 @@ void DEBUG_CheckWrapperThreadSafety(const XPCWrappedNative* wrapper)
     if(proto && proto->ClassIsThreadSafe())
         return;
 
-    PRBool val;
+    PRThread* currentThread = PR_GetCurrentThread();
+
     if(proto && proto->ClassIsMainThreadOnly())
     {
-        if(!NS_IsMainThread())
+        if(currentThread != wrapper->gMainThread)
         {
             XPCCallContext ccx(NATIVE_CALLER);
             DEBUG_ReportWrapperThreadSafetyError(ccx,
                 "Main Thread Only wrapper accessed on another thread", wrapper);
         }
     }
-    else if(NS_SUCCEEDED(wrapper->mThread->IsOnCurrentThread(&val)) && !val)
+    else if(currentThread != wrapper->mThread)
     {
         XPCCallContext ccx(NATIVE_CALLER);
         DEBUG_ReportWrapperThreadSafetyError(ccx,

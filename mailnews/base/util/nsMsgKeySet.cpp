@@ -94,6 +94,9 @@
    set holds a cache of the last value asked for, and can simply resume the
    search from there.  */
 
+MOZ_DECL_CTOR_COUNTER(nsMsgKeySet)
+
+
 nsMsgKeySet::nsMsgKeySet(/* MSG_NewsHost* host*/)
 {
 	MOZ_COUNT_CTOR(nsMsgKeySet);
@@ -1278,7 +1281,7 @@ nsMsgKeySet::test_decoder (const char *string)
 void
 nsMsgKeySet::test_adder (void)
 {
-  const char *string;
+  char *string;
   nsMsgKeySet *set;
   char *s;
   PRInt32 i;

@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* vim: set ts=4 sw=4 et tw=78: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,10 +42,6 @@
 #define nsXULDocument_h__
 
 #include "nsCOMPtr.h"
-#include "nsXULPrototypeDocument.h"
-#include "nsXULPrototypeCache.h"
-#include "nsTArray.h"
-
 #include "nsXMLDocument.h"
 #include "nsElementMap.h"
 #include "nsForwardReference.h"
@@ -56,9 +53,9 @@
 #include "nsCOMArray.h"
 #include "nsIURI.h"
 #include "nsIXULDocument.h"
+#include "nsIXULPrototypeDocument.h"
 #include "nsScriptLoader.h"
 #include "nsIStreamListener.h"
-#include "nsICSSLoaderObserver.h"
 
 class nsIRDFResource;
 class nsIRDFService;
@@ -86,9 +83,9 @@ struct PRLogModuleInfo;
  */
 class nsXULDocument : public nsXMLDocument,
                       public nsIXULDocument,
-                      public nsIDOMXULDocument,
-                      public nsIStreamLoaderObserver,
-                      public nsICSSLoaderObserver
+                      public nsIDOMXULDocument2,
+                      public nsIDOMXULDocument_MOZILLA_1_8_BRANCH,
+                      public nsIStreamLoaderObserver
 {
 public:
     nsXULDocument();
@@ -100,8 +97,7 @@ public:
 
     // nsIDocument interface
     virtual void Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
-    virtual void ResetToURI(nsIURI *aURI, nsILoadGroup* aLoadGroup,
-                            nsIPrincipal* aPrincipal);
+    virtual void ResetToURI(nsIURI *aURI, nsILoadGroup* aLoadGroup);
 
     virtual nsresult StartDocumentLoad(const char* aCommand,
                                        nsIChannel *channel,
@@ -111,42 +107,52 @@ public:
                                        PRBool aReset = PR_TRUE,
                                        nsIContentSink* aSink = nsnull);
 
+    virtual nsIPrincipal* GetPrincipal();
+
+    virtual void SetPrincipal(nsIPrincipal *aPrincipal);
+
     virtual void SetContentType(const nsAString& aContentType);
 
     virtual void EndLoad();
 
-    // nsIMutationObserver interface
-    virtual void ContentAppended(nsIDocument* aDocument,
-                                 nsIContent* aContainer,
+    virtual void ContentAppended(nsIContent* aContainer,
                                  PRInt32 aNewIndexInContainer);
-    virtual void ContentInserted(nsIDocument* aDocument,
-                                 nsIContent* aContainer,
+
+    virtual void ContentInserted(nsIContent* aContainer,
                                  nsIContent* aChild,
                                  PRInt32 aIndexInContainer);
-    virtual void ContentRemoved(nsIDocument* aDocument,
-                                nsIContent* aContainer,
+
+    virtual void ContentRemoved(nsIContent* aContainer,
                                 nsIContent* aChild,
                                 PRInt32 aIndexInContainer);
-    virtual void AttributeChanged(nsIDocument* aDocument, nsIContent* aElement,
-                                  PRInt32 aNameSpaceID, nsIAtom* aAttribute,
-                                  PRInt32 aModType);
+
+    virtual void AttributeChanged(nsIContent* aElement, PRInt32 aNameSpaceID,
+                                  nsIAtom* aAttribute, PRInt32 aModType);
+
+    virtual nsresult HandleDOMEvent(nsPresContext* aPresContext,
+                                    nsEvent* aEvent,
+                                    nsIDOMEvent** aDOMEvent,
+                                    PRUint32 aFlags,
+                                    nsEventStatus* aEventStatus);
 
     // nsIXULDocument interface
     NS_IMETHOD AddElementForID(const nsAString& aID, nsIContent* aElement);
     NS_IMETHOD RemoveElementForID(const nsAString& aID, nsIContent* aElement);
     NS_IMETHOD GetElementsForID(const nsAString& aID,
-                                nsCOMArray<nsIContent>& aElements);
+                                nsISupportsArray* aElements);
     NS_IMETHOD AddForwardReference(nsForwardReference* aRef);
     NS_IMETHOD ResolveForwardReferences();
-    NS_IMETHOD GetScriptGlobalObjectOwner(nsIScriptGlobalObjectOwner** aGlobalOwner);
+    NS_IMETHOD SetMasterPrototype(nsIXULPrototypeDocument* aDocument);
+    NS_IMETHOD GetMasterPrototype(nsIXULPrototypeDocument** aDocument);
+    NS_IMETHOD SetCurrentPrototype(nsIXULPrototypeDocument* aDocument);
     NS_IMETHOD AddSubtreeToDocument(nsIContent* aElement);
     NS_IMETHOD RemoveSubtreeFromDocument(nsIContent* aElement);
     NS_IMETHOD SetTemplateBuilderFor(nsIContent* aContent,
                                      nsIXULTemplateBuilder* aBuilder);
     NS_IMETHOD GetTemplateBuilderFor(nsIContent* aContent,
                                      nsIXULTemplateBuilder** aResult);
-    NS_IMETHOD OnPrototypeLoadDone(PRBool aResumeWalk);
-    PRBool OnDocumentParserError();
+    NS_IMETHOD OnPrototypeLoadDone();
+    NS_IMETHOD OnHide();
 
     // nsIDOMNode interface overrides
     NS_IMETHOD CloneNode(PRBool deep, nsIDOMNode **_retval);
@@ -157,20 +163,17 @@ public:
 
     // nsIDOMXULDocument interface
     NS_DECL_NSIDOMXULDOCUMENT
+    NS_DECL_NSIDOMXULDOCUMENT2
+    NS_DECL_NSIDOMXULDOCUMENT_MOZILLA_1_8_BRANCH
 
     // nsIDOMNSDocument
     NS_IMETHOD GetContentType(nsAString& aContentType);
-
-    // nsICSSLoaderObserver
-    NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet* aSheet,
-                                PRBool aWasAlternate,
-                                nsresult aStatus);
 
     static PRBool
     MatchAttribute(nsIContent* aContent,
                    PRInt32 aNameSpaceID,
                    nsIAtom* aAttrName,
-                   void* aData);
+                   const nsAString& aValue);
 
 protected:
     // Implementation methods
@@ -209,12 +212,11 @@ protected:
                            nsIParser** aResult);
 
     nsresult 
-    LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic, PRBool* aShouldReturn,
-                        PRBool* aFailureFromContent);
+    LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic, PRBool* aShouldReturn);
 
     nsresult ApplyPersistentAttributes();
     nsresult ApplyPersistentAttributesToElements(nsIRDFResource* aResource,
-                                                 nsCOMArray<nsIContent>& aElements);
+                                                 nsISupportsArray* aElements);
 
     nsresult
     AddElementToDocumentPre(nsIContent* aElement);
@@ -245,7 +247,7 @@ protected:
     static nsIRDFResource* kNC_attribute;
     static nsIRDFResource* kNC_value;
 
-    static nsXULPrototypeCache* gXULCache;
+    static nsIXULPrototypeCache* gXULCache;
 
     static PRLogModuleInfo* gXULLog;
 
@@ -268,34 +270,18 @@ protected:
     nsElementMap               mElementMap;
     nsCOMPtr<nsIRDFDataSource> mLocalStore;
     PRPackedBool               mIsPopup;
+    PRPackedBool               mIsFastLoad;
     PRPackedBool               mApplyingPersistedAttrs;
     PRPackedBool               mIsWritingFastLoad;
     PRPackedBool               mDocumentLoaded;
-    /**
-     * Since ResumeWalk is interruptible, it's possible that last
-     * stylesheet finishes loading while the PD walk is still in
-     * progress (waiting for an overlay to finish loading).
-     * mStillWalking prevents DoneLoading (and StartLayout) from being
-     * called in this situation.
-     */
-    PRPackedBool               mStillWalking;
-
-    /**
-     * An array of style sheets, that will be added (preserving order) to the
-     * document after all of them are loaded (in DoneWalking).
-     */
-    nsCOMArray<nsICSSStyleSheet> mOverlaySheets;
-
     nsCOMPtr<nsIDOMXULCommandDispatcher>     mCommandDispatcher; // [OWNER] of the focus tracker
 
     // Maintains the template builders that have been attached to
     // content elements
     nsSupportsHashtable* mTemplateBuilderTable;
-
+    
     nsVoidArray mForwardReferences;
     nsForwardReference::Phase mResolutionPhase;
-
-    PRUint32 mPendingSheets;
 
     /*
      * XXX dr
@@ -358,13 +344,8 @@ protected:
      * order of the array is significant: overlays at the _end_ of the
      * array are resolved before overlays earlier in the array (i.e.,
      * it is a stack).
-     *
-     * In the current implementation the order the overlays are loaded
-     * in is as follows: first overlays from xul-overlay PIs, in the
-     * same order as in the document, then the overlays from the chrome
-     * registry.
      */
-    nsCOMArray<nsIURI> mUnloadedOverlays;
+    nsCOMPtr<nsISupportsArray> mUnloadedOverlays;
 
     /**
      * Load the transcluded script at the specified URI. If the
@@ -377,13 +358,7 @@ protected:
      * Execute the precompiled script object scoped by this XUL document's
      * containing window object, and using its associated script context.
      */
-    nsresult ExecuteScript(nsIScriptContext *aContext, void* aScriptObject);
-
-    /**
-     * Helper method for the above that uses aScript to find the appropriate
-     * script context and object.
-     */
-    nsresult ExecuteScript(nsXULPrototypeScript *aScript);
+    nsresult ExecuteScript(JSObject* aScriptObject);
 
     /**
      * Create a delegate content model element from a prototype.
@@ -393,8 +368,8 @@ protected:
                                         nsIContent** aResult);
 
     /**
-     * Create a hook-up element to which content nodes can be attached for
-     * later resolution.
+     * Create a temporary 'overlay' element to which content nodes
+     * can be attached for later resolution.
      */
     nsresult CreateOverlayElement(nsXULPrototypeElement* aPrototype, nsIContent** aResult);
 
@@ -412,6 +387,12 @@ protected:
     nsXULPrototypeScript* mCurrentScriptProto;
 
     /**
+     * A "dummy" channel that is used as a placeholder to signal document load
+     * completion.
+     */
+    nsCOMPtr<nsIRequest> mPlaceHolderRequest;
+        
+    /**
      * Check if a XUL template builder has already been hooked up.
      */
     static nsresult
@@ -424,8 +405,12 @@ protected:
     CreateTemplateBuilder(nsIContent* aElement);
 
     /**
-     * Add the current prototype's style sheets (currently it's just
-     * style overlays from the chrome registry) to the document.
+     * Do hookup for <xul:observes> tag
+     */
+    nsresult HookupObserver(nsIContent* aElement);
+
+    /**
+     * Add the current prototype's style sheets to the document.
      */
     nsresult AddPrototypeSheets();
 
@@ -529,57 +514,24 @@ protected:
      * The current prototype that we are walking to construct the
      * content model.
      */
-    nsRefPtr<nsXULPrototypeDocument> mCurrentPrototype;
+    nsCOMPtr<nsIXULPrototypeDocument> mCurrentPrototype;
 
     /**
      * The master document (outermost, .xul) prototype, from which
      * all subdocuments get their security principals.
      */
-    nsRefPtr<nsXULPrototypeDocument> mMasterPrototype;
+    nsCOMPtr<nsIXULPrototypeDocument> mMasterPrototype;
 
     /**
      * Owning references to all of the prototype documents that were
      * used to construct this document.
      */
-    nsTArray< nsRefPtr<nsXULPrototypeDocument> > mPrototypes;
+    nsCOMArray<nsIXULPrototypeDocument> mPrototypes;
 
     /**
      * Prepare to walk the current prototype.
      */
     nsresult PrepareToWalk();
-
-    /**
-     * Creates a processing instruction based on aProtoPI and inserts
-     * it to the DOM (as the aIndex-th child of aParent).
-     */
-    nsresult
-    CreateAndInsertPI(const nsXULPrototypePI* aProtoPI,
-                      nsINode* aParent, PRUint32 aIndex);
-
-    /**
-     * Inserts the passed <?xml-stylesheet ?> PI at the specified
-     * index. Loads and applies the associated stylesheet
-     * asynchronously.
-     * The prototype document walk can happen before the stylesheets
-     * are loaded, but the final steps in the load process (see
-     * DoneWalking()) are not run before all the stylesheets are done
-     * loading.
-     */
-    nsresult
-    InsertXMLStylesheetPI(const nsXULPrototypePI* aProtoPI,
-                          nsINode* aParent,
-                          PRUint32 aIndex,
-                          nsIContent* aPINode);
-
-    /**
-     * Inserts the passed <?xul-overlay ?> PI at the specified index.
-     * Schedules the referenced overlay URI for further processing.
-     */
-    nsresult
-    InsertXULOverlayPI(const nsXULPrototypePI* aProtoPI,
-                       nsINode* aParent,
-                       PRUint32 aIndex,
-                       nsIContent* aPINode);
 
     /**
      * Add overlays from the chrome registry to the set of unprocessed
@@ -592,13 +544,6 @@ protected:
      * prototype walk.
      */
     nsresult ResumeWalk();
-
-    /**
-     * Called at the end of ResumeWalk() and from StyleSheetLoaded().
-     * Expects that both the prototype document walk is complete and
-     * all referenced stylesheets finished loading.
-     */
-    nsresult DoneWalking();
 
     /**
      * Report that an overlay failed to load

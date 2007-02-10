@@ -74,14 +74,6 @@ class nsXFormsAtoms
   static NS_HIDDEN_(nsIAtom *) instanceDocumentOwner;
   static NS_HIDDEN_(nsIAtom *) externalMessagesProperty;
   static NS_HIDDEN_(nsIAtom *) deferredEventListProperty;
-  static NS_HIDDEN_(nsIAtom *) attrBased;
-
-  // xforms elements atoms (required for xforms utility service)
-  static NS_HIDDEN_(nsIAtom *) choices;
-  static NS_HIDDEN_(nsIAtom *) item;
-  static NS_HIDDEN_(nsIAtom *) itemset;
-  static NS_HIDDEN_(nsIAtom *) select;
-  static NS_HIDDEN_(nsIAtom *) select1;
 
   static NS_HIDDEN_(void) InitAtoms();
 

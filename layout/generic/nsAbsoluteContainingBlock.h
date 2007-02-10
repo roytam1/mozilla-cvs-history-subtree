@@ -34,18 +34,12 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * code for managing absolutely positioned children of a rendering
- * object that is a containing block for them
- */
-
 #ifndef nsAbsoluteContainingBlock_h___
 #define nsAbsoluteContainingBlock_h___
 
 #include "nsFrameList.h"
 #include "nsHTMLReflowState.h"
-#include "nsGkAtoms.h"
+#include "nsLayoutAtoms.h"
 
 class nsIAtom;
 class nsIFrame;
@@ -60,7 +54,7 @@ class nsPresContext;
  * All functions include as the first argument the frame that is delegating
  * the request
  *
- * @see nsGkAtoms::absoluteList
+ * @see nsLayoutAtoms::absoluteList
  */
 class nsAbsoluteContainingBlock
 {
@@ -69,14 +63,14 @@ public:
 
   virtual ~nsAbsoluteContainingBlock() { } // useful for debugging
 
-  virtual nsIAtom* GetChildListName() const { return nsGkAtoms::absoluteList; }
+  virtual nsIAtom* GetChildListName() const { return nsLayoutAtoms::absoluteList; }
 
   nsresult FirstChild(const nsIFrame* aDelegatingFrame,
                       nsIAtom*        aListName,
                       nsIFrame**      aFirstChild) const;
-  nsIFrame* GetFirstChild() { return mAbsoluteFrames.FirstChild(); }
   
   nsresult SetInitialChildList(nsIFrame*       aDelegatingFrame,
+                               nsPresContext* aPresContext,
                                nsIAtom*        aListName,
                                nsIFrame*       aChildList);
   nsresult AppendFrames(nsIFrame*      aDelegatingFrame,
@@ -89,6 +83,10 @@ public:
   nsresult RemoveFrame(nsIFrame*      aDelegatingFrame,
                        nsIAtom*       aListName,
                        nsIFrame*      aOldFrame);
+  nsresult ReplaceFrame(nsIFrame*      aDelegatingFrame,
+                        nsIAtom*       aListName,
+                        nsIFrame*      aOldFrame,
+                        nsIFrame*      aNewFrame);
 
   // Called by the delegating frame after it has done its reflow first. This
   // function will reflow any absolutely positioned child frames that need to
@@ -102,18 +100,33 @@ public:
   //        placeholders for positioning and on whether the containing block
   //        width or height changed.
   nsresult Reflow(nsIFrame*                aDelegatingFrame,
-                  nsPresContext*           aPresContext,
+                  nsPresContext*          aPresContext,
                   const nsHTMLReflowState& aReflowState,
                   nscoord                  aContainingBlockWidth,
                   nscoord                  aContainingBlockHeight,
-                  PRBool                   aCBWidthChanged,
-                  PRBool                   aCBHeightChanged,
-                  nsRect*                  aChildBounds = nsnull);
+                  nsRect*                  aChildBounds = nsnull,
+                  PRBool                   aForceReflow = PR_TRUE,
+                  PRBool                   aCBWidthChanged = PR_TRUE,
+                  PRBool                   aCBHeightChanged = PR_TRUE);
 
+  // Called by the delegating frame to determine whether the
+  // incremental reflow is entirely targeted at absolute children
+  PRBool ReflowingAbsolutesOnly(nsIFrame* aDelegatingFrame,
+                                const nsHTMLReflowState& aReflowState);
 
-  void DestroyFrames(nsIFrame* aDelegatingFrame);
+  // Called only for a reflow reason of eReflowReason_Incremental.
+  void IncrementalReflow(nsIFrame*                aDelegatingFrame,
+                         nsPresContext*           aPresContext,
+                         const nsHTMLReflowState& aReflowState,
+                         nscoord                  aContainingBlockWidth,
+                         nscoord                  aContainingBlockHeight);
+
+  void DestroyFrames(nsIFrame*       aDelegatingFrame,
+                     nsPresContext* aPresContext);
 
   PRBool  HasAbsoluteFrames() {return mAbsoluteFrames.NotEmpty();}
+
+  void CalculateChildBounds(nsPresContext* aPresContext, nsRect& aChildBounds);
 
 protected:
   // Returns PR_TRUE if the position of f depends on the position of
@@ -128,6 +141,7 @@ protected:
                                nscoord                  aContainingBlockWidth,
                                nscoord                  aContainingBlockHeight,
                                nsIFrame*                aKidFrame,
+                               nsReflowReason           aReason,
                                nsReflowStatus&          aStatus);
 
 protected:

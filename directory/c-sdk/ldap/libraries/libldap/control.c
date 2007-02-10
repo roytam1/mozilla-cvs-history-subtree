@@ -1,29 +1,29 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  * http://www.mozilla.org/MPL/
- * 
+ *
  * Software distributed under the License is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
  * License.
- * 
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
+ *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998-1999
  * the Initial Developer. All Rights Reserved.
- * 
+ *
  * Contributor(s):
- * 
+ *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -32,7 +32,7 @@
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the MPL, the GPL or the LGPL.
- * 
+ *
  * ***** END LICENSE BLOCK ***** */
 /* control.c - routines to handle ldapv3 controls */
 
@@ -108,7 +108,7 @@ nsldapi_put_controls( LDAP *ld, LDAPControl **ctrls, int closeseq,
 
 		if ( c->ldctl_value.bv_val != NULL ) {
 			if ( ber_printf( ber, "o", c->ldctl_value.bv_val,
-			    c->ldctl_value.bv_len )
+			    (int)c->ldctl_value.bv_len /* XXX lossy cast */ )
 			    == -1 ) {
 				goto error_exit;
 			}
@@ -145,9 +145,8 @@ int
 nsldapi_get_controls( BerElement *ber, LDAPControl ***controlsp )
 {
 	LDAPControl		*newctrl;
-	ber_tag_t		tag;
-	ber_len_t		len;
-	int				rc, maxcontrols, curcontrols;
+	unsigned long		tag, len;
+	int			rc, maxcontrols, curcontrols;
 	char			*last;
 
 	/*
@@ -303,30 +302,7 @@ ldap_controls_free( LDAPControl **ctrls )
 	}
 }
 
-LDAPControl *
-LDAP_CALL
-ldap_find_control( const char *oid, LDAPControl **ctrls )
-{
-	int i, foundControl;
-	LDAPControl *Ctrlp = NULL;
-	
-	/* find the control in the list of controls if it exists */
-	if ( ctrls == NULL ) {
-		return ( NULL );
-	} 
-	foundControl = 0;
-	for ( i = 0; (( ctrls[i] != NULL ) && ( !foundControl )); i++ ) {
-		foundControl = !strcmp( ctrls[i]->ldctl_oid, oid );
-	}
-	if ( !foundControl ) {
-		return ( NULL );
-	} else {
-		/* let local var point to the control */
-		Ctrlp = ctrls[i-1];			
-	}
-	
-	return( Ctrlp );
-}
+
 
 #if 0
 LDAPControl **

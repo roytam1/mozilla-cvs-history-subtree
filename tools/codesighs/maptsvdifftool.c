@@ -59,7 +59,7 @@ typedef struct __struct_Options
 **  mOutput         Output file, append.
 **                  Default is stdout.
 **  mOutputName     Name of the file.
-**  mHelp           Whether or not help should be shown.
+**  mHelp           Wether or not help should be shown.
 **  mSummaryOnly    Only output a signle line.
 **  mZeroDrift      Output zero drift data.
 **  mNegation       Perform negation heuristics on the symbol drifts.
@@ -870,7 +870,7 @@ int difftool(Options* inOptions)
                         theSymbol = theObject->mSymbols + symbolLoop;
                         
                         /*
-                        **  Propagate the composition all the way to the top.
+                        **  Propogate the composition all the way to the top.
                         **  Sizes of zero change are skipped.
                         */
                         if(0 < theSymbol->mSize)
@@ -1227,7 +1227,7 @@ int initOptions(Options* outOptions, int inArgc, char** inArgv)
             else
             {
                 retval = __LINE__;
-                ERROR_REPORT(retval, current->mLongName, "No handler for command line switch.");
+                ERROR_REPORT(retval, current->mLongName, "No hanlder for command line switch.");
             }
         }
     }

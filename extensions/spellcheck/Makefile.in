@@ -42,14 +42,13 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= spellchecker
-DIRS		= idl locales
+DIRS		= src idl locales
 
-ifeq (cocoa,$(MOZ_WIDGET_TOOLKIT))
+ifneq (,$(filter cocoa,$(MOZ_WIDGET_TOOLKIT)))
 DIRS		+= osxspell
 else
 DIRS		+= myspell
 endif
 
-DIRS += src
-
 include $(topsrcdir)/config/rules.mk
+

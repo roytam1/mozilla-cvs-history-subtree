@@ -35,8 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* DOM object representing values in DOM computed style */
-
 #include "nsROCSSPrimitiveValue.h"
 
 #include "nsCOMPtr.h"
@@ -45,12 +43,11 @@
 #include "nsContentUtils.h"
 #include "nsXPIDLString.h"
 #include "nsCRT.h"
-#include "nsPresContext.h"
 
-nsROCSSPrimitiveValue::nsROCSSPrimitiveValue(PRInt32 aAppUnitsPerInch)
-  : mType(CSS_PX), mAppUnitsPerInch(aAppUnitsPerInch)
+nsROCSSPrimitiveValue::nsROCSSPrimitiveValue(float aT2P)
+  : mType(CSS_PX), mT2P(aT2P)
 {
-  mValue.mAppUnits = 0;
+  mValue.mTwips = 0;
 }
 
 
@@ -64,7 +61,7 @@ nsROCSSPrimitiveValue::GetEscapedURI(nsIURI *aURI, PRUnichar **aReturn)
 {
   nsCAutoString specUTF8;
   aURI->GetSpec(specUTF8);
-  NS_ConvertUTF8toUTF16 spec(specUTF8);
+  NS_ConvertUTF8toUCS2 spec(specUTF8);
 
   PRUint16 length = spec.Length();
   PRUnichar *escaped = (PRUnichar *)nsMemory::Alloc(length * 2 * sizeof(PRUnichar) + sizeof(PRUnichar('\0')));
@@ -123,9 +120,37 @@ nsROCSSPrimitiveValue::GetCssText(nsAString& aCssText)
   switch (mType) {
     case CSS_PX :
       {
-        float val = nsPresContext::AppUnitsToFloatCSSPixels(mValue.mAppUnits);
+        float val = NSTwipsToFloatPixels(mValue.mTwips, mT2P);
         tmpStr.AppendFloat(val);
         tmpStr.AppendLiteral("px");
+        break;
+      }
+    case CSS_CM :
+      {
+        float val = NS_TWIPS_TO_CENTIMETERS(mValue.mTwips);
+        tmpStr.AppendFloat(val);
+        tmpStr.AppendLiteral("cm");
+        break;
+      }
+    case CSS_MM :
+      {
+        float val = NS_TWIPS_TO_MILLIMETERS(mValue.mTwips);
+        tmpStr.AppendFloat(val);
+        tmpStr.AppendLiteral("mm");
+        break;
+      }
+    case CSS_IN :
+      {
+        float val = NS_TWIPS_TO_INCHES(mValue.mTwips);
+        tmpStr.AppendFloat(val);
+        tmpStr.AppendLiteral("in");
+        break;
+      }
+    case CSS_PT :
+      {
+        float val = NSTwipsToFloatPoints(mValue.mTwips);
+        tmpStr.AppendFloat(val);
+        tmpStr.AppendLiteral("pt");
         break;
       }
     case CSS_IDENT :
@@ -213,10 +238,7 @@ nsROCSSPrimitiveValue::GetCssText(nsAString& aCssText)
         NS_NAMED_LITERAL_STRING(comma, ", ");
         nsCOMPtr<nsIDOMCSSPrimitiveValue> colorCSSValue;
         nsAutoString colorValue;
-        if (mValue.mColor->HasAlpha())
-          tmpStr.AssignLiteral("rgba(");
-        else
-          tmpStr.AssignLiteral("rgb(");
+        tmpStr.AssignLiteral("rgb(");
 
         // get the red component
         result = mValue.mColor->GetRed(getter_AddRefs(colorCSSValue));
@@ -243,27 +265,10 @@ nsROCSSPrimitiveValue::GetCssText(nsAString& aCssText)
         result = colorCSSValue->GetCssText(colorValue);
         if (NS_FAILED(result))
           break;
-        tmpStr.Append(colorValue);
-
-        if (mValue.mColor->HasAlpha()) {
-          // get the alpha component
-          result = mValue.mColor->GetAlpha(getter_AddRefs(colorCSSValue));
-          if (NS_FAILED(result))
-            break;
-          result = colorCSSValue->GetCssText(colorValue);
-          if (NS_FAILED(result))
-            break;
-          tmpStr.Append(comma + colorValue);
-        }
-
-        tmpStr.Append(NS_LITERAL_STRING(")"));
+        tmpStr.Append(colorValue + NS_LITERAL_STRING(")"));
 
         break;
       }
-    case CSS_CM :
-    case CSS_MM :
-    case CSS_IN :
-    case CSS_PT :
     case CSS_PC :
     case CSS_UNKNOWN :
     case CSS_EMS :
@@ -335,32 +340,32 @@ nsROCSSPrimitiveValue::GetFloatValue(PRUint16 aUnitType, float* aReturn)
     case CSS_PX :
       if (mType != CSS_PX)
         return NS_ERROR_DOM_INVALID_ACCESS_ERR;
-      *aReturn = nsPresContext::AppUnitsToFloatCSSPixels(mValue.mAppUnits);
+      *aReturn = NSTwipsToFloatPixels(mValue.mTwips, mT2P);
       break;
     case CSS_CM :
       if (mType != CSS_PX)
         return NS_ERROR_DOM_INVALID_ACCESS_ERR;
-      *aReturn = mValue.mAppUnits * 2.54f / float(mAppUnitsPerInch);
+      *aReturn = NS_TWIPS_TO_CENTIMETERS(mValue.mTwips);
       break;
     case CSS_MM :
       if (mType != CSS_PX)
         return NS_ERROR_DOM_INVALID_ACCESS_ERR;
-      *aReturn = mValue.mAppUnits * 25.4f / float(mAppUnitsPerInch);
+      *aReturn = NS_TWIPS_TO_MILLIMETERS(mValue.mTwips);
       break;
     case CSS_IN :
       if (mType != CSS_PX)
         return NS_ERROR_DOM_INVALID_ACCESS_ERR;
-      *aReturn = mValue.mAppUnits / float(mAppUnitsPerInch);
+      *aReturn = NS_TWIPS_TO_INCHES(mValue.mTwips);
       break;
     case CSS_PT :
       if (mType != CSS_PX)
         return NS_ERROR_DOM_INVALID_ACCESS_ERR;
-      *aReturn = mValue.mAppUnits * 72.0f / float(mAppUnitsPerInch);
+      *aReturn = NSTwipsToFloatPoints(mValue.mTwips);
       break;
     case CSS_PC :
       if (mType != CSS_PX)
         return NS_ERROR_DOM_INVALID_ACCESS_ERR;
-      *aReturn = mValue.mAppUnits * 6.0f / float(mAppUnitsPerInch);
+      *aReturn = NS_TWIPS_TO_PICAS(mValue.mTwips);
       break;
     case CSS_PERCENTAGE :
       if (mType != CSS_PERCENTAGE)

@@ -148,10 +148,11 @@ C1=Component Navigator
 C2=Component PSM
 C3=Component US English Profile Defaults
 C4=Component En US lang pack
-C5=Component Uninstaller
+C5=Component US region pack
+C6=Component Uninstaller
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-;C6=Component QFA
+;C7=Component QFA
 
 [Setup Type1]
 ;*** LOCALIZE ME BABY ***
@@ -166,17 +167,19 @@ C0=Component XPCOM
 C1=Component Navigator
 C2=Component MailNews
 C3=Component PSM
-C4=Component Chatzilla
-C5=Component Venkman
-C6=Component US English Profile Defaults
-C7=Component En US lang pack
-C8=Component DOM Inspector
-C9=Component Uninstaller
+C4=Component Spellchecker
+C5=Component Chatzilla
+C6=Component Venkman
+C7=Component US English Profile Defaults
+C8=Component En US lang pack
+C9=Component US region pack
+C10=Component DOM Inspector
+C11=Component Uninstaller
+C12=Component SRoaming
+C13=Component RPT
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-;C11=Component QFA
-C10=Component RPT
-C11=Component SRoaming
+;C12=Component QFA
 
 [Setup Type2]
 ;*** LOCALIZE ME BABY ***
@@ -193,17 +196,19 @@ C0=Component XPCOM
 C1=Component Navigator
 C2=Component MailNews
 C3=Component PSM
-C4=Component Chatzilla
-C5=Component Venkman
-C6=Component US English Profile Defaults
-C7=Component En US lang pack
-C8=Component DOM Inspector
-C9=Component Uninstaller
+C4=Component Spellchecker
+C5=Component Chatzilla
+C6=Component Venkman
+C7=Component US English Profile Defaults
+C8=Component En US lang pack
+C9=Component US region pack
+C10=Component DOM Inspector
+C11=Component Uninstaller
+C12=Component SRoaming
+C13=Component RPT
 ; Make sure Component QFA is LAST so 3rd party developers who might not want
 ; this component can easily remove it.
-;C11=Component QFA
-C10=Component RPT
-C11=Component SRoaming
+;C12=Component QFA
 
 
 
@@ -471,6 +476,17 @@ Attributes=SELECTED|FORCE_UPGRADE
 Force Upgrade File0=[SETUP PATH]\msgbsutl.dll
 
 
+[Component Spellchecker]
+Description Short=Spellchecker
+;*** LOCALIZE ME BABY ***
+Description Long=for spellchecking
+Archive=spellcheck.xpi
+$InstallSize$:spellcheck
+$InstallSizeArchive$:spellcheck.xpi
+Attributes=SELECTED|FORCE_UPGRADE
+Force Upgrade File0=[SETUP PATH]\myspell.dll
+
+
 [Component Uninstaller]
 Description Short=$CompanyName$ Uninstaller
 *** LOCALIZE ME BABY ***
@@ -540,6 +556,17 @@ $InstallSize$:langenus
 $InstallSizeArchive$:langenus.xpi
 Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
 Force Upgrade File0=[SETUP PATH]\Chrome\en-US.jar
+
+[Component US region pack]
+;*** LOCALIZE ME BABY ***
+Description Short=US region pack
+;*** LOCALIZE ME BABY ***
+Description Long=Regional content for US users
+Archive=regus.xpi
+$InstallSize$:regus
+$InstallSizeArchive$:regus.xpi
+Attributes=SELECTED|INVISIBLE|FORCE_UPGRADE
+Force Upgrade File0=[SETUP PATH]\Chrome\US.jar
 
 [Component PSM]
 Description Short=Personal Security Manager
@@ -879,7 +906,7 @@ Message Download Paused=Setup has encountered a network problem and has paused t
 [Site Selector]
 ; Dictates whether or not to show the pull down menu.
 ; Default value is SHOW.
-; If Status= is set to HIDE, then Identifier0 will be used
+; If Status= is set to HIDE, then Indentifier0 will be used
 ; and all other IdentifiersX will be ignored.
 Status=HIDE
 

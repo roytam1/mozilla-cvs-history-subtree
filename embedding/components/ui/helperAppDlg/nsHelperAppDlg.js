@@ -224,7 +224,7 @@ nsHelperAppDialog.prototype = {
             }
         },
 
-        // Ignore onProgressChange, onProgressChange64, onStateChange, onLocationChange, onSecurityChange, and onRefreshAttempted notifications.
+        // Ignore onProgressChange, onStateChange, onLocationChange, and onSecurityChange notifications.
         onProgressChange: function( aWebProgress,
                                     aRequest,
                                     aCurSelfProgress,
@@ -248,10 +248,6 @@ nsHelperAppDialog.prototype = {
         },
 
         onSecurityChange: function( aWebProgress, aRequest, state ) {
-        },
-
-        onRefreshAttempted: function( aWebProgress, aURI, aDelay, aSameURI ) {
-            return true;
         }
     },
 

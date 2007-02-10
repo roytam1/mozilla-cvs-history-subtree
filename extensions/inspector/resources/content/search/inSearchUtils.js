@@ -45,6 +45,7 @@
 //////////// global variables /////////////////////
 
 var kSearchLookup = {
+  file: "inIFileSearch", 
   cssvalue: "inICSSValueSearch"
 };
 

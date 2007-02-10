@@ -46,7 +46,10 @@ include $(DEPTH)/config/autoconf.mk
 LIBRARY_NAME	= mozctl
 RESFILE		= MozillaControl.res
 DEFFILE		= L_mozctl.def
+EXPORT_LIBRARY	= 1
 FORCE_SHARED_LIB= 1
+GRE_MODULE	= 1
+MOZILLA_INTERNAL_API = 1
 
 REQUIRES = \
     xpcom \
@@ -93,11 +96,11 @@ CPPSRCS = \
 
 
 EXTRA_DSO_LDOPTS = \
-	$(DEPTH)/embedding/base/$(LIB_PREFIX)embed_base_s.$(LIB_SUFFIX) \
-	../common/$(LIB_PREFIX)ax_common_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)gkgfx.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)embed_base_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)ax_common_s.$(LIB_SUFFIX) \
 	$(MOZ_UNICHARUTIL_LIBS) \
-	$(XPCOM_GLUE_LDOPTS) \
-	$(XPCOM_FROZEN_LDOPTS) \
+	$(XPCOM_LIBS) \
 	$(NSPR_LIBS) \
 	$(NULL)
 
@@ -113,8 +116,6 @@ MIDL_GENERATED_FILES = MozillaControl_i.c MozillaControl.h
 GARBAGE	+= $(DEFFILE) $(MIDL_GENERATED_FILES) done_gen
 
 ENABLE_CXX_EXCEPTIONS = 1
-
-EMBED_MANIFEST_AT = 2
 
 include $(topsrcdir)/config/rules.mk
 

@@ -49,7 +49,6 @@
 #include "nsICollation.h"
 #include "nsCollationCID.h"
 #include "nsLocaleCID.h"
-#include "nsIGenericFactory.h"
 #include "nsILocaleService.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
@@ -70,9 +69,12 @@
 // Global functions and data [declaration]
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFContainerUtilsCID, NS_RDFCONTAINERUTILS_CID);
 static NS_DEFINE_CID(kRDFContainerCID, NS_RDFCONTAINER_CID);
+static NS_DEFINE_CID(kCollationFactoryCID, NS_COLLATIONFACTORY_CID);
+static NS_DEFINE_CID(kLocaleServiceCID, NS_LOCALESERVICE_CID); 
 
 static const char kURINC_BrowserAutodetMenuRoot[] = "NC:BrowserAutodetMenuRoot";
 static const char kURINC_BrowserCharsetMenuRoot[] = "NC:BrowserCharsetMenuRoot";
@@ -139,6 +141,8 @@ public:
   nsCAutoString mCharset;
   nsAutoString      mTitle;
 };
+
+MOZ_DECL_CTOR_COUNTER(nsMenuEntry)
 
 //----------------------------------------------------------------------------
 // Class nsCharsetMenu [declaration]
@@ -502,7 +506,7 @@ nsCharsetMenu::nsCharsetMenu()
   nsresult res = NS_OK;
 
   //get charset manager
-  mCCManager = do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &res);
+  mCCManager = do_GetService(kCharsetConverterManagerCID, &res);
 
   //initialize skeleton RDF source
   mRDFService = do_GetService(kRDFServiceCID, &res);
@@ -1465,7 +1469,7 @@ nsresult nsCharsetMenu::AddFromPrefsToMenu(
   if (pls) {
     nsXPIDLString ucsval;
     pls->ToString(getter_Copies(ucsval));
-    NS_ConvertUTF16toUTF8 utf8val(ucsval);
+    NS_ConvertUCS2toUTF8 utf8val(ucsval);
     if (ucsval)
       res = AddFromStringToMenu(utf8val.BeginWriting(), aArray,
                                 aContainer, aDecs, aIDPrefix);
@@ -1804,13 +1808,13 @@ nsresult nsCharsetMenu::GetCollation(nsICollation ** aCollation)
   nsICollationFactory * collationFactory = nsnull;
   
   nsCOMPtr<nsILocaleService> localeServ = 
-           do_GetService(NS_LOCALESERVICE_CONTRACTID, &res);
+           do_GetService(kLocaleServiceCID, &res);
   if (NS_FAILED(res)) return res;
 
   res = localeServ->GetApplicationLocale(getter_AddRefs(locale));
   if (NS_FAILED(res)) return res;
 
-  res = CallCreateInstance(NS_COLLATIONFACTORY_CONTRACTID, &collationFactory);
+  res = CallCreateInstance(kCollationFactoryCID, &collationFactory);
   if (NS_FAILED(res)) return res;
 
   res = collationFactory->CreateCollation(locale, aCollation);
@@ -1827,7 +1831,7 @@ NS_IMETHODIMP nsCharsetMenu::SetCurrentCharset(const PRUnichar * aCharset)
   nsresult res = NS_OK;
 
   if (mBrowserMenuInitialized) {
-    res = AddCharsetToCache(NS_LossyConvertUTF16toASCII(aCharset),
+    res = AddCharsetToCache(NS_LossyConvertUCS2toASCII(aCharset),
                             &mBrowserMenu, kNC_BrowserCharsetMenuRoot, 
                             mBrowserCacheStart, mBrowserCacheSize,
                             mBrowserMenuRDFPosition);
@@ -1853,7 +1857,7 @@ NS_IMETHODIMP nsCharsetMenu::SetCurrentMailCharset(const PRUnichar * aCharset)
   nsresult res = NS_OK;
 
   if (mMailviewMenuInitialized) {
-    res = AddCharsetToCache(NS_LossyConvertUTF16toASCII(aCharset),
+    res = AddCharsetToCache(NS_LossyConvertUCS2toASCII(aCharset),
                             &mMailviewMenu, kNC_MailviewCharsetMenuRoot, 
                             mMailviewCacheStart, mMailviewCacheSize,
                             mMailviewMenuRDFPosition);
@@ -1877,7 +1881,7 @@ NS_IMETHODIMP nsCharsetMenu::SetCurrentComposerCharset(const PRUnichar * aCharse
 
   if (mComposerMenuInitialized) {
 
-    res = AddCharsetToCache(NS_LossyConvertUTF16toASCII(aCharset),
+    res = AddCharsetToCache(NS_LossyConvertUCS2toASCII(aCharset),
                             &mComposerMenu, kNC_ComposerCharsetMenuRoot, 
                             mComposerCacheStart, mComposerCacheSize,
                             mComposerMenuRDFPosition);
@@ -2058,13 +2062,3 @@ NS_IMETHODIMP nsCharsetMenu::EndUpdateBatch()
 {
   return mInner->EndUpdateBatch();
 }
-
-// Module definitions
-
-static const nsModuleComponentInfo components[] = {
-    { "nsCharsetMenu", NS_CHARSETMENU_CID,
-      NS_RDF_DATASOURCE_CONTRACTID_PREFIX NS_CHARSETMENU_PID,
-      NS_NewCharsetMenu },
-};
-
-NS_IMPL_NSGETMODULE(nsXPIntlModule, components)

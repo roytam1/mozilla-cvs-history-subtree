@@ -79,23 +79,9 @@ typedef NS_4XPLUGIN_CALLBACK(NPError, NP_PLUGINUNIXINIT) (const NPNetscapeFuncs*
 typedef NS_4XPLUGIN_CALLBACK(NPError, NP_PLUGINSHUTDOWN) (void);
 #endif
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 typedef NS_4XPLUGIN_CALLBACK(NPError, NP_PLUGINSHUTDOWN) (void);
 typedef NS_4XPLUGIN_CALLBACK(NPError, NP_MAIN) (NPNetscapeFuncs* nCallbacks, NPPluginFuncs* pCallbacks, NPP_ShutdownUPP* unloadUpp);
-
-/*  Since WebKit supports getting function pointers via NP_GetEntryPoints and
- *  sending function pointers via NP_Initialize, it would be nice if we
- *  supported that too. We can't do it on PPC because there is no standard for
- *  whether or not function pointers returned via NP_GetEntryPoints or sent
- *  via NP_Initialize are supposed to be wrapped with tvector glue. However,
- *  since there are no tvectors on Intel we can do it on that arch.
- */
-#ifndef __POWERPC__
-#define MACOSX_GETENTRYPOINT_SUPPORT 1
-typedef NS_4XPLUGIN_CALLBACK(NPError, NP_GETENTRYPOINTS) (NPPluginFuncs* pCallbacks);
-typedef NS_4XPLUGIN_CALLBACK(NPError, NP_PLUGININIT) (const NPNetscapeFuncs* pCallbacks);
-#endif
-
 #endif
 
 class nsIServiceManagerObsolete;
@@ -160,8 +146,9 @@ public:
                PRLibrary* aLibrary,
                nsIPlugin** aResult);
 
-#ifdef XP_MACOSX
-  void SetPluginRefNum(short aRefNum);
+#if defined(XP_MAC) || defined(XP_MACOSX)
+  void
+  SetPluginRefNum(short aRefNum);
 #endif
 
 protected:
@@ -171,11 +158,8 @@ protected:
   static void CheckClassInitialized(void);
 
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
   short fPluginRefNum;
-#ifdef MACOSX_GETENTRYPOINT_SUPPORT
-  PRBool usesGetEntryPoints;
-#endif
 #endif
 
   /**
@@ -256,10 +240,6 @@ _hasproperty(NPP npp, NPObject* npobj, NPIdentifier propertyName);
 
 bool NP_EXPORT
 _hasmethod(NPP npp, NPObject* npobj, NPIdentifier methodName);
-
-bool NP_EXPORT
-_enumerate(NPP npp, NPObject *npobj, NPIdentifier **identifier,
-           uint32_t *count);
 
 void NP_EXPORT
 _releasevariantvalue(NPVariant *variant);

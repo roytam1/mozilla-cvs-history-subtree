@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -23,7 +23,6 @@
  *   Seth Spitzer <sspitzer@netscape.com>
  *   Dan Mosedale <dmose@netscape.com>
  *   Paul Sandoz <paul.sandoz@sun.com>
- *   Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -46,7 +45,6 @@
 #include "nsAbBaseCID.h"
 #include "nsIAddrBookSession.h"
 #include "nsIRDFService.h"
-#include "nsIServiceManager.h"
 
 #include "nsString.h"
 #include "nsXPIDLString.h"
@@ -59,7 +57,7 @@
 #include "nsIPrefBranch.h"
 #include "nsCOMArray.h"
 #include "nsArrayEnumerator.h"
-#include "nsEnumeratorUtils.h"
+#include "nsLDAP.h"
 #include "nsIAbLDAPAttributeMap.h"
 
 nsAbLDAPDirectory::nsAbLDAPDirectory() :
@@ -84,21 +82,6 @@ NS_IMPL_ISUPPORTS_INHERITED4(nsAbLDAPDirectory, nsAbDirectoryRDFResource, nsIAbD
 NS_IMETHODIMP nsAbLDAPDirectory::Init(const char* aURI)
 {
   mInitialized = PR_FALSE;
-
-  // We need to ensure that the m_DirPrefId is initialized properly
-  nsCAutoString uri(aURI);
-
-  // Find the first ? (of the search params) if there is one.
-  // We know we can start at the end of the moz-abldapdirectory:// because
-  // that's the URI we should have been passed.
-  PRInt32 searchCharLocation = uri.FindChar('?', kLDAPDirectoryRootLen);
-
-  if (searchCharLocation == kNotFound)
-    uri.Right(m_DirPrefId, uri.Length() - kLDAPDirectoryRootLen);
-  else
-    uri.Mid(m_DirPrefId, kLDAPDirectoryRootLen,
-            searchCharLocation - kLDAPDirectoryRootLen);
-
   return nsAbDirectoryRDFResource::Init(aURI);
 }
 
@@ -222,21 +205,6 @@ nsresult nsAbLDAPDirectory::InitiateConnection ()
  *
  */
 
-NS_IMETHODIMP nsAbLDAPDirectory::GetURI(nsACString &aURI)
-{
-  nsresult rv = GetStringValue("uri", EmptyCString(), aURI);
-
-  if (aURI.IsEmpty())
-  {
-    rv = GetFileName(aURI);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    aURI.Insert(kLDAPDirectoryRoot, 0);
-  }
-
-  return NS_OK;
-}
-
 NS_IMETHODIMP nsAbLDAPDirectory::GetOperations(PRInt32 *aOperations)
 {
     *aOperations = nsIAbDirectory::opSearch;
@@ -249,7 +217,7 @@ NS_IMETHODIMP nsAbLDAPDirectory::GetChildNodes(nsISimpleEnumerator* *aResult)
     return NS_NewArrayEnumerator(aResult, children);
 }
 
-NS_IMETHODIMP nsAbLDAPDirectory::GetChildCards(nsISimpleEnumerator** result)
+NS_IMETHODIMP nsAbLDAPDirectory::GetChildCards(nsIEnumerator** result)
 {
     nsresult rv;
     
@@ -260,7 +228,7 @@ NS_IMETHODIMP nsAbLDAPDirectory::GetChildCards(nsISimpleEnumerator** result)
     rv = ioService->GetOffline(&offline);
     NS_ENSURE_SUCCESS(rv,rv);
     
-    if (offline) {
+    if (mIsQueryURI && offline) {
       nsCOMPtr <nsIRDFService> rdfService = do_GetService("@mozilla.org/rdf/rdf-service;1",&rv);
       NS_ENSURE_SUCCESS(rv, rv);
 
@@ -281,9 +249,7 @@ NS_IMETHODIMP nsAbLDAPDirectory::GetChildCards(nsISimpleEnumerator** result)
 
       // perform the same query, but on the local directory
       nsCAutoString localDirectoryURI;
-      localDirectoryURI = NS_LITERAL_CSTRING("moz-abmdbdirectory://") + fileName;
-      if (mIsQueryURI)
-        localDirectoryURI += NS_LITERAL_CSTRING("?") + mQueryString;
+      localDirectoryURI = NS_LITERAL_CSTRING("moz-abmdbdirectory://") + fileName + NS_LITERAL_CSTRING("?") + mQueryString;
       
       nsCOMPtr <nsIRDFResource> resource;
       rv = rdfService->GetResource(localDirectoryURI, getter_AddRefs(resource));
@@ -298,8 +264,13 @@ NS_IMETHODIMP nsAbLDAPDirectory::GetChildCards(nsISimpleEnumerator** result)
       // Start the search
       rv = StartSearch();
       NS_ENSURE_SUCCESS(rv, rv);
-
-      rv = NS_NewEmptyEnumerator(result);
+      
+      nsCOMPtr<nsISupportsArray> array;
+      NS_NewISupportsArray(getter_AddRefs(array));
+      if (!array)
+        return NS_ERROR_OUT_OF_MEMORY;
+      
+      rv = array->Enumerate(result);
     }
 
     NS_ENSURE_SUCCESS(rv,rv);
@@ -526,9 +497,17 @@ NS_IMETHODIMP nsAbLDAPDirectory::GetIsSecure(PRBool *aIsSecure)
 {
   NS_ENSURE_ARG_POINTER(aIsSecure);
 
-  nsCAutoString URI;
-  nsresult rv = GetStringValue("uri", EmptyCString(), URI);
+  nsresult rv;
+  nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
   NS_ENSURE_SUCCESS(rv, rv);
+  
+  // use mURINoQuery to get a prefName
+  nsCAutoString prefName;
+  prefName = nsDependentCString(mURINoQuery.get() + kLDAPDirectoryRootLen) + NS_LITERAL_CSTRING(".uri");
+  
+  nsXPIDLCString URI;
+  rv = prefBranch->GetCharPref(prefName.get(), getter_Copies(URI));
+  NS_ENSURE_SUCCESS(rv,rv);
   
   // to determine if this is a secure directory, check if the uri is ldaps:// or not
   *aIsSecure = (strncmp(URI.get(), "ldaps:", 6) == 0);
@@ -572,69 +551,4 @@ nsAbLDAPDirectory::SetSearchServerControls(nsIMutableArray *aControls)
 {
     mSearchServerControls = aControls;
     return NS_OK;
-}
-
-NS_IMETHODIMP nsAbLDAPDirectory::GetProtocolVersion(PRUint32 *aProtocolVersion)
-{
-  nsCAutoString versionString;
-
-  nsresult rv = GetStringValue("protocolVersion", NS_LITERAL_CSTRING("3"), versionString);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  *aProtocolVersion = versionString.EqualsLiteral("3") ?
-    (PRUint32)nsILDAPConnection::VERSION3 :
-    (PRUint32)nsILDAPConnection::VERSION2;
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsAbLDAPDirectory::SetProtocolVersion(PRUint32 aProtocolVersion)
-{
-  // XXX We should cancel any existing LDAP connections here and
-  // be ready to re-initialise them with the new auth details.
-  return SetStringValue("protocolVersion",
-                        aProtocolVersion == nsILDAPConnection::VERSION3 ?
-                        NS_LITERAL_CSTRING("3") : NS_LITERAL_CSTRING("2"));
-}
-
-NS_IMETHODIMP nsAbLDAPDirectory::GetReplicationFileName(nsACString &aReplicationFileName)
-{
-  return GetStringValue("filename", EmptyCString(), aReplicationFileName);
-}
-
-NS_IMETHODIMP nsAbLDAPDirectory::SetReplicationFileName(const nsACString &aReplicationFileName)
-{
-  return SetStringValue("filename", aReplicationFileName);
-}
-
-NS_IMETHODIMP nsAbLDAPDirectory::GetAuthDn(nsACString &aAuthDn)
-{
-  return GetStringValue("auth.Dn", EmptyCString(), aAuthDn);
-}
-
-NS_IMETHODIMP nsAbLDAPDirectory::SetAuthDn(const nsACString &aAuthDn)
-{
-  // XXX We should cancel any existing LDAP connections here and
-  // be ready to re-initialise them with the new auth details.
-  return SetStringValue("auth.Dn", aAuthDn);
-}
-
-NS_IMETHODIMP nsAbLDAPDirectory::GetLastChangeNumber(PRInt32 *aLastChangeNumber)
-{
-  return GetIntValue("lastChangeNumber", -1, aLastChangeNumber);
-}
-
-NS_IMETHODIMP nsAbLDAPDirectory::SetLastChangeNumber(PRInt32 aLastChangeNumber)
-{
-  return SetIntValue("lastChangeNumber", aLastChangeNumber);
-}
-
-NS_IMETHODIMP nsAbLDAPDirectory::GetDataVersion(nsACString &aDataVersion)
-{
-  return GetStringValue("dataVersion", EmptyCString(), aDataVersion);
-}
-
-NS_IMETHODIMP nsAbLDAPDirectory::SetDataVersion(const nsACString &aDataVersion)
-{
-  return SetStringValue("dataVersion", aDataVersion);
 }

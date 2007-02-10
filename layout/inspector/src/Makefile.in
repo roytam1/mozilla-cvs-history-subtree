@@ -61,16 +61,13 @@ REQUIRES	= xpcom \
 		  webshell \
 		  $(NULL)
 
-ifdef ACCESSIBILITY
-REQUIRES        += accessibility
-endif
-
 CPPSRCS= \
   inDOMView.cpp \
   inDeepTreeWalker.cpp \
   inFlasher.cpp \
   inSearchLoop.cpp \
   inCSSValueSearch.cpp \
+  inFileSearch.cpp \
   inDOMUtils.cpp \
   inLayoutUtils.cpp \
 	$(NULL)

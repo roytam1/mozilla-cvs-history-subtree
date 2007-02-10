@@ -48,20 +48,11 @@
 
 #include "nsBoxFrame.h"
 
-/**
- * A frame representing a grid row (or column).  Grid row (and column)
- * elements are the children of row group (or column group) elements,
- * and their children are placed one to a cell.
- */
-// XXXldb This needs a better name that indicates that it's for any grid
-// row.
 class nsGridRowLeafFrame : public nsBoxFrame
 {
 public:
 
-  friend nsIFrame* NS_NewGridRowLeafFrame(nsIPresShell* aPresShell,
-                                          nsStyleContext* aContext,
-                                          nsIBoxLayout* aLayoutManager);
+  friend nsresult NS_NewGridRowLeafFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame, nsIBoxLayout* aLayoutManager);
 
 #ifdef NS_DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const
@@ -70,11 +61,7 @@ public:
   }
 #endif
 
-  nsGridRowLeafFrame(nsIPresShell* aPresShell,
-                     nsStyleContext* aContext,
-                     PRBool aIsRoot,
-                     nsIBoxLayout* aLayoutManager):
-    nsBoxFrame(aPresShell, aContext, aIsRoot, aLayoutManager) {}
+  nsGridRowLeafFrame(nsIPresShell* aPresShell, PRBool aIsRoot, nsIBoxLayout* aLayoutManager);
 
   NS_IMETHOD GetBorderAndPadding(nsMargin& aBorderAndPadding);
 

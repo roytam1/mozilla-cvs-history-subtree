@@ -1,4 +1,4 @@
-#ifdef MOZ_SUITE
+#ifndef MOZ_XUL_APP
 messenger.jar:
     content/messenger/am-smime.xul                                   (resources/content/am-smime.xul)
     content/messenger/am-smime.js                                    (resources/content/am-smime.js)

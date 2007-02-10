@@ -40,7 +40,6 @@
 #include "prtypes.h"
 #include "nsAutoComplete.h"
 #include "nsReadableUtils.h"
-#include "nsIGenericFactory.h"
 
 /******************************************************************************
  * nsAutoCompleteItem
@@ -176,23 +175,3 @@ NS_IMETHODIMP nsAutoCompleteResults::SetDefaultItemIndex(PRInt32 aDefaultItemInd
     mDefaultItemIndex = aDefaultItemIndex;
     return NS_OK;
 }
-
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteItem)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteResults)
-
-static const nsModuleComponentInfo components[] = {
-    {
-        "AutoComplete Search Results",
-        NS_AUTOCOMPLETERESULTS_CID,
-        NS_AUTOCOMPLETERESULTS_CONTRACTID,
-        nsAutoCompleteResultsConstructor
-    },
-    {
-        "AutoComplete Search Item",
-        NS_AUTOCOMPLETEITEM_CID,
-        NS_AUTOCOMPLETEITEM_CONTRACTID,
-        nsAutoCompleteItemConstructor
-    }
-};
-
-NS_IMPL_NSGETMODULE(xpAutoComplete, components)

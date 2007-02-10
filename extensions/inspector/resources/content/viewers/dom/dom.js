@@ -20,8 +20,6 @@
  *
  * Contributor(s):
  *   Joe Hewitt <hewitt@netscape.com> (original author)
- *   Jason Barnabe <jason_barnabe@fastmail.fm>
- *   Shawn Wilsher <me@shawnwilsher.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -45,13 +43,13 @@
 //////////// global variables /////////////////////
 
 var viewer;
+var gEntityConverter;
 
 //////////// global constants ////////////////////
 
 const kDOMViewCID          = "@mozilla.org/inspector/dom-view;1";
 const kClipboardHelperCID  = "@mozilla.org/widget/clipboardhelper;1";
 const kPromptServiceCID    = "@mozilla.org/embedcomp/prompt-service;1";
-const nsIDOMNode           = Components.interfaces.nsIDOMNode;
 
 //////////////////////////////////////////////////
 
@@ -67,7 +65,6 @@ function DOMViewer_initialize()
 function DOMViewer_destroy()
 {
   PrefUtils.removeObserver("inspector", PrefChangeObserver);
-  viewer.removeClickListeners();
   viewer = null;
 }
 
@@ -128,24 +125,16 @@ DOMViewer.prototype =
 
   //// methods
 
-  /**
-   * Properly sets up the DOM Viewer
-   *
-   * @param aPane The panel this references.
-   */
-  initialize: function initialize(aPane)
+  initialize: function(aPane)
   {
     //this.initColumns();
 
     this.mPanel = aPane;
+    aPane.notifyViewerReady(this);
 
-    this.setAnonContent(PrefUtils.getPref("inspector.dom.showAnon"));
-    this.setProcessingInstructions(PrefUtils.getPref("inspector.dom.showProcessingInstructions"));
-    this.setAccessibleNodes(PrefUtils.getPref("inspector.dom.showAccessibleNodes"));
+    this.setAnonContent(PrefUtils.getPref("inspector.dom.showAnon"), false);
     this.setWhitespaceNodes(PrefUtils.getPref("inspector.dom.showWhitespaceNodes"));
     this.setFlashSelected(PrefUtils.getPref("inspector.blink.on"));
-
-    aPane.notifyViewerReady(this);
   },
 
   destroy: function()
@@ -155,30 +144,14 @@ DOMViewer.prototype =
 
   isCommandEnabled: function(aCommand)
   {
-    var clipboardNode = null;
-    var selectedNode = null;
-    var parentNode = null;
-    if (/^cmdEditPaste/.test(aCommand)) {
-      if (this.mPanel.panelset.clipboardFlavor != "inspector/dom-node")
-        return false;
-      clipboardNode = this.mPanel.panelset.getClipboardData();
-      selectedNode = new XPCNativeWrapper(viewer.selectedNode, "nodeType",
-                                          "parentNode", "childNodes");
-      if (selectedNode.parentNode)
-        parentNode = new XPCNativeWrapper(selectedNode.parentNode, "nodeType");
-    }
     switch (aCommand) {
       case "cmdEditPaste":
-      case "cmdEditPasteBefore":
-        return this.isValidChild(parentNode, clipboardNode);
-      case "cmdEditPasteReplace":
-        return this.isValidChild(parentNode, clipboardNode, selectedNode);
-      case "cmdEditPasteFirstChild":
-      case "cmdEditPasteLastChild":
-        return this.isValidChild(selectedNode, clipboardNode);
-      case "cmdEditPasteAsParent":
-        return this.isValidChild(clipboardNode, selectedNode) &&
-               this.isValidChild(parentNode, clipboardNode, selectedNode);
+        var canPaste = this.mPanel.panelset.clipboardFlavor == "inspector/dom-node";
+        if (canPaste) {
+          var node = this.mPanel.panelset.getClipboardData();
+          canPaste = node ? node.nodeType != Node.ATTRIBUTE_NODE : false;
+        }
+        return canPaste;
       case "cmdEditInsert":
         return false;
       case "cmdEditCut":
@@ -187,52 +160,6 @@ DOMViewer.prototype =
         return this.selectedNode != null;
     }
     return false;
-  },
-
- /**
-  * Determines whether the passed parent/child combination is valid.
-  * @param the parent
-  * @param the child
-  * @param the node the child is replacing (optional)
-  * @return true if the passed parent can have the passed child as a child,
-  *   false otherwise
-  */
-  isValidChild: function isValidChild(parent, child, replaced)
-  {
-    // the document (fragment) node must be an only child and can't be replaced
-    if (parent == null)
-      return false;
-    // the only types that can ever have children
-    if (parent.nodeType != nsIDOMNode.ELEMENT_NODE &&
-        parent.nodeType != nsIDOMNode.DOCUMENT_NODE &&
-        parent.nodeType != nsIDOMNode.DOCUMENT_FRAGMENT_NODE)
-      return false;
-    // the only types that can't ever be children
-    if (child.nodeType == nsIDOMNode.DOCUMENT_NODE ||
-        child.nodeType == nsIDOMNode.DOCUMENT_FRAGMENT_NODE ||
-        child.nodeType == nsIDOMNode.ATTRIBUTE_NODE)
-      return false;
-    // doctypes can only be the children of documents
-    if (child.nodeType == nsIDOMNode.DOCUMENT_TYPE_NODE &&
-        parent.nodeType != nsIDOMNode.DOCUMENT_NODE)
-      return false;
-    // only elements and fragments can have text, cdata, and entities as
-    // children
-    if (parent.nodeType != nsIDOMNode.ELEMENT_NODE &&
-        parent.nodeType != nsIDOMNode.DOCUMENT_FRAGMENT_NODE && 
-       (child.nodeType == nsIDOMNode.TEXT_NODE ||
-        child.nodeType == nsIDOMNode.CDATA_NODE ||
-        child.nodeType == nsIDOMNode.ENTITY_NODE))
-      return false;
-    // documents can only have one document element or doctype
-    if (parent.nodeType == nsIDOMNode.DOCUMENT_NODE &&
-       (child.nodeType == nsIDOMNode.ELEMENT_NODE ||
-        child.nodeType == nsIDOMNode.DOCUMENT_TYPE_NODE) &&
-       (!replaced || child.nodeType != replaced.nodeType))
-      for (var i = 0; i < parent.childNodes.length; i++)
-        if (parent.childNodes[i].nodeType == child.nodeType)
-          return false;
-    return true;
   },
   
   getCommand: function(aCommand)
@@ -244,16 +171,6 @@ DOMViewer.prototype =
         return new cmdEditCopy();
       case "cmdEditPaste":
         return new cmdEditPaste();
-      case "cmdEditPasteBefore":
-        return new cmdEditPasteBefore();
-      case "cmdEditPasteReplace":
-        return new cmdEditPasteReplace();
-      case "cmdEditPasteFirstChild":
-        return new cmdEditPasteFirstChild();
-      case "cmdEditPasteLastChild":
-        return new cmdEditPasteLastChild();
-      case "cmdEditPasteAsParent":
-        return new cmdEditPasteAsParent();
       case "cmdEditDelete":
         return new cmdEditDelete();
     }
@@ -275,25 +192,20 @@ DOMViewer.prototype =
                          "_blank", "chrome,dependent", this.mFindType, this.mFindDir, this.mFindParams);
   },
 
-  /**
-   * Toggles the setting for displaying anonymous content.
-   */
-  toggleAnonContent: function toggleAnonContent()
+  toggleAnonContent: function(aRebuild)
   {
-    var value = PrefUtils.getPref("inspector.dom.showAnon");
-    PrefUtils.setPref("inspector.dom.showAnon", !value);
+    this.setAnonContent(!this.mDOMView.showAnonymousContent, aRebuild);
   },
-
-  /**
-   * Sets the UI and filters for anonymous content.
-   *
-   * @param aValue The value that we should be setting things to.
-   */
-  setAnonContent: function setAnonContent(aValue)
+  
+  setAnonContent: function(aValue, aRebuild)
   {
     this.mDOMView.showAnonymousContent = aValue;
-    this.mPanel.panelset.setCommandAttribute("cmd:toggleAnon", "checked",
-                                             aValue);
+    this.mPanel.panelset.setCommandAttribute("cmd:toggleAnon", "checked", aValue);
+    PrefUtils.setPref("inspector.dom.showAnon", aValue);
+
+    if (aRebuild) {
+      this.rebuild();
+    }
   },
 
   toggleSubDocs: function()
@@ -303,85 +215,33 @@ DOMViewer.prototype =
     this.mPanel.panelset.setCommandAttribute("cmd:toggleSubDocs", "checked", val);
   },
 
-  /**
-   * Toggles the visibility of Processing Instructions.
-   */
-  toggleProcessingInstructions: function toggleProcessingInstructions()
+  setWhitespaceNodes: function(aValue)
   {
-    var value = PrefUtils.getPref("inspector.dom.showProcessingInstructions");
-    PrefUtils.setPref("inspector.dom.showProcessingInstructions", !value);
-  },
+    // Do this first so we ensure the checkmark is set in the case
+    // we are starting with whitespace nodes enabled.
+    this.mPanel.panelset.setCommandAttribute("cmd:toggleWhitespaceNodes", "checked", aValue);
 
-  /**
-   * Sets the visibility of Processing Instructions.
-   *
-   * @param aValue The visibility of the instructions.
-   */
-  setProcessingInstructions: function setProcessingInstructions(aValue)
-  {
-    this.mPanel.panelset.setCommandAttribute("cmd:toggleProcessingInstructions",
-                                             "checked", aValue);
-    if (aValue) {
-      this.mDOMView.whatToShow |= NodeFilter.SHOW_PROCESSING_INSTRUCTION;
-    } else {
-      this.mDOMView.whatToShow &= ~NodeFilter.SHOW_PROCESSING_INSTRUCTION;
+    // The rest of the stuff is redundant to do if we are not changing
+    // the value, so just bail here if we're setting the same value.
+    if (this.mDOMView.showWhitespaceNodes == aValue) {
+      return;
     }
-  },
 
-  /**
-   * Toggle state of 'Show Accessible Nodes' option.
-   */
-  toggleAccessibleNodes: function toggleAccessibleNodes()
-  {
-    var value = PrefUtils.getPref("inspector.dom.showAccessibleNodes");
-    PrefUtils.setPref("inspector.dom.showAccessibleNodes", !value);
-  },
-
-  /**
-   * Set state of 'Show Accessible Nodes' option.
-   *
-   * @param Boolean aValue - if true then accessible nodes will be shown
-   */
-  setAccessibleNodes: function setAccessibleNodes(aValue)
-  {
-    if (!("@mozilla.org/accessibilityService;1" in Components.classes))
-      aValue = false;
-
-    this.mDOMView.showAccessibleNodes = aValue;
-    this.mPanel.panelset.setCommandAttribute("cmd:toggleAccessibleNodes",
-                                             "checked", aValue);
-    this.onItemSelected();
-  },
-
-  /**
-   * Return state of 'Show Accessible Nodes' option.
-   */
-  getAccessibleNodes: function getAccessibleNodes()
-  {
-    return this.mDOMView.showAccessibleNodes;
-  },
-
-  /**
-   * Toggles the value for whitespace nodes.
-   */
-  toggleWhitespaceNodes: function toggleWhitespaceNodes()
-  {
-    var value = PrefUtils.getPref("inspector.dom.showWhitespaceNodes");
-    PrefUtils.setPref("inspector.dom.showWhitespaceNodes", !value);
-  },
-
-  /**
-   * Sets the UI for displaying whitespace nodes.
-   *
-   * @param aValue The value we are to use to determine the state of the UI.
-   */
-  setWhitespaceNodes: function setWhitespaceNodes(aValue)
-  {
-    this.mPanel.panelset.setCommandAttribute("cmd:toggleWhitespaceNodes",
-                                             "checked", aValue);
     this.mDOMView.showWhitespaceNodes = aValue;
+    PrefUtils.setPref("inspector.dom.showWhitespaceNodes", aValue);
+    this.rebuild();
   },
 
+  toggleWhitespaceNodes: function()
+  {
+    this.setWhitespaceNodes(!this.mDOMView.showWhitespaceNodes);
+  },
+
+  toggleAttributes: function()
+  {
+    alert("NOT YET IMPLEMENTED");
+  },
+  
   showColumnsDialog: function()
   {
     var win = openDialog("chrome://inspector/content/viewers/dom/columnsDialog.xul", 
@@ -405,7 +265,7 @@ DOMViewer.prototype =
   
   cmdBlinkIsValid: function()
   {
-    return this.selectedNode ? (this.selectedNode.nodeType == nsIDOMNode.ELEMENT_NODE) : false;
+    return this.selectedNode ? (this.selectedNode.nodeType == Node.ELEMENT_NODE) : false;
   },
     
   onItemSelected: function()
@@ -418,7 +278,6 @@ DOMViewer.prototype =
       if (this.mFlashSelected)
         this.flashElement(this.mSelection);
     }
-    viewer.pane.panelset.updateAllCommands();
   },
   
   setInitialSelection: function(aObject)
@@ -453,21 +312,11 @@ DOMViewer.prototype =
       }
     }
   },
-
-  onPastePopupShowing: function onPastePopupShowing(menupopup) {
-    for (var i = 0; i < menupopup.childNodes.length; i++) {
-      var commandId = menupopup.childNodes[i].getAttribute("command");
-      if (viewer.isCommandEnabled(commandId))
-        document.getElementById(commandId).setAttribute("disabled", "false");
-      else
-        document.getElementById(commandId).setAttribute("disabled", "true");
-    }
-  },
   
   cmdInspectBrowserIsValid: function()
   {
     var node = viewer.selectedNode;
-    if (!node || node.nodeType != nsIDOMNode.ELEMENT_NODE) return false;
+    if (!node || node.nodeType != Node.ELEMENT_NODE) return false;
     
     var n = node.localName.toLowerCase();
     return n == "tabbrowser" || n == "browser" || n == "iframe" || n == "frame" || n == "editor";
@@ -518,11 +367,7 @@ DOMViewer.prototype =
 
   toXML: function(aNode)
   {
-    // we'll use XML serializer, if available
-    if (typeof XMLSerializer != "undefined")
-      return (new XMLSerializer()).serializeToString(aNode);
-    else
-      return this._toXML(aNode, 0);
+    return this._toXML(aNode, 0);
   },
   
   // not the most complete serialization ever conceived, but it'll do for now
@@ -536,7 +381,7 @@ DOMViewer.prototype =
       indent += "  ";
     var line = indent;        
       
-    if (aNode.nodeType == nsIDOMNode.ELEMENT_NODE) {
+    if (aNode.nodeType == Node.ELEMENT_NODE) {
       line += "<" + aNode.localName;
 
       var attrIndent = "";
@@ -545,7 +390,7 @@ DOMViewer.prototype =
   
       for (i = 0; i < aNode.attributes.length; ++i) {
         var a = aNode.attributes[i];
-        var attr = " " + a.localName + '="' + InsUtil.unicodeToEntity(a.nodeValue) + '"';
+        var attr = " " + a.localName + '="' + unicodeToEntity(a.nodeValue) + '"';
         if (line.length + attr.length > 80) {
           s += line + (i < aNode.attributes.length-1 ? "\n"+attrIndent : "");
           line = "";
@@ -563,12 +408,10 @@ DOMViewer.prototype =
           s += this._toXML(aNode.childNodes[i], aLevel+1);
         s += indent + "</" + aNode.localName + ">\n";
       }
-    } else if (aNode.nodeType == nsIDOMNode.TEXT_NODE) {
-      s += InsUtil.unicodeToEntity(aNode.data);
-    } else if (aNode.nodeType == nsIDOMNode.COMMENT_NODE) {
-      s += line + "<!--" + InsUtil.unicodeToEntity(aNode.data) + "-->\n";
-    } else if (aNode.nodeType == nsIDOMNode.DOCUMENT_NODE) {
-      s += this._toXML(aNode.documentElement);
+    } else if (aNode.nodeType == Node.TEXT_NODE) {
+      s += unicodeToEntity(aNode.data);
+    } else if (aNode.nodeType == Node.COMMENT_NODE) {
+      s += line + "<!--" + unicodeToEntity(aNode.data) + "-->\n";
     }
     
     return s;
@@ -618,7 +461,7 @@ DOMViewer.prototype =
   
   doSelectByClick: function(aTarget)
   {
-    if (aTarget.nodeType == nsIDOMNode.TEXT_NODE)
+    if (aTarget.nodeType == Node.TEXT_NODE)
       aTarget = aTarget.parentNode;
       
     this.stopSelectByClick();
@@ -704,21 +547,9 @@ DOMViewer.prototype =
   {
     var re = new RegExp(this.mFindParams[0], "i");
 
-    var node = aWalker.currentNode;
-    if (!node)
-      return false;
-
-    if (node.nodeType != Components.interfaces.nsIDOMNode.ELEMENT_NODE)
-      return false;
-
-    for (var i = 0; i < node.attributes.length; i++) {
-      var attr = node.attributes[i];
-      if (attr.isId && re.test(attr.nodeValue)) {
-        return true;
-      }
-    }
-
-    return false;
+    return aWalker.currentNode
+           && "id" in aWalker.currentNode
+           && re.test(aWalker.currentNode.id);
   },
 
   doFindElementsByTagName: function(aWalker)
@@ -726,7 +557,7 @@ DOMViewer.prototype =
     var re = new RegExp(this.mFindParams[0], "i");
 
     return aWalker.currentNode
-           && aWalker.currentNode.nodeType == nsIDOMNode.ELEMENT_NODE
+           && aWalker.currentNode.nodeType == Node.ELEMENT_NODE
            && re.test(aWalker.currentNode.localName);
   },
 
@@ -735,7 +566,7 @@ DOMViewer.prototype =
     var re = new RegExp(this.mFindParams[1], "i");
 
     return aWalker.currentNode
-           && aWalker.currentNode.nodeType == nsIDOMNode.ELEMENT_NODE
+           && aWalker.currentNode.nodeType == Node.ELEMENT_NODE
            && (this.mFindParams[1] == ""
               ? aWalker.currentNode.hasAttribute(this.mFindParams[0])
               : re.test(aWalker.currentNode.getAttribute(this.mFindParams[0])));
@@ -868,7 +699,7 @@ DOMViewer.prototype =
   {
     // make sure we only try to flash element nodes, and don't 
     // flash the documentElement (it's too darn big!)
-    if (aElement.nodeType == nsIDOMNode.ELEMENT_NODE &&
+    if (aElement.nodeType == Node.ELEMENT_NODE &&
         aElement != aElement.ownerDocument.documentElement) {
       var flasher = this.flasher;
       
@@ -883,70 +714,42 @@ DOMViewer.prototype =
     }
   },
 
-  /**
-   * Toggles the preference for flashing selected elements.
-   */
-  toggleFlashSelected: function toggleFlashSelected()
+  toggleFlashSelected: function()
   {
-    var value = PrefUtils.getPref("inspector.blink.on");
-    PrefUtils.setPref("inspector.blink.on", !value);
+    this.setFlashSelected(!this.mFlashSelected);
   },
 
-  /**
-   * Sets the object's value and the command for flashing selected objects.
-   *
-   * @param aValue The value to set it to.
-   */
-  setFlashSelected: function setFlashSelected(aValue)
+  setFlashSelected: function(aValue)
   {
     this.mFlashSelected = aValue;
-    this.mPanel.panelset.setCommandAttribute("cmd:flashSelected", "checked",
-                                             aValue);
+    this.mPanel.panelset.setCommandAttribute("cmd:flashSelected", "checked", aValue);
+    PrefUtils.setPref("inspector.blink.on", aValue);
   },
 
   ////////////////////////////////////////////////////////////////////////////
   //// Prefs
 
-  /**
-   * Called by PrefChangeObserver.
-   *
-   * @param aName The name of the preference that has been changed.
-   */
-  onPrefChanged: function onPrefChanged(aName)
+  onPrefChanged: function(aName)
   {
-    var value = PrefUtils.getPref(aName);
+    if (aName == "inspector.dom.showAnon")
+      this.setFlashSelected(PrefUtils.getPref("inspector.blink.on"));
 
-    if (aName == "inspector.dom.showAnon") {
-      this.setAnonContent(value);
-    } else if (aName == "inspector.dom.showProcessingInstructions") {
-      this.setProcessingInstructions(value);
-    } else if (aName == "inspector.dom.showAccessibleNodes") {
-      this.setAccessibleNodes(value);
-    } else if (aName == "inspector.dom.showWhitespaceNodes") {
-      this.setWhitespaceNodes(value);
-    } else if (aName == "inspector.blink.on") {
-      this.setFlashSelected(value);
+    if (aName == "inspector.blink.on")
+      this.setFlashSelected(PrefUtils.getPref("inspector.blink.on"));
 
-      // don't need to rebuild for this
-      return;
-    } else if (this.mFlasher) {
+    if (this.mFlasher) {
       if (aName == "inspector.blink.border-color") {
-        this.mFlasher.color = value;
+        this.mFlasher.color = PrefUtils.getPref("inspector.blink.border-color");
       } else if (aName == "inspector.blink.border-width") {
-        this.mFlasher.thickness = value;
+        this.mFlasher.thickness = PrefUtils.getPref("inspector.blink.border-width");
       } else if (aName == "inspector.blink.duration") {
-        this.mFlasher.duration = value;
+        this.mFlasher.duration = PrefUtils.getPref("inspector.blink.duration");
       } else if (aName == "inspector.blink.speed") {
-        this.mFlasher.speed = value;
+        this.mFlasher.speed = PrefUtils.getPref("inspector.blink.speed");
       } else if (aName == "inspector.blink.invert") {
-        this.mFlasher.invert = value;
+        this.mFlasher.invert = PrefUtils.getPref("inspector.blink.invert");
       }
-
-      // don't need to rebuild for these
-      return;
     }
-
-    this.rebuild();
   },
 
   ////////////////////////////////////////////////////////////////////////////
@@ -1004,6 +807,11 @@ DOMViewer.prototype =
     } catch (ex) {
       return -1;
     }
+  },
+  
+  canPaste: function(aFlavour)
+  {
+    return aFlavour == "Inspector-DOM-Node";
   }
   
 };
@@ -1044,8 +852,12 @@ cmdEditDelete.prototype =
   
   undoTransaction: function()
   {
-    if (this.node)
-      this.parentNode.insertBefore(this.node, this.nextSibling);
+    if (this.node) {
+      if (this.nextSibling)
+        this.parentNode.insertBefore(this.node, this.nextSibling);
+      else
+        this.parentNode.appendChild(this.node);        
+    }
     viewer.selectElementInTree(this.node);
   }
 };
@@ -1078,6 +890,7 @@ cmdEditCut.prototype =
   undoTransaction: function()
   {
     this.cmdDelete.undoTransaction();    
+    this.cmdCopy.undoTransaction();
   }
 };
 
@@ -1085,6 +898,8 @@ function cmdEditCopy() {}
 cmdEditCopy.prototype =
 {
   copiedNode: null,
+  previousData: null,
+  previousFlavor: null,
   
   // remove this line for bug 179621, Phase Three
   txnType: "standard",
@@ -1092,27 +907,31 @@ cmdEditCopy.prototype =
   // required for nsITransaction
   QueryInterface: txnQueryInterface,
   merge: txnMerge,
-  isTransient: true,
+  isTransient: false,
   redoTransaction: txnRedoTransaction,
 
   doTransaction: function()
   {
     var copiedNode = null;
     if (!this.copiedNode) {
-      copiedNode = viewer.selectedNode.cloneNode(true);
+      copiedNode = viewer.selectedNode;
       if (copiedNode) {
         this.copiedNode = copiedNode;
+        this.previousData = viewer.pane.panelset.getClipboardData();
+        this.previousFlavor = viewer.pane.panelset.clipboardFlavor;
       }
     } else
       copiedNode = this.copiedNode;
       
-    viewer.pane.panelset.setClipboardData(copiedNode, "inspector/dom-node", null);
+    viewer.pane.panelset.setClipboardData(copiedNode, "inspector/dom-node");
+  },
+  
+  undoTransaction: function()
+  {
+    viewer.pane.panelset.setClipboardData(this.previousData, this.previousFlavor);
   }
 };
 
-/**
- * Pastes the node on the clipboard as the next sibling of the selected node.
- */
 function cmdEditPaste() {}
 cmdEditPaste.prototype =
 {
@@ -1128,222 +947,28 @@ cmdEditPaste.prototype =
   isTransient: false,
   redoTransaction: txnRedoTransaction,
   
-  doTransaction: function doTransaction()
+  doTransaction: function()
   {
     var node = this.pastedNode ? this.pastedNode : viewer.pane.panelset.getClipboardData();
     var selected = this.pastedBefore ? this.pastedBefore : viewer.selectedNode;
     if (selected) {
       this.pastedNode = node.cloneNode(true);
       this.pastedBefore = selected;
-      selected.parentNode.insertBefore(this.pastedNode, selected.nextSibling);
+      if (selected.nextSibling)
+        selected.parentNode.insertBefore(this.pastedNode, selected.nextSibling);
+      else
+        selected.parentNode.appendChild(this.pastedNode);
       return false;
     }
     return true;
   },
   
-  undoTransaction: function undoTransaction()
+  undoTransaction: function()
   {
     if (this.pastedNode)
       this.pastedNode.parentNode.removeChild(this.pastedNode);
   }
 };
-
-/**
- * Pastes the node on the clipboard as the previous sibling of the selected 
- * node.
- */
-function cmdEditPasteBefore() {}
-cmdEditPasteBefore.prototype =
-{
-  pastedNode: null,
-  pastedBefore: null,
-  
-  // remove this line for bug 179621, Phase Three
-  txnType: "standard",
-  
-  // required for nsITransaction
-  QueryInterface: txnQueryInterface,
-  merge: txnMerge,
-  isTransient: false,
-  redoTransaction: txnRedoTransaction,
-  
-  doTransaction: function doTransaction()
-  {
-    var node = this.pastedNode ? this.pastedNode : viewer.pane.panelset.getClipboardData();
-    var selected = this.pastedBefore ? this.pastedBefore : viewer.selectedNode;
-    if (selected) {
-      this.pastedNode = node.cloneNode(true);
-      this.pastedBefore = selected;
-      selected.parentNode.insertBefore(this.pastedNode, selected);
-      return false;
-    }
-    return true;
-  },
-  
-  undoTransaction: function undoTransaction()
-  {
-    if (this.pastedNode)
-      this.pastedNode.parentNode.removeChild(this.pastedNode);
-  }
-};
-
-/**
- * Pastes the node on the clipboard in the place of the selected node, 
- * overwriting it.
- */
-function cmdEditPasteReplace() {}
-cmdEditPasteReplace.prototype =
-{
-  pastedNode: null,
-  originalNode: null,
-  
-  // remove this line for bug 179621, Phase Three
-  txnType: "standard",
-  
-  // required for nsITransaction
-  QueryInterface: txnQueryInterface,
-  merge: txnMerge,
-  isTransient: false,
-  redoTransaction: txnRedoTransaction,
-  
-  doTransaction: function doTransaction()
-  {
-    var node = this.pastedNode ? this.pastedNode : viewer.pane.panelset.getClipboardData();
-    var selected = this.originalNode ? this.originalNode : viewer.selectedNode;
-    if (selected) {
-      this.pastedNode = node.cloneNode(true);
-      this.originalNode = selected;
-      selected.parentNode.replaceChild(this.pastedNode, selected);
-      return false;
-    }
-    return true;
-  },
-  
-  undoTransaction: function undoTransaction()
-  {
-    if (this.pastedNode)
-      this.pastedNode.parentNode.replaceChild(this.originalNode, this.pastedNode);
-  }
-};
-
-/**
- * Pastes the node on the clipboard as the first child of the selected node.
- */
-function cmdEditPasteFirstChild() {}
-cmdEditPasteFirstChild.prototype =
-{
-  pastedNode: null,
-  pastedBefore: null,
-  
-  // remove this line for bug 179621, Phase Three
-  txnType: "standard",
-  
-  // required for nsITransaction
-  QueryInterface: txnQueryInterface,
-  merge: txnMerge,
-  isTransient: false,
-  redoTransaction: txnRedoTransaction,
-  
-  doTransaction: function doTransaction()
-  {
-    var node = this.pastedNode ? this.pastedNode : viewer.pane.panelset.getClipboardData();
-    var selected = this.pastedBefore ? this.pastedBefore : viewer.selectedNode;
-    if (selected) {
-      this.pastedNode = node.cloneNode(true);
-      this.pastedBefore = selected.firstChild;
-      selected.insertBefore(this.pastedNode, this.pastedBefore);
-      return false;
-    }
-    return true;
-  },
-  
-  undoTransaction: function undoTransaction()
-  {
-    if (this.pastedNode)
-      this.pastedNode.parentNode.removeChild(this.pastedNode);
-  }
-};
-/**
- * Pastes the node on the clipboard as the last child of the selected node.
- */
-function cmdEditPasteLastChild() {}
-cmdEditPasteLastChild.prototype =
-{
-  pastedNode: null,
-  selectedNode: null,
-  
-  // remove this line for bug 179621, Phase Three
-  txnType: "standard",
-  
-  // required for nsITransaction
-  QueryInterface: txnQueryInterface,
-  merge: txnMerge,
-  isTransient: false,
-  redoTransaction: txnRedoTransaction,
-  
-  doTransaction: function doTransaction()
-  {
-    var node = this.pastedNode ? this.pastedNode : viewer.pane.panelset.getClipboardData();
-    var selected = this.selectedNode ? this.selectedNode : viewer.selectedNode;
-    if (selected) {
-      this.pastedNode = node.cloneNode(true);
-      this.selectedNode = selected;
-      selected.appendChild(this.pastedNode);
-      return false;
-    }
-    return true;
-  },
-  
-  undoTransaction: function undoTransaction()
-  {
-    if (this.selectedNode)
-      this.selectedNode.removeChild(this.pastedNode);
-  }
-};
-
-/**
- * Pastes the node on the clipboard in the place of the selected node, making
- * the selected node its child.
- */
-function cmdEditPasteAsParent() {}
-cmdEditPasteAsParent.prototype =
-{
-  pastedNode: null,
-  originalNode: null,
-  originalParentNode: null,
-  
-  // remove this line for bug 179621, Phase Three
-  txnType: "standard",
-  
-  // required for nsITransaction
-  QueryInterface: txnQueryInterface,
-  merge: txnMerge,
-  isTransient: false,
-  redoTransaction: txnRedoTransaction,
-  
-  doTransaction: function doTransaction()
-  {
-    var node = this.pastedNode ? this.pastedNode : viewer.pane.panelset.getClipboardData();
-    var selected = this.originalNode ? this.originalNode : viewer.selectedNode;
-    var parent = this.originalParentNode ? this.originalParentNode : selected.parentNode;
-    if (selected) {
-      this.pastedNode = node.cloneNode(true);
-      this.originalNode = selected;
-      this.originalParentNode = parent;
-      parent.replaceChild(this.pastedNode, selected);
-      this.pastedNode.appendChild(selected);
-      return false;
-    }
-    return true;
-  },
-  
-  undoTransaction: function undoTransaction()
-  {
-    if (this.pastedNode)
-      this.originalParentNode.replaceChild(this.originalNode, this.pastedNode);
-  }
-};
-
 
 ////////////////////////////////////////////////////////////////////////////
 //// Listener Objects
@@ -1403,4 +1028,46 @@ function gColumnRemoveListener(aIndex)
 function dumpDOM2(aNode)
 {
   dump(DOMViewer.prototype.toXML(aNode));
+}
+
+function unicodeToEntity(text)
+{
+  const charTable = {
+    '&': "&amp;",
+    '<': "&lt;",
+    '>': "&gt;",
+    '"': "&quot;"
+  };
+
+  function charTableLookup(letter) {
+    return charTable[letter];
+  }
+
+  function convertEntity(letter) {
+    try {
+      return gEntityConverter.ConvertToEntity(letter, entityVersion);
+    } catch (ex) {
+      return letter;
+    }
+  }
+
+  if (!gEntityConverter) {
+    try {
+      gEntityConverter =
+        Components.classes["@mozilla.org/intl/entityconverter;1"]
+                  .createInstance(Components.interfaces.nsIEntityConverter);
+    } catch (ex) { }
+  }
+
+  const entityVersion = Components.interfaces.nsIEntityConverter.entityW3C;
+
+  var str = text;
+
+  // replace chars in our charTable
+  str = str.replace(/[<>&"]/g, charTableLookup);
+
+  // replace chars > 0x7f via nsIEntityConverter
+  str = str.replace(/[^\0-\u007f]/g, convertEntity);
+
+  return str;
 }

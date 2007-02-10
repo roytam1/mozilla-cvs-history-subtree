@@ -130,7 +130,7 @@ class nsTAString_CharT
     public:
 
         // this acts like a virtual destructor
-      NS_COM NS_CONSTRUCTOR_FASTCALL ~nsTAString_CharT();
+      NS_COM NS_FASTCALL ~nsTAString_CharT();
 
 
         /**
@@ -174,10 +174,8 @@ class nsTAString_CharT
         /**
          * BeginWriting/EndWriting can be used to get mutable access to the
          * string's underlying buffer.  EndWriting returns a pointer to the
-         * end of the string's buffer.
-         *
-         * If these methods are unable to return a mutable buffer, then they
-         * will return a null iterator.
+         * end of the string's buffer.  This iterator API cannot be used to
+         * grow a buffer.  Use SetLength to resize the string's buffer.
          */
 
       inline iterator& BeginWriting( iterator& iter )
@@ -207,36 +205,8 @@ class nsTAString_CharT
         {
           char_type *b;
           size_type len = GetWritableBuffer(&b);
-          return b ? b + len : nsnull;
+          return b + len;
         }
-
-
-        /**
-         * Get a const pointer to the string's internal buffer.  The caller
-         * MUST NOT modify the characters at the returned address.
-         *
-         * @returns The length of the buffer in characters.
-         */
-      inline size_type GetData( const char_type** data ) const
-        {
-          return GetReadableBuffer(data);
-        }
-
-        /**
-         * Get a pointer to the string's internal buffer, optionally resizing
-         * the buffer first.  If size_type(-1) is passed for newLen, then the
-         * current length of the string is used.  The caller MAY modify the
-         * characters at the returned address (up to but not exceeding the
-         * length of the string).
-         *
-         * @returns The length of the buffer in characters or 0 if unable to
-         * satisfy the request due to low-memory conditions.
-         */
-      inline size_type GetMutableData( char_type** data, size_type newLen = size_type(-1) )
-        {
-          return GetWritableBuffer(data, newLen);
-        }
-
 
         /**
          * Length checking functions.  IsEmpty is a helper function to avoid
@@ -356,13 +326,13 @@ class nsTAString_CharT
 
 
         /**
-         * Returns the number of occurrences of the given character.
+         * Returns the number of occurances of the given character.
          */
       NS_COM size_type NS_FASTCALL CountChar( char_type ) const;
 
 
         /**
-         * Locates the offset of the first occurrence of the character.  Pass a
+         * Locates the offset of the first occurance of the character.  Pass a
          * non-zero offset to control where the search begins.
          */
 
@@ -374,34 +344,40 @@ class nsTAString_CharT
          * as a hint to the implementation to reduce allocations.
          *
          * SetCapacity(0) is a suggestion to discard all associated storage.
-         * 
-         * The |newCapacity| value does not include room for the null
-         * terminator.  The actual allocation size will be one unit larger
-         * than the given value to make room for a null terminator.
          */
-      NS_COM void NS_FASTCALL SetCapacity( size_type newCapacity );
+      NS_COM void NS_FASTCALL SetCapacity( size_type );
 
 
         /**
-         * SetLength is used to resize the string's internal buffer.  It has
-         * the effect of moving the string's null-terminator to the offset
-         * specified by |newLen|, and if the string's internal buffer was
-         * previously readonly or dependent on some other string, then it will
-         * be copied.  If there is insufficient memory to perform the resize,
-         * then the string will not be modified.  If the length of the string
-         * is reduced sufficiently, then the string's internal buffer may be
-         * resized to something smaller.
+         * XXX talk to dbaron about this comment.  we do need a method that
+         * XXX allows someone to resize a string's buffer so that it can be
+         * XXX populated using writing iterators.  SetLength seems to be the
+         * XXX right method for the job, and we do use it in this capacity
+         * XXX in certain places.
+         *
+         * SetLength is used in two ways:
+         *   1) to |Cut| a suffix of the string;
+         *   2) to prepare to |Append| or move characters around.
+         *
+         * External callers are not allowed to use |SetLength| in this
+         * latter capacity, and should prefer |Truncate| for the former.
+         * In other words, |SetLength| is deprecated for all use outside
+         * of the string library and the internal use may at some point
+         * be replaced as well.
+         *
+         * This distinction makes me think the two different uses should
+         * be split into two distinct functions.
          */
-      NS_COM void NS_FASTCALL SetLength( size_type newLen );
+      NS_COM void NS_FASTCALL SetLength( size_type );
 
 
         /**
          * Can't use |Truncate| to make a string longer!
          */
-      void Truncate( size_type newLen = 0 )
+      void Truncate( size_type aNewLength=0 )
         {
-          NS_ASSERTION(newLen <= Length(), "Truncate cannot make string longer");
-          SetLength(newLen);
+          NS_ASSERTION(aNewLength <= Length(), "Truncate cannot make string longer");
+          SetLength(aNewLength);
         }
 
 
@@ -569,7 +545,7 @@ class nsTAString_CharT
          * return length of buffer.
          */
       NS_COM size_type NS_FASTCALL GetReadableBuffer( const char_type **data ) const;
-      NS_COM size_type NS_FASTCALL GetWritableBuffer(       char_type **data, size_type newLen = size_type(-1) );
+      NS_COM size_type NS_FASTCALL GetWritableBuffer(       char_type **data );
 
         /**
          * returns true if this tuple is dependent on (i.e., overlapping with)

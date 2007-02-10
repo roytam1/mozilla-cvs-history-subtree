@@ -43,32 +43,25 @@
 #include "nsISupports.h"
 class nsIFrame;
 class nsIContent;
-class nsIPresShell;
 
-// {2256d568-3f5a-42ec-b932-3d0f78551a1a}
+// {DF05F6AB-320B-4e06-AFB3-E39E632A7555}
 #define NS_IROOTBOX_IID \
-{ 0x2256d568, 0x3f5a, 0x42ec, \
-  { 0xb9, 0x32, 0x3d, 0x0f, 0x78, 0x55, 0x1a, 0x1a } }
-
+{ 0xdf05f6ab, 0x320b, 0x4e06, { 0xaf, 0xb3, 0xe3, 0x9e, 0x63, 0x2a, 0x75, 0x55 } }
 
 class nsIRootBox : public nsISupports {
 
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IROOTBOX_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IROOTBOX_IID)
 
-  virtual nsIFrame* GetPopupSetFrame() = 0;
-  virtual void SetPopupSetFrame(nsIFrame* aPopupSet)=0;
+  NS_IMETHOD GetPopupSetFrame(nsIFrame** aResult)=0;
+  NS_IMETHOD SetPopupSetFrame(nsIFrame* aPopupSet)=0;
 
-  virtual nsIContent* GetDefaultTooltip() = 0;
-  virtual void SetDefaultTooltip(nsIContent* aTooltip) = 0;
+  NS_IMETHOD GetDefaultTooltip(nsIContent** aResult)=0;
+  NS_IMETHOD SetDefaultTooltip(nsIContent* aTooltip)=0;
 
-  virtual nsresult AddTooltipSupport(nsIContent* aNode) = 0;
-  virtual nsresult RemoveTooltipSupport(nsIContent* aNode) = 0;
-
-  static nsIRootBox* GetRootBox(nsIPresShell* aShell);
+  NS_IMETHOD AddTooltipSupport(nsIContent* aNode)=0;
+  NS_IMETHOD RemoveTooltipSupport(nsIContent* aNode)=0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIRootBox, NS_IROOTBOX_IID)
 
 #endif
 

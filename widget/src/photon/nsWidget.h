@@ -216,19 +216,17 @@ public:
   NS_IMETHOD ResetInputState();
   NS_IMETHOD SetIMEOpenState(PRBool aState);
   NS_IMETHOD GetIMEOpenState(PRBool* aState);
-  NS_IMETHOD SetIMEEnabled(PRBool aState);
-  NS_IMETHOD GetIMEEnabled(PRBool* aState);
   NS_IMETHOD CancelIMEComposition();
 
   inline void InitEvent(nsGUIEvent& event, PRUint32 aEventType, nsPoint* aPoint = nsnull)
 		{
 		if( aPoint == nsnull ) {
-		  event.refPoint.x = 0;
-		  event.refPoint.y = 0;
+		  event.point.x = 0;
+		  event.point.y = 0;
 		  }
 		else {
-		  event.refPoint.x = aPoint->x;
-		  event.refPoint.y = aPoint->y;
+		  event.point.x = aPoint->x;
+		  event.point.y = aPoint->y;
 		  }
 		event.widget = this;
 		event.time = PR_IntervalNow();
@@ -239,7 +237,15 @@ public:
 
   inline PRBool     ConvertStatus(nsEventStatus aStatus)
 		{
-		return aStatus == nsEventStatus_eConsumeNoDefault;
+		switch(aStatus) {
+		  case nsEventStatus_eIgnore:
+		  case nsEventStatus_eConsumeDoDefault:
+		    return(PR_FALSE);
+		  case nsEventStatus_eConsumeNoDefault:
+		    return(PR_TRUE);
+		  }
+		NS_ASSERTION(0, "Illegal nsEventStatus enumeration value");
+		return PR_FALSE;
 		}
 
   PRBool     DispatchMouseEvent(nsMouseEvent& aEvent);
@@ -313,8 +319,7 @@ protected:
   void InitMouseEvent( PhPointerEvent_t * aPhButtonEvent,
                        nsWidget         * aWidget,
                        nsMouseEvent     & anEvent,
-                       PRUint32         aEventType,
-                       PRInt16          aButton);
+                       PRUint32         aEventType );
 
 
   /* Convert Photon key codes to Mozilla key codes */

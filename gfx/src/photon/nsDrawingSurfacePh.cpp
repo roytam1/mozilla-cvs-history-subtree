@@ -46,6 +46,8 @@
 #include <Pt.h>
 #include <errno.h>
 
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+
 nsPixelFormat nsDrawingSurfacePh::mPixFormat = {
 	0, // mRedZeroMask;     //red color mask in zero position
 	0, // mGreenZeroMask;   //green color mask in zero position
@@ -98,7 +100,7 @@ nsDrawingSurfacePh :: ~nsDrawingSurfacePh( )
 
 	if( mIsOffscreen ) {
 		nsresult rv;
-		nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
+		nsCOMPtr<nsIPref> prefs = do_GetService(kPrefCID, &rv);
 		if (NS_SUCCEEDED(rv)) {
 			prefs->UnregisterCallback("browser.display.internaluse.graphics_changed", prefChanged, (void *)this);
 		}
@@ -242,7 +244,7 @@ NS_IMETHODIMP nsDrawingSurfacePh :: Init( PRUint32 aWidth, PRUint32 aHeight, PRU
 	PgSetDrawBufferSizeCx( mDrawContext, 0xffff );
 
 	nsresult rv;
-	nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &rv));
+	nsCOMPtr<nsIPref> prefs(do_GetService(kPrefCID, &rv));
 	if (NS_SUCCEEDED(rv)) {
 		prefs->RegisterCallback("browser.display.internaluse.graphics_changed", prefChanged, (void *)this);
 		}

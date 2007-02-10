@@ -34,13 +34,10 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* rendering object for HTML <frameset> elements */
-
 #ifndef nsHTMLFrameset_h___
 #define nsHTMLFrameset_h___
 
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsHTMLContainerFrame.h"
 #include "nsColor.h"
 #include "nsIObserver.h"
@@ -109,16 +106,18 @@ class nsHTMLFramesetFrame : public nsHTMLContainerFrame
 {
 public:
   // Woohoo, concrete class with an IID!
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IFRAMESETFRAME_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IFRAMESETFRAME_IID)
 
-  nsHTMLFramesetFrame(nsStyleContext* aContext);
+  nsHTMLFramesetFrame();
 
   virtual ~nsHTMLFramesetFrame();
 
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
-  NS_IMETHOD Init(nsIContent*      aContent,
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
                   nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
 
   static PRBool  gDragInProgress;
@@ -135,12 +134,18 @@ public:
                          nsGUIEvent*     aEvent,
                          nsEventStatus*  aEventStatus);
 
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint, 
+                              nsFramePaintLayer aWhichLayer,
+                              nsIFrame**     aFrame);
+
   NS_IMETHOD GetCursor(const nsPoint&    aPoint,
                        nsIFrame::Cursor& aCursor);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
 
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
@@ -148,9 +153,6 @@ public:
                     nsReflowStatus&          aStatus);
 
   virtual nsIAtom* GetType() const;
-#ifdef DEBUG
-  NS_IMETHOD GetFrameName(nsAString& aResult) const;
-#endif
 
   virtual PRBool IsLeaf() const;
   
@@ -272,6 +274,5 @@ protected:
   PRBool mForceFrameResizability;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsHTMLFramesetFrame, NS_IFRAMESETFRAME_IID)
 
 #endif

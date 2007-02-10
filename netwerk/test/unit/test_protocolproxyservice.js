@@ -41,7 +41,7 @@
 var ios = Components.classes["@mozilla.org/network/io-service;1"]
                     .getService(Components.interfaces.nsIIOService);
 var pps = Components.classes["@mozilla.org/network/protocol-proxy-service;1"]
-                    .getService();
+                    .getService(Components.interfaces.nsIProtocolProxyService);
 
 /**
  * Test nsIProtocolHandler that allows proxying, but doesn't allow HTTP
@@ -60,8 +60,7 @@ TestProtocolHandler.prototype = {
   defaultPort: -1,
   protocolFlags: Components.interfaces.nsIProtocolHandler.URI_NOAUTH |
                  Components.interfaces.nsIProtocolHandler.URI_NORELATIVE |
-                 Components.interfaces.nsIProtocolHandler.ALLOWS_PROXY |
-                 Components.interfaces.nsIProtocolHandler.URI_DANGEROUS_TO_LOAD,
+                 Components.interfaces.nsIProtocolHandler.ALLOWS_PROXY,
   newURI: function(spec, originCharset, baseURI) {
     var uri = Components.classes["@mozilla.org/network/simple-uri;1"]
                         .createInstance(Components.interfaces.nsIURI);

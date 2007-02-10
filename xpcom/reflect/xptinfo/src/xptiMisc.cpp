@@ -71,6 +71,8 @@ xptiFileType::Type xptiFileType::GetType(const char* name)
 
 /***************************************************************************/
 
+MOZ_DECL_CTOR_COUNTER(xptiAutoLog)
+
 xptiAutoLog::xptiAutoLog(xptiInterfaceInfoManager* mgr, 
                          nsILocalFile* logfile, PRBool append)
     : mMgr(nsnull), mOldFileDesc(nsnull)

@@ -69,6 +69,7 @@
 #define PIPSTRING_BUNDLE_URL "chrome://pippki/locale/pippki.properties"
 
 static NS_DEFINE_CID(kCStringBundleServiceCID,  NS_STRINGBUNDLESERVICE_CID);
+static NS_DEFINE_CID(kDateTimeFormatCID, NS_DATETIMEFORMAT_CID);
 
 /* ==== */
 static NS_DEFINE_CID(kPKIParamBlockCID, NS_PKIPARAMBLOCK_CID);
@@ -242,7 +243,7 @@ nsNSSDialogs::ConfirmMismatchDomain(nsIInterfaceRequestor *socketInfo,
     return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIDialogParamBlock> dialogBlock = do_QueryInterface(block);
-  rv = dialogBlock->SetString(1, NS_ConvertUTF8toUTF16(targetURL).get());
+  rv = dialogBlock->SetString(1, NS_ConvertUTF8toUCS2(targetURL).get());
   if (NS_FAILED(rv))
     return rv;
 
@@ -314,14 +315,14 @@ nsNSSDialogs::ConfirmCertExpired(nsIInterfaceRequestor *socketInfo,
   rv = cert->GetCommonName(commonName);
 
   nsIDateTimeFormat *aDateTimeFormat;
-  rv = CallCreateInstance(NS_DATETIMEFORMAT_CONTRACTID, &aDateTimeFormat);
+  rv = CallCreateInstance(kDateTimeFormatCID, &aDateTimeFormat);
 
   aDateTimeFormat->FormatPRTime(nsnull, kDateFormatShort, 
                                 kTimeFormatNoSeconds, timeToUse, 
                                 formattedDate);
   const PRUnichar *formatStrings[2] = { commonName.get(), formattedDate.get() }; 
-  NS_ConvertASCIItoUTF16 keyString(key);
-  NS_ConvertASCIItoUTF16 titleKeyString(titleKey);
+  NS_ConvertASCIItoUCS2 keyString(key);
+  NS_ConvertASCIItoUCS2 titleKeyString(titleKey);
   mPIPStringBundle->FormatStringFromName(keyString.get(), formatStrings, 
                                          2, getter_Copies(message1));
   mPIPStringBundle->FormatStringFromName(titleKeyString.get(), formatStrings,
@@ -361,7 +362,7 @@ nsNSSDialogs::NotifyCrlNextupdate(nsIInterfaceRequestor *socketInfo,
   nsCOMPtr<nsIPKIParamBlock> block = do_CreateInstance(kPKIParamBlockCID);
   nsCOMPtr<nsIDialogParamBlock> dialogBlock = do_QueryInterface(block);
 
-  rv = dialogBlock->SetString(1, NS_ConvertUTF8toUTF16(targetURL).get());
+  rv = dialogBlock->SetString(1, NS_ConvertUTF8toUCS2(targetURL).get());
   if (NS_FAILED(rv))
     return rv;
 

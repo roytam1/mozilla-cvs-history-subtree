@@ -43,7 +43,7 @@
 #include "nsIDOMSVGFitToViewBox.h"
 #include "nsSVGRect.h"
 #include "nsSVGAnimatedRect.h"
-#include "nsGkAtoms.h"
+#include "nsSVGAtoms.h"
 
 typedef nsSVGStylableElement nsSVGSymbolElementBase;
 
@@ -55,6 +55,7 @@ protected:
   friend nsresult NS_NewSVGSymbolElement(nsIContent **aResult,
                                          nsINodeInfo *aNodeInfo);
   nsSVGSymbolElement(nsINodeInfo* aNodeInfo);
+  virtual ~nsSVGSymbolElement();
   nsresult Init();
 
 public:
@@ -65,14 +66,12 @@ public:
   NS_DECL_NSIDOMSVGFITTOVIEWBOX
 
   // xxx I wish we could use virtual inheritance
-  NS_FORWARD_NSIDOMNODE(nsSVGElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsSVGElement::)
   NS_FORWARD_NSIDOMELEMENT(nsSVGElement::)
   NS_FORWARD_NSIDOMSVGELEMENT(nsSVGElement::)
 
   // nsIContent interface
   NS_IMETHODIMP_(PRBool) IsAttributeMapped(const nsIAtom* name) const;
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 
 protected:
 
@@ -105,6 +104,9 @@ nsSVGSymbolElement::nsSVGSymbolElement(nsINodeInfo *aNodeInfo)
 {
 }
 
+nsSVGSymbolElement::~nsSVGSymbolElement()
+{
+}
 
 nsresult
 nsSVGSymbolElement::Init()
@@ -120,7 +122,7 @@ nsSVGSymbolElement::Init()
     NS_ENSURE_SUCCESS(rv,rv);
     rv = NS_NewSVGAnimatedRect(getter_AddRefs(mViewBox), viewbox);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = AddMappedSVGValue(nsGkAtoms::viewBox, mViewBox);
+    rv = AddMappedSVGValue(nsSVGAtoms::viewBox, mViewBox);
     NS_ENSURE_SUCCESS(rv,rv);
   }
 
@@ -133,7 +135,7 @@ nsSVGSymbolElement::Init()
                                           getter_AddRefs(mPreserveAspectRatio),
                                           preserveAspectRatio);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = AddMappedSVGValue(nsGkAtoms::preserveAspectRatio,
+    rv = AddMappedSVGValue(nsSVGAtoms::preserveAspectRatio,
                            mPreserveAspectRatio);
     NS_ENSURE_SUCCESS(rv,rv);
   }
@@ -144,7 +146,7 @@ nsSVGSymbolElement::Init()
 //----------------------------------------------------------------------
 // nsIDOMNode methods
 
-NS_IMPL_ELEMENT_CLONE_WITH_INIT(nsSVGSymbolElement)
+NS_IMPL_DOM_CLONENODE_WITH_INIT(nsSVGSymbolElement)
 
 //----------------------------------------------------------------------
 // nsIDOMSVGFitToViewBox methods
@@ -173,15 +175,9 @@ NS_IMETHODIMP_(PRBool)
 nsSVGSymbolElement::IsAttributeMapped(const nsIAtom* name) const
 {
   static const MappedAttributeEntry* const map[] = {
-    sFEFloodMap,
-    sFiltersMap,
-    sFontSpecificationMap,
-    sGradientStopMap,
-    sMarkersMap,
-    sTextContentElementsMap,
-    sViewportsMap
-   };
-
+    sViewportsMap,
+  };
+  
   return FindAttributeDependence(name, map, NS_ARRAY_LENGTH(map)) ||
     nsSVGSymbolElementBase::IsAttributeMapped(name);
 }

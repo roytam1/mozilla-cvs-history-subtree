@@ -54,11 +54,30 @@ public:
     flags |= NS_EVENT_FLAG_CANT_CANCEL;
   }
 
+  nsMutationEvent(PRBool isTrusted, PRUint32 msg, nsIDOMEventTarget *target)
+    : nsEvent(isTrusted, msg, NS_MUTATION_EVENT),
+      mTarget(target),
+      mAttrChange(0)
+  {
+    flags |= NS_EVENT_FLAG_CANT_CANCEL;
+  }
+
+  nsMutationEvent(PRBool isTrusted, PRUint32 msg, nsIContent *target)
+    : nsEvent(isTrusted, msg, NS_MUTATION_EVENT),
+      mTarget(do_QueryInterface(target)),
+      mAttrChange(0)
+  {
+    flags |= NS_EVENT_FLAG_CANT_CANCEL;
+  }
+
   nsCOMPtr<nsIDOMNode> mRelatedNode;
-  nsCOMPtr<nsIAtom>    mAttrName;
-  nsCOMPtr<nsIAtom>    mPrevAttrValue;
-  nsCOMPtr<nsIAtom>    mNewAttrValue;
-  unsigned short       mAttrChange;
+  nsCOMPtr<nsIDOMEventTarget> mTarget;
+  
+  nsCOMPtr<nsIAtom> mAttrName;
+  nsCOMPtr<nsIAtom> mPrevAttrValue;
+  nsCOMPtr<nsIAtom> mNewAttrValue;
+  
+  unsigned short mAttrChange;
 };
 
 #define NS_MUTATION_START           1800
@@ -69,7 +88,6 @@ public:
 #define NS_MUTATION_NODEINSERTEDINTODOCUMENT          (NS_MUTATION_START+4)
 #define NS_MUTATION_ATTRMODIFIED                      (NS_MUTATION_START+5)
 #define NS_MUTATION_CHARACTERDATAMODIFIED             (NS_MUTATION_START+6)
-#define NS_MUTATION_END                               (NS_MUTATION_START+6)
 
 // Bits are actually checked to optimize mutation event firing.
 // That's why I don't number from 0x00.  The first event should

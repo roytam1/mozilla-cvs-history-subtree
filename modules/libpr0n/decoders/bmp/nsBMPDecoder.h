@@ -116,7 +116,7 @@ struct bitFields {
 #define LITTLE_TO_NATIVE32(x) x
 #endif
 
-#if !defined(MOZ_CAIRO_GFX) && (defined(XP_WIN) || defined(XP_OS2) || defined(XP_BEOS) || defined(MOZ_WIDGET_PHOTON))
+#if defined(XP_WIN) || defined(XP_OS2) || defined(XP_BEOS) || defined(MOZ_WIDGET_PHOTON)
 #define BMP_GFXFORMAT gfxIFormats::BGR
 #define RLE_GFXFORMAT_ALPHA gfxIFormats::BGR_A1
 #else
@@ -125,7 +125,7 @@ struct bitFields {
 #define RLE_GFXFORMAT_ALPHA gfxIFormats::RGB_A1
 #endif
 
-#if defined(MOZ_CAIRO_GFX) || defined(XP_MAC) || defined(XP_MACOSX)
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #define GFXBYTESPERPIXEL 4
 #else
 #define GFXBYTESPERPIXEL 3
@@ -229,14 +229,9 @@ private:
 };
 
 /** Sets the pixel data in aDecoded to the given values.
- * The variable passed in as aDecoded will be moved on 3 or 4 bytes! */
-inline void SetPixel(PRUint8*& aDecoded, PRUint8 aRed, PRUint8 aGreen, PRUint8 aBlue, PRUint8 aAlpha = 0xFF)
+ * The variable passed in as aDecoded will be moved on 3 bytes! */
+inline void SetPixel(PRUint8*& aDecoded, PRUint8 aRed, PRUint8 aGreen, PRUint8 aBlue)
 {
-#if defined(MOZ_CAIRO_GFX)
-    *(PRUint32*)aDecoded = (aAlpha << 24) | (aRed << 16) | (aGreen << 8) | aBlue;
-    aDecoded += 4;
-#else // MOZ_CAIRO_GFX
-
 #if defined(XP_MAC) || defined(XP_MACOSX)
     *aDecoded++ = 0; // Mac needs this padding byte
 #endif
@@ -249,12 +244,15 @@ inline void SetPixel(PRUint8*& aDecoded, PRUint8 aRed, PRUint8 aGreen, PRUint8 a
     *aDecoded++ = aGreen;
     *aDecoded++ = aRed;
 #endif
-#endif // MOZ_CAIRO_GFX
 }
 
 inline void SetPixel(PRUint8*& aDecoded, PRUint8 idx, colorTable* aColors)
 {
-    SetPixel(aDecoded, aColors[idx].red, aColors[idx].green, aColors[idx].blue);
+    PRUint8 red, green, blue;
+    red = aColors[idx].red;
+    green = aColors[idx].green;
+    blue = aColors[idx].blue;
+    SetPixel(aDecoded, red, green, blue);
 }
 
 /** Sets two (or one if aCount = 1) pixels
@@ -275,4 +273,3 @@ inline void Set4BitPixel(PRUint8*& aDecoded, PRUint8 aData,
 }
 
 #endif
-

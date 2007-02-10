@@ -41,6 +41,6 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = config components chrome customization base 
+DIRS = config components chrome locales customization base extensions
 
 include $(topsrcdir)/config/rules.mk

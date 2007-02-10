@@ -136,7 +136,7 @@ nsXPINotifierImpl::NotificationEnabled(PRBool* aReturn)
 
         if (NS_SUCCEEDED(rv) && value)
         {
-            // check to see the last time we did anything.  Since flash does not have a persistent
+            // check to see the last time we did anything.  Since flash does not have a persistant
             // way to do poll invervals longer than a session, we will implemented that here by using the
             // preferences.  
 
@@ -536,7 +536,7 @@ nsXPINotifierImpl::OnEndLoad(nsIRDFXMLSink *aSink)
 					nsMemory::Free(regkeyCString);
 
                     // check to see if this software title should be "flashed"
-                    if (IsNewerOrUninstalled(NS_ConvertUTF16toUTF8(regKeyString).get(), NS_ConvertUTF16toUTF8(versionString).get()))
+                    if (IsNewerOrUninstalled(NS_ConvertUCS2toUTF8(regKeyString).get(), NS_ConvertUCS2toUTF8(versionString).get()))
                     {
                         //assert into flash
                         

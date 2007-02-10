@@ -290,9 +290,10 @@ NS_METHOD nsSound::Play(nsIURL *aURL)
   return rv;
 }
 
-NS_IMETHODIMP nsSound::PlaySystemSound(const nsAString &aSoundAlias)
+NS_IMETHODIMP nsSound::PlaySystemSound(const char *aSoundAlias)
 {
-  if (aSoundAlias.EqualsLiteral("_moz_mailbeep"))
+  if (!aSoundAlias) return NS_ERROR_FAILURE;
+  if (strcmp(aSoundAlias, "_moz_mailbeep") == 0)
   {
     return Beep();
   }
@@ -301,8 +302,8 @@ NS_IMETHODIMP nsSound::PlaySystemSound(const nsAString &aSoundAlias)
 
   // create a nsILocalFile and then a nsIFileURL from that
   nsCOMPtr <nsILocalFile> soundFile;
-  rv = NS_NewLocalFile(aSoundAlias, PR_TRUE, 
-                       getter_AddRefs(soundFile));
+  rv = NS_NewNativeLocalFile(nsDependentCString(aSoundAlias), PR_TRUE, 
+                             getter_AddRefs(soundFile));
   NS_ENSURE_SUCCESS(rv,rv);
 
   rv = NS_NewFileURI(getter_AddRefs(fileURI), soundFile);

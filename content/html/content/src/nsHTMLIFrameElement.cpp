@@ -36,7 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsIDOMHTMLIFrameElement.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
 #include "nsIDocument.h"
@@ -55,7 +55,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLFrameElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLFrameElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLFrameElement::)
@@ -67,14 +67,11 @@ public:
   NS_DECL_NSIDOMHTMLIFRAMEELEMENT
 
   // nsIContent
-  virtual PRBool ParseAttribute(PRInt32 aNamespaceID,
-                                nsIAtom* aAttribute,
+  virtual PRBool ParseAttribute(nsIAtom* aAttribute,
                                 const nsAString& aValue,
                                 nsAttrValue& aResult);
   NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
   virtual nsMapRuleToAttributesFunc GetAttributeMappingFunction() const;
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 };
 
 
@@ -91,8 +88,8 @@ nsHTMLIFrameElement::~nsHTMLIFrameElement()
 }
 
 
-NS_IMPL_ADDREF_INHERITED(nsHTMLIFrameElement,nsGenericElement)
-NS_IMPL_RELEASE_INHERITED(nsHTMLIFrameElement,nsGenericElement)
+NS_IMPL_ADDREF(nsHTMLIFrameElement)
+NS_IMPL_RELEASE(nsHTMLIFrameElement)
 
 // QueryInterface implementation for nsHTMLIFrameElement
 NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLIFrameElement, nsGenericHTMLFrameElement)
@@ -101,7 +98,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLIFrameElement, nsGenericHTMLFrameEleme
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLIFrameElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLIFrameElement)
 
 
 NS_IMPL_STRING_ATTR(nsHTMLIFrameElement, Align, align)
@@ -122,37 +119,33 @@ nsHTMLIFrameElement::GetContentDocument(nsIDOMDocument** aContentDocument)
 }
 
 PRBool
-nsHTMLIFrameElement::ParseAttribute(PRInt32 aNamespaceID,
-                                    nsIAtom* aAttribute,
+nsHTMLIFrameElement::ParseAttribute(nsIAtom* aAttribute,
                                     const nsAString& aValue,
                                     nsAttrValue& aResult)
 {
-  if (aNamespaceID == kNameSpaceID_None) {
-    if (aAttribute == nsGkAtoms::marginwidth) {
-      return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
-    }
-    if (aAttribute == nsGkAtoms::marginheight) {
-      return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
-    }
-    if (aAttribute == nsGkAtoms::width) {
-      return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
-    }
-    if (aAttribute == nsGkAtoms::height) {
-      return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
-    }
-    if (aAttribute == nsGkAtoms::frameborder) {
-      return ParseFrameborderValue(aValue, aResult);
-    }
-    if (aAttribute == nsGkAtoms::scrolling) {
-      return ParseScrollingValue(aValue, aResult);
-    }
-    if (aAttribute == nsGkAtoms::align) {
-      return ParseAlignValue(aValue, aResult);
-    }
+  if (aAttribute == nsHTMLAtoms::marginwidth) {
+    return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
+  }
+  if (aAttribute == nsHTMLAtoms::marginheight) {
+    return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
+  }
+  if (aAttribute == nsHTMLAtoms::width) {
+    return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
+  }
+  if (aAttribute == nsHTMLAtoms::height) {
+    return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
+  }
+  if (aAttribute == nsHTMLAtoms::frameborder) {
+    return ParseFrameborderValue(aValue, aResult);
+  }
+  if (aAttribute == nsHTMLAtoms::scrolling) {
+    return ParseScrollingValue(aValue, aResult);
+  }
+  if (aAttribute == nsHTMLAtoms::align) {
+    return ParseAlignValue(aValue, aResult);
   }
 
-  return nsGenericHTMLFrameElement::ParseAttribute(aNamespaceID, aAttribute,
-                                                   aValue, aResult);
+  return nsGenericHTMLFrameElement::ParseAttribute(aAttribute, aValue, aResult);
 }
 
 static void
@@ -163,7 +156,7 @@ MapAttributesIntoRule(const nsMappedAttributes* aAttributes,
     // frameborder: 0 | 1 (| NO | YES in quirks mode)
     // If frameborder is 0 or No, set border to 0
     // else leave it as the value set in html.css
-    const nsAttrValue* value = aAttributes->GetAttr(nsGkAtoms::frameborder);
+    const nsAttrValue* value = aAttributes->GetAttr(nsHTMLAtoms::frameborder);
     if (value && value->Type() == nsAttrValue::eEnum) {
       PRInt32 frameborder = value->GetEnumValue();
       if (NS_STYLE_FRAME_0 == frameborder ||
@@ -183,7 +176,7 @@ MapAttributesIntoRule(const nsMappedAttributes* aAttributes,
   else if (aData->mSID == eStyleStruct_Position) {
     // width: value
     if (aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
-      const nsAttrValue* value = aAttributes->GetAttr(nsGkAtoms::width);
+      const nsAttrValue* value = aAttributes->GetAttr(nsHTMLAtoms::width);
       if (value && value->Type() == nsAttrValue::eInteger)
         aData->mPositionData->mWidth.SetFloatValue((float)value->GetIntegerValue(), eCSSUnit_Pixel);
       else if (value && value->Type() == nsAttrValue::ePercent)
@@ -192,7 +185,7 @@ MapAttributesIntoRule(const nsMappedAttributes* aAttributes,
 
     // height: value
     if (aData->mPositionData->mHeight.GetUnit() == eCSSUnit_Null) {
-      const nsAttrValue* value = aAttributes->GetAttr(nsGkAtoms::height);
+      const nsAttrValue* value = aAttributes->GetAttr(nsHTMLAtoms::height);
       if (value && value->Type() == nsAttrValue::eInteger)
         aData->mPositionData->mHeight.SetFloatValue((float)value->GetIntegerValue(), eCSSUnit_Pixel);
       else if (value && value->Type() == nsAttrValue::ePercent)
@@ -209,9 +202,9 @@ NS_IMETHODIMP_(PRBool)
 nsHTMLIFrameElement::IsAttributeMapped(const nsIAtom* aAttribute) const
 {
   static const MappedAttributeEntry attributes[] = {
-    { &nsGkAtoms::width },
-    { &nsGkAtoms::height },
-    { &nsGkAtoms::frameborder },
+    { &nsHTMLAtoms::width },
+    { &nsHTMLAtoms::height },
+    { &nsHTMLAtoms::frameborder },
     { nsnull },
   };
 

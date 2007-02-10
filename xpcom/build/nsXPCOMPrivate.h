@@ -39,25 +39,49 @@
 #ifndef nsXPComPrivate_h__
 #define nsXPComPrivate_h__
 
+// Map frozen functions to private symbol names if not using strict API.
+#ifdef MOZILLA_INTERNAL_API
+# define NS_RegisterXPCOMExitRoutine        NS_RegisterXPCOMExitRoutine_P
+# define NS_UnregisterXPCOMExitRoutine      NS_UnregisterXPCOMExitRoutine_P
+#endif
+
 #include "nscore.h"
 #include "nsXPCOM.h"
-#include "nsXPCOMStrings.h"
+#include "nsStringAPI.h"
 
 class nsStringContainer;
 class nsCStringContainer;
 class nsIComponentLoader;
 
 /**
- * During this shutdown notification all threads which run XPCOM code must
- * be joined.
+ * Private Method to register an exit routine.  This method
+ * allows you to setup a callback that will be called from 
+ * the NS_ShutdownXPCOM function after all services and 
+ * components have gone away.
+ *
+ * This API is for the exclusive use of the xpcom glue library.
+ * 
+ * Note that these APIs are NOT threadsafe and must be called on the
+ * main thread.
+ * 
+ * @status FROZEN
+ * @param exitRoutine pointer to user defined callback function
+ *                    of type XPCOMExitRoutine. 
+ * @param priority    higher priorities are called before lower  
+ *                    priorities.
+ *
+ * @return NS_OK for success;
+ *         other error codes indicate a failure.
+ *
  */
-#define NS_XPCOM_SHUTDOWN_THREADS_OBSERVER_ID "xpcom-shutdown-threads"
+typedef NS_CALLBACK(XPCOMExitRoutine)(void);
 
-/**
- * During this shutdown notification all module loaders must unload XPCOM
- * modules.
- */
-#define NS_XPCOM_SHUTDOWN_LOADERS_OBSERVER_ID "xpcom-shutdown-loaders"
+extern "C" NS_COM nsresult
+NS_RegisterXPCOMExitRoutine(XPCOMExitRoutine exitRoutine, PRUint32 priority);
+
+extern "C" NS_COM nsresult
+NS_UnregisterXPCOMExitRoutine(XPCOMExitRoutine exitRoutine);
+
 
 // PUBLIC
 typedef nsresult   (* InitFunc)(nsIServiceManager* *result, nsIFile* binDirectory, nsIDirectoryServiceProvider* appFileLocationProvider);
@@ -100,19 +124,7 @@ typedef void*      (* AllocFunc)(PRSize size);
 typedef void*      (* ReallocFunc)(void* ptr, PRSize size);
 typedef void       (* FreeFunc)(void* ptr);
 
-typedef void       (* DebugBreakFunc)(PRUint32 aSeverity,
-                                      const char *aStr, const char *aExpr,
-                                      const char *aFile, PRInt32 aLine);
-
-typedef void       (* xpcomVoidFunc)();
-typedef void       (* LogAddRefFunc)(void*, nsrefcnt, const char*, PRUint32);
-typedef void       (* LogReleaseFunc)(void*, nsrefcnt, const char*);
-typedef void       (* LogCtorFunc)(void*, const char*, PRUint32);
-typedef void       (* LogCOMPtrFunc)(void*, nsISupports*);
-
-// PRIVATE AND DEPRECATED
-typedef NS_CALLBACK(XPCOMExitRoutine)(void);
-
+// PRIVATE
 typedef nsresult   (* RegisterXPCOMExitRoutineFunc)(XPCOMExitRoutine exitRoutine, PRUint32 priority);
 typedef nsresult   (* UnregisterXPCOMExitRoutineFunc)(XPCOMExitRoutine exitRoutine);
 
@@ -163,22 +175,10 @@ typedef struct XPCOMFunctions{
     StringGetMutableDataFunc stringGetMutableData;
     CStringGetMutableDataFunc cstringGetMutableData;
     Init3Func init3;
-
-    // Added for Mozilla 1.9
-    DebugBreakFunc debugBreakFunc;
-    xpcomVoidFunc logInitFunc;
-    xpcomVoidFunc logTermFunc;
-    LogAddRefFunc logAddRefFunc;
-    LogReleaseFunc logReleaseFunc;
-    LogCtorFunc logCtorFunc;
-    LogCtorFunc logDtorFunc;
-    LogCOMPtrFunc logCOMPtrAddRefFunc;
-    LogCOMPtrFunc logCOMPtrReleaseFunc;
-
 } XPCOMFunctions;
 
 typedef nsresult (PR_CALLBACK *GetFrozenFunctionsFunc)(XPCOMFunctions *entryPoints, const char* libraryPath);
-XPCOM_API(nsresult)
+extern "C" NS_COM nsresult
 NS_GetFrozenFunctions(XPCOMFunctions *entryPoints, const char* libraryPath);
 
 // think hard before changing this
@@ -205,9 +205,8 @@ NS_GetFrozenFunctions(XPCOMFunctions *entryPoints, const char* libraryPath);
 #elif defined(XP_BEOS)
 
 #define XPCOM_SEARCH_KEY  "ADDON_PATH"
-#define GRE_CONF_NAME "gre.config"
-#define GRE_CONF_PATH "gre.conf"
-#define GRE_CONF_DIR  "gre.d"
+#define GRE_CONF_NAME ".gre.config"
+#define GRE_CONF_PATH "/boot/home/config/settings/GRE/gre.conf"
 #define XPCOM_DLL "libxpcom"MOZ_DLL_SUFFIX
 #define XUL_DLL   "libxul"MOZ_DLL_SUFFIX
 
@@ -256,5 +255,10 @@ NS_GetFrozenFunctions(XPCOMFunctions *entryPoints, const char* libraryPath);
 #define MAXPATHLEN 1024
 #endif
 #endif
+
+nsresult
+NewStaticComponentLoader(nsStaticModuleInfo const *aStaticModules,
+                         PRUint32 aStaticModuleCount,
+                         nsIComponentLoader **retval);
 
 #endif

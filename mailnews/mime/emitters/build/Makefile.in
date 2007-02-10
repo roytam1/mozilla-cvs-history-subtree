@@ -50,11 +50,11 @@ SHORT_LIBNAME	= emitter
 IS_COMPONENT	= 1
 MODULE_NAME	= nsMimeEmitterModule
 MOZILLA_INTERNAL_API = 1
-LOCAL_INCLUDES += -I$(srcdir)/../src
 
 PACKAGE_FILE = mimeemitter.pkg
 
 REQUIRES	= xpcom \
+		  xpcom_obsolete \
 		  string \
 		  mime \
 		  necko \
@@ -72,13 +72,14 @@ endif
 CPPSRCS		= nsEmitterFactory.cpp
 
 SHARED_LIBRARY_LIBS = \
-		../src/$(LIB_PREFIX)emitterutil_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)emitterutil_s.$(LIB_SUFFIX) \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS = \
 		$(LIBS_DIRS) \
 		$(MOZ_UNICHARUTIL_LIBS) \
 		$(MOZ_COMPONENT_LIBS) \
+		$(MOZ_XPCOM_OBSOLETE_LIBS) \
 		$(EXTRA_DSO_LIBS) \
 		$(NULL)
 

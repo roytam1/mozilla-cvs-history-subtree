@@ -59,14 +59,19 @@ public:
   nsSampleWordBreaker() ;
   virtual ~nsSampleWordBreaker() ;
 
-  PRBool BreakInBetween(const PRUnichar* aText1 , PRUint32 aTextLen1,
-                        const PRUnichar* aText2 , PRUint32 aTextLen2);
-  nsWordRange FindWord(const PRUnichar* aText1 , PRUint32 aTextLen1,
-                       PRUint32 aOffset);
+  NS_IMETHOD BreakInBetween(const PRUnichar* aText1 , PRUint32 aTextLen1,
+                            const PRUnichar* aText2 , PRUint32 aTextLen2,
+                            PRBool *oCanBreak);
+  NS_IMETHOD FindWord(const PRUnichar* aText1 , PRUint32 aTextLen1,
+                                      PRUint32 aOffset,
+                                      PRUint32 *oWordBegin,
+                                      PRUint32 *oWordEnd);
 
-  PRInt32 NextWord(const PRUnichar* aText, PRUint32 aLen, PRUint32 aPos);
+  NS_IMETHOD NextWord(const PRUnichar* aText, PRUint32 aLen, PRUint32 aPos,
+                      PRUint32* oNext, PRBool *oNeedMoreText);
 
-  PRInt32 PrevWord(const PRUnichar* aText, PRUint32 aLen, PRUint32 aPos);
+  NS_IMETHOD PrevWord(const PRUnichar* aText, PRUint32 aLen, PRUint32 aPos,
+                      PRUint32* oPrev, PRBool *oNeedMoreText);
 
 protected:
   PRUint8  GetClass(PRUnichar aChar);

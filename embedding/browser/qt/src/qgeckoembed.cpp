@@ -208,7 +208,7 @@ QGeckoEmbedPrivate::init()
     nsCOMPtr<nsIWeakReference> weakRef;
     supportsWeak->GetWeakReference(getter_AddRefs(weakRef));
     webBrowser->AddWebBrowserListener(weakRef,
-                                      NS_GET_IID(nsIWebProgressListener));
+                                      nsIWebProgressListener::GetIID());
 
     // set ourselves as the parent uri content listener
     webBrowser->SetParentURIContentListener(contentListener);

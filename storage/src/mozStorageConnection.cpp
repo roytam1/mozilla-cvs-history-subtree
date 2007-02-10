@@ -40,7 +40,6 @@
 #include <stdio.h>
 
 #include "nsError.h"
-#include "nsIMutableArray.h"
 #include "nsIFile.h"
 
 #include "mozIStorageFunction.h"

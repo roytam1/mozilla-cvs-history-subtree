@@ -690,19 +690,9 @@ nsresult calIcalComponent::GetDateTimeAttribute(
         *dtp = nsnull;  /* invalid date */
         return NS_OK;
     }
-    
     struct icaltimetype itt =
         icalvalue_get_datetime(icalproperty_get_value(prop));
-
-    // Need to get the tzid param. Unfortunatly, libical tends to return raw
-    // ics strings, with quotes and everything. That's not what we want. Need
-    // to work around.
-    icalparameter_kind tzkind = icalparameter_string_to_kind("TZID");
-    icalparameter* tzparam = icalproperty_get_first_parameter(prop, tzkind);
-    const char *tzid = nsnull;
-    if (tzparam)
-        tzid = icalparameter_get_xvalue(tzparam);
-
+    const char *tzid = icalproperty_get_parameter_as_string(prop, "TZID");
     if (tzid) {
         // look up tz in ics service, which btw caches commonly used tzones.
         // this hides errors from incorrect ics files, which could state

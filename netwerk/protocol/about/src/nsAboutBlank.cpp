@@ -38,7 +38,7 @@
 #include "nsAboutBlank.h"
 #include "nsIIOService.h"
 #include "nsIServiceManager.h"
-#include "nsStringStream.h"
+#include "nsIStringStream.h"
 #include "nsNetUtil.h"
 
 NS_IMPL_ISUPPORTS1(nsAboutBlank, nsIAboutModule)
@@ -54,7 +54,7 @@ nsAboutBlank::NewChannel(nsIURI *aURI, nsIChannel **result)
     nsIChannel* channel;
 
     nsCOMPtr<nsIInputStream> in;
-    rv = NS_NewCStringInputStream(getter_AddRefs(in), NS_LITERAL_CSTRING(kBlankPage));
+    rv = NS_NewCStringInputStream(getter_AddRefs(in), nsDependentCString(kBlankPage));
     if (NS_FAILED(rv)) return rv;
 
     rv = NS_NewInputStreamChannel(&channel, aURI, in,
@@ -64,13 +64,6 @@ nsAboutBlank::NewChannel(nsIURI *aURI, nsIChannel **result)
 
     *result = channel;
     return rv;
-}
-
-NS_IMETHODIMP
-nsAboutBlank::GetURIFlags(nsIURI *aURI, PRUint32 *result)
-{
-    *result = nsIAboutModule::URI_SAFE_FOR_UNTRUSTED_CONTENT;
-    return NS_OK;
 }
 
 NS_METHOD

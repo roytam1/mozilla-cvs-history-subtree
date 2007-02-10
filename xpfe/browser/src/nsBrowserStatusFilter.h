@@ -39,7 +39,6 @@
 #define nsBrowserStatusFilter_h__
 
 #include "nsIWebProgressListener.h"
-#include "nsIWebProgressListener2.h"
 #include "nsIWebProgress.h"
 #include "nsWeakReference.h"
 #include "nsITimer.h"
@@ -53,7 +52,7 @@
 //-----------------------------------------------------------------------------
 
 class nsBrowserStatusFilter : public nsIWebProgress
-                            , public nsIWebProgressListener2
+                            , public nsIWebProgressListener
                             , public nsSupportsWeakReference
 {
 public:
@@ -63,7 +62,6 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIWEBPROGRESS
     NS_DECL_NSIWEBPROGRESSLISTENER
-    NS_DECL_NSIWEBPROGRESSLISTENER2
 
 private:
     nsresult StartDelayTimer();
@@ -78,8 +76,8 @@ private:
 
     // delayed values
     nsString                         mStatusMsg;
-    PRInt64                          mCurProgress;
-    PRInt64                          mMaxProgress;
+    PRInt32                          mCurProgress;
+    PRInt32                          mMaxProgress;
 
     // used to convert OnStart/OnStop notifications into progress notifications
     PRInt32                          mTotalRequests;

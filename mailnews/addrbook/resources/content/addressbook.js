@@ -181,15 +181,10 @@ function OnLoadAddressBook()
   UpgradeAddressBookResultsPaneUI("mailnews.ui.addressbook_results.version");
 
   //This migrates the LDAPServer Preferences from 4.x to mozilla format.
-  var ldapPrefs = null;
   try {
-    ldapPrefs = Components.classes["@mozilla.org/ldapprefs-service;1"]
-                          .getService(Components.interfaces.nsILDAPPrefsService);
-  } catch (ex) {Components.utils.reportError("ERROR: Cannot get the LDAP service\n" + ex + "\n");}
-
-  if (ldapPrefs) {
-    ldapPrefs.migratePrefsIfNeeded();
-  }
+    Components.classes["@mozilla.org/ldapprefs-service;1"]
+              .getService(Components.interfaces.nsILDAPPrefsService);
+  } catch (ex) {dump ("ERROR: Cannot get the LDAP service\n" + ex + "\n");}
 
   GetCurrentPrefs();
 
@@ -303,7 +298,6 @@ function CommandUpdate_AddressBook()
 {
   goUpdateCommand('cmd_delete');
   goUpdateCommand('button_delete');
-  goUpdateCommand('cmd_newlist');
 }
 
 function ResultsPaneSelectionChanged()
@@ -422,6 +416,36 @@ function AbOnRenameAddressBook(aName)
   addressbook.modifyAddressBook(addressbookDS, parentDir, selectedABDirectory, properties);
 }
 
+function GetPrintSettings()
+{
+  var prevPS = gPrintSettings;
+
+  try {
+    if (gPrintSettings == null) {
+      var useGlobalPrintSettings = true;
+      var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                           .getService(Components.interfaces.nsIPrefBranch);
+      if (pref) {
+        useGlobalPrintSettings = pref.getBoolPref("print.use_global_printsettings", false);
+      }
+
+      // I would rather be using nsIWebBrowserPrint API
+      // but I really don't have a document at this point
+      var printSettingsService = Components.classes["@mozilla.org/gfx/printsettings-service;1"]
+                                           .getService(Components.interfaces.nsIPrintSettingsService);
+      if (useGlobalPrintSettings) {
+        gPrintSettings = printSettingsService.globalPrintSettings;
+      } else {
+        gPrintSettings = printSettingsService.CreatePrintSettings();
+      }
+    }
+  } catch (e) {
+    dump("GetPrintSettings "+e);
+  }
+
+  return gPrintSettings;
+}
+
 function AbPrintCardInternal(doPrintPreview, msgType)
 {
   var selectedItems = GetSelectedAbCards();
@@ -455,7 +479,7 @@ function AbPrintCardInternal(doPrintPreview, msgType)
 
   if (!gPrintSettings)
   {
-    gPrintSettings = PrintUtils.getPrintSettings();
+    gPrintSettings = GetPrintSettings();
   }
 
   printEngineWindow = window.openDialog("chrome://messenger/content/msgPrintEngine.xul",
@@ -503,7 +527,7 @@ function AbPrintAddressBookInternal(doPrintPreview, msgType)
   var printUrl = "addbook://" + abURIArr[0] + "/" + abURIArr[1] + "?action=print"
 
   if (!gPrintSettings) {
-    gPrintSettings = PrintUtils.getPrintSettings();
+    gPrintSettings = GetPrintSettings();
   }
 
 	printEngineWindow = window.openDialog("chrome://messenger/content/msgPrintEngine.xul",

@@ -37,7 +37,7 @@
 #include "nsIDOMHTMLMapElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsContentList.h"
@@ -51,12 +51,13 @@ class nsHTMLMapElement : public nsGenericHTMLElement,
 {
 public:
   nsHTMLMapElement(nsINodeInfo *aNodeInfo);
+  virtual ~nsHTMLMapElement();
 
   // nsISupports
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -72,8 +73,6 @@ public:
                               PRBool aCompileEventHandlers);
   virtual void UnbindFromTree(PRBool aDeep = PR_TRUE,
                               PRBool aNullParent = PR_TRUE);
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
-
 protected:
   nsRefPtr<nsContentList> mAreas;
 };
@@ -86,6 +85,14 @@ nsHTMLMapElement::nsHTMLMapElement(nsINodeInfo *aNodeInfo)
   : nsGenericHTMLElement(aNodeInfo)
 {
 }
+
+nsHTMLMapElement::~nsHTMLMapElement()
+{
+  if (mAreas) {
+    mAreas->RootDestroyed();
+  }
+}
+
 
 NS_IMPL_ADDREF_INHERITED(nsHTMLMapElement, nsGenericElement) 
 NS_IMPL_RELEASE_INHERITED(nsHTMLMapElement, nsGenericElement) 
@@ -129,7 +136,7 @@ nsHTMLMapElement::UnbindFromTree(PRBool aDeep, PRBool aNullParent)
   nsGenericHTMLElement::UnbindFromTree(aDeep, aNullParent);
 }
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLMapElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLMapElement)
 
 
 NS_IMETHODIMP
@@ -139,9 +146,10 @@ nsHTMLMapElement::GetAreas(nsIDOMHTMLCollection** aAreas)
 
   if (!mAreas) {
     // Not using NS_GetContentList because this should not be cached
-    mAreas = new nsContentList(this,
-                               nsGkAtoms::area,
+    mAreas = new nsContentList(GetDocument(),
+                               nsHTMLAtoms::area,
                                mNodeInfo->NamespaceID(),
+                               this,
                                PR_FALSE);
 
     if (!mAreas) {

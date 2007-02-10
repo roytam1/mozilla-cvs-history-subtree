@@ -80,10 +80,6 @@ function PROT_DataProvider() {
   // Watch for when anti-phishing is toggled on or off.
   this.prefs_.addObserver(kPhishWardenEnabledPref,
                           BindToObject(this.loadDataProviderPrefs_, this));
-
-  // Watch for when remote lookups are toggled on or off.
-  this.prefs_.addObserver(kPhishWardenRemoteLookups,
-                          BindToObject(this.loadDataProviderPrefs_, this));
 }
 
 /**
@@ -116,7 +112,7 @@ PROT_DataProvider.prototype.loadDataProviderPrefs_ = function() {
   this.reportErrorURL_ = this.getUrlPref_(basePref + "reportErrorURL");
   this.reportPhishURL_ = this.getUrlPref_(basePref + "reportPhishURL");
 
-  // Propagate the changes to the list-manager.
+  // Propogate the changes to the list-manager.
   this.updateListManager_();
 }
 
@@ -133,15 +129,11 @@ PROT_DataProvider.prototype.updateListManager_ = function() {
   listManager.setUpdateUrl(this.getUpdateURL());
 
   // setKeyUrl has the side effect of fetching a key from the server.
-  // This shouldn't happen if anti-phishing is disabled or we're in local
-  // list mode, so we need to check for that.
+  // This shouldn't happen if anti-phishing is disabled, so we need to
+  // check for that.
   var isEnabled = this.prefs_.getPref(kPhishWardenEnabledPref, false);
-  var remoteLookups = this.prefs_.getPref(kPhishWardenRemoteLookups, false);
-  if (isEnabled && remoteLookups) {
+  if (isEnabled) {
     listManager.setKeyUrl(this.getKeyURL());
-  } else {
-    // Clear the key to stop updates.
-    listManager.setKeyUrl("");
   }
 }
 
@@ -158,9 +150,9 @@ PROT_DataProvider.prototype.getUrlPref_ = function(prefName) {
 
   // Parameter substitution
   url = url.replace(MOZ_PARAM_LOCALE, this.getLocale_());
-  url = url.replace(MOZ_PARAM_CLIENT, mozClientStr);
+  url = url.replace(MOZ_PARAM_CLIENT, mozClientStr + appInfo.version);
   url = url.replace(MOZ_PARAM_BUILDID, appInfo.appBuildID);
-  url = url.replace(MOZ_PARAM_VERSION, appInfo.version);
+  url = url.replace(MOZ_PARAM_VERSION, appInfo.platformVersion);
   return url;
 }
 

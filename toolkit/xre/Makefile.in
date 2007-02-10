@@ -45,6 +45,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE = xulapp
 LIBRARY_NAME = xulapp_s
+EXPORT_LIBRARY = 1
 LIBXUL_LIBRARY = 1
 
 REQUIRES = \
@@ -56,7 +57,6 @@ REQUIRES = \
 	content \
 	docshell \
 	dom \
-	layout \
 	embed_base \
 	embedcomponents \
 	extensions \
@@ -66,9 +66,9 @@ REQUIRES = \
 	necko \
 	pref \
 	profile \
+	shellservice \
 	string \
 	uriloader \
-        layout \
 	widget \
 	windowwatcher \
 	xpcom \
@@ -85,10 +85,6 @@ ifdef NS_TRACE_MALLOC
 REQUIRES += tracemalloc
 endif
 
-ifdef MOZ_AIRBAG
-REQUIRES += airbag
-endif
-
 FORCE_STATIC_LIB = 1
 
 XPIDLSRCS = \
@@ -97,14 +93,7 @@ XPIDLSRCS = \
 	nsIXULRuntime.idl \
 	$(NULL)
 
-ifeq ($(OS_ARCH),WINNT)
-XPIDLSRCS += nsIWinAppHelper.idl
-endif
-
-EXPORTS = \
-	xrecore.h \
-	nsXULAppAPI.h \
-	$(NULL)
+EXPORTS = nsXULAppAPI.h
 
 SHAREDCPPSRCS = \
 	showOSAlert.cpp \
@@ -116,12 +105,9 @@ CPPSRCS = \
 	nsConsoleWriter.cpp \
 	nsXREDirProvider.cpp \
 	nsNativeAppSupportBase.cpp \
-	nsAppData.cpp \
 	$(NULL)
 
-DEFINES += -DIMPL_XREAPI
-
-ifndef BUILD_STATIC_LIBS
+ifdef MOZ_ENABLE_LIBXUL
 CPPSRCS += nsEmbedFunctions.cpp
 endif
 
@@ -154,10 +140,7 @@ CMSRCS = MacLaunchHelper.m
 CPPSRCS += nsCommandLineServiceMac.cpp
 LOCAL_INCLUDES += -I$(topsrcdir)/xpfe/bootstrap/appleevents
 OS_CXXFLAGS += -fexceptions
-SHARED_LIBRARY_LIBS += $(DEPTH)/xpfe/bootstrap/appleevents/$(LIB_PREFIX)appleevents_s.$(LIB_SUFFIX)
-endif
-ifeq ($(MOZ_WIDGET_TOOLKIT),cocoa)
-CMMSRCS = MacApplicationDelegate.mm
+SHARED_LIBRARY_LIBS += $(DIST)/lib/$(LIB_PREFIX)appleevents_s.$(LIB_SUFFIX)
 endif
 
 ifneq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
@@ -173,13 +156,15 @@ endif
 SHAREDCPPSRCS	  += nsSigHandlers.cpp
 endif
 
-GARBAGE += $(SHAREDCPPSRCS) $(wildcard *.$(OBJ_SUFFIX))
+GARBAGE += $(SHAREDSRCS) $(wildcard *.$(OBJ_SUFFIX))
 ifeq ($(OS_ARCH),WINNT)
-GARBAGE	+= $(addprefix $(srcdir)/,$(SHAREDCPPSRCS))
+GARBAGE	+= $(addprefix $(srcdir)/,$(SHAREDSRCS))
 endif
 
 ifneq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
+ifndef MOZ_ENABLE_LIBXUL
 GARBAGE += $(STACKWALK_SRC_LCSRCS)
+endif
 endif
 
 SHARED_LIBRARY_LIBS += ../profile/src/$(LIB_PREFIX)profile_s.$(LIB_SUFFIX)
@@ -187,15 +172,6 @@ SHARED_LIBRARY_LIBS += ../profile/src/$(LIB_PREFIX)profile_s.$(LIB_SUFFIX)
 ifdef MOZ_ENABLE_XREMOTE
 SHARED_LIBRARY_LIBS += $(DEPTH)/widget/src/xremoteclient/$(LIB_PREFIX)xremote_client_s.$(LIB_SUFFIX)
 LOCAL_INCLUDES += -I$(topsrcdir)/widget/src/xremoteclient
-endif
-
-ifdef MOZ_AIRBAG
-SHARED_LIBRARY_LIBS += $(DEPTH)/toolkit/airbag/$(LIB_PREFIX)airbagexception_s.$(LIB_SUFFIX)
-ifeq ($(OS_ARCH),WINNT)
-SHARED_LIBRARY_LIBS += \
-	$(DEPTH)/toolkit/airbag/airbag/src/client/windows/handler/$(LIB_PREFIX)exception_handler.$(LIB_SUFFIX) \
-	$(DEPTH)/toolkit/airbag/airbag/src/common/windows/$(LIB_PREFIX)airbag_common_s.$(LIB_SUFFIX)
-endif
 endif
 
 include $(topsrcdir)/config/rules.mk
@@ -231,9 +207,16 @@ endif
 
 DEFINES += -DTOOLKIT_EM_VERSION=\"$(shell $(PERL) $(topsrcdir)/config/milestone.pl --topsrcdir=$(topsrcdir))\"
 
-ifdef WRAP_SYSTEM_INCLUDES
-DEFINES		+= -DWRAP_SYSTEM_INCLUDES
+export:: $(addprefix $(topsrcdir)/xpfe/bootstrap/, $(SHAREDCPPSRCS) $(SHAREDCMMSRCS)) $(STACKWALK_CPPSRCS)
+ifeq ($(OS_ARCH),WINNT)
+	$(INSTALL) $^ $(srcdir)
+else
+	$(INSTALL) $^ .
 endif
 
-export:: $(addprefix $(topsrcdir)/xpfe/bootstrap/, $(SHAREDCPPSRCS) $(SHAREDCMMSRCS)) $(STACKWALK_CPPSRCS)
-	$(INSTALL) $^ .
+ifdef USE_PREBINDING
+libs::
+	$(INSTALL) $(srcdir)/redo-prebinding.sh $(DIST)/bin
+install::
+	$(SYSINSTALL) $(IFLAGS1) $(DESTDIR)$(bindir)
+endif

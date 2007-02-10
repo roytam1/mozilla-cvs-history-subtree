@@ -76,11 +76,10 @@
 static char _progname[1024] = "huh?";
 static unsigned int _gdb_sleep_duration = 300;
 
-#if defined(LINUX) && defined(DEBUG) && \
-      (defined(__i386) || defined(__x86_64) || defined(PPC))
+#if defined(LINUX) && defined(DEBUG) && (defined(__i386) || defined(PPC))
 #define CRAWL_STACK_ON_SIGSEGV
 #endif
-
+ 
 #ifdef MOZ_WIDGET_PHOTON
 void abnormal_exit_handler(int signum)
 {
@@ -91,7 +90,6 @@ void abnormal_exit_handler(int signum)
   if (    (signum == SIGSEGV)
        || (signum == SIGILL)
        || (signum == SIGABRT)
-       || (signum == SIGFPE)
      )
   {
     printf("prog = %s\npid = %d\nsignal = %s\n", 
@@ -108,7 +106,7 @@ void abnormal_exit_handler(int signum)
 #endif
 
   _exit(1);
-}
+} 
 #elif defined(CRAWL_STACK_ON_SIGSEGV)
 
 #include <unistd.h>
@@ -118,11 +116,12 @@ void abnormal_exit_handler(int signum)
 void
 ah_crap_handler(int signum)
 {
+
   printf("\nProgram %s (pid = %d) received signal %d.\n",
          _progname,
          getpid(),
          signum);
-
+  
   printf("Stack:\n");
   DumpStackToFile(stdout);
 
@@ -155,10 +154,11 @@ void beos_signal_handler(int signum) {
 	// Exit the appshell so that the app can shutdown normally
 	appStartup->Quit(nsIAppStartup::eAttemptQuit);
 }
-#endif
+#endif 
 
 void InstallUnixSignalHandlers(const char *ProgramName)
 {
+
   PL_strncpy(_progname,ProgramName, (sizeof(_progname)-1) );
 
   const char *gdbSleep = PR_GetEnv("MOZ_GDB_SLEEP");
@@ -179,21 +179,19 @@ void InstallUnixSignalHandlers(const char *ProgramName)
   signal(SIGSEGV, abnormal_exit_handler);
   signal(SIGILL,  abnormal_exit_handler);
   signal(SIGABRT, abnormal_exit_handler);
-  signal(SIGFPE,  abnormal_exit_handler);
 
 #elif defined(CRAWL_STACK_ON_SIGSEGV)
   signal(SIGSEGV, ah_crap_handler);
   signal(SIGILL, ah_crap_handler);
   signal(SIGABRT, ah_crap_handler);
-  signal(SIGFPE, ah_crap_handler);
 #endif // CRAWL_STACK_ON_SIGSEGV
 
 #if defined(DEBUG) && defined(LINUX)
-  const char *memLimit = PR_GetEnv("MOZ_MEM_LIMIT");
-  if (memLimit && *memLimit)
+  char *text = PR_GetEnv("MOZ_MEM_LIMIT");
+  if (text) 
   {
-    long m = atoi(memLimit);
-    m *= (1024*1024);
+    long m = atoi(text);
+    m *= (1024*1024);    
     struct rlimit r;
     r.rlim_cur = m;
     r.rlim_max = m;
@@ -202,7 +200,8 @@ void InstallUnixSignalHandlers(const char *ProgramName)
 #endif
 
 #if defined(SOLARIS)
-#define NOFILES 512
+
+    #define NOFILES 512
 
     // Boost Solaris file descriptors
     {

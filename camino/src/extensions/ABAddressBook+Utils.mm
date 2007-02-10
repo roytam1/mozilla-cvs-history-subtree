@@ -78,6 +78,11 @@
 //
 - (NSString*)getRealNameForEmailAddress:(NSString*)emailAddress
 {
+  // These constants are taken from the 10.3 SDK. We declare them here because they are not
+	// supported on 10.2, and we still need to build on 10.2.
+	const int ABConstsShowAsMask    = 0x07;  // kABShowAsMask
+	const int ABConstsShowAsPerson  = 0x00;  // kABShowAsPerson
+	
   NSString* realName = nil;
 
   ABPerson* person = [self recordFromEmail:emailAddress];
@@ -85,11 +90,11 @@
 	  
     NSNumber* flags = [person valueForProperty:@"ABPersonFlags"];
 		
-		int displayMode = kABShowAsPerson; // Default incase we're on 10.2 and property not set
+		int displayMode = ABConstsShowAsPerson; // Default incase we're on 10.2 and property not set
 		if ( flags != nil ) 
-		  displayMode = [flags intValue] & kABShowAsMask;
+		  displayMode = [flags intValue] & ABConstsShowAsMask;
 
-		if (displayMode == kABShowAsPerson) {
+		if ( displayMode == ABConstsShowAsPerson) {
       NSString* firstName = [person valueForProperty:kABFirstNameProperty];
       NSString* lastName  = [person valueForProperty:kABLastNameProperty];
     

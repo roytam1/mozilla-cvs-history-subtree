@@ -46,12 +46,14 @@
 #include "nsFontMetricsQt.h"
 #include "nsRenderingContextQt.h"
 #include "nsDeviceContextSpecQt.h"
+#include "nsDeviceContextSpecFactoryQt.h"
 #include "nsScreenManagerQt.h"
 #include "nsScriptableRegion.h"
 #include "nsDeviceContextQt.h"
 #include "nsImageQt.h"
 #include "nsFontList.h"
 #include "nsPrintSession.h"
+#include "nsNativeThemeQt.h"
 #include "gfxImageFrame.h"
 
 #include "qtlog.h"
@@ -68,11 +70,13 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsImageQt)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsBlender)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsRegionQt)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDeviceContextSpecQt)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsDeviceContextSpecFactoryQt)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontEnumeratorQt)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontList)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsScreenManagerQt)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPrintSession, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(gfxImageFrame)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsNativeThemeQt)
 
 // our custom constructors
 static nsresult nsScriptableRegionConstructor(nsISupports *aOuter,REFNSIID aIID,void **aResult)
@@ -142,6 +146,10 @@ static const nsModuleComponentInfo components[] =
       NS_DEVICE_CONTEXT_SPEC_CID,
       "@mozilla.org/gfx/devicecontextspec;1",
       nsDeviceContextSpecQtConstructor },
+    { "Qt Device Context Spec Factory",
+      NS_DEVICE_CONTEXT_SPEC_FACTORY_CID,
+      "@mozilla.org/gfx/devicecontextspecfactory;1",
+      nsDeviceContextSpecFactoryQtConstructor },
     { "Qt Font Enumerator",
       NS_FONT_ENUMERATOR_CID,
       "@mozilla.org/gfx/fontenumerator;1",
@@ -159,6 +167,10 @@ static const nsModuleComponentInfo components[] =
       GFX_IMAGEFRAME_CID,
       "@mozilla.org/gfx/image/frame;2",
       gfxImageFrameConstructor, },
+    { "Native Theme Renderer",
+      NS_THEMERENDERER_CID,
+      "@mozilla.org/chrome/chrome-native-theme;1",
+      nsNativeThemeQtConstructor },
     { "Print Session",
       NS_PRINTSESSION_CID,
       "@mozilla.org/gfx/printsession;1",

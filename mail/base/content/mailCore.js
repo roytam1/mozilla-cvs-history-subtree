@@ -51,12 +51,8 @@ function CustomizeMailToolbar(id)
     
   var customizePopup = document.getElementById("CustomizeMailToolbar"); 
   customizePopup.setAttribute("disabled", "true");
-
-  var wintype = document.documentElement.getAttribute("windowtype");
-  wintype = wintype.replace(/:/g, "");
-
-  window.openDialog("chrome://global/content/customizeToolbar.xul",
-                    "CustomizeToolbar"+wintype,
+   
+  window.openDialog("chrome://global/content/customizeToolbar.xul", "CustomizeToolbar",
                     "chrome,all,dependent", document.getElementById(id));
 }
 
@@ -75,7 +71,7 @@ function MailToolboxCustomizeDone(aToolboxChanged)
 
   // make sure the mail views search box is initialized
   if (document.getElementById("mailviews-container"))
-    ViewPickerOnLoad();
+    viewPickerOnLoad();
     
   // make sure the folder location picker is initialized
   if (document.getElementById("folder-location-container"))
@@ -149,6 +145,12 @@ function toAddressBook()
 function toImport()
 {
   window.openDialog("chrome://messenger/content/importDialog.xul","importDialog","chrome, modal, titlebar", {importType: "addressbook"});
+}
+
+// this method is overridden by mail-offline.js if we build with the offline extensions
+function CheckOnline()
+{
+  return true; 
 }
 
 // aPaneID
@@ -248,25 +250,4 @@ function openRegionURL(aResourceName)
                       .getService(Components.interfaces.nsIExternalProtocolService);
     protocolSvc.loadUrl(uri);
   } catch (ex) {}
-}
-
-/**
- *  Fetches the url for the passed in pref name, formats it and then loads it in the default
- *  browser.
- *
- *  @param aPrefName - name of the pref that holds the url we want to format and open
- */
-function openFormattedRegionURL(aPrefName)
-{
-  var formatter = Components.classes["@mozilla.org/toolkit/URLFormatterService;1"]
-                             .getService(Components.interfaces.nsIURLFormatter);
-  var formattedUrl = formatter.formatURLPref(aPrefName);
-  
-  var uri = Components.classes["@mozilla.org/network/io-service;1"]
-            .getService(Components.interfaces.nsIIOService)
-            .newURI(formattedUrl, null, null);
-
-  var protocolSvc = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"]
-                    .getService(Components.interfaces.nsIExternalProtocolService);
-  protocolSvc.loadUrl(uri);  
 }

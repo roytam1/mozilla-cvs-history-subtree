@@ -52,8 +52,7 @@
 
 #include "nsDeviceContextSpecXlib.h"
 
-#include "nsIPrefBranch.h"
-#include "nsIPrefService.h"
+#include "nsIPref.h"
 #include "prenv.h" /* for PR_GetEnv */
 
 #include "nsPrintfCString.h"
@@ -186,8 +185,8 @@ private:
   void SetIntValue(  const char *tagname, PRInt32 value );
   void SetCharValue(  const char *tagname, const char *value );
 
-  nsCString    mPrinterName;
-  nsCOMPtr<nsIPrefBranch> mPrefs;
+  nsXPIDLCString    mPrinterName;
+  nsCOMPtr<nsIPref> mPrefs;
 };
 
 void nsPrinterFeatures::SetBoolValue( const char *tagname, PRBool value )
@@ -209,7 +208,7 @@ nsPrinterFeatures::nsPrinterFeatures( const char *printername )
 {
   DO_PR_DEBUG_LOG(("nsPrinterFeatures::nsPrinterFeatures('%s')\n", printername));
   mPrinterName.Assign(printername);
-  mPrefs = do_GetService(NS_PREFSERVICE_CONTRACTID);
+  mPrefs = do_GetService(NS_PREF_CONTRACTID);
  
   SetBoolValue("has_special_printerfeatures", PR_TRUE);
 }
@@ -426,9 +425,8 @@ NS_IMPL_ISUPPORTS1(nsDeviceContextSpecXlib,
  * 
  * ** Please update the other toolkits when changing this function.
  */
-NS_IMETHODIMP nsDeviceContextSpecXlib::Init(nsIWidget *aWidget,
-                                            nsIPrintSettings* aPS,
-                                            PRBool aIsPrintPreview)
+NS_IMETHODIMP nsDeviceContextSpecXlib::Init(nsIPrintSettings *aPS,
+        PRBool aIsPrintPreview)
 {
   DO_PR_DEBUG_LOG(("nsDeviceContextSpecXlib::Init(aPS=%p)\n", aPS));
   nsresult rv = NS_ERROR_FAILURE;
@@ -487,32 +485,32 @@ NS_IMETHODIMP nsDeviceContextSpecXlib::Init(nsIWidget *aWidget,
     aPS->GetMarginRight(&dright);
 
     if (printfile)
-      PL_strncpyz(mPath,      NS_ConvertUTF16toUTF8(printfile).get(), sizeof(mPath));
+      PL_strncpyz(mPath,      NS_ConvertUCS2toUTF8(printfile).get(), sizeof(mPath));
     if (command)
-      PL_strncpyz(mCommand,   NS_ConvertUTF16toUTF8(command).get(),   sizeof(mCommand));  
+      PL_strncpyz(mCommand,   NS_ConvertUCS2toUTF8(command).get(),   sizeof(mCommand));  
     if (printer) 
-      PL_strncpyz(mPrinter,   NS_ConvertUTF16toUTF8(printer).get(),   sizeof(mPrinter));        
+      PL_strncpyz(mPrinter,   NS_ConvertUCS2toUTF8(printer).get(),   sizeof(mPrinter));        
     if (papername) 
-      PL_strncpyz(mPaperName, NS_ConvertUTF16toUTF8(papername).get(), sizeof(mPaperName));  
+      PL_strncpyz(mPaperName, NS_ConvertUCS2toUTF8(papername).get(), sizeof(mPaperName));  
     if (plexname) 
-      PL_strncpyz(mPlexName,  NS_ConvertUTF16toUTF8(plexname).get(),  sizeof(mPlexName));  
+      PL_strncpyz(mPlexName,  NS_ConvertUCS2toUTF8(plexname).get(),  sizeof(mPlexName));  
     if (resolutionname) 
-      PL_strncpyz(mResolutionName, NS_ConvertUTF16toUTF8(resolutionname).get(), sizeof(mResolutionName));  
+      PL_strncpyz(mResolutionName, NS_ConvertUCS2toUTF8(resolutionname).get(), sizeof(mResolutionName));  
     if (colorspace) 
-      PL_strncpyz(mColorspace, NS_ConvertUTF16toUTF8(colorspace).get(), sizeof(mColorspace));  
+      PL_strncpyz(mColorspace, NS_ConvertUCS2toUTF8(colorspace).get(), sizeof(mColorspace));  
 
     DO_PR_DEBUG_LOG(("margins:   %5.2f,%5.2f,%5.2f,%5.2f\n", dtop, dleft, dbottom, dright));
     DO_PR_DEBUG_LOG(("printRange %d\n",   printRange));
     DO_PR_DEBUG_LOG(("fromPage   %d\n",   fromPage));
     DO_PR_DEBUG_LOG(("toPage     %d\n",   toPage));
     DO_PR_DEBUG_LOG(("tofile     %d\n",   tofile));
-    DO_PR_DEBUG_LOG(("printfile  '%s'\n", printfile? NS_ConvertUTF16toUTF8(printfile).get():"<NULL>"));
-    DO_PR_DEBUG_LOG(("command    '%s'\n", command? NS_ConvertUTF16toUTF8(command).get():"<NULL>"));
-    DO_PR_DEBUG_LOG(("printer    '%s'\n", printer? NS_ConvertUTF16toUTF8(printer).get():"<NULL>"));
-    DO_PR_DEBUG_LOG(("papername  '%s'\n", papername? NS_ConvertUTF16toUTF8(papername).get():"<NULL>"));
-    DO_PR_DEBUG_LOG(("plexname   '%s'\n", plexname? NS_ConvertUTF16toUTF8(plexname).get():"<NULL>"));
-    DO_PR_DEBUG_LOG(("resolution '%s'\n", resolutionname? NS_ConvertUTF16toUTF8(resolutionname).get():"<NULL>"));
-    DO_PR_DEBUG_LOG(("colorspace '%s'\n", colorspace? NS_ConvertUTF16toUTF8(colorspace).get():"<NULL>"));
+    DO_PR_DEBUG_LOG(("printfile  '%s'\n", printfile? NS_ConvertUCS2toUTF8(printfile).get():"<NULL>"));
+    DO_PR_DEBUG_LOG(("command    '%s'\n", command? NS_ConvertUCS2toUTF8(command).get():"<NULL>"));
+    DO_PR_DEBUG_LOG(("printer    '%s'\n", printer? NS_ConvertUCS2toUTF8(printer).get():"<NULL>"));
+    DO_PR_DEBUG_LOG(("papername  '%s'\n", papername? NS_ConvertUCS2toUTF8(papername).get():"<NULL>"));
+    DO_PR_DEBUG_LOG(("plexname   '%s'\n", plexname? NS_ConvertUCS2toUTF8(plexname).get():"<NULL>"));
+    DO_PR_DEBUG_LOG(("resolution '%s'\n", resolutionname? NS_ConvertUCS2toUTF8(resolutionname).get():"<NULL>"));
+    DO_PR_DEBUG_LOG(("colorspace '%s'\n", colorspace? NS_ConvertUCS2toUTF8(colorspace).get():"<NULL>"));
 
     mTop         = dtop;
     mBottom      = dbottom;
@@ -693,13 +691,16 @@ nsresult CopyPrinterCharPref(nsIPref *pref, const char *modulename, const char *
 {
   DO_PR_DEBUG_LOG(("CopyPrinterCharPref('%s', '%s', '%s')\n", modulename, printername, prefname));
 
+  NS_ENSURE_ARG_POINTER(return_buf);
+
+  nsXPIDLCString name;
   nsresult rv = NS_ERROR_FAILURE;
  
   if (printername && modulename) {
     /* Get prefs per printer name and module name */
-    nsPrintfCString name(512, "print.%s.printer_%s.%s", modulename, printername, prefname);
+    name = nsPrintfCString(512, "print.%s.printer_%s.%s", modulename, printername, prefname);
     DO_PR_DEBUG_LOG(("trying to get '%s'\n", name.get()));
-    rv = pref->GetCharPref(name.get(), getter_Copies(return_buf));
+    rv = pref->CopyCharPref(name, return_buf);
   }
   
   if (NS_FAILED(rv)) { 
@@ -707,29 +708,29 @@ nsresult CopyPrinterCharPref(nsIPref *pref, const char *modulename, const char *
       /* Get prefs per printer name */
       name = nsPrintfCString(512, "print.printer_%s.%s", printername, prefname);
       DO_PR_DEBUG_LOG(("trying to get '%s'\n", name.get()));
-      rv = pref->GetCharPref(name.get(), getter_Copies(return_buf));
+      rv = pref->CopyCharPref(name, return_buf);
     }
 
     if (NS_FAILED(rv)) {
       if (modulename) {
         /* Get prefs per module name */
-        nsPrintfCString name(512, "print.%s.%s", modulename, prefname);
+        name = nsPrintfCString(512, "print.%s.%s", modulename, prefname);
         DO_PR_DEBUG_LOG(("trying to get '%s'\n", name.get()));
-        rv = pref->GetCharPref(name.get(), getter_Copies(return_buf));
+        rv = pref->CopyCharPref(name, return_buf);
       }
       
       if (NS_FAILED(rv)) {
         /* Get prefs */
-        nsPrintfCString name(512, "print.%s", prefname);
+        name = nsPrintfCString(512, "print.%s", prefname);
         DO_PR_DEBUG_LOG(("trying to get '%s'\n", name.get()));
-        rv = pref->GetCharPref(name.get(), getter_Copies(return_buf));
+        rv = pref->CopyCharPref(name, return_buf);
       }
     }
   }
 
 #ifdef PR_LOG  
   if (NS_SUCCEEDED(rv)) {
-    DO_PR_DEBUG_LOG(("CopyPrinterCharPref returning '%s'.\n", return_buf.get()));
+    DO_PR_DEBUG_LOG(("CopyPrinterCharPref returning '%s'.\n", *return_buf));
   }
   else
   {
@@ -807,7 +808,7 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::GetDefaultPrinterName(PRUnichar **aDefaul
 
   GlobalPrinters::GetInstance()->GetDefaultPrinterName(aDefaultPrinterName);
 
-  DO_PR_DEBUG_LOG(("GetDefaultPrinterName(): default printer='%s'.\n", NS_ConvertUTF16toUTF8(*aDefaultPrinterName).get()));
+  DO_PR_DEBUG_LOG(("GetDefaultPrinterName(): default printer='%s'.\n", NS_ConvertUCS2toUTF8(*aDefaultPrinterName).get()));
   return NS_OK;
 }
 
@@ -823,14 +824,14 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
   NS_ENSURE_TRUE(*aPrinterName, NS_ERROR_FAILURE);
   NS_ENSURE_TRUE(aPrintSettings, NS_ERROR_FAILURE);
 
-  nsCOMPtr<nsIPrefBranch> pPrefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+  nsCOMPtr<nsIPref> pPrefs = do_GetService(NS_PREF_CONTRACTID, &rv);
   if (NS_FAILED(rv))
     return rv;
 
   nsXPIDLCString fullPrinterName, /* Full name of printer incl. driver-specific prefix */ 
                  printerName;     /* "Stripped" name of printer */
-  fullPrinterName.Assign(NS_ConvertUTF16toUTF8(aPrinterName));
-  printerName.Assign(NS_ConvertUTF16toUTF8(aPrinterName));
+  fullPrinterName.Assign(NS_ConvertUCS2toUTF8(aPrinterName));
+  printerName.Assign(NS_ConvertUCS2toUTF8(aPrinterName));
   DO_PR_DEBUG_LOG(("printerName='%s'\n", printerName.get()));
   
   PrintMethod type = pmInvalid;
@@ -857,7 +858,7 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
   
   /* Set filename */
   nsXPIDLCString filename;
-  if (NS_FAILED(CopyPrinterCharPref(pPrefs, nsnull, printerName, "filename", filename))) {
+  if (NS_FAILED(CopyPrinterCharPref(pPrefs, nsnull, printerName, "filename", getter_Copies(filename)))) {
     const char *path;
   
     if (!(path = PR_GetEnv("PWD")))
@@ -866,10 +867,10 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
     if (path)
       filename = nsPrintfCString(PATH_MAX, "%s/mozilla.ps", path);
     else
-      filename.AssignLiteral("mozilla.ps");
+      filename.Assign("mozilla.ps");  
   }  
   DO_PR_DEBUG_LOG(("Setting default filename to '%s'\n", filename.get()));
-  aPrintSettings->SetToFileName(NS_ConvertUTF8toUTF16(filename).get());
+  aPrintSettings->SetToFileName(NS_ConvertUTF8toUCS2(filename).get());
 
   aPrintSettings->SetIsInitializedFromPrinter(PR_TRUE);
 
@@ -877,7 +878,7 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
   if (type == pmXprint) {
     DO_PR_DEBUG_LOG(("InitPrintSettingsFromPrinter() for Xprint printer\n"));
 
-    /* Setup the capabilities list of Mozilla's Xprint print module */
+    /* Setup the capabilties list of Mozilla's Xprint print module */
 #ifdef SET_PRINTER_FEATURES_VIA_PREFS
     nsPrinterFeatures printerFeatures(fullPrinterName);
 
@@ -890,7 +891,7 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
     printerFeatures.SetSupportsSpoolerCommandChange(PR_FALSE); /* won't work by design and very good reasons! */
 #endif /* SET_PRINTER_FEATURES_VIA_PREFS */ 
     
-    /* Setup the capabilities list of this specific printer */
+    /* Setup the capabilties list of this specific printer */
 
     Display   *pdpy;
     XPContext  pcontext;
@@ -955,7 +956,7 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
       default_plex = &plexlist[0]; /* First entry is the default one */
     
       DO_PR_DEBUG_LOG(("setting default plex to '%s'\n", default_plex->plex));
-      aPrintSettings->SetPlexName(NS_ConvertUTF8toUTF16(default_plex->plex).get());
+      aPrintSettings->SetPlexName(NS_ConvertUTF8toUCS2(default_plex->plex).get());
 
 #ifdef SET_PRINTER_FEATURES_VIA_PREFS
       int i;
@@ -995,16 +996,17 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
     
     mlist = XpuGetMediumSourceSizeList(pdpy, pcontext, &mcount);
     if (mlist) {
-      nsCAutoString papername;
+      nsXPIDLCString papername;
 
       default_medium = &mlist[0]; /* First entry is the default one */
       double total_width  = default_medium->ma1 + default_medium->ma2,
              total_height = default_medium->ma3 + default_medium->ma4;
 
       /* Either "paper" or "tray/paper" */
+      papername.Truncate();
       if (default_medium->tray_name) {
         papername.Append(default_medium->tray_name);
-        papername.Append('/');
+        papername.Append("/");
       }
       papername.Append(default_medium->medium_name);
  
@@ -1013,7 +1015,7 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
       aPrintSettings->SetPaperSizeUnit(nsIPrintSettings::kPaperSizeMillimeters);
       aPrintSettings->SetPaperWidth(total_width);
       aPrintSettings->SetPaperHeight(total_height);
-      aPrintSettings->SetPaperName(NS_ConvertUTF8toUTF16(papername).get());     
+      aPrintSettings->SetPaperName(NS_ConvertUTF8toUCS2(papername).get());     
 
 #ifdef SET_PRINTER_FEATURES_VIA_PREFS
       int i;
@@ -1026,11 +1028,11 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
         papername.Truncate();
         if (curr->tray_name) {
           papername.Append(curr->tray_name);
-          papername.Append('/');
+          papername.Append("/");
         }
         papername.Append(curr->medium_name);
 
-        printerFeatures.SetPaperRecord(i, papername.get(), PRInt32(total_width), PRInt32(total_height), PR_FALSE);
+        printerFeatures.SetPaperRecord(i, papername, PRInt32(total_width), PRInt32(total_height), PR_FALSE);
       }
       printerFeatures.SetNumPaperSizeRecords(mcount);
 #endif /* SET_PRINTER_FEATURES_VIA_PREFS */
@@ -1056,7 +1058,7 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
                        default_resolution->name,
                        default_resolution->x_dpi,
                        default_resolution->y_dpi));
-      aPrintSettings->SetResolutionName(NS_ConvertUTF8toUTF16(default_resolution->name).get());
+      aPrintSettings->SetResolutionName(NS_ConvertUTF8toUCS2(default_resolution->name).get());
 
 #ifdef SET_PRINTER_FEATURES_VIA_PREFS
       int i;
@@ -1089,7 +1091,7 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
       default_colorspace = &cslist[0]; /* First entry is the default one */
     
       DO_PR_DEBUG_LOG(("setting default colorspace to '%s'\n", default_colorspace->name));
-      aPrintSettings->SetColorspace(NS_ConvertUTF8toUTF16(default_colorspace->name).get());
+      aPrintSettings->SetColorspace(NS_ConvertUTF8toUCS2(default_colorspace->name).get());
 
 #ifdef SET_PRINTER_FEATURES_VIA_PREFS
       int i;
@@ -1152,12 +1154,12 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
 #endif /* SET_PRINTER_FEATURES_VIA_PREFS */
 
     nsXPIDLCString orientation;
-    if (NS_SUCCEEDED(CopyPrinterCharPref(pPrefs, "postscript", printerName, "orientation", orientation))) {
-      if (orientation.LowerCaseEqualsLiteral("portrait")) {
+    if (NS_SUCCEEDED(CopyPrinterCharPref(pPrefs, "postscript", printerName, "orientation", getter_Copies(orientation)))) {
+      if (!PL_strcasecmp(orientation, "portrait")) {
         DO_PR_DEBUG_LOG(("setting default orientation to 'portrait'\n"));
         aPrintSettings->SetOrientation(nsIPrintSettings::kPortraitOrientation);
       }
-      else if (orientation.LowerCaseEqualsLiteral("landscape")) {
+      else if (!PL_strcasecmp(orientation, "landscape")) {
         DO_PR_DEBUG_LOG(("setting default orientation to 'landscape'\n"));
         aPrintSettings->SetOrientation(nsIPrintSettings::kLandscapeOrientation);  
       }
@@ -1209,16 +1211,18 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
     printerFeatures.SetCanChangePaperSize(PR_TRUE);
 #endif /* SET_PRINTER_FEATURES_VIA_PREFS */
     nsXPIDLCString papername;
-    if (NS_SUCCEEDED(CopyPrinterCharPref(pPrefs, "postscript", printerName, "paper_size", papername))) {
+    if (NS_SUCCEEDED(CopyPrinterCharPref(pPrefs, "postscript", printerName, "paper_size", getter_Copies(papername)))) {
       nsPaperSizePS paper;
 
       if (paper.Find(papername)) {
         DO_PR_DEBUG_LOG(("setting default paper size to '%s' (%g mm/%g mm)\n",
               paper.Name(), paper.Width_mm(), paper.Height_mm()));
-        aPrintSettings->SetPaperSizeUnit(nsIPrintSettings::kPaperSizeMillimeters);
+        aPrintSettings->SetPaperSizeUnit(paper.IsMetric() ?
+            (int)nsIPrintSettings::kPaperSizeMillimeters :
+            (int)nsIPrintSettings::kPaperSizeInches);
         aPrintSettings->SetPaperWidth(paper.Width_mm());
         aPrintSettings->SetPaperHeight(paper.Height_mm());
-        aPrintSettings->SetPaperName(NS_ConvertASCIItoUTF16(paper.Name()).get());
+        aPrintSettings->SetPaperName(NS_ConvertASCIItoUCS2(paper.Name()).get());
       }
       else {
         DO_PR_DEBUG_LOG(("Unknown paper size '%s' given.\n", papername.get()));
@@ -1257,10 +1261,10 @@ NS_IMETHODIMP nsPrinterEnumeratorXlib::InitPrintSettingsFromPrinter(const PRUnic
     if (hasSpoolerCmd) {
       nsXPIDLCString command;
       if (NS_SUCCEEDED(CopyPrinterCharPref(pPrefs, "postscript",
-            printerName, "print_command", command))) {
+            printerName, "print_command", getter_Copies(command)))) {
         DO_PR_DEBUG_LOG(("setting default print command to '%s'\n",
             command.get()));
-        aPrintSettings->SetPrintCommand(NS_ConvertUTF8toUTF16(command).get());
+        aPrintSettings->SetPrintCommand(NS_ConvertUTF8toUCS2(command).get());
       }
     }
     
@@ -1304,7 +1308,7 @@ nsresult GlobalPrinters::InitializeGlobalPrinters ()
     return NS_ERROR_OUT_OF_MEMORY;
 
   nsresult rv;
-  nsCOMPtr<nsIPrefBranch> pPrefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+  nsCOMPtr<nsIPref> pPrefs = do_GetService(NS_PREF_CONTRACTID, &rv);
   if (NS_FAILED(rv))
     return rv;
       
@@ -1318,7 +1322,7 @@ nsresult GlobalPrinters::InitializeGlobalPrinters ()
     for( i = 0 ; i < printerCount ; i++ )
     {
       /* Add name to our list of printers... */
-      mGlobalPrinterList->AppendString(nsString(NS_ConvertUTF8toUTF16(plist[i].name)));
+      mGlobalPrinterList->AppendString(nsString(NS_ConvertUTF8toUCS2(plist[i].name)));
 
       /* ... and store the description text for this printer */
       pPrefs->SetCharPref(nsPrintfCString(256, "print.printer_%s.printer_description", plist[i].name).get(), plist[i].desc);      

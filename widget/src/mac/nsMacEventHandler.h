@@ -157,7 +157,8 @@ protected:
 
 		virtual void		ConvertOSEventToMouseEvent(
 												EventRecord&	aOSEvent,
-												nsMouseEvent&	aMouseEvent);
+												nsMouseEvent&	aMouseEvent,
+												PRUint32		aMessage);
 		virtual nsresult	HandleStartComposition(void);
 		virtual nsresult	HandleEndComposition(void);
 		virtual nsresult  HandleTextEvent(PRUint32 textRangeCount, nsTextRangeArray textRangeArray);

@@ -41,7 +41,7 @@
 
 // Line breaker stuff
 #include "nsIServiceManager.h"
-#include "nsILineBreaker.h"
+#include "nsILineBreakerFactory.h"
 #include "nsLWBrkCIID.h"
 
 /*
@@ -56,8 +56,16 @@ nsWrapUtils::Rewrap(const nsAString& aInString,
 {
   PRInt32 i;
 
-  nsresult rv;
-  nsCOMPtr<nsILineBreaker> lineBreaker = do_GetService(NS_LBRK_CONTRACTID, &rv);
+  nsCOMPtr<nsILineBreaker> lineBreaker;
+
+  nsILineBreakerFactory *lf;
+  nsresult rv = CallGetService(NS_LWBRK_CONTRACTID, &lf);
+  if (NS_SUCCEEDED(rv))
+  {
+    nsAutoString lbarg;
+    lf->GetBreaker(lbarg, getter_AddRefs(lineBreaker));
+    NS_RELEASE(lf);
+  }
 
   aOutString.Truncate();
 
@@ -84,18 +92,19 @@ nsWrapUtils::Rewrap(const nsAString& aInString,
     if (i > 0) aFirstLineOffset = 0;
     // eol is the prospective end of line ...
     // look backwards from there for a place to break.
-    PRInt32 breakPt;
+    PRUint32 breakPt;
+    PRBool needMore;
     rv = NS_ERROR_BASE;
     if (lineBreaker)
     {
-      breakPt = lineBreaker->Prev(unicodeStr + i, length - i, eol - i);
-      if (breakPt == NS_LINEBREAKER_NEED_MORE_TEXT)
+      rv = lineBreaker->Prev(unicodeStr + i, length - i, eol - i,
+                             &breakPt, &needMore);
+      if (NS_FAILED(rv) || needMore)
       {
-        breakPt = lineBreaker->Next(unicodeStr + i, length - i, eol - i);
-        if (breakPt == NS_LINEBREAKER_NEED_MORE_TEXT) rv = NS_ERROR_BASE;
-        else rv = NS_OK;
+        rv = lineBreaker->Next(unicodeStr + i, length - i, eol - i,
+                               &breakPt, &needMore);
+        if (needMore) rv = NS_ERROR_BASE;
       }
-      else rv = NS_OK;
     }
     // If we get out here and rv is set, something went wrong with line breaker.
     // Just break the line, hard.

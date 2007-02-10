@@ -35,9 +35,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* atom list for CSS anonymous boxes */
-
 #ifndef nsCSSAnonBoxes_h___
 #define nsCSSAnonBoxes_h___
 

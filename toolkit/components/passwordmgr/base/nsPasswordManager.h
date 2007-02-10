@@ -47,7 +47,6 @@
 #include "nsIDOMFocusListener.h"
 #include "nsIStringBundle.h"
 #include "nsIPrefBranch.h"
-#include "nsIPromptFactory.h"
 
 /* 360565c4-2ef3-4f6a-bab9-94cca891b2a7 */
 #define NS_PASSWORDMANAGER_CID \
@@ -69,7 +68,6 @@ class nsPasswordManager : public nsIPasswordManager,
                           public nsIFormSubmitObserver,
                           public nsIWebProgressListener,
                           public nsIDOMFocusListener,
-                          public nsIPromptFactory,
                           public nsSupportsWeakReference
 {
 public:
@@ -116,7 +114,6 @@ public:
   NS_DECL_NSIPASSWORDMANAGERINTERNAL
   NS_DECL_NSIOBSERVER
   NS_DECL_NSIWEBPROGRESSLISTENER
-  NS_DECL_NSIPROMPTFACTORY
 
   // nsIFormSubmitObserver
   NS_IMETHOD Notify(nsIContent* aFormNode,

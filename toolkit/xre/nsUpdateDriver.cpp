@@ -67,7 +67,7 @@
 # include <unistd.h>
 # define INCL_DOSFILEMGR
 # include <os2.h>
-#elif defined(XP_UNIX) || defined(XP_BEOS)
+#elif defined(XP_UNIX)
 # include <unistd.h>
 #endif
 
@@ -126,7 +126,7 @@ GetCurrentWorkingDir(char *buf, size_t size)
   return NS_OK;
 }
 
-#if defined(XP_MACOSX)
+#if defined(MOZ_XULRUNNER) && defined(XP_MACOSX)
 
 // This is a copy of OS X's XRE_GetBinaryPath from nsAppRunner.cpp with the
 // gBinaryPath check removed so that the updater can reload the stub executable
@@ -166,7 +166,7 @@ GetXULRunnerStubPath(const char* argv0, nsILocalFile* *aResult)
   NS_ADDREF(*aResult = lf);
   return NS_OK;
 }
-#endif /* XP_MACOSX */
+#endif /* MOZ_XULRUNNER && XP_MACOSX */
 
 PR_STATIC_CALLBACK(int)
 ScanDirComparator(nsIFile *a, nsIFile *b, void *unused)
@@ -268,7 +268,7 @@ SetStatus(nsILocalFile *statusFile, const char *status)
 }
 
 static PRBool
-CopyUpdaterIntoUpdateDir(nsIFile *greDir, nsIFile *appDir, nsIFile *updateDir,
+CopyUpdaterIntoUpdateDir(nsIFile *appDir, nsIFile *updateDir,
                          nsCOMPtr<nsIFile> &updater)
 {
   // We have to move the updater binary and its resource file.
@@ -298,7 +298,7 @@ CopyUpdaterIntoUpdateDir(nsIFile *greDir, nsIFile *appDir, nsIFile *updateDir,
     file->Remove(PR_FALSE);
 
     // Now, copy into the target location.
-    rv = greDir->Clone(getter_AddRefs(file));
+    rv = appDir->Clone(getter_AddRefs(file));
     if (NS_FAILED(rv))
       return PR_FALSE;
     rv = file->AppendNative(leaf);
@@ -334,7 +334,7 @@ ApplyUpdate(nsIFile *greDir, nsIFile *updateDir, nsILocalFile *statusFile,
   //  - run updater w/ appDir as the current working dir
 
   nsCOMPtr<nsIFile> updater;
-  if (!CopyUpdaterIntoUpdateDir(greDir, appDir, updateDir, updater)) {
+  if (!CopyUpdaterIntoUpdateDir(greDir, updateDir, updater)) {
     LOG(("failed copying updater\n"));
     return;
   }
@@ -343,7 +343,7 @@ ApplyUpdate(nsIFile *greDir, nsIFile *updateDir, nsILocalFile *statusFile,
   // to restart the running application.
   nsCOMPtr<nsILocalFile> appFile;
 
-#if defined(XP_MACOSX)
+#if defined(MOZ_XULRUNNER) && defined(XP_MACOSX)
   // On OS X we need to pass the location of the xulrunner-stub executable
   // rather than xulrunner-bin. See bug 349737.
   GetXULRunnerStubPath(appArgv[0], getter_AddRefs(appFile));
@@ -435,7 +435,7 @@ ApplyUpdate(nsIFile *greDir, nsIFile *updateDir, nsILocalFile *statusFile,
 #elif defined(XP_WIN)
   _chdir(applyToDir.get());
 
-  if (!WinLaunchChild(updaterPath.get(), appArgc + 4, argv, 1))
+  if (!WinLaunchChild(updaterPath.get(), appArgc + 4, argv))
     return;
   _exit(0);
 #else
@@ -464,13 +464,12 @@ end:
 }
 
 nsresult
-ProcessUpdates(nsIFile *greDir, nsIFile *appDir, nsIFile *updRootDir,
-               int argc, char **argv)
+ProcessUpdates(nsIFile *greDir, nsIFile *appDir, int argc, char **argv)
 {
   nsresult rv;
 
   nsCOMPtr<nsIFile> updatesDir;
-  rv = updRootDir->Clone(getter_AddRefs(updatesDir));
+  rv = greDir->Clone(getter_AddRefs(updatesDir));
   if (NS_FAILED(rv))
     return rv;
   rv = updatesDir->AppendNative(NS_LITERAL_CSTRING("updates"));

@@ -51,5 +51,13 @@ XPIDLSRCS	= \
 		nsIAutoCompleteSession.idl \
 		$(NULL)
 
+ifdef MOZ_LDAP_XPCOM
+REQUIRES	+= mozldap necko
+XPIDLSRCS	+= \
+		nsILDAPAutoCompleteSession.idl \
+		nsILDAPAutoCompFormatter.idl \
+		$(NULL)
+endif
+
 include $(topsrcdir)/config/rules.mk
 

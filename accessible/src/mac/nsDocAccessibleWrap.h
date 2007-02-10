@@ -15,12 +15,12 @@
  * The Original Code is mozilla.org code.
  *
  * The Initial Developer of the Original Code is
- * Mozilla Foundation.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2003
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Original Author: Håkan Waara <hwaara@gmail.com>
+ *   Original Author: Aaron Leventhal (aaronl@netscape.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -36,22 +36,21 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+/* For documentation of the accessibility architecture, 
+ * see http://lxr.mozilla.org/seamonkey/source/accessible/accessible-docs.html
+ */
+
 #ifndef _nsDocAccessibleWrap_H_
 #define _nsDocAccessibleWrap_H_
 
 #include "nsDocAccessible.h"
 
-struct objc_class;
-
 class nsDocAccessibleWrap: public nsDocAccessible
 {
-  public:
+public:
     nsDocAccessibleWrap(nsIDOMNode *aNode, nsIWeakReference *aShell);
     virtual ~nsDocAccessibleWrap();
-    
-    NS_IMETHOD FireToolkitEvent(PRUint32 aEvent, nsIAccessible* aAccessible, 
-                                void* aData);
+    NS_IMETHOD FireToolkitEvent(PRUint32 aEvent, nsIAccessible* aAccessible, void* aData);
 };
 
 #endif
-

@@ -356,7 +356,7 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
   // that should have initialized gDBView, now re-root the thread pane
   RerootThreadPane();
 
-  UpdateLocationBar(gMsgFolderSelected);
+  UpdateLocationBar(newFolder);
 
   UpdateStatusMessageCounts(gMsgFolderSelected);
   
@@ -368,9 +368,8 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
   if (gSearchSession && !gVirtualFolderTerms) // another var might be better...
   {
     viewDebug("doing a xf folder search in rerootFolder\n");
-    ViewChangeByFolder(newFolder);
-    gPreQuickSearchView = null; // don't remember the cross folder search
-    ScrollToMessageAfterFolderLoad(newFolder);
+    gDBView.searchSession = gSearchSession;
+    gSearchSession.search(msgWindow);
   }
 }
 
@@ -379,7 +378,7 @@ function SwitchView(command)
   // when switching thread views, we might be coming out of quick search
   // or a message view.
   // first set view picker to all
-  ViewChangeByValue(kViewItemAll);
+  ViewMessagesBy("viewPickerAll");
 
   // clear the QS text, if we need to
   ClearQSIfNecessary();
@@ -824,13 +823,13 @@ function FolderPaneSelectionChange()
 
         folderSelection.getRangeAt(0, startIndex, endIndex);
         var folderResource = GetFolderResource(folderTree, startIndex.value);
+        UpdateLocationBar(folderResource);
         var uriToLoad = folderResource.Value;
         var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
         if (msgFolder == gMsgFolderSelected)
            return;
         gPrevSelectedFolder = gMsgFolderSelected;
         gMsgFolderSelected = msgFolder;
-        UpdateLocationBar(gMsgFolderSelected);
         var folderFlags = msgFolder.flags;
         // if this is same folder, and we're not showing a virtual folder
         // then do nothing.
@@ -1021,6 +1020,16 @@ function AddMailOfflineObserver()
 {
   var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService); 
   observerService.addObserver(mailOfflineObserver, "network:offline-status-changed", false);
+  
+  try {
+    // Stop automatic management of the offline status.
+    // XXX need to watch the link status changes and manage
+    // offline mode accordingly.
+    var ioService = Components.classes["@mozilla.org/network/io-service;1"].
+      getService(Components.interfaces.nsIIOService2);
+    ioService.manageOfflineStatus = false;
+  } catch (ex) {
+  }
 }
 
 function RemoveMailOfflineObserver()

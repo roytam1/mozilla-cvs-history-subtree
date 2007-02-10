@@ -149,7 +149,6 @@
 
 - (void)textDidChange:(NSNotification *)aNotification
 {
-  [self setStringValue:[[self stringValue] stringByRemovingCharactersInSet:[NSCharacterSet controlCharacterSet]]];
   [[self cell] searchSubmittedFromView:self];
   [super textDidChange: aNotification];
 }

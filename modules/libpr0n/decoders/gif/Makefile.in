@@ -51,8 +51,6 @@ LIBXUL_LIBRARY = 1
 REQUIRES	= xpcom \
 		  string \
 		  gfx \
-		  thebes \
-		  cairo \
 		  imglib2 \
 		  $(NULL)
 
@@ -60,4 +58,3 @@ CPPSRCS		= GIF2.cpp nsGIFDecoder2.cpp imgContainerGIF.cpp
 
 include $(topsrcdir)/config/rules.mk
 
-CXXFLAGS += $(MOZ_CAIRO_CFLAGS)

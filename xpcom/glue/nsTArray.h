@@ -42,7 +42,6 @@
 #include "prtypes.h"
 #include "nsQuickSort.h"
 #include "nsDebug.h"
-#include "nsTraceRefcnt.h"
 #include NEW_H
 
 //
@@ -78,21 +77,10 @@ class NS_COM_GLUE nsTArray_base {
       return mHdr->mCapacity;
     }
 
-#ifdef DEBUG
-    void* DebugGetHeader() {
-      return mHdr;
-    }
-#endif
-
   protected:
-#ifndef NS_BUILD_REFCNT_LOGGING
     nsTArray_base()
-      : mHdr(&sEmptyHdr) {
+      : mHdr(NS_CONST_CAST(Header *, &sEmptyHdr)) {
     }
-#else
-    nsTArray_base();
-    ~nsTArray_base();  
-#endif // NS_BUILD_REFCNT_LOGGING
 
     // Resize the storage if necessary to achieve the requested capacity.
     // @param capacity     The requested number of array elements.
@@ -115,62 +103,21 @@ class NS_COM_GLUE nsTArray_base {
                    size_type elementSize);
 
     // This method increments the length member of the array's header.
-    // Note that mHdr may actually be sEmptyHdr in the case where a
-    // zero-length array is inserted into our array. But then n should
-    // always be 0.
     void IncrementLength(PRUint32 n) {
-      NS_ASSERTION(mHdr != &sEmptyHdr || n == 0, "bad data pointer");
+      NS_ASSERTION(mHdr != &sEmptyHdr, "bad data pointer");
       mHdr->mLength += n;
     }
 
-    // This method inserts blank slots into the array.
-    // @param index the place to insert the new elements. This must be no
-    //              greater than the current length of the array.
-    // @param count the number of slots to insert
-    // @param elementSize the size of an array element.
-    PRBool InsertSlotsAt(index_type index, size_type count,
-                         size_type elementSize);
-
   protected:
-
-    // NOTE: This method isn't heavily optimized if either array is an
-    // nsAutoTArray.
-    PRBool SwapArrayElements(nsTArray_base& other, size_type elementSize);
-
-    // Helper function for SwapArrayElements. Ensures that if the array
-    // is an nsAutoTArray that it doesn't use the built-in buffer.
-    PRBool EnsureNotUsingAutoArrayBuffer(size_type elemSize);
 
     // We prefix mData with a structure of this type.  This is done to minimize
     // the size of the nsTArray object when it is empty.
     struct Header {
       PRUint32 mLength;
-      PRUint32 mCapacity : 31;
-      PRUint32 mIsAutoArray : 1;
+      PRUint32 mCapacity;
     };
 
-    // Returns true if this nsTArray is an nsAutoTArray with a built-in buffer.
-    PRBool IsAutoArray() {
-      return mHdr->mIsAutoArray;
-    }
-
-    // Returns a Header for the built-in buffer of this nsAutoTArray.
-    Header* GetAutoArrayBuffer() {
-      NS_ASSERTION(IsAutoArray(), "Should be an auto array to call this");
-
-      return NS_REINTERPRET_CAST(Header*, &mHdr + 1);
-    }
-
-    // Returns true if this is an nsAutoTArray and it currently uses the
-    // built-in buffer to store its elements.
-    PRBool UsesAutoArrayBuffer() {
-      return mHdr->mIsAutoArray && mHdr == GetAutoArrayBuffer();
-    }
-
-    // This is not const since we may actually write to it. However we will
-    // always write to it the same data that it already contains. See
-    // IncrementLength
-    static Header sEmptyHdr;
+    static const Header sEmptyHdr;
 
     // The array's elements (prefixed with a Header).  This pointer is never
     // null.  If the array is empty, then this will point to sEmptyHdr.
@@ -326,24 +273,6 @@ class nsTArray : public nsTArray_base {
     const elem_type& ElementAt(index_type i) const {
       NS_ASSERTION(i < Length(), "invalid array index");
       return Elements()[i];
-    }
-
-    // This method provides direct access to the i'th element of the array in
-    // a bounds safe manner. If the requested index is out of bounds the
-    // provided default value is returned.
-    // @param i  The index of an element in the array.
-    // @param def The value to return if the index is out of bounds.
-    elem_type& SafeElementAt(index_type i, elem_type& def) {
-      return i < Length() ? Elements()[i] : def;
-    }
-
-    // This method provides direct access to the i'th element of the array in
-    // a bounds safe manner. If the requested index is out of bounds the
-    // provided default value is returned.
-    // @param i  The index of an element in the array.
-    // @param def The value to return if the index is out of bounds.
-    const elem_type& SafeElementAt(index_type i, const elem_type& def) const {
-      return i < Length() ? Elements()[i] : def;
     }
 
     // Shorthand for ElementAt(i)
@@ -519,34 +448,22 @@ class nsTArray : public nsTArray_base {
       return AppendElements(&item, 1);
     }
 
-    // Append new elements without copy-constructing. This is useful to avoid
-    // temporaries.
-    // @return A pointer to the newly appended elements, or null on OOM.
-    elem_type *AppendElements(size_type count) {
-      if (!EnsureCapacity(Length() + count, sizeof(elem_type)))
-         return nsnull;
-      elem_type *elems = Elements() + Length();
-      size_type i;
-      for (i = 0; i < count; ++i) {
-        elem_traits::Construct(elems + i);
-      }
-      IncrementLength(count);
-      return elems;
-    }
-
     // Append a new element without copy-constructing. This is useful to avoid
     // temporaries.
     // @return A pointer to the newly appended element, or null on OOM.
     elem_type *AppendElement() {
-      return AppendElements(1);
+      if (!EnsureCapacity(Length() + 1, sizeof(elem_type)))
+         return nsnull;
+      elem_type *elem = Elements() + Length();
+      elem_traits::Construct(elem);
+      IncrementLength(1);
+      return elem;
     }
 
     // This method removes a range of elements from this array.
     // @param start  The starting index of the elements to remove.
     // @param count  The number of elements to remove.
     void RemoveElementsAt(index_type start, size_type count) {
-      NS_ASSERTION(count == 0 || start < Length(), "Invalid start index");
-      NS_ASSERTION(start + count <= Length(), "Invalid length");
       DestructRange(start, count);
       ShiftData(start, count, 0, sizeof(elem_type));
     }
@@ -565,30 +482,18 @@ class nsTArray : public nsTArray_base {
     // and destroy" the first element that is equal to the given element.
     // @param item  The item to search for.
     // @param comp  The Comparator used to determine element equality.
-    // @return PR_TRUE if the element was found
     template<class Item, class Comparator>
-    PRBool RemoveElement(const Item& item, const Comparator& comp) {
+    void RemoveElement(const Item& item, const Comparator& comp) {
       index_type i = IndexOf(item, 0, comp);
-      if (i == NoIndex)
-        return PR_FALSE;
-
-      RemoveElementAt(i);
-      return PR_TRUE;
+      if (i != NoIndex)
+        RemoveElementAt(i);
     }
 
     // A variation on the RemoveElement method defined above that assumes
     // that 'operator==' is defined for elem_type.
     template<class Item>
-    PRBool RemoveElement(const Item& item) {
-      return RemoveElement(item, nsDefaultComparator<elem_type, Item>());
-    }
-
-    // This method causes the elements contained in this array and the given
-    // array to be swapped.
-    // NOTE: This method isn't heavily optimized if either array is an
-    // nsAutoTArray.
-    PRBool SwapElements(self_type& other) {
-      return SwapArrayElements(other, sizeof(elem_type));
+    void RemoveElement(const Item& item) {
+      RemoveElement(item, nsDefaultComparator<elem_type, Item>());
     }
 
     //
@@ -600,9 +505,8 @@ class nsTArray : public nsTArray_base {
     // AppendElement operations to minimize heap re-allocations.  This method
     // will not reduce the number of elements in this array.
     // @param capacity  The desired capacity of this array.
-    // @return True if the operation succeeded; false if we ran out of memory
-    PRBool SetCapacity(size_type capacity) {
-      return EnsureCapacity(capacity, sizeof(elem_type));
+    void SetCapacity(size_type capacity) {
+      EnsureCapacity(capacity, sizeof(elem_type));
     }
 
     // This method modifies the length of the array.  If the new length is
@@ -614,53 +518,20 @@ class nsTArray : public nsTArray_base {
     PRBool SetLength(size_type newLen) {
       size_type oldLen = Length();
       if (newLen > oldLen) {
-        return InsertElementsAt(oldLen, newLen - oldLen) != nsnull;
+        SetCapacity(newLen);
+        // Check for out of memory conditions
+        if (Capacity() < newLen)
+          return PR_FALSE;
+        // Initialize the extra array elements
+        elem_type *iter = Elements() + oldLen, *end = Elements() + newLen;
+        for (; iter != end; ++iter) {
+          elem_traits::Construct(iter);
+        }
+        IncrementLength(newLen - oldLen);
+      } else {
+        RemoveElementsAt(newLen, oldLen - newLen);
       }
-      
-      RemoveElementsAt(newLen, oldLen - newLen);
       return PR_TRUE;
-    }
-
-    // This method inserts elements into the array, constructing
-    // them using elem_type's default constructor.
-    // @param index the place to insert the new elements. This must be no
-    //              greater than the current length of the array.
-    // @param count the number of elements to insert
-    elem_type *InsertElementsAt(index_type index, size_type count) {
-      if (!nsTArray_base::InsertSlotsAt(index, count, sizeof(elem_type))) {
-        return nsnull;
-      }
-
-      // Initialize the extra array elements
-      elem_type *iter = Elements() + index, *end = iter + count;
-      for (; iter != end; ++iter) {
-        elem_traits::Construct(iter);
-      }
-
-      return Elements() + index;
-    }
-
-    // This method inserts elements into the array, constructing them
-    // elem_type's copy constructor (or whatever one-arg constructor
-    // happens to match the Item type).
-    // @param index the place to insert the new elements. This must be no
-    //              greater than the current length of the array.
-    // @param count the number of elements to insert.
-    // @param item the value to use when constructing the new elements.
-    template<class Item>
-    elem_type *InsertElementsAt(index_type index, size_type count,
-                                const Item& item) {
-      if (!nsTArray_base::InsertSlotsAt(index, count, sizeof(elem_type))) {
-        return nsnull;
-      }
-
-      // Initialize the extra array elements
-      elem_type *iter = Elements() + index, *end = iter + count;
-      for (; iter != end; ++iter) {
-        elem_traits::Construct(iter, item);
-      }
-
-      return Elements() + index;
     }
 
     // This method may be called to minimize the memory used by this array.
@@ -712,28 +583,6 @@ class nsTArray : public nsTArray_base {
         elem_traits::Construct(iter, *values);
       }
     }
-};
-
-template<class E, PRUint32 N>
-class nsAutoTArray : public nsTArray<E> {
-  public:
-    typedef nsTArray<E> base_type;
-    typedef typename base_type::Header Header;
-    typedef typename base_type::elem_type elem_type;
-
-    nsAutoTArray() {
-      base_type::mHdr = NS_REINTERPRET_CAST(Header*, &mAutoBuf);
-      base_type::mHdr->mLength = 0;
-      base_type::mHdr->mCapacity = N;
-      base_type::mHdr->mIsAutoArray = 1;
-
-      NS_ASSERTION(base_type::GetAutoArrayBuffer() ==
-                   NS_REINTERPRET_CAST(Header*, &mAutoBuf),
-                   "GetAutoArrayBuffer needs to be fixed");
-    }
-
-  protected:
-    char mAutoBuf[sizeof(Header) + N * sizeof(elem_type)];
 };
 
 #endif  // nsTArray_h__

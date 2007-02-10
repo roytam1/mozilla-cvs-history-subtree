@@ -48,7 +48,7 @@
 #include "nsITimer.h"
 #include "nsIRDFNode.h"
 #include "nsIBookmarksService.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "nsIFile.h"
 #include "nsIObserver.h"
 #include "nsWeakReference.h"
@@ -62,12 +62,12 @@
 class nsIOutputStream;
 
 #ifdef DEBUG
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #include <Timer.h>
 #endif
 #endif
 
-class nsBookmarksService : public nsIBookmarksService,
+class nsBookmarksService : public nsIBookmarksService_MOZILLA_1_8_BRANCH,
                            public nsIRDFDataSource,
                            public nsIRDFRemoteDataSource,
                            public nsIStreamListener,
@@ -88,7 +88,7 @@ protected:
 
     PRUint32      htmlSize;
     PRInt32       mUpdateBatchNest;
-    nsString      mPersonalToolbarName;
+    nsXPIDLString mPersonalToolbarName;
     PRBool        mBookmarksAvailable;
     PRBool        mDirty;
     PRBool        mBrowserIcons;
@@ -201,6 +201,7 @@ public:
 
     // nsIBookmarksService
     NS_DECL_NSIBOOKMARKSSERVICE
+    NS_DECL_NSIBOOKMARKSSERVICE_MOZILLA_1_8_BRANCH
 
     // nsIRDFDataSource
     NS_IMETHOD GetURI(char* *uri);

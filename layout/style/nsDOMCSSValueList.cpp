@@ -35,8 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* DOM object representing lists of values in DOM computed style */
-
 #include "nsDOMCSSValueList.h"
 #include "nsCOMPtr.h"
 #include "nsDOMError.h"
@@ -125,7 +123,7 @@ nsDOMCSSValueList::GetCssText(nsAString& aCssText)
       }
 
       // If this isn't the first item in the list, then
-      // it's ok to append a separator.
+      // its ok to append a separator.
       if (!aCssText.IsEmpty()) {
         aCssText.Append(separator);
       }

@@ -19,6 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Josh Aas - josha@mac.com
  *   Nate Weaver (Wevah) - wevah@derailer.org
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -43,7 +44,6 @@
 //
 // Reads the URL from a .webloc/.ftploc file.
 // Returns the URL, or nil on failure.
-//
 +(NSURL*)URLFromInetloc:(NSString*)inFile
 {
   FSRef ref;
@@ -91,24 +91,12 @@
   if (inFile) {
     NSCharacterSet *newlines = [NSCharacterSet characterSetWithCharactersInString:@"\r\n"];
     NSScanner *scanner = [NSScanner scannerWithString:[NSString stringWithContentsOfFile:inFile]];
-    [scanner scanUpToString:@"[InternetShortcut]" intoString:nil];
+    NSString *urlString;
     
-    if ([scanner scanString:@"[InternetShortcut]" intoString:nil]) {
-      // Scan each non-empty line in this section. We don't need to explicitly scan the newlines or
-      // whitespace because NSScanner ignores these by default.
-      NSString *line;
-      
-      while ([scanner scanUpToCharactersFromSet:newlines intoString:&line]) {
-        if ([line hasPrefix:@"URL="]) {
-          ret = [NSURL URLWithString:[line substringFromIndex:4]];
-          break;
-        }
-        else if ([line hasPrefix:@"["]) {
-          // This is the start of a new section, so if we haven't found an URL yet, we should bail.
-          break;
-        }
-      }
-    }
+    if ([scanner scanString:@"[InternetShortcut]" intoString:nil] &&
+          [scanner scanString:@"URL=" intoString:nil] &&
+          [scanner scanUpToCharactersFromSet:newlines intoString:&urlString])
+      ret = [NSURL URLWithString:urlString];
   }
   
   return ret;

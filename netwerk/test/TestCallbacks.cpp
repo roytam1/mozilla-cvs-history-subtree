@@ -43,10 +43,12 @@
 #include "nspr.h"
 #include "nscore.h"
 #include "nsCOMPtr.h"
+#include "nsIEventQueueService.h"
 #include "nsIIOService.h"
 #include "nsIServiceManager.h"
 #include "nsIStreamListener.h"
 #include "nsIInputStream.h"
+#include "nsCRT.h"
 #include "nsIChannel.h"
 #include "nsIURL.h"
 #include "nsIInterfaceRequestor.h" 
@@ -54,13 +56,15 @@
 #include "nsIDNSService.h" 
 
 #include "nsISimpleEnumerator.h"
+#include "nsXPIDLString.h"
 #include "nsNetUtil.h"
-#include "nsStringAPI.h"
 
+static NS_DEFINE_CID(kEventQueueServiceCID,      NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
 
+static int gKeepRunning = 0;
+static nsIEventQueue* gEventQ = nsnull;
 static PRBool gError = PR_FALSE;
-static PRInt32 gKeepRunning = 0;
 
 #define NS_IEQUALS_IID \
     { 0x11c5c8ee, 0x1dd2, 0x11b2, \
@@ -68,11 +72,9 @@ static PRInt32 gKeepRunning = 0;
 
 class nsIEquals : public nsISupports {
 public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IEQUALS_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IEQUALS_IID)
     NS_IMETHOD Equals(void *aPtr, PRBool *_retval) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIEquals, NS_IEQUALS_IID)
 
 class ConsumerContext : public nsIEquals {
 public:
@@ -198,8 +200,7 @@ Consumer::~Consumer() {
     }
 
     fprintf(stderr, "Consumer::~Consumer -> out\n\n");
-    if (--gKeepRunning == 0)
-      QuitPumpingEvents();
+    gKeepRunning--;
 }
 
 nsresult
@@ -254,6 +255,14 @@ int main(int argc, char *argv[]) {
     rv = NS_InitXPCOM2(nsnull, nsnull, nsnull);
     if (NS_FAILED(rv)) return rv;
 
+    // Create the Event Queue for this thread...
+    nsCOMPtr<nsIEventQueueService> eventQService = 
+             do_GetService(kEventQueueServiceCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    rv = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &gEventQ);
+    if (NS_FAILED(rv)) return rv;
+
     if (cmdLineURL) {
         rv = StartLoad(argv[1]);
     } else {
@@ -262,7 +271,11 @@ int main(int argc, char *argv[]) {
     if (NS_FAILED(rv)) return rv;
 
     // Enter the message pump to allow the URL load to proceed.
-    PumpEvents();
+    while ( gKeepRunning ) {
+        PLEvent *gEvent;
+        gEventQ->WaitForEvent(&gEvent);
+        gEventQ->HandleEvent(gEvent);
+    }
 
     NS_ShutdownXPCOM(nsnull);
     if (gError) {

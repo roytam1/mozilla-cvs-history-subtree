@@ -93,20 +93,26 @@ ifndef MOZ_STATIC_MAIL_BUILD
 CPPSRCS	 += nsComm4xMailFactory.cpp 
 
 ifeq ($(USE_SHORT_LIBNAME),1)
-EXTRA_DSO_LIBS = msgbsutl
+EXTRA_DSO_LIBS += msgbsutl
 else
-EXTRA_DSO_LIBS = msgbaseutil
+EXTRA_DSO_LIBS += msgbaseutil
 endif
 
 EXTRA_DSO_LDOPTS = \
 	$(LIBS_DIR) \
 	$(EXTRA_DSO_LIBS) \
-	$(DEPTH)/modules/libreg/src/$(LIB_PREFIX)mozreg_s.$(LIB_SUFFIX) \
 	$(MOZ_COMPONENT_LIBS) \
 	$(MOZ_XPCOM_OBSOLETE_LIBS) \
 	$(NULL)
 
 else
+
+EXPORTS     = \
+            nsComm4xProfile.h               \
+	    nsComm4xMailStringBundle.h      \
+	    nsComm4xMailImport.h	    \
+	    nsComm4xMail.h		    \
+            $(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a static lib.
 FORCE_STATIC_LIB = 1
@@ -114,8 +120,4 @@ FORCE_STATIC_LIB = 1
 endif
 
 include $(topsrcdir)/config/rules.mk
-
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-EXTRA_DSO_LDOPTS += $(TK_LIBS)
-endif
 

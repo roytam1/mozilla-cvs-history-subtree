@@ -41,14 +41,11 @@
 #define _NS_NSSCERTIFICATE_H_
 
 #include "nsIX509Cert.h"
-#include "nsIX509Cert2.h"
 #include "nsIX509Cert3.h"
 #include "nsIX509CertDB.h"
-#include "nsIX509CertList.h"
 #include "nsIASN1Object.h"
 #include "nsISMimeCert.h"
 #include "nsNSSShutDown.h"
-#include "nsISimpleEnumerator.h"
 
 #include "nsNSSCertHeader.h"
 
@@ -57,7 +54,6 @@ class nsIASN1Sequence;
 
 /* Certificate */
 class nsNSSCertificate : public nsIX509Cert,
-                         public nsIX509Cert2,
                          public nsIX509Cert3,
                          public nsISMimeCert,
                          public nsNSSShutDownObject
@@ -65,13 +61,16 @@ class nsNSSCertificate : public nsIX509Cert,
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIX509CERT
-  NS_DECL_NSIX509CERT2
   NS_DECL_NSIX509CERT3
   NS_DECL_NSISMIMECERT
 
   nsNSSCertificate(CERTCertificate *cert);
   /* from a request? */
   virtual ~nsNSSCertificate();
+  CERTCertificate *GetCert();
+  nsresult MarkForPermDeletion();
+  nsresult SetCertType(PRUint32 aCertType);
+  nsresult GetCertType(PRUint32 *aCertType);
   nsresult FormatUIStrings(const nsAutoString &nickname, nsAutoString &nickWithSerial, nsAutoString &details);
   static nsNSSCertificate* ConstructFromDER(char *certDER, int derLen);
 
@@ -89,33 +88,6 @@ private:
   virtual void virtualDestroyNSSReference();
   void destructorSafeDestroyNSSReference();
 };
-
-class nsNSSCertList: public nsIX509CertList
-{
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIX509CERTLIST
-
-  nsNSSCertList(CERTCertList *certList = nsnull, PRBool adopt = PR_FALSE);
-  virtual ~nsNSSCertList();
-
-  static CERTCertList *DupCertList(CERTCertList *aCertList);
-private:
-  CERTCertList *mCertList;
-};
-
-class nsNSSCertListEnumerator: public nsISimpleEnumerator
-{
-public:
-   NS_DECL_ISUPPORTS
-   NS_DECL_NSISIMPLEENUMERATOR
-
-   nsNSSCertListEnumerator(CERTCertList *certList);
-   virtual ~nsNSSCertListEnumerator();
-private:
-   CERTCertList *mCertList;
-};
-
 
 #define NS_NSS_LONG 4
 #define NS_NSS_GET_LONG(x) ((((unsigned long)((x)[0])) << 24) | \

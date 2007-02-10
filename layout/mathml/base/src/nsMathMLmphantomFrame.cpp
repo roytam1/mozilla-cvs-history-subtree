@@ -51,10 +51,23 @@
 // <mphantom> -- make content invisible but preserve its size
 //
 
-nsIFrame*
-NS_NewMathMLmphantomFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMathMLmphantomFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLmphantomFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLmphantomFrame* it = new (aPresShell) nsMathMLmphantomFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+nsMathMLmphantomFrame::nsMathMLmphantomFrame()
+{
 }
 
 nsMathMLmphantomFrame::~nsMathMLmphantomFrame()
@@ -69,5 +82,16 @@ nsMathMLmphantomFrame::InheritAutomaticData(nsIFrame* aParent)
 
   mPresentationData.flags |= NS_MATHML_STRETCH_ALL_CHILDREN_VERTICALLY;
 
+  return NS_OK;
+}
+
+NS_METHOD
+nsMathMLmphantomFrame::Paint(nsPresContext*      aPresContext,
+                             nsIRenderingContext& aRenderingContext,
+                             const nsRect&        aDirtyRect,
+                             nsFramePaintLayer    aWhichLayer,
+                             PRUint32             aFlags)
+{
+  // do nothing, this is not a bug.
   return NS_OK;
 }

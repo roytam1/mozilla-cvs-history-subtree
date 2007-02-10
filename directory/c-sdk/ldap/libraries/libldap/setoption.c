@@ -1,29 +1,29 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  * http://www.mozilla.org/MPL/
- * 
+ *
  * Software distributed under the License is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
  * License.
- * 
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
+ *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998-1999
  * the Initial Developer. All Rights Reserved.
- * 
+ *
  * Contributor(s):
- * 
+ *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -32,7 +32,7 @@
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the MPL, the GPL or the LGPL.
- * 
+ *
  * ***** END LICENSE BLOCK ***** */
 /*
  * setoption.c - ldap_set_option implementation 
@@ -55,14 +55,8 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 	int		rc, i;
 	char		*matched, *errstr;
 
-	/*
-         * if ld is NULL, arrange to modify our default settings
-         */
-        if ( ld == NULL ) {
-		if ( !nsldapi_initialized ) {
-			nsldapi_initialize_defaults();
-		}
-		ld = &nsldapi_ld_defaults;
+	if ( !nsldapi_initialized ) {
+		nsldapi_initialize_defaults();
 	}
 
 	/*
@@ -102,6 +96,17 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
     }
 
 	/*
+	 * if ld is NULL, arrange to modify our default settings
+	 */
+	if ( ld == NULL ) {
+		ld = &nsldapi_ld_defaults;
+#ifdef LDAP_DEBUG
+		ldap_debug = 0;
+#endif
+
+	}
+
+	/*
 	 * process options that are associated with an LDAP session handle
 	 */
 	if ( !NSLDAPI_VALID_LDAP_POINTER( ld )) {
@@ -136,10 +141,6 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 
 	case LDAP_OPT_RECONNECT:
 		LDAP_SETCLR_BITOPT( ld, LDAP_BITOPT_RECONNECT, optdata );
-		break;
-
-	case LDAP_OPT_NOREBIND:
-		LDAP_SETCLR_BITOPT( ld, LDAP_BITOPT_NOREBIND, optdata );
 		break;
 
 #ifdef LDAP_ASYNC_IO
@@ -211,9 +212,7 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 	    ld->ld_extwritev_fn = NULL;
 	    if ( ber_sockbuf_set_option( ld->ld_sbp, LBER_SOCKBUF_OPT_EXT_IO_FNS,
 					 &(ld->ld_ext_io_fns) ) != 0 ) {
-	      LDAP_SET_LDERRNO( ld, LDAP_LOCAL_ERROR, NULL, NULL );
-	      rc = -1;
-	      break;
+	      return( LDAP_LOCAL_ERROR );
 	    }
 	  }
 	  else {
@@ -227,16 +226,6 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 	  }
 	  break;
 
-	 /* set Socket Arg in extended socket i/o functions*/
-	case LDAP_X_OPT_SOCKETARG:
-	  if ( ber_sockbuf_set_option( ld->ld_sbp,
-	    LBER_SOCKBUF_OPT_SOCK_ARG, (void *)optdata ) != 0 ) {
-		LDAP_SET_LDERRNO( ld, LDAP_LOCAL_ERROR, NULL, NULL );
-		rc = -1;
-	  }
-		
-	  break;
-	  
 	/* thread function pointers */
 	case LDAP_OPT_THREAD_FN_PTRS:
 		/*
@@ -336,68 +325,6 @@ ldap_set_option( LDAP *ld, int option, const void *optdata )
 	case LDAP_X_OPT_CONNECT_TIMEOUT:
 		ld->ld_connect_timeout = *((int *) optdata);
 		break;
-
-#ifdef LDAP_SASLIO_HOOKS
-	/* SASL options */
-	case LDAP_OPT_X_SASL_MECH:
-		NSLDAPI_FREE(ld->ld_def_sasl_mech);
-		ld->ld_def_sasl_mech = nsldapi_strdup((char *) optdata);
-		break;
-	case LDAP_OPT_X_SASL_REALM:
-		NSLDAPI_FREE(ld->ld_def_sasl_realm);
-		ld->ld_def_sasl_realm = nsldapi_strdup((char *) optdata);
-		break;
-	case LDAP_OPT_X_SASL_AUTHCID:
-		NSLDAPI_FREE(ld->ld_def_sasl_authcid);
-		ld->ld_def_sasl_authcid = nsldapi_strdup((char *) optdata);
-		break;
-	case LDAP_OPT_X_SASL_AUTHZID:
-		NSLDAPI_FREE(ld->ld_def_sasl_authzid);
-		ld->ld_def_sasl_authzid = nsldapi_strdup((char *) optdata);
-		break;
-	case LDAP_OPT_X_SASL_SSF_EXTERNAL:
-		{
-			int sc;
-			sasl_ssf_t extprops;
-			sasl_conn_t *ctx;
-			if( ld->ld_defconn == NULL ) {
-				return -1;
-			}
-			ctx = (sasl_conn_t *)(ld->ld_defconn->lconn_sasl_ctx);
-			if ( ctx == NULL ) {
-				return -1;
-			}
-			memset(&extprops, 0L, sizeof(extprops));
-			extprops = * ((sasl_ssf_t *) optdata);
-			sc = sasl_setprop( ctx, SASL_SSF_EXTERNAL,
-					(void *) &extprops );
-			if ( sc != SASL_OK ) {
-				return -1;
-			}
-		}
-		break;
-	case LDAP_OPT_X_SASL_SECPROPS:
-		{
-			int sc;
-			sc = nsldapi_sasl_secprops( (char *) optdata,
-					&ld->ld_sasl_secprops );
-			return sc == LDAP_SUCCESS ? 0 : -1;
-		}
-		break;
-	case LDAP_OPT_X_SASL_SSF_MIN:
-		ld->ld_sasl_secprops.min_ssf = *((sasl_ssf_t *) optdata);
-		break;
-	case LDAP_OPT_X_SASL_SSF_MAX:
-		ld->ld_sasl_secprops.max_ssf = *((sasl_ssf_t *) optdata);
-		break;
-	case LDAP_OPT_X_SASL_MAXBUFSIZE:
-		ld->ld_sasl_secprops.maxbufsize = *((sasl_ssf_t *) optdata);
-		break;
-	case LDAP_OPT_X_SASL_SSF:       /* read only */
-		LDAP_SET_LDERRNO( ld, LDAP_PARAM_ERROR, NULL, NULL );
-		rc = -1;
-		break;
-#endif
 
 	default:
 		LDAP_SET_LDERRNO( ld, LDAP_PARAM_ERROR, NULL, NULL );

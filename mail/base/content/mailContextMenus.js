@@ -149,8 +149,6 @@ function fillThreadPaneContextMenu()
 
   ShowMenuItem("threadPaneContext-sep-edit", (numSelected <= 1));
 
-  EnableMenuItem('downloadSelected', GetNumSelectedMessages() > 0);
-
   return(true);
 }
 
@@ -324,11 +322,8 @@ function fillFolderPaneContextMenu()
   ShowMenuItem("folderPaneContext-copy-location", !isServer && !isVirtualFolder);
   ShowMenuItem("folderPaneContext-emptyTrash", (numSelected <= 1) && (specialFolder == 'Trash'));
   EnableMenuItem("folderPaneContext-emptyTrash", true);
-  ShowMenuItem("folderPaneContext-emptyJunk", (numSelected <= 1) && (specialFolder == 'Junk'));
-  EnableMenuItem("folderPaneContext-emptyJunk", true);
 
-  var showSendUnsentMessages = (numSelected <= 1) 
-    && (specialFolder == 'Unsent Messages' || specialFolder == 'Unsent');
+  var showSendUnsentMessages = (numSelected <= 1) && (specialFolder == 'Unsent Messages');
   ShowMenuItem("folderPaneContext-sendUnsentMessages", showSendUnsentMessages);
   if (showSendUnsentMessages) 
     EnableMenuItem("folderPaneContext-sendUnsentMessages", IsSendUnsentMsgsEnabled(folderResource));
@@ -374,7 +369,7 @@ function SetupNewMenuItem(folderResource, numSelected, isServer, serverType,spec
   var showNew = ((numSelected <=1) && (serverType != 'nntp') && canCreateNew) || isInbox;
   ShowMenuItem("folderPaneContext-new", showNew);
 
-  EnableMenuItem("folderPaneContext-new", !isIMAPFolder || MailOfflineMgr.isOnline());
+  EnableMenuItem("folderPaneContext-new", !isIMAPFolder || !ioService.offline);
 
   if (showNew)
   {
@@ -512,10 +507,8 @@ function fillMessagePaneContextMenu()
   SetupAddSenderToABMenuItem("messagePaneContext-addSenderToAddressBook", numSelected, (numSelected == 0 || hideMailItems));
   SetupAddAllToABMenuItem("messagePaneContext-addAllToAddressBook", numSelected, (numSelected == 0 || hideMailItems));
 
-  ShowMenuItem("context-addemail", gContextMenu.onMailtoLink );
-  ShowMenuItem("context-composeemailto", gContextMenu.onMailtoLink );
-  
-  ShowMenuItem("reportPhishingURL", gContextMenu.onLink && !gContextMenu.onMailtoLink);
+  ShowMenuItem( "context-addemail", gContextMenu.onMailtoLink );
+  ShowMenuItem( "context-composeemailto", gContextMenu.onMailtoLink );
   
   // if we are on an image, go ahead and show this separator
   //if (gContextMenu.onLink && !gContextMenu.onMailtoLink)
@@ -529,7 +522,6 @@ function fillMessagePaneContextMenu()
   ShowMenuItem("messagePaneContext-sep-saveAs", shouldShowSeparator("messagePaneContext-sep-saveAs"));
   ShowMenuItem("messagePaneContext-sep-edit", shouldShowSeparator("messagePaneContext-sep-edit"));
   ShowMenuItem("messagePaneContext-sep-copy", shouldShowSeparator("messagePaneContext-sep-copy"));
-  ShowMenuItem("messagePaneContext-sep-reportPhishing", shouldShowSeparator("messagePaneContext-sep-reportPhishing"));
 }
 
 // Determines whether or not the separator with the specified ID should be 

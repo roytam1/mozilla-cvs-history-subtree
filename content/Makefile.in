@@ -43,7 +43,7 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= content
-DIRS		= base canvas html xml xul xbl xslt
+DIRS		= base canvas html xml xul xbl xsl
 
 ifdef MOZ_SVG
 DIRS		+= svg
@@ -54,10 +54,6 @@ DIRS            += xtf
 endif
 
 DIRS           += events
-
-ifdef ENABLE_TESTS
-TOOL_DIRS += test
-endif
 
 include $(topsrcdir)/config/rules.mk
 

@@ -1,13 +1,8 @@
-
-/*
- * internal interface that allows XBL code to provide additional style
- * rules matching an element
- */
-
 #ifndef _nsIStyleRuleSupplier_h
 #define _nsIStyleRuleSupplier_h
 
 #include "nsISupports.h"
+#include "nsISupportsArray.h"
 #include "nsIStyleRuleProcessor.h"
 
 // {2D77A45B-4F3A-4203-A7D2-F4B84D0C1EE4}
@@ -19,14 +14,12 @@ class nsStyleSet;
 
 class nsIStyleRuleSupplier : public nsISupports {
  public: 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISTYLERULESUPPLIER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISTYLERULESUPPLIER_IID)
 
   NS_IMETHOD WalkRules(nsStyleSet* aStyleSet, 
                        nsIStyleRuleProcessor::EnumFunc aFunc,
                        RuleProcessorData* aData,
                        PRBool* aCutOffInheritance)=0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIStyleRuleSupplier, NS_ISTYLERULESUPPLIER_IID)
 
 #endif /* _nsIStyleRuleSupplier_h */

@@ -20,8 +20,6 @@
  *
  * Contributor(s):
  *   Joe Hewitt <hewitt@netscape.com> (original author)
- *   Jason Barnabe <jason_barnabe@fastmail.fm>
- *   Shawn Wilsher <me@shawnwilsher.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -50,11 +48,10 @@ var inspector;
 
 const kSearchRegURL        = "resource:///res/inspector/search-registry.rdf";
 
+const kWindowDataSourceCID = "@mozilla.org/rdf/datasource;1?name=window-mediator";
 const kClipboardHelperCID  = "@mozilla.org/widget/clipboardhelper;1";
 const kPromptServiceCID    = "@mozilla.org/embedcomp/prompt-service;1";
 const nsIWebNavigation     = Components.interfaces.nsIWebNavigation;
-const nsIDocShellTreeItem  = Components.interfaces.nsIDocShellTreeItem;
-const nsIDocShell          = Components.interfaces.nsIDocShell;
 
 //////////////////////////////////////////////////
 
@@ -78,12 +75,6 @@ function InspectorApp_initialize()
     }
   }
   inspector.initialize(initNode, initURI);
-
-  // Disables the Mac Specific VK_BACK for delete key for non-mac systems
-  if (!/Mac/.test(navigator.platform)) {
-    document.getElementById("keyEditDeleteMac")
-            .setAttribute("disabled", "true");
-  }
 }
 
 function InspectorApp_destroy()
@@ -131,13 +122,6 @@ InspectorApp.prototype =
     this.mPanelSet.addObserver("panelsetready", this, false);
     this.mPanelSet.initialize();
 
-    // check if accessibility service is available
-    var cmd = document.getElementById("cmd:toggleAccessibleNodes");
-    if (cmd) {
-      if (!("@mozilla.org/accessibilityService;1" in Components.classes))
-        cmd.setAttribute("disabled", "true");
-    }
-
     if (aURI) {
       this.gotoURL(aURI);
     }
@@ -179,16 +163,7 @@ InspectorApp.prototype =
         if (aEvent.target == this.mDocPanel.viewer &&
             aEvent.subject && "location" in aEvent.subject) {
           this.locationText = aEvent.subject.location; // display document url
-
-          var docTitle = aEvent.subject.title || aEvent.subject.location; 
-          if (/Mac/.test(navigator.platform)) {
-            document.title = docTitle;
-          } else {
-            document.title = docTitle + " - " + 
-              document.documentElement.getAttribute("title");
-          }
         }
-        break;
     }
   },
   
@@ -376,106 +351,25 @@ InspectorApp.prototype =
     }
   },
 
- /** 
-  * Creates the submenu for Inspect Content/Chrome Document
-  */
-  showInspectDocumentList: function showInspectDocumentList(aEvent, aChrome)
+  goToWindow: function(aMenuitem)
   {
-    const XULNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-    var menu = aEvent.target;
-    var ww = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                       .getService(Components.interfaces.nsIWindowMediator);
-    var windows = ww.getXULWindowEnumerator(null);
-    var docs = [];
-
-    while (windows.hasMoreElements()) {
-      try {
-        // Get the window's main docshell
-        var windowDocShell = windows.getNext()
-                            .QueryInterface(Components.interfaces.nsIXULWindow)
-                            .docShell;
-        this.appendContainedDocuments(docs, windowDocShell,
-                                      aChrome ? nsIDocShellTreeItem.typeChrome
-                                              : nsIDocShellTreeItem.typeContent);
-      }
-      catch (ex) {
-        // We've failed with this window somehow, but we're catching the error
-        // so the others will still work
-        Components.utils.reportError(ex);
-      }
-    }
-
-    // Clear out any previous menu
-    this.emptyChildren(menu);
-
-    // Now add what we found to the menu
-    if (!docs.length) {
-      var noneMenuItem = document.createElementNS(XULNS, "menuitem");
-      noneMenuItem.setAttribute("label",
-                                this.mPanelSet.stringBundle
-                                    .getString("inspectWindow.noDocuments.message"));
-      noneMenuItem.setAttribute("disabled", true);
-      menu.appendChild(noneMenuItem);
-    } else {
-      for (var i = 0; i < docs.length; i++)
-        this.addInspectDocumentMenuItem(menu, docs[i], i + 1);
-    }
+    this.setTargetWindowById(aMenuitem.id);
   },
 
- /** 
-  * Appends to the array the documents contained in docShell (including the passed
-  * docShell itself).
-  *
-  * @param array the array to append to
-  * @param docShell the docshell to look for documents in
-  * @param type one of the types defined in nsIDocShellTreeItem
-  */
-  appendContainedDocuments: function appendContainedDocuments(array, docShell, type)
+  setTargetWindowById: function(aResId)
   {
-    // Load all the window's content docShells
-    var containedDocShells = docShell.getDocShellEnumerator(type, 
-                                      nsIDocShell.ENUMERATE_FORWARDS);
-    while (containedDocShells.hasMoreElements()) {
-      try {
-        // Get the corresponding document for this docshell
-        var childDoc = containedDocShells.getNext().QueryInterface(nsIDocShell)
-                                         .contentViewer.DOMDocument;
+    var windowManager = XPCU.getService(kWindowDataSourceCID, "nsIWindowDataSource");
+    var win = windowManager.getWindowForResource(aResId);
 
-        // Ignore the DOM Insector's browser docshell if it's not being used
-        if (docShell.contentViewer.DOMDocument.location.href != document.location.href ||
-            childDoc.location.href != "about:blank") {
-          array.push(childDoc);
-        }
-      }
-      catch (ex) {
-        // We've failed with this document somehow, but we're catching the error so
-        // the others will still work
-        dump(ex + "\n");
-      }
-    }
-  },
-
- /** 
-  * Creates a menu item for Inspect Document.
-  *
-  * @param doc document related to this menu item
-  * @param docNumber the position of the document
-  */
-  addInspectDocumentMenuItem: function addInspectDocumentMenuItem(parent, doc, docNumber)
-  {
-    const XULNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-    var menuItem = document.createElementNS(XULNS, "menuitem");
-    menuItem.doc = doc;
-    // Use the URL if there's no title
-    var title = doc.title || doc.location.href;
-    // The first ten items get numeric access keys
-    if (docNumber < 10) {
-      menuItem.setAttribute("label", docNumber + " " + title);
-      menuItem.setAttribute("accesskey", docNumber);
+    if (win) {
+      this.setTargetWindow(win);
+      this.setBrowser(false, true);
     } else {
-      menuItem.setAttribute("label", title);
+      var bundle = this.mPanelSet.stringBundle;
+      var msg = bundle.getString("inspectWindow.error.message");
+      var title = bundle.getString("inspectWindow.error.title");
+      this.mPromptService.alert(window, title, msg);
     }
-    parent.appendChild(menuItem);
   },
 
   setTargetWindow: function(aWindow)
@@ -656,11 +550,11 @@ InspectorApp.prototype =
 
   emptyChildren: function(aNode)
   {
-    while (aNode.hasChildNodes()) {
+    while (aNode.childNodes.length > 0) {
       aNode.removeChild(aNode.lastChild);
     }
   },
-
+  
   onSplitterOpen: function(aSplitter)
   {
     if (aSplitter.id == "splBrowser") {

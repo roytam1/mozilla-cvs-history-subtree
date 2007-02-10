@@ -40,48 +40,18 @@
 
 interface nsIMutableArray;
 
-%{C++
-#define kLDAPDirectoryRoot         "moz-abldapdirectory://"
-#define kLDAPDirectoryRootLen      22
-%}
-
 /**
  * XXX This should really inherit from nsIAbDirectory, and some day it will.
  * But for now, doing that complicates implementation.
  */
-[scriptable, uuid(78d1b2df-ab00-4ffc-abca-16b286a63df6)]
+[scriptable, uuid(27ef9414-6959-4085-b5e3-bc491c0e6554)]
 interface nsIAbLDAPDirectory : nsISupports
 {
-  /**
-   * If set, these arrays of nsILDAPControls are passed through to the
-   * nsILDAPOperation that searchExt is called on.
-   */
-  attribute nsIMutableArray searchServerControls;
-  attribute nsIMutableArray searchClientControls;
-
-  /**
-   * The Replication File Name to use.
-   */
-  attribute ACString replicationFileName;
-
-  /**
-   * The version of LDAP protocol in use.
-   */
-  attribute unsigned long protocolVersion;
-
-  /**
-   * The AuthDN to use to access the server.
-   */
-  attribute ACString authDn;
-
-  /**
-   * The Last Change Number used for replication.
-   */
-  attribute long lastChangeNumber;
-
-  /**
-   * The LDAP server's scoping of the lastChangeNumber.
-   */
-  attribute ACString dataVersion;
+    /**
+     * If set, these arrays of nsILDAPControls are passed through to the
+     * nsILDAPOperation that searchExt is called on.
+     */
+    attribute nsIMutableArray searchServerControls;
+    attribute nsIMutableArray searchClientControls;
 };
 

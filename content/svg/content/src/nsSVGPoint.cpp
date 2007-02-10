@@ -194,4 +194,3 @@ NS_NewSVGReadonlyPoint(nsIDOMSVGPoint** result, float x, float y)
   NS_ADDREF(*result);
   return NS_OK;
 }
-

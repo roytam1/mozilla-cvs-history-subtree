@@ -64,16 +64,10 @@ border: 1px solid blue;
   margin: 1px 3px !important;
 }
 
-.menulist-description {
-  font-style: italic;
-  color: GrayText;
-  -moz-margin-start: 1ex !important;
-}
-
 /* ..... dropmarker ..... */
 
 .menulist-dropmarker {
-  display: none;
+  -moz-appearance: menulist-button;
 }
 
 /* ..... disabled state ..... */

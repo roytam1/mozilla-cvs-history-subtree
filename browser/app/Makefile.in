@@ -22,7 +22,6 @@
 #  Brian Ryner <bryner@brianryner.com>
 #  Jonathan Wilson <jonwil@tpgi.com.au>
 #  Dan Mosedale <dmose@mozilla.org>
-#  Benjamin Smedberg <benjamin@smedbergs.us>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -45,6 +44,8 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+MOZILLA_INTERNAL_API = 1
+
 DIRS		= profile/extensions
 
 PREF_JS_EXPORTS = $(srcdir)/profile/firefox.js \
@@ -60,41 +61,14 @@ AB_CD = en-US
 
 DEFINES += -DAB_CD=$(AB_CD)
 
-APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
-DEFINES += -DAPP_VERSION="$(APP_VERSION)"
-APP_UA_NAME = $(shell echo $(MOZ_APP_DISPLAYNAME) | sed -e's/[^A-Za-z]//g')
-DEFINES += -DAPP_UA_NAME="$(APP_UA_NAME)"
-
-ifdef LIBXUL_SDK
-# Build application.ini for a XULRunner app
-
-DIST_FILES = application.ini
-
-# GRE_BUILD_ID is only available in nsBuildID.h in a form that we can't use
-# directly. So munge it. Beware makefile and shell escaping
-AWK_EXPR = '/\#define GRE_BUILD_ID/ { gsub(/"/, "", $$3); print $$3 }'
-AWK_CMD = awk $(AWK_EXPR) < $(LIBXUL_DIST)/include/nsBuildID.h
-
-GRE_BUILD_ID = $(shell $(AWK_CMD))
-
-DEFINES += -DGRE_BUILD_ID=$(GRE_BUILD_ID)
-
-include $(topsrcdir)/config/rules.mk
-
-else
-# Build a binary bootstrapping with XRE_main
-
-MOZILLA_INTERNAL_API = 1
-
 ifeq ($(USE_SHORT_LIBNAME), 1)
-PROGRAM = $(MOZ_APP_NAME)$(BIN_SUFFIX)
+PROGRAM = firefox$(BIN_SUFFIX)
 else
-PROGRAM = $(MOZ_APP_NAME)-bin$(BIN_SUFFIX)
+PROGRAM = firefox-bin$(BIN_SUFFIX)
 endif
 
 REQUIRES = \
 	xpcom \
-	xulapp \
 	$(NULL)
 
 CPPSRCS = nsBrowserApp.cpp
@@ -102,27 +76,17 @@ CPPSRCS = nsBrowserApp.cpp
 LOCAL_INCLUDES += -I$(topsrcdir)/toolkit/xre
 
 ifdef BUILD_STATIC_LIBS
-ifdef _MSC_VER
-STATIC_COMPONENTS_LINKER_PATH = -LIBPATH:$(DEPTH)/staticlib
-else
-STATIC_COMPONENTS_LINKER_PATH = -L$(DEPTH)/staticlib
-endif
-LIBS += $(DEPTH)/toolkit/xre/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX)
-else
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-LIBS += $(DIST)/bin/XUL
-else
-EXTRA_DSO_LIBS += xul
-endif
+STATIC_COMPONENTS_LINKER_PATH = -L$(DIST)/lib/components
 endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 TK_LIBS := -framework Cocoa $(TK_LIBS)
 endif
 
-LIBS += \
+LIBS = \
 	$(STATIC_COMPONENTS_LINKER_PATH) \
 	$(EXTRA_DSO_LIBS) \
+	$(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX) \
 	$(MOZ_JS_LIBS) \
 	$(XPCOM_LIBS) \
 	$(NSPR_LIBS) \
@@ -132,9 +96,6 @@ LIBS += \
 # Add explicit X11 dependency when building against X11 toolkits
 ifneq (,$(filter gtk gtk2 xlib,$(MOZ_WIDGET_TOOLKIT)))
 LIBS += $(XLDFLAGS) $(XLIBS)
-ifdef MOZ_ENABLE_CAIRO_GFX
-LIBS += $(ZLIB_LIBS)
-endif
 endif
 
 ifdef MOZ_JPROF
@@ -172,14 +133,7 @@ EXTRA_LIBS	+= $(STATIC_EXTRA_LIBS)
 endif
 
 ifeq ($(OS_ARCH),WINNT)
-OS_LIBS += $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 oleaut32 version winspool)
-ifdef MOZ_ENABLE_CAIRO_GFX
-OS_LIBS += $(call EXPAND_LIBNAME,usp10)
-ifdef MOZ_ENABLE_GLITZ
-OS_LIBS += $(call EXPAND_LIBNAME,opengl32)
-endif
-endif
-
+OS_LIBS += $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 oleaut32 version winspool gdi32)
 RCINCLUDE = splash.rc
 ifndef GNU_CC
 RCFLAGS += -DMOZ_PHOENIX -I$(srcdir)
@@ -220,9 +174,12 @@ DEFINES += -DFIREFOX_ICO=\"$(DIST)/branding/firefox.ico\" -DDOCUMENT_ICO=\"$(DIS
 
 ifdef BUILD_STATIC_LIBS
 include $(topsrcdir)/config/static-rules.mk
-
-DEFINES += -DIMPL_XREAPI
 endif
+
+APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
+DEFINES += -DAPP_VERSION="$(APP_VERSION)"
+APP_UA_NAME = $(shell echo $(MOZ_APP_DISPLAYNAME) | sed -e's/[^A-Za-z]//g')
+DEFINES += -DAPP_UA_NAME="$(APP_UA_NAME)"
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 ifdef BUILD_STATIC_LIBS
@@ -253,7 +210,7 @@ LDFLAGS += /HEAP:0x40000
 endif
 endif
 
-$(PROGRAM): $(DEPTH)/toolkit/xre/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX)
+$(PROGRAM): $(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX)
 
 ifeq ($(OS_ARCH),OS2)
 ifdef BUILD_STATIC_LIBS
@@ -271,19 +228,19 @@ endif
 
 ifneq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
 
-$(MOZ_APP_NAME):: mozilla.in Makefile.in Makefile $(DEPTH)/config/autoconf.mk
+firefox:: mozilla.in Makefile.in Makefile $(DEPTH)/config/autoconf.mk
 	cat $< | sed -e "s|%MOZAPPDIR%|$(mozappdir)|" \
                 -e "s|%MOZ_USER_DIR%|.mozilla/firefox|" \
 		-e "s|%MREDIR%|$(mredir)|" > $@
 	chmod +x $@
 
-libs:: $(MOZ_APP_NAME)
+libs:: firefox
 	$(INSTALL) $< $(DIST)/bin
 
-install:: $(MOZ_APP_NAME)
+install:: firefox
 	$(SYSINSTALL) $< $(DESTDIR)$(bindir)
 
-GARBAGE += $(MOZ_APP_NAME)
+GARBAGE += firefox
 GARBAGE += $(addprefix $(DIST)/bin/defaults/pref/, firefox.js)
 
 endif
@@ -309,7 +266,7 @@ libs::
 	$(INSTALL) $(DIST)/branding/default.xpm $(DIST)/bin/chrome/icons/default
 
 install::
-	$(SYSINSTALL) $(IFLAGS1) $(DIST)/branding/default.xpm $(DESTDIR)$(mozappdir)/chrome/icons/default
+	$(SYSINSTALL) $(IFLAGS1) $(DIST)/branding/default.xpm $(DESTDIR)$(mozappdir)/icons
 endif
 
 export::
@@ -373,6 +330,9 @@ libs repackage:: $(PROGRAM)
 	rm -f $(DIST)/$(APP_NAME).app/Contents/MacOS/$(PROGRAM) $(DIST)/$(APP_NAME).app/Contents/MacOS/mangle $(DIST)/$(APP_NAME).app/Contents/MacOS/shlibsign
 	rsync -aL $(PROGRAM) $(DIST)/$(APP_NAME).app/Contents/MacOS
 	mkdir -p $(DIST)/$(APP_NAME).app/Contents/Plug-Ins
+# Bug 297227: the next line only exists to repair broken depend builds, it can
+# go away once that bug has been closed for a while.
+	rm -rf $(DIST)/$(APP_NAME).app/Contents/Plug-Ins/PrintPDE.plugin
 	rsync -a --copy-unsafe-links $(DIST)/package/PrintPDE.plugin $(DIST)/$(APP_NAME).app/Contents/Plug-Ins
 	-cp -L $(DIST)/bin/mangle $(DIST)/bin/shlibsign $(DIST)/$(APP_NAME).app/Contents/MacOS
 	cp -RL $(DIST)/branding/firefox.icns $(DIST)/$(APP_NAME).app/Contents/Resources/firefox.icns
@@ -384,13 +344,11 @@ libs repackage:: $(PROGRAM)
 
 endif
 
-endif # LIBXUL_SDK
-
 libs::
 	$(INSTALL) $(topsrcdir)/LICENSE	$(DIST)/bin
 
 libs:: $(srcdir)/profile/prefs.js
 	$(INSTALL) $^ $(DIST)/bin/defaults/profile
-
+	
 install:: $(srcdir)/profile/prefs.js
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/defaults/profile

@@ -106,7 +106,6 @@ scrollbarbutton {
 }
 
 scrollbarbutton[disabled="true"],
-scrollbarbutton[active="true"],
 scrollbarbutton:hover:active {
   border-left-width: 2px;
   border-right-width: 2px;
@@ -121,7 +120,6 @@ scrollbarbutton:hover:active {
 
 scrollcorner { 
   -moz-binding: url("chrome://global/content/bindings/scrollbar.xml#scrollbar-base");
-  width: 15px;
   cursor: default;
   background-color: #B1BBC5;
 }
@@ -203,7 +201,6 @@ scrollbar[orient="vertical"] > scrollbarbutton[type="decrement"] {
   }
 
   html|div scrollbarbutton[disabled="true"],
-  html|div scrollbarbutton[active="true"],   
   html|div scrollbarbutton:hover:active {
     border-left-width: 2px;
     border-right-width: 2px;

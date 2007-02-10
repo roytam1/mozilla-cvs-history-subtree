@@ -54,7 +54,7 @@
 class nsIDOMFormListener : public nsIDOMEventListener {
 
 public:
-   NS_DECLARE_STATIC_IID_ACCESSOR(NS_IDOMFORMLISTENER_IID)
+   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOMFORMLISTENER_IID)
   /**
   * Processes a form submit event
   * @param aEvent @see nsIDOMEvent.h 
@@ -91,7 +91,5 @@ public:
   NS_IMETHOD Input(nsIDOMEvent* aEvent) = 0;
 
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDOMFormListener, NS_IDOMFORMLISTENER_IID)
 
 #endif // nsIDOMFormListener_h__

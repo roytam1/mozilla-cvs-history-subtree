@@ -51,7 +51,6 @@
 #include "nsWeakReference.h"
 #include "nsIGenericFactory.h"
 #include "nsVariant.h"
-#include "plarena.h"
 
 #include "nsIInterfaceInfo.h"
 #include "nsIInterfaceInfoManager.h"
@@ -75,8 +74,10 @@ public:
     nsGenericInterfaceInfoSet();
     virtual ~nsGenericInterfaceInfoSet();
 
-    // allocate from mArena and guarantee zero-fill
-    void* AllocateFromArena(PRUint32 size);
+    XPTArena* GetArena()
+    {
+        return mArena;
+    }
 
     const XPTTypeDescriptor* GetAdditionalTypeAt(PRUint16 aIndex)
     {
@@ -112,7 +113,7 @@ private:
 private:
     nsVoidArray mInterfaces;
     nsVoidArray mAdditionalTypes;
-    PLArenaPool mArena;
+    XPTArena* mArena;
 };
 
 /***************************************************************************/

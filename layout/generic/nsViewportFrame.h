@@ -34,18 +34,13 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * rendering object that is the root of the frame tree, which contains
- * the document's scrollbars and contains fixed-positioned elements
- */
-
 #ifndef nsViewportFrame_h___
 #define nsViewportFrame_h___
 
 #include "nsContainerFrame.h"
-#include "nsGkAtoms.h"
+#include "nsLayoutAtoms.h"
 #include "nsPresContext.h"
+#include "nsReflowPath.h"
 #include "nsIPresShell.h"
 #include "nsAbsoluteContainingBlock.h"
 
@@ -55,7 +50,7 @@ public:
 
   virtual ~nsFixedContainingBlock() { } // useful for debugging
 
-  virtual nsIAtom* GetChildListName() const { return nsGkAtoms::fixedList; }
+  virtual nsIAtom* GetChildListName() const { return nsLayoutAtoms::fixedList; }
 };
 
 /**
@@ -66,19 +61,19 @@ public:
   */
 class ViewportFrame : public nsContainerFrame {
 public:
-  typedef nsContainerFrame Super;
+  ViewportFrame() { }          // useful for debugging
 
-  ViewportFrame(nsStyleContext* aContext) : nsContainerFrame(aContext) {}
   virtual ~ViewportFrame() { } // useful for debugging
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
-  NS_IMETHOD Init(nsIContent*      aContent,
-                  nsIFrame*        aParent,
-                  nsIFrame*        asPrevInFlow);
-
-  NS_IMETHOD SetInitialChildList(nsIAtom*        aListName,
+  NS_IMETHOD SetInitialChildList(nsPresContext* aPresContext,
+                                 nsIAtom*        aListName,
                                  nsIFrame*       aChildList);
+
+  NS_IMETHOD GetFrameForPoint(const nsPoint&    aPoint, 
+                              nsFramePaintLayer aWhichLayer,
+                              nsIFrame**        aFrame);
 
   NS_IMETHOD AppendFrames(nsIAtom*        aListName,
                           nsIFrame*       aFrameList);
@@ -94,29 +89,21 @@ public:
 
   virtual nsIFrame* GetFirstChild(nsIAtom* aListName) const;
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
-
-  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
-  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&          aStatus);
 
+  virtual PRBool CanPaintBackground() { return PR_FALSE; }
+  
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::viewportFrame
+   * @see nsLayoutAtoms::viewportFrame
    */
   virtual nsIAtom* GetType() const;
   
   virtual PRBool IsContainingBlock() const;
-
-  virtual void InvalidateInternal(const nsRect& aDamageRect,
-                                  nscoord aX, nscoord aY, nsIFrame* aForChild,
-                                  PRBool aImmediate);
 
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;

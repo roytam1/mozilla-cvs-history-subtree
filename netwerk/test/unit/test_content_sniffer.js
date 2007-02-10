@@ -1,7 +1,5 @@
 // This file tests nsIContentSniffer, introduced in bug 324985
 
-do_import_script("netwerk/test/httpserver/httpd.js");
-
 const unknownType = "application/x-unknown-content-type";
 const sniffedType = "application/x-sniffed";
 
@@ -19,7 +17,7 @@ var sniffer = {
   QueryInterface: function sniffer_qi(iid) {
     if (iid.equals(Components.interfaces.nsISupports) ||
         iid.equals(Components.interfaces.nsIFactory) ||
-        iid.equals(Components.interfaces.nsIContentSniffer))
+        iid.equals(Components.interfaces.nsIContentSniffer_MOZILLA_1_8_BRANCH))
       return this;
     throw Components.results.NS_ERROR_NO_INTERFACE;
   },
@@ -81,18 +79,13 @@ function makeChan(url) {
 
 var urls = [
   // NOTE: First URL here runs without our content sniffer
-  "data:" + unknownType + ", Some text",
-  "data:" + unknownType + ", Text", // Make sure sniffing works even if we
-                                    // used the unknown content sniffer too
-  "data:text/plain, Some more text",
+  // NOTE: Only test HTTP on the 1.8 branch, unimplemented for the rest.
+  "http://localhost:4444",
   "http://localhost:4444"
 ];
 
-var httpserv = null;
-
 function run_test() {
-  httpserv = new nsHttpServer();
-  httpserv.start(4444);
+  start_server(4444);
 
   Components.manager.nsIComponentRegistrar.registerFactory(snifferCID,
     "Unit test content sniffer", snifferContract, sniffer);
@@ -106,7 +99,6 @@ function run_test_iteration(index) {
         sniffing_enabled = false;
         index = listener._iteration = 1;
     } else {
-        httpserv.stop();
         return; // we're done
     }
   }

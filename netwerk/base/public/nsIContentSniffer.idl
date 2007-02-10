@@ -42,8 +42,33 @@ interface nsIRequest;
  * Content sniffer interface. Components implementing this interface can
  * determine a MIME type from a chunk of bytes.
  */
-[scriptable, uuid(a5772d1b-fc63-495e-a169-96e8d3311af0)]
+[scriptable, uuid(a5710331-74ec-45fb-aa85-ed3bc7c36924)]
 interface nsIContentSniffer : nsISupports
+{
+  /**
+   * Given a chunk of data, determines a MIME type.
+   *
+   * @param aData Data to check
+   * @param aLength Length of the data
+   *
+   * @throw NS_ERROR_NOT_AVAILABLE if no MIME type could be determined.
+   */
+  ACString getMIMETypeFromContent([const,array,size_is(aLength)] in octet aData,
+                                  in unsigned long aLength);
+};
+
+/**
+ * Content sniffer interface. Components implementing this interface can
+ * determine a MIME type from a chunk of bytes.
+ *
+ * NOTE: This interface is equivalent to nsIContentSniffer, but its method has
+ * an additional paramter. It exists only on the 1.8 branch of Mozilla; use
+ * nsIContentSniffer on newer branches.
+ *
+ * @status TEMPORARY
+ */
+[scriptable, uuid(a5772d1b-fc63-495e-a169-96e8d3311af0)]
+interface nsIContentSniffer_MOZILLA_1_8_BRANCH : nsISupports
 {
   /**
    * Given a chunk of data, determines a MIME type. Information from the given

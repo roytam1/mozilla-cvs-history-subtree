@@ -64,8 +64,6 @@ CPPSRCS		= \
 		nsInterfaceRequestorAgg.cpp \
 		nsUUIDGenerator.cpp \
 		nsSystemInfo.cpp \
-		nsCycleCollector.cpp \
-		nsCycleCollectionParticipant.cpp \
 		$(NULL)
 
 ifdef GC_LEAK_DETECTOR
@@ -74,7 +72,7 @@ CPPSRCS += nsLeakDetector.cpp
 REQUIRES	+= boehm
 endif
 
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+ifeq ($(OS_ARCH),Darwin)
 CPPSRCS		+= nsMacUtilsImpl.cpp
 endif
 
@@ -117,8 +115,6 @@ SDK_HEADERS     = \
 		nsError.h \
 		nsISupportsBase.h \
 		nscore.h \
-		nsCycleCollector.h \
-		nsCycleCollectionParticipant.h
 
 XPIDLSRCS	= \
 		nsIConsoleListener.idl \
@@ -129,14 +125,13 @@ XPIDLSRCS	= \
 		nsIExceptionService.idl \
 		nsIVersionComparator.idl \
 		nsIUUIDGenerator.idl \
-		nsIMutable.idl \
 		$(NULL)
 
 ifdef GC_LEAK_DETECTOR
 XPIDLSRCS       += nsILeakDetector.idl
 endif
 
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+ifeq ($(OS_ARCH),Darwin)
 XPIDLSRCS	+= nsIMacUtils.idl
 endif
 

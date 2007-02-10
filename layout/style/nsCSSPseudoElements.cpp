@@ -35,9 +35,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* atom list for CSS pseudo-elements */
-
 #include "nsCSSPseudoElements.h"
 #include "nsAtomListUtils.h"
 #include "nsStaticAtom.h"

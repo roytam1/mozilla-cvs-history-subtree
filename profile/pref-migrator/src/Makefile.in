@@ -58,7 +58,6 @@ REQUIRES	= xpcom \
 		  intl \
 		  docshell \
 		  dom \
-		  layout \
 		  js \
 		  necko \
 		  widget \

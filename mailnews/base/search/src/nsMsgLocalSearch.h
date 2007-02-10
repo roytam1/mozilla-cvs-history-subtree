@@ -46,6 +46,7 @@
 #include "nsISimpleEnumerator.h"
 
 class nsIMsgDBHdr;
+class nsMsgMailboxParser;
 class nsIMsgSearchScopeTerm;
 class nsIMsgFolder;
 class nsMsgSearchBoolExpression;

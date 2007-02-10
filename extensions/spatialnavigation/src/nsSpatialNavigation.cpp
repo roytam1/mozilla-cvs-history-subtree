@@ -117,10 +117,10 @@ nsSpatialNavigation::KeyPress(nsIDOMEvent* aEvent)
   
   nsCOMPtr<nsIContent> targetContent = do_QueryInterface(domEventTarget);
 
-  if (targetContent->IsNodeOfType(nsINode::eXUL)) 
+  if (targetContent->IsContentOfType(nsIContent::eXUL)) 
     return NS_OK;
   
-  if (targetContent->IsNodeOfType(nsINode::eHTML_FORM_CONTROL)) 
+  if (targetContent->IsContentOfType(nsIContent::eHTML_FORM_CONTROL)) 
   {
       nsCOMPtr<nsIFormControl> formControl(do_QueryInterface(targetContent));
       formControlType = formControl->GetType();
@@ -136,7 +136,7 @@ nsSpatialNavigation::KeyPress(nsIDOMEvent* aEvent)
         }
       }
   }
-  else if (!mService->mIgnoreTextFields && targetContent->IsNodeOfType(nsINode::eHTML)) 
+  else if (!mService->mIgnoreTextFields && targetContent->IsContentOfType(nsIContent::eHTML)) 
   {
     // Test for isindex, a deprecated kind of text field. We're using a string 
     // compare because <isindex> is not considered a form control, so it does 
@@ -506,12 +506,7 @@ nsSpatialNavigation::getContentInDirection(int aDirection,
 
   
   nsCOMPtr<nsIBidirectionalEnumerator> frameTraversal;
-  nsresult result = createFrameTraversal(aPresContext,
-                                         ePreOrder,
-                                         PR_FALSE, // aVisual
-                                         PR_FALSE, // aLockInScrollView
-                                         PR_TRUE,  // aFollowOOFs
-                                         getter_AddRefs(frameTraversal));  
+  nsresult result = createFrameTraversal(FOCUS, aPresContext, getter_AddRefs(frameTraversal));  
   if (NS_FAILED(result))
     return result;
   
@@ -541,6 +536,8 @@ nsSpatialNavigation::getContentInDirection(int aDirection,
 nsresult
 nsSpatialNavigation::handleMove(int direction)
 {
+  PRUint32 type = FOCUS;
+
   nsCOMPtr<nsIContent> focusedContent;
   getFocusedContent(direction, getter_AddRefs(focusedContent));
 
@@ -582,7 +579,8 @@ nsSpatialNavigation::handleMove(int direction)
     
     nsIPresShell *presShell = doc->GetShellAt(0);
 
-    nsIFrame* cframe = presShell->GetPrimaryFrameFor(c);
+    nsIFrame* cframe;
+    presShell->GetPrimaryFrameFor(c, &cframe);
     
     PRBool b = IsPartiallyVisible(presShell, cframe); 
     
@@ -740,7 +738,8 @@ nsSpatialNavigation::setFocusedContent(nsIContent* c)
   nsPresContext* presContext = getPresContext(c);
   
   nsIPresShell *presShell = presContext->PresShell();
-  nsIFrame* frame = presShell->GetPrimaryFrameFor(c);
+  nsIFrame* frame;
+  presShell->GetPrimaryFrameFor(c, &frame);
   
   if (frame) {
     presContext->EventStateManager()->SetContentState(c, NS_EVENT_STATE_FOCUS);

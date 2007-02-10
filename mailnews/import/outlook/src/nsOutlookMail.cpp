@@ -59,7 +59,6 @@
 #include "nsOutlookMail.h"
 #include "nsUnicharUtils.h"
 #include "nsMsgUtils.h"
-#include "nsIOutputStream.h"
 
 static NS_DEFINE_CID(kImportMimeEncodeCID,	NS_IMPORTMIMEENCODE_CID);
 static NS_DEFINE_IID(kISupportsIID,			NS_ISUPPORTS_IID);
@@ -485,7 +484,7 @@ nsresult nsOutlookMail::ImportMailbox( PRUint32 *pDoneSoFar, PRBool *pAbort, PRI
         rv = impSvc->SystemStringToUnicode(tempCStr.get(), newheader);
         NS_ASSERTION(NS_SUCCEEDED(rv), "failed to convert headers to utf8");
         if (NS_SUCCEEDED(rv))
-          compose.SetHeaders(NS_ConvertUTF16toUTF8(newheader).get());
+          compose.SetHeaders(NS_ConvertUCS2toUTF8(newheader).get());
       }
 
 			compose.SetAttachments( &m_attachments);
@@ -586,15 +585,12 @@ BOOL nsOutlookMail::WriteMessage( nsIFileSpec *pDest, CMapiMessage *pMsg, int& a
 		checkStart = TRUE;
 	}
 
-  nsCOMPtr<nsIOutputStream> outStream;
-  pDest->GetOutputStream (getter_AddRefs (outStream));
-  
 	pData = pMsg->GetHeaders( len);
 	if (pData && len) {
     if (checkStart)
-      bResult = (EscapeFromSpaceLine(outStream, (char *)pData, pData+len) == NS_OK);
+      bResult = (EscapeFromSpaceLine(pDest, (char *)pData, pData+len) == NS_OK);
     else
-      bResult = (EscapeFromSpaceLine(outStream, (char *)(pData+1), pData+len-1) == NS_OK);
+      bResult = (EscapeFromSpaceLine(pDest, (char *)(pData+1), pData+len-1) == NS_OK);
 	}
 
 	// Do we need to add any mime headers???
@@ -646,7 +642,7 @@ BOOL nsOutlookMail::WriteMessage( nsIFileSpec *pDest, CMapiMessage *pMsg, int& a
 	pData = pMsg->GetBody( len);
 	if (pData && len) {
 		if (bResult)
-			bResult = (EscapeFromSpaceLine(outStream, (char *)pData, pData+len) == NS_OK);
+			bResult = (EscapeFromSpaceLine(pDest, (char *)pData, pData+len) == NS_OK);
 		if ((len < 2) || (pData[len - 1] != 0x0A) || (pData[len - 2] != 0x0D))
 			bResult = WriteStr( pDest, "\x0D\x0A");
 	}
@@ -1246,22 +1242,22 @@ PRBool nsOutlookMail::BuildCard( const PRUnichar *pName, nsIAddrDatabase *pDb, n
 	// We now have the required fields
 	// write them out followed by any optional fields!
 	if (!displayName.IsEmpty()) {
-		pDb->AddDisplayName( newRow, NS_ConvertUTF16toUTF8(displayName).get());
+		pDb->AddDisplayName( newRow, NS_ConvertUCS2toUTF8(displayName).get());
 	}
 	if (!firstName.IsEmpty()) {
-		pDb->AddFirstName( newRow, NS_ConvertUTF16toUTF8(firstName).get());
+		pDb->AddFirstName( newRow, NS_ConvertUCS2toUTF8(firstName).get());
 	}
 	if (!lastName.IsEmpty()) {
-		pDb->AddLastName( newRow, NS_ConvertUTF16toUTF8(lastName).get());
+		pDb->AddLastName( newRow, NS_ConvertUCS2toUTF8(lastName).get());
 	}
 	if (!nickName.IsEmpty()) {
-		pDb->AddNickName( newRow, NS_ConvertUTF16toUTF8(nickName).get());
+		pDb->AddNickName( newRow, NS_ConvertUCS2toUTF8(nickName).get());
 	}
 	if (!eMail.IsEmpty()) {
-		pDb->AddPrimaryEmail( newRow, NS_ConvertUTF16toUTF8(eMail).get());
+		pDb->AddPrimaryEmail( newRow, NS_ConvertUCS2toUTF8(eMail).get());
 	}
 	if (!secondEMail.IsEmpty()) {
-		pDb->Add2ndEmail( newRow, NS_ConvertUTF16toUTF8(secondEMail).get());
+		pDb->Add2ndEmail( newRow, NS_ConvertUCS2toUTF8(secondEMail).get());
 	}
 
 	// Do all of the extra fields!

@@ -72,7 +72,7 @@ class nsTSubstring_CharT : public nsTAString_CharT
 
 #ifndef MOZ_V1_STRING_ABI
         // this acts like a virtual destructor
-      NS_COM NS_CONSTRUCTOR_FASTCALL ~nsTSubstring_CharT();
+      NS_COM NS_FASTCALL ~nsTSubstring_CharT();
 #endif
 
         /**
@@ -117,16 +117,8 @@ class nsTSubstring_CharT : public nsTAString_CharT
          * writing iterators
          */
       
-      char_iterator BeginWriting()
-        {
-          return EnsureMutable() ? mData : char_iterator(0);
-        }
-
-      char_iterator EndWriting()
-        {
-          return EnsureMutable() ? (mData + mLength) : char_iterator(0);
-        }
-
+      char_iterator BeginWriting() { EnsureMutable(); return mData; }
+      char_iterator EndWriting() { EnsureMutable(); return mData + mLength; }
 
         /**
          * deprecated writing iterators
@@ -134,30 +126,32 @@ class nsTSubstring_CharT : public nsTAString_CharT
       
       iterator& BeginWriting( iterator& iter )
         {
-          char_type *data = EnsureMutable() ? mData : nsnull;
-          iter.mStart = data;
-          iter.mEnd = data + mLength;
+          EnsureMutable();
+          iter.mStart = mData;
+          iter.mEnd = mData + mLength;
           iter.mPosition = iter.mStart;
           return iter;
         }
 
       iterator& EndWriting( iterator& iter )
         {
-          char_type *data = EnsureMutable() ? mData : nsnull;
-          iter.mStart = data;
-          iter.mEnd = data + mLength;
+          EnsureMutable();
+          iter.mStart = mData;
+          iter.mEnd = mData + mLength;
           iter.mPosition = iter.mEnd;
           return iter;
         }
 
       char_iterator& BeginWriting( char_iterator& iter )
         {
-          return iter = EnsureMutable() ? mData : char_iterator(0);
+          EnsureMutable();
+          return iter = mData;
         }
 
       char_iterator& EndWriting( char_iterator& iter )
         {
-          return iter = EnsureMutable() ? (mData + mLength) : char_iterator(0);
+          EnsureMutable();
+          return iter = mData + mLength;
         }
 
 
@@ -306,7 +300,7 @@ class nsTSubstring_CharT : public nsTAString_CharT
          * assignment
          */
 
-      NS_COM void NS_FASTCALL Assign( char_type c );
+      void Assign( char_type c )                                                                { Assign(&c, 1); }
       NS_COM void NS_FASTCALL Assign( const char_type* data, size_type length = size_type(-1) );
       NS_COM void NS_FASTCALL Assign( const self_type& );
       NS_COM void NS_FASTCALL Assign( const substring_tuple_type& );
@@ -347,7 +341,7 @@ class nsTSubstring_CharT : public nsTAString_CharT
          * buffer manipulation
          */
 
-      NS_COM void NS_FASTCALL Replace( index_type cutStart, size_type cutLength, char_type c );
+             void Replace( index_type cutStart, size_type cutLength, char_type c )               { Replace(cutStart, cutLength, &c, 1); }
       NS_COM void NS_FASTCALL Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length = size_type(-1) );
              void Replace( index_type cutStart, size_type cutLength, const self_type& str )      { Replace(cutStart, cutLength, str.Data(), str.Length()); }
       NS_COM void NS_FASTCALL Replace( index_type cutStart, size_type cutLength, const substring_tuple_type& tuple );
@@ -405,54 +399,14 @@ class nsTSubstring_CharT : public nsTAString_CharT
          * buffer sizing
          */
 
-      NS_COM void NS_FASTCALL SetCapacity( size_type newCapacity );
+      NS_COM void NS_FASTCALL SetCapacity( size_type capacity );
 
-      NS_COM void NS_FASTCALL SetLength( size_type newLength );
+      NS_COM void NS_FASTCALL SetLength( size_type );
 
       void Truncate( size_type newLength = 0 )
         {
           NS_ASSERTION(newLength <= mLength, "Truncate cannot make string longer");
           SetLength(newLength);
-        }
-
-
-        /**
-         * buffer access
-         */
-
-
-        /**
-         * Get a const pointer to the string's internal buffer.  The caller
-         * MUST NOT modify the characters at the returned address.
-         *
-         * @returns The length of the buffer in characters.
-         */
-      inline size_type GetData( const char_type** data ) const
-        {
-          *data = mData;
-          return mLength;
-        }
-        
-        /**
-         * Get a pointer to the string's internal buffer, optionally resizing
-         * the buffer first.  If size_type(-1) is passed for newLen, then the
-         * current length of the string is used.  The caller MAY modify the
-         * characters at the returned address (up to but not exceeding the
-         * length of the string).
-         *
-         * @returns The length of the buffer in characters or 0 if unable to
-         * satisfy the request due to low-memory conditions.
-         */
-      inline size_type GetMutableData( char_type** data, size_type newLen = size_type(-1) )
-        {
-          if (!EnsureMutable(newLen))
-            {
-              *data = nsnull;
-              return 0;
-            }
-
-          *data = mData;
-          return mLength;
         }
 
 
@@ -464,7 +418,7 @@ class nsTSubstring_CharT : public nsTAString_CharT
       NS_COM void NS_FASTCALL SetIsVoid( PRBool );
 
         /**
-         *  This method is used to remove all occurrences of aChar from this
+         *  This method is used to remove all occurances of aChar from this
          * string.
          *  
          *  @param  aChar -- char to be stripped
@@ -498,11 +452,16 @@ class nsTSubstring_CharT : public nsTAString_CharT
          * NOTE: this constructor is declared public _only_ for convenience
          * inside the string implementation.
          */
-#ifdef XP_OS2 /* Workaround for GCC 3.3.x bug. */
-       nsTSubstring_CharT( char_type *data, size_type length, PRUint32 flags ) NS_COM;
+      nsTSubstring_CharT( char_type *data, size_type length, PRUint32 flags )
+#ifdef MOZ_V1_STRING_ABI
+        : abstract_string_type(data, length, flags) {}
 #else
-       NS_COM nsTSubstring_CharT( char_type *data, size_type length, PRUint32 flags );
+        : mData(data),
+          mLength(length),
+          mFlags(flags) {}
 #endif
+
+
     protected:
 
       friend class nsTObsoleteAStringThunk_CharT;
@@ -551,7 +510,7 @@ class nsTSubstring_CharT : public nsTAString_CharT
 
         /**
          * this function releases mData and does not change the value of
-         * any of it's member variables.  in other words, this function acts
+         * any of its member variables.  inotherwords, this function acts
          * like a destructor.
          */
       void NS_FASTCALL Finalize();
@@ -610,7 +569,7 @@ class nsTSubstring_CharT : public nsTAString_CharT
          * this helper function can be called prior to directly manipulating
          * the contents of mData.  see, for example, BeginWriting.
          */
-      NS_COM PRBool NS_FASTCALL EnsureMutable( size_type newLen = size_type(-1) );
+      NS_COM void NS_FASTCALL EnsureMutable();
 
         /**
          * returns true if this string overlaps with the given string fragment.

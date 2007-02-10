@@ -162,8 +162,7 @@ public:
     NS_IMETHOD              BeginResizingChildren(void);
     NS_IMETHOD              EndResizingChildren(void);
 
-    static  PRBool          ConvertStatus(nsEventStatus aStatus)
-                            { return aStatus == nsEventStatus_eConsumeNoDefault; }
+    static  PRBool          ConvertStatus(nsEventStatus aStatus);
     NS_IMETHOD              DispatchEvent(nsGUIEvent* event, nsEventStatus & aStatus);
     virtual PRBool          DispatchMouseEvent(nsMouseEvent &aEvent);
 
@@ -219,8 +218,6 @@ public:
     NS_IMETHOD ResetInputState();
     NS_IMETHOD SetIMEOpenState(PRBool aState);
     NS_IMETHOD GetIMEOpenState(PRBool* aState);
-    NS_IMETHOD SetIMEEnabled(PRBool aState);
-    NS_IMETHOD GetIMEEnabled(PRBool* aState);
     NS_IMETHOD CancelIMEComposition();
 
 protected:

@@ -7,6 +7,8 @@
 <!ENTITY btnFind.tooltip "Pomocí id, tagu nebo atributu najde uzel ">
 <!-- MAIN MENU ITEMS -->
 <!ENTITY mnFile.label "Soubor">
+<!ENTITY mnWindows.label "Prozkoumat okno">
+<!ENTITY mnWindows.accesskey "o">
 <!ENTITY mnFile.accesskey "S">
 <!ENTITY cmdShowOpenURLDialog.label "Prozkoumat URL">
 <!ENTITY cmdShowOpenURLDialog.accesskey "U">

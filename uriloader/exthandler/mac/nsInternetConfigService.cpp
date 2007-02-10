@@ -125,7 +125,7 @@ NS_IMETHODIMP nsInternetConfigService::HasMappingForMIMEType(const char *mimetyp
   return rv;
 }
 
-/* boolean hasProtocolHandler (in string protocol); */
+/* boolean hasProtocalHandler (in string protocol); */
 // returns NS_ERROR_NOT_AVAILABLE if the current application is registered for as the
 // protocol handler for protocol
 NS_IMETHODIMP nsInternetConfigService::HasProtocolHandler(const char *protocol, PRBool *_retval)
@@ -305,10 +305,10 @@ nsresult nsInternetConfigService::FillMIMEInfoForICEntry(ICMapEntry& entry, nsIM
     info->SetMacType(entry.fileType);
     info->SetMacCreator(entry.fileCreator);
     temp.Assign((char *) &entry.entryName[1], entry.entryName[0]);
-    info->SetDescription(NS_ConvertASCIItoUTF16(temp));
+    info->SetDescription(NS_ConvertASCIItoUCS2(temp));
     
     temp.Assign((char *) &entry.postAppName[1], entry.postAppName[0]);
-    info->SetDefaultDescription(NS_ConvertASCIItoUTF16(temp));
+    info->SetDefaultDescription(NS_ConvertASCIItoUCS2(temp));
     
     if (entry.flags & kICMapPostMask)
     {

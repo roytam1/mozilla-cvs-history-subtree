@@ -1,5 +1,6 @@
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 // vim:cindent:sw=4:et:ts=8:
+
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -13,9 +14,10 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is jprof.
  *
- * The Initial Developer of the Original Code is Netscape Communications Corp.
+ * The Initial Developer of the Original Code is
+ * Kipp E.B. Hickman.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *
@@ -47,6 +49,11 @@
 #endif
 #endif
 
+// Some versions of glibc (i.e., the one that comes with RedHat 6.0 rather
+// than 6.1) seem to do things a bit differently when libpthread is involved.
+// If things don't work for you, try defining this:
+//#define JPROF_PTHREAD_HACK
+
 #include <errno.h>
 #if defined(linux)
 #include <linux/rtc.h>
@@ -61,7 +68,6 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
-#include <ucontext.h>
 
 #include "libmalloc.h"
 #include "jprof.h"
@@ -80,39 +86,38 @@ extern r_debug _r_debug;
 static int gLogFD = -1;
 static pthread_t main_thread;
 
-static void startSignalCounter(unsigned long millisec);
+static void startSignalCounter(unsigned long milisec);
 static int enableRTCSignals(bool enable);
 
 
 //----------------------------------------------------------------------
 
-#if defined(i386) || defined(_i386) || defined(__x86_64__)
-static void CrawlStack(malloc_log_entry* me,
-                       void* stack_top, void* top_instr_ptr)
+#if defined(i386) || defined(_i386)
+static void CrawlStack(malloc_log_entry* me, void* frame_ptr, char* first)
 {
-  void **bp;
-#if defined(__i386)
-  __asm__( "movl %%ebp, %0" : "=g"(bp));
-#elif defined(__x86_64__)
-  __asm__( "movq %%rbp, %0" : "=g"(bp));
-#else
-  // It would be nice if this worked uniformly, but at least on i386 and
-  // x86_64, it stopped working with gcc 4.1, because it points to the
-  // end of the saved registers instead of the start.
-  bp = __builtin_frame_address(0);
-#endif
+  void** bp = (void**)frame_ptr;
   u_long numpcs = 0;
 
-  me->pcs[numpcs++] = (char*) top_instr_ptr;
+#ifdef JPROF_PTHREAD_HACK
+  int skip = 3;
+#else
+  me->pcs[numpcs++] = first;
 
+  // skip 2 frames: StackHook, __restore_rt.
+  // The next frame is the frame _above_ |first|.
+  int skip = 2;
+#endif
   while (numpcs < MAX_STACK_CRAWL) {
     void** nextbp = (void**) *bp++;
     void* pc = *bp;
-    if (nextbp < bp) {
+#ifdef JPROF_PTHREAD_HACK
+    if ((pc < 0x08000000) || ((pc > 0x7fffffff) && (skip <= 0)) || (nextbp < bp)) {
+#else
+    if ((nextbp < bp)) {
+#endif
       break;
     }
-    if (bp > stack_top) {
-      // Skip the signal handling.
+    if (--skip < 0) {
       me->pcs[numpcs++] = (char*) pc;
     }
     bp = nextbp;
@@ -129,7 +134,7 @@ static int rtcFD = -1;
 #if defined(linux) || defined(NTO)
 static void DumpAddressMap()
 {
-  // Turn off the timer so we don't get interrupts during shutdown
+  // Turn off the timer so we dont get interrupts during shutdown
 #if defined(linux)
   if (rtcHz) {
     enableRTCSignals(false);
@@ -170,14 +175,25 @@ static void EndProfilingHook(int signum)
 //----------------------------------------------------------------------
 
 static void
-Log(u_long aTime, void* stack_top, void* top_instr_ptr)
+Log(u_long aTime, char *first)
 {
   // Static is simply to make debugging tollerable
   static malloc_log_entry me;
 
   me.delTime = aTime;
 
-  CrawlStack(&me, stack_top, top_instr_ptr);
+  void *bp;
+#if defined(__i386) 
+  __asm__( "movl %%ebp, %0" : "=g"(bp));
+#elif defined(__x86_64__)
+  __asm__( "movq %%rbp, %0" : "=g"(bp));
+#else
+  // It would be nice if this worked uniformly, but at least on i386 and
+  // x86_64, it stopped working with gcc 4.1, because it points to the
+  // end of the saved registers instead of the start.
+  bp = __builtin_frame_address(0);
+#endif
+  CrawlStack(&me, bp, first);
 
 #ifndef NTO
   write(gLogFD, &me, offsetof(malloc_log_entry, pcs) + me.numpcs*sizeof(char*));
@@ -193,14 +209,14 @@ static int realTime;
  * programmed to reset, even though it is capable of doing so.  This is
  * to keep from getting interrupts from inside of the handler.
 */
-static void startSignalCounter(unsigned long millisec)
+static void startSignalCounter(unsigned long milisec)
 {
     struct itimerval tvalue;
 
     tvalue.it_interval.tv_sec = 0;
     tvalue.it_interval.tv_usec = 0;
-    tvalue.it_value.tv_sec = millisec/1000;
-    tvalue.it_value.tv_usec = (millisec%1000)*1000;
+    tvalue.it_value.tv_sec = milisec/1000;
+    tvalue.it_value.tv_usec = (milisec%1000)*1000;
 
     if (realTime) {
 	setitimer(ITIMER_REAL, &tvalue, NULL);
@@ -250,12 +266,6 @@ static int setupRTCSignals(int hz, struct sigaction *sap)
 
 static int enableRTCSignals(bool enable)
 {
-    static bool enabled = false;
-    if (enabled == enable) {
-        return 0;
-    }
-    enabled = enable;
-    
     int flags = fcntl(rtcFD, F_GETFL);
     if (flags < 0) {
         perror("JPROF_RTC setup: fcntl(/dev/rtc, F_GETFL)");
@@ -284,11 +294,11 @@ static int enableRTCSignals(bool enable)
 static void StackHook(
 int signum,
 siginfo_t *info,
-void *ucontext)
+void *mystry)
 {
     static struct timeval tFirst;
     static int first=1;
-    size_t millisec = 0;
+    size_t milisec = 0;
 
 #if defined(linux)
     if (rtcHz && pthread_self() != main_thread) {
@@ -306,30 +316,26 @@ void *ucontext)
 #endif
         {
             gettimeofday(&tFirst, 0);
-            millisec = 0;
+            milisec = 0;
         }
     } else {
-#if defined(linux)
-        if (rtcHz) {
-            enableRTCSignals(true);
-        } else
-#endif
-        {
-            struct timeval tNow;
-            gettimeofday(&tNow, 0);
-            double usec = 1e6*(tNow.tv_sec - tFirst.tv_sec);
-            usec += (tNow.tv_usec - tFirst.tv_usec);
-            millisec = static_cast<size_t>(usec*1e-3);
-        }
+	struct timeval tNow;
+        gettimeofday(&tNow, 0);
+	double usec = 1e6*(tNow.tv_sec - tFirst.tv_sec);
+	usec += (tNow.tv_usec - tFirst.tv_usec);
+	milisec = static_cast<size_t>(usec*1e-3);
     }
 
-    gregset_t &gregs = ((ucontext_t*)ucontext)->uc_mcontext.gregs;
-#ifdef __x86_64__
-    Log(millisec, (void*)gregs[REG_RSP], (void*)gregs[REG_RIP]);
+#ifdef JPROF_PTHREAD_HACK
+    Log(milisec, NULL);
 #else
-    Log(millisec, (void*)gregs[REG_ESP], (void*)gregs[REG_EIP]);
+    // The mystry[19] thing is a hack to figure out where we were called from.
+    // By playing around with the debugger it looks like [19] contains the
+    // information I need.
+    // it's really ((ucontext_t *)mystry)->uc_mcontext.gregs[14] which is
+    // the EIP register when the handler was called
+    Log(milisec, ((char**)mystry)[19]);
 #endif
-
     if (!rtcHz)
         startSignalCounter(timerMiliSec);
 }
@@ -386,8 +392,6 @@ NS_EXPORT_(void) setupProfilingStuff(void)
             if (rtc) {
 #if defined(linux)
                 rtcHz = atol(rtc+10);
-                timerMiliSec = 0; /* This makes JP_FIRST work right. */
-                realTime = 1; /* It's the _R_TC and all.  ;) */
 
 #define IS_POWER_OF_TWO(x) (((x) & ((x) - 1)) == 0)
 
@@ -433,9 +437,7 @@ NS_EXPORT_(void) setupProfilingStuff(void)
                                   "profiling\n", stderr);
                             return;
                         }
-                    }
-
-                    if (!rtcHz || firstDelay != 0)
+                    } else
 #endif
                     if (realTime) {
                         sigaction(SIGALRM, &action, NULL);
@@ -463,11 +465,7 @@ NS_EXPORT_(void) setupProfilingStuff(void)
 
 		    if(startTimer) {
 #if defined(linux)
-                        /* If we have an initial delay we can just use
-                           startSignalCounter to set up a timer to fire the
-                           first stackHook after that delay.  When that happens
-                           we'll go and switch to RTC profiling. */
-                        if (rtcHz && firstDelay == 0) {
+                        if (rtcHz) {
                             puts("Jprof: enabled RTC signals");
                             enableRTCSignals(true);
                         } else

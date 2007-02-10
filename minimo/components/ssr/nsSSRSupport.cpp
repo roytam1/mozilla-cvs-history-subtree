@@ -144,7 +144,7 @@ nsSSRSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar
     nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(aSubject);
     nsXPIDLCString cstr;
     
-    const char* pref = NS_ConvertUTF16toUTF8(aData).get();
+    const char* pref = NS_ConvertUCS2toUTF8(aData).get();
     
     if (!strcmp(pref, "ssr.enabled"))
     {
@@ -163,9 +163,10 @@ nsSSRSupport::Observe(nsISupports *aSubject, const char *aTopic, const PRUnichar
       return NS_OK;
     }
 
-    const char* domain = NS_ConvertUTF16toUTF8(aData).get();
+    const char* domain = NS_ConvertUCS2toUTF8(aData).get();
     
     if (!strcmp(domain, "maps.google.com") ||
+        !strcmp(domain, "people.mozilla.com") ||
         !strcmp(domain, "slashdot.org") ||
         !strcmp(domain, "www.digg.com") ||
         !strcmp(domain, "weblogs.mozillazine.org") ||
@@ -260,7 +261,7 @@ static NS_METHOD SSRUnregistration(nsIComponentManager *aCompMgr,
 
 static const nsModuleComponentInfo components[] =
 {
-  { "SoftKeyBoardService", 
+  { "SSRSupportService", 
     SSRSupport_CID, 
     SSRSupport_ContractID,
     nsSSRSupportConstructor,

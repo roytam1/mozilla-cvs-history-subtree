@@ -47,7 +47,7 @@ LIBRARY_NAME    = websrvcs
 EXPORT_LIBRARY  = 1
 IS_COMPONENT    = 1
 MODULE_NAME     = nsWebServicesModule
-LIBXUL_LIBRARY = 1
+MOZILLA_INTERNAL_API = 1
 
 PACKAGE_FILE    = webservices.pkg
 
@@ -56,7 +56,6 @@ REQUIRES	= xpcom \
 		  dom \
 		  js \
 		  content \
-		  layout \
 		  widget \
 		  caps \
 		  necko \
@@ -68,12 +67,12 @@ CPPSRCS = nsWebServicesModule.cpp
 
 
 SHARED_LIBRARY_LIBS += \
-	../../security/src/$(LIB_PREFIX)websrvcssecurity_s.$(LIB_SUFFIX) \
-	../../schema/src/$(LIB_PREFIX)websrvcsschema_s.$(LIB_SUFFIX) \
-	../../soap/src/$(LIB_PREFIX)websrvcssoap_s.$(LIB_SUFFIX) \
-	../../interfaceinfo/src/$(LIB_PREFIX)websrvcsinterfaceinfo_s.$(LIB_SUFFIX) \
-	../../wsdl/src/$(LIB_PREFIX)websrvcswsdl_s.$(LIB_SUFFIX) \
-	../../proxy/src/$(LIB_PREFIX)websrvcsproxy_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)websrvcssecurity_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)websrvcsschema_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)websrvcssoap_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)websrvcsinterfaceinfo_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)websrvcswsdl_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)websrvcsproxy_s.$(LIB_SUFFIX) \
 	$(NULL)
 
 LOCAL_INCLUDES	+= \

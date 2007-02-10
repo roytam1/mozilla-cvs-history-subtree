@@ -1,7 +1,3 @@
-// This file tests bug 250375
-
-do_import_script("netwerk/test/httpserver/httpd.js");
-
 function check_request_header(chan, name, value) {
   var chanValue;
   try {
@@ -32,10 +28,8 @@ var listener = {
   },
 
   onStopRequest: function test_onStopR(request, ctx, status) {
-    if (this._iteration == 1)
+    if (this._iteration == 1 && Components.isSuccessCode(status))
       run_test_continued();
-    else
-      httpserv.stop();
     do_test_finished();
   },
 
@@ -45,17 +39,14 @@ var listener = {
 function makeChan() {
   var ios = Components.classes["@mozilla.org/network/io-service;1"]
                       .getService(Components.interfaces.nsIIOService);
-  var chan = ios.newChannel("http://localhost:4444/", null, null)
+  var chan = ios.newChannel("http://www.mozilla.org/", null, null)
                 .QueryInterface(Components.interfaces.nsIHttpChannel);
 
   return chan;
 }
 
-var httpserv = null;
-
 function run_test() {
-  httpserv = new nsHttpServer();
-  httpserv.start(4444);
+  dump("Note: This test needs a network connection\n");
 
   var chan = makeChan();
 
@@ -84,3 +75,4 @@ function run_test_continued() {
 
   do_test_pending();
 }
+

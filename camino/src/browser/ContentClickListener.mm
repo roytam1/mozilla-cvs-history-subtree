@@ -95,32 +95,21 @@ ContentClickListener::MouseClick(nsIDOMEvent* aEvent)
   mouseEvent->GetShiftKey(&shiftKey);
   mouseEvent->GetAltKey(&altKey);
 
-  NSString* hrefStr = [NSString stringWith_nsAString:href];
-
+  NSString* hrefStr = [NSString stringWith_nsAString: href];
+  
   if ((metaKey && button == 0) || button == 1) {
+    // The command key is down or we got a middle click.  Open the link in a new window or tab.
+    BOOL useTab           = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
+    BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
+
     NSString* referrer = [[[mBrowserController getBrowserWrapper] getBrowserView] getFocusedURLString];
-
-    NSRange firstColon = [hrefStr rangeOfString:@":"];
-    NSString* hrefScheme;
-    if (firstColon.location != NSNotFound)
-      hrefScheme = [hrefStr substringToIndex:firstColon.location];
+    
+    if (shiftKey)
+      loadInBackground = !loadInBackground;
+    if (useTab)
+      [mBrowserController openNewTabWithURL: hrefStr referrer:referrer loadInBackground: loadInBackground allowPopups:NO setJumpback:YES];
     else
-      hrefScheme = @"file"; // implicitly file:// if no colon is found
-
-    // The Command key is down or we got a middle-click.
-    // Open the link in a new window or tab if it's an internally handled, non-Javascript link.
-    if (![hrefScheme isEqualToString:@"javascript"] && GeckoUtils::isProtocolInternal([hrefScheme UTF8String])) {
-      BOOL useTab           = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
-      BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:nil];
-
-      if (useTab)
-        [mBrowserController openNewTabWithURL:hrefStr referrer:referrer loadInBackground:loadInBackground allowPopups:NO setJumpback:YES];
-      else
-        [mBrowserController openNewWindowWithURL:hrefStr referrer:referrer loadInBackground:loadInBackground allowPopups:NO];
-    }
-    else { // It's an external protocol or a "javascript:" URL, so just open the link.
-      [mBrowserController loadURL:hrefStr referrer:referrer focusContent:YES allowPopups:NO];
-    }
+      [mBrowserController openNewWindowWithURL: hrefStr referrer:referrer loadInBackground: loadInBackground allowPopups:NO];
   }
   else if (altKey) {
     // The user wants to save this link.

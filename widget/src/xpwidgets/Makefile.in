@@ -59,17 +59,11 @@ REQUIRES	= xpcom \
 		  uconv \
 		  unicharutil \
 		  view \
-		  windowwatcher \
 		  $(NULL)
-
-ifeq ($(MOZ_ENABLE_CAIRO_GFX),1)
-REQUIRES += thebes cairo
-endif
 
 DEFINES		+= -D_IMPL_NS_WIDGET -DUSE_TLS_FOR_TOOLKIT
 
 CPPSRCS		= \
-		nsBaseAppShell.cpp \
 		nsBaseWidget.cpp \
 		nsTransferable.cpp \
 		nsHTMLFormatConverter.cpp \
@@ -77,12 +71,11 @@ CPPSRCS		= \
 		nsPrimitiveHelpers.cpp \
 		nsXPLookAndFeel.cpp \
 		nsClipboardHelper.cpp \
-		nsPrintOptionsImpl.cpp \
-		nsPrintSettingsImpl.cpp \
-		nsPrintSession.cpp \
-		nsWidgetAtoms.cpp \
-		nsIdleService.cpp \
 		$(NULL)
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+CPPSRCS += nsWidgetAtoms.cpp
+endif
 
 ifneq (,$(filter beos os2 mac qt cocoa windows,$(MOZ_WIDGET_TOOLKIT)))
 CPPSRCS += nsBaseClipboard.cpp
@@ -91,10 +84,6 @@ endif
 ifneq (,$(filter beos gtk2 os2 mac qt cocoa photon windows,$(MOZ_WIDGET_TOOLKIT)))
 CPPSRCS += nsBaseFilePicker.cpp
 REQUIRES += docshell view intl
-endif
-
-ifneq (,$(filter gtk gtk2 qt windows mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-CPPSRCS += nsNativeTheme.cpp
 endif
 
 LOCAL_INCLUDES	= \

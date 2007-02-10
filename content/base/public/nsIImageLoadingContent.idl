@@ -2,9 +2,9 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
  * http://www.mozilla.org/MPL/
  *
  * Software distributed under the License is distributed on an "AS IS" basis,
@@ -14,12 +14,13 @@
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
+ * The Initial Developer of the Original Code is 
  * Boris Zbarsky <bzbarsky@mit.edu>.
  * Portions created by the Initial Developer are Copyright (C) 2003
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -27,11 +28,11 @@
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
+ * use your version of this file under the terms of the NPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
 
@@ -62,9 +63,11 @@ interface nsIURI;
  * missed.  We should NOT freeze this interface without considering
  * this issue.  (It could be that the image status on imgIRequest is
  * sufficient, when combined with the imageBlockingStatus information.)
+ *
+ * XXXbz Do not freeze without removing imageURIChanged!
  */
 
-[scriptable, uuid(7744c6d3-5c60-4b7b-a526-4fe9d5ac7e97)]
+[scriptable, uuid(da19c86d-08aa-421c-8c37-12ec2ba5a2c3)]
 interface nsIImageLoadingContent : imgIDecoderObserver
 {
   /**
@@ -162,9 +165,13 @@ interface nsIImageLoadingContent : imgIDecoderObserver
   nsIStreamListener loadImageWithChannel(in nsIChannel aChannel);
 
   /**
-   * forceReload forces reloading of the image pointed to by currentURI
-   *
-   * @throws NS_ERROR_NOT_AVAILABLE if there is no current URI to reload
+   * ImageURIChanged is called when the appropriate attributes (eg
+   * 'src' for <img> tags) change.  The string passed in is the new
+   * uri string.
    */
-  void forceReload();
+  // XXXbz The only reason this is not a protected method is that
+  // XXXbz <object> and <embed> do everything from frames, not content.
+  // XXXbz Once those are moved to content, this method should become
+  // XXXbz a protected method on nsImageLoadingContent!
+  [noscript] void imageURIChanged(in AString aNewURI);
 };

@@ -52,7 +52,7 @@ ifndef MOZ_ENABLE_LIBXUL
 # Make this a true dynamic component even in static builds because
 # this component is shared by installer
 FORCE_SHARED_LIB	= 1
-BUILD_STATIC_LIBS=
+MOZ_STATIC_COMPONENT_LIBS=
 SHORT_LIBNAME	= xpinstal
 endif
 IS_COMPONENT	= 1
@@ -63,6 +63,7 @@ LIBXUL_LIBRARY	= 1
 PACKAGE_FILE = base.pkg
 
 REQUIRES	= xpcom \
+		  xpcom_obsolete \
 		  string \
 		  jar \
 		  caps \
@@ -144,17 +145,19 @@ CPPSRCS		+= \
 		nsAppleSingleDecoder.cpp \
 		$(NULL)
 
-EXTRA_DSO_LDOPTS += $(DEPTH)/xpcom/MoreFiles/libmacmorefiles_s.a
+EXTRA_DSO_LDOPTS += $(DEPTH)/dist/lib/libmacmorefiles_s.a
 endif
 
 LOCAL_INCLUDES	= -I$(srcdir)/../public
 
 EXTRA_DSO_LDOPTS = \
-		$(DEPTH)/modules/libreg/src/$(LIB_PREFIX)mozreg_s.$(LIB_SUFFIX) \
+		$(LIBS_DIR) \
+		$(EXTRA_DSO_LIBS) \
 		$(MOZ_JS_LIBS) \
-		$(MOZ_UNICHARUTIL_LIBS) \
 		$(MOZ_COMPONENT_LIBS) \
+		$(MOZ_UNICHARUTIL_LIBS) \
 		$(ZLIB_LIBS) \
+		$(MOZ_XPCOM_OBSOLETE_LIBS) \
 		$(NULL)
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))

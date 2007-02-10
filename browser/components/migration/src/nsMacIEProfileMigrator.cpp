@@ -20,7 +20,6 @@
  *
  * Contributor(s):
  *  Ben Goodger <ben@bengoodger.com>
- *  Benjamin Smedberg <benjamin@smedbergs.us>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -46,14 +45,14 @@
 #include "nsIStringBundle.h"
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
-#include "nsServiceManagerUtils.h"
-#include "nsIProperties.h"
 
 #define MACIE_BOOKMARKS_FILE_NAME NS_LITERAL_STRING("Favorites.html")
 #define MACIE_PREFERENCES_FOLDER_NAME NS_LITERAL_STRING("Explorer")
 #define FIREFOX_BOOKMARKS_FILE_NAME NS_LITERAL_STRING("bookmarks.html")
 
 #define MIGRATION_BUNDLE "chrome://browser/locale/migration/migration.properties"
+
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsMacIEProfileMigrator
@@ -192,14 +191,14 @@ nsMacIEProfileMigrator::CopyBookmarks(PRBool aReplace)
 
     // Look for the localized name of the IE Favorites Bar
     nsCOMPtr<nsIStringBundleService> bundleService =
-      do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+      do_GetService(kStringBundleServiceCID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIStringBundle> bundle;
     rv = bundleService->CreateBundle(MIGRATION_BUNDLE, getter_AddRefs(bundle));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsString toolbarFolderNameMacIE;
+    nsXPIDLString toolbarFolderNameMacIE;
     bundle->GetStringFromName(NS_LITERAL_STRING("toolbarFolderNameMacIE").get(), 
                               getter_Copies(toolbarFolderNameMacIE));
     nsCAutoString ctoolbarFolderNameMacIE;

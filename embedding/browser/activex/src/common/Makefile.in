@@ -46,6 +46,7 @@ include $(DEPTH)/config/autoconf.mk
 MODULE          = ax_common
 LIBRARY_NAME    = ax_common_s
 XPIDL_MODULE    = ax_common
+MOZILLA_INTERNAL_API = 1
 
 REQUIRES        = \
                 xpcom \

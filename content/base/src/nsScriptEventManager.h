@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * Class that allows finding an event handler <script> node (one using
- * FOR="....") for a given event and dispatching the event to that
- * node.
- */
 
 #include "nsCOMPtr.h"
 #include "nsAString.h"

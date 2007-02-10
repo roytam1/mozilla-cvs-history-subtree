@@ -40,6 +40,7 @@
 
 #include "nsEvent.h"
 #include "nsISupports.h"
+#include "nsVoidArray.h"
 
 class nsIContent;
 class nsPresContext;
@@ -52,11 +53,10 @@ class imgIContainer;
 /*
  * Event state manager interface.
  */
-// {9d25327a-7a17-4d19-928c-f7f3ac19b763}
+// 2270e188-6743-441e-b6e1-af83f1047a53
 #define NS_IEVENTSTATEMANAGER_IID \
-{ 0x9d25327a, 0x7a17, 0x4d19, \
-  { 0x92, 0x8c, 0xf7, 0xf3, 0xac, 0x19, 0xb7, 0x63 } }
-
+{ 0x2270e188, 0x6743, 0x441e, \
+  { 0xb6, 0xe1, 0xaf, 0x83, 0xf1, 0x04, 0x7a, 0x53 } }
 
 
 #define NS_EVENT_NEEDS_FRAME(event) (!NS_IS_FOCUS_EVENT(event))
@@ -72,7 +72,7 @@ public:
     eEventFocusedByApplication  // focus gained via Application (like script)
   };
 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IEVENTSTATEMANAGER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IEVENTSTATEMANAGER_IID)
 
   NS_IMETHOD Init() = 0;
 
@@ -93,22 +93,10 @@ public:
 
   NS_IMETHOD GetEventTarget(nsIFrame **aFrame) = 0;
   NS_IMETHOD GetEventTargetContent(nsEvent* aEvent, nsIContent** aContent) = 0;
+  NS_IMETHOD GetEventRelatedContent(nsIContent** aContent) = 0;
 
   NS_IMETHOD GetContentState(nsIContent *aContent, PRInt32& aState) = 0;
-
-  /**
-   * Notify that the given NS_EVENT_STATE_* bit has changed for this content.
-   * @param aContent Content which has changed states
-   * @param aState   Corresponding state flags such as NS_EVENT_STATE_FOCUS 
-   *                 defined in the nsIEventStateManager interface
-   * @return  Whether the content was able to change all states. Returns PR_FALSE
-   *                  if a resulting DOM event causes the content node passed in
-   *                  to not change states. Note, the frame for the content may
-   *                  change as a result of the content state change, because of
-   *                  frame reconstructions that may occur, but this does not
-   *                  affect the return value.
-   */
-  virtual PRBool SetContentState(nsIContent *aContent, PRInt32 aState) = 0;
+  NS_IMETHOD SetContentState(nsIContent *aContent, PRInt32 aState) = 0;
 
   NS_IMETHOD GetFocusedContent(nsIContent **aContent) = 0;
   NS_IMETHOD SetFocusedContent(nsIContent* aContent) = 0;
@@ -133,6 +121,9 @@ public:
   // Must supply method that focus is being set with
   NS_IMETHOD ChangeFocusWith(nsIContent *aFocusContent, EFocusedWithType aFocusedWith) = 0;
 
+  // This is an experiment and may be temporary
+  NS_IMETHOD ConsumeFocusEvents(PRBool aDoConsume) = 0;
+
   // Access Key Registration
   NS_IMETHOD RegisterAccessKey(nsIContent* aContent, PRUint32 aKey) = 0;
   NS_IMETHOD UnregisterAccessKey(nsIContent* aContent, PRUint32 aKey) = 0;
@@ -141,13 +132,12 @@ public:
                        PRBool aHaveHotspot, float aHotspotX, float aHotspotY,
                        nsIWidget* aWidget, PRBool aLockCursor) = 0;
 
+  //Method for centralized distribution of new DOM events
+  NS_IMETHOD DispatchNewEvent(nsISupports* aTarget, nsIDOMEvent* aEvent, PRBool* aDefaultActionEnabled) = 0;
+
   // Method for moving the focus forward/back.
   NS_IMETHOD ShiftFocus(PRBool aDirection, nsIContent* aStart)=0;
-
-  NS_IMETHOD NotifyDestroyPresContext(nsPresContext* aPresContext) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIEventStateManager, NS_IEVENTSTATEMANAGER_IID)
 
 #define NS_EVENT_STATE_ACTIVE        0x00000001 // mouse is down on content
 #define NS_EVENT_STATE_FOCUS         0x00000002 // content has focus
@@ -156,33 +146,19 @@ NS_DEFINE_STATIC_IID_ACCESSOR(nsIEventStateManager, NS_IEVENTSTATEMANAGER_IID)
 #define NS_EVENT_STATE_URLTARGET     0x00000010 // content is URL's target (ref)
 
 // The following states are used only for ContentStatesChanged
-
-#define NS_EVENT_STATE_CHECKED       0x00000020 // CSS3-Selectors
-#define NS_EVENT_STATE_ENABLED       0x00000040 // CSS3-Selectors
-#define NS_EVENT_STATE_DISABLED      0x00000080 // CSS3-Selectors
-#define NS_EVENT_STATE_REQUIRED      0x00000100 // CSS3-UI
-#define NS_EVENT_STATE_OPTIONAL      0x00000200 // CSS3-UI
-#define NS_EVENT_STATE_VISITED       0x00000400 // CSS2
-#define NS_EVENT_STATE_VALID         0x00000800 // CSS3-UI
-#define NS_EVENT_STATE_INVALID       0x00001000 // CSS3-UI
-#define NS_EVENT_STATE_INRANGE       0x00002000 // CSS3-UI
-#define NS_EVENT_STATE_OUTOFRANGE    0x00004000 // CSS3-UI
-// these two are temporary (see bug 302188)
-#define NS_EVENT_STATE_MOZ_READONLY  0x00008000 // CSS3-UI
-#define NS_EVENT_STATE_MOZ_READWRITE 0x00010000 // CSS3-UI
-#define NS_EVENT_STATE_DEFAULT       0x00020000 // CSS3-UI
-
-// Content could not be rendered (image/object/etc).
-#define NS_EVENT_STATE_BROKEN        0x00040000
-// Content disabled by the user (images turned off, say)
-#define NS_EVENT_STATE_USERDISABLED  0x00080000
-// Content suppressed by the user (ad blocking, etc)
-#define NS_EVENT_STATE_SUPPRESSED    0x00100000
-// Content is still loading such that there is nothing to show the
-// user (eg an image which hasn't started coming in yet)
-#define NS_EVENT_STATE_LOADING       0x00200000
-// Content is of a type that gecko can't handle
-#define NS_EVENT_STATE_TYPE_UNSUPPORTED \
-                                     0x00400000
+// CSS 3 Selectors
+#define NS_EVENT_STATE_CHECKED       0x00000020
+#define NS_EVENT_STATE_ENABLED       0x00000040
+#define NS_EVENT_STATE_DISABLED      0x00000080
+// CSS 3 UI
+#define NS_EVENT_STATE_REQUIRED      0x00000100
+#define NS_EVENT_STATE_OPTIONAL      0x00000200
+#define NS_EVENT_STATE_VISITED       0x00000400
+#define NS_EVENT_STATE_VALID         0x00000800
+#define NS_EVENT_STATE_INVALID       0x00001000
+#define NS_EVENT_STATE_INRANGE       0x00002000
+#define NS_EVENT_STATE_OUTOFRANGE    0x00004000
+#define NS_EVENT_STATE_MOZ_READONLY  0x00008000
+#define NS_EVENT_STATE_MOZ_READWRITE 0x00010000
 
 #endif // nsIEventStateManager_h__

@@ -168,7 +168,7 @@ public:
         
         // set blockCount
         NS_ASSERTION( (blockCount>=1) && (blockCount<=4),"invalid block count");
-        --blockCount;
+        blockCount = --blockCount;
         mDataLocation |= (blockCount << eExtraBlocksOffset) & eExtraBlocksMask;
         
         mDataLocation |= eLocationInitializedMask;
@@ -236,7 +236,7 @@ public:
         
         // set blockCount
         NS_ASSERTION( (blockCount>=1) && (blockCount<=4),"invalid block count");
-        --blockCount;
+        blockCount = --blockCount;
         mMetaLocation |= (blockCount << eExtraBlocksOffset) & eExtraBlocksMask;
         
         mMetaLocation |= eLocationInitializedMask;
@@ -293,20 +293,20 @@ public:
 #if defined(IS_LITTLE_ENDIAN)
     void        Swap()
     {
-        mHashNumber   = htonl(mHashNumber);
-        mEvictionRank = htonl(mEvictionRank);
-        mDataLocation = htonl(mDataLocation);
-        mMetaLocation = htonl(mMetaLocation);
+        mHashNumber   = ::PR_htonl(mHashNumber);
+        mEvictionRank = ::PR_htonl(mEvictionRank);
+        mDataLocation = ::PR_htonl(mDataLocation);
+        mMetaLocation = ::PR_htonl(mMetaLocation);
     }
 #endif
     
 #if defined(IS_LITTLE_ENDIAN)
     void        Unswap()
     {
-        mHashNumber   = ntohl(mHashNumber);
-        mEvictionRank = ntohl(mEvictionRank);
-        mDataLocation = ntohl(mDataLocation);
-        mMetaLocation = ntohl(mMetaLocation);
+        mHashNumber   = ::PR_ntohl(mHashNumber);
+        mEvictionRank = ::PR_ntohl(mEvictionRank);
+        mDataLocation = ::PR_ntohl(mDataLocation);
+        mMetaLocation = ::PR_ntohl(mMetaLocation);
     }
 #endif
 
@@ -335,7 +335,7 @@ class nsDiskCacheRecordVisitor {
 
 struct nsDiskCacheHeader {
     PRUint32    mVersion;                           // cache version.
-    PRUint32    mDataSize;                          // size of cache in units of 256bytes.
+    PRInt32     mDataSize;                          // size of cache in bytes.
     PRInt32     mEntryCount;                        // number of entries stored in cache.
     PRUint32    mIsDirty;                           // dirty flag.
     PRInt32     mRecordCount;                       // Number of records
@@ -353,15 +353,15 @@ struct nsDiskCacheHeader {
     void        Swap()
     {
 #if defined(IS_LITTLE_ENDIAN)
-        mVersion     = htonl(mVersion);
-        mDataSize    = htonl(mDataSize);
-        mEntryCount  = htonl(mEntryCount);
-        mIsDirty     = htonl(mIsDirty);
-        mRecordCount = htonl(mRecordCount);
+        mVersion     = ::PR_htonl(mVersion);
+        mDataSize    = ::PR_htonl(mDataSize);
+        mEntryCount  = ::PR_htonl(mEntryCount);
+        mIsDirty     = ::PR_htonl(mIsDirty);
+        mRecordCount = ::PR_htonl(mRecordCount);
 
         for (PRUint32 i = 0; i < kBuckets ; i++) {
-            mEvictionRank[i] = htonl(mEvictionRank[i]);
-            mBucketUsage[i]  = htonl(mBucketUsage[i]);
+            mEvictionRank[i] = ::PR_htonl(mEvictionRank[i]);
+            mBucketUsage[i]  = ::PR_htonl(mBucketUsage[i]);
         }
 #endif
     }
@@ -369,15 +369,15 @@ struct nsDiskCacheHeader {
     void        Unswap()
     {
 #if defined(IS_LITTLE_ENDIAN)
-        mVersion     = ntohl(mVersion);
-        mDataSize    = ntohl(mDataSize);
-        mEntryCount  = ntohl(mEntryCount);
-        mIsDirty     = ntohl(mIsDirty);
-        mRecordCount = ntohl(mRecordCount);
+        mVersion     = ::PR_ntohl(mVersion);
+        mDataSize    = ::PR_ntohl(mDataSize);
+        mEntryCount  = ::PR_ntohl(mEntryCount);
+        mIsDirty     = ::PR_ntohl(mIsDirty);
+        mRecordCount = ::PR_ntohl(mRecordCount);
 
         for (PRUint32 i = 0; i < kBuckets ; i++) {
-            mEvictionRank[i] = ntohl(mEvictionRank[i]);
-            mBucketUsage[i]  = ntohl(mBucketUsage[i]);
+            mEvictionRank[i] = ::PR_ntohl(mEvictionRank[i]);
+            mBucketUsage[i]  = ::PR_ntohl(mBucketUsage[i]);
         }
 #endif
     }
@@ -422,7 +422,9 @@ public:
 /**
  *  Disk Entry operations
  */
+    nsresult    DoomRecord( nsDiskCacheRecord *  record);
     nsresult    DeleteStorage( nsDiskCacheRecord *  record);
+    nsresult    DeleteRecordAndStorage( nsDiskCacheRecord *  record);
 
     nsresult    GetFileForDiskCacheRecord( nsDiskCacheRecord * record,
                                            PRBool              meta,
@@ -444,32 +446,21 @@ public:
     /**
      *  Statistical Operations
      */
-    void     IncrementTotalSize( PRUint32  delta)
+    void     IncrementTotalSize( PRInt32  delta)
              {
+                NS_ASSERTION(mHeader.mDataSize >= 0, "disk cache size negative?");
                 mHeader.mDataSize += delta;
                 mHeader.mIsDirty   = PR_TRUE;
              }
              
-    void     DecrementTotalSize( PRUint32  delta)
+    void     DecrementTotalSize( PRInt32  delta)
              {
-                NS_ASSERTION(mHeader.mDataSize >= delta, "disk cache size negative?");
-                mHeader.mDataSize  = mHeader.mDataSize > delta ? mHeader.mDataSize - delta : 0;               
+                mHeader.mDataSize -= delta;
                 mHeader.mIsDirty   = PR_TRUE;
+                NS_ASSERTION(mHeader.mDataSize >= 0, "disk cache size negative?");
              }
     
-    inline void IncrementTotalSize( PRUint32  blocks, PRUint32 blockSize)
-             {
-                // Round up to nearest K
-                IncrementTotalSize(((blocks*blockSize) + 0x03FF) >> 10);
-             }
-
-    inline void DecrementTotalSize( PRUint32  blocks, PRUint32 blockSize)
-             {
-                // Round up to nearest K
-                DecrementTotalSize(((blocks*blockSize) + 0x03FF) >> 10);
-             }
-                 
-    PRUint32 TotalSize()   { return mHeader.mDataSize; }
+    PRInt32  TotalSize()   { return mHeader.mDataSize; }
     
     PRInt32  EntryCount()  { return mHeader.mEntryCount; }
 

@@ -201,6 +201,10 @@
 
                     viewElement.setDateRange(d1,d2);
 
+                    if (this.mWorkdaysOnly) {
+                        this.removeNonWorkdays();
+                    }
+
                     viewElement.selectedDay = aDate;
                     this.setNavLabels(firstWeekDate);
                 ]]></body>
@@ -208,16 +212,11 @@
             <method name="moveView">
                 <parameter name="aNumber"/>
                 <body><![CDATA[
-                    var d1 = this.startDay.clone();
-                    var savedSelectedDay = this.selectedDay.clone();
+                    var d1 = this.selectedDay.clone();
                     // aNumber only corresponds to the number of weeks to move
                     d1.day += 7*aNumber;
                     d1.normalize();
                     this.goToDay(d1);
-                    var viewElement = document.getAnonymousElementByAttribute(this, "anonid", "view-element");
-                    savedSelectedDay.day += 7*aNumber;
-                    savedSelectedDay.normalize();
-                    viewElement.selectedDay = savedSelectedDay;
                 ]]></body>
             </method>
             <method name="setNavLabels">
@@ -256,6 +255,13 @@
                         nameArray.push(weekTitle);
                     }
                     document.getAnonymousElementByAttribute(this, "anonid", "nav-control").setNames(nameArray);
+                ]]></body>
+            </method>
+            <method name="removeNonWorkdays">
+                <body><![CDATA[
+                    // This is handled by our pref observers and in the
+                    // embedded view.
+                    return;
                 ]]></body>
             </method>
 

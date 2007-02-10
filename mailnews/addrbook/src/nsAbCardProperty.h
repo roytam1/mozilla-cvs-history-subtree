@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -47,9 +46,8 @@
 
 #include "nsIAbCard.h"  
 #include "nsCOMPtr.h"
-#include "nsString.h"
+#include "nsIAddressBook.h"
 
-class nsIStringBundle;
 class mozITXTToHTMLConv;
 struct AppendItem;
 
@@ -80,6 +78,8 @@ protected:
 	nsString m_NickName;
 	nsString m_PrimaryEmail;
 	nsString m_SecondEmail;
+  nsString m_DefaultEmail;
+  nsString m_CardType;  // "", "0": normal, "1": AOL groups, "2": AOL additional email address
 	nsString m_WorkPhone;
 	nsString m_HomePhone;
 	nsString m_FaxNumber;
@@ -126,17 +126,14 @@ protected:
 	PRUint32 m_LastModDate;
 	PRUint32 m_PreferMailFormat;
 	PRUint32 m_PopularityIndex;
-  PRBool   m_AllowRemoteContent;
 
 	PRBool   m_IsMailList;
 	nsCString m_MailListURI;
 
 private:
   nsresult AppendData(const char *aAttrName, mozITXTToHTMLConv *aConv, nsString &aResult);
-  nsresult AppendSection(const AppendItem *aArray, PRInt16 aCount, const nsAFlatString& aHeading, nsIStringBundle *aBundle, mozITXTToHTMLConv *aConv, nsString &aResult);
-  nsresult AppendLine(const AppendItem &aItem, mozITXTToHTMLConv *aConv, nsString &aResult);
-  nsresult AppendLabel(const AppendItem &aItem, nsIStringBundle *aBundle, mozITXTToHTMLConv *aConv, nsString &aResult);
-  nsresult AppendCityStateZip(const AppendItem &aItem, nsIStringBundle *aBundle, mozITXTToHTMLConv *aConv, nsString &aResult);
+  nsresult AppendSection(AppendItem *aArray, PRInt16 aCount, const nsAFlatString& aHeading, mozITXTToHTMLConv *aConv, nsString &aResult);
+  nsresult GetCardTypeFromString(const char *aCardTypeStr, PRBool aEmptyIsTrue, PRBool *aValue);
 };
 
 #endif

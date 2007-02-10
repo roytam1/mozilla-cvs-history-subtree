@@ -37,16 +37,14 @@
 #
 # ***** END LICENSE BLOCK *****
 
-# These are loaded by placesOverlay in places-enabled builds
-#ifndef MOZ_PLACES
 <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
 <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
-<script type="application/x-javascript" src="chrome://browser/content/utilityOverlay.js"/>
-#endif
-
+<script type="application/x-javascript" src="chrome://global/content/findBar.js"/>
 <script type="application/x-javascript" src="chrome://global/content/printUtils.js"/>
-
-#ifndef MOZ_PLACES_BOOKMARKS
+<script type="application/x-javascript" src="chrome://browser/content/utilityOverlay.js"/>
+#ifdef MOZ_PLACES
+<script type="application/x-javascript" src="chrome://browser/content/places/controller.js"/>
+#else
 <script type="application/x-javascript" src="chrome://browser/content/bookmarks/bookmarks.js"/>
 <script type="application/x-javascript" src="chrome://browser/content/bookmarks/bookmarksMenu.js"/>
 #endif

@@ -21,7 +21,7 @@
  *
  * Contributor(s):
  *   Calum Robinson <calumr@mac.com>
- *   Josh Aas <josh@mozilla.com>
+ *   Josh Aas <josha@mac.com>
  *   Nick Kreeger <nick.kreeger@park.edu>
  *   Bruce Davidson <mozilla@transoceanic.org.uk>
  *
@@ -71,7 +71,6 @@ static NSString* const kProgressWindowFrameSaveName = @"ProgressWindow";
 -(void)removeSuccessfulDownloads;
 -(BOOL)shouldRemoveDownloadsOnQuit;
 -(NSString*)downloadsPlistPath;
-- (void)setToolTipForToolbarItem:(NSToolbarItem *)theItem;
 
 @end
 
@@ -219,7 +218,7 @@ static id gSharedProgressController = nil;
   {
     ProgressViewController* selProgressViewController = [selected objectAtIndex:i];
     if (![selProgressViewController isActive])
-      [self removeDownload:selProgressViewController suppressRedraw:YES];
+      [self removeDownload:selProgressViewController];
   }
   
   [self rebuildViews];
@@ -237,7 +236,7 @@ static id gSharedProgressController = nil;
   // now remove stuff, don't need to check if active, the toolbar/menu validates
   for (unsigned int i = 0; i < selectedCount; i++) {
     [[selected objectAtIndex:i] deleteFile:sender];
-    [self removeDownload:[selected objectAtIndex:i] suppressRedraw:YES];
+    [self removeDownload:[selected objectAtIndex:i]];
   }
   
   [self rebuildViews];
@@ -259,11 +258,14 @@ static id gSharedProgressController = nil;
 // remove all inactive instances
 -(IBAction)cleanUpDownloads:(id)sender
 {
-  for (int i = [mProgressViewControllers count] - 1; i >= 0; i--)
+  for (unsigned int i = 0; i < [mProgressViewControllers count]; i++)
   {
     ProgressViewController* curProgressViewController = [mProgressViewControllers objectAtIndex:i];
     if ((![curProgressViewController isActive]) || [curProgressViewController isCanceled])
-      [self removeDownload:curProgressViewController suppressRedraw:YES];
+    {
+      [self removeDownload:curProgressViewController]; // remove the download
+      i--; // leave index at the same position because the dl there got removed
+    }
   }
   mSelectionPivotIndex = -1;
   
@@ -281,7 +283,7 @@ static id gSharedProgressController = nil;
     // the ProgressViewController method "cancel:" has a sanity check, so its ok to call on anything
     // make sure downloads are not active before removing them
     [curProgressViewController cancel:self];
-    [self removeDownload:curProgressViewController suppressRedraw:YES];
+    [self removeDownload:curProgressViewController]; // remove the download
   }
   mSelectionPivotIndex = -1;
   
@@ -643,7 +645,7 @@ static id gSharedProgressController = nil;
 {
 }
 
--(void)removeDownload:(id <CHDownloadProgressDisplay>)progressDisplay suppressRedraw:(BOOL)suppressRedraw
+-(void)removeDownload:(id <CHDownloadProgressDisplay>)progressDisplay
 {
   [mProgressViewControllers removeObject:progressDisplay];
   
@@ -652,8 +654,7 @@ static id gSharedProgressController = nil;
     [self killDownloadTimer];
   }
   
-  if (!suppressRedraw)
-    [self rebuildViews];
+  [self rebuildViews];
 }
 
 -(void)rebuildViews
@@ -939,7 +940,7 @@ static id gSharedProgressController = nil;
   return YES;
 }
 
--(BOOL)validateMenuItem:(NSMenuItem*)menuItem
+-(BOOL)validateMenuItem:(id <NSMenuItem>)menuItem
 {
   SEL action = [menuItem action];
   if (action == @selector(cancel:)) {
@@ -973,6 +974,7 @@ static id gSharedProgressController = nil;
   // set the default value of the label, tooltip, icon, and pallete label to pause
   // only set the action of the selector to pause if we validate properly
   [theItem setLabel:NSLocalizedString(@"dlPauseButtonLabel", nil)];
+  [theItem setToolTip:NSLocalizedString(@"dlPauseButtonTooltip", nil)];
   [theItem setPaletteLabel:NSLocalizedString(@"dlPauseButtonLabel", nil)];
   [theItem setImage:[NSImage imageNamed:@"dl_pause.tif"]];
   
@@ -982,6 +984,7 @@ static id gSharedProgressController = nil;
     return [[self window] isKeyWindow]; // if not key window, dont enable
   }
   else if ([self shouldAllowResumeAction]) {
+    [theItem setToolTip:NSLocalizedString(@"dlResumeButtonTooltip", nil)];
     [theItem setLabel:NSLocalizedString(@"dlResumeButtonLabel", nil)];
     [theItem setPaletteLabel:NSLocalizedString(@"dlResumeButtonLabel", nil)];
     [theItem setAction:@selector(resume:)];
@@ -1016,12 +1019,10 @@ static id gSharedProgressController = nil;
   }
 
   // validate items that depend on current selection
-  if ([[self selectedProgressViewControllers] count] == 0)
+  if ([[self selectedProgressViewControllers] count] == 0) {
     return NO;
-
-  [self setToolTipForToolbarItem:theItem];
-
-  if (action == @selector(remove:)) {
+  }
+  else if (action == @selector(remove:)) {
     return [self shouldAllowRemoveAction] && [[self window] isKeyWindow];
   }
   else if (action == @selector(open:)) { 
@@ -1048,39 +1049,43 @@ static id gSharedProgressController = nil;
   NSToolbarItem *theItem = [[[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier] autorelease];
   [theItem setTarget:self];
   [theItem setEnabled:NO];
-  [self setToolTipForToolbarItem:theItem];
-
   if ([itemIdentifier isEqualToString:@"removebutton"]) {
+    [theItem setToolTip:NSLocalizedString(@"dlRemoveButtonTooltip", nil)];
     [theItem setLabel:NSLocalizedString(@"dlRemoveButtonLabel", nil)];
     [theItem setPaletteLabel:NSLocalizedString(@"dlRemoveButtonLabel", nil)];
     [theItem setAction:@selector(remove:)];
     [theItem setImage:[NSImage imageNamed:@"dl_remove.tif"]];
   }
   else if ([itemIdentifier isEqualToString:@"cancelbutton"]) {
+    [theItem setToolTip:NSLocalizedString(@"dlCancelButtonTooltip", nil)];
     [theItem setLabel:NSLocalizedString(@"dlCancelButtonLabel", nil)];
     [theItem setPaletteLabel:NSLocalizedString(@"dlCancelButtonLabel", nil)];
     [theItem setAction:@selector(cancel:)];
     [theItem setImage:[NSImage imageNamed:@"dl_cancel.tif"]];
   }
   else if ([itemIdentifier isEqualToString:@"revealbutton"]) {
+    [theItem setToolTip:NSLocalizedString(@"dlRevealButtonTooltip", nil)];
     [theItem setLabel:NSLocalizedString(@"dlRevealButtonLabel", nil)];
     [theItem setPaletteLabel:NSLocalizedString(@"dlRevealButtonLabel", nil)];
     [theItem setAction:@selector(reveal:)];
     [theItem setImage:[NSImage imageNamed:@"dl_reveal.tif"]];
   }
   else if ([itemIdentifier isEqualToString:@"openbutton"]) {
+    [theItem setToolTip:NSLocalizedString(@"dlOpenButtonTooltip", nil)];
     [theItem setLabel:NSLocalizedString(@"dlOpenButtonLabel", nil)];
     [theItem setPaletteLabel:NSLocalizedString(@"dlOpenButtonLabel", nil)];
     [theItem setAction:@selector(open:)];
     [theItem setImage:[NSImage imageNamed:@"dl_open.tif"]];
   }
   else if ([itemIdentifier isEqualToString:@"cleanupbutton"]) {
+    [theItem setToolTip:NSLocalizedString(@"dlCleanUpButtonTooltip", nil)];
     [theItem setLabel:NSLocalizedString(@"dlCleanUpButtonLabel", nil)];
     [theItem setPaletteLabel:NSLocalizedString(@"dlCleanUpButtonLabel", nil)];
     [theItem setAction:@selector(cleanUpDownloads:)];
     [theItem setImage:[NSImage imageNamed:@"dl_clearall.tif"]];
   }
   else if ([itemIdentifier isEqualToString:@"movetotrashbutton"]) {
+    [theItem setToolTip:NSLocalizedString(@"dlTrashButtonTooltip", nil)];
     [theItem setLabel:NSLocalizedString(@"dlTrashButtonLabel", nil)];
     [theItem setPaletteLabel:NSLocalizedString(@"dlTrashButtonLabel", nil)];
     [theItem setAction:@selector(deleteDownloads:)];
@@ -1097,59 +1102,12 @@ static id gSharedProgressController = nil;
 
 -(NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
 {
-  return [NSArray arrayWithObjects:@"cleanupbutton",
-                                   @"removebutton",
-                                   @"cancelbutton",
-                                   @"pauseresumebutton",
-                                   @"openbutton",
-                                   @"revealbutton",
-                                   @"movetotrashbutton",
-                                   NSToolbarCustomizeToolbarItemIdentifier,
-                                   NSToolbarFlexibleSpaceItemIdentifier,
-                                   NSToolbarSpaceItemIdentifier,
-                                   NSToolbarSeparatorItemIdentifier,
-                                   nil];
+  return [NSArray arrayWithObjects:@"cleanupbutton", @"removebutton", @"cancelbutton", @"pauseresumebutton", @"openbutton", @"revealbutton", @"movetotrashbutton", NSToolbarFlexibleSpaceItemIdentifier, nil];
 }
 
 -(NSArray *)toolbarDefaultItemIdentifiers:(NSToolbar *)toolbar
 {
-  return [NSArray arrayWithObjects:@"cleanupbutton",
-                                   @"removebutton",
-                                   @"cancelbutton",
-                                   @"pauseresumebutton",
-                                   @"openbutton",
-                                   NSToolbarFlexibleSpaceItemIdentifier,
-                                   @"revealbutton",
-                                   nil];
-}
-
-- (void)setToolTipForToolbarItem:(NSToolbarItem *)theItem
-{
-  NSString* toolTip = nil;
-  NSString* itemIdentifier = [theItem itemIdentifier];
-  BOOL plural = ([[self selectedProgressViewControllers] count] > 1);
-
-  if ([itemIdentifier isEqualToString:@"cleanupbutton"])
-    toolTip = NSLocalizedString(@"dlCleanUpButtonTooltip", nil);
-  else if ([itemIdentifier isEqualToString:@"removebutton"])
-    toolTip = NSLocalizedString((plural ? @"dlRemoveButtonTooltipPlural" : @"dlRemoveButtonTooltip"), nil);
-  else if ([itemIdentifier isEqualToString:@"cancelbutton"])
-    toolTip = NSLocalizedString((plural ? @"dlCancelButtonTooltipPlural" : @"dlCancelButtonTooltip"), nil);
-  else if ([itemIdentifier isEqualToString:@"revealbutton"])
-    toolTip = NSLocalizedString((plural ? @"dlRevealButtonTooltipPlural" : @"dlRevealButtonTooltip"), nil);
-  else if ([itemIdentifier isEqualToString:@"openbutton"])
-    toolTip = NSLocalizedString((plural ? @"dlOpenButtonTooltipPlural" : @"dlOpenButtonTooltip"), nil);
-  else if ([itemIdentifier isEqualToString:@"movetotrashbutton"])
-    toolTip = NSLocalizedString((plural ? @"dlTrashButtonTooltipPlural" : @"dlTrashButtonTooltip"), nil);
-  else if ([itemIdentifier isEqualToString:@"pauseresumebutton"]) {
-    if ([self shouldAllowResumeAction])
-      toolTip = NSLocalizedString((plural ? @"dlResumeButtonTooltipPlural" : @"dlResumeButtonTooltip"), nil);
-    else
-      toolTip = NSLocalizedString((plural ? @"dlPauseButtonTooltipPlural" : @"dlPauseButtonTooltip"), nil);
-  }
-
-  if (toolTip)
-    [theItem setToolTip:toolTip];
+  return [NSArray arrayWithObjects:@"cleanupbutton", @"removebutton", @"cancelbutton", @"pauseresumebutton", @"openbutton", NSToolbarFlexibleSpaceItemIdentifier, @"revealbutton", nil];
 }
 
 #pragma mark -

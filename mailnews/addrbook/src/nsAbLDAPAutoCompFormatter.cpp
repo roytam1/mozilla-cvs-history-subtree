@@ -37,20 +37,26 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+// Work around lack of conditional build logic in codewarrior's
+// build system.  The MOZ_LDAP_XPCOM preprocessor symbol is only 
+// defined on Mac because noone else needs this weirdness; thus 
+// the XP_MAC check first.  This conditional encloses the entire
+// file, so that in the case where the ldap option is turned off
+// in the mac build, a dummy (empty) object will be generated.
+//
+#if !defined(XP_MAC) || defined(MOZ_LDAP_XPCOM)
+
 #include "nsAbLDAPAutoCompFormatter.h"
 #include "nsIAutoCompleteResults.h"
 #include "nsIServiceManager.h"
 #include "nsIMsgHeaderParser.h"
 #include "nsILDAPMessage.h"
+#include "nsLDAP.h"
 #include "nsReadableUtils.h"
 #include "nsIStringBundle.h"
 #include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
 #include "nsNetError.h"
-#include "nsILDAPErrors.h"
-
-#define LDAP_ERROR_BUNDLE "chrome://mozldap/locale/ldap.properties"
-#define LDAP_AUTOCOMPLETE_ERROR_BUNDLE "chrome://messenger/locale/addressbook/ldapAutoCompErrs.properties"
 
 NS_IMPL_ISUPPORTS2(nsAbLDAPAutoCompFormatter, 
 		   nsILDAPAutoCompFormatter, 
@@ -128,7 +134,7 @@ nsAbLDAPAutoCompFormatter::Format(nsILDAPMessage *aMsg,
 
     // this is that part that actually gets autocompleted to
     //
-    rv = item->SetValue(NS_ConvertUTF8toUTF16(value));
+    rv = item->SetValue(NS_ConvertUTF8toUCS2(value));
     if (NS_FAILED(rv)) {
         NS_ERROR("nsAbLDAPAutoCompFormatter::Format(): "
                  "item->SetValue failed");
@@ -140,7 +146,7 @@ nsAbLDAPAutoCompFormatter::Format(nsILDAPMessage *aMsg,
     nsCAutoString comment;
     rv = ProcessFormat(mCommentFormat, aMsg, &comment, 0);
     if (NS_SUCCEEDED(rv)) {
-        rv = item->SetComment(NS_ConvertUTF8toUTF16(comment).get());
+        rv = item->SetComment(NS_ConvertUTF8toUCS2(comment).get());
         if (NS_FAILED(rv)) {
             NS_WARNING("nsAbLDAPAutoCompFormatter::Format():"
                        " item->SetComment() failed");
@@ -196,22 +202,22 @@ nsAbLDAPAutoCompFormatter::FormatException(PRInt32 aState,
     nsCOMPtr<nsIStringBundle> ldapBundle, ldapACBundle;
 
     rv = stringBundleSvc->CreateBundle(
-        LDAP_ERROR_BUNDLE,
+        "chrome://mozldap/locale/ldap.properties",
         getter_AddRefs(ldapBundle));
     if (NS_FAILED(rv)) {
         NS_ERROR("nsAbLDAPAutoCompleteFormatter::FormatException():"
-                 " error creating string bundle "
-                 LDAP_ERROR_BUNDLE);
+                 " error creating string bundle"
+                 " chrome://mozldap/locale/ldap.properties");
         return rv;
     } 
 
     rv = stringBundleSvc->CreateBundle(
-        LDAP_AUTOCOMPLETE_ERROR_BUNDLE,
+        "chrome://global/locale/ldapAutoCompErrs.properties",
         getter_AddRefs(ldapACBundle));
     if (NS_FAILED(rv)) {
         NS_ERROR("nsAbLDAPAutoCompleteFormatter::FormatException():"
-                 " error creating string bundle "
-                 LDAP_AUTOCOMPLETE_ERROR_BUNDLE);
+                 " error creating string bundle"
+                 " chrome://global/locale/ldapAutoCompErrs.properties");
         return rv;
     }
 
@@ -221,8 +227,8 @@ nsAbLDAPAutoCompFormatter::FormatException(PRInt32 aState,
     rv = ldapACBundle->GetStringFromID(aState, getter_Copies(errMsg));
     if (NS_FAILED(rv)) {
         NS_ERROR("nsAbLDAPAutoCompleteFormatter::FormatException():"
-                 " error getting general error from bundle "
-                 LDAP_AUTOCOMPLETE_ERROR_BUNDLE);
+                 " error getting general error from bundle"
+                 " chrome://global/locale/ldapAutoCompErrs.properties");
         return rv;
     }
 
@@ -232,8 +238,8 @@ nsAbLDAPAutoCompFormatter::FormatException(PRInt32 aState,
                                          getter_Copies(errCode));
     if (NS_FAILED(rv)) {
         NS_ERROR("nsAbLDAPAutoCompleteFormatter::FormatException"
-                 "(): error getting 'errCode' string from bundle "
-                 LDAP_AUTOCOMPLETE_ERROR_BUNDLE);
+                   "(): error getting 'errCode' string from bundle "
+                   "chrome://mozldap/locale/ldap.properties");
         return rv;
     }
 
@@ -254,7 +260,7 @@ nsAbLDAPAutoCompFormatter::FormatException(PRInt32 aState,
         if (NS_FAILED(rv)) {
             NS_ERROR("nsAbLDAPAutoCompleteFormatter::FormatException"
                      "(): error getting string 2 from bundle "
-                     LDAP_ERROR_BUNDLE);
+                     "chrome://mozldap/locale/ldap.properties");
             return rv;
         }
   
@@ -279,7 +285,7 @@ nsAbLDAPAutoCompFormatter::FormatException(PRInt32 aState,
             NS_ERROR("nsAbLDAPAutoCompleteFormatter::FormatException"
                      "(): error getting specific non LDAP error-string "
                      "from bundle "
-                     LDAP_AUTOCOMPLETE_ERROR_BUNDLE);
+                     "chrome://mozldap/locale/ldap.properties");
             return rv;
         }
     }
@@ -296,7 +302,7 @@ nsAbLDAPAutoCompFormatter::FormatException(PRInt32 aState,
         if (NS_FAILED(rv)) {
             NS_ERROR("nsAbLDAPAutoCompleteFormatter::FormatException()"
                      "(): error getting hint string from bundle "
-                     LDAP_AUTOCOMPLETE_ERROR_BUNDLE);
+                     "chrome://mozldap/locale/ldap.properties");
             return rv;
         }
     }
@@ -736,3 +742,5 @@ nsAbLDAPAutoCompFormatter::SetCommentFormat(const nsAString &
 
     return NS_OK;
 }
+
+#endif

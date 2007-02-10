@@ -134,9 +134,6 @@ function initForm() {
 
   // We don't let the user go forward until they fufill certain requirements - see validateform()
   reportWizard.canAdvance = false;
-
-  document.getElementById("problem_type").focus();
-
 }
 
 function validateForm() {
@@ -244,7 +241,6 @@ function sendReport() {
     finishExtendedDoc.getElementById('emailStri').textContent       = emailStri;
 
     reportWizard.canRewind = false;
-
   } else {
     // If there was an error from the server
     finishExtendedSuccess.setAttribute("class", "hide");
@@ -262,8 +258,8 @@ function sendReport() {
     //finishExtendedDoc.getElementById('faultCode').textContent = gFaultCode;
     finishExtendedDoc.getElementById('faultMessage').textContent = gFaultMessage;
   }
-
   document.getElementById('finishExtendedFrame').collapsed = true;
+  reportWizard.canRewind = false;
   reportWizard.getButton("cancel").disabled = true;
 }
 
@@ -275,6 +271,8 @@ function showDetail() {
 function getBuildConfig() {
   // bz and Biesi are my heroes for writing/debugging this chunk.
   try {
+    netscape.security.PrivilegeManager
+            .enablePrivilege("UniversalXPConnect UniversalBrowserRead UniversalBrowserWrite");
     var ioservice =
       Components.classes["@mozilla.org/network/io-service;1"]
                 .getService(Components.interfaces.nsIIOService);

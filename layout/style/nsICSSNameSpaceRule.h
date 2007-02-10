@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* internal interface for CSS @namespace rules */
-
 #ifndef nsICSSNameSpaceRule_h___
 #define nsICSSNameSpaceRule_h___
 
@@ -52,7 +49,7 @@ class nsIURI;
 
 class nsICSSNameSpaceRule : public nsICSSRule {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICSS_NAMESPACE_RULE_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICSS_NAMESPACE_RULE_IID)
 
   NS_IMETHOD  GetPrefix(nsIAtom*& aPrefix) const = 0;
   NS_IMETHOD  SetPrefix(nsIAtom* aPrefix) = 0;
@@ -60,8 +57,6 @@ public:
   NS_IMETHOD  GetURLSpec(nsString& aURLSpec) const = 0;
   NS_IMETHOD  SetURLSpec(const nsString& aURLSpec) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsICSSNameSpaceRule, NS_ICSS_NAMESPACE_RULE_IID)
 
 nsresult
 NS_NewCSSNameSpaceRule(nsICSSNameSpaceRule** aInstancePtrResult, 

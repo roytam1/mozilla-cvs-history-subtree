@@ -164,17 +164,17 @@ net_ParseFileURL(const nsACString &inURL,
 
     // invoke the parser to extract the URL path
     rv = parser->ParseURL(url, flatURL.Length(),
-                          nsnull, nsnull, // don't care about scheme
-                          nsnull, nsnull, // don't care about authority
+                          nsnull, nsnull, // dont care about scheme
+                          nsnull, nsnull, // dont care about authority
                           &pathPos, &pathLen);
     if (NS_FAILED(rv)) return rv;
 
     // invoke the parser to extract filepath from the path
     rv = parser->ParsePath(url + pathPos, pathLen,
                            &filepathPos, &filepathLen,
-                           nsnull, nsnull,  // don't care about param
-                           nsnull, nsnull,  // don't care about query
-                           nsnull, nsnull); // don't care about ref
+                           nsnull, nsnull,  // dont care about param
+                           nsnull, nsnull,  // dont care about query
+                           nsnull, nsnull); // dont care about ref
     if (NS_FAILED(rv)) return rv;
 
     filepathPos += pathPos;
@@ -629,6 +629,20 @@ net_FindCharInSet(const char *iter, const char *stop, const char *set)
 }
 
 char *
+net_RFindCharInSet(const char *stop, const char *iter, const char *set)
+{
+    --iter;
+    --stop;
+    for (; iter != stop; --iter) {
+        for (const char *s = set; *s; ++s) {
+            if (*iter == *s)
+                return (char *) iter;
+        }
+    }
+    return (char *) iter;
+}
+
+char *
 net_FindCharNotInSet(const char *iter, const char *stop, const char *set)
 {
 repeat:
@@ -885,7 +899,7 @@ net_IsValidHostName(const nsCSubstring &host)
     const char *end = host.EndReading();
     // ctrl-chars and  !\"#%&'()*,/;<=>?@\\^{|}\x7f
     // if one of these chars is found return false
-    return net_FindCharInSet(host.BeginReading(), end, 
+    return net_FindCharInSet(host.BeginReading(), end,
                              "\x01\x02\x03\x04\x05\x06\x07\x08"
                              "\x09\x0a\x0b\x0c\x0d\x0e\x0f\x10"
                              "\x11\x12\x13\x14\x15\x16\x17\x18"

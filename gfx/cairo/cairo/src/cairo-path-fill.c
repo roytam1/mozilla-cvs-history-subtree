@@ -94,7 +94,7 @@ _cairo_filler_move_to (void *closure, cairo_point_t *point)
     status = _cairo_polygon_close (polygon);
     if (status)
 	return status;
-
+      
     status = _cairo_polygon_move_to (polygon, point);
     if (status)
 	return status;
@@ -194,9 +194,9 @@ _cairo_path_fixed_fill_to_traps (cairo_path_fixed_t *path,
     if (status)
 	goto BAIL;
 
-    status = _cairo_bentley_ottmann_tessellate_polygon (filler.traps,
-							&filler.polygon,
-							fill_rule);
+    status = _cairo_traps_tessellate_polygon (filler.traps,
+					      &filler.polygon,
+					      fill_rule);
     if (status)
 	goto BAIL;
 
@@ -205,3 +205,4 @@ BAIL:
 
     return status;
 }
+

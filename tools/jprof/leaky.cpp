@@ -11,9 +11,10 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is jprof.
  *
- * The Initial Developer of the Original Code is Netscape Communications Corp.
+ * The Initial Developer of the Original Code is
+ * Kipp E.B. Hickman.
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *
@@ -72,52 +73,6 @@ int main(int argc, char** argv)
   l->initialize(argc, argv);
   l->open();
   return 0;
-}
-
-char *
-htmlify(const char *in)
-{
-  const char *p = in;
-  char *out, *q;
-  int n = 0;
-  size_t newlen;
-
-  // Count the number of '<' and '>' in the input.
-  while ((p = strpbrk(p, "<>")))
-  {
-    ++n;
-    ++p;
-  }
-
-  // Knowing the number of '<' and '>', we can calculate the space
-  // needed for the output string.
-  newlen = strlen(in) + n * 3 + 1;
-  out = new char[newlen];
-
-  // Copy the input to the output, with substitutions.
-  p = in;
-  q = out;
-  do
-  {
-    if (*p == '<') 
-    {
-      strcpy(q, "&lt;");
-      q += 4;
-    }
-    else if (*p == '>')
-    {
-      strcpy(q, "&gt;");
-      q += 4;
-    }
-    else
-    {
-      *q++ = *p;
-    }
-    p++;
-  } while (*p);
-  *q = '\0';
-
-  return out;
 }
 
 leaky::leaky()
@@ -287,12 +242,11 @@ void leaky::open()
 //----------------------------------------------------------------------
 
 
-static int symbolOrder(void const* a, void const* b)
+static ptrdiff_t symbolOrder(void const* a, void const* b)
 {
   Symbol const* ap = (Symbol const *)a;
   Symbol const* bp = (Symbol const *)b;
-  ptrdiff_t diff = ap->address - bp->address;
-  return (diff == 0) ? 0 : ((diff > 0) ? 1 : -1);
+  return ap->address - bp->address;
 }
 
 void leaky::ReadSharedLibrarySymbols()
@@ -441,9 +395,9 @@ void leaky::generateReportHTML(FILE *fp, int *countArray, int count)
   for(int cnt=usefulSymbols; --cnt>=0; rankingTable[cnt]=cnt);
 
   // Drat.  I would use ::qsort() but I would need a global variable and my
-  // intro-pascal professor threatened to flunk anyone who used globals.
-  // She damaged me for life :-) (That was 1986.  See how much influence
-  // she had.  I don't remember her name but I always feel guilty about globals)
+  // into-pascal professor threatened to flunk anyone who used globals.
+  // She dammaged me for life :-) (That was 1986.  See how much influence
+  // she had.  I dont remember her name but I always feel guilty about globals)
 
   // Shell Sort. 581130733 is the max 31 bit value of h = 3h+1
   int mx, i, h;
@@ -459,8 +413,8 @@ void leaky::generateReportHTML(FILE *fp, int *countArray, int count)
     }
   }
 
-  // Ok, We are sorted now.  Let's go through the table until we get to
-  // functions that were never called.  Right now we don't do much inside
+  // Ok, We are sorted now.  Lets go through the table until we get to
+  // functions that were never called.  Right now we dont do much inside
   // this loop.  Later we can get callers and callees into it like gprof
   // does
   fprintf(fp,
@@ -474,11 +428,8 @@ void leaky::generateReportHTML(FILE *fp, int *countArray, int count)
     
     sp->cntP.printReport(fp, this);
 
-    char *symname = htmlify(sp->name);
     fprintf(fp, "%6d %3d <a name=%d>%8d</a> <b>%s</b>\n", rankingTable[i],
-            sp->timerHit, rankingTable[i], countArray[rankingTable[i]],
-            symname);
-    delete [] symname;
+    sp->timerHit, rankingTable[i], countArray[rankingTable[i]], sp->name);
 
     sp->cntC.printReport(fp, this);
 
@@ -526,11 +477,9 @@ void leaky::generateReportHTML(FILE *fp, int *countArray, int count)
 
     Symbol *sp=&externalSymbols[rankingTable[i]];
     
-    char *symname = htmlify(sp->name);
     fprintf(fp, "<a href=\"#%d\">%3d   %-2.1f     %s</a>\n",
-            rankingTable[i], sp->timerHit,
-            ((float)sp->timerHit/(float)totalTimerHits)*100.0, symname);
-    delete [] symname;
+    rankingTable[i], sp->timerHit,
+    ((float)sp->timerHit/(float)totalTimerHits)*100.0, sp->name);
   }
 
   fprintf(fp,"</pre></body></html>\n");
@@ -596,7 +545,7 @@ void leaky::analyze()
       }
     }
 
-    // idx should be the function that we were in when we received the signal.
+    // idx should be the function that we were in when we recieved the signal.
     if(idx>=0) {
       ++externalSymbols[idx].timerHit;
     }
@@ -617,9 +566,8 @@ void FunctionCount::printReport(FILE *fp, leaky *lk)
 	    int cnt = getCount(j);
 	    if(cnt==tmax) {
 		int idx = getIndex(j);
-		char *symname = htmlify(lk->indexToName(idx));
-		fprintf(fp, fmt, idx, getCount(j), symname);
-		delete [] symname;
+		fprintf(fp, fmt, idx, getCount(j),
+		const_cast<char*>(lk->indexToName(idx)));
 	    } else if(cnt<tmax && cnt>nmax) {
 	        nmax=cnt;
 	    }

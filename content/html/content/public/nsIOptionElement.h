@@ -56,7 +56,7 @@
 class nsIOptionElement : public nsISupports {
 public:
 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IOPTIONELEMENT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IOPTIONELEMENT_IID)
 
   /**
    * Select the option element from its own point of view.  This should only be
@@ -66,8 +66,6 @@ public:
    */
   NS_IMETHOD SetSelectedInternal(PRBool aValue, PRBool aNotify) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIOptionElement, NS_IOPTIONELEMENT_IID)
 
 #endif // nsIOptionElement_h___
 

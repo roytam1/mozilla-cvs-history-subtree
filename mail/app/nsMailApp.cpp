@@ -45,14 +45,14 @@
 #include "prtypes.h"
 
 static const nsXREAppData kAppData = {
-  offsetof(nsXREAppData, xreDirectory),
+  sizeof(nsXREAppData),
   nsnull,
   nsnull,
   "Thunderbird",
   NS_STRINGIFY(APP_VERSION),
   NS_STRINGIFY(BUILD_ID),
   "{3550f703-e582-4d05-9a08-453d09bdfdc6}",
-  "Copyright (c) 1998-2007 mozilla.org",
+  "Copyright (c) 2005-2006 mozilla.org",
   NS_XRE_ENABLE_PROFILE_MIGRATOR |
   NS_XRE_ENABLE_EXTENSION_MANAGER
 };

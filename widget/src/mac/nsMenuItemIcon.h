@@ -50,17 +50,18 @@
 class nsIURI;
 class nsIContent;
 class imgIRequest;
-class nsIMenu;
+class nsIMenu_MOZILLA_1_8_BRANCH;
 
 #include <Carbon/Carbon.h>
 
 
-class nsMenuItemIcon : public imgIDecoderObserver
+class nsMenuItemIcon : public imgIDecoderObserver,
+                       public imgIDecoderObserver_MOZILLA_1_8_BRANCH
 {
 public:
-  nsMenuItemIcon(nsISupports* aMenuItem,
-                 nsIMenu*     aMenu,
-                 nsIContent*  aContent);
+  nsMenuItemIcon(nsISupports*                aMenuItem,
+                 nsIMenu_MOZILLA_1_8_BRANCH* aMenu,
+                 nsIContent*                 aContent);
 private:
   ~nsMenuItemIcon();
 
@@ -68,6 +69,7 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_IMGICONTAINEROBSERVER
   NS_DECL_IMGIDECODEROBSERVER
+  NS_DECL_IMGIDECODEROBSERVER_MOZILLA_1_8_BRANCH
 
   // SetupIcon succeeds if it was able to set up the icon, or if there should
   // be no icon, in which case it clears any existing icon but still succeeds.
@@ -85,14 +87,14 @@ public:
   PRBool ShouldLoadSync(nsIURI* aURI);
 
 protected:
-  nsCOMPtr<nsIContent>  mContent;
-  nsCOMPtr<imgIRequest> mIconRequest;
-  nsISupports*          mMenuItem;
-  nsIMenu*              mMenu;
-  MenuRef               mMenuRef;
-  PRUint16              mMenuItemIndex;
-  PRPackedBool          mLoadedIcon;
-  PRPackedBool          mSetIcon;
+  nsCOMPtr<nsIContent>        mContent;
+  nsCOMPtr<imgIRequest>       mIconRequest;
+  nsISupports*                mMenuItem;
+  nsIMenu_MOZILLA_1_8_BRANCH* mMenu;
+  MenuRef                     mMenuRef;
+  PRUint16                    mMenuItemIndex;
+  PRPackedBool                mLoadedIcon;
+  PRPackedBool                mSetIcon;
 };
 
 #endif /* nsMenuItemIcon_h__ */

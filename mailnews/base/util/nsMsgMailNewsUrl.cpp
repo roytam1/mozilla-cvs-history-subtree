@@ -42,6 +42,7 @@
 #include "nsIMsgAccountManager.h"
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
+#include "nsIDocumentLoader.h"
 #include "nsILoadGroup.h"
 #include "nsIDocShell.h"
 #include "nsIWebProgress.h"
@@ -56,6 +57,8 @@
 #include "nsIInputStream.h"
 #include "nsIFileSpec.h"
 #include <time.h>
+
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 nsMsgMailNewsUrl::nsMsgMailNewsUrl()
 {
@@ -573,22 +576,11 @@ NS_IMETHODIMP nsMsgMailNewsUrl::Clone(nsIURI **_retval)
 {
   nsresult rv;
   nsCAutoString urlSpec;
-  nsCOMPtr<nsIIOService> ioService = do_GetService(NS_IOSERVICE_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
+  nsCOMPtr<nsIIOService> ioService = do_GetService(kIOServiceCID, &rv);
+  if (NS_FAILED(rv)) return rv;
   rv = GetSpec(urlSpec);
-  NS_ENSURE_SUCCESS(rv, rv);
-  rv = ioService->NewURI(urlSpec, nsnull, nsnull, _retval);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // add the msg window to the cloned url
-  if (m_msgWindow)
-  {
-    nsCOMPtr<nsIMsgMailNewsUrl> msgMailNewsUrl = do_QueryInterface(*_retval, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-    msgMailNewsUrl->SetMsgWindow(m_msgWindow);
-  }
-
-  return rv;
+  if (NS_FAILED(rv)) return rv;
+  return ioService->NewURI(urlSpec, nsnull, nsnull, _retval);
 } 
 
 NS_IMETHODIMP nsMsgMailNewsUrl::Resolve(const nsACString &relativePath, nsACString &result) 
@@ -951,17 +943,9 @@ nsresult nsMsgSaveAsListener::SetupMsgWriteStream(nsIFileSpec *aFileSpec, PRBool
 {
   nsresult rv = NS_ERROR_FAILURE;
 
-  // If the file already exists, delete it, but do this before
-  // getting the outputstream.
-  // Due to bug 328027, the nsSaveMsgListener created in 
-  // nsMessenger::SaveAs now opens the stream on the nsIFileSpec
-  // object, thus creating an empty file. Actual save operations for
-  // IMAP and NNTP use this nsMsgSaveAsListener here, though, so we
-  // have to close the stream before deleting the file, else data
-  // would still be written happily into a now non-existing file.
-  // (Windows doesn't care, btw, just unixoids do...)
+  // if the file already exists, delete it.
+  // do this before we get the outputstream
   nsFileSpec fileSpec;
-  aFileSpec->CloseStream();
   aFileSpec->GetFileSpec(&fileSpec);
   fileSpec.Delete(PR_FALSE);
 

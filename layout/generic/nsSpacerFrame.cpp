@@ -34,14 +34,11 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* rendering object for HTML <spacer> element */
-
 #include "nsHTMLParts.h"
 #include "nsFrame.h"
 #include "nsLineLayout.h"
 #include "nsPresContext.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsUnitConversion.h"
 #include "nsStyleConsts.h"
 #include "nsINameSpaceManager.h"
@@ -53,11 +50,9 @@
 
 class SpacerFrame : public nsFrame {
 public:
-  friend nsIFrame* NS_NewSpacerFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewSpacerFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   // nsIHTMLReflow
-  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
-  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -66,37 +61,31 @@ public:
   PRUint8 GetType();
 
 protected:
-  SpacerFrame(nsStyleContext* aContext) : nsFrame(aContext) {}
+  SpacerFrame();
   virtual ~SpacerFrame();
-  void GetDesiredSize(nsHTMLReflowMetrics& aMetrics, nsSize aPercentBase);
 };
 
-nsIFrame*
-NS_NewSpacerFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewSpacerFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) SpacerFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  SpacerFrame* it = new (aPresShell) SpacerFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+SpacerFrame::SpacerFrame()
+{
 }
 
 SpacerFrame::~SpacerFrame()
 {
-}
-
-/* virtual */ nscoord
-SpacerFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
-{
-  nsHTMLReflowMetrics metrics;
-  DISPLAY_MIN_WIDTH(this, metrics.width);
-  GetDesiredSize(metrics, nsSize(0, 0));
-  return metrics.width;
-}
-
-/* virtual */ nscoord
-SpacerFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
-{
-  nsHTMLReflowMetrics metrics;
-  DISPLAY_PREF_WIDTH(this, metrics.width);
-  GetDesiredSize(metrics, nsSize(0, 0));
-  return metrics.width;
 }
 
 NS_IMETHODIMP
@@ -105,31 +94,15 @@ SpacerFrame::Reflow(nsPresContext*          aPresContext,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("SpacerFrame");
+  DO_GLOBAL_REFLOW_COUNT("SpacerFrame", aReflowState.reason);
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
   aStatus = NS_FRAME_COMPLETE;
 
-  nsSize percentBase(aReflowState.availableWidth, aReflowState.availableHeight);
-  if (percentBase.width == NS_UNCONSTRAINEDSIZE)
-    percentBase.width = 0;
-  if (percentBase.height == NS_UNCONSTRAINEDSIZE)
-    percentBase.height = 0;
-
-  if (GetType() == TYPE_LINE)
-    aStatus = NS_INLINE_LINE_BREAK_AFTER(NS_FRAME_COMPLETE);
-
-  GetDesiredSize(aMetrics, percentBase);
-
-  NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aMetrics);
-  return NS_OK;
-}
-
-void
-SpacerFrame::GetDesiredSize(nsHTMLReflowMetrics& aMetrics, nsSize aPercentBase)
-{
   // By default, we have no area
   aMetrics.width = 0;
   aMetrics.height = 0;
+  aMetrics.ascent = 0;
+  aMetrics.descent = 0;
 
   const nsStylePosition* position = GetStylePosition();
 
@@ -139,9 +112,11 @@ SpacerFrame::GetDesiredSize(nsHTMLReflowMetrics& aMetrics, nsSize aPercentBase)
     break;
 
   case TYPE_LINE:
+    aStatus = NS_INLINE_LINE_BREAK_AFTER(NS_FRAME_COMPLETE);
     if (eStyleUnit_Coord == position->mHeight.GetUnit()) {
-      aMetrics.height = position->mHeight.GetCoordValue();
+      aMetrics.width = position->mHeight.GetCoordValue();
     }
+    aMetrics.ascent = aMetrics.height;
     break;
 
   case TYPE_IMAGE:
@@ -152,8 +127,11 @@ SpacerFrame::GetDesiredSize(nsHTMLReflowMetrics& aMetrics, nsSize aPercentBase)
     }
     else if (eStyleUnit_Percent == unit) 
     {
-      float factor = position->mWidth.GetPercentValue();
-      aMetrics.width = NSToCoordRound(factor * aPercentBase.width);
+      if (NS_UNCONSTRAINEDSIZE != aReflowState.availableWidth)
+      {
+        float factor = position->mWidth.GetPercentValue();
+        aMetrics.width = NSToCoordRound (factor * aReflowState.availableWidth);
+      }
     }
 
     // height
@@ -163,9 +141,14 @@ SpacerFrame::GetDesiredSize(nsHTMLReflowMetrics& aMetrics, nsSize aPercentBase)
     }
     else if (eStyleUnit_Percent == unit) 
     {
-      float factor = position->mHeight.GetPercentValue();
-      aMetrics.width = NSToCoordRound(factor * aPercentBase.height);
+      if (NS_UNCONSTRAINEDSIZE != aReflowState.availableHeight)
+      {
+        float factor = position->mHeight.GetPercentValue();
+        aMetrics.width = NSToCoordRound (factor * aReflowState.availableHeight);
+      }
     }
+    // accent
+    aMetrics.ascent = aMetrics.height;
     break;
   }
 
@@ -174,23 +157,30 @@ SpacerFrame::GetDesiredSize(nsHTMLReflowMetrics& aMetrics, nsSize aPercentBase)
     if (!aMetrics.width) aMetrics.width = 1;
     if (!aMetrics.height) aMetrics.height = 1;
   }
+
+  if (aMetrics.mComputeMEW) {
+    aMetrics.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
+  }
+
+  NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aMetrics);
+  return NS_OK;
 }
 
 PRUint8
 SpacerFrame::GetType()
 {
   PRUint8 type = TYPE_WORD;
-  static nsIContent::AttrValuesArray strings[] =
-    {&nsGkAtoms::line, &nsGkAtoms::vert, &nsGkAtoms::vertical,
-     &nsGkAtoms::block, nsnull};
-  switch (mContent->FindAttrValueIn(kNameSpaceID_None, nsGkAtoms::type,
-                                    strings, eIgnoreCase)) {
-    case 0:
-    case 1:
-    case 2:
+  nsAutoString value;
+  if (NS_CONTENT_ATTR_HAS_VALUE ==
+      mContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::type, value)) {
+    if (value.LowerCaseEqualsLiteral("line") ||
+        value.LowerCaseEqualsLiteral("vert") ||
+        value.LowerCaseEqualsLiteral("vertical")) {
       return TYPE_LINE;
-    case 3:
+    }
+    if (value.LowerCaseEqualsLiteral("block")) {
       return TYPE_IMAGE;
+    }
   }
   return type;
 }

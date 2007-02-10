@@ -21,7 +21,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Benjamin Smedberg <benjamin@smedbergs.us>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -64,19 +63,19 @@
 
  */
 
-#include "nsRDFService.h"
 #include "nsCOMPtr.h"
-#include "nsAutoPtr.h"
 #include "nsMemory.h"
 #include "nsIAtom.h"
 #include "nsIComponentManager.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
+#include "nsIRDFService.h"
 #include "nsIRDFRemoteDataSource.h"
 #include "nsIServiceManager.h"
 #include "nsIFactory.h"
 #include "nsRDFCID.h"
 #include "nsString.h"
+#include "nsWeakReference.h"
 #include "nsXPIDLString.h"
 #include "nsNetUtil.h"
 #include "pldhash.h"
@@ -87,7 +86,6 @@
 #include "prmem.h"
 #include "rdf.h"
 #include "nsCRT.h"
-#include "nsCRTGlue.h"
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -105,6 +103,56 @@ static PRLogModuleInfo* gLog = nsnull;
 #endif
 
 class BlobImpl;
+
+////////////////////////////////////////////////////////////////////////
+// RDFServiceImpl
+//
+//   This is the RDF service.
+//
+class RDFServiceImpl : public nsIRDFService,
+                       public nsSupportsWeakReference
+{
+protected:
+    PLHashTable* mNamedDataSources;
+    PLDHashTable mResources;
+    PLDHashTable mLiterals;
+    PLDHashTable mInts;
+    PLDHashTable mDates;
+    PLDHashTable mBlobs;
+
+    nsCAutoString mLastURIPrefix;
+    nsCOMPtr<nsIFactory> mLastFactory;
+    nsCOMPtr<nsIFactory> mDefaultResourceFactory;
+
+    RDFServiceImpl();
+    nsresult Init();
+    virtual ~RDFServiceImpl();
+
+public:
+
+    static nsresult GetRDFService(nsIRDFService** result);
+
+    // nsISupports
+    NS_DECL_ISUPPORTS
+
+    // nsIRDFService
+    NS_DECL_NSIRDFSERVICE
+
+    // Implementation methods
+    nsresult RegisterLiteral(nsIRDFLiteral* aLiteral);
+    nsresult UnregisterLiteral(nsIRDFLiteral* aLiteral);
+    nsresult RegisterInt(nsIRDFInt* aInt);
+    nsresult UnregisterInt(nsIRDFInt* aInt);
+    nsresult RegisterDate(nsIRDFDate* aDate);
+    nsresult UnregisterDate(nsIRDFDate* aDate);
+    nsresult RegisterBlob(BlobImpl* aBlob);
+    nsresult UnregisterBlob(BlobImpl* aBlob);
+
+    nsresult GetDataSource(const char *aURI, PRBool aBlock, nsIRDFDataSource **aDataSource );
+};
+
+static RDFServiceImpl* gRDFService; // The one-and-only RDF service
+
 
 // These functions are copied from nsprpub/lib/ds/plhash.c, with one
 // change to free the key in DataSourceFreeEntry.
@@ -362,18 +410,18 @@ public:
         mData.mLength = aLength;
         mData.mBytes = new PRUint8[aLength];
         memcpy(mData.mBytes, aBytes, aLength);
-        NS_ADDREF(RDFServiceImpl::gRDFService);
-        RDFServiceImpl::gRDFService->RegisterBlob(this);
+        NS_ADDREF(gRDFService);
+        gRDFService->RegisterBlob(this);
     }
 
     virtual ~BlobImpl()
     {
-        RDFServiceImpl::gRDFService->UnregisterBlob(this);
+        gRDFService->UnregisterBlob(this);
         // Use NS_RELEASE2() here, because we want to decrease the
         // refcount, but not null out the gRDFService pointer (which is
         // what a vanilla NS_RELEASE() would do).
         nsrefcnt refcnt;
-        NS_RELEASE2(RDFServiceImpl::gRDFService, refcnt);
+        NS_RELEASE2(gRDFService, refcnt);
         delete[] mData.mBytes;
     }
 
@@ -534,19 +582,19 @@ LiteralImpl::Create(const PRUnichar* aValue, nsIRDFLiteral** aResult)
 
 LiteralImpl::LiteralImpl(const PRUnichar* s)
 {
-    RDFServiceImpl::gRDFService->RegisterLiteral(this);
-    NS_ADDREF(RDFServiceImpl::gRDFService);
+    gRDFService->RegisterLiteral(this);
+    NS_ADDREF(gRDFService);
 }
 
 LiteralImpl::~LiteralImpl()
 {
-    RDFServiceImpl::gRDFService->UnregisterLiteral(this);
+    gRDFService->UnregisterLiteral(this);
 
     // Use NS_RELEASE2() here, because we want to decrease the
     // refcount, but not null out the gRDFService pointer (which is
     // what a vanilla NS_RELEASE() would do).
     nsrefcnt refcnt;
-    NS_RELEASE2(RDFServiceImpl::gRDFService, refcnt);
+    NS_RELEASE2(gRDFService, refcnt);
 }
 
 NS_IMPL_THREADSAFE_ADDREF(LiteralImpl)
@@ -597,7 +645,7 @@ LiteralImpl::GetValue(PRUnichar* *value)
         return NS_ERROR_NULL_POINTER;
 
     const PRUnichar *temp = GetValue();
-    *value = temp? NS_strdup(temp) : 0;
+    *value = temp? nsCRT::strdup(temp) : 0;
     return NS_OK;
 }
 
@@ -636,19 +684,19 @@ private:
 DateImpl::DateImpl(const PRTime s)
     : mValue(s)
 {
-    RDFServiceImpl::gRDFService->RegisterDate(this);
-    NS_ADDREF(RDFServiceImpl::gRDFService);
+    gRDFService->RegisterDate(this);
+    NS_ADDREF(gRDFService);
 }
 
 DateImpl::~DateImpl()
 {
-    RDFServiceImpl::gRDFService->UnregisterDate(this);
+    gRDFService->UnregisterDate(this);
 
     // Use NS_RELEASE2() here, because we want to decrease the
     // refcount, but not null out the gRDFService pointer (which is
     // what a vanilla NS_RELEASE() would do).
     nsrefcnt refcnt;
-    NS_RELEASE2(RDFServiceImpl::gRDFService, refcnt);
+    NS_RELEASE2(gRDFService, refcnt);
 }
 
 NS_IMPL_ADDREF(DateImpl)
@@ -742,19 +790,19 @@ private:
 IntImpl::IntImpl(PRInt32 s)
     : mValue(s)
 {
-    RDFServiceImpl::gRDFService->RegisterInt(this);
-    NS_ADDREF(RDFServiceImpl::gRDFService);
+    gRDFService->RegisterInt(this);
+    NS_ADDREF(gRDFService);
 }
 
 IntImpl::~IntImpl()
 {
-    RDFServiceImpl::gRDFService->UnregisterInt(this);
+    gRDFService->UnregisterInt(this);
 
     // Use NS_RELEASE2() here, because we want to decrease the
     // refcount, but not null out the gRDFService pointer (which is
     // what a vanilla NS_RELEASE() would do).
     nsrefcnt refcnt;
-    NS_RELEASE2(RDFServiceImpl::gRDFService, refcnt);
+    NS_RELEASE2(gRDFService, refcnt);
 }
 
 NS_IMPL_ADDREF(IntImpl)
@@ -824,9 +872,6 @@ IntImpl::EqualsInt(nsIRDFInt* intValue, PRBool* result)
 ////////////////////////////////////////////////////////////////////////
 // RDFServiceImpl
 
-RDFServiceImpl*
-RDFServiceImpl::gRDFService;
-
 RDFServiceImpl::RDFServiceImpl()
     :  mNamedDataSources(nsnull)
 {
@@ -835,7 +880,6 @@ RDFServiceImpl::RDFServiceImpl()
     mInts.ops = nsnull;
     mDates.ops = nsnull;
     mBlobs.ops = nsnull;
-    gRDFService = this;
 }
 
 nsresult
@@ -910,27 +954,27 @@ RDFServiceImpl::~RDFServiceImpl()
 }
 
 
-// static
 nsresult
-RDFServiceImpl::CreateSingleton(nsISupports* aOuter,
-                                const nsIID& aIID, void **aResult)
+RDFServiceImpl::GetRDFService(nsIRDFService** mgr)
 {
-    NS_ENSURE_NO_AGGREGATION(aOuter);
+    if (! gRDFService) {
+        RDFServiceImpl* serv = new RDFServiceImpl();
+        if (! serv)
+            return NS_ERROR_OUT_OF_MEMORY;
 
-    if (gRDFService) {
-        NS_ERROR("Trying to create RDF serviec twice.");
-        return gRDFService->QueryInterface(aIID, aResult);
+        nsresult rv;
+        rv = serv->Init();
+        if (NS_FAILED(rv)) {
+            delete serv;
+            return rv;
+        }
+
+        gRDFService = serv;
     }
 
-    nsRefPtr<RDFServiceImpl> serv = new RDFServiceImpl();
-    if (!serv)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    nsresult rv = serv->Init();
-    if (NS_FAILED(rv))
-        return rv;
-
-    return serv->QueryInterface(aIID, aResult);
+    NS_ADDREF(gRDFService);
+    *mgr = gRDFService;
+    return NS_OK;
 }
 
 NS_IMPL_THREADSAFE_ISUPPORTS2(RDFServiceImpl, nsIRDFService, nsISupportsWeakReference)
@@ -1078,7 +1122,7 @@ RDFServiceImpl::GetResource(const nsACString& aURI, nsIRDFResource** aResource)
 NS_IMETHODIMP
 RDFServiceImpl::GetUnicodeResource(const nsAString& aURI, nsIRDFResource** aResource)
 {
-    return GetResource(NS_ConvertUTF16toUTF8(aURI), aResource);
+    return GetResource(NS_ConvertUCS2toUTF8(aURI), aResource);
 }
 
 
@@ -1746,4 +1790,12 @@ RDFServiceImpl::UnregisterBlob(BlobImpl *aBlob)
             aBlob, aBlob->mData.mBytes));
 
     return NS_OK;
+}
+
+////////////////////////////////////////////////////////////////////////
+
+nsresult
+NS_NewRDFService(nsIRDFService** mgr)
+{
+    return RDFServiceImpl::GetRDFService(mgr);
 }

@@ -66,7 +66,7 @@ nsDSURIContentListener::Init()
 {
     nsresult rv;
     mNavInfo = do_GetService(NS_WEBNAVIGATION_INFO_CONTRACTID, &rv);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to get webnav info");
+    NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "Failed to get webnav info");
     return rv;
 }
 
@@ -91,14 +91,6 @@ NS_INTERFACE_MAP_END
 NS_IMETHODIMP
 nsDSURIContentListener::OnStartURIOpen(nsIURI* aURI, PRBool* aAbortOpen)
 {
-    // If mDocShell is null here, that means someone's starting a load
-    // in our docshell after it's already been destroyed.  Don't let
-    // that happen.
-    if (!mDocShell) {
-        *aAbortOpen = PR_TRUE;
-        return NS_OK;
-    }
-    
     nsCOMPtr<nsIURIContentListener> parentListener;
     GetParentContentListener(getter_AddRefs(parentListener));
     if (parentListener)

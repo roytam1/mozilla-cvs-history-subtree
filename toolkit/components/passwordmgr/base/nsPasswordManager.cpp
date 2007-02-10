@@ -37,7 +37,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsPasswordManager.h"
-#include "nsSingleSignonPrompt.h"
 #include "nsIFile.h"
 #include "nsNetUtil.h"
 #include "nsILineInputStream.h"
@@ -45,15 +44,15 @@
 #include "nsISecretDecoderRing.h"
 #include "nsIPasswordInternal.h"
 #include "nsIPrompt.h"
-#include "nsIPromptService2.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefBranch2.h"
 #include "prmem.h"
 #include "nsIStringBundle.h"
-#include "nsIMutableArray.h"
+#include "nsArray.h"
 #include "nsICategoryManager.h"
 #include "nsIObserverService.h"
+#include "nsIDocumentLoader.h"
 #include "nsIWebProgress.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMWindow.h"
@@ -72,9 +71,6 @@
 #include "nsIAutoCompleteResult.h"
 #include "nsIPK11TokenDB.h"
 #include "nsIPK11Token.h"
-#include "nsUnicharUtils.h"
-#include "nsCOMArray.h"
-#include "nsEmbedCID.h"
 
 static const char kPMPropertiesURL[] = "chrome://passwordmgr/locale/passwordmgr.properties";
 static PRBool sRememberPasswords = PR_FALSE;
@@ -212,7 +208,6 @@ NS_INTERFACE_MAP_BEGIN(nsPasswordManager)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIDOMEventListener, nsIDOMFocusListener)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIPasswordManager)
-  NS_INTERFACE_MAP_ENTRY(nsIPromptFactory)
 NS_INTERFACE_MAP_END
 
 nsPasswordManager::nsPasswordManager()
@@ -283,10 +278,14 @@ nsPasswordManager::Init()
 
   obsService->AddObserver(this, NS_EARLYFORMSUBMIT_SUBJECT, PR_TRUE);
 
-  nsCOMPtr<nsIWebProgress> progress = do_GetService(NS_DOCUMENTLOADER_SERVICE_CONTRACTID);
-  NS_ASSERTION(progress, "No web progress service");
+  nsCOMPtr<nsIDocumentLoader> docLoaderService = do_GetService(NS_DOCUMENTLOADER_SERVICE_CONTRACTID);
+  NS_ASSERTION(docLoaderService, "No document loader service");
+
+  nsCOMPtr<nsIWebProgress> progress = do_QueryInterface(docLoaderService);
+  NS_ASSERTION(progress, "docloader service does not implement nsIWebProgress");
 
   progress->AddProgressListener(this, nsIWebProgress::NOTIFY_STATE_DOCUMENT);
+
   return NS_OK;
 }
 
@@ -468,9 +467,8 @@ NS_IMETHODIMP
 nsPasswordManager::GetEnumerator(nsISimpleEnumerator** aEnumerator)
 {
   // Build an array out of the hashtable
-  nsCOMPtr<nsIMutableArray> signonArray =
-    do_CreateInstance(NS_ARRAY_CONTRACTID);
-  NS_ENSURE_STATE(signonArray);
+  nsCOMPtr<nsIMutableArray> signonArray;
+  NS_NewArray(getter_AddRefs(signonArray));
 
   mSignonTable.EnumerateRead(BuildArrayEnumerator, signonArray);
 
@@ -494,9 +492,8 @@ NS_IMETHODIMP
 nsPasswordManager::GetRejectEnumerator(nsISimpleEnumerator** aEnumerator)
 {
   // Build an array out of the hashtable
-  nsCOMPtr<nsIMutableArray> rejectArray =
-    do_CreateInstance(NS_ARRAY_CONTRACTID);
-  NS_ENSURE_STATE(rejectArray);
+  nsCOMPtr<nsIMutableArray> rejectArray;
+  NS_NewArray(getter_AddRefs(rejectArray));
 
   mRejectTable.EnumerateRead(BuildRejectArrayEnumerator, rejectArray);
 
@@ -1160,7 +1157,8 @@ nsPasswordManager::Notify(nsIContent* aFormNode,
               PRInt32 selection;
               prompt->ConfirmEx(dialogTitle.get(),
                                 dialogText.get(),
-                                nsIPrompt::STD_YES_NO_BUTTONS,
+                                (nsIPrompt::BUTTON_TITLE_YES * nsIPrompt::BUTTON_POS_0) +
+                                (nsIPrompt::BUTTON_TITLE_NO * nsIPrompt::BUTTON_POS_1),
                                 nsnull, nsnull, nsnull, nsnull, nsnull,
                                 &selection);
 
@@ -1226,35 +1224,6 @@ nsPasswordManager::HandleEvent(nsIDOMEvent* aEvent)
   else if (type.EqualsLiteral("DOMContentLoaded"))
     return FillDocument(domDoc);
 
-  return NS_OK;
-}
-
-
-// nsIPromptFactory implementation
-
-NS_IMETHODIMP
-nsPasswordManager::GetPrompt(nsIDOMWindow* aParent, const nsIID& aIID,
-                             void** _retval)
-{
-  if (!aIID.Equals(NS_GET_IID(nsIAuthPrompt2))) {
-    NS_WARNING("asked for unknown IID");
-    return NS_NOINTERFACE;
-  }
-
-  // NOTE: It is important to return the specific return value here. The
-  // caller cares.
-  nsresult rv;
-  nsCOMPtr<nsIPromptService2> service =
-    do_GetService(NS_PROMPTSERVICE_CONTRACTID, &rv);
-  if (NS_FAILED(rv))
-    return rv;
-
-  nsSingleSignonPrompt2* wrapper = new nsSingleSignonPrompt2(service, aParent);
-  if (!wrapper)
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  NS_ADDREF(wrapper);
-  *_retval = NS_STATIC_CAST(nsIAuthPrompt2*, wrapper);
   return NS_OK;
 }
 
@@ -1395,7 +1364,7 @@ nsPasswordManager::AutoCompleteSearch(const nsAString& aSearchString,
       for (PRInt32 i = result->mArray.Count() - 1; i >= 0; --i) {
         nsDependentString match(NS_STATIC_CAST(PRUnichar*, result->mArray.ElementAt(i)));
         if (aSearchString.Length() > match.Length() ||
-            !StringBeginsWith(match, aSearchString, nsCaseInsensitiveStringComparator())) {
+            !StringBeginsWith(match, aSearchString)) {
           nsMemory::Free(result->mArray.ElementAt(i));
           result->mArray.RemoveElementAt(i);
         }
@@ -1434,7 +1403,7 @@ nsPasswordManager::AutoCompleteSearch(const nsAString& aSearchString,
           return NS_ERROR_FAILURE;
 
         if (aSearchString.Length() <= userValue.Length() &&
-            StringBeginsWith(userValue, aSearchString, nsCaseInsensitiveStringComparator())) {
+            StringBeginsWith(userValue, aSearchString)) {
           PRUnichar* data = ToNewUnicode(userValue);
           if (data)
             result->mArray.AppendElement(data);
@@ -1529,20 +1498,20 @@ nsPasswordManager::WriteSignonEntryEnumerator(const nsACString& aKey,
   stream->Write(buffer.get(), buffer.Length(), &bytesWritten);
 
   for (SignonDataEntry* e = aEntry->head; e; e = e->next) {
-    NS_ConvertUTF16toUTF8 userField(e->userField);
+    NS_ConvertUCS2toUTF8 userField(e->userField);
     userField.Append(NS_LINEBREAK);
     stream->Write(userField.get(), userField.Length(), &bytesWritten);
 
-    buffer.Assign(NS_ConvertUTF16toUTF8(e->userValue));
+    buffer.Assign(NS_ConvertUCS2toUTF8(e->userValue));
     buffer.Append(NS_LINEBREAK);
     stream->Write(buffer.get(), buffer.Length(), &bytesWritten);
 
     buffer.Assign("*");
-    buffer.Append(NS_ConvertUTF16toUTF8(e->passField));
+    buffer.Append(NS_ConvertUCS2toUTF8(e->passField));
     buffer.Append(NS_LINEBREAK);
     stream->Write(buffer.get(), buffer.Length(), &bytesWritten);
 
-    buffer.Assign(NS_ConvertUTF16toUTF8(e->passValue));
+    buffer.Assign(NS_ConvertUCS2toUTF8(e->passValue));
     buffer.Append(NS_LINEBREAK);
     stream->Write(buffer.get(), buffer.Length(), &bytesWritten);
   }
@@ -1622,7 +1591,7 @@ nsPasswordManager::AddSignonData(const nsACString& aRealm,
 nsPasswordManager::DecryptData(const nsAString& aData,
                                nsAString& aPlaintext)
 {
-  NS_ConvertUTF16toUTF8 flatData(aData);
+  NS_ConvertUCS2toUTF8 flatData(aData);
   char* buffer = nsnull;
 
   if (flatData.CharAt(0) == '~') {
@@ -1647,7 +1616,7 @@ nsPasswordManager::DecryptData(const nsAString& aData,
 
   }
 
-  aPlaintext.Assign(NS_ConvertUTF8toUTF16(buffer));
+  aPlaintext.Assign(NS_ConvertUTF8toUCS2(buffer));
   PR_Free(buffer);
 
   return NS_OK;
@@ -1666,7 +1635,7 @@ nsPasswordManager::EncryptData(const nsAString& aPlaintext,
   NS_ENSURE_TRUE(sDecoderRing, NS_ERROR_FAILURE);
 
   char* buffer;
-  if (NS_FAILED(sDecoderRing->EncryptString(NS_ConvertUTF16toUTF8(aPlaintext).get(), &buffer)))
+  if (NS_FAILED(sDecoderRing->EncryptString(NS_ConvertUCS2toUTF8(aPlaintext).get(), &buffer)))
     return NS_ERROR_FAILURE;
 
   aEncrypted.Assign(buffer);
@@ -1683,7 +1652,7 @@ nsPasswordManager::EncryptDataUCS2(const nsAString& aPlaintext,
   nsresult rv = EncryptData(aPlaintext, buffer);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  aEncrypted.Assign(NS_ConvertUTF8toUTF16(buffer));
+  aEncrypted.Assign(NS_ConvertUTF8toUCS2(buffer));
   return NS_OK;
 }
 
@@ -1774,8 +1743,6 @@ nsresult
 nsPasswordManager::FillDocument(nsIDOMDocument* aDomDoc)
 {
   nsCOMPtr<nsIDOMHTMLDocument> htmlDoc = do_QueryInterface(aDomDoc);
-  if (!htmlDoc)
-    return NS_OK;
   nsCOMPtr<nsIDOMHTMLCollection> forms;
   htmlDoc->GetForms(getter_AddRefs(forms));
   
@@ -1791,10 +1758,6 @@ nsPasswordManager::FillDocument(nsIDOMDocument* aDomDoc)
 
   PRUint32 formCount;
   forms->GetLength(&formCount);
-  
-  // check to see if we should formfill.  failure is non-fatal
-  PRBool prefillForm = PR_TRUE;
-  mPrefBranch->GetBoolPref("autofillForms", &prefillForm);
 
   // We can auto-prefill the username and password if there is only
   // one stored login that matches the username and password field names
@@ -1822,7 +1785,6 @@ nsPasswordManager::FillDocument(nsIDOMDocument* aDomDoc)
       }
 
       nsAutoString oldUserValue;
-      PRBool userFieldFound = PR_FALSE;
 
       if (temp) {
         temp->GetType(fieldType);
@@ -1831,7 +1793,6 @@ nsPasswordManager::FillDocument(nsIDOMDocument* aDomDoc)
 
         temp->GetValue(oldUserValue);
         userField = temp;
-        userFieldFound = PR_TRUE;
       } else if ((e->passField).IsEmpty()) {
         // Happens sometimes when we import passwords from IE since
         // their form name match is case insensitive. In this case,
@@ -1854,16 +1815,11 @@ nsPasswordManager::FillDocument(nsIDOMDocument* aDomDoc)
               userField = inputField;
               foundNode = inputField;
               e->userField.Assign(name);
-              userFieldFound = PR_TRUE;
               break;
             }
           }
         }
       }
-
-      // Bail out if we should be seeing a userField but we're not
-      if (!userFieldFound && !(e->userField).IsEmpty())
-        continue;
 
       if (!(e->passField).IsEmpty()) {
         form->ResolveName(e->passField, getter_AddRefs(foundNode));
@@ -1923,7 +1879,7 @@ nsPasswordManager::FillDocument(nsIDOMDocument* aDomDoc)
         continue;
       }
 
-      if (!oldUserValue.IsEmpty() && prefillForm) {
+      if (!oldUserValue.IsEmpty()) {
         // The page has prefilled a username.
         // If it matches any of our saved usernames, prefill the password
         // for that username.  If there are multiple saved usernames,
@@ -1965,7 +1921,7 @@ nsPasswordManager::FillDocument(nsIDOMDocument* aDomDoc)
       if (userField)
         AttachToInput(userField);
 
-      if (!prefilledUser && prefillForm) {
+      if (!prefilledUser){
         nsAutoString buffer;
 
         if (userField) {

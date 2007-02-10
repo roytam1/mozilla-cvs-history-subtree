@@ -45,12 +45,11 @@ interface nsIInputStream;
  * This interface provides methods to initialize an input stream channel.
  * The input stream channel serves as a data pump for an input stream.
  */
-[scriptable, uuid(274c4d7a-2447-4ceb-a6de-80db1b83f5d2)]
-interface nsIInputStreamChannel : nsISupports
+[scriptable, uuid(560a64ce-6d66-44db-b38e-864469c52d03)]
+interface nsIInputStreamChannel : nsIChannel
 {
     /**
-     * Sets the URI for this channel.  This must be called before the
-     * channel is opened, and it may only be called once.
+     * Sets the URI for this channel.
      */
     void setURI(in nsIURI aURI);
 
@@ -62,8 +61,7 @@ interface nsIInputStreamChannel : nsISupports
      * nsIAsyncInputStream interface, then the stream will be read directly.
      * Otherwise, the stream will be read on a background thread.
      *
-     * This attribute must be set before the channel is opened, and it may
-     * only be set once.
+     * This attribute can only be changed before the channel is opened.
      *
      * @throws NS_ERROR_IN_PROGRESS if the setter is called after the channel
      * has been opened.

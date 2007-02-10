@@ -56,20 +56,15 @@ class nsIStreamListener;
 class nsIURI;
 class nsIXPConnectWrappedJS;
 class nsIDOMNodeList;
-class nsIMutationObserver;
-class nsXBLInsertionPoint;
-template<class E> class nsTArray;
-template<class E> class nsRefPtr;
-typedef nsTArray<nsRefPtr<nsXBLInsertionPoint> > nsInsertionPointList;
+class nsVoidArray;
 
 #define NS_IBINDING_MANAGER_IID \
-{ 0xda349538, 0xfda2, 0x41ed, \
-  { 0x9b, 0xba, 0x66, 0x56, 0x2c, 0x42, 0x49, 0x3d } }
+{ 0x92281eaa, 0x89c4, 0x4457, { 0x8f, 0x8d, 0xca, 0x92, 0xbf, 0xbe, 0x0f, 0x50 } }
 
 class nsIBindingManager : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IBINDING_MANAGER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IBINDING_MANAGER_IID)
 
   virtual nsXBLBinding* GetBinding(nsIContent* aContent) = 0;
   NS_IMETHOD SetBinding(nsIContent* aContent, nsXBLBinding* aBinding) = 0;
@@ -111,8 +106,7 @@ public:
    * Set the insertion point children for the specified element.
    * The binding manager assumes ownership of aList.
    */
-  NS_IMETHOD SetContentListFor(nsIContent* aContent,
-                               nsInsertionPointList* aList) = 0;
+  NS_IMETHOD SetContentListFor(nsIContent* aContent, nsVoidArray* aList)=0;
 
   /**
    * Determine whether or not the explicit child list has been altered
@@ -129,8 +123,7 @@ public:
    * Set the anonymous child content for the specified element.
    * The binding manager assumes ownership of aList.
    */
-  NS_IMETHOD SetAnonymousNodesFor(nsIContent* aContent,
-                                  nsInsertionPointList* aList) = 0;
+  NS_IMETHOD SetAnonymousNodesFor(nsIContent* aContent, nsVoidArray* aList) = 0;
 
   /**
    * Retrieves the anonymous list of children if the element has one;
@@ -183,24 +176,6 @@ public:
   NS_IMETHOD GetBindingImplementation(nsIContent* aContent, REFNSIID aIID, void** aResult)=0;
 
   NS_IMETHOD ShouldBuildChildFrames(nsIContent* aContent, PRBool* aResult) = 0;
-  
-  /**
-   * Add a new observer of document change notifications. Whenever content is
-   * changed, appended, inserted or removed the observers are informed.  This
-   * is like nsIDocument::AddObserver, but these observers will be notified
-   * after the XBL data structures are updated for
-   * ContentInserted/ContentAppended and before they're updated for
-   * ContentRemoved.
-   */
-  virtual void AddObserver(nsIMutationObserver* aObserver) = 0;
-
-  /**
-   * Remove an observer of document change notifications. This will
-   * return false if the observer cannot be found.
-   */
-  virtual PRBool RemoveObserver(nsIMutationObserver* aObserver) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIBindingManager, NS_IBINDING_MANAGER_IID)
 
 #endif // nsIBinding_Manager_h__

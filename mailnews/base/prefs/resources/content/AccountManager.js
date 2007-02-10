@@ -166,7 +166,14 @@ function onLoad() {
   removeButton = document.getElementById("removeButton");
   setDefaultButton = document.getElementById("setDefaultButton");
 
+  sortAccountList(accounttree);
   setTimeout(selectServer, 0, selectedServer ? selectedServer.serverURI : "", selectPage);
+}
+
+function sortAccountList(accounttree)
+{
+  var xulSortService = Components.classes["@mozilla.org/xul/xul-sort-service;1"].getService(Components.interfaces.nsIXULSortService);
+  xulSortService.sort(accounttree, 'http://home.netscape.com/NC-rdf#FolderTreeName?sort=true', 'ascending');
 }
 
 function selectServer(serverId, selectPage)
@@ -633,7 +640,7 @@ function saveAccount(accountValues, account)
       }
     }
   }
- }
+}
  
  // if we made account changes to the spam settings, we'll need to re-initialize
  // our settings object
@@ -965,7 +972,7 @@ function restorePage(pageId, serverId)
 
   // tell the page that new values have been loaded
   if ("onInit" in top.frames["contentFrame"])
-    top.frames["contentFrame"].onInit(pageId, serverId);
+    top.frames["contentFrame"].onInit();
 
   // everything has succeeded, vervied by setting currentPageId
   currentPageId = pageId;

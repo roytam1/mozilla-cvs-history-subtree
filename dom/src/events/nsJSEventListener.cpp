@@ -39,65 +39,49 @@
 #include "nsString.h"
 #include "nsReadableUtils.h"
 #include "nsIServiceManager.h"
+#include "nsIJSContextStack.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIScriptContext.h"
-#include "nsIScriptGlobalObject.h"
-#include "nsIScriptRuntime.h"
 #include "nsIXPConnect.h"
 #include "nsIPrivateDOMEvent.h"
 #include "nsGUIEvent.h"
 #include "nsContentUtils.h"
-#include "nsDOMScriptObjectHolder.h"
-#include "nsIMutableArray.h"
-#include "nsVariant.h"
 
-
-#ifdef NS_DEBUG
-
-#include "nspr.h" // PR_fprintf
-
-class EventListenerCounter
-{
-public:
-  ~EventListenerCounter() {
-  }
-};
-
-static EventListenerCounter sEventListenerCounter;
-#endif
 
 /*
  * nsJSEventListener implementation
  */
 nsJSEventListener::nsJSEventListener(nsIScriptContext *aContext,
-                                     void *aScopeObject,
-                                     nsISupports *aTarget)
-  : nsIJSEventListener(aContext, aScopeObject, aTarget),
+                                     JSObject *aScopeObject,
+                                     nsISupports *aObject)
+  : nsIJSEventListener(aContext, aScopeObject, aObject),
     mReturnResult(nsReturnResult_eNotSet)
 {
-  // aScopeObject is the inner window's JS object, which we need to lock
-  // until we are done with it.
-  NS_ASSERTION(aScopeObject && aContext,
-               "EventListener with no context or scope?");
-  aContext->HoldScriptObject(aScopeObject);
+  if (aScopeObject && aContext) {
+    JSContext *cx = (JSContext *)aContext->GetNativeContext();
+
+    ::JS_LockGCThing(cx, aScopeObject);
+  }
 }
 
 nsJSEventListener::~nsJSEventListener() 
 {
-  mContext->DropScriptObject(mScopeObject);
-}
+  if (mScopeObject && mContext) {
+    JSContext *cx = (JSContext *)mContext->GetNativeContext();
 
-NS_IMPL_CYCLE_COLLECTION_1_AMBIGUOUS(nsJSEventListener, nsIDOMEventListener, mTarget)
+    ::JS_UnlockGCThing(cx, mScopeObject);
+  }
+}
 
 NS_INTERFACE_MAP_BEGIN(nsJSEventListener)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
   NS_INTERFACE_MAP_ENTRY(nsIJSEventListener)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMEventListener)
-  NS_INTERFACE_MAP_ENTRY_CYCLE_COLLECTION(nsJSEventListener)
 NS_INTERFACE_MAP_END
 
-NS_IMPL_CYCLE_COLLECTING_ADDREF_AMBIGUOUS(nsJSEventListener, nsIDOMEventListener)
-NS_IMPL_CYCLE_COLLECTING_RELEASE_AMBIGUOUS(nsJSEventListener, nsIDOMEventListener)
+NS_IMPL_ADDREF(nsJSEventListener)
+
+NS_IMPL_RELEASE(nsJSEventListener)
 
 //static nsString onPrefix = "on";
 
@@ -110,10 +94,16 @@ nsJSEventListener::SetEventName(nsIAtom* aName)
 nsresult
 nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
 {
-  nsresult rv;
-  nsCOMPtr<nsIArray> iargv;
+  jsval funval;
+  jsval arg;
+  jsval *argv = &arg;
+  PRInt32 argc = 0;
+  void *stackPtr; // For JS_[Push|Pop]Arguments()
   nsAutoString eventString;
-  nsCOMPtr<nsIAtom> atomName;
+  // XXX This doesn't seem like the correct context on which to execute
+  // the event handler. Might need to get one from the JS thread context
+  // stack.
+  JSContext* cx = (JSContext*)mContext->GetNativeContext();
 
   if (!mEventName) {
     if (NS_OK != aEvent->GetType(eventString)) {
@@ -130,20 +120,34 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
       }
     //}
     eventString.Assign(NS_LITERAL_STRING("on") + eventString);
-	atomName = do_GetAtom(eventString);
   }
   else {
     mEventName->ToString(eventString);
-	atomName = mEventName;
   }
 
+  nsresult rv;
+  nsIXPConnect *xpc = nsContentUtils::XPConnect();
 
-  nsScriptObjectHolder funcval(mContext);
-  rv = mContext->GetBoundEventHandler(mTarget, mScopeObject, atomName,
-                                      funcval);
+  // root
+  nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
+  rv = xpc->WrapNative(cx, mScopeObject, mTarget, NS_GET_IID(nsISupports),
+                       getter_AddRefs(wrapper));
   NS_ENSURE_SUCCESS(rv, rv);
-  if (!funcval)
+
+  JSObject* obj = nsnull;
+  rv = wrapper->GetJSObject(&obj);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!JS_LookupUCProperty(cx, obj,
+                           NS_REINTERPRET_CAST(const jschar *,
+                                               eventString.get()),
+                           eventString.Length(), &funval)) {
+    return NS_ERROR_FAILURE;
+  }
+
+  if (JS_TypeOfValue(cx, funval) != JSTYPE_FUNCTION) {
     return NS_OK;
+  }
 
   PRBool handledScriptError = PR_FALSE;
   if (eventString.EqualsLiteral("onerror")) {
@@ -152,65 +156,40 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
 
     nsEvent* event;
     priv->GetInternalNSEvent(&event);
-    if (event->message == NS_LOAD_ERROR &&
-        event->eventStructType == NS_SCRIPT_ERROR_EVENT) {
+    if (event->message == NS_SCRIPT_ERROR) {
       nsScriptErrorEvent *scriptEvent =
         NS_STATIC_CAST(nsScriptErrorEvent*, event);
-      // Create a temp argv for the error event.
-      nsCOMPtr<nsIMutableArray> tempargv = 
-        do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
-      if (NS_FAILED(rv)) return rv;
-      // Append the event args.
-      nsCOMPtr<nsIWritableVariant>
-          var(do_CreateInstance(NS_VARIANT_CONTRACTID, &rv));
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = var->SetAsWString(scriptEvent->errorMsg);
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = tempargv->AppendElement(var, PR_FALSE);
-      NS_ENSURE_SUCCESS(rv, rv);
-      // filename
-      var = do_CreateInstance(NS_VARIANT_CONTRACTID, &rv);
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = var->SetAsWString(scriptEvent->fileName);
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = tempargv->AppendElement(var, PR_FALSE);
-      NS_ENSURE_SUCCESS(rv, rv);
-      // line number
-      var = do_CreateInstance(NS_VARIANT_CONTRACTID, &rv);
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = var->SetAsUint32(scriptEvent->lineNr);
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = tempargv->AppendElement(var, PR_FALSE);
-      NS_ENSURE_SUCCESS(rv, rv);
 
-      // And set the real argv
-      iargv = do_QueryInterface(tempargv);
-
+      argv = ::JS_PushArguments(cx, &stackPtr, "WWi", scriptEvent->errorMsg,
+                                scriptEvent->fileName, scriptEvent->lineNr);
+      NS_ENSURE_TRUE(argv, NS_ERROR_OUT_OF_MEMORY);
+      argc = 3;
       handledScriptError = PR_TRUE;
     }
   }
 
   if (!handledScriptError) {
-    nsCOMPtr<nsIMutableArray> tempargv = 
-      do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
-    NS_ENSURE_TRUE(tempargv != nsnull, NS_ERROR_OUT_OF_MEMORY);
-    rv = tempargv->AppendElement(aEvent, PR_FALSE);
+    rv = xpc->WrapNative(cx, obj, aEvent, NS_GET_IID(nsIDOMEvent),
+                         getter_AddRefs(wrapper));
     NS_ENSURE_SUCCESS(rv, rv);
-    iargv = do_QueryInterface(tempargv);
+
+    JSObject *eventObj = nsnull;
+    rv = wrapper->GetJSObject(&eventObj);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    argv[0] = OBJECT_TO_JSVAL(eventObj);
+    argc = 1;
   }
 
-  // FIXME: bug 347480 - [The JSContext inside mContext] doesn't seem like
-  // the correct context on which to execute the event handler. Might need to
-  // get one from the JS thread context stack.
-  nsCOMPtr<nsIVariant> vrv;
-  rv = mContext->CallEventHandler(mTarget, mScopeObject, funcval, iargv,
-                                  getter_AddRefs(vrv));
+  jsval rval;
+  rv = mContext->CallEventHandler(obj, JSVAL_TO_OBJECT(funval), argc, argv,
+                                  &rval);
+
+  if (argv != &arg) {
+    ::JS_PopArguments(cx, stackPtr);
+  }
 
   if (NS_SUCCEEDED(rv)) {
-    PRUint16 dataType = nsIDataType::VTYPE_VOID;
-    if (vrv)
-      vrv->GetDataType(&dataType);
     if (eventString.EqualsLiteral("onbeforeunload")) {
       nsCOMPtr<nsIPrivateDOMEvent> priv(do_QueryInterface(aEvent));
       NS_ENSURE_TRUE(priv, NS_ERROR_UNEXPECTED);
@@ -223,30 +202,23 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
       nsBeforePageUnloadEvent *beforeUnload =
         NS_STATIC_CAST(nsBeforePageUnloadEvent *, event);
 
-      if (dataType != nsIDataType::VTYPE_VOID) {
+      if (!JSVAL_IS_VOID(rval)) {
         aEvent->PreventDefault();
 
         // Set the text in the beforeUnload event as long as it wasn't
         // already set (through event.returnValue, which takes
         // precedence over a value returned from a JS function in IE)
-        if ((dataType == nsIDataType::VTYPE_DOMSTRING ||
-             dataType == nsIDataType::VTYPE_CHAR_STR ||
-             dataType == nsIDataType::VTYPE_WCHAR_STR ||
-             dataType == nsIDataType::VTYPE_STRING_SIZE_IS ||
-             dataType == nsIDataType::VTYPE_WSTRING_SIZE_IS ||
-             dataType == nsIDataType::VTYPE_CSTRING ||
-             dataType == nsIDataType::VTYPE_ASTRING)
-            && beforeUnload->text.IsEmpty()) {
-          vrv->GetAsDOMString(beforeUnload->text);
+        if (JSVAL_IS_STRING(rval) && beforeUnload->text.IsEmpty()) {
+          beforeUnload->text = nsDependentJSString(JSVAL_TO_STRING(rval));
         }
       }
-    } else if (dataType == nsIDataType::VTYPE_BOOL) {
+    } else if (JSVAL_IS_BOOLEAN(rval)) {
       // If the handler returned false and its sense is not reversed,
       // or the handler returned true and its sense is reversed from
       // the usual (false means cancel), then prevent default.
-      PRBool brv;
-      if (NS_SUCCEEDED(vrv->GetAsBool(&brv)) &&
-          brv == (mReturnResult == nsReturnResult_eReverseReturnResult)) {
+
+      if (JSVAL_TO_BOOLEAN(rval) ==
+          (mReturnResult == nsReturnResult_eReverseReturnResult)) {
         aEvent->PreventDefault();
       }
     }
@@ -260,15 +232,17 @@ nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
  */
 
 nsresult
-NS_NewJSEventListener(nsIScriptContext *aContext, void *aScopeObject,
-                      nsISupports*aTarget, nsIDOMEventListener ** aReturn)
+NS_NewJSEventListener(nsIScriptContext *aContext, JSObject *aScopeObject,
+                      nsISupports *aObject, nsIDOMEventListener ** aReturn)
 {
   nsJSEventListener* it =
-    new nsJSEventListener(aContext, aScopeObject, aTarget);
+    new nsJSEventListener(aContext, aScopeObject, aObject);
   if (!it) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
+
   NS_ADDREF(*aReturn = it);
 
   return NS_OK;
 }
+

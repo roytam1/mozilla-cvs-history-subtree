@@ -170,12 +170,6 @@ function createShortcuts()
     {
       winreg.setRootKey(winreg.HKEY_LOCAL_MACHINE);
       registerProgramFolderKey(winreg, fFolderPath);
-
-      // This is so that Windows Media Player works with us
-      var subkey = "SOFTWARE\\Microsoft\\MediaPlayer\\ShimInclusionList\\$MainExeFile$";
-      winreg.createKey(subkey, "");
-      subkey = "SOFTWARE\\Microsoft\\MediaPlayer\\ShimInclusionList\\SEAMON~1.exe"
-      winreg.createKey(subkey, "");
     }
 
     winreg.setRootKey(winreg.HKEY_CURRENT_USER);
@@ -413,6 +407,7 @@ function upgradeCleanup()
   deleteThisFile("Components", "chardetc.dll");
   deleteThisFile("Components", "evntloop.dll");
   deleteThisFile("Components", "nativapp.dll");
+  deleteThisFile("Components", "universalchardet.dll");
   deleteThisFile("Components", "ucvja.dll");
   deleteThisFile("Components", "ucvko.dll");
   deleteThisFile("Components", "ucvtw.dll");
@@ -430,6 +425,7 @@ function upgradeCleanup()
   deleteThisFile("Components", "imgxbm.dll");
   deleteThisFile("Components", "imgppm.dll");
   deleteThisFile("Components", "ucharuti.dll");
+  deleteThisFile("Components", "chardet.dll");
   deleteThisFile("Components", "lwbrk.dll");
   deleteThisFile("Components", "nslocale.dll");
   deleteThisFile("Components", "strres.dll");
@@ -437,11 +433,8 @@ function upgradeCleanup()
   deleteThisFile("Components", "nkcache.dll");
   deleteThisFile("Components", "jsloader.dll");
   deleteThisFile("Components", "gkcontent.dll");
-  deleteThisFile("Components", "transformiix.dll");
-  deleteThisFile("Components", "inspector.dll");
   deleteThisFile("Components", "psm.xpt");
   deleteThisFile("Components", "typeaheadfind.xpt");
-  deleteThisFile("Components", "suitetypeaheadfind.xpt");
   deleteThisFile("Components", "xmlextras_interfaceinfo.xpt");
   deleteThisFile("Components", "xmlsoap.xpt");
   deleteThisFile("Components", "xmlschema.xpt");
@@ -456,7 +449,6 @@ function upgradeCleanup()
   deleteThisFile("Chrome",     "forms.jar");
   deleteThisFile("Chrome",     "typeaheadfind.jar");
   deleteThisFolder("Chrome",   "overlayinfo");
-  deleteThisFolder("Components",   "myspell");
   deleteThisFolder("Components",   "Netscape/Gecko1.0");
   deleteThisFolder("Components",   "Netscape/Netscape6.00");
   deleteThisFolder("Components",   "Netscape/Netscape6.01");
@@ -492,7 +484,6 @@ function upgradeCleanup()
     deleteThisFile("Program",    "zlib.dll");
     deleteThisFile("Program",    "mozz.dll");
     deleteThisFile("Components", "accessibility.xpt");
-    deleteThisFile("Components", "chardet.dll");
     deleteThisFile("Components", "content_base.xpt");
     deleteThisFile("Components", "docshell_base.xpt");
     deleteThisFile("Components", "dom.xpt");
@@ -533,7 +524,6 @@ function upgradeCleanup()
     deleteThisFile("Components", "regviewr.dll");
     deleteThisFile("Components", "txtsvc.xpt");
     deleteThisFile("Components", "unicharutil.xpt");
-    deleteThisFile("Components", "universalchardet.dll");
     deleteThisFile("Components", "uriloader.xpt");
     deleteThisFile("Components", "webbrowserpersist.xpt");
     deleteThisFile("Components", "webBrowser_core.xpt");
@@ -672,6 +662,7 @@ if(verifyDiskSpace(fProgram, srDest))
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/autoconfig/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/cookie/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/wallet/");
+    registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","content-packs.jar"), "content/content-packs/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/communicator/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/communicator/downloadmanager/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/communicator-region/");

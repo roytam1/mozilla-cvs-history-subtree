@@ -74,6 +74,7 @@ class nsMsgFilter : public nsIMsgFilter
 {
 public:
   NS_DECL_ISUPPORTS
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMSGFILTER_IID)
 
   nsMsgFilter();
   virtual ~nsMsgFilter ();

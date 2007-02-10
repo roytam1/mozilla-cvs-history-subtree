@@ -58,7 +58,7 @@ MimeDefClass(MimeInlineTextPlainFlowed, MimeInlineTextPlainFlowedClass,
 			 mimeInlineTextPlainFlowedClass, &MIME_SUPERCLASS);
 
 static int MimeInlineTextPlainFlowed_parse_begin (MimeObject *);
-static int MimeInlineTextPlainFlowed_parse_line (const char *, PRInt32, MimeObject *);
+static int MimeInlineTextPlainFlowed_parse_line (char *, PRInt32, MimeObject *);
 static int MimeInlineTextPlainFlowed_parse_eof (MimeObject *, PRBool);
 
 static MimeInlineTextPlainFlowedExData *MimeInlineTextPlainFlowedExDataList = nsnull;
@@ -286,7 +286,7 @@ EarlyOut:
 
 
 static int
-MimeInlineTextPlainFlowed_parse_line (const char *aLine, PRInt32 length, MimeObject *obj)
+MimeInlineTextPlainFlowed_parse_line (char *line, PRInt32 length, MimeObject *obj)
 {
   int status;
   PRBool quoting = ( obj->options
@@ -309,9 +309,7 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, PRInt32 length, MimeObj
   if (length <= 0) return 0;
 
   uint32 linequotelevel = 0;
-  nsCAutoString real_line(aLine, length);
-  char *line = real_line.BeginWriting();
-  const char *linep = real_line.BeginReading();
+  const char *linep = line;
   // Space stuffed?
   if(' ' == *linep) {
     linep++;
@@ -333,7 +331,6 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, PRInt32 length, MimeObj
   // are CR and LF as said in RFC822, but that doesn't seem to
   // be the case always.
   PRBool flowed = PR_FALSE;
-  PRBool sigSeparator = PR_FALSE;
   PRInt32 index = length-1;
   while(index >= 0 && ('\r' == line[index] || '\n' == line[index])) {
     index--;
@@ -343,19 +340,11 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, PRInt32 length, MimeObj
           (quote marks and) a space count as empty */
   {
     flowed = PR_TRUE;
-    sigSeparator = (index - (linep - line) + 1 == 3) && !nsCRT::strncmp(linep, "-- ", 3);
-    if (((MimeInlineTextPlainFlowed *) obj)->delSp && ! sigSeparator)
+    if (((MimeInlineTextPlainFlowed *) obj)->delSp)
        /* If line is flowed and DelSp=yes, logically
-          delete trailing space. Line consisting of
-          dash dash space ("-- "), commonly used as
-          signature separator, gets special handling
-          (RFC 3676) */
+          delete trailing space (RFC 3676) */
     {
       length--;
-      while(index < length) {
-        line[index] = line[index + 1];
-        index++;
-      }
       line[index] = '\0';
     }
   }
@@ -461,7 +450,16 @@ MimeInlineTextPlainFlowed_parse_line (const char *aLine, PRInt32 length, MimeObj
   if(flowed) {
     // Check RFC 2646 "4.3. Usenet Signature Convention": "-- "+CRLF is
     // not a flowed line
-    if (sigSeparator)
+    if
+      (  // is "-- "LINEBREAK
+        lineSource.Length() >= 4
+        && lineSource[0] == '-'
+        &&
+        (
+          Substring(lineSource, 0, 4).EqualsLiteral("-- \r") ||
+          Substring(lineSource, 0, 4).EqualsLiteral("-- \n")
+        )
+      )
     {
       if (linequotelevel > 0 || exdata->isSig)
       {
@@ -560,7 +558,7 @@ static void Update_in_tag_info(PRBool *a_in_tag, /* IN/OUT */
 
   // Not in a tag. 
   // Check if we are entering a tag by looking for '<'.
-  // All normal occurrences of '<' should have been replaced
+  // All normal occurances of '<' should have been replaced
   // by &lt;
   if ('<' == a_current_char) {
     *a_in_tag = PR_TRUE;

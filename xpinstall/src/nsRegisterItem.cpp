@@ -38,7 +38,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "prprf.h"
-#include "nsCRT.h"
 #include "nsRegisterItem.h"
 #include "nsInstallResources.h"
 #include "nsNetUtil.h"
@@ -50,6 +49,8 @@
 #include "nsDirectoryServiceDefs.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsNativeCharsetUtils.h"
+
+MOZ_DECL_CTOR_COUNTER(nsRegisterItem)
 
 nsRegisterItem:: nsRegisterItem(  nsInstall* inInstall,
                                   nsIFile* chrome,
@@ -65,6 +66,21 @@ nsRegisterItem::~nsRegisterItem()
 {
     MOZ_COUNT_DTOR(nsRegisterItem);
 }
+
+#if defined (XP_MAC)
+static void SwapSlashColon(char * s)
+{
+	while (*s)
+	{
+		if (*s == '/')
+			*s++ = ':';
+		else if (*s == ':')
+			*s++ = '/';
+		else
+			*s++;
+	}
+} 
+#endif
 
 #if defined(XP_WIN)
 #include <windows.h>
@@ -96,11 +112,19 @@ hack_nsIFile2URL(nsIFile* file, char * *aURL)
         s++;
     }
 #endif
+#if defined( XP_MAC )
+    // Swap the / and colons to convert to an url
+    SwapSlashColon(ePath.BeginWriting());
+#endif
     // Escape the path with the directory mask
     nsCAutoString tmp(ePath);
     tmp.ReplaceChar(":", '|');
+#ifdef XP_MAC
+    nsCAutoString escPath("file:///");
+#else
     nsCAutoString escPath("file://");
-    escPath += tmp;
+#endif
+	escPath += tmp;
 //    rv = nsURLEscape(ePath,nsIIOService::url_Directory + nsIIOService::url_Forced, escPath);
 //    if (NS_SUCCEEDED(rv)) {
         PRBool dir;
@@ -475,13 +499,10 @@ void nsRegisterItem::Abort()
 
 char* nsRegisterItem::toString()
 {
-    char* rsrcVal = nsnull;
-    
-    if (!mInstall)
-        return nsnull;
-        
     char* buffer = new char[1024];
-    if (!buffer)
+    char* rsrcVal = nsnull;
+
+    if (buffer == nsnull || !mInstall)
         return nsnull;
 
     buffer[0] = '\0';

@@ -33,6 +33,11 @@
 #include <string.h>
 #include <limits.h>
 
+#include "slim_internal.h"
+
+/* Include NSPR's prcpucfg.h for endianness information */
+#include "prcpucfg.h"
+
 #ifndef __GNUC__
 #define __inline
 #endif
@@ -43,9 +48,7 @@
 #define INLINE
 #endif
 
-#undef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
-#undef MAX
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 
 /* C89 has implementation-defined behavior for % with negative operands.
@@ -66,6 +69,7 @@ typedef struct _FbPoint {
 
 typedef unsigned int	Mask;
 
+
 #define GXcopy		0x3
 #define GXor		0x7
 #define ClipByChildren  0
@@ -73,6 +77,7 @@ typedef unsigned int	Mask;
 #define PolyModePrecise 0
 #define CPClipMask      (1 << 6)
 #define CPLastBit       11
+
 
 /* Define any names that the server code will be expecting in
  * terms of libpixman names. */
@@ -106,7 +111,7 @@ typedef pixman_triangle_t	xTriangle;
 #define LSBFirst 0
 #define MSBFirst 1
 
-#ifdef WORDS_BIGENDIAN
+#if defined(WORDS_BIGENDIAN) || defined(IS_BIG_ENDIAN)
 #  define IMAGE_BYTE_ORDER MSBFirst
 #  define BITMAP_BIT_ORDER MSBFirst
 #else
@@ -114,12 +119,15 @@ typedef pixman_triangle_t	xTriangle;
 #  define BITMAP_BIT_ORDER LSBFirst
 #endif
 
+
 #define MAXSHORT SHRT_MAX
 #define MINSHORT SHRT_MIN
 
 /* XXX: What do we need from here?
 #include "picture.h"
 */
+
+
 
 #include "pixman.h"
 
@@ -131,7 +139,7 @@ typedef pixman_triangle_t	xTriangle;
 #define FB_HALFUNIT (1 << (FB_SHIFT-1))
 #define FB_MASK	    (FB_UNIT - 1)
 #define FB_ALLONES  ((pixman_bits_t) -1)
-
+    
 /* whether to bother to include 24bpp support */
 #ifndef ICNO24BIT
 #define FB_24BIT
@@ -152,17 +160,19 @@ typedef pixman_triangle_t	xTriangle;
 #define FB_STIP_UNIT	(1 << FB_STIP_SHIFT)
 #define FB_STIP_MASK	(FB_STIP_UNIT - 1)
 #define FB_STIP_ALLONES	((FbStip) -1)
-
+    
 #define FB_STIP_ODDSTRIDE(s)	(((s) & (FB_MASK >> FB_STIP_SHIFT)) != 0)
 #define FB_STIP_ODDPTR(p)	((((long) (p)) & (FB_MASK >> 3)) != 0)
-
+    
 #define FbStipStrideToBitsStride(s) (((s) >> (FB_SHIFT - FB_STIP_SHIFT)))
 #define FbBitsStrideToStipStride(s) (((s) << (FB_SHIFT - FB_STIP_SHIFT)))
-
+    
 #define FbFullMask(n)   ((n) == FB_UNIT ? FB_ALLONES : ((((FbBits) 1) << n) - 1))
+
 
 typedef uint32_t	    FbStip;
 typedef int		    FbStride;
+
 
 #ifdef FB_DEBUG
 extern void fbValidateDrawable(DrawablePtr d);
@@ -215,6 +225,7 @@ extern void fbSetBits (FbStip *bits, int stride, FbStip data);
 
 #define FbStipMask(x,w)	(FbStipRight(FB_STIP_ALLONES,(x) & FB_STIP_MASK) & \
 			 FbStipLeft(FB_STIP_ALLONES,(FB_STIP_UNIT - ((x)+(w))) & FB_STIP_MASK))
+
 
 #define FbMaskBits(x,w,l,n,r) { \
     n = (w); \
@@ -433,6 +444,7 @@ extern void fbSetBits (FbStip *bits, int stride, FbStip data);
     } \
 }
 
+
 #define FbDoRightMaskByteRRop(dst,rb,r,and,xor) { \
     switch (rb) { \
     case 1: \
@@ -581,21 +593,21 @@ extern void fbSetBits (FbStip *bits, int stride, FbStip data);
  * icblt.c
  */
 pixman_private void
-fbBlt (pixman_bits_t   *src,
+fbBlt (pixman_bits_t   *src, 
        FbStride	srcStride,
        int	srcX,
-
+       
        FbBits   *dst,
        FbStride dstStride,
        int	dstX,
-
-       int	width,
+       
+       int	width, 
        int	height,
-
+       
        int	alu,
        FbBits	pm,
        int	bpp,
-
+       
        Bool	reverse,
        Bool	upsidedown);
 
@@ -608,7 +620,7 @@ fbBlt24 (pixman_bits_t	    *srcLine,
 	 FbStride   dstStride,
 	 int	    dstX,
 
-	 int	    width,
+	 int	    width, 
 	 int	    height,
 
 	 int	    alu,
@@ -616,23 +628,23 @@ fbBlt24 (pixman_bits_t	    *srcLine,
 
 	 Bool	    reverse,
 	 Bool	    upsidedown);
-
+    
 pixman_private void
 fbBltStip (FbStip   *src,
 	   FbStride srcStride,	    /* in FbStip units, not FbBits units */
 	   int	    srcX,
-
+	   
 	   FbStip   *dst,
 	   FbStride dstStride,	    /* in FbStip units, not FbBits units */
 	   int	    dstX,
 
-	   int	    width,
+	   int	    width, 
 	   int	    height,
 
 	   int	    alu,
 	   FbBits   pm,
 	   int	    bpp);
-
+    
 /*
  * icbltone.c
  */
@@ -652,7 +664,7 @@ fbBltOne (FbStip   *src,
 	  FbBits   fbxor,
 	  FbBits   bgand,
 	  FbBits   bgxor);
-
+ 
 #ifdef FB_24BIT
 pixman_private void
 fbBltOne24 (FbStip    *src,
@@ -804,15 +816,15 @@ fbRasterizeTrapezoid (pixman_image_t		*pMask,
    in libgcc in case a target does not have one, which should be just as
    good as the static function below.  */
 #if __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
-static INLINE int
-_FbOnes(unsigned int mask)
-{
-	return __builtin_popcount(mask);
-}
+# if __INT_MIN__ == 0x7fffffff
+#  define _FbOnes(mask)		__builtin_popcount(mask)
+# else
+#  define _FbOnes(mask)		__builtin_popcountl((mask) & 0xffffffff)
+# endif
 #else
 # define ICINT_NEED_IC_ONES
-pixman_private int
-_FbOnes(unsigned int mask);
+int
+_FbOnes(unsigned long mask);
 #endif
 
 /* icformat.c */
@@ -825,13 +837,6 @@ pixman_format_init (pixman_format_t *format, int format_code);
 pixman_private pixman_image_t *
 pixman_image_createForPixels (FbPixels	*pixels,
 			pixman_format_t	*format);
-
-pixman_private uint32_t
-pixman_gradient_color (pixman_gradient_stop_t *stop1,
-		       pixman_gradient_stop_t *stop2,
-		       uint32_t		      x);
-
-#define PictureGradientColor pixman_gradient_color
 
 /* icpixels.c */
 
@@ -849,6 +854,18 @@ FbPixelsDestroy (FbPixels *pixels);
 pixman_private int
 pixman_transform_point (pixman_transform_t	*transform,
 		  pixman_vector_t	*vector);
+
+/* Avoid unnessecary PLT entries.  */
+
+slim_hidden_proto(pixman_image_create)
+slim_hidden_proto(pixman_color_to_pixel)
+slim_hidden_proto(pixman_format_init)
+slim_hidden_proto(pixman_image_destroy)
+slim_hidden_proto(pixman_fill_rectangles)
+slim_hidden_proto(pixman_image_set_component_alpha)
+slim_hidden_proto(pixman_image_set_repeat)
+slim_hidden_proto(pixman_composite)
+
 
 #include "icrop.h"
 
@@ -935,7 +952,7 @@ typedef struct _PictFormat	*PictFormatPtr;
 #define PICT_b1g2r1	PICT_FORMAT(4,PICT_TYPE_ABGR,0,1,2,1)
 #define PICT_a1r1g1b1	PICT_FORMAT(4,PICT_TYPE_ARGB,1,1,1,1)
 #define PICT_a1b1g1r1	PICT_FORMAT(4,PICT_TYPE_ABGR,1,1,1,1)
-
+				    
 #define PICT_c4		PICT_FORMAT(4,PICT_TYPE_COLOR,0,0,0,0)
 #define PICT_g4		PICT_FORMAT(4,PICT_TYPE_GRAY,0,0,0,0)
 
@@ -945,7 +962,7 @@ typedef struct _PictFormat	*PictFormatPtr;
 #define PICT_g1		PICT_FORMAT(1,PICT_TYPE_GRAY,0,0,0,0)
 
 /*
- * For dynamic indexed visuals (GrayScale and PseudoColor), these control the
+ * For dynamic indexed visuals (GrayScale and PseudoColor), these control the 
  * selection of colors allocated for drawing to Pictures.  The default
  * policy depends on the size of the colormap:
  *
@@ -976,7 +993,7 @@ typedef struct _PictFormat	*PictFormatPtr;
  * 4x4x4 cube allocates another two and nine more are allocated to fill
  * in the 13 levels.  When the 4x4x4 cube is not allocated, a total of
  * 11 cells are allocated.
- */
+ */   
 
 #define PictureCmapPolicyInvalid    -1
 #define PictureCmapPolicyDefault    0
@@ -985,7 +1002,7 @@ typedef struct _PictFormat	*PictFormatPtr;
 #define PictureCmapPolicyColor	    3
 #define PictureCmapPolicyAll	    4
 
-extern pixman_private int PictureCmapPolicy;
+extern int PictureCmapPolicy pixman_private;
 
 int	PictureParseCmapPolicy (const char *name);
 
@@ -1016,8 +1033,8 @@ typedef uint32_t		xFixed_1_16;
 typedef int32_t		xFixed_16_16;
 
 /*
- * An unadorned "xFixed" is the same as xFixed_16_16,
- * (since it's quite common in the code)
+ * An unadorned "xFixed" is the same as xFixed_16_16, 
+ * (since it's quite common in the code) 
  */
 typedef	xFixed_16_16	xFixed;
 #define XFIXED_BITS	16
@@ -1056,6 +1073,7 @@ typedef	xFixed_16_16	xFixed;
 				  (((s)      ) & 0xff) * 58) >> 2)
 
 #endif /* _PICTURE_H_ */
+
 
 /* Macros needed by fbpict.c */
 

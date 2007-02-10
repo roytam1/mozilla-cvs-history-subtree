@@ -35,7 +35,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
 #include <stdio.h>
 #include "nsISupports.h"
 #include "nsXPCOM.h"
@@ -50,8 +49,10 @@
 #include "nsIURL.h"
 #include "nsNetUtil.h"
 #include "nsCOMPtr.h"
+#include "nsReadableUtils.h"
+#include "nsCRT.h"
 #include "nsIUnicodeNormalizer.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 
 NS_DEFINE_CID(kUnicharUtilCID, NS_UNICHARUTIL_CID);
 NS_DEFINE_CID(kEntityConverterCID, NS_ENTITYCONVERTER_CID);
@@ -401,7 +402,7 @@ static void TestEntityConversion(PRUint32 version)
   nsresult res;
 
 
-  inString.Assign(NS_ConvertASCIItoUTF16("\xA0\xA1\xA2\xA3"));
+  inString.Assign(NS_ConvertASCIItoUCS2("\xA0\xA1\xA2\xA3"));
   uChar = (PRUnichar) 8364; //euro
   inString.Append(&uChar, 1);
   uChar = (PRUnichar) 9830; //
@@ -410,15 +411,12 @@ static void TestEntityConversion(PRUint32 version)
   nsCOMPtr <nsIEntityConverter> entityConv = do_CreateInstance(kEntityConverterCID, &res);;
   if (NS_FAILED(res)) {printf("\tFailed!! return value != NS_OK\n"); return;}
 
-  const PRUnichar *data;
-  PRUint32 length = NS_StringGetData(inString, &data);
-
   // convert char by char
-  for (i = 0; i < length; i++) {
+  for (i = 0; i < inString.Length(); i++) {
     char *entity = NULL;
-    res = entityConv->ConvertToEntity(data[i], version, &entity);
+    res = entityConv->ConvertToEntity(inString[i], version, &entity);
     if (NS_SUCCEEDED(res) && NULL != entity) {
-      printf("%c %s\n", data[i], entity);
+      printf("%c %s\n", inString[i], entity);
       nsMemory::Free(entity);
     }
   }
@@ -427,9 +425,9 @@ static void TestEntityConversion(PRUint32 version)
   PRUnichar *entities;
   res = entityConv->ConvertToEntities(inString.get(), version, &entities);
   if (NS_SUCCEEDED(res) && NULL != entities) {
-    for (PRUnichar *centity = entities; *centity; ++centity) {
-      printf("%c", (char) *centity);
-      if (';' == (char) *centity)
+    for (i = 0; i < nsCRT::strlen(entities); i++) {
+      printf("%c", (char) entities[i]);
+      if (';' == (char) entities[i])
         printf("\n");
     }
     nsMemory::Free(entities);
@@ -449,15 +447,12 @@ static void TestSaveAsCharset()
   nsresult res;
 
   nsString inString;
-  inString.Assign(NS_ConvertASCIItoUTF16("\x61\x62\x80\xA0\x63"));
+  inString.Assign(NS_ConvertASCIItoUCS2("\x61\x62\x80\xA0\x63"));
   char *outString;
   
-  const PRUnichar *data;
-  PRUint32 length = NS_StringGetData(inString, &data);
-
   // first, dump input string
-  for (PRUint32 i = 0; i < length; i++) {
-    printf("%c ", data[i]);
+  for (PRUint32 i = 0; i < inString.Length(); i++) {
+    printf("%c ", inString[i]);
   }
   printf("\n");
 
@@ -584,7 +579,7 @@ void TestNormalization()
     printf("Test 2 - NormalizeUnicode(PRUint32, const nsAString&, nsAString&):\n");
     nsAutoString resultStr;
     res =  t->NormalizeUnicodeNFD(nsDependentString(normStr), resultStr);
-    if (resultStr.Equals(nsDependentString(nfdForm))) {
+    if (resultStr.Equals(nfdForm)) {
       printf(" Succeeded in NFD UnicodeNormalizer test. \n");
     } else {
       printf(" Failed in NFD UnicodeNormalizer test. \n");

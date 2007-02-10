@@ -58,6 +58,7 @@
 #include "mozITXTToHTMLConv.h"
 #include "nsIIOService.h"
 #include "nsString.h"
+#include "nsTimer.h"
 #include "nsCOMPtr.h"
 
 
@@ -72,6 +73,9 @@ public:
   mozTXTToHTMLConv();
   virtual ~mozTXTToHTMLConv();
   NS_DECL_ISUPPORTS
+
+  // XXX Is this really needed?  This isn't an interface.
+  NS_DEFINE_STATIC_IID_ACCESSOR(MOZITXTTOHTMLCONV_IID)
 
   NS_DECL_MOZITXTTOHTMLCONV
   NS_DECL_NSIREQUESTOBSERVER
@@ -92,6 +96,12 @@ public:
   see mozITXTToHTMLConv::CiteLevelTXT
  */
   PRInt32 CiteLevelTXT(const PRUnichar * line,PRUint32& logLineStart);
+
+
+  // Timing!
+  MOZ_TIMER_DECLARE(mScanTXTTimer)
+  MOZ_TIMER_DECLARE(mGlyphHitTimer)
+  MOZ_TIMER_DECLARE(mTotalMimeTime)
 
 
 //////////////////////////////////////////////////////////

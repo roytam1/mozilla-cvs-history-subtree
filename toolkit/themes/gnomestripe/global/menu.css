@@ -81,6 +81,7 @@ menubar > menu[open] {
   color: -moz-menuhovertext;
   background-color: -moz-menuhover;
 }
+
 menuitem.spell-suggestion {
   font-weight:bold;
 }
@@ -114,12 +115,6 @@ menulist > menupopup > menu {
 .menu-text {
   -moz-margin-start: 18px !important;
   font-weight: inherit;
-}
-
-.menu-description {
-  font-style: italic;
-  color: GrayText;
-  -moz-margin-start: 1ex !important;
 }
 
 .menu-accel,

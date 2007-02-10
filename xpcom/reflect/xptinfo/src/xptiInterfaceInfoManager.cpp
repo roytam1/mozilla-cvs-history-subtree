@@ -126,7 +126,7 @@ xptiInterfaceInfoManager::xptiInterfaceInfoManager(nsISupportsArray* aSearchPath
         mSearchPath(aSearchPath)
 {
     const char* statsFilename = PR_GetEnv("MOZILLA_XPTI_STATS");
-    if(statsFilename && *statsFilename)
+    if(statsFilename)
     {
         mStatsLogFile = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID);         
         if(mStatsLogFile && 
@@ -142,7 +142,7 @@ xptiInterfaceInfoManager::xptiInterfaceInfoManager(nsISupportsArray* aSearchPath
     }
 
     const char* autoRegFilename = PR_GetEnv("MOZILLA_XPTI_REGLOG");
-    if(autoRegFilename && *autoRegFilename)
+    if(autoRegFilename)
     {
         mAutoRegLogFile = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID);         
         if(mAutoRegLogFile && 
@@ -1724,21 +1724,18 @@ EntryToInfo(xptiInterfaceEntry* entry, nsIInterfaceInfo **_retval)
     return NS_OK;    
 }
 
-xptiInterfaceEntry*
-xptiInterfaceInfoManager::GetInterfaceEntryForIID(const nsIID *iid)
-{
-    xptiHashEntry *hashEntry = (xptiHashEntry*)
-        PL_DHashTableOperate(mWorkingSet.mIIDTable, iid, PL_DHASH_LOOKUP);
-    return PL_DHASH_ENTRY_IS_FREE(hashEntry) ? nsnull : hashEntry->value;
-}
-
 /* nsIInterfaceInfo getInfoForIID (in nsIIDPtr iid); */
 NS_IMETHODIMP xptiInterfaceInfoManager::GetInfoForIID(const nsIID * iid, nsIInterfaceInfo **_retval)
 {
     NS_ASSERTION(iid, "bad param");
     NS_ASSERTION(_retval, "bad param");
 
-    xptiInterfaceEntry* entry = GetInterfaceEntryForIID(iid);
+    xptiHashEntry* hashEntry = (xptiHashEntry*)
+        PL_DHashTableOperate(mWorkingSet.mIIDTable, iid, PL_DHASH_LOOKUP);
+
+    xptiInterfaceEntry* entry = 
+        PL_DHASH_ENTRY_IS_FREE(hashEntry) ? nsnull : hashEntry->value;
+
     return EntryToInfo(entry, _retval);
 }
 
@@ -2109,3 +2106,21 @@ NS_IMETHODIMP xptiInterfaceInfoManager::EnumerateAdditionalManagers(nsISimpleEnu
     NS_ADDREF(*_retval = enumerator);
     return NS_OK;
 }
+
+/***************************************************************************/
+
+XPTI_PUBLIC_API(nsIInterfaceInfoManager*)
+XPTI_GetInterfaceInfoManager()
+{
+    nsIInterfaceInfoManager* iim =
+        xptiInterfaceInfoManager::GetInterfaceInfoManagerNoAddRef();
+    NS_IF_ADDREF(iim);
+    return iim;
+}
+
+XPTI_PUBLIC_API(void)
+XPTI_FreeInterfaceInfoManager()
+{
+    xptiInterfaceInfoManager::FreeInterfaceInfoManager();
+}
+

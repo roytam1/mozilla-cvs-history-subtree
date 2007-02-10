@@ -221,11 +221,7 @@ nsresult RemoteURILoadManager::RequestURILoad(const nsAString& inURI, id<RemoteL
   if (NS_FAILED(rv)) return rv;
 
   nsCOMPtr<nsIStreamLoader> streamLoader;
-  rv = NS_NewStreamLoader(getter_AddRefs(streamLoader), this);
-
-  if (NS_SUCCEEDED(rv))
-    rv = channel->AsyncOpen(streamLoader, loaderContext);
-
+  rv = NS_NewStreamLoader(getter_AddRefs(streamLoader), channel, this, loaderContext) ; // , mLoadGroup, nsnull, loadFlags);
   if (NS_FAILED(rv))
   {
 #if DEBUG

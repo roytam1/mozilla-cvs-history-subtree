@@ -2,32 +2,32 @@ dnl -*- Mode: Autoconf; tab-width: 4; indent-tabs-mode: nil; -*-
 dnl 
 dnl ***** BEGIN LICENSE BLOCK *****
 dnl Version: MPL 1.1/GPL 2.0/LGPL 2.1
-dnl 
-dnl The contents of this file are subject to the Mozilla Public License Version 
-dnl 1.1 (the "License"); you may not use this file except in compliance with 
-dnl the License. You may obtain a copy of the License at 
+dnl
+dnl The contents of this file are subject to the Mozilla Public License Version
+dnl 1.1 (the "License"); you may not use this file except in compliance with
+dnl the License. You may obtain a copy of the License at
 dnl http://www.mozilla.org/MPL/
-dnl 
+dnl
 dnl Software distributed under the License is distributed on an "AS IS" basis,
 dnl WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
 dnl for the specific language governing rights and limitations under the
 dnl License.
-dnl 
+dnl
 dnl The Original Code is the Netscape Portable Runtime (NSPR).
-dnl 
+dnl
 dnl The Initial Developer of the Original Code is
 dnl Netscape Communications Corporation.
 dnl Portions created by the Initial Developer are Copyright (C) 1998-2000
 dnl the Initial Developer. All Rights Reserved.
-dnl 
+dnl
 dnl Contributor(s):
 dnl   Christopher Seawood <cls@seawood.org>
 dnl   Dan Mosedale <dmose@netscape.com>
 dnl   Howard Chu <hyc@symas.com>
-dnl 
+dnl
 dnl Alternatively, the contents of this file may be used under the terms of
-dnl either of the GNU General Public License Version 2 or later (the "GPL"),
-dnl or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+dnl either the GNU General Public License Version 2 or later (the "GPL"), or
+dnl the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
 dnl in which case the provisions of the GPL or the LGPL are applicable instead
 dnl of those above. If you wish to allow use of your version of this file only
 dnl under the terms of either the GPL or the LGPL, and not to allow others to
@@ -36,11 +36,11 @@ dnl decision by deleting the provisions above and replace them with the notice
 dnl and other provisions required by the GPL or the LGPL. If you do not delete
 dnl the provisions above, a recipient may use your version of this file under
 dnl the terms of any one of the MPL, the GPL or the LGPL.
-dnl 
-dnl ***** END LICENSE BLOCK ***** 
+dnl
+dnl ***** END LICENSE BLOCK *****
 
 AC_PREREQ(2.12)
-AC_INIT(ldap/include/ldap.h)
+AC_INIT(ldap/build/dirver.c)
 
 AC_CONFIG_AUX_DIR(${srcdir}/config/autoconf)
 AC_CANONICAL_SYSTEM
@@ -62,9 +62,9 @@ _OPTIMIZE_FLAGS=-O
 _DEBUG_FLAGS=-g
 MOZ_DEBUG=1
 MOZ_OPTIMIZE=
-MFLAGS=
 OBJDIR=.
 OBJDIR_NAME=.
+OBJDIR_SUFFIX=OBJ
 NSINSTALL='$(MOD_DEPTH)/config/$(OBJDIR_NAME)/nsinstall'
 NOSUCHFILE=/no-such-file
 
@@ -199,9 +199,8 @@ AC_ARG_ENABLE(n32,
 AC_ARG_ENABLE(64bit,
     [  --enable-64bit          Enable 64-bit support (on certain platforms)],
     [ if test "$enableval" = "yes"; then
-	    USE_64=1 ; export USE_64
-      fi ],
-    [])
+	    USE_64=1
+      fi ])
 
 AC_ARG_ENABLE(mdupdate,
     [  --enable-mdupdate       Enable use of certain compilers' mdupdate feature],
@@ -210,117 +209,17 @@ AC_ARG_ENABLE(mdupdate,
       fi ])
 
 dnl ========================================================
-dnl = build the optional command-line utilities such as
-dnl = ldapsearch and ldapmodify.
+dnl = Build libssldap, and use the NSS installed in dist for
+dnl = the crypto.
 dnl ========================================================
-AC_ARG_ENABLE(clu,
-   [  --enable-clu            Enable building the command-line utilities],
-   [ if test "$enableval" = "yes"; then
-           BUILDCLU=1
-           AC_SUBST(BUILDCLU)
-     fi ],
-   []) 
-
-dnl ========================================================
-dnl = svrcore gives the command line tools secure PIN management
-dnl = for client cert based authentication
-dnl ========================================================
-dnl ========================================================
-dnl = Use the SVRCORE copy in the system (assuming it exists) 
-dnl = rather than the one in the source tree (mozilla/security)
-dnl ========================================================
-AC_ARG_WITH(system-svrcore,
-    [  --with-system-svrcore   Use system installed SVRCORE],
+dnl
+AC_ARG_WITH(nss, 
+    [  --with-nss              Build libssldap, using NSS for crypto],
     [   if test "$withval" = "yes"; then
-            _SYSTEM_SVRCORE=1
-            HAVE_SVRCORE=1
-            SVRCORE_LIBS=-lsvrcore
-            AC_SUBST(SVRCORE_LIBS)
-            AC_SUBST(HAVE_SVRCORE)
-dnl svrcore implies both nspr and nss
             USE_NSS=1
-            no_nspr=no
 	    else
-            _SYSTEM_SVRCORE=
-	    fi], _SYSTEM_SVRCORE= )
-
-dnl _SYSTEM_SVRCORE means /usr/lib and /usr/include so no need to add additional
-dnl include or lib paths
-if test -z "$_SYSTEM_SVRCORE" ; then
-   dnl first, see if user has specified explicit SVRCORE include and lib paths
-   AM_PATH_GIVEN_SVRCORE()
-
-   dnl next, see if user explicitly said to use system svrcore
-   if test -n "$HAVE_SVRCORE" ; then
-dnl svrcore implies both nspr and nss
-       USE_NSS=1
-       HAVE_SVRCORE=1
-       AC_SUBST(HAVE_SVRCORE)
-       no_nspr=no
-       if test -z "$SVRCORE_CFLAGS" -o -z "$SVRCORE_LIBS" ; then
-           if test -n "$_SYSTEM_SVRCORE"; then
-               AM_PATH_SVRCORE(4.0.1, [MOZ_NATIVE_SVRCORE=1], [MOZ_NATIVE_SVRCORE=])
-           else
-       	       dnl see if we are being built in the same build tree as svrcore
-               AM_PATH_INTREE_SVRCORE(../../dist)
-               dnl failing that, see if we can find svrcore-config or pkg-config svrcore
-               if test -z "$SVRCORE_CFLAGS" -o -z "$SVRCORE_LIBS"; then
-                   AM_PATH_SVRCORE(4.0.1, [MOZ_NATIVE_SVRCORE=1], [MOZ_NATIVE_SVRCORE=])
-               fi
-           fi
-       fi
-   fi
-fi
-
-if test -n "$HAVE_SVRCORE" -a -z "$_SYSTEM_SVRCORE" ; then
-   if test -z "$SVRCORE_CFLAGS" -o -z "$SVRCORE_LIBS"; then
-      AC_MSG_ERROR([--with-svrcore specified, but no svrcore could be found])
-   fi
-fi
-
-dnl ========================================================
-dnl = Use the NSS copy in the system (assuming it exists) 
-dnl = rather than the one in the source tree (mozilla/security)
-dnl ========================================================
-AC_ARG_WITH(system-nss,
-    [  --with-system-nss   Use system installed NSS],
-    [   if test "$withval" = "yes"; then
-            _SYSTEM_NSS=1
-            USE_NSS=1
-dnl nss requires nspr
-            no_nspr=no
-	    elif test "$withval" = "no" ; then
-            _SYSTEM_NSS=no
-	    fi], _SYSTEM_NSS= )
-
-if test "$_WIN32_MSVC"; then
-    _SYSTEM_NSS=
-fi
-
-dnl first, see if user has specified explicit NSPR include and lib paths,
-dnl of if the user has explicitly disabled the use of nss
-if test -z "$_SYSTEM_NSS" -o "$_SYSTEM_NSS" = "no" ; then
-   AM_PATH_GIVEN_NSS()
-fi
-
-dnl next, see if user explicitly said to use system nss
-if test -n "$USE_NSS" -a -z "$NSS_CFLAGS" -a -z "$NSS_LIBS" ; then
-dnl nss requires nspr
-   no_nspr=no
-   if test -z "$_SYSTEM_NSS" -o "$_SYSTEM_NSS" = "no" ; then
-dnl see if we are being built in the same build tree as nss
-      AM_PATH_INTREE_NSS(../../dist)
-   fi
-dnl failing that, see if we can find nss-config or pkg-config nss
-   if test -z "$NSS_CFLAGS" -a "$_SYSTEM_NSS" != "no" ; then
-      AM_PATH_NSS(3.9.0, [MOZ_NATIVE_NSS=1], [MOZ_NATIVE_NSS=])
-   fi
-fi
-
-dnl bomb out if nss not found
-if test -n "$USE_NSS" -a -z "$NSS_CFLAGS" -a -z "$NSS_LIBS" ; then
-   AC_MSG_ERROR(Need to use NSS but no NSS was found)
-fi
+            USE_NSS=
+	    fi])
 
 dnl ========================================================
 dnl = Use the NSPR copy in the system (assuming it exists) 
@@ -330,105 +229,26 @@ AC_ARG_WITH(system-nspr,
     [  --with-system-nspr   Use system installed NSPR],
     [   if test "$withval" = "yes"; then
             _SYSTEM_NSPR=1
-            no_nspr=no
-	    elif test "$withval" = "no"; then
-            _SYSTEM_NSPR=no
+	    else
+            _SYSTEM_NSPR=
 	    fi], _SYSTEM_NSPR= )
 
 if test "$_WIN32_MSVC"; then
-    _SYSTEM_NSPR=no
+    _SYSTEM_NSPR=
+fi
+	
+if test -n "$_SYSTEM_NSPR"; then
+    AM_PATH_NSPR(4.0.0, [MOZ_NATIVE_NSPR=1], [MOZ_NATIVE_NSPR=])
 fi
 
-dnl first, see if user has specified explicit NSPR include and lib paths,
-dnl of if the user has explicitly disabled the use of nspr
-if test -z "$_SYSTEM_NSPR" -o "$_SYSTEM_NSPR" = "no" ; then
-   AM_PATH_GIVEN_NSPR()
-fi
-
-dnl next, look for in-tree nspr if user did not specify explicit system nspr
-if test "$no_nspr" = "no" -a -z "$NSPR_CFLAGS" -a -z "$NSPR_LIBS" ; then
-   if test -z "$_SYSTEM_NSPR" -o "$_SYSTEM_NSPR" = "no" ; then
-dnl see if we are being built in the same build tree as nspr
-      AM_PATH_INTREE_NSPR(../../dist)
-   fi
-dnl failing that, see if we can find nspr-config or pkg-config nspr
-   if test -z "$NSPR_CFLAGS" -a "$_SYSTEM_NSPR" != "no" ; then
-      AM_PATH_NSPR(4.0.0, [MOZ_NATIVE_NSPR=1], [MOZ_NATIVE_NSPR=])
-   fi
-fi
-
-dnl if we are being built as part of the mozilla client, and we could not
-dnl find NSPR by any other method, just default to the default values
-dnl used by the client build - NOTE that this sets the libpaths and the
-dnl library link commands directly, so we don't need to muck with any
-dnl cygwin path conversion stuff.  The client build also uses --with-dist-prefix
-dnl which sets $(DIST) in the makefiles
-if test -z "$NSPR_CFLAGS" -o -z "$NSPR_LIBS" ; then
-   if test -n "$MOZILLA_CLIENT" ; then
-       NSPR_CFLAGS='-I$(DIST)/include/nspr'
-       NSPR_LIBS='-L$(DIST)/lib '"-lplds$NSPR_VERSION -lplc$NSPR_VERSION -lnspr$NSPR_VERSION"
-       dnl explicitly set libs for Visual Age C++ for OS/2
-       if test "$VACPP" = "yes"; then
-          NSPR_LIBS='$(DIST)/lib/nspr'$NSPR_VERSION'.lib $(DIST)/lib/plc'$NSPR_VERSION'.lib $(DIST)/lib/plds'$NSPR_VERSION'.lib '$_PTHREAD_LDFLAGS''
-       elif test "$_WIN32_MSVC"; then
-          NSPR_LIBS='$(DIST)/lib/nspr'$NSPR_VERSION'.lib $(DIST)/lib/plc'$NSPR_VERSION'.lib $(DIST)/lib/plds'$NSPR_VERSION'.lib '
-       fi
-       SKIP_CYGWIN_FIXUP=1
-       LIBS_ALREADY_SET=1
-       AC_SUBST(LIBS_ALREADY_SET)
-   elif test "$no_nspr" = "no" ; then
-       AC_MSG_ERROR(Need to use NSPR but no NSPR was found)
-   fi
-fi
-
-dnl ========================================================
-dnl If using cygwin (or another Windows shell that uses unix
-dnl style paths by default - mingw?) and using MSVC, we need
-dnl to convert the include and lib paths to the more MSVC
-dnl friendly format - it's easier and faster to do it here
-dnl than in cygwin-wrapper
-dnl ========================================================
-
-dnl add other runtime environments that use unix style paths
-dnl *-cygwin*|*-mingw*|*-msvc*|*-mks*)
-case "$target" in
-*-cygwin*) USE_WINDOWS_PATHS=1 ;;
-esac
-
-if test -n "$_WIN32_MSVC" -a -n "$USE_WINDOWS_PATHS" ; then
-    if test -n "$NSPR_CFLAGS" -a -z "$SKIP_CYGWIN_FIXUP" ; then
-        path=`echo $NSPR_CFLAGS | sed -e 's/^-I//'`
-        path=`cygpath -m $path`
-        NSPR_CFLAGS="/I$path"
-    fi
-    if test -n "$NSPR_LIBS" -a -z "$SKIP_CYGWIN_FIXUP" ; then
-        path=`echo $NSPR_LIBS | sed -e 's/^-L//'`
-        path=`cygpath -m $path`
-        NSPR_LIBS="/LIBPATH:$path"
-    fi
-
-    if test -n "$NSS_CFLAGS" ; then
-        path=`echo $NSS_CFLAGS | sed -e 's/^-I//'`
-        path=`cygpath -m $path`
-        NSS_CFLAGS="/I$path"
-    fi
-
-    if test -n "$NSS_LIBS" ; then
-        path=`echo $NSS_LIBS | sed -e 's/^-L//'`
-        path=`cygpath -m $path`
-        NSS_LIBS="/LIBPATH:$path"
-    fi
-
-    if test -n "$SVRCORE_CFLAGS" ; then
-        path=`echo $SVRCORE_CFLAGS | sed -e 's/^-I//'`
-        path=`cygpath -m $path`
-        SVRCORE_CFLAGS="/I$path"
-    fi
-
-    if test -n "$SVRCORE_LIBS" ; then
-        path=`echo $SVRCORE_LIBS | sed -e 's/^-L//'`
-        path=`cygpath -m $path`
-        SVRCORE_LIBS="/LIBPATH:$path"
+if test -z "$MOZ_NATIVE_NSPR"; then
+    NSPR_CFLAGS='-I$(DIST)/include/nspr'
+    NSPR_LIBS='-L$(DIST)/lib '"-lplds$NSPR_VERSION -lplc$NSPR_VERSION -lnspr$NSPR_VERSION"
+    # explicitly set libs for Visual Age C++ for OS/2
+    if test "$VACPP" = "yes"; then
+        NSPR_LIBS='$(DIST)/lib/nspr'$NSPR_VERSION'.lib $(DIST)/lib/plc'$NSPR_VERSION'.lib $(DIST)/lib/plds'$NSPR_VERSION'.lib '$_PTHREAD_LDFLAGS''
+    elif test "$_WIN32_MSVC"; then
+            NSPR_LIBS='$(DIST)/lib/nspr'$NSPR_VERSION'.lib $(DIST)/lib/plc'$NSPR_VERSION'.lib $(DIST)/lib/plds'$NSPR_VERSION'.lib '
     fi
 fi
 
@@ -550,14 +370,12 @@ if test -n "$MOZ_DEBUG"; then
         DEFINES="$MOZ_DEBUG_ENABLE_DEFS -DDEBUG_`$WHOAMI`"
         ;;
     esac
-    MFLAGS="BUILD_DEBUG=full"
 else
     AC_DEFINE(NDEBUG)
     DEFINES="$DEFINES -UDEBUG"
-    MFLAGS="BUILD_DEBUG=optimize"
 fi
 
-dnl Use mozilla's nsinstall
+# Use mozilla's nsinstall
 if test -n "$MOZILLA_CLIENT"; then
    NSINSTALL='$(dist_bindir)/nsinstall'
 fi
@@ -566,50 +384,9 @@ if test -z "$SKIP_COMPILER_CHECKS"; then
 dnl ========================================================
 dnl Checks for compilers.
 dnl ========================================================
-dnl NOTE that according to the latest autoconf 2.5x manual
-dnl "Now, configure enters cross-compilation mode if and only if `--host' is passed."
-dnl However, the mozilla build system expects us to assume different target and host
-dnl means cross compiling.  But, %configure in many linux RPM build systems sets the
-dnl following:
-dnl ./configure --build=i686-redhat-linux-gnu --host=i686-redhat-linux-gnu --target=i386-redhat-linux-gnu ...
-dnl which means that the system is an i686, but we want to produce code which will run on i386 - in
-dnl this case, we _do not_ want to cross compile
-dnl So, additional logic:
-dnl if $host = $build, do not cross compile
-dnl otherwise, cross compile if host is given
-cross_compiling=no
-dnl host must be specified to cross compile
-if test -n "$host" ; then
-dnl host == build - do not cross compile
-    if test "$host" = "$build" ; then
-        cross_compiling=no
-dnl host != build or host != target - do cross compile
-    elif test "$host" != "$target" -o "$host" != "$build" ; then
-        cross_compiling=yes
-    fi
-fi
-if test "$cross_compiling" = "no"; then
-    AC_PROG_CXX
-    if test "$CXX" = "cl" -a -z "$CC"; then
-        CC=$CXX
-    else        
-        AC_PROG_CC
-    fi
-    AC_PROG_CPP
-    AC_PROG_RANLIB
-    AC_PATH_PROGS(AS, as, $CC)
-    AC_PATH_PROGS(AR, ar, echo not_ar)
-    AC_PATH_PROGS(LD, ld link, echo not_ld)
-    AC_PATH_PROGS(STRIP, strip, echo not_strip)
-    AC_PATH_PROGS(WINDRES, windres, echo not_windres)
-    if test -z "$HOST_CC"; then
-	    HOST_CC="$CC"
-    fi
-    if test -z "$HOST_CFLAGS"; then
-	    HOST_CFLAGS="$CFLAGS"
-    fi
-else
+if test "$target" != "$host"; then
     echo "cross compiling from $host to $target"
+    cross_compiling=yes
 
     _SAVE_CC="$CC"
     _SAVE_CFLAGS="$CFLAGS"
@@ -669,6 +446,27 @@ else
     AC_CHECK_PROGS(LD, $LD "${target_alias}-ld" "${target}-ld", echo)
     AC_CHECK_PROGS(STRIP, $STRIP "${target_alias}-strip" "${target}-strip", echo)
     AC_CHECK_PROGS(WINDRES, $WINDRES "${target_alias}-windres" "${target}-windres", echo)
+
+else
+    AC_PROG_CXX
+    if test "$CXX" = "cl" -a -z "$CC"; then
+        CC=$CXX
+    else        
+        AC_PROG_CC
+    fi
+    AC_PROG_CPP
+    AC_PROG_RANLIB
+    AC_PATH_PROGS(AS, as, $CC)
+    AC_PATH_PROGS(AR, ar, echo not_ar)
+    AC_PATH_PROGS(LD, ld link, echo not_ld)
+    AC_PATH_PROGS(STRIP, strip, echo not_strip)
+    AC_PATH_PROGS(WINDRES, windres, echo not_windres)
+    if test -z "$HOST_CC"; then
+	    HOST_CC="$CC"
+    fi
+    if test -z "$HOST_CFLAGS"; then
+	    HOST_CFLAGS="$CFLAGS"
+    fi
 fi
 
 if test "$GCC" = "yes"; then
@@ -753,6 +551,9 @@ LIB_PREFIX=lib
 DLL_SUFFIX=so
 ASM_SUFFIX=s
 MKSHLIB='$(LD) $(DSO_LDOPTS) -o $@'
+PR_MD_ASFILES=
+PR_MD_CSRCS=
+PR_MD_ARCH_DIR=unix
 AR_FLAGS='cr $@'
 AS='$(CC)'
 ASFLAGS='$(CFLAGS)'
@@ -779,7 +580,6 @@ fi
 
 if test "$OS_ARCH" = "Linux"; then
     OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
-    OS_RELEASE=`echo $OS_RELEASE | awk -F. '{ print $1 "." $2 }'`
 fi
 
 #######################################################################
@@ -906,6 +706,7 @@ fi
 if test "$OS_TARGET" = "WIN16"; then
     OS_RELEASE=
 fi
+OS_CONFIG="${OS_TARGET}${OS_RELEASE}"
 
 dnl ========================================================
 dnl = Mac OS X SDK support
@@ -917,17 +718,6 @@ AC_ARG_WITH(macos-sdk,
 dnl ========================================================
 
 dnl ========================================================
-dnl Enable high-memory support on OS/2, disabled by default
-dnl ========================================================
-AC_ARG_ENABLE(os2-high-mem,
-    [  --enable-os2-high-mem Enable high-memory support on OS/2],
-    [ if test "$enableval" = "yes"; then
-        MOZ_OS2_HIGH_MEMORY=1
-      else
-        MOZ_OS2_HIGH_MEMORY=
-      fi ])
-
-dnl ========================================================
 dnl Override of system specific host options
 dnl ========================================================
 case "$host" in
@@ -936,14 +726,12 @@ case "$host" in
     WIN_TOP_SRC=`cd $srcdir && pwd -W`
     ;;
 *-cygwin*|*-msvc*|*-mks*)
-# don't really need cygwin_wrapper anymore
-    CYGWIN_WRAPPER=
-#    CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
+    CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
     NSINSTALL='$(CYGWIN_WRAPPER) nsinstall'
     if test "`${PERL} -v | grep -c cygwin  2>/dev/null`" = 0; then
         PERL='$(CYGWIN_WRAPPER) perl'
     fi
-    WIN_TOP_SRC=`cygpath -w $srcdir | sed -e 's|\\\\|/|g'`
+    WIN_TOP_SRC=`cygpath -a -w $srcdir | sed -e 's|\\\\|/|g'`
     ;;
 *-beos*)
     HOST_CFLAGS="$HOST_CFLAGS -DXP_BEOS -DBeOS -DBEOS -D_POSIX_SOURCE"
@@ -954,20 +742,6 @@ case "$host" in
     HOST_CFLAGS="$HOST_CFLAGS -DXP_UNIX"
     ;;
 esac
-
-dnl ========================================================
-dnl Check for --with-rpath and user supplied rpath
-dnl ========================================================
-DEFAULT_RPATHFLAG=..:../lib:../../lib:../../../lib:../../../../lib
-AC_ARG_WITH(rpath,
-    [  --with-rpath[[=dir]]    Build the shared libs and cmd lines progs with an RPATH (default dir is ..:../lib:../../lib:../../../lib:../../../../lib)],
-[
-    if test "$withval" = "yes" ; then # set default
-       RPATHFLAG="$DEFAULT_RPATHFLAG"
-    elif test -n "$withval" ; then # user supplied
-       RPATHFLAG="$withval"
-    fi
-])
 
 dnl ========================================================
 dnl Override of system specific target options
@@ -984,6 +758,8 @@ case "$target" in
     aix3.2*)
         AC_DEFINE(AIX_RENAME_SELECT)
         AC_DEFINE(_PR_NO_LARGE_FILES)
+        AIX_LINK_OPTS='-bnso -berok'
+        PR_MD_ASFILES=os_AIX.s
         ;;
     aix4.1*)
         AC_DEFINE(AIX_TIMERS)
@@ -991,10 +767,12 @@ case "$target" in
         AC_DEFINE(AIX4_1)
         MKSHLIB=
         DSO_LDOPTS=
+        AIX_LINK_OPTS='-bnso -berok'
         ;;
     aix4.2*)
         AC_DEFINE(AIX_TIMERS)
         AC_DEFINE(_PR_HAVE_OFF64_T)
+        AIX_LINK_OPTS='-brtl -bnso -berok'
         ;;
     aix4.3*)
         AC_DEFINE(AIX_TIMERS)
@@ -1003,6 +781,7 @@ case "$target" in
         AC_DEFINE(HAVE_SOCKLEN_T)
         AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
         USE_IPV6=1
+        AIX_LINK_OPTS='-brtl -bnso -berok'
         ;;
     *)
         AC_DEFINE(AIX_TIMERS)
@@ -1010,6 +789,7 @@ case "$target" in
         AC_DEFINE(HAVE_SOCKLEN_T)
         AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
         USE_IPV6=1
+        AIX_LINK_OPTS='-brtl -bnso -berok'
         ;;
     esac
     CFLAGS="$CFLAGS -qro -qroconst"
@@ -1019,8 +799,16 @@ case "$target" in
     AIX_WRAP='$(DIST)/lib/aixwrap.o'
     AIX_TMP='./_aix_tmp.o'
     if test -n "$USE_64"; then
+        MDCPUCFG_H=_aix64.cfg
         OBJECT_MODE=64
+    else
+        if test -n "$USE_IPV6"; then
+            MDCPUCFG_H=_aix32in6.cfg
+        else
+            MDCPUCFG_H=_aix32.cfg
+        fi
     fi
+    PR_MD_CSRCS=aix.c
     RESOLVE_LINK_SYMBOLS=1
     ;;
         
@@ -1030,7 +818,9 @@ case "$target" in
     AC_DEFINE(BEOS)
     AC_DEFINE(_POSIX_SOURCE)
     DSO_LDOPTS=-nostart
+    MDCPUCFG_H=_beos.cfg
     USE_BTHREADS=1
+    PR_MD_ARCH_DIR=beos
     RESOLVE_LINK_SYMBOLS=1
     case "${target_cpu}" in
     i*86)
@@ -1064,6 +854,9 @@ case "$target" in
         CPU_ARCH=sparc
     fi
 
+    MDCPUCFG_H=_bsdi.cfg
+    PR_MD_CSRCS=bsdi.c
+
     DSO_LDOPTS=-r
 
     case "$target_os" in
@@ -1082,6 +875,7 @@ case "$target" in
         AC_DEFINE(HAVE_DLL)
         AC_DEFINE(USE_DLFCN)
         AC_DEFINE(_PR_STAT_HAS_ST_ATIMESPEC)
+        PR_MD_ASFILES=os_BSD_OS_386_2.s
         ;;
 
     bsdi4.*)
@@ -1134,6 +928,8 @@ case "$target" in
     STRIP="$STRIP -x -S"
     DLL_SUFFIX=dylib
     USE_PTHREADS=1
+    MDCPUCFG_H=_darwin.cfg
+    PR_MD_CSRCS=darwin.c
 
     dnl MACOS_SDK_DIR will be set to the SDK location whenever one is
     dnl in use.  NEXT_ROOT will be set and exported if it's needed for
@@ -1229,6 +1025,8 @@ tools are selected during the Xcode/Developer Tools installation.])
     DSO_LDOPTS=-G
     _OPTIMIZE_FLAGS=-O2
     _DEBUG_FLAGS=
+    MDCPUCFG_H=_dgux.cfg
+    PR_MD_CSRCS=dgux.c
     ;;
 
 *-freebsd*)
@@ -1247,30 +1045,29 @@ tools are selected during the Xcode/Developer Tools installation.])
     fi
     DSO_CFLAGS=-fPIC
     DSO_LDOPTS=-Bshareable
+    MDCPUCFG_H=_freebsd.cfg
+    PR_MD_CSRCS=freebsd.c
     ;;
 
 *-hpux*)
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(HPUX)
     AC_DEFINE(_HPUX_SOURCE)
-    if test "$OS_TEST" = "ia64" ; then
-        AC_DEFINE(ia64)
-        DLL_SUFFIX=so
-    else
-        AC_DEFINE(hppa)
-        DLL_SUFFIX=sl
-    fi
+    AC_DEFINE(hppa)
+    DLL_SUFFIX=sl
     DSO_LDOPTS='-b +h $(notdir $@)'
+    PR_MD_CSRCS=hpux.c
+    PR_MD_ASFILES=os_HPUX.s
+    if test -n "$USE_64"; then
+        MDCPUCFG_H=_hpux64.cfg
+    else
+        MDCPUCFG_H=_hpux32.cfg
+    fi
     if test -z "$GNU_CC"; then
         CC="$CC -Ae"
         CXX="$CXX -ext"
-        if test "$OS_RELEASE" = "B.11.23"; then
-            CFLAGS="$CFLAGS +Olit=all"
-            CXXFLAGS="$CXXFLAGS +Olit=all"
-        else
-            CFLAGS="$CFLAGS +ESlit"
-            CXXFLAGS="$CXXFLAGS +ESlit"
-        fi
+        CFLAGS="$CFLAGS +ESlit"
+        CXXFLAGS="$CXXFLAGS +ESlit"
         DSO_CFLAGS=+Z
     else
         DSO_CFLAGS=-fPIC
@@ -1299,7 +1096,7 @@ tools are selected during the Xcode/Developer Tools installation.])
         AC_DEFINE(HAVE_INT_LOCALTIME_R)
     fi
 
-    if echo "$OS_RELEASE" | egrep '^(B.10.30|B.11.00|B.11.11|B.11.23)' >/dev/null; then
+    if echo "$OS_RELEASE" | egrep '^(B.10.30|B.11.00|B.11.11)' >/dev/null; then
         AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
     fi
 
@@ -1352,31 +1149,6 @@ tools are selected during the Xcode/Developer Tools installation.])
         DEFAULT_IMPL_STRATEGY=_PTH
     fi
 
-    if test "$OS_RELEASE" = "B.11.23"; then
-        AC_DEFINE(HPUX10)
-        AC_DEFINE(HPUX11)
-        AC_DEFINE(_LARGEFILE64_SOURCE)
-        AC_DEFINE(_PR_HAVE_OFF64_T)
-        AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
-        if test -z "$GNU_CC"; then
-            if test -z "$USE_64"; then
-                CFLAGS="$CFLAGS +DD32"
-                CXXFLAGS="$CXXFLAGS +DD32"
-            else
-                CFLAGS="$CFLAGS +DD64"
-                CXXFLAGS="$CXXFLAGS +DD64"
-            fi
-        fi
-        DEFAULT_IMPL_STRATEGY=_PTH
-    fi
-
-    if test "$DEFAULT_RPATHFLAG" = "$RPATHFLAG" ; then
-       if test "$OS_RELEASE" = "B.11.23" -o "$OS_RELEASE" = "B.11.11" ; then
-          # add ORIGIN to default rpath
-          RPATHFLAG="\\\$\$ORIGIN/../lib:\\\$\$ORIGIN/../../lib:$RPATHFLAG"
-       fi
-    fi
-
     if test "$DEFAULT_IMPL_STRATEGY" = "_EMU"; then
         USE_NSPR_THREADS=1
         USE_PTHREADS=
@@ -1390,7 +1162,6 @@ tools are selected during the Xcode/Developer Tools installation.])
             USE_PTHREADS=
         fi
     fi
-
     ;;
 
 *-irix*)
@@ -1399,15 +1170,24 @@ tools are selected during the Xcode/Developer Tools installation.])
     AC_DEFINE(SVR4)
     AC_DEFINE(_SGI_MP_SOURCE)
     AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
+    PR_MD_CSRCS=irix.c
+    PR_MD_ASFILES=os_Irix.s
     DSO_LDOPTS='-rdata_shared -shared'
     MKSHLIB='$(LD) $(DSO_LDOPTS) -soname $(notdir $@) -o $@'
     STRIP="$STRIP -f"
     RESOLVE_LINK_SYMBOLS=1
+    if test -n "$USE_64"; then
+        MDCPUCFG_H=_irix64.cfg
+    else
+        MDCPUCFG_H=_irix32.cfg
+    fi
     case "${target_os}" in
     irix6*)
         AC_DEFINE(IRIX6)
         USE_PTHREADS=1
         USE_N32=1
+        COMPILER_TAG=_n32
+        IMPL_STRATEGY=_PTH
         ;;
     irix5*)
         AC_DEFINE(IRIX5)
@@ -1487,6 +1267,7 @@ tools are selected during the Xcode/Developer Tools installation.])
 *-linux*)
     if test -z "$USE_NSPR_THREADS"; then
         USE_PTHREADS=1
+        IMPL_STRATEGY=_PTH
     fi
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(_POSIX_SOURCE)
@@ -1499,6 +1280,8 @@ tools are selected during the Xcode/Developer Tools installation.])
     LD='$(CC)'
     CFLAGS="$CFLAGS -ansi -Wall"
     CXXFLAGS="$CXXFLAGS -ansi -Wall"
+    MDCPUCFG_H=_linux.cfg
+    PR_MD_CSRCS=linux.c
     MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
     DSO_CFLAGS=-fPIC
     DSO_LDOPTS='-shared -Wl,-soname -Wl,$(notdir $@)'
@@ -1508,11 +1291,13 @@ tools are selected during the Xcode/Developer Tools installation.])
                                    # combo is not yet good at debugging inlined
                                    # functions (even when using DWARF2 as the
                                    # debugging format)
+    COMPILER_TAG=_glibc
     if echo "$OS_TEST" | grep -c 86 >/dev/null; then
         CPU_ARCH=x86
     else
         CPU_ARCH=$OS_TEST
     fi
+    CPU_ARCH_TAG=_${CPU_ARCH}
     case "${target_cpu}" in
     alpha)
         AC_DEFINE(_ALPHA_)
@@ -1522,8 +1307,10 @@ tools are selected during the Xcode/Developer Tools installation.])
         ;;
     i*86)
         AC_DEFINE(i386)
+        PR_MD_ASFILES=os_Linux_x86.s
         ;;
     ia64)
+        PR_MD_ASFILES=os_Linux_ia64.s
         ;;
     m68k)
         CFLAGS="$CFLAGS -m68020-40"
@@ -1542,6 +1329,7 @@ tools are selected during the Xcode/Developer Tools installation.])
     AC_DEFINE(XP_PC)
     AC_DEFINE(WIN32)
     AC_DEFINE(_WINDOWS)
+    PR_MD_ARCH_DIR=windows
     RESOLVE_LINK_SYMBOLS=1
     PROG_SUFFIX=.exe
     if test -n "$GNU_CC"; then
@@ -1552,24 +1340,14 @@ tools are selected during the Xcode/Developer Tools installation.])
         # Use temp file for windres (bug 213281)
         RC="$WINDRES -O coff --use-temp-file"
     else
-# don't really need cygwin_wrapper anymore
-#        CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
-        CYGWIN_WRAPPER=
         CC=cl
         CXX=cl
         LD=link
-        # if the lib program is available, use it, otherwise use link /lib
-        AC_CHECK_PROG(HAVE_MSVC_LIB, lib, 1)
-        if test "$HAVE_MSVC_LIB" = "1" ; then
-            AR='lib -NOLOGO -OUT:"$@"'
-        else
-            AR='$(LD) /lib -NOLOGO -OUT:"$@"'
-        fi
-
+        AR='lib -NOLOGO -OUT:"$@"'
         AR_FLAGS=
         RANLIB='echo not_ranlib'
         STRIP='echo not_strip'
-        RC='$(CYGWIN_WRAPPER) rc.exe'
+        RC=rc.exe
         GARBAGE='$(OBJDIR)/vc20.pdb $(OBJDIR)/vc40.pdb'
 	    OBJ_SUFFIX=obj
 	    LIB_SUFFIX=lib
@@ -1635,14 +1413,27 @@ tools are selected during the Xcode/Developer Tools installation.])
         AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
     fi
 
+    if test "$CPU_ARCH" = "x86"; then
+        CPU_ARCH_TAG=
+    else
+        CPU_ARCH_TAG=$CPU_ARCH
+    fi
+
+    if test -n "$USE_DEBUG_RTL"; then
+        OBJDIR_SUFFIX=OBJD
+    fi
+
     OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
 
     case "$OS_TARGET" in
     WINNT)
+	    MDCPUCFG_H=_winnt.cfg
 	    ;;
     WIN95)
+	    MDCPUCFG_H=_win95.cfg
 	    ;;
     WIN16)
+	    MDCPUCFG_H=_win16.cfg
 	    ;;
     *)
 	    AC_MSG_ERROR([Missing OS_TARGET for ${target}.  Use --enable-win32-target to set.])
@@ -1686,6 +1477,8 @@ tools are selected during the Xcode/Developer Tools installation.])
         CXXFLAGS="$CXXFLAGS -fPIC -Wall"
         DSO_LDOPTS=-G
     fi
+    MDCPUCFG_H=_ncr.cfg
+    PR_MD_CSRCS=ncr.c
     ;;
 
 mips-nec-sysv*)
@@ -1701,6 +1494,8 @@ mips-nec-sysv*)
     fi
     OS_LIBS="$OS_LIBS -lsocket -lnsl -ldl"
     DSO_LDOPTS=-G
+    MDCPUCFG_H=_nec.cfg
+    PR_MD_CSRCS=nec.c
     ;;
 
 *-netbsd*)
@@ -1708,6 +1503,8 @@ mips-nec-sysv*)
     AC_DEFINE(NETBSD)
     AC_DEFINE(HAVE_BSD_FLOCK)
     USE_NSPR_THREADS=1
+    MDCPUCFG_H=_netbsd.cfg
+    PR_MD_CSRCS=netbsd.c
 
     DSO_CFLAGS='-fPIC -DPIC'
     CFLAGS="$CFLAGS -ansi -Wall"
@@ -1743,6 +1540,8 @@ mips-sony-newsos*)
     CFLAGS="$CFLAGS -Xa -fullwarn"
     CXXFLAGS="$CXXFLAGS -Xa -fullwarn"
     DSO_LDOPTS=-G
+    MDCPUCFG_H=_sony.cfg
+    PR_MD_CSRCS=sony.c
     ;;
 
 *-nextstep*|*-openstep*)
@@ -1754,6 +1553,8 @@ mips-sony-newsos*)
     CXXFLAGS="$CXXFLAGS -Wall -fno-common -traditional-cpp -posix"
     USE_NSPR_THREADS=1
     DLL_SUFFIX=dylib
+    MDCPUCFG_H=_nextstep.cfg
+    PR_MD_CSRCS=nextstep.c
     ;;
 
 
@@ -1762,6 +1563,8 @@ mips-sony-newsos*)
     AC_DEFINE(NTO)
     AC_DEFINE(_QNX_SOURCE)
     AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
+    MDCPUCFG_H=_nto.cfg
+    PR_MD_CSRCS=nto.c
     MKSHLIB='$(CC) $(DSO_LDOPTS) -Wl,-soname -Wl,$(notdir $@) -o $@'
     DSO_CFLAGS=-fPIC
     DSO_LDOPTS=-shared
@@ -1778,6 +1581,8 @@ mips-sony-newsos*)
     CXXFLAGS="$CXXFLAGS -ansi -Wall"
     DLL_SUFFIX=so.1.0
     DSO_CFLAGS=-fPIC
+    MDCPUCFG_H=_openbsd.cfg
+    PR_MD_CSRCS=openbsd.c
     USE_NSPR_THREADS=1
     case "$OS_TEST" in
     alpha|mips|pmax)
@@ -1790,6 +1595,8 @@ mips-sony-newsos*)
 *-openvms*)
     AC_DEFINE(XP_UNIX)
     RESOLVE_LINK_SYMBOLS=1
+    MDCPUCFG_H=_openvms.cfg
+    PR_MD_CSRCS=openvms.c
     AR_FLAGS='c $@'
     DSO_LDOPTS='-shared -auto_symvec $(LDFLAGS) $(OPTIMIZER)'
     ;;
@@ -1799,6 +1606,7 @@ mips-sony-newsos*)
     AC_DEFINE(XP_PC)
     AC_DEFINE(BSD_SELECT)
     AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
+    PR_MD_ARCH_DIR=os2
     RESOLVE_LINK_SYMBOLS=1
     NSINSTALL=nsinstall
     LIB_PREFIX=
@@ -1807,6 +1615,7 @@ mips-sony-newsos*)
     DLLTOOL=''
     RC=rc.exe
     PROG_SUFFIX=.exe
+    MDCPUCFG_H=_os2.cfg
 
     # EMX/GCC build
     if test -n "$GNU_CC"; then
@@ -1821,8 +1630,9 @@ mips-sony-newsos*)
         CXXFLAGS="$CFLAGS -Wall -Zomf"
         MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
         DSO_CFLAGS=
-        DSO_LDOPTS='-Zomf -Zdll'
-        _OPTIMIZE_FLAGS=-O3
+        DSO_LDOPTS='-Zmap -Zomf -Zdll'
+        LDFLAGS='-Zmap'
+        _OPTIMIZE_FLAGS="-O2 -s"
         _DEBUG_FLAGS="-g -fno-inline"
         if test -n "$MOZ_OPTIMIZE"; then
           DSO_LDOPTS="$DSO_LDOPTS -Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
@@ -1830,11 +1640,6 @@ mips-sony-newsos*)
         OS_LIBS="-lsocket"
         IMPLIB='emximp -o'
         FILTER='emxexp -o'
-        if test -n "$MOZ_OS2_HIGH_MEMORY"; then
-          DSO_LDOPTS="$DSO_LDOPTS -Zhigh-mem"
-          LDFLAGS="$LDFLAGS -Zhigh-mem"
-          AC_DEFINE(MOZ_OS2_HIGH_MEMORY)
-        fi
 
         # GCC for OS/2 currently predefines these, but we don't want them
         DEFINES="$DEFINES -Uunix -U__unix -U__unix__"
@@ -1909,6 +1714,8 @@ mips-sony-newsos*)
         AC_DEFINE(OSF1V4_MAP_PRIVATE_BUG)
     fi
     DSO_LDOPTS='-shared -all -expect_unresolved "*" -soname $(notdir $@)'
+    MDCPUCFG_H=_osf1.cfg
+    PR_MD_CSRCS=osf1.c
     ;;
 
 *-qnx*)
@@ -1916,6 +1723,8 @@ mips-sony-newsos*)
     AC_DEFINE(QNX)
     AC_DEFINE(_PR_NEED_H_ERRNO)
     USE_NSPR_THREADS=1
+    MDCPUCFG_H=_qnx.cfg
+    PR_MD_CSRCS=qnx.c
     ;;
 
 *-*-sco*)
@@ -1930,6 +1739,8 @@ mips-sony-newsos*)
     USE_NSPR_THREADS=1
     CPU_ARCH=x86
     DSO_LDOPTS='-b elf -G'
+    MDCPUCFG_H=_scoos.cfg
+    PR_MD_SRCS=scoos.c
     ;;
 
 *-sinix*)
@@ -1965,6 +1776,11 @@ mips-sony-newsos*)
 
     OS_LIBS="$OS_LIBS -lsocket -lnsl -lresolv -ldl -lc"
     USE_NSPR_THREADS=1
+    MDCPUCFG_H=_reliantunix.cfg
+    PR_MD_CSRCS=reliantunix.c
+    if test "${OS_ARCH}" = "mips"; then
+        PR_MD_ASFILES=os_ReliantUNIX.s
+    fi
     ;;
 
 *-sunos*)
@@ -1983,6 +1799,8 @@ mips-sony-newsos*)
         _OPTIMIZE_FLAGS=
         OS_LIBS="$OS_LIBS -lm"
     fi
+    MDCPUCFG_H=_sunos4.cfg
+    PR_MD_CSRCS=sunos4.c
     ;;
 
 *-solaris*)
@@ -1996,14 +1814,24 @@ mips-sony-newsos*)
     AC_DEFINE(__svr4__)
     AC_DEFINE(SOLARIS)
     AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
-    if test -n "$GNU_CC" ; then
-        if test -n "$USE_64"; then
-            CC="$CC -m64"
-            CXX="$CXX -m64"
-        fi
-        LD='$(CC)'
-        DSO_LDOPTS='-shared -Wl,-soname -Wl,$(notdir $@)'
+    if test -n "$USE_64"; then
+        MDCPUCFG_H=_solaris64.cfg
+    else
+        MDCPUCFG_H=_solaris32.cfg
+    fi
+    PR_MD_CSRCS=solaris.c
+    LD=/usr/ccs/bin/ld
+    RANLIB=/usr/ccs/bin/ranlib
+    DSO_LDOPTS='-G -h $(notdir $@)'
+    if test -n "$GNU_CC"; then
         DSO_CFLAGS=-fPIC
+    else
+        DSO_CFLAGS=-KPIC
+    fi
+    if test -z "$GNU_AS"; then
+        ASFLAGS="$ASFLAGS -Wa,-P"
+    fi
+    if test -n "$GNU_CC"; then
         CFLAGS="$CFLAGS -Wall"
         CXXFLAGS="$CXXFLAGS -Wall"
         if test -n "$USE_MDUPDATE"; then
@@ -2011,35 +1839,20 @@ mips-sony-newsos*)
             CXXFLAGS="$CXXFLAGS -MDupdate \$(DEPENDENCIES)"
         fi
     else
-        LD=/usr/ccs/bin/ld
-        RANLIB=/usr/ccs/bin/ranlib
-    	DSO_LDOPTS='-G -h $(notdir $@)'
-        DSO_CFLAGS=-KPIC
-    	if test -n "$USE_64"; then
-    		if test "$OS_TEST" = "i86pc"; then
-    			CC="$CC -xarch=amd64"
-            	CXX="$CXX -xarch=amd64"
-            else
-            	CC="$CC -xarch=v9"
-            	CXX="$CXX -xarch=v9"
-            fi
-        fi
         CC="$CC -xstrconst"
+        CXX="$CXX -Qoption cg -xstrconst"
         if test -z "$MOZ_OPTIMIZE"; then
             CFLAGS="$CFLAGS -xs"
             CXXFLAGS="$CXXFLAGS -xs"
         fi
     fi
-    if test "$DEFAULT_RPATHFLAG" = "$RPATHFLAG" ; then
-       # add origin stuff
-       RPATHFLAG="\\\$\$ORIGIN/../lib:\\\$\$ORIGIN/../../lib:$RPATHFLAG"
-    fi
-    if test -z "$GNU_AS"; then
-        ASFLAGS="$ASFLAGS -Wa,-P"
+    if test -n "$USE_64" && test -z "$GNU_CC"; then
+        CC="$CC -xarch=v9"
+        CXX="$CXX -xarch=v9"
     fi
     if test "$OS_TEST" = "i86pc"; then
         AC_DEFINE(i386)
-
+        CPU_ARCH_TAG=_$OS_TEST
         # The default debug format, DWARF (-g), is not supported by gcc
         # on i386-ANY-sysv4/solaris, but the stabs format is.  It is
         # assumed that the Solaris assembler /usr/ccs/bin/as is used.
@@ -2096,11 +1909,14 @@ mips-sony-newsos*)
         AC_DEFINE(_PR_NO_LARGE_FILES)
         CC='$(NSDEPTH)/build/hcc cc'
         CXX='$(NSDEPTH)/build/hcpp CC'
+        MDCPUCFG_H=_unixware.cfg
     else
         AC_DEFINE(_LARGEFILE64_SOURCE)
         AC_DEFINE(_PR_HAVE_OFF64_T)
         AC_DEFINE(_PR_HAVE_SOCKADDR_LEN)
+        MDCPUCFG_H=_unixware7.cfg
     fi
+    PR_MD_CSRCS=unixware.c
     DSO_LDOPTS=-G
     CPU_ARCH=x86
     ;;
@@ -2317,12 +2133,13 @@ AC_ARG_ENABLE(ipv6,
 	    USE_IPV6=1
       fi])
 
-dnl ========================================================
-dnl = check for sasl options
-dnl = This has to come after we set all of the platform specific
-dnl = compiler and linker flags
-dnl ========================================================
-AM_PATH_GIVEN_SASL()
+
+AC_ARG_ENABLE(boehm,
+    [  --enable-boehm          Enable the Boehm Garbage Collector],
+    [ if test "$enableval" = "yes"; then
+        AC_DEFINE(GC_LEAK_DETECTOR)
+        GC_LEAK_DETECTOR=1
+    fi])
 
 if test -n "$USE_PTHREADS"; then
    dnl See if -pthread is supported.
@@ -2454,8 +2271,8 @@ case "$target" in
         AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
     fi
     ;;
-*-mingw*|*-cygwin*|*-msvc*|*-mks*|*-os2*|*-beos*)
-    dnl win32, os2 & beos cannot use pthreads
+*-mingw*|*-cygwin*|*-msvc*|*-mks*)
+    dnl win32 does not use pthreads
     USE_PTHREADS=
     _PTHREAD_LDFLAGS=
     USE_USER_PTHREADS=
@@ -2488,6 +2305,14 @@ case "$target" in
     if test -z "$USE_NSPR_THREADS"; then
         AC_DEFINE(_REENTRANT)
         AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
+        if test "$OS_TEST" = "i86pc"; then
+            PR_MD_ASFILES=os_SunOS_x86.s
+        else
+            PR_MD_ASFILES=os_SunOS.s
+            if test -n "$USE_64"; then
+                PR_MD_ASFILES="$PR_MD_ASFILES os_SunOS_sparcv9.s"
+            fi
+        fi
     fi
     ;;
 *-nto*)
@@ -2519,6 +2344,18 @@ if test -n "$MOZ_DEBUG"; then
     CFLAGS="$CFLAGS $_DEBUG_FLAGS"
     CXXFLAGS="$CXXFLAGS $_DEBUG_FLAGS"
 fi
+
+if test -n "$MOZ_OPTIMIZE"; then
+    OBJDIR_TAG=_OPT
+else
+    OBJDIR_TAG=_DBG
+fi
+
+if test -n "$USE_64"; then
+    COMPILER_TAG=_64
+fi
+
+RELEASE_OBJDIR_NAME="${OS_CONFIG}${CPU_ARCH_TAG}${COMPILER_TAG}${IMPL_STRATEGY}${OBJDIR_TAG}.${OBJDIR_SUFFIX}"
 
 dnl ========================================================
 dnl Use cygwin wrapper for win32 builds, except MinGW/MSYS
@@ -2564,9 +2401,12 @@ AC_SUBST(USE_USER_PTHREADS)
 AC_SUBST(USE_NATIVE_THREADS)
 AC_SUBST(USE_NSPR_THREADS)
 AC_SUBST(USE_NSS)
-AC_SUBST(NSS_CFLAGS)
-AC_SUBST(NSS_LIBS)
 
+AC_SUBST(NSPR_MODNAME)
+AC_SUBST(MDCPUCFG_H)
+AC_SUBST(PR_MD_CSRCS)
+AC_SUBST(PR_MD_ASFILES)
+AC_SUBST(PR_MD_ARCH_DIR)
 AC_SUBST(CPU_ARCH)
 
 AC_SUBST(OBJ_SUFFIX)
@@ -2600,6 +2440,7 @@ AC_SUBST(IMPLIB)
 
 AC_SUBST(OS_LIBS)
 AC_SUBST(RESOLVE_LINK_SYMBOLS)
+AC_SUBST(AIX_LINK_OPTS)
 AC_SUBST(NOSUCHFILE)
 AC_SUBST(MOZ_OBJFORMAT)
 AC_SUBST(ULTRASPARC_LIBRARY)
@@ -2607,6 +2448,7 @@ AC_SUBST(ULTRASPARC_FILTER_LIBRARY)
 
 AC_SUBST(OBJDIR)
 AC_SUBST(OBJDIR_NAME)
+AC_SUBST(RELEASE_OBJDIR_NAME)
 AC_SUBST(NSINSTALL)
 AC_SUBST(OPTIMIZER)
 AC_SUBST(RC)
@@ -2616,9 +2458,6 @@ AC_SUBST(OS_DLLFLAGS)
 AC_SUBST(CYGWIN_WRAPPER)
 AC_SUBST(WIN_TOP_SRC)
 AC_SUBST(NEXT_ROOT)
-AC_SUBST(RPATHFLAG)
-
-AC_SUBST(MFLAGS)
 
 dnl ========================================================
 dnl Generate output files.
@@ -2628,6 +2467,7 @@ Makefile
 config/Makefile
 config/autoconf.mk
 ldap/Makefile
+ldap/build/Makefile
 ldap/clients/tools/Makefile
 ldap/include/Makefile
 ldap/libraries/Makefile
@@ -2637,7 +2477,6 @@ ldap/libraries/libldif/Makefile
 ldap/libraries/liblber/Makefile
 ldap/libraries/libiutil/Makefile
 ldap/libraries/libssldap/Makefile
-ldap/libraries/libutil/Makefile
 "
 
 dnl since configure won't handle 2 levels of directory

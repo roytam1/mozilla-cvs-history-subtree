@@ -49,6 +49,13 @@ REQUIRES	= \
 		xpnet \
 		$(NULL)
 
+EXTRA_DSO_LIBS	= \
+		mozregsa_s \
+		jar50_s \
+		mozz_s \
+		xpnet_s \
+		$(NULL)
+
 USE_STATIC_LIBS = 1
 
 CSRCS		= \
@@ -68,12 +75,7 @@ CPPSRCS		= \
 		nsEscape.cpp \
 		$(NULL)
 
-LIBS = \
-		$(DEPTH)/modules/libreg/standalone/$(LIB_PREFIX)mozregsa_s.$(LIB_SUFFIX) \
-		$(DEPTH)/modules/libjar/standalone/$(LIB_PREFIX)jar50_s.$(LIB_SUFFIX) \
-		$(DEPTH)/modules/zlib/standalone/$(LIB_PREFIX)mozz_s.$(LIB_SUFFIX) \
-		../../libxpnet/src/$(LIB_PREFIX)xpnet_s.$(LIB_SUFFIX) \
-		$(NULL)
+LIBS		= $(EXTRA_DSO_LIBS)
 
 LOCAL_INCLUDES	= -I$(srcdir) -I$(srcdir)/../uninstall
 
@@ -85,7 +87,7 @@ include $(topsrcdir)/config/rules.mk
 
 _OS_LIBS 	= ole32 comdlg32 shell32 version
 ifdef GNU_CC
-_OS_LIBS	+= uuid
+_OS_LIBS	+= gdi32 ws2_32 uuid
 endif
 OS_LIBS		+= $(call EXPAND_LIBNAME,$(_OS_LIBS))
 

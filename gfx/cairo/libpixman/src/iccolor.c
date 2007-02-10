@@ -15,7 +15,7 @@
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL SuSE
  * BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN 
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  * Author:  Keith Packard, SuSE, Inc.
@@ -26,9 +26,9 @@
 #ifdef ICINT_NEED_IC_ONES
 /* Fall back on HACKMEM 169.  */
 int
-_FbOnes (unsigned int mask)
+_FbOnes (unsigned long mask)
 {
-    register int y;
+    register unsigned long y;
 
     y = (mask >> 1) &033333333333;
     y = mask - y - ((y >>1) & 033333333333);
@@ -53,6 +53,7 @@ pixman_color_to_pixel (const pixman_format_t	*format,
     a = a << format->alpha;
     *pixel = r|g|b|a;
 }
+slim_hidden_def(pixman_color_to_pixel);
 
 static uint16_t
 FbFillColor (uint32_t pixel, int bits)

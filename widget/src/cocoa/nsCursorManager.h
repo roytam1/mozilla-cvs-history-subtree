@@ -33,12 +33,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsCursorManager_h_
-#define nsCursorManager_h_
-
 #import <Foundation/Foundation.h>
-#include "nsIWidget.h"
-#include "nsMacCursor.h"
+#import "nsIWidget.h"
+#import "nsMacCursor.h"
 
 /*! @class      nsCursorManager
     @abstract   Singleton service provides access to all cursors available in the application.
@@ -74,5 +71,3 @@
 */
 + (void) dispose;
 @end
-
-#endif // nsCursorManager_h_

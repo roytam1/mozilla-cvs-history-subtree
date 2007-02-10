@@ -72,6 +72,7 @@
 #include "nsIPersistentProperties2.h"
 #include "nsCRT.h"
 #include "nsFontMetricsPS.h"
+#include "nsPaperPS.h"
 
 #ifndef NS_BUILD_ID
 #include "nsBuildID.h"
@@ -109,6 +110,8 @@ class fpCString : public nsCAutoString {
 #define NS_RGB_TO_GRAY(r,g,b) ((int(r) * 77 + int(g) * 150 + int(b) * 29) / 256)
 #define NS_IS_BOLD(x) (((x) >= 401) ? 1 : 0) 
 
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 /* 
  * global
@@ -199,7 +202,7 @@ nsPostScriptObj::nsPostScriptObj() :
 {
   PR_LOG(nsPostScriptObjLM, PR_LOG_DEBUG, ("nsPostScriptObj::nsPostScriptObj()\n"));
 
-  CallGetService(NS_PREF_CONTRACTID, &gPrefs);
+  CallGetService(kPrefCID, &gPrefs);
 
   gLangGroups = new nsHashtable();
 }
@@ -261,6 +264,7 @@ nsPostScriptObj::Init( nsIDeviceContextSpecPS *aSpec )
 {
   PRBool      isGray,
               isFirstPageFirst;
+  int         landscape;
 
   PrintInfo* pi = new PrintInfo(); 
   mPrintSetup = new PrintSetup();
@@ -294,25 +298,34 @@ nsPostScriptObj::Init( nsIDeviceContextSpecPS *aSpec )
     memset(mPrintContext, 0, sizeof(struct PSContext_));
     memset(pi, 0, sizeof(struct PrintInfo_));
 
-    /* Get the paper name to write into the ps output */
+    /* Find PS paper size record by name */
     aSpec->GetPaperName(&(mPrintSetup->paper_name));
-
-    /* Get the paper size */
-    rv = aSpec->GetPageSizeInTwips(&mPrintSetup->width, &mPrintSetup->height);
-    if ( NS_FAILED(rv) || mPrintSetup->width <= 0 || mPrintSetup->height <= 0 ) {
+    nsPaperSizePS paper;
+    if (!paper.Find(mPrintSetup->paper_name))
       return NS_ERROR_GFX_PRINTER_PAPER_SIZE_NOT_SUPPORTED;
+
+    aSpec->GetLandscape( landscape );
+    mPrintSetup->width = NS_MILLIMETERS_TO_TWIPS(paper.Width_mm());
+    mPrintSetup->height = NS_MILLIMETERS_TO_TWIPS(paper.Height_mm());
+
+    if (landscape) {
+      nscoord temp = mPrintSetup->width;
+      mPrintSetup->width = mPrintSetup->height;
+      mPrintSetup->height = temp;
     }
 
 #ifdef DEBUG
     printf("\nPaper Width = %d twips (%gmm) Height = %d twips (%gmm)\n",
-        mPrintSetup->width, NS_TWIPS_TO_MILLIMETERS(mPrintSetup->width),
-        mPrintSetup->height, NS_TWIPS_TO_MILLIMETERS(mPrintSetup->height));
+        mPrintSetup->width, paper.Width_mm(),
+        mPrintSetup->height, paper.Height_mm());
 #endif
     mPrintSetup->header = "header";
     mPrintSetup->footer = "footer";
     mPrintSetup->sizes = nsnull;
 
-    aSpec->GetLandscape(mPrintSetup->landscape);
+    mPrintSetup->landscape = (landscape) ? PR_TRUE : PR_FALSE; // Rotated output 
+    //mPrintSetup->landscape = PR_FALSE;
+
     mPrintSetup->underline = PR_TRUE;             // underline links 
     mPrintSetup->scale_images = PR_TRUE;          // Scale unsized images which are too big 
     mPrintSetup->scale_pre = PR_FALSE;		        // do the pre-scaling thing 
@@ -396,14 +409,27 @@ nsPostScriptObj::initialize_translation(PrintSetup* pi)
 void 
 nsPostScriptObj::write_prolog(FILE *aHandle, PRBool aFTPEnable)
 {
+  int i;
   FILE *f = aHandle;
 
-  float fWidth = NSTwipsToFloatPoints(mPrintContext->prSetup->width);
-  float fHeight = NSTwipsToFloatPoints(mPrintContext->prSetup->height);
+  nscoord paper_width = mPrintContext->prSetup->width;
+  nscoord paper_height = mPrintContext->prSetup->height;
+  const char *orientation;
 
-  // PostScript comments marked with %% are document structuring conventions
-  // (DSC) comments. See Adobe specification 5001 at
-  // <http://partners.adobe.com/public/developer/ps/index_specs.html>.
+  if (paper_height < paper_width) {
+    // prSetup->width and height have been swapped, indicating landscape.
+    // The bounding box etc. must be in terms of the default PS coordinate
+    // system.
+    nscoord temp = paper_width;
+    paper_width = paper_height;
+    paper_height = temp;
+    orientation = "Landscape";
+  }
+  else
+    orientation = "Portrait";
+
+  float fWidth = NSTwipsToFloatPoints(paper_width);
+  float fHeight = NSTwipsToFloatPoints(paper_height);
 
   fprintf(f, "%%!PS-Adobe-3.0\n");
   fprintf(f, "%%%%BoundingBox: 0 0 %s %s\n",
@@ -417,8 +443,7 @@ nsPostScriptObj::write_prolog(FILE *aHandle, PRBool aFTPEnable)
              "rv:" MOZILLA_VERSION, (unsigned long)NS_BUILD_ID);
   fprintf(f, "%%%%DocumentData: Clean8Bit\n");
   fprintf(f, "%%%%DocumentPaperSizes: %s\n", mPrintSetup->paper_name);
-  fprintf(f, "%%%%Orientation: %s\n",
-    mPrintContext->prSetup->landscape ? "Landscape" : "Portrait");
+  fprintf(f, "%%%%Orientation: %s\n", orientation);
   fprintf(f, "%%%%Pages: %d\n", (int) mPageNumber - 1);
 
   fprintf(f, "%%%%PageOrder: %s\n",
@@ -436,12 +461,48 @@ nsPostScriptObj::write_prolog(FILE *aHandle, PRBool aFTPEnable)
   // general comments: Mozilla-specific 
   fputs("% MozillaCharsetName: iso-8859-1\n\n", f);
     
-  fputs("%%BeginProlog\n", f);
+    // now begin prolog 
+  fprintf(f, "%%%%BeginProlog\n");
 
-  // The first number following "Gecko_procset" is a version number. If you change
-  // any of the PS between the following BeginResource and EndResource lines, you
-  // must increment the version.
-  fputs("%%BeginResource: procset Gecko_procset 1.0 0\n", f);
+  // Tell the printer what size paper it should use
+  fprintf(f,
+    "/setpagedevice where\n"			// Test for the feature
+    "{ pop 2 dict\n"
+    "  dup /PageSize [ %s %s ] put\n"		// Paper dimensions
+    "  dup /Policies 1 dict\n"
+    "    dup /PageSize 3 put\n"			// Select the nearest page size to fit
+    "  put\n"
+    "  setpagedevice\n"				// Install settings
+    "} if\n", 
+    fpCString(NSTwipsToFloatPoints(paper_width)).get(),
+    fpCString(NSTwipsToFloatPoints(paper_height)).get());
+
+  fprintf(f, "[");
+  for (i = 0; i < 256; i++){
+	  if (*isotab[i] == '\0'){
+      fprintf(f, " /.notdef");
+    }else{
+	    fprintf(f, " /%s", isotab[i]);
+    }
+
+    if (( i % 6) == 5){
+      fprintf(f, "\n");
+    }
+  }
+
+  fprintf(f, "] /isolatin1encoding exch def\n");
+
+  // Procedure to reencode a font
+  fprintf(f, "%s",
+      "/Mfr {\n"
+      "  findfont dup length dict\n"
+      "  begin\n"
+      "    {1 index /FID ne {def} {pop pop} ifelse} forall\n"
+      "    /Encoding isolatin1encoding def\n"
+      "    currentdict\n"
+      "  end\n"
+      "  definefont pop\n"
+      "} bind def\n");
 
   // Procedure to select and scale a font, using selectfont if available. See
   // Adobe Technical note 5048. Note msf args are backwards from selectfont.
@@ -480,44 +541,21 @@ nsPostScriptObj::write_prolog(FILE *aHandle, PRBool aFTPEnable)
     "/Msetstrokeadjust /setstrokeadjust where\n"
     "  { pop /setstrokeadjust } { /pop } ifelse\n"
     "  load def\n"
+
+    "\n"
     );
-  fputs("%%EndResource\n", f);    // Gecko_procset
 
   if (aFTPEnable) {
+    fprintf(f, "%%%%EndProlog\n");
     return;
   }
 
-  // Write the AFM font support.
-  // The first number following "Gecko_afm_procset" is a version number. If you change
-  // any of the PS between the following BeginResource and EndResource lines, you
-  // must increment the version.
-  fputs("%%BeginResource: procset Gecko_afm_procset 1.0 0\n", f);
-  fprintf(f, "[");
-  for (int i = 0; i < 256; i++) {
-    if (*isotab[i] == '\0') {
-      fputs(" /.notdef", f);
-    }
-    else {
-      fprintf(f, " /%s", isotab[i]);
-    }
-
-    if (( i % 6) == 5){
-      fprintf(f, "\n");
-    }
+  for(i = 0;i < NUM_AFM_FONTS; i++){
+    fprintf(f, 
+      "/F%d /%s Mfr\n"
+      "/f%d { dup /csize exch def /F%d Msf } bind def\n",
+      i, gSubstituteFonts[i].mPSName, i, i);
   }
-  fprintf(f, "] /isolatin1encoding exch def\n");
-
-  // Procedure to reencode a font
-  fprintf(f, "%s",
-      "/Mfr {\n"
-      "  findfont dup length dict\n"
-      "  begin\n"
-      "    {1 index /FID ne {def} {pop pop} ifelse} forall\n"
-      "    /Encoding isolatin1encoding def\n"
-      "    currentdict\n"
-      "  end\n"
-      "  definefont pop\n"
-      "} bind def\n");
 
   fprintf(f, "%s",
     // Unicode glyph dictionary
@@ -1783,18 +1821,11 @@ nsPostScriptObj::write_prolog(FILE *aHandle, PRBool aFTPEnable)
     "  /unicodeshow2 { real_unicodeshow_native } bind def\n"
     "} bind def\n"
     );
+
   // setup prolog for each langgroup
   initlanggroup(f);
-  fputs("%%EndResource\n", f);  // Gecko_afm_procset
 
-  for(int i = 0;i < NUM_AFM_FONTS; i++) {
-    fprintf(f, 
-      "%%%%BeginResource: font Gecko_%s\n"
-      "/F%d /%s Mfr\n"
-      "/f%d { dup /csize exch def /F%d Msf } bind def\n"
-      "%%%%EndResource\n",
-      gSubstituteFonts[i].mPSName, i, gSubstituteFonts[i].mPSName, i, i);
-  }
+  fprintf(f, "%%%%EndProlog\n");
 }
 
 /** ---------------------------------------------------
@@ -1807,27 +1838,9 @@ nsresult
 nsPostScriptObj::write_script(FILE *aDestHandle)
 {
   NS_PRECONDITION(aDestHandle, "Handle must not be NULL");
-
-  // Close out the prolog
-  fprintf(aDestHandle, "%%%%EndProlog\n");
-
-  // Begin the script section. Set the correct paper size.
-  fputs("%%BeginSetup\n", aDestHandle);
-  fprintf(aDestHandle,
-    "%%%%BeginFeature: *PageSize %s\n"
-    "/setpagedevice where\n"			// Test for the feature
-    "{ pop 1 dict\n"
-    "  dup /PageSize [ %s %s ] put\n"		// Paper dimensions
-    "  setpagedevice\n"				// Install settings
-    "} if\n"
-    "%%%%EndFeature\n",
-    mPrintSetup->paper_name,
-    fpCString(NSTwipsToFloatPoints(mPrintContext->prSetup->width)).get(),
-    fpCString(NSTwipsToFloatPoints(mPrintContext->prSetup->height)).get());
-  fputs("%%EndSetup\n", aDestHandle);
-
   char buf[BUFSIZ];
   size_t readAmt;
+
   rewind(mScriptFP);
   while ((readAmt = fread(buf, 1, sizeof buf, mScriptFP))) {
     size_t writeAmt = fwrite(buf, 1, readAmt, aDestHandle);
@@ -2304,7 +2317,7 @@ nsPostScriptObj::translate(nscoord x, nscoord y)
    *    @param iRect    Rectangle describing the portion of the image's
    *                    coordinate space covered by the image pixel data.
    */
-   
+
 void
 nsPostScriptObj::draw_image(nsIImage *anImage,
     const nsRect& sRect, const nsRect& iRect, const nsRect& dRect)
@@ -2314,17 +2327,6 @@ nsPostScriptObj::draw_image(nsIImage *anImage,
     return;
   }
 
-  PRBool hasAlpha = anImage->GetHasAlphaMask();
-  PRInt32 bytesPerRow = anImage->GetLineStride();
-  
-  PRUint8 *rowCopy = nsnull;
-  if (hasAlpha) {
-    rowCopy = new PRUint8[bytesPerRow];
-    if (!rowCopy) {
-      return;
-    }
-  }
-
   anImage->LockImagePixels(PR_FALSE);
   PRUint8 *theBits = anImage->GetBits();
 
@@ -2332,34 +2334,14 @@ nsPostScriptObj::draw_image(nsIImage *anImage,
   // There's nothing to print, so just return.
   if (!theBits || (0 == iRect.width) || (0 == iRect.height)) {
     anImage->UnlockImagePixels(PR_FALSE);
-    delete[] rowCopy;
     return;
   }
-  
+
   // Save the current graphic state and define a PS variable that
-  // can hold pixel data.
-  // If !hasAlpha, we read the image one line at a time
-  PRInt32 pixCountBytes = mPrintSetup->color ? iRect.width * 3 : iRect.width;
-  PRInt32 alphaCountBytes = hasAlpha ? (iRect.width + 7)/8 : 0;
-  fprintf(mScriptFP, "gsave\n"
-                     "/rowdata %d string def\n", pixCountBytes + alphaCountBytes);
-  if (hasAlpha) {
-    // Determine whether we can support explicit mask
-    fputs("/useExplicitMask false def\n"
-          "/languagelevel where\n"
-          "{pop languagelevel\n"
-          " 3 eq\n"
-          " {/useExplicitMask true def} if\n"
-          "} if\n"
-          "/makedict {"
-          " counttomark 2 idiv\n"
-          " dup dict\n"
-          " begin\n"
-          "  {def} repeat\n"
-          "  pop\n"
-          "  currentdict\n"
-          " end } def\n", mScriptFP);
-  }
+  // can hold one line of pixel data.
+  fprintf(mScriptFP, "gsave\n/rowdata %d string def\n",
+     mPrintSetup->color ? iRect.width * 3 : iRect.width);
+ 
   // Translate the coordinate origin to the corner of the rectangle where
   // the image should appear, set up a clipping region, and scale the
   // coordinate system to the image's final size.
@@ -2367,6 +2349,10 @@ nsPostScriptObj::draw_image(nsIImage *anImage,
   box(0, 0, dRect.width, dRect.height);
   clip();
   fprintf(mScriptFP, "%d %d scale\n", dRect.width, dRect.height);
+
+  // Describe how the pixel data is to be interpreted: pixels per row,
+  // rows, and bits per pixel (per component in color).
+  fprintf(mScriptFP, "%d %d 8 ", iRect.width, iRect.height);
 
   // Output the transformation matrix for the image. This is a bit tricky
   // to understand. PS image-drawing operations involve two transformation
@@ -2408,121 +2394,25 @@ nsPostScriptObj::draw_image(nsIImage *anImage,
     tmTY += tmSY;
     tmSY = -tmSY;
   }
-  
-  if (hasAlpha) {
-    const char* decodeMatrix;
-    fprintf(mScriptFP, " useExplicitMask {\n");
-    if (mPrintSetup->color) {
-      fprintf(mScriptFP, " /DeviceRGB setcolorspace\n");
-      decodeMatrix = "0 1 0 1 0 1";
-    } else {
-      fprintf(mScriptFP, " /DeviceGray setcolorspace\n");
-      decodeMatrix = "0 1";
-    }
-    fprintf(mScriptFP, "mark /ImageType 3\n"
-                       "  /DataDict mark\n"
-                       "   /ImageType 1 /Width %d /Height %d\n"
-                       "   /ImageMatrix [ %d 0 0 %d %d %d ]\n"
-                       "   /DataSource { currentfile rowdata readhexstring pop }\n"
-                       "   /BitsPerComponent 8\n"
-                       "   /Decode [%s]\n"
-                       "  makedict\n"
-                       "  /MaskDict mark\n"
-                       "   /ImageType 1 /Width %d /Height %d\n"
-                       "   /ImageMatrix [ %d 0 0 %d %d %d ]\n"
-                       "   /BitsPerComponent 1\n"
-                       "   /Decode [1 0]\n"
-                       "  makedict\n"
-                       "  /InterleaveType 2\n" // interleave by row
-                       " makedict image}\n"
-                       "{", iRect.width, iRect.height, tmSX, tmSY, tmTX, tmTY,
-                       decodeMatrix,
-                       iRect.width, iRect.height, tmSX, tmSY, tmTX, tmTY);
-  }
-  // output the runtime fallback "no mask" code
-  fprintf(mScriptFP, " %d %d 8 [ %d 0 0 %d %d %d ]\n",
-                     iRect.width, iRect.height, tmSX, tmSY, tmTX, tmTY);
-  if (hasAlpha) {
-    fprintf(mScriptFP, " { currentfile rowdata readhexstring pop %d %d getinterval }\n",
-                       /*index*/ alphaCountBytes, /*index*/ pixCountBytes);
-  } else {
-    fprintf(mScriptFP, " { currentfile rowdata readhexstring pop }\n");
-  }
-  if (mPrintSetup->color) {
+  fprintf(mScriptFP, "[ %d 0 0 %d %d %d ]\n", tmSX, tmSY, tmTX, tmTY);
+
+  // Output the data-reading procedure and the appropriate image command.
+  fputs(" { currentfile rowdata readhexstring pop }", mScriptFP);
+  if (mPrintSetup->color)
     fputs(" false 3 colorimage\n", mScriptFP);
-  } else {
+  else
     fputs(" image\n", mScriptFP);
-  }
-  if (hasAlpha) {
-    fputs("} ifelse\n", mScriptFP);
-  }
-  
-  PRUint8* alphaBits;
-  PRInt32 alphaBytesPerRow;
-  PRInt32 alphaDepth;
-  if (hasAlpha) {
-    anImage->LockImagePixels(PR_TRUE);
-    alphaBits = anImage->GetAlphaBits();
-    alphaBytesPerRow = anImage->GetAlphaLineStride();
-    alphaDepth = anImage->GetAlphaDepth();
-  }
-  
+
   // Output the image data. The entire image is written, even
   // if it's partially clipped in the document.
   int outputCount = 0;
+  PRInt32 bytesPerRow = anImage->GetLineStride();
 
-  nscoord y;
-  for (y = 0; y < iRect.height; y++) {
-    PRUint8 *row = theBits + y * bytesPerRow;
+  for (nscoord y = 0; y < iRect.height; y++) {
+    // calculate the starting point for this row of pixels
+    PRUint8 *row = theBits                // Pixel buffer start
+      + y * bytesPerRow;                  // Rows already output
 
-    // output alpha first, if any
-    if (hasAlpha) {
-      // Copy the row so that we can set any transparent pixels to white
-      memcpy(rowCopy, row, bytesPerRow);
-      row = rowCopy;
-        
-      PRUint8 *alphaRow = alphaBits + y * alphaBytesPerRow;
-      PRUint8 v = 0;
-      for (nscoord x = 0; x < iRect.width; x++) {
-        PRUint8 alpha;
-        if (alphaDepth == 8) {
-          alpha = alphaRow[x];
-        } else {
-          PRUint8 mask = 0x80 >> (x & 7);
-          // Test the x'th bit of the alphaRow
-          alpha = (alphaRow[x >> 3] & mask) ? 255 : 0;
-        }
-        
-        if (alpha >= 128) {
-          PRUint8 mask = 0x80 >> (x & 7);
-          // set the correct bit for the Postscript mask
-          v |= mask;
-        } else {
-          // Many tools set fully transparent pixels to black (perhaps
-          // because that compresses better). So for PS printers that
-          // don't support transparency, we'll get the image on an ugly
-          // black background which is especially bad on printers.
-          // So if the pixel is fully transparent and fully black, then
-          // we set it to white --- still wrong, but less bad.
-          PRUint8 *pixel = row + (x * 3);
-          if (alpha == 0 && pixel[0] == 0 && pixel[1] == 0 &&
-              pixel[2] == 0) {
-            pixel[0] = pixel[1] = pixel[2] = 0xFF;
-          }
-        }
-        if ((x & 7) == 7 || x == iRect.width - 1) {
-          outputCount += fprintf(mScriptFP, "%02x", v);
-          if (outputCount >= 72) {
-            fputc('\n', mScriptFP);
-            outputCount = 0;
-          }
-          v = 0;
-        }
-      }
-      fputc('\n', mScriptFP);
-      outputCount = 0;
-    }
-    
     for (nscoord x = 0; x < iRect.width; x++) {
       PRUint8 *pixel = row + (x * 3);
       if (mPrintSetup->color)
@@ -2537,18 +2427,12 @@ nsPostScriptObj::draw_image(nsIImage *anImage,
         outputCount = 0;
       }
     }
-    fputc('\n', mScriptFP);
-    outputCount = 0;
-  }
-  if (hasAlpha) {
-    anImage->UnlockImagePixels(PR_TRUE);
   }
   anImage->UnlockImagePixels(PR_FALSE);
-  
+
   // Free the PS data buffer and restore the previous graphics state.
-  fputs("/undef where { pop /rowdata where { /rowdata undef } if } if\n"
-        "grestore\n", mScriptFP);
-  delete[] rowCopy;
+  fputs("\n/undef where { pop /rowdata where { /rowdata undef } if } if\n", mScriptFP);
+  fputs("grestore\n", mScriptFP);
 }
 
 
@@ -2856,7 +2740,7 @@ static void PrefEnumCallback(const char *aName, void *aClosure)
     if (psnativecode) {
       nsAutoString str;
       nsCOMPtr<nsICharsetConverterManager> ccMain =
-        do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &res);
+        do_GetService(kCharsetConverterManagerCID, &res);
       
       if (NS_SUCCEEDED(res)) {
         res = ccMain->GetUnicodeEncoder(psnativecode.get(), &linfo->mEncoder);

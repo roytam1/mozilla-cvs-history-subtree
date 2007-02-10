@@ -39,7 +39,11 @@
 
 // this file implements the nsMsgDatabase interface using the MDB Interface.
 
+#ifdef XP_MAC
+#include <stat.h>
+#else
 #include <sys/stat.h>
+#endif
 
 #include "nscore.h"
 #include "msgCore.h"
@@ -60,6 +64,7 @@
 #include "prprf.h"
 #include "nsTime.h"
 #include "nsIFileSpec.h"
+#include "nsLocalFolderSummarySpec.h"
 #include "nsMsgDBCID.h"
 #include "nsILocale.h"
 #include "nsLocaleCID.h"
@@ -70,8 +75,12 @@
 #include "nsIMsgFolderCache.h"
 #include "nsIMsgFolderCacheElement.h"
 #include "MailNewsTypes2.h"
-#include "nsMsgUtils.h"
 
+static NS_DEFINE_CID(kCMorkFactory, NS_MORK_CID);
+
+#if defined(XP_MAC) && defined(CompareString)
+	#undef CompareString
+#endif
 #include "nsICollation.h"
 
 #include "nsCollationCID.h"
@@ -81,6 +90,8 @@
 #if defined(DEBUG_sspitzer_) || defined(DEBUG_seth_)
 #define DEBUG_MSGKEYSET 1
 #endif
+
+static NS_DEFINE_CID(kCollationFactoryCID, NS_COLLATIONFACTORY_CID);
 
 #define MSG_HASH_SIZE 512
 
@@ -169,17 +180,19 @@ NS_IMETHODIMP nsMsgDBService::OpenFolderDB(nsIMsgFolder *aFolder, PRBool aCreate
 // and copying local folders.
 NS_IMETHODIMP nsMsgDBService::OpenMailDBFromFileSpec(nsIFileSpec *aFolderName, PRBool aCreate, PRBool aLeaveInvalidDB, nsIMsgDatabase** pMessageDB)
 {
+  nsFileSpec  folderName;
+  
   if (!aFolderName)
     return NS_ERROR_NULL_POINTER;
+  aFolderName->GetFileSpec(&folderName);
+  nsLocalFolderSummarySpec summarySpec(folderName);
 
-  nsFileSpec dbPath;
-  nsresult rv = GetSummaryFileLocation(aFolderName, &dbPath);
-  NS_ENSURE_SUCCESS(rv, rv);
-
+  nsFileSpec dbPath(summarySpec);
   *pMessageDB = (nsMsgDatabase *) nsMsgDatabase::FindInCache(dbPath);
   if (*pMessageDB)
     return NS_OK;
 
+  nsresult rv;
   nsCOMPtr <nsIMsgDatabase> msgDB = do_CreateInstance(NS_MAILBOXDB_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
   rv = msgDB->Open(aFolderName, aCreate, aLeaveInvalidDB);
@@ -812,16 +825,15 @@ nsMsgDatabase* nsMsgDatabase::FindInCache(nsFileSpec &dbName)
 //----------------------------------------------------------------------
 nsIMsgDatabase* nsMsgDatabase::FindInCache(nsIMsgFolder *folder)
 {
-  nsCOMPtr<nsIFileSpec> folderPath;
-
+  nsCOMPtr <nsIFileSpec> folderPath;
+  nsFileSpec  folderName;
   nsresult rv = folder->GetPath(getter_AddRefs(folderPath));
   NS_ENSURE_SUCCESS(rv, nsnull);
+  folderPath->GetFileSpec(&folderName);
+  nsLocalFolderSummarySpec summarySpec(folderName);
 
-  nsFileSpec summaryFile;
-  rv = GetSummaryFileLocation(folderPath, &summaryFile);
-  NS_ENSURE_SUCCESS(rv, nsnull);
-
-  return (nsIMsgDatabase *) FindInCache(summaryFile);
+  nsFileSpec dbPath(summarySpec);
+  return (nsIMsgDatabase *) FindInCache(dbPath);
 }
 
 //----------------------------------------------------------------------
@@ -984,7 +996,7 @@ NS_IMETHODIMP nsMsgDatabase::QueryInterface(REFNSIID aIID, void** aResult)
   static nsIMdbFactory *gMDBFactory = nsnull;
   if (!gMDBFactory)
   {
-    nsCOMPtr <nsIMdbFactoryFactory> factoryfactory = do_CreateInstance(NS_MORK_CONTRACTID);
+    nsCOMPtr <nsIMdbFactoryFactory> factoryfactory = do_CreateInstance(kCMorkFactory);
     if (factoryfactory)
       factoryfactory->GetMdbFactory(&gMDBFactory);
   }
@@ -1033,6 +1045,42 @@ void nsMsgDatabase::UnixToNative(char*& ioPath)
 }
 #endif /* XP_WIN || XP_OS2 */
 
+#ifdef XP_MAC
+// this code is stolen from nsFileSpecMac. Since MDB requires a native path, for 
+// the time being, we'll just take the Unix/Canonical form and munge it
+void nsMsgDatabase::UnixToNative(char*& ioPath)
+// This just does string manipulation.  It doesn't check reality, or canonify, or
+// anything
+//----------------------------------------------------------------------------------------
+{
+  // Relying on the fact that the unix path is always longer than the mac path:
+  size_t len = strlen(ioPath);
+  char* result = new char[len + 2]; // ... but allow for the initial colon in a partial name
+  if (result)
+  {
+    char* dst = result;
+    const char* src = ioPath;
+    if (*src == '/')		 	// * full path
+      src++;
+    else if (strchr(src, '/'))	// * partial path, and not just a leaf name
+      *dst++ = ':';
+    strcpy(dst, src);
+    
+    while ( *dst != 0)
+    {
+      if (*dst == '/')
+        *dst++ = ':';
+      else
+        *dst++;
+    }
+    nsCRT::free(ioPath);
+    ioPath = result;
+  }
+}
+
+#endif /* XP_MAC */
+
+
 // caller passes in leaveInvalidDB==PR_TRUE if they want back a db even if the db is out of date.
 // If so, they'll extract out the interesting info from the db, close it, delete it, and
 // then try to open the db again, prior to reparsing.
@@ -1044,35 +1092,32 @@ NS_IMETHODIMP nsMsgDatabase::Open(nsIFileSpec *aFolderName, PRBool aCreate, PRBo
   if (!aFolderName)
     return NS_ERROR_NULL_POINTER;
   
-  nsCOMPtr<nsIFileSpec> folderName;
-  nsresult err = GetSummaryFileLocation(aFolderName, getter_AddRefs(folderName));
-  NS_ENSURE_SUCCESS(err, err);
-
-  nsFileSpec summaryFile;
-  err = folderName->GetFileSpec(&summaryFile);
-  NS_ENSURE_SUCCESS(err, err);
-
+  nsFileSpec		folderName;
+  aFolderName->GetFileSpec(&folderName);
+  nsLocalFolderSummarySpec	summarySpec(folderName);
+  
   nsIDBFolderInfo	*folderInfo = nsnull;
   
 #if defined(DEBUG_bienvenu)
-
   printf("really opening db in nsImapMailDatabase::Open(%s, %s, %p, %s) -> %s\n",
     (const char*)folderName, aCreate ? "TRUE":"FALSE",
     this, aLeaveInvalidDB ? "TRUE":"FALSE", (const char*)folderName);
 #endif
   // if the old summary doesn't exist, we're creating a new one.
-  if ((!summaryFile.Exists() || !summaryFile.GetFileSize()) && aCreate)
+  if ((!summarySpec.Exists() || !summarySpec.GetFileSize()) && aCreate)
     newFile = PR_TRUE;
   
   // stat file before we open the db, because if we've latered
   // any messages, handling latered will change time stamp on
   // folder file.
-  summaryFileExists = summaryFile.Exists()  && summaryFile.GetFileSize() > 0;
+  summaryFileExists = summarySpec.Exists()  && summarySpec.GetFileSize() > 0;
   
-  err = OpenMDB((const char *) summaryFile, aCreate);
+  nsresult err = NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE;
+  
+  err = OpenMDB((const char *) summarySpec, aCreate);
   if (err == NS_ERROR_FILE_TARGET_DOES_NOT_EXIST)
     return err;
-
+  
   if (NS_SUCCEEDED(err))
   {
     GetDBFolderInfo(&folderInfo);
@@ -1111,7 +1156,7 @@ NS_IMETHODIMP nsMsgDatabase::Open(nsIFileSpec *aFolderName, PRBool aCreate, PRBo
     NS_IF_RELEASE(m_dbFolderInfo);
     ForceClosed();
     if (err == NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE)
-      summaryFile.Delete(PR_FALSE);
+      summarySpec.Delete(PR_FALSE);
   }
   if (err != NS_OK || newFile)
   {
@@ -1124,7 +1169,7 @@ NS_IMETHODIMP nsMsgDatabase::Open(nsIFileSpec *aFolderName, PRBool aCreate, PRBo
     else if (err != NS_OK && err != NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE)
     {
       Close(PR_FALSE);
-      summaryFile.Delete(PR_FALSE);  // blow away the db if it's corrupt.
+      summarySpec.Delete(PR_FALSE);  // blow away the db if it's corrupt.
     }
   }
   if (err == NS_OK || err == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING)
@@ -1156,7 +1201,7 @@ nsresult nsMsgDatabase::OpenMDB(const char *dbName, PRBool create)
       if (m_mdbEnv)
         m_mdbEnv->SetAutoClear(PR_TRUE);
       m_dbName = dbName;
-#if defined(XP_WIN) || defined(XP_OS2)
+#if defined(XP_WIN) || defined(XP_OS2) || defined(XP_MAC)
       UnixToNative(nativeFileName);
 #endif
       if (stat(nativeFileName, &st)) 
@@ -1201,7 +1246,7 @@ nsresult nsMsgDatabase::OpenMDB(const char *dbName, PRBool create)
         {
           ret = thumb->DoMore(m_mdbEnv, &outTotal, &outCurrent, &outDone, &outBroken);
           if (ret != 0)
-          {// mork isn't really doing NS errors yet.
+          {// mork isn't really doing NS erorrs yet.
             outDone = PR_TRUE;
             break;
           }
@@ -1263,15 +1308,17 @@ nsresult nsMsgDatabase::CloseMDB(PRBool commit)
 NS_IMETHODIMP nsMsgDatabase::ForceFolderDBClosed(nsIMsgFolder *aFolder)
 {
   NS_ENSURE_ARG(aFolder);
+  nsCOMPtr <nsIFileSpec> folderPath;
+  nsFileSpec		folderName;
 
-  nsCOMPtr<nsIFileSpec> folderPath;
   nsresult rv = aFolder->GetPath(getter_AddRefs(folderPath));
   NS_ENSURE_SUCCESS(rv, rv);
-
-  nsFileSpec dbPath;
-  rv = GetSummaryFileLocation(folderPath, &dbPath);
-  NS_ENSURE_SUCCESS(rv, rv);
-
+  folderPath->GetFileSpec(&folderName);
+  nsLocalFolderSummarySpec	summarySpec(folderName);
+  
+  
+  nsFileSpec dbPath(summarySpec);
+  
   nsIMsgDatabase *mailDB = (nsMsgDatabase *) FindInCache(dbPath);
   if (mailDB)
   {
@@ -1468,7 +1515,6 @@ const char *kOfflineMsgOffsetColumnName = "msgOffset";
 const char *kOfflineMsgSizeColumnName = "offlineMsgSize";
 struct mdbOid gAllMsgHdrsTableOID;
 struct mdbOid gAllThreadsTableOID;
-const char *kFixedBadRefThreadingProp = "fixedBadRefThreading";
 
 // set up empty tables, dbFolderInfo, etc.
 nsresult nsMsgDatabase::InitNewDB()
@@ -1484,7 +1530,6 @@ nsresult nsMsgDatabase::InitNewDB()
       NS_ADDREF(dbFolderInfo); 
       err = dbFolderInfo->AddToNewMDB();
       dbFolderInfo->SetVersion(GetCurVersion());
-      dbFolderInfo->SetBooleanProperty(kFixedBadRefThreadingProp, PR_TRUE);
       nsIMdbStore *store = GetStore();
       // create the unique table for the dbFolderInfo.
       mdb_err mdberr;
@@ -1587,42 +1632,6 @@ nsresult nsMsgDatabase::InitExistingDB()
       if (mdberr != NS_OK || !m_mdbAllThreadsTable)
         err = NS_ERROR_FAILURE;
     }
-  }
-  if (NS_SUCCEEDED(err) && m_dbFolderInfo)
-  {
-    PRBool fixedBadRefThreading;
-    m_dbFolderInfo->GetBooleanProperty(kFixedBadRefThreadingProp, PR_FALSE, &fixedBadRefThreading);
-    if (!fixedBadRefThreading)
-    {
-      nsCOMPtr <nsISimpleEnumerator> enumerator;
-      err = EnumerateMessages(getter_AddRefs(enumerator));
-      if (NS_SUCCEEDED(err) && enumerator)
-      {
-        PRBool hasMore;
-        
-        while (NS_SUCCEEDED(err = enumerator->HasMoreElements(&hasMore)) && (hasMore == PR_TRUE)) 
-        {
-          nsCOMPtr <nsIMsgDBHdr> msgHdr;
-          err = enumerator->GetNext(getter_AddRefs(msgHdr));
-          NS_ASSERTION(NS_SUCCEEDED(err), "nsMsgDBEnumerator broken");
-          if (msgHdr && NS_SUCCEEDED(err))
-          {
-            nsXPIDLCString messageId;
-            nsCAutoString firstReference;
-            msgHdr->GetMessageId(getter_Copies(messageId));
-            msgHdr->GetStringReference(0, firstReference);
-            if (messageId.Equals(firstReference))
-            {
-              err = NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE;
-              break;
-            }
-          }
-        }
-      }
-            
-      m_dbFolderInfo->SetBooleanProperty(kFixedBadRefThreadingProp, PR_TRUE);
-    }
-    
   }
   return err;
 }
@@ -1930,7 +1939,7 @@ PRUint32	nsMsgDatabase::GetStatusFlags(nsIMsgDBHdr *msgHdr, PRUint32 origFlags)
   
   nsMsgKey key;
   (void)msgHdr->GetMessageKey(&key);
-  if (m_newSet.GetSize() > 0 && m_newSet.GetAt(m_newSet.GetSize() - 1) == key || m_newSet.IndexOfSorted(key) != kNotFound)
+  if (m_newSet.GetSize() > 0 && m_newSet.GetAt(m_newSet.GetSize() - 1) == key || m_newSet.IndexOf(key) != kNotFound)
     statusFlags |= MSG_FLAG_NEW;
   else
     statusFlags &= ~MSG_FLAG_NEW;
@@ -2779,7 +2788,7 @@ public:
 protected:
     nsresult					GetTableCursor(void);
     nsresult					PrefetchNext();
-    nsMsgDatabase*              mDB; 
+    nsMsgDatabase*              mDB;
     nsIMdbPortTableCursor*       mTableCursor;
     nsIMsgThread*                 mResultThread;
     PRBool                      mDone;
@@ -3187,7 +3196,7 @@ nsresult nsMsgDatabase::RowCellColumnToAddressCollationKey(nsIMdbRow *row, mdb_t
   }
   if (NS_SUCCEEDED(ret))
   {
-    ret = CreateCollationKey(NS_ConvertUTF8toUTF16(name), result, len);
+    ret = CreateCollationKey(NS_ConvertUTF8toUCS2(name), result, len);
   }
   
   return ret;
@@ -3213,7 +3222,7 @@ nsresult nsMsgDatabase::GetCollationKeyGenerator()
         // or generate a locale from a stored locale name ("en_US", "fr_FR") 
         //err = localeFactory->NewLocale(&localeName, &locale); 
         
-        nsCOMPtr <nsICollationFactory> f = do_CreateInstance(NS_COLLATIONFACTORY_CONTRACTID, &err);
+        nsCOMPtr <nsICollationFactory> f = do_CreateInstance(kCollationFactoryCID, &err);
         if (NS_SUCCEEDED(err) && f)
         {
           // get a collation interface instance 
@@ -3244,7 +3253,7 @@ nsresult nsMsgDatabase::RowCellColumnToCollationKey(nsIMdbRow *row, mdb_token co
       
       err = m_mimeConverter->DecodeMimeHeader(nakedString, getter_Copies(decodedStr), charSet, characterSetOverride);
       if (NS_SUCCEEDED(err))
-        err = CreateCollationKey(NS_ConvertUTF8toUTF16(decodedStr), result, len);
+        err = CreateCollationKey(NS_ConvertUTF8toUCS2(decodedStr), result, len);
     }
   }
   return err;
@@ -3748,12 +3757,7 @@ nsresult nsMsgDatabase::ThreadNewHdr(nsMsgHdr* newHdr, PRBool &newThread)
         replyToHdr->GetMessageKey(&replyToKey);
         // message claims to be a reply to itself - ignore that since it leads to corrupt threading.
         if (replyToKey == newHdrKey)
-        {
-          // bad references - throw them all away.
-          newHdr->SetMessageId("");
-          thread = nsnull;
-          break;
-        }
+          continue;
       }
       thread->GetThreadKey(&threadId);
       newHdr->SetThreadId(threadId);
@@ -4748,33 +4752,14 @@ NS_IMETHODIMP nsMsgDownloadSettings::SetAgeLimitOfMsgsToDownload(PRUint32 ageLim
 NS_IMETHODIMP nsMsgDatabase::GetDefaultViewFlags(nsMsgViewFlagsTypeValue *aDefaultViewFlags)
 { 
   NS_ENSURE_ARG_POINTER(aDefaultViewFlags);
-  GetIntPref("mailnews.default_view_flags", aDefaultViewFlags);
-  if (*aDefaultViewFlags < nsMsgViewFlagsType::kNone ||
-      *aDefaultViewFlags > (nsMsgViewFlagsType::kThreadedDisplay |
-                            nsMsgViewFlagsType::kShowIgnored |
-                            nsMsgViewFlagsType::kUnreadOnly |
-                            nsMsgViewFlagsType::kExpandAll |
-                            nsMsgViewFlagsType::kGroupBySort))
-    *aDefaultViewFlags = nsMsgViewFlagsType::kNone;
+  *aDefaultViewFlags = nsMsgViewFlagsType::kNone;
   return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDatabase::GetDefaultSortType(nsMsgViewSortTypeValue *aDefaultSortType)
 {
   NS_ENSURE_ARG_POINTER(aDefaultSortType);
-  GetIntPref("mailnews.default_sort_type", aDefaultSortType);
-  if (*aDefaultSortType < nsMsgViewSortType::byDate ||
-      *aDefaultSortType > nsMsgViewSortType::byAccount)
-    *aDefaultSortType = nsMsgViewSortType::byDate;
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsMsgDatabase::GetDefaultSortOrder(nsMsgViewSortOrderValue *aDefaultSortOrder)
-{
-  NS_ENSURE_ARG_POINTER(aDefaultSortOrder);
-  GetIntPref("mailnews.default_sort_order", aDefaultSortOrder);
-  if (*aDefaultSortOrder != nsMsgViewSortOrder::descending)
-    *aDefaultSortOrder = nsMsgViewSortOrder::ascending;
+  *aDefaultSortType = nsMsgViewSortType::byDate;
   return NS_OK;
 }
 

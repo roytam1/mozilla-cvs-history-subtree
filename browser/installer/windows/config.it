@@ -562,7 +562,7 @@ FileCount=$FileCount$
 ; This particular value will set the checkbox checked [number]% of the time.
 ; This logic is done only during the initialization of setup, not in any
 ; particular dialog.
-Random Install Percentage=100
+Random Install Percentage=20
 
 [Core]
 Source=[XPI PATH]\xpcom.xpi
@@ -1066,7 +1066,7 @@ Message AUTO Restricted Access={MSG_NOT_ADMIN_AUTO}
 [Site Selector]
 ; Dictates whether or not to show the pull down menu.
 ; Default value is SHOW.
-; If Status= is set to HIDE, then Identifier0 will be used
+; If Status= is set to HIDE, then Indentifier0 will be used
 ; and all other IdentifiersX will be ignored.
 Status=HIDE
 

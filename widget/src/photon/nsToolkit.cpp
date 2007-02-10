@@ -37,7 +37,6 @@
 
 #include "nsToolkit.h"
 #include "nscore.h"
-#include "nsWidgetAtoms.h"
 
 //
 // Static thread local storage index of the Toolkit 
@@ -75,8 +74,6 @@ nsToolkit::~nsToolkit()
 //-------------------------------------------------------------------------
 NS_METHOD nsToolkit::Init(PRThread *aThread)
 {
-  nsWidgetAtoms::RegisterAtoms();
-
   return NS_OK;
 }
 

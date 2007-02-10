@@ -47,7 +47,6 @@
 #include "nsIMIMEInputStream.h"
 #include "nsISeekableStream.h"
 #include "nsIStringStream.h"
-#include "nsString.h"
 
 class nsMIMEInputStream : public nsIMIMEInputStream,
                           public nsISeekableStream
@@ -115,10 +114,11 @@ NS_METHOD nsMIMEInputStream::Init()
     mCLStream = do_CreateInstance("@mozilla.org/io/string-input-stream;1", &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = mStream->AppendStream(mHeaderStream);
+    nsCOMPtr<nsIInputStream> headerStream = do_QueryInterface(mHeaderStream);
+    nsCOMPtr<nsIInputStream> clStream = do_QueryInterface(mCLStream);
+    rv = mStream->AppendStream(headerStream);
     NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = mStream->AppendStream(mCLStream);
+    rv = mStream->AppendStream(clStream);
     NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;

@@ -438,6 +438,7 @@ NS_IMETHODIMP nsWindow::Destroy()
 nsIWidget* nsWindow::GetParent(void)
 {
   if (mIsTopWidgetWindow) return nsnull;
+  NS_IF_ADDREF(mParent);
   return  mParent;
 }
 
@@ -585,7 +586,7 @@ NS_IMETHODIMP nsWindow::SetFocus(PRBool aRaise)
   nsToolkit::GetTopWidget(mWindowPtr, getter_AddRefs(top));
 
   if (top) {
-    nsCOMPtr<nsPIWidgetMac> topMac = do_QueryInterface(top);
+    nsCOMPtr<nsPIWidgetMac_MOZILLA_1_8_BRANCH> topMac = do_QueryInterface(top);
 
     if (topMac) {
       nsMacEventDispatchHandler* eventDispatchHandler = nsnull;
@@ -1723,6 +1724,25 @@ scrollChildren:
 
 //-------------------------------------------------------------------------
 //
+//
+//-------------------------------------------------------------------------
+
+PRBool nsWindow::ConvertStatus(nsEventStatus aStatus)
+{
+  switch (aStatus)
+  {
+    case nsEventStatus_eIgnore:							return(PR_FALSE);
+    case nsEventStatus_eConsumeNoDefault:		return(PR_TRUE);	// don't do default processing
+    case nsEventStatus_eConsumeDoDefault:		return(PR_FALSE);
+    default:
+      NS_ERROR("Illegal nsEventStatus enumeration value");
+      break;
+  }
+  return(PR_FALSE);
+}
+
+//-------------------------------------------------------------------------
+//
 // Invokes callback and  ProcessEvent method on Event Listener object
 //
 //-------------------------------------------------------------------------
@@ -1790,7 +1810,7 @@ PRBool nsWindow::DispatchMouseEvent(nsMouseEvent &aEvent)
         result = ConvertStatus(mMouseListener->MouseMoved(aEvent));
         nsRect rect;
         GetBounds(rect);
-        if (rect.Contains(aEvent.refPoint.x, aEvent.refPoint.y)) 
+        if (rect.Contains(aEvent.point.x, aEvent.point.y)) 
         	{
           //if (mWindowPtr == NULL || mWindowPtr != this) 
           	//{
@@ -1805,11 +1825,15 @@ PRBool nsWindow::DispatchMouseEvent(nsMouseEvent &aEvent)
 
       } break;
 
-      case NS_MOUSE_BUTTON_DOWN:
+      case NS_MOUSE_LEFT_BUTTON_DOWN:
+      case NS_MOUSE_MIDDLE_BUTTON_DOWN:
+      case NS_MOUSE_RIGHT_BUTTON_DOWN:
         result = ConvertStatus(mMouseListener->MousePressed(aEvent));
         break;
 
-      case NS_MOUSE_BUTTON_UP:
+      case NS_MOUSE_LEFT_BUTTON_UP:
+      case NS_MOUSE_MIDDLE_BUTTON_UP:
+      case NS_MOUSE_RIGHT_BUTTON_UP:
         result = ConvertStatus(mMouseListener->MouseReleased(aEvent));
         result = ConvertStatus(mMouseListener->MouseClicked(aEvent));
         break;
@@ -1843,8 +1867,8 @@ PRBool nsWindow::ReportMoveEvent()
 {
 	// nsEvent
 	nsGUIEvent moveEvent(PR_TRUE, NS_MOVE, this);
-	moveEvent.refPoint.x	= mBounds.x;
-	moveEvent.refPoint.y	= mBounds.y;
+	moveEvent.point.x			= mBounds.x;
+	moveEvent.point.y			= mBounds.y;
 	moveEvent.time				= PR_IntervalNow();
 
 	// dispatch event
@@ -1984,7 +2008,7 @@ nsWindow::CalcOffset(PRInt32 &aX, PRInt32 &aY)
 {
   aX = aY = 0;
 
-  nsIWidget* theParent = GetParent();
+  nsCOMPtr<nsIWidget> theParent = dont_AddRef(GetParent());
   while (theParent)
   {
     nsRect theRect;
@@ -1992,7 +2016,8 @@ nsWindow::CalcOffset(PRInt32 &aX, PRInt32 &aY)
     aX += theRect.x;
     aY += theRect.y;
 
-    theParent = theParent->GetParent();
+    nsIWidget* grandparent = theParent->GetParent();
+    theParent = dont_AddRef(grandparent);
   }
 }
 
@@ -2000,7 +2025,7 @@ nsWindow::CalcOffset(PRInt32 &aX, PRInt32 &aY)
 PRBool
 nsWindow::ContainerHierarchyIsVisible()
 {
-  nsIWidget* theParent = GetParent();
+  nsCOMPtr<nsIWidget> theParent = dont_AddRef(GetParent());
   
   while (theParent)
   {
@@ -2009,7 +2034,8 @@ nsWindow::ContainerHierarchyIsVisible()
     if (!visible)
       return PR_FALSE;
     
-    theParent = theParent->GetParent();
+    nsIWidget* grandparent = theParent->GetParent();
+    theParent = dont_AddRef(grandparent);
   }
   
   return PR_TRUE;
@@ -2086,6 +2112,7 @@ NS_IMETHODIMP nsWindow::WidgetToScreen(const nsRect& aLocalRect, nsRect& aGlobal
 		//
 		// Convert the local rect to global, except for this level.
 		theParent->WidgetToScreen(aLocalRect, aGlobalRect);
+	  NS_RELEASE(theParent);
 
 		// the offset from our parent is in the x/y of our bounding rect
 		nsRect myBounds;
@@ -2126,6 +2153,7 @@ NS_IMETHODIMP nsWindow::ScreenToWidget(const nsRect& aGlobalRect, nsRect& aLocal
 		//
 		// Convert the local rect to global, except for this level.
 		theParent->WidgetToScreen(aGlobalRect, aLocalRect);
+	  NS_RELEASE(theParent);
 	  
 		// the offset from our parent is in the x/y of our bounding rect
 		nsRect myBounds;
@@ -2266,7 +2294,7 @@ NS_IMETHODIMP nsWindow::GetPluginClipRect(nsRect& outClipRect, nsPoint& outOrigi
   widgetClipRect.y = 0;
 
   // Gather up the absolute position of the widget, clip window, and visibilty
-  nsIWidget* widget = GetParent();
+  nsCOMPtr<nsIWidget> widget = getter_AddRefs(GetParent());
   while (widget)
   {
     if (isVisible)
@@ -2283,7 +2311,7 @@ NS_IMETHODIMP nsWindow::GetPluginClipRect(nsRect& outClipRect, nsPoint& outOrigi
     widgetClipRect.IntersectRect(widgetClipRect, widgetRect);
     absX += wx;
     absY += wy;
-    widget = widget->GetParent();
+    widget = getter_AddRefs(widget->GetParent());
     if (!widget)
     {
       // Don't include the top-level windows offset
@@ -2346,12 +2374,12 @@ NS_IMETHODIMP nsWindow::ResetInputState()
 {
 	// currently, the nsMacEventHandler is owned by nsMacWindow, which is the top level window
 	// we delegate this call to its parent
-  nsIWidget* parent = GetParent();
-  NS_ASSERTION(parent, "cannot get parent");
+  nsCOMPtr<nsIWidget> parent = getter_AddRefs(GetParent());
+  NS_WARN_IF_FALSE(parent, "cannot get parent");
   if (parent)
   {
     nsCOMPtr<nsIKBStateControl> kb = do_QueryInterface(parent);
-    NS_ASSERTION(kb, "cannot get parent");
+    NS_WARN_IF_FALSE(kb, "cannot get parent");
   	if (kb) {
   		return kb->ResetInputState();
   	}
@@ -2364,14 +2392,6 @@ NS_IMETHODIMP nsWindow::SetIMEOpenState(PRBool aState) {
 }
 
 NS_IMETHODIMP nsWindow::GetIMEOpenState(PRBool* aState) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsWindow::SetIMEEnabled(PRBool aState) {
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsWindow::GetIMEEnabled(PRBool* aState) {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 

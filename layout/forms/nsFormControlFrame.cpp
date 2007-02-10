@@ -34,35 +34,101 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
+#include "nsCOMPtr.h"
 #include "nsFormControlFrame.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLParts.h"
+#include "nsGenericHTMLElement.h"
+#include "nsIRenderingContext.h"
+#include "nsIPresShell.h"
+#include "nsPresContext.h"
+#include "nsLeafFrame.h"
+#include "nsCSSRendering.h"
+#include "nsIView.h"
+#include "nsIViewManager.h"
+#include "nsCoord.h"
+#include "nsWidgetsCID.h"
+#include "nsViewsCID.h"
+#include "nsIComponentManager.h"
+#include "nsGUIEvent.h"
+#include "nsIFontMetrics.h"
+#include "nsIFormControl.h"
+#include "nsIDeviceContext.h"
+#include "nsHTMLAtoms.h"
+#include "nsIButton.h"  // remove this when GetCID is pure virtual
+#include "nsICheckButton.h"  //remove this
+#include "nsITextWidget.h"  //remove this
+#include "nsISupports.h"
+#include "nsStyleConsts.h"
+#include "nsUnitConversion.h"
+#include "nsIContent.h"
+#include "nsINameSpaceManager.h"
 #include "nsIDOMHTMLInputElement.h"
+#include "nsIDOMHTMLLabelElement.h"
+#include "nsIDOMHTMLTextAreaElement.h"
+#include "nsIDOMHTMLLegendElement.h"
+#include "nsIDOMHTMLButtonElement.h"
 #include "nsIEventStateManager.h"
 #include "nsIScrollableView.h"
 #include "nsILookAndFeel.h"
 
+#ifdef DEBUG_evaughan
+//#define DEBUG_rods
+#endif
+
+#ifdef DEBUG_rods
 //#define FCF_NOISY
+#endif
+
+#ifdef FCF_NOISY
+#define REFLOW_DEBUG_MSG(_msg1) printf((_msg1))
+#define REFLOW_DEBUG_MSG2(_msg1, _msg2) printf((_msg1), (_msg2))
+#define REFLOW_DEBUG_MSG3(_msg1, _msg2, _msg3) printf((_msg1), (_msg2), (_msg3))
+#define REFLOW_DEBUG_MSG4(_msg1, _msg2, _msg3, _msg4) printf((_msg1), (_msg2), (_msg3), (_msg4))
+
+#define IF_REFLOW_DEBUG_MSG(_bool, _msg1) if ((_bool)) printf((_msg1))
+#define IF_REFLOW_DEBUG_MSG2(_bool, _msg1, _msg2) if ((_bool)) printf((_msg1), (_msg2))
+#define IF_REFLOW_DEBUG_MSG3(_bool, _msg1, _msg2, _msg3) if ((_bool)) printf((_msg1), (_msg2), (_msg3))
+#define IF_REFLOW_DEBUG_MSG4(_bool, _msg1, _msg2, _msg3, _msg4) if ((_bool)) printf((_msg1), (_msg2), (_msg3), (_msg4))
+
+#else //-------------
+#define REFLOW_DEBUG_MSG(_msg) 
+#define REFLOW_DEBUG_MSG2(_msg1, _msg2) 
+#define REFLOW_DEBUG_MSG3(_msg1, _msg2, _msg3) 
+#define REFLOW_DEBUG_MSG4(_msg1, _msg2, _msg3, _msg4) 
+
+#define IF_REFLOW_DEBUG_MSG(_bool, _msg) 
+#define IF_REFLOW_DEBUG_MSG2(_bool, _msg1, _msg2) 
+#define IF_REFLOW_DEBUG_MSG3(_bool, _msg1, _msg2, _msg3) 
+#define IF_REFLOW_DEBUG_MSG4(_bool, _msg1, _msg2, _msg3, _msg4) 
+#endif
 
 const PRInt32 kSizeNotSet = -1;
 
-nsFormControlFrame::nsFormControlFrame(nsStyleContext* aContext) :
-  nsLeafFrame(aContext),
-  mDidInit(PR_FALSE)
+nsFormControlFrame::nsFormControlFrame()
+  : nsLeafFrame()
 {
+  mDidInit        = PR_FALSE;
+  mSuggestedWidth = NS_FORMSIZE_NOTSET;
+  mSuggestedHeight = NS_FORMSIZE_NOTSET;
+  mPresContext    = nsnull;
+
+  // Reflow Optimization
+  mCacheSize.width             = kSizeNotSet;
+  mCacheSize.height            = kSizeNotSet;
+  mCachedMaxElementWidth       = kSizeNotSet;
 }
 
 nsFormControlFrame::~nsFormControlFrame()
 {
 }
 
-void
-nsFormControlFrame::Destroy()
+NS_IMETHODIMP
+nsFormControlFrame::Destroy(nsPresContext *aPresContext)
 {
   // XXXldb Do we really need to do this?  Shouldn't only those frames
   // that use it do it?
-  nsFormControlFrame::RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
-  nsLeafFrame::Destroy();
+  nsFormControlFrame::RegUnRegAccessKey(aPresContext, NS_STATIC_CAST(nsIFrame*, this), PR_FALSE);
+  return nsLeafFrame::Destroy(aPresContext);
 }
 
 // Frames are not refcounted, no need to AddRef
@@ -80,22 +146,342 @@ nsFormControlFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   return nsLeafFrame::QueryInterface(aIID, aInstancePtr);
 }
 
-nscoord
-nsFormControlFrame::GetIntrinsicWidth()
+void nsFormControlFrame::SetupCachedSizes(nsSize& aCacheSize,
+                                          nscoord& aCachedAscent,
+                                          nscoord& aCachedMaxElementWidth,
+                                          nsHTMLReflowMetrics& aDesiredSize)
 {
-  // Intrinsic width is 144 twips.  Why?  I have no idea; that's what
-  // it was before I touched this code, and the original checkin
-  // comment is not so helpful.
-  return 144;
+  aCacheSize.width  = aDesiredSize.width;
+  aCacheSize.height = aDesiredSize.height;
+  aCachedAscent = aDesiredSize.ascent;
+  if (aDesiredSize.mComputeMEW) {
+    aCachedMaxElementWidth  = aDesiredSize.mMaxElementWidth;
+  }
 }
 
-nscoord
-nsFormControlFrame::GetIntrinsicHeight()
+#if 0 // Testing out changes
+//------------------------------------------------------------
+void nsFormControlFrame::SkipResizeReflow(nsSize& aCacheSize,
+                                          nscoord& aCachedMaxElementWidth,
+                                          nsSize& aCachedAvailableSize,
+                                          nsHTMLReflowMetrics& aDesiredSize,
+                                          const nsHTMLReflowState& aReflowState,
+                                          nsReflowStatus& aStatus,
+                                          PRBool& aBailOnWidth,
+                                          PRBool& aBailOnHeight)
 {
-  // Intrinsic height is 144 twips.  Why?  I have no idea; that's what
-  // it was before I touched this code, and the original checkin
-  // comment is not so helpful.
-  return 144;
+
+  if (aReflowState.reason == eReflowReason_Incremental ||
+      aReflowState.reason == eReflowReason_Dirty) {
+    aBailOnHeight = PR_FALSE;
+    aBailOnWidth  = PR_FALSE;
+
+  } else if (eReflowReason_Initial == aReflowState.reason) {
+    aBailOnHeight = PR_FALSE;
+    aBailOnWidth  = PR_FALSE;
+
+  } else {
+
+    nscoord width;
+    if (NS_UNCONSTRAINEDSIZE == aReflowState.mComputedWidth) {
+      if (aReflowState.availableWidth == NS_UNCONSTRAINEDSIZE) {
+        width = NS_UNCONSTRAINEDSIZE;
+        aBailOnWidth = aCacheSize.width != kSizeNotSet;
+        IF_REFLOW_DEBUG_MSG2(aBailOnWidth, "-------------- #1 Bailing on aCachedAvailableSize.width %d != kSizeNotSet\n", aCachedAvailableSize.width);
+      } else {
+        //width = aReflowState.availableWidth - aReflowState.mComputedBorderPadding.left -
+        //        aReflowState.mComputedBorderPadding.right;
+        aBailOnWidth = aCacheSize.width <= aReflowState.availableWidth && aCacheSize.width != kSizeNotSet;
+
+        if (aBailOnWidth) {
+          REFLOW_DEBUG_MSG3("-------------- #2 Bailing on aCachedSize.width %d <= (AW - BP) %d\n", aCachedAvailableSize.width, width );
+        } else {
+          //aBailOnWidth = width <= (aCacheSize.width - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right) &&
+          //               aCachedAvailableSize.width == kSizeNotSet;
+          //if (aBailOnWidth) {
+          //  REFLOW_DEBUG_MSG3("-------------- #2.2 Bailing on width %d <= aCachedSize.width %d\n", width, (aCacheSize.width - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right));
+          //}        
+        }
+      }
+    } else {
+      width = aReflowState.mComputedWidth;
+      aBailOnWidth = width == (aCacheSize.width - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right);
+      IF_REFLOW_DEBUG_MSG3(aBailOnWidth, "-------------- #3 Bailing on aCachedAvailableSize.width %d == aReflowState.mComputedWidth %d\n", aCachedAvailableSize.width, width );
+    }
+    
+    nscoord height;
+    if (NS_UNCONSTRAINEDSIZE == aReflowState.mComputedHeight) {
+      if (aReflowState.availableHeight == NS_UNCONSTRAINEDSIZE) {
+        height = NS_UNCONSTRAINEDSIZE;
+        aBailOnHeight = aCacheSize.height != kSizeNotSet;
+        if (aBailOnHeight) {
+          IF_REFLOW_DEBUG_MSG2(aBailOnHeight, "-------------- #1 Bailing on aCachedAvailableSize.height %d != kSizeNotSet\n", aCachedAvailableSize.height);
+        }
+      } else {
+        height = aReflowState.availableHeight - aReflowState.mComputedBorderPadding.left -
+                aReflowState.mComputedBorderPadding.right;
+        aBailOnHeight = aCachedAvailableSize.height <= height && aCachedAvailableSize.height != kSizeNotSet;
+        if (aBailOnHeight) {
+          REFLOW_DEBUG_MSG3("-------------- #2 Bailing on aCachedAvailableSize.height %d <= height %d\n", aCachedAvailableSize.height, height );
+        } else {
+          aBailOnHeight = height <= (aCacheSize.height - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right) &&
+                         aCachedAvailableSize.height == kSizeNotSet;
+          if (aBailOnHeight) {
+            REFLOW_DEBUG_MSG3("-------------- #2.2 Bailing on height %d <= aCachedSize.height %d\n", height, (aCacheSize.height - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right));
+          }        
+        }
+      }
+    } else {
+      height = aReflowState.mComputedHeight;
+        aBailOnHeight = height == (aCacheSize.height - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right);
+        IF_REFLOW_DEBUG_MSG3(aBailOnHeight, "-------------- #3 Bailing on aCachedAvailableSize.height %d == aReflowState.mComputedHeight %d\n", aCachedAvailableSize.height, height );
+    }
+
+    if (aBailOnWidth || aBailOnHeight) {
+      aDesiredSize.width  = aCacheSize.width;
+      aDesiredSize.height = aCacheSize.height;
+
+      if (aDesiredSize.mComputeMEW) {
+        aDesiredSize.mMaxElementWidth  = aCachedMaxElementWidth;
+      }
+      aDesiredSize.ascent = aDesiredSize.height;
+      aDesiredSize.descent = 0;
+    }
+  }
+}
+#else
+//------------------------------------------------------------
+void nsFormControlFrame::SkipResizeReflow(nsSize& aCacheSize,
+                                          nscoord& aCachedAscent,
+                                          nscoord& aCachedMaxElementWidth,
+                                          nsSize& aCachedAvailableSize,
+                                          nsHTMLReflowMetrics& aDesiredSize,
+                                          const nsHTMLReflowState& aReflowState,
+                                          nsReflowStatus& aStatus,
+                                          PRBool& aBailOnWidth,
+                                          PRBool& aBailOnHeight)
+{
+
+  if (aReflowState.reason == eReflowReason_Incremental ||
+#ifdef IBMBIDI
+      aReflowState.reason == eReflowReason_StyleChange ||
+#endif
+      aReflowState.reason == eReflowReason_Dirty) {
+    aBailOnHeight = PR_FALSE;
+    aBailOnWidth  = PR_FALSE;
+
+  } else if (eReflowReason_Initial == aReflowState.reason) {
+    aBailOnHeight = PR_FALSE;
+    aBailOnWidth  = PR_FALSE;
+
+  } else {
+
+    nscoord width;
+    if (NS_UNCONSTRAINEDSIZE == aReflowState.mComputedWidth) {
+      if (aReflowState.availableWidth == NS_UNCONSTRAINEDSIZE) {
+        width = NS_UNCONSTRAINEDSIZE;
+        aBailOnWidth = aCacheSize.width != kSizeNotSet;
+#ifdef FCF_NOISY
+        if (aBailOnWidth) {
+          printf("-------------- #1 Bailing on aCachedAvailableSize.width %d != kSizeNotSet\n", aCachedAvailableSize.width);
+        }
+#endif
+      } else {
+        width = aReflowState.availableWidth - aReflowState.mComputedBorderPadding.left -
+                aReflowState.mComputedBorderPadding.right;
+        aBailOnWidth = aCachedAvailableSize.width <= width && aCachedAvailableSize.width != kSizeNotSet;
+#ifdef FCF_NOISY
+        if (aBailOnWidth) {
+          printf("-------------- #2 Bailing on aCachedAvailableSize.width %d <= width %d\n", aCachedAvailableSize.width, width );
+        } else {
+          aBailOnWidth = width <= (aCacheSize.width - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right) &&
+                         aCachedAvailableSize.width == kSizeNotSet;
+          if (aBailOnWidth) {
+            printf("-------------- #2.2 Bailing on width %d <= aCachedAvailableSize.width %d\n",(aCacheSize.width - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right), width );
+          }        
+        }
+#endif
+      }
+    } else {
+      width = aReflowState.mComputedWidth;
+      //if (aCachedAvailableSize.width == kSizeNotSet) {
+      //  //aBailOnWidth = aCachedAvailableSize.width == aCacheSize.width;
+        aBailOnWidth = PR_FALSE;
+      //} else {
+        aBailOnWidth = width == (aCacheSize.width - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right);
+      //}
+#ifdef FCF_NOISY
+      if (aBailOnWidth) {
+        printf("-------------- #3 Bailing on aCachedAvailableSize.width %d == aReflowState.mComputedWidth %d\n", aCachedAvailableSize.width, width );
+      }
+#endif
+    }
+    
+    nscoord height;
+    if (NS_UNCONSTRAINEDSIZE == aReflowState.mComputedHeight) {
+      if (aReflowState.availableHeight == NS_UNCONSTRAINEDSIZE) {
+        height = NS_UNCONSTRAINEDSIZE;
+        aBailOnHeight = aCacheSize.height != kSizeNotSet;
+#ifdef FCF_NOISY
+        if (aBailOnHeight) {
+          printf("-------------- #1 Bailing on aCachedAvailableSize.height %d != kSizeNotSet\n", aCachedAvailableSize.height);
+        }
+#endif
+      } else {
+        height = aReflowState.availableHeight - aReflowState.mComputedBorderPadding.left -
+                aReflowState.mComputedBorderPadding.right;
+        aBailOnHeight = aCachedAvailableSize.height <= height && aCachedAvailableSize.height != kSizeNotSet;
+#ifdef FCF_NOISY
+        if (aBailOnHeight) {
+          printf("-------------- #2 Bailing on aCachedAvailableSize.height %d <= height %d\n", aCachedAvailableSize.height, height );
+        } else {
+          aBailOnHeight = height <= (aCacheSize.height - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right) &&
+                         aCachedAvailableSize.height == kSizeNotSet;
+          if (aBailOnHeight) {
+            printf("-------------- #2.2 Bailing on height %d <= aCachedAvailableSize.height %d\n",(aCacheSize.height - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right), height );
+          }        
+        }
+#endif
+      }
+    } else {
+      height = aReflowState.mComputedHeight;
+      //if (aCachedAvailableSize.height == kSizeNotSet) {
+      //  //aBailOnHeight = aCachedAvailableSize.height == aCacheSize.height;
+        aBailOnHeight = PR_FALSE;
+      //} else {
+        aBailOnHeight = height == (aCacheSize.height - aReflowState.mComputedBorderPadding.left - aReflowState.mComputedBorderPadding.right);
+      //}
+#ifdef FCF_NOISY
+      if (aBailOnHeight) {
+        printf("-------------- #3 Bailing on aCachedAvailableSize.height %d == aReflowState.mComputedHeight %d\n", aCachedAvailableSize.height, height );
+      }
+#endif
+    }
+
+    if (aBailOnWidth || aBailOnHeight) {
+      aDesiredSize.width  = aCacheSize.width;
+      aDesiredSize.height = aCacheSize.height;
+      aDesiredSize.ascent = aCachedAscent;
+      aDesiredSize.descent = aDesiredSize.height - aDesiredSize.ascent;
+
+      if (aDesiredSize.mComputeMEW) {
+        aDesiredSize.mMaxElementWidth = aCachedMaxElementWidth;
+      }
+    }
+  }
+}
+#endif
+
+nscoord 
+nsFormControlFrame::GetScrollbarWidth(float aPixToTwip)
+{
+   return NSIntPixelsToTwips(19, aPixToTwip);  // XXX this is windows
+}
+
+void 
+nsFormControlFrame::SetClickPoint(nscoord aX, nscoord aY)
+{
+  mLastClickPoint.x = aX;
+  mLastClickPoint.y = aY;
+}
+
+// XXX it would be cool if form element used our rendering sw, then
+// they could be blended, and bordered, and so on...
+NS_METHOD
+nsFormControlFrame::Paint(nsPresContext*      aPresContext,
+                          nsIRenderingContext& aRenderingContext,
+                          const nsRect&        aDirtyRect,
+                          nsFramePaintLayer    aWhichLayer,
+                          PRUint32             aFlags)
+{
+  PRBool isVisible;
+  if (NS_SUCCEEDED(IsVisibleForPainting(aPresContext, aRenderingContext, PR_TRUE, &isVisible)) && !isVisible) {
+    return NS_OK;
+  }
+
+  nsresult rv = NS_OK;
+  if (aWhichLayer == NS_FRAME_PAINT_LAYER_FOREGROUND) {
+    rv = nsLeafFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
+                            NS_FRAME_PAINT_LAYER_BACKGROUND);
+    if (NS_FAILED(rv))
+      return rv;
+    // draw selection borders when appropriate
+    rv = nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
+                            NS_FRAME_PAINT_LAYER_BACKGROUND);
+    if (NS_FAILED(rv))
+      return rv;
+
+    rv = nsLeafFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
+                            NS_FRAME_PAINT_LAYER_FLOATS);
+    if (NS_FAILED(rv))
+      return rv;
+    // draw selection borders when appropriate
+    rv = nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
+                            NS_FRAME_PAINT_LAYER_FLOATS);
+    if (NS_FAILED(rv))
+      return rv;
+
+    rv = nsLeafFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
+                            NS_FRAME_PAINT_LAYER_FOREGROUND);
+    if (NS_FAILED(rv))
+      return rv;
+    // draw selection borders when appropriate
+    rv = nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
+                            NS_FRAME_PAINT_LAYER_FOREGROUND);
+  }
+  return rv;
+}
+
+NS_IMETHODIMP
+nsFormControlFrame::GetFrameForPoint(const nsPoint& aPoint,
+                                     nsFramePaintLayer aWhichLayer,
+                                     nsIFrame** aFrame)
+{
+  nsresult rv = NS_ERROR_FAILURE;
+  if (aWhichLayer == NS_FRAME_PAINT_LAYER_FOREGROUND) {
+    rv = nsLeafFrame::GetFrameForPoint(aPoint,
+                                      NS_FRAME_PAINT_LAYER_FOREGROUND, aFrame);
+    if (NS_SUCCEEDED(rv))
+      return NS_OK;
+    rv = nsLeafFrame::GetFrameForPoint(aPoint,
+                                       NS_FRAME_PAINT_LAYER_FLOATS, aFrame);
+    if (NS_SUCCEEDED(rv))
+      return NS_OK;
+    rv = nsLeafFrame::GetFrameForPoint(aPoint,
+                                      NS_FRAME_PAINT_LAYER_BACKGROUND, aFrame);
+  }
+  return rv;
+}
+
+void 
+nsFormControlFrame::GetDesiredSize(nsPresContext*          aPresContext,
+                                   const nsHTMLReflowState& aReflowState,
+                                   nsHTMLReflowMetrics&     aDesiredLayoutSize,
+                                   nsSize&                  aDesiredWidgetSize)
+{
+  // get the css size and let the frame use or override it
+  nsSize styleSize;
+  GetStyleSize(aPresContext, aReflowState, styleSize);
+
+  // subclasses should always override this method, but if not and no css, make it small
+  aDesiredLayoutSize.width  = (styleSize.width  > CSS_NOTSET) ? styleSize.width  : 144;
+  aDesiredLayoutSize.height = (styleSize.height > CSS_NOTSET) ? styleSize.height : 144;
+  aDesiredLayoutSize.ascent = aDesiredLayoutSize.height;
+  aDesiredLayoutSize.descent = 0;
+  if (aDesiredLayoutSize.mComputeMEW) {
+    aDesiredLayoutSize.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
+  }
+  aDesiredWidgetSize.width  = aDesiredLayoutSize.width;
+  aDesiredWidgetSize.height = aDesiredLayoutSize.height;
+}
+
+void 
+nsFormControlFrame::GetDesiredSize(nsPresContext* aPresContext,
+                             const nsHTMLReflowState& aReflowState,
+                             nsHTMLReflowMetrics& aDesiredSize)
+{
+  nsSize ignore;
+  GetDesiredSize(aPresContext, aReflowState, aDesiredSize, ignore);
 }
 
 NS_IMETHODIMP
@@ -128,7 +514,8 @@ nsFormControlFrame::DidReflow(nsPresContext*           aPresContext,
 }
 
 NS_IMETHODIMP
-nsFormControlFrame::SetInitialChildList(nsIAtom*        aListName,
+nsFormControlFrame::SetInitialChildList(nsPresContext* aPresContext,
+                                        nsIAtom*        aListName,
                                         nsIFrame*       aChildList)
 {
   return NS_OK;
@@ -140,32 +527,53 @@ nsFormControlFrame::Reflow(nsPresContext*          aPresContext,
                            const nsHTMLReflowState& aReflowState,
                            nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsFormControlFrame");
+  DO_GLOBAL_REFLOW_COUNT("nsFormControlFrame", aReflowState.reason);
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
 
-  if (mState & NS_FRAME_FIRST_REFLOW) {
-    RegUnRegAccessKey(NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
+  if (!mDidInit) {
+    mPresContext = aPresContext;
+    InitializeControl(aPresContext);
+    mDidInit = PR_TRUE;
   }
 
-  return nsLeafFrame::Reflow(aPresContext, aDesiredSize, aReflowState,
-                             aStatus);
+#if 0
+  nsresult skiprv = SkipResizeReflow(mCacheSize, mCachedMaxElementWidth, aPresContext, 
+                                     aDesiredSize, aReflowState, aStatus);
+  if (NS_SUCCEEDED(skiprv)) {
+    return skiprv;
+  }
+#endif
+
+  nsresult rv = nsLeafFrame::Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
+
+  aStatus = NS_FRAME_COMPLETE;
+  SetupCachedSizes(mCacheSize, mCachedAscent, mCachedMaxElementWidth, aDesiredSize);
+  NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
+  aDesiredSize.mOverflowArea = nsRect(0, 0, aDesiredSize.width, aDesiredSize.height);
+  FinishAndStoreOverflow(&aDesiredSize);
+  return rv;
 }
 
-nsresult
-nsFormControlFrame::RegUnRegAccessKey(nsIFrame * aFrame, PRBool aDoReg)
+
+nsWidgetInitData* 
+nsFormControlFrame::GetWidgetInitData(nsPresContext* aPresContext)
 {
+  return nsnull;
+}
+
+
+nsresult
+nsFormControlFrame::RegUnRegAccessKey(nsPresContext* aPresContext, nsIFrame * aFrame, PRBool aDoReg)
+{
+  NS_ASSERTION(aPresContext, "aPresContext is NULL in RegUnRegAccessKey!");
   NS_ENSURE_ARG_POINTER(aFrame);
-  
-  nsPresContext* presContext = aFrame->GetPresContext();
-  
-  NS_ASSERTION(presContext, "aPresContext is NULL in RegUnRegAccessKey!");
 
   nsAutoString accessKey;
 
   nsIContent* content = aFrame->GetContent();
-  content->GetAttr(kNameSpaceID_None, nsGkAtoms::accesskey, accessKey);
+  content->GetAttr(kNameSpaceID_None, nsHTMLAtoms::accesskey, accessKey);
   if (!accessKey.IsEmpty()) {
-    nsIEventStateManager *stateManager = presContext->EventStateManager();
+    nsIEventStateManager *stateManager = aPresContext->EventStateManager();
     if (aDoReg) {
       return stateManager->RegisterAccessKey(content, (PRUint32)accessKey.First());
     } else {
@@ -176,43 +584,222 @@ nsFormControlFrame::RegUnRegAccessKey(nsIFrame * aFrame, PRBool aDoReg)
 }
 
 void 
+nsFormControlFrame::InitializeControl(nsPresContext* aPresContext)
+{
+  RegUnRegAccessKey(aPresContext, NS_STATIC_CAST(nsIFrame*, this), PR_TRUE);
+}
+
+void 
 nsFormControlFrame::SetFocus(PRBool aOn, PRBool aRepaint)
 {
 }
+
+void
+nsFormControlFrame::ScrollIntoView(nsPresContext* aPresContext)
+{
+  if (aPresContext) {
+    nsIPresShell *presShell = aPresContext->GetPresShell();
+    if (presShell) {
+      presShell->ScrollFrameIntoView(this,
+                   NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE,NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE);
+    }
+  }
+}
+
+/*
+ * FIXME: this ::GetIID() method has no meaning in life and should be
+ * removed.
+ * Pierre Phaneuf <pp@ludusdesign.com>
+ */
+const nsIID&
+nsFormControlFrame::GetIID()
+{
+  return NS_GET_IID(nsIButton);
+}
+  
+const nsIID&
+nsFormControlFrame::GetCID()
+{
+  static NS_DEFINE_IID(kButtonCID, NS_BUTTON_CID);
+  return kButtonCID;
+}
+
+NS_IMETHODIMP
+nsFormControlFrame::GetMaxLength(PRInt32* aSize)
+{
+  *aSize = -1;
+
+  nsGenericHTMLElement *content = nsGenericHTMLElement::FromContent(mContent);
+  if (content) {
+    const nsAttrValue* attr = content->GetParsedAttr(nsHTMLAtoms::maxlength);
+    if (attr && attr->Type() == nsAttrValue::eInteger) {
+      *aSize = attr->GetIntegerValue();
+
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
+  }
+  return NS_CONTENT_ATTR_NOT_THERE;
+}
+
+nsresult
+nsFormControlFrame::GetSizeFromContent(PRInt32* aSize) const
+{
+  *aSize = -1;
+
+  nsGenericHTMLElement *content = nsGenericHTMLElement::FromContent(mContent);
+  if (content) {
+    const nsAttrValue* attr = content->GetParsedAttr(nsHTMLAtoms::size);
+    if (attr && attr->Type() == nsAttrValue::eInteger) {
+      *aSize = attr->GetIntegerValue();
+
+      return NS_CONTENT_ATTR_HAS_VALUE;
+    }
+  }
+  return NS_CONTENT_ATTR_NOT_THERE;
+}
+
+NS_IMETHODIMP_(PRInt32)
+nsFormControlFrame::GetFormControlType() const
+{
+  return nsFormControlHelper::GetType(mContent);
+}
+
+NS_IMETHODIMP
+nsFormControlFrame::GetName(nsAString* aResult)
+{
+  return nsFormControlHelper::GetName(mContent, aResult);
+}
+
+
+NS_IMETHODIMP
+nsFormControlFrame::GetValue(nsAString* aResult)
+{
+  return nsFormControlHelper::GetValueAttr(mContent, aResult);
+}
+
 
 NS_METHOD
 nsFormControlFrame::HandleEvent(nsPresContext* aPresContext, 
                                           nsGUIEvent* aEvent,
                                           nsEventStatus* aEventStatus)
 {
+  NS_ENSURE_ARG_POINTER(aEventStatus);
+  if (nsEventStatus_eConsumeNoDefault == *aEventStatus) {
+    return NS_OK;
+  }
+
   // Check for user-input:none style
   const nsStyleUserInterface* uiStyle = GetStyleUserInterface();
-  if (uiStyle->mUserInput == NS_STYLE_USER_INPUT_NONE ||
-      uiStyle->mUserInput == NS_STYLE_USER_INPUT_DISABLED)
+  if (uiStyle->mUserInput == NS_STYLE_USER_INPUT_NONE || uiStyle->mUserInput == NS_STYLE_USER_INPUT_DISABLED)
     return nsFrame::HandleEvent(aPresContext, aEvent, aEventStatus);
 
+  // if not native then use the NS_MOUSE_LEFT_CLICK to see if pressed
+  // unfortunately native widgets don't seem to handle this right. 
+  // so use the old code for native stuff. -EDV
+  switch (aEvent->message) {
+	   case NS_KEY_DOWN:
+	    if (NS_KEY_EVENT == aEvent->eventStructType) {
+	      nsKeyEvent* keyEvent = (nsKeyEvent*)aEvent;
+	      if (NS_VK_RETURN == keyEvent->keyCode) {
+	        EnterPressed(aPresContext);
+	      }
+	    }
+	    break;
+  }
+
+  *aEventStatus = nsEventStatus_eConsumeDoDefault;
   return NS_OK;
 }
 
-void
-nsFormControlFrame::GetCurrentCheckState(PRBool *aState)
+void 
+nsFormControlFrame::GetStyleSize(nsPresContext* aPresContext,
+                                 const nsHTMLReflowState& aReflowState,
+                                 nsSize& aSize)
 {
-  nsCOMPtr<nsIDOMHTMLInputElement> inputElement = do_QueryInterface(mContent);
-  if (inputElement) {
-    inputElement->GetChecked(aState);
+  if (aReflowState.mComputedWidth != NS_INTRINSICSIZE) {
+    aSize.width = aReflowState.mComputedWidth;
+  }
+  else {
+    aSize.width = CSS_NOTSET;
+  }
+  if (aReflowState.mComputedHeight != NS_INTRINSICSIZE) {
+    aSize.height = aReflowState.mComputedHeight;
+  }
+  else {
+    aSize.height = CSS_NOTSET;
   }
 }
 
-nsresult
-nsFormControlFrame::SetFormProperty(nsIAtom* aName, const nsAString& aValue)
+NS_IMETHODIMP
+nsFormControlFrame::GetFormContent(nsIContent*& aContent) const
 {
+  aContent = GetContent();
+  NS_IF_ADDREF(aContent);
   return NS_OK;
 }
 
 nsresult
-nsFormControlFrame::GetFormProperty(nsIAtom* aName, nsAString& aValue) const
+nsFormControlFrame::GetDefaultCheckState(PRBool *aState)
+{
+  nsresult res = NS_OK;
+  nsCOMPtr<nsIDOMHTMLInputElement> inputElement = do_QueryInterface(mContent);
+  if (inputElement) {
+    res = inputElement->GetDefaultChecked(aState);
+  }
+	return res;
+}
+
+nsresult
+nsFormControlFrame::SetDefaultCheckState(PRBool aState)
+{
+	nsresult res = NS_OK;
+  nsCOMPtr<nsIDOMHTMLInputElement> inputElement = do_QueryInterface(mContent);
+  if (inputElement) {
+    res = inputElement->SetDefaultChecked(aState);
+  }
+	return res;
+}
+
+nsresult
+nsFormControlFrame::GetCurrentCheckState(PRBool *aState)
+{
+	nsresult res = NS_OK;
+  nsCOMPtr<nsIDOMHTMLInputElement> inputElement = do_QueryInterface(mContent);
+  if (inputElement) {
+    res = inputElement->GetChecked(aState);
+  }
+	return res;
+}
+
+nsresult
+nsFormControlFrame::SetCurrentCheckState(PRBool aState)
+{
+	nsresult res = NS_OK;
+  nsCOMPtr<nsIDOMHTMLInputElement> inputElement = do_QueryInterface(mContent);
+  if (inputElement) {
+    inputElement->SetChecked(aState); 
+  }
+	return res;
+}
+
+NS_IMETHODIMP
+nsFormControlFrame::SetProperty(nsPresContext* aPresContext, nsIAtom* aName, const nsAString& aValue)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFormControlFrame::GetProperty(nsIAtom* aName, nsAString& aValue)
 {
   aValue.Truncate();
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFormControlFrame::SetSuggestedSize(nscoord aWidth, nscoord aHeight)
+{
+  mSuggestedWidth = aWidth;
+  mSuggestedHeight = aHeight;
   return NS_OK;
 }
 
@@ -231,8 +818,10 @@ nsFormControlFrame::GetScreenHeight(nsPresContext* aPresContext,
     context->GetRect ( screen );
   else
     context->GetClientRect(screen);
-
-  aHeight = aPresContext->AppUnitsToDevPixels(screen.height);
+      
+  float devUnits;
+  devUnits = context->DevUnitsToAppUnits();
+  aHeight = NSToIntRound(float(screen.height) / devUnits );
   return NS_OK;
 }
 
@@ -252,6 +841,12 @@ nsFormControlFrame::GetAbsoluteFramePosition(nsPresContext* aPresContext,
   // get a containing view?
   aAbsoluteTwipsRect.x = 0;
   aAbsoluteTwipsRect.y = 0;
+
+  // Get conversions between twips and pixels
+  float t2p;
+  float p2t;
+  t2p = aPresContext->TwipsToPixels();
+  p2t = aPresContext->PixelsToTwips();
 
   // Start with frame's offset from it it's containing view
   nsIView *view = nsnull;
@@ -282,8 +877,8 @@ nsFormControlFrame::GetAbsoluteFramePosition(nsPresContext* aPresContext,
         // XXX a twip version of this would be really nice here!
         widget->WidgetToScreen(zeroRect, absBounds);
           // Convert widget coordinates to twips   
-        aAbsoluteTwipsRect.x += aPresContext->DevPixelsToAppUnits(absBounds.x);
-        aAbsoluteTwipsRect.y += aPresContext->DevPixelsToAppUnits(absBounds.y);   
+        aAbsoluteTwipsRect.x += NSIntPixelsToTwips(absBounds.x, p2t);
+        aAbsoluteTwipsRect.y += NSIntPixelsToTwips(absBounds.y, p2t);   
         break;
       }
 
@@ -293,10 +888,11 @@ nsFormControlFrame::GetAbsoluteFramePosition(nsPresContext* aPresContext,
   
   // convert to pixel coordinates
   if (NS_SUCCEEDED(rv)) {
-    aAbsolutePixelRect.x = aPresContext->AppUnitsToDevPixels(aAbsoluteTwipsRect.x);
-    aAbsolutePixelRect.y = aPresContext->AppUnitsToDevPixels(aAbsoluteTwipsRect.y);
-    aAbsolutePixelRect.width = aPresContext->AppUnitsToDevPixels(aAbsoluteTwipsRect.width);
-    aAbsolutePixelRect.height = aPresContext->AppUnitsToDevPixels(aAbsoluteTwipsRect.height);
+    aAbsolutePixelRect.x = NSTwipsToIntPixels(aAbsoluteTwipsRect.x, t2p);
+    aAbsolutePixelRect.y = NSTwipsToIntPixels(aAbsoluteTwipsRect.y, t2p);
+
+    aAbsolutePixelRect.width = NSTwipsToIntPixels(aAbsoluteTwipsRect.width, t2p);
+    aAbsolutePixelRect.height = NSTwipsToIntPixels(aAbsoluteTwipsRect.height, t2p);
   }
 
   return rv;

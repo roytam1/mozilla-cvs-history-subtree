@@ -88,24 +88,17 @@ var unifinderToDoDataSourceObserver =
     onAddItem: function(aItem) {
         if (aItem instanceof Components.interfaces.calITodo &&
             !this.mInBatch)
-        {
             toDoUnifinderRefresh();
-        }
     },
     onModifyItem: function(aNewItem, aOldItem) {
-        if ((aNewItem instanceof Components.interfaces.calITodo ||
-            aOldItem instanceof Components.interfaces.calITodo) &&
+        if (aNewItem instanceof Components.interfaces.calITodo &&
             !this.mInBatch)
-        {
             toDoUnifinderRefresh();
-        }
     },
     onDeleteItem: function(aDeletedItem) {
         if (aDeletedItem instanceof Components.interfaces.calITodo &&
             !this.mInBatch)
-        {
             toDoUnifinderRefresh();
-        }
     },
     onError: function(aErrNo, aMessage) {},
 
@@ -226,9 +219,9 @@ function modifyToDoCommand( event )
    var ThisToDo = getToDoFromEvent( event );
    
    if( ThisToDo )
-      modifyEventWithDialog(ThisToDo);
+      editToDo( ThisToDo );
    else
-     createTodoWithDialog();
+     newToDo();
 }
 
 /**
@@ -522,11 +515,12 @@ calendarTaskView.prototype.getCalendarTaskAtRow = function( i )
 
 calendarTaskView.prototype.getRowOfCalendarTask = function( Task )
 {
-   for (var i in gTaskArray) {
-      if (gTaskArray[i].hasSameIds(Task))
-         return i;
+   for( var i = 0; i < this.gTaskArray.length; i++ )
+   {
+      if( this.gTaskArray[i].id == Event.id )
+         return( i );
    }
-   return null;
+   return( "null" );
 }
 
 /**
@@ -627,7 +621,7 @@ function contextChangePriority( event, Priority )
 function modifyTaskFromContext() {
    var task = document.getElementById( ToDoUnifinderTreeName ).taskView.contextTask;
    if(task)
-       modifyEventWithDialog(task);
+       editToDo(task);
 }
 
 function changeContextMenuForToDo(event)

@@ -42,10 +42,10 @@
 #include "nsISupports.h"
 
 // IID for the nsISelectControlFrame class
-// f8a1b329-d0d8-4bd5-a9ab-08c3c0f2f166
+// 264dc2f5-1cca-47dd-9ebc-699c430be00a
 #define NS_ISELECTCONTROLFRAME_IID \
-{ 0xf8a1b329, 0xd0d8, 0x4bd5, \
- { 0xa9, 0xab, 0x08, 0xc3, 0xc0, 0xf2, 0xf1, 0x66 } }
+{ 0x264dc2f5, 0x1cca, 0x47dd, \
+  { 0x9e, 0xbc, 0x69, 0x9c, 0x43, 0x0b, 0xe0, 0x0a } }
 
 class nsIDOMHTMLOptionElement;
 
@@ -55,7 +55,7 @@ class nsIDOMHTMLOptionElement;
 class nsISelectControlFrame : public nsISupports {
 
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISELECTCONTROLFRAME_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISELECTCONTROLFRAME_IID)
 
   /**
    * Adds an option to the list at index
@@ -88,13 +88,16 @@ public:
                               PRBool aSelected) = 0;
 
   /**
+   * For the content model to tell if there's a dummy frame or not
+   */
+  NS_IMETHOD GetDummyFrame(nsIFrame** aFrame) = 0;
+  NS_IMETHOD SetDummyFrame(nsIFrame* aFrame) = 0;
+
+  /**
    * Notify the frame when selectedIndex was changed
    */
   NS_IMETHOD OnSetSelectedIndex(PRInt32 aOldIndex, PRInt32 aNewIndex) = 0;
 
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsISelectControlFrame,
-                              NS_ISELECTCONTROLFRAME_IID)
 
 #endif

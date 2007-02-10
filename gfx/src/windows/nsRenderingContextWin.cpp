@@ -1290,14 +1290,6 @@ NS_IMETHODIMP nsRenderingContextWin :: FillPolygon(const nsPoint aPoints[], PRIn
   return NS_OK;
 }
 
-void*
-nsRenderingContextWin::GetNativeGraphicData(GraphicDataType aType)
-{
-  if (aType == NATIVE_WINDOWS_DC)
-    return mDC;
-
-  return nsnull;
-}
 
 NS_IMETHODIMP nsRenderingContextWin :: DrawEllipse(const nsRect& aRect)
 {
@@ -2267,9 +2259,9 @@ do_DrawString(const nsFontSwitch* aFontSwitch,
       x = data->mX;
       y = data->mY;
       data->mTranMatrix->TransformCoord(&x, &y);
-      if (NS_IS_HIGH_SURROGATE(*str) && 
+      if (IS_HIGH_SURROGATE(*str) && 
           ((str+1)<end) && 
-          NS_IS_LOW_SURROGATE(*(str+1))) 
+          IS_LOW_SURROGATE(*(str+1))) 
       {
         // special case for surrogate pair
         fontWin->DrawString(data->mDC, x, y, str, 2);
@@ -2513,6 +2505,14 @@ NS_IMETHODIMP nsRenderingContextWin :: CopyOffScreenBits(nsIDrawingSurface* aSrc
   else
     NS_ASSERTION(0, "attempt to blit with bad DCs");
 
+  return NS_OK;
+}
+
+//~~~
+NS_IMETHODIMP nsRenderingContextWin::RetrieveCurrentNativeGraphicData(void** ngd)
+{
+  if(ngd != nsnull)
+    *ngd = (void*)mDC;
   return NS_OK;
 }
 

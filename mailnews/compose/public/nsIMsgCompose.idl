@@ -111,15 +111,17 @@ interface nsIMsgComposeStateListener : nsISupports
 	void        NotifyComposeBodyReady();
 };
 
-[scriptable, uuid(061aae23-7e0a-4818-9a15-1b5db3ceb7f4)]
-interface nsIMsgComposeNotificationType
-{
-    const long ComposeFieldsReady = 0;
-    const long ComposeProcessDone = 1;
-    const long SaveInFolderDone   = 2;
-    const long ComposeBodyReady   = 3;
-};
+%{ C++
+/* TODO: we should create an interface for this enum! */
+typedef enum {
+   eComposeFieldsReady,
+   eComposeProcessDone,
+   eSaveInFolderDone,
+   eComposeBodyReady
+} TStateListenerNotification;
+%}
 
+native TStateListenerNotification(TStateListenerNotification);
 native nsString(nsString);
 [ref] native nsStringRef(nsString);
 
@@ -130,7 +132,8 @@ interface nsIMsgComposeRecyclingListener : nsISupports {
   void onReopen(in nsIMsgComposeParams params);
 };
 
-[scriptable, uuid(41A7933D-DAC3-4a42-AA88-373A7DEA9F12)]
+
+[scriptable, uuid(a56e2be5-76c2-4647-857d-ca71b129b4d6)]
 interface nsIMsgCompose : nsISupports {
 
   /* ... */
@@ -232,7 +235,7 @@ interface nsIMsgCompose : nsISupports {
   [noscript] void setCiteReference(in nsString citeReference);
 
   /* Set the URI of the folder where the message has been saved */
-  attribute string savedFolderURI;
+  [noscript] attribute string savedFolderURI;
 
   /* Append the signature defined in the identity to the msgBody */
   [noscript] void processSignature(in nsIMsgIdentity identity,
@@ -250,10 +253,8 @@ interface nsIMsgCompose : nsISupports {
                                               in boolean aQuoted,
                                               in boolean aHTMLEditor);
 
-  /* Tell the doc state listeners that the doc state has changed
-   * aNotificationType is from nsIMsgComposeNotificationType
-   */
-  [noscript] void notifyStateListeners(in long aNotificationType, in nsresult aResult);
+  /* Tell the doc state listeners that the doc state has changed */
+  [noscript] void notifyStateListeners(in TStateListenerNotification aNotificationType, in nsresult aResult);
 
   /* Retreive the progress object */
   readonly attribute nsIMsgProgress progress;
@@ -279,11 +280,6 @@ interface nsIMsgCompose : nsISupports {
   readonly attribute string originalMsgURI;
 
   attribute boolean deleteDraft;
-
-  /* true when the compose window is in the process of inserting quoted content
-     (i.e. via reply, forward inline or a quoting operation) into the document 
-   */
-  attribute boolean insertingQuotedContent;
 };
 
 /* send listener interface */

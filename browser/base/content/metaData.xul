@@ -43,13 +43,13 @@
 <?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
 
 <!DOCTYPE window SYSTEM "chrome://browser/locale/metaData.dtd" >
-
+ 
 <window id="metadata"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         title="&caption.label;"
         onload="onLoad()"
         class="dialog"
-        style="width: 40em; height: 10em;"
+        minwidth="350"
         persist="screenX screenY"
         screenX="24" screenY="24">
 
@@ -103,11 +103,6 @@
           <label value="&link-rev.label; "/>
           <textbox readonly="true" id="link-rev-text"/>
         </row>
-        <row id="link-ping">
-          <separator orient="vertical"/>
-          <label value="&link-ping.label; "/>
-          <textbox readonly="true" multiline="true" id="link-ping-text"/>
-        </row>
       </rows>
     </grid>
     <separator/>
@@ -127,15 +122,15 @@
           <label value="&image-url.label; "/>
           <textbox readonly="true" id="image-url-text"/>
         </row>
-        <row id="image-type">
+        <row id="image-width">
           <separator orient="vertical"/>
-          <label value="&image-type.label; "/>
-          <textbox readonly="true" id="image-type-text"/>
+          <label value="&image-width.label; "/>
+          <textbox readonly="true" id="image-width-text"/>
         </row>
-        <row id="image-size">
+        <row id="image-height">
           <separator orient="vertical"/>
-          <label value="&image-size.label; "/>
-          <textbox readonly="true" id="image-size-text"/>
+          <label value="&image-height.label; "/>
+          <textbox readonly="true" id="image-height-text"/>
         </row>
 	<row id="image-filesize">
           <separator orient="vertical"/>

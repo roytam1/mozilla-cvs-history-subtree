@@ -40,11 +40,10 @@
 #define nsTreeRows_h__
 
 #include "nsCOMPtr.h"
-#include "pldhash.h"
-#include "nsIXULTemplateResult.h"
-#include "nsTemplateMatch.h"
 #include "nsIRDFResource.h"
-
+#include "pldhash.h"
+class nsConflictSet;
+class nsTemplateMatch;
 
 /**
  * This class maintains the state of the XUL tree builder's
@@ -312,21 +311,17 @@ public:
     iterator Last();
 
     /**
-     * Find the row that contains the given resource
+     * Find the row that contains the match with the specified member
+     * resource.
      */
-    iterator FindByResource(nsIRDFResource* aResource);
-
-    /**
-     * Find the row that contains the result
-     */
-    iterator Find(nsIXULTemplateResult* aResult);
+    iterator Find(nsConflictSet& aConflictSet, nsIRDFResource* aMember);
 
     /**
      * Retrieve the ith element in the view
      */
     iterator operator[](PRInt32 aIndex);
 
-    nsTreeRows() : mRoot(nsnull) {}
+    nsTreeRows() : mRoot(nsnull), mRootResource(nsnull) {}
     ~nsTreeRows() {}
 
     /**
@@ -436,7 +431,7 @@ public:
         mRootResource = aResource; }
 
     /**
-     * Retrieve the root resource for the view
+     * Retrieve hte root resource for the view
      */
     nsIRDFResource* GetRootResource() {
         return mRootResource.get(); }

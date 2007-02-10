@@ -68,10 +68,10 @@ NS_IMETHODIMP nsHTMLAreaAccessible::GetName(nsAString & aName)
       return rv;
     }
   }
-  if (!content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::alt,
-                        aName) &&  
-      !content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::title,
-                        aName)) {
+  if (NS_CONTENT_ATTR_NO_VALUE ==
+      content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::alt, aName) &&  
+      NS_CONTENT_ATTR_NO_VALUE ==
+      content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::title, aName)) {
     return GetValue(aName);
   }
 
@@ -140,20 +140,23 @@ NS_IMETHODIMP nsHTMLAreaAccessible::GetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *w
   imageFrame->GetImageMap(presContext, getter_AddRefs(map));
   NS_ENSURE_TRUE(map, NS_ERROR_FAILURE);
 
-  nsRect rect, orgRectPixels;
+  nsRect rect, orgRectPixels, pageRectPixels;
   rv = map->GetBoundsForAreaContent(ourContent, presContext, rect);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  *x      = presContext->AppUnitsToDevPixels(rect.x); 
-  *y      = presContext->AppUnitsToDevPixels(rect.y); 
+  // Convert from twips to pixels
+  float t2p;
+  t2p = presContext->TwipsToPixels();   // Get pixels conversion factor
+  *x      = NSTwipsToIntPixels(rect.x, t2p); 
+  *y      = NSTwipsToIntPixels(rect.y, t2p); 
 
-  // XXX Areas are screwy; they return their rects as a pair of points, one pair
-  // stored into the width and height.
-  *width  = presContext->AppUnitsToDevPixels(rect.width - rect.x);
-  *height = presContext->AppUnitsToDevPixels(rect.height - rect.y);
+  // XXX aaronl not sure why we have to subtract the x,y from the width, height
+  //     -- but it works perfectly!
+  *width  = NSTwipsToIntPixels(rect.width, t2p) - *x;
+  *height = NSTwipsToIntPixels(rect.height, t2p) - *y;
 
   // Put coords in absolute screen coords
-  orgRectPixels = frame->GetScreenRectExternal();
+  GetScreenOrigin(presContext, frame, &orgRectPixels);
   *x += orgRectPixels.x;
   *y += orgRectPixels.y;
 

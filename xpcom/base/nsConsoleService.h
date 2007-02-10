@@ -48,7 +48,7 @@
 
 #include "nsIConsoleService.h"
 
-class nsConsoleService : public nsIConsoleService
+class nsConsoleService : public nsIConsoleService_MOZILLA_1_8_BRANCH
 {
 public:
     nsConsoleService();
@@ -56,6 +56,7 @@ public:
 
     NS_DECL_ISUPPORTS
     NS_DECL_NSICONSOLESERVICE
+    NS_DECL_NSICONSOLESERVICE_MOZILLA_1_8_BRANCH
 
 private:
     ~nsConsoleService();

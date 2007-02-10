@@ -975,13 +975,41 @@ InMemoryDataSource::DeleteForwardArcsEntry(PLDHashTable* aTable, PLDHashEntryHdr
 ////////////////////////////////////////////////////////////////////////
 
 NS_IMPL_AGGREGATED(InMemoryDataSource)
-NS_INTERFACE_MAP_BEGIN_AGGREGATED(InMemoryDataSource)
-    NS_INTERFACE_MAP_ENTRY(nsIRDFDataSource)
-    NS_INTERFACE_MAP_ENTRY(nsIRDFInMemoryDataSource)
-    NS_INTERFACE_MAP_ENTRY(nsIRDFPropagatableDataSource)
-    NS_INTERFACE_MAP_ENTRY(nsIRDFPurgeableDataSource)
-    NS_INTERFACE_MAP_ENTRY(rdfIDataSource)
-NS_INTERFACE_MAP_END
+
+NS_IMETHODIMP
+InMemoryDataSource::AggregatedQueryInterface(REFNSIID aIID, void** aResult)
+{
+    NS_PRECONDITION(aResult != nsnull, "null ptr");
+    if (! aResult)
+        return NS_ERROR_NULL_POINTER;
+
+    if (aIID.Equals(NS_GET_IID(nsISupports))) {
+        *aResult = NS_STATIC_CAST(nsISupports*, &fAggregated);
+    }
+    else if (aIID.Equals(NS_GET_IID(nsIRDFDataSource))) {
+        *aResult = NS_STATIC_CAST(nsIRDFDataSource*, this);
+    }
+    else if (aIID.Equals(NS_GET_IID(nsIRDFInMemoryDataSource))) {
+        *aResult = NS_STATIC_CAST(nsIRDFInMemoryDataSource*, this);
+    }
+    else if (aIID.Equals(NS_GET_IID(nsIRDFPropagatableDataSource))) {
+        *aResult = NS_STATIC_CAST(nsIRDFPropagatableDataSource*, this);
+    }
+    else if (aIID.Equals(NS_GET_IID(nsIRDFPurgeableDataSource))) {
+        *aResult = NS_STATIC_CAST(nsIRDFPurgeableDataSource*, this);
+    }
+    else if (aIID.Equals(NS_GET_IID(rdfIDataSource))) {
+        *aResult = NS_STATIC_CAST(rdfIDataSource*, this);
+    }
+    else {
+        *aResult = nsnull;
+        return NS_NOINTERFACE;
+    }
+
+    NS_ADDREF(NS_STATIC_CAST(nsISupports*, *aResult));
+    return NS_OK;
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -1789,7 +1817,12 @@ InMemoryDataSource::GetAllResources(nsISimpleEnumerator** aResult)
     // Enumerate all of our entries into an nsISupportsArray.
     PL_DHashTableEnumerate(&mForwardArcs, ResourceEnumerator, values.get());
 
-    return NS_NewArrayEnumerator(aResult, values);
+    *aResult = new nsArrayEnumerator(values);
+    if (! *aResult)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(*aResult);
+    return NS_OK;
 }
 
 NS_IMETHODIMP

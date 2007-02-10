@@ -45,7 +45,7 @@
 #include "nsStringBundleTextOverride.h"
 #include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
-#include "nsIMutableArray.h"
+#include "nsArray.h"
 #include "nsArrayEnumerator.h"
 #include "nscore.h"
 #include "nsHashtable.h"
@@ -73,6 +73,9 @@
 #include "nsIBinaryInputStream.h"
 #include "nsIStringStream.h"
 #endif
+
+// eventQ
+#include "nsIEventQueueService.h"
 
 #include "prenv.h"
 #include "nsCRT.h"
@@ -183,12 +186,12 @@ nsStringBundle::GetStringFromName(const nsAString& aName,
   // try override first
   if (mOverrideStrings) {
     rv = mOverrideStrings->GetStringFromName(mPropertiesURL,
-                                             NS_ConvertUTF16toUTF8(aName),
+                                             NS_ConvertUCS2toUTF8(aName),
                                              aResult);
     if (NS_SUCCEEDED(rv)) return rv;
   }
   
-  rv = mProps->GetStringProperty(NS_ConvertUTF16toUTF8(aName), aResult);
+  rv = mProps->GetStringProperty(NS_ConvertUCS2toUTF8(aName), aResult);
 #ifdef DEBUG_tao_
   char *s = ToNewCString(aResult),
        *ss = ToNewCString(aName);
@@ -244,7 +247,7 @@ nsStringBundle::GetStringFromID(PRInt32 aID, PRUnichar **aResult)
 {
   nsresult rv;
   rv = LoadProperties();
-  if (NS_FAILED(rv)) return rv;
+  NS_ENSURE_SUCCESS(rv, rv);
   
   *aResult = nsnull;
   nsAutoString tmpstr;
@@ -267,7 +270,7 @@ nsStringBundle::GetStringFromName(const PRUnichar *aName, PRUnichar **aResult)
 
   nsresult rv;
   rv = LoadProperties();
-  if (NS_FAILED(rv)) return rv;
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsAutoCMonitor(this);
   *aResult = nsnull;
@@ -279,7 +282,7 @@ nsStringBundle::GetStringFromName(const PRUnichar *aName, PRUnichar **aResult)
     // it is not uncommon for apps to request a string name which may not exist
     // so be quiet about it. 
     NS_WARNING("String missing from string bundle");
-    printf("  '%s' missing from bundle %s\n", NS_ConvertUTF16toUTF8(aName).get(), mPropertiesURL.get());
+    printf("  '%s' missing from bundle %s\n", NS_ConvertUCS2toUTF8(aName).get(), mPropertiesURL.get());
 #endif
     return rv;
   }
@@ -299,8 +302,8 @@ nsStringBundle::GetCombinedEnumeration(nsIStringBundleOverride* aOverrideStrings
   
   nsresult rv;
 
-  nsCOMPtr<nsIMutableArray> resultArray =
-    do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
+  nsCOMPtr<nsIMutableArray> resultArray;
+  rv = NS_NewArray(getter_AddRefs(resultArray));
   NS_ENSURE_SUCCESS(rv, rv);
 
   // first, append the override elements
@@ -748,7 +751,7 @@ nsStringBundleService::CreateExtensibleBundle(const char* aCategory,
   return res;
 }
 
-#define GLOBAL_PROPERTIES "chrome://global/locale/global-strres.properties"
+#define GLOBAL_PROPERTIES "chrome://global/locale/xpcom.properties"
 
 nsresult
 nsStringBundleService::FormatWithBundle(nsIStringBundle* bundle, nsresult aStatus,
@@ -763,7 +766,7 @@ nsStringBundleService::FormatWithBundle(nsIStringBundle* bundle, nsresult aStatu
 
   // first try looking up the error message with the string key:
   if (NS_SUCCEEDED(rv)) {
-    rv = bundle->FormatStringFromName(NS_ConvertASCIItoUTF16(key).get(),
+    rv = bundle->FormatStringFromName(NS_ConvertASCIItoUCS2(key).get(),
                                       (const PRUnichar**)argArray, 
                                       argCount, result);
   }

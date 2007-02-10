@@ -52,6 +52,9 @@
 
 NSString* const kTabWillChangeNotifcation = @"kTabWillChangeNotifcation";
 
+// we cannot use the spinner before 10.2, so don't allow it. This is the
+// version of appkit in 10.2 (taken from the 10.3 SDK headers which we cannot use).
+const double kJaguarAppKitVersion = 663;
 // truncate menuitem title to the same width as the bookmarks menu
 const int kMenuTruncationChars = 60;
 
@@ -180,9 +183,20 @@ const int kMenuTruncationChars = 60;
   return NSDragOperationGeneric;
 }
 
+- (unsigned int)draggingUpdated:(id <NSDraggingInfo>)sender
+{
+  if (![self shouldAcceptDragFrom:[sender draggingSource]]) {
+    [self hideDragDestinationIndicator];
+    return NSDragOperationNone;
+  }
+
+  [self showDragDestinationIndicator];
+  return NSDragOperationGeneric;
+}
+
 - (void)draggingExited:(id <NSDraggingInfo>)sender
 {
-  [self hideDragDestinationIndicator];
+    [self hideDragDestinationIndicator];
 }
 
 - (BOOL)prepareForDragOperation:(id <NSDraggingInfo>)sender
@@ -205,12 +219,9 @@ const int kMenuTruncationChars = 60;
 
 // NSDraggingSource methods
 
-- (unsigned int)draggingSourceOperationMaskForLocal:(BOOL)isLocal
+- (unsigned int)draggingSourceOperationMaskForLocal:(BOOL)flag
 {
-  if (isLocal)
-    return (NSDragOperationGeneric | NSDragOperationCopy);
-
-  return (NSDragOperationGeneric | NSDragOperationCopy | NSDragOperationLink);
+	return NSDragOperationGeneric | NSDragOperationCopy;
 }
 
 // NSResponder methods
@@ -317,11 +328,15 @@ const int kMenuTruncationChars = 60;
 #if USE_PROGRESS_SPINNER
 // the progress spinner causes content to shear when scrolling because of
 // redraw problems on jaguar and panther. Removing until we can fix it. (bug 203349)
-    mProgressWheel = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect(0, 0, 16, 16)];
-    [mProgressWheel setStyle:NSProgressIndicatorSpinningStyle];
-    [mProgressWheel setUsesThreadedAnimation:YES];
-    [mProgressWheel setDisplayedWhenStopped:NO];
-    [mProgressWheel setAutoresizingMask:NSViewMaxXMargin];
+    if (NSAppKitVersionNumber >= kJaguarAppKitVersion) {
+      mProgressWheel = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect(0, 0, 16, 16)];
+      [mProgressWheel setStyle:NSProgressIndicatorSpinningStyle];
+      [mProgressWheel setUsesThreadedAnimation:YES];
+      [mProgressWheel setDisplayedWhenStopped:NO];
+      [mProgressWheel setAutoresizingMask:NSViewMaxXMargin];
+    }
+    else
+      mProgressWheel = nil;
 #endif
 
     // create close button. keep a strong ref as view goes in and out of view hierarchy

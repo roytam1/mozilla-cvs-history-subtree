@@ -235,7 +235,7 @@ void nsMacEventDispatchHandler::SetDeactivated(nsWindow *aDeactivatedWidget)
     if (mActiveWidget) {
       nsCOMPtr<nsIWidget> curWin = do_QueryInterface(NS_STATIC_CAST(nsIWidget*, mActiveWidget));
       for (;;) {
-        nsIWidget* parent = curWin->GetParent();
+        nsCOMPtr<nsIWidget> parent = dont_AddRef(curWin->GetParent());
         if (!parent)
           break;
         curWin = parent;
@@ -445,8 +445,8 @@ PRBool nsMacEventHandler::HandleMenuCommand(
 
 	// nsEvent
 	nsMenuEvent menuEvent(PR_TRUE, NS_MENU_SELECTED, focusedWidget);
-	menuEvent.refPoint.x		= aOSEvent.where.h;
-	menuEvent.refPoint.y		= aOSEvent.where.v;
+	menuEvent.point.x		= aOSEvent.where.h;
+	menuEvent.point.y		= aOSEvent.where.v;
 	menuEvent.time			= PR_IntervalNow();
 
 	// nsGUIEvent
@@ -468,8 +468,8 @@ PRBool nsMacEventHandler::HandleMenuCommand(
 		// the event is supposed to not have been handled)
 		if (focusedWidget == mEventDispatchHandler->GetActive())
 		{
-      // Hold a ref across event dispatch
-			nsCOMPtr<nsIWidget> parent = focusedWidget->GetParent();
+			nsCOMPtr<nsIWidget> grandParent;
+			nsCOMPtr<nsIWidget> parent ( dont_AddRef(focusedWidget->GetParent()) );
 			while (parent)
 			{
 				menuEvent.widget = parent;
@@ -480,7 +480,8 @@ PRBool nsMacEventHandler::HandleMenuCommand(
 				}
 				else
 				{
-					parent = parent->GetParent();
+					grandParent = dont_AddRef(parent->GetParent());
+					parent = grandParent;
 				}
 			}
 		}
@@ -499,7 +500,7 @@ nsMacEventHandler::InitializeMouseEvent(nsMouseEvent& aMouseEvent,
                                         PRUint32      aClickCount)
 {
   // nsEvent
-  aMouseEvent.refPoint   = aPoint;
+  aMouseEvent.point      = aPoint;
   aMouseEvent.time       = PR_IntervalNow();
 
   // nsInputEvent
@@ -820,12 +821,12 @@ void nsMacEventHandler::InitializeKeyEvent(nsKeyEvent& aKeyEvent,
     PRBool aConvertChar)
 {
 	//
-	// initialize the basic message parts
+	// initalize the basic message parts
 	//
 	aKeyEvent.time				= PR_IntervalNow();
 	
 	//
-	// initialize the GUI event parts
+	// initalize the GUI event parts
 	//
   aKeyEvent.widget = aFocusedWidget;
 	aKeyEvent.nativeMsg		= (void*)&aOSEvent;
@@ -1049,9 +1050,7 @@ ConvertKeyEventToContextMenuEvent(const nsKeyEvent* inKeyEvent, nsMouseEvent* ou
   *(nsInputEvent*)outCMEvent = *(nsInputEvent*)inKeyEvent;
   
   outCMEvent->eventStructType = NS_MOUSE_EVENT;
-  outCMEvent->message = NS_CONTEXTMENU;
-  outCMEvent->context = nsMouseEvent::eContextMenuKey;
-  outCMEvent->button = nsMouseEvent::eRightButton;
+  outCMEvent->message = NS_CONTEXTMENU_KEY;
   outCMEvent->isShift = outCMEvent->isControl = outCMEvent->isAlt = outCMEvent->isMeta = PR_FALSE;
   
   outCMEvent->clickCount = 0;
@@ -1393,8 +1392,8 @@ nsMacEventHandler::ScrollAxis(nsMouseScrollEvent::nsMouseScrollFlags aAxis,
   widgetToScroll->ConvertToDeviceCoordinates(widgetOrigin.x, widgetOrigin.y);
   mouseLocRelativeToWidget.MoveBy(-widgetOrigin.x, -widgetOrigin.y);
 
-  scrollEvent.refPoint.x = mouseLocRelativeToWidget.x;
-  scrollEvent.refPoint.y = mouseLocRelativeToWidget.y;
+  scrollEvent.point.x = mouseLocRelativeToWidget.x;
+  scrollEvent.point.y = mouseLocRelativeToWidget.y;
   scrollEvent.time = PR_IntervalNow();
 
   // Translate OS event modifiers into Gecko event modifiers
@@ -1502,20 +1501,19 @@ PRBool nsMacEventHandler::HandleMouseDownEvent(EventRecord&	aOSEvent)
 			if ( ignoreClickInContent )
 				break;
 						
-			nsMouseEvent mouseEvent(PR_TRUE, NS_MOUSE_BUTTON_DOWN, nsnull,
-                              nsMouseEvent::eReal);
-			mouseEvent.button = nsMouseEvent::eLeftButton;
+			nsMouseEvent mouseEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
+			PRUint32 mouseButton = NS_MOUSE_LEFT_BUTTON_DOWN;
 			if ( aOSEvent.modifiers & controlKey )
-			  mouseEvent.button = nsMouseEvent::eRightButton;
+			  mouseButton = NS_MOUSE_RIGHT_BUTTON_DOWN;
 
 			// We've hacked our events to include the button.
 			// Normally message is undefined in mouse click/drag events.
 			if ( aOSEvent.message == kEventMouseButtonSecondary )
-			  mouseEvent.button = nsMouseEvent::eRightButton;
+			  mouseButton = NS_MOUSE_RIGHT_BUTTON_DOWN;
 			if ( aOSEvent.message == kEventMouseButtonTertiary )
-			  mouseEvent.button = nsMouseEvent::eMiddleButton;
+			  mouseButton = NS_MOUSE_MIDDLE_BUTTON_DOWN;
 
-			ConvertOSEventToMouseEvent(aOSEvent, mouseEvent);
+			ConvertOSEventToMouseEvent(aOSEvent, mouseEvent, mouseButton);
 
 			nsCOMPtr<nsIWidget> kungFuDeathGrip ( mouseEvent.widget );            // ensure widget doesn't go away
 			nsWindow* widgetHit = NS_STATIC_CAST(nsWindow*, mouseEvent.widget);   //   while we're processing event
@@ -1523,9 +1521,9 @@ PRBool nsMacEventHandler::HandleMouseDownEvent(EventRecord&	aOSEvent)
 			{        
 				// set the activation and focus on the widget hit, if it accepts it
 				{
-					nsMouseEvent mouseActivateEvent(PR_TRUE, NS_MOUSE_ACTIVATE, nsnull,
+					nsMouseEvent mouseActivateEvent(PR_TRUE, 0, nsnull,
                                           nsMouseEvent::eReal);
-          ConvertOSEventToMouseEvent(aOSEvent, mouseActivateEvent);
+          ConvertOSEventToMouseEvent(aOSEvent, mouseActivateEvent, NS_MOUSE_ACTIVATE);
 					widgetHit->DispatchMouseEvent(mouseActivateEvent);
 				}
 
@@ -1534,10 +1532,10 @@ PRBool nsMacEventHandler::HandleMouseDownEvent(EventRecord&	aOSEvent)
 				
 				// if we're a control-click, send in an additional NS_CONTEXTMENU event
 				// after the mouse down.
-				if (mouseEvent.button == nsMouseEvent::eRightButton) {
-    			nsMouseEvent contextMenuEvent(PR_TRUE, NS_CONTEXTMENU, nsnull,
+				if ( mouseButton == NS_MOUSE_RIGHT_BUTTON_DOWN ) {
+    			nsMouseEvent contextMenuEvent(PR_TRUE, 0, nsnull,
                                         nsMouseEvent::eReal);
-    			ConvertOSEventToMouseEvent(aOSEvent, contextMenuEvent);
+    			ConvertOSEventToMouseEvent(aOSEvent, contextMenuEvent, NS_CONTEXTMENU);
     			contextMenuEvent.isControl = PR_FALSE;    			
 					widgetHit->DispatchMouseEvent(contextMenuEvent);
         } 
@@ -1584,18 +1582,17 @@ PRBool nsMacEventHandler::HandleMouseUpEvent(
 {
 	PRBool retVal = PR_FALSE;
 
-	nsMouseEvent mouseEvent(PR_TRUE, NS_MOUSE_BUTTON_UP, nsnull,
-                          nsMouseEvent::eReal);
-	mouseEvent.button = nsMouseEvent::eLeftButton;
+	nsMouseEvent mouseEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
+	PRUint32 mouseButton = NS_MOUSE_LEFT_BUTTON_UP;
 
 	// We've hacked our events to include the button.
 	// Normally message is undefined in mouse click/drag events.
 	if ( aOSEvent.message == kEventMouseButtonSecondary )
-		mouseEvent.button = nsMouseEvent::eRightButton;
+		mouseButton = NS_MOUSE_RIGHT_BUTTON_UP;
 	if ( aOSEvent.message == kEventMouseButtonTertiary )
-		mouseEvent.button = nsMouseEvent::eMiddleButton;
+		mouseButton = NS_MOUSE_MIDDLE_BUTTON_UP;
 
-	ConvertOSEventToMouseEvent(aOSEvent, mouseEvent);
+	ConvertOSEventToMouseEvent(aOSEvent, mouseEvent, mouseButton);
 
 	nsWindow* widgetReleased = (nsWindow*)mouseEvent.widget;
 	nsWindow* widgetHit = mEventDispatchHandler->GetWidgetHit();
@@ -1639,8 +1636,8 @@ PRBool nsMacEventHandler::HandleMouseMoveEvent( EventRecord& aOSEvent )
 	if (!::IsWindowActive(wind) && windowType != eWindowType_popup)
 		return retVal;
 
-	nsMouseEvent mouseEvent(PR_TRUE, NS_MOUSE_MOVE, nsnull, nsMouseEvent::eReal);
-	ConvertOSEventToMouseEvent(aOSEvent, mouseEvent);
+	nsMouseEvent mouseEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
+	ConvertOSEventToMouseEvent(aOSEvent, mouseEvent, NS_MOUSE_MOVE);
 	if (lastWidgetHit)
 	{
 		Point macPoint = aOSEvent.where;
@@ -1667,7 +1664,7 @@ PRBool nsMacEventHandler::HandleMouseMoveEvent( EventRecord& aOSEvent )
 			if (lastWidgetPointed)
 			{
         // We need to convert the coords to be relative to lastWidgetPointed.
-        nsPoint widgetHitPoint = mouseEvent.refPoint;
+        nsPoint widgetHitPoint = mouseEvent.point;
 
         Point macPoint = aOSEvent.where;
         nsGraphicsUtils::SafeSetPortWindowPort(wind);
@@ -1685,12 +1682,12 @@ PRBool nsMacEventHandler::HandleMouseMoveEvent( EventRecord& aOSEvent )
           lastWidgetPointed->LocalToWindowCoordinate(widgetOrigin);
           lastWidgetHitPoint.MoveBy(-widgetOrigin.x, -widgetOrigin.y);
 				mouseEvent.widget = lastWidgetPointed;
-				mouseEvent.refPoint = lastWidgetHitPoint;
+				mouseEvent.point = lastWidgetHitPoint;
 				mouseEvent.message = NS_MOUSE_EXIT;
 				lastWidgetPointed->DispatchMouseEvent(mouseEvent);
 				retVal = PR_TRUE;
 
-				mouseEvent.refPoint = widgetHitPoint;
+				mouseEvent.point = widgetHitPoint;
 			}
 
       mEventDispatchHandler->SetWidgetPointed(widgetPointed);
@@ -1728,16 +1725,21 @@ PRBool nsMacEventHandler::HandleMouseMoveEvent( EventRecord& aOSEvent )
 //-------------------------------------------------------------------------
 void nsMacEventHandler::ConvertOSEventToMouseEvent(
 														EventRecord&		aOSEvent,
-														nsMouseEvent&		aMouseEvent)
+														nsMouseEvent&		aMouseEvent,
+														PRUint32				aMessage)
 {
 	// we're going to time double-clicks from mouse *up* to next mouse *down*
-	if (aMouseEvent.message == NS_MOUSE_BUTTON_UP)
+	if (aMessage == NS_MOUSE_LEFT_BUTTON_UP  ||
+      aMessage == NS_MOUSE_RIGHT_BUTTON_UP ||
+      aMessage == NS_MOUSE_MIDDLE_BUTTON_UP)
 	{
 		// remember when this happened for the next mouse down
 		mLastMouseUpWhen = aOSEvent.when;
 		mLastMouseUpWhere = aOSEvent.where;
 	}
-	else if (aMouseEvent.message == NS_MOUSE_BUTTON_DOWN)
+	else if (aMessage == NS_MOUSE_LEFT_BUTTON_DOWN  ||
+           aMessage == NS_MOUSE_RIGHT_BUTTON_DOWN ||
+           aMessage == NS_MOUSE_MIDDLE_BUTTON_DOWN)
 	{
 		// now look to see if we want to convert this to a double- or triple-click
 		const short kDoubleClickMoveThreshold	= 5;
@@ -1749,7 +1751,7 @@ void nsMacEventHandler::ConvertOSEventToMouseEvent(
 			mClickCount ++;
 			
 //			if (mClickCount == 2)
-//				aMessage = NS_MOUSE_DOUBLECLICK;
+//				aMessage = NS_MOUSE_LEFT_DOUBLECLICK;
 		}
 		else
 		{
@@ -1778,8 +1780,7 @@ void nsMacEventHandler::ConvertOSEventToMouseEvent(
         WindowRef   lastWind = reinterpret_cast<WindowRef>(lastWidgetHit->GetNativeData(NS_NATIVE_DISPLAY));
         PRBool      eventInSameWindowAsLastEvent = (windowThatHasEvent == lastWind);
         if ( eventInSameWindowAsLastEvent || !topLevelIsAPopup ) {	  
-            if (::StillDown() || (aMouseEvent.message == NS_MOUSE_BUTTON_UP && 
-                aMouseEvent.button == nsMouseEvent::eLeftButton))
+            if (::StillDown() || aMessage == NS_MOUSE_LEFT_BUTTON_UP)
             {
                 widgetHit = lastWidgetHit;
                 eventTargetWindow = lastWind;   // make sure we use the correct window to fix the coords
@@ -1828,14 +1829,16 @@ void nsMacEventHandler::ConvertOSEventToMouseEvent(
 
     InitializeMouseEvent(aMouseEvent, widgetHitPoint, aOSEvent.modifiers,
                          mClickCount);
+
+    // nsEvent
+    aMouseEvent.message     = aMessage;
+
     // nsGUIEvent
     aMouseEvent.widget      = widgetHit;
     aMouseEvent.nativeMsg   = (void*)&aOSEvent;
 
     // nsMouseEvent
     aMouseEvent.acceptActivation = PR_TRUE;
-    if (aMouseEvent.message == NS_CONTEXTMENU)
-      aMouseEvent.button = nsMouseEvent::eRightButton;
 }
 
 //-------------------------------------------------------------------------

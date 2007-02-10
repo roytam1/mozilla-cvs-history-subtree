@@ -66,6 +66,9 @@ public:
 
   nsProperties(nsISupports *aOuter) { NS_INIT_AGGREGATED(aOuter); }
 
+  static NS_METHOD
+  Create(nsISupports *aOuter, REFNSIID aIID, void **aResult);
+
 private:
   ~nsProperties() { }
 };

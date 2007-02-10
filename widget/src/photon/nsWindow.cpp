@@ -55,8 +55,7 @@
 #include "nsGfxCIID.h"
 #include "nsIMenuBar.h"
 #include "nsToolkit.h"
-#include "nsIPrefBranch.h"
-#include "nsIPrefService.h"
+#include "nsIPref.h"
 
 #include "nsClipboard.h"
 #include "nsIRollupListener.h"
@@ -187,7 +186,7 @@ NS_IMETHODIMP nsWindow::CaptureRollupEvents( nsIRollupListener * aListener, PRBo
 		/* Menus+submenus have the same parent. If the parent has mLastMenu set and realized, then use its region as "infront" */
 		/* If not, then this widget ( mWidget ) becomes the mLastMenu and gets recorded into the parent */
 		/* Different windows have different mLastMenu's */
-		if( mWindowType == eWindowType_popup && !( PtWidgetFlags( gMenuRegion ) & Pt_REALIZED ) && mParent ) {
+		if( mWindowType == eWindowType_popup && !( PtWidgetFlags( gMenuRegion ) & Pt_REALIZED ) ) {
 
 			PtWidget_t *pw = ((nsWindow*)mParent)->mLastMenu;
 
@@ -607,8 +606,8 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 		
 		sevent.windowSize = new nsRect (0, 0, aWidth, aHeight); 	
 		
-		sevent.refPoint.x = 0;
-		sevent.refPoint.y = 0;
+		sevent.point.x = 0;
+		sevent.point.y = 0;
 		sevent.mWinWidth = aWidth;
 		sevent.mWinHeight = aHeight;
 		// XXX fix this
@@ -639,8 +638,8 @@ int nsWindow::WindowWMHandler( PtWidget_t *widget, void *data, PtCallbackInfo_t 
 			  event.widget  = win;
 			  
 			  event.time = 0;
-			  event.refPoint.x = 0;
-			  event.refPoint.y = 0;
+			  event.point.x = 0;
+			  event.point.y = 0;
 			  
 			  win->DispatchEvent(&event, status);
 			  
@@ -687,7 +686,7 @@ void nsWindow::RawDrawFunc( PtWidget_t * pWidget, PhTile_t * damage )
 		PtWidgetOffset(pWidget, &offset);
 		/* Build a List of Tiles that might be in front of me.... */
 		PhTile_t *new_damage, *clip_tiles, *intersect;
-		/* Intersect the Damage tile list w/ the clipped out list and see what's left! */
+		/* Intersect the Damage tile list w/ the clipped out list and see whats left! */
 		new_damage = PhRectsToTiles(&damage->rect, 1);
 		PhDeTranslateTiles(new_damage, &offset);
 		clip_tiles = GetWindowClipping( pWidget );
@@ -718,8 +717,8 @@ void nsWindow::RawDrawFunc( PtWidget_t * pWidget, PhTile_t * damage )
 
 			/* Re-Setup Paint Event */
 			pWin->InitEvent(pev, NS_PAINT);
-			pev.refPoint.x = nsDmg.x;
-			pev.refPoint.y = nsDmg.y;
+			pev.point.x = nsDmg.x;
+			pev.point.y = nsDmg.y;
 			pev.rect = &nsDmg;
 			pev.region = nsnull;
 
@@ -791,19 +790,21 @@ int nsWindow::ResizeHandler( PtWidget_t *widget, void *data, PtCallbackInfo_t *c
 }
 
 
+static NS_DEFINE_CID(kWindowMediatorCID, NS_WINDOWMEDIATOR_CID);
+
 /* catch an Ph_EV_INFO event when the graphics mode has changed */
 int nsWindow::EvInfo( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo ) {
 
 	if( cbinfo->event && cbinfo->event->type == Ph_EV_INFO && cbinfo->event->subtype == Ph_OFFSCREEN_INVALID ) {
 		nsresult rv;
 		
-		nsCOMPtr<nsIPrefBranch> pPrefs = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
+		nsCOMPtr<nsIPref> pPrefs = do_GetService(NS_PREF_CONTRACTID, &rv);
 		if (NS_SUCCEEDED(rv)) {
 			 PRBool displayInternalChange = PR_FALSE;
 			 pPrefs->GetBoolPref("browser.display.internaluse.graphics_changed", &displayInternalChange);
 			 pPrefs->SetBoolPref("browser.display.internaluse.graphics_changed", !displayInternalChange);
-		}
-		nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(NS_WINDOWMEDIATOR_CONTRACTID));
+		 }
+		nsCOMPtr<nsIWindowMediator> windowMediator(do_GetService(kWindowMediatorCID));
 		NS_ENSURE_TRUE(windowMediator, NS_ERROR_FAILURE);
 
 		nsCOMPtr<nsISimpleEnumerator> windowEnumerator;

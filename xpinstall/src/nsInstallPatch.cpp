@@ -88,6 +88,8 @@ static int32   gdiff_validateFile( pDIFFDATA dd, int file );
 static PRBool  su_unbind(char* oldsrc, char* newsrc);
 #endif
 
+MOZ_DECL_CTOR_COUNTER(nsInstallPatch)
+
 nsInstallPatch::nsInstallPatch( nsInstall* inInstall,
                                 const nsString& inVRName,
                                 const nsString& inVInfo,
@@ -100,7 +102,7 @@ nsInstallPatch::nsInstallPatch( nsInstall* inInstall,
 
     char tempTargetFile[MAXREGPATHLEN];
 
-    PRInt32 err = VR_GetPath( NS_CONST_CAST(char *, NS_ConvertUTF16toUTF8(inVRName).get()),
+    PRInt32 err = VR_GetPath( NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(inVRName).get()),
                               sizeof(tempTargetFile), tempTargetFile );
     
     if (err != REGERR_OK)
@@ -325,12 +327,12 @@ PRInt32 nsInstallPatch::Complete()
             nsCAutoString tempPath;
             mTargetFile->GetNativePath(tempPath);
 
-            // DO NOT propagate version registry errors, it will abort 
+            // DO NOT propogate version registry errors, it will abort 
             // FinalizeInstall() leaving things hosed. These piddly errors
             // aren't worth that.
-            VR_Install( NS_CONST_CAST(char *, NS_ConvertUTF16toUTF8(*mRegistryName).get()),
+            VR_Install( NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(*mRegistryName).get()),
                         NS_CONST_CAST(char *, tempPath.get()),
-                        NS_CONST_CAST(char *, NS_ConvertUTF16toUTF8(tempVersionString).get()),
+                        NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(tempVersionString).get()),
                         PR_FALSE );
         }
         else
@@ -409,6 +411,7 @@ nsInstallPatch::NativePatch(nsIFile *sourceFile, nsIFile *patchFile, nsIFile **n
   nsresult rv;
   DIFFDATA	  *dd;
 	PRInt32		  status		   = GDIFF_ERR_MEM;
+	char 		    *tmpurl		   = NULL;
 	//nsFileSpec  *outFileSpec = new nsFileSpec; 
   //nsFileSpec  *tempSrcFile = new nsFileSpec;   // TODO: do you need to free?
   nsCOMPtr<nsIFile> outFileSpec;
@@ -659,6 +662,12 @@ cleanup:
         PR_FREEIF( dd->oldChecksum );
         PR_FREEIF( dd->newChecksum );
         PR_DELETE(dd);
+    }
+
+    if ( tmpurl != NULL ) {
+        //XP_FileRemove( tmpurl, xpURL );
+        tmpurl = NULL;
+        PR_DELETE( tmpurl );
     }
 
     if (tempSrcFile)

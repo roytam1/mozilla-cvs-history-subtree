@@ -131,55 +131,24 @@ nsProfileMigrator::GetDefaultMailMigratorKey(nsACString& aKey, nsCOMPtr<nsIMailP
 
   // if we are being forced to migrate to a particular migration type, then create an instance of that migrator
   // and return it.
-  NS_NAMED_LITERAL_CSTRING(migratorPrefix,
-                           NS_MAILPROFILEMIGRATOR_CONTRACTID_PREFIX);
-  nsCAutoString migratorID;
   if (forceMigrationType.get())
   {
     PRBool exists = PR_FALSE;
-    migratorID = migratorPrefix;
+    nsCAutoString migratorID (NS_MAILPROFILEMIGRATOR_CONTRACTID_PREFIX);
     migratorID.Append(forceMigrationType);
     mailMigrator = do_CreateInstance(migratorID.get());
-    if (!mailMigrator)
-      return NS_ERROR_NOT_AVAILABLE;
-
-    mailMigrator->GetSourceExists(&exists);
-    /* trying to force migration on a source which doesn't
-     * have any profiles.
-     */
-    if (!exists)
-      return NS_ERROR_NOT_AVAILABLE;
-    aKey = forceMigrationType;
-    return NS_OK;
-  }
-
-  #define MAX_SOURCE_LENGTH 10
-  const char sources[][MAX_SOURCE_LENGTH] = {
-    "seamonkey",
-    "oexpress",
-    "outlook",
-    "dogbert",
-    "eudora",
-    ""
-  };
-  for (PRUint32 i = 0; sources[i][0]; ++i)
-  {
-    migratorID = migratorPrefix;
-    migratorID.Append(sources[i]);
-    mailMigrator = do_CreateInstance(migratorID.get());
-    if (!mailMigrator)
-      continue;
-
-    PRBool exists = PR_FALSE;
-    mailMigrator->GetSourceExists(&exists);
-    if (exists)
+  
+    if (mailMigrator)
     {
-      mailMigrator = nsnull;
-      return NS_OK;
+      mailMigrator->GetSourceExists(&exists);
+      if (exists) 
+        aKey = forceMigrationType;
+      else
+        rv = NS_ERROR_FAILURE; // trying to force migration on a source which does not have any profiles
     }
   }
  
-  return NS_ERROR_NOT_AVAILABLE;
+  return rv;
 }
 
 NS_IMETHODIMP
@@ -223,12 +192,6 @@ nsProfileMigrator::ImportRegistryProfiles(const nsACString& aAppName)
   NS_ENSURE_SUCCESS(rv, PR_FALSE);
   regFile->AppendNative(aAppName);
   regFile->AppendNative(NS_LITERAL_CSTRING("registry.dat"));
-#elif defined(XP_BEOS)
-  rv = dirService->Get(NS_BEOS_SETTINGS_DIR, NS_GET_IID(nsILocalFile),
-                       getter_AddRefs(regFile));
-  NS_ENSURE_SUCCESS(rv, PR_FALSE);
-  regFile->AppendNative(aAppName);
-  regFile->AppendNative(NS_LITERAL_CSTRING("appreg"));
 #else
   rv = dirService->Get(NS_UNIX_HOME_DIR, NS_GET_IID(nsILocalFile),
                        getter_AddRefs(regFile));

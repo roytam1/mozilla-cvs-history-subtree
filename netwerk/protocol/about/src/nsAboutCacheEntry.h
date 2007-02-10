@@ -54,11 +54,16 @@
 class nsICacheEntryDescriptor;
 
 class nsAboutCacheEntry : public nsIAboutModule
+                        , public nsIChannel
+                        , public nsICacheListener
                         , public nsICacheMetaDataVisitor
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIABOUTMODULE
+    NS_DECL_NSIREQUEST
+    NS_DECL_NSICHANNEL
+    NS_DECL_NSICACHELISTENER
     NS_DECL_NSICACHEMETADATAVISITOR
 
     nsAboutCacheEntry()
@@ -68,14 +73,17 @@ public:
     virtual ~nsAboutCacheEntry() {}
 
 private:
-    nsresult GetContentStream(nsIURI *, nsIInputStream **);
-    nsresult OpenCacheEntry(nsIURI *, nsICacheEntryDescriptor **);
     nsresult WriteCacheEntryDescription(nsIOutputStream *, nsICacheEntryDescriptor *);
-    nsresult WriteCacheEntryUnavailable(nsIOutputStream *);
-    nsresult ParseURI(nsIURI *, nsCString &, PRBool &, nsCString &);
+    nsresult WriteCacheEntryUnavailable(nsIOutputStream *, nsresult);
+    nsresult ParseURI(nsCString &, PRBool &, nsCString &);
 
 private:
-    nsCString *mBuffer;
+    nsCOMPtr<nsIURI>                mURI;
+    nsCOMPtr<nsIInputStreamChannel> mStreamChannel;
+    nsCOMPtr<nsIStreamListener>     mListener;
+    nsCOMPtr<nsISupports>           mListenerContext;
+    nsCOMPtr<nsICacheSession>       mCacheSession;
+    nsCString *                     mBuffer;
 };
 
 #define NS_ABOUT_CACHE_ENTRY_MODULE_CID              \

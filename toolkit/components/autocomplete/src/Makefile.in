@@ -44,11 +44,8 @@ VPATH=@srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE = autocomplete
-MODULE_NAME = tkAutoCompleteModule
-LIBRARY_NAME = tkautocomplete
-SHORT_LIBNAME = tkautoc
-IS_COMPONENT = 1
-EXPORT_LIBRARY = 1
+LIBRARY_NAME = autocomplete_s
+FORCE_STATIC_LIB = 1
 LIBXUL_LIBRARY = 1
 
 REQUIRES =	xpcom \
@@ -56,7 +53,6 @@ REQUIRES =	xpcom \
 		dom \
 		layout \
 		unicharutil \
-		toolkitcomps \
 		widget \
 		content \
 		view \
@@ -72,15 +68,6 @@ CPPSRCS = nsAutoCompleteController.cpp \
 ifdef MOZ_MORK
 REQUIRES += mork
 CPPSRCS += nsAutoCompleteMdbResult.cpp
-endif
-
-EXTRA_DSO_LDOPTS += \
-	$(MOZ_UNICHARUTIL_LIBS) \
-	$(MOZ_COMPONENT_LIBS) \
-	$(NULL)
-
-ifdef MOZ_MORKREADER
-EXTRA_DSO_LDOPTS += $(DEPTH)/db/morkreader/$(LIB_PREFIX)morkreader_s.$(LIB_SUFFIX)
 endif
 
 include $(topsrcdir)/config/rules.mk

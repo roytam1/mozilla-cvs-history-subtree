@@ -47,15 +47,15 @@
 // for PR_LOGGING
 #include "prlog.h"
 
+#include "nsString.h"
 #include "nsIContentPolicy.h"
+#include "nsIMemory.h"
 #include "nsIServiceManager.h"
 #include "nsIContent.h"
 
 //XXXtw sadly, this makes consumers of nsContentPolicyUtils depend on widget
 #include "nsIDocument.h"
-#include "nsPIDOMWindow.h"
-
-class nsACString;
+#include "nsIScriptGlobalObject.h"
 
 #define NS_CONTENTPOLICY_CONTRACTID   "@mozilla.org/layout/content-policy;1"
 #define NS_CONTENTPOLICY_CATEGORY "content-policy"
@@ -141,28 +141,17 @@ NS_CP_ContentTypeName(PRUint32 contentType)
 
 /* Passes on parameters from its "caller"'s context. */
 #define CHECK_CONTENT_POLICY(action)                                          \
-  PR_BEGIN_MACRO                                                              \
     nsCOMPtr<nsIContentPolicy> policy =                                       \
          do_GetService(NS_CONTENTPOLICY_CONTRACTID);                          \
     if (!policy)                                                              \
         return NS_ERROR_FAILURE;                                              \
                                                                               \
     return policy-> action (contentType, contentLocation, requestOrigin,      \
-                            context, mimeType, extra, decision);              \
-  PR_END_MACRO
-
-/* Passes on parameters from its "caller"'s context. */
-#define CHECK_CONTENT_POLICY_WITH_SERVICE(action, _policy)                    \
-  PR_BEGIN_MACRO                                                              \
-    return _policy-> action (contentType, contentLocation, requestOrigin,     \
-                             context, mimeType, extra, decision);             \
-  PR_END_MACRO
+                            context, mimeType, extra, decision);
 
 /**
  * Alias for calling ShouldLoad on the content policy service.
- * Parameters are the same as nsIContentPolicy::shouldLoad, except for
- * the last parameter, which can be used to pass in a pointer to the
- * service if the caller already has one.
+ * Parameters are the same as nsIContentPolicy::shouldLoad.
  */
 inline nsresult
 NS_CheckContentLoadPolicy(PRUint32          contentType,
@@ -171,12 +160,8 @@ NS_CheckContentLoadPolicy(PRUint32          contentType,
                           nsISupports      *context,
                           const nsACString &mimeType,
                           nsISupports      *extra,
-                          PRInt16          *decision,
-                          nsIContentPolicy *policyService = nsnull)
+                          PRInt16          *decision)
 {
-    if (policyService) {
-        CHECK_CONTENT_POLICY_WITH_SERVICE(ShouldLoad, policyService);
-    }
     CHECK_CONTENT_POLICY(ShouldLoad);
 }
 
@@ -191,17 +176,12 @@ NS_CheckContentProcessPolicy(PRUint32          contentType,
                              nsISupports      *context,
                              const nsACString &mimeType,
                              nsISupports      *extra,
-                             PRInt16          *decision,
-                             nsIContentPolicy *policyService = nsnull)
+                             PRInt16          *decision)
 {
-    if (policyService) {
-        CHECK_CONTENT_POLICY_WITH_SERVICE(ShouldProcess, policyService);
-    }
     CHECK_CONTENT_POLICY(ShouldProcess);
 }
 
 #undef CHECK_CONTENT_POLICY
-#undef CHECK_CONTENT_POLICY_WITH_SERVICE
 
 /**
  * Helper function to get an nsIDocShell given a context.
@@ -214,16 +194,16 @@ NS_CheckContentProcessPolicy(PRUint32          contentType,
  * @return a WEAK pointer to the docshell, or nsnull if it could
  *     not be obtained
  */
-inline nsIDocShell*
+static nsIDocShell*
 NS_CP_GetDocShellFromContext(nsISupports *aContext)
 {
     if (!aContext) {
         return nsnull;
     }
 
-    nsCOMPtr<nsPIDOMWindow> window = do_QueryInterface(aContext);
+    nsCOMPtr<nsIScriptGlobalObject> scriptGlobal = do_QueryInterface(aContext);
 
-    if (!window) {
+    if (!scriptGlobal) {
         // our context might be a document (which also QIs to nsIDOMNode), so
         // try that first
         nsCOMPtr<nsIDocument> doc = do_QueryInterface(aContext);
@@ -237,15 +217,15 @@ NS_CP_GetDocShellFromContext(nsISupports *aContext)
         }
 
         if (doc) {
-            window = doc->GetWindow();
+            scriptGlobal = doc->GetScriptGlobalObject();
         }
     }
 
-    if (!window) {
+    if (!scriptGlobal) {
         return nsnull;
     }
 
-    return window->GetDocShell();
+    return scriptGlobal->GetDocShell();
 }
 
 #endif /* __nsContentPolicyUtils_h__ */

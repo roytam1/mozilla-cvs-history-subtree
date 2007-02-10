@@ -516,32 +516,6 @@ PRBool test_appendint64()
     return PR_TRUE;
   }
 
-PRBool test_appendfloat()
-  {
-    nsCString str;
-    double bigdouble = 11223344556.66;
-    static const char double_expected[] = "11223344556.66";
-    static const char float_expected[] = "0.01";
-
-    // AppendFloat is used to append doubles, therefore the precision must be
-    // large enough (see bug 327719)
-    str.AppendFloat( bigdouble );
-    if (!str.Equals(double_expected)) {
-      fprintf(stderr, "Error appending a big double: Got %s\n", str.get());
-      return PR_FALSE;
-    }
-    
-    str.Truncate();
-    // AppendFloat is used to append floats (bug 327719 #27)
-    str.AppendFloat( 0.1f * 0.1f );
-    if (!str.Equals(float_expected)) {
-      fprintf(stderr, "Error appending a float: Got %s\n", str.get());
-      return PR_FALSE;
-    }
-
-    return PR_TRUE;
-  }
-
 PRBool test_findcharinset()
   {
     nsCString buf("hello, how are you?");
@@ -639,68 +613,6 @@ PRBool test_stringbuffer()
     return rv;
   }
 
-PRBool test_voided()
-  {
-    const char kData[] = "hello world";
-
-    nsXPIDLCString str;
-    if (str)
-      return PR_FALSE;
-    if (!str.IsVoid())
-      return PR_FALSE;
-    if (!str.IsEmpty())
-      return PR_FALSE;
-
-    str.Assign(kData);
-    if (strcmp(str, kData) != 0)
-      return PR_FALSE;
-
-    str.SetIsVoid(PR_TRUE);
-    if (str)
-      return PR_FALSE;
-    if (!str.IsVoid())
-      return PR_FALSE;
-    if (!str.IsEmpty())
-      return PR_FALSE;
-
-    str.SetIsVoid(PR_FALSE);
-    if (strcmp(str, "") != 0)
-      return PR_FALSE;
-
-    return PR_TRUE;
-  }
-
-PRBool test_voided_autostr()
-  {
-    const char kData[] = "hello world";
-
-    nsCAutoString str;
-    if (str.IsVoid())
-      return PR_FALSE;
-    if (!str.IsEmpty())
-      return PR_FALSE;
-
-    str.Assign(kData);
-    if (strcmp(str.get(), kData) != 0)
-      return PR_FALSE;
-
-    str.SetIsVoid(PR_TRUE);
-    if (!str.IsVoid())
-      return PR_FALSE;
-    if (!str.IsEmpty())
-      return PR_FALSE;
-
-    str.Assign(kData);
-    if (str.IsVoid())
-      return PR_FALSE;
-    if (str.IsEmpty())
-      return PR_FALSE;
-    if (strcmp(str.get(), kData) != 0)
-      return PR_FALSE;
-
-    return PR_TRUE;
-  }
-
 //----
 
 typedef PRBool (*TestFunc)();
@@ -736,12 +648,9 @@ tests[] =
     { "test_set_length", test_set_length },
     { "test_substring", test_substring },
     { "test_appendint64", test_appendint64 },
-    { "test_appendfloat", test_appendfloat },
     { "test_findcharinset", test_findcharinset },
     { "test_rfindcharinset", test_rfindcharinset },
     { "test_stringbuffer", test_stringbuffer },
-    { "test_voided", test_voided },
-    { "test_voided_autostr", test_voided_autostr },
     { nsnull, nsnull }
   };
 

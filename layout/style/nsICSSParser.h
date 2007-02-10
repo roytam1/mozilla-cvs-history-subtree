@@ -34,17 +34,13 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* parsing of CSS stylesheets, based on a token stream from the CSS scanner */
-
-#ifndef nsICSSParser_h___
-#define nsICSSParser_h___
+#ifndef nsCSS1Parser_h___
+#define nsCSS1Parser_h___
 
 #include "nsISupports.h"
 #include "nsAString.h"
 #include "nsCSSProperty.h"
 #include "nsColor.h"
-#include "nsCOMArray.h"
 
 class nsICSSStyleRule;
 class nsICSSStyleSheet;
@@ -53,11 +49,12 @@ class nsIURI;
 class nsCSSDeclaration;
 class nsICSSLoader;
 class nsICSSRule;
+class nsISupportsArray;
 class nsMediaList;
 
 #define NS_ICSS_PARSER_IID    \
-{ 0x2cb34728, 0x0f17, 0x4753, \
-  {0x8e, 0xad, 0xec, 0x73, 0xe5, 0x69, 0xcd, 0xcd} }
+{ 0x94d1d921, 0xd6f6, 0x435f, \
+  {0xa5, 0xe8, 0x85, 0x3f, 0x6e, 0x34, 0x57, 0xf6} }
 
 // Rule processing function
 typedef void (*PR_CALLBACK RuleAppendFunc) (nsICSSRule* aRule, void* aData);
@@ -65,7 +62,7 @@ typedef void (*PR_CALLBACK RuleAppendFunc) (nsICSSRule* aRule, void* aData);
 // Interface to the css parser.
 class nsICSSParser : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICSS_PARSER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICSS_PARSER_IID)
 
   // Set a style sheet for the parser to fill in. The style sheet must
   // implement the nsICSSStyleSheet interface
@@ -85,15 +82,10 @@ public:
   // Set loader to use for child sheets
   NS_IMETHOD SetChildLoader(nsICSSLoader* aChildLoader) = 0;
 
-  /**
-   * @param aAllowUnsafeRules see aEnableUnsafeRules in
-   * nsICSSLoader::LoadSheetSync
-   */
   NS_IMETHOD Parse(nsIUnicharInputStream* aInput,
                    nsIURI*                aSheetURL,
                    nsIURI*                aBaseURI,
                    PRUint32               aLineNumber,
-                   PRBool                 aAllowUnsafeRules,
                    nsICSSStyleSheet*&     aResult) = 0;
 
   // Parse HTML style attribute or its equivalent in other markup
@@ -112,10 +104,10 @@ public:
                                        PRBool*                  aChanged,
                                        PRBool                   aClearOldDecl) = 0;
 
-  NS_IMETHOD ParseRule(const nsAString&        aRule,
-                       nsIURI*                 aSheetURL,
-                       nsIURI*                 aBaseURL,
-                       nsCOMArray<nsICSSRule>& aResult) = 0;
+  NS_IMETHOD ParseRule(const nsAString&   aRule,
+                       nsIURI*            aSheetURL,
+                       nsIURI*            aBaseURL,
+                       nsISupportsArray** aResult) = 0;
 
   NS_IMETHOD ParseProperty(const nsCSSProperty aPropID,
                            const nsAString& aPropValue,
@@ -153,9 +145,28 @@ public:
                               nscolor* aColor) = 0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsICSSParser, NS_ICSS_PARSER_IID)
+// IID for the nsICSSParser_MOZILLA_1_8_BRANCH interface
+// fcef7cd9-9ac4-4283-91f6-8eea74c15892
+#define NS_ICSS_PARSER_MOZILLA_1_8_BRANCH_IID     \
+{0xfcef7cd9, 0x9ac4, 0x4283, {0x91, 0xf6, 0x8e, 0xea, 0x74, 0xc1, 0x58, 0x92}}
+
+class nsICSSParser_MOZILLA_1_8_BRANCH : public nsISupports {
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICSS_PARSER_MOZILLA_1_8_BRANCH_IID)
+
+  /**
+   * @param aAllowUnsafeRules see aEnableUnsafeRules in
+   * nsICSSLoader::LoadSheetSync
+   */
+  NS_IMETHOD Parse(nsIUnicharInputStream* aInput,
+                   nsIURI*                aSheetURL,
+                   nsIURI*                aBaseURI,
+                   PRUint32               aLineNumber,
+                   PRBool                 aAllowUnsafeRules,
+                   nsICSSStyleSheet*&     aResult) = 0;
+};
 
 nsresult
 NS_NewCSSParser(nsICSSParser** aInstancePtrResult);
 
-#endif /* nsICSSParser_h___ */
+#endif /* nsCSS1Parser_h___ */

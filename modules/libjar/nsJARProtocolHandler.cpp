@@ -61,10 +61,12 @@ nsJARProtocolHandler *gJarHandler = nsnull;
 
 nsJARProtocolHandler::nsJARProtocolHandler()
 {
+    gJarHandler = this;
 }
 
 nsJARProtocolHandler::~nsJARProtocolHandler()
 {
+    gJarHandler = nsnull;
 }
 
 nsresult
@@ -93,23 +95,22 @@ NS_IMPL_THREADSAFE_ISUPPORTS3(nsJARProtocolHandler,
                               nsIProtocolHandler,
                               nsISupportsWeakReference)
 
-nsJARProtocolHandler*
-nsJARProtocolHandler::GetSingleton()
+NS_METHOD
+nsJARProtocolHandler::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
 {
-    if (!gJarHandler) {
-        gJarHandler = new nsJARProtocolHandler();
-        if (!gJarHandler)
-            return nsnull;
+    if (aOuter)
+        return NS_ERROR_NO_AGGREGATION;
 
-        NS_ADDREF(gJarHandler);
-        nsresult rv = gJarHandler->Init();
-        if (NS_FAILED(rv)) {
-            NS_RELEASE(gJarHandler);
-            return nsnull;
-        }
+    nsJARProtocolHandler* ph = new nsJARProtocolHandler();
+    if (ph == nsnull)
+        return NS_ERROR_OUT_OF_MEMORY;
+    NS_ADDREF(ph);
+    nsresult rv = ph->Init();
+    if (NS_SUCCEEDED(rv)) {
+        rv = ph->QueryInterface(aIID, aResult);
     }
-    NS_ADDREF(gJarHandler);
-    return gJarHandler;
+    NS_RELEASE(ph);
+    return rv;
 }
 
 NS_IMETHODIMP
@@ -140,9 +141,7 @@ nsJARProtocolHandler::GetDefaultPort(PRInt32 *result)
 NS_IMETHODIMP
 nsJARProtocolHandler::GetProtocolFlags(PRUint32 *result)
 {
-    // URI_LOADABLE_BY_ANYONE, since it's our inner URI that will matter
-    // anyway.
-    *result = URI_NORELATIVE | URI_NOAUTH | URI_LOADABLE_BY_ANYONE;
+    *result = URI_NORELATIVE | URI_NOAUTH;
     /* Although jar uris have their own concept of relative urls
        it is very different from the standard behaviour, so we
        have to say norelative here! */

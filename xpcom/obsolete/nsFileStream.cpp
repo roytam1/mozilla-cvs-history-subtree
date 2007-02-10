@@ -75,11 +75,9 @@ PRInt32 nsInputStream::read(void* s, PRInt32 n)
   if (!mInputStream)
       return 0;
   PRInt32 result = 0;
-  PRInt32 status = mInputStream->Read((char*)s, n, (PRUint32*)&result);
+  mInputStream->Read((char*)s, n, (PRUint32*)&result);
   if (result == 0)
       set_at_eof(PR_TRUE);
-  if (status < 0) 
-      return (status); 
   return result;
 } // nsInputStream::read
 
@@ -252,6 +250,31 @@ PRBool nsRandomAccessInputStream::readline(char* s, PRInt32 n)
 } // nsRandomAccessInputStream::readline
 
 //========================================================================================
+//          nsInputStringStream
+//========================================================================================
+
+//----------------------------------------------------------------------------------------
+nsInputStringStream::nsInputStringStream(const char* stringToRead)
+//----------------------------------------------------------------------------------------
+{
+	nsCOMPtr<nsIInputStream> stream;
+	if (NS_FAILED(NS_NewCharInputStream(getter_AddRefs(stream), stringToRead)))
+		return;
+	mInputStream = stream;
+	mStore = do_QueryInterface(stream);
+}
+
+//----------------------------------------------------------------------------------------
+nsInputStringStream::nsInputStringStream(const nsString& stringToRead)
+//----------------------------------------------------------------------------------------
+{
+	if (NS_FAILED(NS_NewStringInputStream(getter_AddRefs(mInputStream), stringToRead)))
+		return;
+	mStore = do_QueryInterface(mInputStream);
+}
+
+
+//========================================================================================
 //          nsInputFileStream
 //========================================================================================
 
@@ -359,6 +382,8 @@ nsOutputStream& nsEndl(nsOutputStream& os)
 {
 #if defined(XP_WIN) || defined(XP_OS2)
     os.write("\r\n", 2);
+#elif defined (XP_MAC)
+    os.put('\r');
 #else
     os.put('\n');
 #endif

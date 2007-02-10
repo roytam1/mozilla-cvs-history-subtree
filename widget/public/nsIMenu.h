@@ -51,10 +51,10 @@ class nsIContent;
 class nsIMenuCommandDispatcher;
 
 
-// {FC5BCA9C-4494-4C0F-BEFD-CB31BEBA1531}
-#define NS_IMENU_IID \
-{ 0xFC5BCA9C, 0x4494, 0x4C0F, \
-  { 0xBE, 0xFD, 0xCB, 0x31, 0xBE, 0xBA, 0x15, 0x31 } }
+// {ab6cea83-00ff-11d5-bb6f-f432a43ead7c}
+#define NS_IMENU_IID      \
+{ 0xab6cea83, 0x00ff, 0x11d5, \
+  { 0xbb, 0x6f, 0xf4, 0x32, 0xa4, 0x3e, 0xad, 0x7c } };
 
 
 /**
@@ -63,7 +63,7 @@ class nsIMenuCommandDispatcher;
 class nsIMenu : public nsISupports {
 
   public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IMENU_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMENU_IID)
 
   /**
     * Creates the Menu
@@ -73,7 +73,7 @@ class nsIMenu : public nsISupports {
                           nsIChangeManager* aManager, nsIDocShell* aShell, nsIContent* aNode ) = 0;
 
    /**
-    * Get the Menu's Parent.  This addrefs.
+    * Get the Menu's Parent
     *
     */
     NS_IMETHOD GetParent(nsISupports *&aParent) = 0;
@@ -113,6 +113,12 @@ class nsIMenu : public nsISupports {
     *
     */
 	NS_IMETHOD GetEnabled(PRBool* aIsEnabled) = 0;
+	
+	/**
+    * Query if this is the help menu. Mostly for MacOS voodoo.
+    *
+    */
+	NS_IMETHOD IsHelpMenu(PRBool* aIsHelpMenu) = 0;
 	
 	/**
     * Adds a Menu Item
@@ -186,6 +192,18 @@ class nsIMenu : public nsISupports {
     */
     NS_IMETHOD GetMenuContent(nsIContent ** aMenuContent) = 0;
     
+};
+
+// {FF2CE8E5-9755-4DFA-86A3-FBB558093C04}
+#define NS_IMENU_MOZILLA_1_8_BRANCH_IID \
+{ 0xFF2CE8E5, 0x9755, 0x4DFA, \
+  { 0x86, 0xA3, 0xFB, 0xB5, 0x58, 0x09, 0xC3, 0x04 } };
+
+class nsIMenu_MOZILLA_1_8_BRANCH : public nsIMenu
+{
+  public:
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMENU_MOZILLA_1_8_BRANCH_IID)
+
    /**
     * Enable/disable native widget for a particular nsIMenuItem
     *
@@ -206,7 +224,5 @@ class nsIMenu : public nsISupports {
     */
     NS_IMETHOD SetupIcon() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIMenu, NS_IMENU_IID)
 
 #endif

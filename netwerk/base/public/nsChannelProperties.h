@@ -37,7 +37,7 @@
 #ifndef nsChannelProperties_h__
 #define nsChannelProperties_h__
 
-#include "nsStringGlue.h"
+#include "nsLiteralString.h"
 #ifdef IMPL_NS_NET
 #include "nsNetStrings.h"
 #endif

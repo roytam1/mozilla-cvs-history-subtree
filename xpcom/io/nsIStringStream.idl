@@ -23,7 +23,7 @@
  *   mcmullen@netscape.com (original author)
  *   scc@mozilla.org
  *   davidm@netscape.com
- *   darin@meer.net
+ *   darin@netscape.com
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -39,15 +39,17 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+/**
+ * Based on original code from nsIStringStream.h
+ */
+
 #include "nsIInputStream.idl"
 
 /**
  * nsIStringInputStream
  *
- * Provides scriptable and specialized C++-only methods for initializing a
+ * Provides scriptable and specialized C++ only methods for initializing a
  * nsIInputStream implementation with a simple character array.
- *
- * @status UNDER_REVIEW
  */
 [scriptable, uuid(450cd2d4-f0fd-424d-b365-b1251f80fd53)]
 interface nsIStringInputStream : nsIInputStream
@@ -60,11 +62,6 @@ interface nsIStringInputStream : nsIInputStream
      *
      * NOTE: C++ code should consider using AdoptData or ShareData to avoid
      * making an extra copy of the stream data.
-     *
-     * NOTE: For JS callers, the given data must not contain null characters
-     * (other than a null terminator) because a null character in the middle of
-     * the data string will be seen as a terminator when the data is converted
-     * from a JS string to a C++ character array.
      */
     void setData(in string data, in long dataLen);
 
@@ -93,3 +90,42 @@ interface nsIStringInputStream : nsIInputStream
      */
     [noscript] void shareData(in string data, in long dataLen);
 };
+
+%{C++
+
+//-----------------------------------------------------------------------------
+// C++ factory methods
+//-----------------------------------------------------------------------------
+
+#include "nsIInputStream.h"
+#include "nsString.h"
+
+//-----------------------------------------------------------------------------
+// Factory method to get an nsInputStream from an nsAString.  Result will
+// implement nsIStringInputStream and nsISeekableStream
+extern "C" NS_COM nsresult
+NS_NewStringInputStream(nsIInputStream** aStreamResult,
+                        const nsAString& aStringToRead);
+
+//-----------------------------------------------------------------------------
+// Factory method to get an nsInputStream from an nsACString.  Result will
+// implement nsIStringInputStream and nsISeekableStream 
+extern "C" NS_COM nsresult
+NS_NewCStringInputStream(nsIInputStream** aStreamResult,
+                         const nsACString& aStringToRead);
+
+//-----------------------------------------------------------------------------
+// Factory method to get an nsInputStream from a string.  Result will
+// implement nsIStringInputStream and nsISeekableStream
+extern "C" NS_COM nsresult
+NS_NewCharInputStream(nsIInputStream** aStreamResult,
+                      const char* aStringToRead);
+
+//-----------------------------------------------------------------------------
+// Factory method to get an nsInputStream from a byte buffer.  Result will
+// implement nsIStringInputStream and nsISeekableStream
+extern "C" NS_COM nsresult
+NS_NewByteInputStream(nsIInputStream** aStreamResult,
+                      const char* aStringToRead,
+                      PRInt32 aLength);
+%}

@@ -56,6 +56,8 @@
 #include <View.h>
 #include <Button.h>
 
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsFilePicker, nsIFilePicker)
 
 #ifdef FILEPICKER_SAVE_LAST_DIR

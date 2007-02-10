@@ -1,4 +1,5 @@
-/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+/* -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/*
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -21,7 +22,7 @@
  *
  * Contributor(s):
  *   ddrinan@netscape.com
- *   Scott MacGregor <mscott@netscape.com>
+ *   Scott MacGreogr <mscott@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -169,7 +170,8 @@ function showNeedSetupInfo()
     promptService.confirmEx(window,
       gBrandBundle.getString("brandShortName"),
       gBundle.getString("NeedSetup"), 
-      ifps.STD_YES_NO_BUTTONS,
+      (ifps.BUTTON_POS_0 * ifps.BUTTON_TITLE_YES
+       + ifps.BUTTON_POS_1 * ifps.BUTTON_TITLE_NO),
       0,
       0,
       0,

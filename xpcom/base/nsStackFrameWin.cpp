@@ -327,7 +327,7 @@ BOOL SymGetModuleInfoEspecial(HANDLE aProcess, DWORD aAddr, PIMAGEHLP_MODULE aMo
          * Not loaded, here's the magic.
          * Go through all the modules.
          */
-        enumRes = _EnumerateLoadedModules(aProcess, (PENUMLOADED_MODULES_CALLBACK)callbackEspecial, (PVOID)&aAddr);
+        enumRes = _EnumerateLoadedModules(aProcess, callbackEspecial, (PVOID)&aAddr);
         if (FALSE != enumRes)
         {
             /*
@@ -377,7 +377,7 @@ BOOL SymGetModuleInfoEspecial64(HANDLE aProcess, DWORD64 aAddr, PIMAGEHLP_MODULE
          * Not loaded, here's the magic.
          * Go through all the modules.
          */
-        enumRes = _EnumerateLoadedModules64(aProcess, (PENUMLOADED_MODULES_CALLBACK64)callbackEspecial64, (PVOID)&aAddr);
+        enumRes = _EnumerateLoadedModules64(aProcess, callbackEspecial64, (PVOID)&aAddr);
         if (FALSE != enumRes)
         {
             /*
@@ -414,11 +414,7 @@ GetCurrentPIDorHandle()
 PRBool
 EnsureSymInitialized()
 {
-    static PRBool gInitialized = PR_FALSE;
     PRBool retStat;
-
-    if (gInitialized)
-        return gInitialized;
 
     if (!EnsureImageHlpInitialized())
         return PR_FALSE;
@@ -427,10 +423,6 @@ EnsureSymInitialized()
     retStat = _SymInitialize(GetCurrentPIDorHandle(), NULL, TRUE);
     if (!retStat)
         PrintError("SymInitialize", NULL);
-
-    gInitialized = retStat;
-    /* XXX At some point we need to arrange to call _SymCleanup */
-
     return retStat;
 }
 
@@ -469,10 +461,10 @@ DumpStackToFile(FILE* aStream)
     walkerThread = ::CreateThread( NULL, 0, DumpStackToFileThread, (LPVOID) &data, 0, NULL ) ;
     if (walkerThread) {
         walkerReturn = ::WaitForSingleObject(walkerThread, 2000); // no timeout is never a good idea
+        CloseHandle(myThread) ;
         if (walkerReturn != WAIT_OBJECT_0) {
             PrintError("ThreadWait", aStream);
         }
-        CloseHandle(myThread);
     }
     else {
         PrintError("ThreadCreate", aStream);
@@ -621,12 +613,12 @@ DumpStackToFileMain64(struct DumpStackToFileData* data)
             ReleaseMutex(hStackWalkMutex);
 
             if (ok)
-                fprintf(aStream, "%s!%s+0x%016X\n", modInfo.ModuleName, pSymbol->Name, displacement);
+                fprintf(aStream, "%s!%s+0x%016X\n", modInfo.ImageName, pSymbol->Name, displacement);
             else
                 fprintf(aStream, "0x%016X\n", addr);
 
-            // Stop walking when we get to kernel32.
-            if (strcmp(modInfo.ModuleName, "kernel32") == 0)
+            // Stop walking when we get to kernel32.dll.
+            if (strcmp(modInfo.ImageName, "kernel32.dll") == 0)
                 break;
         }
         else {

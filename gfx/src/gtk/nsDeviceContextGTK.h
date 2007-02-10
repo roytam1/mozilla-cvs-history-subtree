@@ -65,6 +65,7 @@ public:
 
   NS_IMETHOD  SupportsNativeWidgets(PRBool &aSupportsWidgets);
 
+  NS_IMETHOD  GetScrollBarDimensions(float &aWidth, float &aHeight) const;
   NS_IMETHOD  GetSystemFont(nsSystemFontID anID, nsFont *aFont) const;
 
   NS_IMETHOD CheckFontExistence(const nsString& aFontName);
@@ -85,9 +86,8 @@ public:
 
   NS_IMETHOD GetDepth(PRUint32& aDepth);
 
-  NS_IMETHOD ClearCachedSystemFonts();
-
   static int prefChanged(const char *aPref, void *aClosure);
+  static void ClearCachedSystemFonts();
 
 protected:
   nsresult   SetDPI(PRInt32 aPrefDPI);
@@ -96,6 +96,8 @@ private:
   PRUint32      mDepth;
   PRBool        mWriteable;
   PRUint32      mNumCells;
+  PRInt16       mScrollbarHeight;
+  PRInt16       mScrollbarWidth;
   static nscoord mDpi;
 
   float         mWidthFloat;

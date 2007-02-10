@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Chris Waterson <waterson@netscape.com>
- *   Neil Deakin <enndeakin@sympatico.ca>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -41,9 +40,9 @@
 #define nsInstantiationNode_h__
 
 #include "nsRuleNetwork.h"
-#include "nsRDFQuery.h"
-
-class nsXULTemplateQueryProcessorRDF;
+class nsIRDFDataSource;
+class nsConflictSet;
+class nsTemplateRule;
 
 /**
  * A leaf-level node in the rule network. If any instantiations
@@ -52,19 +51,24 @@ class nsXULTemplateQueryProcessorRDF;
 class nsInstantiationNode : public ReteNode
 {
 public:
-    nsInstantiationNode(nsXULTemplateQueryProcessorRDF* aProcessor,
-                        nsRDFQuery* aRule);
+    nsInstantiationNode(nsConflictSet& aConflictSet,
+                        nsTemplateRule* aRule,
+                        nsIRDFDataSource* aDataSource);
 
     ~nsInstantiationNode();
 
     // "downward" propagations
-    virtual nsresult Propagate(InstantiationSet& aInstantiations,
-                               PRBool aIsUpdate, PRBool& aMatched);
+    virtual nsresult Propagate(const InstantiationSet& aInstantiations, void* aClosure);
 
 protected:
+    nsConflictSet& mConflictSet;
 
-    nsXULTemplateQueryProcessorRDF* mProcessor;
-    nsRDFQuery* mQuery;
+    /**
+     * The rule that the node instantiates. The instantiation node
+     * assumes ownership of the rule in its ctor, and will destroy
+     * the rule in its dtor.
+     */
+    nsTemplateRule* mRule;
 };
 
 #endif // nsInstantiationNode_h__

@@ -44,14 +44,15 @@
 
 #include "xpcprivate.h"
 #include "XPCNativeWrapper.h"
-#include "nsBaseHashtable.h"
-#include "nsHashKeys.h"
-#include "jsobj.h"
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPConnect,nsIXPConnect,nsISupportsWeakReference)
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsXPConnect,
+                              nsIXPConnect,
+                              nsIXPConnect_MOZILLA_1_8_BRANCH,
+                              nsISupportsWeakReference)
 
 nsXPConnect* nsXPConnect::gSelf = nsnull;
 JSBool       nsXPConnect::gOnceAliveNowDead = JS_FALSE;
+PRThread*    nsXPConnect::gMainThread = nsnull;
 
 const char XPC_CONTEXT_STACK_CONTRACTID[] = "@mozilla.org/js/xpc/ContextStack;1";
 const char XPC_RUNTIME_CONTRACTID[]       = "@mozilla.org/js/xpc/RuntimeService;1";
@@ -65,20 +66,21 @@ const char XPC_XPCONNECT_CONTRACTID[]     = "@mozilla.org/js/xpc/XPConnect;1";
 
 nsXPConnect::nsXPConnect()
     :   mRuntime(nsnull),
-        mInterfaceInfoManager(do_GetService(NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID)),
+        mInterfaceInfoManager(nsnull),
         mContextStack(nsnull),
         mDefaultSecurityManager(nsnull),
         mDefaultSecurityManagerFlags(0),
-        mShuttingDown(JS_FALSE),
-        mObjRefcounts(nsnull)
+        mShuttingDown(JS_FALSE)
 {
     // Ignore the result. If the runtime service is not ready to rumble
     // then we'll set this up later as needed.
     CreateRuntime();
 
-    CallGetService(XPC_CONTEXT_STACK_CONTRACTID, &mContextStack);
+    nsCOMPtr<nsIInterfaceInfoManager> iim = 
+        dont_AddRef(XPTI_GetInterfaceInfoManager());
+    CallQueryInterface(iim, &mInterfaceInfoManager);
 
-    nsCycleCollector_registerRuntime(nsIProgrammingLanguage::JAVASCRIPT, this);
+    CallGetService(XPC_CONTEXT_STACK_CONTRACTID, &mContextStack);
 
 #ifdef XPC_TOOLS_SUPPORT
   {
@@ -107,50 +109,12 @@ nsXPConnect::nsXPConnect()
 
 }
 
-typedef nsBaseHashtable<nsClearingVoidPtrHashKey, PRUint32, PRUint32> PointerSet;
-
-struct JSObjectRefcounts 
-{
-    PointerSet mRefCounts;
-    JSObjectRefcounts()
-    {
-        mRefCounts.Init();
-    }
-
-    void Clear()
-    {
-        mRefCounts.Clear();
-    }
-
-    void Ref(void *obj, uint8 flags)
-    {
-        PRUint32 refs;
-        if (mRefCounts.Get(obj, &refs))
-            refs++;
-        else
-            refs = 1;
-        mRefCounts.Put(obj, refs);
-    }
-
-    PRBool Get(void *obj, PRUint32 &refcount)
-    {
-        return mRefCounts.Get(obj, &refcount);
-    }
-};
-
 nsXPConnect::~nsXPConnect()
 {
     // XXX It would be nice if we could get away with doing a GC here and also
     // calling Release on the natives no longer reachable via XPConnect. As
     // noted all over the place, this makes bad things happen since shutdown is
     // an unstable time for so many modules who have not planned well for it.
-
-    nsCycleCollector_forgetRuntime(nsIProgrammingLanguage::JAVASCRIPT);
-    if (mObjRefcounts)
-    {
-        delete mObjRefcounts;
-        mObjRefcounts = NULL;
-    }
 
     mShuttingDown = JS_TRUE;
     { // scoped callcontext
@@ -164,6 +128,7 @@ nsXPConnect::~nsXPConnect()
         }
     }
 
+    NS_IF_RELEASE(mInterfaceInfoManager);
     NS_IF_RELEASE(mContextStack);
     NS_IF_RELEASE(mDefaultSecurityManager);
 
@@ -369,6 +334,19 @@ nsXPConnect::CreateRuntime()
     return nsnull != mRuntime;
 }
 
+// static 
+PRThread* 
+nsXPConnect::FindMainThread()
+{
+    nsCOMPtr<nsIThread> t;
+    nsresult rv;
+    rv = nsIThread::GetMainThread(getter_AddRefs(t));
+    NS_ASSERTION(NS_SUCCEEDED(rv) && t, "bad");
+    rv = t->GetPRThread(&gMainThread);
+    NS_ASSERTION(NS_SUCCEEDED(rv) && gMainThread, "bad");
+    return gMainThread;
+}
+
 /***************************************************************************/
 
 typedef PRBool (*InfoTester)(nsIInterfaceInfoManager* manager, const void* data,
@@ -430,132 +408,6 @@ nsXPConnect::GetInfoForName(const char * name, nsIInterfaceInfo** info)
     return FindInfo(NameTester, name, mInterfaceInfoManager, info);
 }
 
-void XPCMarkNotification(void *thing, uint8 flags, void *closure)
-{
-    uint8 ty = flags & GCF_TYPEMASK;
-    if (ty != GCX_OBJECT &&
-        ty != GCX_PRIVATE && 
-        ty != GCX_XML)
-        return;
-
-    JSObjectRefcounts* jsr = NS_STATIC_CAST(JSObjectRefcounts*, closure);
-    jsr->Ref(thing, flags);
-}
-
-nsresult 
-nsXPConnect::BeginCycleCollection()
-{
-    if (!mObjRefcounts)
-        mObjRefcounts = new JSObjectRefcounts;
-
-    mObjRefcounts->Clear();
-    XPCCallContext cx(NATIVE_CALLER);
-    if (cx.IsValid()) {
-        JS_SetGCThingCallback(cx, XPCMarkNotification, mObjRefcounts);
-        JS_GC(cx);
-        JS_SetGCThingCallback(cx, nsnull, nsnull);
-    }
-
-    return NS_OK;
-}
-
-nsresult 
-nsXPConnect::FinishCycleCollection()
-{
-    if (mObjRefcounts)
-        mObjRefcounts->Clear();
-    return NS_OK;
-}
-
-nsresult 
-nsXPConnect::Root(const nsDeque &nodes)
-{
-    XPCCallContext cx(NATIVE_CALLER);
-    for (PRInt32 i = 0; i < nodes.GetSize(); ++i)
-    {
-        void *p = nodes.ObjectAt(i);
-        if (!p)
-            continue;
-        JSObject *obj = NS_STATIC_CAST(JSObject*, p);
-        if (!JS_LockGCThing(cx, obj))
-            return NS_ERROR_FAILURE;
-    }
-    return NS_OK;
-}
-
-nsresult 
-nsXPConnect::Unlink(const nsDeque &nodes)
-{
-    XPCCallContext cx(NATIVE_CALLER);
-    
-    for (PRInt32 i = 0; i < nodes.GetSize(); ++i)
-    {
-        void *p = nodes.ObjectAt(i);
-        if (!p)
-            continue;
-        JSObject *obj = NS_STATIC_CAST(JSObject*, p);
-        JS_ClearScope(cx, obj);
-    }
-    return NS_OK;
-}
-
-nsresult 
-nsXPConnect::Unroot(const nsDeque &nodes)
-{
-    XPCCallContext cx(NATIVE_CALLER);
-    for (PRInt32 i = 0; i < nodes.GetSize(); ++i)
-    {
-        void *p = nodes.ObjectAt(i);
-        if (!p)
-            continue;
-        JSObject *obj = NS_STATIC_CAST(JSObject*, p);
-        if (!JS_UnlockGCThing(cx, obj))
-            return NS_ERROR_FAILURE;
-    }
-    return NS_OK;
-}
-
-nsresult 
-nsXPConnect::Traverse(void *p, nsCycleCollectionTraversalCallback &cb)
-{
-    XPCCallContext cx(NATIVE_CALLER);
-
-    PRUint32 refcount = 0;
-    if (!mObjRefcounts->Get(p, refcount))
-        return NS_OK;
-
-    cb.DescribeNode(refcount, sizeof(JSObject), "JS Object");
-
-    if (!p)
-        return NS_OK;    
-    
-    JSObject *obj = NS_STATIC_CAST(JSObject*, p);
-
-    if (OBJ_GET_CLASS(cx, obj)->flags & JSCLASS_HAS_PRIVATE
-        && OBJ_GET_CLASS(cx, obj)->flags & JSCLASS_PRIVATE_IS_NSISUPPORTS) 
-    {
-        void *v = JS_GetPrivate(cx, obj);
-        if (v)
-            cb.NoteXPCOMChild(NS_STATIC_CAST(nsISupports*, v));
-    }
-    
-    for (uint32 i = JSSLOT_START(OBJ_GET_CLASS(cx, obj)); 
-         i < STOBJ_NSLOTS(obj); ++i) 
-    {
-        jsval val = STOBJ_GET_SLOT(obj, i);
-        if (!JSVAL_IS_NULL(val) 
-            && JSVAL_IS_OBJECT(val)) 
-        {
-            JSObject *child = JSVAL_TO_OBJECT(val);
-            if (child) 
-                cb.NoteScriptChild(nsIProgrammingLanguage::JAVASCRIPT, child);
-        }
-    }
-    
-    return NS_OK;
-}
-
-
 /***************************************************************************/
 /***************************************************************************/
 // nsIXPConnect interface methods...
@@ -600,9 +452,6 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
 #endif
 
     if (!XPCNativeWrapper::AttachNewConstructorObject(ccx, aGlobalJSObj))
-        return UnexpectedFailure(NS_ERROR_FAILURE);
-
-    if (!XPC_SJOW_AttachNewConstructorObject(ccx, aGlobalJSObj))
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
     return NS_OK;
@@ -714,9 +563,6 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext,
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
     if (!XPCNativeWrapper::AttachNewConstructorObject(ccx, globalJSObj))
-        return UnexpectedFailure(NS_ERROR_FAILURE);
-
-    if (!XPC_SJOW_AttachNewConstructorObject(ccx, globalJSObj))
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
     NS_ADDREF(*_retval = holder);
@@ -1006,12 +852,13 @@ nsXPConnect::ReparentScopeAwareWrappers(JSContext *aJSContext,
             // Now, reparent the wrapper, since we know that it wants to be
             // reparented.
 
-            nsRefPtr<XPCWrappedNative> junk;
+            XPCWrappedNative *junk;
             rv = XPCWrappedNative::ReparentWrapperIfFound(ccx, oldScope,
-                                                          newScope, newParent,
+                                                          newScope, aNewScope,
                                                           wrapper->GetIdentityObject(),
-                                                          getter_AddRefs(junk));
+                                                          &junk);
             NS_ENSURE_SUCCESS(rv, rv);
+            NS_IF_RELEASE(junk);
         }
     }
 
@@ -1323,21 +1170,20 @@ nsXPConnect::RestoreWrappedNativePrototype(JSContext * aJSContext,
         // map of detached wrapped native protos so that the old proto
         // gets properly cleaned up, especially during shutdown.
         XPCWrappedNativeProto *oldProto = map->Find(aClassInfo);
-        if(oldProto)
-        {
+        if (oldProto) {
             detachedMap->Add(oldProto);
 
             // ClassInfo2WrappedNativeProtoMap doesn't ever replace
             // entries in the map, so now since we know there's an
-            // entry for aClassInfo in the map we have to remove it to
+            // entry for aClassInfo in the map we haveto remove it to
             // be able to add the new one.
             map->Remove(aClassInfo);
 
             // This code should do the right thing even if we're
             // restoring the current proto, but warn in that case
             // since doing that is pointless.
-            NS_ASSERTION(proto != oldProto,
-                         "Restoring current prototype, fix caller!");
+            NS_WARN_IF_FALSE(proto != oldProto,
+                             "Restoring current prototype, fix caller!");
         }
 
         map->Add(aClassInfo, proto);
@@ -1355,57 +1201,6 @@ nsXPConnect::RestoreWrappedNativePrototype(JSContext * aJSContext,
     scope->SetGlobal(ccx, aScope);
 
     return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXPConnect::CreateSandbox(JSContext *cx, nsIPrincipal *principal,
-                           nsIXPConnectJSObjectHolder **_retval)
-{
-#ifdef XPCONNECT_STANDALONE
-    return NS_ERROR_NOT_AVAILABLE;
-#else /* XPCONNECT_STANDALONE */
-    XPCCallContext ccx(NATIVE_CALLER, cx);
-    if(!ccx.IsValid())
-        return UnexpectedFailure(NS_ERROR_FAILURE);
-
-    *_retval = nsnull;
-
-    jsval rval = JSVAL_VOID;
-    AUTO_MARK_JSVAL(ccx, &rval);
-
-    nsresult rv = xpc_CreateSandboxObject(cx, &rval, principal);
-    NS_ASSERTION(NS_FAILED(rv) || !JSVAL_IS_PRIMITIVE(rval),
-                 "Bad return value from xpc_CreateSandboxObject()!");
-
-    if (NS_SUCCEEDED(rv) && !JSVAL_IS_PRIMITIVE(rval)) {
-        *_retval = XPCJSObjectHolder::newHolder(cx, JSVAL_TO_OBJECT(rval));
-        NS_ENSURE_TRUE(*_retval, NS_ERROR_OUT_OF_MEMORY);
-
-        NS_ADDREF(*_retval);
-    }
-
-    return rv;
-#endif /* XPCONNECT_STANDALONE */
-}
-
-NS_IMETHODIMP
-nsXPConnect::EvalInSandboxObject(const nsAString& source, JSContext *cx,
-                                 nsIXPConnectJSObjectHolder *sandbox,
-                                 jsval *rval)
-{
-#ifdef XPCONNECT_STANDALONE
-    return NS_ERROR_NOT_AVAILABLE;
-#else /* XPCONNECT_STANDALONE */
-    if (!sandbox)
-        return NS_ERROR_INVALID_ARG;
-
-    JSObject *obj;
-    nsresult rv = sandbox->GetJSObject(&obj);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    return xpc_EvalInSandbox(cx, obj, source,
-                             NS_ConvertUTF16toUTF8(source).get(), 1, rval);
-#endif /* XPCONNECT_STANDALONE */
 }
 
 /* nsIXPConnectJSObjectHolder getWrappedNativePrototype (in JSContextPtr aJSContext, in JSObjectPtr aScope, in nsIClassInfo aClassInfo); */
@@ -1548,7 +1343,7 @@ nsXPConnect::DebugDump(PRInt16 depth)
         XPC_LOG_ALWAYS(("gOnceAliveNowDead is %d", (int)gOnceAliveNowDead));
         XPC_LOG_ALWAYS(("mDefaultSecurityManager @ %x", mDefaultSecurityManager));
         XPC_LOG_ALWAYS(("mDefaultSecurityManagerFlags of %x", mDefaultSecurityManagerFlags));
-        XPC_LOG_ALWAYS(("mInterfaceInfoManager @ %x", mInterfaceInfoManager.get()));
+        XPC_LOG_ALWAYS(("mInterfaceInfoManager @ %x", mInterfaceInfoManager));
         XPC_LOG_ALWAYS(("mContextStack @ %x", mContextStack));
         if(mRuntime)
         {

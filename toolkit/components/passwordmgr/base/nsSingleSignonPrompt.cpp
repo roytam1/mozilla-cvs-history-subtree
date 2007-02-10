@@ -40,18 +40,6 @@
 #include "nsPasswordManager.h"
 #include "nsIServiceManager.h"
 
-#include "nsIAuthInformation.h"
-#include "nsIDOMWindow.h"
-#include "nsIChannel.h"
-#include "nsIIDNService.h"
-#include "nsIPromptService2.h"
-#include "nsIProxiedChannel.h"
-#include "nsIProxyInfo.h"
-#include "nsIURI.h"
-
-#include "nsNetUtil.h"
-#include "nsPromptUtils.h"
-
 NS_IMPL_ISUPPORTS2(nsSingleSignonPrompt,
                    nsIAuthPromptWrapper,
                    nsIAuthPrompt)
@@ -84,7 +72,7 @@ nsSingleSignonPrompt::Prompt(const PRUnichar* aDialogTitle,
     nsCAutoString outHost;
     nsAutoString outUser, outPassword;
 
-    mgrInternal->FindPasswordEntry(NS_ConvertUTF16toUTF8(aPasswordRealm),
+    mgrInternal->FindPasswordEntry(NS_ConvertUCS2toUTF8(aPasswordRealm),
                                    emptyString,
                                    emptyString,
                                    outHost,
@@ -114,7 +102,7 @@ nsSingleSignonPrompt::Prompt(const PRUnichar* aDialogTitle,
 
       nsCOMPtr<nsIPasswordManager> manager = do_QueryInterface(mgrInternal);
 
-      manager->AddUser(NS_ConvertUTF16toUTF8(aPasswordRealm),
+      manager->AddUser(NS_ConvertUCS2toUTF8(aPasswordRealm),
                        nsDependentString(value),
                        emptyString);
     }
@@ -156,7 +144,7 @@ nsSingleSignonPrompt::PromptUsernameAndPassword(const PRUnichar* aDialogTitle,
     nsCAutoString outHost;
     nsAutoString outUser, outPassword;
 
-    mgrInternal->FindPasswordEntry(NS_ConvertUTF16toUTF8(aPasswordRealm),
+    mgrInternal->FindPasswordEntry(NS_ConvertUCS2toUTF8(aPasswordRealm),
                                    emptyString,
                                    emptyString,
                                    outHost,
@@ -184,7 +172,7 @@ nsSingleSignonPrompt::PromptUsernameAndPassword(const PRUnichar* aDialogTitle,
 
       nsCOMPtr<nsIPasswordManager> manager = do_QueryInterface(mgrInternal);
 
-      manager->AddUser(NS_ConvertUTF16toUTF8(aPasswordRealm),
+      manager->AddUser(NS_ConvertUCS2toUTF8(aPasswordRealm),
                        nsDependentString(user),
                        nsDependentString(password));
     }
@@ -230,7 +218,7 @@ nsSingleSignonPrompt::PromptPassword(const PRUnichar* aDialogTitle,
     nsCAutoString outHost;
     nsAutoString outUser, outPassword;
 
-    mgrInternal->FindPasswordEntry(NS_ConvertUTF16toUTF8(aPasswordRealm),
+    mgrInternal->FindPasswordEntry(NS_ConvertUCS2toUTF8(aPasswordRealm),
                                    emptyString,
                                    emptyString,
                                    outHost,
@@ -256,7 +244,7 @@ nsSingleSignonPrompt::PromptPassword(const PRUnichar* aDialogTitle,
 
       nsCOMPtr<nsIPasswordManager> manager = do_QueryInterface(mgrInternal);
 
-      manager->AddUser(NS_ConvertUTF16toUTF8(aPasswordRealm),
+      manager->AddUser(NS_ConvertUCS2toUTF8(aPasswordRealm),
                        emptyString,
                        nsDependentString(password));
     }
@@ -280,90 +268,3 @@ nsSingleSignonPrompt::SetPromptDialogs(nsIPrompt* aDialogs)
   mPrompt = aDialogs;
   return NS_OK;
 }
-
-// ---------------------------------------------------------------------
-// nsSingleSignonPrompt2
-
-nsSingleSignonPrompt2::nsSingleSignonPrompt2(nsIPromptService2* aService,
-                                             nsIDOMWindow* aParent)
-  : mService(aService), mParent(aParent)
-{
-}
-
-nsSingleSignonPrompt2::~nsSingleSignonPrompt2()
-{
-}
-
-NS_IMPL_ISUPPORTS1(nsSingleSignonPrompt2, nsIAuthPrompt2)
-
-// nsIAuthPrompt2
-
-NS_IMETHODIMP
-nsSingleSignonPrompt2::PromptAuth(nsIChannel* aChannel,
-                                  PRUint32 aLevel,
-                                  nsIAuthInformation* aAuthInfo,
-                                  PRBool* aConfirm)
-{
-  nsCAutoString key;
-  NS_GetAuthKey(aChannel, aAuthInfo, key);
-
-  nsAutoString checkMsg;
-  PRBool checkValue = PR_FALSE;
-  PRBool *checkPtr = nsnull;
-  nsCOMPtr<nsIPasswordManagerInternal> mgrInternal;
-
-  if (nsPasswordManager::SingleSignonEnabled()) {
-    nsPasswordManager::GetLocalizedString(NS_LITERAL_STRING("rememberPassword"),
-                                          checkMsg);
-    checkPtr = &checkValue;
-
-    mgrInternal = do_GetService(NS_PASSWORDMANAGER_CONTRACTID);
-    nsCAutoString outHost;
-    nsAutoString outUser, outPassword;
-
-    const nsString& emptyString = EmptyString();
-    mgrInternal->FindPasswordEntry(key,
-                                   emptyString,
-                                   emptyString,
-                                   outHost,
-                                   outUser,
-                                   outPassword);
-
-    NS_SetAuthInfo(aAuthInfo, outUser, outPassword);
-
-    if (!outUser.IsEmpty() || !outPassword.IsEmpty())
-      checkValue = PR_TRUE;
-  }
-
-  mService->PromptAuth(mParent, aChannel, aLevel, aAuthInfo,
-                       checkMsg.get(), checkPtr, aConfirm);
-
-  if (*aConfirm) {
-    // XXX domain
-    nsAutoString user, password;
-    aAuthInfo->GetUsername(user);
-    aAuthInfo->GetPassword(password);
-    if (checkValue && (!user.IsEmpty() || !password.IsEmpty())) {
-      // The user requested that we save the password
-
-      nsCOMPtr<nsIPasswordManager> manager = do_QueryInterface(mgrInternal);
-
-      manager->AddUser(key, user, password);
-    }
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSingleSignonPrompt2::AsyncPromptAuth(nsIChannel*,
-                                       nsIAuthPromptCallback*,
-                                       nsISupports*,
-                                       PRUint32,
-                                       nsIAuthInformation*,
-                                       nsICancelable**)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-
-

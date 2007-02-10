@@ -47,8 +47,9 @@
 <!ENTITY folderCharsetOverride.accesskey         "A">
 <!ENTITY folderRebuildSummaryFile.label          "Rebuild Index">
 <!ENTITY folderRebuildSummaryFile.accesskey      "R">
-<!ENTITY folderRebuildSummaryFileTip.label       "Rebuild Summary File"> 
-     
+<!ENTITY folderRebuildSummaryFileTip.label       "Rebuild Summary File">      
+
+
 <!ENTITY retention.label "Retention Policy">
 <!ENTITY retentionUseDefault.label  "Use server defaults">
 <!ENTITY retentionUseDefault.accesskey "d">

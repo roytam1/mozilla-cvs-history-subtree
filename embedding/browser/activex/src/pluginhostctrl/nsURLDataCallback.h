@@ -19,7 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Adam Lock <adamlock@eircom.net> 
+ *   Adam Lock <adamlock@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,7 +43,7 @@
 
 #include "npapi.h"
 
-class nsPluginHostWnd;
+class nsPluginHostCtrl;
 
 #define WM_NPP_NEWSTREAM      WM_USER 
 #define WM_NPP_DESTROYSTREAM  WM_USER + 1
@@ -138,7 +138,7 @@ protected:
     virtual ~nsURLDataCallback();
 
 protected:
-    nsPluginHostWnd *m_pOwner;
+    nsPluginHostCtrl *m_pOwner;
     void *m_pNotifyData;
     HGLOBAL m_hPostData;
 
@@ -167,13 +167,13 @@ protected:
         if (szContentType) { m_szContentType = strdup(szContentType); }
     }
     void SetPostData(const void *pData, unsigned long nSize);
-    void SetOwner(nsPluginHostWnd *pOwner) { m_pOwner = pOwner; }
+    void SetOwner(nsPluginHostCtrl *pOwner) { m_pOwner = pOwner; }
     void SetNotifyData(void *pNotifyData)   { m_pNotifyData = pNotifyData; }
     
     static void __cdecl StreamThread(void *pThis);
 
 public:
-    static HRESULT OpenURL(nsPluginHostWnd *pOwner, const TCHAR *szURL, void *pNotifyData, const void *pData, unsigned long nSize);
+    static HRESULT OpenURL(nsPluginHostCtrl *pOwner, const TCHAR *szURL, void *pNotifyData, const void *pData, unsigned long nSize);
 
 // IBindStatusCallback
 public:

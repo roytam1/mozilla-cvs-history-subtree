@@ -127,25 +127,10 @@ SafeGlobalResolve(JSContext *cx, JSObject *obj, jsval id)
     return JS_ResolveStandardClass(cx, obj, id, &resolved);
 }
 
-JS_STATIC_DLL_CALLBACK(void)
-SafeFinalize(JSContext* cx, JSObject* obj)
-{
-#ifndef XPCONNECT_STANDALONE
-    nsIScriptObjectPrincipal* sop =
-        NS_STATIC_CAST(nsIScriptObjectPrincipal*, JS_GetPrivate(cx, obj));
-    NS_IF_RELEASE(sop);
-#endif
-}
-
 static JSClass global_class = {
-    "global_for_XPCJSContextStack_SafeJSContext",
-#ifndef XPCONNECT_STANDALONE
-    JSCLASS_HAS_PRIVATE | JSCLASS_PRIVATE_IS_NSISUPPORTS,
-#else
-    0,
-#endif
+    "global_for_XPCJSContextStack_SafeJSContext", 0,
     JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
-    JS_EnumerateStub, SafeGlobalResolve, JS_ConvertStub, SafeFinalize,
+    JS_EnumerateStub, SafeGlobalResolve, JS_ConvertStub, JS_FinalizeStub,
     JSCLASS_NO_OPTIONAL_MEMBERS
 };
 
@@ -155,23 +140,6 @@ XPCJSContextStack::GetSafeJSContext(JSContext * *aSafeJSContext)
 {
     if(!mSafeJSContext)
     {
-#ifndef XPCONNECT_STANDALONE
-        // Start by getting the principal holder and principal for this
-        // context.  If we can't manage that, don't bother with the rest.
-        nsCOMPtr<nsIPrincipal> principal =
-            do_CreateInstance("@mozilla.org/nullprincipal;1");
-        nsCOMPtr<nsIScriptObjectPrincipal> sop;
-        if(principal)
-        {
-            sop = new PrincipalHolder(principal);
-        }
-        if(!sop)
-        {
-            *aSafeJSContext = nsnull;
-            return NS_ERROR_FAILURE;
-        }        
-#endif /* !XPCONNECT_STANDALONE */
-        
         JSRuntime *rt;
         XPCJSRuntime* xpcrt;
 
@@ -187,27 +155,6 @@ XPCJSContextStack::GetSafeJSContext(JSContext * *aSafeJSContext)
                 AutoJSRequestWithNoCallContext req(mSafeJSContext);
                 JSObject *glob;
                 glob = JS_NewObject(mSafeJSContext, &global_class, NULL, NULL);
-
-#ifndef XPCONNECT_STANDALONE
-                if(glob)
-                {
-                    // Note: make sure to set the private before calling
-                    // InitClasses
-                    nsIScriptObjectPrincipal* priv = nsnull;
-                    sop.swap(priv);
-                    if(!JS_SetPrivate(mSafeJSContext, glob, priv))
-                    {
-                        // Drop the whole thing
-                        NS_RELEASE(priv);
-                        glob = nsnull;
-                    }
-                }
-
-                // After this point either glob is null and the
-                // nsIScriptObjectPrincipal ownership is either handled by the
-                // nsCOMPtr or dealt with, or we'll release in the finalize
-                // hook.
-#endif
                 if(!glob || NS_FAILED(xpc->InitClasses(mSafeJSContext, glob)))
                 {
                     // Explicitly end the request since we are about to kill

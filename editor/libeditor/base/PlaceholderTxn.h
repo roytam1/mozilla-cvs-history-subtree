@@ -45,7 +45,6 @@
 #include "nsCOMPtr.h"
 #include "nsWeakPtr.h"
 #include "nsWeakReference.h"
-#include "nsAutoPtr.h"
 
 #define PLACEHOLDER_TXN_CID \
 {/* {0CE9FB00-D9D1-11d2-86DE-000064657374} */ \
@@ -76,12 +75,20 @@ private:
   PlaceholderTxn();
 
 public:
+
+  virtual ~PlaceholderTxn();
+
 // ------------ EditAggregateTxn -----------------------
 
-  NS_DECL_EDITTXN
+  NS_IMETHOD DoTransaction(void);
 
-  NS_IMETHOD RedoTransaction();
+  NS_IMETHOD UndoTransaction(void);
+  
+  NS_IMETHOD RedoTransaction(void);
+
   NS_IMETHOD Merge(nsITransaction *aTransaction, PRBool *aDidMerge);
+
+  NS_IMETHOD GetTxnDescription(nsAString& aTxnDescription);
 
 // ------------ nsIAbsorbingTransaction -----------------------
 
@@ -107,13 +114,13 @@ protected:
   PRBool      mAbsorb;          // do we auto absorb any and all transaction?
   nsWeakPtr   mForwarding;
   IMETextTxn *mIMETextTxn;      // first IME txn in this placeholder - used for IME merging
-                                // non-owning for now - can't nsCOMPtr it due to broken transaction interfaces
+                                // non-owning for now - cant nsCOMPtr it due to broken transaction interfaces
   PRBool      mCommitted;       // do we stop auto absorbing any matching placeholder txns?
   // these next two members store the state of the selection in a safe way. 
   // selection at the start of the txn is stored, as is the selection at the end.
   // This is so that UndoTransaction() and RedoTransaction() can restore the
   // selection properly.
-  nsAutoPtr<nsSelectionState> mStartSel; // use a pointer because this is constructed before we exist
+  nsSelectionState *mStartSel; // use a pointer because this is constructed before we exist
   nsSelectionState  mEndSel;
   nsIEditor*        mEditor;   /** the editor for this transaction */
 };

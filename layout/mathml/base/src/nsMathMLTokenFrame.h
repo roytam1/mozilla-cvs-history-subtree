@@ -47,17 +47,20 @@
 
 class nsMathMLTokenFrame : public nsMathMLContainerFrame {
 public:
-  friend nsIFrame* NS_NewMathMLTokenFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLTokenFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
-  virtual eMathMLFrameType GetMathMLFrameType();
+  virtual nsIAtom* GetType() const;
 
   NS_IMETHOD
-  Init(nsIContent*      aContent,
+  Init(nsPresContext*  aPresContext,
+       nsIContent*      aContent,
        nsIFrame*        aParent,
+       nsStyleContext*  aContext,
        nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD
-  SetInitialChildList(nsIAtom*        aListName,
+  SetInitialChildList(nsPresContext* aPresContext,
+                      nsIAtom*        aListName,
                       nsIFrame*       aChildList);
 
   NS_IMETHOD
@@ -71,36 +74,31 @@ public:
         PRBool               aPlaceOrigin,
         nsHTMLReflowMetrics& aDesiredSize);
 
-  virtual void MarkIntrinsicWidthsDirty();
+  NS_IMETHOD
+  ReflowDirtyChild(nsIPresShell* aPresShell,
+                   nsIFrame*     aChild);
 
   NS_IMETHOD
-  AttributeChanged(PRInt32         aNameSpaceID,
+  AttributeChanged(nsIContent*     aChild,
+                   PRInt32         aNameSpaceID,
                    nsIAtom*        aAttribute,
                    PRInt32         aModType);
-
-  virtual nsresult
-  ChildListChanged(PRInt32 aModType)
-  {
-    ProcessTextData(PR_TRUE);
-    return nsMathMLContainerFrame::ChildListChanged(aModType);
-  }
-
 protected:
-  nsMathMLTokenFrame(nsStyleContext* aContext) : nsMathMLContainerFrame(aContext) {}
+  nsMathMLTokenFrame();
   virtual ~nsMathMLTokenFrame();
 
   virtual PRIntn GetSkipSides() const { return 0; }
 
   // hook to perform MathML-specific actions depending on the tag
   virtual void
-  ProcessTextData(PRBool aComputeStyleChange);
+  ProcessTextData(nsPresContext* aPresContext);
 
   // helper to set the style of <mi> which has to be italic or normal
   // depending on its textual content
-  PRBool SetTextStyle();
+  void SetTextStyle(nsPresContext* aPresContext);
 
   // helper to set the quotes of <ms>
-  void SetQuotes();
+  void SetQuotes(nsPresContext* aPresContext);
 };
 
 #endif /* nsMathMLTokentFrame_h___ */

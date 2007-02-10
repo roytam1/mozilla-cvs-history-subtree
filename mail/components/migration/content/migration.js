@@ -67,7 +67,7 @@ var MigrationWizard = {
       var nothing = document.getElementById("nothing");
       nothing.hidden = false;      
     }
-	
+
     this.onImportSourcePageShow();
 	
     // Behavior alert! If we were given a migrator already, then we are going to perform migration

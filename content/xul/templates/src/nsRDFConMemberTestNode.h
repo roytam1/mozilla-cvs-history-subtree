@@ -42,7 +42,9 @@
 #include "nscore.h"
 #include "nsRDFTestNode.h"
 #include "nsIRDFDataSource.h"
-#include "nsXULTemplateQueryProcessorRDF.h"
+#include "nsFixedSizeAllocator.h"
+class nsConflictSet;
+class nsResourceSet;
 
 /**
  * Rule network node that test if a resource is a member of an RDF
@@ -52,13 +54,16 @@
 class nsRDFConMemberTestNode : public nsRDFTestNode
 {
 public:
-    nsRDFConMemberTestNode(TestNode* aParent,
-                           nsXULTemplateQueryProcessorRDF* aProcessor,
-                           nsIAtom* aContainerVariable,
-                           nsIAtom* aMemberVariable);
+    nsRDFConMemberTestNode(InnerNode* aParent,
+                           nsConflictSet& aConflictSet,
+                           nsIRDFDataSource* aDataSource,
+                           const nsResourceSet& aMembershipProperties,
+                           PRInt32 aContainerVariable,
+                           PRInt32 aMemberVariable);
 
-    virtual nsresult FilterInstantiations(InstantiationSet& aInstantiations,
-                                          PRBool* aCantHandleYet) const;
+    virtual nsresult FilterInstantiations(InstantiationSet& aInstantiations, void* aClosure) const;
+
+    virtual nsresult GetAncestorVariables(VariableSet& aVariables) const;
 
     virtual PRBool
     CanPropagate(nsIRDFResource* aSource,
@@ -69,7 +74,9 @@ public:
     virtual void
     Retract(nsIRDFResource* aSource,
             nsIRDFResource* aProperty,
-            nsIRDFNode* aTarget) const;
+            nsIRDFNode* aTarget,
+            nsTemplateMatchSet& aFirings,
+            nsTemplateMatchSet& aRetractions) const;
 
     class Element : public MemoryElement {
     protected:
@@ -123,9 +130,11 @@ public:
     };
 
 protected:
-    nsXULTemplateQueryProcessorRDF* mProcessor;
-    nsCOMPtr<nsIAtom> mContainerVariable;
-    nsCOMPtr<nsIAtom> mMemberVariable;
+    nsConflictSet& mConflictSet;
+    nsCOMPtr<nsIRDFDataSource> mDataSource;
+    const nsResourceSet& mMembershipProperties;
+    PRInt32 mContainerVariable;
+    PRInt32 mMemberVariable;
 };
 
 #endif // nsRDFConMemberTestNode_h__

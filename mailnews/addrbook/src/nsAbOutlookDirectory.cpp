@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Created by Cyrille Moureaux <Cyrille.Moureaux@sun.com>
- *   Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -43,23 +42,17 @@
 
 #include "nsAbBaseCID.h"
 #include "nsIAbCard.h"
-#include "nsAbOutlookCard.h"
 #include "nsXPIDLString.h"
 #include "nsAbDirectoryQuery.h"
 #include "nsIAbBooleanExpression.h"
 #include "nsIAddressBook.h"
 #include "nsIAddrBookSession.h"
-#include "nsIAbMDBDirectory.h"
 #include "nsAbQueryStringToExpression.h"
 #include "nsAbUtils.h"
 #include "nsIProxyObjectManager.h"
 #include "nsEnumeratorUtils.h"
-#include "nsServiceManagerUtils.h"
-#include "nsCRT.h"
 #include "prlog.h"
 #include "prthread.h"
-#include "nsIPrefService.h"
-#include "nsIPrefBranch.h"
 
 #ifdef PR_LOGGING
 static PRLogModuleInfo* gAbOutlookDirectoryLog
@@ -152,22 +145,6 @@ NS_IMETHODIMP nsAbOutlookDirectory::Init(const char *aUri)
 }
 
 // nsIAbDirectory methods
-
-NS_IMETHODIMP nsAbOutlookDirectory::GetURI(nsACString &aURI)
-{
-  nsresult rv = GetStringValue("uri", EmptyCString(), aURI);
-
-  if (aURI.IsEmpty())
-  {
-    rv = GetFileName(aURI);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    aURI.Insert(kMDBDirectoryRoot, 0);
-  }
-
-  return NS_OK;
-}
-
 NS_IMETHODIMP nsAbOutlookDirectory::GetChildNodes(nsISimpleEnumerator **aNodes)
 {
     if (!aNodes) { return NS_ERROR_NULL_POINTER ; }
@@ -186,7 +163,7 @@ NS_IMETHODIMP nsAbOutlookDirectory::GetChildNodes(nsISimpleEnumerator **aNodes)
     return retCode;
 }
 
-NS_IMETHODIMP nsAbOutlookDirectory::GetChildCards(nsISimpleEnumerator **aCards)
+NS_IMETHODIMP nsAbOutlookDirectory::GetChildCards(nsIEnumerator **aCards)
 {
     if (!aCards) { return NS_ERROR_NULL_POINTER ; }
     *aCards = nsnull ;
@@ -207,7 +184,7 @@ NS_IMETHODIMP nsAbOutlookDirectory::GetChildCards(nsISimpleEnumerator **aCards)
         PRUint32 nbCards = 0 ;
         nsCOMPtr<nsISupports> element ;
         
-        NS_NewArrayEnumerator(aCards, cardList);
+        cardList->Enumerate(aCards) ;
         cardList->Count(&nbCards) ;
         for (PRUint32 i = 0 ; i < nbCards ; ++ i) {
             cardList->GetElementAt(i, getter_AddRefs(element)) ;
@@ -1026,10 +1003,10 @@ NS_IMETHODIMP nsAbOutlookDirectory::StartSearch(void)
     NS_ENSURE_SUCCESS(retCode, retCode) ;
     nsCOMPtr<nsIAbDirectoryQueryResultListener> proxyListener;
 
-    retCode = NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+    retCode = NS_GetProxyForObject(NS_UI_THREAD_EVENTQ,
                      NS_GET_IID(nsIAbDirectoryQueryResultListener),
                      NS_STATIC_CAST(nsIAbDirectoryQueryResultListener *, new nsAbDirSearchListener(this)),
-                     NS_PROXY_SYNC | NS_PROXY_ALWAYS,
+                     PROXY_SYNC | PROXY_ALWAYS,
                      getter_AddRefs(proxyListener));
     NS_ENSURE_SUCCESS(retCode, retCode) ;
 
@@ -1337,7 +1314,7 @@ nsresult nsAbOutlookDirectory::CreateCard(nsIAbCard *aData, nsIAbCard **aNewCard
     if (!didCopy) {
         retCode = newCard->Copy(aData) ;
         NS_ENSURE_SUCCESS(retCode, retCode) ;
-        retCode = ModifyCard(newCard) ;
+        retCode = newCard->EditCardToDatabase(mURINoQuery.get()) ;
         NS_ENSURE_SUCCESS(retCode, retCode) ;
     }
     *aNewCard = newCard ;
@@ -1345,134 +1322,8 @@ nsresult nsAbOutlookDirectory::CreateCard(nsIAbCard *aData, nsIAbCard **aNewCard
     return retCode ;
 }
 
-static void UnicodeToWord(const PRUnichar *aUnicode, WORD& aWord)
-{
-    aWord = 0 ;
-    if (aUnicode == nsnull || *aUnicode == 0) { return ; }
-    PRInt32 errorCode = 0 ;
-    nsAutoString unichar (aUnicode) ;
 
-    aWord = NS_STATIC_CAST(WORD, unichar.ToInteger(&errorCode)) ;
-    if (errorCode != 0) {
-        PRINTF(("Error conversion string %S: %08x.\n", unichar.get(), errorCode)) ;
-    }
-}
 
-#define PREF_MAIL_ADDR_BOOK_LASTNAMEFIRST "mail.addr_book.lastnamefirst"
 
-NS_IMETHODIMP nsAbOutlookDirectory::ModifyCard(nsIAbCard *aModifiedCard)
-{
-  NS_ENSURE_ARG_POINTER(aModifiedCard);
 
-  nsresult retCode = NS_OK;
-  nsXPIDLString *properties = nsnull;
-  nsAutoString utility;
-  nsAbWinHelperGuard mapiAddBook(mAbWinType);
 
-  if (!mapiAddBook->IsOK())
-    return NS_ERROR_FAILURE;
-
-  // First, all the standard properties in one go
-  properties = new nsXPIDLString[index_LastProp];
-  if (!properties) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-  aModifiedCard->GetFirstName(getter_Copies(properties[index_FirstName]));
-  aModifiedCard->GetLastName(getter_Copies(properties[index_LastName]));
-  // This triple search for something to put in the name
-  // is because in the case of a mailing list edition in 
-  // Mozilla, the display name will not be provided, and 
-  // MAPI doesn't allow that, so we fall back on an optional
-  // name, and when all fails, on the email address.
-  aModifiedCard->GetDisplayName(getter_Copies(properties[index_DisplayName]));
-  if (*properties[index_DisplayName].get() == 0) {
-    nsresult rv;
-    nsCOMPtr<nsIPrefBranch> prefBranch =
-      do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
-    NS_ENSURE_SUCCESS(rv,rv);
-
-    PRInt32 format;
-    rv = prefBranch->GetIntPref(PREF_MAIL_ADDR_BOOK_LASTNAMEFIRST, &format);
-    NS_ENSURE_SUCCESS(rv,rv);
-
-    nsCOMPtr<nsIAddrBookSession> abSession =
-      do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
-    NS_ENSURE_SUCCESS(rv,rv);
-
-    rv = abSession->GenerateNameFromCard(aModifiedCard, format, getter_Copies(properties [index_DisplayName]));
-    NS_ENSURE_SUCCESS(rv,rv);
-
-    if (*properties[index_DisplayName].get() == 0) {
-      aModifiedCard->GetPrimaryEmail(getter_Copies(properties[index_DisplayName]));
-    }
-  }
-  aModifiedCard->SetDisplayName(properties[index_DisplayName]);
-  aModifiedCard->GetNickName(getter_Copies(properties[index_NickName]));
-  aModifiedCard->GetPrimaryEmail(getter_Copies(properties[index_EmailAddress]));
-  aModifiedCard->GetWorkPhone(getter_Copies(properties[index_WorkPhoneNumber]));
-  aModifiedCard->GetHomePhone(getter_Copies(properties[index_HomePhoneNumber]));
-  aModifiedCard->GetFaxNumber(getter_Copies(properties[index_WorkFaxNumber]));
-  aModifiedCard->GetPagerNumber(getter_Copies(properties[index_PagerNumber]));
-  aModifiedCard->GetCellularNumber(getter_Copies(properties[index_MobileNumber]));
-  aModifiedCard->GetHomeCity(getter_Copies(properties[index_HomeCity]));
-  aModifiedCard->GetHomeState(getter_Copies(properties[index_HomeState]));
-  aModifiedCard->GetHomeZipCode(getter_Copies(properties[index_HomeZip]));
-  aModifiedCard->GetHomeCountry(getter_Copies(properties[index_HomeCountry]));
-  aModifiedCard->GetWorkCity(getter_Copies(properties[index_WorkCity]));
-  aModifiedCard->GetWorkState(getter_Copies(properties[index_WorkState]));
-  aModifiedCard->GetWorkZipCode(getter_Copies(properties[index_WorkZip]));
-  aModifiedCard->GetWorkCountry(getter_Copies(properties[index_WorkCountry]));
-  aModifiedCard->GetJobTitle(getter_Copies(properties[index_JobTitle]));
-  aModifiedCard->GetDepartment(getter_Copies(properties[index_Department]));
-  aModifiedCard->GetCompany(getter_Copies(properties[index_Company]));
-  aModifiedCard->GetWebPage1(getter_Copies(properties[index_WorkWebPage]));
-  aModifiedCard->GetWebPage2(getter_Copies(properties[index_HomeWebPage]));
-  aModifiedCard->GetNotes(getter_Copies(properties[index_Comments]));
-  if (!mapiAddBook->SetPropertiesUString(*mMapiData, OutlookCardMAPIProps,
-                                         index_LastProp, properties)) {
-    PRINTF(("Cannot set general properties.\n")) ;
-  }
-
-  delete [] properties;
-  nsXPIDLString unichar;
-  nsXPIDLString unichar2;
-  WORD year = 0;
-  WORD month = 0;
-  WORD day = 0;
-
-  aModifiedCard->GetHomeAddress(getter_Copies(unichar));
-  aModifiedCard->GetHomeAddress2(getter_Copies(unichar2));
-
-  utility.Assign(unichar.get());
-  if (!utility.IsEmpty())
-    utility.AppendWithConversion(CRLF);
-
-  utility.Append(unichar2.get());
-  if (!mapiAddBook->SetPropertyUString(*mMapiData, PR_HOME_ADDRESS_STREET_W, utility.get())) {
-    PRINTF(("Cannot set home address.\n")) ;
-  }
-
-  aModifiedCard->GetWorkAddress(getter_Copies(unichar));
-  aModifiedCard->GetWorkAddress2(getter_Copies(unichar2));
-
-  utility.Assign(unichar.get());
-  if (!utility.IsEmpty())
-    utility.AppendWithConversion(CRLF);
-
-  utility.Append(unichar2.get());
-  if (!mapiAddBook->SetPropertyUString(*mMapiData, PR_BUSINESS_ADDRESS_STREET_W, utility.get())) {
-    PRINTF(("Cannot set work address.\n")) ;
-  }
-
-  aModifiedCard->GetBirthYear(getter_Copies(unichar));
-  UnicodeToWord(unichar.get(), year);
-  aModifiedCard->GetBirthMonth(getter_Copies(unichar));
-  UnicodeToWord(unichar.get(), month);
-  aModifiedCard->GetBirthDay(getter_Copies(unichar));
-  UnicodeToWord(unichar.get(), day);
-  if (!mapiAddBook->SetPropertyDate(*mMapiData, PR_BIRTHDAY, year, month, day)) {
-    PRINTF(("Cannot set date.\n")) ;
-  }
-
-  return retCode;
-}

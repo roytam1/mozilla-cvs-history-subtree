@@ -62,7 +62,4 @@
 - (NSImage*)siteIconForURL:(NSString*)inURL;
 - (void)setSiteIcon:(NSImage*)inImage forURL:(NSString*)inURL withExpiration:(NSDate*)inExpirationDate memoryOnly:(BOOL)inMemoryOnly;
 
-// Purge our cached image of the favicon located at inURL
-- (void)removeImageForURL:(NSString*)inURL;
-
 @end

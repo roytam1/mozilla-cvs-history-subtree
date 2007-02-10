@@ -39,10 +39,19 @@
 #include "nsUCvTWDll.h"
 
 //----------------------------------------------------------------------
+// Global functions and data [declaration]
+
+static const PRUint16 gBig5ShiftTable[] =  {
+  0, u2BytesCharset,
+  ShiftCell(0,   0, 0, 0, 0, 0, 0, 0),
+};
+ 
+
+//----------------------------------------------------------------------
 // Class nsUnicodeToBIG5NoAscii [implementation]
 
 nsUnicodeToBIG5NoAscii::nsUnicodeToBIG5NoAscii() 
-  : nsTableEncoderSupport(u2BytesCharset,
+: nsTableEncoderSupport( (uShiftTable*) &gBig5ShiftTable, 
                         (uMappingTable*) &g_ufBig5Mapping,
                          2 /* max length = src * 2 */)
 {

@@ -46,6 +46,8 @@
 PRInt32 XPCWrappedNativeProto::gDEBUG_LiveProtoCount = 0;
 #endif
 
+MOZ_DECL_CTOR_COUNTER(XPCWrappedNativeProto)
+
 XPCWrappedNativeProto::XPCWrappedNativeProto(XPCWrappedNativeScope* Scope,
                                              nsIClassInfo* ClassInfo,
                                              PRUint32 ClassInfoFlags,

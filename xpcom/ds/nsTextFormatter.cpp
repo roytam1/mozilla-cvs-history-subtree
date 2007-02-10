@@ -561,7 +561,7 @@ static int cvt_s(SprintfState *ss, const char *s, int width,
 }
 
 /*
-** BuildArgArray stands for Numbered Argument list Sprintf
+** BiuldArgArray stands for Numbered Argument list Sprintf
 ** for example,  
 **	fmp = "%4$i, %2$d, %3s, %1d";
 ** the number must start from 1, and no gap among them
@@ -1413,7 +1413,7 @@ PRBool nsTextFormatter::SelfTest()
     ret = nsTextFormatter::snprintf(buf, 256, fmt.get(), d, 333, utf8, ucs2);
     printf("ret = %d\n", ret);
     nsAutoString out(buf);
-    printf("%s \n", NS_LossyConvertUTF16toASCII(out).get());
+    printf("%s \n", NS_LossyConvertUCS2toASCII(out).get());
     const PRUnichar *uout = out.get();
     for(PRUint32 i=0;i<out.Length();i++)
         printf("%2X ", uout[i]);

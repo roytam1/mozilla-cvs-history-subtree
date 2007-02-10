@@ -37,6 +37,7 @@
  
 /**
  * MODULE NOTES:
+ * @update  gess 4/1/98
  * 
  *  This class does two primary jobs:
  *    1) It iterates the tokens provided during the 
@@ -83,7 +84,7 @@
 #include "nsHTMLTags.h"
 #include "nsDTDUtils.h"
 #include "nsTimer.h"
-#include "nsThreadUtils.h"
+#include "nsIEventQueue.h"
 #include "nsIContentSink.h"
 #include "nsIParserFilter.h"
 #include "nsCOMArray.h"
@@ -178,6 +179,8 @@ class nsParser : public nsIParser,
 
 
     NS_IMETHOD_(void) SetParserFilter(nsIParserFilter* aFilter);
+    
+    NS_IMETHOD RegisterDTD(nsIDTD* aDTD);
 
     /**
      *  Retrieve the scanner from the topmost parser context
@@ -196,6 +199,7 @@ class nsParser : public nsIParser,
      */
     NS_IMETHOD Parse(nsIURI* aURL,
                      nsIRequestObserver* aListener = nsnull,
+                     PRBool aEnableVerify = PR_FALSE,
                      void* aKey = 0,
                      nsDTDMode aMode = eDTDMode_autodetect);
 
@@ -207,6 +211,7 @@ class nsParser : public nsIParser,
      */
     NS_IMETHOD Parse(nsIInputStream* aStream,
                      const nsACString& aMimeType,
+                     PRBool aEnableVerify = PR_FALSE,
                      void* aKey = 0,
                      nsDTDMode aMode = eDTDMode_autodetect);
 
@@ -219,10 +224,9 @@ class nsParser : public nsIParser,
     NS_IMETHOD Parse(const nsAString& aSourceBuffer,
                      void* aKey,
                      const nsACString& aContentType,
+                     PRBool aEnableVerify,
                      PRBool aLastCall,
                      nsDTDMode aMode = eDTDMode_autodetect);
-
-    NS_IMETHOD_(void *) GetRootContextKey();
 
     /**
      * This method needs documentation
@@ -309,6 +313,14 @@ class nsParser : public nsIParser,
     CParserContext*   PopContext();
     CParserContext*   PeekContext() {return mParserContext;}
 
+    /**
+     * 
+     * @update	gess 1/22/99
+     * @param 
+     * @return
+     */
+    nsresult GetTokenizer(nsITokenizer*& aTokenizer);
+
     /** 
      * Get the channel associated with this parser
      * @update harishd,gagan 07/17/01
@@ -372,7 +384,7 @@ class nsParser : public nsIParser,
      *  Fired when the continue parse event is triggered.
      *  @update  kmcclusk 5/18/98
      */
-    void HandleParserContinueEvent(class nsParserContinueEvent *);
+    void HandleParserContinueEvent(void);
 
     /**
      * Called by top-level scanners when data from necko is added to
@@ -446,10 +458,10 @@ protected:
     //*********************************************
     
       
+    nsCOMPtr<nsIEventQueue>      mEventQueue;
     CParserContext*              mParserContext;
     nsCOMPtr<nsIRequestObserver> mObserver;
     nsCOMPtr<nsIContentSink>     mSink;
-    nsIRunnable*                 mContinueEvent;  // weak ref
    
     nsCOMPtr<nsIParserFilter> mParserFilter;
     nsTokenAllocator          mTokenAllocator;

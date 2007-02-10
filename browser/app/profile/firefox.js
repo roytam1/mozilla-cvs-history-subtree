@@ -178,12 +178,13 @@ pref("browser.shell.checkDefaultBrowser", true);
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last visited page, 3 = resume previous browser session
 // The behavior of option 3 is detailed at: http://wiki.mozilla.org/Session_Restore
 pref("browser.startup.page",                1);
-pref("browser.startup.homepage",            "resource:/browserconfig.properties");
+pref("browser.startup.homepage",	          "resource:/browserconfig.properties");
 
 pref("browser.cache.disk.capacity",         50000);
 pref("browser.enable_automatic_image_resizing", true);
 pref("browser.urlbar.autoFill", false);
 pref("browser.urlbar.matchOnlyTyped", false);
+pref("browser.urlbar.hideGoButton", false);
 pref("browser.chrome.site_icons", true);
 pref("browser.chrome.favicons", true);
 pref("browser.formfill.enable", true);
@@ -239,7 +240,6 @@ pref("browser.search.updateinterval", 6);
 pref("browser.search.suggest.enabled", true);
 
 pref("browser.history.grouping", "day");
-pref("browser.history.showSessions", false);
 pref("browser.sessionhistory.max_entries", 50);
 
 // handle external links
@@ -283,12 +283,7 @@ pref("browser.bookmarks.sort.resource", "rdf:http://home.netscape.com/NC-rdf#Nam
 
 // Scripts & Windows prefs
 pref("dom.disable_open_during_load",              true);
-#ifdef DEBUG
-pref("javascript.options.showInConsole",          true);
-#else
 pref("javascript.options.showInConsole",          false);
-#endif
-
 // Make the status bar reliably present and unaffected by pages
 pref("dom.disable_window_open_feature.status",    true);
 // This is the pref to control the location bar, change this to true to 
@@ -381,13 +376,13 @@ pref("custtoolbar.personal_toolbar_folder", "");
 pref("alerts.slideIncrement", 1);
 pref("alerts.slideIncrementTime", 10);
 pref("alerts.totalOpenTime", 4000);
+pref("alerts.height", 50);
 
 pref("browser.xul.error_pages.enabled", true);
 
 pref("signon.rememberSignons",              true);
 pref("signon.expireMasterPassword",         false);
-pref("signon.SignonFileName",               "signons.txt");
-pref("signon.autofillForms",                true);
+pref("signon.SignonFileName", "signons.txt");
 
 // We want to make sure mail URLs are handled externally...
 pref("network.protocol-handler.external.mailto", true); // for mail
@@ -457,7 +452,7 @@ pref("bidi.browser.ui", false);
 // 1 act like PgUp/PgDown
 // 2 and other values, nothing
 #ifdef UNIX_BUT_NOT_MAC
-pref("browser.backspace_action", 2);
+pref("browser.backspace_action", 1);
 #else
 pref("browser.backspace_action", 0);
 #endif
@@ -472,9 +467,7 @@ pref("layout.spellcheckDefault", 1);
 pref("view_source.editor.path", "");
 pref("view_source.editor.external", false);
 
-pref("browser.send_pings", true);
-
-/* initial web feed readers list */
+#ifdef MOZ_FEEDS
 pref("browser.contentHandlers.types.0.title", "chrome://browser-region/locale/region.properties");
 pref("browser.contentHandlers.types.0.uri", "chrome://browser-region/locale/region.properties");
 pref("browser.contentHandlers.types.0.type", "application/vnd.mozilla.maybe.feed");
@@ -495,6 +488,7 @@ pref("browser.contentHandlers.types.5.uri", "chrome://browser-region/locale/regi
 pref("browser.contentHandlers.types.5.type", "application/vnd.mozilla.maybe.feed");
 
 pref("browser.feeds.handler", "ask");
+#endif
 
 #ifdef MOZ_SAFE_BROWSING
 // Safe browsing does nothing unless both these prefs are set.
@@ -502,13 +496,13 @@ pref("browser.safebrowsing.enabled", true);
 pref("browser.safebrowsing.remoteLookups", false);
 
 // Non-enhanced mode (local url lists) URL list to check for updates
-pref("browser.safebrowsing.provider.0.updateURL", "http://sb.google.com/safebrowsing/update?client={moz:client}&appver={moz:version}&");
+pref("browser.safebrowsing.provider.0.updateURL", "http://sb.google.com/safebrowsing/update?client={moz:client}&mozver={moz:version}-{moz:buildid}&");
 
 pref("browser.safebrowsing.dataProvider", 0);
 
 // Does the provider name need to be localizable?
 pref("browser.safebrowsing.provider.0.name", "Google");
-pref("browser.safebrowsing.provider.0.lookupURL", "http://sb.google.com/safebrowsing/lookup?sourceid=firefox-antiphish&features=TrustRank&client={moz:client}&appver={moz:version}&");
+pref("browser.safebrowsing.provider.0.lookupURL", "http://sb.google.com/safebrowsing/lookup?sourceid=firefox-antiphish&features=TrustRank&client={moz:client}&mozver={moz:version}-{moz:buildid}&");
 pref("browser.safebrowsing.provider.0.keyURL", "https://sb-ssl.google.com/safebrowsing/getkey?client={moz:client}&");
 pref("browser.safebrowsing.provider.0.reportURL", "http://sb.google.com/safebrowsing/report?");
 
@@ -532,20 +526,4 @@ pref("browser.EULA.2.accepted", true);
 // if we rev the EULA again, we should bump this so users agree to the new EULA
 pref("browser.EULA.version", 2);
 
-pref("browser.sessionstore.enabled", true);
-pref("browser.sessionstore.resume_from_crash", true);
-pref("browser.sessionstore.resume_session_once", false);
- 
-// minimal interval between two save operations in milliseconds
-pref("browser.sessionstore.interval", 10000);
-// maximum amount of POSTDATA to be saved in bytes per history entry (-1 = all of it)
-// (NB: POSTDATA will be saved either entirely or not at all)
-pref("browser.sessionstore.postdata", 0);
-// on which sites to save text data, POSTDATA and cookies
-// 0 = everywhere, 1 = unencrypted sites, 2 = nowhere
-pref("browser.sessionstore.privacy_level", 1);
-// how many tabs can be reopened (per window)
-pref("browser.sessionstore.max_tabs_undo", 10);
 
-// allow META refresh by default
-pref("accessibility.blockautorefresh", false);

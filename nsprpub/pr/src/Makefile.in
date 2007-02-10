@@ -119,7 +119,6 @@ OS_LIBS += -lc
 endif
 
 ifeq ($(OS_ARCH),AIX)
-DSO_LDOPTS	+= -binitfini::_PR_Fini
 OS_LIBS		= -lodm -lcfg
 ifeq ($(CLASSIC_NSPR),1)
 ifeq ($(OS_RELEASE),4.1)
@@ -186,11 +185,6 @@ ifeq ($(basename $(OS_RELEASE)),A.09)
 OS_LIBS		+= -ldld -L/lib/pa1.1 -lm
 else
 OS_LIBS		+= -ldld -lm -lc
-endif
-ifneq ($(OS_TEST),ia64)
-ifndef USE_64
-DSO_LDOPTS	+= +I PR_HPUX10xInit
-endif
 endif
 endif
 

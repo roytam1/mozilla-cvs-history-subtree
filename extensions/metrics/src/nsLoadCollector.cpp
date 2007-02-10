@@ -221,9 +221,9 @@ nsLoadCollector::~nsLoadCollector()
   GetMemUsage_Shutdown();
 }
 
-NS_IMPL_ISUPPORTS5(nsLoadCollector, nsIMetricsCollector,
+NS_IMPL_ISUPPORTS4(nsLoadCollector, nsIMetricsCollector,
                    nsIWebProgressListener, nsISupportsWeakReference,
-                   nsIDocumentObserver, nsIMutationObserver)
+                   nsIDocumentObserver)
 
 NS_IMETHODIMP
 nsLoadCollector::OnStateChange(nsIWebProgress *webProgress,
@@ -524,9 +524,8 @@ nsLoadCollector::EndUpdate(nsIDocument *document, nsUpdateType updateType)
 }
 
 void
-nsLoadCollector::NodeWillBeDestroyed(const nsINode *node)
+nsLoadCollector::DocumentWillBeDestroyed(nsIDocument *document)
 {
-  const nsIDocument* document = NS_STATIC_CAST(const nsIDocument*, node);
   // Look up the document to get its id.
   DocumentEntry entry;
   if (!mDocumentMap.Get(document, &entry)) {

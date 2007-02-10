@@ -46,7 +46,7 @@
 #include "nsString.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOMDOMImplementation.h"
-#include "nsIXTFElementWrapper.h"
+#include "nsIXTFGenericElementWrapper.h"
 #include "nsXFormsUtils.h"
 #include "nsNetUtil.h"
 
@@ -136,7 +136,7 @@ nsXFormsInstanceElement::AttributeRemoved(nsIAtom *aName)
 }
 
 NS_IMETHODIMP
-nsXFormsInstanceElement::OnCreated(nsIXTFElementWrapper *aWrapper)
+nsXFormsInstanceElement::OnCreated(nsIXTFGenericElementWrapper *aWrapper)
 {
   aWrapper->SetNotificationMask(nsIXTFElement::NOTIFY_ATTRIBUTE_SET |
                                 nsIXTFElement::NOTIFY_ATTRIBUTE_REMOVED |
@@ -290,7 +290,7 @@ nsXFormsInstanceElement::ReplacePrincipal(nsIDocument *aDocument)
   mElement->GetOwnerDocument(getter_AddRefs(domDoc));
   nsCOMPtr<nsIDocument> fromDoc(do_QueryInterface(domDoc));
   NS_ENSURE_STATE(fromDoc);
-  aDocument->SetPrincipal(fromDoc->NodePrincipal());
+  aDocument->SetPrincipal(fromDoc->GetPrincipal());
 
   return NS_OK;
 }
@@ -364,8 +364,7 @@ nsXFormsInstanceElement::BackupOriginalDocument()
     NS_ENSURE_TRUE(instanceRoot, NS_ERROR_FAILURE);
 
     nsCOMPtr<nsIDOMNode> nodeReturn;
-    rv = mOriginalDocument->ImportNode(instanceRoot, PR_TRUE,
-                                       getter_AddRefs(newNode));
+    rv = instanceRoot->CloneNode(PR_TRUE, getter_AddRefs(newNode)); 
     if(NS_SUCCEEDED(rv)) {
       rv = mOriginalDocument->AppendChild(newNode, getter_AddRefs(nodeReturn));
       NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), 

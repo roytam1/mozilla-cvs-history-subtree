@@ -66,10 +66,23 @@
 #define NS_MATHML_PSEUDO_UNIT_LSPACE      5
 #define NS_MATHML_PSEUDO_UNIT_NAMEDSPACE  6
 
-nsIFrame*
-NS_NewMathMLmpaddedFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMathMLmpaddedFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLmpaddedFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLmpaddedFrame* it = new (aPresShell) nsMathMLmpaddedFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+nsMathMLmpaddedFrame::nsMathMLmpaddedFrame()
+{
 }
 
 nsMathMLmpaddedFrame::~nsMathMLmpaddedFrame()
@@ -112,29 +125,29 @@ nsMathMLmpaddedFrame::ProcessAttributes()
 
   // width
   mWidthSign = NS_MATHML_SIGN_INVALID;
-  GetAttribute(mContent, nsnull, nsGkAtoms::width, value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, nsnull,
+                   nsMathMLAtoms::width_, value)) {
     ParseAttribute(value, mWidthSign, mWidth, mWidthPseudoUnit);
   }
 
   // height
   mHeightSign = NS_MATHML_SIGN_INVALID;
-  GetAttribute(mContent, nsnull, nsGkAtoms::height, value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, nsnull,
+                   nsMathMLAtoms::height_, value)) {
     ParseAttribute(value, mHeightSign, mHeight, mHeightPseudoUnit);
   }
 
   // depth
   mDepthSign = NS_MATHML_SIGN_INVALID;
-  GetAttribute(mContent, nsnull, nsGkAtoms::depth_, value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, nsnull,
+                   nsMathMLAtoms::depth_, value)) {
     ParseAttribute(value, mDepthSign, mDepth, mDepthPseudoUnit);
   }
 
   // lspace
   mLeftSpaceSign = NS_MATHML_SIGN_INVALID;
-  GetAttribute(mContent, nsnull, nsGkAtoms::lspace_, value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, nsnull,
+                   nsMathMLAtoms::lspace_, value)) {
     ParseAttribute(value, mLeftSpaceSign, mLeftSpace, mLeftSpacePseudoUnit);
   }
 }
@@ -202,7 +215,7 @@ nsMathMLmpaddedFrame::ParseAttribute(nsString&   aString,
   if (number.IsEmpty()) {
 #ifdef NS_DEBUG
     printf("mpadded: attribute with bad numeric value: %s\n",
-            NS_LossyConvertUTF16toASCII(aString).get());
+            NS_LossyConvertUCS2toASCII(aString).get());
 #endif
     aSign = NS_MATHML_SIGN_INVALID;
     return PR_FALSE;
@@ -285,7 +298,7 @@ nsMathMLmpaddedFrame::ParseAttribute(nsString&   aString,
 
 #ifdef NS_DEBUG
   printf("mpadded: attribute with bad numeric value: %s\n",
-          NS_LossyConvertUTF16toASCII(aString).get());
+          NS_LossyConvertUCS2toASCII(aString).get());
 #endif
   // if we reach here, it means we encounter an unexpected input
   aSign = NS_MATHML_SIGN_INVALID;
@@ -436,8 +449,9 @@ nsMathMLmpaddedFrame::Reflow(nsPresContext*          aPresContext,
   mBoundingMetrics.descent = depth;
 
   aDesiredSize.ascent += dy;
+  aDesiredSize.descent += depth - mBoundingMetrics.descent;
   aDesiredSize.width = mBoundingMetrics.width;
-  aDesiredSize.height += dy + depth - mBoundingMetrics.descent;
+  aDesiredSize.height = aDesiredSize.ascent + aDesiredSize.descent;
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
 
   // combine our tweaked size and our natural size to get our real estate

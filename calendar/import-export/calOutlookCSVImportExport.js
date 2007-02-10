@@ -52,19 +52,16 @@ function QueryInterface(aIID) {
     return this;
 };
 
-function getOutlookCsvFileTypes(aCount) {
+calOutlookCSVImporter.prototype.getFileTypes =
+function getFileTypes(aCount) {
     aCount.value = 1;
     var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
                         .getService(Components.interfaces.nsIStringBundleService);
     var props = sbs.createBundle("chrome://calendar/locale/calendar.properties");
-    var wildmat = '*.csv';
-    var label = props.formatStringFromName('filterOutlookCsv', [wildmat], 1);
     return([{defaultExtension:'csv', 
-             extensionFilter: wildmat, 
-             description: label}]);
-}
-
-calOutlookCSVImporter.prototype.getFileTypes = getOutlookCsvFileTypes;
+             extensionFilter:'*.csv', 
+             description: props.GetStringFromName('outlookDesc')}]);
+};
 
 const localeEn = {
     headTitle       : "Subject",
@@ -274,9 +271,7 @@ function csv_importFromStream(aStream, aCount) {
                                       .createInstance(Components.interfaces.calIEvent);
 
                 event.title = title;
-                if (sDate) {
-                    sDate.isDate = (locale.valueTrue == eventFields[args.allDayIndex]);
-                }
+                sDate.isDate = (locale.valueTrue == eventFields[args.allDayIndex]);
                 if (locale.valueTrue == eventFields[args.privateIndex])
                     event.privacy = "PRIVATE";
 
@@ -293,8 +288,30 @@ function csv_importFromStream(aStream, aCount) {
                     event.endDate = eDate;
 
                 if (alarmDate) {
-                    event.alarmOffset = sDate.subtractDate(alarmDate);
-                    event.alarmRelated = Components.interfaces.calIItemBase.ALARM_RELATED_START;
+                    var dif = sDate.subtractDate(alarmDate);
+                    dump(dif+"\n");
+                    /*
+                    // XXX Port this once new alarm stuff lands
+                    var len, units;
+                    var minutes = Math.round( ( sDate - alarmDate ) / kDate_MillisecondsInMinute );
+                    var hours = Math.round(minutes / 60 );
+                    if (minutes != hours*60) {
+                      len = minutes;
+                      units = "minutes";
+                    } else {
+                      var days = Math.round(hours / 24);
+                      if (hours != days * 24) {
+                        len = hours;
+                        units = "hours";
+                      } else {
+                        len = days;
+                        units = "days";
+                      }
+                    }
+                    calendarEvent.alarmLength = len;
+                    calendarEvent.alarmUnits = units;
+                    calendarEvent.setParameter( "ICAL_RELATED_PARAMETER", "ICAL_RELATED_START" );
+                    */
                 }
 
                 if ("descriptionIndex" in args)
@@ -333,10 +350,6 @@ function parseDateTime(aDate, aTime, aLocale)
 
     var rd = aLocale.dateRe.exec(aDate);
     var rt = aLocale.timeRe.exec(aTime);
-
-    if (!rd || !rt) {
-        return null;
-    }
     
     date.year = rd[aLocale.dateYearIndex];
     date.month = rd[aLocale.dateMonthIndex] - 1;
@@ -387,7 +400,16 @@ function QueryInterface(aIID) {
     return this;
 };
 
-calOutlookCSVExporter.prototype.getFileTypes = getOutlookCsvFileTypes;
+calOutlookCSVExporter.prototype.getFileTypes =
+function getFileTypes(aCount) {
+    aCount.value = 1;
+    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                        .getService(Components.interfaces.nsIStringBundleService);
+    var props = sbs.createBundle("chrome://calendar/locale/calendar.properties");
+    return([{defaultExtension:'csv', 
+             extensionFilter:'*.csv', 
+             description:props.GetStringFromName('outlookDesc')}]);
+};
 
 // not prototype.export. export is reserved.
 calOutlookCSVExporter.prototype.exportToStream =
@@ -420,22 +442,9 @@ function csv_exportToStream(aStream, aCount, aItems) {
         line.push(dateString(item.endDate));
         line.push(timeString(item.endDate));
         line.push(item.startDate.isDate ? localeEn.valueTrue : localeEn.valueFalse);
-        if (item.alarmOffset) {
-            line.push(localeEn.valueTrue);
-            var fireTime;
-            if (item.alarmRelated == Components.interfaces.calIItemBase.ALARM_RELATED_START) {
-                fireTime = item.startDate.clone();
-            } else {
-                fireTime = item.endDate.clone();
-            }
-            fireTime.addDuration(item.alarmOffset);
-            line.push(dateString(fireTime));
-            line.push(timeString(fireTime));
-        } else {
-            line.push(localeEn.valueFalse);
-            line.push("");
-            line.push("");
-        }
+        line.push(""); //XXX add alarm support
+        line.push(""); //XXX add alarm support
+        line.push(""); //XXX add alarm support
         line.push(item.getProperty("CATEGORIES"));
         line.push(item.getProperty("DESCRIPTION"));
         line.push(item.getProperty("LOCATION"));

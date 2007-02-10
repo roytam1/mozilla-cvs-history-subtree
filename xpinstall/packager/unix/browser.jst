@@ -32,13 +32,11 @@ function upgradeCleanup()
   deleteThisFile("Components", "libnkcache.so");
   deleteThisFile("Components", "libjsloader.so");
   deleteThisFile("Components", "libgkcontent.so");
-  deleteThisFile("Components", "libtransformiix.so");
   deleteThisFile("Components", "libjsurl.so");
   deleteThisFile("Components", "liburiloader.so");
   deleteThisFile("Components", "libgkview.so");
   deleteThisFile("Components", "libshistory.so");
   deleteThisFile("Components", "libjsdom.so");
-  deleteThisFile("Components", "libinspector.so");
   deleteThisFile("Components", "compreg.dat");
   deleteThisFile("Components", "xpti.dat");
   deleteThisFile("Components", "xptitemp.dat");
@@ -93,6 +91,7 @@ if (verifyDiskSpace(communicatorFolder, srDest))
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"comm.jar"),"content/autoconfig/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"comm.jar"),"content/cookie/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"comm.jar"),"content/wallet/");
+    registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"content-packs.jar"),"content/content-packs/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"comm.jar"),"content/communicator/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"comm.jar"),"content/communicator/downloadmanager/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder(cf,"comm.jar"),"content/branding/");

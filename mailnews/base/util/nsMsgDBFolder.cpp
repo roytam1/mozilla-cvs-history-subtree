@@ -53,6 +53,8 @@
 #include "nsIMsgAccountManager.h"
 #include "nsXPIDLString.h"
 #include "nsEscape.h"
+#include "nsLocalFolderSummarySpec.h"
+#include "nsMsgI18N.h"
 #include "nsNativeCharsetUtils.h"
 #include "nsIFileStream.h"
 #include "nsIChannel.h"
@@ -84,11 +86,8 @@
 #include "nsLayoutCID.h"
 #include "nsIHTMLToTextSink.h"
 #include "nsIDocumentEncoder.h" 
-#include "nsMsgI18N.h"
 #include "nsIMIMEHeaderParam.h"
-#include "plbase64.h"
 #include <time.h>
-#include "nsIMsgFolderNotificationService.h"
 
 #define oneHour 3600000000U
 #include "nsMsgUtils.h"
@@ -101,8 +100,10 @@ static PRTime gtimeOfLastPurgeCheck;    //variable to know when to check for pur
 #define PREF_MAIL_WARN_FILTER_CHANGED "mail.warn_filter_changed"
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
+static NS_DEFINE_CID(kCollationFactoryCID, NS_COLLATIONFACTORY_CID);
 static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
 static NS_DEFINE_CID(kParserCID, NS_PARSER_CID);
+static NS_DEFINE_CID(kNavDTDCID, NS_CNAVDTD_CID);
 
 nsIAtom* nsMsgDBFolder::mFolderLoadedAtom=nsnull;
 nsIAtom* nsMsgDBFolder::mDeleteOrMoveMsgCompletedAtom=nsnull;
@@ -471,29 +472,6 @@ NS_IMETHODIMP nsMsgDBFolder::ClearNewMessages()
   return rv;
 }
 
-void nsMsgDBFolder::UpdateNewMessages()
-{
-  if (! (mFlags & MSG_FOLDER_FLAG_VIRTUAL))
-  {
-    PRBool hasNewMessages = PR_FALSE;
-    for (PRUint32 keyIndex = 0; keyIndex < m_newMsgs.GetSize(); keyIndex++)
-    {
-      PRBool containsKey = PR_FALSE;
-      mDatabase->ContainsKey(m_newMsgs[keyIndex], &containsKey);
-      if (!containsKey)
-        continue;
-      PRBool isRead = PR_FALSE;
-      nsresult rv2 = mDatabase->IsRead(m_newMsgs[keyIndex], &isRead);
-      if (NS_SUCCEEDED(rv2) && !isRead)
-      {
-        hasNewMessages = PR_TRUE;
-        mDatabase->AddToNewList(m_newMsgs[keyIndex]);
-      }
-    }
-    SetHasNewMessages(hasNewMessages);
-  }
-}
-
 // helper function that gets the cache element that corresponds to the passed in file spec.
 // This could be static, or could live in another class - it's not specific to the current
 // nsMsgDBFolder. If it lived at a higher level, we could cache the account manager and folder cache.
@@ -536,7 +514,7 @@ nsresult nsMsgDBFolder::ReadDBFolderInfo(PRBool force)
   {
     nsCOMPtr <nsIFileSpec> dbPath;
     
-    result = GetFolderCacheKey(getter_AddRefs(dbPath), PR_TRUE /* createDBIfMissing */);
+    result = GetFolderCacheKey(getter_AddRefs(dbPath));
     
     if (dbPath)
     {
@@ -747,6 +725,11 @@ NS_IMETHODIMP nsMsgDBFolder::GetOfflineStoreOutputStream(nsIOutputStream **outpu
   return rv;
 }
 
+// XXX todo
+// move these to a common location and remove all the hard coded ".msf"
+#define SUMMARY_SUFFIX ".msf"
+#define SUMMARY_SUFFIX_LEN 4
+
 // path coming in is the root path without the leaf name,
 // on the way out, it's the whole path.
 nsresult nsMsgDBFolder::CreateFileSpecForDB(const char *userLeafName, nsFileSpec &path, nsIFileSpec **dbFileSpec)
@@ -780,7 +763,7 @@ nsresult nsMsgDBFolder::CreateFileSpecForDB(const char *userLeafName, nsFileSpec
     proposedDBName = path.GetLeafName();
   }
   // now, take the ".msf" off
-  proposedDBName.Truncate(proposedDBName.Length() - NS_LITERAL_CSTRING(SUMMARY_SUFFIX).Length());
+  proposedDBName.Truncate(proposedDBName.Length() - SUMMARY_SUFFIX_LEN);
   path.SetLeafName(proposedDBName.get());
 
   NS_NewFileSpecWithSpec(path, dbFileSpec);
@@ -1025,12 +1008,6 @@ NS_IMETHODIMP nsMsgDBFolder::GetSupportsOffline(PRBool *aSupportsOffline)
 {  
    NS_ENSURE_ARG_POINTER(aSupportsOffline);
 
-   if (mFlags & MSG_FOLDER_FLAG_VIRTUAL)
-   {
-      *aSupportsOffline = PR_FALSE;
-      return NS_OK;
-   }
-
    nsCOMPtr<nsIMsgIncomingServer> server;
    nsresult rv = GetServer(getter_AddRefs(server));
    NS_ENSURE_SUCCESS(rv,rv);
@@ -1096,6 +1073,16 @@ NS_IMETHODIMP nsMsgDBFolder::ReadFromFolderCacheElem(nsIMsgFolderCacheElement *e
   nsXPIDLCString charset;
 
   element->GetInt32Property("flags", (PRInt32 *) &mFlags);
+
+  PRBool persistElided = PR_TRUE;
+  rv = GetPersistElided(&persistElided);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  // we aren't persisting elided, set the folder as closed
+  if (!persistElided) {
+    mFlags |= MSG_FOLDER_FLAG_ELIDED;
+  }
+
   element->GetInt32Property("totalMsgs", &mNumTotalMessages);
   element->GetInt32Property("totalUnreadMsgs", &mNumUnreadMessages);
   element->GetInt32Property("pendingUnreadMsgs", &mNumPendingUnreadMessages);
@@ -1118,7 +1105,7 @@ NS_IMETHODIMP nsMsgDBFolder::ReadFromFolderCacheElem(nsIMsgFolderCacheElement *e
   return rv;
 }
 
-nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec, PRBool createDBIfMissing /* = PR_FALSE */)
+nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec)
 {
   nsresult rv;
   nsCOMPtr <nsIFileSpec> path;
@@ -1138,15 +1125,16 @@ nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec, PRBool create
     // if it's a server, we don't need the .msf appended to the name
     if (!isServer)
     {
-      nsFileSpec summaryName;
-      rv = GetSummaryFileLocation(dbPath, &summaryName);
+      nsFileSpec		folderName;
+      dbPath->GetFileSpec(&folderName);
+      nsLocalFolderSummarySpec summarySpec(folderName);
       
-      dbPath->SetFromFileSpec(summaryName);
+      dbPath->SetFromFileSpec(summarySpec);
       
       // create the .msf file
       // see bug #244217 for details
       PRBool exists;
-      if (createDBIfMissing && NS_SUCCEEDED(dbPath->Exists(&exists)) && !exists)
+      if (NS_SUCCEEDED(dbPath->Exists(&exists)) && !exists)
         dbPath->Touch();
     }
   }
@@ -1647,7 +1635,7 @@ nsMsgDBFolder::AutoCompact(nsIMsgWindow *aWindow)
              rv = aWindow->GetPromptDialog(getter_AddRefs(dialog));
              NS_ENSURE_SUCCESS(rv, rv);
 
-             rv = dialog->ConfirmEx(dialogTitle.get(), confirmString.get(), nsIPrompt::STD_YES_NO_BUTTONS,
+             rv = dialog->ConfirmEx(dialogTitle.get(), confirmString.get(), nsIPrompt::STD_OK_CANCEL_BUTTONS,
                                     nsnull, nsnull, nsnull, checkboxText.get(), &checkValue, &buttonPressed);
              NS_ENSURE_SUCCESS(rv, rv);
              if (!buttonPressed)
@@ -1663,9 +1651,6 @@ nsMsgDBFolder::AutoCompact(nsIMsgWindow *aWindow)
 
            if (okToCompact)
            {
-              nsCOMPtr <nsIAtom> aboutToCompactAtom = do_GetAtom("AboutToCompact");
-              NotifyFolderEvent(aboutToCompactAtom);
-             
              if ( localExpungedBytes > 0)
              {
                nsCOMPtr <nsIMsgFolder> msgFolder =
@@ -2131,8 +2116,8 @@ nsresult nsMsgDBFolder::PromptForCachePassword(nsIMsgIncomingServer *server, nsI
   bundle->GetStringFromName(NS_LITERAL_STRING("passwordTitle").get(), getter_Copies(passwordTitle));
   bundle->GetStringFromName(NS_LITERAL_STRING("passwordPrompt").get(), getter_Copies(passwordTemplate));
 
-  NS_ConvertASCIItoUTF16 userNameStr(userName);
-  NS_ConvertASCIItoUTF16 hostNameStr(hostName);
+  NS_ConvertASCIItoUCS2 userNameStr(userName);
+  NS_ConvertASCIItoUCS2 hostNameStr(hostName);
 
   const PRUnichar *stringParams[2] = { userNameStr.get(), hostNameStr.get() };
 
@@ -2174,7 +2159,7 @@ nsresult nsMsgDBFolder::PromptForCachePassword(nsIMsgIncomingServer *server, nsI
           break;
         // compare the user-entered password with the saved password with
         // the munged uri.
-        passwordCorrect = password.Equals(NS_ConvertUTF16toUTF8(passwordFound).get());
+        passwordCorrect = password.Equals(NS_ConvertUCS2toUTF8(passwordFound).get());
         if (!passwordCorrect)
           server->SetPassword("");
         else
@@ -2258,7 +2243,7 @@ nsMsgDBFolder::createCollationKeyGenerator()
   rv = localeSvc->GetApplicationLocale(getter_AddRefs(locale));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr <nsICollationFactory> factory = do_CreateInstance(NS_COLLATIONFACTORY_CONTRACTID, &rv);
+  nsCOMPtr <nsICollationFactory> factory = do_CreateInstance(kCollationFactoryCID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = factory->CreateCollation(locale, &gCollationKeyGenerator);
@@ -3154,15 +3139,7 @@ NS_IMETHODIMP nsMsgDBFolder::RecursiveDelete(PRBool deleteStorage, nsIMsgWindow 
 
   // now delete the disk storage for _this_
   if (deleteStorage && (status == NS_OK))
-  {
-    status = Delete();
-    nsCOMPtr <nsISupports> supports;
-    QueryInterface(NS_GET_IID(nsISupports), getter_AddRefs(supports));
-    nsCOMPtr <nsIMsgFolderNotificationService> notifier = do_GetService(NS_MSGNOTIFICATIONSERVICE_CONTRACTID);
-    if (notifier)
-      notifier->NotifyItemDeleted(supports);    
-    
-  }
+      status = Delete();
   return status;
 }
 
@@ -3413,11 +3390,10 @@ NS_IMETHODIMP nsMsgDBFolder::Rename(const PRUnichar *aNewName, nsIMsgWindow *msg
   if (NS_FAILED(rv)) 
     return rv;
   nsCOMPtr<nsISupports> parentSupport = do_QueryInterface(parentFolder);
-
-  nsFileSpec oldSummarySpec;
-  rv = GetSummaryFileLocation(oldPathSpec, &oldSummarySpec);
-  NS_ENSURE_SUCCESS(rv, rv);
-
+  
+  nsFileSpec fileSpec;
+  oldPathSpec->GetFileSpec(&fileSpec);
+  nsLocalFolderSummarySpec oldSummarySpec(fileSpec);
   nsFileSpec dirSpec;
   
   PRUint32 cnt = 0;
@@ -3471,7 +3447,7 @@ NS_IMETHODIMP nsMsgDBFolder::Rename(const PRUnichar *aNewName, nsIMsgWindow *msg
     rv = oldPathSpec->Rename(newDiskName.get());
   if (NS_SUCCEEDED(rv))
   {
-    newDiskName += SUMMARY_SUFFIX;
+    newDiskName += ".msf";
     oldSummarySpec.Rename(newDiskName.get());
   }
   else
@@ -4205,8 +4181,8 @@ NS_IMETHODIMP nsMsgDBFolder::SetBiffState(PRUint32 aBiffState)
     // Get the server and notify it and not inbox.
   if (oldBiffState != aBiffState)
   {
-//    if (aBiffState == nsMsgBiffState_NoMail)
-//      SetNumNewMessages(0);
+    if (aBiffState == nsMsgBiffState_NoMail)
+      SetNumNewMessages(0);
 
     // we don't distinguish between unknown and noMail for servers
     if (! (oldBiffState == nsMsgBiffState_Unknown && aBiffState == nsMsgBiffState_NoMail))
@@ -4935,7 +4911,7 @@ nsMsgDBFolder::GetStringFromBundle(const char *msgName, PRUnichar **aResult)
   nsCOMPtr <nsIStringBundle> bundle;
   rv = GetBaseStringBundle(getter_AddRefs(bundle));
   if (NS_SUCCEEDED(rv) && bundle)
-    rv=bundle->GetStringFromName(NS_ConvertASCIItoUTF16(msgName).get(), aResult);
+    rv=bundle->GetStringFromName(NS_ConvertASCIItoUCS2(msgName).get(), aResult);
   return rv;
 
 }
@@ -4972,7 +4948,7 @@ nsMsgDBFolder::GetStringWithFolderNameFromBundle(const char *msgName, PRUnichar 
       folderName,
       kLocalizedBrandShortName
     };
-    rv = bundle->FormatStringFromName(NS_ConvertASCIItoUTF16(msgName).get(),
+    rv = bundle->FormatStringFromName(NS_ConvertASCIItoUCS2(msgName).get(),
                                       formatStrings, 2, aResult);
   }
   return rv;
@@ -5132,6 +5108,13 @@ NS_IMETHODIMP nsMsgDBFolder::GetSortKey(PRUint8 **aKey, PRUint32 *aLength)
   return CreateCollationKey(orderString, aKey, aLength);
 }
 
+NS_IMETHODIMP nsMsgDBFolder::GetPersistElided(PRBool *aPersistElided)
+{
+  // by default, we should always persist the open / closed state of folders & servers
+  *aPersistElided = PR_TRUE;
+  return NS_OK;
+}
+
 nsresult
 nsMsgDBFolder::CreateCollationKey(const nsString &aSource,  PRUint8 **aKey, PRUint32 *aLength)
 {
@@ -5182,21 +5165,25 @@ NS_IMETHODIMP nsMsgDBFolder::FetchMsgPreviewText(nsMsgKey *aKeysToFetch, PRUint3
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMsgDBFolder::GetMsgTextFromStream(nsIMsgDBHdr *msgHdr, nsIInputStream *stream, 
-                                                  PRInt32 bytesToRead,
-                                                  PRInt32 aMaxOutputLen,
-                                                  PRBool aCompressQuotes,
-                                                  nsACString &aMsgText) 
+nsresult nsMsgDBFolder::GetMsgPreviewTextFromStream(nsIMsgDBHdr *msgHdr, nsIInputStream *stream) 
 {
   /*
-   1. non mime message - the message body starts after the blank line following the headers.
-   2. mime message, multipart/alternative - we could simply scan for the boundary line, 
-   advance past its headers, and treat the next few lines as the text.
-   3. mime message, text/plain - body follows headers
-   4. multipart/mixed - scan past boundary, treat next part as body.
-   */
-  
-  // If we've got a header charset use it, otherwise look for one in the mime parts.
+  1. non mime message - the message body starts after the blank line following the headers.
+  2. mime message, multipart/alternative - we could simply scan for the boundary line, 
+     advance past its headers, and treat the next few lines as the text.
+  3. mime message, text/plain - body follows headers
+  4. multipart/mixed - scan past boundary, treat next part as body.
+
+     TODO need to worry about quoted printable and other encodings, 
+     so look for content transfer encoding.
+  */
+
+  // If we've got a header charset, we'll use that, otherwise we'll look for one in
+  // the mime parts.
+  nsXPIDLCString strCharset;
+  msgHdr->GetCharset(getter_Copies(strCharset));
+  nsAutoString charset (NS_ConvertUTF8toUTF16(strCharset.get()));
+
   PRUint32 len;
   msgHdr->GetMessageSize(&len);
   nsLineBuffer<char> *lineBuffer;
@@ -5204,20 +5191,11 @@ NS_IMETHODIMP nsMsgDBFolder::GetMsgTextFromStream(nsIMsgDBHdr *msgHdr, nsIInputS
   nsresult rv = NS_InitLineBuffer(&lineBuffer);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsXPIDLCString strCharset;
-  msgHdr->GetCharset(getter_Copies(strCharset));
-  nsAutoString charset (NS_ConvertUTF8toUTF16(strCharset.get()));
-
-  nsCString msgText;
-  nsCAutoString encoding;
-  nsCAutoString boundary;
+  nsCAutoString boundary, msgBody;
   nsCAutoString curLine;
-  
   // might want to use a state var instead of bools.
   PRBool inMsgBody = PR_FALSE, msgBodyIsHtml = PR_FALSE, lookingForBoundary = PR_FALSE;
   PRBool haveBoundary = PR_FALSE;
-  PRBool isBase64 = PR_FALSE;
-  PRBool reachedEndBody = bytesToRead >= len;
   PRBool more = PR_TRUE;
   while (len > 0 && more)
   {
@@ -5225,24 +5203,19 @@ NS_IMETHODIMP nsMsgDBFolder::GetMsgTextFromStream(nsIMsgDBHdr *msgHdr, nsIInputS
     // we read the next line.
     if (lookingForBoundary) 
     {
-      // Mail.app doesn't wrap the boundary id in quotes so we need 
-      // to be sure to handle an unquoted boundary.
-      PRInt32 boundaryIndex = curLine.Find("boundary=", PR_TRUE /* ignore case*/);
+      PRInt32 boundaryIndex = curLine.Find("boundary=\"");
       if (boundaryIndex != kNotFound)
       {
-        boundaryIndex += 9;
-        if (curLine[boundaryIndex] == '\"')
-          boundaryIndex++;
-
+        boundaryIndex += 10;
         PRInt32 endBoundaryIndex = curLine.RFindChar('"');
-        if (endBoundaryIndex == kNotFound)
-          endBoundaryIndex = curLine.Length(); // no trailing quote? assume the boundary runs to the end of the line
-
-        // prepend "--" to boundary, and then boundary delimiter, minus the trailing " 
-        boundary.Assign("--");
-        boundary.Append(Substring(curLine, boundaryIndex, endBoundaryIndex - boundaryIndex));
-        haveBoundary = PR_TRUE;
-        lookingForBoundary = PR_FALSE;
+        if (endBoundaryIndex != kNotFound)
+        {
+          // prepend "--" to boundary, and then boundary delimiter, minus the trailing " 
+          boundary.Assign("--");
+          boundary.Append(Substring(curLine, boundaryIndex, endBoundaryIndex - boundaryIndex));
+          haveBoundary = PR_TRUE;
+          lookingForBoundary = PR_FALSE;
+        }
       }
     }
     rv = NS_ReadLine(stream, lineBuffer, curLine, &more);
@@ -5253,15 +5226,11 @@ NS_IMETHODIMP nsMsgDBFolder::GetMsgTextFromStream(nsIMsgDBHdr *msgHdr, nsIInputS
       if (inMsgBody)
       {
         if (!boundary.IsEmpty() && boundary.Equals(curLine))
-        {
-          reachedEndBody = PR_TRUE;
           break;
-        }
-        msgText.Append(curLine);
-        if (!isBase64) // don't append a LF for base64 encoded text
-          msgText.Append(nsCRT::LF); // put a LF back, we'll strip this out later        
-        
-        if (msgText.Length() > bytesToRead)
+        msgBody.Append(curLine);
+        msgBody.Append(" "); // convert each end of line delimter into a space
+        // how much html should we parse for text? 2K? 4K?
+        if (msgBody.Length() > 2048 || (!msgBodyIsHtml && msgBody.Length() > 255))
           break;
         continue;
       }
@@ -5279,180 +5248,70 @@ NS_IMETHODIMP nsMsgDBFolder::GetMsgTextFromStream(nsIMsgDBHdr *msgHdr, nsIInputS
         continue;
       }
       if (StringBeginsWith(curLine, NS_LITERAL_CSTRING("Content-Type:"),
-                           nsCaseInsensitiveCStringComparator()))
+                          nsCaseInsensitiveCStringComparator()))
       {
         // look for a charset in the Content-Type header line, we'll take the first one we find.
         nsCOMPtr<nsIMIMEHeaderParam> mimehdrpar = do_GetService(NS_MIMEHEADERPARAM_CONTRACTID, &rv);
         if (NS_SUCCEEDED(rv) && charset.IsEmpty())
-          mimehdrpar->GetParameter(curLine, "charset", EmptyCString(), false, nsnull, charset);
+           mimehdrpar->GetParameter(curLine, "charset", EmptyCString(), false, nsnull, charset);
         if (FindInReadable(NS_LITERAL_CSTRING("text/html"), curLine,
-                           nsCaseInsensitiveCStringComparator()))
+          nsCaseInsensitiveCStringComparator()))
+        {
           msgBodyIsHtml = PR_TRUE;
+//        bodyFollowsHeaders = PR_TRUE;
+        }
+        else if (FindInReadable(NS_LITERAL_CSTRING("text/plain"), curLine,
+                                nsCaseInsensitiveCStringComparator()))
+          /* bodyFollowsHeaders = PR_TRUE */;
         else if (FindInReadable(NS_LITERAL_CSTRING("multipart/"), curLine,
                                 nsCaseInsensitiveCStringComparator()))
+        {
           lookingForBoundary = PR_TRUE;
-      }
-      else if (StringBeginsWith(curLine, NS_LITERAL_CSTRING("Content-Transfer-Encoding:"),
-                           nsCaseInsensitiveCStringComparator()))
-      {
-        curLine.Right(encoding, curLine.Length() - 27);
-        if (encoding.EqualsLiteral("base64"))
-          isBase64 = PR_TRUE;
+        }
       }
     }
   }
 
-  // if the snippet is encoded, decode it
-  if (!encoding.IsEmpty())
-    decodeMsgSnippet(encoding, !reachedEndBody, msgText);
-
-  // In order to turn our snippet into unicode, we need to convert it from the charset we
-  // detected earlier.
-  nsString unicodeMsgBodyStr;
-  ConvertToUnicode(NS_ConvertUTF16toUTF8(charset).get(), msgText, unicodeMsgBodyStr);
+  // Note: in order to convert from a specific charset to UTF-8 we have to go through unicode first.
+  nsAutoString unicodeMsgBodyStr;
+  ConvertToUnicode(NS_ConvertUTF16toUTF8(charset).get(), msgBody, unicodeMsgBodyStr);
 
   // now we've got a msg body. If it's html, convert it to plain text.
   // Then, set the previewProperty on the msg hdr to the plain text.
   if (msgBodyIsHtml)
-    convertMsgSnippetToPlainText(unicodeMsgBodyStr);
-
-  // step 3, optionally remove quoted text from the snippet
-  nsString compressedQuotesMsgStr;
-  if (aCompressQuotes)
-    compressQuotesInMsgSnippet(unicodeMsgBodyStr, compressedQuotesMsgStr);
-
-  // now convert back to utf-8 which is more convenient for storage
-  CopyUTF16toUTF8(aCompressQuotes ? compressedQuotesMsgStr : unicodeMsgBodyStr, aMsgText);
-  
-  // finally, truncate the string based on aMaxOutputLen
-  if (aMsgText.Length() > aMaxOutputLen)
-    aMsgText.Truncate(aMaxOutputLen);
-  return rv;
-}
-
-/** 
- * decodeMsgSnippet - helper function which applies the appropriate transfer decoding 
- *                    to the message snippet based on aEncodingType. Currently handles
- *                    base64 and quoted-printable. If aEncodingType refers to an encoding we don't
- *                    handle, the message data is passed back unmodified.
- * @param aEncodingType the encoding type (base64, quoted-printable)
- * @param aIsComplete the snippet is actually the entire message so the decoder
- *                           doesn't have to worry about partial data
- * @param aMsgSnippet in/out argument. The encoded msg snippet and then the decoded snippet
- */
-void nsMsgDBFolder::decodeMsgSnippet(const nsACString& aEncodingType, PRBool aIsComplete, nsCString& aMsgSnippet)
-{
-  if (!aEncodingType.IsEmpty())
   {
-    if (aEncodingType.EqualsLiteral("base64"))
-    {
-      PRInt32 base64Len = aMsgSnippet.Length();
-      if (aIsComplete)
-        base64Len -= base64Len % 4;
-      char *decodedBody = PL_Base64Decode(aMsgSnippet.get(), base64Len, nsnull);
-      if (decodedBody)
-        aMsgSnippet.Adopt(decodedBody);
+    nsAutoString bodyText;
+    nsresult rv = NS_OK;
+    // Create a parser
+    nsCOMPtr<nsIParser> parser = do_CreateInstance(kParserCID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
 
-      // base64 encoded message haven't had line endings converted to LFs yet.
-      aMsgSnippet.ReplaceChar(nsCRT::CR, nsCRT::LF);
-      
-    }
-    else if (aEncodingType.EqualsLiteral("quoted-printable"))
-    {
-      // giant hack - decode in place, and truncate string.
-      MsgStripQuotedPrintable((unsigned char *) aMsgSnippet.get());
-      aMsgSnippet.Truncate(strlen(aMsgSnippet.get()));
-    }
-  }
-}
+    // Create the appropriate output sink
+    nsCOMPtr<nsIContentSink> sink = do_CreateInstance(NS_PLAINTEXTSINK_CONTRACTID,&rv);
+    NS_ENSURE_SUCCESS(rv, rv);
 
-/** 
- * stripQuotesFromMsgSnippet - Reduces quoted reply text including the citation (Scott wrote:) from
- *                             the message snippet to " ... ". Assumes the snippet has been decoded and converted to
- *                             plain text.
- * @param aMsgSnippet in/out argument. The string to strip quotes from. 
- */
-void nsMsgDBFolder::compressQuotesInMsgSnippet(const nsString& aMsgSnippet, nsAString& aCompressedQuotes)
-{
-  PRUint32 msgBodyStrLen = aMsgSnippet.Length();
-  PRBool lastLineWasAQuote = PR_FALSE;
-  PRUint32 offset = 0;
-  PRUint32 lineFeedPos = 0;
-  while (offset < msgBodyStrLen)
-  {
-    lineFeedPos = aMsgSnippet.FindChar(nsCRT::LF, offset);
-    if (lineFeedPos != kNotFound)
-    {
-      const nsAString& currentLine = Substring(aMsgSnippet, offset, lineFeedPos - offset);
-      // this catches quoted text ("> "), nested quotes of any level (">> ", ">>> ", ...)
-      // it also catches empty line quoted text (">"). It might be over agressive and require
-      // tweaking later.
-      // Try to strip the citation. If the current line ends with a ':' and the next line 
-      // looks like a quoted reply (starts with a ">") skip the current line
-      if (StringBeginsWith(currentLine, NS_LITERAL_STRING(">")) ||
-          (lineFeedPos + 1 < msgBodyStrLen  && lineFeedPos
-          && aMsgSnippet[lineFeedPos - 1] == PRUnichar(':')
-          && aMsgSnippet[lineFeedPos + 1] == PRUnichar('>')))
-      {
-        lastLineWasAQuote = PR_TRUE;
-      }
-      else if (!currentLine.IsEmpty())
-      {
-        if (lastLineWasAQuote)
-        {
-          aCompressedQuotes += NS_LITERAL_STRING(" ... ");
-          lastLineWasAQuote = PR_FALSE;
-        }
-
-        aCompressedQuotes += currentLine;      
-        aCompressedQuotes += PRUnichar(' '); // don't forget to substitute a space for the line feed
-      }
-
-      offset = lineFeedPos + 1;
-    }
-    else
-    {
-      aCompressedQuotes.Append(Substring(aMsgSnippet, offset, msgBodyStrLen - offset));
-      break;
-    }
-  }
-}
-
-/**
- * converts an html mail snippet to plain text
- * @param aMessageText - in place conversion
- */
-nsresult nsMsgDBFolder::convertMsgSnippetToPlainText(nsAString& aMessageText)
-{
-  nsString bodyText;
-  nsresult rv = NS_OK;
-  
-  // Create a parser
-  nsCOMPtr<nsIParser> parser = do_CreateInstance(kParserCID, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-    
-  // Create the appropriate output sink
-  nsCOMPtr<nsIContentSink> sink = do_CreateInstance(NS_PLAINTEXTSINK_CONTRACTID,&rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-    
-  nsCOMPtr<nsIHTMLToTextSink> textSink(do_QueryInterface(sink));
-  NS_ENSURE_TRUE(textSink, NS_ERROR_FAILURE);
-  PRUint32 flags = nsIDocumentEncoder::OutputLFLineBreak 
+    nsCOMPtr<nsIHTMLToTextSink> textSink(do_QueryInterface(sink));
+    NS_ENSURE_TRUE(textSink, NS_ERROR_FAILURE);
+    PRUint32 flags = nsIDocumentEncoder::OutputLFLineBreak 
                    | nsIDocumentEncoder::OutputNoScriptContent
                    | nsIDocumentEncoder::OutputNoFramesContent
                    | nsIDocumentEncoder::OutputBodyOnly;
-    
-  textSink->Initialize(&bodyText, flags, 80);
-  parser->SetContentSink(sink);  
-  rv = parser->Parse(aMessageText, 0, NS_LITERAL_CSTRING("text/html"), PR_TRUE);
-  aMessageText.Assign(bodyText);
-  return rv;
-}
 
-nsresult nsMsgDBFolder::GetMsgPreviewTextFromStream(nsIMsgDBHdr *msgHdr, nsIInputStream *stream) 
-{
-  nsCString msgBody;
-  nsresult rv = GetMsgTextFromStream(msgHdr, stream, 2048, 255, PR_TRUE, msgBody);
+    textSink->Initialize(&bodyText, flags, 80);
+
+    parser->SetContentSink(sink);
+    nsCOMPtr<nsIDTD> dtd = do_CreateInstance(kNavDTDCID,&rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    parser->RegisterDTD(dtd);
+    rv = parser->Parse(unicodeMsgBodyStr, 0, NS_LITERAL_CSTRING("text/html"), PR_FALSE, PR_TRUE);
+    // push bodyText back into unicodeMsgBodyStr
+    unicodeMsgBodyStr.Assign(bodyText);
+  }
+
+  // now convert back to utf-8 for storage
+  CopyUTF16toUTF8(unicodeMsgBodyStr, msgBody);
+
   // replaces all tabs and line returns with a space, then trims off leading and trailing white space
   msgBody.CompressWhitespace(PR_TRUE, PR_TRUE);
   msgHdr->SetStringProperty("preview", msgBody.get());
@@ -5514,7 +5373,7 @@ NS_IMETHODIMP nsMsgDBFolder::RemoveKeywordFromMessages(nsISupportsArray *aMessag
     NS_ENSURE_SUCCESS(rv, rv);
     nsXPIDLCString keywords;
     // If the tag is also a label, we should remove the label too...
-    PRBool keywordIsLabel = (!PL_strncasecmp(aKeyword, "$label", 6)  && aKeyword[6] >= '1' && aKeyword[6] <= '5');
+    PRBool keywordIsLabel = (!strncmp(aKeyword, "$label", 6)  && aKeyword[6] >= '1' && aKeyword[6] <= '5');
 
     for(PRUint32 i = 0; i < count; i++)
     {
@@ -5539,6 +5398,7 @@ NS_IMETHODIMP nsMsgDBFolder::RemoveKeywordFromMessages(nsISupportsArray *aMessag
       if (MsgFindKeyword(nsDependentCString(aKeyword), keywords, start, end))
       {
         keywords.Cut(Distance(saveStart, start), Distance(start, end));
+        NS_ASSERTION(keywords.IsEmpty() || keywords.CharAt(0) != ' ', "space only keyword");
         mDatabase->SetStringProperty(msgKey, "keywords", keywords);
       }
     }
@@ -5546,10 +5406,3 @@ NS_IMETHODIMP nsMsgDBFolder::RemoveKeywordFromMessages(nsISupportsArray *aMessag
   return rv;
 }
 
- 
-NS_IMETHODIMP nsMsgDBFolder::GetCustomIdentity(nsIMsgIdentity **aIdentity)
-{
-  NS_ENSURE_ARG_POINTER(aIdentity);
-  *aIdentity = nsnull;
-  return NS_OK;
-}

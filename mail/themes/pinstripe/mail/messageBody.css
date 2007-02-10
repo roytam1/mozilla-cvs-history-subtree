@@ -201,7 +201,7 @@ span.moz-smiley-s7 {
   background-image: url("chrome://communicator/skin/icons/smileys/smiley-undecided.png");
 }
 
-/* surprise */
+/* suprise */
 span.moz-smiley-s8 {
   background-image: url("chrome://communicator/skin/icons/smileys/smiley-surprised.png");
 }
@@ -294,12 +294,4 @@ blockquote[type=cite] > blockquote {
 blockquote[type=cite] > blockquote > blockquote {
    color: maroon !important;
    border-color: maroon !important;
-}
-
-/* Correct style for messages already converted from RSS to HTML email;
-   see bug 363154. */
-
-#\_mailrssiframe {
-  width: 100%;
-  height: 100%;
 }

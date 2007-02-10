@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* base class for all rule types in a CSS style sheet */
-
 #include "nsCSSRule.h"
 #include "nsCRT.h"
 #include "nsICSSStyleSheet.h"

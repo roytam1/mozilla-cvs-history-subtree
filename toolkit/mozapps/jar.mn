@@ -26,5 +26,3 @@ toolkit.jar:
   content/mozapps/plugins/pluginInstallerWizard.css             (plugins/content/pluginInstallerWizard.css)
   content/mozapps/plugins/pluginInstallerDatasource.js          (plugins/content/pluginInstallerDatasource.js)
   content/mozapps/plugins/pluginInstallerService.js             (plugins/content/pluginInstallerService.js)
-  content/mozapps/plugins/missingPlugin.xml                     (plugins/content/missingPlugin.xml)
-  content/mozapps/plugins/missingPluginBinding.css              (plugins/content/missingPluginBinding.css)

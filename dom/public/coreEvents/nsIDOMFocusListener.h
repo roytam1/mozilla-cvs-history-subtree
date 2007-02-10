@@ -55,7 +55,7 @@ class nsIDOMFocusListener : public nsIDOMEventListener
 {
 public:
 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IDOMFOCUSLISTENER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOMFOCUSLISTENER_IID)
 
   /**
   * Processes a focus event
@@ -71,7 +71,5 @@ public:
    */
   NS_IMETHOD Blur(nsIDOMEvent* aEvent) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDOMFocusListener, NS_IDOMFOCUSLISTENER_IID)
 
 #endif // nsIDOMFocusListener_h__

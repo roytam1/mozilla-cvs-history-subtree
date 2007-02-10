@@ -39,46 +39,15 @@
 #define GFX_WINDOWSSURFACE_H
 
 #include "gfxASurface.h"
-#include "gfxImageSurface.h"
 
-#include <windows.h>
+#include <cairo-win32.h>
 
-class THEBES_API gfxWindowsSurface : public gfxASurface {
+class gfxWindowsSurface : public gfxASurface {
+    THEBES_DECL_ISUPPORTS_INHERITED
+
 public:
-    gfxWindowsSurface(HWND wnd);
-    gfxWindowsSurface(HDC dc, PRBool deleteDC = PR_FALSE);
-
-    // Create a DIB surface
-    gfxWindowsSurface(const gfxIntSize& size,
-                      gfxImageFormat imageFormat = ImageFormatRGB24);
-
-    // Create a DDB surface; dc may be NULL to use the screen DC
-    gfxWindowsSurface(HDC dc,
-                      const gfxIntSize& size,
-                      gfxImageFormat imageFormat = ImageFormatRGB24);
-
-    gfxWindowsSurface(cairo_surface_t *csurf);
-
+    gfxWindowsSurface(HDC dc);
     virtual ~gfxWindowsSurface();
-
-    HDC GetDC() { return mDC; }
-
-    already_AddRefed<gfxImageSurface> GetImageSurface();
-
-    already_AddRefed<gfxWindowsSurface> OptimizeToDDB(HDC dc,
-                                                      const gfxIntSize& size,
-                                                      gfxImageFormat format);
-
-    nsresult BeginPrinting(const nsAString& aTitle, const nsAString& aPrintToFileName);
-    nsresult EndPrinting();
-    nsresult AbortPrinting();
-    nsresult BeginPage();
-    nsresult EndPage();
-
-private:
-    PRBool mOwnsDC;
-    HDC mDC;
-    HWND mWnd;
 };
 
 #endif /* GFX_WINDOWSSURFACE_H */

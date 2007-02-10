@@ -223,7 +223,7 @@
             return !cancel;  
           }
           catch (e) { 
-            Components.utils.reportError(e);
+            dump(e);
           }
           return false;
         ]]>
@@ -442,10 +442,11 @@
     </content>
     
     <implementation implements="nsIAccessibleProvider, nsIDOMXULControlElement">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULColorPicker;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULColorPickerAccessible(this);
           ]]>
         </getter>
       </property>
@@ -467,7 +468,6 @@
           this.mOpen = false;
                     
           this.mColorBox = document.getAnonymousElementByAttribute(this, "anonid", "colorbox");
-          this.mColorBox.style.backgroundColor = this.color;
         
           var popup = document.getAnonymousElementByAttribute(this, "anonid", "colorpopup")
           popup._colorPicker = this;
@@ -576,11 +576,12 @@
   </binding>
 
   <binding id="colorpickertile">
-    <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+    <implementation implements="nsIAccessibleProvider" >
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULColorPickerTile;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULColorPickerTileAccessible(this);
           ]]>
         </getter>
       </property>

@@ -19,7 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Clint Talbert <cmtalbert@myfastmail.com>
+ * Clint Talbert <cmtalbert@myfastmail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -177,7 +177,7 @@ calItipItem.prototype = {
                     this.mItemList.push(todo);
                     break;
                 default:
-                    // Nothing -- Bug 185537: Implement VFREEBUSY, VJOURNAL
+                    // Nothing -- Bug 185537: Implement Freebusy, VJournal etc.
                 }
                 subComp = calComp.getNextSubcomponent("ANY");
             }
@@ -185,7 +185,6 @@ calItipItem.prototype = {
         }
         this.mIsInitialized = true;
     },
-
     getFirstItem: function() {
         if (!this.mIsInitialized || (this.mItemList.length == 0)) {
             throw Components.results.NS_ERROR_NOT_INITIALIZED;
@@ -193,7 +192,6 @@ calItipItem.prototype = {
         this.mCurrentItemIndex = 0;
         return this.mItemList[0];
     },
-
     getNextItem: function() {
         if (!this.mIsInitialized || (this.mItemList.length == 0)) {
             throw Components.results.NS_ERROR_NOT_INITIALIZED;
@@ -205,22 +203,22 @@ calItipItem.prototype = {
             return null;
         }
     },
-
-    setAttendeeStatus: function (attendeeID, status) {
+    setAttendeeStatus: function (attendeeID, status) {        
         // Note that this code forces the user to respond to all items
         // in the same way, which is a current limitation of the spec
         if (attendeeID.match(/mailto:/i)) {
             attendeeID = "mailto:" + attendeeID; // prepend mailto
         }
         for (var i=0; i < this.mItemList.length; ++i) {
-            var item = this.mItemList[i];
-            var attendee = item.getAttendeeById(attendeeID);
+            var anItem = this.mItemList[i];
+            var attendee = anItem.getAttendeeById(attendeeID);
             if (attendee) {
                 // XXX BUG 351589: workaround for updating an attendee
-                item.removeAttendee(attendee);
+                anItem.removeAttendee(attendee);
                 attendee.participationStatus = status;
-                item.addAttendee(attendee);
+                anItem.addAttendee(attendee);
             }
         }
     }
 };
+

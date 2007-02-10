@@ -12,9 +12,16 @@ menuitem.spell-suggestion {
   font-weight:bold;
 }
 
-#sidebar-box toolbarbutton.tabs-closebutton {
-  -moz-user-focus: normal;
+#noPreviewAvailable {
+  background-color: white !important;
+  font-size: 12px !important;
 }
+
+%ifdef MOZ_PLACES
+#PersonalToolbar > #bookmarksBarShowPlaces > .toolbarbutton-text {
+  visibility: collapse;
+}
+%endif
 
 /* apply Fitts' law to the notification bar's close button */
 window[sizemode="maximized"] #content .notification-inner {

@@ -65,13 +65,6 @@ static const char* const sNewsProtocols[] = {
   "nntp"
 };
 
-static const char* const sFeedProtocols[] = {
-  "feed"
-};
-
-nsMailGNOMEIntegration::nsMailGNOMEIntegration(): mCheckedThisSession(PR_FALSE)
-{}
-
 nsresult
 nsMailGNOMEIntegration::Init()
 {
@@ -97,64 +90,19 @@ nsMailGNOMEIntegration::Init()
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = appPath->GetNativePath(mAppPath);
-  return rv;
-}
+  NS_ENSURE_SUCCESS(rv, rv);
 
-NS_IMPL_ISUPPORTS1(nsMailGNOMEIntegration, nsIShellService)
+  PRBool isDefault;
+  nsMailGNOMEIntegration::GetIsDefaultMailClient(&isDefault);
+  mShowMailDialog = !isDefault;
 
+  nsMailGNOMEIntegration::GetIsDefaultNewsClient(&isDefault);
+  mShowNewsDialog = !isDefault;
 
-NS_IMETHODIMP
-nsMailGNOMEIntegration::IsDefaultClient(PRBool aStartupCheck, PRUint16 aApps, PRBool * aIsDefaultClient)
-{
-  *aIsDefaultClient = PR_TRUE;
-  if (aApps & nsIShellService::MAIL)
-    *aIsDefaultClient &= checkDefault(sMailProtocols, NS_ARRAY_LENGTH(sMailProtocols));
-  if (aApps & nsIShellService::NEWS)
-    *aIsDefaultClient &= checkDefault(sNewsProtocols, NS_ARRAY_LENGTH(sNewsProtocols));
-  if (aApps & nsIShellService::RSS)
-    *aIsDefaultClient &= checkDefault(sFeedProtocols, NS_ARRAY_LENGTH(sFeedProtocols));
-  
-  // If this is the first mail window, maintain internal state that we've
-  // checked this session (so that subsequent window opens don't show the 
-  // default client dialog).
-  if (aStartupCheck)
-    mCheckedThisSession = PR_TRUE;
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsMailGNOMEIntegration::SetDefaultClient(PRBool aForAllUsers, PRUint16 aApps)
-{
-  nsresult rv = NS_OK;
-  if (aApps & nsIShellService::MAIL)
-    rv |= MakeDefault(sMailProtocols, NS_ARRAY_LENGTH(sMailProtocols));
-  if (aApps & nsIShellService::NEWS)
-    rv |= MakeDefault(sNewsProtocols, NS_ARRAY_LENGTH(sNewsProtocols));
-  if (aApps & nsIShellService::RSS)
-    rv |= MakeDefault(sFeedProtocols, NS_ARRAY_LENGTH(sFeedProtocols));
-  
-  return rv;	
-}
-
-NS_IMETHODIMP
-nsMailGNOMEIntegration::GetShouldCheckDefaultClient(PRBool* aResult)
-{
-  if (mCheckedThisSession) 
-  {
-    *aResult = PR_FALSE;
-    return NS_OK;
-  }
-
-  nsCOMPtr<nsIPrefBranch> prefs(do_GetService(NS_PREFSERVICE_CONTRACTID));
-  return prefs->GetBoolPref("mail.shell.checkDefaultClient", aResult);
-}
-
-NS_IMETHODIMP
-nsMailGNOMEIntegration::SetShouldCheckDefaultClient(PRBool aShouldCheck)
-{
-  nsCOMPtr<nsIPrefBranch> prefs(do_GetService(NS_PREFSERVICE_CONTRACTID));
-  return prefs->SetBoolPref("mail.shell.checkDefaultClient", aShouldCheck);
-}
+NS_IMPL_ISUPPORTS1(nsMailGNOMEIntegration, nsIMapiRegistry)
 
 PRBool
 nsMailGNOMEIntegration::KeyMatchesAppName(const char *aKeyValue) const
@@ -181,9 +129,11 @@ nsMailGNOMEIntegration::KeyMatchesAppName(const char *aKeyValue) const
   return matches;
 }
 
-PRBool
-nsMailGNOMEIntegration::checkDefault(const char* const *aProtocols, unsigned int aLength)
+nsresult
+nsMailGNOMEIntegration::CheckDefault(const char* const *aProtocols,
+                                     unsigned int aLength, PRBool *aIsDefault)
 {
+  *aIsDefault = PR_FALSE;
   nsCOMPtr<nsIGConfService> gconf = do_GetService(NS_GCONFSERVICE_CONTRACTID);
 
   PRBool enabled;
@@ -193,26 +143,27 @@ nsMailGNOMEIntegration::checkDefault(const char* const *aProtocols, unsigned int
     handler.Truncate();
     nsresult rv = gconf->GetAppForProtocol(nsDependentCString(aProtocols[i]),
                                            &enabled, handler);
-    if (NS_SUCCEEDED(rv))
-    {
-      // The string will be something of the form: [/path/to/]app "%s"
-      // We want to remove all of the parameters and get just the binary name.
+    NS_ENSURE_SUCCESS(rv, rv);
 
-      gint argc;
-      gchar **argv;
+    // The string will be something of the form: [/path/to/]app "%s"
+    // We want to remove all of the parameters and get just the binary name.
 
-      if (g_shell_parse_argv(handler.get(), &argc, &argv, NULL) && argc > 0) {
-        handler.Assign(argv[0]);
-        g_strfreev(argv);
-      } else 
-        return PR_FALSE;
+    gint argc;
+    gchar **argv;
 
-      if (!KeyMatchesAppName(handler.get()) || !enabled)
-        return PR_FALSE; // the handler is disabled or set to another app
+    if (g_shell_parse_argv(handler.get(), &argc, &argv, NULL) && argc > 0) {
+      handler.Assign(argv[0]);
+      g_strfreev(argv);
+    } else {
+      return NS_ERROR_FAILURE;
     }
+
+    if (!KeyMatchesAppName(handler.get()) || !enabled)
+      return NS_OK; // the handler is disabled or set to another app
   }
 
-  return PR_TRUE;
+  *aIsDefault = PR_TRUE;
+  return NS_OK;
 }
 
 nsresult
@@ -230,3 +181,163 @@ nsMailGNOMEIntegration::MakeDefault(const char* const *aProtocols,
 
   return NS_OK;
 }
+
+NS_IMETHODIMP
+nsMailGNOMEIntegration::GetIsDefaultMailClient(PRBool *aIsDefault)
+{
+  return CheckDefault(sMailProtocols, NS_ARRAY_LENGTH(sMailProtocols),
+                      aIsDefault);
+}
+
+NS_IMETHODIMP
+nsMailGNOMEIntegration::SetIsDefaultMailClient(PRBool aIsDefault)
+{
+  NS_ASSERTION(!aIsDefault, "Should never be called with aIsDefault=false");
+  return MakeDefault(sMailProtocols, NS_ARRAY_LENGTH(sMailProtocols));
+}
+
+NS_IMETHODIMP
+nsMailGNOMEIntegration::GetIsDefaultNewsClient(PRBool *aIsDefault)
+{
+  return CheckDefault(sNewsProtocols, NS_ARRAY_LENGTH(sNewsProtocols),
+                      aIsDefault);
+}
+
+NS_IMETHODIMP
+nsMailGNOMEIntegration::SetIsDefaultNewsClient(PRBool aIsDefault)
+{
+  NS_ASSERTION(!aIsDefault, "Should never be called with aIsDefault=false");
+  return MakeDefault(sNewsProtocols, NS_ARRAY_LENGTH(sNewsProtocols));
+}
+
+NS_IMETHODIMP
+nsMailGNOMEIntegration::GetIsDefaultFeedClient(PRBool *aIsDefault)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsMailGNOMEIntegration::SetIsDefaultFeedClient(PRBool aIsDefault)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsMailGNOMEIntegration::GetShowDialog(PRBool *aShow)
+{
+  *aShow = (mShowMailDialog || mShowNewsDialog);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMailGNOMEIntegration::ShowMailIntegrationDialog(nsIDOMWindow* aParentWindow)
+{
+  nsCOMPtr<nsIPrefService> pref = do_GetService(NS_PREFSERVICE_CONTRACTID);
+  nsCOMPtr<nsIPrefBranch> branch;
+  pref->GetBranch("", getter_AddRefs(branch));
+
+  PRBool showMailDialog, showNewsDialog;
+  branch->GetBoolPref("mail.checkDefaultMail", &showMailDialog);
+  branch->GetBoolPref("mail.checkDefaultNews", &showNewsDialog);
+
+  if (!((mShowMailDialog && showMailDialog) ||
+        (mShowNewsDialog && showNewsDialog)))
+    return NS_OK;
+
+  nsCOMPtr<nsIStringBundleService> bundleService =
+    do_GetService(NS_STRINGBUNDLE_CONTRACTID);
+  NS_ENSURE_TRUE(bundleService, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsIStringBundle> brandBundle;
+  bundleService->CreateBundle("chrome://branding/locale/brand.properties",
+                              getter_AddRefs(brandBundle));
+  NS_ENSURE_TRUE(brandBundle, NS_ERROR_FAILURE);
+
+  nsXPIDLString brandShortName;
+  brandBundle->GetStringFromName(NS_LITERAL_STRING("brandShortName").get(),
+                                 getter_Copies(brandShortName));
+
+  nsCOMPtr<nsIStringBundle> mapiBundle;
+  bundleService->CreateBundle("chrome://messenger-mapi/locale/mapi.properties",
+                              getter_AddRefs(mapiBundle));
+  NS_ENSURE_TRUE(mapiBundle, NS_ERROR_FAILURE);
+
+  nsXPIDLString dialogTitle;
+  const PRUnichar *brandStrings[] = { brandShortName.get() };
+
+  nsresult rv =
+    mapiBundle->FormatStringFromName(NS_LITERAL_STRING("dialogTitle").get(),
+                                     brandStrings, 1,
+                                     getter_Copies(dialogTitle));
+
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsXPIDLString checkboxText;
+  rv = mapiBundle->GetStringFromName(NS_LITERAL_STRING("checkboxText").get(),
+                                     getter_Copies(checkboxText));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIPromptService> promptService =
+    do_GetService(NS_PROMPTSERVICE_CONTRACTID);
+  NS_ENSURE_TRUE(promptService, NS_ERROR_FAILURE);
+
+  if (mShowMailDialog && showMailDialog) {
+    nsXPIDLString dialogText;
+    rv = mapiBundle->FormatStringFromName(NS_LITERAL_STRING("dialogText").get(),
+                                          brandStrings, 1,
+                                          getter_Copies(dialogText));
+
+    PRBool checkValue = PR_FALSE;
+    PRInt32 buttonPressed = 0;
+    rv = promptService->ConfirmEx(aParentWindow, dialogTitle, dialogText.get(),
+                                  (nsIPromptService::BUTTON_TITLE_YES *
+                                   nsIPromptService::BUTTON_POS_0) +
+                                  (nsIPromptService::BUTTON_TITLE_NO *
+                                   nsIPromptService::BUTTON_POS_1),
+                                  nsnull, nsnull, nsnull,
+                                  checkboxText, &checkValue, &buttonPressed);
+    NS_ENSURE_SUCCESS(rv, rv);
+    if (checkValue)
+      branch->SetBoolPref("mail.checkDefaultMail", PR_FALSE);
+    mShowMailDialog = PR_FALSE;
+
+    if (buttonPressed == 0) {
+      rv = nsMailGNOMEIntegration::SetIsDefaultMailClient(PR_TRUE);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+  }
+
+  if (mShowNewsDialog && showNewsDialog) {
+    nsXPIDLString dialogText;
+    rv = mapiBundle->FormatStringFromName(NS_LITERAL_STRING("newsDialogText").get(),
+                                          brandStrings, 1,
+                                          getter_Copies(dialogText));
+
+    PRBool checkValue = PR_FALSE;
+    PRInt32 buttonPressed = 0;
+    rv = promptService->ConfirmEx(aParentWindow, dialogTitle, dialogText.get(),
+                                  (nsIPromptService::BUTTON_TITLE_YES *
+                                   nsIPromptService::BUTTON_POS_0) +
+                                  (nsIPromptService::BUTTON_TITLE_NO *
+                                   nsIPromptService::BUTTON_POS_1),
+                                  nsnull, nsnull, nsnull,
+                                  checkboxText, &checkValue, &buttonPressed);
+    NS_ENSURE_SUCCESS(rv, rv);
+    if (checkValue)
+      branch->SetBoolPref("mail.checkDefaultNews", PR_FALSE);
+    mShowNewsDialog = PR_FALSE;
+
+    if (buttonPressed == 0)
+      rv = nsMailGNOMEIntegration::SetIsDefaultNewsClient(PR_TRUE);
+  }
+
+  return rv;
+}
+
+NS_IMETHODIMP
+nsMailGNOMEIntegration::RegisterMailAndNewsClient()
+{
+  return NS_OK;
+}
+
+

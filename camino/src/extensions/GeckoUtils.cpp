@@ -51,20 +51,12 @@
 #include "nsISimpleEnumerator.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
-#include "nsIIOService.h"
-#include "nsIProtocolHandler.h"
-#include "nsIServiceManager.h"
-#include "nsIExternalProtocolHandler.h"
 
 #include "nsIEditor.h"
 #include "nsISelection.h"
 
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
-
-#include "nsIDOMDocument.h"
-#include "nsIDOMWindowInternal.h"
-#include "nsIDOMNSHTMLElement.h"
 
 /* static */
 void GeckoUtils::GatherTextUnder(nsIDOMNode* aNode, nsString& aResult) 
@@ -196,24 +188,6 @@ void GeckoUtils::GetEnclosingLinkElementAndHref(nsIDOMNode* aNode, nsIDOMElement
   aHref = href;
 }
 
-/*static*/
-PRBool GeckoUtils::isProtocolInternal(const char* aProtocol)
-{
-  nsCOMPtr<nsIIOService> ioService = do_GetService("@mozilla.org/network/io-service;1");
-  if (!ioService)
-    return PR_TRUE; // something went wrong, so punt
-
-  nsCOMPtr<nsIProtocolHandler> handler;
-  // try to get an external handler for the protocol
-  nsresult rv = ioService->GetProtocolHandler(aProtocol, getter_AddRefs(handler));
-  if (NS_FAILED(rv))
-    return PR_TRUE; // something went wrong, so punt
-
-  nsCOMPtr<nsIExternalProtocolHandler> extHandler = do_QueryInterface(handler);
-  // a null external handler means it's a protocol we handle internally
-  return (extHandler == nsnull);
-}
-
 /* static */
 void GeckoUtils::GetURIForDocShell(nsIDocShell* aDocShell, nsACString& aURI)
 {
@@ -290,44 +264,4 @@ void GeckoUtils::GetAnchorNodeFromSelection(nsIEditor* inEditor, nsIDOMNode** ou
     return;
   selection->GetAnchorOffset(outOffset);
   selection->GetAnchorNode(outAnchorNode);
-}
-
-void GeckoUtils::GetIntrisicSize(nsIDOMWindow* aWindow,  PRInt32* outWidth, PRInt32* outHeight)
-{
-  if (!aWindow)
-    return;
-
-  nsCOMPtr<nsIDOMDocument> domDocument;
-  aWindow->GetDocument(getter_AddRefs(domDocument));
-  if (!domDocument)
-    return;
-
-  nsCOMPtr<nsIDOMElement> docElement;
-  domDocument->GetDocumentElement(getter_AddRefs(docElement));
-  if (!docElement)
-    return;
-
-  nsCOMPtr<nsIDOMNSHTMLElement> nsElement = do_QueryInterface(docElement);
-  if (!nsElement)
-    return;
-
-  // scrollHeight always gets the wanted height but scrollWidth may not if the page contains
-  // non-scrollable elements (eg <pre>), therefor we find the slientWidth and adds the max x
-  // offset if the window has a horizontal scroller. For more see bug 155956 and
-  // http://developer.mozilla.org/en/docs/DOM:element.scrollWidth
-  // http://developer.mozilla.org/en/docs/DOM:element.clientWidth
-  // http://developer.mozilla.org/en/docs/DOM:window.scrollMaxX
-  nsElement->GetClientWidth(outWidth); 
-  nsElement->GetScrollHeight(outHeight);
-
-  nsCOMPtr<nsIDOMWindowInternal> domWindow = do_QueryInterface(aWindow);
-  if (!domWindow)
-    return;
-
-  PRInt32 scrollMaxX = 0;
-  domWindow->GetScrollMaxX(&scrollMaxX);
-  if (scrollMaxX > 0) 
-    *outWidth  += scrollMaxX;
-
-  return;
 }

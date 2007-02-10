@@ -43,6 +43,7 @@
 #include "nsMsgSearchCore.h"
 #include "nsMsgLocalSearch.h"
 #include "nsIStreamListener.h"
+#include "nsParseMailbox.h"
 #include "nsMsgSearchBoolExpression.h"
 #include "nsMsgSearchTerm.h"
 #include "nsMsgResultElement.h"
@@ -53,7 +54,6 @@
 #include "nsIMsgLocalMailFolder.h"
 #include "nsIMsgWindow.h"
 #include "nsIFileSpec.h"
-#include "nsIMsgHdr.h"
 
 extern "C"
 {
@@ -678,7 +678,7 @@ nsresult nsMsgSearchOfflineMail::Search (PRBool *aDone)
           PRBool match = PR_FALSE;
           nsXPIDLString nullCharset, folderCharset;
           GetSearchCharsets(getter_Copies(nullCharset), getter_Copies(folderCharset));
-          NS_ConvertUTF16toUTF8 charset(folderCharset);
+          NS_ConvertUCS2toUTF8 charset(folderCharset);
           // Is this message a hit?
           err = MatchTermsForSearch (msgDBHdr, m_searchTerms, charset.get(), m_scope, m_db, &expressionTree, &match);
           // Add search hits to the results list

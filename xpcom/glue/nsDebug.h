@@ -46,11 +46,44 @@
 #include "nsError.h"
 #endif 
 
-#include "nsXPCOM.h"
-
 #ifdef DEBUG
 #define NS_DEBUG
 #endif
+
+/**
+ * Namespace for debugging methods. Note that your code must use the
+ * macros defined later in this file so that the debug code can be
+ * conditionally compiled out.
+ */
+
+PR_BEGIN_EXTERN_C
+
+/**
+ * Log a warning message to the debug log.
+ */
+NS_COM_GLUE void NS_FASTCALL
+NSGlue_Warning(const char *aMessage, const char *aFile, PRIntn aLine);
+
+/**
+ * Abort the executing program. This works on all architectures.
+ */
+NS_COM_GLUE void NS_FASTCALL
+NSGlue_Abort(const char *aFile, PRIntn aLine);
+
+/**
+ * Break the executing program into the debugger. 
+ */
+NS_COM_GLUE void NS_FASTCALL
+NSGlue_Break(const char* aFile, PRIntn aLine);
+
+/**
+ * Log an assertion message to the debug log
+ */
+NS_COM_GLUE void NS_FASTCALL
+NSGlue_Assertion(const char* aStr, const char* aExpr,
+                 const char* aFile, PRIntn aLine);
+
+PR_END_EXTERN_C
 
 #ifdef DEBUG
 
@@ -73,7 +106,7 @@
 #define NS_ABORT_IF_FALSE(_expr, _msg)                        \
   PR_BEGIN_MACRO                                              \
     if (!(_expr)) {                                           \
-      NS_DebugBreak(NS_DEBUG_ASSERTION, _msg, #_expr, __FILE__, __LINE__); \
+      NSGlue_Assertion(_msg, #_expr, __FILE__, __LINE__);     \
     }                                                         \
   PR_END_MACRO
 
@@ -88,7 +121,7 @@
 #define NS_WARN_IF_FALSE(_expr,_msg)                          \
   PR_BEGIN_MACRO                                              \
     if (!(_expr)) {                                           \
-      NS_DebugBreak(NS_DEBUG_WARNING, _msg, #_expr, __FILE__, __LINE__); \
+      NSGlue_Warning(_msg, __FILE__, __LINE__);               \
     }                                                         \
   PR_END_MACRO
 
@@ -99,7 +132,7 @@
 #define NS_PRECONDITION(expr, str)                            \
   PR_BEGIN_MACRO                                              \
     if (!(expr)) {                                            \
-      NS_DebugBreak(NS_DEBUG_ASSERTION, str, #expr, __FILE__, __LINE__); \
+      NSGlue_Assertion(str, #expr, __FILE__, __LINE__);       \
     }                                                         \
   PR_END_MACRO
 
@@ -110,7 +143,7 @@
 #define NS_ASSERTION(expr, str)                               \
   PR_BEGIN_MACRO                                              \
     if (!(expr)) {                                            \
-      NS_DebugBreak(NS_DEBUG_ASSERTION, str, #expr, __FILE__, __LINE__); \
+      NSGlue_Assertion(str, #expr, __FILE__, __LINE__);       \
     }                                                         \
   PR_END_MACRO
 
@@ -121,7 +154,7 @@
 #define NS_POSTCONDITION(expr, str)                           \
   PR_BEGIN_MACRO                                              \
     if (!(expr)) {                                            \
-      NS_DebugBreak(NS_DEBUG_ASSERTION, str, #expr, __FILE__, __LINE__); \
+      NSGlue_Assertion(str, #expr, __FILE__, __LINE__);       \
     }                                                         \
   PR_END_MACRO
 
@@ -130,38 +163,38 @@
  * an attempt was made to execute some unimplemented functionality.
  */
 #define NS_NOTYETIMPLEMENTED(str)                             \
-  NS_DebugBreak(NS_DEBUG_ASSERTION, str, "NotYetImplemented", __FILE__, __LINE__)
+  NSGlue_Assertion(str, "NotYetImplemented", __FILE__, __LINE__)
 
 /**
  * This macros triggers a program failure if executed. It indicates that
  * an attempt was made to execute some unimplemented functionality.
  */
 #define NS_NOTREACHED(str)                                    \
-  NS_DebugBreak(NS_DEBUG_ASSERTION, str, "Not Reached", __FILE__, __LINE__)
+  NSGlue_Assertion(str, "Not Reached", __FILE__, __LINE__)
 
 /**
  * Log an error message.
  */
 #define NS_ERROR(str)                                         \
-  NS_DebugBreak(NS_DEBUG_ASSERTION, str, "Error", __FILE__, __LINE__)
+  NSGlue_Assertion(str, "Error", __FILE__, __LINE__)
 
 /**
  * Log a warning message.
  */
 #define NS_WARNING(str)                                       \
-  NS_DebugBreak(NS_DEBUG_WARNING, str, nsnull, __FILE__, __LINE__)
+  NSGlue_Warning(str, __FILE__, __LINE__)
 
 /**
  * Trigger an abort
  */
 #define NS_ABORT()                                            \
-  NS_DebugBreak(NS_DEBUG_ABORT, nsnull, nsnull, __FILE__, __LINE__)
+  NSGlue_Abort(__FILE__, __LINE__)
 
 /**
  * Cause a break
  */
 #define NS_BREAK()                                            \
-  NS_DebugBreak(NS_DEBUG_BREAK, nsnull, nsnull, __FILE__, __LINE__)
+  NSGlue_Break(__FILE__, __LINE__)
 
 #else /* NS_DEBUG */
 
@@ -242,17 +275,5 @@
 #define NS_CheckThreadSafe(owningThread, msg)                 \
   NS_ASSERTION(owningThread == PR_GetCurrentThread(), msg)
 #endif
-
-/* When compiling the XPCOM Glue on Windows, we pretend that it's going to
- * be linked with a static CRT (-MT) even when it's not. This means that we
- * cannot link to data exports from the CRT, only function exports. So,
- * instead of referencing "stderr" directly, use fdopen.
- */
-PR_BEGIN_EXTERN_C
-
-void
-printf_stderr(const char *fmt, ...);
-
-PR_END_EXTERN_C
 
 #endif /* nsDebug_h___ */

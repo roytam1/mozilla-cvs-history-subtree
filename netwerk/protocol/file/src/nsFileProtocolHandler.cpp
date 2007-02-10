@@ -66,12 +66,6 @@
 #include "nsILocalFileOS2.h"
 #endif
 
-// URL file handling for freedesktop.org
-#ifdef XP_UNIX
-#include "nsINIParser.h"
-#define DESKTOP_ENTRY_SECTION "Desktop Entry"
-#endif
-
 //-----------------------------------------------------------------------------
 
 nsFileProtocolHandler::nsFileProtocolHandler()
@@ -188,40 +182,6 @@ nsFileProtocolHandler::ReadURLFile(nsIFile* aFile, nsIURI** aURI)
     return rv;
 }
 
-#elif defined(XP_UNIX)
-NS_IMETHODIMP
-nsFileProtocolHandler::ReadURLFile(nsIFile* aFile, nsIURI** aURI)
-{
-    // We only support desktop files that end in ".desktop" like the spec says:
-    // http://standards.freedesktop.org/desktop-entry-spec/latest/ar01s02.html
-    nsCAutoString leafName;
-    nsresult rv = aFile->GetNativeLeafName(leafName);
-    if (NS_FAILED(rv) ||
-	!StringEndsWith(leafName, NS_LITERAL_CSTRING(".desktop")))
-        return NS_ERROR_NOT_AVAILABLE;
-
-    nsCOMPtr<nsILocalFile> file(do_QueryInterface(aFile, &rv));
-    if (NS_FAILED(rv))
-        return rv;
-
-    nsINIParser parser;
-    rv = parser.Init(file);
-    if (NS_FAILED(rv))
-        return rv;
-
-    nsCAutoString type;
-    parser.GetString(DESKTOP_ENTRY_SECTION, "Type", type);
-    if (!type.EqualsLiteral("Link"))
-        return NS_ERROR_NOT_AVAILABLE;
-
-    nsCAutoString url;
-    rv = parser.GetString(DESKTOP_ENTRY_SECTION, "URL", url);
-    if (NS_FAILED(rv) || url.IsEmpty())
-        return NS_ERROR_NOT_AVAILABLE;
-
-    return NS_NewURI(aURI, url);
-}
-
 #else // other platforms
 NS_IMETHODIMP
 nsFileProtocolHandler::ReadURLFile(nsIFile* aFile, nsIURI** aURI)
@@ -247,7 +207,7 @@ nsFileProtocolHandler::GetDefaultPort(PRInt32 *result)
 NS_IMETHODIMP
 nsFileProtocolHandler::GetProtocolFlags(PRUint32 *result)
 {
-    *result = URI_NOAUTH | URI_IS_LOCAL_FILE;
+    *result = URI_NOAUTH;
     return NS_OK;
 }
 
@@ -279,13 +239,11 @@ nsFileProtocolHandler::NewURI(const nsACString &spec,
 NS_IMETHODIMP
 nsFileProtocolHandler::NewChannel(nsIURI *uri, nsIChannel **result)
 {
-    nsresult rv;
-
     // This file may be a url file
     nsCOMPtr<nsIFileURL> url(do_QueryInterface(uri));
     if (url) {
         nsCOMPtr<nsIFile> file;
-        rv = url->GetFile(getter_AddRefs(file));
+        nsresult rv = url->GetFile(getter_AddRefs(file));
         if (NS_SUCCEEDED(rv)) {
             nsCOMPtr<nsIURI> uri;
             rv = ReadURLFile(file, getter_AddRefs(uri));
@@ -297,12 +255,12 @@ nsFileProtocolHandler::NewChannel(nsIURI *uri, nsIChannel **result)
         }
     }
 
-    nsFileChannel *chan = new nsFileChannel(uri);
+    nsFileChannel *chan = new nsFileChannel();
     if (!chan)
         return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(chan);
 
-    rv = chan->Init();
+    nsresult rv = chan->Init(uri);
     if (NS_FAILED(rv)) {
         NS_RELEASE(chan);
         return rv;

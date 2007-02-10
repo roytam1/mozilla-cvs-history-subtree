@@ -43,10 +43,11 @@
 
   <binding id="browser" extends="xul:browser">
     <implementation type="application/x-javascript" implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.OuterDoc;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createOuterDocAccessible(this);
           ]]>
         </getter>
       </property>
@@ -222,7 +223,7 @@
                 readonly="true"/>
 
       <property name="docShell"
-                onget="return this.boxObject.QueryInterface(Components.interfaces.nsIContainerBoxObject).docShell;"
+                onget="return this.boxObject.QueryInterface(Components.interfaces.nsIBrowserBoxObject).docShell;"
                 readonly="true"/>
 
       <property name="webNavigation"
@@ -409,9 +410,8 @@
         ]]>
       </destructor>
 
-      <!-- This is necessary because the tabbrowser wants this stuff wired up
-           before adding its progress listener but the browser won't have a
-           docShell if we try to construct it before its frame is created -->
+      <!-- This is necessary because the tabbrowser constructor is called
+           before the browser constructor for the first tab in a window. -->
       <method name="init">
         <body>
         <![CDATA[
@@ -497,7 +497,8 @@
             var buttonPressed = promptService.confirmEx(window, 
               this.mStrBundle.GetStringFromName('browsewithcaret.checkWindowTitle'), 
               this.mStrBundle.GetStringFromName('browsewithcaret.checkLabel'),
-              promptService.STD_YES_NO_BUTTONS,
+              (promptService.BUTTON_TITLE_YES * promptService.BUTTON_POS_0) +
+              (promptService.BUTTON_TITLE_NO * promptService.BUTTON_POS_1),
               null, null, null, this.mStrBundle.GetStringFromName('browsewithcaret.checkMsg'),
               checkValue);
             if (buttonPressed != 0)

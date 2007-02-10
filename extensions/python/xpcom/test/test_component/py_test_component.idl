@@ -37,7 +37,7 @@
 
 // NOTE: This is a TEST interface, not a DEMO interface :-)
 // We try to get as many data-types etc exposed, meaning this
-// doesn't really make a good demo of a "simple component"
+// doesnt really make a good demo of a "simple component"
 #include "nsISupports.idl"
 #include "nsIVariant.idl"
 
@@ -212,7 +212,6 @@ interface nsIPythonTestInterfaceExtra : nsIPythonTestInterface
     void AppendArray(inout PRUint32 count, [array, size_is(count)]in PRInt32 array1, [array, size_is(count)]inout PRInt32 array2);
     void AppendVariant(in nsIVariant variant, inout nsIVariant result);
     nsIVariant CopyVariant(in nsIVariant variant);
-    nsIVariant SumVariants(in PRUint32 incount, [array, size_is(incount)]in nsIVariant variants);
 };
 
 // DOM String support is a "recent" (01/2001) addition to XPCOM.  These test 

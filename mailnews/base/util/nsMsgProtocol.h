@@ -43,7 +43,6 @@
 #include "nsIOutputStream.h"
 #include "nsIChannel.h"
 #include "nsIURL.h"
-#include "nsIThread.h"
 #include "nsILoadGroup.h"
 #include "nsCOMPtr.h"
 #include "nsIFileSpec.h"
@@ -52,6 +51,7 @@
 #include "nsIProgressEventSink.h"
 #include "nsITransport.h"
 #include "nsIAsyncOutputStream.h"
+#include "nsIEventQueue.h"
 #include "nsIAuthModule.h"
 
 #define UNKNOWN_ERROR             101
@@ -165,7 +165,7 @@ protected:
   //PRUint32	m_startPosition;
   PRInt32       m_readCount;
 
-  nsCOMPtr<nsIFile> m_tempMsgFile;  // we currently have a hack where displaying a msg involves writing it to a temp file first
+  nsFileSpec	m_tempMsgFileSpec;  // we currently have a hack where displaying a msg involves writing it to a temp file first
 
   // auth module for access to NTLM functions
   nsCOMPtr<nsIAuthModule> m_authModule;
@@ -219,7 +219,7 @@ public:
   nsCOMPtr<nsIRequest>     m_WriteRequest;
   nsCOMPtr<nsIAsyncOutputStream>    mAsyncOutStream;
   nsCOMPtr<nsIOutputStreamCallback> mProvider;
-  nsCOMPtr<nsIThread>               mProviderThread;
+  nsCOMPtr<nsIEventQueue>           mProviderEventQ;
 
   // because we are reading the post data in asychronously, it's possible that we aren't sending it 
   // out fast enough and the reading gets blocked. The following set of state variables are used to 

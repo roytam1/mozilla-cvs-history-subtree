@@ -39,7 +39,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(8e150a70-3e51-45df-bee3-77505fbe016c)]
+[scriptable, uuid(8758b72b-63d4-4685-b908-4275126410fb)]
 interface nsIDOMNavigator : nsISupports
 {
   readonly attribute DOMString           appCodeName;
@@ -58,7 +58,6 @@ interface nsIDOMNavigator : nsISupports
   readonly attribute DOMString           userAgent;
   readonly attribute boolean             cookieEnabled;
   readonly attribute boolean             onLine;
-  readonly attribute DOMString           buildID;
 
   boolean                   javaEnabled();
   boolean                   taintEnabled();
@@ -77,4 +76,10 @@ interface nsIDOMJSNavigator : nsISupports
   // in XPIDL, argument handling and the return value needs to be
   // dealt with in the implementation of this method.
   void                      preference();
+};
+
+[scriptable, uuid(b3abb5c6-a0c4-47e9-84f6-edb873042769)]
+interface nsIDOMNavigator_MOZILLA_1_8_BRANCH : nsISupports
+{
+  readonly attribute DOMString           buildID;
 };

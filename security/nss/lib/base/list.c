@@ -379,7 +379,6 @@ nssList_CreateIterator(nssList *list)
 	if (!rvIterator->lock) {
 	    nssList_Destroy(rvIterator->list);
 	    nss_ZFreeIf(rvIterator);
-	    rvIterator = NULL;
 	}
     }
     return rvIterator;

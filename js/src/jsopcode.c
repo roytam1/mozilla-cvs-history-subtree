@@ -110,33 +110,6 @@ GetJumpOffset(jsbytecode *pc, jsbytecode *pc2)
     return GET_JUMP_OFFSET(pc2);
 }
 
-JSAtom *
-js_GetAtomFromBytecode(JSScript *script, jsbytecode *pc, ptrdiff_t pcoff)
-{
-    JSOp op;
-    uintN span, atomBase;
-
-    op = (JSOp)*pc;
-    JS_ASSERT(js_CodeSpec[op].length >= 1 + pcoff + ATOM_INDEX_LEN);
-
-    /*
-     * We need to detect atom base prefix. It presents when resetbase
-     * follows the bytecode.
-     */
-    span = js_CodeSpec[op].length;
-    atomBase = 0;
-    if (pc - script->code + span < script->length) {
-        if (pc[span] == JSOP_RESETBASE) {
-            atomBase = GET_ATOMBASE(pc - JSOP_ATOMBASE_LENGTH);
-        } else if (pc[span] == JSOP_RESETBASE0) {
-            JS_ASSERT(JSOP_ATOMBASE1 <= pc[-1] || pc[-1] <= JSOP_ATOMBASE3);
-            atomBase = (pc[-1] - JSOP_ATOMBASE1 + 1) << 16;
-        }
-    }
-    JS_ASSERT(atomBase < script->atomMap.length);
-    return GET_ATOM(script, script->atomMap.vector + atomBase, pc + pcoff);
-}
-
 #ifdef DEBUG
 
 JS_FRIEND_API(JSBool)
@@ -196,8 +169,8 @@ ToDisassemblySource(JSContext *cx, jsval v)
 }
 
 JS_FRIEND_API(uintN)
-js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc,
-                uintN loc, JSBool lines, FILE *fp)
+js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc, uintN loc,
+                JSBool lines, FILE *fp)
 {
     JSOp op;
     const JSCodeSpec *cs;
@@ -239,7 +212,7 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc,
         break;
 
       case JOF_CONST:
-        atom = js_GetAtomFromBytecode(script, pc, 0);
+        atom = GET_ATOM(cx, script, pc);
         bytes = ToDisassemblySource(cx, ATOM_KEY(atom));
         if (!bytes)
             return 0;
@@ -249,10 +222,6 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc,
       case JOF_UINT16:
       case JOF_LOCAL:
         fprintf(fp, " %u", GET_UINT16(pc));
-        break;
-
-      case JOF_2BYTE:
-        fprintf(fp, " %u", (uintN)pc[1]);
         break;
 
       case JOF_TABLESWITCH:
@@ -291,11 +260,11 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc,
         pc2 = pc;
         off = GetJumpOffset(pc, pc2);
         pc2 += jmplen;
-        npairs = GET_UINT16(pc2);
-        pc2 += UINT16_LEN;
+        npairs = GET_ATOM_INDEX(pc2);
+        pc2 += ATOM_INDEX_LEN;
         fprintf(fp, " offset %d npairs %u", off, (uintN) npairs);
         while (npairs) {
-            atom = GET_ATOM(script, script->atomMap.vector, pc2);
+            atom = GET_ATOM(cx, script, pc2);
             pc2 += ATOM_INDEX_LEN;
             off = GetJumpOffset(pc, pc2);
             pc2 += jmplen;
@@ -320,7 +289,8 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc,
 
       case JOF_INDEXCONST:
         fprintf(fp, " %u", GET_VARNO(pc));
-        atom = js_GetAtomFromBytecode(script, pc, VARNO_LEN);
+        pc += VARNO_LEN;
+        atom = GET_ATOM(cx, script, pc);
         bytes = ToDisassemblySource(cx, ATOM_KEY(atom));
         if (!bytes)
             return 0;
@@ -328,8 +298,43 @@ js_Disassemble1(JSContext *cx, JSScript *script, jsbytecode *pc,
         break;
 
       case JOF_UINT24:
-        JS_ASSERT(op == JSOP_UINT24);
+        if (op == JSOP_FINDNAME) {
+            /* Special case to avoid a JOF_FINDNAME just for this op. */
+            atom = js_GetAtom(cx, &script->atomMap, GET_UINT24(pc));
+            bytes = ToDisassemblySource(cx, ATOM_KEY(atom));
+            if (!bytes)
+                return 0;
+            fprintf(fp, " %s", bytes);
+            break;
+        }
+
+        JS_ASSERT(op == JSOP_UINT24 || op == JSOP_LITERAL);
         fprintf(fp, " %u", GET_UINT24(pc));
+        break;
+
+      case JOF_LITOPX:
+        atom = js_GetAtom(cx, &script->atomMap, GET_LITERAL_INDEX(pc));
+        bytes = ToDisassemblySource(cx, ATOM_KEY(atom));
+        if (!bytes)
+            return 0;
+
+        /*
+         * Bytecode: JSOP_LITOPX <uint24> op [<varno> if JSOP_DEFLOCALFUN].
+         * Advance pc to point at op.
+         */
+        pc += 1 + LITERAL_INDEX_LEN;
+        op = *pc;
+        cs = &js_CodeSpec[op];
+        fprintf(fp, " %s op %s", bytes, cs->name);
+        if ((cs->format & JOF_TYPEMASK) == JOF_INDEXCONST)
+            fprintf(fp, " %u", GET_VARNO(pc));
+
+        /*
+         * Set len to advance pc to skip op and any other immediates (namely,
+         * <varno> if JSOP_DEFLOCALFUN).
+         */
+        JS_ASSERT(cs->length > ATOM_INDEX_LEN);
+        len = cs->length - ATOM_INDEX_LEN;
         break;
 
       default: {
@@ -782,7 +787,7 @@ static ptrdiff_t
 GetOff(SprintStack *ss, uintN i)
 {
     ptrdiff_t off;
-    char *bytes;
+    JSString *str;
 
     off = ss->offsets[i];
     if (off < 0) {
@@ -795,15 +800,14 @@ GetOff(SprintStack *ss, uintN i)
             return 0;
         }
 
-        bytes = js_DecompileValueGenerator(ss->sprinter.context, off,
-                                           JSVAL_NULL, NULL);
-        if (!bytes)
+        str = js_DecompileValueGenerator(ss->sprinter.context, off,
+                                         JSVAL_NULL, NULL);
+        if (!str)
             return 0;
-        off = SprintCString(&ss->sprinter, bytes);
+        off = SprintCString(&ss->sprinter, JS_GetStringBytes(str));
         if (off < 0)
             off = 0;
         ss->offsets[i] = off;
-        JS_free(ss->sprinter.context, bytes);
     }
     return off;
 }
@@ -1066,22 +1070,6 @@ GetSlotAtom(JSPrinter *jp, JSPropertyOp getter, uintN slot)
     return NULL;
 }
 
-static JSBool
-PushSlotAtom(SprintStack *ss, JSPropertyOp getter, uintN slot, JSOp op)
-{
-    JSAtom *atom;
-    char *lval;
-
-    atom = GetSlotAtom(ss->printer, getter, slot);
-    if (!atom)
-        return JS_FALSE;
-    JS_ASSERT(ATOM_IS_STRING(atom));
-    lval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0);
-    if (!lval)
-        return JS_FALSE;
-    return PushOff(ss, STR2OFF(&ss->sprinter, lval), op);
-}
-
 /*
  * NB: Indexed by SRC_DECL_* defines from jsemit.h.
  */
@@ -1222,7 +1210,7 @@ DecompileDestructuringLHS(SprintStack *ss, jsbytecode *pc, jsbytecode *endpc,
         else if (op == JSOP_SETVAR)
             atom = GetSlotAtom(jp, js_GetLocalVariable, i);
         else if (op == JSOP_SETGVAR)
-            atom = js_GetAtomFromBytecode(jp->script, pc, 0);
+            atom = GET_ATOM(cx, jp->script, pc);
         else
             lval = GetLocal(ss, i);
         if (atom)
@@ -1307,6 +1295,8 @@ DecompileDestructuring(SprintStack *ss, jsbytecode *pc, jsbytecode *endpc)
     jsint i, lasti;
     jsdouble d;
     const char *lval;
+    jsbytecode *pc2;
+    jsatomid atomIndex;
     JSAtom *atom;
     jssrcnote *sn;
     JSString *str;
@@ -1346,8 +1336,19 @@ DecompileDestructuring(SprintStack *ss, jsbytecode *pc, jsbytecode *endpc)
           case JSOP_UINT16: d = i = GET_UINT16(pc); goto do_getelem;
           case JSOP_UINT24: d = i = GET_UINT24(pc); goto do_getelem;
 
+          /* Handle the extended literal form of JSOP_NUMBER. */
+          case JSOP_LITOPX:
+            atomIndex = GET_LITERAL_INDEX(pc);
+            pc2 = pc + 1 + LITERAL_INDEX_LEN;
+            op = *pc2;
+            LOCAL_ASSERT(op == JSOP_NUMBER);
+            goto do_getatom;
+
           case JSOP_NUMBER:
-            atom = js_GetAtomFromBytecode(jp->script, pc, 0);
+            atomIndex = GET_ATOM_INDEX(pc);
+
+          do_getatom:
+            atom = js_GetAtom(cx, &jp->script->atomMap, atomIndex);
             d = *ATOM_TO_DOUBLE(atom);
             LOCAL_ASSERT(JSDOUBLE_IS_FINITE(d) && !JSDOUBLE_IS_NEGZERO(d));
             i = (jsint)d;
@@ -1361,7 +1362,8 @@ DecompileDestructuring(SprintStack *ss, jsbytecode *pc, jsbytecode *endpc)
             LOCAL_ASSERT(op == JSOP_GETELEM);
 
             /* Distinguish object from array by opcode or source note. */
-            if (sn && SN_TYPE(sn) == SRC_INITPROP) {
+            if (saveop == JSOP_LITERAL ||
+                (sn && SN_TYPE(sn) == SRC_INITPROP)) {
                 *OFF2STR(&ss->sprinter, head) = '{';
                 if (Sprint(&ss->sprinter, "%g: ", d) < 0)
                     return NULL;
@@ -1377,9 +1379,13 @@ DecompileDestructuring(SprintStack *ss, jsbytecode *pc, jsbytecode *endpc)
             }
             break;
 
+          case JSOP_LITERAL:
+            atomIndex = GET_LITERAL_INDEX(pc);
+            goto do_getatom;
+
           case JSOP_GETPROP:
             *OFF2STR(&ss->sprinter, head) = '{';
-            atom = js_GetAtomFromBytecode(jp->script, pc, 0);
+            atom = GET_ATOM(cx, jp->script, pc);
             str = ATOM_TO_STRING(atom);
             if (!QuoteString(&ss->sprinter, str,
                              js_IsIdentifier(str) ? 0 : (jschar)'\'')) {
@@ -1512,6 +1518,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
     const char *lval, *rval, *xval, *fmt;
     jsint i, argc;
     char **argv;
+    jsatomid atomIndex;
     JSAtom *atom;
     JSObject *obj;
     JSFunction *fun;
@@ -1527,6 +1534,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
     static const char exception_cookie[] = "/*EXCEPTION*/";
     static const char retsub_pc_cookie[] = "/*RETSUB_PC*/";
+    static const char iter_cookie[]      = "/*ITER*/";
     static const char forelem_cookie[]   = "/*FORELEM*/";
     static const char with_cookie[]      = "/*WITH*/";
     static const char dot_format[]       = "%s.%s";
@@ -1570,16 +1578,13 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
             return NULL;                                                      \
     JS_END_MACRO
 
-#define LOAD_ATOM(PCOFF)                                                      \
-    (atom = js_GetAtomFromBytecode(jp->script, pc, (PCOFF)))
-
 /*
  * Get atom from jp->script's atom map, quote/escape its string appropriately
  * into rval, and select fmt from the quoted and unquoted alternatives.
  */
 #define GET_ATOM_QUOTE_AND_FMT(qfmt, ufmt, rval)                              \
     JS_BEGIN_MACRO                                                            \
-        LOAD_ATOM(0);                                                         \
+        atom = GET_ATOM(cx, jp->script, pc);                                  \
         GET_QUOTE_AND_FMT(qfmt, ufmt, rval);                                  \
     JS_END_MACRO
 
@@ -1611,21 +1616,8 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
          * set to nop or otherwise mutated to suppress auto-parens.
          */
         lastop = saveop;
-        op = (JSOp) *pc;
-        cs = &js_CodeSpec[op];
-        if (cs->format & JOF_ATOMBASE) {
-            /*
-             * The decompiler uses js_GetAtomFromBytecode to get atoms and
-             * ignores these suffix/prefix bytecodes, thus simplifying code
-             * that must process JSOP_GETTER/JSOP_SETTER prefixes.
-             */
-            pc += cs->length;
-            if (pc >= endpc)
-                break;
-            op = (JSOp) *pc;
-            cs = &js_CodeSpec[op];
-        }
-        saveop = op;
+        op = saveop = (JSOp) *pc;
+        cs = &js_CodeSpec[saveop];
         len = oplen = cs->length;
 
         if (nb < 0 && -(nb + 1) == (intN)ss->top - cs->nuses + cs->ndefs)
@@ -1645,8 +1637,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
             format = cs->format;
             if (((fp && pc == fp->pc) ||
                  (pc == startpc && cs->nuses != 0)) &&
-                format & (JOF_SET|JOF_DEL|JOF_INCDEC|JOF_IMPORT|JOF_FOR|
-                          JOF_VARPROP)) {
+                format & (JOF_SET|JOF_DEL|JOF_INCDEC|JOF_IMPORT|JOF_FOR)) {
                 mode = (format & JOF_MODEMASK);
                 if (mode == JOF_NAME) {
                     /*
@@ -1696,15 +1687,6 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                             op = JSOP_CALL;
                             break;
 #endif
-                          case JSOP_GETARGPROP:
-                            op = JSOP_GETARG;
-                            break;
-                          case JSOP_GETVARPROP:
-                            op = JSOP_GETVAR;
-                            break;
-                          case JSOP_GETLOCALPROP:
-                            op = JSOP_GETLOCAL;
-                            break;
                           default:
                             LOCAL_ASSERT(0);
                         }
@@ -1724,8 +1706,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                   default:;
                 }
             }
-            LOCAL_ASSERT(js_CodeSpec[saveop].length == oplen ||
-                         (format & JOF_TYPEMASK) == JOF_INDEXCONST);
+            LOCAL_ASSERT(js_CodeSpec[saveop].length == oplen);
 
             jp->dvgfence = NULL;
         }
@@ -1774,9 +1755,11 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
             }
         } else {
             switch (op) {
-#define BEGIN_LITOPX_CASE(OP,PCOFF)                                           \
+#define BEGIN_LITOPX_CASE(OP)                                                 \
               case OP:                                                        \
-                LOAD_ATOM(PCOFF);
+                atomIndex = GET_ATOM_INDEX(pc);                               \
+              do_##OP:                                                        \
+                atom = js_GetAtom(cx, &jp->script->atomMap, atomIndex);
 
 #define END_LITOPX_CASE                                                       \
                 break;
@@ -1942,8 +1925,16 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 break;
 
               case JSOP_STARTITER:
-                todo = -2;
-                break;
+                if (ss->inArrayInit) {
+                    ss->offsets[ss->top++] = ss->sprinter.offset;
+                    ss->offsets[ss->top++] = ss->sprinter.offset;
+                    ss->opcodes[ss->top-1] = ss->opcodes[ss->top-2] = op;
+                    break;
+                }
+                todo = Sprint(&ss->sprinter, iter_cookie);
+                if (todo < 0 || !PushOff(ss, todo, op))
+                    return NULL;
+                /* FALL THROUGH */
 
               case JSOP_PUSH:
 #if JS_HAS_DESTRUCTURING
@@ -1961,6 +1952,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               case JSOP_PUSHOBJ:
               case JSOP_BINDNAME:
+              do_JSOP_BINDNAME:
                 todo = Sprint(&ss->sprinter, "");
                 break;
 
@@ -2082,22 +2074,11 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                                 goto do_forloop;
                             }
                             if (SN_TYPE(sn) == SRC_DECL) {
-                                if (ss->top == jp->script->depth) {
-                                    /*
-                                     * This must be an empty destructuring
-                                     * in the head of a let whose body block
-                                     * is also empty.
-                                     */
-                                    pc = pc2 + 1;
-                                    len = js_GetSrcNoteOffset(sn, 0);
-                                    LOCAL_ASSERT(pc[len] == JSOP_LEAVEBLOCK);
-                                    js_printf(jp, "\tlet (%s) {\n", rval);
-                                    js_printf(jp, "\t}\n");
-                                    goto end_setsp;
-                                }
                                 todo = SprintCString(&ss->sprinter, rval);
-                                if (todo < 0 || !PushOff(ss, todo, JSOP_NOP))
+                                if (todo < 0 ||
+                                    !PushOff(ss, todo, JSOP_NOP)) {
                                     return NULL;
+                                }
                                 op = JSOP_POP;
                                 pc = pc2 + 1;
                                 goto do_letheadbody;
@@ -2119,11 +2100,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
                     /*
                      * If control flow reaches this point with todo still -2,
-                     * just print rval as an expression statement.
                      */
                     if (todo == -2)
                         js_printf(jp, "\t%s;\n", rval);
-                  end_setsp:
                     break;
                 }
 #endif
@@ -2277,8 +2256,15 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 if (sn && SN_TYPE(sn) == SRC_HIDDEN)
                     break;
                 (void) PopOff(ss, op);
-                if (op == JSOP_POP2)
-                    (void) PopOff(ss, op);
+                if (ss->inArrayInit) {
+                    ss->top -= 2;
+                    break;
+                }
+                (void) PopOff(ss, op);
+                if (op == JSOP_ENDITER) {
+                    rval = POP_STR();
+                    LOCAL_ASSERT(!strcmp(rval, iter_cookie));
+                }
                 break;
 
               case JSOP_ENTERWITH:
@@ -2300,7 +2286,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 js_printf(jp, "\t}\n");
                 break;
 
-              BEGIN_LITOPX_CASE(JSOP_ENTERBLOCK, 0)
+              BEGIN_LITOPX_CASE(JSOP_ENTERBLOCK)
               {
                 JSAtom **atomv, *smallv[5];
                 JSScopeProperty *sprop;
@@ -2444,8 +2430,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               case JSOP_GETLOCAL:
                 i = GET_UINT16(pc);
-                LOCAL_ASSERT((uintN)i < ss->top);
                 sn = js_GetSrcNote(jp->script, pc);
+                LOCAL_ASSERT((uintN)i < ss->top);
+                rval = GetLocal(ss, i);
 
 #if JS_HAS_DESTRUCTURING
                 if (sn && SN_TYPE(sn) == SRC_GROUPASSIGN) {
@@ -2458,7 +2445,6 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 }
 #endif
 
-                rval = GetLocal(ss, i);
                 todo = Sprint(&ss->sprinter, ss_format, VarPrefix(sn), rval);
                 break;
 
@@ -2522,15 +2508,12 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
                 rval = POP_STR();
                 pos = ss->top;
-                while ((op = ss->opcodes[--pos]) != JSOP_ENTERBLOCK &&
-                       op != JSOP_NEWINIT) {
+                while (ss->opcodes[--pos] != JSOP_ENTERBLOCK)
                     LOCAL_ASSERT(pos != 0);
-                }
                 blockpos = pos;
-                while (ss->opcodes[pos] == JSOP_ENTERBLOCK) {
+                while (ss->opcodes[--pos] == JSOP_ENTERBLOCK) {
                     if (pos == 0)
                         break;
-                    --pos;
                 }
                 LOCAL_ASSERT(ss->opcodes[pos] == JSOP_NEWINIT);
                 startpos = pos;
@@ -2764,7 +2747,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 goto do_fornameinloop;
 
               case JSOP_FORNAME:
-                LOAD_ATOM(0);
+                atom = GET_ATOM(cx, jp->script, pc);
 
               do_fornameinloop:
                 lval = "";
@@ -2775,7 +2758,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               case JSOP_FORPROP:
                 xval = NULL;
-                LOAD_ATOM(0);
+                atom = GET_ATOM(cx, jp->script, pc);
                 if (!ATOM_IS_IDENTIFIER(atom)) {
                     xval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom),
                                        (jschar)'\'');
@@ -2992,7 +2975,10 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
               case JSOP_SETCONST:
               case JSOP_SETNAME:
               case JSOP_SETGVAR:
-                LOAD_ATOM(0);
+                atomIndex = GET_ATOM_INDEX(pc);
+
+              do_JSOP_SETCONST:
+                atom = js_GetAtom(cx, &jp->script->atomMap, atomIndex);
 
               do_setname:
                 lval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0);
@@ -3100,7 +3086,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 break;
 
               case JSOP_DELNAME:
-                LOAD_ATOM(0);
+                atom = GET_ATOM(cx, jp->script, pc);
                 lval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0);
                 if (!lval)
                     return NULL;
@@ -3161,7 +3147,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
               case JSOP_DECNAME:
               case JSOP_INCGVAR:
               case JSOP_DECGVAR:
-                LOAD_ATOM(0);
+                atom = GET_ATOM(cx, jp->script, pc);
               do_incatom:
                 lval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0);
                 if (!lval)
@@ -3223,7 +3209,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
               case JSOP_NAMEDEC:
               case JSOP_GVARINC:
               case JSOP_GVARDEC:
-                LOAD_ATOM(0);
+                atom = GET_ATOM(cx, jp->script, pc);
               do_atominc:
                 lval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0);
                 if (!lval)
@@ -3275,7 +3261,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               case JSOP_GETPROP:
               case JSOP_GETXPROP:
-                LOAD_ATOM(0);
+                atom = GET_ATOM(cx, jp->script, pc);
 
               do_getprop:
                 GET_QUOTE_AND_FMT(index_format, dot_format, rval);
@@ -3285,41 +3271,15 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 todo = Sprint(&ss->sprinter, fmt, lval, rval);
                 break;
 
-              BEGIN_LITOPX_CASE(JSOP_GETTHISPROP, 0)
-                GET_QUOTE_AND_FMT(index_format, dot_format, rval);
-                todo = Sprint(&ss->sprinter, fmt, js_this_str, rval);
-              END_LITOPX_CASE
-
-              BEGIN_LITOPX_CASE(JSOP_GETARGPROP, ARGNO_LEN)
-                if (!PushSlotAtom(ss, js_GetArgument, GET_ARGNO(pc), op))
-                    return NULL;
-                goto do_getprop;
-
-              BEGIN_LITOPX_CASE(JSOP_GETVARPROP, VARNO_LEN)
-                if (!PushSlotAtom(ss, js_GetLocalVariable, GET_VARNO(pc), op))
-                    return NULL;
-                goto do_getprop;
-
-              BEGIN_LITOPX_CASE(JSOP_GETLOCALPROP, 2)
-                i = GET_UINT16(pc);
-                LOCAL_ASSERT((uintN)i < ss->top);
-                lval = GetLocal(ss, i);
-                if (!lval)
-                    return NULL;
-                todo = SprintCString(&ss->sprinter, lval);
-                if (todo < 0 || !PushOff(ss, todo, op))
-                    return NULL;
-                goto do_getprop;
-
 #if JS_HAS_XML_SUPPORT
-              BEGIN_LITOPX_CASE(JSOP_GETMETHOD, 0)
+              BEGIN_LITOPX_CASE(JSOP_GETMETHOD)
                 sn = js_GetSrcNote(jp->script, pc);
                 if (sn && SN_TYPE(sn) == SRC_PCBASE)
                     goto do_getprop;
                 GET_QUOTE_AND_FMT("%s.function::[%s]", "%s.function::%s", rval);
                 goto do_getprop_lval;
 
-              BEGIN_LITOPX_CASE(JSOP_SETMETHOD, 0)
+              BEGIN_LITOPX_CASE(JSOP_SETMETHOD)
                 sn = js_GetSrcNote(jp->script, pc);
                 if (sn && SN_TYPE(sn) == SRC_PCBASE)
                     goto do_setprop;
@@ -3330,7 +3290,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 #endif
 
               case JSOP_SETPROP:
-                LOAD_ATOM(0);
+                atom = GET_ATOM(cx, jp->script, pc);
 
               do_setprop:
                 GET_QUOTE_AND_FMT("%s[%s] %s= %s", "%s.%s %s= %s", xval);
@@ -3363,6 +3323,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 /* FALL THROUGH */
 
               case JSOP_GETELEM:
+              case JSOP_GETXELEM:
                 op = JSOP_NOP;          /* turn off parens */
                 xval = POP_STR();
                 op = saveop;
@@ -3405,7 +3366,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 break;
 
               case JSOP_ARGSUB:
-                i = (jsint) GET_ARGNO(pc);
+                i = (jsint) GET_ATOM_INDEX(pc);
                 todo = Sprint(&ss->sprinter, "%s[%d]",
                               js_arguments_str, (int) i);
                 break;
@@ -3435,7 +3396,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
               case JSOP_NAME:
               case JSOP_GETGVAR:
-                LOAD_ATOM(0);
+                atom = GET_ATOM(cx, jp->script, pc);
               do_name:
                 lval = "";
               do_qname:
@@ -3449,7 +3410,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 break;
 
               case JSOP_UINT16:
-                i = (jsint) GET_UINT16(pc);
+                i = (jsint) GET_ATOM_INDEX(pc);
                 goto do_sprint_int;
 
               case JSOP_UINT24:
@@ -3458,7 +3419,59 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 todo = Sprint(&ss->sprinter, "%u", (unsigned) i);
                 break;
 
-              BEGIN_LITOPX_CASE(JSOP_NUMBER, 0)
+              case JSOP_LITERAL:
+                atomIndex = GET_LITERAL_INDEX(pc);
+                goto do_JSOP_STRING;
+
+              case JSOP_FINDNAME:
+                atomIndex = GET_LITERAL_INDEX(pc);
+                todo = Sprint(&ss->sprinter, "");
+                if (todo < 0 || !PushOff(ss, todo, op))
+                    return NULL;
+                atom = js_GetAtom(cx, &jp->script->atomMap, atomIndex);
+                goto do_name;
+
+              case JSOP_LITOPX:
+                atomIndex = GET_LITERAL_INDEX(pc);
+                pc2 = pc + 1 + LITERAL_INDEX_LEN;
+                op = saveop = *pc2;
+                pc += len - (1 + ATOM_INDEX_LEN);
+                cs = &js_CodeSpec[op];
+                len = cs->length;
+                switch (op) {
+                  case JSOP_ANONFUNOBJ:   goto do_JSOP_ANONFUNOBJ;
+                  case JSOP_BINDNAME:     goto do_JSOP_BINDNAME;
+                  case JSOP_CLOSURE:      goto do_JSOP_CLOSURE;
+#if JS_HAS_EXPORT_IMPORT
+                  case JSOP_EXPORTNAME:   goto do_JSOP_EXPORTNAME;
+#endif
+#if JS_HAS_XML_SUPPORT
+                  case JSOP_GETMETHOD:    goto do_JSOP_GETMETHOD;
+                  case JSOP_SETMETHOD:    goto do_JSOP_SETMETHOD;
+#endif
+                  case JSOP_NAMEDFUNOBJ:  goto do_JSOP_NAMEDFUNOBJ;
+                  case JSOP_NUMBER:       goto do_JSOP_NUMBER;
+                  case JSOP_OBJECT:       goto do_JSOP_OBJECT;
+#if JS_HAS_XML_SUPPORT
+                  case JSOP_QNAMECONST:   goto do_JSOP_QNAMECONST;
+                  case JSOP_QNAMEPART:    goto do_JSOP_QNAMEPART;
+#endif
+                  case JSOP_REGEXP:       goto do_JSOP_REGEXP;
+                  case JSOP_SETCONST:     goto do_JSOP_SETCONST;
+                  case JSOP_STRING:       goto do_JSOP_STRING;
+#if JS_HAS_XML_SUPPORT
+                  case JSOP_XMLCDATA:     goto do_JSOP_XMLCDATA;
+                  case JSOP_XMLCOMMENT:   goto do_JSOP_XMLCOMMENT;
+                  case JSOP_XMLOBJECT:    goto do_JSOP_XMLOBJECT;
+                  case JSOP_XMLPI:        goto do_JSOP_XMLPI;
+#endif
+                  case JSOP_ENTERBLOCK:   goto do_JSOP_ENTERBLOCK;
+                  default:                LOCAL_ASSERT(0);
+                }
+                /* NOTREACHED */
+                break;
+
+              BEGIN_LITOPX_CASE(JSOP_NUMBER)
                 val = ATOM_KEY(atom);
                 if (JSVAL_IS_INT(val)) {
                     long ival = (long)JSVAL_TO_INT(val);
@@ -3475,7 +3488,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 }
               END_LITOPX_CASE
 
-              BEGIN_LITOPX_CASE(JSOP_STRING, 0)
+              BEGIN_LITOPX_CASE(JSOP_STRING)
                 rval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom),
                                    inXML ? DONT_ESCAPE : '"');
                 if (!rval)
@@ -3487,7 +3500,13 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
               case JSOP_REGEXP:
               case JSOP_ANONFUNOBJ:
               case JSOP_NAMEDFUNOBJ:
-                LOAD_ATOM(0);
+                atomIndex = GET_ATOM_INDEX(pc);
+
+              do_JSOP_OBJECT:
+              do_JSOP_REGEXP:
+              do_JSOP_ANONFUNOBJ:
+              do_JSOP_NAMEDFUNOBJ:
+                atom = js_GetAtom(cx, &jp->script->atomMap, atomIndex);
                 if (op == JSOP_OBJECT || op == JSOP_REGEXP) {
                     if (!js_regexp_toString(cx, ATOM_TO_OBJECT(atom), 0, NULL,
                                             &val)) {
@@ -3511,7 +3530,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
               {
                 ptrdiff_t jmplen, off, off2;
                 jsint j, n, low, high;
-                TableEntry *table, *tmp;
+                TableEntry *table, pivot;
 
                 sn = js_GetSrcNote(jp->script, pc);
                 LOCAL_ASSERT(sn && SN_TYPE(sn) == SRC_SWITCH);
@@ -3530,7 +3549,6 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 if (n == 0) {
                     table = NULL;
                     j = 0;
-                    ok = JS_TRUE;
                 } else {
                     table = (TableEntry *)
                             JS_malloc(cx, (size_t)n * sizeof *table);
@@ -3555,21 +3573,12 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                         }
                         pc2 += jmplen;
                     }
-                    tmp = (TableEntry *)
-                          JS_malloc(cx, (size_t)j * sizeof *table);
-                    if (tmp) {
-                        ok = js_MergeSort(table, (size_t)j, sizeof(TableEntry),
-                                          CompareOffsets, NULL, tmp);
-                        JS_free(cx, tmp);
-                    } else {
-                        ok = JS_FALSE;
-                    }
+                    js_HeapSort(table, (size_t) j, &pivot, sizeof(TableEntry),
+                                CompareOffsets, NULL);
                 }
 
-                if (ok) {
-                    ok = DecompileSwitch(ss, table, (uintN)j, pc, len, off,
-                                         JS_FALSE);
-                }
+                ok = DecompileSwitch(ss, table, (uintN)j, pc, len, off,
+                                     JS_FALSE);
                 JS_free(cx, table);
                 if (!ok)
                     return NULL;
@@ -3592,8 +3601,8 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 pc2 = pc;
                 off = GetJumpOffset(pc, pc2);
                 pc2 += jmplen;
-                npairs = GET_UINT16(pc2);
-                pc2 += UINT16_LEN;
+                npairs = GET_ATOM_INDEX(pc2);
+                pc2 += ATOM_INDEX_LEN;
 
                 table = (TableEntry *)
                     JS_malloc(cx, (size_t)npairs * sizeof *table);
@@ -3609,8 +3618,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                     } else {
                         table[k].label = NULL;
                     }
-                    atom = GET_ATOM(jp->script, jp->script->atomMap.vector,
-                                    pc2);
+                    atom = GET_ATOM(cx, jp->script, pc2);
                     pc2 += ATOM_INDEX_LEN;
                     off2 = GetJumpOffset(pc, pc2);
                     pc2 += jmplen;
@@ -3712,15 +3720,15 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 break;
               }
 
-              case JSOP_STRICTEQ:
-              case JSOP_STRICTNE:
+              case JSOP_NEW_EQ:
+              case JSOP_NEW_NE:
                 rval = POP_STR();
                 lval = POP_STR();
                 todo = Sprint(&ss->sprinter, "%s %c== %s",
-                              lval, (op == JSOP_STRICTEQ) ? '=' : '!', rval);
+                              lval, (op == JSOP_NEW_EQ) ? '=' : '!', rval);
                 break;
 
-              BEGIN_LITOPX_CASE(JSOP_CLOSURE, 0)
+              BEGIN_LITOPX_CASE(JSOP_CLOSURE)
                 LOCAL_ASSERT(ATOM_IS_OBJECT(atom));
                 todo = -2;
                 goto do_function;
@@ -3732,7 +3740,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 todo = -2;
                 break;
 
-              BEGIN_LITOPX_CASE(JSOP_EXPORTNAME, 0)
+              BEGIN_LITOPX_CASE(JSOP_EXPORTNAME)
                 rval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0);
                 if (!rval)
                     return NULL;
@@ -3792,7 +3800,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                     pc += len;
                     cs = &js_CodeSpec[op];
                     len = cs->length;
-                    i = (jsint) GET_UINT16(pc);
+                    i = (jsint) GET_ATOM_INDEX(pc);
                     if (Sprint(&ss->sprinter, "#%u=", (unsigned) i) < 0)
                         return NULL;
                 }
@@ -3820,7 +3828,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 break;
 
               case JSOP_INITPROP:
-                LOAD_ATOM(0);
+                atom = GET_ATOM(cx, jp->script, pc);
                 xval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom),
                                    (jschar)
                                    (ATOM_IS_IDENTIFIER(atom) ? 0 : '\''));
@@ -3842,27 +3850,17 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                               rval);
 #else
                 if (lastop == JSOP_GETTER || lastop == JSOP_SETTER) {
-                    if (strncmp(rval, js_function_str, 8) || rval[8] != ' ') {
-                        todo = Sprint(&ss->sprinter, "%s%s%s%s%s:%s", lval,
-                                      (lval[1] != '\0') ? ", " : "", xval,
-                                      (lastop == JSOP_GETTER ||
-                                       lastop == JSOP_SETTER)
-                                        ? " " : "",
-                                      (lastop == JSOP_GETTER) ? js_getter_str :
-                                      (lastop == JSOP_SETTER) ? js_setter_str :
-                                      "",
-                                      rval);
-                    } else {
-                        rval += 8 + 1;
-                        LOCAL_ASSERT(rval[strlen(rval)-1] == '}');
-                        todo = Sprint(&ss->sprinter, "%s%s%s %s%s",
-                                      lval,
-                                      (lval[1] != '\0') ? ", " : "",
-                                      (lastop == JSOP_GETTER)
-                                      ? js_get_str : js_set_str,
-                                      xval,
-                                      rval);
-                    }
+                    LOCAL_ASSERT(strncmp(rval, js_function_str, 8) == 0 &&
+                                 rval[8] == ' ');
+                    rval += 8 + 1;
+                    LOCAL_ASSERT(rval[strlen(rval)-1] == '}');
+                    todo = Sprint(&ss->sprinter, "%s%s%s %s%s",
+                                  lval,
+                                  (lval[1] != '\0') ? ", " : "",
+                                  (lastop == JSOP_GETTER)
+                                  ? js_get_str : js_set_str,
+                                  xval,
+                                  rval);
                 } else {
                     todo = Sprint(&ss->sprinter, "%s%s%s:%s",
                                   lval,
@@ -3888,13 +3886,13 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 
 #if JS_HAS_SHARP_VARS
               case JSOP_DEFSHARP:
-                i = (jsint) GET_UINT16(pc);
+                i = (jsint) GET_ATOM_INDEX(pc);
                 rval = POP_STR();
                 todo = Sprint(&ss->sprinter, "#%u=%s", (unsigned) i, rval);
                 break;
 
               case JSOP_USESHARP:
-                i = (jsint) GET_UINT16(pc);
+                i = (jsint) GET_ATOM_INDEX(pc);
                 todo = Sprint(&ss->sprinter, "#%u#", (unsigned) i);
                 break;
 #endif /* JS_HAS_SHARP_VARS */
@@ -3929,7 +3927,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 }
                 break;
 
-              BEGIN_LITOPX_CASE(JSOP_QNAMEPART, 0)
+              BEGIN_LITOPX_CASE(JSOP_QNAMEPART)
                 if (pc[JSOP_QNAMEPART_LENGTH] == JSOP_TOATTRNAME) {
                     saveop = JSOP_TOATTRNAME;
                     len += JSOP_TOATTRNAME_LENGTH;
@@ -3939,7 +3937,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 goto do_name;
               END_LITOPX_CASE
 
-              BEGIN_LITOPX_CASE(JSOP_QNAMECONST, 0)
+              BEGIN_LITOPX_CASE(JSOP_QNAMECONST)
                 rval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0);
                 if (!rval)
                     return NULL;
@@ -4034,26 +4032,26 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 todo = Sprint(&ss->sprinter, "%s..%s", lval, rval);
                 break;
 
-              BEGIN_LITOPX_CASE(JSOP_XMLOBJECT, 0)
+              BEGIN_LITOPX_CASE(JSOP_XMLOBJECT)
                 todo = Sprint(&ss->sprinter, "<xml address='%p'>",
                               ATOM_TO_OBJECT(atom));
               END_LITOPX_CASE
 
-              BEGIN_LITOPX_CASE(JSOP_XMLCDATA, 0)
+              BEGIN_LITOPX_CASE(JSOP_XMLCDATA)
                 todo = SprintPut(&ss->sprinter, "<![CDATA[", 9);
                 if (!QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0))
                     return NULL;
                 SprintPut(&ss->sprinter, "]]>", 3);
               END_LITOPX_CASE
 
-              BEGIN_LITOPX_CASE(JSOP_XMLCOMMENT, 0)
+              BEGIN_LITOPX_CASE(JSOP_XMLCOMMENT)
                 todo = SprintPut(&ss->sprinter, "<!--", 4);
                 if (!QuoteString(&ss->sprinter, ATOM_TO_STRING(atom), 0))
                     return NULL;
                 SprintPut(&ss->sprinter, "-->", 3);
               END_LITOPX_CASE
 
-              BEGIN_LITOPX_CASE(JSOP_XMLPI, 0)
+              BEGIN_LITOPX_CASE(JSOP_XMLPI)
                 rval = JS_strdup(cx, POP_STR());
                 if (!rval)
                     return NULL;
@@ -4411,7 +4409,7 @@ js_DecompileFunction(JSPrinter *jp, JSFunction *fun)
 
 #undef LOCAL_ASSERT_RV
 
-char *
+JSString *
 js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
                            JSString *fallback)
 {
@@ -4425,7 +4423,7 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
     jssrcnote *sn;
     ptrdiff_t len, oplen;
     JSPrinter *jp;
-    char *name;
+    JSString *name;
 
     for (fp = cx->fp; fp && !fp->script; fp = fp->down)
         continue;
@@ -4557,7 +4555,7 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
      * its keyword name instead.
      */
     if (op == JSOP_THIS)
-        return JS_strdup(cx, js_this_str);
+        return JS_NewStringCopyZ(cx, js_this_str);
 
     /*
      * JSOP_BINDNAME is special: it generates a value, the base object of a
@@ -4572,25 +4570,21 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
     cs = &js_CodeSpec[op];
     begin = pc;
     end = pc + cs->length;
-    switch (cs->format & JOF_MODEMASK) {
-      case JOF_PROP:
-      case JOF_ELEM:
+    if ((cs->format & JOF_MODEMASK) != JOF_NAME) {
+        JSSrcNoteType noteType;
+
         sn = js_GetSrcNote(script, pc);
         if (!sn)
             goto do_fallback;
-        switch (SN_TYPE(sn)) {
-          case SRC_PCBASE:
+        noteType = SN_TYPE(sn);
+        if (noteType == SRC_PCBASE) {
             begin -= js_GetSrcNoteOffset(sn, 0);
-            break;
-          case SRC_PCDELTA:
+        } else if (noteType == SRC_PCDELTA) {
             end = begin + js_GetSrcNoteOffset(sn, 0);
             begin += cs->length;
-            break;
-          default:
+        } else {
             goto do_fallback;
         }
-        break;
-      default:;
     }
     len = PTRDIFF(end, begin, jsbytecode);
     if (len <= 0)
@@ -4603,12 +4597,13 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
      */
     pcdepth = 0;
     for (pc = script->main; pc < begin; pc += oplen) {
+        jsbytecode *pc2;
         uint32 type;
         intN nuses, ndefs;
 
+        /* Let pc2 be non-null only for JSOP_LITOPX. */
+        pc2 = NULL;
         op = (JSOp) *pc;
-        if (op == JSOP_TRAP)
-            op = JS_GetTrapOpcode(cx, script, pc);
         cs = &js_CodeSpec[op];
         oplen = cs->length;
 
@@ -4655,7 +4650,6 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
           case JOF_TABLESWITCHX:
           {
             jsint jmplen, i, low, high;
-            jsbytecode *pc2;
 
             jmplen = (type == JOF_TABLESWITCH) ? JUMP_OFFSET_LEN
                                                : JUMPX_OFFSET_LEN;
@@ -4682,7 +4676,7 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
                                                 : JUMPX_OFFSET_LEN;
             pc2 = pc;
             pc2 += jmplen;
-            npairs = GET_UINT16(pc2);
+            npairs = GET_ATOM_INDEX(pc2);
             pc2 += ATOM_INDEX_LEN;
             while (npairs) {
                 pc2 += ATOM_INDEX_LEN;
@@ -4692,6 +4686,14 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
             oplen = 1 + pc2 - pc;
             break;
           }
+
+          case JOF_LITOPX:
+            pc2 = pc + 1 + LITERAL_INDEX_LEN;
+            op = *pc2;
+            cs = &js_CodeSpec[op];
+            JS_ASSERT(cs->length > ATOM_INDEX_LEN);
+            oplen += cs->length - (1 + ATOM_INDEX_LEN);
+            break;
 
           default:;
         }
@@ -4720,11 +4722,13 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
             JS_ASSERT(ndefs == 0);
             ndefs = 2;
         } else if (op == JSOP_ENTERBLOCK) {
+            jsatomid atomIndex;
             JSAtom *atom;
             JSObject *obj;
 
             JS_ASSERT(ndefs == 0);
-            atom = js_GetAtomFromBytecode(script, pc, 0);
+            atomIndex = pc2 ? GET_LITERAL_INDEX(pc) : GET_ATOM_INDEX(pc);
+            atom = js_GetAtom(cx, &script->atomMap, atomIndex);
             obj = ATOM_TO_OBJECT(atom);
             JS_ASSERT(OBJ_BLOCK_DEPTH(cx, obj) == pcdepth);
             ndefs = OBJ_BLOCK_COUNT(cx, obj);
@@ -4740,20 +4744,12 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
             jp->scope = OBJ_SCOPE(fp->fun->object);
         }
         jp->dvgfence = end;
-        if (js_DecompileCode(jp, script, begin, (uintN)len, (uintN)pcdepth)) {
-            name = (jp->sprinter.base) ? jp->sprinter.base : "";
-            name = JS_strdup(cx, name);
-        }
+        if (js_DecompileCode(jp, script, begin, (uintN)len, (uintN)pcdepth))
+            name = js_GetPrinterOutput(jp);
         js_DestroyPrinter(jp);
     }
     return name;
 
   do_fallback:
-    if (!fallback) {
-        fallback = js_ValueToSource(cx, v);
-        if (!fallback)
-            return NULL;
-    }
-    return js_DeflateString(cx, JSSTRING_CHARS(fallback),
-                            JSSTRING_LENGTH(fallback));
+    return fallback ? fallback : js_ValueToSource(cx, v);
 }

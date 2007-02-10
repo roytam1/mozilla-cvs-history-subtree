@@ -52,13 +52,13 @@ class nsIController;
 class nsIControllers;
 class nsAString;
 
-// {f9004db3-5272-4a8c-8b19-70a4adb8f8b6}
+// {AC71F479-17E1-4ee0-8EFD-0ECF2AA2F827}
 #define NS_IFOCUSCONTROLLER_IID \
-{ 0xf9004db3, 0x5272, 0x4a8c, { 0x8b, 0x19, 0x70, 0xa4, 0xad, 0xb8, 0xf8, 0xb6 } }
+{ 0xac71f479, 0x17e1, 0x4ee0, { 0x8e, 0xfd, 0xe, 0xcf, 0x2a, 0xa2, 0xf8, 0x27 } }
 
 class nsIFocusController : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IFOCUSCONTROLLER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IFOCUSCONTROLLER_IID)
 
   NS_IMETHOD GetFocusedElement(nsIDOMElement** aResult)=0;
   NS_IMETHOD SetFocusedElement(nsIDOMElement* aElement)=0;
@@ -78,9 +78,6 @@ public:
   NS_IMETHOD GetPopupNode(nsIDOMNode** aNode)=0;
   NS_IMETHOD SetPopupNode(nsIDOMNode* aNode)=0;
 
-  NS_IMETHOD GetPopupEvent(nsIDOMEvent** aEvent)=0;
-  NS_IMETHOD SetPopupEvent(nsIDOMEvent* aEvent)=0;
-
   NS_IMETHOD GetControllerForCommand(const char * aCommand, nsIController** aResult)=0;
   NS_IMETHOD GetControllers(nsIControllers** aResult)=0;
 
@@ -90,7 +87,18 @@ public:
   NS_IMETHOD ResetElementFocus() = 0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIFocusController, NS_IFOCUSCONTROLLER_IID)
+// {884e474a-bb6b-4cbf-89ea-47e0ec1f67c3}
+#define NS_IFOCUSCONTROLLER_MOZILLA_1_8_BRANCH_IID \
+{ 0x884e474a, 0xbb6b, 0x4cbf, { 0x89, 0xea, 0x47, 0xe0, 0xec, 0x1f, 0x67, 0xc3 } }
+
+class nsIFocusController_MOZILLA_1_8_BRANCH : public nsIFocusController
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IFOCUSCONTROLLER_MOZILLA_1_8_BRANCH_IID)
+
+  NS_IMETHOD GetPopupEvent(nsIDOMEvent** aEvent)=0;
+  NS_IMETHOD SetPopupEvent(nsIDOMEvent* aEvent)=0;
+};
 
 class nsFocusSuppressor {
 public:

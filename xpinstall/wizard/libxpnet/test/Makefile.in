@@ -48,7 +48,7 @@ CPPSRCS			= TestLibxpnet.cpp
 
 SIMPLE_PROGRAMS	= $(CPPSRCS:.cpp=$(BIN_SUFFIX))
 
-LIBS			= ../src/$(LIB_PREFIX)xpnet_s.$(LIB_SUFFIX)
+LIBS			= -lxpnet_s
 
 ifeq ($(OS_ARCH),WINNT)
 MAPFILE			= TestLibxpnet.map

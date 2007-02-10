@@ -49,9 +49,6 @@
   <!ENTITY cmdToggleWhitespaceNodes.label "Vis blanke noder">
   <!ENTITY cmdToggleWhitespaceNodes.accesskey "b">
 
-  <!ENTITY cmdToggleAccessibleNodes.label "Show Accessible Nodes">
-  <!ENTITY cmdToggleAccessibleNodes.accesskey "c">
-
   <!ENTITY cmdFlashSelected.label "Blink valgte element">
 
   <!ENTITY cmdToggleAttributes.label "Vis attributer">
@@ -88,12 +85,3 @@
   <!ENTITY findNodesDirectionDown.label "Ned">
   <!ENTITY findNodesFind.label "Find">
   <!ENTITY findNodesCancel.label "Afbryd">
-
-  <!ENTITY mnEditPasteMenu.label "Indsæt">
-  <!ENTITY mnEditPasteBefore.label "Før">
-  <!ENTITY mnEditPasteAfter.label "Efter">
-  <!ENTITY mnEditPasteReplace.label "I stedet for (erstat)">
-  <!ENTITY mnEditPasteFirstChild.label "Som første barn">
-  <!ENTITY mnEditPasteLastChild.label "Som sidste barn">
-  <!ENTITY mnEditPasteAsParent.label "Som forældre">
-  

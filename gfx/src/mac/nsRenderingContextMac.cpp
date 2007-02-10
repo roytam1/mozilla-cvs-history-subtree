@@ -53,6 +53,10 @@
 #include "nsGfxUtils.h"
 #include "nsCOMPtr.h"
 
+#ifdef MOZ_WIDGET_COCOA
+#include "nsIQDFlushManager.h"
+#endif
+
 #include "plhash.h"
 
 #include <FixMath.h>
@@ -844,6 +848,7 @@ NS_IMETHODIMP nsRenderingContextMac::GetCurrentTransform(nsTransform2D *&aTransf
 
 #pragma mark -
 
+
 // 0 1 2 3 4 5 6 7
 // *   *   *   *  
 //   *   *   *   *
@@ -881,7 +886,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawLine(nscoord aX0, nscoord aY0, nscoord 
       mGS->mLineStyle == nsLineStyle_kDashed) {
     ::GetPenState(&savedPenState);
     ::GetBackColor(&savedBGColor);
-
+    
     ::PenMode(transparent);
     if (mGS->mLineStyle == nsLineStyle_kDashed)
       ::PenPat(&dashedPattern);
@@ -905,8 +910,9 @@ NS_IMETHODIMP nsRenderingContextMac::DrawLine(nscoord aX0, nscoord aY0, nscoord 
 	if (diffY)
 		diffY -= (diffY > 0 ? 1 : -1);
 
-  ::MoveTo(aX0, aY0);
-  ::Line(diffX, diffY);
+	// draw line
+	::MoveTo(aX0, aY0);
+	::Line(diffX, diffY);
 
   if (mGS->mLineStyle == nsLineStyle_kDotted ||
       mGS->mLineStyle == nsLineStyle_kDashed) {
@@ -918,6 +924,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawLine(nscoord aX0, nscoord aY0, nscoord 
 	return NS_OK;
 }
 
+
 //------------------------------------------------------------------------
 
 NS_IMETHODIMP nsRenderingContextMac::DrawPolyline(const nsPoint aPoints[], PRInt32 aNumPoints)
@@ -925,7 +932,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawPolyline(const nsPoint aPoints[], PRInt
   if (mGS->mLineStyle == nsLineStyle_kNone)
     return NS_OK;
 
-  SetupPortState();
+	SetupPortState();
 
   PenState savedPenState;
   RGBColor savedBGColor;
@@ -933,7 +940,7 @@ NS_IMETHODIMP nsRenderingContextMac::DrawPolyline(const nsPoint aPoints[], PRInt
       mGS->mLineStyle == nsLineStyle_kDashed) {
     ::GetPenState(&savedPenState);
     ::GetBackColor(&savedBGColor);
-
+    
     ::PenMode(transparent);
     if (mGS->mLineStyle == nsLineStyle_kDashed)
       ::PenPat(&dashedPattern);
@@ -945,19 +952,21 @@ NS_IMETHODIMP nsRenderingContextMac::DrawPolyline(const nsPoint aPoints[], PRInt
     ::RGBBackColor(&invertedForeColor);
   }
 
-  PRInt32 x,y;
+	PRInt32    x,y;
 
-  x = aPoints[0].x;
-  y = aPoints[0].y;
-  mGS->mTMatrix.TransformCoord((PRInt32*)&x,(PRInt32*)&y);
+	x = aPoints[0].x;
+	y = aPoints[0].y;
+	mGS->mTMatrix.TransformCoord((PRInt32*)&x,(PRInt32*)&y);
+	::MoveTo(x,y);
 
-  ::MoveTo(x,y);
-  for (PRInt32 i = 1; i < aNumPoints; i++) {
-    x = aPoints[i].x;
-    y = aPoints[i].y;
-    mGS->mTMatrix.TransformCoord((PRInt32*)&x,(PRInt32*)&y);
-    ::LineTo(x,y);
-  }
+	for (PRInt32 i = 1; i < aNumPoints; i++)
+	{
+		x = aPoints[i].x;
+		y = aPoints[i].y;
+
+		mGS->mTMatrix.TransformCoord((PRInt32*)&x,(PRInt32*)&y);
+		::LineTo(x,y);
+	}
 
   if (mGS->mLineStyle == nsLineStyle_kDotted ||
       mGS->mLineStyle == nsLineStyle_kDashed) {
@@ -1228,6 +1237,8 @@ NS_IMETHODIMP nsRenderingContextMac::FillArc(nscoord aX, nscoord aY, nscoord aWi
 	return NS_OK;
 }
 
+#pragma mark -
+
 PRInt32 nsRenderingContextMac::GetMaxStringLength()
 {
   if (!mGS->mFontMetrics)
@@ -1235,7 +1246,6 @@ PRInt32 nsRenderingContextMac::GetMaxStringLength()
   return NS_STATIC_CAST(nsFontMetricsMac*, mGS->mFontMetrics)->GetMaxStringLength();
 }
 
-#pragma mark -
 //------------------------------------------------------------------------
 
 NS_IMETHODIMP nsRenderingContextMac::GetWidth(char ch, nscoord &aWidth)
@@ -1284,7 +1294,8 @@ nsRenderingContextMac::GetWidthInternal(const char* aString, PRUint32 aLength, n
 
 //------------------------------------------------------------------------
 
-NS_IMETHODIMP nsRenderingContextMac::GetWidthInternal(const PRUnichar *aString, PRUint32 aLength, nscoord &aWidth, PRInt32 *aFontID)
+NS_IMETHODIMP
+nsRenderingContextMac::GetWidthInternal(const PRUnichar *aString, PRUint32 aLength, nscoord &aWidth, PRInt32 *aFontID)
 {
 	SetupPortState();
 	
@@ -1409,9 +1420,13 @@ NS_IMETHODIMP nsRenderingContextMac::DrawStringInternal(const PRUnichar *aString
 	return rv;        
 }
 
-
 #pragma mark -
 //------------------------------------------------------------------------
+
+NS_IMETHODIMP nsRenderingContextMac::RetrieveCurrentNativeGraphicData(void** ngd)
+{
+  return NS_OK;
+}
 
 NS_IMETHODIMP nsRenderingContextMac::InvertRect(const nsRect& aRect)
 {
@@ -1446,6 +1461,30 @@ nsRenderingContextMac::FlushRect(const nsRect& aRect)
 NS_IMETHODIMP
 nsRenderingContextMac::FlushRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
 {
+#ifdef MOZ_WIDGET_COCOA
+  if (mPort) {
+    SetupPortState();
+
+    nscoord x,y,w,h;
+
+    x = aX;
+    y = aY;
+    w = aWidth;
+    h = aHeight;
+
+    mGS->mTMatrix.TransformCoord(&x, &y, &w, &h);
+
+    StRegionFromPool rgn;
+    if (!rgn) return NS_ERROR_OUT_OF_MEMORY;
+
+    ::SetRectRgn(rgn, pinToShort(x), pinToShort(y), pinToShort(x + w), pinToShort(y + h));
+
+    nsCOMPtr<nsIQDFlushManager> qdFlushManager =
+     do_GetService("@mozilla.org/gfx/qdflushmanager;1");
+    if (qdFlushManager)
+      qdFlushManager->FlushPortBuffer(mPort, rgn);
+  }
+#endif
   return NS_OK;
 }
 
@@ -1546,14 +1585,4 @@ nsRenderingContextMac::OnTigerOrLater()
     sInitVer = PR_TRUE;
   }
   return sOnTigerOrLater;
-}
-
-void*
-nsRenderingContextMac::GetNativeGraphicData(GraphicDataType aType)
-{
-  if (aType == NATIVE_MAC_THING) {
-    return mPort;
-  }
-
-  return nsnull;
 }

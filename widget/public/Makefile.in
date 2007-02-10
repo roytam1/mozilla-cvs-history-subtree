@@ -54,6 +54,9 @@ EXPORTS		= \
 		nsStringUtil.h \
 		nsIWidget.h \
 		nsIKBStateControl.h \
+		nsIButton.h \
+		nsICheckButton.h \
+		nsITextWidget.h \
 		nsGUIEvent.h \
 		nsEvent.h \
 		nsIMouseListener.h \
@@ -61,31 +64,18 @@ EXPORTS		= \
 		nsIMenuListener.h \
 		nsWidgetsCID.h \
 		nsILookAndFeel.h \
+		nsILabel.h \
+		nsIDragSessionGTK.h \
+		nsIDragSessionXlib.h \
+		nsIDragSessionMac.h \
+		nsIDragSessionOS2.h \
+		nsIDragSessionBeOS.h \
 		nsIPluginWidget.h \
 		nsINativeKeyBindings.h \
-		nsIDeviceContextSpec.h \
 		$(NULL)
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-EXPORTS		+= \
-		nsIDragSessionMac.h \
-		nsIPrintingContext.h
-endif
-
-ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
-EXPORTS		+= nsIDragSessionOS2.h
-endif
-
-ifeq ($(MOZ_WIDGET_TOOLKIT),beos)
-EXPORTS		+= nsIDragSessionBeOS.h
-endif
-
-ifeq ($(MOZ_WIDGET_TOOLKIT),xlib)
-EXPORTS		+= nsIDragSessionXlib.h
-endif
-
-ifneq (,$(filter gtk gtk2,$(MOZ_WIDGET_TOOLKIT)))
-EXPORTS		+= nsIDragSessionGTK.h
+EXPORTS       += nsWidgetAtoms.h nsWidgetAtomList.h
 endif
 
 XPIDLSRCS	= \
@@ -108,23 +98,10 @@ XPIDLSRCS	= \
 		nsIBidiKeyboard.idl \
 		nsIFullScreen.idl \
 		nsINativeScrollbar.idl \
-		nsIScreen.idl \
-		nsIScreenManager.idl \
-		nsIPrintSession.idl \
-		nsIPrintSettings.idl \
-		nsIPrintSettingsService.idl \
-		nsIPrintOptions.idl \
-		nsIIdleService.idl \
 		$(NULL)
 
-ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
-XPIDLSRCS	+= nsIPrintSettingsWin.idl
-endif
-
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-XPIDLSRCS	+= nsIEventSink.idl \
-		nsIPrintSettingsX.idl \
-		nsIPrintSessionX.idl
+XPIDLSRCS       += nsIEventSink.idl
 endif
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))

@@ -44,14 +44,13 @@
 #include "nsString.h"
 #include "nsIDOMInstallVersion.h"
 #include "nsIDOMInstallTriggerGlobal.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindow.h"
 #include "nsIDOMDocument.h"
 #include "nsIDocument.h"
 #include "nsIDocShell.h"
 #include "nsIObserverService.h"
 #include "nsInstallTrigger.h"
 #include "nsXPITriggerInfo.h"
-#include "nsDOMJSUtils.h"
 
 #include "nsIComponentManager.h"
 #include "nsNetUtil.h"
@@ -95,7 +94,7 @@ JSClass InstallTriggerGlobalClass = {
 //
 // InstallTriggerGlobal finalizer
 //
-JS_STATIC_DLL_CALLBACK(void)
+PR_STATIC_CALLBACK(void)
 FinalizeInstallTriggerGlobal(JSContext *cx, JSObject *obj)
 {
   nsISupports *nativeThis = (nsISupports*)JS_GetPrivate(cx, obj);
@@ -155,23 +154,45 @@ InstallTriggerCheckLoadURIFromScript(JSContext *cx, const nsAString& uriStr)
         do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID,&rv));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // get the script principal
+    // get the script base URI
+    nsCOMPtr<nsIURI> scriptURI;
     nsCOMPtr<nsIPrincipal> principal;
     rv = secman->GetSubjectPrincipal(getter_AddRefs(principal));
     NS_ENSURE_SUCCESS(rv, rv);
     if (!principal)
         return NS_ERROR_FAILURE;
 
+    rv = principal->GetURI(getter_AddRefs(scriptURI));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (!scriptURI) {
+      // No URI reachable from the principal, get one from the calling
+      // window.
+
+      nsIScriptContext *scx = GetScriptContextFromJSContext(cx);
+      NS_ENSURE_TRUE(scx, NS_ERROR_FAILURE);
+
+      nsCOMPtr<nsIDOMWindow> window =
+        do_QueryInterface(scx->GetGlobalObject());
+      NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
+
+      nsCOMPtr<nsIDOMDocument> domDoc;
+      window->GetDocument(getter_AddRefs(domDoc));
+
+      nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
+      NS_ENSURE_TRUE(doc, NS_ERROR_FAILURE);
+
+      scriptURI = doc->GetDocumentURI();
+    }
+
     // convert the requested URL string to a URI
-    // Note that we use a null base URI here, since that's what we use when we
-    // actually convert the string into a URI to load.
     nsCOMPtr<nsIURI> uri;
     rv = NS_NewURI(getter_AddRefs(uri), uriStr);
     NS_ENSURE_SUCCESS(rv, rv);
 
     // are we allowed to load this one?
-    rv = secman->CheckLoadURIWithPrincipal(principal, uri,
-                    nsIScriptSecurityManager::DISALLOW_INHERIT_PRINCIPAL);
+    rv = secman->CheckLoadURI(scriptURI, uri,
+                    nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA);
     return rv;
 }
 
@@ -197,7 +218,7 @@ static nsIDOMInstallTriggerGlobal* getTriggerNative(JSContext *cx, JSObject *obj
 //
 // Native method UpdateEnabled
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalUpdateEnabled(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = getTriggerNative(cx, obj);
@@ -223,7 +244,7 @@ InstallTriggerGlobalUpdateEnabled(JSContext *cx, JSObject *obj, uintN argc, jsva
 //
 // Native method Install
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 { 
   nsIDOMInstallTriggerGlobal *nativeThis = getTriggerNative(cx, obj);
@@ -242,11 +263,11 @@ InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
   nativeThis->UpdateEnabled(globalObject, XPI_WHITELIST, &enabled);
   if (!enabled || !globalObject)
   {
-    nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(globalObject));
     nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
     if (os)
     {
-      os->NotifyObservers(win->GetDocShell(), "xpinstall-install-blocked", 
+      os->NotifyObservers(globalObject->GetDocShell(),
+                          "xpinstall-install-blocked", 
                           NS_LITERAL_STRING("install").get());
     }
     return JS_TRUE;
@@ -304,14 +325,7 @@ InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
       for (int i = 0; i < ida->length && !abortLoad; i++ )
       {
         JS_IdToValue( cx, ida->vector[i], &v );
-        JSString * str = JS_ValueToString( cx, v );
-        if (!str)
-        {
-          abortLoad = PR_TRUE;
-          break;
-        }
-
-        name = NS_REINTERPRET_CAST(const PRUnichar*, JS_GetStringChars( str ));
+        name = NS_REINTERPRET_CAST(const PRUnichar*, JS_GetStringChars( JS_ValueToString( cx, v ) ));
 
         URL = iconURL = nsnull;
         hash = nsnull;
@@ -333,7 +347,7 @@ InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
           URL = NS_REINTERPRET_CAST(const PRUnichar*, JS_GetStringChars( JS_ValueToString( cx, v ) ));
         }
 
-        if ( URL )
+        if ( name && URL )
         {
             // Get relative URL to load
             nsAutoString xpiURL(URL);
@@ -411,7 +425,7 @@ InstallTriggerGlobalInstall(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
 //
 // Native method InstallChrome
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = getTriggerNative(cx, obj);
@@ -438,11 +452,11 @@ InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsva
   nativeThis->UpdateEnabled(globalObject, XPI_WHITELIST, &enabled);
   if (!enabled || !globalObject)
   {
-    nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(globalObject));
     nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
     if (os)
     {
-      os->NotifyObservers(win->GetDocShell(), "xpinstall-install-blocked", 
+      os->NotifyObservers(globalObject->GetDocShell(),
+                          "xpinstall-install-blocked", 
                           NS_LITERAL_STRING("install").get());
     }
     return JS_TRUE;
@@ -500,7 +514,7 @@ InstallTriggerGlobalInstallChrome(JSContext *cx, JSObject *obj, uintN argc, jsva
 //
 // Native method StartSoftwareUpdate
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalStartSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = getTriggerNative(cx, obj);
@@ -522,11 +536,11 @@ InstallTriggerGlobalStartSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc
   nativeThis->UpdateEnabled(globalObject, XPI_WHITELIST, &enabled);
   if (!enabled || !globalObject)
   {
-    nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(globalObject));
     nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
     if (os)
     {
-      os->NotifyObservers(win->GetDocShell(), "xpinstall-install-blocked", 
+      os->NotifyObservers(globalObject->GetDocShell(),
+                          "xpinstall-install-blocked", 
                           NS_LITERAL_STRING("install").get());
     }
     return JS_TRUE;
@@ -587,7 +601,7 @@ InstallTriggerGlobalStartSoftwareUpdate(JSContext *cx, JSObject *obj, uintN argc
 //
 // Native method CompareVersion
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalCompareVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = getTriggerNative(cx, obj);
@@ -685,7 +699,7 @@ InstallTriggerGlobalCompareVersion(JSContext *cx, JSObject *obj, uintN argc, jsv
 //
 // Native method GetVersion
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallTriggerGlobalGetVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallTriggerGlobal *nativeThis = getTriggerNative(cx, obj);
@@ -727,19 +741,19 @@ InstallTriggerGlobalGetVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *
 static JSFunctionSpec InstallTriggerGlobalMethods[] =
 {
   // -- obsolete forms, do not document. Kept for 4.x compatibility
-  {"UpdateEnabled",         InstallTriggerGlobalUpdateEnabled,         0,0,0},
-  {"StartSoftwareUpdate",   InstallTriggerGlobalStartSoftwareUpdate,   2,0,0},
-  {"CompareVersion",        InstallTriggerGlobalCompareVersion,        5,0,0},
-  {"GetVersion",            InstallTriggerGlobalGetVersion,            2,0,0},
-  {"updateEnabled",         InstallTriggerGlobalUpdateEnabled,         0,0,0},
+  {"UpdateEnabled",             InstallTriggerGlobalUpdateEnabled,             0},
+  {"StartSoftwareUpdate",       InstallTriggerGlobalStartSoftwareUpdate,       2},
+  {"CompareVersion",            InstallTriggerGlobalCompareVersion,            5},
+  {"GetVersion",                InstallTriggerGlobalGetVersion,                2},
+  {"updateEnabled",             InstallTriggerGlobalUpdateEnabled,             0},
   // -- new forms to match JS style --
-  {"enabled",               InstallTriggerGlobalUpdateEnabled,         0,0,0},
-  {"install",               InstallTriggerGlobalInstall,               2,0,0},
-  {"installChrome",         InstallTriggerGlobalInstallChrome,         2,0,0},
-  {"startSoftwareUpdate",   InstallTriggerGlobalStartSoftwareUpdate,   2,0,0},
-  {"compareVersion",        InstallTriggerGlobalCompareVersion,        5,0,0},
-  {"getVersion",            InstallTriggerGlobalGetVersion,            2,0,0},
-  {nsnull,nsnull,0,0,0}
+  {"enabled",                   InstallTriggerGlobalUpdateEnabled,             0},
+  {"install",                   InstallTriggerGlobalInstall,                   2},
+  {"installChrome",             InstallTriggerGlobalInstallChrome,             2},
+  {"startSoftwareUpdate",       InstallTriggerGlobalStartSoftwareUpdate,       2},
+  {"compareVersion",            InstallTriggerGlobalCompareVersion,            5},
+  {"getVersion",                InstallTriggerGlobalGetVersion,                2},
+  {0}
 };
 
 
@@ -755,7 +769,7 @@ static JSConstDoubleSpec diff_constants[] =
     { CHROME_LOCALE,                             "LOCALE"     },
     { CHROME_CONTENT,                            "CONTENT"    },
     { CHROME_ALL,                                "PACKAGE"    },
-    {0,nsnull}
+    {0}
 };
 
 

@@ -392,7 +392,6 @@
       <field name="mClipboard">null</field>
       <field name="mClipboardData">null</field>
       <field name="mClipboardFlavor">null</field>
-      <field name="mClipboardHelper">null</field>
 
       <property name="clipboardFlavor" readonly="true"
                 onget="return this.mClipboardFlavor"/>
@@ -408,29 +407,26 @@
           return this.mClipboard;
         ]]></getter>
       </property>
-
-      <property name="clipboardHelper" readonly="true">
-        <getter>
-        <![CDATA[
-          if (!this.mClipboardHelper) {
-            this.mClipboardHelper = Components.classes["@mozilla.org/widget/clipboardhelper;1"]
-                                              .getService(Components.interfaces.nsIClipboardHelper);
-          }
-          return this.mClipboardHelper;
-        ]]></getter>
-      </property>
       
       <method name="setClipboardData">
         <parameter name="aObject"/>
         <parameter name="aFlavor"/>
-        <parameter name="aTextRepresentation"/>
         <body><![CDATA[
-          // put the text representation on the system clipboard
-          if (aTextRepresentation) {            
-            this.clipboardHelper.copyString(aTextRepresentation);
+          if (aFlavor == "text/unicode") {
+            var iid = Components.interfaces.nsISupportsString;
+            var cid = "@mozilla.org/supports-string;1";
+            data = Components.classes[cid].createInstance(iid);
+            data.data = aObject;
+
+            iid = Components.interfaces.nsITransferable;
+            cid = "@mozilla.org/widget/transferable;1";
+            var trans = Components.classes[cid].createInstance(iid);
+            trans.setTransferData(aFlavor, data, aObject.length*2);
+            
+            const clip = Components.interfaces.nsIClipboard.kGlobalClipboard;
+            this.clipboard.setData(trans, null, clip);            
           }
           
-          // store the real object internally
           this.mClipboardData = aObject;
           this.mClipboardFlavor = aFlavor;
           
@@ -572,7 +568,6 @@
       </property>
 
       <field name="mLinkedPanel">null</field>
-      <field name="mLinkedViewer">null</field>
       <field name="mCurrentViewer">null</field>
       <field name="mCurrentEntry">null</field>
       
@@ -662,8 +657,7 @@
           this.mParams = null;
           
           // get the list of viewers which match the node
-          var entries = this.registry.findViewersForObject(aObject, this.id,
-                                                           this.mLinkedViewer);
+          var entries = this.registry.findViewersForObject(aObject, this.id);
           this.rebuildViewerList(entries);
 
           if (entries.length == 0) {

@@ -48,19 +48,11 @@
 
 #include "nsBoxFrame.h"
 
-/**
- * A frame representing a grid row (or column) group, which is usually
- * an element that is a child of a grid and contains all the rows (or
- * all the columns).  However, multiple levels of groups are allowed, so
- * the parent or child could instead be another group.
- */
 class nsGridRowGroupFrame : public nsBoxFrame
 {
 public:
 
-  friend nsIFrame* NS_NewGridRowGroupFrame(nsIPresShell* aPresShell,
-                                           nsStyleContext* aContext,
-                                           nsIBoxLayout* aLayoutManager);
+  friend nsresult NS_NewGridRowGroupFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame, nsIBoxLayout* aLayoutManager);
 
 #ifdef NS_DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const
@@ -69,13 +61,9 @@ public:
   }
 #endif
 
-  nsGridRowGroupFrame(nsIPresShell* aPresShell,
-                      nsStyleContext* aContext,
-                      PRBool aIsRoot,
-                      nsIBoxLayout* aLayoutManager):
-    nsBoxFrame(aPresShell, aContext, aIsRoot, aLayoutManager) {}
+  nsGridRowGroupFrame(nsIPresShell* aPresShell, PRBool aIsRoot, nsIBoxLayout* aLayoutManager);
 
-  virtual nscoord GetFlex(nsBoxLayoutState& aBoxLayoutState);
+  NS_IMETHOD GetFlex(nsBoxLayoutState& aBoxLayoutState, nscoord& aFlex);
 
 }; // class nsGridRowGroupFrame
 

@@ -40,9 +40,9 @@
 #define nsIMenuParent_h___
 
 
-// {33f700c8-976a-4cdb-8f6c-d9f4cfee8366}
+// {81C0BF71-9F50-4f4d-8B6A-D6B233C100C2}
 #define NS_IMENUPARENT_IID \
-{ 0x33f700c8, 0x976a, 0x4cdb, { 0x8f, 0x6c, 0xd9, 0xf4, 0xcf, 0xee, 0x83, 0x66 } }
+{ 0x81c0bf71, 0x9f50, 0x4f4d, { 0x8b, 0x6a, 0xd6, 0xb2, 0x33, 0xc1, 0x0, 0xc2 } };
 
 class nsIMenuFrame;
 class nsIDOMKeyEvent;
@@ -137,7 +137,7 @@ static nsNavigationDirection DirectionFromKeyCode_rl_tb [6] = {
 class nsIMenuParent : public nsISupports {
 
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IMENUPARENT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMENUPARENT_IID)
 
   virtual nsIMenuFrame *GetCurrentMenuItem() = 0;
   NS_IMETHOD SetCurrentMenuItem(nsIMenuFrame* aMenuItem) = 0;
@@ -156,9 +156,8 @@ public:
   NS_IMETHOD DismissChain() = 0;
   NS_IMETHOD HideChain() = 0;
   NS_IMETHOD KillPendingTimers() = 0;
-  NS_IMETHOD CancelPendingTimers() = 0;
 
-  NS_IMETHOD AttachedDismissalListener() = 0;
+  NS_IMETHOD CreateDismissalListener() = 0;
 
   NS_IMETHOD InstallKeyboardNavigator() = 0;
   NS_IMETHOD RemoveKeyboardNavigator() = 0;
@@ -173,11 +172,8 @@ public:
 
   NS_IMETHOD SetIsContextMenu(PRBool aIsContextMenu) = 0;
   NS_IMETHOD GetIsContextMenu(PRBool& aIsContextMenu) = 0;
-
-  NS_IMETHOD GetParentPopup(nsIMenuParent** aResult) = 0;
+  
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIMenuParent, NS_IMENUPARENT_IID)
 
 #endif
 

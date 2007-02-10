@@ -181,9 +181,22 @@ nsContextMenuInfo::GetImageSrc(nsIURI **aURI)
   NS_ENSURE_ARG_POINTER(aURI);
   NS_ENSURE_STATE(mDOMNode);
   
-  nsCOMPtr<nsIImageLoadingContent> content(do_QueryInterface(mDOMNode));
-  NS_ENSURE_TRUE(content, NS_ERROR_FAILURE);
-  return content->GetCurrentURI(aURI);
+  // First try the easy case of our node being a nsIDOMHTMLImageElement
+  nsCOMPtr<nsIDOMHTMLImageElement> imgElement(do_QueryInterface(mDOMNode));
+  if (imgElement) {
+    nsAutoString imgSrcSpec;
+    nsresult rv = imgElement->GetSrc(imgSrcSpec);
+    if (NS_SUCCEEDED(rv))
+      return NS_NewURI(aURI, NS_ConvertUCS2toUTF8(imgSrcSpec));
+  }
+  
+  // If not, dig deeper.
+  nsCOMPtr<imgIRequest> request;
+  GetImageRequest(mDOMNode, getter_AddRefs(request));
+  if (request)
+    return request->GetURI(aURI);
+
+  return NS_ERROR_FAILURE;
 }
 
 /* readonly attribute imgIContainer backgroundImageContainer; */
@@ -272,7 +285,6 @@ nsContextMenuInfo::GetBackgroundImageRequest(nsIDOMNode *aDOMNode, imgIRequest *
       nsCOMPtr<nsIDOMHTMLElement> body;
       htmlDocument->GetBody(getter_AddRefs(body));
       domNode = do_QueryInterface(body);
-      NS_ENSURE_TRUE(domNode, NS_ERROR_FAILURE);
     }
   }
   return GetBackgroundImageRequestInternal(domNode, aRequest);
@@ -281,7 +293,6 @@ nsContextMenuInfo::GetBackgroundImageRequest(nsIDOMNode *aDOMNode, imgIRequest *
 nsresult
 nsContextMenuInfo::GetBackgroundImageRequestInternal(nsIDOMNode *aDOMNode, imgIRequest **aRequest)
 {
-  NS_ENSURE_ARG_POINTER(aDOMNode);
 
   nsCOMPtr<nsIDOMNode> domNode = aDOMNode;
   nsCOMPtr<nsIDOMNode> parentNode;

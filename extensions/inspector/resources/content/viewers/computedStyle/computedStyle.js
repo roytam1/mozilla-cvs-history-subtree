@@ -20,7 +20,6 @@
  *
  * Contributor(s):
  *   Joe Hewitt <hewitt@netscape.com> (original author)
- *   Jason Barnabe <jason_barnabe@fastmail.fm>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -69,9 +68,9 @@ function ComputedStyleViewer()
   this.mURL = window.location;
   
   this.mTree = document.getElementById("olStyles");
+  this.mOlBox = this.mTree.treeBoxObject;
 }
 
-//XXX Don't use anonymous functions
 ComputedStyleViewer.prototype = 
 {
   ////////////////////////////////////////////////////////////////////////////
@@ -89,8 +88,7 @@ ComputedStyleViewer.prototype =
   get subject() { return this.mSubject },
   set subject(aObject) 
   {
-    this.mTreeView = new ComputedStyleView(aObject);
-    this.mTree.view = this.mTreeView;
+    this.mOlBox.view = new ComputedStyleView(aObject);
     this.mObsMan.dispatchEvent("subjectChange", { subject: aObject });
   },
 
@@ -105,22 +103,16 @@ ComputedStyleViewer.prototype =
     // We need to remove the view at this time or else it will attempt to 
     // re-paint while the document is being deconstructed, resulting in
     // some nasty XPConnect assertions
-    this.mTree.view = null;
+    this.mOlBox.view = null;
   },
 
   isCommandEnabled: function(aCommand)
   {
-    if (aCommand == "cmdEditCopy") {
-      return this.mTree.view.selection.count > 0;
-    }
     return false;
   },
   
   getCommand: function(aCommand)
   {
-    if (aCommand == "cmdEditCopy") {
-      return new cmdEditCopy(this.mTreeView.getSelectedRowObjects());
-    }
     return null;
   },
 
@@ -135,8 +127,6 @@ ComputedStyleViewer.prototype =
 
   onItemSelected: function()
   {
-    // This will (eventually) call isCommandEnabled on Copy
-    viewer.pane.panelset.updateAllCommands();
   }
 };
 
@@ -153,27 +143,14 @@ function ComputedStyleView(aObject)
 ComputedStyleView.prototype = new inBaseTreeView();
 
 ComputedStyleView.prototype.getCellText = 
-function getCellText(aRow, aCol) 
+function(aRow, aCol) 
 {
-  var prop = this.mStyleList.item(aRow);
   if (aCol.id == "olcStyleName") {
-    return prop;
+    return this.mStyleList.item(aRow);
   } else if (aCol.id == "olcStyleValue") {
+    var prop = this.mStyleList.item(aRow);
     return this.mStyleList.getPropertyValue(prop);
   }
   
-  return null;
-}
-
-/**
-  * Returns a CSSDeclaration for the row in the tree corresponding to the
-  * passed index.
-  * @param aIndex index of the row in the tree
-  * @return a CSSDeclaration
-  */
-ComputedStyleView.prototype.getRowObjectFromIndex = 
-function getRowObjectFromIndex(aIndex)
-{
-  var prop = this.mStyleList.item(aIndex);
-  return new CSSDeclaration(prop, this.mStyleList.getPropertyValue(prop));
+  return "";
 }

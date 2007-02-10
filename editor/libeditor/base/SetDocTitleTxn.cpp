@@ -64,6 +64,10 @@ NS_IMETHODIMP SetDocTitleTxn::Init(nsIHTMLEditor *aEditor,
   return NS_OK;
 }
 
+SetDocTitleTxn::~SetDocTitleTxn()
+{
+}
+
 NS_IMETHODIMP SetDocTitleTxn::DoTransaction(void)
 {
   nsresult res = SetDomTitle(mValue);
@@ -211,6 +215,13 @@ nsresult SetDocTitleTxn::SetDomTitle(const nsAString& aTitle)
     res = editor->InsertNode(titleNode, headNode, newTitleIndex);
   }
   return res;
+}
+
+NS_IMETHODIMP SetDocTitleTxn::Merge(nsITransaction *aTransaction, PRBool *aDidMerge)
+{
+  if (aDidMerge)
+    *aDidMerge = PR_FALSE;
+  return NS_OK;
 }
 
 NS_IMETHODIMP SetDocTitleTxn::GetTxnDescription(nsAString& aString)

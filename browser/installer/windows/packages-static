@@ -24,7 +24,7 @@ bin\defaults\profile\prefs.js
 bin\defaults\profile\search.rdf
 bin\defaults\profile\mimeTypes.rdf
 bin\defaults\profile\chrome\*
-bin\uninstall\helper.exe
+bin\uninstall\uninst.exe
 bin\updater.ini
 bin\dictionaries\*
 
@@ -38,17 +38,13 @@ bin\xpistub.dll
 bin\nspr4.dll
 bin\components\xpinstal.dll
 bin\components\jar50.dll
-bin\Microsoft.VC80.CRT.manifest
-bin\msvcm80.dll
-bin\msvcp80.dll
-bin\msvcr80.dll
+bin\xpcom_compat.dll
 
 [browser]
 ; [Base Browser Files]
-bin\@MOZ_APP_NAME@.exe
+bin\firefox.exe
 bin\plugins\npnul32.dll
 bin\res\cmessage.txt
-bin\res\effective_tld_names.dat
 bin\xpicleanup.exe
 bin\LICENSE
 bin\README.txt
@@ -114,6 +110,7 @@ bin\components\imgicon.xpt
 bin\components\intl.xpt
 bin\components\intlcmpt.xpt
 bin\components\jar.xpt
+bin\components\jsconsole.xpt
 bin\components\jsconsole-clhandler.js
 bin\components\jsd3250.dll
 bin\components\jsdservice.xpt
@@ -135,6 +132,7 @@ bin\components\necko_cache.xpt
 bin\components\necko_cookie.xpt
 bin\components\necko_strconv.xpt
 bin\components\necko_about.xpt
+bin\components\necko_data.xpt
 bin\components\necko_dns.xpt
 bin\components\necko_file.xpt
 bin\components\necko_ftp.xpt
@@ -181,12 +179,14 @@ bin\components\windowds.xpt
 bin\components\windowwatcher.xpt
 bin\components\shellservice.xpt
 bin\components\xml-rpc.xpt
+bin\components\xmlextras.xpt
 bin\components\xpcom_base.xpt
 bin\components\xpcom_components.xpt
 bin\components\xpcom_ds.xpt
 bin\components\xpcom_io.xpt
 bin\components\xpcom_thread.xpt
 bin\components\xpcom_xpti.xpt
+bin\components\xpcom_obsolete.xpt
 bin\components\xpconnect.xpt
 bin\components\xpinstall.xpt
 bin\components\xulapp.xpt
@@ -212,7 +212,6 @@ bin\components\nsExtensionManager.js
 bin\components\nsUpdateService.js
 bin\components\nsMicrosummaryService.js
 bin\components\nsPostUpdateWin.js
-bin\components\pluginGlue.js
 bin\components\extensions.xpt
 bin\components\update.xpt
 bin\components\nsBookmarkTransactionManager.js
@@ -221,9 +220,6 @@ bin\components\nsSessionStore.js
 bin\components\sessionstore.xpt
 bin\components\nsURLFormatter.js
 bin\components\urlformatter.xpt
-bin\components\browserdirprovider.dll
-bin\components\brwsrcmp.dll
-bin\components\txEXSLTRegExFunctions.js
 
 ; Safe Browsing
 bin\components\nsSafebrowsingApplication.js
@@ -333,10 +329,6 @@ bin\chrome\pippki.manifest
 ; [Updater]
 ;
 bin\updater.exe
-
-; [airbag]
-bin\crashreporter.exe
-bin\crashreporter.ini
 
 ; [Additional Developer Tools]
 [adt]

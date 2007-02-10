@@ -41,22 +41,15 @@
 interface nsIEditor;
 interface nsITextServicesFilter;
 
-[scriptable, uuid(90c93610-c116-44ab-9793-62dccb9f43ce)]
+[scriptable, uuid(6088a862-1229-11d9-941d-c035b2e390c6)]
 interface nsIEditorSpellCheck : nsISupports
 {
-
- /**
-   * Returns true if we can enable spellchecking. If there are no available
-   * dictionaries, this will return false.
-   */
-  boolean       canSpellCheck();
 
   /**
    * Turns on the spell checker for the given editor. enableSelectionChecking
    * set means that we only want to check the current selection in the editor,
-   * (this controls the behavior of GetNextMisspelledWord). For spellchecking
-   * clients with no modal UI (such as inline spellcheckers), this flag doesn't
-   * matter
+   * (this controls the behavior of GetNextMisspelledWord). For inline
+   * spellchecking, we don't care about this.
    */
   void          InitSpellChecker(in nsIEditor editor, in boolean enableSelectionChecking);
 
@@ -73,8 +66,8 @@ interface nsIEditorSpellCheck : nsISupports
    * Used to get suggestions for the last word that was checked and found to
    * be misspelled. The first call will give you the first (best) suggestion.
    * Subsequent calls will iterate through all the suggestions, allowing you
-   * to build a list. When there are no more suggestions, an empty string
-   * (not a null pointer) will be returned.
+   * to build a list. When there are no more suggestions, an empty string will
+   * be returned.
    *
    * @see nsISpellChecker::GetSuggestedWord
    */
@@ -91,7 +84,7 @@ interface nsIEditorSpellCheck : nsISupports
   boolean       CheckCurrentWord(in wstring suggestedWord);
 
   /**
-   * Use when modally checking the document to replace a word.
+   * Use when modaly checking the document to replace a word.
    *
    * @see nsISpellChecker::CheckCurrentWord
    */
@@ -100,6 +93,7 @@ interface nsIEditorSpellCheck : nsISupports
   /**
    * @see nsISpellChecker::IgnoreAll
    */
+
   void          IgnoreWordAllOccurrences(in wstring word);
 
   /**
@@ -151,14 +145,6 @@ interface nsIEditorSpellCheck : nsISupports
   void          SetCurrentDictionary(in wstring dictionary);
 
   /**
-   * Call to save the currently selected dictionary as the default. The
-   * function UninitSpellChecker will also do this, but that function may not
-   * be called in some situations. This function allows the caller to force the
-   * default right now.
-   */
-  void          saveDefaultDictionary();
-
-  /**
    * Call this to free up the spell checking object. It will also save the
    * current selected language as the default for future use.
    *
@@ -188,4 +174,26 @@ interface nsIEditorSpellCheck : nsISupports
    */
   boolean       CheckCurrentWordNoSuggest(in wstring suggestedWord);
 
+};
+
+/**
+ * This contains enhancements made to this interface on the trunk. Here, it is
+ * on a separate interface to avoid changing interfaces on the branch.
+ */
+[scriptable, uuid(0455cf88-c679-40c3-8e9f-ff4554ee9559)]
+interface nsIEditorSpellCheck_MOZILLA_1_8_BRANCH : nsIEditorSpellCheck
+{
+  /**
+   * Returns true if we can enable spellchecking. If there are no available
+   * dictionaries, this will return false.
+   */
+  boolean       CanSpellCheck();
+
+  /**
+   * Call to save the currently selected dictionary as the default. The
+   * function UninitSpellChecker will also do this, but that function may
+   * not be called in some situations. This function allows the caller to force
+   * the default right now.
+   */
+  void saveDefaultDictionary();
 };

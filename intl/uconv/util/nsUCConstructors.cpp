@@ -53,7 +53,7 @@ inline NS_METHOD StabilizedQueryInterface(T* aNewObject,
 
 NS_METHOD
 CreateMultiTableDecoder(PRInt32 aTableCount, const uRange * aRangeArray, 
-                        uScanClassID * aScanClassArray,
+                        uShiftTable ** aShiftTable,
                         uMappingTable ** aMappingTable,
                         PRUint32 aMaxLengthFactor,
                         nsISupports* aOuter,
@@ -66,7 +66,7 @@ CreateMultiTableDecoder(PRInt32 aTableCount, const uRange * aRangeArray,
   
   nsMultiTableDecoderSupport* decoder =
     new nsMultiTableDecoderSupport(aTableCount, aRangeArray,
-                                   aScanClassArray, aMappingTable,
+                                   aShiftTable, aMappingTable,
                                    aMaxLengthFactor);
   if (!decoder)
     return NS_ERROR_OUT_OF_MEMORY;
@@ -76,8 +76,7 @@ CreateMultiTableDecoder(PRInt32 aTableCount, const uRange * aRangeArray,
 
 NS_METHOD
 CreateMultiTableEncoder(PRInt32 aTableCount,
-                        uScanClassID * aScanClassArray,
-                        uShiftOutTable ** aShiftOutTable,
+                        uShiftTable ** aShiftTable,
                         uMappingTable ** aMappingTable,
                         PRUint32 aMaxLengthFactor,
                         nsISupports* aOuter,
@@ -90,9 +89,7 @@ CreateMultiTableEncoder(PRInt32 aTableCount,
   
   nsMultiTableEncoderSupport* encoder =
     new nsMultiTableEncoderSupport(aTableCount,
-                                   aScanClassArray,
-                                   aShiftOutTable,
-                                   aMappingTable,
+                                   aShiftTable, aMappingTable,
                                    aMaxLengthFactor);
   if (!encoder)
     return NS_ERROR_OUT_OF_MEMORY;
@@ -101,23 +98,7 @@ CreateMultiTableEncoder(PRInt32 aTableCount,
 }
 
 NS_METHOD
-CreateMultiTableEncoder(PRInt32 aTableCount,
-                        uScanClassID * aScanClassArray,
-                        uMappingTable ** aMappingTable,
-                        PRUint32 aMaxLengthFactor,
-                        nsISupports* aOuter,
-                        REFNSIID aIID,
-                        void** aResult)
-{
-  return CreateMultiTableEncoder(aTableCount, aScanClassArray,
-                                 nsnull,
-                                 aMappingTable, aMaxLengthFactor,
-                                 aOuter, aIID, aResult);
-}
-
-NS_METHOD
-CreateTableEncoder(uScanClassID aScanClass,
-                   uShiftOutTable * aShiftOutTable,
+CreateTableEncoder(uShiftTable * aShiftTable, 
                    uMappingTable  * aMappingTable,
                    PRUint32 aMaxLengthFactor,
                    nsISupports* aOuter,
@@ -128,8 +109,7 @@ CreateTableEncoder(uScanClassID aScanClass,
     return NS_ERROR_NO_AGGREGATION;
   
   nsTableEncoderSupport* encoder =
-      new nsTableEncoderSupport(aScanClass,
-                                aShiftOutTable,  aMappingTable,
+      new nsTableEncoderSupport(aShiftTable, aMappingTable,
                                 aMaxLengthFactor);
   if (!encoder)
     return NS_ERROR_OUT_OF_MEMORY;
@@ -138,21 +118,7 @@ CreateTableEncoder(uScanClassID aScanClass,
 }
 
 NS_METHOD
-CreateTableEncoder(uScanClassID aScanClass,
-                   uMappingTable  * aMappingTable,
-                   PRUint32 aMaxLengthFactor,
-                   nsISupports* aOuter,
-                   REFNSIID aIID,
-                   void** aResult)
-{
-    return CreateTableEncoder(aScanClass, nsnull,
-                              aMappingTable, aMaxLengthFactor,
-                              aOuter, aIID, aResult);
-}
-
-NS_METHOD
-CreateTableDecoder(uScanClassID aScanClass,
-                   uShiftInTable * aShiftInTable,
+CreateTableDecoder(uShiftTable * aShiftTable, 
                    uMappingTable  * aMappingTable,
                    PRUint32 aMaxLengthFactor,
                    nsISupports* aOuter,
@@ -163,7 +129,7 @@ CreateTableDecoder(uScanClassID aScanClass,
     return NS_ERROR_NO_AGGREGATION;
   
   nsTableDecoderSupport* decoder =
-      new nsTableDecoderSupport(aScanClass, aShiftInTable, aMappingTable,
+      new nsTableDecoderSupport(aShiftTable, aMappingTable,
                                 aMaxLengthFactor);
   if (!decoder)
     return NS_ERROR_OUT_OF_MEMORY;
@@ -172,7 +138,8 @@ CreateTableDecoder(uScanClassID aScanClass,
 }
 
 NS_METHOD
-CreateOneByteDecoder(uMappingTable * aMappingTable,
+CreateOneByteDecoder(uShiftTable * aShiftTable, 
+                     uMappingTable * aMappingTable,
                      
                      nsISupports* aOuter,
                      REFNSIID aIID,
@@ -181,7 +148,7 @@ CreateOneByteDecoder(uMappingTable * aMappingTable,
     if (aOuter) return NS_ERROR_NO_AGGREGATION;
     
     nsOneByteDecoderSupport* decoder =
-        new nsOneByteDecoderSupport(aMappingTable);
+        new nsOneByteDecoderSupport(aShiftTable, aMappingTable);
 
     if (!decoder)
         return NS_ERROR_OUT_OF_MEMORY;

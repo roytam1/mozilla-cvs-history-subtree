@@ -37,8 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
  
-/* the interface (to internal code) for retrieving computed style data */
-
 #include "nsStyleConsts.h"
 #include "nsString.h"
 #include "nsPresContext.h"
@@ -48,6 +46,7 @@
 #include "nsCOMPtr.h"
 #include "nsStyleSet.h"
 #include "nsIPresShell.h"
+#include "nsLayoutAtoms.h"
 #include "prenv.h"
 
 #include "nsRuleNode.h"
@@ -80,15 +79,14 @@ nsStyleContext::nsStyleContext(nsStyleContext* aParent,
   mPrevSibling = this;
   if (mParent) {
     mParent->AddRef();
-    mParent->AddChild(this);
+    mParent->AppendChild(this);
   }
 
   ApplyStyleFixups(aPresContext);
 
-  #define eStyleStruct_LastItem (nsStyleStructID_Length - 1)
-  NS_ASSERTION(NS_STYLE_INHERIT_MASK & NS_STYLE_INHERIT_BIT(LastItem),
+  NS_ASSERTION(NS_STYLE_INHERIT_MASK &
+               (1 << PRInt32(nsStyleStructID_Length - 1)) != 0,
                "NS_STYLE_INHERIT_MASK must be bigger, and other bits shifted");
-  #undef eStyleStruct_LastItem
 }
 
 nsStyleContext::~nsStyleContext()
@@ -111,41 +109,61 @@ nsStyleContext::~nsStyleContext()
   }
 }
 
-void nsStyleContext::AddChild(nsStyleContext* aChild)
+void nsStyleContext::AppendChild(nsStyleContext* aChild)
 {
-  NS_ASSERTION(aChild->mPrevSibling == aChild &&
-               aChild->mNextSibling == aChild,
-               "child already in a child list");
-
-  nsStyleContext **list = aChild->mRuleNode->IsRoot() ? &mEmptyChild : &mChild;
-
-  // Insert at the beginning of the list.  See also FindChildWithRules.
-  if (*list) {
-    // Link into existing elements, if there are any.
-    aChild->mNextSibling = (*list);
-    aChild->mPrevSibling = (*list)->mPrevSibling;
-    (*list)->mPrevSibling->mNextSibling = aChild;
-    (*list)->mPrevSibling = aChild;
+  if (aChild->mRuleNode->IsRoot()) {
+    // The child matched no rules.
+    if (!mEmptyChild) {
+      mEmptyChild = aChild;
+    }
+    else {
+      aChild->mNextSibling = mEmptyChild;
+      aChild->mPrevSibling = mEmptyChild->mPrevSibling;
+      mEmptyChild->mPrevSibling->mNextSibling = aChild;
+      mEmptyChild->mPrevSibling = aChild;
+    }
   }
-  (*list) = aChild;
+  else {
+    if (!mChild) {
+      mChild = aChild;
+    }
+    else {
+      aChild->mNextSibling = mChild;
+      aChild->mPrevSibling = mChild->mPrevSibling;
+      mChild->mPrevSibling->mNextSibling = aChild;
+      mChild->mPrevSibling = aChild;
+    }
+  }
 }
 
 void nsStyleContext::RemoveChild(nsStyleContext* aChild)
 {
   NS_PRECONDITION(nsnull != aChild && this == aChild->mParent, "bad argument");
 
-  nsStyleContext **list = aChild->mRuleNode->IsRoot() ? &mEmptyChild : &mChild;
-
-  if (aChild->mPrevSibling != aChild) { // has siblings
-    if ((*list) == aChild) {
-      (*list) = (*list)->mNextSibling;
+  if (aChild->mRuleNode->IsRoot()) { // is empty 
+    if (aChild->mPrevSibling != aChild) { // has siblings
+      if (mEmptyChild == aChild) {
+        mEmptyChild = mEmptyChild->mNextSibling;
+      }
+    } 
+    else {
+      NS_ASSERTION(mEmptyChild == aChild, "bad sibling pointers");
+      mEmptyChild = nsnull;
     }
-  } 
-  else {
-    NS_ASSERTION((*list) == aChild, "bad sibling pointers");
-    (*list) = nsnull;
   }
-
+  else {  // isn't empty
+    if (aChild->mPrevSibling != aChild) { // has siblings
+      if (mChild == aChild) {
+        mChild = mChild->mNextSibling;
+      }
+    }
+    else {
+      NS_ASSERTION(mChild == aChild, "bad sibling pointers");
+      if (mChild == aChild) {
+        mChild = nsnull;
+      }
+    }
+  }
   aChild->mPrevSibling->mNextSibling = aChild->mNextSibling;
   aChild->mNextSibling->mPrevSibling = aChild->mPrevSibling;
   aChild->mNextSibling = aChild;
@@ -159,35 +177,45 @@ nsStyleContext::FindChildWithRules(const nsIAtom* aPseudoTag,
   PRUint32 threshold = 10; // The # of siblings we're willing to examine
                            // before just giving this whole thing up.
 
-  nsStyleContext* result = nsnull;
-  nsStyleContext *list = aRuleNode->IsRoot() ? mEmptyChild : mChild;
+  nsStyleContext* aResult = nsnull;
 
-  if (list) {
-    nsStyleContext *child = list;
-    do {
-      if (child->mRuleNode == aRuleNode && child->mPseudoTag == aPseudoTag) {
-        result = child;
-        break;
+  if ((nsnull != mChild) || (nsnull != mEmptyChild)) {
+    nsStyleContext* child;
+    if (aRuleNode->IsRoot()) {
+      if (nsnull != mEmptyChild) {
+        child = mEmptyChild;
+        do {
+          if (aPseudoTag == child->mPseudoTag) {
+            aResult = child;
+            break;
+          }
+          child = child->mNextSibling;
+          threshold--;
+          if (threshold == 0)
+            break;
+        } while (child != mEmptyChild);
       }
-      child = child->mNextSibling;
-      threshold--;
-      if (threshold == 0)
-        break;
-    } while (child != list);
-  }
-
-  if (result) {
-    if (result != list) {
-      // Move result to the front of the list.
-      RemoveChild(result);
-      AddChild(result);
     }
-
-    // Add reference for the caller.
-    result->AddRef();
+    else if (nsnull != mChild) {
+      child = mChild;
+      
+      do {
+        if (child->mRuleNode == aRuleNode && child->mPseudoTag == aPseudoTag) {
+          aResult = child;
+          break;
+        }
+        child = child->mNextSibling;
+        threshold--;
+        if (threshold == 0)
+          break;
+      } while (child != mChild);
+    }
   }
 
-  return result;
+  if (aResult)
+    aResult->AddRef();
+
+  return aResult;
 }
 
 
@@ -223,25 +251,22 @@ const nsStyleStruct* nsStyleContext::GetStyleData(nsStyleStructID aSID)
   return mRuleNode->GetStyleData(aSID, this, PR_TRUE); // Our rule node will take care of it for us.
 }
 
-#define STYLE_STRUCT(name_, checkdata_cb_, ctor_args_)                      \
-  const nsStyle##name_ * nsStyleContext::GetStyle##name_ ()                 \
-  {                                                                         \
-    const nsStyle##name_ * cachedData = mCachedStyleData.GetStyle##name_(); \
-    if (cachedData)                                                         \
-      return cachedData; /* We have computed data stored on this node */    \
-                         /* in the context tree. */                         \
-    /* Else our rule node will take care of it for us. */                   \
-    return mRuleNode->GetStyle##name_(this, PR_TRUE);                       \
-  }
-#include "nsStyleStructList.h"
-#undef STYLE_STRUCT
-
 inline const nsStyleStruct* nsStyleContext::PeekStyleData(nsStyleStructID aSID)
 {
   const nsStyleStruct* cachedData = mCachedStyleData.GetStyleData(aSID); 
   if (cachedData)
     return cachedData; // We have computed data stored on this node in the context tree.
   return mRuleNode->GetStyleData(aSID, this, PR_FALSE); // Our rule node will take care of it for us.
+}
+
+void
+nsStyleContext::GetBorderPaddingFor(nsStyleBorderPadding& aBorderPadding)
+{
+  nsMargin padding;
+  if (GetStylePadding()->GetPadding(padding)) {
+    padding += GetStyleBorder()->GetBorder();
+    aBorderPadding.SetBorderPadding(padding);
+  }
 }
 
 // This is an evil evil function, since it forces you to alloc your own separate copy of
@@ -438,9 +463,11 @@ nsStyleContext::CalcStyleDifference(nsStyleContext* aOther)
                  "Struct placed in the wrong maxHint section");               \
     const nsStyle##struct_* this##struct_ =                                   \
         NS_STATIC_CAST(const nsStyle##struct_*,                               \
-                       PeekStyleData(eStyleStruct_##struct_));                \
+                      PeekStyleData(NS_GET_STYLESTRUCTID(nsStyle##struct_))); \
     if (this##struct_) {                                                      \
-      const nsStyle##struct_* other##struct_ = aOther->GetStyle##struct_();   \
+      const nsStyle##struct_* other##struct_ =                                \
+          NS_STATIC_CAST(const nsStyle##struct_*,                             \
+               aOther->GetStyleData(NS_GET_STYLESTRUCTID(nsStyle##struct_))); \
       if (compare &&                                                          \
           !NS_IsHintSubset(maxHint, hint) &&                                  \
           this##struct_ != other##struct_) {                                  \
@@ -468,7 +495,6 @@ nsStyleContext::CalcStyleDifference(nsStyleContext* aOther)
   DO_STRUCT_DIFFERENCE(Table);
   DO_STRUCT_DIFFERENCE(Background);
   DO_STRUCT_DIFFERENCE(UIReset);
-  DO_STRUCT_DIFFERENCE(List);
   // If the quotes implementation is ever going to change we might not need
   // a framechange here and a reflow should be sufficient.  See bug 35768.
   DO_STRUCT_DIFFERENCE(Quotes);
@@ -484,6 +510,7 @@ nsStyleContext::CalcStyleDifference(nsStyleContext* aOther)
   DO_STRUCT_DIFFERENCE(Margin);
   DO_STRUCT_DIFFERENCE(Padding);
   DO_STRUCT_DIFFERENCE(Border);
+  DO_STRUCT_DIFFERENCE(List);
   DO_STRUCT_DIFFERENCE(Position);
   DO_STRUCT_DIFFERENCE(Text);
   DO_STRUCT_DIFFERENCE(TextReset);
@@ -568,7 +595,7 @@ void nsStyleContext::List(FILE* out, PRInt32 aIndent)
   if (mPseudoTag) {
     nsAutoString  buffer;
     mPseudoTag->ToString(buffer);
-    fputs(NS_LossyConvertUTF16toASCII(buffer).get(), out);
+    fputs(NS_LossyConvertUCS2toASCII(buffer).get(), out);
     fputs(" ", out);
   }
 
@@ -617,7 +644,7 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
   IndentBy(out,aIndent);
   const nsStyleFont* font = GetStyleFont();
   fprintf(out, "<font %s %d %d %d />\n", 
-          NS_ConvertUTF16toUTF8(font->mFont.name).get(),
+          NS_ConvertUCS2toUTF8(font->mFont.name).get(),
           font->mFont.size,
           font->mSize,
           font->mFlags);
@@ -647,11 +674,11 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
 
   const nsStyleMargin* margin = GetStyleMargin();
   margin->mMargin.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   
   const nsStylePadding* padding = GetStylePadding();
   padding->mPadding.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   
   const nsStyleBorder* border = GetStyleBorder();
 #ifdef NS_COORD_IS_FLOAT
@@ -666,13 +693,13 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
                          border->GetBorderWidth(NS_SIDE_LEFT));
   fprintf(out, "%s ", output.get());
   border->mBorderRadius.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   
   const nsStyleOutline* outline = GetStyleOutline();
   outline->mOutlineRadius.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   outline->mOutlineWidth.ToString(str);
-  fprintf(out, "%s", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s", NS_ConvertUCS2toUTF8(str).get());
   fprintf(out, "%d", (int)border->mFloatEdge);
   fprintf(out, "\" />\n");
 
@@ -689,22 +716,22 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
   const nsStylePosition* pos = GetStylePosition();
   fprintf(out, "<position data=\"");
   pos->mOffset.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   pos->mWidth.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   pos->mMinWidth.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   pos->mMaxWidth.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   pos->mHeight.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   pos->mMinHeight.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   pos->mMaxHeight.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   fprintf(out, "%d ", (int)pos->mBoxSizing);
   pos->mZIndex.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   fprintf(out, "\" />\n");
 
   // TEXT
@@ -715,13 +742,13 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
     (int)text->mTextTransform,
     (int)text->mWhiteSpace);
   text->mLetterSpacing.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   text->mLineHeight.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   text->mTextIndent.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   text->mWordSpacing.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   fprintf(out, "\" />\n");
   
   // TEXT RESET
@@ -730,7 +757,7 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
   fprintf(out, "<textreset data=\"%d ",
     (int)textReset->mTextDecoration);
   textReset->mVerticalAlign.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   fprintf(out, "\" />\n");
 
   // DISPLAY
@@ -780,9 +807,9 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
   fprintf(out, "<tableborder data=\"%d ",
     (int)tableBorder->mBorderCollapse);
   tableBorder->mBorderSpacingX.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   tableBorder->mBorderSpacingY.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   fprintf(out, "%d %d ",
     (int)tableBorder->mCaptionSide,
     (int)tableBorder->mEmptyCells);
@@ -797,7 +824,7 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
     (long)content->CounterResetCount());
   // XXX: iterate over the content and counters...
   content->mMarkerOffset.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   fprintf(out, "\" />\n");
 
   // QUOTES
@@ -829,9 +856,9 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
   fprintf(out, "<column data=\"%d ",
     (int)column->mColumnCount);
   column->mColumnWidth.ToString(str);
-  fprintf(out, "%s ", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s ", NS_ConvertUCS2toUTF8(str).get());
   column->mColumnGap.ToString(str);
-  fprintf(out, "%s", NS_ConvertUTF16toUTF8(str).get());
+  fprintf(out, "%s", NS_ConvertUCS2toUTF8(str).get());
   fprintf(out, "\" />\n");
 
   // XUL
@@ -852,15 +879,13 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
   const nsStyleSVG* svg = GetStyleSVG();
   fprintf(out, "<svg data=\"%d ",(int)svg->mFill.mType);
   if (svg->mFill.mType == eStyleSVGPaintType_Server)
-    fprintf(out, "%s %ld ", URICString(svg->mFill.mPaint.mPaintServer).get(),
-                            (long)svg->mFill.mFallbackColor);
+    fprintf(out, "%s ", URICString(svg->mFill.mPaint.mPaintServer).get());
   else
     fprintf(out, "%ld ", (long)svg->mFill.mPaint.mColor);
 
   fprintf(out, "%d ", (int)svg->mStroke.mType);
   if (svg->mStroke.mType == eStyleSVGPaintType_Server)
-    fprintf(out, "%s %ld ", URICString(svg->mStroke.mPaint.mPaintServer).get(),
-                            (long)svg->mStroke.mFallbackColor);
+    fprintf(out, "%s ", URICString(svg->mStroke.mPaint.mPaintServer).get());
   else
     fprintf(out, "%ld ", (long)svg->mStroke.mPaint.mColor);
 
@@ -873,23 +898,21 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
     svg->mStrokeDasharray[i].ToString(str);
     fprintf(out,
             "%s%c",
-            NS_ConvertUTF16toUTF8(str).get(),
+            NS_ConvertUCS2toUTF8(str).get(),
             (i == svg->mStrokeDasharrayLength) ? ' ' : ',');
   }
 
   svg->mStrokeDashoffset.ToString(str);
   fprintf(out, "%f %s %f %f ",
           svg->mFillOpacity,
-          NS_ConvertUTF16toUTF8(str).get(),
+          NS_ConvertUCS2toUTF8(str).get(),
           svg->mStrokeMiterlimit,
           svg->mStrokeOpacity);
   svg->mStrokeWidth.ToString(str);
-  fprintf(out, "%s %d %d %d %d %d %d %d %d %d %d %d\" />\n",
-          NS_ConvertUTF16toUTF8(str).get(),
+  fprintf(out, "%s %d %d %d %d %d %d %d %d %d\" />\n",
+          NS_ConvertUCS2toUTF8(str).get(),
           (int)svg->mStrokeDasharrayLength,
           (int)svg->mClipRule,
-          (int)svg->mColorInterpolation,
-          (int)svg->mColorInterpolationFilters,
           (int)svg->mFillRule,
           (int)svg->mPointerEvents,
           (int)svg->mShapeRendering,
@@ -902,16 +925,16 @@ void nsStyleContext::DumpRegressionData(nsPresContext* aPresContext, FILE* out, 
   IndentBy(out,aIndent);
   const nsStyleSVGReset* svgReset = GetStyleSVGReset();
 
-  fprintf(out, "<svgreset data=\"%ld ", (long)svgReset->mStopColor);
+  fprintf(out, "<svgreset data=\"%d ", (int)svgReset->mStopColor.mType);
+  if (svgReset->mStopColor.mType == eStyleSVGPaintType_Server)
+    fprintf(out, "%s ",
+            URICString(svgReset->mStopColor.mPaint.mPaintServer).get());
+  else
+    fprintf(out, "%ld ", (long)svgReset->mStopColor.mPaint.mColor);
 
-  fprintf(out, "%ld ", (long)svgReset->mFloodColor);
-
-  fprintf(out, "%s %s %s %f %f %d\" />\n",
+  fprintf(out, "%s %f %d\" />\n",
           URICString(svgReset->mClipPath).get(),
-          URICString(svgReset->mFilter).get(),
-          URICString(svgReset->mMask).get(),
           svgReset->mStopOpacity,
-          svgReset->mFloodOpacity,
           (int)svgReset->mDominantBaseline);
 #endif
   //#insert new style structs here#

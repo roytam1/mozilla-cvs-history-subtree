@@ -1,6 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- *
- * ***** BEGIN LICENSE BLOCK *****
+/* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  * The contents of this file are subject to the Mozilla Public License Version
@@ -23,7 +21,6 @@
  * Contributor(s):
  *   Rajiv Dayal <rdayal@netscape.com>
  *   Dan Mosedale <dan.mosedale@oracle.com>
- *   Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -41,6 +38,7 @@
 
 #include "nsAbLDAPChangeLogData.h"
 #include "nsAbLDAPChangeLogQuery.h"
+#include "nsLDAP.h"
 #include "nsILDAPMessage.h"
 #include "nsIAbCard.h"
 #include "nsIAddrBookSession.h"
@@ -54,9 +52,6 @@
 #include "nsIStringBundle.h"
 #include "nsIWindowWatcher.h"
 #include "nsUnicharUtils.h"
-#include "plstr.h"
-#include "nsILDAPErrors.h"
-#include "prmem.h"
 
 // defined here since to be used 
 // only locally to this file.
@@ -175,7 +170,7 @@ nsresult nsAbLDAPProcessChangeLogData::OnLDAPSearchEntry(nsILDAPMessage *aMessag
 nsresult nsAbLDAPProcessChangeLogData::OnLDAPSearchResult(nsILDAPMessage *aMessage)
 {
     NS_ENSURE_ARG_POINTER(aMessage);
-    if (!mInitialized)
+    if(!mInitialized) 
         return NS_ERROR_NOT_INITIALIZED;
 
     PRInt32 errorCode;
@@ -194,25 +189,20 @@ nsresult nsAbLDAPProcessChangeLogData::OnLDAPSearchResult(nsILDAPMessage *aMessa
                 // before starting the changeLog check the DB file, if its not there or bogus
                 // we need to create a new one and set to all.
                 nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
-                if (NS_FAILED(rv)) 
+                if(NS_FAILED(rv)) 
                     break;
                 nsCOMPtr<nsILocalFile> dbPath;
                 rv = abSession->GetUserProfileDirectory(getter_AddRefs(dbPath));
-                if (NS_FAILED(rv)) 
+                if(NS_FAILED(rv)) 
                     break;
 
-                nsCAutoString fileName;
-                rv = mDirectory->GetReplicationFileName(fileName);
-                if (NS_FAILED(rv))
-                  break;
-
-                rv = dbPath->AppendNative(fileName);
-                if (NS_FAILED(rv)) 
+                rv = dbPath->AppendNative(nsDependentCString(mDirServerInfo->replInfo->fileName));
+                if(NS_FAILED(rv)) 
                     break;
 
                 PRBool fileExists;
                 rv = dbPath->Exists(&fileExists);
-                if (NS_FAILED(rv)) 
+                if(NS_FAILED(rv)) 
                     break;
 
                 PRInt64 fileSize;
@@ -310,13 +300,15 @@ nsresult nsAbLDAPProcessChangeLogData::GetAuthData()
     nsXPIDLString password;
     PRBool btnResult = PR_FALSE;
 	rv = dialog->PromptUsernameAndPassword(title, desc, 
-                                            NS_ConvertUTF8toUTF16(serverUri).get(), 
+                                            NS_ConvertUTF8toUCS2(serverUri).get(), 
                                             nsIAuthPrompt::SAVE_PASSWORD_PERMANENTLY,
                                             getter_Copies(username), getter_Copies(password), 
                                             &btnResult);
     if(NS_SUCCEEDED(rv) && btnResult) {
         CopyUTF16toUTF8(username, mAuthUserID);
         CopyUTF16toUTF8(password, mAuthPswd);
+        mDirServerInfo->enableAuth=PR_TRUE;
+        mDirServerInfo->savePassword=PR_TRUE;
     }
     else
         rv = NS_ERROR_FAILURE;
@@ -326,8 +318,8 @@ nsresult nsAbLDAPProcessChangeLogData::GetAuthData()
 
 nsresult nsAbLDAPProcessChangeLogData::OnSearchAuthDNDone()
 {
-  if (!mInitialized)
-    return NS_ERROR_NOT_INITIALIZED;
+    if(!mInitialized) 
+        return NS_ERROR_NOT_INITIALIZED;
 
     nsCOMPtr<nsILDAPURL> url;
     nsresult rv = mQuery->GetReplicationURL(getter_AddRefs(url));
@@ -335,7 +327,8 @@ nsresult nsAbLDAPProcessChangeLogData::OnSearchAuthDNDone()
         rv = mQuery->ConnectToLDAPServer(url, mAuthDN);
     if(NS_SUCCEEDED(rv)) {
         mState = kAuthenticatedBinding;
-        rv = mDirectory->SetAuthDn(mAuthDN);
+        PR_FREEIF(mDirServerInfo->authDn);
+        mDirServerInfo->authDn=ToNewCString(mAuthDN);
     }
 
     return rv;
@@ -344,7 +337,7 @@ nsresult nsAbLDAPProcessChangeLogData::OnSearchAuthDNDone()
 nsresult nsAbLDAPProcessChangeLogData::ParseRootDSEEntry(nsILDAPMessage *aMessage)
 {
     NS_ENSURE_ARG_POINTER(aMessage);
-    if (!mInitialized)
+    if(!mInitialized) 
         return NS_ERROR_NOT_INITIALIZED;
 
     // populate the RootDSEChangeLogEntry
@@ -363,24 +356,21 @@ nsresult nsAbLDAPProcessChangeLogData::ParseRootDSEEntry(nsILDAPMessage *aMessag
             if (!PL_strcasecmp(attrs[i], "changelog"))
                 CopyUTF16toUTF8(vals[0], mRootDSEEntry.changeLogDN);
             if (!PL_strcasecmp(attrs[i], "firstChangeNumber"))
-                mRootDSEEntry.firstChangeNumber = atol(NS_LossyConvertUTF16toASCII(vals[0]).get());
+                mRootDSEEntry.firstChangeNumber = atol(NS_LossyConvertUCS2toASCII(vals[0]).get());
             if (!PL_strcasecmp(attrs[i], "lastChangeNumber"))
-                mRootDSEEntry.lastChangeNumber = atol(NS_LossyConvertUTF16toASCII(vals[0]).get());
+                mRootDSEEntry.lastChangeNumber = atol(NS_LossyConvertUCS2toASCII(vals[0]).get());
             if (!PL_strcasecmp(attrs[i], "dataVersion"))
                 CopyUTF16toUTF8(vals[0], mRootDSEEntry.dataVersion);
         }
     }
 
-    PRInt32 lastChangeNumber;
-    mDirectory->GetLastChangeNumber(&lastChangeNumber);
-
-    if ((mRootDSEEntry.lastChangeNumber > 0) &&
-        (lastChangeNumber < mRootDSEEntry.lastChangeNumber) &&
-        (lastChangeNumber > mRootDSEEntry.firstChangeNumber))
+    if((mRootDSEEntry.lastChangeNumber > 0) 
+        && (mDirServerInfo->replInfo->lastChangeNumber < mRootDSEEntry.lastChangeNumber)
+        && (mDirServerInfo->replInfo->lastChangeNumber > mRootDSEEntry.firstChangeNumber) 
+      )
         mUseChangeLog = PR_TRUE;
 
-    if (mRootDSEEntry.lastChangeNumber &&
-        (lastChangeNumber == mRootDSEEntry.lastChangeNumber)) {
+    if(mRootDSEEntry.lastChangeNumber && (mDirServerInfo->replInfo->lastChangeNumber == mRootDSEEntry.lastChangeNumber)) {
         Done(PR_TRUE); // we are up to date no need to replicate, db not open yet so call Done
         return NS_OK;
     }
@@ -390,7 +380,7 @@ nsresult nsAbLDAPProcessChangeLogData::ParseRootDSEEntry(nsILDAPMessage *aMessag
 
 nsresult nsAbLDAPProcessChangeLogData::OnSearchRootDSEDone()
 {
-    if (!mInitialized)
+    if(!mInitialized) 
         return NS_ERROR_NOT_INITIALIZED;
 
     nsresult rv = NS_OK;
@@ -412,10 +402,9 @@ nsresult nsAbLDAPProcessChangeLogData::OnSearchRootDSEDone()
             mListener->OnStateChange(nsnull, nsnull, nsIWebProgressListener::STATE_START, PR_TRUE);
     }
 
-    rv = mDirectory->SetLastChangeNumber(mRootDSEEntry.lastChangeNumber);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = mDirectory->SetDataVersion(mRootDSEEntry.dataVersion);
+    mDirServerInfo->replInfo->lastChangeNumber = mRootDSEEntry.lastChangeNumber;
+    PR_FREEIF(mDirServerInfo->replInfo->dataVersion);
+    mDirServerInfo->replInfo->dataVersion = ToNewCString(mRootDSEEntry.dataVersion);
 
     return rv;
 }
@@ -464,7 +453,7 @@ nsresult nsAbLDAPProcessChangeLogData::ParseChangeLogEntries(nsILDAPMessage *aMe
 
 #ifdef DEBUG_rdayal
     printf ("ChangeLog Replication : Updated Entry : %s for OpType : %u\n", 
-                                    NS_ConvertUTF16toUTF8(targetDN).get(), operation);
+                                    NS_ConvertUCS2toUTF8(targetDN).get(), operation);
 #endif
 
     switch(operation) {
@@ -533,7 +522,7 @@ nsresult nsAbLDAPProcessChangeLogData::OnFindingChangesDone()
 
     // decrement the count first to get the correct array element
     mEntriesAddedQueryCount--;
-    rv = mChangeLogQuery->QueryChangedEntries(NS_ConvertUTF16toUTF8(*(mEntriesToAdd[mEntriesAddedQueryCount])));
+    rv = mChangeLogQuery->QueryChangedEntries(NS_ConvertUCS2toUTF8(*(mEntriesToAdd[mEntriesAddedQueryCount])));
     if (NS_FAILED(rv))
         return rv;
 
@@ -563,7 +552,7 @@ nsresult nsAbLDAPProcessChangeLogData::OnReplicatingChangeDone()
             rv = mBackupReplicationFile->Remove(PR_FALSE);
             NS_ASSERTION(NS_SUCCEEDED(rv), "Replication BackupFile Remove on Success failed");
         }
-        Done(PR_TRUE);  // all data is received
+        Done(PR_TRUE);  // all data is recieved
         return NS_OK;
     }
 
@@ -571,7 +560,7 @@ nsresult nsAbLDAPProcessChangeLogData::OnReplicatingChangeDone()
     if(mEntriesAddedQueryCount < mEntriesToAdd.Count() && mEntriesAddedQueryCount >= 0)
         mEntriesToAdd.RemoveStringAt(mEntriesAddedQueryCount);
     mEntriesAddedQueryCount--;
-    rv = mChangeLogQuery->QueryChangedEntries(NS_ConvertUTF16toUTF8(*(mEntriesToAdd[mEntriesAddedQueryCount])));
+    rv = mChangeLogQuery->QueryChangedEntries(NS_ConvertUCS2toUTF8(*(mEntriesToAdd[mEntriesAddedQueryCount])));
 
     return rv;
 }

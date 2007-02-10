@@ -208,17 +208,17 @@ nsresult nsPermissionManager::Init()
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  // Clear the array of type strings
-  memset(mTypeArray, nsnull, sizeof(mTypeArray));
-
   // Cache the permissions file
   rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(mPermissionsFile));
   if (NS_SUCCEEDED(rv)) {
-    mPermissionsFile->AppendNative(NS_LITERAL_CSTRING(kPermissionsFileName));
-
-    // Ignore an error. That is not a problem. No cookperm.txt usually.
-    Read();
+    rv = mPermissionsFile->AppendNative(NS_LITERAL_CSTRING(kPermissionsFileName));
   }
+
+  // Clear the array of type strings
+  memset(mTypeArray, nsnull, sizeof(mTypeArray));
+
+  // Ignore an error. That is not a problem. No cookperm.txt usually.
+  Read();
 
   mObserverService = do_GetService("@mozilla.org/observer-service;1", &rv);
   if (NS_SUCCEEDED(rv)) {
@@ -502,9 +502,9 @@ NS_IMETHODIMP nsPermissionManager::Observe(nsISupports *aSubject, const char *aT
     // Re-get the permissions file
     rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(mPermissionsFile));
     if (NS_SUCCEEDED(rv)) {
-      mPermissionsFile->AppendNative(NS_LITERAL_CSTRING(kPermissionsFileName));
-      Read();
+      rv = mPermissionsFile->AppendNative(NS_LITERAL_CSTRING(kPermissionsFileName));
     }
+    Read();
   }
 
   return rv;
@@ -629,6 +629,7 @@ nsPermissionManager::Read()
     NS_ENSURE_SUCCESS(rv, rv);
 
     rv = NS_NewLocalFileInputStream(getter_AddRefs(fileInputStream), oldPermissionsFile);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     readingOldFile = PR_TRUE;
 
@@ -639,11 +640,6 @@ nsPermissionManager::Read()
      * with a=0, b=1 etc
      */
   }
-  // An error path is expected when cookperm.txt is not found either, or when
-  // creating the stream failed for another reason.
-  if (NS_FAILED(rv))
-    return rv;
-
 
   nsCOMPtr<nsILineInputStream> lineInputStream = do_QueryInterface(fileInputStream, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -757,10 +753,6 @@ nsPermissionManager::Read()
           type = 10*type + (c-'0');
           c = permissionString.CharAt(++index);
         }
-
-        if (type >= NUMBER_OF_TYPES)
-          continue; // invalid type for this permission entry
-
         if (index >= permissionString.Length())
           continue; // bad format for this permission entry
 

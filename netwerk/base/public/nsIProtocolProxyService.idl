@@ -69,8 +69,8 @@ interface nsIProtocolProxyService : nsISupports
      * NS_BASE_STREAM_WOULD_BLOCK to indicate that it failed due to this flag
      * being present.
      */
-    const unsigned long RESOLVE_NON_BLOCKING = 1 << 0;
-
+    const unsigned long RESOLVE_NON_BLOCKING = 1;
+    
     /**
      * This method returns a nsIProxyInfo instance that identifies a proxy to
      * be used for loading the given URI.  Otherwise, this method returns null
@@ -79,9 +79,8 @@ interface nsIProtocolProxyService : nsISupports
      * @param aURI
      *        The URI to test.
      * @param aFlags
-     *        A bit-wise combination of the RESOLVE_ flags defined above.  Pass
-     *        0 to specify the default behavior.  Any additional bits that do
-     *        not correspond to a RESOLVE_ flag are reserved for future use.
+     *        A bit-wise OR of the RESOLVE_ flags defined above.  Pass 0 to
+     *        specify the default behavior.
      *
      * NOTE: If this proxy is unavailable, getFailoverForProxy may be called
      * to determine the correct secondary proxy to be used.
@@ -114,15 +113,12 @@ interface nsIProtocolProxyService : nsISupports
      * @param aURI
      *        The URI to test.
      * @param aFlags
-     *        A bit-wise combination of the RESOLVE_ flags defined above.  Pass
-     *        0 to specify the default behavior.  Any additional bits that do
-     *        not correspond to a RESOLVE_ flag are reserved for future use.
+     *        A bit-wise OR of the RESOLVE_ flags defined above.  Pass 0 to
+     *        specify the default behavior.
      * @param aCallback
      *        The object to be notified when the result is available.
      *
      * @return An object that can be used to cancel the asychronous operation.
-     *         If canceled, the cancelation status (aReason) will be forwarded
-     *         to the callback's onProxyAvailable method via the aStatus param.
      */
     nsICancelable asyncResolve(in nsIURI aURI, in unsigned long aFlags,
                                in nsIProtocolProxyCallback aCallback);
@@ -141,8 +137,7 @@ interface nsIProtocolProxyService : nsISupports
      *          "socks4"  - specifies a SOCKS version 4 proxy
      *          "direct"  - specifies a direct connection (useful for failover)
      *        The type name is case-insensitive.  Other string values may be
-     *        possible, and new types may be defined by a future version of
-     *        this interface.
+     *        possible.
      * @param aHost
      *        The proxy hostname or IP address.
      * @param aPort

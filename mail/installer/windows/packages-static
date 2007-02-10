@@ -31,10 +31,6 @@ bin\plds4.dll
 bin\js3250.dll   
 bin\components\jsd3250.dll
 bin\components\xpinstal.dll  
-bin\Microsoft.VC80.CRT.manifest
-bin\msvcm80.dll
-bin\msvcp80.dll
-bin\msvcr80.dll
 
 ; Optional offline extension
 [offline]
@@ -45,7 +41,8 @@ bin\chrome\offline.manifest
 [newsblog]
 bin\chrome\newsblog.jar
 bin\chrome\newsblog.manifest
-bin\isp\rss.rdf
+
+bin\defaults\isp\rss.rdf
 bin\components\newsblog.js
 
 ; Optional Talkback
@@ -79,8 +76,6 @@ bin\defaults\profile\localstore.rdf
 bin\defaults\profile\prefs.js
 bin\defaults\profile\mimeTypes.rdf
 
-bin\isp\gmail.rdf
-
 bin\components\addrbook.xpt
 bin\components\mime.xpt
 bin\components\mailnews.xpt
@@ -95,7 +90,6 @@ bin\components\import.xpt
 bin\components\impComm4xMail.xpt
 bin\components\mailview.xpt
 bin\components\mailprofilemigration.xpt
-bin\components\shellservice.xpt
 
 bin\chrome\toolkit.jar
 bin\chrome\toolkit.manifest
@@ -118,6 +112,7 @@ bin\MapiProxy.dll
 bin\mozMapi32.dll
 bin\components\mapihook.xpt
 bin\components\nsSetDefaultMail.js
+bin\components\nsUnsetDefaultMail.js
 bin\components\offlineStartup.js
 bin\components\nsMailDefaultHandler.js
 
@@ -176,13 +171,6 @@ bin\components\xmlextras.xpt
 bin\defaults\autoconfig\platform.js
 bin\defaults\autoconfig\prefcalls.js
 bin\components\autoconfig.xpt
-
-; Phishing Protection
-bin\components\nsPhishingProtectionApplication.js
-bin\components\nsUrlClassifierListManager.js
-bin\components\nsUrlClassifierLib.js
-bin\components\nsUrlClassifierTable.js
-bin\components\url-classifier.xpt
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Base Package Files
@@ -264,7 +252,6 @@ bin\components\dom_css.xpt
 bin\components\dom_events.xpt
 bin\components\dom_html.xpt
 bin\components\dom_range.xpt
-bin\components\dom_storage.xpt
 bin\components\dom_stylesheets.xpt
 bin\components\dom_traversal.xpt
 bin\components\dom_views.xpt
@@ -281,11 +268,9 @@ bin\components\txmgr.xpt
 ; Optional - only if your code uses nsIWebBrowserFind
 bin\components\txtsvc.xpt
 
-; moz storage
-bin\components\storage.xpt
-
 ; netwerk
 bin\components\necko.xpt                               
+bin\components\necko_data.xpt               
 bin\components\necko_dns.xpt                
 bin\components\necko_http.xpt               
 bin\components\necko_res.xpt                
@@ -323,7 +308,6 @@ bin\nssckbi.dll
 ; core platform files
 bin\regxpcom.exe
 bin\components\xpautocomplete.xpt
-bin\components\autocomplete.xpt
 bin\components\alerts.xpt
 bin\components\jsdservice.xpt
 bin\components\fastfind.xpt
@@ -347,8 +331,6 @@ bin\AccessibleMarshal.dll
 bin\components\lwbrk.xpt
 bin\components\nsCloseAllWindows.js
 bin\components\winhooks.xpt
-bin\components\pluginGlue.js
-bin\components\txEXSLTRegExFunctions.js
 
 bin\res\hiddenWindow.html
 bin\res\ua.css

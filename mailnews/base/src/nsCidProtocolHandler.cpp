@@ -64,7 +64,6 @@ NS_IMETHODIMP nsCidProtocolHandler::GetDefaultPort(PRInt32 *aDefaultPort)
 
 NS_IMETHODIMP nsCidProtocolHandler::GetProtocolFlags(PRUint32 *aProtocolFlags)
 {
-  // XXXbz so why does this protocol handler exist, exactly?
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 

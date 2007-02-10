@@ -75,12 +75,14 @@ public:
   virtual ~nsAccessibleTreeWalker();
 
   NS_IMETHOD GetNextSibling();
+  NS_IMETHOD GetParent();
   NS_IMETHOD GetFirstChild();
 
   WalkState mState;
 
 protected:
   PRBool GetAccessible();
+  NS_IMETHOD GetFullTreeParentNode(nsIDOMNode *aChildNode, nsIDOMNode **aParentNodeOut);
   void GetKids(nsIDOMNode *aParent);
 
   void ClearState();

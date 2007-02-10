@@ -256,18 +256,6 @@
       
       <field name="batching">false</field>
       
-      <method name="_reportUnknownType">
-        <body>
-        <![CDATA[
-          var consoleService = Components.classes["@mozilla.org/consoleservice;1"]
-                                         .getService(Components.interfaces.nsIConsoleService);
-          var msg = "<preference> with id='" + this.id + "' and name='" + 
-                    this.name + "' has unknown type '" + this.type + "'.";
-          consoleService.logStringMessage(msg);
-        ]]>
-        </body>
-      </method>
-      
       <property name="valueFromPreferences">
         <getter>
         <![CDATA[
@@ -285,15 +273,13 @@
                          .data;
             case "string":
             case "unichar":
-              return this._branch
-                         .getComplexValue(this.name, Components.interfaces.nsISupportsString)
-                         .data;
+              var pref = Components.classes["@mozilla.org/preferences;1"] 
+                                   .getService(Components.interfaces.nsIPref);
+              return pref.CopyUnicharPref(this.name);
             case "file":
               var f = this._branch
                           .getComplexValue(this.name, Components.interfaces.nsILocalFile);
               return f;
-            default:
-              this._reportUnknownType();
             }
           }
           catch (e) { }
@@ -322,11 +308,9 @@
             break;
           case "string":
           case "unichar":
-            var iss = Components.classes["@mozilla.org/supports-string;1"]
-                                .createInstance(Components.interfaces.nsISupportsString);
-            iss.data = val;
-            this.preferences.rootBranch
-                .setComplexValue(this.name, Components.interfaces.nsISupportsString, iss);
+            var pref = Components.classes["@mozilla.org/preferences;1"] 
+                                 .getService(Components.interfaces.nsIPref);
+            pref.SetUnicharPref(this.name, val);
             break;
           case "file":
             var lf;
@@ -342,8 +326,6 @@
             this.preferences.rootBranch
                 .setComplexValue(this.name, Components.interfaces.nsILocalFile, lf);
             break;
-          default:
-            this._reportUnknownType();
           }
           if (!this.batching)
             this.preferences.service.savePrefFile(null);
@@ -551,6 +533,7 @@
     <implementation implements="nsITimerCallback">
       <constructor>
       <![CDATA[
+        this.setAttribute("animate", !this._shouldAnimate ? "off" : "on");
         if (this.type != "child") {
           var psvc = Components.classes["@mozilla.org/preferences-service;1"]
                                .getService(Components.interfaces.nsIPrefBranch);
@@ -707,7 +690,7 @@
             return !cancel;  
           }
           catch (e) { 
-            Components.utils.reportError(e);
+            dump(e);
           }
           return false;
         ]]>
@@ -733,20 +716,21 @@
               this._paneDeck.setAttribute("selectedIndex", i);
               
               if (this.type != "child") {
-                var oldPane = this.lastSelected ? document.getElementById(this.lastSelected) : this.preferencePanes[0];
-                oldPane.selected = !(aPaneElement.selected = true);
-                this.lastSelected = aPaneElement.id;
-                this.currentPane = aPaneElement;
-                this._initialized = true;
-
-                // Only animate if we've switched between prefpanes
-                if (this._shouldAnimate && oldPane.id != aPaneElement.id) {
-                  // Don't let the new pane content flex to the current window
-                  // height if we're animating 
+                // Don't let the new pane content flex to the current window
+                // height if we're animating
+                if (this._shouldAnimate)
                   aPaneElement.removeAttribute("flex");
 
-                  aPaneElement.style.opacity = 0.0;
-                  this.animate(oldPane, aPaneElement);
+                var oldPane = this.lastSelected ? document.getElementById(this.lastSelected) : this.preferencePanes[0];
+                oldPane.selected = !(aPaneElement.selected = true);
+                if (!this._initialized || oldPane.id != aPaneElement.id) {
+                  this.lastSelected = aPaneElement.id;
+                  this.currentPane = aPaneElement;
+                  if (this._shouldAnimate) {
+                    aPaneElement.style.opacity = 0.0;
+                    this.animate(oldPane, aPaneElement);
+                  }
+                  this._initialized = true;
                 }
               }
               break;
@@ -1243,11 +1227,12 @@
       <xul:image class="paneButtonIcon" xbl:inherits="src"/>
       <xul:label class="paneButtonLabel" xbl:inherits="value=label"/>
     </content>
-    <implementation implements="nsIAccessible">
-      <property name="accessibleType" readonly="true">
+    <implementation implements="nsIAccessibleProvider">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULListitem;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULListitemAccessible(this);
           ]]>
         </getter>
       </property>
@@ -1279,7 +1264,7 @@
 #
 # Contributor(s):
 #   Ben Goodger <ben@mozilla.org>
-#   Josh Aas <josh@mozilla.com>
+#   Josh Aas <joshmoz@gmail.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or

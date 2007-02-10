@@ -91,7 +91,7 @@ protected:
 
 protected:
 	// use with care
-  const char     *fNextToken;
+  char           *fNextToken;
   char           *fCurrentLine;
 	char					 *fLineOfTokens;
   char           *fStartOfLineOfTokens;

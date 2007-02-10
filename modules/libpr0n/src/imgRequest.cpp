@@ -21,7 +21,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Stuart Parmenter <stuart@mozilla.com>
+ *   Stuart Parmenter <pavlov@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -63,6 +63,7 @@
 #include "nsIServiceManager.h"
 #include "nsISupportsPrimitives.h"
 
+#include "nsAutoLock.h"
 #include "nsString.h"
 #include "nsXPIDLString.h"
 #include "plstr.h" // PL_strcasestr(...)
@@ -71,15 +72,15 @@
 PRLogModuleInfo *gImgLog = PR_NewLogModule("imgRequest");
 #endif
 
-NS_IMPL_ISUPPORTS6(imgRequest, imgILoad,
-                   imgIDecoderObserver, imgIContainerObserver,
-                   nsIStreamListener, nsIRequestObserver,
-                   nsISupportsWeakReference)
+NS_IMPL_THREADSAFE_ISUPPORTS6(imgRequest, imgILoad,
+                              imgIDecoderObserver, imgIContainerObserver,
+                              nsIStreamListener, nsIRequestObserver,
+                              nsISupportsWeakReference)
 
 imgRequest::imgRequest() : 
   mObservers(0),
   mLoading(PR_FALSE), mProcessing(PR_FALSE), mHadLastPart(PR_FALSE),
-  mNetworkStatus(0), mImageStatus(imgIRequest::STATUS_NONE), mState(0),
+  mImageStatus(imgIRequest::STATUS_NONE), mState(0),
   mCacheId(0), mValidator(nsnull), mIsMultiPartChannel(PR_FALSE)
 {
   /* member initializers and constructor code */
@@ -90,24 +91,21 @@ imgRequest::~imgRequest()
   /* destructor code */
 }
 
-nsresult imgRequest::Init(nsIURI *aURI,
-                          nsIRequest *aRequest,
+nsresult imgRequest::Init(nsIChannel *aChannel,
                           nsICacheEntryDescriptor *aCacheEntry,
                           void *aCacheId,
                           void *aLoadId)
 {
   LOG_FUNC(gImgLog, "imgRequest::Init");
 
-  NS_ASSERTION(!mImage, "Multiple calls to init");
-  NS_ASSERTION(aURI, "No uri");
-  NS_ASSERTION(aRequest, "No request");
+  NS_ASSERTION(!mImage, "imgRequest::Init -- Multiple calls to init");
+  NS_ASSERTION(aChannel, "imgRequest::Init -- No channel");
 
   mProperties = do_CreateInstance("@mozilla.org/properties;1");
   if (!mProperties)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  mURI = aURI;
-  mRequest = aRequest;
+  mChannel = aChannel;
 
   /* set our loading flag to true here.
      Setting it here lets checks to see if the load is in progress
@@ -174,7 +172,7 @@ nsresult imgRequest::RemoveProxy(imgRequestProxy *proxy, nsresult aStatus, PRBoo
        This way, if a proxy is destroyed without calling cancel on it, it won't leak
        and won't leave a bad pointer in mObservers.
      */
-    if (mRequest && mLoading && NS_FAILED(aStatus)) {
+    if (mChannel && mLoading && NS_FAILED(aStatus)) {
       LOG_MSG(gImgLog, "imgRequest::RemoveProxy", "load in progress.  canceling");
 
       mImageStatus |= imgIRequest::STATUS_LOAD_PARTIAL;
@@ -291,17 +289,18 @@ void imgRequest::Cancel(nsresult aStatus)
   if (!(mImageStatus & imgIRequest::STATUS_LOAD_PARTIAL))
     mImageStatus |= imgIRequest::STATUS_ERROR;
 
-  if (aStatus != NS_IMAGELIB_ERROR_NO_DECODER) {
-    RemoveFromCache();
-  }
+  RemoveFromCache();
 
-  if (mRequest && mLoading)
-    mRequest->Cancel(aStatus);
+  if (mChannel && mLoading)
+    mChannel->Cancel(aStatus);
 }
 
 nsresult imgRequest::GetURI(nsIURI **aURI)
 {
   LOG_FUNC(gImgLog, "imgRequest::GetURI");
+
+  if (mChannel)
+    return mChannel->GetOriginalURI(aURI);
 
   if (mURI) {
     *aURI = mURI;
@@ -341,7 +340,7 @@ PRBool imgRequest::HaveProxyWithObserver(imgRequestProxy* aProxyToIgnore) const
 PRInt32 imgRequest::Priority() const
 {
   PRInt32 priority = nsISupportsPriority::PRIORITY_NORMAL;
-  nsCOMPtr<nsISupportsPriority> p = do_QueryInterface(mRequest);
+  nsCOMPtr<nsISupportsPriority> p = do_QueryInterface(mChannel);
   if (p)
     p->GetPriority(&priority);
   return priority;
@@ -359,7 +358,7 @@ void imgRequest::AdjustPriority(imgRequestProxy *proxy, PRInt32 delta)
   if (mObservers[0] != proxy)
     return;
 
-  nsCOMPtr<nsISupportsPriority> p = do_QueryInterface(mRequest);
+  nsCOMPtr<nsISupportsPriority> p = do_QueryInterface(mChannel);
   if (p)
     p->AdjustPriority(delta);
 }
@@ -444,12 +443,6 @@ NS_IMETHODIMP imgRequest::OnStartDecode(imgIRequest *request)
   if (mCacheEntry)
     mCacheEntry->SetDataSize(0);
 
-  return NS_OK;
-}
-
-NS_IMETHODIMP imgRequest::OnStartRequest(imgIRequest *aRequest)
-{
-  NS_NOTREACHED("imgRequest(imgIDecoderObserver)::OnStartRequest");
   return NS_OK;
 }
 
@@ -611,13 +604,6 @@ NS_IMETHODIMP imgRequest::OnStopDecode(imgIRequest *aRequest,
   return NS_OK;
 }
 
-NS_IMETHODIMP imgRequest::OnStopRequest(imgIRequest *aRequest,
-                                        PRBool aLastPart)
-{
-  NS_NOTREACHED("imgRequest(imgIDecoderObserver)::OnStopRequest");
-  return NS_OK;
-}
-
 /** nsIRequestObserver methods **/
 
 /* void onStartRequest (in nsIRequest request, in nsISupports ctxt); */
@@ -629,7 +615,21 @@ NS_IMETHODIMP imgRequest::OnStartRequest(nsIRequest *aRequest, nsISupports *ctxt
 
   NS_ASSERTION(!mDecoder, "imgRequest::OnStartRequest -- we already have a decoder");
 
+  /* if mChannel isn't set here, use aRequest.
+     Having mChannel set is important for Canceling the load, and since we set
+     mChannel to null in OnStopRequest.  Since with multipart/x-mixed-replace, you
+     can get multiple OnStartRequests, we need to reinstance mChannel so that when/if
+     Cancel() gets called, we have a channel to cancel and we don't leave the channel
+     open forever.
+   */
   nsCOMPtr<nsIMultiPartChannel> mpchan(do_QueryInterface(aRequest));
+  if (!mChannel) {
+    if (mpchan)
+      mpchan->GetBaseChannel(getter_AddRefs(mChannel));
+    else
+      mChannel = do_QueryInterface(aRequest);
+  }
+
   if (mpchan)
       mIsMultiPartChannel = PR_TRUE;
 
@@ -738,13 +738,9 @@ NS_IMETHODIMP imgRequest::OnStopRequest(nsIRequest *aRequest, nsISupports *ctxt,
   }
 
   // XXXldb What if this is a non-last part of a multipart request?
-  // xxx before we release our reference to mChannel, lets
-  // save the last status that we saw so that the
-  // imgRequestProxy will have access to it.
-  if (mRequest)
-  {
-    mRequest->GetStatus(&mNetworkStatus);
-    mRequest = nsnull;  // we no longer need the request
+  if (mChannel) {
+    mChannel->GetOriginalURI(getter_AddRefs(mURI));
+    mChannel = nsnull; // we no longer need the channel
   }
 
   // If mImage is still null, we didn't properly load the image.
@@ -934,16 +930,4 @@ void
 imgRequest::SniffMimeType(const char *buf, PRUint32 len)
 {
   imgLoader::GetMimeTypeFromContent(buf, len, mContentType);
-}
-
-nsresult 
-imgRequest::GetNetworkStatus()
-{
-  nsresult status;
-  if (mRequest)
-    mRequest->GetStatus(&status);
-  else
-    status = mNetworkStatus;
-
-  return status;
 }

@@ -58,11 +58,10 @@
 #include "nsPIPluginInstancePeer.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMDocument.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindow.h"
 #include "nsIDocument.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
-#include "nsDOMJSUtils.h"
 
 #include "jscntxt.h"
 
@@ -141,6 +140,19 @@ PR_BEGIN_EXTERN_C
   static void NP_EXPORT
   _status(NPP npp, const char *message);
 
+#if 0
+
+  static void NP_EXPORT
+  _registerwindow(NPP npp, void* window);
+
+  static void NP_EXPORT
+  _unregisterwindow(NPP npp, void* window);
+
+  static int16 NP_EXPORT
+  _allocateMenuID(NPP npp, NPBool isSubmenu);
+
+#endif
+
   static void NP_EXPORT
   _memfree (void *ptr);
 
@@ -185,7 +197,28 @@ PR_BEGIN_EXTERN_C
 
 PR_END_EXTERN_C
 
-#if defined(XP_MACOSX) && defined(__POWERPC__)
+#if defined(XP_MACOSX) && defined(__i386__)
+
+// BROKEN_PLUGIN_HACK works around bugs in the version of the Macromedia
+// Flash Player plugin that is supplied with the initial consumer shipment
+// of Mac OS X for x86-based Macs.  The plugin is broken in at least
+// 10.4.4/x86 and 10.4.5/x86.
+#define BROKEN_PLUGIN_HACK
+
+// brokenPlugin is defined in the scope in which TV2FP is used.  It is
+// true when this ns4xPlugin object has loaded a plugin that contains the
+// bugs being worked around.
+//
+// The broken plugin returns entry points that are pointers to function
+// pointers, instead of just returning the function pointers.  These must
+// be dereferenced, or Mozilla will crash upon attempting to call an address
+// that doesn't contain code.  TV2FP is a convenient place to handle this,
+// since the macro is already present everywhere it's needed, and is otherwise
+// unused on x86.
+#define TV2FP(f) (brokenPlugin && f ? *(void**)f : (void*)f)
+#define FP2TV(f) (f)
+
+#elif defined(XP_MACOSX) && defined(__POWERPC__)
 
 #define TV2FP(tvp) _TV2FP((void *)tvp)
 
@@ -365,9 +398,6 @@ ns4xPlugin::CheckClassInitialized(void)
   CALLBACKS.hasmethod =
     NewNPN_HasMethodProc(FP2TV(_hasmethod));
 
-  CALLBACKS.enumerate =
-    NewNPN_EnumerateProc(FP2TV(_enumerate));
-
   CALLBACKS.releasevariantvalue =
     NewNPN_ReleaseVariantValueProc(FP2TV(_releasevariantvalue));
 
@@ -410,64 +440,179 @@ ns4xPlugin::ns4xPlugin(NPPluginFuncs* callbacks, PRLibrary* aLibrary,
   fCallbacks.size = sizeof(fCallbacks);
 
   nsresult result = pfnGetEntryPoints(&fCallbacks);
-  NS_ASSERTION(result == NS_OK, "Failed to get callbacks");
+  NS_ASSERTION( NS_OK == result,"Failed to get callbacks");
 
   NS_ASSERTION(HIBYTE(fCallbacks.version) >= NP_VERSION_MAJOR,
                "callback version is less than NP version");
 
   fShutdownEntry = (NP_PLUGINSHUTDOWN)PR_FindSymbol(aLibrary, "NP_Shutdown");
 #elif defined(XP_MACOSX)
+#ifdef BROKEN_PLUGIN_HACK
+#warning BROKEN_PLUGIN_HACK is in use, enjoy your Flash movies!
+  // This is a private NSPR struct.  Define it here because it's necessary
+  // to restrict the hack to plugins that need it, and the only way to do
+  // that is to examine the bundle that was loaded.  I feel comfortable doing
+  // this because BROKEN_PLUGIN_HACK is a hack anyway, and it's not intended
+  // to be long-lived.
+  struct myPRLibrary {
+    char*                     name;
+    PRLibrary*                next;
+    int                       refCount;
+    const PRStaticLinkTable*  staticTable;
+    CFragConnectionID         connection;
+    CFBundleRef               bundle;
+    Ptr                       main;
+    CFMutableDictionaryRef    wrappers;
+    const struct mach_header* image;
+  };
+
+  // brokenPlugin indicates whether the plugin needs to be worked around
+  // because it doesn't adhere to the API used on x86.
+  PRBool brokenPlugin = PR_FALSE;
+
+  // Identify the broken plugin by a variety of attributes.
+  // Further inspection will be done before applying any workarounds.
+  struct myPRLibrary *prLibrary = (struct myPRLibrary*) aLibrary;
+
+  if (prLibrary->name && prLibrary->bundle) {
+    CFStringRef bundleIdentifier = ::CFBundleGetIdentifier(prLibrary->bundle);
+    CFStringRef bundleShortVersion =
+      (CFStringRef) ::CFBundleGetValueForInfoDictionaryKey(prLibrary->bundle,
+                      CFSTR("CFBundleShortVersionString"));
+
+    if (!strcmp(prLibrary->name,
+                "/Library/Internet Plug-Ins/Flash Player.plugin") &&
+        ::CFBundleGetVersionNumber(prLibrary->bundle) == 0x1018011 &&
+        bundleIdentifier &&
+        ::CFStringCompare(bundleIdentifier,
+                          CFSTR("com.macromedia.Flash Player.plugin"),
+                          0) == kCFCompareEqualTo &&
+        bundleShortVersion &&
+        ::CFStringCompare(bundleShortVersion,
+                          CFSTR("8.0.17"),
+                          0) == kCFCompareEqualTo) {
+      // Macromedia Flash Player plugin, version 8.0.17, bundle version 1.0.1f17
+      brokenPlugin = PR_TRUE;
+    }
+  }
+#endif /* BROKEN_PLUGIN_HACK */
+
+  // call into the entry point
+  NP_MAIN pfnMain = (NP_MAIN) PR_FindSymbol(aLibrary, "main");
+
+  if (pfnMain == NULL)
+    return;
+
+  NPP_ShutdownUPP pfnShutdown;
   NPPluginFuncs np_callbacks;
   memset((void*) &np_callbacks, 0, sizeof(np_callbacks));
   np_callbacks.size = sizeof(np_callbacks);
+  NPError error;
 
-#ifdef MACOSX_GETENTRYPOINT_SUPPORT
-  fShutdownEntry = (NP_PLUGINSHUTDOWN)PR_FindSymbol(aLibrary, "NP_Shutdown");
-  NP_GETENTRYPOINTS pfnGetEntryPoints = (NP_GETENTRYPOINTS)PR_FindSymbol(aLibrary, "NP_GetEntryPoints");
-  NP_PLUGININIT pfnInitialize = (NP_PLUGININIT)PR_FindSymbol(aLibrary, "NP_Initialize");
-  usesGetEntryPoints = (pfnGetEntryPoints && pfnInitialize && fShutdownEntry);
+  NS_TRY_SAFE_CALL_RETURN(error,
+                          CallNPP_MainEntryProc(pfnMain,
+                                                &(ns4xPlugin::CALLBACKS),
+                                                &np_callbacks,
+                                                &pfnShutdown),
+                          aLibrary, nsnull);
 
-  if (usesGetEntryPoints) {
-    // we call NP_Initialize before getting function pointers to match
-    // WebKit's behavior. They implemented this first on Mac OS X.
-    if (pfnInitialize(&(ns4xPlugin::CALLBACKS)) != NPERR_NO_ERROR)
-      return;
-    if (pfnGetEntryPoints(&np_callbacks) != NPERR_NO_ERROR)
-      return;
+#ifdef BROKEN_PLUGIN_HACK
+  // The broken plugin has wrapped NPN callback function pointers in PPC
+  // TVector glue as though they were pointers to CFM TVectors.  When the
+  // x86 attempts to execute the PPC glue, it will of course fail.
+  //
+  // What's done here is a bit unorthodox.  I'm going to locate the
+  // TVector glue that the plugin created from ns4xPlugin::CALLBACKS by
+  // peeking into its symbol table, then I'm going to dissect the PPC
+  // machine code to get the target addresses and produce x86 machine code.
+  // The x86 code overwrites the PPC code in the plugin's jump table.
+  // The replacement code is of course executable.  I know I can do this,
+  // because the broken plugin builds its table of TVector glue based on
+  // what the sample NPAPI plugin does.
+  //
+  // Watch this.
+  if (brokenPlugin) {
+    PRUint32 glueFixed = 0;
+
+    // Locate the table that the plugin filled with TVector glue.
+    PRUint8* pluginsGlueTable = (PRUint8*)
+      ::CFBundleGetDataPointerForName(prLibrary->bundle,
+                                      CFSTR("gNetscapeFuncsGlueTable"));
+
+    if (pluginsGlueTable) {
+      // The table contains 40 entries.  Each entry is TVector glue of 6
+      // 4-byte words (24 bytes total).  See gPluginFuncsGlueTable in
+      // mozilla/modules/plugin/samples/default/mac/npmac.cpp .  That table
+      // accomodates 23 entries, inspection in the debugger teaches that the
+      // broken plugin's table is 40 entries long.
+      for (PRUint32 i = 0 ; i < 40 ; i++) {
+        PRUint32* gluePPC = (PRUint32*) (pluginsGlueTable + 24 * i);
+
+        // Only translate entries that are actually stored as TVector glue.
+        // There are other ways to write the glue for PPC, but this is the
+        // de facto standard, and it's what the broken plugin uses.  The
+        // PPC code means:
+        //   lis   r12,        hi16(address) ; pointer to tvector embedded
+        //   ori   r12,   r12, lo16(address) ;   as immediate params in glue
+        //   lwz    r0, 0(r12)               ; get pc from tvector
+        //   lwz    r2, 4(r12)               ; get rtoc from tvector
+        //   mtctr  r0
+        //   bctr                            ; jump to new pc
+        if ( (*gluePPC    & 0xffff0000) == 0x3d800000 &&
+            (*(gluePPC+1) & 0xffff0000) == 0x618c0000 &&
+             *(gluePPC+2)               == 0x800c0000 &&
+             *(gluePPC+3)               == 0x804c0004 &&
+             *(gluePPC+4)               == 0x7c0903a6 &&
+             *(gluePPC+5)               == 0x4e800420) {
+          // Determine the actual address of the function by stripping the
+          // TVector glue.  |address| is a usable function pointer.  Making
+          // it a pointer to an 8-bit quantity keeps the math below simple.
+          PRUint8* address = (PRUint8*) ((*gluePPC) << 16 |
+                                         *(gluePPC+1) & 0xffff);
+
+          // Build an x86 JMP instruction to jump to the desired function,
+          // and replace the TVector glue with it.  Opcode 0xe9 is a
+          // jump relative to the next instruction.  Total instruction length
+          // is 5 bytes (in 32-bit operand-size mode).  If base is address
+          // 0xfece5 and the target function is at address 0xc0ffee, then
+          // the instruction placed at base, byte for byte, should be:
+          //   0xfece5: 0xe9 0x04 0x13 0xb1 0x00: jmp 0xc0ffee
+          PRUint8* glueX86 = (PRUint8*) gluePPC;
+          *glueX86 = 0xe9;
+
+          PRInt32* offset = (PRInt32*) (glueX86+1);
+          *offset = (address - (glueX86 + 5));
+
+          // PPC TVector glue is big compared to the x86 JMP.  Clean up the
+          // rest of the space in the table entry.  Opcode 0x90 is NOP,
+          // instruction length 1 byte.  This permits clean disassembly of
+          // the entire memory region corresponding to the table.
+          memset(glueX86+5, 0x90, 19);
+
+          glueFixed++;
+        }
+      }
+    }
+
+    if (!glueFixed) {
+      // This plugin wasn't broken after all.  Avoid applying the callback
+      // dereferencing workarounds (TV2FP).
+      brokenPlugin = PR_FALSE;
+    }
   }
-  else
-#endif
-  {
-    // call into the entry point
-    NP_MAIN pfnMain = (NP_MAIN)PR_FindSymbol(aLibrary, "main");
+#endif /* BROKEN_PLUGIN_HACK */
 
-    if (pfnMain == NULL)
-      return;
+  NPP_PLUGIN_LOG(PLUGIN_LOG_BASIC,
+                 ("NPP MainEntryProc called: return=%d\n",error));
 
-    NPError error;
-    NPP_ShutdownUPP pfnMainShutdown;
-    NS_TRY_SAFE_CALL_RETURN(error,
-                            CallNPP_MainEntryProc(pfnMain,
-                                                  &(ns4xPlugin::CALLBACKS),
-                                                  &np_callbacks,
-                                                  &pfnMainShutdown),
-                            aLibrary,
-                            nsnull);
-    
-    NPP_PLUGIN_LOG(PLUGIN_LOG_BASIC,
-                   ("NPP MainEntryProc called: return=%d\n",error));
-    
-    if (error != NPERR_NO_ERROR)
-      return;
-    
-    fShutdownEntry = (NP_PLUGINSHUTDOWN)TV2FP(pfnMainShutdown);
-    
-    // version is a uint16 so cast to int to avoid an invalid
-    // comparison due to limited range of the data type
-    int cb_version = np_callbacks.version;
-    if ((cb_version >> 8) < NP_VERSION_MAJOR)
-      return;
-  }
+  if (error != NPERR_NO_ERROR)
+    return;
+
+  // version is a uint16 so cast to int to avoid an invalid
+  // comparison due to limited range of the data type
+  int cb_version = np_callbacks.version;
+  if ((cb_version >> 8) < NP_VERSION_MAJOR)
+    return;
 
   // wrap all plugin entry points tvectors as mach-o callable function
   // pointers.
@@ -487,6 +632,7 @@ ns4xPlugin::ns4xPlugin(NPPluginFuncs* callbacks, PRLibrary* aLibrary,
   fCallbacks.urlnotify = (NPP_URLNotifyUPP) TV2FP(np_callbacks.urlnotify);
   fCallbacks.getvalue = (NPP_GetValueUPP) TV2FP(np_callbacks.getvalue);
   fCallbacks.setvalue = (NPP_SetValueUPP) TV2FP(np_callbacks.setvalue);
+  fShutdownEntry = (NP_PLUGINSHUTDOWN) TV2FP(pfnShutdown);
 #else // for everyone else
   memcpy((void*) &fCallbacks, (void*) callbacks, sizeof(fCallbacks));
   fShutdownEntry = aShutdown;
@@ -858,7 +1004,7 @@ ns4xPlugin::Shutdown(void)
   NPP_PLUGIN_LOG(PLUGIN_LOG_BASIC,
                  ("NPP Shutdown to be called: this=%p\n", this));
 
-  if (fShutdownEntry != nsnull) {
+  if (nsnull != fShutdownEntry) {
 #if defined(XP_MACOSX)
     CallNPP_ShutdownProc(fShutdownEntry);
     ::CloseResFile(fPluginRefNum);
@@ -936,10 +1082,9 @@ MakeNew4xStreamInternal(NPP npp, const char *relativeURL, const char *target,
   NS_ASSERTION(pm, "failed to get plugin manager");
   if (!pm) return NPERR_GENERIC_ERROR;
 
-  nsCOMPtr<nsIPluginStreamListener> listener;
+  nsIPluginStreamListener* listener = nsnull;
   if (target == nsnull)
-    ((ns4xPluginInstance*)inst)->NewNotifyStream(getter_AddRefs(listener),
-                                                 notifyData,
+    ((ns4xPluginInstance*)inst)->NewNotifyStream(&listener, notifyData,
                                                  bDoNotify, relativeURL);
 
   switch (type) {
@@ -974,21 +1119,6 @@ _geturl(NPP npp, const char* relativeURL, const char* target)
   NPN_PLUGIN_LOG(PLUGIN_LOG_NORMAL,
   ("NPN_GetURL: npp=%p, target=%s, url=%s\n", (void *)npp, target,
    relativeURL));
-
-  // Block Adobe Acrobat from loading URLs that are not http:, https:,
-  // or ftp: URLs if the given target is null.
-  if (target == nsnull && relativeURL &&
-      (strncmp(relativeURL, "http:", 5) != 0) &&
-      (strncmp(relativeURL, "https:", 6) != 0) &&
-      (strncmp(relativeURL, "ftp:", 4) != 0)) {
-    ns4xPluginInstance *inst = (ns4xPluginInstance *) npp->ndata;
-
-    const char *name = nsPluginHostImpl::GetPluginName(inst);
-
-    if (name && strstr(name, "Adobe") && strstr(name, "Acrobat")) {
-      return NPERR_NO_ERROR;
-    }
-  }
 
   return MakeNew4xStreamInternal (npp, relativeURL, target,
                                   eNPPStreamTypeInternal_Get);
@@ -1430,7 +1560,6 @@ _getstringidentifier(const NPUTF8* name)
   if (!cx)
     return NULL;
 
-  JSAutoRequest ar(cx);
   return doGetIdentifier(cx, name);
 }
 
@@ -1447,8 +1576,6 @@ _getstringidentifiers(const NPUTF8** names, int32_t nameCount,
   stack->GetSafeJSContext(&cx);
   if (!cx)
     return;
-
-  JSAutoRequest ar(cx);
 
   for (int32_t i = 0; i < nameCount; ++i) {
     identifiers[i] = doGetIdentifier(cx, names[i]);
@@ -1698,26 +1825,6 @@ _hasmethod(NPP npp, NPObject* npobj, NPIdentifier methodName)
   return npobj->_class->hasProperty(npobj, methodName);
 }
 
-bool NP_EXPORT
-_enumerate(NPP npp, NPObject *npobj, NPIdentifier **identifier,
-           uint32_t *count)
-{
-  if (!npp || !npobj || !npobj->_class)
-    return false;
-
-  if (!NP_CLASS_STRUCT_VERSION_HAS_ENUM(npobj->_class) ||
-      !npobj->_class->enumerate) {
-    *identifier = 0;
-    *count = 0;
-    return true;
-  }
-
-  NPPExceptionAutoHolder nppExceptionHolder;
-  NPPAutoPusher nppPusher(npp);
-
-  return npobj->_class->enumerate(npobj, identifier, count);
-}
-
 void NP_EXPORT
 _releasevariantvalue(NPVariant* variant)
 {
@@ -1784,7 +1891,7 @@ PeekException()
 void
 PopException()
 {
-  NS_ASSERTION(gNPPException, "Uh, no NPP exception to pop!");
+  NS_ASSERTION(!gNPPException, "Uh, no NPP exception to pop!");
 
   if (gNPPException) {
     free(gNPPException);
@@ -1948,7 +2055,7 @@ _getvalue(NPP npp, NPNVariable variable, void *result)
     *((NPNToolkitType*)result) = NPNVGtk2;
 #endif
 
-    if (*(NPNToolkitType*)result)
+    if (result)
         return NPERR_NO_ERROR;
 
     return NPERR_GENERIC_ERROR;

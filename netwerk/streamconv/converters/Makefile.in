@@ -52,8 +52,10 @@ REQUIRES	= xpcom \
 		  locale \
 		  intl \
 		  unicharutil \
+		  util \
 		  pref \
 		  uconv \
+		  necko2 \
 		  $(ZLIB_REQUIRES) \
 		  $(NULL)
 

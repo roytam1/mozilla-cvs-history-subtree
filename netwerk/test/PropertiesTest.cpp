@@ -38,7 +38,8 @@
 
 #include "TestCommon.h"
 #include "nsXPCOM.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
+#include "nsIEventQueueService.h"
 #include "nsIPersistentProperties2.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentRegistrar.h"
@@ -49,13 +50,14 @@
 #include "nsIComponentManager.h"
 #include "nsIEnumerator.h"
 #include <stdio.h>
-#include "nsComponentManagerUtils.h"
-#include "nsServiceManagerUtils.h"
+#include "nsReadableUtils.h"
+
 
 #define TEST_URL "resource:/res/test.properties"
 static NS_DEFINE_CID(kPersistentPropertiesCID, NS_IPERSISTENTPROPERTIES_CID);
 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 /***************************************************************************/
 
@@ -66,6 +68,7 @@ main(int argc, char* argv[])
     return -1;
 
   nsresult ret;
+
 
   nsCOMPtr<nsIServiceManager> servMan;
   NS_InitXPCOM2(getter_AddRefs(servMan), nsnull, nsnull);
@@ -78,8 +81,16 @@ main(int argc, char* argv[])
   nsCOMPtr<nsIIOService> service(do_GetService(kIOServiceCID, &ret));
   if (NS_FAILED(ret)) return ret;
 
+  nsCOMPtr<nsIEventQueueService> eventQService = 
+           do_GetService(kEventQueueServiceCID, &ret);
+  if (NS_FAILED(ret)) return ret;
+
   nsIChannel *channel = nsnull;
   ret = service->NewChannel(NS_LITERAL_CSTRING(TEST_URL), nsnull, nsnull, &channel);
+  if (NS_FAILED(ret)) return ret;
+
+  nsIEventQueue *eventQ = nsnull;
+  ret = eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &eventQ);
   if (NS_FAILED(ret)) return ret;
 
   ret = channel->Open(&in);
@@ -106,7 +117,14 @@ main(int argc, char* argv[])
     if (NS_FAILED(ret) || (!v.Length())) {
       break;
     }
-    printf("\"%d\"=\"%s\"\n", i, NS_ConvertUTF16toUTF8(v).get());
+    char* value = ToNewCString(v);
+    if (value) {
+      printf("\"%d\"=\"%s\"\n", i, value);
+      delete[] value;
+    }
+    else {
+      printf("%d: ToNewCString failed\n", i);
+    }
     i++;
   }
 

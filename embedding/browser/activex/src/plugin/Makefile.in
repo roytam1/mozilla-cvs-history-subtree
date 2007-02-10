@@ -50,6 +50,7 @@ LIBRARY_NAME    = npmozax
 RESFILE         = MozActiveX.res
 DEFFILE         = npmozax.def
 GRE_MODULE	= 1
+MOZILLA_INTERNAL_API = 1
 
 REQUIRES = \
     xpcom \
@@ -197,7 +198,6 @@ DEFINES += -DXPC_IDISPATCH_SUPPORT
 endif
 
 EXTRA_DSO_LDOPTS = \
-    $(DIST)/lib/$(LIB_PREFIX)xpcomglue_s.$(LIB_SUFFIX) \
     $(MOZ_COMPONENT_LIBS) \
     $(NSPR_LIBS) \
     $(NULL)
@@ -219,7 +219,7 @@ endif
 # XPConnect links to XPCOM and the shared activex lib
 ifdef XPC_IDISPATCH_SUPPORT
 EXTRA_DSO_LDOPTS += \
-    ../common/$(LIB_PREFIX)ax_common_s.$(LIB_SUFFIX) \
+    $(DIST)/lib/$(LIB_PREFIX)ax_common_s.$(LIB_SUFFIX) \
     $(MOZ_JS_LIBS) \
     $(XPCOM_LIBS) \
     $(NULL)

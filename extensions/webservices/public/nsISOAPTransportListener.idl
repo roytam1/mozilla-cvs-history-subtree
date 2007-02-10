@@ -41,8 +41,8 @@ interface nsIDOMDocument;
 interface nsISOAPMessage;
 
 /**
- * This interface receives control when an unsolicited transport
- * is received on a transport.
+ * This interface recieves control when an unsolicited transport
+ * is recieved on a transport.
  */
 
 [scriptable, function,
@@ -51,7 +51,7 @@ interface nsISOAPTransportListener : nsISupports {
 
   /**
    * This method is invoked when an unsolicited message is
-   *   received.  First all listeners are tried in the order declared
+   *   recieved.  First all listeners are tried in the order declared
    *   with the capture flag set.  Then all listeners are tried in
    *   the reverse order declared with the capture flag clear.
    *

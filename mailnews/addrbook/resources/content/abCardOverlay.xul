@@ -52,7 +52,7 @@
 
 <vbox id="editcard">
 
-  <tabbox>
+  <tabbox style="margin:5px">
     <tabs id="abTabs">
       <tab label="&Contact.tab;"/>
       <tab label="&Address.tab;"/>
@@ -65,7 +65,8 @@
       <vbox index="name" flex="1">
       <groupbox flex="1">
         <caption label="&Name.box;"/>
-        <vbox>
+
+        <vbox style="width:100%">
 
         <!-- LOCALIZATION NOTE: 
         NameField1, NameField2, PhoneticField1, PhoneticField2
@@ -124,7 +125,7 @@
 
       <groupbox flex="1">
         <caption label="&Internet.box;"/>
-        <vbox>
+        <vbox style="width:100%">
           <hbox>
             <spacer flex="1"/>
             <label control="PrimaryEmail" value="&PrimaryEmail.label;" accesskey="&PrimaryEmail.accesskey;"  class="CardEditLabel"/>
@@ -139,13 +140,6 @@
               <textbox id="SecondEmail" flex="1" class="uri-element"/>
             </hbox>
           </hbox>
-          <hbox id="screenNameContainer">
-            <spacer flex="1"/>
-            <label control="ScreenName" value="&ScreenName.label;" accesskey="&ScreenName.accesskey;" class="CardEditLabel"/>
-            <hbox class="CardEditWidth">
-              <textbox id="ScreenName" flex="1"/>
-            </hbox>
-          </hbox>          
           <hbox>
             <vbox valign="middle">
               <label control="PreferMailFormatPopup" value="&PreferMailFormat.label;" accesskey="&PreferMailFormat.accesskey;"/>
@@ -159,13 +153,19 @@
               </menupopup>
             </menulist>
           </hbox>
-          <checkbox id="allowRemoteContent" label="&allowRemoteContent.label;" accesskey="&allowRemoteContent.accesskey;"/>
+          <hbox id="screenNameContainer">
+            <spacer flex="1"/>
+            <label control="ScreenName" value="&ScreenName.label;" accesskey="&ScreenName.accesskey;" class="CardEditLabel"/>
+            <hbox class="CardEditWidth">
+              <textbox id="ScreenName" flex="1"/>
+            </hbox>
+          </hbox>
         </vbox>
       </groupbox>
 
       <groupbox flex="1">
         <caption label="&Phones.box;"/>
-        <vbox>
+        <vbox style="width:100%">
           <hbox>
             <spacer flex="1"/>
             <label control="WorkPhone" value="&WorkPhone.label;" accesskey="&WorkPhone.accesskey;" class="CardEditLabel"/>
@@ -209,7 +209,7 @@
     <vbox index="address" flex="1">
       <groupbox id="homeAddressGroup" flex="1">
         <caption label="&Home.box;"/>
-        <vbox>
+        <vbox style="width:100%">
           <hbox>
             <spacer flex="1"/>
             <label control="HomeAddress" value="&HomeAddress.label;" class="CardEditLabel"/>
@@ -258,9 +258,9 @@
         </vbox>
       </groupbox>
 
-      <groupbox>
+      <groupbox style="width:100%">
         <caption label="&Work.box;"/>
-          <vbox>
+          <vbox style="width:100%">
             <hbox>
               <spacer flex="1"/>
               <label control="JobTitle" value="&JobTitle.label;" class="CardEditLabel"/>
@@ -352,9 +352,11 @@
           </hbox>
         </vbox>
 
-        <groupbox flex="1">
+        <groupbox style="width:100%">
           <caption label="&Notes.box;"/>
-          <textbox id="Notes" multiline="true" wrap="virtual" flex="1"/>
+          <vbox style="width:100%">
+            <textbox id="Notes" multiline="true" rows="15" wrap="virtual"/>
+          </vbox>
         </groupbox>
 
       </vbox>

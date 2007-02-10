@@ -52,7 +52,6 @@
 #include <math.h>
 #include <errno.h>
 #include <limits.h>
-#include <float.h>
 #include "prlog.h"
 #include "prprf.h"
 #include "prdtoa.h"
@@ -115,33 +114,16 @@ PRBool
 nsSchemaValidatorUtils::IsValidSchemaDouble(const char* aString,
                                             double *aResult)
 {
-  PRBool isValid = PR_TRUE;
-
   if (*aString == 0)
     return PR_FALSE;
 
   char * pEnd;
   double value = PR_strtod(aString, &pEnd);
 
-  // If the end pointer desn't point at the end, it wasn't a true double (could
-  // be INF, -INF or NaN though)
-  if (*pEnd != '\0') {
-    nsCAutoString temp(aString);
-
-    // doubles may be INF, -INF or NaN
-    if (temp.EqualsLiteral("INF")) {
-      value = DBL_MAX;
-    } else if (temp.EqualsLiteral("-INF")) {
-      value = - DBL_MAX;
-    } else if (!temp.EqualsLiteral("NaN")) {
-      isValid = PR_FALSE;
-    }
-  }
-
   if (aResult)
     *aResult = value;
 
-  return isValid;
+  return (pEnd != aString);
 }
 
 PRBool
@@ -484,7 +466,7 @@ nsSchemaValidatorUtils::ParseSchemaTime(const nsAString & aStrValue,
       aTime->hour = strtol(hour, &pEnd, 10);
       aTime->minute = strtol(minute, &pEnd, 10);
       aTime->second = strtol(second, &pEnd, 10);
-      aTime->millisecond = usecval;
+      aTime->milisecond = usecval;
 
       if (tzSign == '+')
         aTime->tzIsNegative = PR_FALSE;
@@ -689,9 +671,9 @@ nsSchemaValidatorUtils::CompareTime(nsSchemaTime aTime1, nsSchemaTime aTime2)
       } else if (aTime1.second > aTime2.second) {
         result = 1;
       } else {
-        if (aTime1.millisecond < aTime2.millisecond) {
+        if (aTime1.milisecond < aTime2.milisecond) {
           result = -1;
-        } else if (aTime1.millisecond > aTime2.millisecond) {
+        } else if (aTime1.milisecond > aTime2.milisecond) {
           result = 1;
         } else {
           result = 0;
@@ -715,7 +697,7 @@ nsSchemaValidatorUtils::AddTimeZoneToDateTime(nsSchemaDateTime aDateTime,
   int hour = aDateTime.time.hour;
   int minute = aDateTime.time.minute;
   PRUint8 second = aDateTime.time.second;
-  PRUint32 millisecond = aDateTime.time.millisecond;
+  PRUint32 milisecond = aDateTime.time.milisecond;
 
   if (aDateTime.time.tzIsNegative) {
     hour = hour + aDateTime.time.tzhour;
@@ -785,7 +767,7 @@ nsSchemaValidatorUtils::AddTimeZoneToDateTime(nsSchemaDateTime aDateTime,
   aDestDateTime->time.hour = hour;
   aDestDateTime->time.minute = minute;
   aDestDateTime->time.second = second;
-  aDestDateTime->time.millisecond = millisecond;
+  aDestDateTime->time.milisecond = milisecond;
   aDestDateTime->time.tzIsNegative = aDateTime.time.tzIsNegative;
 }
 
@@ -1293,7 +1275,7 @@ nsSchemaValidatorUtils::AddDurationToDatetime(nsSchemaDateTime aDatetime,
    */
   double dblValue;
   aDuration->GetFractionSeconds(&dblValue);
-  aResultDateTime->time.millisecond = (int) dblValue * 1000000;
+  aResultDateTime->time.milisecond = (int) dblValue * 1000000;
 
   // seconds
   aDuration->GetSeconds(&temp);
@@ -1409,179 +1391,6 @@ nsSchemaValidatorUtils::IsValidSchemaLanguage(const nsAString &aStrValue)
   nsCOMPtr<nsISchemaValidatorRegexp> regexp = do_GetService(kREGEXP_CID);
   nsresult rv = regexp->RunRegexp(aStrValue, pattern, "g", &isValid);
   NS_ENSURE_SUCCESS(rv, rv);
-
-  return isValid;
-}
-
-// http://www.w3.org/TR/xmlschema-2/#name
-PRBool
-nsSchemaValidatorUtils::IsValidSchemaName(const nsAString &aStrValue)
-{
-  PRBool isValid = PR_FALSE;
-
-  // xsd:Name is restriction on xsd:token
-  if (IsValidSchemaToken(aStrValue)) {
-    /* http://www.w3.org/TR/2000/WD-xml-2e-20000814
-    [4]	NameChar ::=  Letter | Digit | '.' | '-' | '_' | ':' |
-                      CombiningChar | Extender
-    [5]	Name     ::= (Letter | '_' | ':') ( NameChar)*
-    */
-    // XXX Need to handling CombiningChar and Extender as well
-    // XXX Additional Unicode testing needed?
-    nsAutoString pattern;
-    pattern.AssignLiteral("^[a-zA-Z_:][\\w\\.\\-:]*$");
-    nsCOMPtr<nsISchemaValidatorRegexp> regexp = do_GetService(kREGEXP_CID);
-    nsresult rv = regexp->RunRegexp(aStrValue, pattern, "g", &isValid);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
-
-  return isValid;
-}
-
-// http://www.w3.org/TR/xmlschema-2/#ncname
-PRBool
-nsSchemaValidatorUtils::IsValidSchemaNCName(const nsAString &aStrValue)
-{
-  PRBool isValid = PR_FALSE;
-  
-  // xsd:NCNAME is a restriction on xsd:Name
-  if (IsValidSchemaToken(aStrValue)) {
-    /* http://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-NCName
-      NCNameChar ::=  Letter | Digit | '.' | '-' | '_' |
-                      CombiningChar | Extender
-      NCName     ::= (Letter | '_') (NCNameChar)*
-     */
-    nsAutoString pattern;
-    // XXX Need to handle Combining|Extender and Unicode Letters
-    // xsd:Name minus the ":"
-    pattern.AssignLiteral("^[a-zA-Z_][\\w\\.\\-]*$");
-    nsCOMPtr<nsISchemaValidatorRegexp> regexp = do_GetService(kREGEXP_CID);
-    nsresult rv = regexp->RunRegexp(aStrValue, pattern, "g", &isValid);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
-
-  return isValid;
-}
-
-// http://www.w3.org/TR/xmlschema-2/#id
-PRBool
-nsSchemaValidatorUtils::IsValidSchemaID(const nsAString &aStrValue)
-{
-  PRBool isValid = PR_FALSE;
-
-  // xsd:ID is a restriction of xsd:NCNAME
-  if (IsValidSchemaNCName(aStrValue)) {
-    isValid = PR_TRUE;
-    // XXX Uniqueness tests per
-    //   http://www.w3.org/TR/2000/WD-xml-2e-20000814#NT-TokenizedType
-  }
-
-  return isValid;
-}
-
-// http://www.w3.org/TR/xmlschema-2/#idref
-PRBool
-nsSchemaValidatorUtils::IsValidSchemaIDRef(const nsAString &aStrValue)
-{
-  PRBool isValid = PR_FALSE;
-
-  // xsd:IDREF is a restriction of xsd:NCName
-  if (IsValidSchemaNCName(aStrValue)) {
-    isValid = PR_TRUE;
-    // XXX Ensure IDREF really references an ID,
-    //   http://www.w3.org/TR/2000/WD-xml-2e-20000814#idref
-  }
-
-  return isValid;
-}
-
-// http://www.w3.org/TR/xmlschema-2/#idrefs
-PRBool
-nsSchemaValidatorUtils::IsValidSchemaIDRefs(const nsAString &aStrValue)
-{
-  PRBool isValid = PR_FALSE;
-
-  // Need to validate each IDREF
-  nsAString::const_iterator iter, end, tokenStart;
-  nsAutoString idref;
-  aStrValue.BeginReading(iter);
-  aStrValue.BeginReading(tokenStart);
-  aStrValue.EndReading(end);
-  while (iter != end) {
-    for (;IsWhitespace(*iter) && iter != end; ++iter);
-    tokenStart = iter;
-
-    // Find end of token
-    for (;!IsWhitespace(*iter) && iter != end; ++iter);
-
-    // Get the token/idref and validate
-    idref = Substring(tokenStart, iter);
-    isValid = IsValidSchemaIDRef(idref);
-    if (!isValid) break; // No need to continue
-
-    if (iter != end) ++iter;
-  }
-
-  return isValid;
-}
-
-PRBool
-nsSchemaValidatorUtils::IsWhitespace(PRUnichar aChar)
-{
-  return aChar == ' '  || aChar == '\t' || aChar == '\n' ||
-         aChar == '\r' || aChar == '\v';
-}
-
-// http://www.w3.org/TR/xmlschema-2/#nmtoken
-PRBool
-nsSchemaValidatorUtils::IsValidSchemaNMToken(const nsAString &aStrValue)
-{
-  PRBool isValid = PR_FALSE;
-
-  // xsd:NMTOKEN is a restriction on xsd:token
-  if (IsValidSchemaToken(aStrValue)) {
-    /*
-      NameChar ::= 	Letter | Digit | '.' | '-' | '_' | ':' |
-                    CombiningChar | Extender
-      Nmtoken	 ::= (NameChar)+
-    */
-    nsAutoString pattern;
-    // XXX Need to handle Combining|Extender and possibly unicode letters
-    pattern.AssignLiteral("^[\\w\\.\\-_:]*$");
-    nsCOMPtr<nsISchemaValidatorRegexp> regexp = do_GetService(kREGEXP_CID);
-    nsresult rv = regexp->RunRegexp(aStrValue, pattern, "g", &isValid);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
-
-  return isValid;
-}
-
-// http://www.w3.org/TR/xmlschema-2/#nmtokens
-PRBool
-nsSchemaValidatorUtils::IsValidSchemaNMTokens(const nsAString &aStrValue)
-{
-  PRBool isValid = PR_FALSE;
-
-  // Need to validate each NNTOKEN
-  nsAString::const_iterator iter, end, tokenStart;
-  nsAutoString idref;
-  aStrValue.BeginReading(iter);
-  aStrValue.BeginReading(tokenStart);
-  aStrValue.EndReading(end);
-  while (iter != end) {
-    for (;IsWhitespace(*iter) && iter != end; ++iter);
-    tokenStart = iter;
-
-    // Find end of token
-    for (;!IsWhitespace(*iter) && iter != end; ++iter);
-
-    // Get the token/idref and validate
-    idref = Substring(tokenStart, iter);
-    isValid = IsValidSchemaNMToken(idref);
-    if (!isValid) break; // No need to continue
-
-    if (iter != end) ++iter;
-  }
 
   return isValid;
 }

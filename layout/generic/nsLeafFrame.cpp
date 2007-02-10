@@ -34,13 +34,11 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* base class for rendering objects that do not have child lists */
-
 #include "nsCOMPtr.h"
 #include "nsLeafFrame.h"
 #include "nsHTMLContainerFrame.h"
 #include "nsHTMLParts.h"
+#include "nsHTMLAtoms.h"
 #include "nsIPresShell.h"
 #include "nsPresContext.h"
 
@@ -48,23 +46,18 @@ nsLeafFrame::~nsLeafFrame()
 {
 }
 
-/* virtual */ nscoord
-nsLeafFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+NS_IMETHODIMP
+nsLeafFrame::Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags)
 {
-  nscoord result;
-  DISPLAY_MIN_WIDTH(this, result);
-
-  result = GetIntrinsicWidth();
-  return result;
-}
-
-/* virtual */ nscoord
-nsLeafFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
-{
-  nscoord result;
-  DISPLAY_PREF_WIDTH(this, result);
-  result = GetIntrinsicWidth();
-  return result;
+  if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
+    PaintSelf(aPresContext, aRenderingContext, aDirtyRect);
+  }
+  DO_GLOBAL_REFLOW_COUNT_DSP("nsLeafFrame", &aRenderingContext);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -73,7 +66,7 @@ nsLeafFrame::Reflow(nsPresContext* aPresContext,
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus& aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsLeafFrame");
+  DO_GLOBAL_REFLOW_COUNT("nsLeafFrame", aReflowState.reason);
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,
                  ("enter nsLeafFrame::Reflow: aMaxSize=%d,%d",
                   aReflowState.availableWidth, aReflowState.availableHeight));
@@ -83,66 +76,33 @@ nsLeafFrame::Reflow(nsPresContext* aPresContext,
   // XXX add in code to check for width/height being set via css
   // and if set use them instead of calling GetDesiredSize.
 
-  NS_ASSERTION(aReflowState.ComputedWidth() != NS_UNCONSTRAINEDSIZE,
-               "Shouldn't have unconstrained stuff here");
 
-  aMetrics.width = aReflowState.ComputedWidth();
-  if (NS_INTRINSICSIZE != aReflowState.mComputedHeight) {
-    aMetrics.height = aReflowState.mComputedHeight;
-  } else {
-    aMetrics.height = GetIntrinsicHeight();
-    // XXXbz using NS_CSS_MINMAX like this presupposes content-box sizing.
-    aMetrics.height = NS_CSS_MINMAX(aMetrics.height,
-                                    aReflowState.mComputedMinHeight,
-                                    aReflowState.mComputedMaxHeight);
+  GetDesiredSize(aPresContext, aReflowState, aMetrics);
+  nsMargin borderPadding;
+  AddBordersAndPadding(aPresContext, aReflowState, aMetrics, borderPadding);
+  if (aMetrics.mComputeMEW) {
+    aMetrics.SetMEWToActualWidth(aReflowState.mStylePosition->mWidth.GetUnit());
   }
-  
-  AddBordersAndPadding(aReflowState, aMetrics);
   aStatus = NS_FRAME_COMPLETE;
 
   NS_FRAME_TRACE(NS_FRAME_TRACE_CALLS,
                  ("exit nsLeafFrame::Reflow: size=%d,%d",
                   aMetrics.width, aMetrics.height));
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aMetrics);
-
-  aMetrics.mOverflowArea =
-    nsRect(0, 0, aMetrics.width, aMetrics.height);
-  FinishAndStoreOverflow(&aMetrics);
   return NS_OK;
-}
-
-PRBool
-nsLeafFrame::IsFrameOfType(PRUint32 aFlags) const
-{
-  // We don't actually contain a block, but we do always want a
-  // computed width, so tell a little white lie here.
-  return !(aFlags & ~nsIFrame::eReplacedContainsBlock);
-}
-
-nscoord
-nsLeafFrame::GetIntrinsicHeight()
-{
-  NS_NOTREACHED("Someone didn't override Reflow");
-  return 0;
 }
 
 // XXX how should border&padding effect baseline alignment?
 // => descent = borderPadding.bottom for example
 void
-nsLeafFrame::AddBordersAndPadding(const nsHTMLReflowState& aReflowState,
-                                  nsHTMLReflowMetrics& aMetrics)
+nsLeafFrame::AddBordersAndPadding(nsPresContext* aPresContext,
+                                  const nsHTMLReflowState& aReflowState,
+                                  nsHTMLReflowMetrics& aMetrics,
+                                  nsMargin& aBorderPadding)
 {
-  aMetrics.width += aReflowState.mComputedBorderPadding.LeftRight();
-  aMetrics.height += aReflowState.mComputedBorderPadding.TopBottom();
-}
-
-void
-nsLeafFrame::SizeToAvailSize(const nsHTMLReflowState& aReflowState,
-                             nsHTMLReflowMetrics& aDesiredSize)
-{
-  aDesiredSize.width  = aReflowState.availableWidth; // FRAME
-  aDesiredSize.height = aReflowState.availableHeight;
-  aDesiredSize.mOverflowArea =
-    nsRect(0, 0, aDesiredSize.width, aDesiredSize.height);
-  FinishAndStoreOverflow(&aDesiredSize);  
+  aBorderPadding = aReflowState.mComputedBorderPadding;
+  aMetrics.width += aBorderPadding.left + aBorderPadding.right;
+  aMetrics.height += aBorderPadding.top + aBorderPadding.bottom;
+  aMetrics.ascent = aMetrics.height;
+  aMetrics.descent = 0;
 }

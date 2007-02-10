@@ -45,7 +45,6 @@
 #include "nsITreeBoxObject.h"
 #include "nsITreeSelection.h"
 #include "nsISupportsArray.h"
-#include "nsIMutableArray.h"
 #include "pldhash.h"
 #include "nsIX509CertDB.h"
 
@@ -119,7 +118,7 @@ private:
   nsCOMPtr<nsINSSComponent> mNSSComponent;
 
   treeArrayEl *GetThreadDescAtIndex(PRInt32 _index);
-  nsIX509Cert *GetCertAtIndex(PRInt32 _index, PRInt32 *outAbsoluteCertOffset = nsnull);
+  nsIX509Cert *GetCertAtIndex(PRInt32 _index);
 
   void FreeCertArray();
   nsresult UpdateUIContents();
@@ -129,8 +128,6 @@ private:
                                     nsCertCompareFunc  aCertCmpFn,
                                     void              *aCertCmpFnArg,
                                     nsISupportsArray **_certs);
-
-  nsCOMPtr<nsIMutableArray> mCellText;
 
 #ifdef DEBUG_CERT_TREE
   /* for debugging purposes */

@@ -2,6 +2,10 @@ classic.jar:
 % skin browser classic/1.0 %skin/classic/browser/
 *       skin/classic/browser/browser.css                        (browser.css)
         skin/classic/browser/browser.xml
+        skin/classic/browser/dropmark-nav.png
+        skin/classic/browser/dropmark-nav-rtl.png
+        skin/classic/browser/dropmark-nav-small.png
+        skin/classic/browser/dropmark-nav-rtl-small.png
 *       skin/classic/browser/engineManager.css                  (engineManager.css)
         skin/classic/browser/Info.png
         skin/classic/browser/pageInfo.css
@@ -39,24 +43,23 @@ classic.jar:
         skin/classic/browser/Search-provider-bkgnd.png
         skin/classic/browser/Search-provider-mid-top.png
         skin/classic/browser/Search-provider-mid-bottom.png
-        skin/classic/browser/setDesktopBackground.css
-        skin/classic/browser/monitor.png
+#ifdef MOZ_FEEDS
         skin/classic/browser/feeds/feedIcon.png                 (feeds/feedIcon.png)
         skin/classic/browser/feeds/feedIcon16.png               (feeds/feedIcon16.png)
         skin/classic/browser/feeds/subscribe.css                (feeds/subscribe.css)
+        skin/classic/browser/feeds/addFeedReader.css            (feeds/addFeedReader.css)
+#endif
 #ifdef MOZ_PLACES
         skin/classic/browser/places/places.css                  (places/places.css)
         skin/classic/browser/places/defaultFavicon.png          (places/defaultFavicon.png)
         skin/classic/browser/places/query.png                   (places/query.png)
-        skin/classic/browser/places/livemarkItem.png            (places/livemarkItem.png)
-#endif
-#ifdef MOZ_PLACES_BOOKMARKS
         skin/classic/browser/places/bookmarksMenu.png           (places/bookmarksMenu.png)
         skin/classic/browser/places/bookmarksToolbar.png        (places/bookmarksToolbar.png)
+        skin/classic/browser/places/livemarkItem.png            (places/livemarkItem.png)
+        skin/classic/browser/places/placesIcon.png              (places/placesIcon.png)
         skin/classic/browser/places/toolbarDropMarker.png       (places/toolbarDropMarker.png)
         skin/classic/browser/places/folderDragOver.png          (places/folderDragOver.png)
         skin/classic/browser/places/bookmarkProperties.css      (places/bookmarkProperties.css)
-        skin/classic/browser/places/organizer-toolbar.png       (bookmarks/Bookmarks-toolbar.png)
 #else
         skin/classic/browser/Bookmarks-folder.png
         skin/classic/browser/bookmarks/addBookmark.css          (bookmarks/addBookmark.css)

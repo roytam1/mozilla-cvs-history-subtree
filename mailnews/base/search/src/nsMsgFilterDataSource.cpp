@@ -125,7 +125,12 @@ nsMsgFilterDataSource::GetTargets(nsIRDFResource *aSource,
 
     if (NS_FAILED(rv)) {
         // no filter delegate
-        return NS_NewSingletonEnumerator(aResult, nsnull);
+        nsSingletonEnumerator *cursor = new nsSingletonEnumerator(nsnull);
+        NS_ENSURE_TRUE(cursor, NS_ERROR_OUT_OF_MEMORY);
+        
+        *aResult = cursor;
+        NS_ADDREF(*aResult);
+        return NS_OK;
     }
         
 
@@ -157,7 +162,12 @@ nsMsgFilterDataSource::GetTargets(nsIRDFResource *aSource,
         }
     }
     
-    return NS_NewArrayEnumerator(aResult, resourceList);
+    nsArrayEnumerator *cursor = new nsArrayEnumerator(resourceList);
+    NS_ENSURE_TRUE(cursor, NS_ERROR_OUT_OF_MEMORY);
+    
+    *aResult = cursor;
+    NS_ADDREF(*aResult);
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -249,7 +259,14 @@ nsMsgFilterDataSource::ArcLabelsOut(nsIRDFResource *aSource,
         return NS_RDF_NO_VALUE;
     }
 
-    return NS_NewArrayEnumerator(aResult, arcs);
+    nsArrayEnumerator* enumerator =
+        new nsArrayEnumerator(arcs);
+    NS_ENSURE_TRUE(enumerator, NS_ERROR_OUT_OF_MEMORY);
+  
+    *aResult = enumerator;
+    NS_ADDREF(*aResult);
+
+    return NS_OK;
 }
 
 // takes a base resource, like mailbox://username@host/folder and returns

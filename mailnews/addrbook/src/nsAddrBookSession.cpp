@@ -40,6 +40,7 @@
 #include "nsCOMPtr.h"
 #include "nsAddrBookSession.h"
 #include "nsIAddrBookSession.h"
+#include "nsIFileSpec.h"
 #include "nsILocalFile.h"
 #include "nsIDirectoryService.h"
 #include "nsAppDirectoryServiceDefs.h"

@@ -39,6 +39,7 @@
 
 interface nsIContent;
 interface nsIDOMHTMLOptionElement;
+interface nsPresContext;
 
 /** 
  * This interface is used to notify a SELECT when OPTION

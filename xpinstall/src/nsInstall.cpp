@@ -45,7 +45,6 @@
 #include "nsIFactory.h"
 #include "nsISupports.h"
 #include "nsNativeCharsetUtils.h"
-#include "nsStringEnumerator.h"
 
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
@@ -56,7 +55,6 @@
 #include "nsDirectoryServiceDefs.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
-#include "nsThreadUtils.h"
 
 #include "nsNetUtil.h"
 
@@ -95,7 +93,7 @@
 #include "nsInstallFileOpEnums.h"
 #include "nsInstallFileOpItem.h"
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #include <Gestalt.h>
 #include "nsAppleSingleDecoder.h"
 #include "nsILocalFileMac.h"
@@ -106,16 +104,16 @@
 
 #if defined(XP_UNIX) || defined(XP_BEOS)
 #include <sys/utsname.h>
-#endif
+#endif /* XP_UNIX */
 
 #if defined(XP_WIN)
 #include <windows.h>
 #endif
 
-#if defined(XP_OS2)
-#define INCL_DOSMISC
-#include <os2.h>
-#endif
+static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+static NS_DEFINE_IID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
+
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 #define kInstallLocaleProperties "chrome://global/locale/commonDialogs.properties"
 
@@ -167,6 +165,8 @@ NS_SoftwareUpdateRequestAutoReg()
 
 
 
+MOZ_DECL_CTOR_COUNTER(nsInstallInfo)
+
 nsInstallInfo::nsInstallInfo(PRUint32           aInstallType,
                              nsIFile*           aFile,
                              const PRUnichar*   aURL,
@@ -189,11 +189,9 @@ nsInstallInfo::nsInstallInfo(PRUint32           aInstallType,
 
     // Failure is an option, and will occur in the stub installer.
 
-    nsCOMPtr<nsIThread> thread = do_GetMainThread();
-
     NS_WITH_ALWAYS_PROXIED_SERVICE(CHROMEREG_IFACE, cr,
                                    NS_CHROMEREGISTRY_CONTRACTID,
-                                   thread, &rv);
+                                   NS_UI_THREAD_EVENTQ, &rv);
     if (NS_SUCCEEDED(rv)) {
       mChromeRegistry = cr;
 
@@ -213,7 +211,7 @@ nsInstallInfo::nsInstallInfo(PRUint32           aInstallType,
 #ifdef MOZ_XUL_APP
     NS_WITH_ALWAYS_PROXIED_SERVICE(nsIExtensionManager, em,
                                    "@mozilla.org/extensions/manager;1",
-                                   thread, &rv);
+                                   NS_UI_THREAD_EVENTQ, &rv);
     if (NS_SUCCEEDED(rv))
       mExtensionManager = em;
 
@@ -232,6 +230,8 @@ nsInstallInfo::~nsInstallInfo()
 
 static NS_DEFINE_IID(kSoftwareUpdateCID,  NS_SoftwareUpdate_CID);
 
+
+MOZ_DECL_CTOR_COUNTER(nsInstall)
 
 nsInstall::nsInstall(nsIZipReader * theJARFile)
 {
@@ -264,14 +264,12 @@ nsInstall::nsInstall(nsIZipReader * theJARFile)
 
     su->Release();
 
-    nsCOMPtr<nsIThread> thread = do_GetMainThread();
-
     // get the resourced xpinstall string bundle
     mStringBundle = nsnull;
     NS_WITH_PROXIED_SERVICE( nsIStringBundleService,
                              service,
-                             NS_STRINGBUNDLE_CONTRACTID,
-                             thread,
+                             kStringBundleServiceCID,
+                             NS_UI_THREAD_EVENTQ,
                              &rv );
 
     if (NS_SUCCEEDED(rv) && service)
@@ -338,7 +336,7 @@ nsInstall::GetInstallPlatform(nsCString& aPlatform)
     // Gather platform.
 #if defined(XP_WIN)
     mInstallPlatform = "Windows";
-#elif defined(XP_MACOSX)
+#elif defined(XP_MAC) || defined(XP_MACOSX)
     mInstallPlatform = "Macintosh";
 #elif defined (XP_UNIX)
     mInstallPlatform = "X11";
@@ -387,7 +385,7 @@ nsInstall::GetInstallPlatform(nsCString& aPlatform)
        mInstallPlatform += ' ';
        mInstallPlatform += (char*)name.machine;
     }
-#elif defined(XP_MACOSX)
+#elif defined (XP_MAC) || defined (XP_MACOSX)
     mInstallPlatform += "PPC";
 #elif defined(XP_OS2)
     ULONG os2ver = 0;
@@ -465,14 +463,20 @@ nsInstall::AddDirectory(const nsString& aRegName,
         return NS_OK;
     }
 
-    // Default subName = location in jar file
     nsString qualifiedRegName;
-    result = GetQualifiedRegName( aRegName.IsEmpty() ? aJarSource : aRegName,
-                                  qualifiedRegName);
 
-    if (result != nsInstall::SUCCESS)
+    if ( aRegName.IsEmpty())
     {
-        *aReturn = SaveError( result );
+        // Default subName = location in jar file
+        *aReturn = GetQualifiedRegName( aJarSource, qualifiedRegName);
+    }
+    else
+    {
+        *aReturn = GetQualifiedRegName( aRegName, qualifiedRegName );
+    }
+
+    if (*aReturn != SUCCESS)
+    {
         return NS_OK;
     }
 
@@ -489,47 +493,47 @@ nsInstall::AddDirectory(const nsString& aRegName,
         }
     }
 
-    nsAutoString subdirectory(aSubdir);
+    nsString subdirectory(aSubdir);
+
     if (!subdirectory.IsEmpty())
-        subdirectory.AppendLiteral("/");
-
-    nsAutoString prefix(aJarSource + NS_LITERAL_STRING("/"));
-    const PRInt32 prefix_length = prefix.Length();
-    NS_LossyConvertUTF16toASCII pattern(prefix + NS_LITERAL_STRING("*"));
-
-    nsCOMPtr<nsIUTF8StringEnumerator> jarEnum;
-    nsresult rv = mJarFileData->FindEntries(pattern.get(),
-                                            getter_AddRefs(jarEnum) );
-    if (NS_FAILED(rv) || !jarEnum)
     {
-        *aReturn = SaveError( nsInstall::EXTRACTION_FAILED );
+        subdirectory.AppendLiteral("/");
+    }
+
+
+    nsVoidArray *paths = new nsVoidArray();
+
+    if (paths == nsnull)
+    {
+        *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
         return NS_OK;
     }
 
     PRInt32 count = 0;
-    PRBool bMore = PR_FALSE;
-    while (NS_SUCCEEDED(jarEnum->HasMore(&bMore)) && bMore)
+    result = ExtractDirEntries(aJarSource, paths);
+    if (result == nsInstall::SUCCESS)
     {
-        nsCAutoString name;
-        rv = jarEnum->GetNext(name);
-        if (NS_FAILED(rv))
+        count = paths->Count();
+        if (count == 0)
+            result = nsInstall::DOES_NOT_EXIST;
+    }
+
+    for (PRInt32 i=0; i < count && result == nsInstall::SUCCESS; i++)
+    {
+        nsString *thisPath = (nsString *)paths->ElementAt(i);
+
+        nsString newJarSource = aJarSource;
+        newJarSource.AppendLiteral("/");
+        newJarSource += *thisPath;
+
+        nsString newSubDir;
+
+        if (!subdirectory.IsEmpty())
         {
-            result = nsInstall::EXTRACTION_FAILED;
-            break;
+            newSubDir = subdirectory;
         }
 
-        if ( name.Last() == '/' )
-        {
-            // Skip the directory entries
-            continue;
-        }
-        const PRInt32 namelen = name.Length();
-        NS_ASSERTION( prefix_length <= namelen, "Match must be longer than pattern!" );
-        NS_ConvertASCIItoUTF16 fileName(Substring(name,
-                                                  prefix_length,
-                                                  namelen - prefix_length));
-        nsAutoString newJarSource(prefix + fileName);
-        nsAutoString newSubDir(subdirectory + fileName);
+        newSubDir += *thisPath;
 
         ie = new nsInstallFile( this,
                                 qualifiedRegName,
@@ -538,7 +542,7 @@ nsInstall::AddDirectory(const nsString& aRegName,
                                 aFolder,
                                 newSubDir,
                                 aMode,
-                                (count == 0), // register the first one only
+                                (i == 0), // register the first one only
                                 &result);
 
         if (ie == nsnull)
@@ -552,12 +556,10 @@ nsInstall::AddDirectory(const nsString& aRegName,
         else
         {
             result = ScheduleForInstall( ie );
-            count++;
         }
     }
 
-    if (result == nsInstall::SUCCESS && count == 0) 
-        result = nsInstall::DOES_NOT_EXIST;
+    DeleteVector(paths);
 
     *aReturn = SaveError( result );
     return NS_OK;
@@ -659,13 +661,19 @@ nsInstall::AddSubcomponent(const nsString& aRegName,
     if (qualifiedVersion.IsEmpty())
         qualifiedVersion.AssignLiteral("0.0.0.0");
 
-    // Default subName = location in jar file
-    result = GetQualifiedRegName( aRegName.IsEmpty() ? aJarSource : aRegName,
-                                  qualifiedRegName);
 
-    if (result != nsInstall::SUCCESS)
+    if ( aRegName.IsEmpty() )
     {
-        *aReturn = SaveError( result );
+        // Default subName = location in jar file
+        *aReturn = GetQualifiedRegName( aJarSource, qualifiedRegName);
+    }
+    else
+    {
+        *aReturn = GetQualifiedRegName( aRegName, qualifiedRegName );
+    }
+
+    if (*aReturn != SUCCESS)
+    {
         return NS_OK;
     }
 
@@ -683,7 +691,7 @@ nsInstall::AddSubcomponent(const nsString& aRegName,
     if (ie == nsnull)
     {
         *aReturn = SaveError(nsInstall::OUT_OF_MEMORY);
-        return NS_OK;
+            return NS_OK;
     }
 
     if (errcode == nsInstall::SUCCESS)
@@ -852,8 +860,8 @@ nsInstall::FinalizeInstall(PRInt32* aReturn)
     {
         if ( mUninstallPackage )
         {
-            VR_UninstallCreateNode( NS_CONST_CAST(char *, NS_ConvertUTF16toUTF8(mRegistryPackageName).get()),
-                                    NS_CONST_CAST(char *, NS_ConvertUTF16toUTF8(mUIName).get()));
+            VR_UninstallCreateNode( NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(mRegistryPackageName).get()),
+                                    NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(mUIName).get()));
         }
 
         // Install the Component into the Version Registry.
@@ -869,7 +877,7 @@ nsInstall::FinalizeInstall(PRInt32* aReturn)
             if (mPackageFolder)
                 mPackageFolder->GetDirectoryPath(path);
 
-            VR_Install( NS_CONST_CAST(char *, NS_ConvertUTF16toUTF8(mRegistryPackageName).get()),
+            VR_Install( NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(mRegistryPackageName).get()),
                         NS_CONST_CAST(char *, path.get()),
                         NS_CONST_CAST(char *, versionCString.get()),
                         PR_TRUE );
@@ -890,7 +898,7 @@ nsInstall::FinalizeInstall(PRInt32* aReturn)
                 if (objString)
                 {
                     mListener->OnFinalizeProgress(
-                                    NS_ConvertASCIItoUTF16(objString).get(),
+                                    NS_ConvertASCIItoUCS2(objString).get(),
                                     (i+1), mInstalledFiles->Count());
                     delete [] objString;
                 }
@@ -951,12 +959,12 @@ nsInstall::FinalizeInstall(PRInt32* aReturn)
     return NS_OK;
 }
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 #define GESTALT_CHAR_CODE(x)          (((unsigned long) ((x[0]) & 0x000000FF)) << 24) \
                                     | (((unsigned long) ((x[1]) & 0x000000FF)) << 16) \
                                     | (((unsigned long) ((x[2]) & 0x000000FF)) << 8)  \
                                     | (((unsigned long) ((x[3]) & 0x000000FF)))
-#endif
+#endif /* XP_MACOS || XP_MACOSX */
 
 PRInt32
 nsInstall::Gestalt(const nsString& aSelector, PRInt32* aReturn)
@@ -970,7 +978,7 @@ nsInstall::Gestalt(const nsString& aSelector, PRInt32* aReturn)
         *aReturn = SaveError( result );
         return NS_OK;
     }
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 
     long    response = 0;
     char    selectorChars[4];
@@ -994,7 +1002,7 @@ nsInstall::Gestalt(const nsString& aSelector, PRInt32* aReturn)
     else
         *aReturn = response;
 
-#endif /* XP_MACOSX */
+#endif /* XP_MAC || XP_MACOSX */
     return NS_OK;
 }
 
@@ -1018,7 +1026,7 @@ nsInstall::GetComponentFolder(const nsString& aComponentName, const nsString& aS
         return NS_OK;
     }
 
-    NS_ConvertUTF16toUTF8 componentCString(tempString);
+    NS_ConvertUCS2toUTF8 componentCString(tempString);
 
     if((err = VR_GetDefaultDirectory( NS_CONST_CAST(char *, componentCString.get()), sizeof(dir), dir )) != REGERR_OK)
     {
@@ -1212,6 +1220,7 @@ nsInstall::LoadResources(JSContext* cx, const nsString& aBaseName, jsval* aRetur
     nsCOMPtr<nsIFile> resFile;
     nsIURI *url = nsnull;
     nsIStringBundleService* service = nsnull;
+    nsIEventQueueService* pEventQueueService = nsnull;
     nsIStringBundle* bundle = nsnull;
     nsCOMPtr<nsISimpleEnumerator> propEnum;
     jsval v = JSVAL_NULL;
@@ -1235,7 +1244,14 @@ nsInstall::LoadResources(JSContext* cx, const nsString& aBaseName, jsval* aRetur
     }
 
     // initialize string bundle and related services
-    ret = CallGetService(NS_STRINGBUNDLE_CONTRACTID, &service);
+    ret = CallGetService(kStringBundleServiceCID, &service);
+    if (NS_FAILED(ret))
+        goto cleanup;
+    ret = CallGetService(kEventQueueServiceCID, &pEventQueueService);
+    if (NS_FAILED(ret))
+        goto cleanup;
+    ret = pEventQueueService->CreateThreadEventQueue();
+    NS_RELEASE(pEventQueueService);
     if (NS_FAILED(ret))
         goto cleanup;
 
@@ -1390,11 +1406,14 @@ nsPIXPIProxy* nsInstall::GetUIThreadProxy()
     if (!mUIThreadProxy)
     {
         nsresult rv;
-        nsCOMPtr<nsPIXPIProxy> tmp(do_QueryInterface(new nsXPIProxy()));
-        rv = NS_GetProxyForObject( NS_PROXY_TO_MAIN_THREAD,
-                                   NS_GET_IID(nsPIXPIProxy), tmp,
-                                   NS_PROXY_SYNC | NS_PROXY_ALWAYS,
-                                   getter_AddRefs(mUIThreadProxy) );
+        nsCOMPtr<nsIProxyObjectManager> pmgr =
+                 do_GetService(kProxyObjectManagerCID, &rv);
+        if (NS_SUCCEEDED(rv))
+        {
+            nsCOMPtr<nsPIXPIProxy> tmp(do_QueryInterface(new nsXPIProxy()));
+            rv = pmgr->GetProxyForObject( NS_UI_THREAD_EVENTQ, NS_GET_IID(nsPIXPIProxy),
+                    tmp, PROXY_SYNC | PROXY_ALWAYS, getter_AddRefs(mUIThreadProxy) );
+        }
     }
 
     return mUIThreadProxy;
@@ -1497,7 +1516,7 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aRegis
 
     mPackageFolder = nsnull;
     if(REGERR_OK == VR_GetDefaultDirectory(
-                        NS_CONST_CAST(char *, NS_ConvertUTF16toUTF8(mRegistryPackageName).get()),
+                        NS_CONST_CAST(char *, NS_ConvertUCS2toUTF8(mRegistryPackageName).get()),
                         sizeof(szRegPackagePath), szRegPackagePath))
     {
         // found one saved in the registry
@@ -2187,7 +2206,7 @@ nsInstall::FileOpFileMacAlias(nsIFile *aSourceFile, nsIFile *aAliasFile, PRInt32
 
   *aReturn = nsInstall::SUCCESS;
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
 
   nsInstallFileOpItem* ifop = new nsInstallFileOpItem(this, NS_FOP_MAC_ALIAS, aSourceFile, aAliasFile, aReturn);
   if (!ifop)
@@ -2216,7 +2235,7 @@ nsInstall::FileOpFileMacAlias(nsIFile *aSourceFile, nsIFile *aAliasFile, PRInt32
 
   SaveError(*aReturn);
 
-#endif /* XP_MACOSX */
+#endif /* XP_MAC || XP_MACOSX */
 
   return NS_OK;
 }
@@ -2289,7 +2308,7 @@ nsInstall::ScheduleForInstall(nsInstallObject* ob)
     // flash current item
 
     if (mListener)
-        mListener->OnItemScheduled(NS_ConvertASCIItoUTF16(objString).get());
+        mListener->OnItemScheduled(NS_ConvertASCIItoUCS2(objString).get());
 
 
     // do any unpacking or other set-up
@@ -2562,7 +2581,7 @@ void nsInstall::SetInstallURL(const nsString& url)  { mInstallURL = url; }
 //-----------------------------------------------------------------------------
 PRUnichar *GetTranslatedString(const PRUnichar* aString)
 {
-    nsCOMPtr<nsIStringBundleService> stringService = do_GetService(NS_STRINGBUNDLE_CONTRACTID);
+    nsCOMPtr<nsIStringBundleService> stringService = do_GetService(kStringBundleServiceCID);
     nsCOMPtr<nsIStringBundle> stringBundle;
     PRUnichar* translatedString;
 
@@ -2709,7 +2728,7 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsIFile* aSuggestedName,
         extractHereSpec = temp;
     }
 
-    rv = mJarFileData->Extract(NS_LossyConvertUTF16toASCII(aJarfile).get(),
+    rv = mJarFileData->Extract(NS_LossyConvertUCS2toASCII(aJarfile).get(),
                                extractHereSpec);
     if (NS_FAILED(rv))
     {
@@ -2721,7 +2740,7 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsIFile* aSuggestedName,
         }
     }
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
     FSRef finalRef, extractedRef;
 
     nsCOMPtr<nsILocalFileMac> tempExtractHereSpec;
@@ -2754,7 +2773,7 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsIFile* aSuggestedName,
             extractHereSpec = do_QueryInterface(tempExtractHereSpec, &rv);
         }
     }
-#endif /* XP_MACOSX */
+#endif /* XP_MAC || XP_MACOSX */
 
     extractHereSpec->Clone(aRealName);
     
@@ -2788,5 +2807,82 @@ nsInstall::GetResourcedString(const nsAString& aResName)
     ** than nothing due to failure above: always the case for the Install Wizards.
     */
     return nsCRT::strdup(nsInstallResources::GetDefaultVal(
-                    NS_LossyConvertUTF16toASCII(aResName).get()));
+                    NS_LossyConvertUCS2toASCII(aResName).get()));
+}
+
+
+PRInt32
+nsInstall::ExtractDirEntries(const nsString& directory, nsVoidArray *paths)
+{
+    char                *buf;
+    nsISimpleEnumerator *jarEnum = nsnull;
+    nsIZipEntry         *currZipEntry = nsnull;
+
+    if ( paths )
+    {
+        nsString pattern(directory + NS_LITERAL_STRING("/*"));
+        PRInt32 prefix_length = directory.Length()+1; // account for slash
+
+        nsresult rv = mJarFileData->FindEntries(
+                          NS_LossyConvertUCS2toASCII(pattern).get(),
+                          &jarEnum );
+        if (NS_FAILED(rv) || !jarEnum)
+            goto handle_err;
+
+        PRBool bMore;
+        rv = jarEnum->HasMoreElements(&bMore);
+        while (bMore && NS_SUCCEEDED(rv))
+        {
+            rv = jarEnum->GetNext( (nsISupports**) &currZipEntry );
+            if (currZipEntry)
+            {
+                // expensive 'buf' callee malloc per iteration!
+                rv = currZipEntry->GetName(&buf);
+                if (NS_FAILED(rv))
+                    goto handle_err;
+                if (buf)
+                {
+                    PRInt32 namelen = PL_strlen(buf);
+                    NS_ASSERTION( prefix_length <= namelen, "Match must be longer than pattern!" );
+
+                    if ( buf[namelen-1] != '/' )
+                    {
+                        // XXX manipulation should be in caller
+                        nsString* tempString = new nsString; tempString->AssignWithConversion(buf+prefix_length);
+                        paths->AppendElement(tempString);
+                    }
+
+                    PR_FREEIF( buf );
+                }
+                NS_IF_RELEASE(currZipEntry);
+            }
+            rv = jarEnum->HasMoreElements(&bMore);
+        }
+    }
+
+    NS_IF_RELEASE(jarEnum);
+    return SUCCESS;
+
+handle_err:
+    NS_IF_RELEASE(jarEnum);
+    NS_IF_RELEASE(currZipEntry);
+    return EXTRACTION_FAILED;
+}
+
+void
+nsInstall::DeleteVector(nsVoidArray* vector)
+{
+    if (vector != nsnull)
+    {
+        for (PRInt32 i=0; i < vector->Count(); i++)
+        {
+            nsString* element = (nsString*)vector->ElementAt(i);
+            if (element != nsnull)
+                delete element;
+        }
+
+        vector->Clear();
+        delete (vector);
+        vector = nsnull;
+    }
 }

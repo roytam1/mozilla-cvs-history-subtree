@@ -45,7 +45,6 @@
 #include "nsIController.h"
 #include "nsAutoPtr.h"
 #include "nsXBLEventHandler.h"
-#include "nsIWeakReference.h"
 
 class nsIDOMEvent;
 class nsIContent;
@@ -161,7 +160,6 @@ protected:
                           const PRUnichar* aPreventDefault=nsnull,
                           const PRUnichar* aAllowUntrusted=nsnull);
 
-  void ReportKeyConflict(const PRUnichar* aKey, const PRUnichar* aModifiers, nsIContent* aElement, const char *aMessageName);
   void GetEventType(nsAString& type);
   PRBool ModifiersMatchMask(nsIDOMUIEvent* aEvent);
 
@@ -185,11 +183,11 @@ protected:
 
 protected:
   union {
-    nsIWeakReference* mHandlerElement;  // For XUL <key> element handlers. [STRONG]
-    PRUnichar*        mHandlerText;     // For XBL handlers (we don't build an
-                                        // element for the <handler>, and instead
-                                        // we cache the JS text or command name
-                                        // that we should use.
+    nsIContent* mHandlerElement;  // For XUL <key> element handlers.
+    PRUnichar* mHandlerText;      // For XBL handlers (we don't build an
+                                  // element for the <handler>, and instead we
+                                  // cache the JS text or command name that we
+                                  // should use.
   };
 
   PRUint32 mLineNumber;  // The line number we started at in the XBL file

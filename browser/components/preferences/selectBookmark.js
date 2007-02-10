@@ -50,6 +50,11 @@ var SelectBookmarkDialog = {
   init: function SBD_init() {
     // Initial update of the OK button.
     this.selectionChanged();
+    
+    var bookmarks = document.getElementById("bookmarks");
+    bookmarks.excludeItems = false;
+    bookmarks.excludeQueries = true;
+    bookmarks.place = bookmarks.place;
   },
   
   /** 
@@ -69,7 +74,7 @@ var SelectBookmarkDialog = {
   linkChosen: function SBD_linkChosen() {
     var bookmarks = document.getElementById("bookmarks");
     if (bookmarks.hasSingleSelection && 
-        PlacesUtils.nodeIsURI(bookmarks.selectedNode))
+        PlacesController.nodeIsURI(bookmarks.selectedNode))
       document.documentElement.getButton("accept").click();
   },
   
@@ -85,12 +90,12 @@ var SelectBookmarkDialog = {
     var names = [];
     var selectedNode = bookmarks.selectedNode;
     if (bookmarks.hasSingleSelection && 
-        PlacesUtils.nodeIsFolder(selectedNode)) {
-      var contents = PlacesUtils.getFolderContents(asFolder(selectedNode).folderId);
+        PlacesController.nodeIsFolder(selectedNode)) {
+      var contents = PlacesController.getFolderContents(asFolder(selectedNode).folderId);
       var cc = contents.childCount;
       for (var i = 0; i < cc; ++i) {
         var node = contents.getChild(i);
-        if (PlacesUtils.nodeIsURI(node)) {
+        if (PlacesController.nodeIsURI(node)) {
           urls.push(node.uri);
           names.push(node.title);
         }

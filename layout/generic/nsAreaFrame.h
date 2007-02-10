@@ -34,13 +34,11 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* derived class of nsBlockFrame; distinction barely relevant anymore */
-
 #ifndef nsAreaFrame_h___
 #define nsAreaFrame_h___
 
 #include "nsBlockFrame.h"
+#include "nsVoidArray.h"
 #include "nsAbsoluteContainingBlock.h"
 
 struct nsStyleDisplay;
@@ -51,23 +49,26 @@ struct nsStylePosition;
  * The area frame has an additional named child list:
  * - "Absolute-list" which contains the absolutely positioned frames
  *
- * @see nsGkAtoms::absoluteList
+ * @see nsLayoutAtoms::absoluteList
  */
 class nsAreaFrame : public nsBlockFrame
 {
 public:
-  friend nsIFrame* NS_NewAreaFrame(nsIPresShell* aPresShell, nsStyleContext *aContext, PRUint32 aFlags);
+  friend nsresult NS_NewAreaFrame(nsIPresShell* aPresShell, nsIFrame** aResult, PRUint32 aFlags);
   
   // nsIFrame
 
 #ifdef MOZ_XUL
-  NS_IMETHOD Init(nsIContent*      aContent,
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
                   nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
-  NS_IMETHOD AttributeChanged(PRInt32 aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent* aChild,
+                              PRInt32 aNameSpaceID,
                               nsIAtom* aAttribute,
                               PRInt32 aModType);
 #endif
@@ -75,7 +76,7 @@ public:
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::areaFrame
+   * @see nsLayoutAtoms::areaFrame
    */
   virtual nsIAtom* GetType() const;
   
@@ -84,10 +85,11 @@ public:
 #endif
 
 protected:
-  nsAreaFrame(nsStyleContext *aContext) : nsBlockFrame(aContext) {}
+  nsAreaFrame();
 
 #ifdef MOZ_XUL
-  nsresult RegUnregAccessKey(PRBool aDoReg);
+  nsresult RegUnregAccessKey(nsPresContext* aPresContext,
+                             PRBool aDoReg);
 #endif
 };
 

@@ -54,6 +54,7 @@
 #include "nsHTMLURIRefObject.h"
 
 #include "nsIDOMText.h"
+#include "nsITextContent.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMAttr.h"
@@ -77,7 +78,6 @@
 
 #include "nsICSSLoader.h"
 #include "nsICSSStyleSheet.h"
-#include "nsIDOMStyleSheet.h"
 #include "nsIDocumentObserver.h"
 #include "nsIDocumentStateListener.h"
 
@@ -96,6 +96,7 @@
 #include "nsIDOMDocumentFragment.h"
 #include "nsIPresShell.h"
 #include "nsPresContext.h"
+#include "nsParserCIID.h"
 #include "nsIImage.h"
 #include "nsAOLCiter.h"
 #include "nsInternetCiter.h"
@@ -122,6 +123,7 @@
 // Misc
 #include "TextEditorTest.h"
 #include "nsEditorUtils.h"
+#include "nsITextContent.h"
 #include "nsWSRunObject.h"
 #include "nsHTMLObjectResizer.h"
 
@@ -129,6 +131,8 @@
 #include "nsIView.h"
 #include "nsIWidget.h"
 #include "nsIParserService.h"
+
+static NS_DEFINE_CID(kCTransitionalDTDCID,  NS_CTRANSITIONAL_DTD_CID);
 
 // Some utilities to handle annoying overloading of "A" tag for link and named anchor
 static char hrefText[] = "href";
@@ -279,6 +283,10 @@ nsHTMLEditor::Init(nsIDOMDocument *aDoc, nsIPresShell *aPresShell,
   {
     // block to scope nsAutoEditInitRulesTrigger
     nsAutoEditInitRulesTrigger rulesTrigger(NS_STATIC_CAST(nsPlaintextEditor*,this), rulesRes);
+
+    // Set up a DTD   
+    mDTD = do_CreateInstance(kCTransitionalDTDCID);
+    if (!mDTD) result = NS_ERROR_FAILURE;
 
     // Init the plaintext editor
     result = nsPlaintextEditor::Init(aDoc, aPresShell, aRoot, aSelCon, aFlags);
@@ -1106,7 +1114,7 @@ nsHTMLEditor::IsPrevCharWhitespace(nsIDOMNode *aParentNode,
         textNode->GetLength(&strLength);
         if (strLength)
         {
-          // you could use nsIContent::TextIsOnlyWhitespace here
+          // you could use nsITextContent::IsOnlyWhitespace here
           textNode->SubstringData(strLength-1,strLength,tempString);
           *outIsSpace = nsCRT::IsAsciiSpace(tempString.First());
           *outIsNBSP = (tempString.First() == nbsp);
@@ -1615,7 +1623,7 @@ nsHTMLEditor::CollapseSelectionToDeepestNonTableFirstChild(nsISelection *aSelect
 NS_IMETHODIMP
 nsHTMLEditor::ReplaceHeadContentsWithHTML(const nsAString& aSourceToInsert)
 {
-  nsAutoRules beginRulesSniffing(this, kOpIgnore, nsIEditor::eNone); // don't do any post processing, rules get confused
+  nsAutoRules beginRulesSniffing(this, kOpIgnore, nsIEditor::eNone); // dont do any post processing, rules get confused
   nsCOMPtr<nsISelection> selection;
   nsresult res = GetSelection(getter_AddRefs(selection));
   if (NS_FAILED(res)) return res;
@@ -1799,17 +1807,14 @@ nsHTMLEditor::RebuildDocumentFromSource(const nsAString& aSourceString)
       res = LoadHTML(body);
     else // assume there is no head, the entire source is body
       res = LoadHTML(body + aSourceString);
-    if (NS_FAILED(res))
-      return res;
+    if (NS_FAILED(res)) return res;
 
     nsCOMPtr<nsIDOMElement> divElement;
     res = CreateElementWithDefaults(NS_LITERAL_STRING("div"), getter_AddRefs(divElement));
-    if (NS_FAILED(res))
-      return res;
+    if (NS_FAILED(res)) return res;
 
     res = CloneAttributes(bodyElement, divElement);
-    if (NS_FAILED(res))
-      return res;
+    if (NS_FAILED(res)) return res;
 
     return BeginningOfDocument();
   }
@@ -3551,7 +3556,8 @@ nsHTMLEditor::ReplaceStyleSheet(const nsAString& aURL)
   rv = NS_NewURI(getter_AddRefs(uaURI), aURL);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = cssLoader->LoadSheet(uaURI, this);
+  nsCOMPtr<nsICSSStyleSheet> sheet;
+  rv = cssLoader->LoadAgentSheet(uaURI, this);
   NS_ENSURE_SUCCESS(rv, rv);
 
   return NS_OK;
@@ -3601,11 +3607,9 @@ nsHTMLEditor::AddOverrideStyleSheet(const nsAString& aURL)
   NS_ENSURE_SUCCESS(rv, rv);
 
   // We MUST ONLY load synchronous local files (no @import)
-  // XXXbz Except this will actually try to load remote files
-  // synchronously, of course..
   nsCOMPtr<nsICSSStyleSheet> sheet;
-  // Editor override style sheets may want to style Gecko anonymous boxes
-  rv = cssLoader->LoadSheetSync(uaURI, PR_TRUE, getter_AddRefs(sheet));
+  nsCOMPtr<nsICSSLoader_MOZILLA_1_8_BRANCH> loader = do_QueryInterface(cssLoader);
+  rv = loader->LoadSheetSync(uaURI, PR_TRUE, getter_AddRefs(sheet));
 
   // Synchronous loads should ALWAYS return completed
   if (!sheet)
@@ -3687,10 +3691,8 @@ nsHTMLEditor::EnableStyleSheet(const nsAString &aURL, PRBool aEnable)
   if (!sheet)
     return NS_OK; // Don't fail if sheet not found
 
-  nsCOMPtr<nsIDOMStyleSheet> domSheet(do_QueryInterface(sheet));
-  NS_ASSERTION(domSheet, "Sheet not implementing nsIDOMStyleSheet!");
-  
-  return domSheet->SetDisabled(!aEnable);
+  nsCOMPtr<nsIStyleSheet> nsISheet = do_QueryInterface(sheet);
+  return nsISheet->SetEnabled(aEnable);
 }
 
 
@@ -3704,10 +3706,8 @@ nsHTMLEditor::EnableExistingStyleSheet(const nsAString &aURL)
   // Enable sheet if already loaded.
   if (sheet)
   {
-    nsCOMPtr<nsIDOMStyleSheet> domSheet(do_QueryInterface(sheet));
-    NS_ASSERTION(domSheet, "Sheet not implementing nsIDOMStyleSheet!");
-    
-    domSheet->SetDisabled(PR_FALSE);
+    nsCOMPtr<nsIStyleSheet> nsISheet = do_QueryInterface(sheet);
+    nsISheet->SetEnabled(PR_TRUE);
     return PR_TRUE;
   }
   return PR_FALSE;
@@ -3852,11 +3852,22 @@ nsHTMLEditor::GetEmbeddedObjects(nsISupportsArray** aNodeList)
         node->GetNodeName(tagName);
         ToLowerCase(tagName);
 
-        // See if it's an image or an embed and also include all links.
-        // Let mail decide which link to send or not
-        if (tagName.EqualsLiteral("img") || tagName.EqualsLiteral("embed") ||
-            tagName.EqualsLiteral("a"))
+        // See if it's an image or an embed
+        if (tagName.EqualsLiteral("img") || tagName.EqualsLiteral("embed"))
           (*aNodeList)->AppendElement(node);
+        else if (tagName.EqualsLiteral("a"))
+        {
+          // Only include links if they're links to file: URLs
+          nsCOMPtr<nsIDOMHTMLAnchorElement> anchor (do_QueryInterface(content));
+          if (anchor)
+          {
+            nsAutoString href;
+            if (NS_SUCCEEDED(anchor->GetHref(href)))
+              if (StringBeginsWith(href, NS_LITERAL_STRING("file:"),
+                                   nsCaseInsensitiveStringComparator()))
+                (*aNodeList)->AppendElement(node);
+          }
+        }
         else if (tagName.EqualsLiteral("body"))
         {
           nsCOMPtr<nsIDOMElement> element = do_QueryInterface(node);
@@ -4058,8 +4069,7 @@ nsHTMLEditor::DebugUnitTests(PRInt32 *outNumTests, PRInt32 *outNumTestsFailed)
 
 
 NS_IMETHODIMP 
-nsHTMLEditor::StyleSheetLoaded(nsICSSStyleSheet* aSheet, PRBool aWasAlternate,
-                               nsresult aStatus)
+nsHTMLEditor::StyleSheetLoaded(nsICSSStyleSheet* aSheet, PRBool aNotify)
 {
   nsresult rv = NS_OK;
   nsAutoEditBatch batchIt(this);
@@ -4139,44 +4149,40 @@ nsHTMLEditor::EndOperation()
 PRBool 
 nsHTMLEditor::TagCanContainTag(const nsAString& aParentTag, const nsAString& aChildTag)  
 {
-  PRInt32 childTagEnum;
-  // XXX Should this handle #cdata-section too?
-  if (aChildTag.EqualsLiteral("#text")) {
-    childTagEnum = eHTMLTag_text;
-  }
-  else {
-    childTagEnum = sParserService->HTMLStringTagToId(aChildTag);
-  }
-
-  PRInt32 parentTagEnum = sParserService->HTMLStringTagToId(aParentTag);
-  NS_ASSERTION(parentTagEnum < NS_HTML_TAG_MAX,
-               "Fix the caller, this type of node can never contain children.");
-
-  return nsHTMLEditUtils::CanContain(parentTagEnum, childTagEnum);
-}
-
-PRBool 
-nsHTMLEditor::IsContainer(nsIDOMNode *aNode)
-{
-  if (!aNode) {
-    return PR_FALSE;
+  // COtherDTD gives some unwanted results.  We override them here.
+  if (aParentTag.LowerCaseEqualsLiteral("ol") ||
+      aParentTag.LowerCaseEqualsLiteral("ul"))
+  {
+    // if parent is a list and tag is also a list, say "yes".
+    // This is because the editor does sublists illegally for now. 
+      if (aChildTag.LowerCaseEqualsLiteral("ol") ||
+          aChildTag.LowerCaseEqualsLiteral("ul"))
+      return PR_TRUE;
   }
 
-  nsAutoString stringTag;
-
-  nsresult rv = aNode->GetNodeName(stringTag);
-  NS_ENSURE_SUCCESS(rv, PR_FALSE);
-
-  PRInt32 tagEnum;
-  // XXX Should this handle #cdata-section too?
-  if (stringTag.EqualsLiteral("#text")) {
-    tagEnum = eHTMLTag_text;
-  }
-  else {
-    tagEnum = sParserService->HTMLStringTagToId(stringTag);
+  if (aParentTag.LowerCaseEqualsLiteral("li"))
+  {
+    // list items cant contain list items
+    if (aChildTag.LowerCaseEqualsLiteral("li"))
+      return PR_FALSE;
   }
 
-  return nsHTMLEditUtils::IsContainer(tagEnum);
+/*  
+  // if parent is a pre, and child is not inline, say "no"
+  if ( aParentTag.EqualsLiteral("pre") )
+  {
+    if (aChildTag.EqualsLiteral("#text"))
+      return PR_TRUE;
+
+    PRInt32 childTagEnum = sParserService->HTMLStringTagToId(aChildTag);
+    PRInt32 parentTagEnum = sParserService->HTMLStringTagToId(aParentTag);
+
+    if (!mDTD->IsInlineElement(childTagEnum, parentTagEnum))
+      return PR_FALSE;
+  }
+*/
+  // else fall thru
+  return nsEditor::TagCanContainTag(aParentTag, aChildTag);
 }
 
 
@@ -5090,9 +5096,9 @@ nsHTMLEditor::IsVisTextNode( nsIDOMNode *aNode,
   *outIsEmptyNode = PR_TRUE;
   nsresult res = NS_OK;
 
-  nsCOMPtr<nsIContent> textContent = do_QueryInterface(aNode);
+  nsCOMPtr<nsITextContent> textContent = do_QueryInterface(aNode);
   // callers job to only call us with text nodes
-  if (!textContent || !textContent->IsNodeOfType(nsINode::eTEXT)) 
+  if (!textContent) 
     return NS_ERROR_NULL_POINTER;
   PRUint32 length = textContent->TextLength();
   if (aSafeToAskFrames)
@@ -5117,7 +5123,7 @@ nsHTMLEditor::IsVisTextNode( nsIDOMNode *aNode,
   }
   else if (length)
   {
-    if (textContent->TextIsOnlyWhitespace())
+    if (textContent->IsOnlyWhitespace())
     {
       nsWSRunObject wsRunObj(this, aNode, 0);
       nsCOMPtr<nsIDOMNode> visNode;
@@ -5180,8 +5186,8 @@ nsHTMLEditor::IsEmptyNodeImpl( nsIDOMNode *aNode,
   }
 
   // if it's not a text node (handled above) and it's not a container,
-  // then we don't call it empty (it's an <hr>, or <br>, etc).
-  // Also, if it's an anchor then don't treat it as empty - even though
+  // then we dont call it empty (it's an <hr>, or <br>, etc).
+  // Also, if it's an anchor then dont treat it as empty - even though
   // anchors are containers, named anchors are "empty" but we don't
   // want to treat them as such.  Also, don't call ListItems or table
   // cells empty if caller desires.  Form Widgets not empty.
@@ -5709,9 +5715,12 @@ nsHTMLEditor::GetElementOrigin(nsIDOMElement * aElement, PRInt32 & aX, PRInt32 &
   if (!ps) return NS_ERROR_NOT_INITIALIZED;
 
   nsCOMPtr<nsIContent> content = do_QueryInterface(aElement);
-  nsIFrame *frame = ps->GetPrimaryFrameFor(content); // not ref-counted
+  nsIFrame *frame = 0; // not ref-counted
+  ps->GetPrimaryFrameFor(content, &frame);
 
-  if (nsHTMLEditUtils::IsHR(aElement) && frame) {
+  float t2p = ps->GetPresContext()->TwipsToPixels();
+
+  if (nsHTMLEditUtils::IsHR(aElement)) {
     frame = frame->GetNextSibling();
   }
   PRInt32 offsetX = 0, offsetY = 0;
@@ -5729,8 +5738,8 @@ nsHTMLEditor::GetElementOrigin(nsIDOMElement * aElement, PRInt32 & aX, PRInt32 &
     frame = frame->GetParent();
   }
 
-  aX = nsPresContext::AppUnitsToIntCSSPixels(offsetX);
-  aY = nsPresContext::AppUnitsToIntCSSPixels(offsetY);
+  aX = NSTwipsToIntPixels(offsetX , t2p);
+  aY = NSTwipsToIntPixels(offsetY , t2p);
 
   return NS_OK;
 }

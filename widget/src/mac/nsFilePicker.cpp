@@ -56,6 +56,7 @@
 #include "nsCarbonHelpers.h"
 
 #include "nsFilePicker.h"
+
 #include "nsIInternetConfigService.h"
 #include "nsIMIMEInfo.h"
 
@@ -237,7 +238,8 @@ pascal void nsFilePicker::FileDialogEventHandlerProc(NavEventCallbackMessage msg
           WindowPtr window = reinterpret_cast<WindowPtr>(cbRec->eventData.eventDataParms.event->message);
           nsCOMPtr<nsIEventSink> sink;
           nsToolkit::GetWindowEventSink (window, getter_AddRefs(sink));
-          if (sink) {
+          if (sink)
+          {
             ::BeginUpdate(window);
             PRBool handled = PR_FALSE;
             sink->DispatchEvent(cbRec->eventData.eventDataParms.event, &handled);
@@ -264,8 +266,7 @@ pascal void nsFilePicker::FileDialogEventHandlerProc(NavEventCallbackMessage msg
           FSRef displayFSRef;
           if (NS_SUCCEEDED(localDisplay->GetFSRef(&displayFSRef))) {
             AEDesc desc;
-            OSErr status = ::AECreateDesc(typeFSRef, &displayFSRef,
-                                          sizeof(displayFSRef), &desc);
+            OSErr status = ::AECreateDesc(typeFSRef, &displayFSRef, sizeof(displayFSRef), &desc);
             if (status == noErr) {
               (void)::NavCustomControl(cbRec->context, kNavCtlSetLocation, &desc);
               (void)::AEDisposeDesc(&desc);
@@ -586,7 +587,7 @@ nsFilePicker::PutLocalFile(const nsString& inTitle, const nsString& inDefaultNam
   else
   {
     dialogCreateOptions.optionFlags &= ~kNavAllowStationery;  // remove Stationery option
-    creatorToSave = kNavGenericSignature;   // This suppresses the default format menu items
+    creatorToSave = kNavGenericSignature;   // This supresses the default format menu items
     SetupFormatMenuItems(&dialogCreateOptions);
   }
   

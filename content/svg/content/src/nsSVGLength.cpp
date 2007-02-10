@@ -39,7 +39,7 @@
 
 #include "nsSVGLength.h"
 #include "nsIDOMSVGMatrix.h"
-#include "nsGkAtoms.h"
+#include "nsSVGAtoms.h"
 #include "nsSVGValue.h"
 #include "nsTextFormatter.h"
 #include "prdtoa.h"
@@ -338,31 +338,31 @@ nsSVGLength::GetValueAsString(nsAString & aValueAsString)
     case SVG_LENGTHTYPE_NUMBER:
       return NS_OK;
     case SVG_LENGTHTYPE_PX:
-      UnitAtom = nsGkAtoms::px;
+      UnitAtom = nsSVGAtoms::px;
       break;
     case SVG_LENGTHTYPE_MM:
-      UnitAtom = nsGkAtoms::mm;
+      UnitAtom = nsSVGAtoms::mm;
       break;
     case SVG_LENGTHTYPE_CM:
-      UnitAtom = nsGkAtoms::cm;
+      UnitAtom = nsSVGAtoms::cm;
       break;
     case SVG_LENGTHTYPE_IN:
-      UnitAtom = nsGkAtoms::in;
+      UnitAtom = nsSVGAtoms::in;
       break;
     case SVG_LENGTHTYPE_PT:
-      UnitAtom = nsGkAtoms::pt;
+      UnitAtom = nsSVGAtoms::pt;
       break;
     case SVG_LENGTHTYPE_PC:
-      UnitAtom = nsGkAtoms::pc;
+      UnitAtom = nsSVGAtoms::pc;
       break;
     case SVG_LENGTHTYPE_EMS:
-      UnitAtom = nsGkAtoms::em;
+      UnitAtom = nsSVGAtoms::ems;
       break;
     case SVG_LENGTHTYPE_EXS:
-      UnitAtom = nsGkAtoms::ex;
+      UnitAtom = nsSVGAtoms::exs;
       break;
     case SVG_LENGTHTYPE_PERCENTAGE:
-      UnitAtom = nsGkAtoms::percentage;
+      UnitAtom = nsSVGAtoms::percentage;
       break;
     default:
       NS_NOTREACHED("Unknown unit");
@@ -398,23 +398,23 @@ nsSVGLength::SetValueAsString(const nsAString & aValueAsString)
       }
       else {
         nsCOMPtr<nsIAtom> unitAtom = do_GetAtom(unitStr);
-        if (unitAtom == nsGkAtoms::px)
+        if (unitAtom == nsSVGAtoms::px)
           unitType = SVG_LENGTHTYPE_PX;
-        else if (unitAtom == nsGkAtoms::mm)
+        else if (unitAtom == nsSVGAtoms::mm)
           unitType = SVG_LENGTHTYPE_MM;
-        else if (unitAtom == nsGkAtoms::cm)
+        else if (unitAtom == nsSVGAtoms::cm)
           unitType = SVG_LENGTHTYPE_CM;
-        else if (unitAtom == nsGkAtoms::in)
+        else if (unitAtom == nsSVGAtoms::in)
           unitType = SVG_LENGTHTYPE_IN;
-        else if (unitAtom == nsGkAtoms::pt)
+        else if (unitAtom == nsSVGAtoms::pt)
           unitType = SVG_LENGTHTYPE_PT;
-        else if (unitAtom == nsGkAtoms::pc)
+        else if (unitAtom == nsSVGAtoms::pc)
           unitType = SVG_LENGTHTYPE_PC;
-        else if (unitAtom == nsGkAtoms::em)
+        else if (unitAtom == nsSVGAtoms::ems)
           unitType = SVG_LENGTHTYPE_EMS;
-        else if (unitAtom == nsGkAtoms::ex)
+        else if (unitAtom == nsSVGAtoms::exs)
           unitType = SVG_LENGTHTYPE_EXS;
-        else if (unitAtom == nsGkAtoms::percentage)
+        else if (unitAtom == nsSVGAtoms::percentage)
           unitType = SVG_LENGTHTYPE_PERCENTAGE;
       }
       if (IsValidUnitType(unitType)){
@@ -483,6 +483,26 @@ nsSVGLength::ConvertToSpecifiedUnits(PRUint16 unitType)
   
   return NS_OK;
 }
+
+/* float getTransformedValue (in nsIDOMSVGMatrix matrix); */
+NS_IMETHODIMP
+nsSVGLength::GetTransformedValue(nsIDOMSVGMatrix *matrix,
+                                 float *_retval)
+{
+// XXX we don't have enough information here. is it the length part of
+// a coordinate pair (in which case it should transform like a point)
+// or is it used like a vector-component (in which case it doesn't
+// translate)
+
+  // maybe we should remove this method since it isn't part of the spec?
+  // if not, null check when implementing - this method can be used by scripts!
+  // if (!matrix)
+  //   return NS_ERROR_DOM_SVG_WRONG_TYPE_ERR;
+
+  NS_NOTYETIMPLEMENTED("nsSVGLength::GetTransformedValue");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 
 //----------------------------------------------------------------------
 // nsISVGLength methods:

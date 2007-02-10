@@ -35,11 +35,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* DOM object for element.style */
-
 #include "nsDOMCSSAttrDeclaration.h"
 #include "nsCSSDeclaration.h"
 #include "nsIDocument.h"
+#include "nsHTMLAtoms.h"
+#include "nsIStyledContent.h"
 #include "nsIDOMMutationEvent.h"
 #include "nsICSSStyleRule.h"
 #include "nsICSSLoader.h"
@@ -48,16 +48,15 @@
 #include "nsINameSpaceManager.h"
 #include "nsStyleConsts.h"
 #include "nsContentUtils.h"
-#include "nsIContent.h"
 
-nsDOMCSSAttributeDeclaration::nsDOMCSSAttributeDeclaration(nsIContent *aContent)
+MOZ_DECL_CTOR_COUNTER(nsDOMCSSAttributeDeclaration)
+
+nsDOMCSSAttributeDeclaration::nsDOMCSSAttributeDeclaration(nsIStyledContent *aContent)
 {
   MOZ_COUNT_CTOR(nsDOMCSSAttributeDeclaration);
 
   // This reference is not reference-counted. The content
   // object tells us when its about to go away.
-  NS_ASSERTION(aContent && aContent->IsNodeOfType(nsINode::eELEMENT),
-               "Inline style for non-element content?");
   mContent = aContent;
 }
 

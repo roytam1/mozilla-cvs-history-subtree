@@ -63,7 +63,6 @@
 
 // class definition headers
 #include "nsAppShell.h"
-#include "nsAppShellSingleton.h"
 #include "nsBidiKeyboard.h"
 #include "nsWindow.h"
 #include "nsDragService.h"
@@ -79,13 +78,6 @@
 #include "nsTransferable.h"
 #include "nsHTMLFormatConverter.h"
 
-#include "nsScreenManagerOS2.h"
-
-// Printing
-#include "nsDeviceContextSpecOS2.h"
-#include "nsPrintOptionsOS2.h"
-#include "nsPrintSession.h"
-
 #include "nsFrameWindow.h" // OS/2 only
 
 // objects that just require generic constructors
@@ -94,6 +86,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindow)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsClipboard)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsClipboardHelper)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFilePicker)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsAppShell)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFrameWindow)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsLookAndFeel)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSound)
@@ -101,12 +94,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsToolkit)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTransferable)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsHTMLFormatConverter)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDragService)
-
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsDeviceContextSpecOS2)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPrintOptionsOS2, Init)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsPrinterEnumeratorOS2)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPrintSession, Init)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsScreenManagerOS2)
 
 // component definition, will be exported using XPCOM
 static const nsModuleComponentInfo components[] =
@@ -162,30 +149,7 @@ static const nsModuleComponentInfo components[] =
   { "OS/2 HTML Format Converter",
     NS_HTMLFORMATCONVERTER_CID,
     "@mozilla.org/widget/htmlformatconverter;1",
-    nsHTMLFormatConverterConstructor },
-  { "nsScreenManagerWin",
-    NS_SCREENMANAGER_CID,
-    "@mozilla.org/gfx/screenmanager;1",
-    nsScreenManagerOS2Constructor },
-  { "OS/2 Device Context Spec",
-    NS_DEVICE_CONTEXT_SPEC_CID,
-    //    "@mozilla.org/gfx/device_context_spec/gtk;1",
-    "@mozilla.org/gfx/devicecontextspec;1",
-    nsDeviceContextSpecOS2Constructor },
-  { "PrintSettings Service",
-    NS_PRINTSETTINGSSERVICE_CID,
-    //    "@mozilla.org/gfx/printsettings-service;1",
-    "@mozilla.org/gfx/printsettings-service;1",
-    nsPrintOptionsOS2Constructor },
-  { "Print Session",
-    NS_PRINTSESSION_CID,
-    "@mozilla.org/gfx/printsession;1",
-    nsPrintSessionConstructor },
-  { "OS/2 Printer Enumerator",
-    NS_PRINTER_ENUMERATOR_CID,
-    //    "@mozilla.org/gfx/printer_enumerator/gtk;1",
-    "@mozilla.org/gfx/printerenumerator;1",
-    nsPrinterEnumeratorOS2Constructor },
+    nsHTMLFormatConverterConstructor }
 };
 
 PR_STATIC_CALLBACK(void)
@@ -193,10 +157,8 @@ nsWidgetOS2ModuleDtor(nsIModule *self)
 {
   nsWindow::ReleaseGlobals();
   nsFilePicker::ReleaseGlobals();
-  nsAppShellShutdown(self);
 }
 
-NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(nsWidgetOS2Module,
-                                   components,
-                                   nsAppShellInit,
-                                   nsWidgetOS2ModuleDtor)
+NS_IMPL_NSGETMODULE_WITH_DTOR(nsWidgetOS2Module,
+                              components,
+                              nsWidgetOS2ModuleDtor)

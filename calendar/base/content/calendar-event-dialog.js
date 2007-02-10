@@ -51,7 +51,6 @@ function onLoad()
 
     window.onAcceptCallback = args.onOk;
     window.calendarItem = args.calendarEvent;
-    window.originalItem = args.calendarEvent;
     window.mode = args.mode;
     window.recurrenceInfo = null;
 
@@ -109,7 +108,7 @@ function onAccept()
 
     var calendar = document.getElementById("item-calendar").selectedItem.calendar;
 
-    window.onAcceptCallback(item, calendar, window.originalItem);
+    window.onAcceptCallback(item, calendar, originalItem);
 
     // We already set persist="collapsed" in the xul file, but because
     // of a bug on 1_8_BRANCH we need this to make it really persist.
@@ -460,55 +459,9 @@ function updateTitle()
     }
 }
 
-function updateComponentType(aValue) {
-    if ((aValue == "event" && isEvent(window.calendarItem)) ||
-        (aValue == "todo" && isToDo(window.calendarItem))) {
-        return;
-    }
-    var oldItem = window.calendarItem.clone();
-    saveDialog(oldItem);
-
-    var newItem;
-    if (aValue == "event") {
-        newItem = createEvent();
-        oldItem.wrappedJSObject.cloneItemBaseInto(newItem.wrappedJSObject);
-        newItem.startDate = oldItem.entryDate || now();
-        newItem.endDate = oldItem.dueDate || now();
-    } else {
-        newItem = createToDo();
-        oldItem.wrappedJSObject.cloneItemBaseInto(newItem.wrappedJSObject);
-        newItem.entryDate = oldItem.startDate;
-        newItem.dueDate = oldItem.endDate;
-    }
-    window.calendarItem = newItem;
-
-    loadDialog(newItem);
-
-    // remove old style rule, so the hidden stuff comes back
-    const kDialogStylesheet = "chrome://calendar/content/calendar-event-dialog.css";
-
-    for each(var stylesheet in document.styleSheets) {
-        if (stylesheet.href != kDialogStylesheet) {
-            continue;
-        }
-        for (var i=0; i < stylesheet.cssRules.length; i++) {
-            if (stylesheet.cssRules[i].selectorText == ".todo-only" ||
-                stylesheet.cssRules[i].selectorText == ".event-only") {
-                stylesheet.deleteRule(i);
-                break;
-            } 
-        }
-        break;
-    }
-
-    updateStyle();
-    updateAccept();
-    updateDueDate();
-    updateEntryDate();
-    updateAllDay();
-    updateRecurrence();
-
-    window.sizeToContent();
+function updateComponentType() {
+    //XXX We still can't properly convert from event <-> task via QI
+    return;
 }
 
 function updateStyle()
@@ -730,17 +683,6 @@ function updateAllDay()
     var allDay = getElementValue("event-all-day", "checked");
     setElementValue("event-starttime", allDay, "timepickerdisabled");
     setElementValue("event-endtime", allDay, "timepickerdisabled");
-
-    if (!allDay) {
-        // Reset default event length, if timepickers are equal
-        var startDate = jsDateToDateTime(getElementValue("event-starttime"));
-        var endDate = jsDateToDateTime(getElementValue("event-endtime"));
-        if (startDate.compare(endDate) == 0) {
-            endDate.minute += getPrefSafe("calendar.event.defaultlength", 60);
-            endDate.normalize();
-            setElementValue("event-endtime", endDate.jsDate);
-        }
-    }
 
     updateAccept();
 }
@@ -1165,13 +1107,3 @@ var gCategoriesPane = {
         catList.selectedIndex = index;
     }
 };
-
-// Make sure that an AUS update triggered restart doesn't automatically nuke
-// what the user is working on
-window.tryToClose = function calItemDialogAttemptClose() {
-    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
-                                  .getService(Components.interfaces.nsIPromptService);
-    return promptService.confirm(window,
-                                 calGetString("calendar", "confirmCloseTitle"),
-                                 calGetString("calendar", "confirmCloseText"));
-}

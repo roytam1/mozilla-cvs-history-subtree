@@ -76,8 +76,7 @@ scrollbarbutton {
 }
 
 thumb:active,
-scrollbarbutton:hover:active, 
-scrollbarbutton[active="true"] {
+scrollbarbutton:hover:active {
   -moz-border-top-colors: ThreeDDarkShadow ThreeDShadow;
   -moz-border-right-colors: ThreeDHighlight ThreeDHighlight;
   -moz-border-bottom-colors: ThreeDHighlight ThreeDHighlight;
@@ -184,8 +183,7 @@ scrollbar[orient="vertical"] > scrollbarbutton[type="decrement"][disabled="true"
   }
   
   html|div thumb:hover:active,
-  html|div scrollbarbutton:hover:active, 
-  html|div scrollbarbutton[active="true"] {
+  html|div scrollbarbutton:hover:active {
     -moz-border-top-colors: ThreeDDarkShadow ThreeDShadow;
     -moz-border-right-colors: ThreeDHighlight ThreeDHighlight;
     -moz-border-bottom-colors: ThreeDHighlight ThreeDHighlight;

@@ -15,7 +15,8 @@
 
 <!ENTITY  updatesfound.title              "Update Available">
 
-<!ENTITY  incompatibleChecking.label      "Checking if this update will cause problems with your extensions and/or themes...">
+<!ENTITY  moreDetails.label               "More Details &#0187;">
+<!ENTITY  moreDetails.accesskey           "M">
 <!ENTITY  clickHere.label                 "View more information about this update">
 
 <!ENTITY  incompatible.warning            "This update will cause some of your extensions and/or themes 

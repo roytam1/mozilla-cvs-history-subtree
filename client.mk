@@ -44,18 +44,17 @@
 #    1. cvs co mozilla/client.mk
 #    2. cd mozilla
 #    3. create your .mozconfig file with
-#       mk_add_options MOZ_CO_PROJECT=
-#         suite,browser
+#       mk_add_options MOZ_CO_PROJECT=suite,browser,mail,minimo,xulrunner
 #    4. gmake -f client.mk 
 #
 # This script will pick up the CVSROOT from the CVS/Root file. If you wish
 # to use a different CVSROOT, you must set CVSROOT in your environment:
 #
-#   export CVSROOT=:pserver:anonymous:anonymous@cvs-mirror.mozilla.org:/cvsroot
+#   export CVSROOT=:pserver:anonymous@cvs-mirror.mozilla.org:/cvsroot
 #   export CVSROOT=:pserver:username%somedomain.org@cvs.mozilla.org:/cvsroot
 # 
 # You must specify which products/modules you wish to checkout, with
-#   MOZ_CO_PROJECT and MOZ_CO_MODULE variables.
+#   MOZ_CO_PROJECT, MOZ_CO_MODULE, and BUILD_MODULES variables.
 #
 #   MOZ_CO_PROJECT possibilities include the following:
 #     suite (Seamonkey suite)
@@ -65,8 +64,7 @@
 #     composer (standalone composer, aka NVU)
 #     calendar (aka Sunbird, use this to build the calendar extensions also)
 #     xulrunner
-#     camino
-#     tamarin
+#     macbrowser (aka Camino)
 #
 # Other common MOZ_CO_MODULE options include the following:
 #   mozilla/other-licenses/libart_lgpl
@@ -113,112 +111,30 @@ AVAILABLE_PROJECTS = \
   composer \
   calendar \
   xulrunner \
-  camino \
-  necko \
-  tamarin \
-  $(NULL)
-
-# Trailing / on top-level mozilla dir required to stop fast-update thinking
-# it is a module name.
-MODULES_NS_necko :=                             \
-  mozilla/                                      \
-  $(NULL)
-
-MODULES_necko :=                                \
-  mozilla/README                                \
-  mozilla/config                                \
-  mozilla/build                                 \
-  mozilla/intl                                  \
-  mozilla/modules/libpref                       \
-  mozilla/modules/zlib                          \
-  mozilla/netwerk                               \
-  mozilla/xpcom                                 \
-  mozilla/tools/test-harness                    \
-  $(NULL)
-
-MODULES_NS_core :=                              \
-  $(MODULES_NS_necko)                           \
-  mozilla/js                                    \
-  mozilla/js/src                                \
-  mozilla/js/jsd                                \
-  mozilla/db                                    \
+  macbrowser \
   $(NULL)
 
 MODULES_core :=                                 \
-  $(MODULES_necko)                              \
-  mozilla/caps                                  \
-  mozilla/content                               \
-  mozilla/db/mdb                                \
-  mozilla/db/mork                               \
-  mozilla/docshell                              \
-  mozilla/dom                                   \
-  mozilla/editor                                \
-  mozilla/embedding                             \
-  mozilla/extensions                            \
-  mozilla/gfx                                   \
-  mozilla/parser                                \
-  mozilla/layout                                \
-  mozilla/jpeg                                  \
-  mozilla/js/src/fdlibm                         \
-  mozilla/js/src/liveconnect                    \
-  mozilla/js/src/xpconnect                      \
-  mozilla/js/jsd/idl                            \
-  mozilla/modules/libimg                        \
-  mozilla/modules/libjar                        \
-  mozilla/modules/libpr0n                       \
-  mozilla/modules/libreg                        \
-  mozilla/modules/libutil                       \
-  mozilla/modules/oji                           \
-  mozilla/modules/plugin                        \
-  mozilla/modules/staticmod                     \
-  mozilla/plugin/oji                            \
-  mozilla/profile                               \
-  mozilla/rdf                                   \
-  mozilla/security/manager                      \
-  mozilla/sun-java                              \
+  SeaMonkeyAll                                  \
+  mozilla/browser/config/version.txt            \
+  mozilla/mail/config/version.txt               \
+  mozilla/calendar/sunbird/config/version.txt   \
   mozilla/ipc/ipcd                              \
   mozilla/modules/libpr0n                       \
   mozilla/modules/libmar                        \
   mozilla/modules/libbz2                        \
   mozilla/accessible                            \
-  mozilla/other-licenses/atk-1.0                \
   mozilla/security/manager                      \
-  mozilla/tools/elf-dynstr-gc                   \
-  mozilla/uriloader                             \
-  mozilla/view                                  \
-  mozilla/webshell                              \
-  mozilla/widget                                \
-  mozilla/xpfe                                  \
-  mozilla/xpinstall                             \
   mozilla/toolkit                               \
   mozilla/storage                               \
   mozilla/db/sqlite3                            \
   mozilla/db/morkreader                         \
-  mozilla/testing/mochitest                     \
-  $(NULL)
-
-LOCALES_necko :=                                \
-  netwerk                                       \
+  mozilla/tools/test-harness                    \
   $(NULL)
 
 LOCALES_core :=                                 \
-  $(LOCALES_necko)                              \
+  netwerk                                       \
   dom                                           \
-  $(NULL)
-
-BOOTSTRAP_necko :=                              \
-  mozilla/browser/config/version.txt            \
-  mozilla/mail/config/version.txt               \
-  mozilla/calendar/sunbird/config/version.txt   \
-  mozilla/suite/config/version.txt              \
-  $(NULL)
-
-BOOTSTRAP_core :=                               \
-  $(BOOTSTRAP_necko)                            \
-  $(NULL)
-
-MODULES_NS_toolkit :=                           \
-  $(MODULES_NS_core)                            \
   $(NULL)
 
 MODULES_toolkit :=                              \
@@ -232,35 +148,13 @@ LOCALES_toolkit :=                              \
   security/manager                              \
   $(NULL)
 
-BOOTSTRAP_toolkit :=                            \
-  $(BOOTSTRAP_core)                             \
-  $(NULL)
-
-MODULES_NS_suite :=                             \
-  $(MODULES_NS_toolkit)                         \
-  $(NULL)
-
 MODULES_suite :=                                \
-  $(MODULES_toolkit)                            \
-  mozilla/directory/xpcom                       \
-  mozilla/mailnews                              \
-  mozilla/themes                                \
+  $(MODULES_core)                               \
   mozilla/suite                                 \
   $(NULL)
 
 LOCALES_suite :=                                \
-  $(LOCALES_toolkit)                            \
-  suite                                         \
-  editor/ui                                     \
-  extensions/reporter                           \
-  $(NULL)
-
-BOOTSTRAP_suite :=                              \
-  $(BOOTSTRAP_toolkit)                          \
-  $(NULL)
-
-MODULES_NS_browser :=                           \
-  $(MODULES_NS_toolkit)                         \
+  $(LOCALES_core)                               \
   $(NULL)
 
 MODULES_browser :=                              \
@@ -278,32 +172,20 @@ LOCALES_browser :=                              \
   other-licenses/branding/firefox               \
   $(NULL)
 
-BOOTSTRAP_browser :=                            \
-  $(BOOTSTRAP_toolkit)                          \
-  mozilla/browser/config/mozconfig              \
-  $(NULL)
-
-MODULES_NS_minimo :=                            \
-  $(MODULES_NS_toolkit)                         \
-  $(NULL)
+BOOTSTRAP_browser := mozilla/browser/config/mozconfig
 
 MODULES_minimo :=                               \
   $(MODULES_toolkit)                            \
   mozilla/minimo                                \
   $(NULL)
 
-BOOTSTRAP_minimo :=                             \
-  $(BOOTSTRAP_toolkit)                          \
-  $(NULL)
-
-MODULES_NS_mail :=                              \
-  $(MODULES_NS_toolkit)                         \
+LOCALES_minimo :=                               \
+  $(LOCALES_toolkit)                            \
+  minimo                                        \
   $(NULL)
 
 MODULES_mail :=                                 \
   $(MODULES_toolkit)                            \
-  mozilla/directory/xpcom                       \
-  mozilla/mailnews                              \
   mozilla/mail                                  \
   mozilla/other-licenses/branding/thunderbird   \
   mozilla/other-licenses/7zstub/thunderbird     \
@@ -317,18 +199,11 @@ LOCALES_mail :=                                 \
   extensions/spellcheck                         \
   $(NULL)
 
-BOOTSTRAP_mail :=                               \
-  $(BOOTSTRAP_toolkit)                          \
-  mozilla/mail/config/mozconfig                 \
-  $(NULL)
+BOOTSTRAP_mail := mozilla/mail/config/mozconfig
 
 MODULES_composer :=                             \
   $(MODULES_toolkit)                            \
   mozilla/composer                              \
-  $(NULL)
-
-MODULES_NS_calendar :=                          \
-  $(MODULES_NS_toolkit)                         \
   $(NULL)
 
 MODULES_calendar :=                             \
@@ -346,14 +221,7 @@ LOCALES_calendar :=                             \
   other-licenses/branding/sunbird               \
   $(NULL)
 
-BOOTSTRAP_calendar :=                           \
-  $(BOOTSTRAP_toolkit)                          \
-  mozilla/calendar/sunbird/config/mozconfig     \
-  $(NULL)
-
-MODULES_NS_xulrunner :=                         \
-  $(MODULES_NS_toolkit)                         \
-  $(NULL)
+BOOTSTRAP_calendar := mozilla/calendar/sunbird/config/mozconfig
 
 MODULES_xulrunner :=                            \
   $(MODULES_toolkit)                            \
@@ -364,30 +232,14 @@ LOCALES_xulrunner :=                            \
   $(LOCALES_toolkit)                            \
   $(NULL)
 
-BOOTSTRAP_xulrunner :=                          \
-  $(BOOTSTRAP_toolkit)                          \
-  mozilla/xulrunner/config/mozconfig            \
-  $(NULL)
+BOOTSTRAP_xulrunner := mozilla/xulrunner/config/mozconfig
 
-MODULES_NS_camino :=                            \
-  $(MODULES_NS_toolkit)                         \
-  $(NULL)
-
-MODULES_camino :=                               \
+MODULES_macbrowser :=                           \
   $(MODULES_core)                               \
   mozilla/camino                                \
-  mozilla/themes                                \
   $(NULL)
 
-BOOTSTRAP_camino :=                             \
-  $(BOOTSTRAP_toolkit)                          \
-  mozilla/camino/config/mozconfig               \
-  $(NULL)
-
-MODULES_tamarin :=                              \
-  mozilla/js/tamarin                            \
-  mozilla/modules/zlib                          \
-  $(NULL)
+BOOTSTRAP_macbrowser := mozilla/camino/config/mozconfig
 
 MODULES_all :=                                  \
   mozilla/other-licenses/bsdiff                 \
@@ -396,6 +248,8 @@ MODULES_all :=                                  \
   mozilla/tools/jprof                           \
   mozilla/tools/codesighs                       \
   mozilla/tools/update-packaging                \
+  mozilla/other-licenses/branding               \
+  mozilla/other-licenses/7zstub                 \
   $(NULL)
 
 #######################################################################
@@ -403,11 +257,13 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG          = <tag>
-NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
+MOZ_CO_TAG           = LIGHTNING_0_3_BRANCH
+NSPR_CO_TAG          = NSPR_4_6_5_RTM
 NSS_CO_TAG           = NSS_3_11_5_RTM
-LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
-LOCALES_CO_TAG       =
+LDAPCSDK_CO_TAG      = LIGHTNING_0_3_BRANCH
+LOCALES_CO_TAG       = LIGHTNING_0_3_BRANCH
+
+BUILD_MODULES = all
 
 #######################################################################
 # Defines
@@ -416,9 +272,6 @@ CVS = cvs
 comma := ,
 
 CWD := $(shell pwd)
-ifneq (1,$(words $(CWD)))
-$(error The mozilla directory cannot be located in a path with spaces.)
-endif
 
 ifeq "$(CWD)" "/"
 CWD   := /.
@@ -464,18 +317,6 @@ else
 endif
 
 ####################################
-# Sanity checks
-
-ifneq (,$(filter MINGW%,$(shell uname -s)))
-# check for CRLF line endings
-ifneq (0,$(shell $(PERL) -e 'binmode(STDIN); while (<STDIN>) { if (/\r/) { print "1"; exit } } print "0"' < $(TOPSRCDIR)/client.mk))
-$(error This source tree appears to have Windows-style line endings. To \
-convert it to Unix-style line endings, run \
-"python mozilla/build/win32/mozilla-dos2unix.py")
-endif
-endif
-
-####################################
 # CVS
 
 # Add the CVS root to CVS_FLAGS if needed
@@ -497,7 +338,7 @@ CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 
 # if LOCALES_CVSROOT is not specified, set it here
 # (and let mozconfig override it)
-LOCALES_CVSROOT ?= :pserver:anonymous:anonymous@cvs-mirror.mozilla.org:/l10n
+LOCALES_CVSROOT ?= :pserver:anonymous@cvs-mirror.mozilla.org:/l10n
 
 ####################################
 # Load mozconfig Options
@@ -521,7 +362,6 @@ include $(TOPSRCDIR)/build/unix/modules.mk
 # Options that may come from mozconfig
 
 MOZ_PROJECT_LIST := $(subst $(comma), ,$(MOZ_CO_PROJECT))
-MOZ_PROJECT_LIST := $(subst macbrowser,camino,$(MOZ_PROJECT_LIST))
 
 ifneq (,$(filter-out $(AVAILABLE_PROJECTS),$(MOZ_PROJECT_LIST)))
 $(error MOZ_CO_PROJECT contains an unrecognized project.)
@@ -532,7 +372,6 @@ ifeq (all,$(filter all,$(MOZ_PROJECT_LIST)))
 endif
 
 MOZ_MODULE_LIST := $(subst $(comma), ,$(MOZ_CO_MODULE)) $(foreach project,$(MOZ_PROJECT_LIST),$(MODULES_$(project)))
-MOZ_MODULE_LIST_NS := $(foreach project,$(MOZ_PROJECT_LIST),$(MODULES_NS_$(project)))
 LOCALE_DIRS := $(MOZ_LOCALE_DIRS) $(foreach project,$(MOZ_PROJECT_LIST),$(LOCALES_$(project)))
 
 MOZCONFIG_MODULES += $(foreach project,$(MOZ_PROJECT_LIST),$(BOOTSTRAP_$(project)))
@@ -544,7 +383,7 @@ MOZCONFIG_MODULES := $(sort $(MOZCONFIG_MODULES))
 
 # Change CVS flags if anonymous root is requested
 ifdef MOZ_CO_USE_MIRROR
-  CVS_FLAGS := -d :pserver:anonymous:anonymous@cvs-mirror.mozilla.org:/cvsroot
+  CVS_FLAGS := -d :pserver:anonymous@cvs-mirror.mozilla.org:/cvsroot
 endif
 
 # MOZ_CVS_FLAGS - Basic CVS flags
@@ -584,10 +423,8 @@ endif # MOZ_BUILD_PROJECTS
 # CVS defines for NSS
 #
 NSS_CO_MODULE =               \
-		mozilla/dbm               \
 		mozilla/security/nss      \
 		mozilla/security/coreconf \
-		mozilla/security/dbm      \
 		$(NULL)
 
 NSS_CO_FLAGS := -P
@@ -596,11 +433,11 @@ ifdef MOZ_CO_FLAGS
 endif
 NSS_CO_FLAGS := $(NSS_CO_FLAGS) $(if $(NSS_CO_TAG),-r $(NSS_CO_TAG),-A)
 
-# Can only pull the tip or branch tags by date
-ifeq (,$(filter-out HEAD %BRANCH,$(NSS_CO_TAG)))
-CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSS_CO_MODULE)
-else
+# Cannot pull static tags by date
+ifeq ($(NSS_CO_TAG),NSS_CLIENT_TAG)
 CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(NSS_CO_MODULE)
+else
+CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSS_CO_MODULE)
 endif
 
 ####################################
@@ -613,11 +450,11 @@ ifdef MOZ_CO_FLAGS
 endif
 NSPR_CO_FLAGS := $(NSPR_CO_FLAGS) $(if $(NSPR_CO_TAG),-r $(NSPR_CO_TAG),-A)
 
-# Can only pull the tip or branch tags by date
-ifeq (,$(filter-out HEAD %BRANCH,$(NSPR_CO_TAG)))
-CVSCO_NSPR = $(CVS) $(CVS_FLAGS) co $(NSPR_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSPR_CO_MODULE)
-else
+# Cannot pull static tags by date
+ifeq ($(NSPR_CO_TAG),NSPRPUB_CLIENT_TAG)
 CVSCO_NSPR = $(CVS) $(CVS_FLAGS) co $(NSPR_CO_FLAGS) $(NSPR_CO_MODULE)
+else
+CVSCO_NSPR = $(CVS) $(CVS_FLAGS) co $(NSPR_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSPR_CO_MODULE)
 endif
 
 ####################################
@@ -630,6 +467,31 @@ ifdef MOZ_CO_FLAGS
 endif
 LDAPCSDK_CO_FLAGS := $(LDAPCSDK_CO_FLAGS) $(if $(LDAPCSDK_CO_TAG),-r $(LDAPCSDK_CO_TAG),-A)
 CVSCO_LDAPCSDK = $(CVS) $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(LDAPCSDK_CO_MODULE)
+
+####################################
+# CVS defines for standalone modules
+#
+ifeq ($(BUILD_MODULES),all)
+  CHECKOUT_STANDALONE := true
+  CHECKOUT_STANDALONE_NOSUBDIRS := true
+else
+  STANDALONE_CO_MODULE := $(filter-out $(NSPRPUB_DIR) security directory/c-sdk, $(BUILD_MODULE_CVS))
+  STANDALONE_CO_MODULE += allmakefiles.sh client.mk aclocal.m4 configure configure.in
+  STANDALONE_CO_MODULE += Makefile.in
+
+	MOZ_MODULE_LIST += $(addprefix mozilla/,$(STANDALONE_CO_MODULE))
+  NOSUBDIRS_MODULE := $(addprefix mozilla/,$(BUILD_MODULE_CVS_NS))
+
+ifeq (,$(filter $(NSPRPUB_DIR), $(BUILD_MODULE_CVS))$(MOZ_CO_PROJECT))
+  CVSCO_NSPR :=
+endif
+ifeq (,$(filter security security/manager, $(BUILD_MODULE_CVS))$(MOZ_CO_PROJECT))
+  CVSCO_NSS :=
+endif
+ifeq (,$(filter directory/c-sdk, $(BUILD_MODULE_CVS))$(MOZ_CO_PROJECT))
+  CVSCO_LDAPCSDK :=
+endif
+endif
 
 ####################################
 # Error on obsolete variables.
@@ -657,23 +519,11 @@ endif
 # Checkout main modules
 #
 
-# sort is used to remove duplicates.
-MOZ_MODULE_LIST := $(sort $(MOZ_MODULE_LIST))
-MOZ_MODULE_LIST_NS := $(sort $(MOZ_MODULE_LIST_NS))
-
-####################################
-# Suppress standalone modules if they're not needed.
-#
-ifeq (,$(filter mozilla/xpcom,$(MOZ_MODULE_LIST)))
-  CVSCO_NSPR :=
-endif
-
-ifeq (,$(filter mozilla/security/manager,$(MOZ_MODULE_LIST)))
-  CVSCO_NSS :=
-endif
-ifeq (,$(filter mozilla/directory/xpcom,$(MOZ_MODULE_LIST)))
-  CVSCO_LDAPCSDK :=
-endif
+# sort is used to remove duplicates.  SeaMonkeyAll is special-cased to
+# checkout last, because if you check it out first, there is a sticky
+# tag left over from checking out the LDAP SDK, which causes files in
+# the root directory to be missed.
+MOZ_MODULE_LIST := $(sort $(filter-out SeaMonkeyAll,$(MOZ_MODULE_LIST))) $(firstword $(filter SeaMonkeyAll,$(MOZ_MODULE_LIST)))
 
 MODULES_CO_FLAGS := -P
 ifdef MOZ_CO_FLAGS
@@ -681,16 +531,16 @@ ifdef MOZ_CO_FLAGS
 endif
 MODULES_CO_FLAGS := $(MODULES_CO_FLAGS) $(if $(MOZ_CO_TAG),-r $(MOZ_CO_TAG),-A)
 
-CVSCO_MODULES_NS = $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) -l $(MOZ_MODULE_LIST_NS)
+CVSCO_MODULES_NS = $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) -l $(NOSUBDIRS_MODULE)
 
 ifeq (,$(strip $(MOZ_MODULE_LIST)))
 FASTUPDATE_MODULES = $(error No modules or projects were specified. Use MOZ_CO_PROJECT to specify a project for checkout.)
 CHECKOUT_MODULES   = $(error No modules or projects were specified. Use MOZ_CO_PROJECT to specify a project for checkout.)
 else
 FASTUPDATE_MODULES := fast_update $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(MOZ_MODULE_LIST)
-CHECKOUT_MODULES   := cvs_co $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(MOZ_MODULE_LIST);
+CHECKOUT_MODULES   := $(foreach module,$(MOZ_MODULE_LIST),cvs_co $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(module);)
 endif
-ifeq (,$(MOZ_MODULE_LIST_NS))
+ifeq (,$(NOSUBDIRS_MODULE))
 FASTUPDATE_MODULES_NS := true
 CHECKOUT_MODULES_NS   := true
 else
@@ -788,13 +638,12 @@ real_checkout:
 	cvs_co $(CVSCO_NSPR); \
 	cvs_co $(CVSCO_NSS); \
 	cvs_co $(CVSCO_LDAPCSDK); \
-	$(CHECKOUT_MODULES_NS); \
 	$(CHECKOUT_MODULES) \
+	$(CHECKOUT_MODULES_NS); \
 	$(CHECKOUT_LOCALES);
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
-# update the NSS checkout timestamp, if we checked PSM out
-	@if test -d $(TOPSRCDIR)/security/manager -a \
-		 `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
+# update the NSS checkout timestamp
+	@if test `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
 		touch $(TOPSRCDIR)/security/manager/.nss.checkout; \
 	fi
 #	@: Check the log for conflicts. ;

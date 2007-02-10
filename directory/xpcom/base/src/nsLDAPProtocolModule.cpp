@@ -38,8 +38,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIClassInfoImpl.h"
-
 #include "nsLDAPInternal.h"
 #include "nsLDAPURL.h"
 #include "nsIGenericFactory.h"

@@ -44,22 +44,14 @@ nsTemplateMatch::nsTemplateMatch(const nsTemplateMatch& aMatch) {}
 void nsTemplateMatch::operator=(const nsTemplateMatch& aMatch) {}
 #endif
 
-nsresult
-nsTemplateMatch::RuleMatched(nsTemplateQuerySet* aQuerySet,
-                             nsTemplateRule* aRule,
-                             PRInt16 aRuleIndex,
-                             nsIXULTemplateResult* aResult)
+PRBool
+nsTemplateMatch::GetAssignmentFor(nsConflictSet& aConflictSet, PRInt32 aVariable, Value* aValue)
 {
-    // assign the rule index, used to indicate that a match is active, and
-    // so the tree builder can get the right action body to generate
-    mRuleIndex = aRuleIndex;
-
-    nsCOMPtr<nsIDOMNode> rulenode;
-    aRule->GetRuleNode(getter_AddRefs(rulenode));
-    if (rulenode) {
-        nsCOMPtr<nsIDOMNode> querynode = do_QueryInterface(aQuerySet->mQueryNode);
-        return aResult->RuleMatched(querynode, rulenode);
+    if (mAssignments.GetAssignmentFor(aVariable, aValue)) {
+        return PR_TRUE;
     }
-
-    return NS_OK;
+    else {
+        return mRule->ComputeAssignmentFor(aConflictSet, this, aVariable, aValue);
+    }
 }
+

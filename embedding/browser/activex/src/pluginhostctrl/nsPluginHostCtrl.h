@@ -19,7 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Adam Lock <adamlock@eircom.net> 
+ *   Adam Lock <adamlock@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,15 +43,119 @@
 #include "resource.h"       // main symbols
 #include <atlctl.h>
 
-#include "nsPluginHostWnd.h"
 #include "nsPluginWnd.h"
+
+class nsURLDataCallback;
+
+template <class Entry>
+class nsSimpleArray
+{
+    Entry *m_pData;
+    unsigned long m_nSize;
+    unsigned long m_nMaxSize;
+    unsigned long m_nExpandArrayBy;
+public:
+    nsSimpleArray(unsigned long nExpandArrayBy = 10) :
+      m_pData(NULL),
+      m_nSize(0),
+      m_nMaxSize(0),
+      m_nExpandArrayBy(nExpandArrayBy)
+    {
+    }
+    
+    virtual ~nsSimpleArray()
+    {
+        Empty();
+    }
+
+    Entry ElementAt(unsigned long aIndex) const
+    {
+        ATLASSERT(aIndex < m_nSize);
+        return m_pData[aIndex];
+    }
+
+    Entry operator[](unsigned long aIndex) const
+    {
+        return ElementAt(aIndex);
+    }
+
+    void AppendElement(Entry entry)
+    {
+        if (!m_pData)
+        {
+            m_nMaxSize = m_nExpandArrayBy;
+            m_pData = (Entry *) malloc(sizeof(Entry) * m_nMaxSize);
+        }
+        else if (m_nSize == m_nMaxSize)
+        {
+            m_nMaxSize += m_nExpandArrayBy;
+            m_pData = (Entry *) realloc(m_pData, sizeof(Entry) * m_nMaxSize);
+        }
+        ATLASSERT(m_pData);
+        if (m_pData)
+        {
+            m_pData[m_nSize++] = entry;
+        }
+    }
+
+    void RemoveElementAt(unsigned long nIndex)
+    {
+        ATLASSERT(aIndex < m_nSize);
+        if (nIndex < m_nSize)
+        {
+            m_nSize--;
+            if (m_nSize > 0)
+            {
+                m_pData[nIndex] = m_pData[m_nSize - 1];
+                m_nSize--;
+            }
+        }
+    }
+
+    void RemoveElement(Entry entry)
+    {
+        unsigned long i = 0;
+        while (i < m_nSize)
+        {
+            if (m_pData[i] == entry)
+            {
+                m_nSize--;
+                if (m_nSize > 0)
+                {
+                    m_pData[i] = m_pData[m_nSize - 1];
+                    m_nSize--;
+                }
+                continue;
+            }
+            i++;
+        }
+    }
+
+    void Empty()
+    {
+        if (m_pData)
+        {
+            free(m_pData);
+            m_pData = NULL;
+            m_nSize = m_nMaxSize = 0;
+        }
+    }
+    BOOL IsEmpty() const { return m_nSize == 0 ? TRUE : FALSE; }
+    unsigned long Count() const { return m_nSize; }
+};
+
+
+#define PLUGINS_FROM_IE       0x1
+#define PLUGINS_FROM_NS4X     0x2
+#define PLUGINS_FROM_NS6X     0x4
+#define PLUGINS_FROM_MOZILLA  0x8
 
 /////////////////////////////////////////////////////////////////////////////
 // nsPluginHostCtrl
 class ATL_NO_VTABLE nsPluginHostCtrl : 
 	public CComObjectRootEx<CComSingleThreadModel>,
 	public CStockPropImpl<nsPluginHostCtrl, IMozPluginHostCtrl, &IID_IMozPluginHostCtrl, &LIBID_PLUGINHOSTCTRLLib>,
-	public CComControl<nsPluginHostCtrl, nsPluginHostWnd>,
+	public CComControl<nsPluginHostCtrl>,
 	public IPersistStreamInitImpl<nsPluginHostCtrl>,
 	public IOleControlImpl<nsPluginHostCtrl>,
 	public IOleObjectImpl<nsPluginHostCtrl>,
@@ -122,8 +226,12 @@ BEGIN_CONNECTION_POINT_MAP(nsPluginHostCtrl)
 	CONNECTION_POINT_ENTRY(IID_IPropertyNotifySink)
 END_CONNECTION_POINT_MAP()
 
-BEGIN_MSG_MAP(nsPluginHostWnd)
-	CHAIN_MSG_MAP(nsPluginHostWnd)
+BEGIN_MSG_MAP(nsPluginHostCtrl)
+	MESSAGE_HANDLER(WM_CREATE, OnCreate)
+	MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
+	MESSAGE_HANDLER(WM_SIZE, OnSize)
+	MESSAGE_HANDLER(WM_PAINT, OnPaint)
+	CHAIN_MSG_MAP(CComControl<nsPluginHostCtrl>)
 END_MSG_MAP()
 
 
@@ -131,6 +239,8 @@ END_MSG_MAP()
 //  LRESULT MessageHandler(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL& bHandled);
 //  LRESULT CommandHandler(WORD wNotifyCode, WORD wID, HWND hWndCtl, BOOL& bHandled);
 //  LRESULT NotifyHandler(int idCtrl, LPNMHDR pnmh, BOOL& bHandled);
+
+
 
 // ISupportsErrorInfo
 	STDMETHOD(InterfaceSupportsErrorInfo)(REFIID riid)
@@ -147,9 +257,6 @@ END_MSG_MAP()
 		return S_FALSE;
 	}
 
-// Overrides from nsPluginHostCtrl
-    virtual HRESULT GetWebBrowserApp(IWebBrowserApp **pBrowser);
-
 // IViewObjectEx
 	DECLARE_VIEW_STATUS(0)
 
@@ -164,6 +271,84 @@ public:
 	STDMETHOD(put_PluginContentType)(/*[in]*/ BSTR newVal);
 	STDMETHOD(get_PluginsPage)(/*[out, retval]*/ BSTR *pVal);
 	STDMETHOD(put_PluginsPage)(/*[in]*/ BSTR newVal);
+
+// Windows message handlers
+public:
+	LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+
+public:
+	CComBSTR m_bstrText;
+
+protected:
+    CComBSTR m_bstrContentType;
+    CComBSTR m_bstrSource;
+    CComBSTR m_bstrPluginsPage;
+
+    // Array of plugins
+    struct PluginInfo
+    {
+        TCHAR *szPluginPath;
+        TCHAR *szPluginName;
+        TCHAR *szMIMEType;
+    };
+
+    nsSimpleArray<PluginInfo *> m_Plugins;
+
+    // Array of names and values to pass to the new plugin
+    unsigned long m_nArgs;
+    unsigned long m_nArgsMax;
+    char **m_pszArgNames;
+    char **m_pszArgValues;
+
+    // Array of loaded plugins which is shared amongst instances of this control
+    struct LoadedPluginInfo
+    {
+        TCHAR *szFullPath; // Path + plugin name
+        HINSTANCE hInstance;
+        DWORD nRefCount;
+        NPPluginFuncs NPPFuncs;
+    };
+
+    static nsSimpleArray<LoadedPluginInfo *> m_LoadedPlugins;
+
+    LoadedPluginInfo *m_pLoadedPlugin;
+
+    NPWindow m_NPWindow;
+
+    static NPNetscapeFuncs g_NPNFuncs;
+    static HRESULT InitPluginCallbacks();
+
+    HRESULT CreatePluginList(unsigned long ulFlags);
+    HRESULT CreatePluginListFrom(const TCHAR *szPluginsDir);
+    HRESULT CleanupPluginList();
+    HRESULT GetPluginInfo(const TCHAR * pszPluginPath, PluginInfo *pInfo);
+
+public:
+    NPP_t m_NPP;
+    BOOL  m_bPluginIsAlive;
+    BOOL  m_bCreatePluginFromStreamData;
+    nsPluginWnd m_wndPlugin;
+
+    // Struct holding pointers to the functions within the plugin
+    NPPluginFuncs m_NPPFuncs;
+
+    HRESULT GetWebBrowserApp(IWebBrowserApp **pBrowser);
+    HRESULT GetBaseURL(TCHAR **szBaseURL);
+    
+    HRESULT AddPluginParam(const char *szName, const char *szValue);
+    HRESULT LoadPluginByContentType(const TCHAR *pszContentType);
+	HRESULT LoadPlugin(const TCHAR *pszPluginPath);
+    HRESULT FindPluginPathByContentType(const TCHAR *pszContentType, TCHAR **ppszPluginPath);
+    HRESULT UnloadPlugin();
+
+    HRESULT OpenURLStream(const TCHAR *szURL, void *pNotifyData, const void *pPostData, unsigned long nDataLength);
+
+    HRESULT CreatePluginInstance();
+    HRESULT DestroyPluginInstance();
+    HRESULT SizeToFitPluginInstance();
 };
 
 #endif //__PLUGINHOSTCTRL_H_

@@ -88,6 +88,21 @@ CPPSRCS		= \
 		nsNewsDownloader.cpp \
 		$(NULL)
 
+EXPORTS		= \
+		nsMsgNewsCID.h \
+		nsNNTPProtocol.h \
+		nsNntpUrl.h \
+		nsNNTPArticleList.h \
+		nsNNTPNewsgroupList.h \
+		nsNNTPNewsgroupPost.h \
+		nntpCore.h \
+		nsNntpService.h \
+		nsNewsFolder.h \
+		nsNntpIncomingServer.h \
+		nsNewsUtils.h \
+		nsNewsDownloadDialogArgs.h \
+		$(NULL)
+
 EXTRA_DSO_LDOPTS = \
 		$(MOZ_COMPONENT_LIBS) \
 		$(MOZ_UNICHARUTIL_LIBS) \

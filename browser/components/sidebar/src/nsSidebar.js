@@ -57,13 +57,16 @@
 
 const DEBUG = false; /* set to false to suppress debug messages */
 
-const SIDEBAR_CONTRACTID        = "@mozilla.org/sidebar;1";
-const SIDEBAR_CID               = Components.ID("{22117140-9c6e-11d3-aaf1-00805f8a4905}");
-const nsISupports               = Components.interfaces.nsISupports;
-const nsIFactory                = Components.interfaces.nsIFactory;
-const nsISidebar                = Components.interfaces.nsISidebar;
-const nsISidebarExternal        = Components.interfaces.nsISidebarExternal;
-const nsIClassInfo              = Components.interfaces.nsIClassInfo;
+const SIDEBAR_CONTRACTID            = "@mozilla.org/sidebar;1";
+const SIDEBAR_CID                   = Components.ID("{22117140-9c6e-11d3-aaf1-00805f8a4905}");
+const NETSEARCH_CONTRACTID          = "@mozilla.org/rdf/datasource;1?name=internetsearch"
+const nsISupports                   = Components.interfaces.nsISupports;
+const nsIFactory                    = Components.interfaces.nsIFactory;
+const nsISidebar                    = Components.interfaces.nsISidebar;
+const nsISidebar_MOZILLA_1_8_BRANCH = Components.interfaces.nsISidebar_MOZILLA_1_8_BRANCH;
+const nsISidebarExternal            = Components.interfaces.nsISidebarExternal;
+const nsIInternetSearchService      = Components.interfaces.nsIInternetSearchService;
+const nsIClassInfo                  = Components.interfaces.nsIClassInfo;
 
 // File extension for Sherlock search plugin description files
 const SHERLOCK_FILE_EXT_REGEXP = /\.src$/i;
@@ -262,7 +265,8 @@ nsSidebar.prototype.classDescription = "Sidebar";
 
 // method of nsIClassInfo
 nsSidebar.prototype.getInterfaces = function(count) {
-    var interfaceList = [nsISidebar, nsISidebarExternal, nsIClassInfo];
+    var interfaceList = [nsISidebar, nsISidebar_MOZILLA_1_8_BRANCH, 
+                         nsIClassInfo, nsISidebarExternal];
     count.value = interfaceList.length;
     return interfaceList;
 }
@@ -272,10 +276,11 @@ nsSidebar.prototype.getHelperForLanguage = function(count) {return null;}
 
 nsSidebar.prototype.QueryInterface =
 function (iid) {
-    if (!iid.equals(nsISidebar) &&
-        !iid.equals(nsISidebarExternal) &&
+    if (!iid.equals(nsISidebar) && 
         !iid.equals(nsIClassInfo) &&
-        !iid.equals(nsISupports))
+        !iid.equals(nsISupports) &&
+        !iid.equals(nsISidebar_MOZILLA_1_8_BRANCH) &&
+        !iid.equals(nsISidebarExternal))
         throw Components.results.NS_ERROR_NO_INTERFACE;
     return this;
 }

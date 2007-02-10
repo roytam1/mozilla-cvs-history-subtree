@@ -35,11 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * interface to provide DOM inspector with access to internal interfaces
- * via DOM interface
- */
-
 #ifndef nsICSSStyleRuleDOMWrapper_h_
 #define nsICSSStyleRuleDOMWrapper_h_
 
@@ -52,12 +47,9 @@
 
 class nsICSSStyleRuleDOMWrapper : public nsIDOMCSSStyleRule {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICSS_STYLE_RULE_DOM_WRAPPER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICSS_STYLE_RULE_DOM_WRAPPER_IID)
 
   NS_IMETHOD GetCSSStyleRule(nsICSSStyleRule** aResult) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsICSSStyleRuleDOMWrapper,
-                              NS_ICSS_STYLE_RULE_DOM_WRAPPER_IID)
 
 #endif /* !defined(nsICSSStyleRuleDOMWrapper_h_) */

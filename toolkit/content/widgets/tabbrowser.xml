@@ -28,8 +28,6 @@
    -   Asaf Romano <mozilla.mano@sent.com>
    -   Seth Spitzer <sspitzer@mozilla.org>
    -   Simon Bünzli <zeniko@gmail.com>
-   -   Michael Ventnor <ventnor.bugzilla@yahoo.com.au>
-   -   Mark Pilgrim <pilgrim@gmail.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -67,7 +65,7 @@
       <xul:tabbox anonid="tabbox" flex="1" eventnode="document" xbl:inherits="handleCtrlPageUpDown"
                   onselect="if (!('updateCurrentBrowser' in this.parentNode) || event.target.localName != 'tabpanels') return; this.parentNode.updateCurrentBrowser();">
         <xul:hbox class="tab-drop-indicator-bar">
-          <xul:hbox class="tab-drop-indicator" mousethrough="always"/>
+          <xul:hbox class="tab-drop-indicator"/>
         </xul:hbox>
         <xul:hbox class="tabbrowser-strip" collapsed="true" tooltip="_child" context="_child"
                   anonid="strip"
@@ -93,6 +91,7 @@
                                      tabbrowser.removeAllTabsBut(tabbrowser.mContextTab);"/>
             <xul:menuseparator/>
             <xul:menuitem label="&closeTab.label;" accesskey="&closeTab.accesskey;"
+                          tbattr="tabbrowser-multiple"
                           oncommand="var tabbrowser = this.parentNode.parentNode.parentNode.parentNode;
                                      tabbrowser.removeTab(tabbrowser.mContextTab);"/>
           </xul:menupopup>
@@ -180,6 +179,9 @@
       </field>
       <field name="mContextTab">
         null
+      </field>
+      <field name="mModalDialogShowing">
+        false
       </field>
       <field name="arrowKeysShouldWrap" readonly="true">
 #ifdef XP_MACOSX
@@ -285,15 +287,6 @@
               }
 
               this.mTotalProgress = aMaxTotalProgress ? aCurTotalProgress / aMaxTotalProgress : 0;
-            },
-
-            onProgressChange64 : function (aWebProgress, aRequest,
-                                         aCurSelfProgress, aMaxSelfProgress,
-                                         aCurTotalProgress, aMaxTotalProgress)
-            {
-              return this.onProgressChange(aWebProgress, aRequest,
-                aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress,
-                aMaxTotalProgress);
             },
 
             onStateChange : function(aWebProgress, aRequest, aStateFlags, aStatus)
@@ -441,23 +434,9 @@
               }
             },
 
-             onRefreshAttempted : function(aWebProgress, aURI, aDelay, aSameURI)
-             {
-               var allowRefresh = true;
-               for (var i = 0; i < this.mTabBrowser.mProgressListeners.length; i++) {
-                 var p = this.mTabBrowser.mProgressListeners[i];
-                 if (p && "onRefreshAttempted" in p) {
-                   if (!p.onRefreshAttempted(aWebProgress, aURI, aDelay, aSameURI))
-                     allowRefresh = false;
-                 }
-               }
-               return allowRefresh;
-             },
- 
             QueryInterface : function(aIID)
             {
               if (aIID.equals(Components.interfaces.nsIWebProgressListener) ||
-                  aIID.equals(Components.interfaces.nsIWebProgressListener2) ||
                   aIID.equals(Components.interfaces.nsISupportsWeakReference) ||
                   aIID.equals(Components.interfaces.nsISupports))
                 return this;
@@ -688,13 +667,14 @@
                 this.mCurrentBrowser.focusedElement = document.commandDispatcher.focusedElement;
               }
 
-              if (this.mCurrentBrowser.focusedElement &&
-                  this.mCurrentBrowser.focusedElement.parentNode !=
-                  this.mCurrentTab.parentNode) {
-                // Clear focus outline before we draw on top of it.
-                // Only blur the focused element if it isn't a tab, 
-                // to avoid breaking keyboard tab navigation
+              if (this.mCurrentBrowser.focusedElement instanceof NSHTMLElement || 
+                  this.mCurrentBrowser.focusedElement instanceof XULElement) {
+                // Clear focus outline before we draw on top of it
                 this.mCurrentBrowser.focusedElement.blur();
+              }
+              else {
+                // non-HTML/XUL elements have no blur method, see bug 323805
+                this.mCurrentBrowser.focusedElement = null;
               }
               this.mCurrentBrowser.setAttribute("type", "content-targetable");
             }
@@ -713,6 +693,8 @@
 
             // Update the URL bar.
             var loc = this.mCurrentBrowser.currentURI;
+            if (!loc)
+              loc = ({ spec: "" });
 
             var webProgress = this.mCurrentBrowser.webProgress;
             var securityUI = this.mCurrentBrowser.securityUI;
@@ -790,31 +772,25 @@
             else if (newBrowser.focusedWindow) {
               whatToFocus = newBrowser.focusedWindow;
             }
- 
-            // Change focus for this window to |whatToFocus|, without
-            // focusing the window itself.
-            var cmdDispatcher = document.commandDispatcher;
 
-            var ww =
-              Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                        .getService(Components.interfaces.nsIWindowWatcher);
-            if (ww.activeWindow == window) {
-              cmdDispatcher.suppressFocusScroll = true;
-              whatToFocus.focus();
-              cmdDispatcher.suppressFocusScroll = false;
-            }
-            else {
-              // set the element in command dispatcher so focus will restore
-              // properly when the window does become active
-              if (whatToFocus instanceof Window) {
-                cmdDispatcher.focusedWindow = whatToFocus;
-                cmdDispatcher.focusedElement = null;
+            function setFocus(element) {
+              document.commandDispatcher.suppressFocusScroll = true;
+
+              if (element instanceof Window ||
+                  element instanceof NSHTMLElement || 
+                  element instanceof XULElement) {
+                try {
+                  element.focus();
+                }
+                catch(ex) {
+                  dump("XXXfocus() failed, see bug #348183: ex = " + ex + "\n");
+                }
               }
-              else {
-                cmdDispatcher.focusedWindow = whatToFocus.ownerDocument.defaultView;
-                cmdDispatcher.focusedElement = whatToFocus;
-              }
+              document.commandDispatcher.suppressFocusScroll = false;
             }
+
+            // Use setTimeout to avoid focus outline ghosting.
+            setTimeout(setFocus, 0, whatToFocus);
           ]]>
         </body>
       </method>
@@ -946,7 +922,7 @@
           <![CDATA[
             var browser = this.getBrowserForTab(aTab);
             var crop = "end";
-            var title = browser.contentTitle;
+            var title = browser.contentDocument.title;
 
             if (!title) {
               if (browser.currentURI.spec) {
@@ -1244,11 +1220,6 @@
               t.setAttribute("afterselected", true);
 
             if (!blank) {
-              // Stop the existing about:blank load.  Otherwise, if aURI
-              // doesn't stop in-progress loads on its own, we'll get into
-              // trouble with multiple parallel loads running at once.
-              b.stop();
-
               // pretend the user typed this so it'll be available till
               // the document successfully loads
               b.userTypedValue = aURI;
@@ -1317,19 +1288,19 @@
             var messageKey = (tabsToClose == 1) ? "tabs.closeWarningOneTab" : "tabs.closeWarningMultipleTabs";
             var closeKey = (tabsToClose == 1) ? "tabs.closeButtonOne" : "tabs.closeButtonMultiple";
             // focus the window before prompting.
-            // this will raise any minimized window, which will
+            // this will raise any minimized window, which will 
             // make it obvious which window the prompt is for and will
             // solve the problem of windows "obscuring" the prompt.
             // see bug #350299 for more details
             window.focus();
             var buttonPressed = promptService.confirmEx(window,
-                                                        bundle.getString('tabs.closeWarningTitle'),
+                                                        bundle.getString("tabs.closeWarningTitle"),
                                                         bundle.getFormattedString(messageKey, [tabsToClose]),
                                                         (promptService.BUTTON_TITLE_IS_STRING * promptService.BUTTON_POS_0)
                                                         + (promptService.BUTTON_TITLE_CANCEL * promptService.BUTTON_POS_1),
                                                         bundle.getString(closeKey),
                                                         null, null,
-                                                        bundle.getString('tabs.closeWarningPromptMe'),
+                                                        bundle.getString("tabs.closeWarningPromptMe"),
                                                         warnOnClose);
             reallyClose = (buttonPressed == 0);
             // don't set the pref unless they press OK and it's false
@@ -1661,7 +1632,7 @@
         </body>
       </method>
 
-      <property name="tabContainer" readonly="true">
+      <property name="tabContainer">
         <getter>
           return this.mTabContainer;
         </getter>
@@ -1740,8 +1711,6 @@
         </body>
       </method>
 
-      <field name="mDragTime">0</field>
-      <field name="mDragOverDelay">350</field>
       <method name="onDragOver">
         <parameter name="aEvent"/>
         <parameter name="aFlavour"/>
@@ -1769,13 +1738,8 @@
               }
 
               var isTabDrag = (aDragSession.sourceNode.parentNode == this.mTabContainer);
-              if (!isTabDrag && aEvent.target.localName == "tab") {
-                if (!this.mDragTime) 
-                  this.mDragTime = Date.now();
-                if (Date.now() >= this.mDragTime + this.mDragOverDelay)
-                  this.mTabContainer.selectedItem = aEvent.target;
+              if (!isTabDrag)
                 return;
-              }
 
               var newIndex = this.getNewIndex(aEvent);
 
@@ -1809,14 +1773,14 @@
                 else if (pixelsToScroll < 0)
                   newMarginLeft = minMarginLeft;
                 else {
-                if (newIndex == this.mTabs.length) {
+                  if (newIndex == this.mTabs.length) {
                     newMarginLeft = this.mTabs[newIndex-1].boxObject.screenX +
                                     this.mTabs[newIndex-1].boxObject.width - 
                                     this.boxObject.screenX - halfIndWidth;
-                } else {
+                  } else {
                     newMarginLeft = this.mTabs[newIndex].boxObject.screenX - 
                                     this.boxObject.screenX - halfIndWidth;
-                }
+                  }
 
                   // ensure we never place the drop indicator beyond
                   // our limits
@@ -1848,12 +1812,12 @@
                 else if (pixelsToScroll < 0)
                   newMarginRight = minMarginRight;
                 else {
-                if (newIndex == this.mTabs.length) {
+                  if (newIndex == this.mTabs.length) {
                     newMarginRight = this.boxObject.width + 
                                      this.boxObject.screenX -
                                      this.mTabs[newIndex-1].boxObject.screenX -
                                      halfIndWidth;
-                } else {
+                  } else {
                     newMarginRight = this.boxObject.width + 
                                      this.boxObject.screenX -
                                      this.mTabs[newIndex].boxObject.screenX -
@@ -1934,8 +1898,6 @@
         <parameter name="aDragSession"/>
         <body>
           <![CDATA[
-            this.mDragTime = 0;
-
             if (aDragSession.sourceNode &&
                 aDragSession.sourceNode.parentNode == this.mTabContainer &&
                 aDragSession.canDrop) {
@@ -1975,9 +1937,7 @@
 
           aIndex = aIndex < aTab._tPos ? aIndex: aIndex+1;
           this.mCurrentTab.selected = false;
-          // use .item() instead of [] because dragging to the end of the strip goes out of
-          // bounds: .item() returns null (so it acts like appendChild), but [] throws
-          this.mTabContainer.insertBefore(aTab, this.mTabContainer.childNodes.item(aIndex));
+          this.mTabContainer.insertBefore(aTab, this.mTabContainer.childNodes[aIndex]);
           // invalidate cache, because mTabContainer is about to change
           this._browsers = null;
 
@@ -2226,13 +2186,17 @@
         <![CDATA[
           if (!this._fastFind) {
             this._fastFind = Components.classes["@mozilla.org/typeaheadfind;1"]
-                                       .createInstance(Components.interfaces.nsITypeAheadFind);
+                                       .createInstance(Components.interfaces.nsITypeAheadFind_MOZILLA_1_8_BRANCH);
             this._fastFind.init(this.docShell);
           }
           return this._fastFind;
         ]]>
         </getter>
       </property>
+
+      <property name="findString"
+                onget="return this.mCurrentBrowser.findString;"
+                readonly="true"/>
 
       <property name="docShell"
                 onget="return this.mCurrentBrowser.docShell"
@@ -2285,6 +2249,30 @@
       <property name="securityUI"
                 onget="return this.mCurrentBrowser.securityUI;"
                 readonly="true"/>
+
+      <method name="find">
+        <body>
+          <![CDATA[
+            return this.mCurrentBrowser.find();
+          ]]>
+        </body>
+      </method>
+
+      <method name="findAgain">
+        <body>
+          <![CDATA[
+            return this.mCurrentBrowser.findAgain();
+          ]]>
+        </body>
+      </method>
+
+      <method name="findPrevious">
+        <body>
+          <![CDATA[
+            return this.mCurrentBrowser.findPrevious();
+          ]]>
+        </body>
+      </method>
 
       <method name="dragDropSecurityCheck">
         <parameter name="aEvent"/>
@@ -2398,6 +2386,10 @@
       })]]>
       </field>
 
+      <property name="canFindAgain"
+                onget="return this.mCurrentBrowser.canFindAgain;"
+                readonly="true"/>
+
       <property name="userTypedClear"
                 onget="return this.mCurrentBrowser.userTypedClear;"
                 onset="return this.mCurrentBrowser.userTypedClear = val;"/>
@@ -2405,6 +2397,9 @@
       <property name="userTypedValue"
                 onget="return this.mCurrentBrowser.userTypedValue;"
                 onset="return this.mCurrentBrowser.userTypedValue = val;"/>
+
+      <property name="forceSyncURLBarUpdate"
+                onget="return this.mModalDialogShowing;"/>
 
       <method name="createTooltip">
         <parameter name="event"/>
@@ -2499,11 +2494,20 @@
 
           for (var i = 0; i < browsers.length; ++i) {
             if (this.getBrowserAtIndex(i).contentWindow == targetTop) {
+              this.mModalDialogShowing = true;
               this.selectedTab = this.mTabContainer.childNodes[i];
 
               break;
             }
           }
+        ]]>
+      </handler>
+      <handler event="DOMModalDialogClosed" phase="capturing">
+        <![CDATA[
+          if (!event.isTrusted)
+            return;
+
+          this.mModalDialogShowing = false;
         ]]>
       </handler>
     </handlers>
@@ -2570,11 +2574,6 @@
         if (event.target != this)
           return;
 
-        // Ignore vertical events.
-        if (event.detail == 0) {
-          return;
-        }
-
         this._scrollButtonDownBox.collapsed = true;
         this._scrollButtonDownBoxAnimate.collapsed = true;
       ]]></handler>
@@ -2583,11 +2582,6 @@
         // filter underflow events which were dispatched on nested scrollboxes
         if (event.target != this)
           return;
-
-        // Ignore vertical events.
-        if (event.detail == 0) {
-          return;
-        }
 
         this._scrollButtonDownBox.collapsed = false;
         this._scrollButtonDownBoxAnimate.collapsed = false;
@@ -2644,7 +2638,7 @@
         -->
         <xul:hbox style="position: relative;">
           <xul:toolbarbutton class="tabs-alltabs-button" type="menu"
-                             anonid="alltabs-button"
+                             anonid="alltabs-button" 
                              tooltipstring="&listAllTabs.label;">
             <xul:menupopup class="tabs-alltabs-popup"
                            anonid="alltabs-popup" 
@@ -2675,7 +2669,7 @@
           this.adjustTabstrip();
 
           pb2.addObserver("browser.tabs.closeButtons", 
-                          this._prefObserver, false);
+                          this._prefObserver, true);
 
           var self = this;
           function onResize() {
@@ -2702,11 +2696,6 @@
 
       <destructor>
         <![CDATA[
-          var pb2 =
-              Components.classes['@mozilla.org/preferences-service;1'].
-              getService(Components.interfaces.nsIPrefBranch2);
-          pb2.removeObserver("browser.tabs.closeButtons", this._prefObserver);
-
           // Release timer to avoid reference cycles.
           if (this._animateTimer) {
             this._animateTimer.cancel();
@@ -2736,17 +2725,20 @@
           if (topic == "nsPref:changed") {
             switch (data) {
             case "browser.tabs.closeButtons":
-              subject.QueryInterface(Components.interfaces.nsIPrefBranch);
-              this.tabbox.mCloseButtons = subject.getIntPref("browser.tabs.closeButtons");
+              var pb2 =
+                  Components.classes['@mozilla.org/preferences-service;1'].
+                  getService(Components.interfaces.nsIPrefBranch2);
+              this.tabbox.mCloseButtons = pb2.getIntPref("browser.tabs.closeButtons");
               this.tabbox.adjustTabstrip();
               break;
             }
           }
         },
   
-        QueryInterface: function(aIID)
+        QueryInterface : function(aIID)
         {
           if (aIID.equals(Components.interfaces.nsIObserver) ||
+              aIID.equals(Components.interfaces.nsISupportsWeakReference) ||
               aIID.equals(Components.interfaces.nsISupports))
             return this;
           throw Components.results.NS_NOINTERFACE;
@@ -2835,7 +2827,7 @@
 
       <field name="mAllTabsBoxAnimate">
         document.getAnonymousElementByAttribute(this, 
-                                                "anonid",
+                                                "anonid", 
                                                 "alltabs-box-animate");
       </field>
 
@@ -2944,25 +2936,6 @@
   <binding id="tabbrowser-alltabs-popup"
            extends="chrome://global/content/bindings/popup.xml#popup">
     <implementation implements="nsIDOMEventListener">
-      <field name="_xulWindow">
-        null
-      </field>
-
-      <constructor><![CDATA[
-        // We cannot cache the XULBrowserWindow object itself since it might
-        // be set after this binding is constructed.
-        try {
-          this._xulWindow = 
-            window.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
-                  .getInterface(Components.interfaces.nsIWebNavigation)
-                  .QueryInterface(Components.interfaces.nsIDocShellTreeItem)
-                  .treeOwner
-                  .QueryInterface(Components.interfaces.nsIInterfaceRequestor)
-                  .getInterface(Components.interfaces.nsIXULWindow);
-        }
-        catch(ex) { }
-      ]]></constructor>
-
       <method name="_menuItemOnCommand">
         <parameter name="aEvent"/>
         <body><![CDATA[
@@ -2985,22 +2958,12 @@
               case "crop":
               case "busy":
               case "image":
-              case "selected":
                 if (aEvent.attrChange == aEvent.REMOVAL)
                   menuItem.removeAttribute(attrName);
                 else
                   menuItem.setAttribute(attrName, aEvent.newValue);
             }
           }
-        ]]></body>
-      </method>
-
-      <method name="_tabOnTabClose">
-        <parameter name="aEvent"/>
-        <body><![CDATA[
-          var menuItem = aEvent.target.mCorrespondingMenuitem;
-          if (menuItem)
-            this.removeChild(menuItem);
         ]]></body>
       </method>
 
@@ -3016,109 +2979,75 @@
               break;
             case "DOMAttrModified":
               this._tabOnAttrModified(aEvent);
-              break;
-            case "TabClose":
-              this._tabOnTabClose(aEvent);
-              break;
-            case "TabOpen":
-              this._createTabMenuItem(aEvent.originalTarget);
-              break;
           }
         ]]></body>
       </method>
 
-      <method name="_createTabMenuItem">
-        <parameter name="aTab"/>
+      <method name="_onHidingAllTabsPopup">
         <body><![CDATA[
-          var menuItem = document.createElementNS(
-            "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", 
-            "menuitem");
+          // clear out the menu popup and remove the listeners
+          while (this.hasChildNodes()) {
+            var menuItem = this.lastChild;
+            menuItem.removeEventListener("command", this, false);
+            menuItem.tab.removeEventListener("DOMAttrModified", this, false);
+            menuItem.tab.mCorrespondingMenuitem = null;
+            this.removeChild(menuItem);
+          }
+        ]]></body>
+      </method>
 
-          menuItem.setAttribute("class", "menuitem-iconic alltabs-item");
+      <method name="_onShowingAllTabsPopup">
+        <body><![CDATA[
+          // set up the menu popup
+          var tabcontainer = document.getBindingParent(this);
+          var tabs = tabcontainer.childNodes;
 
-          menuItem.setAttribute("label", aTab.label);
-          menuItem.setAttribute("crop", aTab.getAttribute("crop"));
-          menuItem.setAttribute("image", aTab.getAttribute("image"));
+          // if an animation is in progress and the user
+          // clicks on the "all tabs" button, stop the animation
+          tabcontainer._stopAnimation();
 
-          if (aTab.hasAttribute("busy"))
-            menuItem.setAttribute("busy", aTab.getAttribute("busy"));
-          if (aTab.selected)
-            menuItem.setAttribute("selected", "true");
+          for (var i = 0; i < tabs.length; i++) {
+            var menuItem = document.createElementNS(
+              "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", 
+              "menuitem");
+            var curTab = tabs[i];
 
-          // Keep some attributes of the menuitem in sync with its
-          // corresponding tab (e.g. the tab label)
-          aTab.mCorrespondingMenuitem = menuItem;
-          aTab.addEventListener("DOMAttrModified", this, false);
-          aTab.addEventListener("TabClose", this, false);
-          menuItem.tab = aTab;
-          menuItem.addEventListener("command", this, false);
+            if (curTab.selected)
+              menuItem.setAttribute("selected", "true");
+            menuItem.setAttribute("class", "menuitem-iconic alltabs-item");
 
-          this.appendChild(menuItem);
-          return menuItem;
+            menuItem.setAttribute("label", curTab.label);
+            menuItem.setAttribute("crop", curTab.getAttribute("crop"));
+            menuItem.setAttribute("image", curTab.getAttribute("image"));
+            if (curTab.hasAttribute("busy"))
+              menuItem.setAttribute("busy", curTab.getAttribute("busy"));
+
+            // XXX todo
+            // statustext not working yet, since I don't have a menubar
+            // reuse the menubar statustext logic
+            var URI = curTab.linkedBrowser.currentURI.spec;
+            menuItem.setAttribute("statustext", URI);
+
+            // Keep some attributes of the menuitem in sync with its
+            // corresponding tab (e.g. the tab label)
+            curTab.mCorrespondingMenuitem = menuItem;
+            curTab.addEventListener("DOMAttrModified", this, false);
+
+            menuItem.tab = curTab;
+            menuItem.addEventListener("command", this, false);
+            this.appendChild(menuItem);
+          }
         ]]></body>
       </method>
     </implementation>
-
     <handlers>
-      <handler event="popupshowing">
-      <![CDATA[
-        // set up the menu popup
-        var tabcontainer = document.getBindingParent(this);
-        var tabs = tabcontainer.childNodes;
-
-        // Listen for changes in the tab bar.
-        var tabbrowser = document.getBindingParent(tabcontainer);
-        tabbrowser.addEventListener("TabOpen", this, false);
-
-        // if an animation is in progress and the user
-        // clicks on the "all tabs" button, stop the animation
-        tabcontainer._stopAnimation();
-
-        for (var i = 0; i < tabs.length; i++) {
-          this._createTabMenuItem(tabs[i]);
-        }
+      <handler event="popupshowing"><![CDATA[
+        if (event.target == this)
+          this._onShowingAllTabsPopup();
       ]]></handler>
-
-      <handler event="popuphiding">
-      <![CDATA[
-        // clear out the menu popup and remove the listeners
-        while (this.hasChildNodes()) {
-          var menuItem = this.lastChild;
-          menuItem.removeEventListener("command", this, false);
-          menuItem.tab.removeEventListener("DOMAttrModified", this, false);
-          menuItem.tab.removeEventListener("TabClose", this, false);
-          menuItem.tab.mCorrespondingMenuitem = null;
-          this.removeChild(menuItem);
-        }
-        var tabbrowser = document.getBindingParent(document.getBindingParent(this));
-        tabbrowser.removeEventListener("TabOpen", this, false);
-      ]]></handler>
-
-      <handler event="DOMMenuItemActive">
-      <![CDATA[
-        if (!this._xulWindow || !this._xulWindow.XULBrowserWindow)
-          return;
-
-        var tab = event.target.tab;
-        if (tab) {
-          var statusText = tab.linkedBrowser.currentURI.spec;
-          if (statusText == "about:blank") {
-            // XXXhack: Passing a space here (and not "")
-            // to make sure the the browser implementation would
-            // still consider it a hovered link.
-            statusText = " ";
-          }
-
-          this._xulWindow.XULBrowserWindow.setOverLink(statusText, null);
-        }
-      ]]></handler>
-
-      <handler event="DOMMenuItemInactive">
-      <![CDATA[
-        if (!this._xulWindow || !this._xulWindow.XULBrowserWindow)
-          return;
-
-        this._xulWindow.XULBrowserWindow.setOverLink("", null);
+      <handler event="popuphiding"><![CDATA[
+        if (event.target == this)
+          this._onHidingAllTabsPopup();
       ]]></handler>
     </handlers>
   </binding>

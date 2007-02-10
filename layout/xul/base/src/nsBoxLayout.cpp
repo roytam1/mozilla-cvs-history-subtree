@@ -99,16 +99,14 @@ nsBoxLayout::AddInset(nsIBox* aBox, nsSize& aSize)
 NS_IMETHODIMP
 nsBoxLayout::GetFlex(nsIBox* aBox, nsBoxLayoutState& aState, nscoord& aFlex)
 {
-  aFlex = aBox->GetFlex(aState);
-  return NS_OK;
+  return aBox->GetFlex(aState, aFlex);
 }
 
 
 NS_IMETHODIMP
 nsBoxLayout::IsCollapsed(nsIBox* aBox, nsBoxLayoutState& aState, PRBool& aCollapsed)
 {
-  aCollapsed = aBox->IsCollapsed(aState);
-  return NS_OK;
+  return aBox->IsCollapsed(aState, aCollapsed);
 }
 
 NS_IMETHODIMP
@@ -202,7 +200,13 @@ nsBoxLayout::ChildrenSet(nsIBox* aBox, nsBoxLayoutState& aState, nsIBox* aChildL
 }
 
 NS_IMETHODIMP
-nsBoxLayout::IntrinsicWidthsDirty(nsIBox* aBox, nsBoxLayoutState& aState)
+nsBoxLayout::ChildBecameDirty(nsIBox* aBox, nsBoxLayoutState& aState, nsIBox* aChild)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBoxLayout::BecameDirty(nsIBox* aBox, nsBoxLayoutState& aState)
 {
   return NS_OK;
 }

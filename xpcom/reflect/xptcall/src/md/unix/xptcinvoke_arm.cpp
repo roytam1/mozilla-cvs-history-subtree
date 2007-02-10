@@ -138,8 +138,8 @@ extern "C" {
     };
 }
 
-EXPORT_XPCOM_API(nsresult)
-NS_InvokeByIndex(nsISupports* that, PRUint32 methodIndex,
+XPTC_PUBLIC_API(nsresult)
+XPTC_InvokeByIndex(nsISupports* that, PRUint32 methodIndex,
                    PRUint32 paramCount, nsXPTCVariant* params)
 {
     PRUint32 result;
@@ -212,7 +212,7 @@ NS_InvokeByIndex(nsISupports* that, PRUint32 methodIndex,
     "add	sp, sp, r4	\n\t"	/* restore stack pointer		*/
     "mov	%0, r0		\n\t"	/* the result...			*/
     : "=r" (result)
-    : "r" (&my_params), "m" (my_params)
+    : "r" (&my_params)
     : "r0", "r1", "r2", "r3", "r4", "ip", "lr", "sp"
     );
     

@@ -73,7 +73,6 @@
 #include "nsPoint.h" // mCurrent/mDefaultScrollbarPreferences
 #include "nsString.h"
 #include "nsAutoPtr.h"
-#include "nsThreadUtils.h"
 
 // Threshold value in ms for META refresh based redirects
 #define REFRESH_REDIRECT_TIMER 15000
@@ -104,11 +103,7 @@
 #include "nsDocShellTransferableHooks.h"
 #include "nsIAuthPromptProvider.h"
 #include "nsISecureBrowserUI.h"
-#include "nsIObserver.h"
 #include "nsDocShellLoadTypes.h"
-
-/* load commands were moved to nsIDocShell.h */
-/* load types were moved to nsDocShellLoadTypes.h */
 
 /* internally used ViewMode types */
 enum ViewMode {
@@ -146,6 +141,7 @@ protected:
 
 class nsDocShell : public nsDocLoader,
                    public nsIDocShell,
+                   public nsIDocShell_MOZILLA_1_8_BRANCH,
                    public nsIDocShellTreeItem, 
                    public nsIDocShellTreeNode,
                    public nsIDocShellHistory,
@@ -160,8 +156,7 @@ class nsDocShell : public nsDocLoader,
                    public nsIWebProgressListener,
                    public nsIEditorDocShell,
                    public nsIWebPageDescriptor,
-                   public nsIAuthPromptProvider,
-                   public nsIObserver
+                   public nsIAuthPromptProvider
 {
 friend class nsDSURIContentListener;
 
@@ -174,6 +169,7 @@ public:
     NS_DECL_ISUPPORTS_INHERITED
 
     NS_DECL_NSIDOCSHELL
+    NS_DECL_NSIDOCSHELL_MOZILLA_1_8_BRANCH
     NS_DECL_NSIDOCSHELLTREEITEM
     NS_DECL_NSIDOCSHELLTREENODE
     NS_DECL_NSIDOCSHELLHISTORY
@@ -189,7 +185,6 @@ public:
     NS_DECL_NSIEDITORDOCSHELL
     NS_DECL_NSIWEBPAGEDESCRIPTOR
     NS_DECL_NSIAUTHPROMPTPROVIDER
-    NS_DECL_NSIOBSERVER
 
     NS_IMETHOD Stop() {
         // Need this here because otherwise nsIWebNavigation::Stop
@@ -220,9 +215,7 @@ protected:
     // Content Viewer Management
     NS_IMETHOD EnsureContentViewer();
     NS_IMETHOD EnsureDeviceContext();
-    // aPrincipal can be passed in if the caller wants.  If null is
-    // passed in, the about:blank principal will end up being used.
-    nsresult CreateAboutBlankContentViewer(nsIPrincipal* aPrincipal);
+    nsresult CreateAboutBlankContentViewer();
     NS_IMETHOD CreateContentViewer(const char * aContentType, 
         nsIRequest * request, nsIStreamListener ** aContentHandler);
     NS_IMETHOD NewContentViewerObj(const char * aContentType, 
@@ -233,18 +226,7 @@ protected:
     void SetupReferrerFromChannel(nsIChannel * aChannel);
     
     NS_IMETHOD GetEldestPresContext(nsPresContext** aPresContext);
-
-    // Get the principal that we'll set on the channel if we're inheriting.  If
-    // aConsiderCurrentDocument is true, we try to use the current document if
-    // at all possible.  If that fails, we fall back on the parent document.
-    // If that fails too, we force creation of a content viewer and use the
-    // resulting principal.  If aConsiderCurrentDocument is false, we just look
-    // at the parent.
-    nsIPrincipal* GetInheritedPrincipal(PRBool aConsiderCurrentDocument);
-
-    // Actually open a channel and perform a URI load.  Note: whatever owner is
-    // passed to this function will be set on the channel.  Callers who wish to
-    // not have an owner on the channel should just pass null.
+    void GetCurrentDocumentOwner(nsISupports ** aOwner);
     virtual nsresult DoURILoad(nsIURI * aURI,
                                nsIURI * aReferrer,
                                PRBool aSendReferrer,
@@ -362,7 +344,6 @@ protected:
                                 nsIChannel * aChannel);
 
     // Helper Routines
-    nsresult   ConfirmRepost(PRBool * aRepost);
     NS_IMETHOD GetPromptAndStringBundle(nsIPrompt ** aPrompt,
         nsIStringBundle ** aStringBundle);
     NS_IMETHOD GetChildOffset(nsIDOMNode * aChild, nsIDOMNode * aParent,
@@ -474,25 +455,9 @@ protected:
     // Call BeginRestore(nsnull, PR_FALSE) for each child of this shell.
     nsresult BeginRestoreChildren();
 
-    // Check whether aURI should inherit our security context
-    static nsresult URIInheritsSecurityContext(nsIURI* aURI, PRBool* aResult);
-
-    // Check whether aURI is about:blank
-    static PRBool IsAboutBlank(nsIURI* aURI);
-    
 protected:
     // Override the parent setter from nsDocLoader
     virtual nsresult SetDocLoaderParent(nsDocLoader * aLoader);
-
-    // Event type dispatched by RestorePresentation
-    class RestorePresentationEvent : public nsRunnable {
-    public:
-        NS_DECL_NSIRUNNABLE
-        RestorePresentationEvent(nsDocShell *ds) : mDocShell(ds) {}
-        void Revoke() { mDocShell = nsnull; }
-    private:
-        nsDocShell *mDocShell;
-    };
 
     PRPackedBool               mAllowSubframes;
     PRPackedBool               mAllowPlugins;
@@ -503,7 +468,6 @@ protected:
     PRPackedBool               mHasFocus;
     PRPackedBool               mCreatingDocument; // (should be) debugging only
     PRPackedBool               mUseErrorPages;
-    PRPackedBool               mObserveErrorPages;
     PRPackedBool               mAllowAuth;
     PRPackedBool               mAllowKeywordFixup;
 
@@ -557,8 +521,6 @@ protected:
     nsCOMPtr<nsIDeviceContext> mDeviceContext;
     nsCOMPtr<nsIWidget>        mParentWidget;
     nsCOMPtr<nsIPrefBranch>    mPrefs;
-
-    // mCurrentURI should be marked immutable on set if possible.
     nsCOMPtr<nsIURI>           mCurrentURI;
     nsCOMPtr<nsIURI>           mReferrerURI;
     nsCOMPtr<nsIScriptGlobalObject> mScriptGlobal;
@@ -572,11 +534,6 @@ protected:
     // Reference to the SHEntry for this docshell until the page is loaded
     // Somebody give me better name
     nsCOMPtr<nsISHEntry>       mLSHE;
-
-    // Holds a weak pointer to a RestorePresentationEvent object if any that
-    // holds a weak pointer back to us.  We use this pointer to possibly revoke
-    // the event whenever necessary.
-    nsRevocableEventPtr<RestorePresentationEvent> mRestorePresentationEvent;
 
     // hash of session storages, keyed by domain
     nsInterfaceHashtable<nsCStringHashKey, nsIDOMStorage> mStorages;

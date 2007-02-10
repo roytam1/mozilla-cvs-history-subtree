@@ -36,6 +36,7 @@
             LANGUAGE = ObjC; 
             OUTLETS = {
                 mAskAboutCookies = NSButton; 
+                mAutoFillPasswords = NSButton; 
                 mCookieBehavior = NSMatrix; 
                 mCookiesFilterField = SearchTextField; 
                 mCookiesPanel = id; 

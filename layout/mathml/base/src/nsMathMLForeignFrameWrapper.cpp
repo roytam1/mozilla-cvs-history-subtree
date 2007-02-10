@@ -46,6 +46,7 @@
 #include "nsAreaFrame.h"
 #include "nsLineLayout.h"
 #include "nsPresContext.h"
+#include "nsHTMLAtoms.h"
 #include "nsUnitConversion.h"
 #include "nsStyleContext.h"
 #include "nsStyleConsts.h"
@@ -58,10 +59,29 @@ NS_IMPL_ADDREF_INHERITED(nsMathMLForeignFrameWrapper, nsMathMLFrame)
 NS_IMPL_RELEASE_INHERITED(nsMathMLForeignFrameWrapper, nsMathMLFrame)
 NS_IMPL_QUERY_INTERFACE_INHERITED1(nsMathMLForeignFrameWrapper, nsBlockFrame, nsMathMLFrame)
 
-nsIFrame*
-NS_NewMathMLForeignFrameWrapper(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMathMLForeignFrameWrapper(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLForeignFrameWrapper(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLForeignFrameWrapper* it = new (aPresShell) nsMathMLForeignFrameWrapper;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMathMLForeignFrameWrapper::Init(nsPresContext*  aPresContext,
+                                  nsIContent*      aContent,
+                                  nsIFrame*        aParent,
+                                  nsStyleContext*  aContext,
+                                  nsIFrame*        aPrevInFlow)
+{
+  return nsBlockFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
 }
 
 NS_IMETHODIMP
@@ -79,7 +99,7 @@ nsMathMLForeignFrameWrapper::Reflow(nsPresContext*          aPresContext,
   // just make-up a bounding metrics
   mBoundingMetrics.Clear();
   mBoundingMetrics.ascent = aDesiredSize.ascent;
-  mBoundingMetrics.descent = aDesiredSize.height - aDesiredSize.ascent;
+  mBoundingMetrics.descent = aDesiredSize.descent;
   mBoundingMetrics.width = aDesiredSize.width;
   mBoundingMetrics.leftBearing = 0;
   mBoundingMetrics.rightBearing = aDesiredSize.width;

@@ -20,17 +20,10 @@
   ins:icon      This sets an icon for the viewer.  Currently unused.
 
   ins:filter    This determines which nodes (or in the case of JavaScript Object
-                viewer, values), the viewer referenced is valid for.
-
-                @param object - nsIDOMNode object (or in the case of JavaScript
-                  Object viewer, JavaScript object).
-                @param linkedViewer - linked viewer object.
-
-                For example, ins:filter=
-                "return object instanceof Components.interfaces.nsIDOMDocument;"
-                is a JavaScript fragment ViewerRegistry.js uses to define a
-                filter function if the panel's subject node is an instance of
-                nsIDOMDocument.
+                viewer, values), the viewer referenced is valid for. For example,
+                ins:filter="return object instanceof Components.interfaces.nsIDOMDocument;"
+                is a JavaScript fragment ViewerRegistry.js uses to define a filter
+                function if the panel's subject node is an instance of nsIDOMDocument.
 -->
 
   <rdf:Seq about="inspector:viewers">
@@ -87,32 +80,10 @@
     <rdf:li><rdf:Description 
       ins:uid="jsObject"
       ins:panels="bxDocPanel bxObjectPanel bxObjPanel"
-      ins:description="JavaScript Object"
+      ins:description="Javascript Object"
       ins:filter="return true;"/>
     </rdf:li>
 
-    <rdf:li>
-      <rdf:Description ins:uid="accessibleObject"
-                       ins:panels="bxObjectPanel bxObjPanel"
-                       ins:description="Accessible Object">
-        <ins:filter><![CDATA[
-          if (!linkedViewer || linkedViewer.uid != "dom" ||
-              !linkedViewer.getAccessibleNodes() ||
-              !(object instanceof Components.interfaces.nsIDOMNode))
-            return false;
-
-          try {
-            var accService =
-              Components.classes['@mozilla.org/accessibilityService;1']
-                        .getService(Components.interfaces.nsIAccessibilityService);
-
-            return accService.getAttachedAccessibleFor(object);
-          } catch(e) {
-            return false;
-          }
-        ]]></ins:filter>
-      </rdf:Description>
-    </rdf:li>
   </rdf:Seq>
 
 </rdf:RDF>

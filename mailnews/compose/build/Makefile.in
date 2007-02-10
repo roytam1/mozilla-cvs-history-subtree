@@ -39,7 +39,6 @@ DEPTH		= ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
-LOCAL_INCLUDES += -I$(srcdir)/../src
 
 include $(DEPTH)/config/autoconf.mk
 
@@ -88,7 +87,7 @@ endif
 CPPSRCS		= nsMsgCompFactory.cpp
 
 SHARED_LIBRARY_LIBS = \
-		../src/$(LIB_PREFIX)msgcompose_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)msgcompose_s.$(LIB_SUFFIX) \
 		$(NULL)
 
 EXTRA_DSO_LDOPTS = \

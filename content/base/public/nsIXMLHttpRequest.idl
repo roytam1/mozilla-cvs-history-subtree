@@ -75,17 +75,8 @@ interface nsIVariant;
  *   where mylistener is your event listener object that implements the
  *   interface nsIDOMEventListener.
  *
- *   The 'onload', 'onerror', and 'onreadystatechange' attributes moved to
- *   nsIJSXMLHttpRequest, but if you're coding in C++ you should avoid using
- *   those.
- *
- * Though actually, if you use addEventListener from C++ weird things will
- * happen too, since the result will depend on what JS happens to be on the
- * stack when you do it....
- *
- * Conclusion: Do not use event listeners on XMLHttpRequest from C++, unless
- * you're aware of all the security implications.  And then think twice about
- * it.
+ *   The 'onload' and 'onerror' attributes moved to nsIJSXMLHttRequest,
+ *   but if you're coding in C++ you should avoid using those.
  */
 [scriptable, uuid(7b3b3c62-9d53-4abc-bc89-c33ce78f439f)]
 interface nsIXMLHttpRequest : nsISupports
@@ -164,8 +155,10 @@ interface nsIXMLHttpRequest : nsISupports
    * the request is not sent until the <code>send</code> method
    * is invoked.
    *
-   * If there is an "active" request (that is, if open() or openRequest() has
-   * been called already), this is equivalent to calling abort().
+   * Will abort currently active loads.
+   *
+   * After the initial response, all event listeners will be cleared.
+   * Call open() before setting new event listeners.
    *
    * @param method The HTTP method, for example "POST" or "GET". Ignored
    *               if the URL is not a HTTP(S) URL.
@@ -193,8 +186,10 @@ interface nsIXMLHttpRequest : nsISupports
    * description of <code>openRequest</code>, but the last
    * 3 are optional.
    *
-   * If there is an "active" request (that is, if open() or openRequest() has
-   * been called already), this is equivalent to calling abort().
+   * Will abort currently active loads.
+   *
+   * After the initial response, all event listeners will be cleared.
+   * Call open() before setting new event listeners.
    *
    * @param method The HTTP method - either "POST" or "GET". Ignored
    *               if the URL is not a HTTP URL.
@@ -220,10 +215,8 @@ interface nsIXMLHttpRequest : nsISupports
    * immediately after sending the request. If it is synchronous
    * returns only after the response has been received.
    *
-   * All event listeners must be set before calling send().
-   *
    * After the initial response, all event listeners will be cleared.
-   * // XXXbz what does that mean, exactly?   
+   * Call open() before setting new event listeners.
    *
    * @param body Either an instance of nsIDOMDocument, nsIInputStream
    *             or a string (nsISupportsString in the native calling
@@ -290,7 +283,17 @@ interface nsIXMLHttpRequest : nsISupports
   attribute boolean multipart;
 };
 
-[scriptable, uuid(261676b4-d508-43bf-b099-74635a0ee2e9)]
+
+[scriptable, function, uuid(6459B7CE-6B57-4934-A0AF-0133BA6F9085)]
+interface nsIOnReadyStateChangeHandler : nsISupports {
+  /**
+   * Helper to implement the onreadystatechange callback member.
+   * You should not need to use this.
+   */
+  void handleEvent();
+};
+
+[scriptable, uuid(9deabc90-28d5-41d3-a660-474f2254f4ba)]
 interface nsIJSXMLHttpRequest : nsISupports {
   /**
    * Meant to be a script-only mechanism for setting a load event listener.
@@ -299,9 +302,7 @@ interface nsIJSXMLHttpRequest : nsISupports {
    * This attribute should not be used from native code!!
    *
    * After the initial response, all event listeners will be cleared.
-   * // XXXbz what does that mean, exactly?   
-   *
-   * Call open() before setting an onload listener.
+   * Call open() before setting new event listeners.
    *
    * Mozilla only.
    */
@@ -314,9 +315,7 @@ interface nsIJSXMLHttpRequest : nsISupports {
    * This attribute should not be used from native code!!
    *
    * After the initial response, all event listeners will be cleared.
-   * // XXXbz what does that mean, exactly?   
-   *
-   * Call open() before setting an onerror listener.
+   * Call open() before setting new event listeners.
    *
    * Mozilla only.
    */
@@ -330,28 +329,11 @@ interface nsIJSXMLHttpRequest : nsISupports {
    * This event listener may be called multiple times during the open request.
    *
    * After the initial response, all event listeners will be cleared.
-   * // XXXbz what does that mean, exactly?
-   *
-   * This event listener must be set BEFORE calling open().
+   * Call open() before setting new event listeners.
    *
    * Mozilla only.
    */
   attribute nsIDOMEventListener onprogress;
-
-  /**
-   * Meant to be a script-only mechanism for setting an upload progress event
-   * listener.
-   * This attribute should not be used from native code!!
-   * This event listener may be called multiple times during the upload..
-   *
-   * After the initial response, all event listeners will be cleared.
-   * // XXXbz what does that mean, exactly?
-   *
-   * This event listener must be set BEFORE calling open().
-   *
-   * Mozilla only.
-   */
-  attribute nsIDOMEventListener onuploadprogress;
 
   /**
    * Meant to be a script-only mechanism for setting a callback function.
@@ -360,11 +342,9 @@ interface nsIJSXMLHttpRequest : nsISupports {
    * This attribute should not be used from native code!!
    *
    * After the initial response, all event listeners will be cleared.
-   * // XXXbz what does that mean, exactly?   
-   *
-   * Call open() before setting an onreadystatechange listener.
+   * Call open() before setting new event listeners.
    */
-  attribute nsIDOMEventListener onreadystatechange;
+  attribute nsIOnReadyStateChangeHandler onreadystatechange;
 };
 
 %{ C++

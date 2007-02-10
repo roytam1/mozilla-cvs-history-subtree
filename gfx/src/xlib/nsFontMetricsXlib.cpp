@@ -1925,7 +1925,7 @@ FontEnumCallback(const nsString& aFamily, PRBool aGeneric, void *aData)
 {
 #ifdef REALLY_NOISY_FONTS
   printf("font = '");
-  fputs(NS_LossyConvertUTF16toASCII(aFamily).get(), stdout);
+  fputs(NS_LossyConvertUCS2toASCII(aFamily).get(), stdout);
   printf("'\n");
 #endif
 
@@ -2302,19 +2302,6 @@ NS_IMETHODIMP  nsFontMetricsXlib::GetHeight(nscoord &aHeight)
   return NS_OK;
 }
 
-#ifdef FONT_LEADING_APIS_V2
-NS_IMETHODIMP  nsFontMetricsXlib::GetInternalLeading(nscoord &aLeading)
-{
-  aLeading = mLeading;
-  return NS_OK;
-}
-NS_IMETHODIMP  nsFontMetricsXlib::GetExternalLeading(nscoord &aLeading)
-{
-  aLeading = 0;
-  return NS_OK;
-}
-#else
-
 NS_IMETHODIMP  nsFontMetricsXlib::GetNormalLineHeight(nscoord &aHeight)
 {
   aHeight = mEmHeight + mLeading;
@@ -2326,7 +2313,6 @@ NS_IMETHODIMP  nsFontMetricsXlib::GetLeading(nscoord &aLeading)
   aLeading = mLeading;
   return NS_OK;
 }
-#endif
 
 NS_IMETHODIMP  nsFontMetricsXlib::GetEmHeight(nscoord &aHeight)
 {
@@ -2433,7 +2419,7 @@ nsFontMetricsXlib::ResolveForwards(const PRUnichar*         aString,
 
   count = mLoadedFontsCount;
 
-  if (NS_IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && NS_IS_LOW_SURROGATE(*(currChar+1))) {
+  if (IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && IS_LOW_SURROGATE(*(currChar+1))) {
     currFont = LocateFont(SURROGATE_TO_UCS4(*currChar, *(currChar+1)), count);
     currChar += 2;
   }
@@ -2454,7 +2440,7 @@ nsFontMetricsXlib::ResolveForwards(const PRUnichar*         aString,
       return NS_OK;
     // continue with the next substring, re-using the available loaded fonts
     firstChar = currChar;
-    if (NS_IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && NS_IS_LOW_SURROGATE(*(currChar+1))) {
+    if (IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && IS_LOW_SURROGATE(*(currChar+1))) {
       currFont = LocateFont(SURROGATE_TO_UCS4(*currChar, *(currChar+1)), count);
       currChar += 2;
     }
@@ -2467,7 +2453,7 @@ nsFontMetricsXlib::ResolveForwards(const PRUnichar*         aString,
   // see if we can keep the same font for adjacent characters
   PRInt32 lastCharLen;
   while (currChar < lastChar) {
-    if (NS_IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && NS_IS_LOW_SURROGATE(*(currChar+1))) {
+    if (IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && IS_LOW_SURROGATE(*(currChar+1))) {
       nextFont = LocateFont(SURROGATE_TO_UCS4(*currChar, *(currChar+1)), count);
       lastCharLen = 2;
     }
@@ -2904,7 +2890,7 @@ static PRBool
 DumpFamilyEnum(nsHashKey* hashKey, void *aData, void* closure)
 {
   printf("family: %s\n",
-         NS_LossyConvertUTF16toASCII(*NS_STATIC_CAST(nsString*,he->key)));
+         NS_LossyConvertUCS2toASCII(*NS_STATIC_CAST(nsString*,he->key)));
   nsFontFamilyXlib* family = (nsFontFamilyXlib*) he->value;
   DumpFamily(family);
 
@@ -3174,6 +3160,8 @@ nsFontXlib::IsFreeTypeFont(void)
   return PR_FALSE;
 }
 #endif /* MOZ_ENABLE_FREETYPE2 */
+
+MOZ_DECL_CTOR_COUNTER(nsFontXlib)
 
 nsFontXlib::nsFontXlib()
 {
@@ -5823,7 +5811,7 @@ nsFontMetricsXlib::FindFont(PRUnichar aChar)
 
   // If this is is the 'unknown' char (ie: converter could not 
   // convert it) there is no sense in searching any further for 
-  // a font. Just returning mWesternFont
+  // a font. Just returing mWesternFont
   if (aChar == UCS2_NOMAPPING) {
     FIND_FONT_PRINTF(("      ignore the 'UCS2_NOMAPPING' character, return mWesternFont"));
     return mWesternFont;

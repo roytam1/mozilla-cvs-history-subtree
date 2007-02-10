@@ -42,8 +42,8 @@
 /**
  * imgIEncoder interface
  */
-[scriptable, uuid(CCC5B3AD-3E67-4e3d-97E1-B06B2E96FEF8)]
-interface imgIEncoder : nsIInputStream
+[scriptable, uuid(b1b0b493-3369-44e0-878d-f7c56d937680)]
+interface imgIEncoder_MOZILLA_1_8_BRANCH : nsIInputStream
 {
   // Possible values for input format (note that not all image formats
   // support saving alpha channels):
@@ -85,3 +85,17 @@ interface imgIEncoder : nsIInputStream
                     in PRUint32 inputFormat,
                     in AString outputOptions);
 };
+
+/**
+ * This is the old imgIEncoder interface that only ever existed on the
+ * Aviary and 1.8 branch.
+ */
+interface nsIClipboardImage;
+interface nsIFile;
+
+[scriptable, uuid(CCC5B3AD-3E67-4e3d-97E1-B06B2E96FEF8)]
+interface imgIEncoder : nsISupports
+{
+  void encodeClipboardImage(in nsIClipboardImage aClipboardImage, out nsIFile aImageFile);
+};
+

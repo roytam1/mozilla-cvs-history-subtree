@@ -41,6 +41,7 @@
 #include "nsIServiceManager.h"
 #include "nsIGenericFactory.h"
 #include "nsIWebBrowserChrome.h"
+#include "nsIDocumentLoader.h"
 #include "nsCURILoader.h"
 #include "nsNetUtil.h"
 #include "nsIURL.h"
@@ -49,6 +50,8 @@
 #include "nsIDocShellTreeOwner.h"
 #include "nsIEditorDocShell.h"
 #include "nsISimpleEnumerator.h"
+#include "nsIDOMWindow.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsPIDOMWindow.h"
 #include "nsIDOMEventTarget.h"
 #include "nsIDOMNSUIEvent.h"
@@ -78,10 +81,12 @@
 #include "nsISelectionPrivate.h"
 #include "nsISelectElement.h"
 #include "nsILink.h"
+#include "nsITextContent.h"
 #include "nsTextFragment.h"
 #include "nsILookAndFeel.h"
 
 #include "nsICaret.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDOMKeyEvent.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIWebNavigation.h"
@@ -94,6 +99,7 @@
 #include "nsINameSpaceManager.h"
 #include "nsIWindowWatcher.h"
 #include "nsIObserverService.h"
+#include "nsLayoutAtoms.h"
 
 #include "nsIPrivateTextEvent.h"
 #include "nsIPrivateCompositionEvent.h"
@@ -109,7 +115,7 @@
 
 
 NS_INTERFACE_MAP_BEGIN(nsTypeAheadFind)
-  NS_INTERFACE_MAP_ENTRY(nsISuiteTypeAheadFind)
+  NS_INTERFACE_MAP_ENTRY(nsITypeAheadFind)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
   NS_INTERFACE_MAP_ENTRY(nsITimerCallback)
   NS_INTERFACE_MAP_ENTRY(nsIScrollPositionListener)
@@ -126,6 +132,7 @@ NS_IMPL_ADDREF(nsTypeAheadFind)
 NS_IMPL_RELEASE(nsTypeAheadFind)
 
 static NS_DEFINE_IID(kRangeCID, NS_RANGE_CID);
+static NS_DEFINE_CID(kStringBundleServiceCID,  NS_STRINGBUNDLESERVICE_CID);
 static NS_DEFINE_CID(kFrameTraversalCID, NS_FRAMETRAVERSAL_CID);
 static NS_DEFINE_CID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
 
@@ -281,7 +288,7 @@ nsTypeAheadFind::PrefsReset()
 
       // Initialize string bundle
       nsCOMPtr<nsIStringBundleService> stringBundleService =
-        do_GetService(NS_STRINGBUNDLE_CONTRACTID);
+        do_GetService(kStringBundleServiceCID);
 
       if (stringBundleService)
         stringBundleService->CreateBundle(TYPEAHEADFIND_BUNDLE_URL,
@@ -719,8 +726,7 @@ nsTypeAheadFind::KeyPress(nsIDOMEvent* aEvent)
     return NS_OK;
   }
 
-  // We're using this key, no one else should
-  aEvent->PreventDefault();
+  aEvent->StopPropagation();  // We're using this key, no one else should
 
   return HandleChar(charCode);
 }
@@ -870,7 +876,7 @@ nsTypeAheadFind::HandleChar(PRUnichar aChar)
     return NS_ERROR_FAILURE;
   }
 
-  aChar = ToLowerCase(aChar);
+  aChar = ToLowerCase(NS_STATIC_CAST(PRUnichar, aChar));
   PRInt32 bufferLength = mTypeAheadBuffer.Length();
 
   mIsFirstVisiblePreferred = PR_FALSE;
@@ -1589,16 +1595,19 @@ nsTypeAheadFind::RangeStartsInsideLink(nsIDOMRange *aRange,
   }
   origContent = startContent;
 
-  if (startContent->IsNodeOfType(nsINode::eELEMENT)) {
+  if (startContent->IsContentOfType(nsIContent::eELEMENT)) {
     nsIContent *childContent = startContent->GetChildAt(startOffset);
     if (childContent) {
       startContent = childContent;
     }
   }
   else if (startOffset > 0) {
-    const nsTextFragment *textFrag = startContent->GetText();
-    if (textFrag) {
+    nsCOMPtr<nsITextContent> textContent(do_QueryInterface(startContent));
+
+    if (textContent) {
       // look for non whitespace character before start offset
+      const nsTextFragment *textFrag = textContent->Text();
+
       for (PRInt32 index = 0; index < startOffset; index++) {
         if (!XP_IS_SPACE(textFrag->CharAt(index))) {
           *aIsStartingLink = PR_FALSE;  // not at start of a node
@@ -1621,7 +1630,7 @@ nsTypeAheadFind::RangeStartsInsideLink(nsIDOMRange *aRange,
     // Keep testing while textContent is equal to something,
     // eventually we'll run out of ancestors
 
-    if (startContent->IsNodeOfType(nsINode::eHTML)) {
+    if (startContent->IsContentOfType(nsIContent::eHTML)) {
       nsCOMPtr<nsILink> link(do_QueryInterface(startContent));
       if (link) {
         // Check to see if inside HTML link
@@ -1633,9 +1642,9 @@ nsTypeAheadFind::RangeStartsInsideLink(nsIDOMRange *aRange,
       // Any xml element can be an xlink
       *aIsInsideLink = startContent->HasAttr(kNameSpaceID_XLink, hrefAtom);
       if (*aIsInsideLink) {
-        if (!startContent->AttrValueIs(kNameSpaceID_XLink, typeAtom,
-                                       NS_LITERAL_STRING("simple"),
-                                       eCaseMatters)) {
+        nsAutoString xlinkType;
+        startContent->GetAttr(kNameSpaceID_XLink, typeAtom, xlinkType);
+        if (!xlinkType.EqualsLiteral("simple")) {
           *aIsInsideLink = PR_FALSE;  // Xlink must be type="simple"
         }
 
@@ -1647,8 +1656,11 @@ nsTypeAheadFind::RangeStartsInsideLink(nsIDOMRange *aRange,
     nsCOMPtr<nsIContent> parent = startContent->GetParent();
     if (parent) {
       nsIContent *parentsFirstChild = parent->GetChildAt(0);
+      nsCOMPtr<nsITextContent> textContent =
+        do_QueryInterface(parentsFirstChild);
+
       // We don't want to look at a whitespace-only first child
-      if (parentsFirstChild && parentsFirstChild->TextIsOnlyWhitespace())
+      if (textContent && textContent->IsOnlyWhitespace())
         parentsFirstChild = parent->GetChildAt(1);
 
       if (parentsFirstChild != startContent) {
@@ -1704,7 +1716,7 @@ nsTypeAheadFind::NotifySelectionChanged(nsIDOMDocument *aDoc,
 }
 
 
-// ---------------- nsISuiteTypeAheadFind --------------------
+// ---------------- nsITypeAheadFind --------------------
 
 NS_IMETHODIMP
 nsTypeAheadFind::FindNext(PRBool aFindBackwards, nsISupportsInterfacePointer *aCallerWindowSupports)
@@ -2395,7 +2407,7 @@ nsTypeAheadFind::IsTargetContentOkay(nsIContent *aContent)
     return PR_FALSE;
   }
 
-  if (aContent->IsNodeOfType(nsINode::eHTML_FORM_CONTROL)) {
+  if (aContent->IsContentOfType(nsIContent::eHTML_FORM_CONTROL)) {
     nsCOMPtr<nsIFormControl> formControl(do_QueryInterface(aContent));
     PRInt32 controlType = formControl->GetType();
     if (controlType == NS_FORM_SELECT || 
@@ -2409,7 +2421,7 @@ nsTypeAheadFind::IsTargetContentOkay(nsIContent *aContent)
       return PR_FALSE;
     }
   }
-  else if (aContent->IsNodeOfType(nsINode::eHTML)) {
+  else if (aContent->IsContentOfType(nsIContent::eHTML)) {
     // Test for isindex, a deprecated kind of text field. We're using a string 
     // compare because <isindex> is not considered a form control, so it does 
     // not support nsIFormControl or eHTML_FORM_CONTROL, and it's not worth 
@@ -2466,7 +2478,7 @@ nsTypeAheadFind::GetTargetIfTypeAheadOkay(nsIDOMEvent *aEvent,
     return NS_OK;
   }
 
-  nsIDOMWindow *domWin = doc->GetWindow();
+  nsCOMPtr<nsIDOMWindow> domWin(do_QueryInterface(doc->GetScriptGlobalObject()));
   nsCOMPtr<nsIDOMWindow> topContentWin;
   GetStartWindow(domWin, getter_AddRefs(topContentWin));
 
@@ -2556,7 +2568,8 @@ nsTypeAheadFind::IsRangeVisible(nsIPresShell *aPresShell,
     return PR_FALSE;
   }
 
-  nsIFrame *frame = aPresShell->GetPrimaryFrameFor(content);
+  nsIFrame *frame = nsnull;
+  aPresShell->GetPrimaryFrameFor(content, &frame);
   if (!frame) {
     // No frame! Not visible then.
 
@@ -2583,9 +2596,9 @@ nsTypeAheadFind::IsRangeVisible(nsIPresShell *aPresShell,
     if (startRangeOffset < endFrameOffset) {
       break;
     }
-    nsIFrame *nextContinuationFrame = frame->GetNextContinuation();
-    if (nextContinuationFrame) {
-      frame = nextContinuationFrame;
+    nsIFrame *nextInFlowFrame = frame->GetNextInFlow();
+    if (nextInFlowFrame) {
+      frame = nextInFlowFrame;
     }
     else {
       break;
@@ -2594,7 +2607,6 @@ nsTypeAheadFind::IsRangeVisible(nsIPresShell *aPresShell,
 
   // Set up the variables we need, return true if we can't get at them all
   const PRUint16 kMinPixels  = 12;
-  PRUint16 minPixels = PRUint16(nsPresContext::CSSPixelsToAppUnits(kMinPixels));
 
   nsIViewManager* viewManager = aPresShell->GetViewManager();
   if (!viewManager) {
@@ -2607,6 +2619,8 @@ nsTypeAheadFind::IsRangeVisible(nsIPresShell *aPresShell,
   // for only needs to be a rough indicator
   nsIView *containingView = nsnull;
   nsPoint frameOffset;
+  float p2t;
+  p2t = aPresContext->PixelsToTwips();
   nsRectVisibility rectVisibility = nsRectVisibility_kAboveViewport;
 
   if (!aGetTopVisibleLeaf) {
@@ -2622,7 +2636,7 @@ nsTypeAheadFind::IsRangeVisible(nsIPresShell *aPresShell,
     relFrameRect.y = frameOffset.y;
 
     viewManager->GetRectVisibility(containingView, relFrameRect,
-                                   minPixels,
+                                   NS_STATIC_CAST(PRUint16, (kMinPixels * p2t)),
                                    &rectVisibility);
 
     if (rectVisibility != nsRectVisibility_kAboveViewport &&
@@ -2637,13 +2651,8 @@ nsTypeAheadFind::IsRangeVisible(nsIPresShell *aPresShell,
   nsCOMPtr<nsIBidirectionalEnumerator> frameTraversal;
   nsCOMPtr<nsIFrameTraversal> trav(do_CreateInstance(kFrameTraversalCID));
   if (trav) {
-    trav->NewFrameTraversal(getter_AddRefs(frameTraversal),
-                            aPresContext, frame,
-                            eLeaf,
-                            PR_FALSE, // aVisual
-                            PR_FALSE, // aLockInScrollView
-                            PR_FALSE  // aFollowOOFs
-                            );
+    trav->NewFrameTraversal(getter_AddRefs(frameTraversal), LEAF,
+                            aPresContext, frame);
   }
 
   if (!frameTraversal) {
@@ -2666,7 +2675,9 @@ nsTypeAheadFind::IsRangeVisible(nsIPresShell *aPresShell,
       relFrameRect.x = frameOffset.x;
       relFrameRect.y = frameOffset.y;
       viewManager->GetRectVisibility(containingView, relFrameRect,
-                                     minPixels, &rectVisibility);
+                                     NS_STATIC_CAST(PRUint16,
+                                                    (kMinPixels * p2t)),
+                                     &rectVisibility);
     }
   }
 
@@ -2917,7 +2928,7 @@ nsTypeAheadController::DoCommand(const char *aCommand)
   EnsureContentWindow(domWinInternal, getter_AddRefs(startContentWin));
   NS_ENSURE_TRUE(startContentWin, NS_ERROR_FAILURE);
 
-  nsCOMPtr<nsISuiteTypeAheadFind> typeAhead = 
+  nsCOMPtr<nsITypeAheadFind> typeAhead = 
     do_GetService(NS_TYPEAHEADFIND_CONTRACTID);
   NS_ENSURE_TRUE(typeAhead, NS_ERROR_FAILURE);
 

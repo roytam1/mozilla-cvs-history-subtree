@@ -103,7 +103,7 @@
       -->
     </content>
     
-    <implementation implements="nsIDOMEventListener">
+    <implementation>
     
       <property name="color">
         <getter><![CDATA[
@@ -326,8 +326,21 @@
           }
         ]]></body>
       </method>
+      
+      <method name="addKeyListener">
+        <body><![CDATA[
+          document._focusedPicker = this;
+          document.addEventListener("keydown", this.mPickerKeyDown, true);
+        ]]></body>
+      </method>
+      <method name="removeKeyListener">
+        <body><![CDATA[
+          document._focusedPicker = null;
+          document.removeEventListener("keydown", this.mPickerKeyDown, true);
+        ]]></body>
+      </method>
 
-      <method name="handleEvent">
+      <method name="pickerKeyDown">
         <parameter name="aEvent"/>
         <body><![CDATA[
           switch (aEvent.keyCode) {
@@ -374,7 +387,7 @@
       <![CDATA[
         if (!mIsPopup && this.getAttribute('focused') != 'true') {
           this.setAttribute('focused','true');
-          document.addEventListener("keydown", this, true);
+          this.addKeyListener();
           if (this.mSelectedCell)
             this.hoverCell(this.mSelectedCell);
         }
@@ -384,7 +397,7 @@
       <handler event="blur" phase="capturing">
       <![CDATA[
         if (!mIsPopup && this.getAttribute('focused') == 'true') {
-          document.removeEventListener("keydown", this, true);
+          this.removeKeyListener();
           this.removeAttribute('focused');
           this.resetHover();
         }
@@ -415,10 +428,11 @@
     </content>
     
     <implementation implements="nsIAccessibleProvider, nsIDOMXULControlElement">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULColorPicker;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULColorPickerAccessible(this);
           ]]>
         </getter>
       </property>
@@ -441,7 +455,6 @@
           this.onchange = null;
                     
           this.mColorBox = document.getAnonymousElementByAttribute(this, "anonid", "colorbox");
-          this.mColorBox.style.backgroundColor = this.color;
         
           var popup = document.getAnonymousElementByAttribute(this, "anonid", "colorpopup")
           popup._colorPicker = this;
@@ -478,7 +491,7 @@
 
           if ("resetHover" in this.mPicker)
             this.mPicker.resetHover();
-            document.addEventListener("keydown", this.mPicker, true);
+            this.mPicker.addKeyListener();
             this.mPicker.mIsPopup = true;
             // Initialize to current button's color
             this.mPicker.initColor(this.color);
@@ -490,7 +503,7 @@
           this.mOpen = false;
           this.removeAttribute("open");
           // Removes the key listener
-          document.removeEventListener("keydown", this.mPicker, true);
+          this.mPicker.removeKeyListener();
           this.mPicker.mIsPopup = false;
         ]]></body>
       </method>
@@ -534,11 +547,12 @@
   </binding>
 
   <binding id="colorpickertile">
-    <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+    <implementation implements="nsIAccessibleProvider" >
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULColorPickerTile;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULColorPickerTileAccessible(this);
           ]]>
         </getter>
       </property>

@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set sw=2 ts=2 et tw=78: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -40,6 +39,13 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+/**
+ * MODULE NOTES:
+ * @update  gess 4/8/98
+ * 
+ *         
+ */
+
 /*
  * Set NS_VIEWSOURCE_TOKENS_PER_BLOCK to 0 to disable multi-block
  * output.  Multi-block output helps reduce the amount of bidi
@@ -78,6 +84,7 @@
 
 #include "nsIServiceManager.h"
 
+#include "COtherDTD.h"
 #include "nsElementTable.h"
 
 #include "prenv.h"  //this is here for debug reasons...
@@ -92,6 +99,7 @@ Stopwatch vsTimer;
 #endif
 
 
+static NS_DEFINE_IID(kClassIID,     NS_VIEWSOURCE_HTML_IID);
 
 // Define this to dump the viewsource stuff to a file
 //#define DUMP_TO_FILE
@@ -108,7 +116,61 @@ Stopwatch vsTimer;
 static const char kBodyId[] = "viewsource";
 static const char kBodyClassWrap[] = "wrap";
 
-NS_IMPL_ISUPPORTS1(CViewSourceHTML, nsIDTD)
+/**
+ *  This method gets called as part of our COM-like interfaces.
+ *  Its purpose is to create an interface to parser object
+ *  of some type.
+ *  
+ *  @update   gess 4/8/98
+ *  @param    nsIID  id of object to discover
+ *  @param    aInstancePtr ptr to newly discovered interface
+ *  @return   NS_xxx result code
+ */
+nsresult CViewSourceHTML::QueryInterface(const nsIID& aIID, void** aInstancePtr)  
+{                                                                        
+  if (NULL == aInstancePtr) {                                            
+    return NS_ERROR_NULL_POINTER;                                        
+  }                                                                      
+
+  if(aIID.Equals(NS_GET_IID(nsISupports)))    {  //do IUnknown...
+    *aInstancePtr = (nsIDTD*)(this);                                        
+  }
+  else if(aIID.Equals(NS_GET_IID(nsIDTD))) {  //do IParser base class...
+    *aInstancePtr = (nsIDTD*)(this);                                        
+  }
+  else if(aIID.Equals(kClassIID)) {  //do this class...
+    *aInstancePtr = (CViewSourceHTML*)(this);                                        
+  }                 
+  else {
+    *aInstancePtr=0;
+    return NS_NOINTERFACE;
+  }
+  NS_ADDREF_THIS();
+  return NS_OK;                                                        
+}
+
+/**
+ *  This method is defined in nsIParser. It is used to 
+ *  cause the COM-like construction of an nsParser.
+ *  
+ *  @update  gess 4/8/98
+ *  @param   nsIParser** ptr to newly instantiated parser
+ *  @return  NS_xxx error result
+ */
+nsresult NS_NewViewSourceHTML(nsIDTD** aInstancePtrResult)
+{
+  CViewSourceHTML* it = new CViewSourceHTML();
+
+  if (it == 0) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  return it->QueryInterface(kClassIID, (void **) aInstancePtrResult);
+}
+
+
+NS_IMPL_ADDREF(CViewSourceHTML)
+NS_IMPL_RELEASE(CViewSourceHTML)
 
 /********************************************
  ********************************************/
@@ -158,17 +220,19 @@ public:
 };
 
 enum {
-  kStartTag = 0,
-  kEndTag,
-  kComment,
-  kCData,
-  kDoctype,
-  kPI,
-  kEntity,
-  kText,
-  kAttributeName,
-  kAttributeValue,
-  kMarkupDecl
+  VIEW_SOURCE_START_TAG = 0,
+  VIEW_SOURCE_END_TAG = 1,
+  VIEW_SOURCE_COMMENT = 2,
+  VIEW_SOURCE_CDATA = 3,
+  VIEW_SOURCE_DOCTYPE = 4,
+  VIEW_SOURCE_PI = 5,
+  VIEW_SOURCE_ENTITY = 6,
+  VIEW_SOURCE_TEXT = 7,
+  VIEW_SOURCE_ATTRIBUTE_NAME = 8,
+  VIEW_SOURCE_ATTRIBUTE_VALUE = 9,
+  VIEW_SOURCE_SUMMARY = 10,
+  VIEW_SOURCE_POPUP = 11,
+  VIEW_SOURCE_MARKUPDECLARATION = 12
 };
 
 static const char* const kElementClasses[] = {
@@ -182,6 +246,8 @@ static const char* const kElementClasses[] = {
   "text",
   "attribute-name",
   "attribute-value",
+  "summary",
+  "popup",
   "markupdeclaration"  
 };
 
@@ -196,12 +262,16 @@ static const char* const kBeforeText[] = {
   "",
   "",
   "=",
+  "",
+  "",
   ""
 };
 
 static const char* const kAfterText[] = {
   ">",
   ">",
+  "",
+  "",
   "",
   "",
   "",
@@ -225,12 +295,16 @@ static const char* const kDumpFileBeforeText[] = {
   "",
   "",
   "=",
+  "",
+  "",
   ""
 };
 
 static const char* const kDumpFileAfterText[] = {
   "&gt;",
   "&gt;",
+  "",
+  "",
   "",
   "",
   "",
@@ -250,8 +324,20 @@ static const char* const kDumpFileAfterText[] = {
  *  @param   
  *  @return  
  */
-CViewSourceHTML::CViewSourceHTML()
-{
+CViewSourceHTML::CViewSourceHTML() : mFilename(), mTags(), mErrors() {
+  mStartTag = VIEW_SOURCE_START_TAG;
+  mEndTag = VIEW_SOURCE_END_TAG;
+  mCommentTag = VIEW_SOURCE_COMMENT;
+  mCDATATag = VIEW_SOURCE_CDATA;
+  mMarkupDeclaration = VIEW_SOURCE_MARKUPDECLARATION;
+  mDocTypeTag = VIEW_SOURCE_DOCTYPE;
+  mPITag = VIEW_SOURCE_PI;
+  mEntityTag = VIEW_SOURCE_ENTITY;
+  mText = VIEW_SOURCE_TEXT;
+  mKey = VIEW_SOURCE_ATTRIBUTE_NAME;
+  mValue = VIEW_SOURCE_ATTRIBUTE_VALUE;
+  mSummaryTag = VIEW_SOURCE_SUMMARY;
+  mPopupTag = VIEW_SOURCE_POPUP;
   mSyntaxHighlight = PR_FALSE;
   mWrapLongLines = PR_FALSE;
   nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
@@ -295,6 +381,52 @@ CViewSourceHTML::~CViewSourceHTML(){
 }
 
 /**
+ * 
+ * @update	gess1/8/99
+ * @param 
+ * @return
+ */
+const nsIID& CViewSourceHTML::GetMostDerivedIID(void) const{
+  return kClassIID;
+}
+
+/**
+ * Call this method if you want the DTD to construct a fresh 
+ * instance of itself. 
+ * @update	gess7/23/98
+ * @param 
+ * @return
+ */
+nsresult CViewSourceHTML::CreateNewInstance(nsIDTD** aInstancePtrResult){
+  return NS_NewViewSourceHTML(aInstancePtrResult);
+}
+
+/**
+ * This method is called to determine if the given DTD can parse
+ * a document in a given source-type. 
+ * NOTE: Parsing always assumes that the end result will involve
+ *       storing the result in the main content model.
+ * @update	gess6/24/98
+ * @param   
+ * @return  TRUE if this DTD can satisfy the request; FALSE otherwise.
+ */
+NS_IMETHODIMP_(eAutoDetectResult)
+CViewSourceHTML::CanParse(CParserContext& aParserContext)
+{
+  if (eViewSource == aParserContext.mParserCommand) {
+    if (aParserContext.mDocType == ePlainText) {
+      return eValidDetect;
+    }
+
+    // We claim to parse XML... now _that_ is funny.
+    return ePrimaryDetect;
+  }
+  
+  return eUnknownDetect;
+}
+
+
+/**
   * The parser uses a code sandwich to wrap the parsing process. Before
   * the process begins, WillBuildModel() is called. Afterwards the parser
   * calls DidBuildModel(). 
@@ -324,11 +456,16 @@ nsresult CViewSourceHTML::WillBuildModel(const CParserContext& aParserContext,
                           12, // The length of "view-source:"
                           contextFilename.Length() - 12);
     
+    mTags.Truncate();
+    mErrors.Assign(NS_LITERAL_STRING(" HTML 4.0 Strict-DTD validation (enabled); [Should use Transitional?].\n"));
+
     mDocType=aParserContext.mDocType;
     mMimeType=aParserContext.mMimeType;
     mDTDMode=aParserContext.mDTDMode;
     mParserCommand=aParserContext.mParserCommand;
     mTokenizer = aTokenizer;
+    mErrorCount=0;
+    mTagCount=0;
 
 #ifdef DUMP_TO_FILE
     if (gDumpFile) {
@@ -337,7 +474,7 @@ nsresult CViewSourceHTML::WillBuildModel(const CParserContext& aParserContext,
       fprintf(gDumpFile, "<head>\n");
       fprintf(gDumpFile, "<title>");
       fprintf(gDumpFile, "Source of: ");
-      fputs(NS_ConvertUTF16toUTF8(mFilename).get(), gDumpFile);
+      fputs(NS_ConvertUCS2toUTF8(mFilename).get(), gDumpFile);
       fprintf(gDumpFile, "</title>\n");
       fprintf(gDumpFile, "<link rel=\"stylesheet\" type=\"text/css\" href=\"resource://gre/res/viewsource.css\">\n");
       fprintf(gDumpFile, "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n");
@@ -396,31 +533,21 @@ NS_IMETHODIMP CViewSourceHTML::BuildModel(nsIParser* aParser,nsITokenizer* aToke
 
       CStartToken htmlToken(NS_LITERAL_STRING("HTML"), eHTMLTag_html);
       nsCParserNode htmlNode(&htmlToken, 0/*stack token*/);
-      mSink->OpenContainer(htmlNode);
+      mSink->OpenHTML(htmlNode);
 
       CStartToken headToken(NS_LITERAL_STRING("HEAD"), eHTMLTag_head);
       nsCParserNode headNode(&headToken, 0/*stack token*/);
-      mSink->OpenContainer(headNode);
-
-      CStartToken titleToken(NS_LITERAL_STRING("TITLE"), eHTMLTag_title);
-      nsCParserNode titleNode(&titleToken, 0/*stack token*/);
-      mSink->OpenContainer(titleNode);
+      mSink->OpenHead(headNode);
 
       // Note that XUL will automatically add the prefix "Source of: "
       if (StringBeginsWith(mFilename, NS_LITERAL_STRING("data:")) &&
           mFilename.Length() > 50) {
         nsAutoString dataFilename(Substring(mFilename, 0, 50));
         dataFilename.AppendLiteral("...");
-        CTextToken titleText(dataFilename);
-        nsCParserNode titleTextNode(&titleText, 0/*stack token*/);
-        mSink->AddLeaf(titleTextNode);
+        mSink->SetTitle(dataFilename);
       } else {
-        CTextToken titleText(mFilename);
-        nsCParserNode titleTextNode(&titleText, 0/*stack token*/);
-        mSink->AddLeaf(titleTextNode);
+        mSink->SetTitle(mFilename);
       }
-
-      mSink->CloseContainer(eHTMLTag_title);
 
       if (theAllocator) {
         CStartToken* theToken=
@@ -448,7 +575,9 @@ NS_IMETHODIMP CViewSourceHTML::BuildModel(nsIParser* aParser,nsITokenizer* aToke
         }
       }
 
-      result = mSink->CloseContainer(eHTMLTag_head);
+      CEndToken endHeadToken(eHTMLTag_head);
+      nsCParserNode endHeadNode(&endHeadToken, 0/*stack token*/);
+      result = mSink->CloseHead();
       if(NS_SUCCEEDED(result)) {
         mHasOpenRoot = PR_TRUE;
         if (didBlock) {
@@ -468,14 +597,14 @@ NS_IMETHODIMP CViewSourceHTML::BuildModel(nsIParser* aParser,nsITokenizer* aToke
 
           AddAttrToNode(bodyNode, theAllocator,
                         NS_LITERAL_STRING("id"),
-                        NS_ConvertASCIItoUTF16(kBodyId));
+                        NS_ConvertASCIItoUCS2(kBodyId));
           
           if (mWrapLongLines) {
             AddAttrToNode(bodyNode, theAllocator,
                           NS_LITERAL_STRING("class"),
-                          NS_ConvertASCIItoUTF16(kBodyClassWrap));
+                          NS_ConvertASCIItoUCS2(kBodyClassWrap));
           }
-          result = mSink->OpenContainer(bodyNode);
+          result = mSink->OpenBody(bodyNode);
           if(NS_SUCCEEDED(result)) mHasOpenBody=PR_TRUE;
         }
         
@@ -525,6 +654,28 @@ NS_IMETHODIMP CViewSourceHTML::BuildModel(nsIParser* aParser,nsITokenizer* aToke
   return result;
 }
 
+
+/**
+ * Call this to display an error summary regarding the page.
+ * 
+ * @update	rickg 6June2000
+ * @return  nsresult
+ */
+nsresult  CViewSourceHTML::GenerateSummary() {
+  nsresult result=NS_OK;
+
+  if(mErrorCount && mTagCount) {
+
+    mErrors.AppendLiteral("\n\n ");
+    mErrors.AppendInt(mErrorCount);
+    mErrors.Append(NS_LITERAL_STRING(" error(s) detected -- see highlighted portions.\n"));
+
+    result=WriteTag(mSummaryTag,mErrors,0,PR_FALSE);
+  }
+
+  return result;
+}
+
 /**
  * Call this to start a new PRE block.  See bug 86355 for why this
  * makes some pages much faster.
@@ -551,7 +702,7 @@ void CViewSourceHTML::StartNewPreBlock(void){
   nsCParserStartNode startNode(theToken, theAllocator);
   AddAttrToNode(startNode, theAllocator,
                 NS_LITERAL_STRING("id"),
-                NS_ConvertASCIItoUTF16(nsPrintfCString("line%d", mLineNumber)));
+                NS_ConvertASCIItoUCS2(nsPrintfCString("line%d", mLineNumber)));
   mSink->OpenContainer(startNode);
   
 #ifdef DUMP_TO_FILE
@@ -614,9 +765,17 @@ NS_IMETHODIMP CViewSourceHTML::DidBuildModel(nsresult anErrorCode,PRBool aNotify
 #endif // DUMP_TO_FILE
 
       if(ePlainText!=mDocType) {
+        CEndToken theToken(eHTMLTag_pre);
+        nsCParserNode preNode(&theToken, 0/*stack token*/);
         mSink->CloseContainer(eHTMLTag_pre);
-        mSink->CloseContainer(eHTMLTag_body);
-        mSink->CloseContainer(eHTMLTag_html);
+        
+        CEndToken bodyToken(eHTMLTag_body);
+        nsCParserNode bodyNode(&bodyToken, 0/*stack token*/);
+        mSink->CloseBody();
+        
+        CEndToken htmlToken(eHTMLTag_html);
+        nsCParserNode htmlNode(&htmlToken, 0/*stack token*/);
+        mSink->CloseHTML();
       }
       result = mSink->DidBuildModel();
     }
@@ -652,6 +811,12 @@ CViewSourceHTML::Terminate() {
 NS_IMETHODIMP_(PRInt32)  
 CViewSourceHTML::GetType() {
   return NS_IPARSER_FLAG_HTML;
+}
+
+NS_IMETHODIMP 
+CViewSourceHTML::CollectSkippedContent(PRInt32 aTag, nsAString& aContent, PRInt32 &aLineNo)
+{
+  return NS_OK;
 }
 
 /**
@@ -750,11 +915,11 @@ nsresult CViewSourceHTML::WriteAttributes(PRInt32 attrCount, PRBool aOwnerInErro
           const PRBool attributeInError =
             !aOwnerInError && theAttrToken->IsInError();
 
-          result = WriteTag(kAttributeName,theKey,0,attributeInError);
+          result = WriteTag(mKey,theKey,0,attributeInError);
           const nsSubstring& theValue = theAttrToken->GetValue();
 
           if(!theValue.IsEmpty() || theAttrToken->mHasEqualWithoutValue){
-            result = WriteTag(kAttributeValue,theValue,0,attributeInError);
+            result = WriteTag(mValue,theValue,0,attributeInError);
           }
         } 
       }
@@ -797,7 +962,6 @@ nsresult CViewSourceHTML::WriteTag(PRInt32 aTagType,const nsSubstring & aText,PR
                      theAllocator->CreateTokenOfType(eToken_start,
                                                      eHTMLTag_span,
                                                      NS_LITERAL_STRING("SPAN")));
-    NS_ENSURE_TRUE(theTagToken, NS_ERROR_OUT_OF_MEMORY);
     theContext.mErrorNode.Init(theTagToken, theAllocator);
     AddAttrToNode(theContext.mErrorNode, theAllocator,
                   NS_LITERAL_STRING("class"),
@@ -821,17 +985,16 @@ nsresult CViewSourceHTML::WriteTag(PRInt32 aTagType,const nsSubstring & aText,PR
     fprintf(gDumpFile, kDumpFileBeforeText[aTagType]);
 #endif // DUMP_TO_FILE
   
-  if (mSyntaxHighlight && aTagType != kText) {
+  if (mSyntaxHighlight && aTagType != mText) {
     CStartToken* theTagToken=
       NS_STATIC_CAST(CStartToken*,
                      theAllocator->CreateTokenOfType(eToken_start,
                                                      eHTMLTag_span,
                                                      NS_LITERAL_STRING("SPAN")));
-    NS_ENSURE_TRUE(theTagToken, NS_ERROR_OUT_OF_MEMORY);
     theContext.mStartNode.Init(theTagToken, theAllocator);
     AddAttrToNode(theContext.mStartNode, theAllocator,
                   NS_LITERAL_STRING("class"),
-                  NS_ConvertASCIItoUTF16(kElementClasses[aTagType]));
+                  NS_ConvertASCIItoUCS2(kElementClasses[aTagType]));
     mSink->OpenContainer(theContext.mStartNode);  //emit <starttag>...
 #ifdef DUMP_TO_FILE
     if (gDumpFile) {
@@ -850,11 +1013,11 @@ nsresult CViewSourceHTML::WriteTag(PRInt32 aTagType,const nsSubstring & aText,PR
   mSink->AddLeaf(theNode);
 #ifdef DUMP_TO_FILE
   if (gDumpFile) {
-    fputs(NS_ConvertUTF16toUTF8(aText).get(), gDumpFile);
+    fputs(NS_ConvertUCS2toUTF8(aText).get(), gDumpFile);
   }
 #endif // DUMP_TO_FILE
 
-  if (mSyntaxHighlight && aTagType != kText) {
+  if (mSyntaxHighlight && aTagType != mText) {
     theContext.mStartNode.ReleaseAll(); 
     CEndToken theEndToken(eHTMLTag_span);
     theContext.mEndNode.Init(&theEndToken, 0/*stack token*/);
@@ -904,8 +1067,7 @@ nsresult CViewSourceHTML::WriteTag(PRInt32 aTagType,const nsSubstring & aText,PR
  *  @param   aToken -- token object to be put into content model
  *  @return  0 if all is well; non-zero is an error
  */
-NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser)
-{
+NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser) {
   nsresult        result=NS_OK;
   CHTMLToken*     theToken= (CHTMLToken*)(aToken);
   eHTMLTokenTypes theType= (eHTMLTokenTypes)theToken->GetTokenType();
@@ -916,12 +1078,17 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser)
   CSharedVSContext& theContext=CSharedVSContext::GetSharedContext();
   theContext.mTokenNode.Init(theToken, mTokenizer->GetTokenAllocator());
 
+  eHTMLTags theParent=(mTags.Length()) ? (eHTMLTags)mTags.Last() : eHTMLTag_unknown;
+  eHTMLTags theChild=(eHTMLTags)aToken->GetTypeID();
+  
   switch(theType) {
     
     case eToken_start:
       {
+        ++mTagCount;
+
         const nsSubstring& startValue = aToken->GetStringValue();
-        result = WriteTag(kStartTag,startValue,aToken->GetAttributeCount(),aToken->IsInError());
+        result=WriteTag(mStartTag,startValue,aToken->GetAttributeCount(),aToken->IsInError());
 
         if((ePlainText!=mDocType) && mParser && (NS_OK==result)) {
           result = mSink->NotifyTagObservers(&theContext.mTokenNode);
@@ -931,8 +1098,12 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser)
 
     case eToken_end:
       {
+        if(theParent==theChild) {
+          mTags.Truncate(mTags.Length()-1);
+        }
+
         const nsSubstring& endValue = aToken->GetStringValue();
-        result = WriteTag(kEndTag,endValue,aToken->GetAttributeCount(),aToken->IsInError());
+        result=WriteTag(mEndTag,endValue,aToken->GetAttributeCount(),aToken->IsInError());
       }
       break;
 
@@ -944,7 +1115,7 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser)
         if (!aToken->IsInError()) {
           theStr.AppendLiteral(">");
         }
-        result=WriteTag(kCData,theStr,0,aToken->IsInError());
+        result=WriteTag(mCDATATag,theStr,0,aToken->IsInError());
       }
       break;
 
@@ -956,7 +1127,7 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser)
         if (!aToken->IsInError()) {
           theStr.AppendLiteral(">");
         }
-        result=WriteTag(kMarkupDecl,theStr,0,aToken->IsInError());
+        result=WriteTag(mMarkupDeclaration,theStr,0,aToken->IsInError());
       }
       break;
 
@@ -964,33 +1135,32 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser)
       {
         nsAutoString theStr;
         aToken->AppendSourceTo(theStr);
-        result=WriteTag(kComment,theStr,0,aToken->IsInError());
+        result=WriteTag(mCommentTag,theStr,0,aToken->IsInError());
       }
       break;
 
     case eToken_doctypeDecl:
       {
         const nsSubstring& doctypeValue = aToken->GetStringValue();
-        result=WriteTag(kDoctype,doctypeValue,0,aToken->IsInError());
+        result=WriteTag(mDocTypeTag,doctypeValue,0,aToken->IsInError());
       }
       break;
 
     case eToken_newline:
       {
         const nsSubstring& newlineValue = aToken->GetStringValue();
-        result=WriteTag(kText,newlineValue,0,PR_FALSE);
+        result=WriteTag(mText,newlineValue,0,PR_FALSE);
         ++mTokenCount;
         if (NS_VIEWSOURCE_TOKENS_PER_BLOCK > 0 &&
-            mTokenCount > NS_VIEWSOURCE_TOKENS_PER_BLOCK) {
+            mTokenCount > NS_VIEWSOURCE_TOKENS_PER_BLOCK)
           StartNewPreBlock();
-        }
       }
       break;
 
     case eToken_whitespace:
       {
         const nsSubstring& wsValue = aToken->GetStringValue();
-        result=WriteTag(kText,wsValue,0,PR_FALSE);
+        result=WriteTag(mText,wsValue,0,PR_FALSE);
         ++mTokenCount;
         if (NS_VIEWSOURCE_TOKENS_PER_BLOCK > 0 &&
             mTokenCount > NS_VIEWSOURCE_TOKENS_PER_BLOCK &&
@@ -1005,7 +1175,7 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser)
     case eToken_text:
       {
         const nsSubstring& str = aToken->GetStringValue();         
-        result=WriteTag(kText,str,aToken->GetAttributeCount(),aToken->IsInError());
+        result=WriteTag(mText,str,aToken->GetAttributeCount(),aToken->IsInError());
         ++mTokenCount;
         if (NS_VIEWSOURCE_TOKENS_PER_BLOCK > 0 &&
             mTokenCount > NS_VIEWSOURCE_TOKENS_PER_BLOCK && !str.IsEmpty()) {
@@ -1018,11 +1188,11 @@ NS_IMETHODIMP CViewSourceHTML::HandleToken(CToken* aToken,nsIParser* aParser)
       break;
 
     case eToken_entity:
-      result=WriteTag(kEntity,aToken->GetStringValue(),0,aToken->IsInError());
+      result=WriteTag(mEntityTag,aToken->GetStringValue(),0,aToken->IsInError());
       break;
 
     case eToken_instruction:
-      result=WriteTag(kPI,aToken->GetStringValue(),0,aToken->IsInError());
+      result=WriteTag(mPITag,aToken->GetStringValue(),0,aToken->IsInError());
       break;
 
     default:

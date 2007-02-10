@@ -65,13 +65,12 @@ interface nsIFileSpec;
 interface nsIOutputStream;
 interface nsIInputStream;
 interface nsILocalFile;
-interface nsIMsgIdentity;
 
 typedef long nsMsgBiffState;
 // enumerated type for determining if a message has been replied to, forwarded, etc.
 typedef long nsMsgDispositionState;
 
-[scriptable, uuid(913D683A-206F-4c91-9B10-3FC4CAEA644E)]
+[scriptable, uuid(5711cb97-42ad-466d-9e8f-48b84a8b76a2)]
 interface nsIMsgFolder : nsICollection {
 
 const nsMsgBiffState nsMsgBiffState_NewMail = 0; // User has new mail waiting.
@@ -410,6 +409,11 @@ const nsMsgBiffState nsMsgBiffState_Unknown = 2; // We dunno whether there is ne
    */
   attribute long sortOrder;
 
+  /** 
+   * used to determine if we persist the close / open state of this folder or not
+   */
+  [noscript]readonly attribute boolean persistElided;
+
   /* handy accessor when we want a msg folder */
   readonly attribute nsIMsgFolder parentMsgFolder;
 
@@ -498,22 +502,4 @@ const nsMsgBiffState nsMsgBiffState_Unknown = 2; // We dunno whether there is ne
   void addKeywordToMessages(in nsISupportsArray aMessages, in string aKeyword);
   void removeKeywordFromMessages(in nsISupportsArray aMessages, in string aKeyword);
 
-  /**
-   * Extract the message preview text from aStream, storing it as a string property
-   * on aMsgHdr.
-   * 
-   * @param aMsgHdr
-   * @param aStream
-   * @param aBytesToRead number of bytes to read from the stream   
-   * @param aMaxOutputLen desired length of the converted message text. Used to control how many characters
-   *        of msg text we want to store.
-   * @param aCompressQuotes Replace quotes and citations with " ... " in the preview text
-   */
-  ACString getMsgTextFromStream(in nsIMsgDBHdr aMsgHdr, in nsIInputStream aStream, 
-                                in long aBytesToRead, in long aMaxOutputLen, in boolean aCompressQuotes);
-  
-  // this allows a folder to have a special identity. E.g., you might want to
-  // associate an identity with a particular newsgroup, or for IMAP shared folders in
-  // the other users namespace, you might want to create a delegated identity
-  readonly attribute nsIMsgIdentity customIdentity;
 };

@@ -48,9 +48,10 @@ MODULE          = wcap
 XPIDL_MODULE    = wcap
 
 XPIDLSRCS       = calIWcapCalendar.idl \
-                  calIWcapSession.idl \
                   calIWcapErrors.idl \
-                  calIWcapRequest.idl \
+                  calIWcapFreeBusyEntry.idl \
+                  calIWcapFreeBusyListener.idl \
+                  calIWcapSession.idl \
                   $(NULL)
 
 include $(topsrcdir)/config/rules.mk

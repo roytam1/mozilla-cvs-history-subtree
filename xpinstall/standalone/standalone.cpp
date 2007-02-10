@@ -42,7 +42,7 @@
 #include "nsIServiceManager.h"
 #include "nsCOMPtr.h"
 
-#include "nsFileSpec.h"
+#include "nsSpecialSystemDirectory.h" 
 
 #include "nscore.h"
 #include "nspr.h"

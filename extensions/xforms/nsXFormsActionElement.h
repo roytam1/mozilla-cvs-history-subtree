@@ -44,9 +44,9 @@
 #include "nsDataHashtable.h"
 #include "nsXFormsStubElement.h"
 
-class nsIXTFElementWrapper;
+class nsIXTFBindableElementWrapper;
 
-class nsXFormsActionElement : public nsXFormsStubElement,
+class nsXFormsActionElement : public nsXFormsBindableStub,
                               public nsIXFormsActionElement,
                               public nsIXFormsActionModuleElement,
                               public nsIDOMEventListener
@@ -57,7 +57,7 @@ public:
   NS_DECL_NSIDOMEVENTLISTENER
   NS_DECL_NSIXFORMSACTIONELEMENT
   NS_DECL_NSIXFORMSACTIONMODULEELEMENT
-  NS_IMETHOD OnCreated(nsIXTFElementWrapper* aWrapper);
+  NS_IMETHOD OnCreated(nsIXTFBindableElementWrapper* aWrapper);
   NS_IMETHOD OnDestroyed();
 private:
   nsIDOMElement*                                mElement;

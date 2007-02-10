@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *       Rajiv Dayal <rdayal@netscape.com>
- *       Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -46,7 +45,6 @@
 #include "nsRDFCID.h"
 #include "nsUnicharUtils.h"
 #include "nsIAbMDBCard.h"
-#include "nsIAddressBook.h"
 #include "nsAbCardProperty.h"
 #include "prdtoa.h"
 #include "nsMsgUtils.h"
@@ -163,7 +161,7 @@ void nsAbPalmHotSync::ConvertAssignPalmIDAttrib(PRUint32 id, nsIAbMDBCard * card
     char buf[128];
     PR_cnvtf(buf, 128, 0, f);
     card->SetAbDatabase(mABDB);
-    card->SetStringAttribute(CARD_ATTRIB_PALMID,NS_ConvertASCIItoUTF16(buf).get());
+    card->SetStringAttribute(CARD_ATTRIB_PALMID,NS_ConvertASCIItoUCS2(buf).get());
 }
 
 nsresult nsAbPalmHotSync::GetABInterface()
@@ -282,13 +280,14 @@ nsresult nsAbPalmHotSync::AddAllRecordsToAB(PRBool existingAB, PRInt32 aCount, l
       rv = OpenABDBForHotSync(PR_FALSE);
       NS_ENSURE_SUCCESS(rv, rv);
       // lets try deleting the db out from under ourselves. 
-      nsCOMPtr<nsIFile> abFile;
-      rv = mABDB->GetDbPath(getter_AddRefs(abFile));
+      nsFileSpec *abFileSpec;
+      rv = mABDB->GetDbPath(&abFileSpec);
       NS_ENSURE_SUCCESS(rv, rv);
       mABDB->ForceClosed();
       mDBOpen = PR_FALSE;
       mABDB = nsnull;
-      abFile->Remove(PR_FALSE);
+      abFileSpec->Delete(PR_FALSE);
+      delete abFileSpec;
     }
     else
     {
@@ -366,7 +365,7 @@ nsresult nsAbPalmHotSync::GetAllCards(PRInt32 * aCount, lpnsABCOMCardStruct * aC
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    nsCOMPtr<nsISimpleEnumerator> cardsEnumerator;
+    nsCOMPtr<nsIEnumerator> cardsEnumerator;
     rv = mABDB->EnumerateCards(mDirectory, getter_AddRefs(cardsEnumerator));
     if (NS_FAILED(rv) || !cardsEnumerator) {
         mABDB->Close(PR_FALSE);
@@ -375,9 +374,8 @@ nsresult nsAbPalmHotSync::GetAllCards(PRInt32 * aCount, lpnsABCOMCardStruct * aC
 
     nsCOMPtr<nsISupports> item;
     nsCOMPtr<nsIAbCard> card;
-    PRBool more;
-    while (NS_SUCCEEDED(cardsEnumerator->HasMoreElements(&more)) && more) {
-        rv = cardsEnumerator->GetNext(getter_AddRefs(item));
+    for (rv = cardsEnumerator->First(); NS_SUCCEEDED(rv); rv = cardsEnumerator->Next()) {
+        rv = cardsEnumerator->CurrentItem(getter_AddRefs(item));
         if (NS_FAILED(rv)) 
             continue;
 
@@ -563,7 +561,7 @@ nsresult nsAbPalmHotSync::LoadNewModifiedCardsSinceLastSync()
     if(!mDBOpen || !mABDB || !mInitialized) 
         return NS_ERROR_NOT_INITIALIZED;
 
-    nsCOMPtr<nsISimpleEnumerator> cardsEnumerator;
+    nsCOMPtr<nsIEnumerator> cardsEnumerator;
     nsresult rv = mABDB->EnumerateCards(mDirectory, getter_AddRefs(cardsEnumerator));
     if (NS_FAILED(rv) || !cardsEnumerator) 
         return NS_ERROR_NOT_AVAILABLE; // no cards available
@@ -571,10 +569,9 @@ nsresult nsAbPalmHotSync::LoadNewModifiedCardsSinceLastSync()
     // create the list of cards to be sent to Palm
     nsCOMPtr<nsISupports> item;
     nsCOMPtr<nsIAbCard> card;
-    PRBool more;
-    while (NS_SUCCEEDED(cardsEnumerator->HasMoreElements(&more)) && more) 
+    for (rv = cardsEnumerator->First(); NS_SUCCEEDED(rv); rv = cardsEnumerator->Next()) 
     {
-        rv = cardsEnumerator->GetNext(getter_AddRefs(item));
+        rv = cardsEnumerator->CurrentItem(getter_AddRefs(item));
         if (NS_FAILED(rv)) 
             return rv;
 
@@ -827,7 +824,7 @@ nsresult nsAbPalmHotSync::UpdateMozABWithPalmRecords()
           {
             nsCOMPtr<nsIAbMDBCard> dbCard = do_QueryInterface(existingCard);
 
-            dbCard->SetStringAttribute(CARD_ATTRIB_PALMID, NS_ConvertASCIItoUTF16(recordIDBuf).get());
+            dbCard->SetStringAttribute(CARD_ATTRIB_PALMID, NS_ConvertASCIItoUCS2(recordIDBuf).get());
             continue;
           }
 
@@ -884,7 +881,7 @@ nsresult nsAbPalmHotSync::UpdateMozABWithPalmRecords()
             {
                 // now set the attribute for the PalmRecID in the card in the DB
                 dbCard->SetAbDatabase(mABDB);
-                dbCard->SetStringAttribute(CARD_ATTRIB_PALMID, NS_ConvertASCIItoUTF16(recordIDBuf).get());
+                dbCard->SetStringAttribute(CARD_ATTRIB_PALMID, NS_ConvertASCIItoUCS2(recordIDBuf).get());
                 newCard = do_QueryInterface(dbCard, &rv);
                 if(NS_SUCCEEDED(rv))
                     rv = mABDB->EditCard(newCard, PR_FALSE);

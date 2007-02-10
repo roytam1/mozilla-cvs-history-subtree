@@ -46,8 +46,7 @@
 #include "nsIScrollableFrame.h"
 #include "nsIReflowCallback.h"
 #include "nsINameSpaceManager.h"
-#include "nsGkAtoms.h"
-#include "nsContentUtils.h"
+#include "nsXULAtoms.h"
 
 nsListBoxLayout::nsListBoxLayout(nsIPresShell* aPresShell)
   : nsGridRowGroupLayout(aPresShell)
@@ -63,7 +62,7 @@ nsListBoxLayout::GetPrefSize(nsIBox* aBox, nsBoxLayoutState& aBoxLayoutState, ns
 
   nsListBoxBodyFrame* frame = NS_STATIC_CAST(nsListBoxBodyFrame*, aBox);
   if (frame) {
-    nscoord rowheight = frame->GetRowHeightAppUnits();
+    nscoord rowheight = frame->GetRowHeightTwips();
     aSize.height = frame->GetRowCount() * rowheight;
     // Pad the height.
     nscoord y = frame->GetAvailableHeight();
@@ -72,8 +71,9 @@ nsListBoxLayout::GetPrefSize(nsIBox* aBox, nsBoxLayoutState& aBoxLayoutState, ns
       nscoord remainder = m == 0 ? 0 : rowheight - m;
       aSize.height += remainder;
     }
-    if (nsContentUtils::HasNonEmptyAttr(frame->GetContent(), kNameSpaceID_None,
-                                        nsGkAtoms::sizemode)) {
+    nsAutoString sizeMode;
+    frame->GetContent()->GetAttr(kNameSpaceID_None, nsXULAtoms::sizemode, sizeMode);
+    if (!sizeMode.IsEmpty()) {
       nscoord width = frame->ComputeIntrinsicWidth(aBoxLayoutState);
       if (width > aSize.width)
         aSize.width = width;
@@ -89,7 +89,7 @@ nsListBoxLayout::GetMinSize(nsIBox* aBox, nsBoxLayoutState& aBoxLayoutState, nsS
 
   nsListBoxBodyFrame* frame = NS_STATIC_CAST(nsListBoxBodyFrame*, aBox);
   if (frame) {
-    nscoord rowheight = frame->GetRowHeightAppUnits();
+    nscoord rowheight = frame->GetRowHeightTwips();
     aSize.height = frame->GetRowCount() * rowheight;
     // Pad the height.
     nscoord y = frame->GetAvailableHeight();
@@ -98,8 +98,9 @@ nsListBoxLayout::GetMinSize(nsIBox* aBox, nsBoxLayoutState& aBoxLayoutState, nsS
       nscoord remainder = m == 0 ? 0 : rowheight - m;
       aSize.height += remainder;
     }
-    if (nsContentUtils::HasNonEmptyAttr(frame->GetContent(), kNameSpaceID_None,
-                                        nsGkAtoms::sizemode)) {
+    nsAutoString sizeMode;
+    frame->GetContent()->GetAttr(kNameSpaceID_None, nsXULAtoms::sizemode, sizeMode);
+    if (!sizeMode.IsEmpty()) {
       nscoord width = frame->ComputeIntrinsicWidth(aBoxLayoutState);
       if (width > aSize.width)
         aSize.width = width;
@@ -115,7 +116,7 @@ nsListBoxLayout::GetMaxSize(nsIBox* aBox, nsBoxLayoutState& aBoxLayoutState, nsS
 
   nsListBoxBodyFrame* frame = NS_STATIC_CAST(nsListBoxBodyFrame*, aBox);
   if (frame) {
-    nscoord rowheight = frame->GetRowHeightAppUnits();
+    nscoord rowheight = frame->GetRowHeightTwips();
     aSize.height = frame->GetRowCount() * rowheight;
     // Pad the height.
     nscoord y = frame->GetAvailableHeight();
@@ -140,7 +141,7 @@ nsListBoxLayout::Layout(nsIBox* aBox, nsBoxLayoutState& aState)
   frame->GetIndexOfFirstVisibleRow(&index);
   if (index > 0) {
     nscoord pos = frame->GetYPosition();
-    PRInt32 rowHeight = frame->GetRowHeightAppUnits();
+    PRInt32 rowHeight = frame->GetRowHeightTwips();
     if (pos != (rowHeight*index)) {
       frame->VerticalScroll(rowHeight*index);
       frame->Redraw(aState, nsnull, PR_FALSE);
@@ -195,23 +196,29 @@ nsListBoxLayout::LayoutInternal(nsIBox* aBox, nsBoxLayoutState& aState)
   body->GetChildBox(&box);
 
   // if the reason is resize or initial we must relayout.
-  nscoord rowHeight = body->GetRowHeightAppUnits();
+  PRBool relayout = (aState.LayoutReason() == nsBoxLayoutState::Resize || aState.LayoutReason() == nsBoxLayoutState::Initial);
+  nscoord rowHeight = body->GetRowHeightTwips();
 
   while (box) {
     // If this box is dirty or if it has dirty children, we
     // call layout on it.
+    PRBool dirty = PR_FALSE;           
+    PRBool dirtyChildren = PR_FALSE;           
+    box->IsDirty(dirty);
+    box->HasDirtyChildren(dirtyChildren);
+       
     nsRect childRect(box->GetRect());
     box->GetMargin(margin);
     
     // relayout if we must or we are dirty or some of our children are dirty
     //   or the client area is wider than us
-    // XXXldb There should probably be a resize check here too!
-    if ((box->GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN)) || childRect.width < clientRect.width) {
+    if (relayout || dirty || dirtyChildren || childRect.width < clientRect.width) {
       childRect.x = 0;
       childRect.y = yOffset;
       childRect.width = clientRect.width;
       
-      nsSize size = box->GetPrefSize(aState);
+      nsSize size;
+      box->GetPrefSize(aState, size);
       body->SetRowHeight(size.height);
       
       childRect.height = rowHeight;
@@ -225,7 +232,7 @@ nsListBoxLayout::LayoutInternal(nsIBox* aBox, nsBoxLayoutState& aState)
       PRInt32 newPos = yOffset+margin.top;
 
       // are we pushing down or pulling up any rows?
-      // Then we may have to redraw everything below the moved 
+      // Then we may have to redraw everything below the the moved 
       // rows.
       if (redrawStart == -1 && childRect.y != newPos)
         redrawStart = newPos;

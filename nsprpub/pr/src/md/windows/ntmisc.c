@@ -112,7 +112,7 @@ static int assembleCmdLine(char *const *argv, char **cmdLine)
 {
     char *const *arg;
     char *p, *q;
-    size_t cmdLineSize;
+    int cmdLineSize;
     int numBackslashes;
     int i;
     int argNeedQuotes;
@@ -133,7 +133,7 @@ static int assembleCmdLine(char *const *argv, char **cmdLine)
                 + 2                      /* we quote every argument */
                 + 1;                     /* space in between, or final null */
     }
-    p = *cmdLine = PR_MALLOC((PRUint32) cmdLineSize);
+    p = *cmdLine = PR_MALLOC(cmdLineSize);
     if (p == NULL) {
         return -1;
     }
@@ -226,7 +226,7 @@ static int assembleEnvBlock(char **envp, char **envBlock)
     char **env;
     char *curEnv;
     char *cwdStart, *cwdEnd;
-    size_t envBlockSize;
+    int envBlockSize;
 
     if (envp == NULL) {
         *envBlock = NULL;
@@ -261,7 +261,7 @@ static int assembleEnvBlock(char **envp, char **envBlock)
     }
     envBlockSize++;
 
-    p = *envBlock = PR_MALLOC((PRUint32) envBlockSize);
+    p = *envBlock = PR_MALLOC(envBlockSize);
     if (p == NULL) {
         FreeEnvironmentStrings(curEnv);
         return -1;
@@ -583,7 +583,7 @@ PRStatus _MD_CreateFileMap(PRFileMap *fmap, PRInt64 size)
 {
     DWORD dwHi, dwLo;
     DWORD flProtect;
-    PROsfd osfd;
+    PRUint32    osfd;
 
     osfd = ( fmap->fd == (PRFileDesc*)-1 )?  -1 : fmap->fd->secret->md.osfd;
 
@@ -774,7 +774,7 @@ PR_StackPush(PRStack *stack, PRStackElem *stack_elem)
   if (*tos == (void *) -1)
     goto retry;
   
-  __asm__("xchg %0,%1"
+  __asm__("lock xchg %0,%1"
           : "=r" (tmp), "=m"(*tos)
           : "0" (-1), "m"(*tos));
   
@@ -815,7 +815,7 @@ PR_StackPop(PRStack *stack)
   if (*tos == (void *) -1)
     goto retry;
   
-  __asm__("xchg %0,%1"
+  __asm__("lock xchg %0,%1"
           : "=r" (tmp), "=m"(*tos)
           : "0" (-1), "m"(*tos));
 

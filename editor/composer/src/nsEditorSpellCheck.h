@@ -52,7 +52,7 @@
     { 0x93, 0x9a, 0xec, 0x63, 0x51, 0xee, 0xa0, 0xcc }\
 }
 
-class nsEditorSpellCheck : public nsIEditorSpellCheck
+class nsEditorSpellCheck : public nsIEditorSpellCheck_MOZILLA_1_8_BRANCH
 {
 public:
   nsEditorSpellCheck();
@@ -62,6 +62,7 @@ public:
 
   /* Declare all methods in the nsIEditorSpellCheck interface */
   NS_DECL_NSIEDITORSPELLCHECK
+  NS_DECL_NSIEDITORSPELLCHECK_MOZILLA_1_8_BRANCH
 
 protected:
   nsCOMPtr<nsISpellChecker> mSpellChecker;

@@ -39,13 +39,13 @@
 #include "nsIGenericFactory.h"
 #include "nsIContentSniffer.h"
 #include "nsIStreamListener.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 
-class nsFeedSniffer : public nsIContentSniffer, nsIStreamListener
+class nsFeedSniffer : public nsIContentSniffer_MOZILLA_1_8_BRANCH, nsIStreamListener
 {
 public:
   NS_DECL_ISUPPORTS
-  NS_DECL_NSICONTENTSNIFFER
+  NS_DECL_NSICONTENTSNIFFER_MOZILLA_1_8_BRANCH
   NS_DECL_NSIREQUESTOBSERVER
   NS_DECL_NSISTREAMLISTENER
 

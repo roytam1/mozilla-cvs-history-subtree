@@ -358,14 +358,7 @@ NS_IMETHODIMP
 nsNewsDatabase::GetDefaultViewFlags(nsMsgViewFlagsTypeValue *aDefaultViewFlags)
 {
   NS_ENSURE_ARG_POINTER(aDefaultViewFlags);
-  GetIntPref("mailnews.default_news_view_flags", aDefaultViewFlags);
-  if (*aDefaultViewFlags < nsMsgViewFlagsType::kNone ||
-      *aDefaultViewFlags > (nsMsgViewFlagsType::kThreadedDisplay |
-                            nsMsgViewFlagsType::kShowIgnored |
-                            nsMsgViewFlagsType::kUnreadOnly |
-                            nsMsgViewFlagsType::kExpandAll |
-                            nsMsgViewFlagsType::kGroupBySort))
-    *aDefaultViewFlags = nsMsgViewFlagsType::kThreadedDisplay;
+  *aDefaultViewFlags = nsMsgViewFlagsType::kThreadedDisplay;
   return NS_OK;
 }
 
@@ -373,19 +366,6 @@ NS_IMETHODIMP
 nsNewsDatabase::GetDefaultSortType(nsMsgViewSortTypeValue *aDefaultSortType)
 {
   NS_ENSURE_ARG_POINTER(aDefaultSortType);
-  GetIntPref("mailnews.default_news_sort_type", aDefaultSortType);
-  if (*aDefaultSortType < nsMsgViewSortType::byDate ||
-      *aDefaultSortType > nsMsgViewSortType::byAccount)
-    *aDefaultSortType = nsMsgViewSortType::byThread;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsNewsDatabase::GetDefaultSortOrder(nsMsgViewSortOrderValue *aDefaultSortOrder)
-{
-  NS_ENSURE_ARG_POINTER(aDefaultSortOrder);
-  GetIntPref("mailnews.default_news_sort_order", aDefaultSortOrder);
-  if (*aDefaultSortOrder != nsMsgViewSortOrder::descending)
-    *aDefaultSortOrder = nsMsgViewSortOrder::ascending;
+  *aDefaultSortType = nsMsgViewSortType::byThread;
   return NS_OK;
 }

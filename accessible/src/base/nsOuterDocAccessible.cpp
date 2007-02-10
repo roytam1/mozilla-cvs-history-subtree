@@ -70,9 +70,13 @@ NS_IMETHODIMP nsOuterDocAccessible::GetName(nsAString& aName)
 }
 
 /* unsigned long getRole (); */
-NS_IMETHODIMP nsOuterDocAccessible::GetRole(PRUint32 *aRole)
+NS_IMETHODIMP nsOuterDocAccessible::GetRole(PRUint32 *_retval)
 {
-  *aRole = ROLE_CLIENT;
+#ifndef MOZ_ACCESSIBILITY_ATK
+  *_retval = ROLE_CLIENT;
+#else
+  *_retval = ROLE_PANE;
+#endif
   return NS_OK;
 }
 
@@ -83,7 +87,7 @@ NS_IMETHODIMP nsOuterDocAccessible::GetState(PRUint32 *aState)
   return NS_OK;
 }
 
-void nsOuterDocAccessible::CacheChildren()
+void nsOuterDocAccessible::CacheChildren(PRBool aWalkAnonContent)
 {  
   // An outer doc accessible usually has 1 nsDocAccessible child,
   // but could have none if we can't get to the inner documnet
@@ -95,6 +99,7 @@ void nsOuterDocAccessible::CacheChildren()
     return;
   }
 
+  mAccChildCount = 0;
   SetFirstChild(nsnull);
 
   // In these variable names, "outer" relates to the nsOuterDocAccessible
@@ -107,14 +112,12 @@ void nsOuterDocAccessible::CacheChildren()
 
   nsCOMPtr<nsIDocument> outerDoc = content->GetDocument();
   if (!outerDoc) {
-    mAccChildCount = 0;
     return;
   }
 
   nsIDocument *innerDoc = outerDoc->GetSubDocumentFor(content);
   nsCOMPtr<nsIDOMNode> innerNode(do_QueryInterface(innerDoc));
   if (!innerNode) {
-    mAccChildCount = 0;
     return;
   }
 
@@ -125,7 +128,6 @@ void nsOuterDocAccessible::CacheChildren()
   nsCOMPtr<nsPIAccessible> privateInnerAccessible = 
     do_QueryInterface(innerAccessible);
   if (!privateInnerAccessible) {
-    mAccChildCount = 0;
     return;
   }
 

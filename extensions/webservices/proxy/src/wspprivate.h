@@ -48,7 +48,6 @@
 #include "nsIExceptionService.h"
 #include "nsIServiceManager.h"
 #include "nsAString.h"
-#include "nsIClassInfoImpl.h"
 
 // SOAP includes
 #include "nsISOAPCall.h"
@@ -59,7 +58,7 @@
 #include "nsSOAPUtils.h"
 
 // interface info includes
-#include "nsXPTCUtils.h"
+#include "xptcall.h"
 #include "nsIInterfaceInfo.h"
 
 // WSDL includes
@@ -88,11 +87,11 @@ public:
 
   static nsresult C2XML(const nsACString& aCIdentifier,
                         nsAString& aXMLIdentifier);
-  static void XML2C(const nsAString& aXMLIdentifier,
+  static void XML2C(const nsAString& aXMLIndentifier,
                     nsACString& aCIdentifier);
 };
 
-class WSPProxy : protected nsAutoXPTCStub,
+class WSPProxy : public nsXPTCStubBase,
                  public nsIWebServiceProxy,
                  public nsIClassInfo
 {
@@ -104,9 +103,11 @@ public:
   NS_DECL_NSIWEBSERVICEPROXY
   NS_DECL_NSICLASSINFO
 
+  // Would be nice to have a NS_DECL_NSXPTCSTUBBASE
   NS_IMETHOD CallMethod(PRUint16 methodIndex,
-                        const XPTMethodDescriptor* info,
+                        const nsXPTMethodInfo* info,
                         nsXPTCMiniVariant* params);
+  NS_IMETHOD GetInterfaceInfo(nsIInterfaceInfo** info);
 
   void GetListenerInterfaceInfo(nsIInterfaceInfo** aInfo);
   void CallCompleted(WSPCallContext* aContext);
@@ -250,7 +251,7 @@ protected:
   nsCOMPtr<nsIInterfaceInfo> mInterfaceInfo;
 };
 
-class WSPPropertyBagWrapper : protected nsAutoXPTCStub,
+class WSPPropertyBagWrapper : public nsXPTCStubBase,
                               public nsIWebServicePropertyBagWrapper,
                               public nsIClassInfo
 {
@@ -262,9 +263,11 @@ public:
   NS_DECL_NSIWEBSERVICEPROPERTYBAGWRAPPER
   NS_DECL_NSICLASSINFO
 
+  // Would be nice to have a NS_DECL_NSXPTCSTUBBASE
   NS_IMETHOD CallMethod(PRUint16 methodIndex,
-                        const XPTMethodDescriptor* info,
+                        const nsXPTMethodInfo* info,
                         nsXPTCMiniVariant* params);
+  NS_IMETHOD GetInterfaceInfo(nsIInterfaceInfo** info);
 
   static NS_METHOD
   Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);

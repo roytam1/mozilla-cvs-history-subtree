@@ -134,34 +134,23 @@ private:
         const char *aURI,
         PRBool aNeedsPersisting = PR_TRUE,
         URIData **aData = nsnull);
-    nsresult StoreURIAttributeNS(
-        nsIDOMNode *aNode, const char *aNamespaceURI, const char *aAttribute,
-        PRBool aNeedsPersisting = PR_TRUE,
-        URIData **aData = nsnull);
     nsresult StoreURIAttribute(
         nsIDOMNode *aNode, const char *aAttribute,
         PRBool aNeedsPersisting = PR_TRUE,
-        URIData **aData = nsnull)
-    {
-        return StoreURIAttributeNS(aNode, "", aAttribute, aNeedsPersisting, aData);
-    }
+        URIData **aData = nsnull);
     PRBool GetQuotedAttributeValue(
     const nsAString &aSource, const nsAString &aAttribute, nsAString &aValue);
 
     nsresult GetNodeToFixup(nsIDOMNode *aNodeIn, nsIDOMNode **aNodeOut);
     nsresult FixupURI(nsAString &aURI);
-    nsresult FixupNodeAttributeNS(nsIDOMNode *aNode, const char *aNamespaceURI, const char *aAttribute);
-    nsresult FixupNodeAttribute(nsIDOMNode *aNode, const char *aAttribute)
-    {
-        return FixupNodeAttributeNS(aNode, "", aAttribute);
-    }
+    nsresult FixupNodeAttribute(nsIDOMNode *aNode, const char *aAttribute);
     nsresult FixupAnchor(nsIDOMNode *aNode);
     nsresult FixupXMLStyleSheetLink(nsIDOMProcessingInstruction *aPI, const nsAString &aHref);
     nsresult GetXMLStyleSheetLink(nsIDOMProcessingInstruction *aPI, nsAString &aHref);
 
     nsresult StoreAndFixupStyleSheet(nsIStyleSheet *aStyleSheet);
     nsresult SaveDocumentWithFixup(
-        nsIDOMDocument *pDocument, nsIDocumentEncoderNodeFixup *pFixup,
+        nsIDocument *pDocument, nsIDocumentEncoderNodeFixup *pFixup,
         nsIURI *aFile, PRBool aReplaceExisting, const nsACString &aFormatType,
         const nsCString &aSaveCharset, PRUint32  aFlags);
     nsresult SaveSubframeContent(
@@ -215,7 +204,6 @@ private:
      * progress notification.
      */
     nsCOMPtr<nsIWebProgressListener2> mProgressListener2;
-    nsCOMPtr<nsIProgressEventSink> mEventSink;
     nsHashtable               mOutputMap;
     nsHashtable               mUploadList;
     nsHashtable               mURIMap;

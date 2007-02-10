@@ -118,11 +118,35 @@ static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 #define PREF_MAIL_STRICTLY_MIME "mail.strictly_mime"
 #define PREF_MAIL_MESSAGE_WARNING_SIZE "mailnews.message_warning_size"
 #define PREF_MAIL_COLLECT_EMAIL_ADDRESS_OUTGOING "mail.collect_email_address_outgoing"
-#define PREF_MAIL_DONT_ATTACH_SOURCE "mail.compose.dont_attach_source_of_local_network_links"
-
-#define ATTR_MOZ_DO_NOT_SEND "moz-do-not-send"
 
 enum  { kDefaultMode = (PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE) };
+
+#ifdef XP_MAC
+
+static char* NET_GetLocalFileFromURL(char *url)
+{
+  char * finalPath;
+  NS_ASSERTION(PL_strncasecmp(url, "file://", 7) == 0, "invalid url");
+  finalPath = (char*)PR_Malloc(strlen(url));
+  if (finalPath == nsnull)
+    return nsnull;
+  strcpy(finalPath, url+6+1);
+  return finalPath;
+}
+
+static char* NET_GetURLFromLocalFile(char *filename)
+{
+    /*  file:///<path>0 */
+  char * finalPath = (char*)PR_Malloc(strlen(filename) + 8 + 1);
+  if (finalPath == nsnull)
+    return nsnull;
+  finalPath[0] = 0;
+  strcat(finalPath, "file://");
+  strcat(finalPath, filename);
+  return finalPath;
+}
+
+#endif /* XP_MAC */
 
 static PRBool mime_use_quoted_printable_p = PR_FALSE;
 
@@ -463,7 +487,7 @@ nsMsgComposeAndSend::Clear()
         m_attachments[i].mFileSpec = nsnull;
       }
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
       //
       // remove the appledoubled intermediate file after we done all.
       //
@@ -473,7 +497,7 @@ nsMsgComposeAndSend::Clear()
         delete m_attachments[i].mAppleFileSpec;
         m_attachments[i].mAppleFileSpec = nsnull;
       }
-#endif /* XP_MACOSX */
+#endif /* XP_MAC */
     }
 
     delete[] m_attachments;
@@ -1303,6 +1327,13 @@ nsMsgComposeAndSend::PreProcessPart(nsMsgAttachmentHandler  *ma,
   return 1;
 }
 
+
+#if defined(XP_MAC) && defined(DEBUG)
+// Compiler runs out of registers for the debug build.
+#pragma global_optimizer on
+#pragma optimization_level 4
+#endif // XP_MAC && DEBUG
+
 # define FROB(X) \
     if (X && *X) \
     { \
@@ -1362,8 +1393,12 @@ nsresult nsMsgComposeAndSend::BeginCryptoEncapsulation ()
   return rv;
 }
 
+#if defined(XP_MAC) && defined(DEBUG)
+#pragma global_optimizer reset
+#endif // XP_MAC && DEBUG
+
 nsresult
-mime_write_message_body(nsIMsgSend *state, const char *buf, PRInt32 size)
+mime_write_message_body(nsIMsgSend *state, char *buf, PRInt32 size)
 {
   NS_ENSURE_ARG_POINTER(state);
 
@@ -1404,30 +1439,22 @@ nsMsgComposeAndSend::GetEmbeddedObjectInfo(nsIDOMNode *node, nsMsgAttachmentData
   NS_ENSURE_ARG_POINTER(attachment);
   NS_ENSURE_ARG_POINTER(acceptObject);
 
-// GetEmbeddedObjectInfo will determine if we need to attach the source of the embedded object with the message
-// The decision is made automatically unless the attribute moz-do-not-send has been set to true or false
-// The default rule is that all image and anchor objects are attached as well link to a local file
   nsresult rv;
 
   // Reset this structure to null!
   memset(attachment, 0, sizeof(nsMsgAttachmentData));
   *acceptObject = PR_FALSE;
 
-  // Check if the object has a moz-do-not-send attribute set. If it's true,
-  // we must ignore it, if false set forceToBeAttached to be true.
+  // Check if the object has an moz-do-not-send attribute set. If it's the case,
+  // we must ignore it
 
-  PRBool forceToBeAttached = PR_FALSE;
   nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(node);
   if (domElement)
   {
     nsAutoString attributeValue;
-    if (NS_SUCCEEDED(domElement->GetAttribute(NS_LITERAL_STRING(ATTR_MOZ_DO_NOT_SEND), attributeValue)))
-    {
+    if (NS_SUCCEEDED(domElement->GetAttribute(NS_LITERAL_STRING("moz-do-not-send"), attributeValue)))
       if (attributeValue.LowerCaseEqualsLiteral("true"))
         return NS_OK;
-      if (attributeValue.LowerCaseEqualsLiteral("false"))
-        forceToBeAttached = PR_TRUE;
-    }
   }
     
   // Now, we know the types of objects this node can be, so we will do
@@ -1574,40 +1601,12 @@ nsMsgComposeAndSend::GetEmbeddedObjectInfo(nsIDOMNode *node, nsMsgAttachmentData
           rv = aLocalFile->IsFile(&isAValidFile);
           if (NS_FAILED(rv))
             isAValidFile = PR_FALSE;
-          else
-          {
-            if (anchor)
-            {
-              // One more test, if the anchor points to a local network server, let's check what the pref
-              // mail.compose.dont_attach_source_of_local_network_links tells us to do.
-              nsCAutoString urlSpec;         
-              rv = attachment->url->GetSpec(urlSpec);
-              if (NS_SUCCEEDED(rv))
-                if (StringBeginsWith(urlSpec, NS_LITERAL_CSTRING("file://///")))
-                {
-                  nsCOMPtr<nsIPrefBranch> pPrefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
-                  if (pPrefBranch)
-                  {
-                    PRBool dontSend = PR_FALSE;
-                    rv = pPrefBranch->GetBoolPref(PREF_MAIL_DONT_ATTACH_SOURCE, &dontSend);
-                    if (dontSend)
-                      isAValidFile = PR_FALSE;
-                  }
-                }
-            }
-          }
         }
       }
       
       if (! isAValidFile)
         return NS_OK;
     }  
-  }
-  else //not a file:// url
-  {
-    //if this is an anchor, don't attach remote file unless we have been forced to do it
-    if (anchor && !forceToBeAttached)
-      return NS_OK;
   }
   
   *acceptObject = PR_TRUE;
@@ -1742,7 +1741,7 @@ nsMsgComposeAndSend::GetBodyFromEditor()
   
   nsCString attachment1_body;
   // we'd better be "text/html" at this point
-  const char  *attachment1_type = TEXT_HTML;  
+  char          *attachment1_type = TEXT_HTML;  
 
   // Convert body to mail charset
   nsXPIDLCString    outCString;
@@ -1788,11 +1787,12 @@ nsMsgComposeAndSend::GetBodyFromEditor()
               CopyUTF16toUTF8(bodyText, outCString);
               mCompFields->SetCharacterSet("UTF-8"); // tag as UTF-8
               break; 
-            case 1 : // return to the editor
+            case 1 : // send anyway 
+              break;
+            case 2 : // return to the editor
+            default :
               Recycle(bodyText);
               return NS_ERROR_MSG_MULTILINGUAL_SEND;
-            case 2 : // send anyway 
-              break;
           }
         }
       }
@@ -1824,7 +1824,7 @@ nsMsgComposeAndSend::GetBodyFromEditor()
   else
     return NS_ERROR_FAILURE;
 
-  // If our holder for the original body text is STILL null, then just 
+  // If our holder for the orignal body text is STILL null, then just 
   // just copy what we have as the original body text.
   //
   if (!origHTMLBody)
@@ -1878,7 +1878,7 @@ nsMsgComposeAndSend::EnsureLineBreaks(const char *body, PRUint32 bodyLen)
           // in the worse case, the body will be solid, no linebreaks.
           // that will require us to insert a line break every LINE_BREAK_MAX bytes
           PRUint32 worstCaseLen = bodyLen+((bodyLen/LINE_BREAK_MAX)*NS_LINEBREAK_LEN)+1;
-          newBody = (char *) PR_Calloc(1, worstCaseLen);
+          newBody = (char *) PR_Malloc(worstCaseLen);
           if (!newBody) return NS_ERROR_OUT_OF_MEMORY;
           newBodyPos = newBody;
         }
@@ -1900,8 +1900,8 @@ nsMsgComposeAndSend::EnsureLineBreaks(const char *body, PRUint32 bodyLen)
 
   // if newBody is non-null is non-zero, we inserted a linebreak
   if (newBody) {
-      // don't forget about part after the last linebreak we inserted
-     PL_strncpy(newBodyPos, body+lastPos, bodyLen - lastPos);
+     // don't forget about part after the last linebreak we inserted
+     PL_strcpy(newBodyPos, body+lastPos);
 
      m_attachment1_body = newBody;
      m_attachment1_body_length = PL_strlen(newBody);  // not worstCaseLen
@@ -2133,13 +2133,13 @@ nsMsgComposeAndSend::ProcessMultipartRelated(PRInt32 *aMailboxCount, PRInt32 *aN
       // STRING USE WARNING: hoisting the following conversion might save code-space, since it happens along every path
 
     if (anchor)
-      anchor->SetHref(NS_ConvertASCIItoUTF16(domSaveArray[i].url));
+      anchor->SetHref(NS_ConvertASCIItoUCS2(domSaveArray[i].url));
     else if (link)
-      link->SetHref(NS_ConvertASCIItoUTF16(domSaveArray[i].url));
+      link->SetHref(NS_ConvertASCIItoUCS2(domSaveArray[i].url));
     else if (image)
-      image->SetSrc(NS_ConvertASCIItoUTF16(domSaveArray[i].url));
+      image->SetSrc(NS_ConvertASCIItoUCS2(domSaveArray[i].url));
     else if (body)
-      body->SetBackground(NS_ConvertASCIItoUTF16(domSaveArray[i].url));
+      body->SetBackground(NS_ConvertASCIItoUCS2(domSaveArray[i].url));
 
     nsMemory::Free(domSaveArray[i].url);
   }
@@ -2305,14 +2305,7 @@ nsMsgComposeAndSend::AddCompFieldLocalAttachments()
 
         // Now, most importantly, we need to figure out what the content type is for
         // this attachment...If we can't, then just make it application/octet-stream
-        
-#ifdef MAC_OSX
-        //Mac always need to snarf the file to figure out how to send it, maybe we need to use apple double...
-        //  unless caller has already set the content type, in which case, trust them.
-        PRBool mustSnarfAttachment = PR_TRUE;
-#else
-        PRBool mustSnarfAttachment = PR_FALSE;
-#endif        
+
         PR_FREEIF(m_attachments[newLoc].m_type);
         element->GetContentType(&m_attachments[newLoc].m_type);
         if (!m_attachments[newLoc].m_type || !(*m_attachments[newLoc].m_type))
@@ -2333,7 +2326,7 @@ nsMsgComposeAndSend::AddCompFieldLocalAttachments()
                 if (NS_SUCCEEDED(rv) && !fileExt.IsEmpty()) {
                   nsCAutoString type;
                   mimeFinder->GetTypeFromExtension(fileExt, type);
-#ifndef XP_MACOSX
+#if !defined(XP_MAC) && !defined(XP_MACOSX)
                   if (!type.Equals("multipart/appledouble"))  // can't do apple double on non-macs
 #endif
                   m_attachments[newLoc].m_type = ToNewCString(type);
@@ -2350,15 +2343,10 @@ nsMsgComposeAndSend::AddCompFieldLocalAttachments()
                   if (NS_SUCCEEDED(rv) && !fileExt.IsEmpty()) {
                     nsCAutoString type;
                     mimeFinder->GetTypeFromExtension(fileExt, type);
-#ifndef XP_MACOSX
+#if !defined(XP_MAC) && !defined(XP_MACOSX)
                   if (!type.Equals("multipart/appledouble"))  // can't do apple double on non-macs
 #endif
                     m_attachments[newLoc].m_type = ToNewCString(type);
-                  // rtf and vcs files may look like text to sniffers,
-                  // but they're not human readable.
-                  if (type.IsEmpty() && !fileExt.IsEmpty() &&
-                       (fileExt.LowerCaseEqualsLiteral("rtf") || fileExt.LowerCaseEqualsLiteral("vcs")))
-                    m_attachments[newLoc].m_type = PL_strdup(APPLICATION_OCTET_STREAM);
                   }
                 }
               }
@@ -2366,13 +2354,15 @@ nsMsgComposeAndSend::AddCompFieldLocalAttachments()
           }
         }
         else
-        {
           element->GetContentTypeParam(&m_attachments[newLoc].m_type_param);
-          mustSnarfAttachment = PR_FALSE;
-        }
 
+#if defined(XP_MAC) || defined(XP_MACOSX)
+        //We always need to snarf the file to figure out how to send it, maybe we need to use apple double...
+        m_attachments[newLoc].m_done = PR_FALSE;
+        m_attachments[newLoc].SetMimeDeliveryState(this);
+#else
         //We need to snarf the file to figure out how to send it only if we don't have a content type...
-        if (mustSnarfAttachment || (!m_attachments[newLoc].m_type) || (!*m_attachments[newLoc].m_type))
+        if ((!m_attachments[newLoc].m_type) || (!*m_attachments[newLoc].m_type))
         {
           m_attachments[newLoc].m_done = PR_FALSE;
           m_attachments[newLoc].SetMimeDeliveryState(this);
@@ -2382,6 +2372,7 @@ nsMsgComposeAndSend::AddCompFieldLocalAttachments()
           m_attachments[newLoc].m_done = PR_TRUE;
           m_attachments[newLoc].SetMimeDeliveryState(nsnull);
         }
+#endif
         // For local files, if they are HTML docs and we don't have a charset, we should
         // sniff the file and see if we can figure it out.
         if ( (m_attachments[newLoc].m_type) &&  (*m_attachments[newLoc].m_type) ) 
@@ -2863,8 +2854,12 @@ nsMsgComposeAndSend::InitCompositionFields(nsMsgCompFields *fields,
 {
   nsresult        rv = NS_OK;
   const char      *pStr = nsnull;
+  nsMsgCompFields *tPtr = new nsMsgCompFields();
 
-  mCompFields = new nsMsgCompFields();
+  if (!tPtr)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  mCompFields = do_QueryInterface( tPtr );
   if (!mCompFields)
     return NS_ERROR_OUT_OF_MEMORY;
 

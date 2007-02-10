@@ -52,12 +52,6 @@ PR_BEGIN_EXTERN_C
 /************************************************************************/
 /************************************************************************/
 
-#ifdef _WIN64
-typedef __int64 PROsfd;
-#else
-typedef PRInt32 PROsfd;
-#endif
-
 /* Return the method tables for files, tcp sockets and udp sockets */
 NSPR_API(const PRIOMethods*)    PR_GetFileMethods(void);
 NSPR_API(const PRIOMethods*)    PR_GetTCPMethods(void);
@@ -68,18 +62,18 @@ NSPR_API(const PRIOMethods*)    PR_GetPipeMethods(void);
 ** Convert a NSPR Socket Handle to a Native Socket handle.
 ** This function will be obsoleted with the next release; avoid using it.
 */
-NSPR_API(PROsfd)       PR_FileDesc2NativeHandle(PRFileDesc *);
-NSPR_API(void)         PR_ChangeFileDescNativeHandle(PRFileDesc *, PROsfd);
-NSPR_API(PRFileDesc*)  PR_AllocFileDesc(PROsfd osfd,
+NSPR_API(PRInt32)      PR_FileDesc2NativeHandle(PRFileDesc *);
+NSPR_API(void)         PR_ChangeFileDescNativeHandle(PRFileDesc *, PRInt32);
+NSPR_API(PRFileDesc*)  PR_AllocFileDesc(PRInt32 osfd,
                                          const PRIOMethods *methods);
 NSPR_API(void)         PR_FreeFileDesc(PRFileDesc *fd);
 /*
 ** Import an existing OS file to NSPR. 
 */
-NSPR_API(PRFileDesc*)  PR_ImportFile(PROsfd osfd);
-NSPR_API(PRFileDesc*)  PR_ImportPipe(PROsfd osfd);
-NSPR_API(PRFileDesc*)  PR_ImportTCPSocket(PROsfd osfd);
-NSPR_API(PRFileDesc*)  PR_ImportUDPSocket(PROsfd osfd);
+NSPR_API(PRFileDesc*)  PR_ImportFile(PRInt32 osfd);
+NSPR_API(PRFileDesc*)  PR_ImportPipe(PRInt32 osfd);
+NSPR_API(PRFileDesc*)  PR_ImportTCPSocket(PRInt32 osfd);
+NSPR_API(PRFileDesc*)  PR_ImportUDPSocket(PRInt32 osfd);
 
 
 /*
@@ -100,7 +94,7 @@ NSPR_API(PRFileDesc*)  PR_ImportUDPSocket(PROsfd osfd);
  **************************************************************************
  */
 
-NSPR_API(PRFileDesc*)	PR_CreateSocketPollFd(PROsfd osfd);
+NSPR_API(PRFileDesc*)	PR_CreateSocketPollFd(PRInt32 osfd);
 
 /*
  *************************************************************************

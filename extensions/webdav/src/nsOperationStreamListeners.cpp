@@ -371,8 +371,11 @@ PropfindStreamListener::PropertiesFromPropElt(nsIDOMElement *propElt,
         nsCOMPtr<nsIDocumentEncoder> encoder =
           do_CreateInstance(NS_DOC_ENCODER_CONTRACTID_BASE "text/xml", &rv);
 
+        nsCOMPtr<nsIDocument> baseDoc = do_QueryInterface(mXMLDoc, &rv);
+        NS_ENSURE_SUCCESS(rv, rv);
+
         // This method will fail if no document
-        rv = encoder->Init(mXMLDoc, NS_LITERAL_STRING("text/xml"),
+        rv = encoder->Init(baseDoc, NS_LITERAL_STRING("text/xml"),
                            nsIDocumentEncoder::OutputEncodeBasicEntities);
         NS_ENSURE_SUCCESS(rv, rv);
         
@@ -410,9 +413,8 @@ PropfindStreamListener::ProcessResponse(nsIDOMElement *responseElt)
     LOG(("response for %s: %d", href.get(), statusCode));
 
     nsCOMPtr<nsIDOMNodeList> proplist;
-    rv = responseElt->GetElementsByTagNameNS(NS_LITERAL_STRING("DAV:"),
-                                             NS_LITERAL_STRING("propstat"),
-                                             getter_AddRefs(proplist));
+    rv = responseElt->GetElementsByTagName(NS_LITERAL_STRING("propstat"),
+                                           getter_AddRefs(proplist));
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRUint32 length;

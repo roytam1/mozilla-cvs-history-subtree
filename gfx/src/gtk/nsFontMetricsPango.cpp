@@ -645,7 +645,7 @@ nsFontMetricsPango::GetTextDimensions(const PRUnichar*    aString,
             curBreak++;
         }
 
-        if (NS_IS_HIGH_SURROGATE(aString[curOffset]))
+        if (IS_HIGH_SURROGATE(aString[curOffset]))
             curOffset++;
     }
 
@@ -925,7 +925,7 @@ nsFontMetricsPango::GetClusterInfo(const PRUnichar *aText,
     pango_layout_get_log_attrs(layout, &attrs, &n_attrs);
 
     for (PRUint32 pos = 0; pos < aLength; pos++) {
-        if (NS_IS_HIGH_SURROGATE(aText[pos])) {
+        if (IS_HIGH_SURROGATE(aText[pos])) {
             aClusterStarts[pos] = 1;
             pos++;
         }
@@ -951,6 +951,7 @@ nsFontMetricsPango::GetPosition(const PRUnichar *aText, PRUint32 aLength,
 {
     int trailing = 0;
     int inx = 0;
+    gboolean found = FALSE;
     const gchar *curChar;
     PRInt32 retval = 0;
 
@@ -976,11 +977,21 @@ nsFontMetricsPango::GetPosition(const PRUnichar *aText, PRUint32 aLength,
     pango_layout_set_text(layout, text, strlen(text));
     FixupSpaceWidths(layout, text);
     
-    pango_layout_xy_to_index(layout, localX, localY,
-                             &inx, &trailing);
+    found = pango_layout_xy_to_index(layout, localX, localY,
+                                     &inx, &trailing);
 
     // Convert the index back to the utf-16 index
     curChar = text;
+
+    // Jump to the end if it's not found.
+    if (!found) {
+        if (inx == 0)
+            retval = 0;
+        else if (trailing)
+            retval = aLength;
+
+        goto loser;
+    }
 
     for (PRUint32 curOffset=0; curOffset < aLength;
          curOffset++, curChar = g_utf8_find_next_char(curChar, NULL)) {
@@ -991,7 +1002,7 @@ nsFontMetricsPango::GetPosition(const PRUnichar *aText, PRUint32 aLength,
             break;
         }
 
-        if (NS_IS_HIGH_SURROGATE(aText[curOffset]))
+        if (IS_HIGH_SURROGATE(aText[curOffset]))
             curOffset++;
     }
 
@@ -1001,7 +1012,7 @@ nsFontMetricsPango::GetPosition(const PRUnichar *aText, PRUint32 aLength,
         retval++;
         // Yes, this can make aInx > length to indicate the end of the
         // string.
-        if (retval < (PRInt32)aLength && NS_IS_HIGH_SURROGATE(aText[retval]))
+        if (retval < (PRInt32)aLength && IS_HIGH_SURROGATE(aText[retval]))
             retval++;
         trailing--;
     }
@@ -1051,7 +1062,7 @@ nsFontMetricsPango::GetRangeWidth(const PRUnichar *aText,
         if (curOffset == aEnd)
             utf8End = curChar - text;
         
-        if (NS_IS_HIGH_SURROGATE(aText[curOffset]))
+        if (IS_HIGH_SURROGATE(aText[curOffset]))
             curOffset++;
     }
 
@@ -1316,7 +1327,7 @@ nsFontMetricsPango::DrawStringSlowly(const gchar *aText,
              curOffset++, curChar = g_utf8_find_next_char(curChar, NULL)) {
             utf8spacing[curChar - aText] = aSpacing[curOffset];
 
-            if (NS_IS_HIGH_SURROGATE(aOrigString[curOffset]))
+            if (IS_HIGH_SURROGATE(aOrigString[curOffset]))
                 curOffset++;
         }
     }

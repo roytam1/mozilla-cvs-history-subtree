@@ -36,7 +36,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsINameSpaceManager.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
+#include "nsXULAtoms.h"
 #include "nsIBoxObject.h"
 #include "nsTreeUtils.h"
 #include "nsTreeContentView.h"
@@ -46,7 +47,6 @@
 #include "nsIDOMClassInfo.h"
 #include "nsIEventStateManager.h"
 #include "nsINodeInfo.h"
-#include "nsIXULSortService.h"
 
 // A content model view implementation for the tree.
 
@@ -149,7 +149,7 @@ nsTreeContentView::~nsTreeContentView(void)
 }
 
 nsresult
-NS_NewTreeContentView(nsITreeView** aResult)
+NS_NewTreeContentView(nsITreeContentView** aResult)
 {
   *aResult = new nsTreeContentView;
   if (! *aResult)
@@ -165,7 +165,6 @@ NS_INTERFACE_MAP_BEGIN(nsTreeContentView)
   NS_INTERFACE_MAP_ENTRY(nsITreeView)
   NS_INTERFACE_MAP_ENTRY(nsITreeContentView)
   NS_INTERFACE_MAP_ENTRY(nsIDocumentObserver)
-  NS_INTERFACE_MAP_ENTRY(nsIMutationObserver)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsITreeContentView)
   NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(TreeContentView)
 NS_INTERFACE_MAP_END
@@ -190,23 +189,23 @@ NS_IMETHODIMP
 nsTreeContentView::SetSelection(nsITreeSelection* aSelection)
 {
   mSelection = aSelection;
-  if (!mSelection || !mUpdateSelection)
-    return NS_OK;
 
-  mUpdateSelection = PR_FALSE;
+  if (mUpdateSelection) {
+    mUpdateSelection = PR_FALSE;
 
-  mSelection->SetSelectEventsSuppressed(PR_TRUE);
-  for (PRInt32 i = 0; i < mRows.Count(); ++i) {
-    Row* row = (Row*)mRows[i];
-    nsCOMPtr<nsIDOMHTMLOptionElement> optEl = do_QueryInterface(row->mContent);
-    if (optEl) {
-      PRBool isSelected;
-      optEl->GetSelected(&isSelected);
-      if (isSelected)
-        mSelection->ToggleSelect(i);
+    mSelection->SetSelectEventsSuppressed(PR_TRUE);
+    for (PRInt32 i = 0; i < mRows.Count(); ++i) {
+      Row* row = (Row*)mRows[i];
+      nsCOMPtr<nsIDOMHTMLOptionElement> optEl = do_QueryInterface(row->mContent);
+      if (optEl) {
+        PRBool isSelected;
+        optEl->GetSelected(&isSelected);
+        if (isSelected)
+          mSelection->ToggleSelect(i);
+      }
     }
+    mSelection->SetSelectEventsSuppressed(PR_FALSE);
   }
-  mSelection->SetSelectEventsSuppressed(PR_FALSE);
 
   return NS_OK;
 }
@@ -214,7 +213,6 @@ nsTreeContentView::SetSelection(nsITreeSelection* aSelection)
 NS_IMETHODIMP
 nsTreeContentView::GetRowProperties(PRInt32 aIndex, nsISupportsArray* aProperties)
 {
-  NS_ENSURE_ARG_POINTER(aProperties);
   NS_PRECONDITION(aIndex >= 0 && aIndex < mRows.Count(), "bad index");
   if (aIndex < 0 || aIndex >= mRows.Count())
     return NS_ERROR_INVALID_ARG;   
@@ -224,11 +222,11 @@ nsTreeContentView::GetRowProperties(PRInt32 aIndex, nsISupportsArray* aPropertie
   if (row->IsSeparator())
     realRow = row->mContent;
   else
-    nsTreeUtils::GetImmediateChild(row->mContent, nsGkAtoms::treerow, getter_AddRefs(realRow));
+    nsTreeUtils::GetImmediateChild(row->mContent, nsXULAtoms::treerow, getter_AddRefs(realRow));
 
   if (realRow) {
     nsAutoString properties;
-    realRow->GetAttr(kNameSpaceID_None, nsGkAtoms::properties, properties);
+    realRow->GetAttr(kNameSpaceID_None, nsXULAtoms::properties, properties);
     if (!properties.IsEmpty())
       nsTreeUtils::TokenizeProperties(properties, aProperties);
   }
@@ -239,20 +237,18 @@ nsTreeContentView::GetRowProperties(PRInt32 aIndex, nsISupportsArray* aPropertie
 NS_IMETHODIMP
 nsTreeContentView::GetCellProperties(PRInt32 aRow, nsITreeColumn* aCol, nsISupportsArray* aProperties)
 {
-  NS_ENSURE_ARG_POINTER(aCol);
-  NS_ENSURE_ARG_POINTER(aProperties);
   NS_PRECONDITION(aRow >= 0 && aRow < mRows.Count(), "bad row");
   if (aRow < 0 || aRow >= mRows.Count())
     return NS_ERROR_INVALID_ARG;   
 
   Row* row = (Row*)mRows[aRow];
   nsCOMPtr<nsIContent> realRow;
-  nsTreeUtils::GetImmediateChild(row->mContent, nsGkAtoms::treerow, getter_AddRefs(realRow));
+  nsTreeUtils::GetImmediateChild(row->mContent, nsXULAtoms::treerow, getter_AddRefs(realRow));
   if (realRow) {
     nsIContent* cell = GetCell(realRow, aCol);
     if (cell) {
       nsAutoString properties;
-      cell->GetAttr(kNameSpaceID_None, nsGkAtoms::properties, properties);
+      cell->GetAttr(kNameSpaceID_None, nsXULAtoms::properties, properties);
       if (!properties.IsEmpty())
         nsTreeUtils::TokenizeProperties(properties, aProperties);
     }
@@ -264,8 +260,6 @@ nsTreeContentView::GetCellProperties(PRInt32 aRow, nsITreeColumn* aCol, nsISuppo
 NS_IMETHODIMP
 nsTreeContentView::GetColumnProperties(nsITreeColumn* aCol, nsISupportsArray* aProperties)
 {
-  NS_ENSURE_ARG_POINTER(aCol);
-  NS_ENSURE_ARG_POINTER(aProperties);
   nsCOMPtr<nsIDOMElement> element;
   aCol->GetElement(getter_AddRefs(element));
 
@@ -416,20 +410,20 @@ nsTreeContentView::GetLevel(PRInt32 aIndex, PRInt32* _retval)
  NS_IMETHODIMP
 nsTreeContentView::GetImageSrc(PRInt32 aRow, nsITreeColumn* aCol, nsAString& _retval)
 {
-  _retval.Truncate();
-  NS_ENSURE_ARG_POINTER(aCol);
   NS_PRECONDITION(aRow >= 0 && aRow < mRows.Count(), "bad row");
   if (aRow < 0 || aRow >= mRows.Count())
     return NS_ERROR_INVALID_ARG;   
 
+  _retval.SetCapacity(0);
+
   Row* row = (Row*)mRows[aRow];
 
   nsCOMPtr<nsIContent> realRow;
-  nsTreeUtils::GetImmediateChild(row->mContent, nsGkAtoms::treerow, getter_AddRefs(realRow));
+  nsTreeUtils::GetImmediateChild(row->mContent, nsXULAtoms::treerow, getter_AddRefs(realRow));
   if (realRow) {
     nsIContent* cell = GetCell(realRow, aCol);
     if (cell)
-      cell->GetAttr(kNameSpaceID_None, nsGkAtoms::src, _retval);
+      cell->GetAttr(kNameSpaceID_None, nsHTMLAtoms::src, _retval);
   }
 
   return NS_OK;
@@ -438,7 +432,6 @@ nsTreeContentView::GetImageSrc(PRInt32 aRow, nsITreeColumn* aCol, nsAString& _re
 NS_IMETHODIMP
 nsTreeContentView::GetProgressMode(PRInt32 aRow, nsITreeColumn* aCol, PRInt32* _retval)
 {
-  NS_ENSURE_ARG_POINTER(aCol);
   NS_PRECONDITION(aRow >= 0 && aRow < mRows.Count(), "bad row");
   if (aRow < 0 || aRow >= mRows.Count())
     return NS_ERROR_INVALID_ARG;   
@@ -448,17 +441,16 @@ nsTreeContentView::GetProgressMode(PRInt32 aRow, nsITreeColumn* aCol, PRInt32* _
   Row* row = (Row*)mRows[aRow];
 
   nsCOMPtr<nsIContent> realRow;
-  nsTreeUtils::GetImmediateChild(row->mContent, nsGkAtoms::treerow, getter_AddRefs(realRow));
+  nsTreeUtils::GetImmediateChild(row->mContent, nsXULAtoms::treerow, getter_AddRefs(realRow));
   if (realRow) {
     nsIContent* cell = GetCell(realRow, aCol);
     if (cell) {
-      static nsIContent::AttrValuesArray strings[] =
-        {&nsGkAtoms::normal, &nsGkAtoms::undetermined, nsnull};
-      switch (cell->FindAttrValueIn(kNameSpaceID_None, nsGkAtoms::mode,
-                                    strings, eCaseMatters)) {
-        case 0: *_retval = nsITreeView::PROGRESS_NORMAL; break;
-        case 1: *_retval = nsITreeView::PROGRESS_UNDETERMINED; break;
-      }
+      nsAutoString state;
+      cell->GetAttr(kNameSpaceID_None, nsXULAtoms::mode, state);
+      if (state.EqualsLiteral("normal"))
+        *_retval = nsITreeView::PROGRESS_NORMAL;
+      else if (state.EqualsLiteral("undetermined"))
+        *_retval = nsITreeView::PROGRESS_UNDETERMINED;
     }
   }
 
@@ -468,20 +460,20 @@ nsTreeContentView::GetProgressMode(PRInt32 aRow, nsITreeColumn* aCol, PRInt32* _
 NS_IMETHODIMP
 nsTreeContentView::GetCellValue(PRInt32 aRow, nsITreeColumn* aCol, nsAString& _retval)
 {
-  _retval.Truncate();
-  NS_ENSURE_ARG_POINTER(aCol);
   NS_PRECONDITION(aRow >= 0 && aRow < mRows.Count(), "bad row");
   if (aRow < 0 || aRow >= mRows.Count())
     return NS_ERROR_INVALID_ARG;   
 
+  _retval.SetCapacity(0);
+
   Row* row = (Row*)mRows[aRow];
 
   nsCOMPtr<nsIContent> realRow;
-  nsTreeUtils::GetImmediateChild(row->mContent, nsGkAtoms::treerow, getter_AddRefs(realRow));
+  nsTreeUtils::GetImmediateChild(row->mContent, nsXULAtoms::treerow, getter_AddRefs(realRow));
   if (realRow) {
     nsIContent* cell = GetCell(realRow, aCol);
     if (cell)
-      cell->GetAttr(kNameSpaceID_None, nsGkAtoms::value, _retval);
+      cell->GetAttr(kNameSpaceID_None, nsHTMLAtoms::value, _retval);
   }
 
   return NS_OK;
@@ -490,43 +482,43 @@ nsTreeContentView::GetCellValue(PRInt32 aRow, nsITreeColumn* aCol, nsAString& _r
 NS_IMETHODIMP
 nsTreeContentView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsAString& _retval)
 {
-  _retval.Truncate();
-  NS_ENSURE_ARG_POINTER(aCol);
   NS_PRECONDITION(aRow >= 0 && aRow < mRows.Count(), "bad row");
   NS_PRECONDITION(aCol, "bad column");
 
   if (aRow < 0 || aRow >= mRows.Count() || !aCol)
     return NS_ERROR_INVALID_ARG;
 
+  _retval.SetCapacity(0);
+
   Row* row = (Row*)mRows[aRow];
 
   // Check for a "label" attribute - this is valid on an <treeitem>
   // or an <option>, with a single implied column.
-  if (row->mContent->GetAttr(kNameSpaceID_None, nsGkAtoms::label, _retval)
+  if (row->mContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::label, _retval)
       && !_retval.IsEmpty())
     return NS_OK;
 
   nsIAtom *rowTag = row->mContent->Tag();
-  if (rowTag == nsGkAtoms::option &&
-      row->mContent->IsNodeOfType(nsINode::eHTML)) {
+  if (rowTag == nsHTMLAtoms::option &&
+      row->mContent->IsContentOfType(nsIContent::eHTML)) {
     // Use the text node child as the label
     nsCOMPtr<nsIDOMHTMLOptionElement> elem = do_QueryInterface(row->mContent);
     elem->GetText(_retval);
   }
-  else if (rowTag == nsGkAtoms::optgroup &&
-           row->mContent->IsNodeOfType(nsINode::eHTML)) {
+  else if (rowTag == nsHTMLAtoms::optgroup &&
+           row->mContent->IsContentOfType(nsIContent::eHTML)) {
     nsCOMPtr<nsIDOMHTMLOptGroupElement> elem = do_QueryInterface(row->mContent);
     elem->GetLabel(_retval);
   }
-  else if (rowTag == nsGkAtoms::treeitem &&
-           row->mContent->IsNodeOfType(nsINode::eXUL)) {
+  else if (rowTag == nsXULAtoms::treeitem &&
+           row->mContent->IsContentOfType(nsIContent::eXUL)) {
     nsCOMPtr<nsIContent> realRow;
-    nsTreeUtils::GetImmediateChild(row->mContent, nsGkAtoms::treerow,
+    nsTreeUtils::GetImmediateChild(row->mContent, nsXULAtoms::treerow,
                                    getter_AddRefs(realRow));
     if (realRow) {
       nsIContent* cell = GetCell(realRow, aCol);
       if (cell)
-        cell->GetAttr(kNameSpaceID_None, nsGkAtoms::label, _retval);
+        cell->GetAttr(kNameSpaceID_None, nsHTMLAtoms::label, _retval);
     }
   }
 
@@ -576,8 +568,8 @@ nsTreeContentView::ToggleOpenState(PRInt32 aIndex)
   // lazily.
   Row* row = (Row*)mRows[aIndex];
 
-  if (row->mContent->Tag() == nsGkAtoms::optgroup &&
-      row->mContent->IsNodeOfType(nsINode::eHTML)) {
+  if (row->mContent->Tag() == nsHTMLAtoms::optgroup &&
+      row->mContent->IsContentOfType(nsIContent::eHTML)) {
     // we don't use an attribute for optgroup's open state
     if (row->IsOpen())
       CloseContainer(aIndex);
@@ -586,9 +578,9 @@ nsTreeContentView::ToggleOpenState(PRInt32 aIndex)
   }
   else {
     if (row->IsOpen())
-      row->mContent->SetAttr(kNameSpaceID_None, nsGkAtoms::open, NS_LITERAL_STRING("false"), PR_TRUE);
+      row->mContent->SetAttr(kNameSpaceID_None, nsXULAtoms::open, NS_LITERAL_STRING("false"), PR_TRUE);
     else
-      row->mContent->SetAttr(kNameSpaceID_None, nsGkAtoms::open, NS_LITERAL_STRING("true"), PR_TRUE);
+      row->mContent->SetAttr(kNameSpaceID_None, nsXULAtoms::open, NS_LITERAL_STRING("true"), PR_TRUE);
   }
 
   return NS_OK;
@@ -597,37 +589,6 @@ nsTreeContentView::ToggleOpenState(PRInt32 aIndex)
 NS_IMETHODIMP
 nsTreeContentView::CycleHeader(nsITreeColumn* aCol)
 {
-  NS_ENSURE_ARG_POINTER(aCol);
-
-  if (!mRoot)
-    return NS_OK;
-
-  nsCOMPtr<nsIDOMElement> element;
-  aCol->GetElement(getter_AddRefs(element));
-  if (element) {
-    nsCOMPtr<nsIContent> column = do_QueryInterface(element);
-    nsAutoString sort;
-    column->GetAttr(kNameSpaceID_None, nsGkAtoms::sort, sort);
-    if (!sort.IsEmpty()) {
-      nsCOMPtr<nsIXULSortService> xs = do_GetService("@mozilla.org/xul/xul-sort-service;1");
-      if (xs) {
-        nsAutoString sortdirection;
-        static nsIContent::AttrValuesArray strings[] =
-          {&nsGkAtoms::ascending, &nsGkAtoms::descending, nsnull};
-        switch (column->FindAttrValueIn(kNameSpaceID_None,
-                                        nsGkAtoms::sortDirection,
-                                        strings, eCaseMatters)) {
-          case 0: sortdirection.AssignLiteral("descending"); break;
-          case 1: sortdirection.AssignLiteral("natural"); break;
-          default: sortdirection.AssignLiteral("ascending"); break;
-        }
-
-        nsCOMPtr<nsIDOMNode> rootnode = do_QueryInterface(mRoot);
-        xs->Sort(rootnode, sort, sortdirection);
-      }
-    }
-  }
-
   return NS_OK;
 }
 
@@ -646,8 +607,6 @@ nsTreeContentView::CycleCell(PRInt32 aRow, nsITreeColumn* aCol)
 NS_IMETHODIMP
 nsTreeContentView::IsEditable(PRInt32 aRow, nsITreeColumn* aCol, PRBool* _retval)
 {
-  *_retval = PR_FALSE;
-  NS_ENSURE_ARG_POINTER(aCol);
   NS_PRECONDITION(aRow >= 0 && aRow < mRows.Count(), "bad row");
   if (aRow < 0 || aRow >= mRows.Count())
     return NS_ERROR_INVALID_ARG;   
@@ -657,36 +616,14 @@ nsTreeContentView::IsEditable(PRInt32 aRow, nsITreeColumn* aCol, PRBool* _retval
   Row* row = (Row*)mRows[aRow];
 
   nsCOMPtr<nsIContent> realRow;
-  nsTreeUtils::GetImmediateChild(row->mContent, nsGkAtoms::treerow, getter_AddRefs(realRow));
+  nsTreeUtils::GetImmediateChild(row->mContent, nsXULAtoms::treerow, getter_AddRefs(realRow));
   if (realRow) {
     nsIContent* cell = GetCell(realRow, aCol);
-    if (cell && cell->AttrValueIs(kNameSpaceID_None, nsGkAtoms::editable,
-                                  nsGkAtoms::_false, eCaseMatters)) {
-      *_retval = PR_FALSE;
-    }
-  }
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsTreeContentView::IsSelectable(PRInt32 aRow, nsITreeColumn* aCol, PRBool* _retval)
-{
-  NS_PRECONDITION(aRow >= 0 && aRow < mRows.Count(), "bad row");
-  if (aRow < 0 || aRow >= mRows.Count())
-    return NS_ERROR_INVALID_ARG;   
-
-  *_retval = PR_TRUE;
-
-  Row* row = (Row*)mRows[aRow];
-
-  nsCOMPtr<nsIContent> realRow;
-  nsTreeUtils::GetImmediateChild(row->mContent, nsGkAtoms::treerow, getter_AddRefs(realRow));
-  if (realRow) {
-    nsIContent* cell = GetCell(realRow, aCol);
-    if (cell && cell->AttrValueIs(kNameSpaceID_None, nsGkAtoms::selectable,
-                                  nsGkAtoms::_false, eCaseMatters)) {
-      *_retval = PR_FALSE;
+    if (cell) {
+      nsAutoString editable;
+      cell->GetAttr(kNameSpaceID_None, nsXULAtoms::editable, editable);
+      if (editable.EqualsLiteral("false"))
+        *_retval = PR_FALSE;
     }
   }
 
@@ -696,7 +633,6 @@ nsTreeContentView::IsSelectable(PRInt32 aRow, nsITreeColumn* aCol, PRBool* _retv
 NS_IMETHODIMP
 nsTreeContentView::SetCellValue(PRInt32 aRow, nsITreeColumn* aCol, const nsAString& aValue)
 {
-  NS_ENSURE_ARG_POINTER(aCol);
   NS_PRECONDITION(aRow >= 0 && aRow < mRows.Count(), "bad row");
   if (aRow < 0 || aRow >= mRows.Count())
     return NS_ERROR_INVALID_ARG;   
@@ -704,11 +640,11 @@ nsTreeContentView::SetCellValue(PRInt32 aRow, nsITreeColumn* aCol, const nsAStri
   Row* row = (Row*)mRows[aRow];
 
   nsCOMPtr<nsIContent> realRow;
-  nsTreeUtils::GetImmediateChild(row->mContent, nsGkAtoms::treerow, getter_AddRefs(realRow));
+  nsTreeUtils::GetImmediateChild(row->mContent, nsXULAtoms::treerow, getter_AddRefs(realRow));
   if (realRow) {
     nsIContent* cell = GetCell(realRow, aCol);
     if (cell)
-      cell->SetAttr(kNameSpaceID_None, nsGkAtoms::value, aValue, PR_TRUE);
+      cell->SetAttr(kNameSpaceID_None, nsHTMLAtoms::value, aValue, PR_TRUE);
   }
 
   return NS_OK;
@@ -717,7 +653,6 @@ nsTreeContentView::SetCellValue(PRInt32 aRow, nsITreeColumn* aCol, const nsAStri
 NS_IMETHODIMP
 nsTreeContentView::SetCellText(PRInt32 aRow, nsITreeColumn* aCol, const nsAString& aValue)
 {
-  NS_ENSURE_ARG_POINTER(aCol);
   NS_PRECONDITION(aRow >= 0 && aRow < mRows.Count(), "bad row");
   if (aRow < 0 || aRow >= mRows.Count())
     return NS_ERROR_INVALID_ARG;   
@@ -725,11 +660,11 @@ nsTreeContentView::SetCellText(PRInt32 aRow, nsITreeColumn* aCol, const nsAStrin
   Row* row = (Row*)mRows[aRow];
 
   nsCOMPtr<nsIContent> realRow;
-  nsTreeUtils::GetImmediateChild(row->mContent, nsGkAtoms::treerow, getter_AddRefs(realRow));
+  nsTreeUtils::GetImmediateChild(row->mContent, nsXULAtoms::treerow, getter_AddRefs(realRow));
   if (realRow) {
     nsIContent* cell = GetCell(realRow, aCol);
     if (cell)
-      cell->SetAttr(kNameSpaceID_None, nsGkAtoms::label, aValue, PR_TRUE);
+      cell->SetAttr(kNameSpaceID_None, nsHTMLAtoms::label, aValue, PR_TRUE);
   }
 
   return NS_OK;
@@ -783,11 +718,11 @@ nsTreeContentView::ContentStatesChanged(nsIDocument* aDocument,
                                         PRInt32 aStateMask)
 {
   if (!aContent1 || !mSelection ||
-      !aContent1->IsNodeOfType(nsINode::eHTML) ||
+      !aContent1->IsContentOfType(nsIContent::eHTML) ||
       !(aStateMask & NS_EVENT_STATE_CHECKED))
     return;
 
-  if (aContent1->Tag() == nsGkAtoms::option) {
+  if (aContent1->Tag() == nsHTMLAtoms::option) {
     // update the selected state for this node
     PRInt32 index = FindContent(aContent1);
     if (index >= 0)
@@ -806,12 +741,12 @@ nsTreeContentView::AttributeChanged(nsIDocument *aDocument,
   // First check the tag to see if it's one that we care about.
   nsIAtom *tag = aContent->Tag();
 
-  if (aContent->IsNodeOfType(nsINode::eXUL)) {
-    if (tag != nsGkAtoms::treecol &&
-        tag != nsGkAtoms::treeitem &&
-        tag != nsGkAtoms::treeseparator &&
-        tag != nsGkAtoms::treerow &&
-        tag != nsGkAtoms::treecell)
+  if (aContent->IsContentOfType(nsIContent::eXUL)) {
+    if (tag != nsXULAtoms::treecol &&
+        tag != nsXULAtoms::treeitem &&
+        tag != nsXULAtoms::treeseparator &&
+        tag != nsXULAtoms::treerow &&
+        tag != nsXULAtoms::treecell)
       return;
   }
   else {
@@ -824,8 +759,8 @@ nsTreeContentView::AttributeChanged(nsIDocument *aDocument,
   do {
     parent = parent->GetParent();
     if (parent)
-      ni = parent->NodeInfo();
-  } while (parent && !ni->Equals(nsGkAtoms::tree, kNameSpaceID_XUL));
+      ni = parent->GetNodeInfo();
+  } while (parent && !ni->Equals(nsXULAtoms::tree, kNameSpaceID_XUL));
 
   if (parent != mRoot) {
     // This is not for us, we can bail out.
@@ -833,11 +768,11 @@ nsTreeContentView::AttributeChanged(nsIDocument *aDocument,
   }
 
   // Handle changes of the hidden attribute.
-  if (aAttribute == nsGkAtoms::hidden &&
-     (tag == nsGkAtoms::treeitem || tag == nsGkAtoms::treeseparator)) {
-    PRBool hidden = aContent->AttrValueIs(kNameSpaceID_None,
-                                          nsGkAtoms::hidden,
-                                          nsGkAtoms::_true, eCaseMatters);
+  if (aAttribute == nsHTMLAtoms::hidden &&
+     (tag == nsXULAtoms::treeitem || tag == nsXULAtoms::treeseparator)) {
+    nsAutoString hiddenString;
+    aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::hidden, hiddenString);
+    PRBool hidden = hiddenString.EqualsLiteral("true");
  
     PRInt32 index = FindContent(aContent);
     if (hidden && index >= 0) {
@@ -857,8 +792,8 @@ nsTreeContentView::AttributeChanged(nsIDocument *aDocument,
     return;
   }
 
-  if (tag == nsGkAtoms::treecol) {
-    if (aAttribute == nsGkAtoms::properties) {
+  if (tag == nsXULAtoms::treecol) {
+    if (aAttribute == nsXULAtoms::properties) {
       if (mBoxObject) {
         nsCOMPtr<nsITreeColumns> cols;
         mBoxObject->GetColumns(getter_AddRefs(cols));
@@ -871,48 +806,48 @@ nsTreeContentView::AttributeChanged(nsIDocument *aDocument,
       }
     }
   }
-  else if (tag == nsGkAtoms::treeitem) {
+  else if (tag == nsXULAtoms::treeitem) {
     PRInt32 index = FindContent(aContent);
     if (index >= 0) {
       Row* row = (Row*)mRows[index];
-      if (aAttribute == nsGkAtoms::container) {
-        PRBool isContainer =
-          aContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::container,
-                                nsGkAtoms::_true, eCaseMatters);
+      if (aAttribute == nsXULAtoms::container) {
+        nsAutoString container;
+        aContent->GetAttr(kNameSpaceID_None, nsXULAtoms::container, container);
+        PRBool isContainer = container.EqualsLiteral("true");
         row->SetContainer(isContainer);
         if (mBoxObject)
           mBoxObject->InvalidateRow(index);
       }
-      else if (aAttribute == nsGkAtoms::open) {
-        PRBool isOpen =
-          aContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::open,
-                                nsGkAtoms::_true, eCaseMatters);
+      else if (aAttribute == nsXULAtoms::open) {
+        nsAutoString open;
+        aContent->GetAttr(kNameSpaceID_None, nsXULAtoms::open, open);
+        PRBool isOpen = open.EqualsLiteral("true");
         PRBool wasOpen = row->IsOpen();
         if (! isOpen && wasOpen)
           CloseContainer(index);
         else if (isOpen && ! wasOpen)
           OpenContainer(index);
       }
-      else if (aAttribute == nsGkAtoms::empty) {
-        PRBool isEmpty =
-          aContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::empty,
-                                nsGkAtoms::_true, eCaseMatters);
+      else if (aAttribute == nsXULAtoms::empty) {
+        nsAutoString empty;
+        aContent->GetAttr(kNameSpaceID_None, nsXULAtoms::empty, empty);
+        PRBool isEmpty = empty.EqualsLiteral("true");
         row->SetEmpty(isEmpty);
         if (mBoxObject)
           mBoxObject->InvalidateRow(index);
       }
     }
   }
-  else if (tag == nsGkAtoms::treeseparator) {
+  else if (tag == nsXULAtoms::treeseparator) {
     PRInt32 index = FindContent(aContent);
     if (index >= 0) {
-      if (aAttribute == nsGkAtoms::properties && mBoxObject) {
+      if (aAttribute == nsXULAtoms::properties && mBoxObject) {
         mBoxObject->InvalidateRow(index);
       }
     }
   }
-  else if (tag == nsGkAtoms::treerow) {
-    if (aAttribute == nsGkAtoms::properties) {
+  else if (tag == nsXULAtoms::treerow) {
+    if (aAttribute == nsXULAtoms::properties) {
       nsCOMPtr<nsIContent> parent = aContent->GetParent();
       if (parent) {
         PRInt32 index = FindContent(parent);
@@ -922,13 +857,13 @@ nsTreeContentView::AttributeChanged(nsIDocument *aDocument,
       }
     }
   }
-  else if (tag == nsGkAtoms::treecell) {
-    if (aAttribute == nsGkAtoms::ref ||
-        aAttribute == nsGkAtoms::properties ||
-        aAttribute == nsGkAtoms::mode ||
-        aAttribute == nsGkAtoms::src ||
-        aAttribute == nsGkAtoms::value ||
-        aAttribute == nsGkAtoms::label) {
+  else if (tag == nsXULAtoms::treecell) {
+    if (aAttribute == nsXULAtoms::ref ||
+        aAttribute == nsXULAtoms::properties ||
+        aAttribute == nsXULAtoms::mode ||
+        aAttribute == nsHTMLAtoms::src ||
+        aAttribute == nsHTMLAtoms::value ||
+        aAttribute == nsHTMLAtoms::label) {
       nsIContent* parent = aContent->GetParent();
       if (parent) {
         nsCOMPtr<nsIContent> grandParent = parent->GetParent();
@@ -969,17 +904,17 @@ nsTreeContentView::ContentInserted(nsIDocument *aDocument,
   // First check the tag to see if it's one that we care about.
   nsIAtom *childTag = aChild->Tag();
 
-  if (aChild->IsNodeOfType(nsINode::eHTML)) {
-    if (childTag != nsGkAtoms::option &&
-        childTag != nsGkAtoms::optgroup)
+  if (aChild->IsContentOfType(nsIContent::eHTML)) {
+    if (childTag != nsHTMLAtoms::option &&
+        childTag != nsHTMLAtoms::optgroup)
       return;
   }
-  else if (aChild->IsNodeOfType(nsINode::eXUL)) {
-    if (childTag != nsGkAtoms::treeitem &&
-        childTag != nsGkAtoms::treeseparator &&
-        childTag != nsGkAtoms::treechildren &&
-        childTag != nsGkAtoms::treerow &&
-        childTag != nsGkAtoms::treecell)
+  else if (aChild->IsContentOfType(nsIContent::eXUL)) {
+    if (childTag != nsXULAtoms::treeitem &&
+        childTag != nsXULAtoms::treeseparator &&
+        childTag != nsXULAtoms::treechildren &&
+        childTag != nsXULAtoms::treerow &&
+        childTag != nsXULAtoms::treecell)
       return;
   }
   else {
@@ -993,12 +928,12 @@ nsTreeContentView::ContentInserted(nsIDocument *aDocument,
     if (!element)
       return; // this is not for us
     nsIAtom *parentTag = element->Tag();
-    if ((element->IsNodeOfType(nsINode::eXUL) && parentTag == nsGkAtoms::tree) ||
-        (element->IsNodeOfType(nsINode::eHTML) && parentTag == nsGkAtoms::select))
+    if ((element->IsContentOfType(nsIContent::eXUL) && parentTag == nsXULAtoms::tree) ||
+        (element->IsContentOfType(nsIContent::eHTML) && parentTag == nsHTMLAtoms::select))
       return; // this is not for us
   }
 
-  if (childTag == nsGkAtoms::treechildren) {
+  if (childTag == nsXULAtoms::treechildren) {
     PRInt32 index = FindContent(aContainer);
     if (index >= 0) {
       Row* row = (Row*)mRows[index];
@@ -1012,16 +947,16 @@ nsTreeContentView::ContentInserted(nsIDocument *aDocument,
       }
     }
   }
-  else if (childTag == nsGkAtoms::treeitem ||
-           childTag == nsGkAtoms::treeseparator) {
+  else if (childTag == nsXULAtoms::treeitem ||
+           childTag == nsXULAtoms::treeseparator) {
     InsertRowFor(aContainer, aChild);
   }
-  else if (childTag == nsGkAtoms::treerow) {
+  else if (childTag == nsXULAtoms::treerow) {
     PRInt32 index = FindContent(aContainer);
     if (index >= 0 && mBoxObject)
       mBoxObject->InvalidateRow(index);
   }
-  else if (childTag == nsGkAtoms::treecell) {
+  else if (childTag == nsXULAtoms::treecell) {
     nsCOMPtr<nsIContent> parent = aContainer->GetParent();
     if (parent) {
       PRInt32 index = FindContent(parent);
@@ -1029,10 +964,10 @@ nsTreeContentView::ContentInserted(nsIDocument *aDocument,
         mBoxObject->InvalidateRow(index);
     }
   }
-  else if (childTag == nsGkAtoms::optgroup) {
+  else if (childTag == nsHTMLAtoms::optgroup) {
     InsertRowFor(aContainer, aChild);
   }
-  else if (childTag == nsGkAtoms::option) {
+  else if (childTag == nsHTMLAtoms::option) {
     PRInt32 parentIndex = FindContent(aContainer);
     PRInt32 count = InsertRow(parentIndex, aIndexInContainer, aChild);
     if (mBoxObject)
@@ -1052,17 +987,17 @@ nsTreeContentView::ContentRemoved(nsIDocument *aDocument,
   // First check the tag to see if it's one that we care about.
   nsIAtom *tag = aChild->Tag();
 
-  if (aChild->IsNodeOfType(nsINode::eHTML)) {
-    if (tag != nsGkAtoms::option &&
-        tag != nsGkAtoms::optgroup)
+  if (aChild->IsContentOfType(nsIContent::eHTML)) {
+    if (tag != nsHTMLAtoms::option &&
+        tag != nsHTMLAtoms::optgroup)
       return;
   }
-  else if (aChild->IsNodeOfType(nsINode::eXUL)) {
-    if (tag != nsGkAtoms::treeitem &&
-        tag != nsGkAtoms::treeseparator &&
-        tag != nsGkAtoms::treechildren &&
-        tag != nsGkAtoms::treerow &&
-        tag != nsGkAtoms::treecell)
+  else if (aChild->IsContentOfType(nsIContent::eXUL)) {
+    if (tag != nsXULAtoms::treeitem &&
+        tag != nsXULAtoms::treeseparator &&
+        tag != nsXULAtoms::treechildren &&
+        tag != nsXULAtoms::treerow &&
+        tag != nsXULAtoms::treecell)
       return;
   }
   else {
@@ -1076,12 +1011,12 @@ nsTreeContentView::ContentRemoved(nsIDocument *aDocument,
     if (!element)
       return; // this is not for us
     nsIAtom *parentTag = element->Tag();
-    if ((element->IsNodeOfType(nsINode::eXUL) && parentTag == nsGkAtoms::tree) || 
-        (element->IsNodeOfType(nsINode::eHTML) && parentTag == nsGkAtoms::select))
+    if ((element->IsContentOfType(nsIContent::eXUL) && parentTag == nsXULAtoms::tree) || 
+        (element->IsContentOfType(nsIContent::eHTML) && parentTag == nsHTMLAtoms::select))
       return; // this is not for us
   }
 
-  if (tag == nsGkAtoms::treechildren) {
+  if (tag == nsXULAtoms::treechildren) {
     PRInt32 index = FindContent(aContainer);
     if (index >= 0) {
       Row* row = (Row*)mRows[index];
@@ -1093,17 +1028,17 @@ nsTreeContentView::ContentRemoved(nsIDocument *aDocument,
         mBoxObject->RowCountChanged(index + 1, -count);
       }
     }
-    else if (aContainer->Tag() == nsGkAtoms::tree) {
+    else if (aContainer->Tag() == nsXULAtoms::tree) {
       PRInt32 count = mRows.Count();
       ClearRows();
       if (count && mBoxObject)
         mBoxObject->RowCountChanged(0, -count);
     }
   }
-  else if (tag == nsGkAtoms::treeitem ||
-           tag == nsGkAtoms::treeseparator ||
-           tag == nsGkAtoms::option ||
-           tag == nsGkAtoms::optgroup
+  else if (tag == nsXULAtoms::treeitem ||
+           tag == nsXULAtoms::treeseparator ||
+           tag == nsHTMLAtoms::option ||
+           tag == nsHTMLAtoms::optgroup
           ) {
     PRInt32 index = FindContent(aChild);
     if (index >= 0) {
@@ -1112,12 +1047,12 @@ nsTreeContentView::ContentRemoved(nsIDocument *aDocument,
         mBoxObject->RowCountChanged(index, -count);
     }
   }
-  else if (tag == nsGkAtoms::treerow) {
+  else if (tag == nsXULAtoms::treerow) {
     PRInt32 index = FindContent(aContainer);
     if (index >= 0 && mBoxObject)
       mBoxObject->InvalidateRow(index);
   }
-  else if (tag == nsGkAtoms::treecell) {
+  else if (tag == nsXULAtoms::treecell) {
     nsCOMPtr<nsIContent> parent = aContainer->GetParent();
     if (parent) {
       PRInt32 index = FindContent(parent);
@@ -1128,8 +1063,14 @@ nsTreeContentView::ContentRemoved(nsIDocument *aDocument,
 }
 
 void
-nsTreeContentView::NodeWillBeDestroyed(const nsINode* aNode)
+nsTreeContentView::DocumentWillBeDestroyed(nsIDocument *aDocument)
 {
+  // Remove ourselves from mDocument's observers.
+  if (mDocument) {
+    mDocument->RemoveObserver(this);
+    mDocument = nsnull;
+  }
+
   ClearRows();
 }
 
@@ -1144,16 +1085,16 @@ nsTreeContentView::Serialize(nsIContent* aContent, PRInt32 aParentIndex, PRInt32
     nsIAtom *tag = content->Tag();
     PRInt32 count = aRows.Count();
 
-    if (content->IsNodeOfType(nsINode::eXUL)) {
-      if (tag == nsGkAtoms::treeitem)
+    if (content->IsContentOfType(nsIContent::eXUL)) {
+      if (tag == nsXULAtoms::treeitem)
         SerializeItem(content, aParentIndex, aIndex, aRows);
-      else if (tag == nsGkAtoms::treeseparator)
+      else if (tag == nsXULAtoms::treeseparator)
         SerializeSeparator(content, aParentIndex, aIndex, aRows);
     }
-    else if (content->IsNodeOfType(nsINode::eHTML)) {
-      if (tag == nsGkAtoms::option)
+    else if (content->IsContentOfType(nsIContent::eHTML)) {
+      if (tag == nsHTMLAtoms::option)
         SerializeOption(content, aParentIndex, aIndex, aRows);
-      else if (tag == nsGkAtoms::optgroup)
+      else if (tag == nsHTMLAtoms::optgroup)
         SerializeOptGroup(content, aParentIndex, aIndex, aRows);
     }
     *aIndex += aRows.Count() - count;
@@ -1163,21 +1104,24 @@ nsTreeContentView::Serialize(nsIContent* aContent, PRInt32 aParentIndex, PRInt32
 void
 nsTreeContentView::SerializeItem(nsIContent* aContent, PRInt32 aParentIndex, PRInt32* aIndex, nsVoidArray& aRows)
 {
-  if (aContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::hidden,
-                            nsGkAtoms::_true, eCaseMatters))
+  nsAutoString hidden;
+  aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::hidden, hidden);
+  if (hidden.EqualsLiteral("true"))
     return;
 
   Row* row = Row::Create(mAllocator, aContent, aParentIndex);
   aRows.AppendElement(row);
 
-  if (aContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::container,
-                            nsGkAtoms::_true, eCaseMatters)) {
+  nsAutoString container;
+  aContent->GetAttr(kNameSpaceID_None, nsXULAtoms::container, container);
+  if (container.EqualsLiteral("true")) {
     row->SetContainer(PR_TRUE);
-    if (aContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::open,
-                              nsGkAtoms::_true, eCaseMatters)) {
+    nsAutoString open;
+    aContent->GetAttr(kNameSpaceID_None, nsXULAtoms::open, open);
+    if (open.EqualsLiteral("true")) {
       row->SetOpen(PR_TRUE);
       nsCOMPtr<nsIContent> child;
-      nsTreeUtils::GetImmediateChild(aContent, nsGkAtoms::treechildren, getter_AddRefs(child));
+      nsTreeUtils::GetImmediateChild(aContent, nsXULAtoms::treechildren, getter_AddRefs(child));
       if (child) {
         // Now, recursively serialize our child.
         PRInt32 count = aRows.Count();
@@ -1187,9 +1131,11 @@ nsTreeContentView::SerializeItem(nsIContent* aContent, PRInt32 aParentIndex, PRI
       }
       else
         row->SetEmpty(PR_TRUE);
-    } else if (aContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::empty,
-                                     nsGkAtoms::_true, eCaseMatters)) {
-      row->SetEmpty(PR_TRUE);
+    } else {
+      nsAutoString empty;
+      aContent->GetAttr(kNameSpaceID_None, nsXULAtoms::empty, empty);
+      if (empty.EqualsLiteral("true"))
+        row->SetEmpty(PR_TRUE);
     }
   } 
 }
@@ -1197,8 +1143,9 @@ nsTreeContentView::SerializeItem(nsIContent* aContent, PRInt32 aParentIndex, PRI
 void
 nsTreeContentView::SerializeSeparator(nsIContent* aContent, PRInt32 aParentIndex, PRInt32* aIndex, nsVoidArray& aRows)
 {
-  if (aContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::hidden,
-                            nsGkAtoms::_true, eCaseMatters))
+  nsAutoString hidden;
+  aContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::hidden, hidden);
+  if (hidden.EqualsLiteral("true"))
     return;
 
   Row* row = Row::Create(mAllocator, aContent, aParentIndex);
@@ -1233,7 +1180,7 @@ nsTreeContentView::SerializeOptGroup(nsIContent* aContent, PRInt32 aParentIndex,
   row->SetOpen(PR_TRUE);
 
   nsCOMPtr<nsIContent> child;
-  nsTreeUtils::GetImmediateChild(aContent, nsGkAtoms::option, getter_AddRefs(child));
+  nsTreeUtils::GetImmediateChild(aContent, nsHTMLAtoms::option, getter_AddRefs(child));
   if (child) {
     // Now, recursively serialize our child.
     PRInt32 count = aRows.Count();
@@ -1258,35 +1205,39 @@ nsTreeContentView::GetIndexInSubtree(nsIContent* aContainer,
 
     nsIAtom *tag = content->Tag();
 
-    if (content->IsNodeOfType(nsINode::eXUL)) {
-      if (tag == nsGkAtoms::treeitem) {
-        if (! content->AttrValueIs(kNameSpaceID_None, nsGkAtoms::hidden,
-                                   nsGkAtoms::_true, eCaseMatters)) {
+    if (content->IsContentOfType(nsIContent::eXUL)) {
+      if (tag == nsXULAtoms::treeitem) {
+        nsAutoString hidden;
+        content->GetAttr(kNameSpaceID_None, nsHTMLAtoms::hidden, hidden);
+        if (! hidden.EqualsLiteral("true")) {
           (*aIndex)++;
-          if (content->AttrValueIs(kNameSpaceID_None, nsGkAtoms::container,
-                                   nsGkAtoms::_true, eCaseMatters) &&
-              content->AttrValueIs(kNameSpaceID_None, nsGkAtoms::open,
-                                   nsGkAtoms::_true, eCaseMatters)) {
-            nsCOMPtr<nsIContent> child;
-            nsTreeUtils::GetImmediateChild(content, nsGkAtoms::treechildren,
-                                           getter_AddRefs(child));
-            if (child)
-              GetIndexInSubtree(child, aContent, aIndex);
+          nsAutoString container;
+          content->GetAttr(kNameSpaceID_None, nsXULAtoms::container, container);
+          if (container.EqualsLiteral("true")) {
+            nsAutoString open;
+            content->GetAttr(kNameSpaceID_None, nsXULAtoms::open, open);
+            if (open.EqualsLiteral("true")) {
+              nsCOMPtr<nsIContent> child;
+              nsTreeUtils::GetImmediateChild(content, nsXULAtoms::treechildren, getter_AddRefs(child));
+              if (child)
+                GetIndexInSubtree(child, aContent, aIndex);
+            }
           }
         }
       }
-      else if (tag == nsGkAtoms::treeseparator) {
-        if (! content->AttrValueIs(kNameSpaceID_None, nsGkAtoms::hidden,
-                                   nsGkAtoms::_true, eCaseMatters))
+      else if (tag == nsXULAtoms::treeseparator) {
+        nsAutoString hidden;
+        content->GetAttr(kNameSpaceID_None, nsHTMLAtoms::hidden, hidden);
+        if (! hidden.EqualsLiteral("true"))
           (*aIndex)++;
       }
     }
-    else if (content->IsNodeOfType(nsINode::eHTML)) {
-      if (tag == nsGkAtoms::optgroup) {
+    else if (content->IsContentOfType(nsIContent::eHTML)) {
+      if (tag == nsHTMLAtoms::optgroup) {
         (*aIndex)++;
         GetIndexInSubtree(content, aContent, aIndex);
       }
-      else if (tag == nsGkAtoms::option)
+      else if (tag == nsHTMLAtoms::option)
         (*aIndex)++;
     }
   }
@@ -1298,10 +1249,10 @@ nsTreeContentView::EnsureSubtree(PRInt32 aIndex)
   Row* row = (Row*)mRows[aIndex];
 
   nsCOMPtr<nsIContent> child;
-  if (row->mContent->Tag() == nsGkAtoms::optgroup)
+  if (row->mContent->Tag() == nsHTMLAtoms::optgroup)
     child = row->mContent;
   else {
-    nsTreeUtils::GetImmediateChild(row->mContent, nsGkAtoms::treechildren, getter_AddRefs(child));
+    nsTreeUtils::GetImmediateChild(row->mContent, nsXULAtoms::treechildren, getter_AddRefs(child));
     if (! child) {
       return 0;
     }
@@ -1352,8 +1303,8 @@ nsTreeContentView::InsertRowFor(nsIContent* aParent, nsIContent* aChild)
   nsCOMPtr<nsIContent> grandParent = aParent->GetParent();
   nsIAtom* grandParentTag = grandParent->Tag();
 
-  if ((grandParent->IsNodeOfType(nsINode::eXUL) && grandParentTag == nsGkAtoms::tree) ||
-      (grandParent->IsNodeOfType(nsINode::eHTML) && grandParentTag == nsGkAtoms::select)
+  if ((grandParent->IsContentOfType(nsIContent::eXUL) && grandParentTag == nsXULAtoms::tree) ||
+      (grandParent->IsContentOfType(nsIContent::eHTML) && grandParentTag == nsHTMLAtoms::select)
      ) {
     // Allow insertion to the outermost container.
     insertRow = PR_TRUE;
@@ -1386,16 +1337,16 @@ nsTreeContentView::InsertRow(PRInt32 aParentIndex, PRInt32 aIndex, nsIContent* a
 {
   nsAutoVoidArray rows;
   nsIAtom *tag = aContent->Tag();
-  if (aContent->IsNodeOfType(nsINode::eXUL)) {
-    if (tag == nsGkAtoms::treeitem)
+  if (aContent->IsContentOfType(nsIContent::eXUL)) {
+    if (tag == nsXULAtoms::treeitem)
       SerializeItem(aContent, aParentIndex, &aIndex, rows);
-    else if (tag == nsGkAtoms::treeseparator)
+    else if (tag == nsXULAtoms::treeseparator)
       SerializeSeparator(aContent, aParentIndex, &aIndex, rows);
   }
-  else if (aContent->IsNodeOfType(nsINode::eHTML)) {
-    if (tag == nsGkAtoms::option)
+  else if (aContent->IsContentOfType(nsIContent::eHTML)) {
+    if (tag == nsHTMLAtoms::option)
       SerializeOption(aContent, aParentIndex, &aIndex, rows);
-    else if (tag == nsGkAtoms::optgroup)
+    else if (tag == nsHTMLAtoms::optgroup)
       SerializeOptGroup(aContent, aParentIndex, &aIndex, rows);
   }
 
@@ -1439,11 +1390,6 @@ nsTreeContentView::ClearRows()
     Row::Destroy(mAllocator, (Row*)mRows[i]);
   mRows.Clear();
   mRoot = nsnull;
-  // Remove ourselves from mDocument's observers.
-  if (mDocument) {
-    mDocument->RemoveObserver(this);
-    mDocument = nsnull;
-  }
 } 
 
 void
@@ -1509,9 +1455,9 @@ nsTreeContentView::UpdateParentIndexes(PRInt32 aIndex, PRInt32 aSkip, PRInt32 aC
 nsIContent*
 nsTreeContentView::GetCell(nsIContent* aContainer, nsITreeColumn* aCol)
 {
-  nsCOMPtr<nsIAtom> colAtom;
+  const PRUnichar* colID;
   PRInt32 colIndex;
-  aCol->GetAtom(getter_AddRefs(colAtom));
+  aCol->GetIdConst(&colID);
   aCol->GetIndex(&colIndex);
 
   // Traverse through cells, try to find the cell by "ref" attribute or by cell
@@ -1522,9 +1468,10 @@ nsTreeContentView::GetCell(nsIContent* aContainer, nsITreeColumn* aCol)
   for (ChildIterator::Init(aContainer, &iter, &last); iter != last; ++iter) {
     nsCOMPtr<nsIContent> cell = *iter;
 
-    if (cell->Tag() == nsGkAtoms::treecell) {
-      if (colAtom && cell->AttrValueIs(kNameSpaceID_None, nsGkAtoms::ref,
-                                       colAtom, eCaseMatters)) {
+    if (cell->Tag() == nsXULAtoms::treecell) {
+      nsAutoString ref;
+      cell->GetAttr(kNameSpaceID_None, nsXULAtoms::ref, ref);
+      if (!ref.IsEmpty() && ref.Equals(colID)) {
         result = cell;
         break;
       }

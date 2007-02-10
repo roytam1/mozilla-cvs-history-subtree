@@ -76,8 +76,8 @@
 {
   if (isLocal)
     return NSDragOperationGeneric;
-
-  return (NSDragOperationLink | NSDragOperationCopy);
+  else
+    return NSDragOperationCopy;
 }
 
 - (void)mouseDown:(NSEvent *)theEvent

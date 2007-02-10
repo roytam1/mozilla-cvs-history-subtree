@@ -1,14 +1,11 @@
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "TestCommon.h"
+#include <stdlib.h>
 #include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
 #include "nsNetCID.h"
 #include "nsIURL.h"
 #include "prinrval.h"
-#include "nsStringAPI.h"
-#include "nsComponentManagerUtils.h"
+#include "nsString.h"
 
 static nsIURL     *test_url = 0;
 static nsCString   test_param;

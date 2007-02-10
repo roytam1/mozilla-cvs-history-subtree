@@ -37,6 +37,7 @@
 #include "nsIDOMHTMLTitleElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsIDOMText.h"
@@ -55,7 +56,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -65,8 +66,6 @@ public:
 
   // nsIDOMHTMLTitleElement
   NS_DECL_NSIDOMHTMLTITLEELEMENT
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 };
 
 
@@ -94,25 +93,49 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLTitleElement, nsGenericHTMLElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLTitleElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLTitleElement)
 
 
 NS_IMETHODIMP 
 nsHTMLTitleElement::GetText(nsAString& aTitle)
 {
-  nsContentUtils::GetNodeTextContent(this, PR_FALSE, aTitle);
+  nsresult result = NS_OK;
+  nsCOMPtr<nsIDOMNode> child;
 
-  return NS_OK;
+  result = GetFirstChild(getter_AddRefs(child));
+
+  if ((NS_OK == result) && child) {
+    nsCOMPtr<nsIDOMText> text(do_QueryInterface(child));
+
+    if (text) {
+      text->GetData(aTitle);
+    }
+  }
+
+  return result;
 }
 
 NS_IMETHODIMP 
 nsHTMLTitleElement::SetText(const nsAString& aTitle)
 {
+  nsresult result = NS_OK;
+  nsCOMPtr<nsIDOMNode> child;
+
   nsCOMPtr<nsIDOMHTMLDocument> htmlDoc(do_QueryInterface(GetCurrentDoc()));
 
   if (htmlDoc) {
     htmlDoc->SetTitle(aTitle);
   }   
 
-  return nsContentUtils::SetNodeTextContent(this, aTitle, PR_TRUE);
+  result = GetFirstChild(getter_AddRefs(child));
+
+  if ((NS_OK == result) && child) {
+    nsCOMPtr<nsIDOMText> text(do_QueryInterface(child));
+    
+    if (text) {
+      text->SetData(aTitle);
+    }
+  }
+
+  return result;
 }

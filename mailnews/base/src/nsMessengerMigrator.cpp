@@ -81,6 +81,7 @@
 #include "nsEscape.h"
 
 #include "nsIUserInfo.h"
+#include "nsIAbUpgrader.h"
 #include "nsIAddressBook.h"
 #include "nsAbBaseCID.h"
 
@@ -730,17 +731,15 @@ nsMessengerMigrator::UpgradePrefs()
     rv = MigrateNewsAccounts(identity);
     if (NS_FAILED(rv)) return rv;
 
-    // this will migrate the ldap prefs
+    // this will upgrade the ldap prefs
 #if defined(MOZ_LDAP_XPCOM)
     nsCOMPtr <nsILDAPPrefsService> ldapPrefsService = do_GetService("@mozilla.org/ldapprefs-service;1", &rv);
-
-    rv = ldapPrefsService->MigratePrefsIfNeeded();
-    NS_ENSURE_SUCCESS(rv, rv);
 #endif    
     rv = MigrateAddressBookPrefs();
     NS_ENSURE_SUCCESS(rv,rv);
 
-    // XXX: No address book migration for 4.x see bug 35509
+    rv = MigrateAddressBooks();
+    if (NS_FAILED(rv)) return rv;
 
     m_prefs->ClearUserPref(PREF_4X_MAIL_POP_PASSWORD); // intentionally ignore the return value
 
@@ -1892,6 +1891,202 @@ nsMessengerMigrator::MigrateOldImapPrefs(nsIMsgIncomingServer *server, const cha
   return NS_OK;
 }
 
+static PRBool charEndsWith(const char *str, const char *endStr)
+{
+    PRUint32 endStrLen = PL_strlen(endStr);
+    PRUint32 strLen = PL_strlen(str);
+   
+    if (strLen < endStrLen) return PR_FALSE;
+
+    PRUint32 pos = strLen - endStrLen;
+    if (PL_strncmp(str + pos, endStr, endStrLen) == 0) {
+        return PR_TRUE;
+    }
+    else {
+        return PR_FALSE;
+    }
+}
+
+#define ADDRESSBOOK_PREF_NAME_ROOT "ldap_2.servers."
+#define ADDRESSBOOK_PREF_NAME_SUFFIX ".filename"
+#define ADDRESSBOOK_PREF_CSID_SUFFIX ".csid"
+#define ADDRESSBOOK_PREF_VALUE_4x_SUFFIX ".na2"
+#define ADDRESSBOOK_PREF_VALUE_5x_SUFFIX ".mab"
+#define TEMP_LDIF_FILE_SUFFIX ".ldif"
+
+#if defined(DEBUG_sspitzer_) || defined(DEBUG_seth_)
+#define DEBUG_AB_MIGRATION 1
+#endif
+
+void
+nsMessengerMigrator::migrateAddressBookPrefEnum(const char *aPref)
+{
+  nsresult rv = NS_OK;
+
+#ifdef DEBUG_AB_MIGRATION
+  printf("investigate pref: %s\n",aPref);
+#endif
+  nsXPIDLCString abFileName;
+  // we only care about ldap_2.servers.*.filename" prefs
+  if (!charEndsWith(aPref, ADDRESSBOOK_PREF_NAME_SUFFIX)) return;
+      
+  // check for pab without a filename and if so, set it to pab.na2.
+  // This is an ugly hack for installations that haven't set 
+  // pab.filename.
+      rv = m_prefs->GetCharPref(DEFAULT_PAB_FILENAME_PREF_NAME, getter_Copies(abFileName));
+      if (NS_FAILED(rv))
+      {
+        // pab.filename not set - set it to pab.na2 and pretend aPref is it.
+        m_prefs->SetCharPref(DEFAULT_PAB_FILENAME_PREF_NAME, "pab.na2");
+        aPref = "ldap_2.servers.pab.filename";
+      }
+
+  // check if this really is an ldap server, in which case, we're not going to migrate
+  // the na2 file for now, since it confuses RDF when the import code adds this
+  // server as a personal address book. I'd like to fix that but it's tricky
+  // and the .na2 file for ldap servers should only be for offline data.
+
+  nsCAutoString serverPrefName(aPref);
+  PRInt32 fileNamePos = serverPrefName.Find(".filename");
+  serverPrefName.Truncate(fileNamePos + 1);
+  serverPrefName.AppendLiteral("serverName");
+  nsXPIDLCString serverName;
+  rv = m_prefs->GetCharPref(serverPrefName.get(), getter_Copies(serverName));
+  if (NS_SUCCEEDED(rv) && !serverName.IsEmpty())
+    return; // skip this - it's an ldap server
+      
+  rv = m_prefs->GetCharPref(aPref,getter_Copies(abFileName));
+  NS_ASSERTION(NS_SUCCEEDED(rv),"ab migration failed: failed to get ab filename");
+  if (NS_FAILED(rv)) return;
+  
+  NS_ASSERTION(((const char *)abFileName), "ERROR:  empty addressbook file name");
+  if (!((const char *)abFileName)) return;
+
+  NS_ASSERTION(PL_strlen((const char *)abFileName),"ERROR:  empty addressbook file name");
+  if (!(PL_strlen((const char *)abFileName))) return;
+
+#ifdef DEBUG_AB_MIGRATION
+  printf("pref value: %s\n",(const char *)abFileName);
+#endif /* DEBUG_AB_MIGRATION */
+  // if this a 5.x addressbook file name, skip it.
+  if (charEndsWith((const char *)abFileName, ADDRESSBOOK_PREF_VALUE_5x_SUFFIX)) return;
+    
+  nsCAutoString abName;
+  abName = abFileName;
+  PRInt32 len = abName.Length();
+  PRInt32 suffixLen = PL_strlen(ADDRESSBOOK_PREF_VALUE_4x_SUFFIX);
+  NS_ASSERTION(len > suffixLen, "ERROR: bad length of addressbook filename");
+  if (len <= suffixLen) return;
+  
+  abName.SetLength(len - suffixLen);
+
+  // get 5.0 profile root.
+  nsCOMPtr <nsIFile> ab4xFile;
+  nsCOMPtr <nsIFileSpec> ab4xFileSpec;
+  nsCOMPtr <nsIFile> tmpLDIFFile;
+  nsCOMPtr <nsIFileSpec> tmpLDIFFileSpec;
+
+#ifdef DEBUG_AB_MIGRATION
+  printf("turn %s%s into %s%s\n", (const char *)abName,ADDRESSBOOK_PREF_VALUE_4x_SUFFIX,(const char *)abName,TEMP_LDIF_FILE_SUFFIX);
+#endif /* DEBUG_AB_MIGRATION */
+
+  rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(ab4xFile));
+  NS_ASSERTION(NS_SUCCEEDED(rv) && ab4xFile,"ab migration failed: failed to get profile dir");
+  if (NS_FAILED(rv) || !ab4xFile) return;
+  
+  rv = ab4xFile->AppendNative(nsDependentCString(abFileName));
+  NS_ASSERTION(NS_SUCCEEDED(rv),"ab migration failed:  failed to append filename");
+  if (NS_FAILED(rv)) return;
+
+  // TODO: Change users of nsIFileSpec to nsIFile and avoid this.
+  rv = NS_NewFileSpecFromIFile(ab4xFile, getter_AddRefs(ab4xFileSpec));
+  if (NS_FAILED(rv)) return;
+
+  rv = NS_GetSpecialDirectory(NS_OS_TEMP_DIR, getter_AddRefs(tmpLDIFFile));
+  if (NS_FAILED(rv) || !tmpLDIFFile) return;
+
+  // do the migration in a subdirectory of temp, to prevent 
+  // collision (between multiple users), deleting TMPDIR
+  // and privacy issues (where the temp ldif files are readable)
+  rv = tmpLDIFFile->AppendNative(NS_LITERAL_CSTRING("addr-migrate"));
+  if (NS_FAILED(rv) || !tmpLDIFFile) return;
+
+  rv = tmpLDIFFile->CreateUnique(nsIFile::DIRECTORY_TYPE, 0700);
+  if (NS_FAILED(rv) || !tmpLDIFFile) return;
+
+  // TODO: Change users of nsIFileSpec to nsIFile and avoid this.
+  rv = NS_NewFileSpecFromIFile(tmpLDIFFile, getter_AddRefs(tmpLDIFFileSpec));
+  if (NS_FAILED(rv)) return;
+
+  // get the csid from the prefs
+  nsCAutoString csidPrefName;
+  csidPrefName.AssignLiteral(ADDRESSBOOK_PREF_NAME_ROOT);
+  csidPrefName += abName; 
+  csidPrefName.AppendLiteral(ADDRESSBOOK_PREF_CSID_SUFFIX);
+  nsXPIDLCString csidPrefValue;
+  rv = m_prefs->GetCharPref(csidPrefName.get(),getter_Copies(csidPrefValue));
+  if (NS_FAILED(rv)) { 
+	// if we fail to get the pref value, set it to "", which will
+	// later cause us to use the system charset
+	csidPrefValue.Truncate();
+  }
+
+  nsCOMPtr <nsIAbUpgrader> abUpgrader = do_GetService(NS_AB4xUPGRADER_CONTRACTID, &rv);
+  NS_ASSERTION(NS_SUCCEEDED(rv) && abUpgrader, "failed to get upgrader");
+  if (NS_FAILED(rv) || !abUpgrader) return;
+  rv = abUpgrader->SetCurrentCharset((const char *)csidPrefValue);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to set the current char set");
+  if (NS_FAILED(rv)) return;
+
+// HACK:  I need to rename pab.ldif -> abook.ldif, because a bunch of places are hacked to point to abook.mab, and when I import abook.ldif it will create abook.mab. this is a temporary hack and will go away soon.
+  if (abName.EqualsLiteral("pab")) {
+	abName = "abook";
+  }
+
+  nsCAutoString ldifFileName;
+  ldifFileName = abName;
+  ldifFileName.AppendLiteral(TEMP_LDIF_FILE_SUFFIX);
+  rv = tmpLDIFFileSpec->AppendRelativeUnixPath(ldifFileName.get());
+  NS_ASSERTION(NS_SUCCEEDED(rv),"ab migration failed: failed to append filename");
+  if (NS_FAILED(rv)) return;
+     
+  nsCOMPtr <nsIAddressBook> ab = do_CreateInstance(NS_ADDRESSBOOK_CONTRACTID, &rv);
+  NS_ASSERTION(NS_SUCCEEDED(rv) && ab, "failed to get address book");
+  if (NS_FAILED(rv) || !ab) return;
+
+  rv = ab->ConvertNA2toLDIF(ab4xFileSpec, tmpLDIFFileSpec);
+  NS_ASSERTION(NS_SUCCEEDED(rv),"ab migration failed: failed to convert na2 to ldif");
+  if (NS_FAILED(rv)) return;
+  
+  rv = ab->Migrate4xAb(tmpLDIFFileSpec, PR_TRUE /* migrating */, PR_FALSE);
+  NS_ASSERTION(NS_SUCCEEDED(rv),"ab migration filed:  failed to convert ldif to mab\n");
+  if (NS_FAILED(rv)) return;
+ 
+  // this sucks.
+  // ConvertLDIFtoMAB should set this pref value for us. 
+#ifdef DEBUG_AB_MIGRATION
+  printf("set %s the pref to %s%s\n",aPref,(const char *)abName,ADDRESSBOOK_PREF_VALUE_5x_SUFFIX);
+#endif /* DEBUG_AB_MIGRATION */
+  
+  nsCAutoString newPrefValue;
+  newPrefValue = abName;
+  newPrefValue.AppendLiteral(ADDRESSBOOK_PREF_VALUE_5x_SUFFIX);
+  rv = m_prefs->SetCharPref(aPref,newPrefValue.get());
+  NS_ASSERTION(NS_SUCCEEDED(rv),"ab migration failed: failed to set pref");
+  if (NS_FAILED(rv)) return;
+ 
+#ifdef DEBUG_AB_MIGRATION
+  printf("remove the tmp file\n");
+#endif /* DEBUG_AB_MIGRATION */
+  rv = ab4xFile->Remove(PR_FALSE);
+  NS_ASSERTION(NS_SUCCEEDED(rv),"failed to delete the na2 file");
+  if (NS_FAILED(rv)) return;
+  rv = tmpLDIFFile->Remove(PR_TRUE);
+  NS_ASSERTION(NS_SUCCEEDED(rv),"failed to delete the temp ldif file");
+  
+  return;
+}
+
 nsresult 
 nsMessengerMigrator::MigrateAddressBookPrefs()
 {
@@ -1905,6 +2100,31 @@ nsMessengerMigrator::MigrateAddressBookPrefs()
     NS_ENSURE_SUCCESS(rv,rv);
   }
   return NS_OK;
+}
+
+nsresult
+nsMessengerMigrator::MigrateAddressBooks()
+{
+  nsresult rv = NS_OK;
+
+  nsCOMPtr <nsIAbUpgrader> abUpgrader = do_GetService(NS_AB4xUPGRADER_CONTRACTID, &rv);
+  if (NS_FAILED(rv) || !abUpgrader) {
+    printf("the addressbook migrator is only in the commercial builds.\n");
+    return NS_OK;
+  }
+
+  PRUint32 num;
+  char **arr;
+
+  rv = m_prefs->GetChildList(ADDRESSBOOK_PREF_NAME_ROOT, &num, &arr);
+  if (NS_SUCCEEDED(rv)) {
+    for (PRUint32 i = 0; i < num; i++)
+      migrateAddressBookPrefEnum(arr[i]);
+
+    NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(num, arr);
+  }
+
+  return rv;
 }
 
 #ifdef USE_NEWSRC_MAP_FILE
@@ -1968,7 +2188,7 @@ nsMessengerMigrator::MigrateNewsAccounts(nsIMsgIdentity *identity)
 
     // for each news server in the fat file call MigrateNewsAccount();
 	char buffer[512];
-	char pseudo_name[512];
+	char psuedo_name[512];
 	char filename[512];
 	char is_newsgroup[512];
 	PRBool ok;
@@ -2016,8 +2236,8 @@ nsMessengerMigrator::MigrateNewsAccounts(nsIMsgIdentity *identity)
 		is_newsgroup[0]='\0';
 		
 		for (i = 0, p = buffer; *p && *p != '\t' && i < 500; p++, i++)
-			pseudo_name[i] = *p;
-		pseudo_name[i] = '\0';
+			psuedo_name[i] = *p;
+		psuedo_name[i] = '\0';
 		if (*p) 
 		{
 			for (i = 0, p++; *p && *p != '\t' && i < 500; p++, i++)
@@ -2048,29 +2268,29 @@ nsMessengerMigrator::MigrateNewsAccounts(nsIMsgIdentity *identity)
 			rcFile += filename;
 #endif /* NEWS_FAT_STORES_ABSOLUTE_NEWSRC_FILE_PATHS */
 
-			// pseudo-name is of the form newsrc-<host> or snewsrc-<host>.  
-			if (PL_strncmp(PSEUDO_NAME_PREFIX,pseudo_name,PL_strlen(PSEUDO_NAME_PREFIX)) == 0) {
+			// psuedo-name is of the form newsrc-<host> or snewsrc-<host>.  
+			if (PL_strncmp(PSUEDO_NAME_PREFIX,psuedo_name,PL_strlen(PSUEDO_NAME_PREFIX)) == 0) {
                 // check that there is a hostname to get after the "newsrc-" part
-                NS_ASSERTION(PL_strlen(pseudo_name) > PL_strlen(PSEUDO_NAME_PREFIX), "pseudo_name is too short");
-                if (PL_strlen(pseudo_name) <= PL_strlen(PSEUDO_NAME_PREFIX)) {
+                NS_ASSERTION(PL_strlen(psuedo_name) > PL_strlen(PSUEDO_NAME_PREFIX), "psuedo_name is too short");
+                if (PL_strlen(psuedo_name) <= PL_strlen(PSUEDO_NAME_PREFIX)) {
                     return NS_ERROR_FAILURE;
                 }
 
-                char *hostname = pseudo_name + PL_strlen(PSEUDO_NAME_PREFIX);
+                char *hostname = psuedo_name + PL_strlen(PSUEDO_NAME_PREFIX);
                 rv = MigrateNewsAccount(identity, hostname, rcFile, newsHostsDir, PR_FALSE /* isSecure */);
                 if (NS_FAILED(rv)) {
                     // failed to migrate.  bail out
                     return rv;
                 }
 			}
-            else if (PL_strncmp(PSEUDO_SECURE_NAME_PREFIX,pseudo_name,PL_strlen(PSEUDO_SECURE_NAME_PREFIX)) == 0) {
+            else if (PL_strncmp(PSUEDO_SECURE_NAME_PREFIX,psuedo_name,PL_strlen(PSUEDO_SECURE_NAME_PREFIX)) == 0) {
                 // check that there is a hostname to get after the "snewsrc-" part
-                NS_ASSERTION(PL_strlen(pseudo_name) > PL_strlen(PSEUDO_SECURE_NAME_PREFIX), "pseudo_name is too short");
-                if (PL_strlen(pseudo_name) <= PL_strlen(PSEUDO_SECURE_NAME_PREFIX)) {
+                NS_ASSERTION(PL_strlen(psuedo_name) > PL_strlen(PSUEDO_SECURE_NAME_PREFIX), "psuedo_name is too short");
+                if (PL_strlen(psuedo_name) <= PL_strlen(PSUEDO_SECURE_NAME_PREFIX)) {
                     return NS_ERROR_FAILURE;
                 }
 
-                char *hostname = pseudo_name + PL_strlen(PSEUDO_SECURE_NAME_PREFIX);
+                char *hostname = psuedo_name + PL_strlen(PSUEDO_SECURE_NAME_PREFIX);
                 rv = MigrateNewsAccount(identity, hostname, rcFile, newsHostsDir, PR_TRUE /* isSecure */);
                 if (NS_FAILED(rv)) {
                     // failed to migrate.  bail out

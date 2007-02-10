@@ -205,19 +205,11 @@ NS_IMETHODIMP nsRenderingContextGTK::CommonInit()
   return NS_OK;
 }
 
-void*
-nsRenderingContextGTK::GetNativeGraphicData(GraphicDataType aType)
-{
-  if (aType == NATIVE_GDK_DRAWABLE)
-    return mSurface->GetDrawable();
-  return nsnull;
-}
-
 NS_IMETHODIMP nsRenderingContextGTK::GetHints(PRUint32& aResult)
 {
   PRUint32 result = 0;
 
-  // Most X servers implement 8 bit text rendering a lot faster than
+  // Most X servers implement 8 bit text rendering alot faster than
   // XChar2b rendering. In addition, we can avoid the PRUnichar to
   // XChar2b conversion. So we set this bit...
   result |= NS_RENDERING_HINT_FAST_8BIT_TEXT;
@@ -1394,6 +1386,18 @@ nsRenderingContextGTK::CopyOffScreenBits(nsIDrawingSurface* aSrcSurf,
                          srcX, srcY,
                          drect.width, drect.height);
                      
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextGTK::RetrieveCurrentNativeGraphicData(void** ngd)
+{
+  if (ngd) {
+    if (mSurface)
+      *ngd = (void*) mSurface->GetDrawable();
+    else
+      *ngd = nsnull;
+  }
 
   return NS_OK;
 }

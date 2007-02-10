@@ -60,7 +60,6 @@ var caTreeView;
 var serverTreeView;
 var emailTreeView;
 var userTreeView;
-var orphanTreeView;
 
 function LoadCerts()
 {
@@ -97,12 +96,6 @@ function LoadCerts()
   document.getElementById('user-tree')
    .treeBoxObject.view = userTreeView;
 
-  orphanTreeView = Components.classes[nsCertTree]
-                      .createInstance(nsICertTree);
-  orphanTreeView.loadCertsFromCache(certcache, nsIX509Cert.UNKNOWN_CERT);
-  document.getElementById('orphan-tree')
-   .treeBoxObject.view = orphanTreeView;
-
   var rowCnt = userTreeView.rowCount;
   var enableBackupAllButton=document.getElementById('mine_backupAllButton');
   if(rowCnt < 1) {
@@ -116,13 +109,35 @@ function LoadCerts()
   }
 }
 
+function getSelectedTab()
+{
+  var selTab = document.getElementById('certMgrTabbox').selectedItem;
+  var selTabID = selTab.getAttribute('id');
+  if (selTabID == 'mine_tab') {
+    key = "my_certs";
+  } else if (selTabID == "others_tab") {
+    key = "others_certs";
+  } else if (selTabID == "websites_tab") {
+    key = "web_certs";
+  } else if (selTabID == "ca_tab") {
+    key = "ca_certs";
+  }  
+  return key;
+}
+
+
+function doHelpButton() {
+   var uri = getSelectedTab();
+   openHelp(uri);
+}
+
+
 function getSelectedCerts()
 {
   var ca_tab = document.getElementById("ca_tab");
   var mine_tab = document.getElementById("mine_tab");
   var others_tab = document.getElementById("others_tab");
   var websites_tab = document.getElementById("websites_tab");
-  var orphan_tab = document.getElementById("orphan_tab");
   var items = null;
   if (ca_tab.selected) {
     items = caTreeView.selection;
@@ -132,8 +147,6 @@ function getSelectedCerts()
     items = emailTreeView.selection;
   } else if (websites_tab.selected) {
     items = serverTreeView.selection;
-  } else if (orphan_tab.selected) {
-    items = orphanTreeView.selection;
   }
   selected_certs = [];
   var cert = null;
@@ -155,8 +168,6 @@ function getSelectedCerts()
           cert = emailTreeView.getCert(j);
         } else if (websites_tab.selected) {
           cert = serverTreeView.getCert(j);
-        } else if (orphan_tab.selected) {
-          cert = orphanTreeView.getCert(j);
         }
         if (cert) {
           var sc = selected_certs.length;
@@ -248,19 +259,6 @@ function email_enableButtons()
   var enableEditButton=document.getElementById('email_editButton');
   enableEditButton.setAttribute("disabled",toggle);
   var enableDeleteButton=document.getElementById('email_deleteButton');
-  enableDeleteButton.setAttribute("disabled",toggle);
-}
-
-function orphan_enableButtons()
-{
-  var items = orphanTreeView.selection;
-  var toggle="false";
-  if (items.getRangeCount() == 0) {
-    toggle="true";
-  }
-  var enableViewButton=document.getElementById('orphan_viewButton');
-  enableViewButton.setAttribute("disabled",toggle);
-  var enableDeleteButton=document.getElementById('orphan_deleteButton');
   enableDeleteButton.setAttribute("disabled",toggle);
 }
 
@@ -356,23 +354,19 @@ function deleteCerts()
 
   if (selTabID == 'mine_tab') 
   {
-    params.SetString(0, selTabID);
+    params.SetString(0,bundle.GetStringFromName("deleteUserCertFlag"));
   } 
   else if (selTabID == "websites_tab") 
   {
-    params.SetString(0, selTabID);
+    params.SetString(0,bundle.GetStringFromName("deleteSslCertFlag"));
   } 
   else if (selTabID == "ca_tab") 
   {
-    params.SetString(0, selTabID);
+    params.SetString(0,bundle.GetStringFromName("deleteCaCertFlag"));
   }
   else if (selTabID == "others_tab") 
   {
-    params.SetString(0, selTabID);
-  }
-  else if (selTabID == "orphan_tab") 
-  {
-    params.SetString(0, selTabID);
+    params.SetString(0,bundle.GetStringFromName("deleteEmailCertFlag"));
   }
   else
   {
@@ -413,9 +407,6 @@ function deleteCerts()
     } else if (selTabID == "ca_tab") {
       treeView = caTreeView;
       loadParam = nsIX509Cert.CA_CERT;
-    } else if (selTabID == "orphan_tab") {
-      treeView = orphanTreeView;
-      loadParam = nsIX509Cert.UNKNOWN_CERT;
     }
 
     for (t=numcerts-1; t>=0; t--)
@@ -474,8 +465,7 @@ function onSmartCardChange()
   serverTreeView.selection.clearSelection();
   emailTreeView.loadCertsFromCache(certcache, nsIX509Cert.EMAIL_CERT);
   emailTreeView.selection.clearSelection();
-  orphanTreeView.loadCertsFromCache(certcache, nsIX509Cert.UNKNOWN_CERT);
-  orphanTreeView.selection.clearSelection();
+
 }
 
 function addEmailCert()

@@ -1,4 +1,6 @@
 /*
+ * $Id$
+ *
  * Copyright © 2000 SuSE, Inc.
  *
  * Permission to use, copy, modify, distribute, and sell this software and its
@@ -69,6 +71,20 @@ fbIn (CARD32 x, CARD8 y)
     n = FbInU(x,8,a,t);
     o = FbInU(x,16,a,t);
     p = FbInU(x,24,a,t);
+    return m|n|o|p;
+}
+
+static CARD32
+fbIn24 (CARD32 x, CARD8 y)
+{
+    CARD16  a = y;
+    CARD16  t;
+    CARD32  m,n,o,p;
+
+    m = FbInU(x,0,a,t);
+    n = FbInU(x,8,a,t);
+    o = FbInU(x,16,a,t);
+    p = (y << 24);
     return m|n|o|p;
 }
 
@@ -736,6 +752,8 @@ fbCompositeSrc_8888x0565 (pixman_operator_t  op,
     }
 }
 
+
+
 static void
 fbCompositeSrcAdd_8000x8000 (pixman_operator_t	  op,
 			     PicturePtr pSrc,
@@ -839,58 +857,6 @@ fbCompositeSrcAdd_8888x8888 (pixman_operator_t   op,
 		*dst = s;
 	    }
 	    dst++;
-	}
-    }
-}
-
-static void
-fbCompositeSrcAdd_8888x8x8 (pixman_operator_t   op,
-			    PicturePtr pSrc,
-			    PicturePtr pMask,
-			    PicturePtr pDst,
-			    INT16      xSrc,
-			    INT16      ySrc,
-			    INT16      xMask,
-			    INT16      yMask,
-			    INT16      xDst,
-			    INT16      yDst,
-			    CARD16     width,
-			    CARD16     height)
-{
-    CARD8	*dstLine, *dst;
-    CARD8	*maskLine, *mask;
-    FbStride	dstStride, maskStride;
-    CARD16	w;
-    CARD32	src;
-    CARD8	sa;
-
-    fbComposeGetStart (pDst, xDst, yDst, CARD8, dstStride, dstLine, 1);
-    fbComposeGetStart (pMask, xMask, yMask, CARD8, maskStride, maskLine, 1);
-    fbComposeGetSolid (pSrc, pDst, src);
-    sa = (src >> 24);
-
-    while (height--)
-    {
-	dst = dstLine;
-	dstLine += dstStride;
-	mask = maskLine;
-	maskLine += maskStride;
-	w = width;
-
-	while (w--)
-	{
-	    CARD16	tmp;
-	    CARD16	a;
-	    CARD32	m, d;
-	    CARD32	r;
-
-	    a = *mask++;
-	    d = *dst;
-
-	    m = FbInU (sa, 0, a, tmp);
-	    r = FbAdd (m, d, 0, tmp);
-
-	    *dst++ = r;
 	}
     }
 }
@@ -1119,6 +1085,8 @@ fbCompositeTrans_0565xnx0565(pixman_operator_t      op,
 	}
 }
 
+
+
 /* macros for "i can't believe it's not fast" packed pixel handling */
 #define alphamaskCombine24(a,b) genericCombine24(a,b,maskAlpha,maskiAlpha)
 static void
@@ -1183,7 +1151,7 @@ fbCompositeTrans_0888xnx0888(pixman_operator_t      op,
 				setupPackedReader(ws,wt,isrc,wsrc,workingSource);
 
 				/* get to word aligned */
-				switch(~(long)dst&3)
+				switch(!(long)dst&3)
 				{
 					case 1:
 						readPackedSource(rs);
@@ -1259,7 +1227,7 @@ fbCompositeTrans_0888xnx0888(pixman_operator_t      op,
 				srcLine += srcStride;
 				w = width*3;
 				/* get to word aligned */
-				switch(~(long)src&3)
+				switch(!(long)src&3)
 				{
 					case 1:
 						rd=alphamaskCombine24(*src++, *dst)>>8;
@@ -1401,7 +1369,7 @@ pixman_composite (pixman_operator_t	op,
     Bool	    maskAlphaMap = FALSE;
     Bool	    dstAlphaMap = pDst->alphaMap != 0;
     int		    x_msk, y_msk, x_src, y_src, x_dst, y_dst;
-    unsigned int    w, h, w_this, h_this;
+    int		    w, h, w_this, h_this;
 
 #ifdef USE_MMX
     static Bool mmx_setup = FALSE;
@@ -1410,7 +1378,7 @@ pixman_composite (pixman_operator_t	op,
         mmx_setup = TRUE;
     }
 #endif
-
+        
     xDst += pDst->pDrawable->x;
     yDst += pDst->pDrawable->y;
     if (pSrc->pDrawable) {
@@ -1735,12 +1703,7 @@ pixman_composite (pixman_operator_t	op,
 			func = fbCompositeSrc_8888x0888;
 			break;
 		    case PICT_r5g6b5:
-#ifdef USE_MMX
-			if (fbHaveMMX())
-			    func = fbCompositeSrc_8888x0565mmx;
-			else
-#endif
-			    func = fbCompositeSrc_8888x0565;
+			func = fbCompositeSrc_8888x0565;
 			break;
 		    }
 		    break;
@@ -1759,12 +1722,7 @@ pixman_composite (pixman_operator_t	op,
 			func = fbCompositeSrc_8888x0888;
 			break;
 		    case PICT_b5g6r5:
-#ifdef USE_MMX
-			if (fbHaveMMX())
-			    func = fbCompositeSrc_8888x0565mmx;
-			else
-#endif
-			    func = fbCompositeSrc_8888x0565;
+			func = fbCompositeSrc_8888x0565;
 			break;
 		    }
 		    break;
@@ -1821,26 +1779,6 @@ pixman_composite (pixman_operator_t	op,
 		break;
 	    }
 	}
-	else
-	{
-	    if ((pSrc->format_code == PICT_a8r8g8b8	||
-		 pSrc->format_code == PICT_a8b8g8r8) &&
-		srcRepeat			     &&
-		pMask->format_code == PICT_a8	     &&
-		pDst->format_code == PICT_a8)
-	    {
-#ifdef USE_MMX
-		if (fbHaveMMX())
-		{
-		    srcRepeat = FALSE;
-
-		    func = fbCompositeSrcAdd_8888x8x8mmx;
-		}
-		else
-#endif
-		    func = fbCompositeSrcAdd_8888x8x8;
-	    }
-	}
 	break;
     case PIXMAN_OPERATOR_SRC:
 	if (pMask)
@@ -1880,44 +1818,6 @@ pixman_composite (pixman_operator_t	op,
 	    }
 	}
 	break;
-    case PIXMAN_OPERATOR_IN:
-#ifdef USE_MMX
-	if (pSrc->format_code == PICT_a8 &&
-	    pDst->format_code == PICT_a8 &&
-	    !pMask)
-	{
-	    if (fbHaveMMX())
-		func = fbCompositeIn_8x8mmx;
-	}
-	else if (srcRepeat && pMask && !pMask->componentAlpha &&
-		 (pSrc->format_code == PICT_a8r8g8b8 ||
-		  pSrc->format_code == PICT_a8b8g8r8)   &&
-		 (pMask->format_code == PICT_a8)	&&
-		 pDst->format_code == PICT_a8)
-	{
-	    if (fbHaveMMX())
-	    {
-		srcRepeat = FALSE;
-		func = fbCompositeIn_nx8x8mmx;
-	    }
-	}
-#else
-	func = NULL;
-#endif
-	break;
-    case PIXMAN_OPERATOR_CLEAR:
-    case PIXMAN_OPERATOR_DST:
-    case PIXMAN_OPERATOR_OVER_REVERSE:
-    case PIXMAN_OPERATOR_IN_REVERSE:
-    case PIXMAN_OPERATOR_OUT:
-    case PIXMAN_OPERATOR_OUT_REVERSE:
-    case PIXMAN_OPERATOR_ATOP:
-    case PIXMAN_OPERATOR_ATOP_REVERSE:
-    case PIXMAN_OPERATOR_XOR:
-    case PIXMAN_OPERATOR_SATURATE:
-    default:
-	/* For any operator not specifically handled above we default out to the general code. */
-	func = NULL;
     }
 
     if (!func) {
@@ -1934,7 +1834,7 @@ pixman_composite (pixman_operator_t	op,
 
     region = pixman_region_create();
     pixman_region_union_rect (region, region, xDst, yDst, width, height);
-
+    
     if (!FbComputeCompositeRegion (region,
 				   pSrc,
 				   pMask,
@@ -1948,7 +1848,7 @@ pixman_composite (pixman_operator_t	op,
 				   width,
 				   height))
 	return;
-
+    
     n = pixman_region_num_rects (region);
     pbox = pixman_region_rects (region);
     while (n--)
@@ -2008,6 +1908,7 @@ pixman_composite (pixman_operator_t	op,
     }
     pixman_region_destroy (region);
 }
+slim_hidden_def(pixman_composite);
 
 /* The CPU detection code needs to be in a file not compiled with
  * "-mmmx -msse", as gcc would generate CMOV instructions otherwise
@@ -2019,22 +1920,17 @@ pixman_composite (pixman_operator_t	op,
 enum CPUFeatures {
     NoFeatures = 0,
     MMX = 0x1,
-    MMX_Extensions = 0x2,
+    MMX_Extensions = 0x2, 
     SSE = 0x6,
     SSE2 = 0x8,
     CMOV = 0x10
 };
 
 static unsigned int detectCPUFeatures(void) {
-    unsigned int result, features;
+    unsigned int result;
     char vendor[13];
-#ifdef _MSC_VER
-    int vendor0 = 0, vendor1, vendor2;
-#endif
     vendor[0] = 0;
     vendor[12] = 0;
-
-#ifdef __GNUC__
     /* see p. 118 of amd64 instruction set manual Vol3 */
     /* We need to be careful about the handling of %ebx and
      * %esp here. We can't declare either one as clobbered
@@ -2069,50 +1965,15 @@ static unsigned int detectCPUFeatures(void) {
 	     "pop %%ebx\n"
              "1:\n"
              "mov %%edx, %0\n"
-             : "=r" (result),
-               "=m" (vendor[0]),
-               "=m" (vendor[4]),
+             : "=r" (result), 
+               "=m" (vendor[0]), 
+               "=m" (vendor[4]), 
                "=m" (vendor[8])
              :
              : "%eax", "%ecx", "%edx"
         );
-#elif defined (_MSC_VER)
-    _asm {
-      pushfd
-      pop eax
-      mov ecx, eax
-      xor eax, 00200000h
-      push eax
-      popfd
-      pushfd
-      pop eax
-      mov edx, 0
-      xor eax, ecx
-      jz nocpuid
 
-      mov eax, 0
-      push ebx
-      cpuid
-      mov eax, ebx
-      pop ebx
-      mov vendor0, eax
-      mov vendor1, edx
-      mov vendor2, ecx
-      mov eax, 1
-      push ebx
-      cpuid
-      pop ebx
-    nocpuid:
-      mov result, edx
-    }
-    memmove (vendor+0, &vendor0, 4);
-    memmove (vendor+4, &vendor1, 4);
-    memmove (vendor+8, &vendor2, 4);
-#else
-#error unsupported compiler
-#endif
-
-    features = 0;
+    unsigned int features = 0;
     if (result) {
         /* result now contains the standard feature bits */
         if (result & (1 << 15))
@@ -2125,9 +1986,8 @@ static unsigned int detectCPUFeatures(void) {
             features |= SSE2;
         if ((result & MMX) && !(result & SSE) && (strcmp(vendor, "AuthenticAMD") == 0)) {
             /* check for AMD MMX extensions */
-#ifdef __GNUC__
 
-            unsigned int result;
+            unsigned int result;            
             __asm__("push %%ebx\n"
                     "mov $0x80000000, %%eax\n"
                     "cpuid\n"
@@ -2143,22 +2003,6 @@ static unsigned int detectCPUFeatures(void) {
                     :
                     : "%eax", "%ecx", "%edx"
                 );
-#endif
-#ifdef _MSC_VER
-	    _asm {
-	      push ebx
-	      mov eax, 80000000h
-	      cpuid
-	      xor edx, edx
-	      cmp eax, 1
-	      jge notamd
-	      mov eax, 80000001h
-	      cpuid
-	    notamd:
-	      pop ebx
-	      mov result, edx
-	    }
-#endif
             if (result & (1<<22))
                 features |= MMX_Extensions;
         }
@@ -2178,7 +2022,7 @@ fbHaveMMX (void)
 	mmx_present = (features & (MMX|MMX_Extensions)) == (MMX|MMX_Extensions);
         initialized = TRUE;
     }
-
+    
     return mmx_present;
 }
 #endif /* USE_MMX && !amd64 */

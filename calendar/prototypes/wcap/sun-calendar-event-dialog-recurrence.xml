@@ -43,10 +43,6 @@
   <!ENTITY % dtd1 SYSTEM "chrome://calendar/locale/global.dtd" >  %dtd1;
   <!ENTITY % dtd2 SYSTEM "chrome://calendar/locale/calendar.dtd" >  %dtd2;
   <!ENTITY % dtd3 SYSTEM "chrome://calendar/locale/sun-calendar-event-dialog.dtd" > %dtd3;
-  <!ENTITY % calendar-recurrence-dialogDTD SYSTEM "chrome://calendar/locale/calendar-recurrence-dialog.dtd">
-  <!ENTITY % calendar-event-dialogDTD SYSTEM "chrome://calendar/locale/calendar-event-dialog.dtd">
-  %calendar-recurrence-dialogDTD;
-  %calendar-event-dialogDTD;
 ]>
 
 <bindings xmlns="http://www.mozilla.org/xbl"
@@ -57,7 +53,7 @@
   <binding id="recurrence-page">
     <content>
 
-      <xul:box flex="1" xbl:inherits="orient">
+      <xul:box xbl:inherits="orient" flex="1">
 
         <xul:label id="task-repeat-warning" value="&newtodo.repeatstart.warning;" hidden="true"/>
 
@@ -65,32 +61,35 @@
         <xul:groupbox>
           <xul:caption label="&event.recurrence.pattern.label;"/>
 
-          <xul:grid style="min-width: 28em">
+          <xul:grid>
             <xul:columns>
               <xul:column/>
-              <xul:column/>
+              <xul:column flex="1"/>
             </xul:columns>
 
             <xul:rows>
-              
               <xul:row align="center">
                 <xul:label value="&event.recurrence.occurs.label;" disable-on-readonly="true" disable-on-occurrence="true"/>
                 <xul:menulist id="period-list" oncommand="updateRecurrenceDeck();" disable-on-readonly="true" disable-on-occurrence="true">
                   <xul:menupopup>
-                    <xul:menuitem label="&event.recurrence.day.label;" value="0"/>
-                    <xul:menuitem label="&event.recurrence.week.label;" value="1"/>
-                    <xul:menuitem label="&event.recurrence.month.label;" value="2"/>
-                    <xul:menuitem label="&event.recurrence.year.label;" value="3"/>
+                    <xul:menuitem label="&event.recurrence.none.label;" value="0"/>
+                    <xul:menuitem label="&event.recurrence.day.label;" value="1"/>
+                    <xul:menuitem label="&event.recurrence.week.label;" value="2"/>
+                    <xul:menuitem label="&event.recurrence.month.label;" value="3"/>
+                    <xul:menuitem label="&event.recurrence.year.label;" value="4"/>
                   </xul:menupopup>
                 </xul:menulist>
               </xul:row>
-
               <xul:row align="top">
 
                 <xul:spacer/>
 
                 <xul:deck id="period-deck">
-                 
+
+                  <!-- None -->
+                  <xul:box orient="vertical" align="top">
+                  </xul:box>
+
                   <!-- Daily -->
                   <xul:box orient="vertical" align="top">
                     <xul:radiogroup id="daily-group" oncommand="updateRecurrenceControls();">
@@ -162,12 +161,11 @@
                       <xul:textbox id="yearly-interval" value="1" size="3" oninput="validateIntegers(event); updateRecurrenceControls();" disable-on-readonly="true" disable-on-occurrence="true"/>
                       <xul:label value="&repeat.units.years.both;"/>
                     </xul:hbox>
-
                     <xul:radiogroup id="yearly-group" oncommand="updateRecurrenceControls();">
-                      <xul:grid>
+                      <xul:grid flex="1">
                         <xul:columns>
                           <xul:column/>
-                          <xul:column/>
+                          <xul:column flex="1"/>
                         </xul:columns>
                         <xul:rows>
                           <xul:row align="center">
@@ -240,12 +238,10 @@
                       </xul:grid>
                     </xul:radiogroup>
                   </xul:box>
-
                 </xul:deck>
               </xul:row>
             </xul:rows>
           </xul:grid>
-
         </xul:groupbox>
 
         <!-- range of recurrence -->
@@ -277,9 +273,12 @@
     </content>
     <implementation>
 
+      <field name="mCalID">null</field>
+      <field name="mUserID">null</field>
+      <field name="mOrganizerID">null</field>
       <field name="mIsReadOnly">false</field>
-      <field name="mStartTime">null</field>
-      <field name="mEndTime">null</field>
+      <field name="mIsOrganizer">false</field>
+      <field name="mStartDate">null</field>
 
       <constructor>
         <![CDATA[
@@ -288,7 +287,7 @@
           window.addEventListener("load", load, true);
         ]]>
       </constructor>
-
+      
       <method name="onLoad">
         <body>
           <![CDATA[
@@ -298,15 +297,13 @@
             var args = window.arguments[0];
             var item = args.calendarEvent;
             var calendar = item.calendar;
-            var recinfo = args.recurrenceInfo;
-
-            this.mStartTime = args.startTime;
-            this.mEndTime = args.endTime;
+            var recinfo = item.recurrenceInfo;
 
             this.onChangeCalendar(calendar);
 
             // set starting value for 'repeat until' rule.
-            setElementValue("repeat-until-date", this.mStartTime);
+            this.mStartDate = item.startDate || item.entryDate || item.dueDate;
+            setElementValue("repeat-until-date", this.mStartDate);
 
             if(item.parentItem != item) {
               item = item.parentItem;
@@ -327,7 +324,7 @@
 
                         switch(rule.type) {
                             case "DAILY":
-                                document.getElementById("period-list").selectedIndex = 0;
+                                document.getElementById("period-list").selectedIndex = 1;
                                 setElementValue("daily-days", rule.interval);
                                 var ruleComp = rule.getComponent("BYDAY",{});
                                 if(ruleComp.length > 0) {
@@ -337,13 +334,13 @@
                                 }
                                 break;
                             case "WEEKLY":
-                                document.getElementById("period-list").selectedIndex = 1;
+                                document.getElementById("period-list").selectedIndex = 2;
                                 setElementValue("weekly-weeks", rule.interval);
                                 var days = rule.getComponent("BYDAY", {});
                                 document.getElementById("datepicker-weekday").days = days;
                                 break;
                             case "MONTHLY":
-                                document.getElementById("period-list").selectedIndex = 2;
+                                document.getElementById("period-list").selectedIndex = 3;
                                 setElementValue("monthly-interval", rule.interval);
                                 var ruleComp = rule.getComponent("BYDAY",{});
                                 if (ruleComp.length > 0) {
@@ -362,7 +359,7 @@
                                 }
                                 break;
                             case "YEARLY":
-                                document.getElementById("period-list").selectedIndex = 3;
+                                document.getElementById("period-list").selectedIndex = 4;
                                 setElementValue("yearly-interval", rule.interval);
                                 var byMonthRule = rule.getComponent("BYMONTH",{});
                                 var byDayRule = rule.getComponent("BYDAY",{});
@@ -423,9 +420,9 @@
           <![CDATA[
             if (item.parentItem != item) {
               this.disableRecurrenceFields("disable-on-occurrence");
-            } else if (this.mIsReadOnly) {
+            } else if (this.mIsReadOnly || !this.mIsOrganizer) {
               this.disableRecurrenceFields("disable-on-readonly");
-            } else if (isToDo(item) && !this.mStartTime) {
+            } else if (isToDo(item) && !this.mStartDate) {
               this.disableRecurrenceFields("disable-on-readonly");
             } else {
               this.enableRecurrenceFields("disable-on-readonly");
@@ -451,9 +448,11 @@
             // code here always inserts a rule first, because all our
             // exceptions should come afterward.
             var deckNumber = Number(getElementValue("period-list"));
+            if(!deckNumber) {
+                return null;
+            }
 
-            var args = window.arguments[0];
-            var recurrenceInfo = args.recurrenceInfo;
+            var recurrenceInfo = item.recurrenceInfo;
             if (recurrenceInfo) {
                 recurrenceInfo = recurrenceInfo.clone();
                 var rrules = this.splitRecurrenceRules(recurrenceInfo);
@@ -466,7 +465,7 @@
 
             var recRule = new calRecurrenceRule();
             switch (deckNumber) {
-            case 0:
+            case 1:
                 recRule.type = "DAILY";
                 var dailyGroup = document.getElementById("daily-group");
                 if(dailyGroup.selectedIndex==0) {
@@ -478,7 +477,7 @@
                     recRule.setComponent("BYDAY", onDays.length, onDays);
                 }
                 break;
-            case 1:
+            case 2:
                 recRule.type = "WEEKLY";
                 var ndays = Number(getElementValue("weekly-weeks"));
                 recRule.interval = ndays;
@@ -486,19 +485,15 @@
                 if (onDays.length > 0)
                     recRule.setComponent("BYDAY", onDays.length, onDays);
                 break;
-            case 2:
+            case 3:
                 recRule.type = "MONTHLY";
                 var monthInterval = Number(getElementValue("monthly-interval"));
                 recRule.interval = monthInterval;
                 var monthlyGroup = document.getElementById("monthly-group");
                 if(monthlyGroup.selectedIndex==0) {
-                  var abs = function(v) {
-                    return v >= 0 ? v : -v;
-                  }
-                  var ordinal = Number(getElementValue("monthly-ordinal"));
-                  var day_of_week = Number(getElementValue("monthly-weekday"));
-                  var sign = ordinal < 0 ? -1 : 1;
-                  var onDays = [ (abs(ordinal)*8+day_of_week)*sign ];
+                  var onDays = [
+                    Number(getElementValue("monthly-ordinal"))*8+
+                    Number(getElementValue("monthly-weekday")) ];
                   recRule.setComponent("BYDAY", onDays.length, onDays);
                 } else {
                   var monthlyDays = document.getElementById("monthly-days").days;
@@ -506,7 +501,7 @@
                     recRule.setComponent("BYMONTHDAY", monthlyDays.length, monthlyDays);
                 }
                 break;
-            case 3:
+            case 4:
                 recRule.type = "YEARLY";
                 var yearInterval = Number(getElementValue("yearly-interval"));
                 recRule.interval = yearInterval;
@@ -519,14 +514,10 @@
                 } else {
                   var yearlyByMonth = [ Number(getElementValue("yearly-month-rule")) ];
                   recRule.setComponent("BYMONTH", yearlyByMonth.length, yearlyByMonth);
-                  var abs = function(v) {
-                    return v >= 0 ? v : -v;
-                  }
-                  var ordinal = Number(getElementValue("yearly-ordinal"));
-                  var day_of_week = Number(getElementValue("yearly-weekday"));
-                  var sign = ordinal < 0 ? -1 : 1;
-                  var onDays = [ (abs(ordinal)*8+day_of_week)*sign ];
-                  recRule.setComponent("BYDAY", onDays.length, onDays);
+                  var yearlyByDay = [
+                    Number(getElementValue("yearly-ordinal"))*8+
+                    Number(getElementValue("yearly-weekday")) ];
+                  recRule.setComponent("BYDAY", yearlyByDay.length, yearlyByDay);
                 }
                 break;
             }
@@ -574,6 +565,29 @@
             this.mIsReadOnly = false;
             if (calendar && calendar.readOnly)
               this.mIsReadOnly = true;
+
+            // assume we're the organizer [in case that the calendar
+            // does not support the concept of identities].
+            this.mIsOrganizer = true;
+            
+            try {
+              this.mUserID = "";
+              this.mCalID = "";
+              this.mOrganizerID = "";
+            
+              var provider = calendar.QueryInterface(Components.interfaces.calIWcapCalendar);
+              this.mCalID = provider.calId;
+              this.mUserID = provider.session.userId;
+              this.mOrganizerID = ((item.organizer == null || item.organizer.id == null)
+                              ? this.mCalID // sensible default
+                              : item.organizer.id);
+
+              // set 'mIsOrganizer' if the current calid originally scheduled this event.
+              this.mIsOrganizer = false;
+              if(this.mCalID == this.mOrganizerID)
+                this.mIsOrganizer = true;
+            }
+            catch(e) {}
 
             // disable or enable controls based on a set or rules
             // - whether this item is a stand-alone item or an occurrence
@@ -650,7 +664,7 @@
             var item = window.calendarItem;
             if(item.parentItem != item)
                 return;
-            if(this.mIsReadOnly)
+            if(this.mIsReadOnly || !this.mIsOrganizer)
               return;
 
             var radioRangeForever = document.getElementById("recurrence-range-forever");
@@ -661,26 +675,35 @@
             var rangeAppointmentsLabel = document.getElementById("repeat-appointments-label");
 
             var deckNumber = Number(getElementValue("period-list"));
-        
-            radioRangeForever.removeAttribute("disabled");
-            radioRangeFor.removeAttribute("disabled");
-            radioRangeUntil.removeAttribute("disabled");
-            rangeAppointmentsLabel.removeAttribute("disabled");
-        
-            var durationSelection = document.getElementById("recurrence-duration").selectedItem.value;
-            if (durationSelection == "forever") {
-            }
-
-            if (durationSelection == "ntimes") {
-                rangeTimesCount.removeAttribute("disabled");
-            } else {
+            if(!deckNumber) {
+                radioRangeForever.setAttribute("disabled","true");
+                radioRangeFor.setAttribute("disabled","true");
+                radioRangeUntil.setAttribute("disabled","true");
                 rangeTimesCount.setAttribute("disabled","true");
-            }
-
-            if (durationSelection == "until") {
-                rangeUntilDate.removeAttribute("disabled");
-            } else {
                 rangeUntilDate.setAttribute("disabled","true");
+                rangeAppointmentsLabel.setAttribute("disabled","true");
+            } else {
+            
+                radioRangeForever.removeAttribute("disabled");
+                radioRangeFor.removeAttribute("disabled");
+                radioRangeUntil.removeAttribute("disabled");
+                rangeAppointmentsLabel.removeAttribute("disabled");
+            
+                var durationSelection = document.getElementById("recurrence-duration").selectedItem.value;
+                if (durationSelection == "forever") {
+                }
+
+                if (durationSelection == "ntimes") {
+                    rangeTimesCount.removeAttribute("disabled");
+                } else {
+                    rangeTimesCount.setAttribute("disabled","true");
+                }
+
+                if (durationSelection == "until") {
+                    rangeUntilDate.removeAttribute("disabled");
+                } else {
+                    rangeUntilDate.setAttribute("disabled","true");
+                }
             }
           ]]>
         </body>
@@ -701,30 +724,36 @@
             item = item.clone();
             var kDefaultTimezone = calendarDefaultTimezone();
             if (isEvent(item)) {
-                var startDate = this.mStartTime.getInTimezone(kDefaultTimezone);
-                var endDate = this.mEndTime.getInTimezone(kDefaultTimezone);
-                if (startDate.isDate) {
-                    endDate.day -= 1;
+                var startDate = jsDateToDateTime(getElementValue("event-starttime"));
+                var endDate = jsDateToDateTime(getElementValue("event-endtime"));
+                startDate = startDate.getInTimezone(kDefaultTimezone);
+                endDate = endDate.getInTimezone(kDefaultTimezone);
+                var isAllDay = getElementValue("event-all-day", "checked");
+                if (isAllDay) {
+                    startDate.isDate = true;
                     startDate.normalize();
+                    endDate.isDate = true;
+                    endDate.day += 1;
                     endDate.normalize();
                 }
-                
-                item.startDate = startDate;
-                item.endDate = endDate;
+                this.setItemProperty(item, "startDate",   startDate);
+                this.setItemProperty(item, "endDate",     endDate);
             }
             if (isToDo(item)) {
-                var entryDate = this.mStartTime;
+                var entryDate = getElementValue("todo-has-entrydate", "checked") ? 
+                    jsDateToDateTime(getElementValue("todo-entrydate")) : null;
                 if (entryDate) {
                     entryDate = entryDate.getInTimezone(kDefaultTimezone);
                 } else {
                     item.recurrenceInfo = null;
                 }
-                item.entryDate = entryDate;
-                var dueDate = this.mEndTime;
+                this.setItemProperty(item,"entryDate",entryDate);
+                var dueDate = getElementValue("todo-has-duedate", "checked") ? 
+                    jsDateToDateTime(getElementValue("todo-duedate")) : null;
                 if (dueDate) {
                     dueDate = dueDate.getInTimezone(kDefaultTimezone);
                 }
-                item.dueDate = dueDate;
+                this.setItemProperty(item, "dueDate",     dueDate);
             }
             
             var recInfo = this.onSave(item);
@@ -761,8 +790,19 @@
         <body>
           <![CDATA[
             var enableAccept = true;
+
+            var tab = document.getElementById("dialog-tab");
+            var index = tab.selectedIndex;
+            if (index == 1) {
+              var args = window.arguments[0];
+              var item = args.calendarEvent;
+              if (isToDo(item) && !this.mStartDate) {
+                this.showWarning("task-repeat-warning");
+              }
+            }
+            
             switch (Number(getElementValue("period-list"))) {
-            case 0: // daily
+            case 1: // daily
                 var ndays = Number(getElementValue("daily-days"));
                 if (ndays == "" || ndays < 1) {
                   enableAccept = false;
@@ -798,13 +838,13 @@
             var item = window.calendarItem;
             if(item.parentItem != item)
                 return;
-            if(this.mIsReadOnly)
+            if(this.mIsReadOnly || !this.mIsOrganizer)
               return;
          
             switch (Number(getElementValue("period-list"))) {
                 
                 // daily
-                case 0:
+                case 1:
                     var dailyGroup = document.getElementById("daily-group");
                     var dailyDays = document.getElementById("daily-days");
                     dailyDays.removeAttribute("disabled", "true");
@@ -814,11 +854,11 @@
                     break;
                     
                 // weekly
-                case 1:
+                case 2:
                     break;
                     
                 // monthly
-                case 2:
+                case 3:
                     var monthlyGroup = document.getElementById("monthly-group");
                     var monthlyOrdinal = document.getElementById("monthly-ordinal");
                     var monthlyWeekday = document.getElementById("monthly-weekday");
@@ -835,7 +875,7 @@
                     break;
 
                 // yearly
-                case 3:
+                case 4:
                     var yearlyGroup = document.getElementById("yearly-group");
                     var yearlyDays = document.getElementById("yearly-days");
                       var yearlyMonthOrdinal = document.getElementById("yearly-month-ordinal");
@@ -856,6 +896,67 @@
                         yearlyMonthOrdinal.setAttribute("disabled", "true");
                     }
                     break;
+            }
+          ]]>
+        </body>
+      </method>
+
+      <method name="setItemProperty">
+        <parameter name="item"/>
+        <parameter name="propertyName"/>
+        <parameter name="value"/>
+        <body>
+          <![CDATA[
+            switch(propertyName) {
+              case "startDate":
+                if (value.isDate && !item.startDate.isDate ||
+                    !value.isDate && item.startDate.isDate ||
+                    value.timezone != item.startDate.timezone ||
+                    value.compare(item.startDate) != 0)
+                    item.startDate = value;
+                break;
+              case "endDate":
+                if (value.isDate && !item.endDate.isDate ||
+                    !value.isDate && item.endDate.isDate ||
+                    value.timezone != item.endDate.timezone ||
+                    value.compare(item.endDate) != 0)
+                    item.endDate = value;
+                break;
+
+              case "entryDate":
+                if (value == item.entryDate)
+                    break;
+                if ((value && !item.entryDate) ||
+                    (!value && item.entryDate) ||
+                    (value.timezone != item.entryDate.timezone) ||
+                    (value.compare(item.entryDate) != 0))
+                    item.entryDate = value;
+                break;
+              case "dueDate":
+                if (value == item.dueDate)
+                    break;
+                if ((value && !item.dueDate) ||
+                    (!value && item.dueDate) ||
+                    (value.timezone != item.dueDate.timezone) ||
+                    (value.compare(item.dueDate) != 0))
+                    item.dueDate = value;
+                break;
+              case "isCompleted":
+                if (value != item.isCompleted)
+                    item.isCompleted = value;
+                break;
+
+              case "title":
+                if (value != item.title)
+                    item.title = value;
+                break;
+
+              default:
+                if (!value || value == "")
+                    item.deleteProperty(propertyName);
+                else if (item.getProperty(propertyName) != value)
+                    item.setProperty(propertyName, value);
+                break;
             }
           ]]>
         </body>

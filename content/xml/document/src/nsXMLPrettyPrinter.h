@@ -65,7 +65,7 @@ public:
                                  PRInt32 aIndexInContainer);
     virtual void ContentRemoved(nsIDocument* aDocument, nsIContent* aContainer,
                                 nsIContent* aChild, PRInt32 aIndexInContainer);
-    virtual void NodeWillBeDestroyed(const nsINode* aNode);
+    virtual void DocumentWillBeDestroyed(nsIDocument* aDocument);
     
     /**
      * This will prettyprint the document if the document is loaded in a

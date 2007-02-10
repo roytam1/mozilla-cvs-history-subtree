@@ -65,6 +65,7 @@
 #include "nsIMIMEInfo.h"
 #include "nsITimer.h"
 #include "nsIAlertsService.h"
+#include "nsWeakReference.h"
 
 typedef PRInt16 DownloadState;
 typedef PRInt16 DownloadType;
@@ -74,7 +75,8 @@ class nsDownload;
 
 class nsDownloadManager : public nsIDownloadManager,
                           public nsIXPInstallManagerUI,
-                          public nsIObserver
+                          public nsIObserver,
+                          public nsSupportsWeakReference
 {
 public:
   NS_DECL_ISUPPORTS
@@ -193,13 +195,14 @@ private:
   nsCOMPtr<nsIRDFDataSource> mInner;
 };
 
-class nsDownload : public nsIDownload
+class nsDownload : public nsIDownload_MOZILLA_1_8_BRANCH
 {
 public:
   NS_DECL_NSIWEBPROGRESSLISTENER
   NS_DECL_NSIWEBPROGRESSLISTENER2
   NS_DECL_NSITRANSFER
   NS_DECL_NSIDOWNLOAD
+  NS_DECL_NSIDOWNLOAD_MOZILLA_1_8_BRANCH
   NS_DECL_ISUPPORTS
 
   nsDownload();

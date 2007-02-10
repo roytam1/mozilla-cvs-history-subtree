@@ -36,9 +36,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* tokenization of CSS style sheets */
-
 #ifndef nsCSSScanner_h___
 #define nsCSSScanner_h___
 
@@ -48,8 +45,6 @@ class nsIUnicharInputStream;
 
 // XXX turn this off for minimo builds
 #define CSS_REPORT_PARSE_ERRORS
-
-#define CSS_BUFFER_SIZE 256
 
 // for #ifdef CSS_REPORT_PARSE_ERRORS
 #include "nsXPIDLString.h"
@@ -137,10 +132,7 @@ class nsCSSScanner {
   // Init the scanner.
   // |aLineNumber == 1| is the beginning of a file, use |aLineNumber == 0|
   // when the line number is unknown.
-  // Either aInput or (aBuffer and aCount) must be set.
-  void Init(nsIUnicharInputStream* aInput, 
-            const PRUnichar *aBuffer, PRInt32 aCount, 
-            nsIURI* aURI, PRUint32 aLineNumber);
+  void Init(nsIUnicharInputStream* aInput, nsIURI* aURI, PRUint32 aLineNumber);
   void Close();
 
   static PRBool InitGlobals();
@@ -206,7 +198,7 @@ protected:
   PRBool EatWhiteSpace(nsresult& aErrorCode);
   PRBool EatNewline(nsresult& aErrorCode);
 
-  void ParseAndAppendEscape(nsresult& aErrorCode, nsString& aOutput);
+  PRInt32 ParseEscape(nsresult& aErrorCode);
   PRBool ParseIdent(nsresult& aErrorCode, PRInt32 aChar, nsCSSToken& aResult);
   PRBool ParseAtKeyword(nsresult& aErrorCode, PRInt32 aChar,
                         nsCSSToken& aResult);
@@ -221,11 +213,8 @@ protected:
 
   PRBool GatherIdent(nsresult& aErrorCode, PRInt32 aChar, nsString& aIdent);
 
-  // Only used when input is a stream
-  nsCOMPtr<nsIUnicharInputStream> mInputStream;
-  PRUnichar mBuffer[CSS_BUFFER_SIZE];
-
-  const PRUnichar *mReadPointer;
+  nsCOMPtr<nsIUnicharInputStream> mInput;
+  PRUnichar* mBuffer;
   PRInt32 mOffset;
   PRInt32 mCount;
   PRUnichar* mPushback;

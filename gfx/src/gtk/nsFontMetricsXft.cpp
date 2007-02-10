@@ -2188,14 +2188,6 @@ nsAutoDrawSpecBuffer::Draw(nscoord x, nscoord y, XftFont *font, FT_UInt glyph)
     if (mSpecPos >= BUFFER_LEN-1)
         Flush();
 
-    // Make sure the coordinates fit into the 16-bit x and y fields of
-    // XftGlyphFontSpec
-    NS_ASSERTION(sizeof(short) == sizeof(mSpecBuffer[mSpecPos].x), "Unexpected coordinate type");
-    if ((short)x != x || (short)y != y){
-        NS_WARNING("ignoring coordinate overflow");
-        return;
-    }
-
     mSpecBuffer[mSpecPos].x = x;
     mSpecBuffer[mSpecPos].y = y;
     mSpecBuffer[mSpecPos].font = font;
@@ -2403,8 +2395,8 @@ ConvertUnicharToUCS4(const PRUnichar *aString, PRUint32 aLength,
         if (IS_NON_SURROGATE(c)) {
             outBuffer[outLen] = c;
         }
-        else if (NS_IS_HIGH_SURROGATE(aString[i])) {
-            if (i + 1 < aLength && NS_IS_LOW_SURROGATE(aString[i+1])) {
+        else if (IS_HIGH_SURROGATE(aString[i])) {
+            if (i + 1 < aLength && IS_LOW_SURROGATE(aString[i+1])) {
                 outBuffer[outLen] = SURROGATE_TO_UCS4(c, aString[i + 1]);
                 ++i;
             }
@@ -2412,7 +2404,7 @@ ConvertUnicharToUCS4(const PRUnichar *aString, PRUint32 aLength,
                 outBuffer[outLen] = UCS2_REPLACEMENT;
             }
         }
-        else if (NS_IS_LOW_SURROGATE(aString[i])) { // Unpaired low surrogate?
+        else if (IS_LOW_SURROGATE(aString[i])) { // Unpaired low surrogate?
             outBuffer[outLen] = UCS2_REPLACEMENT;
         }
 

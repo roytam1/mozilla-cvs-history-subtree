@@ -35,12 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * nsIContentSerializer implementation that can be used with an
- * nsIDocumentEncoder to convert an XML DOM to an XML string that
- * could be parsed into more or less the original DOM.
- */
-
 #ifndef nsXMLContentSerializer_h__
 #define nsXMLContentSerializer_h__
 
@@ -50,7 +44,6 @@
 #include "nsVoidArray.h"
 
 class nsIDOMNode;
-class nsIAtom;
 
 class nsXMLContentSerializer : public nsIContentSerializer {
  public:
@@ -81,7 +74,7 @@ class nsXMLContentSerializer : public nsIContentSerializer {
                            nsAString& aStr);
 
   NS_IMETHOD AppendElementStart(nsIDOMElement *aElement,
-                                nsIDOMElement *aOriginalElement,
+                                PRBool aHasChildren,
                                 nsAString& aStr);
   
   NS_IMETHOD AppendElementEnd(nsIDOMElement *aElement,
@@ -125,7 +118,8 @@ class nsXMLContentSerializer : public nsIContentSerializer {
    * @param aURI the namespace URI we want aPrefix to point to
    * @param aElement the element we're working with (needed for proper default
    *                 namespace handling)
-   * @param aIsAttribute PR_TRUE if we're confirming a prefix for an attribute.
+   * @param aMustHavePrefix PR_TRUE if we the output prefix must be nonempty
+   *                        whenever a new namespace decl is needed.
    * @return PR_TRUE if we need to push the (prefix, uri) pair on the namespace
    *                 stack (note that this can happen even if the prefix is
    *                 empty).
@@ -133,7 +127,7 @@ class nsXMLContentSerializer : public nsIContentSerializer {
   PRBool ConfirmPrefix(nsAString& aPrefix,
                        const nsAString& aURI,
                        nsIDOMElement* aElement,
-                       PRBool aIsAttribute);
+                       PRBool aMustHavePrefix);
   /**
    * GenerateNewPrefix generates a new prefix and writes it to aPrefix
    */
@@ -153,10 +147,6 @@ class nsXMLContentSerializer : public nsIContentSerializer {
 
   PRInt32 mPrefixIndex;
   nsVoidArray mNameSpaceStack;
-
-  // The charset that was passed to Init()
-  nsCString mCharset;
-  
   PRPackedBool mInAttribute;
   PRPackedBool mAddNewline;
 };

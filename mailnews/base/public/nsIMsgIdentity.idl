@@ -102,7 +102,6 @@ interface nsIMsgIdentity : nsISupports {
   attribute string fccFolder;
 
   attribute string fccFolderPickerMode;
-  attribute boolean fccReplyFollowsParent;
   attribute string draftsFolderPickerMode;
   attribute string tmplFolderPickerMode;  
 
@@ -176,4 +175,6 @@ interface nsIMsgIdentity : nsISupports {
 
   /* useful for debugging */
   wstring toString();
+
+  attribute boolean fccReplyFollowsParent;
 };

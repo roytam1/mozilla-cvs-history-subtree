@@ -39,31 +39,32 @@
 #ifndef nsMailGNOMEIntegration_h_
 #define nsMailGNOMEIntegration_h_
 
-#include "nsIShellService.h"
-#include "nsIGenericFactory.h"
+#include "nsIMapiRegistry.h"
 #include "nsString.h"
 
 #define NS_MAILGNOMEINTEGRATION_CID \
 {0xbddef0f4, 0x5e2d, 0x4846, {0xbd, 0xec, 0x86, 0xd0, 0x78, 0x1d, 0x8d, 0xed}}
 
-class nsMailGNOMEIntegration : public nsIShellService
+class nsMailGNOMEIntegration : public nsIMapiRegistry
 {
 public:
   NS_DECL_ISUPPORTS
-  NS_DECL_NSISHELLSERVICE
+  NS_DECL_NSIMAPIREGISTRY
 
   NS_HIDDEN_(nsresult) Init();
-  nsMailGNOMEIntegration();
 
-protected:
-  virtual ~nsMailGNOMEIntegration() {};
-
-  PRBool KeyMatchesAppName(const char *aKeyValue) const;
-  PRBool checkDefault(const char* const *aProtocols, unsigned int aLength);
-  nsresult MakeDefault(const char* const *aProtocols, unsigned int aLength);
 private:
+  ~nsMailGNOMEIntegration() {}
+
+  NS_HIDDEN_(PRBool)   KeyMatchesAppName(const char *aKeyValue) const;
+  NS_HIDDEN_(nsresult) CheckDefault(const char* const *aProtocols,
+                                  unsigned int aLength, PRBool *aIsDefault);
+  NS_HIDDEN_(nsresult) MakeDefault(const char* const *aProtocols,
+                                 unsigned int aLength);
+
   PRPackedBool mUseLocaleFilenames;
-  PRPackedBool mCheckedThisSession;
+  PRPackedBool mShowMailDialog;
+  PRPackedBool mShowNewsDialog;
   nsCString mAppPath;
 };
 

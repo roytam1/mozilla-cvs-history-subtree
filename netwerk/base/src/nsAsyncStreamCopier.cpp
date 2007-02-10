@@ -36,7 +36,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsAsyncStreamCopier.h"
-#include "nsIEventTarget.h"
 #include "nsStreamUtils.h"
 #include "nsNetSegmentUtils.h"
 #include "nsNetUtil.h"
@@ -246,7 +245,7 @@ nsAsyncStreamCopier::Init(nsIInputStream *source,
         mTarget = target;
     else {
         nsresult rv;
-        mTarget = do_GetService(NS_STREAMTRANSPORTSERVICE_CONTRACTID, &rv);
+        mTarget = do_GetService(NS_IOTHREADPOOL_CONTRACTID, &rv);
         if (NS_FAILED(rv)) return rv;
     }
     return NS_OK;

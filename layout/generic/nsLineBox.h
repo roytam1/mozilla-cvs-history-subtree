@@ -22,7 +22,6 @@
  *
  * Contributor(s):
  *   L. David Baron <dbaron@dbaron.org>
- *   Mats Palmgren <mats.palmgren@bredband.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -37,12 +36,10 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* representation of one line within a block frame, a CSS line box */
-
 #ifndef nsLineBox_h___
 #define nsLineBox_h___
 
+#include "nsVoidArray.h"
 #include "nsPlaceholderFrame.h"
 #include "nsILineIterator.h"
 
@@ -86,6 +83,9 @@ public:
   // the containing block frame.
   nsRect mCombinedArea;
 
+  // The float's max-element-width.
+  nscoord mMaxElementWidth;
+
 protected:
   nsFloatCache* mNext;
 
@@ -97,11 +97,7 @@ protected:
 
 class nsFloatCacheList {
 public:
-#ifdef NS_BUILD_REFCNT_LOGGING
-  nsFloatCacheList();
-#else
   nsFloatCacheList() : mHead(nsnull) { }
-#endif
   ~nsFloatCacheList();
 
   PRBool IsEmpty() const {
@@ -118,14 +114,10 @@ public:
 
   nsFloatCache* Tail() const;
 
-  void DeleteAll();
-
   nsFloatCache* Find(nsIFrame* aOutOfFlowFrame);
 
-  // Remove a nsFloatCache from this list.  Deleting this nsFloatCache
-  // becomes the caller's responsibility.
-  void Remove(nsFloatCache* aElement) { RemoveAndReturnPrev(aElement); }
-  
+  void Remove(nsFloatCache* aElement);
+
   // Steal away aList's nsFloatCache objects and put them in this
   // list.  aList must not be empty.
   void Append(nsFloatCacheFreeList& aList);
@@ -133,45 +125,15 @@ public:
 protected:
   nsFloatCache* mHead;
 
-  // Remove a nsFloatCache from this list.  Deleting this nsFloatCache
-  // becomes the caller's responsibility. Returns the nsFloatCache that was
-  // before aElement, or nsnull if aElement was the first.
-  nsFloatCache* RemoveAndReturnPrev(nsFloatCache* aElement);
-  
   friend class nsFloatCacheFreeList;
 };
 
 //---------------------------------------
-// Like nsFloatCacheList, but with fast access to the tail
 
-class nsFloatCacheFreeList : private nsFloatCacheList {
+class nsFloatCacheFreeList : public nsFloatCacheList {
 public:
-#ifdef NS_BUILD_REFCNT_LOGGING
-  nsFloatCacheFreeList();
-  ~nsFloatCacheFreeList();
-#else
   nsFloatCacheFreeList() : mTail(nsnull) { }
   ~nsFloatCacheFreeList() { }
-#endif
-
-  // Reimplement trivial functions
-  PRBool IsEmpty() const {
-    return nsnull == mHead;
-  }
-
-  nsFloatCache* Head() const {
-    return mHead;
-  }
-
-  nsFloatCache* Tail() const {
-    return mTail;
-  }
-  
-  PRBool NotEmpty() const {
-    return nsnull != mHead;
-  }
-
-  void DeleteAll();
 
   // Steal away aList's nsFloatCache objects and put them on this
   // free-list.  aList must not be empty.
@@ -179,12 +141,9 @@ public:
 
   void Append(nsFloatCache* aFloatCache);
 
-  void Remove(nsFloatCache* aElement);
-
-  // Remove an nsFloatCache object from this list and return it, or create
-  // a new one if this one is empty;
+  // Allocate a new nsFloatCache object
   nsFloatCache* Alloc();
-  
+
 protected:
   nsFloatCache* mTail;
 
@@ -307,6 +266,15 @@ public:
   }
   PRBool IsImpactedByFloat() const {
     return mFlags.mImpactedByFloat;
+  }
+
+  // mHasPercentageChild bit
+  void SetHasPercentageChild(PRBool aOn) {
+    NS_ASSERTION((PR_FALSE==aOn || PR_TRUE==aOn), "somebody is playing fast and loose with bools and bits!");
+    mFlags.mHasPercentageChild = aOn;
+  }
+  PRBool HasPercentageChild() const {
+    return mFlags.mHasPercentageChild;
   }
 
   // mLineWrapped bit
@@ -446,7 +414,7 @@ public:
 #ifdef DEBUG
   char* StateToString(char* aBuf, PRInt32 aBufSize) const;
 
-  void List(FILE* out, PRInt32 aIndent) const;
+  void List(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent) const;
 #endif
 
   nsIFrame* LastChild() const;
@@ -459,21 +427,12 @@ public:
     return IndexOf(aFrame) >= 0;
   }
 
-  // Search the line for aFrameToFind, going forward from aFrameInLine
-  // (or from the beginning of the line, if aFrameInLine is null).
-  // aLineIterator is a line iterator pointing to the line.
-  // aEndLine should point to the block's end_lines.
-  PRBool ContainsAfter(nsIFrame* aFrameInLine,
-                       nsIFrame* aFrameToFind,
-                       nsLineList_iterator aLineIter,
-                       const nsLineList_iterator& aEndLines) const;
-  
   // whether the line box is "logically" empty (just like nsIFrame::IsEmpty)
   PRBool IsEmpty() const;
 
   // Call this only while in Reflow() for the block the line belongs
   // to, only between reflowing the line (or sliding it, if we skip
-  // reflowing it) and the end of reflowing the block.
+  // reflowing it) and the end of reflowing the the block.
   PRBool CachedIsEmpty();
 
   void InvalidateCachedIsEmpty() {
@@ -492,6 +451,9 @@ public:
   nsIFrame* mFirstChild;
 
   nsRect mBounds;
+  nscoord mMaxElementWidth;  // width part of max-element-size
+  nscoord mMaximumWidth;     // maximum width (needed for incremental reflow of tables)
+                             // includes the left border/padding but not the right
 
   struct FlagBits {
     PRUint32 mDirty : 1;
@@ -499,6 +461,7 @@ public:
     PRUint32 mHasClearance : 1;
     PRUint32 mBlock : 1;
     PRUint32 mImpactedByFloat : 1;
+    PRUint32 mHasPercentageChild : 1;
     PRUint32 mLineWrapped: 1;
     PRUint32 mResizeReflowOptimizationDisabled: 1;  // default 0 = means that the opt potentially applies to this line. 1 = never skip reflowing this line for a resize reflow
     PRUint32 mEmptyCacheValid: 1;
@@ -580,11 +543,7 @@ class nsLineList_iterator {
 
     typedef nsLineLink                  link_type;
 
-#ifdef NS_DEBUG
-    nsLineList_iterator() { memset(&mCurrent, 0xcd, sizeof(mCurrent)); }
-#else
     // Auto generated default constructor OK.
-#endif
     // Auto generated copy-constructor OK.
 
     inline iterator_self_type&
@@ -742,11 +701,7 @@ class nsLineList_reverse_iterator {
 
     typedef nsLineLink                  link_type;
 
-#ifdef NS_DEBUG
-    nsLineList_reverse_iterator() { memset(&mCurrent, 0xcd, sizeof(mCurrent)); }
-#else
     // Auto generated default constructor OK.
-#endif
     // Auto generated copy-constructor OK.
 
     inline iterator_self_type&
@@ -880,11 +835,7 @@ class nsLineList_const_iterator {
 
     typedef nsLineLink                  link_type;
 
-#ifdef NS_DEBUG
-    nsLineList_const_iterator() { memset(&mCurrent, 0xcd, sizeof(mCurrent)); }
-#else
     // Auto generated default constructor OK.
-#endif
     // Auto generated copy-constructor OK.
 
     inline iterator_self_type&
@@ -1010,11 +961,7 @@ class nsLineList_const_reverse_iterator {
 
     typedef nsLineLink                  link_type;
 
-#ifdef NS_DEBUG
-    nsLineList_const_reverse_iterator() { memset(&mCurrent, 0xcd, sizeof(mCurrent)); }
-#else
     // Auto generated default constructor OK.
-#endif
     // Auto generated copy-constructor OK.
 
     inline iterator_self_type&

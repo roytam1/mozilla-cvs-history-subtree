@@ -37,6 +37,7 @@
 
 #include "nsStylClipboardUtils.h"
 #include "nsMemory.h"
+#include "nsCarbonHelpers.h"
 
 #include <Appearance.h>
 

@@ -78,7 +78,7 @@ protected:
   nsCOMArray <nsIDBChangeListener> m_pendingListeners;
 };
 
-class nsMsgDatabase : public nsIMsgDatabase
+class nsMsgDatabase : public nsIMsgDatabase 
 {
 public:
   friend class nsMsgDBService;
@@ -187,16 +187,12 @@ protected:
   
   // open db cache
   static void		AddToCache(nsMsgDatabase* pMessageDB) 
-  {
-#ifdef DEBUG_David_Bienvenu
-    NS_ASSERTION(GetNumInCache() < 40, "40 or more open db's");
-#endif
-    GetDBCache()->AppendElement(pMessageDB);}
+  {GetDBCache()->AppendElement(pMessageDB);}
   static void		RemoveFromCache(nsMsgDatabase* pMessageDB);
   static int		FindInCache(nsMsgDatabase* pMessageDB);
   PRBool	MatchDbName(nsFileSpec &dbName);	// returns TRUE if they match
   
-#if defined(XP_WIN) || defined(XP_OS2) // this should go away when we can provide our own file stream to MDB/Mork
+#if defined(XP_WIN) || defined(XP_OS2) || defined(XP_MAC)	// this should go away when we can provide our own file stream to MDB/Mork
   static void		UnixToNative(char*& ioPath);
 #endif
   

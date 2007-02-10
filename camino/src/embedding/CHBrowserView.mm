@@ -51,7 +51,6 @@
 #include "nsIDocCharset.h"
 
 #include "nsIURI.h"
-#include "nsIURIFixup.h"
 #include "nsIDocument.h"
 #include "nsIDOMWindow.h"
 #include "nsPIDOMWindow.h"
@@ -59,6 +58,7 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsIWidget.h"
 #include "nsIPrefBranch.h"
+#include "nsIScriptGlobalObject.h"
 
 // Printing
 #include "nsIWebBrowserPrint.h"
@@ -107,11 +107,12 @@
 
 #import "mozView.h"
 
+typedef unsigned int DragReference;
+#include "nsIDragHelperService.h"
+
 // Cut/copy/paste
 #include "nsIClipboardCommands.h"
 #include "nsIInterfaceRequestorUtils.h"
-
-#include "nsIEventSink.h"
 
 // Undo/redo
 #include "nsICommandManager.h"
@@ -126,6 +127,19 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 #define DEFAULT_TEXT_ZOOM 1.0f
 #define MIN_TEXT_ZOOM 0.01f
 #define MAX_TEXT_ZOOM 20.0f
+
+// fix warnings
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
+@interface NSView(PantherViewAdditions)
+- (void)getRectsBeingDrawn:(const NSRect **)rects count:(int *)count;
+- (BOOL)needsToDrawRect:(NSRect)aRect;
+- (BOOL)wantsDefaultClipping;
+@end
+
+const long NSFindPanelActionNext = 2;
+const long NSFindPanelActionPrevious = 3;
+const long NSFindPanelActionSetFindString = 7;
+#endif
 
 
 @interface CHBrowserView(Private)
@@ -225,6 +239,10 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     nsCOMPtr<nsIBaseWindow> baseWin = do_QueryInterface(_webBrowser);
     baseWin->InitWindow((NSView*)self, nsnull, 0, 0, (int)frame.size.width, (int)frame.size.height);
     baseWin->Create();
+    
+// register the view as a drop site for text, files, and urls. 
+    [self registerForDraggedTypes: [NSArray arrayWithObjects:
+              NSStringPboardType, NSURLPboardType, NSFilenamesPboardType, nil]];
               
     // The value of mUseGlobalPrintSettings can't change during our lifetime. 
     nsCOMPtr<nsIPrefBranch> pref(do_GetService("@mozilla.org/preferences-service;1"));
@@ -313,12 +331,24 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 {
   [[NSColor whiteColor] set];
 
-  const NSRect *rects;
-  int numRects;
-  [self getRectsBeingDrawn:&rects count:&numRects];
+#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_3
+  // if we're on panther, only draw the rects that need drawing
+  if ([self respondsToSelector:@selector(getRectsBeingDrawn:count:)])
+#endif
+  {
+    const NSRect *rects;
+    int numRects;
+    [self getRectsBeingDrawn:&rects count:&numRects];
 
-  for (int i = 0; i < numRects; ++i)
-    NSRectFill(rects[i]);
+    for (int i = 0; i < numRects; ++i)
+      NSRectFill(rects[i]);
+  }
+#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_3
+  else
+  {
+    NSRectFill(inRect);
+  }
+#endif
 }
 
 - (void)addListener:(id <CHBrowserListener>)listener
@@ -508,10 +538,6 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     browserSetup->SetProperty(property, value);
 }
 
-// Gets the current URI in fixed-up form, suitable for display to the user.
-// In the case of wyciwyg: URIs, this will not be the actual URI of the page
-// according to gecko.
-//
 // should we be using the window.location URL instead? see nsIDOMLocation.h
 - (NSString*)getCurrentURI
 {
@@ -525,13 +551,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     return @"";
 
   nsCAutoString spec;
-  nsCOMPtr<nsIURI> exposableURI;
-  nsCOMPtr<nsIURIFixup> fixup(do_GetService("@mozilla.org/docshell/urifixup;1"));
-  if (fixup && NS_SUCCEEDED(fixup->CreateExposableURI(uri, getter_AddRefs(exposableURI))) && exposableURI)
-    exposableURI->GetSpec(spec);
-  else
-    uri->GetSpec(spec);
-  
+  uri->GetSpec(spec);
 	return [NSString stringWithUTF8String:spec.get()];
 }
 
@@ -598,7 +618,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   // again to an NSDate. Why doesn't nsIDOMNSDocument have an accessor
   // which can give me a date directly?
   PRTime time;
-  PRStatus st = PR_ParseTimeString(NS_ConvertUTF16toUTF8(lastModifiedDate).get(), PR_FALSE /* local time */, &time);
+  PRStatus st = PR_ParseTimeString(NS_ConvertUCS2toUTF8(lastModifiedDate).get(), PR_FALSE /* local time */, &time);
   if (st == PR_SUCCESS)
     return [NSDate dateWithPRTime:time];
 
@@ -1167,12 +1187,12 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   }
 }
 
--(NSMenu*)contextMenu
+-(NSMenu*)getContextMenu
 {
-	return [[self getBrowserContainer] contextMenu];
+	return [[self getBrowserContainer] getContextMenu];
 }
 
--(NSWindow*)nativeWindow
+-(NSWindow*)getNativeWindow
 {
   NSWindow* window = [self window];
   if (window)
@@ -1183,9 +1203,9 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   if (mWindow)
     return mWindow;
   
-  // Finally, see if our parent responds to the nativeWindow selector,
+  // Finally, see if our parent responds to the getNativeWindow selector,
   // and if they do, let them handle it.
-  return [[self getBrowserContainer] nativeWindow];
+  return [[self getBrowserContainer] getNativeWindow];
 }
 
 
@@ -1215,10 +1235,10 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     return NULL;
   nsCOMPtr<nsIDOMWindow> domWindow;
   _webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
-  nsCOMPtr<nsPIDOMWindow> privWin(do_QueryInterface(domWindow));
-  if (!privWin)
+  nsCOMPtr<nsIScriptGlobalObject> global(do_QueryInterface(domWindow));
+  if (!global)
     return NULL;
-  return privWin->GetDocShell();
+  return global->GetDocShell();
 }
 
 // used for finding a blocked popup's docshell
@@ -1283,12 +1303,100 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 #pragma mark -
 
--(BOOL)validateMenuItem: (NSMenuItem*)aMenuItem
+- (BOOL)shouldAcceptDrag:(id <NSDraggingInfo>)sender
 {
-  // Window actions are disabled while a sheet is showing
-  if ([[self window] attachedSheet])
+  id<CHBrowserContainer> browserContainer = [self getBrowserContainer];
+  if (browserContainer)
+    return [browserContainer shouldAcceptDragFromSource:[sender draggingSource]];
+
+  return YES;
+}
+
+- (unsigned int)draggingEntered:(id <NSDraggingInfo>)sender
+{
+  if (![self shouldAcceptDrag:sender])
+    return NSDragOperationNone;
+
+//  NSLog(@"draggingEntered");  
+  nsCOMPtr<nsIDragHelperService> helper(do_GetService("@mozilla.org/widget/draghelperservice;1"));
+  mDragHelper = helper.get();
+  NS_IF_ADDREF(mDragHelper);
+  NS_ASSERTION ( mDragHelper, "Couldn't get a drag service, we're in big trouble" );
+  
+  if ( mDragHelper ) {
+    mLastTrackedLocation = [sender draggingLocation];
+    mLastTrackedWindow   = [sender draggingDestinationWindow];
+    nsCOMPtr<nsIEventSink> sink;
+    [self findEventSink:getter_AddRefs(sink) forPoint:mLastTrackedLocation inWindow:mLastTrackedWindow];
+    if (sink)
+      mDragHelper->Enter ( [sender draggingSequenceNumber], sink );
+  }
+  
+  return NSDragOperationCopy;
+}
+
+- (void)draggingExited:(id <NSDraggingInfo>)sender
+{
+//  NSLog(@"draggingExited");
+  if ( mDragHelper ) {
+    nsCOMPtr<nsIEventSink> sink;
+    
+    [self findEventSink:getter_AddRefs(sink)
+            forPoint:mLastTrackedLocation /* [sender draggingLocation] */
+            inWindow:mLastTrackedWindow   /* [sender draggingDestinationWindow] */
+            ];
+    if (sink)
+      mDragHelper->Leave( [sender draggingSequenceNumber], sink );
+    NS_RELEASE(mDragHelper);     
+  }
+}
+
+- (unsigned int)draggingUpdated:(id <NSDraggingInfo>)sender
+{
+  if (![self shouldAcceptDrag:sender])
+    return NSDragOperationNone;
+
+//  NSLog(@"draggingUpdated");
+  PRBool dropAllowed = PR_FALSE;
+  if ( mDragHelper ) {
+    mLastTrackedLocation = [sender draggingLocation];
+    mLastTrackedWindow   = [sender draggingDestinationWindow];
+    nsCOMPtr<nsIEventSink> sink;
+    [self findEventSink:getter_AddRefs(sink) forPoint:mLastTrackedLocation inWindow:mLastTrackedWindow];
+    if (sink)
+      mDragHelper->Tracking([sender draggingSequenceNumber], sink, &dropAllowed);
+  }
+  
+  return dropAllowed ? NSDragOperationCopy : NSDragOperationNone;
+}
+
+- (BOOL)prepareForDragOperation:(id <NSDraggingInfo>)sender
+{
+  return YES;
+}
+
+- (BOOL)performDragOperation:(id <NSDraggingInfo>)sender
+{
+  if (![self shouldAcceptDrag:sender])
     return NO;
 
+  PRBool dragAccepted = PR_FALSE;
+    
+  if ( mDragHelper ) {
+    nsCOMPtr<nsIEventSink> sink;
+    [self findEventSink:getter_AddRefs(sink) forPoint:[sender draggingLocation]
+            inWindow:[sender draggingDestinationWindow]];
+    if (sink)
+      mDragHelper->Drop([sender draggingSequenceNumber], sink, &dragAccepted);
+  }
+  
+  return dragAccepted ? YES : NO;
+}
+
+#pragma mark -
+
+-(BOOL)validateMenuItem: (NSMenuItem*)aMenuItem
+{
   // update first responder items based on the selection
   SEL action = [aMenuItem action];
   if (action == @selector(cut:))
@@ -1306,8 +1414,6 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   else if (action == @selector(selectAll:))
     return YES;
   else if (action == @selector(performFindPanelAction:)) {
-    if (![self isTextBasedContent])
-      return NO;
     long tag = [aMenuItem tag];
     if (tag == NSFindPanelActionNext || tag == NSFindPanelActionPrevious)
       return ([[self lastFindText] length] > 0);

@@ -149,12 +149,11 @@ private:
   char *mInboxURI;
   char *mEmail;
 
-  nsString  mAppName;
-  nsString  mEmailPrefix;
+  nsAutoString mAppName;      
+  nsAutoString mEmailPrefix;  
   nsCString mShellDllPath;
 
-  // XXX test for this as long as there are still non-xul-app suite builds
-#ifdef MOZ_XUL_APP
+#ifdef MOZ_THUNDERBIRD
   nsString mProfilePath;
 #else
   nsXPIDLString mProfileName;

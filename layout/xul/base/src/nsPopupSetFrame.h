@@ -54,7 +54,7 @@
 #include "nsITimer.h"
 #include "nsISupportsArray.h"
 
-nsIFrame* NS_NewPopupSetFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+nsresult NS_NewPopupSetFrame(nsIPresShell* aPresShell, nsIFrame** aResult) ;
 
 struct nsPopupFrameList {
   nsPopupFrameList* mNextPopup;  // The next popup in the list.
@@ -83,27 +83,16 @@ public:
 class nsPopupSetFrame : public nsBoxFrame, public nsIPopupSetFrame
 {
 public:
-  nsPopupSetFrame(nsIPresShell* aShell, nsStyleContext* aContext):
-    nsBoxFrame(aShell, aContext) {}
+  nsPopupSetFrame(nsIPresShell* aShell);
 
   NS_DECL_ISUPPORTS
   
-  NS_IMETHOD Init(nsIContent*      aContent,
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
                   nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
-  NS_IMETHOD AppendFrames(nsIAtom*        aListName,
-                          nsIFrame*       aFrameList);
-  NS_IMETHOD RemoveFrame(nsIAtom*        aListName,
-                         nsIFrame*       aOldFrame);
-#ifdef DEBUG
-  // Only need these for asserts
-  NS_IMETHOD InsertFrames(nsIAtom*        aListName,
-                          nsIFrame*       aPrevFrame,
-                          nsIFrame*       aFrameList);
-  NS_IMETHOD  SetInitialChildList(nsIAtom*        aListName,
-                                  nsIFrame*       aChildList);
-#endif
-  
+
     // nsIBox
   NS_IMETHOD DoLayout(nsBoxLayoutState& aBoxLayoutState);
 #ifdef DEBUG_LAYOUT
@@ -111,7 +100,7 @@ public:
 #endif
 
   // Used to destroy our popup frames.
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
   // Reflow methods
   virtual void RepositionPopup(nsPopupFrameList* aEntry, nsBoxLayoutState& aState);
@@ -123,6 +112,9 @@ public:
   NS_IMETHOD HidePopup(nsIFrame* aPopup);
   NS_IMETHOD DestroyPopup(nsIFrame* aPopup, PRBool aDestroyEntireChain);
 
+  NS_IMETHOD AddPopupFrame(nsIFrame* aPopup);
+  NS_IMETHOD RemovePopupFrame(nsIFrame* aPopup);
+  
   PRBool OnCreate(PRInt32 aX, PRInt32 aY, nsIContent* aPopupContent);
   PRBool OnDestroy(nsIContent* aPopupContent);
   PRBool OnCreated(PRInt32 aX, PRInt32 aY, nsIContent* aPopupContent);
@@ -131,13 +123,6 @@ public:
 
   void ActivatePopup(nsPopupFrameList* aEntry, PRBool aActivateFlag);
   void OpenPopup(nsPopupFrameList* aEntry, PRBool aOpenFlag);
-
-  /**
-   * Return true if the docshell containing aFrame may open a popup. aFrame
-   * doesn't need to be any particular type of frame, just a frame in the
-   * same document.
-   */
-  static PRBool MayOpenPopup(nsIFrame* aFrame);
 
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const
@@ -148,10 +133,8 @@ public:
 
 protected:
 
-  nsresult AddPopupFrame(nsIFrame* aPopup);
-  nsresult RemovePopupFrame(nsIFrame* aPopup);
-  
   void MarkAsGenerated(nsIContent* aPopupContent);
+  void UpdateDismissalListener(nsIMenuParent* aMenuParent);
 
 protected:
 #ifdef DEBUG_LAYOUT
@@ -159,6 +142,8 @@ protected:
 #endif
 
   nsPopupFrameList* mPopupList;
+  
+  nsPresContext* mPresContext; // Our pres context.
 
 }; // class nsPopupSetFrame
 

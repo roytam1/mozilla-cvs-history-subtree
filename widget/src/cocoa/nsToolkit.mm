@@ -20,8 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Simon Fraser <sfraser@netscape.com>
- *   Josh Aas <josh@mozilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -38,203 +36,51 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsToolkit.h"
-
-#include <ctype.h>
-#include <stdlib.h>
-#include <stdio.h>
-
-#include <mach/mach_port.h>
-#include <mach/mach_interface.h>
-#include <mach/mach_init.h>
-
-#import <Carbon/Carbon.h>
-#import <IOKit/pwr_mgt/IOPMLib.h>
-#import <IOKit/IOMessage.h>
-
 #include "nsWidgetAtoms.h"
 
-#include "nsIObserverService.h"
+#include <Gestalt.h>
+#include <Appearance.h>
+
+#include "nsIEventQueue.h"
+#include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
+#include "nsIPref.h"
 
-static io_connect_t gRootPort = MACH_PORT_NULL;
+// for some reason, this must come last. otherwise the appshell 
+// component fails to instantiate correctly at runtime.
+#undef DARWIN
+#import <Cocoa/Cocoa.h>
 
-// Static thread local storage index of the Toolkit 
-// object associated with a given thread...
-static PRUintn gToolkitTLSIndex = 0;
-
-
+//-------------------------------------------------------------------------
+//
+//-------------------------------------------------------------------------
 nsToolkit::nsToolkit()
-: mInited(false)
-, mSleepWakeNotificationRLS(nsnull)
 {
 }
 
-
+//-------------------------------------------------------------------------
+//
+//-------------------------------------------------------------------------
 nsToolkit::~nsToolkit()
-{
-  RemoveSleepWakeNotifcations();
-  // Remove the TLS reference to the toolkit...
-  PR_SetThreadPrivate(gToolkitTLSIndex, nsnull);
+{ 
 }
 
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsToolkit, nsIToolkit);
-
-
-NS_IMETHODIMP
-nsToolkit::Init(PRThread * aThread)
+//-------------------------------------------------------------------------
+//
+//-------------------------------------------------------------------------
+nsresult
+nsToolkit::InitEventQueue(PRThread * aThread)
 {
-  nsWidgetAtoms::RegisterAtoms();
-  
-  mInited = true;
-  
-  RegisterForSleepWakeNotifcations();
-
+  // nothing to do
   return NS_OK;
 }
 
 
-nsToolkit* NS_CreateToolkitInstance()
+//-------------------------------------------------------------------------
+//
+//-------------------------------------------------------------------------
+nsToolkitBase* NS_CreateToolkitInstance()
 {
   return new nsToolkit();
-}
-
-
-void
-nsToolkit::PostSleepWakeNotification(const char* aNotification)
-{
-  nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
-  if (observerService)
-    observerService->NotifyObservers(nsnull, aNotification, nsnull);
-}
-
-
-// http://developer.apple.com/documentation/DeviceDrivers/Conceptual/IOKitFundamentals/PowerMgmt/chapter_10_section_3.html
-static void ToolkitSleepWakeCallback(void *refCon, io_service_t service, natural_t messageType, void * messageArgument)
-{
-  switch (messageType)
-  {
-    case kIOMessageSystemWillSleep:
-      // System is going to sleep now.
-      nsToolkit::PostSleepWakeNotification("sleep_notification");
-      ::IOAllowPowerChange(gRootPort, (long)messageArgument);
-      break;
-      
-    case kIOMessageCanSystemSleep:
-      // In this case, the computer has been idle for several minutes
-      // and will sleep soon so you must either allow or cancel
-      // this notification. Important: if you don’t respond, there will
-      // be a 30-second timeout before the computer sleeps.
-      // In Mozilla's case, we always allow sleep.
-      ::IOAllowPowerChange(gRootPort,(long)messageArgument);
-      break;
-      
-    case kIOMessageSystemHasPoweredOn:
-      // Handle wakeup.
-      nsToolkit::PostSleepWakeNotification("wake_notification");
-      break;
-  }
-}
-
-
-nsresult
-nsToolkit::RegisterForSleepWakeNotifcations()
-{
-  IONotificationPortRef notifyPortRef;
-
-  NS_ASSERTION(!mSleepWakeNotificationRLS, "Already registered for sleep/wake");
-
-  gRootPort = ::IORegisterForSystemPower(0, &notifyPortRef, ToolkitSleepWakeCallback, &mPowerNotifier);
-  if (gRootPort == MACH_PORT_NULL) {
-    NS_ASSERTION(0, "IORegisterForSystemPower failed");
-    return NS_ERROR_FAILURE;
-  }
-
-  mSleepWakeNotificationRLS = ::IONotificationPortGetRunLoopSource(notifyPortRef);
-  ::CFRunLoopAddSource(::CFRunLoopGetCurrent(),
-                       mSleepWakeNotificationRLS,
-                       kCFRunLoopDefaultMode);
-
-  return NS_OK;
-}
-
-
-void
-nsToolkit::RemoveSleepWakeNotifcations()
-{
-  if (mSleepWakeNotificationRLS) {
-    ::IODeregisterForSystemPower(&mPowerNotifier);
-    ::CFRunLoopRemoveSource(::CFRunLoopGetCurrent(),
-                            mSleepWakeNotificationRLS,
-                            kCFRunLoopDefaultMode);
-
-    mSleepWakeNotificationRLS = nsnull;
-  }
-}
-
-
-// Return the nsIToolkit for the current thread.  If a toolkit does not
-// yet exist, then one will be created...
-NS_METHOD NS_GetCurrentToolkit(nsIToolkit* *aResult)
-{
-  NS_ENSURE_ARG_POINTER(aResult);
-  *aResult = nsnull;
-  
-  // Create the TLS index the first time through...
-  if (gToolkitTLSIndex == 0) {
-    PRStatus status = PR_NewThreadPrivateIndex(&gToolkitTLSIndex, NULL);
-    if (PR_FAILURE == status)
-      return NS_ERROR_FAILURE;
-  }
-  
-  // Create a new toolkit for this thread...
-  nsToolkit* toolkit = (nsToolkit*)PR_GetThreadPrivate(gToolkitTLSIndex);
-  if (!toolkit) {
-    toolkit = NS_CreateToolkitInstance();
-    if (!toolkit)
-      return NS_ERROR_OUT_OF_MEMORY;
-    
-    NS_ADDREF(toolkit);
-    toolkit->Init(PR_GetCurrentThread());
-    //
-    // The reference stored in the TLS is weak.  It is removed in the
-    // nsToolkit destructor...
-    //
-    PR_SetThreadPrivate(gToolkitTLSIndex, (void*)toolkit);
-  }
-  else {
-    NS_ADDREF(toolkit);
-  }
-  *aResult = toolkit;
-  return NS_OK;
-}
-
-
-long nsToolkit::OSXVersion()
-{
-  static long gOSXVersion = 0x0;
-  if (gOSXVersion == 0x0) {
-    OSErr err = ::Gestalt(gestaltSystemVersion, &gOSXVersion);
-    if (err != noErr) {
-      //This should probably be changed when our minimum version changes
-      NS_ERROR("Couldn't determine OS X version, assuming 10.3");
-      gOSXVersion = MAC_OS_X_VERSION_10_3_HEX;
-    }
-  }
-  return gOSXVersion;
-}
-
-PRBool nsToolkit::OnPantherOrLater()
-{
-    return (OSXVersion() >= MAC_OS_X_VERSION_10_3_HEX) ? PR_TRUE : PR_FALSE;
-}
-
-PRBool nsToolkit::OnTigerOrLater()
-{
-    return (OSXVersion() >= MAC_OS_X_VERSION_10_4_HEX) ? PR_TRUE : PR_FALSE;
-}
-
-PRBool nsToolkit::OnLeopardOrLater()
-{
-    return (OSXVersion() >= MAC_OS_X_VERSION_10_5_HEX) ? PR_TRUE : PR_FALSE;
 }

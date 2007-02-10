@@ -56,7 +56,6 @@ class nsIDocument;
 #include "nsIObserver.h"
 #include "nsWeakReference.h"
 #include "nsString.h"
-#include "nsICSSLoader.h"
 #include "nsIZipReader.h"
 #include "nsCOMArray.h"
      
@@ -121,7 +120,8 @@ protected:
                                  PRBool aIsOverlay, PRBool
                                  aUseProfile, PRBool aRemove);
  
-  nsresult LoadStyleSheetWithURL(nsIURI* aURL, PRBool aEnableUnsafeRules, nsICSSStyleSheet** aSheet);
+  nsresult LoadStyleSheetWithURL(nsIURI* aURL, PRBool aAllowUnsafeRules,
+                                 nsICSSStyleSheet** aSheet);
 
   nsresult LoadInstallDataSource();
   nsresult LoadProfileDataSource();
@@ -145,9 +145,7 @@ private:
                    nsISimpleEnumerator** aResult);
 
   nsresult AddToCompositeDataSource(PRBool aUseProfile);
-
-  nsresult FlagXPCNativeWrappers();
-
+  
   nsresult GetBaseURL(const nsACString& aPackage,
                       const nsACString& aProvider, 
                       nsACString& aBaseURL);
@@ -260,7 +258,6 @@ protected:
   nsCOMPtr<nsIRDFResource> mDisabled;
   nsCOMPtr<nsIRDFResource> mXPCNativeWrappers;
 
-  nsCOMPtr<nsICSSLoader> mCSSLoader;
   nsCOMPtr<nsIZipReader> mOverrideJAR;
   nsCString              mOverrideJARURL;
   

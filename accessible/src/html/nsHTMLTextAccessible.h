@@ -53,9 +53,6 @@ public:
   // nsIAccessible
   NS_IMETHOD GetName(nsAString& _retval);
   NS_IMETHOD GetState(PRUint32 *aState);
-  NS_IMETHOD GetRole(PRUint32 *aRole);
-  NS_IMETHOD GetAttributes(nsIPersistentProperties **aAttributes);
-  NS_IMETHOD Shutdown() { mFrame = nsnull; return nsTextAccessibleWrap::Shutdown(); }
   
   // nsPIAccessNode
   NS_IMETHOD_(nsIFrame *) GetFrame(void);
@@ -65,9 +62,6 @@ public:
                               void *aData);
 
 private:
-  // We cache frames for text accessibles so that the primary frame map isn't
-  // increased in size just due to accessibility. Normally the primary frame map,
-  // which is used by nsIPresShell::GetPrimaryFrameFor(), does not include text frames
   nsIFrame *mFrame; // Only valid if node is not shut down (mWeakShell != null)
 };
 
@@ -77,15 +71,6 @@ public:
   nsHTMLHRAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell);
   NS_IMETHOD GetRole(PRUint32 *aRole); 
   NS_IMETHOD GetState(PRUint32 *aState); 
-};
-
-class nsHTMLBRAccessible : public nsLeafAccessible
-{
-public:
-  nsHTMLBRAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell);
-  NS_IMETHOD GetRole(PRUint32 *aRole); 
-  NS_IMETHOD GetState(PRUint32 *aState); 
-  NS_IMETHOD GetName(nsAString& aName);
 };
 
 class nsHTMLLabelAccessible : public nsTextAccessible 
@@ -126,16 +111,16 @@ protected:
   nsString mBulletText;
 };
 
-class nsHTMLListAccessible : public nsHyperTextAccessible
+class nsHTMLListAccessible : public nsAccessibleWrap
 {
 public:
   nsHTMLListAccessible(nsIDOMNode *aDOMNode, nsIWeakReference* aShell):
-    nsHyperTextAccessible(aDOMNode, aShell) { }
+    nsAccessibleWrap(aDOMNode, aShell) { }
   NS_IMETHOD GetRole(PRUint32 *aRole) { *aRole = ROLE_LIST; return NS_OK; }
-  NS_IMETHOD GetState(PRUint32 *aState) { nsHyperTextAccessible::GetState(aState); *aState &= ~STATE_FOCUSABLE; *aState |= STATE_READONLY; return NS_OK; }
+  NS_IMETHOD GetState(PRUint32 *aState) { nsAccessibleWrap::GetState(aState); *aState &= ~STATE_FOCUSABLE; *aState |= STATE_READONLY; return NS_OK; }
 };
 
-class nsHTMLLIAccessible : public nsHyperTextAccessible
+class nsHTMLLIAccessible : public nsBlockAccessible
 {
 public:
   nsHTMLLIAccessible(nsIDOMNode *aDOMNode, nsIWeakReference* aShell, 
@@ -145,7 +130,7 @@ public:
   NS_IMETHOD GetState(PRUint32 *aState) { nsAccessibleWrap::GetState(aState); *aState |= STATE_READONLY; return NS_OK; }
   NS_IMETHOD GetName(nsAString& aName) { aName.SetIsVoid(PR_TRUE); return mRoleMapEntry ? nsAccessible::GetName(aName) : NS_OK; }
   NS_IMETHOD GetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height);
-  void CacheChildren();  // Include bullet accessible
+  void CacheChildren(PRBool aWalkAnonContent);  // Include bullet accessible
 protected:
   nsRefPtr<nsHTMLListBulletAccessible> mBulletAccessible;
 };

@@ -70,8 +70,14 @@
 #include <sys/param.h>
 #include "prenv.h"
 #elif defined(XP_BEOS)
+#include <FindDirectory.h>
+#include <Path.h>
+#include <unistd.h>
 #include <stdlib.h>
+#include <sys/param.h>
+#include <OS.h>
 #include <image.h>
+#include "prenv.h"
 #endif
 
 #include <sys/stat.h>
@@ -91,10 +97,10 @@ NS_IMPL_ISUPPORTS1(nsGREDirServiceProvider, nsIDirectoryServiceProvider)
 //*****************************************************************************   
 
 NS_IMETHODIMP
-nsGREDirServiceProvider::GetFile(const char *prop, PRBool *persistent, nsIFile **_retval)
+nsGREDirServiceProvider::GetFile(const char *prop, PRBool *persistant, nsIFile **_retval)
 {
   *_retval = nsnull;
-  *persistent = PR_TRUE;
+  *persistant = PR_TRUE;
 
   //---------------------------------------------------------------
   // Note that by returning a valid localFile's for NS_GRE_DIR,
@@ -224,18 +230,28 @@ GRE_GetCurrentProcessDirectory(char* buffer)
     }
 
 #elif defined(XP_BEOS)
-// We are able to get actual path for running app.
-    int32 cookie = 0;
-    image_info info;
-    char *lastSlash;
-    *buffer = 0;
-    if (get_next_image_info(0, &cookie, &info) == B_OK)
+
+    char *moz5 = getenv("MOZILLA_FIVE_HOME");
+    if (moz5)
     {
-      strcpy(buffer, info.name);
-      if ((lastSlash = strrchr(buffer, '/')) != 0)
+      strcpy(buffer, moz5);
+      return PR_TRUE;
+    }
+    else
+    {
+      int32 cookie = 0;
+      image_info info;
+      char *p;
+      *buffer = 0;
+      if(get_next_image_info(0, &cookie, &info) == B_OK)
       {
-        *lastSlash = '\0';
-        return PR_TRUE;
+        strcpy(buffer, info.name);
+        if((p = strrchr(buffer, '/')) != 0)
+        {
+          *p = 0;
+
+          return PR_TRUE;
+        }
       }
     }
 

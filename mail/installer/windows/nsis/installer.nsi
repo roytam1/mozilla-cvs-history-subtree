@@ -92,8 +92,6 @@ Var ShortPathNameToExe
 !include locales.nsi
 !include version.nsh
 
-VIAddVersionKey "FileDescription" "${BrandShortName} Installer"
-
 !insertmacro RegCleanMain
 !insertmacro RegCleanUninstall
 !insertmacro CloseApp
@@ -119,20 +117,16 @@ ReserveFile shortcuts.ini
 ################################################################################
 # Modern User Interface - MUI
 
+; WIZ_IMAGE_SUFFIX, HDR_IMAGE_SUFFIX, and MUI_HEADER_SUFFIX are defined in
+; locales.nsi
 !define MUI_ABORTWARNING
 !define MUI_ICON setup.ico
 !define MUI_UNICON setup.ico
 !define MUI_WELCOMEPAGE_TITLE_3LINES
+!define MUI_WELCOMEFINISHPAGE_BITMAP wizWatermark${WIZ_IMAGE_SUFFIX}.bmp
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_RIGHT
-!define MUI_WELCOMEFINISHPAGE_BITMAP wizWatermark.bmp
-
-; Use a right to left header image when the language is right to left
-!ifdef ${AB_CD}_rtl
-!define MUI_HEADERIMAGE_BITMAP_RTL wizHeaderRTL.bmp
-!else
-!define MUI_HEADERIMAGE_BITMAP wizHeader.bmp
-!endif
+!define MUI_HEADERIMAGE_BITMAP${MUI_HEADER_SUFFIX} wizHeader${HDR_IMAGE_SUFFIX}.bmp
 
 /**
  * Installation Pages
@@ -285,10 +279,6 @@ Section "-Application" Section1
 
   ${DeleteFile} "$INSTDIR\install_wizard.log"
   ${DeleteFile} "$INSTDIR\install_status.log"
-
-  RmDir /r "$INSTDIR\updates"
-  ${DeleteFile} "$INSTDIR\updates.xml"
-  ${DeleteFile} "$INSTDIR\active-update.xml"
 
   SetDetailsPrint textonly
   DetailPrint $(STATUS_INSTALL_APP)

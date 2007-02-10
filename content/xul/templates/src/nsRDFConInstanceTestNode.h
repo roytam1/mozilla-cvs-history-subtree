@@ -40,11 +40,12 @@
 #define nsRDFConInstanceTestNode_h__
 
 #include "nscore.h"
-#include "nsFixedSizeAllocator.h"
 #include "nsRDFTestNode.h"
+#include "nsFixedSizeAllocator.h"
 #include "nsIRDFResource.h"
 #include "nsIRDFDataSource.h"
-#include "nsXULTemplateQueryProcessorRDF.h"
+class nsConflictSet;
+class nsResourceSet;
 
 /**
  * Rule network node that tests if a resource is an RDF container, or
@@ -55,14 +56,17 @@ class nsRDFConInstanceTestNode : public nsRDFTestNode
 public:
     enum Test { eFalse, eTrue, eDontCare };
 
-    nsRDFConInstanceTestNode(TestNode* aParent,
-                             nsXULTemplateQueryProcessorRDF* aProcessor,
-                             nsIAtom* aContainerVariable,
+    nsRDFConInstanceTestNode(InnerNode* aParent,
+                             nsConflictSet& aConflictSet,
+                             nsIRDFDataSource* aDataSource,
+                             const nsResourceSet& aMembershipProperties,
+                             PRInt32 aContainerVariable,
                              Test aContainer,
                              Test aEmpty);
 
-    virtual nsresult FilterInstantiations(InstantiationSet& aInstantiations,
-                                          PRBool* aCantHandleYet) const;
+    virtual nsresult FilterInstantiations(InstantiationSet& aInstantiations, void* aClosure) const;
+
+    virtual nsresult GetAncestorVariables(VariableSet& aVariables) const;
 
     virtual PRBool
     CanPropagate(nsIRDFResource* aSource,
@@ -73,7 +77,9 @@ public:
     virtual void
     Retract(nsIRDFResource* aSource,
             nsIRDFResource* aProperty,
-            nsIRDFNode* aTarget) const;
+            nsIRDFNode* aTarget,
+            nsTemplateMatchSet& aFirings,
+            nsTemplateMatchSet& aRetractions) const;
 
 
     class Element : public MemoryElement {
@@ -133,8 +139,10 @@ public:
     };
 
 protected:
-    nsXULTemplateQueryProcessorRDF* mProcessor;
-    nsCOMPtr<nsIAtom> mContainerVariable;
+    nsConflictSet& mConflictSet;
+    nsCOMPtr<nsIRDFDataSource> mDataSource;
+    const nsResourceSet& mMembershipProperties;
+    PRInt32 mContainerVariable;
     Test mContainer;
     Test mEmpty;
 };

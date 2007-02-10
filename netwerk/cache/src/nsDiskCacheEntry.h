@@ -46,6 +46,13 @@
 
 #include "nsCacheEntry.h"
 
+#include "nsICacheVisitor.h"
+
+#include "nspr.h"
+#include "nscore.h"
+#include "nsError.h"
+
+
 
 /******************************************************************************
  *  nsDiskCacheEntry
@@ -60,55 +67,49 @@ struct nsDiskCacheEntry {
     PRUint32        mDataSize;
     PRUint32        mKeySize;       // includes terminating null byte
     PRUint32        mMetaDataSize;  // includes terminating null byte
-    // followed by key data (mKeySize bytes)
-    // followed by meta data (mMetaDataSize bytes)
+    char            mKeyStart[1];   // start of key data
+    //              mMetaDataStart = mKeyStart[mKeySize];
 
-    PRUint32        Size()    { return sizeof(nsDiskCacheEntry) + 
+    PRUint32        Size()    { return offsetof(nsDiskCacheEntry,mKeyStart) + 
                                     mKeySize + mMetaDataSize;
                               }
 
-    char*           Key()     { return NS_REINTERPRET_CAST(char*const, this) + 
-                                    sizeof(nsDiskCacheEntry);
-                              }
-
-    char*           MetaData()
-                              { return Key() + mKeySize; }
-
     nsCacheEntry *  CreateCacheEntry(nsCacheDevice *  device);
+                                     
+    PRBool          CheckConsistency(PRUint32  size);
 
     void Swap()         // host to network (memory to disk)
     {
 #if defined(IS_LITTLE_ENDIAN)   
-        mHeaderVersion      = htonl(mHeaderVersion);
-        mMetaLocation       = htonl(mMetaLocation);
-        mFetchCount         = htonl(mFetchCount);
-        mLastFetched        = htonl(mLastFetched);
-        mLastModified       = htonl(mLastModified);
-        mExpirationTime     = htonl(mExpirationTime);
-        mDataSize           = htonl(mDataSize);
-        mKeySize            = htonl(mKeySize);
-        mMetaDataSize       = htonl(mMetaDataSize);
+        mHeaderVersion      = ::PR_htonl(mHeaderVersion);
+        mMetaLocation       = ::PR_htonl(mMetaLocation);
+        mFetchCount         = ::PR_htonl(mFetchCount);
+        mLastFetched        = ::PR_htonl(mLastFetched);
+        mLastModified       = ::PR_htonl(mLastModified);
+        mExpirationTime     = ::PR_htonl(mExpirationTime);
+        mDataSize           = ::PR_htonl(mDataSize);
+        mKeySize            = ::PR_htonl(mKeySize);
+        mMetaDataSize       = ::PR_htonl(mMetaDataSize);
 #endif
     }
     
     void Unswap()       // network to host (disk to memory)
     {
 #if defined(IS_LITTLE_ENDIAN)
-        mHeaderVersion      = ntohl(mHeaderVersion);
-        mMetaLocation       = ntohl(mMetaLocation);
-        mFetchCount         = ntohl(mFetchCount);
-        mLastFetched        = ntohl(mLastFetched);
-        mLastModified       = ntohl(mLastModified);
-        mExpirationTime     = ntohl(mExpirationTime);
-        mDataSize           = ntohl(mDataSize);
-        mKeySize            = ntohl(mKeySize);
-        mMetaDataSize       = ntohl(mMetaDataSize);
+        mHeaderVersion      = ::PR_ntohl(mHeaderVersion);
+        mMetaLocation       = ::PR_ntohl(mMetaLocation);
+        mFetchCount         = ::PR_ntohl(mFetchCount);
+        mLastFetched        = ::PR_ntohl(mLastFetched);
+        mLastModified       = ::PR_ntohl(mLastModified);
+        mExpirationTime     = ::PR_ntohl(mExpirationTime);
+        mDataSize           = ::PR_ntohl(mDataSize);
+        mKeySize            = ::PR_ntohl(mKeySize);
+        mMetaDataSize       = ::PR_ntohl(mMetaDataSize);
 #endif
     }
 };
 
-nsDiskCacheEntry *  CreateDiskCacheEntry(nsDiskCacheBinding *  binding,
-                                         PRUint32 * size);
+nsDiskCacheEntry *  CreateDiskCacheEntry(nsDiskCacheBinding *  binding);
 
 
 
@@ -128,7 +129,7 @@ public:
 
     virtual ~nsDiskCacheEntryInfo() {}
     
-    const char* Key() { return mDiskEntry->Key(); }
+    const char* Key() { return mDiskEntry->mKeyStart; }
     
 private:
     const char *        mDeviceID;

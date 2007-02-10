@@ -76,6 +76,17 @@ nsresult nsDateTimeFormatWin::Initialize(nsILocale* locale)
     }
   }
 
+  // get os version
+  OSVERSIONINFO os;
+  os.dwOSVersionInfoSize = sizeof(os);
+  ::GetVersionEx(&os);
+  if (VER_PLATFORM_WIN32_NT == os.dwPlatformId && os.dwMajorVersion >= 4) {
+    mW_API = PR_TRUE;   // has W API
+  }
+  else {
+    mW_API = PR_FALSE;
+  }
+
   // default LCID (en-US)
   mLCID = 1033;
 
@@ -117,7 +128,7 @@ nsresult nsDateTimeFormatWin::FormatTime(nsILocale* locale,
                                          const nsDateFormatSelector  dateFormatSelector, 
                                          const nsTimeFormatSelector timeFormatSelector, 
                                          const time_t  timetTime, 
-                                         nsAString& stringOut)
+                                         nsString& stringOut)
 {
   return FormatTMTime(locale, dateFormatSelector, timeFormatSelector, localtime( &timetTime ), stringOut);
 }
@@ -127,7 +138,7 @@ nsresult nsDateTimeFormatWin::FormatTMTime(nsILocale* locale,
                                            const nsDateFormatSelector  dateFormatSelector, 
                                            const nsTimeFormatSelector timeFormatSelector, 
                                            const struct tm*  tmTime, 
-                                           nsAString& stringOut)
+                                           nsString& stringOut)
 {
   SYSTEMTIME system_time;
   DWORD dwFlags_Date = 0, dwFlags_Time = 0;
@@ -217,7 +228,7 @@ nsresult nsDateTimeFormatWin::FormatTMTime(nsILocale* locale,
   NS_ASSERTION(NSDATETIMEFORMAT_BUFFER_LEN >= (PRUint32) (timeLen + 1), "internal time buffer is not large enough");
 
   // Copy the result
-  stringOut.Truncate();
+  stringOut.SetLength(0);
   if (dateLen != 0 && timeLen != 0) {
     stringOut.Assign(dateBuffer, dateLen);
     stringOut.Append((PRUnichar *)(L" "), 1);
@@ -238,7 +249,7 @@ nsresult nsDateTimeFormatWin::FormatPRTime(nsILocale* locale,
                                            const nsDateFormatSelector  dateFormatSelector, 
                                            const nsTimeFormatSelector timeFormatSelector, 
                                            const PRTime  prTime, 
-                                           nsAString& stringOut)
+                                           nsString& stringOut)
 {
   PRExplodedTime explodedTime;
   PR_ExplodeTime(prTime, PR_LocalTimeParameters, &explodedTime);
@@ -251,7 +262,7 @@ nsresult nsDateTimeFormatWin::FormatPRExplodedTime(nsILocale* locale,
                                                    const nsDateFormatSelector  dateFormatSelector, 
                                                    const nsTimeFormatSelector timeFormatSelector, 
                                                    const PRExplodedTime*  explodedTime, 
-                                                   nsAString& stringOut)
+                                                   nsString& stringOut)
 {
   struct tm  tmTime;
   memset( &tmTime, 0, sizeof(tmTime) );
@@ -273,12 +284,26 @@ int nsDateTimeFormatWin::nsGetTimeFormatW(DWORD dwFlags, const SYSTEMTIME *lpTim
                                           const char* format, PRUnichar *timeStr, int cchTime)
 {
   int len = 0;
-  len = GetTimeFormatW(mLCID, dwFlags, lpTime, 
-                       format ?
-                       NS_CONST_CAST(LPCWSTR,
-                                     NS_ConvertASCIItoUTF16(format).get()) :
-                       NULL,
-                       (LPWSTR) timeStr, cchTime);
+
+#ifndef WINCE // Always use wide APIs on Win CE.
+  if (mW_API) {
+#endif
+    nsString formatString; if (format) formatString.AssignWithConversion(format);
+    LPCWSTR wstr = format ? (LPCWSTR) formatString.get() : NULL;
+    len = GetTimeFormatW(mLCID, dwFlags, lpTime, wstr, (LPWSTR) timeStr, cchTime);
+#ifndef WINCE // Always use wide APIs on Win CE.
+  }
+  else {
+    char cstr_time[NSDATETIMEFORMAT_BUFFER_LEN];
+
+    len = GetTimeFormatA(mLCID, dwFlags, lpTime, (LPCSTR) format, 
+                         (LPSTR) cstr_time, NSDATETIMEFORMAT_BUFFER_LEN);
+
+    // convert result to unicode
+    if (len > 0)
+      len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (LPCSTR) cstr_time, len, (LPWSTR) timeStr, cchTime);
+  }
+#endif
   return len;
 }
 
@@ -286,11 +311,25 @@ int nsDateTimeFormatWin::nsGetDateFormatW(DWORD dwFlags, const SYSTEMTIME *lpDat
                                           const char* format, PRUnichar *dateStr, int cchDate)
 {
   int len = 0;
-  len = GetDateFormatW(mLCID, dwFlags, lpDate, 
-                       format ?
-                       NS_CONST_CAST(LPCWSTR,
-                                     NS_ConvertASCIItoUTF16(format).get()) :
-                       NULL,
-                       (LPWSTR) dateStr, cchDate);
+
+#ifndef WINCE // Always use wide APIs on Win CE.
+  if (mW_API) {
+#endif
+    nsString formatString; if (format) formatString.AssignWithConversion(format);
+    LPCWSTR wstr = format ? (LPCWSTR) formatString.get() : NULL;
+    len = GetDateFormatW(mLCID, dwFlags, lpDate, wstr, (LPWSTR) dateStr, cchDate);
+#ifndef WINCE // Always use wide APIs on Win CE.
+  }
+  else {
+    char cstr_date[NSDATETIMEFORMAT_BUFFER_LEN];
+
+    len = GetDateFormatA(mLCID, dwFlags, lpDate, (LPCSTR) format, 
+                         (LPSTR) cstr_date, NSDATETIMEFORMAT_BUFFER_LEN);
+
+    // convert result to unicode
+    if (len > 0)
+      len = MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, (LPCSTR) cstr_date, len, (LPWSTR) dateStr, cchDate);
+  }
+#endif
   return len;
 }

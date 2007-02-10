@@ -70,10 +70,23 @@
 
 static const PRUnichar kSlashChar = PRUnichar('/');
 
-nsIFrame*
-NS_NewMathMLmfracFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMathMLmfracFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLmfracFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLmfracFrame* it = new (aPresShell) nsMathMLmfracFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+nsMathMLmfracFrame::nsMathMLmfracFrame()
+{
 }
 
 nsMathMLmfracFrame::~nsMathMLmfracFrame()
@@ -88,38 +101,44 @@ PRBool
 nsMathMLmfracFrame::IsBevelled()
 {
   nsAutoString value;
-  GetAttribute(mContent, mPresentationData.mstyle, nsGkAtoms::bevelled_,
-               value);
-  return value.EqualsLiteral("true");
+  if (NS_CONTENT_ATTR_HAS_VALUE == 
+      GetAttribute(mContent, mPresentationData.mstyle,
+                   nsMathMLAtoms::bevelled_, value)) {
+    if (value.EqualsLiteral("true")) {
+      return PR_TRUE;
+    }
+  }
+  return PR_FALSE;
 }
 
 NS_IMETHODIMP
-nsMathMLmfracFrame::Init(nsIContent*      aContent,
+nsMathMLmfracFrame::Init(nsPresContext*  aPresContext,
+                         nsIContent*      aContent,
                          nsIFrame*        aParent,
+                         nsStyleContext*  aContext,
                          nsIFrame*        aPrevInFlow)
 {
-  nsresult rv = nsMathMLContainerFrame::Init(aContent, aParent, aPrevInFlow);
+  nsresult rv = nsMathMLContainerFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+  if (NS_FAILED(rv)) return rv;
 
   if (IsBevelled()) {
     // enable the bevelled rendering
     mSlashChar = new nsMathMLChar();
     if (mSlashChar) {
-      nsPresContext* presContext = GetPresContext();
-    
       nsAutoString slashChar; slashChar.Assign(kSlashChar);
-      mSlashChar->SetData(presContext, slashChar);
-      ResolveMathMLCharStyle(presContext, mContent, mStyleContext, mSlashChar, PR_TRUE);
+      mSlashChar->SetData(aPresContext, slashChar);
+      ResolveMathMLCharStyle(aPresContext, mContent, mStyleContext, mSlashChar, PR_TRUE);
     }
   }
 
   return rv;
 }
 
-eMathMLFrameType
-nsMathMLmfracFrame::GetMathMLFrameType()
+nsIAtom*
+nsMathMLmfracFrame::GetType() const
 {
   // frac is "inner" in TeXBook, Appendix G, rule 15e. See also page 170.
-  return eMathMLFrameType_Inner;
+  return nsMathMLAtoms::innerMathMLFrame;
 }
 
 NS_IMETHODIMP
@@ -206,22 +225,31 @@ nsMathMLmfracFrame::CalcLineThickness(nsPresContext*  aPresContext,
 }
 
 NS_IMETHODIMP
-nsMathMLmfracFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                                     const nsRect&           aDirtyRect,
-                                     const nsDisplayListSet& aLists)
+nsMathMLmfracFrame::Paint(nsPresContext*      aPresContext,
+                          nsIRenderingContext& aRenderingContext,
+                          const nsRect&        aDirtyRect,
+                          nsFramePaintLayer    aWhichLayer,
+                          PRUint32             aFlags)
 {
   /////////////
   // paint the numerator and denominator
-  nsresult rv = nsMathMLContainerFrame::BuildDisplayList(aBuilder, aDirtyRect, aLists);
-  NS_ENSURE_SUCCESS(rv, rv);
-  
+  nsresult rv = nsMathMLContainerFrame::Paint(aPresContext, aRenderingContext,
+                                              aDirtyRect, aWhichLayer);
   /////////////
   // paint the fraction line
   if (mSlashChar) {
     // bevelled rendering
-    rv = mSlashChar->Display(aBuilder, this, aLists);
-  } else {
-    rv = DisplayBar(aBuilder, this, mLineRect, aLists);
+    mSlashChar->Paint(aPresContext, aRenderingContext,
+                      aDirtyRect, aWhichLayer, this);
+  }
+  else if ((NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer) &&
+           mStyleContext->GetStyleVisibility()->IsVisible() &&
+           !NS_MATHML_HAS_ERROR(mPresentationData.flags) &&
+           !mLineRect.IsEmpty()) {
+    // paint the fraction line with the current text color
+    aRenderingContext.SetColor(GetStyleColor()->mColor);
+    aRenderingContext.FillRect(mLineRect.x, mLineRect.y, 
+                               mLineRect.width, mLineRect.height);
   }
 
   return rv;
@@ -271,8 +299,8 @@ nsMathMLmfracFrame::Place(nsIRenderingContext& aRenderingContext,
   ////////////////////////////////////
   // Get the children's desired sizes
   nsBoundingMetrics bmNum, bmDen;
-  nsHTMLReflowMetrics sizeNum;
-  nsHTMLReflowMetrics sizeDen;
+  nsHTMLReflowMetrics sizeNum (nsnull);
+  nsHTMLReflowMetrics sizeDen (nsnull);
   nsIFrame* frameDen = nsnull;
   nsIFrame* frameNum = mFrames.FirstChild();
   if (frameNum) 
@@ -289,7 +317,7 @@ nsMathMLmfracFrame::Place(nsIRenderingContext& aRenderingContext,
   // Get shifts
 
   nsPresContext* presContext = GetPresContext();
-  nscoord onePixel = nsPresContext::CSSPixelsToAppUnits(1);
+  nscoord onePixel = presContext->IntScaledPixelsToTwips(1);
 
   aRenderingContext.SetFont(GetStyleFont()->mFont, nsnull);
   nsCOMPtr<nsIFontMetrics> fm;
@@ -302,7 +330,7 @@ nsMathMLmfracFrame::Place(nsIRenderingContext& aRenderingContext,
   // by default, leave at least one-pixel padding at either end, or use
   // lspace & rspace that may come from <mo> if we are an embellished container
   // (we fetch values from the core since they may use units that depend
-  // on style data, and style changes could have occurred in the core since
+  // on style data, and style changes could have occured in the core since
   // our last visit there)
   nsEmbellishData coreData;
   GetEmbellishDataFrom(mEmbellishData.coreFrame, coreData);
@@ -311,7 +339,7 @@ nsMathMLmfracFrame::Place(nsIRenderingContext& aRenderingContext,
 
   // see if the linethickness attribute is there 
   nsAutoString value;
-  GetAttribute(mContent, mPresentationData.mstyle, nsGkAtoms::linethickness_, value);
+  GetAttribute(mContent, mPresentationData.mstyle, nsMathMLAtoms::linethickness_, value);
   mLineRect.height = CalcLineThickness(presContext, mStyleContext, value,
                                        onePixel, defaultRuleThickness);
   nscoord numShift = 0;
@@ -395,20 +423,21 @@ nsMathMLmfracFrame::Place(nsIRenderingContext& aRenderingContext,
   width += leftSpace + rightSpace;
 
   // see if the numalign attribute is there 
-  GetAttribute(mContent, mPresentationData.mstyle, nsGkAtoms::numalign_,
-               value);
-  if (value.EqualsLiteral("left"))
-    dxNum = leftSpace;
-  else if (value.EqualsLiteral("right"))
-    dxNum = width - rightSpace - sizeNum.width;
-
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle, 
+                   nsMathMLAtoms::numalign_, value)) {
+    if (value.EqualsLiteral("left"))
+      dxNum = leftSpace;
+    else if (value.EqualsLiteral("right"))
+      dxNum = width - rightSpace - sizeNum.width;
+  }
   // see if the denomalign attribute is there 
-  GetAttribute(mContent, mPresentationData.mstyle, nsGkAtoms::denomalign_,
-               value);
-  if (value.EqualsLiteral("left"))
-    dxDen = leftSpace;
-  else if (value.EqualsLiteral("right"))
-    dxDen = width - rightSpace - sizeDen.width;
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle, 
+                   nsMathMLAtoms::denomalign_, value)) {
+    if (value.EqualsLiteral("left"))
+      dxDen = leftSpace;
+    else if (value.EqualsLiteral("right"))
+      dxDen = width - rightSpace - sizeDen.width;
+  }
 
   mBoundingMetrics.rightBearing =
     PR_MAX(dxNum + bmNum.rightBearing, dxDen + bmDen.rightBearing);
@@ -423,8 +452,8 @@ nsMathMLmfracFrame::Place(nsIRenderingContext& aRenderingContext,
   mBoundingMetrics.width = width;
 
   aDesiredSize.ascent = sizeNum.ascent + numShift;
-  aDesiredSize.height = aDesiredSize.ascent +
-                        sizeDen.height - sizeDen.ascent + denShift;
+  aDesiredSize.descent = sizeDen.descent + denShift;
+  aDesiredSize.height = aDesiredSize.ascent + aDesiredSize.descent;
   aDesiredSize.width = mBoundingMetrics.width;
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
 
@@ -448,11 +477,12 @@ nsMathMLmfracFrame::Place(nsIRenderingContext& aRenderingContext,
 }
 
 NS_IMETHODIMP
-nsMathMLmfracFrame::AttributeChanged(PRInt32         aNameSpaceID,
+nsMathMLmfracFrame::AttributeChanged(nsIContent*     aContent,
+                                     PRInt32         aNameSpaceID,
                                      nsIAtom*        aAttribute,
                                      PRInt32         aModType)
 {
-  if (nsGkAtoms::bevelled_ == aAttribute) {
+  if (nsMathMLAtoms::bevelled_ == aAttribute) {
     if (!IsBevelled()) {
       // disable the bevelled rendering
       if (mSlashChar) {
@@ -474,7 +504,8 @@ nsMathMLmfracFrame::AttributeChanged(PRInt32         aNameSpaceID,
     }
   }
   return nsMathMLContainerFrame::
-         AttributeChanged(aNameSpaceID, aAttribute, aModType);
+         AttributeChanged(aContent, aNameSpaceID,
+                          aAttribute, aModType);
 }
 
 NS_IMETHODIMP

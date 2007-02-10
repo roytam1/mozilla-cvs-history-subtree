@@ -262,7 +262,7 @@ STDMETHODIMP XPCDispatchTearOff::Invoke(DISPID dispIdMember, REFIID riid,
     }
     // Get the name as a flat string
     // This isn't that efficient, but we have to make the conversion somewhere
-    NS_LossyConvertUTF16toASCII name(pTypeInfo->GetNameForDispID(dispIdMember));
+    NS_LossyConvertUCS2toASCII name(pTypeInfo->GetNameForDispID(dispIdMember));
     if(name.IsEmpty())
         return E_FAIL;
     // Decide if this is a getter or setter
@@ -336,7 +336,6 @@ STDMETHODIMP XPCDispatchTearOff::Invoke(DISPID dispIdMember, REFIID riid,
         JSObject* thisObj;
         AutoScriptEvaluate scriptEval(ccx);
         XPCJSRuntime* rt = ccx.GetRuntime();
-        int j;
 
         thisObj = obj = GetJSObject();;
 
@@ -404,13 +403,12 @@ STDMETHODIMP XPCDispatchTearOff::Invoke(DISPID dispIdMember, REFIID riid,
 
         uintN err;
         // build the args
-        // NOTE: COM expects args in DISPPARAMS to be in reverse order
-        for (j = argc - 1; j >= 0; --j )
+        for(i = 0; i < argc; i++)
         {
             jsval val;
-            if((pDispParams->rgvarg[j].vt & VT_BYREF) == 0)
+            if((pDispParams->rgvarg[i].vt & VT_BYREF) == 0)
             {
-                if(!XPCDispConvert::COMToJS(ccx, pDispParams->rgvarg[j], val, err))
+                if(!XPCDispConvert::COMToJS(ccx, pDispParams->rgvarg[i], val, err))
                     goto pre_call_clean_up;
                 *sp++ = val;
             }

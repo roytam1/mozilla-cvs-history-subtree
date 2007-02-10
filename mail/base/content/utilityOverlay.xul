@@ -15,7 +15,17 @@
 
   <script type="application/x-javascript" src="chrome://global/content/strres.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/utilityOverlay.js"/>
-  
+  <script type="application/x-javascript" src="chrome://communicator/content/builtinURLs.js"/>
+
+  <!-- online/offline status indicators -->   
+  <broadcaster id="Communicator:WorkMode"
+               label="&offlineGoOfflineCmd.label;"
+               type="checkbox"
+               oncommand="toggleOfflineStatus();"/>
+
+  <statusbarpanel id="offline-status" observes="Communicator:WorkMode"/>
+  <menuitem id="offlineGoOfflineCmd" label="&offlineGoOfflineCmd.label;" accesskey="&offlineGoOfflineCmd.accesskey;" observes="Communicator:WorkMode"/>
+
   <!-- File Menu -->
   <menu id="menu_File" label="&fileMenu.label;" accesskey="&fileMenu.accesskey;"/>
   <menu id="menu_New" label="&newMenu.label;" accesskey="&newMenu.accesskey;"/>
@@ -26,11 +36,7 @@
     <menuseparator id="menu_FileQuitSeparator"/>
     <menuitem id="menu_FileQuitItem" key="key_quit" command="cmd_quit" 
 #ifdef XP_UNIX
-#ifndef XP_MACOSX
       label="&quitApplicationCmdUnix.label;" accesskey="&quitApplicationCmdUnix.accesskey;" />
-#else
-      label="&quitApplicationCmdMac.label;" accesskey="&quitApplicationCmdMac.accesskey;" />
-#endif
 #else
       label="&quitApplicationCmd.label;" accesskey="&quitApplicationCmd.accesskey;" />
 #endif
@@ -106,10 +112,9 @@
   <!-- Not needed yet, window will need this: -->
   <!-- broadcaster id="cmd_preferences"/ -->
 
-#ifndef XP_MACOSX
   <menuitem id="menu_preferences"
 #ifdef XP_UNIX
-
+#ifndef XP_MACOSX
             label="&preferencesCmdUnix.label;"
             accesskey="&preferencesCmdUnix.accesskey;"/>  
 #else
@@ -117,6 +122,10 @@
             key="key_preferences"
             accesskey="&preferencesCmd.accesskey;"/>
 #endif
+#else
+            label="&preferencesCmd.label;"
+            key="key_preferences"
+            accesskey="&preferencesCmd.accesskey;"/>
 #endif
 
   <!-- View Menu -->

@@ -42,7 +42,8 @@
 
 #import "nsCOMPtr.h"
 #import "nsString.h"
-#import "nsIMutableArray.h"
+#import "nsArray.h"
+#import "nsIArray.h"
 
 #import "nsIX509Cert.h"
 #import "nsIX509CertDB.h"

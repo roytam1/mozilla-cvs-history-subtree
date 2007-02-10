@@ -52,10 +52,6 @@ var gComposePane = {
     if (kLDAPPrefContractID in Components.classes)
       this.mLDAPPrefsService = Components.classes[kLDAPPrefContractID].getService(Components.interfaces.nsILDAPPrefsService);
 
-    if (this.mLDAPPrefsService) {
-      this.mLDAPPrefsService.migratePrefsIfNeeded();
-    }
-
     this.createDirectoriesList();
     
     // build the local address book menu list. We do this by hand instead of using the xul template
@@ -65,23 +61,13 @@ var gComposePane = {
     this.enableAutocomplete();
 
     this.initLanguageMenu();
-    
-    this.populateFonts();
 
-    document.getElementById('downloadDictionaries').setAttribute('href', this.getDictionaryURL());  
+    document.getElementById('downloadDictionaries').setAttribute('href', xlateURL('urn:clienturl:composer:spellcheckers'));
 
     var preference = document.getElementById("mail.preferences.compose.selectedTabIndex");
     if (preference.value)
       document.getElementById("composePrefs").selectedIndex = preference.value;
     this.mInitialized = true;
-  },
-
-  getDictionaryURL: function()
-  {
-    var formatter = Components.classes["@mozilla.org/toolkit/URLFormatterService;1"]
-                    .getService(Components.interfaces.nsIURLFormatter);
-                    
-    return formatter.formatURLPref("spellchecker.dictionaries.download.url");
   },
 
   tabSelectionChanged: function ()
@@ -91,6 +77,12 @@ var gComposePane = {
       var preference = document.getElementById("mail.preferences.compose.selectedTabIndex");
       preference.valueFromPreferences = document.getElementById("composePrefs").selectedIndex;
     }
+  },
+
+  showReturnReceipts: function()
+  {
+    document.documentElement.openSubDialog("chrome://messenger/content/preferences/receipts.xul",
+                                           "", null);
   },
 
   sendOptionsDialog: function()
@@ -396,43 +388,4 @@ var gComposePane = {
       languageMenuList.selectedIndex = 0;
       
   },
-  
-  populateFonts: function() 
-  {
-    var fontsList = document.getElementById("FontSelect");
-    try 
-    {
-      var enumerator = Components.classes["@mozilla.org/gfx/fontenumerator;1"]
-                                 .getService(Components.interfaces.nsIFontEnumerator);
-      var localFontCount = { value: 0 }
-      var localFonts = enumerator.EnumerateAllFonts(localFontCount);
-      for (var i = 0; i < localFonts.length; ++i) 
-      {
-        if (localFonts[i] != "") 
-          fontsList.appendItem(localFonts[i], localFonts[i]);
-      }
-    }
-    catch(e) { }
-   },
-   
-   restoreHTMLDefaults: function()
-   {
-     // reset throws an exception if the pref value is already the default so
-     // work around that with some try/catch exception handling
-     try {
-       document.getElementById('msgcompose.font_face').reset();
-     } catch (ex) {}
-
-     try {
-       document.getElementById('msgcompose.font_size').reset();
-     } catch (ex) {}
-
-     try {
-       document.getElementById('msgcompose.text_color').reset();
-     } catch (ex) {}
-
-     try {
-       document.getElementById('msgcompose.background_color').reset();
-     } catch (ex) {}
-   },  
 };

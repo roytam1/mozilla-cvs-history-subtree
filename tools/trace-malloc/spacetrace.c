@@ -314,7 +314,7 @@ initOptions(int aArgCount, char **aArgArray)
     }
 
     /*
-     ** initialize the categories
+     ** initalize the categories
      */
     initCategories(&globals);
 
@@ -586,7 +586,7 @@ pngSink(void *aContext, const char *aBuffer, int aLen)
 /*
 ** FormatNumber
 **
-** Formats a number with thousands separator. Don't free the result. Returns
+** Formats a number with thousands separator. Dont free the result. Returns
 ** static data.
 */
 char *
@@ -678,7 +678,7 @@ byteSize(STOptions * inOptions, STAllocation * aAlloc)
 ** recalculateAllocationCost
 **
 ** Given an allocation, does a recalculation of Cost - weight, heapcount etc.
-** and does the right thing to propagate the cost upwards.
+** and does the right thing to propogate the cost upwards.
 */
 int
 recalculateAllocationCost(STOptions * inOptions, STContext * inContext,
@@ -1060,7 +1060,7 @@ harvestRun(const STRun * aInRun, STRun * aOutRun,
 /*
 ** recalculateRunCost
 **
-** Goes over all allocations of a run and recalculates and propagates
+** Goes over all allocations of a run and recalculates and propogates
 ** the allocation costs - weight, heapcount, size
 */
 int
@@ -2233,7 +2233,7 @@ resolveSourceFile(tmmethodnode * aMethod)
 ** Output an html anchor that will resolve to the callsite in question.
 ** If no text is provided, we provide our own.
 **
-** RealName determines whether or not we crawl our parents until the point
+** RealName determines wether or not we crawl our parents until the point
 **  we no longer match stats.
 */
 void
@@ -5251,7 +5251,7 @@ contextLookup(STOptions * inOptions)
 
                 unlock = PR_TRUE;
                 /*
-                 ** Just a category change. We don't need to harvest. Just find the
+                 ** Just a category change. We dont need to harvest. Just find the
                  ** right node and set the cache.mSortedRun. We need to recompute
                  ** cost though. But that is cheap.
                  */
@@ -5810,7 +5810,7 @@ handleClient(void *inArg)
                 }
                 PR_fprintf(aFD, crlf);
                 /*
-                 ** One more to separate headers from content.
+                 ** One more to seperate headers from content.
                  */
                 PR_fprintf(aFD, crlf);
                 /*

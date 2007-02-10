@@ -123,9 +123,11 @@ nsScriptableUnicodeConverter::FinishWithLength(char **_retval, PRInt32* aLength)
 
   nsresult rv = mEncoder->Finish(*_retval, &finLength);
   if (NS_SUCCEEDED(rv))
-    *aLength = finLength;
+    (*_retval)[finLength] = '\0';
   else
     nsMemory::Free(*_retval);
+
+  *aLength = finLength;
 
   return rv;
 
@@ -215,7 +217,6 @@ nsScriptableUnicodeConverter::ConvertToByteArray(const nsAString& aString,
     return rv;
 
   str.Append(data, len);
-  nsMemory::Free(data);
   // NOTE: this being a byte array, it needs no null termination
   *_aData = NS_REINTERPRET_CAST(PRUint8*,
                                 nsMemory::Clone(str.get(), str.Length()));

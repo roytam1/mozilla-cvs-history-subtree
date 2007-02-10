@@ -51,7 +51,7 @@ XPIDLSRCS = nsIBrowserSearchService.idl
 EXTRA_PP_COMPONENTS = nsSearchService.js \
 	nsSearchSuggestions.js
 
-ifneq (,$(BUILD_OFFICIAL)$(MOZILLA_OFFICIAL))
+ifdef MOZ_BRANDING_DIRECTORY
 DEFINES += -DOFFICIAL_BUILD=1
 endif
 

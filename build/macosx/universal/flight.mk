@@ -59,7 +59,7 @@ endif
 
 APP_CONTENTS = Contents/MacOS
 
-ifeq ($(MOZ_BUILD_APP),camino) # {
+ifeq ($(MOZ_BUILD_APP),macbrowser) # {
 INSTALLER_DIR = camino/installer
 MOZ_PKG_APPNAME = camino
 APPNAME = Camino.app

@@ -47,9 +47,6 @@
 #include "nsIImageLoadingContent.h"
 #include "nsIPresShell.h"
 #include "nsIServiceManager.h"
-#include "nsIDOMHTMLImageElement.h"
-#include "nsIDOMDocument.h"
-#include "nsPIDOMWindow.h"
 
 // --- image -----
 
@@ -112,15 +109,17 @@ NS_IMETHODIMP nsHTMLImageAccessible::GetName(nsAString& aName)
     return NS_ERROR_FAILURE;  // Node has been shut down
   }
 
-  if (!content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::alt,
-                        aName)) {
+  if (NS_CONTENT_ATTR_HAS_VALUE != content->GetAttr(kNameSpaceID_None,
+                                                    nsAccessibilityAtoms::alt,
+                                                    aName)) {
     if (mRoleMapEntry) {
       // Use HTML label or DHTML accessibility's labelledby attribute for name
       // GetHTMLName will also try title attribute as a last resort
       return GetHTMLName(aName, PR_FALSE);
     }
-    if (!content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::title,
-                          aName)) {
+    if (NS_CONTENT_ATTR_HAS_VALUE != content->GetAttr(kNameSpaceID_None,
+                                                    nsAccessibilityAtoms::title,
+                                                    aName)) {
       aName.SetIsVoid(PR_TRUE); // No alt or title
     }
   }
@@ -170,11 +169,11 @@ already_AddRefed<nsIAccessible> nsHTMLImageAccessible::CreateAreaAccessible(PRIn
 }
 
 
-void nsHTMLImageAccessible::CacheChildren()
+void nsHTMLImageAccessible::CacheChildren(PRBool aWalkAnonContent)
 {
   if (!mWeakShell) {
     // This node has been shut down
-    mAccChildCount = eChildCountUninitialized;
+    mAccChildCount = -1;
     return;
   }
 
@@ -182,23 +181,22 @@ void nsHTMLImageAccessible::CacheChildren()
     return;
   }
 
+  mAccChildCount = 0;
   nsCOMPtr<nsIDOMHTMLCollection> mapAreas;
   if (mMapElement) {
     mMapElement->GetAreas(getter_AddRefs(mapAreas));
   }
   if (!mapAreas) {
-    mAccChildCount = 0;
     return;
   }
 
   PRUint32 numMapAreas;
   mapAreas->GetLength(&numMapAreas);
-  PRInt32 childCount = 0;
-  
+
   nsCOMPtr<nsIAccessible> areaAccessible;
   nsCOMPtr<nsPIAccessible> privatePrevAccessible;
-  while (childCount < (PRInt32)numMapAreas && 
-         (areaAccessible = CreateAreaAccessible(childCount)) != nsnull) {
+  while (mAccChildCount < numMapAreas && 
+         (areaAccessible = CreateAreaAccessible(mAccChildCount)) != nsnull) {
     if (privatePrevAccessible) {
       privatePrevAccessible->SetNextSibling(areaAccessible);
     }
@@ -206,35 +204,11 @@ void nsHTMLImageAccessible::CacheChildren()
       SetFirstChild(areaAccessible);
     }
 
-    ++ childCount;
+    ++mAccChildCount;
 
     privatePrevAccessible = do_QueryInterface(areaAccessible);
     NS_ASSERTION(privatePrevAccessible, "nsIAccessible impl's should always support nsPIAccessible as well");
     privatePrevAccessible->SetParent(this);
   }
-  mAccChildCount = childCount;
-}
-
-NS_IMETHODIMP nsHTMLImageAccessible::DoAction(PRUint8 index)
-{
-  if (index == eAction_ShowLongDescription) {
-    //get the long description uri and open in a new window
-    nsCOMPtr<nsIDOMHTMLImageElement> element(do_QueryInterface(mDOMNode));
-    NS_ENSURE_TRUE(element, NS_ERROR_FAILURE);
-    nsAutoString longDesc;
-    nsresult rv = element->GetLongDesc(longDesc);
-    NS_ENSURE_SUCCESS(rv, rv);
-    nsCOMPtr<nsIDOMDocument> domDocument;
-    rv = mDOMNode->GetOwnerDocument(getter_AddRefs(domDocument));
-    NS_ENSURE_SUCCESS(rv, rv);
-    nsCOMPtr<nsIDocument> document(do_QueryInterface(domDocument));
-    nsCOMPtr<nsPIDOMWindow> piWindow = document->GetWindow();
-    nsCOMPtr<nsIDOMWindowInternal> win(do_QueryInterface(piWindow));
-    NS_ENSURE_TRUE(win, NS_ERROR_FAILURE);
-    nsCOMPtr<nsIDOMWindow> tmp;
-    return win->Open(longDesc, NS_LITERAL_STRING(""), NS_LITERAL_STRING(""),
-                     getter_AddRefs(tmp));
-  }
-  return nsLinkableAccessible::DoAction(index);
 }
 

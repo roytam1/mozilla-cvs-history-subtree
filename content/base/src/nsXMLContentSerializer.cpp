@@ -35,15 +35,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * nsIContentSerializer implementation that can be used with an
- * nsIDocumentEncoder to convert an XML DOM to an XML string that
- * could be parsed into more or less the original DOM.
- */
-
 #include "nsXMLContentSerializer.h"
 
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsIDOMText.h"
 #include "nsIDOMCDATASection.h"
 #include "nsIDOMProcessingInstruction.h"
@@ -54,13 +48,14 @@
 #include "nsIContent.h"
 #include "nsIDocument.h"
 #include "nsINameSpaceManager.h"
+#include "nsITextContent.h"
 #include "nsTextFragment.h"
 #include "nsString.h"
 #include "prprf.h"
 #include "nsUnicharUtils.h"
 #include "nsCRT.h"
 #include "nsContentUtils.h"
-#include "nsAttrName.h"
+#include "nsLayoutAtoms.h"
 
 typedef struct {
   nsString mPrefix;
@@ -95,7 +90,6 @@ NS_IMETHODIMP
 nsXMLContentSerializer::Init(PRUint32 flags, PRUint32 aWrapColumn,
                              const char* aCharSet, PRBool aIsCopying)
 {
-  mCharset = aCharSet;
   return NS_OK;
 }
 
@@ -107,11 +101,10 @@ nsXMLContentSerializer::AppendTextData(nsIDOMNode* aNode,
                                        PRBool aTranslateEntities,
                                        PRBool aIncrColumn)
 {
-  nsCOMPtr<nsIContent> content = do_QueryInterface(aNode);
-  const nsTextFragment* frag;
-  if (!content || !(frag = content->GetText())) {
-    return NS_ERROR_FAILURE;
-  }
+  nsCOMPtr<nsITextContent> content(do_QueryInterface(aNode));
+  if (!content) return NS_ERROR_FAILURE;
+
+  const nsTextFragment* frag = content->Text();
 
   PRInt32 endoffset = (aEndOffset == -1) ? frag->GetLength() : aEndOffset;
   PRInt32 length = endoffset - aStartOffset;
@@ -132,7 +125,7 @@ nsXMLContentSerializer::AppendTextData(nsIDOMNode* aNode,
                    aTranslateEntities, aIncrColumn);
   }
   else {
-    AppendToString(NS_ConvertASCIItoUTF16(frag->Get1b()+aStartOffset, length),
+    AppendToString(NS_ConvertASCIItoUCS2(frag->Get1b()+aStartOffset, length),
                    aStr, aTranslateEntities, aIncrColumn);
   }
 
@@ -342,46 +335,20 @@ PRBool
 nsXMLContentSerializer::ConfirmPrefix(nsAString& aPrefix,
                                       const nsAString& aURI,
                                       nsIDOMElement* aElement,
-                                      PRBool aIsAttribute)
+                                      PRBool aMustHavePrefix)
 {
-  if (aPrefix.EqualsLiteral(kXMLNS)) {
+  if (aPrefix.EqualsLiteral(kXMLNS) ||
+      (aPrefix.EqualsLiteral("xml") &&
+       aURI.EqualsLiteral("http://www.w3.org/XML/1998/namespace"))) {
+    return PR_FALSE;
+  }
+  if (aURI.IsEmpty()) {
+    aPrefix.Truncate();
     return PR_FALSE;
   }
 
-  if (aURI.EqualsLiteral("http://www.w3.org/XML/1998/namespace")) {
-    // The prefix must be xml for this namespace. We don't need to declare it,
-    // so always just set the prefix to xml.
-    aPrefix.AssignLiteral("xml");
-
-    return PR_FALSE;
-  }
-
-  PRBool mustHavePrefix;
-  if (aIsAttribute) {
-    if (aURI.IsEmpty()) {
-      // Attribute in the null namespace.  This just shouldn't have a prefix.
-      // And there's no need to push any namespace decls
-      aPrefix.Truncate();
-      return PR_FALSE;
-    }
-
-    // Attribute not in the null namespace -- must have a prefix
-    mustHavePrefix = PR_TRUE;
-  } else {
-    // Not an attribute, so doesn't _have_ to have a prefix
-    mustHavePrefix = PR_FALSE;
-  }
-
-  // Keep track of the closest prefix that's bound to aURI and whether we've
-  // found such a thing.  closestURIMatch holds the prefix, and uriMatch
-  // indicates whether we actually have one.
   nsAutoString closestURIMatch;
   PRBool uriMatch = PR_FALSE;
-
-  // Also keep track of whether we've seen aPrefix already.  If we have, that
-  // means that it's already bound to a URI different from aURI, so even if we
-  // later (so in a more outer scope) see it bound to aURI we can't reuse it.
-  PRBool haveSeenOurPrefix = PR_FALSE;
 
   PRInt32 count = mNameSpaceStack.Count();
   PRInt32 index = count - 1;
@@ -389,18 +356,11 @@ nsXMLContentSerializer::ConfirmPrefix(nsAString& aPrefix,
     NameSpaceDecl* decl = (NameSpaceDecl*)mNameSpaceStack.ElementAt(index);
     // Check if we've found a prefix match
     if (aPrefix.Equals(decl->mPrefix)) {
-
-      // If the URIs match and aPrefix is not bound to any other URI, we can
-      // use aPrefix
-      if (!haveSeenOurPrefix && aURI.Equals(decl->mURI)) {
-        // Just use our uriMatch stuff.  That will deal with an empty aPrefix
-        // the right way.  We can break out of the loop now, though.
-        uriMatch = PR_TRUE;
-        closestURIMatch = aPrefix;
-        break;
+      
+      // If the URI's match, we don't have to add a namespace decl
+      if (aURI.Equals(decl->mURI)) {
+        return PR_FALSE;
       }
-
-      haveSeenOurPrefix = PR_TRUE;      
 
       // If they don't, and either:
       // 1) We have a prefix (so we'd be redeclaring this prefix to point to a
@@ -412,19 +372,14 @@ nsXMLContentSerializer::ConfirmPrefix(nsAString& aPrefix,
       // URIs when |decl| doesn't have aElement as its owner.  In that case we
       // can simply push the new namespace URI as the default namespace for
       // aElement.
-      if (!aPrefix.IsEmpty() || decl->mOwner == aElement) {
-        NS_ASSERTION(!aURI.IsEmpty(),
-                     "Not allowed to add a xmlns attribute with an empty "
-                     "namespace name unless it declares the default "
-                     "namespace.");
-
+      if (!aPrefix.IsEmpty() ||
+          (decl->mPrefix.IsEmpty() && decl->mOwner == aElement)) {
         GenerateNewPrefix(aPrefix);
         // Now we need to validate our new prefix/uri combination; check it
         // against the full namespace stack again.  Note that just restarting
         // the while loop is ok, since we haven't changed aURI, so the
-        // closestURIMatch and uriMatch state is not affected.
+        // closestURIMatch state is not affected.
         index = count - 1;
-        haveSeenOurPrefix = PR_FALSE;
         continue;
       }
     }
@@ -451,41 +406,33 @@ nsXMLContentSerializer::ConfirmPrefix(nsAString& aPrefix,
   }
 
   // At this point the following invariants hold:
-  // 1) The prefix in closestURIMatch is mapped to aURI in our scope if
-  //    uriMatch is set.
+  // 1) There is nothing on the namespace stack that matches the pair
+  //    (aPrefix, aURI)
   // 2) There is nothing on the namespace stack that has aPrefix as the prefix
   //    and a _different_ URI, except for the case aPrefix.IsEmpty (and
   //    possible default namespaces on ancestors)
+  // 3) The prefix in closestURIMatch is mapped to aURI in our scope if
+  //    uriMatch is set.
   
   // So if uriMatch is set it's OK to use the closestURIMatch prefix.  The one
   // exception is when closestURIMatch is actually empty (default namespace
   // decl) and we must have a prefix.
-  if (uriMatch && (!mustHavePrefix || !closestURIMatch.IsEmpty())) {
+  if (uriMatch && (!aMustHavePrefix || !closestURIMatch.IsEmpty())) {
     aPrefix.Assign(closestURIMatch);
     return PR_FALSE;
   }
   
-  if (aPrefix.IsEmpty()) {
-    // At this point, aPrefix is empty (which means we never had a prefix to
-    // start with).  If we must have a prefix, just generate a new prefix and
-    // then send it back through the namespace stack checks to make sure it's
-    // OK.
-    if (mustHavePrefix) {
-      GenerateNewPrefix(aPrefix);
-      return ConfirmPrefix(aPrefix, aURI, aElement, aIsAttribute);
-    }
-
-    // One final special case.  If aPrefix is empty and we never saw an empty
-    // prefix (default namespace decl) on the namespace stack and we're in the
-    // null namespace there is no reason to output an |xmlns=""| here.  It just
-    // makes the output less readable.
-    if (!haveSeenOurPrefix && aURI.IsEmpty()) {
-      return PR_FALSE;
-    }
+  // At this point, if aPrefix is empty (which means we never had a prefix to
+  // start with) and we must have a prefix, just generate a new prefix and then
+  // send it back through the namespace stack checks to make sure it's OK.
+  if (aPrefix.IsEmpty() && aMustHavePrefix) {
+    GenerateNewPrefix(aPrefix);
+    return ConfirmPrefix(aPrefix, aURI, aElement, aMustHavePrefix);
   }
+  // else we will just set aURI as the new default namespace URI
 
-  // Now just set aURI as the new default namespace URI.  Indicate that we need
-  // to create a namespace decl for the final prefix
+  // Indicate that we need to create a namespace decl for the
+  // final prefix
   return PR_TRUE;
 }
 
@@ -582,7 +529,7 @@ nsXMLContentSerializer::SerializeAttr(const nsAString& aPrefix,
 
 NS_IMETHODIMP 
 nsXMLContentSerializer::AppendElementStart(nsIDOMElement *aElement,
-                                           nsIDOMElement *aOriginalElement,
+                                           PRBool aHasChildren,
                                            nsAString& aStr)
 {
   NS_ENSURE_ARG(aElement);
@@ -598,18 +545,21 @@ nsXMLContentSerializer::AppendElementStart(nsIDOMElement *aElement,
   aElement->GetLocalName(tagLocalName);
   aElement->GetNamespaceURI(tagNamespaceURI);
 
+  PRInt32 namespaceID;
+    
   PRUint32 index, count;
   nsAutoString nameStr, prefixStr, uriStr, valueStr;
+  nsCOMPtr<nsIAtom> attrName, attrPrefix;
 
   count = content->GetAttrCount();
 
   // First scan for namespace declarations, pushing each on the stack
-  PRUint32 skipAttr = count;
   for (index = 0; index < count; index++) {
     
-    const nsAttrName* name = content->GetAttrNameAt(index);
-    PRInt32 namespaceID = name->NamespaceID();
-    nsIAtom *attrName = name->LocalName();
+    content->GetAttrNameAt(index,
+                           &namespaceID,
+                           getter_AddRefs(attrName),
+                           getter_AddRefs(attrPrefix));
     
     if (namespaceID == kNameSpaceID_XMLNS ||
         // Also push on the stack attrs named "xmlns" in the null
@@ -618,29 +568,15 @@ nsXMLContentSerializer::AppendElementStart(nsIDOMElement *aElement,
         // XXXbz what if we have both "xmlns" in the null namespace and "xmlns"
         // in the xmlns namespace?
         (namespaceID == kNameSpaceID_None &&
-         attrName == nsGkAtoms::xmlns)) {
+         attrName == nsLayoutAtoms::xmlnsNameSpace)) {
       content->GetAttr(namespaceID, attrName, uriStr);
 
-      if (!name->GetPrefix()) {
-        if (tagNamespaceURI.IsEmpty() && !uriStr.IsEmpty()) {
-          // If the element is in no namespace we need to add a xmlns
-          // attribute to declare that. That xmlns attribute must not have a
-          // prefix (see http://www.w3.org/TR/REC-xml-names/#dt-prefix), ie it
-          // must declare the default namespace. We just found an xmlns
-          // attribute that declares the default namespace to something
-          // non-empty. We're going to ignore this attribute, for children we
-          // will detect that we need to add it again and attributes aren't
-          // affected by the default namespace.
-          skipAttr = index;
-        }
-        else {
-          // Default NS attribute does not have prefix (and the name is "xmlns")
-          PushNameSpaceDecl(EmptyString(), uriStr, aOriginalElement);
-        }
-      }
-      else {
+      if (!attrPrefix) {
+        // Default NS attribute does not have prefix (and the name is "xmlns")
+        PushNameSpaceDecl(EmptyString(), uriStr, aElement);
+      } else {
         attrName->ToString(nameStr);
-        PushNameSpaceDecl(nameStr, uriStr, aOriginalElement);
+        PushNameSpaceDecl(nameStr, uriStr, aElement);
       }
     }
   }
@@ -649,8 +585,7 @@ nsXMLContentSerializer::AppendElementStart(nsIDOMElement *aElement,
     
   MaybeAddNewline(aStr);
 
-  addNSAttr = ConfirmPrefix(tagPrefix, tagNamespaceURI, aOriginalElement,
-                            PR_FALSE);
+  addNSAttr = ConfirmPrefix(tagPrefix, tagNamespaceURI, aElement, PR_FALSE);
   // Serialize the qualified name of the element
   AppendToString(NS_LITERAL_STRING("<"), aStr);
   if (!tagPrefix.IsEmpty()) {
@@ -669,21 +604,17 @@ nsXMLContentSerializer::AppendElementStart(nsIDOMElement *aElement,
       // Serialize namespace decl
       SerializeAttr(xmlnsStr, tagPrefix, tagNamespaceURI, aStr, PR_TRUE);
     }
-    PushNameSpaceDecl(tagPrefix, tagNamespaceURI, aOriginalElement);
+    PushNameSpaceDecl(tagPrefix, tagNamespaceURI, aElement);
   }
 
   // Now serialize each of the attributes
   // XXX Unfortunately we need a namespace manager to get
   // attribute URIs.
   for (index = 0; index < count; index++) {
-    if (skipAttr == index) {
-        continue;
-    }
-
-    const nsAttrName* name = content->GetAttrNameAt(index);
-    PRInt32 namespaceID = name->NamespaceID();
-    nsIAtom* attrName = name->LocalName();
-    nsIAtom* attrPrefix = name->GetPrefix();
+    content->GetAttrNameAt(index,
+                           &namespaceID,
+                           getter_AddRefs(attrName),
+                           getter_AddRefs(attrPrefix));
 
     if (attrPrefix) {
       attrPrefix->ToString(prefixStr);
@@ -694,8 +625,10 @@ nsXMLContentSerializer::AppendElementStart(nsIDOMElement *aElement,
 
     addNSAttr = PR_FALSE;
     if (kNameSpaceID_XMLNS != namespaceID) {
-      nsContentUtils::NameSpaceManager()->GetNameSpaceURI(namespaceID, uriStr);
-      addNSAttr = ConfirmPrefix(prefixStr, uriStr, aOriginalElement, PR_TRUE);
+      nsContentUtils::GetNSManagerWeakRef()->GetNameSpaceURI(namespaceID,
+                                                             uriStr);
+      addNSAttr = ConfirmPrefix(prefixStr, uriStr, aElement,
+                                namespaceID != kNameSpaceID_None);
     }
     
     content->GetAttr(namespaceID, attrName, valueStr);
@@ -721,14 +654,12 @@ nsXMLContentSerializer::AppendElementStart(nsIDOMElement *aElement,
       NS_ASSERTION(!prefixStr.IsEmpty(),
                    "Namespaced attributes must have a prefix");
       SerializeAttr(xmlnsStr, prefixStr, uriStr, aStr, PR_TRUE);
-      PushNameSpaceDecl(prefixStr, uriStr, aOriginalElement);
+      PushNameSpaceDecl(prefixStr, uriStr, aElement);
     }
   }
 
   // We don't output a separate end tag for empty element
-  PRBool hasChildren;
-  if (NS_FAILED(aOriginalElement->HasChildNodes(&hasChildren)) ||
-      !hasChildren) {
+  if (!aHasChildren) {
     AppendToString(NS_LITERAL_STRING("/>"), aStr);    
     MaybeFlagNewline(aElement);
   } else {
@@ -874,86 +805,86 @@ nsXMLContentSerializer::IsShorthandAttr(const nsIAtom* aAttrName,
                                         const nsIAtom* aElementName)
 {
   // checked
-  if ((aAttrName == nsGkAtoms::checked) &&
-      (aElementName == nsGkAtoms::input)) {
+  if ((aAttrName == nsHTMLAtoms::checked) &&
+      (aElementName == nsHTMLAtoms::input)) {
     return PR_TRUE;
   }
 
   // compact
-  if ((aAttrName == nsGkAtoms::compact) &&
-      (aElementName == nsGkAtoms::dir || 
-       aElementName == nsGkAtoms::dl ||
-       aElementName == nsGkAtoms::menu ||
-       aElementName == nsGkAtoms::ol ||
-       aElementName == nsGkAtoms::ul)) {
+  if ((aAttrName == nsHTMLAtoms::compact) &&
+      (aElementName == nsHTMLAtoms::dir || 
+       aElementName == nsHTMLAtoms::dl ||
+       aElementName == nsHTMLAtoms::menu ||
+       aElementName == nsHTMLAtoms::ol ||
+       aElementName == nsHTMLAtoms::ul)) {
     return PR_TRUE;
   }
 
   // declare
-  if ((aAttrName == nsGkAtoms::declare) &&
-      (aElementName == nsGkAtoms::object)) {
+  if ((aAttrName == nsHTMLAtoms::declare) &&
+      (aElementName == nsHTMLAtoms::object)) {
     return PR_TRUE;
   }
 
   // defer
-  if ((aAttrName == nsGkAtoms::defer) &&
-      (aElementName == nsGkAtoms::script)) {
+  if ((aAttrName == nsHTMLAtoms::defer) &&
+      (aElementName == nsHTMLAtoms::script)) {
     return PR_TRUE;
   }
 
   // disabled
-  if ((aAttrName == nsGkAtoms::disabled) &&
-      (aElementName == nsGkAtoms::button ||
-       aElementName == nsGkAtoms::input ||
-       aElementName == nsGkAtoms::optgroup ||
-       aElementName == nsGkAtoms::option ||
-       aElementName == nsGkAtoms::select ||
-       aElementName == nsGkAtoms::textarea)) {
+  if ((aAttrName == nsHTMLAtoms::disabled) &&
+      (aElementName == nsHTMLAtoms::button ||
+       aElementName == nsHTMLAtoms::input ||
+       aElementName == nsHTMLAtoms::optgroup ||
+       aElementName == nsHTMLAtoms::option ||
+       aElementName == nsHTMLAtoms::select ||
+       aElementName == nsHTMLAtoms::textarea)) {
     return PR_TRUE;
   }
 
   // ismap
-  if ((aAttrName == nsGkAtoms::ismap) &&
-      (aElementName == nsGkAtoms::img ||
-       aElementName == nsGkAtoms::input)) {
+  if ((aAttrName == nsHTMLAtoms::ismap) &&
+      (aElementName == nsHTMLAtoms::img ||
+       aElementName == nsHTMLAtoms::input)) {
     return PR_TRUE;
   }
 
   // multiple
-  if ((aAttrName == nsGkAtoms::multiple) &&
-      (aElementName == nsGkAtoms::select)) {
+  if ((aAttrName == nsHTMLAtoms::multiple) &&
+      (aElementName == nsHTMLAtoms::select)) {
     return PR_TRUE;
   }
 
   // noresize
-  if ((aAttrName == nsGkAtoms::noresize) &&
-      (aElementName == nsGkAtoms::frame)) {
+  if ((aAttrName == nsHTMLAtoms::noresize) &&
+      (aElementName == nsHTMLAtoms::frame)) {
     return PR_TRUE;
   }
 
   // noshade
-  if ((aAttrName == nsGkAtoms::noshade) &&
-      (aElementName == nsGkAtoms::hr)) {
+  if ((aAttrName == nsHTMLAtoms::noshade) &&
+      (aElementName == nsHTMLAtoms::hr)) {
     return PR_TRUE;
   }
 
   // nowrap
-  if ((aAttrName == nsGkAtoms::nowrap) &&
-      (aElementName == nsGkAtoms::td ||
-       aElementName == nsGkAtoms::th)) {
+  if ((aAttrName == nsHTMLAtoms::nowrap) &&
+      (aElementName == nsHTMLAtoms::td ||
+       aElementName == nsHTMLAtoms::th)) {
     return PR_TRUE;
   }
 
   // readonly
-  if ((aAttrName == nsGkAtoms::readonly) &&
-      (aElementName == nsGkAtoms::input ||
-       aElementName == nsGkAtoms::textarea)) {
+  if ((aAttrName == nsHTMLAtoms::readonly) &&
+      (aElementName == nsHTMLAtoms::input ||
+       aElementName == nsHTMLAtoms::textarea)) {
     return PR_TRUE;
   }
 
   // selected
-  if ((aAttrName == nsGkAtoms::selected) &&
-      (aElementName == nsGkAtoms::option)) {
+  if ((aAttrName == nsHTMLAtoms::selected) &&
+      (aElementName == nsHTMLAtoms::option)) {
     return PR_TRUE;
   }
 
@@ -1002,17 +933,9 @@ nsXMLContentSerializer::AppendDocumentStart(nsIDOMDocument *aDocument,
 
   aStr += NS_LITERAL_STRING("<?xml version=\"") + version + endQuote;
   
-  if (!mCharset.IsEmpty()) {
-    aStr += NS_LITERAL_STRING(" encoding=\"") +
-      NS_ConvertASCIItoUTF16(mCharset) + endQuote;
+  if (!encoding.IsEmpty()) {
+    aStr += NS_LITERAL_STRING(" encoding=\"") + encoding + endQuote;
   }
-  // Otherwise just don't output an encoding attr.  Not that we expect
-  // mCharset to ever be empty.
-#ifdef DEBUG
-  else {
-    NS_WARNING("Empty mCharset?  How come?");
-  }
-#endif
 
   if (!standalone.IsEmpty()) {
     aStr += NS_LITERAL_STRING(" standalone=\"") + standalone + endQuote;

@@ -143,10 +143,7 @@ Feed.prototype =
                         createInstance(Components.interfaces.nsIURI);
     uri.spec = this.url;
     if (!(uri.schemeIs("http") || uri.schemeIs("https")))
-    {
-      this.onParseError(this); // simulate an invalid feed error
-      return;
-    }
+      return this.onParseError(this); // simulate an invalid feed error
 
     // Before we try to download the feed, make sure we aren't already processing the feed
     // by looking up the url in our feed cache
@@ -321,9 +318,6 @@ Feed.prototype =
 
   set link (aNewLink)
   {
-    if (!aNewLink)
-      return;
-
     var ds = getSubscriptionsDS(this.server);
     aNewLink = rdf.GetLiteral(aNewLink);
     var old_link = ds.GetTarget(this.resource, RSS_LINK, true);
@@ -341,10 +335,7 @@ Feed.prototype =
     debug("parsing feed " + this.url);
 
     if (!this.request.responseText) 
-    {
-      this.onParseError(this);
-      return;
-    }
+      return this.onParseError(this);
       
     // create a feed parser which will parse the feed for us
     var parser = new FeedParser();
@@ -408,8 +399,7 @@ Feed.prototype =
     if (!this.itemsToStore ||  !this.itemsToStore.length)
     {
       this.createFolder();
-      this.cleanupParsingState(this);
-      return;
+      return this.cleanupParsingState(this);
     }
 
     var item = this.itemsToStore[this.itemsToStoreIndex]; 

@@ -281,7 +281,6 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
     if (!java_wrapper_obj) {
         jsj_UnexpectedJavaError(cx, jEnv, "Couldn't create new instance of "
                                           "netscape.javascript.JSObject");
-        JS_free(cx, handle);
         goto done;
     }
  
@@ -298,7 +297,7 @@ jsj_UnwrapJSObjectWrapper(JNIEnv *jEnv, jobject java_wrapper_obj)
     JSObjectHandle *handle;
 
 #ifndef OJI
-#if JS_BYTES_PER_LONG == 8 || JS_BYTES_PER_WORD == 8
+#if JS_BYTES_PER_LONG == 8
     handle = (JSObjectHandle*)((*jEnv)->GetLongField(jEnv, java_wrapper_obj, njJSObject_long_internal));
 #else
     handle = (JSObjectHandle*)((*jEnv)->GetIntField(jEnv, java_wrapper_obj, njJSObject_internal));
@@ -317,7 +316,7 @@ jsj_UnwrapJSObjectWrapper(JNIEnv *jEnv, jobject java_wrapper_obj)
     }
     else {
         jclass   cid = (*jEnv)->GetObjectClass(jEnv, java_wrapper_obj);
-#if JS_BYTES_PER_LONG == 8 || JS_BYTES_PER_WORD == 8
+#if JS_BYTES_PER_LONG == 8
         jfieldID fid = (*jEnv)->GetFieldID(jEnv, cid, "nativeJSObject", "J");
         handle = (JSObjectHandle*)((*jEnv)->GetLongField(jEnv, java_wrapper_obj, fid));
 #else
@@ -398,10 +397,8 @@ capture_js_error_reports_for_java(JSContext *cx, const char *message,
     /* Copy all the error info out of the original report into a private copy */
     if (message) {
         new_error->message = strdup(message);
-        if (!new_error->message) {
-            free(new_error);
-            return;
-        }
+        if (!new_error->message)
+            goto out_of_memory;
     }
     if (report) {
         new_error->report.lineno = report->lineno;
@@ -782,16 +779,17 @@ jsj_enter_js(JNIEnv *jEnv, void* applet_obj, jobject java_wrapper_obj,
     return jsj_env;
 
 error:
-    JS_ASSERT(!cx);
     /* Invoke callback, presumably used to implement concurrency constraints */
     if (JSJ_callbacks && JSJ_callbacks->exit_js)
         JSJ_callbacks->exit_js(jEnv, cx);
 
 entry_failure:
-    JS_ASSERT(!cx);
     if (err_msg) {
-        jsj_LogError(err_msg);
-        JS_smprintf_free(err_msg);
+        if (cx)
+            JS_ReportError(cx, err_msg);
+        else
+            jsj_LogError(err_msg);
+        free(err_msg);
     }
 
     return NULL;
@@ -1331,7 +1329,7 @@ Java_netscape_javascript_JSObject_finalize(JNIEnv *jEnv, jobject java_wrapper_ob
 
     success = JS_FALSE;
 
-#if JS_BYTES_PER_LONG == 8 || JS_BYTES_PER_WORD == 8
+#if JS_BYTES_PER_LONG == 8
     handle = (JSObjectHandle *)((*jEnv)->GetLongField(jEnv, java_wrapper_obj, njJSObject_long_internal));
 #else    
     handle = (JSObjectHandle *)((*jEnv)->GetIntField(jEnv, java_wrapper_obj, njJSObject_internal));

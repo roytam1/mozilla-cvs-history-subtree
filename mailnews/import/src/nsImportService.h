@@ -50,7 +50,6 @@
 #include "nsIImportModule.h"
 #include "nsIImportService.h"
 #include "nsICategoryManager.h"
-#include "nsIStringBundle.h"
 
 class nsImportModuleList;
 
@@ -75,7 +74,6 @@ private:
 	nsCString				m_sysCharset;
 	nsIUnicodeDecoder *		m_pDecoder;
 	nsIUnicodeEncoder *		m_pEncoder;
-    nsCOMPtr<nsIStringBundle> m_stringBundle;
 };
 
 class ImportModuleDesc {

@@ -40,7 +40,7 @@
 interface nsIUrlListener;
 interface nsIURI;
 interface nsIImapUrl;
-interface nsIEventTarget;
+interface nsIEventQueue;
 interface nsIImapProtocol;
 interface nsISupportsArray;
 interface nsIMsgFolder;
@@ -88,7 +88,7 @@ interface nsIImapIncomingServer : nsISupports {
   nsIMsgFolder getPFC(in boolean createIfMissing);
   attribute boolean downloadBodiesOnGetNewMail;
   attribute boolean autoSyncOfflineStores;
-  void GetImapConnectionAndLoadUrl(in nsIEventTarget aClientEventTarget,
+  void GetImapConnectionAndLoadUrl(in nsIEventQueue aClientEventQueue,
                                            in nsIImapUrl aImapUrl,
                                            in nsISupports aConsumer);
 

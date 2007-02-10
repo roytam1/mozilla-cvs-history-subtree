@@ -75,7 +75,9 @@
       <xul:popupset anonid="popupset" class="autocomplete-result-popupset"/>
     </content>
 
-    <implementation implements="nsIAccessibleProvider, nsIAutoCompleteInput, nsIDOMXULMenuListElement">
+    <implementation implements="nsIAccessibleProvider,
+                                nsIAutoCompleteInput_MOZILLA_1_8_BRANCH,
+                                nsIDOMXULMenuListElement">
       <field name="mController">null</field>
       <field name="mSearchNames">null</field>
       <field name="mIgnoreInput">false</field>
@@ -88,16 +90,21 @@
 
       <constructor><![CDATA[
         mController = Components.classes["@mozilla.org/autocomplete/controller;1"].
-                        getService(Components.interfaces.nsIAutoCompleteController);
+                        createInstance(Components.interfaces.nsIAutoCompleteController);
       ]]></constructor>
 
       <!-- =================== nsIAccessibleProvider =================== -->
 
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            // Will be exposed as nsIAccessible::ROLE_AUTOCOMPLETE
-            return Components.interfaces.nsIAccessibleProvider.XULCombobox;
+            // enablehistory="true": dropmarker shows up, so expose as a combobox.
+            // enablehistory="false" (default): no dropmarker, so expose as a textfield.
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].
+                              getService(Components.interfaces.nsIAccessibilityService);
+            return (this.getAttribute("enablehistory") == 'true') ?
+                         accService.createXULComboboxAccessible(this) :
+                         accService.createXULTextBoxAccessible(this);
           ]]>
         </getter>
       </property>
@@ -191,6 +198,12 @@
           return this.value;
         ]]></setter>
       </property>
+
+      <property name="selectionStart"
+                onget="return this.mInputElt.selectionStart;"/>
+
+      <property name="selectionEnd"
+                onget="return this.mInputElt.selectionEnd;"/>
 
       <method name="selectTextRange">
         <parameter name="aStartIndex"/>
@@ -307,12 +320,8 @@
 
       <method name="detachController">
         <body><![CDATA[
-          try { 
-            if  (this.mController.input == this)
+          if (this.mController.input == this)
             this.mController.input = null;
-          } catch (ex) {
-            // nothing really to do.
-          }       
         ]]></body>
       </method>
 
@@ -387,6 +396,7 @@
             return false;
 
           var cancel = false;
+          const IController = Components.interfaces.nsIAutoCompleteController;
 
           // Catch any keys that could potentially move the caret. Ctrl can be
           // used in combination with these keys, so only make sure that Alt
@@ -394,9 +404,13 @@
           if (!this.disableKeyNavigation && !aEvent.altKey) {
             switch (aEvent.keyCode) {
               case KeyEvent.DOM_VK_LEFT:
+                cancel = this.mController.handleKeyNavigation(IController.KEY_LEFT);
+                break;
               case KeyEvent.DOM_VK_RIGHT:
+                cancel = this.mController.handleKeyNavigation(IController.KEY_RIGHT);
+                break;
               case KeyEvent.DOM_VK_HOME:
-                cancel = this.mController.handleKeyNavigation(aEvent.keyCode);
+                cancel = this.mController.handleKeyNavigation(IController.KEY_HOME);
                 break;
             }
           }
@@ -407,14 +421,20 @@
               case KeyEvent.DOM_VK_TAB:
                 if (this.tabScrolling && this.popup.mPopupOpen)
                   cancel = this.mController.handleKeyNavigation(aEvent.shiftKey ?
-                                                                KeyEvent.DOM_VK_UP :
-                                                                KeyEvent.DOM_VK_DOWN);
+                                                                IController.KEY_UP :
+                                                                IController.KEY_DOWN);
                 break;
               case KeyEvent.DOM_VK_UP:
+                cancel = this.mController.handleKeyNavigation(IController.KEY_UP);
+                break;
               case KeyEvent.DOM_VK_DOWN:
+                cancel = this.mController.handleKeyNavigation(IController.KEY_DOWN);
+                break;
               case KeyEvent.DOM_VK_PAGE_UP:
+                cancel = this.mController.handleKeyNavigation(IController.KEY_PAGE_UP);
+                break;
               case KeyEvent.DOM_VK_PAGE_DOWN:
-                cancel = this.mController.handleKeyNavigation(aEvent.keyCode);
+                cancel = this.mController.handleKeyNavigation(IController.KEY_PAGE_DOWN);
                 break;
             }
           }
@@ -589,7 +609,11 @@
               this.showPopup(document.documentElement, aX, aY, "popup", null, null);            
             }
             this.enableRollup(false);
-            this.mInput.controller.attachRollupListener();
+            var controller =
+              this.mInput.controller.QueryInterface(Components.interfaces.
+                nsIAutoCompleteController_MOZILLA_1_8_BRANCH);
+            if (controller)
+              controller.attachRollupListener();
           }
         ]]></body>
       </method>
@@ -601,7 +625,11 @@
             document.popupNode = null;
 
             this.setAttribute("hidden", "true");
-            this.mInput.controller.detachRollupListener();
+            var controller =
+              this.mInput.controller.QueryInterface(Components.interfaces.
+                nsIAutoCompleteController_MOZILLA_1_8_BRANCH);
+            if (controller)
+              controller.detachRollupListener();
           }
         ]]></body>
       </method>
@@ -765,6 +793,13 @@
         ]]></body>
       </method>
       
+      <method name="clearOpenProperty">
+        <parameter name="aPopupNode"/>
+        <body><![CDATA[
+          aPopupNode.mPopupOpen = false;
+        ]]></body>
+      </method>
+
     </implementation>
 
     <handlers>
@@ -778,7 +813,7 @@
       ]]></handler>
 
       <handler event="popuphiding">
-        this.mPopupOpen = false;
+        setTimeout(this.clearOpenProperty, 0, this);
 
         // Reset the maxRows property to the cached "normal" value, and reset
         // _normalMaxRows so that we can detect whether it was set by the input
@@ -848,12 +883,41 @@
     </content>
   </binding>
 
-  <binding id="history-dropmarker" extends="chrome://global/content/bindings/general.xml#dropmarker">
-    <implementation>
+  <binding id="history-dropmarker" extends="xul:button">
+    <content>
+      <xul:stack class="history-dropmarker-stack">
+        <xul:vbox class="autocomplete-dropmarker-bkgnd-box">
+          <xul:image class="autocomplete-dropmarker-bkgnd-top autocomplete-dropmarker-bkgnd"/>
+          <xul:vbox flex="1" class="autocomplete-dropmarker-inner-box">
+            <xul:image flex="1" class="autocomplete-dropmarker-bkgnd-mid-top autocomplete-dropmarker-bkgnd"/>
+            <xul:image flex="1" class="autocomplete-dropmarker-bkgnd-mid-bottom autocomplete-dropmarker-bkgnd"/>
+          </xul:vbox>
+          <xul:image class="autocomplete-dropmarker-bkgnd-bottom autocomplete-dropmarker-bkgnd"/>
+        </xul:vbox>
+
+        <xul:hbox align="center" class="dropmarker-image-container">
+          <xul:image class="dropmarker-image"/>
+        </xul:hbox>
+      </xul:stack>
+
+    </content>
+      
+    <implementation implements="nsIAccessibleProvider">
+      <property name="accessible">
+        <getter>
+          <![CDATA[
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULDropmarkerAccessible(this);
+          ]]>
+        </getter>
+      </property>
+
       <method name="showPopup">
         <body><![CDATA[
           var textbox = document.getBindingParent(this);
-          textbox.showHistoryPopup();
+          if (!textbox.popup.mPopupOpen) { 
+            textbox.showHistoryPopup();
+          }
         ]]></body>
       </method>
     </implementation>

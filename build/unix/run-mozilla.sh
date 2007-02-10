@@ -139,7 +139,7 @@ moz_run_program()
 	fi
 	##
 	## Use md5sum to crc a core file.  If md5sum is not found on the system,
-	## then don't debug core files.
+	## then dont debug core files.
 	##
 	moz_test_binary /bin/type
 	if [ $? -eq 1 ]
@@ -221,15 +221,9 @@ moz_debug_program()
 	fi
     if [ -x "$debugger" ] 
     then
-        tmpfile=`mktemp /tmp/mozargs.XXXXXX` || { echo "Cannot create temporary file" >&2; exit 1; }
-        trap " [ -f \"$tmpfile\" ] && /bin/rm -f -- \"$tmpfile\"" 0 1 2 3 13 15
-        # echo -n isn't portable, so pipe through perl -pe chomp instead
-        echo "set args" | perl -pe 'chomp' > $tmpfile
-        for PARAM in "$@"
-        do
-            echo " '$PARAM'" | perl -pe 'chomp' >> $tmpfile
-        done
-        echo >> $tmpfile
+    	tmpfile=`mktemp /tmp/mozargs.XXXXXX` || { echo "Cannot create temporary file" >&2; exit 1; }
+	trap " [ -f \"$tmpfile\" ] && /bin/rm -f -- \"$tmpfile\"" 0 1 2 3 13 15
+        echo "set args ${1+"$@"}" > $tmpfile
 # If you are not using ddd, gdb and know of a way to convey the arguments 
 # over to the prog then add that here- Gagan Saksena 03/15/00
         case `basename $debugger` in
@@ -334,28 +328,7 @@ if [ -z "$MRE_HOME" ]; then
 fi
 ##
 ## Set LD_LIBRARY_PATH
-##
-## On Solaris we use $ORIGIN (set in RUNPATH) instead of LD_LIBRARY_PATH 
-## to locate shared libraries. 
-##
-## When a shared library is a symbolic link, $ORIGIN will be replaced with
-## the real path (i.e., what the symbolic link points to) by the runtime
-## linker.  For example, if dist/bin/libmozjs.so is a symbolic link to
-## js/src/libmozjs.so, $ORIGIN will be "js/src" instead of "dist/bin".
-## So the runtime linker will use "js/src" NOT "dist/bin" to locate the
-## other shared libraries that libmozjs.so depends on.  This only happens
-## when a user (developer) tries to start firefox, thunderbird, or seamonkey
-## under dist/bin. To solve the problem, we should rely on LD_LIBRARY_PATH
-## to locate shared libraries.
-##
-## Note: 
-##  We choose libmozjs.so as a representative shared library. If it is 
-##  a symbolic link, all other shared libraries are symbolic links also.
-if [ `uname -s` != "SunOS" -o -h "$MOZ_DIST_BIN/libmozjs.so" ]
-then
-	LD_LIBRARY_PATH=${MOZ_DIST_BIN}:${MOZ_DIST_BIN}/plugins:${MRE_HOME}${LD_LIBRARY_PATH+":$LD_LIBRARY_PATH"}
-fi 
-
+LD_LIBRARY_PATH=${MOZ_DIST_BIN}:${MOZ_DIST_BIN}/plugins:${MRE_HOME}${LD_LIBRARY_PATH+":$LD_LIBRARY_PATH"}
 if [ -n "$LD_LIBRARYN32_PATH" ]
 then
 	LD_LIBRARYN32_PATH=${MOZ_DIST_BIN}:${MOZ_DIST_BIN}/plugins:${MRE_HOME}${LD_LIBRARYN32_PATH+":$LD_LIBRARYN32_PATH"}

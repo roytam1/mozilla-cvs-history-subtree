@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
-/* vim:set ts=4 sts=4 sw=4 cin et: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -53,46 +52,56 @@
  */
 
 #include "nsStringStream.h"
-#include "nsStreamUtils.h"
-#include "nsReadableUtils.h"
-#include "nsISeekableStream.h"
-#include "nsISupportsPrimitives.h"
-#include "nsInt64.h"
-#include "nsCRT.h"
+
 #include "prerror.h"
 #include "plstr.h"
-#include "nsIClassInfoImpl.h"
+#include "nsReadableUtils.h"
+#include "nsCRT.h"
+#include "nsISeekableStream.h"
+#include "nsInt64.h"
 
+#define NS_FILE_RESULT(x) ns_file_convert_result((PRInt32)x)
+#define NS_FILE_FAILURE NS_FILE_RESULT(-1)
+
+static nsresult ns_file_convert_result(PRInt32 nativeErr)
+{
+    return nativeErr ?
+        NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_FILES,((nativeErr)&0xFFFF))
+        : NS_OK;
+}
+ 
 //-----------------------------------------------------------------------------
 // nsIStringInputStream implementation
 //-----------------------------------------------------------------------------
 
 class nsStringInputStream : public nsIStringInputStream
                           , public nsISeekableStream
-                          , public nsISupportsCString
+                            
 {
 public:
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSIINPUTSTREAM
-    NS_DECL_NSISTRINGINPUTSTREAM
-    NS_DECL_NSISEEKABLESTREAM
-    NS_DECL_NSISUPPORTSPRIMITIVE
-    NS_DECL_NSISUPPORTSCSTRING
-
     nsStringInputStream()
-        : mData(nsnull)
-        , mOffset(0)
-        , mLength(0)
+        : mOffset(0)
+        , mLastResult(NS_OK)
+        , mEOF(PR_FALSE)
         , mOwned(PR_FALSE)
+        , mConstString(nsnull)
+        , mLength(0)
     {}
-
+    
 private:
     ~nsStringInputStream()
     {
-        if (mData)
-            Clear();
+        if (mOwned)
+            nsMemory::Free((char*)mConstString);
     }
 
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSISTRINGINPUTSTREAM
+    NS_DECL_NSIINPUTSTREAM
+    NS_DECL_NSISEEKABLESTREAM
+
+protected:
     PRInt32 LengthRemaining() const
     {
         return mLength - mOffset;
@@ -100,78 +109,34 @@ private:
 
     void Clear()
     {
-        NS_ASSERTION(mData || !mOwned, "bad state");
+        NS_ASSERTION(mConstString || !mOwned,
+                     "Can't have mOwned set and have a null string!");
         if (mOwned)
-            NS_Free(NS_CONST_CAST(char*, mData));
+            nsMemory::Free((char*)mConstString);
 
-        // We're about to get a new string; reset the offset.
+        // We're about to get a new string; clear the members that
+        // would no longer have valid values.
         mOffset = 0;
+        mLastResult = NS_OK;
+        mEOF = PR_FALSE;
     }
 
-    const char*    mData;
-    PRUint32       mOffset;
-    PRUint32       mLength;
-    PRPackedBool   mOwned;
+    PRUint32                       mOffset;
+    nsresult                       mLastResult;
+    PRPackedBool                   mEOF;
+    PRPackedBool                   mOwned;
+    const char*                    mConstString;
+    PRUint32                       mLength;
 };
 
-// This class needs to support threadsafe refcounting since people often
-// allocate a string stream, and then read it from a background thread.
-NS_IMPL_THREADSAFE_ADDREF(nsStringInputStream)
-NS_IMPL_THREADSAFE_RELEASE(nsStringInputStream)
-
-NS_IMPL_QUERY_INTERFACE4_CI(nsStringInputStream,
-                            nsIStringInputStream,
-                            nsIInputStream,
-                            nsISupportsCString,
-                            nsISeekableStream)
-NS_IMPL_CI_INTERFACE_GETTER4(nsStringInputStream,
-                             nsIStringInputStream,
-                             nsIInputStream,
-                             nsISupportsCString,
-                             nsISeekableStream)
-
-/////////
-// nsISupportsCString implementation
-/////////
-
-NS_IMETHODIMP
-nsStringInputStream::GetType(PRUint16 *type)
-{
-    *type = TYPE_CSTRING;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStringInputStream::GetData(nsACString &data)
-{
-    // The stream doesn't have any data when it is closed.  We could fake it
-    // and return an empty string here, but it seems better to keep this return
-    // value consistent with the behavior of the other 'getter' methods.
-    NS_ENSURE_TRUE(mData, NS_BASE_STREAM_CLOSED);
-
-    data.Assign(mData, mLength);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsStringInputStream::SetData(const nsACString &data)
-{
-    nsACString::const_iterator iter;
-    data.BeginReading(iter);
-    return SetData(iter.get(), iter.size_forward());
-}
-
-NS_IMETHODIMP
-nsStringInputStream::ToString(char **result)
-{
-    // NOTE: This method may result in data loss, so we do not implement it.
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsStringInputStream,
+                              nsIStringInputStream,
+                              nsIInputStream,
+                              nsISeekableStream)
 
 /////////
 // nsIStringInputStream implementation
 /////////
-
 NS_IMETHODIMP
 nsStringInputStream::SetData(const char *data, PRInt32 dataLen)
 {
@@ -180,15 +145,7 @@ nsStringInputStream::SetData(const char *data, PRInt32 dataLen)
     if (dataLen < 0)
         dataLen = strlen(data);
 
-    // NOTE: We do not use nsCRT::strndup here because that does not handle
-    // null bytes in the middle of the given data.
- 
-    char *copy = NS_STATIC_CAST(char *, NS_Alloc(dataLen));
-    if (!copy)
-        return NS_ERROR_OUT_OF_MEMORY;
-    memcpy(copy, data, dataLen);
-
-    return AdoptData(copy, dataLen);
+    return AdoptData(nsCRT::strndup(data, dataLen), dataLen);
 }
 
 NS_IMETHODIMP
@@ -201,7 +158,7 @@ nsStringInputStream::AdoptData(char *data, PRInt32 dataLen)
 
     Clear();
     
-    mData = data;
+    mConstString = (const char *) data;
     mLength = dataLen;
     mOwned = PR_TRUE;
     return NS_OK;
@@ -217,7 +174,7 @@ nsStringInputStream::ShareData(const char *data, PRInt32 dataLen)
 
     Clear();
     
-    mData = data;
+    mConstString = data;
     mLength = dataLen;
     mOwned = PR_FALSE;
     return NS_OK;
@@ -226,60 +183,65 @@ nsStringInputStream::ShareData(const char *data, PRInt32 dataLen)
 /////////
 // nsIInputStream implementation
 /////////
-
-NS_IMETHODIMP
-nsStringInputStream::Close()
+NS_IMETHODIMP nsStringInputStream::Close()
 {
-    Clear();
-    mData = nsnull;
-    mLength = 0;
-    mOwned = PR_FALSE;
     return NS_OK;
 }
     
-NS_IMETHODIMP
-nsStringInputStream::Available(PRUint32 *aLength)
+NS_IMETHODIMP nsStringInputStream::Available(PRUint32 *aLength)
 {
-    NS_ASSERTION(aLength, "null ptr");
-
-    if (!mData)
-        return NS_BASE_STREAM_CLOSED;
-
+    NS_PRECONDITION(aLength != nsnull, "null ptr");
+    if (!aLength)
+        return NS_ERROR_NULL_POINTER;
     *aLength = LengthRemaining();
     return NS_OK;
 }
 
-NS_IMETHODIMP
-nsStringInputStream::Read(char* aBuf, PRUint32 aCount, PRUint32 *aReadCount)
+NS_IMETHODIMP nsStringInputStream::Read(char* aBuf, PRUint32 aCount,
+                                        PRUint32 *aReadCount)
 {
-    NS_ASSERTION(aBuf, "null ptr");
-    return ReadSegments(NS_CopySegmentToBuffer, aBuf, aCount, aReadCount);
+    NS_PRECONDITION(aBuf != nsnull, "null ptr");
+    if (!aBuf)
+        return NS_ERROR_NULL_POINTER;
+    NS_PRECONDITION(aReadCount != nsnull, "null ptr");
+    if (!aReadCount)
+        return NS_ERROR_NULL_POINTER;
+    if (NS_FAILED(mLastResult))
+        return mLastResult;
+
+    PRUint32 bytesRead;
+    PRUint32 maxCount = mLength - mOffset;
+    if (aCount > maxCount)
+        bytesRead = maxCount;
+    else
+        bytesRead = aCount;
+  
+    memcpy(aBuf, mConstString + mOffset, bytesRead);
+    mOffset += bytesRead;
+
+    *aReadCount = bytesRead;
+    return NS_OK;
 }
 
-NS_IMETHODIMP
-nsStringInputStream::ReadSegments(nsWriteSegmentFun writer, void *closure,
-                                  PRUint32 aCount, PRUint32 *result)
-{
-    NS_ASSERTION(result, "null ptr");
-    NS_ASSERTION(mLength >= mOffset, "bad stream state");
 
-    // We may be at end-of-file
-    PRUint32 maxCount = LengthRemaining();
+NS_IMETHODIMP
+nsStringInputStream::ReadSegments(nsWriteSegmentFun writer, void * closure,
+                                  PRUint32 aCount, PRUint32 * result)
+{
+    nsresult rv;
+    PRUint32 maxCount = mLength - mOffset;
     if (maxCount == 0) {
         *result = 0;
         return NS_OK;
     }
-    NS_ASSERTION(mData, "must have data if maxCount != 0");
-
     if (aCount > maxCount)
         aCount = maxCount;
-    nsresult rv = writer(this, closure, mData + mOffset, 0, aCount, result);
+    rv = writer(this, closure, mConstString + mOffset, 
+                0, aCount, result);
     if (NS_SUCCEEDED(rv)) {
-        NS_ASSERTION(*result <= aCount,
-                     "writer should not write more than we asked it to write");
+        NS_ASSERTION(*result <= aCount, "writer should not write more than we asked it to write");
         mOffset += *result;
     }
-
     // errors returned from the writer end here!
     return NS_OK;
 }
@@ -291,66 +253,123 @@ nsStringInputStream::IsNonBlocking(PRBool *aNonBlocking)
     return NS_OK;
 }
 
+
 /////////
 // nsISeekableStream implementation
 /////////
-
 NS_IMETHODIMP 
 nsStringInputStream::Seek(PRInt32 whence, PRInt64 offset)
 {
-    if (!mData)
-        return NS_BASE_STREAM_CLOSED;
+    mLastResult = NS_OK; // reset on a seek.
+    const nsInt64 maxUint32 = PR_UINT32_MAX;
+    nsInt64 offset64(offset);
+    PRInt32 offset32;
+    LL_L2I(offset32, offset);
 
-    // Compute new stream position.  The given offset may be a negative value.
- 
-    PRInt64 newPos = offset;
-    switch (whence) {
-    case NS_SEEK_SET:
-        break;
-    case NS_SEEK_CUR:
-        newPos += (PRInt32) mOffset;
-        break;
-    case NS_SEEK_END:
-        newPos += (PRInt32) mLength;
-        break;
-    default:
-        NS_ERROR("invalid whence");
-        return NS_ERROR_INVALID_ARG;
+    NS_ASSERTION(maxUint32 > offset64, "string streams only support 32 bit offsets");
+    mEOF = PR_FALSE; // reset on a seek.
+    PRInt32 fileSize = LengthRemaining();
+    PRInt32 newPosition=-1;
+    switch (whence)
+    {
+        case NS_SEEK_CUR: newPosition = mOffset + offset32; break;
+        case NS_SEEK_SET: newPosition = offset32; break;
+        case NS_SEEK_END: newPosition = fileSize + offset32; break;
     }
-
-    // mLength is never larger than PR_INT32_MAX due to the way it is assigned.
-
-    NS_ENSURE_ARG(newPos >= 0);
-    NS_ENSURE_ARG(newPos <= (PRInt32) mLength);
-
-    mOffset = (PRInt32) newPos;
+    if (newPosition < 0)
+    {
+        newPosition = 0;
+        mLastResult = NS_FILE_RESULT(PR_FILE_SEEK_ERROR);
+    }
+    if (newPosition >= fileSize)
+    {
+        newPosition = fileSize;
+        mEOF = PR_TRUE;
+    }
+    mOffset = newPosition;
     return NS_OK;
 }
 
-NS_IMETHODIMP
-nsStringInputStream::Tell(PRInt64* outWhere)
-{
-    if (!mData)
-        return NS_BASE_STREAM_CLOSED;
 
+NS_IMETHODIMP nsStringInputStream::Tell(PRInt64* outWhere)
+{
     *outWhere = mOffset;
     return NS_OK;
 }
 
-NS_IMETHODIMP
-nsStringInputStream::SetEOF()
+NS_IMETHODIMP nsStringInputStream::SetEOF()
 {
-    if (!mData)
-        return NS_BASE_STREAM_CLOSED;
+    NS_NOTYETIMPLEMENTED("nsStringInputStream::SetEOF");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
 
-    mLength = mOffset;
+// Factory method to get an nsInputStream from an nsAString.  Result will
+// implement nsIStringInputStream and nsISeekableStream
+extern "C" NS_COM nsresult
+NS_NewStringInputStream(nsIInputStream** aStreamResult,
+                        const nsAString& aStringToRead)
+{
+    NS_PRECONDITION(aStreamResult, "null out ptr");
+
+    char* data = ToNewCString(aStringToRead);
+    if (!data)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    nsStringInputStream* stream = new nsStringInputStream();
+    if (! stream) {
+        nsMemory::Free(data);
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    NS_ADDREF(stream);
+
+    nsresult rv = stream->AdoptData(data, aStringToRead.Length());
+    if (NS_FAILED(rv)) {
+        nsMemory::Free(data);
+        NS_RELEASE(stream);
+        return rv;
+    }
+    
+    *aStreamResult = stream;
     return NS_OK;
 }
 
-NS_COM nsresult
-NS_NewByteInputStream(nsIInputStream** aStreamResult,
-                      const char* aStringToRead, PRInt32 aLength,
-                      nsAssignmentType aAssignment)
+// Factory method to get an nsInputStream from an nsACString.  Result will
+// implement nsIStringInputStream and nsISeekableStream
+extern "C" NS_COM nsresult
+NS_NewCStringInputStream(nsIInputStream** aStreamResult,
+                         const nsACString& aStringToRead)
+{
+    NS_PRECONDITION(aStreamResult, "null out ptr");
+
+    char* data = ToNewCString(aStringToRead);
+    if (!data)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    nsStringInputStream* stream = new nsStringInputStream();
+    if (! stream) {
+        nsMemory::Free(data);
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    NS_ADDREF(stream);
+
+    nsresult rv = stream->AdoptData(data, aStringToRead.Length());
+    if (NS_FAILED(rv)) {
+        nsMemory::Free(data);
+        NS_RELEASE(stream);
+        return rv;
+    }
+    
+    *aStreamResult = stream;
+    return NS_OK;
+}
+
+// Factory method to get an nsInputStream from a C string.  Result will
+// implement nsIStringInputStream and nsISeekableStream
+extern "C" NS_COM nsresult
+NS_NewCharInputStream(nsIInputStream** aStreamResult,
+                      const char* aStringToRead)
 {
     NS_PRECONDITION(aStreamResult, "null out ptr");
 
@@ -360,21 +379,7 @@ NS_NewByteInputStream(nsIInputStream** aStreamResult,
 
     NS_ADDREF(stream);
 
-    nsresult rv;
-    switch (aAssignment) {
-    case NS_ASSIGNMENT_COPY:
-        rv = stream->SetData(aStringToRead, aLength);
-        break;
-    case NS_ASSIGNMENT_DEPEND:
-        rv = stream->ShareData(aStringToRead, aLength);
-        break;
-    case NS_ASSIGNMENT_ADOPT:
-        rv = stream->AdoptData(NS_CONST_CAST(char*, aStringToRead), aLength);
-        break;
-    default:
-        NS_ERROR("invalid assignment type");
-        rv = NS_ERROR_INVALID_ARG;
-    }
+    nsresult rv = stream->ShareData(aStringToRead, -1);
     
     if (NS_FAILED(rv)) {
         NS_RELEASE(stream);
@@ -385,31 +390,30 @@ NS_NewByteInputStream(nsIInputStream** aStreamResult,
     return NS_OK;
 }
 
-NS_COM nsresult
-NS_NewStringInputStream(nsIInputStream** aStreamResult,
-                        const nsAString& aStringToRead)
+// Factory method to get an nsInputStream from a byte array.  Result will
+// implement nsIStringInputStream and nsISeekableStream
+extern "C" NS_COM nsresult
+NS_NewByteInputStream(nsIInputStream** aStreamResult,
+                      const char* aStringToRead,
+                      PRInt32 aLength)
 {
-    char* data = ToNewCString(aStringToRead);  // truncates high-order bytes
-    if (!data)
+    NS_PRECONDITION(aStreamResult, "null out ptr");
+
+    nsStringInputStream* stream = new nsStringInputStream();
+    if (! stream)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    nsresult rv = NS_NewByteInputStream(aStreamResult, data,
-                                        aStringToRead.Length(),
-                                        NS_ASSIGNMENT_ADOPT);
-    if (NS_FAILED(rv))
-        NS_Free(data);
-    return rv;
-}
+    NS_ADDREF(stream);
 
-NS_COM nsresult
-NS_NewCStringInputStream(nsIInputStream** aStreamResult,
-                         const nsACString& aStringToRead)
-{
-    nsACString::const_iterator data;
-    aStringToRead.BeginReading(data);
-
-    return NS_NewByteInputStream(aStreamResult, data.get(), data.size_forward(),
-                                 NS_ASSIGNMENT_COPY);
+    nsresult rv = stream->ShareData(aStringToRead, aLength);
+    
+    if (NS_FAILED(rv)) {
+        NS_RELEASE(stream);
+        return rv;
+    }
+    
+    *aStreamResult = stream;
+    return NS_OK;
 }
 
 // factory method for constructing a nsStringInputStream object
@@ -418,9 +422,11 @@ nsStringInputStreamConstructor(nsISupports *outer, REFNSIID iid, void **result)
 {
     *result = nsnull;
 
-    NS_ENSURE_TRUE(!outer, NS_ERROR_NO_AGGREGATION);
+    if (outer)
+        return NS_ERROR_NO_AGGREGATION;
 
-    nsStringInputStream *inst = new nsStringInputStream();
+    nsStringInputStream *inst;
+    NS_NEWXPCOM(inst, nsStringInputStream);
     if (!inst)
         return NS_ERROR_OUT_OF_MEMORY;
 

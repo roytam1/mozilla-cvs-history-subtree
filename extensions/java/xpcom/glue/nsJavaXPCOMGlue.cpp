@@ -37,7 +37,6 @@
 #include "jni.h"
 #include "nsXPCOMPrivate.h" // for XPCOM_DLL defines.
 #include "nsXPCOMGlue.h"
-#include "nsDebug.h"
 #include <stdlib.h>
 
 #if defined(XP_WIN) || defined(XP_OS2)
@@ -70,11 +69,8 @@ JNI_OnUnload(JavaVM* vm, void* reserved)
 #define JXM_NATIVE(func) Java_org_mozilla_xpcom_internal_JavaXPCOMMethods_##func
 
 enum {
-  kFunc_Initialize,
   kFunc_InitEmbedding,
   kFunc_TermEmbedding,
-  kFunc_LockProfileDirectory,
-  kFunc_NotifyProfile,
   kFunc_InitXPCOM,
   kFunc_ShutdownXPCOM,
   kFunc_GetComponentManager,
@@ -83,12 +79,10 @@ enum {
   kFunc_NewLocalFile,
   kFunc_CallXPCOMMethod,
   kFunc_FinalizeProxy,
-  kFunc_IsSameXPCOMObject,
-  kFunc_ReleaseProfileLock,
-  kFunc_GetNativeHandleFromAWT
+  kFunc_IsSameXPCOMObject
 };
 
-#define JX_NUM_FUNCS 16
+#define JX_NUM_FUNCS 11
 
 
 // Get path string from java.io.File object.
@@ -131,56 +125,11 @@ LoadXULMethods(JNIEnv* env, jobject aXPCOMPath, void** aFunctions)
   if (NS_FAILED(rv))
     return rv;
 
-#ifdef XP_WIN32
-  // The JNICALL calling convention defines to "__stdcall" on Win32, which
-  // mangles the name.
   nsDynamicFunctionLoad funcs[] = {
-    { "_Java_org_mozilla_xpcom_internal_MozillaImpl_initialize@8",
-            (NSFuncPtr*) &aFunctions[kFunc_Initialize] },
-    { "_Java_org_mozilla_xpcom_internal_GREImpl_initEmbedding@20",
-            (NSFuncPtr*) &aFunctions[kFunc_InitEmbedding] },
-    { "_Java_org_mozilla_xpcom_internal_GREImpl_termEmbedding@8",
-            (NSFuncPtr*) &aFunctions[kFunc_TermEmbedding] },
-    { "_Java_org_mozilla_xpcom_internal_GREImpl_lockProfileDirectory@12",
-            (NSFuncPtr*) &aFunctions[kFunc_LockProfileDirectory] },
-    { "_Java_org_mozilla_xpcom_internal_GREImpl_notifyProfile@8",
-            (NSFuncPtr*) &aFunctions[kFunc_NotifyProfile] },
-    { "_Java_org_mozilla_xpcom_internal_XPCOMImpl_initXPCOM@16",
-            (NSFuncPtr*) &aFunctions[kFunc_InitXPCOM] },
-    { "_Java_org_mozilla_xpcom_internal_XPCOMImpl_shutdownXPCOM@12",
-            (NSFuncPtr*) &aFunctions[kFunc_ShutdownXPCOM] },
-    { "_Java_org_mozilla_xpcom_internal_XPCOMImpl_getComponentManager@8",
-            (NSFuncPtr*) &aFunctions[kFunc_GetComponentManager] },
-    { "_Java_org_mozilla_xpcom_internal_XPCOMImpl_getComponentRegistrar@8",
-            (NSFuncPtr*) &aFunctions[kFunc_GetComponentRegistrar] },
-    { "_Java_org_mozilla_xpcom_internal_XPCOMImpl_getServiceManager@8",
-            (NSFuncPtr*) &aFunctions[kFunc_GetServiceManager] },
-    { "_Java_org_mozilla_xpcom_internal_XPCOMImpl_newLocalFile@16",
-            (NSFuncPtr*) &aFunctions[kFunc_NewLocalFile] },
-    { "_Java_org_mozilla_xpcom_internal_XPCOMJavaProxy_callXPCOMMethod@20",
-            (NSFuncPtr*) &aFunctions[kFunc_CallXPCOMMethod] },
-    { "_Java_org_mozilla_xpcom_internal_XPCOMJavaProxy_finalizeProxy@12",
-            (NSFuncPtr*) &aFunctions[kFunc_FinalizeProxy] },
-    { "_Java_org_mozilla_xpcom_internal_XPCOMJavaProxy_isSameXPCOMObject@16",
-            (NSFuncPtr*) &aFunctions[kFunc_IsSameXPCOMObject] },
-    { "_Java_org_mozilla_xpcom_ProfileLock_release@16",
-            (NSFuncPtr*) &aFunctions[kFunc_ReleaseProfileLock] },
-    { "_Java_org_mozilla_xpcom_internal_MozillaImpl_getNativeHandleFromAWT@12",
-            (NSFuncPtr*) &aFunctions[kFunc_GetNativeHandleFromAWT] },
-    { nsnull, nsnull }
-  };
-#else
-  nsDynamicFunctionLoad funcs[] = {
-    { "Java_org_mozilla_xpcom_internal_MozillaImpl_initialize",
-            (NSFuncPtr*) &aFunctions[kFunc_Initialize] },
     { "Java_org_mozilla_xpcom_internal_GREImpl_initEmbedding",
             (NSFuncPtr*) &aFunctions[kFunc_InitEmbedding] },
     { "Java_org_mozilla_xpcom_internal_GREImpl_termEmbedding",
             (NSFuncPtr*) &aFunctions[kFunc_TermEmbedding] },
-    { "Java_org_mozilla_xpcom_internal_GREImpl_lockProfileDirectory",
-            (NSFuncPtr*) &aFunctions[kFunc_LockProfileDirectory] },
-    { "Java_org_mozilla_xpcom_internal_GREImpl_notifyProfile",
-            (NSFuncPtr*) &aFunctions[kFunc_NotifyProfile] },
     { "Java_org_mozilla_xpcom_internal_XPCOMImpl_initXPCOM",
             (NSFuncPtr*) &aFunctions[kFunc_InitXPCOM] },
     { "Java_org_mozilla_xpcom_internal_XPCOMImpl_shutdownXPCOM",
@@ -199,13 +148,8 @@ LoadXULMethods(JNIEnv* env, jobject aXPCOMPath, void** aFunctions)
             (NSFuncPtr*) &aFunctions[kFunc_FinalizeProxy] },
     { "Java_org_mozilla_xpcom_internal_XPCOMJavaProxy_isSameXPCOMObject",
             (NSFuncPtr*) &aFunctions[kFunc_IsSameXPCOMObject] },
-    { "Java_org_mozilla_xpcom_ProfileLock_release",
-            (NSFuncPtr*) &aFunctions[kFunc_ReleaseProfileLock] },
-    { "Java_org_mozilla_xpcom_internal_MozillaImpl_getNativeHandleFromAWT",
-            (NSFuncPtr*) &aFunctions[kFunc_GetNativeHandleFromAWT] },
     { nsnull, nsnull }
   };
-#endif
 
   rv = XPCOMGlueLoadXULFunctions(funcs);
   if (NS_FAILED(rv))
@@ -259,38 +203,27 @@ ThrowException(JNIEnv* env, const nsresult aErrorCode, const char* aMessage)
 nsresult
 RegisterNativeMethods(JNIEnv* env, void** aFunctions)
 {
-  JNINativeMethod mozilla_methods[] = {
-    { "initializeNative", "()V",
-      (void*) aFunctions[kFunc_Initialize] },
-    { "getNativeHandleFromAWT", "(Ljava/lang/Object;)J",
-      (void*) aFunctions[kFunc_GetNativeHandleFromAWT] }
-  };
-
   JNINativeMethod gre_methods[] = {
     { "initEmbeddingNative",
       "(Ljava/io/File;Ljava/io/File;Lorg/mozilla/xpcom/IAppFileLocProvider;)V",
       (void*) aFunctions[kFunc_InitEmbedding] },
     { "termEmbedding", "()V",
       (void*) aFunctions[kFunc_TermEmbedding] },
-    { "lockProfileDirectory", "(Ljava/io/File;)Lorg/mozilla/xpcom/ProfileLock;",
-      (void*) aFunctions[kFunc_LockProfileDirectory] },
-    { "notifyProfile", "()V",
-      (void*) aFunctions[kFunc_NotifyProfile] },
   };
 
   JNINativeMethod xpcom_methods[] = {
     { "initXPCOMNative",
-      "(Ljava/io/File;Lorg/mozilla/xpcom/IAppFileLocProvider;)Lorg/mozilla/interfaces/nsIServiceManager;",
+      "(Ljava/io/File;Lorg/mozilla/xpcom/IAppFileLocProvider;)Lorg/mozilla/xpcom/nsIServiceManager;",
       (void*) aFunctions[kFunc_InitXPCOM] },
-    { "shutdownXPCOM", "(Lorg/mozilla/interfaces/nsIServiceManager;)V",
+    { "shutdownXPCOM", "(Lorg/mozilla/xpcom/nsIServiceManager;)V",
       (void*) aFunctions[kFunc_ShutdownXPCOM] },
-    { "getComponentManager", "()Lorg/mozilla/interfaces/nsIComponentManager;",
+    { "getComponentManager", "()Lorg/mozilla/xpcom/nsIComponentManager;",
       (void*) aFunctions[kFunc_GetComponentManager] },
-    { "getComponentRegistrar", "()Lorg/mozilla/interfaces/nsIComponentRegistrar;",
+    { "getComponentRegistrar", "()Lorg/mozilla/xpcom/nsIComponentRegistrar;",
       (void*) aFunctions[kFunc_GetComponentRegistrar] },
-    { "getServiceManager", "()Lorg/mozilla/interfaces/nsIServiceManager;",
+    { "getServiceManager", "()Lorg/mozilla/xpcom/nsIServiceManager;",
       (void*) aFunctions[kFunc_GetServiceManager] },
-    { "newLocalFile", "(Ljava/lang/String;Z)Lorg/mozilla/interfaces/nsILocalFile;",
+    { "newLocalFile", "(Ljava/lang/String;Z)Lorg/mozilla/xpcom/nsILocalFile;",
       (void*) aFunctions[kFunc_NewLocalFile] }
   };
 
@@ -304,21 +237,8 @@ RegisterNativeMethods(JNIEnv* env, void** aFunctions)
       (void*) aFunctions[kFunc_IsSameXPCOMObject] }
   };
 
-   JNINativeMethod lockProxy_methods[] = {
-    { "releaseNative", "(J)V",
-      (void*) aFunctions[kFunc_ReleaseProfileLock] }
-  };
-
   jint rc = -1;
-  jclass clazz = env->FindClass("org/mozilla/xpcom/internal/MozillaImpl");
-  if (clazz) {
-    rc = env->RegisterNatives(clazz, mozilla_methods,
-                          sizeof(mozilla_methods) / sizeof(mozilla_methods[0]));
-  }
-  NS_ENSURE_TRUE(rc == 0, NS_ERROR_FAILURE);
-
-  rc = -1;
-  clazz = env->FindClass("org/mozilla/xpcom/internal/GREImpl");
+  jclass clazz = env->FindClass("org/mozilla/xpcom/internal/GREImpl");
   if (clazz) {
     rc = env->RegisterNatives(clazz, gre_methods,
                               sizeof(gre_methods) / sizeof(gre_methods[0]));
@@ -338,14 +258,6 @@ RegisterNativeMethods(JNIEnv* env, void** aFunctions)
   if (clazz) {
     rc = env->RegisterNatives(clazz, proxy_methods,
                               sizeof(proxy_methods) / sizeof(proxy_methods[0]));
-  }
-  NS_ENSURE_TRUE(rc == 0, NS_ERROR_FAILURE);
-
-  rc = -1;
-  clazz = env->FindClass("org/mozilla/xpcom/ProfileLock");
-  if (clazz) {
-    rc = env->RegisterNatives(clazz, lockProxy_methods,
-                      sizeof(lockProxy_methods) / sizeof(lockProxy_methods[0]));
   }
   NS_ENSURE_TRUE(rc == 0, NS_ERROR_FAILURE);
 

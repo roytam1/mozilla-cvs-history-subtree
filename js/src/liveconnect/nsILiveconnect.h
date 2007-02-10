@@ -69,7 +69,7 @@
 
 class nsILiveconnect : public nsISupports {
 public:
-	NS_DECLARE_STATIC_IID_ACCESSOR(NS_ILIVECONNECT_IID)
+	NS_DEFINE_STATIC_IID_ACCESSOR(NS_ILIVECONNECT_IID)
 	NS_DEFINE_STATIC_CID_ACCESSOR(NS_CLIVECONNECT_CID)
 	
     /**
@@ -191,7 +191,5 @@ public:
     NS_IMETHOD
     ToString(JNIEnv *jEnv, lcjsobject obj, jstring *pjstring) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsILiveconnect, NS_ILIVECONNECT_IID)
 
 #endif // nsILiveconnect_h___

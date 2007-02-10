@@ -50,7 +50,7 @@ typedef struct _GdkPixbuf GdkPixbuf;
  */
 class nsIGdkPixbufImage : public nsIImage {
   public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NSIGDKPIXBUFIMAGE_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NSIGDKPIXBUFIMAGE_IID)
 
     /**
      * Get a GdkPixbuf* for this image. Returns NULL on failure.
@@ -58,7 +58,5 @@ class nsIGdkPixbufImage : public nsIImage {
      */
     NS_IMETHOD_(GdkPixbuf*) GetGdkPixbuf() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIGdkPixbufImage, NSIGDKPIXBUFIMAGE_IID)
 
 #endif

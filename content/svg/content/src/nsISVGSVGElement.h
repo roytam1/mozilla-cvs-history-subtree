@@ -51,12 +51,12 @@ class nsISVGEnum;
 // nsISVGSVGElement: private interface implemented by <svg>-elements
 
 #define NS_ISVGSVGELEMENT_IID \
-{ 0x7f22b121, 0x9522, 0x4840, { 0xb1, 0x0e, 0x07, 0x48, 0xfa, 0xe1, 0xb3, 0xf8 } }
+{ 0x968b7ff3, 0xcaa7, 0x4604, { 0x92, 0x98, 0x7a, 0x66, 0xee, 0x91, 0x83, 0xca } }
 
 class nsISVGSVGElement : public nsIDOMSVGSVGElement
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISVGSVGELEMENT_IID)
+  static const nsIID& GetIID() { static nsIID iid = NS_ISVGSVGELEMENT_IID; return iid; }
 
   NS_IMETHOD SetParentCoordCtxProvider(nsSVGCoordCtxProvider *parentCtx)=0;
   NS_IMETHOD GetCurrentScaleNumber(nsIDOMSVGNumber **aResult)=0;
@@ -89,13 +89,6 @@ public:
   NS_IMETHOD_(float) GetPreviousScale()=0;
   NS_IMETHOD_(float) GetPreviousTranslate_x()=0;
   NS_IMETHOD_(float) GetPreviousTranslate_y()=0;
-
-  /**
-   * Our viewport or viewbox is changing - throw away the cached value.
-   */
-  NS_IMETHOD_(void) InvalidateViewBoxToViewport()=0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsISVGSVGElement, NS_ISVGSVGELEMENT_IID)
 
 #endif // __NS_ISVGSVGELEMENT__

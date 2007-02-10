@@ -43,15 +43,15 @@
 #include "nsPoint.h"
 #include "nsSize.h"
 
-#ifdef MOZ_CAIRO_GFX
-class gfxContext;
-#endif
 
 typedef struct {	
     double x;	  // x coordinate of edge's intersection with current scanline */
     double dx;	// change in x with respect to y 
     int i;	    // edge number: edge i goes from mPointList[i] to mPointList[i+1] 
 } Edge;
+
+#undef  IMETHOD_VISIBILITY
+#define IMETHOD_VISIBILITY NS_VISIBILITY_DEFAULT
 
 class nsRenderingContextImpl : public nsIRenderingContext
 {
@@ -82,15 +82,12 @@ public:
    */
   NS_IMETHOD GetPenMode(nsPenMode &aPenMode) { return NS_ERROR_FAILURE;}
 
-  virtual void* GetNativeGraphicData(nsIRenderingContext::GraphicDataType aType)
-  { return nsnull; }
-
   /**
    * Sets the Pen Mode for the RenderingContext 
    * @param aPenMode The Pen Mode
    * @return NS_OK if the Pen Mode is correctly set
    */
-  NS_IMETHOD SetPenMode(nsPenMode aPenMode) { return NS_ERROR_FAILURE;}
+  NS_IMETHOD SetPenMode(nsPenMode aPenMode) { return NS_ERROR_FAILURE;};
 
   NS_IMETHOD GetBackbuffer(const nsRect &aRequestedSize, const nsRect &aMaxSize, PRBool aForBlending, nsIDrawingSurface* &aBackbuffer); 
   NS_IMETHOD ReleaseBackbuffer(void);
@@ -99,7 +96,6 @@ public:
   
   NS_IMETHOD PushTranslation(PushedTranslation* aState);
   NS_IMETHOD PopTranslation(PushedTranslation* aState);
-  NS_IMETHOD SetTranslation(nscoord aX, nscoord aY);
 
   /**
    * Return the maximum length of a string that can be handled by the platform
@@ -125,7 +121,6 @@ public:
   virtual PRInt32 GetPosition(const PRUnichar *aText,
                               PRUint32 aLength,
                               nsPoint aPt);
-
   NS_IMETHOD GetRangeWidth(const PRUnichar *aText,
                            PRUint32 aLength,
                            PRUint32 aStart,
@@ -209,7 +204,6 @@ public:
   NS_IMETHOD GetWidthInternal(const PRUnichar *aString, PRUint32 aLength,
                               nscoord &aWidth, PRInt32 *aFontID = nsnull)
   { return NS_ERROR_NOT_IMPLEMENTED; }
-
   NS_IMETHOD GetTextDimensionsInternal(const char* aString, PRUint32 aLength,
                                        nsTextDimensions& aDimensions)
   { return NS_ERROR_NOT_IMPLEMENTED; }
@@ -264,11 +258,6 @@ public:
   { return NS_ERROR_NOT_IMPLEMENTED; }
 
   NS_IMETHOD RenderEPS(const nsRect& aRect, FILE *aDataFile);
-
-#ifdef MOZ_CAIRO_GFX
-  NS_IMETHOD Init(nsIDeviceContext* aContext, gfxASurface* aThebesSurface) { return NS_ERROR_NOT_IMPLEMENTED; }
-  NS_IMETHOD Init(nsIDeviceContext* aContext, gfxContext* aThebesContext) { return NS_ERROR_NOT_IMPLEMENTED; }
-#endif
 
 protected:
   virtual ~nsRenderingContextImpl();
@@ -337,5 +326,8 @@ private:
   static nsSize            gLargestRequestedSize;
 
 };
+
+#undef  IMETHOD_VISIBILITY
+#define IMETHOD_VISIBILITY NS_VISIBILITY_HIDDEN
 
 #endif /* nsRenderingContextImpl */

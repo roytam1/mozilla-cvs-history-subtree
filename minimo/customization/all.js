@@ -1,4 +1,4 @@
-pref("general.useragent.extra.minimo", "Minimo/0.015");
+pref("general.useragent.extra.minimo", "Minimo/0.016");
 
 pref("keyword.enabled", true);
 pref("keyword.URL", "http://www.google.com/xhtml?q=");
@@ -6,7 +6,7 @@ pref("keyword.URL", "http://www.google.com/xhtml?q=");
 pref("browser.cache.disk.enable",           false);
 pref("browser.cache.disk.capacity",         1024);
 pref("browser.cache.memory.enable",         true);
-pref("browser.cache.memory.capacity",       1024);
+pref("browser.cache.memory.capacity",       2048);
 
 // -1 = determine dynamically, 0 = none, n = memory capacity in kilobytes
 pref("browser.cache.disk_cache_ssl",        false);
@@ -50,6 +50,8 @@ pref("accessibility.browsewithcaret", false);
 pref("accessibility.warn_on_browsewithcaret", true);
 
 pref("browser.history_expire_days", 9);
+
+pref("browser.urlbar.clickSelectsAll", true);
 
 // loading and rendering of framesets and iframes
 pref("browser.frames.enabled", true);
@@ -177,15 +179,15 @@ pref("dom.disable_window_open_feature.status",      true);
 pref("dom.allow_scripts_to_close_windows",          false);
 
 pref("dom.disable_open_during_load",                false);
-pref("dom.popup_maximum",                           20);
-pref("dom.popup_allowed_events", "change click dblclick mouseup reset submit");
-pref("dom.disable_open_click_delay", 5000);
 
 // Disable popups from plugins by default
 //   0 = openAllowed
 //   1 = openControlled
 //   2 = openAbused
 pref("privacy.popups.disable_from_plugins", 2);
+
+// popups.policy 1=allow,2=reject
+pref("privacy.popups.policy",               2);
 
 pref("dom.event.contextmenu.enabled",       true);
 
@@ -263,23 +265,23 @@ pref("network.http.max-connections", 24);
 // limit the absolute number of http connections that can be established per
 // host.  if a http proxy server is enabled, then the "server" is the proxy
 // server.  Otherwise, "server" is the http origin server.
-pref("network.http.max-connections-per-server", 8);
+pref("network.http.max-connections-per-server", 24);
 
 // if network.http.keep-alive is true, and if NOT connecting via a proxy, then
 // a new connection will only be attempted if the number of active persistent
 // connections to the server is less then max-persistent-connections-per-server.
-pref("network.http.max-persistent-connections-per-server", 2);
+pref("network.http.max-persistent-connections-per-server", 24);
 
 // if network.http.keep-alive is true, and if connecting via a proxy, then a
 // new connection will only be attempted if the number of active persistent
 // connections to the proxy is less then max-persistent-connections-per-proxy.
-pref("network.http.max-persistent-connections-per-proxy", 4);
+pref("network.http.max-persistent-connections-per-proxy", 24);
 
 // amount of time (in seconds) to suspend pending requests, before spawning a
 // new connection, once the limit on the number of persistent connections per
 // host has been reached.  however, a new connection will not be created if
 // max-connections or max-connections-per-server has also been reached.
-pref("network.http.request.max-start-delay", 10);
+pref("network.http.request.max-start-delay", 1);
 
 // Headers
 pref("network.http.accept.default", "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5");
@@ -300,7 +302,7 @@ pref("network.http.pipelining"      , false);
 pref("network.http.proxy.pipelining", false);
 
 // Max number of requests in the pipeline
-pref("network.http.pipelining.maxrequests" , 4);
+pref("network.http.pipelining.maxrequests" , 24);
 
 // </http>
 
@@ -511,10 +513,6 @@ pref("capability.policy.default.SOAPCall.invokeVerifySourceHeader", "allAccess")
 pref("plugin.override_internal_types", false);
 pref("plugin.expose_full_path", false); // if true navigator.plugins reveals full path
 
-// See bug 136985.  Gives embedders a pref to hook into to show
-// a popup blocker if they choose.
-pref("browser.popups.showPopupBlocker", true);
-
 // Pref to control whether the viewmanager code does double-buffering or not
 // See http://bugzilla.mozilla.org/show_bug.cgi?id=169483 for further details...
 pref("viewmanager.do_doublebuffering", true);
@@ -631,9 +629,6 @@ pref("skey.enabled", true);
 
 pref("browser.startup.homepage", "http://www.meer.net/~dougt/minimo_ce/start.html");
 
-pref("browser.display.zoomui",10);
-pref("browser.display.zoomcontent",10);
-
 pref("snav.enabled", true);
 pref("accessibility.tabfocus", 7);
 pref("accessibility.tabfocus_applies_to_xul", false);
@@ -645,15 +640,12 @@ pref("browser.formfill.enable", true);
 
 
 /* slow computer, slow connection */
-pref("content.max.tokenizing.time", 2250000);
-pref("content.notify.interval", 750000);
+pref("content.max.tokenizing.time", 3000);
 pref("content.notify.ontimer", true);
-pref("content.switch.threshold", 750000);
-pref("nglayout.initialpaint.delay", 750);
-pref("network.http.max-connections", 32);
-pref("network.http.max-connections-per-server", 8);
-pref("network.http.max-persistent-connections-per-proxy", 8);
-pref("network.http.max-persistent-connections-per-server", 4);
+pref("content.switch.threshold", 3000);
+pref("nglayout.initialpaint.delay", 20);
+pref("content.interrupt.parsing", true);
+
 pref("dom.disable_window_status_change", true);
 
 pref("browser.chrome.favicons",true);
@@ -663,9 +655,6 @@ pref("dom.max_script_run_time", 60);
 
 /* Bookmark store as a pref for now, homebar section as well */
 
-pref("browser.bookmark.store","<bm></bm>");
-pref("browser.bookmark.homebar","<bm><li iconsrc='chrome://minimo/skin/extensions/icon-star.png'>chrome://minimo/content/rssview/rssload.xhtml?url=http://del.icio.us/rss/tag/mobile-sites</li><li iconsrc='chrome://minimo/skin/extensions/icon-google.png'>http://www.google.com/ig</li><li iconsrc='chrome://minimo/skin/extensions/icon-cash.png'>chrome://minimo/content/rssview/rssload.xhtml?url=http://www.xanadb.com/ticker/goog+yhoo+msft+nok+fte.pa</li><li iconsrc='http://www.yokel.com/favicon.ico'>http://www.yokel.com</li><li iconsrc='http://www.inner-browsing.com/shop/icon-shopping.png'>http://www.inner-browsing.com/shop/newshop.xhtml</li><li iconsrc='http://m.technorati.com/favicon.ico'>http://m.technorati.com/</li><li iconsrc='http://mobile.wunderground.com/favicon.ico'>http://mobile.wunderground.com/</li><li iconsrc='http://www.yelp.com/favicon.ico'>http://www.yelp.com</li><li iconsrc='http://www.meer.net/dougt/minimo_ce/start/update.cgi'>http://www.mozilla.org/projects/minimo/update/latest-update.xhtml</li></bm>");
-
 pref("browser.download.dir", "\\Storage Card");
 pref("browser.download.progressDnlgDialog.dontAskForLaunch", false);
 pref("browser.cache.disk.parent_directory","\\Storage Card");
@@ -674,4 +663,10 @@ pref("browser.cache.disk.enable",false);
 pref("signon.rememberSignons", true);
 pref("signon.SignonFileName", "signons.txt");
 
+pref("ui.homebar",true);
+pref("ui.fullscreen",false);
 
+
+pref("gps.enabled", true);
+
+pref("browser.bookmark.store", "<bm><li title='Del.icio.us Mobile Sites...' iconsrc='chrome://mobile/skin/favicon.png'>chrome://minimo/content/rssview/rssload.xhtml?url=http://del.icio.us/rss/tag/mobile-sites</li><li title='History...' iconsrc='chrome://history/skin/favicon.png'>chrome://history/content/historyview.xhtml</li><li title='Map...' iconsrc='chrome://map/skin/favicon.png'>http://people.mozilla.com/~chofmann/map.html</li><li title='Weather...' iconsrc='chrome://wunderground/skin/favicon.png'>http://mobile.wunderground.com</li></bm>");

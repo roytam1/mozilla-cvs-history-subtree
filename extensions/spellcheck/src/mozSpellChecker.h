@@ -55,8 +55,6 @@ public:
   mozSpellChecker();
   virtual ~mozSpellChecker();
 
-  nsresult Init();
-
   // nsISpellChecker
   NS_IMETHOD SetDocument(nsITextServicesDocument *aDoc, PRBool aFromStartofDoc);
   NS_IMETHOD NextMisspelledWord(nsAString &aWord, nsStringArray *aSuggestions);

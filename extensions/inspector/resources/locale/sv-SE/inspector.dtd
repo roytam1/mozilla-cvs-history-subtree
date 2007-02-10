@@ -11,11 +11,9 @@
 <!-- MAIN MENU ITEMS -->
 
 <!ENTITY mnFile.label "Arkiv">
+<!ENTITY mnWindows.label "Inspektera ett fönster">
+<!ENTITY mnWindows.accesskey "f">
 <!ENTITY mnFile.accesskey "A">
-<!ENTITY mnInspectContentDocument.label "Inspektera Content-dokument">
-<!ENTITY mnInspectContentDocument.accesskey "C">
-<!ENTITY mnInspectChromeDocument.label "Inspektera Chrome-dokument">
-<!ENTITY mnInspectChromeDocument.accesskey "h">
 <!ENTITY cmdShowOpenURLDialog.label "Inspektera en URL...">
 <!ENTITY cmdShowOpenURLDialog.accesskey "u">
 <!ENTITY cmdClose.label "Stäng">

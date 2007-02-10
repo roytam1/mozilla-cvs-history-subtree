@@ -43,11 +43,16 @@
 //----------------------------------------------------------------------
 // Global functions and data [declaration]
 
+static const PRUint16 g_2BytesShiftTable[] =  {
+  0, u2BytesCharset,  
+  ShiftCell(0,   0, 0, 0, 0, 0, 0, 0),
+};
+
 NS_METHOD
 nsUnicodeToKSC5601Constructor(nsISupports *aOuter, REFNSIID aIID,
                               void **aResult)
 {
-  return CreateTableEncoder(u2BytesCharset,
+  return CreateTableEncoder((uShiftTable*) g_2BytesShiftTable, 
                              (uMappingTable*) g_ufKSC5601Mapping,
                              2 /* max length = src * 2 */,
                              aOuter, aIID, aResult);

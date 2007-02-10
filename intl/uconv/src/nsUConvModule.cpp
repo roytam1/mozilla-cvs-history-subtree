@@ -58,18 +58,22 @@
 #include "nsConverterInputStream.h"
 #include "nsConverterOutputStream.h"
 #include "nsPlatformCharset.h"
-#include "nsScriptableUConv.h"
 
 #ifndef MOZ_USE_NATIVE_UCONV
+#include "nsIUnicodeDecodeHelper.h"
+#include "nsIUnicodeEncodeHelper.h"
 #include "nsIPlatformCharset.h"
 #include "nsITextToSubURI.h"
 
 #include "nsUConvDll.h"
 #include "nsIFile.h"
+#include "nsIScriptableUConv.h"
 
 #include "nsCRT.h"
 
 #include "nsUCSupport.h"
+#include "nsUnicodeDecodeHelper.h"
+#include "nsUnicodeEncodeHelper.h"
 #include "nsISO88591ToUnicode.h"
 #include "nsCP1252ToUnicode.h"
 #include "nsMacRomanToUnicode.h"
@@ -78,10 +82,13 @@
 #include "nsUnicodeToCP1252.h"
 #include "nsUnicodeToMacRoman.h"
 #include "nsUnicodeToUTF8.h"
+#include "nsScriptableUConv.h"
 
 // ucvlatin
 #include "nsUCvLatinCID.h"
 #include "nsUCvLatinDll.h"
+#include "nsUEscapeToUnicode.h"
+#include "nsUnicodeToUEscape.h"
 #include "nsAsciiToUnicode.h"
 #include "nsISO88592ToUnicode.h"
 #include "nsISO88593ToUnicode.h"
@@ -327,6 +334,7 @@ NS_UCONV_REG_UNREG("UTF-8", NS_UTF8TOUNICODE_CID, NS_UNICODETOUTF8_CID)
 
   // ucvlatin
 NS_UCONV_REG_UNREG("us-ascii", NS_ASCIITOUNICODE_CID, NS_UNICODETOASCII_CID)
+NS_UCONV_REG_UNREG("x-u-escaped", NS_UESCAPETOUNICODE_CID, NS_UNICODETOUESCAPE_CID)
 NS_UCONV_REG_UNREG("ISO-8859-2", NS_ISO88592TOUNICODE_CID, NS_UNICODETOISO88592_CID)
 NS_UCONV_REG_UNREG("ISO-8859-3", NS_ISO88593TOUNICODE_CID, NS_UNICODETOISO88593_CID)
 NS_UCONV_REG_UNREG("ISO-8859-4", NS_ISO88594TOUNICODE_CID, NS_UNICODETOISO88594_CID)
@@ -479,6 +487,9 @@ NS_CONVERTER_REGISTRY_END
 
 NS_IMPL_NSUCONVERTERREGSELF
 
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnicodeDecodeHelper)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnicodeEncodeHelper)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsScriptableUnicodeConverter)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnicodeToUTF8)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUTF8ToUnicode)
 
@@ -490,6 +501,8 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsUTF16BEToUnicode)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUTF16LEToUnicode)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUTF32BEToUnicode)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUTF32LEToUnicode)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnicodeToUEscape)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsUEscapeToUnicode)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnicodeToUTF7)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnicodeToMUTF7)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnicodeToUTF16BE)
@@ -707,7 +720,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsCharsetAlias2)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsConverterInputStream)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsConverterOutputStream)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPlatformCharset, Init)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsScriptableUnicodeConverter)
 
 static const nsModuleComponentInfo components[] = 
 {
@@ -740,11 +752,6 @@ static const nsModuleComponentInfo components[] =
     "@mozilla.org/intl/converter-output-stream;1",
     nsConverterOutputStreamConstructor 
   },   
-  { 
-    "Unicode Encoder / Decoder for Script", NS_ISCRIPTABLEUNICODECONVERTER_CID,
-    NS_ISCRIPTABLEUNICODECONVERTER_CONTRACTID, 
-    nsScriptableUnicodeConverterConstructor
-  },
 #ifdef MOZ_USE_NATIVE_UCONV
   { 
     "Native UConv Service", 
@@ -754,9 +761,24 @@ static const nsModuleComponentInfo components[] =
   },
 #else
   { 
+    "Unicode Decode Helper", NS_UNICODEDECODEHELPER_CID,
+    NS_UNICODEDECODEHELPER_CONTRACTID, 
+    nsUnicodeDecodeHelperConstructor 
+  },
+  { 
+    "Unicode Encode Helper", NS_UNICODEENCODEHELPER_CID,
+    NS_UNICODEENCODEHELPER_CONTRACTID, 
+    nsUnicodeEncodeHelperConstructor 
+  },
+  { 
     "Converter to/from UTF8 with charset", NS_UTF8CONVERTERSERVICE_CID,
     NS_UTF8CONVERTERSERVICE_CONTRACTID, 
     nsUTF8ConverterServiceConstructor
+  },
+  { 
+    "Unicode Encoder / Decoder for Script", NS_ISCRIPTABLEUNICODECONVERTER_CID,
+    NS_ISCRIPTABLEUNICODECONVERTER_CONTRACTID, 
+    nsScriptableUnicodeConverterConstructor
   },
   { 
     "ISO-8859-1 To Unicode Converter", NS_ISO88591TOUNICODE_CID, 
@@ -806,6 +828,11 @@ static const nsModuleComponentInfo components[] =
     DECODER_NAME_BASE "us-ascii" , NS_ASCIITOUNICODE_CID, 
     NS_UNICODEDECODER_CONTRACTID_BASE "us-ascii",
     nsAsciiToUnicodeConstructor ,
+  },
+  { 
+    DECODER_NAME_BASE "x-u-escaped" , NS_UESCAPETOUNICODE_CID, 
+    NS_UNICODEDECODER_CONTRACTID_BASE "x-u-escaped",
+    nsUEscapeToUnicodeConstructor ,
   },
   { 
     DECODER_NAME_BASE "ISO-8859-2" , NS_ISO88592TOUNICODE_CID, 
@@ -1111,6 +1138,11 @@ static const nsModuleComponentInfo components[] =
     ENCODER_NAME_BASE "us-ascii" , NS_UNICODETOASCII_CID, 
     NS_UNICODEENCODER_CONTRACTID_BASE "us-ascii",
     nsUnicodeToAsciiConstructor, 
+  },
+  { 
+    ENCODER_NAME_BASE "x-u-escaped" , NS_UNICODETOUESCAPE_CID, 
+    NS_UNICODEENCODER_CONTRACTID_BASE "x-u-escaped",
+    nsUnicodeToUEscapeConstructor, 
   },
   { 
     ENCODER_NAME_BASE "ISO-8859-2" , NS_UNICODETOISO88592_CID, 

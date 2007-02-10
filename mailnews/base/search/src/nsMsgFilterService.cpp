@@ -43,7 +43,7 @@
 #include "nsMsgFilterService.h"
 #include "nsFileStream.h"
 #include "nsMsgFilterList.h"
-#include "nsDirectoryServiceDefs.h"
+#include "nsSpecialSystemDirectory.h"
 #include "nsIPrompt.h"
 #include "nsIDocShell.h"
 #include "nsIMsgWindow.h"
@@ -63,7 +63,6 @@
 #include "nsIOutputStream.h"
 #include "nsIMsgComposeService.h"
 #include "nsMsgCompCID.h"
-#include "nsMsgUtils.h"
 
 NS_IMPL_ISUPPORTS1(nsMsgFilterService, nsIMsgFilterService)
 
@@ -148,9 +147,11 @@ NS_IMETHODIMP	nsMsgFilterService::SaveFilterList(nsIMsgFilterList *filterList, n
   nsCOMPtr <nsIFileSpec> realFiltersFile;
   nsCOMPtr <nsIFileSpec> parentDir;
 
-  ret = GetSpecialDirectoryWithFileName(NS_OS_TEMP_DIR,
-                                        "tmprules.dat",
-                                        getter_AddRefs(tmpFiltersFile));
+
+  nsSpecialSystemDirectory tmpFile(nsSpecialSystemDirectory::OS_TemporaryDirectory);
+  tmpFile += "tmprules.dat";
+
+  ret = NS_NewFileSpecWithSpec(tmpFile, getter_AddRefs(tmpFiltersFile));
 
   NS_ASSERTION(NS_SUCCEEDED(ret),"writing filters file: failed to append filename");
   if (NS_FAILED(ret)) 
@@ -255,7 +256,7 @@ nsMsgFilterService::GetStringFromBundle(const char *aMsgName, PRUnichar **aResul
   nsCOMPtr <nsIStringBundle> bundle;
   rv = GetFilterStringBundle(getter_AddRefs(bundle));
   if (NS_SUCCEEDED(rv) && bundle)
-    rv=bundle->GetStringFromName(NS_ConvertASCIItoUTF16(aMsgName).get(), aResult);
+    rv=bundle->GetStringFromName(NS_ConvertASCIItoUCS2(aMsgName).get(), aResult);
   return rv;
   
 }

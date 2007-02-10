@@ -69,7 +69,7 @@ typedef struct __struct_Options
 **  mOutput         Output file, append.
 **                  Default is stdout.
 **  mOutputName     Name of the file.
-**  mHelp           Whether or not help should be shown.
+**  mHelp           Wether or not help should be shown.
 **  mOverhead       How much overhead an allocation will have.
 **  mAlignment      What boundry will the end of an allocation line up on.
 **  mPageSize       Controls the page size.  A page containing only fragments
@@ -436,7 +436,7 @@ int initOptions(Options* outOptions, int inArgc, char** inArgv)
             else
             {
                 retval = __LINE__;
-                ERROR_REPORT(retval, current->mLongName, "No handler for command line switch.");
+                ERROR_REPORT(retval, current->mLongName, "No hanlder for command line switch.");
             }
         }
     }
@@ -555,7 +555,7 @@ unsigned arrayAlloc(AnyArray* inArray, unsigned inItems)
 **  Resize the item array capcity to a specific number of items.
 **  This could possibly truncate the array, so handle that as well.
 **
-**  returns unsigned        <= inArray->mCapacity on success.
+**  returns unsigned        <= inArray->mCapactiy on success.
 */
 {
     unsigned retval = (unsigned)-1;

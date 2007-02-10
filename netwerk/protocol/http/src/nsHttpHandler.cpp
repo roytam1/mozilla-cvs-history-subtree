@@ -83,11 +83,6 @@
 #include <windows.h>
 #endif
 
-#if defined(XP_OS2)
-#define INCL_DOSMISC
-#include <os2.h>
-#endif
-
 #ifdef DEBUG
 // defined by the socket transport service while active
 extern PRThread *gSocketThread;
@@ -97,6 +92,7 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 static NS_DEFINE_CID(kCookieServiceCID, NS_COOKIESERVICE_CID);
 static NS_DEFINE_CID(kCacheServiceCID, NS_CACHESERVICE_CID);
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kSocketProviderServiceCID, NS_SOCKETPROVIDERSERVICE_CID);
 
 #define UA_PREF_PREFIX          "general.useragent."
@@ -330,6 +326,8 @@ nsHttpHandler::AddStandardRequestHeaders(nsHttpHeaderArray *request,
 {
     nsresult rv;
 
+    LOG(("nsHttpHandler::AddStandardRequestHeaders\n"));
+
     // Add the "User-Agent" header
     rv = request->SetHeader(nsHttp::User_Agent, UserAgent());
     if (NS_FAILED(rv)) return rv;
@@ -394,7 +392,7 @@ nsHttpHandler::IsAcceptableEncoding(const char *enc)
     if (!PL_strncasecmp(enc, "x-", 2))
         enc += 2;
     
-    return nsHttp::FindToken(mAcceptEncodings.get(), enc, HTTP_LWS ",") != nsnull;
+    return PL_strcasestr(mAcceptEncodings.get(), enc) != nsnull;
 }
 
 nsresult
@@ -436,6 +434,17 @@ nsHttpHandler::GetCacheSession(nsCacheStoragePolicy storagePolicy,
         NS_ADDREF(*result = mCacheSession_ANY);
 
     return NS_OK;
+}
+
+nsresult
+nsHttpHandler::GetCurrentEventQ(nsIEventQueue **result)
+{
+    if (!mEventQueueService) {
+        nsresult rv;
+        mEventQueueService = do_GetService(kEventQueueServiceCID, &rv);
+        if (NS_FAILED(rv)) return rv;
+    }
+    return mEventQueueService->ResolveEventQueue(NS_CURRENT_EVENTQ, result);
 }
 
 nsresult
@@ -666,6 +675,14 @@ nsHttpHandler::InitUserAgentComponents()
                     PR_smprintf_free(buf);
                 }
             }
+        } else if (info.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS &&
+                   info.dwMajorVersion == 4) {
+            if (info.dwMinorVersion == 90)
+                mOscpu.AssignLiteral("Win 9x 4.90");  // Windows Me
+            else if (info.dwMinorVersion > 0)
+                mOscpu.AssignLiteral("Win98");
+            else
+                mOscpu.AssignLiteral("Win95");
         } else {
             char *buf = PR_smprintf("Windows %ld.%ld",
                                     info.dwMajorVersion,
@@ -1100,7 +1117,7 @@ nsHttpHandler::PrefsChanged(nsIPrefBranch *prefs, const char *pref)
             nsXPIDLString uval;
             pls->ToString(getter_Copies(uval));
             if (uval)
-                SetAcceptLanguages(NS_ConvertUTF16toUTF8(uval).get());
+                SetAcceptLanguages(NS_ConvertUCS2toUTF8(uval).get());
         } 
     }
 
@@ -1113,7 +1130,7 @@ nsHttpHandler::PrefsChanged(nsIPrefBranch *prefs, const char *pref)
             nsXPIDLString uval;
             pls->ToString(getter_Copies(uval));
             if (uval)
-                SetAcceptCharsets(NS_ConvertUTF16toUTF8(uval).get());
+                SetAcceptCharsets(NS_ConvertUCS2toUTF8(uval).get());
         } 
     }
 
@@ -1400,8 +1417,7 @@ nsHttpHandler::GetDefaultPort(PRInt32 *result)
 NS_IMETHODIMP
 nsHttpHandler::GetProtocolFlags(PRUint32 *result)
 {
-    *result = URI_STD | ALLOWS_PROXY | ALLOWS_PROXY_HTTP |
-        URI_LOADABLE_BY_ANYONE;
+    *result = URI_STD | ALLOWS_PROXY | ALLOWS_PROXY_HTTP;
     return NS_OK;
 }
 
@@ -1672,7 +1688,7 @@ nsHttpHandler::Observe(nsISupports *subject,
     if (strcmp(topic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID) == 0) {
         nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(subject);
         if (prefBranch)
-            PrefsChanged(prefBranch, NS_ConvertUTF16toUTF8(data).get());
+            PrefsChanged(prefBranch, NS_ConvertUCS2toUTF8(data).get());
     }
     else if (strcmp(topic, "profile-change-net-teardown")    == 0 ||
              strcmp(topic, NS_XPCOM_SHUTDOWN_OBSERVER_ID)    == 0) {

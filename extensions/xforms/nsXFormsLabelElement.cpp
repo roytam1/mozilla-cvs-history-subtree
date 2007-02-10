@@ -51,31 +51,34 @@
 #include "nsIDOM3Node.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMText.h"
+#include "nsIXTFXMLVisualWrapper.h"
 #include "nsString.h"
 #include "nsIXFormsUIWidget.h"
 #include "nsIDocument.h"
 #include "nsNetUtil.h"
+#include "nsIXFormsLabelElement.h"
 #include "nsIXFormsItemElement.h"
 
 class nsXFormsLabelElement : public nsXFormsDelegateStub,
                              public nsIStreamListener,
-                             public nsIInterfaceRequestor
+                             public nsIInterfaceRequestor,
+                             public nsIXFormsLabelElement
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIREQUESTOBSERVER
   NS_DECL_NSISTREAMLISTENER
   NS_DECL_NSIINTERFACEREQUESTOR
+  NS_DECL_NSIXFORMSLABELELEMENT
 
   // nsIXFormsDelegate
   NS_IMETHOD GetValue(nsAString& aValue);
-  NS_IMETHOD WidgetAttached();
 
   // nsIXFormsControl
   NS_IMETHOD IsEventTarget(PRBool *aOK);
   NS_IMETHOD Refresh();
 
-  NS_IMETHOD OnCreated(nsIXTFElementWrapper *aWrapper);
+  NS_IMETHOD OnCreated(nsIXTFBindableElementWrapper *aWrapper);
   NS_IMETHOD OnDestroyed();
 
   // nsIXTFElement overrides
@@ -85,8 +88,6 @@ public:
   NS_IMETHOD AttributeSet(nsIAtom *aName, const nsAString &aSrc);
   NS_IMETHOD AttributeRemoved(nsIAtom *aName);
 
-  nsXFormsLabelElement() : mWidgetLoaded(PR_FALSE) {};
-
 #ifdef DEBUG_smaug
   virtual const char* Name() { return "label"; }
 #endif
@@ -95,17 +96,17 @@ private:
 
   nsCString            mSrcAttrText;
   nsCOMPtr<nsIChannel> mChannel;
-  PRBool               mWidgetLoaded;
 };
 
-NS_IMPL_ISUPPORTS_INHERITED3(nsXFormsLabelElement,
+NS_IMPL_ISUPPORTS_INHERITED4(nsXFormsLabelElement,
                              nsXFormsDelegateStub,
                              nsIRequestObserver,
                              nsIStreamListener,
-                             nsIInterfaceRequestor)
+                             nsIInterfaceRequestor,
+                             nsIXFormsLabelElement)
 
 NS_IMETHODIMP
-nsXFormsLabelElement::OnCreated(nsIXTFElementWrapper *aWrapper)
+nsXFormsLabelElement::OnCreated(nsIXTFBindableElementWrapper *aWrapper)
 {
   nsresult rv = nsXFormsDelegateStub::OnCreated(aWrapper);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -198,28 +199,6 @@ nsXFormsLabelElement::GetValue(nsAString& aValue)
     // handle linking ('src') attribute
     aValue = NS_ConvertUTF8toUTF16(mSrcAttrText);
   }
-  if (aValue.IsVoid()) {
-    NS_ENSURE_STATE(mElement);
-
-    nsCOMPtr<nsIDOM3Node> inner(do_QueryInterface(mElement));
-    if (inner) {
-      inner->GetTextContent(aValue);
-    }
-  }
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXFormsLabelElement::WidgetAttached()
-{
-  mWidgetLoaded = PR_TRUE;
-
-  // We shouldn't report to model that label is ready to work
-  // if label is loading external resource. We will report
-  // about it later when external resource will be loaded.
-  if (!mChannel)
-    nsXFormsDelegateStub::WidgetAttached();
 
   return NS_OK;
 }
@@ -419,8 +398,25 @@ nsXFormsLabelElement::OnStopRequest(nsIRequest *aRequest,
     mSrcAttrText.Truncate();
   }
 
-  if (mWidgetLoaded)
-    nsXFormsDelegateStub::WidgetAttached();
+  nsCOMPtr<nsIXFormsUIWidget> widget = do_QueryInterface(mElement);
+  if (widget)
+    widget->Refresh();
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsLabelElement::GetTextValue(nsAString& aValue)
+{
+  NS_ENSURE_STATE(mElement);
+  GetValue(aValue);
+
+  if (aValue.IsVoid()) {
+    nsCOMPtr<nsIDOM3Node> inner(do_QueryInterface(mElement));
+    if (inner) {
+      inner->GetTextContent(aValue);
+    }
+  }
 
   return NS_OK;
 }

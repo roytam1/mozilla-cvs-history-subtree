@@ -71,8 +71,8 @@
 #include "nsIURI.h"
 #include "nsIWebBrowserPersist.h"
 #include "nsCWebBrowserPersist.h"
+#include "nsIWebBrowserPrint.h"
 #include "nsIServiceManager.h"
-#include "nsAutoPtr.h"
 
 // for painting the background window
 #include "nsIRenderingContext.h"
@@ -80,10 +80,7 @@
 #include "nsILookAndFeel.h"
 
 // Printing Includes
-#ifdef NS_PRINTING
-#include "nsIWebBrowserPrint.h"
 #include "nsIContentViewer.h"
-#endif
 
 // PSM2 includes
 #include "nsISecureBrowserUI.h"
@@ -107,7 +104,6 @@ nsWebBrowser::nsWebBrowser() : mDocShellTreeOwner(nsnull),
    mInitInfo(nsnull),
    mContentType(typeContentWrapper),
    mActivating(PR_FALSE),
-   mShouldEnableHistory(PR_TRUE),
    mParentNativeWindow(nsnull),
    mProgressListener(nsnull),
    mBackgroundColor(0),
@@ -212,22 +208,20 @@ NS_IMETHODIMP nsWebBrowser::GetInterface(const nsIID& aIID, void** aSink)
 #endif
 
    if (mDocShell) {
-#ifdef NS_PRINTING
        if (aIID.Equals(NS_GET_IID(nsIWebBrowserPrint))) {
            nsCOMPtr<nsIContentViewer> viewer;
            mDocShell->GetContentViewer(getter_AddRefs(viewer));
-           if (!viewer)
-               return NS_NOINTERFACE;
-
-           nsCOMPtr<nsIWebBrowserPrint> webBrowserPrint(do_QueryInterface(viewer));
-           nsIWebBrowserPrint* print = (nsIWebBrowserPrint*)webBrowserPrint.get();
-           NS_ASSERTION(print, "This MUST support this interface!");
-           NS_ADDREF(print);
-           *aSink = print;
-           return NS_OK;
+           if (viewer) {
+               nsCOMPtr<nsIWebBrowserPrint> webBrowserPrint(do_QueryInterface(viewer));
+               nsIWebBrowserPrint* print = (nsIWebBrowserPrint*)webBrowserPrint.get();
+               NS_ASSERTION(print, "This MUST support this interface!");
+               NS_ADDREF(print);
+               *aSink = print;
+               return NS_OK;
+           }
+       } else {
+           return mDocShellAsReq->GetInterface(aIID, aSink);
        }
-#endif
-       return mDocShellAsReq->GetInterface(aIID, aSink);
    }
 
    return NS_NOINTERFACE;
@@ -790,7 +784,6 @@ NS_IMETHODIMP nsWebBrowser::SetProperty(PRUint32 aId, PRUint32 aValue)
            NS_ENSURE_STATE(mDocShell);
            NS_ENSURE_TRUE((aValue == PR_TRUE || aValue == PR_FALSE), NS_ERROR_INVALID_ARG);
            rv = EnableGlobalHistory(aValue);
-           mShouldEnableHistory = aValue;
         }
         break;
     case nsIWebBrowserSetup::SETUP_FOCUS_DOC_BEFORE_CONTENT:
@@ -900,7 +893,7 @@ NS_IMETHODIMP nsWebBrowser::SetPersistFlags(PRUint32 aPersistFlags)
     mPersistFlags = aPersistFlags;
     if (mPersist)
     {
-        rv = mPersist->SetPersistFlags(mPersistFlags);
+        rv = SetPersistFlags(mPersistFlags);
         mPersist->GetPersistFlags(&mPersistFlags);
     }
     return rv;
@@ -1217,9 +1210,9 @@ NS_IMETHODIMP nsWebBrowser::Create()
    NS_ENSURE_TRUE(mInitInfo->sessionHistory, NS_ERROR_FAILURE);
    mDocShellAsNav->SetSessionHistory(mInitInfo->sessionHistory);
    
-   // Hook up global history. Do not fail if we can't - just warn.
-   nsresult rv = EnableGlobalHistory(mShouldEnableHistory);
-   NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "EnableGlobalHistory() failed");
+   // Hook up global history. Do not fail if we can't - just assert.
+   nsresult rv = EnableGlobalHistory(PR_TRUE);
+   NS_ASSERTION(NS_SUCCEEDED(rv), "EnableGlobalHistory() failed");
 
    NS_ENSURE_SUCCESS(mDocShellAsWin->Create(), NS_ERROR_FAILURE);
 
@@ -1230,7 +1223,7 @@ NS_IMETHODIMP nsWebBrowser::Create()
    if (NS_SUCCEEDED(rv))
    {
        // this works because the implementation of nsISecureBrowserUI
-       // (nsSecureBrowserUIImpl) gets a docShell from the domWindow,
+       // (nsSecureBrowserUIImpl) get a docShell from the domWindow,
        // and calls docShell->SetSecurityUI(this);
        nsCOMPtr<nsISecureBrowserUI> securityUI =
            do_CreateInstance(NS_SECURE_BROWSER_UI_CONTRACTID, &rv);

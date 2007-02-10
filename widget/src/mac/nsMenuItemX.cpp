@@ -67,7 +67,7 @@ nsInstanceCounter   gMenuItemCounterX("nsMenuItemX");
 #endif
 
 
-NS_IMPL_ISUPPORTS4(nsMenuItemX, nsIMenuItem, nsIMenuListener, nsIChangeObserver, nsISupportsWeakReference)
+NS_IMPL_ISUPPORTS5(nsMenuItemX, nsIMenuItem, nsIMenuItem_MOZILLA_1_8_BRANCH, nsIMenuListener, nsIChangeObserver, nsISupportsWeakReference)
 
 //
 // nsMenuItemX constructor
@@ -105,22 +105,21 @@ nsMenuItemX::~nsMenuItemX()
 }
 
 
-NS_METHOD nsMenuItemX::Create(nsIMenu* aParent, const nsString & aLabel, PRBool aIsSeparator,
-                              EMenuItemType aItemType, nsIChangeManager* aManager,
-                              nsIDocShell* aShell, nsIContent* aNode)
+NS_METHOD nsMenuItemX::Create ( nsIMenu* aParent, const nsString & aLabel, PRBool aIsSeparator,
+                                EMenuItemType aItemType, PRBool aEnabled, 
+                                nsIChangeManager* aManager, nsIDocShell* aShell, nsIContent* aNode )
 {
   mContent = aNode;         // addref
   mMenuParent = aParent;    // weak
   mDocShellWeakRef = do_GetWeakReference(aShell);
   
+  mEnabled = aEnabled;
   mMenuType = aItemType;
   
   // register for AttributeChanged messages
   mManager = aManager;
   nsCOMPtr<nsIChangeObserver> obs = do_QueryInterface(NS_STATIC_CAST(nsIChangeObserver*,this));
   mManager->Register(mContent, obs);   // does not addref this
-  
-  mEnabled = !mContent->AttrValueIs(kNameSpaceID_None, nsWidgetAtoms::disabled, nsWidgetAtoms::_true, eCaseMatters);
   
   mIsSeparator = aIsSeparator;
   mLabel = aLabel;
@@ -141,8 +140,10 @@ NS_METHOD nsMenuItemX::Create(nsIMenu* aParent, const nsString & aLabel, PRBool 
     }
   }
 
+  nsCOMPtr<nsIMenu_MOZILLA_1_8_BRANCH> menuParent_MOZILLA_1_8_BRANCH =
+   do_QueryInterface(mMenuParent);
   mIcon = new nsMenuItemIcon(NS_STATIC_CAST(nsIMenuItem*, this),
-                             mMenuParent, mContent);
+                             menuParent_MOZILLA_1_8_BRANCH, mContent);
 
   return NS_OK;
 }
@@ -193,10 +194,19 @@ NS_METHOD nsMenuItemX::GetMenuItemType(EMenuItemType *aType)
   return NS_OK;
 }
 
+
+//-------------------------------------------------------------------------
+NS_METHOD nsMenuItemX::GetTarget(nsIWidget *& aTarget)
+{
+  NS_IF_ADDREF(aTarget = mTarget);
+  return NS_OK;
+}
+
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuItemX::GetNativeData(void *& aData)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  //aData = (void *)mMenu;
+  return NS_OK;
 }
 
 //-------------------------------------------------------------------------
@@ -284,21 +294,21 @@ NS_METHOD nsMenuItemX::DoCommand()
 {
     // flip "checked" state if we're a checkbox menu, or an un-checked radio menu
     if (mMenuType == nsIMenuItem::eCheckbox || (mMenuType == nsIMenuItem::eRadio && !mIsChecked)) {
-        if (!mContent->AttrValueIs(kNameSpaceID_None, nsWidgetAtoms::autocheck,
-                                   nsWidgetAtoms::_false, eCaseMatters))
+        nsAutoString value;
+        mContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::autocheck, value);
+        if (!value.EqualsLiteral("false"))
             SetChecked(!mIsChecked);
             /* the AttributeChanged code will update all the internal state */
     }
 
     return MenuHelpersX::DispatchCommandTo(mDocShellWeakRef, mContent);
 }
-
-
+    
 NS_IMETHODIMP nsMenuItemX::DispatchDOMEvent(const nsString &eventName, PRBool *preventDefaultCalled)
 {
   if (!mContent)
     return NS_ERROR_FAILURE;
-  
+
   // get owner document for content
   nsCOMPtr<nsIDocument> parentDoc = mContent->GetOwnerDoc();
   if (!parentDoc) {
@@ -315,11 +325,7 @@ NS_IMETHODIMP nsMenuItemX::DispatchDOMEvent(const nsString &eventName, PRBool *p
   
   // create DOM event
   nsCOMPtr<nsIDOMEvent> event;
-  nsresult rv = DOMEventFactory->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
-  if (NS_FAILED(rv)) {
-    NS_WARNING("Failed to create nsIDOMEvent");
-    return rv;
-  }
+  DOMEventFactory->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
   event->InitEvent(eventName, PR_TRUE, PR_TRUE);
   
   // mark DOM event as trusted
@@ -328,42 +334,46 @@ NS_IMETHODIMP nsMenuItemX::DispatchDOMEvent(const nsString &eventName, PRBool *p
   
   // send DOM event
   nsCOMPtr<nsIDOMEventTarget> eventTarget = do_QueryInterface(mContent);
-  rv = eventTarget->DispatchEvent(event, preventDefaultCalled);
+  nsresult rv = eventTarget->DispatchEvent(event, preventDefaultCalled);
   if (NS_FAILED(rv)) {
     NS_WARNING("Failed to send DOM event via nsIDOMEventTarget");
-    return rv;
+    return NS_ERROR_FAILURE;
   }
   
   return NS_OK;
 }
-
    
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuItemX::GetModifiers(PRUint8 * aModifiers) 
 {
+    nsresult res = NS_OK;
     *aModifiers = mModifiers; 
-    return NS_OK; 
+    return res; 
 }
 
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuItemX::SetModifiers(PRUint8 aModifiers)
 {
+    nsresult res = NS_OK;
+    
     mModifiers = aModifiers;
-    return NS_OK;
+    return res;
 }
  
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuItemX::SetShortcutChar(const nsString &aText)
 {
+    nsresult res = NS_OK;
     mKeyEquivalent = aText;
-    return NS_OK;
+    return res;
 } 
 
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuItemX::GetShortcutChar(nsString &aText)
 {
+    nsresult res = NS_OK;
     aText = mKeyEquivalent;
-    return NS_OK;
+    return res;
 } 
 
 //
@@ -391,8 +401,9 @@ nsMenuItemX :: UncheckRadioSiblings(nsIContent* inCheckedContent)
     if ( sibling ) {      
       if ( sibling != inCheckedContent ) {                    // skip this node
         // if the current sibling is in the same group, clear it
-        if (sibling->AttrValueIs(kNameSpaceID_None, nsWidgetAtoms::name,
-                                 myGroupName, eCaseMatters))
+        nsAutoString currGroupName;
+        sibling->GetAttr(kNameSpaceID_None, nsWidgetAtoms::name, currGroupName);
+        if ( currGroupName == myGroupName )
           sibling->SetAttr(kNameSpaceID_None, nsWidgetAtoms::checked, NS_LITERAL_STRING("false"), PR_TRUE);
       }
     }    
@@ -415,11 +426,11 @@ nsMenuItemX::AttributeChanged(nsIDocument *aDocument, PRInt32 aNameSpaceID, nsIC
       // if we're a radio menu, uncheck our sibling radio items. No need to
       // do any of this if we're just a normal check menu.
       if (mMenuType == eRadio) {
-        if (mContent->AttrValueIs(kNameSpaceID_None, nsWidgetAtoms::checked,
-                                  nsWidgetAtoms::_true, eCaseMatters))
+        nsAutoString checked;
+        mContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::checked, checked);
+        if (checked.EqualsLiteral("true")) 
           UncheckRadioSiblings(mContent);
       }
-      
       nsCOMPtr<nsIMenuListener> listener = do_QueryInterface(mMenuParent);
       listener->SetRebuild(PR_TRUE);
     } 
@@ -427,14 +438,14 @@ nsMenuItemX::AttributeChanged(nsIDocument *aDocument, PRInt32 aNameSpaceID, nsIC
              aAttribute == nsWidgetAtoms::collapsed || aAttribute == nsWidgetAtoms::label )  {
       nsCOMPtr<nsIMenuListener> listener = do_QueryInterface(mMenuParent);
       listener->SetRebuild(PR_TRUE);
-    }    
+    }
     else if (aAttribute == nsWidgetAtoms::image) {
       SetupIcon();
     }
   }
   else if (aContent == mCommandContent &&
-    aAttribute == nsWidgetAtoms::disabled &&
-    mMenuParent && mCommandContent) {
+           aAttribute == nsWidgetAtoms::disabled &&
+           mMenuParent && mCommandContent) {
     nsAutoString menuItemDisabled;
     nsAutoString commandDisabled;
     mContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::disabled, menuItemDisabled);
@@ -446,12 +457,15 @@ nsMenuItemX::AttributeChanged(nsIDocument *aDocument, PRInt32 aNameSpaceID, nsIC
       else
         mContent->SetAttr(kNameSpaceID_None, nsWidgetAtoms::disabled, commandDisabled, PR_TRUE);
     }
+    
     // we need to get our native menu item to update itself
-    mMenuParent->ChangeNativeEnabledStatusForMenuItem(this, !commandDisabled.EqualsLiteral("true"));
+    nsCOMPtr<nsIMenu_MOZILLA_1_8_BRANCH> parentMenu = do_QueryInterface(mMenuParent);
+    if (parentMenu)
+      parentMenu->ChangeNativeEnabledStatusForMenuItem(this, !commandDisabled.EqualsLiteral("true"));
   }
   
   return NS_OK;
-}
+} // AttributeChanged
 
 
 NS_IMETHODIMP
@@ -465,8 +479,7 @@ nsMenuItemX :: ContentRemoved(nsIDocument *aDocument, nsIContent *aChild, PRInt3
   nsCOMPtr<nsIMenuListener> listener = do_QueryInterface(mMenuParent);
   listener->SetRebuild(PR_TRUE);
   return NS_OK;
-}
-
+} // ContentRemoved
 
 NS_IMETHODIMP
 nsMenuItemX :: ContentInserted(nsIDocument *aDocument, nsIContent *aChild, PRInt32 aIndexInContainer)

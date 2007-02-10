@@ -35,10 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * Implementation of DOM Core's nsIDOMDocumentFragment.
- */
-
 #include "nsISupports.h"
 #include "nsIContent.h"
 #include "nsIDOMDocumentFragment.h"
@@ -51,12 +47,12 @@
 #include "nsIDOMAttr.h"
 #include "nsDOMError.h"
 #include "nsIDOM3Node.h"
-#include "nsGkAtoms.h"
+#include "nsLayoutAtoms.h"
 #include "nsDOMString.h"
-#include "nsIDOMUserDataHandler.h"
 
 class nsDocumentFragment : public nsGenericElement,
-                           public nsIDOMDocumentFragment
+                           public nsIDOMDocumentFragment,
+                           public nsIDOM3Node
 {
 public:
   nsDocumentFragment(nsINodeInfo *aNodeInfo);
@@ -106,18 +102,14 @@ public:
   { return nsGenericElement::HasChildNodes(aReturn); }
   NS_IMETHOD    HasAttributes(PRBool* aReturn)
   { return nsGenericElement::HasAttributes(aReturn); }
-  NS_IMETHOD    CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
-  { return nsGenericElement::CloneNode(aDeep, aReturn); }
+  NS_IMETHOD    CloneNode(PRBool aDeep, nsIDOMNode** aReturn);
   NS_IMETHOD    GetPrefix(nsAString& aPrefix)
   { return nsGenericElement::GetPrefix(aPrefix); }
   NS_IMETHOD    SetPrefix(const nsAString& aPrefix);
   NS_IMETHOD    GetNamespaceURI(nsAString& aNamespaceURI)
   { return nsGenericElement::GetNamespaceURI(aNamespaceURI); }
   NS_IMETHOD    GetLocalName(nsAString& aLocalName)
-  {
-    SetDOMStringToNull(aLocalName);
-    return NS_OK;
-  }
+  { return nsGenericElement::GetLocalName(aLocalName); }
   NS_IMETHOD    Normalize()
   { return nsGenericElement::Normalize(); }
   NS_IMETHOD    IsSupported(const nsAString& aFeature,
@@ -125,7 +117,11 @@ public:
                             PRBool* aReturn)
   { return nsGenericElement::IsSupported(aFeature, aVersion, aReturn); }
 
+  // nsIDOM3Node
+  NS_DECL_NSIDOM3NODE
+
   // nsIContent
+  virtual void SetParent(nsIContent* aParent) { }
   nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                    const nsAString& aValue, PRBool aNotify)
   {
@@ -137,25 +133,32 @@ public:
   {
     return NS_OK;
   }
-  virtual PRBool GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                         nsAString& aResult) const
+  virtual nsresult GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                           nsAString& aResult) const
   {
-    return PR_FALSE;
+    return NS_CONTENT_ATTR_NOT_THERE;
   }
   virtual nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute, 
                              PRBool aNotify)
   {
     return NS_OK;
   }
-  virtual const nsAttrName* GetAttrNameAt(PRUint32 aIndex) const
+  virtual nsresult GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
+                                 nsIAtom** aName, nsIAtom** aPrefix) const
   {
-    return nsnull;
+    *aNameSpaceID = kNameSpaceID_None;
+    *aName = nsnull;
+    *aPrefix = nsnull;
+    return NS_ERROR_ILLEGAL_VALUE;
   }
-
-  virtual PRBool IsNodeOfType(PRUint32 aFlags) const;
-
-protected:
-  nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
+  virtual nsresult HandleDOMEvent(nsPresContext* aPresContext,
+                                  nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                                  PRUint32 aFlags, nsEventStatus* aEventStatus)
+  {
+    NS_ENSURE_ARG_POINTER(aEventStatus);
+    *aEventStatus = nsEventStatus_eIgnore;
+    return NS_OK;
+  }
 };
 
 nsresult
@@ -166,7 +169,7 @@ NS_NewDocumentFragment(nsIDOMDocumentFragment** aInstancePtrResult,
 
   nsCOMPtr<nsINodeInfo> nodeInfo;
   nsresult rv =
-    aNodeInfoManager->GetNodeInfo(nsGkAtoms::documentFragmentNodeName,
+    aNodeInfoManager->GetNodeInfo(nsLayoutAtoms::documentFragmentNodeName,
                                   nsnull, kNameSpaceID_None,
                                   getter_AddRefs(nodeInfo));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -176,7 +179,9 @@ NS_NewDocumentFragment(nsIDOMDocumentFragment** aInstancePtrResult,
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  NS_ADDREF(*aInstancePtrResult = it);
+  *aInstancePtrResult = NS_STATIC_CAST(nsIDOMDocumentFragment *, it);
+
+  NS_ADDREF(*aInstancePtrResult);
 
   return NS_OK;
 }
@@ -190,23 +195,21 @@ nsDocumentFragment::~nsDocumentFragment()
 {
 }
 
-PRBool
-nsDocumentFragment::IsNodeOfType(PRUint32 aFlags) const
-{
-  return !(aFlags & ~(eCONTENT | eDOCUMENT_FRAGMENT));
-}
 
 // QueryInterface implementation for nsDocumentFragment
 NS_INTERFACE_MAP_BEGIN(nsDocumentFragment)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentFragment)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
-  NS_INTERFACE_MAP_ENTRY_TEAROFF(nsIDOM3Node, new nsNode3Tearoff(this))
+  NS_INTERFACE_MAP_ENTRY(nsIDOM3Node)
+  NS_INTERFACE_MAP_ENTRY(nsIContent)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMGCParticipant)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIContent)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(DocumentFragment)
-NS_INTERFACE_MAP_END_INHERITING(nsGenericElement)
+NS_INTERFACE_MAP_END
 
 
-NS_IMPL_ADDREF_INHERITED(nsDocumentFragment, nsGenericElement)
-NS_IMPL_RELEASE_INHERITED(nsDocumentFragment, nsGenericElement)
+NS_IMPL_ADDREF(nsDocumentFragment)
+NS_IMPL_RELEASE(nsDocumentFragment)
 
 NS_IMETHODIMP    
 nsDocumentFragment::GetNodeType(PRUint16* aNodeType)
@@ -221,4 +224,197 @@ nsDocumentFragment::SetPrefix(const nsAString& aPrefix)
   return NS_ERROR_DOM_NAMESPACE_ERR;
 }
 
-NS_IMPL_ELEMENT_CLONE(nsDocumentFragment)
+NS_IMETHODIMP    
+nsDocumentFragment::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
+{
+  NS_ENSURE_ARG_POINTER(aReturn);
+  *aReturn = nsnull;
+
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIDOMDocumentFragment> newFragment;
+
+  rv = NS_NewDocumentFragment(getter_AddRefs(newFragment),
+                              mNodeInfo->NodeInfoManager());
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (aDeep) {
+    nsCOMPtr<nsIDOMNodeList> childNodes;
+
+    GetChildNodes(getter_AddRefs(childNodes));
+    if (childNodes) {
+      PRUint32 index, count;
+      childNodes->GetLength(&count);
+
+      for (index = 0; index < count; ++index) {
+        nsCOMPtr<nsIDOMNode> child;
+        childNodes->Item(index, getter_AddRefs(child));
+        if (child) {
+          nsCOMPtr<nsIDOMNode> newChild;
+          rv = child->CloneNode(PR_TRUE, getter_AddRefs(newChild));
+          NS_ENSURE_SUCCESS(rv, rv);
+
+          nsCOMPtr<nsIDOMNode> dummyNode;
+          rv = newFragment->AppendChild(newChild,
+                                        getter_AddRefs(dummyNode));
+          NS_ENSURE_SUCCESS(rv, rv);
+        }
+      } // End of for loop
+    } // if (childNodes)
+  } // if (aDeep)
+
+  return CallQueryInterface(newFragment, aReturn);
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::GetBaseURI(nsAString& aURI)
+{
+  aURI.Truncate();
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::LookupPrefix(const nsAString& aNamespaceURI,
+                                 nsAString& aPrefix)
+{
+  aPrefix.Truncate();
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::LookupNamespaceURI(const nsAString& aNamespacePrefix,
+                                       nsAString& aNamespaceURI)
+{
+  aNamespaceURI.Truncate();
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::IsDefaultNamespace(const nsAString& aNamespaceURI,
+                                       PRBool* aReturn)
+{
+  *aReturn = PR_FALSE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::CompareDocumentPosition(nsIDOMNode* aOther,
+                                            PRUint16* aReturn)
+{
+  NS_ENSURE_ARG_POINTER(aOther);
+  NS_PRECONDITION(aReturn, "Must have an out parameter");
+
+  if (this == aOther) {
+    // If the two nodes being compared are the same node,
+    // then no flags are set on the return.
+    *aReturn = 0;
+    return NS_OK;
+  }
+
+  PRUint16 mask = 0;
+
+  nsCOMPtr<nsIDOMNode> other(aOther);
+  do {
+    nsCOMPtr<nsIDOMNode> tmp(other);
+    tmp->GetParentNode(getter_AddRefs(other));
+    if (!other) {
+      // No parent.  Check to see if we're at an attribute node.
+      PRUint16 nodeType = 0;
+      tmp->GetNodeType(&nodeType);
+      if (nodeType != nsIDOMNode::ATTRIBUTE_NODE) {
+        // If there is no common container node, then the order
+        // is based upon order between the root container of each
+        // node that is in no container. In this case, the result
+        // is disconnected and implementation-dependent.
+        mask |= (nsIDOM3Node::DOCUMENT_POSITION_DISCONNECTED |
+                 nsIDOM3Node::DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC);
+
+        break;
+      }
+
+      // If we are, let's get the owner element and continue up the tree
+      nsCOMPtr<nsIDOMAttr> attr(do_QueryInterface(tmp));
+      nsCOMPtr<nsIDOMElement> owner;
+      attr->GetOwnerElement(getter_AddRefs(owner));
+      other = do_QueryInterface(owner);
+    }
+
+    if (NS_STATIC_CAST(nsIDOMNode*, this) == other) {
+      // If the node being compared is contained by our node,
+      // then it follows it.
+      mask |= (nsIDOM3Node::DOCUMENT_POSITION_CONTAINED_BY |
+               nsIDOM3Node::DOCUMENT_POSITION_FOLLOWING);
+      break;
+    }
+  } while (other);
+
+  *aReturn = mask;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::IsSameNode(nsIDOMNode* aOther,
+                               PRBool* aReturn)
+{
+  PRBool sameNode = PR_FALSE;
+
+  if (NS_STATIC_CAST(nsIDOMNode*, this) == aOther) {
+    sameNode = PR_TRUE;
+  }
+
+  *aReturn = sameNode;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::IsEqualNode(nsIDOMNode* aOther, PRBool* aReturn)
+{
+  NS_NOTYETIMPLEMENTED("nsDocumentFragment::IsEqualNode()");
+
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::GetFeature(const nsAString& aFeature,
+                               const nsAString& aVersion,
+                               nsISupports** aReturn)
+{
+  NS_NOTYETIMPLEMENTED("nsDocumentFragment::GetFeature()");
+
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::SetUserData(const nsAString& aKey,
+                                nsIVariant* aData,
+                                nsIDOMUserDataHandler* aHandler,
+                                nsIVariant** aReturn)
+{
+  NS_NOTYETIMPLEMENTED("nsDocumentFragment::SetUserData()");
+
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::GetUserData(const nsAString& aKey,
+                                nsIVariant** aReturn)
+{
+  NS_NOTYETIMPLEMENTED("nsDocumentFragment::GetUserData()");
+
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::GetTextContent(nsAString &aTextContent)
+{
+  return nsNode3Tearoff::GetTextContent(this, aTextContent);
+}
+
+NS_IMETHODIMP
+nsDocumentFragment::SetTextContent(const nsAString& aTextContent)
+{
+  return nsNode3Tearoff::SetTextContent(this, aTextContent);
+}
+

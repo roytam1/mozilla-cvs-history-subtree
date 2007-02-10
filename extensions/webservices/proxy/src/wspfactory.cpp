@@ -151,7 +151,7 @@ WSPAsyncProxyCreator::OnError(nsresult status, const nsAString & statusMessage)
   // exception class!
 
   nsCOMPtr<nsIException> e = new WSPException(status, 
-    NS_ConvertUTF16toUTF8(statusMessage).get(), nsnull);
+    NS_ConvertUCS2toUTF8(statusMessage).get(), nsnull);
   if (!e) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -261,14 +261,14 @@ WSPFactory::C2XML(const nsACString& aCIdentifier,
 }
 
 void
-WSPFactory::XML2C(const nsAString& aXMLIdentifier,
+WSPFactory::XML2C(const nsAString& aXMLIndentifier,
                   nsACString& aCIdentifier)
 {
   nsReadingIterator<PRUnichar> current, end;
 
   aCIdentifier.Truncate();
-  aXMLIdentifier.BeginReading(current);
-  aXMLIdentifier.EndReading(end);
+  aXMLIndentifier.BeginReading(current);
+  aXMLIndentifier.EndReading(end);
 
   while (current != end) {
     PRUnichar uch = *current++;

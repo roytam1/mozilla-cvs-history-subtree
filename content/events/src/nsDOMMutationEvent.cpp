@@ -46,13 +46,22 @@ nsDOMMutationEvent::nsDOMMutationEvent(nsPresContext* aPresContext,
                                        nsMutationEvent* aEvent)
   : nsDOMEvent(aPresContext, aEvent ? aEvent :
                new nsMutationEvent(PR_FALSE, 0))
-{
-  mEventIsInternal = (aEvent == nsnull);
+{  
+  if ( aEvent ) {
+    mEventIsInternal = PR_FALSE;
+    nsMutationEvent* mutation = (nsMutationEvent*)aEvent;
+    SetTarget(mutation->mTarget);
+  }
+  else
+  {
+    mEventIsInternal = PR_TRUE;
+  }
 }
 
 nsDOMMutationEvent::~nsDOMMutationEvent()
 {
   if (mEventIsInternal) {
+    delete mEvent->userType;
     nsMutationEvent* mutation = NS_STATIC_CAST(nsMutationEvent*, mEvent);
     delete mutation;
     mEvent = nsnull;

@@ -72,7 +72,7 @@ XPI_PKGNAME            = xforms
 USE_EXTENSION_MANIFEST = 1
 NO_JAR_AUTO_REG        = 1
 INSTALL_EXTENSION_ID   = {cf2812dc-6a7c-4402-b639-4d277dac4c36}
-PACKAGE_VERSION        = 0.7
+PACKAGE_VERSION        = 0.6
 
 # We want to strip the XPI
 STRIP_XPI = 1
@@ -100,6 +100,7 @@ REQUIRES	= \
 		widget \
 		necko \
 		websrvcs \
+		xmlextras \
 		docshell \
 		mimetype \
 		caps \
@@ -128,8 +129,6 @@ XPIDLSRCS	= \
 		nsIXFormsSwitchElement.idl \
 		nsIXFormsCaseElement.idl \
 		nsIXFormsCaseUIElement.idl \
-		nsIXFormsNSSelect1Element.idl \
-		nsIXFormsNSSelectElement.idl \
 		nsIXFormsSelectChild.idl \
 		nsIXFormsValueElement.idl \
 		nsIXFormsRepeatElement.idl \
@@ -141,6 +140,7 @@ XPIDLSRCS	= \
 		nsIDelegateInternal.idl \
 		nsIXFormsUIWidget.idl \
 		nsIXFormsItemElement.idl \
+		nsIXFormsLabelElement.idl \
 		nsIXFormsItemSetUIElement.idl \
 		nsIXFormsRepeatUIElement.idl \
 		nsIXFormsAccessors.idl \
@@ -150,9 +150,6 @@ XPIDLSRCS	= \
 		nsIXFormsCopyElement.idl \
 		nsIXFormsEphemeralMessageUI.idl \
 		nsIXFormsRangeConditionAccessors.idl \
-		nsIXFormsNSEditableElement.idl \
-		nsIXFormsComboboxUIWidget.idl \
-		nsIXFormsXPathFunctions.idl \
 		$(NULL)
 
 # XForms source files
@@ -192,7 +189,6 @@ CPPSRCS		= \
 		nsXFormsInsertDeleteElement.cpp \
 		nsXFormsLoadElement.cpp \
 		nsXFormsMessageElement.cpp \
-		nsXFormsMediatypeElement.cpp \
 		nsXFormsLabelElement.cpp \
 		nsXFormsToggleElement.cpp \
 		nsXFormsCaseElement.cpp \
@@ -214,7 +210,6 @@ CPPSRCS		= \
 		nsXFormsRangeAccessors.cpp \
 		nsXFormsCopyElement.cpp \
 		nsXFormsRangeConditionAccessors.cpp \
-		nsXFormsXPathFunctions.cpp \
 		$(NULL)
 
 # Standard Mozilla make rules

@@ -109,7 +109,7 @@ GetNativeThis(JSContext *cx, JSObject *obj, jsval *argv)
 //
 // Native method DirCreate
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpDirCreate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -154,7 +154,7 @@ InstallFileOpDirCreate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 //
 // Native method DirGetParent
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpDirGetParent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -214,7 +214,7 @@ InstallFileOpDirGetParent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 //
 // Native method DirRemove
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpDirRemove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -267,7 +267,7 @@ InstallFileOpDirRemove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 //
 // Native method DirRename
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpDirRename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -330,7 +330,7 @@ InstallFileOpDirRename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 //
 // Native method FileCopy
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileCopy(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -399,7 +399,7 @@ InstallFileOpFileCopy(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
 //
 // Native method FileDelete
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileRemove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -444,7 +444,7 @@ InstallFileOpFileRemove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 //
 // Native method FileExists
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileExists(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -489,7 +489,7 @@ InstallFileOpFileExists(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 //
 // Native method FileExecute
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -564,7 +564,7 @@ InstallFileOpFileExecute(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, 
 //
 // Native method FileGetNativeVersion
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileGetNativeVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -609,7 +609,7 @@ InstallFileOpFileGetNativeVersion(JSContext *cx, JSObject *obj, uintN argc, jsva
 //
 // Native method FileGetDiskSpaceAvailable
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileGetDiskSpaceAvailable(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
 
@@ -657,7 +657,7 @@ InstallFileOpFileGetDiskSpaceAvailable(JSContext *cx, JSObject *obj, uintN argc,
 //
 // Native method FileGetModDate
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileGetModDate(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -702,7 +702,7 @@ InstallFileOpFileGetModDate(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
 //
 // Native method FileGetSize
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileGetSize(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -750,7 +750,7 @@ InstallFileOpFileGetSize(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, 
 //
 // Native method FileIsDirectory
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileIsDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -795,7 +795,7 @@ InstallFileOpFileIsDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *ar
 //
 // Native method FileIsWritable
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileIsWritable(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -839,7 +839,7 @@ InstallFileOpFileIsWritable(JSContext *cx, JSObject *obj, uintN argc, jsval *arg
 //
 // Native method FileIsFile
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileIsFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -884,7 +884,7 @@ InstallFileOpFileIsFile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 //
 // Native method FileModDateChanged
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileModDateChanged(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -939,7 +939,7 @@ InstallFileOpFileModDateChanged(JSContext *cx, JSObject *obj, uintN argc, jsval 
 //
 // Native method FileMove
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileMove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1005,7 +1005,7 @@ InstallFileOpFileMove(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsv
 //
 // Native method FileRename
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileRename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1068,7 +1068,7 @@ InstallFileOpFileRename(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, j
 //
 // Native method FileWindowsGetShortName
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileWindowsGetShortName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsAutoString shortPathName;
@@ -1114,7 +1114,7 @@ InstallFileOpFileWindowsGetShortName(JSContext *cx, JSObject *obj, uintN argc, j
 //
 // Native method FileWindowsShortcut
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileWindowsShortcut(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1190,7 +1190,7 @@ InstallFileOpFileWindowsShortcut(JSContext *cx, JSObject *obj, uintN argc, jsval
 //
 // Native method FileMacAlias
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileMacAlias(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1312,7 +1312,7 @@ InstallFileOpFileMacAlias(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 //
 // Native method FileUnixLinkCreate
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpFileUnixLink(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1369,7 +1369,7 @@ InstallFileOpFileUnixLink(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 //
 // Native method WindowsRegisterServer
 //
-JSBool JS_DLL_CALLBACK
+JSBool PR_CALLBACK
 InstallFileOpWinRegisterServer(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall *nativeThis =
@@ -1416,31 +1416,31 @@ InstallFileOpWinRegisterServer(JSContext *cx, JSObject *obj, uintN argc, jsval *
 //
 static JSFunctionSpec FileOpMethods[] = 
 {
-  {"dirCreate",                 InstallFileOpDirCreate,                1,0,0},
-  {"dirGetParent",              InstallFileOpDirGetParent,             1,0,0},
-  {"dirRemove",                 InstallFileOpDirRemove,                2,0,0},
-  {"dirRename",                 InstallFileOpDirRename,                2,0,0},
-  {"copy",                      InstallFileOpFileCopy,                 2,0,0},
-  {"remove",                    InstallFileOpFileRemove,               1,0,0},
-  {"exists",                    InstallFileOpFileExists,               1,0,0},
-  {"execute",                   InstallFileOpFileExecute,              2,0,0},
-  {"nativeVersion",             InstallFileOpFileGetNativeVersion,     1,0,0},
-  {"windowsVersion",            InstallFileOpFileGetNativeVersion,     1,0,0},
-  {"diskSpaceAvailable",        InstallFileOpFileGetDiskSpaceAvailable,1,0,0},
-  {"modDate",                   InstallFileOpFileGetModDate,           1,0,0},
-  {"size",                      InstallFileOpFileGetSize,              1,0,0},
-  {"isDirectory",               InstallFileOpFileIsDirectory,          1,0,0},
-  {"isWritable",                InstallFileOpFileIsWritable,           1,0,0},
-  {"isFile",                    InstallFileOpFileIsFile,               1,0,0},
-  {"modDateChanged",            InstallFileOpFileModDateChanged,       2,0,0},
-  {"move",                      InstallFileOpFileMove,                 2,0,0},
-  {"rename",                    InstallFileOpFileRename,               2,0,0},
-  {"windowsGetShortName",       InstallFileOpFileWindowsGetShortName,  1,0,0},
-  {"windowsShortcut",           InstallFileOpFileWindowsShortcut,      7,0,0},
-  {"macAlias",                  InstallFileOpFileMacAlias,             2,0,0},
-  {"unixLink",                  InstallFileOpFileUnixLink,             2,0,0},
-  {"windowsRegisterServer",     InstallFileOpWinRegisterServer,        1,0,0},
-  {nsnull,nsnull,0,0,0}
+  {"dirCreate",                 InstallFileOpDirCreate,                1},
+  {"dirGetParent",              InstallFileOpDirGetParent,             1},
+  {"dirRemove",                 InstallFileOpDirRemove,                2},
+  {"dirRename",                 InstallFileOpDirRename,                2},
+  {"copy",                      InstallFileOpFileCopy,                 2},
+  {"remove",                    InstallFileOpFileRemove,               1},
+  {"exists",                    InstallFileOpFileExists,               1},
+  {"execute",                   InstallFileOpFileExecute,              2},
+  {"nativeVersion",             InstallFileOpFileGetNativeVersion,     1},
+  {"windowsVersion",            InstallFileOpFileGetNativeVersion,     1},
+  {"diskSpaceAvailable",        InstallFileOpFileGetDiskSpaceAvailable,1},
+  {"modDate",                   InstallFileOpFileGetModDate,           1},
+  {"size",                      InstallFileOpFileGetSize,              1},
+  {"isDirectory",               InstallFileOpFileIsDirectory,          1},
+  {"isWritable",                InstallFileOpFileIsWritable,           1},
+  {"isFile",                    InstallFileOpFileIsFile,               1},
+  {"modDateChanged",            InstallFileOpFileModDateChanged,       2},
+  {"move",                      InstallFileOpFileMove,                 2},
+  {"rename",                    InstallFileOpFileRename,               2},
+  {"windowsGetShortName",       InstallFileOpFileWindowsGetShortName,  1},
+  {"windowsShortcut",           InstallFileOpFileWindowsShortcut,      7},
+  {"macAlias",                  InstallFileOpFileMacAlias,             2},
+  {"unixLink",                  InstallFileOpFileUnixLink,             2},
+  {"windowsRegisterServer",     InstallFileOpWinRegisterServer,        1},
+  {0}
 };
 
 
@@ -1466,7 +1466,7 @@ PRInt32 InitXPFileOpObjectPrototype(JSContext *jscontext,
                                  nsnull,            // ctor props (static)
                                  FileOpMethods);    // ctor funcs (static)
 
-  if (nsnull == *fileOpObjectPrototype) 
+  if (nsnull == fileOpObjectPrototype) 
   {
       return NS_ERROR_FAILURE;
   }

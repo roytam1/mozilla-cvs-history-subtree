@@ -20,7 +20,6 @@
    - the Initial Developer. All Rights Reserved.
    -
    - Contributor(s):
-   -   Shawn Wilsher <me@shawnwilsher.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -49,12 +48,6 @@
 
   <!ENTITY cmdToggleWhitespaceNodes.label "Show Whitespace Nodes">
   <!ENTITY cmdToggleWhitespaceNodes.accesskey "W">
-
-  <!ENTITY cmdToggleAccessibleNodes.label "Show Accessible Nodes">
-  <!ENTITY cmdToggleAccessibleNodes.accesskey "c">
-
-  <!ENTITY cmdToggleProcessingInstructions.label "Show Processing Instructions">
-  <!ENTITY cmdToggleProcessingInstructions.accesskey "P">
 
   <!ENTITY cmdFlashSelected.label "Blink Selected Element">
 
@@ -92,11 +85,3 @@
   <!ENTITY findNodesDirectionDown.label "Down">
   <!ENTITY findNodesFind.label "Find">
   <!ENTITY findNodesCancel.label "Cancel">
-
-  <!ENTITY mnEditPasteMenu.label "Paste">
-  <!ENTITY mnEditPasteBefore.label "Before">
-  <!ENTITY mnEditPasteAfter.label "After">
-  <!ENTITY mnEditPasteReplace.label "In place of (Replace)">
-  <!ENTITY mnEditPasteFirstChild.label "As first child">
-  <!ENTITY mnEditPasteLastChild.label "As last child">
-  <!ENTITY mnEditPasteAsParent.label "As parent">

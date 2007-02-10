@@ -37,20 +37,25 @@
 #ifndef nsIDocument_h___
 #define nsIDocument_h___
 
-#include "nsINode.h"
-#include "nsStringGlue.h"
-#include "nsIDocumentObserver.h" // for nsUpdateType
+#include "nsISupports.h"
+#include "nsEvent.h"
+#include "nsString.h"
+#include "nsCOMArray.h"
+#include "nsIDocumentObserver.h"
 #include "nsCOMPtr.h"
 #include "nsIURI.h"
 #include "nsIBindingManager.h"
 #include "nsWeakPtr.h"
 #include "nsIWeakReferenceUtils.h"
 #include "nsILoadGroup.h"
+#include "nsReadableUtils.h"
 #include "nsCRT.h"
 #include "mozFlushType.h"
-#include "nsIAtom.h"
-#include "nsCompatibility.h"
+#include "nsPropertyTable.h"
+#include "nsHashSets.h"
+#include "nsAutoPtr.h"
 
+class nsIAtom;
 class nsIContent;
 class nsPresContext;
 class nsIPresShell;
@@ -77,7 +82,7 @@ class nsIDOMDocument;
 class nsIDOMDocumentType;
 class nsIObserver;
 class nsISupportsArray;
-class nsScriptLoader;
+class nsIScriptLoader;
 class nsIContentSink;
 class nsIScriptEventManager;
 class nsNodeInfoManager;
@@ -85,66 +90,39 @@ class nsICSSLoader;
 class nsHTMLStyleSheet;
 class nsIHTMLCSSStyleSheet;
 class nsILayoutHistoryState;
-class nsIVariant;
-class nsIDOMUserDataHandler;
-template<class E> class nsCOMArray;
-class nsIDocumentObserver;
 
 // IID for the nsIDocument interface
 #define NS_IDOCUMENT_IID      \
-{ 0x0b8acf09, 0x7877, 0x4928, \
- { 0x8b, 0xfb, 0x6d, 0x7c, 0x6d, 0x53, 0xff, 0x32 } }
+{ 0xd7c47f55, 0x480b, 0x4a60, \
+  { 0x9a, 0xdf, 0xca, 0x49, 0x87, 0x3c, 0x71, 0xe2 } }
+
+// The base value for the content ID counter.
+// This counter is used by the document to 
+// assign a monotonically increasing ID to each content
+// object it creates
+#define NS_CONTENT_ID_COUNTER_BASE 10000
+
 
 // Flag for AddStyleSheet().
 #define NS_STYLESHEET_FROM_CATALOG                (1 << 0)
 
 //----------------------------------------------------------------------
 
-// Document interface.  This is implemented by all document objects in
-// Gecko.
-class nsIDocument : public nsINode
+// Document interface
+class nsIDocument : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IDOCUMENT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOCUMENT_IID)
   NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
 
-#ifdef MOZILLA_INTERNAL_API
   nsIDocument()
-    : nsINode(nsnull),
-      mCharacterSet(NS_LITERAL_CSTRING("ISO-8859-1")),
+    : mCharacterSet(NS_LITERAL_CSTRING("ISO-8859-1")),
+      mNextContentID(NS_CONTENT_ID_COUNTER_BASE),
       mNodeInfoManager(nsnull),
-      mCompatMode(eCompatibility_FullStandards),
-      mIsInitialDocumentInWindow(PR_FALSE),
       mPartID(0)
   {
-    mParentPtrBits |= PARENT_BIT_INDOCUMENT;
   }
-#endif
-  
-  /**
-   * Let the document know that we're starting to load data into it.
-   * @param aCommand The parser command
-   *                 XXXbz It's odd to have that here.
-   * @param aChannel The channel the data will come from
-   * @param aLoadGroup The loadgroup this document should use from now on.
-   *                   Note that the document might not be the only thing using
-   *                   this loadgroup.
-   * @param aContainer The container this document is in.  This may be null.
-   *                   XXXbz maybe we should make it more explicit (eg make the
-   *                   container an nsIWebNavigation or nsIDocShell or
-   *                   something)?
-   * @param [out] aDocListener the listener to pump data from the channel into.
-   *                           Generally this will be the parser this document
-   *                           sets up, or some sort of data-handler for media
-   *                           documents.
-   * @param aReset whether the document should call Reset() on itself.  If this
-   *               is false, the document will NOT set its principal to the
-   *               channel's owner, will not clear any event listeners that are
-   *               already set on it, etc.
-   * @param aSink The content sink to use for the data.  If this is null and
-   *              the document needs a content sink, it will create one based
-   *              on whatever it knows about the data it's going to load.
-   */  
+
   virtual nsresult StartDocumentLoad(const char* aCommand,
                                      nsIChannel* aChannel,
                                      nsILoadGroup* aLoadGroup,
@@ -152,13 +130,13 @@ public:
                                      nsIStreamListener **aDocListener,
                                      PRBool aReset,
                                      nsIContentSink* aSink = nsnull) = 0;
+
   virtual void StopDocumentLoad() = 0;
 
   /**
-   * Return the title of the document.  This will return a void string
-   * if there is no title for this document).
+   * Return the title of the document. May return null.
    */
-  const nsString& GetDocumentTitle() const
+  const nsAFlatString& GetDocumentTitle() const
   {
     return mDocumentTitle;
   }
@@ -170,11 +148,15 @@ public:
   {
     return mDocumentURI;
   }
+  void SetDocumentURI(nsIURI* aURI)
+  {
+    mDocumentURI = aURI;
+  }
 
   /**
-   * Set the URI for the document.
+   * Return the principal responsible for this document.
    */
-  virtual void SetDocumentURI(nsIURI* aURI) = 0;
+  virtual nsIPrincipal* GetPrincipal() = 0;
 
   /**
    * Set the principal responsible for this document.
@@ -215,7 +197,7 @@ public:
    * will trigger a startDocumentLoad if necessary to answer the
    * question.
    */
-  const nsCString& GetDocumentCharacterSet() const
+  const nsAFlatCString& GetDocumentCharacterSet() const
   {
     return mCharacterSet;
   }
@@ -263,7 +245,7 @@ public:
    */
   void GetContentLanguage(nsAString& aContentLanguage) const
   {
-    CopyASCIItoUTF16(mContentLanguage, aContentLanguage);
+    CopyASCIItoUCS2(mContentLanguage, aContentLanguage);
   }
 
   // The state BidiEnabled should persist across multiple views
@@ -290,43 +272,13 @@ public:
   }
 
   /**
-   * Ask this document whether it's the initial document in its window.
+   * Return the Line Breaker for the document
    */
-  PRBool IsInitialDocument() const
-  {
-    return mIsInitialDocumentInWindow;
-  }
-  
-  /**
-   * Tell this document that it's the initial document in its window.  See
-   * comments on mIsInitialDocumentInWindow for when this should be called.
-   */
-  void SetIsInitialDocument(PRBool aIsInitialDocument)
-  {
-    mIsInitialDocumentInWindow = aIsInitialDocument;
-  }
-  
+  virtual nsILineBreaker* GetLineBreaker() = 0;
+  virtual void SetLineBreaker(nsILineBreaker* aLineBreaker) = 0;
+  virtual nsIWordBreaker* GetWordBreaker() = 0;
+  virtual void SetWordBreaker(nsIWordBreaker* aWordBreaker) = 0;
 
-  /**
-   * Get the bidi options for this document.
-   * @see nsBidiUtils.h
-   */
-  PRUint32 GetBidiOptions() const
-  {
-    return mBidiOptions;
-  }
-
-  /**
-   * Set the bidi options for this document.  This just sets the bits;
-   * callers are expected to take action as needed if they want this
-   * change to actually change anything immediately.
-   * @see nsBidiUtils.h
-   */
-  void SetBidiOptions(PRUint32 aBidiOptions)
-  {
-    mBidiOptions = aBidiOptions;
-  }
-  
   /**
    * Access HTTP header data (this may also get set from other
    * sources, like HTML META tags).
@@ -346,7 +298,6 @@ public:
   virtual PRBool DeleteShell(nsIPresShell* aShell) = 0;
   virtual PRUint32 GetNumberOfShells() const = 0;
   virtual nsIPresShell *GetShellAt(PRUint32 aIndex) const = 0;
-  virtual void SetShellsHidden(PRBool aHide) = 0;
 
   /**
    * Return the parent document of this document. Will return null
@@ -389,6 +340,26 @@ public:
   {
     return mRootContent;
   }
+
+  /**
+   * Set aRoot as the root content object for this document.  If aRoot is
+   * non-null, this should not be called on documents that currently have a
+   * root content without first clearing out the document's children.  Passing
+   * in null to unbind the existing root content is allowed.  This method will
+   * bind aRoot to the document; the caller need not call BindToTree on aRoot.
+   *
+   * Note that this method never sends out nsIDocumentObserver notifications;
+   * doing that is the caller's responsibility.
+   */
+  virtual nsresult SetRootContent(nsIContent* aRoot) = 0;
+
+  /** 
+   * Get the direct children of the document - content in
+   * the prolog, the root content and content in the epilog.
+   */
+  virtual nsIContent *GetChildAt(PRUint32 aIndex) const = 0;
+  virtual PRInt32 IndexOf(nsIContent* aPossibleChild) const = 0;
+  virtual PRUint32 GetChildCount() const = 0;
 
   /**
    * Accessors to the collection of stylesheets owned by this document.
@@ -501,30 +472,14 @@ public:
   virtual void SetScriptGlobalObject(nsIScriptGlobalObject* aGlobalObject) = 0;
 
   /**
-   * Get the object that is used as the scope for all of the content
-   * wrappers whose owner document is this document. Unlike the script global
-   * object, this will only return null when the global object for this
-   * document is truly gone. Use this object when you're trying to find a
-   * content wrapper in XPConnect.
-   */
-  virtual nsIScriptGlobalObject* GetScopeObject() = 0;
-
-  /**
    * Return the window containing the document (the outer window).
    */
   virtual nsPIDOMWindow *GetWindow() = 0;
 
   /**
-   * Return the inner window used as the script compilation scope for
-   * this document. If you're not absolutely sure you need this, use
-   * GetWindow().
-   */
-  virtual nsPIDOMWindow *GetInnerWindow() = 0;
-
-  /**
    * Get the script loader for this document
    */ 
-  virtual nsScriptLoader* GetScriptLoader() = 0;
+  virtual nsIScriptLoader* GetScriptLoader() = 0;
 
   //----------------------------------------------------------------------
 
@@ -551,11 +506,27 @@ public:
   virtual void EndUpdate(nsUpdateType aUpdateType) = 0;
   virtual void BeginLoad() = 0;
   virtual void EndLoad() = 0;
+  virtual void CharacterDataChanged(nsIContent* aContent, PRBool aAppend) = 0;
   // notify that one or two content nodes changed state
   // either may be nsnull, but not both
   virtual void ContentStatesChanged(nsIContent* aContent1,
                                     nsIContent* aContent2,
                                     PRInt32 aStateMask) = 0;
+  virtual void AttributeWillChange(nsIContent* aChild,
+                                   PRInt32 aNameSpaceID,
+                                   nsIAtom* aAttribute) = 0;
+  virtual void AttributeChanged(nsIContent* aChild,
+                                PRInt32 aNameSpaceID,
+                                nsIAtom* aAttribute,
+                                PRInt32 aModType) = 0;
+  virtual void ContentAppended(nsIContent* aContainer,
+                               PRInt32 aNewIndexInContainer) = 0;
+  virtual void ContentInserted(nsIContent* aContainer,
+                               nsIContent* aChild,
+                               PRInt32 aIndexInContainer) = 0;
+  virtual void ContentRemoved(nsIContent* aContainer,
+                              nsIContent* aChild,
+                              PRInt32 aIndexInContainer) = 0;
 
   // Observation hooks for style data to propagate notifications
   // to document observers
@@ -567,18 +538,21 @@ public:
   virtual void StyleRuleRemoved(nsIStyleSheet* aStyleSheet,
                                 nsIStyleRule* aStyleRule) = 0;
 
-  /**
-   * Notify document of pending attribute change
-   */
-  virtual void AttributeWillChange(nsIContent* aChild,
-                                   PRInt32 aNameSpaceID,
-                                   nsIAtom* aAttribute) = 0;
+  virtual nsresult HandleDOMEvent(nsPresContext* aPresContext,
+                                  nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                                  PRUint32 aFlags,
+                                  nsEventStatus* aEventStatus) = 0;
 
   /**
    * Flush notifications for this document and its parent documents
    * (since those may affect the layout of this one).
    */
   virtual void FlushPendingNotifications(mozFlushType aType) = 0;
+
+  PRInt32 GetAndIncrementContentID()
+  {
+    return mNextContentID++;
+  }
 
   nsIBindingManager* BindingManager() const
   {
@@ -597,21 +571,13 @@ public:
   /**
    * Reset the document using the given channel and loadgroup.  This works
    * like ResetToURI, but also sets the document's channel to aChannel.
-   * The principal of the document will be set from the channel.
    */
   virtual void Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup) = 0;
 
   /**
-   * Reset this document to aURI, aLoadGroup, and aPrincipal.  aURI must not be
-   * null.  If aPrincipal is null, a codebase principal based on aURI will be
-   * used.
+   * Reset this document to aURI and aLoadGroup.  aURI must not be null.
    */
-  virtual void ResetToURI(nsIURI *aURI, nsILoadGroup* aLoadGroup,
-                          nsIPrincipal* aPrincipal) = 0;
-
-  virtual void AddReference(void *aKey, nsISupports *aReference) = 0;
-  virtual nsISupports *GetReference(void *aKey) = 0;
-  virtual already_AddRefed<nsISupports> RemoveReference(void *aKey) = 0;
+  virtual void ResetToURI(nsIURI *aURI, nsILoadGroup* aLoadGroup) = 0;
 
   /**
    * Set the container (docshell) for this document.
@@ -691,6 +657,18 @@ public:
    */
   virtual PRInt32 GetDefaultNamespaceID() const = 0;
 
+  virtual void* GetProperty(nsIAtom *aPropertyName,
+                            nsresult *aStatus = nsnull) const = 0;
+
+  virtual nsresult SetProperty(nsIAtom            *aPropertyName,
+                               void               *aValue,
+                               NSPropertyDtorFunc  aDtor = nsnull) = 0;
+
+  virtual nsresult DeleteProperty(nsIAtom *aPropertyName) = 0;
+
+  virtual void* UnsetProperty(nsIAtom  *aPropertyName,
+                              nsresult *aStatus = nsnull) = 0;
+
   nsPropertyTable* PropertyTable() { return &mPropertyTable; }
 
   /**
@@ -760,16 +738,11 @@ public:
    * should block onload is posted.  onload is guaranteed to not fire until
    * either all calls to BlockOnload() have been matched by calls to
    * UnblockOnload() or the load has been stopped altogether (by the user
-   * pressing the Stop button, say).
+   * pressing the Stop button, say).  onload may fire synchronously from inside
+   * the UnblockOnload() call.
    */
   virtual void BlockOnload() = 0;
-  /**
-   * @param aFireSync whether to fire onload synchronously.  If false,
-   * onload will fire asynchronously after all onload blocks have been
-   * removed.  It will NOT fire from inside UnblockOnload.  If true,
-   * onload may fire from inside UnblockOnload.
-   */
-  virtual void UnblockOnload(PRBool aFireSync) = 0;
+  virtual void UnblockOnload() = 0;
 
   /**
    * Notification that the page has been shown, for documents which are loaded
@@ -813,20 +786,6 @@ public:
    */
   virtual void NotifyURIVisitednessChanged(nsIURI* aURI) = 0;
 
-  /**
-   * Resets and removes a box object from the document's box object cache
-   *
-   * @param aElement canonical nsIContent pointer of the box object's element
-   */
-  virtual void ClearBoxObjectFor(nsIContent *aContent) = 0;
-
-  /**
-   * Get the compatibility mode for this document
-   */
-  nsCompatibility GetCompatibilityMode() const {
-    return mCompatMode;
-  }
-
 protected:
   ~nsIDocument()
   {
@@ -854,6 +813,10 @@ protected:
   // such element exists.
   nsIContent* mRootContent;
 
+  // A content ID counter used to give a monotonically increasing ID
+  // to the content objects in the document's content model
+  PRInt32 mNextContentID;
+
   nsCOMPtr<nsIBindingManager> mBindingManager;
   nsNodeInfoManager* mNodeInfoManager; // [STRONG]
 
@@ -864,23 +827,10 @@ protected:
   // Table of element properties for this document.
   nsPropertyTable mPropertyTable;
 
-  // Compatibility mode
-  nsCompatibility mCompatMode;
-
   // True if BIDI is enabled.
-  PRPackedBool mBidiEnabled;
+  PRBool mBidiEnabled;
 
-  // True if this document is the initial document for a window.  This should
-  // basically be true only for documents that exist in newly-opened windows or
-  // documents created to satisfy a GetDocument() on a window when there's no
-  // document in it.
-  PRPackedBool mIsInitialDocumentInWindow;
-
-  // The bidi options for this document.  What this bitfield means is
-  // defined in nsBidiUtils.h
-  PRUint32 mBidiOptions;
-
-  nsCString mContentLanguage;
+  nsXPIDLCString mContentLanguage;
   nsCString mContentType;
 
   // The document's security info
@@ -891,7 +841,25 @@ protected:
   PRUint32 mPartID;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDocument, NS_IDOCUMENT_IID)
+// IID for the nsIDocument interface
+#define NS_IDOCUMENT_MOZILLA_1_8_0_BRANCH_IID      \
+{ 0xf7e62f7e, 0x394b, 0x44ad, \
+  { 0x85, 0x51, 0x9c, 0x61, 0x8c, 0xab, 0x80, 0x70 } }
+
+class nsIDocument_MOZILLA_1_8_0_BRANCH : public nsISupports
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOCUMENT_MOZILLA_1_8_0_BRANCH_IID)
+
+  /**
+   * Get the object that is used as the scope for all of the content
+   * wrappers whose owner document is this document. Unlike the script global
+   * object, this will only return null when the global object for this
+   * document is truly gone. Use this object when you're trying to find a
+   * content wrapper in XPConnect.
+   */
+  virtual nsIScriptGlobalObject* GetScopeObject() = 0;
+};
 
 /**
  * Helper class to automatically handle batching of document updates.  This
@@ -925,13 +893,6 @@ private:
   nsUpdateType mUpdateType;
 };
 
-#define MOZ_AUTO_DOC_UPDATE_PASTE2(tok,line) tok##line
-#define MOZ_AUTO_DOC_UPDATE_PASTE(tok,line) \
-  MOZ_AUTO_DOC_UPDATE_PASTE2(tok,line)
-#define MOZ_AUTO_DOC_UPDATE(doc,type,notify) \
-  mozAutoDocUpdate MOZ_AUTO_DOC_UPDATE_PASTE(_autoDocUpdater_, __LINE__) \
-  (doc,type,notify)
-
 // XXX These belong somewhere else
 nsresult
 NS_NewHTMLDocument(nsIDocument** aInstancePtrResult);
@@ -950,18 +911,12 @@ NS_NewImageDocument(nsIDocument** aInstancePtrResult);
 nsresult
 NS_NewDocumentFragment(nsIDOMDocumentFragment** aInstancePtrResult,
                        nsNodeInfoManager *aNodeInfoManager);
-
-// Note: it's the caller's responsibility to create or get aPrincipal as needed
-// -- this method will not attempt to get a principal based on aDocumentURI.
-// Also, both aDocumentURI and aBaseURI must not be null.
 nsresult
 NS_NewDOMDocument(nsIDOMDocument** aInstancePtrResult,
                   const nsAString& aNamespaceURI, 
                   const nsAString& aQualifiedName, 
                   nsIDOMDocumentType* aDoctype,
-                  nsIURI* aDocumentURI,
-                  nsIURI* aBaseURI,
-                  nsIPrincipal* aPrincipal);
+                  nsIURI* aBaseURI);
 nsresult
 NS_NewPluginDocument(nsIDocument** aInstancePtrResult);
 

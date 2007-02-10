@@ -69,9 +69,8 @@
       </vbox>
     </groupbox>
 
-    <groupbox id="LinkURLBox"><caption label="&LinkURLBox.label;"/>
+    <groupbox><caption label="&LinkURLBox.label;"/>
       <vbox id="LinkLocationBox"/>
-      <!-- mail compose will insert custom item here defined in mailComposeEditorOverlay.xul -->
     </groupbox>
   </vbox>
   <!-- from EdDialogOverlay -->

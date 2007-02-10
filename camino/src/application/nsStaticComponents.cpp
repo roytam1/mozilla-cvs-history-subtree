@@ -54,19 +54,19 @@
 #define MODULES \
     MODULE(xpcomObsoleteModule) \
     MODULE(nsI18nModule) \
-    MODULE(nsChardetModule) \
     MODULE(nsUConvModule) \
     MODULE(nsUCvMathModule) \
     MODULE(nsJarModule) \
     MODULE(xpconnect) \
-    MODULE(necko) \
+    MODULE(necko_core_and_primary_protocols) \
+    MODULE(necko_secondary_protocols) \
     MODULE(nsPrefModule) \
     MODULE(nsCJVMManagerModule) \
     MODULE(nsSecurityManagerModule) \
     MODULE(nsChromeModule) \
     MODULE(nsRDFModule) \
     MODULE(nsParserModule) \
-    MODULE(nsGfxModule) \
+    MODULE(nsGfxMacModule) \
     MODULE(nsImageLib2Module) \
     MODULE(nsPluginModule) \
     MODULE(nsWidgetMacModule) \
@@ -82,11 +82,9 @@
     MODULE(nsXMLExtrasModule) \
     MODULE(nsUniversalCharDetModule) \
     MODULE(nsTypeAheadFind) \
+    MODULE(TransformiixModule) \
     MODULE(nsPermissionsModule) \
     MODULE(nsComposerModule) \
-    MODULE(xpAutoComplete) \
-    MODULE(mozSpellCheckerModule) \
-    MODULE(nsAuthModule) \
     MODULE(BOOT) \
     MODULE(NSS) \
     /* end of list */

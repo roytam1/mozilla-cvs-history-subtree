@@ -48,8 +48,10 @@
 #include "nsIPresShell.h"
 #include "nsHTMLContainerFrame.h"
 #include "nsINameSpaceManager.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsFrameManager.h"
+#include "nsLayoutAtoms.h"
+#include "nsXULAtoms.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMNamedNodeMap.h"
 #include "nsIDOMAttr.h"
@@ -60,6 +62,10 @@
 #include "nsITheme.h"
 #include "nsIServiceManager.h"
 #include "nsIBoxLayout.h"
+
+#ifdef DEBUG_COELESCED
+static PRInt32 coelesced = 0;
+#endif
 
 #ifdef DEBUG_LAYOUT
 PRInt32 gIndent = 0;
@@ -128,7 +134,7 @@ nsBox::DumpBox(FILE* aFile)
 {
   nsAutoString s;
   ListBox(s);
-  fprintf(aFile, "%s", NS_LossyConvertUTF16toASCII(s).get());
+  fprintf(aFile, "%s", NS_LossyConvertUCS2toASCII(s).get());
   return NS_OK;
 }
 
@@ -147,6 +153,16 @@ nsBox::PropagateDebug(nsBoxLayoutState& aState)
 }
 #endif
 
+/**
+ * Hack for deck who requires that all its children has widgets
+ */
+NS_IMETHODIMP 
+nsBox::ChildrenMustHaveWidgets(PRBool& aMust) const
+{
+  aMust = PR_FALSE;
+  return NS_OK;
+}
+
 #ifdef DEBUG_LAYOUT
 void
 nsBox::GetBoxName(nsAutoString& aName)
@@ -161,7 +177,24 @@ nsBox::BeginLayout(nsBoxLayoutState& aState)
 #ifdef DEBUG_LAYOUT 
 
   nsBoxAddIndents();
-  printf("Layout: ");
+
+  nsAutoString reason;
+  switch(aState.LayoutReason())
+    {
+    case nsBoxLayoutState::Dirty:
+      reason.AssignLiteral("Dirty");
+      break;
+    case nsBoxLayoutState::Initial:
+      reason.AssignLiteral("Initial");
+      break;
+    case nsBoxLayoutState::Resize:
+      reason.AssignLiteral("Resize");
+      break;
+    }
+
+  char ch[100];
+  reason.ToCString(ch,100);
+  printf("%s Layout: ", ch);
   DumpBox(stdout);
   printf("\n");
   gIndent++;
@@ -169,18 +202,7 @@ nsBox::BeginLayout(nsBoxLayoutState& aState)
 
   // mark ourselves as dirty so no child under us
   // can post an incremental layout.
-  // XXXldb Is this still needed?
   mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-
-  if (GetStateBits() & NS_FRAME_IS_DIRTY)
-  {
-    // If the parent is dirty, all the children are dirty (nsHTMLReflowState
-    // does this too).
-    nsIFrame* box;
-    for (GetChildBox(&box); box; box->GetNextBox(&box))
-      box->AddStateBits(NS_FRAME_IS_DIRTY);
-  }
-
 
 #ifdef DEBUG_LAYOUT
   PropagateDebug(aState);
@@ -206,8 +228,19 @@ nsBox::EndLayout(nsBoxLayoutState& aState)
   return SyncLayout(aState);
 }
 
+#ifdef REFLOW_COELESCED
+void Coelesced()
+{
+   printf("Coelesed=%d\n", ++coelesced);
+
+}
+
+#endif
+
 PRBool nsBox::gGotTheme = PR_FALSE;
 nsITheme* nsBox::gTheme = nsnull;
+
+MOZ_DECL_CTOR_COUNTER(nsBox)
 
 nsBox::nsBox()
 {
@@ -235,6 +268,156 @@ nsBox::Shutdown()
 }
 
 NS_IMETHODIMP
+nsBox::MarkDirty(nsBoxLayoutState& aState)
+{
+  // only reflow if we aren't already dirty.
+  if (GetStateBits() & NS_FRAME_IS_DIRTY) {      
+#ifdef DEBUG_COELESCED
+      Coelesced();
+#endif
+      return NS_OK;
+  }
+
+  AddStateBits(NS_FRAME_IS_DIRTY);
+
+  NeedsRecalc();
+
+  nsCOMPtr<nsIBoxLayout> layout;
+  GetLayoutManager(getter_AddRefs(layout));
+  if (layout)
+    layout->BecameDirty(this, aState);
+
+  if (GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN) {   
+#ifdef DEBUG_COELESCED
+      Coelesced();
+#endif
+      return NS_OK;
+  }
+
+  nsIBox* parent = nsnull;
+  GetParentBox(&parent);
+  if (parent)
+     return parent->RelayoutDirtyChild(aState, this);
+  else {
+    return GetParent()->ReflowDirtyChild(aState.PresShell(), this);
+  }
+}
+
+nsresult
+nsIFrame::MarkDirtyChildren(nsBoxLayoutState& aState)
+{
+  return RelayoutDirtyChild(aState, nsnull);
+}
+
+NS_IMETHODIMP
+nsBox::MarkStyleChange(nsBoxLayoutState& aState)
+{
+  NeedsRecalc();
+
+  if (HasStyleChange())
+    return NS_OK;
+
+  // iterate through all children making them dirty
+  MarkChildrenStyleChange();
+
+  nsCOMPtr<nsIBoxLayout> layout;
+  GetLayoutManager(getter_AddRefs(layout));
+  if (layout)
+    layout->BecameDirty(this, aState);
+
+  nsIBox* parent = nsnull;
+  GetParentBox(&parent);
+  if (parent)
+     return parent->RelayoutDirtyChild(aState, this);
+  else {
+    /*
+    aState.PresShell()->AppendReflowCommand(this, eReflowType_StyleChanged,
+                                            nsnull);
+    return NS_OK;
+    */
+    return GetParent()->ReflowDirtyChild(aState.PresShell(), this);
+  }
+
+  return NS_OK;
+}
+
+PRBool
+nsBox::HasStyleChange()
+{
+  PRBool aDirty = PR_FALSE;
+  IsDirty(aDirty);
+  return aDirty;
+}
+
+void
+nsBox::SetStyleChangeFlag(PRBool aDirty)
+{
+  NeedsRecalc();
+  AddStateBits(NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN);
+}
+
+NS_IMETHODIMP
+nsBox::MarkChildrenStyleChange()
+{
+  // only reflow if we aren't already dirty.
+  if (HasStyleChange()) {   
+#ifdef DEBUG_COELESCED
+    printf("StyleChange reflows coelesced=%d\n", ++StyleCoelesced);  
+#endif
+    return NS_OK;
+  }
+
+  SetStyleChangeFlag(PR_TRUE);
+
+  nsIBox* child = nsnull;
+  GetChildBox(&child);
+  while(child)
+  {
+    child->MarkChildrenStyleChange();
+    child->GetNextBox(&child);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBox::RelayoutDirtyChild(nsBoxLayoutState& aState, nsIBox* aChild)
+{
+    if (aChild != nsnull) {
+        nsCOMPtr<nsIBoxLayout> layout;
+        GetLayoutManager(getter_AddRefs(layout));
+        if (layout)
+          layout->ChildBecameDirty(this, aState, aChild);
+    }
+
+    // if we are not dirty mark ourselves dirty and tell our parent we are dirty too.
+    if (!(GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN)) {      
+      // Mark yourself as dirty and needing to be recalculated
+      AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+
+      if (GetStateBits() & NS_FRAME_REFLOW_ROOT) {
+        aState.PresShell()->AppendReflowCommand(this, eReflowType_ReflowDirty,
+                                                nsnull);
+        return NS_OK;
+      }
+
+      NeedsRecalc();
+
+      nsIBox* parentBox = nsnull;
+      GetParentBox(&parentBox);
+      if (parentBox)
+         return parentBox->RelayoutDirtyChild(aState, this);
+      return GetParent()->ReflowDirtyChild(aState.PresShell(), this);
+    } else {
+#ifdef DEBUG_COELESCED
+      Coelesced();
+#endif
+    }
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsBox::RelayoutChildAtOrdinal(nsBoxLayoutState& aState, nsIBox* aChild)
 {
   return NS_OK;
@@ -257,8 +440,7 @@ nsBox::GetHAlign(Halignment& aAlign)
 nsresult
 nsIFrame::GetClientRect(nsRect& aClientRect)
 {
-  aClientRect = mRect;
-  aClientRect.MoveTo(0,0);
+  GetContentRect(aClientRect);
 
   nsMargin borderPadding;
   GetBorderAndPadding(borderPadding);
@@ -277,6 +459,16 @@ nsIFrame::GetClientRect(nsRect& aClientRect)
 
  // NS_ASSERTION(aClientRect.width >=0 && aClientRect.height >= 0, "Content Size < 0");
 
+  return NS_OK;
+}
+
+nsresult
+nsIFrame::GetContentRect(nsRect& aContentRect)
+{
+  aContentRect = mRect;
+  aContentRect.x = 0;
+  aContentRect.y = 0;
+  NS_BOX_ASSERTION(this, aContentRect.width >=0 && aContentRect.height >= 0, "Content Size < 0");
   return NS_OK;
 }
 
@@ -304,7 +496,7 @@ nsBox::SetBounds(nsBoxLayoutState& aState, const nsRect& aRect, PRBool aRemoveOv
     if (aRemoveOverflowArea && (GetStateBits() & NS_FRAME_OUTSIDE_CHILDREN)) {
       // remove the previously stored overflow area
       GetPresContext()->PropertyTable()->
-        DeleteProperty(this, nsGkAtoms::overflowAreaProperty);
+        DeleteProperty(this, nsLayoutAtoms::overflowAreaProperty);
       RemoveStateBits(NS_FRAME_OUTSIDE_CHILDREN);
     }
 
@@ -370,10 +562,11 @@ nsBox::GetBorder(nsMargin& aMargin)
       nsMargin margin(0, 0, 0, 0);
       gTheme->GetWidgetBorder(context->DeviceContext(), this,
                               disp->mAppearance, &margin);
-      aMargin.top = context->DevPixelsToAppUnits(margin.top);
-      aMargin.right = context->DevPixelsToAppUnits(margin.right);
-      aMargin.bottom = context->DevPixelsToAppUnits(margin.bottom);
-      aMargin.left = context->DevPixelsToAppUnits(margin.left);
+      float p2t = context->ScaledPixelsToTwips();
+      aMargin.top = NSIntPixelsToTwips(margin.top, p2t);
+      aMargin.right = NSIntPixelsToTwips(margin.right, p2t);
+      aMargin.bottom = NSIntPixelsToTwips(margin.bottom, p2t);
+      aMargin.left = NSIntPixelsToTwips(margin.left, p2t);
       return NS_OK;
     }
   }
@@ -398,10 +591,11 @@ nsBox::GetPadding(nsMargin& aMargin)
                                                  this, disp->mAppearance,
                                                  &margin);
       if (useThemePadding) {
-        aMargin.top = context->DevPixelsToAppUnits(margin.top);
-        aMargin.right = context->DevPixelsToAppUnits(margin.right);
-        aMargin.bottom = context->DevPixelsToAppUnits(margin.bottom);
-        aMargin.left = context->DevPixelsToAppUnits(margin.left);
+        float p2t = context->ScaledPixelsToTwips();
+        aMargin.top = NSIntPixelsToTwips(margin.top, p2t);
+        aMargin.right = NSIntPixelsToTwips(margin.right, p2t);
+        aMargin.bottom = NSIntPixelsToTwips(margin.bottom, p2t);
+        aMargin.left = NSIntPixelsToTwips(margin.left, p2t);
         return NS_OK;
       }
     }
@@ -426,6 +620,12 @@ nsresult
 nsIFrame::GetParentBox(nsIBox** aParent)
 {
   *aParent = (mParent && mParent->IsBoxFrame()) ? mParent : nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBox::NeedsRecalc()
+{
   return NS_OK;
 }
 
@@ -483,39 +683,45 @@ nsBox::GetLayoutManager(nsIBoxLayout** aLayout)
 }
 
 
-nsSize
-nsBox::GetPrefSize(nsBoxLayoutState& aState)
+NS_IMETHODIMP
+nsBox::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
-  nsSize pref(0,0);
-  DISPLAY_PREF_SIZE(this, pref);
+  aSize.width = 0;
+  aSize.height = 0;
 
-  if (IsCollapsed(aState))
-    return pref;
+  PRBool collapsed = PR_FALSE;
+  IsCollapsed(aState, collapsed);
+  if (collapsed)
+    return NS_OK;
 
-  AddBorderAndPadding(pref);
-  AddInset(pref);
-  nsIBox::AddCSSPrefSize(aState, this, pref);
+  AddBorderAndPadding(aSize);
+  AddInset(aSize);
+  nsIBox::AddCSSPrefSize(aState, this, aSize);
 
-  nsSize minSize = GetMinSize(aState);
-  nsSize maxSize = GetMaxSize(aState);
-  BoundsCheck(minSize, pref, maxSize);
+  nsSize minSize(0, 0), maxSize(0, 0);
+  GetMinSize(aState, minSize);
+  GetMaxSize(aState, maxSize);
 
-  return pref;
+  BoundsCheck(minSize, aSize, maxSize);
+
+  return NS_OK;
 }
 
-nsSize
-nsBox::GetMinSize(nsBoxLayoutState& aState)
+NS_IMETHODIMP
+nsBox::GetMinSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
-  nsSize min(0,0);
-  DISPLAY_MIN_SIZE(this, min);
+  aSize.width = 0;
+  aSize.height = 0;
 
-  if (IsCollapsed(aState))
-    return min;
+  PRBool collapsed = PR_FALSE;
+  IsCollapsed(aState, collapsed);
+  if (collapsed)
+    return NS_OK;
 
-  AddBorderAndPadding(min);
-  AddInset(min);
-  nsIBox::AddCSSMinSize(aState, this, min);
-  return min;
+  AddBorderAndPadding(aSize);
+  AddInset(aSize);
+  nsIBox::AddCSSMinSize(aState, this, aSize);
+  return NS_OK;
 }
 
 nsSize
@@ -524,65 +730,71 @@ nsBox::GetMinSizeForScrollArea(nsBoxLayoutState& aBoxLayoutState)
   return nsSize(0, 0);
 }
 
-nsSize
-nsBox::GetMaxSize(nsBoxLayoutState& aState)
+NS_IMETHODIMP
+nsBox::GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
-  nsSize max(NS_INTRINSICSIZE, NS_INTRINSICSIZE);
-  DISPLAY_MAX_SIZE(this, max);
+  aSize.width = NS_INTRINSICSIZE;
+  aSize.height = NS_INTRINSICSIZE;
 
-  if (IsCollapsed(aState))
-    return max;
-
-  AddBorderAndPadding(max);
-  AddInset(max);
-  nsIBox::AddCSSMaxSize(aState, this, max);
-  return max;
-}
-
-nscoord
-nsBox::GetFlex(nsBoxLayoutState& aState)
-{
-  nscoord flex = 0;
-
-  GetDefaultFlex(flex);
-  nsIBox::AddCSSFlex(aState, this, flex);
-
-  return flex;
-}
-
-PRUint32
-nsIFrame::GetOrdinal(nsBoxLayoutState& aState)
-{
-  PRUint32 ordinal = DEFAULT_ORDINAL_GROUP;
-  nsIBox::AddCSSOrdinal(aState, this, ordinal);
-
-  return ordinal;
-}
-
-nscoord
-nsBox::GetBoxAscent(nsBoxLayoutState& aState)
-{
-  if (IsCollapsed(aState))
-    return 0;
-
-  return GetPrefSize(aState).height;
-}
-
-PRBool
-nsBox::IsCollapsed(nsBoxLayoutState& aState)
-{
   PRBool collapsed = PR_FALSE;
-  nsIBox::AddCSSCollapsed(aState, this, collapsed);
+  IsCollapsed(aState, collapsed);
+  if (collapsed)
+    return NS_OK;
 
-  return collapsed;
+  AddBorderAndPadding(aSize);
+  AddInset(aSize);
+  nsIBox::AddCSSMaxSize(aState, this, aSize);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBox::GetFlex(nsBoxLayoutState& aState, nscoord& aFlex)
+{
+  aFlex = 0;
+
+  GetDefaultFlex(aFlex);
+  nsIBox::AddCSSFlex(aState, this, aFlex);
+
+  return NS_OK;
+}
+
+nsresult
+nsIFrame::GetOrdinal(nsBoxLayoutState& aState, PRUint32& aOrdinal)
+{
+  aOrdinal = DEFAULT_ORDINAL_GROUP;
+  nsIBox::AddCSSOrdinal(aState, this, aOrdinal);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBox::GetAscent(nsBoxLayoutState& aState, nscoord& aAscent)
+{
+  aAscent = 0;
+  PRBool collapsed = PR_FALSE;
+  IsCollapsed(aState, collapsed);
+  if (collapsed)
+    return NS_OK;
+
+  nsSize size(0,0);
+  nsresult rv = GetPrefSize(aState, size);
+  aAscent = size.height;
+  return rv;
+}
+
+NS_IMETHODIMP
+nsBox::IsCollapsed(nsBoxLayoutState& aState, PRBool& aCollapsed)
+{
+  aCollapsed = PR_FALSE;
+  nsIBox::AddCSSCollapsed(aState, this, aCollapsed);
+
+  return NS_OK;
 }
 
 nsresult
 nsIFrame::Layout(nsBoxLayoutState& aState)
 {
   nsBox *box = NS_STATIC_CAST(nsBox*, this);
-  DISPLAY_LAYOUT(box);
-
   box->BeginLayout(aState);
 
   box->DoLayout(aState);
@@ -615,7 +827,9 @@ nsBox::SyncLayout(nsBoxLayoutState& aState)
   */
   
 
-  if (GetStateBits() & NS_FRAME_IS_DIRTY)
+  PRBool dirty = PR_FALSE;
+  IsDirty(dirty);
+  if (dirty || aState.LayoutReason() == nsBoxLayoutState::Initial)
      Redraw(aState);
 
   RemoveStateBits(NS_FRAME_HAS_DIRTY_CHILDREN | NS_FRAME_IS_DIRTY
@@ -648,11 +862,23 @@ nsBox::SyncLayout(nsBoxLayoutState& aState)
       GetChildBox(&box);
       while (box) {
         nsRect* overflowArea = box->GetOverflowAreaProperty();
-        nsRect bounds = overflowArea ? *overflowArea + box->GetPosition()
-                                     : box->GetRect();
+        nsRect bounds = overflowArea ? *overflowArea + box->GetPosition() :
+                                         bounds = box->GetRect();
         rect.UnionRect(rect, bounds);
 
         box->GetNextBox(&box);
+      }
+    }
+
+    const nsStyleDisplay* disp = GetStyleDisplay();
+    if (disp->mAppearance && gTheme) {
+      // Add in the theme's desired overflow
+      if (gTheme->ThemeSupportsWidget(presContext, this, disp->mAppearance)) {
+        nsRect r;
+        if (gTheme->GetWidgetOverflow(presContext->DeviceContext(), this,
+                                      disp->mAppearance, &r)) {
+          rect.UnionRect(rect, r);
+        }
       }
     }
 
@@ -684,6 +910,12 @@ nsIFrame::Redraw(nsBoxLayoutState& aState,
 {
   if (aState.PaintingDisabled())
     return NS_OK;
+
+  const nsHTMLReflowState* s = aState.GetReflowState();
+  if (s) {
+    if (s->reason != eReflowReason_Incremental)
+      return NS_OK;
+  }
 
   nsRect damageRect(0,0,0,0);
   if (aDamageRect)
@@ -720,27 +952,26 @@ nsIBox::AddCSSPrefSize(nsBoxLayoutState& aState, nsIBox* aBox, nsSize& aSize)
     // ignore 'height' and 'width' attributes if the actual element is not XUL
     // For example, we might be magic XUL frames whose primary content is an HTML
     // <select>
-    if (content && content->IsNodeOfType(nsINode::eXUL)) {
+    if (content && content->IsContentOfType(nsIContent::eXUL)) {
         nsPresContext* presContext = aState.PresContext();
 
         nsAutoString value;
         PRInt32 error;
 
-        content->GetAttr(kNameSpaceID_None, nsGkAtoms::width, value);
-        if (!value.IsEmpty()) {
+        if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, nsHTMLAtoms::width, value))
+        {
             value.Trim("%");
 
             aSize.width =
-              nsPresContext::CSSPixelsToAppUnits(value.ToInteger(&error));
+              presContext->IntScaledPixelsToTwips(value.ToInteger(&error));
             widthSet = PR_TRUE;
         }
 
-        content->GetAttr(kNameSpaceID_None, nsGkAtoms::height, value);
-        if (!value.IsEmpty()) {
+        if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, nsHTMLAtoms::height, value))
+        {
             value.Trim("%");
 
-            aSize.height =
-              nsPresContext::CSSPixelsToAppUnits(value.ToInteger(&error));
+            aSize.height = presContext->IntScaledPixelsToTwips(value.ToInteger(&error));
             heightSet = PR_TRUE;
         }
     }
@@ -763,16 +994,17 @@ nsIBox::AddCSSMinSize(nsBoxLayoutState& aState, nsIBox* aBox, nsSize& aSize)
       nsITheme *theme = aState.PresContext()->GetTheme();
       if (theme && theme->ThemeSupportsWidget(aState.PresContext(), aBox, display->mAppearance)) {
         nsSize size;
-        nsIRenderingContext* rendContext = aState.GetRenderingContext();
-        if (rendContext) {
-          theme->GetMinimumWidgetSize(rendContext, aBox,
+        const nsHTMLReflowState* reflowState = aState.GetReflowState();
+        if (reflowState) {
+          theme->GetMinimumWidgetSize(reflowState->rendContext, aBox,
                                       display->mAppearance, &size, &canOverride);
+          float p2t = aState.PresContext()->ScaledPixelsToTwips();
           if (size.width) {
-            aSize.width = aState.PresContext()->DevPixelsToAppUnits(size.width);
+            aSize.width = NSIntPixelsToTwips(size.width, p2t);
             widthSet = PR_TRUE;
           }
           if (size.height) {
-            aSize.height = aState.PresContext()->DevPixelsToAppUnits(size.height);
+            aSize.height = NSIntPixelsToTwips(size.height, p2t);
             heightSet = PR_TRUE;
           }
         }
@@ -817,25 +1049,23 @@ nsIBox::AddCSSMinSize(nsBoxLayoutState& aState, nsIBox* aBox, nsSize& aSize)
         nsAutoString value;
         PRInt32 error;
 
-        content->GetAttr(kNameSpaceID_None, nsGkAtoms::minwidth, value);
-        if (!value.IsEmpty())
+        if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, nsXULAtoms::minwidth, value))
         {
             value.Trim("%");
 
             nscoord val =
-              nsPresContext::CSSPixelsToAppUnits(value.ToInteger(&error));
+              presContext->IntScaledPixelsToTwips(value.ToInteger(&error));
             if (val > aSize.width)
               aSize.width = val;
             widthSet = PR_TRUE;
         }
 
-        content->GetAttr(kNameSpaceID_None, nsGkAtoms::minheight, value);
-        if (!value.IsEmpty())
+        if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, nsXULAtoms::minheight, value))
         {
             value.Trim("%");
 
             nscoord val =
-              nsPresContext::CSSPixelsToAppUnits(value.ToInteger(&error));
+              presContext->IntScaledPixelsToTwips(value.ToInteger(&error));
             if (val > aSize.height)
               aSize.height = val;
 
@@ -876,22 +1106,22 @@ nsIBox::AddCSSMaxSize(nsBoxLayoutState& aState, nsIBox* aBox, nsSize& aSize)
         nsAutoString value;
         PRInt32 error;
 
-        content->GetAttr(kNameSpaceID_None, nsGkAtoms::maxwidth, value);
-        if (!value.IsEmpty()) {
+        if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, nsXULAtoms::maxwidth, value))
+        {
             value.Trim("%");
 
             nscoord val =
-              nsPresContext::CSSPixelsToAppUnits(value.ToInteger(&error));
+              presContext->IntScaledPixelsToTwips(value.ToInteger(&error));
             aSize.width = val;
             widthSet = PR_TRUE;
         }
 
-        content->GetAttr(kNameSpaceID_None, nsGkAtoms::maxheight, value);
-        if (!value.IsEmpty()) {
+        if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, nsXULAtoms::maxheight, value))
+        {
             value.Trim("%");
 
             nscoord val =
-              nsPresContext::CSSPixelsToAppUnits(value.ToInteger(&error));
+              presContext->IntScaledPixelsToTwips(value.ToInteger(&error));
             aSize.height = val;
 
             heightSet = PR_TRUE;
@@ -912,8 +1142,8 @@ nsIBox::AddCSSFlex(nsBoxLayoutState& aState, nsIBox* aBox, nscoord& aFlex)
         PRInt32 error;
         nsAutoString value;
 
-        content->GetAttr(kNameSpaceID_None, nsGkAtoms::flex, value);
-        if (!value.IsEmpty()) {
+        if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, nsXULAtoms::flex, value))
+        {
             value.Trim("%");
             aFlex = value.ToInteger(&error);
             flexSet = PR_TRUE;
@@ -928,11 +1158,6 @@ nsIBox::AddCSSFlex(nsBoxLayoutState& aState, nsIBox* aBox, nscoord& aFlex)
           }
         }
     }
-
-    if (aFlex < 0)
-      aFlex = 0;
-    if (aFlex >= nscoord_MAX)
-      aFlex = nscoord_MAX - 1;
 
     return flexSet;
 }
@@ -956,8 +1181,7 @@ nsIBox::AddCSSOrdinal(nsBoxLayoutState& aState, nsIBox* aBox, PRUint32& aOrdinal
     PRInt32 error;
     nsAutoString value;
 
-    content->GetAttr(kNameSpaceID_None, nsGkAtoms::ordinal, value);
-    if (!value.IsEmpty()) {
+    if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, nsXULAtoms::ordinal, value)) {
       aOrdinal = value.ToInteger(&error);
       ordinalSet = PR_TRUE;
     }
@@ -1065,8 +1289,7 @@ NS_IMETHODIMP
 nsBox::GetDebugBoxAt( const nsPoint& aPoint,
                       nsIBox**     aBox)
 {
-  nsRect thisRect(nsPoint(0,0), GetSize());
-  if (!thisRect.Contains(aPoint))
+  if (!mRect.Contains(aPoint))
     return NS_ERROR_FAILURE;
 
   nsIBox* child = nsnull;
@@ -1074,8 +1297,10 @@ nsBox::GetDebugBoxAt( const nsPoint& aPoint,
   GetChildBox(&child);
 
   *aBox = nsnull;
+  nsPoint tmp;
+  tmp.MoveTo(aPoint.x - mRect.x, aPoint.y - mRect.y);
   while (nsnull != child) {
-    nsresult rv = child->GetDebugBoxAt(aPoint - child->GetOffsetTo(this), &hit);
+    nsresult rv = child->GetDebugBoxAt(tmp, &hit);
 
     if (NS_SUCCEEDED(rv) && hit) {
       *aBox = hit;
@@ -1092,7 +1317,7 @@ nsBox::GetDebugBoxAt( const nsPoint& aPoint,
   nsMargin m;
   GetBorderAndPadding(m);
 
-  nsRect rect(thisRect);
+  nsRect rect(mRect);
   rect.Deflate(m);
   if (rect.Contains(aPoint)) {
     GetInset(m);
@@ -1124,13 +1349,14 @@ nsBox::GetInset(nsMargin& margin)
 
 #endif
 
-PRBool
-nsBox::GetMouseThrough() const
+NS_IMETHODIMP
+nsBox::GetMouseThrough(PRBool& aMouseThrough)
 {
   if (mParent && mParent->IsBoxFrame())
-    return mParent->GetMouseThrough();
+    return mParent->GetMouseThrough(aMouseThrough);
 
-  return PR_FALSE;
+  aMouseThrough = PR_FALSE;
+  return NS_OK;
 }
 
 PRBool
@@ -1138,4 +1364,12 @@ nsBox::GetDefaultFlex(PRInt32& aFlex)
 { 
   aFlex = 0; 
   return PR_TRUE; 
+}
+
+NS_IMETHODIMP
+nsBox::GetIndexOf(nsIBox* aChild, PRInt32* aIndex)
+{
+  // return -1. We have no children
+  *aIndex = -1;
+  return NS_OK;
 }

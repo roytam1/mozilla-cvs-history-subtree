@@ -40,7 +40,7 @@
 interface nsIDOMElement;
 interface nsILocalFile;
 
-[scriptable, uuid(bb477da4-dddf-4106-a562-f06c85c7f9a8)]
+[scriptable, uuid(a4c253ab-09b9-4fb0-a61d-600621e690e4)]
 interface nsIShellService : nsISupports
 {
   /**
@@ -113,7 +113,13 @@ interface nsIShellService : nsISupports
    * entire screen. A rgb value, where (r << 16 | g << 8 | b)
    */
   attribute unsigned long desktopBackgroundColor;
-
+};
+ 
+// this interface stability for non-frozen interfaces esp. outside of gecko 
+// is retarded.
+[scriptable, uuid(d48f8ea2-c912-48fa-9714-10d8098f05ea)]
+interface nsIShellService_MOZILLA_1_8_BRANCH : nsISupports
+{
   /**
    * Opens an application with a specific URI to load.
    * @param   application
@@ -122,9 +128,5 @@ interface nsIShellService : nsISupports
    *          The uri to be loaded by the application
    */
   void openApplicationWithURI(in nsILocalFile aApplication, in ACString aURI);
-
-  /**
-   * The default system handler for web feeds
-   */
-  readonly attribute nsILocalFile defaultFeedReader;
 };
+

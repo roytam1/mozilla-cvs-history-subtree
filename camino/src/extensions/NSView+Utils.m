@@ -159,6 +159,7 @@ static void RedistributeSpace(int resizeMask, float newWidth, /* in out */ float
 
   [existingSubview retain];
   [existingSubview removeFromSuperview];
+  
   [self addSubview:newSubview];
   [newSubview setFrame:[self bounds]];
 

@@ -52,13 +52,13 @@ REQUIRES	= xpcom \
 CPPSRCS		= RobotMain.cpp
 
 ifeq ($(USE_SHORT_LIBNAME),1)
-ROBOT_LIB = dbgrobot
+EXTRA_DSO_LIBS = dbgrobot
 else
-ROBOT_LIB = DebugRobot
+EXTRA_DSO_LIBS = DebugRobot
 endif
 
 LIBS		= \
-		$(call EXPAND_LIBNAME_PATH,$(ROBOT_LIB),..) \
+		$(EXTRA_DSO_LIBS) \
 		$(MOZ_UNICHARUTIL_LIBS) \
 		$(MOZ_COMPONENT_LIBS) \
 		$(NULL)

@@ -58,7 +58,7 @@ CPPSRCS			= \
   		  	  mozSqlModule.cpp
 
 SHARED_LIBRARY_LIBS	= \
-		 	  ../../base/src/$(LIB_PREFIX)sqlbase_s.$(LIB_SUFFIX)
+		 	  $(DIST)/lib/$(LIB_PREFIX)sqlbase_s.$(LIB_SUFFIX)
 
 EXTRA_DSO_LDOPTS	= \
 			  $(MOZ_UNICHARUTIL_LIBS) \
@@ -67,26 +67,20 @@ EXTRA_DSO_LDOPTS	= \
 
 ifdef MOZ_ENABLE_PGSQL
 DEFINES             	+= -DMOZ_ENABLE_PGSQL
-SHARED_LIBRARY_LIBS 	+= ../../pgsql/src/$(LIB_PREFIX)sqlpgsql_s.$(LIB_SUFFIX)
+SHARED_LIBRARY_LIBS 	+= $(DIST)/lib/$(LIB_PREFIX)sqlpgsql_s.$(LIB_SUFFIX)
 EXTRA_DSO_LDOPTS    	+= -L$(MOZ_PGSQL_LIBS) -lpq
 endif
 
 ifdef MOZ_ENABLE_SQLITE
 DEFINES                 += -DMOZ_ENABLE_SQLITE
-SHARED_LIBRARY_LIBS     += ../../sqlite/src/$(LIB_PREFIX)sqlsqlite_s.$(LIB_SUFFIX)
+SHARED_LIBRARY_LIBS     += $(DIST)/lib/$(LIB_PREFIX)sqlsqlite_s.$(LIB_SUFFIX)
 EXTRA_DSO_LDOPTS        += -L$(MOZ_SQLITE_LIBS) -lsqlite3
 endif
 
 ifdef MOZ_ENABLE_MYSQL
 DEFINES             	+= -DMOZ_ENABLE_MYSQL
-SHARED_LIBRARY_LIBS 	+= ../../mysql/src/$(LIB_PREFIX)sqlmysql_s.$(LIB_SUFFIX)
+SHARED_LIBRARY_LIBS 	+= $(DIST)/lib/$(LIB_PREFIX)sqlmysql_s.$(LIB_SUFFIX)
 EXTRA_DSO_LDOPTS    	+= -L$(MOZ_MYSQL_LIBS) -lmysqlclient -lz
-endif
-
-ifdef MOZ_ENABLE_ODBC
-DEFINES             	+= -DMOZ_ENABLE_ODBC
-SHARED_LIBRARY_LIBS 	+= ../../odbc/src/$(LIB_PREFIX)sqlodbc_s.$(LIB_SUFFIX)
-EXTRA_DSO_LDOPTS    	+= -L$(MOZ_ODBC_LIBS) -lodbc32 ODBC32.LIB
 endif
 
 include $(topsrcdir)/config/rules.mk
@@ -101,8 +95,4 @@ endif
 
 ifdef MOZ_ENABLE_MYSQL
 INCLUDES		+= -I$(MOZ_MYSQL_INCLUDES)
-endif
-
-ifdef MOZ_ENABLE_ODBC
-INCLUDES		+= -I$(MOZ_ODBC_INCLUDES)
 endif

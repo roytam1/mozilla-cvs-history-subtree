@@ -40,7 +40,6 @@
 #include "nsIDOMNodeList.h"
 #include "nsISOAPMessage.h"
 #include "nsSOAPException.h"
-#include "nsIClassInfoImpl.h"
 
 nsSOAPFault::nsSOAPFault()
 {

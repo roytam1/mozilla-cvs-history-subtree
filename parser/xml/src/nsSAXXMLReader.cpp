@@ -43,9 +43,7 @@
 #include "nsParserCIID.h"
 #include "nsStreamUtils.h"
 #include "nsStringStream.h"
-#include "nsIScriptError.h"
 #include "nsSAXAttributes.h"
-#include "nsSAXLocator.h"
 #include "nsSAXXMLReader.h"
 
 #define XMLNS_URI "http://www.w3.org/2000/xmlns/"
@@ -107,7 +105,6 @@ nsSAXXMLReader::HandleStartElement(const PRUnichar *aName,
     NS_NAMED_LITERAL_STRING(cdataType, "CDATA");
     // could support xmlns reporting, it's a standard SAX feature
     if (!uri.EqualsLiteral(XMLNS_URI)) {
-      NS_ASSERTION(aAtts[1], "null passed to handler");
       atts->AddAttribute(uri, localName, qName, cdataType,
                          nsDependentString(aAtts[1]));
     }
@@ -132,7 +129,6 @@ nsSAXXMLReader::HandleEndElement(const PRUnichar *aName)
 NS_IMETHODIMP
 nsSAXXMLReader::HandleComment(const PRUnichar *aName)
 {
-  NS_ASSERTION(aName, "null passed to handler");
   if (mLexicalHandler)
     return mLexicalHandler->Comment(nsDependentString(aName));
  
@@ -167,16 +163,6 @@ nsSAXXMLReader::HandleStartDTD(const PRUnichar *aName,
                                const PRUnichar *aSystemId,
                                const PRUnichar *aPublicId)
 {
-  PRUnichar nullChar = PRUnichar(0);
-  if (!aName)
-    aName = &nullChar;
-  if (!aSystemId)
-    aSystemId = &nullChar;
-  if (!aPublicId)
-    aPublicId = &nullChar;
-
-  mSystemId = aSystemId;
-  mPublicId = aPublicId;
   if (mLexicalHandler) {
     return mLexicalHandler->StartDTD(nsDependentString(aName),
                                      nsDependentString(aSystemId),
@@ -242,7 +228,6 @@ NS_IMETHODIMP
 nsSAXXMLReader::HandleProcessingInstruction(const PRUnichar *aTarget,
                                             const PRUnichar *aData)
 {
-  NS_ASSERTION(aTarget && aData, "null passed to handler");
   if (mContentHandler) {
     return mContentHandler->ProcessingInstruction(nsDependentString(aTarget),
                                                   nsDependentString(aData));
@@ -256,7 +241,6 @@ nsSAXXMLReader::HandleNotationDecl(const PRUnichar *aNotationName,
                                    const PRUnichar *aSystemId,
                                    const PRUnichar *aPublicId)
 {
-  NS_ASSERTION(aNotationName, "null passed to handler");
   if (mDTDHandler) {
     PRUnichar nullChar = PRUnichar(0);
     if (!aSystemId)
@@ -278,7 +262,6 @@ nsSAXXMLReader::HandleUnparsedEntityDecl(const PRUnichar *aEntityName,
                                          const PRUnichar *aPublicId,
                                          const PRUnichar *aNotationName)
 {
-  NS_ASSERTION(aEntityName && aNotationName, "null passed to handler");
   if (mDTDHandler) {
     PRUnichar nullChar = PRUnichar(0);
     if (!aSystemId)
@@ -307,36 +290,12 @@ nsSAXXMLReader::HandleXMLDeclaration(const PRUnichar *aVersion,
 
 NS_IMETHODIMP
 nsSAXXMLReader::ReportError(const PRUnichar* aErrorText,
-                            const PRUnichar* aSourceText,
-                            nsIScriptError *aError,
-                            PRBool *_retval)
+                            const PRUnichar* aSourceText)
 {
-  NS_PRECONDITION(aError && aSourceText && aErrorText, "Check arguments!!!");
-  // Normally, the expat driver should report the error.
-  *_retval = PR_TRUE;
-
-  if (mErrorHandler) {
-    PRUint32 lineNumber;
-    nsresult rv = aError->GetLineNumber(&lineNumber);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    PRUint32 columnNumber;
-    rv = aError->GetColumnNumber(&columnNumber);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsISAXLocator> locator = new nsSAXLocator(mPublicId,
-                                                       mSystemId,
-                                                       lineNumber,
-                                                       columnNumber);
-    if (!locator)
-      return NS_ERROR_OUT_OF_MEMORY;
-
-    rv = mErrorHandler->FatalError(locator, nsDependentString(aErrorText));
-    if (NS_SUCCEEDED(rv)) {
-      // The error handler has handled the script error.  Don't log to console.
-      *_retval = PR_FALSE;
-    }
-  }
+  /// XXX need to settle what to do about the input setup, so I have
+  /// coherent values for the nsISAXLocator here. nsnull for now.
+  if (mErrorHandler)
+    return mErrorHandler->FatalError(nsnull, nsDependentString(aErrorText));
 
   return NS_OK;
 }
@@ -449,8 +408,7 @@ nsSAXXMLReader::ParseFromString(const nsAString &aStr,
   // The new stream holds a reference to the buffer
   nsCOMPtr<nsIInputStream> stream;
   nsresult rv = NS_NewByteInputStream(getter_AddRefs(stream),
-                                      data.get(), data.Length(),
-                                      NS_ASSIGNMENT_DEPEND);
+                                      data.get(), data.Length());
   NS_ENSURE_SUCCESS(rv, rv);
   return ParseFromStream(stream, "UTF-8", aContentType);
 }
@@ -494,15 +452,6 @@ nsSAXXMLReader::ParseFromStream(nsIInputStream *aStream,
   rv = mListener->OnStartRequest(parserChannel, nsnull);
   if (NS_FAILED(rv))
     parserChannel->Cancel(rv);
-
-  /* When parsing a new document, we need to clear the XML identifiers.
-     HandleStartDTD will set these values from the DTD declaration tag.
-     We won't have them, of course, if there's a well-formedness error
-     before the DTD tag (such as a space before an XML declaration).
-   */
-  mSystemId.Truncate();
-  mPublicId.Truncate();
-
   nsresult status;
   parserChannel->GetStatus(&status);
   
@@ -670,7 +619,6 @@ nsSAXXMLReader::SplitExpatName(const PRUnichar *aExpatName,
    *
    */
 
-  NS_ASSERTION(aExpatName, "null passed to handler");
   nsDependentString expatStr(aExpatName);
   PRInt32 break1, break2 = kNotFound;
   break1 = expatStr.FindChar(PRUnichar(0xFFFF));

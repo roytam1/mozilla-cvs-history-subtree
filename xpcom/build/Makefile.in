@@ -44,8 +44,6 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 include $(srcdir)/../glue/objs.mk
 
-EXTRA_DEPS += $(srcdir)/../glue/objs.mk
-
 MODULE		= xpcom
 LIBRARY_NAME	= xpcom_core
 
@@ -83,19 +81,15 @@ CPPSRCS		= \
 		$(XPCOM_GLUE_SRC_LCPPSRCS) \
 		$(XPCOM_GLUENS_SRC_LCPPSRCS) \
 		nsXPComInit.cpp \
-		nsXPCOMStrings.cpp \
+		nsStringAPI.cpp \
 		$(NULL)
 
-ifndef MINIMO
 ifeq ($(OS_ARCH)$(MOZ_ENABLE_LIBXUL),WINNT)
 CPPSRCS		+= dlldeps.cpp
 endif
-endif
 
-ifndef MINIMO
-ifeq ($(OS_ARCH)$(MOZ_ENABLE_LIBXUL),OS2)
+ifeq ($(OS_ARCH),WINCE)
 CPPSRCS		+= dlldeps.cpp
-endif
 endif
 
 ifdef XPCOM_USE_LEA
@@ -107,17 +101,17 @@ EXTRA_DSO_LIBS = boehm
 endif
 
 SHARED_LIBRARY_LIBS = \
-		../ds/$(LIB_PREFIX)xpcomds_s.$(LIB_SUFFIX) \
-		../io/$(LIB_PREFIX)xpcomio_s.$(LIB_SUFFIX) \
-		../components/$(LIB_PREFIX)xpcomcomponents_s.$(LIB_SUFFIX) \
-		../threads/$(LIB_PREFIX)xpcomthreads_s.$(LIB_SUFFIX) \
-		../proxy/src/$(LIB_PREFIX)xpcomproxy_s.$(LIB_SUFFIX) \
-		../base/$(LIB_PREFIX)xpcombase_s.$(LIB_SUFFIX) \
-		../reflect/xptcall/src/$(LIB_PREFIX)xptcall.$(LIB_SUFFIX) \
-		../reflect/xptcall/src/$(LIB_PREFIX)xptcmd.$(LIB_SUFFIX) \
-		../reflect/xptinfo/src/$(LIB_PREFIX)xptinfo.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)xpcomds_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)xpcomio_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)xpcomcomponents_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)xpcomthreads_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)xpcomproxy_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)xpcombase_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)xptcall.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)xptinfo.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)xpt.$(LIB_SUFFIX) \
-		../string/src/$(LIB_PREFIX)string_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)xptcmd.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)string_s.$(LIB_SUFFIX) \
 		$(NULL)
 
 LOCAL_INCLUDES	= \
@@ -131,7 +125,6 @@ LOCAL_INCLUDES	= \
 		-I$(srcdir)/../threads \
 		-I$(srcdir)/../threads/_xpidlgen \
 		-I$(srcdir)/../proxy/src \
-		-I$(srcdir)/../reflect/xptinfo/src \
 		$(NULL)
 
 SDK_HEADERS =  \
@@ -139,13 +132,11 @@ SDK_HEADERS =  \
 		nsXPCOMCID.h    \
 		$(NULL)
 
-EXPORTS	= \
-		nsXPCOMCIDInternal.h \
-		$(NULL)
-
 # pull in MoreFiles for MacOSX
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-SHARED_LIBRARY_LIBS += ../MoreFiles/$(LIB_PREFIX)macmorefiles_s.$(LIB_SUFFIX)
+EXTRA_DSO_LIBS = macmorefiles_s
+EXTRA_DSO_LDOPTS += $(EXTRA_DSO_LIBS)
+EXTRA_DEPS += $(DIST)/lib/$(LIB_PREFIX)macmorefiles_s.$(LIB_SUFFIX)
 endif
 
 # Force use of PIC
@@ -160,7 +151,7 @@ endif
 # UNIX98 iconv support
 OS_LIBS += $(LIBICONV)
 
-GARBAGE         += $(XPCOM_GLUE_SRC_LCSRCS) $(XPCOM_GLUE_SRC_LCPPSRCS) $(XPCOM_GLUENS_SRC_LCPPSRCS) $(wildcard *.$(OBJ_SUFFIX))
+GARBAGE         += $(XPCOM_GLUE_SRC_LCSRCS) $(XPCOM_GLUENS_SRC_LCSRCS) $(wildcard *.$(OBJ_SUFFIX))
 
 include $(topsrcdir)/config/rules.mk
 
@@ -168,7 +159,8 @@ DEFINES		+= \
 		-D_IMPL_NS_COM \
 		-D_IMPL_NS_STRINGAPI \
 		-DEXPORT_XPT_API \
-		-DEXPORT_XPTC_API
+		-DEXPORT_XPTC_API \
+		-DEXPORT_XPTI_API
 
 EXTRA_DSO_LDOPTS += $(NSPR_LIBS)
 

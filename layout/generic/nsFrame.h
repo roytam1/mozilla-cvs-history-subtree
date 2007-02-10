@@ -35,9 +35,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* base class of all rendering objects */
-
 #ifndef nsFrame_h___
 #define nsFrame_h___
 
@@ -50,7 +47,8 @@
 #endif
 
 #include "nsIPresShell.h"
-#include "nsFrameSelection.h"
+#include "nsHTMLReflowCommand.h"
+#include "nsIFrameSelection.h"
 #include "nsHTMLReflowState.h"
 #include "nsHTMLReflowMetrics.h"
 
@@ -114,7 +112,6 @@
 #endif
 
 // handy utilities
-// XXXldb Move to nsLayoutUtils!
 void SetFontFromStyle(nsIRenderingContext* aRC, nsStyleContext* aSC);
 
 //----------------------------------------------------------------------
@@ -138,7 +135,7 @@ public:
    * Create a new "empty" frame that maps a given piece of content into a
    * 0,0 area.
    */
-  friend nsIFrame* NS_NewEmptyFrame(nsIPresShell* aShell, nsStyleContext* aContext);
+  friend nsresult NS_NewEmptyFrame(nsIPresShell* aShell, nsIFrame** aInstancePtrResult);
 
   // Overloaded new operator. Initializes the memory to 0 and relies on an arena
   // (which comes from the presShell) to perform the allocation.
@@ -164,10 +161,13 @@ public:
   NS_IMETHOD  QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
   // nsIFrame
-  NS_IMETHOD  Init(nsIContent*      aContent,
+  NS_IMETHOD  Init(nsPresContext*  aPresContext,
+                   nsIContent*      aContent,
                    nsIFrame*        aParent,
+                   nsStyleContext*  aContext,
                    nsIFrame*        asPrevInFlow);
-  NS_IMETHOD  SetInitialChildList(nsIAtom*        aListName,
+  NS_IMETHOD  SetInitialChildList(nsPresContext* aPresContext,
+                                  nsIAtom*        aListName,
                                   nsIFrame*       aChildList);
   NS_IMETHOD  AppendFrames(nsIAtom*        aListName,
                            nsIFrame*       aFrameList);
@@ -176,14 +176,22 @@ public:
                            nsIFrame*       aFrameList);
   NS_IMETHOD  RemoveFrame(nsIAtom*        aListName,
                           nsIFrame*       aOldFrame);
-  virtual void Destroy();
+  NS_IMETHOD  ReplaceFrame(nsIAtom*        aListName,
+                           nsIFrame*       aOldFrame,
+                           nsIFrame*       aNewFrame);
+  NS_IMETHOD  Destroy(nsPresContext* aPresContext);
+  NS_IMETHOD  CalcBorderPadding(nsMargin& aBorderPadding) const;
   virtual nsStyleContext* GetAdditionalStyleContext(PRInt32 aIndex) const;
   virtual void SetAdditionalStyleContext(PRInt32 aIndex,
                                          nsStyleContext* aStyleContext);
   NS_IMETHOD  SetParent(const nsIFrame* aParent);
-  virtual nscoord GetBaseline() const;
   virtual nsIAtom* GetAdditionalChildListName(PRInt32 aIndex) const;
   virtual nsIFrame* GetFirstChild(nsIAtom* aListName) const;
+  NS_IMETHOD  Paint(nsPresContext*      aPresContext,
+                    nsIRenderingContext& aRenderingContext,
+                    const nsRect&        aDirtyRect,
+                    nsFramePaintLayer    aWhichLayer,
+                    PRUint32             aFlags = 0);
   NS_IMETHOD  HandleEvent(nsPresContext* aPresContext, 
                           nsGUIEvent*     aEvent,
                           nsEventStatus*  aEventStatus);
@@ -192,6 +200,9 @@ public:
                                  nsIContent** aContent);
   NS_IMETHOD  GetCursor(const nsPoint&    aPoint,
                         nsIFrame::Cursor& aCursor);
+  NS_IMETHOD  GetFrameForPoint(const nsPoint& aPoint, 
+                               nsFramePaintLayer aWhichLayer,
+                               nsIFrame**     aFrame);
 
   NS_IMETHOD  GetPointFromOffset(nsPresContext*        inPresContext,
                                  nsIRenderingContext*   inRendContext,
@@ -209,36 +220,24 @@ public:
                                         PRInt32 aLineStart, 
                                         PRInt8 aOutSideLimit
                                         );
-
-  /**
-   * Find the nearest frame with a mouse capturer. If no
-   * parent has mouse capture this will return null.
-   * @param aFrame Frame drag began in.
-   * @return Nearest capturing frame.
-   */
-  static nsIFrame* GetNearestCapturingFrame(nsIFrame* aFrame);
-
   NS_IMETHOD  CharacterDataChanged(nsPresContext* aPresContext,
                                    nsIContent*     aChild,
                                    PRBool          aAppend);
-  NS_IMETHOD  AttributeChanged(PRInt32         aNameSpaceID,
+  NS_IMETHOD  AttributeChanged(nsIContent*     aChild,
+                               PRInt32         aNameSpaceID,
                                nsIAtom*        aAttribute,
                                PRInt32         aModType);
-  virtual nsSplittableType GetSplittableType() const;
-  virtual nsIFrame* GetPrevContinuation() const;
-  NS_IMETHOD  SetPrevContinuation(nsIFrame*);
-  virtual nsIFrame* GetNextContinuation() const;
-  NS_IMETHOD  SetNextContinuation(nsIFrame*);
-  virtual nsIFrame* GetPrevInFlowVirtual() const;
+  NS_IMETHOD  IsSplittable(nsSplittableType& aIsSplittable) const;
+  virtual nsIFrame* GetPrevInFlow() const;
   NS_IMETHOD  SetPrevInFlow(nsIFrame*);
-  virtual nsIFrame* GetNextInFlowVirtual() const;
+  virtual nsIFrame* GetNextInFlow() const;
   NS_IMETHOD  SetNextInFlow(nsIFrame*);
   NS_IMETHOD  GetOffsetFromView(nsPoint& aOffset, nsIView** aView) const;
   NS_IMETHOD  GetOriginToViewOffset(nsPoint& aOffset, nsIView **aView) const;
   virtual nsIAtom* GetType() const;
   virtual PRBool IsContainingBlock() const;
 #ifdef NS_DEBUG
-  NS_IMETHOD  List(FILE* out, PRInt32 aIndent) const;
+  NS_IMETHOD  List(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent) const;
   NS_IMETHOD  GetFrameName(nsAString& aResult) const;
   NS_IMETHOD_(nsFrameState) GetDebugStateBits() const;
   NS_IMETHOD  DumpRegressionData(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent, PRBool aIncludeStyleData);
@@ -250,16 +249,13 @@ public:
   NS_IMETHOD  IsSelectable(PRBool* aIsSelectable, PRUint8* aSelectStyle) const;
 
   NS_IMETHOD  GetSelectionController(nsPresContext *aPresContext, nsISelectionController **aSelCon);
-
-  virtual PRBool PeekOffsetNoAmount(PRBool aForward, PRInt32* aOffset);
-  virtual PRBool PeekOffsetCharacter(PRBool aForward, PRInt32* aOffset);
-  virtual PRBool PeekOffsetWord(PRBool aForward, PRBool aWordSelectEatSpace, PRBool aIsKeyboardSelect,
-                                PRInt32* aOffset, PRBool* aSawBeforeType);
-  
+  NS_IMETHOD  PeekOffset(nsPresContext* aPresContext, nsPeekOffsetStruct *aPos) ;
   NS_IMETHOD  CheckVisibility(nsPresContext* aContext, PRInt32 aStartIndex, PRInt32 aEndIndex, PRBool aRecurse, PRBool *aFinished, PRBool *_retval);
 
+  NS_IMETHOD  PeekOffsetParagraph(nsPresContext* aPresContext,
+                                  nsPeekOffsetStruct *aPos);
   NS_IMETHOD  GetOffsets(PRInt32 &aStart, PRInt32 &aEnd) const;
-  virtual void ChildIsDirty(nsIFrame* aChild);
+  NS_IMETHOD  ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild);
 
 #ifdef ACCESSIBILITY
   NS_IMETHOD  GetAccessible(nsIAccessible** aAccessible);
@@ -269,51 +265,16 @@ public:
                                         nsIFrame**      aProviderFrame,
                                         PRBool*         aIsChild);
 
+  // Check Style Visibility and mState for Selection (when printing)
+  NS_IMETHOD IsVisibleForPainting(nsPresContext *     aPresContext, 
+                                  nsIRenderingContext& aRenderingContext,
+                                  PRBool               aCheckVis,
+                                  PRBool*              aIsVisible);
+
   virtual PRBool IsEmpty();
   virtual PRBool IsSelfEmpty();
 
-  virtual void MarkIntrinsicWidthsDirty();
-  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
-  virtual nscoord GetPrefWidth(nsIRenderingContext *aRenderingContext);
-  virtual void AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
-                                 InlineMinWidthData *aData);
-  virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
-                                  InlinePrefWidthData *aData);
-  virtual IntrinsicWidthOffsetData
-    IntrinsicWidthOffsets(nsIRenderingContext* aRenderingContext);
-
-  virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
-                             nsSize aCBSize, nscoord aAvailableWidth,
-                             nsSize aMargin, nsSize aBorder, nsSize aPadding,
-                             PRBool aShrinkWrap);
-
-  /**
-   * A helper, used by |nsFrame::ComputeSize| (for frames that need to
-   * override only this part of ComputeSize), that computes the size
-   * that should be returned when 'width', 'height', and
-   * min/max-width/height are all 'auto' or equivalent.
-   *
-   * In general, frames that can accept any computed width/height should
-   * override only ComputeAutoSize, and frames that cannot do so need to
-   * override ComputeSize to enforce their width/height invariants.
-   *
-   * Implementations may optimize by returning a garbage width if
-   * GetStylePosition()->mWidth.GetUnit() == eStyleUnit_Auto, and
-   * likewise for height, since in such cases the result is guaranteed
-   * to be unused.
-   */
-  virtual nsSize ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                                 nsSize aCBSize, nscoord aAvailableWidth,
-                                 nsSize aMargin, nsSize aBorder,
-                                 nsSize aPadding, PRBool aShrinkWrap);
-
-  /**
-   * Utility function for ComputeAutoSize implementations.  Return
-   * max(GetMinWidth(), min(aWidthInCB, GetPrefWidth()))
-   */
-  nscoord ShrinkWidthToFit(nsIRenderingContext *aRenderingContext,
-                           nscoord aWidthInCB);
-
+  // nsIHTMLReflow
   NS_IMETHOD  WillReflow(nsPresContext* aPresContext);
   NS_IMETHOD  Reflow(nsPresContext*          aPresContext,
                      nsHTMLReflowMetrics&     aDesiredSize,
@@ -322,7 +283,8 @@ public:
   NS_IMETHOD  DidReflow(nsPresContext*           aPresContext,
                         const nsHTMLReflowState*  aReflowState,
                         nsDidReflowStatus         aStatus);
-  virtual PRBool CanContinueTextRun() const;
+  NS_IMETHOD CanContinueTextRun(PRBool& aContinueTextRun) const;
+  NS_IMETHOD AdjustFrameSize(nscoord aExtraSpace, nscoord& aUsedSpace);
   NS_IMETHOD TrimTrailingWhiteSpace(nsPresContext* aPresContext,
                                     nsIRenderingContext& aRC,
                                     nscoord& aDeltaWidth,
@@ -348,6 +310,12 @@ public:
                            nsGUIEvent *    aEvent,
                            nsEventStatus*  aEventStatus);
 
+  NS_IMETHOD GetContentAndOffsetsFromPoint(nsPresContext* aCX,
+                                           const nsPoint& aPoint,
+                                           nsIContent **   aNewContent,
+                                           PRInt32&        aContentOffset,
+                                           PRInt32&        aContentOffsetEnd,
+                                           PRBool&         aBeginFrameContent);
   NS_IMETHOD PeekBackwardAndForward(nsSelectionAmount aAmountBack,
                                     nsSelectionAmount aAmountForward,
                                     PRInt32 aStartPos,
@@ -355,16 +323,15 @@ public:
                                     PRBool aJumpLines);
 
 
-  // Helper for GetContentAndOffsetsFromPoint; calculation of content offsets
-  // in this function assumes there is no child frame that can be targeted.
-  virtual ContentOffsets CalcContentOffsetsFromFramePoint(nsPoint aPoint);
-
   // Box layout methods
-  virtual nsSize GetPrefSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nsSize GetMinSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nsSize GetMaxSize(nsBoxLayoutState& aBoxLayoutState);
-  virtual nscoord GetFlex(nsBoxLayoutState& aBoxLayoutState);
-  virtual nscoord GetBoxAscent(nsBoxLayoutState& aBoxLayoutState);
+  NS_IMETHOD GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetMaxSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize);
+  NS_IMETHOD GetFlex(nsBoxLayoutState& aBoxLayoutState, nscoord& aFlex);
+  NS_IMETHOD GetAscent(nsBoxLayoutState& aBoxLayoutState, nscoord& aAscent);
+  NS_IMETHOD SetIncludeOverflow(PRBool aInclude);
+  NS_IMETHOD GetOverflow(nsSize& aOverflow);
+  NS_IMETHOD NeedsRecalc();
 
   //--------------------------------------------------
   // Additional methods
@@ -442,7 +409,7 @@ public:
     if (NS_SUCCEEDED(aFrame->QueryInterface(NS_GET_IID(nsIFrameDebug), (void**)&frameDebug))) {
       frameDebug->GetFrameName(tmp);
     }
-    fputs(NS_LossyConvertUTF16toASCII(tmp).get(), out);
+    fputs(NS_LossyConvertUCS2toASCII(tmp).get(), out);
     fprintf(out, "@%p", NS_STATIC_CAST(void*, aFrame));
   }
 
@@ -469,88 +436,52 @@ public:
   static void* DisplayReflowEnter(nsPresContext*          aPresContext,
                                   nsIFrame*                aFrame,
                                   const nsHTMLReflowState& aReflowState);
-  static void* DisplayLayoutEnter(nsIFrame* aFrame);
-  static void* DisplayIntrinsicWidthEnter(nsIFrame* aFrame,
-                                          const char* aType);
-  static void* DisplayIntrinsicSizeEnter(nsIFrame* aFrame,
-                                         const char* aType);
   static void  DisplayReflowExit(nsPresContext*      aPresContext,
                                  nsIFrame*            aFrame,
                                  nsHTMLReflowMetrics& aMetrics,
                                  PRUint32             aStatus,
                                  void*                aFrameTreeNode);
-  static void  DisplayLayoutExit(nsIFrame* aFrame,
-                                 void* aFrameTreeNode);
-  static void  DisplayIntrinsicWidthExit(nsIFrame* aFrame,
-                                         const char* aType,
-                                         nscoord aResult,
-                                         void* aFrameTreeNode);
-  static void  DisplayIntrinsicSizeExit(nsIFrame* aFrame,
-                                        const char* aType,
-                                        nsSize aResult,
-                                        void* aFrameTreeNode);
 
   static void DisplayReflowStartup();
   static void DisplayReflowShutdown();
 #endif
 
-  /**
-   * Adds display items for standard CSS borders, background and outline for
-   * for this frame, as necessary. Checks IsVisibleForPainting and won't
-   * display anything if the frame is not visible.
-   * @param aForceBackground draw the background even if the frame
-   * background style appears to have no background --- this is useful
-   * for frames that might receive a propagated background via
-   * nsCSSRendering::FindBackground
-   */
-  nsresult DisplayBorderBackgroundOutline(nsDisplayListBuilder*   aBuilder,
-                                          const nsDisplayListSet& aLists,
-                                          PRBool aForceBackground = PR_FALSE);
-  /**
-   * Add a display item for the CSS outline. Does not check visibility.
-   */
-  nsresult DisplayOutlineUnconditional(nsDisplayListBuilder*   aBuilder,
-                                       const nsDisplayListSet& aLists);
-  /**
-   * Add a display item for the CSS outline, after calling
-   * IsVisibleForPainting to confirm we are visible.
-   */
-  nsresult DisplayOutline(nsDisplayListBuilder*   aBuilder,
-                          const nsDisplayListSet& aLists);
-
 protected:
   // Protected constructor and destructor
-  nsFrame(nsStyleContext* aContext);
+  nsFrame();
   virtual ~nsFrame();
 
   /**
-   * @return PR_FALSE if this frame definitely has no borders at all
-   */                 
-  PRBool HasBorder();
-
-  /**
-   * To be called by |BuildDisplayLists| of this class or derived classes to add
-   * a translucent overlay if this frame's content is selected.
-   * @param aContentType an nsISelectionDisplay DISPLAY_ constant identifying
-   * which kind of content this is for
+   * To be called by |Paint| of this class or derived classes to paint
+   * the background, border, and outline, when in the correct layer to
+   * do so.
    */
-  nsresult DisplaySelectionOverlay(nsDisplayListBuilder* aBuilder,
-      const nsDisplayListSet& aLists, PRUint16 aContentType = nsISelectionDisplay::DISPLAY_FRAMES);
+  void PaintSelf(nsPresContext*      aPresContext,
+                 nsIRenderingContext& aRenderingContext,
+                 const nsRect&        aDirtyRect,
+                 PRIntn               aSkipSides = 0,
+                 PRBool               aUsePrintBackgroundSettings = PR_TRUE);
 
   PRInt16 DisplaySelection(nsPresContext* aPresContext, PRBool isOkToTurnOn = PR_FALSE);
   
+  //this will modify aPos and return the next frame ect.
+  NS_IMETHOD GetFrameFromDirection(nsPresContext* aPresContext, nsPeekOffsetStruct *aPos);
+
   // Style post processing hook
-  NS_IMETHOD DidSetStyleContext();
+  NS_IMETHOD DidSetStyleContext(nsPresContext* aPresContext);
+
+  // Helper routine for determining whether to print selection
+  nsresult GetSelectionForVisCheck(nsPresContext * aPresContext, nsISelection** aSelection);
+
+  //return the line number of the aFrame
+  static PRInt32 GetLineNumber(nsIFrame *aFrame);
 
 public:
   //given a frame five me the first/last leaf available
   //XXX Robert O'Callahan wants to move these elsewhere
   static void GetLastLeaf(nsPresContext* aPresContext, nsIFrame **aFrame);
   static void GetFirstLeaf(nsPresContext* aPresContext, nsIFrame **aFrame);
-
-  // return the line number of the aFrame, and (optionally) the containing block frame.
-  static PRInt32 GetLineNumber(nsIFrame *aFrame, nsIFrame** aContainingBlock = nsnull);
-
+  
 protected:
 
   // Test if we are selecting a table object:
@@ -561,12 +492,18 @@ protected:
   //   of the enclosing cell or table (if not inside a cell)
   //  aTarget tells us what table element to select (currently only cell and table supported)
   //  (enums for this are defined in nsIFrame.h)
-  NS_IMETHOD GetDataForTableSelection(nsFrameSelection *aFrameSelection,
+  NS_IMETHOD GetDataForTableSelection(nsIFrameSelection *aFrameSelection, 
                                       nsIPresShell *aPresShell, nsMouseEvent *aMouseEvent, 
                                       nsIContent **aParentContent, PRInt32 *aContentOffset, 
                                       PRInt32 *aTarget);
 
   virtual PRBool ParentDisablesSelection() const;
+
+  // Set the overflow clip rect into the rendering-context. Used for block-level
+  // elements and replaced elements that have 'overflow' set to 'hidden'. This
+  // member function assumes that the caller has checked that the clip property
+  // applies to its situation.
+  void SetOverflowClipRect(nsIRenderingContext& aRenderingContext);
 
   // Fills aCursor with the appropriate information from ui
   static void FillCursorInformationFromStyle(const nsStyleUserInterface* ui,
@@ -576,6 +513,8 @@ protected:
 #ifdef DEBUG_LAYOUT
   virtual void GetBoxName(nsAutoString& aName);
 #endif
+  virtual PRBool HasStyleChange();
+  virtual void SetStyleChangeFlag(PRBool aDirty);
 
   virtual PRBool GetWasCollapsed(nsBoxLayoutState& aState);
   virtual void SetWasCollapsed(nsBoxLayoutState& aState, PRBool aWas);
@@ -590,12 +529,26 @@ private:
   nsresult BoxReflow(nsBoxLayoutState& aState,
                      nsPresContext*    aPresContext,
                      nsHTMLReflowMetrics&     aDesiredSize,
-                     nsIRenderingContext* aRenderingContext,
+                     const nsHTMLReflowState& aReflowState,
+                     nsReflowStatus&          aStatus,
                      nscoord aX,
                      nscoord aY,
                      nscoord aWidth,
                      nscoord aHeight,
                      PRBool aMoveFrame = PR_TRUE);
+
+  void HandleIncrementalReflow(nsBoxLayoutState& aState, 
+                               const nsHTMLReflowState& aReflowState, 
+                               nsReflowReason& aReason,
+                               nsReflowPath** aReflowPath,
+                               PRBool& aRedrawNow,
+                               PRBool& aNeedReflow,
+                               PRBool& aRedrawAfterReflow,
+                               PRBool& aMoveFrame);
+
+  PRBool CanSetMaxElementWidth(nsBoxLayoutState& aState,
+                               nsReflowReason& aReason,
+                               nsReflowPath **aReflowPath);
 
   NS_IMETHODIMP RefreshSizeCache(nsBoxLayoutState& aState);
 
@@ -623,64 +576,16 @@ protected:
     nsReflowStatus&          mStatus;    
     void*                    mValue;
   };
-
-  struct DR_layout_cookie {
-    DR_layout_cookie(nsIFrame* aFrame);
-    ~DR_layout_cookie();
-
-    nsIFrame* mFrame;
-    void* mValue;
-  };
-  
-  struct DR_intrinsic_width_cookie {
-    DR_intrinsic_width_cookie(nsIFrame* aFrame, const char* aType,
-                              nscoord& aResult);
-    ~DR_intrinsic_width_cookie();
-
-    nsIFrame* mFrame;
-    const char* mType;
-    nscoord& mResult;
-    void* mValue;
-  };
-  
-  struct DR_intrinsic_size_cookie {
-    DR_intrinsic_size_cookie(nsIFrame* aFrame, const char* aType,
-                             nsSize& aResult);
-    ~DR_intrinsic_size_cookie();
-
-    nsIFrame* mFrame;
-    const char* mType;
-    nsSize& mResult;
-    void* mValue;
-  };
   
 #define DISPLAY_REFLOW(dr_pres_context, dr_frame, dr_rf_state, dr_rf_metrics, dr_rf_status) \
   DR_cookie dr_cookie(dr_pres_context, dr_frame, dr_rf_state, dr_rf_metrics, dr_rf_status); 
 #define DISPLAY_REFLOW_CHANGE() \
   dr_cookie.Change();
-#define DISPLAY_LAYOUT(dr_frame) \
-  DR_layout_cookie dr_cookie(dr_frame); 
-#define DISPLAY_MIN_WIDTH(dr_frame, dr_result) \
-  DR_intrinsic_width_cookie dr_cookie(dr_frame, "Min", dr_result)
-#define DISPLAY_PREF_WIDTH(dr_frame, dr_result) \
-  DR_intrinsic_width_cookie dr_cookie(dr_frame, "Pref", dr_result)
-#define DISPLAY_PREF_SIZE(dr_frame, dr_result) \
-  DR_intrinsic_size_cookie dr_cookie(dr_frame, "Pref", dr_result)
-#define DISPLAY_MIN_SIZE(dr_frame, dr_result) \
-  DR_intrinsic_size_cookie dr_cookie(dr_frame, "Min", dr_result)
-#define DISPLAY_MAX_SIZE(dr_frame, dr_result) \
-  DR_intrinsic_size_cookie dr_cookie(dr_frame, "Max", dr_result)
 
 #else
 
 #define DISPLAY_REFLOW(dr_pres_context, dr_frame, dr_rf_state, dr_rf_metrics, dr_rf_status) 
 #define DISPLAY_REFLOW_CHANGE() 
-#define DISPLAY_LAYOUT(dr_frame) PR_BEGIN_MACRO PR_END_MACRO
-#define DISPLAY_MIN_WIDTH(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
-#define DISPLAY_PREF_WIDTH(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
-#define DISPLAY_PREF_SIZE(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
-#define DISPLAY_MIN_SIZE(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
-#define DISPLAY_MAX_SIZE(dr_frame, dr_result) PR_BEGIN_MACRO PR_END_MACRO
   
 #endif
 // End Display Reflow Debugging

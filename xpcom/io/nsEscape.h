@@ -47,8 +47,6 @@
 
 /**
  * Valid mask values for nsEscape
- * Note: these values are copied in nsINetUtil.idl. Any changes should be kept
- * in sync.
  */
 typedef enum {
  	url_All       = 0         /**< %-escape every byte uncondtionally */

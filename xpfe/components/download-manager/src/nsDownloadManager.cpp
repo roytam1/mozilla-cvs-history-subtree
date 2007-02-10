@@ -49,6 +49,7 @@
 #include "nsIDOMEventTarget.h"
 #include "nsRDFCID.h"
 #include "nsAppDirectoryServiceDefs.h"
+#include "nsIWebBrowserPersist.h"
 #include "nsIObserver.h"
 #include "nsIProgressDialog.h"
 #include "nsIWebBrowserPersist.h"
@@ -61,12 +62,11 @@
 #include "nsIProfileChangeStatus.h"
 #include "nsIPrefService.h"
 #include "nsIFileURL.h"
+#ifndef MOZ_THUNDERBIRD
 #include "nsIAlertsService.h"
+#endif
 #include "nsEmbedCID.h"
 #include "nsInt64.h"
-#ifdef MOZ_XUL_APP
-#include "nsToolkitCompsCID.h" 
-#endif
 
 /* Outstanding issues/todo:
  * 1. Implement pause/resume.
@@ -773,7 +773,7 @@ nsDownloadManager::OpenProgressDialogFor(nsIDownload* aDownload, nsIDOMWindow* a
   dialog->SetObserver(internalDownload);
 
   // now set the listener so we forward notifications to the dialog
-  nsCOMPtr<nsIDownloadProgressListener> listener = do_QueryInterface(dialog);
+  nsCOMPtr<nsIWebProgressListener2> listener = do_QueryInterface(dialog);
   internalDownload->SetDialogListener(listener);
   
   internalDownload->SetDialog(dialog);
@@ -890,7 +890,8 @@ nsDownloadManager::Observe(nsISupports* aSubject, const char* aTopic, const PRUn
 ///////////////////////////////////////////////////////////////////////////////
 // nsDownload
 
-NS_IMPL_ISUPPORTS5(nsDownload, nsIDownload, nsITransfer, nsIWebProgressListener,
+NS_IMPL_ISUPPORTS6(nsDownload, nsIDownload, nsIDownload_MOZILLA_1_8_BRANCH,
+                   nsITransfer, nsIWebProgressListener,
                    nsIWebProgressListener2, nsIObserver)
 
 nsDownload::nsDownload(nsDownloadManager* aManager,
@@ -906,8 +907,8 @@ nsDownload::nsDownload(nsDownloadManager* aManager,
                          mCurrBytes(LL_ZERO),
                          mMaxBytes(LL_ZERO),
                          mStartTime(LL_ZERO),
-                         mSpeed(0),
-                         mLastUpdate(PR_Now() - (PRUint32)gInterval)
+                         mLastUpdate(PR_Now() - (PRUint32)gInterval),
+                         mSpeed(0)
 {
 }
 
@@ -1040,11 +1041,10 @@ nsDownload::OnProgressChange64(nsIWebProgress *aWebProgress,
   if (!mRequest)
     mRequest = aRequest; // used for pause/resume
 
-  // Filter notifications since they come in so frequently, but we want to
-  // process the last notification.
+  // filter notifications since they come in so frequently
   PRTime now = PR_Now();
   nsInt64 delta = now - mLastUpdate;
-  if (delta < gInterval && aCurTotalProgress != aMaxTotalProgress)
+  if (delta < gInterval)
     return NS_OK;
 
   mLastUpdate = now;
@@ -1091,8 +1091,8 @@ nsDownload::OnProgressChange64(nsIWebProgress *aWebProgress,
   }
 
   if (mDialogListener) {
-    mDialogListener->OnProgressChange(aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress,
-                                      aCurTotalProgress, aMaxTotalProgress, this);
+    mDialogListener->OnProgressChange64(aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress,
+                                        aCurTotalProgress, aMaxTotalProgress);
   }
 
   return NS_OK;
@@ -1114,16 +1114,6 @@ nsDownload::OnProgressChange(nsIWebProgress *aWebProgress,
                             aCurTotalProgress, aMaxTotalProgress);
 }
 
-NS_IMETHODIMP
-nsDownload::OnRefreshAttempted(nsIWebProgress *aWebProgress,
-                               nsIURI *aUri,
-                               PRInt32 aDelay,
-                               PRBool aSameUri,
-                               PRBool *allowRefresh)
-{
-  *allowRefresh = PR_TRUE;
-  return NS_OK;
-}
 
 NS_IMETHODIMP
 nsDownload::OnLocationChange(nsIWebProgress *aWebProgress,
@@ -1137,7 +1127,7 @@ nsDownload::OnLocationChange(nsIWebProgress *aWebProgress,
   }
 
   if (mDialogListener)
-    mDialogListener->OnLocationChange(aWebProgress, aRequest, aLocation, this);
+    mDialogListener->OnLocationChange(aWebProgress, aRequest, aLocation);
 
   return NS_OK;
 }
@@ -1163,7 +1153,7 @@ nsDownload::OnStatusChange(nsIWebProgress *aWebProgress,
   }
 
   if (mDialogListener)
-    mDialogListener->OnStatusChange(aWebProgress, aRequest, aStatus, aMessage, this);
+    mDialogListener->OnStatusChange(aWebProgress, aRequest, aStatus, aMessage);
   else {
     // Need to display error alert ourselves, if an error occurred.
     if (NS_FAILED(aStatus)) {
@@ -1196,6 +1186,7 @@ nsDownload::OnStatusChange(nsIWebProgress *aWebProgress,
 void nsDownload::DisplayDownloadFinishedAlert()
 {
   nsresult rv;
+#ifndef MOZ_THUNDERBIRD
   nsCOMPtr<nsIAlertsService> alertsService(do_GetService(NS_ALERTSERVICE_CONTRACTID, &rv));
   if (NS_FAILED(rv))
     return;
@@ -1226,6 +1217,7 @@ void nsDownload::DisplayDownloadFinishedAlert()
   alertsService->ShowAlertNotification(NS_LITERAL_STRING("moz-icon://") + NS_ConvertUTF8toUTF16(url),
                                        finishedTitle, finishedText, PR_TRUE,
                                        NS_LITERAL_STRING("download"), this);
+#endif
 }
 
 NS_IMETHODIMP
@@ -1248,7 +1240,7 @@ nsDownload::OnStateChange(nsIWebProgress* aWebProgress,
     if (mDownloadState == DOWNLOADING || mDownloadState == NOTSTARTED) {
       mDownloadState = FINISHED;
 
-      // Set file size at the end of a transfer (for unknown transfer amounts)
+      // Set file size at the end of a tranfer (for unknown transfer amounts)
       if (mMaxBytes == -1)
         mMaxBytes = mCurrBytes;
 
@@ -1323,7 +1315,7 @@ nsDownload::OnStateChange(nsIWebProgress* aWebProgress,
   }
 
   if (mDialogListener) {
-    mDialogListener->OnStateChange(aWebProgress, aRequest, aStateFlags, aStatus, this);
+    mDialogListener->OnStateChange(aWebProgress, aRequest, aStateFlags, aStatus);
     if (aStateFlags & STATE_STOP) {
       // Break this cycle, too
       mDialogListener = nsnull;
@@ -1345,7 +1337,7 @@ nsDownload::OnSecurityChange(nsIWebProgress *aWebProgress,
   }
 
   if (mDialogListener)
-    mDialogListener->OnSecurityChange(aWebProgress, aRequest, aState, this);
+    mDialogListener->OnSecurityChange(aWebProgress, aRequest, aState);
 
   return NS_OK;
 }
@@ -1414,14 +1406,14 @@ nsDownload::GetPercentComplete(PRInt32* aPercentComplete)
 NS_IMETHODIMP
 nsDownload::GetAmountTransferred(PRUint64* aAmountTransferred)
 {
-  *aAmountTransferred = mCurrBytes;
+  *aAmountTransferred = ((PRFloat64)mCurrBytes / 1024.0 + .5);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDownload::GetSize(PRUint64* aSize)
 {
-  *aSize = mMaxBytes;
+  *aSize = ((PRFloat64)mMaxBytes / 1024 + .5);
   return NS_OK;
 }
 

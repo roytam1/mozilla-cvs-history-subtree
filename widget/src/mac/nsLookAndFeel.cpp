@@ -36,11 +36,16 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsLookAndFeel.h"
+#include "nsCarbonHelpers.h"
 #include "nsIInternetConfigService.h"
 #include "nsIServiceManager.h"
 #include "nsSize.h"
-#include <ControlDefinitions.h>
-#include <MacWindows.h>
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
+// This theme brush is available in 10.2 and later, but was not
+// formally documented in the SDK until 10.3.
+#define kThemeBrushAlternatePrimaryHighlightColor -5
+#endif
  
 //-------------------------------------------------------------------------
 //
@@ -140,26 +145,6 @@ nsresult nsLookAndFeel::NativeGetColor(const nsColorID aID, nscolor &aColor)
     		else
     			aColor = NS_DONT_CHANGE_COLOR;
         break;
-    case eColor_IMESelectedRawTextBackground:
-    case eColor_IMESelectedConvertedTextBackground:
-    case eColor_IMERawInputBackground:
-    case eColor_IMEConvertedTextBackground:
-      aColor = NS_TRANSPARENT;
-      break;
-    case eColor_IMESelectedRawTextForeground:
-    case eColor_IMESelectedConvertedTextForeground:
-    case eColor_IMERawInputForeground:
-    case eColor_IMEConvertedTextForeground:
-      aColor = NS_SAME_AS_FOREGROUND_COLOR;
-      break;
-    case eColor_IMERawInputUnderline:
-    case eColor_IMEConvertedTextUnderline:
-      aColor = NS_40PERCENT_FOREGROUND_COLOR;
-      break;
-    case eColor_IMESelectedRawTextUnderline:
-    case eColor_IMESelectedConvertedTextUnderline:
-      aColor = NS_SAME_AS_FOREGROUND_COLOR;
-      break;
 
     //
     // css2 system colors http://www.w3.org/TR/REC-CSS2/ui.html#system-colors
@@ -329,8 +314,8 @@ nsresult nsLookAndFeel::NativeGetColor(const nsColorID aID, nscolor &aColor)
 		res = GetMacAccentColor(eColorOffset_mac_accentlightesthighlight, aColor, NS_RGB(0xEE,0xEE,0xEE));
 	    break;    
     case eColor__moz_mac_accentregularhighlight:
-		//get this colour by querying variation table, ows. default to Aqua normal hilight color
-		res = GetMacAccentColor(eColorOffset_mac_accentregularhighlight, aColor, NS_RGB(0xB5,0xD5,0xFF));
+		//get this colour by querying variation table, ows. default to Platinum/Lavendar
+		res = GetMacAccentColor(eColorOffset_mac_accentregularhighlight, aColor, NS_RGB(0xCC,0xCC,0xFF));
 	    break;        
     case eColor__moz_mac_accentface:
 		//get this colour by querying variation table, ows. default to Platinum/Lavendar
@@ -342,8 +327,8 @@ nsresult nsLookAndFeel::NativeGetColor(const nsColorID aID, nscolor &aColor)
 	    break; 
 	case eColor__moz_mac_menuselect:
 	case eColor__moz_mac_accentregularshadow:
-		//get this colour by querying variation table, ows. default to Aqua's normal menu select color
-		res = GetMacAccentColor(eColorOffset_mac_accentregularshadow, aColor, NS_RGB(0x33,0x6F,0xCB));
+		//get this colour by querying variation table, ows. default to Platinum/Lavendar
+		res = GetMacAccentColor(eColorOffset_mac_accentregularshadow, aColor, NS_RGB(0x63,0x63,0xCE));
 	    break;
     case eColor__moz_mac_accentdarkshadow:
     	//get this colour by querying variation table, ows. default to Platinum/Lavendar
@@ -549,30 +534,12 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricID aID, PRInt32 & aMetric)
     case eMetric_ScrollArrowStyle:
         ThemeScrollBarArrowStyle arrowStyle;
         ::GetThemeScrollBarArrowStyle ( &arrowStyle );
-        switch (arrowStyle) {
-        case kThemeScrollBarArrowsSingle:
-            aMetric = eMetric_ScrollArrowStyleSingle;
-            break;
-        default:
-            NS_WARNING("Not handling all possible ThemeScrollBarArrowStyle values");
-            // fall through so we default to BothAtBottom
-        case kThemeScrollBarArrowsLowerRight:
-            aMetric = eMetric_ScrollArrowStyleBothAtBottom;
-        }
+        aMetric = arrowStyle;
         break;
     case eMetric_ScrollSliderStyle:
         ThemeScrollBarThumbStyle thumbStyle;
         ::GetThemeScrollBarThumbStyle ( &thumbStyle );
-        switch (thumbStyle) {
-        case kThemeScrollBarThumbNormal:
-            aMetric = eMetric_ScrollThumbStyleNormal;
-            break;
-        default:
-            NS_WARNING("Not handling all possible ThemeScrollBarThumbStyle values");
-            // fall through so we default to Proportional
-        case kThemeScrollBarThumbProportional:
-            aMetric = eMetric_ScrollThumbStyleProportional;
-        }
+        aMetric = thumbStyle;
         break;
     case eMetric_TreeOpenDelay:
         aMetric = 1000;
@@ -649,9 +616,6 @@ NS_IMETHODIMP nsLookAndFeel::GetMetric(const nsMetricFloatID aID, float & aMetri
         break;
     case eMetricFloat_ButtonHorizontalInsidePadding:
         aMetric = 0.5f;
-        break;
-    case eMetricFloat_IMEUnderlineRelativeSize:
-        aMetric = 2.0f;
         break;
     default:
         aMetric = -1.0;

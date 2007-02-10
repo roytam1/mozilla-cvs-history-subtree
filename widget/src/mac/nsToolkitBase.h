@@ -43,9 +43,10 @@
 #include "nsIToolkit.h"
 
 #include "nsCOMPtr.h"
-#include "nsIObserver.h"
+#include "nsIEventQueueService.h"
 
-class nsToolkitBase : public nsIToolkit, public nsIObserver
+
+class nsToolkitBase : public nsIToolkit
 {
 public:
                     nsToolkitBase();
@@ -53,7 +54,6 @@ public:
   
   NS_DECL_ISUPPORTS
   NS_DECL_NSITOOLKIT
-  NS_DECL_NSIOBSERVER
   
   static void       PostSleepWakeNotification(const char* aNotification);
 

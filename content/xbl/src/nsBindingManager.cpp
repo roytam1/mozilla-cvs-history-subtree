@@ -57,8 +57,10 @@
 #include "nsIXMLContentSink.h"
 #include "nsContentCID.h"
 #include "nsXMLDocument.h"
+#include "nsHTMLAtoms.h"
+#include "nsSupportsArray.h"
+#include "nsITextContent.h"
 #include "nsIStreamListener.h"
-#include "nsGenericDOMNodeList.h"
 
 #include "nsXBLBinding.h"
 #include "nsXBLPrototypeBinding.h"
@@ -76,7 +78,11 @@
 #include "nsIXPConnect.h"
 #include "nsDOMCID.h"
 #include "nsIDOMScriptObjectFactory.h"
+#include "nsIPrincipal.h"
 #include "nsIScriptGlobalObject.h"
+#include "nsIScriptObjectPrincipal.h"
+#include "nsIConsoleService.h"
+#include "nsIScriptError.h"
 
 #include "nsIScriptContext.h"
 #include "nsBindingManager.h"
@@ -88,22 +94,29 @@
 class nsAnonymousContentList : public nsGenericDOMNodeList
 {
 public:
-  nsAnonymousContentList(nsInsertionPointList* aElements);
+  nsAnonymousContentList(nsVoidArray* aElements);
   virtual ~nsAnonymousContentList();
 
   // nsIDOMNodeList interface
   NS_DECL_NSIDOMNODELIST
 
-  PRInt32 GetInsertionPointCount() { return mElements->Length(); }
+  PRInt32 GetInsertionPointCount() { return mElements->Count(); }
 
   nsXBLInsertionPoint* GetInsertionPointAt(PRInt32 i) { return NS_STATIC_CAST(nsXBLInsertionPoint*, mElements->ElementAt(i)); }
-  void RemoveInsertionPointAt(PRInt32 i) { mElements->RemoveElementAt(i); }
+  void RemoveInsertionPointAt(PRInt32 i) {
+    nsXBLInsertionPoint* insertionPoint =
+      NS_STATIC_CAST(nsXBLInsertionPoint*, mElements->SafeElementAt(i));
+    NS_IF_RELEASE(insertionPoint);
+    mElements->RemoveElementAt(i);
+  }
 
 private:
-  nsInsertionPointList* mElements;
+  nsVoidArray* mElements;
 };
 
-nsAnonymousContentList::nsAnonymousContentList(nsInsertionPointList* aElements)
+MOZ_DECL_CTOR_COUNTER(nsAnonymousContentList)
+
+nsAnonymousContentList::nsAnonymousContentList(nsVoidArray* aElements)
   : mElements(aElements)
 {
   MOZ_COUNT_CTOR(nsAnonymousContentList);
@@ -112,9 +125,18 @@ nsAnonymousContentList::nsAnonymousContentList(nsInsertionPointList* aElements)
   // references). We'll be told when the Anonymous goes away.
 }
 
+PRBool PR_CALLBACK ReleaseInsertionPoint(void* aElement, void* aData)
+{
+  nsXBLInsertionPoint* insertionPoint =
+    NS_STATIC_CAST(nsXBLInsertionPoint*, aElement);
+  NS_IF_RELEASE(insertionPoint);
+  return PR_TRUE;
+}
+
 nsAnonymousContentList::~nsAnonymousContentList()
 {
   MOZ_COUNT_DTOR(nsAnonymousContentList);
+  mElements->EnumerateForwards(ReleaseInsertionPoint, nsnull);
   delete mElements;
 }
 
@@ -125,7 +147,7 @@ nsAnonymousContentList::GetLength(PRUint32* aLength)
   if (! aLength)
       return NS_ERROR_NULL_POINTER;
 
-  PRInt32 cnt = mElements->Length();
+  PRInt32 cnt = mElements->Count();
 
   *aLength = 0;
   for (PRInt32 i = 0; i < cnt; i++)
@@ -137,7 +159,7 @@ nsAnonymousContentList::GetLength(PRUint32* aLength)
 NS_IMETHODIMP    
 nsAnonymousContentList::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
 {
-  PRInt32 cnt = mElements->Length();
+  PRInt32 cnt = mElements->Count();
   PRUint32 pointCount = 0;
 
   for (PRInt32 i = 0; i < cnt; i++) {
@@ -280,102 +302,7 @@ SetOrRemoveObject(PLDHashTable& table, nsISupports* aKey, nsISupports* aValue)
 // Static member variable initialization
 
 // Implement our nsISupports methods
-
-NS_IMPL_CYCLE_COLLECTION_UNLINK_BEGIN(nsBindingManager, nsIBindingManager)
-
-  if (tmp->mBindingTable.IsInitialized())
-    tmp->mBindingTable.Clear();
-
-  if (tmp->mDocumentTable.IsInitialized())
-    tmp->mDocumentTable.Clear();
-
-  if (tmp->mLoadingDocTable.IsInitialized())
-    tmp->mLoadingDocTable.Clear();
-
-  if (tmp->mContentListTable.ops)
-    PL_DHashTableFinish(&(tmp->mContentListTable));
-  tmp->mContentListTable.ops = nsnull;
-
-  if (tmp->mAnonymousNodesTable.ops)
-    PL_DHashTableFinish(&(tmp->mAnonymousNodesTable));
-  tmp->mAnonymousNodesTable.ops = nsnull;
-
-  if (tmp->mInsertionParentTable.ops)
-    PL_DHashTableFinish(&(tmp->mInsertionParentTable));
-  tmp->mInsertionParentTable.ops = nsnull;
-
-  if (tmp->mWrapperTable.ops)
-    PL_DHashTableFinish(&(tmp->mWrapperTable));
-  tmp->mWrapperTable.ops = nsnull;
-
-  tmp->mAttachedStack.Clear();
-NS_IMPL_CYCLE_COLLECTION_UNLINK_END
-
-
-static PLDHashOperator
-DocumentInfoHashtableTraverser(nsIURI* key,
-                               nsIXBLDocumentInfo* di,
-                               void* userArg)
-{
-  nsCycleCollectionTraversalCallback *cb = 
-    NS_STATIC_CAST(nsCycleCollectionTraversalCallback*, userArg);
-  cb->NoteXPCOMChild(di);
-  return PL_DHASH_NEXT;
-}
-
-static PLDHashOperator
-LoadingDocHashtableTraverser(nsIURI* key,
-                             nsIStreamListener* sl,
-                             void* userArg)
-{
-  nsCycleCollectionTraversalCallback *cb = 
-    NS_STATIC_CAST(nsCycleCollectionTraversalCallback*, userArg);
-  cb->NoteXPCOMChild(sl);
-  return PL_DHASH_NEXT;
-}
-
-static PLDHashOperator
-XBLBindingHashtableTraverser(nsISupports* key,
-                             nsXBLBinding* binding,
-                             void* userArg)
-{  
-  nsCycleCollectionTraversalCallback *cb = 
-    NS_STATIC_CAST(nsCycleCollectionTraversalCallback*, userArg);
- 
-  // XBLBindings aren't nsISupports, so we don't tell the cycle collector
-  // about them explicitly. Instead, we traverse their contents directly
-  // here.
- 
-  while (binding) {
-    nsISupports *c = binding->GetAnonymousContent();
-    if (c)
-      cb->NoteXPCOMChild(c);
-    binding = binding->GetBaseBinding();
-  }
-  return PL_DHASH_NEXT;
-}
-
-NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN(nsBindingManager, nsIBindingManager)
-  if (tmp->mBindingTable.IsInitialized())
-      tmp->mBindingTable.EnumerateRead(&XBLBindingHashtableTraverser, &cb);
-  if (tmp->mDocumentTable.IsInitialized())
-      tmp->mDocumentTable.EnumerateRead(&DocumentInfoHashtableTraverser, &cb);
-  if (tmp->mLoadingDocTable.IsInitialized())
-      tmp->mLoadingDocTable.EnumerateRead(&LoadingDocHashtableTraverser, &cb);
-NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
-
-NS_IMPL_CYCLE_COLLECTION_CLASS(nsBindingManager)
-
-NS_INTERFACE_MAP_BEGIN(nsBindingManager)
-  NS_INTERFACE_MAP_ENTRY(nsIBindingManager)
-  NS_INTERFACE_MAP_ENTRY(nsIStyleRuleSupplier)
-  NS_INTERFACE_MAP_ENTRY(nsIMutationObserver)
-  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIBindingManager)
-  NS_INTERFACE_MAP_ENTRY_CYCLE_COLLECTION(nsBindingManager)
-NS_INTERFACE_MAP_END
-
-NS_IMPL_CYCLE_COLLECTING_ADDREF_AMBIGUOUS(nsBindingManager, nsIBindingManager)
-NS_IMPL_CYCLE_COLLECTING_RELEASE_AMBIGUOUS(nsBindingManager, nsIBindingManager)
+NS_IMPL_ISUPPORTS3(nsBindingManager, nsIBindingManager, nsIStyleRuleSupplier, nsIDocumentObserver)
 
 // Constructors/Destructors
 nsBindingManager::nsBindingManager(void)
@@ -385,6 +312,14 @@ nsBindingManager::nsBindingManager(void)
   mAnonymousNodesTable.ops = nsnull;
   mInsertionParentTable.ops = nsnull;
   mWrapperTable.ops = nsnull;
+}
+
+static PRBool PR_CALLBACK
+ReleaseBindings(void *aElement, void *aData)
+{
+  nsXBLBinding *binding = NS_STATIC_CAST(nsXBLBinding*, aElement);
+  NS_IF_RELEASE(binding);
+  return PR_TRUE;
 }
 
 nsBindingManager::~nsBindingManager(void)
@@ -397,6 +332,7 @@ nsBindingManager::~nsBindingManager(void)
     PL_DHashTableFinish(&mInsertionParentTable);
   if (mWrapperTable.ops)
     PL_DHashTableFinish(&mWrapperTable);
+  mAttachedStack.EnumerateForwards(ReleaseBindings, nsnull);
 }
 
 nsXBLBinding*
@@ -423,8 +359,8 @@ nsBindingManager::SetBinding(nsIContent* aContent, nsXBLBinding* aBinding)
   // after aContent has been deleted (if aBinding is null and the content node
   // dies before we process mAttachedStack).
   nsXBLBinding* oldBinding = mBindingTable.GetWeak(aContent);
-  if (oldBinding) {
-    mAttachedStack.RemoveElement(oldBinding);
+  if (oldBinding && mAttachedStack.RemoveElement(oldBinding)) {
+    NS_RELEASE(oldBinding);
   }
   
   PRBool result = PR_TRUE;
@@ -570,13 +506,13 @@ nsBindingManager::GetContentListFor(nsIContent* aContent, nsIDOMNodeList** aResu
 }
 
 NS_IMETHODIMP
-nsBindingManager::SetContentListFor(nsIContent* aContent,
-                                    nsInsertionPointList* aList)
+nsBindingManager::SetContentListFor(nsIContent* aContent, nsVoidArray* aList)
 {
   nsIDOMNodeList* contentList = nsnull;
   if (aList) {
     contentList = new nsAnonymousContentList(aList);
     if (!contentList) {
+      aList->EnumerateForwards(ReleaseInsertionPoint, nsnull);
       delete aList;
       return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -632,13 +568,13 @@ nsBindingManager::GetAnonymousNodesFor(nsIContent* aContent,
 }
 
 NS_IMETHODIMP
-nsBindingManager::SetAnonymousNodesFor(nsIContent* aContent,
-                                       nsInsertionPointList* aList)
+nsBindingManager::SetAnonymousNodesFor(nsIContent* aContent, nsVoidArray* aList)
 {
   nsIDOMNodeList* contentList = nsnull;
   if (aList) {
     contentList = new nsAnonymousContentList(aList);
     if (!contentList) {
+      aList->EnumerateForwards(ReleaseInsertionPoint, nsnull);
       delete aList;
       return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -849,12 +785,14 @@ nsBindingManager::AddToAttachedQueue(nsXBLBinding* aBinding)
   if (!mAttachedStack.AppendElement(aBinding))
     return NS_ERROR_OUT_OF_MEMORY;
 
+  NS_ADDREF(aBinding);
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsBindingManager::ClearAttachedQueue()
 {
+  mAttachedStack.EnumerateForwards(ReleaseBindings, nsnull);
   mAttachedStack.Clear();
   return NS_OK;
 }
@@ -868,12 +806,14 @@ nsBindingManager::ProcessAttachedQueue()
   mProcessingAttachedStack = PR_TRUE;
 
   PRInt32 lastItem;
-  while ((lastItem = mAttachedStack.Length() - 1) >= 0) {
-    nsRefPtr<nsXBLBinding> binding = mAttachedStack.ElementAt(lastItem);
+  while ((lastItem = mAttachedStack.Count() - 1) >= 0) {
+    nsXBLBinding *binding = NS_STATIC_CAST(nsXBLBinding*,
+                                           mAttachedStack.FastElementAt(lastItem));
     mAttachedStack.RemoveElementAt(lastItem);
 
     NS_ASSERTION(binding, "null item in attached stack?");
     binding->ExecuteAttachedHandler();
+    NS_RELEASE(binding);
   }
 
   mProcessingAttachedStack = PR_FALSE;
@@ -1219,91 +1159,51 @@ nsBindingManager::GetNestedInsertionPoint(nsIContent* aParent, nsIContent* aChil
   return NS_OK;
 }
 
-// Note: We don't hold a reference to the document observer; we assume
-// that it has a live reference to the document.
-void
-nsBindingManager::AddObserver(nsIMutationObserver* aObserver)
-{
-  // The array makes sure the observer isn't already in the list
-  mObservers.AppendObserver(aObserver);
-}
-
-PRBool
-nsBindingManager::RemoveObserver(nsIMutationObserver* aObserver)
-{
-  return mObservers.RemoveObserver(aObserver);
-}
-
-void
-nsBindingManager::CharacterDataChanged(nsIDocument* aDocument,
-                                       nsIContent* aContent,
-                                       CharacterDataChangeInfo* aInfo)
-{
-  NS_BINDINGMANAGER_NOTIFY_OBSERVERS(CharacterDataChanged,
-                                     (aDocument, aContent, aInfo));
-}
-
-void
-nsBindingManager::AttributeChanged(nsIDocument* aDocument,
-                                   nsIContent* aContent,
-                                   PRInt32 aNameSpaceID,
-                                   nsIAtom* aAttribute,
-                                   PRInt32 aModType)
-{
-  NS_BINDINGMANAGER_NOTIFY_OBSERVERS(AttributeChanged,
-                                     (aDocument, aContent, aNameSpaceID,
-                                      aAttribute, aModType));
-}
-
 void
 nsBindingManager::ContentAppended(nsIDocument* aDocument,
                                   nsIContent* aContainer,
                                   PRInt32     aNewIndexInContainer)
 {
   // XXX This is hacked and not quite correct. See below.
-  if (aNewIndexInContainer != -1 && mContentListTable.ops) {
-    // It's not anonymous.
-    PRInt32 childCount = aContainer->GetChildCount();
+  if (aNewIndexInContainer == -1 || !mContentListTable.ops)
+    // It's anonymous.
+    return;
 
-    nsIContent *child = aContainer->GetChildAt(aNewIndexInContainer);
+  PRInt32 childCount = aContainer->GetChildCount();
 
-    nsCOMPtr<nsIContent> ins;
-    GetNestedInsertionPoint(aContainer, child, getter_AddRefs(ins));
+  nsIContent *child = aContainer->GetChildAt(aNewIndexInContainer);
 
-    if (ins) {
-      nsCOMPtr<nsIDOMNodeList> nodeList;
-      PRBool isAnonymousContentList;
-      GetXBLChildNodesInternal(ins, getter_AddRefs(nodeList),
-                               &isAnonymousContentList);
+  nsCOMPtr<nsIContent> ins;
+  GetNestedInsertionPoint(aContainer, child, getter_AddRefs(ins));
 
-      if (nodeList && isAnonymousContentList) {
-        // Find a non-pseudo-insertion point and just jam ourselves in.
-        // This is not 100% correct.  Hack city, baby.
-        nsAnonymousContentList* contentList =
-          NS_STATIC_CAST(nsAnonymousContentList*, nodeList.get());
+  if (ins) {
+    nsCOMPtr<nsIDOMNodeList> nodeList;
+    PRBool isAnonymousContentList;
+    GetXBLChildNodesInternal(ins, getter_AddRefs(nodeList),
+                             &isAnonymousContentList);
 
-        PRInt32 count = contentList->GetInsertionPointCount();
-        for (PRInt32 i = 0; i < count; i++) {
-          nsXBLInsertionPoint* point = contentList->GetInsertionPointAt(i);
-          PRInt32 index = point->GetInsertionIndex();
-          if (index != -1) {
-            // We're real. Jam all the kids in.
-            // XXX Check the filters to find the correct points.
-            for (PRInt32 j = aNewIndexInContainer; j < childCount; j++) {
-              child = aContainer->GetChildAt(j);
-              point->AddChild(child);
-              SetInsertionParent(child, ins);
-            }
-            break;
+    if (nodeList && isAnonymousContentList) {
+      // Find a non-pseudo-insertion point and just jam ourselves in.
+      // This is not 100% correct.  Hack city, baby.
+      nsAnonymousContentList* contentList = NS_STATIC_CAST(nsAnonymousContentList*, NS_STATIC_CAST(nsIDOMNodeList*, nodeList.get()));
+
+      PRInt32 count = contentList->GetInsertionPointCount();
+      for (PRInt32 i = 0; i < count; i++) {
+        nsXBLInsertionPoint* point = contentList->GetInsertionPointAt(i);
+        PRInt32 index = point->GetInsertionIndex();
+        if (index != -1) {
+          // We're real. Jam all the kids in.
+          // XXX Check the filters to find the correct points.
+          for (PRInt32 j = aNewIndexInContainer; j < childCount; j++) {
+            child = aContainer->GetChildAt(j);
+            point->AddChild(child);
+            SetInsertionParent(child, ins);
           }
+          break;
         }
       }
     }
   }
-
-  NS_BINDINGMANAGER_NOTIFY_OBSERVERS(ContentAppended,
-                                     (aDocument, aContainer,
-                                      aNewIndexInContainer));
 }
 
 void
@@ -1312,70 +1212,66 @@ nsBindingManager::ContentInserted(nsIDocument* aDocument,
                                   nsIContent* aChild,
                                   PRInt32 aIndexInContainer)
 {
-  // XXX This is hacked just to make menus work again.
-  if (aIndexInContainer != -1 && mContentListTable.ops) {
-    // It's not anonymous.
-    nsCOMPtr<nsIContent> ins;
-    GetNestedInsertionPoint(aContainer, aChild, getter_AddRefs(ins));
+// XXX This is hacked just to make menus work again.
+  if (aIndexInContainer == -1 || !mContentListTable.ops)
+    // It's anonymous.
+    return;
 
-    if (ins) {
-      nsCOMPtr<nsIDOMNodeList> nodeList;
-      PRBool isAnonymousContentList;
-      GetXBLChildNodesInternal(ins, getter_AddRefs(nodeList),
-                               &isAnonymousContentList);
+  nsCOMPtr<nsIContent> ins;
+  GetNestedInsertionPoint(aContainer, aChild, getter_AddRefs(ins));
 
-      if (nodeList && isAnonymousContentList) {
-        // Find a non-pseudo-insertion point and just jam ourselves in.
-        // This is not 100% correct.  Hack city, baby.
-        nsAnonymousContentList* contentList =
-          NS_STATIC_CAST(nsAnonymousContentList*, nodeList.get());
+  if (ins) {
+    nsCOMPtr<nsIDOMNodeList> nodeList;
+    PRBool isAnonymousContentList;
+    GetXBLChildNodesInternal(ins, getter_AddRefs(nodeList),
+                             &isAnonymousContentList);
 
-        PRInt32 count = contentList->GetInsertionPointCount();
-        for (PRInt32 i = 0; i < count; i++) {
-          nsXBLInsertionPoint* point = contentList->GetInsertionPointAt(i);
-          if (point->GetInsertionIndex() != -1) {
-            // We're real. Jam the kid in.
-            // XXX Check the filters to find the correct points.
+    if (nodeList && isAnonymousContentList) {
+      // Find a non-pseudo-insertion point and just jam ourselves in.
+      // This is not 100% correct.  Hack city, baby.
+      nsAnonymousContentList* contentList = NS_STATIC_CAST(nsAnonymousContentList*, NS_STATIC_CAST(nsIDOMNodeList*, nodeList.get()));
 
-            // Find the right insertion spot.  Can't just insert in the insertion
-            // point at aIndexInContainer since the point may contain anonymous
-            // content, not all of aContainer's kids, etc.  So find the last
-            // child of aContainer that comes before aIndexInContainer and is in
-            // the insertion point and insert right after it.
-            PRInt32 pointSize = point->ChildCount();
-            PRBool inserted = PR_FALSE;
-            for (PRInt32 parentIndex = aIndexInContainer - 1;
-                 parentIndex >= 0 && !inserted; --parentIndex) {
-              nsIContent* currentSibling = aContainer->GetChildAt(parentIndex);
-              for (PRInt32 pointIndex = pointSize - 1; pointIndex >= 0;
-                   --pointIndex) {
-                nsCOMPtr<nsIContent> currContent = point->ChildAt(pointIndex);
-                if (currContent == currentSibling) {
-                  point->InsertChildAt(pointIndex + 1, aChild);
-                  inserted = PR_TRUE;
-                  break;
-                }
+      PRInt32 count = contentList->GetInsertionPointCount();
+      for (PRInt32 i = 0; i < count; i++) {
+        nsXBLInsertionPoint* point = contentList->GetInsertionPointAt(i);
+        if (point->GetInsertionIndex() != -1) {
+          // We're real. Jam the kid in.
+          // XXX Check the filters to find the correct points.
+
+          // Find the right insertion spot.  Can't just insert in the insertion
+          // point at aIndexInContainer since the point may contain anonymous
+          // content, not all of aContainer's kids, etc.  So find the last
+          // child of aContainer that comes before aIndexInContainer and is in
+          // the insertion point and insert right after it.
+          PRInt32 pointSize = point->ChildCount();
+          PRBool inserted = PR_FALSE;
+          for (PRInt32 parentIndex = aIndexInContainer - 1;
+               parentIndex >= 0 && !inserted; --parentIndex) {
+            nsIContent* currentSibling = aContainer->GetChildAt(parentIndex);
+            for (PRInt32 pointIndex = pointSize - 1; pointIndex >= 0;
+                 --pointIndex) {
+              nsCOMPtr<nsIContent> currContent = point->ChildAt(pointIndex);
+              if (currContent == currentSibling) {
+                point->InsertChildAt(pointIndex + 1, aChild);
+                inserted = PR_TRUE;
+                break;
               }
             }
-            if (!inserted) {
-              // None of our previous siblings are in here... just stick
-              // ourselves in at the beginning of the insertion point.
-              // XXXbz if we ever start doing the filter thing right, this may be
-              // no good, since we may _still_ have anonymous kids in there and
-              // may need to get the ordering with those right.
-              point->InsertChildAt(0, aChild);
-            }
-            SetInsertionParent(aChild, ins);
-            break;
           }
+          if (!inserted) {
+            // None of our previous siblings are in here... just stick
+            // ourselves in at the beginning of the insertion point.
+            // XXXbz if we ever start doing the filter thing right, this may be
+            // no good, since we may _still_ have anonymous kids in there and
+            // may need to get the ordering with those right.
+            point->InsertChildAt(0, aChild);
+          }
+          SetInsertionParent(aChild, ins);
+          break;
         }
       }
     }
   }
-
-  NS_BINDINGMANAGER_NOTIFY_OBSERVERS(ContentInserted,
-                                     (aDocument, aContainer, aChild,
-                                      aIndexInContainer));  
 }
 
 void
@@ -1384,10 +1280,6 @@ nsBindingManager::ContentRemoved(nsIDocument* aDocument,
                                  nsIContent* aChild,
                                  PRInt32 aIndexInContainer)
 {
-  NS_BINDINGMANAGER_NOTIFY_OBSERVERS(ContentRemoved,
-                                     (aDocument, aContainer, aChild,
-                                      aIndexInContainer));  
-
   if (aIndexInContainer == -1 || !mContentListTable.ops)
     // It's anonymous.
     return;
@@ -1413,10 +1305,4 @@ nsBindingManager::ContentRemoved(nsIDocument* aDocument,
       }
     }
   }
-}
-
-void
-nsBindingManager::NodeWillBeDestroyed(const nsINode *aNode)
-{
-  NS_BINDINGMANAGER_NOTIFY_OBSERVERS(NodeWillBeDestroyed, (aNode));
 }

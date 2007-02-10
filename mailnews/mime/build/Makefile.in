@@ -49,7 +49,6 @@ EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
 MODULE_NAME	= mime_services
 MOZILLA_INTERNAL_API = 1
-LOCAL_INCLUDES += -I$(srcdir)/../src
 
 PACKAGE_FILE = mime.pkg
 
@@ -70,7 +69,7 @@ endif
 CPPSRCS			= nsMimeModule.cpp
 
 SHARED_LIBRARY_LIBS = \
-                ../src/$(LIB_PREFIX)mime_s.$(LIB_SUFFIX) \
+                $(DIST)/lib/$(LIB_PREFIX)mime_s.$(LIB_SUFFIX) \
                 $(NULL)
 
 EXTRA_DSO_LDOPTS = \

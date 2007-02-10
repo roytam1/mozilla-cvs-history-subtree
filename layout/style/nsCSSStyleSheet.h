@@ -39,8 +39,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* representation of a CSS style sheet */
-
 #ifndef nsCSSStyleSheet_h_
 #define nsCSSStyleSheet_h_
 
@@ -51,9 +49,9 @@
 #include "nsIDOMCSSStyleSheet.h"
 #include "nsICSSLoaderObserver.h"
 #include "nsVoidArray.h"
-#include "nsCOMArray.h"
 
 class nsIURI;
+class nsISupportsArray;
 class nsMediaList;
 
 // -------------------------------
@@ -75,7 +73,7 @@ public:
   nsAutoVoidArray        mSheets;
   nsCOMPtr<nsIURI>       mSheetURI; // for error reports, etc.
   nsCOMPtr<nsIURI>       mBaseURI; // for resolving relative URIs
-  nsCOMArray<nsICSSRule> mOrderedRules;
+  nsISupportsArray*      mOrderedRules;
   nsAutoPtr<nsXMLNameSpaceMap> mNameSpaceMap;
   PRPackedBool           mComplete;
 };
@@ -149,8 +147,7 @@ public:
   NS_IMETHOD DropRuleProcessor(nsCSSRuleProcessor* aProcessor);
 
   // nsICSSLoaderObserver interface
-  NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet* aSheet, PRBool aWasAlternate,
-                              nsresult aStatus);
+  NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet*aSheet, PRBool aNotify);
   
   nsresult EnsureUniqueInner();
 

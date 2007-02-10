@@ -13,8 +13,9 @@
  *
  * The Original Code is Java XPCOM Bindings.
  *
- * The Initial Developer of the Original Code is IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * The Initial Developer of the Original Code is
+ * IBM Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2005
  * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,16 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.Properties;
-
-import org.mozilla.xpcom.GREVersionRange;
-import org.mozilla.xpcom.Mozilla;
-import org.mozilla.xpcom.XPCOMException;
-import org.mozilla.xpcom.nsIComponentManager;
-import org.mozilla.xpcom.nsIMutableArray;
-import org.mozilla.xpcom.nsISupports;
+import org.mozilla.xpcom.*;
+import java.io.*;
 
 /**
  * Adapted from xpcom/tests/TestArray.cpp
@@ -71,38 +64,23 @@ public class TestArray {
   public static final String NS_ARRAY_CONTRACTID = "@mozilla.org/array;1";
 
   public static void main(String [] args) {
-    GREVersionRange[] range = new GREVersionRange[1];
-    range[0] = new GREVersionRange("1.8", true, "1.9+", true);
-    Properties props = null;
-      
-    File grePath = null;
-    try {
-      grePath = Mozilla.getGREPathWithProperties(range, props);
-    } catch (FileNotFoundException e) { }
-      
-    if (grePath == null) {
-      System.out.println("found no GRE PATH");
-      return;
-    }
-    System.out.println("GRE PATH = " + grePath.getPath());
-    
-    Mozilla Moz = Mozilla.getInstance();
-    try {
-      Moz.initXPCOM(grePath, null);
-    } catch (IllegalArgumentException e) {
-      System.out.println("no javaxpcom.jar found in given path");
-      return;
-    } catch (Throwable t) {
-      System.out.println("initXPCOM failed");
-      t.printStackTrace();
-      return;
-    }
-    System.out.println("\n--> initialized\n");
+    System.loadLibrary("javaxpcom");
 
-    nsIComponentManager componentManager = Moz.getComponentManager();
+    String mozillaPath = System.getProperty("MOZILLA_FIVE_HOME");
+    if (mozillaPath == null) {
+      throw new RuntimeException("MOZILLA_FIVE_HOME system property not set.");
+    }
+
+    File localFile = new File(mozillaPath);
+    XPCOM.initXPCOM(localFile, null);
+    // XPCOM.initXPCOM() only initializes XPCOM.  If you want to initialize
+    // Gecko, you would do the following instead:
+    //    GeckoEmbed.initEmbedding(localFile, null);
+
+    nsIComponentManager componentManager = XPCOM.getComponentManager();
     nsIMutableArray array = (nsIMutableArray)
-      componentManager.createInstanceByContractID(NS_ARRAY_CONTRACTID,
-          null, nsIMutableArray.NS_IMUTABLEARRAY_IID);
+      componentManager.createInstanceByContractID(NS_ARRAY_CONTRACTID, null,
+                                                  nsIMutableArray.NS_IMUTABLEARRAY_IID);
     if (array == null) {
       throw new RuntimeException("Failed to create nsIMutableArray.");
     }
@@ -113,7 +91,7 @@ public class TestArray {
     dumpArray(array, 10, fillResult, 10);
 
     // test insert
-    Foo foo = (Foo) array.queryElementAt(3, nsISupports.NS_ISUPPORTS_IID);
+    IFoo foo = (IFoo) array.queryElementAt(3, IFoo.IFOO_IID);
     array.insertElementAt(foo, 5, false);
     System.out.println("insert 3 at 5:");
     int insertResult[] = {0, 1, 2, 3, 4, 3, 5, 6, 7, 8, 9};
@@ -144,7 +122,7 @@ public class TestArray {
     } catch (XPCOMException e) {
       // If array.indexOf() did not find the element, it returns
       // NS_ERROR_FAILURE.
-      if (e.errorcode != Mozilla.NS_ERROR_FAILURE) {
+      if (e.errorcode != XPCOM.NS_ERROR_FAILURE) {
         throw e;
       }
     }
@@ -198,9 +176,11 @@ public class TestArray {
     System.gc();
     dumpArray(array, 0, null, 0);
 
+    localFile = null;
     componentManager = null;
     System.gc();
-    Moz.shutdownXPCOM(null);
+    XPCOM.shutdownXPCOM(null);
+    //    GeckoEmbed.termEmbedding();
 
     System.out.println("Test Passed.");
   }
@@ -208,7 +188,7 @@ public class TestArray {
   static void fillArray(nsIMutableArray aArray, int aCount)
   {
     for (int index = 0; index < aCount; index++) {
-      nsISupports foo = new Foo(index);
+      IFoo foo = new Foo(index);
       aArray.appendElement(foo, false);
     }
   }
@@ -233,7 +213,7 @@ public class TestArray {
                        assertEqual(count, aExpectedCount));
 
     for (int index = 0; (index < count) && (index < aExpectedCount); index++) {
-      Foo foo = (Foo) aArray.queryElementAt(index, nsISupports.NS_ISUPPORTS_IID);
+      IFoo foo = (IFoo) aArray.queryElementAt(index, IFoo.IFOO_IID);
       System.out.println(index + ": " + aElementIDs[index] + "=" +
                          foo.getId() + " (" +
                          Integer.toHexString(foo.hashCode()) + ") " + 
@@ -245,7 +225,7 @@ public class TestArray {
   static long lastIndexOf(nsIMutableArray aArray, nsISupports aElement)
   {
     for (long i = aArray.getLength() - 1; i >= 0; i--) {
-      Foo foo = (Foo) aArray.queryElementAt(i, nsISupports.NS_ISUPPORTS_IID);
+      IFoo foo = (IFoo) aArray.queryElementAt(i, IFoo.IFOO_IID);
       if (foo == aElement)
         return i;
     }

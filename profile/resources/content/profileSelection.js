@@ -226,18 +226,16 @@ function onStart()
   // start in online or offline mode
   if (gStartupMode) {
     var offlineState = document.getElementById("offlineState");
-    var ioService = Components.classes["@mozilla.org/network/io-service;1"]
-                              .getService(Components.interfaces.nsIIOService2);
-    if (offlineState.checked != ioService.offline) {
-      ioService.manageOfflineStatus = false;
+    var ioService = Components.classes["@mozilla.org/network/io-service;1"].
+                      getService(Components.interfaces.nsIIOService);
+    if (offlineState.checked != ioService.offline)
       ioService.offline = offlineState.checked;
-    }
   }
 
   var autoSelectLastProfile = document.getElementById("autoSelectLastProfile");
   if (!autoSelectLastProfile.hidden)
     profile.startWithLastUsedProfile = autoSelectLastProfile.checked;
-
+  
   try {
     profile.currentProfile = profilename;
   }

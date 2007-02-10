@@ -19,22 +19,22 @@
 # Portions created by the Initial Developer are Copyright (C) 2002
 # the Initial Developer. All Rights Reserved.
 #
-# Contributor(s):
+# Contributors:
 #   Chip Clark <chipc@netscape.com>
 #   Seth Spitzer <sspitzer@netscape.com>
 #   Neil Rashbrook <neil@parkwaycc.co.uk>
 #
 # Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
+# either the GNU General Public License Version 2 or later (the "GPL"), or 
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
 # in which case the provisions of the GPL or the LGPL are applicable instead
 # of those above. If you wish to allow use of your version of this file only
 # under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
+# use your version of this file under the terms of the NPL, indicate your
 # decision by deleting the provisions above and replace them with the notice
 # and other provisions required by the GPL or the LGPL. If you do not delete
 # the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
+# the terms of any one of the NPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
 
@@ -156,7 +156,6 @@ var view = {
   selectionChanged : function() {},
   cycleCell: function(row, col) {},
   isEditable: function(row, col) {return false; },
-  isSelectable: function(row, col) {return false; },
   setCellValue: function(row, col, value) {},
   setCellText: function(row, col, value) {},
   performAction: function(action) {},
@@ -322,17 +321,6 @@ function onConfigLoad()
   gTypeStrs[nsIPrefBranch.PREF_INT] = gConfigBundle.getString("int");
   gTypeStrs[nsIPrefBranch.PREF_BOOL] = gConfigBundle.getString("bool");
 
-  var showWarning = gPrefBranch.getBoolPref("general.warnOnAboutConfig");
-
-  if (showWarning)
-    document.getElementById("warningButton").focus();
-  else
-    ShowPrefs();
-}
-
-// Unhide the warning message
-function ShowPrefs()
-{
   var prefCount = { value: 0 };
   var prefArray = gPrefBranch.getChildList("", prefCount);
 
@@ -363,57 +351,33 @@ function ShowPrefs()
   
   gPrefBranch.addObserver("", gPrefListener, false);
 
-  var configTree = document.getElementById("configTree");
-  configTree.view = view;
-  configTree.controllers.insertControllerAt(0, configController);
-
-  document.getElementById("configDeck").setAttribute("selectedIndex", 1);
-  if (!document.getElementById("showWarningNextTime").checked)
-    gPrefBranch.setBoolPref("general.warnOnAboutConfig", false);
-
+  document.getElementById("configTree").view = view;
+  
   document.getElementById("textbox").focus();
 }
 
 function onConfigUnload()
 {
-  if (document.getElementById("configDeck").getAttribute("selectedIndex") == 1) {
-    gPrefBranch.removeObserver("", gPrefListener);
-    var configTree = document.getElementById("configTree");
-    configTree.view = null;
-    configTree.controllers.removeController(configController);
-  }
+  gPrefBranch.removeObserver("", gPrefListener);
+  document.getElementById("configTree").view = null;
 }
 
 function FilterPrefs()
 {
-  var substring = document.getElementById("textbox").value;
-  var rex;
-  // Check for "/regex/[i]"
-  if (substring.charAt(0) == '/') {
-    var r = substring.match(/^\/(.*)\/(i?)$/);
-    try {
-      rex = RegExp(r[1], r[2]);
-    }
-    catch (e) {
-      return; // Do nothing on incomplete or bad RegExp
-    }
-  }
-
+  var substring = document.getElementById("textbox").value.toLowerCase();
   var prefCol = view.selection.currentIndex < 0 ? null : gPrefView[view.selection.currentIndex].prefCol;
-  var oldlen = gPrefView.length;
+  var array = gPrefView;
   gPrefView = gPrefArray;
   if (substring) {
     gPrefView = [];
-    if (!rex)
-      rex = RegExp(substring.replace(/([^* \w])/g, "\\$1").replace(/[*]/g, ".*"), "i");
     for (var i = 0; i < gPrefArray.length; ++i)
-      if (rex.test(gPrefArray[i].prefCol + ";" + gPrefArray[i].valueCol))
+      if (gPrefArray[i].prefCol.toLowerCase().indexOf(substring) >= 0)
         gPrefView.push(gPrefArray[i]);
     if (gFastIndex < gPrefArray.length)
       gPrefView.sort(gSortFunction);
   }
   view.treebox.invalidate();
-  view.treebox.rowCountChanged(oldlen, gPrefView.length - oldlen);
+  view.treebox.rowCountChanged(array.length, gPrefView.length - array.length);
   gotoPref(prefCol);
   document.getElementById("button").disabled = !substring;
 }
@@ -466,20 +430,6 @@ const gSortFunctions =
   valueCol: valueColSortFunction
 };
 
-const configController = {
-  supportsCommand: function supportsCommand(command) {
-    return command == "cmd_copy";
-  },
-  isCommandEnabled: function isCommandEnabled(command) {
-    return view.selection && view.selection.currentIndex >= 0;
-  },
-  doCommand: function doCommand(command) {
-    copyPref();
-  },
-  onEvent: function onEvent(event) {
-  }
-}
-
 function updateContextMenu()
 {
   var lockCol = PREF_IS_LOCKED;
@@ -494,9 +444,6 @@ function updateContextMenu()
     valueCol = prefRow.valueCol;
     copyDisabled = false;
   }
-
-  var copyPref = document.getElementById("copyPref");
-  copyPref.setAttribute("disabled", copyDisabled);
 
   var copyName = document.getElementById("copyName");
   copyName.setAttribute("disabled", copyDisabled);
@@ -519,14 +466,12 @@ function updateContextMenu()
   
   var entry = gPrefView[view.selection.currentIndex];
   var isLocked = gPrefBranch.prefIsLocked(entry.prefCol);
-  document.getElementById("lockSelected").hidden = isLocked;
-  document.getElementById("unlockSelected").hidden = !isLocked;
-}
 
-function copyPref()
-{
-  var pref = gPrefView[view.selection.currentIndex];
-  gClipboardHelper.copyString(pref.prefCol + ';' + pref.valueCol);
+  // These might not exist (bug 289136)
+  try {
+    document.getElementById("lockSelected").hidden = isLocked;
+    document.getElementById("unlockSelected").hidden = !isLocked;
+  } catch (ex) {}
 }
 
 function copyName()

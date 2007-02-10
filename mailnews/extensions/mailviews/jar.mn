@@ -1,4 +1,4 @@
-#ifdef MOZ_SUITE
+#ifndef MOZ_XUL_APP
 messenger.jar:
     content/messenger/msgViewPickerOverlay.xul                       (resources/content/msgViewPickerOverlay.xul)
     content/messenger/msgViewPickerOverlay.js                        (resources/content/msgViewPickerOverlay.js)

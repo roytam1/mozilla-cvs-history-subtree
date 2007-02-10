@@ -1,29 +1,29 @@
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
  * http://www.mozilla.org/MPL/
- * 
+ *
  * Software distributed under the License is distributed on an "AS IS" basis,
  * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
  * for the specific language governing rights and limitations under the
  * License.
- * 
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
+ *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 1998-1999
  * the Initial Developer. All Rights Reserved.
- * 
+ *
  * Contributor(s):
- * 
+ *
  * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -32,7 +32,7 @@
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the MPL, the GPL or the LGPL.
- * 
+ *
  * ***** END LICENSE BLOCK ***** */
 #ifndef _LDAPINT_H
 #define _LDAPINT_H
@@ -101,12 +101,6 @@
 #  include <unistd.h>
 #endif /* USE_SYSCONF */
 
-#ifdef LDAP_SASLIO_HOOKS
-#include <sasl.h>
-#define SASL_MAX_BUFF_SIZE      65536
-#define SASL_MIN_BUFF_SIZE      4096
-#endif
-
 #if !defined(_WINDOWS) && !defined(macintosh) && !defined(BSDI) && \
     !defined(XP_OS2) && !defined(XP_BEOS) && !defined(NTO) && \
     !defined(DARWIN)
@@ -151,9 +145,6 @@ typedef enum {
     LDAP_RESULT_LOCK, 
     LDAP_PEND_LOCK, 
     LDAP_THREADID_LOCK, 
-#ifdef LDAP_SASLIO_HOOKS
-    LDAP_SASL_LOCK,
-#endif
     LDAP_MAX_LOCK 
 } LDAPLock;
 
@@ -165,7 +156,7 @@ typedef enum {
 
 struct ldapmsg {
 	int		lm_msgid;	/* the message id */
-	ber_tag_t	lm_msgtype;	/* the message type */
+	int		lm_msgtype;	/* the message type */
 	BerElement	*lm_ber;	/* the ber encoded message contents */
 	struct ldapmsg	*lm_chain;	/* for search - next msg in the resp */
 	struct ldapmsg	*lm_next;	/* next response */
@@ -194,17 +185,14 @@ typedef struct ldap_conn {
 	int			lconn_refcnt;
 	unsigned long		lconn_lastused;	/* time */
 	int			lconn_status;
+#define LDAP_CONNST_NEEDSOCKET		1
 #define LDAP_CONNST_CONNECTING		2
 #define LDAP_CONNST_CONNECTED		3
 #define LDAP_CONNST_DEAD		4
 	LDAPServer		*lconn_server;
 	char			*lconn_binddn;	/* DN of last successful bind */
 	int			lconn_bound;	/* has a bind been done? */
-	int			lconn_pending_requests; /* count of unsent req*/
 	char			*lconn_krbinstance;
-#ifdef LDAP_SASLIO_HOOKS
-    sasl_conn_t     *lconn_sasl_ctx; /* the sasl connection context */
-#endif /* LDAP_SASLIO_HOOKS */
 	struct ldap_conn	*lconn_next;
 } LDAPConn;
 
@@ -217,13 +205,13 @@ typedef struct ldapreq {
 	int		lr_status;	/* status of request */
 #define LDAP_REQST_INPROGRESS	1
 #define LDAP_REQST_CHASINGREFS	2
+#define LDAP_REQST_NOTCONNECTED	3
 #define LDAP_REQST_WRITING	4
 #define LDAP_REQST_CONNDEAD	5	/* associated conn. has failed */
 	int		lr_outrefcnt;	/* count of outstanding referrals */
 	int		lr_origid;	/* original request's message id */
 	int		lr_parentcnt;	/* count of parent requests */
-	ber_tag_t	lr_res_msgtype;	/* result message type */
-	int		lr_expect_resp;	/* if non-zero, expect a response */
+	int		lr_res_msgtype;	/* result message type */
 	int		lr_res_errno;	/* result LDAP errno */
 	char		*lr_res_error;	/* result error string */
 	char		*lr_res_matched;/* result matched DN string */
@@ -268,10 +256,7 @@ struct ldap_x_ext_io_fns_rev0 {
 
 
 /*
- * Structure representing an ldap connection.
- *
- * This is an opaque struct; the fields are not visible to
- * applications that use the LDAP API.
+ * structure representing an ldap connection
  */
 struct ldap {
 	struct sockbuf	*ld_sbp;	/* pointer to socket desc. & buffer */
@@ -291,12 +276,13 @@ struct ldap {
 	char		*ld_matched;
 	int		ld_msgid;
 
-	/* Note: the ld_requests list is ordered old to new */
+	/* do not mess with these */
 	LDAPRequest	*ld_requests;	/* list of outstanding requests */
 	LDAPMessage	*ld_responses;	/* list of outstanding responses */
 	int		*ld_abandoned;	/* array of abandoned requests */
 	char		*ld_cldapdn;	/* DN used in connectionless search */
 
+	/* it is OK to change these next four values directly */
 	int		ld_cldaptries;	/* connectionless search retry count */
 	int		ld_cldaptimeout;/* time between retries */
 	int		ld_refhoplimit;	/* limit on referral nesting */
@@ -308,8 +294,8 @@ struct ldap {
 #define LDAP_BITOPT_RESTART	0x10000000
 #define LDAP_BITOPT_RECONNECT	0x08000000
 #define LDAP_BITOPT_ASYNC       0x04000000
-#define LDAP_BITOPT_NOREBIND    0x02000000
 
+	/* do not mess with the rest though */
 	char		*ld_defhost;	/* full name of default server */
 	int		ld_defport;	/* port of default server */
 	BERTranslateProc ld_lber_encode_translate_proc;
@@ -343,7 +329,6 @@ struct ldap {
 #define ld_dns_bufsize		ld_dnsfn.lddnsfn_bufsize
 #define ld_dns_gethostbyname_fn	ld_dnsfn.lddnsfn_gethostbyname
 #define ld_dns_gethostbyaddr_fn	ld_dnsfn.lddnsfn_gethostbyaddr
-#define ld_dns_getpeername_fn   ld_dnsfn.lddnsfn_getpeername
 
 	/* function pointers, etc. for threading */
 	struct ldap_thread_fns	ld_thread;
@@ -395,11 +380,11 @@ struct ldap {
 	/* extra thread function pointers */
 	struct ldap_extra_thread_fns	ld_thread2;
 
-	/*
-	 * With the 4.0 and later versions of the LDAP SDK, the extra thread
-	 * functions except for the ld_threadid_fn have been disabled.
-	 * Look at the release notes for the full explanation.
-	 */
+	/* With the 4.0 version of the LDAP SDK */
+	/* the extra thread functions except for */
+	/* the ld_threadid_fn has been disabled */
+	/* Look at the release notes for the full */
+	/* explanation */
 #define ld_mutex_trylock_fn		ld_thread2.ltf_mutex_trylock
 #define ld_sema_alloc_fn		ld_thread2.ltf_sema_alloc
 #define ld_sema_free_fn			ld_thread2.ltf_sema_free
@@ -411,18 +396,8 @@ struct ldap {
 	void 			*ld_mutex_threadid[LDAP_MAX_LOCK];
 	unsigned long		ld_mutex_refcnt[LDAP_MAX_LOCK];
 
-	/* connect timeout value (milliseconds) */
+	/* connect timeout value */
 	int				ld_connect_timeout;
-
-#ifdef LDAP_SASLIO_HOOKS
-	/* SASL default option settings */
-	char                    *ld_def_sasl_mech;
-	char                    *ld_def_sasl_realm;
-	char                    *ld_def_sasl_authcid;
-	char                    *ld_def_sasl_authzid;
-	/* SASL Security properties */
-	struct sasl_security_properties ld_sasl_secprops;
-#endif
 };
 
 /* allocate/free mutex */
@@ -741,21 +716,17 @@ int nsldapi_post_result( LDAP *ld, int msgid, LDAPMessage *result );
  */
 int nsldapi_send_initial_request( LDAP *ld, int msgid, unsigned long msgtype,
 	char *dn, BerElement *ber );
-int nsldapi_send_pending_requests_nolock( LDAP *ld, LDAPConn *lc );
 int nsldapi_alloc_ber_with_options( LDAP *ld, BerElement **berp );
 void nsldapi_set_ber_options( LDAP *ld, BerElement *ber );
-int nsldapi_send_ber_message( LDAP *ld, Sockbuf *sb, BerElement *ber,
-	int freeit, int epipe_handler );
+int nsldapi_ber_flush( LDAP *ld, Sockbuf *sb, BerElement *ber, int freeit,
+	int async );
 int nsldapi_send_server_request( LDAP *ld, BerElement *ber, int msgid,
 	LDAPRequest *parentreq, LDAPServer *srvlist, LDAPConn *lc,
 	char *bindreqdn, int bind );
 LDAPConn *nsldapi_new_connection( LDAP *ld, LDAPServer **srvlistp, int use_ldsb,
 	int connect, int bind );
 LDAPRequest *nsldapi_find_request_by_msgid( LDAP *ld, int msgid );
-LDAPRequest *nsldapi_new_request( LDAPConn *lc, BerElement *ber, int msgid,
-   int expect_resp );
 void nsldapi_free_request( LDAP *ld, LDAPRequest *lr, int free_conn );
-void nsldapi_queue_request_nolock( LDAP *ld, LDAPRequest *lr );
 void nsldapi_free_connection( LDAP *ld, LDAPConn *lc,
 	LDAPControl **serverctrls, LDAPControl **clientctrls,
 	int force, int unbind );
@@ -767,23 +738,6 @@ int nsldapi_chase_v3_refs( LDAP *ld, LDAPRequest *lr, char **refs,
 	int is_reference, int *totalcountp, int *chasingcountp );
 int nsldapi_append_referral( LDAP *ld, char **referralsp, char *s );
 void nsldapi_connection_lost_nolock( LDAP *ld, Sockbuf *sb );
-
-#ifdef LDAP_SASLIO_HOOKS
-/*
- * in saslbind.c
- */
-int nsldapi_sasl_is_inited();
-int nsldapi_sasl_cvterrno( LDAP *ld, int err, char *msg );
-int nsldapi_sasl_secprops( const char *in,
-                        sasl_security_properties_t *secprops );
-
-/*
- * in saslio.c
- */
-int nsldapi_sasl_install( LDAP *ld, LDAPConn *lconn );
-int nsldapi_sasl_open( LDAP *ld, LDAPConn *lconn, sasl_conn_t **ctx, sasl_ssf_t ssf );
-
-#endif /* LDAP_SASLIO_HOOKS */
 
 /*
  * in search.c
@@ -813,6 +767,12 @@ char **nsldapi_getdxbyname( char *domain );
  * in unescape.c
  */
 void nsldapi_hex_unescape( char *s );
+
+/*
+ * in reslist.c
+ */
+LDAPMessage *ldap_delete_result_entry( LDAPMessage **list, LDAPMessage *e );
+void ldap_add_result_entry( LDAPMessage **list, LDAPMessage *e );
 
 /*
  * in compat.c
@@ -877,10 +837,5 @@ int ldap_memcache_new( LDAP *ld, int msgid, unsigned long key,
 	const char *basedn );
 int ldap_memcache_append( LDAP *ld, int msgid, int bLast, LDAPMessage *result );
 int ldap_memcache_abandon( LDAP *ld, int msgid );
-
-/*
- * in sbind.c
- */
-void nsldapi_handle_reconnect( LDAP *ld );
 
 #endif /* _LDAPINT_H */

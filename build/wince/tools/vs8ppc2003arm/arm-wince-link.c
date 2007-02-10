@@ -13,20 +13,25 @@ main(int argc, char **argv)
 
   args[i++] = "/LIBPATH:\"" WCE_LIB "\"";
   args[i++] = "/LIBPATH:\"" SHUNT_LIB "\"";
+  args[i++] = "/LIBPATH:\"c:/Program Files/Microsoft Visual Studio 8/VC/ce/lib/armv4i/\"";
 
   args[i++] = "winsock.lib";
   args[i++] = "corelibc.lib";
   args[i++] = "coredll.lib";
   args[i++] = "ceshell.lib";
   args[i++] = "ole32.lib";
+  args[i++] = "aygshell.lib";
 
   args[i++] = "shunt.lib";
-
+  #ifdef WM50
   args[i++] = "/subsystem:\"WINDOWSCE,5.01\"";
-  args[i++] = "/MACHINE:THUMB";
+  #else
+  args[i++] = "/subsystem:\"WINDOWSCE,4.20\"";
+  args[i++] = "/MACHINE:ARM";
+  #endif
 
-  args[i++] = "-OPT:REF";
-  args[i++] = "-OPT:ICF";
+  //  args[i++] = "-OPT:REF";
+  //  args[i++] = "-OPT:ICF";
 
   args[i++] = "/NODEFAULTLIB:LIBC";
   args[i++] = "/NODEFAULTLIB:OLDNAMES";

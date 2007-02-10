@@ -68,10 +68,15 @@ DIRS        += freetype
 endif
 
 ifdef MOZ_ENABLE_POSTSCRIPT
-DIRS        += psshared
-ifndef MOZ_ENABLE_CAIRO_GFX
-DIRS        += ps
+DIRS        += psshared ps
 endif
+
+ifeq ($(MOZ_GFX_TOOLKIT),cocoa)
+DIRS	    += mac
+endif
+
+ifneq (,$(filter beos os2 mac windows,$(MOZ_GFX_TOOLKIT)))
+DIRS        += $(MOZ_GFX_TOOLKIT)
 endif
 
 # Build xlibrgb only for X toolkits and/or Xprint
@@ -84,7 +89,7 @@ DIRS        += xprintutil xprint
 endif
 
 ifdef MOZ_ENABLE_CAIRO_GFX
-DIRS        += thebes
+DIRS        += cairo
 else
  ifdef MOZ_ENABLE_GTK
  DIRS        += gtk
@@ -101,12 +106,7 @@ else
  ifdef MOZ_ENABLE_PHOTON
  DIRS        += photon
  endif
- ifeq ($(MOZ_WIDGET_TOOLKIT),cocoa)
- DIRS	     += mac
- endif
- ifneq (,$(filter windows beos os2 mac,$(MOZ_WIDGET_TOOLKIT)))
- DIRS        += $(MOZ_WIDGET_TOOLKIT)
- endif
+
 endif
 
 CPPSRCS = \
@@ -120,10 +120,19 @@ CPPSRCS = \
         nsRegion.cpp \
         nsTransform2D.cpp \
         nsScriptableRegion.cpp \
+        nsPrintOptionsImpl.cpp \
+        nsPrintSettingsImpl.cpp \
+        nsPrintSession.cpp \
         $(NULL)
 
 ifeq (,$(filter windows,$(MOZ_WIDGET_TOOLKIT)))
 REQUIRES += uconv
+endif
+
+ifneq (,$(filter gtk gtk2 xlib os2,$(MOZ_WIDGET_TOOLKIT)))
+CPPSRCS += \
+        nsRegionImpl.cpp \
+        $(NULL)
 endif
 
 ifneq (,$(filter gtk gtk2 xlib beos windows os2,$(MOZ_WIDGET_TOOLKIT)))
@@ -140,17 +149,15 @@ ifeq ($(OS_ARCH),OS2)
 CPPSRCS += \
         os2/nsOS2Uni.cpp \
         os2/nsPaletteOS2.cpp \
-        os2/nsPrintOS2.cpp \
         $(NULL)
 EXPORTS += \
         os2/nsOS2Uni.h \
         os2/nsPaletteOS2.h \
-        os2/nsPrintOS2.h \
         $(NULL)
 endif
 
 EXTRA_DSO_LDOPTS = \
-        $(DEPTH)/modules/libutil/src/$(LIB_PREFIX)mozutil_s.$(LIB_SUFFIX) \
+        $(DIST)/lib/$(LIB_PREFIX)mozutil_s.$(LIB_SUFFIX) \
         $(MOZ_UNICHARUTIL_LIBS) \
         $(MOZ_COMPONENT_LIBS) \
         $(NULL)

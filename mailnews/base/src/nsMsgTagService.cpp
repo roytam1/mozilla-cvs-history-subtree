@@ -211,7 +211,7 @@ NS_IMETHODIMP nsMsgTagService::GetKeyForTag(const nsAString &aTag, nsACString &a
   }
   NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(count, prefList);
   ToLowerCase(aKey);
-  return NS_OK;
+  return aKey.IsEmpty() ? NS_ERROR_FAILURE : NS_OK;
 }
 
 /* ACString getTopKey (in string keylist); */
@@ -527,6 +527,6 @@ nsresult nsMsgTagService::MigrateLabelsToTags()
       labelKey.SetCharAt(++i + '1', 6);
     }
   }
-  m_tagPrefBranch->SetIntPref(TAG_PREF_VERSION, 2);
+  m_tagPrefBranch->SetIntPref(TAG_PREF_VERSION, 1);
   return rv;
 }

@@ -57,6 +57,7 @@ endif
 CPPSRCS		= \
 		nsAppFileLocationProvider.cpp \
 		nsBinaryStream.cpp \
+		nsByteArrayInputStream.cpp \
 		nsDirectoryService.cpp \
 		nsEscape.cpp \
 		nsInputStreamTee.cpp \
@@ -88,6 +89,7 @@ ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 CPPSRCS		+= nsLocalFileOSX.cpp
 else
 ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
+CPPSRCS		+= nsWinAPIs.cpp
 CPPSRCS		+= nsLocalFileWin.cpp
 else
 CPPSRCS		+= nsLocalFileUnix.cpp
@@ -99,6 +101,7 @@ EXPORTS		= \
 		nsAppDirectoryServiceDefs.h \
 		nsDirectoryService.h \
 		nsEscape.h \
+		nsFastLoadPtr.h \
 		nsFastLoadService.h \
 		nsLinebreakConverter.h \
 		nsLocalFile.h \
@@ -118,7 +121,7 @@ ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 EXPORTS		+= nsLocalFileOSX.h
 else
 ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
-EXPORTS		+= nsLocalFileWin.h
+EXPORTS		+= nsLocalFileWin.h nsWinAPIs.h
 else
 EXPORTS		+= nsLocalFileUnix.h
 endif # windows
@@ -128,6 +131,7 @@ endif # os2
 XPIDLSRCS	= \
 		nsIBinaryInputStream.idl \
 		nsIBinaryOutputStream.idl  \
+		nsIByteArrayInputStream.idl \
 		nsIDirectoryEnumerator.idl \
 		nsIFastLoadFileControl.idl \
 		nsIFastLoadService.idl \
@@ -135,7 +139,6 @@ XPIDLSRCS	= \
 		nsILocalFileWin.idl \
 		nsILineInputStream.idl \
 		nsIUnicharLineInputStream.idl \
-		nsISimpleUnicharStreamFactory.idl \
 		nsIMultiplexInputStream.idl \
 		nsIObjectInputStream.idl \
 		nsIObjectOutputStream.idl \

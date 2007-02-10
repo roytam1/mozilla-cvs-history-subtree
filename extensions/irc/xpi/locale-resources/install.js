@@ -109,12 +109,12 @@ function getPlatform()
   return platformNode;
 }
 
-var err = initInstall("ChatZilla " + locale + " " + version, "ChatZilla " + locale, version); 
+var err = initInstall("Chatzilla " + locale + " " + version, "Chatzilla " + locale, version); 
 logComment("initInstall: " + err);
 
 if (verifyDiskSpace(getFolder("Program"), srDest))
 {
-    addFile("ChatZilla " + locale + " Locale",
+    addFile("Chatzilla " + locale + " Locale",
             "chrome/" + jarFile,        // jar source folder 
             getFolder("Chrome"),        // target folder
             "");                        // target subdir 

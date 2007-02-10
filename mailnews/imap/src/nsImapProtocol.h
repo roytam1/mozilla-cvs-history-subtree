@@ -43,7 +43,7 @@
 #include "nsIImapUrl.h"
 
 #include "nsMsgProtocol.h"
-#include "nsIEventTarget.h"
+#include "nsIEventQueue.h"
 #include "nsIStreamListener.h"
 #include "nsIOutputStream.h"
 #include "nsIOutputStream.h"
@@ -64,6 +64,7 @@
 #include "nsIImapMiscellaneousSink.h"
 
 #include "nsImapServerResponseParser.h"
+#include "nsImapProxyEvent.h"
 #include "nsImapFlagAndUidState.h"
 #include "nsIMAPNamespace.h"
 #include "nsVoidArray.h"
@@ -340,7 +341,7 @@ private:
   PRUint32              m_allocatedSize; // allocated size
   PRUint32        m_totalDataSize; // total data size
   PRUint32        m_curReadIndex;  // current read index
-  nsCString       m_trashFolderName;
+  nsCAutoString   m_trashFolderName;
   
   // Ouput stream for writing commands to the socket
   nsCOMPtr<nsISocketTransport>  m_transport; 
@@ -352,8 +353,8 @@ private:
   
   
   // ******* Thread support *******
-  nsCOMPtr<nsIEventTarget> m_sinkEventTarget;
-  nsCOMPtr<nsIThread>      m_iThread;
+  nsCOMPtr<nsIEventQueue> m_sinkEventQueue;
+  nsCOMPtr<nsIThread>     m_iThread;
   PRThread     *m_thread;
   PRMonitor    *m_dataAvailableMonitor;   // used to notify the arrival of data from the server
   PRMonitor    *m_urlReadyToRunMonitor;	// used to notify the arrival of a new url to be processed
@@ -408,7 +409,7 @@ private:
   void WaitForPotentialListOfBodysToFetch(PRUint32 **msgIdList, PRUint32 &msgCount);
   void HeaderFetchCompleted();
   void UploadMessageFromFile(nsIFileSpec* fileSpec, const char* mailboxName, PRTime date,
-    imapMessageFlagsType flags, nsCString &keywords);
+    imapMessageFlagsType flags);
   
   // mailbox name utilities.
   char *CreateEscapedMailboxName(const char *rawName);

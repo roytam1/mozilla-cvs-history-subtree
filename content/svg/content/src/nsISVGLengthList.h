@@ -54,11 +54,10 @@ class nsSVGCoordCtx;
 class nsISVGLengthList : public nsIDOMSVGLengthList
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISVGLENGTHLIST_IID)
+  static const nsIID& GetIID() { static nsIID iid = NS_ISVGLENGTHLIST_IID; return iid; }
 
   NS_IMETHOD SetContext(nsSVGCoordCtx* ctx)=0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsISVGLengthList, NS_ISVGLENGTHLIST_IID)
 
 #endif // __NS_ISVGLENGTHLIST_H__

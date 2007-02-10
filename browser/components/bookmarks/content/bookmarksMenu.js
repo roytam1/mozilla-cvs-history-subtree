@@ -980,29 +980,36 @@ var BookmarksToolbar =
     if (!buttons)
       return;
     var chevron = document.getElementById("bookmarks-chevron");
-    var myToolbarItem = buttons.parentNode.parentNode;
-    
-    var width = myToolbarItem.boxObject.width;
-    if (width <= 0) {  // hack for bug 266737
+    var width = window.innerWidth;
+    if (width == 0) {  // hack for bug 266737
       window.addEventListener('focus', BookmarksToolbar.resizeFunc, false);
       return;
     }
-
+    var myToolbar = buttons.parentNode.parentNode.parentNode;
+    for (var i = myToolbar.childNodes.length-1; i >= 0; i--){
+      var anItem = myToolbar.childNodes[i];
+      if (anItem.id == "personal-bookmarks") {
+        break;
+      }
+      width -= anItem.boxObject.width;
+    }
     var chevronWidth = 0;
     chevron.collapsed = false;
     chevronWidth = chevron.boxObject.width;
     chevron.collapsed = true;
     var overflowed = false;
 
-    // This 3 is to account for the 'padding-left: 3px;' in browser.xul.
-    var usedWidth = 3;
+    var isLTR=window.getComputedStyle(document.getElementById("PersonalToolbar"),'').direction=='ltr';
+
     for (var i=0; i<buttons.childNodes.length; i++) {
       var button = buttons.childNodes[i];
       button.collapsed = overflowed;
       
       if (i == buttons.childNodes.length - 1) // last ptf item...
         chevronWidth = 0;
-      if (usedWidth + button.boxObject.width + chevronWidth > width) {
+      var offset = isLTR ? button.boxObject.x 
+                         : width - button.boxObject.x;
+      if (offset + button.boxObject.width + chevronWidth > width) {
          overflowed = true;
         // This button doesn't fit. Show it in the menu. Hide it in the toolbar.
         if (!button.collapsed)
@@ -1010,10 +1017,11 @@ var BookmarksToolbar =
         if (chevron.collapsed) {
           chevron.collapsed = false;
           var overflowPadder = document.getElementById("overflow-padder");
-          overflowPadder.width = width - chevron.boxObject.width;
+          offset = isLTR ? buttons.boxObject.x 
+                         : width - buttons.boxObject.x - buttons.boxObject.width;
+          overflowPadder.width = width - chevron.boxObject.width - offset;
         }
       }
-      usedWidth += button.boxObject.width;
     }
     BookmarksToolbarRDFObserver._overflowTimerInEffect = false;
   },

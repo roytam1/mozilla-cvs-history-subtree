@@ -42,7 +42,7 @@
 #include "nsCOMPtr.h"
 #include "MailNewsTypes2.h"
 
-NS_IMPL_ISUPPORTS1(nsMsgThread, nsIMsgThread)
+NS_IMPL_ISUPPORTS1(nsMsgThread, nsMsgThread)
 
 
 nsMsgThread::nsMsgThread()
@@ -1081,15 +1081,12 @@ NS_IMETHODIMP nsMsgThread::GetFirstUnreadChild(nsIMsgDBHdr **result)
   NS_ENSURE_ARG(result);
   PRUint32 numChildren;
   nsresult rv = NS_OK;
-  PRUint8 minLevel = 0xff;
-
+  
   GetNumChildren(&numChildren);
   
   if ((PRInt32) numChildren < 0)
     numChildren = 0;
-
-  nsCOMPtr <nsIMsgDBHdr> retHdr;
-
+  
   for (PRUint32 childIndex = 0; childIndex < numChildren; childIndex++)
   {
     nsCOMPtr <nsIMsgDBHdr> child;
@@ -1103,36 +1100,13 @@ NS_IMETHODIMP nsMsgThread::GetFirstUnreadChild(nsIMsgDBHdr **result)
       rv = m_mdbDB->IsRead(msgKey, &isRead);
       if (NS_SUCCEEDED(rv) && !isRead)
       {
-        // this is the root, so it's the best we're going to do.
-        if (msgKey == m_threadRootKey)
-        {
-          retHdr = child;
-          break;
-        }
-        PRUint8 level = 0;
-        nsMsgKey parentId;
-        child->GetThreadParent(&parentId);
-        nsCOMPtr <nsIMsgDBHdr> parent;
-        // count number of ancestors - that's our level
-        while (parentId != nsMsgKey_None)
-        {
-          rv = m_mdbDB->GetMsgHdrForKey(parentId, getter_AddRefs(parent));
-          if (parent)
-          {
-            parent->GetThreadParent(&parentId);
-            level++;
-          }
-        }
-        if (level < minLevel)
-        {
-          minLevel = level;
-          retHdr = child;
-        }
+        *result = child;
+        NS_ADDREF(*result);
+        break;
       }
     }
   }
   
-  NS_IF_ADDREF(*result = retHdr);
   return rv;
 }
 

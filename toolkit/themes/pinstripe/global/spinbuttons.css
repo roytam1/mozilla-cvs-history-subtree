@@ -37,26 +37,18 @@
 
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
-spinbuttons {
-  height: 24px;
-  min-height: 24px;
-  -moz-appearance: spinner;
-  cursor: default;
+.up {
+  list-style-image: url("chrome://global/skin/spinbtn-up.gif")
 }
 
-.spinbuttons-up {
-  -moz-appearance: none;
-  -moz-box-flex: 1;
-  min-width: 12px;
-  margin: 0;
-  padding: 0;
+.up:hover:active {
+  list-style-image: url("chrome://global/skin/spinbtn-up-act.gif")
 }
 
-.spinbuttons-down {
-  -moz-appearance: none;
-  -moz-box-flex: 1;
-  min-width: 12px;
-  margin: 0;
-  padding: 0;
+.down {
+  list-style-image: url("chrome://global/skin/spinbtn-dn.gif")
 }
 
+.down:hover:active {
+  list-style-image: url("chrome://global/skin/spinbtn-dn-act.gif")
+}

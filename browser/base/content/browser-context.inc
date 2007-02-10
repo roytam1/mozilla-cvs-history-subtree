@@ -35,6 +35,9 @@
 #
 # ***** END LICENSE BLOCK *****
 
+    <popup id="contentAreaContextMenu"
+           onpopupshowing="if (event.target != this) return true; gContextMenu = new nsContextMenu( this ); return gContextMenu.shouldDisplay;"
+           onpopuphiding="if (event.target == this) { gContextMenu = null; }">
       <menuitem id="spell-no-suggestions"
                 disabled="true"
                 label="&spellNoSuggestions.label;"/>
@@ -55,7 +58,8 @@
       <menuitem id="context-bookmarklink"
                 label="&bookmarkLinkCmd.label;"
                 accesskey="&bookmarkLinkCmd.accesskey;"
-                oncommand="gContextMenu.bookmarkLink();"/>
+                oncommand="BookmarksUtils.addBookmark(gContextMenu.linkURL,
+                                                      gContextMenu.linkText());"/>
       <menuitem id="context-savelink"
                 label="&saveLinkCmd.label;"
                 accesskey="&saveLinkCmd.accesskey;"
@@ -71,7 +75,7 @@
       <menuitem id="context-copylink"
                 label="&copyLinkCmd.label;"
                 accesskey="&copyLinkCmd.accesskey;"
-                oncommand="goDoCommand('cmd_copyLink');"/>
+                command="cmd_copyLink"/>
       <menuseparator id="context-sep-copylink"/>
       <menuitem id="context-viewimage"
                 label="&viewImageCmd.label;"
@@ -82,12 +86,12 @@
       <menuitem id="context-copyimage-contents"
                 label="&copyImageContentsCmd.label;"
                 accesskey="&copyImageContentsCmd.accesskey;"
-                oncommand="goDoCommand('cmd_copyImageContents');"/>
+                command="cmd_copyImageContents"/>
 #endif
       <menuitem id="context-copyimage"
                 label="&copyImageCmd.label;"
                 accesskey="&copyImageCmd.accesskey;"
-                oncommand="goDoCommand('cmd_copyImageLocation');"/>
+                command="cmd_copyImageLocation"/>
       <menuseparator id="context-sep-copyimage"/>
       <menuitem id="context-saveimage"
                 label="&saveImageCmd.label;"
@@ -125,11 +129,15 @@
       <menuitem id="context-bookmarkpage"
                 label="&bookmarkPageCmd.label;"
                 accesskey="&bookmarkPageCmd.accesskey;"
-                oncommand="gContextMenu.bookmarkThisPage();"/>
+#ifdef MOZ_PLACES
+                command="Browser:AddBookmarkAs"/>
+#else
+                oncommand="addBookmarkAs(document.getElementById('content'));"/>
+#endif
       <menuitem id="context-savepage"
                 label="&savePageCmd.label;"
                 accesskey="&savePageCmd.accesskey2;"
-                oncommand="gContextMenu.savePageAs();"/>
+                oncommand="saveDocument(window.content.document);"/>
       <menuitem id="context-sendpage"  
                 label="&sendPageCmd.label;" 
                 accesskey="&sendPageCmd.accesskey;" 
@@ -198,16 +206,12 @@
                     accesskey="&saveFrameCmd.accesskey;"
                     oncommand="saveDocument(gContextMenu.target.ownerDocument);"/>
           <menuseparator/>
-          <menuitem label="&printFrameCmd.label;"
-                    accesskey="&printFrameCmd.accesskey;"
-                    oncommand="gContextMenu.printFrame();"/>
-          <menuseparator/>
           <menuitem label="&viewFrameSourceCmd.label;"
                     accesskey="&viewFrameSourceCmd.accesskey;"
                     oncommand="gContextMenu.viewFrameSource();"/>
           <menuitem label="&viewFrameInfoCmd.label;"
                     accesskey="&viewFrameInfoCmd.accesskey;"
-                    oncommand="gContextMenu.viewFrameInfo();"/>
+                    oncommand="gContextMenu.viewFrameInfo();"/>        
         </menupopup>
       </menu>
       <menuseparator id="context-sep-properties"/>
@@ -261,4 +265,4 @@
                 label="&bidiSwitchPageDirectionItem.label;"
                 accesskey="&bidiSwitchPageDirectionItem.accesskey;"
                 oncommand="SwitchDocumentDirection(window.content);"/>
-
+    </popup>

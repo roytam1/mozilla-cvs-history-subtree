@@ -53,20 +53,31 @@
 #include "nsIDocument.h"
 #include "nsIDocShell.h"
 #include "nsIDocumentViewer.h"
-#include "nsIMutationObserver.h"
+#include "nsIDocumentObserver.h"
 
 #include "nsIDOMDocument.h"
 #include "nsWidgetAtoms.h"
+
+#include <Menus.h>
+#include <TextUtils.h>
+#include <Balloons.h>
+#include <Resources.h>
+#include <Appearance.h>
+#include <Gestalt.h>
 
 #include "nsMacResources.h"
 
 #include "nsGUIEvent.h"
 
+#if !XP_MACOSX
+#include "MenuSharing.h"
+#endif
+
 // CIDs
 #include "nsWidgetsCID.h"
 static NS_DEFINE_CID(kMenuCID, NS_MENU_CID);
 
-NS_IMPL_ISUPPORTS6(nsMenuBarX, nsIMenuBar, nsIMenuListener, nsIMutationObserver, 
+NS_IMPL_ISUPPORTS6(nsMenuBarX, nsIMenuBar, nsIMenuListener, nsIDocumentObserver, 
                     nsIChangeManager, nsIMenuCommandDispatcher, nsISupportsWeakReference)
 
 MenuRef nsMenuBarX::sAppleMenu = nsnull;
@@ -96,7 +107,8 @@ nsMenuBarX::~nsMenuBarX()
 
   // make sure we unregister ourselves as a document observer
   if ( mDocument ) {
-    mDocument->RemoveMutationObserver(this);
+    nsCOMPtr<nsIDocumentObserver> observer ( do_QueryInterface(NS_STATIC_CAST(nsIMenuBar*,this)) );
+    mDocument->RemoveObserver(observer);
   }
 
   if ( mRootMenu )
@@ -112,10 +124,12 @@ nsMenuBarX::MenuItemSelected(const nsMenuEvent & aMenuEvent)
   PRUint32  numItems;
   mMenusArray.Count(&numItems);
   
-  for (PRUint32 i = numItems; i > 0; --i) {
+  for (PRUint32 i = numItems; i > 0; --i)
+  {
     nsCOMPtr<nsISupports>     menuSupports = getter_AddRefs(mMenusArray.ElementAt(i - 1));
     nsCOMPtr<nsIMenuListener> menuListener = do_QueryInterface(menuSupports);
-    if (menuListener) {
+    if(menuListener)
+    {
       eventStatus = menuListener->MenuItemSelected(aMenuEvent);
       if (nsEventStatus_eIgnore != eventStatus)
         return eventStatus;
@@ -131,24 +145,34 @@ nsMenuBarX::MenuSelected(const nsMenuEvent & aMenuEvent)
   // Dispatch event
   nsEventStatus eventStatus = nsEventStatus_eIgnore;
 
-  // If it's the help menu, gPreviousMenuStack won't be accurate so we need to get the listener a different way 
-  // We'll do it the old fashioned way of looping through and finding it
-  PRUint32  numItems;
-  mMenusArray.Count(&numItems);
-  for (PRUint32 i = numItems; i > 0; --i)
-  {
-    nsCOMPtr<nsISupports>     menuSupports = getter_AddRefs(mMenusArray.ElementAt(i - 1));
-    nsCOMPtr<nsIMenuListener> thisListener = do_QueryInterface(menuSupports);
-    if (thisListener)
+  nsCOMPtr<nsIMenuListener> menuListener;
+  //((nsISupports*)mMenuVoidArray[i-1])->QueryInterface(NS_GET_IID(nsIMenuListener), (void**)&menuListener);
+  //printf("gPreviousMenuStack.Count() = %d \n", gPreviousMenuStack.Count());
+  if (menuListener) {
+    //TODO: MenuSelected is the right thing to call...
+    //eventStatus = menuListener->MenuSelected(aMenuEvent);
+    eventStatus = menuListener->MenuItemSelected(aMenuEvent);
+    if (nsEventStatus_eIgnore != eventStatus)
+      return eventStatus;
+  } else {
+    // If it's the help menu, gPreviousMenuStack won't be accurate so we need to get the listener a different way 
+    // We'll do it the old fashioned way of looping through and finding it
+    PRUint32  numItems;
+    mMenusArray.Count(&numItems);
+    for (PRUint32 i = numItems; i > 0; --i)
     {
-      //TODO: MenuSelected is the right thing to call...
-      //eventStatus = menuListener->MenuSelected(aMenuEvent);
-      eventStatus = thisListener->MenuItemSelected(aMenuEvent);
-      if(nsEventStatus_eIgnore != eventStatus)
-        return eventStatus;
+      nsCOMPtr<nsISupports>     menuSupports = getter_AddRefs(mMenusArray.ElementAt(i - 1));
+      nsCOMPtr<nsIMenuListener> thisListener = do_QueryInterface(menuSupports);
+	    if (thisListener)
+	    {
+        //TODO: MenuSelected is the right thing to call...
+  	    //eventStatus = menuListener->MenuSelected(aMenuEvent);
+  	    eventStatus = thisListener->MenuItemSelected(aMenuEvent);
+  	    if(nsEventStatus_eIgnore != eventStatus)
+  	      return eventStatus;
+      }
     }
   }
-  
   return eventStatus;
 }
 
@@ -194,6 +218,8 @@ nsMenuBarX :: GetDocument ( nsIDocShell* inDocShell, nsIDocument** outDocument )
 //
 // RegisterAsDocumentObserver
 //
+// Name says it all.
+//
 void
 nsMenuBarX :: RegisterAsDocumentObserver ( nsIDocShell* inDocShell )
 {
@@ -203,7 +229,8 @@ nsMenuBarX :: RegisterAsDocumentObserver ( nsIDocShell* inDocShell )
     return;
 
   // register ourselves
-  doc->AddMutationObserver(this);
+  nsCOMPtr<nsIDocumentObserver> observer ( do_QueryInterface(NS_STATIC_CAST(nsIMenuBar*,this)) );
+  doc->AddObserver(observer);
   // also get pointer to doc, just in case docshell goes away
   // we can still remove ourself as doc observer directly from doc
   mDocument = doc;
@@ -223,13 +250,13 @@ nsMenuBarX :: AquifyMenuBar ( )
   nsCOMPtr<nsIDOMDocument> domDoc(do_QueryInterface(mMenuBarContent->GetDocument()));
   if ( domDoc ) {
     // remove quit item and its separator
-    HideItem(domDoc, NS_LITERAL_STRING("menu_FileQuitSeparator"), nsnull);
-    HideItem(domDoc, NS_LITERAL_STRING("menu_FileQuitItem"), getter_AddRefs(mQuitItemContent));
-
+    HideItem ( domDoc, NS_LITERAL_STRING("menu_FileQuitSeparator"), nsnull );
+    HideItem ( domDoc, NS_LITERAL_STRING("menu_FileQuitItem"), getter_AddRefs(mQuitItemContent) );
+  
     // remove prefs item and its separator, but save off the pref content node
     // so we can invoke its command later.
-    HideItem(domDoc, NS_LITERAL_STRING("menu_PrefsSeparator"), nsnull);
-    HideItem(domDoc, NS_LITERAL_STRING("menu_preferences"), getter_AddRefs(mPrefItemContent));
+    HideItem ( domDoc, NS_LITERAL_STRING("menu_PrefsSeparator"), nsnull );
+    HideItem ( domDoc, NS_LITERAL_STRING("menu_preferences"), getter_AddRefs(mPrefItemContent) );
     if (mPrefItemContent)
       ::EnableMenuCommand(NULL, kHICommandPreferences);
 
@@ -321,14 +348,12 @@ nsMenuBarX :: CommandEventHandler ( EventHandlerCallRef inHandlerChain, EventRef
       nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(self->mDocument);
       if (domDoc) {
         nsCOMPtr<nsIDOMElement> domElement;
-        domDoc->GetElementById(NS_LITERAL_STRING("aboutName"),
+      	domDoc->GetElementById(NS_LITERAL_STRING("aboutName"),
                                getter_AddRefs(domElement));
-        nsCOMPtr<nsIContent> aboutContent(do_QueryInterface(domElement));
-        nsEventStatus status = self->ExecuteCommand(aboutContent);
-        if (status == nsEventStatus_eConsumeNoDefault)
-          // event handled, no other processing
-          handled = noErr;
+      	nsCOMPtr<nsIContent> aboutContent (do_QueryInterface(domElement));
+        self->ExecuteCommand(aboutContent);
       }
+      handled = noErr;
       break;
     }
 
@@ -405,10 +430,13 @@ nsMenuBarX::MenuConstruct( const nsMenuEvent & aMenuEvent, nsIWidget* aParentWin
     
   Create(aParentWindow);
   
-  // since we're on OSX, remove quit and prefs from our menubar.
-  AquifyMenuBar();
-  
-  OSStatus err = InstallCommandEventHandler();
+  // if we're on X (using aqua UI guidelines for menus), remove quit and prefs
+  // from our menubar.
+  SInt32 result = 0L;
+  OSStatus err = ::Gestalt ( gestaltMenuMgrAttr, &result );
+  if ( !err && (result & gestaltMenuMgrAquaLayoutMask) )
+    AquifyMenuBar();
+  err = InstallCommandEventHandler();
   if ( err )
     return nsEventStatus_eIgnore;
 
@@ -423,7 +451,7 @@ nsMenuBarX::MenuConstruct( const nsMenuEvent & aMenuEvent, nsIWidget* aParentWin
     nsIContent *menu = mMenuBarContent->GetChildAt(i);
     if ( menu ) {
       if (menu->Tag() == nsWidgetAtoms::menu &&
-          menu->IsNodeOfType(nsINode::eXUL)) {
+          menu->IsContentOfType(nsIContent::eXUL)) {
         nsAutoString menuName;
         nsAutoString menuAccessKey(NS_LITERAL_STRING(" "));
         menu->GetAttr(kNameSpaceID_None, nsWidgetAtoms::label, menuName);
@@ -441,9 +469,12 @@ nsMenuBarX::MenuConstruct( const nsMenuEvent & aMenuEvent, nsIWidget* aParentWin
           // Make nsMenu a child of nsMenuBar. nsMenuBar takes ownership
           AddMenu(pnsMenu); 
                   
-          if (menu->AttrValueIs(kNameSpaceID_None, nsWidgetAtoms::id,
-                                NS_LITERAL_STRING("menu_Help"), eCaseMatters)) {
+          nsAutoString menuIDstring;
+          menu->GetAttr(kNameSpaceID_None, nsWidgetAtoms::id, menuIDstring);
+          if ( menuIDstring.EqualsLiteral("menu_Help") ) {
             nsMenuEvent event(PR_TRUE, 0, nsnull);
+            MenuHandle handle = nsnull;
+            event.mCommand = (unsigned int) handle;
             nsCOMPtr<nsIMenuListener> listener(do_QueryInterface(pnsMenu));
             listener->MenuSelected(event);
           }          
@@ -523,9 +554,9 @@ NS_METHOD nsMenuBarX::AddMenu(nsIMenu * aMenu)
 
   nsCOMPtr<nsIContent> menu;
   aMenu->GetMenuContent(getter_AddRefs(menu));
-  if(!menu->AttrValueIs(kNameSpaceID_None, nsWidgetAtoms::hidden,
-                        nsWidgetAtoms::_true, eCaseMatters) &&
-     menu->GetChildCount() > 0) {
+  nsAutoString menuHidden;
+  menu->GetAttr(kNameSpaceID_None, nsWidgetAtoms::hidden, menuHidden);
+  if(!menuHidden.EqualsLiteral("true") && menu->GetChildCount() > 0) {
     // make sure we only increment |mNumMenus| if the menu is visible, since
     // we use it as an index of where to insert the next menu.
     mNumMenus++;
@@ -606,7 +637,7 @@ NS_METHOD nsMenuBarX::GetMenuAt(const PRUint32 aCount, nsIMenu *& aMenu)
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuBarX::InsertMenuAt(const PRUint32 aCount, nsIMenu *& aMenu)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_OK;
 }
 
 //-------------------------------------------------------------------------
@@ -621,20 +652,28 @@ NS_METHOD nsMenuBarX::RemoveMenu(const PRUint32 aCount)
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuBarX::RemoveAll()
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ASSERTION(0, "Not implemented!");
+  // mMenusArray.Clear();    // maybe?
+  return NS_OK;
 }
 
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuBarX::GetNativeData(void *& aData)
 {
-  aData = (void *) mRootMenu;
-  return NS_OK;
+    aData = (void *) mRootMenu;
+    return NS_OK;
 }
 
 //-------------------------------------------------------------------------
 NS_METHOD nsMenuBarX::SetNativeData(void* aData)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+#if 0
+    Handle menubarHandle = (Handle)aData;
+    if (mMacMBarHandle && mMacMBarHandle != menubarHandle)
+        ::DisposeHandle(mMacMBarHandle);
+    mMacMBarHandle = menubarHandle;
+#endif
+    return NS_OK;
 }
 
 //-------------------------------------------------------------------------
@@ -650,14 +689,28 @@ NS_METHOD nsMenuBarX::Paint()
 #pragma mark -
 
 //
-// nsIMutationObserver
+// nsIDocumentObserver
 // this is needed for menubar changes
 //
 
+NS_IMPL_NSIDOCUMENTOBSERVER_LOAD_STUB(nsMenuBarX)
+NS_IMPL_NSIDOCUMENTOBSERVER_REFLOW_STUB(nsMenuBarX)
+NS_IMPL_NSIDOCUMENTOBSERVER_STATE_STUB(nsMenuBarX)
+NS_IMPL_NSIDOCUMENTOBSERVER_STYLE_STUB(nsMenuBarX)
+
+void
+nsMenuBarX::BeginUpdate( nsIDocument * aDocument, nsUpdateType aUpdateType )
+{
+}
+
+void
+nsMenuBarX::EndUpdate( nsIDocument * aDocument, nsUpdateType aUpdateType )
+{
+}
+
 void
 nsMenuBarX::CharacterDataChanged( nsIDocument * aDocument,
-                                  nsIContent * aContent,
-                                  CharacterDataChangeInfo * aInfo)
+                                  nsIContent * aContent, PRBool aAppend)
 {
 }
 
@@ -665,24 +718,28 @@ void
 nsMenuBarX::ContentAppended( nsIDocument * aDocument, nsIContent  * aContainer,
                               PRInt32 aNewIndexInContainer)
 {
-  if (aContainer != mMenuBarContent) {
+  if ( aContainer == mMenuBarContent ) {
+    //Register(aContainer, );
+    //InsertMenu ( aNewIndexInContainer );
+  }
+  else {
     nsCOMPtr<nsIChangeObserver> obs;
-    Lookup(aContainer, getter_AddRefs(obs));
-    if (obs)
-      obs->ContentInserted(aDocument, aContainer, aNewIndexInContainer);
+    Lookup ( aContainer, getter_AddRefs(obs) );
+    if ( obs )
+      obs->ContentInserted ( aDocument, aContainer, aNewIndexInContainer );
     else {
       nsCOMPtr<nsIContent> parent = aContainer->GetParent();
-      if (parent) {
-        Lookup(parent, getter_AddRefs(obs));
-        if (obs)
-          obs->ContentInserted(aDocument, aContainer, aNewIndexInContainer);
+      if(parent) {
+        Lookup ( parent, getter_AddRefs(obs) );
+        if ( obs )
+          obs->ContentInserted ( aDocument, aContainer, aNewIndexInContainer );
       }
     }
   }
 }
 
 void
-nsMenuBarX::NodeWillBeDestroyed(const nsINode* aNode)
+nsMenuBarX::DocumentWillBeDestroyed( nsIDocument * aDocument )
 {
   mDocument = nsnull;
 }
@@ -695,8 +752,8 @@ nsMenuBarX::AttributeChanged( nsIDocument * aDocument, nsIContent * aContent,
 {
   // lookup and dispatch to registered thang.
   nsCOMPtr<nsIChangeObserver> obs;
-  Lookup(aContent, getter_AddRefs(obs));
-  if (obs)
+  Lookup ( aContent, getter_AddRefs(obs) );
+  if ( obs )
     obs->AttributeChanged(aDocument, aNameSpaceID, aContent, aAttribute);
 }
 
@@ -728,17 +785,21 @@ void
 nsMenuBarX::ContentInserted( nsIDocument * aDocument, nsIContent * aContainer,
                              nsIContent * aChild, PRInt32 aIndexInContainer )
 {  
-  if (aContainer != mMenuBarContent) {
+  if ( aContainer == mMenuBarContent ) {
+    //Register(aChild, );
+    //InsertMenu ( aIndexInContainer );
+  }
+  else {
     nsCOMPtr<nsIChangeObserver> obs;
-    Lookup (aContainer, getter_AddRefs(obs));
-    if (obs)
-      obs->ContentInserted(aDocument, aChild, aIndexInContainer);
+    Lookup ( aContainer, getter_AddRefs(obs) );
+    if ( obs )
+      obs->ContentInserted ( aDocument, aChild, aIndexInContainer );
     else {
       nsCOMPtr<nsIContent> parent = aContainer->GetParent();
-      if (parent) {
-        Lookup(parent, getter_AddRefs(obs));
-        if (obs)
-          obs->ContentInserted(aDocument, aChild, aIndexInContainer);
+      if(parent) {
+        Lookup ( parent, getter_AddRefs(obs) );
+        if ( obs )
+          obs->ContentInserted ( aDocument, aChild, aIndexInContainer );
       }
     }
   }
@@ -890,6 +951,7 @@ MenuHelpersX::DispatchCommandTo(nsIWeakReference* aDocShellWeakRef,
   // FIXME: Should probably figure out how to init this with the actual
   // pressed keys, but this is a big old edge case anyway. -dwh
 
-  aTargetContent->DispatchDOMEvent(&event, nsnull, presContext, &status);
+  aTargetContent->HandleDOMEvent(presContext, &event, nsnull,
+                                 NS_EVENT_FLAG_INIT, &status);
   return status;
 }

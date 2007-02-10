@@ -44,13 +44,13 @@
 #include "nsHttpDigestAuth.h"
 #include "nsIHttpChannel.h"
 #include "nsIServiceManager.h"
+#include "nsISignatureVerifier.h"
 #include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
 #include "nsIURI.h"
 #include "nsString.h"
 #include "nsReadableUtils.h"
 #include "nsEscape.h"
-#include "nsNetCID.h"
 #include "plbase64.h"
 #include "plstr.h"
 #include "prprf.h"
@@ -62,7 +62,18 @@
 //-----------------------------------------------------------------------------
 
 nsHttpDigestAuth::nsHttpDigestAuth()
-{}
+{
+  mVerifier = do_GetService("@mozilla.org/security/hash;1");
+  mGotVerifier = (mVerifier != nsnull);
+
+#if defined(PR_LOGGING)
+  if (mGotVerifier) {
+    LOG(("nsHttpDigestAuth: Got signature_verifier\n"));
+  } else {
+    LOG(("nsHttpDigestAuth: No signature_verifier available\n"));
+  }
+#endif
+}
 
 nsHttpDigestAuth::~nsHttpDigestAuth()
 {}
@@ -80,17 +91,11 @@ NS_IMPL_ISUPPORTS1(nsHttpDigestAuth, nsIHttpAuthenticator)
 nsresult
 nsHttpDigestAuth::MD5Hash(const char *buf, PRUint32 len)
 {
+  if (!mGotVerifier)
+    return NS_ERROR_NOT_INITIALIZED;
+
   nsresult rv;
 
-  // Cache a reference to the nsICryptoHash instance since we'll be calling
-  // this function frequently.
-  if (!mVerifier) {
-    mVerifier = do_CreateInstance(NS_CRYPTO_HASH_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) {
-      LOG(("nsHttpDigestAuth: no crypto hash!\n"));
-      return rv;
-    }
-  }
 
   rv = mVerifier->Init(nsICryptoHash::MD5);
   if (NS_FAILED(rv)) return rv;
@@ -101,10 +106,9 @@ nsHttpDigestAuth::MD5Hash(const char *buf, PRUint32 len)
   nsCAutoString hashString;
   rv = mVerifier->Finish(PR_FALSE, hashString);
   if (NS_FAILED(rv)) return rv;
-
-  NS_ENSURE_STATE(hashString.Length() == sizeof(mHashBuf));
-  memcpy(mHashBuf, hashString.get(), hashString.Length());
-
+  
+  if (NS_SUCCEEDED(rv))
+    memcpy(mHashBuf, hashString.get(), hashString.Length());
   return rv;
 }
 
@@ -327,7 +331,7 @@ nsHttpDigestAuth::GenerateCredentials(nsIHttpChannel *httpChannel,
   // calculate credentials
   //
 
-  NS_ConvertUTF16toUTF8 cUser(username), cPass(password);
+  NS_ConvertUCS2toUTF8 cUser(username), cPass(password);
   rv = CalculateHA1(cUser, cPass, realm, algorithm, nonce, cnonce, ha1_digest);
   if (NS_FAILED(rv)) return rv;
 
@@ -387,7 +391,7 @@ nsHttpDigestAuth::GenerateCredentials(nsIHttpChannel *httpChannel,
 NS_IMETHODIMP
 nsHttpDigestAuth::GetAuthFlags(PRUint32 *flags)
 {
-  *flags = REQUEST_BASED | REUSABLE_CHALLENGE | IDENTITY_ENCRYPTED;
+  *flags = REQUEST_BASED | REUSABLE_CHALLENGE;
   //
   // NOTE: digest auth credentials must be uniquely computed for each request,
   //       so we do not set the REUSABLE_CREDENTIALS flag.

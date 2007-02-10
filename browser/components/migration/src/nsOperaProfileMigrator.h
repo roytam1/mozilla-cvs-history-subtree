@@ -43,7 +43,7 @@
 #include "nsIBrowserProfileMigrator.h"
 #include "nsIObserverService.h"
 #include "nsISupportsArray.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "nsVoidArray.h"
 
 class nsICookieManager2;
@@ -52,7 +52,7 @@ class nsILocalFile;
 class nsINIParser;
 class nsIPermissionManager;
 class nsIPrefBranch;
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
 class nsINavBookmarksService;
 #else
 class nsIBookmarksService;
@@ -108,7 +108,7 @@ protected:
   nsresult CopyHistory(PRBool aReplace);
 
   nsresult CopyBookmarks(PRBool aReplace);
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
   void     ClearToolbarFolder(nsINavBookmarksService * aBookmarksService, PRInt64 aToolbarFolder);
   nsresult ParseBookmarksFolder(nsILineInputStream* aStream, 
                                 PRInt64 aFolder,
@@ -130,7 +130,7 @@ protected:
                              nsIStringBundle* aBundle, 
                              nsIRDFResource* aParentFolder);
 #endif // defined(XP_WIN) || (defined(XP_UNIX) && !defined(XP_MACOSX))
-#endif // MOZ_PLACES_BOOKMARKS
+#endif // MOZ_PLACES
 
   void     GetOperaProfile(const PRUnichar* aProfile, nsILocalFile** aFile);
 

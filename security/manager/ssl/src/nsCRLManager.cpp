@@ -47,7 +47,7 @@
 #include "nsCOMPtr.h"
 #include "nsIPrompt.h"
 #include "nsICertificateDialogs.h"
-#include "nsIMutableArray.h"
+#include "nsArray.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
 #include "nsNSSShutDown.h"
@@ -68,6 +68,7 @@ extern "C" {
 #include "ocsp.h"
 #include "plbase64.h"
 
+static NS_DEFINE_CID(kDateTimeFormatCID, NS_DATETIMEFORMAT_CID);
 static NS_DEFINE_CID(kNSSComponentCID, NS_NSSCOMPONENT_CID);
 
 NS_IMPL_ISUPPORTS1(nsCRLManager, nsICRLManager)
@@ -357,9 +358,9 @@ nsCRLManager::GetCrls(nsIArray ** aCrls)
   SECStatus sec_rv;
   CERTCrlHeadNode *head = nsnull;
   CERTCrlNode *node = nsnull;
+  nsCOMPtr<nsIMutableArray> crlsArray;
   nsresult rv;
-  nsCOMPtr<nsIMutableArray> crlsArray =
-    do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
+  rv = NS_NewArray(getter_AddRefs(crlsArray));
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -487,7 +488,7 @@ nsCRLManager::ComputeNextAutoUpdateTime(nsICRLInfo *info,
 
   nsAutoString nextAutoUpdateDate;
   PRExplodedTime explodedTime;
-  nsCOMPtr<nsIDateTimeFormat> dateFormatter = do_CreateInstance(NS_DATETIMEFORMAT_CONTRACTID, &rv);
+  nsCOMPtr<nsIDateTimeFormat> dateFormatter = do_CreateInstance(kDateTimeFormatCID, &rv);
   if (NS_FAILED(rv))
     return rv;
   PR_ExplodeTime(tempTime, PR_GMTParameters, &explodedTime);

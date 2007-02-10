@@ -41,11 +41,10 @@
 #include "nsIObserverService.h"
 #include "nsIObserver.h"
 #include "nsIEnumerator.h"
-#include "nsStringGlue.h"
+#include "nsString.h"
+#include "nsReadableUtils.h"
+#include "prprf.h"
 #include "nsWeakReference.h"
-#include "nsComponentManagerUtils.h"
-
-#include <stdio.h>
 
 static nsIObserverService *anObserverService = NULL;
 
@@ -59,7 +58,9 @@ static void testResult( nsresult rv ) {
 }
 
 void printString(nsString &str) {
-    printf("%s", str.get());
+    const char *cstr = ToNewCString(str);
+    printf("%s", cstr);
+    delete [] (char*)cstr;
 }
 
 class TestObserver : public nsIObserver, public nsSupportsWeakReference {

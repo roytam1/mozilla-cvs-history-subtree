@@ -51,20 +51,34 @@
 var gCachedStyleSheet;
 function addCalendarToTree(aCalendar)
 {
+    var boxobj = document.getElementById("calendarTree").treeBoxObject;
+
+    // Special trick to compare interface pointers, since normal, ==
+    // comparison can fail due to javascript wrapping.
+    var sip = Components.classes["@mozilla.org/supports-interface-pointer;1"]
+                         .createInstance(Components.interfaces.nsISupportsInterfacePointer);
+    sip.data = aCalendar;
+    sip.dataIID = Components.interfaces.calICalendar;
+
+    boxobj.rowCountChanged(getCalendars().indexOf(sip.data), 1);
+
     if (!gCachedStyleSheet) {
         gCachedStyleSheet = getStyleSheet("chrome://calendar/content/calendar-view-bindings.css");
     }
     updateStyleSheetForObject(aCalendar, gCachedStyleSheet);
-    updateLtnStyleSheet(aCalendar);
-
-    var boxobj = document.getElementById("calendarTree").treeBoxObject;
-    boxobj.rowCountChanged(getIndexForCalendar(aCalendar), 1);
 }
 
 function removeCalendarFromTree(aCalendar)
 {
     var calTree = document.getElementById("calendarTree")
-    var index = getIndexForCalendar(aCalendar);
+
+    // Special trick to compare interface pointers, since normal, ==
+    // comparison can fail due to javascript wrapping.
+    var sip = Components.classes["@mozilla.org/supports-interface-pointer;1"]
+                         .createInstance(Components.interfaces.nsISupportsInterfacePointer);
+    sip.data = aCalendar;
+    sip.dataIID = Components.interfaces.calICalendar;
+    var index = getCalendars().indexOf(sip.data);
     calTree.boxObject.rowCountChanged(index, -1);
 
     // Just select the new last row, if we removed the last listed calendar
@@ -91,8 +105,6 @@ var ltnCalendarManagerObserver = {
     },
 
     onCalendarUnregistering: function(aCalendar) {
-        removeCalendarFromTree(aCalendar);
-        getCompositeCalendar().removeCalendar(aCalendar.uri);
     },
 
     onCalendarDeleting: function(aCalendar) {
@@ -105,7 +117,6 @@ var ltnCalendarManagerObserver = {
             gCachedStyleSheet = getStyleSheet("chrome://calendar/content/calendar-view-bindings.css");
         }
         updateStyleSheetForObject(aCalendar, gCachedStyleSheet);
-        updateTreeView(aCalendar);
     },
 
     onCalendarPrefDeleting: function(aCalendar, aName) {
@@ -226,8 +237,8 @@ var ltnCalendarTreeView = {
 
     getCellProperties: function (row, col, properties)
     {
-        var cal = getCalendars()[row];
         if (col.id == "col-calendar-Checkbox") {
+            var cal = getCalendars()[row];
             // We key off this to set the images for the checkboxes
             if (getCompositeCalendar().getCalendar(cal.uri)) {
                 properties.AppendElement(ltnGetAtom("checked"));
@@ -235,9 +246,6 @@ var ltnCalendarTreeView = {
             else {
                 properties.AppendElement(ltnGetAtom("unchecked"));
             }
-        } else if (col.id == "col-calendar-Color") {
-            var color = getCalendarManager().getCalendarPref(cal, "color");
-            properties.AppendElement(ltnGetAtom(getColorPropertyName(color)));
         }
     },
 
@@ -284,8 +292,7 @@ var ltnCalendarTreeView = {
 
     getCellText: function (row, col)
     {
-        if (col.id == "col-calendar-Checkbox" ||
-            col.id == "col-calendar-Color") {
+        if (col.id == "col-calendar-Checkbox") {
             return "";          // tooltip
         }
 
@@ -337,65 +344,8 @@ function ltnSetTreeView()
 
     // Ensure that a calendar is selected in calendar tree after startup.
     if (document.getElementById("calendarTree").currentIndex == -1) {
-        var index = getIndexForCalendar(getCompositeCalendar().defaultCalendar);
-        var indexToSelect = (index != - 1) ? index : 0;
-        document.getElementById("calendarTree").view.selection.select(indexToSelect);
+        document.getElementById("calendarTree").view.selection.select(0);
     }
-}
-
-function getIndexForCalendar(aCalendar) {
-    // Special trick to compare interface pointers, since normal, ==
-    // comparison can fail due to javascript wrapping.
-    var sip = Components.classes["@mozilla.org/supports-interface-pointer;1"]
-                        .createInstance(Components.interfaces.nsISupportsInterfacePointer);
-    sip.data = aCalendar;
-    sip.dataIID = Components.interfaces.calICalendar;
-    return getCalendars().indexOf(sip.data);
-}
-
-function getColorPropertyName(color) {
-    // strip hash (#) from color string
-    return "color-" + (color ? color.substr(1) : "default");
-}
-
-var gLtnStyleSheet;
-
-function updateLtnStyleSheet(aCalendar) {
-    // check if rule already exists in style sheet
-    if (!gLtnStyleSheet) {
-        gLtnStyleSheet = getStyleSheet("chrome://lightning/skin/lightning.css");
-    }
-    var selectorPrefix = "treechildren::-moz-tree-cell";
-    var color = getCalendarManager().getCalendarPref(aCalendar, "color");
-    if (!color) {
-        return;
-    }
-    var propertyName = getColorPropertyName(color);
-    var selectorText = selectorPrefix + propertyName;
-    for (var i = 0; i < gLtnStyleSheet.cssRules.length; i++) {
-        if (gLtnStyleSheet.cssRules[i].selectorText == selectorText) {
-            return;
-        }
-    }
-
-    // add rule to style sheet
-    var ruleString = selectorPrefix + "(" + propertyName + ") { }";
-    gLtnStyleSheet.insertRule(ruleString, gLtnStyleSheet.cssRules.length);
-    var rule = gLtnStyleSheet.cssRules[gLtnStyleSheet.cssRules.length-1];
-    rule.style.backgroundColor = color;
-    rule.style.margin = "1px";
-}
-
-function updateColorCell(aCalendar) {
-    var row = getIndexForCalendar(aCalendar);
-    var treeBoxObject = document.getElementById("calendarTree").treeBoxObject;
-    var column = treeBoxObject.columns["col-calendar-Color"];
-    treeBoxObject.invalidateCell(row, column);
-}
-
-function updateTreeView(aCalendar) {
-    updateLtnStyleSheet(aCalendar);
-    updateColorCell(aCalendar);
 }
 
 window.addEventListener("load", ltnSetTreeView, false);

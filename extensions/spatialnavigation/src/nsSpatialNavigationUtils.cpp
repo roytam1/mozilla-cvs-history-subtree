@@ -199,18 +199,14 @@ nscoord* lo_parse_coord_list(char *str, PRInt32* value_cnt)
   return value_list;
 }
 
-nsresult createFrameTraversal(nsPresContext* aPresContext,
-                              PRInt32 aType,
-                              PRBool aVisual,
-                              PRBool aLockInScrollView,
-                              PRBool aFollowOOFs,
+nsresult createFrameTraversal(PRUint32 type, nsPresContext* presContext, 
                               nsIBidirectionalEnumerator** outTraversal)
 {
   nsresult result;
-  if (!aPresContext)
+  if (!presContext)
     return NS_ERROR_FAILURE;    
   
-  nsIPresShell* presShell = aPresContext->PresShell();
+  nsIPresShell* presShell = presContext->PresShell();
   if (!presShell)
     return NS_ERROR_FAILURE;
   
@@ -234,8 +230,9 @@ nsresult createFrameTraversal(nsPresContext* aPresContext,
     return result;
   
   result = trav->NewFrameTraversal(getter_AddRefs(frameTraversal),
-                                   aPresContext, frame,
-                                   aType, aVisual, aLockInScrollView, aFollowOOFs);
+                                   type, 
+                                   presContext, 
+                                   frame);
   if (NS_FAILED(result))
     return result;
   
@@ -306,8 +303,9 @@ nsresult getFrameForContent(nsIContent* aContent, nsIFrame** aFrame)
   if (!doc)
     return NS_ERROR_FAILURE;
   
+  nsIFrame* frame;
   nsIPresShell *presShell = doc->GetShellAt(0);
-  nsIFrame* frame = presShell->GetPrimaryFrameFor(aContent);
+  presShell->GetPrimaryFrameFor(aContent, &frame);
   
   if (!frame)
     return NS_ERROR_FAILURE;
@@ -322,9 +320,10 @@ isContentOfType(nsIContent* content, const char* type)
   if (!content)
 	return PR_FALSE;
 
-  if (content->IsNodeOfType(nsINode::eELEMENT))
+  nsINodeInfo *nodeInfo = content->GetNodeInfo();
+  if (nodeInfo)
   {
-    nsIAtom* atom =  content->NodeInfo()->NameAtom();
+    nsIAtom* atom =  nodeInfo->NameAtom();
     if (atom)
       return atom->EqualsUTF8(nsDependentCString(type));
   }
@@ -334,7 +333,7 @@ isContentOfType(nsIContent* content, const char* type)
 PRBool
 isArea(nsIContent* content)
 {
-  if (!content || !content->IsNodeOfType(nsINode::eHTML))
+  if (!content || !content->IsContentOfType(nsIContent::eHTML))
       return PR_FALSE;
 
   return isContentOfType(content, "area");
@@ -345,7 +344,7 @@ isMap(nsIFrame* frame)
 {
   nsIContent* content = frame->GetContent();
 
-  if (!content || !content->IsNodeOfType(nsINode::eHTML))
+  if (!content || !content->IsContentOfType(nsIContent::eHTML))
       return PR_FALSE;
 
   return isContentOfType(content, "map");
@@ -359,7 +358,7 @@ isTargetable(PRBool focusDocuments, nsIFrame* frame)
   if (!currentContent)
     return PR_FALSE;
 
-  if (!currentContent->IsNodeOfType(nsINode::eHTML))
+  if (!currentContent->IsContentOfType(nsIContent::eHTML))
       return PR_FALSE;
 
   if (isContentOfType(currentContent, "map"))

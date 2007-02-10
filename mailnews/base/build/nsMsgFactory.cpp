@@ -53,6 +53,7 @@
 
 #include "nsMessengerBootstrap.h"
 #include "nsMessenger.h"
+#include "nsMsgGroupRecord.h"
 
 #include "nsIRegistry.h"
 #include "nsIContentViewer.h"
@@ -109,7 +110,6 @@
 #include "nsMsgContentPolicy.h"
 #include "nsCidProtocolHandler.h"
 #include "nsMsgTagService.h"
-#include "nsMsgFolderNotificationService.h"
 
 #ifdef XP_WIN
 #include "nsMessengerWinIntegration.h"
@@ -174,7 +174,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgProgress)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSpamSettings)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCidProtocolHandler)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgTagService)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgFolderNotificationService)
 #ifdef XP_WIN
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerWinIntegration, Init)
 #endif
@@ -428,10 +427,6 @@ static const nsModuleComponentInfo gComponents[] = {
     { "Tag Service", NS_MSGTAGSERVICE_CID,
       NS_MSGTAGSERVICE_CONTRACTID,
       nsMsgTagServiceConstructor,
-    },
-    { "Msg Notification Service", NS_MSGNOTIFICATIONSERVICE_CID,
-      NS_MSGNOTIFICATIONSERVICE_CONTRACTID,
-      nsMsgFolderNotificationServiceConstructor,
     },
 #ifdef XP_WIN
     { "Windows OS Integration", NS_MESSENGERWININTEGRATION_CID,

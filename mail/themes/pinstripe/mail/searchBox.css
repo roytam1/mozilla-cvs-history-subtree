@@ -37,6 +37,11 @@
 # ***** END LICENSE BLOCK *****
 */
 
+#searchBox {
+  padding: 2px 0px;
+  margin: 0px 4px;
+}
+
 #searchInput[searchCriteria="true"]  {
   color: grey;
 }

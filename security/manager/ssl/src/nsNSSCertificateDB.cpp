@@ -51,12 +51,10 @@
 #include "nsPK11TokenDB.h"
 #include "nsOCSPResponder.h"
 #include "nsReadableUtils.h"
-#include "nsIMutableArray.h"
-#include "nsArrayUtils.h"
+#include "nsArray.h"
 #include "nsNSSShutDown.h"
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
-#include "nsComponentManagerUtils.h"
 #include "nsIPrompt.h"
 #include "nsIProxyObjectManager.h"
 #include "nsProxiedService.h"
@@ -105,7 +103,7 @@ nsNSSCertificateDB::FindCertByNickname(nsISupports *aToken,
   nsNSSShutDownPreventionLock locker;
   CERTCertificate *cert = NULL;
   char *asciiname = NULL;
-  NS_ConvertUTF16toUTF8 aUtf8Nickname(nickname);
+  NS_ConvertUCS2toUTF8 aUtf8Nickname(nickname);
   asciiname = NS_CONST_CAST(char*, aUtf8Nickname.get());
   PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("Getting \"%s\"\n", asciiname));
 #if 0
@@ -467,11 +465,11 @@ nsNSSCertificateDB::ImportCertificates(PRUint8 * data, PRUint32 length,
     PORT_FreeArena(arena, PR_FALSE);
     return NS_ERROR_FAILURE;
   }
-  nsCOMPtr<nsIMutableArray> array =
-    do_CreateInstance(NS_ARRAY_CONTRACTID, &nsrv);
-  if (NS_FAILED(nsrv)) {
+  nsCOMPtr<nsIMutableArray> array;
+  nsresult rv = NS_NewArray(getter_AddRefs(array));
+  if (NS_FAILED(rv)) {
     PORT_FreeArena(arena, PR_FALSE);
-    return nsrv;
+    return rv;
   }
 
   // Now let's create some certs to work with
@@ -595,7 +593,7 @@ nsNSSCertificateDB::ImportEmailCertificate(PRUint8 * data, PRUint32 length,
     CERTCertificateListCleaner chainCleaner(certChain);
 
     if (!alert_and_skip) {
-      certChain = CERT_CertChainFromCert(node->cert, certusage, PR_FALSE);
+      CERT_CertChainFromCert(node->cert, certusage, PR_FALSE);
       if (!certChain) {
         alert_and_skip = true;
       }
@@ -826,10 +824,6 @@ void nsNSSCertificateDB::DisplayCertificateAlert(nsIInterfaceRequestor *ctx,
   nsPSMUITracker tracker;
   if (!tracker.isUIForbidden()) {
 
-    nsCOMPtr<nsIInterfaceRequestor> my_cxt = ctx;
-    if (!my_cxt)
-      my_cxt = new PipUIContext();
-
     // This shall be replaced by embedding ovverridable prompts
     // as discussed in bug 310446, and should make use of certToShow.
 
@@ -843,10 +837,10 @@ void nsNSSCertificateDB::DisplayCertificateAlert(nsIInterfaceRequestor *ctx,
       // the nsIPrompt.
 
       nsCOMPtr<nsIInterfaceRequestor> proxiedCallbacks;
-      NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+      NS_GetProxyForObject(NS_UI_THREAD_EVENTQ,
                            NS_GET_IID(nsIInterfaceRequestor),
-                           my_cxt,
-                           NS_PROXY_SYNC,
+                           ctx,
+                           PROXY_SYNC,
                            getter_AddRefs(proxiedCallbacks));
     
       nsCOMPtr<nsIPrompt> prompt (do_GetInterface(proxiedCallbacks));
@@ -856,10 +850,10 @@ void nsNSSCertificateDB::DisplayCertificateAlert(nsIInterfaceRequestor *ctx,
       // Finally, get a proxy for the nsIPrompt
     
       nsCOMPtr<nsIPrompt> proxyPrompt;
-      NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+      NS_GetProxyForObject(NS_UI_THREAD_EVENTQ,
                            NS_GET_IID(nsIPrompt),
                            prompt,
-                           NS_PROXY_SYNC,
+                           PROXY_SYNC,
                            getter_AddRefs(proxyPrompt));
     
       proxyPrompt->Alert(nsnull, tmpMessage.get());
@@ -952,14 +946,14 @@ NS_IMETHODIMP
 nsNSSCertificateDB::DeleteCertificate(nsIX509Cert *aCert)
 {
   nsNSSShutDownPreventionLock locker;
-  nsCOMPtr<nsIX509Cert2> nssCert = do_QueryInterface(aCert);
+  nsNSSCertificate *nssCert = NS_STATIC_CAST(nsNSSCertificate*, aCert);
   CERTCertificate *cert = nssCert->GetCert();
   if (!cert) return NS_ERROR_FAILURE;
   CERTCertificateCleaner certCleaner(cert);
   SECStatus srv = SECSuccess;
 
-  PRUint32 certType;
-  nssCert->GetCertType(&certType);
+  PRUint32 certType = getCertType(cert);
+  nssCert->SetCertType(certType);
   if (NS_FAILED(nssCert->MarkForPermDeletion()))
   {
     return NS_ERROR_FAILURE;
@@ -994,7 +988,7 @@ nsNSSCertificateDB::SetCertTrust(nsIX509Cert *cert,
   nsNSSShutDownPreventionLock locker;
   SECStatus srv;
   nsNSSCertTrust trust;
-  nsCOMPtr<nsIX509Cert2> pipCert = do_QueryInterface(cert);
+  nsNSSCertificate *pipCert = NS_STATIC_CAST(nsNSSCertificate *, cert);
   CERTCertificate *nsscert = pipCert->GetCert();
   CERTCertificateCleaner certCleaner(nsscert);
   if (type == nsIX509Cert::CA_CERT) {
@@ -1038,7 +1032,7 @@ nsNSSCertificateDB::IsCertTrusted(nsIX509Cert *cert,
 
   nsNSSShutDownPreventionLock locker;
   SECStatus srv;
-  nsCOMPtr<nsIX509Cert2> pipCert = do_QueryInterface(cert);
+  nsNSSCertificate *pipCert = NS_STATIC_CAST(nsNSSCertificate *, cert);
   CERTCertificate *nsscert = pipCert->GetCert();
   CERTCertTrust nsstrust;
   srv = CERT_GetCertTrust(nsscert, &nsstrust);
@@ -1210,12 +1204,12 @@ GetOCSPResponders (CERTCertificate *aCert,
   // Get the AIA and nickname //
   serviceURL = CERT_GetOCSPAuthorityInfoAccessLocation(aCert);
   if (serviceURL) {
-    url = ToNewUnicode(NS_ConvertUTF8toUTF16(serviceURL));
+    url = ToNewUnicode(NS_ConvertUTF8toUCS2(serviceURL));
     PORT_Free(serviceURL);
   }
 
   nickname = aCert->nickname;
-  nn = ToNewUnicode(NS_ConvertUTF8toUTF16(nickname));
+  nn = ToNewUnicode(NS_ConvertUTF8toUCS2(nickname));
 
   nsCOMPtr<nsIOCSPResponder> new_entry = new nsOCSPResponder(nn, url);
   nsMemory::Free(nn);
@@ -1248,10 +1242,10 @@ nsNSSCertificateDB::GetOCSPResponders(nsIArray ** aResponders)
 {
   nsNSSShutDownPreventionLock locker;
   SECStatus sec_rv;
-  nsCOMPtr<nsIMutableArray> respondersArray =
-    do_CreateInstance(NS_ARRAY_CONTRACTID);
-  if (!respondersArray) {
-    return NS_ERROR_OUT_OF_MEMORY;
+  nsCOMPtr<nsIMutableArray> respondersArray;
+  nsresult rv = NS_NewArray(getter_AddRefs(respondersArray));
+  if (NS_FAILED(rv)) {
+    return rv;
   }
 
   sec_rv = PK11_TraverseSlotCerts(::GetOCSPResponders,
@@ -1311,7 +1305,7 @@ nsNSSCertificateDB::getCertNames(CERTCertList *certList,
       char *namestr = NULL;
       nsAutoString certstr;
       rv = pipCert.GetDbKey(&dbkey);
-      nsAutoString keystr = NS_ConvertASCIItoUTF16(dbkey);
+      nsAutoString keystr = NS_ConvertASCIItoUCS2(dbkey);
       PR_FREEIF(dbkey);
       if (type == nsIX509Cert::EMAIL_CERT) {
         namestr = node->cert->emailAddr;
@@ -1323,7 +1317,7 @@ nsNSSCertificateDB::getCertNames(CERTCertList *certList,
         }
       }
       if (!namestr) namestr = "";
-      nsAutoString certname = NS_ConvertASCIItoUTF16(namestr);
+      nsAutoString certname = NS_ConvertASCIItoUCS2(namestr);
       certstr.Append(PRUnichar(DELIM));
       certstr += certname;
       certstr.Append(PRUnichar(DELIM));
@@ -1368,7 +1362,7 @@ nsNSSCertificateDB::FindEmailEncryptionCert(const nsAString &aNickname, nsIX509C
   nsCOMPtr<nsIInterfaceRequestor> ctx = new PipUIContext();
   nsNSSCertificate *nssCert = nsnull;
   char *asciiname = NULL;
-  NS_ConvertUTF16toUTF8 aUtf8Nickname(aNickname);
+  NS_ConvertUCS2toUTF8 aUtf8Nickname(aNickname);
   asciiname = NS_CONST_CAST(char*, aUtf8Nickname.get());
 
   /* Find a good cert in the user's database */
@@ -1408,7 +1402,7 @@ nsNSSCertificateDB::FindEmailSigningCert(const nsAString &aNickname, nsIX509Cert
   nsCOMPtr<nsIInterfaceRequestor> ctx = new PipUIContext();
   nsNSSCertificate *nssCert = nsnull;
   char *asciiname = NULL;
-  NS_ConvertUTF16toUTF8 aUtf8Nickname(aNickname);
+  NS_ConvertUCS2toUTF8 aUtf8Nickname(aNickname);
   asciiname = NS_CONST_CAST(char*, aUtf8Nickname.get());
 
   /* Find a good cert in the user's database */
@@ -1716,23 +1710,4 @@ NS_IMETHODIMP nsNSSCertificateDB::AddCertFromBase64(const char *aBase64, const c
 
 
   return (srv == SECSuccess) ? NS_OK : NS_ERROR_FAILURE;
-}
-
-NS_IMETHODIMP 
-nsNSSCertificateDB::GetCerts(nsIX509CertList **_retval)
-{
-  CERTCertList *certList;
-
-  nsCOMPtr<nsIInterfaceRequestor> ctx = new PipUIContext();
-  nsCOMPtr<nsIX509CertList> nssCertList;
-  certList = PK11_ListCerts(PK11CertListUnique, ctx);
-
-  // nsNSSCertList 1) adopts certList, and 2) handles the NULL case fine.
-  // (returns an empty list) 
-  nssCertList = new nsNSSCertList(certList, PR_TRUE);
-  if (!nssCertList) { return NS_ERROR_OUT_OF_MEMORY; }
-
-  *_retval = nssCertList;
-  NS_ADDREF(*_retval);
-  return NS_OK;
 }

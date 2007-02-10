@@ -48,6 +48,7 @@
 #include "nsIURI.h"
 #include "nsIChannel.h"
 #include "nsString.h"
+#include "nsFileSpec.h"
 #include "nsIMimeMiscStatus.h"
 #include "nsIMsgHeaderParser.h"
 #include "nsIPipe.h"
@@ -132,7 +133,7 @@ protected:
   MimeRebuffer        *mBufferMgr;
 
 	// mscott
-  // don't ref count the streams....the emitter is owned by the converter
+  // dont ref count the streams....the emitter is owned by the converter
 	// which owns these streams...
   //
   nsIOutputStream     *mOutStream;

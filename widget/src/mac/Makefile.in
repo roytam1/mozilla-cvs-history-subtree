@@ -44,7 +44,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= widget
 LIBRARY_NAME	= widget_mac
-EXPORT_LIBRARY	= 1
+EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
 MODULE_NAME	= nsWidgetMacModule
 XPIDL_MODULE	= widget_mac
@@ -76,14 +76,6 @@ ifdef ACCESSIBILITY
 REQUIRES	+= accessibility
 endif
 
-ifdef MOZ_ENABLE_CAIRO_GFX
-REQUIRES += thebes cairo
-
-ifdef MOZ_ENABLE_GLITZ
-REQUIRES += glitz glitzagl
-endif
-endif
-
 CPPSRCS	= nsAppShell.cpp \
 		nsBidiKeyboard.cpp \
 		nsChildWindow.cpp \
@@ -103,7 +95,6 @@ CPPSRCS	= nsAppShell.cpp \
 		nsMenuItemIcon.cpp \
 		nsMenuItemX.cpp \
 		nsMimeMapper.cpp \
-	        nsNativeThemeMac.cpp \
 		nsSound.cpp \
 		nsToolkitBase.cpp \
 		nsToolkit.cpp \
@@ -113,12 +104,6 @@ CPPSRCS	= nsAppShell.cpp \
 		nsStylClipboardUtils.cpp \
 		nsMacControl.cpp \
 		nsNativeScrollbar.cpp \
-		nsScreenMac.cpp \
-		nsScreenManagerMac.cpp \
-		nsDeviceContextSpecX.cpp \
-		nsPrintOptionsX.cpp \
-		nsPrintSettingsX.cpp \
-		nsPrintSessionX.cpp \
 		$(NULL)
 
 XPIDLSRCS  += \
@@ -130,34 +115,32 @@ XPIDLSRCS  += \
 		nsIDragHelperService.idl \
 		$(NULL)
 
-SHARED_LIBRARY_LIBS = ../xpwidgets/libxpwidgets_s.a
+SHARED_LIBRARY_LIBS = $(DIST)/lib/libxpwidgets_s.a
 
 EXTRA_DSO_LDOPTS += \
 		$(MOZ_UNICHARUTIL_LIBS) \
-		$(MOZ_COMPONENT_LIBS) \
-		$(call EXPAND_LIBNAME_PATH,gkgfx,$(DEPTH)/gfx/src) \
 		$(TK_LIBS) \
-		-framework QuickTime \
-		-framework IOKit \
+		$(MOZ_COMPONENT_LIBS) \
+		-lgkgfx \
 		$(NULL)
-
-ifdef MOZ_ENABLE_CAIRO_GFX
-EXTRA_DSO_LDOPTS += -lthebes
-endif
 
 include $(topsrcdir)/config/rules.mk
 
-RESOURCE = libwidget.rsrc
+RES_DEST = $(DIST)/bin/libwidget.rsrc
 RES_SRC = $(srcdir)/nsMacWidget.r
 
-$(RESOURCE): $(RES_SRC)
-	/Developer/Tools/Rez -i /Developer/Headers/FlatCarbon -useDF $< -o $@
+$(RES_DEST): $(RES_SRC)
+	/Developer/Tools/Rez -i /Developer/Headers/FlatCarbon -useDF $(RES_SRC) -o $(RES_DEST)
 
-libs:: $(RESOURCE)
-	$(INSTALL) $(IFLAGS1) $^ $(DIST)/bin
+libs:: $(RES_DEST)
 
 LOCAL_INCLUDES	= \
 	$(TK_CFLAGS) \
 	-I$(topsrcdir)/gfx/src/mac \
 	-I$(srcdir)/../xpwidgets \
+	$(NULL)
+
+LDFLAGS	+= \
+	-framework QuickTime \
+	-framework IOKit \
 	$(NULL)

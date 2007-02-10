@@ -56,11 +56,10 @@ REQUIRES	= xpcom \
 		  $(NULL)
 
 CPPSRCS		= \
+		nsIOThreadPool.cpp \
 		nsTransportUtils.cpp \
 		nsAsyncStreamCopier.cpp \
-		nsAuthInformationHolder.cpp \
-		nsBaseChannel.cpp \
-		nsBaseContentStream.cpp \
+		nsAsyncStreamListener.cpp \
 		nsBufferedStreams.cpp \
 		nsDirectoryIndexStream.cpp \
 		nsDownloader.cpp \
@@ -78,7 +77,6 @@ CPPSRCS		= \
 		nsRequestObserverProxy.cpp \
 		nsSimpleStreamListener.cpp \
 		nsSimpleURI.cpp \
-		nsSimpleNestedURI.cpp \
 		nsStandardURL.cpp \
 		nsSocketTransport2.cpp \
 		nsSocketTransportService2.cpp \

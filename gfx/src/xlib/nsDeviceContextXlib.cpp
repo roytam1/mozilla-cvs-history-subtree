@@ -65,6 +65,8 @@
 #include "nsIDeviceContextXPrint.h"
 #endif /* USE_XPRINT */
 
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+
 #define XLIB_DEFAULT_FONT1 "-*-helvetica-medium-r-*--*-120-*-*-*-*-iso8859-1"
 #define XLIB_DEFAULT_FONT2 "-*-fixed-medium-r-*-*-*-120-*-*-*-*-*-*"
 
@@ -170,7 +172,7 @@ nsDeviceContextXlib::CommonInit(void)
   if (!initialized) {
     initialized = 1;
     nsresult res;
-    nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &res));
+    nsCOMPtr<nsIPref> prefs(do_GetService(kPrefCID, &res));
     if (NS_SUCCEEDED(res) && prefs) {
       PRInt32 intVal = 96;
       res = prefs->GetIntPref("layout.css.dpi", &intVal);
@@ -278,6 +280,18 @@ NS_IMETHODIMP nsDeviceContextXlib::SupportsNativeWidgets(PRBool &aSupportsWidget
 {
   PR_LOG(DeviceContextXlibLM, PR_LOG_DEBUG, ("nsDeviceContextXlib::SupportsNativeWidgets()\n"));
   aSupportsWidgets = PR_TRUE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsDeviceContextXlib::GetScrollBarDimensions(float &aWidth, float &aHeight) const
+{
+  PR_LOG(DeviceContextXlibLM, PR_LOG_DEBUG, ("nsDeviceContextXlib::GetScrollBarDimensions()\n"));
+  float scale;
+  GetCanonicalPixelScale(scale);
+  // XXX Oh, yeah.  These are hard coded.
+  aWidth = 15 * mPixelsToTwips * scale;
+  aHeight = 15 * mPixelsToTwips * scale;
+
   return NS_OK;
 }
 

@@ -40,7 +40,6 @@
 #include "nsXPCOM.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
-#include "nsServiceManagerUtils.h"
 #include <stdio.h>
 
 static NS_DEFINE_CID(kIMyServiceCID, NS_IMYSERVICE_CID);

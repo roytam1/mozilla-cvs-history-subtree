@@ -101,8 +101,9 @@ var disallow_classes_no_html = 1; /* the user preference,
      value > 1 in his prefs.js or user.js, but that the value will not
      change during runtime other than through the MsgBody*() functions below.*/
 
-// Disable the File | New | Account... menu item if the account preference is locked.
-// Two other affected areas are the account central and the account manager dialogs.
+// Disable the new account menu item if the account preference is locked.
+// Two other affected areas are the account central and the account manager
+// dialog.
 function menu_new_init()
 {
   if (!gMessengerBundle)
@@ -112,7 +113,7 @@ function menu_new_init()
   if (gPrefBranch.prefIsLocked("mail.disable_new_account_addition"))
     newAccountItem.setAttribute("disabled","true");
 
-  // Change New Folder... menu according to the context
+  // Change "New Folder..." menu according to the context
   var folderArray = GetSelectedMsgFolders();
   if (folderArray.length == 0)
     return;
@@ -179,6 +180,7 @@ function view_init()
   if (folderPane_menuitem && !folderPane_menuitem.hidden)
     folderPane_menuitem.setAttribute('checked', !IsFolderPaneCollapsed());
 
+  // Disable some menus if account manager is showing
   var sort_menuitem = document.getElementById('viewSortMenu');
   if (sort_menuitem) {
     sort_menuitem.setAttribute("disabled", gAccountCentralLoaded);
@@ -192,7 +194,7 @@ function view_init()
     threads_menuitem.setAttribute("disabled", gAccountCentralLoaded);
   }
 
-  // Initialize the Display Attachments Inline menu.
+  // Initialize the View Attachment Inline menu
   var viewAttachmentInline = pref.getBoolPref("mail.inline_attachments");
   document.getElementById("viewAttachmentsInlineMenuitem").setAttribute("checked", viewAttachmentInline ? "true" : "false");
 
@@ -286,6 +288,76 @@ function InitViewMessagesMenu()
     ignoredTheadsMenuItem.setAttribute("checked", (viewFlags & nsMsgViewFlagsType.kShowIgnored) != 0);
 }
 
+function InitViewMessageViewMenu()
+{
+  var currentViewValue = document.getElementById("viewPicker").value;
+
+  var allMenuItem = document.getElementById("viewAll");
+  if(allMenuItem)
+    allMenuItem.setAttribute("checked",  currentViewValue == 0);  // from msgViewPickerOveraly.xul <menuitem value="0" id="viewPickerAll" label="&viewPickerAll.label;"/>
+    
+  var unreadMenuItem = document.getElementById("viewUnread");
+  if(unreadMenuItem)
+    unreadMenuItem.setAttribute("checked", currentViewValue == 1); // from msgViewPickerOveraly.xul, <menuitem value="1" id="viewPickerUnread" label="&viewPickerUnread.label;"/>
+  
+  for (var i = 1; i <= 5; i++) {
+    var prefString = gPrefBranch.getComplexValue("mailnews.labels.description." + i, Components.interfaces.nsIPrefLocalizedString).data;
+    var viewLabelMenuItem = document.getElementById("viewLabelMenuItem" + i);
+    viewLabelMenuItem.setAttribute("label", prefString);
+    viewLabelMenuItem.setAttribute("checked", (i == (currentViewValue - 1)));  // 1=2-1, from msgViewPickerOveraly.xul, <menuitem value="2" id="labelMenuItem1"/>
+  }
+
+  viewRefreshCustomMailViews(currentViewValue);
+}
+
+function viewRefreshCustomMailViews(aCurrentViewValue)
+{
+  // for each mail view in the msg view list, add a menu item
+  var mailViewList = Components.classes["@mozilla.org/messenger/mailviewlist;1"].getService(Components.interfaces.nsIMsgMailViewList);
+
+  // XXX TODO, fix code in msgViewPickerOverlay.js, to be like this.
+  // remove any existing entries...
+  var menupopupNode = document.getElementById('viewMessageViewPopup');
+  var userDefinedItems = menupopupNode.getElementsByAttribute("userdefined","true");
+  for (var i=0; userDefinedItems.item(i); )
+  {
+    if (!menupopupNode.removeChild(userDefinedItems[i]))
+      ++i;
+  }
+  
+  // now rebuild the list
+  var numItems = mailViewList.mailViewCount; 
+  var viewCreateCustomViewSeparator = document.getElementById('viewCreateCustomViewSeparator');
+  
+  for (i = 0; i < numItems; i++)
+  {
+    var newMenuItem = document.createElement("menuitem");
+    newMenuItem.setAttribute("label", mailViewList.getMailViewAt(i).prettyName);
+    newMenuItem.setAttribute("userdefined", "true");
+    var oncommandStr = "ViewMessagesBy('userdefinedview" + (kLastDefaultViewIndex + i) + "');";  
+    newMenuItem.setAttribute("oncommand", oncommandStr);
+    var item = menupopupNode.insertBefore(newMenuItem, viewCreateCustomViewSeparator);
+    item.setAttribute("value",  kLastDefaultViewIndex + i); 
+    item.setAttribute("type",  "radio"); // for checked
+    item.setAttribute("name", "viewmessages");  // for checked
+    item.setAttribute("checked", (kLastDefaultViewIndex + i == aCurrentViewValue)); 
+  }
+
+  if (!numItems)
+    viewCreateCustomViewSeparator.setAttribute('collapsed', true);
+  else
+    viewCreateCustomViewSeparator.removeAttribute('collapsed');
+}
+
+// called by the View | Messages | Views ... menu items
+// see mailWindowOverlay.xul
+function ViewMessagesBy(id)
+{
+  var viewPicker = document.getElementById('viewPicker');
+  viewPicker.selectedItem = document.getElementById(id);
+  viewChange(viewPicker, viewPicker.value);
+}
+
 function InitMessageMenu()
 {
   var aMessage = GetFirstSelectedMessage();
@@ -294,7 +366,7 @@ function InitMessageMenu()
       isNews = IsNewsMessage(aMessage);
   }
 
-  // We show Reply to Newsgroups only for news messages.
+  //We show reply to Newsgroups only for news messages.
   var replyNewsgroupMenuItem = document.getElementById("replyNewsgroupMainMenu");
   if(replyNewsgroupMenuItem)
   {
@@ -314,21 +386,7 @@ function InitMessageMenu()
       replySenderMenuItem.setAttribute("hidden", isNews ? "" : "true");
   }
 
-  //We show Reply to Sender and Newsgroup only for news messages.
-  var replySenderAndNewsgroupMenuItem = document.getElementById("replySenderAndNewsgroupMainMenu");
-  if (replySenderAndNewsgroupMenuItem)
-    replySenderAndNewsgroupMenuItem.hidden = !isNews;
-
-  // For mail messages we say reply all. For news we say ReplyToAllRecipients.
-  var replyAllMenuItem = document.getElementById("replyallMainMenu");
-  if (replyAllMenuItem)
-    replyAllMenuItem.hidden = isNews;
-
-  var replyAllRecipientsMenuItem = document.getElementById("replyAllRecipientsMainMenu");
-  if (replyAllRecipientsMenuItem)
-    replyAllRecipientsMenuItem.hidden = !isNews;
-
-  // We only show Ignore Thread and Watch Thread menu itmes for news.
+  // we only kill and watch threads for news
   var threadMenuSeparator = document.getElementById("threadItemsSeparator");
   if (threadMenuSeparator) {
       threadMenuSeparator.setAttribute("hidden", isNews ? "" : "true");
@@ -342,8 +400,8 @@ function InitMessageMenu()
       watchThreadMenuItem.setAttribute("hidden", isNews ? "" : "true");
   }
 
-  // Disable the Move and Copy menus if there are no messages selected.
-  // Disable the Move menu if we can't delete messages from the folder.
+  // disable the move and copy menus if there are no messages selected.
+  // disable the move menu if we can't delete msgs from the folder
   var moveMenu = document.getElementById("moveMenu");
   var msgFolder = GetLoadedMsgFolder();
   if(moveMenu)
@@ -356,7 +414,7 @@ function InitMessageMenu()
   if(copyMenu)
       copyMenu.setAttribute("disabled", !aMessage);
 
-  // Disable the Forward as/Tag menu items if no message is selected.
+  // Disable Forward as/tag menu items if no message is selected
   var forwardAsMenu = document.getElementById("forwardAsMenu");
   if(forwardAsMenu)
       forwardAsMenu.setAttribute("disabled", !aMessage);
@@ -365,7 +423,7 @@ function InitMessageMenu()
   if(tagMenu)
       tagMenu.setAttribute("disabled", !aMessage);
 
-  // Disable the Mark menu when we're not in a folder.
+  // Disable mark menu when we're not in a folder
   var markMenu = document.getElementById("markMenu");
   if(markMenu)
       markMenu.setAttribute("disabled", !msgFolder);
@@ -483,29 +541,6 @@ function RemoveAllMessageTags()
     msgHdr.folder.getMsgDatabase(msgWindow)
           .setStringProperty(msgHdr.messageKey, "keywords", "");
   }
-  OnTagsChange();
-}
-
-function InitMessageForward(aPopup)
-{
-  var forwardType = 0;
-  try {
-    forwardType = gPrefs.getIntPref("mail.forward_message_mode");
-  }
-  catch (ex) {
-    dump("failed to retrieve pref mail.forward_message_mode");
-  }
-
-  if (forwardType) {
-    // forward inline is the first menuitem
-    aPopup.firstChild.setAttribute("default", "true");
-    aPopup.lastChild.removeAttribute("default");
-  }
-  else {
-    // attachment is the last menuitem
-    aPopup.lastChild.setAttribute("default", "true");
-    aPopup.firstChild.removeAttribute("default");
-  }
 }
 
 function ToggleMessageTagKey(index)
@@ -578,7 +613,31 @@ function ToggleMessageTag(key, addKey)
   }
   if (prevHdrFolder)
     prevHdrFolder[toggler](messages, key);
-  OnTagsChange();
+}
+
+function AddTag()
+{
+  var args = {result: "", okCallback: AddTagCallback};
+  var dialog = window.openDialog("chrome://messenger/content/newTagDialog.xul",
+                                 "",
+                                 "chrome,titlebar,modal",
+                                 args);
+}
+
+function AddTagCallback(name, color)
+{
+  var tagService = Components.classes["@mozilla.org/messenger/tagservice;1"]
+                             .getService(Components.interfaces.nsIMsgTagService);
+  tagService.addTag(name, color, '');
+  try
+  {
+    ToggleMessageTag(tagService.getKeyForTag(name), true);
+  }
+  catch(ex)
+  {
+    return false;
+  }
+  return true;
 }
 
 function SetMessageTagLabel(menuitem, index, name)
@@ -629,9 +688,6 @@ function InitMessageTags(menuPopup)
     var removeKey = (" " + curKeys + " ").indexOf(" " + taginfo.key + " ") > -1;
     newMenuItem.setAttribute('checked', removeKey);
     newMenuItem.setAttribute('oncommand', 'ToggleMessageTagMenu(event.target);');
-    var color = taginfo.color;
-    if (color)
-      newMenuItem.setAttribute("class", "lc-" + color.substr(1));
     menuPopup.insertBefore(newMenuItem, menuseparator);
   }
 }
@@ -945,9 +1001,10 @@ function MsgNewMessage(event)
   var loadedFolder = GetFirstSelectedMsgFolder();
   var messageArray = GetSelectedMessages();
 
-  ComposeMessage(msgComposeType.New,
-    (event && event.shiftKey) ? msgComposeFormat.OppositeOfDefault : msgComposeFormat.Default,
-    loadedFolder, messageArray);
+  if (event && event.shiftKey)
+    ComposeMessage(msgComposeType.New, msgComposeFormat.OppositeOfDefault, loadedFolder, messageArray);
+  else
+    ComposeMessage(msgComposeType.New, msgComposeFormat.Default, loadedFolder, messageArray);
 }
 
 function MsgReplyMessage(event)
@@ -981,40 +1038,21 @@ function MsgReplyGroup(event)
   var loadedFolder = GetLoadedMsgFolder();
   var messageArray = GetSelectedMessages();
 
-  ComposeMessage(msgComposeType.ReplyToGroup,
-    (event && event.shiftKey) ? msgComposeFormat.OppositeOfDefault : msgComposeFormat.Default,
-    loadedFolder, messageArray);
+  if (event && event.shiftKey)
+    ComposeMessage(msgComposeType.ReplyToGroup, msgComposeFormat.OppositeOfDefault, loadedFolder, messageArray);
+  else
+    ComposeMessage(msgComposeType.ReplyToGroup, msgComposeFormat.Default, loadedFolder, messageArray);
 }
 
 function MsgReplyToAllMessage(event)
 {
   var loadedFolder = GetLoadedMsgFolder();
-  var server = loadedFolder.server;
+  var messageArray = GetSelectedMessages();
 
-  if (server && server.type == "nntp")
-    MsgReplyToSenderAndGroup(event);
+  if (event && event.shiftKey)
+    ComposeMessage(msgComposeType.ReplyAll, msgComposeFormat.OppositeOfDefault, loadedFolder, messageArray);
   else
-    MsgReplyToAllRecipients(event);
-}
-
-function MsgReplyToAllRecipients(event)
-{
-  var loadedFolder = GetLoadedMsgFolder();
-  var messageArray = GetSelectedMessages();
-
-  ComposeMessage(msgComposeType.ReplyAll,
-    (event && event.shiftKey) ? msgComposeFormat.OppositeOfDefault : msgComposeFormat.Default,
-    loadedFolder, messageArray);
-}
-
-function MsgReplyToSenderAndGroup(event)
-{
-  var loadedFolder = GetLoadedMsgFolder();
-  var messageArray = GetSelectedMessages();
-
-  ComposeMessage(msgComposeType.ReplyToSenderAndGroup,
-    (event && event.shiftKey) ? msgComposeFormat.OppositeOfDefault : msgComposeFormat.Default,
-    loadedFolder, messageArray);
+    ComposeMessage(msgComposeType.ReplyAll, msgComposeFormat.Default, loadedFolder, messageArray);
 }
 
 function MsgForwardMessage(event)
@@ -1042,9 +1080,11 @@ function MsgForwardAsAttachment(event)
   var messageArray = GetSelectedMessages();
 
   //dump("\nMsgForwardAsAttachment from XUL\n");
-  ComposeMessage(msgComposeType.ForwardAsAttachment,
-    (event && event.shiftKey) ? msgComposeFormat.OppositeOfDefault : msgComposeFormat.Default,
-    loadedFolder, messageArray);  
+  if (event && event.shiftKey)
+    ComposeMessage(msgComposeType.ForwardAsAttachment,
+                   msgComposeFormat.OppositeOfDefault, loadedFolder, messageArray);
+  else
+    ComposeMessage(msgComposeType.ForwardAsAttachment, msgComposeFormat.Default, loadedFolder, messageArray);
 }
 
 function MsgForwardAsInline(event)
@@ -1053,9 +1093,11 @@ function MsgForwardAsInline(event)
   var messageArray = GetSelectedMessages();
 
   //dump("\nMsgForwardAsInline from XUL\n");
-  ComposeMessage(msgComposeType.ForwardInline,
-    (event && event.shiftKey) ? msgComposeFormat.OppositeOfDefault : msgComposeFormat.Default,
-    loadedFolder, messageArray);  
+  if (event && event.shiftKey)
+    ComposeMessage(msgComposeType.ForwardInline,
+                   msgComposeFormat.OppositeOfDefault, loadedFolder, messageArray);
+  else
+    ComposeMessage(msgComposeType.ForwardInline, msgComposeFormat.Default, loadedFolder, messageArray);
 }
 
 
@@ -1612,6 +1654,31 @@ function MsgSendUnsentMsgs()
   }
 }
 
+function GetPrintSettings()
+{
+  var prevPS = gPrintSettings;
+
+  try {
+    if (gPrintSettings == null) {
+      var useGlobalPrintSettings = gPrefBranch.getBoolPref("print.use_global_printsettings");
+
+      // I would rather be using nsIWebBrowserPrint API
+      // but I really don't have a document at this point
+      var printSettingsService = Components.classes["@mozilla.org/gfx/printsettings-service;1"]
+                                           .getService(Components.interfaces.nsIPrintSettingsService);
+      if (useGlobalPrintSettings) {
+        gPrintSettings = printSettingsService.globalPrintSettings;
+      } else {
+        gPrintSettings = printSettingsService.CreatePrintSettings();
+      }
+    }
+  } catch (e) {
+    dump("GetPrintSettings "+e);
+  }
+
+  return gPrintSettings;
+}
+
 function PrintEnginePrintInternal(messageList, numMessages, doPrintPreview, msgType)
 {
     if (numMessages == 0) {
@@ -1620,7 +1687,7 @@ function PrintEnginePrintInternal(messageList, numMessages, doPrintPreview, msgT
     }
 
     if (gPrintSettings == null) {
-      gPrintSettings = PrintUtils.getPrintSettings();
+      gPrintSettings = GetPrintSettings();
     }
     printEngineWindow = window.openDialog("chrome://messenger/content/msgPrintEngine.xul",
                                           "",
@@ -1715,8 +1782,6 @@ function IsCompactFolderEnabled()
       isCommandEnabled("cmd_compactFolder"));   // checks e.g. if IMAP is offline
 }
 
-var gReplyAllButton = null;
-var gReplyButton = null;
 var gDeleteButton = null;
 var gMarkButton = null;
 
@@ -1730,23 +1795,15 @@ function SetUpToolbarButtons(uri)
 
     if(!gMarkButton) gMarkButton = document.getElementById("button-mark");
     if(!gDeleteButton) gDeleteButton = document.getElementById("button-delete");
-    if (!gReplyButton) gReplyButton = document.getElementById("button-reply");
-    if (!gReplyAllButton) gReplyAllButton = document.getElementById("button-replyall");
 
     var buttonToHide = null;
     var buttonToShow = null;
 
     if (forNews) {
-        gReplyButton.setAttribute("type", "menu-button");
-        gReplyAllButton.setAttribute("type", "menu-button");
-        gReplyAllButton.setAttribute("tooltiptext", gReplyAllButton.getAttribute("tooltiptextnews"));
         buttonToHide = gDeleteButton;
         buttonToShow = gMarkButton;
     }
     else {
-        gReplyButton.removeAttribute("type");
-        gReplyAllButton.removeAttribute("type");
-        gReplyAllButton.setAttribute("tooltiptext", gReplyAllButton.getAttribute("tooltiptextmail"));
         buttonToHide = gMarkButton;
         buttonToShow = gDeleteButton;
     }
@@ -2171,13 +2228,9 @@ var gMessageNotificationBar =
 
   setRemoteContentMsg: function(aMsgHdr)
   {  
-    // update the allow remote content for sender string
-    var headerParser = Components.classes["@mozilla.org/messenger/headerparser;1"]
-                                 .getService(Components.interfaces.nsIMsgHeaderParser);
-    var emailAddress = headerParser.extractHeaderAddressMailboxes(null, aMsgHdr.author);
-    document.getElementById('allowRemoteContentForAuthorDesc').textContent =
-      gMessengerBundle.getFormattedString('alwaysLoadRemoteContentForSender', [emailAddress ? emailAddress : aMsgHdr.author]);
-    this.updateMsgNotificationBar(kMsgNotificationRemoteImages, true);
+    var blockRemote = aMsgHdr &&
+                      aMsgHdr.getUint32Property("remoteContentPolicy") == kBlockRemoteContent;
+    this.updateMsgNotificationBar(kMsgNotificationRemoteImages, blockRemote);
   },
 
   // aUrl is the nsIURI for the message currently loaded in the message pane
@@ -2213,87 +2266,13 @@ var gMessageNotificationBar =
   }
 };
 
-/**
- * loadMsgWithRemoteContent
- *   Reload the current message, allowing remote content
- */
-function loadMsgWithRemoteContent()
+function LoadMsgWithRemoteContent()
 {
   // we want to get the msg hdr for the currently selected message
   // change the "remoteContentBar" property on it
   // then reload the message
 
   setMsgHdrPropertyAndReload("remoteContentPolicy", kAllowRemoteContent);
-}
-
-/**
- *  msgHdrForCurrentMessage
- *   Returns the msg hdr associated with the current loaded message.
- */
-function msgHdrForCurrentMessage()
-{
-  var msgURI = GetLoadedMessage();
-  return (msgURI && !(/type=application\/x-message-display/.test(msgURI))) ? messenger.msgHdrFromURI(msgURI) : null;
-}
-
-/**
- *  Reloads the message after adjusting the remote content policy for the sender.
- *  Iterate through the local address books looking for a card with the same e-mail address as the 
- *  sender of the current loaded message. If we find a card, update the allow remote content field.
- *  If we can't find a card, prompt the user with a new AB card dialog, pre-selecting the remote content field.
- */
-function allowRemoteContentForSender()
-{
-  // get the sender of the msg hdr
-  var msgHdr = msgHdrForCurrentMessage();
-  if (!msgHdr)
-    return;
-
-  var headerParser = Components.classes["@mozilla.org/messenger/headerparser;1"]
-                               .getService(Components.interfaces.nsIMsgHeaderParser);
-  var names = {};
-  var addresses = {};
-  var fullNames = {};
-  var numAddresses;
-
-  numAddresses = headerParser.parseHeadersWithArray(msgHdr.author, addresses, names, fullNames);
-  var authorEmailAddress = addresses.value[0];
-  if (!authorEmailAddress)
-    return;
-
-  // search through all of our local address books looking for a match.
-  var parentDir = RDF.GetResource("moz-abdirectory://").QueryInterface(Components.interfaces.nsIAbDirectory);
-  var enumerator = parentDir.childNodes;
-  var cardForEmailAddress;
-  var addrbook;
-  while (!cardForEmailAddress && enumerator.hasMoreElements())
-  {
-    addrbook = enumerator.getNext();
-    if (addrbook instanceof Components.interfaces.nsIAbMDBDirectory)
-      cardForEmailAddress = addrbook.cardForEmailAddress(authorEmailAddress);
-  }
-
-  var allowRemoteContent = false;
-  if (cardForEmailAddress && addrbook instanceof Components.interfaces.nsIAbDirectory)
-  {
-    // set the property for remote content
-    cardForEmailAddress.allowRemoteContent = true;
-    addrbook.modifyCard(cardForEmailAddress);
-    allowRemoteContent = true;
-  }
-  else
-  {
-    var args = {primaryEmail:authorEmailAddress, displayName:names.value[0],
-                allowRemoteContent:true};
-    // create a new card and set the property
-    window.openDialog("chrome://messenger/content/addressbook/abNewCardDialog.xul",
-                      "", "chrome,resizable=no,titlebar,modal,centerscreen", args);
-    allowRemoteContent = args.allowRemoteContent;
-  } 
-
-  // reload the message if we've updated the remote content policy for the sender  
-  if (allowRemoteContent)
-    MsgReload();
 }
 
 function MsgIsNotAScam()
@@ -2310,11 +2289,16 @@ function setMsgHdrPropertyAndReload(aProperty, aValue)
   // we want to get the msg hdr for the currently selected message
   // change the appropiate property on it then reload the message
 
-  var msgHdr = msgHdrForCurrentMessage();
-  if (msgHdr)
+  var msgURI = GetLoadedMessage();
+
+  if (msgURI && !(/type=application\/x-message-display/.test(msgURI)))
   {
-    msgHdr.setUint32Property(aProperty, aValue);
-    MsgReload();
+    var msgHdr = messenger.msgHdrFromURI(msgURI);
+    if (msgHdr)
+    {
+      msgHdr.setUint32Property(aProperty, aValue);
+      MsgReload();
+    }
   }
 }
 
@@ -2323,8 +2307,14 @@ function checkMsgHdrPropertyIsNot(aProperty, aValue)
   // we want to get the msg hdr for the currently selected message,
   // get the appropiate property on it and then test against value.
 
-  var msgHdr = msgHdrForCurrentMessage();
-  return (msgHdr && msgHdr.getUint32Property(aProperty) != aValue);
+  var msgURI = GetLoadedMessage();
+    
+  if (msgURI && !(/type=application\/x-message-display/.test(msgURI)))
+  {
+    var msgHdr = messenger.msgHdrFromURI(msgURI);
+    return (msgHdr && msgHdr.getUint32Property(aProperty) != aValue);
+  }
+  return false;
 }
 
 function MarkCurrentMessageAsRead()
@@ -2351,13 +2341,9 @@ function OnMsgLoaded(aUrl)
     if (!aUrl)
       return;
 
-    // nsIMsgMailNewsUrl.folder throws an error when opening .eml files.
-    var folder;
-    try {
-      folder = aUrl.folder;
-    } catch (ex) {}
-
+    var folder = aUrl.folder;
     var msgURI = GetLoadedMessage();
+    var msgHdr = null;
 
     if (!folder || !msgURI)
       return;
@@ -2368,7 +2354,8 @@ function OnMsgLoaded(aUrl)
     // SetNextMessageAfterDelete() when the operation completes (bug 243532).
     gNextMessageViewIndexAfterDelete = -2;
 
-    var msgHdr = msgHdrForCurrentMessage();
+    if (!(/type=application\/x-message-display/.test(msgURI)))
+      msgHdr = messenger.msgHdrFromURI(msgURI);
 
     gMessageNotificationBar.setJunkMsg(msgHdr);
 
@@ -2440,8 +2427,11 @@ function HandleMDNResponse(aUrl)
 
   var msgFolder = aUrl.folder;
   var msgURI = GetLoadedMessage();
-  if (!msgFolder || !msgURI || IsNewsMessage(msgURI))
+  if (!msgFolder || !msgURI)
     return;
+
+	if (IsNewsMessage(msgURI))
+		return;
 
   // if the message is marked as junk, do NOT attempt to process a return receipt
   // in order to better protect the user
@@ -2467,7 +2457,7 @@ function HandleMDNResponse(aUrl)
     if (mimeMsgId)
       msgHdr.messageId = mimeMsgId;
   }
-
+  
   // After a msg is downloaded it's already marked READ at this point so we must check if
   // the msg has a "Disposition-Notification-To" header and no MDN report has been sent yet.
   var msgFlags = msgHdr.flags;
@@ -2478,7 +2468,7 @@ function HandleMDNResponse(aUrl)
   var oldDNTHeader = mimeHdr.extractHeader("Return-Receipt-To", false);
   if (!DNTHeader && !oldDNTHeader)
     return;
-
+ 
   // Everything looks good so far, let's generate the MDN response.
   var mdnGenerator = Components.classes["@mozilla.org/messenger-mdn/generator;1"].
                                   createInstance(Components.interfaces.nsIMsgMdnGenerator);

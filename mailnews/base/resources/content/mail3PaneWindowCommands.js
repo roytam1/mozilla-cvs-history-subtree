@@ -152,8 +152,6 @@ var DefaultController =
 			case "cmd_replyGroup":
 			case "cmd_replyall":
 			case "button_replyall":
-      case "cmd_replySenderAndGroup":
-      case "cmd_replyAllRecipients":
 			case "cmd_forward":
 			case "button_forward":
 			case "cmd_forwardInline":
@@ -289,8 +287,6 @@ var DefaultController =
       case "cmd_replyGroup":
       case "cmd_replyall":
       case "button_replyall":
-      case "cmd_replySenderAndGroup":
-      case "cmd_replyAllRecipients":
       case "cmd_forward":
       case "button_forward":
       case "cmd_forwardInline":
@@ -325,12 +321,9 @@ var DefaultController =
         return (GetNumSelectedMessages() > 0);
       case "cmd_markAsJunk":
       case "cmd_markAsNotJunk":
+      case "cmd_recalculateJunkScore":
         // can't do news on junk yet.
         return (GetNumSelectedMessages() > 0 && !isNewsURI(GetFirstSelectedMessage()));
-      case "cmd_recalculateJunkScore":
-        if (GetNumSelectedMessages() > 0)
-          gDBView.getCommandStatus(nsMsgViewCommandType.runJunkControls, enabled, checkStatus);
-        return enabled.value;
       case "cmd_markAsShowRemote":
         return (GetNumSelectedMessages() > 0 && checkMsgHdrPropertyIsNot("remoteContentPolicy", kAllowRemoteContent));
       case "cmd_markAsNotPhish":
@@ -464,12 +457,6 @@ var DefaultController =
 			case "cmd_replyall":
 				MsgReplyToAllMessage(null);
 				break;
-      case "cmd_replySenderAndGroup":
-        MsgReplyToSenderAndGroup(null);
-        break;
-      case "cmd_replyAllRecipients":
-        MsgReplyToAllRecipients(null);
-        break;
 			case "cmd_forward":
 				MsgForwardMessage(null);
 				break;
@@ -839,11 +826,7 @@ function IsRenameFolderEnabled()
 
 function IsCanSearchMessagesEnabled()
 {
-  var folderURI = GetSelectedFolderURI();
-  if (!folderURI)
-    return false;
-
-  var folder = GetMsgFolderFromUri(folderURI, false);
+  var folder = GetMsgFolderFromUri(GetSelectedFolderURI(), false);
   var isVirtualFolder = folder.flags & MSG_FOLDER_FLAG_VIRTUAL;
   return folder.server.canSearchMessages && !isVirtualFolder;
 }
@@ -985,7 +968,9 @@ function MsgNextFlaggedMessage()
 
 function MsgNextUnreadThread()
 {
-  GoNextMessage(nsMsgNavigationType.nextUnreadThread, true);
+	//First mark the current thread as read.  Then go to the next one.
+	MsgMarkThreadAsRead();
+	GoNextMessage(nsMsgNavigationType.nextUnreadThread, true);
 }
 
 function MsgPreviousMessage()

@@ -34,16 +34,13 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* code for HTML client-side image maps */
-
 #ifndef nsImageMap_h___
 #define nsImageMap_h___
 
 #include "nsISupports.h"
 #include "nsCoord.h"
 #include "nsVoidArray.h"
-#include "nsStubMutationObserver.h"
+#include "nsStubDocumentObserver.h"
 #include "nsIDOMFocusListener.h"
 #include "nsIFrame.h"
 #include "nsIImageMap.h"
@@ -56,7 +53,7 @@ class nsIURI;
 class nsString;
 class nsIDOMEvent;
 
-class nsImageMap : public nsStubMutationObserver, public nsIDOMFocusListener,
+class nsImageMap : public nsStubDocumentObserver, public nsIDOMFocusListener,
                    public nsIImageMap
 {
 public:
@@ -84,7 +81,7 @@ public:
   // nsISupports
   NS_DECL_ISUPPORTS
 
-  // nsIMutationObserver
+  // nsIDocumentObserver
   virtual void AttributeChanged(nsIDocument* aDocument, nsIContent* aContent,
                                 PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                                 PRInt32 aModType);
@@ -111,8 +108,7 @@ protected:
   void FreeAreas();
 
   nsresult UpdateAreas();
-  nsresult SearchForAreas(nsIContent* aParent, PRBool& aFoundArea,
-                         PRBool& aFoundAnchor);
+  nsresult UpdateAreasForBlock(nsIContent* aParent, PRBool* aFoundAnchor);
 
   nsresult AddArea(nsIContent* aArea);
  
@@ -122,6 +118,7 @@ protected:
 
   nsIPresShell* mPresShell; // WEAK - owns the frame that owns us
   nsIFrame* mImageFrame;  // the frame that owns us
+  nsIDocument* mDocument; // WEAK - the imagemap will not outlive the document
   nsCOMPtr<nsIContent> mMap;
   nsAutoVoidArray mAreas; // almost always has some entries
   PRBool mContainsBlockContents;

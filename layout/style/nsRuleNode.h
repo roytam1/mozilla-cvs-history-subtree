@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * a node in the lexicographic tree of rules that match an element,
- * responsible for converting the rules' information into computed style
- */
-
 #ifndef nsRuleNode_h___
 #define nsRuleNode_h___
 
@@ -224,19 +219,6 @@ struct nsCachedStyleData
     return data;
   };
 
-  // Typesafe and faster versions of the above
-  #define STYLE_STRUCT_INHERITED(name_, checkdata_cb_, ctor_args_)       \
-    NS_HIDDEN_(nsStyle##name_ *) NS_FASTCALL GetStyle##name_ () {        \
-      return mInheritedData ? mInheritedData->m##name_##Data : nsnull;   \
-    }
-  #define STYLE_STRUCT_RESET(name_, checkdata_cb_, ctor_args_)           \
-    NS_HIDDEN_(nsStyle##name_ *) NS_FASTCALL GetStyle##name_ () {        \
-      return mResetData ? mResetData->m##name_##Data : nsnull;           \
-    }
-  #include "nsStyleStructList.h"
-  #undef STYLE_STRUCT_RESET
-  #undef STYLE_STRUCT_INHERITED
-
   NS_HIDDEN_(void) ClearInheritedData(PRUint32 aBits) {
     if (mResetData)
       mResetData->ClearInheritedData(aBits);
@@ -303,25 +285,34 @@ struct nsCachedStyleData
 
 class nsRuleNode {
 public:
+    // for purposes of the RuleDetail (and related code),
+    //  * a non-inherited value is one that is specified as a
+    //    non-"inherit" value or as an "inherit" value that is reflected
+    //    in the struct and to the user of the style system with an
+    //    eCSSUnit_Inherit value
+    //  * an inherited value is one that is specified as "inherit" and
+    //    where the inheritance is computed by the style system
   enum RuleDetail {
     eRuleNone, // No props have been specified at all.
-    eRulePartialReset, // At least one prop with a non-"inherit" value
+    eRulePartialReset, // At least one prop with a non-inherited value
                        // has been specified.  No props have been
-                       // specified with an "inherit" value.  At least
+                       // specified with an inherited value.  At least
                        // one prop remains unspecified.
-    eRulePartialMixed, // At least one prop with a non-"inherit" value
+    eRulePartialMixed, // At least one prop with a non-inherited value
                        // has been specified.  Some props may also have
-                       // been specified with an "inherit" value.  At
+                       // been specified with an inherited value.  At
                        // least one prop remains unspecified.
-    eRulePartialInherited, // Only props with "inherit" values have
+    eRulePartialInherited, // Only props with inherited values have
                            // have been specified.  At least one prop
                            // remains unspecified.
     eRuleFullReset, // All props have been specified.  None has an
-                    // "inherit" value.
+                    // inherited value.
     eRuleFullMixed, // All props have been specified.  At least one has
-                    // a non-"inherit" value.
-    eRuleFullInherited  // All props have been specified with "inherit"
+                    // a non-inherited value.
+    eRuleFullInherited, // All props have been specified with inherited
                         // values.
+    eRuleUnknown // Information unknown (used as a result from a check
+                 // callback to trigger the normal checking codepath)
   };
 
 private:
@@ -424,142 +415,138 @@ protected:
                  nsRuleData* aRuleData, nsRuleDataStruct* aSpecificData);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeDisplayData(nsStyleStruct* aStartStruct,
-                       const nsRuleDataStruct& aData,
+    ComputeDisplayData(nsStyleStruct* aStartDisplay,
+                       const nsRuleDataStruct& aDisplayData,
                        nsStyleContext* aContext, nsRuleNode* aHighestNode,
                        const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeVisibilityData(nsStyleStruct* aStartStruct,
-                          const nsRuleDataStruct& aData,
+    ComputeVisibilityData(nsStyleStruct* aStartVisibility,
+                          const nsRuleDataStruct& aDisplayData,
                           nsStyleContext* aContext, nsRuleNode* aHighestNode,
                           const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeFontData(nsStyleStruct* aStartStruct,
-                    const nsRuleDataStruct& aData,
+    ComputeFontData(nsStyleStruct* aStartFont,
+                    const nsRuleDataStruct& aFontData,
                     nsStyleContext* aContext, nsRuleNode* aHighestNode,
                     const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeColorData(nsStyleStruct* aStartStruct,
-                     const nsRuleDataStruct& aData,
+    ComputeColorData(nsStyleStruct* aStartColor,
+                     const nsRuleDataStruct& aColorData,
                      nsStyleContext* aContext, nsRuleNode* aHighestNode,
                      const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeBackgroundData(nsStyleStruct* aStartStruct,
-                          const nsRuleDataStruct& aData, 
+    ComputeBackgroundData(nsStyleStruct* aStartBackground,
+                          const nsRuleDataStruct& aColorData, 
                           nsStyleContext* aContext, nsRuleNode* aHighestNode,
                           const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeMarginData(nsStyleStruct* aStartStruct,
-                      const nsRuleDataStruct& aData, 
+    ComputeMarginData(nsStyleStruct* aStartMargin,
+                      const nsRuleDataStruct& aMarginData, 
                       nsStyleContext* aContext, nsRuleNode* aHighestNode,
                       const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeBorderData(nsStyleStruct* aStartStruct,
-                      const nsRuleDataStruct& aData, 
+    ComputeBorderData(nsStyleStruct* aStartBorder,
+                      const nsRuleDataStruct& aMarginData, 
                       nsStyleContext* aContext, nsRuleNode* aHighestNode,
                       const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputePaddingData(nsStyleStruct* aStartStruct,
-                       const nsRuleDataStruct& aData, 
+    ComputePaddingData(nsStyleStruct* aStartPadding,
+                       const nsRuleDataStruct& aMarginData, 
                        nsStyleContext* aContext, nsRuleNode* aHighestNode,
                        const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeOutlineData(nsStyleStruct* aStartStruct,
-                       const nsRuleDataStruct& aData, 
+    ComputeOutlineData(nsStyleStruct* aStartOutline,
+                       const nsRuleDataStruct& aMarginData, 
                        nsStyleContext* aContext, nsRuleNode* aHighestNode,
                        const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeListData(nsStyleStruct* aStartStruct,
-                    const nsRuleDataStruct& aData,
+    ComputeListData(nsStyleStruct* aStartList,
+                    const nsRuleDataStruct& aListData,
                     nsStyleContext* aContext, nsRuleNode* aHighestNode,
                     const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputePositionData(nsStyleStruct* aStartStruct,
-                        const nsRuleDataStruct& aData, 
+    ComputePositionData(nsStyleStruct* aStartPosition,
+                        const nsRuleDataStruct& aPositionData, 
                         nsStyleContext* aContext, nsRuleNode* aHighestNode,
                         const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeTableData(nsStyleStruct* aStartStruct,
-                     const nsRuleDataStruct& aData, 
+    ComputeTableData(nsStyleStruct* aStartTable,
+                     const nsRuleDataStruct& aTableData, 
                      nsStyleContext* aContext, nsRuleNode* aHighestNode,
                      const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeTableBorderData(nsStyleStruct* aStartStruct,
-                           const nsRuleDataStruct& aData, 
+    ComputeTableBorderData(nsStyleStruct* aStartTable,
+                           const nsRuleDataStruct& aTableData, 
                            nsStyleContext* aContext, nsRuleNode* aHighestNode,
                            const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeContentData(nsStyleStruct* aStartStruct,
+    ComputeContentData(nsStyleStruct* aStartContent,
                        const nsRuleDataStruct& aData,
                        nsStyleContext* aContext, nsRuleNode* aHighestNode,
                        const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeQuotesData(nsStyleStruct* aStartStruct,
+    ComputeQuotesData(nsStyleStruct* aStartQuotes,
                       const nsRuleDataStruct& aData, 
                       nsStyleContext* aContext, nsRuleNode* aHighestNode,
                       const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeTextData(nsStyleStruct* aStartStruct,
-                    const nsRuleDataStruct& aData, 
+    ComputeTextData(nsStyleStruct* aStartData, const nsRuleDataStruct& aData, 
                     nsStyleContext* aContext, nsRuleNode* aHighestNode,
                     const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeTextResetData(nsStyleStruct* aStartStruct,
+    ComputeTextResetData(nsStyleStruct* aStartData,
                          const nsRuleDataStruct& aData,
                          nsStyleContext* aContext, nsRuleNode* aHighestNode,
                          const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeUserInterfaceData(nsStyleStruct* aStartStruct,
+    ComputeUserInterfaceData(nsStyleStruct* aStartData,
                              const nsRuleDataStruct& aData, 
                              nsStyleContext* aContext,
                              nsRuleNode* aHighestNode,
                              const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeUIResetData(nsStyleStruct* aStartStruct,
+    ComputeUIResetData(nsStyleStruct* aStartData,
                        const nsRuleDataStruct& aData,
                        nsStyleContext* aContext, nsRuleNode* aHighestNode,
                        const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeXULData(nsStyleStruct* aStartStruct,
-                   const nsRuleDataStruct& aData, 
+    ComputeXULData(nsStyleStruct* aStartXUL, const nsRuleDataStruct& aXULData, 
                    nsStyleContext* aContext, nsRuleNode* aHighestNode,
                    const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeColumnData(nsStyleStruct* aStartStruct,
-                      const nsRuleDataStruct& aData,
+    ComputeColumnData(nsStyleStruct* aStartColumn, const nsRuleDataStruct& aColumnData,
                       nsStyleContext* aContext, nsRuleNode* aHighestNode,
                       const RuleDetail& aRuleDetail, PRBool aInherited);
 
 #ifdef MOZ_SVG
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeSVGData(nsStyleStruct* aStartStruct,
-                   const nsRuleDataStruct& aData, 
+    ComputeSVGData(nsStyleStruct* aStartSVG, const nsRuleDataStruct& aSVGData, 
                    nsStyleContext* aContext, nsRuleNode* aHighestNode,
                    const RuleDetail& aRuleDetail, PRBool aInherited);
 
   NS_HIDDEN_(const nsStyleStruct*)
-    ComputeSVGResetData(nsStyleStruct* aStartStruct,
-                        const nsRuleDataStruct& aData, 
+    ComputeSVGResetData(nsStyleStruct* aStartSVG,
+                        const nsRuleDataStruct& aSVGData, 
                         nsStyleContext* aContext, nsRuleNode* aHighestNode,
                         const RuleDetail& aRuleDetail, PRBool aInherited);
 #endif
@@ -568,6 +555,7 @@ protected:
   static NS_HIDDEN_(void) SetFont(nsPresContext* aPresContext,
                                   nsStyleContext* aContext,
                                   nscoord aMinFontSize,
+                                  PRBool aUseDocumentFonts,
                                   PRBool aIsGeneric,
                                   const nsRuleDataFont& aFontData,
                                   const nsFont& aDefaultFont,
@@ -579,6 +567,7 @@ protected:
                                          const nsRuleDataFont& aFontData,
                                          PRUint8 aGenericFontID,
                                          nscoord aMinFontSize,
+                                         PRBool aUseDocumentFonts,
                                          nsStyleFont* aFont);
 
   NS_HIDDEN_(void) AdjustLogicalBoxProp(nsStyleContext* aContext,
@@ -595,11 +584,6 @@ protected:
   inline RuleDetail CheckSpecifiedProperties(const nsStyleStructID aSID, const nsRuleDataStruct& aRuleDataStruct);
 
   NS_HIDDEN_(const nsStyleStruct*) GetParentData(const nsStyleStructID aSID);
-  #define STYLE_STRUCT(name_, checkdata_cb_, ctor_args_)  \
-    NS_HIDDEN_(const nsStyle##name_*) GetParent##name_();
-  #include "nsStyleStructList.h"
-  #undef STYLE_STRUCT  
-
   NS_HIDDEN_(const nsStyleStruct*) GetDisplayData(nsStyleContext* aContext);
   NS_HIDDEN_(const nsStyleStruct*) GetVisibilityData(nsStyleContext* aContext);
   NS_HIDDEN_(const nsStyleStruct*) GetFontData(nsStyleContext* aContext);
@@ -630,12 +614,11 @@ protected:
   NS_HIDDEN_(const nsStyleStruct*) GetSVGResetData(nsStyleContext* aContext);
 #endif
 
-private:
+public:
   nsRuleNode(nsPresContext* aPresContext, nsIStyleRule* aRule,
              nsRuleNode* aParent) NS_HIDDEN;
-  ~nsRuleNode() NS_HIDDEN;
+  virtual ~nsRuleNode() NS_HIDDEN;
 
-public:
   static NS_HIDDEN_(nsRuleNode*) CreateRootNode(nsPresContext* aPresContext);
 
   NS_HIDDEN_(nsresult) Transition(nsIStyleRule* aRule, nsRuleNode** aResult);
@@ -651,13 +634,6 @@ public:
   NS_HIDDEN_(const nsStyleStruct*) GetStyleData(nsStyleStructID aSID, 
                                                 nsStyleContext* aContext,
                                                 PRBool aComputeData);
-
-  #define STYLE_STRUCT(name_, checkdata_cb_, ctor_args_)                      \
-    NS_HIDDEN_(const nsStyle##name_*)                                         \
-      GetStyle##name_(nsStyleContext* aContext,                               \
-                      PRBool aComputeData);
-  #include "nsStyleStructList.h"
-  #undef STYLE_STRUCT  
 
   /*
    * Garbage collection.  Mark walks up the tree, marking any unmarked

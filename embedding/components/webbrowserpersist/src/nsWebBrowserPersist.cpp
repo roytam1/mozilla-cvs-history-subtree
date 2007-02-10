@@ -44,9 +44,6 @@
 #ifdef XP_MAC
 #include "nsILocalFileMac.h"
 #endif
-#ifdef XP_OS2
-#include "nsILocalFileOS2.h"
-#endif
 
 #include "nsNetUtil.h"
 #include "nsComponentManagerUtils.h"
@@ -63,8 +60,6 @@
 #include "nsCRT.h"
 #include "nsSupportsArray.h"
 #include "nsInt64.h"
-#include "nsContentCID.h"
-#include "nsStreamUtils.h"
 
 #include "nsCExternalHandlerService.h"
 
@@ -105,10 +100,6 @@
 #include "nsIDOMHTMLObjectElement.h"
 #include "nsIDOMHTMLAppletElement.h"
 #include "nsIDOMHTMLDocument.h"
-#ifdef MOZ_SVG
-#include "nsIDOMSVGImageElement.h"
-#include "nsIDOMSVGScriptElement.h"
-#endif // MOZ_SVG
 
 #include "nsIImageLoadingContent.h"
 
@@ -373,7 +364,6 @@ NS_IMETHODIMP nsWebBrowserPersist::SetProgressListener(
 {
     mProgressListener = aProgressListener;
     mProgressListener2 = do_QueryInterface(aProgressListener);
-    mEventSink = do_GetInterface(aProgressListener);
     return NS_OK;
 }
 
@@ -729,29 +719,9 @@ NS_IMETHODIMP nsWebBrowserPersist::OnStopRequest(
     OutputData *data = (OutputData *) mOutputMap.Get(&key);
     if (data)
     {
-#if defined(XP_OS2)
-        // delete 'data';  this will close the stream and let
-        // us tag the file it created with its source URI
-        nsCOMPtr<nsIURI> uriSource = data->mOriginalLocation;
-        nsCOMPtr<nsILocalFile> localFile;
-        GetLocalFileFromURI(data->mFile, getter_AddRefs(localFile));
-        delete data;
-        mOutputMap.Remove(&key);
-        if (localFile)
-        {
-            nsCOMPtr<nsILocalFileOS2> localFileOS2 = do_QueryInterface(localFile);
-            if (localFileOS2)
-            {
-                nsCAutoString url;
-                uriSource->GetSpec(url);
-                localFileOS2->SetFileSource(url);
-            }
-        }
-#else
         // This will close automatically close the output stream
         delete data;
         mOutputMap.Remove(&key);
-#endif
     }
     else
     {
@@ -806,7 +776,6 @@ NS_IMETHODIMP nsWebBrowserPersist::OnStopRequest(
     {
         mProgressListener = nsnull;
         mProgressListener2 = nsnull;
-        mEventSink = nsnull;
     }
 
     return NS_OK;
@@ -815,6 +784,17 @@ NS_IMETHODIMP nsWebBrowserPersist::OnStopRequest(
 //*****************************************************************************
 // nsWebBrowserPersist::nsIStreamListener
 //*****************************************************************************
+
+static NS_METHOD DiscardSegments(nsIInputStream *input,
+                                 void *closure,
+                                 const char *buf,
+                                 PRUint32 offset,
+                                 PRUint32 count,
+                                 PRUint32 *countRead)
+{
+    *countRead = count;
+    return NS_OK;
+}
 
 NS_IMETHODIMP nsWebBrowserPersist::OnDataAvailable(
     nsIRequest* request, nsISupports *aContext, nsIInputStream *aIStream,
@@ -835,7 +815,7 @@ NS_IMETHODIMP nsWebBrowserPersist::OnDataAvailable(
         if (!data) {
             // might be uploadData; consume necko's buffer and bail...
             PRUint32 n;
-            return aIStream->ReadSegments(NS_DiscardSegment, nsnull, aLength, &n);
+            return aIStream->ReadSegments(DiscardSegments, nsnull, aLength, &n);
         }
 
         PRBool readError = PR_TRUE;
@@ -908,9 +888,7 @@ NS_IMETHODIMP nsWebBrowserPersist::OnDataAvailable(
             if ((-1 == channelContentLength) ||
                 ((channelContentLength - (aOffset + aLength)) == 0))
             {
-                NS_WARN_IF_FALSE(channelContentLength != -1,
-                    "nsWebBrowserPersist::OnDataAvailable() no content length "
-                    "header, pushing what we have");
+                NS_ASSERTION(channelContentLength != -1, "no content length");
                 // we're done with this pass; see if we need to do upload
                 nsCAutoString contentType;
                 channel->GetContentType(contentType);
@@ -995,14 +973,8 @@ NS_IMETHODIMP nsWebBrowserPersist::OnProgress(
               nsUint64(aProgressMax), mTotalCurrentProgress, mTotalMaxProgress);
     }
 
-    // If our progress listener implements nsIProgressEventSink,
-    // forward the notification
-    if (mEventSink)
-    {
-        mEventSink->OnProgress(request, ctxt, aProgress, aProgressMax);
-    }
-
     return NS_OK;
+
 }
 
 /* void onStatus (in nsIRequest request, in nsISupports ctxt,
@@ -1036,14 +1008,6 @@ NS_IMETHODIMP nsWebBrowserPersist::OnStatus(
         }
 
     }
-
-    // If our progress listener implements nsIProgressEventSink,
-    // forward the notification
-    if (mEventSink)
-    {
-        mEventSink->OnStatus(request, ctxt, status, statusArg);
-    }
-
     return NS_OK;
 }
 
@@ -1666,16 +1630,6 @@ nsresult nsWebBrowserPersist::SaveDocumentInternal(
                     cleanupData->mIsDirectory = PR_TRUE;
                     mCleanupList.AppendElement(cleanupData);
                 }
-#if defined(XP_OS2)
-                // tag the directory with the URI that originated its contents
-                nsCOMPtr<nsILocalFileOS2> localFileOS2 = do_QueryInterface(localDataPath);
-                if (localFileOS2)
-                {
-                    nsCAutoString url;
-                    mCurrentBaseURI->GetSpec(url);
-                    localFileOS2->SetFileSource(url);
-                }
-#endif
             }
         }
 
@@ -1699,8 +1653,9 @@ nsresult nsWebBrowserPersist::SaveDocumentInternal(
         nsCAutoString charType; // Empty
 
         // Save the document
+        nsCOMPtr<nsIDocument> docAsDoc = do_QueryInterface(aDocument);
         rv = SaveDocumentWithFixup(
-            aDocument,
+            docAsDoc,
             nsnull,  // no dom fixup
             aFile,
             mReplaceExisting,
@@ -1745,6 +1700,8 @@ nsresult nsWebBrowserPersist::SaveDocuments()
         if (nodeFixup)
             nodeFixup->mWebBrowserPersist = this;
 
+        nsCOMPtr<nsIDocument> docAsDoc = do_QueryInterface(docData->mDocument);
+
         // Get the content type
         nsXPIDLString realContentType;
         GetDocEncoderContentType(docData->mDocument,
@@ -1756,7 +1713,7 @@ nsresult nsWebBrowserPersist::SaveDocuments()
 
         // Save the document, fixing up the links as it goes out
         rv = SaveDocumentWithFixup(
-            docData->mDocument,
+            docAsDoc,
             nodeFixup,
             docData->mFile,
             mReplaceExisting,
@@ -2743,7 +2700,7 @@ nsresult nsWebBrowserPersist::OnWalkDOMNode(nsIDOMNode *aNode)
             GetXMLStyleSheetLink(nodeAsPI, href);
             if (!href.IsEmpty())
             {
-                StoreURI(NS_ConvertUTF16toUTF8(href).get());
+                StoreURI(NS_ConvertUCS2toUTF8(href).get());
             }
         }
     }
@@ -2755,15 +2712,6 @@ nsresult nsWebBrowserPersist::OnWalkDOMNode(nsIDOMNode *aNode)
         StoreURIAttribute(aNode, "src");
         return NS_OK;
     }
-
-#ifdef MOZ_SVG
-    nsCOMPtr<nsIDOMSVGImageElement> nodeAsSVGImage = do_QueryInterface(aNode);
-    if (nodeAsSVGImage)
-    {
-        StoreURIAttributeNS(aNode, "http://www.w3.org/1999/xlink", "href");
-        return NS_OK;
-    }
-#endif // MOZ_SVG
 
     nsCOMPtr<nsIDOMHTMLBodyElement> nodeAsBody = do_QueryInterface(aNode);
     if (nodeAsBody)
@@ -2799,16 +2747,7 @@ nsresult nsWebBrowserPersist::OnWalkDOMNode(nsIDOMNode *aNode)
         StoreURIAttribute(aNode, "src");
         return NS_OK;
     }
-
-#ifdef MOZ_SVG
-    nsCOMPtr<nsIDOMSVGScriptElement> nodeAsSVGScript = do_QueryInterface(aNode);
-    if (nodeAsSVGScript)
-    {
-        StoreURIAttributeNS(aNode, "http://www.w3.org/1999/xlink", "href");
-        return NS_OK;
-    }
-#endif // MOZ_SVG
-
+    
     nsCOMPtr<nsIDOMHTMLEmbedElement> nodeAsEmbed = do_QueryInterface(aNode);
     if (nodeAsEmbed)
     {
@@ -3114,27 +3053,7 @@ nsWebBrowserPersist::CloneNodeWithFixedUpURIAttributes(
         }
         return rv;
     }
-
-#ifdef MOZ_SVG
-    nsCOMPtr<nsIDOMSVGImageElement> nodeAsSVGImage = do_QueryInterface(aNodeIn);
-    if (nodeAsSVGImage)
-    {
-        rv = GetNodeToFixup(aNodeIn, aNodeOut);
-        if (NS_SUCCEEDED(rv) && *aNodeOut)
-        {
-            // Disable image loads
-            nsCOMPtr<nsIImageLoadingContent> imgCon =
-                do_QueryInterface(*aNodeOut);
-            if (imgCon)
-                imgCon->SetLoadingEnabled(PR_FALSE);
-
-            // FixupAnchor(*aNodeOut);  // XXXjwatt: is this line needed?
-            FixupNodeAttributeNS(*aNodeOut, "http://www.w3.org/1999/xlink", "href");
-        }
-        return rv;
-    }
-#endif // MOZ_SVG
-
+    
     nsCOMPtr<nsIDOMHTMLScriptElement> nodeAsScript = do_QueryInterface(aNodeIn);
     if (nodeAsScript)
     {
@@ -3145,20 +3064,7 @@ nsWebBrowserPersist::CloneNodeWithFixedUpURIAttributes(
         }
         return rv;
     }
-
-#ifdef MOZ_SVG
-    nsCOMPtr<nsIDOMSVGScriptElement> nodeAsSVGScript = do_QueryInterface(aNodeIn);
-    if (nodeAsSVGScript)
-    {
-        rv = GetNodeToFixup(aNodeIn, aNodeOut);
-        if (NS_SUCCEEDED(rv) && *aNodeOut)
-        {
-            FixupNodeAttributeNS(*aNodeOut, "http://www.w3.org/1999/xlink", "href");
-        }
-        return rv;
-    }
-#endif // MOZ_SVG
-
+    
     nsCOMPtr<nsIDOMHTMLEmbedElement> nodeAsEmbed = do_QueryInterface(aNodeIn);
     if (nodeAsEmbed)
     {
@@ -3307,12 +3213,11 @@ nsWebBrowserPersist::StoreURI(
 }
 
 nsresult
-nsWebBrowserPersist::StoreURIAttributeNS(
-    nsIDOMNode *aNode, const char *aNamespaceURI, const char *aAttribute,
-    PRBool aNeedsPersisting, URIData **aData)
+nsWebBrowserPersist::StoreURIAttribute(
+    nsIDOMNode *aNode, const char *aAttribute, PRBool aNeedsPersisting,
+    URIData **aData)
 {
     NS_ENSURE_ARG_POINTER(aNode);
-    NS_ENSURE_ARG_POINTER(aNamespaceURI);
     NS_ENSURE_ARG_POINTER(aAttribute);
 
     nsresult rv = NS_OK;
@@ -3325,16 +3230,15 @@ nsWebBrowserPersist::StoreURIAttributeNS(
     rv = aNode->GetAttributes(getter_AddRefs(attrMap));
     NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
 
-    NS_ConvertASCIItoUTF16 namespaceURI(aNamespaceURI);
     NS_ConvertASCIItoUTF16 attribute(aAttribute);
-    rv = attrMap->GetNamedItemNS(namespaceURI, attribute, getter_AddRefs(attrNode));
+    rv = attrMap->GetNamedItem(attribute, getter_AddRefs(attrNode));
     if (attrNode)
     {
         nsAutoString oldValue;
         attrNode->GetNodeValue(oldValue);
         if (!oldValue.IsEmpty())
         {
-            NS_ConvertUTF16toUTF8 oldCValue(oldValue);
+            NS_ConvertUCS2toUTF8 oldCValue(oldValue);
             return StoreURI(oldCValue.get(), aNeedsPersisting, aData);
         }
     }
@@ -3417,12 +3321,10 @@ nsWebBrowserPersist::FixupURI(nsAString &aURI)
 }
 
 nsresult
-nsWebBrowserPersist::FixupNodeAttributeNS(nsIDOMNode *aNode,
-                                        const char *aNamespaceURI,
+nsWebBrowserPersist::FixupNodeAttribute(nsIDOMNode *aNode,
                                         const char *aAttribute)
 {
     NS_ENSURE_ARG_POINTER(aNode);
-    NS_ENSURE_ARG_POINTER(aNamespaceURI);
     NS_ENSURE_ARG_POINTER(aAttribute);
 
     nsresult rv = NS_OK;
@@ -3436,8 +3338,7 @@ nsWebBrowserPersist::FixupNodeAttributeNS(nsIDOMNode *aNode,
     NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
 
     NS_ConvertASCIItoUTF16 attribute(aAttribute);
-    NS_ConvertASCIItoUTF16 namespaceURI(aNamespaceURI);
-    rv = attrMap->GetNamedItemNS(namespaceURI, attribute, getter_AddRefs(attrNode));
+    rv = attrMap->GetNamedItem(attribute, getter_AddRefs(attrNode));
     if (attrNode)
     {
         nsString uri;
@@ -3474,7 +3375,7 @@ nsWebBrowserPersist::FixupAnchor(nsIDOMNode *aNode)
     {
         nsString oldValue;
         attrNode->GetNodeValue(oldValue);
-        NS_ConvertUTF16toUTF8 oldCValue(oldValue);
+        NS_ConvertUCS2toUTF8 oldCValue(oldValue);
 
         // Skip empty values and self-referencing bookmarks
         if (oldCValue.IsEmpty() || oldCValue.CharAt(0) == '#')
@@ -3502,7 +3403,7 @@ nsWebBrowserPersist::FixupAnchor(nsIDOMNode *aNode)
             newURI->SetUserPass(EmptyCString());
             nsCAutoString uriSpec;
             newURI->GetSpec(uriSpec);
-            attrNode->SetNodeValue(NS_ConvertUTF8toUTF16(uriSpec));
+            attrNode->SetNodeValue(NS_ConvertUTF8toUCS2(uriSpec));
         }
     }
 
@@ -3582,7 +3483,7 @@ nsWebBrowserPersist::CreateChannelFromURI(nsIURI *aURI, nsIChannel **aChannel)
 
 nsresult
 nsWebBrowserPersist::SaveDocumentWithFixup(
-    nsIDOMDocument *aDocument, nsIDocumentEncoderNodeFixup *aNodeFixup,
+    nsIDocument *aDocument, nsIDocumentEncoderNodeFixup *aNodeFixup,
     nsIURI *aFile, PRBool aReplaceExisting, const nsACString &aFormatType,
     const nsCString &aSaveCharset, PRUint32 aFlags)
 {
@@ -3619,7 +3520,7 @@ nsWebBrowserPersist::SaveDocumentWithFixup(
     nsCOMPtr<nsIDocumentEncoder> encoder = do_CreateInstance(contractID.get(), &rv);
     NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
 
-    NS_ConvertASCIItoUTF16 newContentType(aFormatType);
+    NS_ConvertASCIItoUCS2 newContentType(aFormatType);
     rv = encoder->Init(aDocument, newContentType, aFlags);
     NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
 
@@ -3633,11 +3534,7 @@ nsWebBrowserPersist::SaveDocumentWithFixup(
 
     nsCAutoString charsetStr(aSaveCharset);
     if (charsetStr.IsEmpty())
-    {
-        nsCOMPtr<nsIDocument> doc = do_QueryInterface(aDocument);
-        NS_ASSERTION(doc, "Need a document");
-        charsetStr = doc->GetDocumentCharacterSet();
-    }
+        charsetStr = aDocument->GetDocumentCharacterSet();
 
     rv = encoder->SetCharset(charsetStr);
     NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
@@ -3655,20 +3552,6 @@ nsWebBrowserPersist::SaveDocumentWithFixup(
             NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
         }
     }
-#if defined(XP_OS2)
-    else
-    {
-        // close the stream, then tag the file it created with its source URI
-        outputStream->Close();
-        nsCOMPtr<nsILocalFileOS2> localFileOS2 = do_QueryInterface(localFile);
-        if (localFileOS2)
-        {
-            nsCAutoString url;
-            mCurrentBaseURI->GetSpec(url);
-            localFileOS2->SetFileSource(url);
-        }
-    }
-#endif
 
     return rv;
 }
@@ -3930,19 +3813,22 @@ nsWebBrowserPersist::SetDocumentBase(
     // Add the BASE element
     if (!baseElement)
     {
-      nsCOMPtr<nsIDOMNode> newNode;
-      if (xmlDoc)
-      {
-          aDocument->CreateElementNS(
-              kXHTMLNS,
-              kBase, getter_AddRefs(baseElement));
-      }
-      else
-      {
-          aDocument->CreateElement(
-              kBase, getter_AddRefs(baseElement));
-      }
-      headElement->AppendChild(baseElement, getter_AddRefs(newNode));
+        if (!baseElement)
+        {
+            nsCOMPtr<nsIDOMNode> newNode;
+            if (xmlDoc)
+            {
+                aDocument->CreateElementNS(
+                    kXHTMLNS,
+                    kBase, getter_AddRefs(baseElement));
+            }
+            else
+            {
+                aDocument->CreateElement(
+                    kBase, getter_AddRefs(baseElement));
+            }
+            headElement->AppendChild(baseElement, getter_AddRefs(newNode));
+        }
     }
     if (!baseElement)
     {
@@ -3950,7 +3836,7 @@ nsWebBrowserPersist::SetDocumentBase(
     }
     nsCAutoString uriSpec;
     aBaseURI->GetSpec(uriSpec);
-    NS_ConvertUTF8toUTF16 href(uriSpec);
+    NS_ConvertUTF8toUCS2 href(uriSpec);
     baseElement->SetAttribute(NS_LITERAL_STRING("href"), href);
 
     return NS_OK;

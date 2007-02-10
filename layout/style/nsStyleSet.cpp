@@ -36,13 +36,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * the container for the style sheets that apply to a presentation, and
- * the internal API that the style system exposes for creating (and
- * potentially re-creating) style contexts
- */
-
 #include "nsStyleSet.h"
 #include "nsNetUtil.h"
 #include "nsICSSStyleSheet.h"
@@ -423,11 +416,11 @@ nsStyleSet::AssertNoCSSRules(nsRuleNode* aCurrLevelNode,
   if (!aCurrLevelNode || aCurrLevelNode == aLastPrevLevelNode)
     return;
 
-  AssertNoCSSRules(aCurrLevelNode->GetParent(), aLastPrevLevelNode);
+  AssertNoImportantRules(aCurrLevelNode->GetParent(), aLastPrevLevelNode);
 
   nsIStyleRule *rule = aCurrLevelNode->GetRule();
   nsCOMPtr<nsICSSStyleRule> cssRule(do_QueryInterface(rule));
-  NS_ASSERTION(!cssRule || !cssRule->Selector(), "Unexpected CSS rule");
+  NS_ASSERTION(!cssRule, "Unexpected CSS rule");
 }
 #endif
 
@@ -441,7 +434,7 @@ nsStyleSet::FileRules(nsIStyleRuleProcessor::EnumFunc aCollectorFunc,
   //  1. UA normal rules                    = Agent        normal
   //  2. Presentation hints                 = PresHint     normal
   //  3. User normal rules                  = User         normal
-  //  4. HTML Presentation hints            = HTMLPresHint normal
+  //  2. HTML Presentation hints            = HTMLPresHint normal
   //  5. Author normal rules                = Document     normal
   //  6. Override normal rules              = Override     normal
   //  7. Author !important rules            = Document     !important
@@ -493,7 +486,6 @@ nsStyleSet::FileRules(nsIStyleRuleProcessor::EnumFunc aCollectorFunc,
 #endif
   AddImportantRules(lastUserRN, lastPresHintRN); //user
 #ifdef DEBUG
-  AssertNoCSSRules(lastPresHintRN, lastAgentRN);
   AssertNoImportantRules(lastPresHintRN, lastAgentRN); // preshints
 #endif
   AddImportantRules(lastAgentRN, nsnull);     //agent
@@ -575,7 +567,7 @@ nsStyleSet::ResolveStyleFor(nsIContent* aContent,
   nsPresContext* presContext = PresContext();
 
   NS_ASSERTION(aContent, "must have content");
-  NS_ASSERTION(aContent->IsNodeOfType(nsINode::eELEMENT),
+  NS_ASSERTION(aContent->IsContentOfType(nsIContent::eELEMENT),
                "content must be element");
 
   if (aContent && presContext) {
@@ -645,14 +637,8 @@ nsStyleSet::ResolvePseudoStyleFor(nsIContent* aParentContent,
 
   NS_ASSERTION(aPseudoTag, "must have pseudo tag");
   NS_ASSERTION(!aParentContent ||
-               aParentContent->IsNodeOfType(nsINode::eELEMENT),
+               aParentContent->IsContentOfType(nsIContent::eELEMENT),
                "content (if non-null) must be element");
-  NS_ASSERTION(aParentContent ||
-               nsCSSAnonBoxes::IsAnonBox(aPseudoTag),
-               "null content must correspond to anonymous box");
-  NS_ASSERTION(nsCSSAnonBoxes::IsAnonBox(aPseudoTag) ||
-               nsCSSPseudoElements::IsPseudoElement(aPseudoTag),
-               "aPseudoTag must be pseudo-element or anonymous box");
 
   if (aPseudoTag && presContext) {
     if (mRuleProcessors[eAgentSheet]        ||
@@ -687,17 +673,9 @@ nsStyleSet::ProbePseudoStyleFor(nsIContent* aParentContent,
   nsPresContext *presContext = PresContext();
 
   NS_ASSERTION(aPseudoTag, "must have pseudo tag");
-  NS_ASSERTION(aParentContent &&
-               aParentContent->IsNodeOfType(nsINode::eELEMENT),
-               "aParentContent must be element");
-  //NS_ASSERTION(nsCSSPseudoElements::IsPseudoElement(aPseudoTag),
-  //             "aPseudoTag must be a pseudo-element");
-  NS_ASSERTION(aParentContent ||
-               nsCSSAnonBoxes::IsAnonBox(aPseudoTag),
-               "null content must correspond to anonymous box");
-  NS_ASSERTION(nsCSSAnonBoxes::IsAnonBox(aPseudoTag) ||
-               nsCSSPseudoElements::IsPseudoElement(aPseudoTag),
-               "aPseudoTag must be pseudo-element or anonymous box");
+  NS_ASSERTION(!aParentContent ||
+               aParentContent->IsContentOfType(nsIContent::eELEMENT),
+               "content (if non-null) must be element");
 
   if (aPseudoTag && presContext) {
     if (mRuleProcessors[eAgentSheet]        ||
@@ -766,8 +744,6 @@ nsStyleSet::NotifyStyleContextDestroyed(nsPresContext* aPresContext,
   if (mInShutdown)
     return;
 
-  NS_ASSERTION(mRuleWalker->AtRoot(), "Rule walker should be at root");
-
   if (!aStyleContext->GetParent()) {
     mRoots.RemoveElement(aStyleContext);
   }
@@ -784,6 +760,7 @@ nsStyleSet::NotifyStyleContextDestroyed(nsPresContext* aPresContext,
     }
 
     // Sweep the rule tree.
+    NS_ASSERTION(mRuleWalker->AtRoot(), "Rule walker should be at root");
 #ifdef DEBUG
     PRBool deleted =
 #endif
@@ -858,7 +835,7 @@ nsStyleSet::HasStateDependentStyle(nsPresContext* aPresContext,
 {
   nsReStyleHint result = nsReStyleHint(0);
 
-  if (aContent->IsNodeOfType(nsINode::eELEMENT) &&
+  if (aContent->IsContentOfType(nsIContent::eELEMENT) &&
       (mRuleProcessors[eAgentSheet]        ||
        mRuleProcessors[ePresHintSheet]     ||
        mRuleProcessors[eUserSheet]         ||
@@ -902,7 +879,7 @@ nsStyleSet::HasAttributeDependentStyle(nsPresContext* aPresContext,
 {
   nsReStyleHint result = nsReStyleHint(0);
 
-  if (aContent->IsNodeOfType(nsINode::eELEMENT) &&
+  if (aContent->IsContentOfType(nsIContent::eELEMENT) &&
       (mRuleProcessors[eAgentSheet]        ||
        mRuleProcessors[ePresHintSheet]     ||
        mRuleProcessors[eUserSheet]         ||

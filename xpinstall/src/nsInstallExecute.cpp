@@ -52,6 +52,10 @@
 #include "nsProcess.h"
 #include "nsReadableUtils.h"
 
+static NS_DEFINE_CID(kIProcessCID, NS_PROCESS_CID); 
+
+MOZ_DECL_CTOR_COUNTER(nsInstallExecute)
+
 // Chop the command-line up in place into an array of arguments
 //   by replacing spaces in the command-line string with null
 //   terminators and pointing the array elements to the 
@@ -198,7 +202,7 @@ PRInt32 nsInstallExecute::Complete()
    if (mExecutableFile == nsnull)
       return nsInstall::INVALID_ARGUMENTS;
 
-   nsCOMPtr<nsIProcess> process = do_CreateInstance(NS_PROCESS_CONTRACTID);
+   nsCOMPtr<nsIProcess> process = do_CreateInstance(kIProcessCID);
 
    char *arguments = nsnull;
    if (!mArgs.IsEmpty())

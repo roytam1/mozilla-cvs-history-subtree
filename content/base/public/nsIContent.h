@@ -37,12 +37,14 @@
 #ifndef nsIContent_h___
 #define nsIContent_h___
 
-#include "nsCOMPtr.h" // for already_AddRefed
-#include "nsStringGlue.h"
-#include "nsCaseTreatment.h"
-#include "nsChangeHint.h"
-#include "nsINode.h"
-#include "nsIProgrammingLanguage.h" // for ::JAVASCRIPT
+#include <stdio.h>
+#include "nsCOMPtr.h"
+#include "nsISupports.h"
+#include "nsEvent.h"
+#include "nsAString.h"
+#include "nsContentErrors.h"
+#include "nsPropertyTable.h"
+#include "nsIDOMGCParticipant.h"
 
 // Forward declarations
 class nsIAtom;
@@ -52,54 +54,34 @@ class nsVoidArray;
 class nsIDOMEvent;
 class nsIContent;
 class nsISupportsArray;
+class nsIDOMRange;
+class nsINodeInfo;
 class nsIEventListenerManager;
 class nsIURI;
-class nsICSSStyleRule;
-class nsRuleWalker;
-class nsAttrValue;
-class nsAttrName;
-class nsTextFragment;
-class nsIDocShell;
 
 // IID for the nsIContent interface
-#define NS_ICONTENT_IID       \
-{ 0x53a5757c, 0xf602, 0x41ee, \
-  { 0xac, 0x55, 0xfc, 0x3c, 0x89, 0x4e, 0xb8, 0x97 } }
-
-
-// hack to make egcs / gcc 2.95.2 happy
-class nsIContent_base : public nsINode {
-public:
-#ifdef MOZILLA_INTERNAL_API
-  // If you're using the external API, the only thing you can know about
-  // nsIContent is that it exists with an IID
-
-  nsIContent_base(nsINodeInfo *aNodeInfo)
-    : nsINode(aNodeInfo)
-  {
-  }
-#endif
-
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICONTENT_IID)
-};
+// 9d059608-ddb0-4e6a-9969-d2f363a1b557
+#define NS_ICONTENT_IID \
+{ 0x9d059608, 0xddb0, 0x4e6a, \
+  { 0x99, 0x69, 0xd2, 0xf3, 0x63, 0xa1, 0xb5, 0x57 } }
 
 /**
  * A node of content in a document's content model. This interface
  * is supported by all content objects.
  */
-class nsIContent : public nsIContent_base {
+class nsIContent : public nsIDOMGCParticipant {
 public:
-#ifdef MOZILLA_INTERNAL_API
-  // If you're using the external API, the only thing you can know about
-  // nsIContent is that it exists with an IID
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICONTENT_IID)
 
-  nsIContent(nsINodeInfo *aNodeInfo)
-    : nsIContent_base(aNodeInfo)
-  {
-    NS_ASSERTION(aNodeInfo,
-                 "No nsINodeInfo passed to nsIContent, PREPARE TO CRASH!!!");
-  }
-#endif // MOZILLA_INTERNAL_API
+  nsIContent()
+    : mParentPtrBits(0) { }
+
+  /**
+   * DEPRECATED - Use GetCurrentDoc or GetOwnerDoc.
+   * Get the document for this content.
+   * @return the document
+   */
+  virtual nsIDocument* GetDocument() const = 0;
 
   /**
    * Bind this content node to a tree.  If this method throws, the caller must
@@ -148,13 +130,39 @@ public:
                               PRBool aNullParent = PR_TRUE) = 0;
   
   /**
-   * DEPRECATED - Use GetCurrentDoc or GetOwnerDoc.
-   * Get the document for this content.
-   * @return the document
+   * Returns true if the content has an ancestor that is a document.
+   *
+   * @return whether this content is in a document tree
    */
-  nsIDocument *GetDocument() const
+  virtual PRBool IsInDoc() const = 0;
+
+  /**
+   * Get the document that this content is currently in, if any. This will be
+   * null if the content has no ancestor that is a document.
+   *
+   * @return the current document
+   */
+  nsIDocument *GetCurrentDoc() const
   {
-    return GetCurrentDoc();
+    // XXX This should become:
+    // return IsInDoc() ? GetOwnerDoc() : nsnull;
+    return GetDocument();
+  }
+
+  /**
+   * Get the ownerDocument for this content.
+   *
+   * @return the ownerDocument
+   */
+  virtual nsIDocument *GetOwnerDoc() const = 0;
+
+  /**
+   * Get the parent content for this content.
+   * @return the parent, or null if no parent
+   */
+  nsIContent* GetParent() const
+  {
+    return NS_REINTERPRET_CAST(nsIContent *, mParentPtrBits & ~kParentBitMask);
   }
 
   /**
@@ -162,53 +170,83 @@ public:
    * @see nsIAnonymousContentCreator
    * @return whether this content is anonymous
    */
-  PRBool IsNativeAnonymous() const
-  {
-    return HasFlag(NODE_IS_ANONYMOUS);
-  }
-
-  /**
-   * Returns PR_TRUE if this content is anonymous for event handling.
-   */
-  PRBool IsAnonymousForEvents() const
-  {
-    return HasFlag(NODE_IS_ANONYMOUS_FOR_EVENTS);
-  }
+  virtual PRBool IsNativeAnonymous() const = 0;
 
   /**
    * Set whether this content is anonymous
-   * This is virtual and non-inlined due to nsXULElement::SetNativeAnonymous
    * @see nsIAnonymousContentCreator
    * @param aAnonymous whether this content is anonymous
    */
-  virtual void SetNativeAnonymous(PRBool aAnonymous);
+  virtual void SetNativeAnonymous(PRBool aAnonymous) = 0;
 
   /**
    * Get the namespace that this element's tag is defined in
    * @return the namespace
    */
-  PRInt32 GetNameSpaceID() const
-  {
-    return mNodeInfo->NamespaceID();
-  }
+  virtual PRInt32 GetNameSpaceID() const = 0;
 
   /**
    * Get the tag for this element. This will always return a non-null
    * atom pointer (as implied by the naming of the method).
    */
-  nsIAtom *Tag() const
-  {
-    return mNodeInfo->NameAtom();
-  }
+  virtual nsIAtom *Tag() const = 0;
 
   /**
    * Get the NodeInfo for this element
    * @return the nodes node info
    */
-  nsINodeInfo *NodeInfo() const
-  {
-    return mNodeInfo;
-  }
+  virtual nsINodeInfo * GetNodeInfo() const = 0;
+
+  /**
+   * Get the number of children
+   * @return the number of children
+   */
+  virtual PRUint32 GetChildCount() const = 0;
+
+  /**
+   * Get a child by index
+   * @param aIndex the index of the child to get, or null if index out
+   *               of bounds
+   * @return the child
+   */
+  virtual nsIContent *GetChildAt(PRUint32 aIndex) const = 0;
+
+  /**
+   * Get the index of a child within this content
+   * @param aPossibleChild the child to get the index
+   * @return the index of the child, or -1 if not a child
+   */
+  virtual PRInt32 IndexOf(nsIContent* aPossibleChild) const = 0;
+
+  /**
+   * Insert a content node at a particular index.
+   *
+   * @param aKid the content to insert
+   * @param aIndex the index it is being inserted at (the index it will have
+   *        after it is inserted)
+   * @param aNotify whether to notify the document that the insert has
+   *        occurred
+   */
+  virtual nsresult InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
+                                 PRBool aNotify) = 0;
+
+  /**
+   * Append a content node to the end of the child list.
+   *
+   * @param aKid the content to append
+   * @param aNotify whether to notify the document that the replace has
+   *        occurred
+   */
+  virtual nsresult AppendChildTo(nsIContent* aKid, PRBool aNotify) = 0;
+
+  /**
+   * Remove a child from this content node.
+   *
+   * @param aIndex the index of the child to remove
+   * @param aNotify whether to notify the document that the replace has
+   *        occurred
+   */
+  virtual nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify) = 0;
 
   /**
    * Returns an atom holding the name of the attribute of type ID on
@@ -273,11 +311,14 @@ public:
    * @param aNameSpaceID the namespace of the attr
    * @param aName the name of the attr
    * @param aResult the value (may legitimately be the empty string) [OUT]
-   * @returns PR_TRUE if the attribute was set (even when set to empty string)
-   *          PR_FALSE when not set.
+   * @throws NS_CONTENT_ATTR_NOT_THERE if the attribute is not set and has no
+   *         default value
+   * @throws NS_CONTENT_ATTR_NO_VALUE if the attribute exists but has no value
+   * @throws NS_CONTENT_ATTR_HAS_VALUE if the attribute exists and has a
+   *         non-empty value (==NS_OK)
    */
-  virtual PRBool GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
-                         nsAString& aResult) const = 0;
+  virtual nsresult GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
+                           nsAString& aResult) const = 0;
 
   /**
    * Determine if an attribute has been set (empty string or otherwise).
@@ -287,72 +328,6 @@ public:
    * @return whether an attribute exists
    */
   virtual PRBool HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const = 0;
-
-  /**
-   * Test whether this content node's given attribute has the given value.  If
-   * the attribute is not set at all, this will return false.
-   *
-   * @param aNameSpaceID The namespace ID of the attribute.  Must not
-   *                     be kNameSpaceID_Unknown.
-   * @param aName The name atom of the attribute.  Must not be null.
-   * @param aValue The value to compare to.
-   * @param aCaseSensitive Whether to do a case-sensitive compare on the value.
-   */
-  virtual PRBool AttrValueIs(PRInt32 aNameSpaceID,
-                             nsIAtom* aName,
-                             const nsAString& aValue,
-                             nsCaseTreatment aCaseSensitive) const
-  {
-    return PR_FALSE;
-  }
-  
-  /**
-   * Test whether this content node's given attribute has the given value.  If
-   * the attribute is not set at all, this will return false.
-   *
-   * @param aNameSpaceID The namespace ID of the attribute.  Must not
-   *                     be kNameSpaceID_Unknown.
-   * @param aName The name atom of the attribute.  Must not be null.
-   * @param aValue The value to compare to.  Must not be null.
-   * @param aCaseSensitive Whether to do a case-sensitive compare on the value.
-   */
-  virtual PRBool AttrValueIs(PRInt32 aNameSpaceID,
-                             nsIAtom* aName,
-                             nsIAtom* aValue,
-                             nsCaseTreatment aCaseSensitive) const
-  {
-    return PR_FALSE;
-  }
-  
-  enum {
-    ATTR_MISSING = -1,
-    ATTR_VALUE_NO_MATCH = -2
-  };
-  /**
-   * Check whether this content node's given attribute has one of a given
-   * list of values. If there is a match, we return the index in the list
-   * of the first matching value. If there was no attribute at all, then
-   * we return ATTR_MISSING. If there was an attribute but it didn't
-   * match, we return ATTR_VALUE_NO_MATCH. A non-negative result always
-   * indicates a match.
-   * 
-   * @param aNameSpaceID The namespace ID of the attribute.  Must not
-   *                     be kNameSpaceID_Unknown.
-   * @param aName The name atom of the attribute.  Must not be null.
-   * @param aValues a NULL-terminated array of pointers to atom values to test
-   *                against.
-   * @param aCaseSensitive Whether to do a case-sensitive compare on the values.
-   * @return ATTR_MISSING, ATTR_VALUE_NO_MATCH or the non-negative index
-   * indicating the first value of aValues that matched
-   */
-  typedef nsIAtom* const* const AttrValuesArray;
-  virtual PRInt32 FindAttrValueIn(PRInt32 aNameSpaceID,
-                                  nsIAtom* aName,
-                                  AttrValuesArray* aValues,
-                                  nsCaseTreatment aCaseSensitive) const
-  {
-    return ATTR_MISSING;
-  }
 
   /**
    * Remove an attribute so that it is no longer explicitly specified.
@@ -369,15 +344,14 @@ public:
   /**
    * Get the namespace / name / prefix of a given attribute.
    * 
-   * @param   aIndex the index of the attribute name
-   * @returns The name at the given index, or null if the index is
-   *          out-of-bounds.
-   * @note    The document returned by NodeInfo()->GetDocument() (if one is
-   *          present) is *not* neccesarily the owner document of the element.
-   * @note    The pointer returned by this function is only valid until the
-   *          next call of either GetAttrNameAt or SetAttr on the element.
+   * @param aIndex the index of the attribute name
+   * @param aNameSpace the name space ID of the attribute name [OUT]
+   * @param aName the attribute name [OUT]
+   * @param aPrefix the attribute prefix [OUT]
+   *
    */
-  virtual const nsAttrName* GetAttrNameAt(PRUint32 aIndex) const = 0;
+  virtual nsresult GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
+                                 nsIAtom** aName, nsIAtom** aPrefix) const = 0;
 
   /**
    * Get the number of all specified attributes.
@@ -387,55 +361,91 @@ public:
   virtual PRUint32 GetAttrCount() const = 0;
 
   /**
-   * Get direct access (but read only) to the text in the text content.
-   * NOTE: For elements this is *not* the concatenation of all text children,
-   * it is simply null;
+   * Inform content of range ownership changes.  This allows content
+   * to do the right thing to ranges in the face of changes to the content
+   * model.
+   * RangeRemove -- informs content that it no longer owns a range endpoint
+   * GetRangeList -- returns the list of ranges that have one or both endpoints
+   *                 within this content item
    */
-  virtual const nsTextFragment *GetText() = 0;
+  /**
+   * Inform content that it owns one or both range endpoints
+   * @param aRange the range the content owns
+   */
+  virtual nsresult RangeAdd(nsIDOMRange* aRange) = 0;
 
   /**
-   * Get the length of the text content.
-   * NOTE: This should not be called on elements.
+   * Inform content that it no longer owns either range endpoint
+   * @param aRange the range the content no longer owns
    */
-  virtual PRUint32 TextLength() = 0;
+  virtual void RangeRemove(nsIDOMRange* aRange) = 0;
 
   /**
-   * Set the text to the given value. If aNotify is PR_TRUE then
-   * the document is notified of the content change.
-   * NOTE: For elements this always ASSERTS and returns NS_ERROR_FAILURE
+   * Get the list of ranges that have either endpoint in this content
+   * item.
+   * @return the list of ranges owned partially by this content. The
+   * nsVoidArray is owned by the content object and its lifetime is
+   * controlled completely by the content object.
    */
-  virtual nsresult SetText(const PRUnichar* aBuffer, PRUint32 aLength,
-                           PRBool aNotify) = 0;
+  virtual const nsVoidArray *GetRangeList() const = 0;
 
   /**
-   * Append the given value to the current text. If aNotify is PR_TRUE then
-   * the document is notified of the content change.
-   * NOTE: For elements this always ASSERTS and returns NS_ERROR_FAILURE
+   * Handle a DOM event for this piece of content.  This method is responsible
+   * for handling and controlling all three stages of events, capture, local
+   * and bubble.  It also does strange things to anonymous content which whiz
+   * right by this author's head.
+   *
+   * Here are some beginning explanations:
+   * - if in INIT or CAPTURE mode, it must pass the event to its parent in
+   *   CAPTURE mode (this happens before the event is fired, therefore the
+   *   firing of events will occur from the root up to the target).
+   * - The event is fired to listeners.
+   * - If in INIT or BUBBLE mode, it passes the event to its parent in BUBBLE
+   *   mode.  This means that the events will be fired up the chain starting
+   *   from the target to the ancestor.
+   *
+   * NOTE: if you are extending nsGenericElement and have to do a default
+   * action, call super::HandleDOMEvent() first and check for
+   * aEventStatus != nsEventStatus_eIgnore and make sure you are not in CAPTURE
+   * mode before proceeding.
+   *
+   * XXX Go comment that method, Will Robinson.
+   * @param aPresContext the current presentation context
+   * @param aEvent the event that is being propagated
+   * @param aDOMEvent a special event that may contain a modified target.  Pass
+   *        in null here or aDOMEvent if you are in HandleDOMEvent already;
+   *        don't worry your pretty little head about it.
+   * @param aFlags flags that describe what mode we are in.  Generally
+   *        NS_EVENT_FLAG_CAPTURE, NS_EVENT_FLAG_BUBBLE and NS_EVENT_FLAG_INIT
+   *        are the ones that matter.
+   * @param aEventStatus the status returned from the function.  Generally
+   *        nsEventStatus_eIgnore
    */
-  virtual nsresult AppendText(const PRUnichar* aBuffer, PRUint32 aLength,
-                              PRBool aNotify) = 0;
+  virtual nsresult HandleDOMEvent(nsPresContext* aPresContext,
+                                  nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                                  PRUint32 aFlags,
+                                  nsEventStatus* aEventStatus) = 0;
 
   /**
-   * Set the text to the given value. If aNotify is PR_TRUE then
-   * the document is notified of the content change.
-   * NOTE: For elements this always asserts and returns NS_ERROR_FAILURE
+   * Get a unique ID for this piece of content.
+   * This ID is used as a key to store state information 
+   * about this content object and its associated frame object.
+   * The state information is stored in a dictionary that is
+   * manipulated by the frame manager (nsIFrameManager) inside layout.
+   * An opaque pointer to this dictionary is passed to the session
+   * history as a handle associated with the current document's state
+   *
+   * These methods are DEPRECATED, DON'T USE THEM!!!
+   *
    */
-  nsresult SetText(const nsAString& aStr, PRBool aNotify)
+  virtual PRUint32 ContentID() const = 0;
+  /**
+   * Set the unique content ID for this content.
+   * @param aID the ID to set
+   */
+  virtual void SetContentID(PRUint32 aID)
   {
-    return SetText(aStr.BeginReading(), aStr.Length(), aNotify);
   }
-
-  /**
-   * Query method to see if the frame is nothing but whitespace
-   * NOTE: Always returns PR_FALSE for elements
-   */
-  virtual PRBool TextIsOnlyWhitespace() = 0;
-
-  /**
-   * Append the text content to aResult.
-   * NOTE: This asserts and returns for elements
-   */
-  virtual void AppendTextTo(nsAString& aResult) = 0;
 
   /**
    * Set the focus on this content.  This is generally something for the event
@@ -496,38 +506,6 @@ public:
     return PR_FALSE;
   }
 
-  /*
-   * Get desired IME state for the content.
-   *
-   * @return The desired IME status for the content.
-   *         This is a combination of IME_STATUS_* flags,
-   *         controlling what happens to IME when the content takes focus.
-   *         If this is IME_STATUS_NONE, IME remains in its current state.
-   *         IME_STATUS_ENABLE and IME_STATUS_DISABLE must not be set
-   *         together; likewise IME_STATUS_OPEN and IME_STATUS_CLOSE must
-   *         not be set together.
-   *         If you return IME_STATUS_DISABLE, you should not set the
-   *         OPEN or CLOSE flag; that way, when IME is next enabled,
-   *         the previous OPEN/CLOSE state will be restored (unless the newly
-   *         focused content specifies the OPEN/CLOSE state by setting the OPEN
-   *         or CLOSE flag with the ENABLE flag).
-   */
-  enum {
-    IME_STATUS_NONE    = 0x0000,
-    IME_STATUS_ENABLE  = 0x0001,
-    IME_STATUS_DISABLE = 0x0002,
-    IME_STATUS_OPEN    = 0x0004,
-    IME_STATUS_CLOSE   = 0x0008
-  };
-  enum {
-    IME_STATUS_MASK_ENABLED = IME_STATUS_ENABLE | IME_STATUS_DISABLE,
-    IME_STATUS_MASK_OPENED  = IME_STATUS_OPEN | IME_STATUS_CLOSE
-  };
-  virtual PRUint32 GetDesiredIMEState()
-  {
-    return IME_STATUS_DISABLE;
-  }
-
   /**
    * Gets content node with the binding responsible for our construction (and
    * existence).  Used by anonymous content (XBL-generated). null for all
@@ -538,6 +516,46 @@ public:
   virtual nsIContent *GetBindingParent() const = 0;
 
   /**
+   * Bit-flags to pass (or'ed together) to IsContentOfType()
+   */
+  enum {
+    /** text elements */
+    eTEXT                = 0x00000001,
+    /** dom elements */
+    eELEMENT             = 0x00000002,
+    /** html elements */
+    eHTML                = 0x00000004,
+    /** form controls */
+    eHTML_FORM_CONTROL   = 0x00000008,
+    /** XUL elements */
+    eXUL                 = 0x00000010,
+    /** xml processing instructions */
+    ePROCESSING_INSTRUCTION = 0x00000020,
+    /** svg elements */
+    eSVG                 = 0x00000040,
+    /** comment nodes */
+    eCOMMENT             = 0x00000080
+  };
+
+  /**
+   * API for doing a quick check if a content object is of a given
+   * type, such as HTML, XUL, Text, ...  Use this when you can instead of
+   * checking the tag.
+   *
+   * @param aFlags what types you want to test for (see above, eTEXT, eELEMENT,
+   *        eHTML, eHTML_FORM_CONTROL, eXUL)
+   * @return whether the content matches ALL flags passed in
+   */
+  virtual PRBool IsContentOfType(PRUint32 aFlags) const = 0;
+
+  /**
+   * Get the event listener manager, the guy you talk to to register for events
+   * on this element.
+   * @param aResult the event listener manager [OUT]
+   */
+  virtual nsresult GetListenerManager(nsIEventListenerManager** aResult) = 0;
+
+  /**
    * Get the base URI for any relative URIs within this piece of
    * content. Generally, this is the document's base URI, but certain
    * content carries a local base for backward compatibility, and XML
@@ -546,41 +564,6 @@ public:
    * @return the base URI
    */
   virtual already_AddRefed<nsIURI> GetBaseURI() const = 0;
-
-  /**
-   * API to check if this is a link that's traversed in response to user input
-   * (e.g. a click event). Specializations for HTML/SVG/generic XML allow for
-   * different types of link in different types of content.
-   *
-   * @param aURI Required out param. If this content is a link, a new nsIURI
-   *             set to this link's URI will be passed out.
-   *
-   * @note The out param, aURI, is guaranteed to be set to a non-null pointer
-   *   when the return value is PR_TRUE.
-   *
-   * XXXjwatt: IMO IsInteractiveLink would be a better name.
-   */
-  virtual PRBool IsLink(nsIURI** aURI) const = 0;
-
-  /**
-   * Give this element a chance to fire links that should be fired
-   * automatically when loaded. If the element was an autoloading link
-   * and it was successfully handled, we will throw special nsresult values.
-   *
-   * @param aShell the current doc shell (to possibly load the link on)
-   * @throws NS_OK if nothing happened
-   * @throws NS_XML_AUTOLINK_EMBED if the caller is loading the link embedded
-   * @throws NS_XML_AUTOLINK_NEW if the caller is loading the link in a new
-   *         window
-   * @throws NS_XML_AUTOLINK_REPLACE if it is loading a link that will replace
-   *         the current window (and thus the caller must stop parsing)
-   * @throws NS_XML_AUTOLINK_UNDEFINED if it is loading in any other way--in
-   *         which case, the caller should stop parsing as well.
-   */
-  virtual nsresult MaybeTriggerAutoLink(nsIDocShell *aShell)
-  {
-    return NS_OK;
-  }
 
   /**
    * This method is called when the parser finishes creating the element.  This
@@ -623,9 +606,8 @@ public:
   }
 
   /**
-   * @returns PR_TRUE if there is a chance that the content node has a
-   *                  frame.
-   * @returns PR_FALSE otherwise.
+   * Returns PR_TRUE if there is a chance that the content node has a
+   * frame, PR_FALSE otherwise.
    */
   virtual PRBool MayHaveFrame() const
   {
@@ -656,33 +638,15 @@ public:
    * boolean aFromParser to the NS_NewXXX() constructor for your element and
    * have the parser pass true.  See nsHTMLInputElement.cpp and
    * nsHTMLContentSink::MakeContentObject().
-   *
-   * It is ok to ignore an error returned from this function. However the
-   * following errors may be of interest to some callers:
-   *
-   *   NS_ERROR_HTMLPARSER_BLOCK  Returned by script elements to indicate
-   *                              that a script will be loaded asynchronously
-   *
-   * This means that implementations will have to deal with returned error
-   * codes being ignored.
-   *
-   * @param aHaveNotified Whether there has been a
-   *        ContentInserted/ContentAppended notification for this content node
-   *        yet.
    */
-  virtual nsresult DoneAddingChildren(PRBool aHaveNotified)
+  virtual void DoneAddingChildren()
   {
-    return NS_OK;
   }
 
   /**
    * For HTML textarea, select, applet, and object elements, returns
    * PR_TRUE if all children have been added OR if the element was not
    * created by the parser. Returns PR_TRUE for all other elements.
-   * @returns PR_FALSE if the element was created by the parser and
-   *                   it is an HTML textarea, select, applet, or object
-   *                   element and not all children have been added.
-   * @returns PR_TRUE otherwise.
    */
   virtual PRBool IsDoneAddingChildren()
   {
@@ -702,87 +666,40 @@ public:
     return 0;
   }
     
-  /* The default script type (language) ID for this content.
-     All content must support fetching the default script language.
-   */
-  virtual PRUint32 GetScriptTypeID() const
-  { return nsIProgrammingLanguage::JAVASCRIPT; }
 
-  /* Not all content supports setting a new default language */
-  virtual nsresult SetScriptTypeID(PRUint32 aLang)
-  {
-    NS_NOTREACHED("SetScriptTypeID not implemented");
-    return NS_ERROR_NOT_IMPLEMENTED;
-  }
-
-  /**
-   * Get the ID of this content node (the atom corresponding to the
-   * value of the null-namespace attribute whose name is given by
-   * GetIDAttributeName().  This may be null if there is no ID.
+  /* Methods for manipulating content node properties.  For documentation on
+   * properties, see nsPropertyTable.h.
    */
-  virtual nsIAtom* GetID() const = 0;
 
-  /**
-   * Get the class list of this content node (this corresponds to the
-   * value of the null-namespace attribute whose name is given by
-   * GetClassAttributeName().  This may be null if there are no
-   * classes, but that's not guaranteed.
-   */
-  virtual const nsAttrValue* GetClasses() const = 0;
+  virtual void* GetProperty(nsIAtom  *aPropertyName,
+                            nsresult *aStatus = nsnull) const
+  { if (aStatus) *aStatus = NS_ERROR_NOT_IMPLEMENTED; return nsnull; }
 
-  /**
-   * Walk aRuleWalker over the content style rules (presentational
-   * hint rules) for this content node.
-   */
-  NS_IMETHOD WalkContentStyleRules(nsRuleWalker* aRuleWalker) = 0;
+  virtual nsresult SetProperty(nsIAtom                   *aPropertyName,
+                               void                      *aValue,
+                               NSPropertyDtorFunc         aDtor = nsnull)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
 
-  /**
-   * Get the inline style rule, if any, for this content node
-   */
-  virtual nsICSSStyleRule* GetInlineStyleRule() = 0;
+  virtual nsresult DeleteProperty(nsIAtom *aPropertyName)
+  { return NS_ERROR_NOT_IMPLEMENTED; }
 
-  /**
-   * Set the inline style rule for this node.  This will send an
-   * appropriate AttributeChanged notification if aNotify is true.
-   */
-  NS_IMETHOD SetInlineStyleRule(nsICSSStyleRule* aStyleRule, PRBool aNotify) = 0;
-
-  /**
-   * Is the attribute named stored in the mapped attributes?
-   *
-   * // XXXbz we use this method in HasAttributeDependentStyle, so svg
-   *    returns true here even though it stores nothing in the mapped
-   *    attributes.
-   */
-  NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const = 0;
-
-  /**
-   * Get a hint that tells the style system what to do when 
-   * an attribute on this node changes, if something needs to happen
-   * in response to the change *other* than the result of what is
-   * mapped into style data via any type of style rule.
-   */
-  virtual nsChangeHint GetAttributeChangeHint(const nsIAtom* aAttribute,
-                                              PRInt32 aModType) const = 0;
-
-  /**
-   * Returns an atom holding the name of the "class" attribute on this
-   * content node (if applicable).  Returns null if there is no
-   * "class" attribute for this type of content node.
-   */
-  virtual nsIAtom *GetClassAttributeName() const = 0;
+  virtual void* UnsetProperty(nsIAtom  *aPropertyName,
+                              nsresult *aStatus = nsnull)
+  { if (aStatus) *aStatus = NS_ERROR_NOT_IMPLEMENTED; return nsnull; }
 
 
 #ifdef DEBUG
   /**
    * List the content (and anything it contains) out to the given
    * file stream. Use aIndent as the base indent during formatting.
+   * Returns NS_OK unless a file error occurs.
    */
   virtual void List(FILE* out = stdout, PRInt32 aIndent = 0) const = 0;
 
   /**
    * Dump the content (and anything it contains) out to the given
    * file stream. Use aIndent as the base indent during formatting.
+   * Returns NS_OK unless a file error occurs.
    */
   virtual void DumpContent(FILE* out = stdout, PRInt32 aIndent = 0,
                            PRBool aDumpAll = PR_TRUE) const = 0;
@@ -802,35 +719,13 @@ public:
   // the tabfocus bit field applies to xul elements.
   static PRBool sTabFocusModelAppliesToXUL;
 
+protected:
+  typedef PRWord PtrBits;
+
+  // Subclasses may use the low two bits of mParentPtrBits to store other data
+  enum { kParentBitMask = 0x3 };
+
+  PtrBits      mParentPtrBits;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIContent, NS_ICONTENT_IID)
-
-// Some cycle-collecting helper macros for nsIContent subclasses
-
-#define NS_IMPL_CYCLE_COLLECTION_TRAVERSE_LISTENERMANAGER \
-  if (tmp->HasFlag(NODE_HAS_LISTENERMANAGER)) {           \
-    nsContentUtils::TraverseListenerManager(tmp, cb);     \
-  }
-
-#define NS_IMPL_CYCLE_COLLECTION_TRAVERSE_PRESERVED_WRAPPER      \
-  {                                                              \
-    nsISupports *preservedWrapper = nsnull;                      \
-    if (tmp->GetOwnerDoc())                                      \
-      preservedWrapper = tmp->GetOwnerDoc()->GetReference(tmp);  \
-    if (preservedWrapper)                                        \
-      cb.NoteXPCOMChild(preservedWrapper);                       \
-  }
-
-#define NS_IMPL_CYCLE_COLLECTION_UNLINK_LISTENERMANAGER \
-  if (tmp->HasFlag(NODE_HAS_LISTENERMANAGER)) {         \
-    nsContentUtils::RemoveListenerManager(tmp);         \
-    tmp->UnsetFlags(NODE_HAS_LISTENERMANAGER);          \
-  }
-
-#define NS_IMPL_CYCLE_COLLECTION_UNLINK_PRESERVED_WRAPPER \
-  if (tmp->GetOwnerDoc())                                 \
-    tmp->GetOwnerDoc()->RemoveReference(tmp);
-
 
 #endif /* nsIContent_h___ */

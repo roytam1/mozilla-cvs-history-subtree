@@ -41,7 +41,6 @@
 
 #include "nsDownloadListener.h"
 
-#include "nsIURIFixup.h"
 #include "nsIWebProgress.h"
 #include "nsIFileURL.h"
 #include "netCore.h"
@@ -181,13 +180,6 @@ nsDownloadListener::GetStartTime(PRInt64 *aStartTime)
   return NS_OK;
 }
 
-/* readonly attribute double speed; */
-NS_IMETHODIMP
-nsDownloadListener::GetSpeed(double* aSpeed)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 /* readonly attribute nsIMIMEInfo MIMEInfo; */
 NS_IMETHODIMP
 nsDownloadListener::GetMIMEInfo(nsIMIMEInfo * *aMIMEInfo)
@@ -220,18 +212,6 @@ nsDownloadListener::OnProgressChange64(nsIWebProgress *aWebProgress,
 	
   [mDownloadDisplay setProgressTo:aCurTotalProgress ofMax:aMaxTotalProgress];
   return NS_OK;
-}
-
-/* boolean onRefreshAttempted (in nsIWebProgress aWebProgress, in nsIURI aRefreshURI, in long aDelay, in boolean aSameURI); */
-NS_IMETHODIMP
-nsDownloadListener::OnRefreshAttempted(nsIWebProgress *aWebProgress,
-                                       nsIURI *aUri,
-                                       PRInt32 aDelay,
-                                       PRBool aSameUri,
-                                       PRBool *allowRefresh)
-{
-    *allowRefresh = PR_TRUE;
-    return NS_OK;
 }
 
 /* void onProgressChange (in nsIWebProgress aWebProgress, in nsIRequest aRequest, in long aCurSelfProgress, in long aMaxSelfProgress, in long aCurTotalProgress, in long aMaxTotalProgress); */
@@ -325,14 +305,8 @@ nsDownloadListener::InitDialog()
       spec.Append(hostport);
       spec.Append(path);
     }
-    else {
-      nsCOMPtr<nsIURI> exposableURI;
-      nsCOMPtr<nsIURIFixup> fixup(do_GetService("@mozilla.org/docshell/urifixup;1"));
-      if (fixup && NS_SUCCEEDED(fixup->CreateExposableURI(mURI, getter_AddRefs(exposableURI))) && exposableURI)
-        exposableURI->GetSpec(spec);
-      else
-        mURI->GetSpec(spec);
-    }
+    else
+      mURI->GetSpec(spec);
 
     [mDownloadDisplay setSourceURL: [NSString stringWithUTF8String:spec.get()]];
   }

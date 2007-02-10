@@ -50,8 +50,8 @@ class nsCSSFrameConstructor;
 
 // IID for the nsIComboboxControlFrame class
 #define NS_ICOMBOBOXCONTROLFRAME_IID    \
-  { 0x23f75e9c, 0x6850, 0x11da, \
-      { 0x95, 0x2c, 0x0, 0xe0, 0x81, 0x61, 0x16, 0x5f } }
+{ 0x6961f791, 0xa662, 0x11d2,  \
+  { 0x8d, 0xcf, 0x0, 0x60, 0x97, 0x3, 0xc1, 0x4e } }
 
 /** 
   * nsIComboboxControlFrame is the common interface for frames of form controls. It
@@ -61,32 +61,32 @@ class nsCSSFrameConstructor;
 class nsIComboboxControlFrame : public nsISupports {
 
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICOMBOBOXCONTROLFRAME_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICOMBOBOXCONTROLFRAME_IID)
 
   /**
    * Indicates whether the list is dropped down
    */
-  virtual PRBool IsDroppedDown() = 0;
+  NS_IMETHOD IsDroppedDown(PRBool * aDoDropDown) = 0;
 
   /**
    * Shows or hides the drop down
    */
-  virtual void ShowDropDown(PRBool aDoDropDown) = 0;
+  NS_IMETHOD ShowDropDown(PRBool aDoDropDown) = 0;
 
   /**
    * Gets the Drop Down List
    */
-  virtual nsIFrame* GetDropDown() = 0;
+  NS_IMETHOD GetDropDown(nsIFrame** aDropDownFrame) = 0;
 
   /**
    * Sets the Drop Down List
    */
-  virtual void SetDropDown(nsIFrame* aDropDownFrame) = 0;
+  NS_IMETHOD SetDropDown(nsIFrame* aDropDownFrame) = 0;
 
   /**
    * Tells the combobox to roll up
    */
-  virtual void RollupFromList() = 0;
+  NS_IMETHOD RollupFromList(nsPresContext* aPresContext) = 0;
 
   /**
    * Redisplay the selected text (will do nothing if text has not changed)
@@ -96,18 +96,18 @@ public:
   /**
    * Method for the listbox to set and get the recent index
    */
-  virtual PRInt32 UpdateRecentIndex(PRInt32 aIndex) = 0;
+  NS_IMETHOD_(PRInt32) UpdateRecentIndex(PRInt32 aIndex) = 0;
 
   /**
    *
    */
-  virtual void AbsolutelyPositionDropDown() = 0;
+  NS_IMETHOD AbsolutelyPositionDropDown() = 0;
 
   /**
-   * Notification that the content has been reset
+   *
    */
-  virtual void OnContentReset() = 0;
-  
+  NS_IMETHOD GetAbsoluteRect(nsRect* aRect) = 0;
+
   /**
    * This returns the index of the item that is currently being displayed
    * in the display area. It may differ from what the currently Selected index
@@ -121,14 +121,11 @@ public:
    * the dropdown and it needs to roll up it has to decide whether to keep the current 
    * selection or not. This method is used to get the current index in the combobox to
    * compare it to the current index in the dropdown to see if the combox has been updated
-   * and that way it knows whether to "cancel" the current selection residing in the 
+   * and that way it knows whether to "cancel" the the current selection residing in the 
    * dropdown. Or whether to leave the selection alone.
    */
-  virtual PRInt32 GetIndexOfDisplayArea() = 0;
+  NS_IMETHOD GetIndexOfDisplayArea(PRInt32* aSelectedIndex) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIComboboxControlFrame,
-                              NS_ICOMBOBOXCONTROLFRAME_IID)
 
 #endif
 

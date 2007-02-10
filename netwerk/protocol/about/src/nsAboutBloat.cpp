@@ -38,7 +38,7 @@
 #include "nsAboutBloat.h"
 #include "nsIIOService.h"
 #include "nsIServiceManager.h"
-#include "nsStringStream.h"
+#include "nsIStringStream.h"
 #include "nsXPIDLString.h"
 #include "nsIURI.h"
 #include "prtime.h"
@@ -155,13 +155,6 @@ nsAboutBloat::NewChannel(nsIURI *aURI, nsIChannel **result)
 
     *result = channel;
     return rv;
-}
-
-NS_IMETHODIMP
-nsAboutBloat::GetURIFlags(nsIURI *aURI, PRUint32 *result)
-{
-    *result = 0;
-    return NS_OK;
 }
 
 NS_METHOD

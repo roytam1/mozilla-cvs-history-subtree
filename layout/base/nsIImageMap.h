@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* interface for HTML client-side image maps */
-
 #ifndef nsIImageMap_h___
 #define nsIImageMap_h___
 
@@ -50,13 +47,11 @@ struct nsRect;
 
 class nsIImageMap : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IIMAGEMAP_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IIMAGEMAP_IID)
 
   NS_IMETHOD GetBoundsForAreaContent(nsIContent *aContent, 
                                      nsPresContext* aPresContext, 
                                      nsRect& aBounds) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIImageMap, NS_IIMAGEMAP_IID)
 
 #endif /* nsIImageMap_h___ */

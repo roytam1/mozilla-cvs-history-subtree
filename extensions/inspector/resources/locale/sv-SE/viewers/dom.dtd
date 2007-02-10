@@ -20,7 +20,7 @@
    - the Initial Developer. All Rights Reserved.
    -
    - Contributor(s):
-   -   Hasse Wallanger <hasse@jasajudeju.se>
+   -   Hasse Wallanger <jasajudeju@telia.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -49,9 +49,6 @@
 
   <!ENTITY cmdToggleWhitespaceNodes.label "Visa tomma noder">
   <!ENTITY cmdToggleWhitespaceNodes.accesskey "t">
-
-  <!ENTITY cmdToggleAccessibleNodes.label "Visa åtkomliga noder">
-  <!ENTITY cmdToggleAccessibleNodes.accesskey "å">
 
   <!ENTITY cmdFlashSelected.label "Blinka med det markerade elementet">
 
@@ -89,11 +86,3 @@
   <!ENTITY findNodesDirectionDown.label "Ner">
   <!ENTITY findNodesFind.label "Hitta">
   <!ENTITY findNodesCancel.label "Avbryt">
-
-  <!ENTITY mnEditPasteMenu.label "Klistra in">
-  <!ENTITY mnEditPasteBefore.label "Innan">
-  <!ENTITY mnEditPasteAfter.label "Efter">
-  <!ENTITY mnEditPasteReplace.label "I ställe för (ersätt)">
-  <!ENTITY mnEditPasteFirstChild.label "Som första barn">
-  <!ENTITY mnEditPasteLastChild.label "Som sista barn">
-  <!ENTITY mnEditPasteAsParent.label "Som förälder">

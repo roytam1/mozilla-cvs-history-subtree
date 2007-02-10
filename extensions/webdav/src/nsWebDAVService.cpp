@@ -44,7 +44,6 @@
 #include "nsWebDAVServiceCID.h"
 
 #include "nsServiceManagerUtils.h"
-#include "nsIClassInfoImpl.h"
 
 #include "nsIHttpChannel.h"
 #include "nsIIOService.h"
@@ -147,10 +146,7 @@ nsWebDAVService::SendDocumentToChannel(nsIDocument *doc,
         do_CreateInstance(NS_DOC_ENCODER_CONTRACTID_BASE "text/xml", &rv);
     NS_ENSURE_SUCCESS(rv, rv);
     
-    nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(doc);
-    NS_ASSERTION(domDoc, "Need a document");
-
-    rv = encoder->Init(domDoc, NS_LITERAL_STRING("text/xml"),
+    rv = encoder->Init(doc, NS_LITERAL_STRING("text/xml"),
                        nsIDocumentEncoder::OutputEncodeBasicEntities);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -191,16 +187,6 @@ nsWebDAVService::SendDocumentToChannel(nsIDocument *doc,
     NS_ENSURE_SUCCESS(rv, rv);
     
     channel->SetRequestMethod(nsDependentCString(method));
-    channel->SetRequestHeader(NS_LITERAL_CSTRING("Content-Type"),
-                              NS_LITERAL_CSTRING("text/xml; charset=utf-8"),
-                              PR_FALSE);
-    channel->SetRequestHeader(NS_LITERAL_CSTRING("Accept"),
-                              NS_LITERAL_CSTRING("text/xml"),
-                              PR_FALSE);
-    channel->SetRequestHeader(NS_LITERAL_CSTRING("Accept-Charset"),
-                              NS_LITERAL_CSTRING("utf-8,*;q=0.1"),
-                              PR_FALSE);
-    
 
     if (withDepth) {
         channel->SetRequestHeader(NS_LITERAL_CSTRING("Depth"),
@@ -237,12 +223,7 @@ nsWebDAVService::CreatePropfindDocument(nsIURI *resourceURI,
 
     nsCOMPtr<nsIPrivateDOMImplementation> 
         privImpl(do_QueryInterface(implementation));
-    // XXXbz I doubt this is right, but I have no idea what this code is doing
-    // or why it's creating documents without a useful principal... so I'm just
-    // going to make the fact that those documents have no principal very
-    // explicit, and if this causes issues then someone familiar with this code
-    // should figure out what principals this _should_ be using.
-    privImpl->Init(resourceURI, resourceURI, nsnull);
+    privImpl->Init(resourceURI);
 
     nsCOMPtr<nsIDOMDocument> doc;
     rv = implementation->CreateDocument(mDAVNSString, EmptyString(), nsnull,

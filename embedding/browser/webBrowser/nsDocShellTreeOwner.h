@@ -87,11 +87,9 @@ class ChromeContextMenuListener;
 class nsICDocShellTreeOwner : public nsISupports
 {
 public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICDOCSHELLTREEOWNER_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICDOCSHELLTREEOWNER_IID)
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsICDocShellTreeOwner,
-                              NS_ICDOCSHELLTREEOWNER_IID)
 
 class nsDocShellTreeOwner : public nsIDocShellTreeOwner,
                             public nsIBaseWindow,

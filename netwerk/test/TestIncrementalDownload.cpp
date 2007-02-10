@@ -37,15 +37,51 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include <stdlib.h>
-#include "TestCommon.h"
 #include "nsNetUtil.h"
 #include "nsIIncrementalDownload.h"
 #include "nsIRequestObserver.h"
 #include "nsIProgressEventSink.h"
-#include "nsThreadUtils.h"
+#include "nsIEventQueueService.h"
+#include "nsIEventQueue.h"
 #include "nsAutoPtr.h"
 #include "prprf.h"
 #include "prenv.h"
+
+//-----------------------------------------------------------------------------
+
+static nsresult SetupEventQ()
+{
+  nsresult rv;
+
+  nsCOMPtr<nsIEventQueueService> eqs =
+      do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
+
+  return eqs->CreateMonitoredThreadEventQueue();
+}
+
+static nsresult PumpEvents()
+{
+  nsresult rv;
+
+  nsCOMPtr<nsIEventQueueService> eqs =
+      do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
+
+  nsCOMPtr<nsIEventQueue> eq;
+  rv = eqs->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(eq));
+  if (NS_FAILED(rv))
+    return rv;
+
+  return eq->EventLoop();
+}
+
+static void QuitPumpingEvents()
+{
+  PR_Interrupt(PR_GetCurrentThread());
+}
 
 //-----------------------------------------------------------------------------
 
@@ -124,12 +160,15 @@ DoIncrementalFetch(const char *uriSpec, const char *resultPath, PRInt32 chunkSiz
   if (NS_FAILED(rv))
     return rv;
 
+  rv = SetupEventQ();
+  if (NS_FAILED(rv))
+    return rv;
+
   rv = download->Start(observer, nsnull);
   if (NS_FAILED(rv))
     return rv;
 
-  PumpEvents();
-  return NS_OK;
+  return PumpEvents();
 }
 
 int

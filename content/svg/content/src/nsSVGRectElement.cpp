@@ -37,12 +37,16 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsSVGPathGeometryElement.h"
+#include "nsSVGGraphicElement.h"
+#include "nsSVGAtoms.h"
+#include "nsSVGAnimatedLength.h"
+#include "nsSVGLength.h"
 #include "nsIDOMSVGRectElement.h"
-#include "nsSVGLength2.h"
-#include "nsGkAtoms.h"
+#include "nsCOMPtr.h"
+#include "nsISVGSVGElement.h"
+#include "nsSVGCoordCtxProvider.h"
 
-typedef nsSVGPathGeometryElement nsSVGRectElementBase;
+typedef nsSVGGraphicElement nsSVGRectElementBase;
 
 class nsSVGRectElement : public nsSVGRectElementBase,
                          public nsIDOMSVGRectElement
@@ -51,42 +55,37 @@ protected:
   friend nsresult NS_NewSVGRectElement(nsIContent **aResult,
                                        nsINodeInfo *aNodeInfo);
   nsSVGRectElement(nsINodeInfo* aNodeInfo);
+  virtual ~nsSVGRectElement();
+  nsresult Init();
 
 public:
   // interfaces:
+
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIDOMSVGRECTELEMENT
 
   // xxx I wish we could use virtual inheritance
-  NS_FORWARD_NSIDOMNODE(nsSVGRectElementBase::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsSVGRectElementBase::)
   NS_FORWARD_NSIDOMELEMENT(nsSVGRectElementBase::)
   NS_FORWARD_NSIDOMSVGELEMENT(nsSVGRectElementBase::)
 
-  // nsSVGPathGeometryElement methods:
-  virtual void ConstructPath(cairo_t *aCtx);
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
+  // nsISVGContent specializations:
+  virtual void ParentChainChanged();
 
 protected:
+  
+  nsCOMPtr<nsIDOMSVGAnimatedLength> mX;
+  nsCOMPtr<nsIDOMSVGAnimatedLength> mY;
+  nsCOMPtr<nsIDOMSVGAnimatedLength> mWidth;
+  nsCOMPtr<nsIDOMSVGAnimatedLength> mHeight;
+  nsCOMPtr<nsIDOMSVGAnimatedLength> mRx;
+  nsCOMPtr<nsIDOMSVGAnimatedLength> mRy;
 
-  virtual LengthAttributesInfo GetLengthInfo();
- 
-  enum { X, Y, WIDTH, HEIGHT, RX, RY };
-  nsSVGLength2 mLengthAttributes[6];
-  static LengthInfo sLengthInfo[6];
 };
 
-nsSVGElement::LengthInfo nsSVGRectElement::sLengthInfo[6] =
-{
-  { &nsGkAtoms::x, 0, nsIDOMSVGLength::SVG_LENGTHTYPE_NUMBER, nsSVGUtils::X },
-  { &nsGkAtoms::y, 0, nsIDOMSVGLength::SVG_LENGTHTYPE_NUMBER, nsSVGUtils::Y },
-  { &nsGkAtoms::width, 0, nsIDOMSVGLength::SVG_LENGTHTYPE_NUMBER, nsSVGUtils::X },
-  { &nsGkAtoms::height, 0, nsIDOMSVGLength::SVG_LENGTHTYPE_NUMBER, nsSVGUtils::Y },
-  { &nsGkAtoms::rx, 0, nsIDOMSVGLength::SVG_LENGTHTYPE_NUMBER, nsSVGUtils::X },
-  { &nsGkAtoms::ry, 0, nsIDOMSVGLength::SVG_LENGTHTYPE_NUMBER, nsSVGUtils::Y }
-};
 
 NS_IMPL_NS_NEW_SVG_ELEMENT(Rect)
+
 
 //----------------------------------------------------------------------
 // nsISupports methods
@@ -108,12 +107,106 @@ NS_INTERFACE_MAP_END_INHERITING(nsSVGRectElementBase)
 nsSVGRectElement::nsSVGRectElement(nsINodeInfo *aNodeInfo)
   : nsSVGRectElementBase(aNodeInfo)
 {
+
+}
+
+nsSVGRectElement::~nsSVGRectElement()
+{
+}
+
+
+nsresult
+nsSVGRectElement::Init()
+{
+  nsresult rv = nsSVGRectElementBase::Init();
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  // Create mapped properties:
+
+  // DOM property: x ,  #IMPLIED attrib: x
+  {
+    nsCOMPtr<nsISVGLength> length;
+    rv = NS_NewSVGLength(getter_AddRefs(length),
+                         0.0f);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedLength(getter_AddRefs(mX), length);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = AddMappedSVGValue(nsSVGAtoms::x, mX);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  // DOM property: y ,  #IMPLIED attrib: y
+  {
+    nsCOMPtr<nsISVGLength> length;
+    rv = NS_NewSVGLength(getter_AddRefs(length),
+                         0.0f);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedLength(getter_AddRefs(mY), length);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = AddMappedSVGValue(nsSVGAtoms::y, mY);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  // DOM property: width ,  #REQUIRED  attrib: width
+  // XXX: enforce requiredness
+  {
+    nsCOMPtr<nsISVGLength> length;
+    rv = NS_NewSVGLength(getter_AddRefs(length),
+                         0.0f);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedLength(getter_AddRefs(mWidth), length);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = AddMappedSVGValue(nsSVGAtoms::width, mWidth);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  // DOM property: height ,  #REQUIRED  attrib: height
+  // XXX: enforce requiredness
+  {
+    nsCOMPtr<nsISVGLength> length;
+    rv = NS_NewSVGLength(getter_AddRefs(length),
+                         0.0f);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedLength(getter_AddRefs(mHeight), length);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = AddMappedSVGValue(nsSVGAtoms::height, mHeight);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+  // DOM property: rx ,  #IMPLIED  attrib: rx
+  // XXX: enforce requiredness
+  {
+    nsCOMPtr<nsISVGLength> length;
+    rv = NS_NewSVGLength(getter_AddRefs(length),
+                         0.0f);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedLength(getter_AddRefs(mRx), length);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = AddMappedSVGValue(nsSVGAtoms::rx, mRx);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  // DOM property: ry ,  #IMPLIED  attrib: ry
+  // XXX: enforce requiredness
+  {
+    nsCOMPtr<nsISVGLength> length;
+    rv = NS_NewSVGLength(getter_AddRefs(length),
+                         0.0f);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedLength(getter_AddRefs(mRy), length);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = AddMappedSVGValue(nsSVGAtoms::ry, mRy);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+
+  return rv;
 }
 
 //----------------------------------------------------------------------
 // nsIDOMNode methods
 
-NS_IMPL_ELEMENT_CLONE_WITH_INIT(nsSVGRectElement)
+
+NS_IMPL_DOM_CLONENODE_WITH_INIT(nsSVGRectElement)
+
 
 //----------------------------------------------------------------------
 // nsIDOMSVGRectElement methods
@@ -121,123 +214,124 @@ NS_IMPL_ELEMENT_CLONE_WITH_INIT(nsSVGRectElement)
 /* readonly attribute nsIDOMSVGAnimatedLength x; */
 NS_IMETHODIMP nsSVGRectElement::GetX(nsIDOMSVGAnimatedLength * *aX)
 {
-  return mLengthAttributes[X].ToDOMAnimatedLength(aX, this);
+  *aX = mX;
+  NS_IF_ADDREF(*aX);
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGAnimatedLength y; */
 NS_IMETHODIMP nsSVGRectElement::GetY(nsIDOMSVGAnimatedLength * *aY)
 {
-  return mLengthAttributes[Y].ToDOMAnimatedLength(aY, this);
+  *aY = mY;
+  NS_IF_ADDREF(*aY);
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGAnimatedLength width; */
 NS_IMETHODIMP nsSVGRectElement::GetWidth(nsIDOMSVGAnimatedLength * *aWidth)
 {
-  return mLengthAttributes[WIDTH].ToDOMAnimatedLength(aWidth, this);
+  *aWidth = mWidth;
+  NS_IF_ADDREF(*aWidth);
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGAnimatedLength height; */
 NS_IMETHODIMP nsSVGRectElement::GetHeight(nsIDOMSVGAnimatedLength * *aHeight)
 {
-  return mLengthAttributes[HEIGHT].ToDOMAnimatedLength(aHeight, this);
+  *aHeight = mHeight;
+  NS_IF_ADDREF(*aHeight);
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGAnimatedLength rx; */
 NS_IMETHODIMP nsSVGRectElement::GetRx(nsIDOMSVGAnimatedLength * *aRx)
 {
-  return mLengthAttributes[RX].ToDOMAnimatedLength(aRx, this);
+  *aRx = mRx;
+  NS_IF_ADDREF(*aRx);
+  return NS_OK;
 }
 
 /* readonly attribute nsIDOMSVGAnimatedLength ry; */
 NS_IMETHODIMP nsSVGRectElement::GetRy(nsIDOMSVGAnimatedLength * *aRy)
 {
-  return mLengthAttributes[RY].ToDOMAnimatedLength(aRy, this);
+  *aRy = mRy;
+  NS_IF_ADDREF(*aRy);
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
-// nsSVGElement methods
+// nsISVGContent methods
 
-nsSVGElement::LengthAttributesInfo
-nsSVGRectElement::GetLengthInfo()
+void nsSVGRectElement::ParentChainChanged()
 {
-  return LengthAttributesInfo(mLengthAttributes, sLengthInfo,
-                              NS_ARRAY_LENGTH(sLengthInfo));
-}
+  // set new context information on our length-properties:
+  
+  nsCOMPtr<nsIDOMSVGSVGElement> dom_elem;
+  GetOwnerSVGElement(getter_AddRefs(dom_elem));
+  if (!dom_elem) return;
 
-//----------------------------------------------------------------------
-// nsSVGPathGeometryElement methods
+  nsCOMPtr<nsSVGCoordCtxProvider> ctx = do_QueryInterface(dom_elem);
+  NS_ASSERTION(ctx, "<svg> element missing interface");
 
-void
-nsSVGRectElement::ConstructPath(cairo_t *aCtx)
-{
-  float x, y, width, height, rx, ry;
-
-  GetAnimatedLengthValues(&x, &y, &width, &height, &rx, &ry, nsnull);
-
-  /* In a perfect world, this would be handled by the DOM, and
-     return a DOM exception. */
-  if (width <= 0 || height <= 0 || ry < 0 || rx < 0)
-    return;
-
-  /* optimize the no rounded corners case */
-  if (rx == 0 && ry == 0) {
-    cairo_rectangle(aCtx, x, y, width, height);
-    return;
+  // x:
+  {
+    nsCOMPtr<nsIDOMSVGLength> dom_length;
+    mX->GetAnimVal(getter_AddRefs(dom_length));
+    nsCOMPtr<nsISVGLength> length = do_QueryInterface(dom_length);
+    NS_ASSERTION(length, "svg length missing interface");
+    
+    length->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextX()));
   }
 
-  /* Clamp rx and ry to half the rect's width and height respectively. */
-  float halfWidth  = width/2;
-  float halfHeight = height/2;
-  if (rx > halfWidth)
-    rx = halfWidth;
-  if (ry > halfHeight)
-    ry = halfHeight;
+  // y:
+  {
+    nsCOMPtr<nsIDOMSVGLength> dom_length;
+    mY->GetAnimVal(getter_AddRefs(dom_length));
+    nsCOMPtr<nsISVGLength> length = do_QueryInterface(dom_length);
+    NS_ASSERTION(length, "svg length missing interface");
+    
+    length->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextY()));
+  }
 
-  /* If either the 'rx' or the 'ry' attribute isn't set in the markup, then we
-     have to set it to the value of the other. We do this after clamping rx and
-     ry since omitting one of the attributes implicitly means they should both
-     be the same. */
-  PRBool hasRx = HasAttr(kNameSpaceID_None, nsGkAtoms::rx);
-  PRBool hasRy = HasAttr(kNameSpaceID_None, nsGkAtoms::ry);
-  if (hasRx && !hasRy)
-    ry = rx;
-  else if (hasRy && !hasRx)
-    rx = ry;
+  // width:
+  {
+    nsCOMPtr<nsIDOMSVGLength> dom_length;
+    mWidth->GetAnimVal(getter_AddRefs(dom_length));
+    nsCOMPtr<nsISVGLength> length = do_QueryInterface(dom_length);
+    NS_ASSERTION(length, "svg length missing interface");
+    
+    length->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextX()));
+  }
 
-  /* However, we may now have made rx > width/2 or else ry > height/2. (If this
-     is the case, we know we must be giving rx and ry the same value.) */
-  if (rx > halfWidth)
-    rx = ry = halfWidth;
-  else if (ry > halfHeight)
-    rx = ry = halfHeight;
+  // height:
+  {
+    nsCOMPtr<nsIDOMSVGLength> dom_length;
+    mHeight->GetAnimVal(getter_AddRefs(dom_length));
+    nsCOMPtr<nsISVGLength> length = do_QueryInterface(dom_length);
+    NS_ASSERTION(length, "svg length missing interface");
+    
+    length->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextY()));
+  }
+  
+  // rx:
+  {
+    nsCOMPtr<nsIDOMSVGLength> dom_length;
+    mRx->GetAnimVal(getter_AddRefs(dom_length));
+    nsCOMPtr<nsISVGLength> length = do_QueryInterface(dom_length);
+    NS_ASSERTION(length, "svg length missing interface");
+    
+    length->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextX()));
+  }
 
-  // Conversion factor used for ellipse to bezier conversion.
-  // Gives radial error of 0.0273% in circular case.
-  // See comp.graphics.algorithms FAQ 4.04
-  const float magic = 4*(sqrt(2.)-1)/3;
-  const float magic_x = magic*rx;
-  const float magic_y = magic*ry;
+  // ry:
+  {
+    nsCOMPtr<nsIDOMSVGLength> dom_length;
+    mRy->GetAnimVal(getter_AddRefs(dom_length));
+    nsCOMPtr<nsISVGLength> length = do_QueryInterface(dom_length);
+    NS_ASSERTION(length, "svg length missing interface");
 
-  cairo_move_to(aCtx, x+rx, y);
-  cairo_line_to(aCtx, x+width-rx, y);
-  cairo_curve_to(aCtx,
-                 x+width-rx + magic_x, y,
-                 x+width, y+ry-magic_y,
-                 x+width, y+ry);
-  cairo_line_to(aCtx, x+width, y+height-ry);
-  cairo_curve_to(aCtx,
-                 x+width, y+height-ry + magic_y,
-                 x+width-rx + magic_x, y+height,
-                 x+width-rx, y+height);
-  cairo_line_to(aCtx, x+rx, y+height);
-  cairo_curve_to(aCtx,
-                 x+rx - magic_x, y+height,
-                 x, y+height-ry + magic_y,
-                 x, y+height-ry);
-  cairo_line_to(aCtx, x, y+ry);
-  cairo_curve_to(aCtx,
-                 x, y+ry - magic_y,
-                 x+rx - magic_x, y,
-                 x+rx, y);
-  cairo_close_path(aCtx);
-}
+    length->SetContext(nsRefPtr<nsSVGCoordCtx>(ctx->GetContextY()));
+  }
+
+  // XXX call baseclass version to recurse into children?
+}  

@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Mark Banner <mark@standard8.demon.co.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -49,8 +48,6 @@
 #include "nsAddrDatabase.h"
 #include "nsIAddrBookSession.h"
 #include "nsIAddressBook.h"
-#include "nsIAbMDBDirectory.h"
-#include "nsILocalFile.h"
 
 nsAbMDBCardProperty::nsAbMDBCardProperty(void)
 {
@@ -127,6 +124,190 @@ NS_IMETHODIMP nsAbMDBCardProperty::GetStringAttribute(const char *name, PRUnicha
     return NS_ERROR_UNEXPECTED;
 
   return mCardDatabase->GetCardValue(this, name, value);
+}
+
+NS_IMETHODIMP nsAbMDBCardProperty::CopyCard(nsIAbMDBCard* srcCardDB)
+{
+	nsresult rv = NS_OK;
+	nsCOMPtr<nsIAbCard> srcCard(do_QueryInterface(srcCardDB, &rv));
+	NS_ENSURE_SUCCESS(rv, rv);
+
+	nsXPIDLString str;
+	srcCard->GetFirstName(getter_Copies(str));
+	SetFirstName(str);
+
+	srcCard->GetLastName(getter_Copies(str));
+	SetLastName(str);
+	srcCard->GetPhoneticFirstName(getter_Copies(str));
+	SetPhoneticFirstName(str);
+	srcCard->GetPhoneticLastName(getter_Copies(str));
+	SetPhoneticLastName(str);
+	srcCard->GetDisplayName(getter_Copies(str));
+	SetDisplayName(str);
+	srcCard->GetNickName(getter_Copies(str));
+	SetNickName(str);
+	srcCard->GetPrimaryEmail(getter_Copies(str));
+	SetPrimaryEmail(str);
+	srcCard->GetSecondEmail(getter_Copies(str));
+	SetSecondEmail(str);
+  srcCard->GetDefaultEmail(getter_Copies(str));
+  SetDefaultEmail(str);
+  srcCard->GetCardType(getter_Copies(str));
+  SetCardType(str);
+
+  PRUint32 format = nsIAbPreferMailFormat::unknown;
+  srcCard->GetPreferMailFormat(&format);
+  SetPreferMailFormat(format);
+
+  PRUint32 popularityIndex = 0;
+  srcCard->GetPopularityIndex(&popularityIndex);
+  SetPopularityIndex(popularityIndex);
+
+	srcCard->GetWorkPhone(getter_Copies(str));
+	SetWorkPhone(str);
+	srcCard->GetHomePhone(getter_Copies(str));
+	SetHomePhone(str);
+	srcCard->GetFaxNumber(getter_Copies(str));
+	SetFaxNumber(str);
+	srcCard->GetPagerNumber(getter_Copies(str));
+	SetPagerNumber(str);
+	srcCard->GetCellularNumber(getter_Copies(str));
+	SetCellularNumber(str);
+  srcCard->GetWorkPhoneType(getter_Copies(str));
+  SetWorkPhoneType(str);
+  srcCard->GetHomePhoneType(getter_Copies(str));
+  SetHomePhoneType(str);
+  srcCard->GetFaxNumberType(getter_Copies(str));
+  SetFaxNumberType(str);
+  srcCard->GetPagerNumberType(getter_Copies(str));
+  SetPagerNumberType(str);
+  srcCard->GetCellularNumberType(getter_Copies(str));
+  SetCellularNumberType(str);
+	srcCard->GetHomeAddress(getter_Copies(str));
+	SetHomeAddress(str);
+	srcCard->GetHomeAddress2(getter_Copies(str));
+	SetHomeAddress2(str);
+	srcCard->GetHomeCity(getter_Copies(str));
+	SetHomeCity(str);
+	srcCard->GetHomeState(getter_Copies(str));
+	SetHomeState(str);
+	srcCard->GetHomeZipCode(getter_Copies(str));
+	SetHomeZipCode(str);
+	srcCard->GetHomeCountry(getter_Copies(str));
+	SetHomeCountry(str);
+	srcCard->GetWorkAddress(getter_Copies(str));
+	SetWorkAddress(str);
+	srcCard->GetWorkAddress2(getter_Copies(str));
+	SetWorkAddress2(str);
+	srcCard->GetWorkCity(getter_Copies(str));
+	SetWorkCity(str);
+	srcCard->GetWorkState(getter_Copies(str));
+	SetWorkState(str);
+	srcCard->GetWorkZipCode(getter_Copies(str));
+	SetWorkZipCode(str);
+	srcCard->GetWorkCountry(getter_Copies(str));
+	SetWorkCountry(str);
+	srcCard->GetJobTitle(getter_Copies(str));
+	SetJobTitle(str);
+	srcCard->GetDepartment(getter_Copies(str));
+	SetDepartment(str);
+	srcCard->GetCompany(getter_Copies(str));
+	SetCompany(str);
+  srcCard->GetAimScreenName(getter_Copies(str));
+  SetAimScreenName(str);
+
+  srcCard->GetAnniversaryYear(getter_Copies(str));
+  SetAnniversaryYear(str);
+  srcCard->GetAnniversaryMonth(getter_Copies(str));
+  SetAnniversaryMonth(str);
+  srcCard->GetAnniversaryDay(getter_Copies(str));
+  SetAnniversaryDay(str);
+  srcCard->GetSpouseName(getter_Copies(str));
+  SetSpouseName(str);
+  srcCard->GetFamilyName(getter_Copies(str));
+  SetFamilyName(str);
+  srcCard->GetDefaultAddress(getter_Copies(str));
+  SetDefaultAddress(str);
+  srcCard->GetCategory(getter_Copies(str));
+  SetCategory(str);
+
+	srcCard->GetWebPage1(getter_Copies(str));
+	SetWebPage1(str);
+	srcCard->GetWebPage2(getter_Copies(str));
+	SetWebPage2(str);
+	srcCard->GetBirthYear(getter_Copies(str));
+	SetBirthYear(str);
+	srcCard->GetBirthMonth(getter_Copies(str));
+	SetBirthMonth(str);
+	srcCard->GetBirthDay(getter_Copies(str));
+	SetBirthDay(str);
+	srcCard->GetCustom1(getter_Copies(str));
+	SetCustom1(str);
+	srcCard->GetCustom2(getter_Copies(str));
+	SetCustom2(str);
+	srcCard->GetCustom3(getter_Copies(str));
+	SetCustom3(str);
+	srcCard->GetCustom4(getter_Copies(str));
+	SetCustom4(str);
+	srcCard->GetNotes(getter_Copies(str));
+	SetNotes(str);
+
+	PRUint32 tableID, rowID;
+	srcCardDB->GetDbTableID(&tableID);
+	SetDbTableID(tableID);
+	srcCardDB->GetDbRowID(&rowID);
+	SetDbRowID(rowID);
+
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsAbMDBCardProperty::EditCardToDatabase(const char *uri)
+{
+	if (!mCardDatabase && uri)
+		GetCardDatabase(uri);
+
+	if (mCardDatabase)
+	{
+		mCardDatabase->EditCard(this, PR_TRUE);
+    mCardDatabase->Commit(nsAddrDBCommitType::kLargeCommit);
+		return NS_OK;
+	}
+	else
+		return NS_ERROR_FAILURE;
+}
+
+// protected class methods
+
+nsresult nsAbMDBCardProperty::GetCardDatabase(const char *uri)
+{
+	nsresult rv = NS_OK;
+
+	nsCOMPtr<nsIAddrBookSession> abSession = 
+	         do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv); 
+	if (NS_SUCCEEDED(rv))
+	{
+		nsCOMPtr<nsILocalFile> dbPath;
+		rv = abSession->GetUserProfileDirectory(getter_AddRefs(dbPath));
+		NS_ENSURE_SUCCESS(rv, rv);
+
+
+		rv = dbPath->AppendNative(nsDependentCString(&(uri[kMDBDirectoryRootLen])));
+		NS_ENSURE_SUCCESS(rv, rv);
+		
+		PRBool fileExists;
+		rv = dbPath->Exists(&fileExists);
+		if (NS_SUCCEEDED(rv) && fileExists)
+		{
+			nsCOMPtr<nsIAddrDatabase> addrDBFactory = 
+			         do_GetService(NS_ADDRDATABASE_CONTRACTID, &rv);
+
+			if (NS_SUCCEEDED(rv) && addrDBFactory)
+				rv = addrDBFactory->Open(dbPath, PR_TRUE, PR_TRUE, getter_AddRefs(mCardDatabase));
+		}
+		else
+			rv = NS_ERROR_FAILURE;
+	}
+	return rv;
 }
 
 NS_IMETHODIMP nsAbMDBCardProperty::Equals(nsIAbCard *card, PRBool *result)

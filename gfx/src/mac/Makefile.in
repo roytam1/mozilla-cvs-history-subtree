@@ -69,6 +69,8 @@ REQUIRES	= xpcom \
 CPPSRCS = \
         nsATSUIUtils.cpp \
         nsDeviceContextMac.cpp \
+        nsDeviceContextSpecFactoryM.cpp \
+        nsDeviceContextSpecX.cpp \
         nsDrawingSurfaceMac.cpp \
         nsFontMetricsMac.cpp \
         nsGfxFactoryMac.cpp \
@@ -80,29 +82,30 @@ CPPSRCS = \
         nsUnicodeFontMappingMac.cpp \
         nsUnicodeMappingUtil.cpp \
         nsUnicodeRenderingToolkit.cpp \
+        nsScreenMac.cpp \
+        nsScreenManagerMac.cpp \
+        nsPrintOptionsX.cpp \
+        nsPrintSettingsX.cpp \
+        nsPrintSessionX.cpp \
         nsFontUtils.cpp \
+        nsNativeThemeMac.cpp \
         $(NULL)
 
-EXPORTS		= \
-		nsIImageMac.h \
-		nsIDrawingSurfaceMac.h \
-		nsGfxUtils.h \
-		nsCarbonHelpers.h \
-		nsRegionPool.h \
-		$(NULL)
-
 ifeq (cocoa,$(MOZ_WIDGET_TOOLKIT))
+CPPSRCS += nsQDFlushManager.cpp
 CMMSRCS = nsCocoaImageUtils.mm
 endif
+
+EXTRA_DSO_LIBS = mozutil_s gkgfx
+
+EXTRA_DEPS = $(DIST)/lib/$(LIB_PREFIX)mozutil_s.$(LIB_SUFFIX)
 
 EXTRA_DSO_LDOPTS = \
 	$(LIBS_DIR) \
 	$(EXTRA_DSO_LIBS) \
 	$(MOZ_COMPONENT_LIBS) \
 	$(MOZ_UNICHARUTIL_LIBS) \
-	../shared/$(LIB_PREFIX)gfxshared_s.$(LIB_SUFFIX) \
-	$(call EXPAND_LIBNAME_PATH,gkgfx,$(DEPTH)/..) \
-	$(DEPTH)/modules/libutil/src/$(LIB_PREFIX)mozutil_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)gfxshared_s.$(LIB_SUFFIX) \
 	$(TK_LIBS) \
 	$(NULL)
 
@@ -113,10 +116,10 @@ LOCAL_INCLUDES	= \
 
 include $(topsrcdir)/config/rules.mk
 
-libs:: fontEncoding.properties 
+libs::	fontEncoding.properties
 	$(INSTALL) $^ $(DIST)/bin/res/fonts
- 
-install:: fontEncoding.properties
+
+install::	fontEncoding.properties
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/res/fonts
 
 CXXFLAGS    += $(TK_CFLAGS)
@@ -126,3 +129,4 @@ INCLUDES    += $(TK_CFLAGS) -I$(srcdir)/..
 ifeq (cocoa,$(MOZ_WIDGET_TOOLKIT))
 EXTRA_DSO_LDOPTS += -framework Cocoa
 endif
+

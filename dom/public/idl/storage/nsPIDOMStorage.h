@@ -53,7 +53,7 @@ class nsIURI;
 class nsPIDOMStorage : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_PIDOMSTORAGE_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_PIDOMSTORAGE_IID)
 
   virtual void Init(nsIURI* aURI, const nsAString &aDomain, PRBool aUseDB) = 0;
 
@@ -61,7 +61,5 @@ public:
 
   virtual nsTArray<nsString> *GetKeys() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsPIDOMStorage, NS_PIDOMSTORAGE_IID)
 
 #endif // __nsPIDOMStorage_h_

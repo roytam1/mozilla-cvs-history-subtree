@@ -143,7 +143,7 @@ var CommandUpdater = {
     else
       element.setAttribute("disabled", "true");
   },
-
+  
   /**
    * Performs the action associated with a specified command using the most
    * relevant controller.
@@ -243,8 +243,7 @@ function visitLink(aEvent) {
         win = win.opener;
     }
     win.open(uri.spec);
-  }
-  else
+  } else
     protocolSvc.loadUrl(uri);
 }
 

@@ -37,6 +37,7 @@
 
 #include "TestCommon.h"
 #include "nsNetUtil.h"
+#include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
@@ -45,11 +46,12 @@
 #include "prprf.h"
 #include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
+#include "nsTimer.h"
 #include "prlong.h"
 #include "plstr.h"
 #include "nsSupportsArray.h"
+#include "nsReadableUtils.h"
 #include "nsIComponentRegistrar.h"
-
 int getStrLine(const char *src, char *str, int ind, int max);
 nsresult auxLoad(char *uriBuf);
 //----------------------------------------------------------------------
@@ -63,6 +65,9 @@ nsresult auxLoad(char *uriBuf);
     } \
     PR_END_MACRO
 
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+static nsIEventQueue* gEventQ = nsnull;
+static PRBool gKeepRunning = PR_FALSE;
 static nsCString globalStream;
 //static char urlBuf[256];
 static nsCOMPtr<nsIURI> baseURI;
@@ -71,8 +76,6 @@ static nsCOMPtr<nsISupportsArray> uriList;
 //Temp, should remove:
 static int numStart=0;
 static int numFound=0;
-
-static PRInt32 gKeepRunning = 0;
 
 
 //--------writer fun----------------------
@@ -183,8 +186,7 @@ NS_IMETHODIMP
 MyListener::OnStopRequest(nsIRequest *req, nsISupports *ctxt, nsresult status)
 {
     //printf(">>> OnStopRequest status=%x\n", status);
-    if (--gKeepRunning == 0)
-      QuitPumpingEvents();
+    gKeepRunning--;
     return NS_OK;
 }
 
@@ -274,7 +276,7 @@ MyNotifications::OnProgress(nsIRequest *req, nsISupports *ctx,
 int getStrLine(const char *src, char *str, int ind, int max) {
   char c = src[ind];
   int i=0;
-  globalStream.Assign('\0');
+  globalStream.AssignLiteral("\0");
   while(c!='\n' && c!='\0' && i<max) {
     str[i] = src[ind];
     i++; ind++;
@@ -366,8 +368,19 @@ int main(int argc, char **argv)
 
         PRTime start, finish;
 
-        uriList = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv);
-        RETURN_IF_FAILED(rv, "do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID)");
+        rv = NS_NewISupportsArray(getter_AddRefs(uriList));
+        RETURN_IF_FAILED(rv, "NS_NewISupportsArray");
+
+        // Create the Event Queue for this thread...
+        nsCOMPtr<nsIEventQueueService> eqs =
+                 do_GetService(kEventQueueServiceCID, &rv);
+        RETURN_IF_FAILED(rv, "do_GetService(EventQueueService)");
+
+        rv = eqs->CreateMonitoredThreadEventQueue();
+        RETURN_IF_FAILED(rv, "CreateMonitoredThreadEventQueue");
+
+        rv = eqs->GetThreadEventQueue(NS_CURRENT_THREAD, &gEventQ);
+        RETURN_IF_FAILED(rv, "GetThreadEventQueue");
 
         printf("Loading necko ... \n");
         nsCOMPtr<nsIChannel> chan;
@@ -387,7 +400,9 @@ int main(int argc, char **argv)
         rv = chan->AsyncOpen(listener, nsnull);
         RETURN_IF_FAILED(rv, "AsyncOpen");
 
-        PumpEvents();
+        while (gKeepRunning) {
+            gEventQ->ProcessPendingEvents();
+        }
 
         finish = PR_Now();
         PRUint32 totalTime32;

@@ -34,6 +34,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+var gAddressBookBundle;
+
 function GetAbViewListener()
 {
   // the ab panel doesn't care if the total changes, or if the selection changes
@@ -146,6 +148,7 @@ function AbPanelOnComposerReOpen()
 function AbPanelLoad() 
 {
   InitCommonJS();
+  gAddressBookBundle = document.getElementById("bundle_addressBook");
 
   LoadPreviouslySelectedAB();
 
@@ -158,7 +161,7 @@ function AbPanelLoad()
     gAddressBookPanelAbListener,
     Components.interfaces.nsIAddrBookSession.directoryRemoved |
     Components.interfaces.nsIAddrBookSession.changed);
-
+  
   parent.document.getElementById("msgcomposeWindow").addEventListener('compose-window-close', AbPanelOnComposerClose, true);
   parent.document.getElementById("msgcomposeWindow").addEventListener('compose-window-reopen', AbPanelOnComposerReOpen, true);
   gSearchInput = document.getElementById("searchInput");
@@ -168,8 +171,6 @@ function AbPanelUnload()
 {
   var addrbookSession = Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
   addrbookSession.removeAddressBookListener(gAddressBookPanelAbListener);
-  parent.document.getElementById("msgcomposeWindow").removeEventListener('compose-window-close', AbPanelOnComposerClose, true);
-  parent.document.getElementById("msgcomposeWindow").removeEventListener('compose-window-reopen', AbPanelOnComposerReOpen, true);
 
   CloseAbView();
 }

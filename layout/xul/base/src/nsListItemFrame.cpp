@@ -41,8 +41,7 @@
 
 #include "nsCOMPtr.h"
 #include "nsINameSpaceManager.h" 
-#include "nsGkAtoms.h"
-#include "nsDisplayList.h"
+#include "nsXULAtoms.h"
 
 NS_IMETHODIMP_(nsrefcnt) 
 nsListItemFrame::AddRef(void)
@@ -59,11 +58,8 @@ nsListItemFrame::Release(void)
 NS_INTERFACE_MAP_BEGIN(nsListItemFrame)
 NS_INTERFACE_MAP_END_INHERITING(nsGridRowLeafFrame)
 
-nsListItemFrame::nsListItemFrame(nsIPresShell* aPresShell,
-                                 nsStyleContext* aContext,
-                                 PRBool aIsRoot,
-                                 nsIBoxLayout* aLayoutManager)
-  : nsGridRowLeafFrame(aPresShell, aContext, aIsRoot, aLayoutManager) 
+nsListItemFrame::nsListItemFrame(nsIPresShell* aPresShell, PRBool aIsRoot, nsIBoxLayout* aLayoutManager)
+  : nsGridRowLeafFrame(aPresShell, aIsRoot, aLayoutManager) 
 {
 }
 
@@ -71,37 +67,53 @@ nsListItemFrame::~nsListItemFrame()
 {
 }
 
-nsSize
-nsListItemFrame::GetPrefSize(nsBoxLayoutState& aState)
+nsresult
+nsListItemFrame::GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize)
 {
-  nsSize size = nsBoxFrame::GetPrefSize(aState);  
-  DISPLAY_PREF_SIZE(this, size);
+  nsresult rv = nsBoxFrame::GetPrefSize(aState, aSize);
+  if (NS_FAILED(rv)) return rv;
 
   // guarantee that our preferred height doesn't exceed the standard
   // listbox row height
-  size.height = PR_MAX(mRect.height, size.height);
-  return size;
+  aSize.height = PR_MAX(mRect.height, aSize.height);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
-nsListItemFrame::BuildDisplayListForChildren(nsDisplayListBuilder*   aBuilder,
-                                             const nsRect&           aDirtyRect,
-                                             const nsDisplayListSet& aLists)
+nsListItemFrame::GetFrameForPoint(const nsPoint& aPoint, 
+                                     nsFramePaintLayer aWhichLayer,
+                                     nsIFrame**     aFrame)
 {
-  if (aBuilder->IsForEventDelivery()) {
-    if (!mContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::allowevents,
-                               nsGkAtoms::_true, eCaseMatters))
-      return NS_OK;
+  nsAutoString value;
+  mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::allowevents, value);
+  if (value.EqualsLiteral("true")) {
+    return nsBoxFrame::GetFrameForPoint(aPoint, aWhichLayer, aFrame);
   }
-  
-  return nsGridRowLeafFrame::BuildDisplayListForChildren(aBuilder, aDirtyRect, aLists);
+  else if (mRect.Contains(aPoint)) {
+    if (GetStyleVisibility()->IsVisible()) {
+      *aFrame = this; // Capture all events so that we can perform selection and expand/collapse.
+      return NS_OK;
+    }
+  }
+  return NS_ERROR_FAILURE;
 }
 
 // Creation Routine ///////////////////////////////////////////////////////////////////////
 
-nsIFrame*
-NS_NewListItemFrame(nsIPresShell* aPresShell, nsStyleContext* aContext, PRBool aIsRoot, nsIBoxLayout* aLayoutManager)
+nsresult
+NS_NewListItemFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRBool aIsRoot, 
+                        nsIBoxLayout* aLayoutManager)
 {
-  return new (aPresShell) nsListItemFrame(aPresShell, aContext, aIsRoot, aLayoutManager);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsListItemFrame* it = new (aPresShell) nsListItemFrame(aPresShell, aIsRoot, aLayoutManager);
+  if (!it)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  *aNewFrame = it;
+  return NS_OK;
+  
 } // NS_NewListItemFrame
 

@@ -72,15 +72,14 @@ public:
 protected:
 
   // Internal helper functions
-  nsresult GetScrollInfo(nsIScrollableView** aScrollableView);
+  nsresult GetScrollInfo(nsIScrollableView** aScrollableView, float* aP2T,
+                         float* aT2P);
   nsPoint GetClientPoint();
   nsPoint GetScreenPoint();
-  nsPoint GetLayerPoint();
   
 protected:
   nsCOMPtr<nsIDOMAbstractView> mView;
   PRInt32 mDetail;
-  nsPoint mClientPoint;
 };
 
 #define NS_FORWARD_TO_NSDOMUIEVENT \

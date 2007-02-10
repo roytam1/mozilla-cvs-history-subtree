@@ -79,7 +79,6 @@
               <xul:menuitem class="open-engine-manager"
                             anonid="open-engine-manager"
                             label="&cmd_engineManager.label;"
-                            oncommand="openManager(event);"
                             accesskey="&cmd_engineManager.accesskey;"/>
             </xul:menupopup>
           </xul:button>
@@ -118,13 +117,10 @@
           <xul:toolbarbutton class="search-go-button"
                              anonid="search-go-button"
                              chromedir="&locale.dir;"
-                             oncommand="document.getBindingParent(this).handleSearchCommand(event);"
-                             onclick="checkForMiddleClick(this, event);"
                              label="&searchEndCap.label;" />
         </xul:stack>
       </xul:hbox>
     </content>
-
     <implementation implements="nsIObserver">
 
       <constructor><![CDATA[
@@ -163,6 +159,8 @@
           "anonid", "searchbar-textbox");</field>
       <field name="_popup">document.getAnonymousElementByAttribute(this, 
           "anonid", "searchbar-popup");</field>
+      <field name="_engineButton">document.getAnonymousElementByAttribute(
+          this, "anonid", "searchbar-engine-button");</field>
       <field name="_ss">null</field>
       <field name="_engines">null</field>
 
@@ -346,9 +344,6 @@
           if (this.hasAttribute("empty")) 
             this._textbox._displayCurrentEngine();
 
-          var name = this.currentEngine.name;
-          var text = this._stringBundle.getFormattedString("searchtip", [name]);
-          this.setAttribute("tooltiptext", text);
         ]]></body>
       </method>
 
@@ -397,7 +392,6 @@
               menuitem = document.createElementNS(kXULNS, "menuitem");
               menuitem.setAttribute("class", "menuitem-iconic addengine-item");
               menuitem.setAttribute("label", labelStr);
-              menuitem.setAttribute("tooltiptext", engineInfo.uri);
               menuitem.setAttribute("uri", engineInfo.uri);
               if (engineInfo.icon)
                 menuitem.setAttribute("src", engineInfo.icon);
@@ -428,17 +422,14 @@
           this._engines = this.searchService.getVisibleEngines({ });
           for (var i = this._engines.length - 1; i >= 0; --i) {
             var menuitem = document.createElementNS(kXULNS, "menuitem");
-            var name = this._engines[i].name;
-            menuitem.setAttribute("label", name);
-            menuitem.setAttribute("id", name);
+            menuitem.setAttribute("label", this._engines[i].name);
+            menuitem.setAttribute("id", this._engines[i].name);
             menuitem.setAttribute("class", "menuitem-iconic searchbar-engine-menuitem");
             // Since this menu is rebuilt by the observer method whenever a new
             // engine is selected, the "selected" attribute does not need to be
             // explicitly cleared anywhere.
             if (this._engines[i] == this.currentEngine)
               menuitem.setAttribute("selected", "true");
-            var tooltip = this._stringBundle.getFormattedString("searchtip", [name]);
-            menuitem.setAttribute("tooltiptext", tooltip);
             if (this._engines[i].iconURI)
               menuitem.setAttribute("src", this._engines[i].iconURI.spec);
             popup.insertBefore(menuitem, popup.firstChild);
@@ -463,6 +454,33 @@
                          "_blank", "chrome,dialog,modal,centerscreen");
             }, 0);
           }
+        ]]></body>
+      </method>
+
+      <!-- Because this may be called from a command handler, where event.target is
+      not the correct target for the command, it takes a target rather than an
+      event as a parameter.  Note that because of the engine-list maintenance
+      performed in this function, it should not be used in a way that leaves the
+      menu open after this function has been called (or if it is, be sure to call
+      rebuildPopupDynamic afterward).
+      -->
+      <method name="onEnginePopupCommand">
+        <parameter name="aTarget"/>
+        <body><![CDATA[
+          if (aTarget.getAttribute("class").indexOf("addengine-item") != -1) {
+            var searchService =
+                Components.classes["@mozilla.org/browser/search-service;1"]
+                          .getService(Components.interfaces.nsIBrowserSearchService);
+            // We only detect OpenSearch files
+            var type = Components.interfaces.nsISearchEngine.DATA_XML;
+            searchService.addEngine(aTarget.getAttribute("uri"), type,
+                                    aTarget.getAttribute("src"), false);
+          }
+          else if (aTarget.engine)
+            this.currentEngine = aTarget.engine;
+
+          this.focus();
+          this.select();
         ]]></body>
       </method>
 
@@ -497,52 +515,73 @@
                                           textValue);
           }
 
-          var where = "current";      
-          if (aEvent && aEvent.originalTarget.getAttribute("anonid") == "search-go-button")
-            where = whereToOpenLink(aEvent, false, true);
-          else {
+          // Always open in a new tab on a middle-click; otherwise examine the
+          // preference and the alt key.  If the user chose an autocomplete
+          // entry with the mouse, aEvent will be null, so treat it as no alt key.
+          var newTab = (aEvent && aEvent.button == 1);
+          if (!newTab) {
             var newTabPref = textBox._prefBranch.getBoolPref("browser.search.openintab");
-            if ((aEvent && aEvent.altKey) ^ newTabPref)
-              where = "tab";
+            newTab = ((aEvent && aEvent.altKey) ^ newTabPref);
           }
-          this.doSearch(textValue, where);
+          this.doSearch(textValue, newTab);
         ]]></body>
       </method>
 
       <method name="doSearch">
         <parameter name="aData"/>
-        <parameter name="aWhere"/>
+        <parameter name="aInNewTab"/>
         <body><![CDATA[
+          var postData = null;
+
           // null parameter below specifies HTML response for search
           var submission = this.currentEngine.getSubmission(aData, null);
-          openUILinkIn(submission.uri.spec, aWhere, null, submission.postData);
+          if (submission) {
+            var url = submission.uri.spec;
+            postData = submission.postData;
+          }
+
+          if (aInNewTab) {
+            content.focus();
+            getBrowser().loadOneTab(url, null, null, postData, false, false);
+            if (gURLBar)
+              gURLBar.value = url;
+          }
+          else
+            loadURI(url, null, postData, false);
+          content.focus();
         ]]></body>
       </method>
 
     </implementation>
 
     <handlers>
-      <handler event="command"><![CDATA[
+      <handler event="click"><![CDATA[
         const target = event.originalTarget;
-        if (target.getAttribute("class").indexOf("addengine-item") != -1) {
-          var searchService =
-            Components.classes["@mozilla.org/browser/search-service;1"]
-                      .getService(Components.interfaces.nsIBrowserSearchService);
-          // We only detect OpenSearch files
-          var type = Components.interfaces.nsISearchEngine.DATA_XML;
-          searchService.addEngine(target.getAttribute("uri"), type,
-                                  target.getAttribute("src"), false);
-        }
-        else if (target.engine)
-          this.currentEngine = target.engine;
-        else
-          return;
-
-        this.focus();
-        this.select();
+        var anonid = target.getAttribute("anonid");
+        /* We can't use checkForMiddleClick() from utilityOverlay.js here
+           because the button is using a command handler rather than an oncommand
+           attribute.  The middle-click behavior itself (i.e., opening the search 
+           in a new tab) is handled in handleSearchCommand().
+        */
+        if (anonid == "search-go-button" && event.button == 1)
+          this.handleSearchCommand(event);
       ]]></handler>
 
-      <handler event="popupshowing" action="this.rebuildPopupDynamic();"/>
+      <handler event="command"><![CDATA[
+        const target = event.originalTarget;
+        var anonid = target.getAttribute("anonid");
+        if (anonid == "search-go-button")
+          this.handleSearchCommand(event);
+        else if (anonid == "open-engine-manager")
+          this.openManager(event);
+        else if (target.getAttribute("class").indexOf("addengine-item") != -1 ||
+                 target.engine)
+          this.onEnginePopupCommand(target);
+      ]]></handler>
+
+      <handler event="popupshowing" action="this.rebuildPopupDynamic();
+                                            this._engineButton.setAttribute('open', true);"/>
+      <handler event="popuphiding" action="this._engineButton.removeAttribute('open');"/>
     </handlers>
   </binding>
 
@@ -832,4 +871,5 @@
       <children/>
     </content>
   </binding>
+
 </bindings>

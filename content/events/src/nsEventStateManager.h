@@ -49,10 +49,10 @@
 #include "nsCOMPtr.h"
 #include "nsIDocument.h"
 #include "nsCOMArray.h"
-#include "nsIFrame.h"
 
 class nsIScrollableView;
 class nsIPresShell;
+class nsIFrameSelection;
 class nsIDocShell;
 class nsIDocShellTreeNode;
 class nsIDocShellTreeItem;
@@ -107,21 +107,24 @@ public:
                              nsEventStatus* aStatus,
                              nsIView* aView);
 
-  NS_IMETHOD NotifyDestroyPresContext(nsPresContext* aPresContext);
   NS_IMETHOD SetPresContext(nsPresContext* aPresContext);
   NS_IMETHOD ClearFrameRefs(nsIFrame* aFrame);
 
   NS_IMETHOD GetEventTarget(nsIFrame **aFrame);
   NS_IMETHOD GetEventTargetContent(nsEvent* aEvent, nsIContent** aContent);
+  NS_IMETHOD GetEventRelatedContent(nsIContent** aContent);
 
   NS_IMETHOD GetContentState(nsIContent *aContent, PRInt32& aState);
-  virtual PRBool SetContentState(nsIContent *aContent, PRInt32 aState);
+  NS_IMETHOD SetContentState(nsIContent *aContent, PRInt32 aState);
   NS_IMETHOD GetFocusedContent(nsIContent **aContent);
   NS_IMETHOD SetFocusedContent(nsIContent* aContent);
   NS_IMETHOD GetLastFocusedContent(nsIContent **aContent);
   NS_IMETHOD GetFocusedFrame(nsIFrame **aFrame);
   NS_IMETHOD ContentRemoved(nsIContent* aContent);
   NS_IMETHOD EventStatusOK(nsGUIEvent* aEvent, PRBool *aOK);
+
+  // This is an experiement and may be temporary
+  NS_IMETHOD ConsumeFocusEvents(PRBool aDoConsume) { mConsumeFocusEvents = aDoConsume; return NS_OK; }
 
   // Access Key Registration
   NS_IMETHOD RegisterAccessKey(nsIContent* aContent, PRUint32 aKey);
@@ -130,6 +133,9 @@ public:
   NS_IMETHOD SetCursor(PRInt32 aCursor, imgIContainer* aContainer,
                        PRBool aHaveHotspot, float aHotspotX, float aHotspotY,
                        nsIWidget* aWidget, PRBool aLockCursor);
+
+  //Method for centralized distribution of new DOM events
+  NS_IMETHOD DispatchNewEvent(nsISupports* aTarget, nsIDOMEvent* aEvent, PRBool *aDefaultActionEnabled);
 
   NS_IMETHOD ShiftFocus(PRBool aForward, nsIContent* aStart=nsnull);
 
@@ -287,13 +293,22 @@ protected:
   nsresult GetDocSelectionLocation(nsIContent **start, nsIContent **end, 
                                    nsIFrame **startFrame, PRUint32 *startOffset);
 
+  void GetSelection ( nsIFrame* inFrame, nsPresContext* inPresContext, nsIFrameSelection** outSelection ) ;
+
+  // To be called before and after you fire an event, to update booleans and
+  // such
+  void BeforeDispatchEvent() { ++mDOMEventLevel; }
+  void AfterDispatchEvent();
+
   PRInt32     mLockCursor;
 
-  nsWeakFrame mCurrentTarget;
+  //Any frames here must be checked for validity in ClearFrameRefs
+  nsIFrame* mCurrentTarget;
   nsCOMPtr<nsIContent> mCurrentTargetContent;
-  nsWeakFrame mLastMouseOverFrame;
+  nsCOMPtr<nsIContent> mCurrentRelatedContent;
+  nsIFrame* mLastMouseOverFrame;
   nsCOMPtr<nsIContent> mLastMouseOverElement;
-  nsWeakFrame mLastDragOverFrame;
+  nsIFrame* mLastDragOverFrame;
 
   // member variables for the d&d gesture state machine
   nsPoint mGestureDownPoint; // screen coordinates
@@ -319,7 +334,7 @@ protected:
   nsCOMPtr<nsIContent> mURLTargetContent;
   nsCOMPtr<nsIContent> mCurrentFocus;
   nsCOMPtr<nsIContent> mLastFocus;
-  nsWeakFrame mCurrentFocusFrame;
+  nsIFrame* mCurrentFocusFrame;
   PRInt32 mCurrentTabIndex;
   EFocusedWithType mLastFocusedWith;
 
@@ -346,15 +361,25 @@ protected:
   PRUint32 mMClickCount;
   PRUint32 mRClickCount;
 
+  PRPackedBool mConsumeFocusEvents;
+
   PRPackedBool mNormalLMouseEventInProcess;
 
   PRPackedBool m_haveShutdown;
+
+  // To inform people that dispatched events that frames have been cleared and
+  // they need to drop frame refs
+  PRPackedBool mClearedFrameRefsDuringEvent;
 
   // So we don't have to keep checking accessibility.browsewithcaret pref
   PRPackedBool mBrowseWithCaret;
 
   // Recursion guard for tabbing
   PRPackedBool mTabbedThroughDocument;
+
+  // The number of events we are currently nested in (currently just applies to
+  // those handlers that care about clearing frame refs)
+  PRInt32 mDOMEventLevel;
 
   //Hashtable for accesskey support
   nsSupportsHashtable *mAccessKeys;

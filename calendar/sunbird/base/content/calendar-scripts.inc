@@ -62,6 +62,9 @@
   <!-- NEEDED FOR IMPORT / EXPORT SUPPORT -->
   <script type="application/x-javascript" src="chrome://calendar/content/import-export.js"/>
 
+  <!-- NEEDED FOR MAIL SUPPORT -->
+  <script type="application/x-javascript" src="chrome://calendar/content/calendarMail.js"/>
+
   <!-- NEEDED FOR PUBLICATION SUPPORT -->
   <script type="application/x-javascript" src="chrome://calendar/content/publish.js"/>
 
@@ -73,7 +76,6 @@
   <script type="application/x-javascript" src="chrome://calendar/content/unifinder.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/unifinderToDo.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calendar-views.js"/>
-  <script type="application/x-javascript" src="chrome://calendar/content/migration.js"/>
 
   <!-- NEEDED FOR APPLICATION SUPPORT -->
   <script type="application/x-javascript" src="chrome://calendar/content/applicationUtil.js"/>

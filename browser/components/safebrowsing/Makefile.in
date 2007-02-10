@@ -49,12 +49,13 @@ ifdef ENABLE_TESTS
 DIRS     += tests
 endif
 
-ifneq (,$(BUILD_OFFICIAL)$(MOZILLA_OFFICIAL))
+ifneq ($(origin BUILD_OFFICIAL)_$(origin MOZILLA_OFFICIAL),undefined_undefined)
 DEFINES += -DOFFICIAL_BUILD=1
 endif
 
 # EXTRA_COMPONENTS installs components written in JS to dist/bin/components
 EXTRA_PP_COMPONENTS = \
+         content/globalstore.js \
          src/nsSafebrowsingApplication.js \
          $(NULL)
 

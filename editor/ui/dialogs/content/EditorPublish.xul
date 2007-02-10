@@ -83,23 +83,19 @@
                 style="min-width:18em; max-width:18em;" crop="right"
                 oncommand="SelectSiteList();"/>
               <hbox>
-                <button label="&newSiteButton.label;"
-                        accesskey="&newSiteButton.accesskey;"
-                        oncommand="AddNewSite();"/>
+                <button label="&newSiteButton.label;" oncommand="AddNewSite();"/>
                 <spacer flex="1"/>
               </hbox>
             </row>
             <spacer class="spacer"/>
             <row align="center">
-              <label value="&pageTitle.label;" accesskey="&pageTitle.accesskey;"
-                     control="PageTitleInput"/>
+              <label value="&pageTitle.label;"/>
               <textbox id="PageTitleInput" 
                 tooltiptext="&pageTitle.tooltip;" class="minWidth15"/>
               <label value="&pageTitleExample.label;"/>
             </row>
             <row align="center">
-              <label value="&filename.label;" accesskey="&filename.accesskey;"
-                     control="FilenameInput"/>
+              <label value="&filename.label;"/>
               <textbox id="FilenameInput"
                 tooltiptext="&filename.tooltip;" class="minWidth15 uri-element"/>
               <label value="&filenameExample.label;"/>
@@ -111,31 +107,28 @@
         <hbox align="center">
           <!-- Contents filled in at runtime -->
           <menulist id="DocDirList" class="minWidth20 uri-element" editable="true"  flex="1"
-                    tooltiptext="&docDirList.tooltip;" oninput="onInputSettings();"/>
+                    oninput="onInputSettings();"/>
+<!-- 
+          <button label="&chooseDirButton.label;" oncommand="ChooseDir(gDialog.DocDirList);" disabled="true"/>
+-->
         </hbox>
         <spacer class="spacer"/>
         <groupbox>
           <caption>
             <checkbox id="OtherDirCheckbox" label="&publishImgCheckbox.label;" 
-                      accesskey="&publishImgCheckbox.accesskey;"
-                      tooltiptext="&publishImgCheckbox.tooltip;"
-                      oncommand="doEnabling();"/>
+              tooltiptext="&publishImgCheckbox.tooltip;" oncommand="doEnabling();"/>
           </caption>
           <vbox>
           <radiogroup id="OtherDirRadiogroup">
             <hbox>
               <spacer class="checkbox-spacer"/>
               <radio id="SameLocationRadio" label="&sameLocationRadio.label;"
-                     accesskey="&sameLocationRadio.accesskey;"
-                     tooltiptext="&sameLocationRadio.tooltip;"
-                     oncommand="doEnabling();"/>
+                tooltiptext="&sameLocationRadio.tooltip;" oncommand="doEnabling();"/>
             </hbox>
             <hbox>
               <spacer class="checkbox-spacer"/>
               <radio id="UseSubdirRadio" label="&useSubdirRadio.label;"
-                     accesskey="&useSubdirRadio.accesskey;"
-                     tooltiptext="&useSubdirRadio.tooltip;"
-                     oncommand="doEnabling();"/>
+                tooltiptext="&useSubdir.tooltip;" oncommand="doEnabling();"/>
             </hbox>
           </radiogroup>
           </vbox>
@@ -143,9 +136,11 @@
             <spacer class="checkbox-spacer"/>
             <spacer class="radio-spacer"/>
             <!-- Contents filled in at runtime -->
-            <menulist id="OtherDirList" class="minWidth20 uri-element"
-                      editable="true" flex="1" tooltiptext="&otherDirList.tooltip;"
-                      oninput="onInputSettings();"/>
+            <menulist id="OtherDirList" class="minWidth20 uri-element" editable="true" flex="1"
+              tooltiptext="&useSubdir.tooltip;" oninput="onInputSettings();"/>
+<!-- 
+            <button label="&chooseDirButton.label;" oncommand="ChooseDir(gDialog.OtherDirList);" disabled="true"/>
+-->
           </hbox>
         </groupbox>
         <spacer flex="1"/>

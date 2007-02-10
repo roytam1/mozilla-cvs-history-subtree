@@ -311,8 +311,6 @@ static const unsigned int kMaxTitleLength = 50;
       [newItem setTarget:self];
       [newItem setRepresentedObject:curChild];
       [self addItem:newItem];
-
-      [self addCommandKeyAlternatesForMenuItem:newItem];
     }
     else if ([curChild isKindOfClass:[HistoryCategoryItem class]] && ([curChild numberOfChildren] > 0))
     {
@@ -341,9 +339,6 @@ static const unsigned int kMaxTitleLength = 50;
           [todayMenuItem setTarget:self];
           [todayMenuItem setRepresentedObject:curTodayItem];
           [self addItem:todayMenuItem];
-
-          [self addCommandKeyAlternatesForMenuItem:todayMenuItem];
-
           separatorPending = YES;
         }
         
@@ -422,21 +417,6 @@ static const unsigned int kMaxTitleLength = 50;
   [self rebuildHistoryItems];
 }
 
-- (BOOL)validateMenuItem:(NSMenuItem*)aMenuItem
-{
-  BrowserWindowController* browserController = [(MainController *)[NSApp delegate] getMainWindowBrowserController];
-  SEL action = [aMenuItem action];
-
-  // disable history if a sheet is up
-  if (browserController && [[browserController window] attachedSheet] &&
-      (action == @selector(openHistoryItem:)))
-  {
-    return NO;
-  }
-
-  return YES;
-}
-
 - (void)openHistoryItem:(id)sender
 {
   id repObject = [sender representedObject];
@@ -448,9 +428,9 @@ static const unsigned int kMaxTitleLength = 50;
     BrowserWindowController* bwc = [(MainController *)[NSApp delegate] getMainWindowBrowserController];
     if (bwc)
     {
-      if ([sender keyEquivalentModifierMask] & NSCommandKeyMask)
+      if ([[NSApp currentEvent] modifierFlags] & NSCommandKeyMask)
       {
-        BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:sender];
+        BOOL backgroundLoad = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
         if ([[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL])
           [bwc openNewTabWithURL:itemURL referrer:nil loadInBackground:backgroundLoad allowPopups:NO setJumpback:NO];
         else

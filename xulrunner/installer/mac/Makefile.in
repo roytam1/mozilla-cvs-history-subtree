@@ -69,6 +69,11 @@ _BINPATH = /$(_APPNAME)/Versions/Current
 
 include $(topsrcdir)/toolkit/mozapps/installer/packager.mk
 
+BINARY_DIR = $(DIST)/package-stage/XUL.framework/Versions/$(MOZILLA_VERSION)
+
+SOFTOKN       = $(BINARY_DIR)/$(DLL_PREFIX)softokn3$(DLL_SUFFIX)
+FREEBL        = $(BINARY_DIR)/$(DLL_PREFIX)freebl3$(DLL_SUFFIX)
+
 _ABS_OBJDIR := $(shell pwd)
 _ABS_DIST := $(shell cd $(DIST) && pwd)
 
@@ -90,8 +95,6 @@ libs:: Info.plist Description.plist
 	mkdir $(DIST)/$(STAGEPATH)xulrunner-pkg
 	chmod -R a+rX,u+w,go-w,-s,-t $(DIST)/$(STAGEPATH)$(MOZ_PKG_APPNAME)
 # For some unknown reason, PackageMaker requires absolute paths to everything.
-# For other poor reasons, PackageMaker returns an exit code of "1" if the
-# version string has any letters in it (e.g. 1.9a1).
 	unset NEXT_ROOT; \
 	$(CHOWN_ROOT) $(DIST)/$(STAGEPATH)$(MOZ_PKG_APPNAME) && \
 	  /Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/PackageMaker -build -v \

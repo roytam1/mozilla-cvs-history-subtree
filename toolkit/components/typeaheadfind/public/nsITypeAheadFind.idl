@@ -51,7 +51,7 @@ interface nsIDocShell;
 
 /****************************** nsTypeAheadFind ******************************/
 
-[scriptable, uuid(0749a445-19d3-4eb9-9d66-78eca8c6f604)]
+[scriptable, uuid(376da416-e6b3-4bac-98f3-6aa408742751)]
 interface nsITypeAheadFind : nsISupports
 {
   /****************************** Initializer ******************************/
@@ -65,11 +65,15 @@ interface nsITypeAheadFind : nsISupports
   /***************************** Core functions ****************************/
 
   /* Find aSearchString in page.  If aLinksOnly is true, only search the page's
-   * hyperlinks for the string. */
+   * hyperlinks for the string.  aHasFocus will be true if the "Find" textfield
+   * has focus. */
   unsigned short find(in AString aSearchString, in boolean aLinksOnly);
 
-  /* Find another match in the page. */
-  unsigned short findAgain(in boolean findBackwards, in boolean aLinksOnly);
+  /* Find next match in the page. */
+  unsigned short findNext();
+
+  /* Find previous match in the page. */
+  unsigned short findPrevious();
 
 
   /**************************** Helper functions ***************************/
@@ -78,25 +82,15 @@ interface nsITypeAheadFind : nsISupports
    * nsITypeAheadFind object to search different tabs. */
   void setDocShell(in nsIDocShell aDocShell);
 
-  /* Change the look of the the "found match" selection to aToggle, and repaint
-   * the selection. */
-  void setSelectionModeAndRepaint(in short toggle);
-
-  /* Collapse the "found match" selection to its start.  Because not all
-   * matches are owned by the same selection controller, this doesn't
-   * necessarily happen automatically. */
-  void collapseSelection();
-
 
   /******************************* Attributes ******************************/
 
   readonly attribute AString searchString;
                                         // Most recent search string
+  attribute boolean focusLinks;         // DOES NOTHING
   attribute boolean caseSensitive;      // Searches are case sensitive
   readonly attribute nsIDOMElement foundLink;
                                         // Most recent elem found, if a link
-  readonly attribute nsIDOMElement foundEditable;
-                                        // Most recent elem found, if editable
   readonly attribute nsIDOMWindow currentWindow;
                                         // Window of most recent match
 
@@ -110,6 +104,34 @@ interface nsITypeAheadFind : nsISupports
                                         // Unsuccessful find
   const unsigned short FIND_WRAPPED  = 2;
                                         // Successful find, but wrapped around
+
+
+  /*************************************************************************/
+
+};
+
+
+/********************* nsTypeAheadFind_MOZILLA_1_8_BRANCH ********************/
+
+[scriptable, uuid(6e934f17-1975-49c2-880e-4f9fa79a1b2e)]
+interface nsITypeAheadFind_MOZILLA_1_8_BRANCH : nsITypeAheadFind
+{
+  /**************************** Helper functions ***************************/
+
+  /* Change the look of the the "found match" selection to aToggle, and repaint
+   * the selection. */
+  void setSelectionModeAndRepaint(in short toggle);
+
+  /* Collapse the "found match" selection to its start.  Because not all
+   * matches are owned by the same selection controller, this doesn't
+   * necessarily happen automatically. */
+  void collapseSelection();
+
+
+  /******************************* Attributes ******************************/
+
+  readonly attribute nsIDOMElement foundEditable;
+                                        // Most recent elem found, if editable
 
 
   /*************************************************************************/

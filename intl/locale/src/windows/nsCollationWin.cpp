@@ -80,6 +80,16 @@ nsresult nsCollationWin::Initialize(nsILocale* locale)
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
+  OSVERSIONINFO os;
+  os.dwOSVersionInfoSize = sizeof(os);
+  ::GetVersionEx(&os);
+  if (VER_PLATFORM_WIN32_NT == os.dwPlatformId && os.dwMajorVersion >= 4) {
+    mW_API = PR_TRUE;
+  }
+  else {
+    mW_API = PR_FALSE;
+  }
+  
   // default LCID (en-US)
   mLCID = 1033;
 
@@ -141,19 +151,38 @@ NS_IMETHODIMP nsCollationWin::CompareString(PRInt32 strength,
   if (strength == kCollationCaseInSensitive)
     dwMapFlags |= NORM_IGNORECASE;
 
+  if (mW_API) {
 #endif
-  retval = ::CompareStringW(mLCID, 
-                            dwMapFlags,
-                            (LPCWSTR) PromiseFlatString(string1).get(), 
-                            -1,
-                            (LPCWSTR) PromiseFlatString(string2).get(), 
-                            -1);
-  if (retval) {
-    res = NS_OK;
-    *result = retval - 2;
+    retval = ::CompareStringW(mLCID, 
+                              dwMapFlags,
+                              (LPCWSTR) PromiseFlatString(string1).get(), 
+                              -1,
+                              (LPCWSTR) PromiseFlatString(string2).get(), 
+                              -1);
+    if (retval) {
+      res = NS_OK;
+      *result = retval - 2;
+    } else {
+      res = NS_ERROR_FAILURE;
+    }
+#ifndef WINCE // Always use wide APIs on Win CE.
   } else {
-    res = NS_ERROR_FAILURE;
+    char *Cstr1 = nsnull, *Cstr2 = nsnull;
+    res = mCollation->UnicodeToChar(string1, &Cstr1);
+    if (NS_SUCCEEDED(res) && Cstr1 != nsnull) {
+      res = mCollation->UnicodeToChar(string2, &Cstr2);
+      if (NS_SUCCEEDED(res) && Cstr2 != nsnull) {
+        retval = CompareStringA(mLCID, dwMapFlags, Cstr1, -1, Cstr2, -1);
+        if (retval)
+          *result = retval - 2;
+        else
+          res = NS_ERROR_FAILURE;
+        PR_Free(Cstr2);
+      }
+      PR_Free(Cstr1);
+    }
   }
+#endif //WINCE
 
   return res;
 }
@@ -170,18 +199,39 @@ nsresult nsCollationWin::AllocateRawSortKey(PRInt32 strength,
   if (strength == kCollationCaseInSensitive)
     dwMapFlags |= NORM_IGNORECASE;
 
-  byteLen = LCMapStringW(mLCID, dwMapFlags, 
-                         (LPCWSTR) PromiseFlatString(stringIn).get(),
-                         -1, NULL, 0);
-  buffer = PR_Malloc(byteLen);
-  if (!buffer) {
-    res = NS_ERROR_OUT_OF_MEMORY;
-  } else {
-    *key = (PRUint8 *)buffer;
-    *outLen = LCMapStringW(mLCID, dwMapFlags, 
+#ifndef WINCE // Always use wide APIs on Win CE.
+  if (mW_API) {
+#endif
+    byteLen = LCMapStringW(mLCID, dwMapFlags, 
                            (LPCWSTR) PromiseFlatString(stringIn).get(),
-                           -1, (LPWSTR) buffer, byteLen);
+                           -1, NULL, 0);
+    buffer = PR_Malloc(byteLen);
+    if (!buffer) {
+      res = NS_ERROR_OUT_OF_MEMORY;
+    } else {
+      *key = (PRUint8 *)buffer;
+      *outLen = LCMapStringW(mLCID, dwMapFlags, 
+                             (LPCWSTR) PromiseFlatString(stringIn).get(),
+                             -1, (LPWSTR) buffer, byteLen);
+    }
+#ifndef WINCE // Always use wide APIs on Win CE.
   }
+  else {
+    char *Cstr = nsnull;
+    res = mCollation->UnicodeToChar(stringIn, &Cstr);
+    if (NS_SUCCEEDED(res) && Cstr != nsnull) {
+      byteLen = LCMapStringA(mLCID, dwMapFlags, Cstr, -1, NULL, 0);
+      buffer = PR_Malloc(byteLen);
+      if (!buffer) {
+        res = NS_ERROR_OUT_OF_MEMORY;
+      } else {
+        *key = (PRUint8 *)buffer;
+        *outLen = LCMapStringA(mLCID, dwMapFlags, Cstr, -1, (char *) buffer, byteLen);
+      }
+      PR_Free(Cstr);
+    }
+  }
+#endif
   return res;
 }
 

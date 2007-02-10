@@ -184,9 +184,31 @@ nsRenderingContextOS2::~nsRenderingContextOS2()
    NS_IF_RELEASE(mSurface);
 }
 
-NS_IMPL_ISUPPORTS2(nsRenderingContextOS2,
-                   nsIRenderingContext,
-                   nsIRenderingContextOS2)
+nsresult
+nsRenderingContextOS2::QueryInterface( REFNSIID aIID, void **aInstancePtr)
+{
+   if( !aInstancePtr)
+      return NS_ERROR_NULL_POINTER;
+
+   if( aIID.Equals( nsIRenderingContext::GetIID()))
+      *aInstancePtr = (void *) (nsIRenderingContext*) this;
+   else if( aIID.Equals( ((nsIRenderingContext*)this)->GetIID()))
+      *aInstancePtr = (void *) (nsIRenderingContext*)this;
+   else if( aIID.Equals( nsIRenderingContextOS2::GetIID()))
+      *aInstancePtr = (void *) (nsIRenderingContextOS2*) this;
+   else if( aIID.Equals( ((nsIRenderingContextOS2 *)this)->GetIID()))
+      *aInstancePtr = (void *) (nsIRenderingContextOS2*) this;
+
+   if( !*aInstancePtr)
+      return NS_NOINTERFACE;
+
+   NS_ADDREF_THIS();
+
+   return NS_OK;
+}
+
+NS_IMPL_ADDREF(nsRenderingContextOS2)
+NS_IMPL_RELEASE(nsRenderingContextOS2)
 
 NS_IMETHODIMP
 nsRenderingContextOS2::Init( nsIDeviceContext *aContext,
@@ -2040,9 +2062,9 @@ do_DrawString(const nsFontSwitch* aFontSwitch,
       x = data->mX;
       y = data->mY;
       data->mTranMatrix->TransformCoord(&x, &y);
-      if (NS_IS_HIGH_SURROGATE(*str) && 
+      if (IS_HIGH_SURROGATE(*str) && 
           ((str+1)<end) && 
-          NS_IS_LOW_SURROGATE(*(str+1))) 
+          IS_LOW_SURROGATE(*(str+1))) 
       {
         // special case for surrogate pair
         font->DrawString(data->mPS, data->mSurface, x, y, str, 2);
@@ -2324,13 +2346,11 @@ NS_IMETHODIMP nsRenderingContextOS2::CopyOffScreenBits(
    return NS_OK;
 }
 
-void*
-nsRenderingContextOS2::GetNativeGraphicData(GraphicDataType aType)
+NS_IMETHODIMP nsRenderingContextOS2::RetrieveCurrentNativeGraphicData(void** ngd)
 {
-  if (aType == NATIVE_WINDOWS_DC)
-    return (void*)mPS;
-
-  return nsnull;
+  if(ngd != nsnull)
+    *ngd = (void*)mPS;
+  return NS_OK;
 }
 
 void nsRenderingContextOS2::SetupFontAndColor(void)

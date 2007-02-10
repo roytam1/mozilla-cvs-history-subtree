@@ -43,12 +43,12 @@ interface nsIDOMWindow;
 /**
  * nsIWebContentHandlerRegistrar
  * 
- * Applications wishing to use web content handlers need to implement this
- * interface. Typically they will prompt the user to confirm adding an entry
- * to the local list. 
+ * Embedding applications wishing to use web content handlers need to implement 
+ * this interface. Typically they will prompt the user to confirm adding an 
+ * entry to the local list. 
  *
  * The component must have the contract id defined below so that nsNavigator
- * can invoke it. 
+ * can invoke it.
  */
 
 [scriptable, uuid(e6a75410-c93e-42bf-84ca-a5c3ec34a2f1)]
@@ -59,17 +59,18 @@ interface nsIWebContentHandlerRegistrar : nsISupports
    * The additional contentWindow param for both methods represents the dom
    * content window from which the method has been called.
    */
-   void registerContentHandler(in DOMString mimeType,
+  void registerContentHandler(in DOMString mimeType,
+                              in DOMString uri,
+                              in DOMString title,
+                              in nsIDOMWindow contentWindow);
+  void registerProtocolHandler(in DOMString protocol,
                                in DOMString uri,
                                in DOMString title,
                                in nsIDOMWindow contentWindow);
-   void registerProtocolHandler(in DOMString protocol,
-                                in DOMString uri,
-                                in DOMString title,
-                                in nsIDOMWindow contentWindow);
 };
 
 %{ C++
 
 #define NS_WEBCONTENTHANDLERREGISTRAR_CONTRACTID "@mozilla.org/embeddor.implemented/web-content-handler-registrar;1"
+
 %}

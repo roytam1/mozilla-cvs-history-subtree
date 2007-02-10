@@ -60,7 +60,7 @@ typedef struct __struct_Options
 **  mOutput         Output file, append.
 **                  Default is stdout.
 **  mOutputName     Name of the file.
-**  mHelp           Whether or not help should be shown.
+**  mHelp           Wether or not help should be shown.
 **  mModules        Output module by module information.
 **  mTotalOnly      Only output one number, the total.
 **  mMinSize        Ignore lines below this size.
@@ -251,7 +251,7 @@ int codesighs(Options* inOptions)
 
     /*
     **  Read the file line by line, regardless of number of fields.
-    **  We assume tab separated value formatting, at least 7 lead values:
+    **  We assume tab seperated value formatting, at least 7 lead values:
     **      size class scope module segment object symbol ....
     */
     while(0 == retval && NULL != fgets(lineBuffer, sizeof(lineBuffer), inOptions->mInput))
@@ -954,7 +954,7 @@ int initOptions(Options* outOptions, int inArgc, char** inArgv)
             else
             {
                 retval = __LINE__;
-                ERROR_REPORT(retval, current->mLongName, "No handler for command line switch.");
+                ERROR_REPORT(retval, current->mLongName, "No hanlder for command line switch.");
             }
         }
     }

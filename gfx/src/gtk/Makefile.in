@@ -61,6 +61,8 @@ REQUIRES	= xpcom \
 		  unicharutil \
 		  locale \
 		  necko \
+		  content \
+		  layout \
 		  $(NULL)
 
 # Sun's Complex Text Layout support
@@ -71,6 +73,10 @@ endif
 ifdef MOZ_ENABLE_XPRINT
 REQUIRES	+= xprintutil
 endif
+
+NATIVE_THEME_SUPPORT = 1
+
+CSRCS		= nsPrintdGTK.c
 
 # Code shared between GTK+, Xlib and Xprint gfx modules
 X11SHARED_LCPPSRCS = \
@@ -88,15 +94,20 @@ X11SHARED_LCPPSRCS += \
 		nsNameValuePairDB.cpp \
 		$(NULL)
 endif
-
+                
 CPPSRCS		= \
 		nsDeviceContextGTK.cpp \
+		nsDeviceContextSpecFactoryG.cpp \
+		nsDeviceContextSpecG.cpp \
 		nsDrawingSurfaceGTK.cpp \
 		nsGfxFactoryGTK.cpp \
 		nsGraphicsStateGTK.cpp \
 		nsImageGTK.cpp \
 		nsGCCache.cpp \
 		nsRenderingContextGTK.cpp \
+		nsScreenGtk.cpp \
+		nsScreenManagerGtk.cpp \
+		nsPrintOptionsGTK.cpp \
 		nsFontMetricsUtils.cpp \
 		$(NULL)
 
@@ -122,22 +133,36 @@ ifdef MOZ_ENABLE_GTK
 CPPSRCS 	+= \
 		nsRegionGTK.cpp \
 		$(NULL)
+
+ifdef NATIVE_THEME_SUPPORT
+CSRCS		+= gtkdrawing.c
+CPPSRCS		+= nsNativeThemeGTK.cpp
+DEFINES		+= -DNATIVE_THEME_SUPPORT
+endif
+
 endif
 
 ifdef MOZ_ENABLE_GTK2
 CPPSRCS		+= \
 		nsRegionGTK2.cpp \
 		$(NULL)
+
+ifdef NATIVE_THEME_SUPPORT
+CSRCS		+= gtk2drawing.c
+CPPSRCS		+= nsNativeThemeGTK.cpp
+DEFINES		+= -DNATIVE_THEME_SUPPORT
+endif
+
 endif
 
 GARBAGE         += $(X11SHARED_LCPPSRCS) $(XPU_LCSRCS) $(wildcard *.$(OBJ_SUFFIX))
 
 ifdef MOZ_ENABLE_FREETYPE2
 # the SHARED_LIBRARY_LIBS line must be before the rules.mk include
-SHARED_LIBRARY_LIBS += ../freetype/$(LIB_PREFIX)gfxft2_s.$(LIB_SUFFIX)
+SHARED_LIBRARY_LIBS += $(DIST)/lib/$(LIB_PREFIX)gfxft2_s.$(LIB_SUFFIX)
 endif
 
-EXTRA_DSO_LDOPTS = ../shared/$(LIB_PREFIX)gfxshared_s.$(LIB_SUFFIX)
+EXTRA_DSO_LDOPTS = $(DIST)/lib/$(LIB_PREFIX)gfxshared_s.$(LIB_SUFFIX)
 
 include $(topsrcdir)/config/rules.mk
 

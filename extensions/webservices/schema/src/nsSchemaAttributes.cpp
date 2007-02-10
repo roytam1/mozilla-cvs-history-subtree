@@ -162,18 +162,6 @@ nsSchemaAttribute::GetUse(PRUint16 *aUse)
   return NS_OK;
 }
 
-/* readonly attribute AString targetNamespace */
-NS_IMETHODIMP
-nsSchemaAttribute::GetQualifiedNamespace(nsAString & aNamespace)
-{
-  if (mSchema && mAttributeFormQualified)
-    mSchema->GetTargetNamespace(aNamespace);
-  else
-    aNamespace.Truncate();
-
-  return NS_OK;
-}
-
 NS_IMETHODIMP
 nsSchemaAttribute::SetType(nsISchemaSimpleType* aType)
 {
@@ -198,14 +186,6 @@ NS_IMETHODIMP
 nsSchemaAttribute::SetUse(PRUint16 aUse)
 {
   mUse = aUse;
-
-  return NS_OK;
-}
-
-nsresult
-nsSchemaAttribute::SetAttributeFormQualified(PRBool aAttributeFormQualified)
-{
-  mAttributeFormQualified = aAttributeFormQualified;
 
   return NS_OK;
 }
@@ -343,18 +323,6 @@ nsSchemaAttributeRef::GetUse(PRUint16 *aUse)
   return NS_OK;
 }
 
-/* readonly attribute AString targetNamespace */
-NS_IMETHODIMP
-nsSchemaAttributeRef::GetQualifiedNamespace(nsAString & aNamespace)
-{
-  if (mSchema && mAttributeFormQualified)
-    mSchema->GetTargetNamespace(aNamespace);
-  else
-    aNamespace.Truncate();
-
-  return NS_OK;
-}
-
 NS_IMETHODIMP
 nsSchemaAttributeRef::SetConstraints(const nsAString& aDefaultValue,
                                      const nsAString& aFixedValue)
@@ -369,14 +337,6 @@ NS_IMETHODIMP
 nsSchemaAttributeRef::SetUse(PRUint16 aUse)
 {
   mUse = aUse;
-
-  return NS_OK;
-}
-
-nsresult
-nsSchemaAttributeRef::SetAttributeFormQualified(PRBool aAttributeFormQualified)
-{
-  mAttributeFormQualified = aAttributeFormQualified;
 
   return NS_OK;
 }

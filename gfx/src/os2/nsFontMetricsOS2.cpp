@@ -68,6 +68,9 @@
 
 #define NS_REPLACEMENT_CHAR  PRUnichar(0x003F) // question mark
 
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+static NS_DEFINE_CID(kLocaleServiceCID, NS_LOCALESERVICE_CID); 
 
 #define NS_MAX_FONT_WEIGHT 900
 #define NS_MIN_FONT_WEIGHT 100
@@ -211,7 +214,7 @@ static nsFontCleanupObserver *gFontCleanupObserver;
 static nsresult
 InitGlobals(void)
 {
-  CallGetService(NS_PREF_CONTRACTID, &gPref);
+  CallGetService(kPrefCID, &gPref);
   if (!gPref) {
     FreeGlobals();
     return NS_ERROR_FAILURE;
@@ -540,7 +543,7 @@ nsFontMetricsOS2::SetFontHandle(HPS aPS, GlobalFontEntry* aEntry,
       if (gSubstituteVectorFonts &&
           GetVectorSubstitute(aPS, aEntry->GetKey(), alias))
       {
-        strcpy(fattrs->szFacename, NS_LossyConvertUTF16toASCII(alias).get());
+        strcpy(fattrs->szFacename, NS_LossyConvertUCS2toASCII(alias).get());
         fattrs->fsFontUse = FATTR_FONTUSE_OUTLINE | FATTR_FONTUSE_TRANSFORMABLE;
         fattrs->fsSelection &= ~(FM_SEL_BOLD | FM_SEL_ITALIC);
       }
@@ -724,7 +727,7 @@ PR_STATIC_CALLBACK(PLDHashOperator)
 DebugOutputEnumFunc(GlobalFontEntry* aEntry, void* aData)
 {
   printf("---------------------------------------------------------------------\n");
-  printf(" [[]] %s\n", NS_LossyConvertUTF16toASCII(aEntry->GetKey()).get());
+  printf(" [[]] %s\n", NS_LossyConvertUCS2toASCII(aEntry->GetKey()).get());
   nsMiniMetrics* metrics = aEntry->mMetrics;
   while (metrics) {
     printf("  %32s", metrics->szFacename);
@@ -833,7 +836,7 @@ nsFontMetricsOS2::InitializeGlobalFonts()
         for (int i = 0; gBadDBCSFontMapping[i].mName != nsnull; i++) {
           if (strcmp(f, gBadDBCSFontMapping[i].mName) == 0)
           {
-            CopyASCIItoUTF16(nsDependentCString(gBadDBCSFontMapping[i].mWinName),
+            CopyASCIItoUCS2(nsDependentCString(gBadDBCSFontMapping[i].mWinName),
                             fontptr);
             break;
           }
@@ -1040,7 +1043,7 @@ nsFontMetricsOS2::FindLocalFont(HPS aPS, PRUint32 aChar)
     }
 #ifdef DEBUG_FONT_SELECTION
     printf(" FindLocalFont(): attempting to load %s\n",
-           NS_LossyConvertUTF16toASCII(*winName).get());
+           NS_LossyConvertUCS2toASCII(*winName).get());
 #endif
     nsFontOS2* font = LoadFont(aPS, *winName);
     if (font && font->HasGlyph(aPS, aChar)) {
@@ -1057,14 +1060,14 @@ nsFontMetricsOS2::LoadGenericFont(HPS aPS, PRUint32 aChar, const nsAString& aNam
     // woah, this seems bad
     const nsACString& fontName =
       nsDependentCString(((nsFontOS2*)mLoadedFonts[i])->mFattrs.szFacename);
-    if (aName.Equals(NS_ConvertASCIItoUTF16(fontName),
+    if (aName.Equals(NS_ConvertASCIItoUCS2(fontName),
                      nsCaseInsensitiveStringComparator()))
       return nsnull;
 
   }
 #ifdef DEBUG_FONT_SELECTION
   printf(" LoadGenericFont(): attempting to load %s\n",
-         NS_LossyConvertUTF16toASCII(aName).get());
+         NS_LossyConvertUCS2toASCII(aName).get());
 #endif
   nsFontOS2* font = LoadFont(aPS, aName);
   if (font && font->HasGlyph(aPS, aChar)) {
@@ -1162,7 +1165,7 @@ nsFontMetricsOS2::FindGenericFont(HPS aPS, PRUint32 aChar)
     }
 
     AppendGenericFontFromPref(font.name, langGroup, 
-                              NS_ConvertUTF16toUTF8(mGeneric).get());
+                              NS_ConvertUCS2toUTF8(mGeneric).get());
   }
 
   // Iterate over the list of names using the callback mechanism of nsFont...
@@ -1191,8 +1194,8 @@ nsFontMetricsOS2::FindPrefFont(HPS aPS, PRUint32 aChar)
     nsAutoString langGroup;
     gUsersLocale->ToString(langGroup);
     AppendGenericFontFromPref(font.name, 
-                              NS_ConvertUTF16toUTF8(langGroup).get(), 
-                              NS_ConvertUTF16toUTF8(mGeneric).get());
+                              NS_ConvertUCS2toUTF8(langGroup).get(), 
+                              NS_ConvertUCS2toUTF8(mGeneric).get());
   }
   // Try the pref of the user's system lang group
   // For example, if the os language is Simplified Chinese, 
@@ -1202,8 +1205,8 @@ nsFontMetricsOS2::FindPrefFont(HPS aPS, PRUint32 aChar)
     nsAutoString langGroup;
     gSystemLocale->ToString(langGroup);
     AppendGenericFontFromPref(font.name, 
-                              NS_ConvertUTF16toUTF8(langGroup).get(), 
-                              NS_ConvertUTF16toUTF8(mGeneric).get());
+                              NS_ConvertUCS2toUTF8(langGroup).get(), 
+                              NS_ConvertUCS2toUTF8(mGeneric).get());
   }
 
   // Also try all the default pref fonts enlisted from other languages
@@ -1211,7 +1214,7 @@ nsFontMetricsOS2::FindPrefFont(HPS aPS, PRUint32 aChar)
     nsIAtom* langGroup = NS_NewAtom(gCharsetInfo[i].mLangGroup); 
     if((gUsersLocale != langGroup) && (gSystemLocale != langGroup)) {
       AppendGenericFontFromPref(font.name, gCharsetInfo[i].mLangGroup, 
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     }
     NS_IF_RELEASE(langGroup);
   }
@@ -1591,7 +1594,7 @@ nsFontMetricsOS2::LoadUnicodeFont(HPS aPS, const nsAString& aName)
 {
 #ifdef DEBUG_FONT_SELECTION
   printf(" LoadUnicodeFont(): attempting to load %s\n",
-         NS_LossyConvertUTF16toASCII(aName).get());
+         NS_LossyConvertUCS2toASCII(aName).get());
 #endif
   nsFontOS2* font = LoadFont(aPS, aName);
   if (font) {
@@ -1627,7 +1630,7 @@ nsFontMetricsOS2::FindUnicodeFont(HPS aPS)
   nsCAutoString pref, generic;
   nsXPIDLString value;
 
-  generic.Assign(NS_ConvertUTF16toUTF8(mGeneric));
+  generic.Assign(NS_ConvertUCS2toUTF8(mGeneric));
 
   pref.Assign("font.name.");
   pref.Append(generic);
@@ -1974,7 +1977,7 @@ nsFontMetricsOS2FT::FindPrefFont(HPS aPS, PRUint32 aChar)
   // be identified instead of a single language (eg. CJK and latin). In this case we have to 
   // try every language in the set. gUserLocale and gSystemLocale provide some hints about 
   // which one should be tried first. This is important for CJK font, since the glyph for single 
-  // char varies dramatically in different languages. For latin languages, their glyphs are 
+  // char varies dramatically in different langauges. For latin languages, their glyphs are 
   // similar. In fact, they almost always share identical fonts. It will be a waste of time to 
   // figure out which one comes first. As a final fallback, unicode preference is always tried. 
 
@@ -1982,15 +1985,15 @@ nsFontMetricsOS2FT::FindPrefFont(HPS aPS, PRUint32 aChar)
   if (unicodeRange < kRangeSpecificItemNum) {
     // a single language is identified
     AppendGenericFontFromPref(font.name, LangGroupFromUnicodeRange(unicodeRange), 
-                              NS_ConvertUTF16toUTF8(mGeneric).get());
+                              NS_ConvertUCS2toUTF8(mGeneric).get());
   } else if (kRangeSetLatin == unicodeRange) { 
     // Character is from a latin language set, so try western and central european
     // If mLangGroup is western or central european, this most probably will not be
     // used, but is here as a fallback scenario.    
     AppendGenericFontFromPref(font.name, "x-western",
-                              NS_ConvertUTF16toUTF8(mGeneric).get());
+                              NS_ConvertUCS2toUTF8(mGeneric).get());
     AppendGenericFontFromPref(font.name, "x-central-euro",
-                              NS_ConvertUTF16toUTF8(mGeneric).get());
+                              NS_ConvertUCS2toUTF8(mGeneric).get());
   } else if (kRangeSetCJK == unicodeRange) { 
     // CJK, we have to be careful about the order, use locale info as hint
     
@@ -1999,7 +2002,7 @@ nsFontMetricsOS2FT::FindPrefFont(HPS aPS, PRUint32 aChar)
       nsCAutoString usersLocaleLangGroup;
       gUsersLocale->ToUTF8String(usersLocaleLangGroup);
       AppendGenericFontFromPref(font.name, usersLocaleLangGroup.get(), 
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     }
     
     // then system locale (os language)
@@ -2007,30 +2010,30 @@ nsFontMetricsOS2FT::FindPrefFont(HPS aPS, PRUint32 aChar)
       nsCAutoString systemLocaleLangGroup;
       gSystemLocale->ToUTF8String(systemLocaleLangGroup);
       AppendGenericFontFromPref(font.name, systemLocaleLangGroup.get(), 
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     }
 
     // try all other languages in this set.
     if (mLangGroup != gJA && gUsersLocale != gJA && gSystemLocale != gJA)
       AppendGenericFontFromPref(font.name, "ja",
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     if (mLangGroup != gZHCN && gUsersLocale != gZHCN && gSystemLocale != gZHCN)
       AppendGenericFontFromPref(font.name, "zh-CN",
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     if (mLangGroup != gZHTW && gUsersLocale != gZHTW && gSystemLocale != gZHTW)
       AppendGenericFontFromPref(font.name, "zh-TW",
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     if (mLangGroup != gZHHK && gUsersLocale != gZHHK && gSystemLocale != gZHHK)
       AppendGenericFontFromPref(font.name, "zh-HK",
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     if (mLangGroup != gKO && gUsersLocale != gKO && gSystemLocale != gKO)
       AppendGenericFontFromPref(font.name, "ko",
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
   } 
 
   // always try unicode as fallback
   AppendGenericFontFromPref(font.name, "x-unicode",
-                            NS_ConvertUTF16toUTF8(mGeneric).get());
+                            NS_ConvertUCS2toUTF8(mGeneric).get());
   
   // use the font list to find font
   GenericFontEnumContext context = {aPS, aChar, nsnull, this};
@@ -2194,7 +2197,7 @@ nsFontMetricsOS2FT::ResolveForwards(HPS                  aPS,
 
   count = mLoadedFonts.Count();
 
-  if (NS_IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && NS_IS_LOW_SURROGATE(*(currChar+1))) {
+  if (IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && IS_LOW_SURROGATE(*(currChar+1))) {
     currFont = LocateFont(aPS, SURROGATE_TO_UCS4(*currChar, *(currChar+1)), count);
     currChar += 2;
   }
@@ -2215,7 +2218,7 @@ nsFontMetricsOS2FT::ResolveForwards(HPS                  aPS,
       return NS_OK;
     // continue with the next substring, re-using the available loaded fonts
     firstChar = currChar;
-    if (NS_IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && NS_IS_LOW_SURROGATE(*(currChar+1))) {
+    if (IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && IS_LOW_SURROGATE(*(currChar+1))) {
       currFont = LocateFont(aPS, SURROGATE_TO_UCS4(*currChar, *(currChar+1)), count);
       currChar += 2;
     }
@@ -2228,7 +2231,7 @@ nsFontMetricsOS2FT::ResolveForwards(HPS                  aPS,
   // see if we can keep the same font for adjacent characters
   PRInt32 lastCharLen;
   while (currChar < lastChar) {
-    if (NS_IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && NS_IS_LOW_SURROGATE(*(currChar+1))) {
+    if (IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && IS_LOW_SURROGATE(*(currChar+1))) {
       nextFont = LocateFont(aPS, SURROGATE_TO_UCS4(*currChar, *(currChar+1)), count);
       lastCharLen = 2;
     }
@@ -2278,7 +2281,7 @@ nsFontMetricsOS2FT::ResolveBackwards(HPS                  aPS,
   count = mLoadedFonts.Count();
 
   // see if one of our loaded fonts can represent the current character
-  if (NS_IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && NS_IS_HIGH_SURROGATE(*(currChar-1))) {
+  if (IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && IS_HIGH_SURROGATE(*(currChar-1))) {
     currFont = LocateFont(aPS, SURROGATE_TO_UCS4(*(currChar-1), *currChar), count);
     currChar -= 2;
   }
@@ -2299,7 +2302,7 @@ nsFontMetricsOS2FT::ResolveBackwards(HPS                  aPS,
       return NS_OK;
     // continue with the next substring, re-using the available loaded fonts
     firstChar = currChar;
-    if (NS_IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && NS_IS_HIGH_SURROGATE(*(currChar-1))) {
+    if (IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && IS_HIGH_SURROGATE(*(currChar-1))) {
       currFont = LocateFont(aPS, SURROGATE_TO_UCS4(*(currChar-1), *currChar), count);
       currChar -= 2;
     }
@@ -2314,7 +2317,7 @@ nsFontMetricsOS2FT::ResolveBackwards(HPS                  aPS,
   PRUint32 codepoint;
 
   while (currChar > lastChar) {
-    if (NS_IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && NS_IS_HIGH_SURROGATE(*(currChar-1))) {
+    if (IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && IS_HIGH_SURROGATE(*(currChar-1))) {
       codepoint =  SURROGATE_TO_UCS4(*(currChar-1), *currChar);
       nextFont = LocateFont(aPS, codepoint, count);
       lastCharLen = 2;
@@ -2439,7 +2442,7 @@ nsFontOS2FT::GetWidth(HPS aPS, const PRUnichar* aString, PRUint32 aLength)
     if (rc == FALSE)
 #endif /* use_expanded_freetype_funcs */
     {
-      NS_ConvertUTF16toUTF8 str(Substring(aString, aString + aLength));
+      NS_ConvertUCS2toUTF8 str(Substring(aString, aString + aLength));
       rc = GetTextExtentPoint32(aPS, (const char*)str.get(), str.Length(),
                                 &size);
     }
@@ -2491,7 +2494,7 @@ nsFontOS2FT::DrawString(HPS aPS, nsDrawingSurfaceOS2* aSurface,
     if (rc == GPI_ERROR)
 #endif /* use_expanded_freetype_funcs */
     {
-      NS_ConvertUTF16toUTF8 str(Substring(aString, aString + aLength));
+      NS_ConvertUCS2toUTF8 str(Substring(aString, aString + aLength));
       ExtTextOut(aPS, ptl.x, ptl.y, 0, NULL, (const char*)str.get(),
                  str.Length(), NULL);
     }
@@ -2596,7 +2599,7 @@ nsFontOS2Substitute::GetWidth(HPS aPS, const PRUnichar* aString,
 
   SIZEL size;
   PRUnichar* string = buffer.get();
-  NS_ConvertUTF16toUTF8 str(Substring(string, string + aLength));
+  NS_ConvertUCS2toUTF8 str(Substring(string, string + aLength));
   BOOL rc = GetTextExtentPoint32(aPS, (const char*)str.get(), str.Length(),
                                  &size);
   if (rc == TRUE) {
@@ -2618,7 +2621,7 @@ nsFontOS2Substitute::DrawString(HPS aPS, nsDrawingSurfaceOS2* aSurface,
   POINTL ptl = { aX, aY };
   aSurface->NS2PM(&ptl, 1);
   PRUnichar* string = buffer.get();
-  NS_ConvertUTF16toUTF8 str(Substring(string, string + aLength));
+  NS_ConvertUCS2toUTF8 str(Substring(string, string + aLength));
   ExtTextOut(aPS, ptl.x, ptl.y, 0, NULL, (const char*)str.get(), str.Length(), NULL);
 }
 #endif /* use_freetype */

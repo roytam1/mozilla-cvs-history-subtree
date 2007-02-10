@@ -44,6 +44,44 @@
 #include "nsIDOMXULElement.h"
 #include "nsIDOMXULControlElement.h"
 
+/**
+  * nsFormControlAccessible
+  */
+
+nsFormControlAccessible::nsFormControlAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell):
+nsAccessibleWrap(aNode, aShell)
+{ 
+}
+
+NS_IMPL_ISUPPORTS_INHERITED0(nsFormControlAccessible, nsAccessible)
+
+/**
+  * No Children
+  */
+NS_IMETHODIMP nsFormControlAccessible::GetFirstChild(nsIAccessible **_retval)
+{
+  *_retval = nsnull;
+  return NS_OK;
+}
+
+/**
+  * No Children
+  */
+NS_IMETHODIMP nsFormControlAccessible::GetLastChild(nsIAccessible **_retval)
+{
+  *_retval = nsnull;
+  return NS_OK;
+}
+
+/**
+  * No Children
+  */
+NS_IMETHODIMP nsFormControlAccessible::GetChildCount(PRInt32 *_retval)
+{
+  *_retval = 0;
+  return NS_OK;
+}
+
 // ------------
 // Radio button
 // ------------
@@ -58,7 +96,7 @@ nsFormControlAccessible(aNode, aShell)
   */
 NS_IMETHODIMP nsRadioButtonAccessible::GetNumActions(PRUint8 *_retval)
 {
-  *_retval = 1;
+  *_retval = eSingle_Action;
   return NS_OK;
 }
 
@@ -70,15 +108,6 @@ NS_IMETHODIMP nsRadioButtonAccessible::GetActionName(PRUint8 index, nsAString& _
   if (index == eAction_Click) {
     nsAccessible::GetTranslatedString(NS_LITERAL_STRING("select"), _retval); 
     return NS_OK;
-  }
-  return NS_ERROR_INVALID_ARG;
-}
-
-/** Our only action is to click */
-NS_IMETHODIMP nsRadioButtonAccessible::DoAction(PRUint8 aIndex)
-{
-  if (aIndex == eAction_Click) {
-    return DoCommand();
   }
   return NS_ERROR_INVALID_ARG;
 }

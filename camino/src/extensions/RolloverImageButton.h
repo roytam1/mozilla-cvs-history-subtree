@@ -11,10 +11,10 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Camino code.
+ * The Original Code is Chimera code.
  *
  * The Initial Developer of the Original Code is
- * Aaron Schulman <aschulm@umd.edu>
+ * Netscape Communications Corporation.
  * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
@@ -42,9 +42,6 @@
     NSImage* mImage;               //STRONG Refrence
     NSImage* mHoverImage;          //STRONG Refrence
     NSTrackingRectTag mTrackingTag;
-    BOOL mTrackingIsEnabled;
-    BOOL mSettingFrame;
 }
-- (void)setHoverImage:(NSImage*)inImage;
-- (void)setTrackingEnabled:(BOOL)enableTracking;
+- (void)setHoverImage:(NSImage*)inImage;  
 @end

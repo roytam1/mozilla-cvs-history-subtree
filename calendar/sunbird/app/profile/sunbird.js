@@ -51,8 +51,6 @@ pref("calendar.alarms.todoalarmlen", 15);
 pref("calendar.alarms.eventalarmunit", "minutes");
 pref("calendar.alarms.todoalarmunit", "minutes");
 pref("calendar.alarms.defaultsnoozelength", 60);
-pref("calendar.autorefresh.enabled", true);
-pref("calendar.autorefresh.timeout", 30);
 pref("calendar.date.format", 0);
 pref("calendar.event.defaultlength", 60);
 // Do NOT set this.  If it is unset, we guess the timezone from the system
@@ -77,63 +75,7 @@ pref("xpinstall.whitelist.add.103", "addons.mozilla.org");
 
 // App-specific update preferences
 
-// Whether or not app updates are enabled
-pref("app.update.enabled", true);
-
-// This preference turns on app.update.mode and allows automatic download and
-// install to take place. We use a separate boolean toggle for this to make
-// the UI easier to construct.
-pref("app.update.auto", true);
-
-// Defines how the Application Update Service notifies the user about updates:
-//
-// AUS Set to:  Minor Releases:     Major Releases:
-// 0            download no prompt  download no prompt
-// 1            download no prompt  download no prompt if no incompatibilities
-// 2            download no prompt  prompt
-//
-// See chart in nsUpdateService.js.in for more details
-//
-pref("app.update.mode", 1);
-
-// If set to true, the Update Service will present no UI for any event.
-pref("app.update.silent", false);
-
-// Update service URLs:
-pref("app.update.url", "https://aus2.mozilla.org/update/2/%PRODUCT%/%VERSION%/%BUILD_ID%/%BUILD_TARGET%/%LOCALE%/%CHANNEL%/%OS_VERSION%/update.xml");
-// URL user can browse to manually if for some reason all update installation
-// attempts fail.
-pref("app.update.url.manual", "http://www.mozilla.org/projects/calendar/sunbird/");
-// A default value for the "More information about this update" link
-// supplied in the "An update is available" page of the update wizard. 
-pref("app.update.url.details", "http://www.mozilla.org/projects/calendar/sunbird/");
-
-// User-settable override to app.update.url for testing purposes.
-//pref("app.update.url.override", "");
-
-// Interval: Time between checks for a new version (in seconds)
-//           default=1 day
-pref("app.update.interval", 86400);
-// Interval: Time before prompting the user to download a new version that
-//           is available (in seconds) default=1 day
-pref("app.update.nagTimer.download", 86400);
-// Interval: Time before prompting the user to restart to install the latest
-//           download (in seconds) default=30 minutes
-pref("app.update.nagTimer.restart", 1800);
-// Interval: When all registered timers should be checked (in milliseconds)
-//           default=5 minutes
-pref("app.update.timer", 600000);
-
-// Whether or not we show a dialog box informing the user that the update was
-// successfully applied.
-pref("app.update.showInstalledUI", true);
-
-// 0 = suppress prompting for incompatibilities if there are updates available
-//     to newer versions of installed addons that resolve them.
-// 1 = suppress prompting for incompatibilities only if there are VersionInfo
-//     updates available to installed addons that resolve them, not newer
-//     versions.
-pref("app.update.incompatible.mode", 0);
+pref("app.update.enabled", false);
 
 // Symmetric (can be overridden by individual extensions) update preferences.
 // e.g.
@@ -208,8 +150,7 @@ pref("alerts.totalOpenTime", 4000);
 
 pref("signon.rememberSignons",              true);
 pref("signon.expireMasterPassword",         false);
-pref("signon.SignonFileName",               "signons.txt");
-pref("signon.SignonFileName2",              "signons2.txt");
+pref("signon.SignonFileName", "signons.txt");
 
 // We want to make sure mail URLs are handled externally...
 pref("network.protocol-handler.external.mailto", true); // for mail
@@ -248,10 +189,3 @@ pref("browser.preferences.animateFadeIn", false);
 #endif
 
 pref("calendar.wcap.enabled", false);
-
-// Used by view-source
-pref("accessibility.typeaheadfind.flashBar", 1);
-pref("view_source.editor.path", "");
-pref("view_source.editor.external", false);
-pref("view_source.syntax_highlight", true);
-pref("view_source.wrap_long_lines", false);

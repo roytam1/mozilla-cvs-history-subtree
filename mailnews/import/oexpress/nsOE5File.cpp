@@ -42,7 +42,6 @@
 #include "msgCore.h"
 #include "prprf.h"
 #include "nsMsgLocalFolderHdrs.h"
-#include "nsIOutputStream.h"
 
 
 #define	kIndexGrowBy		100
@@ -362,9 +361,7 @@ nsresult nsOE5File::ImportMailbox( PRUint32 *pBytesDone, PRBool *pAbort, nsStrin
         }
         
         // Now process the block of data which ends with CRLF.
-        nsCOMPtr<nsIOutputStream> outStream;
-        pDestination->GetOutputStream (getter_AddRefs (outStream));
-        rv = EscapeFromSpaceLine(outStream, pStart, partialLineStart);
+        rv = EscapeFromSpaceLine(pDestination, pStart, partialLineStart);
         if (NS_FAILED(rv))
           break;
         
@@ -375,7 +372,7 @@ nsresult nsOE5File::ImportMailbox( PRUint32 *pBytesDone, PRBool *pAbort, nsStrin
         {
           // OK, we're done so flush out the partial line if it's not empty.
           if (partialLine.Length())
-            rv = EscapeFromSpaceLine(outStream, (char *)partialLine.get(), (partialLine.get()+partialLine.Length()));
+            rv = EscapeFromSpaceLine(pDestination, (char *)partialLine.get(), (partialLine.get()+partialLine.Length()));
         }
         else
           if (ReadBytes(inFile, block, next, 16) && (block[0] == next) &&
@@ -395,7 +392,7 @@ nsresult nsOE5File::ImportMailbox( PRUint32 *pBytesDone, PRBool *pAbort, nsStrin
                 pStart += 2;      // .. then copy that too.
               tempLine.Assign(pBuffer, pStart - pBuffer);
               partialLine.Append(tempLine);
-              rv = EscapeFromSpaceLine(outStream, (char *)partialLine.get(), (partialLine.get()+partialLine.Length()));
+              rv = EscapeFromSpaceLine(pDestination, (char *)partialLine.get(), (partialLine.get()+partialLine.Length()));
               if (NS_FAILED(rv))
                 break;
               

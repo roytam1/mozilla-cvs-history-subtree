@@ -42,17 +42,17 @@
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         title="&newTagDialog.title;"
         onload="onLoad();"
-        ondialogaccept="return onOKNewTag();">
+        ondialogaccept="return onOK();">
 
   <stringbundleset id="stringbundleset">
     <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>
   </stringbundleset>
   
   <script type="application/x-javascript" src="chrome://messenger/content/newTagDialog.js"/>
-  <label value="&name.label;" accesskey="&name.accesskey;" control="name"/>
+    <label value="&name.label;" accesskey="&name.accesskey;" control="name"/>
   <hbox>
     <textbox id="name" oninput="doEnabling();"/>
     <colorpicker class="small-margin" type="button" id="tagColorPicker" palettename="standard"/>
   </hbox>
-  <separator/>
+    <separator/>
 </dialog>

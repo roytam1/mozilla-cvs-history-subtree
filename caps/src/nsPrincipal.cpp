@@ -53,7 +53,6 @@
 #include "nsIObjectOutputStream.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
-#include "nsIClassInfoImpl.h"
 
 #include "nsPrincipal.h"
 
@@ -115,9 +114,6 @@ nsPrincipal::Init(const nsACString& aCertFingerprint,
 
   mCodebase = aCodebase;
 
-  // Invalidate our cached origin
-  mOrigin = nsnull;
-
   nsresult rv;
   if (!aCertFingerprint.IsEmpty()) {
     rv = SetCertificate(aCertFingerprint, aSubjectName, aPrettyName, aCert);
@@ -133,7 +129,7 @@ nsPrincipal::Init(const nsACString& aCertFingerprint,
     }
   }
 
-  NS_ASSERTION(NS_SUCCEEDED(rv), "nsPrincipal::Init() failed");
+  NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "nsPrincipal::Init() failed");
 
   return rv;
 }
@@ -156,7 +152,7 @@ nsPrincipal::~nsPrincipal(void)
 NS_IMETHODIMP
 nsPrincipal::GetJSPrincipals(JSContext *cx, JSPrincipals **jsprin)
 {
-  NS_PRECONDITION(mJSPrincipals.nsIPrincipalPtr, "mJSPrincipals is uninitialized!");
+  NS_PRECONDITION(mJSPrincipals.nsIPrincipalPtr, "mJSPrincipals is uninitalized!");
 
   JSPRINCIPALS_HOLD(cx, &mJSPrincipals);
   *jsprin = &mJSPrincipals;
@@ -168,14 +164,8 @@ nsPrincipal::GetOrigin(char **aOrigin)
 {
   *aOrigin = nsnull;
 
-  if (!mOrigin) {
-    nsIURI* uri = mDomain ? mDomain : mCodebase;
-    if (uri) {
-      mOrigin = NS_GetInnermostURI(uri);
-    }
-  }
-  
-  if (!mOrigin) {
+  nsIURI* uri = mDomain ? mDomain : mCodebase;
+  if (!uri) {
     NS_ASSERTION(mCert, "No Domain or Codebase for a non-cert principal");
     return NS_ERROR_FAILURE;
   }
@@ -187,14 +177,14 @@ nsPrincipal::GetOrigin(char **aOrigin)
   // XXX this should be removed in favor of the solution in
   // bug 160042.
   PRBool isChrome;
-  nsresult rv = mOrigin->SchemeIs("chrome", &isChrome);
+  nsresult rv = uri->SchemeIs("chrome", &isChrome);
   if (NS_SUCCEEDED(rv) && !isChrome) {
-    rv = mOrigin->GetHostPort(hostPort);
+    rv = uri->GetHostPort(hostPort);
   }
 
   if (NS_SUCCEEDED(rv) && !isChrome) {
     nsCAutoString scheme;
-    rv = mOrigin->GetScheme(scheme);
+    rv = uri->GetScheme(scheme);
     NS_ENSURE_SUCCESS(rv, rv);
     *aOrigin = ToNewCString(scheme + NS_LITERAL_CSTRING("://") + hostPort);
   }
@@ -202,7 +192,7 @@ nsPrincipal::GetOrigin(char **aOrigin)
     // Some URIs (e.g., nsSimpleURI) don't support host. Just
     // get the full spec.
     nsCAutoString spec;
-    rv = mOrigin->GetSpec(spec);
+    rv = uri->GetSpec(spec);
     NS_ENSURE_SUCCESS(rv, rv);
     *aOrigin = ToNewCString(spec);
   }
@@ -270,10 +260,15 @@ nsPrincipal::Equals(nsIPrincipal *aOther, PRBool *aResult)
     }
 
     // Codebases are equal if they have the same origin.
-    *aResult =
-      NS_SUCCEEDED(nsScriptSecurityManager::GetScriptSecurityManager()
-                   ->CheckSameOriginPrincipal(this, aOther));
-    return NS_OK;
+    nsIURI *origin = mDomain ? mDomain : mCodebase;
+    nsCOMPtr<nsIURI> otherOrigin;
+    aOther->GetDomain(getter_AddRefs(otherOrigin));
+    if (!otherOrigin) {
+      aOther->GetURI(getter_AddRefs(otherOrigin));
+    }
+
+    return nsScriptSecurityManager::GetScriptSecurityManager()
+           ->SecurityCompareURIs(origin, otherOrigin, aResult);
   }
 
   *aResult = PR_TRUE;
@@ -283,6 +278,32 @@ nsPrincipal::Equals(nsIPrincipal *aOther, PRBool *aResult)
 NS_IMETHODIMP
 nsPrincipal::Subsumes(nsIPrincipal *aOther, PRBool *aResult)
 {
+  // First, check if aOther is an about:blank principal. If it is, then we can
+  // subsume it.
+
+  nsCOMPtr<nsIURI> otherOrigin;
+  aOther->GetURI(getter_AddRefs(otherOrigin));
+
+  if (otherOrigin) {
+    PRBool isAbout = PR_FALSE;
+    if (NS_SUCCEEDED(otherOrigin->SchemeIs("about", &isAbout)) && isAbout) {
+      nsCAutoString str;
+      otherOrigin->GetSpec(str);
+
+      // Note: about:blank principals do not necessarily subsume about:blank
+      // principals (unless aOther == this, which is checked in the Equals call
+      // below).
+
+      if (str.Equals("about:blank")) {
+        PRBool isEqual = PR_FALSE;
+        if (NS_SUCCEEDED(otherOrigin->Equals(mCodebase, &isEqual)) && !isEqual) {
+          *aResult = PR_TRUE;
+          return NS_OK;
+        }
+      }
+    }
+  }
+
   return Equals(aOther, aResult);
 }
 
@@ -496,21 +517,15 @@ nsPrincipal::GetHasCertificate(PRBool* aResult)
 NS_IMETHODIMP
 nsPrincipal::GetURI(nsIURI** aURI)
 {
-  if (!mCodebase) {
-    *aURI = nsnull;
-    return NS_OK;
-  }
+  NS_IF_ADDREF(*aURI = mCodebase);
 
-  return NS_EnsureSafeToReturn(mCodebase, aURI);
+  return NS_OK;
 }
 
 void
 nsPrincipal::SetURI(nsIURI* aURI)
 {
-  mCodebase = NS_TryToMakeImmutable(aURI);
-
-  // Invalidate our cached origin
-  mOrigin = nsnull;
+  mCodebase = aURI;
 }
 
 
@@ -597,23 +612,17 @@ nsPrincipal::GetHashValue(PRUint32* aValue)
 NS_IMETHODIMP
 nsPrincipal::GetDomain(nsIURI** aDomain)
 {
-  if (!mDomain) {
-    *aDomain = nsnull;
-    return NS_OK;
-  }
+  NS_IF_ADDREF(*aDomain = mDomain);
 
-  return NS_EnsureSafeToReturn(mDomain, aDomain);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
 nsPrincipal::SetDomain(nsIURI* aDomain)
 {
-  mDomain = NS_TryToMakeImmutable(aDomain);
+  mDomain = aDomain;
   // Domain has changed, forget cached security policy
   SetSecurityPolicy(nsnull);
-
-  // Invalidate our cached origin
-  mOrigin = nsnull;
 
   return NS_OK;
 }
@@ -653,9 +662,6 @@ nsPrincipal::InitFromPersistent(const char* aPrefName,
     }
 
     mTrusted = aTrusted;
-
-    // Invalidate our cached origin
-    mOrigin = nsnull;
   }
 
   rv = mJSPrincipals.Init(this, aToken.get());

@@ -56,6 +56,7 @@
 #include "nsXPIDLString.h"
 
 static NS_DEFINE_CID(kMsgSendLaterCID, NS_MSGSENDLATER_CID); 
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 NS_IMPL_THREADSAFE_ISUPPORTS5(nsMsgOfflineManager,
                               nsIMsgOfflineManager,
@@ -206,6 +207,8 @@ nsresult nsMsgOfflineManager::SynchronizeOfflineImapChanges()
 nsresult nsMsgOfflineManager::SendUnsentMessages()
 {
 	nsresult rv;
+
+  ShowStatus("sendingUnsent");
 	nsCOMPtr<nsIMsgSendLater> pMsgSendLater = do_CreateInstance(kMsgSendLaterCID, &rv); 
   NS_ENSURE_SUCCESS(rv, rv);
   nsCOMPtr<nsIMsgAccountManager> accountManager = 
@@ -255,8 +258,7 @@ nsresult nsMsgOfflineManager::SendUnsentMessages()
 	{ 
     pMsgSendLater->AddListener(this);
     pMsgSendLater->SetMsgWindow(m_window);
-    rv = pMsgSendLater->SendUnsentMessages(identityToUse);
-    ShowStatus("sendingUnsent");
+    rv = pMsgSendLater->SendUnsentMessages(identityToUse); 
     // if we succeeded, return - we'll run the next operation when the
     // send finishes. Otherwise, advance to the next state.
     if (NS_SUCCEEDED(rv))
@@ -285,7 +287,7 @@ nsresult nsMsgOfflineManager::ShowStatus(const char *statusMsgName)
   if (mStringBundle)
   {
     nsXPIDLString statusString;
-		res = mStringBundle->GetStringFromName(NS_ConvertASCIItoUTF16(statusMsgName).get(), getter_Copies(statusString));
+		res = mStringBundle->GetStringFromName(NS_ConvertASCIItoUCS2(statusMsgName).get(), getter_Copies(statusString));
 
     if ( NS_SUCCEEDED(res))
       OnStatus(statusString);
@@ -355,7 +357,7 @@ NS_IMETHODIMP nsMsgOfflineManager::SynchronizeForOffline(PRBool downloadNews, PR
 nsresult nsMsgOfflineManager::SetOnlineState(PRBool online)
 {
   nsresult rv;
-  nsCOMPtr<nsIIOService> netService(do_GetService(NS_IOSERVICE_CONTRACTID, &rv));
+  nsCOMPtr<nsIIOService> netService(do_GetService(kIOServiceCID, &rv));
   if (NS_SUCCEEDED(rv) && netService)
   {
     rv = netService->SetOffline(!online);

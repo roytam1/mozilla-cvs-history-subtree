@@ -103,14 +103,14 @@ calWcapCachedCalendar.prototype = {
     get remoteCal() {
         return this.m_remoteCal;
     },
-    set remoteCal(cal) {
+    set remoteCal( cal ) {
         if (this.m_remoteCal != null)
             this.m_remoteCal.removeObserver( this.m_observerMultiplexer );
         if (cal != null) {
             cal.addObserver( this.m_observerMultiplexer );
             cal.superCalendar = this;
         }
-        return (this.m_remoteCal = cal);
+        this.m_remoteCal = cal;
     },
     
     getCalKey:
@@ -156,12 +156,12 @@ calWcapCachedCalendar.prototype = {
         }
         return this.m_localCal;
     },
-    set localCal(cal) {
+    set localCal( cal ) {
         if (cal != null) {
             cal.suppressAlarms = this.remoteCal.suppressAlarms; // sync setting
             cal.superCalendar = this;
         }
-        return (this.m_localCal = cal);
+        this.m_localCal = cal;
     },
     
     toString:
@@ -213,9 +213,9 @@ calWcapCachedCalendar.prototype = {
     get session() { return this.remoteCal.session; },
     get calId() { return this.remoteCal.calId; },
     get calId_() { return this.remoteCal.calId_; },
-    set calId(id) {
+    set calId( id ) {
         this.localCal = null; // disconnect
-        return (this.remoteCal.calId = id);
+        this.remoteCal.calId = id;
     },
     get description() { return this.remoteCal.description; },
     get displayName() { return this.remoteCal.displayName; },
@@ -236,26 +236,25 @@ calWcapCachedCalendar.prototype = {
     get name() {
         return getCalendarManager().getCalendarPref( this, "NAME" );
     },
-    set name(name) {
+    set name( name ) {
         getCalendarManager().setCalendarPref( this, "NAME", name );
-        return name;
     },
     
     get type() { return "wcap"; },
     
     m_bReadOnly: false,
     get readOnly() { return (this.m_bReadOnly || this.remoteCal.readOnly); },
-    set readOnly(bReadOnly) { return (this.m_bReadOnly = bReadOnly); },
+    set readOnly( bReadOnly ) { this.m_bReadOnly = bReadOnly; },
     
     get uri() { return this.remoteCal.uri; },
-    set uri(thatUri) {
+    set uri( thatUri ) {
         this.localCal = null; // disconnect
-        return (this.remoteCal.uri = thatUri);
+        this.remoteCal.uri = thatUri;
     },
     
     m_superCalendar: null,
     get superCalendar() { return this.m_superCalendar || this; },
-    set superCalendar(cal) { return (this.m_superCalendar = cal); },
+    set superCalendar( cal ) { this.m_superCalendar = cal; },
     
     m_observers: null,
     notifyObservers:
@@ -295,7 +294,7 @@ calWcapCachedCalendar.prototype = {
     get suppressAlarms() { return this.remoteCal.suppressAlarms; },
     set suppressAlarms( bSuppressAlarms ) {
         this.remoteCal.suppressAlarms = bSuppressAlarms;
-        return (this.localCal.suppressAlarms = this.remoteCal.suppressAlarms);
+        this.localCal.suppressAlarms = this.remoteCal.suppressAlarms;
     },
     
     get canRefresh() { return true; },
@@ -348,10 +347,10 @@ calWcapCachedCalendar.prototype = {
     },
     
     getItems:
-    function( itemFilter, maxResults, rangeStart, rangeEnd, listener )
+    function( itemFilter, maxResult, rangeStart, rangeEnd, listener )
     {
         this.log( "getItems():\n\titemFilter=" + itemFilter +
-                  ",\n\tmaxResults=" + maxResults +
+                  ",\n\tmaxResult=" + maxResult +
                   ",\n\trangeStart=" + getIcalUTC(rangeStart) +
                   ",\n\trangeEnd=" + getIcalUTC(rangeEnd) );
         var this_ = this;
@@ -361,11 +360,11 @@ calWcapCachedCalendar.prototype = {
                 function( calendar, status, opType, id, detail )
                 {
                     if (listener != null) {
-                        if (status == NS_OK) {
+                        if (status == Components.results.NS_OK) {
                             // delegate to local cal:
                             this_.log("begin localCal.getItems().");
                             this_.localCal.getItems(
-                                itemFilter, maxResults, rangeStart, rangeEnd,
+                                itemFilter, maxResult, rangeStart, rangeEnd,
                                 listener );
                             this_.log("end localCal.getItems().");
                         }
@@ -477,7 +476,7 @@ calWcapCachedCalendar.prototype = {
                     function( calendar, status, opType, id, detail )
                     {
                         try {
-                            if (status == NS_OK) {
+                            if (status == Components.results.NS_OK) {
                                 if (opType == SYNC) {
                                     // write stamp: only if necessary
                                     if (dtFrom == null ||
@@ -487,7 +486,8 @@ calWcapCachedCalendar.prototype = {
                                     if (listener != null) {
                                         listener.onOperationComplete(
                                             this_.superCalendar,
-                                            NS_OK, SYNC, null, null );
+                                            Components.results.NS_OK,
+                                            SYNC, null, null );
                                     }
                                 }
                                 else {

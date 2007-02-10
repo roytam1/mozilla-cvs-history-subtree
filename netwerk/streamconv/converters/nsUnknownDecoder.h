@@ -54,7 +54,8 @@
 }
 
 
-class nsUnknownDecoder : public nsIStreamConverter, public nsIContentSniffer
+class nsUnknownDecoder : public nsIStreamConverter
+                       , public nsIContentSniffer_MOZILLA_1_8_BRANCH
 {
 public:
   // nsISupports methods
@@ -70,7 +71,7 @@ public:
   NS_DECL_NSIREQUESTOBSERVER
 
   // nsIContentSniffer methods
-  NS_DECL_NSICONTENTSNIFFER
+  NS_DECL_NSICONTENTSNIFFER_MOZILLA_1_8_BRANCH
 
   nsUnknownDecoder();
 

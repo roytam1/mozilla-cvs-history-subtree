@@ -53,10 +53,23 @@
 // <msubsup> -- attach a subscript-superscript pair to a base - implementation
 //
 
-nsIFrame*
-NS_NewMathMLmsubsupFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMathMLmsubsupFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLmsubsupFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLmsubsupFrame* it = new (aPresShell) nsMathMLmsubsupFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+nsMathMLmsubsupFrame::nsMathMLmsubsupFrame()
+{
 }
 
 nsMathMLmsubsupFrame::~nsMathMLmsubsupFrame()
@@ -97,9 +110,8 @@ nsMathMLmsubsupFrame::Place(nsIRenderingContext& aRenderingContext,
   // check if the subscriptshift attribute is there
   nsAutoString value;
   nscoord subScriptShift = 0;
-  GetAttribute(mContent, mPresentationData.mstyle,
-               nsGkAtoms::subscriptshift_, value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                   nsMathMLAtoms::subscriptshift_, value)) {
     nsCSSValue cssValue;
     if (ParseNumericValue(value, cssValue) && cssValue.IsLengthUnit()) {
       subScriptShift = CalcLength(GetPresContext(), mStyleContext, cssValue);
@@ -107,9 +119,8 @@ nsMathMLmsubsupFrame::Place(nsIRenderingContext& aRenderingContext,
   }
   // check if the superscriptshift attribute is there
   nscoord supScriptShift = 0;
-  GetAttribute(mContent, mPresentationData.mstyle,
-               nsGkAtoms::superscriptshift_, value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                   nsMathMLAtoms::superscriptshift_, value)) {
     nsCSSValue cssValue;
     if (ParseNumericValue(value, cssValue) && cssValue.IsLengthUnit()) {
       supScriptShift = CalcLength(GetPresContext(), mStyleContext, cssValue);
@@ -144,15 +155,15 @@ nsMathMLmsubsupFrame::PlaceSubSupScript(nsPresContext*      aPresContext,
   if (!mathMLFrame) return NS_ERROR_INVALID_ARG;
 
   // force the scriptSpace to be atleast 1 pixel
-  nscoord onePixel = nsPresContext::CSSPixelsToAppUnits(1);
+  nscoord onePixel = aPresContext->IntScaledPixelsToTwips(1);
   aScriptSpace = PR_MAX(onePixel, aScriptSpace);
 
   ////////////////////////////////////
   // Get the children's desired sizes
 
-  nsHTMLReflowMetrics baseSize;
-  nsHTMLReflowMetrics subScriptSize;
-  nsHTMLReflowMetrics supScriptSize;
+  nsHTMLReflowMetrics baseSize (nsnull);
+  nsHTMLReflowMetrics subScriptSize (nsnull);
+  nsHTMLReflowMetrics supScriptSize (nsnull);
   nsBoundingMetrics bmBase, bmSubScript, bmSupScript;
   nsIFrame* subScriptFrame = nsnull;
   nsIFrame* supScriptFrame = nsnull;
@@ -332,10 +343,11 @@ nsMathMLmsubsupFrame::PlaceSubSupScript(nsPresContext*      aPresContext,
     PR_MAX(baseSize.ascent, 
        PR_MAX(subScriptSize.ascent - subScriptShift,
               supScriptSize.ascent + supScriptShift));
-  aDesiredSize.height = aDesiredSize.ascent +
-    PR_MAX(baseSize.height - baseSize.ascent,
-       PR_MAX(subScriptSize.height - subScriptSize.ascent + subScriptShift, 
-              supScriptSize.height - subScriptSize.ascent - supScriptShift));
+  aDesiredSize.descent =
+    PR_MAX(baseSize.descent,
+       PR_MAX(subScriptSize.descent + subScriptShift, 
+              supScriptSize.descent - supScriptShift));
+  aDesiredSize.height = aDesiredSize.ascent + aDesiredSize.descent;
   aDesiredSize.width = boundingMetrics.width;
   aDesiredSize.mBoundingMetrics = boundingMetrics;
 

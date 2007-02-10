@@ -14,17 +14,23 @@ bin/.autoreg
 [langenus]
 ;
 ; en-US 
-; If you add a new directory you must explicitly call addDirectory in langenus.jst
 bin/chrome/en-US.jar
-bin/chrome/en-US.manifest
-bin/defaults/profile/en-US/*
-bin/defaults/messenger/en-US/*
+bin/chrome/en-mac.jar
+bin/chrome/en-unix.jar
+bin/chrome/en-win.jar
+
+[regus]
+;
+; US
+; If you add a new directory you must explicitly call addDirectory in regus.jst
+bin/chrome/US.jar
+bin/defaults/profile/US/*
+bin/defaults/messenger/US/*
 bin/searchplugins/*
-bin/dictionaries/*
 
 [deflenus]
 ;
-; default files for en-US
+; default files for US
 bin/defaults/profile/bookmarks.html
 bin/defaults/profile/panels.rdf
 bin/defaults/profile/localstore.rdf
@@ -56,28 +62,10 @@ bin/components/jar50.dll
 bin/components/xpinstal.dll
 
 [browser]
-; MOZ_XUL_APP=1 items
-bin/xul.dll
-bin/components/commandlines.xpt
-bin/components/feeds.xpt
-bin/components/nsUpdateService.js
-bin/components/toolkitprofile.xpt
-bin/components/update.xpt
-bin/components/cmdlines.dll
-bin/components/suite.dll
-bin/components/tkitcmps.dll
-bin/components/nsBrowserContentHandler.js
-bin/components/nsExtensionManager.js
-bin/components/pluginGlue.js
-bin/components/xulapp.xpt
-bin/components/nsURLFormatter.js
-bin/components/urlformatter.xpt
-
 ; files listed in xpcom (missing in this section) will be installed as part of the browser
 bin/README.txt,bin/readme.txt
 bin/LICENSE,bin/license.txt
 bin/gkgfx.dll
-bin/thebes.dll
 ;bin/components/gkgfxwin.dll
 bin/components/gfx_os2.dll
 ;bin/components/gkwidget.dll
@@ -100,14 +88,11 @@ bin/components/accessibility.xpt
 bin/components/appshell.xpt
 bin/components/appshell.dll
 bin/components/appcomps.dll
-bin/components/bookmark.dll
-bin/components/windowds.dll
-bin/components/intlapp.dll
-bin/components/xpautoc.dll
 bin/components/srchsvc.dll
 bin/components/appstartup.xpt
 bin/components/autocomplete.xpt
 bin/components/bookmarks.xpt
+bin/components/chrome.xpt
 bin/components/directory.xpt
 bin/components/downloadmanager.xpt
 ;bin/components/embedcomponents.dll
@@ -150,7 +135,6 @@ bin/components/dom_range.xpt
 bin/components/dom_sidebar.xpt
 bin/components/dom_storage.xpt
 bin/components/dom_stylesheets.xpt
-bin/components/dom_svg.xpt
 bin/components/dom_traversal.xpt
 bin/components/dom_views.xpt
 bin/components/dom_xbl.xpt
@@ -172,7 +156,6 @@ bin/components/content_xslt.xpt
 bin/components/content_xtf.xpt
 bin/components/xuldoc.xpt
 bin/components/xultmpl.xpt
-bin/components/gkgfxthebes.dll
 bin/components/gklayout.dll
 bin/components/gkparser.dll
 bin/components/gkplugin.dll
@@ -183,6 +166,7 @@ bin/components/imgicon.xpt
 bin/components/intl.xpt
 bin/components/chardet.xpt
 bin/components/jar.xpt
+bin/components/jsconsole.xpt
 bin/components/jsconsole-clhandler.js
 bin/components/layout_base.xpt
 bin/components/layout_printing.xpt
@@ -191,21 +175,22 @@ bin/components/layout_xul_tree.xpt
 bin/components/inspector.xpt
 bin/components/locale.xpt
 bin/components/i18n.dll
-bin/components/chardet.dll
 bin/components/mork.dll
 bin/components/mozbrwsr.xpt
-;bin/components/mozcomps.xpt (not built on OS/2)
+;bin/components/mozcomps.xpt
 bin/components/mozfind.dll
 bin/components/mozfind.xpt
 ;bin/components/mozucth.dll
 ;bin/components/mozucth.xpt
 ;bin/components/nativapp.dll
 bin/components/necko.dll
+bin/components/necko2.dll
 bin/components/necko.xpt
 bin/components/mimetype.xpt
 bin/components/necko_cache.xpt
 bin/components/necko_strconv.xpt
 bin/components/necko_about.xpt
+bin/components/necko_data.xpt
 bin/components/necko_dns.xpt
 bin/components/necko_ftp.xpt
 bin/components/necko_http.xpt
@@ -279,6 +264,7 @@ bin/components/nsProxyAutoConfig.js
 bin/components/nsXmlRpcClient.js
 ;bin/plugins/npnul32.dll
 bin/plugins/npnulos2.dll
+bin/components/xmlextras.xpt
 ;bin/components/xmlextras.dll
 bin/components/xmlextra.dll
 bin/components/nsHelperAppDlg.js
@@ -287,9 +273,11 @@ bin/components/nsKillAll.js
 bin/components/nsProgressDialog.js
 bin/components/progressDlg.xpt
 bin/components/nsDownloadProgressListener.js
+;bin/components/transformiix.dll
+bin/components/t8iix.dll
 ;bin/AccessibleMarshal.dll
 ;bin/components/nsSetDefaultBrowser.js
-bin/components/suitetypeaheadfind.xpt
+bin/components/typeaheadfind.xpt
 bin/components/typahead.dll
 bin/components/nsCloseAllWindows.js
 bin/components/htmlparser.xpt
@@ -299,18 +287,14 @@ bin/components/nsResetPref.js
 bin/components/nsUpdateNotifier.js
 bin/components/plugin.xpt
 bin/components/prefetch.xpt
-bin/components/txEXSLTRegExFunctions.js
+bin/components/imgicon.xpt
+bin/components/libimgicon.dll
 
 bin/components/websrvcs.dll
 bin/components/websrvcs.xpt
 
 bin/components/xulappinfo.js
 bin/components/xulappinfo.xpt
-
-; spellchecker (may not be present)
-bin/components/myspell.dll
-bin/components/spellchk.dll
-bin/components/spellchecker.xpt
 
 ; LDAP components need to be in the browser for AutoConfig
 bin/components/mozldap.dll
@@ -324,29 +308,13 @@ bin/prldap50.dll
 bin/components/p3p.xpt
 bin/components/p3p.dll
 
-; classic theme
-bin/chrome/classic.jar
-bin/chrome/classic.manifest
-bin/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/icon.png
-bin/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/install.rdf
-bin/extensions/{972ce4c6-7e08-4474-a285-3208198ce6fd}/preview.png
-bin/chrome/classic/*
-
-; modern theme
-bin/chrome/modern.jar
-bin/chrome/modern/*
-bin/extensions/modern@themes.mozilla.org/chrome/modern.jar
-bin/extensions/modern@themes.mozilla.org/chrome.manifest
-bin/extensions/modern@themes.mozilla.org/icon.png
-bin/extensions/modern@themes.mozilla.org/install.rdf
-bin/extensions/modern@themes.mozilla.org/preview.png
- 
 ; chrome stuff
 bin/chrome/help.jar
 bin/chrome/comm.jar
-bin/chrome/comm.manifest
+bin/chrome/content-packs.jar
 bin/chrome/toolkit.jar
-bin/chrome/toolkit.manifest
+bin/chrome/modern.jar
+bin/chrome/classic.jar
 bin/chrome/chromelist.txt
 bin/chrome/icons/default/bmPropsWindow.ico
 bin/chrome/icons/default/bookmark-window.ico
@@ -404,7 +372,6 @@ bin/res/broken-image.gif
 bin/res/html/*
 bin/res/fonts/*
 bin/res/dtd/*
-bin/res/effective_tld_names.dat
 bin/defaults/wallet/VcardSchema.tbl
 bin/defaults/wallet/FieldSchema.tbl
 bin/defaults/wallet/SchemaConcat.tbl
@@ -424,10 +391,6 @@ bin/res/rdf/folder-open.gif
 bin/res/rdf/loading.gif
 
 [mail]
-; MOZ_XUL_APP=1 addition
-bin/components/mail.dll
-
-; Original items (pre MOZ_XUL_APP=1)
 bin/msgbsutl.dll
 bin/components/addrbook.dll
 bin/components/addrbook.xpt
@@ -466,7 +429,6 @@ bin/components/impComm4xMail.xpt
 bin/components/nsAbLDAPAttributeMap.js
 bin/components/nsLDAPPrefsService.js
 bin/chrome/messenger.jar
-bin/chrome/messenger.manifest
 bin/chrome/icons/default/abcardWindow.ico
 bin/chrome/icons/default/addressbookWindow.ico
 bin/chrome/icons/default/messengerWindow.ico
@@ -479,7 +441,7 @@ bin/components/smime-service.js
 ;bin/components/msgMapi.dll
 ;bin/components/mapihook.xpt
 bin/components/msgmdn.dll
-;bin/components/msgmdn.xpt (not built on OS/2)
+;bin/components/msgmdn.xpt
 bin/components/mdn-service.js
 ;bin/components/nsSetDefaultMail.js
 ;bin/components/nsUnsetDefaultMail.js
@@ -515,8 +477,6 @@ bin/freebl3.dll
 bin/ssl3.dll
 bin/chrome/pipnss.jar
 bin/chrome/pippki.jar
-bin/chrome/pippki.manifest
-
 
 [inspector]
 bin/components/inspector-cmdline.js
@@ -526,9 +486,14 @@ bin/defaults/pref/inspector.js
 bin/res/inspector/viewer-registry.rdf
 bin/res/inspector/search-registry.rdf
 
+[spellcheck]
+bin/components/myspell.dll
+bin/components/spellchk.dll
+bin/components/spellchecker.xpt
+bin/dictionaries/*
+
 [reporter]
 bin/chrome/reporter.jar
-bin/chrome/reporter.manifest
 
 [sroaming]
 bin/components/sroaming.dll

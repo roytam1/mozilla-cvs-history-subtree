@@ -42,11 +42,17 @@
 var messengerContractID        = "@mozilla.org/messenger;1";
 var statusFeedbackContractID   = "@mozilla.org/messenger/statusfeedback;1";
 var mailSessionContractID      = "@mozilla.org/messenger/services/session;1";
+var secureUIContractID         = "@mozilla.org/secure_browser_ui;1";
+
+
+var prefContractID             = "@mozilla.org/preferences-service;1";
 var msgWindowContractID      = "@mozilla.org/messenger/msgwindow;1";
 
 var messenger;
 var pref;
+var prefServices;
 var statusFeedback;
+var messagePaneController;
 var msgWindow;
 
 var msgComposeService;
@@ -77,9 +83,13 @@ var gAccountCentralLoaded = true;
 var gFakeAccountPageLoaded = false;
 //End progress and Status variables
 
+// for checking if the folder loaded is Draft or Unsent which msg is editable
+var gIsEditableMsgFolder = false;
+var gOfflineManager;
+
 function OnMailWindowUnload()
 {
-  MailOfflineMgr.uninit();
+  RemoveMailOfflineObserver();
   ClearPendingReadTimer();
 
   var searchSession = GetSearchSession();
@@ -133,8 +143,8 @@ function CreateMailWindowGlobals()
   // get the messenger instance
   CreateMessenger();
 
-  pref = Components.classes["@mozilla.org/preferences-service;1"]
-          .getService(Components.interfaces.nsIPrefBranch2);
+  prefServices = Components.classes[prefContractID].getService(Components.interfaces.nsIPrefService);
+  pref = prefServices.getBranch(null);
 
   //Create windows status feedback
   // set the JS implementation of status feedback before creating the c++ one..
@@ -147,9 +157,33 @@ function CreateMailWindowGlobals()
         .getInterface(Components.interfaces.nsIXULWindow)
         .XULBrowserWindow = window.MsgStatusFeedback;
 
-  statusFeedback = Components.classes[statusFeedbackContractID].createInstance();
+  statusFeedback           = Components.classes[statusFeedbackContractID].createInstance();
   statusFeedback = statusFeedback.QueryInterface(Components.interfaces.nsIMsgStatusFeedback);
-  statusFeedback.setWrappedStatusFeedback(window.MsgStatusFeedback);
+
+  /*
+    not in use unless we want the lock button back
+
+  // try to create and register ourselves with a security icon...
+  var securityIcon = document.getElementById("security-button");
+  if (securityIcon) {
+    // if the client isn't built with psm enabled then we won't have a secure UI to monitor the lock icon
+    // so be sure to wrap this in a try / catch clause...
+    try {
+      var secureUI;
+      // we may not have a secure UI if psm isn't installed!
+      if (secureUIContractID in Components.classes) {
+        secureUI = Components.classes[secureUIContractID].createInstance();
+        if (secureUI) {
+          secureUI = secureUI.QueryInterface(Components.interfaces.nsISecureBrowserUI);
+          secureUI.init(_content, securityIcon);
+        }
+      }
+    }
+    catch (ex) {}
+  }
+  */
+
+  window.MsgWindowCommands = new nsMsgWindowCommands();
 
   //Create message window object
   msgWindow = Components.classes[msgWindowContractID].createInstance();
@@ -181,15 +215,13 @@ function CreateMailWindowGlobals()
 
 function InitMsgWindow()
 {
-  msgWindow.windowCommands = new nsMsgWindowCommands();
-  // set the domWindow before setting the status feedback and header sink objects
-  msgWindow.domWindow = window; 
+  msgWindow.messagePaneController = new nsMessagePaneController();
   msgWindow.statusFeedback = statusFeedback;
   msgWindow.msgHeaderSink = messageHeaderSink;
+  msgWindow.SetDOMWindow(window);
   mailSession.AddMsgWindow(msgWindow);
   getBrowser().docShell.allowAuth = false;
   msgWindow.rootDocShell.allowAuth = true; 
-  msgWindow.rootDocShell.appType = Components.interfaces.nsIDocShell.APP_TYPE_MAIL;
 }
 
 function AddDataSources()
@@ -280,7 +312,7 @@ nsMsgStatusFeedback.prototype =
         this.statusTextFld.label = status;
       }
     },
-  setOverLink : function(link, context)
+  setOverLink : function(link)
     {
       this.ensureStatusFields();
       this.statusTextFld.label = link;
@@ -289,7 +321,6 @@ nsMsgStatusFeedback.prototype =
     {
       if (iid.equals(Components.interfaces.nsIMsgStatusFeedback) ||
           iid.equals(Components.interfaces.nsIXULBrowserWindow) ||
-          iid.equals(Components.interfaces.nsISupportsWeakReference) || 
           iid.equals(Components.interfaces.nsISupports))
         return this;
       throw Components.results.NS_NOINTERFACE;
@@ -406,7 +437,10 @@ nsMsgStatusFeedback.prototype =
         this.statusBar.value = percentage;
         this.statusBar.label = Math.round(percentage) + "%";
       }
-    }
+    },
+  closeWindow : function(percent)
+  {
+  }
 }
 
 
@@ -423,17 +457,29 @@ nsMsgWindowCommands.prototype =
       return this;
     throw Components.results.NS_NOINTERFACE;
   },
-  
-  selectFolder: function(folderUri)
+  SelectFolder: function(folderUri)
   {
     SelectFolder(folderUri);
   },
-  
-  selectMessage: function(messageUri)
+  SelectMessage: function(messageUri)
   {
     SelectMessage(messageUri);
+  }
+}
+
+function nsMessagePaneController()
+{
+}
+
+nsMessagePaneController.prototype =
+{
+  QueryInterface : function(iid)
+  {
+    if (iid.equals(Components.interfaces.nsIMsgMessagePaneController) ||
+        iid.equals(Components.interfaces.nsISupports))
+      return this;
+    throw Components.results.NS_NOINTERFACE;
   },
-  
   clearMsgPane: function()
   {
     if (gDBView)
@@ -441,7 +487,7 @@ nsMsgWindowCommands.prototype =
     else
       setTitleFromFolder(null,null);
     ClearMessagePane();
-  }  
+  }
 }
 
 function StopUrls()
@@ -574,10 +620,12 @@ function OpenInboxForServer(server)
     var inboxFolder = GetInboxFolder(server);
     SelectFolder(inboxFolder.URI);
 
-    if (MailOfflineMgr.isOnline() || MailOfflineMgr.getNewMail())	{
+    if(CheckOnline())	{
       if (server.type != "imap")
         GetMessagesForInboxOnServer(server);
     }
+    else if (DoGetNewMailWhenOffline())
+      GetMessagesForInboxOnServer(server);
   }
   catch (ex) {
       dump("Error opening inbox for server -> " + ex + "\n");

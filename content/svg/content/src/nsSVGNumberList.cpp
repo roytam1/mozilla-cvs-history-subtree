@@ -183,7 +183,7 @@ nsSVGNumberList::GetValueString(nsAString& aValue)
 
     if (++i >= count) break;
 
-    aValue.AppendLiteral(" ");
+    aValue.Append(NS_LITERAL_STRING(" "));
   }
   
   return NS_OK;

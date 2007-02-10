@@ -22,7 +22,7 @@
 #
 # Contributor(s):
 #   Ben Goodger <ben@netscape.com> (ass'td polish fixes)
-#   Hkan Waara <hwaara@chello.se>
+#   Håkan Waara <hwaara@chello.se>
 #   Neil Rashbrook <neil@parkwaycc.co.uk> (ass'td polish fix)
 #
 # Alternatively, the contents of this file may be used under the terms of
@@ -66,21 +66,22 @@
 
 <stringbundleset id="stringbundleset">
   <stringbundle id="bundle_composeMsgs" src="chrome://messenger/locale/messengercompose/composeMsgs.properties"/>
-  <stringbundle id="bundle_messenger"   src="chrome://messenger/locale/messenger.properties"/>
+  <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>
   <stringbundle id="languageBundle"     src="chrome://global/locale/languageNames.properties"/>
 </stringbundleset>
 
 <script type="application/x-javascript" src="chrome://communicator/content/printing.js"/>
+<script type="application/x-javascript" src="chrome://editor/content/editorInlineSpellCheck.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/accountUtils.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/widgetglue.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/mailCore.js"/>
-<script type="application/x-javascript" src="chrome://global/content/inlineSpellCheckUI.js"/>
 <script type="application/x-javascript" src="chrome://editor/content/editor.js"/>
 <script type="application/x-javascript" src="chrome://messenger/content/messengercompose/MsgComposeCommands.js"/>
 
 <!-- drag and drop -->
 <script type="application/x-javascript" src="chrome://messenger/content/addressbook/abDragDrop.js"/>
 <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
+<script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
 
 <!-- move needed functions into a single js file -->
 <script type="application/x-javascript" src="chrome://messenger/content/messengercompose/addressingWidgetOverlay.js"/>
@@ -168,6 +169,8 @@
 
 <broadcasterset id="composeBroadcasters">
   <broadcaster id="Editor:Throbber" busy="false"/>
+  <broadcaster id="Communicator:WorkMode" label="&offlineGoOfflineCmd.label;"
+               type="checkbox" oncommand="toggleOfflineStatus();"/>
   <broadcaster id="args" value="editorType=default"/>
   <broadcaster id="viewAddressPicker" autoCheck="false" type="checkbox" oncommand="toggleAddressPicker();"/>
 </broadcasterset>
@@ -194,7 +197,6 @@
   <key id="key_cut" key="&cutCmd.key;" modifiers="accel"/>
   <key id="key_copy" key="&copyCmd.key;" modifiers="accel"/>
   <key id="key_paste" key="&pasteCmd.key;" modifiers="accel"/>
-  <key id="key_rewrap" key="&editRewrapCmd.key;" modifiers="accel"/>
 #ifdef XP_MACOSX
   <key id="key_delete" keycode="VK_BACK"/>
   <key id="key_delete2" keycode="VK_DELETE"/>
@@ -241,14 +243,15 @@
 
 <keyset id="editorKeys"/>
 
-<popup id="msgComposeContext" onpopupshowing="openEditorContextMenu(this);">
-
+<popup id="msgComposeContext"
+    onpopupshowing="openEditorContextMenu();">
+  
   <menuitem id="spellCheckNoSuggestions" label="&spellCheckNoSuggestions.label;" disabled="true"/>
   <menuseparator id="spellCheckAddSep"/>
   <menuitem id="spellCheckAddToDictionary" label="&spellCheckAddToDictionary.label;" accesskey="&spellCheckAddToDictionary.accesskey;"
-            oncommand="InlineSpellCheckerUI.addToDictionary();"/>  
+            oncommand="InlineSpellChecker.addToDictionary(null,null);"/>  
   <menuitem id="spellCheckIgnoreWord" label="&spellCheckIgnoreWord.label;" accesskey="&spellCheckIgnoreWord.accesskey;"
-            oncommand="InlineSpellCheckerUI.ignoreWord();"/>  
+            oncommand="InlineSpellChecker.ignoreWord(null, null)"/>  
   <menuseparator id="spellCheckSuggestionsSeparator"/>
 
   <menuitem label="&undo.label;" accesskey="&undo.accesskey;" command="cmd_undo"/>
@@ -311,6 +314,7 @@
               <menuitem type="checkbox" label="&attachVCardCmd.label;" accesskey="&attachVCardCmd.accesskey;" command="cmd_attachVCard"/>
             </menupopup>
           </menu>
+          <menuitem id="offlineGoOfflineCmd" hidden="true" label="&offlineGoOfflineCmd.label;" accesskey="&offlineGoOfflineCmd.accesskey;" observes="Communicator:WorkMode"/>
           <menuitem id="menu_close" label="&closeCmd.label;" key="key_close" accesskey="&closeCmd.accesskey;" command="cmd_close"/>
           <menuseparator/>
           <menuitem label="&saveCmd.label;" accesskey="&saveCmd.accesskey;" key="key_save" command="cmd_saveDefault"/>
@@ -349,7 +353,7 @@
           <menuitem id="menu_paste" label="&pasteCmd.label;" key="key_paste" accesskey="&pasteCmd.accesskey;" command="cmd_paste"/>
           <menuitem id="menu_pasteNoFormatting" command="cmd_pasteNoFormatting"/>
           <menuitem id="menu_pasteQuote"/>
-          <menuitem id="menu_rewrap" label="&editRewrapCmd.label;" key="key_rewrap" accesskey="&editRewrapCmd.accesskey;" command="cmd_rewrap"/>
+          <menuitem label="&editRewrapCmd.label;" accesskey="&editRewrapCmd.accesskey;" command="cmd_rewrap"/>
           <menuitem id="menu_delete" label="&deleteCmd.label;" key="key_delete" accesskey="&deleteCmd.accesskey;" command="cmd_delete"/>
           <menuseparator/>
           <menuitem id="menu_selectAll" label="&selectAllCmd.label;" key="key_selectAll" accesskey="&selectAllCmd.accesskey;" command="cmd_selectAll"/>
@@ -416,7 +420,7 @@
           <menuitem label="&checkSpellingCmd.label;" id="menu_checkspelling" accesskey="&checkSpellingCmd.accesskey;" key="key_checkspelling" command="cmd_spelling"/>
           <menuitem label="&enableInlineSpellChecker.label;" id="menu_inlineSpellCheck" 
                            accesskey="&enableInlineSpellChecker.accesskey;" checked="false"
-                           type="checkbox" oncommand="enableInlineSpellCheck(!InlineSpellCheckerUI.enabled);"/>
+                           type="checkbox" oncommand="ToggleInlineSpellChecker(event.target)"/>
           <menuitem label="&quoteCmd.label;" accesskey="&quoteCmd.accesskey;" command="cmd_quoteMessage"/>
           <menuseparator/>
           <menuitem id="returnReceiptMenu" type="checkbox" label="&returnReceiptMenu.label;" accesskey="&returnReceiptMenu.accesskey;" checked="false" oncommand="ToggleReturnReceipt(event.target)"/>
@@ -539,9 +543,9 @@
         <menupopup id="menu_HelpPopup">
 #ifdef XP_MACOSX
           <menuitem id="hintsAndTips" label="&hintsAndTips.label;" key="key_macHelp" oncommand="openRegionURL('mailnews.hints_and_tips.url');"/>
-          <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="openFormattedRegionURL('app.releaseNotesURL');"/>
+          <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="openRegionURL('releaseNotesURL');"/>
 #else
-          <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="openFormattedRegionURL('app.releaseNotesURL');"/>
+          <menuitem id="releaseNotes" accesskey="&releaseCmd.accesskey;" label="&releaseCmd.label;" oncommand="openRegionURL('releaseNotesURL');"/>
           <menuitem id="hintsAndTips" accesskey="&hintsAndTips.accesskey;" label="&hintsAndTips.label;" oncommand="openRegionURL('mailnews.hints_and_tips.url');"/>
           <menuseparator id="menu_HelpAboutSeparator"/>
 #endif
@@ -567,6 +571,7 @@
                now_tooltiptext="&sendButton.tooltip;"
                later_label="&sendLaterCmd.label;"
                later_tooltiptext="&sendlaterButton.tooltip;">
+      <observes element="Communicator:WorkMode" attribute="offline"/>
     </toolbarbutton>
     
     <toolbarbutton class="toolbarbutton-1"
@@ -685,7 +690,7 @@
         <vbox flex="1" id="addresses-box">
           <hbox align="center">
             <label value="&fromAddr.label;" accesskey="&fromAddr.accesskey;" control="msgIdentity"/>
-            <menulist id="msgIdentity" type="description" flex="1" oncommand="LoadIdentity(false);">
+            <menulist id="msgIdentity" class="identity-menulist" label="..." flex="1" oncommand="LoadIdentity(false);">
               <menupopup id="msgIdentityPopup"/>
             </menulist>
           </hbox> 
@@ -717,7 +722,7 @@
                          searchSessions="addrbook" timeout="300" maxrows="4" 
                          autoFill="true" autoFillAfterMatch="true" forceComplete="true"
                          minResultsForPopup="3" ignoreBlurWhileSearching="true"
-                         ontextentered="awRecipientTextCommand(eventParam, this)"
+                         ontextcommand="awRecipientTextCommand(eventParam, this)"
                          onerrorcommand="awRecipientErrorCommand(eventParam, this)"
                          oninput="gContentChanged=true; setupAutocomplete();" disableonsend="true"
                          onkeypress="awRecipientKeyPress(event, this)"
@@ -729,7 +734,7 @@
           </listbox>
           <hbox align="center">
             <label value="&subject.label;" accesskey="&subject.accesskey;" control="msgSubject"/>
-            <textbox id="msgSubject" flex="1" class="toolbar" disableonsend="true" spellcheck="true"
+            <textbox id="msgSubject" flex="1" class="toolbar" disableonsend="true"
                      oninput="gContentChanged=true;SetComposeWindowTitle();"
                      onkeypress="subjectKeyPress(event);" />
           </hbox>

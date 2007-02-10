@@ -191,6 +191,8 @@ static unsigned char * utf8_nextchar(unsigned char *str)
 static
 PRInt32 generate_encodedwords(char *pUTF8, const char *charset, char method, char *output, PRInt32 outlen, PRInt32 output_carryoverlen, PRInt32 foldlen, PRBool foldingonly)
 {
+  NS_ASSERTION(output_carryoverlen > 0, "output_carryoverlen must be > 0"); 
+
   nsCOMPtr <nsISaveAsCharset> conv;
   PRUnichar *_pUCS2 = nsnull, *pUCS2 = nsnull, *pUCS2Head = nsnull, cUCS2Tmp = 0;
   char  *ibuf, *o = output;
@@ -206,7 +208,7 @@ PRInt32 generate_encodedwords(char *pUTF8, const char *charset, char method, cha
   if (!foldingonly) {
 
     // Deal with UCS2 pointer
-    pUCS2 = _pUCS2 = ToNewUnicode(NS_ConvertUTF8toUTF16(pUTF8));
+    pUCS2 = _pUCS2 = ToNewUnicode(NS_ConvertUTF8toUCS2(pUTF8));
     if (!pUCS2)
       return -1;
 
@@ -592,19 +594,13 @@ char * apply_rfc2047_encoding(const char *_src, PRBool structured, const char *c
 
   if (!_src)
     return nsnull;
-
-  //<TAB>=?<charset>?<B/Q>?...?=<CRLF>
-  PRInt32 perLineOverhead = strlen(charset) + 10;
-
-  if (perLineOverhead > foldlen || (src = src_head = nsCRT::strdup(_src)) == nsnull)
+  if ((src = src_head = nsCRT::strdup(_src)) == nsnull)
     return nsnull;
 
   /* allocate enough buffer for conversion, this way it can avoid
      do another memory allocation which is expensive
    */
-  PRInt32 charsPerLine = (foldlen - perLineOverhead) / 4;
-  PRInt32 maxNumLines = (strlen(src) / charsPerLine) + 1;
-  outputlen = strlen(src) * 4 + (maxNumLines * perLineOverhead) + 20 /* fudge */;
+  outputlen = strlen(src) * 4 + kMAX_CSNAME + 8;
   if ((outputtail = output = (char *)PR_Malloc(outputlen)) == nsnull) {
     PR_Free(src_head);
     return nsnull;

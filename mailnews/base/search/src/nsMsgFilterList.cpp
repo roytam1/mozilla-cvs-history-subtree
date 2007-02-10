@@ -69,10 +69,7 @@ nsMsgFilterList::nsMsgFilterList() :
     m_fileVersion(0)
 {
   // I don't know how we're going to report this error if we failed to create the isupports array...
-#ifdef DEBUG
-  nsresult rv =
-#endif
-    NS_NewISupportsArray(getter_AddRefs(m_filters));
+  nsresult rv = NS_NewISupportsArray(getter_AddRefs(m_filters));
   NS_ASSERTION(NS_SUCCEEDED(rv), "Fixme bug 180312: NS_NewISupportsArray() failed");
 
   m_loggingEnabled = PR_FALSE;
@@ -126,14 +123,14 @@ NS_IMETHODIMP nsMsgFilterList::SaveToFile(nsIOFileStream *stream)
 
 NS_IMETHODIMP nsMsgFilterList::EnsureLogFile()
 {
-  nsCOMPtr <nsILocalFile> file;
+  nsCOMPtr <nsIFileSpec> file;
   nsresult rv = GetLogFileSpec(getter_AddRefs(file));
   NS_ENSURE_SUCCESS(rv,rv);
 
   PRBool exists;
   rv = file->Exists(&exists);
   if (NS_SUCCEEDED(rv) && !exists) {
-    rv = file->Create(nsIFile::NORMAL_FILE_TYPE, 0644);
+    rv = file->Touch();
     NS_ENSURE_SUCCESS(rv,rv);
   }
   return NS_OK;
@@ -145,12 +142,11 @@ nsresult nsMsgFilterList::TruncateLog()
   nsresult rv = SetLogStream(nsnull);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  nsCOMPtr <nsILocalFile> file;
+  nsCOMPtr <nsIFileSpec> file;
   rv = GetLogFileSpec(getter_AddRefs(file));
   NS_ENSURE_SUCCESS(rv,rv);
 
-  file->Remove(PR_FALSE);
-  rv = file->Create(nsIFile::NORMAL_FILE_TYPE, 0644);
+  rv = file->Truncate(0);
   NS_ENSURE_SUCCESS(rv,rv);
   return rv;
 }
@@ -162,21 +158,17 @@ NS_IMETHODIMP nsMsgFilterList::ClearLog()
   // disable logging while clearing
   m_loggingEnabled = PR_FALSE;
 
-#ifdef DEBUG
-  nsresult rv =
-#endif
-    TruncateLog();
+  nsresult rv = TruncateLog();
   NS_ASSERTION(NS_SUCCEEDED(rv), "failed to truncate filter log");
 
   m_loggingEnabled = loggingEnabled;
-
   return NS_OK;
 }
 
 nsresult 
-nsMsgFilterList::GetLogFileSpec(nsILocalFile **aFile)
+nsMsgFilterList::GetLogFileSpec(nsIFileSpec **aFileSpec)
 {
-  NS_ENSURE_ARG_POINTER(aFile);
+  NS_ENSURE_ARG_POINTER(aFileSpec);
 
   // XXX todo
   // the path to the log file won't change
@@ -209,41 +201,31 @@ nsMsgFilterList::GetLogFileSpec(nsILocalFile **aFile)
     rv = m_folder->GetPath(getter_AddRefs(thisFolder));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsFileSpec spec;
-    rv = thisFolder->GetFileSpec(&spec);
+    nsCOMPtr <nsIFileSpec> filterLogFile = do_CreateInstance(NS_FILESPEC_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsILocalFile> filterLogFile;
-    rv = NS_FileSpecToIFile(&spec, getter_AddRefs(filterLogFile));
+    
+    rv = filterLogFile->FromFileSpec(thisFolder);
     NS_ENSURE_SUCCESS(rv, rv);
-
+    
     // NOTE:
     // we don't we need to call NS_MsgHashIfNecessary()
     // it's already been hashed, if necessary
-    nsAutoString filterLogName;
-    rv = filterLogFile->GetLeafName(filterLogName);
+    nsXPIDLCString filterLogName;
+    rv = filterLogFile->GetLeafName(getter_Copies(filterLogName));
+    NS_ENSURE_SUCCESS(rv,rv);
+    
+    filterLogName.Append(".htm");
+    
+    rv = filterLogFile->SetLeafName(filterLogName.get());
     NS_ENSURE_SUCCESS(rv,rv);
 
-    filterLogName.Append(NS_LITERAL_STRING(".htm"));
-
-    rv = filterLogFile->SetLeafName(filterLogName);
-    NS_ENSURE_SUCCESS(rv,rv);
-
-    NS_IF_ADDREF(*aFile = filterLogFile);
+    NS_IF_ADDREF(*aFileSpec = filterLogFile);
   }
   else {
-    nsCOMPtr<nsIFileSpec> fileSpec;
-    rv = server->GetLocalPath(getter_AddRefs(fileSpec));
+    rv = server->GetLocalPath(aFileSpec);
     NS_ENSURE_SUCCESS(rv,rv);
-
-    nsFileSpec spec;
-    rv = fileSpec->GetFileSpec(&spec);
-    NS_ENSURE_SUCCESS(rv,rv);
- 
-    rv = NS_FileSpecToIFile(&spec, aFile);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = (*aFile)->AppendNative(NS_LITERAL_CSTRING("filterlog.html"));
+    
+    rv = (*aFileSpec)->AppendRelativeUnixPath("filterlog.html");
     NS_ENSURE_SUCCESS(rv,rv);
   }
   return NS_OK;
@@ -254,17 +236,13 @@ nsMsgFilterList::GetLogURL(char **aLogURL)
 {
   NS_ENSURE_ARG_POINTER(aLogURL);
 
-  nsCOMPtr <nsILocalFile> file;
+  nsCOMPtr <nsIFileSpec> file;
   nsresult rv = GetLogFileSpec(getter_AddRefs(file));
   NS_ENSURE_SUCCESS(rv,rv);
   
-  nsCString url;
-  rv = NS_GetURLSpecFromFile(file, url);
+  rv = file->GetURLString(aLogURL);
   NS_ENSURE_SUCCESS(rv,rv);
-
-  *aLogURL = ToNewCString(url);
-
-  return *aLogURL ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -292,8 +270,18 @@ nsMsgFilterList::GetLogStream(nsIOutputStream **aLogStream)
   nsresult rv;
 
   if (!m_logStream) {
-    nsCOMPtr <nsILocalFile> logFile;
-    rv = GetLogFileSpec(getter_AddRefs(logFile));
+    nsCOMPtr <nsIFileSpec> file;
+    rv = GetLogFileSpec(getter_AddRefs(file));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsXPIDLCString nativePath;
+    rv = file->GetNativePath(getter_Copies(nativePath));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr <nsILocalFile> logFile = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    rv = logFile->InitWithNativePath(nsDependentCString(nativePath));
     NS_ENSURE_SUCCESS(rv,rv);
 
     // append to the end of the log file
@@ -535,7 +523,6 @@ nsresult nsMsgFilterList::LoadValue(nsCString &value, nsIOFileStream *aStream)
         curChar = '"';
       else if (nextChar == '\\')	// replace "\\" with "\"
       {
-        valueStr += curChar;
         curChar = ReadChar(aStream);
       }
       else
@@ -686,7 +673,7 @@ nsresult nsMsgFilterList::LoadTextFilters(nsIOFileStream *aStream)
         else if (type == nsMsgFilterAction::ChangePriority)
         {
           nsMsgPriorityValue outPriority;
-          nsresult res = NS_MsgGetPriorityFromString(value.get(), outPriority);
+          nsresult res = NS_MsgGetPriorityFromString(value.get(), &outPriority);
           if (NS_SUCCEEDED(res))
             currentFilterAction->SetPriority(outPriority);
           else
@@ -826,12 +813,6 @@ NS_IMETHODIMP nsMsgFilterList::ParseCondition(nsIMsgFilter *aFilter, const char 
       
       if (newTerm) 
       {
-        /* Invert nsMsgSearchTerm::EscapeQuotesInStr() */
-        for (char *to = termDup, *from = termDup;;)
-        {
-          if (*from == '\\' && from[1] == '"') from++;
-          if (!(*to++ = *from++)) break;
-        }
         newTerm->m_booleanOp = (ANDTerm) ? nsMsgSearchBooleanOp::BooleanAND
                                          : nsMsgSearchBooleanOp::BooleanOR;
 
@@ -894,7 +875,7 @@ nsresult
 nsMsgFilterList::WriteWstrAttr(nsMsgFilterFileAttribValue attrib,
                                const PRUnichar *aFilterName, nsIOFileStream *aStream)
 {
-    WriteStrAttr(attrib, NS_ConvertUTF16toUTF8(aFilterName).get(), aStream);
+    WriteStrAttr(attrib, NS_ConvertUCS2toUTF8(aFilterName).get(), aStream);
     return NS_OK;
 }
 

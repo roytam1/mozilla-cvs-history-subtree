@@ -92,8 +92,6 @@ public:
   nsXBLContentSink();
   ~nsXBLContentSink();
 
-  NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
-
   nsresult Init(nsIDocument* aDoc,
                 nsIURI* aURL,
                 nsISupports* aContainer);
@@ -112,8 +110,6 @@ public:
 
 protected:
     // nsXMLContentSink overrides
-    void MaybeStartLayout();
-
     PRBool OnOpenContainer(const PRUnichar **aAtts, 
                            PRUint32 aAttsCount, 
                            PRInt32 aNameSpaceID, 
@@ -150,9 +146,7 @@ protected:
 
   // nsIExpatSink overrides
   NS_IMETHOD ReportError(const PRUnichar* aErrorText,
-                         const PRUnichar* aSourceText,
-                         nsIScriptError *aError,
-                         PRBool *_retval);
+                         const PRUnichar* aSourceText);
 
 protected:
   nsresult ReportUnexpectedElement(nsIAtom* aElementName, PRUint32 aLineNumber);
@@ -173,6 +167,7 @@ protected:
   nsXBLProtoImplField* mField;
 };
 
+// This is also declared in nsSyncLoadService.cpp
 nsresult
 NS_NewXBLContentSink(nsIXMLContentSink** aResult,
                      nsIDocument* aDoc,

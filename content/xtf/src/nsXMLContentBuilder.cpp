@@ -57,6 +57,7 @@
 
 static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 
+
 class nsXMLContentBuilder : public nsIXMLContentBuilder
 {
 protected:
@@ -144,7 +145,7 @@ NS_IMETHODIMP nsXMLContentBuilder::SetDocument(nsIDOMDocument *doc)
 /* void setElementNamespace (in AString ns); */
 NS_IMETHODIMP nsXMLContentBuilder::SetElementNamespace(const nsAString & ns)
 {
-  nsContentUtils::NameSpaceManager()->RegisterNameSpace(ns, mNamespaceId);
+  nsContentUtils::GetNSManagerWeakRef()->RegisterNameSpace(ns, mNamespaceId);
   return NS_OK;
 }
 
@@ -220,7 +221,7 @@ NS_IMETHODIMP nsXMLContentBuilder::GetRoot(nsIDOMElement * *aRoot)
     *aRoot = nsnull;
     return NS_OK;
   }
-  return CallQueryInterface(mTop, aRoot);
+  return mTop->QueryInterface(nsIDOMElement::GetIID(), (void**)aRoot);
 }
 
 /* readonly attribute nsIDOMElement current; */
@@ -230,7 +231,7 @@ NS_IMETHODIMP nsXMLContentBuilder::GetCurrent(nsIDOMElement * *aCurrent)
     *aCurrent = nsnull;
     return NS_OK;
   }  
-  return CallQueryInterface(mCurrent, aCurrent);
+  return mCurrent->QueryInterface(nsIDOMElement::GetIID(), (void**)aCurrent);
 }
 
 //----------------------------------------------------------------------

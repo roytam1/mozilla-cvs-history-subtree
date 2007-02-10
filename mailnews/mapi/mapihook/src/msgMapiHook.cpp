@@ -83,7 +83,6 @@
 #include "msgMapiHook.h"
 #include "msgMapiSupport.h"
 #include "msgMapiMain.h"
-#include "nsThreadUtils.h"
 #include "nsNetUtil.h"
 
 #include "nsEmbedCID.h"
@@ -162,8 +161,7 @@ PRBool nsMapiHook::isMapiService = PR_FALSE;
 
 PRBool nsMapiHook::Initialize()
 {
-// XXX test for this as long as there are still non-xul-app suite builds
-#ifndef MOZ_XUL_APP
+#ifndef MOZ_THUNDERBIRD 
     nsresult rv;
     nsCOMPtr<nsINativeAppSupport> native;
     nsCOMPtr<nsICmdLineService> cmdLineArgs (do_GetService(NS_COMMANDLINESERVICE_CONTRACTID, &rv));
@@ -288,7 +286,7 @@ PRBool nsMapiHook::VerifyUserName(const PRUnichar *aUsername, char **aIdKey)
             if (index != -1)
                 aEmail.Truncate(index);
 
-			if (nsDependentString(aUsername) == NS_ConvertASCIItoUTF16(aEmail))  // == overloaded
+			if (nsDependentString(aUsername) == NS_ConvertASCIItoUCS2(aEmail))  // == overloaded
                 return NS_SUCCEEDED(thisIdentity->GetKey(aIdKey));
         }
     }
@@ -414,13 +412,15 @@ nsresult nsMapiHook::BlindSendMail (unsigned long aSession, nsIMsgCompFields * a
 
     // we need to wait here to make sure that we return only after send is completed
     // so we will have a event loop here which will process the events till the Send IsDone.
-    nsIThread *thread = NS_GetCurrentThread();
+    nsCOMPtr<nsIEventQueueService> pEventQService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+    nsCOMPtr<nsIEventQueue> eventQueue;
+    pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,getter_AddRefs(eventQueue));
     while ( !((nsMAPISendListener *) pSendListener)->IsDone() )
     {
         PR_CEnterMonitor(pSendListener);
         PR_CWait(pSendListener, PR_MicrosecondsToInterval(1000UL));
         PR_CExitMonitor(pSendListener);
-        NS_ProcessPendingEvents(thread);
+        eventQueue->ProcessPendingEvents();
     }
 
     return rv ;
@@ -479,7 +479,7 @@ nsresult nsMapiHook::PopulateCompFields(lpnsMapiMessage aMessage,
         }
     }
 
-    PR_LOG(MAPI, PR_LOG_DEBUG, ("to: %s cc: %s bcc: %s \n", NS_ConvertUTF16toUTF8(To).get(), NS_ConvertUTF16toUTF8(Cc).get(), NS_ConvertUTF16toUTF8(Bcc).get()));
+    PR_LOG(MAPI, PR_LOG_DEBUG, ("to: %s cc: %s bcc: %s \n", NS_ConvertUCS2toUTF8(To).get(), NS_ConvertUCS2toUTF8(Cc).get(), NS_ConvertUCS2toUTF8(Bcc).get()));
     // set To, Cc, Bcc
     aCompFields->SetTo (To) ;
     aCompFields->SetCc (Cc) ;
@@ -687,7 +687,7 @@ nsresult nsMapiHook::PopulateCompFieldsWithConversion(lpnsMapiMessage aMessage,
     aCompFields->SetCc (Cc) ;
     aCompFields->SetBcc (Bcc) ;
 
-    PR_LOG(MAPI, PR_LOG_DEBUG, ("to: %s cc: %s bcc: %s \n", NS_ConvertUTF16toUTF8(To).get(), NS_ConvertUTF16toUTF8(Cc).get(), NS_ConvertUTF16toUTF8(Bcc).get()));
+    PR_LOG(MAPI, PR_LOG_DEBUG, ("to: %s cc: %s bcc: %s \n", NS_ConvertUCS2toUTF8(To).get(), NS_ConvertUCS2toUTF8(Cc).get(), NS_ConvertUCS2toUTF8(Bcc).get()));
 
     nsCAutoString platformCharSet;
     // set subject

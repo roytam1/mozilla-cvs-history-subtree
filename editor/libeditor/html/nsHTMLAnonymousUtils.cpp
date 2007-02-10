@@ -77,7 +77,7 @@ static PRInt32 GetCSSFloatValue(nsIDOMCSSStyleDeclaration * aDecl,
   PRUint16 type;
   val->GetPrimitiveType(&type);
 
-  float f = 0;
+  float f;
   switch (type) {
     case nsIDOMCSSPrimitiveValue::CSS_PX:
       // the value is in pixels, just get it
@@ -91,12 +91,14 @@ static PRInt32 GetCSSFloatValue(nsIDOMCSSStyleDeclaration * aDecl,
       res = val->GetStringValue(str);
       if (str.EqualsLiteral("thin"))
         f = 1;
-      else if (str.EqualsLiteral("medium"))
+      if (str.EqualsLiteral("medium"))
         f = 3;
-      else if (str.EqualsLiteral("thick"))
+      if (str.EqualsLiteral("thick"))
         f = 5;
       break;
     }
+    default:
+      f = 0;
   }
 
   return (PRInt32) f;
@@ -371,9 +373,10 @@ nsHTMLEditor::GetPositionAndDimensions(nsIDOMElement * aElement,
     res = mHTMLCSSUtils->GetDefaultViewCSS(aElement, getter_AddRefs(viewCSS));
     if (NS_FAILED(res)) return res;
 
+    nsAutoString empty;
     nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
     // Get the all the computed css styles attached to the element node
-    res = viewCSS->GetComputedStyle(aElement, EmptyString(), getter_AddRefs(cssDecl));
+    res = viewCSS->GetComputedStyle(aElement, empty, getter_AddRefs(cssDecl));
     if (NS_FAILED(res)) return res;
 
     aBorderLeft = GetCSSFloatValue(cssDecl, NS_LITERAL_STRING("border-left-width"));

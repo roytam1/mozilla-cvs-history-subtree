@@ -47,20 +47,19 @@
 %pippkiDTD;
 ]>
 
-<dialog id="newServerDialog" title="&newserver.title;"
+<dialog id="ssl_warning" title="&newserver.title;"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
   style="width: 47em;"
   onload="onLoad();"
-  buttons="accept,cancel,extra2"
-  defaultButton="cancel"
-  buttonlabelextra2="&newserver.examine;"
+#expand buttons="accept,cancel__HELP_BUTTON__"
   ondialogaccept="return doOK();"
   ondialogcancel="return doCancel();"
-  ondialogextra2="viewCert();">
+  ondialoghelp="openHelp('new_web_cert');">
 
 <script type="application/x-javascript" src="chrome://global/content/strres.js"/>
 <script type="application/x-javascript" src="chrome://pippki/content/pippki.js"/>
 <script type="application/x-javascript" src="chrome://pippki/content/newserver.js"/>
+<script type="application/x-javascript" src="chrome://help/content/contextHelp.js"/>
 
 <stringbundle id="newserver_bundle" src="chrome://pippki/locale/newserver.properties"/>
 
@@ -80,10 +79,15 @@
     <separator/>
     <description id="question"/>
     <separator class="thin"/>
+    <hbox>
+      <button id="examineCert-button" label="&newserver.examine;"
+              oncommand="viewCert();"/> 
+    </hbox>
+    <separator class="thin"/>
     <radiogroup id="whatnow">
-      <radio label="&newserver.remember;" id="remember" value="0"/>
-      <radio label="&newserver.session;" id="session"
-             value="1" selected="true"/>
+      <radio label="&newserver.remember;" id="remember"/>
+      <radio label="&newserver.session;" id="session" selected="true"/>
+      <radio label="&newserver.refuse;" id="refuse"/>
     </radiogroup>
   </vbox>
 </hbox>

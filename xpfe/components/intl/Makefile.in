@@ -43,11 +43,9 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE            = appcomps
-LIBRARY_NAME      = intlapp
+LIBRARY_NAME      = appcompintl_s
+FORCE_STATIC_LIB  = 1
 LIBXUL_LIBRARY    = 1
-MODULE_NAME       = nsXPIntlModule
-EXPORT_LIBRARY    = 1
-IS_COMPONENT      = 1
 
 REQUIRES	= xpcom \
 		  string \
@@ -63,13 +61,14 @@ REQUIRES	= xpcom \
 		  appshell \
 		  $(NULL)
 
-CPPSRCS= \
-	nsCharsetMenu.cpp \
+EXPORTS = \
+	nsCharsetMenu.h \
+	nsFontPackageHandler.h \
 	$(NULL)
 
-EXTRA_DSO_LDOPTS = \
-	$(MOZ_UNICHARUTIL_LIBS) \
-	$(MOZ_COMPONENT_LIBS) \
+CPPSRCS= \
+	nsCharsetMenu.cpp \
+	nsFontPackageHandler.cpp \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

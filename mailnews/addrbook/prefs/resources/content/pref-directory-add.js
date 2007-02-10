@@ -34,7 +34,7 @@ function Startup()
   document.getElementById("download").label =
     gReplicationBundle.getString("downloadButton");
   document.getElementById("download").accessKey =
-    gReplicationBundle.getString("downloadButton.accesskey");
+    gReplicationBundle.getString("downloadButtonAccessKey");
 
   if ( "arguments" in window && window.arguments[0] ) {
     gCurrentDirectory = window.arguments[0].selectedDirectory;
@@ -93,7 +93,7 @@ var progressListener = {
       document.getElementById("download").label =
         gReplicationBundle.getString("cancelDownloadButton");
       document.getElementById("download").accessKey =
-        gReplicationBundle.getString("cancelDownloadButton.accesskey");
+        gReplicationBundle.getString("cancelDownloadButtonAccessKey");
     }
     
     if (aStateFlags & Components.interfaces.nsIWebProgressListener.STATE_STOP) {
@@ -159,7 +159,7 @@ function EndDownload(aStatus)
   document.getElementById("download").label =
     gReplicationBundle.getString("downloadButton");
   document.getElementById("download").accessKey =
-    gReplicationBundle.getString("downloadButton.accesskey");
+    gReplicationBundle.getString("downloadButtonAccessKey");
 
   // stop the spinning
   gProgressMeter.setAttribute("mode", "normal");

@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* debugging interface for all rendering objects */
-
 #ifndef nsIFrameDebug_h___
 #define nsIFrameDebug_h___
 
@@ -56,9 +53,9 @@ struct PRLogModuleInfo;
  */
 class nsIFrameDebug : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IFRAMEDEBUG_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IFRAMEDEBUG_IID)
   
-  NS_IMETHOD  List(FILE* out, PRInt32 aIndent) const = 0;
+  NS_IMETHOD  List(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent) const = 0;
   /**
    * lists the frames beginning from the root frame
    * - calls root frame's List(...)
@@ -75,7 +72,7 @@ public:
   NS_IMETHOD_(nsFrameState)  GetDebugStateBits() const = 0;
   /**
    * Called to dump out regression data that describes the layout
-   * of the frame and its children, and so on. The format of the
+   * of the frame and it's children, and so on. The format of the
    * data is dictated to be XML (using a specific DTD); the
    * specific kind of data dumped is up to the frame itself, with
    * the caveat that some base types are defined.
@@ -129,14 +126,10 @@ public:
   // Show frame border of event target
   static void ShowEventTargetFrameBorder(PRBool aEnable);
   static PRBool GetShowEventTargetFrameBorder();
-  
-  static void PrintDisplayList(nsDisplayListBuilder* aBuilder, const nsDisplayList& aList);
 
 private:
   NS_IMETHOD_(nsrefcnt) AddRef(void) = 0;
   NS_IMETHOD_(nsrefcnt) Release(void) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIFrameDebug, NS_IFRAMEDEBUG_IID)
 
 #endif /* nsIFrameDebug_h___ */

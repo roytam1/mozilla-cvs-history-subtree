@@ -150,7 +150,6 @@ pageInfoTreeView.prototype = {
   selectionChanged: function() { },
   cycleCell: function(row, column) { },
   isEditable: function(row, column) { return false; },
-  isSelectable: function(row, column) { return false; },
   performAction: function(action) { },
   performActionOnCell: function(action, row, column) { }
 };
@@ -284,8 +283,9 @@ function onLoadPageInfo()
   if ("arguments" in window && window.arguments.length >= 1 &&
        window.arguments[0] && window.arguments[0].doc)
   {
+    theWindow = null;
     theDocument = window.arguments[0].doc;
-    theWindow = theDocument.defaultView;
+    docTitle = theBundle.getString("frameInfo.title");
   } 
   else 
   {
@@ -294,10 +294,11 @@ function onLoadPageInfo()
     else
       theWindow = window.opener.frames[0];
     theDocument = theWindow.document;
+
+    docTitle = theBundle.getString("pageInfo.title");
   }
-  document.title = theBundle.getString(theWindow != theWindow.top ?
-                                       "frameInfo.title" :
-                                       "pageInfo.title");
+
+  document.title = docTitle;
   
   document.getElementById("main-window").setAttribute("relatedUrl", theDocument.location.toString());
 

@@ -631,23 +631,6 @@ pr_LoadMachDyldModule(const char *name)
 
 #ifdef XP_MACOSX
 
-/*
-** macLibraryLoadProc is a function definition for a Mac shared library
-** loading method. The "name" param is the same full or partial pathname
-** that was passed to pr_LoadLibraryByPathName. The function must fill
-** in the fields of "lm" which apply to its library type. Returns
-** PR_SUCCESS if successful.
-*/
-
-typedef PRStatus (*macLibraryLoadProc)(const char *name, PRLibrary *lm);
-
-#ifdef __ppc__
-
-/*
-** CFM and its TVectors only exist on PowerPC.  Other OS X architectures
-** only use Mach-O as a native binary format.
-*/
-
 static void* TV2FP(CFMutableDictionaryRef dict, const char* name, void *tvp)
 {
     static uint32 glue[6] = { 0x3D800000, 0x618C0000, 0x800C0000, 0x804C0004, 0x7C0903A6, 0x4E800420 };
@@ -681,6 +664,16 @@ static void* TV2FP(CFMutableDictionaryRef dict, const char* name, void *tvp)
     
     return newGlue;
 }
+
+/*
+** macLibraryLoadProc is a function definition for a Mac shared library
+** loading method. The "name" param is the same full or partial pathname
+** that was passed to pr_LoadLibraryByPathName. The function must fill
+** in the fields of "lm" which apply to its library type. Returns
+** PR_SUCCESS if successful.
+*/
+
+typedef PRStatus (*macLibraryLoadProc)(const char *name, PRLibrary *lm);
 
 static PRStatus
 pr_LoadViaCFM(const char *name, PRLibrary *lm)
@@ -730,7 +723,6 @@ pr_LoadViaCFM(const char *name, PRLibrary *lm)
     }
     return (err == noErr) ? PR_SUCCESS : PR_FAILURE;
 }
-#endif /* __ppc__ */
 
 /*
 ** Creates a CFBundleRef if the pathname refers to a Mac OS X bundle
@@ -926,11 +918,7 @@ pr_LoadLibraryByPathname(const char *name, PRIntn flags)
     PRStatus status;
 
     static const macLibraryLoadProc loadProcs[] = {
-#ifdef __ppc__
         pr_LoadViaDyld, pr_LoadCFBundle, pr_LoadViaCFM
-#else  /* __ppc__ */
-        pr_LoadViaDyld, pr_LoadCFBundle
-#endif /* __ppc__ */
     };
 
     for (i = 0; i < sizeof(loadProcs) / sizeof(loadProcs[0]); i++) {
@@ -1413,12 +1401,10 @@ pr_FindSymbolInLib(PRLibrary *lm, const char *name)
         
         f = (FindSymbol(lm->connection, pName, &symAddr, &symClass) == noErr) ? symAddr : NULL;
         
-#ifdef __ppc__
         /* callers expect mach-o function pointers, so must wrap tvectors with glue. */
         if (f && symClass == kTVectorCFragSymbol) {
             f = TV2FP(lm->wrappers, name + SYM_OFFSET, f);
         }
-#endif /* __ppc__ */
         
         if (f == NULL && strcmp(name + SYM_OFFSET, "main") == 0) f = lm->main;
     }
@@ -1611,8 +1597,8 @@ PR_LoadStaticLibrary(const char *name, const PRStaticLinkTable *slt)
 
     result = lm;    /* success */
     PR_ASSERT(lm->refCount == 1);
-    PR_LOG(_pr_linker_lm, PR_LOG_MIN, ("Loaded library %s (static lib)", lm->name));
   unlock:
+    PR_LOG(_pr_linker_lm, PR_LOG_MIN, ("Loaded library %s (static lib)", lm->name));
     PR_ExitMonitor(pr_linker_lock);
     return result;
 }
@@ -1620,8 +1606,7 @@ PR_LoadStaticLibrary(const char *name, const PRStaticLinkTable *slt)
 PR_IMPLEMENT(char *)
 PR_GetLibraryFilePathname(const char *name, PRFuncPtr addr)
 {
-#if defined(USE_DLFCN) && (defined(SOLARIS) || defined(FREEBSD) \
-        || defined(LINUX) || defined(__GNU__) || defined(__GLIBC__))
+#if defined(SOLARIS) || defined(LINUX) || defined(FREEBSD)
     Dl_info dli;
     char *result;
 
@@ -1637,7 +1622,7 @@ PR_GetLibraryFilePathname(const char *name, PRFuncPtr addr)
     return result;
 #elif defined(USE_MACH_DYLD)
     char *result;
-    const char *image_name;
+    char *image_name;
     int i, count = _dyld_image_count();
 
     for (i = 0; i < count; i++) {

@@ -52,12 +52,17 @@
 
 - (void)dealloc
 {
+  [mLastFindString release];
   [super dealloc];
 }
 
 - (void)loadNewFindStringFromPasteboard
 {
-  [mSearchField setStringValue:[self getSearchText]];
+  BOOL pasteboardChanged;
+  NSString* curPasteboard = [self getSearchText:&pasteboardChanged];
+  if (pasteboardChanged)
+    [mSearchField setStringValue:curPasteboard];
+
   [mSearchField selectText:nil];
 
   if ([[mSearchField stringValue] length] > 0)
@@ -69,11 +74,12 @@
 
 - (void)putFindStringOnPasteboard
 {
-  NSPasteboard* pasteboard = [NSPasteboard pasteboardWithName:NSFindPboard];
-  NSString* searchText = [mSearchField stringValue];
-
+  NSPasteboard *pasteboard = [NSPasteboard pasteboardWithName:NSFindPboard];
   [pasteboard declareTypes:[NSArray arrayWithObject:NSStringPboardType] owner:nil];
-  [pasteboard setString:searchText forType:NSStringPboardType];
+  [pasteboard setString:[mSearchField stringValue] forType:NSStringPboardType];
+
+  [mLastFindString release];
+  mLastFindString = [[NSString stringWithString:[mSearchField stringValue]] retain];
 }
 
 //
@@ -143,16 +149,23 @@
 //
 // Retrieve the most recent search string
 //
-- (NSString*)getSearchText
+- (NSString*)getSearchText:(BOOL*)outIsNew
 {
   NSString* searchText;
-
-  NSPasteboard* findPboard = [NSPasteboard pasteboardWithName:NSFindPboard];
-  if ([[findPboard types] indexOfObject:NSStringPboardType] != NSNotFound)
+  
+  NSPasteboard *findPboard = [NSPasteboard pasteboardWithName:NSFindPboard];
+  if ([[findPboard types] indexOfObject:NSStringPboardType] != NSNotFound) 
     searchText = [findPboard stringForType:NSStringPboardType];
   else
     searchText = @"";
-
+  
+  if (outIsNew)
+    *outIsNew = !mLastFindString || (mLastFindString && ![mLastFindString isEqualToString:searchText]);
+  
+  // remember the last pasteboard string that we saw
+  [mLastFindString release];
+  mLastFindString = [[NSString stringWithString:searchText] retain];
+  
   return searchText;
 }
 

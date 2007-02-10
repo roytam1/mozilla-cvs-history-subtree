@@ -23,7 +23,6 @@
                 openBookmarksInTabsInNewWindow = id; 
                 paste = id; 
                 quicksearchPopupChanged = id; 
-                searchStringChanged = id; 
                 setAsDockMenuFolder = id; 
                 showBookmarkInfo = id; 
             }; 
@@ -46,7 +45,7 @@
                 mOutlinerHostView = NSView; 
                 mQuickSearchMenuBookmarks = NSMenu; 
                 mQuickSearchMenuHistory = NSMenu; 
-                mSearchField = NSSearchField; 
+                mSearchField = SearchTextField; 
                 mSortButton = NSButton; 
                 mSortMenuBookmarks = NSMenu; 
                 mSortMenuHistory = NSMenu; 

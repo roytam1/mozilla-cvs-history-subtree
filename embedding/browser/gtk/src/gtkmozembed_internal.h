@@ -1,5 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim:set ts=2 sw=2 sts=2 et cindent: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -40,9 +38,8 @@
 #ifndef gtkmozembed_internal_h
 #define gtkmozembed_internal_h
 
-#include "nsIWebBrowser.h"
-#include "nsXPCOM.h"
-#include <stdlib.h>
+#include <nsIWebBrowser.h>
+#include <nsXPCOM.h>
 
 struct nsModuleComponentInfo;
 
@@ -50,27 +47,16 @@ struct nsModuleComponentInfo;
 extern "C" {
 #endif /* __cplusplus */
 
-GTKMOZEMBED_API(void,
-  gtk_moz_embed_get_nsIWebBrowser, (GtkMozEmbed *embed,
-                                    nsIWebBrowser **retval))
-
-GTKMOZEMBED_API(PRUnichar*,
-  gtk_moz_embed_get_title_unichar, (GtkMozEmbed *embed))
-
-GTKMOZEMBED_API(PRUnichar*,
-  gtk_moz_embed_get_js_status_unichar, (GtkMozEmbed *embed))
-
-GTKMOZEMBED_API(PRUnichar*,
-  gtk_moz_embed_get_link_message_unichar, (GtkMozEmbed *embed))
-
-GTKMOZEMBED_API(void,
-  gtk_moz_embed_set_directory_service_provider, (nsIDirectoryServiceProvider *appFileLocProvider))
-
-GTKMOZEMBED_API(void,
-  gtk_moz_embed_set_app_components, (const nsModuleComponentInfo *aComps,
-                                     int aNumComps))
+extern GTKMOZEMBED_API(void)  gtk_moz_embed_get_nsIWebBrowser  (GtkMozEmbed *embed, nsIWebBrowser **retval);
+extern GTKMOZEMBED_API(PRUnichar*) gtk_moz_embed_get_title_unichar (GtkMozEmbed *embed);
+extern GTKMOZEMBED_API(PRUnichar*) gtk_moz_embed_get_js_status_unichar (GtkMozEmbed *embed);
+extern GTKMOZEMBED_API(PRUnichar*) gtk_moz_embed_get_link_message_unichar (GtkMozEmbed *embed);
+extern GTKMOZEMBED_API(void) gtk_moz_embed_set_directory_service_provider (nsIDirectoryServiceProvider *appFileLocProvider);
+extern GTKMOZEMBED_API(void) gtk_moz_embed_set_app_components (const nsModuleComponentInfo *aComps, int aNumComps);
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
+
 #endif /* gtkmozembed_internal_h */
+

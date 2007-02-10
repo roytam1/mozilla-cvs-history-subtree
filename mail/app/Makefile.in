@@ -63,34 +63,23 @@ endif
 
 REQUIRES = \
 	xpcom \
-	xulapp \
 	$(NULL)
+
+LOCAL_INCLUDES = -I$(topsrcdir)/toolkit/xre
 
 CPPSRCS = nsMailApp.cpp
 
-LOCAL_INCLUDES += -I$(topsrcdir)/toolkit/xre
-
 ifdef BUILD_STATIC_LIBS
-ifdef _MSC_VER
-STATIC_COMPONENTS_LINKER_PATH = -LIBPATH:$(DIST)/lib/components
-else
 STATIC_COMPONENTS_LINKER_PATH = -L$(DIST)/lib/components
-endif
-LIBS += $(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX)
-else
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-LIBS += $(DIST)/bin/XUL
-else
-EXTRA_DSO_LIBS += xul
-endif
 endif
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 TK_LIBS := -framework Cocoa $(TK_LIBS)
 endif
 
-LIBS += \
+LIBS = \
 	$(STATIC_COMPONENTS_LINKER_PATH) \
+	$(DIST)/lib/$(LIB_PREFIX)xulapp_s.$(LIB_SUFFIX) \
 	$(MOZ_JS_LIBS) \
 	$(EXTRA_DSO_LIBS) \
 	$(XPCOM_LIBS) \
@@ -139,10 +128,7 @@ EXTRA_LIBS	+= $(STATIC_EXTRA_LIBS)
 endif
 
 ifeq ($(OS_ARCH),WINNT)
-OS_LIBS += $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 oleaut32 version winspool)
-ifdef MOZ_ENABLE_CAIRO_GFX
-OS_LIBS += $(call EXPAND_LIBNAME,usp10)
-endif
+OS_LIBS += $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 oleaut32 version winspool gdi32)
 RCINCLUDE = splash.rc
 ifndef GNU_CC
 RCFLAGS += -DMOZ_THUNDERBIRD -I$(srcdir)
@@ -154,12 +140,6 @@ RCFLAGS += -DMOZ_STATIC_BUILD
 endif
 endif
 
-ifeq ($(OS_ARCH),BeOS)
-ifdef BUILD_STATIC_LIBS
-OS_LIBS += -ltracker -lgame
-endif
-endif
-
 ifeq ($(OS_ARCH),OS2)
 RESFILE=splashos2.res
 endif
@@ -168,8 +148,6 @@ include $(topsrcdir)/config/rules.mk
 
 ifdef BUILD_STATIC_LIBS
 include $(topsrcdir)/config/static-rules.mk
-
-DEFINES	+= -DIMPL_XREAPI
 endif
 
 APP_VERSION = $(shell cat $(srcdir)/../config/version.txt)
@@ -177,7 +155,7 @@ DEFINES += -DAPP_VERSION="$(APP_VERSION)"
 
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 ifdef BUILD_STATIC_LIBS
-LIBS	+= -framework QuickTime -framework IOKit -lcups
+LIBS	+= -framework QuickTime -framework IOKit
 endif
 endif
 
@@ -237,7 +215,7 @@ libs::
 	$(INSTALL) $(DIST)/branding/default.xpm $(DIST)/bin/chrome/icons/default
 
 install::
-	$(SYSINSTALL) $(IFLAGS1) $(DIST)/branding/default.xpm $(DESTDIR)$(mozappdir)/chrome/icons/default
+	$(SYSINSTALL) $(IFLAGS1) $(DIST)/branding/default.xpm $(DESTDIR)$(mozappdir)/icons
 endif
 
 export::
@@ -319,6 +297,9 @@ libs:: $(PROGRAM)
 	rm -f $(DIST)/$(APP_NAME).app/Contents/MacOS/$(PROGRAM)
 	rsync -aL $(PROGRAM) $(DIST)/$(APP_NAME).app/Contents/MacOS
 	mkdir -p $(DIST)/$(APP_NAME).app/Contents/Plug-Ins
+# Bug 297227: the next line only exists to repair broken depend builds, it can
+# go away once that bug has been closed for a while.
+	rm -rf $(DIST)/$(APP_NAME).app/Contents/Plug-Ins/PrintPDE.plugin
 	rsync -a --copy-unsafe-links $(DIST)/package/PrintPDE.plugin $(DIST)/$(APP_NAME).app/Contents/Plug-Ins
 	cp -RL $(DIST)/branding/thunderbird.icns $(DIST)/$(APP_NAME).app/Contents/Resources/thunderbird.icns
 	cp -RL $(srcdir)/macbuild/mail-biff-badge.png 	$(DIST)/$(APP_NAME).app/Contents/Resources/mail-biff-badge.png

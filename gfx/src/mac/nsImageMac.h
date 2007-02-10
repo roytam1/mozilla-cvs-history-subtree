@@ -41,7 +41,7 @@
 #include "nsIImage.h"
 #include "nsIImageMac.h"
 
-class nsImageMac : public nsIImage, public nsIImageMac
+class nsImageMac : public nsIImage, public nsIImageMac_MOZILLA_1_8_BRANCH
 {
 public:
                       nsImageMac();

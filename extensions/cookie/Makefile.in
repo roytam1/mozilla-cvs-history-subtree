@@ -48,7 +48,7 @@ EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
 MODULE_NAME	= nsCookieModule
 GRE_MODULE	= 1
-LIBXUL_LIBRARY = 1
+MOZILLA_INTERNAL_API = 1
 
 PACKAGE_FILE = cookie.pkg
 
@@ -65,7 +65,7 @@ REQUIRES	= xpcom \
 		  $(NULL)
 
 CPPSRCS		= \
-		nsCookieModule.cpp \
+		nsModuleFactory.cpp \
 		nsPermission.cpp \
 		nsPermissionManager.cpp \
 		nsPopupWindowManager.cpp \
@@ -74,6 +74,7 @@ CPPSRCS		= \
 		$(NULL)
 
 XPIDLSRCS	= \
+		nsIPermission.idl \
 		nsICookieAcceptDialog.idl \
 		nsICookiePromptService.idl \
 		$(NULL)

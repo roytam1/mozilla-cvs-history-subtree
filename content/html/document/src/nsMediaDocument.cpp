@@ -37,7 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsMediaDocument.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsRect.h"
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
@@ -233,7 +233,7 @@ nsMediaDocument::CreateSyntheticDocument()
   nsresult rv;
 
   nsCOMPtr<nsINodeInfo> nodeInfo;
-  rv = mNodeInfoManager->GetNodeInfo(nsGkAtoms::html, nsnull,
+  rv = mNodeInfoManager->GetNodeInfo(nsHTMLAtoms::html, nsnull,
                                      kNameSpaceID_None,
                                      getter_AddRefs(nodeInfo));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -243,11 +243,10 @@ nsMediaDocument::CreateSyntheticDocument()
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  NS_ASSERTION(GetChildCount() == 0, "Shouldn't have any kids");
-  rv = AppendChildTo(root, PR_FALSE);
+  rv = SetRootContent(root);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = mNodeInfoManager->GetNodeInfo(nsGkAtoms::body, nsnull,
+  rv = mNodeInfoManager->GetNodeInfo(nsHTMLAtoms::body, nsnull,
                                      kNameSpaceID_None,
                                      getter_AddRefs(nodeInfo));
   NS_ENSURE_SUCCESS(rv, rv);
@@ -275,8 +274,7 @@ nsMediaDocument::StartLayout()
 
     // Initial-reflow this time.
     nsRect visibleArea = shell->GetPresContext()->GetVisibleArea();
-    nsresult rv = shell->InitialReflow(visibleArea.width, visibleArea.height);
-    NS_ENSURE_SUCCESS(rv, rv);
+    shell->InitialReflow(visibleArea.width, visibleArea.height);
 
     // Now trigger a refresh.
     nsIViewManager* vm = shell->GetViewManager();
@@ -330,7 +328,7 @@ nsMediaDocument::UpdateTitleAndCharset(const nsACString& aTypeStr,
   }
 
 
-  NS_ConvertASCIItoUTF16 typeStr(aTypeStr);
+  NS_ConvertASCIItoUCS2 typeStr(aTypeStr);
   nsXPIDLString title;
 
   if (mStringBundle) {
@@ -344,14 +342,14 @@ nsMediaDocument::UpdateTitleAndCharset(const nsACString& aTypeStr,
       if (!fileStr.IsEmpty()) {
         const PRUnichar *formatStrings[4]  = {fileStr.get(), typeStr.get(), 
           widthStr.get(), heightStr.get()};
-        NS_ConvertASCIItoUTF16 fmtName(aFormatNames[eWithDimAndFile]);
+        NS_ConvertASCIItoUCS2 fmtName(aFormatNames[eWithDimAndFile]);
         mStringBundle->FormatStringFromName(fmtName.get(), formatStrings, 4,
                                             getter_Copies(title));
       } 
       else {
         const PRUnichar *formatStrings[3]  = {typeStr.get(), widthStr.get(), 
           heightStr.get()};
-        NS_ConvertASCIItoUTF16 fmtName(aFormatNames[eWithDim]);
+        NS_ConvertASCIItoUCS2 fmtName(aFormatNames[eWithDim]);
         mStringBundle->FormatStringFromName(fmtName.get(), formatStrings, 3,
                                             getter_Copies(title));
       }
@@ -360,13 +358,13 @@ nsMediaDocument::UpdateTitleAndCharset(const nsACString& aTypeStr,
     // If we got a filename, display it
       if (!fileStr.IsEmpty()) {
         const PRUnichar *formatStrings[2] = {fileStr.get(), typeStr.get()};
-        NS_ConvertASCIItoUTF16 fmtName(aFormatNames[eWithFile]);
+        NS_ConvertASCIItoUCS2 fmtName(aFormatNames[eWithFile]);
         mStringBundle->FormatStringFromName(fmtName.get(), formatStrings, 2,
                                             getter_Copies(title));
       }
       else {
         const PRUnichar *formatStrings[1] = {typeStr.get()};
-        NS_ConvertASCIItoUTF16 fmtName(aFormatNames[eWithNoInfo]);
+        NS_ConvertASCIItoUCS2 fmtName(aFormatNames[eWithNoInfo]);
         mStringBundle->FormatStringFromName(fmtName.get(), formatStrings, 1,
                                             getter_Copies(title));
       }

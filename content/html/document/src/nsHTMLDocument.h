@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 sw=2 et tw=80: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -45,9 +44,10 @@
 #include "nsIDOMHTMLBodyElement.h"
 #include "nsIDOMHTMLMapElement.h"
 #include "nsIDOMHTMLCollection.h"
-#include "nsIScriptElement.h"
 #include "jsapi.h"
-
+#include "rdf.h"
+#include "nsRDFCID.h"
+#include "nsIRDFService.h"
 #include "pldhash.h"
 #include "nsIHttpChannel.h"
 #include "nsHTMLStyleSheet.h"
@@ -81,8 +81,7 @@ public:
   NS_IMETHOD_(nsrefcnt) Release(void);
 
   virtual void Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
-  virtual void ResetToURI(nsIURI* aURI, nsILoadGroup* aLoadGroup,
-                          nsIPrincipal* aPrincipal);
+  virtual void ResetToURI(nsIURI* aURI, nsILoadGroup* aLoadGroup);
   virtual nsStyleSet::sheetType GetAttrSheetType();
 
   virtual nsresult CreateShell(nsPresContext* aContext,
@@ -97,7 +96,6 @@ public:
                                      nsIStreamListener **aDocListener,
                                      PRBool aReset = PR_TRUE,
                                      nsIContentSink* aSink = nsnull);
-  virtual void StopDocumentLoad();
 
   virtual void EndLoad();
 
@@ -107,6 +105,7 @@ public:
 
   virtual nsIDOMHTMLMapElement *GetImageMap(const nsAString& aMapName);
 
+  virtual nsCompatibility GetCompatibilityMode();
   virtual void SetCompatibilityMode(nsCompatibility aMode);
 
   virtual PRBool IsWriting()
@@ -119,31 +118,26 @@ public:
 
   virtual NS_HIDDEN_(nsContentList*) GetForms();
  
-  virtual NS_HIDDEN_(nsContentList*) GetFormControls();
- 
+  virtual void ContentAppended(nsIContent* aContainer,
+                               PRInt32 aNewIndexInContainer);
+  virtual void ContentInserted(nsIContent* aContainer,
+                               nsIContent* aChild,
+                               PRInt32 aIndexInContainer);
+  virtual void ContentRemoved(nsIContent* aContainer,
+                              nsIContent* aChild,
+                              PRInt32 aIndexInContainer);
+  virtual void AttributeChanged(nsIContent* aChild,
+                                PRInt32 aNameSpaceID,
+                                nsIAtom* aAttribute,
+                                PRInt32 aModType);
   virtual void AttributeWillChange(nsIContent* aChild,
                                    PRInt32 aNameSpaceID,
                                    nsIAtom* aAttribute);
 
+  virtual void FlushPendingNotifications(mozFlushType aType);
+
   virtual PRBool IsCaseSensitive();
 
-  // nsIMutationObserver
-  virtual void ContentAppended(nsIDocument* aDocument,
-                               nsIContent* aContainer,
-                               PRInt32 aNewIndexInContainer);
-  virtual void ContentInserted(nsIDocument* aDocument,
-                               nsIContent* aContainer,
-                               nsIContent* aChild,
-                               PRInt32 aIndexInContainer);
-  virtual void ContentRemoved(nsIDocument* aDocument,
-                              nsIContent* aContainer,
-                              nsIContent* aChild,
-                              PRInt32 aIndexInContainer);
-  virtual void AttributeChanged(nsIDocument* aDocument,
-                                nsIContent* aChild,
-                                PRInt32 aNameSpaceID,
-                                nsIAtom* aAttribute,
-                                PRInt32 aModType);
   // nsIDOMDocument interface
   NS_DECL_NSIDOMDOCUMENT
 
@@ -184,12 +178,14 @@ public:
   // nsIDOMNSHTMLDocument interface
   NS_DECL_NSIDOMNSHTMLDOCUMENT
 
+  /*
+   * Returns true if document.domain was set for this document
+   */
+  virtual PRBool WasDomainSet();
+
   virtual nsresult ResolveName(const nsAString& aName,
                          nsIDOMHTMLFormElement *aForm,
                          nsISupports **aResult);
-
-  virtual void ScriptLoading(nsIScriptElement *aScript);
-  virtual void ScriptExecuted(nsIScriptElement *aScript);
 
   virtual void AddedForm();
   virtual void RemovedForm();
@@ -214,9 +210,11 @@ protected:
 
   nsresult RegisterNamedItems(nsIContent *aContent);
   nsresult UnregisterNamedItems(nsIContent *aContent);
-  nsresult UpdateNameTableEntry(nsIAtom* aName, nsIContent *aContent);
-  nsresult UpdateIdTableEntry(nsIAtom* aId, nsIContent *aContent);
-  nsresult RemoveFromNameTable(nsIAtom* aName, nsIContent *aContent);
+  nsresult UpdateNameTableEntry(const nsAString& aName,
+                                nsIContent *aContent);
+  nsresult AddToIdTable(const nsAString& aId, nsIContent *aContent);
+  nsresult UpdateIdTableEntry(const nsAString& aId, nsIContent *aContent);
+  nsresult RemoveFromNameTable(const nsAString& aName, nsIContent *aContent);
   nsresult RemoveFromIdTable(nsIContent *aContent);
 
   void InvalidateHashTables();
@@ -225,11 +223,11 @@ protected:
   nsIContent *MatchId(nsIContent *aContent, const nsAString& aId);
 
   static PRBool MatchLinks(nsIContent *aContent, PRInt32 aNamespaceID,
-                           nsIAtom* aAtom, void* aData);
+                           nsIAtom* aAtom, const nsAString& aData);
   static PRBool MatchAnchors(nsIContent *aContent, PRInt32 aNamespaceID,
-                             nsIAtom* aAtom, void* aData);
+                             nsIAtom* aAtom, const nsAString& aData);
   static PRBool MatchNameAttribute(nsIContent* aContent, PRInt32 aNamespaceID,
-                                   nsIAtom* aAtom, void* aData);
+                                   nsIAtom* aAtom, const nsAString& aData);
 
   static void DocumentWriteTerminationFunc(nsISupports *aRef);
 
@@ -253,6 +251,8 @@ protected:
     return mDefaultNamespaceID;
   };
 
+  nsCompatibility mCompatMode;
+
   nsCOMArray<nsIDOMHTMLMapElement> mImageMaps;
 
   nsCOMPtr<nsIDOMHTMLCollection> mImages;
@@ -261,10 +261,12 @@ protected:
   nsCOMPtr<nsIDOMHTMLCollection> mLinks;
   nsCOMPtr<nsIDOMHTMLCollection> mAnchors;
   nsRefPtr<nsContentList> mForms;
-  nsRefPtr<nsContentList> mFormControls;
 
   /** # of forms in the document, synchronously set */
   PRInt32 mNumForms;
+
+  // ahmed 12-2
+  PRInt32  mTexttype;
 
   static PRUint32 gWyciwygSessionCnt;
 
@@ -282,10 +284,8 @@ protected:
                                    nsIChannel* aChannel,
                                    PRInt32& aCharsetSource,
                                    nsACString& aCharset);
-  // aParentDocument could be null.
-  PRBool TryParentCharset(nsIDocumentCharsetInfo*  aDocInfo,
-                          nsIDocument* aParentDocument,
-                          PRInt32& charsetSource, nsACString& aCharset);
+  static PRBool TryParentCharset(nsIDocumentCharsetInfo*  aDocInfo,
+                                 PRInt32& charsetSource, nsACString& aCharset);
   static PRBool UseWeakDocTypeDefault(PRInt32& aCharsetSource,
                                       nsACString& aCharset);
   static PRBool TryDefaultCharset(nsIMarkupDocumentViewer* aMarkupDV,
@@ -295,57 +295,21 @@ protected:
   void StartAutodetection(nsIDocShell *aDocShell, nsACString& aCharset,
                           const char* aCommand);
 
-  // mWriteState tracks the status of this document if the document is being
-  // entirely created by script. In the normal load case, mWriteState will be
-  // eNotWriting. Once document.open has been called (either implicitly or
-  // explicitly), mWriteState will be eDocumentOpened. When document.close has
-  // been called, mWriteState will become eDocumentClosed if there have been no
-  // external script loads in the meantime. If there have been, then mWriteState
-  // becomes ePendingClose, indicating that we might still be writing, but that
-  // we shouldn't process any further close() calls.
-  enum {
-    eNotWriting,
-    eDocumentOpened,
-    ePendingClose,
-    eDocumentClosed
-  } mWriteState;
-
-  // Tracks if we are currently processing any document.write calls (either
-  // implicit or explicit). Note that if a write call writes out something which
-  // would block the parser, then mWriteLevel will be incorrect until the parser
-  // finishes processing that script.
-  PRUint32 mWriteLevel;
-
-  nsSmallVoidArray mPendingScripts;
+  PRUint32 mIsWriting : 1;
+  PRUint32 mWriteLevel : 31;
 
   // Load flags of the document's channel
   PRUint32 mLoadFlags;
 
   nsCOMPtr<nsIDOMNode> mBodyContent;
 
+  /*
+   * Bug 13871: Frameset spoofing - find out if document.domain was set
+   */
+  PRPackedBool mDomainWasSet;
+
   PRPackedBool mIsFrameset;
 
-  PRBool IdTableIsLive() const {
-    // live if we've had over 63 misses
-    return (mIdMissCount & 0x40) != 0;
-  }
-
-  PRBool IdTableShouldBecomeLive() {
-    NS_ASSERTION(!IdTableIsLive(),
-                 "Shouldn't be called if table is already live!");
-    ++mIdMissCount;
-    return IdTableIsLive();
-  }
-
-  PRUint8 mIdMissCount;
-
-  /* mIdAndNameHashTable works as follows for IDs:
-   * 1) Attribute changes affect the table immediately (removing and adding
-   *    entries as needed).
-   * 2) Removals from the DOM affect the table immediately
-   * 3) Additions to the DOM always update existing entries, but only add new
-   *    ones if IdTableIsLive() is true.
-   */
   PLDHashTable mIdAndNameHashTable;
 
   nsCOMPtr<nsIWyciwygChannel> mWyciwygChannel;

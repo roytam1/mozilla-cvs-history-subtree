@@ -52,11 +52,13 @@ problems and installation issues with Mozilla.
    Theme submenu and choose Modern.
 
 *OS/2
-   - This release requires the C runtime DLLs (libc-0.6.1) from
-     ftp://ftp.netlabs.org/pub/gcc/libc-0.6.1-csd1.zip
-     in order to run.  You can unpack them in the same directory as the Mozilla
-     executable or somewhere else in your LIBPATH.  The Mozilla installer will
-     not install the C runtime DLLs for you but requires them to run.
+   - This release requires updated C runtime DLLs (libc-0.5.1) from
+        http://www.innotek.de/products/gccos2/download/gccos2download_e.html
+     in order to run. By default the installation routine places them in
+     \OS2\DLL on your bootdrive, but you can put them in the same directory as
+     Mozilla's executable, or somewhere else in your LIBPATH. The Mozilla 
+     installer will not install the C runtime DLLs for you but requires them to
+     run.
 
    - Minimum hardware requirements
      + Pentium class processor

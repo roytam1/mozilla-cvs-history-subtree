@@ -22,7 +22,6 @@
 # Contributor(s):
 #   Annie Sullivan <annie.sullivan@gmail.com>
 #   Ben Goodger <beng@google.com>
-#   Asaf Romano <mano@mozilla.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -48,7 +47,8 @@
            extends="chrome://global/content/bindings/popup.xml#popup">
     <implementation>
       <constructor><![CDATA[
-#if 0
+        this.history = PlacesController.history;
+        
         // Support an asyncinit attribute that causes the view to populate 
         // itself only after the window has been shown. This is to ensure we
         // do not regress browser window show time (Ts/Txul)
@@ -57,17 +57,18 @@
           //setTimeout(function() { self._init(); }, 0);
         }
         else
-#endif
-        this._init();
+          this._init();
       ]]></constructor>
       
       <destructor><![CDATA[
       ]]></destructor>
-
+            
+      <field name="history">null</field>
+      
       <method name="_init">
         <body><![CDATA[
-          this._controller = new PlacesController(this);
-          this.controllers.appendController(this._controller);
+          if (!this.hasAttribute("place"))
+            return;
 
           // This function should only be called for top-level menus like the bookmarks menu.
           // Submenus get their _result and _resultNode from their parents.
@@ -77,16 +78,13 @@
           }
         ]]></body>
       </method>
-
-      <property name="controller"
-                readonly="true"
-                onget="return this._controller;"/>
-
+            
       <method name="onPopupShowing">
         <body><![CDATA[
+        PlacesController.activeView = this;
         if (!this._resultNode)
           this._init();
-        if (PlacesUtils.nodeIsContainer(this._resultNode)) {
+        if (PlacesController.nodeIsContainer(this._resultNode)) {
           this._resultNode.QueryInterface(Ci.nsINavHistoryContainerResultNode);
           this._resultNode.containerOpen = true;
         }
@@ -114,14 +112,7 @@
           return this._result;
         ]]></body>
       </method>
-
-      <!-- nsIPlacesView -->
-      <method name="getResultNode">
-        <body><![CDATA[
-          return this._resultNode;
-        ]]></body>
-      </method>
-
+      
       <!-- These are the indices of the start and end
            of dynamic content in the menu.  For index,
            if this is a bookmark menu and it has two
@@ -190,7 +181,7 @@
 
           this._cleanMenu();
           const XULNS = "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
-          if (PlacesUtils.nodeIsContainer(this._resultNode))
+          if (PlacesController.nodeIsContainer(this._resultNode))
             this._resultNode.QueryInterface(Ci.nsINavHistoryContainerResultNode);
           else
             return; // Nothing to do if this menu isn't a container.
@@ -220,30 +211,30 @@
             for (var i = 0; i < cc; ++i) {
               var child = this._resultNode.getChild(i);
               var element = null;
-              if (PlacesUtils.nodeIsURI(child) || noSubmenus) {
+              if (PlacesController.nodeIsURI(child) || noSubmenus) {
                 element = document.createElementNS(XULNS, "menuitem");
                 element.setAttribute("label", child.title);
                 element.setAttribute("url", child.uri);
                 element.setAttribute("statustext", child.uri);
                 element.className = "menuitem-iconic bookmark-item";
               }
-              else if (PlacesUtils.nodeIsSeparator(child)) {
+              else if (PlacesController.nodeIsSeparator(child)) {
                 element = document.createElementNS(XULNS, "menuseparator");
               }
-              else if (PlacesUtils.nodeIsContainer(child)) {
+              else if (PlacesController.nodeIsContainer(child)) {
                 element = document.createElementNS(XULNS, "menu");
                 element.setAttribute("type", "menu");
                 element.setAttribute("container", "true");
                 element.setAttribute("label", child.title);
 
-                if (PlacesUtils.nodeIsLivemarkContainer(child)) {
+                if (PlacesController.nodeIsLivemarkContainer(child)) {
                   element.setAttribute("livemark", "true");
                   var folder = asFolder(child).folderId;
                   var bms =
                     Cc["@mozilla.org/browser/nav-bookmarks-service;1"].
                     getService(Ci.nsINavBookmarksService);
                   var lms =
-                    Cc["@mozilla.org/browser/livemark-service;2"].
+                    Cc["@mozilla.org/browser/livemark-service;1"].
                     getService(Ci.nsILivemarkService);
                   var siteURI = lms.getSiteURI(folder);
                   if (siteURI) {            
@@ -292,7 +283,8 @@
             // This menu is empty.  If there is no static content, add
             // an element to show it is empty.
             if (this._startMarker == -1 && this._endMarker == -1) {
-              var label = PlacesUtils.getString("bookmarksMenuEmptyFolder");
+              var bundle = document.getElementById("placeBundle");
+              var label = bundle.getString("bookmarksMenuEmptyFolder");
               var element = null;
               element = document.createElementNS(XULNS, "menuitem");
               element.setAttribute("label", label);
@@ -329,13 +321,12 @@
         <setter><![CDATA[ 
           this.setAttribute("place", val);
           var queries = { }, options = { };
-          PlacesUtils.history.queryStringToQueries(val, queries, { }, options);
+          this.history.queryStringToQueries(val, queries, { }, options);
           if (!queries.value.length) 
-            queries.value = [PlacesUtils.history.getNewQuery()];
+            queries.value = [this.history.getNewQuery()];
           this._result = 
-            PlacesUtils.history.executeQueries(queries.value,
-                                               queries.value.length,
-                                               options.value);
+            this.history.executeQueries(queries.value, queries.value.length, 
+                                        options.value);
           this._resultNode = this._result.root;
           if (this._resultNode.containerOpen)
             this._rebuild();
@@ -381,7 +372,7 @@
       <!-- nsIPlacesView -->
       <method name="getDragableSelection">
         <body><![CDATA[
-          if (PlacesUtils.nodeIsReadOnly(this._resultNode))
+          if (PlacesController.nodeIsReadOnly(this._resultNode))
             return null;
           return this.getSelectionNodes();
         ]]></body>
@@ -398,7 +389,7 @@
       <property name="selectedURINode">
         <getter><![CDATA[
           var node = this.selectedNode;
-          return node && PlacesUtils.nodeIsURI(node) ? node : null;
+          return node && PlacesController.nodeIsURI(node) ? node : null;
         ]]></getter>
       </property>
       
@@ -408,18 +399,18 @@
           // By default, the insertion point is at the top level, at the end. 
           var index = -1;
           var folderId = 0;
-          if (PlacesUtils.nodeIsFolder(this._resultNode))
+          if(PlacesController.nodeIsFolder(this._resultNode))
             folderId = this._resultNode.QueryInterface(Ci.nsINavHistoryFolderResultNode).folderId;
           
           if (this.hasSelection) {
-            if(PlacesUtils.nodeIsFolder(this.selectedNode)) {
+            if(PlacesController.nodeIsFolder(this.selectedNode)) {
               // If there is a folder selected, the insertion point is the
               // end of the folder.
               folderId = this.selectedNode.QueryInterface(Ci.nsINavHistoryFolderResultNode).folderId;
             } else {
               // If there is another type of node selected, the insertion point
               // is after that node.
-              index = PlacesUtils.getIndexOfNode(this.selectedNode)
+              index = PlacesController.getIndexOfNode(this.selectedNode)
             }
           }
           return new InsertionPoint(folderId, index);
@@ -434,6 +425,15 @@
       
       <!-- nsIPlacesView -->
       <field name="childDropTypes">ViewConfig.GENERIC_DROP_TYPES</field>
+      
+      <!-- nsIPlacesView -->
+      <field name="excludeItems">false</field>
+      
+      <!-- nsIPlacesView -->
+      <field name="excludeQueries">false</field>
+      
+      <!-- nsIPlacesView -->
+      <field name="expandQueries">false</field>
       
       <!-- nsIPlacesView -->
       <method name="selectAll">
@@ -466,8 +466,13 @@
         _closeMenuTimer: null,
         
         _setTimer: function TBV_DO_setTimer(time) {
+          // There is a problem in Windows where timers don't fire while the
+          // mouse is dragging.  QI-ing the timer to nsITimerInternal and setting
+          // idle to false makes the timer fire.
           var timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
           timer.initWithCallback(this, time, timer.TYPE_ONE_SHOT);
+          timer.QueryInterface(Ci.nsITimerInternal);
+          timer.idle = false;
           return timer;
         },
         
@@ -551,8 +556,8 @@
         _getDropPoint: function TBV_DO_getDropPoint(event) {
           // Can't drop if the menu isn't a folder
           var resultNode = this._self._resultNode;
-          if (!PlacesUtils.nodeIsFolder(this._self._result.root) ||
-              !PlacesUtils.nodeIsFolder(resultNode))
+          if (!PlacesController.nodeIsFolder(this._self._result.root) ||
+              !PlacesController.nodeIsFolder(resultNode))
             return null;
           asFolder(resultNode);
           
@@ -567,8 +572,8 @@
             var nodeY = xulNode.boxObject.y - this._self.boxObject.y;
             var nodeHeight = xulNode.boxObject.height;
             if (xulNode.node &&
-                PlacesUtils.nodeIsFolder(xulNode.node) &&
-                !PlacesUtils.nodeIsReadOnly(xulNode.node)) {
+                PlacesController.nodeIsFolder(xulNode.node) &&
+                !PlacesController.nodeIsReadOnly(xulNode.node)) {
               // This is a folder. If the mouse is in the top 25% of the
               // node, drop above the folder.  If it's in the middle
               // 50%, drop into the folder.  If it's past that, drop below.
@@ -614,10 +619,11 @@
         },
         
         onDragStart: function TBV_DO_onDragStart(event, xferData, dragAction) {
+          PlacesController.activeView = this._self;
           this._self._selection = event.target.node;
           if (event.ctrlKey)
             dragAction.action = Ci.nsIDragService.DRAGDROP_ACTION_COPY;
-          xferData.data = this._controller.getTransferData(dragAction.action);
+          xferData.data = PlacesController.getTransferData(dragAction.action);
         },
         
         canDrop: function TBV_DO_canDrop(event, session) {
@@ -662,6 +668,7 @@
           var dropPoint = this._getDropPoint(event);
           if (dropPoint == null)
             return;
+          PlacesController.activeView = this._self;
           PlacesControllerDragHelper.onDrop(null, this._self, dropPoint.ip);
           this._self._rebuild();
         },
@@ -714,37 +721,26 @@
           this._selection = event.target.node;
           if (event.target.node == null)
             this._selection = this._resultNode;
+          // Set the active view to this node.
+          PlacesController.activeView = this;
+          // When right clicking an item in a bookmarks menu the places commands
+          // need to be updated for the context menu to appear correctly.
+          document.commandDispatcher.updateCommands(event.type);
         ]]></body>
       </method>
       
       <property name="selType" onget="return 'single';"/>
-                
-      <method name="buildContextMenu">
-        <parameter name="aPopup"/>
-        <body><![CDATA[
-          this.focus();
-          this.controller.buildContextMenu(aPopup);
-        ]]></body>
-      </method>
-
-      <method name="destroyContextMenu">
-        <parameter name="aPopup"/>
-        <body>
-          <![CDATA[
-            if (window.content)
-              window.content.focus();
-          ]]>
-        </body>
-      </method>
+            
     </implementation>
     <handlers>
       <handler event="popupshowing">
-        if (event.target == this)
+        if (event.target == this) {
           this.onPopupShowing();
+        }
       </handler>
       <handler event="popuphidden">
         if (event.target == this) {
-          if (PlacesUtils.nodeIsContainer(this._resultNode)) {
+          if (PlacesController.nodeIsContainer(this._resultNode)) {
             this._resultNode.QueryInterface(Ci.nsINavHistoryContainerResultNode);
             this._resultNode.containerOpen = false;
           }

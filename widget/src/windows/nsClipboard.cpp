@@ -61,8 +61,9 @@
 #include "nsPrimitiveHelpers.h"
 #include "nsImageClipboard.h"
 #include "nsIWidget.h"
-#include "nsIComponentManager.h"
+#include "nsComponentManagerUtils.h"
 #include "nsWidgetsCID.h"
+#include "nsGfxCIID.h"
 #include "nsCRT.h"
 
 #include "nsNetUtil.h"
@@ -70,6 +71,7 @@
 #include "nsIImage.h"
 #include "nsIObserverService.h"
 
+#include "nsToolkit.h"
 
 // oddly, this isn't in the MSVC headers anywhere.
 UINT nsClipboard::CF_HTML = ::RegisterClipboardFormat("HTML Format");
@@ -113,12 +115,19 @@ UINT nsClipboard::GetFormat(const char* aMimeStr)
   else if (strcmp(aMimeStr, kUnicodeMime) == 0)
     format = CF_UNICODETEXT;
 #ifndef WINCE
-  else if (strcmp(aMimeStr, kJPEGImageMime) == 0)
+  else if (strcmp(aMimeStr, kJPEGImageMime) == 0 ||
+           strcmp(aMimeStr, kNativeImageMime) == 0)
     format = CF_DIB;
   else if (strcmp(aMimeStr, kFileMime) == 0 || 
            strcmp(aMimeStr, kFilePromiseMime) == 0)
     format = CF_HDROP;
 #endif
+  else if (strcmp(aMimeStr, kURLMime) == 0 || 
+           strcmp(aMimeStr, kURLDataMime) == 0 || 
+           strcmp(aMimeStr, kURLDescriptionMime) == 0 || 
+           strcmp(aMimeStr, kURLPrivateMime) == 0 || 
+           strcmp(aMimeStr, kFilePromiseURLMime) == 0)
+    format = CF_UNICODETEXT;
   else if (strcmp(aMimeStr, kNativeHTMLMime) == 0)
     format = CF_HTML;
   else
@@ -474,19 +483,15 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject * aDataObject, UINT 
 #ifndef WINCE
             case CF_DIB :
               {
-                PRUint32 allocLen = 0;
-                unsigned char * clipboardData;
-                nsresult rv = GetGlobalData(stm.hGlobal, (void **) &clipboardData, &allocLen);
-                if (NS_SUCCEEDED(rv))
-                {
-                  nsImageFromClipboard converter;
-                  nsIInputStream * inputStream;
-                  converter.GetEncodedImageStream (clipboardData,  &inputStream );   // addrefs for us, don't release
-                  if ( inputStream ) {
-                    *aData = inputStream;
-                    *aLen = sizeof(nsIInputStream*);
-                    result = NS_OK;
-                  }
+                nsIClipboardImage * nativeImageWrapper = nsnull; // don't use a nsCOMPtr here
+                result = CallCreateInstance("@mozilla.org/widget/clipboardimage;1", &nativeImageWrapper);
+
+                if (nativeImageWrapper)
+                {                                  
+                  nativeImageWrapper->SetNativeImage((void *) &stm);
+                  *aData = nativeImageWrapper; // note that we never release our ref to nativeImageWrapper. We pass it on to the owner of *aData
+                  *aLen = sizeof(nsIClipboardImage *);
+                  result = NS_OK;
                 }
               } break;
 
@@ -498,14 +503,14 @@ nsresult nsClipboard::GetNativeDataOffClipboard(IDataObject * aDataObject, UINT 
                 // if there really are multiple drag items.
                 HDROP dropFiles = (HDROP) GlobalLock(stm.hGlobal);
 
-                UINT numFiles = ::DragQueryFileW(dropFiles, 0xFFFFFFFF, NULL, 0);
+                UINT numFiles = nsToolkit::mDragQueryFile(dropFiles, 0xFFFFFFFF, NULL, 0);
                 NS_ASSERTION ( numFiles > 0, "File drop flavor, but no files...hmmmm" );
                 NS_ASSERTION ( aIndex < numFiles, "Asked for a file index out of range of list" );
                 if (numFiles > 0) {
-                  UINT fileNameLen = ::DragQueryFileW(dropFiles, aIndex, nsnull, 0);
+                  UINT fileNameLen = nsToolkit::mDragQueryFile(dropFiles, aIndex, nsnull, 0);
                   PRUnichar* buffer = NS_REINTERPRET_CAST(PRUnichar*, nsMemory::Alloc((fileNameLen + 1) * sizeof(PRUnichar)));
                   if ( buffer ) {
-                    ::DragQueryFileW(dropFiles, aIndex, buffer, fileNameLen + 1);
+                    nsToolkit::mDragQueryFile(dropFiles, aIndex, buffer, fileNameLen + 1);
                     *aData = buffer;
                     *aLen = fileNameLen * sizeof(PRUnichar);
                     result = NS_OK;
@@ -631,14 +636,13 @@ nsresult nsClipboard::GetDataFromDataObject(IDataObject     * aDataObject,
       // Hopefully by this point we've found it and can go about our business
       if ( dataFound ) {
         nsCOMPtr<nsISupports> genericDataWrapper;
-          if ( strcmp(flavorStr, kFileMime) == 0 ) {
-            // we have a file path in |data|. Create an nsLocalFile object.
-            nsDependentString filepath(NS_REINTERPRET_CAST(PRUnichar*, data));
-            nsCOMPtr<nsILocalFile> file;
-            if ( NS_SUCCEEDED(NS_NewLocalFile(filepath, PR_FALSE, getter_AddRefs(file))) )
-              genericDataWrapper = do_QueryInterface(file);
-            nsMemory::Free(data);
-          }
+        if ( strcmp(flavorStr, kFileMime) == 0 ) {
+          // we have a file path in |data|. Create an nsLocalFile object.
+          nsDependentString filepath(NS_REINTERPRET_CAST(PRUnichar*, data));
+          nsCOMPtr<nsILocalFile> file;
+          if ( NS_SUCCEEDED(NS_NewLocalFile(filepath, PR_FALSE, getter_AddRefs(file))) )
+            genericDataWrapper = do_QueryInterface(file);
+        }
         else if ( strcmp(flavorStr, kNativeHTMLMime) == 0) {
           // the editor folks want CF_HTML exactly as it's on the clipboard, no conversions,
           // no fancy stuff. Pull it off the clipboard, stuff it into a wrapper and hand
@@ -646,16 +650,12 @@ nsresult nsClipboard::GetDataFromDataObject(IDataObject     * aDataObject,
           if ( FindPlatformHTML(aDataObject, anIndex, &data, &dataLen) )
             nsPrimitiveHelpers::CreatePrimitiveForData ( flavorStr, data, dataLen, getter_AddRefs(genericDataWrapper) );
           else
-          {
-            nsMemory::Free(data);
             continue;     // something wrong with this flavor, keep looking for other data
-          }
-          nsMemory::Free(data);
         }
-        else if ( strcmp(flavorStr, kJPEGImageMime) == 0) {
-          nsIInputStream * imageStream = NS_REINTERPRET_CAST(nsIInputStream*, data);
-          genericDataWrapper = do_QueryInterface(imageStream);
-          NS_IF_RELEASE(imageStream);
+        else if ( strcmp(flavorStr, kJPEGImageMime) == 0 || strcmp(flavorStr, kNativeImageMime) == 0) {
+          // we have image data. We don't want to attempt any conversions here 
+          nsIClipboardImage * image = NS_REINTERPRET_CAST(nsIClipboardImage*, data);
+          genericDataWrapper = do_QueryInterface(image);       
         }
         else {
           // we probably have some form of text. The DOM only wants LF, so convert from Win32 line 
@@ -665,11 +665,14 @@ nsresult nsClipboard::GetDataFromDataObject(IDataObject     * aDataObject,
           dataLen = signedLen;
 
           nsPrimitiveHelpers::CreatePrimitiveForData ( flavorStr, data, dataLen, getter_AddRefs(genericDataWrapper) );
-          nsMemory::Free(data);
         }
         
         NS_ASSERTION ( genericDataWrapper, "About to put null data into the transferable" );
         aTransferable->SetTransferData(flavorStr, genericDataWrapper, dataLen);
+
+        // don't free data if it is an image object
+        if (strcmp(flavorStr, kJPEGImageMime) && strcmp(flavorStr, kNativeImageMime))
+          nsMemory::Free(data);
         res = NS_OK;
 
         // we found one, get out of the loop
@@ -909,5 +912,77 @@ NS_IMETHODIMP nsClipboard::HasDataMatchingFlavors(nsISupportsArray *aFlavorList,
     }
   }
 
+  return NS_OK;
+}
+
+
+nsClipboardImage::nsClipboardImage()
+{
+  memset(&mStgMedium, 0, sizeof(STGMEDIUM));
+}
+
+nsClipboardImage :: ~nsClipboardImage()
+{
+  if(mStgMedium.hGlobal)
+    ReleaseStgMedium(&mStgMedium);
+}
+
+NS_IMPL_ISUPPORTS1(nsClipboardImage, nsIClipboardImage)
+
+static HGLOBAL CopyGlobalMemory(HGLOBAL hSource)
+{
+  if (hSource == NULL)
+    return NULL;
+
+  DWORD nSize = (DWORD)::GlobalSize(hSource);
+  HGLOBAL hDest = ::GlobalAlloc(GMEM_SHARE | GMEM_MOVEABLE, nSize);
+  if (hDest == NULL)
+    return NULL;
+
+  // copy the bits
+  LPVOID lpSource = GlobalLock(hSource);
+  LPVOID lpDest = GlobalLock(hDest);
+  memcpy(lpDest, lpSource, nSize);
+  GlobalUnlock(hDest);
+  GlobalUnlock(hSource);
+
+  return hDest;
+}
+
+NS_IMETHODIMP nsClipboardImage::SetNativeImage(void * aNativeImageData)
+{
+  STGMEDIUM * stg = (STGMEDIUM *)aNativeImageData;
+
+  HGLOBAL hDest = CopyGlobalMemory(stg->hGlobal);
+  if (!hDest)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  if(mStgMedium.hGlobal)
+    ReleaseStgMedium(&mStgMedium);
+    
+  mStgMedium = *stg;
+  mStgMedium.hGlobal = hDest;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsClipboardImage::GetNativeImage(void * aNativeImageData)
+{
+  // the caller should be passing in a STGMEDIUM object which we can copy into
+  HGLOBAL hDest = CopyGlobalMemory(mStgMedium.hGlobal);
+  if (!hDest)
+    return NS_ERROR_OUT_OF_MEMORY;
+
+  STGMEDIUM * stg = (STGMEDIUM *)aNativeImageData;
+
+  *stg = mStgMedium;
+  stg->hGlobal = hDest;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsClipboardImage::ReleaseNativeImage(void * aNativeImageData)
+{
+  STGMEDIUM * stg = (STGMEDIUM *) aNativeImageData;
+  if (stg)
+    ReleaseStgMedium(stg);
   return NS_OK;
 }

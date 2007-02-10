@@ -144,7 +144,7 @@
               <menupopup id="menu_viewPopup">
                 <menu id="viewToolbarsMenu" label="&viewToolbarsMenu.label;" accesskey="&viewToolbarsMenu.accesskey;"
                       onpopupshowing="onViewToolbarsPopupShowing(event);">
-                  <menupopup>
+                  <menupopup onpopupshowing="updateToolbarStates(this);"> 
                     <menuseparator/>
                       <menuitem label="&viewCustomizeToolbar.label;" accesskey="&viewCustomizeToolbar.accesskey;"
                                 command="cmd_CustomizeToolbars"/>             
@@ -155,8 +155,10 @@
                       label="&viewSidebarMenu.label;"
                       accesskey="&viewSidebarMenu.accesskey;">
                   <menupopup id="viewSidebarMenu">
+#ifndef MOZ_PLACES
                     <menuitem key="viewBookmarksSidebarKb" observes="viewBookmarksSidebar" accesskey="&bookmarksSidebarCmd.accesskey;"/>
                     <menuitem key="key_gotoHistory" observes="viewHistorySidebar" label="&historyButton.label;" accesskey="&historySidebarCmd.accesskey;"/>
+#endif
                   </menupopup>
                 </menu>
                 <menuseparator/>
@@ -353,14 +355,18 @@
                 <menuitem label="&historyHomeCmd.label;"
                           command="Browser:Home"
                           key="historyHome"/>
+                <menuseparator/>
+                <menuitem label="&historySearchCmd.label;"
+                          command="Browser:SearchHistory"
+                          key="searchHistoryKb"/>
+                <menuitem label="&historyShowCmd.label;"
+                          command="Browser:ShowHistory"/>
                 <menuseparator id="startTabHistorySeparator"/>
                 <menuseparator hidden="true" id="endTabHistorySeparator"/>
-                <menu id="historyUndoMenu" label="&historyUndoMenu.label;" disabled="true">
-                  <menupopup id="historyUndoPopup" onpopupshowing="HistoryMenu.populateUndoSubmenu();"/>
-                </menu>
-                <menuseparator id="endUndoSeparator"/>
-                <menuitem observes="viewHistorySidebar" label="&historyShowSidebarCmd.label;"
-                          key="key_gotoHistory"/>
+                <menuitem id="sanitizeItem" 
+                          accesskey="&clearPrivateDataCmd.accesskey;"
+                          label="&clearPrivateDataCmd.label;"
+                          key="key_sanitize" command="Tools:Sanitize"/>
               </menupopup>
             </menu>
 #else
@@ -405,13 +411,13 @@
             </menu>
 #endif
 
-#ifndef MOZ_PLACES_BOOKMARKS
+#ifndef MOZ_PLACES
             <menu id="bookmarks-menu" label="&bookmarksMenu.label;" accesskey="&bookmarksMenu.accesskey;"
                   datasources="rdf:bookmarks rdf:files" 
                   ref="NC:BookmarksRoot" flags="dont-test-empty"
                   template='bookmarks-template'
                   infer="forward-proxy"
-                  onpopupshowing="BookmarksMenu.onShowMenu(event.target)"
+                  onpopupshowing="UpdateBookmarkAllTabsMenuitem(); BookmarksMenu.onShowMenu(event.target)"
                   onpopuphidden="BookmarksMenu.onHideMenu(event.target)"
                   oncommand="BookmarksMenu.loadBookmark(event, event.target, this.database)"
                   onclick="BookmarksMenu.loadBookmarkMiddleClick(event, this.database)"
@@ -425,12 +431,20 @@
                           label="&addCurPageAsCmd.label;"
                           command="Browser:AddBookmarkAs"/>
                 <menuitem id="subscribeToPageMenuitem"
+#ifdef MOZ_FEEDS
                           label="&subscribeToPageMenuitem.label;"
+#else
+                          label="&addLiveBookmarkMenuitem.label;"
+#endif
                           oncommand="return FeedHandler.subscribeToFeed(null, event);"
                           onclick="checkForMiddleClick(this, event);"
                           disabled="true"/>
                 <menu id="subscribeToPageMenupopup"
+#ifdef MOZ_FEEDS
                       label="&subscribeToPageMenupopup.label;"
+#else
+                      label="&addLiveBookmarkMenupopup.label;"
+#endif
                       hidden="true">
                   <menupopup id="subscribeToPageSubmenuMenupopup" 
                              onpopupshowing="return FeedHandler.buildFeedList(event.target);" 
@@ -468,12 +482,20 @@
       <menuitem label="&addCurPageAsCmd.label;" 
                 command="Browser:AddBookmarkAs" key="addBookmarkAsKb"/>
       <menuitem id="subscribeToPageMenuitem"
+#ifdef MOZ_FEEDS
                 label="&subscribeToPageMenuitem.label;"
+#else
+                label="&addLiveBookmarkMenuitem.label;"
+#endif
                 oncommand="return FeedHandler.subscribeToFeed(null, event);"
                 onclick="checkForMiddleClick(this, event);"
                 disabled="true"/>
       <menu id="subscribeToPageMenupopup"
+#ifdef MOZ_FEEDS
             label="&subscribeToPageMenupopup.label;"
+#else
+            label="&addLiveBookmarkMenupopup.label;"
+#endif
             hidden="true">
         <menupopup id="subscribeToPageSubmenuMenupopup" 
                    onpopupshowing="return FeedHandler.buildFeedList(event.target);" 
@@ -482,6 +504,8 @@
       </menu>
       <menuitem label="&addCurPagesCmd.label;" 
                 command="Browser:BookmarkAllTabs" key="bookmarkAllTabsKb"/>
+      <menuitem label="&searchBookmarksCmd.label;" 
+                command="Browser:ShowBookmarks" key="searchBookmarksKb"/>
       <menuitem label="&manBookmarksCmd.label;" 
                 command="Browser:ShowBookmarks" key="manBookmarkKb"/>
       <menuseparator builder="start"/>
@@ -509,11 +533,13 @@
               <menuitem accesskey="&pageInfoCmd.accesskey;" label="&pageInfoCmd.label;"   
                         key="key_viewInfo" command="View:PageInfo"/>
 #endif
+#ifndef MOZ_PLACES
               <menuseparator id="sanitizeSeparator"/>
               <menuitem id="sanitizeItem"
                         accesskey="&clearPrivateDataCmd.accesskey;"
                         label="&clearPrivateDataCmd.label;"
                         key="key_sanitize" command="Tools:Sanitize"/>
+#endif
 #ifndef XP_UNIX
               <menuseparator id="prefSep"/>
               <menuitem id="menu_preferences"
@@ -530,7 +556,7 @@
           <menu id="helpMenu" />
         </menubar>
 
-#ifndef MOZ_PLACES_BOOKMARKS
+#ifndef MOZ_PLACES
   <template id='bookmarks-template' xmlns:nc="http://home.netscape.com/NC-rdf#">
     <rule parent="hbox" rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
       <toolbarseparator uri="rdf:*"

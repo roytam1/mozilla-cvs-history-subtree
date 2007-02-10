@@ -56,14 +56,13 @@ class nsIXBLDocumentInfo;
 class nsIURI;
 class nsIAtom;
 
-#define NS_IXBLSERVICE_IID      \
-  { 0x7157b300, 0xf49b, 0x4e7d, \
-    { 0xac, 0x3a, 0xef, 0x8f, 0x20, 0x69, 0x6e, 0xb1 } }
+#define NS_IXBLSERVICE_IID \
+{ 0x0b2e5289, 0xe7d8, 0x41f8, { 0x85, 0xa2, 0x8a, 0x57, 0x0b, 0x25, 0xf4, 0x95 } }
 
 class nsIXBLService : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IXBLSERVICE_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IXBLSERVICE_IID)
 
   // This function loads a particular XBL file and installs all of the bindings
   // onto the element.
@@ -81,11 +80,10 @@ public:
                                      nsIURI* aBindingURI,
                                      PRBool aForceSyncLoad, nsIXBLDocumentInfo** aResult) = 0;
 
-  // Hooks up the global key event handlers to the document root.
+  // Hooks up the global key and DragDrop event handlers to the document root.
   NS_IMETHOD AttachGlobalKeyHandler(nsIDOMEventReceiver* aElement)=0;
+  NS_IMETHOD AttachGlobalDragHandler(nsIDOMEventReceiver* aElement)=0;
   
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIXBLService, NS_IXBLSERVICE_IID)
 
 #endif // nsIXBLService_h__

@@ -97,19 +97,19 @@ function getPlatform()
 
 var srDest = 665;
 
-var err = initInstall("ChatZilla @REVISION@", "ChatZilla", "@REVISION@"); 
+var err = initInstall("Chatzilla @REVISION@", "Chatzilla", "@REVISION@"); 
 logComment("initInstall: " + err);
 
 if (verifyDiskSpace(getFolder("Program"), srDest))
 {
-    addFile("ChatZilla service",
+    addFile("Chatzilla service",
             "@REVISION@",
             "components/chatzilla-service.js",
             getFolder("Components"),
             "chatzilla-service.js",
             true);
 
-    addFile("ChatZilla Chrome",
+    addFile("Chatzilla Chrome",
             "chrome/chatzilla.jar",     // jar source folder 
             getFolder("Chrome"),        // target folder
             "");                        // target subdir 

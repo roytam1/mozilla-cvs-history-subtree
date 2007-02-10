@@ -191,8 +191,7 @@ protected:
 
   nsresult CreateMozBR(nsIDOMNode *inParent, PRInt32 inOffset, nsCOMPtr<nsIDOMNode> *outBRNode);
 
-  nsresult CheckBidiLevelForDeletion(nsISelection         *aSelection,
-                                     nsIDOMNode           *aSelNode, 
+  nsresult CheckBidiLevelForDeletion(nsIDOMNode           *aSelNode, 
                                      PRInt32               aSelOffset, 
                                      nsIEditor::EDirection aAction,
                                      PRBool               *aCancel);
@@ -212,10 +211,6 @@ protected:
   PRUint32             mActionNesting;
   PRPackedBool         mLockRulesSniffing;
   PRPackedBool         mDidExplicitlySetInterline;
-  PRPackedBool         mDeleteBidiImmediately; // in bidirectional text, delete
-                                               // characters not visually 
-                                               // adjacent to the caret without
-                                               // moving the caret first.
   PRInt32              mTheAction;     // the top level editor action
   // friends
   friend class nsAutoLockRulesSniffing;

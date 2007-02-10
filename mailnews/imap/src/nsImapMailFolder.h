@@ -55,18 +55,15 @@
 #include "nsIMsgFilterList.h"
 #include "nsIMsgFilterPlugin.h"
 #include "prmon.h"
+#include "nsIEventQueue.h"
 #include "nsIMsgImapMailFolder.h"
 #include "nsIMsgLocalMailFolder.h"
 #include "nsIImapMailFolderSink.h"
 #include "nsIImapServerSink.h"
 #include "nsIMsgFilterPlugin.h"
-#include "nsIEventTarget.h"
-#include "nsIThread.h"
 class nsImapMoveCoalescer;
 class nsHashtable;
 class nsHashKey;
-class nsIMsgIdentity;
-
 #define COPY_BUFFER_SIZE 16384
 
 /* b64534f0-3d53-11d3-ac2a-00805f8ac968 */
@@ -78,7 +75,7 @@ class nsIMsgIdentity;
 class nsImapMailCopyState: public nsISupports
 {
 public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IMAPMAILCOPYSTATE_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMAPMAILCOPYSTATE_IID)
     
     NS_DECL_ISUPPORTS
 
@@ -112,8 +109,6 @@ public:
     PRBool m_eatLF;
     PRBool m_newMsgFlags; // only used if there's no m_message 
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsImapMailCopyState, NS_IMAPMAILCOPYSTATE_IID)
 
 // ACLs for this folder.
 // Generally, we will try to always query this class when performing
@@ -325,7 +320,6 @@ public:
   
   NS_IMETHOD IsCommandEnabled(const char *command, PRBool *result);
   NS_IMETHOD SetFilterList(nsIMsgFilterList *aMsgFilterList);
-  NS_IMETHOD GetCustomIdentity(nsIMsgIdentity **aIdentity);
         
   nsresult MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr, 
                                   nsIMsgDatabase *sourceDB, 
@@ -344,7 +338,7 @@ protected:
   // Helper methods
   
   void FindKeysToAdd(const nsMsgKeyArray &existingKeys, nsMsgKeyArray
-    &keysToFetch, PRUint32 &numNewUnread, nsIImapFlagAndUidState *flagState);
+    &keysToFetch, nsIImapFlagAndUidState *flagState);
   void FindKeysToDelete(const nsMsgKeyArray &existingKeys, nsMsgKeyArray
     &keysToFetch, nsIImapFlagAndUidState *flagState);
   void PrepareToAddHeadersToMailDB(nsIImapProtocol* aProtocol, const
@@ -449,7 +443,7 @@ protected:
   PRInt32 m_numStatusRecentMessages; // used to store counts from Status command
   PRInt32 m_numStatusUnseenMessages;
   PRInt32  m_nextMessageByteLength;
-  nsCOMPtr<nsIThread> m_thread;
+  nsCOMPtr<nsIEventQueue> m_eventQueue;
   nsCOMPtr<nsIUrlListener> m_urlListener;
   PRBool m_urlRunning;
   
@@ -475,7 +469,7 @@ protected:
   PRPackedBool m_performingBiff;
   PRPackedBool m_folderQuotaCommandIssued;
   PRPackedBool m_folderQuotaDataIsValid;
-  PRPackedBool m_updatingFolder;
+  
   nsMsgIMAPFolderACL *m_folderACL;
   PRUint32     m_aclFlags;
   PRUint32     m_supportedUserFlags;

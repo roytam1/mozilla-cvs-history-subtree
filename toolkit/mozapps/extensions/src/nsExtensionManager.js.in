@@ -24,7 +24,6 @@
  *  Jens Bannmann <jens.b@web.de>
  *  Robert Strong <robert.bugzilla@gmail.com>
  *  Dave Townsend <dave.townsend@blueprintit.co.uk>
- *  Daniel Veditz <dveditz@mozilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -177,9 +176,6 @@ var gCheckCompatibility   = true;
  * Valid GUIDs fit this pattern.
  */
 var gIDTest = /^(\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}|[a-z0-9-\._]*\@[a-z0-9-\._]+)$/i;
-
-// shared code for suppressing bad cert dialogs
-#include ../../shared/src/badCertHandler.js
 
 /**
  * Creates a Version Checker object.
@@ -808,7 +804,8 @@ function getZipReaderForFile(zipFile) {
   try {
     var zipReader = Components.classes["@mozilla.org/libjar/zip-reader;1"]
                               .createInstance(Components.interfaces.nsIZipReader);
-    zipReader.open(zipFile);
+    zipReader.init(zipFile);
+    zipReader.open();
   }
   catch (e) {
     zipReader.close();
@@ -832,6 +829,7 @@ function extractRDFFileToTempDir(zipFile, fileName, suppressErrors) {
   var file = getFile(KEY_TEMPDIR, [getRandomFileName(fileName)]);
   try {
     var zipReader = getZipReaderForFile(zipFile);
+    zipReader.getEntry(fileName);
     zipReader.extract(fileName, file);
     zipReader.close();
   }
@@ -1525,9 +1523,9 @@ Installer.prototype = {
       
       // create directories first
       var entries = zipReader.findEntries("*/");
-      while (entries.hasMore()) {
-        var entryName = entries.getNext();
-        var target = installLocation.getItemFile(extensionID, entryName);
+      while (entries.hasMoreElements()) {
+        var entry = entries.getNext().QueryInterface(Components.interfaces.nsIZipEntry);
+        var target = installLocation.getItemFile(extensionID, entry.name);
         if (!target.exists()) {
           try {
             target.create(nsILocalFile.DIRECTORY_TYPE, PERMS_DIRECTORY);
@@ -1539,10 +1537,10 @@ Installer.prototype = {
         }
       }
 
-      entries = zipReader.findEntries(null);
-      while (entries.hasMore()) {
-        var entryName = entries.getNext();
-        target = installLocation.getItemFile(extensionID, entryName);
+      entries = zipReader.findEntries("*");
+      while (entries.hasMoreElements()) {
+        entry = entries.getNext().QueryInterface(Components.interfaces.nsIZipEntry);
+        target = installLocation.getItemFile(extensionID, entry.name);
         if (target.exists())
           continue;
 
@@ -1553,7 +1551,7 @@ Installer.prototype = {
           LOG("extractExtensionsFiles: failed to create target file for extraction " + 
               " file = " + target.path + ", exception = " + e + "\n");
         }
-        zipReader.extract(entryName, target);
+        zipReader.extract(entry.name, target);
       }
       zipReader.close();
     }
@@ -1579,6 +1577,7 @@ Installer.prototype = {
                        "preview.png", "icon.png"];
       for (var i = 0; i < rootFiles.length; ++i) {
         try {
+          var entry = zipReader.getEntry(rootFiles[i]);
           var target = installLocation.getItemFile(id, rootFiles[i]);
           zipReader.extract(rootFiles[i], target);
         }
@@ -1590,11 +1589,11 @@ Installer.prototype = {
       // new theme structure requires a chrome.manifest file
       if (manifestFile.exists()) {
         var entries = zipReader.findEntries(DIR_CHROME + "/*");
-        while (entries.hasMore()) {
-          var entryName = entries.getNext();
-          if (entryName.charAt(entryName.length - 1) == "/")
+        while (entries.hasMoreElements()) {
+          entry = entries.getNext().QueryInterface(Components.interfaces.nsIZipEntry);
+          if (entry.name.substr(entry.name.length - 1, 1) == "/")
             continue;
-          target = installLocation.getItemFile(id, entryName);
+          target = installLocation.getItemFile(id, entry.name);
           try {
             target.create(nsILocalFile.NORMAL_FILE_TYPE, PERMS_FILE);
           }
@@ -1602,12 +1601,13 @@ Installer.prototype = {
             LOG("extractThemeFiles: failed to create target file for extraction " + 
                 " file = " + target.path + ", exception = " + e + "\n");
           }
-          zipReader.extract(entryName, target);
+          zipReader.extract(entry.name, target);
         }
         zipReader.close();
       }
       else { // old theme structure requires only an install.rdf
         try {
+          var entry = zipReader.getEntry(FILE_CONTENTS_MANIFEST);
           var contentsManifestFile = installLocation.getItemFile(id, FILE_CONTENTS_MANIFEST);
           contentsManifestFile.create(nsILocalFile.NORMAL_FILE_TYPE, PERMS_FILE);
           zipReader.extract(FILE_CONTENTS_MANIFEST, contentsManifestFile);
@@ -2375,7 +2375,6 @@ var Blocklist = {
     var request = Components.classes["@mozilla.org/xmlextras/xmlhttprequest;1"]
                             .createInstance(Components.interfaces.nsIXMLHttpRequest);
     request.open("GET", uri.spec, true);
-    request.channel.notificationCallbacks = new BadCertHandler();
     request.overrideMimeType("text/xml");
     request.setRequestHeader("Cache-Control", "no-cache");
 
@@ -2387,13 +2386,6 @@ var Blocklist = {
 
   onXMLLoad: function(aEvent) {
     var request = aEvent.target;
-    try {
-      checkCert(request.channel);
-    }
-    catch (e) {
-      LOG("Blocklist::onXMLLoad: " + e);
-      return;
-    }
     var responseXML = request.responseXML;
     if (!responseXML || responseXML.documentElement.namespaceURI == XMLURI_PARSE_ERROR ||
         (request.status != 200 && request.status != 0)) {
@@ -2821,7 +2813,6 @@ ExtensionManager.prototype = {
    */
   _shutdown: function() {
     gOS.removeObserver(this, "xpcom-shutdown");
-    gOS.removeObserver(this, "profile-after-change");
 
     // Release strongly held services.
     gOS = null;
@@ -3258,9 +3249,13 @@ ExtensionManager.prototype = {
           var item = this._getItemForDroppedFile(entry, location);
           if (item) {
             droppedInFiles.push({ file: entry, location: location });
+
+            var zipReader = Components.classes["@mozilla.org/libjar/zip-reader;1"]
+                                      .createInstance(Components.interfaces.nsIZipReader);
+            zipReader.init(entry);
             var prettyName = "";
             try {
-              var zipReader = getZipReaderForFile(entry);
+              var jar = zipReader.QueryInterface(Components.interfaces.nsIJAR);
               var principal = { };
               var certPrincipal = zipReader.getCertificatePrincipal(null, principal);
               // XXXbz This string could be empty.  This needs better
@@ -3268,8 +3263,6 @@ ExtensionManager.prototype = {
               prettyName = principal.value.prettyName;
             }
             catch (e) { }
-            if (zipReader)
-              zipReader.close();
             xpinstallStrings = xpinstallStrings.concat([item.name, 
                                                         getURLSpecFromFile(entry),
                                                         item.iconURL, 
@@ -4395,9 +4388,9 @@ ExtensionManager.prototype = {
       var files = [];
       for (var i = 0; i < searchForEntries.length; ++i) {
         var entries = zipReader.findEntries(searchForEntries[i]);
-        while (entries.hasMore()) {
-          var entryName = entries.getNext();
-          var target = getFile(KEY_TEMPDIR, [entryName]);
+        while (entries.hasMoreElements()) {
+          var entry = entries.getNext().QueryInterface(Components.interfaces.nsIZipEntry);
+          var target = getFile(KEY_TEMPDIR, [entry.name]);
           try {
             target.createUnique(nsILocalFile.NORMAL_FILE_TYPE, PERMS_FILE);
           }
@@ -4405,7 +4398,7 @@ ExtensionManager.prototype = {
             LOG("installMultiXPI: failed to create target file for extraction " +
                 " file = " + target.path + ", exception = " + e + "\n");
           }
-          zipReader.extract(entryName, target);
+          zipReader.extract(entry.name, target);
           files.push(target);
         }
       }
@@ -6185,7 +6178,6 @@ RDFItemUpdater.prototype = {
     var request = Components.classes["@mozilla.org/xmlextras/xmlhttprequest;1"]
                             .createInstance(Components.interfaces.nsIXMLHttpRequest);
     request.open("GET", uri.spec, true);
-    request.channel.notificationCallbacks = new BadCertHandler();
     request.overrideMimeType("text/xml");
     request.channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
 
@@ -6197,25 +6189,6 @@ RDFItemUpdater.prototype = {
 
   onXMLLoad: function(aEvent, aItem) {
     var request = aEvent.target;
-    try {
-      checkCert(request.channel);
-    }
-    catch (e) {
-      // This may be overly restrictive in two cases: corporate installations
-      // with a corporate update server using an in-house CA cert (installed
-      // but not "built-in") and lone developers hosting their updates on a
-      // site with a self-signed cert (permanently accepted, otherwise the
-      // BadCertHandler would prevent getting this far). Update checks will
-      // fail in both these scenarios.
-      // How else can we protect the vast majority of updates served from AMO
-      // from the spoofing attack described in bug 340198 while allowing those
-      // other cases? A "hackme" pref? Domain-control certs are cheap, getting
-      // one should not be a barrier in either case.
-      LOG("RDFItemUpdater::onXMLLoad: " + e);
-      this._updater.checkForDone(aItem,
-                                 nsIAddonUpdateCheckListener.STATUS_FAILURE);
-      return;
-    }
     var responseXML = request.responseXML;
 
     // If the item does not have an update RDF and returns an error it is not

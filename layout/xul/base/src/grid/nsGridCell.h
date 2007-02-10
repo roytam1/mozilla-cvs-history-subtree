@@ -64,10 +64,10 @@ public:
     nsGridCell();
     virtual ~nsGridCell();
 
-    nsSize      GetPrefSize(nsBoxLayoutState& aBoxLayoutState);
-    nsSize      GetMinSize(nsBoxLayoutState& aBoxLayoutState);
-    nsSize      GetMaxSize(nsBoxLayoutState& aBoxLayoutState);
-    PRBool      IsCollapsed(nsBoxLayoutState& aBoxLayoutState);
+    nsresult    GetPrefSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aPref);
+    nsresult    GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aMin);
+    nsresult    GetMaxSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aMax);
+    nsresult    IsCollapsed(nsBoxLayoutState& aBoxLayoutState, PRBool& aIsCollapsed);
 
 // accessors
     nsIBox*     GetBoxInColumn()             { return mBoxInColumn; }

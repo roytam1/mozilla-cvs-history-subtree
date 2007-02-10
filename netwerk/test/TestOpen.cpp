@@ -38,7 +38,7 @@
 
 #include "TestCommon.h"
 #include "nsCOMPtr.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "nsIURI.h"
 #include "nsIChannel.h"
 #include "nsIHttpChannel.h"
@@ -65,9 +65,7 @@ main(int argc, char **argv)
     if (test_common_init(&argc, &argv) != 0)
         return -1;
 
-    nsresult rv = NS_InitXPCOM2(nsnull, nsnull, nsnull);
-    if (NS_FAILED(rv)) return rv;
-
+    nsresult rv;
     char buf[256];
 
     if (argc != 3) {

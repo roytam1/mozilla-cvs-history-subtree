@@ -167,7 +167,9 @@ function MsgCompactFolder(isAll)
       if (expungedBytes > 0)
       { 
         if (gDBView)
+        {
           gCurrentlyDisplayedMessage = gDBView.currentlyDisplayedMessage;
+        }
 
         ClearThreadPaneSelection();
         ClearThreadPane();
@@ -233,10 +235,7 @@ function onEditVirtualFolderPropertiesCallback(aVirtualFolderURI)
   }
 }
 
-/**
- @param tabID  initial tab
- */
-function MsgFolderProperties(tabID)
+function MsgFolderProperties() 
 {
   var preselectedURI = GetSelectedFolderURI();
   var msgFolder = GetMsgFolderFromUri(preselectedURI, true);
@@ -266,8 +265,7 @@ function MsgFolderProperties(tabID)
               {preselectedURI:preselectedURI, serverType:serverType,
               msgWindow:msgWindow, title:windowTitle,
               okCallback:FolderProperties, 
-              tabID:tabID, name:name,
-              rebuildSummaryCallback:RebuildSummaryFile});
+              tabID:"", tabIndex:0, name:name, rebuildSummaryCallback:RebuildSummaryFile});
 }
 
 function RebuildSummaryFile(msgFolder)
@@ -307,7 +305,7 @@ function MsgToggleMessagePane()
 
 function MsgSetFolderCharset() 
 {
-  MsgFolderProperties();
+  MsgFolderProperties() 
 }
 
 // Given a URI we would like to return corresponding message folder here.

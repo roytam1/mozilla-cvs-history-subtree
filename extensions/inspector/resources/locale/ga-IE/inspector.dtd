@@ -7,6 +7,8 @@
 <!ENTITY btnFind.tooltip "Cuardaigh nód le scrúdú de réir aitheantais, clibe, nó aitreabúide">
 <!-- MAIN MENU ITEMS -->
 <!ENTITY mnFile.label "Comhad">
+<!ENTITY mnWindows.label "Scrúdaigh Fuinneog">
+<!ENTITY mnWindows.accesskey "F">
 <!ENTITY mnFile.accesskey "C">
 <!ENTITY cmdShowOpenURLDialog.label "Scrúdaigh URL...">
 <!ENTITY cmdShowOpenURLDialog.accesskey "U">

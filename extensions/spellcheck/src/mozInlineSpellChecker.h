@@ -55,6 +55,7 @@
 
 class nsIDOMDocumentRange;
 class nsIDOMMouseEventListener;
+class nsIEventQueueService;
 class mozInlineSpellWordUtil;
 class mozInlineSpellChecker;
 class mozInlineSpellResume;
@@ -175,6 +176,9 @@ private:
   // commment at the top of the .cpp file for more info.
   PRBool mNeedsCheckAfterNavigation;
 
+  // lazily created, may be NULL
+  nsCOMPtr<nsIEventQueueService> mEventQueueService;
+
   // TODO: these should be defined somewhere so that they don't have to be copied
   // from editor!
   enum OperationID
@@ -243,12 +247,15 @@ public:
   mozInlineSpellChecker();
   virtual ~mozInlineSpellChecker();
 
+  // re-spellcheck the currently marked ranges
+  nsresult SpellCheckSelection();
+
   // spell checks all of the words between two nodes
   nsresult SpellCheckBetweenNodes(nsIDOMNode *aStartNode,
                                   PRInt32 aStartOffset,
                                   nsIDOMNode *aEndNode,
                                   PRInt32 aEndOffset);
-
+  
   // examines the dom node in question and returns true if the inline spell
   // checker should skip the node (i.e. the text is inside of a block quote
   // or an e-mail signature...)
@@ -295,7 +302,7 @@ public:
   nsresult GetSpellCheckSelection(nsISelection ** aSpellCheckSelection);
   nsresult SaveCurrentSelectionPosition();
 
-  nsresult ResumeCheck(mozInlineSpellStatus* aStatus);
+  nsresult ResumeCheck(mozInlineSpellStatus* resume);
 };
 
 #endif /* __mozinlinespellchecker_h__ */

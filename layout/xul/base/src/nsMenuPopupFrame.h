@@ -64,7 +64,7 @@
 //  need to find a good place to put them together.
 //  if someone changes one, please also change the other.
 
-nsIFrame* NS_NewMenuPopupFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+nsresult NS_NewMenuPopupFrame(nsIPresShell* aPresShell, nsIFrame** aResult) ;
 
 class nsIViewManager;
 class nsIView;
@@ -101,7 +101,7 @@ private:
 class nsMenuPopupFrame : public nsBoxFrame, public nsIMenuParent
 {
 public:
-  nsMenuPopupFrame(nsIPresShell* aShell, nsStyleContext* aContext);
+  nsMenuPopupFrame(nsIPresShell* aShell);
 
   NS_DECL_ISUPPORTS
 
@@ -129,7 +129,6 @@ public:
   NS_IMETHOD HideChain();
 
   NS_IMETHOD KillPendingTimers();
-  NS_IMETHOD CancelPendingTimers();
 
   NS_IMETHOD InstallKeyboardNavigator();
   NS_IMETHOD RemoveKeyboardNavigator();
@@ -137,14 +136,17 @@ public:
   NS_IMETHOD GetWidget(nsIWidget **aWidget);
 
   // The dismissal listener gets created and attached to the window.
-  NS_IMETHOD AttachedDismissalListener();
+  NS_IMETHOD CreateDismissalListener();
 
   // Overridden methods
-  NS_IMETHOD Init(nsIContent*      aContent,
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
                   nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
 
-  NS_IMETHOD AttributeChanged(PRInt32 aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent* aChild,
+                              PRInt32 aNameSpaceID,
                               nsIAtom* aAttribute,
                               PRInt32 aModType);
 
@@ -152,13 +154,15 @@ public:
                          nsGUIEvent*     aEvent,
                          nsEventStatus*  aEventStatus);
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
-  virtual void InvalidateInternal(const nsRect& aDamageRect,
-                                  nscoord aX, nscoord aY, nsIFrame* aForChild,
-                                  PRBool aImmediate);
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint,
+                              nsFramePaintLayer aWhichLayer,    
+                              nsIFrame**     aFrame);
 
-  virtual nsresult CreateWidgetForView(nsIView* aView);
+  NS_IMETHOD MarkStyleChange(nsBoxLayoutState& aState);
+  NS_IMETHOD MarkDirty(nsBoxLayoutState& aState);
+  NS_IMETHOD RelayoutDirtyChild(nsBoxLayoutState& aState, nsIBox* aChild);
 
   void GetViewOffset(nsIView* aView, nsPoint& aPoint);
   static void GetRootViewForPopup(nsIFrame* aStartFrame,
@@ -193,23 +197,17 @@ public:
 
   void EnsureMenuItemIsVisible(nsIMenuFrame* aMenuFrame);
 
-  // This sets 'left' and 'top' attributes.
-  // May kill the frame.
   void MoveTo(PRInt32 aLeft, PRInt32 aTop);
 
   void GetAutoPosition(PRBool* aShouldAutoPosition);
   void SetAutoPosition(PRBool aShouldAutoPosition);
   void EnableRollup(PRBool aShouldRollup);
-  void SetConsumeRollupEvent(PRUint32 aConsumeMode);
 
   nsIScrollableView* GetScrollableView(nsIFrame* aStart);
   
 protected:
   friend class nsMenuPopupTimerMediator;
   NS_HIDDEN_(nsresult) Notify(nsITimer* aTimer);
-
-  // Move without updating attributes.
-  void MoveToInternal(PRInt32 aLeft, PRInt32 aTop);
 
   // redefine to tell the box system not to move the
   // views.
@@ -238,6 +236,8 @@ protected:
 
 
   nsIMenuFrame* mCurrentMenu; // The current menu that is active.
+  // XXX Hack
+  nsPresContext* mPresContext;  // weak reference
 
   nsMenuListener* mKeyboardNavigator; // The listener that tells us about key events.
   nsIDOMEventReceiver* mTarget;
@@ -254,7 +254,6 @@ protected:
 
   PRPackedBool mShouldAutoPosition; // Should SyncViewWithFrame be allowed to auto position popup?
   PRPackedBool mShouldRollup; // Should this menupopup be allowed to dismiss automatically?
-  PRPackedBool mConsumeRollupEvent; // Should the rollup event be consumed?
 
   nsString     mIncrementalString;  // for incremental typing navigation
 

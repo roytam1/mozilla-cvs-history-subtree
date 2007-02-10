@@ -41,8 +41,8 @@ VPATH = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE = suitetypeaheadfind
-LIBRARY_NAME = suitetypeaheadfind
+MODULE = typeaheadfind
+LIBRARY_NAME = typeaheadfind
 ifneq ($(OS_ARCH),WINNT)
 SHORT_LIBNAME = typahead
 endif

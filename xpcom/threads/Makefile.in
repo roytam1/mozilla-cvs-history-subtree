@@ -55,30 +55,37 @@ MOZILLA_INTERNAL_API = 1
 REQUIRES	= string \
 		  $(NULL)
 
+CSRCS		= \
+		plevent.c \
+		$(NULL)
+
 CPPSRCS		= \
-		nsEventQueue.cpp \
+		nsAutoLock.cpp \
 		nsEnvironment.cpp \
+		nsEventQueue.cpp \
+		nsEventQueueService.cpp \
 		nsThread.cpp \
-		nsThreadManager.cpp \
-		nsThreadPool.cpp \
-		nsProcessCommon.cpp \
 		nsTimerImpl.cpp \
+		nsProcessCommon.cpp \
 		TimerThread.cpp \
 		$(NULL)
 
 EXPORTS		= \
+		nsAutoLock.h \
+		plevent.h \
 		nsProcess.h \
-		nsEventQueue.h \
+		nsEventQueueUtils.h \
 		$(NULL)
 
 XPIDLSRCS	= \
-		nsIEventTarget.idl \
 		nsIThread.idl \
-		nsIThreadInternal.idl \
-		nsIThreadManager.idl \
-		nsIThreadPool.idl \
 		nsITimer.idl \
+		nsITimerInternal.idl \
+		nsITimerManager.idl \
 		nsIRunnable.idl \
+		nsIEventTarget.idl \
+		nsIEventQueue.idl \
+		nsIEventQueueService.idl \
 		nsIEnvironment.idl \
 		nsIProcess.idl \
 		nsISupportsPriority.idl \

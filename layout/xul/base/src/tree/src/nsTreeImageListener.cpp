@@ -55,6 +55,11 @@ nsTreeImageListener::~nsTreeImageListener()
   delete mInvalidationArea;
 }
 
+NS_IMETHODIMP nsTreeImageListener::OnStartDecode(imgIRequest *aRequest)
+{
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsTreeImageListener::OnStartContainer(imgIRequest *aRequest,
                                                     imgIContainer *aImage)
 {
@@ -63,11 +68,36 @@ NS_IMETHODIMP nsTreeImageListener::OnStartContainer(imgIRequest *aRequest,
   return NS_OK;
 }
 
+NS_IMETHODIMP nsTreeImageListener::OnStartFrame(imgIRequest *aRequest,
+                                                gfxIImageFrame *aFrame)
+{
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsTreeImageListener::OnDataAvailable(imgIRequest *aRequest,
                                                    gfxIImageFrame *aFrame,
                                                    const nsRect *aRect)
 {
   Invalidate();
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsTreeImageListener::OnStopFrame(imgIRequest *aRequest,
+                                               gfxIImageFrame *aFrame)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsTreeImageListener::OnStopContainer(imgIRequest *aRequest,
+                                                   imgIContainer *aImage)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsTreeImageListener::OnStopDecode(imgIRequest *aRequest,
+                                                nsresult status,
+                                                const PRUnichar *statusArg)
+{
   return NS_OK;
 }
 

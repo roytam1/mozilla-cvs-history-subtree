@@ -15,7 +15,7 @@
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL SuSE
  * BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
  * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
- * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+ * OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN 
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *
  * Author:  Keith Packard, SuSE, Inc.
@@ -23,7 +23,7 @@
 
 #include "icint.h"
 
-#define Mask(n)	((n) == 32 ? 0xffffffff : (unsigned) ((1 << (n))-1))
+#define Mask(n)	((n) == 32 ? 0xffffffff : ((1 << (n))-1))
 
 pixman_format_t *
 pixman_format_create (pixman_format_name_t name)
@@ -47,24 +47,6 @@ pixman_format_create (pixman_format_name_t name)
     case PIXMAN_FORMAT_NAME_A1:
 	return pixman_format_create_masks (1, 0x1,
 				    0, 0, 0);
-    case PIXMAN_FORMAT_NAME_RGB16_565:
-	return pixman_format_create_masks (16,
-					   0x0,
-					   0xf800,
-					   0x07e0,
-					   0x001f);
-    case PIXMAN_FORMAT_NAME_ABGR32:
-	return pixman_format_create_masks (32,
-				    0xff000000,
-				    0x000000ff,
-				    0x0000ff00,
-				    0x00ff0000);
-    case PIXMAN_FORMAT_NAME_BGR24:
-	return pixman_format_create_masks (32,
-				    0x0,
-				    0x000000ff,
-				    0x0000ff00,
-				    0x00ff0000);
     }
 
     return NULL;
@@ -112,7 +94,7 @@ void
 pixman_format_init (pixman_format_t *format, int format_code)
 {
     memset (format, 0, sizeof (pixman_format_t));
-
+    
 /* XXX: What do we want to lodge in here?
     format->id = FakeClientID (0);
 */
@@ -120,45 +102,45 @@ pixman_format_init (pixman_format_t *format, int format_code)
 
     switch (PICT_FORMAT_TYPE(format_code)) {
     case PICT_TYPE_ARGB:
-
+	
 	format->alphaMask = Mask(PICT_FORMAT_A(format_code));
 	if (format->alphaMask)
 	    format->alpha = (PICT_FORMAT_R(format_code) +
 			     PICT_FORMAT_G(format_code) +
 			     PICT_FORMAT_B(format_code));
-
+	
 	format->redMask = Mask(PICT_FORMAT_R(format_code));
-	format->red = (PICT_FORMAT_G(format_code) +
+	format->red = (PICT_FORMAT_G(format_code) + 
 		       PICT_FORMAT_B(format_code));
-
+	
 	format->greenMask = Mask(PICT_FORMAT_G(format_code));
 	format->green = PICT_FORMAT_B(format_code);
-
+	
 	format->blueMask = Mask(PICT_FORMAT_B(format_code));
 	format->blue = 0;
 	break;
-
+	
     case PICT_TYPE_ABGR:
-
+	
 	format->alphaMask = Mask(PICT_FORMAT_A(format_code));
 	if (format->alphaMask)
 	    format->alpha = (PICT_FORMAT_B(format_code) +
 			     PICT_FORMAT_G(format_code) +
 			     PICT_FORMAT_R(format_code));
-
+	
 	format->blueMask = Mask(PICT_FORMAT_B(format_code));
-	format->blue = (PICT_FORMAT_G(format_code) +
+	format->blue = (PICT_FORMAT_G(format_code) + 
 			PICT_FORMAT_R(format_code));
-
+	
 	format->greenMask = Mask(PICT_FORMAT_G(format_code));
 	format->green = PICT_FORMAT_R(format_code);
-
+	
 	format->redMask = Mask(PICT_FORMAT_R(format_code));
 	format->red = 0;
 	break;
-
+	
     case PICT_TYPE_A:
-
+	
 	format->alpha = 0;
 	format->alphaMask = Mask(PICT_FORMAT_A(format_code));
 
@@ -171,6 +153,7 @@ pixman_format_init (pixman_format_t *format, int format_code)
 			     (format->blueMask << format->blue) |
 			     (format->greenMask << format->green));
 }
+slim_hidden_def(pixman_format_init);
 
 void
 pixman_format_destroy (pixman_format_t *format)
@@ -180,11 +163,11 @@ pixman_format_destroy (pixman_format_t *format)
 
 void
 pixman_format_get_masks (pixman_format_t *format,
-                         unsigned int *bpp,
-                         unsigned int *alpha_mask,
-                         unsigned int *red_mask,
-                         unsigned int *green_mask,
-                         unsigned int *blue_mask)
+                         int *bpp,
+                         int *alpha_mask,
+                         int *red_mask,
+                         int *green_mask,
+                         int *blue_mask)
 {
     *bpp = PICT_FORMAT_BPP (format->format_code);
 

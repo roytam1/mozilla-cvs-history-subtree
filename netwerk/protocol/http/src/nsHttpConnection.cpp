@@ -46,11 +46,12 @@
 #include "nsISocketTransport.h"
 #include "nsIServiceManager.h"
 #include "nsISSLSocketControl.h"
-#include "nsStringStream.h"
+#include "nsIStringStream.h"
 #include "netCore.h"
 #include "nsNetCID.h"
 #include "nsAutoLock.h"
 #include "prmem.h"
+#include "plevent.h"
 
 #ifdef DEBUG
 // defined by the socket transport service while active

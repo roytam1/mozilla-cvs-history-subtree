@@ -13,8 +13,9 @@
  *
  * The Original Code is Java XPCOM Bindings.
  *
- * The Initial Developer of the Original Code is IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * The Initial Developer of the Original Code is
+ * IBM Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2004
  * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,16 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+import org.mozilla.xpcom.*;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.Properties;
-
-import org.mozilla.xpcom.GREVersionRange;
-import org.mozilla.xpcom.Mozilla;
-import org.mozilla.xpcom.nsIFile;
-import org.mozilla.xpcom.nsILocalFile;
-import org.mozilla.xpcom.nsISimpleEnumerator;
-import org.mozilla.xpcom.nsISupports;
 
 
 /**
@@ -60,37 +53,18 @@ import org.mozilla.xpcom.nsISupports;
  */
 public class TestJavaProxy {
 	public static void main(String [] args) throws Exception {
-    GREVersionRange[] range = new GREVersionRange[1];
-    range[0] = new GREVersionRange("1.8", true, "1.9+", true);
-    Properties props = null;
-      
-    File grePath = null;
-    try {
-      grePath = Mozilla.getGREPathWithProperties(range, props);
-    } catch (FileNotFoundException e) { }
-      
-    if (grePath == null) {
-      System.out.println("found no GRE PATH");
-      return;
-    }
-    System.out.println("GRE PATH = " + grePath.getPath());
-    
-    Mozilla Moz = Mozilla.getInstance();
-    try {
-      Moz.initXPCOM(grePath, null);
-    } catch (IllegalArgumentException e) {
-      System.out.println("no javaxpcom.jar found in given path");
-      return;
-    } catch (Throwable t) {
-      System.out.println("initXPCOM failed");
-      t.printStackTrace();
-      return;
-    }
-    System.out.println("\n--> initialized\n");
+		System.loadLibrary("javaxpcom");
 
-		nsILocalFile directory = Moz.newLocalFile("/usr", false);
-		nsISimpleEnumerator entries = (nsISimpleEnumerator)
-        directory.getDirectoryEntries();
+		String mozillaPath = System.getProperty("MOZILLA_FIVE_HOME");
+		if (mozillaPath == null) {
+			throw new RuntimeException("MOZILLA_FIVE_HOME system property not set.");
+		}
+
+		File localFile = new File(mozillaPath);
+		XPCOM.initXPCOM(localFile, null);
+
+		nsILocalFile directory = XPCOM.newLocalFile("/usr", false);
+		nsISimpleEnumerator entries = (nsISimpleEnumerator) directory.getDirectoryEntries();
 		while (entries.hasMoreElements()) {
 			nsISupports supp = entries.getNext();
 			nsIFile file = (nsIFile) supp.queryInterface(nsIFile.NS_IFILE_IID);
@@ -101,6 +75,6 @@ public class TestJavaProxy {
     directory = null;
     entries = null;
 
-		Moz.shutdownXPCOM(null);
+		XPCOM.shutdownXPCOM(null);
 	}
 }

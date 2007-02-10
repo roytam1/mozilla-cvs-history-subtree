@@ -37,7 +37,7 @@
 
 # NOTE: This is a TEST interface, not a DEMO interface :-)
 # We try to get as many data-types etc exposed, meaning this
-# doesn't really make a good demo of a "simple component"
+# doesnt really make a good demo of a "simple component"
 
 
 from xpcom import components, verbose
@@ -364,14 +364,6 @@ class PythonTestComponent:
 
     def CopyVariant(self, invar):
         return invar
-
-    def SumVariants(self, variants):
-        if len(variants) == 0:
-            return None
-        result = variants[0]
-        for v in variants[1:]:
-            result += v
-        return result
 
     # Some tests for the "new" (Feb-2001) DOMString type.
     def GetDOMStringResult( self, length ):

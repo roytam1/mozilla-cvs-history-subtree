@@ -37,7 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsCOMPtr.h"
-#include "nsCRTGlue.h"
+#include "nsCRT.h"
 #include "nsDOMClassInfo.h"
 #include "nsDOMError.h"
 #include "nsDOMException.h"
@@ -46,7 +46,6 @@
 #ifdef MOZ_SVG
 #include "nsIDOMSVGException.h"
 #endif
-#include "nsIDOMXPathException.h"
 #include "nsString.h"
 #include "prprf.h"
 
@@ -186,22 +185,6 @@ nsSVGException::GetCode(PRUint16* aCode)
 }
 #endif // MOZ_SVG
 
-IMPL_INTERNAL_DOM_EXCEPTION_HEAD(nsXPathException, nsIDOMXPathException)
-  NS_DECL_NSIDOMXPATHEXCEPTION
-IMPL_INTERNAL_DOM_EXCEPTION_TAIL(nsXPathException, nsIDOMXPathException,
-                                 XPathException, NS_ERROR_MODULE_DOM_XPATH,
-                                 NSResultToNameAndMessage)
-
-NS_IMETHODIMP
-nsXPathException::GetCode(PRUint16* aCode)
-{
-  NS_ENSURE_ARG_POINTER(aCode);
-  nsresult result;
-  GetResult(&result);
-  *aCode = NS_ERROR_GET_CODE(result);
-
-  return NS_OK;
-}
 
 nsBaseDOMException::nsBaseDOMException()
 {
@@ -217,7 +200,7 @@ NS_IMETHODIMP
 nsBaseDOMException::GetMessage(char **aMessage)
 {
   if (mMessage) {
-    *aMessage = NS_strdup(mMessage);
+    *aMessage = nsCRT::strdup(mMessage);
   } else {
     *aMessage = nsnull;
   }
@@ -241,7 +224,7 @@ nsBaseDOMException::GetName(char **aName)
   NS_ENSURE_ARG_POINTER(aName);
 
   if (mName) {
-    *aName = NS_strdup(mName);
+    *aName = nsCRT::strdup(mName);
   } else {
     *aName = nsnull;
   }

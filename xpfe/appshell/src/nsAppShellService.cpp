@@ -44,6 +44,7 @@
 #include "nsIURL.h"
 #include "nsNetUtil.h"
 #include "nsIServiceManager.h"
+#include "nsIEventQueueService.h"
 #include "nsIObserverService.h"
 #include "nsIObserver.h"
 #include "nsIXPConnect.h"
@@ -62,6 +63,7 @@
 #include "nsCRT.h"
 #include "nsITimelineService.h"
 #include "prprf.h"    
+#include "plevent.h"
 
 #include "nsWidgetsCID.h"
 #include "nsIRequestObserver.h"
@@ -151,7 +153,7 @@ nsAppShellService::CreateHiddenWindow(nsIAppShell* aAppShell)
   nsresult rv;
   PRInt32 initialHeight = 100, initialWidth = 100;
     
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
   static const char defaultHiddenWindowURL[] = "chrome://global/content/hiddenWindow.xul";
   PRUint32    chromeMask = 0;
   nsCOMPtr<nsIPrefBranch> prefBranch;
@@ -177,7 +179,7 @@ nsAppShellService::CreateHiddenWindow(nsIAppShell* aAppShell)
 
   mHiddenWindow.swap(newWindow);
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
   // hide the hidden window by launching it into outer space. This
   // way, we can keep it visible and let the OS send it activates
   // to keep menus happy. This will cause it to show up in window
@@ -253,7 +255,7 @@ nsAppShellService::CalculateWindowZLevel(nsIXULWindow *aParent,
   else if (aChromeMask & nsIWebBrowserChrome::CHROME_WINDOW_LOWERED)
     zLevel = nsIXULWindow::loweredZ;
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
   /* Platforms on which modal windows are always application-modal, not
      window-modal (that's just the Mac, right?) want modal windows to
      be stacked on top of everyone else.
@@ -501,11 +503,6 @@ nsAppShellService::UnregisterTopLevelWindow(nsIXULWindow* aWindow)
   }
   
   NS_ENSURE_ARG_POINTER(aWindow);
-
-  if (aWindow == mHiddenWindow) {
-    // CreateHiddenWindow() does not register the window, so we're done.
-    return NS_OK;
-  }
 
   // tell the window mediator
   nsCOMPtr<nsIWindowMediator> mediator

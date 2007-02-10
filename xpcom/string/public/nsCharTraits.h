@@ -73,65 +73,6 @@
   typedef PRBool nsCharTraits_bool;
 #endif
 
-/*
- * Some macros for converting PRUnichar (UTF-16) to and from Unicode scalar
- * values.
- *
- * Note that UTF-16 represents all Unicode scalar values up to U+10FFFF by
- * using "surrogate pairs". These consist of a high surrogate, i.e. a code
- * point in the range U+D800 - U+DBFF, and a low surrogate, i.e. a code point
- * in the range U+DC00 - U+DFFF, like this:
- *
- *  U+D800 U+DC00 =  U+10000
- *  U+D800 U+DC01 =  U+10001
- *  ...
- *  U+DBFF U+DFFE = U+10FFFE
- *  U+DBFF U+DFFF = U+10FFFF
- *
- * These surrogate code points U+D800 - U+DFFF are not themselves valid Unicode
- * scalar values and are not well-formed UTF-16 except as high-surrogate /
- * low-surrogate pairs.
- */
-
-#define PLANE1_BASE          PRUint32(0x00010000)
-// High surrogates are in the range 0xD800 -- OxDBFF
-#define NS_IS_HIGH_SURROGATE(u) ((PRUint32(u) & 0xFFFFFC00) == 0xD800)
-// Low surrogates are in the range 0xDC00 -- 0xDFFF
-#define NS_IS_LOW_SURROGATE(u)  ((PRUint32(u) & 0xFFFFFC00) == 0xDC00)
-// Faster than testing NS_IS_HIGH_SURROGATE || NS_IS_LOW_SURROGATE
-#define IS_SURROGATE(u)      ((PRUint32(u) & 0xFFFFF800) == 0xD800)
-
-// Everything else is not a surrogate: 0x000 -- 0xD7FF, 0xE000 -- 0xFFFF
-
-// N = (H - 0xD800) * 0x400 + 0x10000 + (L - 0xDC00)
-// I wonder whether we could somehow assert that H is a high surrogate
-// and L is a low surrogate
-#define SURROGATE_TO_UCS4(h, l) (((PRUint32(h) & 0x03FF) << 10) + \
-                                 (PRUint32(l) & 0x03FF) + PLANE1_BASE)
-
-// Extract surrogates from a UCS4 char
-// Reference: the Unicode standard 4.0, section 3.9
-// Since (c - 0x10000) >> 10 == (c >> 10) - 0x0080 and 
-// 0xD7C0 == 0xD800 - 0x0080,
-// ((c - 0x10000) >> 10) + 0xD800 can be simplified to
-#define H_SURROGATE(c) PRUnichar(PRUnichar(PRUint32(c) >> 10) + \
-                                 PRUnichar(0xD7C0)) 
-// where it's to be noted that 0xD7C0 is not bitwise-OR'd
-// but added.
-
-// Since 0x10000 & 0x03FF == 0, 
-// (c - 0x10000) & 0x03FF == c & 0x03FF so that
-// ((c - 0x10000) & 0x03FF) | 0xDC00 is equivalent to
-#define L_SURROGATE(c) PRUnichar(PRUnichar(PRUint32(c) & PRUint32(0x03FF)) | \
-                                 PRUnichar(0xDC00))
-
-#define IS_IN_BMP(ucs) (PRUint32(ucs) < PLANE1_BASE)
-#define UCS2_REPLACEMENT_CHAR PRUnichar(0xFFFD)
-
-#define UCS_END PRUint32(0x00110000)
-#define IS_VALID_CHAR(c) ((PRUint32(c) < UCS_END) && !IS_SURROGATE(c))
-#define ENSURE_VALID_CHAR(c) (IS_VALID_CHAR(c) ? (c) : UCS2_REPLACEMENT_CHAR)
-
 template <class CharT> struct nsCharTraits {};
 
 NS_SPECIALIZE_TEMPLATE

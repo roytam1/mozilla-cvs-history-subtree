@@ -15,12 +15,13 @@
 #
 # The Initial Developer of the Original Code is
 # the Mozilla Foundation <http://www.mozilla.org>.
+#
 # Portions created by the Initial Developer are Copyright (C) 2006
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Robert Strong <rstrong@mozilla.com> - Initial perl scripts (install_sub.pl)
-#   Benjamin Smedberg <benjamin@smedbergs.us> - Makefile-izing
+# Robert Strong <rstrong@mozilla.com> - Initial perl scripts (install_sub.pl)
+# Benjamin Smedberg <benjamin@smedbergs.us> - Makefile-izing
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -47,7 +48,6 @@ SFX_MODULE ?= $(error SFX_MODULE is not defined)
 TOOLKIT_NSIS_FILES = \
 	common.nsh \
 	locales.nsi \
-	nsProcess.dll \
 	overrides.nsh \
 	ShellLink.dll \
 	version.nsh \
@@ -80,8 +80,4 @@ uninstaller::
 	$(INSTALL) $(topsrcdir)/toolkit/mozapps/installer/windows/nsis/setup.ico $(CONFIG_DIR)
 	cd $(CONFIG_DIR) && makensis.exe uninstaller.nsi
 	$(NSINSTALL) -D $(DIST)/bin/uninstall
-ifdef MOZ_PHOENIX
-	cp $(CONFIG_DIR)/helper.exe $(DIST)/bin/uninstall
-else
 	cp $(CONFIG_DIR)/uninst.exe $(DIST)/bin/uninstall
-endif

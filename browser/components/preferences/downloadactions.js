@@ -16,7 +16,7 @@
 #
 # The Initial Developer of the Original Code is
 # Ben Goodger.
-# Portions created by the Initial Developer are Copyright (C) 2000
+# Portions created by the Initial Developer are Copyright (C) 2000-2005
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
@@ -293,7 +293,7 @@ var gDownloadActionsWindow = {
     }
 #endif
 #ifdef XP_MACOSX
-    var lfm = aFile.QueryInterface(Components.interfaces.nsILocalFileMac);
+    var lfm = aFile.QueryInterface(Components.interfaces.nsILocalFileMac_MOZILLA_1_8_BRANCH);
     try {
       return lfm.bundleDisplayName;
     }
@@ -463,7 +463,6 @@ var gDownloadActionsWindow = {
     selectionChanged: function () {},    
     cycleCell: function (aIndex, aColumn) {},    
     isEditable: function (aIndex, aColumn) { return false; },
-    isSelectable: function (aIndex, aColumn) { return false; },
     setCellValue: function (aIndex, aColumn, aValue) {},    
     setCellText: function (aIndex, aColumn, aValue) {},    
     performAction: function (aAction) {},  
@@ -826,7 +825,7 @@ var gDownloadActionsWindow = {
    
     function filterActions()
     {
-      var filter = document.getElementById("filter").value.toLowerCase();
+      var filter = document.getElementById("filter").value;
       if (filter == "") {
         gDownloadActionsWindow.clearFilter();
         return;

@@ -47,8 +47,12 @@ MODULE		= libpixman
 LIBRARY_NAME	= mozlibpixman
 LIBXUL_LIBRARY = 1
 
-ifndef MOZ_ENABLE_LIBXUL
-VISIBILITY_FLAGS =
+ifeq ($(OS_ARCH)_$(GNU_CC), WINNT_)
+ifeq ($(MOZ_OPTIMIZE),1)
+ifeq (1200,$(_MSC_VER))
+USE_STATIC_VC71_LIB = 1
+endif
+endif
 endif
 
 CSRCS	= \
@@ -72,17 +76,7 @@ CSRCS	= \
 	renderedge.c \
 	$(NULL)
 
-ifdef MOZ_X11
-#CSRCS   += fbmmx.c
-#DEFINES += -DUSE_MMX
-endif
-
-ifdef _MSC_VER
-CSRCS   += fbmmx.c
-DEFINES += -DUSE_MMX
-endif
-
-EXPORTS		= pixman.h pixman-remap.h
+EXPORTS		= pixman.h
 
 LOCAL_INCLUDES	= -I$(srcdir)
 
@@ -92,7 +86,9 @@ FORCE_USE_PIC = 1
 
 include $(topsrcdir)/config/rules.mk
 
-ifdef MOZ_X11
-#CFLAGS  += -mmmx -msse -Winline --param inline-unit-growth=10000 --param large-function-growth=10000
+ifeq ($(USE_STATIC_VC71_LIB),1)
+libs:: $(srcdir)/pixman-vc71.lib
+	cp $(srcdir)/pixman-vc71.lib $(LIBRARY)
+	$(INSTALL) $(IFLAGS1) $(LIBRARY) $(DIST)/lib
 endif
 

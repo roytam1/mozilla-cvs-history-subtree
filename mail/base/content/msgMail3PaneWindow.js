@@ -172,7 +172,7 @@ var folderListener = {
     OnItemPropertyChanged: function(item, property, oldValue, newValue) { },
 
     OnItemIntPropertyChanged: function(item, property, oldValue, newValue) {
-      if (item == gMsgFolderSelected) {
+      if (item == msgWindow.openFolder) {
         if(property.toString() == "TotalMessages" || property.toString() == "TotalUnreadMessages") {
           UpdateStatusMessageCounts(gMsgFolderSelected);
           UpdateFolderLocationPicker(item);
@@ -198,7 +198,6 @@ var folderListener = {
              gCurrentFolderToReroot = null;
              if(msgFolder) {
                msgFolder.endFolderLoading();
-               UpdateStatusQuota(msgFolder);
                // suppress command updating when rerooting the folder
                // when rerooting, we'll be clearing the selection
                // which will cause us to update commands.
@@ -219,6 +218,8 @@ var folderListener = {
                if (gDBView) {
                  gDBView.suppressCommandUpdating = false;
                }
+
+               gIsEditableMsgFolder = IsSpecialFolder(msgFolder, MSG_FOLDER_FLAG_DRAFTS, true);
 
                gCurrentLoadingFolderSortType = 0;
                gCurrentLoadingFolderSortOrder = 0;
@@ -277,7 +278,7 @@ var folderListener = {
                 gDefaultSearchViewTerms = null;
                 viewDebug("searching gVirtualFolderTerms\n");
                 gDBView.viewFolder = gMsgFolderSelected;
-                ViewChangeByFolder(gMsgFolderSelected);
+                loadVirtualFolder(); 
              }
              else if (gMsgFolderSelected.flags & MSG_FOLDER_FLAG_VIRTUAL)
              {
@@ -289,10 +290,13 @@ var folderListener = {
                // get the view value from the folder
                if (msgFolder)
                {
+                 var msgDatabase = msgFolder.getMsgDatabase(msgWindow);
+                 var dbFolderInfo = msgDatabase.dBFolderInfo; 
+                 var result = dbFolderInfo.getUint32Property("current-view", 0);
+                 
                  // if our new view is the same as the old view and we already have the list of search terms built up
                  // for the old view, just re-use it
-                 var result = GetMailViewForFolder(msgFolder);
-                 if (GetSearchInput() && gCurrentViewValue == result && gDefaultSearchViewTerms)
+                 if (gCurrentViewValue == result && gDefaultSearchViewTerms)
                  {
                    viewDebug("searching gDefaultSearchViewTerms and rerootingFolder\n");
                    Search("");
@@ -305,7 +309,7 @@ var folderListener = {
                }
              }
            }
-         }
+         } 
        } 
        else if (eventType == "ImapHdrDownloaded") {
          if (folder) {
@@ -334,10 +338,6 @@ var folderListener = {
        else if (eventType == "DeleteOrMoveMsgFailed") {
          HandleDeleteOrMoveMsgFailed(folder);
        }
-       else if (eventType == "AboutToCompact") {
-        if (gDBView)
-          gCurrentlyDisplayedMessage = gDBView.currentlyDisplayedMessage;
-       }
        else if (eventType == "CompactCompleted") {
          HandleCompactCompleted(folder);
        }
@@ -361,29 +361,8 @@ var folderObserver = {
         DropOnFolderTree(row, orientation);
     },
 
-    onToggleOpenState: function(index)
+    onToggleOpenState: function()
     {
-      var folderTree = GetFolderTree();
-
-      // Nothing to do when collapsing an item.
-      if (folderTree.view.isContainerOpen(index))
-        return;
-
-      var folderResource = GetFolderResource(folderTree, index);
-
-      if (folderTree.view.getLevel(index) == 0)
-      {
-        // (Imap/Nntp/Pop) Account item.
-
-        folderResource.QueryInterface(Components.interfaces.nsIMsgFolder)
-                      .server.performExpand(msgWindow);
-      }
-      else if (folderResource instanceof Components.interfaces.nsIMsgImapMailFolder)
-      {
-        // Imap message folder item.
-
-        folderResource.performExpand(msgWindow);
-      }
     },
 
     onCycleHeader: function(colID, elt)
@@ -576,7 +555,6 @@ function HandleCompactCompleted(folder)
           viewType = dbFolderInfo.viewType;
           dbFolderInfo = null;
         }
-        
         RerootFolder(uri, msgFolder, viewType, viewFlags, sortType, sortOrder);
         LoadCurrentlyDisplayedMessage();
       }
@@ -788,7 +766,7 @@ function UpdateMailPaneConfig(aMsgWindowInitialized) {
     messenger.SetWindow(window, msgWindow);
     MsgReload(); 
   }
-
+  
   // record the new configuration
   gCurrentPaneConfig = paneConfig; 
 }
@@ -825,8 +803,8 @@ function OnLoadMessenger()
     }
     else // for higher resolution displays, use larger values for height and width
     {
-      defaultWidth = screen.availWidth <= 1024 ? screen.availWidth * .95 : screen.availWidth * .8;      
-      defaultHeight = screen.availHeight * .8;
+      defaultWidth = screen.availWidth * .8;
+      defaultHeight = screen.availHeight * .8; 
     }
 
     document.documentElement.setAttribute("width", defaultWidth);
@@ -844,7 +822,7 @@ function delayedOnLoadMessenger()
   pref.addObserver("mail.pane_config.dynamic", MailPrefObserver, false);
   pref.addObserver("mail.showFolderPaneColumns", MailPrefObserver, false);
 
-  MailOfflineMgr.init();
+  AddMailOfflineObserver();
   CreateMailWindowGlobals();
   accountCentralBox = document.getElementById("accountCentralBox");
   GetMessagePane().collapsed = true;
@@ -862,9 +840,7 @@ function delayedOnLoadMessenger()
   accountManager.setSpecialFolders();
   accountManager.loadVirtualFolders();
   accountManager.addIncomingServerListener(gThreePaneIncomingServerListener);
-  
-  gPhishingDetector.init();
-  
+
   AddToSession();
 
   //need to add to session before trying to load start folder otherwise listeners aren't
@@ -888,24 +864,6 @@ function delayedOnLoadMessenger()
     gSearchEmailAddress = (window.arguments.length > 2) ? window.arguments[2] : null;
   }
 
-#ifdef HAVE_SHELL_SERVICE
-  var nsIShellService = Components.interfaces.nsIShellService;
-  var shellService;
-  var defaultAccount;
-  try {
-    shellService = Components.classes["@mozilla.org/mail/shell-service;1"].getService(nsIShellService);
-    defaultAccount = accountManager.defaultAccount;
-  } catch (ex) {}
-  
-  // show the default client dialog only if we have at least one account, 
-  // if we should check for the default client, 
-  // and we aren't already the default for all of our recognized types (mail, news, rss)
-  if (shellService && defaultAccount && shellService.shouldCheckDefaultClient 
-      && !shellService.isDefaultClient(true, nsIShellService.MAIL | nsIShellService.NEWS | nsIShellService.RSS))
-    window.openDialog("chrome://messenger/content/defaultClientDialog.xul", "DefaultClient", 
-                      "modal,centerscreen,chrome,resizable=no");
-#endif
-
   setTimeout("loadStartFolder(gStartFolderUri);", 0);
 
   // FIX ME - later we will be able to use onload from the overlay
@@ -917,6 +875,8 @@ function delayedOnLoadMessenger()
 
   //Set focus to the Thread Pane the first time the window is opened.
   SetFocusThreadPane();
+  
+  gFindBar.initFindBar();
   
   // initialize the customizeDone method on the customizeable toolbar
   var toolbox = document.getElementById("mail-toolbox");
@@ -933,6 +893,8 @@ function OnUnloadMessenger()
   pref.QueryInterface(Components.interfaces.nsIPrefBranch2);
   pref.removeObserver("mail.pane_config.dynamic", MailPrefObserver);
   pref.removeObserver("mail.showFolderPaneColumns", MailPrefObserver);
+  
+  gFindBar.uninitFindBar();
 
   // FIX ME - later we will be able to use onload from the overlay
   OnUnloadMsgHeaderPane();
@@ -946,6 +908,19 @@ function NotifyObservers(aSubject, aTopic, aData)
 {
   var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
   observerService.notifyObservers(aSubject, aTopic, aData);
+}
+
+// because the "open" state persists, we'll call
+// PerformExpand() for all servers that are open at startup.            
+function PerformExpandForAllOpenServers()
+{
+    var servers = accountManager.allServers;
+    for (var i = 0; i < servers.Count(); i++)
+    {
+        var server = servers.QueryElementAt(i, Components.interfaces.nsIMsgIncomingServer);
+        if (server.type != "imap" && !server.rootMsgFolder.getFlag(MSG_FOLDER_FLAG_ELIDED))
+            server.performExpand(msgWindow);
+    }
 }
 
 function loadStartFolder(initialUri)
@@ -991,6 +966,12 @@ function loadStartFolder(initialUri)
 
                 startFolderResource = inboxFolder.QueryInterface(Components.interfaces.nsIRDFResource);
             }
+            else
+            {
+                // set the startFolderResource to the server, so we select it
+                // so we'll get account central
+                startFolderResource = RDF.GetResource(defaultServer.serverURI);
+            }
         }
 
         var startFolder = startFolderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
@@ -1007,10 +988,20 @@ function loadStartFolder(initialUri)
             defaultServer.rootFolder == defaultServer.rootMsgFolder)
           defaultServer.PerformBiff(msgWindow);        
 
-        SelectFolder(startFolder.URI);
+        SelectFolder(startFolder.URI);        
+
+
+        // because the "open" state persists, we'll call
+        // PerformExpand() for all servers that are open at startup.
+        // note, because of the "news.persist_server_open_state_in_folderpane" pref
+        // we don't persist the "open" state of news servers across sessions, 
+        // but we do within a session, so if you open another 3 pane
+        // and a news server is "open", we'll update the unread counts.
+        PerformExpandForAllOpenServers();
     }
     catch(ex)
     {
+
       if (initialUri)
       {
         messenger.loadURL(window, initialUri);
@@ -1020,28 +1011,48 @@ function loadStartFolder(initialUri)
       dump(ex);
       dump('Exception in LoadStartFolder caused by no default account.  We know about this\n');
     }
-
+    
     // if gLoadStartFolder is true, then we must have just created a POP3 account
     // and we aren't supposed to initially download mail. (Bug #270743)
     if (gLoadStartFolder)
       MsgGetMessagesForAllServers(defaultServer);
 
-    // if appropriate, send unsent messages. This may end up prompting the user
-    if (MailOfflineMgr.isOnline() && MailOfflineMgr.shouldSendUnsentMessages())
-      SendUnsentMessages();
+    if (this.CheckForUnsentMessages != undefined && CheckForUnsentMessages())
+    {
+      var ioService = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
+      if (!ioService.offline) 
+      {
+        InitPrompts();
+        InitServices();
+
+        if (gPromptService) 
+        {
+          var buttonPressed = gPromptService.confirmEx(window, 
+                            gOfflinePromptsBundle.getString('sendMessagesOfflineWindowTitle'), 
+                            gOfflinePromptsBundle.getString('sendMessagesLabel'),
+                            gPromptService.BUTTON_TITLE_IS_STRING * (gPromptService.BUTTON_POS_0 + 
+                            gPromptService.BUTTON_POS_1),
+                            gOfflinePromptsBundle.getString('sendMessagesSendButtonLabel'),
+                            gOfflinePromptsBundle.getString('sendMessagesNoSendButtonLabel'),
+                            null, null, {value:0});
+          if (buttonPressed == 0) 
+            SendUnsentMessages();
+        }
+      }
+    }
 }
 
 function AddToSession()
 {
-  try {
-    var mailSession = Components.classes[mailSessionContractID]
-                                .getService(Components.interfaces.nsIMsgMailSession);
-    var nsIFolderListener = Components.interfaces.nsIFolderListener;
-    var notifyFlags = nsIFolderListener.intPropertyChanged | nsIFolderListener.event;
-    mailSession.AddFolderListener(folderListener, notifyFlags);
-  } catch (ex) {
-    dump("Error adding to session\n");
-  }
+    try {
+        var mailSession = Components.classes[mailSessionContractID].getService(Components.interfaces.nsIMsgMailSession);
+        
+        var nsIFolderListener = Components.interfaces.nsIFolderListener;
+        var notifyFlags = nsIFolderListener.intPropertyChanged | nsIFolderListener.event;
+        mailSession.AddFolderListener(folderListener, notifyFlags);
+	} catch (ex) {
+        dump("Error adding to session\n");
+    }
 }
 
 function InitPanes()
@@ -1405,7 +1416,7 @@ function ClearMessagePane()
     gHaveLoadedMessage = false;
     if (GetMessagePaneFrame().location.href != "about:blank")
         GetMessagePaneFrame().location.href = "about:blank";
-
+    
     // hide the message header view AND the message pane...
     HideMessageHeaderPane();
     gMessageNotificationBar.clearMsgNotifications();
@@ -1479,22 +1490,59 @@ function FolderPaneOnClick(event)
         // clicking on the name column in the folder pane should not sort
         event.stopPropagation();
       }
+      return;
+    }
+
+    if (elt.value == "twisty")
+    {
+        if (!(folderTree.treeBoxObject.view.isContainerOpen(row.value)))
+        {
+            var folderResource = GetFolderResource(folderTree, row.value);
+            var isServer = GetFolderAttribute(folderTree, folderResource, "IsServer");
+            if (isServer == "true")
+            {
+                var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+                var server = msgFolder.server;
+                server.performExpand(msgWindow);
+            }
+            else
+            {
+                var serverType = GetFolderAttribute(folderTree, folderResource, "ServerType");
+                if (serverType == "imap")
+                {
+                    var imapFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgImapMailFolder);
+                    imapFolder.performExpand(msgWindow);
+                }
+            }
+        }
     }
     else if ((event.originalTarget.localName == "slider") ||
              (event.originalTarget.localName == "scrollbarbutton")) {
       event.stopPropagation();
     }
-    else if ((event.detail == 2) && (elt.value != "twisty") &&
-             (folderTree.view.getLevel(row.value) != 0)) {
+    else if (event.detail == 2) {
       FolderPaneDoubleClick(row.value, event);
     }
+
 }
 
 function FolderPaneDoubleClick(folderIndex, event)
 {
-    if (!pref.getBoolPref("mailnews.reuse_thread_window2"))
+    var folderTree = GetFolderTree();
+    var folderResource = GetFolderResource(folderTree, folderIndex);
+
+    var isServer = GetFolderAttribute(folderTree, folderResource, "IsServer");
+    if (isServer == "true")
     {
-      var folderResource = GetFolderResource(GetFolderTree(), folderIndex);
+      if (!(folderTree.treeBoxObject.view.isContainerOpen(folderIndex)))
+      {
+        var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+        var server = msgFolder.server;
+        server.performExpand(msgWindow);
+      }
+    }
+    else if (!pref.getBoolPref("mailnews.reuse_thread_window2"))
+    {
       // Open a new msg window only if we are double clicking on 
       // folders or newsgroups.
       MsgOpenNewWindowForFolder(folderResource.Value, -1 /* key */);
@@ -1747,20 +1795,6 @@ function GetFolderAttribute(tree, source, attribute)
   return target;
 }
 
-function LoadNavigatedToMessage(msgHdr, folder, folderUri)
-{
-  if (IsCurrentLoadedFolder(folder))
-  {
-    gDBView.selectMsgByKey(msgHdr.messageKey);
-  }
-  else
-  {
-    gStartMsgKey = msgHdr.messageKey;
-    SelectFolder(folderUri);
-  }
-  
-}
-
 // Some of the per account junk mail settings have been
 // converted to global prefs. Let's try to migrate some
 // of those settings from the default account.
@@ -1771,10 +1805,7 @@ function MigrateJunkMailSettings()
   {
     // get the default account, check to see if we have values for our 
     // globally migrated prefs.
-    var defaultAccount;
-    try {
-      defaultAccount = accountManager.defaultAccount;
-    } catch (ex) {}
+    var defaultAccount = accountManager.defaultAccount;
     if (defaultAccount && defaultAccount.incomingServer)
     {
       // we only care about

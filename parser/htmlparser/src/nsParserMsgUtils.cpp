@@ -41,6 +41,10 @@
 #include "nsParserMsgUtils.h"
 #include "nsNetCID.h"
 
+static NS_DEFINE_CID(kStringBundleServiceCID,  NS_STRINGBUNDLESERVICE_CID);
+
+// This code is derived from nsFormControlHelper::GetLocalizedString()
+
 static nsresult GetBundle(const char * aPropFileName, nsIStringBundle **aBundle)
 {
   NS_ENSURE_ARG_POINTER(aPropFileName);
@@ -50,7 +54,7 @@ static nsresult GetBundle(const char * aPropFileName, nsIStringBundle **aBundle)
   nsresult rv;
   
   nsCOMPtr<nsIStringBundleService> stringService = 
-    do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+    do_GetService(kStringBundleServiceCID, &rv);
   if (NS_SUCCEEDED(rv))
     rv = stringService->CreateBundle(aPropFileName, aBundle);
   

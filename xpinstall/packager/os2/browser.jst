@@ -28,20 +28,17 @@ function upgradeCleanup()
   deleteThisFile("Components", "mozbrwsr.dll");
   deleteThisFile("Components", "jsloader.dll");
   deleteThisFile("Components", "gkcontnt.dll");
-  deleteThisFile("Components", "t8iix.dll");
   deleteThisFile("Components", "urildr.dll");
   deleteThisFile("Components", "jsurl.dll");
   deleteThisFile("Components", "gkview.dll");
   deleteThisFile("Components", "shistory.dll");
-  deleteThisFile("Components", "gkhtml.dll");
-  deleteThisFile("Components", "regviewr.dll");
-  deleteThisFile("Components", "jsdom.dll");
-  deleteThisFile("Components", "inspectr.dll");
   deleteThisFile("Chrome",     "chrome.rdf");
   deleteThisFile("Chrome",     "overlays.rdf");
   deleteThisFile("Chrome",     "stylesheets.rdf");
   deleteThisFolder("Chrome",   "overlayinfo");
-  deleteThisFolder("Components","myspell");
+  deleteThisFile("Components", "gkhtml.dll");
+  deleteThisFile("Components", "regviewr.dll");
+  deleteThisFile("Components", "jsdom.dll");
 
   deleteThisFile("Components", "accessibility.xpt");
   deleteThisFile("Components", "appshell.xpt");
@@ -128,7 +125,6 @@ function upgradeCleanup()
   deleteThisFile("Components", "txmgr.xpt");
   deleteThisFile("Components", "txtsvc.xpt");
   deleteThisFile("Components", "typeaheadfind.xpt");
-  deleteThisFile("Components", "suitetypeaheadfind.xpt");
   deleteThisFile("Components", "uconv.xpt");
   deleteThisFile("Components", "unicharutil.xpt");
   deleteThisFile("Components", "uriloader.xpt");
@@ -196,6 +192,7 @@ if(verifyDiskSpace(fProgram, srDest))
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/autoconfig/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/cookie/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/wallet/");
+    registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","content-packs.jar"), "content/content-packs/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/communicator/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/communicator/downloadmanager/");
     registerChrome(CONTENT | DELAYED_CHROME, getFolder("Chrome","comm.jar"),"content/communicator-region/");

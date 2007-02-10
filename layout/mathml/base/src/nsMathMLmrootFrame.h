@@ -49,7 +49,7 @@
 
 class nsMathMLmrootFrame : public nsMathMLContainerFrame {
 public:
-  friend nsIFrame* NS_NewMathMLmrootFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLmrootFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   virtual void
   SetAdditionalStyleContext(PRInt32          aIndex, 
@@ -58,8 +58,10 @@ public:
   GetAdditionalStyleContext(PRInt32 aIndex) const;
 
   NS_IMETHOD
-  Init(nsIContent*      aContent,
+  Init(nsPresContext*  aPresContext,
+       nsIContent*      aContent,
        nsIFrame*        aParent,
+       nsStyleContext*  aContext,
        nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD
@@ -71,12 +73,15 @@ public:
          const nsHTMLReflowState& aReflowState,
          nsReflowStatus&          aStatus);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD 
+  Paint(nsPresContext*      aPresContext,
+        nsIRenderingContext& aRenderingContext,
+        const nsRect&        aDirtyRect,
+        nsFramePaintLayer    aWhichLayer,
+        PRUint32             aFlags = 0);
 
 protected:
-  nsMathMLmrootFrame(nsStyleContext* aContext);
+  nsMathMLmrootFrame();
   virtual ~nsMathMLmrootFrame();
   
   virtual PRIntn GetSkipSides() const { return 0; }

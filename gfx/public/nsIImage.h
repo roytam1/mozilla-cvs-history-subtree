@@ -42,10 +42,6 @@
 #include "nsIRenderingContext.h"
 #include "nsRect.h"
 
-#ifdef MOZ_CAIRO_GFX
-class gfxASurface;
-#endif
-
 class nsIDeviceContext;
 
 struct nsColorMap
@@ -71,11 +67,9 @@ typedef enum {
 #define  nsImageUpdateFlags_kColorMapChanged 0x1
 #define  nsImageUpdateFlags_kBitsChanged     0x2
 
-#ifndef MOZ_CAIRO_GFX
 // The following platforms store image data rows bottom-up.
 #if defined(XP_WIN) || defined(XP_OS2) || defined(XP_MACOSX)
 #define MOZ_PLATFORM_IMAGES_BOTTOM_TO_TOP
-#endif
 #endif
 
 // IID for the nsIImage interface
@@ -88,7 +82,7 @@ class nsIImage : public nsISupports
 {
 
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IIMAGE_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IIMAGE_IID)
 
   /**
    * Build and initialize the nsIImage
@@ -283,12 +277,6 @@ public:
    * @return error result
    */
   NS_IMETHOD UnlockImagePixels(PRBool aMaskPixels) = 0;
-
-#ifdef MOZ_CAIRO_GFX
-  NS_IMETHOD GetSurface(gfxASurface **aSurface) = 0;
-#endif
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIImage, NS_IIMAGE_IID)
 
 #endif

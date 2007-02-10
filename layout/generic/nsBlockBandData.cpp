@@ -34,15 +34,14 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* code for management of floats that implements space manager interfaces */
-
 #include "nsCOMPtr.h"
 #include "nsBlockBandData.h"
 #include "nsIFrame.h"
 #include "nsHTMLReflowState.h"
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
+#include "nsLayoutAtoms.h"
+#include "nsVoidArray.h"
 
 nsBlockBandData::nsBlockBandData()
   : mSpaceManager(nsnull),
@@ -92,7 +91,7 @@ nsBlockBandData::GetAvailableSpace(nscoord aY, PRBool aRelaxHeightConstraint,
   ComputeAvailSpaceRect();
   aResult = mAvailSpace;
 #ifdef REALLY_NOISY_COMPUTEAVAILSPACERECT
-  printf("nsBBD %p GetAvailableSpace(%d) returning (%d, %d, %d, %d)\n",
+  printf("nsBBD %p GetAvailableSpace(%d) returing (%d, %d, %d, %d)\n",
           this, aY, aResult.x, aResult.y, aResult.width, aResult.height);
 #endif
   return NS_OK;

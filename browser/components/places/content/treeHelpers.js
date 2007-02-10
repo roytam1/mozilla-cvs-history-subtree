@@ -156,7 +156,7 @@ var OptionsFilter = {
    */
   deserialize: function OF_deserialize(string) {
     var optionsRef = { };
-    PlacesUtils.history.queryStringToQueries(string, {}, {}, optionsRef);
+    PlacesController.history.queryStringToQueries(string, {}, {}, optionsRef);
     return optionsRef.value;    
   },
   
@@ -168,8 +168,8 @@ var OptionsFilter = {
    * @returns A place: URI string that can be stored in preferences.
    */
   serialize: function OF_serialize(options) {
-    var query = PlacesUtils.history.getNewQuery();
-    return PlacesUtils.history.queriesToQueryString([query], 1, options);
+    var query = PlacesController.history.getNewQuery();
+    return PlacesController.history.queriesToQueryString([query], 1, options);
   },
   
   /**
@@ -199,7 +199,7 @@ var OptionsFilter = {
   init: function OF_init(grouper) {
     this._grouper = grouper;
   
-    var history = PlacesUtils.history;
+    var history = PlacesController.history;
     const NHQO = Ci.nsINavHistoryQueryOptions;
     
     var defaultHistoryOptions = history.getNewQueryOptions();
@@ -217,15 +217,6 @@ var OptionsFilter = {
     this.overrideHandlers["livemark/"] = 
       new PrefHandler(PREF_PLACES_ORGANIZER_OPTIONS_SUBSCRIPTIONS, 
                       defaultSubscriptionsOptions, this);
-  },
-  
-  /**
-   * Destroy the OptionsFilter handlers (to avoid leaks).
-   */
-  destroy: function OF_destroy() {
-    this.historyHandler.destroy();
-    this.bookmarksHandler.destroy();
-    this.overrideHandlers["livemark/"].destroy();
   },
   
   /**

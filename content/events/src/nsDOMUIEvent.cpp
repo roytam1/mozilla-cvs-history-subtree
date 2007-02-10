@@ -51,13 +51,11 @@
 #include "nsIPresShell.h"
 #include "nsIEventStateManager.h"
 #include "nsIFrame.h"
-#include "nsLayoutUtils.h"
 
 nsDOMUIEvent::nsDOMUIEvent(nsPresContext* aPresContext, nsGUIEvent* aEvent)
   : nsDOMEvent(aPresContext, aEvent ?
                NS_STATIC_CAST(nsEvent *, aEvent) :
                NS_STATIC_CAST(nsEvent *, new nsUIEvent(PR_FALSE, 0, 0)))
-  , mClientPoint(0,0)
 {
   if (aEvent) {
     mEventIsInternal = PR_FALSE;
@@ -129,8 +127,7 @@ nsPoint nsDOMUIEvent::GetScreenPoint() {
   nsRect bounds(mEvent->refPoint, nsSize(1, 1));
   nsRect offset;
   ((nsGUIEvent*)mEvent)->widget->WidgetToScreen ( bounds, offset );
-  return nsPoint(nsPresContext::AppUnitsToIntCSSPixels(mPresContext->DevPixelsToAppUnits(offset.x)),
-                 nsPresContext::AppUnitsToIntCSSPixels(mPresContext->DevPixelsToAppUnits(offset.y)));
+  return offset.TopLeft();
 }
 
 nsPoint nsDOMUIEvent::GetClientPoint() {
@@ -153,12 +150,13 @@ nsPoint nsDOMUIEvent::GetClientPoint() {
     }
   }
 
-  nsCOMPtr<nsIWidget> eventWidget = ((nsGUIEvent*)mEvent)->widget;
-  if (!eventWidget || !docWidget)
-    return mClientPoint;
-
   nsPoint pt = mEvent->refPoint;
 
+  nsCOMPtr<nsIWidget> eventWidget = ((nsGUIEvent*)mEvent)->widget;
+  if (!eventWidget || !docWidget) {
+    return mEvent->point;
+  }
+  
   // BUG 296004 (see also BUG 242833)
   //
   // For document events we want to return a point relative to the local view manager,
@@ -171,17 +169,17 @@ nsPoint nsDOMUIEvent::GetClientPoint() {
   // anyway... actually what we want is for all users of this and refPoint to agree
   // gracefully on what coordinate system to use, but that's a more involved change.
   
-  nsIWidget* eventParent = eventWidget;
+  nsCOMPtr<nsIWidget> eventParent = eventWidget;
   for (;;) {
-    nsIWidget* t = eventParent->GetParent();
+    nsCOMPtr<nsIWidget> t = dont_AddRef(eventParent->GetParent());
     if (!t)
       break;
     eventParent = t;
   }
 
-  nsIWidget* docParent = docWidget;
+  nsCOMPtr<nsIWidget> docParent = docWidget;
   for (;;) {
-    nsIWidget* t = docParent->GetParent();
+    nsCOMPtr<nsIWidget> t = dont_AddRef(docParent->GetParent());
     if (!t)
       break;
     docParent = t;
@@ -199,7 +197,7 @@ nsPoint nsDOMUIEvent::GetClientPoint() {
     nsRect bounds;
     eventWidget->GetBounds(bounds);
     pt += bounds.TopLeft();
-    eventWidget = eventWidget->GetParent();
+    eventWidget = dont_AddRef(eventWidget->GetParent());
   }
   
   if (eventWidget != docWidget) {
@@ -220,12 +218,11 @@ nsPoint nsDOMUIEvent::GetClientPoint() {
       nsRect bounds;
       docWidget->GetBounds(bounds);
       pt -= bounds.TopLeft();
-      docWidget = docWidget->GetParent();
+      docWidget = dont_AddRef(docWidget->GetParent());
     }
   }
   
-  return nsPoint(nsPresContext::AppUnitsToIntCSSPixels(mPresContext->DevPixelsToAppUnits(pt.x)),
-                 nsPresContext::AppUnitsToIntCSSPixels(mPresContext->DevPixelsToAppUnits(pt.y)));
+  return pt;
 }
 
 NS_IMETHODIMP
@@ -264,12 +261,13 @@ nsDOMUIEvent::GetPageX(PRInt32* aPageX)
   nsresult ret = NS_OK;
   PRInt32 scrollX = 0;
   nsIScrollableView* view = nsnull;
+  float p2t, t2p;
 
-  GetScrollInfo(&view);
+  GetScrollInfo(&view, &p2t, &t2p);
   if(view) {
     nscoord xPos, yPos;
     ret = view->GetScrollPosition(xPos, yPos);
-    scrollX = nsPresContext::AppUnitsToIntCSSPixels(xPos);
+    scrollX = NSTwipsToIntPixels(xPos, t2p);
   }
 
   if (NS_SUCCEEDED(ret)) {
@@ -286,12 +284,13 @@ nsDOMUIEvent::GetPageY(PRInt32* aPageY)
   nsresult ret = NS_OK;
   PRInt32 scrollY = 0;
   nsIScrollableView* view = nsnull;
+  float p2t, t2p;
 
-  GetScrollInfo(&view);
+  GetScrollInfo(&view, &p2t, &t2p);
   if(view) {
     nscoord xPos, yPos;
     ret = view->GetScrollPosition(xPos, yPos);
-    scrollY = nsPresContext::AppUnitsToIntCSSPixels(yPos);
+    scrollY = NSTwipsToIntPixels(yPos, t2p);
   }
 
   if (NS_SUCCEEDED(ret)) {
@@ -323,11 +322,18 @@ nsDOMUIEvent::GetRangeParent(nsIDOMNode** aRangeParent)
   *aRangeParent = nsnull;
 
   if (targetFrame) {
-    nsPoint pt = nsLayoutUtils::GetEventCoordinatesRelativeTo(mEvent,
-                                                              targetFrame);
-    nsCOMPtr<nsIContent> parent = targetFrame->GetContentOffsetsFromPoint(pt).content;
-    if (parent) {
-      return CallQueryInterface(parent, aRangeParent);
+    nsCOMPtr<nsIContent> parent;
+    PRInt32 offset, endOffset;
+    PRBool beginOfContent;
+    if (NS_SUCCEEDED(targetFrame->GetContentAndOffsetsFromPoint(mPresContext, 
+                                              mEvent->point,
+                                              getter_AddRefs(parent),
+                                              offset,
+                                              endOffset,
+                                              beginOfContent))) {
+      if (parent) {
+        return CallQueryInterface(parent, aRangeParent);
+      }
     }
   }
 
@@ -345,10 +351,18 @@ nsDOMUIEvent::GetRangeOffset(PRInt32* aRangeOffset)
   }
 
   if (targetFrame) {
-    nsPoint pt = nsLayoutUtils::GetEventCoordinatesRelativeTo(mEvent,
-                                                              targetFrame);
-    *aRangeOffset = targetFrame->GetContentOffsetsFromPoint(pt).offset;
-    return NS_OK;
+    nsIContent* parent = nsnull;
+    PRInt32 endOffset;
+    PRBool beginOfContent;
+    if (NS_SUCCEEDED(targetFrame->GetContentAndOffsetsFromPoint(mPresContext, 
+                                              mEvent->point,
+                                              &parent,
+                                              *aRangeOffset,
+                                              endOffset,
+                                              beginOfContent))) {
+      NS_IF_RELEASE(parent);
+      return NS_OK;
+    }
   }
   *aRangeOffset = 0;
   return NS_OK;
@@ -358,51 +372,42 @@ NS_IMETHODIMP
 nsDOMUIEvent::GetCancelBubble(PRBool* aCancelBubble)
 {
   NS_ENSURE_ARG_POINTER(aCancelBubble);
-  *aCancelBubble =
-    (mEvent->flags & NS_EVENT_FLAG_STOP_DISPATCH) ? PR_TRUE : PR_FALSE;
+  if (mEvent->flags & NS_EVENT_FLAG_BUBBLE || mEvent->flags & NS_EVENT_FLAG_INIT) {
+    *aCancelBubble = (mEvent->flags &= NS_EVENT_FLAG_STOP_DISPATCH) ? PR_TRUE : PR_FALSE;
+  }
+  else {
+    *aCancelBubble = PR_FALSE;
+  }
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDOMUIEvent::SetCancelBubble(PRBool aCancelBubble)
 {
-  if (aCancelBubble) {
-    mEvent->flags |= NS_EVENT_FLAG_STOP_DISPATCH;
-  } else {
-    mEvent->flags &= ~NS_EVENT_FLAG_STOP_DISPATCH;
+  if (mEvent->flags & NS_EVENT_FLAG_BUBBLE || mEvent->flags & NS_EVENT_FLAG_INIT) {
+    if (aCancelBubble) {
+      mEvent->flags |= NS_EVENT_FLAG_STOP_DISPATCH;
+    }
+    else {
+      mEvent->flags &= ~NS_EVENT_FLAG_STOP_DISPATCH;
+    }
   }
   return NS_OK;
-}
-
-nsPoint nsDOMUIEvent::GetLayerPoint() {
-  if (!mEvent || (mEvent->eventStructType != NS_MOUSE_EVENT) ||
-      !mPresContext) {
-    return nsPoint(0,0);
-  }
-
-  // XXX This is supposed to be relative to the nearest view?
-  // Any element can have a view, not just positioned ones.
-  nsIFrame* targetFrame;
-  nsPoint pt;
-  mPresContext->EventStateManager()->GetEventTarget(&targetFrame);
-  while (targetFrame && !targetFrame->HasView()) {
-    targetFrame = targetFrame->GetParent();
-  }
-  if (targetFrame) {
-    pt = nsLayoutUtils::GetEventCoordinatesRelativeTo(mEvent, targetFrame);
-    pt.x =  nsPresContext::AppUnitsToIntCSSPixels(pt.x);
-    pt.y =  nsPresContext::AppUnitsToIntCSSPixels(pt.y);
-    return pt;
-  } else {
-    return nsPoint(0,0);
-  }
 }
 
 NS_IMETHODIMP
 nsDOMUIEvent::GetLayerX(PRInt32* aLayerX)
 {
   NS_ENSURE_ARG_POINTER(aLayerX);
-  *aLayerX = GetLayerPoint().x;
+  if (!mEvent || (mEvent->eventStructType != NS_MOUSE_EVENT) ||
+      !mPresContext) {
+    *aLayerX = 0;
+    return NS_OK;
+  }
+
+  float t2p;
+  t2p = mPresContext->TwipsToPixels();
+  *aLayerX = NSTwipsToIntPixels(mEvent->point.x, t2p);
   return NS_OK;
 }
 
@@ -410,7 +415,15 @@ NS_IMETHODIMP
 nsDOMUIEvent::GetLayerY(PRInt32* aLayerY)
 {
   NS_ENSURE_ARG_POINTER(aLayerY);
-  *aLayerY = GetLayerPoint().y;
+  if (!mEvent || (mEvent->eventStructType != NS_MOUSE_EVENT) ||
+      !mPresContext) {
+    *aLayerY = 0;
+    return NS_OK;
+  }
+
+  float t2p;
+  t2p = mPresContext->TwipsToPixels();
+  *aLayerY = NSTwipsToIntPixels(mEvent->point.y, t2p);
   return NS_OK;
 }
 
@@ -441,18 +454,27 @@ nsDOMUIEvent::GetPreventDefault(PRBool* aReturn)
 }
 
 nsresult
-nsDOMUIEvent::GetScrollInfo(nsIScrollableView** aScrollableView)
+nsDOMUIEvent::GetScrollInfo(nsIScrollableView** aScrollableView,
+                            float* aP2T, float* aT2P)
 {
   NS_ENSURE_ARG_POINTER(aScrollableView);
+  NS_ENSURE_ARG_POINTER(aP2T);
+  NS_ENSURE_ARG_POINTER(aT2P);
   if (!mPresContext) {
     *aScrollableView = nsnull;
     return NS_ERROR_FAILURE;
   }
 
-  nsIViewManager *vm = mPresContext->GetViewManager();
-  if (vm)
-    return vm->GetRootScrollableView(aScrollableView);
+  *aP2T = mPresContext->PixelsToTwips();
+  *aT2P = mPresContext->TwipsToPixels();
 
+  nsIPresShell *presShell = mPresContext->GetPresShell();
+  if (presShell) {
+    nsIViewManager* vm = presShell->GetViewManager();
+    if(vm) {
+      return vm->GetRootScrollableView(aScrollableView);
+    }
+  }
   return NS_OK;
 }
 

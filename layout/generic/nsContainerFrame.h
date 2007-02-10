@@ -34,15 +34,11 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* base class #1 for rendering objects that have child lists */
-
 #ifndef nsContainerFrame_h___
 #define nsContainerFrame_h___
 
 #include "nsSplittableFrame.h"
 #include "nsFrameList.h"
-#include "nsLayoutUtils.h"
 
 // Option flags for ReflowChild() and FinishReflowChild()
 // member functions
@@ -58,30 +54,34 @@ class nsContainerFrame : public nsSplittableFrame
 {
 public:
   // nsIFrame overrides
-  NS_IMETHOD Init(nsIContent* aContent,
-                  nsIFrame*   aParent,
-                  nsIFrame*   aPrevInFlow);
-  NS_IMETHOD SetInitialChildList(nsIAtom*  aListName,
-                                 nsIFrame* aChildList);
-  NS_IMETHOD AppendFrames(nsIAtom*  aListName,
-                          nsIFrame* aFrameList);
-  NS_IMETHOD InsertFrames(nsIAtom*  aListName,
-                          nsIFrame* aPrevFrame,
-                          nsIFrame* aFrameList);
-  NS_IMETHOD RemoveFrame(nsIAtom*  aListName,
-                         nsIFrame* aOldFrame);
-
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
+                  nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
+                  nsIFrame*        aPrevInFlow);
+  NS_IMETHOD SetInitialChildList(nsPresContext* aPresContext,
+                                 nsIAtom*        aListName,
+                                 nsIFrame*       aChildList);
   virtual nsIFrame* GetFirstChild(nsIAtom* aListName) const;
   virtual nsIAtom* GetAdditionalChildListName(PRInt32 aIndex) const;
-  virtual void Destroy();
-  virtual void ChildIsDirty(nsIFrame* aChild);
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint, 
+                              nsFramePaintLayer aWhichLayer,
+                              nsIFrame**     aFrame);
+  NS_IMETHOD ReplaceFrame(nsIAtom*        aListName,
+                          nsIFrame*       aOldFrame,
+                          nsIFrame*       aNewFrame);
+  NS_IMETHOD ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild);
 
   virtual PRBool IsLeaf() const;
-  virtual PRBool PeekOffsetNoAmount(PRBool aForward, PRInt32* aOffset);
-  virtual PRBool PeekOffsetCharacter(PRBool aForward, PRInt32* aOffset);
   
 #ifdef DEBUG
-  NS_IMETHOD List(FILE* out, PRInt32 aIndent) const;
+  NS_IMETHOD List(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent) const;
 #endif  
 
   // nsContainerFrame methods
@@ -135,20 +135,6 @@ public:
   // Returns PR_TRUE if the frame requires a view
   static PRBool FrameNeedsView(nsIFrame* aFrame);
   
-  // Used by both nsInlineFrame and nsFirstLetterFrame.
-  void DoInlineIntrinsicWidth(nsIRenderingContext *aRenderingContext,
-                              InlineIntrinsicWidthData *aData,
-                              nsLayoutUtils::IntrinsicWidthType aType);
-
-  /**
-   * This is the CSS block concept of computing 'auto' widths, which most
-   * classes derived from nsContainerFrame want.
-   */
-  virtual nsSize ComputeAutoSize(nsIRenderingContext *aRenderingContext,
-                                 nsSize aCBSize, nscoord aAvailableWidth,
-                                 nsSize aMargin, nsSize aBorder,
-                                 nsSize aPadding, PRBool aShrinkWrap);
-
   /**
    * Invokes the WillReflow() function, positions the frame and its view (if
    * requested), and then calls Reflow(). If the reflow succeeds and the child
@@ -196,37 +182,29 @@ public:
 
   
   static void PositionChildViews(nsIFrame* aFrame);
-  
-  /**
-   * Builds display lists for the children. The background
-   * of each child is placed in the Content() list (suitable for inline
-   * children and other elements that behave like inlines,
-   * but not for in-flow block children of blocks).  DOES NOT
-   * paint the background/borders/outline of this frame. This should
-   * probably be avoided and eventually removed. It's currently here
-   * to emulate what nsContainerFrame::Paint did.
-   */
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
 
 protected:
-  nsContainerFrame(nsStyleContext* aContext) : nsSplittableFrame(aContext) {}
+  nsContainerFrame();
   ~nsContainerFrame();
 
-  /**
-   * Builds a display list for non-block children that behave like
-   * inlines. This puts the background of each child into the
-   * Content() list (suitable for inline children but not for
-   * in-flow block children of blocks).
-   * @param aForcePseudoStack forces each child into a pseudo-stacking-context
-   * so its background and all other display items (except for positioned
-   * display items) go into the Content() list.
-   */
-  nsresult BuildDisplayListForNonBlockChildren(nsDisplayListBuilder*   aBuilder,
-                                               const nsRect&           aDirtyRect,
-                                               const nsDisplayListSet& aLists,
-                                               PRUint32                aFlags = 0);
+  nsresult GetFrameForPointUsing(const nsPoint& aPoint,
+                                 nsIAtom*       aList,
+                                 nsFramePaintLayer aWhichLayer,
+                                 PRBool         aConsiderSelf,
+                                 nsIFrame**     aFrame);
+
+  virtual void PaintChildren(nsPresContext*      aPresContext,
+                             nsIRenderingContext& aRenderingContext,
+                             const nsRect&        aDirtyRect,
+                             nsFramePaintLayer    aWhichLayer,
+                             PRUint32             aFlags = 0);
+
+  virtual void PaintChild(nsPresContext*      aPresContext,
+                          nsIRenderingContext& aRenderingContext,
+                          const nsRect&        aDirtyRect,
+                          nsIFrame*            aFrame,
+                          nsFramePaintLayer    aWhichLayer,
+                          PRUint32             aFlags = 0);
 
   /**
    * Get the frames on the overflow list

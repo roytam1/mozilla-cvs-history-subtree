@@ -45,31 +45,18 @@ struct nsPresentationData;
 struct nsEmbellishData;
 struct nsHTMLReflowMetrics;
 
-// a781ed45-4338-43cb-9739-a7a8f8418ff3
-#define NS_IMATHMLFRAME_IID \
-{ 0xa781ed45, 0x4338, 0x43cb, \
-  { 0x97, 0x39, 0xa7, 0xa8, 0xf8, 0x41, 0x8f, 0xf3 } }
+// IID for the nsIMathMLFrame interface (the IID was taken from IIDS.h) 
+/* a6cf9113-15b3-11d2-932e-00805f8add32 */
+#define NS_IMATHMLFRAME_IID   \
+{ 0xa6cf9113, 0x15b3, 0x11d2, \
+  { 0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32 } }
 
 static NS_DEFINE_IID(kIMathMLFrameIID, NS_IMATHMLFRAME_IID);
-
-// For MathML, this 'type' will be used to determine the spacing between frames
-// Subclasses can return a 'type' that will give them a particular spacing
-enum eMathMLFrameType {
-  eMathMLFrameType_UNKNOWN = -1,
-  eMathMLFrameType_Ordinary,
-  eMathMLFrameType_OperatorOrdinary,
-  eMathMLFrameType_OperatorInvisible,
-  eMathMLFrameType_OperatorUserDefined,
-  eMathMLFrameType_Inner,
-  eMathMLFrameType_ItalicIdentifier,
-  eMathMLFrameType_UprightIdentifier,
-  eMathMLFrameType_COUNT
-};
 
 // Abstract base class that provides additional methods for MathML frames
 class nsIMathMLFrame : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IMATHMLFRAME_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMATHMLFRAME_IID)
 
  /* SUPPORT FOR PRECISE POSITIONING */
  /*====================================================================*/
@@ -94,7 +81,6 @@ public:
   NS_IMETHOD
   SetReference(const nsPoint& aReference) = 0;
 
-  virtual eMathMLFrameType GetMathMLFrameType() = 0;
 
  /* SUPPORT FOR STRETCHY ELEMENTS */
  /*====================================================================*/
@@ -242,21 +228,21 @@ public:
   *        The new values (e.g., display, compress) that are going to be
   *        updated.
   *
-  * @param aWhichFlags [in]
+  * @param aFlagsToUpdate [in]
   *        The flags that are relevant to this call. Since not all calls
-  *        are meant to update all flags at once, aWhichFlags is used
+  *        are meant to update all flags at once, aFlagsToUpdate is used
   *        to distinguish flags that need to retain their existing values
   *        from flags that need to be turned on (or turned off). If a bit
-  *        is set in aWhichFlags, then the corresponding value (which
+  *        is set in aFlagsToUpdate, then the corresponding value (which
   *        can be 0 or 1) is taken from aFlagsValues and applied to the
-  *        frame. Therefore, by setting their bits in aWhichFlags, and
+  *        frame. Therefore, by setting their bits in aFlagsToUpdate, and
   *        setting their desired values in aFlagsValues, it is possible to
   *        update some flags in the frame, leaving the other flags unchanged.
   */
   NS_IMETHOD
   UpdatePresentationData(PRInt32         aScriptLevelIncrement,
                          PRUint32        aFlagsValues,
-                         PRUint32        aWhichFlags) = 0;
+                         PRUint32        aFlagsToUpdate) = 0;
 
  /* UpdatePresentationDataFromChildAt :
   * Increments the scriplevel and sets the displaystyle and compression flags
@@ -284,7 +270,7 @@ public:
   *        The new values (e.g., display, compress) that are going to be
   *        assigned in the whole sub-trees.
   *
-  * @param aWhichFlags [in]
+  * @param aFlagsToUpdate [in]
   *        The flags that are relevant to this call. See UpdatePresentationData()
   *        for more details about this parameter.
   */
@@ -293,7 +279,7 @@ public:
                                     PRInt32         aLastIndex,
                                     PRInt32         aScriptLevelIncrement,
                                     PRUint32        aFlagsValues,
-                                    PRUint32        aWhichFlags) = 0;
+                                    PRUint32        aFlagsToUpdate) = 0;
 
  /* ReResolveScriptStyle :
   * During frame construction, the Style System gives us style contexts in
@@ -390,16 +376,13 @@ struct nsPresentationData {
   }
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIMathMLFrame, NS_IMATHMLFRAME_IID)
-
-
 // ==========================================================================
 // Bits used for the presentation flags -- these bits are set
 // in their relevant situation as they become available
 
 // This bit is set if the frame is in the *context* of displaystyle=true.
 // Note: This doesn't mean that the frame has displaystyle=true as attribute,
-// the displaystyle attribute is only allowed on <mstyle> and <mtable>.
+// <mstyle> is the only tag which allows <mstyle displaystyle="true|false">.
 // The bit merely tells the context of the frame. In the context of 
 // displaystyle="false", it is intended to slightly alter how the
 // rendering is done in inline mode.
@@ -421,16 +404,14 @@ NS_DEFINE_STATIC_IID_ACCESSOR(nsIMathMLFrame, NS_IMATHMLFRAME_IID)
 // horizontal stretch command on all their non-empty children
 #define NS_MATHML_STRETCH_ALL_CHILDREN_HORIZONTALLY   0x00000008
 
-// This bit is set if the frame has the explicit attribute
-// scriptlevel="value". It is only relevant to <mstyle> because that's
-// the only tag where the attribute is allowed by the spec.
+// This bit is set if the frame is actually an <mstyle> frame *and* that
+// <mstyle> frame has an explicit attribute scriptlevel="value".
 // Note: the flag is not set if the <mstyle> instead has an incremental +/-value.
-#define NS_MATHML_EXPLICIT_SCRIPTLEVEL                0x00000010
+#define NS_MATHML_MSTYLE_WITH_EXPLICIT_SCRIPTLEVEL    0x00000010
 
-// This bit is set if the frame has the explicit attribute
-// displaystyle="true" or "false". It is only relevant to <mstyle> and <mtable>
-// because they are the only tags where the attribute is allowed by the spec.
-#define NS_MATHML_EXPLICIT_DISPLAYSTYLE               0x00000020
+// This bit is set if the frame is actually an <mstyle> *and* that
+// <mstyle> has an explicit attribute displaystyle="true" or "false"
+#define NS_MATHML_MSTYLE_WITH_DISPLAYSTYLE            0x00000020
 
 // This bit is set when the frame cannot be formatted due to an
 // error (e.g., invalid markup such as a <msup> without an overscript).
@@ -460,11 +441,11 @@ NS_DEFINE_STATIC_IID_ACCESSOR(nsIMathMLFrame, NS_IMATHMLFRAME_IID)
 #define NS_MATHML_WILL_STRETCH_ALL_CHILDREN_HORIZONTALLY(_flags) \
   (NS_MATHML_STRETCH_ALL_CHILDREN_HORIZONTALLY == ((_flags) & NS_MATHML_STRETCH_ALL_CHILDREN_HORIZONTALLY))
 
-#define NS_MATHML_HAS_EXPLICIT_DISPLAYSTYLE(_flags) \
-  (NS_MATHML_EXPLICIT_DISPLAYSTYLE == ((_flags) & NS_MATHML_EXPLICIT_DISPLAYSTYLE))
+#define NS_MATHML_IS_MSTYLE_WITH_DISPLAYSTYLE(_flags) \
+  (NS_MATHML_MSTYLE_WITH_DISPLAYSTYLE == ((_flags) & NS_MATHML_MSTYLE_WITH_DISPLAYSTYLE))
 
-#define NS_MATHML_HAS_EXPLICIT_SCRIPTLEVEL(_flags) \
-  (NS_MATHML_EXPLICIT_SCRIPTLEVEL == ((_flags) & NS_MATHML_EXPLICIT_SCRIPTLEVEL))
+#define NS_MATHML_IS_MSTYLE_WITH_EXPLICIT_SCRIPTLEVEL(_flags) \
+  (NS_MATHML_MSTYLE_WITH_EXPLICIT_SCRIPTLEVEL == ((_flags) & NS_MATHML_MSTYLE_WITH_EXPLICIT_SCRIPTLEVEL))
 
 #define NS_MATHML_HAS_ERROR(_flags) \
   (NS_MATHML_ERROR == ((_flags) & NS_MATHML_ERROR))

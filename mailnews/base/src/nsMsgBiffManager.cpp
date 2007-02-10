@@ -124,7 +124,7 @@ NS_IMETHODIMP nsMsgBiffManager::Init()
   
   
   //Ensure status bar biff service has started
-  nsCOMPtr<nsIFolderListener> statusBarBiffService = 
+  nsCOMPtr<nsStatusBarBiffManager> statusBarBiffService = 
     do_GetService(kStatusBarBiffManagerCID, &rv);
   
   if (!MsgBiffLogModule)

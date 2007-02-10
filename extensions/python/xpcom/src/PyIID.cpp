@@ -51,10 +51,10 @@
 #include "PyXPCOM_std.h"
 #include <nsIInterfaceInfoManager.h>
 
-PYXPCOM_EXPORT nsIID Py_nsIID_NULL = {0,0,0,{0,0,0,0,0,0,0,0}};
+nsIID Py_nsIID_NULL = {0,0,0,{0,0,0,0,0,0,0,0}};
 
 // @pymethod <o Py_nsIID>|xpcom|IID|Creates a new IID object
-PYXPCOM_EXPORT PyObject *PyXPCOMMethod_IID(PyObject *self, PyObject *args)
+PyObject *PyXPCOMMethod_IID(PyObject *self, PyObject *args)
 {
 	PyObject *obIID;
 	PyObject *obBuf;
@@ -105,7 +105,7 @@ Py_nsIID::IIDFromPyObject(PyObject *ob, nsIID *pRet) {
 	if (PyString_Check(ob)) {
 		ok = iid.Parse(PyString_AsString(ob));
 		if (!ok) {
-			PyErr_SetString(PyExc_ValueError, "The string is formatted as a valid nsID");
+			PyXPCOM_BuildPyException(NS_ERROR_ILLEGAL_VALUE);
 			return PR_FALSE;
 		}
 	} else if (ob->ob_type == &type) {
@@ -137,7 +137,7 @@ Py_nsIID::IIDFromPyObject(PyObject *ob, nsIID *pRet) {
 // <nl>All pythoncom functions that return a CLSID/IID will return one of these
 // objects.  However, in almost all cases, functions that expect a CLSID/IID
 // as a param will accept either a string object, or a native Py_nsIID object.
-PYXPCOM_EXPORT PyTypeObject Py_nsIID::type =
+PyTypeObject Py_nsIID::type =
 {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
@@ -171,8 +171,7 @@ Py_nsIID::PyTypeMethod_getattr(PyObject *self, char *name)
 	Py_nsIID *me = (Py_nsIID *)self;
 	if (strcmp(name, "name")==0) {
 		char *iid_repr = nsnull;
-		nsCOMPtr<nsIInterfaceInfoManager> iim(do_GetService(
-		               NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID));
+		nsCOMPtr<nsIInterfaceInfoManager> iim = XPTI_GetInterfaceInfoManager();
 		if (iim!=nsnull)
 			iim->GetNameForIID(&me->m_iid, &iid_repr);
 		if (iid_repr==nsnull)

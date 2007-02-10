@@ -37,57 +37,49 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsBoxFrame.h"
+#include "nsITreeColumns.h"
 
-class nsITreeBoxObject;
-
-nsIFrame* NS_NewTreeColFrame(nsIPresShell* aPresShell, 
-                             nsStyleContext* aContext,
-                             PRBool aIsRoot = PR_FALSE,
-                             nsIBoxLayout* aLayoutManager = nsnull);
+nsresult NS_NewTreeColFrame(nsIPresShell* aPresShell, 
+                            nsIFrame** aNewFrame, 
+                            PRBool aIsRoot = PR_FALSE,
+                            nsIBoxLayout* aLayoutManager = nsnull);
 
 class nsTreeColFrame : public nsBoxFrame
 {
 public:
   NS_DECL_ISUPPORTS
 
-  nsTreeColFrame(nsIPresShell* aPresShell,
-                 nsStyleContext* aContext,
-                 PRBool aIsRoot = nsnull,
-                 nsIBoxLayout* aLayoutManager = nsnull):
-    nsBoxFrame(aPresShell, aContext, aIsRoot, aLayoutManager) {}
-
-  NS_IMETHOD Init(nsIContent*      aContent,
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
                   nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
-  NS_IMETHOD BuildDisplayListForChildren(nsDisplayListBuilder*   aBuilder,
-                                         const nsRect&           aDirtyRect,
-                                         const nsDisplayListSet& aLists);
+  // Overridden to capture events.
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint,
+                              nsFramePaintLayer aWhichLayer,
+                              nsIFrame**     aFrame);
 
-  NS_IMETHOD AttributeChanged(PRInt32 aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent* aChild,
+                              PRInt32 aNameSpaceID,
                               nsIAtom* aAttribute,
                               PRInt32 aModType);
 
   NS_IMETHOD SetBounds(nsBoxLayoutState& aBoxLayoutState, const nsRect& aRect,
                        PRBool aRemoveOverflowArea = PR_FALSE);
 
-  friend nsIFrame* NS_NewTreeColFrame(nsIPresShell* aPresShell, 
-                                      PRBool aIsRoot,
-                                      nsIBoxLayout* aLayoutManager);
+  friend nsresult NS_NewTreeColFrame(nsIPresShell* aPresShell, 
+                                     nsIFrame** aNewFrame, 
+                                     PRBool aIsRoot,
+                                     nsIBoxLayout* aLayoutManager);
 
 protected:
+  nsTreeColFrame(nsIPresShell* aPresShell, PRBool aIsRoot = nsnull, nsIBoxLayout* aLayoutManager = nsnull);
   virtual ~nsTreeColFrame();
 
-  /**
-   * @return the tree box object of the tree this column belongs to, or nsnull.
-   */
-  nsITreeBoxObject* GetTreeBoxObject();
-
-  /**
-   * Helper method that gets the nsITreeColumns object this column belongs to
-   * and calls InvalidateColumns() on it.
-   */
-  void InvalidateColumns();
+  void EnsureColumns();
+  
+  nsCOMPtr<nsITreeColumns>      mColumns;
 };

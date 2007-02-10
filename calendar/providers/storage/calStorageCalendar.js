@@ -24,7 +24,6 @@
  *   Joey Minta <jminta@gmail.com>
  *   Dan Mosedale <dan.mosedale@oracle.com>
  *   Thomas Benisch <thomas.benisch@sun.com>
- *   Matthew Willis <lilmatt@mozilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -872,11 +871,10 @@ calStorageCalendar.prototype = {
             this.mDB.createTable(table, sqlTables[table]);
         }
 
-        // Add a version stamp to the schema
         this.mDB.executeSimpleSQL("INSERT INTO cal_calendar_schema_version VALUES(" + this.DB_SCHEMA_VERSION + ")");
     },
 
-    DB_SCHEMA_VERSION: 6,
+    DB_SCHEMA_VERSION: 5,
 
     /** 
      * @return      db schema version
@@ -1035,117 +1033,8 @@ calStorageCalendar.prototype = {
             }
         }
 
-        if (oldVersion == 5 && this.DB_SCHEMA_VERSION >= 6) {
-            dump ("**** Upgrading schema from 5 -> 6\n");
 
-            this.mDB.beginTransaction();
-            try {
-                // Schema changes between v5 and v6:
-                //
-                // - Change all STRING columns to TEXT to avoid SQLite's
-                //   "feature" where it will automatically convert strings to
-                //   numbers (ex: 10e4 -> 10000). See bug 333688.
-
-
-                // Create the new tables.
-                var tableNames = ["cal_events", "cal_todos", "cal_attendees",
-                                  "cal_recurrence", "cal_properties"];
-
-                var query = "";
-                try { 
-                    for (var i in tableNames) {
-                        query += "DROP TABLE " + tableNames[i] + "_v6;"
-                    }
-                    this.mDB.executeSimpleSQL(query);
-                } catch (e) {
-                    // We should get exceptions for trying to drop tables
-                    // that don't (shouldn't) exist.
-                }
-
-                this.mDB.createTable("cal_events_v6", sqlTables["cal_events"]);
-                this.mDB.createTable("cal_todos_v6", sqlTables["cal_todos"]);
-                this.mDB.createTable("cal_attendees_v6", sqlTables["cal_attendees"]);
-                this.mDB.createTable("cal_recurrence_v6", sqlTables["cal_recurrence"]);
-                this.mDB.createTable("cal_properties_v6", sqlTables["cal_properties"]);
-
-
-                // Copy in the data.
-                var cal_events_cols = ["cal_id", "id", "time_created",
-                                       "last_modified", "title", "priority",
-                                       "privacy", "ical_status",
-                                       "recurrence_id", "recurrence_id_tz",
-                                       "flags", "event_start",
-                                       "event_start_tz", "event_end",
-                                       "event_end_tz", "event_stamp",
-                                       "alarm_time", "alarm_time_tz",
-                                       "alarm_offset", "alarm_related",
-                                       "alarm_last_ack"];
-
-                var cal_todos_cols = ["cal_id", "id", "time_created",
-                                      "last_modified", "title", "priority",
-                                      "privacy", "ical_status",
-                                      "recurrence_id", "recurrence_id_tz",
-                                      "flags", "todo_entry", "todo_entry_tz",
-                                      "todo_due", "todo_due_tz",
-                                      "todo_completed", "todo_completed_tz",
-                                      "todo_complete", "alarm_time",
-                                      "alarm_time_tz", "alarm_offset",
-                                      "alarm_related", "alarm_last_ack"];
-
-                var cal_attendees_cols = ["item_id", "recurrence_id",
-                                          "recurrence_id_tz", "attendee_id",
-                                          "common_name", "rsvp", "role",
-                                          "status", "type"];
-
-                var cal_recurrence_cols = ["item_id", "recur_index",
-                                           "recur_type", "is_negative",
-                                           "dates", "count", "end_date",
-                                           "interval", "second", "minute",
-                                           "hour", "day", "monthday",
-                                           "yearday", "weekno", "month",
-                                           "setpos"];
-
-                var cal_properties_cols = ["item_id", "recurrence_id",
-                                           "recurrence_id_tz", "key",
-                                           "value"];
-
-                var theDB = this.mDB;
-                function copyDataOver(aTableName, aColumnNames) {
-                    theDB.executeSimpleSQL("INSERT INTO " + aTableName + "_v6(" + aColumnNames.join(",") + ") " + 
-                                           "     SELECT " + aColumnNames.join(",") + 
-                                           "       FROM " + aTableName + ";");
-                }
-
-                copyDataOver("cal_events", cal_events_cols);
-                copyDataOver("cal_todos", cal_todos_cols);
-                copyDataOver("cal_attendees", cal_attendees_cols);
-                copyDataOver("cal_recurrence", cal_recurrence_cols);
-                copyDataOver("cal_properties", cal_properties_cols);
-
-
-                // Delete each old table and rename the new ones to use the
-                // old tables' names.
-                for (var i in tableNames) {
-                    this.mDB.executeSimpleSQL("DROP TABLE  " + tableNames[i] + ";" +
-                                              "ALTER TABLE " + tableNames[i] + "_v6" + 
-                                              "  RENAME TO " + tableNames[i] + ";");
-                }
-
-
-                // Update the version stamp, and commit.
-                this.mDB.executeSimpleSQL("UPDATE cal_calendar_schema_version SET version = 6;");
-                this.mDB.commitTransaction();
-                oldVersion = 6;
-            } catch (e) {
-                dump ("+++++++++++++++++ DB Error: " + this.mDB.lastErrorString + "\n");
-                Components.utils.reportError("Upgrade failed! DB Error: " +
-                                             this.mDB.lastErrorString);
-                this.mDB.rollbackTransaction();
-                throw e;
-            }
-        }
-
-        if (oldVersion != 6) {
+        if (oldVersion != 5) {
             dump ("#######!!!!! calStorageCalendar Schema Update failed -- db version: " + oldVersion + " this version: " + this.DB_SCHEMA_VERSION + "\n");
             throw Components.results.NS_ERROR_FAILURE;
         }
@@ -1167,12 +1056,6 @@ calStorageCalendar.prototype = {
                 this.upgradeDB(version);
             }
         }
-        
-        // (Conditionally) add index
-        this.mDB.executeSimpleSQL(
-            "CREATE INDEX IF NOT EXISTS " + 
-            "idx_cal_properies_item_id ON cal_properties(item_id);"
-            );
 
         this.mSelectEvent = createStatement (
             this.mDB,
@@ -2140,15 +2023,15 @@ var sqlTables = {
     /* 	REFERENCES cal_calendars.id, */
     "	cal_id		INTEGER, " +
     /*  ItemBase bits */
-    "	id		TEXT," +
+    "	id		STRING," +
     "	time_created	INTEGER," +
     "	last_modified	INTEGER," +
-    "	title		TEXT," +
+    "	title		STRING," +
     "	priority	INTEGER," +
-    "	privacy		TEXT," +
-    "	ical_status	TEXT," +
+    "	privacy		STRING," +
+    "	ical_status	STRING," +
     "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	TEXT," +
+    "	recurrence_id_tz	VARCHAR," +
     /*  CAL_ITEM_FLAG_PRIVATE = 1 */
     /*  CAL_ITEM_FLAG_HAS_ATTENDEES = 2 */
     /*  CAL_ITEM_FLAG_HAS_PROPERTIES = 4 */
@@ -2158,13 +2041,13 @@ var sqlTables = {
     "	flags		INTEGER," +
     /*  Event bits */
     "	event_start	INTEGER," +
-    "	event_start_tz	TEXT," +
+    "	event_start_tz	VARCHAR," +
     "	event_end	INTEGER," +
-    "	event_end_tz	TEXT," +
+    "	event_end_tz	VARCHAR," +
     "	event_stamp	INTEGER," +
     /*  alarm time */
     "	alarm_time	INTEGER," +
-    "	alarm_time_tz	TEXT," +
+    "	alarm_time_tz	VARCHAR," +
     "	alarm_offset	INTEGER," +
     "	alarm_related	INTEGER," +
     "	alarm_last_ack	INTEGER" +
@@ -2174,15 +2057,15 @@ var sqlTables = {
     /* 	REFERENCES cal_calendars.id, */
     "	cal_id		INTEGER, " +
     /*  ItemBase bits */
-    "	id		TEXT," +
+    "	id		STRING," +
     "	time_created	INTEGER," +
     "	last_modified	INTEGER," +
-    "	title		TEXT," +
+    "	title		STRING," +
     "	priority	INTEGER," +
-    "	privacy		TEXT," +
-    "	ical_status	TEXT," +
+    "	privacy		STRING," +
+    "	ical_status	STRING," +
     "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	TEXT," +
+    "	recurrence_id_tz	VARCHAR," +
     /*  CAL_ITEM_FLAG_PRIVATE = 1 */
     /*  CAL_ITEM_FLAG_HAS_ATTENDEES = 2 */
     /*  CAL_ITEM_FLAG_HAS_PROPERTIES = 4 */
@@ -2193,47 +2076,47 @@ var sqlTables = {
     /*  Todo bits */
     /*  date the todo is to be displayed */
     "	todo_entry	INTEGER," +
-    "	todo_entry_tz	TEXT," +
+    "	todo_entry_tz	VARCHAR," +
     /*  date the todo is due */
     "	todo_due	INTEGER," +
-    "	todo_due_tz	TEXT," +
+    "	todo_due_tz	VARCHAR," +
     /*  date the todo is completed */
     "	todo_completed	INTEGER," +
-    "	todo_completed_tz TEXT," +
+    "	todo_completed_tz VARCHAR," +
     /*  percent the todo is complete (0-100) */
     "	todo_complete	INTEGER," +
     /*  alarm time */
     "	alarm_time	INTEGER," +
-    "	alarm_time_tz	TEXT," +
+    "	alarm_time_tz	VARCHAR," +
     "	alarm_offset	INTEGER," +
     "	alarm_related	INTEGER," +
     "	alarm_last_ack	INTEGER" +
     "",
 
   cal_attendees:
-    "	item_id         TEXT," +
+    "	item_id         STRING," +
     "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	TEXT," +
-    "	attendee_id	TEXT," +
-    "	common_name	TEXT," +
+    "	recurrence_id_tz	VARCHAR," +
+    "	attendee_id	STRING," +
+    "	common_name	STRING," +
     "	rsvp		INTEGER," +
-    "	role		TEXT," +
-    "	status		TEXT," +
-    "	type		TEXT" +
+    "	role		STRING," +
+    "	status		STRING," +
+    "	type		STRING" +
     "",
 
   cal_recurrence:
-    "	item_id		TEXT," +
+    "	item_id		STRING," +
     /*  the index in the recurrence array of this thing */
     "	recur_index	INTEGER, " +
     /*  values from calIRecurrenceInfo; if null, date-based. */
-    "	recur_type	TEXT, " +
+    "	recur_type	STRING, " +
     "	is_negative	BOOLEAN," +
     /*  */
     /*  these are for date-based recurrence */
     /*  */
     /*  comma-separated list of dates */
-    "	dates		TEXT," +
+    "	dates		STRING," +
     /*  */
     /*  these are for rule-based recurrence */
     /*  */
@@ -2241,22 +2124,22 @@ var sqlTables = {
     "	end_date	INTEGER," +
     "	interval	INTEGER," +
     /*  components, comma-separated list or null */
-    "	second		TEXT," +
-    "	minute		TEXT," +
-    "	hour		TEXT," +
-    "	day		TEXT," +
-    "	monthday	TEXT," +
-    "	yearday		TEXT," +
-    "	weekno		TEXT," +
-    "	month		TEXT," +
-    "	setpos		TEXT" +
+    "	second		STRING," +
+    "	minute		STRING," +
+    "	hour		STRING," +
+    "	day		STRING," +
+    "	monthday	STRING," +
+    "	yearday		STRING," +
+    "	weekno		STRING," +
+    "	month		STRING," +
+    "	setpos		STRING" +
     "",
 
   cal_properties:
-    "	item_id		TEXT," +
+    "	item_id		STRING," +
     "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	TEXT," +
-    "	key		TEXT," +
+    "	recurrence_id_tz	VARCHAR," +
+    "	key		STRING," +
     "	value		BLOB" +
     "",
 

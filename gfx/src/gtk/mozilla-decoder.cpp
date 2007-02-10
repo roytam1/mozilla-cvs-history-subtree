@@ -40,9 +40,10 @@
 #define PANGO_ENABLE_ENGINE
 
 #include "mozilla-decoder.h"
+#include <pango/pangoxft.h>
 #include <pango/pangofc-fontmap.h>
 #include <pango/pangofc-font.h>
-#include <gdk/gdkpango.h>
+#include <gdk/gdkx.h>
 
 #include "nsString.h"
 #include "nsIPersistentProperties2.h"
@@ -144,13 +145,6 @@ mozilla_decoders_init(void)
     if (initialized)
         return 0;
 
-    PangoContext* context = gdk_pango_context_get ();
-    PangoFontMap* fontmap = pango_context_get_font_map (context);
-    g_object_unref (context);
-    
-    if (!PANGO_IS_FC_FONT_MAP (fontmap))
-        return -1;
-
     encoder_hash = g_hash_table_new(g_str_hash, g_str_equal);
     cmap_hash = g_hash_table_new(g_str_hash, g_str_equal);
     wide_hash = g_hash_table_new(g_str_hash, g_str_equal);
@@ -214,7 +208,7 @@ mozilla_decoders_init(void)
         }
     }
 
-    pango_fc_font_map_add_decoder_find_func(PANGO_FC_FONT_MAP(fontmap),
+    pango_fc_font_map_add_decoder_find_func(PANGO_FC_FONT_MAP(pango_xft_get_font_map(GDK_DISPLAY(),gdk_x11_get_default_screen())),
                                             mozilla_find_decoder,
                                             NULL,
                                             NULL);

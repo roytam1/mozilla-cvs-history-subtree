@@ -55,6 +55,8 @@
 
 #include "jsapi.h"
 
+static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
+
 /* load() error msgs, XXX localize? */
 #define LOAD_ERROR_NOSERVICE "Error creating IO Service."
 #define LOAD_ERROR_NOCHANNEL "Error creating channel (invalid URL scheme?)"
@@ -135,8 +137,6 @@ mozJSSubScriptLoader::LoadSubScript (const PRUnichar * /*url*/
             return rv;
 
     }
-
-    JSAutoRequest ar(cx);
     
     char     *url;
     JSObject *target_obj = nsnull;
@@ -205,8 +205,7 @@ mozJSSubScriptLoader::LoadSubScript (const PRUnichar * /*url*/
     /* load up the url.  From here on, failures are reflected as ``custom''
      * js exceptions */
     PRInt32   len = -1;
-    PRUint32  readcount = 0;  // Total amount of data read
-    PRUint32  lastReadCount = 0;  // Amount of data read in last Read() call
+    PRUint32  readcount;
     char     *buf = nsnull;
     
     JSString        *errmsg;
@@ -216,7 +215,7 @@ mozJSSubScriptLoader::LoadSubScript (const PRUnichar * /*url*/
     nsCOMPtr<nsIChannel>     chan;
     nsCOMPtr<nsIInputStream> instream;
 
-    nsCOMPtr<nsIIOService> serv = do_GetService(NS_IOSERVICE_CONTRACTID);
+    nsCOMPtr<nsIIOService> serv = do_GetService(kIOServiceCID);
     if (!serv)
     {
         errmsg = JS_NewStringCopyZ (cx, LOAD_ERROR_NOSERVICE);
@@ -248,17 +247,13 @@ mozJSSubScriptLoader::LoadSubScript (const PRUnichar * /*url*/
     buf = new char[len + 1];
     if (!buf)
         return NS_ERROR_OUT_OF_MEMORY;
-    buf[len] = '\0';
     
-    do {
-        rv = instream->Read (buf + readcount, len - readcount, &lastReadCount);
-        if (NS_FAILED(rv))
-        {
-            errmsg = JS_NewStringCopyZ (cx, LOAD_ERROR_BADREAD);
-            goto return_exception;
-        }
-        readcount += lastReadCount;
-    } while (lastReadCount && readcount != PRUint32(len));
+    rv = instream->Read (buf, len, &readcount);
+    if (NS_FAILED(rv))
+    {
+        errmsg = JS_NewStringCopyZ (cx, LOAD_ERROR_BADREAD);
+        goto return_exception;
+    }
     
     if (NS_STATIC_CAST(PRUint32, len) != readcount)
     {

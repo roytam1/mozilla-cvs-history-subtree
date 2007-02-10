@@ -41,6 +41,7 @@
 
 #include "nsCollationCID.h"
 #include "nsDateTimeFormatCID.h"
+#include "nsFontPackageService.h"
 #include "nsIGenericFactory.h"
 #include "nsILocaleService.h"
 #include "nsIScriptableDateFormat.h"
@@ -105,6 +106,7 @@ NSLOCALE_MAKE_CTOR(CreateLocaleService, nsILocaleService, NS_NewLocaleService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCollationFactory)
 //NS_GENERIC_FACTORY_CONSTRUCTOR(nsScriptableDateTimeFormat)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsLanguageAtomService)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsFontPackageService)
 
 
 #ifdef XP_WIN

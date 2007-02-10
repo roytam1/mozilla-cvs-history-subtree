@@ -58,6 +58,4 @@ class nsIDragSessionQt : public nsISupports
    NS_IMETHOD SetDragReference(QMimeSource* aDragRef) = 0; 
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDragSessionQt, NS_IDRAGSESSIONQT_IID)
-
 #endif

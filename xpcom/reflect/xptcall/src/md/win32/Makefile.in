@@ -44,7 +44,6 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpcom
 LIBRARY_NAME	= xptcmd
-MOZILLA_INTERNAL_API = 1
 
 #
 # The default is this buildable, but non-functioning code.
@@ -62,9 +61,6 @@ CPPSRCS		= xptcinvoke.cpp xptcstubs.cpp
 
 endif
 
-REQUIRES = string
-
-LOCAL_INCLUDES += -I$(srcdir)/../../../../xptinfo/src
 
 # Force use of PIC
 FORCE_USE_PIC	= 1
@@ -113,9 +109,6 @@ FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
 
-DEFINES		+= -DEXPORT_XPTC_API -D_IMPL_NS_COM
+DEFINES		+= -DEXPORT_XPTC_API -D_IMPL_NS_COM -D_IMPL_NS_BASE
 
 LOCAL_INCLUDES	+= -I$(srcdir)/../..
-
-libs:: $(LIBRARY)
-	$(INSTALL) $(LIBRARY) ../..

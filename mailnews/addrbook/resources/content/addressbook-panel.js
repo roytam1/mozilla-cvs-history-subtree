@@ -95,8 +95,6 @@ function AbPanelLoad()
 
   UpgradeAddressBookResultsPaneUI("mailnews.ui.addressbook_panel_results.version");
 
-  SetupAbCommandUpdateHandlers();
-
   LoadPreviouslySelectedAB();
 
   // add a listener, so we can switch directories if
@@ -178,3 +176,4 @@ function UpdateCardView()
 {
   // do nothing for ab panel
 }
+

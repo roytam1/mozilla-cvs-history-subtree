@@ -47,8 +47,6 @@
 class nsXULTabAccessible : public nsLeafAccessible
 {
 public:
-  enum { eAction_Switch = 0 };
-
   nsXULTabAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell);
   NS_IMETHOD GetRole(PRUint32 *_retval); 
   NS_IMETHOD GetState(PRUint32 *_retval);

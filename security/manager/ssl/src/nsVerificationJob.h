@@ -50,7 +50,6 @@
 class nsBaseVerificationJob
 {
 public:
-  virtual ~nsBaseVerificationJob() {}
   virtual void Run() = 0;
 };
 

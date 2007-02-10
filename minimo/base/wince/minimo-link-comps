@@ -2,6 +2,7 @@ xpconect
 mozuconv
 i18n
 necko
+necko2
 jar50
 rdf
 pref
@@ -16,11 +17,11 @@ embedcmp
 webbrwsr
 texteditor
 txmgr
-tkautoc
 appshell
 chrome
 mork
 tkitcmps
+t8iix
 xmlextra
 softkey
 phone
@@ -30,3 +31,4 @@ native_ssl
 cookie
 perms
 devicesupport
+gps

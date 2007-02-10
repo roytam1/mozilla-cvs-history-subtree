@@ -42,27 +42,21 @@
 #include <nsISupportsUtils.h>
 
 #include "nsCOMPtr.h"
-#include "nsIObserver.h"
 #include "nsIUrlClassifierStreamUpdater.h"
 #include "nsIStreamListener.h"
-#include "nsNetUtil.h"
 
 // Forward declare pointers
 class nsIURI;
 
-class nsUrlClassifierStreamUpdater : public nsIUrlClassifierStreamUpdater,
-                                     public nsIObserver
+class nsUrlClassifierStreamUpdater : public nsIUrlClassifierStreamUpdater
 {
 public:
   nsUrlClassifierStreamUpdater();
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIURLCLASSIFIERSTREAMUPDATER
-  NS_DECL_NSIOBSERVER
 
-  // When the channel gets OnStopRequest, we call this
-  // to reset the stream updater.
-  void DownloadDone();
+  PRBool mIsUpdating;
 
 private:
   // No subclassing
@@ -71,11 +65,8 @@ private:
   // Disallow copy constructor
   nsUrlClassifierStreamUpdater(nsUrlClassifierStreamUpdater&);
 
-  PRBool mIsUpdating;
-  PRBool mInitialized;
   nsCOMPtr<nsIURI> mUpdateUrl;
   nsCOMPtr<nsIStreamListener> mListener;
-  nsCOMPtr<nsIChannel> mChannel;
 };
 
 #endif // nsUrlClassifierStreamUpdater_h_

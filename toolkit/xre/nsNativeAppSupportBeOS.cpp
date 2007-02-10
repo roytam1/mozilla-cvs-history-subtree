@@ -19,7 +19,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sergei Dolgov <sergei_d@fi.tartu.ee>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -45,10 +44,11 @@
 #include "nsNativeAppSupportBase.h"
 #include "nsICommandLineRunner.h"
 #include "nsCOMPtr.h"
+#include "nsIBrowserDOMWindow.h"
 #include "nsIProxyObjectManager.h"
-//#include "nsIBrowserDOMWindow.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsIDOMChromeWindow.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIWindowMediator.h"
 #include "nsXPIDLString.h"
 #include "nsIBaseWindow.h"
@@ -62,7 +62,7 @@
 #include <Window.h>
 #include <unistd.h>
 
-// Two static helpers for future - if we decide to use OpenBrowserWindow, like we do in SeaMonkey
+#if 0 // TODO for OpenURI, see comment in HandleCommandLine
 static nsresult
 GetMostRecentWindow(const PRUnichar* aType, nsIDOMWindowInternal** aWindow)
 {
@@ -74,8 +74,8 @@ GetMostRecentWindow(const PRUnichar* aType, nsIDOMWindowInternal** aWindow)
     if (med)
     {
         nsCOMPtr<nsIWindowMediator> medProxy;
-        rv = NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD, NS_GET_IID(nsIWindowMediator), 
-                                  med, NS_PROXY_SYNC | NS_PROXY_ALWAYS,
+        rv = NS_GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIWindowMediator), 
+                                  med, PROXY_SYNC | PROXY_ALWAYS,
                                   getter_AddRefs(medProxy));
         if (NS_FAILED(rv))
             return rv;
@@ -87,8 +87,8 @@ GetMostRecentWindow(const PRUnichar* aType, nsIDOMWindowInternal** aWindow)
 static nsresult
 ActivateWindow(nsIDOMWindowInternal* aWindow)
 {
-    nsCOMPtr<nsPIDOMWindow> window(do_QueryInterface(aWindow));
-    NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
+	nsCOMPtr<nsIScriptGlobalObject> window(do_QueryInterface(aWindow));
+	NS_ENSURE_TRUE(window, NS_ERROR_FAILURE);
     nsCOMPtr<nsIBaseWindow> baseWindow(do_QueryInterface(window->GetDocShell()));
     NS_ENSURE_TRUE(baseWindow, NS_ERROR_FAILURE);
     nsCOMPtr<nsIWidget> mainWidget;
@@ -99,7 +99,7 @@ ActivateWindow(nsIDOMWindowInternal* aWindow)
         bwindow->Activate(true);
     return NS_OK;
 }
-//End static helpers
+#endif //0
 
 class nsNativeAppSupportBeOS : public nsNativeAppSupportBase
 {
@@ -270,12 +270,21 @@ nsNativeAppSupportBeOS::HandleCommandLine(int32 argc, char **argv, PRUint32 aSta
 #endif
         return;
     }
-   
+    // nsICommandLineRunner::Init() requires some folder to be provided
+    // but that's unclear if we need it, so using 0 instead atm
+    /*
+    char wdir[MAXPATHLEN];
+    nsCOMPtr<nsILocalFile> workingDir;
+    NS_NewNativeLocalFile(nsDependentCString(getcwd((char *)wdir, MAXPATHLEN)),
+                          PR_FALSE,
+                          getter_AddRefs(workingDir));
+    */
+    
     // nsICommandLineRunner::Init() should be called from main mozilla thread
     // but we are at be_app thread. Using proxy to switch thread
     nsCOMPtr<nsICommandLineRunner> cmdLineProxy;
-    rv = NS_GetProxyForObject(  NS_PROXY_TO_MAIN_THREAD, NS_GET_IID(nsICommandLineRunner), 
-        cmdLine, NS_PROXY_ASYNC | NS_PROXY_ALWAYS, getter_AddRefs(cmdLineProxy));
+    rv = NS_GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsICommandLineRunner), 
+        cmdLine, PROXY_ASYNC | PROXY_ALWAYS, getter_AddRefs(cmdLineProxy));
     if (rv != NS_OK)
     {
 #ifdef DC_PROGRAMNAME
@@ -284,8 +293,6 @@ nsNativeAppSupportBeOS::HandleCommandLine(int32 argc, char **argv, PRUint32 aSta
         return;
     }
     
-    // nsICommandLineRunner::Init(,,workingdir,) requires some folder to be provided
-    // but that's unclear if we need it, so using 0 instead atm
     rv = cmdLine->Init(argc, argv, 0 , aState);
     if (rv != NS_OK)
     {
@@ -294,7 +301,8 @@ nsNativeAppSupportBeOS::HandleCommandLine(int32 argc, char **argv, PRUint32 aSta
 #endif
         return;
     }
-
+    
+#if 0 // TODO: try to use OpenURI here if there is navWin
     nsCOMPtr<nsIDOMWindowInternal> navWin;
     GetMostRecentWindow( NS_LITERAL_STRING( "navigator:browser" ).get(),
                          getter_AddRefs(navWin ));
@@ -305,11 +313,8 @@ nsNativeAppSupportBeOS::HandleCommandLine(int32 argc, char **argv, PRUint32 aSta
 # endif
         cmdLine->SetWindowContext(navWin);
     }
+#endif //0
 
-// TODO: try to use OpenURI here if there is navWin, maybe using special function
-// OpenBrowserWindow which calls OpenURI like we do  for SeaMonkey, 
-// else let CommandLineRunner to do its work.
-// Problem with current implementation is unsufficient tabbed browsing support
     cmdLineProxy->Run();
 }
 

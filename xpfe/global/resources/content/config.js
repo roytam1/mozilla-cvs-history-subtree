@@ -157,7 +157,6 @@ var view = {
   selectionChanged : function() {},
   cycleCell: function(row, col) {},
   isEditable: function(row, col) {return false; },
-  isSelectable: function(row, col) {return false; },
   setCellValue: function(row, col, value) {},
   setCellText: function(row, col, value) {},
   performAction: function(action) {},
@@ -364,13 +363,11 @@ function ShowPrefs()
   
   gPrefBranch.addObserver("", gPrefListener, false);
 
-  var configTree = document.getElementById("configTree");
-  configTree.view = view;
-  configTree.controllers.insertControllerAt(0, configController);
+  document.getElementById("configTree").view = view;
 
   document.getElementById("configDeck").setAttribute("selectedIndex", 1);
-  if (!document.getElementById("showWarningNextTime").checked)
-    gPrefBranch.setBoolPref("general.warnOnAboutConfig", false);
+  var showNextTime = document.getElementById("showWarningNextTime").checked;
+  gPrefBranch.setBoolPref("general.warnOnAboutConfig", showNextTime);
 
   document.getElementById("textbox").focus();
 }
@@ -379,42 +376,26 @@ function onConfigUnload()
 {
   if (document.getElementById("configDeck").getAttribute("selectedIndex") == 1) {
     gPrefBranch.removeObserver("", gPrefListener);
-    var configTree = document.getElementById("configTree");
-    configTree.view = null;
-    configTree.controllers.removeController(configController);
+    document.getElementById("configTree").view = null;
   }
 }
 
 function FilterPrefs()
 {
-  var substring = document.getElementById("textbox").value;
-  var rex;
-  // Check for "/regex/[i]"
-  if (substring.charAt(0) == '/') {
-    var r = substring.match(/^\/(.*)\/(i?)$/);
-    try {
-      rex = RegExp(r[1], r[2]);
-    }
-    catch (e) {
-      return; // Do nothing on incomplete or bad RegExp
-    }
-  }
-
+  var substring = document.getElementById("textbox").value.toLowerCase();
   var prefCol = view.selection.currentIndex < 0 ? null : gPrefView[view.selection.currentIndex].prefCol;
-  var oldlen = gPrefView.length;
+  var array = gPrefView;
   gPrefView = gPrefArray;
   if (substring) {
     gPrefView = [];
-    if (!rex)
-      rex = RegExp(substring.replace(/([^* \w])/g, "\\$1").replace(/[*]/g, ".*"), "i");
     for (var i = 0; i < gPrefArray.length; ++i)
-      if (rex.test(gPrefArray[i].prefCol + ";" + gPrefArray[i].valueCol))
+      if (gPrefArray[i].prefCol.toLowerCase().indexOf(substring) >= 0)
         gPrefView.push(gPrefArray[i]);
     if (gFastIndex < gPrefArray.length)
       gPrefView.sort(gSortFunction);
   }
   view.treebox.invalidate();
-  view.treebox.rowCountChanged(oldlen, gPrefView.length - oldlen);
+  view.treebox.rowCountChanged(array.length, gPrefView.length - array.length);
   gotoPref(prefCol);
   document.getElementById("button").disabled = !substring;
 }
@@ -467,20 +448,6 @@ const gSortFunctions =
   valueCol: valueColSortFunction
 };
 
-const configController = {
-  supportsCommand: function supportsCommand(command) {
-    return command == "cmd_copy";
-  },
-  isCommandEnabled: function isCommandEnabled(command) {
-    return view.selection && view.selection.currentIndex >= 0;
-  },
-  doCommand: function doCommand(command) {
-    copyPref();
-  },
-  onEvent: function onEvent(event) {
-  }
-}
-
 function updateContextMenu()
 {
   var lockCol = PREF_IS_LOCKED;
@@ -495,9 +462,6 @@ function updateContextMenu()
     valueCol = prefRow.valueCol;
     copyDisabled = false;
   }
-
-  var copyPref = document.getElementById("copyPref");
-  copyPref.setAttribute("disabled", copyDisabled);
 
   var copyName = document.getElementById("copyName");
   copyName.setAttribute("disabled", copyDisabled);
@@ -517,12 +481,6 @@ function updateContextMenu()
   var toggleSelected = document.getElementById("toggleSelected");
   toggleSelected.setAttribute("disabled", lockCol == PREF_IS_LOCKED);
   toggleSelected.hidden = !canToggle;
-}
-
-function copyPref()
-{
-  var pref = gPrefView[view.selection.currentIndex];
-  gClipboardHelper.copyString(pref.prefCol + ';' + pref.valueCol);
 }
 
 function copyName()

@@ -47,9 +47,29 @@
 
 // #define DEBUG_IMETXN
 
+nsIAtom *IMETextTxn::gIMETextTxnName = nsnull;
+
+nsresult IMETextTxn::ClassInit()
+{
+  if (!gIMETextTxnName)
+    gIMETextTxnName = NS_NewAtom("NS_IMETextTxn");
+  return NS_OK;
+}
+
+nsresult IMETextTxn::ClassShutdown()
+{
+  NS_IF_RELEASE(gIMETextTxnName);
+  return NS_OK;
+}
+
 IMETextTxn::IMETextTxn()
   : EditTxn()
 {
+}
+
+IMETextTxn::~IMETextTxn()
+{
+  mRangeList = do_QueryInterface(nsnull);
 }
 
 NS_IMETHODIMP IMETextTxn::Init(nsIDOMCharacterData     *aElement,
@@ -291,11 +311,11 @@ NS_IMETHODIMP IMETextTxn::CollapseTextSelection(void)
           }
         }
 
-        nsCOMPtr<nsIPrivateTextRange> textRange;
+        nsIPrivateTextRange*  textRange;
         PRBool setCaret=PR_FALSE;
         for(i=0;i<textRangeListLength;i++)
         {
-          result = mRangeList->Item(i, getter_AddRefs(textRange));
+          result = mRangeList->Item(i,&textRange);
           NS_ASSERTION(NS_SUCCEEDED(result), "cannot get item");
           if(NS_FAILED(result))
                break;

@@ -123,10 +123,7 @@
          which is good, but we need to specify it ourselves here -->
     <key id="key_selectAll" command="cmd_selectAll"/>
 
-    <!-- These keybindings do have a command specified in the overlay,
-         which we need to correct in our DLManagerStartup() function -->
-    <key id="key_delete"/>
-    <key id="key_delete2"/>
+    <key id="key_remove" keycode="VK_DELETE" command="cmd_remove"/>
 
     <key id="key_properties" key="&cmd.properties.keybinding;"
          command="cmd_properties" modifiers="accel"/>

@@ -44,18 +44,15 @@
 
 class nsIFocusController;
 
-// c18dee5a-dcf9-4391-a20c-581e769d095e
+// {575CB0E1-E6C4-484a-99F8-C47B06C0E521}
 #define NS_IWINDOWROOT_IID \
-{ 0xc18dee5a, 0xdcf9, 0x4391, \
-  { 0xa2, 0x0c, 0x58, 0x1e, 0x76, 0x9d, 0x09, 0x5e } }
+{ 0x575cb0e1, 0xe6c4, 0x484a, { 0x99, 0xf8, 0xc4, 0x7b, 0x6, 0xc0, 0xe5, 0x21 } }
 
 class nsPIWindowRoot : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IWINDOWROOT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IWINDOWROOT_IID)
 
   NS_IMETHOD GetFocusController(nsIFocusController** aResult)=0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsPIWindowRoot, NS_IWINDOWROOT_IID)
 
 #endif // nsPIWindowRoot_h__

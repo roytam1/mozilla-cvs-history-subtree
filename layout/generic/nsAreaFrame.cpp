@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* derived class of nsBlockFrame; distinction barely relevant anymore */
-
 #include "nsAreaFrame.h"
 #include "nsBlockBandData.h"
 #include "nsStyleContext.h"
@@ -44,27 +41,38 @@
 #include "nsPresContext.h"
 #include "nsIViewManager.h"
 #include "nsINodeInfo.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsIView.h"
 #include "nsHTMLParts.h"
+#include "nsLayoutAtoms.h"
 
 #ifdef MOZ_XUL
 #include "nsINameSpaceManager.h"
+#include "nsXULAtoms.h"
 #include "nsIEventStateManager.h"
 #endif
 
 #undef NOISY_MAX_ELEMENT_SIZE
 #undef NOISY_FINAL_SIZE
 
-nsIFrame*
-NS_NewAreaFrame(nsIPresShell* aPresShell, nsStyleContext* aContext, PRUint32 aFlags)
+nsresult
+NS_NewAreaFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRUint32 aFlags)
 {
-  nsAreaFrame* it = new (aPresShell) nsAreaFrame(aContext);
-  
-  if (it != nsnull)
-    it->SetFlags(aFlags);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsAreaFrame* it = new (aPresShell) nsAreaFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  it->SetFlags(aFlags);
+  *aNewFrame = it;
+  return NS_OK;
+}
 
-  return it;
+nsAreaFrame::nsAreaFrame()
+{
 }
 
 #ifdef MOZ_XUL
@@ -72,14 +80,17 @@ NS_NewAreaFrame(nsIPresShell* aPresShell, nsStyleContext* aContext, PRUint32 aFl
 // If you make changes to this function, check its counterparts 
 // in nsBoxFrame and nsTextBoxFrame
 nsresult
-nsAreaFrame::RegUnregAccessKey(PRBool aDoReg)
+nsAreaFrame::RegUnregAccessKey(nsPresContext* aPresContext,
+                               PRBool aDoReg)
 {
   // if we have no content, we can't do anything
   if (!mContent)
     return NS_ERROR_FAILURE;
 
+  nsINodeInfo *ni = mContent->GetNodeInfo();
+
   // only support accesskeys for the following elements
-  if (!mContent->NodeInfo()->Equals(nsGkAtoms::label, kNameSpaceID_XUL))
+  if (!ni || !ni->Equals(nsXULAtoms::label, kNameSpaceID_XUL))
     return NS_OK;
 
   // To filter out <label>s without a control attribute.
@@ -87,18 +98,18 @@ nsAreaFrame::RegUnregAccessKey(PRBool aDoReg)
   // in e.g. <menu>, <menuitem>, <button>. These <label>s inherit
   // |accesskey| and would otherwise register themselves, overwriting
   // the content we really meant to be registered.
-  if (!mContent->HasAttr(kNameSpaceID_None, nsGkAtoms::control))
+  if (!mContent->HasAttr(kNameSpaceID_None, nsXULAtoms::control))
     return NS_OK;
 
   nsAutoString accessKey;
-  mContent->GetAttr(kNameSpaceID_None, nsGkAtoms::accesskey, accessKey);
+  mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::accesskey, accessKey);
 
   if (accessKey.IsEmpty())
     return NS_OK;
 
   // With a valid PresContext we can get the ESM 
   // and register the access key
-  nsIEventStateManager *esm = GetPresContext()->EventStateManager();
+  nsIEventStateManager *esm = aPresContext->EventStateManager();
   nsresult rv;
 
   PRUint32 key = accessKey.First();
@@ -116,38 +127,46 @@ nsAreaFrame::RegUnregAccessKey(PRBool aDoReg)
 
 #ifdef MOZ_XUL
 NS_IMETHODIMP
-nsAreaFrame::Init(nsIContent*      aContent,
+nsAreaFrame::Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
                   nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow)
 {
-  nsresult rv = nsBlockFrame::Init(aContent, aParent, aPrevInFlow);
+  nsresult rv = nsBlockFrame::Init(aPresContext,
+                                   aContent,
+                                   aParent,
+                                   aContext,
+                                   aPrevInFlow);
   if (NS_FAILED(rv))
     return rv;
 
   // register access key
-  return RegUnregAccessKey(PR_TRUE);
+  return RegUnregAccessKey(aPresContext, PR_TRUE);
 }
 
-void
-nsAreaFrame::Destroy()
+NS_IMETHODIMP
+nsAreaFrame::Destroy(nsPresContext* aPresContext)
 {
   // unregister access key
-  RegUnregAccessKey(PR_FALSE);
-  nsBlockFrame::Destroy();
+  RegUnregAccessKey(aPresContext, PR_FALSE);
+
+  return nsBlockFrame::Destroy(aPresContext);
 } 
 
 NS_IMETHODIMP
-nsAreaFrame::AttributeChanged(PRInt32 aNameSpaceID,
+nsAreaFrame::AttributeChanged(nsIContent* aChild,
+                              PRInt32 aNameSpaceID,
                               nsIAtom* aAttribute,
                               PRInt32 aModType)
 {
-  nsresult rv = nsBlockFrame::AttributeChanged(aNameSpaceID, 
+  nsresult rv = nsBlockFrame::AttributeChanged(aChild, aNameSpaceID, 
                                                aAttribute, aModType);
 
   // If the accesskey changed, register for the new value
   // The old value has been unregistered in nsXULElement::SetAttr
-  if (aAttribute == nsGkAtoms::accesskey || aAttribute == nsGkAtoms::control)
-    RegUnregAccessKey(PR_TRUE);
+  if (aAttribute == nsXULAtoms::accesskey || aAttribute == nsXULAtoms::control)
+    RegUnregAccessKey(GetPresContext(), PR_TRUE);
 
   return rv;
 }
@@ -156,7 +175,7 @@ nsAreaFrame::AttributeChanged(PRInt32 aNameSpaceID,
 nsIAtom*
 nsAreaFrame::GetType() const
 {
-  return nsGkAtoms::areaFrame;
+  return nsLayoutAtoms::areaFrame;
 }
 
 /////////////////////////////////////////////////////////////////////////////

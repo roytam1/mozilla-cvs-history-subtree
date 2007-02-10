@@ -53,10 +53,23 @@
 // <mstyle> -- style change
 //
 
-nsIFrame*
-NS_NewMathMLmstyleFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMathMLmstyleFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLmstyleFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLmstyleFrame* it = new (aPresShell) nsMathMLmstyleFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;  
+  return NS_OK;
+}
+
+nsMathMLmstyleFrame::nsMathMLmstyleFrame()
+{
 }
 
 nsMathMLmstyleFrame::~nsMathMLmstyleFrame()
@@ -75,17 +88,27 @@ nsMathMLmstyleFrame::InheritAutomaticData(nsIFrame* aParent)
   mPresentationData.mstyle = this;
 
   // see if the displaystyle attribute is there
-  nsMathMLFrame::FindAttrDisplaystyle(mContent, mPresentationData);
+  nsAutoString value;
+  if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttr(kNameSpaceID_None, 
+                   nsMathMLAtoms::displaystyle_, value)) {
+    if (value.EqualsLiteral("true")) {
+      mPresentationData.flags |= NS_MATHML_MSTYLE_WITH_DISPLAYSTYLE;
+      mPresentationData.flags |= NS_MATHML_DISPLAYSTYLE;
+    }
+    else if (value.EqualsLiteral("false")) {
+      mPresentationData.flags |= NS_MATHML_MSTYLE_WITH_DISPLAYSTYLE;
+      mPresentationData.flags &= ~NS_MATHML_DISPLAYSTYLE;
+    }
+  }
 
   // see if the scriptlevel attribute is there
-  nsAutoString value;
-  mContent->GetAttr(kNameSpaceID_None, nsGkAtoms::scriptlevel_, value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttr(kNameSpaceID_None, 
+                   nsMathMLAtoms::scriptlevel_, value)) {
     PRInt32 errorCode, userValue;
     userValue = value.ToInteger(&errorCode); 
     if (!errorCode) {
       if (value[0] != '+' && value[0] != '-') { // record that it is an explicit value
-        mPresentationData.flags |= NS_MATHML_EXPLICIT_SCRIPTLEVEL;
+        mPresentationData.flags |= NS_MATHML_MSTYLE_WITH_EXPLICIT_SCRIPTLEVEL;
         mPresentationData.scriptLevel = userValue;
       }
       else {
@@ -108,26 +131,44 @@ nsMathMLmstyleFrame::TransmitAutomaticData()
   return NS_OK;
 }
 
-// displaystyle and scriptlevel are special in <mstyle>...
-// Since UpdatePresentation() and UpdatePresentationDataFromChildAt() can be called
-// by a parent, ensure that the explicit attributes of <mstyle> take precedence
 NS_IMETHODIMP
 nsMathMLmstyleFrame::UpdatePresentationData(PRInt32         aScriptLevelIncrement,
                                             PRUint32        aFlagsValues,
-                                            PRUint32        aWhichFlags)
+                                            PRUint32        aFlagsToUpdate)
 {
-  if (NS_MATHML_HAS_EXPLICIT_DISPLAYSTYLE(mPresentationData.flags)) {
-    // our current state takes precedence, disallow updating the displastyle
-    aWhichFlags &= ~NS_MATHML_DISPLAYSTYLE;
-    aFlagsValues &= ~NS_MATHML_DISPLAYSTYLE;
-  }
-  if (NS_MATHML_HAS_EXPLICIT_SCRIPTLEVEL(mPresentationData.flags)) {
-    // our current state takes precedence, disallow updating the scriptlevel
-    aScriptLevelIncrement = 0;
+  // mstyle is special...
+  // Since UpdatePresentationData() can be called by a parent frame, the
+  // scriptlevel and displaystyle attributes of mstyle must take precedence.
+  // Update only if attributes are not there
+
+  // see if updating the displaystyle flag is allowed
+  if (!NS_MATHML_IS_MSTYLE_WITH_DISPLAYSTYLE(mPresentationData.flags)) {
+    // see if the displaystyle flag is relevant to this call
+    if (NS_MATHML_IS_DISPLAYSTYLE(aFlagsToUpdate)) {
+      if (NS_MATHML_IS_DISPLAYSTYLE(aFlagsValues)) {
+        mPresentationData.flags |= NS_MATHML_DISPLAYSTYLE;
+      }
+      else {
+        mPresentationData.flags &= ~NS_MATHML_DISPLAYSTYLE;
+      }
+    }
   }
 
-  return nsMathMLContainerFrame::UpdatePresentationData(
-    aScriptLevelIncrement, aFlagsValues, aWhichFlags);
+  // see if updating the scriptlevel is allowed
+  if (!NS_MATHML_IS_MSTYLE_WITH_EXPLICIT_SCRIPTLEVEL(mPresentationData.flags)) {
+    mPresentationData.scriptLevel += aScriptLevelIncrement;
+  }
+
+  // see if the compression flag is relevant to this call
+  if (NS_MATHML_IS_COMPRESSED(aFlagsToUpdate)) {
+    if (NS_MATHML_IS_COMPRESSED(aFlagsValues)) {
+      // 'compressed' means 'prime' style in App. G, TeXbook
+      mPresentationData.flags |= NS_MATHML_COMPRESSED;
+    }
+    // no else. the flag is sticky. it retains its value once it is set
+  }
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -135,15 +176,22 @@ nsMathMLmstyleFrame::UpdatePresentationDataFromChildAt(PRInt32         aFirstInd
                                                        PRInt32         aLastIndex,
                                                        PRInt32         aScriptLevelIncrement,
                                                        PRUint32        aFlagsValues,
-                                                       PRUint32        aWhichFlags)
+                                                       PRUint32        aFlagsToUpdate)
 {
-  if (NS_MATHML_HAS_EXPLICIT_DISPLAYSTYLE(mPresentationData.flags)) {
-    // our current state takes precedence, disallow updating the displastyle
-    aWhichFlags &= ~NS_MATHML_DISPLAYSTYLE;
-    aFlagsValues &= ~NS_MATHML_DISPLAYSTYLE;
+  // mstyle is special...
+  // Since UpdatePresentationDataFromChildAt() can be called by a parent frame,
+  // wee need to ensure that the attributes of mstyle take precedence
+
+  if (NS_MATHML_IS_DISPLAYSTYLE(aFlagsToUpdate)) {
+    if (NS_MATHML_IS_MSTYLE_WITH_DISPLAYSTYLE(mPresentationData.flags)) {
+      // our current state takes precedence, updating is not allowed
+      aFlagsToUpdate &= ~NS_MATHML_DISPLAYSTYLE;
+      aFlagsValues &= ~NS_MATHML_DISPLAYSTYLE;
+    }
   }
-  if (NS_MATHML_HAS_EXPLICIT_SCRIPTLEVEL(mPresentationData.flags)) {
-    // our current state takes precedence, disallow updating the scriptlevel
+
+  if (NS_MATHML_IS_MSTYLE_WITH_EXPLICIT_SCRIPTLEVEL(mPresentationData.flags)) {
+    // our current state takes precedence, updating is not allowed
     aScriptLevelIncrement = 0;
   }
 
@@ -151,17 +199,25 @@ nsMathMLmstyleFrame::UpdatePresentationDataFromChildAt(PRInt32         aFirstInd
   return
     nsMathMLContainerFrame::UpdatePresentationDataFromChildAt(
       aFirstIndex, aLastIndex, aScriptLevelIncrement,
-      aFlagsValues, aWhichFlags); 
+      aFlagsValues, aFlagsToUpdate); 
 }
 
 NS_IMETHODIMP
-nsMathMLmstyleFrame::AttributeChanged(PRInt32         aNameSpaceID,
+nsMathMLmstyleFrame::AttributeChanged(nsIContent*     aContent,
+                                      PRInt32         aNameSpaceID,
                                       nsIAtom*        aAttribute,
                                       PRInt32         aModType)
 {
-  // Attributes common to MathML tags
-  if (CommonAttributeChangedFor(GetPresContext(), mContent, aAttribute))
-    return NS_OK;
+  if (aAttribute == nsMathMLAtoms::mathcolor_      ||
+      aAttribute == nsMathMLAtoms::color_          ||
+      aAttribute == nsMathMLAtoms::mathsize_       ||
+      aAttribute == nsMathMLAtoms::fontsize_       ||
+      aAttribute == nsMathMLAtoms::fontfamily_     ||
+      aAttribute == nsMathMLAtoms::mathbackground_ ||
+      aAttribute == nsMathMLAtoms::background_) {
+    MapAttributesIntoCSS(GetPresContext(), this);
+    return ReflowDirtyChild(GetPresContext()->PresShell(), nsnull);
+  }
 
   // Other attributes can affect too many things, ask our parent to re-layout
   // its children so that we can pick up changes in our attributes & transmit

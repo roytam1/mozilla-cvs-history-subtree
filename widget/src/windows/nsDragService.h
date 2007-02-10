@@ -39,14 +39,11 @@
 #define nsDragService_h__
 
 #include "nsBaseDragService.h"
-#include <windows.h>
-#include <shlobj.h>
 
 struct IDropSource;
 struct IDataObject;
 class  nsNativeDragTarget;
 class  nsDataObjCollection;
-class  nsString;
 
 /**
  * Native Win32 DragService wrapper
@@ -81,9 +78,6 @@ protected:
   // determine if we have a single data object or one of our private
   // collections
   PRBool IsCollectionObject(IDataObject* inDataObj);
-
-  // gets shell version
-  PRUint64 GetShellVersion();
 
   IDropSource * mNativeDragSrc;
   nsNativeDragTarget * mNativeDragTarget;

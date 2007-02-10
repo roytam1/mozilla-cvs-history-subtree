@@ -122,6 +122,7 @@ searchTermContainer.prototype = {
     },
 
     booleanNodes: null,
+    stringBundle: document.getElementById("bundle_search"),
     get booleanAnd() { return this.internalBooleanAnd; },
     set booleanAnd(val) {
         this.internalBooleanAnd = val;

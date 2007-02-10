@@ -45,14 +45,21 @@
 #include "prtime.h"
 #include "prinrval.h"
 #include "nsVoidArray.h"
-#include "nsThreadUtils.h"
 #include "nsIScrollableView.h"
 #include "nsIRegion.h"
 #include "nsIBlender.h"
+#include "nsIEventQueueService.h"
+#include "nsIEventQueue.h"
 #include "nsView.h"
 
+class nsIRegion;
+class nsIEvent;
 class nsISupportsArray;
+struct DisplayListElement2;
+struct DisplayZTreeNode;
 class BlendingBuffers;
+struct PLArenaPool;
+class nsHashtable;
 
 //Uncomment the following line to enable generation of viewmanager performance data.
 #ifdef MOZ_PERF_METRICS
@@ -136,16 +143,6 @@ protected:
 
 protected:
   nsView   *mReparentedView;
-};
-
-class nsViewManagerEvent : public nsRunnable {
-public:
-  nsViewManagerEvent(class nsViewManager *vm) : mViewManager(vm) {
-    NS_ASSERTION(mViewManager, "null parameter");
-  }
-  void Revoke() { mViewManager = nsnull; }
-protected:
-  class nsViewManager *mViewManager;
 };
 
 class nsViewManager : public nsIViewManager {
@@ -293,24 +290,68 @@ private:
   /**
    * Refresh aView (which must be non-null) with our default background color
    */
-  void DefaultRefresh(nsView* aView, nsIRenderingContext *aContext, const nsRect* aRect);
+  void DefaultRefresh(nsView* aView, const nsRect* aRect);
+  PRBool BuildRenderingDisplayList(nsIView* aRootView,
+    const nsRegion& aRegion, nsVoidArray* aDisplayList, PLArenaPool &aPool,
+    PRBool aIgnoreCoveringWidgets, PRBool aIgnoreOutsideClipping,
+    nsIView* aSuppressScrolling);
   void RenderViews(nsView *aRootView, nsIRenderingContext& aRC,
-                   const nsRegion& aRegion, nsIDrawingSurface* aRCSurface);
+                   const nsRegion& aRegion, nsIDrawingSurface* aRCSurface,
+                   const nsVoidArray& aDisplayList);
+
+  void RenderDisplayListElement(DisplayListElement2* element,
+                                nsIRenderingContext* aRC);
+
+  void PaintView(nsView *aView, nsIRenderingContext &aRC, nscoord x, nscoord y,
+                 const nsRect &aDamageRect);
 
   void InvalidateRectDifference(nsView *aView, const nsRect& aRect, const nsRect& aCutOut, PRUint32 aUpdateFlags);
   void InvalidateHorizontalBandDifference(nsView *aView, const nsRect& aRect, const nsRect& aCutOut,
                                           PRUint32 aUpdateFlags, nscoord aY1, nscoord aY2, PRBool aInCutOut);
 
-  virtual BlendingBuffers* CreateBlendingBuffers(nsIRenderingContext *aRC, PRBool aBorrowContext,
-                                                 nsIDrawingSurface* aBorrowSurface, PRBool aNeedAlpha,
-                                                 const nsRect& aArea);
-  virtual nsIBlender* GetBlender() { return mBlender; }
+  BlendingBuffers* CreateBlendingBuffers(nsIRenderingContext *aRC, PRBool aBorrowContext,
+                                         nsIDrawingSurface* aBorrowSurface, PRBool aNeedAlpha,
+                                         const nsRect& aArea);
+
+  void ReparentViews(DisplayZTreeNode* aNode, nsHashtable &);
+  void BuildDisplayList(nsView* aView, const nsRect& aRect, PRBool aEventProcessing,
+                        PRBool aCaptured, nsIView* aSuppressScrolling,
+                        nsVoidArray* aDisplayList, PLArenaPool &aPool);
+  void BuildEventTargetList(nsVoidArray &aTargets, nsView* aView,
+                            nsGUIEvent* aEvent, PRBool aCaptured, PLArenaPool &aPool);
+
+  PRBool CreateDisplayList(nsView *aView,
+                           DisplayZTreeNode* &aResult,
+                           nscoord aOriginX, nscoord aOriginY,
+                           nsView *aRealView, const nsRect *aDamageRect,
+                           nsView *aTopView, nscoord aX, nscoord aY,
+                           PRBool aPaintFloats, PRBool aEventProcessing,
+                           nsIView* aSuppressClip,
+                           nsHashtable&, PLArenaPool &aPool);
+  PRBool AddToDisplayList(nsView *aView,
+                          DisplayZTreeNode* &aParent, nsRect &aClipRect,
+                          nsRect& aDirtyRect, PRUint32 aFlags, nscoord aAbsX, nscoord aAbsY,
+                          PRBool aAssumeIntersection, PLArenaPool &aPool,
+                          nsIView* aStopClippingAtView);
+  void OptimizeDisplayList(const nsVoidArray* aDisplayList, const nsRegion& aDirtyRegion,
+                           nsRect& aFinalTransparentRect, nsRegion& aOpaqueRgn,
+                           PRBool aTreatUniformAsOpaque);
 
   void AddCoveringWidgetsToOpaqueRegion(nsRegion &aRgn, nsIDeviceContext* aContext,
                                         nsView* aRootView);
 
   // Predicates
   PRBool DoesViewHaveNativeWidget(nsView* aView);
+
+  void PauseTimer(void);
+  void RestartTimer(void);
+  void OptimizeDisplayListClipping(const nsVoidArray* aDisplayList, PRBool aHaveClip,
+                                   nsRect& aClipRect, PRInt32& aIndex,
+                                   PRBool& aAnyRendered);
+  nsRect OptimizeTranslucentRegions(const nsVoidArray& aDisplayList,
+                                    PRInt32* aIndex, nsRegion* aOpaqueRegion);
+
+  void ShowDisplayList(const nsVoidArray* aDisplayList);
 
   // Utilities
 
@@ -420,33 +461,14 @@ public: // NOT in nsIViewManager, so private to the view module
   nsViewManager* RootViewManager() const { return mRootViewManager; }
   PRBool IsRootVM() const { return this == RootViewManager(); }
 
-  nsEventStatus HandleEvent(nsView* aView, nsPoint aPoint, nsGUIEvent* aEvent,
-                            PRBool aCaptured);
+  nsEventStatus HandleEvent(nsView* aView, nsGUIEvent* aEvent, PRBool aCaptured);
 
   /**
    * Called to inform the view manager that a view is about to bit-blit.
    * @param aView the view that will bit-blit
    * @param aScrollAmount how much aView will scroll by
-   * @return always returns NS_OK
-   * @note
-   * This method used to return void, but MSVC 6.0 SP5 (without the
-   * Processor Pack) and SP6, and the MS eMbedded Visual C++ 4.0 SP4
-   * (for WINCE) hit an internal compiler error when compiling this
-   * method:
-   *
-   * @par
-@verbatim
-       fatal error C1001: INTERNAL COMPILER ERROR
-                   (compiler file 'E:\8966\vc98\p2\src\P2\main.c', line 494)
-@endverbatim
-   *
-   * @par
-   * Making the method return nsresult worked around the internal
-   * compiler error.  See Bugzilla bug 281158.  (The WINCE internal
-   * compiler error was addressed by the patch in bug 291229 comment
-   * 14 although the bug report did not mention the problem.)
    */
-  nsresult WillBitBlit(nsView* aView, nsPoint aScrollAmount);
+  void WillBitBlit(nsView* aView, nsPoint aScrollAmount);
   
   /**
    * Called to inform the view manager that a view has scrolled.
@@ -454,16 +476,10 @@ public: // NOT in nsIViewManager, so private to the view module
    * to be rerendered.
    * @param aView view to paint. should be the nsScrollPortView that
    * got scrolled.
-   * @param aUpdateRegion ensure that this part of the view is repainted
    */
-  void UpdateViewAfterScroll(nsView *aView, const nsRegion& aUpdateRegion);
+  void UpdateViewAfterScroll(nsView *aView);
 
-  /**
-   * Asks whether we can scroll a view using bitblt. If we say 'yes', we
-   * return in aUpdateRegion an area that must be updated (relative to aView
-   * after it has been scrolled).
-   */
-  PRBool CanScrollWithBitBlt(nsView* aView, nsPoint aDelta, nsRegion* aUpdateRegion);
+  PRBool CanScrollWithBitBlt(nsView* aView);
 
   nsresult CreateRegion(nsIRegion* *result);
 
@@ -481,6 +497,8 @@ public: // NOT in nsIViewManager, so private to the view module
   void PostPendingUpdate() { RootViewManager()->mHasPendingUpdates = PR_TRUE; }
 private:
   nsIDeviceContext  *mContext;
+  float             mTwipsToPixels;
+  float             mPixelsToTwips;
   nsIViewObserver   *mObserver;
   nsView            *mKeyGrabber;
   nsIScrollableView *mRootScrollable;
@@ -498,10 +516,9 @@ private:
   // mRootViewManager is a strong ref unless it equals |this|.  It's
   // never null (if we have no ancestors, it will be |this|).
   nsViewManager     *mRootViewManager;
+  nsCOMPtr<nsIEventQueueService>  mEventQueueService;
+  nsCOMPtr<nsIEventQueue>         mSynthMouseMoveEventQueue;
   PRPackedBool      mAllowDoubleBuffering;
-
-  nsRevocableEventPtr<nsViewManagerEvent> mSynthMouseMoveEvent;
-  nsRevocableEventPtr<nsViewManagerEvent> mInvalidateEvent;
 
   // The following members should not be accessed directly except by
   // the root view manager.  Some have accessor functions to enforce
@@ -515,6 +532,7 @@ private:
   PRInt32           mUpdateBatchCnt;
   PRUint32          mUpdateBatchFlags;
   PRInt32           mScrollCnt;
+  nsCOMPtr<nsIEventQueue>         mInvalidateEventQueue;
   // Use IsRefreshEnabled() to check the value of mRefreshEnabled.
   PRPackedBool      mRefreshEnabled;
   // Use IsPainting() and SetPainting() to access mPainting.

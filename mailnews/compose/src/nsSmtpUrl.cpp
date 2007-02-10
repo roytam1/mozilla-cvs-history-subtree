@@ -48,13 +48,15 @@
 #include "nsMsgMimeCID.h"
 #include "nsISupportsObsolete.h"
 
+static NS_DEFINE_CID(kSimpleURICID, NS_SIMPLEURI_CID);
+
 /////////////////////////////////////////////////////////////////////////////////////
 // mailto url definition
 /////////////////////////////////////////////////////////////////////////////////////
 nsMailtoUrl::nsMailtoUrl()
 {
   mFormat = nsIMsgCompFormat::Default;
-  m_baseURL = do_CreateInstance(NS_SIMPLEURI_CONTRACTID);
+  m_baseURL = do_CreateInstance(kSimpleURICID);
 }
 
 nsMailtoUrl::~nsMailtoUrl()

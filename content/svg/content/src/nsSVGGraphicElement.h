@@ -51,6 +51,7 @@ class nsSVGGraphicElement : public nsSVGGraphicElementBase,
 {
 protected:
   nsSVGGraphicElement(nsINodeInfo *aNodeInfo);
+  nsresult Init();
   
 public:
   // interfaces:  
@@ -58,25 +59,14 @@ public:
   NS_DECL_NSIDOMSVGLOCATABLE
   NS_DECL_NSIDOMSVGTRANSFORMABLE
 
-  // nsIContent interface
+  // nsIStyledContent interface
   NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
-
-  // Used by frames to get consolidation matrix of transform list
-  already_AddRefed<nsIDOMSVGMatrix> GetLocalTransformMatrix();
 
 protected:
   // nsSVGElement overrides
   virtual PRBool IsEventName(nsIAtom* aName);
   
-  virtual nsresult BeforeSetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
-                                 const nsAString* aValue, PRBool aNotify);
-
   nsCOMPtr<nsIDOMSVGAnimatedTransformList> mTransforms;
-
-  // helper
-  nsresult CreateTransformList();
-  nsresult AppendLocalTransform(nsIDOMSVGMatrix *aCTM,
-                                nsIDOMSVGMatrix **_retval);
 };
 
 #endif // __NS_SVGGRAPHICELEMENT_H__

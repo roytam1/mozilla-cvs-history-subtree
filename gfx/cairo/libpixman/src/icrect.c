@@ -29,6 +29,7 @@ typedef void	(*FillFunc) (pixman_image_t *dst,
 			     uint16_t	     height,
 			     pixman_bits_t  *pixel);
 
+
 static void
 pixman_fill_rect_1bpp (pixman_image_t *dst,
 		       int16_t	       xDst,
@@ -122,7 +123,7 @@ pixman_fill_rect_8bpp (pixman_image_t *dst,
 static void
 pixman_fill_rect_32bpp (pixman_image_t *dst,
 			int16_t	        xDst,
-			int16_t	        yDst,
+			int16_t	        yDst, 
 			uint16_t	width,
 			uint16_t	height,
 			pixman_bits_t  *pixel)
@@ -134,7 +135,7 @@ pixman_fill_rect_32bpp (pixman_image_t *dst,
 
     line = (char *)dst->pixels->data +
 	xDst * 4 + yDst * dst->pixels->stride;
-
+     
     int_pixel = *(uint32_t *)pixel;
     while (height-- > 0) {
 	data = line;
@@ -164,7 +165,7 @@ pixman_fill_rect_general (pixman_image_t *dst,
 
     line = (char *)dst->pixels->data +
 	xDst * pixel_size + yDst * dst->pixels->stride;
-
+     
     while (height-- > 0) {
 	data = line;
 	w = width;
@@ -175,6 +176,7 @@ pixman_fill_rect_general (pixman_image_t *dst,
 	line += dst->pixels->stride;
     }
 }
+
 
 static void
 pixman_color_rects (pixman_image_t	 *dst,
@@ -199,7 +201,7 @@ pixman_color_rects (pixman_image_t	 *dst,
     /* offset to the right place on the destination image */
     xoff -= dst->pixels->x;
     yoff -= dst->pixels->y;
-
+    
     clip = pixman_region_create();
     pixman_region_union_rect (clip, clip,
 			      dst->pixels->x, dst->pixels->y,
@@ -208,11 +210,11 @@ pixman_color_rects (pixman_image_t	 *dst,
     pixman_region_intersect (clip, clip, clipPict->pCompositeClip);
     if (clipPict->alphaMap)
     {
-	pixman_region_translate (clip,
+	pixman_region_translate (clip, 
 				 -clipPict->alphaOrigin.x,
 				 -clipPict->alphaOrigin.y);
 	pixman_region_intersect (clip, clip, clipPict->alphaMap->pCompositeClip);
-	pixman_region_translate (clip,
+	pixman_region_translate (clip, 
 				 clipPict->alphaOrigin.x,
 				 clipPict->alphaOrigin.y);
     }
@@ -246,14 +248,14 @@ pixman_color_rects (pixman_image_t	 *dst,
 	func = pixman_fill_rect_32bpp;
     else if (dst->pixels->bpp == 1)
 	func = pixman_fill_rect_1bpp;
-    else
+    else 
 	func = pixman_fill_rect_general;
-
+    
     for (i = 0; i < n_clipped_rects; i++) {
 	(*func) (dst,
-		 clipped_rects[i].x1,
-		 clipped_rects[i].y1,
-		 clipped_rects[i].x2 - clipped_rects[i].x1,
+		 clipped_rects[i].x1, 
+		 clipped_rects[i].y1, 
+		 clipped_rects[i].x2 - clipped_rects[i].x1, 
 		 clipped_rects[i].y2 - clipped_rects[i].y1,
 		 &pixel);
     }
@@ -324,11 +326,11 @@ pixman_fill_rectangles (pixman_operator_t		op,
 	pixman_bits_t		pixel;
 
 	pixman_format_init (&rgbaFormat, PICT_a8r8g8b8);
-
+	
 	pixels = FbPixelsCreate (1, 1, rgbaFormat.depth);
 	if (!pixels)
 	    goto bail1;
-
+	
 	pixman_color_to_pixel (&rgbaFormat, &color_s, &pixel);
 
 	/* XXX: Originally, fb had the following:
@@ -344,11 +346,11 @@ pixman_fill_rectangles (pixman_operator_t		op,
 	if (!src)
 	    goto bail2;
 
-	pixman_image_set_repeat (src, PIXMAN_REPEAT_NORMAL);
+	pixman_image_set_repeat (src, 1);
 
 	while (nRects--)
 	{
-	    pixman_composite (op, src, NULL, dst, 0, 0, 0, 0,
+	    pixman_composite (op, src, NULL, dst, 0, 0, 0, 0, 
 			 rects->x,
 			 rects->y,
 			 rects->width,
@@ -363,3 +365,4 @@ bail1:
 	;
     }
 }
+slim_hidden_def(pixman_fill_rectangles);

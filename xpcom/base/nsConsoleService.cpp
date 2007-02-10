@@ -47,16 +47,18 @@
 #include "nsIServiceManager.h"
 #include "nsIProxyObjectManager.h"
 #include "nsSupportsArray.h"
-#include "nsThreadUtils.h"
 
 #include "nsConsoleService.h"
 #include "nsConsoleMessage.h"
-#include "nsIClassInfoImpl.h"
 
 NS_IMPL_THREADSAFE_ADDREF(nsConsoleService)
 NS_IMPL_THREADSAFE_RELEASE(nsConsoleService)
-NS_IMPL_QUERY_INTERFACE1_CI(nsConsoleService, nsIConsoleService)
-NS_IMPL_CI_INTERFACE_GETTER1(nsConsoleService, nsIConsoleService)
+NS_IMPL_QUERY_INTERFACE2_CI(nsConsoleService,
+                            nsIConsoleService,
+                            nsIConsoleService_MOZILLA_1_8_BRANCH)
+NS_IMPL_CI_INTERFACE_GETTER2(nsConsoleService,
+                             nsIConsoleService,
+                             nsIConsoleService_MOZILLA_1_8_BRANCH)
 
 nsConsoleService::nsConsoleService()
     : mMessages(nsnull), mCurrent(0), mFull(PR_FALSE), mListening(PR_FALSE), mLock(nsnull)
@@ -311,14 +313,26 @@ nsresult
 nsConsoleService::GetProxyForListener(nsIConsoleListener* aListener,
                                       nsIConsoleListener** aProxy)
 {
+    nsresult rv;
+    *aProxy = nsnull;
+
+    nsCOMPtr<nsIProxyObjectManager> proxyManager =
+        (do_GetService(NS_XPCOMPROXY_CONTRACTID));
+
+    if (proxyManager == nsnull)
+        return NS_ERROR_NOT_AVAILABLE;
+
     /*
+     * NOTE this will fail if the calling thread doesn't have an eventQ.
+     *
      * Would it be better to catch that case and leave the listener unproxied?
      */
-    return NS_GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD,
-                                NS_GET_IID(nsIConsoleListener),
-                                aListener,
-                                NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
-                                (void**) aProxy);
+    rv = proxyManager->GetProxyForObject(NS_CURRENT_EVENTQ,
+                                         NS_GET_IID(nsIConsoleListener),
+                                         aListener,
+                                         PROXY_ASYNC | PROXY_ALWAYS,
+                                         (void**) aProxy);
+    return rv;
 }
 
 NS_IMETHODIMP

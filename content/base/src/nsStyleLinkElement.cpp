@@ -37,14 +37,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * A base class which implements nsIStyleSheetLinkingElement and can
- * be subclassed by various content nodes that want to load
- * stylesheets (<style>, <link>, processing instructions, etc).
- */
-
 #include "nsStyleLinkElement.h"
 
+#include "nsHTMLAtoms.h"
 #include "nsIContent.h"
 #include "nsICSSLoader.h"
 #include "nsICSSStyleSheet.h"
@@ -54,14 +49,10 @@
 #include "nsIDOMStyleSheet.h"
 #include "nsIDOMText.h"
 #include "nsIUnicharInputStream.h"
-#include "nsISimpleUnicharStreamFactory.h"
 #include "nsNetUtil.h"
 #include "nsUnicharUtils.h"
 #include "nsVoidArray.h"
 #include "nsCRT.h"
-#include "nsXPCOMCIDInternal.h"
-#include "nsUnicharInputStream.h"
-#include "nsContentUtils.h"
 
 nsStyleLinkElement::nsStyleLinkElement()
   : mDontLoadStyle(PR_FALSE)
@@ -150,13 +141,6 @@ nsStyleLinkElement::GetCharset(nsAString& aCharset)
 }
 
 /* virtual */ void
-nsStyleLinkElement::OverrideBaseURI(nsIURI* aNewBaseURI)
-{
-  NS_NOTREACHED("Base URI can't be overriden in this implementation "
-                "of nsIStyleSheetLinkingElement.");
-}
-
-/* virtual */ void
 nsStyleLinkElement::SetLineNumber(PRUint32 aLineNumber)
 {
   mLineNumber = aLineNumber;
@@ -205,8 +189,7 @@ const PRBool kBlockByDefault=PR_TRUE;
 
 NS_IMETHODIMP
 nsStyleLinkElement::UpdateStyleSheet(nsIDocument *aOldDocument,
-                                     nsICSSLoaderObserver* aObserver,
-                                     PRBool aForceUpdate)
+                                     nsICSSLoaderObserver* aObserver)
 {
   if (mStyleSheet && aOldDocument) {
     // We're removing the link element from the document, unload the
@@ -245,7 +228,7 @@ nsStyleLinkElement::UpdateStyleSheet(nsIDocument *aOldDocument,
   PRBool isInline;
   GetStyleSheetURL(&isInline, getter_AddRefs(uri));
 
-  if (!aForceUpdate && mStyleSheet && !isInline && uri) {
+  if (mStyleSheet && !isInline && uri) {
     nsCOMPtr<nsIURI> oldURI;
 
     mStyleSheet->GetSheetURI(getter_AddRefs(oldURI));
@@ -278,19 +261,58 @@ nsStyleLinkElement::UpdateStyleSheet(nsIDocument *aOldDocument,
     return NS_OK;
   }
 
-  if (!kBlockByDefault) {
-    parser = nsnull;
+  PRBool blockParser = kBlockByDefault;
+  if (isAlternate) {
+    blockParser = PR_FALSE;
+  }
+
+  /* NOTE: no longer honoring the important keyword to indicate blocking
+           as it is proprietary and unnecessary since all non-alternate 
+           will block the parser now  -mja
+    if (-1 != linkTypes.IndexOf("important")) {
+      blockParser = PR_TRUE;
+    }
+  */
+
+  if (!isAlternate && !title.IsEmpty()) {  // possibly preferred sheet
+    nsAutoString prefStyle;
+    doc->GetHeaderData(nsHTMLAtoms::headerDefaultStyle, prefStyle);
+
+    if (prefStyle.IsEmpty()) {
+      doc->SetHeaderData(nsHTMLAtoms::headerDefaultStyle, title);
+    }
   }
 
   PRBool doneLoading;
   nsresult rv = NS_OK;
   if (isInline) {
-    nsAutoString content;
-    nsContentUtils::GetNodeTextContent(thisContent, PR_FALSE, content);
+    PRUint32 count = thisContent->GetChildCount();
 
+    nsAutoString content;
+
+    PRUint32 i;
+    for (i = 0; i < count; ++i) {
+      nsIContent *node = thisContent->GetChildAt(i);
+      nsCOMPtr<nsIDOMText> tc = do_QueryInterface(node);
+      // Ignore nodes that are not DOMText.
+      if (!tc) {
+        nsCOMPtr<nsIDOMComment> comment = do_QueryInterface(node);
+        if (comment)
+          // Skip a comment
+          continue;
+        break;
+      }
+
+      nsAutoString tcString;
+      tc->GetData(tcString);
+      content.Append(tcString);
+    }
+
+    // Use of the stream will be done before parsing returns.  So it will go
+    // out of scope before |content| does.
     nsCOMPtr<nsIUnicharInputStream> uin;
-    rv = nsSimpleUnicharStreamFactory::GetInstance()->
-      CreateInstanceFromString(content, getter_AddRefs(uin));
+    rv = NS_NewStringUnicharInputStream(getter_AddRefs(uin), &content,
+                                        PR_FALSE);
     if (NS_FAILED(rv)) {
       return rv;
     }
@@ -299,17 +321,17 @@ nsStyleLinkElement::UpdateStyleSheet(nsIDocument *aOldDocument,
     // style sheet.
     rv = doc->CSSLoader()->
       LoadInlineStyle(thisContent, uin, mLineNumber, title, media,
-                      parser, aObserver, &doneLoading, &isAlternate);
+                      ((blockParser) ? parser.get() : nsnull),
+                      doneLoading, aObserver);
   }
   else {
-    doneLoading = PR_FALSE;  // If rv is success, we won't be done loading; if
-                             // it's not, this value doesn't matter.
     rv = doc->CSSLoader()->
-      LoadStyleLink(thisContent, uri, title, media, isAlternate,
-                    parser, aObserver, &isAlternate);
+      LoadStyleLink(thisContent, uri, title, media,
+                    ((blockParser) ? parser.get() : nsnull),
+                    doneLoading, aObserver);
   }
 
-  if (NS_SUCCEEDED(rv) && !doneLoading && !isAlternate) {
+  if (NS_SUCCEEDED(rv) && blockParser && !doneLoading) {
     rv = NS_ERROR_HTMLPARSER_BLOCK;
   }
 

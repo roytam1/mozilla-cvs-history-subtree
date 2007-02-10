@@ -35,9 +35,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* class that a parent frame uses to reflow a block frame */
-
 #ifndef nsBlockReflowContext_h___
 #define nsBlockReflowContext_h___
 
@@ -60,7 +57,9 @@ struct nsBlockHorizontalAlign;
 class nsBlockReflowContext {
 public:
   nsBlockReflowContext(nsPresContext* aPresContext,
-                       const nsHTMLReflowState& aParentRS);
+                       const nsHTMLReflowState& aParentRS,
+                       PRBool aComputeMaxElementWidth,
+                       PRBool aComputeMaximumWidth);
   ~nsBlockReflowContext() { }
 
   nsresult ReflowBlock(const nsRect&       aSpace,
@@ -81,6 +80,8 @@ public:
                     nsRect&                  aCombinedRect,
                     nsReflowStatus           aReflowStatus);
 
+  void AlignBlockHorizontally(nscoord aWidth, nsBlockHorizontalAlign&);
+
   nsCollapsingMargin& GetCarriedOutBottomMargin() {
     return mMetrics.mCarriedOutBottomMargin;
   }
@@ -95,6 +96,14 @@ public:
 
   const nsHTMLReflowMetrics& GetMetrics() const {
     return mMetrics;
+  }
+
+  nscoord GetMaxElementWidth() const {
+    return mMetrics.mMaxElementWidth;
+  }
+  
+  nscoord GetMaximumWidth() const {
+    return mMetrics.mMaximumWidth;
   }
 
   /**
@@ -113,7 +122,7 @@ public:
    */
   static PRBool ComputeCollapsedTopMargin(const nsHTMLReflowState& aRS,
                                           nsCollapsingMargin* aMargin, nsIFrame* aClearanceFrame,
-                                          PRBool* aMayNeedRetry, PRBool* aIsEmpty = nsnull);
+                                          PRBool* aMayNeedRetry);
 
 protected:
   nsPresContext* mPresContext;
@@ -132,6 +141,7 @@ protected:
   nscoord mX, mY;
   nsHTMLReflowMetrics mMetrics;
   nsCollapsingMargin mTopMargin;
+  PRPackedBool mComputeMaximumWidth;
 };
 
 #endif /* nsBlockReflowContext_h___ */

@@ -61,7 +61,6 @@
 
 #include "nsIMsgFilterList.h"
 #include "nsIMsgFilterHitNotify.h"
-#include "nsIMsgFolderNotificationService.h"
 
 class nsFileSpec;
 class nsByteArray;
@@ -147,17 +146,10 @@ public:
   struct message_header m_mdn_original_recipient;
   struct message_header m_return_path;
   struct message_header m_mdn_dnt; /* MDN Disposition-Notification-To: header */
-
-  PRTime m_receivedTime;
-  PRUint16              m_body_lines;
   
-  PRBool                m_IgnoreXMozillaStatus;
-
-  // this enables extensions to add the values of particular headers to 
-  // the .msf file as properties of nsIMsgHdr. It is initialized from a
-  // pref, mailnews.customDBHeaders
-  nsCStringArray        m_customDBHeaders;
-  struct message_header *m_customDBHeaderValues;
+  PRUint16			m_body_lines;
+  
+  PRBool			m_IgnoreXMozillaStatus;
 protected:
   nsCOMPtr<nsIMsgStringService> mStringService;
 
@@ -261,7 +253,6 @@ public:
   virtual void	ApplyFilters(PRBool *pMoved, nsIMsgWindow *msgWindow, 
                              PRUint32 msgOffset);
   nsresult    ApplyForwardAndReplyFilter(nsIMsgWindow *msgWindow);
-  void        NotifyGlobalListeners(nsIMsgDBHdr *newHdr);
 
 protected:
   virtual nsresult GetTrashFolder(nsIMsgFolder **pTrashFolder);
@@ -279,7 +270,6 @@ protected:
   nsCOMPtr <nsIMsgWindow> m_msgWindow;
   nsCOMPtr <nsIMsgFolder> m_downloadFolder;
   nsCOMArray <nsIMsgFolder> m_filterTargetFolders;
-  nsCOMPtr <nsIMsgFolderNotificationService> m_notificationService;
 
   nsImapMoveCoalescer *m_moveCoalescer; // strictly owned by nsParseNewMailState;
 

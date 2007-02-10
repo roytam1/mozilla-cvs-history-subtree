@@ -139,6 +139,43 @@ var gFeedsPane = {
     window.addEventListener("unload", this, false);
   },
 
+#ifdef XP_WIN
+  /**
+   * Returns the system default feed reader as a nsILocalFile object if any,
+   * null otherwise.
+   */
+  _getSystemDefaultReader: function() {
+    var defaultReader;
+    try {
+      const WRK = Ci.nsIWindowsRegKey;
+      var regKey =
+          Cc["@mozilla.org/windows-registry-key;1"].createInstance(WRK);
+      regKey.open(WRK.ROOT_KEY_CLASSES_ROOT, 
+                  "feed\\shell\\open\\command", WRK.ACCESS_READ);
+      var path = regKey.readStringValue("");
+      if (path.charAt(0) == "\"") {
+        // Everything inside the quotes
+        path = path.substr(1);
+        path = path.substr(0, path.indexOf("\""));
+      }
+      else {
+        // Everything up to the first space
+        path = path.substr(0, path.indexOf(" "));
+      }
+
+      defaultReader = Cc["@mozilla.org/file/local;1"].
+                      createInstance(Ci.nsILocalFile);
+      defaultReader.initWithPath(path);
+
+      return defaultReader;
+    }
+    catch (ex) { }
+
+    return null;
+  },
+#endif
+
+
   /**
    * Populates the UI list of available feed readers.
    */
@@ -146,28 +183,28 @@ var gFeedsPane = {
     this.updateSelectedApplicationInfo();
 
     var readersList = this.element("readers");
-
-    // List the system default feed reader if it is
+#ifdef XP_WIN
+    // On Windows, list the system default feed reader if it is
     // not the last-selected application already
     try {
-      var systemDefaultReader = Cc["@mozilla.org/browser/shell-service;1"].
-                                getService(Ci.nsIShellService).
-                                defaultFeedReader;
-
-      var defaultSystemReaderFilefield = this.element("defaultSystemReaderFilefield");
-      defaultSystemReaderFilefield.file = systemDefaultReader;
-      var selectedAppFile = this.element("selectedAppFilefield").file;
-      if (!selectedAppFile || defaultSystemReaderFilefield.file.path !=
-          selectedAppFile.path) {
-        var defaultReaderItem = document.createElementNS(kXULNS, "listitem");
-        defaultReaderItem.id = "defaultSystemReaderListitem";
-        defaultReaderItem.className = "listitem-iconic";
-        defaultReaderItem.setAttribute("label", defaultSystemReaderFilefield.label);
-        defaultReaderItem.setAttribute("image", defaultSystemReaderFilefield.image);
-        readersList.appendChild(defaultReaderItem);
+      var systemDefaultReader = this._getSystemDefaultReader();
+      if (systemDefaultReader) {
+        var defaultSystemReaderFilefield = this.element("defaultSystemReaderFilefield");
+        defaultSystemReaderFilefield.file = systemDefaultReader;
+        var selectedAppFile = this.element("selectedAppFilefield").file;
+        if (!selectedAppFile || defaultSystemReaderFilefield.file.path !=
+            selectedAppFile.path) {
+          var defaultReaderItem = document.createElementNS(kXULNS, "listitem");
+          defaultReaderItem.id = "defaultSystemReaderListitem";
+          defaultReaderItem.className = "listitem-iconic";
+          defaultReaderItem.setAttribute("label", defaultSystemReaderFilefield.label);
+          defaultReaderItem.setAttribute("image", defaultSystemReaderFilefield.image);
+          readersList.appendChild(defaultReaderItem);
+        }
       }
     }
-    catch(ex) { /* no default reader */ }
+    catch(ex) { }
+#endif
 
     // List of web handlers
     var wccr = 
@@ -187,9 +224,8 @@ var gFeedsPane = {
       row.setAttribute("webhandlerurl", handlers[i].uri);
 
       var uri = ios.newURI(handlers[i].uri, null, null);
-      if (/^https?/.test(uri.scheme))
-        row.setAttribute("image", uri.prePath + "/favicon.ico");
-
+      row.setAttribute("image", uri.prePath + "/favicon.ico");
+      
       readersList.appendChild(row);
     }
   },
@@ -288,16 +324,7 @@ var gFeedsPane = {
     if (fp.show() == Ci.nsIFilePicker.returnOK && fp.file) {
       // XXXben - we need to compare this with the running instance executable
       //          just don't know how to do that via script...
-      // XXXmano TBD: can probably add this to nsIShellService
-#ifdef XP_WIN
-#expand       if (fp.file.leafName == "__MOZ_APP_NAME__.exe")
-#else
-#ifdef XP_MACOSX
-#expand       if (fp.file.leafName == "__MOZ_APP_DISPLAYNAME__.app")
-#else
-#expand       if (fp.file.leafName == "__MOZ_APP_NAME__-bin")
-#endif
-#endif
+      if (fp.file.leafName == "firefox.exe")
         return;
 
       this.element(PREF_SELECTED_APP).value = fp.file;

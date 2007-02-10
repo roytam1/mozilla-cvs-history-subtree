@@ -638,7 +638,7 @@ sub expand_test_list_entry {
         # it's a regular entry, add it to the list
         push (@retval, $entry);     
     } else {
-        die ("Don't know what to do with list entry '$entry'.\n");
+        die ("Dont know what to do with list entry '$entry'.\n");
     }
 
     return @retval;

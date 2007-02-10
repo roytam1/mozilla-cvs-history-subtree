@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* container for a document and its presentation */
-
 #ifndef nsIDocumentViewer_h___
 #define nsIDocumentViewer_h___
 
@@ -48,7 +45,7 @@ class nsIPresShell;
 class nsIStyleSheet;
 
 #define NS_IDOCUMENT_VIEWER_IID \
- { 0x41796e63, 0xbd1f, 0x401d,{0xb6, 0x63, 0x5b, 0x86, 0xa9, 0x70, 0x72, 0x31}}
+ { 0x42ecec88, 0x80d5, 0x48ac,{0x9a, 0xcd, 0x12, 0x51, 0xdc, 0x42, 0x60, 0x4a}}
 
 /**
  * A document viewer is a kind of content viewer that uses NGLayout
@@ -57,7 +54,7 @@ class nsIStyleSheet;
 class nsIDocumentViewer : public nsIContentViewer
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IDOCUMENT_VIEWER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOCUMENT_VIEWER_IID)
 
   NS_IMETHOD SetUAStyleSheet(nsIStyleSheet* aUAStyleSheet) = 0;
   
@@ -70,7 +67,5 @@ public:
   NS_IMETHOD CreateDocumentViewerUsing(nsPresContext* aPresContext,
                                        nsIDocumentViewer** aResult) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDocumentViewer, NS_IDOCUMENT_VIEWER_IID)
 
 #endif /* nsIDocumentViewer_h___ */

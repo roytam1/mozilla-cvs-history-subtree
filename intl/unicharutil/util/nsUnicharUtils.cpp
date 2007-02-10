@@ -21,8 +21,6 @@
  *
  * Contributor(s):
  *   Alec Flett <alecf@netscape.com>
- *   Benjamin Smedberg <benjamin@smedbergs.us>
- *   Ben Turner <mozilla@songbirdnest.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,189 +36,315 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsString.h"
 #include "nsUnicharUtils.h"
 #include "nsUnicharUtilCIID.h"
-
-#include "nsCRT.h"
 #include "nsICaseConversion.h"
-#include "nsServiceManagerUtils.h"
-#include "nsXPCOMStrings.h"
+#include "nsIServiceManager.h"
+#include "nsCRT.h"
 
-#include <ctype.h>
+#include "nsIObserver.h"
+#include "nsIObserverService.h"
 
-static nsICaseConversion* gCaseConv = nsnull;
+// global cache of the case conversion service
+static nsICaseConversion *gCaseConv = nsnull;
 
-nsICaseConversion*
-NS_GetCaseConversion()
+class nsShutdownObserver : public nsIObserver
 {
-  if (!gCaseConv) {
-    nsresult rv = CallGetService(NS_UNICHARUTIL_CONTRACTID, &gCaseConv);
-    if (NS_FAILED(rv)) {
-      NS_ERROR("Failed to get the case conversion service!");
-      gCaseConv = nsnull;
+public:
+    nsShutdownObserver() { }
+    virtual ~nsShutdownObserver() {}
+    NS_DECL_ISUPPORTS
+    
+    NS_IMETHOD Observe(nsISupports *aSubject, const char *aTopic,
+                       const PRUnichar *aData)
+    {
+        if (nsCRT::strcmp(aTopic, NS_XPCOM_SHUTDOWN_OBSERVER_ID)==0) {
+            NS_IF_RELEASE(gCaseConv);
+        }
+
+        return NS_OK;
     }
-  }
-  return gCaseConv;
+
+};
+
+NS_IMPL_ISUPPORTS1(nsShutdownObserver, nsIObserver)
+
+static nsresult NS_InitCaseConversion() {
+    if (gCaseConv) return NS_OK;
+
+    nsresult rv;
+    
+    rv = CallGetService(NS_UNICHARUTIL_CONTRACTID, &gCaseConv);
+
+    if (NS_SUCCEEDED(rv)) {
+        nsCOMPtr<nsIObserverService> obs =
+            do_GetService("@mozilla.org/observer-service;1", &rv);
+        if (NS_SUCCEEDED(rv)) {
+            nsShutdownObserver *observer = new nsShutdownObserver();
+            if (observer)
+                obs->AddObserver(observer, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_FALSE);
+        }
+    }
+    
+    return NS_OK;
 }
+
+class ConvertToLowerCase
+{
+public:
+    typedef PRUnichar value_type;
+    
+    ConvertToLowerCase()
+    {
+        NS_InitCaseConversion();
+    }
+
+    PRUint32 write( const PRUnichar* aSource, PRUint32 aSourceLength)
+    {
+        if (gCaseConv)
+            gCaseConv->ToLower(aSource, NS_CONST_CAST(PRUnichar*,aSource), aSourceLength);
+        else
+            NS_WARNING("No case converter: no conversion done");
+
+        return aSourceLength;
+    }
+};
+
+#ifdef MOZ_V1_STRING_ABI
+void
+ToLowerCase( nsAString& aString )
+  {
+    nsAString::iterator fromBegin, fromEnd;
+    ConvertToLowerCase converter;
+    copy_string(aString.BeginWriting(fromBegin), aString.EndWriting(fromEnd), converter);
+  }
+#endif
 
 void
-ToLowerCase(nsAString& aString)
-{
-  nsICaseConversion* caseConv = NS_GetCaseConversion();
-  if (caseConv) {
-    PRUnichar *buf = aString.BeginWriting();
-    caseConv->ToLower(buf, buf, aString.Length());
+ToLowerCase( nsASingleFragmentString& aString )
+  {
+    ConvertToLowerCase converter;
+    PRUnichar* start;
+    converter.write(aString.BeginWriting(start), aString.Length());
   }
-  else
-    NS_WARNING("No case converter: no conversion done");
-}
 
 void
-ToLowerCase(const nsAString& aSource,
-            nsAString& aDest)
-{
-  const PRUnichar *in;
-  PRUint32 len = NS_StringGetData(aSource, &in);
-
-  PRUnichar *out;
-  NS_StringGetMutableData(aDest, len, &out);
-
-  nsICaseConversion* caseConv = NS_GetCaseConversion();
-  if (out && caseConv)
-    caseConv->ToLower(in, out, len);
-  else {
-    NS_WARNING("No case converter: only copying");
-    aDest.Assign(aSource);
+ToLowerCase( nsString& aString )
+  {
+    ConvertToLowerCase converter;
+    PRUnichar* start;
+    converter.write(aString.BeginWriting(start), aString.Length());
   }
-}
+
+class CopyToLowerCase
+  {
+    public:
+      typedef PRUnichar value_type;
+    
+      CopyToLowerCase( nsAString::iterator& aDestIter )
+        : mIter(aDestIter)
+        {
+          NS_InitCaseConversion();
+        }
+
+      PRUint32 write( const PRUnichar* aSource, PRUint32 aSourceLength )
+        {
+          PRUint32 len = PR_MIN(PRUint32(mIter.size_forward()), aSourceLength);
+          PRUnichar* dest = mIter.get();
+          if (gCaseConv)
+              gCaseConv->ToLower(aSource, dest, len);
+          else {
+              NS_WARNING("No case converter: only copying");
+              memcpy(dest, aSource, len * sizeof(*aSource));
+          }
+          mIter.advance(len);
+          return len;
+        }
+
+    protected:
+      nsAString::iterator& mIter;
+  };
 
 void
-ToUpperCase(nsAString& aString)
-{
-  nsICaseConversion* caseConv = NS_GetCaseConversion();
-  if (caseConv) {
-    PRUnichar *buf = aString.BeginWriting();
-    caseConv->ToUpper(buf, buf, aString.Length());
+ToLowerCase( const nsAString& aSource, nsAString& aDest )
+  {
+    nsAString::const_iterator fromBegin, fromEnd;
+    nsAString::iterator toBegin;
+    // FIXME: need way to return error
+    if (!EnsureStringLength(aDest, aSource.Length())) {
+      aDest.Truncate();
+      return; // out of memory
+    }
+    CopyToLowerCase converter(aDest.BeginWriting(toBegin));
+    copy_string(aSource.BeginReading(fromBegin), aSource.EndReading(fromEnd), converter);
   }
-  else
-    NS_WARNING("No case converter: no conversion done");
-}
+
+class ConvertToUpperCase
+{
+public:
+    typedef PRUnichar value_type;
+    
+    ConvertToUpperCase()
+    {
+        NS_InitCaseConversion();
+    }
+    
+    PRUint32 write( const PRUnichar* aSource, PRUint32 aSourceLength)
+    {
+        if (gCaseConv)
+            gCaseConv->ToUpper(aSource, NS_CONST_CAST(PRUnichar*,aSource), aSourceLength);
+        else
+            NS_WARNING("No case converter: no conversion done");
+        
+        return aSourceLength;
+    }
+};
+
+#ifdef MOZ_V1_STRING_ABI
+void
+ToUpperCase( nsAString& aString )
+  {
+    nsAString::iterator fromBegin, fromEnd;
+    ConvertToUpperCase converter;
+    copy_string(aString.BeginWriting(fromBegin), aString.EndWriting(fromEnd), converter);
+  }
+#endif
 
 void
-ToUpperCase(const nsAString& aSource,
-            nsAString& aDest)
-{
-  const PRUnichar *in;
-  PRUint32 len = NS_StringGetData(aSource, &in);
-
-  PRUnichar *out;
-  NS_StringGetMutableData(aDest, len, &out);
-
-  nsICaseConversion* caseConv = NS_GetCaseConversion();
-  if (out && caseConv)
-    caseConv->ToUpper(in, out, len);
-  else {
-    NS_WARNING("No case converter: only copying");
-    aDest.Assign(aSource);
+ToUpperCase( nsASingleFragmentString& aString )
+  {
+    ConvertToUpperCase converter;
+    PRUnichar* start;
+    converter.write(aString.BeginWriting(start), aString.Length());
   }
-}
 
-#ifdef MOZILLA_INTERNAL_API
-
-PRInt32
-nsCaseInsensitiveStringComparator::operator()(const PRUnichar* lhs,
-                                              const PRUnichar* rhs,
-                                              PRUint32 aLength) const
-{
-  PRInt32 result;
-  nsICaseConversion* caseConv = NS_GetCaseConversion();
-  if (caseConv)
-    caseConv->CaseInsensitiveCompare(lhs, rhs, aLength, &result);
-  else {
-    NS_WARNING("No case converter: using default");
-    nsDefaultStringComparator comparator;
-    result = comparator(lhs, rhs, aLength);
+void
+ToUpperCase( nsString& aString )
+  {
+    ConvertToUpperCase converter;
+    PRUnichar* start;
+    converter.write(aString.BeginWriting(start), aString.Length());
   }
-  return result;
-}
 
-PRInt32
-nsCaseInsensitiveStringComparator::operator()(PRUnichar lhs,
-                                              PRUnichar rhs) const
-{
-  // see if they're an exact match first
-  if (lhs == rhs)
-    return 0;
-  
-  nsICaseConversion* caseConv = NS_GetCaseConversion();
-  if (caseConv) {
-    caseConv->ToLower(lhs, &lhs);
-    caseConv->ToLower(rhs, &rhs);
+class CopyToUpperCase
+  {
+    public:
+      typedef PRUnichar value_type;
+    
+      CopyToUpperCase( nsAString::iterator& aDestIter )
+        : mIter(aDestIter)
+        {
+          NS_InitCaseConversion();
+        }
+
+      PRUint32 write( const PRUnichar* aSource, PRUint32 aSourceLength )
+        {
+          PRUint32 len = PR_MIN(PRUint32(mIter.size_forward()), aSourceLength);
+          PRUnichar* dest = mIter.get();
+          if (gCaseConv)
+              gCaseConv->ToUpper(aSource, dest, len);
+          else {
+              NS_WARNING("No case converter: only copying");
+              memcpy(dest, aSource, len * sizeof(*aSource));
+          }
+          mIter.advance(len);
+          return len;
+        }
+
+    protected:
+      nsAString::iterator& mIter;
+  };
+
+void
+ToUpperCase( const nsAString& aSource, nsAString& aDest )
+  {
+    nsAString::const_iterator fromBegin, fromEnd;
+    nsAString::iterator toBegin;
+    // FIXME: need way to return error
+    if (!EnsureStringLength(aDest, aSource.Length())) {
+      aDest.Truncate();
+      return; // out of memory
+    }
+    CopyToUpperCase converter(aDest.BeginWriting(toBegin));
+    copy_string(aSource.BeginReading(fromBegin), aSource.EndReading(fromEnd), converter);
   }
-  else {
-    if (lhs < 256)
-      lhs = tolower(char(lhs));
-    if (rhs < 256)
-      rhs = tolower(char(rhs));
-    NS_WARNING("No case converter: no conversion done");
+
+int
+nsCaseInsensitiveStringComparator::operator()( const PRUnichar* lhs, const PRUnichar* rhs, PRUint32 aLength ) const
+  {
+      NS_InitCaseConversion();
+      PRInt32 result;
+      if (gCaseConv) {
+          gCaseConv->CaseInsensitiveCompare(lhs, rhs, aLength, &result);
+      }
+      else {
+          NS_WARNING("No case converter: using default");
+          nsDefaultStringComparator comparator;
+          result = comparator(lhs, rhs, aLength);
+      }
+      return result;
   }
-  
-  if (lhs == rhs)
-    return 0;
-  else if (lhs < rhs)
-    return -1;
-  else
-    return 1;
-}
 
-#else // MOZILLA_INTERNAL_API
+int
+nsCaseInsensitiveStringComparator::operator()( PRUnichar lhs, PRUnichar rhs ) const
+  {
+      // see if they're an exact match first
+      if (lhs == rhs) return 0;
+      
+      NS_InitCaseConversion();
 
-PRInt32
-CaseInsensitiveCompare(const PRUnichar *a,
-                       const PRUnichar *b,
-                       PRUint32 len)
-{
-  nsICaseConversion* caseConv = NS_GetCaseConversion();
-  if (!caseConv)
-    return NS_strcmp(a, b);
-
-  PRInt32 result;
-  caseConv->CaseInsensitiveCompare(a, b, len, &result);
-  return result;
-}
-
-#endif // MOZILLA_INTERNAL_API
+      if (gCaseConv) {
+          gCaseConv->ToLower(lhs, &lhs);
+          gCaseConv->ToLower(rhs, &rhs);
+      } else {
+          if (lhs < 256)
+              lhs = tolower(char(lhs));
+          if (rhs < 256)
+              rhs = tolower(char(rhs));
+          NS_WARNING("No case converter: no conversion done");
+      }
+      
+      if (lhs == rhs) return 0;
+      if (lhs < rhs) return -1;
+      return 1;
+  }
 
 PRUnichar
 ToLowerCase(PRUnichar aChar)
 {
-  PRUnichar result;
-  nsICaseConversion* caseConv = NS_GetCaseConversion();
-  if (caseConv)
-    caseConv->ToLower(aChar, &result);
-  else {
-    NS_WARNING("No case converter: no conversion done");
-    if (aChar < 256)
-      result = tolower(char(aChar));
-    else
-      result = aChar;
-  }
-  return result;
+    PRUnichar result;
+    if (NS_FAILED(NS_InitCaseConversion()))
+        return aChar;
+
+    if (gCaseConv)
+        gCaseConv->ToLower(aChar, &result);
+    else {
+        NS_WARNING("No case converter: no conversion done");
+        if (aChar < 256)
+            result = tolower(char(aChar));
+        else
+            result = aChar;
+    }
+    return result;
 }
 
 PRUnichar
 ToUpperCase(PRUnichar aChar)
 {
-  PRUnichar result;
-  nsICaseConversion* caseConv = NS_GetCaseConversion();
-  if (caseConv)
-    caseConv->ToUpper(aChar, &result);
-  else {
-    NS_WARNING("No case converter: no conversion done");
-    if (aChar < 256)
-      result = toupper(char(aChar));
-    else
-      result = aChar;
-  }
-  return result;
+    PRUnichar result;
+    if (NS_FAILED(NS_InitCaseConversion()))
+        return aChar;
+
+    if (gCaseConv)
+        gCaseConv->ToUpper(aChar, &result);
+    else {
+        NS_WARNING("No case converter: no conversion done");
+        if (aChar < 256)
+            result = toupper(char(aChar));
+        else
+            result = aChar;
+    }
+    return result;
 }
+

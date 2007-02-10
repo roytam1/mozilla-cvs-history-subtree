@@ -37,11 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * Implementations of nsIDOMDOMStringList and nsIDOMNameList, used by various
- * DOM3 stuff and some interfaces specified by WHATWG.
- */
-
 #include "nsDOMLists.h"
 #include "nsDOMError.h"
 #include "nsIDOMClassInfo.h"
@@ -67,10 +62,10 @@ NS_IMETHODIMP
 nsDOMStringList::Item(PRUint32 aIndex, nsAString& aResult)
 {
   if (aIndex >= (PRUint32)mNames.Count()) {
-    SetDOMStringToNull(aResult);
-  } else {
-    mNames.StringAt(aIndex, aResult);
+    return NS_ERROR_DOM_INDEX_SIZE_ERR;
   }
+
+  mNames.StringAt(aIndex, aResult);
 
   return NS_OK;
 }
@@ -112,10 +107,10 @@ NS_IMETHODIMP
 nsNameList::GetName(PRUint32 aIndex, nsAString& aResult)
 {
   if (aIndex >= (PRUint32)mNames.Count()) {
-    SetDOMStringToNull(aResult);
-  } else {
-    mNames.StringAt(aIndex, aResult);
+    return NS_ERROR_DOM_INDEX_SIZE_ERR;
   }
+
+  mNames.StringAt(aIndex, aResult);
 
   return NS_OK;
 }
@@ -124,10 +119,10 @@ NS_IMETHODIMP
 nsNameList::GetNamespaceURI(PRUint32 aIndex, nsAString& aResult)
 {
   if (aIndex >= (PRUint32)mNames.Count()) {
-    SetDOMStringToNull(aResult);
-  } else {
-    mNamespaceURIs.StringAt(aIndex, aResult);
+    return NS_ERROR_DOM_INDEX_SIZE_ERR;
   }
+
+  mNamespaceURIs.StringAt(aIndex, aResult);
 
   return NS_OK;
 }

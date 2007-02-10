@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -62,11 +62,11 @@
 #include "nsXPIDLString.h"
 #include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
+#include "nsImportStringBundle.h"
 #include "plstr.h"
 #include "prmem.h"
 #include "ImportDebug.h"
 #include "nsImportService.h"
-#include "nsImportStringBundle.h"
 
 PRLogModuleInfo *IMPORTLOGMODULE = nsnull;
 
@@ -92,10 +92,8 @@ nsImportService::nsImportService() : m_pModules( nsnull)
 	// thread issues later.
 	nsString	str;
 	SystemStringToUnicode( "Dummy", str);
-
-  nsresult rv = nsImportStringBundle::GetStringBundle(IMPORT_MSGS_URL, getter_AddRefs(m_stringBundle));
-  if (NS_FAILED(rv))
-    IMPORT_LOG0("Failed to get string bundle for Importing Mail");
+    
+    nsImportStringBundle::GetStringBundle(); 
 }
 
 
@@ -125,17 +123,23 @@ NS_IMETHODIMP nsImportService::DiscoverModules( void)
 
 NS_IMETHODIMP nsImportService::CreateNewFieldMap( nsIImportFieldMap **_retval)
 {
-  return nsImportFieldMap::Create(m_stringBundle, nsnull, NS_GET_IID(nsIImportFieldMap), (void**)_retval);
+  nsresult rv;
+  rv = nsImportFieldMap::Create( nsnull, NS_GET_IID(nsIImportFieldMap), (void**)_retval);
+  return rv;
 }
 
 NS_IMETHODIMP nsImportService::CreateNewMailboxDescriptor( nsIImportMailboxDescriptor **_retval)
 {
-  return nsImportMailboxDescriptor::Create(nsnull, NS_GET_IID(nsIImportMailboxDescriptor), (void**)_retval);
+  nsresult rv;
+  rv = nsImportMailboxDescriptor::Create( nsnull, NS_GET_IID(nsIImportMailboxDescriptor), (void**)_retval);
+  return rv;
 }
 
 NS_IMETHODIMP nsImportService::CreateNewABDescriptor(nsIImportABDescriptor **_retval)
 {
-  return nsImportABDescriptor::Create(nsnull, NS_GET_IID(nsIImportABDescriptor), (void**)_retval);
+  nsresult rv;
+  rv = nsImportABDescriptor::Create( nsnull, NS_GET_IID(nsIImportABDescriptor), (void**)_retval);
+  return rv;
 }
 
 NS_IMETHODIMP nsImportService::SystemStringToUnicode(const char *sysStr, nsString & uniStr)

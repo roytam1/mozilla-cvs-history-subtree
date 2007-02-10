@@ -46,6 +46,11 @@ var gDisplayPane = {
     if (preference.value)
       document.getElementById("displayPrefs").selectedIndex = preference.value;
 
+      // build the charset menu list. We do this by hand instead of using the xul template
+      // builder because of Bug #285076, 
+      this.createCharsetMenus(document.getElementById("viewDefaultCharset-menupopup"), "NC:DecodersRoot",
+                              document.getElementById('mailnews.view_default_charset').value);
+
     this.mInitialized = true;
     
     this.mTagListBox = document.getElementById('tagList');    
@@ -86,6 +91,7 @@ var gDisplayPane = {
   
   removeTag: function()
   {
+    var tagItemToRemove = this.mTagListBox.getSelectedItem();
     var index = this.mTagListBox.selectedIndex;
     if (index >= 0)
     {
@@ -97,24 +103,6 @@ var gDisplayPane = {
       this.mTagListBox.selectedIndex = index < numItemsInListBox ? index : numItemsInListBox - 1;
     }
   },
-  
-  /** 
-   * Open the edit tag dialog
-   */
-  editTag: function()
-  {
-    var index = this.mTagListBox.selectedIndex;
-    if (index >= 0)
-    {
-      var tagElToEdit = this.mTagListBox.getItemAtIndex(index);
-      var args = {result: "", keyToEdit: tagElToEdit.getAttribute("value"), okCallback: editTagCallback};
-      var dialog = window.openDialog(
-			      "chrome://messenger/content/newTagDialog.xul",
-			      "",
-			      "chrome,titlebar,modal",
-			      args);        
-    }  
-  },
 
   addTag: function()
   {  
@@ -125,12 +113,66 @@ var gDisplayPane = {
 			    "chrome,titlebar,modal",
 			    args);
   },
+     
+  addMenuItem: function(aMenuPopup, aLabel, aValue)
+  { 
+    var menuItem = document.createElement('menuitem');
+    menuItem.setAttribute('label', aLabel);
+    menuItem.setAttribute('value', aValue);
+    aMenuPopup.appendChild(menuItem);
+  },
+
+  readRDFString: function(aDS,aRes,aProp) 
+  {
+    var n = aDS.GetTarget(aRes, aProp, true);
+    return (n) ? n.QueryInterface(Components.interfaces.nsIRDFLiteral).Value : "";
+  },
+
+  createCharsetMenus: function(aMenuPopup, aRoot, aPreferenceValue)
+  {
+    var rdfService = Components.classes["@mozilla.org/rdf/rdf-service;1"]
+                     .getService(Components.interfaces.nsIRDFService);
+    var kNC_Root = rdfService.GetResource(aRoot);
+    var kNC_Name = rdfService.GetResource("http://home.netscape.com/NC-rdf#Name");
+
+    var rdfDataSource = rdfService.GetDataSource("rdf:charset-menu");
+    var rdfContainer = Components.classes["@mozilla.org/rdf/container;1"].getService(Components.interfaces.nsIRDFContainer);
+    rdfContainer.Init(rdfDataSource, kNC_Root);
+
+    var charset;
+    var availableCharsets = rdfContainer.GetElements();
+
+    for (var i = 0; i < rdfContainer.GetCount(); i++) 
+    {
+      charset = availableCharsets.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+
+      this.addMenuItem(aMenuPopup, this.readRDFString(rdfDataSource, charset, kNC_Name), charset.Value);
+      if (charset.Value == aPreferenceValue)
+        aMenuPopup.parentNode.value = charset.Value;
+    }         
+  },
+  
+  mCharsetMenuInitialized: false,
+  readDefaultCharset: function()
+  {
+    if (!this.mCharsetMenuInitialized) 
+    {
+      Components.classes["@mozilla.org/observer-service;1"]
+                .getService(Components.interfaces.nsIObserverService)
+                .notifyObservers(null, "charsetmenu-selected", "mailedit");
+      // build the charset menu list. We do this by hand instead of using the xul template
+      // builder because of Bug #285076, 
+      this.createCharsetMenus(document.getElementById("sendDefaultCharset-menupopup"), "NC:MaileditCharsetMenuRoot",
+                              document.getElementById('mailnews.send_default_charset').value);
+      this.mCharsetMenuInitialized = true;
+    }
+    return undefined;
+  }
 };
 
 function addTagCallback(aName, aColor)
 {
-  var tagService = Components.classes["@mozilla.org/messenger/tagservice;1"]
-                    .getService(Components.interfaces.nsIMsgTagService);
+  var tagService = Components.classes["@mozilla.org/messenger/tagservice;1"].getService(Components.interfaces.nsIMsgTagService);
   tagService.addTag(aName, aColor, '');
  
   var item = gDisplayPane.appendTagItem(aName, tagService.getKeyForTag(aName), aColor);
@@ -138,21 +180,4 @@ function addTagCallback(aName, aColor)
   tagListBox.ensureElementIsVisible(item);
   tagListBox.selectItem(item);
   tagListBox.focus();
-}
-
-function editTagCallback()
-{
-  // update the values of the selected item
-  var tagListEl = document.getElementById('tagList');
-  var index = tagListEl.selectedIndex;
-  if (index >= 0)
-  {
-    var tagElToEdit = tagListEl.getItemAtIndex(index);
-    var key = tagElToEdit.getAttribute("value");
-    var tagService = Components.classes["@mozilla.org/messenger/tagservice;1"]
-                     .getService(Components.interfaces.nsIMsgTagService);
-    // update the color and label elements
-    tagElToEdit.setAttribute("label", tagService.getTagForKey(key));
-    tagElToEdit.style.color = tagService.getColorForKey(key);
-  }        
 }

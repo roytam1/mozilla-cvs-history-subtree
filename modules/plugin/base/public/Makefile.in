@@ -53,6 +53,10 @@ EXPORTS		= \
 		nsDefaultPlugin.h \
 		nsPluginNativeWindow.h \
 		nsPluginsCID.h \
+		npapi.h \
+		npupp.h \
+		npruntime.h \
+		nptypes.h \
 		nsIPluginInstanceInternal.h \
 		$(NULL)
 

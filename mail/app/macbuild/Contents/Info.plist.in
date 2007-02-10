@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>thunderbird-bin</string>
 	<key>CFBundleGetInfoString</key>
-	<string>@APP_NAME@ @APP_VERSION@, © 1998-2007 Contributors</string>
+	<string>@APP_NAME@ @APP_VERSION@, © 1998-2006 Contributors</string>
 	<key>CFBundleIconFile</key>
 	<string>thunderbird</string>
 	<key>CFBundleIdentifier</key>
@@ -32,22 +32,6 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>mailto</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>News URL</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>news</string>
-			</array>
-		</dict>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>RSS / ATOM URL</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>feed</string>
 			</array>
 		</dict>
 	</array>

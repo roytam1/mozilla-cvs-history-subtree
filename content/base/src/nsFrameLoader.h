@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * Class for managing loading of a subframe (creation of the docshell,
- * handling of loads in it, recursion-checking).
- */
-
 #ifndef nsFrameLoader_h_
 #define nsFrameLoader_h_
 

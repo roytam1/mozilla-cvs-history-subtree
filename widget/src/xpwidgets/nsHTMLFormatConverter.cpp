@@ -212,7 +212,7 @@ nsHTMLFormatConverter::CanConvert(const char *aFromDataFlavor, const char *aToDa
 // Convert
 //
 // Convert data from one flavor to another. The data is wrapped in primitive objects so that it is
-// accessible from JS. Currently, this only accepts HTML input, so anything else is invalid.
+// accessable from JS. Currently, this only accepts HTML input, so anything else is invalid.
 //
 //XXX This method copies the data WAAAAY too many time for my liking. Grrrrrr. Mostly it's because
 //XXX we _must_ put things into nsStrings so that the parser will accept it. Lame lame lame lame. We
@@ -313,7 +313,7 @@ nsHTMLFormatConverter::ConvertFromHTMLToUnicode(const nsAutoString & aFromStr, n
 
   parser->SetContentSink(sink);
 
-  parser->Parse(aFromStr, 0, NS_LITERAL_CSTRING("text/html"), PR_TRUE, eDTDMode_fragment);
+  parser->Parse(aFromStr, 0, NS_LITERAL_CSTRING("text/html"), PR_FALSE, PR_TRUE, eDTDMode_fragment);
   
   return NS_OK;
 } // ConvertFromHTMLToUnicode

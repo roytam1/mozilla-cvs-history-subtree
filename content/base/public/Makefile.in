@@ -54,31 +54,26 @@ nsContentErrors.h \
 nsContentPolicyUtils.h \
 nsContentUtils.h \
 nsIDocument.h \
+nsIDocumentEncoder.h \
 nsIDocumentObserver.h \
-nsIMutationObserver.h \
+nsIDOMGCParticipant.h \
 nsINameSpaceManager.h \
-nsINode.h \
 nsINodeInfo.h \
-nsIRange.h \
 nsIRangeUtils.h \
 nsIScriptElement.h \
+nsIStyledContent.h \
 nsIStyleSheetLinkingElement.h \
+nsITextContent.h \
 nsIPrivateDOMImplementation.h \
 nsIContentSerializer.h \
 nsIHTMLToTextSink.h \
 nsIXPathEvaluatorInternal.h \
 mozISanitizingSerializer.h \
-nsCaseTreatment.h \
 nsContentCID.h \
 nsCopySupport.h \
 nsContentCreatorFunctions.h \
-nsLineBreaker.h \
 nsXMLNameSpaceMap.h \
 $(NULL)
-
-ifndef DISABLE_XFORMS_HOOKS
-EXPORTS += nsIXFormsUtilityService.h
-endif
 
 SDK_XPIDLSRCS   = \
 		nsISelection.idl  \
@@ -87,21 +82,20 @@ SDK_XPIDLSRCS   = \
 XPIDLSRCS	= \
 		nsIChromeRegistry.idl       \
 		nsIContentPolicy.idl        \
-		nsIDocumentEncoder.idl      \
+		nsISelection2.idl \
 		nsIDOMParser.idl \
 		nsIDOMSerializer.idl \
-		nsISelection2.idl \
 		nsISelectionController.idl  \
 		nsISelectionDisplay.idl  \
 		nsISelectionListener.idl  \
 		nsISelectionPrivate.idl  \
+		nsIScriptLoader.idl  \
 		nsIScriptLoaderObserver.idl  \
 		nsISyncLoadDOMService.idl  \
 		nsIDragDropHandler.idl \
 		nsIScriptEventHandler.idl \
 		nsIScriptEventManager.idl \
 		nsIImageLoadingContent.idl \
-		nsIObjectLoadingContent.idl \
 		nsIFrameLoader.idl \
 		nsIXMLHttpRequest.idl \
 		$(NULL)

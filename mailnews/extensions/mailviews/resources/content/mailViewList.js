@@ -22,10 +22,6 @@
  *
  * Contributor(s):
  *   Scott MacGregor <mscott@netscape.com>
- *   Seth Spitzer <sspitzer@netscape.com>
- *   Stefan Borggraefe <borggraefe@despammed.com>
- *   Gervase Markham <gerv@gerv.net>
- *   Karsten Düsterloh <mnyromyr@tprac.de>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -44,6 +40,7 @@
 
 var gMailListView; 
 var gListBox; 
+var gCloseCallback = null; 
 var gEditButton;
 var gDeleteButton;
 
@@ -51,6 +48,13 @@ function mailViewListOnLoad()
 {
   gMailListView = Components.classes["@mozilla.org/messenger/mailviewlist;1"].getService(Components.interfaces.nsIMsgMailViewList);; 
   gListBox = document.getElementById('mailViewList');
+
+  if ("arguments" in window && window.arguments[0]) 
+  {
+    var args = window.arguments[0];
+    if ("onCloseCallback" in args)
+      gCloseCallback =  window.arguments[0].onCloseCallback;
+  }
 
   // Construct list view based on current mail view list data
   refreshListView(null);
@@ -60,11 +64,19 @@ function mailViewListOnLoad()
   updateButtons();
 }
 
+function mailViewListOnUnload()
+{
+  if (gCloseCallback)
+    gCloseCallback(gListBox.selectedIndex);
+}
+
 function refreshListView(aSelectedMailView)
 {
   // remove any existing items in the view...
   for (var index = gListBox.getRowCount(); index > 0; index--)
+  {
     gListBox.removeChild(gListBox.getItemAtIndex(index - 1));
+  }
 
   var numItems = gMailListView.mailViewCount;
   var mailView; 
@@ -141,3 +153,5 @@ function updateButtons()
   gEditButton.disabled = selectedIndex < 0;
   gDeleteButton.disabled = selectedIndex < 0;
 }
+
+

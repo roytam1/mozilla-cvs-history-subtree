@@ -45,14 +45,13 @@
 #include "nsXPCOMGlue.h"
 #include "nsRegisterGRE.h"
 #include "nsAppRunner.h"
+#include "nsINIParser.h"
 #include "nsILocalFile.h"
 #include "nsIXULAppInstall.h"
 #include "nsCOMPtr.h"
 #include "nsMemory.h"
-#include "nsCRTGlue.h"
+#include "nsNativeCharsetUtils.h"
 #include "nsBuildID.h"
-#include "nsStringAPI.h"
-#include "nsServiceManagerUtils.h"
 #include "plstr.h"
 #include "prprf.h"
 #include "prenv.h"
@@ -108,6 +107,148 @@ static PRBool IsArg(const char* arg, const char* s)
 #endif
 
   return PR_FALSE;
+}
+
+/**
+ * Version checking.
+ */
+
+static PRUint32 geckoVersion = 0;
+
+static PRUint32 ParseVersion(const char *versionStr)
+{
+  PRUint16 major, minor;
+  if (PR_sscanf(versionStr, "%hu.%hu", &major, &minor) != 2) {
+    NS_WARNING("invalid version string");
+    return 0;
+  }
+
+  return PRUint32(major) << 16 | PRUint32(minor);
+}
+
+static PRBool CheckMinVersion(const char *versionStr)
+{
+  PRUint32 v = ParseVersion(versionStr);
+  return geckoVersion >= v;
+}
+
+static PRBool CheckMaxVersion(const char *versionStr)
+{
+  PRUint32 v = ParseVersion(versionStr);
+  return geckoVersion <= v;
+}
+
+/**
+ * Parse application data.
+ */
+static int LoadAppData(const char* appDataFile, nsXREAppData* aResult,
+                       nsCString& vendor, nsCString& name, nsCString& version,
+                       nsCString& buildID, nsCString& appID,
+                       nsCString& copyright)
+{
+  nsresult rv;
+
+  nsCOMPtr<nsILocalFile> lf;
+  XRE_GetFileFromPath(appDataFile, getter_AddRefs(lf));
+  if (!lf)
+    return 2;
+
+  nsCOMPtr<nsIFile> appDir;
+  rv = lf->GetParent(getter_AddRefs(appDir));
+  if (NS_FAILED(rv))
+    return 2;
+
+  rv = CallQueryInterface(appDir, &aResult->directory);
+  if (NS_FAILED(rv))
+    return 2;
+
+  nsINIParser parser;
+  rv = parser.Init(lf);
+  if (NS_FAILED(rv))
+    return 2;
+
+  // Gecko version checking
+  //
+  // TODO: If these version checks fail, then look for a compatible XULRunner
+  //       version on the system, and launch it instead.
+
+  nsCAutoString gkVersion;
+  rv = parser.GetString("Gecko", "MinVersion", gkVersion);
+
+  if (NS_FAILED(rv) || !CheckMinVersion(gkVersion.get())) {
+    Output(PR_TRUE, "Error: Gecko MinVersion requirement not met.\n");
+    return 1;
+  }
+
+  rv = parser.GetString("Gecko", "MaxVersion", gkVersion);
+  if (NS_SUCCEEDED(rv) && !CheckMaxVersion(gkVersion.get())) {
+    Output(PR_TRUE, "Error: Gecko MaxVersion requirement not met.\n");
+    return 1;
+  }
+
+  PRUint32 i;
+
+  // Read string-valued fields
+  const struct
+  {
+    const char *key;
+    const char **fill;
+    nsCString  *buf;
+    PRBool      required;
+  } string_fields[] = {
+    { "Vendor",    &aResult->vendor,    &vendor,    PR_FALSE },
+    { "Name",      &aResult->name,      &name,      PR_TRUE  },
+    { "Version",   &aResult->version,   &version,   PR_FALSE },
+    { "BuildID",   &aResult->buildID,   &buildID,   PR_TRUE  },
+    { "ID",        &aResult->ID,        &appID,     PR_FALSE },
+    { "Copyright", &aResult->copyright, &copyright, PR_FALSE }
+  };
+  for (i = 0; i < NS_ARRAY_LENGTH(string_fields); ++i) {
+    rv = parser.GetString("App", string_fields[i].key,
+                          *string_fields[i].buf);
+    if (NS_SUCCEEDED(rv)) {
+      *string_fields[i].fill = string_fields[i].buf->get();
+    }
+    else if (string_fields[i].required) {
+      Output(PR_TRUE, "Error: %x: No \"%s\" field.\n",
+             rv, string_fields[i].key);
+      return 1;
+    }
+  }
+
+  // Read boolean-valued fields
+  const struct {
+    const char* key;
+    PRUint32 flag;
+  } boolean_fields[] = {
+    { "EnableProfileMigrator",  NS_XRE_ENABLE_PROFILE_MIGRATOR  },
+    { "EnableExtensionManager", NS_XRE_ENABLE_EXTENSION_MANAGER }
+  };
+  char buf[6]; // large enough to hold "false"
+  aResult->flags = 0;
+  for (i = 0; i < NS_ARRAY_LENGTH(boolean_fields); ++i) {
+    rv = parser.GetString("XRE", boolean_fields[i].key, buf, sizeof(buf));
+    // accept a truncated result since we are only interested in the
+    // first character.  this is designed to allow the possibility of
+    // expanding these boolean attributes to express additional options.
+    if ((NS_SUCCEEDED(rv) || rv == NS_ERROR_LOSS_OF_SIGNIFICANT_DATA) &&
+        (buf[0] == '1' || buf[0] == 't' || buf[0] == 'T')) {
+      aResult->flags |= boolean_fields[i].flag;
+    }
+  } 
+
+#ifdef DEBUG
+  printf("---------------------------------------------------------\n");
+  printf("     Vendor %s\n", aResult->vendor);
+  printf("       Name %s\n", aResult->name);
+  printf("    Version %s\n", aResult->version);
+  printf("    BuildID %s\n", aResult->buildID);
+  printf("  Copyright %s\n", aResult->copyright);
+  printf("      Flags %08x\n", aResult->flags);
+  printf("---------------------------------------------------------\n");
+#endif
+
+  return 0;
 }
 
 static void Usage()
@@ -169,7 +310,7 @@ InstallXULApp(nsIFile* aXULRunnerDir,
 {
   nsCOMPtr<nsILocalFile> appLocation;
   nsCOMPtr<nsILocalFile> installTo;
-  nsString leafName;
+  nsAutoString leafName;
 
   nsresult rv = XRE_GetFileFromPath(aAppLocation, getter_AddRefs(appLocation));
   if (NS_FAILED(rv))
@@ -182,8 +323,7 @@ InstallXULApp(nsIFile* aXULRunnerDir,
   }
 
   if (aLeafName)
-    NS_CStringToUTF16(nsDependentCString(aLeafName),
-                      NS_CSTRING_ENCODING_NATIVE_FILESYSTEM, leafName);
+    NS_CopyNativeToUnicode(nsDependentCString(aLeafName), leafName);
 
   rv = NS_InitXPCOM2(nsnull, aXULRunnerDir, nsnull);
   if (NS_FAILED(rv))
@@ -214,26 +354,6 @@ static const GREProperty kGREProperties[] = {
 #ifdef MOZ_JAVAXPCOM
   , { "javaxpcom", "1" }
 #endif
-};
-
-class AutoAppData
-{
-public:
-  AutoAppData(nsILocalFile* aINIFile) : mAppData(nsnull) {
-    nsresult rv = XRE_CreateAppData(aINIFile, &mAppData);
-    if (NS_FAILED(rv))
-      mAppData = nsnull;
-  }
-  ~AutoAppData() {
-    if (mAppData)
-      XRE_FreeAppData(mAppData);
-  }
-
-  operator nsXREAppData*() const { return mAppData; }
-  nsXREAppData* operator -> () const { return mAppData; }
-
-private:
-  nsXREAppData* mAppData;
 };
 
 int main(int argc, char* argv[])
@@ -353,6 +473,8 @@ int main(int argc, char* argv[])
     }
   }
 
+  geckoVersion = ParseVersion(GRE_BUILD_ID);
+
   const char *appDataFile = PR_GetEnv("XUL_APP_FILE");
 
   if (!(appDataFile && *appDataFile)) {
@@ -381,31 +503,18 @@ int main(int argc, char* argv[])
     PR_SetEnv(kAppEnv);
   }
 
-  nsCOMPtr<nsILocalFile> appDataLF;
-  nsresult rv = XRE_GetFileFromPath(appDataFile, getter_AddRefs(appDataLF));
-  if (NS_FAILED(rv)) {
-    Output(PR_TRUE, "Error: unrecognized application.ini path.\n");
-    return 2;
-  }
+  nsCAutoString vendor, name, version, buildID, appID, copyright;
 
-  AutoAppData appData(appDataLF);
-  if (!appData) {
-    Output(PR_TRUE, "Error: couldn't parse application.ini.\n");
-    return 2;
-  }
+  nsXREAppData appData = { sizeof(nsXREAppData), 0 };
 
-  if (!appData->directory) {
-    nsCOMPtr<nsIFile> appDir;
-    rv = appDataLF->GetParent(getter_AddRefs(appDir));
-    if (NS_FAILED(rv)) {
-      Output(PR_TRUE, "Error: could not get application directory.\n");
-      return 2;
-    }
+  int rv = LoadAppData(appDataFile, &appData,
+                       vendor, name, version, buildID, appID, copyright);
+  if (!rv)
+    rv = XRE_main(argc, argv, &appData);
 
-    CallQueryInterface(appDir, &appData->directory);
-  }
+  NS_IF_RELEASE(appData.directory);
 
-  return XRE_main(argc, argv, appData);
+  return rv;
 }
 
 #if defined( XP_WIN ) && defined( WIN32 ) && !defined(__GNUC__)

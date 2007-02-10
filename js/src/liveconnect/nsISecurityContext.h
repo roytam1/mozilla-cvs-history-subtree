@@ -61,7 +61,7 @@
 class nsISecurityContext : public nsISupports {
 public:
 
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISECURITYCONTEXT_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISECURITYCONTEXT_IID)
 
     /**
      * Get the security context to be used in LiveConnect.
@@ -95,7 +95,6 @@ public:
     NS_IMETHOD GetCertificateID(char* buf, int len) = 0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsISecurityContext, NS_ISECURITYCONTEXT_IID)
 
 // Supported targets in Netscape Navigator 4.0 (Communicator): 
 

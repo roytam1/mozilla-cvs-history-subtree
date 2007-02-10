@@ -46,7 +46,7 @@ MODULE		= necko
 LIBRARY_NAME	= necko
 EXPORT_LIBRARY = 1
 IS_COMPONENT	= 1
-MODULE_NAME	= necko
+MODULE_NAME	= necko_core_and_primary_protocols
 GRE_MODULE	= 1
 LIBXUL_LIBRARY = 1
 
@@ -61,32 +61,38 @@ REQUIRES	= xpcom \
 		  nkcache \
 		  pref \
 		  mimetype \
+		  util \
 		  locale \
 		  intl \
 		  uconv \
 		  unicharutil \
+		  caps \
 		  $(ZLIB_REQUIRES) \
 		  $(NULL)
 
 CPPSRCS		= nsNetModule.cpp
 EXPORTS		= nsNetCID.h
 
+# core necko protocols (about:blank is mandatory)
+PROTOCOLS = $(filter file ftp http res,$(NECKO_PROTOCOLS))
+
 SHARED_LIBRARY_LIBS = \
-		../base/src/$(LIB_PREFIX)neckobase_s.$(LIB_SUFFIX) \
-		../dns/src/$(LIB_PREFIX)neckodns_s.$(LIB_SUFFIX) \
-		../socket/base/$(LIB_PREFIX)neckosocket_s.$(LIB_SUFFIX) \
-		../streamconv/src/$(LIB_PREFIX)nkconv_s.$(LIB_SUFFIX) \
-		../streamconv/converters/$(LIB_PREFIX)nkcnvts_s.$(LIB_SUFFIX) \
-		../mime/src/$(LIB_PREFIX)nkmime_s.$(LIB_SUFFIX) \
-		../cache/src/$(LIB_PREFIX)nkcache_s.$(LIB_SUFFIX) \
-		../protocol/about/src/$(LIB_PREFIX)nkabout_s.$(LIB_SUFFIX) \
-		$(foreach d,$(filter-out about,$(NECKO_PROTOCOLS)), \
-			../protocol/$(d)/src/$(LIB_PREFIX)nk$(d)_s.$(LIB_SUFFIX)) \
+		$(DIST)/lib/$(LIB_PREFIX)neckobase_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)neckodns_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)neckosocket_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)nkconv_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)nkcnvts_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)nkmime_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)nkcache_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)nkabout_s.$(LIB_SUFFIX) \
+		$(foreach d,$(PROTOCOLS), \
+			$(DIST)/lib/$(LIB_PREFIX)nk${d}_s.$(LIB_SUFFIX)) \
 		$(NULL)
 
+
 ifeq ($(OS_ARCH),WINNT)
-    SHARED_LIBRARY_LIBS += \
-        ../system/win32/$(LIB_PREFIX)neckosystem_s.$(LIB_SUFFIX)
+SHARED_LIBRARY_LIBS += \
+		../system/win32/$(LIB_PREFIX)neckosystem_s.$(LIB_SUFFIX)
 endif
 
 LOCAL_INCLUDES	= \
@@ -98,19 +104,23 @@ LOCAL_INCLUDES	= \
 		-I$(srcdir)/../mime/src \
 		-I$(srcdir)/../cache/src \
 		-I$(srcdir)/../protocol/about/src \
-		$(foreach d,$(filter-out about,$(NECKO_PROTOCOLS)), \
-			-I$(srcdir)/../protocol/$(d)/src) \
+		$(foreach d,$(PROTOCOLS), \
+			-I$(srcdir)/../protocol/${d}/src) \
 		$(NULL)
 
 ifeq ($(OS_ARCH),WINNT)
-    LOCAL_INCLUDES += -I$(srcdir)/../system/win32
+LOCAL_INCLUDES += -I$(srcdir)/../system/win32
 endif
 
 ifdef NECKO_COOKIES
 SHARED_LIBRARY_LIBS += \
-		../cookie/src/$(LIB_PREFIX)neckocookie_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)neckocookie_s.$(LIB_SUFFIX) \
                 $(NULL)
 LOCAL_INCLUDES	+= -I$(srcdir)/../cookie/src
+endif
+
+ifdef MOZ_PERF_METRICS
+EXTRA_DSO_LIBS	+= mozutil_s
 endif
 
 EXTRA_DSO_LDOPTS = \
@@ -134,6 +144,9 @@ endif
 include $(topsrcdir)/config/rules.mk
 
 ifeq ($(OS_ARCH),WINNT)
+ifdef GNU_CC
+OS_LIBS		+= -lwsock32
+endif
 OS_LIBS	+= $(call EXPAND_LIBNAME,ole32 shell32)
 endif
 

@@ -41,6 +41,8 @@
 //#define DEBUG_XF_OUTPUT
 #endif
 
+#include "nsIXTFXMLVisualWrapper.h"
+
 #include "nsAutoPtr.h"
 #include "nsCOMPtr.h"
 #include "nsMemory.h"
@@ -67,7 +69,7 @@
  *
  * \<output\> is not really that different from \<input\>
  * (ie. nsXFormsDelegateStub), except that it has an "value" attribute that
- * must be handled separately because it is evaluated to a string result.
+ * must be handled seperately because it is evaluated to a string result.
  *
  * @see http://www.w3.org/TR/xforms/slice8.html#ui-output
  */
@@ -83,8 +85,6 @@ public:
   NS_IMETHOD GetValue(nsAString& aValue);
   NS_IMETHOD SetValue(const nsAString& aValue);
   NS_IMETHOD GetHasBoundNode(PRBool *aHasBoundNode);
-
-  virtual PRBool IsContentAllowed();
 
   nsXFormsOutputElement();
 
@@ -197,19 +197,6 @@ nsXFormsOutputElement::SetValue(const nsAString& aValue)
 {
   // Setting the value on an output controls seems wrong semantically.
   return NS_ERROR_NOT_AVAILABLE;
-}
-
-PRBool
-nsXFormsOutputElement::IsContentAllowed()
-{
-  PRBool isAllowed = PR_TRUE;
-
-  // Output may not be bound to complexContent.
-  PRBool isComplex = IsContentComplex();
-  if (isComplex) {
-    isAllowed = PR_FALSE;
-  }
-  return isAllowed;
 }
 
 NS_HIDDEN_(nsresult)

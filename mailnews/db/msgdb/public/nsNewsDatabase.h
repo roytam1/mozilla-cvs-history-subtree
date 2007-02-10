@@ -78,7 +78,6 @@ public:
   
   NS_IMETHOD GetDefaultViewFlags(nsMsgViewFlagsTypeValue *aDefaultViewFlags);
   NS_IMETHOD GetDefaultSortType(nsMsgViewSortTypeValue *aDefaultSortType);
-  NS_IMETHOD GetDefaultSortOrder(nsMsgViewSortOrderValue *aDefaultSortOrder);
 
 protected:
   // this is owned by the nsNewsFolder, which lives longer than the db.

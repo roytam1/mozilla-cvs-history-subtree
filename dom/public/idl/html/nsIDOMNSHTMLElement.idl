@@ -38,7 +38,7 @@
 
 #include "domstubs.idl"
 
-[scriptable, uuid(f58dd59c-a4b3-418e-9d10-f5ba0316da22)]
+[scriptable, uuid(da83b2ec-8264-4410-8496-ada3acd2ae42)]
 interface nsIDOMNSHTMLElement : nsISupports
 {
   readonly attribute long             offsetTop;
@@ -64,6 +64,10 @@ interface nsIDOMNSHTMLElement : nsISupports
   // |top| is optional in JS, scriptability of this method is done in
   // nsHTMLElementSH
   void scrollIntoView(in boolean top);
+};
 
+[scriptable, uuid(91fdb05e-f1af-4857-a604-45448bc02471)]
+interface nsIDOMNSHTMLElement_MOZILLA_1_8_BRANCH : nsIDOMNSHTMLElement
+{
            attribute boolean         spellcheck;
 };

@@ -88,22 +88,6 @@ nsHashPropertyBag::Init()
 }
 
 NS_IMETHODIMP
-nsHashPropertyBag::HasKey(const nsAString& name, PRBool *aResult)
-{
-    *aResult = mPropertyHash.Get(name, nsnull);
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsHashPropertyBag::Get(const nsAString& name, nsIVariant* *_retval)
-{
-    mPropertyHash.Get(name, _retval);
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP
 nsHashPropertyBag::GetProperty(const nsAString& name, nsIVariant* *_retval)
 {
     PRBool isFound = mPropertyHash.Get(name, _retval);
@@ -194,9 +178,12 @@ PropertyHashToArrayFunc (const nsAString &aKey,
 NS_IMETHODIMP
 nsHashPropertyBag::GetEnumerator(nsISimpleEnumerator* *_retval)
 {
-    nsCOMPtr<nsIMutableArray> propertyArray = new nsArray();
-    if (!propertyArray)
-        return NS_ERROR_OUT_OF_MEMORY;
+    nsresult rv;
+
+    nsCOMPtr<nsIMutableArray> propertyArray;
+    rv = NS_NewArray (getter_AddRefs(propertyArray));
+    if (NS_FAILED(rv))
+        return rv;
 
     mPropertyHash.EnumerateRead(PropertyHashToArrayFunc, propertyArray.get());
 

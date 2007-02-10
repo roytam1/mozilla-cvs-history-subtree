@@ -535,7 +535,7 @@ function vmgr_remake (ary, cb, startIndex, recalled)
 ViewManager.prototype.computeLocation =
 function vmgr_computelocation (element)
 {
-    if (!ASSERT(element, "missing parameter"))
+    if (!ASSERT(element, "missig parameter"))
         return null;
     
     if (!element.parentNode)
@@ -1632,8 +1632,7 @@ function vmgr_dewdropinn (sourceView, targetView, direction)
     var dest = new Object();
     dest.windowId = parsedTarget.windowId;
     dest.containerId = destContainer.getAttribute ("id");
-    if (destBefore)
-        dest.before = destBefore.getAttribute("id");
+    dest.before = destBefore ? destBefore.getAttribute("id") : null;
     this.moveView(dest, sourceView.viewId);
     this.endMultiMove();
     

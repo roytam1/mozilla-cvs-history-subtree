@@ -57,12 +57,12 @@
 class nsIContent;
 class nsIMenuFrame;
 
-nsIFrame* NS_NewMenuBarFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+nsresult NS_NewMenuBarFrame(nsIPresShell* aPresShell, nsIFrame** aResult) ;
 
 class nsMenuBarFrame : public nsBoxFrame, public nsIMenuParent
 {
 public:
-  nsMenuBarFrame(nsIPresShell* aShell, nsStyleContext* aContext);
+  nsMenuBarFrame(nsIPresShell* aShell);
   virtual ~nsMenuBarFrame();
 
   NS_DECL_ISUPPORTS
@@ -82,15 +82,11 @@ public:
 
   NS_IMETHOD SetIsContextMenu(PRBool aIsContextMenu) { return NS_OK; };
   NS_IMETHOD GetIsContextMenu(PRBool& aIsContextMenu) { aIsContextMenu = PR_FALSE; return NS_OK; }; 
-
-  NS_IMETHOD GetParentPopup(nsIMenuParent** aResult) { *aResult = nsnull;
-                                                       return NS_OK;};
-
+  
   NS_IMETHOD IsActive() { return mIsActive; };
 
   NS_IMETHOD IsOpen();
   NS_IMETHOD KillPendingTimers();
-  NS_IMETHOD CancelPendingTimers() { return NS_OK; };
 
   // Closes up the chain of open cascaded menus.
   NS_IMETHOD DismissChain();
@@ -103,13 +99,15 @@ public:
 
   NS_IMETHOD GetWidget(nsIWidget **aWidget);
   // The dismissal listener gets created and attached to the window.
-  NS_IMETHOD AttachedDismissalListener() { return NS_OK; }
+  NS_IMETHOD CreateDismissalListener();
 
-  NS_IMETHOD Init(nsIContent*      aContent,
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
                   nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
 // Non-interface helpers
 
@@ -130,7 +128,6 @@ public:
   PRBool IsValidItem(nsIContent* aContent);
   PRBool IsDisabled(nsIContent* aContent);
 
-  virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const
   {
@@ -150,6 +147,9 @@ protected:
   nsIMenuFrame* mRecentRollupMenu; 
 
   nsIDOMEventReceiver* mTarget;
+
+  // XXX Hack
+  nsPresContext* mPresContext;  // weak reference
 
 private:
   PRBool mCaretWasVisible;

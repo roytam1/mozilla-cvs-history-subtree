@@ -21,19 +21,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 Except as contained in this notice, the name of The Open Group shall not be
 used in advertising or otherwise to promote the sale, use or other dealings
 in this Software without prior written authorization from The Open Group.
+ 
 
-Copyright 1987, 1988, 1989 by
-Digital Equipment Corporation, Maynard, Massachusetts.
+Copyright 1987, 1988, 1989 by 
+Digital Equipment Corporation, Maynard, Massachusetts. 
 
                         All Rights Reserved
 
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
+Permission to use, copy, modify, and distribute this software and its 
+documentation for any purpose and without fee is hereby granted, 
 provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
+both that copyright notice and this permission notice appear in 
 supporting documentation, and that the name of Digital not be
 used in advertising or publicity pertaining to distribution of the
-software without specific, written prior permission.
+software without specific, written prior permission.  
 
 DIGITAL DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
 ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL
@@ -49,7 +50,10 @@ SOFTWARE.
 #include <limits.h>
 #include <string.h>
 
+#undef DEBUG
+
 #include "pixregionint.h"
+#include "slim_internal.h"
 
 #if defined (__GNUC__) && !defined (NO_INLINES)
 #define INLINE	__inline
@@ -58,7 +62,7 @@ SOFTWARE.
 #endif
 
 #undef assert
-#ifdef DEBUG_PIXREGION
+#ifdef DEBUG
 #define assert(expr) {if (!(expr)) \
 		FatalError("Assertion failed file %s, line %d: expr\n", \
 			__FILE__, __LINE__); }
@@ -68,9 +72,7 @@ SOFTWARE.
 
 #define good(reg) assert(pixman_region16_valid(reg))
 
-#undef MIN
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
-#undef MAX
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 
 static pixman_box16_t pixman_region_emptyBox = {0, 0, 0, 0};
@@ -87,6 +89,10 @@ pixman_init (pixman_region16_t *region, pixman_box16_t *rect);
 
 static void
 pixman_uninit (pixman_region16_t *region);
+
+slim_hidden_proto(pixman_region_create_simple)
+slim_hidden_proto(pixman_region_copy)
+slim_hidden_proto(pixman_region_union)
 
 /*
  * The functions in this file implement the Region abstraction used extensively
@@ -105,9 +111,9 @@ pixman_uninit (pixman_region16_t *region);
  * there is no separate list of band start pointers.
  *
  * The y-x band representation does not minimize rectangles.  In particular,
- * if a rectangle vertically crosses a band (the rectangle has scanlines in
+ * if a rectangle vertically crosses a band (the rectangle has scanlines in 
  * the y1 to y2 area spanned by the band), then the rectangle may be broken
- * down into two or more smaller rectangles stacked one atop the other.
+ * down into two or more smaller rectangles stacked one atop the other. 
  *
  *  -----------				    -----------
  *  |         |				    |         |		    band 0
@@ -133,7 +139,7 @@ pixman_uninit (pixman_region16_t *region);
  * pixman_region_validateTree.  Bob Scheifler changed the representation to be more
  * compact when empty or a single rectangle, and did a bunch of gratuitous
  * reformatting. Carl Worth did further gratuitous reformatting while re-merging
- * the server and client region code into libpixregion.
+ * the server and client region code into libpixregion. 
  */
 
 /*  true iff two Boxes overlap */
@@ -190,6 +196,7 @@ if (!(pReg)->data || (((pReg)->data->numRects + (n)) > (pReg)->data->size)) \
     assert(pReg->data->numRects<=pReg->data->size);			\
 }
 
+
 #define DOWNSIZE(reg,numRects)						 \
 if (((numRects) < ((reg)->data->size >> 1)) && ((reg)->data->size > 50)) \
 {									 \
@@ -202,7 +209,8 @@ if (((numRects) < ((reg)->data->size >> 1)) && ((reg)->data->size > 50)) \
     }									 \
 }
 
-#ifdef DEBUG_PIXREGION
+
+#ifdef DEBUG
 int
 pixman_region16_print(rgn)
     pixman_region16_t * rgn;
@@ -224,6 +232,7 @@ pixman_region16_print(rgn)
     return(num);
 }
 
+
 pixman_region_status_t
 pixman_region16_tsEqual(reg1, reg2)
     pixman_region16_t * reg1;
@@ -237,7 +246,7 @@ pixman_region16_tsEqual(reg1, reg2)
     if (reg1->extents.y1 != reg2->extents.y1) return PIXMAN_REGION_STATUS_FAILURE;
     if (reg1->extents.y2 != reg2->extents.y2) return PIXMAN_REGION_STATUS_FAILURE;
     if (PIXREGION_NUM_RECTS(reg1) != PIXREGION_NUM_RECTS(reg2)) return PIXMAN_REGION_STATUS_FAILURE;
-
+    
     rects1 = PIXREGION_RECTS(reg1);
     rects2 = PIXREGION_RECTS(reg2);
     for (i = 0; i != PIXREGION_NUM_RECTS(reg1); i++) {
@@ -295,7 +304,8 @@ pixman_region16_valid(reg)
     }
 }
 
-#endif /* DEBUG_PIXREGION */
+#endif /* DEBUG */
+
 
 /*	Create a new empty region	*/
 pixman_region16_t *
@@ -313,7 +323,7 @@ pixman_region16_t *
 pixman_region_create_simple (pixman_box16_t *extents)
 {
     pixman_region16_t *region;
-
+   
     region = malloc (sizeof (pixman_region16_t));
     if (region == NULL)
 	return &pixman_brokenregion;
@@ -322,6 +332,7 @@ pixman_region_create_simple (pixman_box16_t *extents)
 
     return region;
 }
+slim_hidden_def(pixman_region_create_simple);
 
 /*****************************************************************
  *   RegionInit(pReg, rect, size)
@@ -384,7 +395,7 @@ static pixman_region_status_t
 pixman_rect_alloc(pixman_region16_t * region, int n)
 {
     pixman_region16_data_t *data;
-
+    
     if (!region->data)
     {
 	n++;
@@ -442,10 +453,12 @@ pixman_region_copy(pixman_region16_t *dst, pixman_region16_t *src)
 	dst->data->size = src->data->numRects;
     }
     dst->data->numRects = src->data->numRects;
-    memmove((char *)PIXREGION_BOXPTR(dst),(char *)PIXREGION_BOXPTR(src),
+    memmove((char *)PIXREGION_BOXPTR(dst),(char *)PIXREGION_BOXPTR(src), 
 	  dst->data->numRects * sizeof(pixman_box16_t));
     return PIXMAN_REGION_STATUS_SUCCESS;
 }
+slim_hidden_def(pixman_region_copy);
+
 
 /*======================================================================
  *	    Generic Region Operator
@@ -525,6 +538,7 @@ pixman_coalesce (
     } while (numRects);
     return prevStart;
 }
+
 
 /* Quicky macro to avoid trivial reject procedure calls to pixman_coalesce */
 
@@ -678,7 +692,7 @@ pixman_op(
      */
     if (PIXREGION_NAR (reg1) || PIXREGION_NAR(reg2))
 	return pixman_break (newReg);
-
+    
     /*
      * Initialization:
      *	set r1, r2, r1End and r2End appropriately, save the rectangles
@@ -730,7 +744,7 @@ pixman_op(
      */
 
     ybot = MIN(r1->y1, r2->y1);
-
+    
     /*
      * prevBand serves to mark the start of the previous band so rectangles
      * can be coalesced into larger rectangles. qv. pixman_coalesce, above.
@@ -741,7 +755,7 @@ pixman_op(
      * array of rectangles.
      */
     prevBand = 0;
-
+    
     do {
 	/*
 	 * This algorithm proceeds one source-band (as opposed to a
@@ -752,7 +766,7 @@ pixman_op(
 	 */
 	assert(r1 != r1End);
 	assert(r2 != r2End);
-
+    
 	FindBand(r1, r1BandEnd, r1End, r1y1);
 	FindBand(r2, r2BandEnd, r2End, r2y1);
 
@@ -980,10 +994,12 @@ pixman_region_intersectO (
     return PIXMAN_REGION_STATUS_SUCCESS;
 }
 
+
 pixman_region_status_t
-pixman_region_intersect(pixman_region16_t * 	newReg,
-			pixman_region16_t * 	reg1,
-			pixman_region16_t *	reg2)
+pixman_region_intersect(newReg, reg1, reg2)
+    pixman_region16_t * 	newReg;     /* destination Region */
+    pixman_region16_t * 	reg1;
+    pixman_region16_t *	reg2;       /* source regions     */
 {
     good(reg1);
     good(reg2);
@@ -1127,7 +1143,7 @@ pixman_region_unionO (
 	    MERGERECT(r2);
 	} while (r2 != r2End);
     }
-
+    
     /* Add current rectangle */
     NEWRECT(region, pNextRect, x1, y1, x2, y2);
 
@@ -1225,6 +1241,8 @@ pixman_region_union(pixman_region16_t *newReg, pixman_region16_t *reg1, pixman_r
     good(newReg);
     return PIXMAN_REGION_STATUS_SUCCESS;
 }
+slim_hidden_def(pixman_region_union);
+
 
 /*======================================================================
  *	    Batch Rectangle Union
@@ -1233,7 +1251,7 @@ pixman_region_union(pixman_region16_t *newReg, pixman_region16_t *reg1, pixman_r
 /*-
  *-----------------------------------------------------------------------
  * pixman_region_append --
- *
+ * 
  *      "Append" the rgn rectangles onto the end of dstrgn, maintaining
  *      knowledge of YX-banding when it's easy.  Otherwise, dstrgn just
  *      becomes a non-y-x-banded random collection of rectangles, and not
@@ -1248,8 +1266,9 @@ pixman_region_union(pixman_region16_t *newReg, pixman_region16_t *reg1, pixman_r
  *
  */
 pixman_region_status_t
-pixman_region_append(pixman_region16_t * dstrgn,
-		     pixman_region16_t * rgn)
+pixman_region_append(dstrgn, rgn)
+    pixman_region16_t * dstrgn;
+    pixman_region16_t * rgn;
 {
     int numRects, dnumRects, size;
     pixman_box16_t *new, *old;
@@ -1257,7 +1276,7 @@ pixman_region_append(pixman_region16_t * dstrgn,
 
     if (PIXREGION_NAR(rgn))
 	return pixman_break (dstrgn);
-
+    
     if (!rgn->data && (dstrgn->data == &pixman_region_emptyData))
     {
 	dstrgn->extents = rgn->extents;
@@ -1318,7 +1337,7 @@ pixman_region_append(pixman_region16_t * dstrgn,
 	if (dnumRects == 1)
 	    *new = *PIXREGION_BOXPTR(dstrgn);
 	else
-	    memmove((char *)new,(char *)PIXREGION_BOXPTR(dstrgn),
+	    memmove((char *)new,(char *)PIXREGION_BOXPTR(dstrgn), 
 		  dnumRects * sizeof(pixman_box16_t));
 	new = PIXREGION_BOXPTR(dstrgn);
     }
@@ -1332,6 +1351,7 @@ pixman_region_append(pixman_region16_t * dstrgn,
     return PIXMAN_REGION_STATUS_SUCCESS;
 }
 
+   
 #define ExchangeRects(a, b) \
 {			    \
     pixman_box16_t     t;	    \
@@ -1402,7 +1422,7 @@ QuickSortRects(
 /*-
  *-----------------------------------------------------------------------
  * pixman_region_validate --
- *
+ * 
  *      Take a ``region'' which is a non-y-x-banded random collection of
  *      rectangles, and compute a nice region which is the union of all the
  *      rectangles.
@@ -1421,7 +1441,7 @@ QuickSortRects(
  *      Step 2. Split the rectangles into the minimum number of proper y-x
  *		banded regions.  This may require horizontally merging
  *		rectangles, and vertically coalescing bands.  With any luck,
- *		this step in an identity transformation (ala the Box widget),
+ *		this step in an identity tranformation (ala the Box widget),
  *		or a coalescing into 1 box (ala Menus).
  *
  *	Step 3. Merge the separate regions down to a single region by calling
@@ -1432,8 +1452,9 @@ QuickSortRects(
  */
 
 pixman_region_status_t
-pixman_region_validate(pixman_region16_t * badreg,
-		       int *pOverlap)
+pixman_region_validate(badreg, pOverlap)
+    pixman_region16_t * badreg;
+    int *pOverlap;
 {
     /* Descriptor for regions under construction  in Step 2. */
     typedef struct {
@@ -1453,7 +1474,7 @@ pixman_region_validate(pixman_region16_t * badreg,
     pixman_box16_t *	box;	    /* Current box in rects		    */
     pixman_box16_t *	riBox;      /* Last box in ri[j].reg		    */
     pixman_region16_t *  hreg;       /* ri[j_half].reg			    */
-    pixman_region_status_t ret = PIXMAN_REGION_STATUS_SUCCESS;
+    int		ret = PIXMAN_REGION_STATUS_SUCCESS;
 
     *pOverlap = PIXMAN_REGION_STATUS_FAILURE;
     if (!badreg->data)
@@ -1708,6 +1729,7 @@ pixman_region_rectsToRegion(nrects, prect, ctype)
  * 	    	  Region Subtraction
  *====================================================================*/
 
+
 /*-
  *-----------------------------------------------------------------------
  * pixman_region_subtractO --
@@ -1738,7 +1760,7 @@ pixman_region_subtractO (
     int  	x1;
 
     x1 = r1->x1;
-
+    
     assert(y1<y2);
     assert(r1 != r1End && r2 != r2End);
 
@@ -1818,6 +1840,7 @@ pixman_region_subtractO (
 	}
     } while ((r1 != r1End) && (r2 != r2End));
 
+
     /*
      * Add remaining minuend rectangles to region.
      */
@@ -1831,7 +1854,7 @@ pixman_region_subtractO (
     }
     return PIXMAN_REGION_STATUS_SUCCESS;
 }
-
+	
 /*-
  *-----------------------------------------------------------------------
  * pixman_region_subtract --
@@ -1847,9 +1870,10 @@ pixman_region_subtractO (
  *-----------------------------------------------------------------------
  */
 pixman_region_status_t
-pixman_region_subtract(pixman_region16_t *	regD,
-		       pixman_region16_t * 	regM,
-		       pixman_region16_t *	regS)
+pixman_region_subtract(regD, regM, regS)
+    pixman_region16_t *	regD;               
+    pixman_region16_t * 	regM;
+    pixman_region16_t *	regS;          
 {
     int overlap; /* result ignored */
 
@@ -1872,7 +1896,7 @@ pixman_region_subtract(pixman_region16_t *	regD,
 	regD->data = &pixman_region_emptyData;
 	return PIXMAN_REGION_STATUS_SUCCESS;
     }
-
+ 
     /* Add those rectangles in region 1 that aren't in region 2,
        do yucky substraction for overlaps, and
        just throw away rectangles in region 2 that aren't in region 1 */
@@ -1911,9 +1935,10 @@ pixman_region_subtract(pixman_region16_t *	regD,
  *-----------------------------------------------------------------------
  */
 pixman_region_status_t
-pixman_region_inverse(pixman_region16_t * 	  newReg,       /* Destination region */
-		      pixman_region16_t * 	  reg1,         /* Region to invert */
-		      pixman_box16_t *     	  invRect) 	/* Bounding box for inversion */
+pixman_region_inverse(newReg, reg1, invRect)
+    pixman_region16_t * 	  newReg;       /* Destination region */
+    pixman_region16_t * 	  reg1;         /* Region to invert */
+    pixman_box16_t *     	  invRect; 	/* Bounding box for inversion */
 {
     pixman_region16_t	  invReg;   	/* Quick and dirty region made from the
 				 * bounding box */
@@ -1970,8 +1995,9 @@ pixman_region_inverse(pixman_region16_t * 	  newReg,       /* Destination region
  */
 
 int
-pixman_region_contains_rectangle(pixman_region16_t *  region,
-				 pixman_box16_t *     prect)
+pixman_region_contains_rectangle(region, prect)
+    pixman_region16_t *  region;
+    pixman_box16_t *     prect;
 {
     int	x;
     int	y;
@@ -2152,7 +2178,7 @@ pixman_region16_data_copy(pixman_region16_t * dst, pixman_region16_t * src)
 {
     good(dst);
     good(src);
-    if (dst->data)
+    if (dst->data) 
 	return PIXMAN_REGION_STATUS_SUCCESS;
     if (dst == src)
 	return PIXMAN_REGION_STATUS_SUCCESS;
@@ -2186,11 +2212,11 @@ pixman_region_reset(pixman_region16_t *region, pixman_box16_t *box)
     region->data = (pixman_region16_data_t *)NULL;
 }
 
-/* box is "return" value */
 int
-pixman_region_contains_point(pixman_region16_t * region,
-			     int x, int y,
-			     pixman_box16_t * box)
+pixman_region_contains_point(region, x, y, box)
+    pixman_region16_t * region;
+    int x, y;
+    pixman_box16_t * box;     /* "return" value */
 {
     pixman_box16_t *pbox, *pboxEnd;
     int numRects;
@@ -2221,7 +2247,8 @@ pixman_region_contains_point(pixman_region16_t * region,
 }
 
 int
-pixman_region_not_empty(pixman_region16_t * region)
+pixman_region_not_empty(region)
+    pixman_region16_t * region;
 {
     good(region);
     return(!PIXREGION_NIL(region));
@@ -2237,7 +2264,8 @@ pixman_region16_broken(pixman_region16_t * region)
 */
 
 void
-pixman_region_empty(pixman_region16_t * region)
+pixman_region_empty(region)
+    pixman_region16_t * region;
 {
     good(region);
     freeData(region);
@@ -2247,7 +2275,8 @@ pixman_region_empty(pixman_region16_t * region)
 }
 
 pixman_box16_t *
-pixman_region_extents(pixman_region16_t * region)
+pixman_region_extents(region)
+    pixman_region16_t * region;
 {
     good(region);
     return(&region->extents);
@@ -2394,7 +2423,7 @@ pixman_region16_clip_spans(
     if (!prgnDst->data)
     {
 	/* Do special fast code with clip boundaries in registers(?) */
-	/* It doesn't pay much to make use of fSorted in this case,
+	/* It doesn't pay much to make use of fSorted in this case, 
 	   so we lump everything together. */
 
 	   int clipx1, clipx2, clipy1, clipy2;
@@ -2403,7 +2432,7 @@ pixman_region16_clip_spans(
 	clipy1 = prgnDst->extents.y1;
 	clipx2 = prgnDst->extents.x2;
 	clipy2 = prgnDst->extents.y2;
-
+	    
 	for (; ppt != pptLast; ppt++, pwidth++)
 	{
 	    y = ppt->y;
@@ -2441,7 +2470,7 @@ pixman_region16_clip_spans(
 
 	pboxBandStart = PIXREGION_BOXPTR(prgnDst);
 	pboxLast = pboxBandStart + numRects;
-
+    
 	NextBand();
 
 	for (; ppt != pptLast; )

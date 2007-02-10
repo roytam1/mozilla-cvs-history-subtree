@@ -46,7 +46,6 @@
 #include "jsapi.h"              // nsXBLJSClass derives from JSClass
 #include "jsclist.h"            // nsXBLJSClass derives from JSCList
 #include "nsFixedSizeAllocator.h"
-#include "nsTArray.h"
 
 class nsXBLBinding;
 class nsIXBLDocumentInfo;
@@ -84,6 +83,7 @@ class nsXBLService : public nsIXBLService,
 
   // Used by XUL key bindings and for window XBL.
   NS_IMETHOD AttachGlobalKeyHandler(nsIDOMEventReceiver* aElement);
+  NS_IMETHOD AttachGlobalDragHandler(nsIDOMEventReceiver* aElement);
 
   NS_DECL_NSIOBSERVER
 
@@ -105,31 +105,11 @@ protected:
 
   nsresult GetXBLDocumentInfo(nsIURI* aURI, nsIContent* aBoundElement, nsIXBLDocumentInfo** aResult);
 
-  /**
-   * This method calls the one below with an empty |aDontExtendURIs| array.
-   */
+  // This method loads a binding doc and then builds the specific binding required.  It
+  // can also peek without building.
   nsresult GetBinding(nsIContent* aBoundElement, nsIURI* aURI,
                       PRBool aPeekFlag, PRBool* aIsReady,
                       nsXBLBinding** aResult);
-
-  /**
-   * This method loads a binding doc and then builds the specific binding
-   * required. It can also peek without building.
-   * @param aBoundElement the element to get a binding for
-   * @param aURI the binding URI
-   * @param aPeekFlag if true then just peek to see if the binding is ready
-   * @param aIsReady [out] if the binding is ready or not
-   * @param aResult [out] where to store the resulting binding (not used if
-   *                      aPeekFlag is true, otherwise it must be non-null)
-   * @param aDontExtendURIs a set of URIs that are already bound to this
-   *        element. If a binding extends any of these then further loading
-   *        is aborted (because it would lead to the binding extending itself)
-   *        and NS_ERROR_ILLEGAL_VALUE is returned.
-   */
-  nsresult GetBinding(nsIContent* aBoundElement, nsIURI* aURI,
-                      PRBool aPeekFlag, PRBool* aIsReady,
-                      nsXBLBinding** aResult,
-                      nsTArray<nsIURI*>& aDontExtendURIs);
 
 // MEMBER VARIABLES
 public:

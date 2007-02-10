@@ -40,7 +40,7 @@
 
 interface nsIAutoCompletePopup;
 
-[scriptable, uuid(AC029254-06DD-4dff-878C-A292117DE2D3)]
+[scriptable, uuid(e312267f-8f57-43e8-a904-ff9b5d3f5aef)]
 interface nsIAutoCompleteInput : nsISupports
 {  
   /*
@@ -156,7 +156,11 @@ interface nsIAutoCompleteInput : nsISupports
    * @return True if the user wishes to prevent the revert
    */
   boolean onTextReverted();
+};
 
+[scriptable, uuid(CCD37136-76E8-47a7-B46C-B8FEE8EB0536)]
+interface nsIAutoCompleteInput_MOZILLA_1_8_BRANCH : nsIAutoCompleteInput
+{
   /*
    * This popup should consume or dispatch the rollup event.
    * TRUE: should consume; FALSE: should dispatch.

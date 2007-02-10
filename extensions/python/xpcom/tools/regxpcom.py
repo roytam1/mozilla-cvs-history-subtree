@@ -36,33 +36,32 @@
 # ***** END LICENSE BLOCK *****
 
 # regxpcom.py - basically the standard regxpcom.cpp ported to Python.
-# In general, you should use regxpcom.exe instead of this.
 
 from xpcom import components, _xpcom
-from xpcom.client import Component
 import sys
 import os
 
-registrar = Component(_xpcom.GetComponentRegistrar(),
-                      components.interfaces.nsIComponentRegistrar)
-
 def ProcessArgs(args):
-
     unregister = 0
     for arg in args:
-        spec = components.classes['@mozilla.org/file/local;1'].createInstance()
-        spec = spec.QueryInterface(components.interfaces.nsILocalFile)
-        spec.initWithPath(os.path.abspath(arg))
         if arg == "-u":
-            registrar.autoUnregister(spec)
-            print "Successfully unregistered", spec.path
+            unregister = 1
         else:
-            registrar.autoRegister(spec)
-            print "Successfully registered", spec.path
+            spec = components.classes['@mozilla.org/file/local;1'].createInstance()
+            spec = spec.QueryInterface(components.interfaces.nsILocalFile)
+            spec.initWithPath(os.path.abspath(arg))
+            if unregister:
+                components.manager.autoUnregisterComponent( components.manager.NS_Startup, spec)
+                print "Successfully unregistered", spec.path
+            else:
+                components.manager.autoRegisterComponent( components.manager.NS_Startup, spec)
+                print "Successfully registered", spec.path
+            unregister = 0
 
+import xpcom
 if len(sys.argv) < 2:
-    registrar.autoRegister( None)
+    components.manager.autoRegister( components.manager.NS_Startup, None)
 else:
     ProcessArgs(sys.argv[1:])
 
-#_xpcom.NS_ShutdownXPCOM()
+_xpcom.NS_ShutdownXPCOM()

@@ -39,15 +39,11 @@
 
 #include "nsCOMPtr.h"
 #include "wspproxytest.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "nsIInterfaceInfoManager.h"
 #include "nsIServiceManager.h"
 #include "nsIProperty.h"
 #include "nsIVariant.h"
-#include "nsMemory.h"
-#include "nsComponentManagerUtils.h"
-#include "nsServiceManagerUtils.h"
-#include "nsIClassInfoImpl.h"
 
 const PRUint8 sInt8Val = 2;
 const PRInt16 sInt16Val = 0x1234;
@@ -128,13 +124,13 @@ WSPProxyTest::TestComplexTypeWrapper(nsAString& aResult)
   nsresult rv = CreateComplexTypeWrapper(getter_AddRefs(wrapper),
                                          getter_AddRefs(info));
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed creating complex type wrapper"));
+    aResult.AssignLiteral("WSPProxyTest: Failed creating complex type wrapper");
     return NS_OK;
   }
 
   nsCOMPtr<nsIPropertyBag> propBag = do_QueryInterface(wrapper);
   if (!propBag) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Wrapper is not property bag"));
+    aResult.AssignLiteral("WSPProxyTest: Wrapper is not property bag");
     return NS_ERROR_FAILURE;
   }
 
@@ -151,7 +147,7 @@ WSPProxyTest::TestComplexTypeWrapperInstance(nsIPropertyBag* propBag,
   nsCOMPtr<nsISimpleEnumerator> enumerator;
   nsresult rv = propBag->GetEnumerator(getter_AddRefs(enumerator));
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed getting property bag enumerator"));
+    aResult.AssignLiteral("WSPProxyTest: Failed getting property bag enumerator");
     return rv;
   }
 
@@ -163,8 +159,7 @@ WSPProxyTest::TestComplexTypeWrapperInstance(nsIPropertyBag* propBag,
 #define GET_AND_TEST_NAME(_name)                                          \
     rv = enumerator->GetNext(getter_AddRefs(sup));                        \
     if (NS_FAILED(rv)) {                                                  \
-      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed getting property ")); \
-      aResult.Append(NS_LITERAL_STRING(#_name));                          \
+      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed getting property ") + NS_LITERAL_STRING(#_name));    \
       return rv;                                                          \
     }                                                                     \
                                                                           \
@@ -174,9 +169,8 @@ WSPProxyTest::TestComplexTypeWrapperInstance(nsIPropertyBag* propBag,
     }                                                                     \
                                                                           \
     prop->GetName(propName);                                              \
-    if (!propName.Equals(NS_LITERAL_STRING(#_name))) {                    \
-      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Name doesn't match for property ")); \
-      aResult.Append(NS_LITERAL_STRING(#_name));                          \
+    if (!propName.EqualsLiteral(#_name)) {                    \
+      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Name doesn't match for property ") + NS_LITERAL_STRING(#_name)); \
       return NS_ERROR_FAILURE;                                            \
     }                                                                     \
     prop->GetValue(getter_AddRefs(val));                                  \
@@ -189,13 +183,11 @@ WSPProxyTest::TestComplexTypeWrapperInstance(nsIPropertyBag* propBag,
     _t _name;                                                               \
     rv = val->GetAs##_n(&_name);                                            \
     if (NS_FAILED(rv)) {                                                    \
-      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed getting value for property ")); \
-      aResult.Append(NS_LITERAL_STRING(#_name));                            \
+      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed getting value for property ") + NS_LITERAL_STRING(#_name)); \
       return rv;                                                            \
     }                                                                       \
     if (_name != _val) {                                                    \
-      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for property ")); \
-      aResult.Append(NS_LITERAL_STRING(#_name));                            \
+      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for property ") + NS_LITERAL_STRING(#_name)); \
       return NS_ERROR_FAILURE;                                              \
     }                                                                       
                                                                              
@@ -217,12 +209,12 @@ WSPProxyTest::TestComplexTypeWrapperInstance(nsIPropertyBag* propBag,
   nsAutoString str;
   rv = val->GetAsAString(str);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed getting value for property s"));
+    aResult.AssignLiteral("WSPProxyTest: Failed getting value for property s");
     return rv;
   }
 
-  if (!str.Equals(NS_LITERAL_STRING(STRING_VAL))) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for property s"));
+  if (!str.EqualsLiteral(STRING_VAL)) {
+    aResult.AssignLiteral("WSPProxyTest: Value doesn't match for property s");
     return NS_ERROR_FAILURE;
   }
 
@@ -230,12 +222,12 @@ WSPProxyTest::TestComplexTypeWrapperInstance(nsIPropertyBag* propBag,
   nsCOMPtr<nsISupports> supVal;  
   rv = val->GetAsISupports(getter_AddRefs(supVal));  
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed getting value for property p"));
+    aResult.AssignLiteral("WSPProxyTest: Failed getting value for property p");
     return rv;
   }
   nsCOMPtr<nsIPropertyBag> propBagVal = do_QueryInterface(supVal, &rv);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for property p"));
+    aResult.AssignLiteral("WSPProxyTest: Value doesn't match for property p");
     return rv;
   }
 
@@ -243,7 +235,7 @@ WSPProxyTest::TestComplexTypeWrapperInstance(nsIPropertyBag* propBag,
   PRUint16 dataType;
   val->GetDataType(&dataType);
   if (dataType != nsIDataType::VTYPE_EMPTY) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for property p"));
+    aResult.AssignLiteral("WSPProxyTest: Value doesn't match for property p");
     return NS_ERROR_FAILURE;
   }
 
@@ -255,12 +247,12 @@ WSPProxyTest::TestComplexTypeWrapperInstance(nsIPropertyBag* propBag,
   nsIID iid;
   rv = val->GetAsArray(&type, &iid, &count, (void**)&arrayVal1);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed getting value for property array1"));
+    aResult.AssignLiteral("WSPProxyTest: Failed getting value for property array1");
     return rv;
   }
   for (index = 0; index < count; index++) {
     if (arrayVal1[index] != sArray1[index]) {
-      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for element of property array1"));
+      aResult.AssignLiteral("WSPProxyTest: Value doesn't match for element of property array1");
       return rv;      
     }
   }
@@ -270,12 +262,12 @@ WSPProxyTest::TestComplexTypeWrapperInstance(nsIPropertyBag* propBag,
   GET_AND_TEST_NAME(array2)
   rv = val->GetAsArray(&type, &iid, &count, (void**)&arrayVal2);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed getting value for property array2"));
+    aResult.AssignLiteral("WSPProxyTest: Failed getting value for property array2");
     return rv;
   }
   for (index = 0; index < count; index++) {
     if (arrayVal2[index] != sArray2[index]) {
-      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for element of property array2"));
+      aResult.AssignLiteral("WSPProxyTest: Value doesn't match for element of property array2");
       return rv;      
     }
   }
@@ -285,16 +277,16 @@ WSPProxyTest::TestComplexTypeWrapperInstance(nsIPropertyBag* propBag,
   GET_AND_TEST_NAME(array3)
   rv = val->GetAsArray(&type, &iid, &count, (void**)&arrayVal3);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed getting value for property array3"));
+    aResult.AssignLiteral("WSPProxyTest: Failed getting value for property array3");
     return rv;
   }
   propBagVal = do_QueryInterface(arrayVal3[0], &rv);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for element of property array3"));
+    aResult.AssignLiteral("WSPProxyTest: Value doesn't match for element of property array3");
     return rv;
   }
   if (arrayVal3[1] != nsnull) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for element of  property array3"));
+    aResult.AssignLiteral("WSPProxyTest: Value doesn't match for element of  property array3");
     return NS_ERROR_FAILURE;
   }
   NS_FREE_XPCOM_ISUPPORTS_POINTER_ARRAY(count, arrayVal3);
@@ -302,7 +294,7 @@ WSPProxyTest::TestComplexTypeWrapperInstance(nsIPropertyBag* propBag,
 #undef GET_AND_TEST
 #undef GET_AND_TEST_NAME
 
-  aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Test Succeeded!"));
+  aResult.AssignLiteral("WSPProxyTest: Test Succeeded!");
   return NS_OK;
 }
 
@@ -315,30 +307,30 @@ WSPProxyTest::TestPropertyBagWrapper(nsAString& aResult)
   nsresult rv = CreateComplexTypeWrapper(getter_AddRefs(ctwrapper),
                                          getter_AddRefs(info));
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed creating complex type wrapper"));
+    aResult.AssignLiteral("WSPProxyTest: Failed creating complex type wrapper");
     return NS_OK;
   }
 
   nsCOMPtr<nsIPropertyBag> propBag = do_QueryInterface(ctwrapper);
   if (!propBag) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Wrapper is not property bag"));
+    aResult.AssignLiteral("WSPProxyTest: Wrapper is not property bag");
     return NS_OK;
   }
 
   nsCOMPtr<nsIWebServicePropertyBagWrapper> wrapper = do_CreateInstance(NS_WEBSERVICEPROPERTYBAGWRAPPER_CONTRACTID, &rv);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed creating property bag wrapper"));
+    aResult.AssignLiteral("WSPProxyTest: Failed creating property bag wrapper");
     return NS_OK;
   }
   rv = wrapper->Init(propBag, info);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed initializing property bag wrapper"));
+    aResult.AssignLiteral("WSPProxyTest: Failed initializing property bag wrapper");
     return NS_OK;
   }
 
   nsCOMPtr<nsIWSPTestComplexType> ct = do_QueryInterface(wrapper, &rv);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Property bag wrapper doesn't QI correctly"));
+    aResult.AssignLiteral("WSPProxyTest: Property bag wrapper doesn't QI correctly");
     return NS_OK;
   }
   
@@ -346,13 +338,11 @@ WSPProxyTest::TestPropertyBagWrapper(nsAString& aResult)
   _t _name;                                                                 \
   rv = ct->Get##_name(&_name);                                              \
   if (NS_FAILED(rv)) {                                                      \
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed to get value for attribute")); \
-    aResult.Append(NS_LITERAL_STRING(#_name));                              \
+    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed to get value for attribute") + NS_LITERAL_STRING(#_name)); \
     return NS_OK;                                                           \
   }                                                                         \
   if (_name != _val) {                                                      \
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for attribute ")); \
-    aResult.Append(NS_LITERAL_STRING(#_name));                              \
+    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for attribute ") + NS_LITERAL_STRING(#_name)); \
     return NS_OK;                                                           \
   }
                                                                            
@@ -373,28 +363,28 @@ WSPProxyTest::TestPropertyBagWrapper(nsAString& aResult)
   nsAutoString str;
   rv = ct->GetS(str);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed to get value for attribute s"));
+    aResult.AssignLiteral("WSPProxyTest: Failed to get value for attribute s");
     return NS_OK;
   }
-  if (!str.Equals(NS_LITERAL_STRING(STRING_VAL))) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for attribute s"));
+  if (!str.EqualsLiteral(STRING_VAL)) {
+    aResult.AssignLiteral("WSPProxyTest: Value doesn't match for attribute s");
     return NS_OK;
   }
 
   nsCOMPtr<nsIWSPTestComplexType> p;
   rv = ct->GetP(getter_AddRefs(p));
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed to get value for attribute p"));
+    aResult.AssignLiteral("WSPProxyTest: Failed to get value for attribute p");
     return NS_OK;
   }
 
   rv = ct->GetP2(getter_AddRefs(p));
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed to get value for attribute p2"));
+    aResult.AssignLiteral("WSPProxyTest: Failed to get value for attribute p2");
     return NS_OK;
   }
   if (p) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for attribute p2"));
+    aResult.AssignLiteral("WSPProxyTest: Value doesn't match for attribute p2");
     return NS_OK;
   }
 
@@ -403,12 +393,12 @@ WSPProxyTest::TestPropertyBagWrapper(nsAString& aResult)
   PRUint32* array1;
   rv = ct->Array1(&count, &array1);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed to get value for attribute array1"));
+    aResult.AssignLiteral("WSPProxyTest: Failed to get value for attribute array1");
     return NS_OK;
   }
   for (index = 0; index < count; index++) {
     if (array1[index] != sArray1[index]) {
-      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for element of attribute array1"));
+      aResult.AssignLiteral("WSPProxyTest: Value doesn't match for element of attribute array1");
       return NS_OK;
     }
   }
@@ -417,12 +407,12 @@ WSPProxyTest::TestPropertyBagWrapper(nsAString& aResult)
   double* array2;
   rv = ct->Array2(&count, &array2);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed to get value for attribute array2"));
+    aResult.AssignLiteral("WSPProxyTest: Failed to get value for attribute array2");
     return NS_OK;
   }
   for (index = 0; index < count; index++) {
     if (array2[index] != sArray2[index]) {
-      aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for element of attribute array2"));
+      aResult.AssignLiteral("WSPProxyTest: Value doesn't match for element of attribute array2");
       return NS_OK;
     }
   }
@@ -431,18 +421,18 @@ WSPProxyTest::TestPropertyBagWrapper(nsAString& aResult)
   nsIWSPTestComplexType** array3;
   rv = ct->Array3(&count, &array3);
   if (NS_FAILED(rv)) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Failed to get value for attribute array3"));
+    aResult.AssignLiteral("WSPProxyTest: Failed to get value for attribute array3");
     return NS_OK;
   }
   if (!array3[0] || array3[1]) {
-    aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Value doesn't match for element of attribute array3"));
+    aResult.AssignLiteral("WSPProxyTest: Value doesn't match for element of attribute array3");
     return NS_OK;
   }
   NS_FREE_XPCOM_ISUPPORTS_POINTER_ARRAY(count, array3);
 
 #undef GET_AND_TEST
 
-  aResult.Assign(NS_LITERAL_STRING("WSPProxyTest: Test Succeeded!"));
+  aResult.AssignLiteral("WSPProxyTest: Test Succeeded!");
   return NS_OK;
 }
 
@@ -523,9 +513,9 @@ WSPProxyTest::OnError(nsresult status, const nsAString & statusMessage)
 /* void onError (in nsIException error, in nsIWebServiceCallContext cx); */
 NS_IMETHODIMP WSPProxyTest::OnError(nsIException *error, nsIWebServiceCallContext *cx)
 {
-  nsCString str;
+  nsXPIDLCString str;
   error->ToString(getter_Copies(str));
-  mListener->OnIsPrimeProxyTestComplete(NS_ConvertASCIItoUTF16(str));
+  mListener->OnIsPrimeProxyTestComplete(NS_ConvertASCIItoUCS2(str.get()));
   return NS_OK;
 }
 
@@ -722,7 +712,7 @@ WSPTestComplexType::GetP2(nsIWSPTestComplexType * *aP2)
 NS_IMETHODIMP 
 WSPTestComplexType::GetS(nsAString & aS)
 {
-  aS.Assign(NS_LITERAL_STRING(STRING_VAL));
+  aS.AssignLiteral(STRING_VAL);
   return NS_OK;
 }
 

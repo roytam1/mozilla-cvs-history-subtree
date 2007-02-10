@@ -22,7 +22,7 @@
  * Contributor(s):
  *   Simon Fraser <sfraser@netscape.com>
  *   Calum Robinson <calumr@mac.com>
- *   Josh Aas <josh@mozilla.com>
+ *   Josh Aas <josha@mac.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -106,7 +106,7 @@
 -(void)clearAllDownloads;
 -(void)didStartDownload:(id <CHDownloadProgressDisplay>)progressDisplay;
 -(void)didEndDownload:(id <CHDownloadProgressDisplay>)progressDisplay withSuccess:(BOOL)completedOK statusCode:(nsresult)status;
--(void)removeDownload:(id <CHDownloadProgressDisplay>)progressDisplay suppressRedraw:(BOOL)suppressRedraw;
+-(void)removeDownload:(id <CHDownloadProgressDisplay>)progressDisplay;
 -(NSApplicationTerminateReply)allowTerminate;
 -(void)applicationWillTerminate;
 -(void)saveProgressViewControllers;

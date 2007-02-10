@@ -42,25 +42,21 @@
 #include "nsXFormsAtoms.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMDocument.h"
-#include "nsIDOMDocumentEvent.h"
-#include "nsIDOMEvent.h"
-#include "nsIPrivateDOMEvent.h"
 #include "nsString.h"
 #include "nsXFormsUtils.h"
 #include "nsIXFormsValueElement.h"
 #include "nsVoidArray.h"
 #include "nsIDOMText.h"
-#include "nsIXTFElementWrapper.h"
+#include "nsIXTFBindableElementWrapper.h"
 #include "nsIXFormsContextControl.h"
 #include "nsIModelElementPrivate.h"
 #include "nsIXFormsItemElement.h"
 #include "nsIXFormsControl.h"
+#include "nsIXFormsLabelElement.h"
 #include "nsIDocument.h"
 #include "nsXFormsModelElement.h"
 #include "nsIXFormsCopyElement.h"
 #include "nsIDOMEventTarget.h"
-#include "nsIXFormsDelegate.h"
-#include "nsIXFormsAccessors.h"
 
 /**
  * nsXFormsItemElement implements the XForms \<item\> element.
@@ -69,7 +65,7 @@
  * select element.
  */
 
-class nsXFormsItemElement : public nsXFormsStubElement,
+class nsXFormsItemElement : public nsXFormsBindableStub,
                             public nsIXFormsSelectChild,
                             public nsIXFormsItemElement
 {
@@ -82,7 +78,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIXFORMSITEMELEMENT
 
-  NS_IMETHOD OnCreated(nsIXTFElementWrapper *aWrapper);
+  NS_IMETHOD OnCreated(nsIXTFBindableElementWrapper *aWrapper);
 
   // nsIXTFElement overrides
   NS_IMETHOD ParentChanged(nsIDOMElement *aNewParent);
@@ -108,14 +104,14 @@ private:
 };
 
 NS_IMPL_ISUPPORTS_INHERITED2(nsXFormsItemElement,
-                             nsXFormsStubElement,
+                             nsXFormsBindableStub,
                              nsIXFormsSelectChild,
                              nsIXFormsItemElement)
 
 NS_IMETHODIMP
-nsXFormsItemElement::OnCreated(nsIXTFElementWrapper *aWrapper)
+nsXFormsItemElement::OnCreated(nsIXTFBindableElementWrapper *aWrapper)
 {
-  nsresult rv = nsXFormsStubElement::OnCreated(aWrapper);
+  nsresult rv = nsXFormsBindableStub::OnCreated(aWrapper);
   NS_ENSURE_SUCCESS(rv, rv);
   
   aWrapper->SetNotificationMask(nsIXTFElement::NOTIFY_PARENT_CHANGED |
@@ -400,33 +396,6 @@ nsXFormsItemElement::SetActive(PRBool aActive)
 {
   /// @see comment in nsIXFormsItemElement.idl
 
-  if (aActive) {
-    // Fire 'DOMMenuItemActive' event. This event is used by accessible module.
-    nsCOMPtr<nsIDOMDocument> domDoc;
-    mElement->GetOwnerDocument(getter_AddRefs(domDoc));
-    nsCOMPtr<nsIDOMDocumentEvent> doc = do_QueryInterface(domDoc);
-    NS_ENSURE_STATE(doc);
-
-    nsCOMPtr<nsIDOMEvent> event;
-    doc->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
-    NS_ENSURE_TRUE(event, NS_ERROR_OUT_OF_MEMORY);
-
-    event->InitEvent(NS_LITERAL_STRING("DOMMenuItemActive"),
-                     PR_TRUE, PR_TRUE);
-
-    nsCOMPtr<nsIDOMNode> node(do_QueryInterface(mElement));
-    NS_ENSURE_STATE(node);
-
-    nsXFormsUtils::SetEventTrusted(event, node);
-
-    nsCOMPtr<nsIDOMEventTarget> target(do_QueryInterface(mElement));
-    NS_ENSURE_STATE(target);
-
-    PRBool defaultActionEnabled = PR_TRUE;
-    nsresult rv = target->DispatchEvent(event, &defaultActionEnabled);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
-
   NS_NAMED_LITERAL_STRING(active, "_moz_active");
 
   return aActive ?
@@ -467,14 +436,11 @@ nsXFormsItemElement::GetLabelText(nsAString& aValue)
   for (PRUint32 i = 0; i < childCount; ++i) {
     children->Item(i, getter_AddRefs(child));
     if (nsXFormsUtils::IsXFormsElement(child, NS_LITERAL_STRING("label"))) {
-      nsCOMPtr<nsIXFormsDelegate> label(do_QueryInterface(child));
-      NS_ENSURE_STATE(label);
-
-      nsCOMPtr<nsIXFormsAccessors> accessors;
-      label->GetXFormsAccessors(getter_AddRefs(accessors));
-      NS_ENSURE_STATE(accessors);
-
-      return accessors->GetValue(aValue);
+      nsCOMPtr<nsIXFormsLabelElement> label(do_QueryInterface(child));
+      if (label) {
+        label->GetTextValue(aValue);
+        return NS_OK;
+      }
     }
   }
 
@@ -515,19 +481,6 @@ nsXFormsItemElement::SetIsCopyItem(PRBool aIsCopyItem)
 {
   mIsCopyItem = aIsCopyItem;
   return NS_OK;
-}
-
-NS_IMETHODIMP
-nsXFormsItemElement::CopyNodeEquals(nsIDOMNode *aNode, PRBool *aIsCopyNode)
-{
-  NS_ENSURE_ARG(aNode);
-  NS_ENSURE_ARG_POINTER(aIsCopyNode);
-
-  nsCOMPtr<nsIDOMNode> selectedNode;
-  nsresult rv = SelectItemByNode(aNode, getter_AddRefs(selectedNode));
-  *aIsCopyNode = !!(selectedNode);
-
-  return rv;
 }
 
 NS_HIDDEN_(nsresult)

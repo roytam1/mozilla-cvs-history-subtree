@@ -397,7 +397,8 @@ nsHttpResponseHead::MustValidateIfExpired()
     //  cache, that cache MUST NOT use the entry after it becomes stale to respond to 
     //  a subsequent request without first revalidating it with the origin server.
     //
-    return HasHeaderValue(nsHttp::Cache_Control, "must-revalidate");
+    const char *val = PeekHeader(nsHttp::Cache_Control);
+    return val && PL_strcasestr(val, "must-revalidate");
 }
 
 PRBool
@@ -408,7 +409,7 @@ nsHttpResponseHead::IsResumable()
     return mVersion >= NS_HTTP_VERSION_1_1 &&
            PeekHeader(nsHttp::Content_Length) && 
           (PeekHeader(nsHttp::ETag) || PeekHeader(nsHttp::Last_Modified)) &&
-           HasHeaderValue(nsHttp::Accept_Ranges, "bytes");
+           PL_strcasestr(PeekHeader(nsHttp::Accept_Ranges), "bytes");
 }
 
 PRBool
@@ -542,10 +543,14 @@ nsHttpResponseHead::GetExpiresValue(PRUint32 *result)
     PRTime time;
     PRStatus st = PR_ParseTimeString(val, PR_TRUE, &time);
     if (st != PR_SUCCESS) {
-        // parsing failed... RFC 2616 section 14.21 says we should treat this
-        // as an expiration time in the past.
-        *result = 0;
-        return NS_OK;
+        // parsing failed... maybe this is an "Expires: 0"
+        nsCAutoString buf(val);
+        buf.StripWhitespace();
+        if (buf.Length() == 1 && buf[0] == '0') {
+            *result = 0;
+            return NS_OK;
+        }
+        return NS_ERROR_NOT_AVAILABLE;
     }
 
     if (LL_CMP(time, <, LL_Zero()))
@@ -634,13 +639,18 @@ nsHttpResponseHead::ParseCacheControl(const char *val)
         return;
     }
 
-    // search header value for occurrence(s) of "no-cache" but ignore
-    // occurrence(s) of "no-cache=blah"
-    if (nsHttp::FindToken(val, "no-cache", HTTP_HEADER_VALUE_SEPS))
-        mCacheControlNoCache = PR_TRUE;
+    const char *s = val;
 
-    // search header value for occurrence of "no-store" 
-    if (nsHttp::FindToken(val, "no-store", HTTP_HEADER_VALUE_SEPS))
+    // search header value for occurance(s) of "no-cache" but ignore
+    // occurance(s) of "no-cache=blah"
+    while ((s = PL_strcasestr(s, "no-cache")) != nsnull) {
+        s += (sizeof("no-cache") - 1);
+        if (*s != '=')
+            mCacheControlNoCache = PR_TRUE;
+    }
+
+    // search header value for occurance of "no-store" 
+    if (PL_strcasestr(val, "no-store"))
         mCacheControlNoStore = PR_TRUE;
 }
 
@@ -658,6 +668,6 @@ nsHttpResponseHead::ParsePragma(const char *val)
     // Although 'Pragma: no-cache' is not a standard HTTP response header (it's
     // a request header), caching is inhibited when this header is present so
     // as to match existing Navigator behavior.
-    if (nsHttp::FindToken(val, "no-cache", HTTP_HEADER_VALUE_SEPS))
+    if (PL_strcasestr(val, "no-cache"))
         mPragmaNoCache = PR_TRUE;
 }

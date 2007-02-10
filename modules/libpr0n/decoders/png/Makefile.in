@@ -50,14 +50,12 @@ LIBXUL_LIBRARY = 1
 
 EXTRA_DSO_LIBS	= gkgfx
 
-REQUIRES = xpcom \
-           string \
-           gfx \
-           thebes \
-           imglib2 \
-           $(PNG_REQUIRES) \
-           $(ZLIB_REQUIRES) \
-           $(NULL)
+REQUIRES	= xpcom \
+		  gfx \
+		  imglib2 \
+		  $(PNG_REQUIRES) \
+		  $(ZLIB_REQUIRES) \
+		  $(NULL)
 
 CPPSRCS		= nsPNGDecoder.cpp
 

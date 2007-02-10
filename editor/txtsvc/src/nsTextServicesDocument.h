@@ -53,6 +53,7 @@
 #include "nsITextServicesFilter.h"
 #include "nsWeakReference.h"
 
+class nsIWordBreaker;
 class nsIRangeUtils;
 
 /** implementation of a text services object.
@@ -89,7 +90,7 @@ private:
   static nsIAtom *sVarAtom;
   static nsIAtom *sWbrAtom;
 
-  typedef enum { eIsDone=0,        // No iterator (I), or iterator doesn't point to anything valid.
+  typedef enum { eIsDone=0,        // No iterator (I), or itertor doesn't point to anything valid.
                  eValid,           // I points to first text node (TN) in current block (CB).
                  ePrev,            // No TN in CB, I points to first TN in prev block.
                  eNext             // No TN in CB, I points to first TN in next block.
@@ -233,7 +234,9 @@ private:
   nsresult RemoveInvalidOffsetEntries();
   nsresult SplitOffsetEntry(PRInt32 aTableIndex, PRInt32 aOffsetIntoEntry);
 
+  static nsresult GetWordBreaker(nsIWordBreaker **aWordBreaker);
   static nsresult FindWordBounds(nsVoidArray *offsetTable, nsString *blockStr,
+                                 nsIWordBreaker *aWordBreaker,
                                  nsIDOMNode *aNode, PRInt32 aNodeOffset,
                                  nsIDOMNode **aWordStartNode,
                                  PRInt32 *aWordStartOffset,

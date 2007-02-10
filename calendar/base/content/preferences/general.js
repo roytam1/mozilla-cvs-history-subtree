@@ -60,10 +60,9 @@ var gGeneralPane = {
         dateFormatMenuList.selectedIndex = selectedIndex;
     },
 
-    autoRefreshPrefChanged: function() {
-        var autoRefreshPref =
-            document.getElementById("calendar.autorefresh.enabled").value;
-        document.getElementById("calendar.autorefresh.timeout").disabled = 
-            !autoRefreshPref;
+    showConnections: function () {
+        var url = "chrome://calendar/content/preferences/connection.xul";
+        document.documentElement.openSubDialog(url, "", "chrome,dialog");
     }
+
 };

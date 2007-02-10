@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -42,6 +42,7 @@
 #include "nsIAbCard.h"
 #include "nsCOMPtr.h"
 #include "nsIAddrDatabase.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIComponentManager.h"
 #include "nsIContentHandler.h"
 #include "nsIStreamLoader.h"
@@ -57,7 +58,6 @@
 
 class nsILocalFile;
 class nsIAbDirectory;
-class nsIAbLDAPAttributeMap;
 
 #define NC_RDF_NEWABCARD            NC_NAMESPACE_URI "NewCard"
 #define NC_RDF_MODIFY               NC_NAMESPACE_URI "Modify"
@@ -65,11 +65,12 @@ class nsIAbLDAPAttributeMap;
 #define NC_RDF_DELETECARD           NC_NAMESPACE_URI "DeleteCards"
 #define NC_RDF_NEWDIRECTORY         NC_NAMESPACE_URI "NewDirectory"
 
-#define   EXPORT_ATTRIBUTES_TABLE_COUNT      51
+#define   EXPORT_ATTRIBUTES_TABLE_COUNT      53
 
 struct ExportAttributesTableStruct
 {
     const char* abColName;
+    const char* ldapPropertyName;
     PRUint32 plainTextStringID;
 };
 
@@ -119,9 +120,9 @@ protected:
 private:
   nsresult ExportDirectoryToDelimitedText(nsIAbDirectory *aDirectory, const char *aDelim, PRUint32 aDelimLen, nsILocalFile *aLocalFile);
   nsresult ExportDirectoryToLDIF(nsIAbDirectory *aDirectory, nsILocalFile *aLocalFile);
-  nsresult AppendLDIFForMailList(nsIAbCard *aCard, nsIAbLDAPAttributeMap *aAttrMap, nsACString &aResult);
-  nsresult AppendDNForCard(const char *aProperty, nsIAbCard *aCard, nsIAbLDAPAttributeMap *aAttrMap, nsACString &aResult);
-  nsresult AppendBasicLDIFForCard(nsIAbCard *aCard, nsIAbLDAPAttributeMap *aAttrMap, nsACString &aResult);
+  nsresult AppendLDIFForMailList(nsIAbCard *aCard, nsACString &aResult);
+  nsresult AppendDNForCard(const char *aProperty, nsIAbCard *aCard, nsACString &aResult);
+  nsresult AppendBasicLDIFForCard(nsIAbCard *aCard, nsACString &aResult);
   nsresult AppendProperty(const char *aProperty, const PRUnichar *aValue, nsACString &aResult);
   PRBool IsSafeLDIFString(const PRUnichar *aStr);
 };

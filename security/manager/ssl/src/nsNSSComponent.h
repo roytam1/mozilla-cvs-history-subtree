@@ -86,6 +86,7 @@
 #define NS_PSMCONTENTLISTEN_CONTRACTID "@mozilla.org/security/psmdownload;1"
 
 #define NS_CRYPTO_HASH_CLASSNAME "Mozilla Cryto Hash Function Component"
+#define NS_CRYPTO_HASH_CONTRACTID "@mozilla.org/security/hash;1"
 #define NS_CRYPTO_HASH_CID {0x36a1d3b3, 0xd886, 0x4317, {0x96, 0xff, 0x87, 0xb0, 0x00, 0x5c, 0xfe, 0xf7}}
 
 //--------------------------------------------
@@ -124,7 +125,7 @@ protected:
 
 class NS_NO_VTABLE nsINSSComponent : public nsISupports {
  public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_INSSCOMPONENT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_INSSCOMPONENT_IID)
 
   NS_IMETHOD GetPIPNSSBundleString(const char *name,
                                    nsAString &outString) = 0;
@@ -160,8 +161,6 @@ class NS_NO_VTABLE nsINSSComponent : public nsISupports {
   NS_IMETHOD DispatchEvent(const nsAString &eventType, const nsAString &token) = 0;
   
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsINSSComponent, NS_INSSCOMPONENT_IID)
 
 class nsCryptoHash : public nsICryptoHash
 {
@@ -243,7 +242,6 @@ private:
   
   void ShowAlert(AlertIdentifier ai);
   void InstallLoadableRoots();
-  void UnloadLoadableRoots();
   void LaunchSmartCardThreads();
   void ShutdownSmartCardThreads();
   nsresult InitializePIPNSSBundle();
@@ -251,7 +249,7 @@ private:
   nsresult RegisterPSMContentListener();
   nsresult RegisterObservers();
   nsresult DownloadCrlSilently();
-  nsresult PostCRLImportEvent(const nsCSubstring &urlString, nsIStreamListener *psmDownloader);
+  nsresult PostCRLImportEvent(nsCAutoString *urlString, PSMContentDownloader *psmDownloader);
   nsresult getParamsForNextCrlToDownload(nsAutoString *url, PRTime *time, nsAutoString *key);
   nsresult DispatchEventToWindow(nsIDOMWindow *domWin, const nsAString &eventType, const nsAString &token);
   PRLock *mutex;

@@ -223,9 +223,14 @@ nsresult nsGIFDecoder2::ProcessData(unsigned char *data, PRUint32 count, PRUint3
 {
   // Push the data to the GIF decoder
   
-  PRStatus result = gif_write(mGIFStruct, data, count);
-  if (result != PR_SUCCESS)
-    return NS_ERROR_FAILURE;
+  // First we ask if the gif decoder is ready for more data, and if so, push it.
+  // In the new decoder, we should always be able to process more data since
+  // we don't wait to decode each frame in an animation now.
+  if (gif_write_ready(mGIFStruct)) {
+    PRStatus result = gif_write(mGIFStruct, data, count);
+    if (result != PR_SUCCESS)
+      return NS_ERROR_FAILURE;
+  }
 
   if (mImageFrame && mObserver) {
     FlushImageData();
@@ -424,12 +429,12 @@ int nsGIFDecoder2::HaveDecodedRow(
       format = gfxIFormats::RGB_A1;
     }
 
-#if !defined(MOZ_ENABLE_CAIRO) || (defined(XP_WIN) || defined(XP_OS2) || defined(XP_BEOS) || defined(MOZ_WIDGET_PHOTON))
+#if defined(XP_WIN) || defined(XP_OS2) || defined(XP_BEOS) || defined(MOZ_WIDGET_PHOTON)
     // XXX this works...
     format += 1; // RGB to BGR
 #endif
 
-    // initialize the frame and append it to the container
+    // initalize the frame and append it to the container
     decoder->mImageFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
     if (!decoder->mImageFrame || NS_FAILED(decoder->mImageFrame->Init(
           decoder->mGIFStruct->x_offset, decoder->mGIFStruct->y_offset, 
@@ -492,9 +497,6 @@ int nsGIFDecoder2::HaveDecodedRow(
 
     if (!cmap) { // cmap could have null value if the global color table flag is 0
       for (int i = 0; i < aDuplicateCount; ++i) {
-#ifdef MOZ_CAIRO_GFX
-        imgContainerGIF::BlackenFrame(decoder->mImageFrame, 0, aRowNumber+i, width, 1);
-#else
         if (format == gfxIFormats::RGB_A1 ||
             format == gfxIFormats::BGR_A1) {
           decoder->mImageFrame->SetAlphaData(nsnull,
@@ -502,33 +504,11 @@ int nsGIFDecoder2::HaveDecodedRow(
         }
         decoder->mImageFrame->SetImageData(nsnull,
                                            bpr, (aRowNumber+i)*bpr);
-#endif
       }
     } else {
-      PRUint8* rowBufIndex = aRowBufPtr;
-
-#if defined(MOZ_CAIRO_GFX)
-      PRUint32 *rgbRowIndex = (PRUint32*)decoder->mRGBLine;
-      while (rowBufIndex != decoder->mGIFStruct->rowend) {
-        if (*rowBufIndex >= cmapsize ||
-            ((format == gfxIFormats::RGB_A1 || format == gfxIFormats::BGR_A1) &&
-             (*rowBufIndex == decoder->mGIFStruct->tpixel))) {
-          *rgbRowIndex++ = 0x00000000;
-          ++rowBufIndex;
-          continue;
-        }
-
-        PRUint32 colorIndex = *rowBufIndex * 3;
-        *rgbRowIndex++ = (0xFF << 24) |
-          (cmap[colorIndex] << 16) |
-          (cmap[colorIndex+1] << 8) |
-          (cmap[colorIndex+2]);
-        ++rowBufIndex;
-      }
-      for (int i=0; i<aDuplicateCount; i++)
-        decoder->mImageFrame->SetImageData(decoder->mRGBLine, bpr, (aRowNumber+i)*bpr);
-#else
       PRUint8* rgbRowIndex = decoder->mRGBLine;
+      PRUint8* rowBufIndex = aRowBufPtr;
+      
       switch (format) {
         case gfxIFormats::RGB:
         case gfxIFormats::BGR:
@@ -606,7 +586,6 @@ int nsGIFDecoder2::HaveDecodedRow(
           break;
         }
       }
-#endif // else !MOZ_CAIRO_GFX
     }
 
     decoder->mCurrentRow = aRowNumber + aDuplicateCount - 1;

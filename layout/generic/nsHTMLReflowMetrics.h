@@ -34,9 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* struct containing the output from nsIFrame::Reflow */
-
 #ifndef nsHTMLReflowMetrics_h___
 #define nsHTMLReflowMetrics_h___
 
@@ -50,8 +47,9 @@
 //----------------------------------------------------------------------
 
 // Option flags
+#define NS_REFLOW_CALC_MAX_WIDTH         0x0001
 #ifdef MOZ_MATHML
-#define NS_REFLOW_CALC_BOUNDING_METRICS  0x0001
+#define NS_REFLOW_CALC_BOUNDING_METRICS  0x0002
 #endif
 
 /**
@@ -139,10 +137,14 @@ struct nsCollapsingMargin {
  * @see #Reflow()
  */
 struct nsHTMLReflowMetrics {
-  nscoord width, height;    // [OUT] desired width and height (border-box)
-  nscoord ascent;           // [OUT] baseline (from top), or ASK_FOR_BASELINE
+  nscoord width, height;        // [OUT] desired width and height
+  nscoord ascent, descent;      // [OUT] ascent and descent information
 
-  enum { ASK_FOR_BASELINE = nscoord_MAX };
+  nscoord mMaxElementWidth;     // [OUT]
+
+  // Used for incremental reflow. If the NS_REFLOW_CALC_MAX_WIDTH flag is set,
+  // then the caller is requesting that you update and return your maximum width
+  nscoord mMaximumWidth;        // [OUT]
 
 #ifdef MOZ_MATHML
   // Metrics that _exactly_ enclose the text to allow precise MathML placements.
@@ -170,15 +172,22 @@ struct nsHTMLReflowMetrics {
 
   PRUint32 mFlags;
  
-  // XXXldb Should |aFlags| generally be passed from parent to child?
-  // Some places do it, and some don't.  |aFlags| should perhaps go away
-  // entirely.
-  nsHTMLReflowMetrics(PRUint32 aFlags = 0) {
+  // used by tables to optimize common cases
+  PRPackedBool mNothingChanged;
+
+  // Should we compute mMaxElementWidth?
+  PRPackedBool mComputeMEW;
+
+  nsHTMLReflowMetrics(PRBool aComputeMEW, PRUint32 aFlags = 0) {
+    mComputeMEW = aComputeMEW;
+    mMaxElementWidth = 0;
+    mMaximumWidth = 0;
     mFlags = aFlags;
     mOverflowArea.x = 0;
     mOverflowArea.y = 0;
     mOverflowArea.width = 0;
     mOverflowArea.height = 0;
+    mNothingChanged = PR_FALSE;
 #ifdef MOZ_MATHML
     mBoundingMetrics.Clear();
 #endif
@@ -187,17 +196,34 @@ struct nsHTMLReflowMetrics {
     // initialized, but there are some bad frame classes that aren't
     // properly setting them when returning from Reflow()...
     width = height = 0;
-    ascent = ASK_FOR_BASELINE;
+    ascent = descent = 0;
+  }
+
+ /**
+  * set the maxElementWidth to the desired width. If the frame has a percent
+  * width specification it can be shrinked to 0 if the containing frame shrinks
+  * so we need to report 0 otherwise the incr. reflow will fail
+  * @param aWidthUnit - the width unit from the corresponding reflowstate
+  */
+  void SetMEWToActualWidth(nsStyleUnit aWidthUnit) {
+    if (aWidthUnit != eStyleUnit_Percent) {
+      mMaxElementWidth = width;
+    } else {
+      mMaxElementWidth = 0;
+    }
   }
 
   nsHTMLReflowMetrics& operator=(const nsHTMLReflowMetrics& aOther)
   {
+    mMaxElementWidth = aOther.mMaxElementWidth;
+    mMaximumWidth = aOther.mMaximumWidth;
     mFlags = aOther.mFlags;
     mCarriedOutBottomMargin = aOther.mCarriedOutBottomMargin;
     mOverflowArea.x = aOther.mOverflowArea.x;
     mOverflowArea.y = aOther.mOverflowArea.y;
     mOverflowArea.width = aOther.mOverflowArea.width;
     mOverflowArea.height = aOther.mOverflowArea.height;
+    mNothingChanged = aOther.mNothingChanged;
 #ifdef MOZ_MATHML
     mBoundingMetrics = aOther.mBoundingMetrics;
 #endif
@@ -205,6 +231,7 @@ struct nsHTMLReflowMetrics {
     width = aOther.width;
     height = aOther.height;
     ascent = aOther.ascent;
+    descent = aOther.descent;
     return *this;
   }
 

@@ -54,7 +54,7 @@
 #include "nsMsgImapCID.h"
 #include "nsMsgI18N.h"
 #include "nsNativeCharsetUtils.h"
-#include "nsCharTraits.h"
+#include "nsUnicharUtils.h"
 #include "prprf.h"
 #include "nsNetCID.h"
 #include "nsIIOService.h"
@@ -76,16 +76,12 @@
 #include "nsIRssIncomingServer.h"
 #include "nsIMsgFolder.h"
 #include "nsIMsgMessageService.h"
-#include "nsIMsgAccountManager.h"
-#include "nsIOutputStream.h"
 
 static NS_DEFINE_CID(kImapUrlCID, NS_IMAPURL_CID);
 static NS_DEFINE_CID(kCMailboxUrl, NS_MAILBOXURL_CID);
 static NS_DEFINE_CID(kCNntpUrlCID, NS_NNTPURL_CID);
 
 #define ILLEGAL_FOLDER_CHARS ";#"
-#define ILLEGAL_FOLDER_CHARS_AS_FIRST_LETTER "." 
-#define ILLEGAL_FOLDER_CHARS_AS_LAST_LETTER  ".~"
 
 #define NS_PASSWORDMANAGER_CATEGORY "passwordmanager"
 static PRBool gInitPasswordManager = PR_FALSE;
@@ -175,118 +171,75 @@ nsresult CreateStartupUrl(const char *uri, nsIURI** aUrl)
 }
 
 
-// Where should this live? It's a utility used to convert a string priority,
-//  e.g., "High, Low, Normal" to an enum.
-// Perhaps we should have an interface that groups together all these
-//  utilities...
-nsresult NS_MsgGetPriorityFromString(
-           const char * const priority,
-           nsMsgPriorityValue & outPriority)
+// Where should this live? It's a utility used to convert a string priority, e.g., "High, Low, Normal" to an enum.
+// Perhaps we should have an interface that groups together all these utilities...
+nsresult NS_MsgGetPriorityFromString(const char *priority, nsMsgPriorityValue *outPriority)
 {
-  if (!priority)
-    return NS_ERROR_NULL_POINTER;
+	if (!outPriority)
+		return NS_ERROR_NULL_POINTER;
 
-  // Note: Checking the values separately and _before_ the names,
-  //        hoping for a much faster match;
-  //       Only _drawback_, as "priority" handling is not truly specified:
-  //        some softwares may have the number meanings reversed (1=Lowest) !?
-  if (PL_strchr(priority, '1'))
-    outPriority = nsMsgPriority::highest;
-  else if (PL_strchr(priority, '2'))
-    outPriority = nsMsgPriority::high;
-  else if (PL_strchr(priority, '3'))
-    outPriority = nsMsgPriority::normal;
-  else if (PL_strchr(priority, '4'))
-    outPriority = nsMsgPriority::low;
-  else if (PL_strchr(priority, '5'))
-    outPriority = nsMsgPriority::lowest;
-  else if (PL_strcasestr(priority, "Highest"))
-    outPriority = nsMsgPriority::highest;
-       // Important: "High" must be tested after "Highest" !
-  else if (PL_strcasestr(priority, "High") ||
-           PL_strcasestr(priority, "Urgent"))
-    outPriority = nsMsgPriority::high;
-  else if (PL_strcasestr(priority, "Normal"))
-    outPriority = nsMsgPriority::normal;
-  else if (PL_strcasestr(priority, "Lowest"))
-    outPriority = nsMsgPriority::lowest;
-       // Important: "Low" must be tested after "Lowest" !
-  else if (PL_strcasestr(priority, "Low") ||
-           PL_strcasestr(priority, "Non-urgent"))
-    outPriority = nsMsgPriority::low;
-  else
-    // "Default" case gets default value.
-    outPriority = nsMsgPriority::Default;
+	nsMsgPriorityValue retPriority = nsMsgPriority::normal;
 
-  return NS_OK;
+	if (PL_strcasestr(priority, "Normal") != NULL)
+		retPriority = nsMsgPriority::normal;
+	else if (PL_strcasestr(priority, "Lowest") != NULL)
+		retPriority = nsMsgPriority::lowest;
+	else if (PL_strcasestr(priority, "Highest") != NULL)
+		retPriority = nsMsgPriority::highest;
+	else if (PL_strcasestr(priority, "High") != NULL || 
+			 PL_strcasestr(priority, "Urgent") != NULL)
+		retPriority = nsMsgPriority::high;
+	else if (PL_strcasestr(priority, "Low") != NULL ||
+			 PL_strcasestr(priority, "Non-urgent") != NULL)
+		retPriority = nsMsgPriority::low;
+	else if (PL_strcasestr(priority, "1") != NULL)
+		retPriority = nsMsgPriority::highest;
+	else if (PL_strcasestr(priority, "2") != NULL)
+		retPriority = nsMsgPriority::high;
+	else if (PL_strcasestr(priority, "3") != NULL)
+		retPriority = nsMsgPriority::normal;
+	else if (PL_strcasestr(priority, "4") != NULL)
+		retPriority = nsMsgPriority::low;
+	else if (PL_strcasestr(priority, "5") != NULL)
+	    retPriority = nsMsgPriority::lowest;
+	else
+		retPriority = nsMsgPriority::normal;
+	*outPriority = retPriority;
+	return NS_OK;
+		//return nsMsgNoPriority;
 }
 
-nsresult NS_MsgGetPriorityValueString(
-           const nsMsgPriorityValue p,
-           nsACString & outValueString)
+
+nsresult NS_MsgGetUntranslatedPriorityName (nsMsgPriorityValue p, nsString *outName)
 {
-  switch (p)
-  {
-    case nsMsgPriority::highest:
-      outValueString.AssignLiteral("1");
-      break;
-    case nsMsgPriority::high:
-      outValueString.AssignLiteral("2");
-      break;
-    case nsMsgPriority::normal:
-      outValueString.AssignLiteral("3");
-      break;
-    case nsMsgPriority::low:
-      outValueString.AssignLiteral("4");
-      break;
-    case nsMsgPriority::lowest:
-      outValueString.AssignLiteral("5");
-      break;
-    case nsMsgPriority::none:
-    case nsMsgPriority::notSet:
-      // Note: '0' is a "fake" value; we expect to never be in this case.
-      outValueString.AssignLiteral("0");
-      break;
-    default:
-      NS_ASSERTION(PR_FALSE, "invalid priority value");
-  }
-
-  return NS_OK;
+	if (!outName)
+		return NS_ERROR_NULL_POINTER;
+	switch (p)
+	{
+	case nsMsgPriority::notSet:
+	case nsMsgPriority::none:
+		outName->AssignLiteral("None");
+		break;
+	case nsMsgPriority::lowest:
+		outName->AssignLiteral("Lowest");
+		break;
+	case nsMsgPriority::low:
+		outName->AssignLiteral("Low");
+		break;
+	case nsMsgPriority::normal:
+		outName->AssignLiteral("Normal");
+		break;
+	case nsMsgPriority::high:
+		outName->AssignLiteral("High");
+		break;
+	case nsMsgPriority::highest:
+		outName->AssignLiteral("Highest");
+		break;
+	default:
+		NS_ASSERTION(PR_FALSE, "invalid priority value");
+	}
+	return NS_OK;
 }
-
-nsresult NS_MsgGetUntranslatedPriorityName(
-           const nsMsgPriorityValue p,
-           nsACString & outName)
-{
-  switch (p)
-  {
-    case nsMsgPriority::highest:
-      outName.AssignLiteral("Highest");
-      break;
-    case nsMsgPriority::high:
-      outName.AssignLiteral("High");
-      break;
-    case nsMsgPriority::normal:
-      outName.AssignLiteral("Normal");
-      break;
-    case nsMsgPriority::low:
-      outName.AssignLiteral("Low");
-      break;
-    case nsMsgPriority::lowest:
-      outName.AssignLiteral("Lowest");
-      break;
-    case nsMsgPriority::none:
-    case nsMsgPriority::notSet:
-      // Note: 'None' is a "fake" value; we expect to never be in this case.
-      outName.AssignLiteral("None");
-      break;
-    default:
-      NS_ASSERTION(PR_FALSE, "invalid priority value");
-  }
-
-  return NS_OK;
-}
-
 
 /* this used to be XP_StringHash2 from xp_hash.c */
 /* phong's linear congruential hash  */
@@ -319,7 +272,9 @@ static PRBool ConvertibleToNative(const nsAutoString& str)
     return str.Equals(roundTripped);
 }
 
-#if defined(XP_UNIX) || defined(XP_BEOS)
+#if defined(XP_MAC)
+  const static PRUint32 MAX_LEN = 25;
+#elif defined(XP_UNIX) || defined(XP_BEOS)
   const static PRUint32 MAX_LEN = 55;
 #elif defined(XP_WIN32)
   const static PRUint32 MAX_LEN = 55;
@@ -339,22 +294,6 @@ nsresult NS_MsgHashIfNecessary(nsCAutoString &name)
   // certain filenames require hashing because they 
   // are too long or contain illegal characters
   PRInt32 illegalCharacterIndex = str.FindCharInSet(illegalChars);
-
-  // Need to check the first ('.') and last ('.' and '~') char
-  if (illegalCharacterIndex == kNotFound) 
-  {
-	NS_NAMED_LITERAL_CSTRING (illegalFirstChars, ILLEGAL_FOLDER_CHARS_AS_FIRST_LETTER);
-	NS_NAMED_LITERAL_CSTRING (illegalLastChars, ILLEGAL_FOLDER_CHARS_AS_LAST_LETTER);
-	  
-    PRInt32 lastIndex = str.Length() - 1;
-    if(str.FindCharInSet(illegalFirstChars) == 0)
-	  illegalCharacterIndex = 0;
-	else if(str.RFindCharInSet(illegalLastChars) == lastIndex)
-	  illegalCharacterIndex = lastIndex;
-	else
-	  illegalCharacterIndex = -1;
-  }
-
   char hashedname[MAX_LEN + 1];
   if (illegalCharacterIndex == kNotFound) 
   {
@@ -394,21 +333,6 @@ nsresult NS_MsgHashIfNecessary(nsAutoString &name)
   PRInt32 illegalCharacterIndex = name.FindCharInSet(
                                   FILE_PATH_SEPARATOR FILE_ILLEGAL_CHARACTERS ILLEGAL_FOLDER_CHARS);
 
-  // Need to check the first ('.') and last ('.' and '~') char
-  if (illegalCharacterIndex == kNotFound) 
-  {
-	NS_NAMED_LITERAL_STRING (illegalFirstChars, ILLEGAL_FOLDER_CHARS_AS_FIRST_LETTER);
-	NS_NAMED_LITERAL_STRING (illegalLastChars, ILLEGAL_FOLDER_CHARS_AS_LAST_LETTER);
-	  
-    PRInt32 lastIndex = name.Length() - 1;
-    if(name.FindCharInSet(illegalFirstChars) == 0)
-	  illegalCharacterIndex = 0;
-	else if(name.RFindCharInSet(illegalLastChars) == lastIndex)
-	  illegalCharacterIndex = lastIndex;
-	else
-	  illegalCharacterIndex = -1;
-  }
-
   char hashedname[9];
   PRInt32 keptLength = -1;
   if (illegalCharacterIndex != kNotFound) 
@@ -419,7 +343,7 @@ nsresult NS_MsgHashIfNecessary(nsAutoString &name)
   {
     keptLength = MAX_LEN-8; 
     // To avoid keeping only the high surrogate of a surrogate pair
-    if (NS_IS_HIGH_SURROGATE(name.CharAt(keptLength-1)))
+    if (IS_HIGH_SURROGATE(name.CharAt(keptLength-1)))
         --keptLength;
   }
 
@@ -743,11 +667,11 @@ PRBool IsAFromSpaceLine(char *start, const char *end)
 // with one or more '>' (ie, ">From", ">>From", etc) in the input buffer
 // (between 'start' and 'end') and prefix them with a ">" .
 //
-nsresult EscapeFromSpaceLine(nsIOutputStream *outputStream, char *start, const char *end)
+nsresult EscapeFromSpaceLine(nsIFileSpec *pDst, char *start, const char *end)
 {
   nsresult rv;
   char *pChar;
-  PRUint32 written;
+  PRInt32 written;
 
   pChar = start;
   while (start < end)
@@ -759,9 +683,9 @@ nsresult EscapeFromSpaceLine(nsIOutputStream *outputStream, char *start, const c
     {
       // Found a line so check if it's a qualified "From " line.
       if (IsAFromSpaceLine(start, pChar))
-        rv = outputStream->Write(">", 1, &written);
+        rv = pDst->Write(">", 1, &written);
       PRInt32 lineTerminatorCount = (*(pChar + 1) == nsCRT::LF) ? 2 : 1;
-      rv = outputStream->Write(start, pChar - start + lineTerminatorCount, &written);
+      rv = pDst->Write(start, pChar - start + lineTerminatorCount, &written);
       NS_ENSURE_SUCCESS(rv,rv);
       pChar += lineTerminatorCount;
       start = pChar;
@@ -770,8 +694,8 @@ nsresult EscapeFromSpaceLine(nsIOutputStream *outputStream, char *start, const c
     {
       // Check and flush out the remaining data and we're done.
       if (IsAFromSpaceLine(start, end))
-        rv = outputStream->Write(">", 1, &written);
-      rv = outputStream->Write(start, end-start, &written);
+        rv = pDst->Write(">", 1, &written);
+      rv = pDst->Write(start, end-start, &written);
       NS_ENSURE_SUCCESS(rv,rv);
       break;
     }
@@ -1218,59 +1142,6 @@ void Seconds2PRTime(PRUint32 seconds, PRTime *prTime)
   LL_MUL((*prTime), intermediateResult, microSecondsPerSecond);
 }
 
-nsresult GetSummaryFileLocation(nsIFile* fileLocation, nsIFile** summaryLocation)
-{
-  nsIFile* newSummaryLocation;
-
-  nsresult rv = fileLocation->Clone(&newSummaryLocation);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsXPIDLCString fileName;
-
-  rv = newSummaryLocation->GetNativeLeafName(fileName);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  fileName.Append(NS_LITERAL_CSTRING(SUMMARY_SUFFIX));
-
-  rv = newSummaryLocation->SetNativeLeafName(fileName);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  *summaryLocation = newSummaryLocation;
-  return NS_OK;
-}
-
-nsresult GetSummaryFileLocation(nsIFileSpec* fileLocation, nsIFileSpec** summaryLocation)
-{
-  nsIFileSpec* newSummaryLocation;
-  nsresult rv = NS_NewFileSpec(&newSummaryLocation);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = newSummaryLocation->FromFileSpec(fileLocation);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsXPIDLCString fileName;
-
-  rv = newSummaryLocation->GetLeafName(getter_Copies(fileName));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  fileName.Append(NS_LITERAL_CSTRING(SUMMARY_SUFFIX));
-  
-  rv = newSummaryLocation->SetLeafName(fileName);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  *summaryLocation = newSummaryLocation;
-  return NS_OK;
-}
-
-nsresult GetSummaryFileLocation(nsIFileSpec* fileLocation, nsFileSpec* summaryLocation)
-{
-  nsCOMPtr<nsIFileSpec> summaryIFile;
-  nsresult rv = GetSummaryFileLocation(fileLocation, getter_AddRefs(summaryIFile));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  return summaryIFile->GetFileSpec(summaryLocation);
-}
-
 void MsgGenerateNowStr(nsACString &nowStr)
 {
   char dateBuf[100];
@@ -1279,62 +1150,6 @@ void MsgGenerateNowStr(nsACString &nowStr)
   PR_ExplodeTime(PR_Now(), PR_LocalTimeParameters, &exploded);
   PR_FormatTimeUSEnglish(dateBuf, sizeof(dateBuf), "%a %b %d %H:%M:%S %Y", &exploded);
   nowStr.Assign(dateBuf);
-}
-
-void GetSummaryFileLocation(nsFileSpec& fileLocation, nsFileSpec* summaryLocation)
-{
-  nsXPIDLCString fileName;
-
-  // First copy all the details across
-  *summaryLocation = fileLocation;
-
-  // Now work out the new file name.
-  fileName.Adopt(fileLocation.GetLeafName());
-
-  fileName.Append(NS_LITERAL_CSTRING(SUMMARY_SUFFIX));
-  
-  summaryLocation->SetLeafName(fileName);
-}
-
-// Gets a special directory and appends the supplied file name onto it.
-nsresult GetSpecialDirectoryWithFileName(const char* specialDirName,
-                                         const char* fileName,
-                                         nsIFile** result)
-{
-  nsresult rv = NS_GetSpecialDirectory(specialDirName, result);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  return (*result)->AppendNative(nsDependentCString(fileName));
-}
-
-// XXX This function is provided temporarily whilst we are still working
-// on bug 33451 to remove nsIFileSpec from mailnews.
-nsresult GetSpecialDirectoryWithFileName(const char* specialDirName,
-                                         const char* fileName,
-                                         nsIFileSpec** result)
-{
-  nsCOMPtr<nsIFile> tmpFile;
-  nsresult rv = GetSpecialDirectoryWithFileName(specialDirName, fileName,
-                                                getter_AddRefs(tmpFile));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  return NS_NewFileSpecFromIFile(tmpFile, result);
-}
-
-// XXX This function is provided temporarily whilst we are still working
-// on bug 33451 to remove nsIFileSpec from mailnews.
-nsresult GetSpecialDirectoryWithFileName(const char* specialDirName,
-                                         const char* fileName,
-                                         nsFileSpec* result)
-{
-
-
-  nsCOMPtr<nsIFileSpec> tmpFile;
-  nsresult rv = GetSpecialDirectoryWithFileName(specialDirName, fileName,
-                                                getter_AddRefs(tmpFile));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  return tmpFile->GetFileSpec(result);
 }
 
 PRBool MsgFindKeyword(const nsACString &keyword, nsACString &keywords, nsACString::const_iterator &start, nsACString::const_iterator &end)
@@ -1416,131 +1231,3 @@ PRBool MsgHostDomainIsTrusted(nsCString &host, nsCString &trustedMailDomains)
   } while (*end);
   return domainIsTrusted;
 }
-
-nsresult MsgMailboxGetURI(const char *nativepath, nsCString &mailboxUri)
-{
-  
-  nsresult rv;
-  
-  nsCOMPtr<nsIMsgAccountManager> accountManager = 
-    do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
-  
-  NS_ENSURE_SUCCESS(rv, rv);
-  nsCOMPtr<nsISupportsArray> serverArray;
-  accountManager->GetAllServers(getter_AddRefs(serverArray));
-  
-  // do a char*->fileSpec->char* conversion to normalize the path
-  nsFilePath filePath(nativepath);
-  
-  PRUint32 cnt;
-  rv = serverArray->Count(&cnt);
-  NS_ENSURE_SUCCESS(rv, rv);
-  PRInt32 count = cnt;
-  PRInt32 i;
-  for (i=0; i<count; i++) 
-  {
-    
-    nsCOMPtr<nsIMsgIncomingServer> server = do_QueryElementAt(serverArray, i);
-    
-    if (!server) continue;
-    
-    // get the path string, convert it to an nsFilePath
-    nsCOMPtr<nsIFileSpec> nativeServerPath;
-    rv = server->GetLocalPath(getter_AddRefs(nativeServerPath));
-    if (NS_FAILED(rv)) continue;
-    
-    nsFileSpec spec;
-    nativeServerPath->GetFileSpec(&spec);
-    nsFilePath serverPath(spec);
-    
-    // check if filepath begins with serverPath
-    PRInt32 len = PL_strlen(serverPath);
-    if (PL_strncasecmp(serverPath, filePath, len) == 0) 
-    {
-      nsXPIDLCString serverURI;
-      rv = server->GetServerURI(getter_Copies(serverURI));
-      if (NS_FAILED(rv)) continue;
-      
-      // the relpath is just past the serverpath
-      const char *relpath = nativepath + len;
-      // skip past leading / if any
-      while (*relpath == '/')
-        relpath++;
-      
-      nsCAutoString pathStr(relpath);
-      PRInt32 sbdIndex;
-      while((sbdIndex = pathStr.Find(".sbd", PR_TRUE)) != -1)
-        pathStr.Cut(sbdIndex, 4);
-      
-      mailboxUri = serverURI;
-      mailboxUri.Append('/');
-      mailboxUri.Append(pathStr);
-      break;
-    }
-  }
-  return mailboxUri.IsEmpty() ? NS_ERROR_FAILURE : NS_OK;
-}
-
-NS_MSG_BASE void MsgStripQuotedPrintable (unsigned char *src)
-{
-  // decode quoted printable text in place
-  
-  if (!*src)
-    return;
-  unsigned char *dest = src;
-  int srcIdx = 0, destIdx = 0;
-  
-  while (src[srcIdx] != 0)
-  {
-    if (src[srcIdx] == '=')
-    {
-      unsigned char *token = &src[srcIdx];
-      unsigned char c = 0;
-      
-      // decode the first quoted char
-      if (token[1] >= '0' && token[1] <= '9')
-        c = token[1] - '0';
-      else if (token[1] >= 'A' && token[1] <= 'F')
-        c = token[1] - ('A' - 10);
-      else if (token[1] >= 'a' && token[1] <= 'f')
-        c = token[1] - ('a' - 10);
-      else
-      {
-        // first char after '=' isn't hex. check if it's a normal char
-        // or a soft line break.
-        if (src[srcIdx + 1] == nsCRT::CR || src[srcIdx + 1] == nsCRT::LF)
-          srcIdx++; // soft line break, ignore the '=';
-        else // normal char, copy it.
-          dest[destIdx++] = src[srcIdx++]; // aka token[0]
-        continue;
-      }
-      
-      // decode the second quoted char
-      c = (c << 4);
-      if (token[2] >= '0' && token[2] <= '9')
-        c += token[2] - '0';
-      else if (token[2] >= 'A' && token[2] <= 'F')
-        c += token[2] - ('A' - 10);
-      else if (token[2] >= 'a' && token[2] <= 'f')
-        c += token[2] - ('a' - 10);
-      else
-      {
-        // second char after '=' isn't hex. copy the '=' as a normal char and keep going
-        dest[destIdx++] = src[srcIdx++]; // aka token[0]
-        continue;
-      }
-      
-      // if we got here, we successfully decoded a quoted printable sequence,
-      // so bump each pointer past it and move on to the next char;
-      dest[destIdx++] = c; 
-      srcIdx += 3;
-      
-    }
-    else
-      dest[destIdx++] = src[srcIdx++];
-  }
-  
-  dest[destIdx] = src[srcIdx]; // null terminate
-}  
-
-

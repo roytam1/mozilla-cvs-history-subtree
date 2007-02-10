@@ -61,15 +61,12 @@
 #include "nsIWebBrowserPersist.h"
 #include "nsIClipboardCommands.h"
 #include "nsIProfile.h"
+#include "nsIPrintOptions.h"
+#include "nsIWebBrowserPrint.h"
 #include "nsIWidget.h"
 #include "nsIWebBrowserFocus.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsIComponentRegistrar.h"
-
-#ifdef NS_PRINTING
-#include "nsIPrintOptions.h"
-#include "nsIWebBrowserPrint.h"
-#endif
 
 #include "nsIDOMWindow.h"
 #include "nsIDOMHTMLAnchorElement.h"
@@ -92,7 +89,6 @@ static HANDLE s_hHackedNonReentrancy = NULL;
 static NS_DEFINE_CID(kPromptServiceCID, NS_PROMPTSERVICE_CID);
 static NS_DEFINE_CID(kHelperAppLauncherDialogCID, NS_HELPERAPPLAUNCHERDIALOG_CID);
 
-#ifdef NS_PRINTING
 class PrintListener : public nsIWebProgressListener
 {
     PRBool mComplete;
@@ -105,7 +101,6 @@ public:
 
     void WaitForComplete();
 };
-#endif
 
 class SimpleDirectoryProvider :
     public nsIDirectoryServiceProvider
@@ -186,7 +181,7 @@ CMozillaBrowser::CMozillaBrowser()
     mBrowserHelperListCount = 0;
 
     // Name of the default profile to use
-    mProfileName.Assign(NS_LITERAL_STRING("MozillaControl"));
+    mProfileName.AssignLiteral("MozillaControl");
 
     // Initialise the web browser
     Initialize();
@@ -448,7 +443,7 @@ LRESULT CMozillaBrowser::OnCreate(UINT uMsg, WPARAM wParam, LPARAM lParam, BOOL&
                 ios->GetProtocolHandler(kDesignModeScheme, getter_AddRefs(ph));
                 if (ph &&
                     NS_SUCCEEDED(ph->GetScheme(phScheme)) &&
-                    phScheme.Equals(NS_LITERAL_CSTRING(kDesignModeScheme)))
+                    phScheme.LowerCaseEqualsASCII(kDesignModeScheme))
                 {
                     Navigate(const_cast<BSTR>(kDesignModeURL), NULL, NULL, NULL, NULL);
                 }
@@ -571,7 +566,6 @@ LRESULT CMozillaBrowser::OnPageSetup(WORD wNotifyCode, WORD wID, HWND hWndCtl, B
     NG_TRACE_METHOD(CMozillaBrowser::OnPageSetup);
 
 
-#ifdef NS_PRINTING
     nsCOMPtr<nsIWebBrowserPrint> print(do_GetInterface(mWebBrowser));
     nsCOMPtr<nsIPrintSettings> printSettings;
     if(!print ||
@@ -583,7 +577,6 @@ LRESULT CMozillaBrowser::OnPageSetup(WORD wNotifyCode, WORD wID, HWND hWndCtl, B
     // show the page setup dialog
     CPageSetupDlg dlg(printSettings);
     dlg.DoModal();
-#endif
 
     return 0;
 }
@@ -786,8 +779,8 @@ LRESULT CMozillaBrowser::OnViewSource(WORD wNotifyCode, WORD wID, HWND hWndCtl, 
     nsCAutoString aURI;
     uri->GetSpec(aURI);
 
-    NS_ConvertUTF8toUTF16 strURI(aURI);
-    strURI.Insert(NS_LITERAL_STRING("view-source:"), 0);
+    nsAutoString strURI(NS_LITERAL_STRING("view-source:"));
+    AppendUTF8toUTF16(aURI, strURI);
 
     // Ask the client to create a window to view the source in
     CIPtr(IDispatch) spDispNew;
@@ -932,27 +925,18 @@ LRESULT CMozillaBrowser::OnLinkCopyShortcut(WORD wNotifyCode, WORD wID, HWND hWn
     {
         EmptyClipboard();
 
-        NS_ConvertUTF16toUTF8 curi(uri);
-        const char *stringText;
-        PRUint32 stringLen = NS_CStringGetData(curi,
-                                               &stringText);
-
         // CF_TEXT
-        HGLOBAL hmemText = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT,
-                                       stringLen + 1);
+        HGLOBAL hmemText = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, uri.Length() + 1);
         char *pszText = (char *) GlobalLock(hmemText);
-        strncpy(pszText, stringText, stringLen);
-        pszText[stringLen] = '\0';
+        uri.ToCString(pszText, uri.Length() + 1);
         GlobalUnlock(hmemText);
         SetClipboardData(CF_TEXT, hmemText);
 
         // UniformResourceLocator - CFSTR_SHELLURL
         const UINT cfShellURL = RegisterClipboardFormat(CFSTR_SHELLURL);
-        HGLOBAL hmemURL = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT,
-                                      stringLen + 1);
+        HGLOBAL hmemURL = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, uri.Length() + 1);
         char *pszURL = (char *) GlobalLock(hmemURL);
-        strncpy(pszText, stringText, stringLen);
-        pszText[stringLen] = '\0';
+        uri.ToCString(pszURL, uri.Length() + 1);
         GlobalUnlock(hmemURL);
         SetClipboardData(cfShellURL, hmemURL);
 
@@ -1498,7 +1482,6 @@ HRESULT CMozillaBrowser::UnloadBrowserHelpers()
 // Print document
 HRESULT CMozillaBrowser::PrintDocument(BOOL promptUser)
 {
-#ifdef NS_PRINTING
     // Print the contents
     nsCOMPtr<nsIWebBrowserPrint> browserAsPrint = do_GetInterface(mWebBrowser);
     NS_ASSERTION(browserAsPrint, "No nsIWebBrowserPrint!");
@@ -1533,7 +1516,7 @@ HRESULT CMozillaBrowser::PrintDocument(BOOL promptUser)
         printSettings->SetPrintSilent(oldPrintSilent);
     }
     mPrefBranch->SetBoolPref(kShowPrintProgressPref, oldShowPrintProgress);
-#endif
+
     return S_OK;
 }
 
@@ -2050,15 +2033,15 @@ NS_IMETHODIMP SimpleDirectoryProvider::GetFile(const char *prop, PRBool *persist
     nsCOMPtr<nsILocalFile> localFile;
     nsresult rv = NS_ERROR_FAILURE;
 
-    if (strcmp(prop, NS_APP_APPLICATION_REGISTRY_DIR) == 0)
+    if (nsCRT::strcmp(prop, NS_APP_APPLICATION_REGISTRY_DIR) == 0)
     {
         localFile = mApplicationRegistryDir;
     }
-    else if (strcmp(prop, NS_APP_APPLICATION_REGISTRY_FILE) == 0)
+    else if (nsCRT::strcmp(prop, NS_APP_APPLICATION_REGISTRY_FILE) == 0)
     {
         localFile = mApplicationRegistryFile;
     }
-    else if (strcmp(prop, NS_APP_USER_PROFILES_ROOT_DIR) == 0)
+    else if (nsCRT::strcmp(prop, NS_APP_USER_PROFILES_ROOT_DIR) == 0)
     {
         localFile = mUserProfileDir;
     }
@@ -2073,8 +2056,6 @@ NS_IMETHODIMP SimpleDirectoryProvider::GetFile(const char *prop, PRBool *persist
 ///////////////////////////////////////////////////////////////////////////////
 // PrintListener implementation
 
-
-#ifdef NS_PRINTING
 
 NS_IMPL_ISUPPORTS1(PrintListener, nsIWebProgressListener)
 
@@ -2157,4 +2138,3 @@ NS_IMETHODIMP PrintListener::OnSecurityChange(nsIWebProgress *aWebProgress, nsIR
 {
     return NS_OK;
 }
-#endif

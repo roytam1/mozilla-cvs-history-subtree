@@ -55,7 +55,6 @@ var gNextMessageViewIndexAfterDelete = -2;
 var gCurrentFolderToRerootForStandAlone;
 var gRerootOnFolderLoadForStandAlone = false;
 var gNextMessageAfterLoad = null;
-var gMessageToLoad = nsMsgKey_None;
 
 // the folderListener object
 var folderListener = {
@@ -257,7 +256,7 @@ function delayedOnLoadMessageWindow()
   HideMenus();
   HideToolbarButtons();
   ShowMenus();
-  MailOfflineMgr.init();
+  AddMailOfflineObserver();
   CreateMailWindowGlobals();
   CreateMessageWindowGlobals();
   verifyAccounts(null);
@@ -320,8 +319,8 @@ function delayedOnLoadMessageWindow()
 
   CreateView(originalView);
   
-  gPhishingDetector.init();
-
+  gFindBar.initFindBar();
+  
   // initialize the customizeDone method on the customizeable toolbar
   var toolbox = document.getElementById("mail-toolbox");
   toolbox.customizeDone = MailToolboxCustomizeDone;
@@ -551,6 +550,8 @@ function OnUnloadMessageWindow()
 	OnUnloadMsgHeaderPane();
 
 	OnMailWindowUnload();
+	
+	gFindBar.uninitFindBar();
 }
 
 function CreateMessageWindowGlobals()
@@ -664,16 +665,12 @@ function SelectFolder(folderUri)
     dbview.close(); 
 
   gCurrentFolderToRerootForStandAlone = folderUri;
-  msgWindow.openFolder = msgfolder;
-  
+
   if (msgfolder.manyHeadersToDownload)
   {
     gRerootOnFolderLoadForStandAlone = true;
     try
     {
-      // accessing the db causes the folder loaded notification to get sent
-      // for local folders.
-      var db = msgfolder.getMsgDatabase(msgWindow);
       msgfolder.startFolderLoading();
       msgfolder.updateFolder(msgWindow);
     }
@@ -701,13 +698,8 @@ function RerootFolderForStandAlone(uri)
   // create new folder view
   CreateView(null);
   
-  if (gMessageToLoad != nsMsgKey_None)
-  {
-    LoadMessageByMsgKey(gMessageToLoad);
-    gMessageToLoad = nsMsgKey_None;
-  }
   // now do the work to load the appropriate message
-  else if (gNextMessageAfterLoad) {
+  if (gNextMessageAfterLoad) {
     var type = gNextMessageAfterLoad;
     gNextMessageAfterLoad = null;
     LoadMessageByNavigationType(type);
@@ -841,7 +833,7 @@ var MessageWindowController =
       case "cmd_synchronizeOffline":
 			case "cmd_downloadFlagged":
 			case "cmd_downloadSelected":
-        return MailOfflineMgr.isOnline();
+        return CheckOnline();
 			default:
 				return false;
 		}
@@ -912,9 +904,9 @@ var MessageWindowController =
 			case "cmd_downloadFlagged":
 			case "cmd_downloadSelected":
       case "cmd_synchronizeOffline":
-        return MailOfflineMgr.isOnline();
+                return CheckOnline();
 			case "cmd_settingsOffline":
-        return IsAccountOfflineEnabled();
+                return IsAccountOfflineEnabled();
 			case "cmd_close":
 			case "cmd_nextMsg":
       case "button_next":
@@ -1100,7 +1092,7 @@ var MessageWindowController =
         MsgSynchronizeOffline();
         return;
       case "cmd_settingsOffline":
-        MailOfflineMgr.openOfflineAccountSettings();
+        MsgSettingsOffline();
         return;
       case "cmd_nextUnreadMsg":
       case "button_next":
@@ -1195,17 +1187,3 @@ function LoadMessageByViewIndex(viewIndex)
   if (nsMsgKey_None == gDBView.keyForFirstSelectedMessage)
     UpdateMailToolbar("update toolbar for message Window");
 }
-
-function LoadNavigatedToMessage(msgHdr, folder, folderUri)
-{
-  if (IsCurrentLoadedFolder(folder))
-  {
-    LoadMessageByMsgKey(msgHdr.messageKey);
-  }
-  else
-  {
-    gMessageToLoad = msgHdr.messageKey;
-    SelectFolder(folderUri);
-  }
-}
-

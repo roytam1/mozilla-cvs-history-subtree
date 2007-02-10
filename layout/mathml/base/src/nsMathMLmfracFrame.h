@@ -85,7 +85,7 @@ element.
 
 class nsMathMLmfracFrame : public nsMathMLContainerFrame {
 public:
-  friend nsIFrame* NS_NewMathMLmfracFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLmfracFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   virtual void
   SetAdditionalStyleContext(PRInt32          aIndex, 
@@ -93,16 +93,19 @@ public:
   virtual nsStyleContext*
   GetAdditionalStyleContext(PRInt32 aIndex) const;
 
-  virtual eMathMLFrameType GetMathMLFrameType();
+  virtual nsIAtom* GetType() const;
 
   NS_IMETHOD
-  AttributeChanged(PRInt32         aNameSpaceID,
+  AttributeChanged(nsIContent*     aChild,
+                   PRInt32         aNameSpaceID,
                    nsIAtom*        aAttribute,
                    PRInt32         aModType);
 
   NS_IMETHOD
-  Init(nsIContent*      aContent,
+  Init(nsPresContext*  aPresContext,
+       nsIContent*      aContent,
        nsIFrame*        aParent,
+       nsStyleContext*  aContext,
        nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD
@@ -116,9 +119,12 @@ public:
         PRBool               aPlaceOrigin,
         nsHTMLReflowMetrics& aDesiredSize);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD 
+  Paint(nsPresContext*      aPresContext,
+        nsIRenderingContext& aRenderingContext,
+        const nsRect&        aDirtyRect,
+        nsFramePaintLayer    aWhichLayer,
+        PRUint32             aFlags = 0);
 
   NS_IMETHOD
   TransmitAutomaticData();
@@ -148,7 +154,7 @@ public:
                     nscoord          aDefaultRuleThickness);
 
 protected:
-  nsMathMLmfracFrame(nsStyleContext* aContext) : nsMathMLContainerFrame(aContext) {}
+  nsMathMLmfracFrame();
   virtual ~nsMathMLmfracFrame();
   
   virtual PRIntn GetSkipSides() const { return 0; }

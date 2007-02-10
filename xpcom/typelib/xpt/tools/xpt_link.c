@@ -41,7 +41,11 @@
 
 #include "xpt_xdr.h"
 #include <stdio.h>
+#ifdef XP_MAC
+#include <stat.h>
+#else
 #include <sys/stat.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include "prlong.h"
@@ -95,6 +99,15 @@ PRUint16 oldTotalNumberOfInterfaces = 0;
 PRUint8 major_version     = XPT_MAJOR_VERSION;
 PRUint8 minor_version     = XPT_MINOR_VERSION;
 
+#if defined(XP_MAC) && defined(XPIDL_PLUGIN)
+
+#define main xptlink_main
+int xptlink_main(int argc, char *argv[]);
+extern size_t mac_get_file_length(const char* filename);
+#define get_file_length mac_get_file_length
+
+#else
+
 static size_t get_file_length(const char* filename)
 {
     struct stat file_stat;
@@ -104,6 +117,8 @@ static size_t get_file_length(const char* filename)
     }
     return file_stat.st_size;
 }
+
+#endif /* XP_MAC && XPIDL_PLUGIN */
 
 int 
 main(int argc, char **argv)
@@ -240,7 +255,8 @@ main(int argc, char **argv)
              * equal to the version specified in the -t cmd line arg.
              */
 
-            if ((header->major_version > major_version ||
+            if (header &&
+                (header->major_version > major_version ||
                 (header->major_version == major_version &&
                  header->minor_version > minor_version))) { 
                 fprintf(stderr, "FAILED: %s's version, %d.%d, is newer than "

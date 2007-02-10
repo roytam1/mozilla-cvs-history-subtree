@@ -34,8 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
- 
-#include <math.h>
 
 #import "NSString+Utils.h"
 #import "NSView+Utils.h"
@@ -86,25 +84,12 @@ class nsIDOMPopupBlockedEvent;
 
 static NSString* const kOfflineNotificationName = @"offlineModeChanged";
 
-// for camino.enable_plugins; needs to match string in WebFeatures.mm
-static NSString* const kEnablePluginsChangedNotificationName = @"EnablePluginsChanged";
-
-// types of status bar messages, in order of priority for showing to the user
-enum {
-  eStatusLinkTarget    = 0, // link mouseover info
-  eStatusProgress      = 1, // loading progress
-  eStatusScript        = 2, // javascript window.status
-  eStatusScriptDefault = 3, // javascript window.defaultStatus
-};
-
 @interface BrowserWrapper(Private)
 
 - (void)ensureContentClickListeners;
 
 - (void)setPendingActive:(BOOL)active;
 - (void)registerNotificationListener;
-
-- (void)clearStatusStrings;
 
 - (void)setSiteIconImage:(NSImage*)inSiteIcon;
 - (void)setSiteIconURI:(NSString*)inSiteIconURI;
@@ -115,11 +100,9 @@ enum {
 - (NSString*)displayTitleForPageURL:(NSString*)inURL title:(NSString*)inTitle;
 
 - (void)updateOfflineStatus;
-- (void)updatePluginsEnabledState;
 
 - (void)checkForCustomViewOnLoad:(NSString*)inURL;
 
-- (void)addBlockedPopupViewAndDisplay;
 - (void)removeBlockedPopupViewAndDisplay;
 
 @end
@@ -163,16 +146,18 @@ enum {
     mProgress = 0.0;
     mFeedList = nil;
 
-    [self updatePluginsEnabledState];
-
+    BOOL gotPref;
+    BOOL pluginsEnabled = [[PreferenceManager sharedInstance] getBooleanPref:"camino.enable_plugins" withSuccess:&gotPref];
+    if (gotPref && !pluginsEnabled)
+      [mBrowserView setProperty:nsIWebBrowserSetup::SETUP_ALLOW_PLUGINS toValue:PR_FALSE];
+    
     mToolTip = [[ToolTip alloc] init];
 
     //[self setSiteIconImage:[NSImage imageNamed:@"globe_ico"]];
     //[self setSiteIconURI: [NSString string]];
-
-    // prefill with a null value for each of the four types of status strings
-    mStatusStrings = [[NSMutableArray alloc] initWithObjects:[NSNull null], [NSNull null],
-                                                             [NSNull null], [NSNull null], nil];
+    
+    mDefaultStatusString = [[NSString alloc] init];
+    mLoadingStatusString = [[NSString alloc] init];
 
     mTitle = [[NSString alloc] init];
     
@@ -191,7 +176,8 @@ enum {
   
   [mSiteIconImage release];
   [mSiteIconURI release];
-  [mStatusStrings release];
+  [mDefaultStatusString release];
+  [mLoadingStatusString release];
 
   [mToolTip release];
   [mTitle release];
@@ -278,31 +264,27 @@ enum {
   // many tabs from being slow.
   // However, this requires us to do the resize on loadURI: below to make
   // sure that we maintain the scroll position in background tabs correctly.
-  if ([self window] || inResizeBrowser) {
+  if ([self window] || inResizeBrowser)
+  {
     NSRect bounds = [self bounds];
-    if (mBlockedPopupView) {
-      // First resize the width of blockedPopupView to match this view.
-      // The blockedPopupView will, during its setFrame method, wrap information 
-      // text if necessary and adjust its own height to enclose that text.
-      // Then find out the actual (possibly adjusted) height of blockedPopupView 
-      // and resize the browser view accordingly.
-      // Recall that we're flipped, so the origin is the top left.
-
+    if (!mBlockedPopupView) {
+      [mBrowserView setFrame:bounds];
+    }
+    else {
+      // resize the browser view and move it down by the height of the block popup
+      // view. Recall we're flipped, so the origin is the top left.
       NSRect popupBlockFrame = [mBlockedPopupView frame];
+      NSRect browserFrame = [mBrowserView frame];
+      browserFrame.origin.y = popupBlockFrame.size.height;
+      browserFrame.size.width = bounds.size.width;
+      browserFrame.size.height = bounds.size.height-popupBlockFrame.size.height;
+      
       popupBlockFrame.origin = NSZeroPoint;
       popupBlockFrame.size.width = bounds.size.width;
-      [mBlockedPopupView setFrame:popupBlockFrame];
-
-      NSRect blockedPopupViewFrameAfterResized = [mBlockedPopupView frame];
-      NSRect browserFrame = [mBrowserView frame];
-      browserFrame.origin.y = blockedPopupViewFrameAfterResized.size.height;
-      browserFrame.size.width = bounds.size.width;
-      browserFrame.size.height = bounds.size.height-blockedPopupViewFrameAfterResized.size.height;
-
+      
       [mBrowserView setFrame:browserFrame];
+      [mBlockedPopupView setFrame:popupBlockFrame];
     }
-    else
-      [mBrowserView setFrame:bounds];
   }
 }
 
@@ -333,14 +315,8 @@ enum {
 
 - (NSString*)statusString
 {
-  // Return the highest-priority status string that is set, or the empty string if none are set
-  for (unsigned int i = 0; i < [mStatusStrings count]; ++i)
-  {
-    id status = [mStatusStrings objectAtIndex:i];
-    if (status != [NSNull null])
-      return status;
-  }
-  return @"";
+  // XXX is this right?
+  return mDefaultStatusString ? mDefaultStatusString : mLoadingStatusString;
 }
 
 - (float)loadingProgress
@@ -476,7 +452,8 @@ enum {
 
 - (void)onLoadingStarted 
 {
-  [self clearStatusStrings];
+  [mDefaultStatusString autorelease];
+  mDefaultStatusString = nil;
 
   mProgress = 0.0;
   mIsBusy = YES;
@@ -484,17 +461,18 @@ enum {
   [mDelegate loadingStarted];
   [mDelegate setLoadingActive:YES];
   [mDelegate setLoadingProgress:mProgress];
-
-  [mStatusStrings replaceObjectAtIndex:eStatusProgress withObject:NSLocalizedString(@"TabLoading", @"")];
-  [mDelegate updateStatus:[self statusString]];
-
+  
+  [mLoadingStatusString autorelease];
+  mLoadingStatusString = [NSLocalizedString(@"TabLoading", @"") retain];
+  [mDelegate updateStatus:mLoadingStatusString];
+  
   [(BrowserTabViewItem*)mTabItem startLoadAnimation];
   
   [mDelegate showFeedDetected:NO];
   [mFeedList removeAllObjects];
   
   [mTabTitle autorelease];
-  mTabTitle = [NSLocalizedString(@"TabLoading", @"") retain];
+  mTabTitle = [mLoadingStatusString retain];
   [mTabItem setLabel:mTabTitle];
 }
 
@@ -506,9 +484,11 @@ enum {
   
   [mDelegate setLoadingActive:NO];
 
-  [mStatusStrings replaceObjectAtIndex:eStatusProgress withObject:[NSNull null]];
-  [mDelegate updateStatus:[self statusString]];
-
+  [mLoadingStatusString autorelease];
+  mLoadingStatusString = [@"" retain];
+  
+  [mDelegate updateStatus:mDefaultStatusString ? mDefaultStatusString : mLoadingStatusString];
+  
   [(BrowserTabViewItem*)mTabItem stopLoadAnimation];
 
   NSString *urlString = nil;
@@ -530,6 +510,22 @@ enum {
     NSDictionary*   userInfo = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:succeeded] forKey:URLLoadSuccessKey];
     NSNotification* note     = [NSNotification notificationWithName:URLLoadNotification object:urlString userInfo:userInfo];
     [[NSNotificationQueue defaultQueue] enqueueNotification:note postingStyle:NSPostWhenIdle];
+  }
+
+  // We've defered display of the blocked popup view until the page has finished loading in 
+  // order to avoid jumping around during the page load. Even if we're hidden, we ensure that
+  // the new view is in the view hierarchy and it will be resized when the
+  // current tab is eventually displayed.
+  if ([self popupsBlocked] && !mBlockedPopupView) {
+    [NSBundle loadNibNamed:@"PopupBlockView" owner:self];
+
+    [mBlockedPopupCloseButton setImage:[NSImage imageNamed:@"popup_close"]];
+    [mBlockedPopupCloseButton setAlternateImage:[NSImage imageNamed:@"popup_close_pressed"]];
+    [mBlockedPopupCloseButton setHoverImage:[NSImage imageNamed:@"popup_close_hover"]];
+
+    [self addSubview:mBlockedPopupView];
+    [self setFrame:[self frame] resizingBrowserViewIfHidden:YES];
+    [self display];
   }
 }
 
@@ -612,8 +608,7 @@ enum {
 
 - (void)onStatusChange:(NSString*)aStatusString
 {
-  [mStatusStrings replaceObjectAtIndex:eStatusProgress withObject:aStatusString];
-  [mDelegate updateStatus:[self statusString]];
+  [mDelegate updateStatus:aStatusString];
 }
 
 //
@@ -631,23 +626,24 @@ enum {
 
 - (void)setStatus:(NSString *)statusString ofType:(NSStatusType)type 
 {
-  int index;
-
+  NSString* newStatus = nil;
+  
   if (type == NSStatusTypeScriptDefault)
-    index = eStatusScriptDefault;
-  else if (type == NSStatusTypeScript)
-    index = eStatusScript;
+  {
+    [mDefaultStatusString autorelease];
+    mDefaultStatusString = [statusString retain];
+  }
+  else if (!statusString)
+  {
+    newStatus = (mDefaultStatusString) ? mDefaultStatusString : mLoadingStatusString;
+  }
   else
-    index = eStatusLinkTarget;
-
-  [mStatusStrings replaceObjectAtIndex:index withObject:(statusString ? statusString : [NSNull null])];
-  [mDelegate updateStatus:[self statusString]];
-}
-
-- (void)clearStatusStrings
-{
-  for (unsigned int i = 0; i < [mStatusStrings count]; ++i)
-    [mStatusStrings replaceObjectAtIndex:i withObject:[NSNull null]];
+  {
+    newStatus = statusString;
+  }
+  
+  if (newStatus)
+    [mDelegate updateStatus:newStatus];
 }
 
 - (NSString *)title 
@@ -675,7 +671,7 @@ enum {
     newWindowTitle = [NSString stringWithFormat:NSLocalizedString(@"OfflineTitleFormat", @""), newWindowTitle];
   mTitle = [newWindowTitle retain];
   
-  [mDelegate updateWindowTitle:mTitle];
+  [mDelegate updateWindowTitle:[mTitle stringByTruncatingTo:80 at:kTruncateAtEnd]];
   
   // Always set the tab.
   [mTabItem setLabel:mTabTitle];		// tab titles get truncated when setting them to tabs
@@ -709,15 +705,6 @@ enum {
   PRBool offline = PR_FALSE;
   ioService->GetOffline(&offline);
   mOffline = offline;
-}
-
-- (void)updatePluginsEnabledState
-{
-  BOOL gotPref;
-  BOOL pluginsEnabled = [[PreferenceManager sharedInstance] getBooleanPref:"camino.enable_plugins" withSuccess:&gotPref];
-
-  // If we can't get the pref, ensure we leave plugins enabled.
-  [mBrowserView setProperty:nsIWebBrowserSetup::SETUP_ALLOW_PLUGINS toValue:(gotPref ? pluginsEnabled : YES)];
 }
 
 //
@@ -761,7 +748,6 @@ enum {
     CallCreateInstance(NS_ARRAY_CONTRACTID, &mBlockedSites);
   if (mBlockedSites) {
     mBlockedSites->AppendElement((nsISupports*)eventData, PR_FALSE);
-    [self addBlockedPopupViewAndDisplay];
     [mDelegate showPopupBlocked:YES];
   }
 }
@@ -807,12 +793,12 @@ enum {
   [[mWindow delegate] onShowContextMenu:flags domEvent:aEvent domNode:aNode];
 }
 
--(NSMenu*)contextMenu
+-(NSMenu*)getContextMenu
 {
-  return [[mWindow delegate] contextMenu];
+  return [[mWindow delegate] getContextMenu];
 }
 
--(NSWindow*)nativeWindow
+-(NSWindow*)getNativeWindow
 {
   // use the view's window first
   NSWindow* viewsWindow = [self window];
@@ -822,6 +808,16 @@ enum {
   return mWindow;
 }
 
+- (BOOL)shouldAcceptDragFromSource:(id)dragSource
+{
+  if ((dragSource == self) || (dragSource == mTabItem) || (dragSource  == [[mWindow delegate] proxyIconView]))
+    return NO;
+  
+  if ([mTabItem isMemberOfClass:[BrowserTabViewItem class]] && (dragSource == [(BrowserTabViewItem*)mTabItem tabItemContentsView]))
+    return NO;
+  
+  return YES;
+}
 
 //
 // closeBrowserWindow
@@ -874,11 +870,6 @@ enum {
   NSString* newWindowTitle = [mTitle stringByAppendingString:titleTrailer];
 
   [mDelegate updateWindowTitle:newWindowTitle];
-}
-
-- (void)enablePluginsChanged:(NSNotification*)aNote
-{
-  [self updatePluginsEnabledState];
 }
 
 //
@@ -1024,15 +1015,11 @@ enum {
 
 - (void)registerNotificationListener
 {
-  [[NSNotificationCenter defaultCenter] addObserver:self
-                                           selector:@selector(imageLoadedNotification:)
-                                               name:SiteIconLoadNotificationName
-                                             object:self];
+  [[NSNotificationCenter defaultCenter] addObserver:	self
+                                        selector:     @selector(imageLoadedNotification:)
+                                        name:         SiteIconLoadNotificationName
+                                        object:				self];
 
-  [[NSNotificationCenter defaultCenter] addObserver:self
-                                           selector:@selector(enablePluginsChanged:)
-                                               name:kEnablePluginsChangedNotificationName
-                                             object:nil];
 }
 
 // called when [[SiteIconProvider sharedFavoriteIconProvider] fetchFavoriteIconForPage:...] completes
@@ -1048,7 +1035,7 @@ enum {
     if (iconImage == nil)
       siteIconURI = @"";	// go back to default image
   
-    if ([pageURI isEqualToString:[self getCurrentURI]]) // make sure it's for the current page
+    if ([pageURI isEqualToString:[[self getBrowserView] getCurrentURI]]) // make sure it's for the current page
       [self updateSiteIconImage:iconImage withURI:siteIconURI loadError:NO];
   }
 }
@@ -1061,32 +1048,18 @@ enum {
 //
 - (BOOL) isEmpty
 {
-  return [[self getCurrentURI] isEqualToString:@"about:blank"];
-}
-
-- (BOOL)isInternalURI
-{
-  NSString* currentURI = [self getCurrentURI];
-  return ([currentURI hasPrefix:@"about:"] || [currentURI hasPrefix:@"view-source:"]);
+  return [[[self getBrowserView] getCurrentURI] isEqualToString:@"about:blank"];
 }
 
 - (BOOL)canReload
 {
-  NSString* curURI = [[self getCurrentURI] lowercaseString];
+  NSString* curURI = [[[self getBrowserView] getCurrentURI] lowercaseString];
   return (![self isEmpty] &&
           !([curURI isEqualToString:@"about:bookmarks"] ||
             [curURI isEqualToString:@"about:history"] ||
             [curURI isEqualToString:@"about:config"]));
 }
 
-- (void)reload:(unsigned int)reloadFlags
-{
-  // Toss the favicon when force reloading
-  if (reloadFlags == NSLoadFlagsBypassCacheAndProxy)
-    [[SiteIconProvider sharedFavoriteIconProvider] removeImageForPageURL:[self getCurrentURI]];
-
-  [mBrowserView reload:reloadFlags];
-}
 
 - (IBAction)reloadWithNewCharset:(NSString*)charset
 {
@@ -1107,8 +1080,6 @@ enum {
 {
   return mFeedList;
 }
-
-#pragma mark -
 
 //
 // -configurePopupBlocking:
@@ -1140,27 +1111,6 @@ enum {
 }
 
 //
-// -addBlockedPopupViewAndDisplay
-//
-// Even if we're hidden, we ensure that the new view is in the view hierarchy
-// and it will be resized when the current tab is eventually displayed.
-//
-- (void)addBlockedPopupViewAndDisplay
-{
-  if ([self popupsBlocked] && !mBlockedPopupView) {
-    [NSBundle loadNibNamed:@"PopupBlockView" owner:self];
-    
-    [mBlockedPopupCloseButton setImage:[NSImage imageNamed:@"popup_close"]];
-    [mBlockedPopupCloseButton setAlternateImage:[NSImage imageNamed:@"popup_close_pressed"]];
-    [mBlockedPopupCloseButton setHoverImage:[NSImage imageNamed:@"popup_close_hover"]];
-    
-    [self addSubview:mBlockedPopupView];
-    [self setFrame:[self frame] resizingBrowserViewIfHidden:YES];
-    [self display];
-  }
-}
-
-//
 // -removeBlockedPopupViewAndDisplay
 //
 // If we're showing the blocked popup view, this removes it and resizes the
@@ -1171,7 +1121,6 @@ enum {
 {
   if (mBlockedPopupView) {
     [mBlockedPopupView removeFromSuperview];
-    [mBlockedPopupView release]; // retain count of 1 from nib
     mBlockedPopupView = nil;
     [self setFrame:[self frame] resizingBrowserViewIfHidden:YES];
     [self display];
@@ -1187,170 +1136,36 @@ enum {
 
 #pragma mark -
 
-// This value keeps the message text field from wrapping excessively.
-#define kMessageTextMinWidth 70
-
 @implementation InformationPanelView
 
-- (void)awakeFromNib
+- (id)initWithFrame:(NSRect)frameRect
 {
-  [self verticallyCenterAllSubviews];
-
-  // Padding & strut length are required when setting the panel's frame.
-  NSRect textFieldFrame = [mPopupBlockedMessageTextField frame];
-  mVerticalPadding = [mPopupBlockedMessageTextField frame].origin.y;
-  mMessageTextRightStrutLength = [self frame].size.width - NSMaxX(textFieldFrame);
-}
-
-//
-// -setFrame:
-// In addition to setting the panel's frame rectangle this method accounts
-// for wrapping of the message text field in response to this new frame and
-// adjusts to properly enclose the text, maintaining vertical padding.
-//
-- (void)setFrame:(NSRect)newPanelFrame
-{
-  NSRect existingPanelFrame = [self frame];
-  NSRect textFieldFrame = [mPopupBlockedMessageTextField frame];
-
-  // Resize the text field's width (based on its right strut).
-  float currentStrutLength = newPanelFrame.size.width - NSMaxX(textFieldFrame);
-  textFieldFrame.size.width -= mMessageTextRightStrutLength - currentStrutLength;
-
-  // Enforce a minimum size for the text field.
-  if (textFieldFrame.size.width < kMessageTextMinWidth)
-    textFieldFrame.size.width = kMessageTextMinWidth;
-
-  // Text field will wrap/resize when its new frame is applied.
-  [mPopupBlockedMessageTextField setFrame:textFieldFrame];
-  textFieldFrame = [mPopupBlockedMessageTextField frame];
-
-  newPanelFrame.size.height = textFieldFrame.size.height + 2 * mVerticalPadding;
-  [super setFrame:newPanelFrame];
-
-  [self verticallyCenterAllSubviews];
-}
-
-- (void)verticallyCenterAllSubviews
-{
-  NSRect panelFrame = [self frame];
-
-  NSEnumerator *subviewEnum = [[self subviews] objectEnumerator];
-  NSView *currentSubview;
-
-  while ((currentSubview = [subviewEnum nextObject])) {
-    NSRect currentSubviewFrame = [currentSubview frame];
-    // The panel's NSButtons draw incorrectly on non-integral pixel boundaries.
-    float verticallyCenteredYLocation = ceilf((panelFrame.size.height - currentSubviewFrame.size.height) / 2.0f);
-
-    [currentSubview setFrameOrigin:NSMakePoint(currentSubviewFrame.origin.x, verticallyCenteredYLocation)];
-  }
-}
-
-//
-// CalculateShadingValues
-//
-// Callback function; Generates a color based upon
-// the current interval (location) of the shading.
-//
-static void CalculateShadingValues(void *info, const float *in, float *out)
-{
-  static float beginTopHalf[4] =    { 0.364706f, 0.364706f, 0.364706f, 1.0f };
-  static float endTopHalf[4] =      { 0.298039f, 0.298039f, 0.298039f, 1.0f };
-  static float beginBottomHalf[4] = { 0.207843f, 0.207843f, 0.207843f, 1.0f };
-  static float endBottomHalf[4] =   { 0.290196f, 0.290196f, 0.290196f, 1.0f };
-
-  float *startColor;
-  float *endColor;
-
-  // The interval is the sole item in the input array.
-  // It ranges from 0 - 1.0.
-  float currentInterval = in[0];
-
-  // Determine which shading to draw based upon the interval and adjust
-  // that interval so each shading contains a full range of 0 - 1.0.
-  if (currentInterval < 0.5f) {
-    startColor = beginTopHalf;
-    endColor = endTopHalf;
-    currentInterval /= 0.5f;
-  }
-  else {
-    startColor = beginBottomHalf;
-    endColor = endBottomHalf;
-    currentInterval = (currentInterval - 0.5f) / 0.5f;
-  }
-
-  // Using the interval, compute and set each color component (RGBa) output.
-  for(int i = 0; i < 4; i++)
-    out[i] = (1.0f - currentInterval) * startColor[i] + currentInterval * endColor[i];
+  if ((self = [super initWithFrame:frameRect]))
+    mPopupBlockedBackgroundImage = [[NSImage imageNamed:@"popup_blocked_background"] retain];
+  
+  return self;
 }
 
 //
 // -drawRect:
 //
-// Draws a shading behind the view's contents.
+// Draw a background color and shadowed border in addition to the contents.
 //
 - (void)drawRect:(NSRect)aRect
 {
-  struct CGFunctionCallbacks shadingCallback = { 0, &CalculateShadingValues, NULL };
-
-  CGFunctionRef shadingFunction = CGFunctionCreate(NULL,              // void *info
-                                                   1,                 // number of inputs
-                                                   NULL,              // valid intervals of input values
-                                                   4,                 // number of outputs (4 = RGBa)
-                                                   NULL,              // valid intervals of output values
-                                                   &shadingCallback); // pointer to callback function
-
-  if (!shadingFunction) {
-    NSLog(@"Failed to create a shading function.");
-    return;
-  }
-
-  NSRect bounds = [self bounds];
-
-  // Start/end at the top/bottom midpoint
-  CGPoint startPoint = CGPointMake(NSMidX(bounds), NSMaxY(bounds));
-  CGPoint endPoint = CGPointMake(NSMidX(bounds), NSMinY(bounds));
-
-  // To preserve 10.3 compatibility, create a color space
-  // using the CGColorSpaceCreateDeviceRGB function.
-
-  // CGColorSpaceCreateDeviceRGB has two possible behaviors:
-  // 1. On 10.3 or earlier it returns a device-dependent color space.
-  // 2. On 10.4 or later it will map to a generic (and more accurate)
-  //    device-independent color space.
-  CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceRGB();
-
-  if (!colorspace) {
-    NSLog(@"Failed to create a color space for the shading.");
-    CGFunctionRelease(shadingFunction);
-    return;
-  }
-
-  // Creates (but does not draw) the axial shading
-  CGShadingRef shading = CGShadingCreateAxial(colorspace,       // CGColorSpaceRef colorspace
-                                              startPoint,       // CGPoint start
-                                              endPoint,         // CGPoint end
-                                              shadingFunction,  // CGFunctionRef function
-                                              false,            // bool extendStart
-                                              false);           // bool extendEnd
-
-  if (!shading) {
-    NSLog(@"Failed to create the shading.");
-    CGFunctionRelease(shadingFunction);
-    CGColorSpaceRelease(colorspace);
-    return;
-  }
-
-  CGContextRef context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-
-  CGContextDrawShading(context, shading);
-
-  CGShadingRelease(shading);
-  CGColorSpaceRelease(colorspace);
-  CGFunctionRelease(shadingFunction);
-
+  NSPoint patternOrigin = [self convertPoint:NSMakePoint(0.0f, 0.0f) toView:nil];
+  [mPopupBlockedBackgroundImage drawTiledInRect:aRect
+                                         origin:patternOrigin
+                                      operation:NSCompositeCopy];
+  
+  // Call our base class method to paint contents
   [super drawRect:aRect];
+}
+
+- (void)dealloc
+{
+  [mPopupBlockedBackgroundImage release];
+  [super dealloc];
 }
 
 @end

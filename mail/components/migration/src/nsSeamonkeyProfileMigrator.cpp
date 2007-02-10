@@ -544,7 +544,7 @@ nsresult nsSeamonkeyProfileMigrator::CopyAddressBookDirectories(nsVoidArray* aLd
     if (StringEndsWith(prefName, nsDependentCString(".filename")))
     {
       // should we be assuming utf-8 or ascii here?
-      CopyFile(NS_ConvertUTF8toUTF16(pref->stringValue), NS_ConvertUTF8toUTF16(pref->stringValue)); 
+      CopyFile(NS_ConvertUTF8toUCS2(pref->stringValue), NS_ConvertUTF8toUCS2(pref->stringValue)); 
     }
 
     // we don't need to do anything to the fileName pref itself
@@ -663,7 +663,7 @@ nsresult nsSeamonkeyProfileMigrator::CopyMailFolders(nsVoidArray* aMailServers, 
         alteredHost += hostName;
 
         NS_MsgHashIfNecessary(alteredHost); 
-        targetMailFolder->Append(NS_ConvertASCIItoUTF16(alteredHost)); 
+        targetMailFolder->Append(NS_ConvertASCIItoUCS2(alteredHost)); 
       }
 
       if (targetMailFolder)
@@ -673,7 +673,7 @@ nsresult nsSeamonkeyProfileMigrator::CopyMailFolders(nsVoidArray* aMailServers, 
         {
           nsXPIDLCString hostName; 
           serverBranch->GetCharPref("hostname", getter_Copies(hostName));
-          targetMailFolder->Append(NS_ConvertASCIItoUTF16(hostName));  
+          targetMailFolder->Append(NS_ConvertASCIItoUCS2(hostName));  
 
           // we should make sure the host name based directory we are going to migrate 
           // the accounts into is unique. This protects against the case where the user
@@ -885,7 +885,9 @@ static PRUint32 StringHash(const char *ubuf)
 
 nsresult NS_MsgHashIfNecessary(nsCString &name)
 {
-#if defined(XP_UNIX) || defined(XP_BEOS)
+#if defined(XP_MAC)
+  const PRUint32 MAX_LEN = 25;
+#elif defined(XP_UNIX) || defined(XP_BEOS)
   const PRUint32 MAX_LEN = 55;
 #elif defined(XP_WIN32)
   const PRUint32 MAX_LEN = 55;

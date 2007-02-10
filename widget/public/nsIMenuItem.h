@@ -45,10 +45,11 @@
 #include "nsIDocShell.h"
 #include "nsIDOMElement.h"
 
-// {4E3931A7-D7E5-47FC-9489-83928536DA9D}
-#define NS_IMENUITEM_IID \
-{ 0x4E3931A7, 0xD7E5, 0x47FC, \
-  { 0x94, 0x89, 0x83, 0x92, 0x85, 0x36, 0xDA, 0x9D } }
+
+// {f2e79600-1700-11d5-bb6f-90f240fe493c}
+#define NS_IMENUITEM_IID      \
+{ 0xf2e79600, 0x1700, 0x11d5, \
+  { 0xbb, 0x6f, 0x90, 0xf2, 0x40, 0xfe, 0x49, 0x3c } };
 
 class nsIMenu;
 class nsIWidget;
@@ -70,7 +71,7 @@ enum {
 class nsIMenuItem : public nsISupports {
 
   public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_IMENUITEM_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMENUITEM_IID)
 
     enum EMenuItemType { eRegular = 0, eCheckbox, eRadio } ;
 
@@ -78,9 +79,9 @@ class nsIMenuItem : public nsISupports {
     * Creates the MenuItem
     *
     */
-    NS_IMETHOD Create(nsIMenu* aParent, const nsString & aLabel, PRBool isSeparator, 
-                      EMenuItemType aItemType, nsIChangeManager* aManager,
-                      nsIDocShell* aShell, nsIContent* aNode) = 0;
+    NS_IMETHOD Create ( nsIMenu* aParent, const nsString & aLabel, PRBool isSeparator, 
+                          EMenuItemType aItemType, PRBool aEnabled, 
+                          nsIChangeManager* aManager, nsIDocShell* aShell, nsIContent* aNode ) = 0;
     
    /**
     * Get the MenuItem label
@@ -125,6 +126,12 @@ class nsIMenuItem : public nsISupports {
     NS_IMETHOD GetMenuItemType(EMenuItemType *aType) = 0;
     
    /**
+    * Gets the target for MenuItem
+    *
+    */
+    NS_IMETHOD GetTarget(nsIWidget *& aTarget) = 0;
+    
+   /**
     * Gets Native Menu Handle
     *
     */
@@ -153,25 +160,34 @@ class nsIMenuItem : public nsISupports {
     * @return NS_OK if the command was executed properly, otherwise an error code
     */
     NS_IMETHOD DoCommand() = 0;
-    
-    /**
-     * Sends a DOM event to the menu item's content node 
-     * @return NS_OK if the event was sent properly, otherwise an error code
-     */
-    NS_IMETHOD DispatchDOMEvent(const nsString &eventName, PRBool *preventDefaultCalled) = 0;
 
     /**
     *
     */
     NS_IMETHOD SetModifiers(PRUint8 aModifiers) = 0;
     NS_IMETHOD GetModifiers(PRUint8 * aModifiers) = 0;
+};
+
+// {58C5DE16-931C-4D31-AB7E-1B5FBDF596C4}
+#define NS_IMENUITEM_MOZILLA_1_8_BRANCH_IID \
+{ 0x58C5DE16, 0x931C, 0x4D31, \
+  { 0xAB, 0x7E, 0x1B, 0x5F, 0xBD, 0xF5, 0x96, 0xC4 } };
+
+class nsIMenuItem_MOZILLA_1_8_BRANCH : public nsIMenuItem  {
+  
+  public:
+    NS_DEFINE_STATIC_IID_ACCESSOR(NS_IMENUITEM_MOZILLA_1_8_BRANCH_IID)
+
+    /**
+     * Sends a DOM event to the menu item's content node 
+     * @return NS_OK if the event was sent properly, otherwise an error code
+     */
+    NS_IMETHOD DispatchDOMEvent(const nsString &eventName, PRBool *preventDefaultCalled) = 0;
 
    /**
     * Sets an appropriate icon for the menu item.
     */
     NS_IMETHOD SetupIcon() = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIMenuItem, NS_IMENUITEM_IID)
 
 #endif

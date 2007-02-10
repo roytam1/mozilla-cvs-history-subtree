@@ -51,17 +51,14 @@
 
 <?xml-stylesheet href="chrome://browser/skin/" type="text/css"?> 
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
 <?xml-stylesheet href="chrome://browser/skin/places/browser-places.css" type="text/css"?>
 #endif
 
 <?xml-stylesheet href="chrome://global/skin/toolbar.css" type="text/css"?>
+<?xml-stylesheet href="chrome://global/skin/findBar.css" type="text/css"?>
 
-<?xul-overlay href="chrome://global/content/editMenuOverlay.xul"?>
 <?xul-overlay href="chrome://browser/content/baseMenuOverlay.xul"?>
-#ifdef MOZ_PLACES
-<?xul-overlay href="chrome://browser/content/places/placesOverlay.xul"?>
-#endif
 
 # All DTD information is stored in a separate file so that it can be shared by
 # hiddenWindow.xul.
@@ -83,8 +80,7 @@
 # wishes to include *must* go into the global-scripts.inc file
 # so that they can be shared by macBrowserOverlay.xul.
 #include global-scripts.inc
-<script type="application/x-javascript" src="chrome://browser/content/nsContextMenu.js"/>
-  
+
 #ifdef MOZ_SAFE_BROWSING
 <script type="application/x-javascript" src="chrome://browser/content/safebrowsing/sb-loader.js"/>
 #endif
@@ -110,7 +106,7 @@
     <popup type="autocomplete" chromedir="&locale.dir;" id="PopupAutoComplete"/>
 
     <popup id="toolbar-context-menu"
-           onpopupshowing="onViewToolbarsPopupShowing(event);">
+           onpopupshowing="updateToolbarStates(this); onViewToolbarsPopupShowing(event);">
       <menuseparator/>
       <menuitem command="cmd_CustomizeToolbars"
                 label="&viewCustomizeToolbar.label;"
@@ -125,42 +121,35 @@
       <menuseparator observes="blockedPopupsSeparator"/>
     </popup>
 
-    <popup id="contentAreaContextMenu"
-           onpopupshowing="if (event.target != this) return true; gContextMenu = new nsContextMenu(this, window.getBrowser()); return gContextMenu.shouldDisplay;"
-           onpopuphiding="if (event.target == this) { gContextMenu = null; }">
 #include browser-context.inc
-    </popup>
 
-    <popup id="placesContext"/>
+#ifdef MOZ_PLACES
+#include ../../components/places/content/context.inc
+#endif
   </popupset>
 
 # The hacky hidden tree used by the Go menu to build items.
 #include browser-gotreehack.inc
 
-#ifndef MOZ_PLACES_BOOKMARKS
+#ifndef MOZ_PLACES
   <!-- bookmarks context menu -->
   <popupset>
     <menupopup id="bookmarks-context-menu" 
                onpopupshowing="return BookmarksMenu.createContextMenu(event);"
                onpopuphidden ="BookmarksMenu.destroyContextMenu(event);"/>
   </popupset>
-#endif
 
   <!-- bookmarks toolbar tooltip -->
-  <tooltip id="btTooltip" noautohide="true"
-#ifdef MOZ_PLACES_BOOKMARKS
-           onpopupshowing="return BookmarksEventHandler.fillInBTTooltip(document.tooltipNode)">
-#else
+  <tooltip id="btTooltip" noautohide="true" 
            onpopupshowing="return BookmarksToolbar.fillInBTTooltip(document.tooltipNode)">
-#endif
     <vbox id="btTooltipTextBox" flex="1">  
       <label id="btTitleText" />
       <label id="btUrlText" />
     </vbox>
   </tooltip>
+#endif
 
-  <toolbox id="navigator-toolbox" class="toolbox-top" mode="icons"
-           defaultmode="icons">
+  <toolbox id="navigator-toolbox" class="toolbox-top" mode="icons">
     <!-- Menu -->
     <toolbar type="menubar" id="toolbar-menubar" class="chromeclass-menubar" customizable="true"
 #ifdef XP_MACOSX
@@ -263,8 +252,16 @@
                         onclick="return FeedHandler.onFeedButtonClick(event);">
                   <menupopup position="after_end"
                              onpopupshowing="return FeedHandler.buildFeedList(this);"
+#ifdef MOZ_FEEDS
                              oncommand="return FeedHandler.subscribeToFeed(null, event);"
                              onclick="checkForMiddleClick(this, event);"/>
+#else
+#ifdef MOZ_PLACES
+                             oncommand="PlacesCommandHook.addLiveBookmark(event.target.getAttribute('feed'));" />
+#else
+                             oncommand="FeedHandler.addLiveBookmark(event.target.getAttribute('feed'));" />
+#endif
+#endif
                 </button>
                 <image id="lock-icon" onclick="if (event.button == 0) displaySecurityInfo(); event.stopPropagation();"/>
 #ifdef MOZ_SAFE_BROWSING
@@ -307,12 +304,13 @@
         </hbox>
       </toolbaritem>
 
-      <toolbaritem id="search-container" title="&searchItem.title;" 
-                   align="center" class="chromeclass-toolbar-additional"
-                   flex="100">
+      <toolbaritem id="search-container" title="&searchItem.title;"
+                    chromedir="&locale.dir;"
+                    align="center" class="chromeclass-toolbar-additional"
+                    flex="100">
         <searchbar id="searchbar" flex="1" chromedir="&locale.dir;"/>
       </toolbaritem>
-
+      
       <toolbarbutton id="print-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
                      label="&printButton.label;" command="cmd_print"
                      tooltiptext="&printButton.tooltip;"/>
@@ -321,16 +319,20 @@
         <button id="navigator-throbber" disabled="true"/>
       </toolbaritem>
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
+      <toolbarbutton id="bookmarksBarShowPlaces" 
+                     class="toolbarbutton-1 chromeclass-toolbar-additional"
+                     label="&placesToolbarButton.label;" 
+                     tooltiptext="&placesToolbarButton.tooltip;" 
+                     oncommand="PlacesCommandHook.togglePlacesPopup(event);"/>
       <toolbaritem flex="1" id="personal-bookmarks" title="&bookmarksItem.title;">
-         <hbox id="bookmarksBarContent" flex="1" type="places"
+         <hbox id="bookmarksBarContent" flex="1" type="places" 
                place="place:&amp;folder=3&amp;group=3&amp;expandQueries=1"
                context="placesContext" asyncinit="true" 
                onclick="BookmarksEventHandler.onClick(event);"
                oncommand="BookmarksEventHandler.onCommand(event);"
                onpopupshowing="BookmarksEventHandler.onPopupShowing(event);"
-               ondragexit="PlacesMenuDNDController.onDragExit(event);"
-               tooltip="btTooltip"/>
+               ondragexit="PlacesMenuDNDController.onDragExit(event);"/>
       </toolbaritem>
       <toolbarbutton id="places-bookmark" 
                      label="&location.status.not_bookmarked;" 
@@ -339,7 +341,7 @@
 #else
       <toolbaritem id="personal-bookmarks" title="&bookmarksItem.title;" flex="1"
                    class="chromeclass-directories">
-        <stack id="bookmarks-stack" flex="1" style="min-width:0px; width:0px; overflow: hidden;"
+        <stack id="bookmarks-stack" flex="1" style="min-width:0px; width:0px;"
                onpopupshowing="BookmarksToolbar.setOpenedMenu(event);"
                onpopuphidden="BookmarksToolbar.unsetOpenedMenu(event);">
           <hbox id="bookmarks-ptf" class="bookmarks-toolbar-items" contextmenu="bookmarks-context-menu"
@@ -396,11 +398,11 @@
                        label="&downloads.label;"
                        tooltiptext="&downloads.tooltip;"/>
 
+#ifndef MOZ_PLACES
         <toolbarbutton id="history-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
                        observes="viewHistorySidebar" label="&historyButton.label;"
                        tooltiptext="&historyButton.tooltip;"/>
 
-#ifndef MOZ_PLACES_BOOKMARKS
         <toolbarbutton id="bookmarks-button" class="toolbarbutton-1 chromeclass-toolbar-additional"
                        observes="viewBookmarksSidebar"
                        tooltiptext="&bookmarksButton.tooltip;"
@@ -472,7 +474,7 @@
  
     <toolbarset id="customToolbars" context="toolbar-context-menu"/>
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
     <toolbar id="PersonalToolbar" mode="icons"  iconsize="small" 
              class="chromeclass-directories"
              context="toolbar-context-menu" 
@@ -507,7 +509,11 @@
                     onnewtab="BrowserOpenTab();"
                     autocompletepopup="PopupAutoComplete"
                     ondragdrop="nsDragAndDrop.drop(event, contentAreaDNDObserver);"
-                    onclick="return contentAreaClick(event, false);"/>
+                    onclick="return contentAreaClick(event, false);"
+#ifdef MOZ_PLACES
+                    onselect="BrowserController.onEvent(BrowserController.EVENT_TABCHANGE);"
+#endif
+                    />
       </vbox>
     </hbox>
 #ifdef TOOLBAR_CUSTOMIZATION_SHEET
@@ -524,11 +530,11 @@
 #endif
   </stack>
 
-  <findbar browserid="content" id="FindToolbar"/>
+#include ../../../toolkit/components/typeaheadfind/content/findBar.inc
   
   <statusbar class="chromeclass-status" id="status-bar"
              ondragdrop="nsDragAndDrop.drop(event, contentAreaDNDObserver);">
-    <statusbarpanel id="statusbar-display" label="" flex="1"/>
+    <statusbarpanel id="statusbar-display" flex="1"/>
     <statusbarpanel class="statusbarpanel-progress" collapsed="true" id="statusbar-progresspanel">
       <progressmeter class="progressmeter-statusbar" id="statusbar-icon" mode="normal" value="0"/>
     </statusbarpanel>
@@ -544,6 +550,18 @@
         <menuseparator observes="blockedPopupsSeparator"/>
       </menupopup>
     </statusbarpanel>
+#ifdef ALTSS_ICON
+    <statusbarpanel id="page-theme-button" type="menu"
+                    class="statusbarpanel-menu-iconic" 
+                    tooltiptext="&pageStyleIcon.tooltip;">
+      <menupopup onpopupshowing="stylesheetFillPopup(this);"
+                 oncommand="stylesheetSwitchAll(window.content, event.target.getAttribute('data')); setStyleDisabled(false);">
+        <menuitem label="&pageStyleNoStyle.label;" accesskey="&pageStyleNoStyle.accesskey;"
+                  oncommand="setStyleDisabled(true); event.stopPropagation();" type="radio" hidden="true"/>
+        <menuitem label="&pageStylePersistentOnly.label;" accesskey="&pageStylePersistentOnly.accesskey;" type="radio" checked="true"/>
+        <menuseparator/>
+      </menupopup>
+    </statusbarpanel>
+#endif
   </statusbar>
 </window>
-  

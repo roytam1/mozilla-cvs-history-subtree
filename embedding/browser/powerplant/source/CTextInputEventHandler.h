@@ -56,19 +56,19 @@ public:
   virtual OSStatus HandleAll( EventHandlerCallRef inHandlerCallRef, 
                               EventRef inEvent);
 protected:  
-  virtual OSStatus HandleUnicodeForKeyEvent( CBrowserShell* aBrowserShell, 
+  virtual OSStatus HandleUnicodeForKeyEvent( CBrowserShell* aBrwoserShell, 
                                              EventHandlerCallRef inHandlerCallRef, 
                                              EventRef inEvent);
   virtual OSStatus HandleUpdateActiveInputArea( CBrowserShell* sink, 
                                                 EventHandlerCallRef inHandlerCallRef, 
                                                 EventRef inEvent);
-  virtual OSStatus HandleOffsetToPos( CBrowserShell* aBrowserShell, 
+  virtual OSStatus HandleOffsetToPos( CBrowserShell* aBrwoserShell, 
                                       EventHandlerCallRef inHandlerCallRef, 
                                       EventRef inEvent);
-  virtual OSStatus HandlePosToOffset( CBrowserShell* aBrowserShell, 
+  virtual OSStatus HandlePosToOffset( CBrowserShell* aBrwoserShell, 
                                       EventHandlerCallRef inHandlerCallRef, 
                                       EventRef inEvent);
-  virtual OSStatus HandleGetSelectedText( CBrowserShell* aBrowserShell, 
+  virtual OSStatus HandleGetSelectedText( CBrowserShell* aBrwoserShell, 
                                       EventHandlerCallRef inHandlerCallRef, 
                                       EventRef inEvent);
   

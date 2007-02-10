@@ -47,6 +47,7 @@
 #include "nsITreeColumns.h"
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
+static NS_DEFINE_CID(kDateTimeFormatCID, NS_DATETIMEFORMAT_CID);
 
 PRInt32                 mozSqlResult::gRefCnt = 0;
 nsIRDFService*          mozSqlResult::gRDFService;
@@ -79,7 +80,7 @@ mozSqlResult::Init()
     rv = CallGetService(kRDFServiceCID, &gRDFService);
     if (NS_FAILED(rv)) return rv;
 
-    rv = CallCreateInstance(NS_DATETIMEFORMAT_CONTRACTID, &gFormat);
+    rv = CallCreateInstance(kDateTimeFormatCID, &gFormat);
     if (NS_FAILED(rv)) return rv;
 
     rv = gRDFService->GetResource(NS_LITERAL_CSTRING("SQL:ResultRoot"),
@@ -912,13 +913,6 @@ NS_IMETHODIMP
 mozSqlResult::IsEditable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
 {
   return CanUpdate(_retval);
-}
-
-NS_IMETHODIMP
-mozSqlResult::IsSelectable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
-{
-  *_retval = PR_FALSE;
-  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -2257,7 +2251,7 @@ mozSqlResultStream::EnsureBuffer()
         else {
           PRInt32 type = cell->GetType();
           if (type == mozISqlResult::TYPE_STRING)
-            mBuffer.Append(NS_ConvertUTF16toUTF8(cell->mString));
+            mBuffer.Append(NS_ConvertUCS2toUTF8(cell->mString));
           else if (type == mozISqlResult::TYPE_INT)
             mBuffer.AppendInt(cell->mInt);
           else if (type == mozISqlResult::TYPE_FLOAT ||
@@ -2272,7 +2266,7 @@ mozSqlResultStream::EnsureBuffer()
                                   type != mozISqlResult::TYPE_DATE ? kTimeFormatSeconds : kTimeFormatNone,
                                   PRTime(cell->mDate),
                                   value);
-            mBuffer.Append(NS_ConvertUTF16toUTF8(value));
+            mBuffer.Append(NS_ConvertUCS2toUTF8(value));
           }
           else if (type == mozISqlResult::TYPE_BOOL) {
             if (cell->mBool)

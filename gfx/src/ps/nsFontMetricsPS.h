@@ -93,13 +93,8 @@ public:
   NS_IMETHOD  GetUnderline(nscoord& aOffset, nscoord& aSize);
 
   NS_IMETHOD  GetHeight(nscoord &aHeight);
-#ifdef FONT_LEADING_APIS_V2
-  NS_IMETHOD  GetInternalLeading(nscoord &aLeading);
-  NS_IMETHOD  GetExternalLeading(nscoord &aLeading);
-#else
   NS_IMETHOD  GetNormalLineHeight(nscoord &aHeight);
   NS_IMETHOD  GetLeading(nscoord &aLeading);
-#endif
   NS_IMETHOD  GetEmHeight(nscoord &aHeight);
   NS_IMETHOD  GetEmAscent(nscoord &aAscent);
   NS_IMETHOD  GetEmDescent(nscoord &aDescent);
@@ -132,14 +127,9 @@ public:
   inline void SetMaxAdvance(nscoord aMaxAdvance) { mMaxAdvance = aMaxAdvance; };
   inline void SetAveCharWidth(nscoord aAveCharWidth) { mAveCharWidth = aAveCharWidth; };
   inline void SetSpaceWidth(nscoord aSpaceWidth) { mSpaceWidth = aSpaceWidth; };
-  // No known string length limits in Postscript
-  virtual PRInt32 GetMaxStringLength() { return PR_INT32_MAX; }
 
   inline nsDeviceContextPS* GetDeviceContext() { return mDeviceContext; }
-  inline nsVoidArray* GetFontsPS() {
-    NS_ASSERTION(mFontsPS, "kherron says this shouldn't happen, see bug 324929");
-    return mFontsPS;
-  };
+  inline nsVoidArray* GetFontsPS() { return mFontsPS; };
   inline nsHashtable *GetFontsAlreadyLoadedList() {return mFontsAlreadyLoaded;};
   inline int GetFontPSState() { return mFontPSState; };
   inline void IncrementFontPSState() { mFontPSState++; };

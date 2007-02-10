@@ -96,9 +96,7 @@ PRWord *_MD_HomeGCRegisters(PRThread *t, int isCurrent, int *np)
 #endif
     }
     return (PRWord *)&t->md.gcContext;
-#else
-    PR_NOT_REACHED("not implemented");
-    return NULL;
+#elif defined(_ALPHA_)
 #endif /* defined(_X86_) */
 }
 
@@ -123,8 +121,6 @@ GetMyFiberID()
     }
   
     return fiberData;
-#else
-    PR_NOT_REACHED("not implemented");
-    return NULL;
+#elif defined(_ALPHA_)
 #endif /* defined(_X86_) */
 }

@@ -52,7 +52,7 @@ typedef enum {
  kMonospace,
  kCursive,
  kFantasy, 
- kUnknownGenericFontName
+ kUknownGenericFontName
 } nsGenericFontNameType;
 //--------------------------------------------------------------------------
 
@@ -77,8 +77,8 @@ public:
 	inline nsString* GenericFontNameForScript(ScriptCode aScript, nsGenericFontNameType aType) const 
 	{
 			NS_PRECONDITION(aScript < smPseudoTotalScripts, "bad script code");
-			NS_PRECONDITION(aType <= kUnknownGenericFontName, "illegal value");
-			if( aType >= kUnknownGenericFontName)
+			NS_PRECONDITION(aType <= kUknownGenericFontName, "illegal value");
+			if( aType >= kUknownGenericFontName)
 				return nsnull;
 			else
 				return mGenericFontMapping[aScript][aType]; 
@@ -87,7 +87,7 @@ public:
   ScriptCode MapLangGroupToScriptCode(const char* aLangGroup);
 	static nsUnicodeMappingUtil* GetSingleton();
 	static void FreeSingleton();
-	nsString *mGenericFontMapping[smPseudoTotalScripts][kUnknownGenericFontName];
+	nsString *mGenericFontMapping[smPseudoTotalScripts][kUknownGenericFontName];
 	
 protected:
     void InitGenericFontMapping();

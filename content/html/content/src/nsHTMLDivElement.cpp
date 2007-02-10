@@ -37,10 +37,13 @@
 #include "nsIDOMHTMLDivElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsMappedAttributes.h"
+
+// XXX support missing nav attributes? gutter, cols, width
+
 
 class nsHTMLDivElement : public nsGenericHTMLElement,
                          public nsIDOMHTMLDivElement
@@ -53,7 +56,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -64,13 +67,11 @@ public:
   // nsIDOMHTMLDivElement
   NS_DECL_NSIDOMHTMLDIVELEMENT
 
-  virtual PRBool ParseAttribute(PRInt32 aNamespaceID,
-                                nsIAtom* aAttribute,
+  virtual PRBool ParseAttribute(nsIAtom* aAttribute,
                                 const nsAString& aValue,
                                 nsAttrValue& aResult);
   NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
   virtual nsMapRuleToAttributesFunc GetAttributeMappingFunction() const;
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 };
 
 
@@ -99,41 +100,31 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLDivElement, nsGenericHTMLElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLDivElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLDivElement)
 
 
 NS_IMPL_STRING_ATTR(nsHTMLDivElement, Align, align)
 
 
 PRBool
-nsHTMLDivElement::ParseAttribute(PRInt32 aNamespaceID,
-                                 nsIAtom* aAttribute,
+nsHTMLDivElement::ParseAttribute(nsIAtom* aAttribute,
                                  const nsAString& aValue,
                                  nsAttrValue& aResult)
 {
-  if (aNamespaceID == kNameSpaceID_None) {
-    if (mNodeInfo->Equals(nsGkAtoms::marquee)) {
-      if ((aAttribute == nsGkAtoms::width) ||
-          (aAttribute == nsGkAtoms::height)) {
-        return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
-      }
-      if (aAttribute == nsGkAtoms::bgcolor) {
-        return aResult.ParseColor(aValue, GetOwnerDoc());
-      }
-      if ((aAttribute == nsGkAtoms::hspace) ||
-          (aAttribute == nsGkAtoms::vspace)) {
-        return aResult.ParseIntWithBounds(aValue, 0);
-      }
-    }
-
-    if (mNodeInfo->Equals(nsGkAtoms::div) &&
-        aAttribute == nsGkAtoms::align) {
-      return ParseDivAlignValue(aValue, aResult);
-    }
+  if (aAttribute == nsHTMLAtoms::align) {
+    return ParseDivAlignValue(aValue, aResult);
+  }
+  if (aAttribute == nsHTMLAtoms::cols) {
+    return aResult.ParseIntWithBounds(aValue, 0);
+  }
+  if (aAttribute == nsHTMLAtoms::gutter) {
+    return aResult.ParseIntWithBounds(aValue, 1);
+  }
+  if (aAttribute == nsHTMLAtoms::width) {
+    return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
   }
 
-  return nsGenericHTMLElement::ParseAttribute(aNamespaceID, aAttribute, aValue,
-                                              aResult);
+  return nsGenericHTMLElement::ParseAttribute(aAttribute, aValue, aResult);
 }
 
 static void
@@ -143,45 +134,19 @@ MapAttributesIntoRule(const nsMappedAttributes* aAttributes, nsRuleData* aData)
   nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
-static void
-MapMarqueeAttributesIntoRule(const nsMappedAttributes* aAttributes, nsRuleData* aData)
-{
-  nsGenericHTMLElement::MapImageMarginAttributeInto(aAttributes, aData);
-  nsGenericHTMLElement::MapImageSizeAttributesInto(aAttributes, aData);
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
-  nsGenericHTMLElement::MapBGColorInto(aAttributes, aData);
-}
-
 NS_IMETHODIMP_(PRBool)
 nsHTMLDivElement::IsAttributeMapped(const nsIAtom* aAttribute) const
 {
-  if (mNodeInfo->Equals(nsGkAtoms::div)) {
-    static const MappedAttributeEntry* const map[] = {
-      sDivAlignAttributeMap,
-      sCommonAttributeMap
-    };
-    return FindAttributeDependence(aAttribute, map, NS_ARRAY_LENGTH(map));
-  }
-  if (mNodeInfo->Equals(nsGkAtoms::marquee)) {  
-    static const MappedAttributeEntry* const map[] = {
-      sImageMarginSizeAttributeMap,
-      sBackgroundColorAttributeMap,
-      sCommonAttributeMap
-    };
-    return FindAttributeDependence(aAttribute, map, NS_ARRAY_LENGTH(map));
-  }
-
-  return nsGenericHTMLElement::IsAttributeMapped(aAttribute);
+  static const MappedAttributeEntry* const map[] = {
+    sDivAlignAttributeMap,
+    sCommonAttributeMap
+  };
+  
+  return FindAttributeDependence(aAttribute, map, NS_ARRAY_LENGTH(map));
 }
 
 nsMapRuleToAttributesFunc
 nsHTMLDivElement::GetAttributeMappingFunction() const
 {
-  if (mNodeInfo->Equals(nsGkAtoms::div)) {
-    return &MapAttributesIntoRule;
-  }
-  if (mNodeInfo->Equals(nsGkAtoms::marquee)) {
-    return &MapMarqueeAttributesIntoRule;
-  }  
-  return nsGenericHTMLElement::GetAttributeMappingFunction();
+  return &MapAttributesIntoRule;
 }

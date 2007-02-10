@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Geoff Beier <me@mollyandgeoff.com>
- *   Desmond Elliott <d.elliott@inf.ed.ac.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -48,8 +47,8 @@
   IBOutlet BrowserTabView*  mTabView;
   
   TabButtonCell*    mActiveTabButton;     // active tab button, mainly useful for handling drags (STRONG)
-  NSButton*         mOverflowRightButton; // button to slide tabs to the left
-  NSButton*         mOverflowLeftButton;  // button to slide tabs to the right
+  NSButton*         mOverflowButton;      // button for overflow menu if we've got more tabs than space (STRONG)
+  NSMenu*           mOverflowMenu;        // menu for tab overflow (STRONG);
   
   // drag tracking
   NSPoint           mLastClickPoint;
@@ -62,9 +61,6 @@
   
   NSImage*          mBackgroundImage;
   NSImage*          mButtonDividerImage;
-  
-  int               mLeftMostVisibleTabIndex;    // Index of tab view item left-most in the tab bar
-  int               mNumberOfVisibleTabs;        // Number of tab view items drawn in the tab bar
 }
 
 // destroy the tab bar and recreate it from the tabview
@@ -73,10 +69,10 @@
 -(float)tabBarHeight;
 -(BrowserTabViewItem*)tabViewItemAtPoint:(NSPoint)location;
 -(void)windowClosed;
+-(IBAction)overflowMenu:(id)sender;
 -(BOOL)isVisible;
 // show or hide tabs- should be called if this view will be hidden, to give it a chance to register or
 // unregister tracking rects as appropriate
 -(void)setVisible:(BOOL)show;
--(void)scrollTabIndexToVisible:(int)index;
 
 @end

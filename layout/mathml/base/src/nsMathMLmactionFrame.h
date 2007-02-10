@@ -56,25 +56,33 @@
 class nsMathMLmactionFrame : public nsMathMLContainerFrame,
                              public nsIDOMMouseListener {
 public:
-  friend nsIFrame* NS_NewMathMLmactionFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewMathMLmactionFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
   NS_DECL_ISUPPORTS_INHERITED
 
   NS_IMETHOD
-  Init(nsIContent*      aContent,
+  Init(nsPresContext*  aPresContext,
+       nsIContent*      aContent,
        nsIFrame*        aParent,
+       nsStyleContext*  aContext,
        nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD
-  SetInitialChildList(nsIAtom*        aListName,
+  SetInitialChildList(nsPresContext* aPresContext,
+                      nsIAtom*        aListName,
                       nsIFrame*       aChildList);
 
-  virtual nsresult
-  ChildListChanged(PRInt32 aModType);
+  NS_IMETHOD
+  GetFrameForPoint(const nsPoint&    aPoint,
+                   nsFramePaintLayer aWhichLayer,
+                   nsIFrame**        aFrame);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD
+  Paint(nsPresContext*      aPresContext,
+        nsIRenderingContext& aRenderingContext,
+        const nsRect&        aDirtyRect,
+        nsFramePaintLayer    aWhichLayer,
+        PRUint32             aFlags = 0);
 
   NS_IMETHOD
   Place(nsIRenderingContext& aRenderingContext,
@@ -99,17 +107,19 @@ public:
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent)  { MOUSE(event); return NS_OK; }
 
 protected:
-  nsMathMLmactionFrame(nsStyleContext* aContext) : nsMathMLContainerFrame(aContext) {}
+  nsMathMLmactionFrame();
   virtual ~nsMathMLmactionFrame();
   
   virtual PRIntn GetSkipSides() const { return 0; }
 
 private:
+  nsPresContext* mPresContext;
   PRInt32         mActionType;
   PRInt32         mChildCount;
   PRInt32         mSelection;
   nsIFrame*       mSelectedFrame;
   nsString        mRestyle;
+  PRBool          mWasRestyled;
 
   // helper to return the frame for the attribute selection="number"
   nsIFrame* 

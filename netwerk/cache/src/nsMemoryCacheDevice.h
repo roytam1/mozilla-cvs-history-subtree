@@ -64,7 +64,7 @@ public:
     virtual const char *    GetDeviceID(void);
 
     virtual nsresult        BindEntry( nsCacheEntry * entry );
-    virtual nsCacheEntry *  FindEntry( nsCString * key, PRBool *collision );
+    virtual nsCacheEntry *  FindEntry( nsCString * key );
     virtual void            DoomEntry( nsCacheEntry * entry );
     virtual nsresult        DeactivateEntry( nsCacheEntry * entry );
 

@@ -45,7 +45,7 @@ class nsSharedPageData;
 class nsPageContentFrame : public ViewportFrame {
 
 public:
-  friend nsIFrame* NS_NewPageContentFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult NS_NewPageContentFrame(nsIPresShell* aPresShell, nsIFrame** aResult);
   friend class nsPageFrame;
 
   // nsIFrame
@@ -54,18 +54,22 @@ public:
                      const nsHTMLReflowState& aMaxSize,
                      nsReflowStatus&      aStatus);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  NS_IMETHOD  Paint(nsPresContext*      aPresContext,
+                    nsIRenderingContext& aRenderingContext,
+                    const nsRect&        aDirtyRect,
+                    nsFramePaintLayer    aWhichLayer,
+                    PRUint32             aFlags = 0);
 
   virtual PRBool IsContainingBlock() const;
+
+  virtual void  SetClipRect(nsRect* aClipRect) { mClipRect = *aClipRect; }
 
   virtual void SetSharedPageData(nsSharedPageData* aPD) { mPD = aPD; }
 
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::pageFrame
+   * @see nsLayoutAtoms::pageFrame
    */
   virtual nsIAtom* GetType() const;
   
@@ -75,8 +79,9 @@ public:
 #endif
 
 protected:
-  nsPageContentFrame(nsStyleContext* aContext) : ViewportFrame(aContext) {}
+  nsPageContentFrame();
 
+  nsRect                    mClipRect;
   nsSharedPageData*         mPD;
 };
 

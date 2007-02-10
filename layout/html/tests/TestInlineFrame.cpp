@@ -39,6 +39,7 @@
 #include "nsCRT.h"
 #include "nsHTMLParts.h"
 #include "nsIDocument.h"
+#include "nsVoidArray.h"
 #include "nsDocument.h"
 #include "nsHTMLTagContent.h"
 #include "nsCoord.h"
@@ -293,7 +294,7 @@ TestReflowUnmapped(nsPresContext* presContext)
   nsRefPtr<nsStyleContext> styleContext;
   styleContext = presContext->StyleSet()->ResolveStyleFor(b, nsnull);
 
-  f->SetStyleContext(styleContext);
+  f->SetStyleContext(presContext,styleContext);
 
   // Reflow the HTML container
   nsReflowMetrics   reflowMetrics;
@@ -387,7 +388,7 @@ TestChildrenThatDontFit(nsPresContext* presContext)
   nsRefPtr<nsStyleContext> styleContext;
   styleContext = presContext->StyleSet()->ResolveStyleFor(b, nsnull);
 
-  f->SetStyleContext(styleContext);
+  f->SetStyleContext(presContext,styleContext);
 
   ///////////////////////////////////////////////////////////////////////////
   // Test #1a
@@ -421,7 +422,7 @@ TestChildrenThatDontFit(nsPresContext* presContext)
 
   // Create a new inline frame for the HTML container
   InlineFrame*  f1 = new InlineFrame(b, 0, nsnull);
-  f1->SetStyleContext(styleContext);
+  f1->SetStyleContext(presContext,styleContext);
 
   // Reflow the frame with a width narrower than the first child frame. This
   // tests how we handle children that don't fit when reflowing unmapped
@@ -560,7 +561,7 @@ TestOverflow(nsPresContext* presContext)
   nsRefPtr<nsStyleContext> styleContext;
   styleContext = presContext->StyleSet()->ResolveStyleFor(b, nsnull);
 
-  f->SetStyleContext(styleContext);
+  f->SetStyleContext(presContext,styleContext);
 
   ///////////////////////////////////////////////////////////////////////////
   // Test #1
@@ -673,7 +674,7 @@ TestPushingPulling(nsPresContext* presContext)
   nsRefPtr<nsStyleContext> styleContext;
   styleContext = presContext->StyleSet()->ResolveStyleFor(b, nsnull);
 
-  f->SetStyleContext(styleContext);
+  f->SetStyleContext(presContext,styleContext);
 
   // Reflow the inline frame so only the first frame fits
   nsReflowMetrics   reflowMetrics;
@@ -1095,7 +1096,7 @@ TestSplittableChildren(nsPresContext* presContext)
   nsRefPtr<nsStyleContext> styleContext;
   styleContext = presContext->StyleSet()->ResolveStyleFor(b, nsnull);
 
-  f->SetStyleContext(styleContext);
+  f->SetStyleContext(presContext,styleContext);
 
   ///////////////////////////////////////////////////////////////////////////
   // Test #1
@@ -1455,7 +1456,7 @@ TestMaxElementSize(nsPresContext* presContext)
   nsRefPtr<nsStyleContext> styleContext;
   styleContext = presContext->StyleSet()->ResolveStyleFor(b, nsnull);
 
-  f->SetStyleContext(styleContext);
+  f->SetStyleContext(presContext,styleContext);
 
   ///////////////////////////////////////////////////////////////////////////
   // Test #1

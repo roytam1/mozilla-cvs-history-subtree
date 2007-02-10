@@ -19,7 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Adam Lock <adamlock@eircom.net> 
+ *   Adam Lock <adamlock@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -39,7 +39,7 @@
 #include <process.h>
 
 #include "Pluginhostctrl.h"
-#include "nsPluginHostWnd.h"
+#include "nsPluginHostCtrl.h"
 #include "nsURLDataCallback.h"
 
 
@@ -101,7 +101,7 @@ void nsURLDataCallback::SetPostData(const void *pData, unsigned long nSize)
     }
 }
 
-HRESULT nsURLDataCallback::OpenURL(nsPluginHostWnd *pOwner, const TCHAR *szURL, void *pNotifyData, const void *pPostData, unsigned long nPostDataSize)
+HRESULT nsURLDataCallback::OpenURL(nsPluginHostCtrl *pOwner, const TCHAR *szURL, void *pNotifyData, const void *pPostData, unsigned long nPostDataSize)
 {
     // Create the callback object
     CComObject<nsURLDataCallback> *pCallback = NULL;

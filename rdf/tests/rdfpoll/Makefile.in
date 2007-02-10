@@ -44,6 +44,7 @@ include $(DEPTH)/config/autoconf.mk
 
 PROGRAM		= rdfpoll$(BIN_SUFFIX)
 CPPSRCS		= rdfpoll.cpp
+MOZILLA_INTERNAL_API = 1
 
 REQUIRES	= xpcom \
 		  string \
@@ -52,7 +53,6 @@ REQUIRES	= xpcom \
 		  $(NULL)
 
 LIBS		= \
-		$(DIST)/lib/$(LIB_PREFIX)xpcomglue_s.$(LIB_SUFFIX) \
 		$(LIBS_DIR) \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \

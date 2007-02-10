@@ -39,7 +39,7 @@
 LOCALIZATION NOTE : 'Communicator 4.x' is the used for previous versions of 
 Netscape Communicator, Please translate using the brandname in respective 
 languages for Netscape Communicator 4 releases.
-LOCALIZATION NOTE : Do not translate any of the occurrences of the word 
+LOCALIZATION NOTE : Do not translate any of the occurances of the word 
 "&brandShortName;" below.
 -->
 
@@ -48,16 +48,13 @@ LOCALIZATION NOTE : Do not translate any of the occurrences of the word
 <!ENTITY importDialog.addressbookTitle "Address Books">
 <!ENTITY importDialog.settingsTitle "Settings">
 
-<!ENTITY  window.width            "40em">
-<!ENTITY  window.macWidth         "45em">
-
 <!ENTITY importTitle.label        "&brandShortName; Mail Import Wizard">
 <!ENTITY importDesc.label         "Import Mail, Address Books and Settings from other programs">
 
 <!ENTITY importDescription.label  "This wizard will import mail messages, address book entries, and/or preferences from other mail programs and common address book formats into &brandShortName; Mail.">
 <!ENTITY importDescription2.label "Once they have been imported, you will be able to access them from within &brandShortName; Mail and/or Address Book.">
 
-<!ENTITY selectDescription.label  "Please select the type of file that you would like to import:">
+<!ENTITY selectDescription.label  "Please select the program from which you would like to import:">
 
 <!ENTITY back.label               "&lt; Back">
 <!ENTITY forward.label            "Next &gt;">

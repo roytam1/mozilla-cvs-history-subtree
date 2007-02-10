@@ -46,6 +46,7 @@ include $(DEPTH)/config/autoconf.mk
 DIRS = \
 	setup \
 	stub \
+	util \
 	app \
 	examples \
 	$(NULL)

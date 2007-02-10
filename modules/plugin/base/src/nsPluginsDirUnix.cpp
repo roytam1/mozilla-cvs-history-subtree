@@ -451,19 +451,9 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
         nsCOMPtr<nsIFactory> factory;
         rv = nsGetFactory(mgr, kPluginCID, nsnull, nsnull, 
 			  getter_AddRefs(factory));
+        if (NS_FAILED(rv)) return rv;
 
-        if (NS_FAILED(rv)) {
-            // HACK: The symbol lookup for "NSGetFactory" mistakenly returns
-            // a reference to an unrelated function when we have an NPAPI
-            // plugin linked to libxul.so.  Give this plugin another shot as
-            // an NPAPI plugin
-            rv = ns4xPlugin::CreatePlugin(mgr, 0, 0, pLibrary,
-                                          getter_AddRefs(plugin));
-            if (NS_FAILED(rv))
-                return rv;
-        } else {
-            plugin = do_QueryInterface(factory);
-        }
+        plugin = do_QueryInterface(factory);
     } else {
         // It's old sk00l
         // if fileName parameter == 0 ns4xPlugin::CreatePlugin() will not call NP_Initialize()
@@ -477,7 +467,7 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
 #ifdef NS_DEBUG
         printf("GetMIMEDescription() returned \"%s\"\n", mimedescr);
 #endif
-        if (NS_FAILED(rv = ParsePluginMimeDescription(mimedescr, info)))
+	if (NS_FAILED(rv = ParsePluginMimeDescription(mimedescr, info)))
             return rv;
         nsCAutoString filename;
         if (NS_FAILED(rv = mPlugin->GetNativePath(filename)))

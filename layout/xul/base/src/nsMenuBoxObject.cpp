@@ -44,7 +44,6 @@
 #include "nsGUIEvent.h"
 #include "nsIDOMNSUIEvent.h"
 #include "nsMenuBarListener.h"
-#include "nsPopupSetFrame.h"
 
 class nsMenuBoxObject : public nsIMenuBoxObject, public nsBoxObject
 {
@@ -89,11 +88,8 @@ nsMenuBoxObject::~nsMenuBoxObject()
 /* void openMenu (in boolean openFlag); */
 NS_IMETHODIMP nsMenuBoxObject::OpenMenu(PRBool aOpenFlag)
 {
-  nsIFrame* frame = GetFrame(PR_FALSE);
+  nsIFrame* frame = GetFrame();
   if (!frame)
-    return NS_OK;
-
-  if (!nsPopupSetFrame::MayOpenPopup(frame))
     return NS_OK;
 
   nsIMenuFrame* menuFrame;
@@ -107,7 +103,7 @@ NS_IMETHODIMP nsMenuBoxObject::OpenMenu(PRBool aOpenFlag)
 NS_IMETHODIMP nsMenuBoxObject::GetActiveChild(nsIDOMElement** aResult)
 {
   *aResult = nsnull;
-  nsIFrame* frame = GetFrame(PR_FALSE);
+  nsIFrame* frame = GetFrame();
   if (!frame)
     return NS_OK;
 
@@ -120,7 +116,7 @@ NS_IMETHODIMP nsMenuBoxObject::GetActiveChild(nsIDOMElement** aResult)
 
 NS_IMETHODIMP nsMenuBoxObject::SetActiveChild(nsIDOMElement* aResult)
 {
-  nsIFrame* frame = GetFrame(PR_FALSE);
+  nsIFrame* frame = GetFrame();
   if (!frame)
     return NS_OK;
 
@@ -152,7 +148,7 @@ NS_IMETHODIMP nsMenuBoxObject::HandleKeyPress(nsIDOMKeyEvent* aKeyEvent, PRBool*
   if (nsMenuBarListener::IsAccessKeyPressed(aKeyEvent))
     return NS_OK;
 
-  nsIFrame* frame = GetFrame(PR_FALSE);
+  nsIFrame* frame = GetFrame();
   if (!frame)
     return NS_OK;
 

@@ -156,7 +156,6 @@ public:
     static nsIAtom *sLocalAppdata;
     static nsIAtom *sPrinthood;
     static nsIAtom *sWinCookiesDirectory;
-    static nsIAtom *sDefaultDownloadDirectory;
 #elif defined (XP_UNIX)
     static nsIAtom *sLocalDirectory;
     static nsIAtom *sLibDirectory;

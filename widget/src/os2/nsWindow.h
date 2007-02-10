@@ -59,10 +59,6 @@
 #include "nsToolkit.h"
 #include "nsSwitchToUIThread.h"
 
-#ifdef MOZ_CAIRO_GFX
-#include <gfxOS2Surface.h>
-#endif
-
 class imgIContainer;
 
 //#define DEBUG_FOCUS
@@ -127,9 +123,6 @@ class nsWindow : public nsBaseWidget,
                       nsIAppShell *aAppShell = nsnull,
                       nsIToolkit *aToolkit = nsnull,
                       nsWidgetInitData *aInitData = nsnull);
-#ifdef MOZ_CAIRO_GFX
-   gfxASurface* GetThebesSurface();
-#endif
    NS_IMETHOD Destroy(); // call before releasing
 
    // Hierarchy: only interested in widget children (it seems)
@@ -155,6 +148,7 @@ class nsWindow : public nsBaseWidget,
    NS_IMETHOD SetFocus(PRBool aRaise);
    NS_IMETHOD GetBounds(nsRect &aRect);
    NS_IMETHOD IsVisible( PRBool &aState);
+   PRBool     IsShown();
    NS_IMETHOD PlaceBehind(nsTopLevelWidgetZPlacement aPlacement,
                           nsIWidget *aWidget, PRBool aActivate);
 
@@ -289,6 +283,7 @@ protected:
    PRUint32  mDragStatus;     // set while this object is being dragged over
    HPOINTER  mCssCursorHPtr;  // created by SetCursor(imgIContainer*)
    nsCOMPtr<imgIContainer> mCssCursorImg;  // saved by SetCursor(imgIContainer*)
+   BOOL      mIsVisible;
 
    HWND      GetParentHWND() const;
    HWND      GetHWND() const   { return mWnd; }
@@ -301,9 +296,6 @@ protected:
    nsFont        *mFont;
    nsIMenuBar    *mMenuBar;
    PRInt32        mWindowState;
-#ifdef MOZ_CAIRO_GFX
-   nsRefPtr<gfxOS2Surface> mThebesSurface;
-#endif
 
    // Implementation ------------------------------
    void DoCreate( HWND hwndP, nsWindow *wndP, const nsRect &rect,
@@ -324,17 +316,14 @@ protected:
 
    virtual void SubclassWindow(BOOL bState);
 
-   PRBool  ConvertStatus( nsEventStatus aStatus)
-                        { return aStatus == nsEventStatus_eConsumeNoDefault; }
+   PRBool  ConvertStatus( nsEventStatus aStatus);
    void    InitEvent( nsGUIEvent &event, nsPoint *pt = 0);
    virtual PRBool DispatchWindowEvent(nsGUIEvent* event);
    virtual PRBool DispatchWindowEvent(nsGUIEvent*event, nsEventStatus &aStatus);
    PRBool  DispatchStandardEvent( PRUint32 aMsg);
-   PRBool  DispatchCommandEvent(PRUint32 aEventCommand);
-   PRBool  DispatchDragDropEvent( PRUint32 aMsg);
-   virtual PRBool DispatchMouseEvent(PRUint32 aEventType, MPARAM mp1, MPARAM mp2, 
-                                     PRBool aIsContextMenuKey = PR_FALSE,
-                                     PRInt16 aButton = nsMouseEvent::eLeftButton);
+   PRBool  DispatchAppCommandEvent(PRUint32 aEventCommand);
+   PRBool  DispatchDragDropEvent(PRUint32 aMsg);
+   virtual PRBool DispatchMouseEvent( PRUint32 aEventType, MPARAM mp1, MPARAM mp2);
    virtual PRBool DispatchResizeEvent( PRInt32 aClientX, PRInt32 aClientY);
    void GetNonClientBounds(nsRect &aRect);
    void    DeferPosition( HWND, HWND, long, long, long, long, ULONG);
@@ -349,7 +338,7 @@ protected:
    HBITMAP CreateTransparencyMask(PRInt32  format, PRUint8* aImageData,
                                   PRUint32 aWidth, PRUint32 aHeight);
 
-   // Enumeration of the methods which are accessible on the PM thread
+   // Enumeration of the methods which are accessable on the PM thread
    enum {
       CREATE,
       DESTROY,
@@ -368,7 +357,6 @@ protected:
 #define PM2NS_PARENT NS2PM_PARENT
 #define PM2NS NS2PM
 
-#define PMSCAN_PADMULT      0x37
 #define PMSCAN_PAD7         0x47
 #define PMSCAN_PAD8         0x48
 #define PMSCAN_PAD9         0x49
@@ -382,15 +370,11 @@ protected:
 #define PMSCAN_PAD3         0x51
 #define PMSCAN_PAD0         0x52
 #define PMSCAN_PADPERIOD    0x53
-#define PMSCAN_PADDIV       0x5c
 
 #define isNumPadScanCode(scanCode) !( (scanCode < PMSCAN_PAD7) ||      \
                                       (scanCode > PMSCAN_PADPERIOD) || \
-                                      (scanCode == PMSCAN_PADMULT) ||  \
-                                      (scanCode == PMSCAN_PADDIV) ||   \
                                       (scanCode == PMSCAN_PADMINUS) || \
                                       (scanCode == PMSCAN_PADPLUS) )
-#define isNumlockOn (BOOL)WinGetKeyState(HWND_DESKTOP, VK_NUMLOCK) & 0x0001
 
 extern PRUint32 WMChar2KeyCode( MPARAM mp1, MPARAM mp2);
 

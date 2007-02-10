@@ -66,15 +66,6 @@ treechildren::-moz-tree-image(col-calendar-Checkbox, unchecked) {
    list-style-image: url("chrome://calendar/skin/checkbox_unchecked.png");
 }
 
-treechildren::-moz-tree-cell-text(agenda-header) {
-   font-weight: bold;
-}
-
-treechildren::-moz-tree-cell(color-default) {
-   background-color: #a8c2e1;
-   margin: 1px;
-}
-
 /*--------------------------------------------------------------------
  * Navigation controls for the views
  *-------------------------------------------------------------------*/
@@ -144,15 +135,8 @@ treechildren::-moz-tree-cell(color-default) {
     -moz-box-pack: end;
 }
 
-.title-label-box button {
-    /* Override button min-width so views can be narrow on narrow screen */
-    min-width: 1px;
-    /* Allow overflow, so long localized month names don't prevent narrow view */
-    overflow-x: hidden;
-}
-
 radio[pane=paneLightning] {
-    list-style-image: url("chrome://calendar/skin/cal-icon32.png");
+  list-style-image: url("chrome://calendar/skin/calendartoolbar.png")
 }
 
 /**

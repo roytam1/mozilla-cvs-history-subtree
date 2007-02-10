@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; 
-c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -43,6 +42,7 @@ c-basic-offset: 2 -*- */
 #include "nsFind.h"
 #include "nsContentCID.h"
 #include "nsIEnumerator.h"
+#include "nsITextContent.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMDocumentRange.h"
@@ -63,7 +63,6 @@ c-basic-offset: 2 -*- */
 #include "nsServiceManagerUtils.h"
 #include "nsUnicharUtils.h"
 #include "nsIDOMElement.h"
-#include "nsIWordBreaker.h"
 #include "nsCRT.h"
 
 // Yikes!  Casting a char to unichar can fill with ones!
@@ -318,7 +317,7 @@ nsFindContentIterator::MaybeSetupInnerIterator()
   mInnerIterator = nsnull;
 
   nsIContent* content = mOuterIterator->GetCurrentNode();
-  if (!content || !content->IsNodeOfType(nsINode::eHTML_FORM_CONTROL))
+  if (!content || !content->IsContentOfType(nsIContent::eHTML_FORM_CONTROL))
     return;
 
   nsCOMPtr<nsIFormControl> formControl(do_QueryInterface(content));
@@ -354,7 +353,8 @@ nsFindContentIterator::SetupInnerIterator(nsIContent* aContent)
   if (!shell)
     return;
 
-  nsIFrame* frame = shell->GetPrimaryFrameFor(aContent);
+  nsIFrame* frame = nsnull;
+  shell->GetPrimaryFrameFor(aContent, &frame);
   if (!frame)
     return;
 
@@ -504,17 +504,17 @@ static void DumpNode(nsIDOMNode* aNode)
   }
   nsAutoString nodeName;
   aNode->GetNodeName(nodeName);
-  nsCOMPtr<nsIContent> textContent (do_QueryInterface(aNode));
-  if (textContent && textContent->IsNodeOfType(nsINode::eTEXT))
+  nsCOMPtr<nsITextContent> textContent (do_QueryInterface(aNode));
+  if (textContent)
   {
     nsAutoString newText;
-    textContent->AppendTextTo(newText);
+    textContent->CopyText(newText);
     printf(">>>> Text node (node name %s): '%s'\n",
-           NS_LossyConvertUTF16toASCII(nodeName).get(),
-           NS_LossyConvertUTF16toASCII(newText).get());
+           NS_LossyConvertUCS2toASCII(nodeName).get(),
+           NS_LossyConvertUCS2toASCII(newText).get());
   }
   else
-    printf(">>>> Node: %s\n", NS_LossyConvertUTF16toASCII(nodeName).get());
+    printf(">>>> Node: %s\n", NS_LossyConvertUCS2toASCII(nodeName).get());
 }
 
 static void DumpRange(nsIDOMRange* aRange)
@@ -633,6 +633,7 @@ nsFind::NextNode(nsIDOMRange* aSearchRange,
   nsresult rv;
 
   nsIContent *content = nsnull;
+  nsCOMPtr<nsITextContent> tc;
 
   if (!mIterator || aContinueOk)
   {
@@ -699,8 +700,8 @@ nsFind::NextNode(nsIDOMRange* aSearchRange,
     nsCOMPtr<nsIDOMNode> dnode (do_QueryInterface(content));
     printf(":::::: Got the first node "); DumpNode(dnode);
 #endif
-    if (content && content->IsNodeOfType(nsINode::eTEXT) &&
-        !SkipNode(content))
+    tc = do_QueryInterface(content);
+    if (tc && !SkipNode(content))
     {
       mIterNode = do_QueryInterface(content);
       // Also set mIterOffset if appropriate:
@@ -758,7 +759,8 @@ nsFind::NextNode(nsIDOMRange* aSearchRange,
     if (SkipNode(content))
       continue;
 
-    if (content->IsNodeOfType(nsINode::eTEXT))
+    tc = do_QueryInterface(content);
+    if (tc)
       break;
 #ifdef DEBUG_FIND
     dnode = do_QueryInterface(content);
@@ -780,7 +782,7 @@ nsFind::NextNode(nsIDOMRange* aSearchRange,
 
 PRBool nsFind::IsBlockNode(nsIContent* aContent)
 {
-  if (!aContent->IsNodeOfType(nsINode::eHTML)) {
+  if (!aContent->IsContentOfType(nsIContent::eHTML)) {
     return PR_FALSE;
   }
 
@@ -805,11 +807,11 @@ PRBool nsFind::IsBlockNode(nsIContent* aContent)
 
 PRBool nsFind::IsTextNode(nsIDOMNode* aNode)
 {
-  PRUint16 nodeType;
-  aNode->GetNodeType(&nodeType);
+  // Can't just QI for nsITextContent, because nsCommentNode
+  // also implements that interface.
+  nsCOMPtr<nsIContent> content (do_QueryInterface(aNode));
 
-  return nodeType == nsIDOMNode::TEXT_NODE ||
-         nodeType == nsIDOMNode::CDATA_SECTION_NODE;
+  return content && content->IsContentOfType(nsIContent::eTEXT);
 }
 
 PRBool nsFind::IsVisibleNode(nsIDOMNode *aDOMNode)
@@ -826,7 +828,8 @@ PRBool nsFind::IsVisibleNode(nsIDOMNode *aDOMNode)
   if (!presShell)
     return PR_FALSE;
 
-  nsIFrame *frame = presShell->GetPrimaryFrameFor(content);
+  nsIFrame *frame = nsnull;
+  presShell->GetPrimaryFrameFor(content, &frame);
   if (!frame) {
     // No frame! Not visible then.
     return PR_FALSE;
@@ -844,8 +847,8 @@ PRBool nsFind::SkipNode(nsIContent* aContent)
 
   // We may not need to skip comment nodes,
   // now that IsTextNode distinguishes them from real text nodes.
-  return (aContent->IsNodeOfType(nsINode::eCOMMENT) ||
-          (aContent->IsNodeOfType(nsINode::eHTML) &&
+  return (aContent->IsContentOfType(nsIContent::eCOMMENT) ||
+          (aContent->IsContentOfType(nsIContent::eHTML) &&
            (atom == sScriptAtom ||
             atom == sNoframesAtom ||
             atom == sSelectAtom)));
@@ -861,8 +864,8 @@ PRBool nsFind::SkipNode(nsIContent* aContent)
   {
     atom = content->Tag();
 
-    if (aContent->IsNodeOfType(nsINode::eCOMMENT) ||
-        (content->IsNodeOfType(nsINode::eHTML) &&
+    if (aContent->IsContentOfType(nsIContent::eCOMMENT) ||
+        (content->IsContentOfType(nsIContent::eHTML) &&
          (atom == sScriptAtom ||
           atom == sNoframesAtom ||
           atom == sSelectAtom)))
@@ -932,7 +935,7 @@ nsFind::Find(const PRUnichar *aPatText, nsIDOMRange* aSearchRange,
 {
 #ifdef DEBUG_FIND
   printf("============== nsFind::Find('%s'%s, %p, %p, %p)\n",
-         NS_LossyConvertUTF16toASCII(aPatText).get(),
+         NS_LossyConvertUCS2toASCII(aPatText).get(),
          mFindBackward ? " (backward)" : " (forward)",
          (void*)aSearchRange, (void*)aStartPoint, (void*)aEndPoint);
 #endif
@@ -960,7 +963,7 @@ nsFind::Find(const PRUnichar *aPatText, nsIDOMRange* aSearchRange,
   // Direction to move pindex and ptr*
   int incr = (mFindBackward ? -1 : 1);
 
-  nsCOMPtr<nsIContent> tc;
+  nsCOMPtr<nsITextContent> tc;
   const nsTextFragment *frag = nsnull;
   PRInt32 fragLen = 0;
 
@@ -1031,18 +1034,19 @@ nsFind::Find(const PRUnichar *aPatText, nsIDOMRange* aSearchRange,
         matchAnchorNode = nsnull;
         matchAnchorOffset = 0;
         pindex = (mFindBackward ? patLen : 0);
-        inWhitespace = PR_FALSE;
       }
  
       // Get the text content:
       tc = do_QueryInterface(mIterNode);
-      if (!tc || !(frag = tc->GetText())) // Out of nodes
+      if (!tc)         // Out of nodes
       {
         mIterator = nsnull;
         mLastBlockParent = 0;
         ResetAll();
         return NS_OK;
       }
+
+      frag = tc->Text();
 
       fragLen = frag->GetLength();
 
@@ -1088,7 +1092,7 @@ nsFind::Find(const PRUnichar *aPatText, nsIDOMRange* aSearchRange,
         t1b = nsnull;
 #ifdef DEBUG_FIND
         nsAutoString str2(t2b, fragLen);
-        printf("2 byte, '%s'\n", NS_LossyConvertUTF16toASCII(str2).get());
+        printf("2 byte, '%s'\n", NS_LossyConvertUCS2toASCII(str2).get());
 #endif
       }
       else

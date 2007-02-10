@@ -38,8 +38,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* state used in reflow of block frames */
-
 #ifndef nsBlockReflowState_h__
 #define nsBlockReflowState_h__
 
@@ -50,14 +48,17 @@
 class nsBlockFrame;
 
   // block reflow state flags
-#define BRS_UNCONSTRAINEDHEIGHT   0x00000001
-#define BRS_ISTOPMARGINROOT       0x00000002  // Is this frame a root for top/bottom margin collapsing?
-#define BRS_ISBOTTOMMARGINROOT    0x00000004
-#define BRS_APPLYTOPMARGIN        0x00000008  // See ShouldApplyTopMargin
-#define BRS_ISFIRSTINFLOW         0x00000010
-// Set when mLineAdjacentToTop is valid
-#define BRS_HAVELINEADJACENTTOTOP 0x00000020
-#define BRS_LASTFLAG              BRS_HAVELINEADJACENTTOTOP
+#define BRS_UNCONSTRAINEDWIDTH    0x00000001
+#define BRS_UNCONSTRAINEDHEIGHT   0x00000002
+#define BRS_SHRINKWRAPWIDTH       0x00000004
+#define BRS_NEEDRESIZEREFLOW      0x00000008
+#define BRS_ISTOPMARGINROOT       0x00000020  // Is this frame a root for top/bottom margin collapsing?
+#define BRS_ISBOTTOMMARGINROOT    0x00000040
+#define BRS_APPLYTOPMARGIN        0x00000080  // See ShouldApplyTopMargin
+#define BRS_COMPUTEMAXELEMENTWIDTH 0x00000100
+#define BRS_COMPUTEMAXWIDTH       0x00000200
+#define BRS_ISFIRSTINFLOW         0x00000400
+#define BRS_LASTFLAG              BRS_ISFIRSTINFLOW
 
 class nsBlockReflowState {
 public:
@@ -68,13 +69,6 @@ public:
                      PRBool aTopMarginRoot, PRBool aBottomMarginRoot);
 
   ~nsBlockReflowState();
-
-  // Set up a property on the block that points to our temporary mOverflowPlaceholders
-  // list, if that list is or could become non-empty during this reflow. Must be
-  // called after the block has done DrainOverflowLines because DrainOverflowLines
-  // can setup mOverflowPlaceholders even if the block is in unconstrained height
-  // reflow (it may have previously been reflowed with constrained height).
-  void SetupOverflowPlaceholdersProperty();
 
   /**
    * Get the available reflow space for the current y coordinate. The
@@ -101,7 +95,7 @@ public:
                            PRBool*         aIsLeftFloat,
                            nsReflowStatus& aReflowStatus,
                            PRBool          aForceFit);
-  PRBool PlaceBelowCurrentLineFloats(nsFloatCacheFreeList& aFloats, PRBool aForceFit);
+  PRBool PlaceBelowCurrentLineFloats(nsFloatCacheList& aFloats, PRBool aForceFit);
 
   // Returns the first coordinate >= aY that clears the
   // indicated floats.
@@ -129,10 +123,15 @@ public:
     return mReflowState.mComputedMargin;
   }
 
+  void UpdateMaxElementWidth(nscoord aMaxElementWidth);
+
+  void UpdateMaximumWidth(nscoord aMaximumWidth);
+
   // Reconstruct the previous bottom margin that goes above |aLine|.
   void ReconstructMarginAbove(nsLineList::iterator aLine);
 
   void ComputeBlockAvailSpace(nsIFrame* aFrame,
+                              nsSplittableType aSplitType,
                               const nsStyleDisplay* aDisplay,
                               nsRect& aResult);
 
@@ -203,17 +202,14 @@ public:
   // If it is mBlock->end_lines(), then it is invalid.
   nsLineList::iterator mCurrentLine;
 
-  // When BRS_HAVELINEADJACENTTOTOP is set, this refers to a line
-  // which we know is adjacent to the top of the block (in other words,
-  // all lines before it are empty and do not have clearance. This line is
-  // always before the current line.
-  nsLineList::iterator mLineAdjacentToTop;
-
   // The current Y coordinate in the block
   nscoord mY;
 
   // The available space within the current band.
   nsRect mAvailSpaceRect;
+
+  // The maximum x-most of each line
+  nscoord mKidXMost;
 
   // The combined area of all floats placed so far
   nsRect mFloatCombinedArea;
@@ -251,6 +247,11 @@ public:
   // and placed. Again, this is done to keep the list fiddling from
   // being N^2.
   nsFloatCacheFreeList mBelowCurrentLineFloats;
+
+  nscoord mMaxElementWidth;
+
+  // maximum width includes the left border/padding but not the right
+  nscoord mMaximumWidth;
 
   nscoord mMinLineHeight;
 

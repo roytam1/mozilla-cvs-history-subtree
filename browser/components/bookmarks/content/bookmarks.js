@@ -718,7 +718,7 @@ var BookmarksCommand = {
     if (url == "")
       return;
 
-    openUILinkIn(url, aTargetBrowser, false);
+    openUILinkIn(url, aTargetBrowser);
   },
 
   _confirmOpenTabs: function(numTabsToOpen) 
@@ -796,7 +796,6 @@ var BookmarksCommand = {
     if (aTargetBrowser == "current" || aTargetBrowser == "tab") {
       var browser  = w.document.getElementById("content");
       var tabPanels = browser.browsers;
-      var tabs = browser.mTabContainer.childNodes;
       var tabCount  = tabPanels.length;
       var doReplace = PREF.getBoolPref("browser.tabs.loadFolderAndReplace");
       var loadInBackground = PREF.getBoolPref("browser.tabs.loadBookmarksInBackground");
@@ -804,7 +803,8 @@ var BookmarksCommand = {
       if (doReplace)
         index0 = 0;
       else {
-        for (index0=tabCount-1; index0>=0; --index0) {
+        for (index0=tabCount-1; index0>=0; --index0)
+        {
           var tab = tabPanels[index0];
           if (tab.webNavigation.currentURI.spec != "about:blank" ||
               tab.webProgress.isLoadingDocument)
@@ -845,6 +845,7 @@ var BookmarksCommand = {
         function selectNewForegroundTab(browser, tab) {
           browser.selectedTab = tab;
         }
+        var tabs = browser.mTabContainer.childNodes;
         setTimeout(selectNewForegroundTab, 0, browser, tabs[index0]);
       }
 
@@ -1621,7 +1622,7 @@ var BookmarksUtils = {
   {
     if (aSelection.length > 1)
       gBkmkTxnSvc.startBatch();
-    if (aSelection.length > kBATCH_LIMIT && aAction != "move")
+    if (aSelection.length > this.BATCH_LIMIT && aAction != "move")
       BMDS.beginUpdateBatch();
 
     for (var i = 0; i < aSelection.length; ++i) {
@@ -1660,7 +1661,7 @@ var BookmarksUtils = {
     }
     if (aSelection.length > 1)
       gBkmkTxnSvc.endBatch();
-    if (aSelection.length > kBATCH_LIMIT && aAction != "move")
+    if (aSelection.length > this.BATCH_LIMIT && aAction != "move")
       BMDS.beginUpdateBatch();
     return true;
   },
@@ -1727,7 +1728,7 @@ var BookmarksUtils = {
 
     if (aSelection.length > 1)
       gBkmkTxnSvc.startBatch();
-    if (aSelection.length > kBATCH_LIMIT && aAction != "move")
+    if (aSelection.length > this.BATCH_LIMIT && aAction != "move")
       BMDS.beginUpdateBatch();
 
     for (var i=0; i<aSelection.length; ++i) {
@@ -1762,7 +1763,7 @@ var BookmarksUtils = {
     }
     if (aSelection.length > 1)
       gBkmkTxnSvc.endBatch();
-    if (aSelection.length > kBATCH_LIMIT && aAction != "move")
+    if (aSelection.length > this.BATCH_LIMIT && aAction != "move")
       BMDS.endUpdateBatch();
   },
 
@@ -1897,50 +1898,39 @@ var BookmarksUtils = {
     return selection;
   },
 
-  getTitleForURLFromHistory: function(aURL, aDefaultName)
-  {
-#ifndef MOZ_PLACES
-    // look up in the history ds to retrieve the name
-    var rSource = RDF.GetResource(aURL);
-    var HISTDS  = RDF.GetDataSource("rdf:history");
-    var nameArc = RDF.GetResource(gNC_NS+"Name");
-    var rName   = HISTDS.GetTarget(rSource, nameArc, true);
-    return (rName ? rName.QueryInterface(kRDFLITIID).Value : aDefaultName);
-#else
-    var histsvc = 
-      Components.classes["@mozilla.org/browser/nav-history-service;1"]
-                .getService(Components.interfaces.nsINavHistoryService);
-
-    // query for the URL
-    var options = histsvc.getNewQueryOptions();
-    options.resultType = options.RESULTS_AS_URI;
-    var query = histsvc.getNewQuery();
-    query.uri = IOSVC.newURI(aURL, null, null);
-    var result = histsvc.executeQuery(query, options);
-    var root = result.root;
-    root.containerOpen = true;
-    var cc = root.childCount;
-    for (var i=0; i < cc; ++i) { 
-      var node = root.getChild(i);
-      if (node.title)
-        return node.title;
-    }
-
-    return (aDefaultName ? aDefaultName : aURL);
-#endif
-  },
-
   createBookmark: function (aName, aURL, aCharSet, aDefaultName)
   {
-    if (!aName)
-      aName = this.getTitleForURLFromHistory(aURL, aDefaultName);
-
+    if (!aName) {
+      // look up in the history ds to retrieve the name
+      var rSource = RDF.GetResource(aURL);
+      var HISTDS  = RDF.GetDataSource("rdf:history");
+      var nameArc = RDF.GetResource(gNC_NS+"Name");
+      var rName   = HISTDS.GetTarget(rSource, nameArc, true);
+      aName       = rName ? rName.QueryInterface(kRDFLITIID).Value : aDefaultName;
+      if (!aName)
+        aName = aURL;
+    }
     if (!aCharSet) {
       var fw = document.commandDispatcher.focusedWindow;
       if (fw)
         aCharSet = fw.document.characterSet;
     }
     return BMSVC.createBookmark(aName, aURL, null, null, aCharSet, null);
+  },
+
+  createLivemark: function (aName, aURL, aFeedURL, aDefaultName)
+  {
+    if (!aName) {
+      // look up in the history ds to retrieve the name
+      var rSource = RDF.GetResource(aURL);
+      var HISTDS  = RDF.GetDataSource("rdf:history");
+      var nameArc = RDF.GetResource(gNC_NS+"Name");
+      var rName   = HISTDS.GetTarget(rSource, nameArc, true);
+      aName       = rName ? rName.QueryInterface(kRDFLITIID).Value : aDefaultName;
+      if (!aName)
+        aName = aURL;
+    }
+    return BMSVC.createLivemark(aName, aURL, aFeedURL, null);
   },
 
   flushDataSource: function ()
@@ -2159,7 +2149,7 @@ bookmarksFavIconLoadListener.prototype = {
           var sniffer = Components.classes[snifferCID].getService(nsIContentSniffer);
 
           try {
-            mimeType = sniffer.getMIMETypeFromContent (aRequest, this.mBytes, this.mCountRead);
+            mimeType = sniffer.getMIMETypeFromContent (this.mBytes, this.mCountRead);
           } catch (e) {
             mimeType = null;
             // ignore

@@ -37,6 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsBidiKeyboard.h"
+#include <gtk/gtk.h>
 
 NS_IMPL_ISUPPORTS1(nsBidiKeyboard, nsIBidiKeyboard)
 
@@ -50,13 +51,12 @@ nsBidiKeyboard::~nsBidiKeyboard()
 
 NS_IMETHODIMP nsBidiKeyboard::IsLangRTL(PRBool *aIsRTL)
 {
-    *aIsRTL = PR_FALSE;
-    // XXX Insert platform specific code to determine keyboard direction
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *aIsRTL = (gdk_keymap_get_direction(NULL) == PANGO_DIRECTION_RTL);
+    return NS_OK;
 }
 
 NS_IMETHODIMP nsBidiKeyboard::SetLangFromBidiLevel(PRUint8 aLevel)
 {
     // XXX Insert platform specific code to set keyboard language
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }

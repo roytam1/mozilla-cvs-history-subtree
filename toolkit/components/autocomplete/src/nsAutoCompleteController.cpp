@@ -40,32 +40,28 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsAutoCompleteController.h"
-#ifdef MOZ_MORK
-#include "nsAutoCompleteMdbResult.h"
-#endif
-#include "nsAutoCompleteSimpleResult.h"
 
-#include "nsNetCID.h"
-#include "nsIIOService.h"
-#include "nsToolkitCompsCID.h"
 #include "nsIServiceManager.h"
 #include "nsIDOMNode.h"
+#include "nsIDOMElement.h"
 #include "nsIDOMDocument.h"
 #include "nsIDocument.h"
 #include "nsIContent.h"
 #include "nsIFrame.h"
+#include "nsIView.h"
 #include "nsIPresShell.h"
 #include "nsIAtomService.h"
 #include "nsReadableUtils.h"
 #include "nsUnicharUtils.h"
 #include "nsITreeColumns.h"
-#include "nsIGenericFactory.h"
+#include "nsNetCID.h"
+#include "nsIIOService.h"
 #include "nsIObserverService.h"
-#include "nsIDOMKeyEvent.h"
 
 static const char *kAutoCompleteSearchCID = "@mozilla.org/autocomplete/search;1?name=";
 
-NS_IMPL_ISUPPORTS5(nsAutoCompleteController, nsIAutoCompleteController,
+NS_IMPL_ISUPPORTS6(nsAutoCompleteController, nsIAutoCompleteController,
+                                             nsIAutoCompleteController_MOZILLA_1_8_BRANCH,
                                              nsIAutoCompleteObserver,
                                              nsIRollupListener,
                                              nsITimerCallback,
@@ -363,7 +359,7 @@ nsAutoCompleteController::HandleEndComposition()
     HandleText(PR_TRUE);
   } else if (forceOpenPopup) {
     PRBool cancel;
-    HandleKeyNavigation(nsIDOMKeyEvent::DOM_VK_DOWN, &cancel);
+    HandleKeyNavigation(nsIAutoCompleteController::KEY_DOWN, &cancel);
   }
   // On here, |value| and |mSearchString| are same. Therefore, next HandleText should be
   // ignored. Because there are no reason to research.
@@ -380,7 +376,7 @@ nsAutoCompleteController::HandleTab()
 }
 
 NS_IMETHODIMP
-nsAutoCompleteController::HandleKeyNavigation(PRUint32 aKey, PRBool *_retval)
+nsAutoCompleteController::HandleKeyNavigation(PRUint16 aKey, PRBool *_retval)
 {
   // By default, don't cancel the event
   *_retval = PR_FALSE;
@@ -401,10 +397,10 @@ nsAutoCompleteController::HandleKeyNavigation(PRUint32 aKey, PRBool *_retval)
   mInput->GetDisableAutoComplete(&disabled);
   NS_ENSURE_TRUE(!disabled, NS_OK);
 
-  if (aKey == nsIDOMKeyEvent::DOM_VK_UP ||
-      aKey == nsIDOMKeyEvent::DOM_VK_DOWN || 
-      aKey == nsIDOMKeyEvent::DOM_VK_PAGE_UP || 
-      aKey == nsIDOMKeyEvent::DOM_VK_PAGE_DOWN)
+  if (aKey == nsIAutoCompleteController::KEY_UP ||
+      aKey == nsIAutoCompleteController::KEY_DOWN || 
+      aKey == nsIAutoCompleteController::KEY_PAGE_UP || 
+      aKey == nsIAutoCompleteController::KEY_PAGE_DOWN)
   {
     // Prevent the input from handling up/down events, as it may move
     // the cursor to home/end on some systems
@@ -413,10 +409,10 @@ nsAutoCompleteController::HandleKeyNavigation(PRUint32 aKey, PRBool *_retval)
     PRBool isOpen;
     mInput->GetPopupOpen(&isOpen);
     if (isOpen) {
-      PRBool reverse = aKey == nsIDOMKeyEvent::DOM_VK_UP ||
-                      aKey == nsIDOMKeyEvent::DOM_VK_PAGE_UP ? PR_TRUE : PR_FALSE;
-      PRBool page = aKey == nsIDOMKeyEvent::DOM_VK_PAGE_UP ||
-                    aKey == nsIDOMKeyEvent::DOM_VK_PAGE_DOWN ? PR_TRUE : PR_FALSE;
+      PRBool reverse = aKey == nsIAutoCompleteController::KEY_UP ||
+                      aKey == nsIAutoCompleteController::KEY_PAGE_UP ? PR_TRUE : PR_FALSE;
+      PRBool page = aKey == nsIAutoCompleteController::KEY_PAGE_UP ||
+                    aKey == nsIAutoCompleteController::KEY_PAGE_DOWN ? PR_TRUE : PR_FALSE;
       
       // Fill in the value of the textbox with whatever is selected in the popup
       // if the completeSelectedIndex attribute is set.  We check this before
@@ -455,10 +451,10 @@ nsAutoCompleteController::HandleKeyNavigation(PRUint32 aKey, PRBool *_retval)
       } else
         StartSearchTimer();
     }    
-  } else if (   aKey == nsIDOMKeyEvent::DOM_VK_LEFT 
-             || aKey == nsIDOMKeyEvent::DOM_VK_RIGHT 
+  } else if (   aKey == nsIAutoCompleteController::KEY_LEFT 
+             || aKey == nsIAutoCompleteController::KEY_RIGHT 
 #ifndef XP_MACOSX
-             || aKey == nsIDOMKeyEvent::DOM_VK_HOME
+             || aKey == nsIAutoCompleteController::KEY_HOME
 #endif
             )
   {
@@ -618,7 +614,10 @@ nsAutoCompleteController::AttachRollupListener()
   NS_ENSURE_TRUE(widget, NS_ERROR_FAILURE);
   NS_ASSERTION(mInput, "mInput must not be null.");
   PRBool consumeRollupEvent = PR_FALSE;
-  mInput->GetConsumeRollupEvent(&consumeRollupEvent);
+  nsCOMPtr<nsIAutoCompleteInput_MOZILLA_1_8_BRANCH> input =
+    do_QueryInterface(mInput);
+  NS_ASSERTION(input, "mInput must have nsIAutoCompleteInput_MOZILLA_1_8_BRANCH interface.");
+  input->GetConsumeRollupEvent(&consumeRollupEvent);
   return widget->CaptureRollupEvents((nsIRollupListener*)this,
                                      PR_TRUE, consumeRollupEvent);
 }
@@ -879,13 +878,6 @@ nsAutoCompleteController::CycleCell(PRInt32 row, nsITreeColumn* col)
 
 NS_IMETHODIMP
 nsAutoCompleteController::IsEditable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
-{
-  *_retval = PR_FALSE;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsAutoCompleteController::IsSelectable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
 {
   *_retval = PR_FALSE;
   return NS_OK;
@@ -1173,22 +1165,20 @@ nsAutoCompleteController::ProcessResult(PRInt32 aSearchIndex, nsIAutoCompleteRes
   if (result == nsIAutoCompleteResult::RESULT_FAILURE) {
     nsAutoString error;
     aResult->GetErrorDescription(error);
-    if (!error.IsEmpty()) {
+    if (!error.IsEmpty())
       ++mRowCount;
-      if (mTree)
-        mTree->RowCountChanged(oldRowCount, 1);
-    }
   } else if (result == nsIAutoCompleteResult::RESULT_SUCCESS) {
     // Increase the match count for all matches in this result
     PRUint32 matchCount = 0;
     aResult->GetMatchCount(&matchCount);
     mRowCount += matchCount;
-    if (mTree)
-      mTree->RowCountChanged(oldRowCount, matchCount);
 
     // Try to autocomplete the default index for this search
     CompleteDefaultIndex(aSearchIndex);
   }
+
+  if (oldRowCount != mRowCount && mTree)
+    mTree->RowCountChanged(oldRowCount, mRowCount - oldRowCount);
 
   // Refresh the popup view to display the new search results
   nsCOMPtr<nsIAutoCompletePopup> popup;
@@ -1418,45 +1408,20 @@ nsAutoCompleteController::GetPopupWidget()
 
   nsCOMPtr<nsIDOMDocument> domDoc;
   popup->GetOwnerDocument(getter_AddRefs(domDoc));
-  NS_ENSURE_TRUE(domDoc, nsnull);
 
   nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
-  NS_ENSURE_TRUE(doc, nsnull);
-
   nsIPresShell* presShell = doc->GetShellAt(0);
-  NS_ENSURE_TRUE(presShell, nsnull);
-
   nsCOMPtr<nsIContent> content = do_QueryInterface(popup);
-  nsIFrame* frame = presShell->GetPrimaryFrameFor(content);
-  NS_ENSURE_TRUE(frame, nsnull);
+  nsIFrame* frame;
+  presShell->GetPrimaryFrameFor(content, &frame);
+  while (frame) {
+    nsIView* view = frame->GetViewExternal();
+    if (view && view->HasWidget())
+      return view->GetWidget();
+    frame = frame->GetParent();
+  }
 
-  return frame->GetWindow();
+  NS_ERROR("widget wasn't found!");
+
+  return nsnull;
 }
-
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteController)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteSimpleResult)
-#ifdef MOZ_MORK
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteMdbResult)
-#endif
-
-static const nsModuleComponentInfo components[] =
-{
-  { "AutoComplete Controller",
-    NS_AUTOCOMPLETECONTROLLER_CID, 
-    NS_AUTOCOMPLETECONTROLLER_CONTRACTID,
-    nsAutoCompleteControllerConstructor },
-
-  { "AutoComplete Simple Result",
-    NS_AUTOCOMPLETESIMPLERESULT_CID, 
-    NS_AUTOCOMPLETESIMPLERESULT_CONTRACTID,
-    nsAutoCompleteSimpleResultConstructor },
-
-#ifdef MOZ_MORK
-  { "AutoComplete Mdb Result",
-    NS_AUTOCOMPLETEMDBRESULT_CID, 
-    NS_AUTOCOMPLETEMDBRESULT_CONTRACTID,
-    nsAutoCompleteMdbResultConstructor },
-#endif
-};
-
-NS_IMPL_NSGETMODULE(tkAutoCompleteModule, components)

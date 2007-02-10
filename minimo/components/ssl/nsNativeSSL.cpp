@@ -50,7 +50,7 @@
 #include "nsITransportSecurityInfo.h"
 #include "nsISSLStatusProvider.h"
 #include "nsIStringBundle.h"
-
+#include "nsDataHashtable.h"
 #include "nsIWebProgressListener.h"
 
 #include "nsSecureBrowserUIImpl.h"
@@ -71,7 +71,9 @@ static HINSTANCE gSchannel = NULL ;
 static PRDescIdentity nsWINCESSLIOLayerIdentity;
 static PRIOMethods	  nsWINCESSLIOLayerMethods;
 
+static nsDataHashtable<nsCStringHashKey, PRBool> gUserAcceptedSSLProblem;
 
+#ifdef DEBUG
 void MessageBoxWSAError(const char * msg)
 {
     char buffer[100];
@@ -82,6 +84,7 @@ void MessageBoxWSAError(const char * msg)
     sprintf(buffer, "%s error is: %d", msg, error);
     MessageBox(0, buffer, buffer, MB_APPLMODAL  | MB_TOPMOST | MB_SETFOREGROUND);
 }
+#endif
 
 class nsWINCESSLSocketProvider : public nsISocketProvider
 {
@@ -99,8 +102,7 @@ class nsWINCESSLSocketInfo : public nsITransportSecurityInfo
 public:
   nsWINCESSLSocketInfo() 
   {
-    mSecurityState          = nsIWebProgressListener::STATE_IS_BROKEN; 
-    mUserAcceptedSSLProblem = PR_FALSE;
+    mSecurityState          = nsIWebProgressListener::STATE_IS_INSECURE; 
   }
 
   virtual ~nsWINCESSLSocketInfo() {}
@@ -123,9 +125,6 @@ public:
   PRInt32   mProxyPort;
 
   PRUint32  mSecurityState;
-
-  PRBool    mUserAcceptedSSLProblem;
-
 };
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsWINCESSLSocketInfo, nsITransportSecurityInfo)
@@ -146,7 +145,9 @@ nsWINCESSLSocketInfo::GetShortSecurityDescription(PRUnichar** aText)
 
 static int DisplaySSLProblemDialog(nsWINCESSLSocketInfo* info, PRUnichar* type)
 {
-  if (info->mUserAcceptedSSLProblem)
+  PRBool accepted = PR_FALSE;
+  gUserAcceptedSSLProblem.Get(info->mDestinationHost, &accepted);
+  if (accepted)
     return IDYES;
 
   nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID);
@@ -167,7 +168,7 @@ static int DisplaySSLProblemDialog(nsWINCESSLSocketInfo* info, PRUnichar* type)
   int result = MessageBoxW(0, message.get(), title.get(), MB_YESNO | MB_ICONWARNING | MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND );
   
   if (result == IDYES)
-    info->mUserAcceptedSSLProblem = PR_TRUE;
+    gUserAcceptedSSLProblem.Put(info->mDestinationHost, PR_TRUE);
   
   return result;
 }
@@ -176,17 +177,22 @@ static int DisplaySSLProblemDialog(nsWINCESSLSocketInfo* info, PRUnichar* type)
 static int SSLValidationHook(DWORD dwType, LPVOID pvArg, DWORD dwChainLen, LPBLOB pCertChain, DWORD dwFlags )
 {
   nsWINCESSLSocketInfo* info = (nsWINCESSLSocketInfo*)pvArg;
-  info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
   
   if ( SSL_CERT_X509 != dwType )
+  {
+    info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
     return SSL_ERR_BAD_DATA;
+  }
   
   if ( SSL_CERT_FLAG_ISSUER_UNKNOWN & dwFlags )
   {
     if (DisplaySSLProblemDialog(info, L"confirmUnknownIssuer") != IDYES)
+    {
+      info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
       return SSL_ERR_CERT_UNKNOWN;
+    }
   }
-  
+
   // see:
   // http://groups.google.com/groups?q=SslCrackCertificate&hl=en&lr=&ie=UTF-8&oe=UTF-8&selm=uQf1VcLWBHA.1632%40tkmsftngp05&rnum=3
   
@@ -201,22 +207,30 @@ static int SSLValidationHook(DWORD dwType, LPVOID pvArg, DWORD dwChainLen, LPBLO
     
     if (!gSslCrackCertificate || !gSslFreeCertificate)
     {
+      info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
+#ifdef DEBUG
       MessageBox(0, "Could not find the right stuff in the default security library", "schannel.dll", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
       return SSL_ERR_BAD_DATA;
     }
   }
   
   X509Certificate * cert = 0;
   if ( !gSslCrackCertificate( pCertChain->pBlobData, pCertChain->cbSize, TRUE, &cert ) )
+  {
+    info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
     return SSL_ERR_BAD_DATA;
-
+  }
   
   // all we have to do is compare the name in the cert to
   // what the hostname was when we created this socket.
 
   char* subject = strstr(cert->pszSubject, "CN=");
   if (!subject)
+  {
+    info->mSecurityState = nsIWebProgressListener::STATE_IS_BROKEN;
     return SSL_ERR_BAD_DATA;
+  }
 
   subject = subject+3; // pass CN=
 
@@ -252,7 +266,10 @@ static int SSLValidationHook(DWORD dwType, LPVOID pvArg, DWORD dwChainLen, LPBLO
   else
   {
     if (DisplaySSLProblemDialog(info, L"confirmMismatch") == IDYES)
+    {
+      info->mSecurityState = nsIWebProgressListener::STATE_IS_SECURE | nsIWebProgressListener::STATE_SECURE_HIGH;
       res = SSL_ERR_OKAY;
+    }
   }
   
   if (end)
@@ -296,7 +313,9 @@ nsWINCESSLIOLayerConnect(PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime /
     SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP); 
     if (!s)
     {
+#ifdef DEBUG
       MessageBox(0, "Failed to create a socket", "connect()", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
       return PR_FAILURE;
     }
 
@@ -307,7 +326,9 @@ nsWINCESSLIOLayerConnect(PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime /
     DWORD error = setsockopt (s, SOL_SOCKET, SO_SECURE, (char *)&dwFlag, sizeof(dwFlag));
     if (error != 0)
     {
+#ifdef DEBUG
       MessageBox(0, "Failed to setsockopt", "connect()", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
       return PR_FAILURE;
     }
 
@@ -328,7 +349,9 @@ nsWINCESSLIOLayerConnect(PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime /
                    NULL, 
                    NULL) )
     {
+#ifdef DEBUG
       MessageBox(0, "SO_SSL_SET_VALIDATE_CERT_HOOK", "connect()", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
       return PR_FAILURE;
     }
 
@@ -342,7 +365,9 @@ nsWINCESSLIOLayerConnect(PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime /
     if (result == 0)
       return PR_SUCCESS;
 
+#ifdef DEBUG
     MessageBoxWSAError("connect()");
+#endif
 
     return PR_FAILURE;
 }
@@ -371,7 +396,9 @@ nsWINCESSLIOLayerClose(PRFileDesc *fd)
 static PRInt32 PR_CALLBACK
 nsWINCESSLIOLayerAvailable(PRFileDesc *fd)
 {
+#ifdef DEBUG
   MessageBox(0, "available.", "available.", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
   return 1;
 }
 
@@ -384,7 +411,9 @@ nsWINCESSLIOLayerRead(PRFileDesc* fd, void* buf, PRInt32 amount)
 
   WSASetLastError (0) ;  
   PRInt32 rv = recv(info->mSocket, (char*)buf, amount, 0);
+#ifdef DEBUG
   MessageBoxWSAError("read");
+#endif
 
   return rv;
 }
@@ -398,7 +427,9 @@ nsWINCESSLIOLayerWrite(PRFileDesc* fd, const void* buf, PRInt32 amount)
     
   WSASetLastError (0) ;  
   PRInt32 rv = send(info->mSocket, (char*)buf, amount, 0);
+#ifdef DEBUG
   MessageBoxWSAError("write");
+#endif
 
   return rv;
 }
@@ -440,6 +471,8 @@ nsWINCESSLSocketProvider::NewSocket(PRInt32 family,
     nsWINCESSLIOLayerMethods.read      = nsWINCESSLIOLayerRead;
     nsWINCESSLIOLayerMethods.poll      = nsWINCESSLIOLayerPoll;
 
+    gUserAcceptedSSLProblem.Init(128);
+
     firstTime = PR_FALSE;
   }
   
@@ -469,7 +502,9 @@ nsWINCESSLSocketProvider::NewSocket(PRInt32 family,
   nsresult initrv = infoObject->Init(host, proxyHost, proxyPort);
   if (NS_FAILED(initrv))
   {
+#ifdef DEBUG
     MessageBox(0, "Can not create ssl socket.", "Can not create ssl socket.", MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+#endif
     return NS_ERROR_FAILURE;
   }
 

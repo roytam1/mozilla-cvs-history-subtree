@@ -84,5 +84,6 @@ class nsMacMessagePump
     nsMacTSMMessagePump* mTSMMessagePump;
     EventHandlerRef      mMouseClickEventHandler;
     EventHandlerRef      mWNETransitionEventHandler;
+    PRPackedBool         mProcessEvents;
 };
 #endif // nsMacMessagePump_h__

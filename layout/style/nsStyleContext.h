@@ -37,8 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* the interface (to internal code) for retrieving computed style data */
-
 #ifndef _nsStyleContext_h_
 #define _nsStyleContext_h_
 
@@ -109,6 +107,8 @@ public:
   NS_HIDDEN_(PRBool)    Equals(const nsStyleContext* aOther) const;
   PRBool    HasTextDecorations() { return mBits & NS_STYLE_HAS_TEXT_DECORATIONS; };
 
+  NS_HIDDEN_(void) GetBorderPaddingFor(nsStyleBorderPadding& aBorderPadding);
+
   NS_HIDDEN_(void) SetStyle(nsStyleStructID aSID, nsStyleStruct* aStruct);
 
   nsRuleNode* GetRuleNode() { return mRuleNode; }
@@ -149,7 +149,10 @@ public:
    */
 
   #define STYLE_STRUCT(name_, checkdata_cb_, ctor_args_)                      \
-    NS_HIDDEN_(const nsStyle##name_ *) NS_FASTCALL GetStyle##name_();
+    const nsStyle##name_ * GetStyle##name_() {                                \
+      return NS_STATIC_CAST(const nsStyle##name_*,                            \
+                            GetStyleData(eStyleStruct_##name_));              \
+    }
   #include "nsStyleStructList.h"
   #undef STYLE_STRUCT
 
@@ -170,16 +173,14 @@ public:
 #endif
 
 protected:
-  NS_HIDDEN_(void) AddChild(nsStyleContext* aChild);
+  NS_HIDDEN_(void) AppendChild(nsStyleContext* aChild);
   NS_HIDDEN_(void) RemoveChild(nsStyleContext* aChild);
 
   NS_HIDDEN_(void) ApplyStyleFixups(nsPresContext* aPresContext);
 
   nsStyleContext* mParent;
 
-  // Children are kept in two circularly-linked lists.  The list anchor
-  // is not part of the list (null for empty), and we point to the first
-  // child.
+  // children are maintained in two circular doubly-linked lists,
   // mEmptyChild for children whose rule node is the root rule node, and
   // mChild for other children.  The order of children is not
   // meaningful.

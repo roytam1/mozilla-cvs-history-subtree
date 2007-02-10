@@ -77,6 +77,7 @@ typedef enum ECookiePolicyPopupIndex
   IBOutlet NSButton*          mAskAboutCookies;
   
   IBOutlet NSButton*          mStorePasswords;
+  IBOutlet NSButton*          mAutoFillPasswords;
 
   BOOL                        mSortedAscending;   // sort direction for tables in sheets
 
@@ -100,6 +101,7 @@ typedef enum ECookiePolicyPopupIndex
 -(IBAction) clickCookieBehavior:(id)aSender;
 -(IBAction) clickAskAboutCookies:(id)sender;
 -(IBAction) clickStorePasswords:(id)sender;
+-(IBAction) clickAutoFillPasswords:(id)sender;
 -(IBAction) launchKeychainAccess:(id)sender;
 
 // cookie editing functions
@@ -136,10 +138,4 @@ typedef enum ECookiePolicyPopupIndex
   //filtering methods
 - (void) filterCookiesPermissionsWithString: (NSString*) inFilterString;
 - (void) filterCookiesWithString: (NSString*) inFilterString;
-@end
-
-// custom formatter for cookies list to handle session cookie expiration sanely
-@interface CookieDateFormatter : NSDateFormatter
-{
-}
 @end

@@ -37,6 +37,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsBookmarksService.h"
+#include "nsArrayEnumerator.h"
+#include "nsArray.h"
 #include "nsIDOMWindow.h"
 #include "nsIObserverService.h"
 #include "nsIRDFContainer.h"
@@ -392,12 +394,8 @@ nsFeedLoadListener::TryParseAsRDF ()
     if (NS_FAILED(rv)) return rv;
     if (!listener) return NS_ERROR_FAILURE;
 
-    nsCOMPtr<nsIStringInputStream> stream =
-        do_CreateInstance("@mozilla.org/io/string-input-stream;1");
-    if (!stream)
-        return NS_ERROR_FAILURE;
-
-    rv = stream->SetData(mBody.get(), mBody.Length());
+    nsCOMPtr<nsIInputStream> stream;
+    rv = NS_NewCStringInputStream(getter_AddRefs(stream), mBody);
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsIChannel> channel;
@@ -517,7 +515,7 @@ nsFeedLoadListener::ParseHTMLFragment(nsAString &aFragString,
 
     // parse the fragment
     parser->SetContentSink(sink);
-    parser->Parse(aFragString, (void*)0, NS_LITERAL_CSTRING("text/html"), PR_TRUE, eDTDMode_fragment);
+    parser->Parse(aFragString, (void*)0, NS_LITERAL_CSTRING("text/html"), PR_FALSE, PR_TRUE, eDTDMode_fragment);
     // get the fragment node
     nsCOMPtr<nsIDOMDocumentFragment> contextfrag;
     rv = fragSink->GetFragment(getter_AddRefs(contextfrag));
@@ -629,8 +627,7 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsIDOMDocument> xmldoc;
-    // XXXbz is this the right principal?
-    parser->Init(nsnull, mURI, nsnull);
+    parser->SetBaseURI(mURI);
     rv = parser->ParseFromBuffer ((const PRUint8*) mBody.get(), mBody.Length(), "text/xml", getter_AddRefs(xmldoc));
     if (NS_FAILED(rv)) return rv;
 
@@ -857,9 +854,9 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
                 }
                 
                 // Clean up whitespace
-                CompressWhitespace(titleStr);
+                titleStr.CompressWhitespace();
                 linkStr.Trim("\b\t\r\n ");
-                CompressWhitespace(dateStr);
+                dateStr.CompressWhitespace();
                 
                 if (titleStr.IsEmpty() && !dateStr.IsEmpty())
                     titleStr.Assign(dateStr);
@@ -915,7 +912,8 @@ nsFeedLoadListener::IsLinkValid(const PRUnichar *aURI)
         return PR_FALSE;
 
     rv = mSecMan->CheckLoadURI(mURI, linkuri,
-                               nsIScriptSecurityManager::DISALLOW_INHERIT_PRINCIPAL);
+                               nsIScriptSecurityManager::DISALLOW_FROM_MAIL |
+                               nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA);
     if (NS_FAILED(rv))
         return PR_FALSE;
 
@@ -1031,24 +1029,26 @@ nsBookmarksService::UpdateLivemarkChildren(nsIRDFResource* aSource)
     }
 
     nsCOMPtr<nsIURI> uri;
+    nsCOMPtr<nsIChannel> uriChannel;
     rv = NS_NewURI(getter_AddRefs(uri), feedUrlString, nsnull, nsnull);
     if (NS_FAILED(rv)) UNLOCK_AND_RETURN_RV;
 
+    rv = NS_NewChannel(getter_AddRefs(uriChannel), uri, nsnull, nsnull, nsnull,
+                       nsIRequest::LOAD_BACKGROUND);
+    if (NS_FAILED(rv)) UNLOCK_AND_RETURN_RV;
+
+    nsCOMPtr<nsIHttpChannel> httpChannel = do_QueryInterface(uriChannel);
+    if (httpChannel) {
+        // XXXvladimir - handle POST livemarks
+        rv = httpChannel->SetRequestMethod(NS_LITERAL_CSTRING("GET"));
+    }
+    
     nsCOMPtr<nsFeedLoadListener> listener = new nsFeedLoadListener(this, mInner, uri, aSource);
 
     nsCOMPtr<nsIChannel> channel;
     rv = NS_NewChannel(getter_AddRefs(channel), uri, nsnull, nsnull, nsnull,
                        nsIRequest::LOAD_BACKGROUND | nsIRequest::VALIDATE_ALWAYS);
     if (NS_FAILED(rv)) UNLOCK_AND_RETURN_RV;
-
-    nsCOMPtr<nsIHttpChannel> httpChannel = do_QueryInterface(channel);
-    if (httpChannel) {
-        // Add a request header so that the request can easily be detected as a
-        // live bookmark update request.
-        rv = httpChannel->SetRequestHeader(NS_LITERAL_CSTRING("X-Moz"),
-                                           NS_LITERAL_CSTRING("livebookmarks"),
-                                           PR_FALSE);
-    }
 
     rv = channel->AsyncOpen(listener, nsnull);
     if (NS_FAILED(rv)) UNLOCK_AND_RETURN_RV;

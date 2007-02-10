@@ -38,11 +38,9 @@
 #ifndef nsContentCID_h__
 #define nsContentCID_h__
 
-#define NS_DOC_ENCODER_CONTRACTID_BASE \
-"@mozilla.org/layout/documentEncoder;1?type="
-
-#define NS_HTMLCOPY_ENCODER_CONTRACTID \
-"@mozilla.org/layout/htmlCopyEncoder;1"
+#include "nsISupports.h"
+#include "nsIFactory.h"
+#include "nsIComponentManager.h"
 
 // {1691E1F7-EE41-11d4-9885-00C04FA0CF4B}
 #define NS_STYLESET_CID \
@@ -83,14 +81,6 @@
 { /* e11a6080-4daa-11d2-b328-00805f8a3859 */      \
  0xe11a6080, 0x4daa, 0x11d2,                      \
  {0xb3, 0x28, 0x00, 0x80, 0x5f, 0x8a, 0x38, 0x59}}
-
-// {e7ba1480-1dea-11d3-830f-00104bed045e}
-#define NS_TEXT_ENCODER_CID \
-{ 0xe7ba1480, 0x1dea, 0x11d3, {0x83, 0x0f, 0x00, 0x10, 0x4b, 0xed, 0x04, 0x5e} }
-
- // {7f915b01-98fc-11d4-8eb0-a803f80ff1bc}
-#define NS_HTMLCOPY_TEXT_ENCODER_CID \
-{ 0x7f915b01, 0x98fc, 0x11d4, { 0x8e, 0xb0, 0xa8, 0x03, 0xf8, 0x0f, 0xf1, 0xbc } }
 
 // {A1FDE864-E802-11d4-9885-00C04FA0CF4B}
 #define NS_HTMLHRELEMENT_CID                   \
@@ -162,6 +152,14 @@
 #define NS_PRECONTENTITERATOR_CID \
 {/* {80D7E247-D4B8-45d7-BB59-6F1DD56F384C} */ \
  0x80d7e247, 0xd4b8, 0x45d7, { 0xbb, 0x59, 0x6f, 0x1d, 0xd5, 0x6f, 0x38, 0x4c } }
+
+#define NS_GENERATEDSUBTREEITERATOR_CID \
+{/* {9A45253B-EB8F-49f1-B925-E9EA90D3EB3A}*/ \
+ 0x9a45253b, 0xeb8f, 0x49f1, { 0xb9, 0x25, 0xe9, 0xea, 0x90, 0xd3, 0xeb, 0x3a } }
+
+#define NS_GENERATEDCONTENTITERATOR_CID \
+{/* {A364930F-E353-49f1-AC69-91637EB8B757}*/ \
+ 0xa364930f, 0xe353, 0x49f1, { 0xac, 0x69, 0x91, 0x63, 0x7e, 0xb8, 0xb7, 0x57 } }
 
 #define NS_SUBTREEITERATOR_CID \
 {/* {a6cf90e5-15b3-11d2-932e-00805f8add32}*/ \

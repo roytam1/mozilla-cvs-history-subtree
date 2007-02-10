@@ -39,6 +39,7 @@
 #include "nsSVGTransform.h"
 #include "prdtoa.h"
 #include "nsSVGMatrix.h"
+#include "nsSVGAtoms.h"
 #include "nsSVGValue.h"
 #include "nsISVGValueUtils.h"
 #include "nsISVGValueObserver.h"
@@ -156,6 +157,7 @@ nsSVGTransform::SetValueString(const nsAString& aValue)
 NS_IMETHODIMP
 nsSVGTransform::GetValueString(nsAString& aValue)
 {
+  aValue.Truncate();
   PRUnichar buf[256];
   
   switch (mType) {
@@ -226,7 +228,7 @@ nsSVGTransform::GetValueString(nsAString& aValue)
       break;
   }
 
-  aValue.Assign(buf);
+  aValue.Append(buf);
   
   return NS_OK;
 }

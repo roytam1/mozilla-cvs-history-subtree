@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Mats Palmgren <mats.palmgren@bredband.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -35,75 +34,36 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * rendering object for the point that anchors out-of-flow rendering
- * objects such as floats and absolutely positioned elements
- */
-
 #include "nsPlaceholderFrame.h"
 #include "nsLineLayout.h"
 #include "nsIContent.h"
 #include "nsPresContext.h"
 #include "nsIRenderingContext.h"
-#include "nsGkAtoms.h"
+#include "nsLayoutAtoms.h"
 #include "nsFrameManager.h"
-#include "nsDisplayList.h"
 
-nsIFrame*
-NS_NewPlaceholderFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewPlaceholderFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsPlaceholderFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsPlaceholderFrame* it = new (aPresShell) nsPlaceholderFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+// These are useful for debugging
+nsPlaceholderFrame::nsPlaceholderFrame()
+{
 }
 
 nsPlaceholderFrame::~nsPlaceholderFrame()
 {
-}
-
-/* virtual */ nscoord
-nsPlaceholderFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
-{
-  nscoord result = 0;
-  DISPLAY_MIN_WIDTH(this, result);
-  return result;
-}
-
-/* virtual */ nscoord
-nsPlaceholderFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
-{
-  nscoord result = 0;
-  DISPLAY_PREF_WIDTH(this, result);
-  return result;
-}
-
-/* virtual */ void
-nsPlaceholderFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
-                                      nsIFrame::InlineMinWidthData *aData)
-{
-  // Override AddInlineMinWith so that *nothing* happens.  In
-  // particular, we don't want to zero out |aData->trailingWhitespace|,
-  // since nsLineLayout skips placeholders when trimming trailing
-  // whitespace, and we don't want to set aData->skipWhitespace to
-  // false.
-
-  // ...but push floats onto the list
-  if (mOutOfFlowFrame->GetStyleDisplay()->mFloats != NS_STYLE_FLOAT_NONE)
-    aData->floats.AppendElement(mOutOfFlowFrame);
-}
-
-/* virtual */ void
-nsPlaceholderFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
-                                       nsIFrame::InlinePrefWidthData *aData)
-{
-  // Override AddInlinePrefWith so that *nothing* happens.  In
-  // particular, we don't want to zero out |aData->trailingWhitespace|,
-  // since nsLineLayout skips placeholders when trimming trailing
-  // whitespace, and we don't want to set aData->skipWhitespace to
-  // false.
-
-  // ...but push floats onto the list
-  if (mOutOfFlowFrame->GetStyleDisplay()->mFloats != NS_STYLE_FLOAT_NONE)
-    aData->floats.AppendElement(mOutOfFlowFrame);
 }
 
 NS_IMETHODIMP
@@ -112,90 +72,62 @@ nsPlaceholderFrame::Reflow(nsPresContext*          aPresContext,
                            const nsHTMLReflowState& aReflowState,
                            nsReflowStatus&          aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsPlaceholderFrame");
+  DO_GLOBAL_REFLOW_COUNT("nsPlaceholderFrame", aReflowState.reason);
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aDesiredSize, aStatus);
   aDesiredSize.width = 0;
   aDesiredSize.height = 0;
+  aDesiredSize.ascent = 0;
+  aDesiredSize.descent = 0;
+  if (aDesiredSize.mComputeMEW) {
+    aDesiredSize.mMaxElementWidth = 0;
+  }
 
   aStatus = NS_FRAME_COMPLETE;
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
   return NS_OK;
 }
 
-void
-nsPlaceholderFrame::Destroy()
+NS_IMETHODIMP
+nsPlaceholderFrame::Destroy(nsPresContext* aPresContext)
 {
-  nsIPresShell* shell = GetPresContext()->GetPresShell();
+  nsIPresShell* shell = aPresContext->GetPresShell();
   if (shell && mOutOfFlowFrame) {
     NS_ASSERTION(!shell->FrameManager()->GetPlaceholderFrameFor(mOutOfFlowFrame),
-                 "Placeholder relationship should have been torn down; see "
-                 "comments in nsPlaceholderFrame.h");
+                 "Placeholder relationship should have been torn down");
   }
 
-  nsSplittableFrame::Destroy();
-}
-
-nsSplittableType
-nsPlaceholderFrame::GetSplittableType() const
-{
-  NS_ASSERTION(mOutOfFlowFrame, "GetSplittableType called at the wrong time");
-  return mOutOfFlowFrame->GetSplittableType();
+  return nsSplittableFrame::Destroy(aPresContext);
 }
 
 nsIAtom*
 nsPlaceholderFrame::GetType() const
 {
-  return nsGkAtoms::placeholderFrame; 
-}
-
-/* virtual */ PRBool
-nsPlaceholderFrame::CanContinueTextRun() const
-{
-  if (!mOutOfFlowFrame) {
-    return PR_FALSE;
-  }
-  // first-letter frames can continue text runs, and placeholders for floated
-  // first-letter frames can too
-  return mOutOfFlowFrame->CanContinueTextRun();
+  return nsLayoutAtoms::placeholderFrame; 
 }
 
 #ifdef DEBUG
-static void
-PaintDebugPlaceholder(nsIFrame* aFrame, nsIRenderingContext* aCtx,
-                      const nsRect& aDirtyRect, nsPoint aPt)
-{
-  aCtx->SetColor(NS_RGB(0, 255, 255));
-  nscoord x = nsPresContext::CSSPixelsToAppUnits(-5);
-  aCtx->FillRect(aPt.x + x, aPt.y,
-                 nsPresContext::CSSPixelsToAppUnits(13), nsPresContext::CSSPixelsToAppUnits(3));
-  nscoord y = nsPresContext::CSSPixelsToAppUnits(-10);
-  aCtx->FillRect(aPt.x, aPt.y + y,
-                 nsPresContext::CSSPixelsToAppUnits(3), nsPresContext::CSSPixelsToAppUnits(10));
-}
-#endif // DEBUG
-
-#if defined(DEBUG) || (defined(MOZ_REFLOW_PERF_DSP) && defined(MOZ_REFLOW_PERF))
-
 NS_IMETHODIMP
-nsPlaceholderFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                                     const nsRect&           aDirtyRect,
-                                     const nsDisplayListSet& aLists)
+nsPlaceholderFrame::Paint(nsPresContext*      aPresContext,
+                          nsIRenderingContext& aRenderingContext,
+                          const nsRect&        aDirtyRect,
+                          nsFramePaintLayer    aWhichLayer,
+                          PRUint32             aFlags)
 {
-  DO_GLOBAL_REFLOW_COUNT_DSP("nsPlaceholderFrame");
-  
-#ifdef DEBUG
-  if (!GetShowFrameBorders())
-    return NS_OK;
-  
-  return aLists.Outlines()->AppendNewToTop(new (aBuilder)
-      nsDisplayGeneric(this, PaintDebugPlaceholder, "DebugPlaceholder"));
-#else // DEBUG
+  if ((NS_FRAME_PAINT_LAYER_DEBUG == aWhichLayer) && GetShowFrameBorders()) {
+    float p2t;
+    p2t = aPresContext->PixelsToTwips();
+    aRenderingContext.SetColor(NS_RGB(0, 255, 255));
+    nscoord x = NSIntPixelsToTwips(-5, p2t);
+    aRenderingContext.FillRect(x, 0, NSIntPixelsToTwips(13, p2t),
+                               NSIntPixelsToTwips(3, p2t));
+    nscoord y = NSIntPixelsToTwips(-10, p2t);
+    aRenderingContext.FillRect(0, y, NSIntPixelsToTwips(3, p2t),
+                               NSIntPixelsToTwips(10, p2t));
+  }
+  DO_GLOBAL_REFLOW_COUNT_DSP("nsPlaceholderFrame", &aRenderingContext);
   return NS_OK;
-#endif // DEBUG
 }
-#endif // DEBUG || (MOZ_REFLOW_PERF_DSP && MOZ_REFLOW_PERF)
 
-#ifdef DEBUG
 NS_IMETHODIMP
 nsPlaceholderFrame::GetFrameName(nsAString& aResult) const
 {
@@ -203,7 +135,7 @@ nsPlaceholderFrame::GetFrameName(nsAString& aResult) const
 }
 
 NS_IMETHODIMP
-nsPlaceholderFrame::List(FILE* out, PRInt32 aIndent) const
+nsPlaceholderFrame::List(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent) const
 {
   IndentBy(out, aIndent);
   ListTag(out);

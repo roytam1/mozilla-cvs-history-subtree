@@ -51,9 +51,6 @@
 #include "nsAdapterEnumerator.h"
 #include "nsIMsgImapMailFolder.h"
 #include "nsCOMArray.h"
-
-class nsIEventTarget;
-
 /* get some implementation from nsMsgIncomingServer */
 class nsImapIncomingServer : public nsMsgIncomingServer,
                              public nsIImapIncomingServer,
@@ -118,10 +115,10 @@ protected:
   nsresult GetPFCForStringId(PRBool createIfMissing, PRInt32 stringId, nsIMsgFolder **aFolder);
 private:
   nsresult SubscribeToFolder(const PRUnichar *aName, PRBool subscribe);
-  nsresult GetImapConnection (nsIEventTarget* aEventTarget,
+  nsresult GetImapConnection (nsIEventQueue* aEventQueue,
                                    nsIImapUrl* aImapUrl,
                                    nsIImapProtocol** aImapConnection);
-  nsresult CreateProtocolInstance(nsIEventTarget *aEventTarget, 
+  nsresult CreateProtocolInstance(nsIEventQueue *aEventQueue, 
                                            nsIImapProtocol ** aImapConnection);
   nsresult RequestOverrideInfo(nsIMsgWindow *aMsgWindow);
   nsresult CreateHostSpecificPrefName(const char *prefPrefix, nsCAutoString &prefName);

@@ -42,10 +42,7 @@
 <!ENTITY jsProperty.label "Propriété">
 <!ENTITY jsValue.label "Valeur">
 
-<!ENTITY evaluateDialog.title "Évaluer l'expression">
+<!ENTITY jsEval.desc "Entrez une expression Javascript. La variable « target » est l'objet qui est actuellement sélectionné. La valeur de retour sera affichée dans la visionneuse d'objet Javascript.">
 
-<!ENTITY jsEval.desc "Entrez une expression Javascript. La variable « target » est l'objet qui est actuellement sélectionné.">
 <!ENTITY jsExecute.label "Exécuter">
-<!ENTITY inspectReturn.label "Inspecter le résultat dans une ">
-<!ENTITY inspectReturnNew.label "nouvelle fenêtre">
-<!ENTITY inspectReturnExisting.label "fenêtre existante">
+<!ENTITY jsCancel.label "Annuler">

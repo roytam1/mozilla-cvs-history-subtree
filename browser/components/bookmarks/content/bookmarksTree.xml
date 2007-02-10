@@ -41,7 +41,7 @@
 #
 # ***** END LICENSE BLOCK *****
 
-<!DOCTYPE bindings [
+<!DOCTYPE window [
   <!ENTITY % bookmarksDTD SYSTEM "chrome://browser/locale/bookmarks/bookmarks.dtd" >
   %bookmarksDTD;
 ]>
@@ -227,8 +227,7 @@
                 accesskey: child.getAttribute("accesskey"),
                 resource: child.getAttribute("sort"),
                 sortActive: child.getAttribute("sortActive") == "true",
-                hidden: child.getAttribute("hidden"),
-                id: "col" + child.getAttribute("id")
+                hidden: child.getAttribute("hidden")
               }
               cols.push(obj);
             }
@@ -529,6 +528,7 @@
             }
             this._itemToBeToggled = items;
           }
+        },
         ]]></body>
       </method>
 
@@ -615,7 +615,7 @@
             this.tree.setAttribute("ref", this.originalRef);
           else
             this.tree.setAttribute("ref",
-                                   "find:datasource=rdf:bookmarks&match=http://home.netscape.com/NC-rdf#Name&method=contains&text=" + encodeURIComponent(aInput));
+                                   "find:datasource=rdf:bookmarks&match=http://home.netscape.com/NC-rdf#Name&method=contains&text=" + encodeURIComponent(aInput));	
         ]]></body>
       </method>
 

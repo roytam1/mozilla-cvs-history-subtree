@@ -648,7 +648,7 @@ nsPoint         pp;
                 mPSObj->lineto(pp.x, pp.y);
 	}
 
-  // we don't close the path, this will give us a polyline
+  // we dont close the path, this will give us a polyline
   mPSObj->stroke();
 
   return NS_OK;
@@ -1372,6 +1372,11 @@ NS_IMETHODIMP nsRenderingContextPS :: CopyOffScreenBits(nsIDrawingSurface* aSrcS
                                                          PRInt32 aSrcX, PRInt32 aSrcY,
                                                          const nsRect &aDestBounds,
                                                          PRUint32 aCopyFlags)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextPS::RetrieveCurrentNativeGraphicData(void** ngd)
 {
   return NS_OK;
 }

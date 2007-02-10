@@ -106,14 +106,8 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR args, int)
             
             strcpy(regFilePath, appPath);
             char* lastSlash = strrchr(regFilePath, '\\');
-            if (lastSlash) {
-              // path does contain backslash
-              lastSlash++; 
-              *lastSlash = 0; // strip off the executable name
-            } else {
-              // no backslash in path, just strip off everything
-              *regFilePath = 0;
-            }
+            lastSlash++; 
+            *lastSlash = 0;//strip of the executable name
             strcat(regFilePath, CLEANUP_REGISTRY); //append reg file name
     
             if ( GetFileAttributes(regFilePath) == 0xFFFFFFFF ) // file doesn't exist

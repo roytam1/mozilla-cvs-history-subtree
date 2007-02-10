@@ -294,7 +294,7 @@ function pm_arrayupdate(prefName)
     if (record.realValue == null)
         record.realValue = record.defaultValue;
 
-    if (!ASSERT(isinstance(record.realValue, Array), "Pref is not an array"))
+    if (!ASSERT(record.realValue instanceof Array, "Pref is not an array"))
         return;
 
     this.prefBranch.setCharPref(prefName, this.arrayToString(record.realValue));
@@ -362,7 +362,7 @@ function pm_getpref(prefName, reload)
         {
             realValue = this.prefBranch.getIntPref(prefName);
         }
-        else if (isinstance(defaultValue, Array))
+        else if (defaultValue instanceof Array)
         {
             realValue = this.prefBranch.getCharPref(prefName);
             realValue = this.stringToArray(realValue);
@@ -425,7 +425,7 @@ function pm_setpref(prefName, value)
     {
         this.prefBranch.setIntPref(prefName, value);
     }
-    else if (isinstance(defaultValue, Array))
+    else if (defaultValue instanceof Array)
     {
         var str = this.arrayToString(value);
         this.prefBranch.setCharPref(prefName, str);
@@ -474,7 +474,7 @@ function pm_addpref(prefName, defaultValue, setter, bundle, group)
     if (!setter)
         setter = prefSetter;
 
-    if (isinstance(defaultValue, Array))
+    if (defaultValue instanceof Array)
         defaultValue.update = updateArrayPref;
 
     var label = getMsgFrom(bundle, "pref." + prefName + ".label", null, prefName);

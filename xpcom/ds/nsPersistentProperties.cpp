@@ -40,7 +40,7 @@
 #include "nsCRT.h"
 #include "nsReadableUtils.h"
 #include "nsIInputStream.h"
-#include "nsUnicharInputStream.h"
+#include "nsIUnicharInputStream.h"
 #include "pratom.h"
 #include "nsEnumeratorUtils.h"
 #include "nsReadableUtils.h"
@@ -49,7 +49,6 @@
 #define PL_ARENA_CONST_ALIGN_MASK 3
 #include "nsPersistentProperties.h"
 #include "nsIProperties.h"
-#include "nsISupportsArray.h"
 #include "nsProperties.h"
 
 struct PropertyTableEntry : public PLDHashEntryHdr
@@ -148,8 +147,7 @@ NS_IMETHODIMP
 nsPersistentProperties::Load(nsIInputStream *aIn)
 {
   PRInt32  c;
-  nsresult ret = nsSimpleUnicharStreamFactory::GetInstance()->
-    CreateInstanceFromUTF8Stream(aIn, &mIn);
+  nsresult ret = NS_NewUTF8ConverterStream(&mIn, aIn, 0);
 
   if (ret != NS_OK) {
     NS_WARNING("NS_NewUTF8ConverterStream failed");
@@ -253,7 +251,7 @@ nsPersistentProperties::Load(nsIInputStream *aIn)
 
       value.Trim(trimThese, PR_TRUE, PR_TRUE);
       nsAutoString oldValue;
-      mSubclass->SetStringProperty(NS_ConvertUTF16toUTF8(key), value, oldValue);
+      mSubclass->SetStringProperty(NS_ConvertUCS2toUTF8(key), value, oldValue);
     }
   }
   mIn->Close();

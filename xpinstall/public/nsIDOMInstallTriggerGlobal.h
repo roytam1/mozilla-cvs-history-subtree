@@ -50,7 +50,7 @@
 
 class nsIDOMInstallTriggerGlobal : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IDOMINSTALLTRIGGERGLOBAL_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOMINSTALLTRIGGERGLOBAL_IID)
   enum {
     NOT_FOUND = -5,
     MAJOR_DIFF = 4,
@@ -75,9 +75,6 @@ public:
   NS_IMETHOD    GetVersion(const nsString& component, nsString& version)=0;
 
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDOMInstallTriggerGlobal,
-                              NS_IDOMINSTALLTRIGGERGLOBAL_IID)
 
 extern nsresult NS_InitInstallTriggerGlobalClass(nsIScriptContext *aContext, void **aPrototype);
 

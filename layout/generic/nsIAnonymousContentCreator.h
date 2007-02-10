@@ -35,10 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * interface for rendering objects that manually create subtrees of
- * anonymous content
- */
 
 #ifndef nsIAnonymousContentCreator_h___
 #define nsIAnonymousContentCreator_h___
@@ -64,7 +60,7 @@ class nsIFrame;
  */
 class nsIAnonymousContentCreator : public nsISupports {
 public:
-     NS_DECLARE_STATIC_IID_ACCESSOR(NS_IANONYMOUS_CONTENT_CREATOR_IID)
+     NS_DEFINE_STATIC_IID_ACCESSOR(NS_IANONYMOUS_CONTENT_CREATOR_IID)
      NS_IMETHOD CreateAnonymousContent(nsPresContext* aPresContext,
                                        nsISupportsArray& aAnonymousItems)=0;
 
@@ -78,9 +74,6 @@ public:
      // created and added to the frame tree. By default it does nothing.
      virtual void PostCreateFrames() {}
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIAnonymousContentCreator,
-                              NS_IANONYMOUS_CONTENT_CREATOR_IID)
 
 nsresult NS_CreateAnonymousNode(nsIContent* aParent, nsIAtom* aTag, PRInt32 aNameSpaceId, nsCOMPtr<nsIContent>& aNewNode);
 

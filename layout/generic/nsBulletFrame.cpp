@@ -34,12 +34,9 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* rendering object for list-item bullets */
-
 #include "nsCOMPtr.h"
 #include "nsBulletFrame.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsHTMLParts.h"
 #include "nsHTMLContainerFrame.h"
 #include "nsIFontMetrics.h"
@@ -47,40 +44,34 @@
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
 #include "nsIDocument.h"
+#include "nsReflowPath.h"
 #include "nsIRenderingContext.h"
 #include "nsILoadGroup.h"
 #include "nsIURL.h"
 #include "nsNetUtil.h"
+#include "nsLayoutAtoms.h"
 #include "prprf.h"
 #ifdef IBMBIDI
 #include "nsBidiPresUtils.h"
 #endif // IBMBIDI
-#include "nsDisplayList.h"
 
 #include "imgILoader.h"
 #include "imgIContainer.h"
-#include "nsStubImageDecoderObserver.h"
+#include "imgIDecoderObserver.h"
 
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 #include "nsContentUtils.h"
 
-class nsBulletListener : public nsStubImageDecoderObserver
+class nsBulletListener : public imgIDecoderObserver
 {
 public:
   nsBulletListener();
   virtual ~nsBulletListener();
 
   NS_DECL_ISUPPORTS
-  // imgIDecoderObserver (override nsStubImageDecoderObserver)
-  NS_IMETHOD OnStartContainer(imgIRequest *aRequest, imgIContainer *aImage);
-  NS_IMETHOD OnDataAvailable(imgIRequest *aRequest, gfxIImageFrame *aFrame,
-                             const nsRect *aRect);
-  NS_IMETHOD OnStopDecode(imgIRequest *aRequest, nsresult status,
-                          const PRUnichar *statusArg);
-  // imgIContainerObserver (override nsStubImageDecoderObserver)
-  NS_IMETHOD FrameChanged(imgIContainer *aContainer, gfxIImageFrame *newframe,
-                          nsRect * dirtyRect);
+  NS_DECL_IMGIDECODEROBSERVER
+  NS_DECL_IMGICONTAINEROBSERVER
 
   void SetFrame(nsBulletFrame *frame) { mFrame = frame; }
 
@@ -89,12 +80,20 @@ private:
 };
 
 
+
+
+
+
+nsBulletFrame::nsBulletFrame()
+{
+}
+
 nsBulletFrame::~nsBulletFrame()
 {
 }
 
-void
-nsBulletFrame::Destroy()
+NS_IMETHODIMP
+nsBulletFrame::Destroy(nsPresContext* aPresContext)
 {
   // Stop image loading first
   if (mImageRequest) {
@@ -106,7 +105,7 @@ nsBulletFrame::Destroy()
     NS_REINTERPRET_CAST(nsBulletListener*, mListener.get())->SetFrame(nsnull);
 
   // Let base class do the rest
-  nsFrame::Destroy();
+  return nsFrame::Destroy(aPresContext);
 }
 
 #ifdef NS_DEBUG
@@ -120,11 +119,11 @@ nsBulletFrame::GetFrameName(nsAString& aResult) const
 nsIAtom*
 nsBulletFrame::GetType() const
 {
-  return nsGkAtoms::bulletFrame;
+  return nsLayoutAtoms::bulletFrame;
 }
 
 NS_IMETHODIMP
-nsBulletFrame::DidSetStyleContext()
+nsBulletFrame::DidSetStyleContext(nsPresContext* aPresContext)
 {
   imgIRequest *newRequest = GetStyleList()->mListStyleImage;
 
@@ -174,244 +173,211 @@ nsBulletFrame::DidSetStyleContext()
   return NS_OK;
 }
 
-class nsDisplayBullet : public nsDisplayItem {
-public:
-  nsDisplayBullet(nsBulletFrame* aFrame) : nsDisplayItem(aFrame) {
-    MOZ_COUNT_CTOR(nsDisplayBullet);
-  }
-#ifdef NS_BUILD_REFCNT_LOGGING
-  virtual ~nsDisplayBullet() {
-    MOZ_COUNT_DTOR(nsDisplayBullet);
-  }
-#endif
-
-  virtual nsIFrame* HitTest(nsDisplayListBuilder* aBuilder, nsPoint aPt) { return mFrame; }
-  virtual void Paint(nsDisplayListBuilder* aBuilder, nsIRenderingContext* aCtx,
-     const nsRect& aDirtyRect);
-  NS_DISPLAY_DECL_NAME("Bullet")
-};
-
-void nsDisplayBullet::Paint(nsDisplayListBuilder* aBuilder,
-     nsIRenderingContext* aCtx, const nsRect& aDirtyRect)
-{
-  NS_STATIC_CAST(nsBulletFrame*, mFrame)->
-    PaintBullet(*aCtx, aBuilder->ToReferenceFrame(mFrame));
-}
-
 NS_IMETHODIMP
-nsBulletFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                                const nsRect&           aDirtyRect,
-                                const nsDisplayListSet& aLists)
+nsBulletFrame::Paint(nsPresContext*      aPresContext,
+                     nsIRenderingContext& aRenderingContext,
+                     const nsRect&        aDirtyRect,
+                     nsFramePaintLayer    aWhichLayer,
+                     PRUint32             aFlags)
 {
-  if (!IsVisibleForPainting(aBuilder))
+  if (NS_FRAME_PAINT_LAYER_FOREGROUND != aWhichLayer) {
     return NS_OK;
+  }
 
-  DO_GLOBAL_REFLOW_COUNT_DSP("nsBulletFrame");
-  
-  return aLists.Content()->AppendNewToTop(new (aBuilder) nsDisplayBullet(this));
-}
+  PRBool isVisible;
+  if (NS_SUCCEEDED(IsVisibleForPainting(aPresContext, aRenderingContext, PR_TRUE, &isVisible)) && isVisible) {
+    const nsStyleList* myList = GetStyleList();
+    PRUint8 listStyleType = myList->mListStyleType;
 
-void
-nsBulletFrame::PaintBullet(nsIRenderingContext& aRenderingContext, nsPoint aPt)
-{
-  const nsStyleList* myList = GetStyleList();
-  PRUint8 listStyleType = myList->mListStyleType;
-
-  if (myList->mListStyleImage && mImageRequest) {
-    PRUint32 status;
-    mImageRequest->GetImageStatus(&status);
-    if (status & imgIRequest::STATUS_LOAD_COMPLETE &&
-        !(status & imgIRequest::STATUS_ERROR)) {
-      nsCOMPtr<imgIContainer> imageCon;
-      mImageRequest->GetImage(getter_AddRefs(imageCon));
-      if (imageCon) {
-        nsRect innerArea(0, 0,
-                         mRect.width - (mPadding.left + mPadding.right),
-                         mRect.height - (mPadding.top + mPadding.bottom));
-        nsRect dest(mPadding.left, mPadding.top, innerArea.width, innerArea.height);
-        aRenderingContext.DrawImage(imageCon, innerArea, dest + aPt);
-        return;
+    if (myList->mListStyleImage && mImageRequest) {
+      PRUint32 status;
+      mImageRequest->GetImageStatus(&status);
+      if (status & imgIRequest::STATUS_LOAD_COMPLETE &&
+          !(status & imgIRequest::STATUS_ERROR)) {
+        nsCOMPtr<imgIContainer> imageCon;
+        mImageRequest->GetImage(getter_AddRefs(imageCon));
+        if (imageCon) {
+          nsRect innerArea(0, 0,
+                           mRect.width - (mPadding.left + mPadding.right),
+                           mRect.height - (mPadding.top + mPadding.bottom));
+          nsRect dest(mPadding.left, mPadding.top, innerArea.width, innerArea.height);
+          aRenderingContext.DrawImage(imageCon, innerArea, dest);
+          return NS_OK;
+        }
       }
     }
-  }
 
-  const nsStyleFont* myFont = GetStyleFont();
-  const nsStyleColor* myColor = GetStyleColor();
+    const nsStyleFont* myFont = GetStyleFont();
+    const nsStyleColor* myColor = GetStyleColor();
 
-  nsCOMPtr<nsIFontMetrics> fm;
-  aRenderingContext.SetColor(myColor->mColor);
+    nsCOMPtr<nsIFontMetrics> fm;
+    aRenderingContext.SetColor(myColor->mColor);
 
 #ifdef IBMBIDI
-  nsCharType charType = eCharType_LeftToRight;
-  PRUint8 level = 0;
-  PRBool isBidiSystem = PR_FALSE;
-  const nsStyleVisibility* vis = GetStyleVisibility();
-  PRUint32 hints = 0;
+    nsCharType charType = eCharType_LeftToRight;
+    PRUint8 level = 0;
+    PRBool isBidiSystem = PR_FALSE;
+    const nsStyleVisibility* vis = GetStyleVisibility();
+    PRUint32 hints = 0;
 #endif // IBMBIDI
 
-  nsAutoString text;
-  switch (listStyleType) {
-  case NS_STYLE_LIST_STYLE_NONE:
-    break;
+    nsAutoString text;
+    switch (listStyleType) {
+    case NS_STYLE_LIST_STYLE_NONE:
+      break;
 
-  default:
-  case NS_STYLE_LIST_STYLE_DISC:
-    aRenderingContext.FillEllipse(mPadding.left + aPt.x, mPadding.top + aPt.y,
-                                  mRect.width - (mPadding.left + mPadding.right),
-                                  mRect.height - (mPadding.top + mPadding.bottom));
-    break;
+    default:
+    case NS_STYLE_LIST_STYLE_DISC:
+      aRenderingContext.FillEllipse(mPadding.left, mPadding.top,
+                                    mRect.width - (mPadding.left + mPadding.right),
+                                    mRect.height - (mPadding.top + mPadding.bottom));
+      break;
 
-  case NS_STYLE_LIST_STYLE_CIRCLE:
-    aRenderingContext.DrawEllipse(mPadding.left + aPt.x, mPadding.top + aPt.y,
-                                  mRect.width - (mPadding.left + mPadding.right),
-                                  mRect.height - (mPadding.top + mPadding.bottom));
-    break;
+    case NS_STYLE_LIST_STYLE_CIRCLE:
+      aRenderingContext.DrawEllipse(mPadding.left, mPadding.top,
+                                    mRect.width - (mPadding.left + mPadding.right),
+                                    mRect.height - (mPadding.top + mPadding.bottom));
+      break;
 
-  case NS_STYLE_LIST_STYLE_SQUARE:
-    aRenderingContext.FillRect(mPadding.left + aPt.x, mPadding.top + aPt.y,
-                               mRect.width - (mPadding.left + mPadding.right),
-                               mRect.height - (mPadding.top + mPadding.bottom));
-    break;
+    case NS_STYLE_LIST_STYLE_SQUARE:
+      aRenderingContext.FillRect(mPadding.left, mPadding.top,
+                                 mRect.width - (mPadding.left + mPadding.right),
+                                 mRect.height - (mPadding.top + mPadding.bottom));
+      break;
 
-  case NS_STYLE_LIST_STYLE_DECIMAL:
-  case NS_STYLE_LIST_STYLE_OLD_DECIMAL:
-  case NS_STYLE_LIST_STYLE_DECIMAL_LEADING_ZERO:
+    case NS_STYLE_LIST_STYLE_DECIMAL:
+    case NS_STYLE_LIST_STYLE_OLD_DECIMAL:
+    case NS_STYLE_LIST_STYLE_DECIMAL_LEADING_ZERO:
 #ifdef IBMBIDI
-    GetListItemText(*myList, text);
-    charType = eCharType_EuropeanNumber;
-    break;
-
-  case NS_STYLE_LIST_STYLE_MOZ_ARABIC_INDIC:
-    if (GetListItemText(*myList, text))
-      charType = eCharType_ArabicNumber;
-    else
+      GetListItemText(*myList, text);
       charType = eCharType_EuropeanNumber;
-    break;
+      break;
 
-  case NS_STYLE_LIST_STYLE_HEBREW:
-    aRenderingContext.GetHints(hints);
-    isBidiSystem = (hints & NS_RENDERING_HINT_BIDI_REORDERING);
-    if (!isBidiSystem) {
-      if (GetListItemText(*myList, text)) {
-         charType = eCharType_RightToLeft;
-        level = 1;
-      } else {
+    case NS_STYLE_LIST_STYLE_MOZ_ARABIC_INDIC:
+      if (GetListItemText(*myList, text))
+        charType = eCharType_ArabicNumber;
+      else
         charType = eCharType_EuropeanNumber;
-      }
+      break;
 
-      if (NS_STYLE_DIRECTION_RTL == vis->mDirection) {
-        text.Cut(0, 1);
-        text.AppendLiteral(".");
+    case NS_STYLE_LIST_STYLE_HEBREW:
+      aRenderingContext.GetHints(hints);
+      isBidiSystem = (hints & NS_RENDERING_HINT_BIDI_REORDERING);
+      if (!isBidiSystem) {
+        if (GetListItemText(*myList, text)) {
+          charType = eCharType_RightToLeft;
+          level = 1;
+        } else {
+          charType = eCharType_EuropeanNumber;
+        }
+
+        if (NS_STYLE_DIRECTION_RTL == vis->mDirection) {
+          text.Cut(0, 1);
+          text.AppendLiteral(".");
+        }
+        break;
       }
+      // else fall through
+#endif // IBMBIDI
+
+    case NS_STYLE_LIST_STYLE_LOWER_ROMAN:
+    case NS_STYLE_LIST_STYLE_UPPER_ROMAN:
+    case NS_STYLE_LIST_STYLE_LOWER_ALPHA:
+    case NS_STYLE_LIST_STYLE_UPPER_ALPHA:
+    case NS_STYLE_LIST_STYLE_OLD_LOWER_ROMAN:
+    case NS_STYLE_LIST_STYLE_OLD_UPPER_ROMAN:
+    case NS_STYLE_LIST_STYLE_OLD_LOWER_ALPHA:
+    case NS_STYLE_LIST_STYLE_OLD_UPPER_ALPHA:
+    case NS_STYLE_LIST_STYLE_LOWER_GREEK:
+#ifndef IBMBIDI
+    case NS_STYLE_LIST_STYLE_HEBREW:
+#endif
+    case NS_STYLE_LIST_STYLE_ARMENIAN:
+    case NS_STYLE_LIST_STYLE_GEORGIAN:
+    case NS_STYLE_LIST_STYLE_CJK_IDEOGRAPHIC:
+    case NS_STYLE_LIST_STYLE_HIRAGANA:
+    case NS_STYLE_LIST_STYLE_KATAKANA:
+    case NS_STYLE_LIST_STYLE_HIRAGANA_IROHA:
+    case NS_STYLE_LIST_STYLE_KATAKANA_IROHA:
+    case NS_STYLE_LIST_STYLE_MOZ_SIMP_CHINESE_INFORMAL: 
+    case NS_STYLE_LIST_STYLE_MOZ_SIMP_CHINESE_FORMAL: 
+    case NS_STYLE_LIST_STYLE_MOZ_TRAD_CHINESE_INFORMAL: 
+    case NS_STYLE_LIST_STYLE_MOZ_TRAD_CHINESE_FORMAL: 
+    case NS_STYLE_LIST_STYLE_MOZ_JAPANESE_INFORMAL: 
+    case NS_STYLE_LIST_STYLE_MOZ_JAPANESE_FORMAL: 
+    case NS_STYLE_LIST_STYLE_MOZ_CJK_HEAVENLY_STEM:
+    case NS_STYLE_LIST_STYLE_MOZ_CJK_EARTHLY_BRANCH:
+#ifndef IBMBIDI
+    case NS_STYLE_LIST_STYLE_MOZ_ARABIC_INDIC:
+#endif
+    case NS_STYLE_LIST_STYLE_MOZ_PERSIAN:
+    case NS_STYLE_LIST_STYLE_MOZ_URDU:
+    case NS_STYLE_LIST_STYLE_MOZ_DEVANAGARI:
+    case NS_STYLE_LIST_STYLE_MOZ_GURMUKHI:
+    case NS_STYLE_LIST_STYLE_MOZ_GUJARATI:
+    case NS_STYLE_LIST_STYLE_MOZ_ORIYA:
+    case NS_STYLE_LIST_STYLE_MOZ_KANNADA:
+    case NS_STYLE_LIST_STYLE_MOZ_MALAYALAM:
+    case NS_STYLE_LIST_STYLE_MOZ_BENGALI:
+    case NS_STYLE_LIST_STYLE_MOZ_TAMIL:
+    case NS_STYLE_LIST_STYLE_MOZ_TELUGU:
+    case NS_STYLE_LIST_STYLE_MOZ_THAI:
+    case NS_STYLE_LIST_STYLE_MOZ_LAO:
+    case NS_STYLE_LIST_STYLE_MOZ_MYANMAR:
+    case NS_STYLE_LIST_STYLE_MOZ_KHMER:
+    case NS_STYLE_LIST_STYLE_MOZ_HANGUL:
+    case NS_STYLE_LIST_STYLE_MOZ_HANGUL_CONSONANT:
+    case NS_STYLE_LIST_STYLE_MOZ_ETHIOPIC_HALEHAME:
+    case NS_STYLE_LIST_STYLE_MOZ_ETHIOPIC_NUMERIC:
+    case NS_STYLE_LIST_STYLE_MOZ_ETHIOPIC_HALEHAME_AM:
+    case NS_STYLE_LIST_STYLE_MOZ_ETHIOPIC_HALEHAME_TI_ER:
+    case NS_STYLE_LIST_STYLE_MOZ_ETHIOPIC_HALEHAME_TI_ET:
+      fm = aPresContext->GetMetricsFor(myFont->mFont);
+#ifdef IBMBIDI
+      // If we can't render our numeral using the chars in the numbering
+      // system, we'll be using "decimal"...
+      PRBool usedChars =
+#endif // IBMBIDI
+      GetListItemText(*myList, text);
+#ifdef IBMBIDI
+      if (!usedChars)
+        charType = eCharType_EuropeanNumber;
+#endif
+      aRenderingContext.SetFont(fm);
+      nscoord ascent;
+      fm->GetMaxAscent(ascent);
+      aRenderingContext.DrawString(text, mPadding.left, mPadding.top + ascent);
       break;
     }
-    // else fall through
-#endif // IBMBIDI
+#ifdef IBMBIDI
+    if (charType != eCharType_LeftToRight) {
+      fm = aPresContext->GetMetricsFor(myFont->mFont);
+      aRenderingContext.SetFont(fm);
+      nscoord ascent;
+      fm->GetMaxAscent(ascent);
 
-  case NS_STYLE_LIST_STYLE_LOWER_ROMAN:
-  case NS_STYLE_LIST_STYLE_UPPER_ROMAN:
-  case NS_STYLE_LIST_STYLE_LOWER_ALPHA:
-  case NS_STYLE_LIST_STYLE_UPPER_ALPHA:
-  case NS_STYLE_LIST_STYLE_OLD_LOWER_ROMAN:
-  case NS_STYLE_LIST_STYLE_OLD_UPPER_ROMAN:
-  case NS_STYLE_LIST_STYLE_OLD_LOWER_ALPHA:
-  case NS_STYLE_LIST_STYLE_OLD_UPPER_ALPHA:
-  case NS_STYLE_LIST_STYLE_LOWER_GREEK:
-#ifndef IBMBIDI
-  case NS_STYLE_LIST_STYLE_HEBREW:
-#endif
-  case NS_STYLE_LIST_STYLE_ARMENIAN:
-  case NS_STYLE_LIST_STYLE_GEORGIAN:
-  case NS_STYLE_LIST_STYLE_CJK_IDEOGRAPHIC:
-  case NS_STYLE_LIST_STYLE_HIRAGANA:
-  case NS_STYLE_LIST_STYLE_KATAKANA:
-  case NS_STYLE_LIST_STYLE_HIRAGANA_IROHA:
-  case NS_STYLE_LIST_STYLE_KATAKANA_IROHA:
-  case NS_STYLE_LIST_STYLE_MOZ_SIMP_CHINESE_INFORMAL: 
-  case NS_STYLE_LIST_STYLE_MOZ_SIMP_CHINESE_FORMAL: 
-  case NS_STYLE_LIST_STYLE_MOZ_TRAD_CHINESE_INFORMAL: 
-  case NS_STYLE_LIST_STYLE_MOZ_TRAD_CHINESE_FORMAL: 
-  case NS_STYLE_LIST_STYLE_MOZ_JAPANESE_INFORMAL: 
-  case NS_STYLE_LIST_STYLE_MOZ_JAPANESE_FORMAL: 
-  case NS_STYLE_LIST_STYLE_MOZ_CJK_HEAVENLY_STEM:
-  case NS_STYLE_LIST_STYLE_MOZ_CJK_EARTHLY_BRANCH:
-#ifndef IBMBIDI
-  case NS_STYLE_LIST_STYLE_MOZ_ARABIC_INDIC:
-#endif
-  case NS_STYLE_LIST_STYLE_MOZ_PERSIAN:
-  case NS_STYLE_LIST_STYLE_MOZ_URDU:
-  case NS_STYLE_LIST_STYLE_MOZ_DEVANAGARI:
-  case NS_STYLE_LIST_STYLE_MOZ_GURMUKHI:
-  case NS_STYLE_LIST_STYLE_MOZ_GUJARATI:
-  case NS_STYLE_LIST_STYLE_MOZ_ORIYA:
-  case NS_STYLE_LIST_STYLE_MOZ_KANNADA:
-  case NS_STYLE_LIST_STYLE_MOZ_MALAYALAM:
-  case NS_STYLE_LIST_STYLE_MOZ_BENGALI:
-  case NS_STYLE_LIST_STYLE_MOZ_TAMIL:
-  case NS_STYLE_LIST_STYLE_MOZ_TELUGU:
-  case NS_STYLE_LIST_STYLE_MOZ_THAI:
-  case NS_STYLE_LIST_STYLE_MOZ_LAO:
-  case NS_STYLE_LIST_STYLE_MOZ_MYANMAR:
-  case NS_STYLE_LIST_STYLE_MOZ_KHMER:
-  case NS_STYLE_LIST_STYLE_MOZ_HANGUL:
-  case NS_STYLE_LIST_STYLE_MOZ_HANGUL_CONSONANT:
-  case NS_STYLE_LIST_STYLE_MOZ_ETHIOPIC_HALEHAME:
-  case NS_STYLE_LIST_STYLE_MOZ_ETHIOPIC_NUMERIC:
-  case NS_STYLE_LIST_STYLE_MOZ_ETHIOPIC_HALEHAME_AM:
-  case NS_STYLE_LIST_STYLE_MOZ_ETHIOPIC_HALEHAME_TI_ER:
-  case NS_STYLE_LIST_STYLE_MOZ_ETHIOPIC_HALEHAME_TI_ET:
-    fm = GetPresContext()->GetMetricsFor(myFont->mFont);
-#ifdef IBMBIDI
-    // If we can't render our numeral using the chars in the numbering
-    // system, we'll be using "decimal"...
-    PRBool usedChars =
-#endif // IBMBIDI
-    GetListItemText(*myList, text);
-#ifdef IBMBIDI
-    if (!usedChars)
-      charType = eCharType_EuropeanNumber;
-#endif
-    aRenderingContext.SetFont(fm);
-    nscoord ascent;
-    fm->GetMaxAscent(ascent);
-    aRenderingContext.SetTextRunRTL(PR_FALSE);
-    aRenderingContext.DrawString(text, mPadding.left + aPt.x,
-                                 mPadding.top + aPt.y + ascent);
-    break;
-  }
-#ifdef IBMBIDI
-  if (charType != eCharType_LeftToRight) {
-    nsPresContext* presContext = GetPresContext();
-    fm = presContext->GetMetricsFor(myFont->mFont);
-    aRenderingContext.SetFont(fm);
-    nscoord ascent;
-    fm->GetMaxAscent(ascent);
-
-    nsBidiPresUtils* bidiUtils = presContext->GetBidiUtils();
-    if (bidiUtils) {
-      const PRUnichar* buffer = text.get();
-      PRInt32 textLength = text.Length();
-      PRUint32 hints = 0;
-      aRenderingContext.GetHints(hints);
-      PRBool isNewTextRunSystem = (hints & NS_RENDERING_HINT_NEW_TEXT_RUNS) != 0;
-      if (eCharType_RightToLeft == charType) {
-        bidiUtils->FormatUnicodeText(presContext, (PRUnichar*)buffer, textLength,
-                                     charType, level, PR_FALSE, isNewTextRunSystem);
-      }
-      else {
+      nsBidiPresUtils* bidiUtils = aPresContext->GetBidiUtils();
+      if (bidiUtils) {
+        const PRUnichar* buffer = text.get();
+        PRInt32 textLength = text.Length();
+        if (eCharType_RightToLeft == charType) {
+          bidiUtils->FormatUnicodeText(aPresContext, (PRUnichar*)buffer, textLength,
+                                       charType, level, PR_FALSE);
+        }
+        else {
 //Mohamed
-        aRenderingContext.GetHints(hints);
-        isBidiSystem = (hints & NS_RENDERING_HINT_ARABIC_SHAPING);
-        bidiUtils->FormatUnicodeText(presContext, (PRUnichar*)buffer, textLength,
-                                     charType, level, isBidiSystem, isNewTextRunSystem);//Mohamed
+          aRenderingContext.GetHints(hints);
+          isBidiSystem = (hints & NS_RENDERING_HINT_ARABIC_SHAPING);
+          bidiUtils->FormatUnicodeText(aPresContext, (PRUnichar*)buffer, textLength,
+                                       charType, level, isBidiSystem);//Mohamed
+        }
       }
-    }
-    // XXX is this right?
-    aRenderingContext.SetTextRunRTL(level);
-    aRenderingContext.DrawString(text, mPadding.left + aPt.x,
-                                 mPadding.top + aPt.y + ascent);
-  }
+      aRenderingContext.DrawString(text, mPadding.left, mPadding.top + ascent);
+    }   
 #endif // IBMBIDI
+  }
+  DO_GLOBAL_REFLOW_COUNT_DSP("nsBulletFrame", &aRenderingContext);
+  return NS_OK;
 }
 
 PRInt32
@@ -430,7 +396,7 @@ nsBulletFrame::SetListItemOrdinal(PRInt32 aNextOrdinal,
     nsGenericHTMLElement *hc =
       nsGenericHTMLElement::FromContent(parentContent);
     if (hc) {
-      const nsAttrValue* attr = hc->GetParsedAttr(nsGkAtoms::value);
+      const nsAttrValue* attr = hc->GetParsedAttr(nsHTMLAtoms::value);
       if (attr && attr->Type() == nsAttrValue::eInteger) {
         // Use ordinal specified by the value attribute
         mOrdinal = attr->GetIntegerValue();
@@ -1413,9 +1379,17 @@ nsBulletFrame::GetListItemText(const nsStyleList& aListStyle,
 #define MIN_BULLET_SIZE 1
 
 
+#define MINMAX(_value,_min,_max) \
+    ((_value) < (_min)           \
+     ? (_min)                    \
+     : ((_value) > (_max)        \
+        ? (_max)                 \
+        : (_value)))
+
+
 void
 nsBulletFrame::GetDesiredSize(nsPresContext*  aCX,
-                              nsIRenderingContext *aRenderingContext,
+                              const nsHTMLReflowState& aReflowState,
                               nsHTMLReflowMetrics& aMetrics)
 {
   // Reset our padding.  If we need it, we'll set it below.
@@ -1429,9 +1403,73 @@ nsBulletFrame::GetDesiredSize(nsPresContext*  aCX,
     mImageRequest->GetImageStatus(&status);
     if (status & imgIRequest::STATUS_SIZE_AVAILABLE &&
         !(status & imgIRequest::STATUS_ERROR)) {
-      // auto size the image
-      mComputedSize.width = mIntrinsicSize.width;
-      mComputedSize.height = mIntrinsicSize.height;
+      nscoord widthConstraint = NS_INTRINSICSIZE;
+      nscoord heightConstraint = NS_INTRINSICSIZE;
+      PRBool fixedContentWidth = PR_FALSE;
+      PRBool fixedContentHeight = PR_FALSE;
+
+      nscoord minWidth, maxWidth, minHeight, maxHeight;
+      
+      // Determine whether the image has fixed content width
+      widthConstraint = aReflowState.mComputedWidth;
+      minWidth = aReflowState.mComputedMinWidth;
+      maxWidth = aReflowState.mComputedMaxWidth;
+      if (widthConstraint != NS_INTRINSICSIZE) {
+        fixedContentWidth = PR_TRUE;
+      }
+
+      // Determine whether the image has fixed content height
+      heightConstraint = aReflowState.mComputedHeight;
+      minHeight = aReflowState.mComputedMinHeight;
+      maxHeight = aReflowState.mComputedMaxHeight;
+      if (heightConstraint != NS_UNCONSTRAINEDSIZE) {
+        fixedContentHeight = PR_TRUE;
+      }
+
+      PRBool haveComputedSize = PR_FALSE;
+      PRBool needIntrinsicImageSize = PR_FALSE;
+
+      nscoord newWidth=0, newHeight=0;
+      if (fixedContentWidth) {
+        newWidth = MINMAX(widthConstraint, minWidth, maxWidth);
+        if (fixedContentHeight) {
+          newHeight = MINMAX(heightConstraint, minHeight, maxHeight);
+          haveComputedSize = PR_TRUE;
+        } else {
+          // We have a width, and an auto height. Compute height from
+          // width once we have the intrinsic image size.
+          if (mIntrinsicSize.height != 0) {
+            newHeight = (mIntrinsicSize.height * newWidth) / mIntrinsicSize.width;
+            haveComputedSize = PR_TRUE;
+          } else {
+            newHeight = 0;
+            needIntrinsicImageSize = PR_TRUE;
+          }
+        }
+      } else if (fixedContentHeight) {
+        // We have a height, and an auto width. Compute width from height
+        // once we have the intrinsic image size.
+        newHeight = MINMAX(heightConstraint, minHeight, maxHeight);
+        if (mIntrinsicSize.width != 0) {
+          newWidth = (mIntrinsicSize.width * newHeight) / mIntrinsicSize.height;
+          haveComputedSize = PR_TRUE;
+        } else {
+          newWidth = 0;
+          needIntrinsicImageSize = PR_TRUE;
+        }
+      } else {
+        // auto size the image
+        if (mIntrinsicSize.width == 0 && mIntrinsicSize.height == 0)
+          needIntrinsicImageSize = PR_TRUE;
+        else
+          haveComputedSize = PR_TRUE;
+
+        newWidth = mIntrinsicSize.width;
+        newHeight = mIntrinsicSize.height;
+      }
+
+      mComputedSize.width = newWidth;
+      mComputedSize.height = newHeight;
 
 #if 0 // don't do scaled images in bullets
       if (mComputedSize == mIntrinsicSize) {
@@ -1445,7 +1483,10 @@ nsBulletFrame::GetDesiredSize(nsPresContext*  aCX,
 #endif
 
       aMetrics.width = mComputedSize.width;
-      aMetrics.ascent = aMetrics.height = mComputedSize.height;
+      aMetrics.height = mComputedSize.height;
+
+      aMetrics.ascent = aMetrics.height;
+      aMetrics.descent = 0;
 
       return;
     }
@@ -1462,23 +1503,35 @@ nsBulletFrame::GetDesiredSize(nsPresContext*  aCX,
   const nsStyleFont* myFont = GetStyleFont();
   nsCOMPtr<nsIFontMetrics> fm = aCX->GetMetricsFor(myFont->mFont);
   nscoord bulletSize;
+  float p2t;
+  float t2p;
 
   nsAutoString text;
   switch (myList->mListStyleType) {
     case NS_STYLE_LIST_STYLE_NONE:
       aMetrics.width = 0;
-      aMetrics.ascent = aMetrics.height = 0;
+      aMetrics.height = 0;
+      aMetrics.ascent = 0;
+      aMetrics.descent = 0;
       break;
 
     case NS_STYLE_LIST_STYLE_DISC:
     case NS_STYLE_LIST_STYLE_CIRCLE:
     case NS_STYLE_LIST_STYLE_SQUARE:
+      t2p = aCX->TwipsToPixels();
       fm->GetMaxAscent(ascent);
-      bulletSize = PR_MAX(nsPresContext::CSSPixelsToAppUnits(MIN_BULLET_SIZE),
-                          NSToCoordRound(0.8f * (float(ascent) / 2.0f)));
-      mPadding.bottom = NSToCoordRound(float(ascent) / 8.0f);
+      bulletSize = NSTwipsToIntPixels(
+        (nscoord)NSToIntRound(0.8f * (float(ascent) / 2.0f)), t2p);
+      if (bulletSize < MIN_BULLET_SIZE) {
+        bulletSize = MIN_BULLET_SIZE;
+      }
+      p2t = aCX->PixelsToTwips();
+      bulletSize = NSIntPixelsToTwips(bulletSize, p2t);
+      mPadding.bottom = NSIntPixelsToTwips((nscoord) NSToIntRound((float)ascent / (8.0f * p2t)),p2t);
       aMetrics.width = mPadding.right + bulletSize;
-      aMetrics.ascent = aMetrics.height = mPadding.bottom + bulletSize;
+      aMetrics.height = mPadding.bottom + bulletSize;
+      aMetrics.ascent = mPadding.bottom + bulletSize;
+      aMetrics.descent = 0;
       break;
 
     default:
@@ -1535,10 +1588,11 @@ nsBulletFrame::GetDesiredSize(nsPresContext*  aCX,
     case NS_STYLE_LIST_STYLE_MOZ_ETHIOPIC_HALEHAME_TI_ET:
       GetListItemText(*myList, text);
       fm->GetHeight(aMetrics.height);
-      aRenderingContext->SetFont(fm);
-      aMetrics.width = nsLayoutUtils::GetStringWidth(this, aRenderingContext, text.get(), text.Length());
+      aReflowState.rendContext->SetFont(fm);
+      aReflowState.rendContext->GetWidth(text, aMetrics.width);
       aMetrics.width += mPadding.right;
       fm->GetMaxAscent(aMetrics.ascent);
+      fm->GetMaxDescent(aMetrics.descent);
       break;
   }
 }
@@ -1549,11 +1603,11 @@ nsBulletFrame::Reflow(nsPresContext* aPresContext,
                       const nsHTMLReflowState& aReflowState,
                       nsReflowStatus& aStatus)
 {
-  DO_GLOBAL_REFLOW_COUNT("nsBulletFrame");
+  DO_GLOBAL_REFLOW_COUNT("nsBulletFrame", aReflowState.reason);
   DISPLAY_REFLOW(aPresContext, this, aReflowState, aMetrics, aStatus);
 
   // Get the base size
-  GetDesiredSize(aPresContext, aReflowState.rendContext, aMetrics);
+  GetDesiredSize(aPresContext, aReflowState, aMetrics);
 
   // Add in the border and padding; split the top/bottom between the
   // ascent and descent to make things look nice
@@ -1561,28 +1615,14 @@ nsBulletFrame::Reflow(nsPresContext* aPresContext,
   aMetrics.width += borderPadding.left + borderPadding.right;
   aMetrics.height += borderPadding.top + borderPadding.bottom;
   aMetrics.ascent += borderPadding.top;
+  aMetrics.descent += borderPadding.bottom;
 
+  if (aMetrics.mComputeMEW) {
+    aMetrics.mMaxElementWidth = aMetrics.width;
+  }
   aStatus = NS_FRAME_COMPLETE;
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aMetrics);
   return NS_OK;
-}
-
-/* virtual */ nscoord
-nsBulletFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
-{
-  nsHTMLReflowMetrics metrics;
-  DISPLAY_MIN_WIDTH(this, metrics.width);
-  GetDesiredSize(GetPresContext(), aRenderingContext, metrics);
-  return metrics.width;
-}
-
-/* virtual */ nscoord
-nsBulletFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
-{
-  nsHTMLReflowMetrics metrics;
-  DISPLAY_PREF_WIDTH(this, metrics.width);
-  GetDesiredSize(GetPresContext(), aRenderingContext, metrics);
-  return metrics.width;
 }
 
 
@@ -1602,10 +1642,11 @@ NS_IMETHODIMP nsBulletFrame::OnStartContainer(imgIRequest *aRequest,
   aImage->GetWidth(&w);
   aImage->GetHeight(&h);
 
+  float p2t;
   nsPresContext* presContext = GetPresContext();
+  p2t = presContext->PixelsToTwips();
 
-  nsSize newsize(nsPresContext::CSSPixelsToAppUnits(w),
-                 nsPresContext::CSSPixelsToAppUnits(h));
+  nsSize newsize(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
 
   if (mIntrinsicSize != newsize) {
     mIntrinsicSize = newsize;
@@ -1617,7 +1658,7 @@ NS_IMETHODIMP nsBulletFrame::OnStartContainer(imgIRequest *aRequest,
       NS_ASSERTION(mParent, "No parent to pass the reflow request up to.");
       if (mParent) {
         mState |= NS_FRAME_IS_DIRTY;
-        shell->FrameNeedsReflow(this, nsIPresShell::eStyleChange);
+        mParent->ReflowDirtyChild(shell, this);
       }
     }
   }
@@ -1711,6 +1752,11 @@ nsBulletListener::~nsBulletListener()
 {
 }
 
+NS_IMETHODIMP nsBulletListener::OnStartDecode(imgIRequest *aRequest)
+{
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsBulletListener::OnStartContainer(imgIRequest *aRequest,
                                                  imgIContainer *aImage)
 {
@@ -1718,6 +1764,12 @@ NS_IMETHODIMP nsBulletListener::OnStartContainer(imgIRequest *aRequest,
     return NS_ERROR_FAILURE;
 
   return mFrame->OnStartContainer(aRequest, aImage);
+}
+
+NS_IMETHODIMP nsBulletListener::OnStartFrame(imgIRequest *aRequest,
+                                             gfxIImageFrame *aFrame)
+{
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsBulletListener::OnDataAvailable(imgIRequest *aRequest,
@@ -1728,6 +1780,18 @@ NS_IMETHODIMP nsBulletListener::OnDataAvailable(imgIRequest *aRequest,
     return NS_ERROR_FAILURE;
 
   return mFrame->OnDataAvailable(aRequest, aFrame, aRect);
+}
+
+NS_IMETHODIMP nsBulletListener::OnStopFrame(imgIRequest *aRequest,
+                                            gfxIImageFrame *aFrame)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsBulletListener::OnStopContainer(imgIRequest *aRequest,
+                                                imgIContainer *aImage)
+{
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsBulletListener::OnStopDecode(imgIRequest *aRequest,

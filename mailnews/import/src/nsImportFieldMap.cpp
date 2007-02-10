@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -52,12 +52,12 @@
 
 
 
-NS_METHOD nsImportFieldMap::Create(nsIStringBundle *aBundle, nsISupports *aOuter, REFNSIID aIID, void **aResult)
+NS_METHOD nsImportFieldMap::Create( nsISupports *aOuter, REFNSIID aIID, void **aResult)
 {
   if (aOuter)
     return NS_ERROR_NO_AGGREGATION;
 
-  nsImportFieldMap *it = new nsImportFieldMap(aBundle);
+  nsImportFieldMap *it = new nsImportFieldMap();
   if (it == nsnull)
     return NS_ERROR_OUT_OF_MEMORY;
 
@@ -71,7 +71,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsImportFieldMap, nsIImportFieldMap)
 
 NS_IMPL_GETSET(nsImportFieldMap, SkipFirstRecord, PRBool, m_skipFirstRecord)
 
-nsImportFieldMap::nsImportFieldMap(nsIStringBundle *aBundle)
+nsImportFieldMap::nsImportFieldMap() 
 { 
 	m_numFields = 0;
 	m_pFields = nsnull;
@@ -80,19 +80,20 @@ nsImportFieldMap::nsImportFieldMap(nsIStringBundle *aBundle)
 	// need to init the description array
 	m_mozFieldCount = 0;
     m_skipFirstRecord = false;
-  nsCOMPtr<nsIStringBundle> pBundle;
-  nsImportStringBundle::GetStringBundleProxy(aBundle, getter_AddRefs(pBundle));
+	nsIStringBundle *pBundle = nsImportStringBundle::GetStringBundleProxy();
 
 	nsString *pStr;
 	for (PRInt32 i = IMPORT_FIELD_DESC_START; i <= IMPORT_FIELD_DESC_END; i++, m_mozFieldCount++) {
 		pStr = new nsString();
-    if (pBundle) {
-      nsImportStringBundle::GetStringByID( i, *pStr, pBundle);
+		if (pBundle) {
+			nsImportStringBundle::GetStringByID( i, *pStr, pBundle);	
 		}
 		else
 			pStr->AppendInt( i);
 		m_descriptions.AppendElement( (void *)pStr);
 	}
+	
+	NS_IF_RELEASE( pBundle);
 }
 
 nsImportFieldMap::~nsImportFieldMap() 

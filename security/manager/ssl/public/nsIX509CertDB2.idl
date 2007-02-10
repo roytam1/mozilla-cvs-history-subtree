@@ -39,15 +39,13 @@
 
 #include "nsISupports.idl"
 
-interface nsIX509CertList;
-
 /**
  * This represents a service to access and manipulate 
  * X.509 certificates stored in a database through methods
  * not in nsIX509CertDB, which is frozen
  *
  */
-[scriptable, uuid(e0df4784-6560-45bf-b1b7-86076a0e8381)]
+[scriptable, uuid(dedec2ca-f941-4638-a9c0-32e02ff83d5b)]
 interface nsIX509CertDB2 : nsISupports {
 
   /* 
@@ -60,10 +58,5 @@ interface nsIX509CertDB2 : nsISupports {
    * @param aName name of the cert for display purposes.
    */
   void addCertFromBase64(in string base64, in string aTrust, in string aName);
-
-  /*
-   * Get all the known certs in the database
-   */
-  nsIX509CertList getCerts();
 };
 

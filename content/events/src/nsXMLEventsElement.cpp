@@ -37,20 +37,18 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsXMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsIDocument.h"
 
 class nsXMLEventsElement : public nsXMLElement {
 public:
   nsXMLEventsElement(nsINodeInfo *aNodeInfo);
   virtual ~nsXMLEventsElement();
-  NS_FORWARD_NSIDOMNODE(nsXMLElement::)
-
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsXMLElement::)
   virtual nsIAtom *GetIDAttributeName() const;
   virtual nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
                            nsIAtom* aPrefix, const nsAString& aValue,
                            PRBool aNotify);
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 };
 
 nsXMLEventsElement::nsXMLEventsElement(nsINodeInfo *aNodeInfo)
@@ -65,8 +63,8 @@ nsXMLEventsElement::~nsXMLEventsElement()
 nsIAtom *
 nsXMLEventsElement::GetIDAttributeName() const
 {
-  if (mNodeInfo->Equals(nsGkAtoms::listener))
-    return nsGkAtoms::id;
+  if (mNodeInfo->Equals(nsHTMLAtoms::listener))
+    return nsHTMLAtoms::id;
   return nsXMLElement::GetIDAttributeName();
 }
 
@@ -74,15 +72,15 @@ nsresult
 nsXMLEventsElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, nsIAtom* aPrefix,
                             const nsAString& aValue, PRBool aNotify)
 {
-  if (mNodeInfo->Equals(nsGkAtoms::listener) && 
+  if (mNodeInfo->Equals(nsHTMLAtoms::listener) && 
       mNodeInfo->GetDocument() && aNameSpaceID == kNameSpaceID_None && 
-      aName == nsGkAtoms::event)
+      aName == nsHTMLAtoms::_event)
     mNodeInfo->GetDocument()->AddXMLEventsContent(this);
   return nsXMLElement::SetAttr(aNameSpaceID, aName, aPrefix, aValue,
                                    aNotify);
 }
 
-NS_IMPL_ELEMENT_CLONE(nsXMLEventsElement)
+NS_IMPL_DOM_CLONENODE(nsXMLEventsElement)
 
 nsresult
 NS_NewXMLEventsElement(nsIContent** aInstancePtrResult, nsINodeInfo *aNodeInfo)

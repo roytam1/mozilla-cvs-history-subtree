@@ -20,10 +20,9 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Bill Law        <law@netscape.com>
+ *   Bill Law       law@netscape.com
  *   IBM Corp.
- *   Rich Walsh      <dragtext@e-vertise.com>
- *   Masayuki Nakano <masayuki@d-toybox.com>
+ *   Rich Walsh     dragtext@e-vertise.com
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -38,11 +37,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-#ifdef MOZ_OS2_HIGH_MEMORY
-// os2safe.h has to be included before os2.h, needed for high mem
-#include <os2safe.h>
-#endif
 
 #define INCL_PM
 #define INCL_GPI
@@ -66,9 +60,10 @@
 #include "nsISupportsPrimitives.h"
 #include "nsISupportsArray.h"
 #include "nsIWindowWatcher.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsIDOMChromeWindow.h"
 #include "nsIBrowserDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDocShell.h"         
 #include "nsIBaseWindow.h"       
 #include "nsIWidget.h"
@@ -86,8 +81,6 @@
 #include "nsIURI.h"
 #include "nsIObserverService.h"
 #include "nsXPFEComponentsCID.h"
-#include "nsIURIFixup.h"
-#include "nsCDefaultURIFixup.h"
 
 // These are needed to load a URL in a browser window.
 #include "nsIDOMLocation.h"
@@ -411,12 +404,8 @@ private:
     static PRBool   InitTopicStrings();
     static int      FindTopic( HSZ topic );
     static nsresult GetCmdLineArgs( LPBYTE request, nsICmdLineService **aResult );
-    static nsresult OpenWindow( const char *urlstr,
-                                const nsAString& aArgs,
-                                nsIDOMWindow **aResult );
-    static nsresult OpenBrowserWindow( const nsAString& aArgs,
-                                       PRBool newWindow,
-                                       nsIDOMWindow **aResult );
+    static nsresult OpenWindow( const char *urlstr, const char *args, nsIDOMWindow **aResult );
+    static nsresult OpenBrowserWindow( const char *args, PRBool newWindow, nsIDOMWindow **aResult );
     static nsresult ReParent( nsISupports *window, HWND newParent );
     static nsresult GetStartupURL(nsICmdLineService *args, nsCString& taskURL);
 
@@ -722,12 +711,10 @@ nsNativeAppSupportOS2::CheckConsole() {
               mShouldShowUI = PR_FALSE;
               __argv[i] = "-nosplash"; // Bit of a hack, but it works!
               // Ignore other args.
-              break;
             }
         }
     }
 
-    PRBool checkTurbo = PR_TRUE;
     for ( int j = 1; j < *__pargc; j++ ) {
         if (strcmp("-killAll", __argv[j]) == 0 || strcmp("/killAll", __argv[j]) == 0 ||
             strcmp("-kill", __argv[j]) == 0 || strcmp("/kill", __argv[j]) == 0) {
@@ -759,37 +746,6 @@ nsNativeAppSupportOS2::CheckConsole() {
             }
             break;
         }
-
-        if ( strcmp( "-silent", __argv[j] ) == 0 || strcmp( "/silent", __argv[j] ) == 0 ) {
-            checkTurbo = PR_FALSE;
-        }
-    }
-
-    // check if this is a restart of the browser after quiting from
-    // the servermoded browser instance.
-    if ( checkTurbo && !mServerMode ) {
-#if 0
-        HKEY key;
-        LONG result = ::RegOpenKeyEx( HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", 0, KEY_QUERY_VALUE, &key );
-        if ( result == ERROR_SUCCESS ) {
-          BYTE regvalue[_MAX_PATH];
-          DWORD type, len = sizeof(regvalue);
-          result = ::RegQueryValueEx( key, NS_QUICKLAUNCH_RUN_KEY, NULL, &type, regvalue, &len);
-          ::RegCloseKey( key );
-          if ( result == ERROR_SUCCESS && len > 0 ) {
-              // Make sure the filename in the quicklaunch command matches us
-              char fileName[_MAX_PATH];
-              int rv = ::GetModuleFileName( NULL, fileName, sizeof fileName );
-              nsCAutoString regvalueholder;
-              regvalueholder.Assign((char *) regvalue);
-              if ((FindInString(regvalueholder, fileName, PR_TRUE) != kNotFound) &&
-                  (FindInString(regvalueholder, "-turbo", PR_TRUE) != kNotFound) ) {
-                  mServerMode = PR_TRUE;
-                  mShouldShowUI = PR_TRUE;
-              }
-          }
-        }
-#endif
     }
 
     return PR_TRUE; /* Start the app */
@@ -1151,22 +1107,8 @@ struct MessageWindow {
         APIRET rc = NO_ERROR;
         PVOID pvData = NULL;
         ULONG ulSize = sizeof(COPYDATASTRUCT)+strlen(cmd)+1;
-#ifdef MOZ_OS2_HIGH_MEMORY
         rc = DosAllocSharedMem( &pvData, NULL, ulSize,
-                                PAG_COMMIT | PAG_READ | PAG_WRITE | OBJ_GETTABLE | OBJ_ANY);
-	if( rc != NO_ERROR ) // Did the kernel handle OBJ_ANY?
-	{
-          // Try again without OBJ_ANY and if the first failure was not caused
-          // by OBJ_ANY then we will get the same failure, else we have taken
-          // care of pre-FP13 systems where the kernel couldn't handle it.
-          rc = DosAllocSharedMem( &pvData, NULL, ulSize,
-                                  PAG_COMMIT | PAG_READ | PAG_WRITE | OBJ_GETTABLE);
-	}
-#else
-        rc = DosAllocSharedMem( &pvData, NULL, ulSize,
-                                PAG_COMMIT | PAG_READ | PAG_WRITE | OBJ_GETTABLE);
-#endif
-
+                                (PAG_COMMIT|PAG_READ|PAG_WRITE|OBJ_GETTABLE) );
 
         if( rc != NO_ERROR )
         {
@@ -1666,13 +1608,13 @@ nsNativeAppSupportOS2::HandleDDENotification( ULONG idInst,     // DDEML instanc
                         escapeQuotes( url );
 
                         // Now for the title; first, get the "window" script global object.
-                        nsCOMPtr<nsPIDOMWindow> scrWin( do_QueryInterface( internalContent ) );
-                        if ( !scrWin ) {
+                        nsCOMPtr<nsIScriptGlobalObject> scrGlobalObj( do_QueryInterface( internalContent ) );
+                        if ( !scrGlobalObj ) {
                             break;
                         }
                         // Then from its doc shell get the base window...
                         nsCOMPtr<nsIBaseWindow> baseWindow =
-                          do_QueryInterface( scrWin->GetDocShell() );
+                          do_QueryInterface( scrGlobalObj->GetDocShell() );
                         if ( !baseWindow ) {
                             break;
                         }
@@ -1690,12 +1632,12 @@ nsNativeAppSupportOS2::HandleDDENotification( ULONG idInst,     // DDEML instanc
                         nsCAutoString   outpt( NS_LITERAL_CSTRING("\"") );
                         // Now copy the URL converting the Unicode string
                         // to a single-byte ASCII string
-                        outpt.Append( NS_LossyConvertUTF16toASCII( url ) );
+                        outpt.Append( NS_LossyConvertUCS2toASCII( url ) );
                         // Add the "," used to separate the URL and the page
                         // title
                         outpt.Append( NS_LITERAL_CSTRING("\",\"") );
                         // Now copy the current page title to the return string
-                        outpt.Append( NS_LossyConvertUTF16toASCII( title ));
+                        outpt.Append( NS_LossyConvertUCS2toASCII( title ));
                         // Fill out the return string with the remainin ",""
                         outpt.Append( NS_LITERAL_CSTRING( "\",\"\"" ));
 
@@ -1888,8 +1830,7 @@ void nsNativeAppSupportOS2::ActivateLastWindow() {
     } else {
         // Need to create a Navigator window, then.
         nsCOMPtr<nsIDOMWindow> newWin;
-        OpenBrowserWindow( NS_LITERAL_STRING( "about:blank" ),
-                           PR_TRUE, getter_AddRefs( newWin ) );
+        OpenBrowserWindow( "about:blank", PR_TRUE, getter_AddRefs( newWin ) );
     }
 }
 
@@ -1949,11 +1890,8 @@ nsNativeAppSupportOS2::HandleRequest( LPBYTE request, PRBool newWindow, nsIDOMWi
       printf( "Launching browser on url [%s]...\n", arg.get() );
 #endif
       rv = nativeApp->EnsureProfile(args);
-      if (NS_SUCCEEDED(rv)) {
-        nsAutoString tmpArg;
-        NS_CopyNativeToUnicode( arg, tmpArg );
-        rv = OpenBrowserWindow( tmpArg, newWindow, aResult );
-      }
+      if (NS_SUCCEEDED(rv))
+        rv = OpenBrowserWindow( arg.get(), newWindow, aResult );
       return rv;
     }
 
@@ -1967,7 +1905,7 @@ nsNativeAppSupportOS2::HandleRequest( LPBYTE request, PRBool newWindow, nsIDOMWi
 #endif
       rv = nativeApp->EnsureProfile(args);
       if (NS_SUCCEEDED(rv))
-        rv = OpenWindow( arg.get(), EmptyString(), aResult );
+        rv = OpenWindow( arg.get(), "", aResult );
       return rv;
     }
 
@@ -2036,7 +1974,7 @@ nsNativeAppSupportOS2::HandleRequest( LPBYTE request, PRBool newWindow, nsIDOMWi
     if (NS_FAILED(rv) || defaultArgs.IsEmpty()) return rv;
 
     NS_ConvertUTF16toUTF8 url( defaultArgs );
-    return OpenBrowserWindow(defaultArgs, newWindow, aResult);
+    return OpenBrowserWindow(url.get(), newWindow, aResult);
 }
 
 // Parse command line args according to MS spec
@@ -2234,18 +2172,14 @@ nsNativeAppSupportOS2::EnsureProfile(nsICmdLineService* args)
 }
 
 nsresult
-nsNativeAppSupportOS2::OpenWindow( const char *urlstr,
-                                   const nsAString& aArgs,
-                                   nsIDOMWindow **aResult )
-{
+nsNativeAppSupportOS2::OpenWindow( const char*urlstr, const char *args, nsIDOMWindow **aResult ) {
 
   nsresult rv = NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
-  nsCOMPtr<nsISupportsString>
-    sarg(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID));
+  nsCOMPtr<nsISupportsCString> sarg(do_CreateInstance(NS_SUPPORTS_CSTRING_CONTRACTID));
   if (sarg)
-    sarg->SetData(aArgs);
+    sarg->SetData(nsDependentCString(args));
 
   if (wwatch && sarg) {
     rv = wwatch->OpenWindow(0, urlstr, "_blank", "chrome,dialog=no,all",
@@ -2259,13 +2193,13 @@ nsNativeAppSupportOS2::OpenWindow( const char *urlstr,
 }
 
 HWND hwndForDOMWindow( nsISupports *window ) {
-    nsCOMPtr<nsPIDOMWindow> win( do_QueryInterface(window) );
-    if ( !win ) {
+    nsCOMPtr<nsIScriptGlobalObject> ppScriptGlobalObj( do_QueryInterface(window) );
+    if ( !ppScriptGlobalObj ) {
         return 0;
     }
 
     nsCOMPtr<nsIBaseWindow> ppBaseWindow =
-      do_QueryInterface( win->GetDocShell() );
+      do_QueryInterface( ppScriptGlobalObj->GetDocShell() );
     if ( !ppBaseWindow ) {
         return 0;
     }
@@ -2337,10 +2271,7 @@ nsresult SafeJSContext::Push() {
 
 
 nsresult
-nsNativeAppSupportOS2::OpenBrowserWindow( const nsAString& aArgs,
-                                          PRBool newWindow,
-                                          nsIDOMWindow **aResult )
-{
+nsNativeAppSupportOS2::OpenBrowserWindow( const char *args, PRBool newWindow, nsIDOMWindow **aResult ) {
     nsresult rv = NS_OK;
     // Open the argument URL according to the external link preference.
     // If there is no Nav window, or newWindow is PR_TRUE, open a new one.
@@ -2369,15 +2300,13 @@ nsNativeAppSupportOS2::OpenBrowserWindow( const nsAString& aArgs,
         if ( !bwin ) {
             break;
         }
-        nsCOMPtr<nsIURIFixup> fixup( do_GetService( NS_URIFIXUP_CONTRACTID ) );
-        if ( !fixup ) {
+        nsCOMPtr<nsIIOService> io( do_GetService( "@mozilla.org/network/io-service;1" ) );
+        if ( !io ) {
             break;
         }
         nsCOMPtr<nsIURI> uri;
-        rv = fixup->CreateFixupURI( NS_ConvertUTF16toUTF8( aArgs ),
-                                    nsIURIFixup::FIXUP_FLAG_NONE,
-                                    getter_AddRefs( uri ) );
-        if ( NS_FAILED(rv) || !uri ) {
+        io->NewURI( nsDependentCString( args ), nsnull, nsnull, getter_AddRefs( uri ) );
+        if ( !uri ) {
             break;
         }
         return bwin->OpenURI( uri, nsnull, nsIBrowserDOMWindow::OPEN_DEFAULTWINDOW, nsIBrowserDOMWindow::OPEN_EXTERNAL, aResult );
@@ -2391,7 +2320,7 @@ nsNativeAppSupportOS2::OpenBrowserWindow( const nsAString& aArgs,
     if (NS_FAILED(rv)) return rv;
 
     // Last resort is to open a brand new window.
-    return OpenWindow( chromeUrlForTask.get(), aArgs, aResult );
+    return OpenWindow( chromeUrlForTask.get(), args, aResult );
 }
 
 //   This opens a special browser window for purposes of priming the pump for
@@ -2404,7 +2333,7 @@ NS_IMETHODIMP
 nsNativeAppSupportOS2::StartServerMode() {
 
     if (mShouldShowUI) {
-        // We don't have to anything anymore. The native UI
+        // We dont have to anything anymore. The native UI
         // will create the window
         return NS_OK;
     } else {
@@ -2419,7 +2348,7 @@ nsNativeAppSupportOS2::StartServerMode() {
         }
     }
 
-    // Since native UI won't create any window, we create a hidden window
+    // Since native UI wont create any window, we create a hidden window
     // so thing work alright.
 
     // Create some of the objects we'll need.
@@ -2474,7 +2403,7 @@ nsNativeAppSupportOS2::SetIsServerMode( PRBool isServerMode ) {
 
 NS_IMETHODIMP
 nsNativeAppSupportOS2::OnLastWindowClosing() {
-
+ 
     if ( !mServerMode )
         return NS_OK;
 
@@ -2484,14 +2413,6 @@ nsNativeAppSupportOS2::OnLastWindowClosing() {
         mInitialWindowActive = PR_FALSE;
         return NS_OK;
     }
-
-    // If the last window closed is our confirmation dialog,
-    // don't do anything.
-    if ( mLastWindowIsConfirmation ) {
-        mLastWindowIsConfirmation = PR_FALSE;
-        return NS_OK;
-    }
-
 
     nsresult rv;
 
@@ -2521,92 +2442,12 @@ nsNativeAppSupportOS2::OnLastWindowClosing() {
         }
     }
 
-    if ( !mShownTurboDialog ) {
-        PRBool showDialog = PR_TRUE;
-        if ( NS_SUCCEEDED( rv ) )
-            prefService->GetBoolPref( "browser.turbo.showDialog", &showDialog );
+    nsCOMPtr<nsIObserverService> observerService(do_GetService("@mozilla.org/observer-service;1", &rv));
+    if (NS_FAILED(rv)) return rv;
+    observerService->NotifyObservers(nsnull, "session-logout", nsnull);
 
-        if ( showDialog ) {
-          /* show turbo dialog, unparented. at this point in the application
-             shutdown process the last window is largely torn down and
-             unsuitable for parenthood.
-          */
-          nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
-          if ( wwatch ) {
-              nsCOMPtr<nsIDOMWindow> newWindow;
-              mShownTurboDialog = PR_TRUE;
-              mLastWindowIsConfirmation = PR_TRUE;
-              rv = wwatch->OpenWindow(0, "chrome://navigator/content/turboDialog.xul",
-                                      "_blank", "chrome,modal,titlebar,centerscreen,dialog",
-                                      0, getter_AddRefs(newWindow));
-          }
-        }
-    }
+    mForceProfileStartup = PR_TRUE;
 
-    nsCOMPtr<nsIAppStartup> appStartup
-        (do_GetService(NS_APPSTARTUP_CONTRACTID, &rv));
-    if ( NS_SUCCEEDED( rv ) ) {
-        // Instead of staying alive, launch a new instance of the application and then
-        // terminate for real.  We take steps to ensure that the new instance will run
-        // as a "server process" and not try to pawn off its request back on this
-        // instance.
-
-        // Grab mutex.  Process termination will release it.
-        Mutex mutexLock = Mutex(mMutexName);
-        NS_ENSURE_TRUE(mutexLock.Lock(MOZ_DDE_START_TIMEOUT), NS_ERROR_FAILURE );
-
-        // Turn off MessageWindow so the other process can't see us.
-        MessageWindow mw;
-        mw.Destroy();
-
-        // Launch another instance.
-        PPIB ppib;
-        PTIB ptib;
-        char filename[CCHMAXPATH];
-        char buffer[CCHMAXPATH];
-        DosGetInfoBlocks(&ptib, &ppib);
-        DosQueryModuleName(ppib->pib_hmte, CCHMAXPATH, filename);
-        strcpy(buffer, filename);
-        // The new process must run in turbo mode (no splash screen, no window, etc.).
-        strcat(buffer, " -turbo");
-
-        // Now do the OS/2 stuff...
-        RESULTCODES resultcodes;
-        CHAR szLoadError[CCHMAXPATH];
-
-        buffer[strlen(buffer)] = '\0';
-        buffer[strlen(buffer)+1] = '\0';
-        buffer[strlen(filename)] = '\0';
-
-        DosExecPgm(szLoadError,
-                         sizeof(szLoadError),
-                         EXEC_ASYNCRESULT,
-                         buffer,
-                         NULL,
-                         &resultcodes,
-                         buffer);
-#ifndef XP_OS2
-        STARTUPINFO startupInfo;
-        ::GetStartupInfo( &startupInfo );
-        PROCESS_INFORMATION processInfo;
-        DWORD rc = ::CreateProcess( 0,
-                              (LPTSTR)cmdLine.get(),
-                              0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              0,
-                              &startupInfo,
-                              &processInfo );
-#endif
-
-        // Turn off turbo mode and quit the application.
-        SetIsServerMode( PR_FALSE );
-        appStartup->Quit(nsIAppStartup::eAttemptQuit);
-
-        // Done.  This app will now commence shutdown.
-    }
     return NS_OK;
 }
 

@@ -57,14 +57,14 @@ nsLeafAccessible(aNode, aShell)
 /** Only one action available */
 NS_IMETHODIMP nsXULTabAccessible::GetNumActions(PRUint8 *_retval)
 {
-  *_retval = 1;
+  *_retval = eSingle_Action;
   return NS_OK;
 }
 
 /** Return the name of our only action  */
 NS_IMETHODIMP nsXULTabAccessible::GetActionName(PRUint8 index, nsAString& _retval)
 {
-  if (index == eAction_Switch) {
+  if (index == eAction_Click) {
     nsAccessible::GetTranslatedString(NS_LITERAL_STRING("switch"), _retval); 
     return NS_OK;
   }
@@ -108,7 +108,8 @@ NS_IMETHODIMP nsXULTabAccessible::GetState(PRUint32 *_retval)
   nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
   nsCOMPtr<nsIPresShell> presShell(do_QueryReferent(mWeakShell));
   if (presShell && content) {
-    nsIFrame *frame = presShell->GetPrimaryFrameFor(content);
+    nsIFrame *frame = nsnull;
+    presShell->GetPrimaryFrameFor(content, &frame);
     if (frame) {
       const nsStyleUserInterface* ui = frame->GetStyleUserInterface();
       if (ui->mUserFocus == NS_STYLE_USER_FOCUS_NORMAL)
@@ -183,9 +184,13 @@ nsAccessibleWrap(aNode, aShell)
 }
 
 /** We are a Property Page */
-NS_IMETHODIMP nsXULTabPanelsAccessible::GetRole(PRUint32 *aRole)
+NS_IMETHODIMP nsXULTabPanelsAccessible::GetRole(PRUint32 *_retval)
 {
-  *aRole = ROLE_PROPERTYPAGE;
+#ifndef MOZ_ACCESSIBILITY_ATK
+  *_retval = ROLE_PROPERTYPAGE;
+#else
+  *_retval = ROLE_SCROLL_PANE;
+#endif
   return NS_OK;
 }
 
@@ -229,7 +234,7 @@ NS_IMETHODIMP nsXULTabsAccessible::GetRole(PRUint32 *_retval)
 /** no actions */
 NS_IMETHODIMP nsXULTabsAccessible::GetNumActions(PRUint8 *_retval)
 {
-  *_retval = 0;
+  *_retval = eNo_Action;
   return NS_OK;
 }
 

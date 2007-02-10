@@ -208,9 +208,7 @@ nsResProtocolHandler::GetDefaultPort(PRInt32 *result)
 NS_IMETHODIMP
 nsResProtocolHandler::GetProtocolFlags(PRUint32 *result)
 {
-    // XXXbz Is this really true for all resource: URIs?  Could we
-    // somehow give different flags to some of them?
-    *result = URI_STD | URI_IS_UI_RESOURCE;
+    *result = URI_STD;
     return NS_OK;
 }
 

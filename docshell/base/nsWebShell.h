@@ -46,7 +46,9 @@
 #include "nsICommandManager.h"
 #include "nsIIOService.h"
 #include "nsCRT.h"
+#include "nsIDocumentLoader.h"
 
+class nsIEventQueue;
 class nsIController;
 struct PRThread;
 struct OnLinkClickEvent;
@@ -81,11 +83,13 @@ public:
 
     // nsILinkHandler
     NS_IMETHOD OnLinkClick(nsIContent* aContent,
+        nsLinkVerb aVerb,
         nsIURI* aURI,
         const PRUnichar* aTargetSpec,
         nsIInputStream* aPostDataStream = 0,
         nsIInputStream* aHeadersDataStream = 0);
     NS_IMETHOD OnLinkClickSync(nsIContent* aContent,
+        nsLinkVerb aVerb,
         nsIURI* aURI,
         const PRUnichar* aTargetSpec,
         nsIInputStream* aPostDataStream = 0,
@@ -99,6 +103,9 @@ public:
     NS_IMETHOD GetLinkState(nsIURI* aLinkURI, nsLinkState& aState);
 
     NS_IMETHOD Create();
+
+  // nsWebShell
+    nsresult GetEventQueue(nsIEventQueue **aQueue);
 
     static nsEventStatus PR_CALLBACK HandleEvent(nsGUIEvent *aEvent);
 
@@ -122,6 +129,8 @@ protected:
     virtual nsresult EndPageLoad(nsIWebProgress *aProgress,
         nsIChannel* channel,
         nsresult aStatus);
+
+    PRThread *mThread;
 
     eCharsetReloadState mCharsetReloadState;
 

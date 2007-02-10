@@ -46,19 +46,18 @@
         onload="document.documentElement.getButton('accept').focus();">
 
   <script type="application/x-javascript">
-    function openJSConsole() {
+    function toJSConsole() {
       var js = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                          .getService(Components.interfaces.nsIWindowMediator)
                          .getMostRecentWindow('global:console');
-      if (js) {
+      if (js)
         js.focus();
-      } else {
+      else
         Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
                   .getService(Components.interfaces.nsIWindowWatcher)
                   .openWindow(null, "chrome://global/content/console.xul",
                               "", "all,dialog=no", null);
       }
-    }
   </script>
 
   <hbox flex="1">
@@ -70,7 +69,7 @@
       <description class="header descr1">
         &xforms.bindingdialog.description1;
       </description>
-      <label class="descr2 text-link" onclick="openJSConsole()">
+      <label class="descr2 text-link" onclick="toJSConsole()">
         &xforms.bindingdialog.description2;
       </label>
     </vbox>

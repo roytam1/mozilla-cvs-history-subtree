@@ -44,14 +44,16 @@
 #include "nsIPlatformCharset.h"
 #include "nsICharsetConverterManager.h"
 #include "nsIServiceManager.h"
-#include "nsIPrefBranch.h"
-#include "nsIPrefService.h"
+#include "nsIPref.h"
 #include <X11/Xatom.h>
 #include "nsCRT.h"
 
 #include "nsWindow.h"
 
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+
 #ifdef USE_XIM
+static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
 nsIMEStatus *nsIMEGtkIC::gStatus = 0;
 nsWindow *nsIMEGtkIC::gGlobalFocusWindow = 0;
@@ -76,6 +78,7 @@ nsGtkIMEHelper* nsGtkIMEHelper::GetSingleton()
   }
 }
 //-----------------------------------------------------------------------
+MOZ_DECL_CTOR_COUNTER(nsGtkIMEHelper)
 
 nsGtkIMEHelper::nsGtkIMEHelper()
 {
@@ -134,7 +137,7 @@ void nsGtkIMEHelper::SetupUnicodeDecoder()
       charset.AssignLiteral("ISO-8859-1");   // default
     }
     nsICharsetConverterManager* manager = nsnull;
-    nsresult res = CallGetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &manager);
+    nsresult res = CallGetService(kCharsetConverterManagerCID, &manager);
     if (manager && NS_SUCCEEDED(res)) {
       manager->GetUnicodeDecoderRaw(charset.get(), &mDecoder);
       NS_RELEASE(manager);
@@ -1134,7 +1137,7 @@ nsIMEGtkIC::~nsIMEGtkIC()
 // xim.status.input_style
 //
 // "xim.status.input_style" and "xim.preedit.input_style" preferences
-// will be overwritten by the setting of PREF_XIM_INPUTSTYLE when specified.
+// will be overwrote the setting of PREF_XIM_INPUTSTYLE when specfied.
 // These preferences are only for special purpose. e.g. debugging
 
 #define PREF_XIM_PREEDIT	"xim.preedit.input_style"
@@ -1218,11 +1221,11 @@ nsIMEGtkIC::GetInputStyle() {
   return ret_style;
 #endif
 
-  nsCOMPtr<nsIPrefBranch> prefs(do_GetService(NS_PREFSERVICE_CONTRACTID, &rv));
+  nsCOMPtr<nsIPref> prefs(do_GetService(kPrefServiceCID, &rv));
   if (NS_SUCCEEDED(rv) && (prefs)) {
-    nsXPIDLCString input_style;
-    rv = prefs->GetCharPref(PREF_XIM_INPUTSTYLE, getter_Copies(input_style));
-    if (NS_SUCCEEDED(rv) && !input_style.IsEmpty()) {
+    char *input_style;
+    rv = prefs->CopyCharPref(PREF_XIM_INPUTSTYLE, &input_style);
+    if (NS_SUCCEEDED(rv) && input_style[0]) {
       if (!nsCRT::strcmp(input_style, VAL_INPUTSTYLE_ONTHESPOT)) {
         preferred_preedit_style = (GdkIMStyle) GDK_IM_PREEDIT_CALLBACKS;
         preferred_status_style = (GdkIMStyle) GDK_IM_STATUS_CALLBACKS;
@@ -1236,12 +1239,13 @@ nsIMEGtkIC::GetInputStyle() {
         preferred_preedit_style = (GdkIMStyle) GDK_IM_PREEDIT_NONE;
         preferred_status_style = (GdkIMStyle) GDK_IM_STATUS_NONE;
       }
+      nsCRT::free(input_style);
     }
     /* if PREF_XIM_PREEDIT and PREF_XIM_STATUS are defined, use
        those values */
-    nsXPIDLCString preeditstyle_type;
-    rv = prefs->GetCharPref(PREF_XIM_PREEDIT, getter_Copies(preeditstyle_type));
-    if (NS_SUCCEEDED(rv) && !preeditstyle_type.IsEmpty()) {
+    char *preeditstyle_type;
+    rv = prefs->CopyCharPref(PREF_XIM_PREEDIT, &preeditstyle_type);
+    if (NS_SUCCEEDED(rv) && preeditstyle_type[0]) {
       if (!nsCRT::strcmp(preeditstyle_type, VAL_PREEDIT_CALLBACKS)) {
         ivalue = GDK_IM_PREEDIT_CALLBACKS;
       } else if (!nsCRT::strcmp(preeditstyle_type, VAL_PREEDIT_POSITION)) {
@@ -1256,10 +1260,11 @@ nsIMEGtkIC::GetInputStyle() {
       if (ivalue) {
         preferred_preedit_style = (GdkIMStyle) ivalue;
       }
+      nsCRT::free(preeditstyle_type);
     }
-    nsXPIDLCString statusstyle_type;
-    rv = prefs->GetCharPref(PREF_XIM_STATUS, getter_Copies(statusstyle_type));
-    if (NS_SUCCEEDED(rv) && !statusstyle_type.IsEmpty()) {
+    char *statusstyle_type;
+    rv = prefs->CopyCharPref(PREF_XIM_STATUS, &statusstyle_type);
+    if (NS_SUCCEEDED(rv) && statusstyle_type[0]) {
       if (!nsCRT::strcmp(statusstyle_type, VAL_STATUS_CALLBACKS)) {
         ivalue = GDK_IM_STATUS_CALLBACKS;
       } else if (!nsCRT::strcmp(statusstyle_type, VAL_STATUS_NOTHING)) {
@@ -1272,6 +1277,7 @@ nsIMEGtkIC::GetInputStyle() {
       if (ivalue) {
         preferred_status_style = (GdkIMStyle) ivalue;
       }
+      nsCRT::free(statusstyle_type);
     }
   }
   style = gdk_im_decide_style((GdkIMStyle)(preferred_preedit_style | preferred_status_style));

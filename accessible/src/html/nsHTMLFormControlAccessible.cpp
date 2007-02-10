@@ -41,16 +41,13 @@
 #include "nsAccessibilityAtoms.h"
 #include "nsHTMLFormControlAccessible.h"
 #include "nsIDOMHTMLInputElement.h"
-#include "nsIDOMNSEditableElement.h"
 #include "nsIDOMNSHTMLButtonElement.h"
-#include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMHTMLLegendElement.h"
 #include "nsIDOMHTMLTextAreaElement.h"
 #include "nsIFrame.h"
 #include "nsINameSpaceManager.h"
 #include "nsISelectionController.h"
 #include "nsISupportsArray.h"
-#include "nsITextControlFrame.h"
 
 // --- checkbox -----
 
@@ -67,7 +64,7 @@ NS_IMETHODIMP nsHTMLCheckboxAccessible::GetRole(PRUint32 *_retval)
 
 NS_IMETHODIMP nsHTMLCheckboxAccessible::GetNumActions(PRUint8 *_retval)
 {
-  *_retval = 1;
+  *_retval = eSingle_Action;
   return NS_OK;
 }
 
@@ -118,9 +115,17 @@ nsRadioButtonAccessible(aNode, aShell)
 { 
 }
 
+NS_IMETHODIMP nsHTMLRadioButtonAccessible::DoAction(PRUint8 index)
+{
+  if (index == eAction_Click) {
+    return DoCommand();
+  }
+  return NS_ERROR_INVALID_ARG;
+}
+
 NS_IMETHODIMP nsHTMLRadioButtonAccessible::GetState(PRUint32 *_retval)
 {
-  nsAccessibleWrap::GetState(_retval);
+  nsFormControlAccessible::GetState(_retval);
   PRBool checked = PR_FALSE;   // Radio buttons and check boxes can be checked
 
   nsCOMPtr<nsIDOMHTMLInputElement> htmlRadioElement(do_QueryInterface(mDOMNode));
@@ -136,13 +141,13 @@ NS_IMETHODIMP nsHTMLRadioButtonAccessible::GetState(PRUint32 *_retval)
 // ----- Button -----
 
 nsHTMLButtonAccessible::nsHTMLButtonAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell):
-nsHyperTextAccessible(aNode, aShell)
+nsFormControlAccessible(aNode, aShell)
 { 
 }
 
 NS_IMETHODIMP nsHTMLButtonAccessible::GetNumActions(PRUint8 *_retval)
 {
-  *_retval = 1;
+  *_retval = eSingle_Action;
   return NS_OK;
 }
 
@@ -169,7 +174,7 @@ NS_IMETHODIMP nsHTMLButtonAccessible::GetState(PRUint32 *_retval)
   if (!element) {
     return NS_ERROR_FAILURE;  // Button accessible shut down
   }
-  nsHyperTextAccessible::GetState(_retval);
+  nsFormControlAccessible::GetState(_retval);
   nsAutoString buttonType;
   element->GetAttribute(NS_LITERAL_STRING("type"), buttonType);
   if (buttonType.LowerCaseEqualsLiteral("submit"))
@@ -192,10 +197,12 @@ NS_IMETHODIMP nsHTMLButtonAccessible::GetName(nsAString& aName)
   }
 
   nsAutoString name;
-  if (!content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::value,
-                        name) &&
-      !content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::alt,
-                        name)) {
+  if (NS_CONTENT_ATTR_HAS_VALUE != content->GetAttr(kNameSpaceID_None,
+                                                    nsAccessibilityAtoms::value,
+                                                    name) &&
+      NS_CONTENT_ATTR_HAS_VALUE != content->GetAttr(kNameSpaceID_None,
+                                                    nsAccessibilityAtoms::alt,
+                                                    name)) {
     if (mRoleMapEntry) {
       // Use HTML label or DHTML accessibility's labelledby attribute for name
       GetHTMLName(name, PR_FALSE);
@@ -213,10 +220,12 @@ NS_IMETHODIMP nsHTMLButtonAccessible::GetName(nsAString& aName)
       }
     }
     if (name.IsEmpty() &&
-        !content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::title,
-                          name) &&
-        !content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::src,
-                          name)) {
+        NS_CONTENT_ATTR_HAS_VALUE != content->GetAttr(kNameSpaceID_None,
+                                                      nsAccessibilityAtoms::title,
+                                                      name) &&
+        NS_CONTENT_ATTR_HAS_VALUE != content->GetAttr(kNameSpaceID_None,
+                                                      nsAccessibilityAtoms::src,
+                                                      name)) {
       content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::data, name);
     }
   }
@@ -231,13 +240,13 @@ NS_IMETHODIMP nsHTMLButtonAccessible::GetName(nsAString& aName)
 // ----- HTML 4 Button: can contain arbitrary HTML content -----
 
 nsHTML4ButtonAccessible::nsHTML4ButtonAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell):
-nsHyperTextAccessible(aNode, aShell)
+nsLeafAccessible(aNode, aShell)
 { 
 }
 
 NS_IMETHODIMP nsHTML4ButtonAccessible::GetNumActions(PRUint8 *_retval)
 {
-  *_retval = 1;
+  *_retval = eSingle_Action;
   return NS_OK;;
 }
 
@@ -270,7 +279,7 @@ NS_IMETHODIMP nsHTML4ButtonAccessible::GetState(PRUint32 *_retval)
   if (!element) {
     return NS_ERROR_FAILURE;  // Button accessible shut down
   }
-  nsHyperTextAccessible::GetState(_retval);
+  nsAccessible::GetState(_retval);
   *_retval |= STATE_FOCUSABLE;
 
   nsAutoString buttonType;
@@ -284,36 +293,15 @@ NS_IMETHODIMP nsHTML4ButtonAccessible::GetState(PRUint32 *_retval)
 // --- textfield -----
 
 nsHTMLTextFieldAccessible::nsHTMLTextFieldAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell):
-nsHyperTextAccessible(aNode, aShell)
-{
+nsFormControlAccessible(aNode, aShell)
+{ 
 }
 
-NS_IMPL_ISUPPORTS_INHERITED2(nsHTMLTextFieldAccessible, nsAccessible, nsIAccessibleText, nsIAccessibleEditableText)
+NS_IMPL_ISUPPORTS_INHERITED0(nsHTMLTextFieldAccessible, nsFormControlAccessible)
 
-NS_IMETHODIMP nsHTMLTextFieldAccessible::Init()
+NS_IMETHODIMP nsHTMLTextFieldAccessible::GetRole(PRUint32 *_retval)
 {
-  CheckForEditor();
-  return nsHyperTextAccessible::Init();
-}
-
-NS_IMETHODIMP nsHTMLTextFieldAccessible::Shutdown()
-{
-  if (mEditor) {
-    mEditor->RemoveEditActionListener(this);
-    mEditor = nsnull;
-  }
-  return nsHyperTextAccessible::Shutdown();
-}
-
-NS_IMETHODIMP nsHTMLTextFieldAccessible::GetRole(PRUint32 *aRole)
-{
-  *aRole = ROLE_ENTRY;
-  nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
-  if (content &&
-      content->AttrValueIs(kNameSpaceID_None, nsAccessibilityAtoms::type,
-                           nsAccessibilityAtoms::password, eIgnoreCase)) {
-    *aRole = ROLE_PASSWORD_TEXT;
-  }
+  *_retval = ROLE_TEXT;
   return NS_OK;
 }
 
@@ -339,20 +327,18 @@ NS_IMETHODIMP nsHTMLTextFieldAccessible::GetValue(nsAString& _retval)
 
 NS_IMETHODIMP nsHTMLTextFieldAccessible::GetState(PRUint32 *aState)
 {
-  nsresult rv = nsHyperTextAccessible::GetState(aState);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
   // can be focusable, focused, protected. readonly, unavailable, selected
   nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
-  NS_ASSERTION(content, "Should not have gotten here if upcalled GetExtState() succeeded");
-
-  if (content->AttrValueIs(kNameSpaceID_None, nsAccessibilityAtoms::type,
-                           nsAccessibilityAtoms::password, eIgnoreCase)) {
-    *aState |= STATE_PROTECTED;
+  if (!content) {
+    return NS_ERROR_FAILURE;  // Node has been Shutdown()
   }
 
+  nsFormControlAccessible::GetState(aState);
+  nsAutoString typeString;
+  content->GetAttr(kNameSpaceID_None, nsAccessibilityAtoms::type, typeString);
+  if (typeString.LowerCaseEqualsLiteral("password")) {
+    *aState |= STATE_PROTECTED;
+  }
   if (content->HasAttr(kNameSpaceID_None, nsAccessibilityAtoms::readonly)) {
     *aState |= STATE_READONLY;
   }
@@ -362,55 +348,14 @@ NS_IMETHODIMP nsHTMLTextFieldAccessible::GetState(PRUint32 *aState)
 
 NS_IMETHODIMP nsHTMLTextFieldAccessible::GetExtState(PRUint32 *aExtState)
 {
-  nsresult rv = nsHyperTextAccessible::GetExtState(aExtState);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  nsCOMPtr<nsIDOMHTMLInputElement> htmlInput(do_QueryInterface(mDOMNode, &rv));
-  // Is it an <input> or a <textarea> ?
-  *aExtState |= htmlInput ? EXT_STATE_SINGLE_LINE : EXT_STATE_MULTI_LINE;
-
-  PRUint32 state;
-  GetState(&state);
-  const PRUint32 kNonEditableStates = STATE_READONLY | STATE_UNAVAILABLE;
-  if (0 == (state & kNonEditableStates)) {
-    *aExtState |= EXT_STATE_EDITABLE;
-    nsCOMPtr<nsIContent> content = do_QueryInterface(mDOMNode);
-    if (content && (content = content->GetBindingParent()) != nsnull &&
-        content->NodeInfo()->Equals(nsAccessibilityAtoms::textbox, kNameSpaceID_XUL)) {
-      // If parent is XUL textbox, then it supports autocompletion if type="autocomplete"
-      if (content->AttrValueIs(kNameSpaceID_None, nsAccessibilityAtoms::type,
-                               NS_LITERAL_STRING("autocomplete"), eIgnoreCase)) {
-        *aExtState |= EXT_STATE_SUPPORTS_AUTOCOMPLETION;
-      }
-    }
-    else if (gIsFormFillEnabled && htmlInput && !(state & STATE_PROTECTED)) {
-      // Check to see if autocompletion is allowed on this input
-      // We don't expose it for password fields even though the entire password can
-      // be remembered for a page if the user asks it to be.
-      // However, the kind of autocomplete we're talking here is based on what
-      // the user types, where a popup of possible choices comes up.
-      nsAutoString autocomplete;
-      htmlInput->GetAttribute(NS_LITERAL_STRING("autocomplete"), autocomplete);
-      if (!autocomplete.LowerCaseEqualsLiteral("off")) {
-        nsCOMPtr<nsIDOMHTMLFormElement> form;
-        htmlInput->GetForm(getter_AddRefs(form));
-        if (form)
-          form->GetAttribute(NS_LITERAL_STRING("autocomplete"), autocomplete);
-        if (!form || !autocomplete.LowerCaseEqualsLiteral("off")) {
-          *aExtState |= EXT_STATE_SUPPORTS_AUTOCOMPLETION;
-        }
-      }
-    }
-  }
-
-  return NS_OK;
+  nsresult rv = nsFormControlAccessible::GetExtState(aExtState);
+  *aExtState |= EXT_STATE_SINGLE_LINE;
+  return rv;
 }
 
 NS_IMETHODIMP nsHTMLTextFieldAccessible::GetNumActions(PRUint8 *_retval)
 {
-  *_retval = 1;
+  *_retval = eSingle_Action;
   return NS_OK;;
 }
 
@@ -435,27 +380,6 @@ NS_IMETHODIMP nsHTMLTextFieldAccessible::DoAction(PRUint8 index)
     return NS_ERROR_FAILURE;
   }
   return NS_ERROR_INVALID_ARG;
-}
-
-void nsHTMLTextFieldAccessible::SetEditor(nsIEditor* aEditor)
-{
-  mEditor = aEditor;
-  if (mEditor)
-    mEditor->AddEditActionListener(this);
-}
-
-void nsHTMLTextFieldAccessible::CheckForEditor()
-{
-  nsCOMPtr<nsIDOMNSEditableElement> editableElt(do_QueryInterface(mDOMNode));
-  if (!editableElt) {
-    return;
-  }
-
-  nsCOMPtr<nsIEditor> editor;
-  nsresult rv = editableElt->GetEditor(getter_AddRefs(editor));
-  if (NS_SUCCEEDED(rv)) {
-    SetEditor(editor);
-  }
 }
 
 // --- groupbox  -----
@@ -512,20 +436,18 @@ NS_IMETHODIMP nsHTMLGroupboxAccessible::GetName(nsAString& aName)
   return NS_OK;
 }
 
-void nsHTMLGroupboxAccessible::CacheChildren()
+void nsHTMLGroupboxAccessible::CacheChildren(PRBool aWalkAnonContent)
 {
   if (!mWeakShell) {
     // This node has been shut down
-    mAccChildCount = eChildCountUninitialized;
+    mAccChildCount = -1;
     return;
   }
 
   if (mAccChildCount == eChildCountUninitialized) {
-    PRBool allowsAnonChildren = PR_FALSE;
-    GetAllowsAnonChildAccessibles(&allowsAnonChildren);
-    nsAccessibleTreeWalker walker(mWeakShell, mDOMNode, allowsAnonChildren);
+    nsAccessibleTreeWalker walker(mWeakShell, mDOMNode, aWalkAnonContent);
     walker.mState.frame = GetFrame();
-    PRInt32 childCount = 0;
+    mAccChildCount = 0;
     walker.GetFirstChild();
     // Check for <legend> and skip it if it's there
     if (walker.mState.accessible && walker.mState.domNode) {
@@ -539,12 +461,11 @@ void nsHTMLGroupboxAccessible::CacheChildren()
     SetFirstChild(walker.mState.accessible);
     nsCOMPtr<nsPIAccessible> privatePrevAccessible;
     while (walker.mState.accessible) {
-      ++ childCount;
+      ++mAccChildCount;
       privatePrevAccessible = do_QueryInterface(walker.mState.accessible);
       privatePrevAccessible->SetParent(this);
       walker.GetNextSibling();
       privatePrevAccessible->SetNextSibling(walker.mState.accessible);
     }
-    mAccChildCount = childCount;
   }
 }

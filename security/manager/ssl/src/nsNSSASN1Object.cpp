@@ -38,8 +38,7 @@
 #include "nsIComponentManager.h"
 #include "secasn1.h"
 #include "nsReadableUtils.h"
-#include "nsIMutableArray.h"
-#include "nsArrayUtils.h"
+#include "nsArray.h"
 #include "nsXPCOMCID.h"
 
 NS_IMPL_THREADSAFE_ISUPPORTS2(nsNSSASN1Sequence, nsIASN1Sequence, 
@@ -147,6 +146,13 @@ buildASN1ObjectFromDER(unsigned char *data,
   PRBool indefinite;
   PRInt32 len;
   PRUint32 type;
+
+  if (parent == nsnull) {
+    parent = new nsNSSASN1Sequence();
+    NS_IF_ADDREF(parent);
+  }
+  if (parent == nsnull) 
+    return NS_ERROR_FAILURE;
 
   rv = parent->GetASN1Objects(getter_AddRefs(parentObjects));
   if (NS_FAILED(rv) || parentObjects == nsnull)

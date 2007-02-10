@@ -44,13 +44,23 @@
 #include "nsIChannel.h"
 #include "nsCOMPtr.h"
 #include "nsReadableUtils.h"
-#include "nsNetError.h"
-#include "nsStreamUtils.h"
-#include "nsStringStream.h"
-#include "nsComponentManagerUtils.h"
+#include "nsIByteArrayInputStream.h"
+#include "nsIStringStream.h"
+
+static NS_METHOD
+DiscardSegments(nsIInputStream *input,
+                void *closure,
+                const char *buf,
+                PRUint32 offset,
+                PRUint32 count,
+                PRUint32 *countRead)
+{
+    *countRead = count;
+    return NS_OK;
+}
 
 // nsISupports implementation
-NS_IMPL_ISUPPORTS2(nsHTTPCompressConv, nsIStreamConverter, nsIStreamListener)
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsHTTPCompressConv, nsIStreamConverter, nsIStreamListener)
 
 // nsFTPDirListingConv methods
 nsHTTPCompressConv::nsHTTPCompressConv()
@@ -131,7 +141,7 @@ nsHTTPCompressConv::OnDataAvailable(nsIRequest* request,
                                     PRUint32 aSourceOffset, 
                                     PRUint32 aCount)
 {
-    nsresult rv = NS_ERROR_INVALID_CONTENT_ENCODING;
+    nsresult rv = NS_ERROR_FAILURE;
     PRUint32 streamLen = aCount;
 
     if (streamLen == 0)
@@ -146,7 +156,7 @@ nsHTTPCompressConv::OnDataAvailable(nsIRequest* request,
         // what's left is either metadata or padding of some sort.... throwing
         // it out is probably the safe thing to do.
         PRUint32 n;
-        return iStr->ReadSegments(NS_DiscardSegment, nsnull, streamLen, &n);
+        return iStr->ReadSegments(DiscardSegments, nsnull, streamLen, &n);
     }
 
     switch (mMode)
@@ -262,7 +272,7 @@ nsHTTPCompressConv::OnDataAvailable(nsIRequest* request,
                         // stop an endless loop caused by non-deflate data being labelled as deflate
                         if (mDummyStreamInitialised) {
                             NS_ERROR("endless loop detected");
-                            return NS_ERROR_INVALID_CONTENT_ENCODING;
+                            return NS_ERROR_FAILURE;
                         }
                         mDummyStreamInitialised = PR_TRUE;
                         // reset stream pointers to our original data
@@ -270,7 +280,7 @@ nsHTTPCompressConv::OnDataAvailable(nsIRequest* request,
                         d_stream.avail_in = (uInt)streamLen;
                     }    
                     else
-                        return NS_ERROR_INVALID_CONTENT_ENCODING;
+                        return NS_ERROR_FAILURE;
                 } /* for */
             }
             else
@@ -329,7 +339,7 @@ nsHTTPCompressConv::OnDataAvailable(nsIRequest* request,
                         break;
                     }
                     else
-                        return NS_ERROR_INVALID_CONTENT_ENCODING;
+                        return NS_ERROR_FAILURE;
                 } /* for */
             } /* gzip */
             break;
@@ -357,25 +367,27 @@ nsHTTPCompressConv::Convert(nsIInputStream *aFromStream,
 } 
 
 nsresult
-nsHTTPCompressConv::do_OnDataAvailable(nsIRequest* request,
-                                       nsISupports *context, PRUint32 offset,
-                                       const char *buffer, PRUint32 count)
+nsHTTPCompressConv::do_OnDataAvailable(nsIRequest* request, nsISupports *aContext, PRUint32 aSourceOffset, char *buffer, PRUint32 aCount)
 {
-    if (!mStream) {
-        mStream = do_CreateInstance(NS_STRINGINPUTSTREAM_CONTRACTID);
-        NS_ENSURE_STATE(mStream);
-    }
+    nsresult rv;
 
-    mStream->ShareData(buffer, count);
+    nsCOMPtr<nsIByteArrayInputStream> convertedStreamSup;
 
-    nsresult rv = mListener->OnDataAvailable(request, context, mStream,
-                                             offset, count);
+    char *lBuf = (char *) nsMemory::Alloc (aCount);
+    if (lBuf == NULL)
+        return NS_ERROR_OUT_OF_MEMORY;
 
-    // Make sure the stream no longer references |buffer| in case our listener
-    // is crazy enough to try to read from |mStream| after ODA.
-    mStream->ShareData("", 0);
+    memcpy(lBuf, buffer, aCount);
 
-    return rv;
+    rv = NS_NewByteArrayInputStream(getter_AddRefs(convertedStreamSup), lBuf, aCount);
+    if (NS_FAILED(rv))
+        return rv;
+
+    nsCOMPtr<nsIInputStream> convertedStream = do_QueryInterface(convertedStreamSup, &rv);
+    if (NS_FAILED(rv))
+        return rv;
+
+    return mListener->OnDataAvailable(request, aContext, convertedStream, aSourceOffset, aCount);
 }
 
 #define ASCII_FLAG   0x01 /* bit 0 set: file probably ascii text */
@@ -409,19 +421,19 @@ nsHTTPCompressConv::check_header(nsIInputStream *iStr, PRUint32 streamLen, nsres
                 
                 if (mSkipCount == 0 && ((unsigned)c & 0377) != gz_magic[0])
                 {
-                    *rs = NS_ERROR_INVALID_CONTENT_ENCODING;
+                    *rs = NS_ERROR_FAILURE;
                     return 0;
                 }
 
                 if (mSkipCount == 1 && ((unsigned)c & 0377) != gz_magic[1])
                 {
-                    *rs = NS_ERROR_INVALID_CONTENT_ENCODING;
+                    *rs = NS_ERROR_FAILURE;
                     return 0;
                 }
 
                 if (mSkipCount == 2 && ((unsigned)c & 0377) != Z_DEFLATED)
                 {
-                    *rs = NS_ERROR_INVALID_CONTENT_ENCODING;
+                    *rs = NS_ERROR_FAILURE;
                     return 0;
                 }
 
@@ -431,7 +443,7 @@ nsHTTPCompressConv::check_header(nsIInputStream *iStr, PRUint32 streamLen, nsres
                     mFlags = (unsigned) c & 0377;
                     if (mFlags & RESERVED)
                     {
-                        *rs = NS_ERROR_INVALID_CONTENT_ENCODING;
+                        *rs = NS_ERROR_FAILURE;
                         return 0;
                     }
                     hMode = GZIP_OS;

@@ -83,13 +83,14 @@ STATIC_EXTRA_LIBS	+= \
 		$(NULL)
 endif
 
-ifndef MOZ_ENABLE_CAIRO_GFX
 ifdef MOZ_SVG
-STATIC_EXTRA_LIBS	+= $(MOZ_CAIRO_LIBS)
+STATIC_EXTRA_LIBS	+= $(MOZ_LIBART_LIBS) $(MOZ_CAIRO_LIBS)
+ifdef MOZ_SVG_RENDERER_GDIPLUS
+STATIC_EXTRA_LIBS	+= $(call EXPAND_LIBNAME,gdiplus)
+endif
 else # not MOZ_SVG
 ifdef MOZ_ENABLE_CANVAS # not SVG, but yes on canvas
 STATIC_EXTRA_LIBS	+= $(MOZ_CAIRO_LIBS)
-endif
 endif
 endif
 
@@ -127,18 +128,16 @@ endif
 # STATIC_EXTRA_LIBS	+= $(TK_LIBS)
 
 # Some random modules require this
-ifndef MOZ_NO_XPCOM_OBSOLETE
+ifndef MINIMO
 STATIC_EXTRA_LIBS	+= $(MOZ_XPCOM_OBSOLETE_LIBS)
 endif
 
 ifeq ($(OS_ARCH),WINNT)
-STATIC_EXTRA_LIBS += $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 oleaut32 version winspool imm32)
-# XXX temporary workaround until link ordering issue is solved
-ifdef GNU_CC
-STATIC_EXTRA_LIBS += $(call EXPAND_LIBNAME,winmm wsock32 gdi32)
-endif
-ifdef MOZ_ENABLE_CAIRO_GFX
-STATIC_EXTRA_LIBS += $(call EXPAND_LIBNAME, usp10)
+STATIC_EXTRA_LIBS += $(call EXPAND_LIBNAME,comctl32 comdlg32 uuid shell32 ole32 oleaut32 version winspool)
+ifdef GNU_CXX
+STATIC_EXTRA_LIBS += -lgdi32
+else
+STATIC_EXTRA_LIBS += $(call EXPAND_LIBNAME,urlmon)
 endif
 endif
 

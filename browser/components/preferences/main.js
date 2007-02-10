@@ -113,7 +113,7 @@ var gMainPane = {
   setHomePageToBookmark: function ()
   {
     var rv = { urls: null, names: null };
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
     document.documentElement.openSubDialog("chrome://browser/content/preferences/selectBookmark.xul",
 #else
     document.documentElement.openSubDialog("chrome://browser/content/bookmarks/selectBookmark.xul",
@@ -155,10 +155,8 @@ var gMainPane = {
       else
         useCurrent.label = useCurrent.getAttribute("label1");
     }
-    else {
-      useCurrent.label = useCurrent.getAttribute("label1");
+    else
       useCurrent.disabled = true;
-    }
   },
 
   /**
@@ -441,7 +439,8 @@ var gMainPane = {
       promptMessage = shellBundle.getFormattedString("setDefaultBrowserMessage", 
                                                      [brandShortName]);
       var rv = psvc.confirmEx(window, promptTitle, promptMessage, 
-                              IPS.STD_YES_NO_BUTTONS,
+                              (IPS.BUTTON_TITLE_YES * IPS.BUTTON_POS_0) + 
+                              (IPS.BUTTON_TITLE_NO * IPS.BUTTON_POS_1),
                               null, null, null, null, { });
       if (rv == 0)
         shellSvc.setDefaultBrowser(true, false);

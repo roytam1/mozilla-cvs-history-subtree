@@ -95,7 +95,6 @@ CPPSRCS		= \
 		xpcwrappednativeproto.cpp \
 		xpcwrappednativescope.cpp \
 		XPCNativeWrapper.cpp \
-		XPCSafeJSObjectWrapper.cpp \
 		$(NULL)
 ifdef XPC_IDISPATCH_SUPPORT
 CPPSRCS +=	XPCDispObject.cpp	\
@@ -124,7 +123,7 @@ EXTRA_DSO_LDOPTS += \
 
 ifdef MOZ_JSLOADER
 SHARED_LIBRARY_LIBS = \
-		../loader/$(LIB_PREFIX)jsloader_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)jsloader_s.$(LIB_SUFFIX) \
 		$(NULL)
 endif
 

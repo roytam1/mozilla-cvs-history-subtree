@@ -120,7 +120,6 @@ function fillThreadPaneContextMenu()
 
   SetupReplyToSenderMenuItem("threadPaneContext-replySender", numSelected, false);
   SetupReplyToNewsgroupMenuItem("threadPaneContext-replyNewsgroup", numSelected, isNewsgroup, false);
-  SetupReplyToSenderAndNewsgroupMenuItem("threadPaneContext-replySenderAndNewsgroup", numSelected, isNewsgroup, false);
   SetupReplyAllMenuItem("threadPaneContext-replyAll", numSelected, false);
   SetupForwardMenuItem("threadPaneContext-forward", numSelected, false);
   SetupForwardAsAttachmentMenuItem("threadPaneContext-forwardAsAttachment", numSelected, false);
@@ -163,12 +162,6 @@ function SetupReplyToSenderMenuItem(menuID, numSelected, forceHide)
 }
 
 function SetupReplyToNewsgroupMenuItem(menuID, numSelected, isNewsgroup, forceHide)
-{
-  ShowMenuItem(menuID, (numSelected <= 1) && isNewsgroup && !forceHide);
-  EnableMenuItem(menuID,  (numSelected == 1));
-}
-
-function SetupReplyToSenderAndNewsgroupMenuItem(menuID, numSelected, isNewsgroup, forceHide)
 {
   ShowMenuItem(menuID, (numSelected <= 1) && isNewsgroup && !forceHide);
   EnableMenuItem(menuID,  (numSelected == 1));
@@ -309,8 +302,6 @@ function fillFolderPaneContextMenu()
   ShowMenuItem("folderPaneContext-copy-location", !isServer && !isVirtualFolder);
   ShowMenuItem("folderPaneContext-emptyTrash", (numSelected <= 1) && (specialFolder == 'Trash'));
   EnableMenuItem("folderPaneContext-emptyTrash", true);
-  ShowMenuItem("folderPaneContext-emptyJunk", (numSelected <= 1) && (specialFolder == 'Junk'));
-  EnableMenuItem("folderPaneContext-emptyJunk", true);
 
   var showSendUnsentMessages = (numSelected <= 1) && (specialFolder == 'Unsent Messages');
   ShowMenuItem("folderPaneContext-sendUnsentMessages", showSendUnsentMessages);
@@ -497,15 +488,15 @@ function fillMessagePaneContextMenu()
   //Figure out separators
   ShowMenuItem("messagePaneContext-sep-open", ShowSeparator("messagePaneContext-sep-open"));
   ShowMenuItem("messagePaneContext-sep-reply", ShowSeparator("messagePaneContext-sep-reply"));
-  ShowMenuItem("messagePaneContext-sep-edit", ShowSeparator("messagePaneContext-sep-edit"));
+  ShowMenuItem("messagePaneContext-sep-edit", ShowSeparator("messagePaneContext-sep-edit") || gContextMenu.onMailtoLink);
   ShowMenuItem("messagePaneContext-sep-link", ShowSeparator("messagePaneContext-sep-link"));
   ShowMenuItem("messagePaneContext-sep-image", ShowSeparator("messagePaneContext-sep-image"));
   ShowMenuItem("messagePaneContext-sep-copy", ShowSeparator("messagePaneContext-sep-copy"));
   ShowMenuItem("messagePaneContext-sep-tags", ShowSeparator("messagePaneContext-sep-tags"));
   ShowMenuItem("messagePaneContext-sep-mark", ShowSeparator("messagePaneContext-sep-mark"));
   
-  // if we are on a link, go ahead and hide this separator
-  if (gContextMenu.onLink)
+  // if we are on an non-mailto link, go ahead and hide this separator
+  if (gContextMenu.onLink && !gContextMenu.onMailtoLink)
     ShowMenuItem("messagePaneContext-sep-edit", false);
 }
 

@@ -41,7 +41,7 @@
  * *********************************************************
  */
 
-class THEBES_API gfxRegion {
+class gfxRegion {
 public:
     gfxRegion(const gfxRegion& r);
     gfxRegion(const gfxRect& r);

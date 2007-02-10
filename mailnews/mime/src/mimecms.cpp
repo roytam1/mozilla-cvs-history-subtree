@@ -53,7 +53,6 @@
 #include "nsIMimeMiscStatus.h"
 #include "nsIMsgSMIMEHeaderSink.h"
 #include "nsCOMPtr.h"
-#include "nsAutoPtr.h"
 #include "nsIX509Cert.h"
 #include "nsIMsgHeaderParser.h"
 #include "nsIProxyObjectManager.h"
@@ -222,7 +221,7 @@ PRBool MimeCMSHeadersAndCertsMatch(nsICMSMessage *content_info,
     {
       if (from_addr && *from_addr)
       {
-        NS_ConvertASCIItoUTF16 ucs2From(from_addr);
+        NS_ConvertASCIItoUCS2 ucs2From(from_addr);
         if (NS_FAILED(signerCert->ContainsEmailAddress(ucs2From, &foundFrom)))
         {
           foundFrom = PR_FALSE;
@@ -231,7 +230,7 @@ PRBool MimeCMSHeadersAndCertsMatch(nsICMSMessage *content_info,
 
       if (sender_addr && *sender_addr)
       {
-        NS_ConvertASCIItoUTF16 ucs2Sender(sender_addr);
+        NS_ConvertASCIItoUCS2 ucs2Sender(sender_addr);
         if (NS_FAILED(signerCert->ContainsEmailAddress(ucs2Sender, &foundSender)))
         {
           foundSender = PR_FALSE;
@@ -327,11 +326,16 @@ NS_IMETHODIMP nsSMimeVerificationListener::Notify(nsICMSMessage2 *aVerifiedMessa
       signature_status = nsICMSMessageErrors::SUCCESS;
   }
 
-  nsCOMPtr<nsIMsgSMIMEHeaderSink> proxySink;
-  NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD, NS_GET_IID(nsIMsgSMIMEHeaderSink),
-                       mHeaderSink, NS_PROXY_SYNC, getter_AddRefs(proxySink));
-  if (proxySink)
-    proxySink->SignedStatus(mMimeNestingLevel, signature_status, signerCert);
+
+  nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
+  if (proxyman)
+  {
+    nsCOMPtr<nsIMsgSMIMEHeaderSink> proxySink;
+    proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIMsgSMIMEHeaderSink),
+                                mHeaderSink, PROXY_SYNC, getter_AddRefs(proxySink));
+    if (proxySink)
+      proxySink->SignedStatus(mMimeNestingLevel, signature_status, signerCert);
+  }
 
   return NS_OK;
 }

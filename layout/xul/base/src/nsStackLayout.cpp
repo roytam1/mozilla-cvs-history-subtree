@@ -48,7 +48,8 @@
 #include "nsBoxLayoutState.h"
 #include "nsBox.h"
 #include "nsBoxFrame.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
+#include "nsXULAtoms.h"
 #include "nsIContent.h"
 #include "nsINameSpaceManager.h"
 
@@ -88,7 +89,8 @@ nsStackLayout::GetPrefSize(nsIBox* aBox, nsBoxLayoutState& aState, nsSize& aSize
   aBox->GetChildBox(&child);
  
   while (child) {  
-    nsSize pref = child->GetPrefSize(aState);
+    nsSize pref(0,0);
+    child->GetPrefSize(aState, pref);
 
     AddMargin(child, pref);
     AddOffset(aState, child, pref);
@@ -116,7 +118,8 @@ nsStackLayout::GetMinSize(nsIBox* aBox, nsBoxLayoutState& aState, nsSize& aSize)
   aBox->GetChildBox(&child);
    
   while (child) {  
-    nsSize min = child->GetMinSize(aState);
+    nsSize min(0,0);
+    child->GetMinSize(aState, min);        
     AddMargin(child, min);
     AddOffset(aState, child, min);
     AddLargestSize(aSize, min);
@@ -143,8 +146,10 @@ nsStackLayout::GetMaxSize(nsIBox* aBox, nsBoxLayoutState& aState, nsSize& aSize)
   aBox->GetChildBox(&child);
    
   while (child) {  
-    nsSize max = child->GetMaxSize(aState);
-    nsSize min = child->GetMinSize(aState);
+    nsSize max(NS_INTRINSICSIZE, NS_INTRINSICSIZE);
+    child->GetMaxSize(aState, max);
+    nsSize min(NS_INTRINSICSIZE, NS_INTRINSICSIZE);
+    child->GetMinSize(aState, min);
     nsBox::BoundsCheckMinMax(min, max);
 
     AddMargin(child, max);
@@ -170,7 +175,8 @@ nsStackLayout::GetAscent(nsIBox* aBox, nsBoxLayoutState& aState, nscoord& aAscen
   aBox->GetChildBox(&child);
    
   while (child) {  
-    nscoord ascent = child->GetBoxAscent(aState);
+    nscoord ascent = 0;
+    child->GetAscent(aState, ascent);
     nsMargin margin;
     child->GetMargin(margin);
     ascent += margin.top + margin.bottom;
@@ -217,19 +223,17 @@ nsStackLayout::AddOffset(nsBoxLayoutState& aState, nsIBox* aChild, nsSize& aSize
     nsAutoString value;
     PRInt32 error;
 
-    content->GetAttr(kNameSpaceID_None, nsGkAtoms::left, value);
-    if (!value.IsEmpty()) {
+    if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, nsHTMLAtoms::left, value)) {
       value.Trim("%");
-      offset.width =
-        nsPresContext::CSSPixelsToAppUnits(value.ToInteger(&error));
+      offset.width = NSIntPixelsToTwips(value.ToInteger(&error),
+                                        presContext->ScaledPixelsToTwips());
       offsetSpecified = PR_TRUE;
     }
 
-    content->GetAttr(kNameSpaceID_None, nsGkAtoms::top, value);
-    if (!value.IsEmpty()) {
+    if (NS_CONTENT_ATTR_HAS_VALUE == content->GetAttr(kNameSpaceID_None, nsHTMLAtoms::top, value)) {
       value.Trim("%");
-      offset.height =
-        nsPresContext::CSSPixelsToAppUnits(value.ToInteger(&error));
+      offset.height = NSIntPixelsToTwips(value.ToInteger(&error),
+                                         presContext->ScaledPixelsToTwips());
       offsetSpecified = PR_TRUE;
     }
   }
@@ -276,7 +280,13 @@ nsStackLayout::Layout(nsIBox* aBox, nsBoxLayoutState& aState)
       PRBool sizeChanged = (oldRect != childRect);
 
       // only lay out dirty children or children whose sizes have changed
-      if (sizeChanged || (child->GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN))) {
+      PRBool isDirty = PR_FALSE;
+      PRBool hasDirtyChildren = PR_FALSE;
+
+      child->IsDirty(isDirty);
+      child->HasDirtyChildren(hasDirtyChildren);
+
+      if (sizeChanged || isDirty || hasDirtyChildren) {
           // add in the child's margin
           nsMargin margin;
           child->GetMargin(margin);
@@ -293,7 +303,8 @@ nsStackLayout::Layout(nsIBox* aBox, nsBoxLayoutState& aState)
           // If we have an offset, we don't stretch the child.  Just use
           // its preferred size.
           if (offsetSpecified) {
-            nsSize pref = child->GetPrefSize(aState);
+            nsSize pref(0,0);
+            child->GetPrefSize(aState, pref);
             childRect.width = pref.width;
             childRect.height = pref.height;
           }

@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 sw=2 et tw=80: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,12 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * A serializer and content sink that removes potentially insecure or
- * otherwise dangerous or offending HTML (eg for display of HTML
- * e-mail attachments or something).
- */
-
 #ifndef mozSanitizingSerializer_h__
 #define mozSanitizingSerializer_h__
 
@@ -54,9 +47,9 @@
 #include "nsIParserService.h"
 #include "nsIContent.h"
 #include "nsIAtom.h"
+#include "nsIDocumentEncoder.h"
 #include "nsString.h"
 #include "nsIParser.h"
-#include "nsHashtable.h"
 
 class mozSanitizingHTMLSerializer : public nsIContentSerializer,
                                     public nsIHTMLContentSink,
@@ -90,8 +83,7 @@ public:
                       { return NS_OK; }
   NS_IMETHOD AppendDoctype(nsIDOMDocumentType *aDoctype, nsAString& aStr)
                       { return NS_OK; }
-  NS_IMETHOD AppendElementStart(nsIDOMElement *aElement,
-                                nsIDOMElement *aOriginalElement,
+  NS_IMETHOD AppendElementStart(nsIDOMElement *aElement, PRBool aHasChildren,
                                 nsAString& aStr); 
   NS_IMETHOD AppendElementEnd(nsIDOMElement *aElement, nsAString& aStr);
   NS_IMETHOD Flush(nsAString& aStr);
@@ -100,14 +92,15 @@ public:
                                  nsAString& aStr);
 
   // nsIContentSink
-  NS_IMETHOD WillTokenize(void) { return NS_OK; }
   NS_IMETHOD WillBuildModel(void) { return NS_OK; }
-  NS_IMETHOD DidBuildModel(void) { return NS_OK; }
+  NS_IMETHOD DidBuildModel(void)
+  { nsCOMPtr<nsIParser> temp(mParser); mParser = nsnull; return NS_OK; }
   NS_IMETHOD WillInterrupt(void) { return NS_OK; }
   NS_IMETHOD WillResume(void) { return NS_OK; }
-  NS_IMETHOD SetParser(nsIParser* aParser) { return NS_OK; }
+  NS_IMETHOD SetParser(nsIParser* aParser) { mParser = aParser; return NS_OK; }
   NS_IMETHOD OpenContainer(const nsIParserNode& aNode);
   NS_IMETHOD CloseContainer(const nsHTMLTag aTag);
+  NS_IMETHOD AddHeadContent(const nsIParserNode& aNode);
   NS_IMETHOD AddLeaf(const nsIParserNode& aNode);
   NS_IMETHOD AddComment(const nsIParserNode& aNode) { return NS_OK; }
   NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode)
@@ -118,7 +111,19 @@ public:
   virtual nsISupports *GetTarget() { return nsnull; }
 
   // nsIHTMLContentSink
-  NS_IMETHOD OpenHead();
+  NS_IMETHOD OpenHTML(const nsIParserNode& aNode);
+  NS_IMETHOD CloseHTML();
+  NS_IMETHOD OpenHead(const nsIParserNode& aNode);
+  NS_IMETHOD CloseHead();
+  NS_IMETHOD SetTitle(const nsString& aValue);
+  NS_IMETHOD OpenBody(const nsIParserNode& aNode);
+  NS_IMETHOD CloseBody();
+  NS_IMETHOD OpenForm(const nsIParserNode& aNode);
+  NS_IMETHOD CloseForm();
+  NS_IMETHOD OpenMap(const nsIParserNode& aNode);
+  NS_IMETHOD CloseMap();
+  NS_IMETHOD OpenFrameset(const nsIParserNode& aNode);
+  NS_IMETHOD CloseFrameset();
   NS_IMETHOD IsEnabled(PRInt32 aTag, PRBool* aReturn);
   NS_IMETHOD NotifyTagObservers(nsIParserNode* aNode) { return NS_OK; }
   NS_IMETHOD_(PRBool) IsFormOnStack() { return PR_FALSE; }
@@ -151,13 +156,13 @@ protected:
 
 protected:
   PRInt32                      mFlags;
-  PRUint32                     mSkipLevel;
   nsHashtable                  mAllowedTags;
 
   nsCOMPtr<nsIContent>         mContent;
   nsAString*                   mOutputString;
   nsIParserNode*               mParserNode;
   nsCOMPtr<nsIParserService>   mParserService;
+  nsCOMPtr<nsIParser>          mParser;
 };
 
 nsresult

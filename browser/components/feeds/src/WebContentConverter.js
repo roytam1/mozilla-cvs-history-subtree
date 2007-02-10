@@ -20,7 +20,7 @@
 #
 # Contributor(s):
 #   Ben Goodger <beng@google.com>
-#   Asaf Romano <mano@mozilla.com>
+#   Asaf Romano <mozilla.mano@sent.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -59,11 +59,6 @@ const PREF_CONTENTHANDLERS_BRANCH = "browser.contentHandlers.types.";
 const PREF_SELECTED_WEB = "browser.feeds.handlers.webservice";
 const PREF_SELECTED_ACTION = "browser.feeds.handler";
 const PREF_SELECTED_READER = "browser.feeds.handler.default";
-
-const STRING_BUNDLE_URI = "chrome://browser/locale/feeds/subscribe.properties";
-
-const NS_ERROR_MODULE_DOM = 2152923136;
-const NS_ERROR_DOM_SYNTAX_ERR = NS_ERROR_MODULE_DOM + 12;
 
 function WebContentConverter() {
 }
@@ -155,29 +150,9 @@ ServiceInfo.prototype = {
 };
 
 var WebContentConverterRegistrar = {
-  _stringBundle: null,
-
-  get stringBundle() {
-    if (!this._stringBundle) {
-      this._stringBundle = Cc["@mozilla.org/intl/stringbundle;1"].
-                            getService(Ci.nsIStringBundleService).
-                            createBundle(STRING_BUNDLE_URI);
-    }
-
-    return this._stringBundle;
-  },
-
-  _getFormattedString: function WCCR__getFormattedString(key, params) {
-    return this.stringBundle.formatStringFromName(key, params, params.length);
-  },
-  
-  _getString: function WCCR_getString(key) {
-    return this.stringBundle.GetStringFromName(key);
-  },
-
   _contentTypes: { },
   _protocols: { },
-
+  
   /**
    * Track auto handlers for various content types using a content-type to 
    * handler map.
@@ -318,19 +293,100 @@ var WebContentConverterRegistrar = {
     return contentType;
   },
 
+  _wrapString: function WCCR__wrapString(string) {
+    var supportsString = 
+        Cc["@mozilla.org/supports-string;1"].
+        createInstance(Ci.nsISupportsString);
+    supportsString.data = string;
+    return supportsString;
+  },
+
   _makeURI: function(aURL, aOriginCharset, aBaseURI) {
     var ioService = Components.classes["@mozilla.org/network/io-service;1"]
                               .getService(Components.interfaces.nsIIOService);
     return ioService.newURI(aURL, aOriginCharset, aBaseURI);
   },
 
+  _confirmAddHandler: function WCCR__confirmAddHandler(contentType, title, uri, contentWindow) {
+    var args =
+        Cc["@mozilla.org/supports-array;1"].
+        createInstance(Ci.nsISupportsArray);
+    
+    var paramBlock = 
+        Cc["@mozilla.org/embedcomp/dialogparam;1"].
+        createInstance(Ci.nsIDialogParamBlock);
+    // Used to tell the WCCR that the user chose to add the handler (rather 
+    // than canceling).
+    const PARAM_SHOULD_ADD_HANDLER = 0;
+    paramBlock.SetInt(PARAM_SHOULD_ADD_HANDLER, 0);
+    args.AppendElement(paramBlock);
+
+    args.AppendElement(uri);
+    args.AppendElement(this._wrapString(title));
+    args.AppendElement(this._wrapString(contentType));
+
+    var typeType = 
+        Cc["@mozilla.org/supports-PRInt32;1"].
+        createInstance(Ci.nsISupportsPRInt32);
+    typeType.data = 1;
+    args.AppendElement(typeType);
+
+    var browserContentWindow = contentWindow.top;
+    var browserWindow =
+        browserContentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
+                            .getInterface(Ci.nsIWebNavigation)
+                            .QueryInterface(Ci.nsIDocShellTreeItem)
+                            .rootTreeItem
+                            .QueryInterface(Ci.nsIInterfaceRequestor)
+                            .getInterface(Ci.nsIDOMWindow);
+
+    // The tabbrowser implementation selects the associated tab when this
+    // is event is dispatched on the windoow.
+    var event = browserWindow.document.createEvent("Events");
+    event.initEvent("DOMWillOpenModalDialog", true, true);
+    browserContentWindow.dispatchEvent(event);
+
+    var ww = Cc["@mozilla.org/embedcomp/window-watcher;1"].
+             getService(Ci.nsIWindowWatcher);
+    ww.openWindow(browserWindow,
+                  "chrome://browser/content/feeds/addFeedReader.xul",
+                  "", "modal,titlebar,centerscreen,dialog=yes", args);
+
+    var event = browserWindow.document.createEvent("Events");
+    event.initEvent("DOMModalDialogClosed", true, true);
+    browserContentWindow.dispatchEvent(event);
+
+    return paramBlock.GetInt(PARAM_SHOULD_ADD_HANDLER);
+  },
+
+  _checkForDuplicateContentType: 
+  function WCCR__checkForDuplicateContentType(contentType, uri, title, contentWindow) {
+    contentType = this._resolveContentType(contentType);
+    if (this._typeIsRegistered(contentType, uri.spec)) {
+      // Show a special dialog for the feed case (XXXben - generalize at some 
+      // point to allow other types to register specialized prompts).
+      this._confirmAddHandler(contentType, title, uri, contentWindow);
+      return false;
+    }
+    return true;
+  },
+
   /**
    * See nsIWebContentHandlerRegistrar
    */
   registerProtocolHandler: 
-  function WCCR_registerProtocolHandler(aProtocol, aURI, aTitle, aContentWindow) {
-    // not yet implemented
-    return;
+  function WCCR_registerProtocolHandler(protocol, uriString, title, contentWindow) {
+# XXXben - for Firefox 2 we only support feed types
+#ifdef REGISTER_PROTOCOL_HANDLER_IMPL
+    try {
+      var uri = this._makeURI(uriString);
+    }
+    catch(ex) { return; }
+
+    LOG("registerProtocolHandler(" + protocol + "," + uri + "," + title + ")");
+    if (this._confirmAddHandler(protocol, title, uri, contentWindow))
+      this._protocols[protocol] = uri;
+#endif
   },
 
   /**
@@ -340,162 +396,31 @@ var WebContentConverterRegistrar = {
    * preferences.
    */
   registerContentHandler: 
-  function WCCR_registerContentHandler(aContentType, aURIString, aTitle, aContentWindow) {
-    LOG("registerContentHandler(" + aContentType + "," + aURIString + "," + aTitle + ")");
-
-    // We only support feed types at present.
-    // XXX this should be a "security exception" according to spec, but that
-    // isn't defined yet.
-    var contentType = this._resolveContentType(aContentType);
-    if (contentType != TYPE_MAYBE_FEED)
-      return;
+  function WCCR_registerContentHandler(contentType, uriString, title, contentWindow) {
+    LOG("registerContentHandler(" + contentType + "," + uri + "," + title + ")");
 
     try {
-      var uri = this._makeURI(aURIString);
-    } catch (ex) {
-      // not supposed to throw according to spec
-      return; 
+      var uri = this._makeURI(uriString);
     }
-    
-    // If the uri doesn't contain '%s', it won't be a good content handler
-    if (uri.spec.indexOf("%s") < 0)
-      throw NS_ERROR_DOM_SYNTAX_ERR; 
-            
+    catch(ex) { return; }
+
     // For security reasons we reject non-http(s) urls (see bug Bug 354316),
     // we may need to revise this once we support more content types
-    // XXX this should be a "security exception" according to spec, but that
-    // isn't defined yet.
     if (uri.scheme != "http" &&  uri.scheme != "https")
       throw("Permission denied to add " + uri.spec + "as a content handler");
 
-    var browserWindow = this._getBrowserWindowForContentWindow(aContentWindow);
-    var browserElement = this._getBrowserForContentWindow(browserWindow, aContentWindow);
-    var notificationBox = browserWindow.getBrowser().getNotificationBox(browserElement);
-    this._appendFeedReaderNotification(uri, aTitle, notificationBox);
-  },
+    // XXXben - for Firefox 2 we only support feed types
+    contentType = this._resolveContentType(contentType);
+    if (contentType != TYPE_MAYBE_FEED)
+      return;    
 
-  /**
-   * Returns the browser chrome window in which the content window is in
-   */
-  _getBrowserWindowForContentWindow:
-  function WCCR__getBrowserWindowForContentWindow(aContentWindow) {
-    return aContentWindow.QueryInterface(Ci.nsIInterfaceRequestor)
-                         .getInterface(Ci.nsIWebNavigation)
-                         .QueryInterface(Ci.nsIDocShellTreeItem)
-                         .rootTreeItem
-                         .QueryInterface(Ci.nsIInterfaceRequestor)
-                         .getInterface(Ci.nsIDOMWindow)
-                         .wrappedJSObject;
-  },
+    if (!this._checkForDuplicateContentType(contentType, uri, title, contentWindow) ||
+        !this._confirmAddHandler(contentType, title, uri, contentWindow))
+      return;
 
-  /**
-   * Returns the <xul:browser> element associated with the given content
-   * window.
-   *
-   * @param aBrowserWindow
-   *        The browser window in which the content window is in.
-   * @param aContentWindow
-   *        The content window. It's possible to pass a child content window
-   *        (i.e. the content window of a frame/iframe).
-   */
-  _getBrowserForContentWindow:
-  function WCCR__getBrowserForContentWindow(aBrowserWindow, aContentWindow) {
-    // This depends on pseudo APIs of browser.js and tabbrowser.xml
-    aContentWindow = aContentWindow.top;
-    var browsers = aBrowserWindow.getBrowser().browsers;
-    for (var i = 0; i < browsers.length; ++i) {
-      if (browsers[i].contentWindow == aContentWindow)
-        return browsers[i];
-    }
-  },
-
-  /**
-   * Appends a notifcation for the given feed reader details.
-   *
-   * The notification could be either a pseudo-dialog which lets
-   * the user to add the feed reader:
-   * [ [icon] Add %feed-reader-name% (%feed-reader-host%) as a Feed Reader?  (Add) [x] ]
-   *
-   * or a simple message for the case where the feed reader is already registered:
-   * [ [icon] %feed-reader-name% is already registered as a Feed Reader             [x] ]
-   *
-   * A new notification isn't appended if the given notificationbox has a
-   * notification for the same feed reader.
-   *
-   * @param aURI
-   *        The url of the feed reader as a nsIURI object
-   * @param aName
-   *        The feed reader name as it was passed to registerContentHandler
-   * @param aNotificationBox
-   *        The notification box to which a notification might be appended
-   * @return true if a notification has been appended, false otherwise.
-   */
-  _appendFeedReaderNotification:
-  function WCCR__appendFeedReaderNotification(aURI, aName, aNotificationBox) {
-    var uriSpec = aURI.spec;
-    var notificationValue = "feed reader notification: " + uriSpec;
-    var notificationIcon = aURI.prePath + "/favicon.ico";
-
-    // Don't append a new notification if the notificationbox
-    // has a notification for the given feed reader already
-    if (aNotificationBox.getNotificationWithValue(notificationValue))
-      return false;
-
-    var buttons, message;
-    if (this.getWebContentHandlerByURI(TYPE_MAYBE_FEED, uriSpec))
-      message = this._getFormattedString("handlerRegistered", [aName]);
-    else {
-      message = this._getFormattedString("addHandler", [aName, aURI.host]);
-      var self = this;
-      var addButton = {
-        _outer: self,
-        label: self._getString("addHandlerAddButton"),
-        accessKey: self._getString("addHandlerAddButtonAccesskey"),
-        feedReaderInfo: { uri: uriSpec, name: aName },
-
-        /* static */
-        callback:
-        function WCCR__addFeedReaderButtonCallback(aNotification, aButtonInfo) {
-          var uri = aButtonInfo.feedReaderInfo.uri;
-          var name = aButtonInfo.feedReaderInfo.name;
-          var outer = aButtonInfo._outer;
-
-          // The reader could have been added from another window mean while
-          if (!outer.getWebContentHandlerByURI(TYPE_MAYBE_FEED, uri)) {
-            outer._registerContentHandler(TYPE_MAYBE_FEED, uri, name);
-            outer._saveContentHandlerToPrefs(TYPE_MAYBE_FEED, uri, name);
-
-            // Make the new handler the last-selected reader in the preview page
-            // and make sure the preview page is shown the next time a feed is visited
-            var pb = Cc["@mozilla.org/preferences-service;1"].
-                     getService(Ci.nsIPrefService).getBranch(null);
-            pb.setCharPref(PREF_SELECTED_READER, "web");
-
-            var supportsString = 
-              Cc["@mozilla.org/supports-string;1"].
-              createInstance(Ci.nsISupportsString);
-              supportsString.data = uri;
-            pb.setComplexValue(PREF_SELECTED_WEB, Ci.nsISupportsString,
-                               supportsString);
-            pb.setCharPref(PREF_SELECTED_ACTION, "ask");
-            outer._setAutoHandler(TYPE_MAYBE_FEED, null);
-          }
-
-          // avoid reference cycles
-          aButtonInfo._outer = null;
-
-          return false;
-        }
-      };
-      buttons = [addButton];
-    }
-
-    aNotificationBox.appendNotification(message,
-                                        notificationValue,
-                                        notificationIcon,
-                                        aNotificationBox.PRIORITY_INFO_LOW,
-                                        buttons);
-    return true;
+    var spec = uri.spec;
+    this._registerContentHandler(contentType, spec, title);
+    this._saveContentHandlerToPrefs(contentType, spec, title);    
   },
 
   /**
@@ -541,11 +466,18 @@ var WebContentConverterRegistrar = {
       typeBranch.setComplexValue("uri", Ci.nsIPrefLocalizedString, pls);
       pls.data = title;
       typeBranch.setComplexValue("title", Ci.nsIPrefLocalizedString, pls);
-    
+
       ps.savePrefFile(null);
     }
+
+    // Make the new handler the last-selected handler for the preview page
+    // and make sure the preview page is shown the next time a feed is visited
+    var pb = ps.getBranch(null);
+    pb.setCharPref(PREF_SELECTED_READER, "web");
+    pb.setCharPref(PREF_SELECTED_WEB, uri);
+    pb.setCharPref(PREF_SELECTED_ACTION, "ask");
   },
-  
+
   /**
    * Determines if there is a type with a particular uri registered for the 
    * specified content type already.
@@ -557,7 +489,7 @@ var WebContentConverterRegistrar = {
   _typeIsRegistered: function WCCR__typeIsRegistered(contentType, uri) {
     if (!(contentType in this._contentTypes))
       return false;
-      
+
     var services = this._contentTypes[contentType];
     for (var i = 0; i < services.length; ++i) {
       // This uri has already been registered
@@ -566,7 +498,7 @@ var WebContentConverterRegistrar = {
     }
     return false;
   },
-  
+
   /**
    * Gets a stream converter contract id for the specified content type.
    * @param   contentType
@@ -578,7 +510,7 @@ var WebContentConverterRegistrar = {
     const template = "@mozilla.org/streamconv;1?from=%s&to=*/*";
     return template.replace(/%s/, contentType);
   },
-  
+
   /**
    * Update the content type -> handler map. This mapping is not persisted, use
    * registerContentHandler or _saveContentHandlerToPrefs for that purpose.
@@ -597,7 +529,7 @@ var WebContentConverterRegistrar = {
     // Avoid adding duplicates
     if (this._typeIsRegistered(contentType, uri)) 
       return;
-    
+
     this._contentTypes[contentType].push(new ServiceInfo(contentType, uri, title));
     
     if (!(contentType in this._blockedTypes)) {
@@ -607,7 +539,7 @@ var WebContentConverterRegistrar = {
                          WebContentConverterFactory);
     }
   },
-  
+
   /**
    * See nsIWebContentConverterService
    */
@@ -616,31 +548,49 @@ var WebContentConverterRegistrar = {
     countRef.value = 0;
     if (!(contentType in this._contentTypes))
       return [];
-    
+
     var handlers = this._contentTypes[contentType];
     countRef.value = handlers.length;
     return handlers;
   },
-  
+
   /**
    * See nsIWebContentConverterService
    */
   resetHandlersForType: 
   function WCCR_resetHandlersForType(contentType) {
-    // currently unused within the tree, so only useful for extensions; previous
-    // impl. was buggy (and even infinite-looped!), so I argue that this is a
-    // definite improvement
-    throw Cr.NS_ERROR_NOT_IMPLEMENTED;
+    contentType = this._resolveContentType(contentType);
+    var ps = 
+        Cc["@mozilla.org/preferences-service;1"].
+        getService(Ci.nsIPrefService);
+    try {
+      var i = 0;
+      while (true) {
+        var handlerBranch = 
+          ps.getBranch(PREF_CONTENTHANDLERS_BRANCH + i + ".");
+        try {
+          if (handlerBranch.getCharPref("type") == contentType)
+            handlerBranch.resetBranch("");
+          var defaultBranch = 
+              ps.getDefaultBranch(PREF_CONTENTHANDLERS_BRANCH + i + ".");
+          if (!this._registerContentHandlerWithBranch(defaultBranch))
+            break;
+          ++i;
+        }
+        catch (e) {
+        }
+      }
+    }
+    catch (e) {
+    }
+    ps.savePrefFile(null);
   },
-  
+
   /**
-   * Registers a handler from the settings on a preferences branch.
-   *
-   * @param branch
-   *        an nsIPrefBranch containing "type", "uri", and "title" preferences
-   *        corresponding to the content handler to be registered
+   * Registers a handler from the settings on a branch
    */
   _registerContentHandlerWithBranch: function(branch) {
+
     /**
      * Since we support up to six predefined readers, we need to handle gaps 
      * better, since the first branch with user-added values will be .6
@@ -649,20 +599,23 @@ var WebContentConverterRegistrar = {
      * branch and stop cycling once that's true.  This doesn't fix the case
      * where a user manually removes a reader, but that's not supported yet!
      */
+    
     var vals = branch.getChildList("", {});
     if (vals.length == 0)
-      return;
+      return false;
 
     try {
       var type = branch.getCharPref("type");
-      var uri = branch.getComplexValue("uri", Ci.nsIPrefLocalizedString).data;
-      var title = branch.getComplexValue("title",
-                                         Ci.nsIPrefLocalizedString).data;
+      var uri = 
+          branch.getComplexValue("uri", Ci.nsIPrefLocalizedString).data;
+      var title = 
+          branch.getComplexValue("title", Ci.nsIPrefLocalizedString).data;
       this._registerContentHandler(type, uri, title);
     }
-    catch(ex) {
+    catch (e) {
       // do nothing, the next branch might have values
     }
+    return true;
   },
 
   /**
@@ -673,24 +626,18 @@ var WebContentConverterRegistrar = {
     var ps = 
         Cc["@mozilla.org/preferences-service;1"].
         getService(Ci.nsIPrefService);
-
-    var kids = ps.getBranch(PREF_CONTENTHANDLERS_BRANCH)
-                 .getChildList("", {});
-
-    // first get the numbers of the providers by getting all ###.uri prefs
-    var nums = [];
-    for (var i = 0; i < kids.length; i++) {
-      var match = /^(\d+)\.uri$/.exec(kids[i]);
-      if (!match)
-        continue;
-      else
-        nums.push(match[1]);
+    try {
+      var i = 0;
+      while (true) {
+        var handlerBranch = 
+          ps.getBranch(PREF_CONTENTHANDLERS_BRANCH + (i++) + ".");
+        if (!this._registerContentHandlerWithBranch(handlerBranch))
+          break;
+      }
     }
-
-    // now register them
-    for (var i = 0; i < nums.length; i++) {
-      var branch = ps.getBranch(PREF_CONTENTHANDLERS_BRANCH + nums[i] + ".");
-      this._registerContentHandlerWithBranch(branch);
+    catch (e) {
+      // No content handlers yet, that's fine
+      //LOG("WCCR.init: There are no content handlers registered in preferences (benign).");
     }
 
     // We need to do this _after_ registering all of the available handlers, 
@@ -730,7 +677,7 @@ var WebContentConverterRegistrar = {
       break;      
     }
   },
-  
+
   /**
    * See nsIFactory
    */
@@ -758,7 +705,7 @@ var WebContentConverterRegistrar = {
   classID: WCCR_CLASSID,
   implementationLanguage: Ci.nsIProgrammingLanguage.JAVASCRIPT,
   flags: Ci.nsIClassInfo.DOM_OBJECT,
-  
+
   /**
    * See nsISupports
    */
@@ -781,7 +728,7 @@ var Module = {
       return this;
     throw Cr.NS_ERROR_NO_INTERFACE;
   },
-  
+
   getClassObject: function M_getClassObject(cm, cid, iid) {
     if (!iid.equals(Ci.nsIFactory))
       throw Cr.NS_ERROR_NOT_IMPLEMENTED;
@@ -791,7 +738,7 @@ var Module = {
       
     throw Cr.NS_ERROR_NO_INTERFACE;
   },
-  
+
   registerSelf: function M_registerSelf(cm, file, location, type) {
     var cr = cm.QueryInterface(Ci.nsIComponentRegistrar);
     cr.registerFactoryLocation(WCCR_CLASSID, WCCR_CLASSNAME, WCCR_CONTRACTID,
@@ -802,12 +749,12 @@ var Module = {
     catman.addCategoryEntry("app-startup", WCCR_CLASSNAME, 
                             "service," + WCCR_CONTRACTID, true, true, null);
   },
-  
+
   unregisterSelf: function M_unregisterSelf(cm, location, type) {
     var cr = cm.QueryInterface(Ci.nsIComponentRegistrar);
     cr.unregisterFactoryLocation(WCCR_CLASSID, location);
   },
-  
+
   canUnload: function M_canUnload(cm) {
     return true;
   }
@@ -818,4 +765,3 @@ function NSGetModule(cm, file) {
 }
 
 #include ../../../../toolkit/content/debug.js
-

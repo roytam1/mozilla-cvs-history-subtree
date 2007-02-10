@@ -159,7 +159,6 @@
 #include "nsWeakReference.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIMsgComposeSecure.h"
-#include "nsAutoPtr.h"
 
 //
 // Some necessary defines...
@@ -305,7 +304,7 @@ public:
   nsMsgKey                  m_messageKey;        // jt -- Draft/Template support; newly created key
   nsCOMPtr<nsIMsgIdentity>  mUserIdentity;
   nsCString                 mAccountKey;
-  nsRefPtr<nsMsgCompFields> mCompFields;         // All needed composition fields (header, etc...)
+  nsCOMPtr<nsMsgCompFields> mCompFields;         // All needed composition fields (header, etc...)
   nsFileSpec                *mTempFileSpec;      // our temporary file
   
   nsOutputFileStream        *mOutputFile;        // the actual output file stream
@@ -427,7 +426,7 @@ private:
 // 
 // These C routines should only be used by the nsMsgSendPart class.
 //
-extern nsresult mime_write_message_body(nsIMsgSend *state, const char *buf, PRInt32 size);
+extern nsresult mime_write_message_body(nsIMsgSend *state, char *buf, PRInt32 size);
 extern char   *mime_get_stream_write_buffer(void);
 extern nsresult PR_CALLBACK mime_encoder_output_fn (const char *buf, PRInt32 size, void *closure);
 extern PRBool UseQuotedPrintable(void);

@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * used by nsCSSFrameConstructor to determine and iterate the child list
- * used to construct frames (normal children or something from XBL)
- */
-
 #include "nsChildIterator.h"
 #include "nsIDocument.h"
 #include "nsIBindingManager.h"

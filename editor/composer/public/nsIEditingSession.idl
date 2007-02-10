@@ -42,6 +42,7 @@
 #include "domstubs.idl"
 
 interface nsIEditor;
+interface nsIEditingShell;
 
 [scriptable, uuid(d39fd2b4-3978-45d2-a4be-ba448171b61b)]
 

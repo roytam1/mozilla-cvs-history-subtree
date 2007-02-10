@@ -47,8 +47,6 @@
 #include "nsIPresShell.h"
 #include "nsISelection.h"
 #include "nsISelectionController.h"
-#include "nsIPersistentProperties2.h"
-#include "nsComponentManagerUtils.h"
 
 nsHTMLTextAccessible::nsHTMLTextAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell, nsIFrame *aFrame):
 nsTextAccessibleWrap(aDomNode, aShell), mFrame(aFrame)
@@ -99,54 +97,17 @@ NS_IMETHODIMP nsHTMLTextAccessible::FireToolkitEvent(PRUint32 aEvent,
   return nsTextAccessibleWrap::FireToolkitEvent(aEvent, aTarget, aData);
 }
 
-NS_IMETHODIMP nsHTMLTextAccessible::GetRole(PRUint32 *aRole)
-{
-  nsIFrame *frame = GetFrame();
-  NS_ENSURE_TRUE(frame, NS_ERROR_NULL_POINTER);
-
-  if (frame->IsGeneratedContentFrame()) {
-    *aRole = ROLE_STATICTEXT;
-    return NS_OK;
-  }
-
-  return nsTextAccessible::GetRole(aRole);
-}
-
 NS_IMETHODIMP nsHTMLTextAccessible::GetState(PRUint32 *aState)
 {
   nsTextAccessible::GetState(aState);
 
-  nsCOMPtr<nsIAccessible> docAccessible = 
-    do_QueryInterface(nsCOMPtr<nsIAccessibleDocument>(GetDocAccessible()));
+  nsCOMPtr<nsIAccessibleDocument> docAccessible(GetDocAccessible());
   if (docAccessible) {
-     PRUint32 extState;
-     docAccessible->GetExtState(&extState);
-     if (0 == (extState & EXT_STATE_EDITABLE)) {
-       *aState |= STATE_READONLY; // Links not focusable in editor
-     }
-  }
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsHTMLTextAccessible::GetAttributes(nsIPersistentProperties **aAttributes)
-{
-  *aAttributes = nsnull;
-
-  if (!mDOMNode) {
-    return NS_ERROR_FAILURE;  // Node already shut down
-  }
-
-  PRUint32 role;
-  GetRole(&role);
-  if (role == ROLE_STATICTEXT) {
-    nsCOMPtr<nsIPersistentProperties> attributes =
-        do_CreateInstance(NS_PERSISTENTPROPERTIES_CONTRACTID);
-    NS_ENSURE_TRUE(attributes, NS_ERROR_OUT_OF_MEMORY);
-    nsAutoString oldValueUnused;
-    attributes->SetStringProperty(NS_LITERAL_CSTRING("static"),
-                                  NS_LITERAL_STRING("true"), oldValueUnused);
-    attributes.swap(*aAttributes);
+    PRBool isEditable;
+    docAccessible->GetIsEditable(&isEditable);
+    if (!isEditable) {
+      *aState |= STATE_READONLY;
+    }
   }
 
   return NS_OK;
@@ -167,29 +128,6 @@ NS_IMETHODIMP nsHTMLHRAccessible::GetState(PRUint32 *aState)
 {
   nsLeafAccessible::GetState(aState);
   *aState &= ~STATE_FOCUSABLE;
-  return NS_OK;
-}
-
-nsHTMLBRAccessible::nsHTMLBRAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell):
-nsLeafAccessible(aDomNode, aShell)
-{ 
-}
-
-NS_IMETHODIMP nsHTMLBRAccessible::GetRole(PRUint32 *aRole)
-{
-  *aRole = ROLE_WHITESPACE;
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsHTMLBRAccessible::GetState(PRUint32 *aState)
-{
-  *aState = STATE_READONLY;
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsHTMLBRAccessible::GetName(nsAString& aName)
-{
-  aName = NS_STATIC_CAST(PRUnichar, '\n');    // Newline char
   return NS_OK;
 }
 
@@ -218,7 +156,7 @@ NS_IMETHODIMP nsHTMLLabelAccessible::GetName(nsAString& aReturn)
 
 NS_IMETHODIMP nsHTMLLabelAccessible::GetRole(PRUint32 *aRole)
 {
-  *aRole = ROLE_LABEL;
+  *aRole = ROLE_STATICTEXT;
   return NS_OK;
 }
 
@@ -251,7 +189,7 @@ NS_IMETHODIMP nsHTMLLabelAccessible::GetChildCount(PRInt32 *aAccChildCount)
 
 nsHTMLLIAccessible::nsHTMLLIAccessible(nsIDOMNode *aDOMNode, nsIWeakReference* aShell, 
                    nsIFrame *aBulletFrame, const nsAString& aBulletText):
-  nsHyperTextAccessible(aDOMNode, aShell)
+  nsBlockAccessible(aDOMNode, aShell)
 {
   if (!aBulletText.IsEmpty()) {
     mBulletAccessible = new nsHTMLListBulletAccessible(mDOMNode, mWeakShell, 
@@ -290,19 +228,29 @@ NS_IMETHODIMP nsHTMLLIAccessible::GetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *wid
   return NS_OK;
 }
 
-void nsHTMLLIAccessible::CacheChildren()
+void nsHTMLLIAccessible::CacheChildren(PRBool aWalkAnonContent)
 {
-  if (!mWeakShell || mAccChildCount != eChildCountUninitialized) {
+  if (!mBulletAccessible || !mWeakShell) {
+    nsAccessibleWrap::CacheChildren(aWalkAnonContent);
     return;
   }
 
-  nsAccessibleWrap::CacheChildren();
-
-  if (mBulletAccessible) {
-    mBulletAccessible->SetNextSibling(mFirstChild);
-    mBulletAccessible->SetParent(this); // Set weak parent;
+  if (mAccChildCount == eChildCountUninitialized) {
     SetFirstChild(mBulletAccessible);
-    ++ mAccChildCount;
+    mBulletAccessible->SetParent(this);
+    mAccChildCount = 1;
+    nsAccessibleTreeWalker walker(mWeakShell, mDOMNode, aWalkAnonContent);
+    walker.mState.frame = GetFrame();
+    walker.GetFirstChild();
+
+    nsCOMPtr<nsPIAccessible> privatePrevAccessible = mBulletAccessible.get();
+    while (walker.mState.accessible) {
+      ++mAccChildCount;
+      privatePrevAccessible->SetNextSibling(walker.mState.accessible);
+      privatePrevAccessible = do_QueryInterface(walker.mState.accessible);
+      privatePrevAccessible->SetParent(this);
+      walker.GetNextSibling();
+    }
   }
 }
 
@@ -311,7 +259,6 @@ nsHTMLListBulletAccessible::nsHTMLListBulletAccessible(nsIDOMNode* aDomNode,
   nsIWeakReference* aShell, nsIFrame *aFrame, const nsAString& aBulletText): 
   nsHTMLTextAccessible(aDomNode, aShell, aFrame), mWeakParent(nsnull), mBulletText(aBulletText)
 {
-  mBulletText += ' '; // Otherwise bullets are jammed up against list text
 }
 
 NS_IMETHODIMP nsHTMLListBulletAccessible::GetUniqueID(void **aUniqueID)
@@ -334,3 +281,4 @@ NS_IMETHODIMP nsHTMLListBulletAccessible::GetName(nsAString &aName)
   aName = mBulletText;
   return NS_OK;
 }
+

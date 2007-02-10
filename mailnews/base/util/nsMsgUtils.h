@@ -45,14 +45,12 @@
 #include "nsCOMPtr.h"
 #include "MailNewsTypes2.h"
 
-class nsFileSpec;
 class nsIFileSpec;
 class nsILocalFile;
 class nsIPrefBranch;
 class nsIMsgFolder;
 class nsIMsgMessageService;
 class nsIUrlListener;
-class nsIOutputStream;
 
 //These are utility functions that can used throughout the mailnews code
 
@@ -64,17 +62,9 @@ NS_MSG_BASE nsresult GetMsgDBHdrFromURI(const char *uri, nsIMsgDBHdr **msgHdr);
 
 NS_MSG_BASE nsresult CreateStartupUrl(const char *uri, nsIURI** aUrl);
 
-NS_MSG_BASE nsresult NS_MsgGetPriorityFromString(
-                       const char * const priority,
-                       nsMsgPriorityValue & outPriority);
+NS_MSG_BASE nsresult NS_MsgGetPriorityFromString(const char *priority, nsMsgPriorityValue *outPriority);
 
-NS_MSG_BASE nsresult NS_MsgGetPriorityValueString(
-                       const nsMsgPriorityValue p,
-                       nsACString & outValueString);
-
-NS_MSG_BASE nsresult NS_MsgGetUntranslatedPriorityName(
-                       const nsMsgPriorityValue p,
-                       nsACString & outName);
+NS_MSG_BASE nsresult NS_MsgGetUntranslatedPriorityName (nsMsgPriorityValue p, nsString *outName);
 
 NS_MSG_BASE nsresult NS_MsgHashIfNecessary(nsAutoString &name);
 NS_MSG_BASE nsresult NS_MsgHashIfNecessary(nsCAutoString &name);
@@ -101,7 +91,7 @@ NS_MSG_BASE PRBool WeAreOffline();
 NS_MSG_BASE nsresult GetExistingFolder(const char *aFolderURI, nsIMsgFolder **aFolder);
 
 // Escape lines starting with "From ", ">From ", etc. in a buffer.
-NS_MSG_BASE nsresult EscapeFromSpaceLine(nsIOutputStream *ouputStream, char *start, const char *end);
+NS_MSG_BASE nsresult EscapeFromSpaceLine(nsIFileSpec *pDst, char *start, const char *end);
 NS_MSG_BASE PRBool IsAFromSpaceLine(char *start, const char *end);
 
 NS_MSG_BASE nsresult NS_GetPersistentFile(const char *relPrefName,
@@ -150,40 +140,6 @@ NS_MSG_BASE void Seconds2PRTime(PRUint32 seconds, PRTime *prTime);
 // helper function to generate current date+time as a string
 NS_MSG_BASE void MsgGenerateNowStr(nsACString &nowStr);
 
-// Appends the correct summary file extension onto the supplied fileLocation
-// and returns it in summaryLocation.
-NS_MSG_BASE nsresult GetSummaryFileLocation(nsIFile* fileLocation,
-                                            nsIFile** summaryLocation);
-// XXX This function is provided temporarily whilst we are still working
-// on bug 33451 to remove nsIFileSpec from mailnews.
-NS_MSG_BASE nsresult GetSummaryFileLocation(nsIFileSpec* fileLocation,
-                                            nsIFileSpec** summaryLocation);
-// XXX This function is provided temporarily whilst we are still working
-// on bug 33451 to remove nsIFileSpec from mailnews.
-NS_MSG_BASE nsresult GetSummaryFileLocation(nsIFileSpec* fileLocation,
-                                            nsFileSpec* summaryLocation);
-// XXX This function is provided temporarily whilst we are still working
-// on bug 33451 to remove nsIFileSpec from mailnews.
-NS_MSG_BASE void GetSummaryFileLocation(nsFileSpec& fileLocation,
-                                        nsFileSpec* summaryLocation);
-
-// Gets a special directory and appends the supplied file name onto it.
-NS_MSG_BASE nsresult GetSpecialDirectoryWithFileName(const char* specialDirName,
-                                                     const char* fileName,
-                                                     nsIFile** result);
-
-// XXX This function is provided temporarily whilst we are still working
-// on bug 33451 to remove nsIFileSpec from mailnews.
-NS_MSG_BASE nsresult GetSpecialDirectoryWithFileName(const char* specialDirName,
-                                                     const char* fileName,
-                                                     nsIFileSpec** result);
-
-// XXX This function is provided temporarily whilst we are still working
-// on bug 33451 to remove nsIFileSpec from mailnews.
-NS_MSG_BASE nsresult GetSpecialDirectoryWithFileName(const char* specialDirName,
-                                                     const char* fileName,
-                                                     nsFileSpec* result);
-
 // fills in the position of the passed in keyword in the passed in keyword list
 // and returns false if the keyword isn't present
 NS_MSG_BASE PRBool MsgFindKeyword(const nsACString &keyword, nsACString &keywords, 
@@ -191,10 +147,6 @@ NS_MSG_BASE PRBool MsgFindKeyword(const nsACString &keyword, nsACString &keyword
                                   nsACString::const_iterator &end);
 
 NS_MSG_BASE PRBool MsgHostDomainIsTrusted(nsCString &host, nsCString &trustedMailDomains);
-
-NS_MSG_BASE nsresult MsgMailboxGetURI(const char *nativepath, nsCString &mailboxUri);
-
-NS_MSG_BASE void MsgStripQuotedPrintable (unsigned char *src);
 
 #endif
 

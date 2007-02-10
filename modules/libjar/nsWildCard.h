@@ -36,17 +36,29 @@
  * ***** END LICENSE BLOCK ***** */
 
 /*
- * nsWildCard.h: Defines and prototypes for shell exp. match routines
+ * shexp.h: Defines and prototypes for shell exp. match routines
  * 
- * See nsIZipReader.findEntries docs in nsIZipReader.idl for a description of
- * the supported expression syntax.
  *
- * Note that the syntax documentation explicitly says the results of certain
- * expressions are undefined.  This is intentional to require less robustness
- * in the code.  Regular expression parsing is hard; the smaller the set of
- * features and interactions this code must support, the easier it is to
- * ensure it works.
- *
+ * This routine will match a string with a shell expression. The expressions
+ * accepted are based loosely on the expressions accepted by zsh.
+ * 
+ * o * matches anything
+ * o ? matches one character
+ * o \ will escape a special character
+ * o $ matches the end of the string
+ * o [abc] matches one occurence of a, b, or c. The only character that needs
+ *         to be escaped in this is ], all others are not special.
+ * o [a-z] matches any character between a and z
+ * o [^az] matches any character except a or z
+ * o ~ followed by another shell expression will remove any pattern
+ *     matching the shell expression from the match list
+ * o (foo|bar) will match either the substring foo, or the substring bar.
+ *             These can be shell expressions as well.
+ * 
+ * The public interface to these routines is documented below.
+ * 
+ * Rob McCool
+ * 
  */
  
 #ifndef nsWildCard_h__
@@ -88,5 +100,17 @@ extern int NS_WildCardValid(char *expr);
  */
 
 extern int NS_WildCardMatch(char *str, char *expr, PRBool case_insensitive);
+
+/*
+ * Same as above, but validates the exp first. 0 on match, 1 on non-match,
+ * -1 on invalid exp.
+ */
+
+extern int NS_WildCardSearch(char *str, char *expr);
+
+/*
+ * Same as above but uses case insensitive search.
+ */
+extern int NS_WildCardCaseSearch(char *str, char *expr);
 
 #endif /* nsWildCard_h__ */

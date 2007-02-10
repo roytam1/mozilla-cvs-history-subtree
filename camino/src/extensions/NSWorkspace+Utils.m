@@ -21,7 +21,7 @@
  *
  * Contributor(s):
  *   Simon Fraser <smfr@smfr.org>
- *   Josh Aas <josh@mozilla.com>
+ *   Josh Aas <josha@mac.com>
  *   Nick Kreeger <nick.kreeger@park.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -46,17 +46,24 @@
 {
   // use a set for automatic duplicate elimination
   NSMutableSet* browsersSet = [NSMutableSet setWithCapacity:10];
-
-  // Once we are 10.4+, switch this all to LSCopyAllHandlersForURLScheme
-  NSArray* apps = [(NSArray*)LSCopyApplicationURLsForURL((CFURLRef)[NSURL URLWithString:@"https:"], kLSRolesViewer) autorelease];
-
-  // Put all the browsers IDs into a new array
+  
+  // using LSCopyApplicationURLsForURL would be nice (its not hidden),
+  // but it only exists on Mac OS X >= 10.3
+  NSArray* apps;
+  _LSCopyApplicationURLsForItemURL([NSURL URLWithString:@"http:"], kLSRolesViewer, &apps);
+  [apps autorelease];
+  
+  // Put all the browsers into a new array, but only if they also support https and have a bundle ID we can access
   NSEnumerator *appEnumerator = [apps objectEnumerator];
   NSURL* anApp;
   while ((anApp = [appEnumerator nextObject])) {
-    NSString *tmpBundleID = [self identifierForBundle:anApp];
-    if (tmpBundleID)
-      [browsersSet addObject:tmpBundleID];
+    Boolean canHandleHTTPS;
+    if ((LSCanURLAcceptURL((CFURLRef)[NSURL URLWithString:@"https:"], (CFURLRef)anApp, kLSRolesAll, kLSAcceptDefault, &canHandleHTTPS) == noErr) &&
+        canHandleHTTPS) {
+      NSString *tmpBundleID = [self identifierForBundle:anApp];
+      if (tmpBundleID)
+        [browsersSet addObject:tmpBundleID];
+    }
   }
   
   // add default browser in case it hasn't been already
@@ -69,12 +76,14 @@
 
 - (NSSet*)installedFeedViewerIdentifiers
 {
+  NSArray* apps = nil;
   NSMutableSet* feedApps = [[[NSMutableSet alloc] init] autorelease]; 
   NSString* defaultFeedViewerID = [self defaultFeedViewerIdentifier];
   if (defaultFeedViewerID)
     [feedApps addObject:defaultFeedViewerID];
   
-  NSArray* apps = [(NSArray*)LSCopyApplicationURLsForURL((CFURLRef)[NSURL URLWithString:@"feed:"], kLSRolesViewer) autorelease];
+  _LSCopyApplicationURLsForItemURL([NSURL URLWithString:@"feed:"], kLSRolesViewer, &apps);
+  [apps autorelease];
   
   NSEnumerator* appEnumerator = [apps objectEnumerator];
   NSURL* anApp;

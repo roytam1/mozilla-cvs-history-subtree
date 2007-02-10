@@ -34,12 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * interface representing a collection of style data attached to a
- * document, which may be or be combined into a style rule processor
- */
-
 #ifndef nsIStyleSheet_h___
 #define nsIStyleSheet_h___
 
@@ -50,16 +44,16 @@ class nsIAtom;
 class nsString;
 class nsIURI;
 class nsIStyleRule;
+class nsISupportsArray;
 class nsPresContext;
 class nsIContent;
 class nsIDocument;
 class nsIStyleRuleProcessor;
 
 // IID for the nsIStyleSheet interface
-// 7b2d31da-c3fb-4537-bd97-337272b83568
+// 93eea32f-681b-4405-b908-3933cf1d5091
 #define NS_ISTYLE_SHEET_IID     \
-{ 0x7b2d31da, 0xc3fb, 0x4537,   \
- { 0xbd, 0x97, 0x33, 0x72, 0x72, 0xb8, 0x35, 0x68 } }
+{0x93eea32f, 0x681b, 0x4405, {0xb9, 0x08, 0x39, 0x33, 0xcf, 0x1d, 0x50, 0x91}}
 
 /**
  * A style sheet is a thing associated with a document that has style
@@ -71,7 +65,7 @@ class nsIStyleRuleProcessor;
  */
 class nsIStyleSheet : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISTYLE_SHEET_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISTYLE_SHEET_IID)
 
   // basic style sheet data
   NS_IMETHOD GetSheetURI(nsIURI** aSheetURI) const = 0;
@@ -92,12 +86,7 @@ public:
 
   /**
    * Set the stylesheet to be enabled.  This may or may not make it
-   * applicable.  Note that this WILL inform the sheet's document of
-   * its new applicable state if the state changes but WILL NOT call
-   * BeginUpdate() or EndUpdate() on the document -- calling those is
-   * the caller's responsibility.  This allows use of SetEnabled when
-   * batched updates are desired.  If you want updates handled for
-   * you, see nsIDOMStyleSheet::SetDisabled().
+   * applicable.
    */
   NS_IMETHOD SetEnabled(PRBool aEnabled) = 0;
 
@@ -116,7 +105,5 @@ public:
   virtual void List(FILE* out = stdout, PRInt32 aIndent = 0) const = 0;
 #endif
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIStyleSheet, NS_ISTYLE_SHEET_IID)
 
 #endif /* nsIStyleSheet_h___ */

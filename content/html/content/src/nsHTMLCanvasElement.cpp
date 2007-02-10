@@ -39,7 +39,7 @@
 #include "nsGenericHTMLElement.h"
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsSize.h"
 #include "nsIFrame.h"
 #include "nsIDocument.h"
@@ -74,7 +74,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -95,10 +95,7 @@ public:
 
   NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
   nsMapRuleToAttributesFunc GetAttributeMappingFunction() const;
-  virtual PRBool ParseAttribute(PRInt32 aNamespaceID,
-                                nsIAtom* aAttribute,
-                                const nsAString& aValue,
-                                nsAttrValue& aResult);
+  PRBool ParseAttribute(nsIAtom* aAttribute, const nsAString& aValue, nsAttrValue& aResult);
   nsChangeHint GetAttributeChangeHint(const nsIAtom* aAttribute, PRInt32 aModType) const;
 
   // SetAttr override.  C++ is stupid, so have to override both
@@ -111,8 +108,6 @@ public:
   virtual nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                            nsIAtom* aPrefix, const nsAString& aValue,
                            PRBool aNotify);
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
-
 protected:
   nsIntSize GetWidthHeight();
   nsresult UpdateContext();
@@ -160,7 +155,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLCanvasElement, nsGenericElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLCanvasElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLCanvasElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLCanvasElement)
 
 nsIntSize
 nsHTMLCanvasElement::GetWidthHeight()
@@ -168,13 +163,13 @@ nsHTMLCanvasElement::GetWidthHeight()
   nsIntSize size(0,0);
   const nsAttrValue* value;
 
-  if ((value = GetParsedAttr(nsGkAtoms::width)) &&
+  if ((value = GetParsedAttr(nsHTMLAtoms::width)) &&
       value->Type() == nsAttrValue::eInteger)
   {
       size.width = value->GetIntegerValue();
   }
 
-  if ((value = GetParsedAttr(nsGkAtoms::height)) &&
+  if ((value = GetParsedAttr(nsHTMLAtoms::height)) &&
       value->Type() == nsAttrValue::eInteger)
   {
       size.height = value->GetIntegerValue();
@@ -199,7 +194,7 @@ nsHTMLCanvasElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   nsresult rv = nsGenericHTMLElement::SetAttr(aNameSpaceID, aName, aPrefix, aValue,
                                               aNotify);
   if (NS_SUCCEEDED(rv) && mCurrentContext &&
-      (aName == nsGkAtoms::width || aName == nsGkAtoms::height))
+      (aName == nsHTMLAtoms::width || aName == nsHTMLAtoms::height))
   {
     rv = UpdateContext();
     NS_ENSURE_SUCCESS(rv, rv);
@@ -214,8 +209,8 @@ nsHTMLCanvasElement::GetAttributeChangeHint(const nsIAtom* aAttribute,
 {
   nsChangeHint retval =
     nsGenericHTMLElement::GetAttributeChangeHint(aAttribute, aModType);
-  if (aAttribute == nsGkAtoms::width ||
-      aAttribute == nsGkAtoms::height)
+  if (aAttribute == nsHTMLAtoms::width ||
+      aAttribute == nsHTMLAtoms::height)
   {
     NS_UpdateHint(retval, NS_STYLE_HINT_REFLOW);
   }
@@ -238,8 +233,8 @@ nsHTMLCanvasElement::GetAttributeMappingFunction() const
 
 static const nsGenericElement::MappedAttributeEntry
 sImageMarginAttributeMap[] = {
-  { &nsGkAtoms::hspace },
-  { &nsGkAtoms::vspace },
+  { &nsHTMLAtoms::hspace },
+  { &nsHTMLAtoms::vspace },
   { nsnull }
 };
 
@@ -255,29 +250,21 @@ nsHTMLCanvasElement::IsAttributeMapped(const nsIAtom* aAttribute) const
 }
 
 PRBool
-nsHTMLCanvasElement::ParseAttribute(PRInt32 aNamespaceID,
-                                    nsIAtom* aAttribute,
+nsHTMLCanvasElement::ParseAttribute(nsIAtom* aAttribute,
                                     const nsAString& aValue,
                                     nsAttrValue& aResult)
 {
-  if (aNamespaceID == kNameSpaceID_None)
+  if ((aAttribute == nsHTMLAtoms::width) ||
+      (aAttribute == nsHTMLAtoms::height))
   {
-    if ((aAttribute == nsGkAtoms::width) ||
-        (aAttribute == nsGkAtoms::height))
-    {
-      return aResult.ParseIntWithBounds(aValue, 0);
-    }
-
-    if (ParseImageAttribute(aAttribute, aValue, aResult))
-    {
-      return PR_TRUE;
-    }
+    return aResult.ParseIntWithBounds(aValue, 0);
   }
 
-  return nsGenericHTMLElement::ParseAttribute(aNamespaceID, aAttribute, aValue,
-                                              aResult);
-}
+  if (ParseImageAttribute(aAttribute, aValue, aResult))
+    return PR_TRUE;
 
+  return nsGenericHTMLElement::ParseAttribute(aAttribute, aValue, aResult);
+}
 
 // nsHTMLCanvasElement::toDataURL
 
@@ -305,10 +292,29 @@ nsHTMLCanvasElement::ToDataURL(nsAString& aDataURL)
   ncc->GetArgc(&argc);
   ncc->GetArgvPtr(&argv);
 
-  // do a trust check if this is a write-only canvas
-  // or if we're trying to use the 2-arg form
-  if ((mWriteOnly || argc >= 2) && !nsContentUtils::IsCallerTrustedForRead()) {
-    return NS_ERROR_DOM_SECURITY_ERR;
+  if (mWriteOnly || argc >= 2) {
+    // do a trust check if this is a write-only canvas
+    // or if we're trying to use the 2-arg form
+    nsCOMPtr<nsIScriptSecurityManager> ssm =
+        do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
+    if (!ssm)
+        return NS_ERROR_FAILURE;
+
+    PRBool isTrusted = PR_FALSE;
+    PRBool isChrome = PR_FALSE;
+    PRBool hasCap = PR_FALSE;
+
+    // The secman really should handle UniversalXPConnect case, since that
+    // should include UniversalBrowserRead... doesn't right now, though.
+    if ((NS_SUCCEEDED(ssm->SubjectPrincipalIsSystem(&isChrome)) && isChrome) ||
+        (NS_SUCCEEDED(ssm->IsCapabilityEnabled("UniversalBrowserRead", &hasCap)) && hasCap) ||
+        (NS_SUCCEEDED(ssm->IsCapabilityEnabled("UniversalXPConnect", &hasCap)) && hasCap))
+    {
+        isTrusted = PR_TRUE;
+    }
+
+    if (!isTrusted)
+      return NS_ERROR_DOM_SECURITY_ERR;
   }
 
   // 0-arg case; convert to png
@@ -362,18 +368,15 @@ nsHTMLCanvasElement::ToDataURLImpl(const nsAString& aMimeType,
 {
   nsresult rv;
   
-  // We get an input stream from the context. If more than one context type
-  // is supported in the future, this will have to be changed to do the right
-  // thing. For now, just assume that the 2D context has all the goods.
-  nsCOMPtr<nsICanvasRenderingContextInternal> context;
-  rv = GetContext(NS_LITERAL_STRING("2d"), getter_AddRefs(context));
-  NS_ENSURE_SUCCESS(rv, rv);
+  // if there's no context, it's an error to call toDataURL.
+  if (!mCurrentContext)
+    return NS_ERROR_FAILURE;
 
   // get image bytes
   nsCOMPtr<nsIInputStream> imgStream;
   NS_ConvertUTF16toUTF8 aMimeType8(aMimeType);
-  rv = context->GetInputStream(aMimeType8, aEncoderOptions,
-                               getter_AddRefs(imgStream));
+  rv = mCurrentContext->GetInputStream(aMimeType8, aEncoderOptions,
+                                       getter_AddRefs(imgStream));
   // XXX ERRMSG we need to report an error to developers here! (bug 329026)
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -485,7 +488,7 @@ nsHTMLCanvasElement::UpdateContext()
 NS_IMETHODIMP
 nsHTMLCanvasElement::GetPrimaryCanvasFrame(nsIFrame **aFrame)
 {
-  *aFrame = GetPrimaryFrame(Flush_Frames);
+  *aFrame = GetPrimaryFrame(PR_TRUE);
   return NS_OK;
 }
 

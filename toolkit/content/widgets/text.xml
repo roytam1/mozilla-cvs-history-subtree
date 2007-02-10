@@ -8,10 +8,17 @@
   <!-- bound to <description>s -->
   <binding id="text-base" extends="chrome://global/content/bindings/general.xml#basecontrol">
     <implementation implements="nsIDOMXULDescriptionElement, nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULText;
+            try {
+              var accService = Components.classes["@mozilla.org/accessibilityService;1"]
+                                         .getService(Components.interfaces.nsIAccessibilityService);
+              return accService.createXULTextAccessible(this);
+            }
+            catch(ex) { /* no chrome privileges */ }
+
+            return null;
           ]]>
         </getter>
       </property>
@@ -272,7 +279,10 @@
 
     <handlers>
       <handler event="click" action="if (this.disabled) return;
-                                     var controlElement = this.labeledControlElement;
+                                     var controlElementID = this.getAttribute('control');
+                                     var controlElement;
+                                     if (controlElementID)
+                                       controlElement = document.getElementById(controlElementID);
                                      if(controlElement)
                                        controlElement.focus();
                                     "/>
@@ -281,10 +291,11 @@
 
   <binding id="text-link" extends="chrome://global/content/bindings/text.xml#text-label">
     <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULLink;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULLinkAccessible(this);
           ]]>
         </getter>
       </property>
@@ -313,8 +324,7 @@
             var safeURI = ioService.newURI("about:blank", null, null);
 
             try {
-              secMan.checkLoadURI(safeURI, uri,
-                                  nsISSM.DISALLOW_INHERIT_PRINCIPAL)
+              secMan.checkLoadURI(safeURI, uri, nsISSM.DISALLOW_SCRIPT_OR_DATA)
             } catch (ex) {
               var msg = "Error: Cannot open a " + uri.scheme + ": link using \
                          the text-link binding.";
@@ -363,4 +373,3 @@
   </binding>
 
 </bindings>
-

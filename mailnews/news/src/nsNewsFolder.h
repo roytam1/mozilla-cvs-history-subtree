@@ -113,6 +113,8 @@ public:
   NS_IMETHOD GetSortOrder(PRInt32 *order);
   NS_IMETHOD SetSortOrder(PRInt32 order);
 
+  NS_IMETHOD GetPersistElided(PRBool *aPersistElided);
+
   NS_IMETHOD Shutdown(PRBool shutdownChildren);
   
   NS_IMETHOD GetFilterList(nsIMsgWindow *aMsgWindow, nsIMsgFilterList **aFilterList);

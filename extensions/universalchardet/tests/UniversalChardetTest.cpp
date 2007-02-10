@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Pierre Phaneuf <pp@ludusdesign.com>
- *   Proofpoint, Inc.
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,6 +35,10 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+#include "nsISupports.h"
+#include "nsIComponentManager.h"
+#include "nsICharsetDetector.h"
+#include "nsICharsetDetectionObserver.h"
 #include <stdio.h>
 #include <stdlib.h>
 #if defined(XP_WIN) || defined(XP_OS2)
@@ -44,8 +47,6 @@
 #if defined(XP_UNIX) || defined(XP_BEOS)
 #include <unistd.h>
 #endif
-#include "nscore.h"
-#include "nsUniversalDetector.h"
 
 #define MAXBSIZE (1L << 13)
 
@@ -56,20 +57,43 @@ void usage() {
           ,  MAXBSIZE);
 }
 
-class nsUniversalChardetTest : public nsUniversalDetector
+class nsReporter : public nsICharsetDetectionObserver 
 {
+   NS_DECL_ISUPPORTS
  public:
-   nsUniversalChardetTest() { };
-   virtual ~nsUniversalChardetTest() { };
+   nsReporter() { };
+   virtual ~nsReporter() { };
 
-  PRBool done() const { return mDone; }
-
- private:
-   virtual void Report(const char* aCharset)
+   NS_IMETHOD Notify(const char* aCharset, nsDetectionConfident aConf)
     {
         printf("RESULT CHARSET : %s\n", aCharset);
+        printf("RESULT Confident : %d\n", aConf);
+        return NS_OK;
     };
 };
+
+
+NS_IMPL_ISUPPORTS1(nsReporter, nsICharsetDetectionObserver)
+
+nsresult GetDetector(const char* key, nsICharsetDetector** det)
+{
+  char buf[128];
+  strcpy(buf, NS_CHARSET_DETECTOR_CONTRACTID_BASE);
+  strcat(buf, key);
+  return CallCreateInstance(buf, det);
+}
+
+
+nsresult GetObserver(nsICharsetDetectionObserver** aRes)
+{
+  *aRes = nsnull;
+  nsReporter* rep = new nsReporter();
+  if(rep) {
+     return rep->QueryInterface(NS_GET_IID(nsICharsetDetectionObserver) ,
+                                (void**)aRes);
+  }
+  return NS_ERROR_OUT_OF_MEMORY;
+}
 
 int main(int argc, char** argv) {
   char buf[MAXBSIZE];
@@ -88,10 +112,26 @@ int main(int argc, char** argv) {
     return(-1);
   }
   nsresult rev = NS_OK;
-  nsUniversalChardetTest *det = new nsUniversalChardetTest;
-  if(nsnull == det){
+  nsICharsetDetector *det = nsnull;
+  rev = GetDetector("universal_charset_detector", &det);
+  if(NS_FAILED(rev) || (nsnull == det) ){
     usage();
     printf("Error: Could not find Universal Detector\n");
+    printf("XPCOM ERROR CODE = %x\n", rev);
+    return(-1);
+  }
+  nsICharsetDetectionObserver *obs = nsnull;
+  rev = GetObserver(&obs);
+  if(NS_SUCCEEDED(rev)) {
+    rev = det->Init(obs);
+    NS_IF_RELEASE(obs);
+    if(NS_FAILED(rev))
+    {
+      printf("XPCOM ERROR CODE = %x\n", rev);
+      return(-1);
+    }
+  } else {
+    printf("XPCOM ERROR CODE = %x\n", rev);
     return(-1);
   }
 
@@ -102,17 +142,26 @@ int main(int argc, char** argv) {
     sz = read(0, buf, bs);
     if(sz > 0) {
       if(! done) {
-        rev = det->HandleData( buf, sz);
+        rev = det->DoIt( buf, sz, &done);
         if(NS_FAILED(rev))
         {
-          printf("HANDLEDATA ERROR CODE = %x\n", rev);
+          printf("XPCOM ERROR CODE = %x\n", rev);
           return(-1);
         }
       }
     }
-  } while((sz > 0) &&  (!det->done()) );
+  } while((sz > 0) &&  (!done) );
   //} while(sz > 0);
-  det->DataEnd();
+  if(!done)
+  {
+    rev = det->Done();
+    if(NS_FAILED(rev))
+    {
+      printf("XPCOM ERROR CODE = %x\n", rev);
+      return(-1);
+    }
+  }
 
+  NS_IF_RELEASE(det);
   return (0);
 }

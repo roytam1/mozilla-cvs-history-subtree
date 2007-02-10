@@ -43,6 +43,9 @@ int WINAPI WinMain(	HINSTANCE hInstance,
 					LPTSTR    lpCmdLine,
 					int       nCmdShow)
 {
+
+	main();
+
 	MSG msg;
 	HACCEL hAccelTable;
 

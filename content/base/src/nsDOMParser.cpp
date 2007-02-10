@@ -42,22 +42,248 @@
 #include "nsILoadGroup.h"
 #include "nsIInputStream.h"
 #include "nsNetUtil.h"
-#include "nsStringStream.h"
+#include "nsIByteArrayInputStream.h"
+#include "nsIXPConnect.h"
+#include "nsIUnicodeEncoder.h"
+#include "nsIServiceManager.h"
+#include "nsICharsetConverterManager.h"
+#include "nsLayoutCID.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
+#include "nsIDOMDOMImplementation.h"
+#include "nsIDOMWindow.h"
+#include "nsIPrivateDOMImplementation.h"
+#include "nsIJSContextStack.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsIPrincipal.h"
+#include "nsIScriptContext.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDOMClassInfo.h"
 #include "nsReadableUtils.h"
 #include "nsCRT.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsLoadListenerProxy.h"
 #include "nsStreamUtils.h"
-#include "nsThreadUtils.h"
 #include "nsNetCID.h"
 #include "nsContentUtils.h"
-#include "nsDOMJSUtils.h"
-#include "nsDOMError.h"
+
+static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
+
+static const char* kLoadAsData = "loadAsData";
+
+static NS_DEFINE_CID(kIDOMDOMImplementationCID, NS_DOM_IMPLEMENTATION_CID);
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+
+/////////////////////////////////////////////
+//
+//
+/////////////////////////////////////////////
+
+class nsDOMParserChannel : public nsIChannel {
+public:
+  nsDOMParserChannel(nsIURI* aURI, const nsACString& aContentType);
+  virtual ~nsDOMParserChannel();
+
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIREQUEST
+  NS_DECL_NSICHANNEL
+
+protected:
+  nsCString mContentType;
+  nsCString mContentCharset;
+  nsresult mStatus;
+  PRInt32 mContentLength;
+  nsCOMPtr<nsIURI> mURI;
+  nsCOMPtr<nsISupports> mOwner;
+  nsCOMPtr<nsILoadGroup> mLoadGroup;
+};
+
+nsDOMParserChannel::nsDOMParserChannel(nsIURI* aURI, const nsACString& aContentType)
+{
+  mURI = aURI;
+  mContentType.Assign(aContentType);
+  mStatus = NS_OK;
+  mContentLength = -1;
+}
+
+nsDOMParserChannel::~nsDOMParserChannel()
+{
+}
+
+NS_IMPL_ISUPPORTS2(nsDOMParserChannel, 
+                   nsIChannel,
+                   nsIRequest)
+
+/* boolean isPending (); */
+NS_IMETHODIMP nsDOMParserChannel::GetName(nsACString &result)
+{
+    NS_NOTREACHED("nsDOMParserChannel::GetName");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP 
+nsDOMParserChannel::IsPending(PRBool *aResult)
+{
+  NS_ENSURE_ARG(aResult);
+  *aResult = PR_FALSE;
+  return NS_OK;
+}
+
+/* readonly attribute nsresult status; */
+NS_IMETHODIMP 
+nsDOMParserChannel::GetStatus(nsresult *aStatus)
+{
+  NS_ENSURE_ARG(aStatus);
+  *aStatus = mStatus;
+  return NS_OK;
+}
+
+/* void cancel (in nsresult status); */
+NS_IMETHODIMP 
+nsDOMParserChannel::Cancel(nsresult status)
+{
+  mStatus = status;
+  return NS_OK;
+}
+
+/* void suspend (); */
+NS_IMETHODIMP 
+nsDOMParserChannel::Suspend()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void resume (); */
+NS_IMETHODIMP 
+nsDOMParserChannel::Resume()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute nsIURI originalURI; */
+NS_IMETHODIMP 
+nsDOMParserChannel::GetOriginalURI(nsIURI * *aOriginalURI)
+{
+  NS_ENSURE_ARG_POINTER(aOriginalURI);
+  *aOriginalURI = mURI;
+  NS_ADDREF(*aOriginalURI);
+  return NS_OK;
+}
+NS_IMETHODIMP nsDOMParserChannel::SetOriginalURI(nsIURI * aOriginalURI)
+{
+  mURI = aOriginalURI;
+  return NS_OK;
+}
+
+/* attribute nsIURI URI; */
+NS_IMETHODIMP nsDOMParserChannel::GetURI(nsIURI * *aURI)
+{
+  NS_ENSURE_ARG_POINTER(aURI);
+  *aURI = mURI;
+  NS_ADDREF(*aURI);
+  return NS_OK;
+}
+
+/* attribute ACString contentType; */
+NS_IMETHODIMP nsDOMParserChannel::GetContentType(nsACString &aContentType)
+{
+  aContentType = mContentType;
+  return NS_OK;
+}
+NS_IMETHODIMP nsDOMParserChannel::SetContentType(const nsACString &aContentType)
+{
+  mContentType = aContentType;
+  return NS_OK;
+}
+
+/* attribute ACString contentCharset; */
+NS_IMETHODIMP nsDOMParserChannel::GetContentCharset(nsACString &aContentCharset)
+{
+  aContentCharset = mContentCharset;
+  return NS_OK;
+}
+NS_IMETHODIMP nsDOMParserChannel::SetContentCharset(const nsACString &aContentCharset)
+{
+  mContentCharset = aContentCharset;
+  return NS_OK;
+}
+
+/* attribute long contentLength; */
+NS_IMETHODIMP nsDOMParserChannel::GetContentLength(PRInt32 *aContentLength)
+{
+  NS_ENSURE_ARG(aContentLength);
+  *aContentLength = mContentLength;
+  return NS_OK;
+}
+NS_IMETHODIMP nsDOMParserChannel::SetContentLength(PRInt32 aContentLength)
+{
+  mContentLength = aContentLength;
+  return NS_OK;
+}
+
+/* attribute nsISupports owner; */
+NS_IMETHODIMP nsDOMParserChannel::GetOwner(nsISupports * *aOwner)
+{
+  NS_ENSURE_ARG_POINTER(aOwner);
+  *aOwner = mOwner;
+  NS_IF_ADDREF(*aOwner);
+  return NS_OK;
+}
+NS_IMETHODIMP nsDOMParserChannel::SetOwner(nsISupports * aOwner)
+{
+  mOwner = aOwner;
+  return NS_OK;
+}
+
+/* attribute nsLoadFlags loadFlags; */
+NS_IMETHODIMP nsDOMParserChannel::GetLoadFlags(nsLoadFlags *aLoadFlags)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsDOMParserChannel::SetLoadFlags(nsLoadFlags aLoadFlags)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute nsILoadGroup loadGroup; */
+NS_IMETHODIMP nsDOMParserChannel::GetLoadGroup(nsILoadGroup * *aLoadGroup)
+{
+  NS_ENSURE_ARG_POINTER(aLoadGroup);
+  *aLoadGroup = mLoadGroup;
+  NS_IF_ADDREF(*aLoadGroup);
+  return NS_OK;
+}
+NS_IMETHODIMP nsDOMParserChannel::SetLoadGroup(nsILoadGroup * aLoadGroup)
+{
+  mLoadGroup = aLoadGroup;
+  return NS_OK;
+}
+
+/* attribute nsIInterfaceRequestor notificationCallbacks; */
+NS_IMETHODIMP nsDOMParserChannel::GetNotificationCallbacks(nsIInterfaceRequestor * *aNotificationCallbacks)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsDOMParserChannel::SetNotificationCallbacks(nsIInterfaceRequestor * aNotificationCallbacks)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsISupports securityInfo; */
+NS_IMETHODIMP nsDOMParserChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsDOMParserChannel::Open(nsIInputStream **aResult)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsDOMParserChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
 
 // nsIDOMEventListener
 nsresult
@@ -104,9 +330,9 @@ nsDOMParser::Error(nsIDOMEvent* aEvent)
 }
 
 nsDOMParser::nsDOMParser()
-  : mLoopingForSyncLoad(PR_FALSE),
-    mAttemptedInit(PR_FALSE)
+  : mLoopingForSyncLoad(PR_FALSE)
 {
+  mEventQService = do_GetService(kEventQueueServiceCID);
 }
 
 nsDOMParser::~nsDOMParser()
@@ -120,16 +346,68 @@ nsDOMParser::~nsDOMParser()
 NS_INTERFACE_MAP_BEGIN(nsDOMParser)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMParser)
   NS_INTERFACE_MAP_ENTRY(nsIDOMParser)
-  NS_INTERFACE_MAP_ENTRY(nsIDOMParserJS)
   NS_INTERFACE_MAP_ENTRY(nsIDOMLoadListener)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
-  NS_INTERFACE_MAP_ENTRY(nsIJSNativeInitializer)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(DOMParser)
 NS_INTERFACE_MAP_END
 
 
 NS_IMPL_ADDREF(nsDOMParser)
 NS_IMPL_RELEASE(nsDOMParser)
+
+static nsresult
+ConvertWStringToStream(const PRUnichar* aStr,
+                       PRInt32 aLength,
+                       nsIInputStream** aStream,
+                       PRInt32* aContentLength)
+{
+  nsresult rv;
+  nsCOMPtr<nsIUnicodeEncoder> encoder;
+  char* charBuf;
+
+  // We want to encode the string as utf-8, so get the right encoder
+  nsCOMPtr<nsICharsetConverterManager> charsetConv = 
+           do_GetService(kCharsetConverterManagerCID, &rv);
+  NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+  
+  rv = charsetConv->GetUnicodeEncoderRaw("UTF-8",
+                                      getter_AddRefs(encoder));
+  NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
+  
+  // Convert to utf-8
+  PRInt32 charLength;
+  const PRUnichar* unicodeBuf = aStr;
+  PRInt32 unicodeLength = aLength;
+    
+  rv = encoder->GetMaxLength(unicodeBuf, unicodeLength, &charLength);
+  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+  
+  charBuf = (char*)nsMemory::Alloc(charLength + 1);
+  if (!charBuf) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  rv = encoder->Convert(unicodeBuf, 
+                        &unicodeLength, 
+                        charBuf, 
+                        &charLength);
+  if (NS_FAILED(rv)) {
+    nsMemory::Free(charBuf);
+    return NS_ERROR_FAILURE;
+  }
+
+  // The new stream takes ownership of the buffer
+  rv = NS_NewByteArrayInputStream((nsIByteArrayInputStream**)aStream, 
+                                  charBuf, 
+                                  charLength);
+  if (NS_FAILED(rv)) {
+    nsMemory::Free(charBuf);
+    return NS_ERROR_FAILURE;
+  }
+  
+  *aContentLength = charLength;
+
+  return NS_OK;
+}
 
 NS_IMETHODIMP 
 nsDOMParser::ParseFromString(const PRUnichar *str, 
@@ -139,17 +417,16 @@ nsDOMParser::ParseFromString(const PRUnichar *str,
   NS_ENSURE_ARG(str);
   NS_ENSURE_ARG_POINTER(aResult);
 
-  NS_ConvertUTF16toUTF8 data(str);
-
-  // The new stream holds a reference to the buffer
   nsCOMPtr<nsIInputStream> stream;
-  nsresult rv = NS_NewByteInputStream(getter_AddRefs(stream),
-                                      data.get(), data.Length(),
-                                      NS_ASSIGNMENT_DEPEND);
-  if (NS_FAILED(rv))
-    return rv;
+  PRInt32 contentLength;
 
-  return ParseFromStream(stream, "UTF-8", data.Length(), contentType, aResult);
+  nsresult rv = ConvertWStringToStream(str, nsCRT::strlen(str), getter_AddRefs(stream), &contentLength);
+  if (NS_FAILED(rv)) {
+    *aResult = nsnull;
+    return rv;
+  }
+
+  return ParseFromStream(stream, "UTF-8", contentLength, contentType, aResult);
 }
 
 NS_IMETHODIMP 
@@ -161,13 +438,28 @@ nsDOMParser::ParseFromBuffer(const PRUint8 *buf,
   NS_ENSURE_ARG_POINTER(buf);
   NS_ENSURE_ARG_POINTER(aResult);
 
-  // The new stream holds a reference to the buffer
   nsCOMPtr<nsIInputStream> stream;
-  nsresult rv = NS_NewByteInputStream(getter_AddRefs(stream),
-                                      NS_REINTERPRET_CAST(const char *, buf),
-                                      bufLen, NS_ASSIGNMENT_DEPEND);
-  if (NS_FAILED(rv))
+  nsCOMPtr<nsIByteArrayInputStream> baiStream;
+
+  PRUint8 *streamBuf = (PRUint8*)nsMemory::Clone(buf, bufLen);
+  if (streamBuf == nsnull) {
+    *aResult = nsnull;
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  // The new stream takes ownership of the buffer
+  nsresult rv = NS_NewByteArrayInputStream(getter_AddRefs(baiStream), (char*)streamBuf, bufLen);
+  if (NS_FAILED(rv)) {
+    nsMemory::Free(streamBuf);
+    *aResult = nsnull;
     return rv;
+  }
+
+  stream = do_QueryInterface(baiStream);
+  if (!stream) {
+    *aResult = nsnull;
+    return NS_ERROR_FAILURE;
+  }
 
   return ParseFromStream(stream, nsnull, bufLen, contentType, aResult);
 }
@@ -191,37 +483,87 @@ nsDOMParser::ParseFromStream(nsIInputStream *stream,
       (nsCRT::strcmp(contentType, "application/xhtml+xml") != 0))
     return NS_ERROR_NOT_IMPLEMENTED;
 
-  nsresult rv;
-  if (!mPrincipal) {
-    NS_ENSURE_TRUE(!mAttemptedInit, NS_ERROR_NOT_INITIALIZED);
-    AttemptedInitMarker marker(&mAttemptedInit);
-    
-    nsCOMPtr<nsIPrincipal> prin =
-      do_CreateInstance("@mozilla.org/nullprincipal;1", &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
-    rv = Init(prin, nsnull, nsnull);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
-
-  NS_ASSERTION(mPrincipal, "Must have principal by now");
-  NS_ASSERTION(mDocumentURI, "Must have document URI by now");
-  
   // Put the nsCOMPtr out here so we hold a ref to the stream as needed
-  nsCOMPtr<nsIInputStream> bufferedStream;
+  nsresult rv;
+  nsCOMPtr<nsIBufferedInputStream> bufferedStream;
   if (!NS_InputStreamIsBuffered(stream)) {
-    rv = NS_NewBufferedInputStream(getter_AddRefs(bufferedStream), stream,
-                                   4096);
+    bufferedStream = do_CreateInstance(NS_BUFFEREDINPUTSTREAM_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
-
+    rv = bufferedStream->Init(stream, 4096);
+    NS_ENSURE_SUCCESS(rv, rv);
     stream = bufferedStream;
   }
   
+  nsCOMPtr<nsIPrincipal> principal;
+  nsCOMPtr<nsIScriptSecurityManager> secMan = 
+    do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+  if (NS_SUCCEEDED(rv)) {
+    secMan->GetSubjectPrincipal(getter_AddRefs(principal));
+  }
+
+  // Try to find a base URI for the document we're creating.
+  nsCOMPtr<nsIURI> baseURI;
+
+  nsCOMPtr<nsIXPCNativeCallContext> cc;
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+  if(NS_SUCCEEDED(rv)) {
+    rv = xpc->GetCurrentNativeCallContext(getter_AddRefs(cc));
+  }
+
+  if (NS_SUCCEEDED(rv) && cc) {
+    JSContext* cx;
+    rv = cc->GetJSContext(&cx);
+    if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+    nsIScriptContext *scriptContext = GetScriptContextFromJSContext(cx);
+    if (scriptContext) {
+      nsCOMPtr<nsIDOMWindow> window =
+        do_QueryInterface(scriptContext->GetGlobalObject());
+
+      if (window) {
+        nsCOMPtr<nsIDOMDocument> domdoc;
+        window->GetDocument(getter_AddRefs(domdoc));
+
+        nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
+        if (doc) {
+          baseURI = doc->GetBaseURI();
+        }
+      }
+    }
+  }
+
+  if (!baseURI) {
+    // No URI from script environment (we are running from command line, for example).
+    // Create a dummy one.
+    // XXX Is this safe? Could we get the URI from stream or something?
+    if (!mBaseURI) {
+      rv = NS_NewURI(getter_AddRefs(baseURI),
+                     "about:blank" );
+      if (NS_FAILED(rv)) return rv;    
+    } else {
+      baseURI = mBaseURI;
+    }
+  }
+
+  // Get and initialize a DOMImplementation
+  nsCOMPtr<nsIDOMDOMImplementation> implementation(do_CreateInstance(kIDOMDOMImplementationCID, &rv));
+  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+  
+  if (baseURI) {
+    nsCOMPtr<nsIPrivateDOMImplementation> privImpl(do_QueryInterface(implementation));
+    if (privImpl) {
+      privImpl->Init(baseURI);
+    }
+  }
+
+  // Create an empty document from it
   nsCOMPtr<nsIDOMDocument> domDocument;
-  rv = nsContentUtils::CreateDocument(EmptyString(), EmptyString(), nsnull,
-                                      mDocumentURI, mBaseURI, mPrincipal,
+  nsAutoString emptyStr;
+  rv = implementation->CreateDocument(emptyStr, 
+                                      emptyStr, 
+                                      nsnull, 
                                       getter_AddRefs(domDocument));
-  NS_ENSURE_SUCCESS(rv, rv);
+  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 
   // Register as a load listener on the document
   nsCOMPtr<nsIDOMEventReceiver> target(do_QueryInterface(domDocument));
@@ -234,279 +576,108 @@ nsDOMParser::ParseFromStream(nsIInputStream *stream,
     rv = target->AddEventListenerByIID(NS_STATIC_CAST(nsIDOMEventListener*, 
                                                       proxy), 
                                        NS_GET_IID(nsIDOMLoadListener));
-    NS_ENSURE_SUCCESS(rv, rv);
+    if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
   }
 
   // Create a fake channel 
-  nsCOMPtr<nsIChannel> parserChannel;
-  NS_NewInputStreamChannel(getter_AddRefs(parserChannel), mDocumentURI, nsnull,
-                           nsDependentCString(contentType), nsnull);
-  NS_ENSURE_STATE(parserChannel);
+  nsDOMParserChannel* parserChannel = new nsDOMParserChannel(baseURI, nsDependentCString(contentType));
+  if (!parserChannel) return NS_ERROR_OUT_OF_MEMORY;
 
-  parserChannel->SetOwner(mPrincipal);
+  // Hold a reference to it in this method
+  nsCOMPtr<nsIChannel> channel = NS_STATIC_CAST(nsIChannel*, parserChannel);
+  if (principal) {
+    channel->SetOwner(principal);
+  }
 
   if (charset) {
     parserChannel->SetContentCharset(nsDependentCString(charset));
   }
+
+  nsCOMPtr<nsIRequest> request = NS_STATIC_CAST(nsIRequest*, parserChannel);
 
   // Tell the document to start loading
   nsCOMPtr<nsIStreamListener> listener;
   nsCOMPtr<nsIDocument> document(do_QueryInterface(domDocument));
   if (!document) return NS_ERROR_FAILURE;
 
+  nsCOMPtr<nsIEventQueue> modalEventQueue;
+
+  if(!mEventQService) {
+    return NS_ERROR_FAILURE;
+  }
+
   mLoopingForSyncLoad = PR_TRUE;
+
+  rv = mEventQService->PushThreadEventQueue(getter_AddRefs(modalEventQueue));
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
 
   // Have to pass PR_FALSE for reset here, else the reset will remove
   // our event listener.  Should that listener addition move to later
-  // than this call?  Then we wouldn't need to mess around with
-  // SetPrincipal, etc, probably!
-  rv = document->StartDocumentLoad(kLoadAsData, parserChannel, 
+  // than this call?
+  rv = document->StartDocumentLoad(kLoadAsData, channel, 
                                    nsnull, nsnull, 
                                    getter_AddRefs(listener),
                                    PR_FALSE);
 
-  // Make sure to give this document the right principal
-  document->SetPrincipal(mPrincipal);
-
-  // And the right base URI
-  document->SetBaseURI(mBaseURI);
+  if (principal) {
+    // Make sure to give this document the right principal
+    document->SetPrincipal(principal);
+  }
 
   if (NS_FAILED(rv) || !listener) {
+    if (modalEventQueue) {
+      mEventQService->PopThreadEventQueue(modalEventQueue);
+    }
     return NS_ERROR_FAILURE;
   }
 
   // Now start pumping data to the listener
   nsresult status;
 
-  rv = listener->OnStartRequest(parserChannel, nsnull);
-  if (NS_FAILED(rv))
-    parserChannel->Cancel(rv);
-  parserChannel->GetStatus(&status);
+  rv = listener->OnStartRequest(request, nsnull);
+  request->GetStatus(&status);
 
   if (NS_SUCCEEDED(rv) && NS_SUCCEEDED(status)) {
-    rv = listener->OnDataAvailable(parserChannel, nsnull, stream, 0,
-                                   contentLength);
-    if (NS_FAILED(rv))
-      parserChannel->Cancel(rv);
-    parserChannel->GetStatus(&status);
+    rv = listener->OnDataAvailable(request, nsnull, stream, 0, contentLength);
+    request->GetStatus(&status);
   }
 
-  rv = listener->OnStopRequest(parserChannel, nsnull, status);
-  // Failure returned from OnStopRequest does not affect the final status of
-  // the channel, so we do not need to call Cancel(rv) as we do above.
+  rv = listener->OnStopRequest(request, nsnull, status);
 
   if (NS_FAILED(rv)) {
+    if (modalEventQueue) {
+      mEventQService->PopThreadEventQueue(modalEventQueue);
+    }
     return NS_ERROR_FAILURE;
   }
 
-  // Process events until we receive a load, abort, or error event for the
-  // document object.  That event may have already fired.
-
-  nsIThread *thread = NS_GetCurrentThread();
   while (mLoopingForSyncLoad) {
-    if (!NS_ProcessNextEvent(thread))
-      break;
+    modalEventQueue->ProcessPendingEvents();
   }
+
+  mEventQService->PopThreadEventQueue(modalEventQueue);
 
   domDocument.swap(*aResult);
 
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsDOMParser::Init(nsIPrincipal* principal, nsIURI* documentURI,
-                  nsIURI* baseURI)
+NS_IMETHODIMP 
+nsDOMParser::GetBaseURI(nsIURI **aBaseURI)
 {
-  NS_ENSURE_STATE(!mAttemptedInit);
-  mAttemptedInit = PR_TRUE;
-  
-  NS_ENSURE_ARG(principal || documentURI);
+  NS_ENSURE_ARG_POINTER(aBaseURI);
 
-  mDocumentURI = documentURI;
-  if (!mDocumentURI) {
-    principal->GetURI(getter_AddRefs(mDocumentURI));
-    if (!mDocumentURI) {
-      return NS_ERROR_INVALID_ARG;
-    }
-  }
+  NS_IF_ADDREF(*aBaseURI = mBaseURI);
 
-  mPrincipal = principal;
-  if (!mPrincipal) {
-    nsIScriptSecurityManager* secMan = nsContentUtils::GetSecurityManager();
-    NS_ENSURE_TRUE(secMan, NS_ERROR_NOT_AVAILABLE);
-    nsresult rv =
-      secMan->GetCodebasePrincipal(mDocumentURI, getter_AddRefs(mPrincipal));
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
-  
-  mBaseURI = baseURI;
-  // Note: if mBaseURI is null, fine.  Leave it like that; that will use the
-  // documentURI as the base.  Otherwise for null principals we'll get
-  // nsDocument::SetBaseURI giving errors.
-
-  NS_POSTCONDITION(mPrincipal, "Must have principal");
-  NS_POSTCONDITION(mDocumentURI, "Must have document URI");
-  return NS_OK;
-}
-  
-static nsQueryInterface
-JSvalToInterface(JSContext* cx, jsval val, nsIXPConnect* xpc, PRBool* wasNull)
-{
-  if (val == JSVAL_NULL) {
-    *wasNull = PR_TRUE;
-    return nsQueryInterface(nsnull);
-  }
-  
-  *wasNull = PR_FALSE;
-  if (JSVAL_IS_OBJECT(val)) {
-    JSObject* arg = JSVAL_TO_OBJECT(val);
-
-    nsCOMPtr<nsIXPConnectWrappedNative> native;
-    xpc->GetWrappedNativeOfJSObject(cx, arg, getter_AddRefs(native));
-
-    // do_QueryWrappedNative is not null-safe
-    if (native) {
-      return do_QueryWrappedNative(native);
-    }
-  }
-  
-  return nsQueryInterface(nsnull);
-}
-
-static nsresult
-GetInitArgs(JSContext *cx, PRUint32 argc, jsval *argv,
-            nsIPrincipal** aPrincipal, nsIURI** aDocumentURI,
-            nsIURI** aBaseURI)
-{
-  // Only proceed if the caller has UniversalXPConnect.
-  PRBool haveUniversalXPConnect;
-  nsresult rv = nsContentUtils::GetSecurityManager()->
-    IsCapabilityEnabled("UniversalXPConnect", &haveUniversalXPConnect);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  if (!haveUniversalXPConnect) {
-    return NS_ERROR_DOM_SECURITY_ERR;
-  }    
-  
-  nsIXPConnect* xpc = nsContentUtils::XPConnect();
-  
-  // First arg is our principal.  If someone passes something that's
-  // not a principal and not null, die to prevent privilege escalation.
-  PRBool wasNull;
-  nsCOMPtr<nsIPrincipal> prin = JSvalToInterface(cx, argv[0], xpc, &wasNull);
-  if (!prin && !wasNull) {
-    return NS_ERROR_INVALID_ARG;
-  }
-
-  nsCOMPtr<nsIURI> documentURI;
-  nsCOMPtr<nsIURI> baseURI;
-  if (argc > 1) {
-    // Grab our document URI too.  Again, if it's something unexpected bail
-    // out.
-    documentURI = JSvalToInterface(cx, argv[1], xpc, &wasNull);
-    if (!documentURI && !wasNull) {
-      return NS_ERROR_INVALID_ARG;
-    }
-
-    if (argc > 2) {
-      // Grab our base URI as well
-      baseURI = JSvalToInterface(cx, argv[2], xpc, &wasNull);
-      if (!baseURI && !wasNull) {
-        return NS_ERROR_INVALID_ARG;
-      }
-    }
-  }
-
-  NS_IF_ADDREF(*aPrincipal = prin);
-  NS_IF_ADDREF(*aDocumentURI = documentURI);
-  NS_IF_ADDREF(*aBaseURI = baseURI);
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsDOMParser::Initialize(JSContext *cx, JSObject* obj,
-                        PRUint32 argc, jsval *argv)
+NS_IMETHODIMP 
+nsDOMParser::SetBaseURI(nsIURI *aBaseURI)
 {
-  AttemptedInitMarker marker(&mAttemptedInit);
-  nsCOMPtr<nsIPrincipal> prin;
-  nsCOMPtr<nsIURI> documentURI;
-  nsCOMPtr<nsIURI> baseURI;
-  if (argc > 0) {
-    nsresult rv = GetInitArgs(cx, argc, argv, getter_AddRefs(prin),
-                              getter_AddRefs(documentURI),
-                              getter_AddRefs(baseURI));
-    NS_ENSURE_SUCCESS(rv, rv);
-  } else {
-    // No arguments; use the subject principal
-    nsIScriptSecurityManager* secMan = nsContentUtils::GetSecurityManager();
-    NS_ENSURE_TRUE(secMan, NS_ERROR_UNEXPECTED);
+  mBaseURI = aBaseURI;
 
-    secMan->GetSubjectPrincipal(getter_AddRefs(prin));
-
-    // We're called from JS; there better be a subject principal, really.
-    NS_ENSURE_TRUE(prin, NS_ERROR_UNEXPECTED);
-  }
-
-  NS_ASSERTION(prin, "Must have principal by now");
-  
-  if (!documentURI) {
-    // No explicit documentURI; grab document and base URIs off the window our
-    // constructor was called on. Error out if anything untoward happens.
-
-    // Note that this is a behavior change as far as I can tell -- we're now
-    // using the base URI and document URI of the window off of which the
-    // DOMParser is created, not the window in which parse*() is called.
-    // Does that matter?
-
-    // Also note that |cx| matches what GetDocumentFromContext() would return,
-    // while GetDocumentFromCaller() gives us the window that the DOMParser()
-    // call was made on.
-    
-    nsCOMPtr<nsIDocument> doc =
-      do_QueryInterface(nsContentUtils::GetDocumentFromCaller());
-    if (!doc) {
-      return NS_ERROR_UNEXPECTED;
-    }
-
-    baseURI = doc->GetBaseURI();
-    documentURI = doc->GetDocumentURI();
-  }
-
-  return Init(prin, documentURI, baseURI);
-}
-
-NS_IMETHODIMP
-nsDOMParser::Init()
-{
-  AttemptedInitMarker marker(&mAttemptedInit);
-
-  nsCOMPtr<nsIXPCNativeCallContext> ncc;
-
-  nsresult rv = nsContentUtils::XPConnect()->
-    GetCurrentNativeCallContext(getter_AddRefs(ncc));
-  NS_ENSURE_SUCCESS(rv, rv);
-  NS_ENSURE_TRUE(ncc, NS_ERROR_UNEXPECTED);
-
-  JSContext *cx = nsnull;
-  rv = ncc->GetJSContext(&cx);
-  NS_ENSURE_SUCCESS(rv, rv);
-  NS_ENSURE_TRUE(cx, NS_ERROR_UNEXPECTED);
-
-  PRUint32 argc;
-  jsval *argv = nsnull;
-  ncc->GetArgc(&argc);
-  ncc->GetArgvPtr(&argv);
-
-  if (argc != 3) {
-    return NS_ERROR_INVALID_ARG;
-  }
-
-  nsCOMPtr<nsIPrincipal> prin;
-  nsCOMPtr<nsIURI> documentURI;
-  nsCOMPtr<nsIURI> baseURI;
-  rv = GetInitArgs(cx, argc, argv, getter_AddRefs(prin),
-                   getter_AddRefs(documentURI), getter_AddRefs(baseURI));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  return Init(prin, documentURI, baseURI);  
+  return NS_OK;
 }

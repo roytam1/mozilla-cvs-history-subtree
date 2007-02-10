@@ -49,7 +49,7 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "prmem.h"
-#include "nsGkAtoms.h"
+#include "nsLayoutAtoms.h"
 #include "nsMutationEvent.h"
 #include "nsContentUtils.h"
 #include "nsIURI.h"
@@ -124,7 +124,10 @@ nsDOMEvent::nsDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent)
     mTmpRealOriginalTarget = mExplicitOriginalTarget;
     nsCOMPtr<nsIContent> content = do_QueryInterface(mExplicitOriginalTarget);
     if (content) {
-      if (content->IsNativeAnonymous() || content->GetBindingParent()) {
+      if (content->IsNativeAnonymous()) {
+        mExplicitOriginalTarget = nsnull;
+      }
+      if (content->GetBindingParent()) {
         mExplicitOriginalTarget = nsnull;
       }
     }
@@ -136,6 +139,7 @@ nsDOMEvent::~nsDOMEvent()
   NS_ASSERT_OWNINGTHREAD(nsDOMEvent);
 
   if (mEventIsInternal && mEvent) {
+    delete mEvent->userType;
     delete mEvent;
   }
 }
@@ -159,11 +163,12 @@ NS_METHOD nsDOMEvent::GetType(nsAString& aType)
   if (name) {
     CopyASCIItoUTF16(name, aType);
     return NS_OK;
-  } else if (mEvent->message == NS_USER_DEFINED_EVENT && mEvent->userType) {
-    nsAutoString name;
-    mEvent->userType->ToString(name);
-    aType = Substring(name, 2, name.Length() - 2); // Remove "on"
-    return NS_OK;
+  }
+  else {
+    if (mEvent->message == NS_USER_DEFINED_EVENT && mEvent->userType) {
+      aType.Assign(NS_STATIC_CAST(nsStringKey*, mEvent->userType)->GetString());
+      return NS_OK;
+    }
   }
   
   return NS_ERROR_FAILURE;
@@ -171,20 +176,51 @@ NS_METHOD nsDOMEvent::GetType(nsAString& aType)
 
 NS_METHOD nsDOMEvent::GetTarget(nsIDOMEventTarget** aTarget)
 {
-  if (mEvent->target) {
-    return CallQueryInterface(mEvent->target, aTarget);
+  if (nsnull != mTarget) {
+    *aTarget = mTarget;
+    NS_ADDREF(*aTarget);
+    return NS_OK;
   }
+  
   *aTarget = nsnull;
+
+  nsCOMPtr<nsIContent> targetContent;  
+
+  if (mPresContext) {
+    mPresContext->EventStateManager()->
+      GetEventTargetContent(mEvent, getter_AddRefs(targetContent));
+  }
+  
+  if (targetContent) {
+    mTarget = do_QueryInterface(targetContent);
+    if (mTarget) {
+      *aTarget = mTarget;
+      NS_ADDREF(*aTarget);
+    }
+  }
+  else {
+    //Always want a target.  Use document if nothing else.
+    nsIPresShell *presShell;
+    if (mPresContext && (presShell = mPresContext->GetPresShell())) {
+      nsIDocument *doc = presShell->GetDocument();
+      if (doc) {
+        mTarget = do_QueryInterface(doc);
+        if (mTarget) {
+          *aTarget = mTarget;
+          NS_ADDREF(*aTarget);
+        }      
+      }
+    }
+  }
+
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDOMEvent::GetCurrentTarget(nsIDOMEventTarget** aCurrentTarget)
 {
-  if (mEvent->currentTarget) {
-    return CallQueryInterface(mEvent->currentTarget, aCurrentTarget);
-  }
-  *aCurrentTarget = nsnull;
+  *aCurrentTarget = mCurrentTarget;
+  NS_IF_ADDREF(*aCurrentTarget);
   return NS_OK;
 }
 
@@ -239,17 +275,18 @@ nsDOMEvent::GetTmpRealOriginalTarget(nsIDOMEventTarget** aRealEventTarget)
 NS_IMETHODIMP
 nsDOMEvent::GetOriginalTarget(nsIDOMEventTarget** aOriginalTarget)
 {
-  if (mEvent->originalTarget) {
-    return CallQueryInterface(mEvent->originalTarget, aOriginalTarget);
-  }
+  if (!mOriginalTarget)
+    return GetTarget(aOriginalTarget);
 
-  return GetTarget(aOriginalTarget);
+  *aOriginalTarget = mOriginalTarget;
+  NS_IF_ADDREF(*aOriginalTarget);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDOMEvent::HasOriginalTarget(PRBool* aResult)
 {
-  *aResult = !!(mEvent->originalTarget);
+  *aResult = (mOriginalTarget != nsnull);
   return NS_OK;
 }
 
@@ -257,9 +294,9 @@ NS_IMETHODIMP
 nsDOMEvent::SetTrusted(PRBool aTrusted)
 {
   if (aTrusted) {
-    mEvent->flags |= NS_EVENT_FLAG_TRUSTED;
+    mEvent->internalAppFlags |= NS_APP_EVENT_FLAG_TRUSTED;
   } else {
-    mEvent->flags &= ~NS_EVENT_FLAG_TRUSTED;
+    mEvent->internalAppFlags &= ~NS_APP_EVENT_FLAG_TRUSTED;
   }
 
   return NS_OK;
@@ -268,19 +305,21 @@ nsDOMEvent::SetTrusted(PRBool aTrusted)
 NS_IMETHODIMP
 nsDOMEvent::GetEventPhase(PRUint16* aEventPhase)
 {
-  // Note, remember to check that this works also
-  // if or when Bug 235441 is fixed.
-  if (mEvent->currentTarget == mEvent->target ||
-      ((mEvent->flags & NS_EVENT_FLAG_CAPTURE) &&
-       (mEvent->flags & NS_EVENT_FLAG_BUBBLE))) {
-    *aEventPhase = nsIDOMEvent::AT_TARGET;
-  } else if (mEvent->flags & NS_EVENT_FLAG_CAPTURE) {
-    *aEventPhase = nsIDOMEvent::CAPTURING_PHASE;
-  } else if (mEvent->flags & NS_EVENT_FLAG_BUBBLE) {
+  if (mEvent->flags & NS_EVENT_FLAG_CAPTURE) {
+    if (mEvent->flags & NS_EVENT_FLAG_BUBBLE) {
+      *aEventPhase = nsIDOMEvent::AT_TARGET;
+    }
+    else {
+      *aEventPhase = nsIDOMEvent::CAPTURING_PHASE;
+    }
+  }
+  else if (mEvent->flags & NS_EVENT_FLAG_BUBBLE) {
     *aEventPhase = nsIDOMEvent::BUBBLING_PHASE;
-  } else {
+  }
+  else {
     *aEventPhase = 0;
   }
+
   return NS_OK;
 }
 
@@ -313,17 +352,21 @@ nsDOMEvent::StopPropagation()
 }
 
 static void
-ReportUseOfDeprecatedMethod(nsEvent* aEvent, nsIDOMEvent* aDOMEvent,
-                            const char* aWarning)
+ReportUseOfDeprecatedMethod(nsIDOMEvent* aDOMEvent, const char* aWarning)
 {
   nsCOMPtr<nsIDocument> doc;
-  nsCOMPtr<nsINode> node = do_QueryInterface(aEvent->currentTarget);
-  if (node) {
-    doc = node->GetOwnerDoc();
+  nsCOMPtr<nsIDOMEventTarget> target;
+  aDOMEvent->GetCurrentTarget(getter_AddRefs(target));
+  nsCOMPtr<nsIContent> content = do_QueryInterface(target);
+  if (content) {
+    doc = content->GetOwnerDoc();
   } else {
-    nsCOMPtr<nsPIDOMWindow> window = do_QueryInterface(aEvent->currentTarget);
-    if (window) {
-      doc = do_QueryInterface(window->GetExtantDocument());
+    doc = do_QueryInterface(target);
+    if (!doc) {
+      nsCOMPtr<nsPIDOMWindow> window = do_QueryInterface(target);
+      if (window) {
+        doc = do_QueryInterface(window->GetExtantDocument());
+      }
     }
   }
 
@@ -342,14 +385,22 @@ ReportUseOfDeprecatedMethod(nsEvent* aEvent, nsIDOMEvent* aDOMEvent,
 NS_IMETHODIMP
 nsDOMEvent::PreventBubble()
 {
-  ReportUseOfDeprecatedMethod(mEvent, this, "UseOfPreventBubbleWarning");
+  ReportUseOfDeprecatedMethod(this, "UseOfPreventBubbleWarning");
+
+  if (mEvent->flags & NS_EVENT_FLAG_BUBBLE || mEvent->flags & NS_EVENT_FLAG_INIT) {
+    mEvent->flags |= NS_EVENT_FLAG_STOP_DISPATCH;
+  }
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsDOMEvent::PreventCapture()
 {
-  ReportUseOfDeprecatedMethod(mEvent, this, "UseOfPreventCaptureWarning");
+  ReportUseOfDeprecatedMethod(this, "UseOfPreventCaptureWarning");
+
+  if (mEvent->flags & NS_EVENT_FLAG_CAPTURE) {
+    mEvent->flags |= NS_EVENT_FLAG_STOP_DISPATCH;
+  }
   return NS_OK;
 }
 
@@ -377,110 +428,107 @@ nsDOMEvent::SetEventType(const nsAString& aEventTypeArg)
   mEvent->message = NS_USER_DEFINED_EVENT;
 
   if (mEvent->eventStructType == NS_MOUSE_EVENT) {
-    if (atom == nsGkAtoms::onmousedown)
-      mEvent->message = NS_MOUSE_BUTTON_DOWN;
-    else if (atom == nsGkAtoms::onmouseup)
-      mEvent->message = NS_MOUSE_BUTTON_UP;
-    else if (atom == nsGkAtoms::onclick)
-      mEvent->message = NS_MOUSE_CLICK;
-    else if (atom == nsGkAtoms::ondblclick)
-      mEvent->message = NS_MOUSE_DOUBLECLICK;
-    else if (atom == nsGkAtoms::onmouseover)
+    if (atom == nsLayoutAtoms::onmousedown)
+      mEvent->message = NS_MOUSE_LEFT_BUTTON_DOWN;
+    else if (atom == nsLayoutAtoms::onmouseup)
+      mEvent->message = NS_MOUSE_LEFT_BUTTON_UP;
+    else if (atom == nsLayoutAtoms::onclick)
+      mEvent->message = NS_MOUSE_LEFT_CLICK;
+    else if (atom == nsLayoutAtoms::ondblclick)
+      mEvent->message = NS_MOUSE_LEFT_DOUBLECLICK;
+    else if (atom == nsLayoutAtoms::onmouseover)
       mEvent->message = NS_MOUSE_ENTER_SYNTH;
-    else if (atom == nsGkAtoms::onmouseout)
+    else if (atom == nsLayoutAtoms::onmouseout)
       mEvent->message = NS_MOUSE_EXIT_SYNTH;
-    else if (atom == nsGkAtoms::onmousemove)
+    else if (atom == nsLayoutAtoms::onmousemove)
       mEvent->message = NS_MOUSE_MOVE;
-    else if (atom == nsGkAtoms::oncontextmenu)
+    else if (atom == nsLayoutAtoms::oncontextmenu)
       mEvent->message = NS_CONTEXTMENU;
   } else if (mEvent->eventStructType == NS_KEY_EVENT) {
-    if (atom == nsGkAtoms::onkeydown)
+    if (atom == nsLayoutAtoms::onkeydown)
       mEvent->message = NS_KEY_DOWN;
-    else if (atom == nsGkAtoms::onkeyup)
+    else if (atom == nsLayoutAtoms::onkeyup)
       mEvent->message = NS_KEY_UP;
-    else if (atom == nsGkAtoms::onkeypress)
+    else if (atom == nsLayoutAtoms::onkeypress)
       mEvent->message = NS_KEY_PRESS;
   } else if (mEvent->eventStructType == NS_COMPOSITION_EVENT) {
-    if (atom == nsGkAtoms::oncompositionstart)
+    if (atom == nsLayoutAtoms::oncompositionstart)
       mEvent->message = NS_COMPOSITION_START;
-    else if (atom == nsGkAtoms::oncompositionend)
+    else if (atom == nsLayoutAtoms::oncompositionend)
       mEvent->message = NS_COMPOSITION_END;
   } else if (mEvent->eventStructType == NS_EVENT) {
-    if (atom == nsGkAtoms::onfocus)
+    if (atom == nsLayoutAtoms::onfocus)
       mEvent->message = NS_FOCUS_CONTENT;
-    else if (atom == nsGkAtoms::onblur)
+    else if (atom == nsLayoutAtoms::onblur)
       mEvent->message = NS_BLUR_CONTENT;
-    else if (atom == nsGkAtoms::onsubmit)
+    else if (atom == nsLayoutAtoms::onsubmit)
       mEvent->message = NS_FORM_SUBMIT;
-    else if (atom == nsGkAtoms::onreset)
+    else if (atom == nsLayoutAtoms::onreset)
       mEvent->message = NS_FORM_RESET;
-    else if (atom == nsGkAtoms::onchange)
+    else if (atom == nsLayoutAtoms::onchange)
       mEvent->message = NS_FORM_CHANGE;
-    else if (atom == nsGkAtoms::onselect)
+    else if (atom == nsLayoutAtoms::onselect)
       mEvent->message = NS_FORM_SELECTED;
-    else if (atom == nsGkAtoms::onload)
-      mEvent->message = NS_LOAD;
-    else if (atom == nsGkAtoms::onunload)
+    else if (atom == nsLayoutAtoms::onload)
+      mEvent->message = NS_PAGE_LOAD;
+    else if (atom == nsLayoutAtoms::onunload)
       mEvent->message = NS_PAGE_UNLOAD;
-    else if (atom == nsGkAtoms::onabort)
+    else if (atom == nsLayoutAtoms::onabort)
       mEvent->message = NS_IMAGE_ABORT;
-    else if (atom == nsGkAtoms::onerror)
-      mEvent->message = NS_LOAD_ERROR;
+    else if (atom == nsLayoutAtoms::onerror)
+      mEvent->message = NS_IMAGE_ERROR;
   } else if (mEvent->eventStructType == NS_MUTATION_EVENT) {
-    if (atom == nsGkAtoms::onDOMAttrModified)
+    if (atom == nsLayoutAtoms::onDOMAttrModified)
       mEvent->message = NS_MUTATION_ATTRMODIFIED;
-    else if (atom == nsGkAtoms::onDOMCharacterDataModified)
+    else if (atom == nsLayoutAtoms::onDOMCharacterDataModified)
       mEvent->message = NS_MUTATION_CHARACTERDATAMODIFIED;
-    else if (atom == nsGkAtoms::onDOMNodeInserted)
+    else if (atom == nsLayoutAtoms::onDOMNodeInserted)
       mEvent->message = NS_MUTATION_NODEINSERTED;
-    else if (atom == nsGkAtoms::onDOMNodeRemoved)
+    else if (atom == nsLayoutAtoms::onDOMNodeRemoved)
       mEvent->message = NS_MUTATION_NODEREMOVED;
-    else if (atom == nsGkAtoms::onDOMNodeInsertedIntoDocument)
+    else if (atom == nsLayoutAtoms::onDOMNodeInsertedIntoDocument)
       mEvent->message = NS_MUTATION_NODEINSERTEDINTODOCUMENT;
-    else if (atom == nsGkAtoms::onDOMNodeRemovedFromDocument)
+    else if (atom == nsLayoutAtoms::onDOMNodeRemovedFromDocument)
       mEvent->message = NS_MUTATION_NODEREMOVEDFROMDOCUMENT;
-    else if (atom == nsGkAtoms::onDOMSubtreeModified)
+    else if (atom == nsLayoutAtoms::onDOMSubtreeModified)
       mEvent->message = NS_MUTATION_SUBTREEMODIFIED;
   } else if (mEvent->eventStructType == NS_UI_EVENT) {
-    if (atom == nsGkAtoms::onDOMActivate)
+    if (atom == nsLayoutAtoms::onDOMActivate)
       mEvent->message = NS_UI_ACTIVATE;
-    else if (atom == nsGkAtoms::onDOMFocusIn)
+    else if (atom == nsLayoutAtoms::onDOMFocusIn)
       mEvent->message = NS_UI_FOCUSIN;
-    else if (atom == nsGkAtoms::onDOMFocusOut)
+    else if (atom == nsLayoutAtoms::onDOMFocusOut)
       mEvent->message = NS_UI_FOCUSOUT;
-    else if (atom == nsGkAtoms::oninput)
+    else if (atom == nsLayoutAtoms::oninput)
       mEvent->message = NS_FORM_INPUT;
   } else if (mEvent->eventStructType == NS_PAGETRANSITION_EVENT) {
-    if (atom == nsGkAtoms::onpageshow)
+    if (atom == nsLayoutAtoms::onpageshow)
       mEvent->message = NS_PAGE_SHOW;
-    else if (atom == nsGkAtoms::onpagehide)
+    else if (atom == nsLayoutAtoms::onpagehide)
       mEvent->message = NS_PAGE_HIDE;
-  } else if (mEvent->eventStructType == NS_XUL_COMMAND_EVENT) {
-    if (atom == nsGkAtoms::oncommand)
-      mEvent->message = NS_XUL_COMMAND;
   }
 #ifdef MOZ_SVG
   else if (mEvent->eventStructType == NS_SVG_EVENT) {
-    if (atom == nsGkAtoms::onSVGLoad)
+    if (atom == nsLayoutAtoms::onSVGLoad)
       mEvent->message = NS_SVG_LOAD;
-    else if (atom == nsGkAtoms::onSVGUnload)
+    else if (atom == nsLayoutAtoms::onSVGUnload)
       mEvent->message = NS_SVG_UNLOAD;
-    else if (atom == nsGkAtoms::onSVGAbort)
+    else if (atom == nsLayoutAtoms::onSVGAbort)
       mEvent->message = NS_SVG_ABORT;
-    else if (atom == nsGkAtoms::onSVGError)
+    else if (atom == nsLayoutAtoms::onSVGError)
       mEvent->message = NS_SVG_ERROR;
-    else if (atom == nsGkAtoms::onSVGResize)
+    else if (atom == nsLayoutAtoms::onSVGResize)
       mEvent->message = NS_SVG_RESIZE;
-    else if (atom == nsGkAtoms::onSVGScroll)
+    else if (atom == nsLayoutAtoms::onSVGScroll)
       mEvent->message = NS_SVG_SCROLL;
   } else if (mEvent->eventStructType == NS_SVGZOOM_EVENT) {
-    if (atom == nsGkAtoms::onSVGZoom)
+    if (atom == nsLayoutAtoms::onSVGZoom)
       mEvent->message = NS_SVG_ZOOM;
   }
 #endif // MOZ_SVG
 
   if (mEvent->message == NS_USER_DEFINED_EVENT)
-    mEvent->userType = atom;
+    mEvent->userType = new nsStringKey(aEventTypeArg);
 
   return NS_OK;
 }
@@ -505,22 +553,10 @@ nsDOMEvent::InitEvent(const nsAString& aEventTypeArg, PRBool aCanBubbleArg, PRBo
 
   NS_ENSURE_SUCCESS(SetEventType(aEventTypeArg), NS_ERROR_FAILURE);
 
-  if (aCanBubbleArg) {
-    mEvent->flags &= ~NS_EVENT_FLAG_CANT_BUBBLE;
-  } else {
-    mEvent->flags |= NS_EVENT_FLAG_CANT_BUBBLE;
-  }
-
-  if (aCancelableArg) {
-    mEvent->flags &= ~NS_EVENT_FLAG_CANT_CANCEL;
-  } else {
-    mEvent->flags |= NS_EVENT_FLAG_CANT_CANCEL;
-  }
-
-  // Clearing the old targets, so that the event is targeted correctly when
-  // re-dispatching it.
-  mEvent->target = nsnull;
-  mEvent->originalTarget = nsnull;
+  mEvent->flags |=
+    aCanBubbleArg ? NS_EVENT_FLAG_NONE : NS_EVENT_FLAG_CANT_BUBBLE;
+  mEvent->flags |=
+    aCancelableArg ? NS_EVENT_FLAG_NONE : NS_EVENT_FLAG_CANT_CANCEL;
 
   // Unset the NS_EVENT_FLAG_STOP_DISPATCH_IMMEDIATELY bit (which is
   // set at the end of event dispatch) so that this event can be
@@ -624,8 +660,6 @@ NS_METHOD nsDOMEvent::DuplicatePrivateData()
       isInputEvent = PR_TRUE;
       mouseEvent->clickCount = oldMouseEvent->clickCount;
       mouseEvent->acceptActivation = oldMouseEvent->acceptActivation;
-      mouseEvent->relatedTarget = oldMouseEvent->relatedTarget;
-      mouseEvent->button = oldMouseEvent->button;
       newEvent = mouseEvent;
       break;
     }
@@ -673,8 +707,6 @@ NS_METHOD nsDOMEvent::DuplicatePrivateData()
         NS_STATIC_CAST(nsMouseScrollEvent*, mEvent);
       mouseScrollEvent->scrollFlags = oldMouseScrollEvent->scrollFlags;
       mouseScrollEvent->delta = oldMouseScrollEvent->delta;
-      mouseScrollEvent->relatedTarget = oldMouseScrollEvent->relatedTarget;
-      mouseScrollEvent->button = oldMouseScrollEvent->button;
       newEvent = mouseScrollEvent;
       break;
     }
@@ -727,11 +759,13 @@ NS_METHOD nsDOMEvent::DuplicatePrivateData()
       newEvent->eventStructType = NS_POPUP_EVENT;
       break;
     }
-    case NS_COMMAND_EVENT:
+    case NS_APPCOMMAND_EVENT:
     {
-      newEvent = new nsCommandEvent(PR_FALSE, mEvent->userType,
-        NS_STATIC_CAST(nsCommandEvent*, mEvent)->command, nsnull);
+      newEvent = new nsAppCommandEvent(PR_FALSE, msg, nsnull);
       NS_ENSURE_TRUE(newEvent, NS_ERROR_OUT_OF_MEMORY);
+      isInputEvent = PR_TRUE;
+      NS_STATIC_CAST(nsAppCommandEvent*, newEvent)->appCommand =
+        NS_STATIC_CAST(nsAppCommandEvent*, mEvent)->appCommand;
       break;
     }
     case NS_POPUPBLOCKED_EVENT:
@@ -789,8 +823,8 @@ NS_METHOD nsDOMEvent::DuplicatePrivateData()
       NS_ENSURE_TRUE(newEvent, NS_ERROR_OUT_OF_MEMORY);
       isInputEvent = PR_TRUE;
       newEvent->eventStructType = NS_XUL_COMMAND_EVENT;
-       NS_STATIC_CAST(nsXULCommandEvent*, newEvent)->sourceEvent =
-         NS_STATIC_CAST(nsXULCommandEvent*, mEvent)->sourceEvent;
+      NS_STATIC_CAST(nsXULCommandEvent*, newEvent)->sourceEvent =
+        NS_STATIC_CAST(nsXULCommandEvent*, mEvent)->sourceEvent;
       break;
     }
     default:
@@ -811,13 +845,16 @@ NS_METHOD nsDOMEvent::DuplicatePrivateData()
     newInputEvent->isMeta = oldInputEvent->isMeta;
   }
 
-  newEvent->target                 = mEvent->target;
-  newEvent->currentTarget          = mEvent->currentTarget;
-  newEvent->originalTarget         = mEvent->originalTarget;
+  if (!mTarget) {
+    // GetTarget sets mTarget
+    nsCOMPtr<nsIDOMEventTarget> dummy;
+    GetTarget(getter_AddRefs(dummy));
+  }
   newEvent->flags                  = mEvent->flags;
+  newEvent->internalAppFlags       = mEvent->internalAppFlags;
   newEvent->time                   = mEvent->time;
+  newEvent->point                  = mEvent->point;
   newEvent->refPoint               = mEvent->refPoint;
-  newEvent->userType               = mEvent->userType;
 
   mEvent = newEvent;
   mPresContext = nsnull;
@@ -837,7 +874,7 @@ NS_METHOD nsDOMEvent::SetTarget(nsIDOMEventTarget* aTarget)
   }
 #endif
 
-  mEvent->target = aTarget;
+  mTarget = aTarget;
   return NS_OK;
 }
 
@@ -852,7 +889,7 @@ NS_METHOD nsDOMEvent::SetCurrentTarget(nsIDOMEventTarget* aCurrentTarget)
   }
 #endif
 
-  mEvent->currentTarget = aCurrentTarget;
+  mCurrentTarget = aCurrentTarget;
   return NS_OK;
 }
 
@@ -867,7 +904,7 @@ NS_METHOD nsDOMEvent::SetOriginalTarget(nsIDOMEventTarget* aOriginalTarget)
   }
 #endif
 
-  mEvent->originalTarget = aOriginalTarget;
+  mOriginalTarget = aOriginalTarget;
   return NS_OK;
 }
 
@@ -879,6 +916,28 @@ nsDOMEvent::IsDispatchStopped(PRBool* aIsDispatchStopped)
   } else {
     *aIsDispatchStopped = PR_FALSE;
   }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMEvent::IsHandled(PRBool* aIsHandled)
+{
+  if (mEvent->internalAppFlags | NS_APP_EVENT_FLAG_HANDLED) {
+    *aIsHandled = PR_TRUE;
+  } else {
+    *aIsHandled = PR_FALSE;
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMEvent::SetHandled(PRBool aHandled)
+{
+  if(aHandled)
+    mEvent->internalAppFlags |= NS_APP_EVENT_FLAG_HANDLED;
+  else
+    mEvent->internalAppFlags &= ~NS_APP_EVENT_FLAG_HANDLED;
+
   return NS_OK;
 }
 
@@ -987,14 +1046,14 @@ nsDOMEvent::GetEventPopupControlState(nsEvent *aEvent)
       PRUint32 key = NS_STATIC_CAST(nsKeyEvent *, aEvent)->keyCode;
       switch(aEvent->message) {
       case NS_KEY_PRESS :
-        // return key on focused button. see note at NS_MOUSE_CLICK.
+        // return key on focused button. see note at NS_MOUSE_LEFT_CLICK.
         if (key == nsIDOMKeyEvent::DOM_VK_RETURN)
           abuse = openAllowed;
         else if (::PopupAllowedForEvent("keypress"))
           abuse = openControlled;
         break;
       case NS_KEY_UP :
-        // space key on focused button. see note at NS_MOUSE_CLICK.
+        // space key on focused button. see note at NS_MOUSE_LEFT_CLICK.
         if (key == nsIDOMKeyEvent::DOM_VK_SPACE)
           abuse = openAllowed;
         else if (::PopupAllowedForEvent("keyup"))
@@ -1008,18 +1067,17 @@ nsDOMEvent::GetEventPopupControlState(nsEvent *aEvent)
     }
     break;
   case NS_MOUSE_EVENT :
-    if (NS_IS_TRUSTED_EVENT(aEvent) &&
-        NS_STATIC_CAST(nsMouseEvent*, aEvent)->button == nsMouseEvent::eLeftButton) {
+    if (NS_IS_TRUSTED_EVENT(aEvent)) {
       switch(aEvent->message) {
-      case NS_MOUSE_BUTTON_UP :
+      case NS_MOUSE_LEFT_BUTTON_UP :
         if (::PopupAllowedForEvent("mouseup"))
           abuse = openControlled;
         break;
-      case NS_MOUSE_BUTTON_DOWN :
+      case NS_MOUSE_LEFT_BUTTON_DOWN :
         if (::PopupAllowedForEvent("mousedown"))
           abuse = openControlled;
         break;
-      case NS_MOUSE_CLICK :
+      case NS_MOUSE_LEFT_CLICK :
         /* Click events get special treatment because of their
            historical status as a more legitimate event handler. If
            click popups are enabled in the prefs, clear the popup
@@ -1027,7 +1085,7 @@ nsDOMEvent::GetEventPopupControlState(nsEvent *aEvent)
         if (::PopupAllowedForEvent("click"))
           abuse = openAllowed;
         break;
-      case NS_MOUSE_DOUBLECLICK :
+      case NS_MOUSE_LEFT_DOUBLECLICK :
         if (::PopupAllowedForEvent("dblclick"))
           abuse = openControlled;
         break;
@@ -1036,7 +1094,7 @@ nsDOMEvent::GetEventPopupControlState(nsEvent *aEvent)
     break;
   case NS_SCRIPT_ERROR_EVENT :
     switch(aEvent->message) {
-    case NS_LOAD_ERROR :
+    case NS_SCRIPT_ERROR :
       // Any error event will allow popups, if enabled in the pref.
       if (::PopupAllowedForEvent("error"))
         abuse = openControlled;
@@ -1090,19 +1148,25 @@ nsDOMEvent::Shutdown()
   }
 }
 
-// To be called ONLY by nsDOMEvent::GetType (which has the additional
-// logic for handling user-defined events).
 // static
 const char* nsDOMEvent::GetEventName(PRUint32 aEventType)
 {
   switch(aEventType) {
-  case NS_MOUSE_BUTTON_DOWN:
+  case NS_MOUSE_LEFT_BUTTON_DOWN:
+  case NS_MOUSE_MIDDLE_BUTTON_DOWN:
+  case NS_MOUSE_RIGHT_BUTTON_DOWN:
     return sEventNames[eDOMEvents_mousedown];
-  case NS_MOUSE_BUTTON_UP:
+  case NS_MOUSE_LEFT_BUTTON_UP:
+  case NS_MOUSE_MIDDLE_BUTTON_UP:
+  case NS_MOUSE_RIGHT_BUTTON_UP:
     return sEventNames[eDOMEvents_mouseup];
-  case NS_MOUSE_CLICK:
+  case NS_MOUSE_LEFT_CLICK:
+  case NS_MOUSE_MIDDLE_CLICK:
+  case NS_MOUSE_RIGHT_CLICK:
     return sEventNames[eDOMEvents_click];
-  case NS_MOUSE_DOUBLECLICK:
+  case NS_MOUSE_LEFT_DOUBLECLICK:
+  case NS_MOUSE_MIDDLE_DOUBLECLICK:
+  case NS_MOUSE_RIGHT_DOUBLECLICK:
     return sEventNames[eDOMEvents_dblclick];
   case NS_MOUSE_ENTER_SYNTH:
     return sEventNames[eDOMEvents_mouseover];
@@ -1126,7 +1190,9 @@ const char* nsDOMEvent::GetEventName(PRUint32 aEventType)
     return sEventNames[eDOMEvents_blur];
   case NS_XUL_CLOSE:
     return sEventNames[eDOMEvents_close];
-  case NS_LOAD:
+  case NS_PAGE_LOAD:
+  case NS_IMAGE_LOAD:
+  case NS_SCRIPT_LOAD:
     return sEventNames[eDOMEvents_load];
   case NS_BEFORE_PAGE_UNLOAD:
     return sEventNames[eDOMEvents_beforeunload];
@@ -1134,7 +1200,8 @@ const char* nsDOMEvent::GetEventName(PRUint32 aEventType)
     return sEventNames[eDOMEvents_unload];
   case NS_IMAGE_ABORT:
     return sEventNames[eDOMEvents_abort];
-  case NS_LOAD_ERROR:
+  case NS_IMAGE_ERROR:
+  case NS_SCRIPT_ERROR:
     return sEventNames[eDOMEvents_error];
   case NS_FORM_SUBMIT:
     return sEventNames[eDOMEvents_submit];
@@ -1199,6 +1266,7 @@ const char* nsDOMEvent::GetEventName(PRUint32 aEventType)
   case NS_MUTATION_CHARACTERDATAMODIFIED:
     return sEventNames[eDOMEvents_characterdatamodified];
   case NS_CONTEXTMENU:
+  case NS_CONTEXTMENU_KEY:
     return sEventNames[eDOMEvents_contextmenu];
   case NS_UI_ACTIVATE:
     return sEventNames[eDOMEvents_DOMActivate];
@@ -1229,11 +1297,11 @@ const char* nsDOMEvent::GetEventName(PRUint32 aEventType)
   default:
     break;
   }
-  // XXXldb We can hit this case for nsEvent objects that we didn't
-  // create and that are not user defined events since this function and
-  // SetEventType are incomplete.  (But fixing that requires fixing the
-  // arrays in nsEventListenerManager too, since the events for which
-  // this is a problem generally *are* created by nsDOMEvent.)
+  // XXXldb We can hit this case in many ways, partly thanks to
+  // nsDOMEvent::SetEventType being incomplete, and partly due to some
+  // event types not having message constants at all (e.g., popup
+  // blocked events).  Shouldn't we use the event's userType when we
+  // can?
   return nsnull;
 }
 

@@ -55,31 +55,43 @@ void
 nsRecyclingAllocator::nsRecycleTimerCallback(nsITimer *aTimer, void *aClosure)
 {
     nsRecyclingAllocator *obj = (nsRecyclingAllocator *) aClosure;
-
-    nsAutoLock lock(obj->mLock);
-
     if (!obj->mTouched)
     {
-        obj->ClearFreeList();
+        if (obj->mFreeList)
+            obj->FreeUnusedBuckets();
+
+        // If we are holding no more memory, there is no need for the timer.
+        // We will revive the timer on the next allocation.
+        // XXX Unfortunately there is no way to Cancel and restart the same timer.
+        // XXX So we pretty much kill it and create a new one later.
+        if (!obj->mFreeList && obj->mRecycleTimer)
+        {
+            obj->mRecycleTimer->Cancel();
+            NS_RELEASE(obj->mRecycleTimer);
+        }
     }
     else
     {
         // Clear touched so the next time the timer fires we can test whether
         // the allocator was used or not.
-        obj->mTouched = PR_FALSE;
+        obj->Untouch();
     }
 }
 
 
 nsRecyclingAllocator::nsRecyclingAllocator(PRUint32 nbucket, PRUint32 recycleAfter, const char *id) :
-    mMaxBlocks(nbucket), mFreeListCount(0), mFreeList(nsnull),
-    mRecycleTimer(nsnull), mRecycleAfter(recycleAfter), mTouched(PR_FALSE)
+    mMaxBlocks(nbucket), mBlocks(nsnull), mFreeList(nsnull), mNotUsedList(nsnull),
+    mRecycleTimer(nsnull), mRecycleAfter(recycleAfter), mTouched(0), mId(id)
 #ifdef DEBUG
-    , mId(id), mNAllocated(0)
+     ,mNAllocated(0)
 #endif
 {
+    NS_ASSERTION(mMaxBlocks <= NS_MAX_BLOCKS, "Too many blocks. This will affect the allocator's performance.");
+
     mLock = PR_NewLock();
     NS_ASSERTION(mLock, "Recycling allocator cannot get lock");
+
+    Init(nbucket, recycleAfter, id);
 }
 
 nsresult
@@ -87,21 +99,56 @@ nsRecyclingAllocator::Init(PRUint32 nbucket, PRUint32 recycleAfter, const char *
 {
     nsAutoLock lock(mLock);
 
-    ClearFreeList();
+    // Free all memory held, if any
+    while(mFreeList)
+    {
+        free(mFreeList->block);
+        mFreeList = mFreeList->next;
+    }
+    mFreeList = nsnull;
+    
+    if (mBlocks)
+        delete [] mBlocks;
 
     // Reinitialize everything
     mMaxBlocks = nbucket;
+    if (nbucket)
+    {
+        // Create memory for our bookkeeping
+        mBlocks = new BlockStoreNode[mMaxBlocks];
+        if (!mBlocks)
+            return NS_ERROR_OUT_OF_MEMORY;
+        // Link them together
+        mNotUsedList = mBlocks;
+        for (PRUint32 i=0; i < mMaxBlocks-1; i++)
+            mBlocks[i].next = &(mBlocks[i+1]);
+    }
+
     mRecycleAfter = recycleAfter;
-#ifdef DEBUG
     mId = id;
-#endif
 
     return NS_OK;
 }
 
 nsRecyclingAllocator::~nsRecyclingAllocator()
 {
-    ClearFreeList();
+    // Cancel and destroy recycle timer
+    if (mRecycleTimer)
+    {
+        mRecycleTimer->Cancel();
+        NS_RELEASE(mRecycleTimer);
+    }
+
+    // Free all memory held, if any
+    while(mFreeList)
+    {
+        free(mFreeList->block);
+        mFreeList = mFreeList->next;
+    }
+    mFreeList = nsnull;
+    
+    if (mBlocks)
+        delete [] mBlocks;
 
     if (mLock)
     {
@@ -114,65 +161,48 @@ nsRecyclingAllocator::~nsRecyclingAllocator()
 void*
 nsRecyclingAllocator::Malloc(PRSize bytes, PRBool zeroit)
 {
-    // We don't enter lock for this check. This is intentional.
-    // Here is my logic: we are checking if (mFreeList). Doing this check
-    // without locking can lead to unpredictable results. YES. But the effect
-    // of the unpredictedness are ok. here is why:
-    //
-    // a) if the check returned NULL when there is stuff in freelist
-    //    We would just end up reallocating.
-    //
-    // b) if the check returned nonNULL when our freelist is empty
-    //    This is the more likely and dangerous case. The code for
-    //    FindFreeBlock() will enter lock, while (null) and return null.
-    //
-    // The reason why I chose to not enter lock for this check was that when
-    // there are no free blocks, we don't want to impose any more overhead than
-    // we already are for failing over to malloc/free.
-    if (mFreeList) {
-        nsAutoLock lock(mLock);
+    // Mark that we are using. This will prevent any
+    // timer based release of unused memory.
+    Touch();
+  
+    Block* freeBlock = FindFreeBlock(bytes);
+    if (freeBlock)
+    {
+        void *data = DATA(freeBlock);
 
-        // Mark that we are using. This will prevent any
-        // Timer based release of unused memory.
-        mTouched = PR_TRUE;
-
-        Block* freeNode = mFreeList;
-        Block** prevp = &mFreeList;
-
-        while (freeNode)
-        {
-            if (freeNode->bytes >= bytes)
-            {
-                // Found the best fit free block
-                // Remove this block from free list
-                *prevp = freeNode->next;
-                mFreeListCount --;
-
-                void *data = DATA(freeNode);
-                if (zeroit)
-                    memset(data, 0, bytes);
-                return data;
-            }
-
-            prevp = &(freeNode->next);
-            freeNode = freeNode->next;
-        }
+        if (zeroit)
+            memset(data, 0, bytes);
+        return data;
     }
-    
+     
     // We need to do an allocation
     // Add 4 bytes to what we allocate to hold the bucket index
     PRSize allocBytes = bytes + NS_ALLOCATOR_OVERHEAD_BYTES;
-
-    // Make sure it is big enough to hold the whole block
-    if (allocBytes < sizeof(Block)) allocBytes = sizeof(Block);
-
-    // We don't have that memory already. Allocate.
-    Block *ptr = (Block *) (zeroit ? calloc(1, allocBytes) : malloc(allocBytes));
   
+    // We dont have that memory already. Allocate.
+    Block *ptr = (Block *) (zeroit ? calloc(1, allocBytes) : malloc(allocBytes));
+    
     // Deal with no memory situation
     if (!ptr)
         return ptr;
+  
+    // This is the first allocation we are holding.
+    // Setup timer for releasing memory
+    // If this fails, then we wont have a timer to release unused
+    // memory. We can live with that. Also, the next allocation
+    // will try again to set the timer.
+    if (mRecycleAfter && !mRecycleTimer)
+    {
+        // known only to stuff in xpcom.  
+        extern nsresult NS_NewTimer(nsITimer* *aResult, nsTimerCallbackFunc aCallback, void *aClosure,
+                                    PRUint32 aDelay, PRUint32 aType);
 
+        (void) NS_NewTimer(&mRecycleTimer, nsRecycleTimerCallback, this, 
+                           NS_SEC_TO_MS(mRecycleAfter),
+                           nsITimer::TYPE_REPEATING_SLACK);
+        NS_ASSERTION(mRecycleTimer, "nsRecyclingAllocator: Creating timer failed.\n");
+    }
+ 
 #ifdef DEBUG
     mNAllocated++;
 #endif
@@ -185,32 +215,14 @@ nsRecyclingAllocator::Malloc(PRSize bytes, PRBool zeroit)
 void
 nsRecyclingAllocator::Free(void *ptr)
 {
-    Block* block = DATA_TO_BLOCK(ptr);
-
-    nsAutoLock lock(mLock);
-
     // Mark that we are using the allocator. This will prevent any
     // timer based release of unused memory.
-    mTouched = PR_TRUE;
+    Touch();
 
-    // Check on maximum number of blocks to keep in the freelist
-    if (mFreeListCount < mMaxBlocks) {
-        // Find the right spot in the sorted list.
-        Block* freeNode = mFreeList;
-        Block** prevp = &mFreeList;
-        while (freeNode)
-        {
-            if (freeNode->bytes >= block->bytes)
-                break;
-            prevp = &(freeNode->next);
-            freeNode = freeNode->next;
-        }
+    Block* block = DATA_TO_BLOCK(ptr);
 
-        // Needs to be inserted between *prevp and freeNode
-        *prevp = block;
-        block->next = freeNode;
-        mFreeListCount ++;
-    } else {
+    if (!AddToFreeList(block))
+    {
         // We are holding more than max. Failover to free
 #ifdef DEBUG_dp
         char buf[1024];
@@ -224,67 +236,139 @@ nsRecyclingAllocator::Free(void *ptr)
 #endif
         free(block);
     }
-
-    // Set up timer for releasing memory for blocks from the freelist.
-    // If this fails, then we won't have a timer to release unused
-    // memory. We can live with that. Also, the next Free
-    // will try again to set the timer.
-    if (mRecycleAfter && !mRecycleTimer)
-    {
-        // known only to stuff in xpcom.
-        extern nsresult NS_NewTimer(nsITimer* *aResult, nsTimerCallbackFunc aCallback, void *aClosure,
-                                    PRUint32 aDelay, PRUint32 aType);
-
-        (void) NS_NewTimer(&mRecycleTimer, nsRecycleTimerCallback, this,
-                           NS_SEC_TO_MS(mRecycleAfter),
-                           nsITimer::TYPE_REPEATING_SLACK);
-        // This can fail during xpcom shutdown
-        if (!mRecycleTimer)
-            NS_WARNING("nsRecyclingAllocator: Creating timer failed");
-    }
 }
 
-/* ClearFreeList
+/* FreeUnusedBuckets
  *
  * Frees any bucket memory that isn't in use
  */
 
 void
-nsRecyclingAllocator::ClearFreeList()
+nsRecyclingAllocator::FreeUnusedBuckets()
 {
 #ifdef DEBUG_dp
-    printf("DEBUG: nsRecyclingAllocator(%s) ClearFreeList (%d): ", mId, mFreeListCount);
+    printf("DEBUG: nsRecyclingAllocator(%s) FreeUnusedBuckets: ", mId);
 #endif
-    // Cancel the timer, because the freelist will be forcefully cleared after this.
-    // We will revive the timer on the next allocation.
-    // XXX Unfortunately there is no way to Cancel and restart the same timer.
-    // XXX So we pretty much kill it and create a new one later.
-    if (mRecycleTimer)
-    {
-        mRecycleTimer->Cancel();
-        NS_RELEASE(mRecycleTimer);
-    }
+    nsAutoLock lock(mLock);
 
     // We will run through the freelist and free all blocks
-    Block* node = mFreeList;
+    BlockStoreNode* node = mFreeList;
     while (node)
     {
+        // Free the allocated block
+        free(node->block);
+
 #ifdef DEBUG_dp
         printf("%d ", node->bytes);
 #endif
-        Block *next = node->next;
-        free(node);
-        node = next;
+        // Clear Node
+        node->block = nsnull;
+        node->bytes = 0;
+        node = node->next;
     }
-    mFreeList = nsnull;
-    mFreeListCount = 0;
 
-#ifdef DEBUG
+    // remake the lists
+    mNotUsedList = mBlocks;
+    for (PRUint32 i=0; i < mMaxBlocks-1; i++)
+        mBlocks[i].next = &(mBlocks[i+1]);
+    mBlocks[mMaxBlocks-1].next = nsnull;
+    mFreeList = nsnull;
+
+#ifdef DEBUG        
     mNAllocated = 0;
 #endif
 #ifdef DEBUG_dp
     printf("\n");
 #endif
+}
+
+nsRecyclingAllocator::Block*
+nsRecyclingAllocator::FindFreeBlock(PRSize bytes)
+{
+    // We dont enter lock for this check. This is intentional.
+    // Here is my logic: we are checking if (!mFreeList). Doing this check
+    // without locking can lead to unpredictable results. YES. But the effect
+    // of the unpredictedness are ok. here is why:
+    //
+    // a) if the check returned NULL when there is stuff in freelist
+    //    We would just end up reallocating.
+    //
+    // b) if the check returned nonNULL when our freelist is empty
+    //    This is the more likely and dangerous case. The code for
+    //    FindFreeBlock() will enter lock, while (null) and return null.
+    //
+    // The reason why I chose to not enter lock for this check was that when
+    // the allocator is full, we dont want to impose any more overhead than
+    // we already are for failing over to malloc/free.
+
+    if (!mFreeList)
+        return NULL;
+
+    Block *block = nsnull;
+
+    nsAutoLock lock(mLock);
+    BlockStoreNode* freeNode = mFreeList;
+    BlockStoreNode** prevp = &mFreeList;
+
+    while (freeNode)
+    {
+        if (freeNode->bytes >= bytes)
+        {
+            // Found the best fit free block
+            block = freeNode->block;
+
+            // Clear the free node
+            freeNode->block = nsnull;
+            freeNode->bytes = 0;
+
+            // Remove free node from free list
+            *prevp = freeNode->next;
+
+            // Add removed BlockStoreNode to not used list
+            freeNode->next = mNotUsedList;
+            mNotUsedList = freeNode;
+
+            break;
+        }
+
+        prevp = &(freeNode->next);
+        freeNode = freeNode->next;
+    }
+    return block;
+}
+
+PRInt32
+nsRecyclingAllocator::AddToFreeList(Block* block)
+{
+    nsAutoLock lock(mLock);
+
+    if (!mNotUsedList)
+        return PR_FALSE;
+
+    // Pick a node from the not used list
+    BlockStoreNode *node = mNotUsedList;
+    mNotUsedList = mNotUsedList->next;
+
+    // Initialize the node
+    node->bytes = block->bytes;
+    node->block = block;
+
+    // Find the right spot in the sorted list.
+    BlockStoreNode* freeNode = mFreeList;
+    BlockStoreNode** prevp = &mFreeList;
+    while (freeNode)
+    {
+        if (freeNode->bytes >= block->bytes)
+            break;
+        prevp = &(freeNode->next);
+        freeNode = freeNode->next;
+    }
+
+    // Needs to be inserted between *prevp and freeNode
+    *prevp = node;
+    node->next = freeNode;
+
+    return PR_TRUE;
 }
 
 

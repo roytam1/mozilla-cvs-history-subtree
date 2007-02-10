@@ -54,7 +54,7 @@ class nsMenuItemIcon;
  * Native Motif MenuItem wrapper
  */
 
-class nsMenuItemX : public nsIMenuItem,
+class nsMenuItemX : public nsIMenuItem_MOZILLA_1_8_BRANCH,
                     public nsIMenuListener,
                     public nsIChangeObserver,
                     public nsSupportsWeakReference
@@ -68,9 +68,9 @@ public:
   NS_DECL_NSICHANGEOBSERVER
 
   // nsIMenuItem Methods
-  NS_IMETHOD Create(nsIMenu* aParent, const nsString & aLabel, PRBool aIsSeparator,
-                    EMenuItemType aItemType, nsIChangeManager* aManager,
-                    nsIDocShell* aShell, nsIContent* aNode);
+  NS_IMETHOD Create ( nsIMenu* aParent, const nsString & aLabel, PRBool aIsSeparator,
+                        EMenuItemType aItemType, PRBool aEnabled, 
+                        nsIChangeManager* aManager, nsIDocShell* aShell, nsIContent* aNode ) ;
   NS_IMETHOD GetLabel(nsString &aText);
   NS_IMETHOD SetShortcutChar(const nsString &aText);
   NS_IMETHOD GetShortcutChar(nsString &aText);
@@ -78,17 +78,19 @@ public:
   NS_IMETHOD SetChecked(PRBool aIsEnabled);
   NS_IMETHOD GetChecked(PRBool *aIsEnabled);
   NS_IMETHOD GetMenuItemType(EMenuItemType *aIsCheckbox);
+  NS_IMETHOD GetTarget(nsIWidget *& aTarget);
   NS_IMETHOD GetNativeData(void*& aData);
   NS_IMETHOD AddMenuListener(nsIMenuListener * aMenuListener);
   NS_IMETHOD RemoveMenuListener(nsIMenuListener * aMenuListener);
   NS_IMETHOD IsSeparator(PRBool & aIsSep);
 
   NS_IMETHOD DoCommand();
-  NS_IMETHOD DispatchDOMEvent(const nsString &eventName, PRBool *preventDefaultCalled);
   NS_IMETHOD SetModifiers(PRUint8 aModifiers);
   NS_IMETHOD GetModifiers(PRUint8 * aModifiers);
   NS_IMETHOD SetupIcon();
-    
+
+  NS_IMETHOD DispatchDOMEvent(const nsString &eventName, PRBool *preventDefaultCalled);
+ 
   // nsIMenuListener interface
   nsEventStatus MenuItemSelected(const nsMenuEvent & aMenuEvent);
   nsEventStatus MenuSelected(const nsMenuEvent & aMenuEvent);
@@ -109,6 +111,7 @@ protected:
   nsIMenu*                  mMenuParent;          // weak, parent owns us
   nsIChangeManager*         mManager;             // weak
 
+  nsCOMPtr<nsIWidget>       mTarget;              // never set?
   nsCOMPtr<nsIMenuListener> mXULCommandListener;
   
   nsWeakPtr                 mDocShellWeakRef;     // weak ref to docshell

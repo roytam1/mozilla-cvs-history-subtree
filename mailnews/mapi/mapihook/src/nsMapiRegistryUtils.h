@@ -35,13 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/***************************************************************************
-*
-* This File is no longer used by Thunderbird. Seamonkey is the only consumer.
-* See mozilla/mail/components/shell for the Thunderbird registry code
-*
-*****************************************************************************/
-
 #ifndef nsmapiregistryutils_h____
 #define nsmapiregistryutils_h____
 
@@ -49,6 +42,7 @@
 #include <string.h>
 #include <winreg.h>
 
+#include "Registry.h"
 #include "nsString.h"
 #include "nsIStringBundle.h"
 
@@ -61,14 +55,15 @@
 class nsMapiRegistryUtils
 {
 private :
-    nsCString m_thisApp;
-    nsXPIDLString m_brand;
-    nsXPIDLString m_vendor;
+    nsCAutoString m_thisApp ;
+    nsAutoString m_brand ;
+    nsAutoString m_vendor ;
+    nsAutoString m_versionNo ;
 
     nsCOMPtr<nsIStringBundle> m_mapiStringBundle ;
 
     // sets result to the value of varName (as defined in brand.properties)
-    void getVarValue(const PRUnichar * varName, nsXPIDLString & result);
+    void getVarValue(const PRUnichar * varName, nsAutoString & result);
 
     // verifyRestrictedAccess - Returns PR_TRUE if this user only has restricted access
     // to the registry keys we need to modify. Consumers should call the public method 

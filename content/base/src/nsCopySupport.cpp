@@ -60,14 +60,13 @@
 #include "nsIDOMElement.h"
 #include "nsIDOMDocument.h"
 #include "nsIHTMLDocument.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 
 // image copy stuff
 #include "nsIImageLoadingContent.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIImage.h"
 #include "nsContentUtils.h"
-#include "nsContentCID.h"
 
 static NS_DEFINE_CID(kCClipboardCID,           NS_CLIPBOARD_CID);
 static NS_DEFINE_CID(kCTransferableCID,        NS_TRANSFERABLE_CID);
@@ -108,10 +107,7 @@ nsresult nsCopySupport::HTMLCopy(nsISelection *aSel, nsIDocument *aDoc, PRInt16 
   mimeType.AssignLiteral(kUnicodeMime);
   PRUint32 flags = nsIDocumentEncoder::OutputPreformatted;
 
-  nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(aDoc);
-  NS_ASSERTION(domDoc, "Need a document");
-
-  rv = docEncoder->Init(domDoc, mimeType, flags);
+  rv = docEncoder->Init(aDoc, mimeType, flags);
   if (NS_FAILED(rv)) 
     return rv;
   rv = docEncoder->SetSelection(aSel);
@@ -148,14 +144,14 @@ nsresult nsCopySupport::HTMLCopy(nsISelection *aSel, nsIDocument *aDoc, PRInt16 
 
     flags = 0;
 
-    rv = docEncoder->Init(domDoc, mimeType, flags);
+    rv = docEncoder->Init(aDoc, mimeType, flags);
     NS_ENSURE_SUCCESS(rv, rv);
 
     rv = docEncoder->SetSelection(aSel);
     NS_ENSURE_SUCCESS(rv, rv);
 
     // encode the selection as html with contextual info
-    rv = docEncoder->EncodeToStringWithContext(parents, info, buffer);
+    rv = docEncoder->EncodeToStringWithContext(buffer, parents, info);
     NS_ENSURE_SUCCESS(rv, rv);
   }
   
@@ -213,12 +209,12 @@ nsresult nsCopySupport::HTMLCopy(nsISelection *aSel, nsIDocument *aDoc, PRInt16 
             nsAutoString shortcut;
             AppendUTF8toUTF16(spec, shortcut);
 
-            // Add the URL DataFlavor to the transferable. Don't use kURLMime, as it will
-            // cause an unnecessary UniformResourceLocator to be added which confuses
-            // some apps eg. Outlook 2000 - (See Bug 315370). Don't use
-            // kURLDataMime, as it will cause a bogus 'url ' flavor to
-            // show up on the Mac clipboard, confusing other apps, like
-            // Terminal (see bug 336012).
+            // Add the URL DataFlavor to the transferable. Don't use kURLMime,
+            // as it will cause an unnecessary UniformResourceLocator to be
+            // added which confuses some apps eg. Outlook 2000 - (See Bug
+            // 315370). Don't use kURLDataMime, as it will cause a bogus
+            // 'url ' flavor to show up on the Mac clipboard, confusing other
+            // apps, like Terminal (see Bug 336012)
             rv = AppendString(trans, shortcut, kURLPrivateMime);
             NS_ENSURE_SUCCESS(rv, rv);
           }
@@ -323,20 +319,20 @@ nsresult nsCopySupport::IsPlainTextContext(nsISelection *aSel, nsIDocument *aDoc
   {
     // checking for selection inside a plaintext form widget
 
-    if (!selContent->IsNodeOfType(nsINode::eHTML)) {
+    if (!selContent->IsContentOfType(nsIContent::eHTML)) {
       continue;
     }
 
     nsIAtom *atom = selContent->Tag();
 
-    if (atom == nsGkAtoms::input ||
-        atom == nsGkAtoms::textarea)
+    if (atom == nsHTMLAtoms::input ||
+        atom == nsHTMLAtoms::textarea)
     {
       *aIsPlainTextContext = PR_TRUE;
       break;
     }
 
-    if (atom == nsGkAtoms::body)
+    if (atom == nsHTMLAtoms::body)
     {
       // check for moz prewrap style on body.  If it's there we are 
       // in a plaintext editor.  This is pretty cheezy but I haven't 
@@ -381,12 +377,8 @@ nsCopySupport::GetContents(const nsACString& aMimeType, PRUint32 aFlags, nsISele
   if (aMimeType.Equals("text/plain"))
     flags |= nsIDocumentEncoder::OutputPreformatted;
 
-  NS_ConvertASCIItoUTF16 unicodeMimeType(aMimeType);
-
-  nsCOMPtr<nsIDOMDocument> domDoc = do_QueryInterface(aDoc);
-  NS_ASSERTION(domDoc, "Need a document");
-
-  rv = docEncoder->Init(domDoc, unicodeMimeType, flags);
+  NS_ConvertASCIItoUCS2 unicodeMimeType(aMimeType);
+  rv = docEncoder->Init(aDoc, unicodeMimeType, flags);
   if (NS_FAILED(rv)) return rv;
   
   if (aSel)
@@ -512,13 +504,12 @@ static nsresult AppendDOMNode(nsITransferable *aTransferable,
   // Note that XHTML is not counted as HTML here, because we can't copy it
   // properly (all the copy code for non-plaintext assumes using HTML
   // serializers and parsers is OK, and those mess up XHTML).
-  nsCOMPtr<nsIHTMLDocument> htmlDoc = do_QueryInterface(domDocument, &rv);
+  nsCOMPtr<nsIHTMLDocument> htmlDoc = do_QueryInterface(document, &rv);
   NS_ENSURE_SUCCESS(rv, NS_OK);
-
   NS_ENSURE_TRUE(!(document->IsCaseSensitive()), NS_OK);
 
   // init encoder with document and node
-  rv = docEncoder->Init(domDocument, NS_LITERAL_STRING(kHTMLMime),
+  rv = docEncoder->Init(document, NS_LITERAL_STRING(kHTMLMime),
                         nsIDocumentEncoder::OutputAbsoluteLinks |
                         nsIDocumentEncoder::OutputEncodeW3CEntities);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -528,7 +519,7 @@ static nsresult AppendDOMNode(nsITransferable *aTransferable,
 
   // serialize to string
   nsAutoString html, context, info;
-  rv = docEncoder->EncodeToStringWithContext(context, info, html);
+  rv = docEncoder->EncodeToStringWithContext(html, context, info);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // copy them to the transferable

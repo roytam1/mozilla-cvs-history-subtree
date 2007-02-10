@@ -21,8 +21,6 @@ classic.jar:
         skin/classic/global/menu.css
         skin/classic/global/menulist.css
         skin/classic/global/netError.css
-        skin/classic/global/dropmarker.css
-        skin/classic/global/numberbox.css
         skin/classic/global/notification.css
         skin/classic/global/popup.css
         skin/classic/global/progressmeter.css
@@ -37,7 +35,6 @@ classic.jar:
         skin/classic/global/splitter.css
         skin/classic/global/tabbox.css
         skin/classic/global/textbox.css
-        skin/classic/global/datetimepicker.css
         skin/classic/global/toolbar.css
         skin/classic/global/toolbarbutton.css
         skin/classic/global/tree.css
@@ -64,8 +61,12 @@ classic.jar:
         skin/classic/global/checkbox/cbox-check.gif                 (checkbox/cbox-check.gif)
         skin/classic/global/checkbox/cbox-check-dis.gif             (checkbox/cbox-check-dis.gif) 
         skin/classic/global/Filepicker.png                          (filepicker/Filepicker.png)
+	skin/classic/global/icons/alltabs-box-end-bkgnd-hover.png (icons/alltabs-box-end-bkgnd-hover.png)
 	skin/classic/global/icons/alltabs-box-overflow-end-bkgnd-hover.png (icons/alltabs-box-overflow-end-bkgnd-hover.png)
 	skin/classic/global/icons/alltabs-box-overflow-start-bkgnd-hover.png (icons/alltabs-box-overflow-start-bkgnd-hover.png)
+	skin/classic/global/icons/alltabs-box-start-bkgnd-hover.png (icons/alltabs-box-start-bkgnd-hover.png)
+	skin/classic/global/icons/alltabs-box-end-bkgnd.png         (icons/alltabs-box-end-bkgnd.png)
+	skin/classic/global/icons/alltabs-box-start-bkgnd.png       (icons/alltabs-box-start-bkgnd.png)
 	skin/classic/global/icons/alltabs-box-overflow-end-bkgnd.png   (icons/alltabs-box-overflow-end-bkgnd.png)
     skin/classic/global/icons/alltabs-box-overflow-start-bkgnd-animate.png   (icons/alltabs-box-overflow-start-bkgnd-animate.png)
 	skin/classic/global/icons/alltabs-box-overflow-end-bkgnd-animate.png   (icons/alltabs-box-overflow-end-bkgnd-animate.png)
@@ -100,6 +101,9 @@ classic.jar:
 	skin/classic/global/icons/tab-left.png                      (icons/tab-left.png)
 	skin/classic/global/icons/tab-middle.png                    (icons/tab-middle.png)
 	skin/classic/global/icons/tab-right.png                     (icons/tab-right.png)
+	skin/classic/global/icons/tab-left-hover.png                (icons/tab-left-hover.png)
+	skin/classic/global/icons/tab-middle-hover.png              (icons/tab-middle-hover.png)
+	skin/classic/global/icons/tab-right-hover.png               (icons/tab-right-hover.png)
 	skin/classic/global/icons/tab-left-bkgnd.png                (icons/tab-left-bkgnd.png)
 	skin/classic/global/icons/tab-middle-bkgnd.png              (icons/tab-middle-bkgnd.png)
 	skin/classic/global/icons/tab-right-bkgnd.png               (icons/tab-right-bkgnd.png)
@@ -139,7 +143,6 @@ classic.jar:
         skin/classic/global/customizeToolbar.css
         skin/classic/global/preferences.css
         skin/classic/global/printPageSetup.css
-*       skin/classic/global/scale.css
         skin/classic/global/printPreview.css
         skin/classic/global/alerts/alert.css                        (alerts/alert.css)
         skin/classic/global/console/console.css                     (console/console.css)

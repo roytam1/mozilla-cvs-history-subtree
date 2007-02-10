@@ -39,6 +39,8 @@
 #define _nsIContentSerializer_h__
 
 #include "nsISupports.h"
+#include "nsAString.h"
+#include "nsIAtom.h"
 
 class nsIDOMText; /* forward declaration */
 class nsIDOMCDATASection; /* forward declaration */
@@ -47,18 +49,20 @@ class nsIDOMComment; /* forward declaration */
 class nsIDOMDocumentType; /* forward declaration */
 class nsIDOMElement; /* forward declaration */
 class nsIDOMDocument; /* forward declaration */
-class nsAString;
 
 /* starting interface:    nsIContentSerializer */
 
+/* d650439a-ca29-410d-a906-b0557fb62fcd */
 #define NS_ICONTENTSERIALIZER_IID \
-{ 0x0921afbc, 0x4c6f, 0x4249, \
-  { 0xa7, 0xf5, 0x32, 0xe4, 0x91, 0xbf, 0x6e, 0x32 } }
+{   0xd650439a, \
+    0xca29, \
+    0x410d, \
+    {0xa9, 0x06, 0xb0, 0x55, 0x7f, 0xb6, 0x2f, 0xcd} }
 
 class nsIContentSerializer : public nsISupports {
  public: 
 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ICONTENTSERIALIZER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICONTENTSERIALIZER_IID)
 
   NS_IMETHOD Init(PRUint32 flags, PRUint32 aWrapColumn,
                   const char* aCharSet, PRBool aIsCopying) = 0;
@@ -82,7 +86,7 @@ class nsIContentSerializer : public nsISupports {
                            nsAString& aStr) = 0;
 
   NS_IMETHOD AppendElementStart(nsIDOMElement *aElement,
-                                nsIDOMElement *aOriginalElement,
+                                PRBool aHasChildren,
                                 nsAString& aStr) = 0;
 
   NS_IMETHOD AppendElementEnd(nsIDOMElement *aElement,
@@ -98,8 +102,6 @@ class nsIContentSerializer : public nsISupports {
   NS_IMETHOD AppendDocumentStart(nsIDOMDocument *aDocument,
                                  nsAString& aStr) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIContentSerializer, NS_ICONTENTSERIALIZER_IID)
 
 #define NS_CONTENTSERIALIZER_CONTRACTID_PREFIX \
 "@mozilla.org/layout/contentserializer;1?mimetype="

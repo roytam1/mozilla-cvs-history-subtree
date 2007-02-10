@@ -380,7 +380,7 @@ jsj_UnexpectedJavaError(JSContext *cx, JNIEnv *env, const char *format, ...)
     format2 = JS_smprintf("internal error: %s", format);
     if (format2) {
         vreport_java_error(cx, env, format2, ap);
-        JS_smprintf_free((void*)format2);
+        free((void*)format2);
     }
     va_end(ap);
 }
@@ -456,7 +456,6 @@ jsj_EnterJava(JSContext *cx, JNIEnv **envp)
     JSJavaThreadState *jsj_env;
     char *err_msg;
 
-    JS_ASSERT(envp);
     *envp = NULL;
     err_msg = NULL;
 
@@ -481,7 +480,8 @@ jsj_EnterJava(JSContext *cx, JNIEnv **envp)
     if (!jsj_env->cx)
         jsj_env->cx = cx;
 
-    *envp = jsj_env->jEnv;
+    if (envp)
+        *envp = jsj_env->jEnv;
     return jsj_env;
 }
 

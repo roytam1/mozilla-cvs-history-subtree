@@ -47,8 +47,6 @@
 #include <malloc.h>
 #endif
 
-#define NS_ASSERTION(c,m) 
-
 #define PR_ASSERT         assert
 #define PR_Malloc         malloc
 #define PR_Free           free
@@ -80,9 +78,6 @@
 #elif defined(XP_WIN)
 #define PR_EXTERN(__type)       extern _declspec(dllexport) __type
 #define PR_PUBLIC_API(__type)   _declspec(dllexport) __type
-#elif defined(XP_OS2) && defined(__declspec)
-#define PR_EXTERN(__type)       extern __declspec(dllexport) __type
-#define PR_PUBLIC_API(__type)   __declspec(dllexport) __type
 #else /* XP_UNIX */
 #define PR_EXTERN(__type)       extern __type
 #define PR_PUBLIC_API(__type)   __type 
@@ -102,7 +97,6 @@ typedef unsigned short      PRUint16;
 typedef char                PRBool;
 typedef unsigned char       PRUint8;
 typedef PRUint8             PRPackedBool;
-typedef PRInt32             nsresult;
 
 #define PR_TRUE             1
 #define PR_FALSE            0
@@ -121,5 +115,6 @@ typedef PRInt32             nsresult;
 #define NS_WildCardValid(a)       NON_SXP
 #define NS_WildCardMatch(a,b,c)   PR_FALSE
 
+#define MOZ_DECL_CTOR_COUNTER(x)
 #define MOZ_COUNT_CTOR(x)
 #define MOZ_COUNT_DTOR(x)

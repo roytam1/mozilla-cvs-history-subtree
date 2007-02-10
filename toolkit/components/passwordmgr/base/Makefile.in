@@ -58,11 +58,9 @@ REQUIRES = 	\
 		intl \
 		dom \
 		content \
-		layout \
 		widget \
 		autocomplete \
 		pipnss \
-		unicharutil \
 		$(NULL)
 
 XPIDLSRCS	= \

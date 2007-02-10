@@ -35,15 +35,12 @@
 #
 # ***** END LICENSE BLOCK *****
 
-import sys
-from xpcom import xpcom_consts, _xpcom, client, nsError, logger
-from xpcom import ServerException, COMException
+from xpcom import xpcom_consts, _xpcom, client, nsError, ServerException, COMException
 import xpcom
+import traceback
 import xpcom.server
 import operator
 import types
-import logging
-
 
 IID_nsISupports = _xpcom.IID_nsISupports
 IID_nsIVariant = _xpcom.IID_nsIVariant
@@ -143,10 +140,7 @@ class DefaultPolicy:
         self._iid_ = iid
         if ni is None:
             raise ValueError, "The object '%r' can not be used as a COM object" % (instance,)
-        # This is really only a check for the user - the same thing is
-        # done by the framework.
-        # XXXmarkh - this should probably die now we have better error
-        # reporting in the framework!
+        # This is really only a check for the user
         if __debug__:
             if iid != IID_nsISupports and iid not in ni:
                 # The object may delegate QI.
@@ -165,7 +159,7 @@ class DefaultPolicy:
         if iid in self._nominated_interfaces_:
             # We return the underlying object re-wrapped
             # in a new gateway - which is desirable, as one gateway should only support
-            # one interface (this won't affect the users of this policy - we can have as many
+            # one interface (this wont affect the users of this policy - we can have as many
             # gateways as we like pointing to the same Python objects - the users never
             # see what object the call came in from.
             # NOTE: We could have simply returned the instance and let the framework
@@ -178,12 +172,12 @@ class DefaultPolicy:
             return GetClassInfoForObject(self._obj_)
 
         # See if the instance has a QI
-        # use lower-case "_query_interface_" as win32com does, and it doesn't really matter.
+        # use lower-case "_query_interface_" as win32com does, and it doesnt really matter.
         delegate = getattr(self._obj_, "_query_interface_", None)
         if delegate is not None:
-            # The COM object itself doesn't get passed to the child
+            # The COM object itself doesnt get passed to the child
             # (again, as win32com doesnt).  It is rarely needed
-            # (in win32com, we don't even pass it to the policy, although we have identified
+            # (in win32com, we dont even pass it to the policy, although we have identified
             # one place where we should - for marshalling - so I figured I may as well pass it
             # to the policy layer here, but no all the way down to the object.
             return delegate(iid)
@@ -197,7 +191,7 @@ class DefaultPolicy:
         if attr is not None and hasattr(self._obj_, attr):
             return xpcom.server.WrapObject(SupportsPrimitive(iid, self._obj_, attr, cvt), iid, bWrapClient = 0)
         # Out of clever things to try!
-        return None # We don't support this IID.
+        return None # We dont support this IID.
 
     def _MakeInterfaceParam_(self, interface, iid, method_index, mi, param_index):
         # Wrap a "raw" interface object in a nice object.  The result of this
@@ -240,11 +234,12 @@ class DefaultPolicy:
             if dt == xpcom_consts.VTYPE_ID:
                 return interface.getAsID()
             # all else fails...
-            logger.warning("Warning: nsIVariant type %d not supported - returning a string", dt)
+            print "Warning: nsIVariant type %d not supported - returning a string" % (dt,)
             try:
                 return interface.getAsString()
             except COMException:
-                logger.exception("Error: failed to get Variant as a string - returning variant object")
+                print "Error: failed to get Variant as a string - returning variant object"
+                traceback.print_exc()
                 return interface
             
         return client.Component(interface, iid)
@@ -280,36 +275,17 @@ class DefaultPolicy:
         exc_val = exc_info[1]
         is_server_exception = isinstance(exc_val, ServerException)
         if is_server_exception:
-            # When a component raised an explicit COM exception, it is
-            # considered 'normal' - however, we still write a debug log
-            # record to help track these otherwise silent exceptions.
-
-            if sys.version_info < (2,4):
-                # Note that Python 2.3 does not allow an explicit exc_info tuple
-                # and passing 'True' will not work as there is no exception pending.
-                # Trick things!
-                if logger.isEnabledFor(logging.DEBUG):
-                    try:
-                        raise exc_info[0], exc_info[1], exc_info[2]
-                    except:
-                        logger.debug("'%s' raised COM Exception %s",
-                                 func_name, exc_val, exc_info = 1)
-            else:
-                logger.debug("'%s' raised COM Exception %s",
-                             func_name, exc_val, exc_info=exc_info)
-
+            if xpcom.verbose:
+                print "** Information:  '%s' raised COM Exception %s" % (func_name, exc_val)
+                traceback.print_exception(exc_info[0], exc_val, exc_info[2])
+                print "** Returning nsresult from existing exception", exc_val
             return exc_val.errno
-        # Unhandled exception - always print a warning and the traceback.
-        # As above, trick the logging module to handle Python 2.3
-        if sys.version_info < (2,4):
-            try:
-                raise exc_info[0], exc_info[1], exc_info[2]
-            except:
-                logger.exception("Unhandled exception calling '%s'", func_name)
-        else:
-            logger.error("Unhandled exception calling '%s'", func_name,
-                         exc_info=exc_info)
+        # Unhandled exception - always print a warning.
+        print "** Unhandled exception calling '%s'" % (func_name,)
+        traceback.print_exception(exc_info[0], exc_val, exc_info[2])
+        print "** Returning nsresult of NS_ERROR_FAILURE"
         return nsError.NS_ERROR_FAILURE
+
 
     # Called whenever an unhandled Python exception is detected as a result
     # of _CallMethod_ - this exception may have been raised during the _CallMethod_
@@ -327,12 +303,8 @@ class DefaultPolicy:
             import xpcom.xpt
             m = xpcom.xpt.Method(info, index, None)
             func_repr = m.Describe().lstrip()
-        except COMException:
-            func_repr = "%s(%r)" % (name, param_descs)
         except:
-            # any other errors are evil!?  Log it
-            self._doHandleException("<building method repr>", sys.exc_info())
-            # And fall through to logging the original error.
+            func_repr = "%s(%r)" % (name, param_descs)
         return self._doHandleException(func_repr, exc_info)
 
     # Called whenever a gateway fails due to anything other than _CallMethod_.
@@ -343,7 +315,7 @@ class DefaultPolicy:
 
 _supports_primitives_data_ = [
     ("nsISupportsCString", "__str__", str),
-    ("nsISupportsString", "__unicode__", unicode),
+    ("nsISupportsString", "__str__", str),
     ("nsISupportsPRUint64", "__long__", long),
     ("nsISupportsPRInt64", "__long__", long),
     ("nsISupportsPRUint32", "__int__", int),

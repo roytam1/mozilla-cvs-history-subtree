@@ -64,11 +64,9 @@
  */
 class nsISplashScreen : public nsISupports {
 public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISPLASHSCREEN_IID)
+    NS_DEFINE_STATIC_IID_ACCESSOR( NS_ISPLASHSCREEN_IID )
     NS_IMETHOD Show() = 0;
     NS_IMETHOD Hide() = 0;
 }; // class nsISplashScreen
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsISplashScreen, NS_ISPLASHSCREEN_IID)
 
 #endif // nsISplashScreen_h__

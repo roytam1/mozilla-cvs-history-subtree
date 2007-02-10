@@ -47,6 +47,8 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSITRACEREFCNT
 
+  nsTraceRefcntImpl();
+
   static NS_COM void Startup();  
   static NS_COM void Shutdown();
 
@@ -77,6 +79,9 @@ public:
   static NS_COM void SetActivityIsLegal(PRBool aLegal);
 
   static NS_METHOD Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
+
+private:
+  ~nsTraceRefcntImpl() {}
 };
 
 #define NS_TRACE_REFCNT_CONTRACTID "@mozilla.org/xpcom/trace-refcnt;1"

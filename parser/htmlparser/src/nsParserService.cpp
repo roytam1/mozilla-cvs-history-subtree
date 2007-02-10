@@ -60,7 +60,8 @@ nsParserService::~nsParserService()
   }
 }
 
-NS_IMPL_ISUPPORTS1(nsParserService, nsIParserService)
+NS_IMPL_ISUPPORTS2(nsParserService, nsIParserService,
+                   nsIParserService_MOZILLA_1_8_BRANCH)
 
 PRInt32
 nsParserService::HTMLAtomTagToId(nsIAtom* aAtom) const
@@ -74,7 +75,10 @@ nsParserService::HTMLAtomTagToId(nsIAtom* aAtom) const
 PRInt32
 nsParserService::HTMLCaseSensitiveAtomTagToId(nsIAtom* aAtom) const
 {
-  return nsHTMLTags::CaseSensitiveLookupTag(aAtom);
+  nsAutoString tagName;
+  aAtom->ToString(tagName);
+
+  return nsHTMLTags::CaseSensitiveLookupTag(tagName.get());
 }
 
 PRInt32
@@ -196,14 +200,14 @@ nsParserService::GetTopicObservers(const nsAString& aTopic,
 }
 
 nsresult
-nsParserService::CheckQName(const nsAString& aQName,
+nsParserService::CheckQName(const nsASingleFragmentString& aQName,
                             PRBool aNamespaceAware,
                             const PRUnichar** aColon)
 {
   const char* colon;
   const PRUnichar *begin, *end;
-  begin = aQName.BeginReading();
-  end = aQName.EndReading();
+  aQName.BeginReading(begin);
+  aQName.EndReading(end);
   int result = MOZ_XMLCheckQName(NS_REINTERPRET_CAST(const char*, begin),
                                  NS_REINTERPRET_CAST(const char*, end),
                                  aNamespaceAware, &colon);
@@ -255,7 +259,7 @@ nsParserService::CreateEntry(const nsAString& aTopic, nsObserverEntry** aEntry)
 {
   *aEntry = new nsObserverEntry(aTopic);
 
-  if (!*aEntry) {
+  if (!aEntry) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
 

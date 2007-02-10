@@ -88,7 +88,8 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
 
 - (id)initWithWindowNibName:(NSString *)windowNibName
 {
-  if ((self = [super initWithWindowNibName:@"BookmarkInfoPanel"])) {
+  if ((self = [super initWithWindowNibName:@"BookmarkInfoPanel"]))
+  {
     //custom field editor lets us undo our changes
     mFieldEditor = [[NSTextView alloc] init];
     [mFieldEditor setAllowsUndo:YES];
@@ -101,8 +102,6 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
 {
   [self setShouldCascadeWindows:NO];
   [[self window] setFrameAutosaveName:@"BookmarkInfoWindow"];
-  [mBookmarkKeywordField setFormatter:[[[BookmarkKeywordFormatter alloc] init] autorelease]];
-  [mFolderKeywordField setFormatter:[[[BookmarkKeywordFormatter alloc] init] autorelease]];
 }
 
 - (void)windowDidLoad
@@ -117,7 +116,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
   [nc addObserver:self selector:@selector(dockMenuChanged:) name:BookmarkFolderDockMenuChangeNotificaton object:nil];
 }
 
-- (void)dealloc
+-(void)dealloc
 {
   // this is never called
   if (self == gSharedBookmarkInfoController)
@@ -126,40 +125,32 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
   [[NSNotificationCenter defaultCenter] removeObserver:self];
   [mBookmarkItem release];
   [mFieldEditor release];
-
+  
   // balance retains of top-level nib items
   [mBookmarkView release];
   [mFolderView release];
   [super dealloc];
 }
 
-// Gets called when the escape key is pressed
-- (void)cancel:(id)sender
-{
-  // revert UI so changes don't get committed
-  [self updateUI];
-  [[self window] close];
-}
-
-// We intercept the tab key in order to let the user tab to/from the bookmark
+// We intercept the tab key in order to let the user tab to/from the bookmark 
 // description textfield (even though it's a textview)
-- (BOOL)textView:(NSTextView *)textView doCommandBySelector:(SEL)command
+-(BOOL)textView:(NSTextView *)textView doCommandBySelector:(SEL)command
 {
   if (command == @selector(insertTab:)) {
     [[self window] selectNextKeyView:nil];
     return YES;
   }
-
+  
   if (command == @selector(insertBacktab:)) {
     [[self window] selectPreviousKeyView:nil];
     return YES;
   }
-
+  
   return NO;
 }
-
+    
 // for the NSTextFields
-- (void)controlTextDidEndEditing:(NSNotification *)aNotification
+-(void)controlTextDidEndEditing:(NSNotification *)aNotification
 {
   [self commitChanges:[aNotification object]];
   [[mFieldEditor undoManager] removeAllActions];
@@ -172,7 +163,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
   [[mFieldEditor undoManager] removeAllActions];
 }
 
-- (void)windowDidBecomeKey:(NSNotification*)aNotification
+-(void)windowDidBecomeKey:(NSNotification*) aNotification
 {
   if ([[self window] contentView] == mBookmarkView) {
     NSTabViewItem *tabViewItem = [mTabView selectedTabViewItem];
@@ -186,7 +177,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
   }
 }
 
-- (void)windowDidResignKey:(NSNotification*)aNotification
+-(void)windowDidResignKey:(NSNotification*) aNotification
 {
   [[self window] makeFirstResponder:[self window]]; // why?
   if (![[self window] isVisible])
@@ -207,20 +198,24 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
 
   // could this be any more long-winded?
   BOOL isBookmark;
-  if ((isBookmark = [mBookmarkItem isKindOfClass:[Bookmark class]])) {
+  if ((isBookmark = [mBookmarkItem isKindOfClass:[Bookmark class]]))
+  {
     // why do we check the parent's type?
     if ([(Bookmark *)mBookmarkItem isSeparator] || ![[mBookmarkItem parent] isKindOfClass:[BookmarkItem class]])
       return;
   }
 
-  if (!changedField) {
-    if ((tabViewItem == mBookmarkInfoTabView) && isBookmark) {
+  if (!changedField)
+  {
+    if ((tabViewItem == mBookmarkInfoTabView) && isBookmark)
+    {
       [mBookmarkItem setTitle:[mBookmarkNameField stringValue]];
       [mBookmarkItem setItemDescription:[NSString stringWithString:[mBookmarkDescField stringValue]]];
       [mBookmarkItem setKeyword:[mBookmarkKeywordField stringValue]];
       [(Bookmark *)mBookmarkItem setUrl:[mBookmarkLocationField stringValue]];
     }
-    else if ([[self window] contentView] == mFolderView && !isBookmark) {
+    else if ([[self window] contentView] == mFolderView && !isBookmark)
+    {
       [mBookmarkItem setTitle:[mFolderNameField stringValue]];
       [mBookmarkItem setItemDescription:[NSString stringWithString:[mFolderDescField stringValue]]];
       if ([(BookmarkFolder *)mBookmarkItem isGroup])
@@ -235,7 +230,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     [mBookmarkItem setItemDescription:[NSString stringWithString:[changedField stringValue]]];
   else if ((changedField == mBookmarkLocationField) && isBookmark)
     [(Bookmark *)mBookmarkItem setUrl:[changedField stringValue]];
-
+    
   [[mFieldEditor undoManager] removeAllActions];
 }
 
@@ -259,7 +254,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
   [mNumberVisitsField setIntValue:0];
 }
 
-- (void)setBookmark:(BookmarkItem*)aBookmark
+-(void)setBookmark:(BookmarkItem*) aBookmark
 {
   // register for changes on the new bookmark
   NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
@@ -277,7 +272,8 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
 {
   NSView* newView = nil;
 
-  switch (inViewType) {
+  switch (inViewType)
+  {
     case eFolderInfoView:
       newView = mFolderView;
       break;
@@ -292,21 +288,20 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     [[self window] setContentView:newView];
 }
 
-- (void)updateUI
+-(void)updateUI
 {
   [self window]; // make sure the window has loaded
-
+  
   // setup for bookmarks
-  if (mBookmarkItem && [mBookmarkItem isKindOfClass:[Bookmark class]]) {
+  if (mBookmarkItem && [mBookmarkItem isKindOfClass:[Bookmark class]])
+  {
     [self configureWindowForView:eBookmarkInfoView];
     [mBookmarkNameField setStringValue:[mBookmarkItem title]];
     [mBookmarkDescField setStringValue:[mBookmarkItem itemDescription]];
     [mBookmarkKeywordField setStringValue:[mBookmarkItem keyword]];
     [mBookmarkLocationField setStringValue:[(Bookmark *)mBookmarkItem url]];
     [mNumberVisitsField setIntValue:[(Bookmark *)mBookmarkItem numberOfVisits]];
-    [mLastVisitField setStringValue:[[(Bookmark *)mBookmarkItem lastVisit] descriptionWithCalendarFormat:[[mLastVisitField formatter] dateFormat]
-                                                                                                timeZone:[NSTimeZone localTimeZone]
-                                                                                                  locale:nil]];
+    [mLastVisitField setStringValue: [[(Bookmark *)mBookmarkItem lastVisit] descriptionWithCalendarFormat:[[mLastVisitField formatter] dateFormat] timeZone:[NSTimeZone localTimeZone] locale:nil]];
 
     // if its parent is a smart folder or it's a menu separator,
     // we turn off all the fields.  if it isn't, then we turn them all on
@@ -320,7 +315,8 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     [mBookmarkLocationField setEditable:canEdit];
   }
   // Folders
-  else if (mBookmarkItem && [mBookmarkItem isKindOfClass:[BookmarkFolder class]]) {
+  else if (mBookmarkItem && [mBookmarkItem isKindOfClass:[BookmarkFolder class]])
+  {
     [self configureWindowForView:eFolderInfoView];
 
     [mTabgroupCheckbox setState:[(BookmarkFolder *)mBookmarkItem isGroup] ? NSOnState : NSOffState];
@@ -335,7 +331,8 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     else
       [mDockMenuCheckbox setState:NSOffState];
   }
-  else {
+  else
+  {
     [self configureWindowForView:eBookmarkInfoView];
     // clear stuff
     [mBookmarkNameField setStringValue:@""];
@@ -351,26 +348,28 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     [mNumberVisitsField setIntValue:0];
     [mLastVisitField setStringValue:@""];
   }
-
+    
   // Header
-  if (mBookmarkItem) {
+  if (mBookmarkItem)
+  {
     NSMutableString *truncatedTitle = [NSMutableString stringWithString:[mBookmarkItem title]];
     [truncatedTitle truncateTo:kMaxLengthOfWindowTitle at:kTruncateAtEnd];
-    NSString* infoForString = [NSString stringWithFormat:NSLocalizedString(@"BookmarkInfoTitle", nil), truncatedTitle];
+    NSString* infoForString = [NSString stringWithFormat:NSLocalizedString(@"BookmarkInfoTitle", @"Info for "), truncatedTitle];
     [[self window] setTitle:infoForString];
   }
-  else {
-    [[self window] setTitle:NSLocalizedString(@"BlankBookmarkInfoTitle", nil)];
+  else
+  {
+    [[self window] setTitle:NSLocalizedString(@"BlankBookmarkInfoTitle", @"")];
   }
 }
 
-- (BookmarkItem *)bookmark
+-(BookmarkItem *)bookmark
 {
   return mBookmarkItem;
 }
 
 
-- (NSText *)windowWillReturnFieldEditor:(NSWindow *)aPanel toObject:(id)aObject
+-(NSText *)windowWillReturnFieldEditor:(NSWindow *)aPanel toObject:(id)aObject
 {
   return mFieldEditor;
 }
@@ -397,9 +396,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
   BookmarkItem *item = [aNote object];
   if ([item isKindOfClass:[Bookmark class]]) {
     [mNumberVisitsField setIntValue:[(Bookmark *)item numberOfVisits]];
-    [mLastVisitField setStringValue:[[(Bookmark *)item lastVisit] descriptionWithCalendarFormat:[[mLastVisitField formatter] dateFormat]
-                                                                                       timeZone:[NSTimeZone localTimeZone]
-                                                                                         locale:nil]];
+    [mLastVisitField setStringValue: [[(Bookmark *)item lastVisit] descriptionWithCalendarFormat:[[mLastVisitField formatter] dateFormat] timeZone:[NSTimeZone localTimeZone] locale:nil]];
   }
 }
 

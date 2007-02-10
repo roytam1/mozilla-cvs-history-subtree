@@ -40,12 +40,7 @@
 
 #include "gfxTypes.h"
 
-/**
- * A filter.
- *
- * @see gfxContext::PushFilter, gfxContext::PopFilter
- */
-class THEBES_API gfxFilter {
+class gfxFilter {
     static gfxFilter* CreateOpacityFilter(gfxFloat alpha);
     // CreateGaussianFilter, etc
 };

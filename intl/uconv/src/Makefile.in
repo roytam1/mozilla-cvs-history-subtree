@@ -61,8 +61,15 @@ REQUIRES	= xpcom \
 		  intl \
 		  locale \
 		  unicharutil \
+		  chardet \
 		  necko \
 		  $(NULL)
+
+CSRCS		= \
+		ugen.c \
+		uscan.c \
+		umap.c \
+		$(NULL)
 
 CPPSRCS		= \
 		nsUConvModule.cpp \
@@ -75,13 +82,16 @@ CPPSRCS		= \
 		nsUTF8ConverterService.cpp \
 		nsUTF8ToUnicode.cpp \
 		nsUnicodeToUTF8.cpp \
-		nsScriptableUConv.cpp \
 		$(NULL)
 
 ifdef MOZ_USE_NATIVE_UCONV
 REQUIRES	+= ucnative
 else
 CPPSRCS         += \
+		nsScriptableUConv.cpp \
+		nsUnicodeDecodeHelper.cpp \
+		nsUnicodeEncodeHelper.cpp \
+		nsMappingCache.cpp \
 		nsISO88591ToUnicode.cpp \
 		nsCP1252ToUnicode.cpp \
 		nsMacRomanToUnicode.cpp \
@@ -124,7 +134,7 @@ endif
 endif
 
 EXTRA_DSO_LDOPTS = \
-		../util/$(LIB_PREFIX)ucvutil_s.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)ucvutil_s.$(LIB_SUFFIX) \
 		$(MOZ_UNICHARUTIL_LIBS) \
 		$(MOZ_NECKO_UTIL_LIBS) \
 		$(MOZ_COMPONENT_LIBS) \
@@ -149,17 +159,17 @@ LOCAL_INCLUDES	= -I$(srcdir)/../util \
 
 ifndef MOZ_USE_NATIVE_UCONV
 SHARED_LIBRARY_LIBS += \
-	../ucvlatin/$(LIB_PREFIX)ucvlatin_s.$(LIB_SUFFIX) \
-	../ucvibm/$(LIB_PREFIX)ucvibm_s.$(LIB_SUFFIX) \
-	../ucvja/$(LIB_PREFIX)ucvja_s.$(LIB_SUFFIX) \
-	../ucvtw2/$(LIB_PREFIX)ucvtw2_s.$(LIB_SUFFIX) \
-	../ucvtw/$(LIB_PREFIX)ucvtw_s.$(LIB_SUFFIX) \
-	../ucvko/$(LIB_PREFIX)ucvko_s.$(LIB_SUFFIX) \
-	../ucvcn/$(LIB_PREFIX)ucvcn_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)ucvlatin_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)ucvibm_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)ucvja_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)ucvtw2_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)ucvtw_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)ucvko_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)ucvcn_s.$(LIB_SUFFIX) \
 	$(NULL)
 else
 SHARED_LIBRARY_LIBS += \
-	../native/$(LIB_PREFIX)ucnative_s.$(LIB_SUFFIX) \
+	$(DIST)/lib/$(LIB_PREFIX)ucnative_s.$(LIB_SUFFIX) \
 	$(NULL)
 endif
 

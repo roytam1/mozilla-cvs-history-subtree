@@ -56,6 +56,8 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
 
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+
 class RobotSinkObserver : public nsIRobotSinkObserver {
 public:
   RobotSinkObserver() {
@@ -113,7 +115,7 @@ NS_IMETHODIMP RobotSinkObserver::ProcessLink(const nsString& aURLSpec)
            nsString * pstr = (nsString *)g_duplicateList->ElementAt(n);
            if (pstr->Equals(aURLSpec)) {
               fputs ("Robot: (duplicate '",stdout);
-              fputs (NS_LossyConvertUTF16toASCII(aURLSpec).get(),stdout);
+              fputs (NS_LossyConvertUCS2toASCII(aURLSpec).get(),stdout);
               fputs ("')\n",stdout);
               return NS_OK;
            }
@@ -130,7 +132,7 @@ NS_IMETHODIMP RobotSinkObserver::ProcessLink(const nsString& aURLSpec)
      }
      else {
         fputs ("Robot: (cannot process URL types '",stdout);
-        fputs (NS_LossyConvertUTF16toASCII(aURLSpec).get(),stdout);
+        fputs (NS_LossyConvertUCS2toASCII(aURLSpec).get(),stdout);
         fputs ("')\n",stdout);
      }
   }
@@ -251,11 +253,11 @@ extern "C" NS_EXPORT int DebugRobot(
     // Create url
     nsIURI* url;
     nsresult rv;
-    nsCOMPtr<nsIIOService> service(do_GetService(NS_IOSERVICE_CONTRACTID, &rv));
+    nsCOMPtr<nsIIOService> service(do_GetService(kIOServiceCID, &rv));
     if (NS_FAILED(rv)) return rv;
 
     nsIURI *uri = nsnull;
-    NS_ConvertUTF16toUTF8 uriStr(*urlName);
+    NS_ConvertUCS2toUTF8 uriStr(*urlName);
     rv = service->NewURI(uriStr, nsnull, nsnull, &uri);
     if (NS_FAILED(rv)) return rv;
 
@@ -274,7 +276,7 @@ extern "C" NS_EXPORT int DebugRobot(
     fputs ("Robot: parsing(",stdout);
     fputs (str_num,stdout);
     fputs (") ",stdout);
-    fputs (NS_LossyConvertUTF16toASCII(*urlName).get(),stdout);
+    fputs (NS_LossyConvertUCS2toASCII(*urlName).get(),stdout);
     fputs ("...",stdout);
 
     delete urlName;
@@ -304,7 +306,7 @@ extern "C" NS_EXPORT int DebugRobot(
     parser->SetContentSink(sink);
     g_bReadyForNextUrl = PR_FALSE;  
 
-    parser->Parse(url, nsnull);/* XXX hook up stream listener here! */
+    parser->Parse(url, nsnull,PR_TRUE);/* XXX hook up stream listener here! */
     while (!g_bReadyForNextUrl) {
       if (yieldProc != NULL) {
         nsCAutoString spec;
@@ -321,7 +323,7 @@ extern "C" NS_EXPORT int DebugRobot(
 
       nsCAutoString spec;
       (void)url->GetSpec(spec);
-      NS_ConvertUTF8toUTF16 theSpec(spec);
+      NS_ConvertUTF8toUCS2 theSpec(spec);
       nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(docShell));
       webNav->LoadURI(theSpec.get(),
                       nsIWebNavigation::LOAD_FLAGS_NONE,

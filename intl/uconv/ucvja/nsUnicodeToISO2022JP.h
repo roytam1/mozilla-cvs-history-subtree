@@ -66,6 +66,7 @@ public:
 protected:
 
   PRInt32                   mCharset;       // current character set
+  nsIUnicodeEncodeHelper    * mHelper;      // encoder helper object
 
   nsresult ChangeCharset(PRInt32 aCharset, char * aDest, 
       PRInt32 * aDestLength);

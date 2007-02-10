@@ -14,21 +14,21 @@
 			</Description>
 		</em:targetApplication>
 		
-		<!-- target: Mozilla Firefox, version 1.0 to 3.0a2 -->
+		<!-- target: Mozilla Firefox, version 1.0 to 3.0a1 -->
 		<em:targetApplication>
 			<Description>
 				<em:id>{ec8030f7-c20a-464f-9b0e-13a3a9e97384}</em:id>
 				<em:minVersion>1.0</em:minVersion>
-				<em:maxVersion>3.0</em:maxVersion>
+				<em:maxVersion>3.0a1</em:maxVersion>
 			</Description>
 		</em:targetApplication>
 		
-		<!-- target: SeaMonkey, version 1.0 to 1.5a -->
+		<!-- target: SeaMonkey, version 1.0 to 1.1 -->
 		<em:targetApplication>
 			<Description>
 				<em:id>{92650c4d-4b8e-4d2a-b7eb-24ecf4f6b63a}</em:id>
 				<em:minVersion>1.0</em:minVersion>
-				<em:maxVersion>1.5a</em:maxVersion>
+				<em:maxVersion>1.1</em:maxVersion>
 			</Description>
 		</em:targetApplication>
 		
@@ -45,11 +45,10 @@
 		<em:name>ChatZilla</em:name>
 		<em:description>A clean, easy to use and highly extensible Internet Relay Chat (IRC) client.</em:description>
 		<em:creator>The ChatZilla Team</em:creator>
-		<em:contributor>Lim Chee Aun (graphics)</em:contributor>
 		<em:contributor>Robert Ginda</em:contributor>
-		<em:contributor>Gijs Kruitbosch</em:contributor>
-		<em:contributor>James Ross</em:contributor>
 		<em:contributor>Samuel Sieb</em:contributor>
+		<em:contributor>James Ross</em:contributor>
+		<em:contributor>Lim Chee Aun (graphics)</em:contributor>
 		<em:iconURL>chrome://chatzilla/skin/images/logo.png</em:iconURL>
 		<em:homepageURL>http://chatzilla.hacksrus.com/</em:homepageURL>
 		<em:optionsURL>javascript:opener.openDialog('chrome://chatzilla/content/config.xul','','chrome,modal,resizable');window.close();</em:optionsURL>

@@ -149,11 +149,11 @@ function onProfilesKey(aEvent)
 {
   switch( aEvent.keyCode ) 
   {
-  case KeyEvent.DOM_VK_DELETE:
-    ConfirmDelete();
+  case 46:
+    confirmDelete();
     break;
-  case KeyEvent.DOM_VK_F2:
-    RenameProfile();
+  case "VK_F2":
+    renameProfile();
     break;
   }
 }
@@ -226,10 +226,9 @@ function RenameProfile()
     }
 
     selectedItem.label = newName;
-    var tiptext = gProfileManagerBundle.
-                  getFormattedString("profileTooltip",
-                                     [newName, selectedProfile.rootDir.path]);
-    selectedItem.setAttribute("tooltiptext", tiptext);
+    var tooltiptext =
+      gProfileManagerBundle.getFormattedString("profileTooltip", [newName, aProfile.rootDir.path]);
+    listitem.setAttribute("tooltiptext", tooltiptext);
 
     return true;
   }
@@ -253,7 +252,7 @@ function ConfirmDelete()
   if (selectedProfile.rootDir.exists()) {
     var dialogTitle = gProfileManagerBundle.getString("deleteTitle");
     var dialogText =
-      gProfileManagerBundle.getFormattedString("deleteProfileConfirm",
+      gProfileManagerBundle.getFormattedString("deleteProfile",
                                                [selectedProfile.rootDir.path]);
 
     var buttonPressed = gPromptService.confirmEx(window, dialogTitle, dialogText,

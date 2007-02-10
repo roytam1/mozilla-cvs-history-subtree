@@ -122,7 +122,7 @@ nsAutoCompleteMdbResult::GetValueAt(PRInt32 aIndex, nsAString & _retval)
   } else if (mValueType == kCharType) {
     nsCAutoString value;
     GetUTF8RowValue(row, mValueToken, value);
-    _retval = NS_ConvertUTF8toUTF16(value);
+    _retval = NS_ConvertUTF8toUCS2(value);
   }
   
   /* // TESTING: return ordinaly labeled values   
@@ -149,7 +149,7 @@ nsAutoCompleteMdbResult::GetCommentAt(PRInt32 aIndex, nsAString & _retval)
   } else if (mCommentType == kCharType) {
     nsCAutoString value;
     GetUTF8RowValue(row, mCommentToken, value);
-    _retval = NS_ConvertUTF8toUTF16(value);
+    _retval = NS_ConvertUTF8toUCS2(value);
   }
 
   return NS_OK;
@@ -290,14 +290,14 @@ nsAutoCompleteMdbResult::GetRowValue(nsIMdbRow *aRow, mdb_column aCol, nsAString
           return NS_ERROR_OUT_OF_MEMORY;
         SwapBytes(swapval, (const PRUnichar *)yarn.mYarn_Buf, len);
         aValue.Assign(swapval, len);
-        delete[] swapval;
+        delete swapval;
       }
       else
         aValue.Assign((const PRUnichar *)yarn.mYarn_Buf, len);
       break;
     }
     case 1: // utf 8
-      aValue.Assign(NS_ConvertUTF8toUTF16((const char*)yarn.mYarn_Buf, yarn.mYarn_Fill));
+      aValue.Assign(NS_ConvertUTF8toUCS2((const char*)yarn.mYarn_Buf, yarn.mYarn_Fill));
       break;
     default:
       return NS_ERROR_UNEXPECTED;

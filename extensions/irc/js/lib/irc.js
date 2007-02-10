@@ -1426,10 +1426,17 @@ function serv_001 (e)
                           this.parent.INITIAL_UMODE + "\n");
     }
 
+    if (this.parent.INITIAL_CHANNEL)
+    {
+        this.parent.primChan = this.addChannel (this.parent.INITIAL_CHANNEL);
+        this.parent.primChan.join();
+    }
+
     this.parent.users = this.users;
     e.destObject = this.parent;
     e.set = "network";
 }
+
 
 /* server features */
 CIRCServer.prototype.on005 =
@@ -1555,35 +1562,6 @@ function serv_005 (e)
     return true;
 }
 
-/* users */
-CIRCServer.prototype.on251 =
-function serv_251(e)
-{
-    // 251 is the first message we get after 005, so it's now safe to do
-    // things that might depend upon server features.
-
-    if (("namesx" in this.supports) && this.supports.namesx)
-        this.sendData("PROTOCTL NAMESX\n");
-
-    if (this.parent.INITIAL_CHANNEL)
-    {
-        this.parent.primChan = this.addChannel(this.parent.INITIAL_CHANNEL);
-        this.parent.primChan.join();
-    }
-
-    e.destObject = this.parent;
-    e.set = "network";
-}
-
-/* user away message */
-CIRCServer.prototype.on301 =
-function serv_301(e)
-{
-    e.user = new CIRCUser(this, null, e.params[2]);
-    e.user.awayMessage = e.decodeParam(3, e.user);
-    e.destObject = this.parent;
-    e.set = "network";
-}
 
 /* whois name */
 CIRCServer.prototype.on311 =
@@ -1728,7 +1706,7 @@ function serv_315 (e)
     return true;
 }
 
-/* names reply */
+/* name reply */
 CIRCServer.prototype.on353 =
 function serv_353 (e)
 {
@@ -1751,23 +1729,21 @@ function serv_353 (e)
         if (nick == "")
             break;
 
-        var modes = new Array();
-        do
+        var found = false;
+        for (var m in mList)
         {
-            var found = false;
-            for (var m in mList)
+            if (nick[0] == mList[m].symbol)
             {
-                if (nick[0] == mList[m].symbol)
-                {
-                    nick = nick.substr(1);
-                    modes.push(mList[m].mode);
-                    found = true;
-                    break;
-                }
+                e.user = new CIRCChanUser(e.channel, null,
+                                          nick.substr(1, nick.length),
+                                          [ mList[m].mode ]);
+                found = true;
+                break;
             }
-        } while (found && ("namesx" in this.supports) && this.supports.namesx);
+        }
+        if (!found)
+            e.user = new CIRCChanUser(e.channel, null, nick, [ ]);
 
-        new CIRCChanUser(e.channel, null, nick, modes);
     }
 
     return true;
@@ -2303,16 +2279,13 @@ function serv_notice (e)
 {
     var targetName = e.params[1];
 
-    if (this.userModes)
+    // Strip off one (and only one) user mode prefix.
+    for (var i = 0; i < this.userModes.length; i++)
     {
-        // Strip off one (and only one) user mode prefix.
-        for (var i = 0; i < this.userModes.length; i++)
+        if (targetName[0] == this.userModes[i].symbol)
         {
-            if (targetName[0] == this.userModes[i].symbol)
-            {
-                targetName = targetName.substr(1);
-                break;
-            }
+            targetName = targetName.substr(1);
+            break;
         }
     }
 
@@ -2357,16 +2330,13 @@ function serv_privmsg (e)
 {
     var targetName = e.params[1];
 
-    if (this.userModes)
+    // Strip off one (and only one) user mode prefix.
+    for (var i = 0; i < this.userModes.length; i++)
     {
-        // Strip off one (and only one) user mode prefix.
-        for (var i = 0; i < this.userModes.length; i++)
+        if (targetName[0] == this.userModes[i].symbol)
         {
-            if (targetName[0] == this.userModes[i].symbol)
-            {
-                targetName = targetName.substr(1);
-                break;
-            }
+            targetName = targetName.substr(1);
+            break;
         }
     }
 
@@ -2912,23 +2882,6 @@ function chan_inviteuser (nick)
 {
     this.parent.sendData("INVITE " + nick + " " + this.encodedName + "\n");
     return true;
-}
-
-CIRCChannel.prototype.findUsers = 
-function chan_findUsers(mask)
-{
-    var ary = [];
-    var unchecked = 0;
-    mask = getHostmaskParts(mask);
-    for (var nick in this.users)
-    {
-        var user = this.users[nick];
-        if (!user.host || !user.name)
-            unchecked++;
-        else if (hostmaskMatches(user, mask))
-            ary.push(user);
-    }
-    return { users: ary, unchecked: unchecked };
 }
 
 /*

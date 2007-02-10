@@ -47,7 +47,7 @@ var gPrivacyPane = {
    */
   init: function ()
   {
-    this._updateHistoryDaysUI();
+    this.updateHistoryDaysUI();
     this.updateClearNowButtonLabel();
   },
 
@@ -78,7 +78,7 @@ var gPrivacyPane = {
    * days-of-history checkbox so that updates to the textbox are transmitted to
    * the real days-of-history preference.
    */
-  _updateHistoryDaysUI: function ()
+  updateHistoryDaysUI: function ()
   {
     var pref = document.getElementById("browser.history_expire_days");
     var mirror = document.getElementById("browser.history_expire_days.mirror");
@@ -90,7 +90,7 @@ var gPrivacyPane = {
       mirror.value = pref.value ? pref.value : pref.defaultValue;
 
     checkbox.checked = (pref.value > 0);
-    textbox.disabled = !checkbox.checked;
+    textbox.disabled = !(pref.value > 0);
 
     // hook up textbox to mirror preference and force a preference read
     textbox.setAttribute("onsynctopreference", "return gPrivacyPane._writeHistoryDaysMirror();");

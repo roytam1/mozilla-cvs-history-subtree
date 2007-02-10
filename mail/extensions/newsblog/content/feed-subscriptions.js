@@ -80,7 +80,7 @@ var gFeedSubscriptionsWindow = {
       var newsBlogBundle = document.getElementById("bundle_newsblog");
       dismissDialog = !(promptService.confirmEx(window, newsBlogBundle.getString('subscribe-cancelSubscriptionTitle'), 
                                        newsBlogBundle.getString('subscribe-cancelSubscription'), 
-                                       IPS.STD_YES_NO_BUTTONS,
+                                       (IPS.BUTTON_TITLE_YES * IPS.BUTTON_POS_0) + (IPS.BUTTON_TITLE_NO * IPS.BUTTON_POS_1),
                                        null, null, null, null, { }));    
     }  
     return dismissDialog;
@@ -333,10 +333,6 @@ var gFeedSubscriptionsWindow = {
     { 
       return false; 
     },
-    isSelectable: function (aIndex, aColumn) 
-    { 
-      return false; 
-    },
     setCellValue: function (aIndex, aColumn, aValue) {},    
     setCellText: function (aIndex, aColumn, aValue) {},    
     performAction: function (aAction) {},  
@@ -514,7 +510,8 @@ var gFeedSubscriptionsWindow = {
     var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(IPS);
     var abortRemoval = promptService.confirmEx(window, this.mBundle.getString('subsribe-confirmFeedDeletionTitle'), 
                                                   this.mBundle.getFormattedString('subsribe-confirmFeedDeletion', [itemToRemove.name], 1), 
-                                                  IPS.STD_YES_NO_BUTTONS, null, null, null, null, { });
+                                                  (IPS.BUTTON_TITLE_YES * IPS.BUTTON_POS_0) + (IPS.BUTTON_TITLE_NO * IPS.BUTTON_POS_1),
+                                                  null, null, null, null, { });
     if (abortRemoval)
       return;
 

@@ -51,7 +51,7 @@ class nsXPrintContext;
 class nsIDeviceContextXp : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IDEVICECONTEXTXP_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDEVICECONTEXTXP_IID);
   
   NS_IMETHOD SetSpec(nsIDeviceContextSpec *aSpec) = 0;
 
@@ -61,6 +61,5 @@ public:
   NS_IMETHOD GetPrintContext(nsXPrintContext*& aContext) = 0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIDeviceContextXp, NS_IDEVICECONTEXTXP_IID)
 
 #endif /* !__nsIDeviceContextXp_h */

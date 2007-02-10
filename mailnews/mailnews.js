@@ -72,33 +72,12 @@ pref("mailnews.headers.showUserAgent",       false);
 // is displayed in the message pane or not...
 pref("mailnews.headers.showOrganization",    false);
 
-// space-delimited list of extra headers to show in msg header display area.
-pref("mailnews.headers.extraExpandedHeaders", "");
-
-// default sort order settings (when creating new folder views)
-// sort_order is an int value reflecting nsMsgViewSortOrder values
-//   as defined in nsIMsgDBView.idl (ascending = 1, descending = 2)
-// sort_type is an int value reflecting nsMsgViewSortType values
-//   as defined in nsIMsgDBView.idl (byDate = 18, byId = 21 etc.)
-pref("mailnews.default_sort_order", 1); // for Mail/RSS/... (nsMsgDatabase)
-pref("mailnews.default_sort_type", 18); //
-pref("mailnews.default_news_sort_order", 1); // for News (nsNewsDatabase)
-pref("mailnews.default_news_sort_type", 21); //
-
-// default view flags for new folders
-// both flags are int values reflecting nsMsgViewFlagsType values
-// as defined in nsIMsgDBView.idl (kNone = 0, kThreadedDisplay = 1 etc.)
-pref("mailnews.default_view_flags", 0); // for Mail/RSS/... (nsMsgDatabase)
-pref("mailnews.default_news_view_flags", 1); // for News (nsNewsDatabase)
-
 // If true, delete will use the direction of the sort order
 // in determining the next message to select. 
 pref("mail.delete_matches_sort_order", false);
 
 // mailnews tcp read+write timeout in seconds.
 pref("mailnews.tcptimeout", 60);
-
-pref("mailnews.headers.showSender", false);
 
 // Mail server preferences, pop by default
 pref("mail.server_type",	0); 	// 0 pop, 1 imap,
@@ -108,6 +87,13 @@ pref("mail.auth_login", true);
 
 pref("mail.default_drafts", "");    // empty string use default Drafts name;
 pref("mail.default_templates", ""); // empty string use default Templates name
+
+// set to 0 if you don't want to ignore timestamp differences between
+// local mail folders and the value stored in the corresponding .msf file.
+// 0 was the default up to and including 1.5. I've made the default
+// be greater than one hour so daylight savings time changes don't affect us.
+// We will still always regenerate .msf files if the file size changes.
+pref("mail.db_timestamp_leeway", 4000);
 
 // check all folders for new mail
 pref("mail.check_all_imap_folders_for_new", false);
@@ -132,10 +118,6 @@ pref("mail.imap.mime_parts_on_demand_threshold", 30000);
 pref("mail.imap.use_literal_plus",          true);
 pref("mail.imap.expunge_after_delete",      false);
 pref("mail.imap.check_deleted_before_expunge", false);
-// if true, we assume that a user access a folder in the other users namespace
-// is acting as a delegate for that folder, and wishes to use the other users
-// identity when acting on messages in other users folders.
-pref("mail.imap.delegateOtherUsersFolders", false);
 pref("mail.thread_without_re",	            true);  // if false, only thread by subject if Re:
 pref("mail.strict_threading",               false); // if true, don't thread by suject at all
 pref("mail.leave_on_server",                false);
@@ -173,7 +155,6 @@ pref("mail.addr_book.im.onlineCheckAllowed", false);
 pref("messenger.throbber.url","chrome://messenger-region/locale/region.properties");
 pref("compose.throbber.url","chrome://messenger-region/locale/region.properties");
 pref("addressbook.throbber.url","chrome://messenger-region/locale/region.properties");
-pref("mail.accountwizard.deferstorage", false);
 #endif
 
 // the format for "mail.addr_book.quicksearchquery.format" is:
@@ -244,15 +225,14 @@ pref("mailnews.reply_header_originalmessage",   "chrome://messenger/locale/messe
 
 pref("mailnews.reply_to_self_check_all_ident", false);
 
-pref("mail.purge_threshhold",              100);
-pref("mail.prompt_purge_threshhold",       false);
-pref("mail.purge.ask",                     true);
+pref("mail.purge_threshhold",                100);
+pref("mail.prompt_purge_threshhold",             false);   
 
 pref("mailnews.offline_sync_mail",         false);
 pref("mailnews.offline_sync_news",         false);
 pref("mailnews.offline_sync_send_unsent",  true);
 pref("mailnews.offline_sync_work_offline", false);   
-pref("mailnews.force_ascii_search",        false);
+pref("mailnews.force_ascii_search",         false);
 
 pref("mailnews.send_default_charset",       "chrome://messenger/locale/messenger.properties");
 pref("mailnews.view_default_charset",       "chrome://messenger/locale/messenger.properties");
@@ -261,7 +241,6 @@ pref("mailnews.reply_in_default_charset",   false);
 
 pref("mailnews.search_date_format",        "chrome://messenger/locale/messenger.properties");
 pref("mailnews.search_date_separator",     "chrome://messenger/locale/messenger.properties");
-pref("mailnews.search_date_leading_zeros", "chrome://messenger/locale/messenger.properties");
 
 pref("mailnews.language_sensitive_font",    true);
 
@@ -270,7 +249,6 @@ pref("mailnews.quotingPrefs.version",       0);  // used to decide whether to mi
 // the first time, we'll warn the user about the blind send, and they can disable the warning if they want.
 pref("mapi.blind-send.enabled",             true);  
 
-pref("offline.autoDetect",                  false); // automatically move the user offline or online based on the network connection
 pref("offline.news.download.unread_only",   true);
 pref("offline.news.download.by_date",       true);
 pref("offline.news.download.days",          30);    // days
@@ -346,8 +324,8 @@ pref("ldap_2.servers.default.attrmap.HomeZipCode", "mozillaHomePostalCode");
 pref("ldap_2.servers.default.attrmap.WorkCountry", "c,countryname");
 pref("ldap_2.servers.default.attrmap.HomeCountry", "mozillaHomeCountryName");
 pref("ldap_2.servers.default.attrmap.JobTitle", "title");
-pref("ldap_2.servers.default.attrmap.Department", "ou,department,departmentnumber,orgunit");
-pref("ldap_2.servers.default.attrmap.Company", "o,company");
+pref("ldap_2.servers.default.attrmap.Department", "department,departmentnumber,ou,orgunit");
+pref("ldap_2.servers.default.attrmap.Company", "company,o");
 pref("ldap_2.servers.default.attrmap._AimScreenName", "nsAIMid,nscpaimscreenname");
 pref("ldap_2.servers.default.attrmap.WebPage1", "mozillaWorkUrl,workurl");
 pref("ldap_2.servers.default.attrmap.WebPage2", "mozillaHomeUrl,homeurl");
@@ -385,9 +363,6 @@ pref("ldap_2.version",											3); /* Update kCurrentListVersion in include/di
 pref("ldap_2.prefs_migrated",      false);
 
 pref("mailnews.confirm.moveFoldersToTrash", true);
-
-// space-delimited list of extra headers to add to .msf file
-pref("mailnews.customDBHeaders", "");
 
 pref("mailnews.reuse_message_window", true);
 pref("mailnews.reuse_thread_window2", false);
@@ -578,28 +553,7 @@ pref("mailnews.html_domains","");
 pref("mailnews.plaintext_domains","");
 pref("mailnews.global_html_domains.version",1);
 
-/////////////////////////////////////////////////////////////////
-// Privacy Controls for Handling Remote Content
-///////////////////////////////////////////////////////////////// 
-pref("mailnews.message_display.allow.plugins", false); // disable plugins by default
-pref("mailnews.message_display.disable_remote_image", true);
-
-/////////////////////////////////////////////////////////////////
-// Trusted Mail Domains
-//
-// Specific domains can be white listed to bypass various privacy controls in Thunderbird
-// such as blocking remote images, the phishing detector, etc. This is particularly
-// useful for business deployments where images or links reference servers inside a 
-// corporate intranet. For multiple domains, separate them with a comma. i.e.
-// pref("mail.trusteddomains", "mozilla.org,mozillafoundation.org");
-///////////////////////////////////////////////////////////////// 
-pref("mail.trusteddomains", "");
-
 pref("mail.imap.use_status_for_biff", true);
-
-pref("mail.quota.mainwindow_threshold.show", 75); // in percent. when the quota meter starts showing up at all. decrease this for it to be more than a warning.
-pref("mail.quota.mainwindow_threshold.warning", 80); // when it gets yellow
-pref("mail.quota.mainwindow_threshold.critical", 95); // when it gets red
 
 // Pref controlling confirmation of folder deletion on empty trash
 pref("mail.imap.confirm_emptyTrashFolderDeletion", false);
@@ -666,6 +620,12 @@ pref("mailnews.ui.advanced_directory_search_results.version", 1);
 //If set to a number greater than 0, msg compose windows will be recycled in order to open them quickly
 pref("mail.compose.max_recycled_windows", 1); 
 
+// true makes it so we persist the open state of news server when starting up the 3 pane
+// this is costly, as it might result in network activity.
+// false makes it so we act like 4.x
+// see bug #103010 for details
+pref("news.persist_server_open_state_in_folderpane",false);
+
 // default description and color prefs for tags
 // (we keep the .labels. names for backwards compatibility)
 pref("mailnews.labels.description.1", "chrome://messenger/locale/messenger.properties");
@@ -686,6 +646,12 @@ pref("mailnews.customHeaders", "");
 pref("mailnews.fakeaccount.show", false);
 pref("mailnews.fakeaccount.server", "");
 
+// message display properties
+pref("mailnews.message_display.allow.plugins", false);
+pref("mailnews.message_display.disable_remote_image", true);
+pref("mailnews.message_display.disable_remote_images.useWhitelist", true);
+pref("mailnews.message_display.disable_remote_images.whiteListAbURI","moz-abmdbdirectory://abook.mab");
+
 // default msg compose font prefs
 pref("msgcompose.font_face",                "");
 pref("msgcompose.font_size",                "medium");
@@ -695,10 +661,6 @@ pref("msgcompose.background_color",         "#FFFFFF");
 // When there is no disclosed recipients (only bcc), we should address the message to empty group
 // to prevent some mail server to disclose the bcc recipients
 pref("mail.compose.add_undisclosed_recipients", true);
-
-// Set this preference to true to tell mail not to attach the source of a link to a local
-// network file (file://///<network name>/<path>/<file name>). Windows only
-pref("mail.compose.dont_attach_source_of_local_network_links", false);
 
 // these prefs (in minutes) are here to help QA test this feature
 // "mail.purge.min_delay", never purge a junk folder more than once every 480 minutes (60 mins/hour * 8 hours)
@@ -753,6 +715,3 @@ pref("mail.signature_date", 0);
 #ifdef XP_OS2
 pref("mail.compose.max_recycled_windows", 0);
 #endif
-
-// For the Empty Junk confirmation dialog
-pref("mailnews.emptyJunk.dontAskAgain", false);

@@ -52,7 +52,6 @@
 #include "nsIIOService.h"
 #include "nsCOMPtr.h"
 #include "nsURLHelper.h"
-#include "nsIClassInfo.h"
 
 class nsIBinaryInputStream;
 class nsIBinaryOutputStream;
@@ -77,7 +76,6 @@ public:
     NS_DECL_NSISTANDARDURL
     NS_DECL_NSISERIALIZABLE
     NS_DECL_NSICLASSINFO
-    NS_DECL_NSIMUTABLE
 
     nsStandardURL(PRBool aSupportsFileURL = PR_FALSE);
     virtual ~nsStandardURL();
@@ -275,7 +273,6 @@ private:
     static PRBool                       gInitialized;
     static PRBool                       gEscapeUTF8;
     static PRBool                       gAlwaysEncodeInUTF8;
-    static PRBool                       gEncodeQueryInUTF8;
     static PRBool                       gShowPunycode;
     static nsIPrefBranch               *gIDNWhitelistPrefBranch;
 };

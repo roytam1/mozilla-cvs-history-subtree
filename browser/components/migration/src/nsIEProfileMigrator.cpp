@@ -45,13 +45,12 @@
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsBrowserProfileMigratorUtils.h"
 #include "nsCOMPtr.h"
-#include "nsCRTGlue.h"
 #include "nsNetCID.h"
 #include "nsDocShellCID.h"
 #include "nsDebug.h"
+#include "nsDependentString.h"
 #include "nsDirectoryServiceDefs.h"
-#include "nsDirectoryServiceUtils.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "plstr.h"
 #include "prio.h"
 #include "prmem.h"
@@ -85,150 +84,189 @@
 #include "nsIRDFService.h"
 #include "nsIRDFContainer.h"
 #include "nsIURL.h"
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
 #include "nsINavBookmarksService.h"
 #include "nsBrowserCompsCID.h"
 #else
 #include "nsIBookmarksService.h"
 #endif
 #include "nsIStringBundle.h"
+#include "nsCRT.h"
 #include "nsNetUtil.h"
 #include "nsToolkitCompsCID.h"
 #include "nsUnicharUtils.h"
 #include "nsIWindowsRegKey.h"
 
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 #define TRIDENTPROFILE_BUNDLE       "chrome://browser/locale/migration/migration.properties"
 
 const int sInitialCookieBufferSize = 1024; // but it can grow
 const int sUsernameLengthLimit     = 80;
 const int sHostnameLengthLimit     = 255;
 
-//***********************************************************************
 //*** Replacements for comsupp.lib calls used by pstorec.dll
 //***********************************************************************
 void  __stdcall _com_issue_error(HRESULT hr)
 {
-  // XXX - Do nothing for now
+// XXX - Do nothing for now
 }
+
+//***********************************************************************
 
 //***********************************************************************
 //*** windows registry to mozilla prefs data type translation functions
 //***********************************************************************
 
-typedef void (*regEntryHandler)(nsIWindowsRegKey *, const nsString&,
+typedef void (*regEntryHandler)(unsigned char *, DWORD, DWORD,
                                 nsIPrefBranch *, char *);
 
 // yes/no string to T/F boolean
 void
-TranslateYNtoTF(nsIWindowsRegKey *aRegKey, const nsString& aRegValueName,
-                nsIPrefBranch *aPrefs, char *aPrefKeyName) {
+TranslateYNtoTF(unsigned char *aRegValue, DWORD aRegValueLength,
+                DWORD aRegValueType,
+                nsIPrefBranch *prefs, char *aPrefKeyName) {
+
+  PRInt32 prefIntValue = 0;
 
   // input type is a string, lowercase "yes" or "no"
-  nsAutoString regValue; 
-  if (NS_SUCCEEDED(aRegKey->ReadStringValue(aRegValueName, regValue)))
-    aPrefs->SetBoolPref(aPrefKeyName, regValue.EqualsLiteral("yes"));
+  if (aRegValueType != REG_SZ)
+    NS_WARNING("unexpected yes/no data type");
+
+  if (aRegValueType == REG_SZ && aRegValue[0] != 0) {
+    // strcmp is safe; it's bounded by its second parameter
+    prefIntValue = strcmp(NS_REINTERPRET_CAST(char *, aRegValue), "yes") == 0;
+    prefs->SetBoolPref(aPrefKeyName, prefIntValue);
+  }
 }
 
 // yes/no string to F/T boolean
 void
-TranslateYNtoFT(nsIWindowsRegKey *aRegKey, const nsString& aRegValueName,
-                nsIPrefBranch *aPrefs, char *aPrefKeyName) {
+TranslateYNtoFT(unsigned char *aRegValue, DWORD aRegValueLength,
+                DWORD aRegValueType,
+                nsIPrefBranch *prefs, char *aPrefKeyName) {
+
+  PRInt32 prefIntValue = 0;
 
   // input type is a string, lowercase "yes" or "no"
-  nsAutoString regValue; 
-  if (NS_SUCCEEDED(aRegKey->ReadStringValue(aRegValueName, regValue)))
-    aPrefs->SetBoolPref(aPrefKeyName, !regValue.EqualsLiteral("yes"));
-}
+  if (aRegValueType != REG_SZ)
+    NS_WARNING("unexpected yes/no data type");
 
-void
-TranslateYNtoImageBehavior(nsIWindowsRegKey *aRegKey,
-                           const nsString& aRegValueName,
-                           nsIPrefBranch *aPrefs, char *aPrefKeyName) {
-  // input type is a string, lowercase "yes" or "no"
-  nsAutoString regValue; 
-  if (NS_SUCCEEDED(aRegKey->ReadStringValue(aRegValueName, regValue)) &&
-      !regValue.IsEmpty()) {
-    if (regValue.EqualsLiteral("yes"))
-      aPrefs->SetIntPref(aPrefKeyName, 1);
-    else
-      aPrefs->SetIntPref(aPrefKeyName, 2);
+  if (aRegValueType == REG_SZ && aRegValue[0] != 0) {
+    // strcmp is safe; it's bounded by its second parameter
+    prefIntValue = strcmp(NS_REINTERPRET_CAST(char *, aRegValue), "yes") != 0;
+    prefs->SetBoolPref(aPrefKeyName, prefIntValue);
   }
 }
 
 void
-TranslateDWORDtoHTTPVersion(nsIWindowsRegKey *aRegKey,
-                            const nsString& aRegValueName,
-                            nsIPrefBranch *aPrefs, char *aPrefKeyName) {
-  PRUint32 val;
-  if (NS_SUCCEEDED(aRegKey->ReadIntValue(aRegValueName, &val))) {
-    if (val & 0x1) 
-      aPrefs->SetCharPref(aPrefKeyName, "1.1");
+TranslateYNtoImageBehavior(unsigned char *aRegValue, DWORD aRegValueLength,
+                           DWORD aRegValueType,
+                           nsIPrefBranch *prefs, char *aPrefKeyName) {
+  // input type is a string, lowercase "yes" or "no"
+  if (aRegValueType != REG_SZ)
+    NS_WARNING("unexpected yes/no data type");
+
+  if (aRegValueType == REG_SZ && aRegValue[0] != 0) {
+    // strcmp is safe; it's bounded by its second parameter
+    if (!strcmp(NS_REINTERPRET_CAST(char *, aRegValue), "yes"))
+      prefs->SetIntPref(aPrefKeyName, 1);
     else
-      aPrefs->SetCharPref(aPrefKeyName, "1.0");
+      prefs->SetIntPref(aPrefKeyName, 2);
+  }
+}
+
+void
+TranslateDWORDtoHTTPVersion(unsigned char *aRegValue, DWORD aRegValueLength,
+                            DWORD aRegValueType,
+                            nsIPrefBranch *prefs, char *aPrefKeyName) {
+  // input type is a string, lowercase "yes" or "no"
+  if (aRegValueType != REG_DWORD)
+    NS_WARNING("unexpected signed int data type");
+
+  if (aRegValueType == REG_DWORD) {
+    DWORD val = *(NS_REINTERPRET_CAST(DWORD *, aRegValue));
+    if (val & 0x1) 
+      prefs->SetCharPref(aPrefKeyName, "1.1");
+    else
+      prefs->SetCharPref(aPrefKeyName, "1.0");
   }
 }
 
 // decimal RGB (1,2,3) to hex RGB (#010203)
 void
-TranslateDRGBtoHRGB(nsIWindowsRegKey *aRegKey, const nsString& aRegValueName,
-                    nsIPrefBranch *aPrefs, char *aPrefKeyName) {
+TranslateDRGBtoHRGB(unsigned char *aRegValue, DWORD aRegValueLength,
+                    DWORD aRegValueType,
+                    nsIPrefBranch *prefs, char *aPrefKeyName) {
 
   // clear previous settings with defaults
   char prefStringValue[10];
 
-  nsAutoString regValue; 
-  if (NS_SUCCEEDED(aRegKey->ReadStringValue(aRegValueName, regValue)) &&
-      !regValue.IsEmpty()) {
+  // input type is a string
+  if (aRegValueType != REG_SZ)
+    NS_WARNING("unexpected RGB data type");
+
+  if (aRegValueType == REG_SZ && aRegValue[0] != 0) {
     int red, green, blue;
-    ::swscanf(regValue.get(), L"%d,%d,%d", &red, &green, &blue);
+    ::sscanf(NS_REINTERPRET_CAST(char *, aRegValue), "%d,%d,%d",
+             &red, &green, &blue);
     ::sprintf(prefStringValue, "#%02X%02X%02X", red, green, blue);
-    aPrefs->SetCharPref(aPrefKeyName, prefStringValue);
+    prefs->SetCharPref(aPrefKeyName, prefStringValue);
   }
 }
 
 // translate a windows registry DWORD int to a mozilla prefs PRInt32
 void
-TranslateDWORDtoPRInt32(nsIWindowsRegKey *aRegKey,
-                        const nsString& aRegValueName,
-                        nsIPrefBranch *aPrefs, char *aPrefKeyName) {
+TranslateDWORDtoPRInt32(unsigned char *aRegValue, DWORD aRegValueLength,
+                        DWORD aRegValueType,
+                        nsIPrefBranch *prefs, char *aPrefKeyName) {
 
   // clear previous settings with defaults
   PRInt32 prefIntValue = 0;
 
-  if (NS_SUCCEEDED(aRegKey->ReadIntValue(aRegValueName, 
-                   NS_REINTERPRET_CAST(PRUint32 *, &prefIntValue))))
-    aPrefs->SetIntPref(aPrefKeyName, prefIntValue);
+  if (aRegValueType != REG_DWORD)
+    NS_WARNING("unexpected signed int data type");
+
+  if (aRegValueType == REG_DWORD) {
+    prefIntValue = *(NS_REINTERPRET_CAST(DWORD *, aRegValue));
+    prefs->SetIntPref(aPrefKeyName, prefIntValue);
+  }
 }
 
 // string copy
 void
-TranslateString(nsIWindowsRegKey *aRegKey, const nsString& aRegValueName,
-                nsIPrefBranch *aPrefs, char *aPrefKeyName) {
-  nsAutoString regValue; 
-  if (NS_SUCCEEDED(aRegKey->ReadStringValue(aRegValueName, regValue)) &&
-      !regValue.IsEmpty()) {
-    aPrefs->SetCharPref(aPrefKeyName, NS_ConvertUTF16toUTF8(regValue).get());
-  }
+TranslateString(unsigned char *aRegValue, DWORD aRegValueLength,
+                DWORD aRegValueType,
+                nsIPrefBranch *prefs, char *aPrefKeyName) {
+
+  if (aRegValueType != REG_SZ)
+    NS_WARNING("unexpected string data type");
+
+  if (aRegValueType == REG_SZ)
+    prefs->SetCharPref(aPrefKeyName,
+                       NS_REINTERPRET_CAST(char *, aRegValue));
 }
 
 // translate accepted language character set formats
 // (modified string copy)
 void
-TranslateLanglist(nsIWindowsRegKey *aRegKey, const nsString& aRegValueName,
-                  nsIPrefBranch *aPrefs, char *aPrefKeyName) {
+TranslateLanglist(unsigned char *aRegValue, DWORD aRegValueLength,
+                  DWORD aRegValueType,
+                  nsIPrefBranch *prefs, char *aPrefKeyName) {
 
-  nsAutoString lang;
-  if (NS_FAILED(aRegKey->ReadStringValue(aRegValueName, lang)))
-      return;
+  char prefStringValue[MAX_PATH]; // a convenient size, one hopes
+
+  if (aRegValueType != REG_SZ)
+    NS_WARNING("unexpected string data type");
+
+  if (aRegValueType != REG_SZ)
+    return;
 
   // copy source format like "en-us,ar-kw;q=0.7,ar-om;q=0.3" into
   // destination format like "en-us, ar-kw, ar-om"
 
-  char prefStringValue[MAX_PATH]; // a convenient size, one hopes
-  NS_LossyConvertUTF16toASCII langCstr(lang);
-  const char   *source = langCstr.get(),
-               *sourceEnd = source + langCstr.Length();
-  char   *dest = prefStringValue,
+  char   *source = NS_REINTERPRET_CAST(char *, aRegValue),
+         *dest = prefStringValue,
+         *sourceEnd = source + aRegValueLength,
          *destEnd = dest + (MAX_PATH-2); // room for " \0"
   PRBool  skip = PR_FALSE,
           comma = PR_FALSE;
@@ -248,43 +286,41 @@ TranslateLanglist(nsIWindowsRegKey *aRegKey, const nsString& aRegValueName,
   }
   *dest = 0;
 
-  aPrefs->SetCharPref(aPrefKeyName, prefStringValue);
+  prefs->SetCharPref(aPrefKeyName, prefStringValue);
 }
 
 static int CALLBACK
-fontEnumProc(const LOGFONTW *aLogFont, const TEXTMETRICW *aMetric,
+fontEnumProc(const LOGFONT *aLogFont, const TEXTMETRIC *aMetric,
              DWORD aFontType, LPARAM aClosure) {
   *((int *) aClosure) = aLogFont->lfPitchAndFamily & FF_ROMAN;
   return 0;
 }
 void
-TranslatePropFont(nsIWindowsRegKey *aRegKey, const nsString& aRegValueName,
-                  nsIPrefBranch *aPrefs, char *aPrefKeyName) {
+TranslatePropFont(unsigned char *aRegValue, DWORD aRegValueLength,
+                  DWORD aRegValueType,
+                  nsIPrefBranch *prefs, char *aPrefKeyName) {
 
-  HDC      dc = ::GetDC(0);
-  LOGFONTW lf;
-  int      isSerif = 1;
+  HDC     dc = ::GetDC(0);
+  LOGFONT lf;
+  int     isSerif = 1;
 
   // serif or sans-serif font?
   lf.lfCharSet = DEFAULT_CHARSET;
   lf.lfPitchAndFamily = 0;
-  nsAutoString font;
-  if (NS_FAILED(aRegKey->ReadStringValue(aRegValueName, font)))
-      return;
-
-  ::wcsncpy(lf.lfFaceName, font.get(), LF_FACESIZE);
-  lf.lfFaceName[LF_FACESIZE - 1] = L'\0';
-  ::EnumFontFamiliesExW(dc, &lf, fontEnumProc, (LPARAM) &isSerif, 0);
+  PL_strncpyz(lf.lfFaceName, NS_REINTERPRET_CAST(char *, aRegValue),
+              LF_FACESIZE);
+  ::EnumFontFamiliesEx(dc, &lf, fontEnumProc, (LPARAM) &isSerif, 0);
   ::ReleaseDC(0, dc);
 
-  // XXX : For now, only x-western font is translated.
-  // All or Locale-dependent subset of fonts need to be translated.
-  nsDependentCString generic(isSerif ? "serif" : "sans-serif");
-  nsCAutoString prefName("font.name.");
-  prefName.Append(generic);
-  prefName.Append(".x-western");
-  aPrefs->SetCharPref(prefName.get(), NS_ConvertUTF16toUTF8(font).get());
-  aPrefs->SetCharPref("font.default.x-western", generic.get());
+  if (isSerif) {
+    prefs->SetCharPref("font.name.serif.x-western",
+                       NS_REINTERPRET_CAST(char *, aRegValue));
+    prefs->SetCharPref("font.default.x-western", "serif");
+  } else {
+    prefs->SetCharPref("font.name.sans-serif.x-western",
+                       NS_REINTERPRET_CAST(char *, aRegValue));
+    prefs->SetCharPref("font.default.x-western", "sans-serif");
+  }
 }
 
 //***********************************************************************
@@ -297,8 +333,7 @@ struct regEntry {
   char            *prefKeyName;    // pref name ("javascript.enabled" ...)
   regEntryHandler  entryHandler;   // processing func
 };
-
-const regEntry gRegEntries[] = {
+struct regEntry gRegEntries[] = {
   { "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\AutoComplete",
      "AutoSuggest",
      "browser.urlbar.autocomplete.enabled",
@@ -307,8 +342,6 @@ const regEntry gRegEntries[] = {
     "AcceptLanguage",
     "intl.accept_languages",
     TranslateLanglist },
-  // XXX : For now, only x-western font is translated.
-  // All or Locale-dependent subset of fonts need to be translated.
   { "Software\\Microsoft\\Internet Explorer\\International\\Scripts\\3",
     "IEFixedFontName",
     "font.name.monospace.x-western",
@@ -333,7 +366,6 @@ const regEntry gRegEntries[] = {
   // Firefox supplies its own home page.
   { 0,
     "Start Page",
-     REG_SZ,
     "browser.startup.homepage",
     TranslateString },
 #endif
@@ -358,7 +390,7 @@ const regEntry gRegEntries[] = {
     "browser.download.manager.showAlertOnComplete",
     TranslateYNtoTF },
   { 0,
-    "SmoothScroll",   // XXX DWORD 
+    "SmoothScroll",
     "general.smoothScroll",
     TranslateYNtoTF },
   { "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
@@ -375,7 +407,7 @@ const regEntry gRegEntries[] = {
     "browser.history_expire_days",
     TranslateDWORDtoPRInt32 },
   { "Software\\Microsoft\\Internet Explorer\\Settings",
-    "Always Use My Colors",            // XXX DWORD
+    "Always Use My Colors",
     "browser.display.use_document_colors",
     TranslateYNtoFT },
   { 0,
@@ -395,7 +427,7 @@ const regEntry gRegEntries[] = {
     "browser.visited_color",
     TranslateDRGBtoHRGB },
   { 0,
-    "Always Use My Font Face",    // XXX DWORD
+    "Always Use My Font Face",
     "browser.display.use_document_fonts",
     TranslateYNtoFT },
   { "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\Url History",
@@ -476,30 +508,36 @@ nsIEProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
 NS_IMETHODIMP
 nsIEProfileMigrator::GetSourceHomePageURL(nsACString& aResult)
 {
-  nsCOMPtr<nsIWindowsRegKey> regKey = 
-    do_CreateInstance("@mozilla.org/windows-registry-key;1");
-  NS_NAMED_LITERAL_STRING(homeURLKey,
-                          "Software\\Microsoft\\Internet Explorer\\Main");
-  if (!regKey ||
-      NS_FAILED(regKey->Open(nsIWindowsRegKey::ROOT_KEY_CURRENT_USER,
-                             homeURLKey, nsIWindowsRegKey::ACCESS_READ)))
+  HKEY            regKey;
+  DWORD           regType;
+  DWORD           regLength;
+  unsigned char   regValue[MAX_PATH];
+  nsresult        rv;
+  
+  if (::RegOpenKeyEx(HKEY_CURRENT_USER, 
+                     "Software\\Microsoft\\Internet Explorer\\Main",
+                     0, KEY_READ, &regKey) != ERROR_SUCCESS)
     return NS_OK;
-  // read registry data
-  NS_NAMED_LITERAL_STRING(homeURLValName, "Start Page");
-  nsAutoString  homeURLVal;
-  if (NS_SUCCEEDED(regKey->ReadStringValue(homeURLValName, homeURLVal))) {
-    // Do we need this round-about way to get |homePageURL|? 
-    // Perhaps, we do to have the form of URL under our control 
-    // (cf. network.standard-url.escape-utf8)
-    // Note that Windows stores URLs in IRI in the registry
-    nsCAutoString  homePageURL;
-    nsCOMPtr<nsIURI> homePageURI;
 
-    if (NS_SUCCEEDED(NS_NewURI(getter_AddRefs(homePageURI), homeURLVal)))
-        if (NS_SUCCEEDED(homePageURI->GetSpec(homePageURL)) 
-            && !homePageURL.IsEmpty())
-            aResult.Assign(homePageURL);
+  // read registry data
+  regLength = MAX_PATH;
+  if (::RegQueryValueEx(regKey, "Start Page", 0,
+                        &regType, regValue, &regLength) == ERROR_SUCCESS) {
+
+    if (regType == REG_SZ) {
+      regValue[MAX_PATH] = '\0';
+      nsCAutoString  homePageURL;
+      nsCOMPtr<nsIURI> homePageURI;
+      rv = NS_NewURI(getter_AddRefs(homePageURI), NS_REINTERPRET_CAST(char *, regValue), nsnull, nsnull);
+      if (NS_SUCCEEDED(rv)) {
+        rv = homePageURI->GetSpec(homePageURL);
+
+        if (NS_SUCCEEDED(rv) && !homePageURL.IsEmpty())
+          aResult.Assign(homePageURL);
+      }
+    }
   }
+  ::RegCloseKey(regKey);
   return NS_OK;
 }
 
@@ -830,8 +868,7 @@ nsIEProfileMigrator::MigrateSiteAuthSignons(IPStore* aPStore)
       unsigned long count = 0;
       unsigned char* data = NULL;
 
-      hr = aPStore->ReadItem(0, &IEPStoreSiteAuthGUID, &mtGuid, itemName,
-                             &count, &data, NULL, 0);
+      hr = aPStore->ReadItem(0, &IEPStoreSiteAuthGUID, &mtGuid, itemName, &count, &data, NULL, 0);
       if (SUCCEEDED(hr) && data) {
         unsigned long i;
         unsigned char* password = NULL;
@@ -843,22 +880,22 @@ nsIEProfileMigrator::MigrateSiteAuthSignons(IPStore* aPStore)
             break;
           }
 
-        nsAutoString realm(itemName);
-        if (Substring(realm, 0, 6).EqualsLiteral("DPAPI:")) // often FTP logins
+        nsAutoString tmp(itemName);
+        tmp.Truncate(6);
+        if (tmp.Equals(NS_LITERAL_STRING("DPAPI:"))) // often FTP logins
           password = NULL; // We can't handle these yet
 
         if (password) {
           int idx;
+          nsAutoString realm(itemName);
           idx = realm.FindChar('/');
           if (idx) {
             realm.Replace(idx, 1, NS_LITERAL_STRING(" ("));
-            realm.Append(')');
+            realm.Append(NS_LITERAL_STRING(")"));
           }
-          // XXX: username and password are always ASCII in IPStore?
-          // If not, are they in UTF-8 or the default codepage? (ref. bug 41489)
           pwmgr->AddUser(NS_ConvertUTF16toUTF8(realm),
-                         NS_ConvertASCIItoUTF16((char *)data),
-                         NS_ConvertASCIItoUTF16((char *)password));
+                         NS_ConvertUTF8toUTF16((char *)data),
+                         NS_ConvertUTF8toUTF16((char *)password));
         }
         ::CoTaskMemFree(data);
       }
@@ -887,8 +924,9 @@ nsIEProfileMigrator::GetSignonsListFromPStore(IPStore* aPStore, nsVoidArray* aSi
       hr = aPStore->ReadItem(0, &IEPStoreAutocompGUID, &IEPStoreAutocompGUID, itemName, &count, &data, NULL, 0);
       if (SUCCEEDED(hr) && data) {
         nsAutoString itemNameString(itemName);
-        if (StringTail(itemNameString, 11).
-            LowerCaseEqualsLiteral(":stringdata")) {
+        nsAutoString suffix;
+        itemNameString.Right(suffix, 11);
+        if (suffix.EqualsIgnoreCase(":StringData")) {
           // :StringData contains the saved data
           const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
           char* realm = nsnull;
@@ -937,13 +975,13 @@ nsIEProfileMigrator::KeyIsURI(const nsAString& aKey, char** aRealm)
     if (validScheme) {
       nsCAutoString realm;
       uri->GetScheme(realm);
-      realm.AppendLiteral("://");
+      realm.Append(NS_LITERAL_CSTRING("://"));
 
       nsCAutoString host;
       uri->GetHost(host);
       realm.Append(host);
 
-      *aRealm = ToNewCString(realm);
+      *aRealm = nsCRT::strdup(realm.get());
       return validScheme;
     }
   }
@@ -966,14 +1004,15 @@ nsIEProfileMigrator::ResolveAndMigrateSignons(IPStore* aPStore, nsVoidArray* aSi
       hr = aPStore->ReadItem(0, &IEPStoreAutocompGUID, &IEPStoreAutocompGUID, itemName, &count, &data, NULL, 0);
       if (SUCCEEDED(hr) && data) {
         nsAutoString itemNameString(itemName);
-        if (StringTail(itemNameString, 11).
-            LowerCaseEqualsLiteral(":stringdata")) {
+        nsAutoString suffix;
+        itemNameString.Right(suffix, 11);
+        if (suffix.EqualsIgnoreCase(":StringData")) {
           // :StringData contains the saved data
           const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
           
           // Assume all keys that are valid URIs are signons, not saved form data, and that 
           // all keys that aren't valid URIs are form field names (containing form data).
-          nsCString realm;
+          nsXPIDLCString realm;
           if (!KeyIsURI(key, getter_Copies(realm))) {
             // Search the data for a username that matches one of the found signons. 
             EnumerateUsernames(key, (PRUnichar*)data, (count/sizeof(PRUnichar)), aSignonsFound);
@@ -990,7 +1029,7 @@ nsIEProfileMigrator::ResolveAndMigrateSignons(IPStore* aPStore, nsVoidArray* aSi
     for (PRInt32 i = 0; i < signonCount; ++i) {
       SignonData* sd = (SignonData*)aSignonsFound->ElementAt(i);
       ::CoTaskMemFree(sd->user);  // |sd->user| is a pointer to the start of a buffer that also contains sd->pass
-      NS_Free(sd->realm);
+      nsCRT::free(sd->realm);
       delete sd;
     }
   }
@@ -1093,11 +1132,12 @@ nsIEProfileMigrator::CopyFormData(PRBool aReplace)
       hr = PStore->ReadItem(0, &IEPStoreAutocompGUID, &IEPStoreAutocompGUID, itemName, &count, &data, NULL, 0);
       if (SUCCEEDED(hr) && data) {
         nsAutoString itemNameString(itemName);
-        if (StringTail(itemNameString, 11).
-            LowerCaseEqualsLiteral(":stringdata")) {
+        nsAutoString suffix;
+        itemNameString.Right(suffix, 11);
+        if (suffix.EqualsIgnoreCase(":StringData")) {
           // :StringData contains the saved data
           const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
-          nsCString realm;
+          nsXPIDLCString realm;
           if (!KeyIsURI(key, getter_Copies(realm))) {
             nsresult rv = AddDataToFormHistory(key, (PRUnichar*)data, (count/sizeof(PRUnichar)));
             if (NS_FAILED(rv)) return rv;
@@ -1145,7 +1185,7 @@ nsIEProfileMigrator::CopyFavorites(PRBool aReplace) {
   // a folder called "Imported IE Favorites" and place all the Bookmarks there. 
   nsresult rv;
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
   nsCOMPtr<nsINavBookmarksService> bms(do_GetService(NS_NAVBOOKMARKSSERVICE_CONTRACTID, &rv));
   NS_ENSURE_SUCCESS(rv, rv);
   PRInt64 root;
@@ -1164,28 +1204,28 @@ nsIEProfileMigrator::CopyFavorites(PRBool aReplace) {
 
   nsAutoString personalToolbarFolderName;
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
   PRInt64 folder;
 #else
   nsCOMPtr<nsIRDFResource> folder;
 #endif
   if (!aReplace) {
-    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
     
     nsCOMPtr<nsIStringBundle> bundle;
     bundleService->CreateBundle(TRIDENTPROFILE_BUNDLE, getter_AddRefs(bundle));
 
-    nsString sourceNameIE;
+    nsXPIDLString sourceNameIE;
     bundle->GetStringFromName(NS_LITERAL_STRING("sourceNameIE").get(), 
                               getter_Copies(sourceNameIE));
 
     const PRUnichar* sourceNameStrings[] = { sourceNameIE.get() };
-    nsString importedIEFavsTitle;
+    nsXPIDLString importedIEFavsTitle;
     bundle->FormatStringFromName(NS_LITERAL_STRING("importedBookmarksFolder").get(),
                                  sourceNameStrings, 1, getter_Copies(importedIEFavsTitle));
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
     bms->CreateFolder(root, importedIEFavsTitle, -1, &folder);
 #else
     bms->CreateFolderInContainer(importedIEFavsTitle.get(), root, -1, getter_AddRefs(folder));
@@ -1230,7 +1270,7 @@ nsIEProfileMigrator::CopyFavorites(PRBool aReplace) {
 }
 
 nsresult
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
 nsIEProfileMigrator::CopySmartKeywords(PRInt64 aParentFolder)
 #else
 nsIEProfileMigrator::CopySmartKeywords(nsIRDFResource* aParentFolder)
@@ -1244,17 +1284,17 @@ nsIEProfileMigrator::CopySmartKeywords(nsIRDFResource* aParentFolder)
       NS_SUCCEEDED(regKey->Open(nsIWindowsRegKey::ROOT_KEY_CURRENT_USER,
                                 searchUrlKey, nsIWindowsRegKey::ACCESS_READ))) {
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
     nsresult rv;
     nsCOMPtr<nsINavBookmarksService> bms(do_GetService(NS_NAVBOOKMARKSSERVICE_CONTRACTID, &rv));
     NS_ENSURE_SUCCESS(rv, rv);
-    PRInt64 keywordsFolder = 0;
+    PRInt64 keywordsFolder;
 #else
     nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
     nsCOMPtr<nsIRDFResource> keywordsFolder, bookmark;
 #endif
 
-    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID);
+    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID);
     
     nsCOMPtr<nsIStringBundle> bundle;
     bundleService->CreateBundle(TRIDENTPROFILE_BUNDLE, getter_AddRefs(bundle));
@@ -1267,15 +1307,15 @@ nsIEProfileMigrator::CopySmartKeywords(nsIRDFResource* aParentFolder)
         break;
 
       if (!keywordsFolder) {
-        nsString sourceNameIE;
+        nsXPIDLString sourceNameIE;
         bundle->GetStringFromName(NS_LITERAL_STRING("sourceNameIE").get(), 
                                   getter_Copies(sourceNameIE));
 
         const PRUnichar* sourceNameStrings[] = { sourceNameIE.get() };
-        nsString importedIESearchUrlsTitle;
+        nsXPIDLString importedIESearchUrlsTitle;
         bundle->FormatStringFromName(NS_LITERAL_STRING("importedSearchURLsFolder").get(),
                                     sourceNameStrings, 1, getter_Copies(importedIESearchUrlsTitle));
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
         bms->CreateFolder(aParentFolder, importedIESearchUrlsTitle, -1, &keywordsFolder);
 #else
         bms->CreateFolderInContainer(importedIESearchUrlsTitle.get(), aParentFolder, -1, 
@@ -1296,7 +1336,7 @@ nsIEProfileMigrator::CopySmartKeywords(nsIRDFResource* aParentFolder)
             childKey->Close();
             continue;
           }
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
           bms->InsertItem(keywordsFolder, uri, -1);
           bms->SetItemTitle(uri, keyName);
 #else
@@ -1305,13 +1345,13 @@ nsIEProfileMigrator::CopySmartKeywords(nsIRDFResource* aParentFolder)
           NS_ConvertUTF8toUTF16 host(hostCStr); 
 
           const PRUnichar* nameStrings[] = { host.get() };
-          nsString keywordName;
+          nsXPIDLString keywordName;
           nsresult rv = bundle->FormatStringFromName(
                         NS_LITERAL_STRING("importedSearchURLsTitle").get(),
                         nameStrings, 1, getter_Copies(keywordName));
 
           const PRUnichar* descStrings[] = { keyName.get(), host.get() };
-          nsString keywordDesc;
+          nsXPIDLString keywordDesc;
           rv = bundle->FormatStringFromName(
                        NS_LITERAL_STRING("importedSearchUrlDesc").get(),
                        descStrings, 2, getter_Copies(keywordDesc));
@@ -1337,7 +1377,7 @@ nsIEProfileMigrator::CopySmartKeywords(nsIRDFResource* aParentFolder)
 }
 
 void 
-nsIEProfileMigrator::ResolveShortcut(const nsString &aFileName, char** aOutURL) 
+nsIEProfileMigrator::ResolveShortcut(const nsAFlatString &aFileName, char** aOutURL) 
 {
   HRESULT result;
 
@@ -1367,7 +1407,7 @@ nsIEProfileMigrator::ResolveShortcut(const nsString &aFileName, char** aOutURL)
 
 nsresult
 nsIEProfileMigrator::ParseFavoritesFolder(nsIFile* aDirectory, 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
                                           PRInt64 aParentFolder,
                                           nsINavBookmarksService* aBookmarksService,
 #else
@@ -1408,17 +1448,17 @@ nsIEProfileMigrator::ParseFavoritesFolder(nsIFile* aDirectory,
     currFile->IsDirectory(&isDir);
 
     if (isSymlink) {
-      // It's a .lnk file.  Get the path and check to see if it's
+      // It's a .lnk file.  Get the native path and check to see if it's
       // a dir.  If so, create a bookmark for the dir.  If not, then
       // simply do nothing and continue.
 
-      // Get the path that the .lnk file is pointing to.
-      nsAutoString path;
-      rv = currFile->GetTarget(path);
+      // Get the native path that the .lnk file is pointing to.
+      nsCAutoString path;
+      rv = currFile->GetNativeTarget(path);
       if (NS_FAILED(rv)) continue;
 
       nsCOMPtr<nsILocalFile> localFile;
-      rv = NS_NewLocalFile(path, PR_TRUE, getter_AddRefs(localFile));
+      rv = NS_NewNativeLocalFile(path, PR_TRUE, getter_AddRefs(localFile));
       if (NS_FAILED(rv)) continue;
 
       // Check for dir here.  If path is not a dir, just continue with
@@ -1431,10 +1471,10 @@ nsIEProfileMigrator::ParseFavoritesFolder(nsIFile* aDirectory,
       NS_NAMED_LITERAL_STRING(lnkExt, ".lnk");
       PRInt32 lnkExtStart = bookmarkName.Length() - lnkExt.Length();
       if (StringEndsWith(bookmarkName, lnkExt,
-                         CaseInsensitiveCompare))
-        bookmarkName.SetLength(lnkExtStart);
+                         nsCaseInsensitiveStringComparator()))
+        bookmarkName.Truncate(lnkExtStart);
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
       nsCOMPtr<nsIURI> bookmarkURI;
       rv = NS_NewFileURI(getter_AddRefs(bookmarkURI), localFile);
       NS_ENSURE_SUCCESS(rv, rv);
@@ -1467,13 +1507,13 @@ nsIEProfileMigrator::ParseFavoritesFolder(nsIFile* aDirectory,
       if (NS_FAILED(rv)) continue;
     }
     else if (isDir) {
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
       PRInt64 folder;
 #else
       nsCOMPtr<nsIRDFResource> folder;
 #endif
       if (bookmarkName.Equals(aPersonalToolbarFolderName)) {
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
         aBookmarksService->GetToolbarRoot(&folder);
         // If we're here, it means the user's doing a _replace_ import which means
         // clear out the content of this folder, and replace it with the new content
@@ -1503,7 +1543,7 @@ nsIEProfileMigrator::ParseFavoritesFolder(nsIFile* aDirectory,
 #endif
       }
       else {
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
         rv = aBookmarksService->CreateFolder(aParentFolder,
                                              bookmarkName,
                                              -1,
@@ -1525,7 +1565,8 @@ nsIEProfileMigrator::ParseFavoritesFolder(nsIFile* aDirectory,
       nsCAutoString extension;
 
       url->GetFileExtension(extension);
-      if (!extension.Equals("url", CaseInsensitiveCompare))
+      if (!extension.Equals(NS_LITERAL_CSTRING("url"),
+                            nsCaseInsensitiveCStringComparator()))
         continue;
 
       nsAutoString name(Substring(bookmarkName, 0, 
@@ -1534,10 +1575,10 @@ nsIEProfileMigrator::ParseFavoritesFolder(nsIFile* aDirectory,
       nsAutoString path;
       currFile->GetPath(path);
 
-      nsCString resolvedURL;
+      nsXPIDLCString resolvedURL;
       ResolveShortcut(path, getter_Copies(resolvedURL));
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
       nsCOMPtr<nsIURI> resolvedURI;
       rv = NS_NewURI(getter_AddRefs(resolvedURI), resolvedURL);
       NS_ENSURE_SUCCESS(rv, rv);
@@ -1572,10 +1613,14 @@ nsIEProfileMigrator::ParseFavoritesFolder(nsIFile* aDirectory,
 nsresult
 nsIEProfileMigrator::CopyPreferences(PRBool aReplace) 
 {
+  HKEY            regKey;
   PRBool          regKeyOpen = PR_FALSE;
-  const regEntry  *entry,
-                  *endEntry = gRegEntries + NS_ARRAY_LENGTH(gRegEntries);
-                              
+  struct regEntry *entry,
+                  *endEntry = gRegEntries +
+                              sizeof(gRegEntries)/sizeof(struct regEntry);
+  DWORD           regType;
+  DWORD           regLength;
+  unsigned char   regValue[MAX_PATH];  // a convenient size
 
   nsCOMPtr<nsIPrefBranch> prefs;
 
@@ -1587,34 +1632,33 @@ nsIEProfileMigrator::CopyPreferences(PRBool aReplace)
   if (!prefs)
     return NS_ERROR_FAILURE;
 
-  nsCOMPtr<nsIWindowsRegKey> regKey = 
-    do_CreateInstance("@mozilla.org/windows-registry-key;1");
-  if (!regKey)
-    return NS_ERROR_UNEXPECTED;
-  
   // step through gRegEntries table
+  
   for (entry = gRegEntries; entry < endEntry; ++entry) {
 
     // a new keyname? close any previous one and open the new one
     if (entry->regKeyName) {
       if (regKeyOpen) {
-        regKey->Close();
+        ::RegCloseKey(regKey);
         regKeyOpen = PR_FALSE;
       }
-      regKeyOpen = NS_SUCCEEDED(regKey->
-                                Open(nsIWindowsRegKey::ROOT_KEY_CURRENT_USER,
-                                NS_ConvertASCIItoUTF16(
-                                  nsDependentCString(entry->regKeyName)),
-                                nsIWindowsRegKey::ACCESS_READ));
+      regKeyOpen = ::RegOpenKeyEx(HKEY_CURRENT_USER, entry->regKeyName, 0,
+                                  KEY_READ, &regKey) == ERROR_SUCCESS;
     }
 
-    if (regKeyOpen) 
+    if (regKeyOpen) {
       // read registry data
-      entry->entryHandler(regKey,
-                          NS_ConvertASCIItoUTF16(
-                            nsDependentCString(entry->regValueName)),
-                          prefs, entry->prefKeyName);
+      regLength = MAX_PATH;
+      if (::RegQueryValueEx(regKey, entry->regValueName, 0,
+          &regType, regValue, &regLength) == ERROR_SUCCESS)
+
+        entry->entryHandler(regValue, regLength, regType,
+                            prefs, entry->prefKeyName);
+    }
   }
+
+  if (regKeyOpen)
+    ::RegCloseKey(regKey);
 
   nsresult rv = CopySecurityPrefs(prefs);
   if (NS_FAILED(rv)) return rv;
@@ -1649,12 +1693,11 @@ nsIEProfileMigrator::CopyCookies(PRBool aReplace)
     return NS_ERROR_FAILURE;
 
   // fetch the current user's name from the environment
-  PRUnichar username[sUsernameLengthLimit+2];
-  ::GetEnvironmentVariableW(L"USERNAME", username,
-                            sizeof(username)/sizeof(PRUnichar));
-  username[sUsernameLengthLimit] = L'\0';
-  wcscat(username, L"@");
-  int usernameLength = wcslen(username);
+  char username[sUsernameLengthLimit+2];
+  ::GetEnvironmentVariable("USERNAME", username, sizeof(username));
+  username[sizeof(username)-2] = '\0';
+  PL_strcat(username, "@");
+  int usernameLength = PL_strlen(username);
 
   // allocate a buffer into which to read each cookie file
   char *fileContents = (char *) PR_Malloc(sInitialCookieBufferSize);
@@ -1677,10 +1720,10 @@ nsIEProfileMigrator::CopyCookies(PRBool aReplace)
     }
 
     // is it a cookie file for the current user?
-    nsAutoString fileName;
-    cookieFile->GetLeafName(fileName);
-    const nsAString &fileOwner = Substring(fileName, 0, usernameLength);
-    if (!fileOwner.Equals(username, CaseInsensitiveCompare))
+    nsCAutoString fileName;
+    cookieFile->GetNativeLeafName(fileName);
+    const nsACString &fileOwner = Substring(fileName, 0, usernameLength);
+    if (!fileOwner.Equals(username, nsCaseInsensitiveCStringComparator()))
       continue;
 
     // ensure the contents buffer is large enough to hold the entire file
@@ -1948,7 +1991,7 @@ nsIEProfileMigrator::GetUserStyleSheetFile(nsIFile **aUserFile)
       return;
 
     // establish the user content stylesheet file
-    userChrome->Append(NS_LITERAL_STRING("userContent.css"));
+    userChrome->AppendNative(NS_LITERAL_CSTRING("userContent.css"));
     *aUserFile = userChrome;
     NS_ADDREF(*aUserFile);
   }
@@ -1968,9 +2011,9 @@ nsIEProfileMigrator::CopySecurityPrefs(nsIPrefBranch* aPrefs)
     PRUint32 value;
     if (NS_SUCCEEDED(regKey->ReadIntValue(NS_LITERAL_STRING("SecureProtocols"),
                                           &value))) { 
-      aPrefs->SetBoolPref("security.enable_ssl2", (value >> 3) & PR_TRUE);
-      aPrefs->SetBoolPref("security.enable_ssl3", (value >> 5) & PR_TRUE);
-      aPrefs->SetBoolPref("security.enable_tls",  (value >> 7) & PR_TRUE);
+      aPrefs->SetBoolPref("security.enable_ssl2", value & 0x08);
+      aPrefs->SetBoolPref("security.enable_ssl3", value & 0x20);
+      aPrefs->SetBoolPref("security.enable_tls",  value & 0x80);
     }
   }
 

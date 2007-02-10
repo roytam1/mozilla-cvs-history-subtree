@@ -63,7 +63,6 @@ const SIMPLEURI_CTRID = "@mozilla.org/network/simple-uri;1";
 const nsIWindowMediator    = Components.interfaces.nsIWindowMediator;
 const nsIAppShellService   = Components.interfaces.nsIAppShellService;
 const nsICmdLineHandler    = Components.interfaces.nsICmdLineHandler;
-const nsIComponentRegistrar = Components.interfaces.nsIComponentRegistrar;
 const nsICategoryManager   = Components.interfaces.nsICategoryManager;
 const nsIContentHandler    = Components.interfaces.nsIContentHandler;
 const nsIProtocolHandler   = Components.interfaces.nsIProtocolHandler;
@@ -74,22 +73,15 @@ const nsIChannel           = Components.interfaces.nsIChannel;
 const nsIRequest           = Components.interfaces.nsIRequest;
 const nsIProgressEventSink = Components.interfaces.nsIProgressEventSink;
 const nsISupports          = Components.interfaces.nsISupports;
-const nsICommandLineHandler = Components.interfaces.nsICommandLineHandler;
-const nsICommandLine        = Components.interfaces.nsICommandLine;
 
 function findDebuggerWindow ()
 {
     var windowManager =
         Components.classes[MEDIATOR_CTRID].getService(nsIWindowMediator);
-    return windowManager.getMostRecentWindow("mozapp:venkman");
-}
 
-function openDebuggerWindow(args)
-{
-    var ass = Components.classes[ASS_CONTRACTID].getService(nsIAppShellService);
-    var window = ass.hiddenDOMWindow;
-    window.openDialog("chrome://venkman/content/venkman.xul", "_blank",
-                      "chrome,menubar,toolbar,resizable,dialog=no", args);
+    var window = windowManager.getMostRecentWindow("mozapp:venkman");
+
+    return window;
 }
 
 function safeHTML(str)
@@ -106,65 +98,25 @@ function safeHTML(str)
                     
             case "&":
                 return "&amp;";
-                    
-            case "'":
-                return "&#39;";
-                    
-            case '"':
-                return "&quot;";
         }
 
         return "?";
     };
         
-    return String(str).replace(/[<>&"']/g, replaceChars);
+    return String(str).replace(/[<>&]/g, replaceChars);
 }
 
 /* Command Line handler service */
 function CLineService()
 {}
 
-/* nsISupports */
-CLineService.prototype.QueryInterface =
-function handler_QI(iid)
-{
-    if (iid.equals(nsISupports) || 
-        (nsICommandLineHandler && iid.equals(nsICommandLineHandler)) ||
-        (nsICmdLineHandler && iid.equals(nsICmdLineHandler)))
-    {
-        return this;
-    }
-
-    throw Components.results.NS_ERROR_NO_INTERFACE;
-}
-
-/* nsICmdLineHandler */
 CLineService.prototype.commandLineArgument = "-venkman";
 CLineService.prototype.prefNameForStartup = "general.startup.venkman";
 CLineService.prototype.chromeUrlForTask = "chrome://venkman/content";
-CLineService.prototype.helpText = "Start with JavaScript Debugger (Venkman).";
+CLineService.prototype.helpText = "Start with JavaScript Debugger.";
 CLineService.prototype.handlesArgs = false;
 CLineService.prototype.defaultArgs = "";
 CLineService.prototype.openWindowWithArgs = false;
-
-/* nsICommandLineHandler */
-
-CLineService.prototype.handle =
-function handler_handle(cmdLine)
-{
-    try
-    {
-        if (cmdLine.handleFlag("venkman", false))
-            openDebuggerWindow(null);
-    }
-    catch (e)
-    {
-        debug(e);
-    }
-}
-
-CLineService.prototype.helpInfo =
- "  -venkman         Start with JavaScript debugger (Venkman).\n"
 
 /* factory for command line handler service (CLineService) */
 var CLineFactory = new Object();
@@ -174,7 +126,10 @@ function clf_create (outer, iid) {
     if (outer != null)
         throw Components.results.NS_ERROR_NO_AGGREGATION;
 
-    return new CLineService().QueryInterface(iid);
+    if (!iid.equals(nsICmdLineHandler) && !iid.equals(nsISupports))
+        throw Components.results.NS_ERROR_INVALID_ARG;
+
+    return new CLineService();
 }
 
 /* x-jsd: protocol handler */
@@ -277,12 +232,8 @@ function JSDProtocolHandler()
 
 JSDProtocolHandler.prototype.scheme = "x-jsd";
 JSDProtocolHandler.prototype.defaultPort = JSD_DEFAULT_PORT;
-JSDProtocolHandler.prototype.protocolFlags = nsIProtocolHandler.URI_NORELATIVE |
+JSDProtocolHandler.prototype.protocolFlags = nsIProtocolHandler.URI_NORELATIVE ||
                                              nsIProtocolHandler.URI_NOAUTH;
-if ("URI_DANGEROUS_TO_LOAD" in nsIProtocolHandler) {
-  JSDProtocolHandler.prototype.protocolFlags |=
-      nsIProtocolHandler.URI_DANGEROUS_TO_LOAD;
-}
 
 JSDProtocolHandler.prototype.allowPort =
 function jsdph_allowport (aPort, aScheme)
@@ -309,7 +260,7 @@ function JSDChannel (uri)
 {
     this.URI = uri;
     this.originalURI = uri;
-    this._isPending = false;
+    this._isPending = true;
     var clazz = Components.classes[STRING_STREAM_CTRID];
     this.stringStream = clazz.createInstance(nsIStringInputStream);
 }
@@ -345,7 +296,6 @@ function jsdch_aopen (streamListener, context)
 {
     this.streamListener = streamListener;
     this.context = context;
-    this._isPending = true;
     
     if (!window && this.URI.spec == "x-jsd:debugger")
     {
@@ -498,8 +448,9 @@ function jsdh_handle(contentType, windowTarget, request)
         var args = new Object();
         args.url = channel.URI.spec;
 
-        openDebuggerWindow(args);
-     }
+        window.openDialog("chrome://venkman/content/venkman.xul", "_blank",
+                          "chrome,menubar,toolbar,resizable,dialog=no", args);
+    }
 }
 
 /*****************************************************************************/
@@ -528,7 +479,8 @@ function (compMgr, fileSpec, location, type)
 {
     debug("*** Registering -venkman handler.\n");
     
-    compMgr = compMgr.QueryInterface(nsIComponentRegistrar);
+    compMgr =
+        compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
 
     compMgr.registerFactoryLocation(CLINE_SERVICE_CID,
                                     "Venkman CommandLine Service",
@@ -537,12 +489,8 @@ function (compMgr, fileSpec, location, type)
                                     location, 
                                     type);
 
-    catman = Components.classes[CATMAN_CTRID].getService(nsICategoryManager);
-    catman.addCategoryEntry("command-line-argument-handlers",
-                            "venkman command line handler",
-                            CLINE_SERVICE_CTRID, true, true);
-
-    catman.addCategoryEntry("command-line-handler",
+	catman = Components.classes[CATMAN_CTRID].getService(nsICategoryManager);
+	catman.addCategoryEntry("command-line-argument-handlers",
                             "venkman command line handler",
                             CLINE_SERVICE_CTRID, true, true);
 
@@ -578,13 +526,11 @@ function (compMgr, fileSpec, location, type)
 Module.unregisterSelf =
 function(compMgr, fileSpec, location)
 {
-    compMgr = compMgr.QueryInterface(nsIComponentRegistrar);
+    compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
 
     compMgr.unregisterFactoryLocation(CLINE_SERVICE_CID, fileSpec);
-    catman = Components.classes[CATMAN_CTRID].getService(nsICategoryManager);
-    catman.deleteCategoryEntry("command-line-argument-handlers",
-                               CLINE_SERVICE_CTRID, true);
-    catman.deleteCategoryEntry("command-line-handler",
+	catman = Components.classes[CATMAN_CTRID].getService(nsICategoryManager);
+	catman.deleteCategoryEntry("command-line-argument-handlers",
                                CLINE_SERVICE_CTRID, true);
 }
 

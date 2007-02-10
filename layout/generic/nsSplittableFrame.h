@@ -34,12 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * base class for rendering objects that can be split across lines,
- * columns, or pages
- */
-
 #ifndef nsSplittableFrame_h___
 #define nsSplittableFrame_h___
 
@@ -49,53 +43,30 @@
 class nsSplittableFrame : public nsFrame
 {
 public:
-  NS_IMETHOD Init(nsIContent*      aContent,
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
                   nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
   
-  virtual nsSplittableType GetSplittableType() const;
+  NS_IMETHOD  IsSplittable(nsSplittableType& aIsSplittable) const;
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
 
-  /*
-   * Frame continuations can be either fluid or not:
-   * Fluid continuations ("in-flows") are the result of line breaking, 
-   * column breaking, or page breaking.
-   * Other (non-fluid) continuations can be the result of BiDi frame splitting.
-   * A "flow" is a chain of fluid continuations.
-   */
-  
-  // Get the previous/next continuation, regardless of its type (fluid or non-fluid).
-  virtual nsIFrame* GetPrevContinuation() const;
-  virtual nsIFrame* GetNextContinuation() const;
-
-  // Set a previous/next non-fluid continuation.
-  NS_IMETHOD SetPrevContinuation(nsIFrame*);
-  NS_IMETHOD SetNextContinuation(nsIFrame*);
-
-  // Get the first/last continuation for this frame.
-  virtual nsIFrame* GetFirstContinuation() const;
-  virtual nsIFrame* GetLastContinuation() const;
-
-#ifdef DEBUG
-  // Can aFrame2 be reached from aFrame1 by following prev/next continuations?
-  static PRBool IsInPrevContinuationChain(nsIFrame* aFrame1, nsIFrame* aFrame2);
-  static PRBool IsInNextContinuationChain(nsIFrame* aFrame1, nsIFrame* aFrame2);
-#endif
-  
-  // Get the previous/next continuation, only if it is fluid (an "in-flow").
-  nsIFrame* GetPrevInFlow() const;
-  nsIFrame* GetNextInFlow() const;
-
-  virtual nsIFrame* GetPrevInFlowVirtual() const { return GetPrevInFlow(); }
-  virtual nsIFrame* GetNextInFlowVirtual() const { return GetNextInFlow(); }
-  
-  // Set a previous/next fluid continuation.
+  // Flow member functions.
+  virtual nsIFrame* GetPrevInFlow() const;
   NS_IMETHOD  SetPrevInFlow(nsIFrame*);
+  virtual nsIFrame*  GetNextInFlow() const;
   NS_IMETHOD  SetNextInFlow(nsIFrame*);
 
-  // Get the first/last frame in the current flow.
+  /**
+   * Return the first frame in our current flow. 
+   */
   virtual nsIFrame* GetFirstInFlow() const;
+
+  /**
+   * Return the last frame in our current flow.
+   */
   virtual nsIFrame* GetLastInFlow() const;
 
   // Remove the frame from the flow. Connects the frame's prev-in-flow
@@ -106,14 +77,12 @@ public:
   static void BreakFromPrevFlow(nsIFrame* aFrame);
 
 protected:
-  nsSplittableFrame(nsStyleContext* aContext) : nsFrame(aContext) {}
-
 #ifdef DEBUG
   virtual void DumpBaseRegressionData(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent, PRBool aIncludeStyleData);
 #endif
 
-  nsIFrame*   mPrevContinuation;
-  nsIFrame*   mNextContinuation;
+  nsIFrame*   mPrevInFlow;
+  nsIFrame*   mNextInFlow;
 };
 
 #endif /* nsSplittableFrame_h___ */

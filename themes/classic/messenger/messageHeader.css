@@ -85,7 +85,7 @@
 }
 
 .headerName {
-  margin: 0 .5em 5px 0;
+  margin: 0 .5em .5em 0;
   font-weight: bold;
   text-align: right;
 }
@@ -97,7 +97,7 @@
 }
 
 .headerValueBox {
-  margin: 0 0 5px 0;
+  margin: 0 0 .5em 0;
 }
 
 .headerValueBox[singleline="true"] {
@@ -106,11 +106,6 @@
 
 .subjectvalue {
   font-weight: bold;
-}
-
-.tagvalue {
-  margin-top: 0;
-  margin-left: 0;
 }
 
 /* ::::: msg header email addresses ::::: */

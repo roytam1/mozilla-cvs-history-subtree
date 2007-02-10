@@ -43,14 +43,9 @@
 #include "nsIX509CertDB.h"
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
-#include "nsUnicharUtils.h"
 #include "nsNSSCertificate.h"
 #include "nsNSSCertHelper.h"
 #include "nsINSSCertCache.h"
-#include "nsIMutableArray.h"
-#include "nsArrayUtils.h"
-#include "nsISupportsPrimitives.h"
-#include "nsXPCOMCID.h"
 
 #include "prlog.h"
 #ifdef PR_LOGGING
@@ -146,7 +141,6 @@ nsCertTree::nsCertTree() : mTreeArray(NULL)
 {
   mCompareCache.ops = nsnull;
   mNSSComponent = do_GetService(kNSSComponentCID);
-  mCellText = nsnull;
 }
 
 void nsCertTree::ClearCompareHash()
@@ -261,7 +255,7 @@ nsCertTree::GetThreadDescAtIndex(PRInt32 index)
 //
 //  If the row at index is a cert, return that cert.  Otherwise, return null.
 nsIX509Cert *
-nsCertTree::GetCertAtIndex(PRInt32 index, PRInt32 *outAbsoluteCertOffset)
+nsCertTree::GetCertAtIndex(PRInt32 index)
 {
   int i, idx = 0, cIndex = 0, nc;
   nsIX509Cert *rawPtr = nsnull;
@@ -273,8 +267,6 @@ nsCertTree::GetCertAtIndex(PRInt32 index, PRInt32 *outAbsoluteCertOffset)
     nc = (mTreeArray[i].open) ? mTreeArray[i].numChildren : 0;
     if (index < idx + nc) { // cert is within range of this thread
       PRInt32 certIndex = cIndex + index - idx;
-      if (outAbsoluteCertOffset)
-        *outAbsoluteCertOffset = certIndex;
       nsCOMPtr<nsISupports> isupport = 
                              dont_AddRef(mCertArray->ElementAt(certIndex));
       nsCOMPtr<nsIX509Cert> cert = do_QueryInterface(isupport);
@@ -294,7 +286,6 @@ nsCertTree::nsCertCompareFunc
 nsCertTree::GetCompareFuncFromCertType(PRUint32 aType)
 {
   switch (aType) {
-    case nsIX509Cert2::ANY_CERT:
     case nsIX509Cert::USER_CERT:
       return CmpUserCert;
     case nsIX509Cert::CA_CERT:
@@ -325,7 +316,7 @@ nsCertTree::GetCertsByTypeFromCertList(CERTCertList *aCertList,
   for (node = CERT_LIST_HEAD(aCertList);
        !CERT_LIST_END(node, aCertList);
        node = CERT_LIST_NEXT(node)) {
-    if (aType == nsIX509Cert2::ANY_CERT || getCertType(node->cert) == aType) {
+    if (getCertType(node->cert) == aType) {
       nsCOMPtr<nsIX509Cert> pipCert = new nsNSSCertificate(node->cert);
       if (pipCert) {
         int i;
@@ -428,16 +419,11 @@ nsCertTree::UpdateUIContents()
   if (!mTreeArray)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  mCellText = do_CreateInstance(NS_ARRAY_CONTRACTID);
-
   PRUint32 j = 0;
   nsCOMPtr<nsISupports> isupport = dont_AddRef(mCertArray->ElementAt(j));
   nsCOMPtr<nsIX509Cert> orgCert = do_QueryInterface(isupport);
   for (PRInt32 i=0; i<mNumOrgs; i++) {
-    nsString &orgNameRef = mTreeArray[i].orgName;
-    orgCert->GetIssuerOrganization(orgNameRef);
-    if (orgNameRef.IsEmpty())
-      orgCert->GetCommonName(orgNameRef);
+    orgCert->GetIssuerOrganization(mTreeArray[i].orgName);
     mTreeArray[i].open = PR_TRUE;
     mTreeArray[i].certIndex = j;
     mTreeArray[i].numChildren = 1;
@@ -722,28 +708,10 @@ nsCertTree::GetCellText(PRInt32 row, nsITreeColumn* col,
     if (NS_LITERAL_STRING("certcol").Equals(colID))
       _retval.Assign(el->orgName);
     else
-      _retval.Truncate();
+      _retval.SetCapacity(0);
     return NS_OK;
   }
-
-  PRInt32 absoluteCertOffset;
-  nsCOMPtr<nsIX509Cert> cert = dont_AddRef(GetCertAtIndex(row, &absoluteCertOffset));
-
-  PRInt32 colIndex;
-  col->GetIndex(&colIndex);
-  PRUint32 arrayIndex=colIndex+absoluteCertOffset*mNumRows;
-  PRUint32 arrayLength=0;
-  if (mCellText) {
-    mCellText->GetLength(&arrayLength);
-  }
-  if (arrayIndex < arrayLength) {
-    nsCOMPtr<nsISupportsString> myString(do_QueryElementAt(mCellText, arrayIndex));
-    if (myString) {
-      myString->GetData(_retval);
-      return NS_OK;
-    }
-  }
-
+  nsCOMPtr<nsIX509Cert> cert = dont_AddRef(GetCertAtIndex(row));
   if (cert == nsnull) return NS_ERROR_FAILURE;
   if (NS_LITERAL_STRING("certcol").Equals(colID)) {
     rv = cert->GetCommonName(_retval);
@@ -825,40 +793,8 @@ nsCertTree::GetCellText(PRInt32 row, nsITreeColumn* col,
     }
   } else if (NS_LITERAL_STRING("serialnumcol").Equals(colID)) {
     rv = cert->GetSerialNumber(_retval);
-  } else if (NS_LITERAL_STRING("typecol").Equals(colID)) {
-    nsCOMPtr<nsIX509Cert2> pipCert = do_QueryInterface(cert);
-    PRUint32 type = nsIX509Cert::UNKNOWN_CERT;
-
-    if (pipCert) {
-	rv = pipCert->GetCertType(&type);
-    }
-
-    switch (type) {
-    case nsIX509Cert::USER_CERT:
-        rv = mNSSComponent->GetPIPNSSBundleString("CertUser", _retval);
-	break;
-    case nsIX509Cert::CA_CERT:
-        rv = mNSSComponent->GetPIPNSSBundleString("CertCA", _retval);
-	break;
-    case nsIX509Cert::SERVER_CERT:
-        rv = mNSSComponent->GetPIPNSSBundleString("CertSSL", _retval);
-	break;
-    case nsIX509Cert::EMAIL_CERT:
-        rv = mNSSComponent->GetPIPNSSBundleString("CertEmail", _retval);
-	break;
-    default:
-        rv = mNSSComponent->GetPIPNSSBundleString("CertUnknown", _retval);
-	break;
-    }
-
   } else {
     return NS_ERROR_FAILURE;
-  }
-  if (mCellText) {
-    nsCOMPtr<nsISupportsString> text(do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv));
-    NS_ENSURE_SUCCESS(rv, rv);
-    text->SetData(_retval);
-    mCellText->ReplaceElementAt(text, arrayIndex, PR_FALSE);
   }
   return rv;
 }
@@ -878,11 +814,10 @@ nsCertTree::ToggleOpenState(PRInt32 index)
   if (!mTreeArray)
     return NS_ERROR_NOT_INITIALIZED;
   treeArrayEl *el = GetThreadDescAtIndex(index);
-  if (el) {
-    el->open = !el->open;
-    PRInt32 newChildren = (el->open) ? el->numChildren : -el->numChildren;
-    if (mTree) mTree->RowCountChanged(index + 1, newChildren);
-  }
+  if (el) el->open = !el->open;
+  PRInt32 fac = (el->open) ? 1 : -1;
+  if (mTree) mTree->RowCountChanged(index, fac * el->numChildren);
+  mSelection->Select(index);
   return NS_OK;
 }
 
@@ -910,14 +845,6 @@ nsCertTree::CycleCell(PRInt32 row, nsITreeColumn* col)
 /* boolean isEditable (in long row, in nsITreeColumn col); */
 NS_IMETHODIMP 
 nsCertTree::IsEditable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
-{
-  *_retval = PR_FALSE;
-  return NS_OK;
-}
-
-/* boolean isSelectable (in long row, in nsITreeColumn col); */
-NS_IMETHODIMP 
-nsCertTree::IsSelectable(PRInt32 row, nsITreeColumn* col, PRBool *_retval)
 {
   *_retval = PR_FALSE;
   return NS_OK;
@@ -969,7 +896,7 @@ nsCertTree::dumpMap()
 {
   for (int i=0; i<mNumOrgs; i++) {
     nsAutoString org(mTreeArray[i].orgName);
-    PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("ORG[%s]", NS_LossyConvertUTF16toASCII(org).get()));
+    PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("ORG[%s]", NS_LossyConvertUCS2toASCII(org).get()));
     PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("OPEN[%d]", mTreeArray[i].open));
     PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("INDEX[%d]", mTreeArray[i].certIndex));
     PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("NCHILD[%d]", mTreeArray[i].numChildren));
@@ -978,14 +905,14 @@ nsCertTree::dumpMap()
     treeArrayEl *el = GetThreadDescAtIndex(i);
     if (el != nsnull) {
       nsAutoString td(el->orgName);
-      PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("thread desc[%d]: %s", i, NS_LossyConvertUTF16toASCII(td).get()));
+      PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("thread desc[%d]: %s", i, NS_LossyConvertUCS2toASCII(td).get()));
     }
     nsCOMPtr<nsIX509Cert> ct = dont_AddRef(GetCertAtIndex(i));
     if (ct != nsnull) {
       PRUnichar *goo;
       ct->GetCommonName(&goo);
       nsAutoString doo(goo);
-      PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("cert [%d]: %s", i, NS_LossyConvertUTF16toASCII(doo).get()));
+      PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("cert [%d]: %s", i, NS_LossyConvertUCS2toASCII(doo).get()));
     }
   }
 }
@@ -1037,8 +964,6 @@ nsCertTree::CmpInitCriterion(nsIX509Cert *cert, CompareCacheHashEntry *entry,
   switch (crit) {
     case sort_IssuerOrg:
       cert->GetIssuerOrganization(str);
-      if (str.IsEmpty())
-        cert->GetCommonName(str);
       break;
     case sort_Org:
       cert->GetOrganization(str);
@@ -1065,7 +990,7 @@ nsCertTree::CmpInitCriterion(nsIX509Cert *cert, CompareCacheHashEntry *entry,
           PR_ExplodeTime(notBefore, PR_GMTParameters, &explodedTime);
           char datebuf[20]; // 4 + 2 + 2 + 2 + 2 + 2 + 1 = 15
           if (0 != PR_FormatTime(datebuf, sizeof(datebuf), "%Y%m%d%H%M%S", &explodedTime)) {
-            str = NS_ConvertASCIItoUTF16(nsDependentCString(datebuf));
+            str = NS_ConvertASCIItoUCS2(nsDependentCString(datebuf));
           }
         }
       }
@@ -1099,7 +1024,7 @@ nsCertTree::CmpByCrit(nsIX509Cert *a, CompareCacheHashEntry *ace,
 
   PRInt32 result;
   if (str_a && str_b)
-    result = Compare(str_a, str_b, nsCaseInsensitiveStringComparator());
+    result = Compare(str_a, str_b);
   else
     result = !str_a ? (!str_b ? 0 : -1) : 1;
 

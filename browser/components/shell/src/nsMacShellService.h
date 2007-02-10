@@ -41,10 +41,10 @@
 #include "nsIMacShellService.h"
 #include "nsIWebProgressListener.h"
 #include "nsILocalFile.h"
-#include "nsCOMPtr.h"
 
 class nsMacShellService : public nsIMacShellService,
-                          public nsIWebProgressListener
+                          public nsIWebProgressListener,
+                          public nsIShellService_MOZILLA_1_8_BRANCH
 {
 public:
   nsMacShellService() : mCheckedThisSession(PR_FALSE) {};
@@ -54,6 +54,7 @@ public:
   NS_DECL_NSISHELLSERVICE
   NS_DECL_NSIMACSHELLSERVICE
   NS_DECL_NSIWEBPROGRESSLISTENER
+  NS_DECL_NSISHELLSERVICE_MOZILLA_1_8_BRANCH
 
 protected:
 

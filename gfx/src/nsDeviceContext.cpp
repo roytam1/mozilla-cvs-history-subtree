@@ -55,9 +55,11 @@ NS_IMPL_ISUPPORTS3(DeviceContextImpl, nsIDeviceContext, nsIObserver, nsISupports
 
 DeviceContextImpl::DeviceContextImpl()
 {
-  mAppUnitsPerDevPixel = -1;
-  mAppUnitsPerInch = -1;
   mFontCache = nsnull;
+  mDevUnitsToAppUnits = 1.0f;
+  mAppUnitsToDevUnits = 1.0f;
+  mCPixelScale = 1.0f;
+  mZoom = 1.0f;
   mWidget = nsnull;
   mFontAliasTable = nsnull;
 
@@ -124,6 +126,18 @@ void DeviceContextImpl::CommonInit(void)
   nsCOMPtr<nsIObserverService> obs(do_GetService("@mozilla.org/observer-service;1"));
   if (obs)
     obs->AddObserver(this, "memory-pressure", PR_TRUE);
+}
+
+NS_IMETHODIMP DeviceContextImpl::GetCanonicalPixelScale(float &aScale) const
+{
+  aScale = mCPixelScale;
+  return NS_OK;
+}
+
+NS_IMETHODIMP DeviceContextImpl::SetCanonicalPixelScale(float aScale)
+{
+  mCPixelScale = aScale;
+  return NS_OK;
 }
 
 NS_IMETHODIMP DeviceContextImpl::CreateRenderingContext(nsIView *aView, nsIRenderingContext *&aContext)
@@ -325,6 +339,18 @@ NS_IMETHODIMP DeviceContextImpl::GetMetricsFor(const nsFont& aFont, nsIFontMetri
     GetLocaleLangGroup();
   }
   return mFontCache->GetMetricsFor(aFont, mLocaleLangGroup, aMetrics);
+}
+
+NS_IMETHODIMP DeviceContextImpl::SetZoom(float aZoom)
+{
+  mZoom = aZoom;
+  return NS_OK;
+}
+
+NS_IMETHODIMP DeviceContextImpl::GetZoom(float &aZoom) const
+{
+  aZoom = mZoom;
+  return NS_OK;
 }
 
 NS_IMETHODIMP DeviceContextImpl::GetDepth(PRUint32& aDepth)
@@ -540,6 +566,8 @@ NS_IMETHODIMP DeviceContextImpl::SetUseAltDC(PRUint8 aValue, PRBool aOn)
 
 /////////////////////////////////////////////////////////////
 
+MOZ_DECL_CTOR_COUNTER(nsFontCache)
+
 nsFontCache::nsFontCache()
 {
   MOZ_COUNT_CTOR(nsFontCache);
@@ -692,14 +720,3 @@ nsresult nsFontCache::Flush()
   return NS_OK;
 }
 
-NS_IMETHODIMP
-DeviceContextImpl::PrepareNativeWidget(nsIWidget *aWidget, void **aOut)
-{
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP
-DeviceContextImpl::ClearCachedSystemFonts()
-{
-  return NS_OK;
-}

@@ -3,28 +3,26 @@
 # Creation:  April 24, 2000 by Robert John Churchill  <rjc@netscape.com>
 
 <SEARCH
-      name="dmoz.org"
-      description = "dmoz.org"
-      method="GET"
-      action="http://search.dmoz.org/cgi-bin/search"
-      queryCharset="utf-8"
+	name="dmoz.org"
+	description = "dmoz.org"
+	method="GET"
+	action="http://search.dmoz.org/cgi-bin/search"
 >
 
 <INPUT NAME="search" user>
 
 <INTERPRET
-      browserResultType = "category"
-      resultListStart = "<b>Open Directory Categories</b>"
-      resultListEnd = "</ol>"
-      resultItemStart = "<li>"
+	browserResultType = "category"
+	resultListStart = "<b>Open Directory Categories</b>"
+	resultListEnd = "</ol>"
+	resultItemStart = "<li>"
 >
 
 <INTERPRET
-      browserResultType = "result"
-      resultListStart = "<b>Open Directory Sites</b>"
-      resultListEnd = "</ol>"
-      resultItemStart = "<li>"
-      charset="utf-8"
+	browserResultType = "result"
+	resultListStart = "<b>Open Directory Sites</b>"
+	resultListEnd = "</ol>"
+	resultItemStart = "<li>"
 >
 
 </SEARCH>

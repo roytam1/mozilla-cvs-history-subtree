@@ -118,7 +118,7 @@ enum InstallVersion_slots {
 //
 // InstallVersion Properties Getter
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 GetInstallVersionProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
   nsIDOMInstallVersion *a = (nsIDOMInstallVersion*)JS_GetPrivate(cx, obj);
@@ -184,7 +184,7 @@ GetInstallVersionProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 //
 // InstallVersion Properties Setter
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 SetInstallVersionProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
   nsIDOMInstallVersion *a = (nsIDOMInstallVersion*)JS_GetPrivate(cx, obj);
@@ -270,7 +270,7 @@ SetInstallVersionProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 //
 // InstallVersion finalizer
 //
-JS_STATIC_DLL_CALLBACK(void)
+PR_STATIC_CALLBACK(void)
 FinalizeInstallVersion(JSContext *cx, JSObject *obj)
 {
   nsISupports *nativeThis = (nsISupports*)JS_GetPrivate(cx, obj);
@@ -293,7 +293,7 @@ FinalizeInstallVersion(JSContext *cx, JSObject *obj)
 //
 // InstallVersion enumerate
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 EnumerateInstallVersion(JSContext *cx, JSObject *obj)
 {
   return JS_TRUE;
@@ -303,7 +303,7 @@ EnumerateInstallVersion(JSContext *cx, JSObject *obj)
 //
 // InstallVersion resolve
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 ResolveInstallVersion(JSContext *cx, JSObject *obj, jsval id)
 {
   return JS_TRUE;
@@ -313,7 +313,7 @@ ResolveInstallVersion(JSContext *cx, JSObject *obj, jsval id)
 //
 // Native method Init
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallVersionInit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallVersion *nativeThis =
@@ -356,7 +356,7 @@ InstallVersionInit(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval 
 //
 // Native method ToString
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallVersionToString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallVersion *nativeThis =
@@ -392,7 +392,7 @@ InstallVersionToString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, js
 //
 // Native method CompareTo
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallVersionCompareTo(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsIDOMInstallVersion *nativeThis =
@@ -523,10 +523,10 @@ static JSPropertySpec InstallVersionProperties[] =
 //
 static JSFunctionSpec InstallVersionMethods[] = 
 {
-  {"init",      InstallVersionInit,             1,0,0},
-  {"toString",  InstallVersionToString,         0,0,0},
-  {"compareTo", InstallVersionCompareTo,        1,0,0},
-  {nsnull,nsnull,0,0,0}
+  {"init",          InstallVersionInit,       1},
+  {"toString",      InstallVersionToString,   0},
+  {"compareTo",     InstallVersionCompareTo,  1},
+  {0}
 };
 
 static JSConstDoubleSpec version_constants[] = 
@@ -540,7 +540,7 @@ static JSConstDoubleSpec version_constants[] =
     { nsIDOMInstallVersion::MINOR_DIFF_MINUS,       "MINOR_DIFF_MINUS"   },
     { nsIDOMInstallVersion::MAJOR_DIFF,             "MAJOR_DIFF"         },
     { nsIDOMInstallVersion::MAJOR_DIFF_MINUS,       "MAJOR_DIFF_MINUS"   },
-    {0,nsnull}
+    {0}
 };
 
 
@@ -548,7 +548,7 @@ static JSConstDoubleSpec version_constants[] =
 //
 // InstallVersion constructor
 //
-JS_STATIC_DLL_CALLBACK(JSBool)
+PR_STATIC_CALLBACK(JSBool)
 InstallVersion(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsresult result;

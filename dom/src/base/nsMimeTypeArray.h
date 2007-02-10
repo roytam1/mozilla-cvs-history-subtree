@@ -48,55 +48,65 @@ class nsIDOMNavigator;
 class nsMimeTypeArray : public nsIDOMMimeTypeArray
 {
 public:
-  nsMimeTypeArray(nsIDOMNavigator* navigator);
-  virtual ~nsMimeTypeArray();
+	nsMimeTypeArray(nsIDOMNavigator* navigator);
+	virtual ~nsMimeTypeArray();
 
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIDOMMIMETYPEARRAY
+	NS_DECL_ISUPPORTS
 
-  nsresult Refresh();
+	NS_IMETHOD GetLength(PRUint32* aLength);
+	NS_IMETHOD Item(PRUint32 aIndex, nsIDOMMimeType** aReturn);
+	NS_IMETHOD NamedItem(const nsAString& aName, nsIDOMMimeType** aReturn);
+	nsresult   Refresh();
 
 private:
   nsresult GetMimeTypes();
   void     Clear();
 
 protected:
-  nsIDOMNavigator* mNavigator;
-  PRUint32 mMimeTypeCount;
-  nsIDOMMimeType** mMimeTypeArray;
+	nsIDOMNavigator* mNavigator;
+	PRUint32 mMimeTypeCount;
+	nsIDOMMimeType** mMimeTypeArray;
 };
 
 class nsMimeType : public nsIDOMMimeType
 {
 public:
-  nsMimeType(nsIDOMPlugin* aPlugin, nsIDOMMimeType* aMimeType);
-  virtual ~nsMimeType();
+	nsMimeType(nsIDOMPlugin* aPlugin, nsIDOMMimeType* aMimeType);
+	virtual ~nsMimeType();
 
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIDOMMIMETYPE
+	NS_DECL_ISUPPORTS
+
+	NS_IMETHOD GetDescription(nsAString& aDescription);
+	NS_IMETHOD GetEnabledPlugin(nsIDOMPlugin** aEnabledPlugin);
+	NS_IMETHOD GetSuffixes(nsAString& aSuffixes);
+	NS_IMETHOD GetType(nsAString& aType);
 
 protected:
-  nsIDOMPlugin* mPlugin;
-  nsCOMPtr<nsIDOMMimeType> mMimeType;
+	nsIDOMPlugin* mPlugin;
+	nsCOMPtr<nsIDOMMimeType> mMimeType;
 };
 
 class nsHelperMimeType : public nsIDOMMimeType
 {
 public:
-  nsHelperMimeType(const nsAString& aType)
-    : mType(aType)
+	nsHelperMimeType(const nsAString& aType)
+		: mType(aType)
+	{
+  }
+
+	virtual ~nsHelperMimeType()
   {
   }
 
-  virtual ~nsHelperMimeType()
-  {
-  }
+	NS_DECL_ISUPPORTS
 
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIDOMMIMETYPE 
+	NS_IMETHOD GetDescription(nsAString& aDescription);
+	NS_IMETHOD GetEnabledPlugin(nsIDOMPlugin** aEnabledPlugin);
+	NS_IMETHOD GetSuffixes(nsAString& aSuffixes);
+	NS_IMETHOD GetType(nsAString& aType);
   
 private:
-  nsString mType;
+	nsString mType;
 };
 
 #endif /* nsMimeTypeArray_h___ */

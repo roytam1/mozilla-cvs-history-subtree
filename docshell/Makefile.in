@@ -44,11 +44,6 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE = docshell
-DIRS = \
-	base \
-	shistory \
-	build \
-	resources \
-	$(NULL)
+DIRS=base build resources
 
 include $(topsrcdir)/config/rules.mk

@@ -55,7 +55,7 @@
 #include "nsHttpNegotiateAuth.h"
 
 #include "nsIHttpChannel.h"
-#include "nsIProxiedChannel.h"
+#include "nsIHttpChannelInternal.h"
 #include "nsIAuthModule.h"
 #include "nsIServiceManager.h"
 #include "nsIPrefService.h"
@@ -136,12 +136,12 @@ nsHttpNegotiateAuth::ChallengeReceived(nsIHttpChannel *httpChannel,
             return NS_ERROR_ABORT;
         }
 
-        nsCOMPtr<nsIProxiedChannel> proxied =
+        nsCOMPtr<nsIHttpChannelInternal> httpInternal =
                 do_QueryInterface(httpChannel);
-        NS_ENSURE_STATE(proxied);
+        NS_ENSURE_STATE(httpInternal);
 
         nsCOMPtr<nsIProxyInfo> proxyInfo;
-        proxied->GetProxyInfo(getter_AddRefs(proxyInfo));
+        httpInternal->GetProxyInfo(getter_AddRefs(proxyInfo));
         NS_ENSURE_STATE(proxyInfo);
 
         proxyInfo->GetHost(service);
@@ -408,7 +408,7 @@ nsHttpNegotiateAuth::MatchesBaseURI(const nsCSubstring &matchScheme,
 
     // XXX this does not work for IPv6-literals
     const char *hostEnd = strchr(hostStart, ':');
-    if (hostEnd && hostEnd < baseEnd) {
+    if (hostEnd && hostEnd <= baseEnd) {
         // the given port must match the parsed port exactly
         int port = atoi(hostEnd + 1);
         if (matchPort != (PRInt32) port)

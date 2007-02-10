@@ -21,10 +21,11 @@
     </content>
     
     <implementation implements="nsIDOMXULCheckboxElement, nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULCheckbox;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULCheckboxAccessible(this);
           ]]>
         </getter>
       </property>

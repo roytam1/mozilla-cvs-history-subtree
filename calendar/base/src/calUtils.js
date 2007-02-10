@@ -145,12 +145,8 @@ function getUUID() {
 }
 
 /** Due to a bug in js-wrapping, normal == comparison can fail when we
- * have 2 objects.  Use these functions to force them both to get wrapped
+ * have 2 calIItemBases.  Use this function to force them both to get wrapped
  * the same way, allowing for normal comparison.
- */
- 
-/**
- * calIItemBase comparer
  */
 function compareItems(aItem, aOtherItem) {
     var sip1 = Cc["@mozilla.org/supports-interface-pointer;1"].
@@ -160,30 +156,8 @@ function compareItems(aItem, aOtherItem) {
 
     var sip2 = Cc["@mozilla.org/supports-interface-pointer;1"].
                createInstance(Ci.nsISupportsInterfacePointer);
-    sip2.data = aOtherItem;
+    sip2.data = aItem;
     sip2.dataIID = Ci.calIItemBase;
-    return sip1.data == sip2.data;
-}
-
-/**
- * Generic object comparer
- * Use to compare two objects which are not of type calIItemBase, in order
- * to avoid the js-wrapping issues mentioned above.
- *
- * @param aObject        first object to be compared
- * @param aOtherObject   second object to be compared
- * @param aIID           IID to use in comparison
- */
-function compareObjects(aObject, aOtherObject, aIID) {
-    var sip1 = Cc["@mozilla.org/supports-interface-pointer;1"].
-               createInstance(Ci.nsISupportsInterfacePointer);
-    sip1.data = aObject;
-    sip1.dataIID = aIID;
-
-    var sip2 = Cc["@mozilla.org/supports-interface-pointer;1"].
-               createInstance(Ci.nsISupportsInterfacePointer);
-    sip2.data = aOtherObject;
-    sip2.dataIID = aIID;
     return sip1.data == sip2.data;
 }
 
@@ -211,8 +185,7 @@ function LOG(aArg) {
     }
     ASSERT(aArg, "Bad log argument.", false);
     var string;
-    // We should just dump() both String objects, and string primitives.
-    if (!(aArg instanceof String) && !(typeof(aArg) == "string")) {
+    if (!(aArg instanceof String)) {
         var string = "Logging object...\n";
         for (var prop in aArg) {
             string += prop + ': ' + aArg[prop] + '\n';
@@ -269,147 +242,3 @@ function ASSERT(aCondition, aMessage, aCritical) {
         Components.utils.reportError(string);
     }
 }
-
-
-/**
- * Auth prompt implementation - Uses password manager if at all possible.
- */
-function calAuthPrompt() {
-    // use the window watcher service to get a nsIAuthPrompt impl
-    this.mPrompter = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                               .getService(Components.interfaces.nsIWindowWatcher)
-                               .getNewAuthPrompter(null);
-    this.mTriedStoredPassword = false;
-}
-
-calAuthPrompt.prototype = {
-    prompt: function capP(aDialogTitle, aText, aPasswordRealm, aSavePassword,
-                          aDefaultText, aResult) {
-        return this.mPrompter.prompt(aDialogTitle, aText, aPasswordRealm,
-                                     aSavePassword, aDefaultText, aResult);
-    },
-
-    getPasswordInfo: function capGPI(aPasswordRealm) {
-        var username;
-        var password;
-        var found = false;
-        var passwordManager = Components.classes["@mozilla.org/passwordmanager;1"]
-                                        .getService(Components.interfaces.nsIPasswordManager);
-        var pwenum = passwordManager.enumerator;
-        // step through each password in the password manager until we find the one we want:
-        while (pwenum.hasMoreElements()) {
-            try {
-                var pass = pwenum.getNext().QueryInterface(Components.interfaces.nsIPassword);
-                if (pass.host == aPasswordRealm) {
-                     // found it!
-                     username = pass.user;
-                     password = pass.password;
-                     found = true;
-                     break;
-                }
-            } catch (ex) {
-                // don't do anything here, ignore the password that could not
-                // be read
-            }
-        }
-        return {found: found, username: username, password: password};
-    },
-
-    promptUsernameAndPassword: function capPUAP(aDialogTitle, aText,
-                                                aPasswordRealm,aSavePassword,
-                                                aUser, aPwd) {
-        var pw;
-        if (!this.mTriedStoredPassword) {
-            pw = this.getPasswordInfo(aPasswordRealm);
-        }
-
-        if (pw && pw.found) {
-            this.mTriedStoredPassword = true;
-            aUser.value = pw.username;
-            aPwd.value = pw.password;
-            return true;
-        } else {
-            return this.mPrompter.promptUsernameAndPassword(aDialogTitle, aText,
-                                                            aPasswordRealm,
-                                                            aSavePassword,
-                                                            aUser, aPwd);
-        }
-    },
-
-    // promptAuth is needed/used on trunk only
-    promptAuth: function capPA(aChannel, aLevel, aAuthInfo) {
-        // need to match the way the password manager stores host/realm
-        var hostRealm = aChannel.URI.host + ":" + aChannel.URI.port + " (" +
-                        aAuthInfo.realm + ")";
-        var pw;
-        if (!this.mTriedStoredPassword) {
-            pw = this.getPasswordInfo(hostRealm);
-        }
-
-        if (pw && pw.found) {
-            this.mTriedStoredPassword = true;
-            aAuthInfo.username = pw.username;
-            aAuthInfo.password = pw.password;
-            return true;
-        } else {
-            var prompter2 = 
-                Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                          .getService(Components.interfaces.nsIPromptFactory)
-                          .getPrompt(null, Components.interfaces.nsIAuthPrompt2);
-            return prompter2.promptAuth(aChannel, aLevel, aAuthInfo);
-        }
-    },
-
-    promptPassword: function capPP(aDialogTitle, aText, aPasswordRealm,
-                             aSavePassword, aPwd) {
-        var found = false;
-        var pw;
-        if (!this.mTriedStoredPassword) {
-            pw = this.getPasswordInfo(aPasswordRealm);
-        }
-
-        if (pw && pw.found) {
-            this.mTriedStoredPassword = true;
-            aPwd.value = pw.password;
-            return true;
-        } else {
-            return this.mPrompter.promptPassword(aDialogTitle, aText,
-                                                 aPasswordRealm, aSavePassword,
-                                                 aPwd);
-        }
-    }
-}
-
-/**
- * Pick whichever of "black" or "white" will look better when used as a text
- * color against a background of bgColor. 
- *
- * @param bgColor   the background color as a "#RRGGBB" string
- *
- * (copied from calendarUtils.js to be available to print formatters)
- */
-function getContrastingTextColor(bgColor)
-{
-    var calcColor = bgColor.replace(/#/g, "");
-    var red = parseInt(calcColor.substring(0, 2), 16);
-    var green = parseInt(calcColor.substring(2, 4), 16);
-    var blue = parseInt(calcColor.substring(4, 6), 16);
-
-    // Calculate the L(ightness) value of the HSL color system.
-    // L = (max(R, G, B) + min(R, G, B)) / 2
-    var max = Math.max(Math.max(red, green), blue);
-    var min = Math.min(Math.min(red, green), blue);
-    var lightness = (max + min) / 2;
-
-    // Consider all colors with less than 50% Lightness as dark colors
-    // and use white as the foreground color; otherwise use black.
-    // Actually we use a threshold a bit below 50%, so colors like
-    // #FF0000, #00FF00 and #0000FF still get black text which looked
-    // better when we tested this.
-    if (lightness < 120) {
-        return "white";
-    }
-    
-    return "black";
-}
-

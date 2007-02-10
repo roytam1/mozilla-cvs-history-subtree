@@ -38,7 +38,7 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsMappedAttributes.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsRuleData.h"
@@ -58,7 +58,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -69,14 +69,11 @@ public:
   // nsIDOMHTMLTableColElement
   NS_DECL_NSIDOMHTMLTABLECOLELEMENT
 
-  virtual PRBool ParseAttribute(PRInt32 aNamespaceID,
-                                nsIAtom* aAttribute,
+  virtual PRBool ParseAttribute(nsIAtom* aAttribute,
                                 const nsAString& aValue,
                                 nsAttrValue& aResult);
   nsMapRuleToAttributesFunc GetAttributeMappingFunction() const;
   NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 };
 
 
@@ -105,7 +102,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLTableColElement,
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLTableColElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLTableColElement)
 
 
 NS_IMPL_STRING_ATTR_DEFAULT_VALUE(nsHTMLTableColElement, Align, align, "left")
@@ -117,33 +114,29 @@ NS_IMPL_STRING_ATTR(nsHTMLTableColElement, Width, width)
 
 
 PRBool
-nsHTMLTableColElement::ParseAttribute(PRInt32 aNamespaceID,
-                                      nsIAtom* aAttribute,
+nsHTMLTableColElement::ParseAttribute(nsIAtom* aAttribute,
                                       const nsAString& aValue,
                                       nsAttrValue& aResult)
 {
-  if (aNamespaceID == kNameSpaceID_None) {
-    /* ignore these attributes, stored simply as strings ch */
-    if (aAttribute == nsGkAtoms::charoff) {
-      return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
-    }
-    if (aAttribute == nsGkAtoms::span) {
-      /* protection from unrealistic large colspan values */
-      return aResult.ParseIntWithBounds(aValue, 1, MAX_COLSPAN);
-    }
-    if (aAttribute == nsGkAtoms::width) {
-      return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
-    }
-    if (aAttribute == nsGkAtoms::align) {
-      return ParseTableCellHAlignValue(aValue, aResult);
-    }
-    if (aAttribute == nsGkAtoms::valign) {
-      return ParseTableVAlignValue(aValue, aResult);
-    }
+  /* ignore these attributes, stored simply as strings ch */
+  if (aAttribute == nsHTMLAtoms::charoff) {
+    return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_FALSE);
+  }
+  if (aAttribute == nsHTMLAtoms::span) {
+    /* protection from unrealistic large colspan values */
+    return aResult.ParseIntWithBounds(aValue, 1, MAX_COLSPAN);
+  }
+  if (aAttribute == nsHTMLAtoms::width) {
+    return aResult.ParseSpecialIntValue(aValue, PR_TRUE, PR_TRUE);
+  }
+  if (aAttribute == nsHTMLAtoms::align) {
+    return ParseTableCellHAlignValue(aValue, aResult);
+  }
+  if (aAttribute == nsHTMLAtoms::valign) {
+    return ParseTableVAlignValue(aValue, aResult);
   }
 
-  return nsGenericHTMLElement::ParseAttribute(aNamespaceID, aAttribute, aValue,
-                                              aResult);
+  return nsGenericHTMLElement::ParseAttribute(aAttribute, aValue, aResult);
 }
 
 static 
@@ -152,7 +145,7 @@ void MapAttributesIntoRule(const nsMappedAttributes* aAttributes, nsRuleData* aD
   if (aData->mSID == eStyleStruct_Position &&
       aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
     // width
-    const nsAttrValue* value = aAttributes->GetAttr(nsGkAtoms::width);
+    const nsAttrValue* value = aAttributes->GetAttr(nsHTMLAtoms::width);
     if (value) {
       switch (value->Type()) {
       case nsAttrValue::ePercent: {
@@ -175,7 +168,7 @@ void MapAttributesIntoRule(const nsMappedAttributes* aAttributes, nsRuleData* aD
   else if (aData->mSID == eStyleStruct_Text) {
     if (aData->mTextData->mTextAlign.GetUnit() == eCSSUnit_Null) {
       // align: enum
-      const nsAttrValue* value = aAttributes->GetAttr(nsGkAtoms::align);
+      const nsAttrValue* value = aAttributes->GetAttr(nsHTMLAtoms::align);
       if (value && value->Type() == nsAttrValue::eEnum)
         aData->mTextData->mTextAlign.SetIntValue(value->GetEnumValue(), eCSSUnit_Enumerated);
     }
@@ -183,7 +176,7 @@ void MapAttributesIntoRule(const nsMappedAttributes* aAttributes, nsRuleData* aD
   else if (aData->mSID == eStyleStruct_TextReset) {
     if (aData->mTextData->mVerticalAlign.GetUnit() == eCSSUnit_Null) {
       // valign: enum
-      const nsAttrValue* value = aAttributes->GetAttr(nsGkAtoms::valign);
+      const nsAttrValue* value = aAttributes->GetAttr(nsHTMLAtoms::valign);
       if (value && value->Type() == nsAttrValue::eEnum)
         aData->mTextData->mVerticalAlign.SetIntValue(value->GetEnumValue(), eCSSUnit_Enumerated);
     }
@@ -199,7 +192,7 @@ void ColMapAttributesIntoRule(const nsMappedAttributes* aAttributes,
   if (aData->mSID == eStyleStruct_Table && 
       aData->mTableData->mSpan.GetUnit() == eCSSUnit_Null) {
     // span: int
-    const nsAttrValue* value = aAttributes->GetAttr(nsGkAtoms::span);
+    const nsAttrValue* value = aAttributes->GetAttr(nsHTMLAtoms::span);
     if (value && value->Type() == nsAttrValue::eInteger)
       aData->mTableData->mSpan.SetIntValue(value->GetIntegerValue(),
                                            eCSSUnit_Integer);
@@ -212,14 +205,14 @@ NS_IMETHODIMP_(PRBool)
 nsHTMLTableColElement::IsAttributeMapped(const nsIAtom* aAttribute) const
 {
   static const MappedAttributeEntry attributes[] = {
-    { &nsGkAtoms::width },
-    { &nsGkAtoms::align },
-    { &nsGkAtoms::valign },
+    { &nsHTMLAtoms::width },
+    { &nsHTMLAtoms::align },
+    { &nsHTMLAtoms::valign },
     { nsnull }
   };
 
   static const MappedAttributeEntry span_attribute[] = {
-    { &nsGkAtoms::span },
+    { &nsHTMLAtoms::span },
     { nsnull }
   };
 
@@ -235,7 +228,7 @@ nsHTMLTableColElement::IsAttributeMapped(const nsIAtom* aAttribute) const
   };
 
   // we only match "span" if we're a <col>
-  if (mNodeInfo->Equals(nsGkAtoms::col))
+  if (mNodeInfo->Equals(nsHTMLAtoms::col))
     return FindAttributeDependence(aAttribute, col_map,
                                    NS_ARRAY_LENGTH(col_map));
   return FindAttributeDependence(aAttribute, colspan_map,
@@ -246,7 +239,7 @@ nsHTMLTableColElement::IsAttributeMapped(const nsIAtom* aAttribute) const
 nsMapRuleToAttributesFunc
 nsHTMLTableColElement::GetAttributeMappingFunction() const
 {
-  if (mNodeInfo->Equals(nsGkAtoms::col)) {
+  if (mNodeInfo->Equals(nsHTMLAtoms::col)) {
     return &ColMapAttributesIntoRule;
   }
 

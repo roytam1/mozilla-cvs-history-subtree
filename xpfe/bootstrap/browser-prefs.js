@@ -36,15 +36,13 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* The prefs in this file are specific to the seamonkey (xpfe) browser.
+/* The prefs in this file are specific to the seamonkey browser.
  * Generic default prefs that would be useful to embedders belong in
  * modules/libpref/src/init/all.js
  */
 
 pref("startup.homepage_override_url","chrome://navigator-region/locale/region.properties");
-
 pref("browser.chromeURL","chrome://navigator/content/navigator.xul");
-pref("browser.hiddenWindowChromeURL", "chrome://navigator/content/hiddenWindow.xul");
 
 pref("general.startup.browser",             true);
 pref("general.startup.mail",                false);
@@ -59,15 +57,17 @@ pref("general.open_location.last_window_choice", 0);
 pref("general.smoothScroll", false);
 pref("general.autoScroll", true);
 
+pref("general.warnOnAboutConfig", true);
+
 #expand pref("general.useragent.extra.__MOZ_APP_NAME__", "__MOZ_APP_DISPLAYNAME__/__MOZ_APP_VERSION__");
 
 // 0 = blank, 1 = home (browser.startup.homepage), 2 = last
 pref("browser.startup.page",                1);
 pref("browser.startup.homepage",	   "chrome://navigator-region/locale/region.properties");
 pref("browser.startup.homepage.count", 1);
-
-// disable this until it can be disabled on a per-docshell basis (see bug 319368)
-pref("browser.send_pings", false);
+// "browser.startup.homepage_override" was for 4.x
+pref("browser.startup.homepage_override.1", true);
+pref("browser.startup.autoload_homepage",   true);
 
 pref("browser.urlbar.autoFill", false);
 pref("browser.urlbar.showPopup", true);
@@ -126,7 +126,6 @@ pref("browser.tabs.opentabfor.middleclick", false);
 pref("browser.tabs.opentabfor.urlbar", false);
 pref("browser.tabs.tooltippreview.enable", true);
 pref("browser.tabs.tooltippreview.width", 300);
-pref("browser.tabs.undoclose.depth", 3);
 
 // external link handling in tabbed browsers. values from nsIBrowserDOMWindow.
 // 0=default window, 1=current window/tab, 2=new window, 3=new tab in most recent window
@@ -145,9 +144,13 @@ pref("browser.translation.service", "chrome://navigator-region/locale/region.pro
 pref("browser.translation.serviceDomain", "chrome://navigator-region/locale/region.properties");
   
 // Smart Browsing prefs
+pref("browser.related.enabled", true);
+pref("browser.related.autoload", 1);  // 0 = Always, 1 = After first use, 2 = Never
 pref("browser.related.provider", "http://www-rl.netscape.com/wtgn?");
 pref("browser.related.disabledForDomains", "");
-pref("keyword.moreInfoURL", "chrome://branding/locale/brand.properties");
+
+// Bookmarks prefs
+pref("browser.bookmarks.confirm_sorting", true);
 
 //Internet Search
 pref("browser.search.defaultenginename", "chrome://communicator-region/locale/region.properties");
@@ -162,6 +165,7 @@ pref("javascript.options.showInConsole",    true);
 pref("offline.startup_state",            0);
 pref("offline.send.unsent_messages",            0);
 pref("offline.download.download_messages",  0);
+pref("offline.prompt_synch_on_exit",            true);
 
 pref("signon.rememberSignons",              true);
 pref("signon.expireMasterPassword",         false);
@@ -181,8 +185,8 @@ pref("wallet.miscPanel.hide",               false);
 pref("mail.signature_file",             "");
 pref("mail.directory",                  "");
 pref("news.directory",                  "");
+pref("browser.editor.disabled", false);
 pref("spellchecker.dictionary", "");
-pref("spellchecker.dictionaries.download.url", "chrome://branding/locale/brand.properties");
 
 // this will automatically enable inline spellchecking (if it is available) for
 // editable elements in HTML
@@ -191,17 +195,11 @@ pref("spellchecker.dictionaries.download.url", "chrome://branding/locale/brand.p
 // 2 = check multi/single line controls
 pref("layout.spellcheckDefault", 1);
 
-pref("app.releaseNotesURL", "chrome://branding/locale/brand.properties");
-pref("app.vendorURL", "chrome://branding/locale/brand.properties");
-
-pref("extensions.getMoreLocalesURL", "chrome://branding/locale/brand.properties");
-
 pref("xpinstall.dialog.confirm",        "chrome://communicator/content/xpinstall/institems.xul");
 pref("xpinstall.dialog.progress.chrome","chrome://communicator/content/xpinstall/xpistatus.xul");
 pref("xpinstall.dialog.progress.skin",  "chrome://communicator/content/xpinstall/xpistatus.xul");
 pref("xpinstall.dialog.progress.type.chrome", "");
 pref("xpinstall.dialog.progress.type.skin",   "");
-
 pref("xpinstall.whitelist.add", "update.mozilla.org");
 pref("xpinstall.whitelist.required", false);
 pref("xpinstall.blacklist.add", "");
@@ -220,6 +218,7 @@ pref("browser.throbber.url","chrome://navigator-region/locale/region.properties"
 pref("alerts.slideIncrement", 1);
 pref("alerts.slideIncrementTime", 10);
 pref("alerts.totalOpenTime", 4000);
+pref("alerts.height", 50);
 
 // update notifications prefs
 pref("update_notifications.enabled", true);
@@ -273,7 +272,7 @@ pref("browser.urlbar.clickSelectsAll", false);
 // 0 goes back
 // 1 act like pgup
 // 2 and other values, nothing
-pref("browser.backspace_action", 2);
+pref("browser.backspace_action", 1);
 
 pref("general.autoScroll", false);
 #endif

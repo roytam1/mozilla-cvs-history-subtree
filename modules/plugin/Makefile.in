@@ -71,8 +71,6 @@ ifdef MOZ_ENABLE_GTK2
 TOOL_DIRS += samples/default/unix
 endif
 
-endif
-
 ifeq ($(OS_ARCH),WINNT)
 TOOL_DIRS += samples/default/windows
 endif
@@ -93,6 +91,8 @@ ifneq (,$(filter WINNT Darwin Linux,$(OS_ARCH)))
 TOOL_DIRS += tools/sdk
 endif
 endif
+
+endif # MINIMO
 
 endif # MOZ_PLUGINS
 

@@ -171,7 +171,6 @@ nsHostRecord::Create(const nsHostKey *key, nsHostRecord **result)
     rec->af = key->af;
 
     rec->_refc = 1; // addref
-    NS_LOG_ADDREF(rec, 1, "nsHostRecord", sizeof(nsHostRecord));
     rec->addr_info = nsnull;
     rec->addr = nsnull;
     rec->expiration = NowInMinutes();
@@ -340,19 +339,6 @@ nsHostResolver::Init()
     PL_DHashTableInit(&mDB, &gHostDB_ops, nsnull, sizeof(nsHostDBEnt), 0);
 
     mShutdown = PR_FALSE;
-
-#if defined(HAVE_RES_NINIT)
-    // We want to make sure the system is using the correct resolver settings,
-    // so we force it to reload those settings whenever we startup a subsequent
-    // nsHostResolver instance.  We assume that there is no reason to do this
-    // for the first nsHostResolver instance since that is usually created
-    // during application startup.
-    static int initCount = 0;
-    if (initCount++ > 0) {
-        LOG(("calling res_ninit\n"));
-        res_ninit(&_res);
-    }
-#endif
     return NS_OK;
 }
 
@@ -361,18 +347,14 @@ nsHostResolver::Shutdown()
 {
     LOG(("nsHostResolver::Shutdown\n"));
 
-    PRCList pendingQ, evictionQ;
+    PRCList pendingQ;
     PR_INIT_CLIST(&pendingQ);
-    PR_INIT_CLIST(&evictionQ);
-
     {
         nsAutoLock lock(mLock);
         
         mShutdown = PR_TRUE;
 
         MoveCList(mPendingQ, pendingQ);
-        MoveCList(mEvictionQ, evictionQ);
-        mEvictionQSize = 0;
 
         if (mHaveIdleThread)
             PR_NotifyCondVar(mIdleThreadCV);
@@ -390,16 +372,6 @@ nsHostResolver::Shutdown()
             OnLookupComplete(rec, NS_ERROR_ABORT, nsnull);
         }
     }
-
-    if (!PR_CLIST_IS_EMPTY(&evictionQ)) {
-        PRCList *node = evictionQ.next;
-        while (node != &evictionQ) {
-            nsHostRecord *rec = NS_STATIC_CAST(nsHostRecord *, node);
-            node = node->next;
-            NS_RELEASE(rec);
-        }
-    }
-
 }
 
 nsresult
@@ -560,10 +532,6 @@ nsHostResolver::IssueLookup(nsHostRecord *rec)
             return NS_ERROR_OUT_OF_MEMORY;
         }
     }
-#if defined(PR_LOGGING)
-    else
-      LOG(("lookup waiting for thread - %s ...\n", rec->host));
-#endif
 
     return NS_OK;
 }
@@ -625,7 +593,7 @@ nsHostResolver::OnLookupComplete(nsHostRecord *rec, nsresult status, PRAddrInfo 
         rec->expiration = NowInMinutes() + mMaxCacheLifetime;
         rec->resolving = PR_FALSE;
         
-        if (rec->addr_info && !mShutdown) {
+        if (rec->addr_info) {
             // add to mEvictionQ
             PR_APPEND_LINK(rec, &mEvictionQ);
             NS_ADDREF(rec);
@@ -686,7 +654,6 @@ nsHostResolver::ThreadFunc(void *arg)
         // convert error code to nsresult.
         nsresult status = ai ? NS_OK : NS_ERROR_UNKNOWN_HOST;
         resolver->OnLookupComplete(rec, status, ai);
-        LOG(("lookup complete for %s ...\n", rec->host));
     }
     NS_RELEASE(resolver);
     LOG(("nsHostResolver::ThreadFunc exiting\n"));

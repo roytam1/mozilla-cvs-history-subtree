@@ -74,10 +74,10 @@ pref("app.update.vendorName.override", "Mozilla");
 
 // URL user can browse to manually if for some reason all update installation
 // attempts fail.  TODO: Change this URL
-pref("app.update.url.manual", "http://%LOCALE%.www.mozilla.com/%LOCALE%/%APP%/");
+pref("app.update.url.manual", "http://www.mozilla.org/products/thunderbird/");
 // A default value for the "More information about this update" link
 // supplied in the "An update is available" page of the update wizard. 
-pref("app.update.url.details", "http://%LOCALE%.www.mozilla.com/%LOCALE%/%APP%/releases/");
+pref("app.update.url.details", "chrome://messenger-region/locale/region.properties");
 // User-settable override to app.update.url for testing purposes.
 //pref("app.update.url.override", "");
 
@@ -100,9 +100,6 @@ pref("app.update.timer", 600000);
 // a whatsNewURL field in their brand.properties that contains a link to a page
 // which tells users what's new in this new update.
 pref("app.update.showInstalledUI", false);
-
-// Release notes URL
-pref("app.releaseNotesURL", "http://%LOCALE%.www.mozilla.com/%LOCALE%/%APP%/%VERSION%/releasenotes/");
 
 // Blocklist preferences
 pref("extensions.blocklist.enabled", true);
@@ -138,13 +135,9 @@ pref("extensions.dss.switchPending", false);    // Non-dynamic switch pending af
 pref("xpinstall.whitelist.add", "update.mozilla.org");
 pref("xpinstall.whitelist.add.103", "addons.mozilla.org");
 
-pref("mail.shell.checkDefaultClient", true);
+pref("mail.phishing.detection.enabled", true); // enable / disable phishing detection for link clicks
 pref("mail.spellcheck.inline", true);
 pref("mail.showPreviewText", true); // enables preview text in mail alerts and folder tooltips
-
-pref("mail.biff.alert.show_preview", true);
-pref("mail.biff.alert.show_subject", true);
-pref("mail.biff.alert.show_sender",  true);
 
 // Folder Pane View
 // 0 == All Folders
@@ -181,10 +174,29 @@ pref("accessibility.typeaheadfind.flashBar", 1);
 pref("mail.showFolderPaneColumns", false); // setting to true will allow total/unread/size columns
 pref("mail.showCondensedAddresses", true); // show the friendly display name for people I know
 
+/////////////////////////////////////////////////////////////////
+// Privacy Controls for Handling Remote Content
+///////////////////////////////////////////////////////////////// 
+pref("mailnews.message_display.allow.plugins", false); // disable plugins by default
+pref("mailnews.message_display.disable_remote_image", true);
+pref("mailnews.message_display.disable_remote_images.useWhitelist", true);
+pref("mailnews.message_display.disable_remote_images.whiteListAbURI","moz-abmdbdirectory://abook.mab");
+
+/////////////////////////////////////////////////////////////////
+// Trusted Mail Domains
+//
+// Specific domains can be white listed to bypass various privacy controls in Thunderbird
+// such as blocking remote images, the phishing detector, etc. This is particularly
+// useful for business deployments where images or links reference servers inside a 
+// corporate intranet. For multiple domains, separate them with a comma. i.e.
+// pref("mail.trusteddomains", "mozilla.org,mozillafoundation.org");
+///////////////////////////////////////////////////////////////// 
+pref("mail.trusteddomains", "");
+
 // hidden pref for changing how we present attachments in the message pane
 pref("mailnews.attachments.display.largeView", false); 
 pref("mail.pane_config.dynamic",            0);
-pref("mailnews.reuse_thread_window2",     true);
+pref("mailnews.reuse_thread_window2", true);
 pref("mail.spam.display.sanitize", true); // sanitize the HTML in spam messages
 pref("mail.standalone", true); 
 pref("editor.singleLine.pasteNewlines", 4);  // substitute commas for new lines in single line text boxes
@@ -200,6 +212,12 @@ pref("network.cookie.cookieBehavior", 3); // 0-Accept, 1-dontAcceptForeign, 2-do
 /////////////////////////////////////////////////////////////////
 // End seamonkey suite mailnews.js pref overrides
 ///////////////////////////////////////////////////////////////// 
+
+// whether to check if we are the default mail, news or feed client
+// on startup. 
+pref("mail.checkDefaultMail", true);
+pref("mail.checkDefaultNews", false);
+pref("mail.checkDefaultFeed", false);
 
 /////////////////////////////////////////////////////////////////
 // Overrides for generic app behavior from the seamonkey suite's all.js
@@ -239,22 +257,9 @@ pref("general.startup.compose",             false);
 pref("general.startup.addressbook",         false);
 
 pref("offline.startup_state",            2);
-// 0 Ask before sending unsent messages when going online
-// 1 Always send unsent messages when going online
-// 2 Never send unsent messages when going online
 pref("offline.send.unsent_messages",            0);
-
-// 0 Ask before synchronizing the offline mail store when going offline
-// 1 Always synchronize the offline store when going offline
-// 2 Never synchronize the offline store when going offline
 pref("offline.download.download_messages",  0);
 pref("offline.prompt_synch_on_exit",            true);
-
-#ifdef XP_WIN
-pref("offline.autoDetect", true); // automatically move the user offline or online based on the network connection
-#else
-pref("offline.autoDetect", false);
-#endif
 
 // Expose only select protocol handlers. All others should go
 // through the external protocol handler route.
@@ -276,10 +281,10 @@ pref("network.protocol-handler.warn-external.ftp", false);
 pref("network.hosts.smtp_server",           "mail");
 pref("network.hosts.pop_server",            "mail");
 
-pref("security.warn_entering_secure", false);
-pref("security.warn_entering_weak", false);
-pref("security.warn_leaving_secure", false);
-pref("security.warn_viewing_mixed", false);
+pref("security.warn_entering_secure.show_once", false);
+pref("security.warn_entering_weak.show_once", false);
+pref("security.warn_leaving_secure.show_once", false);
+pref("security.warn_viewing_mixed.show_once", false);
 
 pref("general.config.obscure_value", 0); // for MCD .cfg files
 
@@ -299,7 +304,6 @@ pref("xpinstall.dialog.progress.type.chrome", "Extension:Manager");
 /////////////////////////////////////////////////////////////////
 pref("browser.startup.homepage",	   "chrome://navigator-region/locale/region.properties");
 pref("browser.cache.memory.capacity",       4096);
-pref("browser.send_pings", false);
 pref("browser.chrome.site_icons", true);
 pref("browser.chrome.favicons", false);
 pref("browser.chrome.toolbar_tips",         true);
@@ -340,8 +344,6 @@ pref("news.directory",                  "");
 pref("autoupdate.enabled",              true);
 pref("browser.editor.disabled", false);
 pref("spellchecker.dictionary", "");
-// Dictionary download preference
-pref("spellchecker.dictionaries.download.url", "https://%LOCALE%.add-ons.mozilla.com/%LOCALE%/thunderbird/%VERSION%/dictionaries/");
 
 // profile.force.migration can be used to bypass the migration wizard, forcing migration from a particular
 // mail application without any user intervention. Possible values are: 
@@ -370,28 +372,6 @@ pref("alerts.totalOpenTime", 3000);
 // 2 and other values, no download manager, no progress dialog. 
 pref("browser.downloadmanager.behavior", 1);
 
-pref("mail.phishing.detection.enabled", true); // enable / disable phishing detection for link clicks
-
-pref("browser.safebrowsing.enabled", false);
-
-// Non-enhanced mode (local url lists) URL list to check for updates
-pref("browser.safebrowsing.provider.0.updateURL", "");
-pref("browser.safebrowsing.dataProvider", 0);
-
-// Does the provider name need to be localizable?
-pref("browser.safebrowsing.provider.0.name", "");
-pref("browser.safebrowsing.provider.0.lookupURL", "");
-pref("browser.safebrowsing.provider.0.keyURL", "");
-pref("browser.safebrowsing.provider.0.reportURL", "");
-
-// HTML report pages
-pref("browser.safebrowsing.provider.0.reportGenericURL", "http://{moz:locale}.phish-generic.mozilla.com/?hl={moz:locale}");
-pref("browser.safebrowsing.provider.0.reportErrorURL", "http://{moz:locale}.phish-error.mozilla.com/?hl={moz:locale}");
-pref("browser.safebrowsing.provider.0.reportPhishURL", "http://{moz:locale}.phish-report.mozilla.com/?hl={moz:locale}");
-
-// FAQ URL
-pref("browser.safebrowsing.warning.infoURL", "http://%LOCALE%.www.mozilla.com/%LOCALE%/firefox/phishing-protection/");
-
 #ifndef XP_MACOSX
 #ifdef XP_UNIX
 // For the download dialog
@@ -402,6 +382,3 @@ pref("browser.urlbar.clickSelectsAll", false);
 
 // prevent status-bar spoofing even if people are foolish enough to turn on JS
 pref("dom.disable_window_status_change",          true);
-
-// For the Empty Junk confirmation dialog
-pref("mail.emptyJunk.dontAskAgain", false);

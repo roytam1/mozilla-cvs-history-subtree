@@ -35,12 +35,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * class that manages regions of 2-D space, originally designed
- * generally but actually specific to space occupied by floats
- */
-
 #include "nsSpaceManager.h"
 #include "nsPoint.h"
 #include "nsRect.h"
@@ -108,19 +102,17 @@ PSArenaFreeCB(size_t aSize, void* aPtr, void* aClosure)
 /////////////////////////////////////////////////////////////////////////////
 // nsSpaceManager
 
+MOZ_DECL_CTOR_COUNTER(nsSpaceManager)
+
 nsSpaceManager::nsSpaceManager(nsIPresShell* aPresShell, nsIFrame* aFrame)
   : mFrame(aFrame),
     mLowestTop(NSCOORD_MIN),
-    mFloatDamage(PSArenaAllocCB, PSArenaFreeCB, aPresShell),
-    mHaveCachedLeftYMost(PR_TRUE),
-    mHaveCachedRightYMost(PR_TRUE),
-    mMaximalLeftYMost(0),
-    mMaximalRightYMost(0),
-    mCachedBandPosition(nsnull)
+    mFloatDamage(PSArenaAllocCB, PSArenaFreeCB, aPresShell)
 {
   MOZ_COUNT_CTOR(nsSpaceManager);
   mX = mY = 0;
   mFrameInfoMap = nsnull;
+  mSavedStates = nsnull;
 }
 
 void
@@ -138,6 +130,14 @@ nsSpaceManager::~nsSpaceManager()
   MOZ_COUNT_DTOR(nsSpaceManager);
   mBandList.Clear();
   ClearFrameInfo();
+
+  NS_ASSERTION(!mSavedStates, "states remaining on state stack");
+
+  while (mSavedStates && mSavedStates != &mAutoState){
+    SpaceManagerState *state = mSavedStates;
+    mSavedStates = state->mNext;
+    delete state;
+  }
 }
 
 // static
@@ -192,7 +192,7 @@ void nsSpaceManager::Shutdown()
       nsMemory::Free(spaceManager);
   }
 
-  // Disable further caching.
+  // Disable futher caching.
   sCachedSpaceManagerCount = -1;
 }
 
@@ -370,7 +370,8 @@ nsSpaceManager::GetBandData(nscoord       aYOffset,
     aBandData.mTrapezoids[0].mFrame = nsnull;
   } else {
     // Find the first band that contains the y-offset or is below the y-offset
-    BandRect* band = GuessBandWithTopAbove(y);
+    NS_ASSERTION(!mBandList.IsEmpty(), "no bands");
+    BandRect* band = mBandList.Head();
 
     aBandData.mCount = 0;
     while (nsnull != band) {
@@ -418,37 +419,6 @@ nsSpaceManager::GetNextBand(const BandRect* aBandRect) const
     }
 
     aBandRect = aBandRect->Next();
-  }
-
-  // No bands left
-  return nsnull;
-}
-
-/**
- * Skips to the start of the previous band.
- *
- * @param aBandRect The first rect within a band
- * @returns The start of the previous band, or nsnull of this is the first band.
- */
-nsSpaceManager::BandRect*
-nsSpaceManager::GetPrevBand(const BandRect* aBandRect) const
-{
-  NS_ASSERTION(aBandRect->Prev() == &mBandList ||
-               aBandRect->Prev()->mBottom <= aBandRect->mTop,
-               "aBandRect should be first rect within its band");
-
-  BandRect* prev = aBandRect->Prev();
-  nscoord topOfBand = prev->mTop;
-
-  while (prev != &mBandList) {
-    // Check whether the prev rect is part of the same band
-    if (prev->mTop != topOfBand) {
-      // We found the beginning of this band
-      return (BandRect*)aBandRect;
-    }
-
-    aBandRect = prev;
-    prev = aBandRect->Prev();
   }
 
   // No bands left
@@ -538,18 +508,13 @@ nsSpaceManager::CanJoinBands(BandRect* aBand, BandRect* aPrevBand)
  * Tries to join the two adjacent bands. Returns PR_TRUE if successful and
  * PR_FALSE otherwise
  *
- * If the two bands are joined, the previous band is the band that's deleted
+ * If the two bands are joined, the previous band is the the band that's deleted
  */
 PRBool
 nsSpaceManager::JoinBands(BandRect* aBand, BandRect* aPrevBand)
 {
   if (CanJoinBands(aBand, aPrevBand)) {
     BandRect* startOfNextBand = aBand;
-    // We're going to be removing aPrevBand, so if mCachedBandPosition points
-    // to it just advance it to startOfNextBand.
-    if (mCachedBandPosition == aPrevBand) {
-      SetCachedBandPosition(startOfNextBand);
-    }
 
     while (aPrevBand != startOfNextBand) {
       // Adjust the top of the band we're keeping, and then move to the next
@@ -560,8 +525,6 @@ nsSpaceManager::JoinBands(BandRect* aBand, BandRect* aPrevBand)
       // Delete the rect from the previous band
       BandRect* next = aPrevBand->Next();
 
-      NS_ASSERTION(mCachedBandPosition != aPrevBand,
-                   "Removing mCachedBandPosition BandRect?");
       aPrevBand->Remove();
       delete aPrevBand;
       aPrevBand = next;
@@ -609,9 +572,6 @@ nsSpaceManager::AddRectToBand(BandRect* aBand, BandRect* aBandRect)
         // No, the new rect is completely to the left of the existing rect
         // (case #1). Insert a new rect
         aBand->InsertBefore(aBandRect);
-        if (mCachedBandPosition == aBand) {
-          SetCachedBandPosition(aBandRect);
-        }
         return;
       }
 
@@ -624,9 +584,6 @@ nsSpaceManager::AddRectToBand(BandRect* aBand, BandRect* aBandRect)
         // Insert the part of the new rect that's to the left of the existing
         // rect as a new band rect
         aBand->InsertBefore(aBandRect);
-        if (mCachedBandPosition == aBand) {
-          SetCachedBandPosition(aBandRect);
-        }
 
         // Continue below with the part that overlaps the existing rect
         aBandRect = r1;
@@ -645,10 +602,6 @@ nsSpaceManager::AddRectToBand(BandRect* aBand, BandRect* aBandRect)
         // rect
         aBandRect->mRight = aBand->mLeft;
         aBand->InsertBefore(aBandRect);
-
-        if (mCachedBandPosition == aBand) {
-          SetCachedBandPosition(aBandRect);
-        }
 
         // Mark the existing rect as shared
         aBand->AddFrame(aBandRect->mFrame);
@@ -723,8 +676,7 @@ nsSpaceManager::AddRectToBand(BandRect* aBand, BandRect* aBandRect)
     }
   } while (aBand->mTop == topOfBand);
 
-  // Insert a new rect.  This is an insertion at the _end_ of the band, so we
-  // absolutely do not want to set mCachedBandPosition to aBandRect here.
+  // Insert a new rect
   aBand->InsertBefore(aBandRect);
 }
 
@@ -763,14 +715,12 @@ nsSpaceManager::InsertBandRect(BandRect* aBandRect)
   nscoord yMost;
   if (!YMost(yMost) || (aBandRect->mTop >= yMost)) {
     mBandList.Append(aBandRect);
-    SetCachedBandPosition(aBandRect);
     return;
   }
 
   // Examine each band looking for a band that intersects this rect
-  // First guess a band whose top is above aBandRect->mTop.  We know
-  // aBandRect won't overlap any bands before that one.
-  BandRect* band = GuessBandWithTopAbove(aBandRect->mTop);
+  NS_ASSERTION(!mBandList.IsEmpty(), "no bands");
+  BandRect* band = mBandList.Head();
 
   while (nsnull != band) {
     // Compare the top edge of this rect with the top edge of the band
@@ -781,7 +731,6 @@ nsSpaceManager::InsertBandRect(BandRect* aBandRect)
         // Case #1. This rect is completely above the band, so insert a
         // new band before the current band
         band->InsertBefore(aBandRect);
-        SetCachedBandPosition(aBandRect);
         break;  // we're all done
       }
 
@@ -826,7 +775,6 @@ nsSpaceManager::InsertBandRect(BandRect* aBandRect)
 
     if (aBandRect->mBottom == band->mBottom) {
       // Add the rect to the band
-      SetCachedBandPosition(band);  // Do this before AddRectToBand
       AddRectToBand(band, aBandRect);
       break;
 
@@ -848,7 +796,6 @@ nsSpaceManager::InsertBandRect(BandRect* aBandRect)
       if (nsnull == band) {
         // Append a new bottommost band
         mBandList.Append(aBandRect);
-        SetCachedBandPosition(aBandRect);
         break;
       }
     }
@@ -859,13 +806,18 @@ nsresult
 nsSpaceManager::AddRectRegion(nsIFrame* aFrame, const nsRect& aUnavailableSpace)
 {
   NS_PRECONDITION(nsnull != aFrame, "null frame");
+  NS_PRECONDITION(aUnavailableSpace.width >= 0 &&
+                  aUnavailableSpace.height >= 0,
+                  "Negative dimensions not allowed");
 
-#ifdef DEBUG
   // See if there is already a region associated with aFrame
-  NS_ASSERTION(!GetFrameInfoFor(aFrame),
-               "aFrame is already associated with a region");
-#endif
-  
+  FrameInfo*  frameInfo = GetFrameInfoFor(aFrame);
+
+  if (nsnull != frameInfo) {
+    NS_WARNING("aFrame is already associated with a region");
+    return NS_ERROR_FAILURE;
+  }
+
   // Convert the frame to world coordinates
   nsRect  rect(aUnavailableSpace.x + mX, aUnavailableSpace.y + mY,
                aUnavailableSpace.width, aUnavailableSpace.height);
@@ -874,7 +826,7 @@ nsSpaceManager::AddRectRegion(nsIFrame* aFrame, const nsRect& aUnavailableSpace)
     mLowestTop = rect.y;
 
   // Create a frame info structure
-  FrameInfo* frameInfo = CreateFrameInfo(aFrame, rect);
+  frameInfo = CreateFrameInfo(aFrame, rect);
   if (nsnull == frameInfo) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -970,9 +922,6 @@ nsSpaceManager::RemoveRegion(nsIFrame* aFrame)
               } else {
                 band = nsnull;
               }
-              if (mCachedBandPosition == rect) {
-                SetCachedBandPosition(band);
-              }                
             }
             delete rect;
             rect = next;
@@ -995,9 +944,6 @@ nsSpaceManager::RemoveRegion(nsIFrame* aFrame)
             if (prevRect == band) {
               // the rect we're deleting is the start of the band
               band = rect;
-              if (mCachedBandPosition == prevRect) {
-                SetCachedBandPosition(band);
-              }
             }
             delete prevRect;
           }
@@ -1022,9 +968,6 @@ nsSpaceManager::RemoveRegion(nsIFrame* aFrame)
       prevFoundMatchingRect = foundMatchingRect;
       prevBand = band;
       band = (rect == &mBandList) ? nsnull : rect;
-      if (!mCachedBandPosition) {
-        SetCachedBandPosition(band);
-      }
     }
   }
 
@@ -1038,21 +981,20 @@ nsSpaceManager::ClearRegions()
   ClearFrameInfo();
   mBandList.Clear();
   mLowestTop = NSCOORD_MIN;
-  mHaveCachedLeftYMost = mHaveCachedRightYMost = PR_TRUE;
-  mMaximalLeftYMost = mMaximalRightYMost = 0;
 }
 
 void
-nsSpaceManager::PushState(SavedState* aState)
+nsSpaceManager::PushState()
 {
-  NS_PRECONDITION(aState, "Need a place to save state");
-
-  // This is a cheap push implementation, which
+  // This is a quick and dirty push implementation, which
   // only saves the (x,y) and last frame in the mFrameInfoMap
   // which is enough info to get us back to where we should be
   // when pop is called.
   //
-  // This push/pop mechanism is used to undo any
+  // The alternative would be to make full copies of the contents
+  // of mBandList and mFrameInfoMap and restore them when pop is
+  // called, but I'm not sure it's worth the effort/bloat at this
+  // point, since this push/pop mechanism is only used to undo any
   // floats that were added during the unconstrained reflow
   // in nsBlockReflowContext::DoReflowBlock(). (See bug 96736)
   //
@@ -1064,39 +1006,55 @@ nsSpaceManager::PushState(SavedState* aState)
   // reflow. In the typical case A and C will be the same, but not always.
   // Allowing mFloatDamage to accumulate the damage incurred during both
   // reflows ensures that nothing gets missed.
-  aState->mX = mX;
-  aState->mY = mY;
-  aState->mLowestTop = mLowestTop;
-  aState->mHaveCachedLeftYMost = mHaveCachedLeftYMost;
-  aState->mHaveCachedRightYMost = mHaveCachedRightYMost;
-  aState->mMaximalLeftYMost = mMaximalLeftYMost;
-  aState->mMaximalRightYMost = mMaximalRightYMost;
+
+  SpaceManagerState *state;
+
+  if(mSavedStates) {
+    state = new SpaceManagerState;
+  } else {
+    state = &mAutoState;
+  }
+
+  NS_ASSERTION(state, "PushState() failed!");
+
+  if (!state) {
+    return;
+  }
+
+  state->mX = mX;
+  state->mY = mY;
+  state->mLowestTop = mLowestTop;
 
   if (mFrameInfoMap) {
-    aState->mLastFrame = mFrameInfoMap->mFrame;
+    state->mLastFrame = mFrameInfoMap->mFrame;
   } else {
-    aState->mLastFrame = nsnull;
+    state->mLastFrame = nsnull;
   }
+
+  // Now that we've saved our state, add it to mSavedStates.
+
+  state->mNext = mSavedStates;
+  mSavedStates = state;
 }
 
 void
-nsSpaceManager::PopState(SavedState* aState)
+nsSpaceManager::PopState()
 {
-  NS_PRECONDITION(aState, "No state to restore?");
-
   // This is a quick and dirty pop implementation, to
   // match the current implementation of PushState(). The
   // idea here is to remove any frames that have been added
   // to the mFrameInfoMap since the last call to PushState().
 
-  // Say we don't have cached left- and right-YMost, so that we don't
-  // try to check for it in RemoveRegion.  We'll restore these from
-  // the state anyway.
-  mHaveCachedLeftYMost = mHaveCachedRightYMost = PR_FALSE;
+  NS_ASSERTION(mSavedStates, "Invalid call to PopState()!");
+
+  if (!mSavedStates) {
+    return;
+  }
 
   // mFrameInfoMap is LIFO so keep removing what it points
   // to until we hit mLastFrame.
-  while (mFrameInfoMap && mFrameInfoMap->mFrame != aState->mLastFrame) {
+
+  while (mFrameInfoMap && mFrameInfoMap->mFrame != mSavedStates->mLastFrame) {
     RemoveRegion(mFrameInfoMap->mFrame);
   }
 
@@ -1105,17 +1063,39 @@ nsSpaceManager::PopState(SavedState* aState)
   // removed mLastFrame from mFrameInfoMap, which means our
   // state is now out of sync with what we thought it should be.
 
-  NS_ASSERTION(((aState->mLastFrame && mFrameInfoMap) ||
-               (!aState->mLastFrame && !mFrameInfoMap)),
+  NS_ASSERTION(((mSavedStates->mLastFrame && mFrameInfoMap) ||
+               (!mSavedStates->mLastFrame && !mFrameInfoMap)),
                "Unexpected outcome!");
 
-  mX = aState->mX;
-  mY = aState->mY;
-  mLowestTop = aState->mLowestTop;
-  mHaveCachedLeftYMost = aState->mHaveCachedLeftYMost;
-  mHaveCachedRightYMost = aState->mHaveCachedRightYMost;
-  mMaximalLeftYMost = aState->mMaximalLeftYMost;
-  mMaximalRightYMost = aState->mMaximalRightYMost;
+  mX = mSavedStates->mX;
+  mY = mSavedStates->mY;
+  mLowestTop = mSavedStates->mLowestTop;
+
+  // Now that we've restored our state, pop the topmost
+  // state and delete it.  Make sure not to delete the mAutoState element
+  // as it is embedded in this class
+
+  SpaceManagerState *state = mSavedStates;
+  mSavedStates = mSavedStates->mNext;
+  if(state != &mAutoState) {
+    delete state;
+  }
+}
+
+void
+nsSpaceManager::DiscardState()
+{
+  NS_ASSERTION(mSavedStates, "Invalid call to DiscardState()!");
+
+  if (!mSavedStates) {
+    return;
+  }
+
+  SpaceManagerState *state = mSavedStates;
+  mSavedStates = mSavedStates->mNext;
+  if(state != &mAutoState) {
+    delete state;
+  }
 }
 
 nscoord
@@ -1145,7 +1125,7 @@ nsSpaceManager::List(FILE* out)
     if (NS_SUCCEEDED(mFrame->QueryInterface(NS_GET_IID(nsIFrameDebug), (void**)&frameDebug))) {
       frameDebug->GetFrameName(tmp);
       fprintf(out, " frame=");
-      fputs(NS_LossyConvertUTF16toASCII(tmp).get(), out);
+      fputs(NS_LossyConvertUCS2toASCII(tmp).get(), out);
       fprintf(out, "@%p", mFrame);
     }
   }
@@ -1165,7 +1145,7 @@ nsSpaceManager::List(FILE* out)
         if (NS_SUCCEEDED(band->mFrame->QueryInterface(NS_GET_IID(nsIFrameDebug), (void**)&frameDebug))) {
           frameDebug->GetFrameName(tmp);
           fprintf(out, " frame=");
-          fputs(NS_LossyConvertUTF16toASCII(tmp).get(), out);
+          fputs(NS_LossyConvertUCS2toASCII(tmp).get(), out);
           fprintf(out, "@%p", band->mFrame);
         }
       }
@@ -1180,7 +1160,7 @@ nsSpaceManager::List(FILE* out)
 
             if (NS_SUCCEEDED(frame->QueryInterface(NS_GET_IID(nsIFrameDebug), (void**)&frameDebug))) {
               frameDebug->GetFrameName(tmp);
-              fputs(NS_LossyConvertUTF16toASCII(tmp).get(), out);
+              fputs(NS_LossyConvertUCS2toASCII(tmp).get(), out);
               fprintf(out, "@%p ", frame);
             }
           }
@@ -1218,19 +1198,6 @@ nsSpaceManager::CreateFrameInfo(nsIFrame* aFrame, const nsRect& aRect)
     // Link it into the list
     frameInfo->mNext = mFrameInfoMap;
     mFrameInfoMap = frameInfo;
-
-    // Optimize for the common case case when the frame being added is
-    // likely to be near the bottom.
-    nscoord ymost = aRect.YMost();
-    PRUint8 floatType = aFrame->GetStyleDisplay()->mFloats;
-    if (mHaveCachedLeftYMost && ymost > mMaximalLeftYMost &&
-        floatType == NS_STYLE_FLOAT_LEFT) {
-      mMaximalLeftYMost = ymost;
-    }
-    else if (mHaveCachedRightYMost && ymost > mMaximalRightYMost &&
-             floatType == NS_STYLE_FLOAT_RIGHT) {
-      mMaximalRightYMost = ymost;
-    }
   }
   return frameInfo;
 }
@@ -1257,21 +1224,28 @@ nsSpaceManager::DestroyFrameInfo(FrameInfo* aFrameInfo)
     }
   }
 
-  // Optimize for the case when the frame being removed is likely to be near
-  // the bottom, but do nothing if we have neither cached value -- that case is
-  // likely to be hit from PopState().
-  if (mHaveCachedLeftYMost || mHaveCachedRightYMost) {
-    PRUint8 floatType = aFrameInfo->mFrame->GetStyleDisplay()->mFloats;
-    if (floatType == NS_STYLE_FLOAT_LEFT) {
-      mHaveCachedLeftYMost = PR_FALSE;
-    }
-    else {
-      NS_ASSERTION(floatType == NS_STYLE_FLOAT_RIGHT, "Unexpected float type");
-      mHaveCachedRightYMost = PR_FALSE;
-    }
-  }
-
   delete aFrameInfo;
+}
+
+static PRBool
+ShouldClearFrame(nsIFrame* aFrame, PRUint8 aBreakType)
+{
+  PRUint8 floatType = aFrame->GetStyleDisplay()->mFloats;
+  PRBool result;
+  switch (aBreakType) {
+    case NS_STYLE_CLEAR_LEFT_AND_RIGHT:
+      result = PR_TRUE;
+      break;
+    case NS_STYLE_CLEAR_LEFT:
+      result = floatType == NS_STYLE_FLOAT_LEFT;
+      break;
+    case NS_STYLE_CLEAR_RIGHT:
+      result = floatType == NS_STYLE_FLOAT_RIGHT;
+      break;
+    default:
+      result = PR_FALSE;
+  }
+  return result;
 }
 
 nscoord
@@ -1279,56 +1253,12 @@ nsSpaceManager::ClearFloats(nscoord aY, PRUint8 aBreakType)
 {
   nscoord bottom = aY + mY;
 
-  if ((!mHaveCachedLeftYMost && aBreakType != NS_STYLE_CLEAR_RIGHT) ||
-      (!mHaveCachedRightYMost && aBreakType != NS_STYLE_CLEAR_LEFT)) {
-    // Recover our maximal YMost values.  Might need both if this is a
-    // NS_STYLE_CLEAR_LEFT_AND_RIGHT
-    nscoord maximalLeftYMost = mHaveCachedLeftYMost ? mMaximalLeftYMost : 0;
-    nscoord maximalRightYMost = mHaveCachedRightYMost ? mMaximalRightYMost : 0;
-
-    // Optimize for most floats not being near the bottom
-    for (FrameInfo *frame = mFrameInfoMap; frame; frame = frame->mNext) {
-      nscoord ymost = frame->mRect.YMost();
-      if (ymost > maximalLeftYMost) {
-        if (frame->mFrame->GetStyleDisplay()->mFloats == NS_STYLE_FLOAT_LEFT) {
-          NS_ASSERTION(!mHaveCachedLeftYMost, "Shouldn't happen");
-          maximalLeftYMost = ymost;
-          // No need to compare to the right ymost
-          continue;
-        }
-      }
-
-      if (ymost > maximalRightYMost) {
-        if (frame->mFrame->GetStyleDisplay()->mFloats == NS_STYLE_FLOAT_RIGHT) {
-          NS_ASSERTION(!mHaveCachedRightYMost, "Shouldn't happen");
-          maximalRightYMost = ymost;
-        }
+  for (FrameInfo *frame = mFrameInfoMap; frame; frame = frame->mNext) {
+    if (ShouldClearFrame(frame->mFrame, aBreakType)) {
+      if (frame->mRect.YMost() > bottom) {
+        bottom = frame->mRect.YMost();
       }
     }
-
-    mMaximalLeftYMost = maximalLeftYMost;
-    mMaximalRightYMost = maximalRightYMost;
-    mHaveCachedRightYMost = mHaveCachedLeftYMost = PR_TRUE;
-  }
-  
-  switch (aBreakType) {
-    case NS_STYLE_CLEAR_LEFT_AND_RIGHT:
-      NS_ASSERTION(mHaveCachedLeftYMost && mHaveCachedRightYMost,
-                   "Need cached values!");
-      bottom = PR_MAX(bottom, mMaximalLeftYMost);
-      bottom = PR_MAX(bottom, mMaximalRightYMost);
-      break;
-    case NS_STYLE_CLEAR_LEFT:
-      NS_ASSERTION(mHaveCachedLeftYMost, "Need cached value!");
-      bottom = PR_MAX(bottom, mMaximalLeftYMost);
-      break;
-    case NS_STYLE_CLEAR_RIGHT:
-      NS_ASSERTION(mHaveCachedRightYMost, "Need cached value!");
-      bottom = PR_MAX(bottom, mMaximalRightYMost);
-      break;
-    default:
-      // Do nothing
-      break;
   }
 
   bottom -= mY;
@@ -1336,29 +1266,10 @@ nsSpaceManager::ClearFloats(nscoord aY, PRUint8 aBreakType)
   return bottom;
 }
 
-nsSpaceManager::BandRect*
-nsSpaceManager::GuessBandWithTopAbove(nscoord aYOffset) const
-{
-  NS_ASSERTION(!mBandList.IsEmpty(), "no bands");
-  BandRect* band = nsnull;
-  if (mCachedBandPosition) {
-    band = mCachedBandPosition;
-    // Now seek backward so that we're guaranteed to be the topmost
-    // band which might contain the y-offset or be below it.
-    while (band && band->mTop > aYOffset) {
-      band = GetPrevBand(band);
-    }
-  }
-
-  if (band) {
-    return band;
-  }
-  
-  return mBandList.Head();
-}
-
 /////////////////////////////////////////////////////////////////////////////
 // FrameInfo
+
+MOZ_DECL_CTOR_COUNTER(nsSpaceManager::FrameInfo)
 
 nsSpaceManager::FrameInfo::FrameInfo(nsIFrame* aFrame, const nsRect& aRect)
   : mFrame(aFrame), mRect(aRect), mNext(0)
@@ -1375,6 +1286,8 @@ nsSpaceManager::FrameInfo::~FrameInfo()
 
 /////////////////////////////////////////////////////////////////////////////
 // BandRect
+
+MOZ_DECL_CTOR_COUNTER(BandRect)
 
 nsSpaceManager::BandRect::BandRect(nscoord    aLeft,
                                    nscoord    aTop,
@@ -1418,7 +1331,8 @@ nsSpaceManager::BandRect::~BandRect()
 nsSpaceManager::BandRect*
 nsSpaceManager::BandRect::SplitVertically(nscoord aBottom)
 {
-  NS_PRECONDITION((aBottom > mTop) && (aBottom < mBottom), "bad argument");
+  // Allow aBottom == mTop, so we can split off an empty rectangle
+  NS_PRECONDITION((aBottom >= mTop) && (aBottom < mBottom), "bad argument");
 
   // Create a new band rect for the bottom part
   BandRect* bottomBandRect;
@@ -1437,7 +1351,8 @@ nsSpaceManager::BandRect::SplitVertically(nscoord aBottom)
 nsSpaceManager::BandRect*
 nsSpaceManager::BandRect::SplitHorizontally(nscoord aRight)
 {
-  NS_PRECONDITION((aRight > mLeft) && (aRight < mRight), "bad argument");
+  // Allow aRight == mLeft, so we can split off an empty rectangle
+  NS_PRECONDITION((aRight >= mLeft) && (aRight < mRight), "bad argument");
   
   // Create a new band rect for the right part
   BandRect* rightBandRect;

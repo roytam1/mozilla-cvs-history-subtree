@@ -45,7 +45,6 @@
 #include "nsIModule.h"
 #include "nsIGenericFactory.h"
 #include "nsCRT.h"
-#include "nsIClassInfoImpl.h"
 
 NS_DECL_CLASSINFO(xpcTestCallJS)
 NS_DECL_CLASSINFO(xpcTestChild2)
@@ -75,3 +74,4 @@ static const nsModuleComponentInfo components[] = {
 };
                                                                
 NS_IMPL_NSGETMODULE(xpconnect_test, components)
+

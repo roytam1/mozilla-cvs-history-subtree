@@ -357,7 +357,7 @@ nsUnknownContentTypeDialog.prototype = {
             }
         },
 
-        // Ignore onProgressChange, onProgressChange64, onStateChange, onLocationChange, onSecurityChange, and onRefreshAttempted notifications.
+        // Ignore onProgressChange, onStateChange, onLocationChange, and onSecurityChange notifications.
         onProgressChange: function( aWebProgress,
                                     aRequest,
                                     aCurSelfProgress,
@@ -383,11 +383,7 @@ nsUnknownContentTypeDialog.prototype = {
         },
 
         onSecurityChange: function( aWebProgress, aRequest, state ) {
-        },
-
-        onRefreshAttempted: function( aWebProgress, aURI, aDelay, aSameURI ) {
-          return true;
-	}
+        }
     },
 
     // initDialog:  Fill various dialog fields with initial content.
@@ -426,20 +422,22 @@ nsUnknownContentTypeDialog.prototype = {
 
       // if always-save and is-executable and no-handler
       // then set up simple ui
+      var defaultApp = this.mLauncher.MIMEInfo.preferredApplicationHandler;
+      var noDefaultApp = (!defaultApp || !defaultApp.path);
       var mimeType = this.mLauncher.MIMEInfo.MIMEType;
       var shouldntRememberChoice = (mimeType == "application/octet-stream" || 
                                     mimeType == "application/x-msdownload" ||
                                     this.mLauncher.targetFile.isExecutable());
-      if (shouldntRememberChoice && !this.openWithDefaultOK()) {
+      if (shouldntRememberChoice && noDefaultApp) {
         // hide featured choice 
-        this.mDialog.document.getElementById("normalBox").collapsed = "true";
+        this.mDialog.document.getElementById("normalBox").collapsed = true;
         // show basic choice 
-        this.mDialog.document.getElementById("basicBox").collapsed = "false";
+        this.mDialog.document.getElementById("basicBox").collapsed = false;
         // change button labels
         this.mDialog.document.documentElement.getButton("accept").label = this.dialogElement("strings").getString("unknownAccept.label");
         this.mDialog.document.documentElement.getButton("cancel").label = this.dialogElement("strings").getString("unknownCancel.label");
         // hide other handler
-        this.mDialog.document.getElementById("openHandler").collapsed = "true";
+        this.mDialog.document.getElementById("openHandler").collapsed = true;
         // set save as the selected option
         this.dialogElement("mode").selectedItem = this.dialogElement("save");
       }
@@ -571,7 +569,7 @@ nsUnknownContentTypeDialog.prototype = {
           catch (ex) {
           }
           if (primaryExtension != "")
-            typeString = this.dialogElement("strings").getFormattedString("fileType", [primaryExtension.toUpperCase()]);
+            typeString = primaryExtension.toUpperCase() + " file";
           // 3. If we can't even do that, just give up and show the MIME type. 
           else
             typeString = mimeInfo.MIMEType;
@@ -831,7 +829,6 @@ nsUnknownContentTypeDialog.prototype = {
     updateHelperAppPref: function() {
       var ha = new this.mDialog.HelperApps();
       ha.updateTypeInfo(this.mLauncher.MIMEInfo);
-      ha.destroy();
     },
     
     // onOK:
@@ -861,7 +858,7 @@ nsUnknownContentTypeDialog.prototype = {
       // Remove our web progress listener (a progress dialog will be
       // taking over).
       this.mLauncher.setWebProgressListener(null);
-
+      
       // saveToDisk and launchWithApplication can return errors in 
       // certain circumstances (e.g. The user clicks cancel in the
       // "Save to Disk" dialog. In those cases, we don't want to
@@ -888,12 +885,7 @@ nsUnknownContentTypeDialog.prototype = {
 
           this.mLauncher.saveToDisk(targetFile, false);
 #endif
-          // Since saveToDisk may open a file picker and therefore block this routine,
-          // we should only call it once the dialog is closed.
-          var _delayedSaveToDisk = function(aSelf) {
-            aSelf.mLauncher.saveToDisk(null, false);
-          }
-          this.mDialog.opener.setTimeout(_delayedSaveToDisk, 0, this);
+          this.mLauncher.saveToDisk(null, false);
         }
         else
           this.mLauncher.launchWithApplication(null, false);

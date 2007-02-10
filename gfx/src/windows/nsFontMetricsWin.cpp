@@ -51,6 +51,7 @@
 #include "nsFontMetricsWin.h"
 #include "nsQuickSort.h"
 #include "nsTextFormatter.h"
+#include "nsIFontPackageProxy.h"
 #include "nsIPersistentProperties2.h"
 #include "nsNetUtil.h"
 #include "prmem.h"
@@ -134,6 +135,8 @@ static PRUint16* GenerateMultiByte(nsCharsetInfo* aSelf);
 static PRBool    LookupWinFontName(const nsAFlatString& aName,
                                    nsAString& aWinName);
 
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
 nsVoidArray* nsFontMetricsWin::gGlobalFonts = nsnull;
 PLHashTable* nsFontMetricsWin::gFontWeights = nsnull;
@@ -150,6 +153,7 @@ static nsICharsetConverterManager* gCharsetManager = nsnull;
 static nsIUnicodeEncoder* gUserDefinedConverter = nsnull;
 static nsISaveAsCharset* gFontSubstituteConverter = nsnull;
 static nsIPref* gPref = nsnull;
+static nsIFontPackageProxy* gFontPackageProxy = nsnull;
 
 static nsIAtom* gUsersLocale = nsnull;
 static nsIAtom* gSystemLocale = nsnull;
@@ -207,6 +211,7 @@ FreeGlobals(void)
   NS_IF_RELEASE(gSystemLocale);
   NS_IF_RELEASE(gUserDefined);
   NS_IF_RELEASE(gUserDefinedConverter);
+  NS_IF_RELEASE(gFontPackageProxy);
   if (gUserDefinedCCMap)
     FreeCCMap(gUserDefinedCCMap);
   NS_IF_RELEASE(gJA);
@@ -351,12 +356,12 @@ private:
 static nsresult
 InitGlobals(void)
 {
-  CallGetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &gCharsetManager);
+  CallGetService(kCharsetConverterManagerCID, &gCharsetManager);
   if (!gCharsetManager) {
     FreeGlobals();
     return NS_ERROR_FAILURE;
   }
-  CallGetService(NS_PREF_CONTRACTID, &gPref);
+  CallGetService(kPrefCID, &gPref);
   if (!gPref) {
     FreeGlobals();
     return NS_ERROR_FAILURE;
@@ -486,6 +491,26 @@ InitGlobals(void)
   return NS_OK;
 }
 
+static void CheckFontLangGroup(nsIAtom* lang1, nsIAtom* lang2, const char* lang3)
+{
+  if (lang1 == lang2) {
+    nsresult res = NS_OK;
+    if (!gFontPackageProxy) {
+      res = CallGetService("@mozilla.org/intl/fontpackageservice;1",
+                           &gFontPackageProxy);
+      if (NS_FAILED(res)) {
+        NS_ERROR("Cannot get the font package proxy");
+        return;
+      }
+    }
+
+    char fontpackageid[256];
+    PR_snprintf(fontpackageid, sizeof(fontpackageid), "lang:%s", lang3);
+    res = gFontPackageProxy->NeedFontPackage(fontpackageid);
+    NS_ASSERTION(NS_SUCCEEDED(res), "cannot notify missing font package ");
+  }
+}
+
 nsFontMetricsWin::nsFontMetricsWin()
 {
 }
@@ -548,6 +573,17 @@ nsFontMetricsWin::Init(const nsFont& aFont, nsIAtom* aLangGroup,
 
   mFont = aFont;
   mLangGroup = aLangGroup;
+
+  // do special checking for the following lang group
+  // * use fonts?
+  PRInt32 useDccFonts = 0;
+  if (NS_SUCCEEDED(gPref->GetIntPref("browser.display.use_document_fonts", &useDccFonts)) && (useDccFonts != 0)) {
+    CheckFontLangGroup(mLangGroup, gJA,   "ja");
+    CheckFontLangGroup(mLangGroup, gKO,   "ko");
+    CheckFontLangGroup(mLangGroup, gZHTW, "zh-TW");
+    CheckFontLangGroup(mLangGroup, gZHCN, "zh-CN");
+    CheckFontLangGroup(mLangGroup, gZHHK, "zh-HK");
+  }
 
   //don't addref this to avoid circular refs
   mDeviceContext = (nsDeviceContextWin *)aContext;
@@ -1175,21 +1211,21 @@ static eCharset gCharsetToIndex[256] =
 
 static PRUint8 gCharsetToBit[eCharset_COUNT] =
 {
-  -1,  // DEFAULT
-   0,  // ANSI_CHARSET,
-   1,  // EASTEUROPE_CHARSET,
-   2,  // RUSSIAN_CHARSET,
-   3,  // GREEK_CHARSET,
-   4,  // TURKISH_CHARSET,
-   5,  // HEBREW_CHARSET,
-   6,  // ARABIC_CHARSET,
-   7,  // BALTIC_CHARSET,
-  16,  // THAI_CHARSET,
-  17,  // SHIFTJIS_CHARSET,
-  18,  // GB2312_CHARSET,
-  19,  // HANGEUL_CHARSET,
-  20,  // CHINESEBIG5_CHARSET,
-  21   // JOHAB_CHARSET,
+	-1,  // DEFAULT
+	 0,  // ANSI_CHARSET,
+	 1,  // EASTEUROPE_CHARSET,
+	 2,  // RUSSIAN_CHARSET,
+	 3,  // GREEK_CHARSET,
+	 4,  // TURKISH_CHARSET,
+	 5,  // HEBREW_CHARSET,
+	 6,  // ARABIC_CHARSET,
+	 7,  // BALTIC_CHARSET,
+	16,  // THAI_CHARSET,
+	17,  // SHIFTJIS_CHARSET,
+	18,  // GB2312_CHARSET,
+	19,  // HANGEUL_CHARSET,
+	20,  // CHINESEBIG5_CHARSET,
+	21   // JOHAB_CHARSET,
 };
 
 // the mapping from bitfield in fsUsb (of FONTSIGNATURE) to UnicodeRange
@@ -1328,7 +1364,7 @@ GetCustomEncoding(const char* aFontName, nsCString& aValue, PRBool* aIsWide)
     fname[0] = 0;
     MultiByteToWideChar(CP_ACP, 0, aFontName,
     strlen(aFontName) + 1, fname, sizeof(fname)/sizeof(fname[0]));
-    name.Assign(NS_LITERAL_CSTRING("encoding.") + NS_ConvertUTF16toUTF8(fname) + NS_LITERAL_CSTRING(".ttf"));
+    name.Assign(NS_LITERAL_CSTRING("encoding.") + NS_ConvertUCS2toUTF8(fname) + NS_LITERAL_CSTRING(".ttf"));
   }
 
   name.StripWhitespace();
@@ -2072,7 +2108,7 @@ public:
     zero.fract = 0; one.fract = 0;
     zero.value = 0; one.value = 1; 
     mMat.eM12 = mMat.eM21 = zero;
-    mMat.eM11 = mMat.eM22 = one;    
+    mMat.eM11 = mMat.eM22 = one;  	
   }
 
   ~nsGlyphAgent()
@@ -3355,7 +3391,7 @@ nsFontMetricsWin::LoadGenericFont(HDC aDC, PRUint32 aChar, const nsString& aName
     // woah, this seems bad
     const nsACString& fontName =
       nsDependentCString(((nsFontWin*)mLoadedFonts[i])->mName);
-    if (aName.Equals(NS_ConvertASCIItoUTF16(fontName),
+    if (aName.Equals(NS_ConvertASCIItoUCS2(fontName),
                      nsCaseInsensitiveStringComparator()))
       return nsnull;
 
@@ -3456,7 +3492,7 @@ nsFontMetricsWin::FindGenericFont(HDC aDC, PRUint32 aChar)
     }
 
     AppendGenericFontFromPref(font.name, langGroup, 
-                              NS_ConvertUTF16toUTF8(mGeneric).get());
+                              NS_ConvertUCS2toUTF8(mGeneric).get());
   }
 
   // Iterate over the list of names using the callback mechanism of nsFont...
@@ -3469,8 +3505,8 @@ nsFontMetricsWin::FindGenericFont(HDC aDC, PRUint32 aChar)
 #if defined(DEBUG_rbs) || defined(DEBUG_shanjian)
   const char* lang;
   mLangGroup->GetUTF8String(&lang);
-  NS_ConvertUTF16toUTF8 generic(mGeneric);
-  NS_ConvertUTF16toUTF8 family(mFont.name);
+  NS_ConvertUCS2toUTF8 generic(mGeneric);
+  NS_ConvertUCS2toUTF8 family(mFont.name);
   printf("FindGenericFont missed:U+%04X langGroup:%s generic:%s mFont.name:%s\n", 
          aChar, lang, generic.get(), family.get());
 #endif
@@ -3498,7 +3534,7 @@ nsFontMetricsWin::FindPrefFont(HDC aDC, PRUint32 aChar)
   // be identified instead of a single language (eg. CJK and latin). In this case we have to 
   // try every language in the set. gUserLocale and gSystemLocale provide some hints about 
   // which one should be tried first. This is important for CJK font, since the glyph for single 
-  // char varies dramatically in different languages. For latin languages, their glyphs are 
+  // char varies dramatically in different langauges. For latin languages, their glyphs are 
   // similar. In fact, they almost always share identical fonts. It will be a waste of time to 
   // figure out which one comes first. As a final fallback, unicode preference is always tried. 
 
@@ -3506,15 +3542,15 @@ nsFontMetricsWin::FindPrefFont(HDC aDC, PRUint32 aChar)
   if (unicodeRange < kRangeSpecificItemNum) {
     // a single language is identified
     AppendGenericFontFromPref(font.name, LangGroupFromUnicodeRange(unicodeRange), 
-                              NS_ConvertUTF16toUTF8(mGeneric).get());
+                              NS_ConvertUCS2toUTF8(mGeneric).get());
   } else if (kRangeSetLatin == unicodeRange) { 
     // Character is from a latin language set, so try western and central european
     // If mLangGroup is western or central european, this most probably will not be
     // used, but is here as a fallback scenario.    
     AppendGenericFontFromPref(font.name, "x-western",
-                              NS_ConvertUTF16toUTF8(mGeneric).get());
+                              NS_ConvertUCS2toUTF8(mGeneric).get());
     AppendGenericFontFromPref(font.name, "x-central-euro",
-                              NS_ConvertUTF16toUTF8(mGeneric).get());
+                              NS_ConvertUCS2toUTF8(mGeneric).get());
   } else if (kRangeSetCJK == unicodeRange) { 
     // CJK, we have to be careful about the order, use locale info as hint
     
@@ -3523,7 +3559,7 @@ nsFontMetricsWin::FindPrefFont(HDC aDC, PRUint32 aChar)
       nsCAutoString usersLocaleLangGroup;
       gUsersLocale->ToUTF8String(usersLocaleLangGroup);
       AppendGenericFontFromPref(font.name, usersLocaleLangGroup.get(), 
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     }
     
     // then system locale (os language)
@@ -3531,30 +3567,30 @@ nsFontMetricsWin::FindPrefFont(HDC aDC, PRUint32 aChar)
       nsCAutoString systemLocaleLangGroup;
       gSystemLocale->ToUTF8String(systemLocaleLangGroup);
       AppendGenericFontFromPref(font.name, systemLocaleLangGroup.get(), 
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     }
 
     // try all other languages in this set.
     if (mLangGroup != gJA && gUsersLocale != gJA && gSystemLocale != gJA)
       AppendGenericFontFromPref(font.name, "ja",
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     if (mLangGroup != gZHCN && gUsersLocale != gZHCN && gSystemLocale != gZHCN)
       AppendGenericFontFromPref(font.name, "zh-CN",
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     if (mLangGroup != gZHTW && gUsersLocale != gZHTW && gSystemLocale != gZHTW)
       AppendGenericFontFromPref(font.name, "zh-TW",
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     if (mLangGroup != gZHHK && gUsersLocale != gZHHK && gSystemLocale != gZHHK)
       AppendGenericFontFromPref(font.name, "zh-HK",
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
     if (mLangGroup != gKO && gUsersLocale != gKO && gSystemLocale != gKO)
       AppendGenericFontFromPref(font.name, "ko",
-                                NS_ConvertUTF16toUTF8(mGeneric).get());
+                                NS_ConvertUCS2toUTF8(mGeneric).get());
   } 
 
   // always try unicode as fallback
   AppendGenericFontFromPref(font.name, "x-unicode",
-                            NS_ConvertUTF16toUTF8(mGeneric).get());
+                            NS_ConvertUCS2toUTF8(mGeneric).get());
   
   // use the font list to find font
   GenericFontEnumContext context = {aDC, aChar, nsnull, this};
@@ -3636,7 +3672,7 @@ FontEnumCallback(const nsString& aFamily, PRBool aGeneric, void *aData)
 
 /** ---------------------------------------------------
  *  See documentation in nsFontMetricsWin.h
- *  @update 05/28/99 dwc
+ *	@update 05/28/99 dwc
  */
 
 nsresult
@@ -3651,7 +3687,7 @@ nsFontMetricsWin::RealizeFont()
     // XXX - DC If we are printing, we need to get the printer HDC and a screen HDC
     // The screen HDC is because there seems to be a bug or requirment that the 
     // GetFontData() method call have a screen HDC, some printers HDC's return nothing
-    // that's will give us bad font data, and break us.  
+    // thats will give us bad font data, and break us.  
     dc = mDeviceContext->mDC;
     win = (HWND)mDeviceContext->mWidget;
     dc1 = ::GetDC(win);
@@ -3728,14 +3764,8 @@ nsFontMetricsWin::RealizeFont()
   if (0 < ::GetOutlineTextMetrics(dc, sizeof(oMetrics), &oMetrics)) {
 //    mXHeight = NSToCoordRound(oMetrics.otmsXHeight * dev2app);  XXX not really supported on windows
     mXHeight = NSToCoordRound((float)metrics.tmAscent * dev2app * 0.56f); // 50% of ascent, best guess for true type
-    if (oMetrics.otmptSuperscriptOffset.y == 0 || oMetrics.otmptSuperscriptOffset.y >= metrics.tmAscent)
-      mSuperscriptOffset = mXHeight;     // XXX temporary code!
-    else
-      mSuperscriptOffset = NSToCoordRound(oMetrics.otmptSuperscriptOffset.y * dev2app);
-    if (oMetrics.otmptSubscriptOffset.y == 0 || oMetrics.otmptSubscriptOffset.y >= metrics.tmAscent)
-      mSubscriptOffset =  mXHeight;     // XXX temporary code!
-    else
-      mSubscriptOffset = NSToCoordRound(oMetrics.otmptSubscriptOffset.y * dev2app);
+    mSuperscriptOffset = NSToCoordRound(oMetrics.otmptSuperscriptOffset.y * dev2app);
+    mSubscriptOffset = NSToCoordRound(oMetrics.otmptSubscriptOffset.y * dev2app);
 
     mStrikeoutSize = PR_MAX(onePixel, NSToCoordRound(oMetrics.otmsStrikeoutSize * dev2app));
     mStrikeoutOffset = NSToCoordRound(oMetrics.otmsStrikeoutPosition * dev2app);
@@ -3793,13 +3823,13 @@ nsFontMetricsWin::RealizeFont()
   // one operation.
   mMaxStringLength = (PRInt32)floor(32767.0/metrics.tmMaxCharWidth);
   mMaxStringLength = PR_MAX(1, mMaxStringLength);
-  
+
   mAveCharWidth = PR_MAX(1, NSToCoordRound(metrics.tmAveCharWidth * dev2app));
 
   if (gDoingLineheightFixup) {
     if (mInternalLeading + mExternalLeading > mUnderlineSize &&
         descentPos < mUnderlineOffset) {
-      // If underline positioned is too near the text, descent position
+      // If underline positioned is too near from the text, descent position
       // is preferred, but we need to make sure there is enough space
       // available so that underline will stay within boundary.
       mUnderlineOffset = descentPos;
@@ -4028,7 +4058,7 @@ nsFontMetricsWin::ResolveForwards(HDC                  aDC,
 
   count = mLoadedFonts.Count();
 
-  if (NS_IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && NS_IS_LOW_SURROGATE(*(currChar+1))) {
+  if (IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && IS_LOW_SURROGATE(*(currChar+1))) {
     currFont = LocateFont(aDC, SURROGATE_TO_UCS4(*currChar, *(currChar+1)), count);
     currChar += 2;
   }
@@ -4054,7 +4084,7 @@ nsFontMetricsWin::ResolveForwards(HDC                  aDC,
       return NS_OK;
     // continue with the next substring, re-using the available loaded fonts
     firstChar = currChar;
-    if (NS_IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && NS_IS_LOW_SURROGATE(*(currChar+1))) {
+    if (IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && IS_LOW_SURROGATE(*(currChar+1))) {
       currFont = LocateFont(aDC, SURROGATE_TO_UCS4(*currChar, *(currChar+1)), count);
       currChar += 2;
     }
@@ -4067,7 +4097,7 @@ nsFontMetricsWin::ResolveForwards(HDC                  aDC,
   // see if we can keep the same font for adjacent characters
   PRInt32 lastCharLen;
   while (currChar < lastChar) {
-    if (NS_IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && NS_IS_LOW_SURROGATE(*(currChar+1))) {
+    if (IS_HIGH_SURROGATE(*currChar) && (currChar+1) < lastChar && IS_LOW_SURROGATE(*(currChar+1))) {
       nextFont = LocateFont(aDC, SURROGATE_TO_UCS4(*currChar, *(currChar+1)), count);
       lastCharLen = 2;
     }
@@ -4117,7 +4147,7 @@ nsFontMetricsWin::ResolveBackwards(HDC                  aDC,
   count = mLoadedFonts.Count();
 
   // see if one of our loaded fonts can represent the current character
-  if (NS_IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && NS_IS_HIGH_SURROGATE(*(currChar-1))) {
+  if (IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && IS_HIGH_SURROGATE(*(currChar-1))) {
     currFont = LocateFont(aDC, SURROGATE_TO_UCS4(*(currChar-1), *currChar), count);
     currChar -= 2;
   }
@@ -4144,7 +4174,7 @@ nsFontMetricsWin::ResolveBackwards(HDC                  aDC,
       return NS_OK;
     // continue with the next substring, re-using the available loaded fonts
     firstChar = currChar;
-    if (NS_IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && NS_IS_HIGH_SURROGATE(*(currChar-1))) {
+    if (IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && IS_HIGH_SURROGATE(*(currChar-1))) {
       currFont = LocateFont(aDC, SURROGATE_TO_UCS4(*(currChar-1), *currChar), count);
       currChar -= 2;
     }
@@ -4159,7 +4189,7 @@ nsFontMetricsWin::ResolveBackwards(HDC                  aDC,
   PRUint32 codepoint;
 
   while (currChar > lastChar) {
-    if (NS_IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && NS_IS_HIGH_SURROGATE(*(currChar-1))) {
+    if (IS_LOW_SURROGATE(*currChar) && (currChar-1) > lastChar && IS_HIGH_SURROGATE(*(currChar-1))) {
       codepoint =  SURROGATE_TO_UCS4(*(currChar-1), *currChar);
       nextFont = LocateFont(aDC, codepoint, count);
       lastCharLen = 2;
@@ -4291,8 +4321,8 @@ VerifyFontHasGlyph(nsFontWin* aFont, const PRUnichar* aString, PRInt32 aLength)
   const PRUnichar* last = aString + aLength;
   PRUint32 ch;
   while (curr < last) {
-    if (NS_IS_HIGH_SURROGATE(*curr) && (curr+1) < last && 
-        NS_IS_LOW_SURROGATE(*(curr+1))) {
+    if (IS_HIGH_SURROGATE(*curr) && (curr+1) < last && 
+        IS_LOW_SURROGATE(*(curr+1))) {
       ch = SURROGATE_TO_UCS4(*curr, *(curr+1));
       curr += 2;
     }

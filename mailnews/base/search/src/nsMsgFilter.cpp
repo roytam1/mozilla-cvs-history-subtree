@@ -64,6 +64,7 @@
 
 static const char *kImapPrefix = "//imap:";
 static const char *kWhitespace = "\b\t\r\n ";
+static NS_DEFINE_CID(kDateTimeFormatCID,    NS_DATETIMEFORMAT_CID);
 
 nsMsgRuleAction::nsMsgRuleAction()
 {
@@ -248,7 +249,6 @@ NS_IMETHODIMP nsMsgFilter::AppendTerm(nsIMsgSearchTerm * aTerm)
     NS_ENSURE_TRUE(aTerm, NS_ERROR_NULL_POINTER);
     // invalidate expression tree if we're changing the terms
     delete m_expressionTree;
-    m_expressionTree = nsnull;
     return m_termList->AppendElement(NS_STATIC_CAST(nsISupports*,aTerm));
 }
 
@@ -390,9 +390,6 @@ NS_IMETHODIMP nsMsgFilter::GetTerm(PRInt32 termIndex,
 NS_IMETHODIMP nsMsgFilter::GetSearchTerms(nsISupportsArray **aResult)
 {
     NS_ENSURE_ARG_POINTER(aResult);
-    // caller can change m_termList, which can invalidate m_expressionTree.
-    delete m_expressionTree;
-    m_expressionTree = nsnull;
     NS_IF_ADDREF(*aResult = m_termList);
     return NS_OK;
 }
@@ -400,7 +397,6 @@ NS_IMETHODIMP nsMsgFilter::GetSearchTerms(nsISupportsArray **aResult)
 NS_IMETHODIMP nsMsgFilter::SetSearchTerms(nsISupportsArray *aSearchList)
 {
     delete m_expressionTree;
-    m_expressionTree = nsnull;
     m_termList = aSearchList;
     return NS_OK;
 }
@@ -446,7 +442,7 @@ NS_IMETHODIMP nsMsgFilter::LogRuleHit(nsIMsgRuleAction *aFilterAction, nsIMsgDBH
 
     if (!mDateFormatter)
     {
-      mDateFormatter = do_CreateInstance(NS_DATETIMEFORMAT_CONTRACTID, &rv);
+      mDateFormatter = do_CreateInstance(kDateTimeFormatCID, &rv);
       NS_ENSURE_SUCCESS(rv, rv);
       if (!mDateFormatter)
       {
@@ -659,7 +655,7 @@ nsresult nsMsgFilter::ConvertMoveOrCopyToFolderValue(nsIMsgRuleAction *filterAct
         // need to remove ".sbd" from moveValue, and perhaps escape it.
         moveValue.ReplaceSubstring(".sbd/", "/");
 
-#ifdef XP_MACOSX
+#if defined(XP_MAC) || defined(XP_MACOSX)
         char *unescapedMoveValue = ToNewCString(moveValue);
         nsUnescape(unescapedMoveValue);
         moveValue.Assign(unescapedMoveValue);
@@ -751,10 +747,11 @@ nsresult nsMsgFilter::SaveRule(nsIOFileStream *aStream)
       {
         nsMsgPriorityValue priorityValue;
         action->GetPriority(&priorityValue);
-        nsCAutoString priority;
-        NS_MsgGetUntranslatedPriorityName(priorityValue, priority);
-        err = filterList->WriteStrAttr(
-                nsIMsgFilterList::attribActionValue, priority.get(), aStream);
+        nsAutoString priority;
+        NS_MsgGetUntranslatedPriorityName (priorityValue, &priority);
+        nsCAutoString cStr;
+        cStr.AssignWithConversion(priority);
+        err = filterList->WriteStrAttr(nsIMsgFilterList::attribActionValue, cStr.get(), aStream);
       }
       break;
       case nsMsgFilterAction::Label:
@@ -915,7 +912,7 @@ nsMsgFilter::GetVersion()
 void nsMsgFilter::Dump()
 {
   nsCAutoString s;
-  LossyCopyUTF16toASCII(m_filterName, s);
+  CopyUCS2toASCII(m_filterName, s);
   printf("filter %s type = %c desc = %s\n", s.get(), m_type + '0', m_description.get());
 }
 #endif

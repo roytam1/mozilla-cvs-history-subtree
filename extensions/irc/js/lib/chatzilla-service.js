@@ -80,12 +80,6 @@ const ASS_CONTRACTID =
 const RDFS_CONTRACTID =
     "@mozilla.org/rdf/rdf-service;1";
 
-//XXXgijs: Because necko is annoying and doesn't expose this error flag, we
-//         define our own constant for it. Throwing something else will show
-//         ugly errors instead of seeminly doing nothing.
-const NS_ERROR_MODULE_NETWORK_BASE = 0x804b0000;
-const NS_ERROR_NO_CONTENT = NS_ERROR_MODULE_NETWORK_BASE + 17;
-
 /* interfaces used in this file */
 const nsIWindowMediator  = Components.interfaces.nsIWindowMediator;
 const nsICmdLineHandler  = Components.interfaces.nsICmdLineHandler;
@@ -261,10 +255,6 @@ function IRCProtocolHandler(isSecure)
 IRCProtocolHandler.prototype.protocolFlags =
                    nsIProtocolHandler.URI_NORELATIVE |
                    nsIProtocolHandler.ALLOWS_PROXY;
-if ("URI_DANGEROUS_TO_LOAD" in nsIProtocolHandler) {
-  IRCProtocolHandler.prototype.protocolFlags |=
-      nsIProtocolHandler.URI_LOADABLE_BY_ANYONE;
-}
 
 IRCProtocolHandler.prototype.allowPort =
 function ircph_allowPort(port, scheme)
@@ -360,9 +350,7 @@ BogusChannel.prototype.asyncOpen =
 function bc_open(observer, ctxt)
 {
     spawnChatZilla(this.URI.spec);
-    // We don't throw this (a number, not a real 'resultcode') because it
-    // upsets xpconnect if we do (error in the js console).
-    Components.returnCode = NS_ERROR_NO_CONTENT;
+    throw Components.results.NS_ERROR_NO_CONTENT;
 }
 
 BogusChannel.prototype.asyncRead =

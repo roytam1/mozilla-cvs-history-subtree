@@ -36,6 +36,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#include "nsConflictSet.h"
 #include "nsIComponentManager.h"
 #include "nsIRDFContainer.h"
 #include "nsIRDFContainerUtils.h"
@@ -43,6 +44,7 @@
 #include "nsRDFCID.h"
 #include "nsRDFConInstanceTestNode.h"
 #include "nsResourceSet.h"
+#include "nsString.h"
 
 #include "prlog.h"
 #ifdef PR_LOGGING
@@ -60,13 +62,17 @@ TestToString(nsRDFConInstanceTestNode::Test aTest) {
 }
 #endif
 
-nsRDFConInstanceTestNode::nsRDFConInstanceTestNode(TestNode* aParent,
-                                                   nsXULTemplateQueryProcessorRDF* aProcessor,
-                                                   nsIAtom* aContainerVariable,
+nsRDFConInstanceTestNode::nsRDFConInstanceTestNode(InnerNode* aParent,
+                                                   nsConflictSet& aConflictSet,
+                                                   nsIRDFDataSource* aDataSource,
+                                                   const nsResourceSet& aMembershipProperties,
+                                                   PRInt32 aContainerVariable,
                                                    Test aContainer,
                                                    Test aEmpty)
     : nsRDFTestNode(aParent),
-      mProcessor(aProcessor),
+      mConflictSet(aConflictSet),
+      mDataSource(aDataSource),
+      mMembershipProperties(aMembershipProperties),
       mContainerVariable(aContainerVariable),
       mContainer(aContainer),
       mEmpty(aEmpty)
@@ -75,9 +81,8 @@ nsRDFConInstanceTestNode::nsRDFConInstanceTestNode(TestNode* aParent,
     if (PR_LOG_TEST(gXULTemplateLog, PR_LOG_DEBUG)) {
         nsCAutoString props;
 
-        nsResourceSet& containmentProps = aProcessor->ContainmentProperties();
-        nsResourceSet::ConstIterator last = containmentProps.Last();
-        nsResourceSet::ConstIterator first = containmentProps.First();
+        nsResourceSet::ConstIterator last = aMembershipProperties.Last();
+        nsResourceSet::ConstIterator first = aMembershipProperties.First();
         nsResourceSet::ConstIterator iter;
 
         for (iter = first; iter != last; ++iter) {
@@ -90,16 +95,12 @@ nsRDFConInstanceTestNode::nsRDFConInstanceTestNode(TestNode* aParent,
             props += str;
         }
 
-        nsAutoString cvar(NS_LITERAL_STRING("(none)"));
-        if (mContainerVariable)
-            mContainerVariable->ToString(cvar);
-
         PR_LOG(gXULTemplateLog, PR_LOG_DEBUG,
-               ("nsRDFConInstanceTestNode[%p]: parent=%p member-props=(%s) container-var=%s container=%s empty=%s",
+               ("nsRDFConInstanceTestNode[%p]: parent=%p member-props=(%s) container-var=%d container=%s empty=%s",
                 this,
                 aParent,
                 props.get(),
-                NS_ConvertUTF16toUTF8(cvar).get(),
+                mContainerVariable,
                 TestToString(aContainer),
                 TestToString(aEmpty)));
     }
@@ -107,13 +108,9 @@ nsRDFConInstanceTestNode::nsRDFConInstanceTestNode(TestNode* aParent,
 }
 
 nsresult
-nsRDFConInstanceTestNode::FilterInstantiations(InstantiationSet& aInstantiations,
-                                               PRBool* aCantHandleYet) const
+nsRDFConInstanceTestNode::FilterInstantiations(InstantiationSet& aInstantiations, void* aClosure) const
 {
     nsresult rv;
-
-    if (aCantHandleYet)
-        *aCantHandleYet = PR_FALSE;
 
     nsCOMPtr<nsIRDFContainerUtils> rdfc
         = do_GetService("@mozilla.org/rdf/container-utils;1");
@@ -121,26 +118,18 @@ nsRDFConInstanceTestNode::FilterInstantiations(InstantiationSet& aInstantiations
     if (! rdfc)
         return NS_ERROR_FAILURE;
 
-    nsIRDFDataSource* ds = mProcessor->GetDataSource();
-
     InstantiationSet::Iterator last = aInstantiations.Last();
     for (InstantiationSet::Iterator inst = aInstantiations.First(); inst != last; ++inst) {
-        nsCOMPtr<nsIRDFNode> value;
-        if (! inst->mAssignments.GetAssignmentFor(mContainerVariable, getter_AddRefs(value))) {
+        Value value;
+        if (! inst->mAssignments.GetAssignmentFor(mContainerVariable, &value)) {
             NS_ERROR("can't do unbounded container testing");
             return NS_ERROR_UNEXPECTED;
         }
 
-        nsCOMPtr<nsIRDFResource> valueres = do_QueryInterface(value);
-        if (! valueres) {
-            aInstantiations.Erase(inst--);
-            continue;
-        }
-
 #ifdef PR_LOGGING
         if (PR_LOG_TEST(gXULTemplateLog, PR_LOG_DEBUG)) {
-            const char* container = "(unbound)";
-            valueres->GetValueConst(&container);
+            const char* container;
+            VALUE_TO_IRDFRESOURCE(value)->GetValueConst(&container);
 
             PR_LOG(gXULTemplateLog, PR_LOG_DEBUG,
                    ("nsRDFConInstanceTestNode[%p]::FilterInstantiations() container=[%s]",
@@ -151,7 +140,7 @@ nsRDFConInstanceTestNode::FilterInstantiations(InstantiationSet& aInstantiations
         nsCOMPtr<nsIRDFContainer> rdfcontainer;
 
         PRBool isRDFContainer;
-        rv = rdfc->IsContainer(ds, valueres, &isRDFContainer);
+        rv = rdfc->IsContainer(mDataSource, VALUE_TO_IRDFRESOURCE(value), &isRDFContainer);
         if (NS_FAILED(rv)) return rv;
 
         if (mEmpty != eDontCare || mContainer != eDontCare) {
@@ -167,7 +156,7 @@ nsRDFConInstanceTestNode::FilterInstantiations(InstantiationSet& aInstantiations
                 rdfcontainer = do_CreateInstance("@mozilla.org/rdf/container;1", &rv);
                 if (NS_FAILED(rv)) return rv;
 
-                rv = rdfcontainer->Init(ds, valueres);
+                rv = rdfcontainer->Init(mDataSource, VALUE_TO_IRDFRESOURCE(value));
                 if (NS_FAILED(rv)) return rv;
 
                 PRInt32 count;
@@ -180,14 +169,13 @@ nsRDFConInstanceTestNode::FilterInstantiations(InstantiationSet& aInstantiations
                 container = eFalse;
 
                 // First do the simple check of finding some outward
-                // arcs; there should be only a few containment arcs, so this can
+                // arcs; mMembershipProperties should be short, so this can
                 // save us time from dealing with an iterator later on
-                nsResourceSet& containmentProps = mProcessor->ContainmentProperties();
-                for (nsResourceSet::ConstIterator property = containmentProps.First();
-                     property != containmentProps.Last();
+                for (nsResourceSet::ConstIterator property = mMembershipProperties.First();
+                     property != mMembershipProperties.Last();
                      ++property) {
                     nsCOMPtr<nsIRDFNode> target;
-                    rv = ds->GetTarget(valueres, *property, PR_TRUE, getter_AddRefs(target));
+                    rv = mDataSource->GetTarget(VALUE_TO_IRDFRESOURCE(value), *property, PR_TRUE, getter_AddRefs(target));
                     if (NS_FAILED(rv)) return rv;
 
                     if (target != nsnull) {
@@ -203,7 +191,7 @@ nsRDFConInstanceTestNode::FilterInstantiations(InstantiationSet& aInstantiations
                 // to check ArcLabelsOut for potential container arcs.
                 if (container == eFalse && mContainer != eDontCare) {
                     nsCOMPtr<nsISimpleEnumerator> arcsout;
-                    rv = ds->ArcLabelsOut(valueres, getter_AddRefs(arcsout));
+                    rv = mDataSource->ArcLabelsOut(VALUE_TO_IRDFRESOURCE(value), getter_AddRefs(arcsout));
                     if (NS_FAILED(rv)) return rv;
 
                     while (1) {
@@ -223,7 +211,7 @@ nsRDFConInstanceTestNode::FilterInstantiations(InstantiationSet& aInstantiations
                         if (! property)
                             return NS_ERROR_UNEXPECTED;
 
-                        if (mProcessor->ContainmentProperties().Contains(property)) {
+                        if (mMembershipProperties.Contains(property)) {
                             container = eTrue;
                             break;
                         }
@@ -244,8 +232,9 @@ nsRDFConInstanceTestNode::FilterInstantiations(InstantiationSet& aInstantiations
                 ((mContainer == eDontCare) && (mEmpty == empty)))
             {
                 Element* element =
-                    nsRDFConInstanceTestNode::Element::Create(mProcessor->GetPool(),
-                                                              valueres, container, empty);
+                    nsRDFConInstanceTestNode::Element::Create(mConflictSet.GetPool(),
+                                                              VALUE_TO_IRDFRESOURCE(value),
+                                                              container, empty);
 
                 if (! element)
                     return NS_ERROR_OUT_OF_MEMORY;
@@ -259,6 +248,17 @@ nsRDFConInstanceTestNode::FilterInstantiations(InstantiationSet& aInstantiations
     }
 
     return NS_OK;
+}
+
+nsresult
+nsRDFConInstanceTestNode::GetAncestorVariables(VariableSet& aVariables) const
+{
+    nsresult rv;
+
+    rv = aVariables.Add(mContainerVariable);
+    if (NS_FAILED(rv)) return rv;
+
+    return TestNode::GetAncestorVariables(aVariables);
 }
 
 PRBool
@@ -282,7 +282,7 @@ nsRDFConInstanceTestNode::CanPropagate(nsIRDFResource* aSource,
     if (NS_FAILED(rv)) return PR_FALSE;
 
     if (! canpropagate) {
-        canpropagate = mProcessor->ContainmentProperties().Contains(aProperty);
+        canpropagate = mMembershipProperties.Contains(aProperty);
     }
 
 #ifdef PR_LOGGING
@@ -298,13 +298,13 @@ nsRDFConInstanceTestNode::CanPropagate(nsIRDFResource* aSource,
 
         PR_LOG(gXULTemplateLog, PR_LOG_DEBUG,
                ("nsRDFConInstanceTestNode[%p]: CanPropagate([%s]==[%s]=>[%s]) => %s",
-                this, source, property, NS_ConvertUTF16toUTF8(target).get(),
+                this, source, property, NS_ConvertUCS2toUTF8(target).get(),
                 canpropagate ? "true" : "false"));
     }
 #endif
 
     if (canpropagate) {
-        aInitialBindings.AddAssignment(mContainerVariable, aSource);
+        aInitialBindings.AddAssignment(mContainerVariable, Value(aSource));
         return PR_TRUE;
     }
 
@@ -314,11 +314,13 @@ nsRDFConInstanceTestNode::CanPropagate(nsIRDFResource* aSource,
 void
 nsRDFConInstanceTestNode::Retract(nsIRDFResource* aSource,
                                   nsIRDFResource* aProperty,
-                                  nsIRDFNode* aTarget) const
+                                  nsIRDFNode* aTarget,
+                                  nsTemplateMatchSet& aFirings,
+                                  nsTemplateMatchSet& aRetractions) const
 {
     // XXXwaterson oof. complicated. figure this out.
     if (0) {
-        mProcessor->RetractElement(Element(aSource, mContainer, mEmpty));
+        mConflictSet.Remove(Element(aSource, mContainer, mEmpty), aFirings, aRetractions);
     }
 }
 

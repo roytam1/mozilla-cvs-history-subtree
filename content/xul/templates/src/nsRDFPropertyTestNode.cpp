@@ -37,6 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsRDFPropertyTestNode.h"
+#include "nsConflictSet.h"
 #include "nsString.h"
 
 #include "prlog.h"
@@ -46,13 +47,15 @@ extern PRLogModuleInfo* gXULTemplateLog;
 #include "nsXULContentUtils.h"
 #endif
 
-nsRDFPropertyTestNode::nsRDFPropertyTestNode(TestNode* aParent,
-                                             nsXULTemplateQueryProcessorRDF* aProcessor,
-                                             nsIAtom* aSourceVariable,
+nsRDFPropertyTestNode::nsRDFPropertyTestNode(InnerNode* aParent,
+                                             nsConflictSet& aConflictSet,
+                                             nsIRDFDataSource* aDataSource,
+                                             PRInt32 aSourceVariable,
                                              nsIRDFResource* aProperty,
-                                             nsIAtom* aTargetVariable)
+                                             PRInt32 aTargetVariable)
     : nsRDFTestNode(aParent),
-      mProcessor(aProcessor),
+      mConflictSet(aConflictSet),
+      mDataSource(aDataSource),
       mSourceVariable(aSourceVariable),
       mSource(nsnull),
       mProperty(aProperty),
@@ -65,29 +68,23 @@ nsRDFPropertyTestNode::nsRDFPropertyTestNode(TestNode* aParent,
         if (aProperty)
             aProperty->GetValueConst(&prop);
 
-        nsAutoString svar(NS_LITERAL_STRING("(none)"));
-        if (mSourceVariable)
-            mSourceVariable->ToString(svar);
-
-        nsAutoString tvar(NS_LITERAL_STRING("(none)"));
-        if (mTargetVariable)
-            mTargetVariable->ToString(tvar);
-
         PR_LOG(gXULTemplateLog, PR_LOG_DEBUG,
-               ("nsRDFPropertyTestNode[%p]: parent=%p source=%s property=%s target=%s",
-                this, aParent, NS_ConvertUTF16toUTF8(svar).get(), prop, NS_ConvertUTF16toUTF8(tvar).get()));
+               ("nsRDFPropertyTestNode[%p]: parent=%p source=%d property=%s target=%d",
+                this, aParent, aSourceVariable, prop, aTargetVariable));
     }
 #endif
 }
 
 
-nsRDFPropertyTestNode::nsRDFPropertyTestNode(TestNode* aParent,
-                                             nsXULTemplateQueryProcessorRDF* aProcessor,
+nsRDFPropertyTestNode::nsRDFPropertyTestNode(InnerNode* aParent,
+                                             nsConflictSet& aConflictSet,
+                                             nsIRDFDataSource* aDataSource,
                                              nsIRDFResource* aSource,
                                              nsIRDFResource* aProperty,
-                                             nsIAtom* aTargetVariable)
+                                             PRInt32 aTargetVariable)
     : nsRDFTestNode(aParent),
-      mProcessor(aProcessor),
+      mConflictSet(aConflictSet),
+      mDataSource(aDataSource),
       mSourceVariable(0),
       mSource(aSource),
       mProperty(aProperty),
@@ -104,25 +101,23 @@ nsRDFPropertyTestNode::nsRDFPropertyTestNode(TestNode* aParent,
         if (aProperty)
             aProperty->GetValueConst(&prop);
 
-        nsAutoString tvar(NS_LITERAL_STRING("(none)"));
-        if (mTargetVariable)
-            mTargetVariable->ToString(tvar);
-
         PR_LOG(gXULTemplateLog, PR_LOG_DEBUG,
-               ("nsRDFPropertyTestNode[%p]: parent=%p source=%s property=%s target=%s",
-                this, aParent, source, prop, NS_ConvertUTF16toUTF8(tvar).get()));
+               ("nsRDFPropertyTestNode[%p]: parent=%p source=%s property=%s target=%d",
+                this, source, prop, aTargetVariable));
     }
 #endif
 }
 
 
-nsRDFPropertyTestNode::nsRDFPropertyTestNode(TestNode* aParent,
-                                             nsXULTemplateQueryProcessorRDF* aProcessor,
-                                             nsIAtom* aSourceVariable,
+nsRDFPropertyTestNode::nsRDFPropertyTestNode(InnerNode* aParent,
+                                             nsConflictSet& aConflictSet,
+                                             nsIRDFDataSource* aDataSource,
+                                             PRInt32 aSourceVariable,
                                              nsIRDFResource* aProperty,
                                              nsIRDFNode* aTarget)
     : nsRDFTestNode(aParent),
-      mProcessor(aProcessor),
+      mConflictSet(aConflictSet),
+      mDataSource(aDataSource),
       mSourceVariable(aSourceVariable),
       mSource(nsnull),
       mProperty(aProperty),
@@ -131,10 +126,6 @@ nsRDFPropertyTestNode::nsRDFPropertyTestNode(TestNode* aParent,
 {
 #ifdef PR_LOGGING
     if (PR_LOG_TEST(gXULTemplateLog, PR_LOG_DEBUG)) {
-        nsAutoString svar(NS_LITERAL_STRING("(none)"));
-        if (mSourceVariable)
-            mSourceVariable->ToString(svar);
-
         const char* prop = "(null)";
         if (aProperty)
             aProperty->GetValueConst(&prop);
@@ -143,73 +134,66 @@ nsRDFPropertyTestNode::nsRDFPropertyTestNode(TestNode* aParent,
         nsXULContentUtils::GetTextForNode(aTarget, target);
 
         PR_LOG(gXULTemplateLog, PR_LOG_DEBUG,
-               ("nsRDFPropertyTestNode[%p]: parent=%p source=%s property=%s target=%s",
-                this, aParent, NS_ConvertUTF16toUTF8(svar).get(), prop, NS_ConvertUTF16toUTF8(target).get()));
+               ("nsRDFPropertyTestNode[%p]: parent=%p source=%s property=%s target=%d",
+                this, aSourceVariable, prop, NS_ConvertUCS2toUTF8(target).get()));
     }
 #endif
 }
 
 
 nsresult
-nsRDFPropertyTestNode::FilterInstantiations(InstantiationSet& aInstantiations,
-                                            PRBool* aCantHandleYet) const
+nsRDFPropertyTestNode::FilterInstantiations(InstantiationSet& aInstantiations, void* aClosure) const
 {
     nsresult rv;
-
-    if (aCantHandleYet)
-        *aCantHandleYet = PR_FALSE;
-
-    nsIRDFDataSource* ds = mProcessor->GetDataSource();
 
     InstantiationSet::Iterator last = aInstantiations.Last();
     for (InstantiationSet::Iterator inst = aInstantiations.First(); inst != last; ++inst) {
         PRBool hasSourceBinding;
-        nsCOMPtr<nsIRDFResource> sourceRes;
+        Value sourceValue;
 
         if (mSource) {
             hasSourceBinding = PR_TRUE;
-            sourceRes = mSource;
+            sourceValue = mSource;
         }
         else {
-            nsCOMPtr<nsIRDFNode> sourceValue;
-            hasSourceBinding = inst->mAssignments.GetAssignmentFor(mSourceVariable,
-                                                                   getter_AddRefs(sourceValue));
-            sourceRes = do_QueryInterface(sourceValue);
+            hasSourceBinding = inst->mAssignments.GetAssignmentFor(mSourceVariable, &sourceValue);
         }
 
         PRBool hasTargetBinding;
-        nsCOMPtr<nsIRDFNode> targetValue;
+        Value targetValue;
 
         if (mTarget) {
             hasTargetBinding = PR_TRUE;
             targetValue = mTarget;
         }
         else {
-            hasTargetBinding = inst->mAssignments.GetAssignmentFor(mTargetVariable,
-                                                                   getter_AddRefs(targetValue));
+            hasTargetBinding = inst->mAssignments.GetAssignmentFor(mTargetVariable, &targetValue);
         }
 
 #ifdef PR_LOGGING
         if (PR_LOG_TEST(gXULTemplateLog, PR_LOG_DEBUG)) {
             const char* source = "(unbound)";
             if (hasSourceBinding)
-                sourceRes->GetValueConst(&source);
+                VALUE_TO_IRDFRESOURCE(sourceValue)->GetValueConst(&source);
 
             nsAutoString target(NS_LITERAL_STRING("(unbound)"));
             if (hasTargetBinding)
-                nsXULContentUtils::GetTextForNode(targetValue, target);
+                nsXULContentUtils::GetTextForNode(VALUE_TO_IRDFNODE(targetValue), target);
 
             PR_LOG(gXULTemplateLog, PR_LOG_DEBUG,
                    ("nsRDFPropertyTestNode[%p]: FilterInstantiations() source=[%s] target=[%s]",
-                    this, source, NS_ConvertUTF16toUTF8(target).get()));
+                    this, source, NS_ConvertUCS2toUTF8(target).get()));
         }
 #endif
 
         if (hasSourceBinding && hasTargetBinding) {
             // it's a consistency check. see if we have a assignment that is consistent
             PRBool hasAssertion;
-            rv = ds->HasAssertion(sourceRes, mProperty, targetValue,
-                                  PR_TRUE, &hasAssertion);
+            rv = mDataSource->HasAssertion(VALUE_TO_IRDFRESOURCE(sourceValue),
+                                           mProperty,
+                                           VALUE_TO_IRDFNODE(targetValue),
+                                           PR_TRUE,
+                                           &hasAssertion);
             if (NS_FAILED(rv)) return rv;
 
 #ifdef PR_LOGGING
@@ -220,10 +204,10 @@ nsRDFPropertyTestNode::FilterInstantiations(InstantiationSet& aInstantiations,
             if (hasAssertion) {
                 // it's consistent.
                 Element* element =
-                    nsRDFPropertyTestNode::Element::Create(mProcessor->GetPool(),
-                                                           sourceRes,
+                    nsRDFPropertyTestNode::Element::Create(mConflictSet.GetPool(),
+                                                           VALUE_TO_IRDFRESOURCE(sourceValue),
                                                            mProperty,
-                                                           targetValue);
+                                                           VALUE_TO_IRDFNODE(targetValue));
 
                 if (! element)
                     return NS_ERROR_OUT_OF_MEMORY;
@@ -242,16 +226,16 @@ nsRDFPropertyTestNode::FilterInstantiations(InstantiationSet& aInstantiations,
             // cross-product.
             nsCOMPtr<nsISimpleEnumerator> results;
             if (hasSourceBinding) {
-                rv = ds->GetTargets(sourceRes,
-                                    mProperty,
-                                    PR_TRUE,
-                                    getter_AddRefs(results));
+                rv = mDataSource->GetTargets(VALUE_TO_IRDFRESOURCE(sourceValue),
+                                             mProperty,
+                                             PR_TRUE,
+                                             getter_AddRefs(results));
             }
             else {
-                rv = ds->GetSources(mProperty,
-                                    targetValue,
-                                    PR_TRUE,
-                                    getter_AddRefs(results));
+                rv = mDataSource->GetSources(mProperty,
+                                             VALUE_TO_IRDFNODE(targetValue),
+                                             PR_TRUE,
+                                             getter_AddRefs(results));
                 if (NS_FAILED(rv)) return rv;
             }
 
@@ -267,29 +251,29 @@ nsRDFPropertyTestNode::FilterInstantiations(InstantiationSet& aInstantiations,
                 rv = results->GetNext(getter_AddRefs(isupports));
                 if (NS_FAILED(rv)) return rv;
 
-                nsIAtom* variable;
-                nsCOMPtr<nsIRDFNode> value;
+                PRInt32 variable;
+                Value value;
 
                 if (hasSourceBinding) {
                     variable = mTargetVariable;
 
-                    value = do_QueryInterface(isupports);
-                    NS_ASSERTION(value != nsnull, "target is not an nsIRDFNode");
+                    nsCOMPtr<nsIRDFNode> target = do_QueryInterface(isupports);
+                    NS_ASSERTION(target != nsnull, "target is not an nsIRDFNode");
 
 #ifdef PR_LOGGING
                     if (PR_LOG_TEST(gXULTemplateLog, PR_LOG_DEBUG)) {
                         nsAutoString s(NS_LITERAL_STRING("(none found)"));
-                        if (value)
-                            nsXULContentUtils::GetTextForNode(value, s);
+                        if (target)
+                            nsXULContentUtils::GetTextForNode(target, s);
 
                         PR_LOG(gXULTemplateLog, PR_LOG_DEBUG,
-                               ("    target => %s", NS_ConvertUTF16toUTF8(s).get()));
+                               ("    target => %s", NS_ConvertUCS2toUTF8(s).get()));
                     }
 #endif
 
-                    if (! value) continue;
+                    if (! target) continue;
 
-                    targetValue = value;
+                    targetValue = value = target.get();
                 }
                 else {
                     variable = mSourceVariable;
@@ -310,7 +294,7 @@ nsRDFPropertyTestNode::FilterInstantiations(InstantiationSet& aInstantiations,
 
                     if (! source) continue;
 
-                    value = sourceRes = source;
+                    sourceValue = value = source.get();
                 }
 
                 // Copy the original instantiation, and add it to the
@@ -320,10 +304,10 @@ nsRDFPropertyTestNode::FilterInstantiations(InstantiationSet& aInstantiations,
                 newinst.AddAssignment(variable, value);
 
                 Element* element =
-                    nsRDFPropertyTestNode::Element::Create(mProcessor->GetPool(),
-                                                           sourceRes,
+                    nsRDFPropertyTestNode::Element::Create(mConflictSet.GetPool(),
+                                                           VALUE_TO_IRDFRESOURCE(sourceValue),
                                                            mProperty,
-                                                           targetValue);
+                                                           VALUE_TO_IRDFNODE(targetValue));
 
                 if (! element)
                     return NS_ERROR_OUT_OF_MEMORY;
@@ -337,17 +321,32 @@ nsRDFPropertyTestNode::FilterInstantiations(InstantiationSet& aInstantiations,
             aInstantiations.Erase(inst--);
         }
         else {
-            if (!aCantHandleYet) {
-                // Neither source nor target assignment!
-                return NS_ERROR_UNEXPECTED;
-            }
-
-            *aCantHandleYet = PR_TRUE;
-            return NS_OK;
+            // Neither source nor target assignment!
+            NS_ERROR("can't do open ended queries like that!");
+            return NS_ERROR_UNEXPECTED;
         }
     }
 
     return NS_OK;
+}
+
+
+nsresult
+nsRDFPropertyTestNode::GetAncestorVariables(VariableSet& aVariables) const
+{
+    nsresult rv;
+
+    if (mSourceVariable) {
+        rv = aVariables.Add(mSourceVariable);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    if (mTargetVariable) {
+        rv = aVariables.Add(mTargetVariable);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    return TestNode::GetAncestorVariables(aVariables);
 }
 
 PRBool
@@ -365,10 +364,10 @@ nsRDFPropertyTestNode::CanPropagate(nsIRDFResource* aSource,
     }
     else {
         if (mSourceVariable)
-            aInitialBindings.AddAssignment(mSourceVariable, aSource);
+            aInitialBindings.AddAssignment(mSourceVariable, Value(aSource));
 
         if (mTargetVariable)
-            aInitialBindings.AddAssignment(mTargetVariable, aTarget);
+            aInitialBindings.AddAssignment(mTargetVariable, Value(aTarget));
 
         result = PR_TRUE;
     }
@@ -386,7 +385,7 @@ nsRDFPropertyTestNode::CanPropagate(nsIRDFResource* aSource,
 
         PR_LOG(gXULTemplateLog, PR_LOG_DEBUG,
                ("nsRDFPropertyTestNode[%p]: CanPropagate([%s]==[%s]=>[%s]) => %s",
-                this, source, property, NS_ConvertUTF16toUTF8(target).get(),
+                this, source, property, NS_ConvertUCS2toUTF8(target).get(),
                 result ? "true" : "false"));
     }
 #endif
@@ -397,7 +396,9 @@ nsRDFPropertyTestNode::CanPropagate(nsIRDFResource* aSource,
 void
 nsRDFPropertyTestNode::Retract(nsIRDFResource* aSource,
                                nsIRDFResource* aProperty,
-                               nsIRDFNode* aTarget) const
+                               nsIRDFNode* aTarget,
+                               nsTemplateMatchSet& aFirings,
+                               nsTemplateMatchSet& aRetractions) const
 {
     if (aProperty == mProperty.get()) {
 #ifdef PR_LOGGING
@@ -413,11 +414,11 @@ nsRDFPropertyTestNode::Retract(nsIRDFResource* aSource,
 
             PR_LOG(gXULTemplateLog, PR_LOG_DEBUG,
                    ("nsRDFPropertyTestNode[%p]: Retract([%s]==[%s]=>[%s])",
-                    this, source, property, NS_ConvertUTF16toUTF8(target).get()));
+                    this, source, property, NS_ConvertUCS2toUTF8(target).get()));
         }
 #endif
 
-        mProcessor->RetractElement(Element(aSource, aProperty, aTarget));
+        mConflictSet.Remove(Element(aSource, aProperty, aTarget), aFirings, aRetractions);
     }
 }
 

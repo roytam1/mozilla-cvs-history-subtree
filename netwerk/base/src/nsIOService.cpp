@@ -1,5 +1,5 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* vim:set ts=4 sw=4 cindent et: */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -41,6 +41,7 @@
 #include "nsIFileProtocolHandler.h"
 #include "nscore.h"
 #include "nsIServiceManager.h"
+#include "nsIEventQueueService.h"
 #include "nsIURI.h"
 #include "nsIStreamListener.h"
 #include "prprf.h"
@@ -66,8 +67,6 @@
 #include "nsIRecyclingAllocator.h"
 #include "nsISocketTransport.h"
 #include "nsCRT.h"
-#include "nsINestedURI.h"
-#include "nsNetUtil.h"
 
 #define PORT_PREF_PREFIX     "network.security.ports."
 #define PORT_PREF(x)         PORT_PREF_PREFIX x
@@ -81,7 +80,7 @@ static NS_DEFINE_CID(kProtocolProxyServiceCID, NS_PROTOCOLPROXYSERVICE_CID);
 
 nsIOService* gIOService = nsnull;
 
-// A general port blacklist.  Connections to these ports will not be allowed unless 
+// A general port blacklist.  Connections to these ports will not be avoided unless 
 // the protocol overrides.
 //
 // TODO: I am sure that there are more ports to be added.  
@@ -188,6 +187,13 @@ nsIOService::Init()
 {
     nsresult rv;
     
+    // Hold onto the eventQueue service.  We do not want any eventqueues to go away
+    // when we shutdown until we process all remaining transports
+
+    mEventQueueService = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
+    if (NS_FAILED(rv))
+        NS_WARNING("failed to get event queue service");
+    
     // We need to get references to these services so that we can shut them
     // down later. If we wait until the nsIOService is being shut down,
     // GetService will fail at that point.
@@ -285,15 +291,7 @@ nsresult
 nsIOService::OnChannelRedirect(nsIChannel* oldChan, nsIChannel* newChan,
                                PRUint32 flags)
 {
-    nsCOMPtr<nsIChannelEventSink> sink =
-        do_GetService(NS_GLOBAL_CHANNELEVENTSINK_CONTRACTID);
-    if (sink) {
-        nsresult rv = sink->OnChannelRedirect(oldChan, newChan, flags);
-        if (NS_FAILED(rv))
-            return rv;
-    }
-
-    // Finally, our category
+    // Notify the registered observers
     const nsCOMArray<nsIChannelEventSink>& entries =
         mChannelEventSinks.GetEntries();
     PRInt32 len = entries.Count();
@@ -319,7 +317,7 @@ nsIOService::CacheProtocolHandler(const char *scheme, nsIProtocolHandler *handle
             nsCOMPtr<nsISupportsWeakReference> factoryPtr = do_QueryInterface(handler, &rv);
             if (!factoryPtr)
             {
-                // Don't cache handlers that don't support weak reference as
+                // Dont cache handlers that dont support weak reference as
                 // there is real danger of a circular reference.
 #ifdef DEBUG_dp
                 printf("DEBUG: %s protcol handler doesn't support weak ref. Not cached.\n", scheme);
@@ -620,10 +618,6 @@ nsIOService::SetOffline(PRBool offline)
         }
         mOffline = PR_FALSE;    // indicate success only AFTER we've
                                 // brought up the services
-         
-        // trigger a PAC reload when we come back online
-        if (mProxyService)
-            mProxyService->ReloadPAC();
  
         // don't care if notification fails
         if (observerService)
@@ -751,7 +745,7 @@ nsIOService::Observe(nsISupports *subject,
     if (!strcmp(topic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID)) {
         nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(subject);
         if (prefBranch)
-            PrefsChanged(prefBranch, NS_ConvertUTF16toUTF8(data).get());
+            PrefsChanged(prefBranch, NS_ConvertUCS2toUTF8(data).get());
     }
     else if (!strcmp(topic, kProfileChangeNetTeardownTopic)) {
         if (!mOffline) {
@@ -766,7 +760,7 @@ nsIOService::Observe(nsISupports *subject,
                 NS_FAILED(TrackNetworkLinkStatusForOffline())) {
                 SetOffline(PR_FALSE);
             }
-        } 
+        }    
     }
     else if (!strcmp(topic, NS_XPCOM_SHUTDOWN_OBSERVER_ID)) {
         SetOffline(PR_TRUE);
@@ -779,7 +773,7 @@ nsIOService::Observe(nsISupports *subject,
             TrackNetworkLinkStatusForOffline();
         }
     }
-    
+
     return NS_OK;
 }
 
@@ -795,76 +789,8 @@ nsIOService::ParseContentType(const nsACString &aTypeHeader,
 }
 
 NS_IMETHODIMP
-nsIOService::ProtocolHasFlags(nsIURI   *uri,
-                              PRUint32  flags,
-                              PRBool   *result)
+nsIOService::SetManageOfflineStatus(PRBool aManage)
 {
-    NS_ENSURE_ARG(uri);
-
-    *result = PR_FALSE;
-    nsCAutoString scheme;
-    nsresult rv = uri->GetScheme(scheme);
-    NS_ENSURE_SUCCESS(rv, rv);
-  
-    PRUint32 protocolFlags;
-    rv = GetProtocolFlags(scheme.get(), &protocolFlags);
-
-    if (NS_SUCCEEDED(rv)) {
-        *result = (protocolFlags & flags) == flags;
-    }
-  
-    return rv;
-}
-
-NS_IMETHODIMP
-nsIOService::URIChainHasFlags(nsIURI   *uri,
-                              PRUint32  flags,
-                              PRBool   *result)
-{
-    nsresult rv = ProtocolHasFlags(uri, flags, result);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    if (*result) {
-        return rv;
-    }
-
-    // Dig deeper into the chain.  Note that this is not a do/while loop to
-    // avoid the extra addref/release on |uri| in the common (non-nested) case.
-    nsCOMPtr<nsINestedURI> nestedURI = do_QueryInterface(uri);
-    while (nestedURI) {
-        nsCOMPtr<nsIURI> innerURI;
-        rv = nestedURI->GetInnerURI(getter_AddRefs(innerURI));
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        rv = ProtocolHasFlags(innerURI, flags, result);
-
-        if (*result) {
-            return rv;
-        }
-
-        nestedURI = do_QueryInterface(innerURI);
-    }
-
-    return rv;
-}
-
-NS_IMETHODIMP
-nsIOService::ToImmutableURI(nsIURI* uri, nsIURI** result)
-{
-    if (!uri) {
-        *result = nsnull;
-        return NS_OK;
-    }
-
-    nsresult rv = NS_EnsureSafeToReturn(uri, result);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    NS_TryToSetImmutable(*result);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsIOService::SetManageOfflineStatus(PRBool aManage) {
     PRBool wasManaged = mManageOfflineStatus;
     mManageOfflineStatus = aManage;
     if (mManageOfflineStatus && !wasManaged)
@@ -873,7 +799,8 @@ nsIOService::SetManageOfflineStatus(PRBool aManage) {
 }
 
 NS_IMETHODIMP
-nsIOService::GetManageOfflineStatus(PRBool* aManage) {
+nsIOService::GetManageOfflineStatus(PRBool* aManage)
+{
     *aManage = mManageOfflineStatus;
     return NS_OK;
 }
@@ -900,22 +827,4 @@ nsIOService::TrackNetworkLinkStatusForOffline()
     nsresult rv = mNetworkLinkService->GetIsLinkUp(&isUp);
     NS_ENSURE_SUCCESS(rv, rv);
     return SetOffline(!isUp);
-}
-
-NS_IMETHODIMP
-nsIOService::EscapeString(const nsACString& aString,
-                          PRUint32 aEscapeType,
-                          nsACString& aResult)
-{
-  NS_ENSURE_ARG_RANGE(aEscapeType, 0, 3);
-
-  nsCAutoString stringCopy(aString);
-  nsCString result;
-
-  if (!NS_Escape(stringCopy, result, (nsEscapeMask) aEscapeType))
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  aResult.Assign(result);
-
-  return NS_OK;
 }

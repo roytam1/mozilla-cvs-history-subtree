@@ -74,15 +74,8 @@ LOCAL_INCLUDES	= \
 		-I$(srcdir)/../ \
 		$(NULL)
 
-EXTRA_DSO_LDOPTS += \
-		    $(DEPTH)/modules/libreg/src/$(LIB_PREFIX)mozreg_s.$(LIB_SUFFIX) \
-		    $(MOZ_COMPONENT_LIBS) \
+EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS) \
 		    $(MOZ_XPCOM_OBSOLETE_LIBS) \
 		    $(NULL)
 
 include $(topsrcdir)/config/rules.mk
-
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-CXXFLAGS	+= $(TK_CFLAGS)
-EXTRA_DSO_LDOPTS += $(TK_LIBS)
-endif

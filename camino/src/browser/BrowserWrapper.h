@@ -147,8 +147,9 @@ class nsIArray;
   NSMutableArray*           mFeedList;        // list of feeds found on page
 
   CHBrowserView*            mBrowserView;     // retained
+  NSString*                 mDefaultStatusString;
+  NSString*                 mLoadingStatusString;
   ToolTip*                  mToolTip;
-  NSMutableArray*           mStatusStrings;   // current status bar messages, STRONG
 
   IBOutlet NSView*          mBlockedPopupView;   // loaded on demand, can be nil, STRONG
   IBOutlet RolloverImageButton* mBlockedPopupCloseButton; 
@@ -187,7 +188,6 @@ class nsIArray;
 - (CHBrowserView*)getBrowserView;
 - (BOOL)isBusy;
 - (BOOL)isEmpty;                      // is about:blank loaded?
-- (BOOL)isInternalURI;
 - (BOOL)canReload;
 
 - (NSString*)windowTitle;
@@ -214,12 +214,11 @@ class nsIArray;
 - (void)setTab:(NSTabViewItem*)tab;
 - (NSTabViewItem*) tab;
 
-- (void)reload:(unsigned int)reloadFlags;
 - (IBAction)reloadWithNewCharset:(NSString*)charset;
 - (NSString*)currentCharset;
 
-- (NSWindow*)nativeWindow;
-- (NSMenu*)contextMenu;
+- (NSWindow*)getNativeWindow;
+- (NSMenu*)getContextMenu;
 - (void)getTitle:(NSString **)outTitle andHref:(NSString**)outHrefString;
 
 // Custom view embedding
@@ -252,16 +251,12 @@ class nsIArray;
 //
 // interface InformationPanelView
 //
-// A placard-style view for showing additional information to the user.
-// Drawn with a shaded background.
+// A placard-style view for showing additional information to the user. Drawn
+// with a colored background and bottom shadow.
 //
 
 @interface InformationPanelView : NSView
 {
-  IBOutlet NSTextField *mPopupBlockedMessageTextField;
-  float mVerticalPadding;
-  float mMessageTextRightStrutLength;
+  NSImage* mPopupBlockedBackgroundImage;
 }
-- (void)verticallyCenterAllSubviews;
-
 @end

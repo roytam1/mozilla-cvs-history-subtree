@@ -43,29 +43,22 @@
 class nsButtonBoxFrame : public nsBoxFrame
 {
 public:
-  friend nsIFrame* NS_NewButtonBoxFrame(nsIPresShell* aPresShell);
+  friend nsresult NS_NewButtonBoxFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
-  nsButtonBoxFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
-    :nsBoxFrame(aPresShell, aContext, PR_FALSE) {}
+  nsButtonBoxFrame(nsIPresShell* aPresShell);
 
-  NS_IMETHOD BuildDisplayListForChildren(nsDisplayListBuilder*   aBuilder,
-                                         const nsRect&           aDirtyRect,
-                                         const nsDisplayListSet& aLists);
+  NS_IMETHOD GetFrameForPoint(const nsPoint& aPoint, 
+                              nsFramePaintLayer aWhichLayer,
+                              nsIFrame**     aFrame);
 
   NS_IMETHOD HandleEvent(nsPresContext* aPresContext, 
                                       nsGUIEvent* aEvent,
                                       nsEventStatus* aEventStatus);
 
-  virtual PRBool GetMouseThrough() const { return PR_FALSE; }
+  NS_IMETHOD GetMouseThrough(PRBool& aMouseThrough);
 
   virtual void MouseClicked (nsPresContext* aPresContext, nsGUIEvent* aEvent)
   { DoMouseClick(aEvent, PR_FALSE); }
-
-#ifdef DEBUG
-  NS_IMETHOD GetFrameName(nsAString& aResult) const {
-    return MakeFrameName(NS_LITERAL_STRING("ButtonBoxFrame"), aResult);
-  }
-#endif
 
   /**
    * Our implementation of MouseClicked. 

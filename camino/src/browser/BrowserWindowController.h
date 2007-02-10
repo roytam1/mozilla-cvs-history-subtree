@@ -136,7 +136,6 @@ typedef enum
   IBOutlet NSMenu*              mImageLinkMenu;
   IBOutlet NSMenu*              mImageMailToLinkMenu;
   IBOutlet NSMenu*              mTabMenu;
-  IBOutlet NSMenu*              mTabBarMenu;
 
   // Context menu item outlets
   IBOutlet NSMenuItem*          mBackItem;
@@ -161,10 +160,6 @@ typedef enum
   BOOL mWindowClosesQuietly;  // if YES, don't warn on multi-tab window close
   
   unsigned int mChromeMask; // Indicates which parts of the window to show (e.g., don't show toolbars)
-
-  // Needed for correct window zooming
-  NSRect mLastFrameSize;
-  BOOL mShouldZoom;
 
   // C++ object that holds owning refs to XPCOM objects (and related data)
   BWCDataOwner*               mDataOwner;
@@ -227,8 +222,6 @@ typedef enum
 - (void)stopThrobber;
 - (void)clickThrobber:(id)aSender;
 
-- (BOOL)validateActionBySelector:(SEL)action;
-- (BOOL)performFindCommand;
 - (BOOL)canMakeTextBigger;
 - (BOOL)canMakeTextSmaller;
 - (BOOL)canMakeTextDefaultSize;
@@ -301,7 +294,7 @@ typedef enum
 // Called when a context menu should be shown.
 - (void)onShowContextMenu:(int)flags domEvent:(nsIDOMEvent*)aEvent domNode:(nsIDOMNode*)aNode;
 - (NSMenuItem*)prepareAddToAddressBookMenuItem:(NSString*)emailAddress;
-- (NSMenu*)contextMenu;
+- (NSMenu*)getContextMenu;
 - (NSArray*)mailAddressesInContextMenuLinkNode;
 - (NSString*)getContextMenuNodeHrefText;
 
@@ -324,9 +317,6 @@ typedef enum
 - (IBAction)showSiteCertificate:(id)sender;
 
 - (IBAction)addBookmark:(id)aSender;
-- (IBAction)addTabGroup:(id)aSender;
-- (IBAction)addBookmarkWithoutPrompt:(id)aSender;
-- (IBAction)addTabGroupWithoutPrompt:(id)aSender;
 - (IBAction)addBookmarkForLink:(id)aSender;
 - (IBAction)addBookmarkFolder:(id)aSender;
 - (IBAction)addBookmarkSeparator:(id)aSender;
@@ -359,11 +349,6 @@ typedef enum
 // cache the toolbar defaults we parse from a plist
 + (NSArray*) toolbarDefaults;
 
-// Get the load-in-background pref.  If possible, aSender's keyEquivalentModifierMask
-// is used to determine the shift key's state.  Otherwise (if aSender doesn't respond to
-// keyEquivalentModifierMask or aSender is nil) uses the current event's modifier flags.
-+ (BOOL)shouldLoadInBackground:(id)aSender;
-
 // Accessor to get the proxy icon view
 - (PageProxyIcon *)proxyIconView;
 
@@ -382,8 +367,5 @@ typedef enum
 
 // Load the item in the bookmark bar given by |inIndex| using the given behavior.
 - (BOOL)loadBookmarkBarIndex:(unsigned short)inIndex openBehavior:(EBookmarkOpenBehavior)inBehavior;
-
-// Reveal the bookmarkItem in the manager
-- (void)revealBookmark:(BookmarkItem*)anItem;
 
 @end

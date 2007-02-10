@@ -76,6 +76,7 @@
 #include "nsIMsgPurgeService.h"
 #include "nsIObserverService.h"
 #include "nsIMsgMailSession.h"
+#include "nsIEventQueueService.h"
 #include "nsIDirectoryService.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsMsgFolderFlags.h"
@@ -86,14 +87,13 @@
 #include "nsIMessengerOSIntegration.h"
 #include "nsICategoryManager.h"
 #include "nsISupportsPrimitives.h"
-#include "nsIMsgFilterService.h"
+#include "nsMsgFilterService.h"
 #include "nsIMsgFilter.h"
 #include "nsIMsgSearchSession.h"
 #include "nsIDBChangeListener.h"
 #include "nsIDBFolderInfo.h"
 #include "nsIMsgHdr.h"
 #include "nsILineInputStream.h"
-#include "nsThreadUtils.h"
 #include "nsNetUtil.h"
 #include "nsEscape.h"
 
@@ -112,6 +112,7 @@
 
 static NS_DEFINE_CID(kMsgAccountCID, NS_MSGACCOUNT_CID);
 static NS_DEFINE_CID(kMsgFolderCacheCID, NS_MSGFOLDERCACHE_CID);
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 // use this to search for all servers with the given hostname/iid and
 // put them in "servers"
@@ -1054,6 +1055,12 @@ PRBool PR_CALLBACK nsMsgAccountManager::cleanupOnExit(nsHashKey *aKey, void *aDa
            nsCOMPtr<nsIMsgAccountManager> accountManager = 
                     do_GetService(NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
            if (NS_FAILED(rv)) return rv;
+           nsCOMPtr<nsIEventQueueService> pEventQService = 
+                    do_GetService(kEventQueueServiceCID, &rv);
+           if (NS_FAILED(rv)) return rv;
+           nsCOMPtr<nsIEventQueue> eventQueue;
+           pEventQService->GetThreadEventQueue(NS_CURRENT_THREAD,
+                                    getter_AddRefs(eventQueue)); 
            if (isImap)
              urlListener = do_QueryInterface(accountManager, &rv);
                     
@@ -1090,33 +1097,49 @@ PRBool PR_CALLBACK nsMsgAccountManager::cleanupOnExit(nsHashKey *aKey, void *aDa
                     
            if (isImap && urlListener)
            {
-             nsIThread *thread = NS_GetCurrentThread();
-
              PRBool inProgress = PR_FALSE;
              if (cleanupInboxOnExit)
              {
-               PRInt32 loopCount = 0; // used to break out after 5 seconds
                accountManager->GetCleanupInboxInProgress(&inProgress);
-               while (inProgress && loopCount++ < 5000)
+               while (inProgress)
                {
                  accountManager->GetCleanupInboxInProgress(&inProgress);
                  PR_CEnterMonitor(folder);
                  PR_CWait(folder, PR_MicrosecondsToInterval(1000UL));
                  PR_CExitMonitor(folder);
-                 NS_ProcessPendingEvents(thread);
+                 if (eventQueue)
+                 {
+                   PLEvent *event;
+                   do
+                   {
+                     eventQueue->GetEvent(&event);
+                     if (event)
+                       eventQueue->HandleEvent(event);
+                   }
+                   while (event);
+                 }
                }
              }
              if (emptyTrashOnExit)
              {
                accountManager->GetEmptyTrashInProgress(&inProgress);
-               PRInt32 loopCount = 0;
-               while (inProgress && loopCount++ < 5000)
+               while (inProgress)
                {
                  accountManager->GetEmptyTrashInProgress(&inProgress);
                  PR_CEnterMonitor(folder);
                  PR_CWait(folder, PR_MicrosecondsToInterval(1000UL));
                  PR_CExitMonitor(folder);
-                 NS_ProcessPendingEvents(thread);
+                 if (eventQueue)
+                 {
+                   PLEvent *event;
+                   do
+                   {
+                     eventQueue->GetEvent(&event);
+                     if (event)
+                       eventQueue->HandleEvent(event);
+                   }
+                   while (event);
+                 }
                }
              }
            } 
@@ -3135,12 +3158,9 @@ NS_IMETHODIMP nsMsgAccountManager::OnItemRemoved(nsIRDFResource *parentItem, nsI
   PRUint32 folderFlags;
   folder->GetFlags(&folderFlags);
   if (folderFlags & MSG_FOLDER_FLAG_VIRTUAL) // if we removed a VF, flush VF list to disk.
-  {
     rv = SaveVirtualFolders();
-    // clear flags on deleted folder if it's a virtual folder, so that creating a new folder
-    // with the same name doesn't cause confusion.
-    folder->SetFlags(0);
-  }
+  // clear flags on deleted folder, especially MSG_FOLDER_FLAG_VIRTUAL
+  folder->SetFlags(0);
   // need to check if the underlying folder for a VF was removed, in which case we need to
   // remove the virtual folder.
 

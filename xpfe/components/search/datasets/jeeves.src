@@ -4,27 +4,28 @@
 # and jeeves.src from the mycroft guys
 # Erich Iseli <sherlock@iseli.org>, Julius Ross <juliusross@mac.com>
 # and modified it to work for ask.com
-# Last updated November 19, 2006 (Charles Caygill, Mycroft Project)
 
 <search 
-   name="Ask.com"
-   description="Ask.com Search Engine"
+   name="AskJeeves"
+   description="Ask Jeeves"
    method="GET"
-   action="http://www.ask.com/web"
-   queryCharset="utf-8"
+   action="http://web.ask.com/web"
 >
 
 <input name="q" user>
+<input name="o" value="0">
+<input name="qsrc" value="64">
+<input name="askbutton.x" value="0">
+<input name="askbutton.y" value="0">
 <inputnext name="page" factor="1">
 <inputprev>
 
 <interpret 
     browserResultType="result" 
-    charset="utf-8"
-    resultListStart='<html>'
-    resultListEnd='</html>'
-    resultItemStart='class="L4"'
-    resultItemEnd='class="T1"'
+    resultListStart = '<div id="result">'
+    resultListEnd = '<div id="resultspagingstrip"'
+    resultItemStart = '<div class="m8">'
+    resultItemEnd = '<div id="resultBottom'
 >
 
 </search>

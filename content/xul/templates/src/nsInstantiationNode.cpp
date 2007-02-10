@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Chris Waterson <waterson@netscape.com>
- *   Neil Deakin <enndeakin@sympatico.ca>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -39,83 +38,64 @@
 
 #include "nsInstantiationNode.h"
 #include "nsTemplateRule.h"
-#include "nsXULTemplateQueryProcessorRDF.h"
+#include "nsClusterKeySet.h"
+#include "nsConflictSet.h"
 
 #include "prlog.h"
 #ifdef PR_LOGGING
 extern PRLogModuleInfo* gXULTemplateLog;
 #endif
 
-nsInstantiationNode::nsInstantiationNode(nsXULTemplateQueryProcessorRDF* aProcessor,
-                                         nsRDFQuery* aQuery)
-        : mProcessor(aProcessor),
-          mQuery(aQuery)
+nsInstantiationNode::nsInstantiationNode(nsConflictSet& aConflictSet,
+                                         nsTemplateRule* aRule,
+                                         nsIRDFDataSource* aDataSource)
+        : mConflictSet(aConflictSet),
+          mRule(aRule)
 {
 #ifdef PR_LOGGING
     PR_LOG(gXULTemplateLog, PR_LOG_DEBUG,
-           ("nsInstantiationNode[%p] query=%p", this, aQuery));
+           ("nsInstantiationNode[%p] rule=%p", this, aRule));
 #endif
-
-    MOZ_COUNT_CTOR(nsInstantiationNode);
 }
 
 
 nsInstantiationNode::~nsInstantiationNode()
 {
-    MOZ_COUNT_DTOR(nsInstantiationNode);
+    delete mRule;
 }
 
 nsresult
-nsInstantiationNode::Propagate(InstantiationSet& aInstantiations,
-                               PRBool aIsUpdate, PRBool& aTakenInstantiations)
+nsInstantiationNode::Propagate(const InstantiationSet& aInstantiations, void* aClosure)
 {
-    // In update mode, iterate through the results and call the template
-    // builder to update them. In non-update mode, cache them in the processor
-    // to be used during processing. The results are cached in the processor
-    // so that the simple rules are only computed once. In this situation, all
-    // data for all queries are calculated at once.
-    nsresult rv = NS_OK;
+    // If we get here, we've matched the rule associated with this
+    // node. Extend it with any <bindings> that we might have, add it
+    // to the conflict set, and the set of new <content, member>
+    // pairs.
+    nsClusterKeySet* newkeys = NS_STATIC_CAST(nsClusterKeySet*, aClosure);
 
-    aTakenInstantiations = PR_FALSE;
+    InstantiationSet::ConstIterator last = aInstantiations.Last();
+    for (InstantiationSet::ConstIterator inst = aInstantiations.First(); inst != last; ++inst) {
+        nsAssignmentSet assignments = inst->mAssignments;
 
-    if (aIsUpdate) {
-        // Iterate through newly added keys to determine which rules fired.
-        //
-        // XXXwaterson Unfortunately, this could also lead to retractions;
-        // e.g., (container ?a ^empty false) could become "unmatched". How
-        // to track those?
-        nsCOMPtr<nsIDOMNode> querynode;
-        mQuery->GetQueryNode(getter_AddRefs(querynode));
+        nsTemplateMatch* match =
+            nsTemplateMatch::Create(mConflictSet.GetPool(), mRule, *inst, assignments);
 
-        InstantiationSet::ConstIterator last = aInstantiations.Last();
-        for (InstantiationSet::ConstIterator inst = aInstantiations.First(); inst != last; ++inst) {
-            nsAssignmentSet assignments = inst->mAssignments;
+        if (! match)
+            return NS_ERROR_OUT_OF_MEMORY;
 
-            nsCOMPtr<nsIRDFNode> node;
-            assignments.GetAssignmentFor(mQuery->mMemberVariable,
-                                         getter_AddRefs(node));
-            if (node) {
-                nsCOMPtr<nsIRDFResource> resource = do_QueryInterface(node);
-                if (resource) {
-                    nsRefPtr<nsXULTemplateResultRDF> nextresult =
-                        new nsXULTemplateResultRDF(mQuery, *inst, resource);
-                    if (! nextresult)
-                        return NS_ERROR_OUT_OF_MEMORY;
+        // Temporarily AddRef() to keep the match alive.
+        match->AddRef();
 
-                    rv = mProcessor->AddMemoryElements(*inst, nextresult);
-                    if (NS_FAILED(rv))
-                        return rv;
+        mRule->InitBindings(mConflictSet, match);
 
-                    mProcessor->GetBuilder()->AddResult(nextresult, querynode);
-                }
-            }
-        }
+        mConflictSet.Add(match);
+
+        // Give back our "local" reference. The conflict set will have
+        // taken what it needs.
+        match->Release(mConflictSet.GetPool());
+
+        newkeys->Add(nsClusterKey(*inst, mRule));
     }
-    else {
-        nsresult rv = mQuery->SetCachedResults(mProcessor, aInstantiations);
-        if (NS_SUCCEEDED(rv))
-            aTakenInstantiations = PR_TRUE;
-    }
-
-    return rv;
+    
+    return NS_OK;
 }

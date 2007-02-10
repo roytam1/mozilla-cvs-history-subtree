@@ -50,15 +50,22 @@
 #include "nsIDOMDocumentView.h"
 #include "nsIDOMAbstractView.h"
 #include "nsIDOMWindowInternal.h"
-#include "nsIAttribute.h"
 #include "nsIStringBundle.h"
 #include "nsAutoBuffer.h"
 #include "nsIEventStateManager.h"
 #include "prmem.h"
-#include "nsISchema.h"
 
 #define NS_HTMLFORM_BUNDLE_URL \
           "chrome://global/locale/layout/HtmlForm.properties"
+
+
+enum nsBoundType {
+  TYPE_DEFAULT,
+  TYPE_ANYURI,
+  TYPE_BASE64,
+  TYPE_HEX
+};
+
 
 /**
  * Implementation of the \<upload\> element.
@@ -70,11 +77,14 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIXFORMSUPLOADELEMENT
 
-  NS_IMETHOD IsTypeAllowed(PRUint16 aType, PRBool *aIsAllowed,
-                           nsRestrictionFlag *aRestriction,
-                           nsAString &aAllowedTypes);
+  NS_IMETHOD Refresh();
 
 private:
+  /**
+   * Returns the type of the node to which this element is bound.
+   */
+  nsBoundType GetBoundType();
+
   /**
    * Sets file path/contents into instance data.  If aFile is nsnull,
    * this clears the data.
@@ -92,7 +102,7 @@ private:
    * Read the contents of the file and encode in Base64 or Hex.  |aResult| must
    * be freed by nsMemory::Free().
    */
-  nsresult EncodeFileContents(nsIFile *aFile, PRUint16 aType,
+  nsresult EncodeFileContents(nsIFile *aFile, nsBoundType aType,
                               PRUnichar **aResult);
 
   void BinaryToHex(const char *aBuffer, PRUint32 aCount,
@@ -104,31 +114,56 @@ NS_IMPL_ISUPPORTS_INHERITED1(nsXFormsUploadElement,
                              nsIXFormsUploadElement)
 
 NS_IMETHODIMP
-nsXFormsUploadElement::IsTypeAllowed(PRUint16 aType, PRBool *aIsAllowed,
-                                     nsRestrictionFlag *aRestriction,
-                                     nsAString &aAllowedTypes)
+nsXFormsUploadElement::Refresh()
 {
-  NS_ENSURE_ARG_POINTER(aRestriction);
-  NS_ENSURE_ARG_POINTER(aIsAllowed);
-  *aRestriction = eTypes_Inclusive;
-  *aIsAllowed = PR_FALSE;
+  // This is called when the 'bind', 'ref' or 'model' attribute has changed.
+  // So we need to make sure that the element is still bound to a node of
+  // type 'anyURI', 'base64Binary', or 'hexBinary'.
 
-  // If it is not bound to 'anyURI', 'base64Binary', 'hexBinary', or an
-  // extension or derivation of one of these three types, then put an error in
-  // the console.  CSS and XBL will make sure that the control won't appear in
-  // the form.
+  nsresult rv = nsXFormsDelegateStub::Refresh();
+  if (NS_FAILED(rv) || rv == NS_OK_XFORMS_NOREFRESH)
+    return rv;
 
-  if (aType == nsISchemaBuiltinType::BUILTIN_TYPE_HEXBINARY ||
-      aType == nsISchemaBuiltinType::BUILTIN_TYPE_BASE64BINARY ||
-      aType == nsISchemaBuiltinType::BUILTIN_TYPE_ANYURI) {
-
-    *aIsAllowed = PR_TRUE;
+  if (!mBoundNode)
     return NS_OK;
+
+  // If it is not bound to 'anyURI', 'base64Binary', or 'hexBinary', then
+  //  mark as not relevant.
+  // XXX Bug 313313 - the 'relevant' state should be handled in XBL constructor.
+  nsCOMPtr<nsIXTFElementWrapper> xtfWrap(do_QueryInterface(mElement));
+  NS_ENSURE_STATE(xtfWrap);
+  if (GetBoundType() == TYPE_DEFAULT) {
+    xtfWrap->SetIntrinsicState(NS_EVENT_STATE_DISABLED);
+    nsXFormsUtils::ReportError(NS_LITERAL_STRING("uploadBoundTypeError"),
+                               mElement);
+  } else {
+    xtfWrap->SetIntrinsicState(NS_EVENT_STATE_ENABLED);
   }
 
-  // build the string of types that upload can bind to
-  aAllowedTypes.AssignLiteral("xsd:anyURI xsd:base64Binary xsd:hexBinary");
   return NS_OK;
+}
+
+nsBoundType
+nsXFormsUploadElement::GetBoundType()
+{
+  nsBoundType result = TYPE_DEFAULT;
+  if (!mModel)
+    return result;
+
+  // get type bound to node
+  nsAutoString type, nsuri;
+  nsresult rv = mModel->GetTypeFromNode(mBoundNode, type, nsuri);
+  if (NS_SUCCEEDED(rv) && nsuri.EqualsLiteral(NS_NAMESPACE_XML_SCHEMA)) {
+    if (type.EqualsLiteral("anyURI")) {
+      result = TYPE_ANYURI;
+    } else if (type.EqualsLiteral("base64Binary")) {
+      result = TYPE_BASE64;
+    } else if (type.EqualsLiteral("hexBinary")) {
+      result = TYPE_HEX;
+    }
+  }
+
+  return result;
 }
 
 static void
@@ -180,55 +215,8 @@ nsXFormsUploadElement::PickFile()
   rv = filePicker->Init(internal, filepickerTitle, nsIFilePicker::modeOpen);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  // Set the file picker filters based on the mediatype attribute.
-  nsAutoString mediaType;
-  mElement->GetAttribute(NS_LITERAL_STRING("mediatype"), mediaType);
-
-  if (!mediaType.IsEmpty()) {
-    // The mediatype attribute contains a space delimited list of mime types.
-    nsresult rv;
-    nsCOMPtr<nsIMIMEService> mimeService =
-      do_GetService("@mozilla.org/mime;1", &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsAString::const_iterator start, end, iter;
-    mediaType.BeginReading(start);
-    mediaType.BeginReading(iter);
-    mediaType.EndReading(end);
-
-    nsAutoString fileFilter;
-    nsAutoString mimeType;
-    while (iter != end) {
-      if (FindCharInReadable(' ', iter, end)) {
-         mimeType = Substring(start, iter);
-         // Skip the space.
-         ++iter;
-         // Save the starting position for the next mime type (if any).
-         start = iter;
-      } else {
-        // Only 1 media type or we've reached the end of the list.
-        mimeType = Substring(start, end);
-      }
-
-      // Map the mime type to a file extension and add the extension to the file
-      // type filter for the file dialog.
-      nsCAutoString fileExtension;
-      rv = mimeService->GetPrimaryExtension(NS_ConvertUTF16toUTF8(mimeType),
-                                            EmptyCString(), fileExtension);
-      if (NS_SUCCEEDED(rv) && !fileExtension.IsEmpty()) {
-        fileFilter.AppendLiteral("*.");
-        fileFilter.Append(NS_ConvertUTF8toUTF16(fileExtension));
-        if (iter != end) {
-          fileFilter.AppendLiteral(";");
-        }
-      }
-    }
-
-    // Append the file extension filter.
-    filePicker->AppendFilter(fileFilter, fileFilter);
-  }
-
-  // Always add 'All Files'
+  // set filter "All Files"
+  // XXX implement "@mediatype" file filters
   filePicker->AppendFilters(nsIFilePicker::filterAll);
 
   // open dialog
@@ -279,36 +267,25 @@ nsXFormsUploadElement::SetFile(nsILocalFile *aFile)
   nsresult rv;
 
   nsCOMPtr<nsIContent> content = do_QueryInterface(mBoundNode);
-  nsCOMPtr<nsIAttribute> attr;
-  if (!content) {
-    attr = do_QueryInterface(mBoundNode);
-    NS_ENSURE_STATE(attr);
-  }
+  NS_ENSURE_STATE(content);
 
   PRBool dataChanged = PR_FALSE;
   if (!aFile) {
     // clear instance data
-    if (content) {
-      content->DeleteProperty(nsXFormsAtoms::uploadFileProperty);
-    } else {
-      attr->DeleteProperty(nsXFormsAtoms::uploadFileProperty);
-    }
+    content->DeleteProperty(nsXFormsAtoms::uploadFileProperty);
     rv = mModel->SetNodeValue(mBoundNode, EmptyString(), PR_FALSE,
                               &dataChanged);
   } else {
     // set file into instance data
 
-    PRUint16 type = 0;
-    rv = GetBoundBuiltinType(&type);
-    NS_ENSURE_SUCCESS(rv, rv);
-    if (type == nsISchemaBuiltinType::BUILTIN_TYPE_ANYURI) {
+    nsBoundType type = GetBoundType();
+    if (type == TYPE_ANYURI) {
       // set fully qualified path as value in instance data node
       nsCAutoString spec;
       NS_GetURLSpecFromFile(aFile, spec);
       rv = mModel->SetNodeValue(mBoundNode, NS_ConvertUTF8toUTF16(spec),
                                 PR_FALSE, &dataChanged);
-    } else if (type == nsISchemaBuiltinType::BUILTIN_TYPE_BASE64BINARY ||
-               type == nsISchemaBuiltinType::BUILTIN_TYPE_HEXBINARY) {
+    } else if (type == TYPE_BASE64 || type == TYPE_HEX) {
       // encode file contents in base64/hex and set into instance data node
       PRUnichar *fileData;
       rv = EncodeFileContents(aFile, type, &fileData);
@@ -329,13 +306,8 @@ nsXFormsUploadElement::SetFile(nsILocalFile *aFile)
       nsIFile *fileCopy = nsnull;
       rv = aFile->Clone(&fileCopy);
       NS_ENSURE_SUCCESS(rv, rv);
-      if (content) {
-        rv = content->SetProperty(nsXFormsAtoms::uploadFileProperty, fileCopy,
-                                  ReleaseObject);
-      } else {
-        rv = attr->SetProperty(nsXFormsAtoms::uploadFileProperty, fileCopy,
-                               ReleaseObject);
-      }
+      rv = content->SetProperty(nsXFormsAtoms::uploadFileProperty, fileCopy,
+                                ReleaseObject);
     }
   }
   NS_ENSURE_SUCCESS(rv, rv);
@@ -406,12 +378,12 @@ nsXFormsUploadElement::HandleChildElements(nsILocalFile *aFile,
       nsAutoString filename;
       rv = aFile->GetLeafName(filename);
       if (!filename.IsEmpty()) {
-        rv = nsXFormsUtils::SetSingleNodeBindingValue(filenameElem, filename,
-                                                      &filenameChanged);
+        rv = mModel->SetNodeValue(filenameElem, filename, PR_FALSE,
+                                  &filenameChanged);
       }
     } else {
-      rv = nsXFormsUtils::SetSingleNodeBindingValue(filenameElem, EmptyString(),
-                                                    &filenameChanged);
+      rv = mModel->SetNodeValue(filenameElem, EmptyString(),
+                                PR_FALSE, &filenameChanged);
     }
     NS_ENSURE_SUCCESS(rv, rv);
   }
@@ -429,12 +401,13 @@ nsXFormsUploadElement::HandleChildElements(nsILocalFile *aFile,
         if (NS_FAILED(rv)) {
           contentType.AssignLiteral("application/octet-stream");
         }
-        rv = nsXFormsUtils::SetSingleNodeBindingValue(mediatypeElem,
-                        NS_ConvertUTF8toUTF16(contentType), &mediatypechanged);
+        rv = mModel->SetNodeValue(mediatypeElem,
+                                  NS_ConvertUTF8toUTF16(contentType),
+                                  PR_FALSE, &mediatypechanged);
       }
     } else {
-      rv = nsXFormsUtils::SetSingleNodeBindingValue(mediatypeElem,
-                        EmptyString(), &mediatypechanged);
+      rv = mModel->SetNodeValue(mediatypeElem, EmptyString(),
+                                PR_FALSE, &mediatypechanged);
     }
   }
 
@@ -461,7 +434,7 @@ ReportEncodingMemoryError(nsIDOMElement* aElement, nsIFile *aFile,
 }
 
 nsresult
-nsXFormsUploadElement::EncodeFileContents(nsIFile *aFile, PRUint16 aType,
+nsXFormsUploadElement::EncodeFileContents(nsIFile *aFile, nsBoundType aType,
                                           PRUnichar **aResult)
 {
   nsresult rv;
@@ -489,7 +462,7 @@ nsXFormsUploadElement::EncodeFileContents(nsIFile *aFile, PRUint16 aType,
                "fileStream->Read failed");
 
   if (NS_SUCCEEDED(rv)) {
-    if (aType == nsISchemaBuiltinType::BUILTIN_TYPE_BASE64BINARY) {
+    if (aType == TYPE_BASE64) {
       // encode file contents
       *aResult = nsnull;
       char *buffer = PL_Base64Encode(fileData.get(), bytesRead, nsnull);
@@ -503,7 +476,7 @@ nsXFormsUploadElement::EncodeFileContents(nsIFile *aFile, PRUint16 aType,
         ReportEncodingMemoryError(mElement, aFile, failedSize);
         rv = NS_ERROR_OUT_OF_MEMORY;
       }
-    } else if (aType == nsISchemaBuiltinType::BUILTIN_TYPE_HEXBINARY) {
+    } else if (aType == TYPE_HEX) {
       // create buffer for hex encoded data
       PRUint32 length = bytesRead * 2 + 1;
       PRUnichar *fileDataHex =

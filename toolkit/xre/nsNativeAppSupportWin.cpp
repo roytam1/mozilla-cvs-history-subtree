@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Bill Law       law@netscape.com
- *   Robert Strong  robert.bugzilla@gmail.com
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -48,12 +47,14 @@
 #include "nsXPIDLString.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
+#include "nsIDOMWindow.h"
 #include "nsIDOMChromeWindow.h"
 #include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
 #include "nsISupportsArray.h"
 #include "nsIWindowWatcher.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindowInternal.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIBaseWindow.h"
@@ -68,6 +69,9 @@
 #include "nsNetUtil.h"
 #include "nsIObserver.h"
 #include "nsIObserverService.h"
+#ifdef MOZ_PHOENIX
+#include "nsIShellService.h"
+#endif
 #include "nsIDOMLocation.h"
 #include "nsIJSContextStack.h"
 #include "nsIWebNavigation.h"
@@ -257,46 +261,6 @@ private:
  * whether Mozilla is already running.
  */
 
-/* Update 2007 January
- *
- * A change in behavior was implemented in July 2004 which made the
- * application on launch to add and on quit to remove the ddexec registry key.
- * See bug 246078.
- * Windows Vista has changed the methods used to set an application as default
- * and the new methods are incompatible with removing the ddeexec registry key.
- * See bug 353089.
- *
- * OS DDE Sequence:
- * 1. OS checks if the dde name is registered.
- * 2. If it is registered the OS sends a DDE request with the WWW_OpenURL topic
- *    and the params as specified in the default value of the ddeexec registry
- *    key for the verb (e.g. open).
- * 3. If it isn't registered the OS launches the executable defined in the
- *    verb's (e.g. open) command registry key.
- * 4. If the ifexec registry key is not present the OS sends a DDE request with
- *    the WWW_OpenURL topic and the params as specified in the default value of
- *    the ddeexec registry key for the verb (e.g. open).
- * 5. If the ifexec registry key is present the OS sends a DDE request with the
- *    WWW_OpenURL topic and the params as specified in the ifexec registry key
- *    for the verb (e.g. open).
- *
- * Application DDE Sequence:
- * 1. If the application is running a DDE request is received with the
- *    WWW_OpenURL topic and the params as specified in the default value of the
- *    ddeexec registry key (e.g. "%1",,0,0,,,, where '%1' is the url to open)
- *    for the verb (e.g. open).
- * 2. If the application is not running it is launched with the -requestPending
- *    and the -url argument.
- * 2.1  If the application does not need to restart and the -requestPending
- *      argument is present the accompanying url will not be used. Instead the
- *      application will wait for the DDE message to open the url.
- * 2.2  If the application needs to restart the -requestPending argument is
- *      removed from the arguments used to restart the application and the url
- *      will be handled normally.
- *
- * Note: Due to a bug in IE the ifexec key should not be used (see bug 355650).
- */
-
 class nsNativeAppSupportWin : public nsNativeAppSupportBase,
                               public nsIObserver
 {
@@ -357,6 +321,7 @@ private:
     static HSZ   mApplication, mTopics[ topicCount ];
     static DWORD mInstance;
     static PRBool mCanHandleRequests;
+    static PRBool mSupportingDDEExec;
     static char mMutexName[];
     friend struct MessageWindow;
 }; // nsNativeAppSupportWin
@@ -422,15 +387,6 @@ nsNativeAppSupportWin::CheckConsole() {
                 // Failed.  Probably because there already is one.
                 // There's little we can do, in any case.
             }
-
-            // Remove the console argument from the command line.
-            do {
-                gArgv[i] = gArgv[i + 1];
-                ++i;
-            } while (gArgv[i]);
-
-            --gArgc;
-
             // Don't bother doing this more than once.
             break;
         }
@@ -457,7 +413,6 @@ NS_CreateNativeAppSupport( nsINativeAppSupport **aResult ) {
 
 // Constants
 #define MOZ_DDE_APPLICATION    "Mozilla"
-#define MOZ_MUTEX_NAMESPACE    "Local\\"
 #define MOZ_STARTUP_MUTEX_NAME "StartupMutex"
 #define MOZ_DDE_START_TIMEOUT 30000
 #define MOZ_DDE_STOP_TIMEOUT  15000
@@ -478,6 +433,7 @@ HSZ   nsNativeAppSupportWin::mApplication   = 0;
 HSZ   nsNativeAppSupportWin::mTopics[nsNativeAppSupportWin::topicCount] = { 0 };
 DWORD nsNativeAppSupportWin::mInstance      = 0;
 PRBool nsNativeAppSupportWin::mCanHandleRequests   = PR_FALSE;
+PRBool nsNativeAppSupportWin::mSupportingDDEExec   = PR_FALSE;
 
 char nsNativeAppSupportWin::mMutexName[ 128 ] = { 0 };
 
@@ -581,10 +537,14 @@ struct MessageWindow {
             cmdlen + strlen(cmdbuf + cmdlen + 1) + 2,
             (void*) cmdbuf
         };
-        // Bring the already running Mozilla process to the foreground.
-        // nsWindow will restore the window (if minimized) and raise it.
-        ::SetForegroundWindow( mHandle );
-        ::SendMessage( mHandle, WM_COPYDATA, 0, (LPARAM)&cds );
+        HWND newWin = (HWND)::SendMessage( mHandle, WM_COPYDATA, 0, (LPARAM)&cds );
+        if ( newWin ) {
+            // Restore the window if it is minimized.
+            if ( ::IsIconic( newWin ) ) {
+                ::ShowWindow( newWin, SW_RESTORE );
+            }
+            ::SetForegroundWindow( newWin );
+        }
         free (cmdbuf);
         return NS_OK;
     }
@@ -678,8 +638,7 @@ nsNativeAppSupportWin::Start( PRBool *aResult ) {
     // Grab mutex first.
 
     // Build mutex name from app name.
-    ::_snprintf( mMutexName, sizeof mMutexName, "%s%s%s", MOZ_MUTEX_NAMESPACE,
-                 gAppData->name, MOZ_STARTUP_MUTEX_NAME );
+    ::_snprintf( mMutexName, sizeof mMutexName, "%s%s", gAppData->name, MOZ_STARTUP_MUTEX_NAME );
     Mutex startupLock = Mutex( mMutexName );
 
     NS_ENSURE_TRUE( startupLock.Lock( MOZ_DDE_START_TIMEOUT ), NS_ERROR_FAILURE );
@@ -724,6 +683,63 @@ nsNativeAppSupportWin::FindTopic( HSZ topic ) {
         }
     }
     return -1;
+}
+
+// Utility function that determines if we're handling http Internet shortcuts.
+static PRBool isDefaultBrowser() 
+{
+#ifdef MOZ_PHOENIX
+  nsCOMPtr<nsIShellService> shell(do_GetService("@mozilla.org/browser/shell-service;1"));
+  PRBool isDefault;
+  shell->IsDefaultBrowser(PR_FALSE, &isDefault);
+  return isDefault;
+#else
+  return FALSE;
+#endif
+}
+
+// Utility function to delete a registry subkey.
+static DWORD deleteKey( HKEY baseKey, const char *keyName ) {
+    // Make sure input subkey isn't null.
+    DWORD rc;
+    if ( keyName && ::strlen(keyName) ) {
+        // Open subkey.
+        HKEY key;
+        rc = ::RegOpenKeyEx( baseKey,
+                             keyName,
+                             0,
+                             KEY_ENUMERATE_SUB_KEYS | DELETE,
+                             &key );
+        // Continue till we get an error or are done.
+        while ( rc == ERROR_SUCCESS ) {
+            char subkeyName[_MAX_PATH];
+            DWORD len = sizeof subkeyName;
+            // Get first subkey name.  Note that we always get the
+            // first one, then delete it.  So we need to get
+            // the first one next time, also.
+            rc = ::RegEnumKeyEx( key,
+                                 0,
+                                 subkeyName,
+                                 &len,
+                                 0,
+                                 0,
+                                 0,
+                                 0 );
+            if ( rc == ERROR_NO_MORE_ITEMS ) {
+                // No more subkeys.  Delete the main one.
+                rc = ::RegDeleteKey( baseKey, keyName );
+                break;
+            } else if ( rc == ERROR_SUCCESS ) {
+                // Another subkey, delete it, recursively.
+                rc = deleteKey( key, subkeyName );
+            }
+        }
+        // Close the key we opened.
+        ::RegCloseKey( key );
+    } else {
+        rc = ERROR_BADKEY;
+    }
+    return rc;
 }
 
 
@@ -822,6 +838,15 @@ nsNativeAppSupportWin::Quit() {
     mw.Destroy();
 
     if ( mInstance ) {
+        // Undo registry setting if we need to.
+        if ( mSupportingDDEExec && isDefaultBrowser() ) {
+            mSupportingDDEExec = PR_FALSE;
+#if MOZ_DEBUG_DDE
+            printf( "Deleting ddexec subkey on exit\n" );
+#endif
+            deleteKey( HKEY_CLASSES_ROOT, "http\\shell\\open\\ddeexec" );
+        }
+
         // Unregister application name.
         DdeNameService( mInstance, mApplication, 0, DNS_UNREGISTER );
         // Clean up strings.
@@ -837,9 +862,6 @@ nsNativeAppSupportWin::Quit() {
         }
         DdeUninitialize( mInstance );
         mInstance = 0;
-#if MOZ_DEBUG_DDE
-    printf( "DDE server stopped\n" );
-#endif
     }
 
     return NS_OK;
@@ -1000,7 +1022,6 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
 #endif
                     // Now handle it.
                     HandleCommandLine(url.get(), nsnull, nsICommandLine::STATE_REMOTE_EXPLICIT);
-
                     // Return pseudo window ID.
                     result = CreateDDEData( 1 );
                     break;
@@ -1031,7 +1052,7 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
                             break;
                         }
                         // Convert that to internal interface.
-                        nsCOMPtr<nsPIDOMWindow> internalContent( do_QueryInterface( content ) );
+                        nsCOMPtr<nsIDOMWindowInternal> internalContent( do_QueryInterface( content ) );
                         if ( !internalContent ) {
                             break;
                         }
@@ -1049,11 +1070,14 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
                         // Escape any double-quotes.
                         escapeQuotes( url );
 
-                        // Now for the title...
-
-                        // Get the base window from the doc shell...
+                        // Now for the title; first, get the "window" script global object.
+                        nsCOMPtr<nsIScriptGlobalObject> scrGlobalObj( do_QueryInterface( internalContent ) );
+                        if ( !scrGlobalObj ) {
+                            break;
+                        }
+                        // Then from its doc shell get the base window...
                         nsCOMPtr<nsIBaseWindow> baseWindow =
-                          do_QueryInterface( internalContent->GetDocShell() );
+                            do_QueryInterface( scrGlobalObj->GetDocShell() );
                         if ( !baseWindow ) {
                             break;
                         }
@@ -1474,13 +1498,13 @@ nsNativeAppSupportWin::OpenWindow( const char*urlstr, const char *args ) {
 }
 
 HWND hwndForDOMWindow( nsISupports *window ) {
-    nsCOMPtr<nsPIDOMWindow> pidomwindow( do_QueryInterface(window) );
-    if ( !pidomwindow ) {
+    nsCOMPtr<nsIScriptGlobalObject> ppScriptGlobalObj( do_QueryInterface(window) );
+    if ( !ppScriptGlobalObj ) {
         return 0;
     }
 
     nsCOMPtr<nsIBaseWindow> ppBaseWindow =
-        do_QueryInterface( pidomwindow->GetDocShell() );
+        do_QueryInterface( ppScriptGlobalObj->GetDocShell() );
     if ( !ppBaseWindow ) {
         return 0;
     }

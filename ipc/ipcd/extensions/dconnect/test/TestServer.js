@@ -41,7 +41,9 @@
  * can connect and control this process.
  */
 
-const ipcIService = Components.interfaces.ipcIService;
+const ipcIService          = Components.interfaces.ipcIService;
+const nsIEventQueueService = Components.interfaces.nsIEventQueueService;
+const nsIEventQueue        = Components.interfaces.nsIEventQueue;
 
 function registerServer()
 {
@@ -51,13 +53,13 @@ function registerServer()
 
 function runEventQ()
 {
-  var thread =
-      Components.classes["@mozilla.org/thread-manager;1"].
-      getService().currentThread;
+  var eqs = Components.classes["@mozilla.org/event-queue-service;1"]
+                      .getService(nsIEventQueueService);  
+  eqs.createMonitoredThreadEventQueue();
+  var queue = eqs.getSpecialEventQueue(eqs.CURRENT_THREAD_EVENT_QUEUE);
 
   // this never returns
-  while (true)
-    thread.processNextEvent();
+  queue.eventLoop(); 
 }
 
 registerServer();

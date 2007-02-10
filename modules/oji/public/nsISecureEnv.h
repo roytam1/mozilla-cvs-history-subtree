@@ -57,17 +57,8 @@ enum jni_type
     jvoid_type
 };
 
-#define NS_ISECUREENV_IID                               \
-{   /* ca9148d0-598a-11d2-a1d4-00805f8f694d */          \
-    0xca9148d0,                                         \
-    0x598a,                                             \
-    0x11d2,                                             \
-    {0xa1, 0xd4, 0x00, 0x80, 0x5f, 0x8f, 0x69, 0x4d }   \
-}
-
 class nsISecureEnv : public nsISupports {
 public:
-    NS_DECLARE_STATIC_IID_ACCESSOR(NS_ISECUREENV_IID)
 
     /**
      * Create new Java object in LiveConnect.
@@ -360,6 +351,12 @@ public:
                          /*[out]*/ jint* result) = 0;
 };
 
-NS_DEFINE_STATIC_IID_ACCESSOR(nsISecureEnv, NS_ISECUREENV_IID)
+#define NS_ISECUREENV_IID                               \
+{   /* ca9148d0-598a-11d2-a1d4-00805f8f694d */          \
+    0xca9148d0,                                         \
+    0x598a,                                             \
+    0x11d2,                                             \
+    {0xa1, 0xd4, 0x00, 0x80, 0x5f, 0x8f, 0x69, 0x4d }   \
+}
 
 #endif // nsISecureEnv_h___

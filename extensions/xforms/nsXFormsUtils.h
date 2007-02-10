@@ -57,21 +57,13 @@ class nsIURI;
 class nsString;
 class nsIMutableArray;
 class nsIDOMEvent;
-class nsIDOMXPathEvaluator;
-class nsIDOMXPathExpression;
-class nsIDOMXPathNSResolver;
-class nsIXPathEvaluatorInternal;
 
 #define NS_NAMESPACE_XFORMS              "http://www.w3.org/2002/xforms"
 #define NS_NAMESPACE_XHTML               "http://www.w3.org/1999/xhtml"
 #define NS_NAMESPACE_XML_SCHEMA          "http://www.w3.org/2001/XMLSchema"
 #define NS_NAMESPACE_XML_SCHEMA_INSTANCE "http://www.w3.org/2001/XMLSchema-instance"
 #define NS_NAMESPACE_MOZ_XFORMS_TYPE     "http://www.mozilla.org/projects/xforms/2005/type"
-#define NS_NAMESPACE_SOAP_ENVELOPE       "http://schemas.xmlsoap.org/soap/envelope/"
 #define NS_NAMESPACE_MOZ_XFORMS_LAZY     "http://www.mozilla.org/projects/xforms/2005/lazy"
-
-#define NS_ERROR_XFORMS_CALCULATION_EXCEPTION \
-  NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_GENERAL, 3001)
 
 /**
  * Error codes
@@ -81,13 +73,6 @@ class nsIXPathEvaluatorInternal;
 NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_GENERAL, 1)
 #define NS_OK_XFORMS_DEFERRED \
 NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_GENERAL, 2)
-#define NS_OK_XFORMS_NOTREADY \
-NS_ERROR_GENERATE_SUCCESS(NS_ERROR_MODULE_GENERAL, 3)
-
-#define NS_ERROR_XFORMS_CALCUATION_EXCEPTION \
-NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_GENERAL, 3001)
-#define NS_ERROR_XFORMS_UNION_TYPE \
-NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_GENERAL, 3002)
 
 /**
  * XForms event types
@@ -247,7 +232,7 @@ public:
    * and returned (addrefed) in |aModel|
    *
    * The return value is an XPathResult as returned from
-   * nsIDOMXPathEvaluator::Evaluate().
+   * nsIXFormsXPathEvaluator::Evaluate().
    */
   static NS_HIDDEN_(nsresult)
     EvaluateNodeBinding(nsIDOMElement           *aElement,
@@ -262,17 +247,10 @@ public:
                         nsCOMArray<nsIDOMNode>  *aDeps = nsnull,
                         nsStringArray           *aIndexesUsed = nsnull);
 
-  static NS_HIDDEN_(nsresult)
-    CreateExpression(nsIXPathEvaluatorInternal  *aEvaluator,
-                     const nsAString            &aExpression,
-                     nsIDOMXPathNSResolver      *aResolver,
-                     nsISupports                *aState,
-                     nsIDOMXPathExpression     **aResult);
-
   /**
    * Convenience method for doing XPath evaluations.  This gets a
-   * nsIDOMXPathEvaluator from |aContextNode|'s ownerDocument, and calls
-   * nsIDOMXPathEvaluator::Evaluate using the given expression, context node,
+   * nsIXFormsXPathEvaluator from |aContextNode|'s ownerDocument, and calls
+   * nsIXFormsXPathEvaluator::Evalute using the given expression, context node,
    * namespace resolver, and result type.
    */
   static NS_HIDDEN_(nsresult)
@@ -285,18 +263,6 @@ public:
                   PRInt32                 aContextSize = 1,
                   nsCOMArray<nsIDOMNode> *aSet = nsnull,
                   nsStringArray          *aIndexesUsed = nsnull);
-
-  static NS_HIDDEN_(nsresult)
-    EvaluateXPath(nsIXPathEvaluatorInternal  *aEvaluator,
-                  const nsAString            &aExpression,
-                  nsIDOMNode                 *aContextNode,
-                  nsIDOMXPathNSResolver      *aResolver,
-                  nsISupports                *aState,
-                  PRUint16                    aResultType,
-                  PRInt32                     aContextPosition,
-                  PRInt32                     aContextSize,
-                  nsIDOMXPathResult          *aInResult,
-                  nsIDOMXPathResult         **aResult);
 
   /**
    * Given a node in the instance data, get its string value according
@@ -322,17 +288,6 @@ public:
   static NS_HIDDEN_(PRBool)
     GetSingleNodeBindingValue(nsIDOMElement* aElement, nsString& aValue);
 
-  /**
-   * Convenience method.  Evaluates the single node binding expression for the
-   * given xforms element and then sets the resulting single node to aValue.
-   * This allows elements like xf:filename and xf:mediatype to function
-   * properly without needing the overhead of being nsIXFormsControls.
-   *
-   * Returns PR_TRUE if the evaluation and node value setting both succeeded.
-   */
-  static NS_HIDDEN_(PRBool)
-    SetSingleNodeBindingValue(nsIDOMElement *aElement, const nsAString &aValue,
-                              PRBool *aChanged);
   /**
    * Dispatch an XForms event.  aDefaultActionEnabled is returned indicating
    * if the default action of the dispatched event was enabled.  aSrcElement
@@ -482,10 +437,8 @@ public:
   /**
    * Outputs to the Error console.
    *
-   * @param aMessage          If aLiteralMessage is PR_FALSE, then this is the
-   *                          name of string to output, which is loaded from
-   *                          xforms.properties.
-   *                          Otherwise this message is used 'as is'.
+   * @param aMessageName      Name of string to output, which is loaded from
+                              xforms.properties
    * @param aParams           Optional parameters for the loaded string
    * @param aParamLength      Amount of params in aParams
    * @param aElement          If set, is used to determine and output the
@@ -493,17 +446,13 @@ public:
    * @param aContext          If set, the node is used to output what element
                               caused the error
    * @param aErrorType        Type of error in form of an nsIScriptError flag
-   * @param aLiteralMessage   If true, then message string is used literally,
-   *                          without going through xforms.properties and
-   *                          without formatting.
    */
-  static NS_HIDDEN_(void) ReportError(const nsAString  &aMessageName,
+  static NS_HIDDEN_(void) ReportError(const nsString   &aMessageName,
                                       const PRUnichar **aParams,
                                       PRUint32          aParamLength,
                                       nsIDOMNode       *aElement,
                                       nsIDOMNode       *aContext,
-                                      PRUint32          aErrorFlag = nsIScriptError::errorFlag,
-                                      PRBool            aLiteralMessage = PR_FALSE);
+                                      PRUint32          aErrorFlag = nsIScriptError::errorFlag);
 
   /**
    * Simple version of ReportError(), used when reporting without message
@@ -514,85 +463,37 @@ public:
    * @param aElement          Element to use for location and context
    * @param aErrorType        Type of error in form of an nsIScriptError flag
    */
-  static NS_HIDDEN_(void) ReportError(const nsAString &aMessageName,
-                                      nsIDOMNode      *aElement = nsnull,
-                                      PRUint32         aErrorFlag = nsIScriptError::errorFlag)
+  static NS_HIDDEN_(void) ReportError(const nsString &aMessageName,
+                                      nsIDOMNode     *aElement = nsnull,
+                                      PRUint32        aErrorFlag = nsIScriptError::errorFlag)
     {
-      nsXFormsUtils::ReportError(aMessageName, nsnull, 0, aElement, aElement, aErrorFlag, PR_FALSE);
+      nsXFormsUtils::ReportError(aMessageName, nsnull, 0, aElement, aElement, aErrorFlag);
     }
 
   /**
-   * Similar to ReportError(), used when reporting an error directly to the
-   * console.
+   * Returns whether the aDocument is ready to bind data (all instance documents
+   * loaded).
    *
-   * @param aMessage       The literal message to be displayed.  Any necessary      
-   *                       translation/string formatting needs to have been
-   *                       done already
-   * @param aElement       Element to use for location and context
-   * @param aContext       If set, the node is used to output what element
-   *                       caused the error
-   * @param aErrorType     Type of error in form of an nsIScriptError flag
+   * @param aDocument      Document to check
    */
-  static NS_HIDDEN_(void) ReportErrorMessage(const nsAString &aMessage,
-                                             nsIDOMNode      *aElement = nsnull,
-                                             PRUint32         aErrorFlag = nsIScriptError::errorFlag)
-    {
-      nsXFormsUtils::ReportError(aMessage, nsnull, 0, aElement, aElement, aErrorFlag, PR_TRUE);
-    }
+  static NS_HIDDEN_(PRBool) IsDocumentReadyForBind(nsIDOMDocument *aDocument);
 
   /**
-   * Returns whether the an elements document is ready to bind data (all
-   * instance documents loaded, etc.).
+   * Retrieve an element by id, handling (cloned) elements inside repeats.
    *
-   * @param aElement         The element to check for
-   */
-  static NS_HIDDEN_(PRBool) IsDocumentReadyForBind(nsIDOMElement *aElement);
-
-  /**
-   * Search for an element by ID through repeat rows looking for controls in
-   * addition to looking through the regular DOM.
-   *
-   * For example, xf:dispatch dispatches an event to an element with the given
-   * ID. If the element is in a repeat, you don't want to dispatch the event to
-   * the element in the DOM since we just end up hiding it and treating it as
-   * part of the repeat template. So we use nsXFormsUtils::GetElementById to
-   * dispatch the event to the contol with that id that is in the repeat row
-   * that has the current focus (well, the repeat row that corresponds to the
-   * repeat's index). If the element with that ID isn't in a repeat, then it
-   * picks the element with that ID from the DOM. But you wouldn't want to use
-   * this call for items that you know can't be inside repeats (like instance or
-   * submission elements). So for those you should use
-   * nsXFormsUtils::GetElementByContextId.
-   *
+   * @param aDoc              The document to get element from
    * @param aId               The id of the element
    * @param aOnlyXForms       Only search for XForms elements
    * @param aCaller           The caller (or rather the caller's DOM element),
                               ignored if nsnull
    * @param aElement          The element (or nsnull if not found)
    */
-  static NS_HIDDEN_(nsresult) GetElementById(const nsAString  &aId,
+  static NS_HIDDEN_(nsresult) GetElementById(nsIDOMDocument   *aDoc,
+                                             const nsAString  &aId,
                                              const PRBool      aOnlyXForms,
                                              nsIDOMElement    *aCaller,
                                              nsIDOMElement   **aElement);
-
-  /**
-   * Search for an element with the given ID value. First
-   * nsIDOMDocument::getElementById() is used. If it successful then found
-   * element is returned. Second, if the given node is inside anonymous content
-   * then search is performed throughout the complete bindings chain by @anonid
-   * attribute.
-   *
-   * @param aRefNode      The node relatively of which search is performed in
-   *                      anonymous content
-   * @param aId           The @id/@anonid value to search for
-   *
-   * @return aElement     The element we found that has its ID/anonid value
-   *                      equal to aId
-   */
-  static NS_HIDDEN_(nsresult) GetElementByContextId(nsIDOMElement   *aRefNode,
-                                                    const nsAString &aId,
-                                                    nsIDOMElement   **aElement);
-
+  
   /**
    * Shows an error dialog for fatal errors.
    *
@@ -646,72 +547,6 @@ public:
    */
   static NS_HIDDEN_(nsresult) GetWindowFromDocument(nsIDOMDocument        *aDoc,
                                                     nsIDOMWindowInternal **aWindow);
-
-  /**
-   * Function to get the corresponding model element from a xforms node or
-   * a xforms instance data node.
-   */
-  static NS_HIDDEN_(nsresult) GetModelFromNode(nsIDOMNode *aNode,
-                                               nsIDOMNode **aResult);
-
-  /**
-   * Function to see if the given node is associated with the given model.
-   * Right now this function is only called by XPath in the case of the
-   * instance() function.
-   * The provided node can be an instance node from an instance
-   * document and thus be associated to the model in that way (model elements
-   * contain instance elements).  Otherwise the node will be an XForms element
-   * that was used as the context node of the XPath expression (i.e the
-   * XForms control has an attribute that contains an XPath expression).
-   * Form controls are associated with model elements either explicitly through
-   * single-node binding or implicitly (if model cannot by calculated, it
-   * will use the first model element encountered in the document).  The model
-   * can also be inherited from a containing element like xforms:group or
-   * xforms:repeat.
-   */
-  static NS_HIDDEN_(PRBool) IsNodeAssocWithModel(nsIDOMNode *aNode,
-                                                 nsIDOMNode *aModel);
-
-  /**
-   * Function to get the instance document root for the instance element with
-   * the given id.  The instance element must be associated with the given
-   * model.
-   */
-  static NS_HIDDEN_(nsresult) GetInstanceDocumentRoot(const nsAString &aID,
-                                                      nsIDOMNode *aModelNode,
-                                                      nsIDOMNode **aResult);
-
-  /**
-   * Function to ensure that aValue is of the schema type aType.  Will basically
-   * be a forwarder to the nsISchemaValidator function of the same name.
-   */
-  static NS_HIDDEN_(PRBool) ValidateString(const nsAString &aValue,
-                                             const nsAString & aType,
-                                             const nsAString & aNamespace);
-
-  static NS_HIDDEN_(nsresult) GetRepeatIndex(nsIDOMNode *aRepeat,
-                                             PRInt32 *aIndex);
-
-  static NS_HIDDEN_(nsresult) GetMonths(const nsAString & aValue,
-                                        PRInt32 * aMonths);
-
-  static NS_HIDDEN_(nsresult) GetSeconds(const nsAString & aValue,
-                                         double * aSeconds);
-
-  static NS_HIDDEN_(nsresult) GetSecondsFromDateTime(const nsAString & aValue,
-                                                     double * aSeconds);
-
-  static NS_HIDDEN_(nsresult) GetDaysFromDateTime(const nsAString & aValue,
-                                                  PRInt32 * aDays);
-
-  /**
-   * Determine whether the given node contains an xf:itemset as a child.
-   * In valid XForms documents this should only be possible if aNode is an
-   * xf:select/1 or an xf:choices element.  This function is used primarily
-   * as a worker function for select/1's IsContentAllowed override.
-
-   */
-  static NS_HIDDEN_(PRBool) NodeHasItemset(nsIDOMNode *aNode);
 
 private:
   /**

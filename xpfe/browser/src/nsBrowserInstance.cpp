@@ -61,31 +61,30 @@
 #include "nsIComponentManager.h"
 #include "nsCRT.h"
 
+#include "nsIScriptContext.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDOMDocument.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindowInternal.h"
 
 #include "nsIContentViewer.h"
 #include "nsIContentViewerEdit.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsIWindowWatcher.h"
 #include "nsCOMPtr.h"
-#include "nsAutoPtr.h"
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
-#include "nsThreadUtils.h"
 
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
 #include "nsIURL.h"
 #include "nsIIOService.h"
 #include "nsIWidget.h"
+#include "plevent.h"
 #include "plstr.h"
 
 #include "nsIAppStartup.h"
 
-#ifdef MOZ_XUL
 #include "nsIBrowserHistory.h"
-#endif
 #include "nsDocShellCID.h"
 
 #include "nsIObserverService.h"
@@ -109,6 +108,10 @@
 #define ENABLE_PAGE_CYCLER
 #endif
 
+/* Define Class IDs */
+static NS_DEFINE_CID(kPrefServiceCID,           NS_PREF_CID);
+static NS_DEFINE_CID(kProxyObjectManagerCID,    NS_PROXYEVENT_MANAGER_CID);
+
 #ifdef DEBUG                                                           
 static int APP_DEBUG = 0; // Set to 1 in debugger to turn on debugging.
 #else                                                                  
@@ -128,6 +131,7 @@ const char *kIgnoreOverrideMilestone = "ignore";
 //*****************************************************************************
 
 #ifdef ENABLE_PAGE_CYCLER
+#include "nsIProxyObjectManager.h"
 #include "nsITimer.h"
 
 static void TimesUp(nsITimer *aTimer, void *aClosure);
@@ -137,14 +141,7 @@ class PageCycler : public nsIObserver {
 public:
   NS_DECL_ISUPPORTS
 
-  struct PageCyclerEvent : public nsRunnable {
-    PageCyclerEvent(PageCycler *pc) : mPageCycler(pc) {}
-    NS_IMETHOD Run() {
-      mPageCycler->DoCycle();
-      return NS_OK;
-    }
-    nsRefPtr<PageCycler> mPageCycler;
-  };
+  PLEvent mEvent;
 
   PageCycler(nsBrowserInstance* appCore, const char *aTimeoutValue = nsnull, const char *aWaitValue = nsnull)
     : mAppCore(appCore), mBuffer(nsnull), mCursor(nsnull), mTimeoutValue(0), mWaitValue(1 /*sec*/) { 
@@ -228,11 +225,13 @@ public:
       nsCOMPtr<nsIAppStartup> appStartup = 
                do_GetService(NS_APPSTARTUP_CONTRACTID, &rv);
       if(NS_FAILED(rv)) return rv;
+      nsCOMPtr<nsIProxyObjectManager> pIProxyObjectManager = 
+               do_GetService(kProxyObjectManagerCID, &rv);
+      if(NS_FAILED(rv)) return rv;
       nsCOMPtr<nsIAppStartup> appStartupProxy;
-      rv = NS_GetProxyForObject(NS_PROXY_TO_CURRENT_THREAD,
-                                NS_GET_IID(nsIAppStartup), appStartup,
-                                NS_PROXY_ASYNC | NS_PROXY_ALWAYS,
-                                getter_AddRefs(appStartupProxy));
+      rv = pIProxyObjectManager->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIAppStartup),
+                                                   appStartup, PROXY_ASYNC | PROXY_ALWAYS,
+                                                   getter_AddRefs(appStartupProxy));
 
       (void)appStartupProxy->Quit(nsIAppStartup::eAttemptQuit);
       return NS_ERROR_FAILURE;
@@ -271,12 +270,26 @@ public:
         // otherwise we'll run the risk of confusing the docshell
         // (which notifies observers before propagating the
         // DocumentEndLoad up to parent docshells).
-        nsCOMPtr<nsIRunnable> ev = new PageCyclerEvent(this);
-        if (ev)
-          rv = NS_DispatchToCurrentThread(ev);
+        nsCOMPtr<nsIEventQueueService> eqs
+          = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID);
+
+        rv = NS_ERROR_FAILURE;
+
+        if (eqs) {
+          nsCOMPtr<nsIEventQueue> eq;
+          eqs->ResolveEventQueue(NS_UI_THREAD_EVENTQ, getter_AddRefs(eq));
+          if (eq) {
+            rv = eq->InitEvent(&mEvent, this, HandleAsyncLoadEvent,
+                               DestroyAsyncLoadEvent);
+
+            if (NS_SUCCEEDED(rv)) {
+              rv = eq->PostEvent(&mEvent);
+            }
+          }
+        }
 
         if (NS_FAILED(rv)) {
-          printf("######### PageCycler couldn't asynchronously load: %s\n", NS_ConvertUTF16toUTF8(mLastRequest).get());
+          printf("######### PageCycler couldn't asynchronously load: %s\n", NS_ConvertUCS2toUTF8(mLastRequest).get());
         }
       }
     }
@@ -288,18 +301,26 @@ public:
     return rv;
   }
 
-  void DoCycle()
+  static void* PR_CALLBACK
+  HandleAsyncLoadEvent(PLEvent* aEvent)
   {
-    // load the URL
-    const PRUnichar* url = mLastRequest.get();
-    printf("########## PageCycler starting: %s\n", NS_ConvertUTF16toUTF8(url).get());
+    // This is the callback that actually loads the page
+    PageCycler* self = NS_STATIC_CAST(PageCycler*, PL_GetEventOwner(aEvent));
 
-    mIntervalTime = PR_IntervalNow();
-    mAppCore->LoadUrl(url);
+    // load the URL
+    const PRUnichar* url = self->mLastRequest.get();
+    printf("########## PageCycler starting: %s\n", NS_ConvertUCS2toUTF8(url).get());
+
+    self->mIntervalTime = PR_IntervalNow();
+    self->mAppCore->LoadUrl(url);
 
     // start new timer
-    StartTimer();
+    self->StartTimer();
+    return nsnull;
   }
+
+  static void PR_CALLBACK
+  DestroyAsyncLoadEvent(PLEvent* aEvent) { /*no-op*/ }
 
   const nsAutoString &GetLastRequest( void )
   { 
@@ -359,12 +380,12 @@ NS_IMPL_ISUPPORTS1(PageCycler, nsIObserver)
 void TimesUp(nsITimer *aTimer, void *aClosure)
 {
   if(aClosure){
+    char urlBuf[64];
     PageCycler *pCycler = (PageCycler *)aClosure;
     pCycler->StopTimer();
-    const nsAutoString &url  = pCycler->GetLastRequest();
-    fprintf(stderr,"########## PageCycler Timeout on URL: %s\n",
-            NS_LossyConvertUTF16toASCII(url).get());
-    pCycler->Observe( pCycler, nsnull, url.get() );
+    pCycler->GetLastRequest().ToCString( urlBuf, sizeof(urlBuf), 0 );
+    fprintf(stderr,"########## PageCycler Timeout on URL: %s\n", urlBuf);
+    pCycler->Observe( pCycler, nsnull, (pCycler->GetLastRequest()).get() );
   }
 }
 
@@ -397,10 +418,10 @@ nsBrowserInstance::ReinitializeContentVariables()
   nsCOMPtr<nsIDOMWindow> contentWindow;
   mDOMWindow->GetContent(getter_AddRefs(contentWindow));
 
-  nsCOMPtr<nsPIDOMWindow> pcontentWindow(do_QueryInterface(contentWindow));
+  nsCOMPtr<nsIScriptGlobalObject> globalObj(do_QueryInterface(contentWindow));
 
-  if (pcontentWindow) {
-    nsIDocShell *docShell = pcontentWindow->GetDocShell();
+  if (globalObj) {
+    nsIDocShell *docShell = globalObj->GetDocShell();
 
     mContentAreaDocShellWeak = do_GetWeakReference(docShell); // Weak reference
 
@@ -409,7 +430,7 @@ nsBrowserInstance::ReinitializeContentVariables()
       if (docShellAsItem) {
         nsXPIDLString name;
         docShellAsItem->GetName(getter_Copies(name));
-        printf("Attaching to Content WebShell [%s]\n", NS_LossyConvertUTF16toASCII(name).get());
+        printf("Attaching to Content WebShell [%s]\n", NS_LossyConvertUCS2toASCII(name).get());
       }
     }
   }
@@ -541,7 +562,7 @@ nsBrowserInstance::StartPageCycler(PRBool* aIsPageCycling)
 
     if (!urlstr.IsEmpty()) {
       // A url was provided. Load it
-      if (APP_DEBUG) printf("Got Command line URL to load %s\n", NS_ConvertUTF16toUTF8(urlstr).get());
+      if (APP_DEBUG) printf("Got Command line URL to load %s\n", NS_ConvertUCS2toUTF8(urlstr).get());
       rv = LoadUrl( urlstr.get() );
       sCmdLineURLUsed = PR_TRUE;
       return rv;
@@ -559,20 +580,20 @@ nsBrowserInstance::SetWebShellWindow(nsIDOMWindowInternal* aWin)
   NS_ENSURE_ARG(aWin);
   mDOMWindow = aWin;
 
-  nsCOMPtr<nsPIDOMWindow> win( do_QueryInterface(aWin) );
-  if (!win) {
+  nsCOMPtr<nsIScriptGlobalObject> globalObj( do_QueryInterface(aWin) );
+  if (!globalObj) {
     return NS_ERROR_FAILURE;
   }
 
   if (APP_DEBUG) {
     nsCOMPtr<nsIDocShellTreeItem> docShellAsItem =
-      do_QueryInterface(win->GetDocShell());
+      do_QueryInterface(globalObj->GetDocShell());
 
     if (docShellAsItem) {
       // inform our top level webshell that we are its parent URI content listener...
       nsXPIDLString name;
       docShellAsItem->GetName(getter_Copies(name));
-      printf("Attaching to WebShellWindow[%s]\n", NS_LossyConvertUTF16toASCII(name).get());
+      printf("Attaching to WebShellWindow[%s]\n", NS_LossyConvertUCS2toASCII(name).get());
     }
   }
 
@@ -631,7 +652,7 @@ NS_IMETHODIMP nsBrowserContentHandler::GetChromeUrlForTask(char **aChromeUrlForT
     return NS_ERROR_NULL_POINTER;
 
   nsresult rv = NS_ERROR_FAILURE;
-  nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID));
+  nsCOMPtr<nsIPref> prefs(do_GetService(kPrefServiceCID));
   if (prefs) {
     rv = prefs->CopyCharPref("browser.chromeURL", aChromeUrlForTask);
     if (NS_SUCCEEDED(rv) && (*aChromeUrlForTask)[0] == '\0') {
@@ -723,7 +744,7 @@ NS_IMETHODIMP nsBrowserContentHandler::GetDefaultArgs(PRUnichar **aDefaultArgs)
 
   nsresult rv;
 
-  nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID));
+  nsCOMPtr<nsIPref> prefs(do_GetService(kPrefServiceCID));
   if (prefs) {
     if (NeedHomepageOverride(prefs)) {
       rv = prefs->GetLocalizedUnicharPref(PREF_HOMEPAGE_OVERRIDE_URL, aDefaultArgs);

@@ -42,11 +42,10 @@
 #include "nsHttpConnectionInfo.h"
 #include "nsHttpConnection.h"
 #include "nsHttpTransaction.h"
-#include "nsVoidArray.h"
-#include "nsThreadUtils.h"
 #include "nsHashtable.h"
-#include "nsAutoPtr.h"
 #include "prmon.h"
+
+#include "nsIEventTarget.h"
 
 class nsHttpPipeline;
 
@@ -115,7 +114,7 @@ public:
 
     // called to get a reference to the socket transport service.  the socket
     // transport service is not available when the connection manager is down.
-    nsresult GetSocketThreadTarget(nsIEventTarget **);
+    nsresult GetSocketThreadEventTarget(nsIEventTarget **);
 
     // called when a connection is done processing a transaction.  if the 
     // connection can be reused then it will be added to the idle list, else
@@ -187,9 +186,9 @@ private:
     // NOTE: these members may be accessed from any thread (use mMonitor)
     //-------------------------------------------------------------------------
 
-    PRInt32                      mRef;
-    PRMonitor                   *mMonitor;
-    nsCOMPtr<nsIEventTarget>     mSocketThreadTarget;
+    PRInt32                   mRef;
+    PRMonitor                *mMonitor;
+    nsCOMPtr<nsIEventTarget>  mSTEventTarget; // event target for socket thread
 
     // connection limits
     PRUint16 mMaxConns;
@@ -222,42 +221,44 @@ private:
 
     // nsConnEvent
     //
-    // subclass of nsRunnable used to marshall events to the socket transport
+    // subclass of PLEvent used to marshall events to the socket transport
     // thread.  this class is used to implement PostEvent.
     //
     class nsConnEvent;
     friend class nsConnEvent;
-    class nsConnEvent : public nsRunnable
+    class nsConnEvent : public PLEvent
     {
     public:
         nsConnEvent(nsHttpConnectionMgr *mgr,
                     nsConnEventHandler handler,
                     PRInt32 iparam,
                     void *vparam)
-            : mMgr(mgr)
-            , mHandler(handler)
+            : mHandler(handler)
             , mIParam(iparam)
             , mVParam(vparam)
         {
-            NS_ADDREF(mMgr);
+            NS_ADDREF(mgr);
+            PL_InitEvent(this, mgr, HandleEvent, DestroyEvent);
         }
 
-        NS_IMETHOD Run()
+        PR_STATIC_CALLBACK(void*) HandleEvent(PLEvent *event)
         {
-            (mMgr->*mHandler)(mIParam, mVParam);
-            return NS_OK;
+            nsHttpConnectionMgr *mgr = (nsHttpConnectionMgr *) event->owner;
+            nsConnEvent *self = (nsConnEvent *) event;
+            nsConnEventHandler handler = self->mHandler;
+            (mgr->*handler)(self->mIParam, self->mVParam);
+            NS_RELEASE(mgr);
+            return nsnull;
+        }
+        PR_STATIC_CALLBACK(void) DestroyEvent(PLEvent *event)
+        {
+            delete (nsConnEvent *) event;
         }
 
     private:
-        virtual ~nsConnEvent()
-        {
-            NS_RELEASE(mMgr);
-        }
-
-        nsHttpConnectionMgr *mMgr;
-        nsConnEventHandler   mHandler;
-        PRInt32              mIParam;
-        void                *mVParam;
+        nsConnEventHandler  mHandler;
+        PRInt32             mIParam;
+        void               *mVParam;
     };
 
     nsresult PostEvent(nsConnEventHandler  handler,

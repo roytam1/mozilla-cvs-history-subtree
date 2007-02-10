@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim: set ts=2 sw=2 et tw=78: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -108,7 +107,7 @@ DECL_TAG_LIST(gFontKids,{eHTMLTag_legend COMMA eHTMLTag_table COMMA eHTMLTag_tex
 DECL_TAG_LIST(gFormKids,{eHTMLTag_keygen})
 DECL_TAG_LIST(gFramesetKids,{eHTMLTag_frame COMMA eHTMLTag_frameset COMMA eHTMLTag_noframes})
 
-DECL_TAG_LIST(gHtmlKids,{eHTMLTag_body COMMA eHTMLTag_frameset COMMA eHTMLTag_head COMMA eHTMLTag_noscript COMMA eHTMLTag_noframes COMMA eHTMLTag_script COMMA eHTMLTag_newline COMMA eHTMLTag_whitespace})
+DECL_TAG_LIST(gHtmlKids,{eHTMLTag_body COMMA eHTMLTag_frameset COMMA eHTMLTag_head COMMA eHTMLTag_map COMMA eHTMLTag_noscript COMMA eHTMLTag_noframes COMMA eHTMLTag_script COMMA eHTMLTag_newline COMMA eHTMLTag_whitespace})
 
 DECL_TAG_LIST(gLabelKids,{eHTMLTag_span})
 DECL_TAG_LIST(gLIKids,{eHTMLTag_ol COMMA eHTMLTag_ul})
@@ -195,6 +194,12 @@ const nsHTMLElement gHTMLElements[] = {
     /*contain-func*/                    0
   },
   {
+    /*************************************************
+      Note: I changed A to contain flow elements
+            since it's such a popular (but illegal) 
+            idiom.
+     *************************************************/
+
     /*tag*/                             eHTMLTag_a,
     /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_unknown,
     /*rootnodes,endrootnodes*/          &gRootTags,&gRootTags,
@@ -880,7 +885,7 @@ const nsHTMLElement gHTMLElements[] = {
     /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_unknown,
     /*rootnodes,endrootnodes*/          &gNoframeRoot,&gNoframeRoot,
     /*autoclose starttags and endtags*/ 0,0,0,0,
-    /*parent,incl,exclgroups*/          kFlowEntity, kFlowEntity, kNone,
+    /*parent,incl,exclgroups*/          kBlock, kFlowEntity, kNone,
     /*special props, prop-range*/       0, kNoPropRange,
     /*special parents,kids,skip*/       &gNoframeRoot,0,eHTMLTag_unknown,
     /*contain-func*/                    0
@@ -900,8 +905,8 @@ const nsHTMLElement gHTMLElements[] = {
     /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_unknown,
     /*rootnodes,endrootnodes*/          &gRootTags,&gRootTags,
     /*autoclose starttags and endtags*/ 0,0,0,0,
-    /*parent,incl,exclgroups*/          kSpecial, (kFlowEntity|kSelf), kNone,
-    /*special props, prop-range*/       kNoStyleLeaksOut|kPreferBody,kDefaultPropRange,
+    /*parent,incl,exclgroups*/          kSpecial, (kFlowEntity|kInlineEntity|kSelf), kNone, // XXX should have a kHeadMisc parent too
+    /*special props, prop-range*/       kNoStyleLeaksOut,kDefaultPropRange,
     /*special parents,kids,skip*/       0,&gContainsParam,eHTMLTag_unknown,
     /*contain-func*/                    0
   },
@@ -1012,7 +1017,7 @@ const nsHTMLElement gHTMLElements[] = {
     /*autoclose starttags and endtags*/ 0,0,0,0,
     /*parent,incl,exclgroups*/          (kSpecial|kHeadContent), kCDATA, kNone,   // note: this is kHeadContent since shipping this breaks things.
     /*special props, prop-range*/       kNoStyleLeaksIn|kLegalOpen, kNoPropRange,
-    /*special parents,kids,skip*/       0,&gContainsText,eHTMLTag_unknown,
+    /*special parents,kids,skip*/       0,&gContainsText,eHTMLTag_script,
     /*contain-func*/                    0
   },
   {
@@ -1026,12 +1031,33 @@ const nsHTMLElement gHTMLElements[] = {
     /*contain-func*/                    0
   },
   {
+    /*tag*/                             eHTMLTag_server,
+    /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_unknown,
+    /*rootnodes,endrootnodes*/          &gRootTags,&gRootTags,
+    /*autoclose starttags and endtags*/ 0,0,0,0,
+    /*parent,incl,exclgroups*/          (kSpecial|kHeadMisc), kCDATA, kNone,
+    /*special props, prop-range*/       (kNoStyleLeaksIn|kLegalOpen), kNoPropRange,
+    /*special parents,kids,skip*/       0,&gContainsText,eHTMLTag_server,
+    /*contain-func*/                    0
+  },
+  {
     /*tag*/                             eHTMLTag_small,
     /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_unknown,
     /*rootnodes,endrootnodes*/          &gRootTags,&gRootTags,
     /*autoclose starttags and endtags*/ 0,0,0,0,
     /*parent,incl,exclgroups*/          kFontStyle, (kSelf|kInlineEntity), kNone,
     /*special props, prop-range*/       0, kDefaultPropRange,
+    /*special parents,kids,skip*/       0,0,eHTMLTag_unknown,
+    /*contain-func*/                    0
+  },
+  {
+    
+    /*tag*/                             eHTMLTag_sound,
+    /*req-parent excl-parent*/          eHTMLTag_unknown,eHTMLTag_unknown,
+    /*rootnodes,endrootnodes*/          &gRootTags,&gRootTags,
+    /*autoclose starttags and endtags*/ 0,0,0,0,
+    /*parent,incl,exclgroups*/          (kFlowEntity|kHeadMisc), kNone, kNone,  // Added kFlowEntity|kHeadMisc & kNonContainer in
+    /*special props, prop-range*/       kNonContainer,kDefaultPropRange,        // Ref. to Bug 25749
     /*special parents,kids,skip*/       0,0,eHTMLTag_unknown,
     /*contain-func*/                    0
   },
@@ -1089,8 +1115,8 @@ const nsHTMLElement gHTMLElements[] = {
     /*rootnodes,endrootnodes*/          &gInHead,&gInHead,
     /*autoclose starttags and endtags*/ 0,0,0,0,
     /*parent,incl,exclgroups*/          kHeadContent, kCDATA, kNone,
-    /*special props, prop-range*/       kNoStyleLeaksIn, kNoPropRange,
-    /*special parents,kids,skip*/       &gInHead,0,eHTMLTag_unknown,
+    /*special props, prop-range*/       kNoStyleLeaksIn|kNonContainer, kNoPropRange,
+    /*special parents,kids,skip*/       &gInHead,0,eHTMLTag_style,
     /*contain-func*/                    0
   },
   {
@@ -1191,7 +1217,7 @@ const nsHTMLElement gHTMLElements[] = {
     /*autoclose starttags and endtags*/ 0,0,0,0,
     /*parent,incl,exclgroups*/          kHeadContent,kPCDATA, kNone,
     /*special props, prop-range*/       kNoStyleLeaksIn, kNoPropRange,
-    /*special parents,kids,skip*/       &gInHead,&gContainsText,eHTMLTag_unknown,
+    /*special parents,kids,skip*/       &gInHead,&gContainsText,eHTMLTag_title,
     /*contain-func*/                    0
   },
   {
@@ -2206,36 +2232,6 @@ eHTMLTags nsHTMLElement::GetCloseTargetForEndTag(nsDTDContext& aContext,PRInt32 
       return mTagID;
     }
         
-  }
-
-  else if(mTagID == eHTMLTag_legend)  {
-    while((--theIndex>=anIndex) && (eHTMLTag_unknown==result)){
-      eHTMLTags theTag = aContext.TagAt(theIndex);
-      if (theTag == mTagID) {
-        result = theTag;
-        break;
-      }
-
-      if (!CanContain(theTag, aMode)) {
-        break;
-      }
-    }
-  }
-
-  else if (mTagID == eHTMLTag_head) {
-    while (--theIndex >= anIndex) {
-      eHTMLTags tag = aContext.TagAt(theIndex);
-      if (tag == eHTMLTag_html) {
-        // HTML gates head closing, but the head should never be the parent of
-        // an html tag.
-        break;
-      }
-
-      if (tag == eHTMLTag_head) {
-        result = eHTMLTag_head;
-        break;
-      }
-    }
   }
 
   return result;

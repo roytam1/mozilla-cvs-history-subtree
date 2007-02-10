@@ -36,7 +36,7 @@
 
 #include "nsSVGAngle.h"
 #include "prdtoa.h"
-#include "nsGkAtoms.h"
+#include "nsSVGAtoms.h"
 #include "nsSVGValue.h"
 #include "nsReadableUtils.h"
 #include "nsTextFormatter.h"
@@ -45,8 +45,11 @@
 #include "nsISVGValueUtils.h"
 #include "nsWeakReference.h"
 #include "nsContentUtils.h"
-#include "nsSVGUtils.h"
 #include <math.h>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // nsSVGAngle class
@@ -95,8 +98,8 @@ protected:
   PRBool IsValidUnitType(PRUint16 unit);
 
   float mValueInSpecifiedUnits;
-  PRUint8 mSpecifiedUnitType;
-  PRPackedBool mIsAuto;
+  PRUint8 mSpecifiedUnitType : 3;
+  PRPackedBool mIsAuto : 1;
 };
 
 
@@ -282,11 +285,13 @@ nsSVGAngle::GetValueAsString(nsAString & aValueAsString)
     aValueAsString.AssignLiteral("auto");
     return NS_OK;
   }
+  aValueAsString.Truncate();
+
   PRUnichar buf[24];
   nsTextFormatter::snprintf(buf, sizeof(buf)/sizeof(PRUnichar),
                             NS_LITERAL_STRING("%g").get(),
                             (double)mValueInSpecifiedUnits);
-  aValueAsString.Assign(buf);
+  aValueAsString.Append(buf);
   
   nsAutoString unitString;
   GetUnitString(unitString);
@@ -376,13 +381,13 @@ void nsSVGAngle::GetUnitString(nsAString& unit)
     UnitAtom = nsnull;
     break;
   case SVG_ANGLETYPE_DEG:
-    UnitAtom = nsGkAtoms::deg;
+    UnitAtom = nsSVGAtoms::deg;
     break;
   case SVG_ANGLETYPE_GRAD:
-    UnitAtom = nsGkAtoms::grad;
+    UnitAtom = nsSVGAtoms::grad;
     break;
   case SVG_ANGLETYPE_RAD:
-    UnitAtom = nsGkAtoms::rad;
+    UnitAtom = nsSVGAtoms::rad;
     break;
   default:
     NS_ASSERTION(PR_FALSE, "unknown unit");
@@ -399,11 +404,11 @@ PRUint16 nsSVGAngle::GetUnitTypeForString(const char* unitStr)
                    
   nsCOMPtr<nsIAtom> unitAtom = do_GetAtom(unitStr);
 
-  if (unitAtom == nsGkAtoms::deg)
+  if (unitAtom == nsSVGAtoms::deg)
     return SVG_ANGLETYPE_DEG;
-  else if (unitAtom == nsGkAtoms::grad)
+  else if (unitAtom == nsSVGAtoms::grad)
     return SVG_ANGLETYPE_GRAD;
-  else if (unitAtom == nsGkAtoms::rad)
+  else if (unitAtom == nsSVGAtoms::rad)
     return SVG_ANGLETYPE_RAD;
 
   return SVG_ANGLETYPE_UNKNOWN;
@@ -411,7 +416,7 @@ PRUint16 nsSVGAngle::GetUnitTypeForString(const char* unitStr)
 
 PRBool nsSVGAngle::IsValidUnitType(PRUint16 unit)
 {
-  if (unit > SVG_ANGLETYPE_UNKNOWN && unit <= SVG_ANGLETYPE_GRAD)
+  if (unit>0 && unit<=4)
     return PR_TRUE;
 
   return PR_FALSE;

@@ -30,23 +30,23 @@ function bmProcessor(prefStore) {
 
 	this.xmlRef=document.implementation.createDocument("","",null);
 	this.xslRef=document.implementation.createDocument("http://www.w3.org/1999/XSL/Transform","stylesheet",null);
+    this.xmlRef=null;
 
-	var bookmarkStore=null;
+    var aDOMParser = new DOMParser();
 
 	try {
-	      gPref = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
-	      bookmarkStore = gPref.getCharPref(prefStore);
-     
-      } catch (ignore) {}
+        var bookmarkStore=null;
+        gPref = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
+        bookmarkStore = gPref.getCharPref(prefStore);
+
+        this.xmlRef = aDOMParser.parseFromString(bookmarkStore,"text/xml");
+
+    } catch (ignore) {}
 
 
-	var aDOMParser = new DOMParser();
-	this.xmlRef = aDOMParser.parseFromString(bookmarkStore,"text/xml");
 
 	if(this.xmlRef&&this.xmlRef.firstChild&&this.xmlRef.firstChild.nodeName=="bm") {
-
 		// All good to go. 
-		
 	} else {
 		var bookmarkEmpty="<bm></bm>";
 		gPref.setCharPref(prefStore,bookmarkEmpty);
@@ -62,13 +62,10 @@ function bmProcessor(prefStore) {
 
 	this.xmlLoadedState=true;
 	this.xslLoadedState=false;
-
-
 }
 
 bmProcessor.prototype.xmlLoaded = function () {
 	this.xmlLoadedState=true;	
-alert('loaded');
 	this.apply();
 }
 

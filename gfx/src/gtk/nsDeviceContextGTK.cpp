@@ -81,9 +81,11 @@ static PRInt32 GetXftDPI(void);
 
 #include <X11/Xatom.h>
 
-#include "nsIDeviceContextSpec.h"
+#include "nsDeviceContextSpecG.h"
 
 static PRInt32 GetOSDPI(void);
+
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
 #define GDK_DEFAULT_FONT1 "-*-helvetica-medium-r-*--*-120-*-*-*-*-iso8859-1"
 #define GDK_DEFAULT_FONT2 "-*-fixed-medium-r-*-*-*-120-*-*-*-*-*-*"
@@ -145,13 +147,17 @@ nsDeviceContextGTK::nsDeviceContextGTK()
   mDepth = 0 ;
   mNumCells = 0;
 
+  mWidthFloat = 0.0f;
+  mHeightFloat = 0.0f;
+  mWidth = -1;
+  mHeight = -1;
   mDeviceWindow = nsnull;
 }
 
 nsDeviceContextGTK::~nsDeviceContextGTK()
 {
   nsresult rv;
-  nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID, &rv);
+  nsCOMPtr<nsIPref> prefs = do_GetService(kPrefCID, &rv);
   if (NS_SUCCEEDED(rv)) {
     prefs->UnregisterCallback("layout.css.dpi",
                               prefChanged, (void *)this);
@@ -214,8 +220,11 @@ NS_IMETHODIMP nsDeviceContextGTK::Init(nsNativeWidget aNativeWidget)
   nsCOMPtr<nsIScreen> screen;
   mScreenManager->GetPrimaryScreen ( getter_AddRefs(screen) );
   if ( screen ) {
-    PRInt32 depth;
+    PRInt32 x, y, width, height, depth;
+    screen->GetRect ( &x, &y, &width, &height );
     screen->GetPixelDepth ( &depth );
+    mWidthFloat = float(width);
+    mHeightFloat = float(height);
     mDepth = NS_STATIC_CAST ( PRUint32, depth );
   }
     
@@ -233,7 +242,7 @@ NS_IMETHODIMP nsDeviceContextGTK::Init(nsNativeWidget aNativeWidget)
     // If it's positive, we use it as the logical resolution
     nsresult res;
 
-    nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &res));
+    nsCOMPtr<nsIPref> prefs(do_GetService(kPrefCID, &res));
     if (NS_SUCCEEDED(res) && prefs) {
       res = prefs->GetIntPref("layout.css.dpi", &prefVal);
       if (NS_FAILED(res)) {
@@ -247,6 +256,30 @@ NS_IMETHODIMP nsDeviceContextGTK::Init(nsNativeWidget aNativeWidget)
   } else {
     SetDPI(mDpi); // to setup p2t and t2p
   }
+
+  sb = gtk_vscrollbar_new(NULL);
+  gtk_widget_ref(sb);
+  gtk_object_sink(GTK_OBJECT(sb));
+#ifdef MOZ_WIDGET_GTK2
+  gtk_widget_ensure_style(sb);
+  gtk_widget_queue_resize(sb);
+#endif /* MOZ_WIDGET_GTK2 */
+  gtk_widget_size_request(sb,&req);
+  mScrollbarWidth = req.width;
+  gtk_widget_destroy(sb);
+  gtk_widget_unref(sb);
+  
+  sb = gtk_hscrollbar_new(NULL);
+  gtk_widget_ref(sb);
+  gtk_object_sink(GTK_OBJECT(sb));
+#ifdef MOZ_WIDGET_GTK2
+  gtk_widget_ensure_style(sb);
+  gtk_widget_queue_resize(sb);
+#endif /* MOZ_WIDGET_GTK2 */
+  gtk_widget_size_request(sb,&req);
+  mScrollbarHeight = req.height;
+  gtk_widget_destroy(sb);
+  gtk_widget_unref(sb);
 
 #ifdef DEBUG
   static PRBool once = PR_TRUE;
@@ -270,18 +303,22 @@ NS_IMETHODIMP nsDeviceContextGTK::CreateRenderingContext(nsIRenderingContext *&a
   }
 #endif
 
+  nsIRenderingContext *pContext;
   nsresult             rv;
-  GtkWidget *w = (GtkWidget*)mWidget;
+  nsDrawingSurfaceGTK  *surf;
+  GtkWidget *w;
+
+  w = (GtkWidget*)mWidget;
 
   // to call init for this, we need to have a valid nsDrawingSurfaceGTK created
-  nsIRenderingContext* pContext = new nsRenderingContextGTK();
+  pContext = new nsRenderingContextGTK();
 
   if (nsnull != pContext)
   {
     NS_ADDREF(pContext);
 
     // create the nsDrawingSurfaceGTK
-    nsDrawingSurfaceGTK* surf = new nsDrawingSurfaceGTK();
+    surf = new nsDrawingSurfaceGTK();
 
     if (surf && w)
       {
@@ -352,6 +389,16 @@ NS_IMETHODIMP nsDeviceContextGTK::SupportsNativeWidgets(PRBool &aSupportsWidgets
   return NS_OK;
 }
 
+NS_IMETHODIMP nsDeviceContextGTK::GetScrollBarDimensions(float &aWidth, float &aHeight) const
+{
+  float scale;
+  GetCanonicalPixelScale(scale);
+  aWidth = mScrollbarWidth * mPixelsToTwips * scale;
+  aHeight = mScrollbarHeight * mPixelsToTwips * scale;
+
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsDeviceContextGTK::GetSystemFont(nsSystemFontID aID, nsFont *aFont) const
 {
   nsresult status = NS_OK;
@@ -409,20 +456,19 @@ NS_IMETHODIMP nsDeviceContextGTK::GetDeviceSurfaceDimensions(PRInt32 &aWidth, PR
   }
 #endif
 
-  PRInt32 width = 0, height = 0;
+  if (mWidth == -1)
+    mWidth = NSToIntRound(mWidthFloat * mDevUnitsToAppUnits);
 
-  nsCOMPtr<nsIScreen> screen;
-  mScreenManager->GetPrimaryScreen(getter_AddRefs(screen));
-  if (screen) {
-    PRInt32 x, y;
-    screen->GetRect(&x, &y, &width, &height);
-  }
+  if (mHeight == -1)
+    mHeight = NSToIntRound(mHeightFloat * mDevUnitsToAppUnits);
 
-  aWidth = NSToIntRound(float(width) * mDevUnitsToAppUnits);
-  aHeight = NSToIntRound(float(height) * mDevUnitsToAppUnits);
+  aWidth = mWidth;
+  aHeight = mHeight;
 
   return NS_OK;
 }
+
+
 
 NS_IMETHODIMP nsDeviceContextGTK::GetRect(nsRect &aRect)
 {
@@ -492,10 +538,7 @@ NS_IMETHODIMP nsDeviceContextGTK::GetDeviceContextFor(nsIDeviceContextSpec *aDev
                                                        nsIDeviceContext *&aContext)
 {
   nsresult                 rv;
-
-#if 0
   PrintMethod              method;
-
   nsDeviceContextSpecGTK  *spec = NS_STATIC_CAST(nsDeviceContextSpecGTK *, aDevice);
   
   rv = spec->GetPrintMethod(method);
@@ -525,11 +568,8 @@ NS_IMETHODIMP nsDeviceContextGTK::GetDeviceContextFor(nsIDeviceContextSpec *aDev
   }
   else
 #endif /* USE_XPRINT */
-#endif
 #ifdef USE_POSTSCRIPT
-//  if (method == pmPostScript) // PostScript
-  {
-
+  if (method == pmPostScript) { // PostScript
     // default/PS
     static NS_DEFINE_CID(kCDeviceContextPS, NS_DEVICECONTEXTPS_CID);
   
@@ -552,8 +592,8 @@ NS_IMETHODIMP nsDeviceContextGTK::GetDeviceContextFor(nsIDeviceContextSpec *aDev
                               (void **)&aContext);
     return rv;
   }
-
 #endif /* USE_POSTSCRIPT */
+  
   NS_WARNING("no print module created.");
   return NS_ERROR_UNEXPECTED;
 }
@@ -618,22 +658,6 @@ nsDeviceContextGTK::SetDPI(PRInt32 aPrefDPI)
   return NS_OK;
 }
 
-static void DoClearCachedSystemFonts()
-{
-  //clear our cache of stored system fonts
-  if (gSystemFonts) {
-    delete gSystemFonts;
-    gSystemFonts = nsnull;
-  }
-}
-
-NS_IMETHODIMP
-nsDeviceContextGTK::ClearCachedSystemFonts()
-{
-  DoClearCachedSystemFonts();
-  return NS_OK;
-}
-
 int nsDeviceContextGTK::prefChanged(const char *aPref, void *aClosure)
 {
   nsDeviceContextGTK *context = (nsDeviceContextGTK*)aClosure;
@@ -641,17 +665,26 @@ int nsDeviceContextGTK::prefChanged(const char *aPref, void *aClosure)
   
   if (nsCRT::strcmp(aPref, "layout.css.dpi")==0) {
     PRInt32 dpi;
-    nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &rv));
+    nsCOMPtr<nsIPref> prefs(do_GetService(kPrefCID, &rv));
     rv = prefs->GetIntPref(aPref, &dpi);
     if (NS_SUCCEEDED(rv))
       context->SetDPI(dpi);
 
     // If this pref changes, we have to clear our cache of stored system
     // fonts.
-    DoClearCachedSystemFonts();
+    ClearCachedSystemFonts();
   }
 
   return 0;
+}
+
+void nsDeviceContextGTK::ClearCachedSystemFonts()
+{
+  //clear our cache of stored system fonts
+  if (gSystemFonts) {
+    delete gSystemFonts;
+    gSystemFonts = nsnull;
+  }
 }
 
 #define DEFAULT_TWIP_FONT_SIZE 240

@@ -48,7 +48,7 @@
 <overlay xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-  <tree id="folderTree" class="plain focusring" flex="1" seltype="text"
+  <tree id="folderTree" class="plain focusring" flex="1" seltype="single" selstyle="primary"
             disableKeyNavigation="true"
             datasources="rdf:null"
             statedatasource="rdf:mailnewsfolders"
@@ -157,22 +157,19 @@
                    hidden="true"
                    persist="hidden width"
                    flex="1"
-                   label="&unreadColumn.label;"
-                   selectable="false"/>
+                   label="&unreadColumn.label;"/>
       <splitter class="tree-splitter"/>
       <treecol id="folderTotalCol"
                    hidden="true"
                    persist="hidden width"
                    flex="1"
-                   label="&totalColumn.label;"
-                   selectable="false"/>
+                   label="&totalColumn.label;"/>
       <splitter class="tree-splitter"/>
       <treecol id="folderSizeCol"
                    hidden="true"
                    persist="hidden width"
                    flex="1"
-                   label="&folderSizeColumn.label;"
-                   selectable="false"/>
+                   label="&folderSizeColumn.label;"/>
     </treecols>
   </tree>
 </overlay>

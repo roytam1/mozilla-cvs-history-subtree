@@ -16,7 +16,7 @@
 #
 # The Initial Developer of the Original Code is
 # Ben Goodger.
-# Portions created by the Initial Developer are Copyright (C) 2000
+# Portions created by the Initial Developer are Copyright (C) 2000-2005
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):

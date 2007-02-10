@@ -20,9 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  Mark Mentovai <mark@moxienet.com>
- *  Stuart Morgan <stuart.morgan@alumni.case.edu>
- *  Josh Aas <josh@mozilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -46,21 +43,8 @@
 #include "nsINameSpaceManager.h"
 #include "nsIDOMElement.h"
 #include "nsIScrollbarMediator.h"
-#include "nsIRollupListener.h"
-
-// category of NSScroller methods to quiet warnings
-
-@interface NSScroller(NativeScrollViewExtensions)
-- (void)trackPagingArea:(id)aEvent;
-@end
 
 NS_IMPL_ISUPPORTS_INHERITED1(nsNativeScrollbar, nsChildView, nsINativeScrollbar)
-
-static const float kHorizScrollbarInitW = 100;
-static const float kHorizScrollbarInitH = 16;
-
-extern nsIRollupListener * gRollupListener;
-extern nsIWidget         * gRollupWidget;
 
 inline void BoundsCheck(PRInt32 low, PRUint32& value, PRUint32 high)
 {
@@ -102,6 +86,19 @@ NSView*
 nsNativeScrollbar::CreateCocoaView(NSRect inFrame)
 {
   return [[[NativeScrollbarView alloc] initWithFrame:inFrame geckoChild:this] autorelease];
+}
+
+
+GrafPtr
+nsNativeScrollbar::GetQuickDrawPort ( )
+{
+  // pray we're always a child of a NSQuickDrawView
+  if ( [mParentView isKindOfClass: [ChildView class]] ) {
+    NSQuickDrawView* parent = NS_STATIC_CAST(NSQuickDrawView*, mParentView);
+    return (GrafPtr)[parent qdPort];
+  }
+  
+  return nsnull;
 }
 
 
@@ -416,8 +413,9 @@ nsNativeScrollbar::SetContent(nsIContent* inContent, nsISupports* inScrollbar,
     // we may have to re-create the scrollbar view as horizontal. Check the
     // 'orient' attribute and rebuild the view with all the settings
     // present in the current view
-    if (mContent->AttrValueIs(kNameSpaceID_None, nsWidgetAtoms::orient,
-                              nsWidgetAtoms::horizontal, eCaseMatters))
+    nsAutoString orient;
+    mContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::orient, orient);
+    if ( orient.Equals(NS_LITERAL_STRING("horizontal")) )
       RecreateHorizontalScrollbar();
   }
   
@@ -434,29 +432,59 @@ nsNativeScrollbar::SetContent(nsIContent* inContent, nsISupports* inScrollbar,
 void
 nsNativeScrollbar::RecreateHorizontalScrollbar()
 {
-  // Use a horizontal frame so that Cocoa thinks it's a horizontal scroller.
-  NSRect orientation = NSMakeRect(0, 0,
-                                  kHorizScrollbarInitW, kHorizScrollbarInitH);
+  // set framerect so that cocoa thinks it's a horizontal scroller
+  NSRect orientation;
+  orientation.origin.x = orientation.origin.y = 0;
+  orientation.size.width = 100;
+  orientation.size.height = 16;
   
-  NativeScrollbarView* oldScrollbarView = ScrollbarView();
+  NativeScrollbarView* scrollbarView = ScrollbarView();
 
-  // Create the new horizontal scroller, init it, and reset the old values.
-  mView = [[NativeScrollbarView alloc] initWithFrame:orientation
-                                          geckoChild:this];
+  // save off the old values and get rid of the previous view. Hiding
+  // it removes it from the parent hierarchy.
+  NSRect oldBounds = [scrollbarView bounds];
+  float oldValue = [scrollbarView floatValue];
+  float oldProportion = [scrollbarView knobProportion];
+  mVisible = PR_TRUE;           // ensure that hide does the work
+  Show(PR_FALSE);
+  scrollbarView = nil;
+  [mView release];
+  
+  // create the new horizontal scroller, init it, hook it up to the
+  // view hierarchy and reset the values.
+  mView = [[NativeScrollbarView alloc] initWithFrame:orientation geckoChild:this];
+  [mView setNativeWindow: [mParentView getNativeWindow]];
+  [mView setFrame:oldBounds];
+  
+  scrollbarView = ScrollbarView();
+  [scrollbarView setFloatValue:oldValue knobProportion:oldProportion];
+  Show(PR_TRUE);
+  Enable(PR_TRUE);
+}
 
-  NativeScrollbarView* newScrollbarView = ScrollbarView();
 
-  [newScrollbarView setNativeWindow:[oldScrollbarView nativeWindow]];
-  [newScrollbarView        setFrame:[oldScrollbarView bounds]];
+//
+// Show
+//
+// Hide or show the scrollbar
+//
+NS_IMETHODIMP
+nsNativeScrollbar::Show(PRBool bState)
+{
+  // the only way to get the scrollbar view to not draw is to remove it
+  // from the view hierarchy. cache the parent view so that we can
+  // hook it up later if we're told to show.
+  if ( mVisible && !bState ) {
+    mParentView = [mView superview];
+    [mView removeFromSuperview];
+  }
+  else if ( !mVisible && bState ) {
+    if ( mParentView )
+      [mParentView addSubview:mView];
+  }
 
-  [newScrollbarView       setHidden:[oldScrollbarView isHidden]];
-  [newScrollbarView      setEnabled:[oldScrollbarView isEnabled]];
-  [newScrollbarView   setFloatValue:[oldScrollbarView floatValue]
-                     knobProportion:[oldScrollbarView knobProportion]];
-
-  // Hook up the new view and get rid of the previous one.
-  [mParentView replaceSubview:oldScrollbarView with:newScrollbarView];
-  [oldScrollbarView release];
+  mVisible = bState;
+  return NS_OK;
 }
 
 
@@ -466,21 +494,19 @@ nsNativeScrollbar::RecreateHorizontalScrollbar()
 // Enable/disable this scrollbar
 //
 NS_IMETHODIMP
-nsNativeScrollbar::Enable(PRBool aState)
+nsNativeScrollbar::Enable(PRBool bState)
 {
-  if (aState != mVisible) {
-    mIsEnabled = aState;
-    UpdateScroller();
-  }
+  mIsEnabled = bState;
+  UpdateScroller();
   return NS_OK;
 }
 
 
 NS_IMETHODIMP
-nsNativeScrollbar::IsEnabled(PRBool* outState)
+nsNativeScrollbar::IsEnabled(PRBool *aState)
 {
-  if (outState)
-    *outState = mIsEnabled;
+  if (aState)
+   *aState = mIsEnabled;
   return NS_OK;
 }
 
@@ -501,17 +527,12 @@ nsNativeScrollbar::UpdateScroller()
   BOOL enableScrollbar = (mIsEnabled && (mMaxValue > 0));
   [scrollbarView setEnabled:enableScrollbar];
   
-  Invalidate(FALSE);
+  [scrollbarView setNeedsDisplay:YES];
 }
 
 
 #pragma mark -
 
-@interface NativeScrollbarView(Private)
-
-- (void)processPendingRedraws;
-
-@end
 
 @implementation NativeScrollbarView
 
@@ -552,24 +573,7 @@ nsNativeScrollbar::UpdateScroller()
 }
 
 
-- (void)setFrame:(NSRect)frameRect
-{
-  // maybe make this a small scrollbar
-  SInt32 smallScrollbarWidth = 0;
-  ::GetThemeMetric(kThemeMetricSmallScrollBarWidth, &smallScrollbarWidth);
-  if ((SInt32)frameRect.size.width == smallScrollbarWidth ||
-      (SInt32)frameRect.size.height == smallScrollbarWidth) {
-    [self setControlSize:NSSmallControlSize];
-  }
-  else {
-    [self setControlSize:NSRegularControlSize];
-  }
-
-  [super setFrame:frameRect];
-}
-
-
-- (NSWindow*)nativeWindow
+- (NSWindow*) getNativeWindow
 {
   NSWindow* currWin = [self window];
   if (currWin)
@@ -600,54 +604,22 @@ nsNativeScrollbar::UpdateScroller()
   return NS_STATIC_CAST(nsIWidget*, mGeckoChild);
 }
 
-- (void)setNeedsPendingDisplay
-{
-  mPendingFullDisplay = YES;
-  [self performSelector:@selector(processPendingRedraws) withObject:nil afterDelay:0];
-}
-
-- (void)setNeedsPendingDisplayInRect:(NSRect)invalidRect
-{
-  if (!mPendingDirtyRects)
-    mPendingDirtyRects = [[NSMutableArray alloc] initWithCapacity:1];
-  [mPendingDirtyRects addObject:[NSValue valueWithRect:invalidRect]];
-  [self performSelector:@selector(processPendingRedraws) withObject:nil afterDelay:0];
-}
-
 //
-// -processPendingRedraws
+// -setNeedsDisplayWithValue:
 //
-// Clears the queue of any pending invalides
+// call -setNeedsDisplay or setNeedsDisplayInRect:
 //
-- (void)processPendingRedraws
+- (void)setNeedsDisplayWithValue:(NSValue*)inRectValue
 {
-  if (mPendingFullDisplay) {
+  if (inRectValue)
+  {
+    NSRect theRect = [inRectValue rectValue];
+    [self setNeedsDisplayInRect:theRect];
+  }
+  else
+  {
     [self setNeedsDisplay:YES];
   }
-  else {
-    unsigned int count = [mPendingDirtyRects count];
-    for (unsigned int i = 0; i < count; ++i) {
-      [self setNeedsDisplayInRect:[[mPendingDirtyRects objectAtIndex:i] rectValue]];
-    }
-  }
-  mPendingFullDisplay = NO;
-  [mPendingDirtyRects release];
-  mPendingDirtyRects = nil;
-}
-
-- (void)scrollRect:(NSRect)aRect by:(NSSize)offset
-{
-  // Update any pending dirty rects to reflect the new scroll position
-  if (mPendingDirtyRects) {
-    unsigned int count = [mPendingDirtyRects count];
-    for (unsigned int i = 0; i < count; ++i) {
-      NSRect oldRect = [[mPendingDirtyRects objectAtIndex:i] rectValue];
-      NSRect newRect = NSOffsetRect(oldRect, offset.width, offset.height);
-      [mPendingDirtyRects replaceObjectAtIndex:i
-                                    withObject:[NSValue valueWithRect:newRect]];
-    }
-  }
-  [super scrollRect:aRect by:offset];
 }
 
 //
@@ -691,8 +663,8 @@ nsNativeScrollbar::UpdateScroller()
   }
 }
 
-// contextMenu, from mozView protocol
-- (NSMenu*)contextMenu
+// getContextMenu, from mozView protocol
+- (NSMenu*)getContextMenu
 {
   return nil;
 }
@@ -706,13 +678,7 @@ nsNativeScrollbar::UpdateScroller()
 //
 - (IBAction)scroll:(NSScroller*)sender
 {
-  // roll up popup windows if there are any
-  if (gRollupListener && gRollupWidget &&
-      gRollupWidget->GetNativeData(NS_NATIVE_WINDOW) != [self nativeWindow]) {
-    gRollupListener->Rollup();
-  }
-  
-  if (mGeckoChild)
+  if ( mGeckoChild )
     mGeckoChild->DoScroll([sender hitPart]);
 }
 
@@ -762,14 +728,6 @@ nsNativeScrollbar::UpdateScroller()
   NS_ENDHANDLER
   mInTracking = NO;
 }
-
-#ifdef ACCESSIBILITY
-// XXXhakan: need to find out what needs to be done here to make these scrollbars accessible.
-- (BOOL)accessibilityIsIgnored
-{
-  return YES;
-}
-#endif
 
 @end
 

@@ -87,10 +87,5 @@ interface nsICacheService : nsISupports
 };
 
 %{C++
-/**
- * Observer service notification that is sent when
- * nsICacheService::evictEntries() or nsICacheSession::evictEntries()
- * is called.
- */
 #define NS_CACHESERVICE_EMPTYCACHE_TOPIC_ID "cacheservice:empty-cache"
 %}

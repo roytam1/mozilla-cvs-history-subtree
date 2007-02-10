@@ -46,10 +46,11 @@
 #include "nsISecurityContext.h"
 #include "nsCSecurityContext.h"
 #include "nsCRT.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIScriptObjectPrincipal.h"
 #include "nsIServiceManager.h"
 #include "nsIScriptSecurityManager.h"
 #include "nsNetUtil.h"
-#include "nsDOMJSUtils.h"
 
 static NS_DEFINE_CID(kJVMManagerCID, NS_JVMMANAGER_CID);
 

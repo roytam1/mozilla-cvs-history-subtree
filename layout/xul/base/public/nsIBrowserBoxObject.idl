@@ -36,14 +36,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIContainerBoxObject.idl"
+#include "nsIBoxObject.idl"
 
-/**
- * @deprecated Please consider using nsIContainerBoxObject.
- */
+interface nsIDocShell;
 
-[scriptable, uuid(db436f2f-c656-4754-b0fa-99bc353bd63f)]
-interface nsIBrowserBoxObject : nsIContainerBoxObject
+[scriptable, uuid(F2504C26-7CF5-426a-86A7-E50998AC57C1)]
+interface nsIBrowserBoxObject : nsISupports
 {
+  readonly attribute nsIDocShell docShell;
 };
 
+%{C++
+nsresult
+NS_NewBrowserBoxObject(nsIBoxObject** aResult);
+
+%}

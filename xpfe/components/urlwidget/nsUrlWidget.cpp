@@ -41,7 +41,9 @@
 
 #include "nsIDocShell.h"
 #include "nsUrlWidget.h"
-#include "nsPIDOMWindow.h"
+#include "nsIScriptContext.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsIDOMWindowInternal.h"
 #include "nsIBaseWindow.h"
 #include "nsIWidget.h"
 #include "nsCOMPtr.h"
@@ -72,14 +74,14 @@ nsUrlWidget::SetURLToHiddenControl( char const *aURL, nsIDOMWindowInternal *pare
 
     static const LONG editControlID = 12345;
 
-    nsCOMPtr<nsPIDOMWindow> win( do_QueryInterface(parent) );
-    if (!win)
+    nsCOMPtr<nsIScriptGlobalObject> ppScriptGlobalObj( do_QueryInterface(parent) );
+    if (!ppScriptGlobalObj)
     {
         return NS_ERROR_FAILURE;
     }
 
     nsCOMPtr<nsIBaseWindow> ppBaseWindow =
-      do_QueryInterface(win->GetDocShell());
+      do_QueryInterface(ppScriptGlobalObj->GetDocShell());
 
     if (ppBaseWindow)
     {

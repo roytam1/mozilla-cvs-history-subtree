@@ -43,9 +43,10 @@
 #include "nsIForm.h"
 #include "nsILinkHandler.h"
 #include "nsIDocument.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsIHTMLDocument.h"
 #include "nsIFormControl.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsDOMError.h"
 #include "nsGenericHTMLElement.h"
@@ -54,7 +55,6 @@
 // JBK added for submit move from content frame
 #include "nsIFile.h"
 #include "nsDirectoryServiceDefs.h"
-#include "nsStringStream.h"
 #include "nsIFormProcessor.h"
 #include "nsIURI.h"
 #include "nsNetUtil.h"
@@ -74,6 +74,7 @@
 //end
 
 static NS_DEFINE_CID(kFormProcessorCID, NS_FORMPROCESSOR_CID);
+static NS_DEFINE_CID(kCharsetAliasCID, NS_CHARSETALIAS_CID);
 
 /**
  * Helper superclass implementation of nsIFormSubmission, providing common
@@ -110,7 +111,7 @@ public:
   // nsIFormSubmission
   //
   virtual nsresult SubmitTo(nsIURI* aActionURI, const nsAString& aTarget,
-                            nsIContent* aSource, nsILinkHandler* aLinkHandler,
+                            nsIContent* aSource, nsPresContext* aPresContext,
                             nsIDocShell** aDocShell, nsIRequest** aRequest);
 
   /**
@@ -190,16 +191,18 @@ public:
   /**
    * Get the encoder for a form (suitable to pass in to the constructor).
    * @param aForm the form in question
+   * @param aPresContext the pres context in which we are submitting
    * @param aCharset the charset of the form
    * @param aEncoder the returned encoder [OUT]
    */
   static nsresult GetEncoder(nsGenericHTMLElement* aForm,
+                             nsPresContext* aPresContext,
                              const nsACString& aCharset,
                              nsISaveAsCharset** aEncoder);
   /**
    * Get an attribute of a form as int, provided that it is an enumerated value.
    * @param aForm the form in question
-   * @param aAtom the attribute (for example, nsGkAtoms::enctype) to get
+   * @param aAtom the attribute (for example, nsHTMLAtoms::enctype) to get
    * @param aValue the result (will not be set at all if the attribute does not
    *        exist on the form, so *make sure you provide a default value*.)
    *        [OUT]
@@ -1130,6 +1133,7 @@ SendJSWarning(nsIContent* aContent,
 
 nsresult
 GetSubmissionFromForm(nsGenericHTMLElement* aForm,
+                      nsPresContext* aPresContext,
                       nsIFormSubmission** aFormSubmission)
 {
   nsresult rv = NS_OK;
@@ -1137,21 +1141,19 @@ GetSubmissionFromForm(nsGenericHTMLElement* aForm,
   //
   // Get all the information necessary to encode the form data
   //
-  nsIDocument* doc = aForm->GetCurrentDoc();
-  NS_ASSERTION(doc, "Should have doc if we're building submission!");
 
   // Get BIDI options
   PRUint8 ctrlsModAtSubmit = 0;
-  PRUint32 bidiOptions = doc->GetBidiOptions();
+  PRUint32 bidiOptions = aPresContext->GetBidi();
   ctrlsModAtSubmit = GET_BIDI_OPTION_CONTROLSTEXTMODE(bidiOptions);
 
   // Get encoding type (default: urlencoded)
   PRInt32 enctype = NS_FORM_ENCTYPE_URLENCODED;
-  nsFormSubmission::GetEnumAttr(aForm, nsGkAtoms::enctype, &enctype);
+  nsFormSubmission::GetEnumAttr(aForm, nsHTMLAtoms::enctype, &enctype);
 
   // Get method (default: GET)
   PRInt32 method = NS_FORM_METHOD_GET;
-  nsFormSubmission::GetEnumAttr(aForm, nsGkAtoms::method, &method);
+  nsFormSubmission::GetEnumAttr(aForm, nsHTMLAtoms::method, &method);
 
   // Get charset
   nsCAutoString charset;
@@ -1159,7 +1161,8 @@ GetSubmissionFromForm(nsGenericHTMLElement* aForm,
 
   // Get unicode encoder
   nsCOMPtr<nsISaveAsCharset> encoder;
-  nsFormSubmission::GetEncoder(aForm, charset, getter_AddRefs(encoder));
+  nsFormSubmission::GetEncoder(aForm, aPresContext, charset,
+                               getter_AddRefs(encoder));
 
   // Get form processor
   nsCOMPtr<nsIFormProcessor> formProcessor =
@@ -1185,7 +1188,7 @@ GetSubmissionFromForm(nsGenericHTMLElement* aForm,
     if (enctype == NS_FORM_ENCTYPE_MULTIPART ||
         enctype == NS_FORM_ENCTYPE_TEXTPLAIN) {
       nsAutoString enctypeStr;
-      aForm->GetAttr(kNameSpaceID_None, nsGkAtoms::enctype, enctypeStr);
+      aForm->GetAttr(kNameSpaceID_None, nsHTMLAtoms::enctype, enctypeStr);
       SendJSWarning(aForm, "ForgotPostWarning", PromiseFlatString(enctypeStr));
     }
     *aFormSubmission = new nsFSURLEncoded(charset, encoder,
@@ -1204,7 +1207,7 @@ GetSubmissionFromForm(nsGenericHTMLElement* aForm,
 
 nsresult
 nsFormSubmission::SubmitTo(nsIURI* aActionURI, const nsAString& aTarget,
-                           nsIContent* aSource, nsILinkHandler* aLinkHandler,
+                           nsIContent* aSource, nsPresContext* aPresContext,
                            nsIDocShell** aDocShell, nsIRequest** aRequest)
 {
   nsresult rv;
@@ -1219,12 +1222,14 @@ nsFormSubmission::SubmitTo(nsIURI* aActionURI, const nsAString& aTarget,
   //
   // Actually submit the data
   //
-  NS_ENSURE_ARG_POINTER(aLinkHandler);
+  nsILinkHandler *handler = aPresContext->GetLinkHandler();
+  NS_ENSURE_TRUE(handler, NS_ERROR_FAILURE);
 
-  return aLinkHandler->OnLinkClickSync(aSource, aActionURI,
-                                       PromiseFlatString(aTarget).get(),
-                                       postDataStream, nsnull,
-                                       aDocShell, aRequest);
+  return handler->OnLinkClickSync(aSource, eLinkVerb_Replace,
+                                  aActionURI,
+                                  PromiseFlatString(aTarget).get(),
+                                  postDataStream, nsnull,
+                                  aDocShell, aRequest);
 }
 
 // JBK moved from nsFormFrame - bug 34297
@@ -1238,7 +1243,7 @@ nsFormSubmission::GetSubmitCharset(nsGenericHTMLElement* aForm,
 
   nsresult rv = NS_OK;
   nsAutoString acceptCharsetValue;
-  aForm->GetAttr(kNameSpaceID_None, nsGkAtoms::acceptcharset,
+  aForm->GetAttr(kNameSpaceID_None, nsHTMLAtoms::acceptcharset,
                  acceptCharsetValue);
 
   PRInt32 charsetLen = acceptCharsetValue.Length();
@@ -1246,7 +1251,7 @@ nsFormSubmission::GetSubmitCharset(nsGenericHTMLElement* aForm,
     PRInt32 offset=0;
     PRInt32 spPos=0;
     // get charset from charsets one by one
-    nsCOMPtr<nsICharsetAlias> calias(do_GetService(NS_CHARSETALIAS_CONTRACTID, &rv));
+    nsCOMPtr<nsICharsetAlias> calias(do_GetService(kCharsetAliasCID, &rv));
     if (NS_FAILED(rv)) {
       return;
     }
@@ -1302,6 +1307,7 @@ nsFormSubmission::GetSubmitCharset(nsGenericHTMLElement* aForm,
 // static
 nsresult
 nsFormSubmission::GetEncoder(nsGenericHTMLElement* aForm,
+                             nsPresContext* aPresContext,
                              const nsACString& aCharset,
                              nsISaveAsCharset** aEncoder)
 {

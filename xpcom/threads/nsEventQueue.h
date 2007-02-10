@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* vim:set ts=2 sw=2 sts=2 et cindent: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -13,18 +12,19 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla code.
+ * The Original Code is Mozilla Communicator client code.
  *
- * The Initial Developer of the Original Code is Google Inc.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  Darin Fisher <darin@meer.net>
+ *   Pierre Phaneuf <pp@ludusdesign.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either of the GNU General Public License Version 2 or later (the "GPL"),
+ * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -36,88 +36,45 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsEventQueue_h__
-#define nsEventQueue_h__
-
-#include <stdlib.h>
 #include "prmon.h"
-#include "nsIRunnable.h"
+#include "nsIEventQueue.h"
+#include "nsPIEventQueueChain.h"
 
-// A threadsafe FIFO event queue...
-class NS_COM nsEventQueue
+class nsEventQueueImpl : public nsIEventQueue,
+                         public nsPIEventQueueChain
 {
 public:
-  nsEventQueue();
-  ~nsEventQueue();
+    nsEventQueueImpl();
 
-  // Returns "true" if the event queue has been completely constructed.
-  PRBool IsInitialized() { return mMonitor != nsnull; }
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIEVENTTARGET
+    NS_DECL_NSIEVENTQUEUE
 
-  // This method adds a new event to the pending event queue.  The event object
-  // is AddRef'd if this method succeeds.  This method returns PR_TRUE if the
-  // event was stored in the event queue, and it returns PR_FALSE if it could
-  // not allocate sufficient memory.
-  PRBool PutEvent(nsIRunnable *event);
+    // Helpers
+    static NS_METHOD Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr);
 
-  // This method gets an event from the event queue.  If mayWait is true, then
-  // the method will block the calling thread until an event is available.  If
-  // the event is null, then the method returns immediately indicating whether
-  // or not an event is pending.  When the resulting event is non-null, the
-  // caller is responsible for releasing the event object.  This method does
-  // not alter the reference count of the resulting event.
-  PRBool GetEvent(PRBool mayWait, nsIRunnable **event);
+    static const nsCID& CID() { static nsCID cid = NS_EVENTQUEUE_CID; return cid; }
 
-  // This method returns true if there is a pending event.
-  PRBool HasPendingEvent() {
-    return GetEvent(PR_FALSE, nsnull);
-  }
-
-  // This method returns the next pending event or null.
-  PRBool GetPendingEvent(nsIRunnable **runnable) {
-    return GetEvent(PR_FALSE, runnable);
-  }
-
-  // This method waits for and returns the next pending event.
-  PRBool WaitPendingEvent(nsIRunnable **runnable) {
-    return GetEvent(PR_TRUE, runnable);
-  }
-
-  // Expose the event queue's monitor for "power users"
-  PRMonitor *Monitor() {
-    return mMonitor;
-  }
+    // nsPIEventQueueChain interface
+    NS_IMETHOD AppendQueue(nsIEventQueue *aQueue);
+    NS_IMETHOD Unlink();
+    NS_IMETHOD GetYoungest(nsIEventQueue **aQueue);
+    NS_IMETHOD GetYoungestActive(nsIEventQueue **aQueue);
+    NS_IMETHOD SetYounger(nsPIEventQueueChain *aQueue);
+    NS_IMETHOD GetYounger(nsIEventQueue **aQueue);
+    NS_IMETHOD SetElder(nsPIEventQueueChain *aQueue);
+    NS_IMETHOD GetElder(nsIEventQueue **aQueue);
+    NS_IMETHOD RevokeEventsInternal(void* aOwner);
 
 private:
+    ~nsEventQueueImpl();
 
-  PRBool IsEmpty() {
-    return !mHead || (mHead == mTail && mOffsetHead == mOffsetTail);
-  }
+  PLEventQueue  *mEventQueue;
+  PRBool        mAcceptingEvents, // accept new events or pass them on?
+                mCouldHaveEvents; // accepting new ones, or still have old ones?
+  nsCOMPtr<nsPIEventQueueChain> mElderQueue; // younger can hold on to elder
+  nsPIEventQueueChain *mYoungerQueue; // but elder can't hold on to younger
 
-  enum { EVENTS_PER_PAGE = 250 };
-
-  // Page objects are linked together to form a simple deque.
-
-  struct Page; friend struct Page; // VC6!
-  struct Page {
-    struct Page *mNext;
-    nsIRunnable *mEvents[EVENTS_PER_PAGE];
-  };
-
-  static Page *NewPage() {
-    return NS_STATIC_CAST(Page *, calloc(1, sizeof(Page)));
-  }
-
-  static void FreePage(Page *p) {
-    free(p);
-  }
-
-  PRMonitor *mMonitor;
-
-  Page *mHead;
-  Page *mTail;
-
-  PRUint16 mOffsetHead;  // offset into mHead where next item is removed
-  PRUint16 mOffsetTail;  // offset into mTail where next item is added
+  void NotifyObservers(const char *aTopic);
+  void CheckForDeactivation();
 };
-
-#endif  // nsEventQueue_h__

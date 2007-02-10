@@ -68,14 +68,22 @@
 
 static const PRUnichar kSqrChar = PRUnichar(0x221A);
 
-nsIFrame*
-NS_NewMathMLmsqrtFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMathMLmsqrtFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLmsqrtFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLmsqrtFrame* it = new (aPresShell) nsMathMLmsqrtFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
 }
 
-nsMathMLmsqrtFrame::nsMathMLmsqrtFrame(nsStyleContext* aContext) :
-  nsMathMLContainerFrame(aContext),
+nsMathMLmsqrtFrame::nsMathMLmsqrtFrame() :
   mSqrChar(),
   mBarRect()
 {
@@ -86,20 +94,21 @@ nsMathMLmsqrtFrame::~nsMathMLmsqrtFrame()
 }
 
 NS_IMETHODIMP
-nsMathMLmsqrtFrame::Init(nsIContent*      aContent,
+nsMathMLmsqrtFrame::Init(nsPresContext*  aPresContext,
+                         nsIContent*      aContent,
                          nsIFrame*        aParent,
+                         nsStyleContext*  aContext,
                          nsIFrame*        aPrevInFlow)
 {
-  nsresult rv = nsMathMLContainerFrame::Init(aContent, aParent, aPrevInFlow);
-                                             
-  nsPresContext *presContext = GetPresContext();
+  nsresult rv = nsMathMLContainerFrame::Init(aPresContext, aContent, aParent,
+                                             aContext, aPrevInFlow);
 
   // No need to tract the style context given to our MathML char. 
   // The Style System will use Get/SetAdditionalStyleContext() to keep it
   // up-to-date if dynamic changes arise.
   nsAutoString sqrChar; sqrChar.Assign(kSqrChar);
-  mSqrChar.SetData(presContext, sqrChar);
-  ResolveMathMLCharStyle(presContext, mContent, mStyleContext, &mSqrChar, PR_TRUE);
+  mSqrChar.SetData(aPresContext, sqrChar);
+  ResolveMathMLCharStyle(aPresContext, mContent, mStyleContext, &mSqrChar, PR_TRUE);
 
   return rv;
 }
@@ -131,31 +140,47 @@ nsMathMLmsqrtFrame::TransmitAutomaticData()
 }
 
 NS_IMETHODIMP
-nsMathMLmsqrtFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                                     const nsRect&           aDirtyRect,
-                                     const nsDisplayListSet& aLists)
+nsMathMLmsqrtFrame::Paint(nsPresContext*      aPresContext,
+                          nsIRenderingContext& aRenderingContext,
+                          const nsRect&        aDirtyRect,
+                          nsFramePaintLayer    aWhichLayer,
+                          PRUint32             aFlags)
 {
   /////////////
   // paint the content we are square-rooting
-  nsresult rv = nsMathMLContainerFrame::BuildDisplayList(aBuilder, aDirtyRect, aLists);
-  NS_ENSURE_SUCCESS(rv, rv);
-
+  nsresult rv = nsMathMLContainerFrame::Paint(aPresContext, aRenderingContext, 
+                                              aDirtyRect, aWhichLayer);
   /////////////
   // paint the sqrt symbol
   if (!NS_MATHML_HAS_ERROR(mPresentationData.flags)) {
-    rv = mSqrChar.Display(aBuilder, this, aLists);
-    NS_ENSURE_SUCCESS(rv, rv);
+    mSqrChar.Paint(aPresContext, aRenderingContext,
+                   aDirtyRect, aWhichLayer, this);
 
-    rv = DisplayBar(aBuilder, this, mBarRect, aLists);
-    NS_ENSURE_SUCCESS(rv, rv);
+    if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer &&
+        mStyleContext->GetStyleVisibility()->IsVisible() &&
+        !mBarRect.IsEmpty()) {
+      // paint the overline bar
+      const nsStyleColor* color = GetStyleColor();
+      aRenderingContext.SetColor(color->mColor);
+      aRenderingContext.FillRect(mBarRect);
+    }
 
 #if defined(NS_DEBUG) && defined(SHOW_BOUNDING_BOX)
     // for visual debug
-    nsRect rect;
-    mSqrChar.GetRect(rect);
-    nsBoundingMetrics bm;
-    mSqrChar.GetBoundingMetrics(bm);
-    rv = DisplayBoundingMetrics(aBuilder, this, rect.TopLeft(), bm, aLists);
+    if (NS_MATHML_PAINT_BOUNDING_METRICS(mPresentationData.flags)) {
+      nsRect rect;
+      mSqrChar.GetRect(rect);
+
+      nsBoundingMetrics bm;
+      mSqrChar.GetBoundingMetrics(bm);
+
+      aRenderingContext.SetColor(NS_RGB(255,0,0));
+      nscoord x = rect.x + bm.leftBearing;
+      nscoord y = rect.y;
+      nscoord w = bm.rightBearing - bm.leftBearing;
+      nscoord h = bm.ascent + bm.descent;
+      aRenderingContext.DrawRect(x,y,w,h);
+    }
 #endif
   }
 
@@ -230,7 +255,7 @@ nsMathMLmsqrtFrame::Reflow(nsPresContext*          aPresContext,
   // the thickness of the overline
   ruleThickness = bmSqr.ascent;
   // make sure that the rule appears on the screen
-  nscoord onePixel = nsPresContext::CSSPixelsToAppUnits(1);
+  nscoord onePixel = aPresContext->IntScaledPixelsToTwips(1);
   if (ruleThickness < onePixel) {
     ruleThickness = onePixel;
   }
@@ -259,9 +284,9 @@ nsMathMLmsqrtFrame::Reflow(nsPresContext*          aPresContext,
     PR_MAX(bmBase.width, bmBase.rightBearing); // take also care of the rule
 
   aDesiredSize.ascent = mBoundingMetrics.ascent + leading;
-  aDesiredSize.height = aDesiredSize.ascent +
-    PR_MAX(baseSize.height - baseSize.ascent,
-           mBoundingMetrics.descent + ruleThickness);
+  aDesiredSize.descent =
+    PR_MAX(baseSize.descent, (mBoundingMetrics.descent + ruleThickness));
+  aDesiredSize.height = aDesiredSize.ascent + aDesiredSize.descent;
   aDesiredSize.width = mBoundingMetrics.width;
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
 
@@ -279,6 +304,9 @@ nsMathMLmsqrtFrame::Reflow(nsPresContext*          aPresContext,
     childFrame = childFrame->GetNextSibling();
   }
 
+  if (aDesiredSize.mComputeMEW) {
+    aDesiredSize.mMaxElementWidth = aDesiredSize.width;
+  }
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
   aStatus = NS_FRAME_COMPLETE;
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);

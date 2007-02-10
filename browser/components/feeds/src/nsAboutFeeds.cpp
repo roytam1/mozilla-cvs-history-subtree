@@ -79,14 +79,6 @@ nsAboutFeeds::NewChannel(nsIURI* uri, nsIChannel** result)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsAboutFeeds::GetURIFlags(nsIURI* uri, PRUint32* uriFlags)
-{
-  // Feeds page needs script, and is untrusted-content-safe
-  *uriFlags = URI_SAFE_FOR_UNTRUSTED_CONTENT | ALLOW_SCRIPT;
-  return NS_OK;
-}
-
 NS_METHOD
 nsAboutFeeds::Create(nsISupports* outer, REFNSIID iid, void** result)
 {

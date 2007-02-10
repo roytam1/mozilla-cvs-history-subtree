@@ -49,6 +49,7 @@
 #include "nsNSSIOLayer.h"
 #include "nsSSLThread.h"
 #include "nsCertVerificationThread.h"
+#include "nsNSSEvent.h"
 
 #include "nsNetUtil.h"
 #include "nsAppDirectoryServiceDefs.h"
@@ -73,6 +74,7 @@
 #include "nsIDateTimeFormat.h"
 #include "nsDateTimeFormatCID.h"
 #include "nsAutoLock.h"
+#include "nsIEventQueue.h"
 #include "nsIDOMEvent.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMDocumentEvent.h"
@@ -81,8 +83,8 @@
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMSmartCardEvent.h"
 #include "nsIDOMCrypto.h"
-#include "nsThreadUtils.h"
-#include "nsAutoPtr.h"
+#include "nsIRunnable.h"
+#include "plevent.h"
 #include "nsCRT.h"
 #include "nsCRLInfo.h"
 
@@ -207,34 +209,33 @@ static PRIntn PR_CALLBACK certHashtable_clearEntry(PLHashEntry *he, PRIntn /*ind
   return HT_ENUMERATE_NEXT;
 }
 
-class CRLDownloadEvent : public nsRunnable {
-public:
-  CRLDownloadEvent(const nsCSubstring &urlString, nsIStreamListener *listener)
-    : mURLString(urlString)
-    , mListener(listener)
-  {}
-
-  // Note that nsNSSComponent is a singleton object across all threads, 
-  // and automatic downloads are always scheduled sequentially - that is, 
-  // once one crl download is complete, the next one is scheduled
-  NS_IMETHOD Run()
-  {
-    if (!mListener || mURLString.IsEmpty())
-      return NS_OK;
-
-    nsCOMPtr<nsIURI> uri;
-    nsresult rv = NS_NewURI(getter_AddRefs(uri), mURLString);
-    if (NS_SUCCEEDED(rv)){
-      NS_OpenURI(mListener, nsnull, uri);
-    }
-
-    return NS_OK;
-  }
-
-private:
-  nsCString mURLString;
-  nsCOMPtr<nsIStreamListener> mListener;
+struct CRLDownloadEvent : PLEvent {
+  nsCAutoString *urlString;
+  nsIStreamListener *psmDownloader;
 };
+
+// Note that nsNSSComponent is a singleton object across all threads, 
+// and automatic downloads are always scheduled sequentially - that is, 
+// once one crl download is complete, the next one is scheduled
+static void PR_CALLBACK HandleCRLImportPLEvent(CRLDownloadEvent *aEvent)
+{
+  nsresult rv;
+  nsIURI *pURL;
+  
+  if((aEvent->psmDownloader==nsnull) || (aEvent->urlString==nsnull) )
+    return;
+
+  rv = NS_NewURI(&pURL, aEvent->urlString->get());
+  if(NS_SUCCEEDED(rv)){
+    NS_OpenURI(aEvent->psmDownloader, nsnull, pURL);
+  }
+}
+
+static void PR_CALLBACK DestroyCRLImportPLEvent(CRLDownloadEvent* aEvent)
+{
+  delete aEvent->urlString;
+  delete aEvent;
+}
 
 //This class is used to run the callback code
 //passed to the event handlers for smart card notification
@@ -356,13 +357,18 @@ NS_IMETHODIMP
 nsNSSComponent::PostEvent(const nsAString &eventType, 
                                                   const nsAString &tokenName)
 {
-  nsCOMPtr<nsIRunnable> runnable = 
+  nsresult rv;
+  nsTokenEventRunnable *runnable = 
                                new nsTokenEventRunnable(eventType, tokenName);
   if (!runnable) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  return NS_DispatchToMainThread(runnable);
+  rv = nsNSSEventPostToUIEventQueue(runnable);
+  if (NS_FAILED(rv))
+    delete runnable;
+
+  return rv;
 }
 
 
@@ -617,48 +623,11 @@ nsNSSComponent::ShutdownSmartCardThreads()
   mThreadList = nsnull;
 }
 
-static char *
-nss_addEscape(const char *string, char quote)
-{
-    char *newString = 0;
-    int escapes = 0, size = 0;
-    const char *src;
-    char *dest;
-
-    for (src=string; *src ; src++) {
-        if ((*src == quote) || (*src == '\\')) {
-          escapes++;
-        }
-        size++;
-    }
-
-    newString = (char*)PORT_ZAlloc(escapes+size+1);
-    if (newString == NULL) {
-        return NULL;
-    }
-
-    for (src=string, dest=newString; *src; src++,dest++) {
-        if ((*src == quote) || (*src == '\\')) {
-            *dest++ = '\\';
-        }
-        *dest = *src;
-    }
-
-    return newString;
-}
-
 void
 nsNSSComponent::InstallLoadableRoots()
 {
   nsNSSShutDownPreventionLock locker;
   SECMODModule *RootsModule = nsnull;
-
-  // In the past we used SECMOD_AddNewModule to load our module containing
-  // root CA certificates. This caused problems, refer to bug 176501.
-  // On startup, we fix our database and clean any stored module reference,
-  // and will use SECMOD_LoadUserModule to temporarily load it
-  // for the session. (This approach requires to clean up 
-  // using SECMOD_UnloadUserModule at the end of the session.)
 
   {
     // Find module containing root certs
@@ -686,107 +655,92 @@ nsNSSComponent::InstallLoadableRoots()
   }
 
   if (RootsModule) {
-    PRInt32 modType;
-    SECMOD_DeleteModule(RootsModule->commonName, &modType);
-    SECMOD_DestroyModule(RootsModule);
-    RootsModule = nsnull;
-  }
+    // Check version, and unload module if it is too old
 
-  // Find the best Roots module for our purposes.
-  // Prefer the application's installation directory,
-  // but also ensure the library is at least the version we expect.
-
-  nsresult rv;
-  nsAutoString modName;
-  rv = GetPIPNSSBundleString("RootCertModuleName", modName);
-  if (NS_FAILED(rv)) return;
-
-  nsCOMPtr<nsIProperties> directoryService(do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID));
-  if (!directoryService)
-    return;
-
-  const char *possible_ckbi_locations[] = {
-    NS_XPCOM_CURRENT_PROCESS_DIR,
-    NS_GRE_DIR,
-    0 // This special value means: 
-      //   search for ckbi in the directories on the shared
-      //   library/DLL search path
-  };
-
-  for (size_t il = 0; il < sizeof(possible_ckbi_locations)/sizeof(const char*); ++il) {
-    nsCOMPtr<nsILocalFile> mozFile;
-    char *fullLibraryPath = nsnull;
-
-    if (!possible_ckbi_locations[il])
-    {
-      fullLibraryPath = PR_GetLibraryName(nsnull, "nssckbi");
+    CK_INFO info;
+    if (SECSuccess != PK11_GetModInfo(RootsModule, &info)) {
+      // Do not use this module
+      SECMOD_DestroyModule(RootsModule);
+      RootsModule = nsnull;
     }
-    else
-    {
-      directoryService->Get( possible_ckbi_locations[il],
-                             NS_GET_IID(nsILocalFile), 
-                             getter_AddRefs(mozFile));
-  
-      if (!mozFile) {
-        continue;
+    else {
+      // NSS_BUILTINS_LIBRARY_VERSION_MAJOR and NSS_BUILTINS_LIBRARY_VERSION_MINOR
+      // define the version we expect to have.
+      // Later version are fine.
+      // Older versions are not ok, and we will replace with our own version.
+
+      if (
+            (info.libraryVersion.major < NSS_BUILTINS_LIBRARY_VERSION_MAJOR)
+          || 
+            (info.libraryVersion.major == NSS_BUILTINS_LIBRARY_VERSION_MAJOR
+             && info.libraryVersion.minor < NSS_BUILTINS_LIBRARY_VERSION_MINOR)
+         ) {
+        PRInt32 modType;
+        SECMOD_DeleteModule(RootsModule->commonName, &modType);
+        SECMOD_DestroyModule(RootsModule);
+
+        RootsModule = nsnull;
       }
-
-      nsCAutoString processDir;
-      mozFile->GetNativePath(processDir);
-      fullLibraryPath = PR_GetLibraryName(processDir.get(), "nssckbi");
-    }
-
-    if (!fullLibraryPath) {
-      continue;
-    }
-
-    char *escaped_fullLibraryPath = nss_addEscape(fullLibraryPath, '\"');
-    if (!escaped_fullLibraryPath) {
-      PR_FreeLibraryName(fullLibraryPath); // allocated by NSPR
-      continue;
-    }
-
-    /* If a module exists with the same name, delete it. */
-    NS_ConvertUTF16toUTF8 modNameUTF8(modName);
-    int modType;
-    SECMOD_DeleteModule(NS_CONST_CAST(char*, modNameUTF8.get()), &modType);
-
-    nsCString pkcs11moduleSpec;
-    pkcs11moduleSpec.Append(NS_LITERAL_CSTRING("name=\""));
-    pkcs11moduleSpec.Append(modNameUTF8.get());
-    pkcs11moduleSpec.Append(NS_LITERAL_CSTRING("\" library=\""));
-    pkcs11moduleSpec.Append(escaped_fullLibraryPath);
-    pkcs11moduleSpec.Append(NS_LITERAL_CSTRING("\""));
-
-    PR_FreeLibraryName(fullLibraryPath); // allocated by NSPR
-    PORT_Free(escaped_fullLibraryPath);
-
-    RootsModule =
-      SECMOD_LoadUserModule(NS_CONST_CAST(char*, pkcs11moduleSpec.get()), 
-                            nsnull, // no parent 
-                            PR_FALSE); // do not recurse
-
-    if (RootsModule) {
-      // found a module, no need to try other directories
-      break;
     }
   }
-}
-
-void 
-nsNSSComponent::UnloadLoadableRoots()
-{
-  nsresult rv;
-  nsAutoString modName;
-  rv = GetPIPNSSBundleString("RootCertModuleName", modName);
-  if (NS_FAILED(rv)) return;
-
-  NS_ConvertUTF16toUTF8 modNameUTF8(modName);
-  SECMODModule *RootsModule = SECMOD_FindModule(modNameUTF8.get());
 
   if (RootsModule) {
-    SECMOD_UnloadUserModule(RootsModule);
     SECMOD_DestroyModule(RootsModule);
+  } else { /* !RootsModule */
+    // Load roots module from our installation path
+  
+    nsresult rv;
+    nsAutoString modName;
+    rv = GetPIPNSSBundleString("RootCertModuleName", modName);
+    if (NS_FAILED(rv)) return;
+
+    nsCOMPtr<nsIProperties> directoryService(do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID));
+    if (!directoryService)
+      return;
+
+    const char *possible_ckbi_locations[] = {
+      NS_GRE_DIR,
+      NS_XPCOM_CURRENT_PROCESS_DIR,
+      0 // This special value means: 
+        //   search for ckbi in the directories on the shared
+        //   library/DLL search path
+    };
+
+    for (size_t il = 0; il < sizeof(possible_ckbi_locations)/sizeof(const char*); ++il) {
+      nsCOMPtr<nsILocalFile> mozFile;
+      char *fullModuleName = nsnull;
+
+      if (!possible_ckbi_locations[il])
+      {
+        fullModuleName = PR_GetLibraryName(nsnull, "nssckbi");
+      }
+      else
+      {
+        directoryService->Get( possible_ckbi_locations[il],
+                               NS_GET_IID(nsILocalFile), 
+                               getter_AddRefs(mozFile));
+    
+        if (!mozFile) {
+          continue;
+        }
+
+        nsCAutoString processDir;
+        mozFile->GetNativePath(processDir);
+        fullModuleName = PR_GetLibraryName(processDir.get(), "nssckbi");
+      }
+
+      /* If a module exists with the same name, delete it. */
+      NS_ConvertUCS2toUTF8 modNameUTF8(modName);
+      int modType;
+      SECMOD_DeleteModule(NS_CONST_CAST(char*, modNameUTF8.get()), &modType);
+      SECStatus rv_add = 
+        SECMOD_AddNewModule(NS_CONST_CAST(char*, modNameUTF8.get()), fullModuleName, 0, 0);
+      PR_FreeLibraryName(fullModuleName); // allocated by NSPR
+      if (SECSuccess == rv_add) {
+        // found a module, no need to try other directories
+        break;
+      }
+    }
   }
 }
 
@@ -828,14 +782,14 @@ nsNSSComponent::ConfigureInternalPKCS11Token()
   rv = GetPIPNSSBundleString("FipsPrivateSlotDescription", fipsPrivateSlotDescription);
   if (NS_FAILED(rv)) return rv;
 
-  PK11_ConfigurePKCS11(NS_ConvertUTF16toUTF8(manufacturerID).get(),
-                       NS_ConvertUTF16toUTF8(libraryDescription).get(),
-                       NS_ConvertUTF16toUTF8(tokenDescription).get(),
-                       NS_ConvertUTF16toUTF8(privateTokenDescription).get(),
-                       NS_ConvertUTF16toUTF8(slotDescription).get(),
-                       NS_ConvertUTF16toUTF8(privateSlotDescription).get(),
-                       NS_ConvertUTF16toUTF8(fipsSlotDescription).get(),
-                       NS_ConvertUTF16toUTF8(fipsPrivateSlotDescription).get(),
+  PK11_ConfigurePKCS11(NS_ConvertUCS2toUTF8(manufacturerID).get(),
+                       NS_ConvertUCS2toUTF8(libraryDescription).get(),
+                       NS_ConvertUCS2toUTF8(tokenDescription).get(),
+                       NS_ConvertUCS2toUTF8(privateTokenDescription).get(),
+                       NS_ConvertUCS2toUTF8(slotDescription).get(),
+                       NS_ConvertUCS2toUTF8(privateSlotDescription).get(),
+                       NS_ConvertUCS2toUTF8(fipsSlotDescription).get(),
+                       NS_ConvertUCS2toUTF8(fipsPrivateSlotDescription).get(),
                        0, 0);
   return NS_OK;
 }
@@ -945,7 +899,7 @@ nsresult nsNSSComponent::GetNSSCipherIDFromPrefString(const nsACString &aPrefStr
 {
   for (CipherPref* cp = CipherPrefs; cp->pref; ++cp) {
     if (nsDependentCString(cp->pref) == aPrefString) {
-      aCipherId = (PRUint16) cp->id;
+      aCipherId = cp->id;
       return NS_OK;
     }
   }
@@ -989,16 +943,24 @@ static void setOCSPOptions(nsIPrefBranch * pref)
 }
 
 nsresult
-nsNSSComponent::PostCRLImportEvent(const nsCSubstring &urlString,
-                                   nsIStreamListener *listener)
+nsNSSComponent::PostCRLImportEvent(nsCAutoString *urlString, PSMContentDownloader *psmDownloader)
 {
   //Create the event
-  nsCOMPtr<nsIRunnable> event = new CRLDownloadEvent(urlString, listener);
-  if (!event)
-    return NS_ERROR_OUT_OF_MEMORY;
+  CRLDownloadEvent *event = new CRLDownloadEvent;
+  PL_InitEvent(event, this, (PLHandleEventProc)HandleCRLImportPLEvent, (PLDestroyEventProc)DestroyCRLImportPLEvent);
+  event->urlString = urlString;
+  event->psmDownloader = (nsIStreamListener *)psmDownloader;
+  
+  //Get a handle to the ui event queue
+  
+  nsCOMPtr<nsIEventQueue>uiQueue = nsNSSEventGetUIEventQueue();
 
-  //Get a handle to the ui thread
-  return NS_DispatchToMainThread(event);
+  if (!uiQueue) {
+    return NS_ERROR_FAILURE;
+  }
+
+  //Post the event
+  return uiQueue->PostEvent(event);
 }
 
 nsresult
@@ -1006,11 +968,12 @@ nsNSSComponent::DownloadCRLDirectly(nsAutoString url, nsAutoString key)
 {
   //This api is meant to support direct interactive update of crl from the crl manager
   //or other such ui.
-  nsCOMPtr<nsIStreamListener> listener =
-      new PSMContentDownloader(PSMContentDownloader::PKCS7_CRL);
+  PSMContentDownloader *psmDownloader = new PSMContentDownloader(PSMContentDownloader::PKCS7_CRL);
   
-  NS_ConvertUTF16toUTF8 url8(url);
-  return PostCRLImportEvent(url8, listener);
+  nsCAutoString *urlString = new nsCAutoString();
+  urlString->AssignWithConversion(url.get());
+    
+  return PostCRLImportEvent(urlString, psmDownloader);
 }
 
 nsresult nsNSSComponent::DownloadCrlSilently()
@@ -1020,14 +983,15 @@ nsresult nsNSSComponent::DownloadCrlSilently()
   crlsScheduledForDownload->Put(&hashKey,(void *)nsnull);
     
   //Set up the download handler
-  nsRefPtr<PSMContentDownloader> psmDownloader =
-      new PSMContentDownloader(PSMContentDownloader::PKCS7_CRL);
+  PSMContentDownloader *psmDownloader = new PSMContentDownloader(PSMContentDownloader::PKCS7_CRL);
   psmDownloader->setSilentDownload(PR_TRUE);
   psmDownloader->setCrlAutodownloadKey(mCrlUpdateKey);
   
   //Now get the url string
-  NS_ConvertUTF16toUTF8 url8(mDownloadURL);
-  return PostCRLImportEvent(url8, psmDownloader);
+  nsCAutoString *urlString = new nsCAutoString();
+  urlString->AssignWithConversion(mDownloadURL);
+
+  return PostCRLImportEvent(urlString, psmDownloader);
 }
 
 nsresult nsNSSComponent::getParamsForNextCrlToDownload(nsAutoString *url, PRTime *time, nsAutoString *key)
@@ -1398,13 +1362,8 @@ nsNSSComponent::InitializeNSS(PRBool showWarningBox)
                                 getter_AddRefs(profilePath));
     if (NS_FAILED(rv)) {
       PR_LOG(gPIPNSSLog, PR_LOG_ERROR, ("Unable to get profile directory\n"));
-      ConfigureInternalPKCS11Token();
-      SECStatus init_rv = NSS_NoDB_Init(NULL);
-      if (init_rv != SECSuccess)
-        return NS_ERROR_NOT_AVAILABLE;
+      return rv;
     }
-    else
-    {
 
   // XP_MAC == CFM
   // XP_MACOSX == MachO
@@ -1482,12 +1441,9 @@ nsNSSComponent::InitializeNSS(PRBool showWarningBox)
         PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("can not init in r/o either\n"));
         which_nss_problem = problem_no_security_at_all;
 
-        init_rv = NSS_NoDB_Init(profileStr.get());
-        if (init_rv != SECSuccess)
-          return NS_ERROR_NOT_AVAILABLE;
+        NSS_NoDB_Init(profileStr.get());
       }
-    } // have profile dir
-    } // lock
+    }
 
     // init phase 3, only if phase 2 was successful
 
@@ -1597,7 +1553,6 @@ nsNSSComponent::ShutdownNSS()
 
     ShutdownSmartCardThreads();
     SSL_ClearSessionCache();
-    UnloadLoadableRoots();
     PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("evaporating psm resources\n"));
     mShutdownObjectList->evaporateAllNSSResources();
     if (SECSuccess != ::NSS_Shutdown()) {
@@ -1980,23 +1935,19 @@ nsNSSComponent::Observe(nsISupports *aSubject, const char *aTopic,
   }
   else if (nsCRT::strcmp(aTopic, NS_PREFBRANCH_PREFCHANGE_TOPIC_ID) == 0) { 
     nsNSSShutDownPreventionLock locker;
-    PRBool clearSessionCache = PR_FALSE;
     PRBool enabled;
-    NS_ConvertUTF16toUTF8  prefName(someData);
+    NS_ConvertUCS2toUTF8  prefName(someData);
 
     if (prefName.Equals("security.enable_ssl2")) {
       mPrefBranch->GetBoolPref("security.enable_ssl2", &enabled);
       SSL_OptionSetDefault(SSL_ENABLE_SSL2, enabled);
       SSL_OptionSetDefault(SSL_V2_COMPATIBLE_HELLO, enabled);
-      clearSessionCache = PR_TRUE;
     } else if (prefName.Equals("security.enable_ssl3")) {
       mPrefBranch->GetBoolPref("security.enable_ssl3", &enabled);
       SSL_OptionSetDefault(SSL_ENABLE_SSL3, enabled);
-      clearSessionCache = PR_TRUE;
     } else if (prefName.Equals("security.enable_tls")) {
       mPrefBranch->GetBoolPref("security.enable_tls", &enabled);
       SSL_OptionSetDefault(SSL_ENABLE_TLS, enabled);
-      clearSessionCache = PR_TRUE;
     } else if (prefName.Equals("security.OCSP.enabled")) {
       setOCSPOptions(mPrefBranch);
     } else {
@@ -2005,13 +1956,10 @@ nsNSSComponent::Observe(nsISupports *aSubject, const char *aTopic,
         if (prefName.Equals(cp->pref)) {
           mPrefBranch->GetBoolPref(cp->pref, &enabled);
           SSL_CipherPrefSetDefault(cp->id, enabled);
-          clearSessionCache = PR_TRUE;
           break;
         }
       }
     }
-    if (clearSessionCache)
-      SSL_ClearSessionCache();
   }
   else if (nsCRT::strcmp(aTopic, PROFILE_CHANGE_NET_TEARDOWN_TOPIC) == 0) {
     PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("receiving network teardown topic\n"));
@@ -2073,16 +2021,20 @@ void nsNSSComponent::ShowAlert(AlertIdentifier ai)
       PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("can't get window prompter\n"));
     }
     else {
-      nsCOMPtr<nsIPrompt> proxyPrompt;
-      NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
-                           NS_GET_IID(nsIPrompt),
-                           prompter, NS_PROXY_SYNC,
-                           getter_AddRefs(proxyPrompt));
-      if (!proxyPrompt) {
-        PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("can't get proxy for nsIPrompt\n"));
+      nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
+      if (!proxyman) {
+        PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("can't get proxy manager\n"));
       }
       else {
-        proxyPrompt->Alert(nsnull, message.get());
+        nsCOMPtr<nsIPrompt> proxyPrompt;
+        proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIPrompt),
+                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
+        if (!proxyPrompt) {
+          PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("can't get proxy for nsIPrompt\n"));
+        }
+        else {
+          proxyPrompt->Alert(nsnull, message.get());
+        }
       }
     }
   }
@@ -2315,16 +2267,17 @@ NS_IMETHODIMP PipUIContext::GetInterface(const nsIID & uuid, void * *result)
   nsresult rv = NS_OK;
 
   if (uuid.Equals(NS_GET_IID(nsIPrompt))) {
+    nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
+    if (!proxyman) return NS_ERROR_FAILURE;
+
     nsCOMPtr<nsIPrompt> prompter;
     nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService(NS_WINDOWWATCHER_CONTRACTID));
     if (wwatch) {
       wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
       if (prompter) {
         nsCOMPtr<nsIPrompt> proxyPrompt;
-        NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
-                             NS_GET_IID(nsIPrompt),
-                             prompter, NS_PROXY_SYNC,
-                             getter_AddRefs(proxyPrompt));
+        proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ, NS_GET_IID(nsIPrompt),
+                                    prompter, PROXY_SYNC, getter_AddRefs(proxyPrompt));
         if (!proxyPrompt) return NS_ERROR_FAILURE;
         *result = proxyPrompt;
         NS_ADDREF((nsIPrompt*)*result);
@@ -2346,9 +2299,14 @@ getNSSDialogs(void **_result, REFNSIID aIID, const char *contract)
   if (NS_FAILED(rv)) 
     return rv;
 
-  rv = NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
-                            aIID, svc, NS_PROXY_SYNC,
-                            _result);
+  nsCOMPtr<nsIProxyObjectManager> proxyman =
+      do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
+ 
+  rv = proxyman->GetProxyForObject(NS_UI_THREAD_EVENTQ,
+                                   aIID, svc, PROXY_SYNC,
+                                   _result);
   return rv;
 }
 
@@ -2361,7 +2319,7 @@ setPassword(PK11SlotInfo *slot, nsIInterfaceRequestor *ctx)
   if (PK11_NeedUserInit(slot)) {
     nsITokenPasswordDialogs *dialogs;
     PRBool canceled;
-    NS_ConvertUTF8toUTF16 tokenName(PK11_GetTokenName(slot));
+    NS_ConvertUTF8toUCS2 tokenName(PK11_GetTokenName(slot));
 
     rv = getNSSDialogs((void**)&dialogs,
                        NS_GET_IID(nsITokenPasswordDialogs),
@@ -2403,7 +2361,8 @@ PSMContentDownloader::~PSMContentDownloader()
     nsMemory::Free(mByteData);
 }
 
-NS_IMPL_ISUPPORTS2(PSMContentDownloader, nsIStreamListener, nsIRequestObserver)
+/*NS_IMPL_ISUPPORTS1(CertDownloader, nsIStreamListener)*/
+NS_IMPL_ISUPPORTS1(PSMContentDownloader,nsIStreamListener)
 
 const PRInt32 kDefaultCertAllocLength = 2048;
 

@@ -47,18 +47,18 @@
  *
  * The nsIURL methods operate on the <jar-entry> part of the spec.
  */
-[scriptable, uuid(d2746619-1724-4f42-8ca8-dacaf1b269d6)]
+[scriptable, uuid(c7e410d3-85f2-11d3-9f63-006008a6efe9)]
 interface nsIJARURI : nsIURL {
 
     /**
-     * Returns the root URI (the one for the actual JAR file) for this JAR
-     * (e.g., http://www.big.com/blue.jar).
+     * Returns the root URI (the one for the actual JAR file) for this JAR.
+     * eg http://www.big.com/blue.jar
      */
-    readonly attribute nsIURI JARFile;
+    attribute nsIURI JARFile;
 
     /**
-     * Returns the entry specified for this JAR URI (e.g., "ocean.html").  This
-     * value may contain %-escaped byte sequences.
+     * Returns the entry specified for this JAR URI.
+     * eg ocean.html
      */
     attribute AUTF8String JAREntry;
 };

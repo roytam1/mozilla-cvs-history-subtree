@@ -45,6 +45,11 @@ class  nsTableFrame;
 class  nsTableCellFrame;
 struct nsTableCellReflowState;
 
+#ifdef DEBUG_TABLE_REFLOW_TIMING
+class nsReflowTimer;
+#endif
+
+#define NS_ROW_NEED_SPECIAL_REFLOW          0x20000000
 #define NS_TABLE_ROW_HAS_UNPAGINATED_HEIGHT 0x40000000
 // This is also used on rows, from nsTableRowGroupFrame.h
 // #define NS_REPEATED_ROW_OR_ROWGROUP      0x10000000
@@ -64,8 +69,10 @@ class nsTableRowFrame : public nsHTMLContainerFrame
 public:
   virtual ~nsTableRowFrame();
 
-  NS_IMETHOD Init(nsIContent*      aContent,
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
                   nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
                   nsIFrame*        aPrevInFlow);
 
   NS_IMETHOD AppendFrames(nsIAtom*        aListName,
@@ -77,19 +84,28 @@ public:
                          nsIFrame*       aOldFrame);
 
   /** instantiate a new instance of nsTableRowFrame.
-    * @param aPresShell the pres shell for this frame
+    * @param aResult    the new object is returned in this out-param
+    * @param aContent   the table object to map
+    * @param aParent    the parent of the new frame
     *
-    * @return           the frame that was created
+    * @return  NS_OK if the frame was properly allocated, otherwise an error code
     */
-  friend nsIFrame* NS_NewTableRowFrame(nsIPresShell* aPresShell, nsStyleContext* aContext);
+  friend nsresult 
+  NS_NewTableRowFrame(nsIPresShell* aPresShell, nsIFrame** aResult);
 
-  virtual nsMargin GetUsedMargin() const;
-  virtual nsMargin GetUsedBorder() const;
-  virtual nsMargin GetUsedPadding() const;
+  /** @see nsIFrame::Paint */
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
 
-  NS_IMETHOD BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                              const nsRect&           aDirtyRect,
-                              const nsDisplayListSet& aLists);
+  // rows don't paint their own background -- the cells do
+  virtual PRBool CanPaintBackground() { return PR_FALSE; }
+
+  NS_IMETHOD GetFrameForPoint(const nsPoint&    aPoint, 
+                              nsFramePaintLayer aWhichLayer,
+                              nsIFrame**        aFrame);
 
   nsTableCellFrame* GetFirstCell() ;
 
@@ -111,12 +127,13 @@ public:
                     const nsHTMLReflowState& aReflowState,
                     nsReflowStatus&          aStatus);
 
-  void DidResize();
+  void DidResize(nsPresContext*          aPresContext,
+                 const nsHTMLReflowState& aReflowState);
 
   /**
    * Get the "type" of the frame
    *
-   * @see nsGkAtoms::tableRowFrame
+   * @see nsLayoutAtoms::tableRowFrame
    */
   virtual nsIAtom* GetType() const;
 
@@ -144,10 +161,6 @@ public:
    * returns 0 if we don't have any cell with 'vertical-align: baseline'
    */
   nscoord GetMaxCellAscent() const;
-
-  /* return the row ascent
-   */
-  nscoord GetRowBaseline();
  
   /** returns the ordinal position of this row in its table */
   virtual PRInt32 GetRowIndex() const;
@@ -161,20 +174,6 @@ public:
                           nsTableCellFrame*        aCellFrame,
                           nscoord                  aAvailableHeight,
                           nsReflowStatus&          aStatus);
-  /**
-    * Collapse the row if required, apply col and colgroup visibility: collapse
-    * info to the cells in the row.
-    * @return he amount to shift up all following rows
-    * @param aRowOffset     - shift the row up by this amount
-    * @param aWidth         - new width of the row
-    * @param aCollapseGroup - parent rowgroup is collapsed so this row needs
-    *                         to be collapsed
-    * @param aDidCollapse   - the row has been collapsed
-    */
-  nscoord CollapseRowIfNecessary(nscoord aRowOffset,
-                                 nscoord aWidth,
-                                 PRBool  aCollapseGroup,
-                                 PRBool& aDidCollapse);
 
   void InsertCellFrame(nsTableCellFrame* aFrame, 
                        nsTableCellFrame* aPrevSibling);
@@ -191,6 +190,9 @@ public:
 
   PRBool IsFirstInserted() const;
   void   SetFirstInserted(PRBool aValue);
+
+  PRBool NeedSpecialReflow() const;
+  void   SetNeedSpecialReflow(PRBool aValue);
 
   PRBool GetContentHeight() const;
   void   SetContentHeight(nscoord aTwipValue);
@@ -219,11 +221,12 @@ public:
   nscoord GetUnpaginatedHeight(nsPresContext* aPresContext);
   void    SetUnpaginatedHeight(nsPresContext* aPresContext, nscoord aValue);
 
-  nscoord GetTopBCBorderWidth();
+  nscoord GetTopBCBorderWidth(float* aPixelsToTwips = nsnull);
   void    SetTopBCBorderWidth(BCPixelSize aWidth);
-  nscoord GetBottomBCBorderWidth();
+  nscoord GetBottomBCBorderWidth(float* aPixelsToTwips = nsnull);
   void    SetBottomBCBorderWidth(BCPixelSize aWidth);
-  nsMargin* GetBCBorderWidth(nsMargin& aBorder);
+  nsMargin* GetBCBorderWidth(float     aPixelsToTwips,
+                             nsMargin& aBorder);
                              
   /**
    * Gets inner border widths before collapsing with cell borders
@@ -231,11 +234,12 @@ public:
    * GetContinuousBCBorderWidth will not overwrite aBorder.bottom
    * see nsTablePainter about continuous borders
    */
-  void GetContinuousBCBorderWidth(nsMargin& aBorder);
+  void GetContinuousBCBorderWidth(float     aPixelsToTwips,
+                                  nsMargin& aBorder);
   /**
    * @returns outer top bc border == prev row's bottom inner
    */
-  nscoord GetOuterTopContBCBorderWidth();
+  nscoord GetOuterTopContBCBorderWidth(float aPixelsToTwips);
   /**
    * Sets full border widths before collapsing with cell borders
    * @param aForSide - side to set; only accepts right, left, and top
@@ -248,15 +252,49 @@ protected:
   /** protected constructor.
     * @see NewFrame
     */
-  nsTableRowFrame(nsStyleContext *aContext);
+  nsTableRowFrame();
 
   void InitChildReflowState(nsPresContext&         aPresContext,
                             const nsSize&           aAvailSize,
                             PRBool                  aBorderCollapse,
-                            nsTableCellReflowState& aReflowState);
+                            float                   aPixelsToTwips,
+                            nsTableCellReflowState& aReflowState,
+                            PRBool                  aResetComputedWidth = PR_FALSE);
   
   /** implement abstract method on nsHTMLContainerFrame */
   virtual PRIntn GetSkipSides() const;
+
+  /** Incremental Reflow attempts to do column balancing with the minimum number of reflow
+    * commands to child elements.  This is done by processing the reflow command,
+    * rebalancing column widths (if necessary), then comparing the resulting column widths
+    * to the prior column widths and reflowing only those cells that require a reflow.
+    *
+    * @see Reflow
+    */
+  NS_IMETHOD IncrementalReflow(nsPresContext*          aPresContext,
+                               nsHTMLReflowMetrics&     aDesiredSize,
+                               const nsHTMLReflowState& aReflowState,
+                               nsTableFrame&            aTableFrame,
+                               nsReflowStatus&          aStatus);
+
+  NS_IMETHOD IR_TargetIsChild(nsPresContext*          aPresContext,
+                              nsHTMLReflowMetrics&     aDesiredSize,
+                              const nsHTMLReflowState& aReflowState,
+                              nsTableFrame&            aTableFrame,
+                              nsReflowStatus&          aStatus,
+                              nsIFrame*                aNextFrame);
+
+  NS_IMETHOD IR_TargetIsMe(nsPresContext*          aPresContext,
+                           nsHTMLReflowMetrics&     aDesiredSize,
+                           const nsHTMLReflowState& aReflowState,
+                           nsTableFrame&            aTableFrame,
+                           nsReflowStatus&          aStatus);
+
+  NS_IMETHOD IR_StyleChanged(nsPresContext*          aPresContext,
+                             nsHTMLReflowMetrics&     aDesiredSize,
+                             const nsHTMLReflowState& aReflowState,
+                             nsTableFrame&            aTableFrame,
+                             nsReflowStatus&          aStatus);
 
   // row-specific methods
 
@@ -271,7 +309,8 @@ protected:
                             nsHTMLReflowMetrics&     aDesiredSize,
                             const nsHTMLReflowState& aReflowState,
                             nsTableFrame&            aTableFrame,
-                            nsReflowStatus&          aStatus);
+                            nsReflowStatus&          aStatus,
+                            PRBool                   aDirtyOnly = PR_FALSE);
 
 private:
   struct RowBits {
@@ -301,6 +340,11 @@ private:
   BCPixelSize mRightContBorderWidth;
   BCPixelSize mTopContBorderWidth;
   BCPixelSize mLeftContBorderWidth;
+
+#ifdef DEBUG_TABLE_REFLOW_TIMING
+public:
+  nsReflowTimer* mTimer;
+#endif
 };
 
 inline PRInt32 nsTableRowFrame::GetRowIndex() const
@@ -374,6 +418,20 @@ inline float nsTableRowFrame::GetPctHeight() const
     return 0.0f;
 }
 
+inline PRBool nsTableRowFrame::NeedSpecialReflow() const
+{
+  return (mState & NS_ROW_NEED_SPECIAL_REFLOW) == NS_ROW_NEED_SPECIAL_REFLOW;
+}
+
+inline void nsTableRowFrame::SetNeedSpecialReflow(PRBool aValue)
+{
+  if (aValue) {
+    mState |= NS_ROW_NEED_SPECIAL_REFLOW;
+  } else {
+    mState &= ~NS_ROW_NEED_SPECIAL_REFLOW;
+  }
+}
+
 inline PRBool nsTableRowFrame::HasUnpaginatedHeight()
 {
   return (mState & NS_TABLE_ROW_HAS_UNPAGINATED_HEIGHT) ==
@@ -389,9 +447,10 @@ inline void nsTableRowFrame::SetHasUnpaginatedHeight(PRBool aValue)
   }
 }
 
-inline nscoord nsTableRowFrame::GetTopBCBorderWidth()
+inline nscoord nsTableRowFrame::GetTopBCBorderWidth(float*  aPixelsToTwips)
 {
-  return mTopBorderWidth;
+  nscoord width = (aPixelsToTwips) ? NSToCoordRound(*aPixelsToTwips * mTopBorderWidth) : mTopBorderWidth;
+  return width;
 }
 
 inline void nsTableRowFrame::SetTopBCBorderWidth(BCPixelSize aWidth)
@@ -399,9 +458,10 @@ inline void nsTableRowFrame::SetTopBCBorderWidth(BCPixelSize aWidth)
   mTopBorderWidth = aWidth;
 }
 
-inline nscoord nsTableRowFrame::GetBottomBCBorderWidth()
+inline nscoord nsTableRowFrame::GetBottomBCBorderWidth(float*  aPixelsToTwips)
 {
-  return mBottomBorderWidth;
+  nscoord width = (aPixelsToTwips) ? NSToCoordRound(*aPixelsToTwips * mBottomBorderWidth) : mBottomBorderWidth;
+  return width;
 }
 
 inline void nsTableRowFrame::SetBottomBCBorderWidth(BCPixelSize aWidth)
@@ -409,20 +469,21 @@ inline void nsTableRowFrame::SetBottomBCBorderWidth(BCPixelSize aWidth)
   mBottomBorderWidth = aWidth;
 }
 
-inline nsMargin* nsTableRowFrame::GetBCBorderWidth(nsMargin& aBorder)
+inline nsMargin* nsTableRowFrame::GetBCBorderWidth(float     aPixelsToTwips,
+                                                   nsMargin& aBorder)
 {
   aBorder.left = aBorder.right = 0;
 
-  aBorder.top    = nsPresContext::CSSPixelsToAppUnits(mTopBorderWidth);
-  aBorder.bottom = nsPresContext::CSSPixelsToAppUnits(mBottomBorderWidth);
+  aBorder.top    = NSToCoordRound(aPixelsToTwips * mTopBorderWidth);
+  aBorder.bottom = NSToCoordRound(aPixelsToTwips * mBottomBorderWidth);
 
   return &aBorder;
 }
 
 inline void
-nsTableRowFrame::GetContinuousBCBorderWidth(nsMargin& aBorder)
+nsTableRowFrame::GetContinuousBCBorderWidth(float     aPixelsToTwips,
+                                            nsMargin& aBorder)
 {
-  PRInt32 aPixelsToTwips = nsPresContext::AppUnitsPerCSSPixel();
   aBorder.right = BC_BORDER_LEFT_HALF_COORD(aPixelsToTwips,
                                             mLeftContBorderWidth);
   aBorder.top = BC_BORDER_BOTTOM_HALF_COORD(aPixelsToTwips,
@@ -431,9 +492,8 @@ nsTableRowFrame::GetContinuousBCBorderWidth(nsMargin& aBorder)
                                             mRightContBorderWidth);
 }
 
-inline nscoord nsTableRowFrame::GetOuterTopContBCBorderWidth()
+inline nscoord nsTableRowFrame::GetOuterTopContBCBorderWidth(float aPixelsToTwips)
 {
-  PRInt32 aPixelsToTwips = nsPresContext::AppUnitsPerCSSPixel();
   return BC_BORDER_TOP_HALF_COORD(aPixelsToTwips, mTopContBorderWidth);
 }
 

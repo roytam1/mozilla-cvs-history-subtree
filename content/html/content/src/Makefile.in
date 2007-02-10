@@ -75,6 +75,8 @@ REQUIRES	= xpcom \
 		  $(NULL)
 
 EXPORTS		= \
+		nsHTMLAtomList.h \
+		nsHTMLAtoms.h \
 		nsImageMapUtils.h \
 		$(NULL)
 
@@ -82,8 +84,10 @@ CPPSRCS		= \
 		nsGenericHTMLElement.cpp \
 		nsGenericDOMHTMLCollection.cpp \
 		nsFormSubmission.cpp \
+		nsHTMLAtoms.cpp \
 		nsImageMapUtils.cpp \
 		nsHTMLAnchorElement.cpp \
+		nsHTMLAppletElement.cpp \
 		nsHTMLAreaElement.cpp \
 		nsHTMLBRElement.cpp \
 		nsHTMLBodyElement.cpp \
@@ -109,9 +113,8 @@ CPPSRCS		= \
 		nsHTMLLinkElement.cpp \
 		nsHTMLMapElement.cpp \
 		nsHTMLMetaElement.cpp \
-		nsHTMLObjectElement.cpp \
 		nsHTMLOListElement.cpp \
-		nsHTMLSharedObjectElement.cpp \
+		nsHTMLObjectElement.cpp \
 		nsHTMLOptionElement.cpp \
 		nsHTMLOptGroupElement.cpp \
 		nsHTMLParagraphElement.cpp \

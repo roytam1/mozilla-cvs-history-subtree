@@ -54,8 +54,6 @@ pref("general.useragent.contentlocale", "chrome://navigator-region/locale/region
 
 pref("general.config.obscure_value", 13); // for MCD .cfg files
 
-pref("general.warnOnAboutConfig", true);
-
 // maximum number of dated backups to keep at any time
 pref("browser.bookmarks.max_backups",       5);
 
@@ -89,11 +87,6 @@ pref("browser.underline_anchors",           true);
 pref("browser.blink_allowed",               true);
 pref("browser.enable_automatic_image_resizing", false);
 
-// See http://whatwg.org/specs/web-apps/current-work/#ping
-pref("browser.send_pings", false);
-pref("browser.send_pings.max_per_link", 1);           // limit the number of pings that are sent per link click
-pref("browser.send_pings.require_same_host", false);  // only send pings to the same host if this is true
-
 pref("browser.display.use_focus_colors",    false);
 pref("browser.display.focus_background_color", "#117722");
 pref("browser.display.focus_text_color",     "#ffffff");
@@ -112,7 +105,6 @@ pref("browser.chrome.toolbar_style",        2);
 // if 0, no images are used for tab icons for image documents.
 pref("browser.chrome.image_icons.max_size", 1024);
 
-pref("browser.triple_click_selects_paragraph", true);
 
 pref("accessibility.browsewithcaret", false);
 pref("accessibility.warn_on_browsewithcaret", true);
@@ -189,10 +181,12 @@ pref("nglayout.events.dispatchLeftClickOnly", true);
 // whether or not to use xbl form controls
 pref("nglayout.debug.enable_xbl_forms", false);
 
-// scrollbar snapping region
-// 0 - off
-// 1 and higher - slider thickness multiple
-pref("slider.snapMultiplier", 0);
+// size of scrollbar snapping region
+pref("slider.snapMultiplier", 6);
+
+// Default to using the system filepicker if possible, but allow
+// toggling to use the XUL filepicker
+pref("ui.allow_platform_file_picker", true);
 
 // option to choose plug-in finder
 pref("application.use_ns_plugin_finder", false);
@@ -223,7 +217,7 @@ pref("print.show_print_progress", true);
 // xxxbsmedberg: more toolkit prefs
 
 // When this is set to false each window has its own PrintSettings
-// and a change in one window does not affect the others
+// and a chnage in one window does not affect the others
 pref("print.use_global_printsettings", true);
 
 // Use the native dialog or the XP dialog?
@@ -296,6 +290,7 @@ pref("capability.policy.default.Navigator.preferenceinternal.set", "UniversalPre
 pref("capability.policy.default.Window.blur.get", "allAccess");
 pref("capability.policy.default.Window.close.get", "allAccess");
 pref("capability.policy.default.Window.closed.get", "allAccess");
+pref("capability.policy.default.Window.Components", "allAccess");
 pref("capability.policy.default.Window.document.get", "allAccess");
 pref("capability.policy.default.Window.focus.get", "allAccess");
 pref("capability.policy.default.Window.frames.get", "allAccess");
@@ -318,7 +313,6 @@ pref("capability.policy.mailnews.*.attributes.get", "noAccess");
 pref("capability.policy.mailnews.*.baseURI.get", "noAccess");
 pref("capability.policy.mailnews.*.data.get", "noAccess");
 pref("capability.policy.mailnews.*.getAttribute", "noAccess");
-pref("capability.policy.mailnews.HTMLDivElement.getAttribute", "sameOrigin");
 pref("capability.policy.mailnews.*.getAttributeNS", "noAccess");
 pref("capability.policy.mailnews.*.getNamedItem", "noAccess");
 pref("capability.policy.mailnews.*.getNamedItemNS", "noAccess");
@@ -566,7 +560,7 @@ pref("network.http.max-persistent-connections-per-proxy", 4);
 pref("network.http.request.max-start-delay", 10);
 
 // Headers
-pref("network.http.accept.default", "text/html,application/xhtml+xml;q=0.9,application/xml;q=0.8,*/*;q=0.7");
+pref("network.http.accept.default", "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5");
 pref("network.http.sendRefererHeader",      2); // 0=don't send any, 1=send only on clicks, 2=send on image requests as well
 
 // Controls whether we send HTTPS referres to other HTTPS sites.
@@ -657,11 +651,7 @@ pref("network.standard-url.escape-utf8", true);
 
 // This preference controls whether or not URLs are always encoded and sent as
 // UTF-8.
-pref("network.standard-url.encode-utf8", true);
-
-// This preference controls whether or not queries are encoded and sent as
-// UTF-8.
-pref("network.standard-url.encode-query-utf8", false);
+pref("network.standard-url.encode-utf8", false);
 
 // Idle timeout for ftp control connections - 5 minute default
 pref("network.ftp.idleConnectionTimeout", 300);
@@ -726,6 +716,7 @@ pref("network.ntlm.send-lm-response", false);
 pref("network.hosts.nntp_server",           "news.mozilla.org");
 
 pref("permissions.default.image",           1); // 1-Accept, 2-Deny, 3-dontAcceptForeign
+pref("network.image.warnAboutImages",       false);
 pref("network.proxy.type",                  0);
 pref("network.proxy.ftp",                   "");
 pref("network.proxy.ftp_port",              0);
@@ -762,8 +753,12 @@ pref("network.proxy.autoconfig_retry_interval_max", 300);  // 5 minutes
 pref("network.cookie.p3p",                  "ffffaaaa");
 pref("network.cookie.p3plevel",             1); // 0=low, 1=medium, 2=high, 3=custom
 
+pref("network.enablePad",                   false); // Allow client to do proxy autodiscovery
 pref("converter.html2txt.structs",          true); // Output structured phrases (strong, em, code, sub, sup, b, i, u)
 pref("converter.html2txt.header_strategy",  1); // 0 = no indention; 1 = indention, increased with header level; 2 = numbering and slight indention
+
+pref("ime.password.onFocus.dontCare",       false);
+pref("ime.password.onBlur.dontCare",        false);
 
 pref("intl.accept_languages",               "chrome://navigator/locale/navigator.properties");
 pref("intl.accept_charsets",                "iso-8859-1,*,utf-8");
@@ -825,11 +820,6 @@ pref("middlemouse.scrollbarPosition", false);
 
 // Clipboard behavior
 pref("clipboard.autocopy", false);
-
-// mouse wheel scroll transaction period of time (in milliseconds)
-pref("mousewheel.transaction.timeout", 1500);
-// mouse wheel scroll transaction is held even if the mouse cursor is moved.
-pref("mousewheel.transaction.ignoremovedelay", 100);
 
 // 0=lines, 1=pages, 2=history , 3=text size
 pref("mousewheel.withnokey.action",0);
@@ -971,29 +961,16 @@ pref("bidi.support", 1);
 // 1 = doccharactersetBidi *
 // 2 = defaultcharactersetBidi
 pref("bidi.characterset", 1);
-// Whether delete and backspace should immediately delete characters not
-// visually adjacent to the caret, or adjust the visual position of the caret
-// on the first keypress and delete the character on a second keypress
-pref("bidi.edit.delete_immediately", false);
 
-// Bidi caret movement style:
-// 0 = logical
-// 1 = visual
-// 2 = visual, but logical during selection
-pref("bidi.edit.caret_movement_style", 2);
 
 // used for double-click word selection behavior. Win will override.
 pref("layout.word_select.eat_space_to_next_word", false);
 pref("layout.word_select.stop_at_punctuation", true);
 
-// controls caret style and word-delete during text selection
+// controls caret style during text selection
 // 0 = use platform default
-// 1 = caret moves and blinks as when there is no selection; word
-//     delete deselects the selection and then deletes word (Windows default)
-// 2 = caret moves to selection edge and is not visible during selection; 
-//     word delete deletes the selection (Mac default)
-// 3 = caret moves and blinks as when there is no selection; word delete
-//     deletes the selection (Unix default)
+// 1 = caret moves and blinks as when there is no selection
+// 2 = caret moves to selection edge and is not visible during selection
 pref("layout.selection.caret_style", 0);
 
 // pref to control whether or not to replace backslashes with Yen signs
@@ -1006,13 +983,6 @@ pref("layout.frames.force_resizability", false);
 
 // pref to report CSS errors to the error console
 pref("layout.css.report_errors", true);
-
-// pref for which side vertical scrollbars should be on
-// 0 = end-side in UI direction
-// 1 = end-side in document/content direction
-// 2 = right
-// 3 = left
-pref("layout.scrollbar.side", 0);
 
 // pref to permit users to make verified SOAP calls by default
 pref("capability.policy.default.SOAPCall.invokeVerifySourceHeader", "allAccess");
@@ -1079,10 +1049,10 @@ pref("font.name.cursive.el", "Comic Sans MS");
 pref("font.name.serif.he", "Narkisim");
 pref("font.name.sans-serif.he", "Arial");
 pref("font.name.monospace.he", "Fixed Miriam Transparent");
-pref("font.name.cursive.he", "Guttman Yad");
+pref("font.name.cursive.he", "Gutmann Yad");
 pref("font.name-list.serif.he", "Narkisim, David");
 pref("font.name-list.monospace.he", "Fixed Miriam Transparent, Miriam Fixed, Rod, Courier New");
-pref("font.name-list.cursive.he", "Guttman Yad, Ktav, Arial");
+pref("font.name-list.cursive.he", "Gutmann Yad, Ktav, Arial");
 
 // For CJK fonts, we list a font twice in name-list, once in the native script and once in English
 // because the name of a CJK font returned by Win32 API is beyond our control and depends on
@@ -1344,9 +1314,6 @@ pref("ui.key.menuAccessKeyFocuses", true);
 // override double-click word selection behavior.
 pref("layout.word_select.eat_space_to_next_word", true);
 
-// scrollbar snapping region
-pref("slider.snapMultiplier", 6);
-
 // print_extra_margin enables platforms to specify an extra gap or margin
 // around the content of the page for Print Preview only
 pref("print.print_extra_margin", 90); // twips (90 twips is an eigth of an inch)
@@ -1571,7 +1538,7 @@ pref("ui.key.accelKey", 224);
 pref("ui.key.generalAccessKey", -1);
 
 // If generalAccessKey is -1, use the following two prefs instead.
-// Use 0 for disabled, 1 for Shift, 2 for Ctrl, 4 for Alt, 8 for Meta (Cmd)
+// Use 0 for disabled, 1 for Shift, 2 for Ctrl, 4 for Alt, 8 for Cmd
 // (values can be combined, e.g. 3 for Ctrl+Shift)
 pref("ui.key.chromeAccess", 2);
 pref("ui.key.contentAccess", 2);
@@ -1748,6 +1715,9 @@ pref("netinst.profile.show_profile_wizard", true);
 
 pref("middlemouse.paste", true);
 
+// turn off scrollbar snapping
+pref("slider.snapMultiplier", 0);
+
 // override double-click word selection behavior.
 pref("layout.word_select.eat_space_to_next_word", true);
 pref("layout.word_select.stop_at_punctuation", false);
@@ -1780,13 +1750,11 @@ pref("network.dns.disableIPv6", true);
 
 #if XP_BEOS
 
-pref("layout.css.dpi", -1); // max(96dpi, System setting)
+pref("layout.css.dpi", -1); // max(96dpi, System setting
 
 pref("intl.font_charset", "");
 pref("intl.font_spec_list", "");
 pref("mail.signature_date", 0);
-
-pref("font.alias-list", "sans,sans-serif,serif,monospace");
 
 pref("font.default.ar", "sans-serif");
 pref("font.size.variable.ar", 16);
@@ -1902,9 +1870,8 @@ pref("layout.word_select.stop_at_punctuation", false);
 pref("autocomplete.grab_during_popup", true);
 pref("autocomplete.ungrab_during_mode_switch", true);
 
-// Default to using the system filepicker if possible, but allow
-// toggling to use the XUL filepicker
-pref("ui.allow_platform_file_picker", true);
+// turn off scrollbar snapping
+pref("slider.snapMultiplier", 0);
 
 pref("helpers.global_mime_types_file", "/etc/mime.types");
 pref("helpers.global_mailcap_file", "/etc/mailcap");
@@ -1941,8 +1908,6 @@ pref("print.whileInPrintPreview", false);
 
 pref("font.allow_double_byte_special_chars", true);
 // font names
-
-pref("font.alias-list", "sans,sans-serif,serif,monospace");
 
 // ar
 
@@ -2403,8 +2368,8 @@ pref("font.name.monospace.x-unicode", "dt-interface user-ucs2.cjk_japan-0");
 
 #ifdef SOLARIS
 
-pref("print.postscript.print_command", "lp -c -s ${MOZ_PRINTER_NAME:+'-d'}${MOZ_PRINTER_NAME}");
-pref("print.print_command", "lp -c -s ${MOZ_PRINTER_NAME:+'-d'}${MOZ_PRINTER_NAME}");
+pref("print.postscript.print_command", "lp -c -s ${MOZ_PRINTER_NAME:+'-d '}${MOZ_PRINTER_NAME}");
+pref("print.print_command", "lp -c -s ${MOZ_PRINTER_NAME:+'-d '}${MOZ_PRINTER_NAME}");
 
 # Solaris
 #endif

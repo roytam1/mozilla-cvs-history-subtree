@@ -50,11 +50,14 @@
 #include "nsEscape.h"
 #include "prmem.h"
 #include "nsEmitterUtils.h"
+#include "nsFileStream.h"
 #include "nsMimeStringResources.h"
 #include "msgCore.h"
 #include "nsIMsgHeaderParser.h"
 #include "nsIComponentManager.h"
 #include "nsEmitterUtils.h"
+#include "nsFileSpec.h"
+#include "nsIRegistry.h"
 #include "nsIMimeStreamConverter.h"
 #include "nsIMimeConverter.h"
 #include "nsMsgMimeCID.h"
@@ -252,7 +255,7 @@ nsMimeBaseEmitter::MimeGetStringByName(const char *aHeaderName)
 	{
     nsXPIDLString val;
 
-    res = m_headerStringBundle->GetStringFromName(NS_ConvertASCIItoUTF16(aHeaderName).get(), 
+    res = m_headerStringBundle->GetStringFromName(NS_ConvertASCIItoUCS2(aHeaderName).get(), 
                                                   getter_Copies(val));
 
     if (NS_FAILED(res)) 

@@ -56,9 +56,6 @@ nsComposeTxtSrvFilter::nsComposeTxtSrvFilter() :
   mTextAreaAtom    = do_GetAtom("textarea");
   mSelectAreaAtom  = do_GetAtom("select");
   mMapAtom         = do_GetAtom("map");
-  mCiteAtom        = do_GetAtom("cite");
-  mTrueAtom        = do_GetAtom("true");
-  mMozSignatureAtom= do_GetAtom("moz-signature");
 }
 
 NS_IMPL_ISUPPORTS1(nsComposeTxtSrvFilter, nsITextServicesFilter)
@@ -76,16 +73,22 @@ nsComposeTxtSrvFilter::Skip(nsIDOMNode* aNode, PRBool *_retval)
     nsIAtom *tag = content->Tag();
     if (tag == mBlockQuoteAtom) {
       if (mIsForMail) {
-        *_retval = content->AttrValueIs(kNameSpaceID_None, mTypeAtom,
-                                        mCiteAtom, eIgnoreCase);
+        nsAutoString cite;
+        if (NS_SUCCEEDED(content->GetAttr(kNameSpaceID_None, mTypeAtom, cite))) {
+          *_retval = cite.LowerCaseEqualsLiteral("cite");
+        }
       }
     } else if (tag == mPreAtom || tag == mSpanAtom) {
       if (mIsForMail) {
-        *_retval = content->AttrValueIs(kNameSpaceID_None, mMozQuoteAtom,
-                                        mTrueAtom, eIgnoreCase);
+        nsAutoString mozQuote;
+        if (NS_SUCCEEDED(content->GetAttr(kNameSpaceID_None, mMozQuoteAtom, mozQuote))) {
+          *_retval = mozQuote.LowerCaseEqualsLiteral("true");            
+        }
+
         if (!*_retval) {
-          *_retval = content->AttrValueIs(kNameSpaceID_None, mClassAtom,
-                                          mMozSignatureAtom, eCaseMatters);
+          nsAutoString className;
+          if (NS_SUCCEEDED(content->GetAttr(kNameSpaceID_None, mClassAtom, className))) 
+            *_retval = className.EqualsLiteral("moz-signature");
         }
       }         
     } else if (tag == mScriptAtom ||
@@ -95,10 +98,10 @@ nsComposeTxtSrvFilter::Skip(nsIDOMNode* aNode, PRBool *_retval)
       *_retval = PR_TRUE;
     } else if (tag == mTableAtom) {
       if (mIsForMail) {
-        *_retval =
-          content->AttrValueIs(kNameSpaceID_None, mClassAtom,
-                               NS_LITERAL_STRING("moz-email-headers-table"),
-                               eCaseMatters);
+          nsAutoString className;
+          if (NS_SUCCEEDED(content->GetAttr(kNameSpaceID_None, mClassAtom, className))) {
+            *_retval = className.EqualsLiteral("moz-email-headers-table");
+        }
       } 
     }
   }

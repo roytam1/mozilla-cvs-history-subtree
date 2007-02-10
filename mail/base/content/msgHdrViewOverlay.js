@@ -62,7 +62,6 @@ var gViewAllHeaders = false;
 var gShowOrganization = false;
 var gShowLargeAttachmentView = false;
 var gShowUserAgent = false;
-var gExtraExpandedHeaders;
 var gMinNumberOfHeaders = 0;
 var gDummyHeaderIdIndex = 0;
 var gCollapsedHeaderViewMode = false;
@@ -215,12 +214,6 @@ function initializeHeaderViewTables()
       gExpandedHeaderView[headerName] = new createHeaderEntry('expanded', gExpandedHeaderList[index]);
     }
     
-    var extraHeaders = gExtraExpandedHeaders.split(' ');
-    for (index = 0; index < extraHeaders.length; index++)
-    {
-      var extraHeader = extraHeaders[index];
-      gExpandedHeaderView[extraHeader.toLowerCase()] = new createNewHeaderView(extraHeader, extraHeader + ':');
-    }
     if (gShowOrganization)
     {
       var organizationEntry = {name:"organization", outputFunction:updateHeaderValue};
@@ -247,7 +240,6 @@ function OnLoadMsgHeaderPane()
   gShowOrganization = pref.getBoolPref("mailnews.headers.showOrganization");
   gShowLargeAttachmentView = pref.getBoolPref("mailnews.attachments.display.largeView");
   gShowCondensedEmailAddresses = pref.getBoolPref("mail.showCondensedAddresses");
-  gExtraExpandedHeaders = pref.getCharPref("mailnews.headers.extraExpandedHeaders");
 
   // listen to the 
   pref.addObserver("mail.showCondensedAddresses", MsgHdrViewObserver, false);
@@ -338,11 +330,13 @@ var messageHeaderSink = {
       ClearHeaderView(gCollapsedHeaderView);
       ClearHeaderView(gExpandedHeaderView);
 
-      EnsureSubjectValue(); // make sure there is a subject even if it's empty so we'll show the subject and the twisty    
+      EnsureSubjectValue(); // make sure there is a subject even if it's empty so we'll show the subject and the twisty
       
       ShowMessageHeaderPane();
       UpdateMessageHeaders();
-      ShowEditMessageButton();
+  
+      if (gIsEditableMsgFolder)
+        ShowEditMessageButton();
       
       for (index in gMessageListeners)
         gMessageListeners[index].onEndHeaders();
@@ -402,9 +396,9 @@ var messageHeaderSink = {
         else
          currentHeaderData[lowerCaseHeaderName] = header;
       } // while we have more headers to parse
-      
+
       // process message tags as if they were headers in the message
-      SetTagHeader();      
+      setTagHeader();      
 
       if (("from" in currentHeaderData) && ("sender" in currentHeaderData) && msgHeaderParser)
       {
@@ -418,7 +412,7 @@ var messageHeaderSink = {
 
       this.onEndHeaders();
     },
-    
+
     handleAttachment: function(contentType, url, displayName, uri, isExternalAttachment) 
     {
       // presentation level change....don't show vcards as external attachments in the UI.
@@ -442,7 +436,7 @@ var messageHeaderSink = {
 
       // display name optimization. Eliminate any large quantities of white space from the display name.
       // such that Hello       World.txt becomes Hello World.txt.
-      displayName = displayName.replace(/ +/g, " ");
+      var displayName = displayName.replace(/ +/g, " ");
           
       currentAttachments.push (new createNewAttachmentInfo(contentType, url, displayName, uri, isExternalAttachment));
       // if we have an attachment, set the MSG_FLAG_ATTACH flag on the hdr
@@ -501,25 +495,25 @@ var messageHeaderSink = {
 
     mSecurityInfo  : null,
     mSaveHdr: null,
-    get securityInfo()
+    getSecurityInfo: function()
     {
       return this.mSecurityInfo;
     },
-    set securityInfo(aSecurityInfo)
+    setSecurityInfo: function(aSecurityInfo)
     {
       this.mSecurityInfo = aSecurityInfo;
     },
 
     mDummyMsgHeader: null,
 
-    get dummyMsgHeader()
+    getDummyMsgHeader: function() 
     {
       if (!this.mDummyMsgHeader)
         this.mDummyMsgHeader = new nsDummyMsgHeader();
       return this.mDummyMsgHeader;
     },
     mProperties: null,
-    get properties()
+    getProperties: function()
     {
       if (!this.mProperties)
         this.mProperties = Components.classes["@mozilla.org/hash-property-bag;1"].
@@ -528,52 +522,56 @@ var messageHeaderSink = {
     }
 };
 
-function SetTagHeader()
+// private method which generates a space delimited list of tag names
+// for the current message. This list is then stored in
+// currentHeaderData['tags']. Each tag is encoded.
+function setTagHeader()
 {
-  // it would be nice if we passed in the msgHdr from the back end
+  // it would be nice if we passed in the msg hdr from the back end  
   var msgHdr;
-  try
-  {
+  try {
     msgHdr = gDBView.hdrForFirstSelectedMessage;
   }
-  catch (ex)
+  catch (ex) { return; } // no msgHdr to add our tags to.
+  
+  var tagsString = "";
+  
+  // extract the tags from the msg hdr
+  var tags = msgHdr.getStringProperty('keywords'); 
+  var label = msgHdr.label;
+  if (label > 0)
   {
-    return; // no msgHdr to add our tags to
+    var labelTag = '$label' + label;
+    if (!tags || !tags.search(labelTag)) // don't add the label if it's already in our keyword list
+      tagsString = labelTag;
   }
-
-  // get the list of known tags
+  
+  // rebuild the keywords string with just the keys that are
+  // actual tags and not other keywords like Junk and NonJunk.
   var tagService = Components.classes["@mozilla.org/messenger/tagservice;1"]
                    .getService(Components.interfaces.nsIMsgTagService);
-  var tagArray = tagService.getAllTags({});
-  var tagKeys = {};
-  for each (var tagInfo in tagArray)
-    if (tagInfo.tag)
-      tagKeys[tagInfo.key] = true;
-
-  // extract the tag keys from the msgHdr
-  var msgKeyArray = msgHdr.getStringProperty("keywords").split(" ");
-
-  // attach legacy label to the front if not already there
-  var label = msgHdr.label;
-  if (label)
+  var tagsArray = tags.split(' ');
+  for (var index = 0; index < tagsArray.length; index++)
   {
-    var labelKey = "$label" + label;
-    if (msgKeyArray.indexOf(labelKey) < 0)
-      msgKeyArray.unshift(labelKey);
+      var tagName;
+      try {
+        // if we got a bad tag name, getTagForKey will throw an exception, skip it 
+        // and go to the next one.
+        tagName = tagService.getTagForKey(tagsArray[index]);
+      } catch (ex) { continue; }
+      
+      if (tagName)
+      {          
+        if (tagsString)
+          tagsString += " ";
+      tagsString += tagsArray[index];
+    }
   }
-
- // Rebuild the keywords string with just the keys that are actual tags or
-  // legacy labels and not other keywords like Junk and NonJunk.
-  // Retain their order, though, with the label as oldest element.
-  for (var i = msgKeyArray.length - 1; i >= 0; --i)
-    if (!(msgKeyArray[i] in tagKeys))
-      msgKeyArray.splice(i, 1); // remove non-tag key
-  var msgKeys = msgKeyArray.join(" ");
-
-  if (msgKeys)
-    currentHeaderData.tags = {headerName: "tags", headerValue: msgKeys};
-  else // no more tags, so clear out the header field
-    delete currentHeaderData.tags;
+  
+  if (tagsString)
+    currentHeaderData['tags'] = { headerName: 'tags', headerValue: tagsString};
+  else if (currentHeaderData['tags']) // no more tags, so clear out the header field
+    currentHeaderData['tags'] = null;
 }
 
 function EnsureSubjectValue()
@@ -593,26 +591,30 @@ function CheckNotify()
     NotifyClearAddresses();
 }
 
-function OnTagsChange()
+// Public method called by the tag front end code when the tags for the selected
+// message has changed. 
+function onTagsChange()
 {
   // rebuild the tag headers
-  SetTagHeader();
-
+  setTagHeader();
+  
   // now update the expanded header view to rebuild the tags,
   // and then show or hide the tag header box.  
   if (gBuiltExpandedView)
   {
-    var headerEntry = gExpandedHeaderView.tags;
+    headerEntry = gExpandedHeaderView['tags'];
     if (headerEntry)
     {
-      headerEntry.valid = ("tags" in currentHeaderData);
-      if (headerEntry.valid)
-        headerEntry.outputFunction(headerEntry, currentHeaderData.tags.headerValue);
+      if (currentHeaderData['tags'])
+      {
+        headerEntry.outputFunction(headerEntry, currentHeaderData['tags'].headerValue);
+        headerEntry.valid = true;
+      }
       
       // if we are showing the expanded header view then we may need to collapse or
       // show the tag header box...
       if (!gCollapsedHeaderViewMode)
-        headerEntry.enclosingBox.collapsed = !headerEntry.valid;
+        headerEntry.enclosingBox.collapsed = !currentHeaderData['tags'];
     }
   }
 }
@@ -692,7 +694,7 @@ function EnsureMinimumNumberOfHeaders (headerTable)
     while (numEmptyHeaders)
     {
       var dummyHeaderId = "Dummy-Header" + gDummyHeaderIdIndex;
-      gExpandedHeaderView[dummyHeaderId] = new createNewHeaderView(dummyHeaderId, "");
+      gExpandedHeaderView[dummyHeaderId] = new createNewHeaderView(dummyHeaderId);
       gExpandedHeaderView[dummyHeaderId].valid = true;
 
       gDummyHeaderIdIndex++;
@@ -746,13 +748,17 @@ function updateHeaderValueInTextNode(headerEntry, headerValue)
   headerEntry.textNode.value = headerValue;
 }
 
-function createNewHeaderView(headerName, label)
+function createNewHeaderView(headerName)
 {
   var idName = 'expanded' + headerName + 'Box';
   var newHeader = document.createElement("mail-headerfield");
-  
   newHeader.setAttribute('id', idName);
-  newHeader.setAttribute('label', label);
+
+  if (headerName.indexOf("Dummy-Header") == 0) // -1 means not found, 0 means starts at the beginning
+    newHeader.setAttribute('label', "");
+  else
+    newHeader.setAttribute('label', currentHeaderData[headerName].headerName + ':');
+  
   newHeader.collapsed = true;
 
   // this new element needs to be inserted into the view...
@@ -807,16 +813,16 @@ function UpdateMessageHeaders()
       {
         // for view all headers, if we don't have a header field for this value....cheat and create one....then
         // fill in a headerEntry
-        gExpandedHeaderView[headerName] = new createNewHeaderView(headerName, currentHeaderData[headerName].headerName + ':');
+        gExpandedHeaderView[headerName] = new createNewHeaderView(headerName);
         headerEntry = gExpandedHeaderView[headerName];
       }
     } // if we are in expanded view....
 
     if (headerEntry)
-    {
-      headerEntry.outputFunction(headerEntry, headerField.headerValue);
-      headerEntry.valid = true;
-    }
+      {
+        headerEntry.outputFunction(headerEntry, headerField.headerValue);
+        headerEntry.valid = true;
+      }
   }
 
   if (gCollapsedHeaderViewMode)
@@ -914,7 +920,7 @@ function updateEmailAddressNode(emailAddressNode, address)
   emailAddressNode.setAttribute("emailAddress", address.emailAddress);
   emailAddressNode.setAttribute("fullAddress", address.fullAddress);
   emailAddressNode.setAttribute("displayName", address.displayName);
-
+  
   AddExtraAddressProcessing(address.emailAddress, emailAddressNode);
 }
 
@@ -926,7 +932,7 @@ function updateEmailAddressNode(emailAddressNode, address)
 function AddExtraAddressProcessing(emailAddress, addressNode)
 {
   var displayName = addressNode.getAttribute("displayName");  
-  var mailAddress = addressNode.getAttribute("emailAddress");
+  var emailAddress = addressNode.getAttribute("emailAddress");
 
   // always show the address for the from and reply-to fields
   var parentElementId = addressNode.parentNode.id;
@@ -938,7 +944,7 @@ function AddExtraAddressProcessing(emailAddress, addressNode)
   {
     if (useDisplayNameForAddress(emailAddress))
       addressNode.setAttribute("label", displayName);
-    addressNode.setAttribute("tooltiptext", mailAddress);
+    addressNode.setAttribute("tooltiptext", emailAddress);
     addressNode.setAttribute("tooltip", "emailAddressTooltip");
   }
   else
@@ -1107,7 +1113,7 @@ function detachAttachment(aAttachment, aSaveFirst)
 function CanDetachAttachments()
 {
   var uri = GetLoadedMessage();
-  var canDetach = !IsNewsMessage(uri) && (!IsImapMessage(uri) || MailOfflineMgr.isOnline());
+  var canDetach = !IsNewsMessage(uri) && (!IsImapMessage(uri) || CheckOnline());
   if (canDetach && ("content-type" in currentHeaderData))
   {
     var contentType = currentHeaderData["content-type"].headerValue;
@@ -1356,7 +1362,7 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
       // find the separator
       var indexOfSeparator = 0;
       while (popup.childNodes[indexOfSeparator].localName != 'menuseparator')
-        indexOfSeparator++;
+        indexOfSeparator++;      
 
       var formattedDisplayNameString = gMessengerBundle.getFormattedString("attachmentDisplayNameFormat",
                                        [attachmentIndex, attachment.displayName]);
@@ -1365,7 +1371,7 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
       item.setAttribute('accesskey', attachmentIndex); 
 
       // each attachment in the list gets its own menupopup with options for saving, deleting, detaching, etc. 
-      var openpopup = document.createElement('menupopup');
+      var openpopup = document.createElement('menupopup'); 
       openpopup = item.appendChild(openpopup);
 
       // Due to Bug #314228, we must append our menupopup to the new attachment menu item
@@ -1375,7 +1381,7 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
 
       var menuitementry = document.createElement('menuitem');
       menuitementry.attachment = cloneAttachment(attachment);
-      menuitementry.setAttribute('oncommand', 'openAttachment(this.attachment)'); 
+      menuitementry.setAttribute('oncommand', 'openAttachment(this.attachment)');
 
       if (!gSaveLabel)
         gSaveLabel = gMessengerBundle.getString("saveLabel");
@@ -1407,7 +1413,7 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
       }
       var canDetach = !(/news-message:/.test(attachment.uri)) && 
           !signedOrEncrypted &&
-          (!(/imap-message/.test(attachment.uri)) || MailOfflineMgr.isOnline());
+          (!(/imap-message/.test(attachment.uri)) || CheckOnline());
       menuitementry.setAttribute('label', gOpenLabel); 
       menuitementry.setAttribute('accesskey', gOpenLabelAccesskey); 
       menuitementry = openpopup.appendChild(menuitementry);
@@ -1516,19 +1522,9 @@ function ClearAttachmentList()
 
 function ShowEditMessageButton() 
 {
-  // it would be nice if we passed in the msgHdr from the back end
-  var msgHdr;
-  try
-  {
-    msgHdr = gDBView.hdrForFirstSelectedMessage;
-  }
-  catch (ex)
-  {
-    return;
-  }
-
-  if (IsSpecialFolder(msgHdr.folder, MSG_FOLDER_FLAG_DRAFTS, true))
-    document.getElementById("editMessageBox").collapsed = false;
+  var editBox = document.getElementById("editMessageBox");
+  if (editBox)
+    editBox.collapsed = false;
 } 
 
 function ClearEditMessageButton() 

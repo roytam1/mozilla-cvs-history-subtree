@@ -42,7 +42,6 @@
 #include "nsWalletService.h"
 #include "nsPasswordManager.h"
 #include "nsCPasswordManager.h"
-#include "nsEmbedCID.h"
 
 // Define the constructor function for the nsWalletlibService
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsWalletlibService, Init)
@@ -53,11 +52,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSingleSignOnPrompt, Init)
 static const nsModuleComponentInfo components[] = {
     { NS_WALLETSERVICE_CLASSNAME, NS_WALLETSERVICE_CID,
       NS_WALLETSERVICE_CONTRACTID, nsWalletlibServiceConstructor,
-      nsWalletlibService::RegisterProc,
-      nsWalletlibService::UnregisterProc
-    },
-    { NS_WALLETSERVICE_CLASSNAME, NS_WALLETSERVICE_CID,
-      NS_PWMGR_AUTHPROMPTFACTORY, nsWalletlibServiceConstructor,
       nsWalletlibService::RegisterProc,
       nsWalletlibService::UnregisterProc
     },

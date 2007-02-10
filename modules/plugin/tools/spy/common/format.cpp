@@ -777,7 +777,7 @@ int formatLogItem(LogItemStruct * plis, char * szOutput, BOOL bDOSStyle)
           strcpy(szMode, "NP_FULL");
           break;
         default:
-          strcpy(szMode, "[Invalid mode]");
+          strcpy(szMode, "[Invalide mode]");
           break;
       }
       sprintf(szString, "NPP_New(\"%s\", %#08lx, %s, %i, %#08lx, %#08lx, %#08lx)%s", 

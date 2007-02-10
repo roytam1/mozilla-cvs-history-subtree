@@ -37,7 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsSVGGraphicElement.h"
-#include "nsGkAtoms.h"
+#include "nsSVGAtoms.h"
 #include "nsIDOMSVGTextElement.h"
 #include "nsCOMPtr.h"
 #include "nsSVGAnimatedLengthList.h"
@@ -45,8 +45,9 @@
 #include "nsISVGSVGElement.h"
 #include "nsSVGCoordCtxProvider.h"
 #include "nsISVGTextContentMetrics.h"
+#include "nsIPresShell.h"
 #include "nsIFrame.h"
-#include "nsDOMError.h"
+#include "nsIDocument.h"
 
 typedef nsSVGGraphicElement nsSVGTextElementBase;
 
@@ -58,6 +59,7 @@ protected:
   friend nsresult NS_NewSVGTextElement(nsIContent **aResult,
                                        nsINodeInfo *aNodeInfo);
   nsSVGTextElement(nsINodeInfo* aNodeInfo);
+  virtual ~nsSVGTextElement();
   nsresult Init();
   
 public:
@@ -70,17 +72,15 @@ public:
 
   // xxx If xpcom allowed virtual inheritance we wouldn't need to
   // forward here :-(
-  NS_FORWARD_NSIDOMNODE(nsSVGTextElementBase::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsSVGTextElementBase::)
   NS_FORWARD_NSIDOMELEMENT(nsSVGTextElementBase::)
   NS_FORWARD_NSIDOMSVGELEMENT(nsSVGTextElementBase::)
 
-  // nsIContent interface
+  // nsIStyledContent interface
   NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
   
   // nsISVGContent specializations:
   virtual void ParentChainChanged();
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 
 protected:
 
@@ -122,6 +122,11 @@ nsSVGTextElement::nsSVGTextElement(nsINodeInfo* aNodeInfo)
 {
 
 }
+
+nsSVGTextElement::~nsSVGTextElement()
+{
+}
+
   
 nsresult
 nsSVGTextElement::Init()
@@ -139,7 +144,7 @@ nsSVGTextElement::Init()
     rv = NS_NewSVGAnimatedLengthList(getter_AddRefs(mX),
                                      lengthList);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = AddMappedSVGValue(nsGkAtoms::x, mX);
+    rv = AddMappedSVGValue(nsSVGAtoms::x, mX);
     NS_ENSURE_SUCCESS(rv,rv);
   }
   
@@ -151,7 +156,7 @@ nsSVGTextElement::Init()
     rv = NS_NewSVGAnimatedLengthList(getter_AddRefs(mY),
                                      lengthList);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = AddMappedSVGValue(nsGkAtoms::y, mY);
+    rv = AddMappedSVGValue(nsSVGAtoms::y, mY);
     NS_ENSURE_SUCCESS(rv,rv);
   }
 
@@ -163,7 +168,7 @@ nsSVGTextElement::Init()
     rv = NS_NewSVGAnimatedLengthList(getter_AddRefs(mdX),
                                      lengthList);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = AddMappedSVGValue(nsGkAtoms::dx, mdX);
+    rv = AddMappedSVGValue(nsSVGAtoms::dx, mdX);
     NS_ENSURE_SUCCESS(rv,rv);
   }
   
@@ -175,7 +180,7 @@ nsSVGTextElement::Init()
     rv = NS_NewSVGAnimatedLengthList(getter_AddRefs(mdY),
                                      lengthList);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = AddMappedSVGValue(nsGkAtoms::dy, mdY);
+    rv = AddMappedSVGValue(nsSVGAtoms::dy, mdY);
     NS_ENSURE_SUCCESS(rv,rv);
   }
 
@@ -186,7 +191,7 @@ nsSVGTextElement::Init()
 // nsIDOMNode methods
 
 
-NS_IMPL_ELEMENT_CLONE_WITH_INIT(nsSVGTextElement)
+NS_IMPL_DOM_CLONENODE_WITH_INIT(nsSVGTextElement)
 
 
 //----------------------------------------------------------------------
@@ -256,59 +261,43 @@ NS_IMETHODIMP nsSVGTextElement::GetLengthAdjust(nsIDOMSVGAnimatedEnumeration * *
 /* long getNumberOfChars (); */
 NS_IMETHODIMP nsSVGTextElement::GetNumberOfChars(PRInt32 *_retval)
 {
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (metrics)
-    return metrics->GetNumberOfChars(_retval);
-
-  *_retval = 0;
-  return NS_OK;
+  NS_NOTYETIMPLEMENTED("nsSVGTextElement::GetNumberOfChars");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* float getComputedTextLength (); */
 NS_IMETHODIMP nsSVGTextElement::GetComputedTextLength(float *_retval)
 {
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
+  nsCOMPtr<nsIDOMSVGRect> bbox;
 
-  if (metrics)
-    return metrics->GetComputedTextLength(_retval);
-
-  *_retval = 0.0;
+  GetBBox(getter_AddRefs(bbox));
+  if (bbox)
+    bbox->GetWidth(_retval);
+  else
+    *_retval = 0;
+  
   return NS_OK;
 }
 
 /* float getSubStringLength (in unsigned long charnum, in unsigned long nchars); */
 NS_IMETHODIMP nsSVGTextElement::GetSubStringLength(PRUint32 charnum, PRUint32 nchars, float *_retval)
 {
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (metrics)
-    return metrics->GetSubStringLength(charnum, nchars, _retval);
-
-  *_retval = 0.0;
-  return NS_OK;
+  NS_NOTYETIMPLEMENTED("nsSVGTextElement::GetSubStringLength");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* nsIDOMSVGPoint getStartPositionOfChar (in unsigned long charnum); */
 NS_IMETHODIMP nsSVGTextElement::GetStartPositionOfChar(PRUint32 charnum, nsIDOMSVGPoint **_retval)
 {
-  *_retval = nsnull;
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (!metrics) return NS_ERROR_FAILURE;
-
-  return metrics->GetStartPositionOfChar(charnum, _retval);
+  NS_NOTYETIMPLEMENTED("nsSVGTextElement::GetStartPositionOfChar");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* nsIDOMSVGPoint getEndPositionOfChar (in unsigned long charnum); */
 NS_IMETHODIMP nsSVGTextElement::GetEndPositionOfChar(PRUint32 charnum, nsIDOMSVGPoint **_retval)
 {
-  *_retval = nsnull;
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (!metrics) return NS_ERROR_FAILURE;
-
-  return metrics->GetEndPositionOfChar(charnum, _retval);
+  NS_NOTYETIMPLEMENTED("nsSVGTextElement::GetEndPositionOfChar");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* nsIDOMSVGRect getExtentOfChar (in unsigned long charnum); */
@@ -325,29 +314,19 @@ NS_IMETHODIMP nsSVGTextElement::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect 
 /* float getRotationOfChar (in unsigned long charnum); */
 NS_IMETHODIMP nsSVGTextElement::GetRotationOfChar(PRUint32 charnum, float *_retval)
 {
-  *_retval = 0.0;
-
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (!metrics) return NS_ERROR_FAILURE;
-
-  return metrics->GetRotationOfChar(charnum, _retval);
+  NS_NOTYETIMPLEMENTED("nsSVGTextElement::GetRotationOfChar");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* long getCharNumAtPosition (in nsIDOMSVGPoint point); */
 NS_IMETHODIMP nsSVGTextElement::GetCharNumAtPosition(nsIDOMSVGPoint *point, PRInt32 *_retval)
 {
   // null check when implementing - this method can be used by scripts!
-  if (!point)
-    return NS_ERROR_DOM_SVG_WRONG_TYPE_ERR;
+  // if (!element)
+  //   return NS_ERROR_DOM_SVG_WRONG_TYPE_ERR;
 
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (metrics)
-    return metrics->GetCharNumAtPosition(point, _retval);
-
-  *_retval = -1;
-  return NS_OK;
+  NS_NOTYETIMPLEMENTED("nsSVGTextElement::GetCharNumAtPosition");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* void selectSubString (in unsigned long charnum, in unsigned long nchars); */
@@ -358,7 +337,7 @@ NS_IMETHODIMP nsSVGTextElement::SelectSubString(PRUint32 charnum, PRUint32 nchar
 }
 
 //----------------------------------------------------------------------
-// nsIContent methods
+// nsIStyledContent methods
 
 NS_IMETHODIMP_(PRBool)
 nsSVGTextElement::IsAttributeMapped(const nsIAtom* name) const
@@ -436,13 +415,28 @@ void nsSVGTextElement::ParentChainChanged()
 already_AddRefed<nsISVGTextContentMetrics>
 nsSVGTextElement::GetTextContentMetrics()
 {
-  nsIFrame* frame = GetPrimaryFrame(Flush_Layout);
+  nsIDocument* doc = GetCurrentDoc();
+  if (!doc) {
+    NS_ERROR("no document");
+    return nsnull;
+  }
+  
+  nsIPresShell* presShell = doc->GetShellAt(0);
+  if (!presShell) {
+    NS_ERROR("no presshell");
+    return nsnull;
+  }
+
+  nsIFrame* frame;
+  presShell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, this), &frame);
 
   if (!frame) {
+    NS_ERROR("no frame");
     return nsnull;
   }
   
   nsISVGTextContentMetrics* metrics;
-  CallQueryInterface(frame, &metrics);
+  frame->QueryInterface(NS_GET_IID(nsISVGTextContentMetrics),(void**)&metrics);
+  NS_ASSERTION(metrics, "wrong frame type");
   return metrics;
 }

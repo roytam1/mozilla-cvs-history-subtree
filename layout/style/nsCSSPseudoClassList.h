@@ -36,8 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* atom list for CSS pseudo-classes */
-
 /*
  * This file contains the list of nsIAtoms and their values for CSS
  * pseudo-classes.  It is designed to be used as inline input to
@@ -54,7 +52,6 @@
 
 CSS_PSEUDO_CLASS(empty, ":empty")
 CSS_PSEUDO_CLASS(mozOnlyWhitespace, ":-moz-only-whitespace")
-CSS_PSEUDO_CLASS(mozEmptyExceptChildrenWithLocalname, ":-moz-empty-except-children-with-localname")
 CSS_PSEUDO_CLASS(lang, ":lang")
 CSS_PSEUDO_CLASS(notPseudo, ":not")
 CSS_PSEUDO_CLASS(mozBoundElement, ":-moz-bound-element")
@@ -79,15 +76,6 @@ CSS_PSEUDO_CLASS(lastChild, ":last-child")
 CSS_PSEUDO_CLASS(lastNode, ":-moz-last-node")
 CSS_PSEUDO_CLASS(onlyChild, ":only-child")
 
-// Image, object, etc state pseudo-classes
-CSS_PSEUDO_CLASS(mozBroken, ":-moz-broken")
-CSS_PSEUDO_CLASS(mozUserDisabled, ":-moz-user-disabled")
-CSS_PSEUDO_CLASS(mozSuppressed, ":-moz-suppressed")
-CSS_PSEUDO_CLASS(mozLoading, ":-moz-loading")
-CSS_PSEUDO_CLASS(mozTypeUnsupported, ":-moz-type-unsupported")
-
-CSS_PSEUDO_CLASS(mozHasHandlerRef, ":-moz-has-handlerref")
-
 // Match nodes that are HTML but not XHTML
 CSS_PSEUDO_CLASS(mozIsHTML, ":-moz-is-html")
 
@@ -99,6 +87,5 @@ CSS_PSEUDO_CLASS(valid, ":valid")
 CSS_PSEUDO_CLASS(invalid, ":invalid")
 CSS_PSEUDO_CLASS(inRange, ":in-range")
 CSS_PSEUDO_CLASS(outOfRange, ":out-of-range")
-CSS_PSEUDO_CLASS(defaultPseudo, ":default")
 CSS_PSEUDO_CLASS(mozReadOnly, ":-moz-read-only")
 CSS_PSEUDO_CLASS(mozReadWrite, ":-moz-read-write")

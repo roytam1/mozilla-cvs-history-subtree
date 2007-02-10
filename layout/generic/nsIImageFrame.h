@@ -34,12 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * interface for rendering objects for replaced elements with bitmap
- * image data
- */
-
 #ifndef nsIImageFrame_h___
 #define nsIImageFrame_h___
 
@@ -55,13 +49,11 @@ class nsIImageMap;
 
 class nsIImageFrame : public nsISupports {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IIMAGEFRAME_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IIMAGEFRAME_IID)
 
   NS_IMETHOD GetIntrinsicImageSize(nsSize& aSize) = 0;
 
   NS_IMETHOD GetImageMap(nsPresContext *aPresContext, nsIImageMap **aImageMap) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIImageFrame, NS_IIMAGEFRAME_IID)
 
 #endif /* nsIImageFrame_h___ */

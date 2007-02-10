@@ -42,12 +42,10 @@
 #include "nsIFrameTraversal.h"
 
 nsresult NS_NewFrameTraversal(nsIBidirectionalEnumerator **aEnumerator,
+                              nsTraversalType aType,
                               nsPresContext* aPresContext,
                               nsIFrame *aStart,
-                              nsIteratorType aType,
-                              PRBool aVisual,
-                              PRBool aLockInScrollView,
-                              PRBool aFollowOOFs);
+                              PRBool aLockInScrollView);
 
 nsresult NS_CreateFrameTraversal(nsIFrameTraversal** aResult);
 
@@ -60,12 +58,9 @@ public:
   NS_DECL_ISUPPORTS
 
   NS_IMETHOD NewFrameTraversal(nsIBidirectionalEnumerator **aEnumerator,
-                               nsPresContext* aPresContext,
-                               nsIFrame *aStart,
-                               PRInt32 aType,
-                               PRBool aVisual,
-                               PRBool aLockInScrollView,
-                               PRBool aFollowOOFs);
+                              PRUint32 aType,
+                              nsPresContext* aPresContext,
+                              nsIFrame *aStart);
 };
 
 #endif //NSFRAMETRAVERSAL_H

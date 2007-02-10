@@ -78,9 +78,6 @@ const SEARCH_DATA_TEXT           = Ci.nsISearchEngine.DATA_TEXT;
 const XML_FILE_EXT      = "xml";
 const SHERLOCK_FILE_EXT = "src";
 
-// Delay for lazy serialization (ms)
-const LAZY_SERIALIZE_DELAY = 100;
-
 const ICON_DATAURL_PREFIX = "data:image/x-icon;base64,";
 
 // Supported extensions for Sherlock plugin icons
@@ -97,6 +94,7 @@ const MAX_ICON_SIZE   = 10000;
 const DEFAULT_QUERY_CHARSET = "ISO-8859-1";
 
 const SEARCH_BUNDLE = "chrome://browser/locale/search.properties";
+const SIDEBAR_BUNDLE = "chrome://browser/locale/sidebar/sidebar.properties";
 const BRAND_BUNDLE = "chrome://branding/locale/brand.properties";
 
 const OPENSEARCH_NS_10  = "http://a9.com/-/spec/opensearch/1.0/";
@@ -152,7 +150,6 @@ const OS_PARAM_OUTPUT_ENCODING = /\{outputEncoding\??\}/g;
 // Default values
 const OS_PARAM_LANGUAGE_DEF         = "*";
 const OS_PARAM_OUTPUT_ENCODING_DEF  = "UTF-8";
-const OS_PARAM_INPUT_ENCODING_DEF   = "UTF-8";
 
 // "Unsupported" OpenSearch parameters. For example, we don't support
 // page-based results, so if the engine requires that we send the "page index"
@@ -167,7 +164,7 @@ const OS_PARAM_START_INDEX_DEF  = "1";  // start at 1st result
 const OS_PARAM_START_PAGE_DEF   = "1";  // 1st page
 
 // Optional parameter
-const OS_PARAM_OPTIONAL     = /\{(?:\w+:)?\w+\?\}/g;
+const OS_PARAM_OPTIONAL     = /\{\w+\?\}/g;
 
 // A array of arrays containing parameters that we don't fully support, and
 // their default values. We will only send values for these parameters if
@@ -264,6 +261,45 @@ function ENSURE(assertion, message, resultCode) {
  */
 function ENSURE_ARG(assertion, message) {
   ENSURE(assertion, message, Cr.NS_ERROR_INVALID_ARG);
+}
+
+// FIXME: Bug 326854: no btoa for components, use our own
+/**
+ * Encodes an array of bytes into a string using the base 64 encoding scheme.
+ * @param aBytes
+ *        An array of bytes to encode.
+ */
+function b64(aBytes) {
+  const B64_CHARS =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  var out = "", bits, i, j;
+
+  while (aBytes.length >= 3) {
+    bits = 0;
+    for (i = 0; i < 3; i++) {
+      bits <<= 8;
+      bits |= aBytes[i];
+    }
+    for (j = 18; j >= 0; j -= 6)
+      out += B64_CHARS[(bits>>j) & 0x3F];
+
+    aBytes.splice(0, 3);
+  }
+
+  switch (aBytes.length) {
+    case 2:
+      out += B64_CHARS[(aBytes[0]>>2) & 0x3F];
+      out += B64_CHARS[((aBytes[0] & 0x03) << 4) | ((aBytes[1] >> 4) & 0x0F)];
+      out += B64_CHARS[((aBytes[1] & 0x0F) << 2)];
+      out += "=";
+      break;
+    case 1:
+      out += B64_CHARS[(aBytes[0]>>2) & 0x3F];
+      out += B64_CHARS[(aBytes[0] & 0x03) << 4];
+      out += "==";
+      break;
+  }
+  return out;
 }
 
 function loadListener(aChannel, aEngine, aCallback) {
@@ -590,23 +626,6 @@ function getLocalizedPref(aPrefName, aDefault) {
   } catch (ex) {}
 
   return aDefault;
-}
-
-/**
- * Wrapper for nsIPrefBranch::setComplexValue.
- * @param aPrefName
- *        The name of the pref to set.
- */
-function setLocalizedPref(aPrefName, aValue) {
-  var prefB = Cc["@mozilla.org/preferences-service;1"].
-              getService(Ci.nsIPrefBranch);
-  const nsIPLS = Ci.nsIPrefLocalizedString;
-  try {
-    var pls = Components.classes["@mozilla.org/pref-localizedstring;1"]
-                        .createInstance(Ci.nsIPrefLocalizedString);
-    pls.data = aValue;
-    prefB.setComplexValue(aPrefName, nsIPLS, pls);
-  } catch (ex) {}
 }
 
 /**
@@ -982,8 +1001,6 @@ Engine.prototype = {
   _updateURL: null,
   // The url to check for a new icon
   _iconUpdateURL: null,
-  // A reference to the timer used for lazily serializing the engine to file
-  _serializeTimer: null,
 
   /**
    * Retrieves the data from the engine's file. If the engine's dataType is
@@ -1003,6 +1020,7 @@ Engine.prototype = {
 
     switch (this._dataType) {
       case SEARCH_DATA_XML:
+
         var domParser = Cc["@mozilla.org/xmlextras/domparser;1"].
                         createInstance(Ci.nsIDOMParser);
         var doc = domParser.parseFromStream(fileInStream, "UTF-8",
@@ -1076,12 +1094,12 @@ Engine.prototype = {
   _confirmAddEngine: function SRCH_SVC_confirmAddEngine() {
     var sbs = Cc["@mozilla.org/intl/stringbundle;1"].
               getService(Ci.nsIStringBundleService);
-    var stringBundle = sbs.createBundle(SEARCH_BUNDLE);
+    var stringBundle = sbs.createBundle(SIDEBAR_BUNDLE);
     var titleMessage = stringBundle.GetStringFromName("addEngineConfirmTitle");
 
     // Display only the hostname portion of the URL.
     var dialogMessage =
-        stringBundle.formatStringFromName("addEngineConfirmation",
+        stringBundle.formatStringFromName("addEngineConfirmText",
                                           [this._name, this._uri.host], 2);
     var checkboxMessage = stringBundle.GetStringFromName("addEngineUseNowText");
     var addButtonLabel =
@@ -1124,6 +1142,7 @@ Engine.prototype = {
         LOG("updating " + aEngine._engineToUpdate.name + " failed");
         return;
       }
+
       var sbs = Cc["@mozilla.org/intl/stringbundle;1"].
                 getService(Ci.nsIStringBundleService);
 
@@ -1295,7 +1314,7 @@ Engine.prototype = {
               return;
             }
 
-            var str = btoa(String.fromCharCode.apply(null, aByteArray));
+            var str = b64(aByteArray);
             aEngine._iconURI = makeURI(ICON_DATAURL_PREFIX + str);
 
             // The engine might not have a file yet, if it's being downloaded,
@@ -1478,9 +1497,6 @@ Engine.prototype = {
    */
   _parseAsOpenSearch: function SRCH_ENG_parseAsOS() {
     var doc = this._data;
-
-    // The OpenSearch spec sets a default value for the input encoding.
-    this._queryCharset = OS_PARAM_INPUT_ENCODING_DEF;
 
     for (var i = 0; i < doc.childNodes.length; ++i) {
       var child = doc.childNodes[i];
@@ -1898,30 +1914,6 @@ Engine.prototype = {
     return doc;
   },
 
-  _lazySerializeToFile: function SRCH_ENG_serializeToFile() {
-    if (this._serializeTimer) {
-      // Reset the timer
-      this._serializeTimer.delay = LAZY_SERIALIZE_DELAY;
-    } else {
-      this._serializeTimer = Cc["@mozilla.org/timer;1"].
-                             createInstance(Ci.nsITimer);
-      var timerCallback = {
-        self: this,
-        notify: function SRCH_ENG_notify(aTimer) {
-          try {
-            this.self._serializeToFile();
-          } catch (ex) {
-            LOG("Serialization from timer callback failed:\n" + ex);
-          }
-          this.self._serializeTimer = null;
-        }
-      };
-      this._serializeTimer.initWithCallback(timerCallback,
-                                            LAZY_SERIALIZE_DELAY,
-                                            Ci.nsITimer.TYPE_ONE_SHOT);
-    }
-  },
-
   /**
    * Serializes the engine object to file.
    */
@@ -2093,9 +2085,6 @@ Engine.prototype = {
            Cr.NS_ERROR_FAILURE);
 
     url.addParam(aName, aValue);
-
-    // Serialize the changes to file lazily
-    this._lazySerializeToFile();
   },
 
   // from nsISearchEngine
@@ -2788,7 +2777,7 @@ SearchService.prototype = {
         prefB.clearUserPref(currentEnginePref);
     }
     else {
-      setLocalizedPref(currentEnginePref, this._currentEngine.name);
+      prefB.setCharPref(currentEnginePref, this._currentEngine.name);
     }
 
     notifyAction(this._currentEngine, SEARCH_ENGINE_CURRENT);
@@ -2846,17 +2835,7 @@ var engineMetadataService = {
     file.append("search.sqlite");
     var dbService = Cc["@mozilla.org/storage/service;1"].
                     getService(Ci.mozIStorageService);
-    try {
-        this.mDB = dbService.openDatabase(file);
-    } catch (ex) {
-        if (ex.result == 0x8052000b) { /* NS_ERROR_FILE_CORRUPTED */
-            // delete and try again
-            file.remove(false);
-            this.mDB = dbService.openDatabase(file);
-        } else {
-            throw ex;
-        }
-    }
+    this.mDB = dbService.openDatabase(file);
 
     try {
       this.mDB.createTable("engine_data", engineDataTable);
@@ -3029,20 +3008,17 @@ var engineUpdateService = {
       ULOG(engine.name + " has expired");
 
       var testEngine = null;
-
-      var updateURI = makeURI(updateURL);
-      if (updateURI) {
+      if (updateURL) {
         var dataType = engineMetadataService.getAttr(engine, "updatedatatype")
         if (!dataType) {
           ULOG("No loadtype to update engine!");
           continue;
         }
 
-        testEngine = new Engine(updateURI, dataType, false);
+        testEngine = new Engine(makeURI(updateURL), dataType, false);
         testEngine._engineToUpdate = engine;
         testEngine._initFromURI();
-      } else
-        ULOG("invalid updateURI");
+      }
 
       if (iconUpdateURL) {
         // If we're updating the engine too, use the new engine object,
@@ -3052,7 +3028,6 @@ var engineUpdateService = {
 
       // Schedule the next update
       this.scheduleNextUpdate(engine);
-
     } // end engine iteration
   }
 };

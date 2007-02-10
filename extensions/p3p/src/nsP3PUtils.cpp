@@ -43,7 +43,7 @@
 
 nsresult
 nsP3PUtils::GetAttributeValue(nsIDOMNode* aNode, 
-                              const char* aAttrName, 
+                              char* aAttrName, 
                               nsAString& aAttrValue) 
 {
   NS_ENSURE_ARG_POINTER(aNode);
@@ -104,7 +104,7 @@ nsP3PUtils::TrimCharsInSet(const char* aSet,
   aValue.BeginReading(valueCurrent);
   aValue.EndReading(valueEnd);
 
-  // Skip characters in the beginning
+  // Skip charaters in the beginning
   while (valueCurrent != valueEnd) {
     if (!IsCharInSet(aSet, *valueCurrent)) {
       break;
@@ -236,7 +236,7 @@ nsP3PUtils::DeterminePolicyScope(const nsVoidArray& aNodeList,
     child->GetNodeValue(value);
     static const char* kWhitespace = " \n\r\t\b";
     value = TrimCharsInSet(kWhitespace, value);
-    *aOut = IsPathIncluded(value, NS_ConvertUTF8toUTF16(aPath));
+    *aOut = IsPathIncluded(value, NS_ConvertUTF8toUCS2(aPath));
   }
 
   return NS_OK;

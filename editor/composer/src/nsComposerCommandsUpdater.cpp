@@ -39,11 +39,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindow.h"
 #include "nsComposerCommandsUpdater.h"
 #include "nsComponentManagerUtils.h"
 #include "nsIDOMDocument.h"
 #include "nsISelection.h"
+#include "nsIScriptGlobalObject.h"
 
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsString.h"
@@ -85,7 +86,7 @@ nsComposerCommandsUpdater::NotifyDocumentCreated()
 NS_IMETHODIMP
 nsComposerCommandsUpdater::NotifyDocumentWillBeDestroyed()
 {
-  // cancel any outstanding update timer
+  // cancel any outstanding udpate timer
   if (mUpdateTimer)
   {
     mUpdateTimer->Cancel();
@@ -245,10 +246,10 @@ nsComposerCommandsUpdater::Init(nsIDOMWindow* aDOMWindow)
   NS_ENSURE_ARG(aDOMWindow);
   mDOMWindow = aDOMWindow;
 
-  nsCOMPtr<nsPIDOMWindow> window(do_QueryInterface(aDOMWindow));
-  if (window)
+  nsCOMPtr<nsIScriptGlobalObject> scriptObject(do_QueryInterface(aDOMWindow));
+  if (scriptObject)
   {
-    mDocShell = window->GetDocShell();
+    mDocShell = scriptObject->GetDocShell();
   }
   return NS_OK;
 }

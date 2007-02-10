@@ -38,10 +38,10 @@
 
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsBrowserProfileMigratorUtils.h"
+#include "nsCRT.h"
 #include "nsDirectoryServiceDefs.h"
-#include "nsDirectoryServiceUtils.h"
 #include "nsDocShellCID.h"
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
 #include "nsINavBookmarksService.h"
 #include "nsBrowserCompsCID.h"
 #else
@@ -79,6 +79,8 @@
 #define SAFARI_COOKIE_BEHAVIOR_FILE_NAME  NS_LITERAL_STRING("com.apple.WebFoundation.plist")
 #define SAFARI_DATE_OFFSET                978307200
 #define MIGRATION_BUNDLE                  "chrome://browser/locale/migration/migration.properties"
+
+static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsSafariProfileMigrator
@@ -177,10 +179,6 @@ nsSafariProfileMigrator::GetMigrateData(const PRUnichar* aProfile,
     if (NS_SUCCEEDED(GetSafariUserStyleSheet(getter_AddRefs(safariUserStylesheetFile))))
       *aResult |= nsIBrowserProfileMigrator::OTHERDATA;
   }
-  
-  // Don't offer to import that Safari form data if there isn't any
-  if (HasFormDataToImport())
-    *aResult |= nsIBrowserProfileMigrator::FORMDATA;
 
   return NS_OK;
 }
@@ -480,7 +478,7 @@ nsSafariProfileMigrator::SetDefaultEncoding(void* aTransform, nsIPrefBranch* aBr
   for (PRUint16 i = 0; (charsetIndex == -1) &&
                        i < (sizeof(gCharsets) / sizeof(gCharsets[0])); ++i) {
     if (gCharsets[i].webkitLabelLength == encodingLength &&
-        !strcmp(gCharsets[i].webkitLabel, encodingStr))
+        !nsCRT::strcmp(gCharsets[i].webkitLabel, encodingStr))
       charsetIndex = (PRInt16)i;
   }
   if (charsetIndex == -1) // Default to "Western"
@@ -658,7 +656,7 @@ nsSafariProfileMigrator::SetDisplayImages(void* aTransform, nsIPrefBranch* aBran
 nsresult
 nsSafariProfileMigrator::SetFontName(void* aTransform, nsIPrefBranch* aBranch)
 {
-  nsCString associatedLangGroup;
+  nsXPIDLCString associatedLangGroup;
   nsresult rv = aBranch->GetCharPref("migration.associatedLangGroup",
                                      getter_Copies(associatedLangGroup));
   if (NS_FAILED(rv))
@@ -674,7 +672,7 @@ nsSafariProfileMigrator::SetFontName(void* aTransform, nsIPrefBranch* aBranch)
 nsresult
 nsSafariProfileMigrator::SetFontSize(void* aTransform, nsIPrefBranch* aBranch)
 {
-  nsCString associatedLangGroup;
+  nsXPIDLCString associatedLangGroup;
   nsresult rv = aBranch->GetCharPref("migration.associatedLangGroup",
                                      getter_Copies(associatedLangGroup));
   if (NS_FAILED(rv))
@@ -893,7 +891,7 @@ nsSafariProfileMigrator::CopyBookmarks(PRBool aReplace)
   // a folder called "Imported IE Favorites" and place all the Bookmarks there.
   nsresult rv;
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
   nsCOMPtr<nsINavBookmarksService> bms(do_GetService(NS_NAVBOOKMARKSSERVICE_CONTRACTID, &rv));
   NS_ENSURE_SUCCESS(rv, rv);
   PRInt64 root;
@@ -902,38 +900,35 @@ nsSafariProfileMigrator::CopyBookmarks(PRBool aReplace)
 
   PRInt64 folder;
 #else
-  nsCOMPtr<nsIRDFService> rdf(do_GetService("@mozilla.org/rdf/rdf-service;1", &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
+  nsCOMPtr<nsIRDFService> rdf(do_GetService("@mozilla.org/rdf/rdf-service;1"));
   nsCOMPtr<nsIRDFResource> root;
   rdf->GetResource(NS_LITERAL_CSTRING("NC:BookmarksRoot"), getter_AddRefs(root));
 
-  nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1", &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
+  nsCOMPtr<nsIBookmarksService> bms(do_GetService("@mozilla.org/browser/bookmarks-service;1"));
+  NS_ENSURE_TRUE(bms, NS_ERROR_FAILURE);
   PRBool dummy;
   bms->ReadBookmarks(&dummy);
 
   nsCOMPtr<nsIRDFResource> folder;
 #endif
   if (!aReplace) {
-    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv);
+    nsCOMPtr<nsIStringBundleService> bundleService = do_GetService(kStringBundleServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsIStringBundle> bundle;
     bundleService->CreateBundle(MIGRATION_BUNDLE, getter_AddRefs(bundle));
 
-    nsString sourceNameSafari;
+    nsXPIDLString sourceNameSafari;
     bundle->GetStringFromName(NS_LITERAL_STRING("sourceNameSafari").get(),
                               getter_Copies(sourceNameSafari));
 
     const PRUnichar* sourceNameStrings[] = { sourceNameSafari.get() };
-    nsString importedSafariBookmarksTitle;
+    nsXPIDLString importedSafariBookmarksTitle;
     bundle->FormatStringFromName(NS_LITERAL_STRING("importedBookmarksFolder").get(),
                                  sourceNameStrings, 1,
                                  getter_Copies(importedSafariBookmarksTitle));
 
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
     bms->CreateFolder(root, importedSafariBookmarksTitle, -1, &folder);
 #else
     bms->CreateFolderInContainer(importedSafariBookmarksTitle.get(), root, -1,
@@ -964,26 +959,34 @@ nsSafariProfileMigrator::CopyBookmarks(PRBool aReplace)
   // We put the contents of the "BookmarksBar" folder into our Personal Toolbar
   // and merge the contents of the "BookmarksMenu" folder and the other toplevel
   // non-special folders under our NC:BookmarksRoot.
-  if (::CFDictionaryContainsKey(safariBookmarks, CFSTR("Children")) &&
-      ::CFDictionaryContainsKey(safariBookmarks, CFSTR("WebBookmarkFileVersion")) ) {
-    CFNumberRef intValue =
-      (CFNumberRef)::CFDictionaryGetValue(safariBookmarks,
-                                          CFSTR("WebBookmarkFileVersion"));
-    PRInt32 value = 0;
-    if (::CFNumberGetValue(intValue, kCFNumberSInt32Type, &value) && value ==1) {
-      CFArrayRef children =
-        (CFArrayRef)::CFDictionaryGetValue(safariBookmarks, CFSTR("Children"));
-      if (children)
-        rv = ParseBookmarksFolder(children, folder, bms, PR_TRUE);
-    }
+  if (!::CFDictionaryContainsKey(safariBookmarks, CFSTR("Children")) ||
+      !::CFDictionaryContainsKey(safariBookmarks, CFSTR("WebBookmarkFileVersion")) ) {
+    ::CFRelease(safariBookmarks);
+    return NS_OK;
   }
+
+  CFNumberRef intValue = (CFNumberRef)::CFDictionaryGetValue(safariBookmarks,
+                                                             CFSTR("WebBookmark" \
+                                                             "FileVersion"));
+  PRInt32 value = 0;
+  if (!::CFNumberGetValue(intValue, kCFNumberSInt32Type, &value) || value != 1)
+    return NS_OK;
+
+  CFArrayRef children = (CFArrayRef)::CFDictionaryGetValue(safariBookmarks,
+                                                           CFSTR("Children"));
+  if (children) {
+    nsresult rv = ParseBookmarksFolder(children, folder, bms, PR_TRUE);
+    if (NS_FAILED(rv)) return rv;
+  }
+
   ::CFRelease(safariBookmarks);
-  return rv;
+
+  return NS_OK;
 }
 
 nsresult
 nsSafariProfileMigrator::ParseBookmarksFolder(CFArrayRef aChildren,
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
                                               PRInt64 aParentFolder,
                                               nsINavBookmarksService * aBookmarksService,
 #else
@@ -992,7 +995,7 @@ nsSafariProfileMigrator::ParseBookmarksFolder(CFArrayRef aChildren,
 #endif
                                               PRBool aIsAtRootLevel)
 {
-  nsresult rv = NS_OK;
+  nsresult rv;
 
   CFIndex count = ::CFArrayGetCount(aChildren);
   for (PRInt32 i = 0; i < count; ++i) {
@@ -1018,7 +1021,7 @@ nsSafariProfileMigrator::ParseBookmarksFolder(CFArrayRef aChildren,
       // Look for the BookmarksBar Bookmarks and add them into the appropriate
       // Personal Toolbar Root
       if (title.EqualsLiteral("BookmarksBar") && aIsAtRootLevel) {
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
         PRInt64 toolbarFolder;
         aBookmarksService->GetToolbarRoot(&toolbarFolder);
 #else
@@ -1034,7 +1037,7 @@ nsSafariProfileMigrator::ParseBookmarksFolder(CFArrayRef aChildren,
       // Look for the BookmarksMenu Bookmarks and flatten them into the top level
       else if (title.EqualsLiteral("BookmarksMenu") && aIsAtRootLevel) {
         rv |= ParseBookmarksFolder(children,
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
                                    aParentFolder,
 #else
                                    aParentResource,
@@ -1045,7 +1048,7 @@ nsSafariProfileMigrator::ParseBookmarksFolder(CFArrayRef aChildren,
       else {
         // Encountered a Folder, so create one in our Bookmarks DataSource and then
         // parse the contents of the Safari one into it...
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
         PRInt64 folder;
         rv |= aBookmarksService->CreateFolder(aParentFolder,
                                               title, -1, &folder);
@@ -1069,7 +1072,7 @@ nsSafariProfileMigrator::ParseBookmarksFolder(CFArrayRef aChildren,
       nsAutoString title, url;
       if (GetDictionaryStringValue(URIDictionary, CFSTR("title"), title) &&
           GetDictionaryStringValue(entry, CFSTR("URLString"), url)) {
-#ifdef MOZ_PLACES_BOOKMARKS
+#ifdef MOZ_PLACES
         nsCOMPtr<nsIURI> uri;
         rv |= NS_NewURI(getter_AddRefs(uri), url);
         rv |= aBookmarksService->InsertItem(aParentFolder, uri, -1);
@@ -1092,30 +1095,6 @@ nsSafariProfileMigrator::ParseBookmarksFolder(CFArrayRef aChildren,
   return rv;
 }
 
-// nsSafariProfileMigrator::HasFormDataToImport()
-// if we add support for "~/Library/Safari/Form Values",
-// keep in sync with CopyFormData()
-// see bug #344284
-PRBool
-nsSafariProfileMigrator::HasFormDataToImport()
-{
-  PRBool hasFormData = PR_FALSE;
-
-  // Safari stores this data in an array under the "RecentSearchStrings" key
-  // in its Preferences file.
-  CFDictionaryRef safariPrefs = CopySafariPrefs();
-  if (safariPrefs) {
-    if (::CFDictionaryContainsKey(safariPrefs, CFSTR("RecentSearchStrings")))
-      hasFormData = PR_TRUE;
-    ::CFRelease(safariPrefs);
-  }
-  return hasFormData;
-}
-
-// nsSafariProfileMigrator::CopyFormData()
-// if we add support for "~/Library/Safari/Form Values",
-// keep in sync with HasFormDataToImport()
-// see bug #344284
 nsresult
 nsSafariProfileMigrator::CopyFormData(PRBool aReplace)
 {
@@ -1167,9 +1146,7 @@ nsSafariProfileMigrator::ProfileHasContentStyleSheet(PRBool *outExists)
   rv = userChromeDir->GetNativePath(userChromeDirPath);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCAutoString path(userChromeDirPath);
-  path.Append("/userContent.css");
-
+  nsCAutoString path = userChromeDirPath + NS_LITERAL_CSTRING("/userContent.css");
   nsCOMPtr<nsILocalFile> file;
   rv = NS_NewNativeLocalFile(path, PR_FALSE,
                             getter_AddRefs(file));

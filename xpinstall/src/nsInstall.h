@@ -46,6 +46,8 @@
 
 #include "jsapi.h"
 
+#include "plevent.h"
+
 #include "nsString.h"
 #include "nsVoidArray.h"
 #include "nsHashtable.h"
@@ -64,6 +66,7 @@
 
 #include "nsIStringBundle.h"
 #include "nsILocale.h"
+#include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 #include "nsIEnumerator.h"
@@ -329,7 +332,7 @@ class nsInstall
         void                SetChromeRegistry(CHROMEREG_IFACE* reg)
                                 { mChromeRegistry = reg; }
 
-        PRInt32    GetFinalStatus() { return mFinalStatus; }
+        PRUint32   GetFinalStatus() { return mFinalStatus; }
         PRBool     InInstallTransaction(void) { return mInstalledFiles != nsnull; }
 
         PRInt32    Alert(nsString& string);
@@ -358,7 +361,7 @@ class nsInstall
         nsInstallFolder*    mPackageFolder;
 
         PRBool              mUserCancelled;
-        PRInt32             mFinalStatus;
+        PRUint32            mFinalStatus;
 
         PRBool              mUninstallPackage;
         PRBool              mRegisterPackage;
@@ -393,6 +396,9 @@ class nsInstall
 
         void        CleanUp();
 
+        PRInt32     ExtractDirEntries(const nsString& directory, nsVoidArray *paths);
+
+        static void DeleteVector(nsVoidArray* vector);
 };
 
 nsresult MakeUnique(nsILocalFile* file);

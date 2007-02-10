@@ -125,8 +125,7 @@ textarea > .anonymous-div,
 input > .anonymous-div {
   overflow: auto;
   border: 0px !important;
-  /* The 1px horizontal padding is for parity with Win/IE */
-  padding: 0px 1px;
+  padding: 0px;
   margin: 0px;
   /* XXXldb I'm not sure if we really want the 'text-decoration: inherit',
      but it's needed to make 'text-decoration' "work" on text inputs. */
@@ -149,7 +148,6 @@ select {
   border-width: 2px;
   border-style: inset;
   text-indent: 0;
-  overflow: -moz-hidden-unscrollable;
 }
 
 /* Need the "select[size][multiple]" selector to override the settings on
@@ -181,25 +179,15 @@ select > input[type="button"] {
   background-repeat: no-repeat !important;
   background-position: center !important;
   -moz-appearance: menulist-button;
-
-  /* Make sure to size correctly if the combobox has a non-auto height. */
-  height: 100% ! important;
-  -moz-box-sizing: border-box ! important;
-
-  /*
-    Make sure to align properly with the display frame.  Note that we
-    want the baseline of the combobox to match the baseline of the
-    display frame, so the dropmarker is what gets the vertical-align.
-  */
-  vertical-align: top !important;
 }
 
 select > input[type="button"]:active {
   background-image: url("arrowd.gif") !important;
 }
 
-select:empty {
-  min-width: 2.5em;
+select::-moz-dummy-option { 
+  visibility: hidden; 
+  content: "XX"; /* demo 8, edge case test 1 */
 }
 
 *|*::-moz-display-comboboxcontrol-frame {
@@ -215,19 +203,10 @@ select:empty {
   white-space: nowrap;
   text-align: inherit;
   -moz-user-select: none;
-  /* Make sure to size correctly if the combobox has a non-auto height. */
-  height: 100% ! important;
-  -moz-box-sizing: border-box ! important;
-}
-
-select::-moz-scrolled-content {
-  display: block !important;
 }
 
 option {
   display: block;
-  float: none !important;
-  position: static !important;
   min-height: 1em;
   line-height: normal !important;
   -moz-user-select: none;
@@ -248,8 +227,6 @@ option:checked {
 
 optgroup {
   display: block;
-  float: none !important;
-  position: static !important;
   font: -moz-list;
   line-height: normal !important;
   font-style: italic;
@@ -260,7 +237,7 @@ optgroup {
 }
 
 optgroup > option {
-  -moz-padding-start: 20px;
+  padding-left: 20px;
   font-style: normal;
   font-weight: normal;
 }
@@ -277,15 +254,7 @@ optgroup:before {
   position: static !important;
   float: none !important;
 
-  /*
-   * We can't change the padding here, because that would affect our
-   * intrinsic width, since we scroll.  But at the same time, we want
-   * to make sure that our left border+padding matches the left
-   * border+padding of a combobox so that our scrollbar will line up
-   * with the dropmarker.  So set our left border to 2px.
-   */
   border: 1px outset black !important;
-  border-left-width: 2px ! important;
 } 
 
 input[disabled],
@@ -348,13 +317,9 @@ input[type="file"] {
   border-style: none !important;
 }
 
-input[type="file"] > input[type="text"][disabled] {
+input[type="file"] > input[type="text"] {
   border-color: inherit;
   background-color: inherit;
-  -moz-user-focus: ignore !important;
-  /* enable user input so that clicking on the control can bring up the
-     file dialog. It's still read-only. */
-  -moz-user-input: enabled;
   color: inherit;
   font-size: inherit;
   height: inherit;
@@ -584,7 +549,7 @@ input[type="submit"] {
 
 %endif
 
-%ifdef MOZ_MACBROWSER
+%if MOZ_DEFAULT_TOOLKIT=="cocoa"
 /* makes sure enabled and disabled input and text area fields are drawn */
 input,
 input[disabled] {
@@ -624,6 +589,7 @@ select[size],
 select[multiple],
 select[size][multiple] {
   -moz-appearance: none; /* we'll draw by hand, thanks */
+  border-width: 0;
   background-color: -moz-Field !important;
   border-style: solid;
   border-color: #737373 #999999 #999999 #999999;
@@ -643,9 +609,7 @@ select[size="1"] {
   painted as part of the menulist. */
 select > input[type="button"],
 select > input[type="button"]:active {
-  background: transparent !important;
-  -moz-appearance: none !important;
-  border: none !important;
+  background-image: none !important;
 }
 
 option[disabled],
@@ -655,6 +619,12 @@ select[disabled] {
 }
 
 input[type="image"] {
+  margin: 0;
+}
+
+/* fixes Apple's proprietary search boxes in Camino */
+input[type="search"],
+input[type="search"] disabled {
   margin: 0;
 }
 

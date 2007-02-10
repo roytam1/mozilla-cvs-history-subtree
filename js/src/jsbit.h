@@ -68,67 +68,29 @@ extern JS_PUBLIC_API(JSIntn) JS_CeilingLog2(JSUint32 i);
 extern JS_PUBLIC_API(JSIntn) JS_FloorLog2(JSUint32 i);
 
 /*
- * Replace bit-scanning code sequences with CPU-specific instructions to
- * speedup calculations of ceiling/floor log2.
- *
- * With GCC 3.4 or later we can use __builtin_clz for that, see bug 327129.
- *
- * SWS: Added MSVC intrinsic bitscan support.  See bugs 349364 and 356856.
+ * Check if __builtin_clz is available which apeared first in GCC 3.4.
+ * The built-in allows to speedup calculations of ceiling/floor log2,
+ * see bug 327129.
  */
-#if defined(_WIN32) && (_MSC_VER >= 1300) && defined(_M_IX86)
-
-unsigned char _BitScanForward(unsigned long * Index, unsigned long Mask);
-unsigned char _BitScanReverse(unsigned long * Index, unsigned long Mask);
-# pragma intrinsic(_BitScanForward,_BitScanReverse)
-
-__forceinline static int
-__BitScanForward32(unsigned int val)
-{
-   unsigned long idx;
-
-   _BitScanForward(&idx, (unsigned long)val);
-   return (int)idx;
-}
-__forceinline static int
-__BitScanReverse32(unsigned int val)
-{
-   unsigned long idx;
-
-   _BitScanReverse(&idx, (unsigned long)val);
-   return (int)(31-idx);
-}
-# define js_bitscan_ctz32(val)  __BitScanForward32(val)
-# define js_bitscan_clz32(val)  __BitScanReverse32(val)
-# define JS_HAS_BUILTIN_BITSCAN32
-
-#elif (__GNUC__ >= 4) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
-
-# define js_bitscan_ctz32(val)  __builtin_ctz(val)
-# define js_bitscan_clz32(val)  __builtin_clz(val)
-# define JS_HAS_BUILTIN_BITSCAN32
-# if (JS_BYTES_PER_WORD == 8)
-#  define js_bitscan_ctz64(val)  __builtin_ctzll(val)
-#  define js_bitscan_clz64(val)  __builtin_clzll(val)
-#  define JS_HAS_BUILTIN_BITSCAN64
-# endif
-
+#if __GNUC__ >= 4 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
+# define JS_HAS_GCC_BUILTIN_CLZ
 #endif
 
 /*
 ** Macro version of JS_CeilingLog2: Compute the log of the least power of
 ** 2 greater than or equal to _n. The result is returned in _log2.
 */
-#ifdef JS_HAS_BUILTIN_BITSCAN32
+#ifdef JS_HAS_GCC_BUILTIN_CLZ
 /*
- * Use intrinsic function or count-leading-zeros to calculate ceil(log2(_n)).
- * The macro checks for "n <= 1" and not "n != 0" as js_bitscan_clz32(0) is
+ * Use __builtin_clz or count-leading-zeros to calculate ceil(log2(_n)).
+ * The macro checks for "n <= 1" and not "n != 0" as __builtin_clz(0) is
  * undefined.
  */
 # define JS_CEILING_LOG2(_log2,_n)                                            \
     JS_BEGIN_MACRO                                                            \
         JS_STATIC_ASSERT(sizeof(unsigned int) == sizeof(JSUint32));           \
         unsigned int j_ = (unsigned int)(_n);                                 \
-        (_log2) = (j_ <= 1 ? 0 : 32 - js_bitscan_clz32(j_ - 1));              \
+        (_log2) = (j_ <= 1 ? 0 : 32 - __builtin_clz(j_ - 1));                 \
     JS_END_MACRO
 #else
 # define JS_CEILING_LOG2(_log2,_n)                                            \
@@ -156,16 +118,16 @@ __BitScanReverse32(unsigned int val)
 **
 ** This is equivalent to finding the highest set bit in the word.
 */
-#ifdef JS_HAS_BUILTIN_BITSCAN32
+#if JS_GCC_HAS_BUILTIN_CLZ
 /*
- * Use js_bitscan_clz32 or count-leading-zeros to calculate floor(log2(_n)).
- * Since js_bitscan_clz32(0) is undefined, the macro set the loweset bit to 1
+ * Use __builtin_clz or count-leading-zeros to calculate floor(log2(_n)).
+ * Since __builtin_clz(0) is undefined, the macro set the loweset bit to 1
  * to ensure 0 result when _n == 0.
  */
 # define JS_FLOOR_LOG2(_log2,_n)                                              \
     JS_BEGIN_MACRO                                                            \
         JS_STATIC_ASSERT(sizeof(unsigned int) == sizeof(JSUint32));           \
-        (_log2) = 31 - js_bitscan_clz32(((unsigned int)(_n)) | 1);            \
+        (_log2) = 31 - __builtin_clz(((unsigned int)(_n)) | 1);               \
     JS_END_MACRO
 #else
 # define JS_FLOOR_LOG2(_log2,_n)                                              \
@@ -201,29 +163,30 @@ __BitScanReverse32(unsigned int val)
  */
 #define JS_FLOOR_LOG2W(n) (JS_ASSERT((n) != 0), js_FloorLog2wImpl(n))
 
-#if JS_BYTES_PER_WORD == 4
+#ifdef JS_HAS_GCC_BUILTIN_CLZ
 
-# ifdef JS_HAS_BUILTIN_BITSCAN32
+# if JS_BYTES_PER_WORD == 4
 JS_STATIC_ASSERT(sizeof(unsigned) == sizeof(JSUword));
 #  define js_FloorLog2wImpl(n)                                                \
-   ((JSUword)(JS_BITS_PER_WORD - 1 - js_bitscan_clz32(n)))
-# else
-#  define js_FloorLog2wImpl(n) ((JSUword)JS_FloorLog2(n))
-#endif
-
-#elif JS_BYTES_PER_WORD == 8
-
-# ifdef JS_HAS_BUILTIN_BITSCAN64
+    ((JSUword)(JS_BITS_PER_WORD - 1 - __builtin_clz(n)))
+# elif JS_BYTES_PER_WORD == 8
 JS_STATIC_ASSERT(sizeof(unsigned long long) == sizeof(JSUword));
 #  define js_FloorLog2wImpl(n)                                                \
-   ((JSUword)(JS_BITS_PER_WORD - 1 - js_bitscan_clz64(n)))
+    ((JSUword)(JS_BITS_PER_WORD - 1 - __builtin_clzll(n)))
 # else
-extern JSUword js_FloorLog2wImpl(JSUword n);
+#  error "NOT SUPPORTED"
 # endif
 
 #else
 
-# error "NOT SUPPORTED"
+# if JS_BYTES_PER_WORD == 4
+#  define js_FloorLog2wImpl(n) ((JSUword)JS_FloorLog2(n))
+# elif JS_BYTES_PER_WORD == 8
+extern JSUword
+js_FloorLog2wImpl(JSUword n);
+# else
+#  error "NOT SUPPORTED"
+# endif
 
 #endif
 

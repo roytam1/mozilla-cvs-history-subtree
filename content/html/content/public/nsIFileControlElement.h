@@ -44,8 +44,8 @@ class nsAString;
 
 // IID for the nsIFileControl interface
 #define NS_IFILECONTROLELEMENT_IID \
-{ 0x1f6a32fd, 0x9cda, 0x43e9, \
-  { 0x90, 0xef, 0x18, 0x0a, 0xd5, 0xe6, 0xcd, 0xa9 } }
+{ 0x848145e7, 0x3f73, 0x4889, \
+ { 0xbf, 0x4d, 0x72, 0x52, 0xa5, 0x98, 0x14, 0xfa } }
 
 /**
  * This interface is used for the file control frame to store its value away
@@ -54,7 +54,7 @@ class nsAString;
 class nsIFileControlElement : public nsISupports {
 public:
 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_IFILECONTROLELEMENT_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IFILECONTROLELEMENT_IID)
 
   /**
    * Gets filename to be uploaded when this control is submitted
@@ -64,10 +64,8 @@ public:
   /**
    * Sets filename to be uploaded when this control is submitted
    */
-  virtual void SetFileName(const nsAString& aFileName) = 0;
+  virtual void SetFileName(const nsAString& aFileName,
+                           PRBool aUpdateFrame) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsIFileControlElement,
-                              NS_IFILECONTROLELEMENT_IID)
 
 #endif // nsIFileControlElement_h___

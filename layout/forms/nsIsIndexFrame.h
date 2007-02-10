@@ -46,6 +46,7 @@
 #include "nsIDOMKeyListener.h"
 
 #include "nsTextControlFrame.h"
+#include "nsFormControlHelper.h"
 typedef   nsTextControlFrame nsNewFrame;
 
 class nsISupportsArray;
@@ -56,8 +57,24 @@ class nsIsIndexFrame : public nsAreaFrame,
                        public nsIStatefulFrame
 {
 public:
-  nsIsIndexFrame(nsStyleContext* aContext);
+  nsIsIndexFrame();
   virtual ~nsIsIndexFrame();
+
+  NS_IMETHOD Paint(nsPresContext*      aPresContext,
+                   nsIRenderingContext& aRenderingContext,
+                   const nsRect&        aDirtyRect,
+                   nsFramePaintLayer    aWhichLayer,
+                   PRUint32             aFlags = 0);
+
+  // XXX Hack so we can squirrel away the pres context pointer for the KeyPress method
+  NS_IMETHOD Init(nsPresContext*  aPresContext,
+                  nsIContent*      aContent,
+                  nsIFrame*        aParent,
+                  nsStyleContext*  aContext,
+                  nsIFrame*        aPrevInFlow) {
+    mPresContext = aPresContext;
+    return nsAreaFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+  }
 
   /**
    * Processes a key pressed event
@@ -84,14 +101,18 @@ public:
   // nsIFormControlFrame
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
 
-  virtual nscoord GetMinWidth(nsIRenderingContext *aRenderingContext);
-  
+  NS_IMETHOD Reflow(nsPresContext*          aCX,
+                    nsHTMLReflowMetrics&     aDesiredSize,
+                    const nsHTMLReflowState& aReflowState,
+                    nsReflowStatus&          aStatus);
+
   virtual PRBool IsLeaf() const;
 
 #ifdef NS_DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;
 #endif
-  NS_IMETHOD AttributeChanged(PRInt32         aNameSpaceID,
+  NS_IMETHOD AttributeChanged(nsIContent*     aChild,
+                              PRInt32         aNameSpaceID,
                               nsIAtom*        aAttribute,
                               PRInt32         aModType);
 
@@ -110,18 +131,21 @@ public:
   NS_IMETHOD OnSubmit(nsPresContext* aPresContext);
 
   //nsIStatefulFrame
-  NS_IMETHOD SaveState(SpecialStateID aStateID, nsPresState** aState);
-  NS_IMETHOD RestoreState(nsPresState* aState);
+  NS_IMETHOD SaveState(nsPresContext* aPresContext, nsPresState** aState);
+  NS_IMETHOD RestoreState(nsPresContext* aPresContext, nsPresState* aState);
 
 protected:
-  nsCOMPtr<nsIContent> mTextContent;
+  nsCOMPtr<nsITextContent> mTextContent;
   nsCOMPtr<nsIContent> mInputContent;
+
+  // XXX Hack: pres context needed by function KeyPress() and SetFocus()
+  nsPresContext*     mPresContext;  // weak reference
 
 private:
   NS_IMETHOD UpdatePromptLabel();
-  nsresult GetInputFrame(nsIFormControlFrame** oFrame);
-  void GetInputValue(nsString& oString);
-  void SetInputValue(const nsString& aString);
+  NS_IMETHOD GetInputFrame(nsPresContext* aPresContext, nsIFormControlFrame** oFrame);
+  NS_IMETHOD GetInputValue(nsPresContext* aPresContext, nsString& oString);
+  NS_IMETHOD SetInputValue(nsPresContext* aPresContext, const nsString aString);
 
   void GetSubmitCharset(nsCString& oCharset);
   NS_IMETHOD GetEncoder(nsIUnicodeEncoder** encoder);

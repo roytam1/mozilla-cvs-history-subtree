@@ -70,10 +70,6 @@ REQUIRES	= xpcom \
 		  locale \
 		  $(NULL)
 
-ifdef MOZ_ENABLE_CAIRO_GFX
-REQUIRES += cairo thebes
-endif
-
 CPPSRCS		= \
 		nsAppShell.cpp \
 		nsBidiKeyboard.cpp \
@@ -85,12 +81,6 @@ CPPSRCS		= \
 		nsToolkit.cpp \
 		nsWidgetFactory.cpp \
 		nsWindow.cpp \
-		nsPopupWindow.cpp \
-		nsChildView.cpp \
-		nsScreenBeOS.cpp \
-		nsScreenManagerBeOS.cpp \
-		nsDeviceContextSpecB.cpp \
-		nsPrintOptionsBeOS.cpp \
 		$(NULL)
 
 SHARED_LIBRARY_LIBS = $(DIST)/lib/libxpwidgets_s.a
@@ -103,10 +93,6 @@ EXTRA_DSO_LDOPTS = \
 		-lgkgfx \
 		$(TK_LIBS) \
 		$(NULL)
-
-ifdef MOZ_ENABLE_CAIRO_GFX
-EXTRA_DSO_LDOPTS += -lthebes
-endif
 
 include $(topsrcdir)/config/rules.mk
 

@@ -44,7 +44,7 @@
 #include NEW_H
 
 // helper function for nsTHashtable::Clear()
-NS_COM_GLUE PLDHashOperator
+PR_EXTERN(PLDHashOperator) PR_CALLBACK
 PL_DHashStubEnumRemove(PLDHashTable    *table,
                        PLDHashEntryHdr *entry,
                        PRUint32         ordinal,

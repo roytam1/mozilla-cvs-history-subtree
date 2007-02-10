@@ -50,6 +50,7 @@
 #include "plarena.h"
 
 #define DEFAULT_MIN_INTERVAL_BETWEEN_WRITES             15*60*1000
+#define DEFAULT_WRITE_TRAINING_DATA_MESSAGES_THRESHOLD  50
 
 struct Token;
 class TokenEnumeration;
@@ -161,8 +162,9 @@ protected:
     Tokenizer mGoodTokens, mBadTokens;
     double   mJunkProbabilityThreshold;
     PRUint32 mGoodCount, mBadCount;
-    PRPackedBool mTrainingDataDirty;
-    PRInt32 mMinFlushInterval; // in milliseconds, must be positive
+    PRInt32 mDirtyingMessageWriteThreshold; // ... before flushing training data
+    PRInt32 mNumDirtyingMessages; // must be positive
+    PRInt32 mMinFlushInterval; // in miliseconds, must be positive
                                //and not too close to 0
     nsCOMPtr<nsITimer> mTimer;
     nsCOMPtr<nsILocalFile> mTrainingFile;

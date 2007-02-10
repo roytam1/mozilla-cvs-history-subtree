@@ -23,8 +23,6 @@
  *   John C. Griggs <johng@corel.com>
  *   Dan Rosen <dr@netscape.com>
  *   Paul Ashford <arougthopher@lizardland.net>
- *   Fredrik Holmqvist <thesuckiestemail@yahoo.se>
- *   Sergei Dolgov <sergei_d@fi.tartu.ee>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -46,21 +44,12 @@
 #include "nsWidgetsCID.h"
 
 #include "nsWindow.h"
-#include "nsPopupWindow.h"
-#include "nsChildView.h"
+#include "nsAppShell.h"
 #include "nsSound.h"
 #include "nsToolkit.h"
-#include "nsAppShell.h"
-#include "nsAppShellSingleton.h"
 #include "nsLookAndFeel.h"
 #include "nsFilePicker.h"
 #include "nsBidiKeyboard.h"
-#include "nsScreenManagerBeOS.h" 
-// Printing:
-// aka    nsDeviceContextSpecBeOS.h 
-#include "nsDeviceContextSpecB.h"
-#include "nsPrintOptionsBeOS.h"
-#include "nsPrintSession.h"
 
 // Drag & Drop, Clipboard
 #include "nsTransferable.h"
@@ -71,8 +60,8 @@
 
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindow)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsPopupWindow)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsChildView)
+NS_GENERIC_FACTORY_CONSTRUCTOR(ChildWindow)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsAppShell)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsToolkit)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsLookAndFeel)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsTransferable)
@@ -83,12 +72,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsDragService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSound)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsFilePicker)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsBidiKeyboard)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsScreenManagerBeOS)
- 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsDeviceContextSpecBeOS) 
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPrintOptionsBeOS, Init)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPrintSession, Init)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsPrinterEnumeratorBeOS)
 
 static const nsModuleComponentInfo components[] =
 {
@@ -96,14 +79,10 @@ static const nsModuleComponentInfo components[] =
     NS_WINDOW_CID,
     "@mozilla.org/widgets/window/beos;1",
     nsWindowConstructor },
-  { "BeOS Popup nsWindow",
-    NS_POPUP_CID,
-    "@mozilla.org/widgets/popup/beos;1",
-    nsPopupWindowConstructor },
   { "BeOS Child nsWindow",
     NS_CHILD_CID,
-    "@mozilla.org/widgets/view/beos;1",
-    nsChildViewConstructor },
+    "@mozilla.org/widgets/child_window/beos;1",
+    ChildWindowConstructor },
   { "BeOS AppShell",
     NS_APPSHELL_CID,
     "@mozilla.org/widget/appshell/beos;1",
@@ -147,31 +126,7 @@ static const nsModuleComponentInfo components[] =
   { "BeOS File Picker",
     NS_FILEPICKER_CID,
     "@mozilla.org/filepicker;1",
-   nsFilePickerConstructor },
-  { "BeOS Screen Manager", 
-    NS_SCREENMANAGER_CID, 
-    "@mozilla.org/gfx/screenmanager;1", 
-    nsScreenManagerBeOSConstructor },
-  { "BeOS Device Context Spec", 
-    NS_DEVICE_CONTEXT_SPEC_CID, 
-    //    "@mozilla.org/gfx/device_context_spec/beos;1", 
-    "@mozilla.org/gfx/devicecontextspec;1", 
-    nsDeviceContextSpecBeOSConstructor }, 
-  { "BeOS Printer Enumerator",
-    NS_PRINTER_ENUMERATOR_CID,
-    //    "@mozilla.org/gfx/printer_enumerator/beos;1",
-    "@mozilla.org/gfx/printerenumerator;1",
-    nsPrinterEnumeratorBeOSConstructor },
-  { "BeOS PrintSettings Service",
-    NS_PRINTSETTINGSSERVICE_CID,
-    "@mozilla.org/gfx/printsettings-service;1",
-    nsPrintOptionsBeOSConstructor },
-  { "Print Session",
-    NS_PRINTSESSION_CID,
-    "@mozilla.org/gfx/printsession;1",
-    nsPrintSessionConstructor }
+    nsFilePickerConstructor },
 };
 
-NS_IMPL_NSGETMODULE_WITH_CTOR_DTOR(nsWidgetBeOSModule,
-                              components,
-                              nsAppShellInit, nsAppShellShutdown)
+NS_IMPL_NSGETMODULE(nsWidgetBeOSModule,components)

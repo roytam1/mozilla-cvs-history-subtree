@@ -49,6 +49,8 @@ const MODE_TRUNCATE = 0x20;
 const MODE_SYNC     = 0x40;
 const MODE_EXCL     = 0x80;
 
+var gItems = new Array();
+
 /**
  * loadEventsFromFile
  * shows a file dialog, reads the selected file(s) and tries to parse events from it.
@@ -102,7 +104,7 @@ function loadEventsFromFile(aCalendar)
         {
            inputStream.init( fp.file, MODE_RDONLY, 0444, {} );
 
-           var items = importer.importFromStream(inputStream, {});
+           gItems = importer.importFromStream(inputStream, {});
            inputStream.close();
         }
         catch(ex)
@@ -111,7 +113,7 @@ function loadEventsFromFile(aCalendar)
         }
 
         if (aCalendar) {
-            putItemsIntoCal(aCalendar, items);
+            putItemsIntoCal(aCalendar);
             return;
         }
 
@@ -121,11 +123,11 @@ function loadEventsFromFile(aCalendar)
         if (count.value == 1) {
             // There's only one calendar, so it's silly to ask what calendar
             // the user wants to import into.
-            putItemsIntoCal(calendars[0], items);
+            putItemsIntoCal(calendars[0]);
         } else {
             // Ask what calendar to import into
             var args = new Object();
-            args.onOk = function putItems(aCal) { putItemsIntoCal(aCal, items); };
+            args.onOk = putItemsIntoCal;
             args.promptText = getCalStringBundle().GetStringFromName("importPrompt");
             openDialog("chrome://calendar/content/chooseCalendarDialog.xul", 
                        "_blank", "chrome,titlebar,modal,resizable", args);
@@ -133,7 +135,7 @@ function loadEventsFromFile(aCalendar)
     }
 }
 
-function putItemsIntoCal(destCal, aItems) {
+function putItemsIntoCal(destCal) {
     // Set batch for the undo/redo transaction manager
     startBatchTransaction();
 
@@ -160,7 +162,7 @@ function putItemsIntoCal(destCal, aItems) {
                 lastError = aStatus;
             }
             // See if it is time to end the calendar's batch.
-            if (count == aItems.length) {
+            if (count == gItems.length) {
                 destCal.endBatch();
                 if (failedCount)
                     showError(failedCount+" items failed to import. The last error was: "+lastError.toString());
@@ -168,7 +170,7 @@ function putItemsIntoCal(destCal, aItems) {
         }
     }
 
-    for each (item in aItems) {
+    for each (item in gItems) {
         // XXX prompt when finding a duplicate.
         try {
             destCal.addItem(item, listener);

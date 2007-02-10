@@ -19,7 +19,6 @@
  * Andrew Thompson. All Rights Reserved.
  * 
  * Contributor(s):
- *    Josh Aas <josh@mozilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,8 +34,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsMacCursor.h"
-#include "nsDebug.h"
+#import "nsMacCursor.h"
+#import "nsMacResources.h"
+#import "nsDebug.h"
 
 /*! @category   nsMacCursor (PrivateMethods)
     @abstract   Private methods internal to the nsMacCursor class.
@@ -212,11 +212,13 @@
 
 - (void) set
 {
-  if ([self isAnimated]) {
+  if ( [self isAnimated])
+  {
     [self createTimer];
   }
   //if the cursor isn't animated or the timer creation fails for any reason...
-  if (!mTimer) {
+  if (mTimer == nil)
+  {
     [self setFrame: 0];
   }
 }
@@ -245,7 +247,8 @@
 
 - (void) createTimer
 {
-  if (mTimer == nil) {
+  if ( mTimer == nil)
+  {
     mTimer = [[NSTimer scheduledTimerWithTimeInterval: 0.25
                                                target: self
                                              selector: @selector(spinCursor:)
@@ -256,7 +259,8 @@
 
 - (void) destroyTimer
 {
-  if (mTimer) {
+  if ( mTimer != nil)
+  {
       [mTimer invalidate];
       [mTimer release];
       mTimer = nil;
@@ -265,7 +269,8 @@
 
 - (void) spinCursor: (NSTimer *) aTimer
 {
-  if ([aTimer isValid]) {
+  if ( [aTimer isValid] )
+  {
     [self setFrame: [self getNextCursorFrame]];
   }
 }
@@ -295,15 +300,18 @@
 
 - (void) setFrame: (int) aFrameIndex
 {
-  if ([self isAnimated]) {
+  if ( [self isAnimated] )
+  {
     //if the cursor is animated try to draw the appropriate frame
     OSStatus err = ::SetAnimatedThemeCursor(mCursor, aFrameIndex);
-    if (err != noErr) {
+    if ( err != noErr )
+    {
       //in the event of any kind of problem, just try to show the first frame
       ::SetThemeCursor(mCursor);
     }
   }
-  else {
+  else
+  {
     ::SetThemeCursor(mCursor);
   }
 }
@@ -329,7 +337,8 @@
   self = [super init];
   NSEnumerator *it = [aCursorFrames objectEnumerator];
   NSObject *frame = nil;
-  while ((frame = [it nextObject])) {
+  while ((frame = [it nextObject]) != nil)
+  {
     NS_ASSERTION([frame isKindOfClass: [NSCursor class]], "Invalid argument: All frames must be of type NSCursor");
   }
   mFrames = [aCursorFrames retain];
@@ -371,75 +380,30 @@
 @end
 
 @implementation nsResourceCursor
-
-static short sRefNum = kResFileNotOpened;
-static short sSaveResFile = 0;
-
-// this could be simplified if it was rewritten using Cocoa
-+(void)openLocalResourceFile
-{
-  if (sRefNum == kResFileNotOpened) {
-    CFBundleRef appBundle = ::CFBundleGetMainBundle();
-    if (appBundle) {
-      CFURLRef executable = ::CFBundleCopyExecutableURL(appBundle);
-      if (executable) {
-        CFURLRef binDir = ::CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault, executable);
-        if (binDir) {
-          CFURLRef resourceFile = ::CFURLCreateCopyAppendingPathComponent(kCFAllocatorDefault, binDir,
-                                                                          CFSTR("libwidget.rsrc"), PR_FALSE);
-          if (resourceFile) {
-            FSRef resourceRef;
-            if (::CFURLGetFSRef(resourceFile, &resourceRef))
-              ::FSOpenResourceFile(&resourceRef, 0, NULL, fsRdPerm, &sRefNum);
-            ::CFRelease(resourceFile);
-          }
-          ::CFRelease(binDir);
-        }
-        ::CFRelease(executable);
-      }
-    }
-  }
-
-  if (sRefNum == kResFileNotOpened)
-    return;
-  
-  sSaveResFile = ::CurResFile();
-  ::UseResFile(sRefNum);
-}
-
-+(void)closeLocalResourceFile
-{
-  if (sRefNum == kResFileNotOpened)
-    return;
-
-  ::UseResFile(sSaveResFile);
-}
-
 -(id) initWithFirstFrame: (int) aFirstFrame lastFrame: (int) aLastFrame
 {
-  if ((self = [super init])) {
-    //Appearance Manager cursors all fall into the range 0..127. Custom application CURS resources begin at id 128.
-    NS_ASSERTION(aFirstFrame >= 128 && aLastFrame >= 128 && aLastFrame >= aFirstFrame, "Nonsensical frame indicies");
-    mFirstFrame = aFirstFrame;
-    mLastFrame = aLastFrame;
-  }
+  self= [super init];
+  //Appearance Manager cursors all fall into the range 0..127. Custom application CURS resources begin at id 128.
+  NS_ASSERTION(aFirstFrame >= 128 && aLastFrame >= 128 && aLastFrame >= aFirstFrame, "Nonsensical frame indicies");
+  mFirstFrame = aFirstFrame;
+  mLastFrame = aLastFrame;
   return self;
 }
 
 - (void) setFrame: (int) aFrameIndex
 {
-  [nsResourceCursor openLocalResourceFile];
+  nsMacResources::OpenLocalResourceFile();
   CursHandle cursHandle = ::GetCursor(mFirstFrame + aFrameIndex);
   NS_ASSERTION(cursHandle, "Can't load cursor, is the resource file installed correctly?");
-  if (cursHandle) {
+  if (cursHandle)
+  {
     ::SetCursor(*cursHandle);
   }
-  [nsResourceCursor closeLocalResourceFile];
+  nsMacResources::CloseLocalResourceFile();
 }
 
 - (int) numFrames
 {
   return (mLastFrame - mFirstFrame) + 1;
 }
-
 @end

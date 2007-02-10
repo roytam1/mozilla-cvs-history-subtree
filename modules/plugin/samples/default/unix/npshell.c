@@ -225,8 +225,10 @@ NPP_SetWindow(NPP instance, NPWindow* window)
 #ifdef DEBUG
         fprintf(stderr, "Nullplugin: plugin received window resize.\n");
         fprintf(stderr, "Window=(%i)\n", (int)window);
-        fprintf(stderr, "W=(%i) H=(%i)\n",
-            (int)window->width, (int)window->height);
+        if (window) {
+           fprintf(stderr, "W=(%i) H=(%i)\n",
+               (int)window->width, (int)window->height);
+        }
 #endif
         return NPERR_NO_ERROR;
     } else {

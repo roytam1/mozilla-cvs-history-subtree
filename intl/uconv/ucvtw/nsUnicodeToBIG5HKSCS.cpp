@@ -43,24 +43,36 @@
 // Global functions and data [declaration]
 
 
+static const PRUint16 gAsciiShiftTable[] =  {
+  0, u1ByteCharset,
+  ShiftCell(0,   0, 0, 0, 0, 0, 0, 0),
+};
+
+static const PRUint16 gBig5HKSCSShiftTable[] =  {
+  0, u2BytesCharset,
+  ShiftCell(0,   0, 0, 0, 0, 0, 0, 0),
+};
+
+
 static const PRUint16 *g_Big5HKSCSMappingTable[] = {
   g_ASCIIMapping,
   g_ufBig5Mapping,
   g_ufBig5HKSCSMapping
 };
 
-static const uScanClassID g_Big5HKSCSScanClassIDs[] =  {
-  u1ByteCharset,
-  u2BytesCharset,
-  u2BytesCharset
+static const PRUint16 *g_Big5HKSCSShiftTable[] =  {
+  gAsciiShiftTable,
+  gBig5HKSCSShiftTable,
+  gBig5HKSCSShiftTable
 };
+
 
 NS_METHOD
 nsUnicodeToBIG5HKSCSConstructor(nsISupports *aOuter, REFNSIID aIID,
                                 void **aResult)
 {
     return CreateMultiTableEncoder(3,
-                                   (uScanClassID*) &g_Big5HKSCSScanClassIDs,
+                                   (uShiftTable**) &g_Big5HKSCSShiftTable,
                                    (uMappingTable**) &g_Big5HKSCSMappingTable,
                                    2 /* max length = src * 2 */,
                                    aOuter, aIID, aResult);

@@ -34,11 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * Implementation of DOM Core's nsIDOMAttr node.
- */
-
 #ifndef nsDOMAttribute_h___
 #define nsDOMAttribute_h___
 
@@ -51,23 +46,44 @@
 #include "nsCOMPtr.h"
 #include "nsINodeInfo.h"
 #include "nsIDOM3Node.h"
-#include "nsIDOM3Attr.h"
 #include "nsDOMAttributeMap.h"
-#include "nsCycleCollectionParticipant.h"
 
 class nsDOMAttribute;
 
+// bogus child list for an attribute
+class nsAttributeChildList : public nsGenericDOMNodeList
+{
+public:
+  nsAttributeChildList(nsDOMAttribute* aAttribute);
+  virtual ~nsAttributeChildList();
+
+  // interface nsIDOMNodeList
+  NS_IMETHOD    GetLength(PRUint32* aLength);
+  NS_IMETHOD    Item(PRUint32 aIndex, nsIDOMNode** aReturn);
+
+  void DropReference();
+
+protected:
+  nsDOMAttribute* mAttribute;
+};
+
 // Attribute helper class used to wrap up an attribute with a dom
-// object that implements nsIDOMAttr, nsIDOM3Attr, nsIDOMNode, nsIDOM3Node
+// object that implements nsIDOMAttr and nsIDOMNode
 class nsDOMAttribute : public nsIDOMAttr,
-                       public nsIDOM3Attr,
-                       public nsIAttribute
+                       public nsIDOM3Node,
+                       public nsIAttribute,
+                       public nsIDOMGCParticipant
 {
 public:
   nsDOMAttribute(nsDOMAttributeMap* aAttrMap, nsINodeInfo *aNodeInfo,
                  const nsAString& aValue);
+  virtual ~nsDOMAttribute();
 
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+  NS_DECL_ISUPPORTS
+
+  // nsIDOMGCParticipant interface methods
+  virtual nsIDOMGCParticipant* GetSCCIndex();
+  virtual void AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray);
 
   // nsIDOMNode interface
   NS_DECL_NSIDOMNODE
@@ -78,45 +94,31 @@ public:
   // nsIDOMAttr interface
   NS_DECL_NSIDOMATTR
 
-  // nsIDOM3Attr interface
-  NS_DECL_NSIDOM3ATTR
-
   // nsIAttribute interface
   void SetMap(nsDOMAttributeMap *aMap);
   nsIContent *GetContent() const;
-  nsresult SetOwnerDocument(nsIDocument* aDocument);
 
-  // nsINode interface
-  virtual PRBool IsNodeOfType(PRUint32 aFlags) const;
-  virtual PRUint32 GetChildCount() const;
-  virtual nsIContent *GetChildAt(PRUint32 aIndex) const;
-  virtual PRInt32 IndexOf(nsINode* aPossibleChild) const;
-  virtual nsresult InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
-                                 PRBool aNotify);
-  virtual nsresult AppendChildTo(nsIContent* aKid, PRBool aNotify);
-  virtual nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify);
-  virtual nsresult PreHandleEvent(nsEventChainPreVisitor& aVisitor);
-  virtual nsresult PostHandleEvent(nsEventChainPostVisitor& aVisitor);
-  virtual nsresult DispatchDOMEvent(nsEvent* aEvent, nsIDOMEvent* aDOMEvent,
-                                    nsPresContext* aPresContext,
-                                    nsEventStatus* aEventStatus);
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
-
+  // Property functions, see nsPropertyTable.h
+  virtual void* GetProperty(nsIAtom  *aPropertyName,
+                            nsresult *aStatus = nsnull);
+  virtual nsresult SetProperty(nsIAtom            *aPropertyName,
+                               void               *aValue,
+                               NSPropertyDtorFunc  aDtor);
+  virtual nsresult DeleteProperty(nsIAtom  *aPropertyName);
+  virtual void*    UnsetProperty(nsIAtom *aPropertyName,
+                                 nsresult *aStatus = nsnull);
   static void Initialize();
   static void Shutdown();
-
-  NS_DECL_CYCLE_COLLECTION_CLASS(nsDOMAttribute)
 
 protected:
   static PRBool sInitialized;
 
 private:
-  nsresult EnsureChildState(PRBool aSetText, PRBool &aHasChild) const;
-
   nsString mValue;
   // XXX For now, there's only a single child - a text
   // element representing the value
-  nsCOMPtr<nsIContent> mChild;
+  nsIDOMText* mChild;
+  nsAttributeChildList* mChildList;
 
   nsIContent *GetContentInternal() const
   {

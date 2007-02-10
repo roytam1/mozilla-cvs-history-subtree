@@ -85,6 +85,7 @@ X11SHARED_LCPPSRCS = \
 
 CPPSRCS		= \
 		$(X11SHARED_LCPPSRCS) \
+		nsDeviceContextSpecFactoryX.cpp \
 		nsDeviceContextSpecXlib.cpp \
 		nsDeviceContextXlib.cpp \
 		nsDrawingSurfaceXlib.cpp \
@@ -93,6 +94,8 @@ CPPSRCS		= \
 		nsImageXlib.cpp \
 		nsRegionXlib.cpp \
 		nsRenderingContextXlib.cpp \
+		nsScreenXlib.cpp \
+		nsScreenManagerXlib.cpp \
 	       	nsPrintOptionsXlib.cpp \
 		nsGCCache.cpp \
 		$(NULL)
@@ -117,9 +120,10 @@ endif
 
 EXTRA_DSO_LDOPTS += \
 		$(LIBS_DIR)     \
+		$(NSPR_LIBS)	\
+		-lxpcom		\
 		-lgkgfx		\
 		$(GFX_XIE_LIBS) \
-		$(MOZ_COMPONENT_LIBS) \
 		$(MOZ_UNICHARUTIL_LIBS) \
 		$(NULL)
 

@@ -7,10 +7,11 @@
 
   <binding id="button-base" extends="chrome://global/content/bindings/general.xml#basetext">
     <implementation implements="nsIDOMXULButtonElement, nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
+      <property name="accessible">
         <getter>
           <![CDATA[
-            return Components.interfaces.nsIAccessibleProvider.XULButton;
+            var accService = Components.classes["@mozilla.org/accessibilityService;1"].getService(Components.interfaces.nsIAccessibilityService);
+            return accService.createXULButtonAccessible(this);
           ]]>
         </getter>
       </property>
@@ -240,7 +241,7 @@
 
   <binding id="menu-button-base"
            extends="chrome://global/content/bindings/button.xml#button-base">
-    <implementation implements="nsIDOMEventListener">
+    <implementation>
       <constructor>
         this.init();
       </constructor>
@@ -252,18 +253,18 @@
           if (!btn)
             throw "XBL binding for <button type=\"menu-button\"/> binding must contain an element with anonid=\"button\"";
           
-          var menubuttonParent = this;
+          btn._menubuttonParent = this;
           btn.addEventListener("mouseover", function() { 
             if (!this.disabled)
-              menubuttonParent.buttonover = true; 
+              this._menubuttonParent.buttonover = true; 
           }, true);
           btn.addEventListener("mouseout", function() {
-            menubuttonParent.buttonover = false;
-          }, true);
+            this._menubuttonParent.buttonover = false;
+           }, true);
           btn.addEventListener("mousedown", function() {
             if (!this.disabled) {
-              menubuttonParent.buttondown = true;
-              document.addEventListener("mouseup", menubuttonParent, true);
+              this._menubuttonParent.buttondown = true;
+              this._menubuttonParent._captureMouseUp();
             }
           }, true);
         ]]>
@@ -308,13 +309,31 @@
       
       <field name="_pendingActive">false</field>
 
-      <method name="handleEvent">
-        <parameter name="aEvent"/>
+      <method name="_captureMouseUp">
+        <body>
+        <![CDATA[
+          document.__ButtonMenuMouseDown__ = this;
+          document.addEventListener("mouseup", this._onGlobalMouseUp, true);
+        ]]>
+        </body>
+      </method>
+
+      <method name="_onGlobalMouseUp" readonly="true">
+        <body>
+        <![CDATA[
+          var btn = document.__ButtonMenuMouseDown__;
+          btn._onMouseReallyUp();
+          document.removeEventListener("mouseup", btn._onGlobalMouseUp, true);
+          delete document.__ButtonMenuMouseDown__;
+        ]]>
+        </body>
+      </method>
+
+      <method name="_onMouseReallyUp">
         <body>
         <![CDATA[
           this._pendingActive = false;
           this.buttondown = false;
-          document.removeEventListener("mouseup", this, true);
         ]]>
         </body>
       </method>
@@ -346,8 +365,5 @@
       <xul:image class="button-image-icon" xbl:inherits="src=image"/>
     </content>
   </binding>
-
-  <binding id="button-repeat" display="xul:autorepeatbutton"
-           extends="chrome://global/content/bindings/button.xml#button"/>
   
 </bindings>

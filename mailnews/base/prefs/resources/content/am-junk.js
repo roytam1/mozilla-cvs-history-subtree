@@ -39,30 +39,16 @@
 const KEY_APPDIR = "XCurProcD";
 const KEY_PROFILEDIR = "PrefD";
 
-function onInit(aPageId, aServerId)
+function onInit()
 {
   // manually adjust several pref UI elements
   document.getElementById('spamLevel').checked =
     document.getElementById('server.spamLevel').value > 0;
     
-  var spamActionTargetAccount = document.getElementById('server.spamActionTargetAccount').value;
-  if (!spamActionTargetAccount)
-  {
-    var server = GetMsgFolderFromUri(aServerId, false).server;
-    if (server.canCreateFoldersOnServer && server.canSearchMessages)
-      spamActionTargetAccount = parent.pendingServerId;
-    else
-      spamActionTargetAccount = parent.accountManager.localFoldersServer.serverURI;
-    document.getElementById('server.spamActionTargetAccount').value = spamActionTargetAccount;
-  }
-  SetFolderPicker(spamActionTargetAccount, 'actionTargetAccount');
-  var spamActionTargetFolder = document.getElementById('server.spamActionTargetFolder').value;
-  if (!spamActionTargetFolder)
-  {
-    spamActionTargetFolder = parent.accountManager.localFoldersServer.serverURI + "/Junk";
-    document.getElementById('server.spamActionTargetFolder').value = spamActionTargetFolder;
-  }
-  SetFolderPicker(spamActionTargetFolder, 'actionTargetFolder');
+  SetFolderPicker(document.getElementById('server.spamActionTargetAccount').value,
+                  'actionTargetAccount');
+  SetFolderPicker(document.getElementById('server.spamActionTargetFolder').value,
+                  'actionTargetFolder');
   
   // set up the whitelist UI
   document.getElementById("whiteListAbURI").value =
@@ -97,7 +83,7 @@ function updateSpamLevel()
     document.getElementById('spamLevel').checked ? 100 : 0;
 }
 
-// propagate changes to the server filter menu list back to 
+// propogate changes to the server filter menu list back to 
 // our hidden wsm element.
 function onServerFilterListChange()
 {
@@ -105,7 +91,7 @@ function onServerFilterListChange()
     document.getElementById("useServerFilterList").value;
 }
 
-// propagate changes to the whitelist menu list back to
+// propogate changes to the whitelist menu list back to
 // our hidden wsm element.
 function onWhiteListAbURIChange()
 {

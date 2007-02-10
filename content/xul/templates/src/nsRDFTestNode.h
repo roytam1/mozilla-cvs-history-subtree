@@ -40,9 +40,9 @@
 #define nsRDFTestNode_h__
 
 #include "nsRuleNetwork.h"
-
 class nsIRDFResource;
 class nsIRDFNode;
+class nsTemplateMatchSet;
 
 /**
  * An abstract base class for all of the RDF-related tests. This interface
@@ -52,11 +52,11 @@ class nsIRDFNode;
 class nsRDFTestNode : public TestNode
 {
 public:
-    nsRDFTestNode(TestNode* aParent)
+    nsRDFTestNode(InnerNode* aParent)
         : TestNode(aParent) {}
 
     /**
-     * Determine whether the node can propagate an assertion
+     * Determine wether the node can propagate an assertion
      * with the specified source, property, and target. If the
      * assertion can be propagated, aInitialBindings will be
      * initialized with appropriate variable-to-value assignments
@@ -76,7 +76,9 @@ public:
      */
     virtual void Retract(nsIRDFResource* aSource,
                          nsIRDFResource* aProperty,
-                         nsIRDFNode* aTarget) const = 0;
+                         nsIRDFNode* aTarget,
+                         nsTemplateMatchSet& aFirings,
+                         nsTemplateMatchSet& aRetractions) const = 0;
 };
 
 #endif // nsRDFTestNode_h__

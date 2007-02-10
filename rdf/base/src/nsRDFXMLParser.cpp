@@ -43,7 +43,6 @@
 #include "nsIParser.h"
 #include "nsIRDFContentSink.h"
 #include "nsParserCIID.h"
-#include "nsStringStream.h"
 #include "nsNetUtil.h"
 
 static NS_DEFINE_CID(kParserCID, NS_PARSER_CID);

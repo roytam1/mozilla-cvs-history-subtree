@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Mats Palmgren <mats.palmgren@bredband.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -39,13 +38,14 @@
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsIForm.h"
 #include "nsIFormControl.h"
 #include "nsIEventStateManager.h"
 #include "nsIFocusController.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDocument.h"
 #include "nsPIDOMWindow.h"
 
@@ -61,7 +61,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLFormElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLFormElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLFormElement::)
@@ -85,8 +85,7 @@ public:
   virtual void UnbindFromTree(PRBool aDeep = PR_TRUE,
                               PRBool aNullParent = PR_TRUE);
   virtual void SetFocus(nsPresContext* aPresContext);
-  virtual PRBool ParseAttribute(PRInt32 aNamespaceID,
-                                nsIAtom* aAttribute,
+  virtual PRBool ParseAttribute(nsIAtom* aAttribute,
                                 const nsAString& aValue,
                                 nsAttrValue& aResult);
   virtual nsChangeHint GetAttributeChangeHint(const nsIAtom* aAttribute,
@@ -101,8 +100,6 @@ public:
                            PRBool aNotify);
   virtual nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                              PRBool aNotify);
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 };
 
 
@@ -134,7 +131,7 @@ NS_HTML_CONTENT_INTERFACE_MAP_END
 // nsIDOMHTMLLegendElement
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLLegendElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLLegendElement)
 
 
 NS_IMETHODIMP
@@ -158,17 +155,15 @@ static const nsAttrValue::EnumTable kAlignTable[] = {
 };
 
 PRBool
-nsHTMLLegendElement::ParseAttribute(PRInt32 aNamespaceID,
-                                    nsIAtom* aAttribute,
+nsHTMLLegendElement::ParseAttribute(nsIAtom* aAttribute,
                                     const nsAString& aValue,
                                     nsAttrValue& aResult)
 {
-  if (aAttribute == nsGkAtoms::align && aNamespaceID == kNameSpaceID_None) {
+  if (aAttribute == nsHTMLAtoms::align) {
     return aResult.ParseEnumValue(aValue, kAlignTable);
   }
 
-  return nsGenericHTMLElement::ParseAttribute(aNamespaceID, aAttribute, aValue,
-                                              aResult);
+  return nsGenericHTMLElement::ParseAttribute(aAttribute, aValue, aResult);
 }
 
 nsChangeHint
@@ -177,7 +172,7 @@ nsHTMLLegendElement::GetAttributeChangeHint(const nsIAtom* aAttribute,
 {
   nsChangeHint retval =
       nsGenericHTMLFormElement::GetAttributeChangeHint(aAttribute, aModType);
-  if (aAttribute == nsGkAtoms::align) {
+  if (aAttribute == nsHTMLAtoms::align) {
     NS_UpdateHint(retval, NS_STYLE_HINT_REFLOW);
   }
   return retval;
@@ -188,7 +183,7 @@ nsHTMLLegendElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                              nsIAtom* aPrefix, const nsAString& aValue,
                              PRBool aNotify)
 {
-  PRBool accesskey = (aAttribute == nsGkAtoms::accesskey &&
+  PRBool accesskey = (aAttribute == nsHTMLAtoms::accesskey &&
                       aNameSpaceID == kNameSpaceID_None);
   if (accesskey) {
     RegUnRegAccessKey(PR_FALSE);
@@ -208,7 +203,7 @@ nsresult
 nsHTMLLegendElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                                PRBool aNotify)
 {
-  if (aAttribute == nsGkAtoms::accesskey &&
+  if (aAttribute == nsHTMLAtoms::accesskey &&
       aNameSpaceID == kNameSpaceID_None) {
     RegUnRegAccessKey(PR_FALSE);
   }
@@ -257,17 +252,17 @@ nsHTMLLegendElement::SetFocus(nsPresContext* aPresContext)
     return;
   }
 
+  nsCOMPtr<nsIEventStateManager> esm = aPresContext->EventStateManager();
   if (IsFocusable()) {
-    nsGenericHTMLFormElement::SetFocus(aPresContext);
+    esm->SetContentState(this, NS_EVENT_STATE_FOCUS);
   } else {
     // If the legend isn't focusable (no tabindex) we focus whatever is
     // focusable following the legend instead, bug 81481.
-    nsCOMPtr<nsPIDOMWindow> ourWindow = document->GetWindow();
+    nsCOMPtr<nsPIDOMWindow> ourWindow = do_QueryInterface(document->GetScriptGlobalObject());
     if (ourWindow) {
-      nsIFocusController* focusController =
-        ourWindow->GetRootFocusController();
-      nsCOMPtr<nsIDOMElement> domElement =
-        do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
+      nsIFocusController* focusController = ourWindow->GetRootFocusController();
+      nsIDOMElement* domElement = nsnull;
+      CallQueryInterface(this, &domElement);
       if (focusController && domElement) {
         focusController->MoveFocus(PR_TRUE, domElement);
       }

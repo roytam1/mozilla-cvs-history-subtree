@@ -12,6 +12,9 @@
 #include "nsUnicharUtilCIID.h"
 #include "nsUnicharUtils.h"
 
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+static NS_DEFINE_CID(kUnicharUtilCID, NS_UNICHARUTIL_CID);
+
 #ifdef __SUNPRO_CC // for SunONE Studio compiler
 using namespace std;
 #endif
@@ -194,7 +197,7 @@ struct cs_info * get_current_cs(const char * es) {
   nsCOMPtr<nsICaseConversion> caseConv;
 
   nsresult rv;
-  nsCOMPtr<nsICharsetConverterManager> ccm = do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv);
+  nsCOMPtr<nsICharsetConverterManager> ccm = do_GetService(kCharsetConverterManagerCID, &rv);
   if (NS_FAILED(rv))
     return nsnull;
 
@@ -205,7 +208,7 @@ struct cs_info * get_current_cs(const char * es) {
     return nsnull;
   rv = ccm->GetUnicodeDecoder(es, getter_AddRefs(decoder));
 
-  caseConv = do_GetService(NS_UNICHARUTIL_CONTRACTID, &rv);
+  caseConv = do_GetService(kUnicharUtilCID, &rv);
   if (NS_FAILED(rv))
     return nsnull;
 

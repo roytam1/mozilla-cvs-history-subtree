@@ -36,9 +36,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/* tokenization of CSS style sheets */
-
 #include "nsCSSScanner.h"
 #include "nsIFactory.h"
 #include "nsIInputStream.h"
@@ -181,11 +178,11 @@ nsCSSToken::AppendToString(nsString& aBuffer)
   }
 }
 
+MOZ_DECL_CTOR_COUNTER(nsCSSScanner)
+
 nsCSSScanner::nsCSSScanner()
-  : mInputStream(nsnull)
-  , mReadPointer(nsnull)
 #ifdef CSS_REPORT_PARSE_ERRORS
-  , mError(mErrorBuf, NS_ARRAY_LENGTH(mErrorBuf), 0)
+  : mError(mErrorBuf, NS_ARRAY_LENGTH(mErrorBuf), 0)
 #endif
 {
   MOZ_COUNT_CTOR(nsCSSScanner);
@@ -193,6 +190,7 @@ nsCSSScanner::nsCSSScanner()
     // XXX need a monitor
     BuildLexTable();
   }
+  mBuffer = new PRUnichar[BUFFER_SIZE];
   mPushback = mLocalPushback;
   mPushbackSize = 4;
   // No need to init the other members, since they represent state
@@ -204,6 +202,10 @@ nsCSSScanner::~nsCSSScanner()
 {
   MOZ_COUNT_DTOR(nsCSSScanner);
   Close();
+  if (nsnull != mBuffer) {
+    delete [] mBuffer;
+    mBuffer = nsnull;
+  }
   if (mLocalPushback != mPushback) {
     delete [] mPushback;
   }
@@ -249,27 +251,13 @@ PR_STATIC_CALLBACK(int) CSSErrorsPrefChanged(const char *aPref, void *aClosure)
 #endif
 }
 
-void nsCSSScanner::Init(nsIUnicharInputStream* aInput, 
-                        const PRUnichar * aBuffer, PRInt32 aCount, 
-                        nsIURI* aURI, PRUint32 aLineNumber)
+void nsCSSScanner::Init(nsIUnicharInputStream* aInput, nsIURI* aURI,
+                        PRUint32 aLineNumber)
 {
-  NS_PRECONDITION(!mInputStream, "Should not have an existing input stream!");
-  NS_PRECONDITION(!mReadPointer, "Should not have an existing input buffer!");
+  NS_PRECONDITION(aInput, "Null input stream pointer");
+  NS_PRECONDITION(!mInput, "Should not have an existing input stream!");
 
-  // Read from stream via my own buffer
-  if (aInput) {
-    NS_PRECONDITION(!aBuffer, "Shouldn't have both input and buffer!");
-    NS_PRECONDITION(aCount == 0, "Shouldn't have count with a stream");
-    mInputStream = aInput;
-    mReadPointer = mBuffer;
-    mCount = 0;
-  } else {
-    NS_PRECONDITION(aBuffer, "Either aInput or aBuffer must be set");
-    // Read directly from the provided buffer
-    mInputStream = nsnull;
-    mReadPointer = aBuffer;
-    mCount = aCount;
-  }
+  mInput = aInput;
 
 #ifdef CSS_REPORT_PARSE_ERRORS
   // If aURI is the same as mURI, no need to reget mFileName -- it
@@ -279,20 +267,25 @@ void nsCSSScanner::Init(nsIUnicharInputStream* aInput,
     if (aURI) {
       aURI->GetSpec(mFileName);
     } else {
-      mFileName.Adopt(NS_strdup("from DOM"));
+      mFileName.Adopt(nsCRT::strdup("from DOM"));
     }
   }
 #endif // CSS_REPORT_PARSE_ERRORS
   mLineNumber = aLineNumber;
 
-  // Reset variables that we use to keep track of our progress through the input
+  // Reset variables that we use to keep track of our progress through mInput
   mOffset = 0;
+  mCount = 0;
   mPushbackCount = 0;
   mLastRead = 0;
 
 #ifdef CSS_REPORT_PARSE_ERRORS
   mColNumber = 0;
 #endif
+
+  // Note that we do NOT want to change mBuffer, mPushback, or
+  // mPushbackCount here.  We can keep using the existing values even
+  // if the input stream we're using has changed.
 }
 
 #ifdef CSS_REPORT_PARSE_ERRORS
@@ -324,7 +317,7 @@ void nsCSSScanner::OutputError()
 #ifdef DEBUG
   fprintf(stderr, "CSS Error (%s :%u.%u): %s\n",
                   mFileName.get(), mErrorLineNumber, mErrorColNumber,
-                  NS_ConvertUTF16toUTF8(mError).get());
+                  NS_ConvertUCS2toUTF8(mError).get());
 #endif
 
   // Log it to the Error console
@@ -335,7 +328,7 @@ void nsCSSScanner::OutputError()
       do_CreateInstance(gScriptErrorFactory, &rv);
     if (NS_SUCCEEDED(rv)) {
       rv = errorObject->Init(mError.get(),
-                             NS_ConvertUTF8toUTF16(mFileName).get(),
+                             NS_ConvertASCIItoUCS2(mFileName.get()).get(),
                              EmptyString().get(),
                              mErrorLineNumber,
                              mErrorColNumber,
@@ -409,7 +402,7 @@ void nsCSSScanner::ReportUnexpectedEOF(const char* aLookingFor)
     innerStr.get()
   };
   nsXPIDLString str;
-  gStringBundle->FormatStringFromName(NS_LITERAL_STRING("PEUnexpEOF2").get(),
+  gStringBundle->FormatStringFromName(NS_LITERAL_STRING("PEUnexpEOF").get(),
                                       params, NS_ARRAY_LENGTH(params),
                                       getter_Copies(str));
   AddToError(str);
@@ -458,8 +451,7 @@ void nsCSSScanner::ReportUnexpectedTokenParams(nsCSSToken& tok,
 
 void nsCSSScanner::Close()
 {
-  mInputStream = nsnull;
-  mReadPointer = nsnull;
+  mInput = nsnull;
 }
 
 #ifdef CSS_REPORT_PARSE_ERRORS
@@ -478,17 +470,13 @@ PRInt32 nsCSSScanner::Read(nsresult& aErrorCode)
     }
     if (mOffset == mCount) {
       mOffset = 0;
-      if (!mInputStream) {
-        mCount = 0;
-        return -1;
-      }
-      aErrorCode = mInputStream->Read(mBuffer, CSS_BUFFER_SIZE, (PRUint32*)&mCount);
+      aErrorCode = mInput->Read(mBuffer, BUFFER_SIZE, (PRUint32*)&mCount);
       if (NS_FAILED(aErrorCode) || mCount == 0) {
         mCount = 0;
         return -1;
       }
     }
-    rv = PRInt32(mReadPointer[mOffset++]);
+    rv = PRInt32(mBuffer[mOffset++]);
     if (((rv == '\n') && (mLastRead != '\r')) || (rv == '\r')) {
       // 0 is a magical line number meaning that we don't know (i.e., script)
       if (mLineNumber != 0)
@@ -514,9 +502,7 @@ PRInt32 nsCSSScanner::Read(nsresult& aErrorCode)
 PRInt32 nsCSSScanner::Peek(nsresult& aErrorCode)
 {
   if (0 == mPushbackCount) {
-    PRInt32 savedLastRead = mLastRead;
     PRInt32 ch = Read(aErrorCode);
-    mLastRead = savedLastRead;
     if (ch < 0) {
       return -1;
     }
@@ -805,7 +791,10 @@ PRBool nsCSSScanner::NextURL(nsresult& aErrorCode, nsCSSToken& aToken)
         ch = Read(aErrorCode);
         if (ch < 0) break;
         if (ch == CSS_ESCAPE) {
-          ParseAndAppendEscape(aErrorCode, ident);
+          ch = ParseEscape(aErrorCode);
+          if (0 < ch) {
+            ident.Append(PRUnichar(ch));
+          }
         } else if ((ch == '"') || (ch == '\'') || (ch == '(')) {
           // This is an invalid URL spec
           ok = PR_FALSE;
@@ -841,14 +830,12 @@ PRBool nsCSSScanner::NextURL(nsresult& aErrorCode, nsCSSToken& aToken)
 }
 
 
-void
-nsCSSScanner::ParseAndAppendEscape(nsresult& aErrorCode, nsString& aOutput)
+PRInt32 nsCSSScanner::ParseEscape(nsresult& aErrorCode)
 {
   PRUint8* lexTable = gLexTable;
   PRInt32 ch = Peek(aErrorCode);
   if (ch < 0) {
-    aOutput.Append(CSS_ESCAPE);
-    return;
+    return CSS_ESCAPE;
   }
   if ((ch <= 255) && ((lexTable[ch] & IS_HEX_DIGIT) != 0)) {
     PRInt32 rv = 0;
@@ -895,22 +882,18 @@ nsCSSScanner::ParseAndAppendEscape(nsresult& aErrorCode, nsString& aOutput)
         }
       }
     }
-    NS_ASSERTION(rv >= 0, "How did rv become negative?");
-    if (rv > 0) {
-      AppendUCS4ToUTF16(ENSURE_VALID_CHAR(rv), aOutput);
-    }
-    return;
+    return rv;
   } else {
     // "Any character except a hexidecimal digit can be escaped to
     // remove its special meaning by putting a backslash in front"
     // -- CSS1 spec section 7.1
-    if (!EatNewline(aErrorCode)) { // skip escaped newline
-      (void) Read(aErrorCode);
-      if (ch > 0) {
-        aOutput.Append(ch);
-      }
+    if (EatNewline(aErrorCode)) { // skip escaped newline
+      ch = 0;
     }
-    return;
+    else {
+      (void) Read(aErrorCode);
+    }
+    return ch;
   }
 }
 
@@ -925,16 +908,19 @@ PRBool nsCSSScanner::GatherIdent(nsresult& aErrorCode, PRInt32 aChar,
                                  nsString& aIdent)
 {
   if (aChar == CSS_ESCAPE) {
-    ParseAndAppendEscape(aErrorCode, aIdent);
+    aChar = ParseEscape(aErrorCode);
   }
-  else if (0 < aChar) {
-    aIdent.Append(aChar);
+  if (0 < aChar) {
+    aIdent.Append(PRUnichar(aChar));
   }
   for (;;) {
     aChar = Read(aErrorCode);
     if (aChar < 0) break;
     if (aChar == CSS_ESCAPE) {
-      ParseAndAppendEscape(aErrorCode, aIdent);
+      aChar = ParseEscape(aErrorCode);
+      if (0 < aChar) {
+        aIdent.Append(PRUnichar(aChar));
+      }
     } else if ((aChar > 255) || ((gLexTable[aChar] & IS_IDENT) != 0)) {
       aIdent.Append(PRUnichar(aChar));
     } else {
@@ -1144,10 +1130,13 @@ PRBool nsCSSScanner::ParseString(nsresult& aErrorCode, PRInt32 aStop,
       break;
     }
     if (ch == CSS_ESCAPE) {
-      ParseAndAppendEscape(aErrorCode, aToken.mIdent);
+      ch = ParseEscape(aErrorCode);
+      if (ch < 0) {
+        return PR_FALSE;
+      }
     }
-    else if (0 < ch) {
-      aToken.mIdent.Append(ch);
+    if (0 < ch) {
+      aToken.mIdent.Append(PRUnichar(ch));
     }
   }
   return PR_TRUE;

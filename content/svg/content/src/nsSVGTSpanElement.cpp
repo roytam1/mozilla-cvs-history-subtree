@@ -37,16 +37,16 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsSVGStylableElement.h"
-#include "nsGkAtoms.h"
+#include "nsSVGAtoms.h"
 #include "nsIDOMSVGTSpanElement.h"
 #include "nsCOMPtr.h"
 #include "nsSVGAnimatedLengthList.h"
 #include "nsSVGLengthList.h"
 #include "nsISVGSVGElement.h"
 #include "nsSVGCoordCtxProvider.h"
-#include "nsISVGTextContentMetrics.h"
+#include "nsIDocument.h"
 #include "nsIFrame.h"
-#include "nsDOMError.h"
+#include "nsISVGChildFrame.h"
 
 typedef nsSVGStylableElement nsSVGTSpanElementBase;
 
@@ -58,6 +58,7 @@ protected:
   friend nsresult NS_NewSVGTSpanElement(nsIContent **aResult,
                                         nsINodeInfo *aNodeInfo);
   nsSVGTSpanElement(nsINodeInfo* aNodeInfo);
+  virtual ~nsSVGTSpanElement();
   nsresult Init();
   
 public:
@@ -70,23 +71,19 @@ public:
 
   // xxx If xpcom allowed virtual inheritance we wouldn't need to
   // forward here :-(
-  NS_FORWARD_NSIDOMNODE(nsSVGTSpanElementBase::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsSVGTSpanElementBase::)
   NS_FORWARD_NSIDOMELEMENT(nsSVGTSpanElementBase::)
   NS_FORWARD_NSIDOMSVGELEMENT(nsSVGTSpanElementBase::)
 
-  // nsIContent interface
+  // nsIStyledContent interface
   NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
 
   // nsISVGContent specializations:
   virtual void ParentChainChanged();
 
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
-
 protected:
   // nsSVGElement overrides
   virtual PRBool IsEventName(nsIAtom* aName);
-
-  already_AddRefed<nsISVGTextContentMetrics> GetTextContentMetrics();
 
   // nsIDOMSVGTextPositioning properties:
   nsCOMPtr<nsIDOMSVGAnimatedLengthList> mX;
@@ -125,6 +122,10 @@ nsSVGTSpanElement::nsSVGTSpanElement(nsINodeInfo *aNodeInfo)
 
 }
 
+nsSVGTSpanElement::~nsSVGTSpanElement()
+{
+}
+
   
 nsresult
 nsSVGTSpanElement::Init()
@@ -142,7 +143,7 @@ nsSVGTSpanElement::Init()
     rv = NS_NewSVGAnimatedLengthList(getter_AddRefs(mX),
                                      lengthList);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = AddMappedSVGValue(nsGkAtoms::x, mX);
+    rv = AddMappedSVGValue(nsSVGAtoms::x, mX);
     NS_ENSURE_SUCCESS(rv,rv);
   }
   
@@ -154,7 +155,7 @@ nsSVGTSpanElement::Init()
     rv = NS_NewSVGAnimatedLengthList(getter_AddRefs(mY),
                                      lengthList);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = AddMappedSVGValue(nsGkAtoms::y, mY);
+    rv = AddMappedSVGValue(nsSVGAtoms::y, mY);
     NS_ENSURE_SUCCESS(rv,rv);
   }
 
@@ -166,7 +167,7 @@ nsSVGTSpanElement::Init()
     rv = NS_NewSVGAnimatedLengthList(getter_AddRefs(mdX),
                                      lengthList);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = AddMappedSVGValue(nsGkAtoms::dx, mdX);
+    rv = AddMappedSVGValue(nsSVGAtoms::dx, mdX);
     NS_ENSURE_SUCCESS(rv,rv);
   }
   
@@ -178,7 +179,7 @@ nsSVGTSpanElement::Init()
     rv = NS_NewSVGAnimatedLengthList(getter_AddRefs(mdY),
                                      lengthList);
     NS_ENSURE_SUCCESS(rv,rv);
-    rv = AddMappedSVGValue(nsGkAtoms::dy, mdY);
+    rv = AddMappedSVGValue(nsSVGAtoms::dy, mdY);
     NS_ENSURE_SUCCESS(rv,rv);
   }
 
@@ -189,7 +190,7 @@ nsSVGTSpanElement::Init()
 // nsIDOMNode methods
 
 
-NS_IMPL_ELEMENT_CLONE_WITH_INIT(nsSVGTSpanElement)
+NS_IMPL_DOM_CLONENODE_WITH_INIT(nsSVGTSpanElement)
 
 
 //----------------------------------------------------------------------
@@ -259,82 +260,80 @@ NS_IMETHODIMP nsSVGTSpanElement::GetLengthAdjust(nsIDOMSVGAnimatedEnumeration * 
 /* long getNumberOfChars (); */
 NS_IMETHODIMP nsSVGTSpanElement::GetNumberOfChars(PRInt32 *_retval)
 {
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (metrics)
-    return metrics->GetNumberOfChars(_retval);
-
-  *_retval = 0;
-  return NS_OK;
+  NS_NOTYETIMPLEMENTED("nsSVGTSpanElement::GetNumberOfChars");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* float getComputedTextLength (); */
 NS_IMETHODIMP nsSVGTSpanElement::GetComputedTextLength(float *_retval)
 {
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
+  nsCOMPtr<nsIDOMSVGRect> bbox;
 
-  if (metrics)
-    return metrics->GetComputedTextLength(_retval);
+  nsIDocument* doc = GetCurrentDoc();
+  if (!doc) return NS_ERROR_FAILURE;
+  nsIPresShell *presShell = doc->GetShellAt(0);
+  NS_ASSERTION(presShell, "no presShell");
+  if (!presShell) return NS_ERROR_FAILURE;
 
-  *_retval = 0.0;
+  nsIFrame* frame;
+  presShell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, this), &frame);
+
+  NS_ASSERTION(frame, "can't get bounding box for element without frame");
+
+  if (frame) {
+    nsISVGChildFrame* svgframe;
+    frame->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&svgframe);
+    NS_ASSERTION(svgframe, "wrong frame type");
+    if (svgframe) {
+      svgframe->SetMatrixPropagation(PR_FALSE);
+      svgframe->NotifyCanvasTMChanged();
+      nsresult rv = svgframe->GetBBox(getter_AddRefs(bbox));
+      svgframe->SetMatrixPropagation(PR_TRUE);
+      svgframe->NotifyCanvasTMChanged();
+    }
+  }
+
+  if (bbox)
+    bbox->GetWidth(_retval);
+  else
+    *_retval = 0;
+  
   return NS_OK;
 }
 
 /* float getSubStringLength (in unsigned long charnum, in unsigned long nchars); */
 NS_IMETHODIMP nsSVGTSpanElement::GetSubStringLength(PRUint32 charnum, PRUint32 nchars, float *_retval)
 {
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (metrics)
-    return metrics->GetSubStringLength(charnum, nchars, _retval);
-
-  *_retval = 0.0;
-  return NS_OK;
+  NS_NOTYETIMPLEMENTED("nsSVGTSpanElement::GetSubStringLength");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* nsIDOMSVGPoint getStartPositionOfChar (in unsigned long charnum); */
 NS_IMETHODIMP nsSVGTSpanElement::GetStartPositionOfChar(PRUint32 charnum, nsIDOMSVGPoint **_retval)
 {
-  *_retval = nsnull;
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (!metrics) return NS_ERROR_FAILURE;
-
-  return metrics->GetStartPositionOfChar(charnum, _retval);
+  NS_NOTYETIMPLEMENTED("nsSVGTSpanElement::GetStartPositionOfChar");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* nsIDOMSVGPoint getEndPositionOfChar (in unsigned long charnum); */
 NS_IMETHODIMP nsSVGTSpanElement::GetEndPositionOfChar(PRUint32 charnum, nsIDOMSVGPoint **_retval)
 {
-  *_retval = nsnull;
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (!metrics) return NS_ERROR_FAILURE;
-
-  return metrics->GetEndPositionOfChar(charnum, _retval);
+  NS_NOTYETIMPLEMENTED("nsSVGTSpanElement::GetEndPositionOfChar");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* nsIDOMSVGRect getExtentOfChar (in unsigned long charnum); */
 NS_IMETHODIMP nsSVGTSpanElement::GetExtentOfChar(PRUint32 charnum, nsIDOMSVGRect **_retval)
 {
-  *_retval = nsnull;
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (!metrics) return NS_ERROR_FAILURE;
-
-  return metrics->GetExtentOfChar(charnum, _retval);
+  NS_NOTYETIMPLEMENTED("nsSVGTSpanElement::GetExtentOfChar");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* float getRotationOfChar (in unsigned long charnum); */
 NS_IMETHODIMP nsSVGTSpanElement::GetRotationOfChar(PRUint32 charnum, float *_retval)
 {
-  *_retval = 0.0;
-
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (!metrics) return NS_ERROR_FAILURE;
-
-  return metrics->GetRotationOfChar(charnum, _retval);
+  NS_NOTYETIMPLEMENTED("nsSVGTSpanElement::GetRotationOfChar");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* long getCharNumAtPosition (in nsIDOMSVGPoint point); */
@@ -342,16 +341,11 @@ NS_IMETHODIMP nsSVGTSpanElement::GetCharNumAtPosition(nsIDOMSVGPoint *point,
                                                       PRInt32 *_retval)
 {
   // null check when implementing - this method can be used by scripts!
-  if (!point)
-    return NS_ERROR_DOM_SVG_WRONG_TYPE_ERR;
+  // if (!point)
+  //   return NS_ERROR_DOM_SVG_WRONG_TYPE_ERR;
 
-  nsCOMPtr<nsISVGTextContentMetrics> metrics = GetTextContentMetrics();
-
-  if (metrics)
-    return metrics->GetCharNumAtPosition(point, _retval);
-
-  *_retval = -1;
-  return NS_OK;
+  NS_NOTYETIMPLEMENTED("nsSVGTSpanElement::GetCharNumAtPosition");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* void selectSubString (in unsigned long charnum, in unsigned long nchars); */
@@ -362,7 +356,7 @@ NS_IMETHODIMP nsSVGTSpanElement::SelectSubString(PRUint32 charnum, PRUint32 ncha
 }
 
 //----------------------------------------------------------------------
-// nsIContent methods
+// nsIStyledContent methods
 
 NS_IMETHODIMP_(PRBool)
 nsSVGTSpanElement::IsAttributeMapped(const nsIAtom* name) const
@@ -371,8 +365,7 @@ nsSVGTSpanElement::IsAttributeMapped(const nsIAtom* name) const
     sFillStrokeMap,
     sGraphicsMap,
     sTextContentElementsMap,
-    sFontSpecificationMap,
-    sColorMap
+    sFontSpecificationMap
   };
   
   return FindAttributeDependence(name, map, NS_ARRAY_LENGTH(map)) ||
@@ -444,21 +437,4 @@ PRBool
 nsSVGTSpanElement::IsEventName(nsIAtom* aName)
 {
   return IsGraphicElementEventName(aName);
-}
-
-//----------------------------------------------------------------------
-// implementation helpers:
-
-already_AddRefed<nsISVGTextContentMetrics>
-nsSVGTSpanElement::GetTextContentMetrics()
-{
-  nsIFrame* frame = GetPrimaryFrame(Flush_Layout);
-
-  if (!frame) {
-    return nsnull;
-  }
-  
-  nsISVGTextContentMetrics* metrics;
-  CallQueryInterface(frame, &metrics);
-  return metrics;
 }

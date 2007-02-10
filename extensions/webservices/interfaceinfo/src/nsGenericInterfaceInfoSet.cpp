@@ -52,8 +52,8 @@ NS_IMPL_THREADSAFE_ISUPPORTS3(nsGenericInterfaceInfoSet,
 
 nsGenericInterfaceInfoSet::nsGenericInterfaceInfoSet()
 {
-    PL_InitArenaPool(&mArena, "nsGenericInterfaceInfoSet Arena",
-                     ARENA_BLOCK_SIZE, sizeof(double));
+    mArena = XPT_NewArena(ARENA_BLOCK_SIZE, sizeof(double),
+                          "nsGenericInterfaceInfoSet Arena");
 }
 
 nsGenericInterfaceInfoSet::~nsGenericInterfaceInfoSet()
@@ -69,18 +69,8 @@ nsGenericInterfaceInfoSet::~nsGenericInterfaceInfoSet()
             NS_RELEASE(info);
     }
 
-    PL_FinishArenaPool(&mArena);
-}
-
-void*
-nsGenericInterfaceInfoSet::AllocateFromArena(PRUint32 size)
-{
-    void *buf = nsnull;
-    PL_ARENA_ALLOCATE(buf, &mArena, size);
-    if (buf) {
-        memset(buf, 0, size);
-    }
-    return buf;
+    if(mArena)
+        XPT_DestroyArena(mArena);
 }
 
 nsresult
@@ -136,7 +126,7 @@ nsGenericInterfaceInfoSet::AllocateParamArray(PRUint16 aCount,
                                               XPTParamDescriptor * *_retval)
 {
     *_retval = (XPTParamDescriptor*)
-        AllocateFromArena(sizeof(XPTParamDescriptor) * aCount);
+        XPT_MALLOC(GetArena(), sizeof(XPTParamDescriptor) * aCount);
     return *_retval ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
@@ -146,7 +136,7 @@ nsGenericInterfaceInfoSet::AllocateAdditionalType(PRUint16 *aIndex,
                                                   XPTTypeDescriptor * *_retval)
 {
     *_retval = (XPTTypeDescriptor*)
-        AllocateFromArena(sizeof(XPTTypeDescriptor));
+        XPT_MALLOC(GetArena(), sizeof(XPTTypeDescriptor));
     if(!*_retval || !mAdditionalTypes.AppendElement(*_retval))
         return NS_ERROR_OUT_OF_MEMORY;
     *aIndex = (PRUint16) mAdditionalTypes.Count()-1;
@@ -363,8 +353,7 @@ nsGenericInterfaceInfo::nsGenericInterfaceInfo(nsGenericInterfaceInfoSet* aSet,
     }
 
     int len = PL_strlen(aName);
-    mName = (char*) mSet->AllocateFromArena(len + 1);
-
+    mName = (char*) XPT_MALLOC(mSet->GetArena(), len+1);
     if(mName)
         memcpy(mName, aName, len);
 }
@@ -377,15 +366,15 @@ NS_IMETHODIMP
 nsGenericInterfaceInfo::AppendMethod(XPTMethodDescriptor * aMethod,
                                      PRUint16 *_retval)
 {
-    XPTMethodDescriptor *desc = (XPTMethodDescriptor*)
-        mSet->AllocateFromArena(sizeof(XPTMethodDescriptor));
+    XPTMethodDescriptor* desc = (XPTMethodDescriptor*)
+        XPT_MALLOC(mSet->GetArena(), sizeof(XPTMethodDescriptor));
     if(!desc)
         return NS_ERROR_OUT_OF_MEMORY;
 
     memcpy(desc, aMethod, sizeof(XPTMethodDescriptor));
 
     int len = PL_strlen(aMethod->name);
-    desc->name = (char*) mSet->AllocateFromArena(len + 1);
+    desc->name = (char*) XPT_MALLOC(mSet->GetArena(), len+1);
     if(!desc->name)
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -408,14 +397,14 @@ nsGenericInterfaceInfo::AppendConst(XPTConstDescriptor * aConst,
                  "unsupported const type");
 
     XPTConstDescriptor* desc = (XPTConstDescriptor*)
-        mSet->AllocateFromArena(sizeof(XPTConstDescriptor));
+        XPT_MALLOC(mSet->GetArena(), sizeof(XPTConstDescriptor));
     if(!desc)
         return NS_ERROR_OUT_OF_MEMORY;
 
     memcpy(desc, aConst, sizeof(XPTConstDescriptor));
 
     int len = PL_strlen(aConst->name);
-    desc->name = (char*) mSet->AllocateFromArena(len + 1);
+    desc->name = (char*) XPT_MALLOC(mSet->GetArena(), len+1);
     if(!desc->name)
         return NS_ERROR_OUT_OF_MEMORY;
 

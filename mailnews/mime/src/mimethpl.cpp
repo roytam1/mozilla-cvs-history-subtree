@@ -60,7 +60,7 @@
 MimeDefClass(MimeInlineTextHTMLAsPlaintext, MimeInlineTextHTMLAsPlaintextClass,
 			 mimeInlineTextHTMLAsPlaintextClass, &MIME_SUPERCLASS);
 
-static int MimeInlineTextHTMLAsPlaintext_parse_line (const char *, PRInt32,
+static int MimeInlineTextHTMLAsPlaintext_parse_line (char *, PRInt32,
                                                      MimeObject *);
 static int MimeInlineTextHTMLAsPlaintext_parse_begin (MimeObject *obj);
 static int MimeInlineTextHTMLAsPlaintext_parse_eof (MimeObject *, PRBool);
@@ -162,7 +162,7 @@ MimeInlineTextHTMLAsPlaintext_finalize (MimeObject *obj)
 }
 
 static int
-MimeInlineTextHTMLAsPlaintext_parse_line (const char *line, PRInt32 length,
+MimeInlineTextHTMLAsPlaintext_parse_line (char *line, PRInt32 length,
                                           MimeObject *obj)
 {
   MimeInlineTextHTMLAsPlaintext *textHTMLPlain =
@@ -186,7 +186,7 @@ printf("Can't output: %s\n", line);
     will behave then. It's not worth the trouble for me to figure this all out.
    */
   nsCString linestr(line, length);
-  NS_ConvertUTF8toUTF16 line_ucs2(linestr.get());
+  NS_ConvertUTF8toUCS2 line_ucs2(linestr.get());
   if (length && line_ucs2.IsEmpty())
     line_ucs2.AssignWithConversion(linestr.get());
   (textHTMLPlain->complete_buffer)->Append(line_ucs2);

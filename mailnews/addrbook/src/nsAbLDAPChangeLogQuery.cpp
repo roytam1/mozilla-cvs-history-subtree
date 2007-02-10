@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -118,30 +118,18 @@ NS_IMETHODIMP nsAbLDAPChangeLogQuery::DoReplicationQuery()
 
 NS_IMETHODIMP nsAbLDAPChangeLogQuery::QueryAuthDN(const nsACString & aValueUsedToFindDn)
 {
-  if (!mInitialized)
-    return NS_ERROR_NOT_INITIALIZED;
+    if(!mInitialized) 
+        return NS_ERROR_NOT_INITIALIZED;
 
-    nsresult rv = NS_OK;
+    nsresult rv = NS_OK; 
 
-    nsCOMPtr<nsIAbLDAPAttributeMapService> mapSvc = 
-      do_GetService("@mozilla.org/addressbook/ldap-attribute-map-service;1", &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsIAbDirectory> abDirectory(do_QueryInterface(mDirectory, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsXPIDLCString prefBaseName;
-  rv = abDirectory->GetDirPrefId(prefBaseName);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsIAbLDAPAttributeMap> attrMap;
-  rv = mapSvc->GetMapForPrefBranch(prefBaseName, getter_AddRefs(attrMap));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCAutoString filter;
-    rv = attrMap->GetFirstAttribute(NS_LITERAL_CSTRING("PrimaryEmail"), filter);
-    NS_ENSURE_SUCCESS(rv, rv);
-
+    CharPtrArrayGuard attributes;
+    *attributes.GetSizeAddr() = 2;
+    *attributes.GetArrayAddr() = NS_STATIC_CAST(char **, nsMemory::Alloc((*attributes.GetSizeAddr()) * sizeof(char *)));
+    attributes.GetArray()[0] = ToNewCString(nsDependentCString(DIR_GetFirstAttributeString(mDirServer, cn)));
+    attributes.GetArray()[1] = nsnull;
+    
+    nsCAutoString filter(DIR_GetFirstAttributeString(mDirServer, auth));
     filter += '=';
     filter += aValueUsedToFindDn;
 
@@ -153,10 +141,8 @@ NS_IMETHODIMP nsAbLDAPChangeLogQuery::QueryAuthDN(const nsACString & aValueUsedT
     rv = CreateNewLDAPOperation();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // XXX We really should be using LDAP_NO_ATTRS here once its exposed via
-    // the XPCOM layer of the directory code.
     return mOperation->SearchExt(dn, nsILDAPURL::SCOPE_SUBTREE, filter, 
-                               0, nsnull,
+                               attributes.GetSize(), attributes.GetArray(),
                                0, 0);
 }
 
@@ -175,27 +161,23 @@ NS_IMETHODIMP nsAbLDAPChangeLogQuery::QueryRootDSE()
 
 NS_IMETHODIMP nsAbLDAPChangeLogQuery::QueryChangeLog(const nsACString & aChangeLogDN, PRInt32 aLastChangeNo)
 {
-  if (!mInitialized)
-    return NS_ERROR_NOT_INITIALIZED;
-  if (aChangeLogDN.IsEmpty()) 
-    return NS_ERROR_UNEXPECTED;
+    if(!mInitialized) 
+        return NS_ERROR_NOT_INITIALIZED;
+    if(aChangeLogDN.IsEmpty()) 
+        return NS_ERROR_UNEXPECTED;
 
-  PRInt32 lastChangeNumber;
-  nsresult rv = mDirectory->GetLastChangeNumber(&lastChangeNumber);
-  NS_ENSURE_SUCCESS(rv, rv);
+    // make sure that the filter here just have one condition 
+    // and should not be enclosed in enclosing brackets.
+    // also condition '>' doesnot work, it should be '>='/
+    nsCAutoString filter (NS_LITERAL_CSTRING("changenumber>="));
+    filter.AppendInt(mDirServer->replInfo->lastChangeNumber+1);
 
-  // make sure that the filter here just have one condition 
-  // and should not be enclosed in enclosing brackets.
-  // also condition '>' doesnot work, it should be '>='/
-  nsCAutoString filter (NS_LITERAL_CSTRING("changenumber>="));
-  filter.AppendInt(lastChangeNumber + 1);
+    nsresult rv = CreateNewLDAPOperation();
+    NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = CreateNewLDAPOperation();
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  return mOperation->SearchExt(aChangeLogDN, nsILDAPURL::SCOPE_ONELEVEL, filter, 
-                               sizeof(sChangeLogEntryAttribs),
-                               sChangeLogEntryAttribs, 0, 0);
+    return mOperation->SearchExt(aChangeLogDN, nsILDAPURL::SCOPE_ONELEVEL, filter, 
+                                 sizeof(sChangeLogEntryAttribs),
+                                 sChangeLogEntryAttribs, 0, 0);
 }
 
 NS_IMETHODIMP nsAbLDAPChangeLogQuery::QueryChangedEntries(const nsACString & aChangedEntryDN)

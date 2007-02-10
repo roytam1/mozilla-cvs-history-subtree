@@ -96,15 +96,13 @@ private:
 class nsSVGCoordCtxProvider : public nsISupports
 {
 public:
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_SVGCOORDCTXPROVIDER_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_SVGCOORDCTXPROVIDER_IID)
 
   nsSVGCoordCtxProvider() : mInner(new nsSVGCoordCtxHolder) {}
     
   already_AddRefed<nsSVGCoordCtx> GetContextX() { return mInner ? mInner->GetContextX() : nsnull; }
   already_AddRefed<nsSVGCoordCtx> GetContextY() { return mInner ? mInner->GetContextY() : nsnull; }
   already_AddRefed<nsSVGCoordCtx> GetContextUnspecified() { return mInner ? mInner->GetContextUnspecified() : nsnull; }
-
-  already_AddRefed<nsSVGCoordCtx> GetCtxByType(PRUint16 aCtxType);
 
 protected:
   void SetCoordCtxRect(nsIDOMSVGRect* ctxRect) { if(mInner) mInner->SetContextRect(ctxRect); }
@@ -116,8 +114,5 @@ protected:
 private:
   nsRefPtr<nsSVGCoordCtxHolder> mInner;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsSVGCoordCtxProvider,
-                              NS_SVGCOORDCTXPROVIDER_IID)
 
 #endif // __NS_SVGCOORDCTXPROVIDER_H__

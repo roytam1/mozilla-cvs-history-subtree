@@ -41,7 +41,6 @@
 #include "nsIWebProgressListener.h"
 #include "nsIAbLDAPReplicationQuery.h"
 #include "nsIAbLDAPReplicationData.h"
-#include "nsIAbLDAPDirectory.h"
 #include "nsILDAPConnection.h"
 #include "nsILDAPOperation.h"
 #include "nsILDAPURL.h"
@@ -55,6 +54,7 @@ public:
   NS_DECL_NSIABLDAPREPLICATIONQUERY
 
   nsAbLDAPReplicationQuery();
+  virtual ~nsAbLDAPReplicationQuery();
 
   nsresult InitLDAPData();
   nsresult CreateNewLDAPOperation();
@@ -64,12 +64,13 @@ protected :
   nsCOMPtr<nsILDAPConnection> mConnection;
   nsCOMPtr<nsILDAPOperation> mOperation;
   nsCOMPtr<nsILDAPURL> mURL;
-  nsCOMPtr<nsIAbLDAPDirectory> mDirectory;
 
   nsCOMPtr<nsIAbLDAPProcessReplicationData> mDataProcessor;
 
   PRBool          mInitialized; 
   nsCString       mDirPrefName;
+  DIR_Server    * mDirServer;
+
 };
 
 #endif // nsAbLDAPReplicationQuery_h__

@@ -46,13 +46,18 @@
 #include "nsIChangeManager.h"
 #include "nsWeakReference.h"
 
-#include <Carbon/Carbon.h>
+#include <Menus.h>
+#include <UnicodeConverter.h>
+#include <CarbonEvents.h>
+
 
 class nsIMenuBar;
 class nsIMenuListener;
 class nsMenuItemIcon;
 
-extern PRInt16 mMacMenuIDCount;
+
+//static PRInt16      mMacMenuIDCount;    // use GetUniqueMenuID()
+extern PRInt16 mMacMenuIDCount;// = kMacMenuID;
 
 #if DEBUG
 // utility instance counter class
@@ -90,7 +95,7 @@ protected:
 };
 #endif
 
-class nsMenuX : public nsIMenu,
+class nsMenuX : public nsIMenu_MOZILLA_1_8_BRANCH,
                 public nsIMenuListener,
                 public nsIChangeObserver,
                 public nsSupportsWeakReference
@@ -135,6 +140,7 @@ public:
     NS_IMETHOD GetMenuContent(nsIContent ** aMenuNode);
     NS_IMETHOD SetEnabled(PRBool aIsEnabled);
     NS_IMETHOD GetEnabled(PRBool* aIsEnabled);
+    NS_IMETHOD IsHelpMenu(PRBool* aIsEnabled);
 
     NS_IMETHOD AddMenuItem(nsIMenuItem * aMenuItem);
     NS_IMETHOD AddMenu(nsIMenu * aMenu);

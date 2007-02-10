@@ -61,15 +61,14 @@
 //#define NS_COORD_IS_FLOAT
 
 inline float NS_IEEEPositiveInfinity() {
-  union { PRUint32 mPRUint32; float mFloat; } pun;
-  pun.mPRUint32 = 0x7F800000;
-  return pun.mFloat;
+  float f;
+  *(PRUint32*)&f = 0x7F800000;
+  return f;
 }
 inline PRBool NS_IEEEIsNan(float aF) {
-  union { PRUint32 mBits; float mFloat; } pun;
-  pun.mFloat = aF;
-  return (pun.mBits & 0x7F800000) == 0x7F800000 &&
-    (pun.mBits & 0x007FFFFF) != 0;
+  PRUint32 bits = *(PRUint32*)&aF;
+  return (bits & 0x7F800000) == 0x7F800000 &&
+    (bits & 0x007FFFFF) != 0;
 }
 
 #ifdef NS_COORD_IS_FLOAT

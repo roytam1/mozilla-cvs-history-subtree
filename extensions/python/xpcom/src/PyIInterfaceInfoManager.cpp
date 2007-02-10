@@ -73,10 +73,10 @@ static PyObject *PyGetInfoForIID(PyObject *self, PyObject *args)
 	if (!Py_nsIID::IIDFromPyObject(obIID, &iid))
 		return NULL;
 
-	nsCOMPtr<nsIInterfaceInfo> pi;
+	nsIInterfaceInfo *pi;
 	nsresult r;
 	Py_BEGIN_ALLOW_THREADS;
-	r = pI->GetInfoForIID(&iid, getter_AddRefs(pi));
+	r = pI->GetInfoForIID(&iid, &pi);
 	Py_END_ALLOW_THREADS;
 	if ( NS_FAILED(r) )
 		return PyXPCOM_BuildPyException(r);
@@ -85,7 +85,7 @@ static PyObject *PyGetInfoForIID(PyObject *self, PyObject *args)
 	nsIID new_iid = NS_GET_IID(nsIInterfaceInfo);
 	// Can not auto-wrap the interface info manager as it is critical to
 	// building the support we need for autowrap.
-	return Py_nsISupports::PyObjectFromInterface(pi, new_iid, PR_FALSE);
+	return Py_nsISupports::PyObjectFromInterface(pi, new_iid, PR_FALSE, PR_FALSE);
 }
 
 static PyObject *PyGetInfoForName(PyObject *self, PyObject *args)
@@ -98,10 +98,10 @@ static PyObject *PyGetInfoForName(PyObject *self, PyObject *args)
 	if (pI==NULL)
 		return NULL;
 
-	nsCOMPtr<nsIInterfaceInfo> pi;
+	nsIInterfaceInfo *pi;
 	nsresult r;
 	Py_BEGIN_ALLOW_THREADS;
-	r = pI->GetInfoForName(name, getter_AddRefs(pi));
+	r = pI->GetInfoForName(name, &pi);
 	Py_END_ALLOW_THREADS;
 	if ( NS_FAILED(r) )
 		return PyXPCOM_BuildPyException(r);
@@ -109,7 +109,7 @@ static PyObject *PyGetInfoForName(PyObject *self, PyObject *args)
 	/* Return a type based on the IID (with no extra ref) */
 	// Can not auto-wrap the interface info manager as it is critical to
 	// building the support we need for autowrap.
-	return Py_nsISupports::PyObjectFromInterface(pi, NS_GET_IID(nsIInterfaceInfo), PR_FALSE);
+	return Py_nsISupports::PyObjectFromInterface(pi, NS_GET_IID(nsIInterfaceInfo), PR_FALSE, PR_FALSE);
 }
 
 static PyObject *PyGetNameForIID(PyObject *self, PyObject *args)
@@ -171,15 +171,15 @@ static PyObject *PyEnumerateInterfaces(PyObject *self, PyObject *args)
 	if (pI==NULL)
 		return NULL;
 
-	nsCOMPtr<nsIEnumerator> pRet;
+	nsIEnumerator *pRet;
 	nsresult r;
 	Py_BEGIN_ALLOW_THREADS;
-	r = pI->EnumerateInterfaces(getter_AddRefs(pRet));
+	r = pI->EnumerateInterfaces(&pRet);
 	Py_END_ALLOW_THREADS;
 	if ( NS_FAILED(r) )
 		return PyXPCOM_BuildPyException(r);
 
-	return Py_nsISupports::PyObjectFromInterface(pRet, NS_GET_IID(nsIEnumerator));
+	return Py_nsISupports::PyObjectFromInterface(pRet, NS_GET_IID(nsIEnumerator), PR_FALSE);
 }
 
 // TODO:

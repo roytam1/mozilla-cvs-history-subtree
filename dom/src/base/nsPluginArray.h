@@ -86,7 +86,13 @@ public:
   virtual ~nsPluginElement();
 
   NS_DECL_ISUPPORTS
-  NS_DECL_NSIDOMPLUGIN
+
+  NS_IMETHOD GetDescription(nsAString& aDescription);
+  NS_IMETHOD GetFilename(nsAString& aFilename);
+  NS_IMETHOD GetName(nsAString& aName);
+  NS_IMETHOD GetLength(PRUint32* aLength);
+  NS_IMETHOD Item(PRUint32 aIndex, nsIDOMMimeType** aReturn);
+  NS_IMETHOD NamedItem(const nsAString& aName, nsIDOMMimeType** aReturn);
 
 private:
   nsresult GetMimeTypes();

@@ -1,4 +1,6 @@
 /*
+ * $Id$
+ *
  * Copyright © 1998 Keith Packard
  *
  * Permission to use, copy, modify, distribute, and sell this software and its
@@ -65,7 +67,7 @@ FbPixelsCreate (int width, int height, int depth)
 	adjust = 8 - (base & 7);
     buf_size += adjust;
 
-    pixels = calloc(base + buf_size, 1);
+    pixels = malloc(base + buf_size);
     if (!pixels)
 	return NULL;
 
@@ -112,3 +114,4 @@ FbPixelsDestroy (FbPixels *pixels)
 
     free(pixels);
 }
+

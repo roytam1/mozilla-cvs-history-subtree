@@ -49,17 +49,26 @@ nsSampleWordBreaker::~nsSampleWordBreaker()
 
 NS_IMPL_ISUPPORTS1(nsSampleWordBreaker, nsIWordBreaker)
 
-PRBool nsSampleWordBreaker::BreakInBetween(
+nsresult nsSampleWordBreaker::BreakInBetween(
   const PRUnichar* aText1 , PRUint32 aTextLen1,
-  const PRUnichar* aText2 , PRUint32 aTextLen2)
+  const PRUnichar* aText2 , PRUint32 aTextLen2,
+  PRBool *oCanBreak)
 {
   NS_PRECONDITION( nsnull != aText1, "null ptr");
   NS_PRECONDITION( nsnull != aText2, "null ptr");
 
-  if(!aText1 || !aText2 || (0 == aTextLen1) || (0 == aTextLen2))
-    return PR_FALSE;
+  if((aText1 == nsnull) || (aText2 == nsnull))
+    return NS_ERROR_NULL_POINTER; 
 
-  return (this->GetClass(aText1[aTextLen1-1]) != this->GetClass(aText2[0]));
+  if( (0 == aTextLen1) || (0 == aTextLen2))
+  {
+    *oCanBreak = PR_FALSE; 
+    return NS_OK;
+  }
+
+  *oCanBreak = (this->GetClass(aText1[aTextLen1-1]) != this->GetClass(aText2[0]));
+
+  return NS_OK;
 }
 
 
@@ -110,41 +119,45 @@ PRUint8 nsSampleWordBreaker::GetClass(PRUnichar c)
   return 0;
 }
 
-nsWordRange nsSampleWordBreaker::FindWord(
+nsresult nsSampleWordBreaker::FindWord(
   const PRUnichar* aText , PRUint32 aTextLen,
-  PRUint32 aOffset)
+  PRUint32 aOffset,
+  PRUint32 *oWordBegin,
+  PRUint32 *oWordEnd)
 {
-  nsWordRange range;
   NS_PRECONDITION( nsnull != aText, "null ptr");
   NS_PRECONDITION( 0 != aTextLen, "len = 0");
+  NS_PRECONDITION( nsnull != oWordBegin, "null ptr");
+  NS_PRECONDITION( nsnull != oWordEnd, "null ptr");
   NS_PRECONDITION( aOffset <= aTextLen, "aOffset > aTextLen");
 
-  range.mBegin = aTextLen + 1;
-  range.mEnd = aTextLen + 1;
+  if((nsnull == aText ) || (nsnull == oWordBegin) || (nsnull == oWordEnd))
+    return NS_ERROR_NULL_POINTER; 
+  
+  if( aOffset > aTextLen )
+    return NS_ERROR_ILLEGAL_VALUE;
 
-  if(!aText || aOffset > aTextLen)
-    return range;
 
   PRUint8 c = this->GetClass(aText[aOffset]);
   PRUint32 i;
   // Scan forward
-  range.mEnd--;
+  *oWordEnd = aTextLen;
   for(i = aOffset +1;i <= aTextLen; i++)
   {
      if( c != this->GetClass(aText[i]))
      {
-       range.mEnd = i;
+       *oWordEnd = i;
        break;
      }
   }
 
   // Scan backward
-  range.mBegin = 0;
+  *oWordBegin = 0;
   for(i = aOffset ;i > 0; i--)
   {
      if( c != this->GetClass(aText[i-1]))
      {
-       range.mBegin = i;
+       *oWordBegin = i;
        break;
      }
   }
@@ -153,11 +166,12 @@ nsWordRange nsSampleWordBreaker::FindWord(
 	// need to call Thai word breaker from here
 	// we should pass the whole Thai segment to the thai word breaker to find a shorter answer
   }
-  return range;
+  return NS_OK;
 }
 
-PRInt32 nsSampleWordBreaker::NextWord( 
-  const PRUnichar* aText, PRUint32 aLen, PRUint32 aPos) 
+nsresult nsSampleWordBreaker::NextWord( 
+  const PRUnichar* aText, PRUint32 aLen, PRUint32 aPos,
+  PRUint32* oNext, PRBool *oNeedMoreText) 
 {
   PRInt8 c1, c2;
   PRUint32 cur = aPos;
@@ -174,13 +188,13 @@ PRInt32 nsSampleWordBreaker::NextWord(
 	// need to call Thai word breaker from here
 	// we should pass the whole Thai segment to the thai word breaker to find a shorter answer
   }
-  if (cur == aLen)
-    return NS_WORDBREAKER_NEED_MORE_TEXT;
-  return cur;
+  *oNext = cur;
+  *oNeedMoreText = (cur == aLen) ? PR_TRUE : PR_FALSE;
+  return NS_OK;
 }
 
-PRInt32 nsSampleWordBreaker::PrevWord(
-  const PRUnichar* aText, PRUint32 aLen, PRUint32 aPos) 
+nsresult nsSampleWordBreaker::PrevWord(const PRUnichar* aText, PRUint32 aLen, PRUint32 aPos,
+  PRUint32* oPrev, PRBool *oNeedMoreText) 
 {
   PRInt8 c1, c2;
   PRUint32 cur = aPos;
@@ -197,7 +211,7 @@ PRInt32 nsSampleWordBreaker::PrevWord(
 	// need to call Thai word breaker from here
 	// we should pass the whole Thai segment to the thai word breaker to find a shorter answer
   }
-  if (!cur)
-    return NS_WORDBREAKER_NEED_MORE_TEXT;
-  return cur;
+  *oPrev = cur;
+  *oNeedMoreText = (cur == 0) ? PR_TRUE : PR_FALSE;
+  return NS_OK;
 }

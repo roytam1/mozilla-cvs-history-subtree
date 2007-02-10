@@ -36,10 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * This file was part of an abortive attempt at DOM3 Load/Save; it's not built.
- */
-
 #ifndef nsDOMBuilder_h__
 #define nsDOMBuilder_h__
 
@@ -49,6 +45,10 @@
 #include "nsIDOMDOMBuilderFilter.h"
 #include "nsIDOMDOMImplementation.h"
 #include "nsCOMPtr.h"
+
+/**
+ * This class implements the DOMBuilder from DOM3 Load/Save
+ */
 
 class nsDOMBuilder : public nsIDOMDOMBuilder
 {

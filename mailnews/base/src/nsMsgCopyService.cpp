@@ -38,14 +38,13 @@
 
 #include "nsMsgCopyService.h"
 #include "nsMsgKeyArray.h"
-#include "nsCOMArray.h"
 #include "nspr.h"
 #include "nsIFileSpec.h"
-#include "nsIMsgFolderNotificationService.h"
-#include "nsMsgBaseCID.h"
 
 // ******************** nsCopySource ******************
 // 
+
+MOZ_DECL_CTOR_COUNTER(nsCopySource)
 
 nsCopySource::nsCopySource() : m_processed(PR_FALSE)
 {
@@ -78,11 +77,13 @@ void nsCopySource::AddMessage(nsIMsgDBHdr* aMsg)
 // ************ nsCopyRequest *****************
 // 
 
+MOZ_DECL_CTOR_COUNTER(nsCopyRequest)
+
 nsCopyRequest::nsCopyRequest() :
     m_requestType(nsCopyMessagesType),
     m_isMoveOrDraftOrTemplate(PR_FALSE),
-    m_processed(PR_FALSE),
-    m_newMsgFlags(0)
+    m_newMsgFlags(0),
+    m_processed(PR_FALSE)
 {
   MOZ_COUNT_CTOR(nsCopyRequest);
 }
@@ -144,11 +145,7 @@ nsCopyRequest::AddNewCopySource(nsIMsgFolder* srcFolder)
 {
   nsCopySource* newSrc = new nsCopySource(srcFolder);
   if (newSrc)
-  {
       m_copySourceArray.AppendElement((void*) newSrc);
-      if (srcFolder == m_dstFolder)
-        newSrc->m_processed = PR_TRUE;
-  }
   return newSrc;
 }
 
@@ -181,35 +178,6 @@ nsMsgCopyService::ClearRequest(nsCopyRequest* aRequest, nsresult rv)
 {
   if (aRequest)
   {
-    // Send notifications to nsIGlobalMsgFolderNotificationService
-    
-    if (aRequest->m_requestType == nsCopyFoldersType)
-    {
-      nsCOMPtr <nsIMsgFolderNotificationService> notifier = do_GetService(NS_MSGNOTIFICATIONSERVICE_CONTRACTID);
-      if (notifier)
-      {
-        PRBool hasListeners;
-        notifier->GetHasListeners(&hasListeners);
-        if (hasListeners)
-        {
-          nsCOMPtr <nsISupportsArray> supportsArray = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID);
-          if (supportsArray)
-          {
-            // Iterate over the copy sources and append their message arrays to this supports array
-            // or in the case of folders, the source folder.
-            PRInt32 cnt, i;
-            cnt =  aRequest->m_copySourceArray.Count();
-            for (i=0; i < cnt; i++)
-            {
-              nsCopySource *copySource = (nsCopySource*) aRequest->m_copySourceArray.ElementAt(i);
-              supportsArray->AppendElement(copySource->m_msgFolder);
-            }
-            notifier->NotifyItemMoveCopyCompleted(aRequest->m_isMoveOrDraftOrTemplate, supportsArray, aRequest->m_dstFolder);
-          }
-        }
-      }
-    }
-    
     // undo stuff
     if (aRequest->m_allowUndo && aRequest->m_copySourceArray.Count() > 1 && 
         aRequest->m_txnMgr)
@@ -281,8 +249,6 @@ nsMsgCopyService::DoNextCopy()
   cnt = m_copyRequests.Count();
   if (cnt > 0)
   {
-    nsCOMArray<nsIMsgFolder> activeTargets;
-
     // ** jt -- always FIFO
     for (i=0; i < cnt; i++)
     {
@@ -291,25 +257,20 @@ nsMsgCopyService::DoNextCopy()
       scnt = copyRequest->m_copySourceArray.Count();
       if (!copyRequest->m_processed)
       {
-        // if the target folder of this request already has an active 
-        // copy request, skip this request for now.
-        if (activeTargets.IndexOfObject(copyRequest->m_dstFolder) != kNotFound)
-        {
-          copyRequest = nsnull;
-          continue;
-        }
         if (scnt <= 0) goto found; // must be CopyFileMessage
         for (j=0; j < scnt; j++)
         {
-          copySource = (nsCopySource*) copyRequest->m_copySourceArray.ElementAt(j);
-          if (!copySource->m_processed)
-            goto found;
+          copySource = (nsCopySource*)
+              copyRequest->m_copySourceArray.ElementAt(j);
+
+          if (copySource->m_msgFolder == copyRequest->m_dstFolder)  //don't do move/copy on itself, just skip
+            copySource->m_processed = PR_TRUE;
+
+          if (!copySource->m_processed) goto found;
         }
         if (j >= scnt) // all processed set the value
-          copyRequest->m_processed = PR_TRUE;
+            copyRequest->m_processed = PR_TRUE;
       }
-      else // keep track of folders actively getting copied to.
-        activeTargets.AppendObject(copyRequest->m_dstFolder);
     }
     found:
       if (copyRequest && !copyRequest->m_processed)
@@ -638,6 +599,8 @@ nsMsgCopyService::NotifyCompletion(nsISupports* aSupport,
                                    nsIMsgFolder* dstFolder,
                                    nsresult result)
 {
+  nsresult rv;
+  rv = DoNextCopy();
   nsCopyRequest* copyRequest = nsnull;
   do
   {
@@ -649,31 +612,14 @@ nsMsgCopyService::NotifyCompletion(nsISupports* aSupport,
 
     if (copyRequest)
     {
-      // check if this copy request is done by making sure all the
-      // sources have been processed.
-      nsCopySource* copySource = nsnull;
-      PRInt32 sourceIndex, sourceCount;
-      sourceCount = copyRequest->m_copySourceArray.Count();
-      for (sourceIndex = 0; sourceIndex < sourceCount; sourceIndex++)
-      {
-        if (!((nsCopySource*)
-            copyRequest->m_copySourceArray.ElementAt(sourceIndex))->m_processed)
-            break;
-      }
-      // if all sources processed, mark the request as processed
-      if (sourceIndex >= sourceCount) 
-        copyRequest->m_processed = PR_TRUE;
-    // if this request is done, or failed, clear it.
-      if (copyRequest->m_processed || NS_FAILED(result))
+      if (copyRequest->m_processed) 
         ClearRequest(copyRequest, result);
-      else 
+      else
         break;
     }
-    else
-      break;
   }
   while (copyRequest);
 
-  return DoNextCopy();
+  return rv;
 }
 

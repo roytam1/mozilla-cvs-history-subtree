@@ -36,7 +36,7 @@ searchplugins/google.gif
 searchplugins/yahoo.src
 searchplugins/yahoo.gif
 searchplugins/
-component.reg
+components/component.reg
 components/compreg.dat
 components/xpti.dat
 components/xptitemp.dat
@@ -45,7 +45,6 @@ components/nsBackgroundUpdateService.js
 components/autocomplete.xpt
 #endif
 @DLL_PREFIX@zlib@DLL_SUFFIX@
-#Remove Talkback files from old location (in case user updates from 1.0.x)
 components/BrandRes.dll
 components/fullsoft.dll
 components/master.ini
@@ -68,7 +67,5 @@ extensions/inspector@mozilla.org/components/inspector.xpt
 extensions/inspector@mozilla.org/components/@DLL_PREFIX@inspector@DLL_SUFFIX@
 uninstall/UninstallFirefox.exe
 uninstall/UninstallDeerPark.exe
-uninstall/uninst.exe
-uninstall/uninstall.exe
 components/myspell/en-US.dic
 components/myspell/en-US.aff

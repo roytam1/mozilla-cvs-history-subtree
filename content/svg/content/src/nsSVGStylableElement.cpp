@@ -39,9 +39,8 @@
 #include "nsSVGStylableElement.h"
 #include "nsICSSOMFactory.h"
 #include "nsSVGAnimatedString.h"
-#include "nsGkAtoms.h"
+#include "nsSVGAtoms.h"
 #include "nsDOMCSSDeclaration.h"
-#include "nsIDOMClassInfo.h"
 
 static NS_DEFINE_CID(kCSSOMFactoryCID, NS_CSSOMFACTORY_CID);
 
@@ -67,8 +66,7 @@ nsSVGStylableElement::nsSVGStylableElement(nsINodeInfo *aNodeInfo)
 nsresult
 nsSVGStylableElement::Init()
 {
-  nsresult rv = nsSVGStylableElementBase::Init();
-  NS_ENSURE_SUCCESS(rv, rv);
+  nsresult rv;
 
   // Create mapped properties:
 
@@ -76,7 +74,7 @@ nsSVGStylableElement::Init()
   {
     mClassName = new nsSVGClassValue;
     NS_ENSURE_TRUE(mClassName, NS_ERROR_OUT_OF_MEMORY);
-    rv = AddMappedSVGValue(nsGkAtoms::_class,
+    rv = AddMappedSVGValue(nsSVGAtoms::_class,
 			   NS_STATIC_CAST(nsIDOMSVGAnimatedString*, mClassName),
 			   kNameSpaceID_None);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -86,12 +84,28 @@ nsSVGStylableElement::Init()
 }
 
 //----------------------------------------------------------------------
-// nsIContent methods
+// nsIStyledContent methods
 
 const nsAttrValue*
 nsSVGStylableElement::GetClasses() const
 {
   return mClassName->GetAttrValue();
+}
+
+NS_IMETHODIMP_(PRBool)
+nsSVGStylableElement::HasClass(nsIAtom* aClass, PRBool aCaseSensitive) const
+{
+  NS_ASSERTION(aCaseSensitive, "svg should always be casesensitive");
+
+  const nsAttrValue* val = mClassName->GetAttrValue();
+  if (val->Type() == nsAttrValue::eAtom) {
+    return aClass == val->GetAtomValue();
+  }
+  if (val->Type() == nsAttrValue::eAtomArray) {
+    return val->GetAtomArrayValue()->IndexOf(aClass) >= 0;
+  }
+
+  return PR_FALSE;
 }
 
 //----------------------------------------------------------------------

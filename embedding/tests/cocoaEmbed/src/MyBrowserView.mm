@@ -180,12 +180,12 @@
   return NULL;
 }
 
-- (NSMenu*)contextMenu
+- (NSMenu*)getContextMenu
 {
   return nil;
 }
 
-- (NSWindow*)nativeWindow
+- (NSWindow*)getNativeWindow
 {
   return [self window];
 }

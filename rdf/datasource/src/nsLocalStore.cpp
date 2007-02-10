@@ -62,9 +62,7 @@
 #include "nsIObserver.h"
 #include "nsIObserverService.h"
 #include "nsWeakReference.h"
-#include "nsCRTGlue.h"
 #include "nsCRT.h"
-#include "nsEnumeratorUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -86,7 +84,8 @@ protected:
     NS_NewLocalStore(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 
     nsCOMPtr<nsISupportsArray> mObservers;
-    nsCOMPtr<nsIRDFService>    mRDFService;
+
+    static nsWeakPtr gRDF;
 
 public:
     // nsISupports interface
@@ -233,6 +232,9 @@ public:
 	NS_DECL_NSIOBSERVER
 };
 
+nsWeakPtr LocalStoreImpl::gRDF;
+
+
 ////////////////////////////////////////////////////////////////////////
 
 
@@ -242,8 +244,9 @@ LocalStoreImpl::LocalStoreImpl(void)
 
 LocalStoreImpl::~LocalStoreImpl(void)
 {
-    if (mRDFService)
-        mRDFService->UnregisterDataSource(this);
+    nsCOMPtr<nsIRDFService> rdf = do_QueryReferent(gRDF);
+    if (rdf)
+        rdf->UnregisterDataSource(this);
 }
 
 
@@ -378,10 +381,14 @@ LocalStoreImpl::Init()
     if (NS_FAILED(rv)) return rv;
 
     // register this as a named data source with the RDF service
-    mRDFService = do_GetService(NS_RDF_CONTRACTID "/rdf-service;1", &rv);
+    nsCOMPtr<nsIRDFService> rdf = do_GetService(NS_RDF_CONTRACTID "/rdf-service;1", &rv);
     if (NS_FAILED(rv)) return rv;
 
-    mRDFService->RegisterDataSource(this, PR_FALSE);
+    // for later
+    if (!gRDF)
+        gRDF = do_GetWeakReference(rdf);
+
+    rdf->RegisterDataSource(this, PR_FALSE);
 
     // Register as an observer of profile changes
     nsCOMPtr<nsIObserverService> obs =
@@ -471,7 +478,7 @@ LocalStoreImpl::GetURI(char* *aURI)
     if (! aURI)
         return NS_ERROR_NULL_POINTER;
 
-    *aURI = NS_strdup("rdf:local-store");
+    *aURI = nsCRT::strdup("rdf:local-store");
     if (! *aURI)
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -522,7 +529,7 @@ LocalStoreImpl::Observe(nsISupports *aSubject, const char *aTopic, const PRUnich
         // profile-less.
         mInner = do_CreateInstance(NS_RDF_DATASOURCE_CONTRACTID_PREFIX "in-memory-datasource");
 
-        if (!nsCRT::strcmp(NS_ConvertUTF16toUTF8(someData).get(), "shutdown-cleanse")) {
+        if (!nsCRT::strcmp(NS_ConvertUCS2toUTF8(someData).get(), "shutdown-cleanse")) {
             nsCOMPtr<nsIFile> aFile;
             rv = NS_GetSpecialDirectory(NS_APP_LOCALSTORE_50_FILE, getter_AddRefs(aFile));
             if (NS_SUCCEEDED(rv))

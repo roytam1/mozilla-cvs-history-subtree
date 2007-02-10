@@ -36,8 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* atom list for CSS anonymous boxes */
-
 /*
  * This file contains the list of nsIAtoms and their values for CSS
  * pseudo-element-ish things used internally for anonymous boxes.  It is
@@ -69,8 +67,8 @@ CSS_ANON_BOX(framesetBlank, ":-moz-frameset-blank")
 CSS_ANON_BOX(radio, ":-moz-radio")
 CSS_ANON_BOX(check, ":-moz-checkbox")
 CSS_ANON_BOX(mozDisplayComboboxControlFrame, ":-moz-display-comboboxcontrol-frame")
+CSS_ANON_BOX(dummyOption, ":-moz-dummy-option")
 
-CSS_ANON_BOX(inlineTable, ":-moz-inline-table")
 CSS_ANON_BOX(table, ":-moz-table")
 CSS_ANON_BOX(tableCell, ":-moz-table-cell")
 CSS_ANON_BOX(tableColGroup, ":-moz-table-column-group")
@@ -111,8 +109,4 @@ CSS_ANON_BOX(moztreedropfeedback, ":-moz-tree-drop-feedback")
 CSS_ANON_BOX(mozMathStretchy, ":-moz-math-stretchy")
 CSS_ANON_BOX(mozMathAnonymous, ":-moz-math-anonymous")
 CSS_ANON_BOX(mozMathInline, ":-moz-math-inline")
-#endif
-
-#ifdef MOZ_SVG
-CSS_ANON_BOX(mozSVGForeignContent, ":-moz-svg-foreign-content")
 #endif

@@ -48,12 +48,9 @@
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsCategoryManagerUtils.h"
-#include "nsComponentManagerUtils.h"
 #include "nsCOMArray.h"
-#include "nsDirectoryServiceUtils.h"
 #include "nsIGenericFactory.h"
-#include "nsServiceManagerUtils.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 #include "nsXULAppAPI.h"
 
 class nsBrowserDirectoryProvider :
@@ -114,16 +111,14 @@ nsBrowserDirectoryProvider::GetFile(const char *aKey, PRBool *aPersist,
 
   char const* leafName = nsnull;
   PRBool restoreBookmarksBackup = PR_FALSE;
-  PRBool ensureFilePermissions = PR_FALSE;
 
   if (!strcmp(aKey, NS_APP_BOOKMARKS_50_FILE)) {
-    ensureFilePermissions = PR_TRUE;
     restoreBookmarksBackup = PR_TRUE;
     leafName = "bookmarks.html";
 
     nsCOMPtr<nsIPrefBranch> prefs(do_GetService(NS_PREFSERVICE_CONTRACTID));
     if (prefs) {
-      nsCString path;
+      nsXPIDLCString path;
       rv = prefs->GetCharPref("browser.bookmarks.file", getter_Copies(path));
       if (NS_SUCCEEDED(rv)) {
 	NS_NewNativeLocalFile(path, PR_TRUE, (nsILocalFile**)(nsIFile**) getter_AddRefs(file));
@@ -195,19 +190,6 @@ nsBrowserDirectoryProvider::GetFile(const char *aKey, PRBool *aPersist,
     if (!restoreBookmarksBackup ||
 	NS_FAILED(RestoreBookmarksFromBackup(leafstr, parentDir, file)))
       EnsureProfileFile(leafstr, parentDir, file);
-  }
-
-  if (ensureFilePermissions) {
-    PRBool fileToEnsureExists;
-    PRBool isWritable;
-    if (NS_SUCCEEDED(file->Exists(&fileToEnsureExists)) && fileToEnsureExists
-        && NS_SUCCEEDED(file->IsWritable(&isWritable)) && !isWritable) {
-      PRUint32 permissions;
-      if (NS_SUCCEEDED(file->GetPermissions(&permissions))) {
-        rv = file->SetPermissions(permissions | 0600);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to ensure file permissions");
-      }
-    }
   }
 
   *aPersist = PR_TRUE;

@@ -38,47 +38,189 @@
 
 #include "nsIDOMSVGTransformable.h"
 #include "nsSVGGFrame.h"
+#include "nsISVGRenderer.h"
+#include "nsISVGRendererSurface.h"
+#include "nsISVGOuterSVGFrame.h"
+#include "nsISVGRendererCanvas.h"
 #include "nsIFrame.h"
 #include "nsSVGMatrix.h"
 #include "nsSVGClipPathFrame.h"
-#include "nsGkAtoms.h"
+#include "nsISVGRendererCanvas.h"
+#include "nsLayoutAtoms.h"
 #include "nsSVGUtils.h"
-#include "nsISVGValueUtils.h"
-#include "nsSVGGraphicElement.h"
+#include <math.h>
 
 //----------------------------------------------------------------------
 // Implementation
 
-nsIFrame*
-NS_NewSVGGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsStyleContext* aContext)
-{  
+nsresult
+NS_NewSVGGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame)
+{
+  *aNewFrame = nsnull;
+  
   nsCOMPtr<nsIDOMSVGTransformable> transformable = do_QueryInterface(aContent);
   if (!transformable) {
 #ifdef DEBUG
     printf("warning: trying to construct an SVGGFrame for a content element that doesn't support the right interfaces\n");
 #endif
-    return nsnull;
+    return NS_ERROR_FAILURE;
   }
+  
+  nsSVGGFrame* it = new (aPresShell) nsSVGGFrame;
+  if (nsnull == it)
+    return NS_ERROR_OUT_OF_MEMORY;
 
-  return new (aPresShell) nsSVGGFrame(aContext);
+  *aNewFrame = it;
+
+  return NS_OK;
 }
 
 nsIAtom *
 nsSVGGFrame::GetType() const
 {
-  return nsGkAtoms::svgGFrame;
+  return nsLayoutAtoms::svgGFrame;
 }
 
 //----------------------------------------------------------------------
 // nsISVGChildFrame methods
 
 NS_IMETHODIMP
-nsSVGGFrame::NotifyCanvasTMChanged(PRBool suppressInvalidation)
+nsSVGGFrame::PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips)
 {
-  // make sure our cached transform matrix gets (lazily) updated
-  mCanvasTM = nsnull;
+  nsCOMPtr<nsISVGRendererSurface> surface;
 
-  return nsSVGGFrameBase::NotifyCanvasTMChanged(suppressInvalidation);
+  const nsStyleDisplay *display = mStyleContext->GetStyleDisplay();
+  if (display->mOpacity == 0.0)
+    return NS_OK;
+
+  nsIURI *aURI;
+  nsSVGClipPathFrame *clip = NULL;
+  aURI = GetStyleSVGReset()->mClipPath;
+  if (aURI) {
+    NS_GetSVGClipPathFrame(&clip, aURI, mContent);
+
+    if (clip) {
+      nsCOMPtr<nsIDOMSVGMatrix> matrix = GetCanvasTM();
+      canvas->PushClip();
+      clip->ClipPaint(canvas, this, matrix);
+    }
+  }
+
+  if (display->mOpacity != 1.0) {
+    nsISVGOuterSVGFrame* outerSVGFrame = GetOuterSVGFrame();
+    if (outerSVGFrame) {
+      nsIFrame *frame = nsnull;
+      CallQueryInterface(outerSVGFrame, &frame);
+
+      if (frame) {
+        nsSize size = frame->GetSize();
+        float p2t = GetPresContext()->ScaledPixelsToTwips();
+        PRUint32 width = (PRUint32)ceil(size.width/p2t);
+        PRUint32 height = (PRUint32)ceil(size.height/p2t);
+        
+        nsCOMPtr<nsISVGRenderer> renderer;
+        outerSVGFrame->GetRenderer(getter_AddRefs(renderer));
+        if (renderer)
+          renderer->CreateSurface(width, height, getter_AddRefs(surface));
+        if (surface) {
+          if (NS_FAILED(canvas->PushSurface(surface)))
+            surface = nsnull;
+        }
+      }
+    }
+  }
+
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame)
+      SVGFrame->PaintSVG(canvas, dirtyRectTwips);
+  }
+
+  if (surface) {
+    canvas->PopSurface();
+    canvas->CompositeSurface(surface, 0, 0, display->mOpacity);
+  }
+
+  if (clip)
+    canvas->PopClip();
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSVGGFrame::GetFrameForPointSVG(float x, float y, nsIFrame** hit)
+{
+  *hit = nsnull;
+  for (nsIFrame* kid = mFrames.FirstChild(); kid;
+       kid = kid->GetNextSibling()) {
+    nsISVGChildFrame* SVGFrame=nsnull;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      nsIFrame* temp=nsnull;
+      nsresult rv = SVGFrame->GetFrameForPointSVG(x, y, &temp);
+      if (NS_SUCCEEDED(rv) && temp) {
+        *hit = temp;
+        // return NS_OK; can't return. we need reverse order but only
+        // have a singly linked list...
+      }
+    }
+  }
+
+  if (*hit) {
+    PRBool clipHit = PR_TRUE;;
+
+    nsIURI *aURI;
+    nsSVGClipPathFrame *clip = NULL;
+    aURI = GetStyleSVGReset()->mClipPath;
+    if (aURI)
+      NS_GetSVGClipPathFrame(&clip, aURI, mContent);
+
+    if (clip) {
+      nsCOMPtr<nsIDOMSVGMatrix> matrix = GetCanvasTM();
+      clip->ClipHitTest(this, matrix, x, y, &clipHit);
+    }
+
+    if (!clipHit)
+      *hit = nsnull;
+  }
+  
+  return *hit ? NS_OK : NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP_(already_AddRefed<nsISVGRendererRegion>)
+nsSVGGFrame::GetCoveredRegion()
+{
+  nsISVGRendererRegion *accu_region=nsnull;
+  
+  nsIFrame* kid = mFrames.FirstChild();
+  while (kid) {
+    nsISVGChildFrame* SVGFrame=0;
+    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
+    if (SVGFrame) {
+      nsCOMPtr<nsISVGRendererRegion> dirty_region = SVGFrame->GetCoveredRegion();
+      if (dirty_region) {
+        if (accu_region) {
+          nsCOMPtr<nsISVGRendererRegion> temp = dont_AddRef(accu_region);
+          dirty_region->Combine(temp, &accu_region);
+        }
+        else {
+          accu_region = dirty_region;
+          NS_IF_ADDREF(accu_region);
+        }
+      }
+    }
+    kid = kid->GetNextSibling();
+  }
+  
+  return accu_region;
+}
+
+NS_IMETHODIMP
+nsSVGGFrame::GetBBox(nsIDOMSVGRect **_retval)
+{
+  return nsSVGUtils::GetBBox(&mFrames, _retval);
 }
 
 NS_IMETHODIMP
@@ -88,76 +230,14 @@ nsSVGGFrame::SetMatrixPropagation(PRBool aPropagate)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsSVGGFrame::SetOverrideCTM(nsIDOMSVGMatrix *aCTM)
-{
-  mOverrideCTM = aCTM;
-  return NS_OK;
-}
-
 already_AddRefed<nsIDOMSVGMatrix>
 nsSVGGFrame::GetCanvasTM()
 {
   if (!mPropagateTransform) {
     nsIDOMSVGMatrix *retval;
-    if (mOverrideCTM) {
-      retval = mOverrideCTM;
-      NS_ADDREF(retval);
-    } else {
-      NS_NewSVGMatrix(&retval);
-    }
+    NS_NewSVGMatrix(&retval);
     return retval;
   }
 
-  if (!mCanvasTM) {
-    // get our parent's tm and append local transforms (if any):
-    NS_ASSERTION(mParent, "null parent");
-    nsSVGContainerFrame *containerFrame = NS_STATIC_CAST(nsSVGContainerFrame*,
-                                                         mParent);
-    nsCOMPtr<nsIDOMSVGMatrix> parentTM = containerFrame->GetCanvasTM();
-    NS_ASSERTION(parentTM, "null TM");
-
-    // got the parent tm, now check for local tm:
-    nsSVGGraphicElement *element =
-      NS_STATIC_CAST(nsSVGGraphicElement*, mContent);
-    nsCOMPtr<nsIDOMSVGMatrix> localTM = element->GetLocalTransformMatrix();
-
-    if (localTM)
-      parentTM->Multiply(localTM, getter_AddRefs(mCanvasTM));
-    else
-      mCanvasTM = parentTM;
-  }
-
-  nsIDOMSVGMatrix* retval = mCanvasTM.get();
-  NS_IF_ADDREF(retval);
-  return retval;
-}
-
-NS_IMETHODIMP
-nsSVGGFrame::DidSetStyleContext()
-{
-  nsSVGUtils::StyleEffects(this);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSVGGFrame::AttributeChanged(PRInt32         aNameSpaceID,
-                              nsIAtom*        aAttribute,
-                              PRInt32         aModType)
-{
-  if (aNameSpaceID == kNameSpaceID_None &&
-      aAttribute == nsGkAtoms::transform) {
-    // make sure our cached transform matrix gets (lazily) updated
-    mCanvasTM = nsnull;
-
-    for (nsIFrame* kid = mFrames.FirstChild(); kid;
-         kid = kid->GetNextSibling()) {
-      nsISVGChildFrame* SVGFrame = nsnull;
-      CallQueryInterface(kid, &SVGFrame);
-      if (SVGFrame)
-        SVGFrame->NotifyCanvasTMChanged(PR_FALSE);
-    }  
-  }
-  
-  return NS_OK;
+  return nsSVGDefsFrame::GetCanvasTM();
 }

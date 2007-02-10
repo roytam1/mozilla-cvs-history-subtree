@@ -39,7 +39,6 @@ import xpcom
 from xpcom import _xpcom, components, COMException, ServerException, nsError
 from StringIO import StringIO
 import unittest
-from pyxpcom_test_tools import testmain
 
 test_data = "abcdefeghijklmnopqrstuvwxyz"
 
@@ -93,4 +92,4 @@ class StreamTests(unittest.TestCase):
         # stream observer mechanism has changed - we should test that.
 
 if __name__=='__main__':
-    testmain()
+    unittest.main()

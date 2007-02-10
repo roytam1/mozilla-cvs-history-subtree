@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * a list of all CSS properties with considerable data about them, for
- * preprocessing
- */
-
 /******
 
   This file contains the list of all parsed CSS properties.  It is
@@ -440,7 +435,7 @@ CSS_PROP_TABLE(table-layout, table_layout, TableLayout, Table, mLayout, eCSSType
 CSS_PROP_TEXT(text-align, text_align, TextAlign, Text, mTextAlign, eCSSType_Value, kTextAlignKTable)
 CSS_PROP_TEXTRESET(text-decoration, text_decoration, TextDecoration, Text, mDecoration, eCSSType_Value, kTextDecorationKTable)
 CSS_PROP_TEXT(text-indent, text_indent, TextIndent, Text, mTextIndent, eCSSType_Value, nsnull)
-CSS_PROP_BACKENDONLY(text-shadow, text_shadow, TextShadow, Text, mTextShadow, eCSSType_ValueList, nsnull)
+CSS_PROP_BACKENDONLY(text-shadow, text_shadow, TextShadow, Text, mTextShadow, eCSSType_Shadow, nsnull)
 CSS_PROP_TEXT(text-transform, text_transform, TextTransform, Text, mTextTransform, eCSSType_Value, kTextTransformKTable)
 CSS_PROP_POSITION(top, top, Top, Position, mOffset.mTop, eCSSType_Value, nsnull)
 CSS_PROP_TEXTRESET(unicode-bidi, unicode_bidi, UnicodeBidi, Text, mUnicodeBidi, eCSSType_Value, kUnicodeBidiKTable)
@@ -471,25 +466,19 @@ CSS_PROP_XUL(-moz-box-ordinal-group, box_ordinal_group, MozBoxOrdinalGroup, XUL,
 #ifndef CSS_PROP_LIST_EXCLUDE_INTERNAL
 CSS_PROP_SVGRESET(clip-path, clip_path, ClipPath, SVG, mClipPath, eCSSType_Value, nsnull)
 CSS_PROP_SVG(clip-rule, clip_rule, ClipRule, SVG, mClipRule, eCSSType_Value, kFillRuleKTable)
-CSS_PROP_SVG(color-interpolation, color_interpolation, ColorInterpolation, SVG, mColorInterpolation, eCSSType_Value, kColorInterpolationKTable)
-CSS_PROP_SVG(color-interpolation-filters, color_interpolation_filters, ColorInterpolationFilters, SVG, mColorInterpolationFilters, eCSSType_Value, kColorInterpolationKTable)
 CSS_PROP_SVGRESET(dominant-baseline, dominant_baseline, DominantBaseline, SVG, mDominantBaseline, eCSSType_Value, kDominantBaselineKTable)
-CSS_PROP_SVG(fill, fill, Fill, SVG, mFill, eCSSType_ValuePair, nsnull)
+CSS_PROP_SVG(fill, fill, Fill, SVG, mFill, eCSSType_Value, nsnull)
 CSS_PROP_SVG(fill-opacity, fill_opacity, FillOpacity, SVG, mFillOpacity, eCSSType_Value, nsnull)
 CSS_PROP_SVG(fill-rule, fill_rule, FillRule, SVG, mFillRule, eCSSType_Value, kFillRuleKTable)
-CSS_PROP_SVGRESET(filter, filter, Filter, SVG, mFilter, eCSSType_Value, nsnull)
-CSS_PROP_SVGRESET(flood-color, flood_color, FloodColor, SVG, mFloodColor, eCSSType_Value, nsnull)
-CSS_PROP_SVGRESET(flood-opacity, flood_opacity, FloodOpacity, SVG, mFloodOpacity, eCSSType_Value, nsnull)
 CSS_PROP_SHORTHAND(marker, marker, Marker)
 CSS_PROP_SVG(marker-end, marker_end, MarkerEnd, SVG, mMarkerEnd, eCSSType_Value, nsnull)
 CSS_PROP_SVG(marker-mid, marker_mid, MarkerMid, SVG, mMarkerMid, eCSSType_Value, nsnull)
 CSS_PROP_SVG(marker-start, marker_start, MarkerStart, SVG, mMarkerStart, eCSSType_Value, nsnull)
-CSS_PROP_SVGRESET(mask, mask, Mask, SVG, mMask, eCSSType_Value, nsnull)
 CSS_PROP_SVG(pointer-events, pointer_events, PointerEvents, SVG, mPointerEvents, eCSSType_Value, kPointerEventsKTable)
 CSS_PROP_SVG(shape-rendering, shape_rendering, ShapeRendering, SVG, mShapeRendering, eCSSType_Value, kShapeRenderingKTable)
 CSS_PROP_SVGRESET(stop-color, stop_color, StopColor, SVG, mStopColor, eCSSType_Value, nsnull)
 CSS_PROP_SVGRESET(stop-opacity, stop_opacity, StopOpacity, SVG, mStopOpacity, eCSSType_Value, nsnull)
-CSS_PROP_SVG(stroke, stroke, Stroke, SVG, mStroke, eCSSType_ValuePair, nsnull)
+CSS_PROP_SVG(stroke, stroke, Stroke, SVG, mStroke, eCSSType_Value, nsnull)
 CSS_PROP_SVG(stroke-dasharray, stroke_dasharray, StrokeDasharray, SVG, mStrokeDasharray, eCSSType_ValueList, nsnull)
 CSS_PROP_SVG(stroke-dashoffset, stroke_dashoffset, StrokeDashoffset, SVG, mStrokeDashoffset, eCSSType_Value, nsnull)
 CSS_PROP_SVG(stroke-linecap, stroke_linecap, StrokeLinecap, SVG, mStrokeLinecap, eCSSType_Value, kStrokeLinecapKTable)

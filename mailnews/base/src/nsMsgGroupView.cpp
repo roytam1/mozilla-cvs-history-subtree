@@ -101,10 +101,7 @@ void nsMsgGroupView::InternalClose()
           {
              nsHashKey *hashKey = AllocHashKeyForHdr(msgHdr);
              if (hashKey)
-             {
                expandFlags |=  1 << ((nsPRUint32Key *)hashKey)->GetValue();
-               delete hashKey;
-             }
           }
         }
       }
@@ -125,8 +122,6 @@ nsHashKey *nsMsgGroupView::AllocHashKeyForHdr(nsIMsgDBHdr *msgHdr)
 {
   static nsXPIDLCString cStringKey;
   static nsXPIDLString stringKey;
-  nsresult rv;
-
   switch (m_sortType)
   {
     case nsMsgViewSortType::bySubject:
@@ -134,8 +129,8 @@ nsHashKey *nsMsgGroupView::AllocHashKeyForHdr(nsIMsgDBHdr *msgHdr)
       return new nsCStringKey(cStringKey.get());
       break;
     case nsMsgViewSortType::byAuthor:
-      rv = nsMsgDBView::FetchAuthor(msgHdr, getter_Copies(stringKey));
-      return NS_SUCCEEDED(rv) ? new nsStringKey(stringKey.get()) : nsnull;
+      (void) nsMsgDBView::FetchAuthor(msgHdr, getter_Copies(stringKey));
+      return new nsStringKey(stringKey.get());
     case nsMsgViewSortType::byRecipient:
       (void) msgHdr->GetRecipients(getter_Copies(cStringKey));
       return new nsCStringKey(cStringKey.get());
@@ -147,7 +142,7 @@ nsHashKey *nsMsgGroupView::AllocHashKeyForHdr(nsIMsgDBHdr *msgHdr)
         if (!dbToUse) // probably search view
           GetDBForViewIndex(0, getter_AddRefs(dbToUse));
 
-        rv = (m_sortType == nsMsgViewSortType::byAccount) 
+        nsresult rv = (m_sortType == nsMsgViewSortType::byAccount) 
           ? FetchAccount(msgHdr, getter_Copies(stringKey))
           : FetchTags(msgHdr, getter_Copies(stringKey));
         return NS_SUCCEEDED(rv) ? new nsStringKey(stringKey.get()) : nsnull;
@@ -280,8 +275,6 @@ nsMsgGroupThread *nsMsgGroupView::AddHdrToThread(nsIMsgDBHdr *msgHdr, PRBool *pN
   msgHdr->GetMessageKey(&msgKey);
   msgHdr->GetFlags(&msgFlags);
   nsHashKey *hashKey = AllocHashKeyForHdr(msgHdr);
-  if (!hashKey)
-    return nsnull;
 //  if (m_sortType == nsMsgViewSortType::byDate)
 //    msgKey = ((nsPRUint32Key *) hashKey)->GetValue();
   nsMsgGroupThread *foundThread = nsnull;
@@ -324,8 +317,7 @@ nsMsgGroupThread *nsMsgGroupView::AddHdrToThread(nsIMsgDBHdr *msgHdr, PRBool *pN
   // check if new hdr became thread root
   if (!newThread && foundThread->m_keys[0] == msgKey)
   {
-    if (viewIndexOfThread != nsMsgKey_None)
-      m_keys.SetAt(viewIndexOfThread, msgKey);
+    m_keys.SetAt(viewIndexOfThread, msgKey);
     if (GroupViewUsesDummyRow())
       foundThread->m_keys.SetAt(1, msgKey); // replace the old duplicate dummy header.
   }
@@ -559,22 +551,18 @@ NS_IMETHODIMP nsMsgGroupView::OnHdrDeleted(nsIMsgDBHdr *aHdrDeleted, nsMsgKey aP
 
   nsMsgGroupThread *groupThread = NS_STATIC_CAST(nsMsgGroupThread *, (nsIMsgThread *) thread);
 
-  PRBool rootDeleted = viewIndexOfThread != nsMsgKey_None &&
-    m_keys.GetAt(viewIndexOfThread) == keyDeleted;
+  PRBool rootDeleted = m_keys.GetAt(viewIndexOfThread) == keyDeleted;
   rv = nsMsgDBView::OnHdrDeleted(aHdrDeleted, aParentKey, aFlags, aInstigator);
   if (groupThread->m_dummy)
   {
     if (!groupThread->NumRealChildren())
     {
       thread->RemoveChildAt(0); // get rid of dummy
-      if (viewIndexOfThread != nsMsgKey_None)
-      {
-        nsMsgDBView::RemoveByIndex(viewIndexOfThread - 1);
-        if (m_deletingRows)
-          mIndicesToNoteChange.Add(viewIndexOfThread - 1);
-      }
+      nsMsgDBView::RemoveByIndex(viewIndexOfThread - 1);
+      if (m_deletingRows)
+        mIndicesToNoteChange.Add(viewIndexOfThread - 1);
     }
-    else if (rootDeleted && viewIndexOfThread > 0)
+    else if (rootDeleted)
     {
       m_keys.SetAt(viewIndexOfThread - 1, m_keys.GetAt(viewIndexOfThread));
       OrExtraFlag(viewIndexOfThread - 1, MSG_VIEW_FLAG_DUMMY | MSG_VIEW_FLAG_ISTHREAD);
@@ -709,31 +697,6 @@ NS_IMETHODIMP nsMsgGroupView::GetCellText(PRInt32 aRow, nsITreeColumn* aCol, nsA
           NS_ASSERTION(PR_FALSE, "we don't sort by group for this type");
           break;
       }
-     
-      if (groupThread)
-      {
-        // Get number of messages in group
-        nsAutoString formattedCountMsg;
-        PRUint32 numMsg = groupThread->NumRealChildren();
-        formattedCountMsg.AppendInt(numMsg);
-
-        // Get number of unread messages
-        nsAutoString formattedCountUnrMsg;
-        PRUint32 numUnrMsg = 0;
-        groupThread->GetNumUnreadChildren(&numUnrMsg);
-        formattedCountUnrMsg.AppendInt(numUnrMsg);
-
-        // Add text to header
-        aValue.Append(NS_LITERAL_STRING(" ("));
-        if (numUnrMsg)
-        {
-          aValue.Append(formattedCountUnrMsg);
-          aValue.Append(NS_LITERAL_STRING("/"));
-        }
-
-        aValue.Append(formattedCountMsg);
-        aValue.Append(NS_LITERAL_STRING(")"));
-      }
     }
     else if (colID[0] == 't')
     {
@@ -754,9 +717,9 @@ NS_IMETHODIMP nsMsgGroupView::LoadMessageByViewIndex(nsMsgViewIndex aViewIndex)
   if (m_flags[aViewIndex] & MSG_VIEW_FLAG_DUMMY)
   {
     // if we used to have one item selected, and now we have more than one, we should clear the message pane.
-    nsCOMPtr <nsIMsgWindowCommands> windowCommands;
-    if (mMsgWindow && NS_SUCCEEDED(mMsgWindow->GetWindowCommands(getter_AddRefs(windowCommands))) && windowCommands)
-      windowCommands->ClearMsgPane();
+    nsCOMPtr <nsIMsgMessagePaneController> controller;
+    if (mMsgWindow && NS_SUCCEEDED(mMsgWindow->GetMessagePaneController(getter_AddRefs(controller))) && controller)
+      controller->ClearMsgPane();
     // since we are selecting a dummy row, we should also clear out m_currentlyDisplayedMsgUri
     m_currentlyDisplayedMsgUri.Truncate();
     return NS_OK;
@@ -770,11 +733,11 @@ nsresult nsMsgGroupView::GetThreadContainingMsgHdr(nsIMsgDBHdr *msgHdr, nsIMsgTh
   nsHashKey *hashKey = AllocHashKeyForHdr(msgHdr);
   if (hashKey)
   {
-    nsMsgGroupThread *groupThread = (nsMsgGroupThread *) m_groupsTable.Get(hashKey);
+  nsMsgGroupThread *groupThread = (nsMsgGroupThread *) m_groupsTable.Get(hashKey);
   
-    if (groupThread)
-      groupThread->QueryInterface(NS_GET_IID(nsIMsgThread), (void **) pThread);
-    delete hashKey;
+  if (groupThread)
+    groupThread->QueryInterface(NS_GET_IID(nsIMsgThread), (void **) pThread);
+  delete hashKey;
   }
   else
     *pThread = nsnull;

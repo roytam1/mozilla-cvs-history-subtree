@@ -59,7 +59,7 @@
 #include "nsLocalMailFolder.h"
 #include "nsIPrefBranch.h"
 #include "nsIPrefService.h"
-#include "nsDirectoryServiceDefs.h"
+#include "nsSpecialSystemDirectory.h"
 #include "nsIMsgStringService.h"
 #include "nsIPrompt.h"
 #include "nsIPromptService.h"
@@ -68,7 +68,6 @@
 #include "nsIDocShell.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsEmbedCID.h"
-#include "nsMsgUtils.h"
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsPop3Sink, nsIPop3Sink)
 
@@ -310,10 +309,11 @@ nsPop3Sink::BeginMailDelivery(PRBool uidlDownload, nsIMsgWindow *aMsgWindow, PRB
     if (m_downloadingToTempFile)
     {
       // need to create an nsIOFileStream from a temp file...
-      nsCOMPtr<nsIFileSpec> tmpDownloadFile;
-      rv = GetSpecialDirectoryWithFileName(NS_OS_TEMP_DIR,
-                                           "newmsg",
-                                           getter_AddRefs(tmpDownloadFile));
+      nsCOMPtr <nsIFileSpec> tmpDownloadFile;
+      nsSpecialSystemDirectory tmpFile(nsSpecialSystemDirectory::OS_TemporaryDirectory);
+      tmpFile += "newmsg";
+
+      rv = NS_NewFileSpecWithSpec(tmpFile, getter_AddRefs(tmpDownloadFile));
 
       NS_ASSERTION(NS_SUCCEEDED(rv),"writing tmp pop3 download file: failed to append filename");
       if (NS_FAILED(rv)) 
@@ -752,7 +752,10 @@ nsresult nsPop3Sink::HandleTempDownloadFailed(nsIMsgWindow *msgWindow)
   {
     PRInt32 dlgResult  = -1;
     rv = promptService->ConfirmEx(parentWindow, nsnull, confirmString,
-                      nsIPromptService::STD_YES_NO_BUTTONS,
+                      (nsIPromptService::BUTTON_TITLE_YES * 
+                      nsIPromptService::BUTTON_POS_0) +
+                      (nsIPromptService::BUTTON_TITLE_NO * 
+                      nsIPromptService::BUTTON_POS_1),
                       nsnull,
                       nsnull,
                       nsnull,
@@ -857,7 +860,6 @@ nsPop3Sink::IncorporateComplete(nsIMsgWindow *aMsgWindow, PRInt32 aSize)
               }
             }
             m_newMailParser->m_mailDB->AddNewHdrToDB(hdr, PR_TRUE);
-            m_newMailParser->NotifyGlobalListeners(hdr);
           }
         }
         else

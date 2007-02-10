@@ -36,12 +36,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 #include "nsIDOMHTMLAreaElement.h"
-#include "nsIDOMNSHTMLAreaElement2.h"
+#include "nsIDOMNSHTMLAreaElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
 #include "nsILink.h"
 #include "nsIPresShell.h"
-#include "nsGkAtoms.h"
+#include "nsHTMLAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"
 #include "nsIEventStateManager.h"
@@ -52,7 +52,7 @@
 
 class nsHTMLAreaElement : public nsGenericHTMLElement,
                           public nsIDOMHTMLAreaElement,
-                          public nsIDOMNSHTMLAreaElement2,
+                          public nsIDOMNSHTMLAreaElement,
                           public nsILink
 {
 public:
@@ -63,7 +63,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLElement::)
 
   // nsIDOMElement
   NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
@@ -77,9 +77,6 @@ public:
   // nsIDOMNSHTMLAreaElement
   NS_DECL_NSIDOMNSHTMLAREAELEMENT
 
-  // nsIDOMNSHTMLAreaElement2
-  NS_DECL_NSIDOMNSHTMLAREAELEMENT2
-
   // nsILink
   NS_IMETHOD GetLinkState(nsLinkState &aState);
   NS_IMETHOD SetLinkState(nsLinkState aState);
@@ -87,10 +84,10 @@ public:
   NS_IMETHOD LinkAdded() { return NS_OK; }
   NS_IMETHOD LinkRemoved() { return NS_OK; }
 
-  virtual nsresult PostHandleEvent(nsEventChainPostVisitor& aVisitor);
-  virtual PRBool IsLink(nsIURI** aURI) const;
-  virtual void GetLinkTarget(nsAString& aTarget);
-
+  virtual nsresult HandleDOMEvent(nsPresContext* aPresContext,
+                                  nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                                  PRUint32 aFlags,
+                                  nsEventStatus* aEventStatus);
   virtual void SetFocus(nsPresContext* aPresContext);
 
   virtual nsresult BindToTree(nsIDocument* aDocument, nsIContent* aParent,
@@ -108,8 +105,6 @@ public:
                            PRBool aNotify);
   virtual nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                              PRBool aNotify);
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
 
 protected:
   // The cached visited state
@@ -138,13 +133,12 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLAreaElement, nsGenericElement)
 NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLAreaElement, nsGenericHTMLElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLAreaElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLAreaElement)
-  NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLAreaElement2)
   NS_INTERFACE_MAP_ENTRY(nsILink)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLAreaElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLAreaElement)
+NS_IMPL_DOM_CLONENODE(nsHTMLAreaElement)
 
 
 NS_IMPL_STRING_ATTR(nsHTMLAreaElement, AccessKey, accesskey)
@@ -158,7 +152,11 @@ NS_IMPL_INT_ATTR_DEFAULT_VALUE(nsHTMLAreaElement, TabIndex, tabindex, 0)
 NS_IMETHODIMP
 nsHTMLAreaElement::GetTarget(nsAString& aValue)
 {
-  if (!GetAttr(kNameSpaceID_None, nsGkAtoms::target, aValue)) {
+  aValue.Truncate();
+
+  nsresult rv;
+  rv = GetAttr(kNameSpaceID_None, nsHTMLAtoms::target, aValue);
+  if (rv == NS_CONTENT_ATTR_NOT_THERE) {
     GetBaseTarget(aValue);
   }
   return NS_OK;
@@ -167,35 +165,28 @@ nsHTMLAreaElement::GetTarget(nsAString& aValue)
 NS_IMETHODIMP
 nsHTMLAreaElement::SetTarget(const nsAString& aValue)
 {
-  return SetAttr(kNameSpaceID_None, nsGkAtoms::target, aValue, PR_TRUE);
+  return SetAttr(kNameSpaceID_None, nsHTMLAtoms::target, aValue, PR_TRUE);
 }
 
 nsresult
-nsHTMLAreaElement::PostHandleEvent(nsEventChainPostVisitor& aVisitor)
+nsHTMLAreaElement::HandleDOMEvent(nsPresContext* aPresContext,
+                                  nsEvent* aEvent,
+                                  nsIDOMEvent** aDOMEvent,
+                                  PRUint32 aFlags,
+                                  nsEventStatus* aEventStatus)
 {
-  return PostHandleEventForAnchors(aVisitor);
-}
-
-PRBool
-nsHTMLAreaElement::IsLink(nsIURI** aURI) const
-{
-  return IsHTMLLink(aURI);
-}
-
-void
-nsHTMLAreaElement::GetLinkTarget(nsAString& aTarget)
-{
-  GetTarget(aTarget);
+  return HandleDOMEventForAnchors(aPresContext, aEvent, aDOMEvent, 
+                                  aFlags, aEventStatus);
 }
 
 void
 nsHTMLAreaElement::SetFocus(nsPresContext* aPresContext)
 {
-  if (!aPresContext ||
-      !aPresContext->EventStateManager()->SetContentState(this, 
-                                                          NS_EVENT_STATE_FOCUS)) {
+  if (!aPresContext)
     return;
-  }
+
+  aPresContext->EventStateManager()->SetContentState(this,
+                                                     NS_EVENT_STATE_FOCUS);
     
   // Make sure the presentation is up-to-date
   nsIDocument* doc = GetCurrentDoc();
@@ -206,7 +197,8 @@ nsHTMLAreaElement::SetFocus(nsPresContext* aPresContext)
   nsIPresShell *presShell = aPresContext->GetPresShell();
 
   if (presShell) {
-    nsIFrame* frame = presShell->GetPrimaryFrameFor(this);
+    nsIFrame* frame = nsnull;
+    presShell->GetPrimaryFrameFor(this, &frame);
     if (frame) {
       presShell->ScrollFrameIntoView(frame, NS_PRESSHELL_SCROLL_ANYWHERE,
                                      NS_PRESSHELL_SCROLL_ANYWHERE);
@@ -250,11 +242,11 @@ nsHTMLAreaElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                            nsIAtom* aPrefix, const nsAString& aValue,
                            PRBool aNotify)
 {
-  if (aName == nsGkAtoms::accesskey && aNameSpaceID == kNameSpaceID_None) {
+  if (aName == nsHTMLAtoms::accesskey && aNameSpaceID == kNameSpaceID_None) {
     RegUnRegAccessKey(PR_FALSE);
   }
 
-  if (aName == nsGkAtoms::href && aNameSpaceID == kNameSpaceID_None) {
+  if (aName == nsHTMLAtoms::href && aNameSpaceID == kNameSpaceID_None) {
     nsIDocument* doc = GetCurrentDoc();
     if (doc) {
       doc->ForgetLink(this);
@@ -268,7 +260,7 @@ nsHTMLAreaElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   nsresult rv =
     nsGenericHTMLElement::SetAttr(aNameSpaceID, aName, aPrefix, aValue, aNotify);
 
-  if (aName == nsGkAtoms::accesskey && aNameSpaceID == kNameSpaceID_None &&
+  if (aName == nsHTMLAtoms::accesskey && aNameSpaceID == kNameSpaceID_None &&
       !aValue.IsEmpty()) {
     RegUnRegAccessKey(PR_TRUE);
   }
@@ -280,7 +272,7 @@ nsresult
 nsHTMLAreaElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttribute,
                              PRBool aNotify)
 {
-  if (aAttribute == nsGkAtoms::accesskey &&
+  if (aAttribute == nsHTMLAtoms::accesskey &&
       aNameSpaceID == kNameSpaceID_None) {
     RegUnRegAccessKey(PR_FALSE);
   }
@@ -491,18 +483,6 @@ NS_IMETHODIMP
 nsHTMLAreaElement::ToString(nsAString& aSource)
 {
   return GetHref(aSource);
-}
-
-NS_IMETHODIMP    
-nsHTMLAreaElement::GetPing(nsAString& aValue)
-{
-  return GetURIListAttr(nsGkAtoms::ping, aValue);
-}
-
-NS_IMETHODIMP
-nsHTMLAreaElement::SetPing(const nsAString& aValue)
-{
-  return SetAttr(kNameSpaceID_None, nsGkAtoms::ping, aValue, PR_TRUE);
 }
 
 NS_IMETHODIMP

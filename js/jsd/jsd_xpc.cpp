@@ -50,15 +50,17 @@
 #include "nsIObserverService.h"
 #include "nsICategoryManager.h"
 #include "nsIJSRuntimeService.h"
-#include "nsIThreadInternal.h"
-#include "nsThreadUtils.h"
+#include "nsIEventQueueService.h"
 #include "nsMemory.h"
 #include "jsdebug.h"
 #include "nsReadableUtils.h"
 #include "nsCRT.h"
 
-/* XXX DOM dependency */
+/* XXX this stuff is used by NestEventLoop, a temporary hack to be refactored
+ * later */
+#include "nsWidgetsCID.h"
 #include "nsIScriptContext.h"
+#include "nsIAppShell.h"
 #include "nsIJSContextStack.h"
 
 /*
@@ -106,7 +108,7 @@
 #define AUTOREG_CATEGORY  "xpcom-autoregistration"
 #define APPSTART_CATEGORY "app-startup"
 #define JSD_AUTOREG_ENTRY "JSDebugger Startup Observer"
-#define JSD_STARTUP_ENTRY "JSDebugger Startup Observer"
+#define JSD_STARTUP_ENTRY "JSDebugger Startup Observer,service"
 
 JS_STATIC_DLL_CALLBACK (JSBool)
 jsds_GCCallbackProc (JSContext *cx, JSGCStatus status);
@@ -116,10 +118,11 @@ jsds_GCCallbackProc (JSContext *cx, JSGCStatus status);
  ******************************************************************************/
 
 const char implementationString[] = "Mozilla JavaScript Debugger Service";
+static NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
+static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
 const char jsdServiceCtrID[] = "@mozilla.org/js/jsd/debugger-service;1";
-const char jsdARObserverCtrID[] = "@mozilla.org/js/jsd/app-start-observer;2";
-const char jsdASObserverCtrID[] = "service,@mozilla.org/js/jsd/app-start-observer;2";
+const char jsdASObserverCtrID[] = "@mozilla.org/js/jsd/app-start-observer;2";
 
 #ifdef DEBUG_verbose
 PRUint32 gScriptCount   = 0;
@@ -1014,7 +1017,6 @@ PCMapEntry *
 jsdScript::CreatePPLineMap()
 {    
     JSContext  *cx  = JSD_GetDefaultJSContext (mCx);
-    JSAutoRequest ar(cx);
     JSObject   *obj = JS_NewObject(cx, NULL, NULL, NULL);
     JSFunction *fun = JSD_GetJSFunction (mCx, mScript);
     JSScript   *script;
@@ -1260,19 +1262,18 @@ jsdScript::GetFunctionSource(nsAString & aFunctionSource)
         return NS_ERROR_FAILURE;
     }
     JSFunction *fun = JSD_GetJSFunction (mCx, mScript);
-
-    JSAutoRequest ar(cx);
-
     JSString *jsstr;
     if (fun)
+    {
         jsstr = JS_DecompileFunction (cx, fun, 4);
-    else {
+    }
+    else
+    {
         JSScript *script = JSD_GetJSScript (mCx, mScript);
         jsstr = JS_DecompileScript (cx, script, "ppscript", 4);
     }
     if (!jsstr)
         return NS_ERROR_FAILURE;
-
     aFunctionSource = NS_REINTERPRET_CAST(PRUnichar*, JS_GetStringChars(jsstr));
     return NS_OK;
 }
@@ -1910,9 +1911,6 @@ jsdStackFrame::Eval (const nsAString &bytes, const char *fileName,
     jsval jv;
 
     JSContext *cx = JSD_GetJSContext (mCx, mThreadState);
-
-    JSAutoRequest ar(cx);
-
     estate = JS_SaveExceptionState (cx);
     JS_ClearPendingException (cx);
 
@@ -1928,7 +1926,6 @@ jsdStackFrame::Eval (const nsAString &bytes, const char *fileName,
     }
 
     JS_RestoreExceptionState (cx, estate);
-
     JSDValue *jsdv = JSD_NewValue (mCx, jv);
     if (!jsdv)
         return NS_ERROR_FAILURE;
@@ -2234,13 +2231,8 @@ jsdValue::GetProperty (const char *name, jsdIProperty **_rval)
 {
     ASSERT_VALID_EPHEMERAL;
     JSContext *cx = JSD_GetDefaultJSContext (mCx);
-
-    JSAutoRequest ar(cx);
-
     /* not rooting this */
     JSString *jstr_name = JS_NewStringCopyZ (cx, name);
-    if (!jstr_name)
-        return NS_ERROR_OUT_OF_MEMORY;
 
     JSDProperty *prop = JSD_GetValueProperty (mCx, mValue, jstr_name);
     
@@ -2383,7 +2375,7 @@ jsdService::SetInitAtStartup (PRBool state)
     if (state) {
         rv = categoryManager->AddCategoryEntry(AUTOREG_CATEGORY,
                                                JSD_AUTOREG_ENTRY,
-                                               jsdARObserverCtrID,
+                                               jsdASObserverCtrID,
                                                PR_TRUE, PR_TRUE, nsnull);
         if (NS_FAILED(rv))
             return rv;
@@ -2412,7 +2404,6 @@ jsdService::SetInitAtStartup (PRBool state)
 NS_IMETHODIMP
 jsdService::GetFlags (PRUint32 *_rval)
 {
-    ASSERT_VALID_CONTEXT;
     *_rval = JSD_GetContextFlags (mCx);
     return NS_OK;
 }
@@ -2420,7 +2411,6 @@ jsdService::GetFlags (PRUint32 *_rval)
 NS_IMETHODIMP
 jsdService::SetFlags (PRUint32 flags)
 {
-    ASSERT_VALID_CONTEXT;
     JSD_SetContextFlags (mCx, flags);
     return NS_OK;
 }
@@ -2955,28 +2945,40 @@ jsdService::WrapValue(jsdIValue **_rval)
 NS_IMETHODIMP
 jsdService::EnterNestedEventLoop (jsdINestCallback *callback, PRUint32 *_rval)
 {
-    // Nesting event queues is a thing of the past.  Now, we just spin the
-    // current event loop.
- 
+    nsCOMPtr<nsIAppShell> appShell(do_CreateInstance(kAppShellCID));
+    NS_ENSURE_TRUE(appShell, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIEventQueueService> 
+        eventService(do_GetService(kEventQueueServiceCID));
+    NS_ENSURE_TRUE(eventService, NS_ERROR_FAILURE);
+    
+    appShell->Create(0, nsnull);
+    appShell->Spinup();
+
     nsCOMPtr<nsIJSContextStack> 
         stack(do_GetService("@mozilla.org/js/xpc/ContextStack;1"));
     nsresult rv = NS_OK;
     PRUint32 nestLevel = ++mNestedLoopLevel;
     
-    nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
-
-    if (stack && NS_SUCCEEDED(stack->Push(nsnull))) {
-        if (callback) {
+    nsCOMPtr<nsIEventQueue> eventQ;
+    if (stack && NS_SUCCEEDED(stack->Push(nsnull)) &&
+        NS_SUCCEEDED(eventService->PushThreadEventQueue(getter_AddRefs(eventQ))))
+    {
+        if (NS_SUCCEEDED(rv) && callback) {
             Pause(nsnull);
             rv = callback->OnNest();
             UnPause(nsnull);
         }
         
-        while (NS_SUCCEEDED(rv) && mNestedLoopLevel >= nestLevel) {
-            if (!NS_ProcessNextEvent(thread))
-                rv = NS_ERROR_UNEXPECTED;
-        }
-
+        while(NS_SUCCEEDED(rv) && mNestedLoopLevel >= nestLevel)
+        {
+            void* data;
+            PRBool isRealEvent;
+            //PRBool processEvent;
+            
+            rv = appShell->GetNativeEvent(isRealEvent, data);
+            if(NS_SUCCEEDED(rv))
+                appShell->DispatchNativeEvent(isRealEvent, data);
+            }
         JSContext* cx;
         stack->Pop(&cx);
         NS_ASSERTION(cx == nsnull, "JSContextStack mismatch");
@@ -2984,6 +2986,9 @@ jsdService::EnterNestedEventLoop (jsdINestCallback *callback, PRUint32 *_rval)
     else
         rv = NS_ERROR_FAILURE;
     
+    eventService->PopThreadEventQueue(eventQ);
+    appShell->Spindown();
+
     NS_ASSERTION (mNestedLoopLevel <= nestLevel,
                   "nested event didn't unwind properly");
     if (mNestedLoopLevel == nestLevel)
@@ -3317,7 +3322,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(jsdASObserver)
 
 static const nsModuleComponentInfo components[] = {
     {"JSDService", JSDSERVICE_CID,    jsdServiceCtrID, jsdServiceConstructor},
-    {"JSDASObserver",  JSDASO_CID, jsdARObserverCtrID, jsdASObserverConstructor}
+    {"JSDASObserver",  JSDASO_CID, jsdASObserverCtrID, jsdASObserverConstructor}
 };
 
 NS_IMPL_NSGETMODULE(JavaScript_Debugger, components)

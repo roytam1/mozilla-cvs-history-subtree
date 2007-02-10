@@ -129,7 +129,7 @@ DownloadProgressListener.prototype =
     if (download)
       download.setAttribute("status-internal", kbProgress);
 
-    var rate = aDownload.speed;
+    var rate = aDownload.QueryInterface(Components.interfaces.nsIDownload_MOZILLA_1_8_BRANCH).speed;
     if (rate) {
       // rate is bytes/sec
       var kRate = rate / 1024; // K bytes/sec;

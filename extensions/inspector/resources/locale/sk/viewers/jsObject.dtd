@@ -42,3 +42,4 @@
 <!ENTITY jsEval.label "Vyhodnotiť Javascript">
 <!ENTITY jsCopyValue.label "Kopírovať hodnotu">
 <!ENTITY jsProperty.label "Vlastnosť">
+<!ENTITY jsCancel.label "Zrušiť">

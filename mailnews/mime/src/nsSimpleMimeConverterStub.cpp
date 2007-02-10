@@ -83,7 +83,7 @@ BeginGather(MimeObject *obj)
 }
 
 static int
-GatherLine(const char *line, PRInt32 length, MimeObject *obj)
+GatherLine(char *line, PRInt32 length, MimeObject *obj)
 {
     MimeSimpleStub *ssobj = (MimeSimpleStub *)obj;
 
@@ -128,7 +128,7 @@ EndGather(MimeObject *obj, PRBool abort_p)
                                                         *ssobj->buffer,
                                                         asHTML);
     if (NS_FAILED(rv)) {
-        NS_ASSERTION(NS_SUCCEEDED(rv), "converter failure");
+        NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "converter failure");
         return -1;
     }
 

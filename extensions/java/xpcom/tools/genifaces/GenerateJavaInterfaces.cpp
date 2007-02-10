@@ -36,15 +36,15 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsXPCOM.h"
-#include "nsStringAPI.h"
-#include "nsILocalFile.h"
+#include "nsString.h"
+#include "nsLocalFile.h"
 #include "nsIInterfaceInfoManager.h"
 #include "xptinfo.h"
 #include "nsCOMPtr.h"
 #include "prmem.h"
 #include "xptcall.h"
 #include "nsNetUtil.h"
-#include "nsDataHashtable.h"
+#include "nsHashSets.h"
 #include "nsIWeakReference.h"
 #include <stdio.h>
 #include <ctype.h>
@@ -121,13 +121,10 @@ public:
         // a non-scriptable interface, output |nsISupports| instead of the
         // interface name.
         nsCOMPtr<nsIInterfaceInfo> info;
-        nsCOMPtr<nsIInterfaceInfoManager>
-          iim(do_GetService(NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID, &rv));
-        NS_ENSURE_SUCCESS(rv, rv);
-
+        nsCOMPtr<nsIInterfaceInfoManager> iim = XPTI_GetInterfaceInfoManager();
+        NS_ASSERTION(iim, "could not get interface info manager");
         rv = iim->GetInfoForIID(iid, getter_AddRefs(info));
         NS_ENSURE_SUCCESS(rv, rv);
-
         PRBool scriptable;
         if (NS_SUCCEEDED(rv)) {
           info->IsScriptable(&scriptable);
@@ -188,10 +185,10 @@ static const char* kNoscriptMethodIfaces[] = {
 class Generate
 {
   nsILocalFile*     mOutputDir;
-  nsDataHashtable<nsCStringHashKey, PRBool> mIfaceTable;
-  nsDataHashtable<nsCStringHashKey, PRBool> mJavaKeywords;
+  nsCStringHashSet  mIfaceTable;
+  nsCStringHashSet  mJavaKeywords;
 #ifdef WRITE_NOSCRIPT_METHODS
-  nsDataHashtable<nsCStringHashKey, PRBool> mNoscriptMethodsTable;
+  nsCStringHashSet  mNoscriptMethodsTable;
 #endif
 
 public:
@@ -203,15 +200,14 @@ public:
     PRUint32 size = NS_ARRAY_LENGTH(kJavaKeywords);
     mJavaKeywords.Init(size);
     for (PRUint32 i = 0; i < size; i++) {
-      mJavaKeywords.Put(nsDependentCString(kJavaKeywords[i]), PR_TRUE);
+      mJavaKeywords.Put(nsDependentCString(kJavaKeywords[i]));
     }
 
 #ifdef WRITE_NOSCRIPT_METHODS
     size = NS_ARRAY_LENGTH(kNoscriptMethodIfaces);
     mNoscriptMethodsTable.Init(size);
     for (PRUint32 j = 0; j < size; j++) {
-      mNoscriptMethodsTable.Put(nsDependentCString(kNoscriptMethodIfaces[j]),
-                                PR_TRUE);
+      mNoscriptMethodsTable.Put(nsDependentCString(kNoscriptMethodIfaces[j]));
     }
 #endif
   }
@@ -224,10 +220,8 @@ public:
   {
     nsresult rv;
 
-    nsCOMPtr<nsIInterfaceInfoManager>
-      iim(do_GetService(NS_INTERFACEINFOMANAGER_SERVICE_CONTRACTID, &rv));
-    NS_ENSURE_SUCCESS(rv, rv);
-
+    nsCOMPtr<nsIInterfaceInfoManager> iim = XPTI_GetInterfaceInfoManager();
+    NS_ASSERTION(iim, "could not get interface info manager");
     nsCOMPtr<nsIEnumerator> etor;
     rv = iim->EnumerateInterfaces(getter_AddRefs(etor));
     NS_ENSURE_SUCCESS(rv, rv);
@@ -272,7 +266,7 @@ public:
     // write each interface only once
     const char* iface_name;
     aIInfo->GetNameShared(&iface_name);
-    if (mIfaceTable.Get(nsDependentCString(iface_name), nsnull))
+    if (mIfaceTable.Contains(nsDependentCString(iface_name)))
       return NS_OK;
 
     // write any parent interface
@@ -284,7 +278,7 @@ public:
     if (parentInfo)
       WriteOneInterface(parentInfo);
 
-    mIfaceTable.Put(nsDependentCString(iface_name), PR_TRUE);
+    mIfaceTable.Put(nsDependentCString(iface_name));
 
     // create file for interface
     nsCOMPtr<nsIOutputStream> out;
@@ -319,10 +313,10 @@ public:
     nsCOMPtr<nsIFile> iface_file;
     rv = mOutputDir->Clone(getter_AddRefs(iface_file));
     NS_ENSURE_SUCCESS(rv, rv);
-    nsCAutoString filename;
-    filename.Append(aIfaceName);
-    filename.Append(NS_LITERAL_CSTRING(".java"));
-    rv = iface_file->AppendNative(filename);
+    nsAutoString filename;
+    filename.AppendASCII(aIfaceName);
+    filename.AppendLiteral(".java");
+    rv = iface_file->Append(filename);
     NS_ENSURE_SUCCESS(rv, rv);
 
     // create interface file
@@ -364,8 +358,8 @@ public:
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCAutoString searchTerm;
-    searchTerm.Append(NS_LITERAL_CSTRING("interface+"));
-    searchTerm.Append(aIfaceName);
+    searchTerm.AppendLiteral("interface+");
+    searchTerm.AppendASCII(aIfaceName);
     // LXR limits to 29 chars
     rv = out->Write(searchTerm.get(), PR_MIN(29, searchTerm.Length()), &count);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -426,12 +420,12 @@ public:
     const char* iface_name;
     aIInfo->GetNameShared(&iface_name);
     if (strncmp("ns", iface_name, 2) == 0) {
-      iid_name.Append(NS_LITERAL_CSTRING("NS_"));
+      iid_name.AppendLiteral("NS_");
       iid_name.Append(iface_name + 2);
     } else {
       iid_name.Append(iface_name);
     }
-    iid_name.Append("_IID");
+    iid_name.AppendLiteral("_IID");
     ToUpperCase(iid_name);
 
     // get iid string
@@ -589,7 +583,7 @@ public:
       if (methodInfo->IsHidden()) {
         const char* iface_name;
         aIInfo->GetNameShared(&iface_name);
-        if (!mNoscriptMethodsTable.Get(nsDependentCString(iface_name), nsnull))
+        if (!mNoscriptMethodsTable.Contains(nsDependentCString(iface_name)))
           continue;
       }
 #else
@@ -639,17 +633,17 @@ public:
     const char* name = aMethodInfo->GetName();
     if (aMethodInfo->IsGetter() || aMethodInfo->IsSetter()) {
       if (aMethodInfo->IsGetter())
-        method_name.Append(NS_LITERAL_CSTRING("get"));
+        method_name.AppendLiteral("get");
       else
-        method_name.Append(NS_LITERAL_CSTRING("set"));
+        method_name.AppendLiteral("set");
       method_name.Append(toupper(name[0]));
-      method_name.Append(name + 1);
+      method_name.AppendASCII(name + 1);
     } else {
       method_name.Append(tolower(name[0]));
-      method_name.Append(name + 1);
+      method_name.AppendASCII(name + 1);
     }
     // don't use Java keywords as method names
-    if (mJavaKeywords.Get(method_name, nsnull)) {
+    if (mJavaKeywords.Contains(method_name)) {
       method_name.Insert('_', 0);
     }
     rv = out->Write(" ", 1, &count);

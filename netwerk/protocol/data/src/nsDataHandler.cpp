@@ -89,8 +89,7 @@ nsDataHandler::GetDefaultPort(PRInt32 *result) {
 
 NS_IMETHODIMP
 nsDataHandler::GetProtocolFlags(PRUint32 *result) {
-    *result = URI_NORELATIVE | URI_NOAUTH | URI_INHERITS_SECURITY_CONTEXT |
-        URI_LOADABLE_BY_ANYONE;
+    *result = URI_NORELATIVE | URI_NOAUTH;
     return NS_OK;
 }
 
@@ -116,15 +115,16 @@ nsDataHandler::NewURI(const nsACString &aSpec,
 }
 
 NS_IMETHODIMP
-nsDataHandler::NewChannel(nsIURI* uri, nsIChannel* *result)
+nsDataHandler::NewChannel(nsIURI* url, nsIChannel* *result)
 {
-    NS_ENSURE_ARG_POINTER(uri);
-    nsDataChannel* channel = new nsDataChannel(uri);
-    if (!channel)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(channel);
+    NS_ENSURE_ARG_POINTER(url);
+    nsresult rv;
+    
+    nsDataChannel* channel;
+    rv = nsDataChannel::Create(nsnull, NS_GET_IID(nsIDataChannel), (void**)&channel);
+    if (NS_FAILED(rv)) return rv;
 
-    nsresult rv = channel->Init();
+    rv = channel->Init(url);
     if (NS_FAILED(rv)) {
         NS_RELEASE(channel);
         return rv;
@@ -141,3 +141,4 @@ nsDataHandler::AllowPort(PRInt32 port, const char *scheme, PRBool *_retval)
     *_retval = PR_FALSE;
     return NS_OK;
 }
+////////////////////////////////////////////////////////////////////////////////

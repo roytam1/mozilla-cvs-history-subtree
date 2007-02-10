@@ -180,14 +180,15 @@ OperationListener.prototype =
     }
 }
     
-const thrd =
-    C.classes["@mozilla.org/thread-manager;1"].getService().currentThread;
+const evQSvc = getService("@mozilla.org/event-queue-service;1",
+                          "nsIEventQueueService");
+const evQ = evQSvc.getSpecialEventQueue(CI.nsIEventQueueService.CURRENT_THREAD_EVENT_QUEUE);
 
 function runEventPump()
 {
     pumpRunning = true;
     while (pumpRunning) {
-        thrd.processNextEvent();
+        evQ.processPendingEvents();
     }
 }
 

@@ -38,7 +38,7 @@
 # ***** END LICENSE BLOCK *****
 
 # mozconfig2configure - Loads options from .mozconfig onto configure's
-#    command-line. See mozconfig-find for how the config file is
+#    command-line. See find-mozconfig.sh for how the config file is
 #    found
 #
 #    The options from .mozconfig are inserted into the command-line
@@ -79,7 +79,7 @@ ac_add_options() {
 ac_add_app_options() {
   APP=$1
   shift;
-  if [ "$APP" = "$MOZ_BUILD_APP" ]; then
+  if [ "$APP" == "$MOZ_BUILD_APP" ]; then
       ac_add_options "$*";
   fi
 }
@@ -115,7 +115,7 @@ done
 
 MOZCONFIG=`$_AUTOCONF_TOOLS_DIR/mozconfig-find $topsrcdir`
 if [ "$MOZCONFIG" ]; then
-  . "$MOZCONFIG"
+  . $MOZCONFIG
 fi
 
 if [ "$mozconfig_ac_options" ]; then

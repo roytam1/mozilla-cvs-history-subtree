@@ -45,6 +45,16 @@
 #include "nsIPref.h"
 #include "CHBrowserService.h"
 
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
+// fix warnings
+@interface NSToolbar(CaminoNSToolbarPantherAdditions)
+- (void)setSelectedItemIdentifier:(NSString *)itemIdentifier;
+- (NSString *)selectedItemIdentifier;
+- (void)setSizeMode:(NSToolbarSizeMode)sizeMode;
+- (NSToolbarSizeMode)sizeMode;
+@end
+#endif
+
 
 static MVPreferencesController *gSharedInstance = nil;
 
@@ -216,7 +226,8 @@ static NSString* const CacheInfoPaneSeenKey   = @"MVPreferencePaneSeen";    // N
       mPendingPaneIdentifier = [identifier retain];
 
       // set the selected toolbar item back
-      [[mWindow toolbar] setSelectedItemIdentifier:mCurrentPaneIdentifier];
+      if ([NSToolbar instancesRespondToSelector:@selector(setSelectedItemIdentifier:)])
+        [[mWindow toolbar] setSelectedItemIdentifier:mCurrentPaneIdentifier];
       return;
     }
     
@@ -260,23 +271,10 @@ static NSString* const CacheInfoPaneSeenKey   = @"MVPreferencePaneSeen";    // N
       [mCurrentPaneIdentifier autorelease];
       mCurrentPaneIdentifier = [identifier copy];
 
-      // What we want here is the first focusable element focused, respecting the full keyboard access
-      // preference (so FKA users see the first control focused, and non-FKA users see the first textfield
-      // focused if there is one, and nothing if there isn't).
-      //
-      // To accomplish this, ideally we'd hook up the view's |nextKeyView| to the first element in the pane
-      // and set focus to |nextValidKeyView|, but we can't, since that view is in a different nib from
-      // the prefpanes.  So to validate, we call |previousValidKeyView| on the second element.
-      //
-      // This has the limitation that it will not focus the first element (even with FKA on) if there
-      // is only one control in the prefpane.  If we ever have a one-element prefpane, this approach
-      // should be reconsidered to prevent breakage for FKA users.
-      NSView* initialKeyView = [pane initialKeyView];
-      NSView* firstValidKeyView = [[initialKeyView nextKeyView] previousValidKeyView];
-      if ([firstValidKeyView isEqual:initialKeyView])
-        [mWindow makeFirstResponder:firstValidKeyView];
-
-      [[mWindow toolbar] setSelectedItemIdentifier:mCurrentPaneIdentifier];
+      [mWindow setInitialFirstResponder:[pane initialKeyView]];
+      [mWindow makeFirstResponder:[pane initialKeyView]];
+      if ([NSToolbar instancesRespondToSelector:@selector(setSelectedItemIdentifier:)])
+        [[mWindow toolbar] setSelectedItemIdentifier:mCurrentPaneIdentifier];
     }
     else
     {
@@ -362,8 +360,8 @@ static NSString* const CacheInfoPaneSeenKey   = @"MVPreferencePaneSeen";    // N
   return mToolbarItemIdentifiers;
 }
 
-// set the selectable toolbar items (draws a gray rect around the active icon in the toolbar)
-- (NSArray *)toolbarSelectableItemIdentifiers:(NSToolbar *)toolbar
+// For OS X 10.3, set the selectable toolbar items (draws a gray rect around the active icon in the toolbar)
+- (NSArray *) toolbarSelectableItemIdentifiers:(NSToolbar *)toolbar
 {
   NSMutableArray* items = [NSMutableArray array];
   NSEnumerator* enumerator = [mPaneBundles objectEnumerator];

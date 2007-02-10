@@ -101,7 +101,7 @@ NS_INTERFACE_MAP_BEGIN(nsUnknownDecoder)
    NS_INTERFACE_MAP_ENTRY(nsIStreamConverter)
    NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
    NS_INTERFACE_MAP_ENTRY(nsIRequestObserver)
-   NS_INTERFACE_MAP_ENTRY(nsIContentSniffer)
+   NS_INTERFACE_MAP_ENTRY(nsIContentSniffer_MOZILLA_1_8_BRANCH)
    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIStreamListener)
 NS_INTERFACE_MAP_END
 
@@ -360,7 +360,7 @@ void nsUnknownDecoder::DetermineContentType(nsIRequest* aRequest)
                    "Must have either a type string or a function to set the type");
       NS_ASSERTION(sSnifferEntries[i].mMimeType == nsnull ||
                    sSnifferEntries[i].mContentTypeSniffer == nsnull,
-                   "Both a type string and a type sniffing function set;"
+                   "Both at type string and a type sniffing function set;"
                    " using type string");
       if (sSnifferEntries[i].mMimeType) {
         mContentType = sSnifferEntries[i].mMimeType;
@@ -417,13 +417,24 @@ PRBool nsUnknownDecoder::TryContentSniffers(nsIRequest* aRequest)
       continue;
     }
 
-    nsCOMPtr<nsIContentSniffer> sniffer(do_GetService(contractid.get()));
+    nsCOMPtr<nsISupports> sniffer(do_GetService(contractid.get()));
     if (!sniffer) {
       continue;
     }
 
-    rv = sniffer->GetMIMETypeFromContent(aRequest, (const PRUint8*)mBuffer,
-                                         mBufferLen, mContentType);
+    nsCOMPtr<nsIContentSniffer> sniffer1(do_QueryInterface(sniffer));
+    nsCOMPtr<nsIContentSniffer_MOZILLA_1_8_BRANCH> sniffer2 =
+      do_QueryInterface(sniffer);
+    if (sniffer2) {
+      rv = sniffer2->GetMIMETypeFromContent(aRequest, (const PRUint8*)mBuffer,
+                                            mBufferLen, mContentType);
+    } else if (sniffer1) {
+      rv = sniffer1->GetMIMETypeFromContent((const PRUint8*)mBuffer,
+                                            mBufferLen, mContentType);
+    } else {
+      continue;
+    }
+
     if (NS_SUCCEEDED(rv)) {
       return PR_TRUE;
     }

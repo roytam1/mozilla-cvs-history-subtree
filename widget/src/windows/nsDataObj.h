@@ -48,32 +48,8 @@
 #include "nsString.h"
 #include "nsILocalFile.h"
 #include "nsIURI.h"
-#include "nsIInputStream.h"
-#include "nsIChannel.h"
 
-// XXX for older version of PSDK where IAsyncOperation and related stuff is not available
-// but thisdefine  should be removed when parocles config is updated
-#ifndef __IAsyncOperation_INTERFACE_DEFINED__
-// IAsyncOperation inerface definition
-EXTERN_C const IID IID_IAsyncOperation;
-
-MIDL_INTERFACE("3D8B0590-F691-11d2-8EA9-006097DF5BD4")
-IAsyncOperation : public IUnknown
-{
-  virtual HRESULT STDMETHODCALLTYPE SetAsyncMode(BOOL fDoOpAsync) = 0;
-  virtual HRESULT STDMETHODCALLTYPE GetAsyncMode(BOOL *pfIsOpAsync) = 0;
-  virtual HRESULT STDMETHODCALLTYPE StartOperation(IBindCtx *pbcReserved) = 0;
-  virtual HRESULT STDMETHODCALLTYPE InOperation(BOOL *pfInAsyncOp) = 0;
-  virtual HRESULT STDMETHODCALLTYPE EndOperation(HRESULT hResult,
-                                                 IBindCtx *pbcReserved,
-                                                 DWORD dwEffects) = 0;
-};
-// this is not defined in the old headers for some reason
-#ifndef FD_PROGRESSUI
-  #define FD_PROGRESSUI 0x4000
-#endif
-
-#endif // __IAsyncOperation_INTERFACE_DEFINED__
+#define MAX_FORMATS 32
 
 /* 
  * CFSTR_SHELLURL is deprecated and doesn't have a Unicode version.
@@ -136,8 +112,7 @@ class nsITransferable;
  * can be adapted by an object derived from CfDragDrop. The CfDragDrop is
  * associated with instances via SetDragDrop().
  */
-class nsDataObj : public IDataObject,
-                  public IAsyncOperation
+class nsDataObj : public IDataObject
 {
   public: // construction, destruction
     nsDataObj(nsIURI *uri = nsnull);
@@ -172,8 +147,8 @@ class nsDataObj : public IDataObject,
 		// S_FALSE otherwise.
 		STDMETHODIMP QueryGetData (LPFORMATETC pFE);
 
-		// Set pCanonFE to the canonical format of pFE if one exists and return
-		// NOERROR, otherwise return DATA_S_SAMEFORMATETC. A canonical format
+		// Set pCanonFE to the cannonical format of pFE if one exists and return
+		// NOERROR, otherwise return DATA_S_SAMEFORMATETC. A cannonical format
 		// implies an identical rendering.
 		STDMETHODIMP GetCanonicalFormatEtc (LPFORMATETC pFE, LPFORMATETC pCanonFE);
 
@@ -202,13 +177,6 @@ class nsDataObj : public IDataObject,
       // object.
 		STDMETHODIMP EnumDAdvise (LPENUMSTATDATA *ppEnum);
 
-    // IAsyncOperation methods
-    STDMETHOD(EndOperation)(HRESULT hResult, IBindCtx *pbcReserved, DWORD dwEffects);
-    STDMETHOD(GetAsyncMode)(BOOL *pfIsOpAsync);
-    STDMETHOD(InOperation)(BOOL *pfInAsyncOp);
-    STDMETHOD(SetAsyncMode)(BOOL fDoOpAsync);
-    STDMETHOD(StartOperation)(IBindCtx *pbcReserved);
-
 	public: // other methods
 
 		// Return the total reference counts of all instances of this class.
@@ -218,18 +186,16 @@ class nsDataObj : public IDataObject,
 		// released the interface pointer after a drop).
 		ULONG GetRefCount() const;
 
-    // Gets the filename from the kFilePromiseURLMime flavour
-    nsresult GetDownloadDetails(nsIURI **aSourceURI,
-                                nsAString &aFilename);
-
 	protected:
-	  // help determine the kind of drag
-    PRBool IsFlavourPresent(const char *inFlavour);
+	
+	    // Help determine if the drag should create an internet shortcut
+	  PRBool IsInternetShortcut ( ) ;
 
 		virtual HRESULT AddSetFormat(FORMATETC&  FE);
 		virtual HRESULT AddGetFormat(FORMATETC&  FE);
 
 		virtual HRESULT GetText ( const nsACString& aDF, FORMATETC& aFE, STGMEDIUM & aSTG );
+		virtual HRESULT GetFile ( const nsACString& aDF, FORMATETC& aFE, STGMEDIUM& aSTG );
 		virtual HRESULT GetBitmap ( const nsACString& inFlavor, FORMATETC&  FE, STGMEDIUM&  STM);
 		virtual HRESULT GetDib ( const nsACString& inFlavor, FORMATETC &, STGMEDIUM & aSTG );
 		virtual HRESULT GetMetafilePict(FORMATETC&  FE, STGMEDIUM&  STM);
@@ -250,11 +216,6 @@ class nsDataObj : public IDataObject,
     virtual HRESULT GetFileDescriptorInternetShortcutA ( FORMATETC& aFE, STGMEDIUM& aSTG ) ;
     virtual HRESULT GetFileDescriptorInternetShortcutW ( FORMATETC& aFE, STGMEDIUM& aSTG ) ;
     virtual HRESULT GetFileContentsInternetShortcut ( FORMATETC& aFE, STGMEDIUM& aSTG ) ;
-
-    // IStream implementation
-    virtual HRESULT GetFileDescriptor_IStreamA ( FORMATETC& aFE, STGMEDIUM& aSTG ) ;
-    virtual HRESULT GetFileDescriptor_IStreamW ( FORMATETC& aFE, STGMEDIUM& aSTG ) ;
-    virtual HRESULT GetFileContents_IStream ( FORMATETC& aFE, STGMEDIUM& aSTG ) ;
 
     nsresult ExtractShortcutURL ( nsString & outURL ) ;
     nsresult ExtractShortcutTitle ( nsString & outTitle ) ;
@@ -281,47 +242,6 @@ class nsDataObj : public IDataObject,
                                       // nsDataObj owns and ref counts CEnumFormatEtc,
 
     nsCOMPtr<nsILocalFile> mCachedTempFile;
-
-    BOOL mIsAsyncMode;
-    BOOL mIsInOperation;
-    ///////////////////////////////////////////////////////////////////////////////
-    // CStream class implementation
-    // this class is used in Drag and drop with download sample
-    // called from IDataObject::GetData
-    class CStream : public IStream
-    {
-      ULONG mRefCount;  // reference counting
-      nsCOMPtr<nsIInputStream> mInputStream;
-      nsCOMPtr<nsIChannel> mChannel;
-
-    protected:
-      virtual ~CStream();
-      // TODO: forbid copying and assignment
-
-    public:
-      CStream();
-      nsresult Init(nsIURI *pSourceURI);
-
-      // IUnknown
-      STDMETHOD(QueryInterface)(REFIID refiid, void** ppvResult);
-      STDMETHOD_(ULONG, AddRef)(void);
-      STDMETHOD_(ULONG, Release)(void);
-
-      // IStream  
-      STDMETHOD(Clone)(IStream** ppStream);
-      STDMETHOD(Commit)(DWORD dwFrags);
-      STDMETHOD(CopyTo)(IStream* pDestStream, ULARGE_INTEGER nBytesToCopy, ULARGE_INTEGER* nBytesRead, ULARGE_INTEGER* nBytesWritten);
-      STDMETHOD(LockRegion)(ULARGE_INTEGER nStart, ULARGE_INTEGER nBytes, DWORD dwFlags);
-      STDMETHOD(Read)(void* pvBuffer, ULONG nBytesToRead, ULONG* nBytesRead);
-      STDMETHOD(Revert)(void);
-      STDMETHOD(Seek)(LARGE_INTEGER nMove, DWORD dwOrigin, ULARGE_INTEGER* nNewPos);
-      STDMETHOD(SetSize)(ULARGE_INTEGER nNewSize);
-      STDMETHOD(Stat)(STATSTG* statstg, DWORD dwFlags);
-      STDMETHOD(UnlockRegion)(ULARGE_INTEGER nStart, ULARGE_INTEGER nBytes, DWORD dwFlags);
-      STDMETHOD(Write)(const void* pvBuffer, ULONG nBytesToRead, ULONG* nBytesRead);
-    };
-
-    HRESULT CreateStream(IStream **outStream);
 };
 
 

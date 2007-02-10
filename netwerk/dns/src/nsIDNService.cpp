@@ -152,7 +152,7 @@ nsIDNService::~nsIDNService()
 NS_IMETHODIMP nsIDNService::ConvertUTF8toACE(const nsACString & input, nsACString & ace)
 {
   nsresult rv;
-  NS_ConvertUTF8toUTF16 ustr(input);
+  NS_ConvertUTF8toUCS2 ustr(input);
 
   // map ideographic period to ASCII period etc.
   normalizeFullStops(ustr);
@@ -296,8 +296,8 @@ static void utf16ToUcs4(const nsAString& in, PRUint32 *out, PRUint32 outBufLen, 
     curChar= *start++;
 
     if (start != end &&
-        NS_IS_HIGH_SURROGATE(curChar) && 
-        NS_IS_LOW_SURROGATE(*start)) {
+        IS_HIGH_SURROGATE(curChar) && 
+        IS_LOW_SURROGATE(*start)) {
       out[i] = SURROGATE_TO_UCS4(curChar, *start);
       ++start;
     }
@@ -308,7 +308,7 @@ static void utf16ToUcs4(const nsAString& in, PRUint32 *out, PRUint32 outBufLen, 
     if (i >= outBufLen) {
       NS_ERROR("input too big, the result truncated");
       out[outBufLen-1] = (PRUint32)'\0';
-      *outLen = outBufLen-1;
+      *outLen = i;
       return;
     }
   }
@@ -477,13 +477,13 @@ nsresult nsIDNService::stringPrepAndACE(const nsAString& in, nsACString& out)
   }
 
   if (IsASCII(in))
-    LossyCopyUTF16toASCII(in, out);
+    CopyUCS2toASCII(in, out);
   else {
     nsAutoString strPrep;
     rv = stringPrep(in, strPrep);
     if (NS_SUCCEEDED(rv)) {
       if (IsASCII(strPrep))
-        LossyCopyUTF16toASCII(strPrep, out);
+        CopyUCS2toASCII(strPrep, out);
       else
         rv = encodeToACE(strPrep, out);
     }

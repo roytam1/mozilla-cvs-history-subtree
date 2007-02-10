@@ -39,6 +39,7 @@
 #define __nsXULSelectAccessible_h__
 
 #include "nsCOMPtr.h"
+#include "nsIAccessibleSelectable.h"
 #include "nsXULMenuAccessible.h"
 
 class nsIWeakReference;
@@ -50,16 +51,74 @@ class nsIWeakReference;
   *
   *  Listbox:
   *     - nsXULListboxAccessible
-  *        - nsXULSelectOptionAccessible
+  *        - nsXULSelectListAccessible
+  *           - nsXULSelectOptionAccessible
   *
   *  Comboboxes:
   *     - nsXULComboboxAccessible      <menulist />
-  *        - nsXULMenuAccessible          <menupopup />
-  *           - nsXULMenuitemAccessible(s)   <menuitem />
+  *        - nsHTMLTextFieldAccessible
+  *        - nsXULComboboxButtonAccessible    
+  *        - nsXULSelectListAccessible      <menupopup />
+  *           - nsXULSelectOptionAccessible(s)   <menuitem />
   */
 
 /** ------------------------------------------------------ */
 /**  First, the common widgets                             */
+/** ------------------------------------------------------ */
+
+/*
+ * The basic implemetation of nsIAccessibleSelectable.
+ */
+class nsXULSelectableAccessible : public nsAccessibleWrap
+{
+public:
+  NS_DECL_ISUPPORTS_INHERITED
+  NS_DECL_NSIACCESSIBLESELECTABLE
+
+  nsXULSelectableAccessible(nsIDOMNode* aDOMNode, nsIWeakReference* aShell);
+  virtual ~nsXULSelectableAccessible() {}
+
+  NS_IMETHOD GetName(nsAString& _retval);
+
+protected:
+  NS_IMETHOD ChangeSelection(PRInt32 aIndex, PRUint8 aMethod, PRBool *aSelState);
+  nsresult AppendFlatStringFromSubtree(nsIContent *aContent, nsAString *aFlatString)
+    { return NS_ERROR_FAILURE; }  // Overrides base impl in nsAccessible
+};
+
+/*
+ * The list that contains all the options in the select.
+ */
+class nsXULSelectListAccessible : public nsAccessibleWrap
+{
+public:
+  
+  nsXULSelectListAccessible(nsIDOMNode* aDOMNode, nsIWeakReference* aShell);
+  virtual ~nsXULSelectListAccessible() {}
+
+  /* ----- nsIAccessible ----- */
+  NS_IMETHOD GetRole(PRUint32 *_retval);
+  NS_IMETHOD GetState(PRUint32 *_retval);
+};
+
+/*
+ * Options inside the select, contained within the list
+ */
+class nsXULSelectOptionAccessible : public nsXULMenuitemAccessible
+{
+public:
+  
+  nsXULSelectOptionAccessible(nsIDOMNode* aDOMNode, nsIWeakReference* aShell);
+  virtual ~nsXULSelectOptionAccessible() {}
+
+  /* ----- nsIAccessible ----- */
+  NS_IMETHOD GetRole(PRUint32 *_retval);
+  NS_IMETHOD GetState(PRUint32 *_retval);
+  nsIFrame*  GetBoundsFrame();
+};
+
+/** ------------------------------------------------------ */
+/**  Secondly, the Listbox widget                          */
 /** ------------------------------------------------------ */
 
 /*
@@ -76,6 +135,7 @@ public:
   NS_IMETHOD GetRole(PRUint32 *_retval);
   NS_IMETHOD GetState(PRUint32 *_retval);
   NS_IMETHOD GetValue(nsAString& _retval);
+
 };
 
 /**
@@ -84,8 +144,6 @@ public:
 class nsXULListitemAccessible : public nsXULMenuitemAccessible
 {
 public:
-  enum { eAction_Click = 0 };
-
   NS_DECL_ISUPPORTS_INHERITED
   
   nsXULListitemAccessible(nsIDOMNode* aDOMNode, nsIWeakReference* aShell);
@@ -96,8 +154,6 @@ public:
   NS_IMETHOD GetRole(PRUint32 *_retval);
   NS_IMETHOD GetState(PRUint32 *_retval);
   NS_IMETHOD GetActionName(PRUint8 index, nsAString& _retval);
-  // Don't use XUL menuitems's description attribute
-  NS_IMETHOD GetDescription(nsAString& aDesc) { return nsAccessibleWrap::GetDescription(aDesc); }
 
 private:
   PRBool mIsCheckbox;
@@ -110,26 +166,20 @@ private:
 /*
  * A class the represents the XUL Combobox widget.
  */
-class nsXULComboboxAccessible : public nsAccessibleWrap
+class nsXULComboboxAccessible : public nsXULSelectableAccessible
 {
 public:
-  enum { eAction_Click = 0 };
 
   nsXULComboboxAccessible(nsIDOMNode* aDOMNode, nsIWeakReference* aShell);
   virtual ~nsXULComboboxAccessible() {}
 
-  /* ----- nsPIAccessible ---- */
-  NS_IMETHOD Init();
-
   /* ----- nsIAccessible ----- */
+  NS_IMETHOD GetChildCount(PRInt32 *_retval);
   NS_IMETHOD GetRole(PRUint32 *_retval);
   NS_IMETHOD GetState(PRUint32 *_retval);
+
   NS_IMETHOD GetValue(nsAString& _retval);
   NS_IMETHOD GetDescription(nsAString& aDescription);
-  NS_IMETHOD GetAllowsAnonChildAccessibles(PRBool *aAllowsAnonChildren);
-  NS_IMETHOD DoAction(PRUint8 index);
-  NS_IMETHOD GetNumActions(PRUint8 *aNumActions);
-  NS_IMETHOD GetActionName(PRUint8 index, nsAString& aActionName);
 };
 
 #endif

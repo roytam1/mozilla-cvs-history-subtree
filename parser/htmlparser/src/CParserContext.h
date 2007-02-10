@@ -52,7 +52,6 @@
 #include "nsScanner.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
-#include "nsAutoPtr.h"
 
 /**
  * Note that the parser is given FULL access to all
@@ -74,6 +73,7 @@ public:
                     eAutoDetectResult aStatus=eUnknownDetect, 
                     PRBool aCopyUnused=PR_FALSE); 
     
+    CParserContext( const CParserContext& aContext);
     ~CParserContext();
 
     nsresult GetTokenizer(PRInt32 aType,
@@ -83,13 +83,13 @@ public:
 
     nsCOMPtr<nsIRequest> mRequest; // provided by necko to differnciate different input streams
                                    // why is mRequest strongly referenced? see bug 102376.
-    nsCOMPtr<nsIDTD>	 mDTD;
-    nsCOMPtr<nsIRequestObserver> mListener;
-    nsAutoArrayPtr<char> mTransferBuffer;
+    nsIDTD*              mDTD;
+    nsIRequestObserver*  mListener;
+    char*                mTransferBuffer;
     void*                mKey;
-    nsCOMPtr<nsITokenizer> mTokenizer;
+    nsITokenizer*        mTokenizer;
     CParserContext*      mPrevContext;
-    nsAutoPtr<nsScanner> mScanner;
+    nsScanner*           mScanner;
     
     nsCString            mMimeType;
     nsDTDMode            mDTDMode;
@@ -105,4 +105,8 @@ public:
     PRUint32             mTransferBufferSize;
 };
 
+
+
 #endif
+
+

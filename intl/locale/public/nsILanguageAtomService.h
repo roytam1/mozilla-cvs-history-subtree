@@ -60,7 +60,7 @@
 class nsILanguageAtomService : public nsISupports
 {
  public: 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ILANGUAGEATOMSERVICE_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ILANGUAGEATOMSERVICE_IID)
 
   virtual nsIAtom* LookupLanguage(const nsAString &aLanguage,
                                   nsresult *aError = nsnull) = 0;
@@ -69,8 +69,5 @@ class nsILanguageAtomService : public nsISupports
 
   virtual nsIAtom* GetLocaleLanguageGroup(nsresult *aError = nsnull) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsILanguageAtomService,
-                              NS_ILANGUAGEATOMSERVICE_IID)
 
 #endif

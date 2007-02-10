@@ -40,14 +40,12 @@
 #include "nsContentCreatorFunctions.h"
 #include "nsIAtom.h"
 #include "nsINodeInfo.h"
-#include "nsGkAtoms.h"
+#include "nsSVGAtoms.h"
 #include "nsContentDLF.h"
 #include "nsContentUtils.h"
 #include "nsSVGUtils.h"
 #include "nsDebug.h"
 
-nsresult
-NS_NewSVGAElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 nsresult
 NS_NewSVGPolylineElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 nsresult
@@ -104,162 +102,79 @@ nsresult
 NS_NewSVGClipPathElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
 nsresult
 NS_NewSVGTextPathElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFilterElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEBlendElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEComponentTransferElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFECompositeElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEFuncRElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEFuncGElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEFuncBElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEFuncAElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEGaussianBlurElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEMergeElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEMergeNodeElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEMorphologyElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEOffsetElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEUnimplementedMOZElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGPatternElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGMaskElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFEFloodElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGFETurbulenceElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
-nsresult
-NS_NewSVGSwitchElement(nsIContent **aResult, nsINodeInfo *aNodeInfo);
+
 
 nsresult
 NS_NewSVGElement(nsIContent** aResult, nsINodeInfo *aNodeInfo)
 {
-  NS_PRECONDITION(NS_SVGEnabled(),
+  NS_PRECONDITION(nsSVGUtils::SVGEnabled(),
                   "creating an SVG element while SVG disabled");
 
   static const char kSVGStyleSheetURI[] = "resource://gre/res/svg.css";
 
   // this bit of code is to load svg.css on demand
-  nsIDocument *doc = aNodeInfo->GetDocument();
+  nsIDocument* doc = nsContentUtils::GetDocument(aNodeInfo);
   if (doc)
     doc->EnsureCatalogStyleSheet(kSVGStyleSheetURI);
 
   nsIAtom *name = aNodeInfo->NameAtom();
   
-  if (name == nsGkAtoms::a)
-    return NS_NewSVGAElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::polyline)
+  if (name == nsSVGAtoms::polyline)
     return NS_NewSVGPolylineElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::polygon)
+  if (name == nsSVGAtoms::polygon)
     return NS_NewSVGPolygonElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::circle)
+  if (name == nsSVGAtoms::circle)
     return NS_NewSVGCircleElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::ellipse)
+  if (name == nsSVGAtoms::ellipse)
     return NS_NewSVGEllipseElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::line)
+  if (name == nsSVGAtoms::line)
     return NS_NewSVGLineElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::rect)
+  if (name == nsSVGAtoms::rect)
     return NS_NewSVGRectElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::svg)
+  if (name == nsSVGAtoms::svg)
     return NS_NewSVGSVGElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::g)
+  if (name == nsSVGAtoms::g)
     return NS_NewSVGGElement(aResult, aNodeInfo);
 #ifdef MOZ_SVG_FOREIGNOBJECT
-  if (name == nsGkAtoms::foreignObject)
+  if (name == nsSVGAtoms::foreignObject)
     return NS_NewSVGForeignObjectElement(aResult, aNodeInfo);
 #endif
-  if (name == nsGkAtoms::path)
+  if (name == nsSVGAtoms::path)
     return NS_NewSVGPathElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::text)
+  if (name == nsSVGAtoms::text)
     return NS_NewSVGTextElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::tspan)
+  if (name == nsSVGAtoms::tspan)
     return NS_NewSVGTSpanElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::image)
+  if (name == nsSVGAtoms::image)
     return NS_NewSVGImageElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::style)
+  if (name == nsSVGAtoms::style)
     return NS_NewSVGStyleElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::linearGradient)
+  if (name == nsSVGAtoms::linearGradient)
     return NS_NewSVGLinearGradientElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::metadata)
+  if (name == nsSVGAtoms::metadata)
     return NS_NewSVGMetadataElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::radialGradient)
+  if (name == nsSVGAtoms::radialGradient)
     return NS_NewSVGRadialGradientElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::stop)
+  if (name == nsSVGAtoms::stop)
     return NS_NewSVGStopElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::defs)
+  if (name == nsSVGAtoms::defs)
     return NS_NewSVGDefsElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::desc)
+  if (name == nsSVGAtoms::desc)
     return NS_NewSVGDescElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::script)
+  if (name == nsSVGAtoms::script)
     return NS_NewSVGScriptElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::use)
+  if (name == nsSVGAtoms::use)
     return NS_NewSVGUseElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::symbol)
+  if (name == nsSVGAtoms::symbol)
     return NS_NewSVGSymbolElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::marker)
+  if (name == nsSVGAtoms::marker)
     return NS_NewSVGMarkerElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::title)
+  if (name == nsSVGAtoms::title)
     return NS_NewSVGTitleElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::clipPath)
+  if (name == nsSVGAtoms::clipPath)
     return NS_NewSVGClipPathElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::textPath)
+  if (name == nsSVGAtoms::textPath)
     return NS_NewSVGTextPathElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::filter)
-    return NS_NewSVGFilterElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feBlend)
-    return NS_NewSVGFEBlendElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feComponentTransfer)
-    return NS_NewSVGFEComponentTransferElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feComposite)
-    return NS_NewSVGFECompositeElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feFuncR)
-    return NS_NewSVGFEFuncRElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feFuncG)
-    return NS_NewSVGFEFuncGElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feFuncB)
-    return NS_NewSVGFEFuncBElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feFuncA)
-    return NS_NewSVGFEFuncAElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feGaussianBlur)
-    return NS_NewSVGFEGaussianBlurElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feMerge)
-    return NS_NewSVGFEMergeElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feMergeNode)
-    return NS_NewSVGFEMergeNodeElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feMorphology)
-    return NS_NewSVGFEMorphologyElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feOffset)
-    return NS_NewSVGFEOffsetElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feFlood)
-    return NS_NewSVGFEFloodElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feTurbulence)
-    return NS_NewSVGFETurbulenceElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::feColorMatrix      ||
-      name == nsGkAtoms::feConvolveMatrix   ||
-      name == nsGkAtoms::feDiffuseLighting  ||
-      name == nsGkAtoms::feDisplacementMap  ||
-      name == nsGkAtoms::feImage            ||
-      name == nsGkAtoms::feSpecularLighting ||
-      name == nsGkAtoms::feTile)
-    return NS_NewSVGFEUnimplementedMOZElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::pattern)
-    return NS_NewSVGPatternElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::mask)
-    return NS_NewSVGMaskElement(aResult, aNodeInfo);
-  if (name == nsGkAtoms::svgSwitch)
-    return NS_NewSVGSwitchElement(aResult, aNodeInfo);
 
   // if we don't know what to create, just create a standard xml element:
   return NS_NewXMLElement(aResult, aNodeInfo);

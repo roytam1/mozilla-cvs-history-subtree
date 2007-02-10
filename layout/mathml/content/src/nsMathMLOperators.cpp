@@ -244,7 +244,7 @@ SetOperator(OperatorData*   aOperatorData,
   gOperatorTable->Put(&key, aOperatorData);
 
 #ifdef NS_DEBUG
-  NS_LossyConvertUTF16toASCII str(aAttributes);
+  NS_LossyConvertUCS2toASCII str(aAttributes);
 #endif
   // Loop over the space-delimited list of attributes to get the name:value pairs
   aAttributes.Append(kNullCh);  // put an extra null at the end
@@ -297,7 +297,7 @@ InitOperators(void)
   nsCOMPtr<nsIPersistentProperties> mathfontProp;
   rv = NS_LoadPersistentPropertiesFromURISpec(getter_AddRefs(mathfontProp),
        NS_LITERAL_CSTRING("resource://gre/res/fonts/mathfont.properties"));
-  if (NS_FAILED(rv)) return rv;
+  if NS_FAILED(rv) return rv;
 
   // Get the list of invariant chars
   for (PRInt32 i = 0; i < nsMathMLOperators::eMATHVARIANT_COUNT; ++i) {

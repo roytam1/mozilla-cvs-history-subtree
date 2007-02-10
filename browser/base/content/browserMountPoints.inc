@@ -2,9 +2,6 @@
 
 <commandset id="mainCommandSet"/>
 <commandset id="baseMenuCommandSet"/>
-#ifdef MOZ_PLACES_BOOKMARKS
-<commandset id="placesCommands"/>
-#endif
 
 <broadcasterset id="mainBroadcasterSet"/>
 
@@ -13,8 +10,6 @@
 
 <menubar id="main-menubar"/>
 
-#ifndef MOZ_PLACES_BOOKMARKS
 <template id="bookmarks-template"/>
-#endif
 
 <tree id="hiddenHistoryTree"/>

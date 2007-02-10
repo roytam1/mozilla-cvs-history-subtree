@@ -42,7 +42,8 @@
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeNode.h"
 #include "nsIDocShellTreeItem.h"
-#include "nsPIDOMWindow.h"
+#include "nsIDOMWindow.h"
+#include "nsIScriptGlobalObject.h"
 #include "nsIDocumentViewer.h"
 
 #include "nsIServiceManager.h"
@@ -149,10 +150,10 @@ NS_IMETHODIMP
 nsLayoutDebuggingTools::Init(nsIDOMWindow *aWin)
 {
     {
-        nsCOMPtr<nsPIDOMWindow> window = do_QueryInterface(aWin);
-        if (!window)
+        nsCOMPtr<nsIScriptGlobalObject> global = do_QueryInterface(aWin);
+        if (!global)
             return NS_ERROR_UNEXPECTED;
-        mDocShell = window->GetDocShell();
+        mDocShell = global->GetDocShell();
     }
 
     mPrefs = do_GetService(NS_PREF_CONTRACTID);
@@ -351,7 +352,7 @@ static void DumpAWebShell(nsIDocShellTreeItem* aShellItem, FILE* out, PRInt32 aI
     fprintf(out, "%p '", NS_STATIC_CAST(void*, aShellItem));
     aShellItem->GetName(getter_Copies(name));
     aShellItem->GetSameTypeParent(getter_AddRefs(parent));
-    fputs(NS_LossyConvertUTF16toASCII(name).get(), out);
+    fputs(NS_LossyConvertUCS2toASCII(name).get(), out);
     fprintf(out, "' parent=%p <\n", NS_STATIC_CAST(void*, parent));
 
     ++aIndent;
@@ -429,7 +430,7 @@ DumpFramesRecur(nsIDocShell* aDocShell, FILE* out)
             if (root) {
                 nsIFrameDebug* fdbg;
                 if (NS_SUCCEEDED(CallQueryInterface(root, &fdbg))) {
-                    fdbg->List(out, 0);
+                    fdbg->List(shell->GetPresContext(), out, 0);
                 }
             }
         }

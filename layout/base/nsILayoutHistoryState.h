@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * interface for container for information saved in session history when
- * the document is not
- */
-
 #ifndef _nsILayoutHistoryState_h
 #define _nsILayoutHistoryState_h
 
@@ -55,7 +50,7 @@ class nsPresState;
 
 class nsILayoutHistoryState : public nsISupports {
  public: 
-  NS_DECLARE_STATIC_IID_ACCESSOR(NS_ILAYOUTHISTORYSTATE_IID)
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ILAYOUTHISTORYSTATE_IID)
 
   /**
    * Set |aState| as the state object for |aKey|.
@@ -75,9 +70,6 @@ class nsILayoutHistoryState : public nsISupports {
    */
   NS_IMETHOD RemoveState(const nsCString& aKey) = 0;
 };
-
-NS_DEFINE_STATIC_IID_ACCESSOR(nsILayoutHistoryState,
-                              NS_ILAYOUTHISTORYSTATE_IID)
 
 nsresult
 NS_NewLayoutHistoryState(nsILayoutHistoryState** aState);

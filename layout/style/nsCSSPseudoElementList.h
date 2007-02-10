@@ -36,8 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* atom list for CSS pseudo-elements */
-
 /*
  * This file contains the list of nsIAtoms and their values for CSS
  * pseudo-elements.  It is designed to be used as inline input to

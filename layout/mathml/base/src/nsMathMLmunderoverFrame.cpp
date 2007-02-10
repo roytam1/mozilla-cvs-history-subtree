@@ -56,10 +56,23 @@
 // <munderover> -- attach an underscript-overscript pair to a base - implementation
 //
 
-nsIFrame*
-NS_NewMathMLmunderoverFrame(nsIPresShell* aPresShell, nsStyleContext* aContext)
+nsresult
+NS_NewMathMLmunderoverFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLmunderoverFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLmunderoverFrame* it = new (aPresShell) nsMathMLmunderoverFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+nsMathMLmunderoverFrame::nsMathMLmunderoverFrame()
+{
 }
 
 nsMathMLmunderoverFrame::~nsMathMLmunderoverFrame()
@@ -67,19 +80,21 @@ nsMathMLmunderoverFrame::~nsMathMLmunderoverFrame()
 }
 
 NS_IMETHODIMP
-nsMathMLmunderoverFrame::AttributeChanged(PRInt32         aNameSpaceID,
+nsMathMLmunderoverFrame::AttributeChanged(nsIContent*     aContent,
+                                          PRInt32         aNameSpaceID,
                                           nsIAtom*        aAttribute,
                                           PRInt32         aModType)
 {
-  if (nsGkAtoms::accent_ == aAttribute ||
-      nsGkAtoms::accentunder_ == aAttribute) {
+  if (nsMathMLAtoms::accent_ == aAttribute ||
+      nsMathMLAtoms::accentunder_ == aAttribute) {
     // When we have automatic data to update within ourselves, we ask our
     // parent to re-layout its children
     return ReLayoutChildren(mParent);
   }
 
   return nsMathMLContainerFrame::
-         AttributeChanged(aNameSpaceID, aAttribute, aModType);
+         AttributeChanged(aContent, aNameSpaceID,
+                          aAttribute, aModType);
 }
 
 NS_IMETHODIMP
@@ -187,6 +202,8 @@ nsMathMLmunderoverFrame::TransmitAutomaticData()
   mPresentationData.baseFrame = baseFrame;
   GetEmbellishDataFrom(baseFrame, mEmbellishData);
 
+  nsAutoString value;
+
   // The default value of accentunder is false, unless the underscript is embellished
   // and its core <mo> is an accent
   nsEmbellishData embellishData;
@@ -196,14 +213,13 @@ nsMathMLmunderoverFrame::TransmitAutomaticData()
   else
     mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_ACCENTUNDER;
 
-  static nsIContent::AttrValuesArray strings[] =
-    {&nsGkAtoms::_true, &nsGkAtoms::_false, nsnull};
-
   // if we have an accentunder attribute, it overrides what the underscript said
-  switch (mContent->FindAttrValueIn(kNameSpaceID_None, nsGkAtoms::accentunder_,
-                                    strings, eCaseMatters)) {
-    case 0: mEmbellishData.flags |= NS_MATHML_EMBELLISH_ACCENTUNDER; break;
-    case 1: mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_ACCENTUNDER; break;
+  if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttr(kNameSpaceID_None, 
+                   nsMathMLAtoms::accentunder_, value)) {
+    if (value.EqualsLiteral("true"))
+      mEmbellishData.flags |= NS_MATHML_EMBELLISH_ACCENTUNDER;
+    else if (value.EqualsLiteral("false")) 
+      mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_ACCENTUNDER;
   }
 
   // The default value of accent is false, unless the overscript is embellished
@@ -215,10 +231,12 @@ nsMathMLmunderoverFrame::TransmitAutomaticData()
     mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_ACCENTOVER;
 
   // if we have an accent attribute, it overrides what the overscript said
-  switch (mContent->FindAttrValueIn(kNameSpaceID_None, nsGkAtoms::accent_,
-                                    strings, eCaseMatters)) {
-    case 0: mEmbellishData.flags |= NS_MATHML_EMBELLISH_ACCENTOVER; break;
-    case 1: mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_ACCENTOVER; break;
+  if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttr(kNameSpaceID_None, 
+                   nsMathMLAtoms::accent_, value)) {
+    if (value.EqualsLiteral("true"))
+      mEmbellishData.flags |= NS_MATHML_EMBELLISH_ACCENTOVER;
+    else if (value.EqualsLiteral("false")) 
+      mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_ACCENTOVER;
   }
 
   // disable the stretch-all flag if we are going to act like a superscript
@@ -294,16 +312,16 @@ nsMathMLmunderoverFrame::Place(nsIRenderingContext& aRenderingContext,
                                                    aRenderingContext,
                                                    aPlaceOrigin,
                                                    aDesiredSize,
-                                                   this, 0, 0, GetPresContext()->PointsToAppUnits(0.5f));
+                                                   this);
   }
 
   ////////////////////////////////////
   // Get the children's desired sizes
 
   nsBoundingMetrics bmBase, bmUnder, bmOver;
-  nsHTMLReflowMetrics baseSize;
-  nsHTMLReflowMetrics underSize;
-  nsHTMLReflowMetrics overSize;
+  nsHTMLReflowMetrics baseSize (nsnull);
+  nsHTMLReflowMetrics underSize (nsnull);
+  nsHTMLReflowMetrics overSize (nsnull);
   nsIFrame* overFrame = nsnull;
   nsIFrame* underFrame = nsnull;
   nsIFrame* baseFrame = mFrames.FirstChild();
@@ -320,7 +338,7 @@ nsMathMLmunderoverFrame::Place(nsIRenderingContext& aRenderingContext,
   GetReflowAndBoundingMetricsFor(underFrame, underSize, bmUnder);
   GetReflowAndBoundingMetricsFor(overFrame, overSize, bmOver);
 
-  nscoord onePixel = nsPresContext::CSSPixelsToAppUnits(1);
+  nscoord onePixel = GetPresContext()->IntScaledPixelsToTwips(1);
 
   ////////////////////
   // Place Children
@@ -464,10 +482,10 @@ nsMathMLmunderoverFrame::Place(nsIRenderingContext& aRenderingContext,
     PR_MAX(dxAnonymousBase + bmAnonymousBase.rightBearing, dxUnder + bmUnder.rightBearing);
 
   aDesiredSize.ascent = ascentAnonymousBase;
-  aDesiredSize.height = aDesiredSize.ascent +
+  aDesiredSize.descent = 
     PR_MAX(mBoundingMetrics.descent + underDelta2,
-           bmAnonymousBase.descent + underDelta1 + bmUnder.ascent +
-             underSize.height - underSize.ascent);
+           bmAnonymousBase.descent + underDelta1 + bmUnder.ascent + underSize.descent);
+  aDesiredSize.height = aDesiredSize.ascent + aDesiredSize.descent;
   aDesiredSize.width = mBoundingMetrics.width;
   aDesiredSize.mBoundingMetrics = mBoundingMetrics;
 

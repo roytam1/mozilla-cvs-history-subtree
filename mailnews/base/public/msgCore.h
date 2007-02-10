@@ -55,11 +55,6 @@ class nsIMsgFolder;
 #include "nsIComponentManager.h"
 
 /*
- * The suffix we use for the mail summary file.
- */
-#define SUMMARY_SUFFIX ".msf"
-
-/*
  * These are folder property strings, which are used in several places.
 
  */

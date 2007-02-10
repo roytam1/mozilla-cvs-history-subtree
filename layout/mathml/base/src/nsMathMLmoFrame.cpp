@@ -46,7 +46,6 @@
 #include "nsStyleConsts.h"
 #include "nsIRenderingContext.h"
 #include "nsIFontMetrics.h"
-#include "nsContentUtils.h"
 
 #include "nsIDOMText.h"
 
@@ -59,10 +58,23 @@
 // additional style context to be used by our MathMLChar.
 #define NS_MATHML_CHAR_STYLE_CONTEXT_INDEX   0
 
-nsIFrame*
-NS_NewMathMLmoFrame(nsIPresShell* aPresShell, nsStyleContext *aContext)
+nsresult
+NS_NewMathMLmoFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 {
-  return new (aPresShell) nsMathMLmoFrame(aContext);
+  NS_PRECONDITION(aNewFrame, "null OUT ptr");
+  if (nsnull == aNewFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  nsMathMLmoFrame* it = new (aPresShell) nsMathMLmoFrame;
+  if (nsnull == it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  *aNewFrame = it;
+  return NS_OK;
+}
+
+nsMathMLmoFrame::nsMathMLmoFrame()
+{
 }
 
 nsMathMLmoFrame::~nsMathMLmoFrame()
@@ -74,12 +86,12 @@ static const PRUnichar kApplyFunction  = PRUnichar(0x2061);
 static const PRUnichar kInvisibleTimes = PRUnichar(0x2062);
 static const PRUnichar kNullCh         = PRUnichar('\0');
 
-eMathMLFrameType
-nsMathMLmoFrame::GetMathMLFrameType()
+nsIAtom*
+nsMathMLmoFrame::GetType() const
 {
   return NS_MATHML_OPERATOR_IS_INVISIBLE(mFlags)
-    ? eMathMLFrameType_OperatorInvisible
-    : eMathMLFrameType_OperatorOrdinary;
+    ? nsMathMLAtoms::operatorInvisibleMathMLFrame
+    : nsMathMLAtoms::operatorOrdinaryMathMLFrame;
 }
 
 // since a mouse click implies selection, we cannot just rely on the
@@ -97,9 +109,21 @@ nsMathMLmoFrame::IsFrameInSelection(nsIFrame* aFrame)
   if (!isSelected)
     return PR_FALSE;
 
-  SelectionDetails* details = aFrame->GetFrameSelection()->
-    LookUpSelection(aFrame->GetContent(), 0, 1, PR_TRUE);
+  SelectionDetails* details = nsnull;
+  nsIPresShell *shell = GetPresContext()->GetPresShell();
+  if (shell) {
+    nsCOMPtr<nsIFrameSelection> frameSelection;
+    nsCOMPtr<nsISelectionController> selCon;
+    nsresult rv = GetSelectionController(GetPresContext(),
+                                         getter_AddRefs(selCon));
+    if (NS_SUCCEEDED(rv) && selCon)
+      frameSelection = do_QueryInterface(selCon);
+    if (!frameSelection)
+      frameSelection = shell->FrameSelection();
 
+    frameSelection->LookUpSelection(aFrame->GetContent(),
+				    0, 1, &details, PR_TRUE);
+  }
   if (!details)
     return PR_FALSE;
 
@@ -112,9 +136,11 @@ nsMathMLmoFrame::IsFrameInSelection(nsIFrame* aFrame)
 }
 
 NS_IMETHODIMP
-nsMathMLmoFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
-                                  const nsRect&           aDirtyRect,
-                                  const nsDisplayListSet& aLists)
+nsMathMLmoFrame::Paint(nsPresContext*      aPresContext,
+                       nsIRenderingContext& aRenderingContext,
+                       const nsRect&        aDirtyRect,
+                       nsFramePaintLayer    aWhichLayer,
+                       PRUint32             aFlags)
 {
   nsresult rv = NS_OK;
   PRBool useMathMLChar =
@@ -123,14 +149,12 @@ nsMathMLmoFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
     NS_MATHML_OPERATOR_IS_CENTERED(mFlags) ||
     NS_MATHML_OPERATOR_IS_INVISIBLE(mFlags);
 
-  if (!useMathMLChar) {
-    // let the base class do everything
-    rv = nsMathMLTokenFrame::BuildDisplayList(aBuilder, aDirtyRect, aLists);
-    NS_ENSURE_SUCCESS(rv, rv);
-  } else {
-    rv = DisplayBorderBackgroundOutline(aBuilder, aLists);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
+  if (!useMathMLChar || NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {
+    // let the base class paint the background, border, outline
+    rv = nsMathMLTokenFrame::Paint(aPresContext, aRenderingContext,
+                                   aDirtyRect, aWhichLayer);
+  }
+  if (useMathMLChar) {
     // make our char selected if our inner child text frame is selected
     PRBool isSelected = PR_FALSE;
     nsRect selectedRect;
@@ -139,12 +163,19 @@ nsMathMLmoFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
       selectedRect = firstChild->GetRect();
       isSelected = PR_TRUE;
     }
-    rv = mMathMLChar.Display(aBuilder, this, aLists, isSelected ? &selectedRect : nsnull);
-    NS_ENSURE_SUCCESS(rv, rv);
-  
+    rv = mMathMLChar.Paint(aPresContext, aRenderingContext, aDirtyRect,
+                           aWhichLayer, this, isSelected ? &selectedRect : nsnull);
 #if defined(NS_DEBUG) && defined(SHOW_BOUNDING_BOX)
     // for visual debug
-    rv = DisplayBoundingMetrics(aBuilder, this, mReference, mBoundingMetrics, aLists);
+    if (NS_FRAME_PAINT_LAYER_FOREGROUND == aWhichLayer &&
+        NS_MATHML_PAINT_BOUNDING_METRICS(mPresentationData.flags)) {
+      aRenderingContext.SetColor(NS_RGB(0,255,255));
+      nscoord x = mReference.x + mBoundingMetrics.leftBearing;
+      nscoord y = mReference.y - mBoundingMetrics.ascent;
+      nscoord w = mBoundingMetrics.rightBearing - mBoundingMetrics.leftBearing;
+      nscoord h = mBoundingMetrics.ascent + mBoundingMetrics.descent;
+      aRenderingContext.DrawRect(x,y,w,h);
+    }
 #endif
   }
   return rv;
@@ -152,12 +183,22 @@ nsMathMLmoFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
 
 // get the text that we enclose and setup our nsMathMLChar
 void
-nsMathMLmoFrame::ProcessTextData(PRBool aComputeStyleChange)
+nsMathMLmoFrame::ProcessTextData(nsPresContext* aPresContext)
 {
   mFlags = 0;
 
+  // kids can be comment-nodes, attribute-nodes, text-nodes...
+  // we use the DOM to ensure that we only look at text-nodes...
   nsAutoString data;
-  nsContentUtils::GetNodeTextContent(mContent, PR_FALSE, data);
+  PRUint32 numKids = mContent->GetChildCount();
+  for (PRUint32 kid = 0; kid < numKids; ++kid) {
+    nsCOMPtr<nsIDOMText> kidText(do_QueryInterface(mContent->GetChildAt(kid)));
+    if (kidText) {
+      nsAutoString kidData;
+      kidText->GetData(kidData);
+      data += kidData;
+    }
+  }
   PRInt32 length = data.Length();
   PRUnichar ch = (length == 0) ? kNullCh : data[0];
 
@@ -170,11 +211,10 @@ nsMathMLmoFrame::ProcessTextData(PRBool aComputeStyleChange)
 
   // don't bother doing anything special if we don't have a
   // single child with a visible text content
-  nsPresContext* presContext = GetPresContext();
   if (NS_MATHML_OPERATOR_IS_INVISIBLE(mFlags) || mFrames.GetLength() != 1) {
     data.Truncate(); // empty data to reset the char
-    mMathMLChar.SetData(presContext, data);
-    ResolveMathMLCharStyle(presContext, mContent, mStyleContext, &mMathMLChar, PR_FALSE);
+    mMathMLChar.SetData(aPresContext, data);
+    ResolveMathMLCharStyle(aPresContext, mContent, mStyleContext, &mMathMLChar, PR_FALSE);
     return;
   }
 
@@ -183,8 +223,8 @@ nsMathMLmoFrame::ProcessTextData(PRBool aComputeStyleChange)
   // sign (U+2212) which looks much better. For background on this, see
   // http://groups.google.com/groups?hl=en&th=66488daf1ade7635&rnum=1
   if (1 == length && ch == '-') {
-    ch = 0x2212;
-    data = ch;
+    data = PRUnichar(0x2212);
+    mFlags |= NS_MATHML_OPERATOR_CENTERED;
   }
 
   // cache the special bits: mutable, accent, movablelimits, centered.
@@ -214,7 +254,6 @@ nsMathMLmoFrame::ProcessTextData(PRBool aComputeStyleChange)
   // fonts that are not math-aware
   if (1 == length) {
     if ((ch == '+') || (ch == '=') || (ch == '*') ||
-        (ch == 0x2212) || // &minus;
         (ch == 0x2264) || // &le;
         (ch == 0x2265) || // &ge;
         (ch == 0x00D7)) { // &times;
@@ -223,8 +262,8 @@ nsMathMLmoFrame::ProcessTextData(PRBool aComputeStyleChange)
   }
 
   // cache the operator
-  mMathMLChar.SetData(presContext, data);
-  ResolveMathMLCharStyle(presContext, mContent, mStyleContext, &mMathMLChar, isMutable);
+  mMathMLChar.SetData(aPresContext, data);
+  ResolveMathMLCharStyle(aPresContext, mContent, mStyleContext, &mMathMLChar, isMutable);
 
   // cache the native direction -- beware of bug 133429...
   // mEmbellishData.direction must always retain our native direction, whereas
@@ -295,20 +334,21 @@ nsMathMLmoFrame::ProcessOperatorData()
       mEmbellishData.flags |= NS_MATHML_EMBELLISH_MOVABLELIMITS;
 
     // see if the accent attribute is there
-    GetAttribute(mContent, mPresentationData.mstyle, nsGkAtoms::accent_,
-                 value);
-    if (value.EqualsLiteral("true"))
-      mEmbellishData.flags |= NS_MATHML_EMBELLISH_ACCENT;
-    else if (value.EqualsLiteral("false"))
-      mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_ACCENT;
-
+    if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                     nsMathMLAtoms::accent_, value)) {
+      if (value.EqualsLiteral("true"))
+        mEmbellishData.flags |= NS_MATHML_EMBELLISH_ACCENT;
+      else if (value.EqualsLiteral("false"))
+        mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_ACCENT;
+    }
     // see if the movablelimits attribute is there
-    GetAttribute(mContent, mPresentationData.mstyle,
-                 nsGkAtoms::movablelimits_, value);
-    if (value.EqualsLiteral("true"))
-      mEmbellishData.flags |= NS_MATHML_EMBELLISH_MOVABLELIMITS;
-    else if (value.EqualsLiteral("false"))
-      mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_MOVABLELIMITS;
+    if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                     nsMathMLAtoms::movablelimits_, value)) {
+      if (value.EqualsLiteral("true"))
+        mEmbellishData.flags |= NS_MATHML_EMBELLISH_MOVABLELIMITS;
+      else if (value.EqualsLiteral("false"))
+        mEmbellishData.flags &= ~NS_MATHML_EMBELLISH_MOVABLELIMITS;
+    }
 
      // ---------------------------------------------------------------------
      // we will be called again to re-sync the rest of our state next time...
@@ -358,9 +398,8 @@ nsMathMLmoFrame::ProcessOperatorData()
 
     // find our form
     form = NS_MATHML_OPERATOR_FORM_INFIX;
-    GetAttribute(mContent, mPresentationData.mstyle, nsGkAtoms::form,
-                 value);
-    if (!value.IsEmpty()) {
+    if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                     nsMathMLAtoms::form_, value)) {
       if (value.EqualsLiteral("prefix"))
         form = NS_MATHML_OPERATOR_FORM_PREFIX;
       else if (value.EqualsLiteral("postfix"))
@@ -415,9 +454,8 @@ nsMathMLmoFrame::ProcessOperatorData()
 
   // lspace = number h-unit | namedspace
   nscoord leftSpace = mEmbellishData.leftSpace;
-  GetAttribute(mContent, mPresentationData.mstyle, nsGkAtoms::lspace_,
-               value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                   nsMathMLAtoms::lspace_, value)) {
     nsCSSValue cssValue;
     if (ParseNumericValue(value, cssValue) ||
         ParseNamedSpaceValue(mPresentationData.mstyle, value, cssValue))
@@ -432,9 +470,8 @@ nsMathMLmoFrame::ProcessOperatorData()
 
   // rspace = number h-unit | namedspace
   nscoord rightSpace = mEmbellishData.rightSpace;
-  GetAttribute(mContent, mPresentationData.mstyle, nsGkAtoms::rspace_,
-               value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                   nsMathMLAtoms::rspace_, value)) {
     nsCSSValue cssValue;
     if (ParseNumericValue(value, cssValue) ||
         ParseNamedSpaceValue(mPresentationData.mstyle, value, cssValue))
@@ -450,7 +487,7 @@ nsMathMLmoFrame::ProcessOperatorData()
   // little extra tuning to round lspace & rspace to at least a pixel so that
   // operators don't look as if they are colliding with their operands
   if (leftSpace || rightSpace) {
-    nscoord onePixel = nsPresContext::CSSPixelsToAppUnits(1);
+    nscoord onePixel = presContext->IntScaledPixelsToTwips(1);
     if (leftSpace && leftSpace < onePixel)
       leftSpace = onePixel;
     if (rightSpace && rightSpace < onePixel)
@@ -467,45 +504,45 @@ nsMathMLmoFrame::ProcessOperatorData()
 
   // For each attribute overriden by the user, turn off its bit flag.
   // symmetric|movablelimits|separator|largeop|accent|fence|stretchy|form
-  // special: accent and movablelimits are handled above,
+  // special: accent and movablelimits are handled in ProcessEmbellishData()
   // don't process them here
 
+  nsAutoString kfalse, ktrue;
+  kfalse.AssignLiteral("false");
+  ktrue.AssignLiteral("true");
+
   if (NS_MATHML_OPERATOR_IS_STRETCHY(mFlags)) {
-    GetAttribute(mContent, mPresentationData.mstyle,
-                 nsGkAtoms::stretchy_, value);
-    if (value.EqualsLiteral("false"))
+    if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                     nsMathMLAtoms::stretchy_, value) && value == kfalse)
       mFlags &= ~NS_MATHML_OPERATOR_STRETCHY;
   }
   if (NS_MATHML_OPERATOR_IS_FENCE(mFlags)) {
-    GetAttribute(mContent, mPresentationData.mstyle,
-                 nsGkAtoms::fence_, value);
-    if (value.EqualsLiteral("false"))
+    if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                     nsMathMLAtoms::fence_, value) && value == kfalse)
       mFlags &= ~NS_MATHML_OPERATOR_FENCE;
   }
   if (NS_MATHML_OPERATOR_IS_LARGEOP(mFlags)) {
-    GetAttribute(mContent, mPresentationData.mstyle,
-                 nsGkAtoms::largeop_, value);
-    if (value.EqualsLiteral("false"))
+    if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                     nsMathMLAtoms::largeop_, value) && value == kfalse)
       mFlags &= ~NS_MATHML_OPERATOR_LARGEOP;
   }
   if (NS_MATHML_OPERATOR_IS_SEPARATOR(mFlags)) {
-    GetAttribute(mContent, mPresentationData.mstyle,
-                 nsGkAtoms::separator_, value);
-    if (value.EqualsLiteral("false"))
+    if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                     nsMathMLAtoms::separator_, value) && value == kfalse)
       mFlags &= ~NS_MATHML_OPERATOR_SEPARATOR;
   }
-  GetAttribute(mContent, mPresentationData.mstyle, nsGkAtoms::symmetric_,
-               value);
-  if (value.EqualsLiteral("false"))
-    mFlags &= ~NS_MATHML_OPERATOR_SYMMETRIC;
-  else if (value.EqualsLiteral("true"))
-    mFlags |= NS_MATHML_OPERATOR_SYMMETRIC;
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                   nsMathMLAtoms::symmetric_, value)) {
+   if (value == kfalse)
+     mFlags &= ~NS_MATHML_OPERATOR_SYMMETRIC;
+   else if (value == ktrue)
+     mFlags |= NS_MATHML_OPERATOR_SYMMETRIC;
+  }
 
   // minsize = number [ v-unit | h-unit ] | namedspace
   mMinSize = float(NS_UNCONSTRAINEDSIZE);
-  GetAttribute(mContent, mPresentationData.mstyle, nsGkAtoms::minsize_,
-               value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                   nsMathMLAtoms::minsize_, value)) {
     nsCSSValue cssValue;
     if (ParseNumericValue(value, cssValue) ||
         ParseNamedSpaceValue(mPresentationData.mstyle, value, cssValue))
@@ -522,9 +559,8 @@ nsMathMLmoFrame::ProcessOperatorData()
 
       if ((eCSSUnit_Number == unit) || (eCSSUnit_Percent == unit)) {
         // see if the multiplicative inheritance should be from <mstyle>
-        GetAttribute(nsnull, mPresentationData.mstyle,
-                     nsGkAtoms::minsize_, value);
-        if (!value.IsEmpty()) {
+        if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(nsnull, mPresentationData.mstyle,
+                         nsMathMLAtoms::minsize_, value)) {
           if (ParseNumericValue(value, cssValue)) {
             if (cssValue.IsLengthUnit()) {
               mMinSize *= float(CalcLength(presContext, mStyleContext, cssValue));
@@ -538,9 +574,8 @@ nsMathMLmoFrame::ProcessOperatorData()
 
   // maxsize = number [ v-unit | h-unit ] | namedspace | infinity
   mMaxSize = float(NS_UNCONSTRAINEDSIZE);
-  GetAttribute(mContent, mPresentationData.mstyle, nsGkAtoms::maxsize_,
-               value);
-  if (!value.IsEmpty()) {
+  if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(mContent, mPresentationData.mstyle,
+                   nsMathMLAtoms::maxsize_, value)) {
     nsCSSValue cssValue;
     if (ParseNumericValue(value, cssValue) ||
         ParseNamedSpaceValue(mPresentationData.mstyle, value, cssValue))
@@ -557,9 +592,8 @@ nsMathMLmoFrame::ProcessOperatorData()
 
       if ((eCSSUnit_Number == unit) || (eCSSUnit_Percent == unit)) {
         // see if the multiplicative inheritance should be from <mstyle>
-        GetAttribute(nsnull, mPresentationData.mstyle,
-                     nsGkAtoms::maxsize_, value);
-        if (!value.IsEmpty()) {
+        if (NS_CONTENT_ATTR_HAS_VALUE == GetAttribute(nsnull, mPresentationData.mstyle,
+                         nsMathMLAtoms::maxsize_, value)) {
           if (ParseNumericValue(value, cssValue)) {
             if (cssValue.IsLengthUnit()) {
               mMaxSize *= float(CalcLength(presContext, mStyleContext, cssValue));
@@ -675,7 +709,6 @@ nsMathMLmoFrame::Stretch(nsIRenderingContext& aRenderingContext,
 
       if (mMaxSize != float(NS_UNCONSTRAINEDSIZE) && mMaxSize > 0.0f) {
         // if we are here, there is a user defined maxsize ...
-        //XXX Set stretchHint = NS_STRETCH_NORMAL? to honor the maxsize as close as possible?
         if (NS_MATHML_OPERATOR_MAXSIZE_IS_EXPLICIT(mFlags)) {
           // there is an explicit value like maxsize="20pt"
           // try to maintain the aspect ratio of the char
@@ -708,15 +741,6 @@ nsMathMLmoFrame::Stretch(nsIRenderingContext& aRenderingContext,
 
       if (mMinSize != float(NS_UNCONSTRAINEDSIZE) && mMinSize > 0.0f) {
         // if we are here, there is a user defined minsize ...
-        // always allow the char to stretch in its natural direction,
-        // even if it is different from the caller's direction 
-        if (aStretchDirection != NS_STRETCH_DIRECTION_DEFAULT &&
-            aStretchDirection != mEmbellishData.direction) {
-          aStretchDirection = NS_STRETCH_DIRECTION_DEFAULT;
-          // but when we are not honoring the requested direction
-          // we should not use the caller's container size either
-          container = initialSize;
-        }
         if (NS_MATHML_OPERATOR_MINSIZE_IS_EXPLICIT(mFlags)) {
           // there is an explicit value like minsize="20pt"
           // try to maintain the aspect ratio of the char
@@ -818,7 +842,7 @@ nsMathMLmoFrame::Stretch(nsIRenderingContext& aRenderingContext,
     // see bug 188467 for what is going on here
     nscoord dy = aDesiredStretchSize.ascent - (mBoundingMetrics.ascent + leading);
     aDesiredStretchSize.ascent = mBoundingMetrics.ascent + leading;
-    aDesiredStretchSize.height = aDesiredStretchSize.ascent + mBoundingMetrics.descent;
+    aDesiredStretchSize.descent = mBoundingMetrics.descent;
 
     firstChild->SetPosition(firstChild->GetPosition() - nsPoint(0, dy));
   }
@@ -827,9 +851,9 @@ nsMathMLmoFrame::Stretch(nsIRenderingContext& aRenderingContext,
     fm->GetMaxAscent(ascent);
     fm->GetMaxDescent(descent);
     aDesiredStretchSize.ascent = PR_MAX(mBoundingMetrics.ascent + leading, ascent);
-    aDesiredStretchSize.height = aDesiredStretchSize.ascent +
-                                 PR_MAX(mBoundingMetrics.descent + leading, descent);
+    aDesiredStretchSize.descent = PR_MAX(mBoundingMetrics.descent + leading, descent);
   }
+  aDesiredStretchSize.height = aDesiredStretchSize.ascent + aDesiredStretchSize.descent;
   aDesiredStretchSize.width = mBoundingMetrics.width;
   aDesiredStretchSize.mBoundingMetrics = mBoundingMetrics;
   mReference.x = 0;
@@ -940,6 +964,10 @@ nsMathMLmoFrame::Reflow(nsPresContext*          aPresContext,
     aDesiredSize.width = 0;
     aDesiredSize.height = 0;
     aDesiredSize.ascent = 0;
+    aDesiredSize.descent = 0;
+    if (aDesiredSize.mComputeMEW) {
+      aDesiredSize.mMaxElementWidth = 0;
+    }
     aDesiredSize.mBoundingMetrics.Clear();
     aStatus = NS_FRAME_COMPLETE;
 
@@ -951,15 +979,16 @@ nsMathMLmoFrame::Reflow(nsPresContext*          aPresContext,
                                     aReflowState, aStatus);
 }
 
-/* virtual */ void
-nsMathMLmoFrame::MarkIntrinsicWidthsDirty()
+NS_IMETHODIMP
+nsMathMLmoFrame::ReflowDirtyChild(nsIPresShell* aPresShell,
+                                  nsIFrame*     aChild)
 {
-  // if we get this, it may mean that something changed in the text
-  // content. So blow away everything an re-build the automatic data
-  // from the parent of our outermost embellished container (we ensure
-  // that we are the core, not just a sibling of the core)
+  // if we get this, it means it was called by the nsTextFrame beneath us, and 
+  // this means something changed in the text content. So blow away everything
+  // an re-build the automatic data from the parent of our outermost embellished
+  // container (we ensure that we are the core, not just a sibling of the core)
 
-  ProcessTextData(PR_FALSE);
+  ProcessTextData(GetPresContext());
 
   nsIFrame* target = this;
   nsEmbellishData embellishData;
@@ -969,22 +998,19 @@ nsMathMLmoFrame::MarkIntrinsicWidthsDirty()
   } while (embellishData.coreFrame == this);
 
   // we have automatic data to update in the children of the target frame
-  // XXXldb This should really be marking dirty rather than rebuilding
-  // so that we don't rebuild multiple times for the same change.
-  RebuildAutomaticDataForChildren(target);
-
-  nsMathMLContainerFrame::MarkIntrinsicWidthsDirty();
+  return ReLayoutChildren(target);
 }
 
 NS_IMETHODIMP
-nsMathMLmoFrame::AttributeChanged(PRInt32         aNameSpaceID,
+nsMathMLmoFrame::AttributeChanged(nsIContent*     aContent,
+                                  PRInt32         aNameSpaceID,
                                   nsIAtom*        aAttribute,
                                   PRInt32         aModType)
 {
   // check if this is an attribute that can affect the embellished hierarchy
   // in a significant way and re-layout the entire hierarchy.
-  if (nsGkAtoms::accent_ == aAttribute ||
-      nsGkAtoms::movablelimits_ == aAttribute) {
+  if (nsMathMLAtoms::accent_ == aAttribute ||
+      nsMathMLAtoms::movablelimits_ == aAttribute) {
 
     // set the target as the parent of our outermost embellished container
     // (we ensure that we are the core, not just a sibling of the core)
@@ -1000,7 +1026,8 @@ nsMathMLmoFrame::AttributeChanged(PRInt32         aNameSpaceID,
   }
 
   return nsMathMLTokenFrame::
-         AttributeChanged(aNameSpaceID, aAttribute, aModType);
+         AttributeChanged(aContent, aNameSpaceID,
+                          aAttribute, aModType);
 }
 
 // ----------------------

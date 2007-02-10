@@ -1,5 +1,4 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-// vim:set et sw=2 sts=2 cin:
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,342 +34,200 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
+#include "nsIDOMHTMLObjectElement.h"
 #include "nsGenericHTMLElement.h"
-#include "nsObjectLoadingContent.h"
-#include "nsGkAtoms.h"
+#include "nsImageLoadingContent.h"
+#include "nsHTMLAtoms.h"
+#include "nsStyleConsts.h"
 #include "nsDOMError.h"
+
 #include "nsIDocument.h"
+#include "nsIPresShell.h"
 #include "nsIDOMDocument.h"
-#include "nsIDOMHTMLAppletElement.h"
-#include "nsIDOMHTMLEmbedElement.h"
-#ifdef MOZ_SVG
-#include "nsIDOMGetSVGDocument.h"
-#include "nsIDOMSVGDocument.h"
-#endif
+#include "nsIWebNavigation.h"
+#include "nsIFormControl.h"
 
-// XXX this is to get around conflicts with windows.h defines
-// introduced through jni.h
-#if defined (XP_WIN) && ! defined (WINCE)
-#undef GetClassName
-#undef GetObject
-#endif
-
-class nsHTMLSharedObjectElement : public nsGenericHTMLElement,
-                                  public nsObjectLoadingContent,
-                                  public nsIDOMHTMLAppletElement,
-                                  public nsIDOMHTMLEmbedElement
-#ifdef MOZ_SVG
-                                  , public nsIDOMGetSVGDocument
-#endif
+class nsHTMLObjectElement : public nsGenericHTMLFormElement,
+                            public nsImageLoadingContent,
+                            public nsIDOMHTMLObjectElement
 {
 public:
-  nsHTMLSharedObjectElement(nsINodeInfo *aNodeInfo,
-                            PRBool aFromParser = PR_FALSE);
-  virtual ~nsHTMLSharedObjectElement();
+  nsHTMLObjectElement(nsINodeInfo *aNodeInfo);
+  virtual ~nsHTMLObjectElement();
 
   // nsISupports
   NS_DECL_ISUPPORTS_INHERITED
 
   // nsIDOMNode
-  NS_FORWARD_NSIDOMNODE(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsGenericHTMLFormElement::)
 
   // nsIDOMElement
-  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMELEMENT(nsGenericHTMLFormElement::)
 
   // nsIDOMHTMLElement
-  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLElement::)
+  NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLFormElement::)
 
-  // nsIDOMHTMLAppletElement
-  NS_DECL_NSIDOMHTMLAPPLETELEMENT
+  // nsIDOMHTMLObjectElement
+  NS_DECL_NSIDOMHTMLOBJECTELEMENT
+  
+  // nsIContent
+  // Let plugin decide whether it wants focus from mouse clicks
+  virtual PRBool IsFocusable(PRInt32 *aTabIndex = nsnull)
+    { if (aTabIndex) GetTabIndex(aTabIndex); return PR_TRUE; }
 
-  // Can't use macro for nsIDOMHTMLEmbedElement because it has conflicts with
-  // NS_DECL_NSIDOMHTMLAPPLETELEMENT.
-
-  // nsIDOMHTMLEmbedElement
-  NS_IMETHOD GetSrc(nsAString &aSrc);
-  NS_IMETHOD SetSrc(const nsAString &aSrc);
-  NS_IMETHOD GetType(nsAString &aType);
-  NS_IMETHOD SetType(const nsAString &aType);
-
-#ifdef MOZ_SVG
-  // nsIDOMGetSVGDocument
-  NS_DECL_NSIDOMGETSVGDOCUMENT
-#endif
-
-  virtual nsresult BindToTree(nsIDocument *aDocument, nsIContent *aParent,
-                              nsIContent *aBindingParent,
-                              PRBool aCompileEventHandlers);
-  virtual void UnbindFromTree(PRBool aDeep = PR_TRUE,
-                              PRBool aNullParent = PR_TRUE);
-  virtual nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom *aName,
-                           nsIAtom *aPrefix, const nsAString &aValue,
-                           PRBool aNotify);
-
-  NS_IMETHOD GetTabIndex(PRInt32 *aTabIndex);
-  NS_IMETHOD SetTabIndex(PRInt32 aTabIndex);
-  virtual PRBool IsFocusable(PRInt32 *aTabIndex = nsnull);
-  virtual PRUint32 GetDesiredIMEState();
-
-  virtual nsresult DoneAddingChildren(PRBool aHaveNotified);
-  virtual PRBool IsDoneAddingChildren();
-
-  virtual PRBool ParseAttribute(PRInt32 aNamespaceID,
-                                nsIAtom *aAttribute,
-                                const nsAString &aValue,
-                                nsAttrValue &aResult);
-  virtual nsMapRuleToAttributesFunc GetAttributeMappingFunction() const;
-  NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom *aAttribute) const;
-  virtual PRInt32 IntrinsicState() const;
-
-  // nsObjectLoadingContent
-  virtual PRUint32 GetCapabilities() const;
-
-  virtual nsresult Clone(nsINodeInfo *aNodeInfo, nsINode **aResult) const;
-
-private:
-  /**
-   * Calls LoadObject with the correct arguments to start the plugin load.
-   */
-  NS_HIDDEN_(void) StartObjectLoad(PRBool aNotify);
-
-  void GetTypeAttrValue(nsCString &aValue) const
+  // Overriden nsIFormControl methods
+  NS_IMETHOD_(PRInt32) GetType()
   {
-    if (mNodeInfo->Equals(nsGkAtoms::applet)) {
-      aValue.AppendLiteral("application/x-java-vm");
-    }
-    else {
-      nsAutoString type;
-      GetAttr(kNameSpaceID_None, nsGkAtoms::type, type);
-
-      CopyUTF16toUTF8(type, aValue);
-    }
+    return NS_FORM_OBJECT;
   }
 
-  nsIAtom *URIAttrName() const
-  {
-    return mNodeInfo->Equals(nsGkAtoms::applet) ?
-           nsGkAtoms::code :
-           nsGkAtoms::src;
-  }
+  NS_IMETHOD Reset();
+  NS_IMETHOD SubmitNamesValues(nsIFormSubmission* aFormSubmission,
+                               nsIContent* aSubmitElement);
+  NS_IMETHOD SaveState();
+  virtual PRBool RestoreState(nsPresState* aState);
 
-  // mIsDoneAddingChildren is only really used for <applet>.  This boolean is
-  // always true for <embed>, per the documentation in nsIContent.h.
-  PRPackedBool mIsDoneAddingChildren;
+  virtual PRBool ParseAttribute(nsIAtom* aAttribute,
+                                const nsAString& aValue,
+                                nsAttrValue& aResult);
+  nsMapRuleToAttributesFunc GetAttributeMappingFunction() const;
+  NS_IMETHOD_(PRBool) IsAttributeMapped(const nsIAtom* aAttribute) const;
 };
 
 
-NS_IMPL_NS_NEW_HTML_ELEMENT_CHECK_PARSER(SharedObject)
+NS_IMPL_NS_NEW_HTML_ELEMENT(Object)
 
 
-nsHTMLSharedObjectElement::nsHTMLSharedObjectElement(nsINodeInfo *aNodeInfo,
-                                                     PRBool aFromParser)
-  : nsGenericHTMLElement(aNodeInfo),
-    mIsDoneAddingChildren(aNodeInfo->Equals(nsGkAtoms::embed) || !aFromParser)
+nsHTMLObjectElement::nsHTMLObjectElement(nsINodeInfo *aNodeInfo)
+  : nsGenericHTMLFormElement(aNodeInfo)
 {
 }
 
-nsHTMLSharedObjectElement::~nsHTMLSharedObjectElement()
+nsHTMLObjectElement::~nsHTMLObjectElement()
 {
   DestroyImageLoadingContent();
 }
 
-PRBool
-nsHTMLSharedObjectElement::IsDoneAddingChildren()
-{
-  return mIsDoneAddingChildren;
-}
 
-nsresult
-nsHTMLSharedObjectElement::DoneAddingChildren(PRBool aHaveNotified)
-{
-  if (!mIsDoneAddingChildren) {
-    mIsDoneAddingChildren = PR_TRUE;
+NS_IMPL_ADDREF_INHERITED(nsHTMLObjectElement, nsGenericElement) 
+NS_IMPL_RELEASE_INHERITED(nsHTMLObjectElement, nsGenericElement) 
 
-    // If we're already in a document, we need to trigger the load
-    // Otherwise, BindToTree takes care of that.
-    if (IsInDoc()) {
-      StartObjectLoad(aHaveNotified);
-    }
-  }
-
-  return NS_OK;
-}
-
-NS_IMPL_ADDREF_INHERITED(nsHTMLSharedObjectElement, nsGenericElement) 
-NS_IMPL_RELEASE_INHERITED(nsHTMLSharedObjectElement, nsGenericElement) 
-
-NS_HTML_CONTENT_INTERFACE_MAP_AMBIGOUS_BEGIN(nsHTMLSharedObjectElement,
-                                             nsGenericHTMLElement,
-                                             nsIDOMHTMLAppletElement)
-  NS_INTERFACE_MAP_ENTRY_IF_TAG(nsIDOMHTMLAppletElement, applet)
-  NS_INTERFACE_MAP_ENTRY_IF_TAG(nsIDOMHTMLEmbedElement, embed)
-#ifdef MOZ_SVG
-  NS_INTERFACE_MAP_ENTRY_IF_TAG(nsIDOMGetSVGDocument, embed)
-#endif
+// QueryInterface implementation for nsHTMLObjectElement
+NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLObjectElement,
+                                    nsGenericHTMLFormElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLObjectElement)
   NS_INTERFACE_MAP_ENTRY(imgIDecoderObserver)
-  NS_INTERFACE_MAP_ENTRY(nsIRequestObserver)
-  NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
-  NS_INTERFACE_MAP_ENTRY(nsIFrameLoaderOwner)
-  NS_INTERFACE_MAP_ENTRY(nsIObjectLoadingContent)
+  NS_INTERFACE_MAP_ENTRY(imgIDecoderObserver_MOZILLA_1_8_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIImageLoadingContent)
-  NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
-  NS_INTERFACE_MAP_ENTRY(nsIChannelEventSink)
-  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
-  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO_IF_TAG(HTMLAppletElement, applet)
-  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO_IF_TAG(HTMLEmbedElement, embed)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLObjectElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
-NS_IMPL_ELEMENT_CLONE(nsHTMLSharedObjectElement)
+// nsIDOMHTMLObjectElement
 
-nsresult
-nsHTMLSharedObjectElement::BindToTree(nsIDocument *aDocument,
-                                      nsIContent *aParent,
-                                      nsIContent *aBindingParent,
-                                      PRBool aCompileEventHandlers)
+
+NS_IMPL_DOM_CLONENODE(nsHTMLObjectElement)
+
+
+NS_IMETHODIMP
+nsHTMLObjectElement::GetForm(nsIDOMHTMLFormElement** aForm)
 {
-  nsresult rv = nsGenericHTMLElement::BindToTree(aDocument, aParent,
-                                                 aBindingParent,
-                                                 aCompileEventHandlers);
-  NS_ENSURE_SUCCESS(rv, rv);
+  return nsGenericHTMLFormElement::GetForm(aForm);
+}
 
-  // If we already have all the children, start the load.
-  if (mIsDoneAddingChildren) {
-    // Don't need to notify: We have no frames yet, since we weren't in a
-    // document
-    StartObjectLoad(PR_FALSE);
-  }
+// nsIFormControl
 
+NS_IMETHODIMP
+nsHTMLObjectElement::Reset()
+{
   return NS_OK;
 }
 
-void
-nsHTMLSharedObjectElement::UnbindFromTree(PRBool aDeep,
-                                          PRBool aNullParent)
+NS_IMETHODIMP
+nsHTMLObjectElement::SubmitNamesValues(nsIFormSubmission* aFormSubmission,
+                                       nsIContent* aSubmitElement)
 {
-  RemovedFromDocument();
-  nsGenericHTMLElement::UnbindFromTree(aDeep, aNullParent);
+  return NS_OK;
 }
 
-
-
-nsresult
-nsHTMLSharedObjectElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom *aName,
-                                   nsIAtom *aPrefix, const nsAString &aValue,
-                                   PRBool aNotify)
+NS_IMETHODIMP
+nsHTMLObjectElement::SaveState()
 {
-  // If we plan to call LoadObject, we want to do it first so that the
-  // object load kicks off _before_ the reflow triggered by the SetAttr.  But if
-  // aNotify is false, we are coming from the parser or some such place; we'll
-  // get bound after all the attributes have been set, so we'll do the
-  // object load from BindToTree/DoneAddingChildren.
-  // Skip the LoadObject call in that case.
-  if (aNotify && aNameSpaceID == kNameSpaceID_None &&
-      aName == URIAttrName()) {
-    nsCAutoString type;
-    GetTypeAttrValue(type);
-    LoadObject(aValue, aNotify, type, PR_TRUE);
-  }
-
-  return nsGenericHTMLElement::SetAttr(aNameSpaceID, aName, aPrefix, aValue,
-                                       aNotify);
+  return NS_OK;
 }
 
 PRBool
-nsHTMLSharedObjectElement::IsFocusable(PRInt32 *aTabIndex)
+nsHTMLObjectElement::RestoreState(nsPresState* aState)
 {
-  if (mNodeInfo->Equals(nsGkAtoms::embed) || Type() == eType_Plugin) {
-    // Has plugin content: let the plugin decide what to do in terms of
-    // internal focus from mouse clicks
-    if (aTabIndex) {
-      GetTabIndex(aTabIndex);
-    }
-  
-    return PR_TRUE;
-  }
-
-  return nsGenericHTMLElement::IsFocusable(aTabIndex);
+  return PR_FALSE;
 }
 
-PRUint32
-nsHTMLSharedObjectElement::GetDesiredIMEState()
-{
-  if (Type() == eType_Plugin) {
-    return nsIContent::IME_STATUS_ENABLE;
-  }
-   
-  return nsGenericHTMLElement::GetDesiredIMEState();
-}
+NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Code, code)
+NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Align, align)
+NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Archive, archive)
+NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Border, border)
+NS_IMPL_URI_ATTR(nsHTMLObjectElement, CodeBase, codebase)
+NS_IMPL_STRING_ATTR(nsHTMLObjectElement, CodeType, codetype)
+NS_IMPL_URI_ATTR(nsHTMLObjectElement, Data, data)
+NS_IMPL_BOOL_ATTR(nsHTMLObjectElement, Declare, declare)
+NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Height, height)
+NS_IMPL_INT_ATTR(nsHTMLObjectElement, Hspace, hspace)
+NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Name, name)
+NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Standby, standby)
+NS_IMPL_INT_ATTR(nsHTMLObjectElement, TabIndex, tabindex)
+NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Type, type)
+NS_IMPL_STRING_ATTR(nsHTMLObjectElement, UseMap, usemap)
+NS_IMPL_INT_ATTR(nsHTMLObjectElement, Vspace, vspace)
+NS_IMPL_STRING_ATTR(nsHTMLObjectElement, Width, width)
 
-NS_IMPL_STRING_ATTR(nsHTMLSharedObjectElement, Align, align)
-NS_IMPL_STRING_ATTR(nsHTMLSharedObjectElement, Alt, alt)
-NS_IMPL_STRING_ATTR(nsHTMLSharedObjectElement, Archive, archive)
-NS_IMPL_URI_ATTR_WITH_BASE(nsHTMLSharedObjectElement, Code, code, codebase)
-NS_IMPL_URI_ATTR(nsHTMLSharedObjectElement, CodeBase, codebase)
-NS_IMPL_STRING_ATTR(nsHTMLSharedObjectElement, Height, height)
-NS_IMPL_INT_ATTR(nsHTMLSharedObjectElement, Hspace, hspace)
-NS_IMPL_STRING_ATTR(nsHTMLSharedObjectElement, Name, name)
-NS_IMPL_URI_ATTR_WITH_BASE(nsHTMLSharedObjectElement, Object, object, codebase)
-NS_IMPL_URI_ATTR(nsHTMLSharedObjectElement, Src, src)
-NS_IMPL_INT_ATTR(nsHTMLSharedObjectElement, TabIndex, tabindex)
-NS_IMPL_STRING_ATTR(nsHTMLSharedObjectElement, Type, type)
-NS_IMPL_INT_ATTR(nsHTMLSharedObjectElement, Vspace, vspace)
-NS_IMPL_STRING_ATTR(nsHTMLSharedObjectElement, Width, width)
 
-#ifdef MOZ_SVG
 NS_IMETHODIMP
-nsHTMLSharedObjectElement::GetSVGDocument(nsIDOMSVGDocument **aResult)
+nsHTMLObjectElement::GetContentDocument(nsIDOMDocument** aContentDocument)
 {
-  NS_ENSURE_ARG_POINTER(aResult);
+  NS_ENSURE_ARG_POINTER(aContentDocument);
 
-  *aResult = nsnull;
+  *aContentDocument = nsnull;
 
-  if (!IsInDoc()) {
+  if (!mDocument) {
     return NS_OK;
   }
 
-  // XXXbz should this use GetCurrentDoc()?  sXBL/XBL2 issue!
-  nsIDocument *sub_doc = GetOwnerDoc()->GetSubDocumentFor(this);
+  nsIDocument *sub_doc = mDocument->GetSubDocumentFor(this);
+
   if (!sub_doc) {
     return NS_OK;
   }
 
-  return CallQueryInterface(sub_doc, aResult);
+  return CallQueryInterface(sub_doc, aContentDocument);
 }
-#endif
 
 PRBool
-nsHTMLSharedObjectElement::ParseAttribute(PRInt32 aNamespaceID,
-                                          nsIAtom *aAttribute,
-                                          const nsAString &aValue,
-                                          nsAttrValue &aResult)
+nsHTMLObjectElement::ParseAttribute(nsIAtom* aAttribute,
+                                    const nsAString& aValue,
+                                    nsAttrValue& aResult)
 {
-  if (aNamespaceID == kNameSpaceID_None) {
-    if (aAttribute == nsGkAtoms::align) {
-      return ParseAlignValue(aValue, aResult);
-    }
-    if (ParseImageAttribute(aAttribute, aValue, aResult)) {
-      return PR_TRUE;
-    }
+  if (aAttribute == nsHTMLAtoms::align) {
+    return ParseAlignValue(aValue, aResult);
+  }
+  if (ParseImageAttribute(aAttribute, aValue, aResult)) {
+    return PR_TRUE;
   }
 
-  return nsGenericHTMLElement::ParseAttribute(aNamespaceID, aAttribute, aValue,
-                                              aResult);
+  return nsGenericHTMLElement::ParseAttribute(aAttribute, aValue, aResult);
 }
 
 static void
-MapAttributesIntoRule(const nsMappedAttributes *aAttributes,
-                      nsRuleData *aData)
+MapAttributesIntoRule(const nsMappedAttributes* aAttributes,
+                      nsRuleData* aData)
 {
-  nsGenericHTMLElement::MapImageBorderAttributeInto(aAttributes, aData);
-  nsGenericHTMLElement::MapImageMarginAttributeInto(aAttributes, aData);
-  nsGenericHTMLElement::MapImageSizeAttributesInto(aAttributes, aData);
-  nsGenericHTMLElement::MapImageAlignAttributeInto(aAttributes, aData);
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
+  nsGenericHTMLFormElement::MapImageAlignAttributeInto(aAttributes, aData);
+  nsGenericHTMLFormElement::MapImageBorderAttributeInto(aAttributes, aData);
+  nsGenericHTMLFormElement::MapImageMarginAttributeInto(aAttributes, aData);
+  nsGenericHTMLFormElement::MapImageSizeAttributesInto(aAttributes, aData);
+  nsGenericHTMLFormElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP_(PRBool)
-nsHTMLSharedObjectElement::IsAttributeMapped(const nsIAtom *aAttribute) const
+nsHTMLObjectElement::IsAttributeMapped(const nsIAtom* aAttribute) const
 {
   static const MappedAttributeEntry* const map[] = {
     sCommonAttributeMap,
@@ -384,46 +241,7 @@ nsHTMLSharedObjectElement::IsAttributeMapped(const nsIAtom *aAttribute) const
 
 
 nsMapRuleToAttributesFunc
-nsHTMLSharedObjectElement::GetAttributeMappingFunction() const
+nsHTMLObjectElement::GetAttributeMappingFunction() const
 {
   return &MapAttributesIntoRule;
-}
-
-void
-nsHTMLSharedObjectElement::StartObjectLoad(PRBool aNotify)
-{
-  nsCAutoString type;
-  GetTypeAttrValue(type);
-
-  nsAutoString uri;
-  if (!GetAttr(kNameSpaceID_None, URIAttrName(), uri)) {
-    // Be sure to call the nsIURI version if we have no attribute
-    // That handles the case where no URI is specified. An empty string would
-    // get interpreted as the page itself, instead of absence of URI.
-    LoadObject(nsnull, aNotify, type);
-  }
-  else {
-    LoadObject(uri, aNotify, type);
-  }
-}
-
-PRInt32
-nsHTMLSharedObjectElement::IntrinsicState() const
-{
-  return nsGenericHTMLElement::IntrinsicState() | ObjectState();
-}
-
-PRUint32
-nsHTMLSharedObjectElement::GetCapabilities() const
-{
-  PRUint32 capabilities = eSupportPlugins | eOverrideServerType;
-  if (mNodeInfo->Equals(nsGkAtoms::embed)) {
-    capabilities |=
-#ifdef MOZ_SVG
-                    eSupportSVG |
-#endif
-                    eSupportImages;
-  }
-
-  return capabilities;
 }

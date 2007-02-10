@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * A unique per-element set of attributes that is used as an
- * nsIStyleRule; used to implement presentational attributes.
- */
-
 #include "nsMappedAttributes.h"
 #include "nsHTMLStyleSheet.h"
 #include "nsRuleWalker.h"
@@ -222,10 +217,10 @@ nsMappedAttributes::List(FILE* out, PRInt32 aIndent) const
     else {
       Attrs()[i].mName.NodeInfo()->GetQualifiedName(buffer);
     }
-    fputs(NS_LossyConvertUTF16toASCII(buffer).get(), out);
+    fputs(NS_LossyConvertUCS2toASCII(buffer).get(), out);
 
     Attrs()[i].mValue.ToString(buffer);
-    fputs(NS_LossyConvertUTF16toASCII(buffer).get(), out);
+    fputs(NS_LossyConvertUCS2toASCII(buffer).get(), out);
     fputs("\n", out);
   }
 
@@ -234,9 +229,8 @@ nsMappedAttributes::List(FILE* out, PRInt32 aIndent) const
 #endif
 
 void
-nsMappedAttributes::RemoveAttrAt(PRUint32 aPos, nsAttrValue& aValue)
+nsMappedAttributes::RemoveAttrAt(PRUint32 aPos)
 {
-  Attrs()[aPos].mValue.SwapValueWith(aValue);
   Attrs()[aPos].~InternalAttr();
   memmove(&Attrs()[aPos], &Attrs()[aPos + 1],
           (mAttrCount - aPos - 1) * sizeof(InternalAttr));

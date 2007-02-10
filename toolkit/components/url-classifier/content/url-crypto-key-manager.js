@@ -1,38 +1,38 @@
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
-#
-# The contents of this file are subject to the Mozilla Public License Version
-# 1.1 (the "License"); you may not use this file except in compliance with
-# the License. You may obtain a copy of the License at
-# http://www.mozilla.org/MPL/
-#
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-#
-# The Original Code is Google Safe Browsing.
-#
-# The Initial Developer of the Original Code is Google Inc.
-# Portions created by the Initial Developer are Copyright (C) 2006
-# the Initial Developer. All Rights Reserved.
-#
-# Contributor(s):
-#   Fritz Schneider <fritz@google.com> (original author)
-#
-# Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or
-# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-#
-# ***** END LICENSE BLOCK *****
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is Google Safe Browsing.
+ *
+ * The Initial Developer of the Original Code is Google Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2006
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Fritz Schneider <fritz@google.com> (original author)
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 
 // This file implements the tricky business of managing the keys for our 
@@ -167,24 +167,10 @@ PROT_UrlCryptoKeyManager.prototype.setKeyUrl = function(keyUrl) {
 
   // Check to see if we should make a new getkey request.
   var prefs = new G_Preferences(PROT_UrlCryptoKeyManager.NEXT_REKEY_PREF);
-  var nextRekey = prefs.getPref(this.getPrefName_(this.keyUrl_), 0);
+  var nextRekey = prefs.getPref(this.keyUrl_, 0);
   if (nextRekey < parseInt(Date.now() / 1000, 10)) {
     this.reKey();
   }
-}
-
-/**
- * Given a url, return the pref value to use (pref contains last update time).
- * We basically use the url up until query parameters.  This avoids duplicate
- * pref entries as version number changes over time.
- * @param url String getkey URL
- */
-PROT_UrlCryptoKeyManager.prototype.getPrefName_ = function(url) {
-  var queryParam = url.indexOf("?");
-  if (queryParam != -1) {
-    return url.substring(0, queryParam);
-  }
-  return url;
 }
 
 /**
@@ -210,7 +196,7 @@ PROT_UrlCryptoKeyManager.prototype.reKey = function() {
     var prefs = new G_Preferences(PROT_UrlCryptoKeyManager.NEXT_REKEY_PREF);
     var nextRekey = parseInt(Date.now() / 1000, 10)
                   + PROT_UrlCryptoKeyManager.KEY_MIN_UPDATE_TIME;
-    prefs.setPref(this.getPrefName_(this.keyUrl_), nextRekey);
+    prefs.setPref(this.keyUrl_, nextRekey);
   }
 }
 

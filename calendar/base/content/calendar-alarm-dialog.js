@@ -72,8 +72,6 @@ function addAlarm(event)
        dump("unable to play sound...\n" + ex + "\n");
      }
    }
-
-  window.getAttention();
 }
 
 function onDismissAll()

@@ -40,7 +40,6 @@ var reporterListener = {
 
   QueryInterface: function(aIID) {
     if (aIID.equals(Components.interfaces.nsIWebProgressListener)   ||
-        aIID.equals(Components.interfaces.nsIWebProgressListener2)  ||
         aIID.equals(Components.interfaces.nsISupportsWeakReference) ||
         aIID.equals(Components.interfaces.nsISupports))
       return this;
@@ -68,14 +67,11 @@ var reporterListener = {
   onProgressChange: function() {  },
   onStatusChange: function() {  },
   onSecurityChange: function() {  },
-  onLinkIconAvailable: function() {  },
-  onProgressChange64: function() { },
-  onRefreshAttempted: function() { return true; }
+  onLinkIconAvailable: function() {  }
 }
 
 function onBrowserLoad() {
-  if ("undefined" != typeof(gBrowser))
-    gBrowser.addProgressListener(reporterListener);
+  gBrowser.addProgressListener(reporterListener);
 }
 
 function loadReporterWizard() {

@@ -36,15 +36,15 @@
 
 # NSIS defines for nightly builds.
 # The release build branding.nsi is located in other-license/branding/firefox/
-!define BrandShortName        "Minefield"
-!define BrandFullName         "Minefield"
+!define BrandShortName        "Bon Echo"
+!define BrandFullName         "Bon Echo"
 # BrandFullNameInternal is used for some registry and file system values that
 # should not contain release that may be in the BrandFullName (e.g. Beta 1, etc.)
-!define BrandFullNameInternal "Minefield"
+!define BrandFullNameInternal "Bon Echo"
 !define CompanyName           "mozilla.org"
 !define URLInfoAbout          "http://www.mozilla.org"
 !define URLUpdateInfo         "http://www.mozilla.org/projects/firefox"
 !define SurveyURL             "https://survey.mozilla.com/1/Mozilla%20Firefox/${AppVersion}/${AB_CD}/exit.html"
 
 # Percentage of new "Standard" installs to enable talkback for
-!define RandomPercent         "100"
+!define RandomPercent         "75"

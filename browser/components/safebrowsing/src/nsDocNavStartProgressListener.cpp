@@ -38,14 +38,13 @@
 #include "nsCURILoader.h"
 #include "nsDocNavStartProgressListener.h"
 #include "nsIChannel.h"
-#include "nsINestedURI.h"
+#include "nsIJARURI.h"
 #include "nsIRequest.h"
 #include "nsITimer.h"
 #include "nsIURI.h"
 #include "nsIWebProgress.h"
-#include "nsComponentManagerUtils.h"
 #include "nsServiceManagerUtils.h"
-#include "nsStringAPI.h"
+#include "nsString.h"
 
 NS_IMPL_ISUPPORTS4(nsDocNavStartProgressListener,
                    nsIDocNavStartProgressListener,
@@ -200,12 +199,12 @@ nsDocNavStartProgressListener::IsSpurious(nsIURI* aURI, PRBool* isSpurious)
                 scheme.Equals("file") ||
                 scheme.Equals("javascript");
 
-  if (!*isSpurious) {
-    // If there's a nested URI, we want to check the inner URI's scheme
-    nsCOMPtr<nsINestedURI> nestedURI = do_QueryInterface(aURI);
-    if (nestedURI) {
-      nsCOMPtr<nsIURI> innerURI;
-      rv = nestedURI->GetInnerURI(getter_AddRefs(innerURI));
+  if (scheme.Equals("jar")) {
+    // If it's a jar URI, we want to check the inner URI's scheme
+    nsCOMPtr<nsIJARURI> jarURI;
+    nsCOMPtr<nsIURI> innerURI;
+    if (jarURI = do_QueryInterface(aURI)) {
+      rv = jarURI->GetJARFile(getter_AddRefs(innerURI));
       NS_ENSURE_SUCCESS(rv, rv);
       return IsSpurious(innerURI, isSpurious);
     }
@@ -333,7 +332,7 @@ nsDocNavStartProgressListener::Observe(nsISupports *subject, const char *topic,
         // We don't care about URL fragments so we take that off.
         PRInt32 pos = uriString.FindChar('#');
         if (pos > -1) {
-          uriString.SetLength(pos);
+          uriString.Truncate(pos);
         }
         
         mCallback->OnDocNavStart(request, uriString);

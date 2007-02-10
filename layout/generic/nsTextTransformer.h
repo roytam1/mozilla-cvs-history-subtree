@@ -34,12 +34,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-/*
- * class for transformation of text before rendering, including CSS
- * text-transform
- */
-
 #ifndef nsTextTransformer_h___
 #define nsTextTransformer_h___
 
@@ -56,15 +50,13 @@ class nsIContent;
 class nsIFrame;
 class nsILineBreaker;
 class nsIWordBreaker;
-class nsICaseConversion;
 
 // XXX I'm sure there are other special characters
-#define CH_NBSP   160
-#define CH_ENSP   8194 //<!ENTITY ensp    CDATA "&#8194;" -- en space, U+2002 ISOpub -->
-#define CH_EMSP   8195 //<!ENTITY emsp    CDATA "&#8195;" -- em space, U+2003 ISOpub -->
-#define CH_THINSP 8291 //<!ENTITY thinsp  CDATA "&#8201;" -- thin space, U+2009 ISOpub -->
-#define CH_SHY    173
-#define CH_CJKSP  12288 // U+3000 IDEOGRAPHIC SPACE (CJK Full-Width Space)
+#define CH_NBSP 160
+#define CH_ENSP 8194		//<!ENTITY ensp    CDATA "&#8194;" -- en space, U+2002 ISOpub -->
+#define CH_EMSP 8195		//<!ENTITY emsp    CDATA "&#8195;" -- em space, U+2003 ISOpub -->
+#define CH_THINSP 8291	//<!ENTITY thinsp  CDATA "&#8201;" -- thin space, U+2009 ISOpub -->
+#define CH_SHY  173
 
 #ifdef IBMBIDI
 #define CH_LRM  8206  //<!ENTITY lrm     CDATA "&#8206;" -- left-to-right mark, U+200E NEW RFC 2070 -->
@@ -92,40 +84,6 @@ class nsICaseConversion;
   (((_ch) == CH_SHY) || ((_ch) == '\r'))
 #endif
 
-/* Unicode codepoints that could be the first of a lam alef pair converted to
- * a lam alef ligature by ArabicShaping()
- */
-#define IS_LAM(_ch) \
-  (((_ch) == 0x0644) ||  /* ARABIC LETTER LAM */ \
-   ((_ch) == 0xfedf) ||  /* ARABIC LETTER LAM INITIAL FORM */ \
-   ((_ch) == 0xfee0))    /* ARABIC LETTER LAM MEDIAL FORM */  \
-
-/* Unicode codepoints that could be the second of a lam alef pair converted to
- * a lam alef ligature by ArabicShaping()
- */
-#define IS_ALEF(_ch) \
-  (((_ch) == 0x0622) || /* ARABIC LETTER ALEF WITH MADDA ABOVE */ \
-   ((_ch) == 0x0623) || /* ARABIC LETTER ALEF WITH HAMZA ABOVE */ \
-   ((_ch) == 0x0625) || /* ARABIC LETTER ALEF WITH HAMZA BELOW */ \
-   ((_ch) == 0x0627) || /* ARABIC LETTER ALEF */ \
-   ((_ch) == 0xfe82) || /* ARABIC LETTER ALEF WITH MADDA ABOVE FINAL FORM */ \
-   ((_ch) == 0xfe84) || /* ARABIC LETTER ALEF WITH HAMZA ABOVE FINAL FORM */ \
-   ((_ch) == 0xfe88) || /* ARABIC LETTER ALEF WITH HAMZA BELOW FINAL FORM */ \
-   ((_ch) == 0xfe8e))   /* ARABIC LETTER ALEF FINAL FORM */
-
-/* Unicode codepoints that could have been converted from a lam alef pair to a
- * lam alef ligature by Arabic Shaping()
- */
-#define IS_LAMALEF(_ch) (((_ch) >= 0xfef5) && ((_ch) <= 0xfefc))
-  /* FEF5 ARABIC LIGATURE LAM WITH ALEF WITH MADDA ABOVE ISOLATED FORM */
-  /* FEF6 ARABIC LIGATURE LAM WITH ALEF WITH MADDA ABOVE FINAL FORM    */
-  /* FEF7 ARABIC LIGATURE LAM WITH ALEF WITH HAMZA ABOVE ISOLATED FORM */
-  /* FEF8 ARABIC LIGATURE LAM WITH ALEF WITH HAMZA ABOVE FINAL FORM    */
-  /* FEF9 ARABIC LIGATURE LAM WITH ALEF WITH HAMZA BELOW ISOLATED FORM */
-  /* FEFA ARABIC LIGATURE LAM WITH ALEF WITH HAMZA BELOW FINAL FORM    */
-  /* FEFB ARABIC LIGATURE LAM WITH ALEF ISOLATED FORM                  */
-  /* FEFC;ARABIC LIGATURE LAM WITH ALEF FINAL FORM                     */
-
 #define IS_ASCII_CHAR(ch) ((ch&0xff80) == 0)
 
 #define NS_TEXT_TRANSFORMER_AUTO_WORD_BUF_SIZE 128 // used to be 256
@@ -146,10 +104,6 @@ class nsICaseConversion;
 
 // The text in the transform buffer needs numeric shaping
 #define NS_TEXT_TRANSFORMER_DO_NUMERIC_SHAPING 16
-
-// The frame containing the text was resolved as right-to-left by the
-// Bidi Algorithm
-#define NS_TEXT_TRANSFORMER_FRAME_IS_RTL 32
 #endif
 
 // A growable text buffer that tries to avoid using malloc by having a
@@ -198,7 +152,9 @@ class nsTextTransformer {
 public:
   // Note: The text transformer does not hold a reference to the line
   // breaker and work breaker objects
-  nsTextTransformer(nsPresContext* aPresContext);
+  nsTextTransformer(nsILineBreaker* aLineBreaker,
+                    nsIWordBreaker* aWordBreaker,
+                    nsPresContext* aPresContext);
 
   ~nsTextTransformer();
 
@@ -234,7 +190,7 @@ public:
    * Returns a pointer to the word, the number of characters in the word, the
    * content length of the word, whether it is whitespace, and whether the
    * text was transformed (any of the transformations listed above). The content
-   * length can be greater than the word length if whitespace compression occurred
+   * length can be greater than the word length if whitespace compression occured
    * or if characters were discarded
    *
    * The default behavior is to reset the transform buffer to the beginning,
@@ -285,11 +241,6 @@ public:
   PRBool NeedsNumericShaping() const {
     return (mFlags & NS_TEXT_TRANSFORMER_DO_NUMERIC_SHAPING) != 0;
   }
-
-  // Returns PR_TRUE if the frame containing the text is right-to-left
-  PRBool FrameIsRTL() const {
-    return (mFlags & NS_TEXT_TRANSFORMER_FRAME_IS_RTL) != 0;
-  }
 #endif
 
   // Set or clears the LEAVE_AS_ASCII bit
@@ -322,12 +273,6 @@ public:
     aValue ? mFlags |= NS_TEXT_TRANSFORMER_DO_NUMERIC_SHAPING : 
                        mFlags &= (~NS_TEXT_TRANSFORMER_DO_NUMERIC_SHAPING);
   }
-
-  // Set or clears the NS_TEXT_TRANSFORMER_FRAME_IS_RTL bit
-  void SetFrameIsRTL(PRBool aValue) {
-    aValue ? mFlags |= NS_TEXT_TRANSFORMER_FRAME_IS_RTL:
-             mFlags &= (~NS_TEXT_TRANSFORMER_FRAME_IS_RTL);
-  }
 #endif
   
   PRUnichar* GetWordBuffer() {
@@ -346,32 +291,24 @@ public:
   	return sWordSelectStopAtPunctuation;
   }
   
-  static nsICaseConversion* GetCaseConv();
-  
   static nsresult Initialize();
   static void Shutdown();
 
 protected:
   // Helper methods for GetNextWord (F == forwards)
-  PRInt32 ScanNormalWhiteSpace_F(PRInt32 aFragLen);
-  PRInt32 ScanNormalAsciiText_F(PRInt32  aFragLen,
-                                PRInt32* aWordLen,
+  PRInt32 ScanNormalWhiteSpace_F();
+  PRInt32 ScanNormalAsciiText_F(PRInt32* aWordLen,
                                 PRBool*  aWasTransformed);
-  PRInt32 ScanNormalAsciiText_F_ForWordBreak(PRInt32  aFragLen,
-                                             PRInt32* aWordLen,
-                                             PRBool*  aWasTransformed,
-                                             PRBool aIsKeyboardSelect);
-  PRInt32 ScanNormalUnicodeText_F(PRInt32  aFragLen,
-                                  PRBool   aForLineBreak,
+  PRInt32 ScanNormalAsciiText_F_ForWordBreak(PRInt32* aWordLen,
+                                PRBool*  aWasTransformed,
+                                PRBool aIsKeyboardSelect);
+  PRInt32 ScanNormalUnicodeText_F(PRBool aForLineBreak,
                                   PRInt32* aWordLen,
                                   PRBool*  aWasTransformed);
-  PRInt32 ScanPreWrapWhiteSpace_F(PRInt32  aFragLen,
-                                  PRInt32* aWordLen);
-  PRInt32 ScanPreAsciiData_F(PRInt32  aFragLen,
-                             PRInt32* aWordLen,
+  PRInt32 ScanPreWrapWhiteSpace_F(PRInt32* aWordLen);
+  PRInt32 ScanPreAsciiData_F(PRInt32* aWordLen,
                              PRBool*  aWasTransformed);
-  PRInt32 ScanPreData_F(PRInt32  aFragLen,
-                        PRInt32* aWordLen,
+  PRInt32 ScanPreData_F(PRInt32* aWordLen,
                         PRBool*  aWasTransformed);
 
   // Helper methods for GetPrevWord (B == backwards)
@@ -380,8 +317,6 @@ protected:
   PRInt32 ScanNormalUnicodeText_B(PRBool aForLineBreak, PRInt32* aWordLen);
   PRInt32 ScanPreWrapWhiteSpace_B(PRInt32* aWordLen);
   PRInt32 ScanPreData_B(PRInt32* aWordLen);
-
-  static nsresult EnsureCaseConv();
 
   // Converts the current text in the transform buffer from ascii to
   // Unicode
@@ -407,6 +342,10 @@ protected:
     ePreWrap
   } mMode;
   
+  nsILineBreaker* mLineBreaker;  // [WEAK]
+
+  nsIWordBreaker* mWordBreaker;  // [WEAK]
+
   nsLanguageSpecificTransformType mLanguageSpecificTransformType;
 
 #ifdef IBMBIDI
@@ -425,7 +364,7 @@ protected:
   // The frame's text-transform state
   PRUint8 mTextTransform;
 
-  // Flag for controlling mLeaveAsAscii, mHasMultibyte, mTransformedTextIsAscii
+  // Flag for controling mLeaveAsAscii, mHasMultibyte, mTransformedTextIsAscii
   PRUint8 mFlags;
 
   // prefs used to configure the double-click word selection behavior
@@ -434,10 +373,10 @@ protected:
   static PRBool sWordSelectEatSpaceAfter;        // should we include whitespace up to next word? 
   static PRBool sWordSelectStopAtPunctuation;    // should we stop at punctuation?
 
-  static nsICaseConversion* gCaseConv;
-
 #ifdef DEBUG
-  static void SelfTest(nsPresContext* aPresContext);
+  static void SelfTest(nsILineBreaker* aLineBreaker,
+                       nsIWordBreaker* aWordBreaker,
+                       nsPresContext* aPresContext);
 
   nsresult Init2(const nsTextFragment* aFrag,
                  PRInt32 aStartingOffset,

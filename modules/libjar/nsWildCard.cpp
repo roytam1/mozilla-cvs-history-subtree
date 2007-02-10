@@ -38,10 +38,9 @@
 /* *
  * 
  *
- * nsWildCard.cpp: shell-like wildcard match routines
+ * shexp.c: shell-like wildcard match routines
  *
- * See nsIZipReader.findEntries documentation in nsIZipReader.idl for
- * a description of the syntax supported by the routines in this file.
+ * See shexp.h for public documentation.
  *
  * Rob McCool
  * 
@@ -51,7 +50,7 @@
 #include "plstr.h"
 #include "prmem.h"
 
-/* ----------------------------- _valid_subexp ------------------------------ */
+/* ----------------------------- shexp_valid ------------------------------ */
 
 
 static int 
@@ -77,7 +76,7 @@ _valid_subexp(char *expr, char stop)
             ++nsc;
             if((!expr[++x]) || (expr[x] == ']'))
                 return INVALID_SXP;
-            for(;expr[x] && (expr[x] != ']');++x)
+            for(++x;expr[x] && (expr[x] != ']');++x)
                 if(expr[x] == '\\')
                     if(!expr[++x])
                         return INVALID_SXP;
@@ -134,7 +133,7 @@ NS_WildCardValid(char *expr)
 }
 
 
-/* ----------------------------- _shexp_match ----------------------------- */
+/* ----------------------------- shexp_match ----------------------------- */
 
 
 #define MATCH 0
@@ -232,16 +231,8 @@ _shexp_match(char *str, char *expr, PRBool case_insensitive)
                 else {
                     int matched;
                     
-                    for (matched=0;expr[y] != ']';y++) {
-                        /* match an escaped ']' character */
-                        if('\\' == expr[y] && ']' == expr[y+1]) {
-                            if(']' == str[x])
-                                matched |= 1;
-                            y++; /* move an extra char to compensate for '\\' */
-                            continue;
-                        }
+                    for (matched=0;expr[y] != ']';y++)
                         matched |= (str[x] == expr[y]);
-                    }
                     if (neg ^ (!matched))
                         ret = NOMATCH;
                 }

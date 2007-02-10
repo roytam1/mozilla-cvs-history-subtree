@@ -36,12 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * To compile, do:
- *
- *   gcc -framework ApplicationServices -l stdc++ -o asencode asencode.cpp
- */
-
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

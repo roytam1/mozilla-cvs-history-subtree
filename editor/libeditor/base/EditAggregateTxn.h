@@ -56,16 +56,26 @@
 class EditAggregateTxn : public EditTxn
 {
 public:
-  NS_IMETHOD QueryInterface(REFNSIID aIID, void **aInstancePtr);
+
+  NS_DECL_ISUPPORTS_INHERITED
 
   static const nsIID& GetCID() { static const nsIID cid = EDIT_AGGREGATE_TXN_CID; return cid; }
 
   EditAggregateTxn();
 
-  NS_DECL_EDITTXN
+  virtual ~EditAggregateTxn();
 
-  NS_IMETHOD RedoTransaction();
+  NS_IMETHOD DoTransaction(void);
+
+  NS_IMETHOD UndoTransaction(void);
+
+  NS_IMETHOD RedoTransaction(void);
+
+  NS_IMETHOD GetIsTransient(PRBool *aIsTransient);
+
   NS_IMETHOD Merge(nsITransaction *aTransaction, PRBool *aDidMerge);
+
+  NS_IMETHOD GetTxnDescription(nsAString& aTxnDescription);
 
   /** append a transaction to this aggregate */
   NS_IMETHOD AppendChild(EditTxn *aTxn);

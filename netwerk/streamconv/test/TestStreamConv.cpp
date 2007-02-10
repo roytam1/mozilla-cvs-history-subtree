@@ -45,7 +45,6 @@
 #include "nsIStringStream.h"
 #include "nsCOMPtr.h"
 #include "nsNetUtil.h"
-#include "nsThreadUtils.h"
 
 #include "nspr.h"
 
@@ -54,6 +53,7 @@
 /////////////////////////////////
 // Event pump setup
 /////////////////////////////////
+#include "nsIEventQueueService.h"
 #ifdef XP_WIN
 #include <windows.h>
 #endif
@@ -62,6 +62,7 @@
 #endif
 
 static int gKeepRunning = 0;
+static nsIEventQueue* gEventQ = nsnull;
 /////////////////////////////////
 // Event pump END
 /////////////////////////////////
@@ -73,6 +74,7 @@ static int gKeepRunning = 0;
 #include "Converters.h"
 
 // CID setup
+static NS_DEFINE_CID(kEventQueueServiceCID,      NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 
 ////////////////////////////////////////////////////////////////////////
@@ -123,14 +125,9 @@ NS_IMPL_ISUPPORTS1(EndListener, nsIStreamListener)
 
 
 nsresult SendData(const char * aData, nsIStreamListener* aListener, nsIRequest* request) {
-    nsresult rv;
-
-    nsCOMPtr<nsIStringInputStream> dataStream
-      (do_CreateInstance("@mozilla.org/io/string-input-stream;1", &rv));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = dataStream->SetData(aData, strlen(aData));
-    NS_ENSURE_SUCCESS(rv, rv);
+    nsCOMPtr<nsIInputStream> dataStream;
+    nsresult rv = NS_NewCharInputStream(getter_AddRefs(dataStream), aData);
+    if (NS_FAILED(rv)) return rv;
 
     PRUint32 avail;
     dataStream->Available(&avail);
@@ -151,12 +148,17 @@ main(int argc, char* argv[])
         if (registrar)
             registrar->AutoRegister(nsnull);
     
-        nsCOMPtr<nsIThread> thread = do_GetCurrentThread();
+        // Create the Event Queue for this thread...
+        nsCOMPtr<nsIEventQueueService> eventQService =
+                 do_GetService(kEventQueueServiceCID, &rv);
+        if (NS_FAILED(rv)) return rv;
+
+        eventQService->GetThreadEventQueue(NS_CURRENT_THREAD, &gEventQ);
 
         nsCOMPtr<nsICategoryManager> catman =
             do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
         if (NS_FAILED(rv)) return rv;
-        nsCString previous;
+        nsXPIDLCString previous;
 
         ///////////////////////////////////////////
         // BEGIN - Stream converter registration
@@ -274,8 +276,10 @@ main(int argc, char* argv[])
 
         // Enter the message pump to allow the URL load to proceed.
         while ( gKeepRunning ) {
-            if (!NS_ProcessNextEvent(thread))
-                break;
+            PLEvent *gEvent;
+            gEventQ->WaitForEvent(&gEvent);
+            gEventQ->HandleEvent(gEvent);
+            /* gKeepRunning = PR_FALSE; */
         }
     } // this scopes the nsCOMPtrs
     // no nsCOMPtrs are allowed to be alive when you call NS_ShutdownXPCOM

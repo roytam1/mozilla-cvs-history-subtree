@@ -2,28 +2,28 @@
 /* vim:expandtab:shiftwidth=4:tabstop=4:
  */
 /* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ * Version: NPL 1.1/GPL 2.0/LGPL 2.1
  *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
  *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
  * The Original Code is mozilla.org code.
  *
- * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are Copyright (C) 2002
- * the Initial Developer. All Rights Reserved.
+ * The Initial Developer of the Original Code is Sun Microsystems, Inc.
+ * Portions created by Sun Microsystems are Copyright (C) 2002 Sun
+ * Microsystems, Inc. All Rights Reserved.
+ *
+ * Original Author: Bolian Yin (bolian.yin@sun.com)
  *
  * Contributor(s):
- *   Bolian Yin (bolian.yin@sun.com)
- *   Ginn Chen (ginn.chen@sun.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -31,21 +31,100 @@
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
+ * use your version of this file under the terms of the NPL, indicate your
  * decision by deleting the provisions above and replace them with the notice
  * and other provisions required by the GPL or the LGPL. If you do not delete
  * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsMaiInterfaceText.h"
 #include "nsString.h"
 
-AtkAttributeSet * GetAttributeSet(nsIAccessible* aAccessible);
+G_BEGIN_DECLS
+
+static void interfaceInitCB(AtkTextIface *aIface);
+
+/* text interface callbacks */
+static gchar *getTextCB(AtkText *aText,
+                        gint aStartOffset, gint aEndOffset);
+static gchar *getTextAfterOffsetCB(AtkText *aText, gint aOffset,
+                                   AtkTextBoundary aBoundaryType,
+                                   gint *aStartOffset, gint *aEndOffset);
+static gchar *getTextAtOffsetCB(AtkText *aText, gint aOffset,
+                                AtkTextBoundary aBoundaryType,
+                                gint *aStartOffset, gint *aEndOffset);
+static gunichar getCharacterAtOffsetCB(AtkText *aText, gint aOffset);
+static gchar *getTextBeforeOffsetCB(AtkText *aText, gint aOffset,
+                                    AtkTextBoundary aBoundaryType,
+                                    gint *aStartOffset, gint *aEndOffset);
+static gint getCaretOffsetCB(AtkText *aText);
+static AtkAttributeSet *getRunAttributesCB(AtkText *aText, gint aOffset,
+                                           gint *aStartOffset,
+                                           gint *aEndOffset);
+static AtkAttributeSet* getDefaultAttributesCB(AtkText *aText);
+static void getCharacterExtentsCB(AtkText *aText, gint aOffset,
+                                  gint *aX, gint *aY,
+                                  gint *aWidth, gint *aHeight,
+                                  AtkCoordType aCoords);
+static gint getCharacterCountCB(AtkText *aText);
+static gint getOffsetAtPointCB(AtkText *aText,
+                               gint aX, gint aY,
+                               AtkCoordType aCoords);
+static gint getSelectionCountCB(AtkText *aText);
+static gchar *getSelectionCB(AtkText *aText, gint aSelectionNum,
+                             gint *aStartOffset, gint *aEndOffset);
+
+// set methods
+static gboolean addSelectionCB(AtkText *aText,
+                               gint aStartOffset,
+                               gint aEndOffset);
+static gboolean removeSelectionCB(AtkText *aText,
+                                  gint aSelectionNum);
+static gboolean setSelectionCB(AtkText *aText, gint aSelectionNum,
+                               gint aStartOffset, gint aEndOffset);
+static gboolean setCaretOffsetCB(AtkText *aText, gint aOffset);
+
+/*************************************************
+ // signal handlers
+ //
+    static void TextChangedCB(AtkText *aText, gint aPosition, gint aLength);
+    static void TextCaretMovedCB(AtkText *aText, gint aLocation);
+    static void TextSelectionChangedCB(AtkText *aText);
+*/
+G_END_DECLS
+
+MaiInterfaceText::MaiInterfaceText(nsAccessibleWrap *aAccWrap):
+    MaiInterface(aAccWrap)
+{
+}
+
+MaiInterfaceText::~MaiInterfaceText()
+{
+}
+
+MaiInterfaceType
+MaiInterfaceText::GetType()
+{
+    return MAI_INTERFACE_TEXT;
+}
+
+const GInterfaceInfo *
+MaiInterfaceText::GetInterfaceInfo()
+{
+    static const GInterfaceInfo atk_if_text_info = {
+        (GInterfaceInitFunc)interfaceInitCB,
+        (GInterfaceFinalizeFunc) NULL,
+        NULL
+    };
+    return &atk_if_text_info;
+}
+
+/* statics */
 
 void
-textInterfaceInitCB(AtkTextIface *aIface)
+interfaceInitCB(AtkTextIface *aIface)
 {
     NS_ASSERTION(aIface, "Invalid aIface");
     if (!aIface)
@@ -60,16 +139,15 @@ textInterfaceInitCB(AtkTextIface *aIface)
     aIface->get_run_attributes = getRunAttributesCB;
     aIface->get_default_attributes = getDefaultAttributesCB;
     aIface->get_character_extents = getCharacterExtentsCB;
-    aIface->get_range_extents = getRangeExtentsCB;
     aIface->get_character_count = getCharacterCountCB;
     aIface->get_offset_at_point = getOffsetAtPointCB;
-    aIface->get_n_selections = getTextSelectionCountCB;
-    aIface->get_selection = getTextSelectionCB;
+    aIface->get_n_selections = getSelectionCountCB;
+    aIface->get_selection = getSelectionCB;
 
     // set methods
-    aIface->add_selection = addTextSelectionCB;
-    aIface->remove_selection = removeTextSelectionCB;
-    aIface->set_selection = setTextSelectionCB;
+    aIface->add_selection = addSelectionCB;
+    aIface->remove_selection = removeSelectionCB;
+    aIface->set_selection = setSelectionCB;
     aIface->set_caret_offset = setCaretOffsetCB;
 }
 
@@ -247,16 +325,17 @@ getRunAttributesCB(AtkText *aText, gint aOffset,
                             getter_AddRefs(accText));
     NS_ENSURE_TRUE(accText, nsnull);
 
-    nsCOMPtr<nsIAccessible> accessibleWithAttrs;
+    nsCOMPtr<nsISupports> attrSet;
     PRInt32 startOffset = 0, endOffset = 0;
     nsresult rv = accText->GetAttributeRange(aOffset,
                                              &startOffset, &endOffset,
-                                             getter_AddRefs(accessibleWithAttrs));
+                                             getter_AddRefs(attrSet));
     *aStartOffset = startOffset;
     *aEndOffset = endOffset;
     NS_ENSURE_SUCCESS(rv, nsnull);
 
-    return GetAttributeSet(accessibleWithAttrs);
+    /* what to do with the nsISupports ? ??? */
+    return nsnull;
 }
 
 AtkAttributeSet *
@@ -273,7 +352,7 @@ getCharacterExtentsCB(AtkText *aText, gint aOffset,
                       AtkCoordType aCoords)
 {
     nsAccessibleWrap *accWrap = GetAccessibleWrap(ATK_OBJECT(aText));
-    if(!accWrap || !aX || !aY || !aWidth || !aHeight)
+    if(!accWrap)
         return;
 
     nsCOMPtr<nsIAccessibleText> accText;
@@ -291,36 +370,8 @@ getCharacterExtentsCB(AtkText *aText, gint aOffset,
     *aY = extY;
     *aWidth = extWidth;
     *aHeight = extHeight;
-    NS_ASSERTION(NS_SUCCEEDED(rv),
-                 "MaiInterfaceText::GetCharacterExtents, failed\n");
-}
-
-void
-getRangeExtentsCB(AtkText *aText, gint aStartOffset, gint aEndOffset,
-                  AtkCoordType aCoords, AtkTextRectangle *aRect)
-{
-    nsAccessibleWrap *accWrap = GetAccessibleWrap(ATK_OBJECT(aText));
-    if(!accWrap || !aRect)
-        return;
-
-    nsCOMPtr<nsIAccessibleText> accText;
-    accWrap->QueryInterface(NS_GET_IID(nsIAccessibleText),
-                            getter_AddRefs(accText));
-    if (!accText)
-        return;
-
-    PRInt32 extY = 0, extX = 0;
-    PRInt32 extWidth = 0, extHeight = 0;
-    nsresult rv = accText->GetRangeExtents(aStartOffset, aEndOffset,
-                                           &extX, &extY,
-                                           &extWidth, &extHeight,
-                                           aCoords);
-    aRect->x = extX;
-    aRect->y = extY;
-    aRect->width = extWidth;
-    aRect->height = extHeight;
-    NS_ASSERTION(NS_SUCCEEDED(rv),
-                 "MaiInterfaceText::GetRangeExtents, failed\n");
+    NS_WARN_IF_FALSE(NS_SUCCEEDED(rv),
+                     "MaiInterfaceText::GetCharacterExtents, failed\n");
 }
 
 gint
@@ -345,20 +396,20 @@ getOffsetAtPointCB(AtkText *aText,
                    AtkCoordType aCoords)
 {
     nsAccessibleWrap *accWrap = GetAccessibleWrap(ATK_OBJECT(aText));
-    NS_ENSURE_TRUE(accWrap, -1);
+    NS_ENSURE_TRUE(accWrap, 0);
 
     nsCOMPtr<nsIAccessibleText> accText;
     accWrap->QueryInterface(NS_GET_IID(nsIAccessibleText),
                             getter_AddRefs(accText));
-    NS_ENSURE_TRUE(accText, -1);
+    NS_ENSURE_TRUE(accText, 0);
 
     PRInt32 offset = 0;
-    accText->GetOffsetAtPoint(aX, aY, aCoords, &offset);
-    return NS_STATIC_CAST(gint, offset);
+    nsresult rv = accText->GetOffsetAtPoint(aX, aY, aCoords, &offset);
+    return (NS_FAILED(rv)) ? 0 : NS_STATIC_CAST(gint, offset);
 }
 
 gint
-getTextSelectionCountCB(AtkText *aText)
+getSelectionCountCB(AtkText *aText)
 {
     /* no implemetation in nsIAccessibleText??? */
 
@@ -369,8 +420,8 @@ getTextSelectionCountCB(AtkText *aText)
 }
 
 gchar *
-getTextSelectionCB(AtkText *aText, gint aSelectionNum,
-                   gint *aStartOffset, gint *aEndOffset)
+getSelectionCB(AtkText *aText, gint aSelectionNum,
+               gint *aStartOffset, gint *aEndOffset)
 {
     nsAccessibleWrap *accWrap = GetAccessibleWrap(ATK_OBJECT(aText));
     NS_ENSURE_TRUE(accWrap, nsnull);
@@ -394,9 +445,9 @@ getTextSelectionCB(AtkText *aText, gint aSelectionNum,
 
 // set methods
 gboolean
-addTextSelectionCB(AtkText *aText,
-                   gint aStartOffset,
-                   gint aEndOffset)
+addSelectionCB(AtkText *aText,
+               gint aStartOffset,
+               gint aEndOffset)
 {
     nsAccessibleWrap *accWrap = GetAccessibleWrap(ATK_OBJECT(aText));
     NS_ENSURE_TRUE(accWrap, FALSE);
@@ -412,8 +463,8 @@ addTextSelectionCB(AtkText *aText,
 }
 
 gboolean
-removeTextSelectionCB(AtkText *aText,
-                      gint aSelectionNum)
+removeSelectionCB(AtkText *aText,
+                  gint aSelectionNum)
 {
     nsAccessibleWrap *accWrap = GetAccessibleWrap(ATK_OBJECT(aText));
     NS_ENSURE_TRUE(accWrap, FALSE);
@@ -429,8 +480,8 @@ removeTextSelectionCB(AtkText *aText,
 }
 
 gboolean
-setTextSelectionCB(AtkText *aText, gint aSelectionNum,
-                   gint aStartOffset, gint aEndOffset)
+setSelectionCB(AtkText *aText, gint aSelectionNum,
+               gint aStartOffset, gint aEndOffset)
 {
     nsAccessibleWrap *accWrap = GetAccessibleWrap(ATK_OBJECT(aText));
     NS_ENSURE_TRUE(accWrap, FALSE);

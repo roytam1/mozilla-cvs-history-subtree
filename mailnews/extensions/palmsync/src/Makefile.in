@@ -55,6 +55,7 @@ XPI_NAME = palmsync
 endif
 
 REQUIRES    = xpcom \
+	      xpcom_obsolete \
           PalmSyncProxy \
           embedcomponents \
           pref \

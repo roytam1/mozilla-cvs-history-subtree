@@ -152,7 +152,7 @@ WSPCallContext::HandleResponse(nsISOAPResponse *aResponse, nsISOAPCall *aCall,
   mStatus = status;
   *_retval = PR_TRUE;
   CallCompletionListener();
-  // Drop our ref to the completion object now that we don't need it.
+  // Drop our ref to the completion object now that we dont need it.
   // This breaks our reference cycle with it and prevents leaks.
   mCompletion = nsnull;
   return NS_OK;
@@ -255,7 +255,7 @@ WSPCallContext::CallCompletionListener()
     dispatchParams[1].SetValIsInterface();
     dispatchParams[1].type.flags = XPT_TDP_POINTER | TD_INTERFACE_TYPE;
 
-    rv = NS_InvokeByIndex(mAsyncListener, 3, 2, dispatchParams);
+    rv = XPTC_InvokeByIndex(mAsyncListener, 3, 2, dispatchParams);
   }
   else if (mResponse) {
     nsCOMPtr<nsIWSDLBinding> binding;
@@ -410,8 +410,8 @@ WSPCallContext::CallCompletionListener()
     dispatchParams[paramIndex].type.flags = 
       XPT_TDP_POINTER | TD_INTERFACE_TYPE;
 
-    rv = NS_InvokeByIndex(mAsyncListener, mListenerMethodIndex,
-                          paramCount, dispatchParams);
+    rv = XPTC_InvokeByIndex(mAsyncListener, mListenerMethodIndex,
+                            paramCount, dispatchParams);
   }
   else {
     rv = NS_ERROR_FAILURE;

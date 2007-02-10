@@ -70,6 +70,10 @@ NS_IMETHODIMP InsertElementTxn::Init(nsIDOMNode *aNode,
 }
 
 
+InsertElementTxn::~InsertElementTxn()
+{
+}
+
 NS_IMETHODIMP InsertElementTxn::DoTransaction(void)
 {
 #ifdef NS_DEBUG
@@ -142,6 +146,13 @@ NS_IMETHODIMP InsertElementTxn::UndoTransaction(void)
 
   nsCOMPtr<nsIDOMNode> resultNode;
   return mParent->RemoveChild(mNode, getter_AddRefs(resultNode));
+}
+
+NS_IMETHODIMP InsertElementTxn::Merge(nsITransaction *aTransaction, PRBool *aDidMerge)
+{
+  if (aDidMerge)
+    *aDidMerge = PR_FALSE;
+  return NS_OK;
 }
 
 NS_IMETHODIMP InsertElementTxn::GetTxnDescription(nsAString& aString)

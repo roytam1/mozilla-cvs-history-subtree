@@ -39,15 +39,14 @@
 #define nsCopySupport_h__
 
 #include "nscore.h"
+#include "nsCOMPtr.h"
 
 class nsISelection;
 class nsIDocument;
 class nsIImageLoadingContent;
 class nsIContent;
 class nsITransferable;
-class nsACString;
-class nsAString;
-
+ 
 class nsCopySupport
 {
   // class of static helper functions for copy support

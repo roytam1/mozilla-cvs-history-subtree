@@ -231,7 +231,7 @@
 
 <!--  Mac OS X Window Menu -->
 <!ENTITY windowMenu.label "Window">
-<!ENTITY minimizeWindow.label "Minimize">
 <!ENTITY minimizeWindow.key "m">
+<!ENTITY minimizeWindow.label "Minimize">
 <!ENTITY bringAllToFront.label "Bring All to Front">
 <!ENTITY zoomWindow.label "Zoom">

@@ -72,12 +72,9 @@
       </vbox>
       <hbox pack="center">
         <vbox>
-          <button id="NewSiteButton" label="&newSiteButton.label;"
-                  accesskey="&newSiteButton.accesskey;" oncommand="AddNewSite();"/>
-          <button id="SetDefaultButton" label="&setDefaultButton.label;"
-                  accesskey="&setDefaultButton.accesskey;" oncommand="SetDefault();"/>
-          <button id="RemoveSiteButton" label="&removeButton.label;"
-                  accesskey="&removeButton.accesskey;" oncommand="RemoveSite();"/>
+          <button id="NewSiteButton"      label="&newSiteButton.label;"      oncommand="AddNewSite();"/>
+          <button id="SetDefaultButton"   label="&setDefaultButton.label;"   oncommand="SetDefault();"/>
+          <button id="RemoveSiteButton"   label="&removeButton.label;"       oncommand="RemoveSite();"/>
         </vbox>
       </hbox>
     </groupbox>

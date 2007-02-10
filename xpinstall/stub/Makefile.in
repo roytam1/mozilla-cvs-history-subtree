@@ -46,7 +46,9 @@ include $(DEPTH)/config/autoconf.mk
 
 # Make this a true dynamic component even in static builds because
 # this component is shared by installer
+MOZ_STATIC_COMPONENT_LIBS=
 BUILD_STATIC_LIBS=
+BUILD_SHARED_LIBS=1
 MOZILLA_INTERNAL_API = 1
 
 MODULE		= xpistub
@@ -67,5 +69,5 @@ EXTRA_DSO_LDOPTS= \
 		$(MOZ_COMPONENT_LIBS) \
 		$(NULL)
 
-EMBED_MANIFEST_AT = 17
 include $(topsrcdir)/config/rules.mk
+

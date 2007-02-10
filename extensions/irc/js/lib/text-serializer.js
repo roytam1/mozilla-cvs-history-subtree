@@ -166,7 +166,7 @@ function ts_serialize(obj)
                     break;
 
                 case "function":
-                    if (isinstance(o[p], RegExp))
+                    if (o[p] instanceof RegExp)
                         writeProp(p, ecmaEscape("" + o[p]));
                     // Can't serialize non-RegExp functions (yet).
                     break;
@@ -180,7 +180,7 @@ function ts_serialize(obj)
                     else
                     {
                         var className = "";
-                        if (isinstance(o[p], Array))
+                        if (o[p] instanceof Array)
                             className = "<Array> ";
 
                         me._fileStream.write(indent + "START " + className +
@@ -196,7 +196,7 @@ function ts_serialize(obj)
         }
     };
 
-    if (isinstance(obj, Array))
+    if (obj instanceof Array)
         this._fileStream.write("START <Array>" + this.lineEnd);
     else
         this._fileStream.write("START" + this.lineEnd);
@@ -226,20 +226,11 @@ function ts_deserialize()
     {
         if (this._lines.length == 0)
         {
-            var newData = this._fileStream.read();
-            if (newData)
-                this._buffer += newData;
-            else if (this._buffer.length == 0)
-                break;
-
-            // Got more data in the buffer, so split into lines. Unless we're
-            // done, the last one might not be complete yet, so save that one.
+            this._buffer += this._fileStream.read();
+            // Got more data in the buffer, so split into lines.
+            // The last one doesn't count - the rest get added to the full list.
             var lines = this._buffer.split(/[\r\n]+/);
-            if (!newData)
-                this._buffer = "";
-            else
-                this._buffer = lines.pop();
-
+            this._buffer = lines.pop();
             this._lines = this._lines.concat(lines);
             if (this._lines.length == 0)
                 break;
@@ -285,7 +276,7 @@ function ts_deserialize()
                         /* Create a new object level, but with no name. This is
                          * only valid if the parent level is an array.
                          */
-                        if (!ASSERT(isinstance(obj, Array), "Parent not Array!"))
+                        if (!ASSERT(obj instanceof Array, "Parent not Array!"))
                             return null;
                         if (className)
                             n = new window[className]();

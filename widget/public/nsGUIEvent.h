@@ -43,7 +43,8 @@
 #include "nsPoint.h"
 #include "nsRect.h"
 #include "nsEvent.h"
-#include "nsStringGlue.h"
+#include "nsHashtable.h"
+#include "nsString.h"
 
 // nsIDOMEvent contains a long enum which includes a member called ERROR,
 // which conflicts with something that Windows defines somewhere.
@@ -52,9 +53,7 @@
 #undef ERROR
 #endif
 #include "nsCOMPtr.h"
-#include "nsIAtom.h"
 #include "nsIDOMKeyEvent.h"
-#include "nsWeakPtr.h"
 
 class nsIRenderingContext;
 class nsIRegion;
@@ -64,8 +63,7 @@ class nsIAccessible;
 class nsIContent;
 class nsIURI;
 class nsIDOMEvent;
-class nsHashKey;
-
+           
 /**
  * Event Struct Types
  */
@@ -91,12 +89,12 @@ class nsHashKey;
 #define NS_FORM_EVENT                     21
 #define NS_FOCUS_EVENT                    22
 #define NS_POPUP_EVENT                    23
-#define NS_COMMAND_EVENT                  24
+#define NS_APPCOMMAND_EVENT               24
 #define NS_POPUPBLOCKED_EVENT             25
 #define NS_BEFORE_PAGE_UNLOAD_EVENT       26
 #define NS_UI_EVENT                       27
 #define NS_QUERYCARETRECT_EVENT           28
-#define NS_PAGETRANSITION_EVENT           29
+#define NS_PAGETRANSITION_EVENT               29
 #ifdef MOZ_SVG
 #define NS_SVG_EVENT                      30
 #define NS_SVGZOOM_EVENT                  31
@@ -107,7 +105,7 @@ class nsHashKey;
 // listener flags and event flags, but only some of them. You've been
 // warned!
 #define NS_EVENT_FLAG_NONE                0x0000
-#define NS_EVENT_FLAG_TRUSTED             0x0001
+#define NS_EVENT_FLAG_INIT                0x0001
 #define NS_EVENT_FLAG_BUBBLE              0x0002
 #define NS_EVENT_FLAG_CAPTURE             0x0004
 #define NS_EVENT_FLAG_STOP_DISPATCH       0x0008
@@ -122,8 +120,18 @@ class nsHashKey;
 
 #define NS_PRIV_EVENT_UNTRUSTED_PERMITTED 0x8000
 
-#define NS_EVENT_CAPTURE_MASK             (~(NS_EVENT_FLAG_BUBBLE | NS_EVENT_FLAG_NO_CONTENT_DISPATCH))
-#define NS_EVENT_BUBBLE_MASK              (~(NS_EVENT_FLAG_CAPTURE | NS_EVENT_FLAG_NO_CONTENT_DISPATCH))
+#define NS_EVENT_CAPTURE_MASK             (~(NS_EVENT_FLAG_INIT | NS_EVENT_FLAG_BUBBLE | NS_EVENT_FLAG_NO_CONTENT_DISPATCH))
+#define NS_EVENT_BUBBLE_MASK              (~(NS_EVENT_FLAG_INIT | NS_EVENT_FLAG_CAPTURE | NS_EVENT_FLAG_NO_CONTENT_DISPATCH))
+
+// Flags for internalAppFlags
+
+#define NS_APP_EVENT_FLAG_NONE      0x00000000
+
+// Similar to NS_EVENT_FLAG_NO_DEFAULT, but it allows focus
+#define NS_APP_EVENT_FLAG_HANDLED   0x00000001
+
+// True if the event came from a trusted source
+#define NS_APP_EVENT_FLAG_TRUSTED   0x00000002
 
 #define NS_EVENT_TYPE_NULL                   0
 
@@ -193,6 +201,9 @@ class nsHashKey;
 // ensure that it is drawn using the current system colors.
 #define NS_SYSCOLORCHANGED              (NS_WINDOW_START + 42)
 
+// Indicates a script error has occurred
+#define NS_SCRIPT_ERROR                 (NS_WINDOW_START + 50)
+
 #define NS_RESIZE_EVENT                 (NS_WINDOW_START + 60)
 #define NS_SCROLL_EVENT                 (NS_WINDOW_START + 61)
 
@@ -200,18 +211,27 @@ class nsHashKey;
 
 #define NS_MOUSE_MESSAGE_START          300
 #define NS_MOUSE_MOVE                   (NS_MOUSE_MESSAGE_START)
-#define NS_MOUSE_BUTTON_UP              (NS_MOUSE_MESSAGE_START + 1)
-#define NS_MOUSE_BUTTON_DOWN            (NS_MOUSE_MESSAGE_START + 2)
+#define NS_MOUSE_LEFT_BUTTON_UP         (NS_MOUSE_MESSAGE_START + 1)
+#define NS_MOUSE_LEFT_BUTTON_DOWN       (NS_MOUSE_MESSAGE_START + 2)
+#define NS_MOUSE_MIDDLE_BUTTON_UP       (NS_MOUSE_MESSAGE_START + 10)
+#define NS_MOUSE_MIDDLE_BUTTON_DOWN     (NS_MOUSE_MESSAGE_START + 11)
+#define NS_MOUSE_RIGHT_BUTTON_UP        (NS_MOUSE_MESSAGE_START + 20)
+#define NS_MOUSE_RIGHT_BUTTON_DOWN      (NS_MOUSE_MESSAGE_START + 21)
 #define NS_MOUSE_ENTER                  (NS_MOUSE_MESSAGE_START + 22)
 #define NS_MOUSE_EXIT                   (NS_MOUSE_MESSAGE_START + 23)
-#define NS_MOUSE_DOUBLECLICK            (NS_MOUSE_MESSAGE_START + 24)
-#define NS_MOUSE_CLICK                  (NS_MOUSE_MESSAGE_START + 27)
+#define NS_MOUSE_LEFT_DOUBLECLICK       (NS_MOUSE_MESSAGE_START + 24)
+#define NS_MOUSE_MIDDLE_DOUBLECLICK     (NS_MOUSE_MESSAGE_START + 25)
+#define NS_MOUSE_RIGHT_DOUBLECLICK      (NS_MOUSE_MESSAGE_START + 26)
+#define NS_MOUSE_LEFT_CLICK             (NS_MOUSE_MESSAGE_START + 27)
+#define NS_MOUSE_MIDDLE_CLICK           (NS_MOUSE_MESSAGE_START + 28)
+#define NS_MOUSE_RIGHT_CLICK            (NS_MOUSE_MESSAGE_START + 29)
 #define NS_MOUSE_ACTIVATE               (NS_MOUSE_MESSAGE_START + 30)
 #define NS_MOUSE_ENTER_SYNTH            (NS_MOUSE_MESSAGE_START + 31)
 #define NS_MOUSE_EXIT_SYNTH             (NS_MOUSE_MESSAGE_START + 32)
 
 #define NS_CONTEXTMENU_MESSAGE_START    500
 #define NS_CONTEXTMENU                  (NS_CONTEXTMENU_MESSAGE_START)
+#define NS_CONTEXTMENU_KEY              (NS_CONTEXTMENU_MESSAGE_START + 1)
 
 #define NS_SCROLLBAR_MESSAGE_START      1000
 #define NS_SCROLLBAR_POS                (NS_SCROLLBAR_MESSAGE_START)
@@ -221,10 +241,12 @@ class nsHashKey;
 #define NS_SCROLLBAR_LINE_PREV          (NS_SCROLLBAR_MESSAGE_START + 4)
 
 #define NS_STREAM_EVENT_START           1100
-#define NS_LOAD                         (NS_STREAM_EVENT_START)
+#define NS_PAGE_LOAD                    (NS_STREAM_EVENT_START)
 #define NS_PAGE_UNLOAD                  (NS_STREAM_EVENT_START + 1)
+#define NS_IMAGE_LOAD                   (NS_STREAM_EVENT_START + 2)
 #define NS_IMAGE_ABORT                  (NS_STREAM_EVENT_START + 3)
-#define NS_LOAD_ERROR                   (NS_STREAM_EVENT_START + 4)
+#define NS_IMAGE_ERROR                  (NS_STREAM_EVENT_START + 4)
+#define NS_SCRIPT_LOAD                  (NS_STREAM_EVENT_START + 5)
 #define NS_BEFORE_PAGE_UNLOAD           (NS_STREAM_EVENT_START + 6)
 #define NS_PAGE_RESTORE                 (NS_STREAM_EVENT_START + 7)
  
@@ -259,6 +281,7 @@ class nsHashKey;
 // NS_XUL_COMMAND used to be here     (NS_XUL_EVENT_START+4)
 #define NS_XUL_BROADCAST              (NS_XUL_EVENT_START+5)
 #define NS_XUL_COMMAND_UPDATE         (NS_XUL_EVENT_START+6)
+#define NS_XUL_CLICK                  (NS_XUL_EVENT_START+7)
 //@}
 
 // Scroll events
@@ -277,6 +300,17 @@ class nsHashKey;
 #define NS_GETACCESSIBLE              (NS_ACCESSIBLE_START)
 
 #define NS_USER_DEFINED_EVENT         2000
+
+// custom OS events
+#define NS_APPCOMMAND_START           2100
+#define NS_APPCOMMAND                 (NS_APPCOMMAND_START)
+#define NS_APPCOMMAND_BACK            (NS_APPCOMMAND_START + 1)
+#define NS_APPCOMMAND_FORWARD         (NS_APPCOMMAND_START + 2)
+#define NS_APPCOMMAND_REFRESH         (NS_APPCOMMAND_START + 3)
+#define NS_APPCOMMAND_STOP            (NS_APPCOMMAND_START + 4)
+#define NS_APPCOMMAND_SEARCH          (NS_APPCOMMAND_START + 5)
+#define NS_APPCOMMAND_FAVORITES       (NS_APPCOMMAND_START + 6)
+#define NS_APPCOMMAND_HOME            (NS_APPCOMMAND_START + 7)
  
 // composition events
 #define NS_COMPOSITION_EVENT_START    2200
@@ -360,9 +394,12 @@ protected:
   nsEvent(PRBool isTrusted, PRUint32 msg, PRUint8 structType)
     : eventStructType(structType),
       message(msg),
+      point(0, 0),
       refPoint(0, 0),
       time(0),
-      flags(isTrusted ? NS_EVENT_FLAG_TRUSTED : NS_EVENT_FLAG_NONE),
+      flags(0),
+      internalAppFlags(isTrusted ? NS_APP_EVENT_FLAG_TRUSTED :
+                       NS_APP_EVENT_FLAG_NONE),
       userType(0)
   {
   }
@@ -371,9 +408,12 @@ public:
   nsEvent(PRBool isTrusted, PRUint32 msg)
     : eventStructType(NS_EVENT),
       message(msg),
+      point(0, 0),
       refPoint(0, 0),
       time(0),
-      flags(isTrusted ? NS_EVENT_FLAG_TRUSTED : NS_EVENT_FLAG_NONE),
+      flags(0),
+      internalAppFlags(isTrusted ? NS_APP_EVENT_FLAG_TRUSTED :
+                       NS_APP_EVENT_FLAG_NONE),
       userType(0)
   {
   }
@@ -381,23 +421,22 @@ public:
   // See event struct types
   PRUint8     eventStructType;
   // See GUI MESSAGES,
-  PRUint32    message;
+  PRUint32    message;              
+  // In widget relative coordinates, modified to be relative to
+  // current view in layout.
+  nsPoint     point;               
   // In widget relative coordinates, not modified by layout code.
-  nsPoint     refPoint;
-  // Elapsed time, in milliseconds, from a platform-specific zero time
-  // to the time the message was created
-  PRUint32    time;
+  nsPoint     refPoint;               
+  // Elapsed time, in milliseconds, from the time the system was
+  // started to the time the message was created
+  PRUint32    time;      
   // Flags to hold event flow stage and capture/bubble cancellation
-  // status. This is used also to indicate whether the event is trusted.
+  // status
   PRUint32    flags;
+  // Flags for indicating more event state for Mozilla applications.
+  PRUint32    internalAppFlags;
   // Additional type info for user defined events
-  nsCOMPtr<nsIAtom>     userType;
-  // Event targets, needed by DOM Events
-  // Using nsISupports, not nsIDOMEventTarget because in some cases
-  // nsIDOMEventTarget is implemented as a tearoff.
-  nsCOMPtr<nsISupports> target;
-  nsCOMPtr<nsISupports> currentTarget;
-  nsCOMPtr<nsISupports> originalTarget;
+  nsHashKey*  userType;
 };
 
 /**
@@ -600,52 +639,27 @@ public:
  * Mouse event
  */
 
-class nsMouseEvent_base : public nsInputEvent
+class nsMouseEvent : public nsInputEvent
 {
 public:
-  nsMouseEvent_base(PRBool isTrusted, PRUint32 msg, nsIWidget *w, PRUint8 type)
-  : nsInputEvent(isTrusted, msg, w, type), button(0) {}
-
-  /// The possible related target
-  nsCOMPtr<nsISupports> relatedTarget;
-
-  PRInt16               button;
-};
-
-class nsMouseEvent : public nsMouseEvent_base
-{
-public:
-  enum buttonType  { eLeftButton = 0, eMiddleButton = 1, eRightButton = 2 };
-  enum reasonType  { eReal, eSynthesized };
-  enum contextType { eNormal, eContextMenuKey };
+  enum reasonType { eReal, eSynthesized };
 
   nsMouseEvent(PRBool isTrusted, PRUint32 msg, nsIWidget *w,
-               reasonType aReason, contextType aContext = eNormal)
-    : nsMouseEvent_base(isTrusted, msg, w, NS_MOUSE_EVENT),
-      acceptActivation(PR_FALSE), reason(aReason), context(aContext),
-      clickCount(0)
+               reasonType aReason)
+    : nsInputEvent(isTrusted, msg, w, NS_MOUSE_EVENT),
+      clickCount(0), acceptActivation(PR_FALSE), reason(aReason)
   {
     if (msg == NS_MOUSE_MOVE) {
       flags |= NS_EVENT_FLAG_CANT_CANCEL;
-    } else if (msg == NS_CONTEXTMENU) {
-      button = eRightButton;
     }
   }
-#ifdef NS_DEBUG
-  ~nsMouseEvent() {
-    NS_WARN_IF_FALSE(message != NS_CONTEXTMENU || button == eRightButton,
-                     "Wrong button set to NS_CONTEXTMENU event?");
-  }
-#endif
-
-  /// Special return code for MOUSE_ACTIVATE to signal
-  /// if the target accepts activation (1), or denies it (0)
-  PRPackedBool acceptActivation;
-  reasonType   reason : 4;
-  contextType  context : 4;
 
   /// The number of mouse clicks
-  PRUint32     clickCount;
+  PRUint32        clickCount;          
+  /// Special return code for MOUSE_ACTIVATE to signal
+  /// if the target accepts activation (1), or denies it (0)
+  PRPackedBool    acceptActivation;           
+  reasonType      reason : 8;
 };
 
 /**
@@ -742,7 +756,7 @@ public:
   nsTextEventReply theReply;
 };
 
-class nsMouseScrollEvent : public nsMouseEvent_base
+class nsMouseScrollEvent : public nsInputEvent
 {
 public:
   enum nsMouseScrollFlags {
@@ -753,13 +767,13 @@ public:
   };
 
   nsMouseScrollEvent(PRBool isTrusted, PRUint32 msg, nsIWidget *w)
-    : nsMouseEvent_base(isTrusted, msg, w, NS_MOUSE_SCROLL_EVENT),
+    : nsInputEvent(isTrusted, msg, w, NS_MOUSE_SCROLL_EVENT),
       scrollFlags(0), delta(0)
   {
   }
 
-  PRInt32               scrollFlags;
-  PRInt32               delta;
+  PRInt32 scrollFlags;
+  PRInt32 delta;
 };
 
 struct nsReconversionEventReply {
@@ -859,23 +873,21 @@ public:
 };
 
 /**
- * Command event
+ * App Command event
  *
- * Custom commands for example from the operating system.
+ * Custom commands from the operating system.  eg. WM_APPCOMMAND on Windows
  */
 
-class nsCommandEvent : public nsGUIEvent
+class nsAppCommandEvent : public nsInputEvent
 {
 public:
-  nsCommandEvent(PRBool isTrusted, nsIAtom* aEventType,
-                 nsIAtom* aCommand, nsIWidget* w)
-    : nsGUIEvent(isTrusted, NS_USER_DEFINED_EVENT, w, NS_COMMAND_EVENT)
+  nsAppCommandEvent(PRBool isTrusted, PRUint32 msg, nsIWidget *w)
+    : nsInputEvent(isTrusted, msg, w, NS_APPCOMMAND_EVENT),
+      appCommand(0)
   {
-    userType = aEventType;
-    command = aCommand;
   }
 
-  nsCOMPtr<nsIAtom> command;
+  PRUint32     appCommand;
 };
 
 /**
@@ -886,14 +898,13 @@ class nsPopupBlockedEvent : public nsEvent
 public:
   nsPopupBlockedEvent(PRBool isTrusted, PRUint32 msg)
     : nsEvent(isTrusted, msg, NS_POPUPBLOCKED_EVENT),
-      mPopupWindowURI(nsnull)
+      mRequestingWindowURI(nsnull), mPopupWindowURI(nsnull)
   {
   }
 
-  nsWeakPtr mRequestingWindow;
+  nsIURI* mRequestingWindowURI; // owning reference
   nsIURI* mPopupWindowURI;      // owning reference
   nsString mPopupWindowFeatures;
-  nsString mPopupWindowName;
 };
 
 /**
@@ -954,26 +965,25 @@ enum nsDragDropEventStatus {
 
 
 #define NS_IS_MOUSE_EVENT(evnt) \
-       (((evnt)->message == NS_MOUSE_BUTTON_DOWN) || \
-        ((evnt)->message == NS_MOUSE_BUTTON_UP) || \
-        ((evnt)->message == NS_MOUSE_CLICK) || \
-        ((evnt)->message == NS_MOUSE_DOUBLECLICK) || \
+       (((evnt)->message == NS_MOUSE_LEFT_BUTTON_DOWN) || \
+        ((evnt)->message == NS_MOUSE_LEFT_BUTTON_UP) || \
+        ((evnt)->message == NS_MOUSE_LEFT_CLICK) || \
+        ((evnt)->message == NS_MOUSE_LEFT_DOUBLECLICK) || \
+        ((evnt)->message == NS_MOUSE_MIDDLE_BUTTON_DOWN) || \
+        ((evnt)->message == NS_MOUSE_MIDDLE_BUTTON_UP) || \
+        ((evnt)->message == NS_MOUSE_MIDDLE_CLICK) || \
+        ((evnt)->message == NS_MOUSE_MIDDLE_DOUBLECLICK) || \
+        ((evnt)->message == NS_MOUSE_RIGHT_BUTTON_DOWN) || \
+        ((evnt)->message == NS_MOUSE_RIGHT_BUTTON_UP) || \
+        ((evnt)->message == NS_MOUSE_RIGHT_CLICK) || \
+        ((evnt)->message == NS_MOUSE_RIGHT_DOUBLECLICK) || \
         ((evnt)->message == NS_MOUSE_ENTER) || \
         ((evnt)->message == NS_MOUSE_EXIT) || \
-        ((evnt)->message == NS_MOUSE_ACTIVATE) || \
+        ((evnt)->message == NS_MOUSE_ENTER) || \
+        ((evnt)->message == NS_MOUSE_EXIT) || \
         ((evnt)->message == NS_MOUSE_ENTER_SYNTH) || \
         ((evnt)->message == NS_MOUSE_EXIT_SYNTH) || \
         ((evnt)->message == NS_MOUSE_MOVE))
-
-#define NS_IS_MOUSE_LEFT_CLICK(evnt) \
-       ((evnt)->eventStructType == NS_MOUSE_EVENT && \
-        (evnt)->message == NS_MOUSE_CLICK && \
-        NS_STATIC_CAST(nsMouseEvent*, (evnt))->button == nsMouseEvent::eLeftButton)
-
-#define NS_IS_CONTEXT_MENU_KEY(evnt) \
-       ((evnt)->eventStructType == NS_MOUSE_EVENT && \
-        (evnt)->message == NS_CONTEXTMENU && \
-        NS_STATIC_CAST(nsMouseEvent*, (evnt))->context == nsMouseEvent::eContextMenuKey)
 
 #define NS_IS_DRAG_EVENT(evnt) \
        (((evnt)->message == NS_DRAGDROP_ENTER) || \
@@ -1005,7 +1015,7 @@ enum nsDragDropEventStatus {
         ((evnt)->message == NS_PLUGIN_ACTIVATE))
 
 #define NS_IS_TRUSTED_EVENT(event) \
-  (((event)->flags & NS_EVENT_FLAG_TRUSTED) != 0)
+  (((event)->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED) != 0)
 
 // Mark an event as being dispatching.
 #define NS_MARK_EVENT_DISPATCH_STARTED(event) \

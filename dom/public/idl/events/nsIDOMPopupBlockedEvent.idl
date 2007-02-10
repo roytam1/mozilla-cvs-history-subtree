@@ -44,19 +44,10 @@ interface nsIURI;
  * posted when a popup window is blocked.
  */
 
-[scriptable, uuid(05be571f-c3ea-4959-a340-c57b1591ae4b)]
+[scriptable, uuid(9e201104-78e9-4cb3-aff5-7f0a9cf446c0)]
 interface nsIDOMPopupBlockedEvent : nsIDOMEvent
 {
-  /**
-   * The window object that attempted to open the blocked popup
-   * (i.e. the window object on which open() was called).
-   */
-  readonly attribute nsIDOMWindow requestingWindow;
-
-
-  /**
-   * The URI of the window that was blocked.
-   */
+  readonly attribute nsIURI requestingWindowURI;
   readonly attribute nsIURI popupWindowURI;
 
   /**
@@ -65,17 +56,10 @@ interface nsIDOMPopupBlockedEvent : nsIDOMEvent
    */
   readonly attribute DOMString popupWindowFeatures;
 
-  /**
-   * The window name passed to the window.open() call
-   * (as the second argument)
-   */
-  readonly attribute DOMString popupWindowName;
-
   void initPopupBlockedEvent(in DOMString typeArg,
                              in boolean canBubbleArg,
                              in boolean cancelableArg,
-                             in nsIDOMWindow requestingWindow,
+                             in nsIURI requestingWindowURI,
                              in nsIURI popupWindowURI,
-                             in DOMString popupWindowName,
                              in DOMString popupWindowFeatures);
 };

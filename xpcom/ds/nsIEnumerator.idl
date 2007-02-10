@@ -39,6 +39,8 @@
 
 %{C++
 #define NS_ENUMERATOR_FALSE 1
+extern "C" NS_COM nsresult
+NS_NewEmptyEnumerator(nsISimpleEnumerator** aResult);
 %}
 /*
  * DO NOT USE THIS INTERFACE.  IT IS HORRIBLY BROKEN, USES NS_COMFALSE

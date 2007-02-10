@@ -42,34 +42,30 @@
 
 #include "nsIBindingManager.h"
 #include "nsIStyleRuleSupplier.h"
-#include "nsIMutationObserver.h"
+#include "nsStubDocumentObserver.h"
 #include "pldhash.h"
 #include "nsInterfaceHashtable.h"
 #include "nsRefPtrHashtable.h"
 #include "nsURIHashKey.h"
-#include "nsCycleCollectionParticipant.h"
 
 class nsIContent;
 class nsIXPConnectWrappedJS;
 class nsIAtom;
 class nsIDOMNodeList;
+class nsVoidArray;
 class nsIDocument;
 class nsIURI;
 class nsIXBLDocumentInfo;
 class nsIStreamListener;
 class nsStyleSet;
-template<class E> class nsTArray;
-template<class E> class nsRefPtr;
-typedef nsTArray<nsRefPtr<nsXBLBinding> > nsBindingList;
 
 class nsBindingManager : public nsIBindingManager,
                          public nsIStyleRuleSupplier,
-                         public nsIMutationObserver
+                         public nsStubDocumentObserver
 {
-public:
-  NS_DECL_CYCLE_COLLECTING_ISUPPORTS
-  NS_DECL_NSIMUTATIONOBSERVER
+  NS_DECL_ISUPPORTS
 
+public:
   nsBindingManager();
   ~nsBindingManager();
 
@@ -88,13 +84,11 @@ public:
   NS_IMETHOD ResolveTag(nsIContent* aContent, PRInt32* aNameSpaceID, nsIAtom** aResult);
 
   NS_IMETHOD GetContentListFor(nsIContent* aContent, nsIDOMNodeList** aResult);
-  NS_IMETHOD SetContentListFor(nsIContent* aContent,
-                               nsInsertionPointList* aList);
+  NS_IMETHOD SetContentListFor(nsIContent* aContent, nsVoidArray* aList);
   NS_IMETHOD HasContentListFor(nsIContent* aContent, PRBool* aResult);
 
   NS_IMETHOD GetAnonymousNodesFor(nsIContent* aContent, nsIDOMNodeList** aResult);
-  NS_IMETHOD SetAnonymousNodesFor(nsIContent* aContent,
-                                  nsInsertionPointList* aList);
+  NS_IMETHOD SetAnonymousNodesFor(nsIContent* aContent, nsVoidArray* aList);
 
   NS_IMETHOD GetXBLChildNodesFor(nsIContent* aContent, nsIDOMNodeList** aResult);
 
@@ -129,17 +123,24 @@ public:
 
   NS_IMETHOD ShouldBuildChildFrames(nsIContent* aContent, PRBool* aResult);
 
-  virtual NS_HIDDEN_(void) AddObserver(nsIMutationObserver* aObserver);
-
-  virtual NS_HIDDEN_(PRBool) RemoveObserver(nsIMutationObserver* aObserver);  
-
   // nsIStyleRuleSupplier
   NS_IMETHOD WalkRules(nsStyleSet* aStyleSet, 
                        nsIStyleRuleProcessor::EnumFunc aFunc,
                        RuleProcessorData* aData,
                        PRBool* aCutOffInheritance);
 
-  NS_DECL_CYCLE_COLLECTION_CLASS(nsBindingManager)
+  // nsIDocumentObserver
+  virtual void ContentAppended(nsIDocument* aDocument,
+                               nsIContent* aContainer,
+                               PRInt32     aNewIndexInContainer);
+  virtual void ContentInserted(nsIDocument* aDocument,
+                               nsIContent* aContainer,
+                               nsIContent* aChild,
+                               PRInt32 aIndexInContainer);
+  virtual void ContentRemoved(nsIDocument* aDocument,
+                              nsIContent* aContainer,
+                              nsIContent* aChild,
+                              PRInt32 aIndexInContainer);
 
 protected:
   nsresult GetXBLChildNodesInternal(nsIContent* aContent,
@@ -154,10 +155,6 @@ protected:
   }
 
   nsresult GetNestedInsertionPoint(nsIContent* aParent, nsIContent* aChild, nsIContent** aResult);
-
-#define NS_BINDINGMANAGER_NOTIFY_OBSERVERS(func_, params_) \
-  NS_OBSERVER_ARRAY_NOTIFY_OBSERVERS(mObservers, nsIMutationObserver, \
-                                     func_, params_);
 
 // MEMBER VARIABLES
 protected: 
@@ -204,14 +201,11 @@ protected:
   // table, they have not yet finished loading.
   nsInterfaceHashtable<nsURIHashKey,nsIStreamListener> mLoadingDocTable;
 
-  // Array of mutation observers who would like to be notified of content
-  // appends/inserts after we update our data structures and of content removes
-  // before we do so.
-  nsTObserverArray<nsIMutationObserver> mObservers;
-
   // A queue of binding attached event handlers that are awaiting execution.
-  nsBindingList mAttachedStack;
+  nsVoidArray mAttachedStack;
   PRBool mProcessingAttachedStack;
 };
+
+PRBool PR_CALLBACK ReleaseInsertionPoint(void* aElement, void* aData);
 
 #endif

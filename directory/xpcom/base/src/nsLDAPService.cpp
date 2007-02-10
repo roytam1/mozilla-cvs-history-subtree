@@ -48,7 +48,6 @@
 #include "nsILDAPURL.h"
 #include "nsAutoLock.h"
 #include "nsCRT.h"
-#include "nsILDAPErrors.h"
 
 // Constants for CIDs used here.
 //
@@ -765,6 +764,8 @@ nsLDAPService::EstablishConnection(nsLDAPServiceEntry *aEntry,
         return NS_ERROR_FAILURE;
     }
 
+    // Here we need to provide the binddn, see bug #75990
+    //
     rv = conn->Init(host.get(), port, 
                     (options & nsILDAPURL::OPT_SECURE) ? PR_TRUE : PR_FALSE, 
                     binddn, this, nsnull, protocolVersion);

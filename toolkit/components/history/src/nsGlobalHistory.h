@@ -42,7 +42,7 @@
 #define nsglobalhistory__h____
 
 #include "nsIBrowserHistory.h"
-#include "nsIGlobalHistory3.h"
+
 #include "mdb.h"
 #include "nsIObserver.h"
 #include "nsIPrefBranch.h"
@@ -132,15 +132,13 @@ class nsGlobalHistory : nsSupportsWeakReference,
                         public nsIObserver,
                         public nsIRDFDataSource,
                         public nsIRDFRemoteDataSource,
-                        public nsIAutoCompleteSearch,
-                        public nsIGlobalHistory3
+                        public nsIAutoCompleteSearch
 {
 public:
   // nsISupports methods 
   NS_DECL_ISUPPORTS
 
   NS_DECL_NSIGLOBALHISTORY2
-  NS_DECL_NSIGLOBALHISTORY3
   NS_DECL_NSIBROWSERHISTORY
   NS_DECL_NSIOBSERVER
   NS_DECL_NSIRDFDATASOURCE
@@ -297,7 +295,6 @@ protected:
   mdb_column kToken_HostnameColumn;
   mdb_column kToken_HiddenColumn;
   mdb_column kToken_TypedColumn;
-  mdb_column kToken_GeckoFlagsColumn;
 
   mdb_column kToken_ByteOrder;
   // meta-data tokens
