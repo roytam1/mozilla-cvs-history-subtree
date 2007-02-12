@@ -1,3 +1,4 @@
 Edit this file and include an explanation of why you're respinning. - #build
 2007-02-07 22:03 - Respinning to pick up l10n Makefile change
 2007-02-09 06:42 UTC - Spin l10n builds for SUNBIRD_0_3_1_RELEASE
+2006-02-12 21:54 UTC - Respinning to check fixes that block 0.3.1rc2
