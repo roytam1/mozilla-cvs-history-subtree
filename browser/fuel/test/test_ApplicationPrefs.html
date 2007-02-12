@@ -43,7 +43,13 @@ function test_Preferences() {
   var itemValue = Application.prefs.get(test.dummy, "default");
   is(itemValue, "default", "Check 'Application.prefs.get' for reset pref");
   
+  // test to see if a non-existant property exists
+  ok(!Application.prefs.has(test.dummy), "Check non-existant property for existance");
+  
   // PREF: string browser.active_color == #EE0000
+  
+  // test to see if an existing string property exists
+  ok(Application.prefs.has(test.string), "Check existing string property for existance");
   
   // test accessing a non-existant string property
   var val = Application.prefs.get(test.dummy, "default");
@@ -65,6 +71,9 @@ function test_Preferences() {
   
   // PREF: integer permissions.default.image == 1
   
+  // test to see if an existing integer property exists
+  ok(Application.prefs.has(test.integer), "Check existing integer property for existance");
+  
   // test accessing a non-existant integer property
   var val = Application.prefs.get(test.dummy, 0);
   is(val, 0, "Check non-existant integer property for expected value");
@@ -84,6 +93,9 @@ function test_Preferences() {
   is(val, 1, "Reset existing integer property");
 
   // PREF: boolean browser.blink_allowed == true
+  
+  // test to see if an existing boolean property exists
+  ok(Application.prefs.has(test.boolean), "Check existing boolean property for existance");
   
   // test accessing a non-existant boolean property
   var val = Application.prefs.get(test.dummy, true);

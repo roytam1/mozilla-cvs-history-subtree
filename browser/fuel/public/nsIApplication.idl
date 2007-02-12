@@ -127,6 +127,14 @@ interface nsIPreferences : nsISupports
    *          does not exists.
    */
   nsIVariant get(in string name, in nsIVariant defaultValue);
+  
+  /**
+   * Check to see if a preference exists.
+   * @param   name
+   *          The name of preference
+   * @returns true if the preference exists, false if not
+   */
+  nsIVariant has(in string name);
 
   /**
    * Resets a preference back to the default values. If name is null, all

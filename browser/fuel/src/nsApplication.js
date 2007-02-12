@@ -211,6 +211,10 @@ Preferences.prototype = {
     return value;
   },
   
+  has : function(name) {
+  	return this.get( name, null ) != null;
+  },
+  
   reset : function(name) {
     if (name) {
       this._prefs.clearUserPref(name);
