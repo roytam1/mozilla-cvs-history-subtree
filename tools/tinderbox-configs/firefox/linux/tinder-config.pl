@@ -140,10 +140,10 @@ $BuildNameExtra = 'Fx-Release';
 $ConfigureOnly = 1;
 %WGetFiles = (
 	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.2-candidates/rc2/firefox-2.0.0.2.en-US.linux-i686.tar.gz" => 
-	      "/builds/tinderbox/Fx-Mozilla1.8-l10n-release/Linux_2.4.20-28.8_Clobber/firefox.tar.gz"
+	      "/builds/tinderbox/Fx-Mozilla1.8-l10n-release/Linux_2.4.20-28.8_Depend/firefox.tar.gz"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.8-l10n-release/Linux_2.4.20-28.8_Clobber/firefox.tar.gz";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.8-l10n-release/Linux_2.4.20-28.8_Depend/firefox.tar.gz";
 
 #-
 #- The rest should not need to be changed
