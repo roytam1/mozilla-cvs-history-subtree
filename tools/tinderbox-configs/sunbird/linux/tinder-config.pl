@@ -165,8 +165,13 @@ $ConfigureOnly = 1;
 
 $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
+# %WGetFiles = (
+#	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/releases/0.3.1rc1/linux-i686/en-US/sunbird-%version%.en-US.linux-i686.tar.bz2" =>
+#	      "/builds/tinderbox/Sb-Trunk-l10n/Linux_2.4.21-32.0.1.EL_Clobber/sunbird.tar.bz2"
+#	      );
+
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/releases/0.3.1rc1/linux-i686/en-US/sunbird-%version%.en-US.linux-i686.tar.bz2" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-%version%.en-US.linux-i686.tar.bz2" =>
 	      "/builds/tinderbox/Sb-Trunk-l10n/Linux_2.4.21-32.0.1.EL_Clobber/sunbird.tar.bz2"
 	      );
 
