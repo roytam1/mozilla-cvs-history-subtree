@@ -92,7 +92,7 @@ function Events() {
 //=================================================
 // Events implementation
 Events.prototype = {
-  add : function(event, handler) {
+  addListener : function(event, handler) {
 	if (this._listeners.some(hasFilter))
       return;
 
@@ -106,13 +106,13 @@ Events.prototype = {
     }
   },
   
-  remove : function(event, handler) {
+  removeListener : function(event, handler) {
     this._listeners = this._listeners.filter(function(element){
       return element.event != event && element.handler != handler;
     });
   },
   
-  fire : function(event, eventItem) {
+  dispatch : function(event, eventItem) {
   	eventItem = new EventItem( event, eventItem );
   	
   	this._listeners.forEach(function(key){
@@ -157,7 +157,7 @@ Preferences.prototype = {
   // for nsIObserver
   observe: function(subject, topic, data) {
     if (topic == "nsPref:changed") {
-      this._events.fire("change", data);
+      this._events.dispatch("change", data);
     }
   },
   
@@ -246,7 +246,7 @@ SessionStorage.prototype = {
   
   set : function(name, value) {
     this._storage[name] = value;
-    this._events.fire("change", name);
+    this._events.dispatch("change", name);
   },
   
   get : function(name, defaultValue) {
@@ -266,7 +266,7 @@ function Extension( item ) {
   var installPref = "install-event-fired";
   if ( !this._prefs.has(installPref) ) {
     this._prefs.set(installPref, true);
-    this._events.fire("install", this._item.id);
+    this._events.dispatch("install", this._item.id);
   }
 }
 
@@ -364,19 +364,19 @@ Application.prototype = {
   observe: function(subject, topic, data) {
     if (topic == "app-startup") {
       this._extensions = new Extensions();
-      this._events.fire("start", "application");
+      this._events.dispatch("start", "application");
     }
     else if (topic == "final-ui-startup") {
-      this._events.fire("ready", "application");
+      this._events.dispatch("ready", "application");
     }
     else if (topic == "quit-application-requested") {
       // we can stop the quit by checking the return value
-      if (this._events.fire("quit", "application")) {
+      if (this._events.dispatch("quit", "application")) {
         data.value = true;
       }
     }
     else if (topic == "xpcom-shutdown") {
-      this._events.fire("unload", "application");
+      this._events.dispatch("unload", "application");
 
       var os = Components.classes["@mozilla.org/observer-service;1"]
                          .getService(Components.interfaces.nsIObserverService);

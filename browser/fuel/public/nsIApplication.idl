@@ -79,7 +79,7 @@ interface nsIEvents : nsISupports
    * @param   listener
    *          The reference to a listener
    */
-  void add(in string event, in nsIEventListener listener);
+  void addListener(in string event, in nsIEventListener listener);
 
   /**
    * Removes an event listener from the list. Calling remove
@@ -90,7 +90,7 @@ interface nsIEvents : nsISupports
    * @param   listener
    *          The reference to a listener
    */
-  void remove(in string event, in nsIEventListener listener);
+  void removeListener(in string event, in nsIEventListener listener);
 }; 
 
 

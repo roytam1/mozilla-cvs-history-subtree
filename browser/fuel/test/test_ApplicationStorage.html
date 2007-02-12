@@ -35,13 +35,14 @@ function test_Storage() {
 
   // check for change event when setting a value
   SimpleTest.waitForExplicitFinish();
-  Application.storage.events.add("change", onStorageChange);
+  Application.storage.events.addListener("change", onStorageChange);
   Application.storage.set("fuel-test", "change event");
 }
 
 function onStorageChange(evt) {
   netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
   is(evt.data, "fuel-test", "Check 'Application.storage.set' fired a change event");
+  Application.storage.events.removeListener("change", onStorageChange);
   SimpleTest.finish();
 }
 
