@@ -141,12 +141,12 @@ $ConfigureOnly = 1;
 # Existing build files to download.
 %WGetFiles = (
 	      'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.2-candidates/rc2/firefox-2.0.0.2.en-US.win32.installer.exe' =>
-	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Clobber/firefox-installer.exe",
+	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Depend/firefox-installer.exe",
 	      'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.2-candidates/rc2/firefox-2.0.0.2.en-US.win32.zip' =>
-	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Clobber/firefox.zip"
+	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Depend/firefox.zip"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Clobber/firefox.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Clobber/firefox-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Depend/firefox.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Depend/firefox-installer.exe";
 
 #-
 #- The rest should not need to be changed
