@@ -50,6 +50,7 @@ JAVA_SRCS = \
 		$(srcdir)/IMozilla.java \
 		$(srcdir)/IGRE.java \
 		$(srcdir)/IXPCOM.java \
+		$(srcdir)/IJavaXPCOMUtils.java \
 		$(srcdir)/IAppFileLocProvider.java \
 		$(srcdir)/INIParser.java \
 		$(srcdir)/VersionComparator.java \
