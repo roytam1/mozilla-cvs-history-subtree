@@ -409,9 +409,6 @@ static BookmarkManager* gBookmarkManager = nil;
 - (void)shutdown
 {
   [self writeBookmarks:nil];
-  // Temporary logging to try to help nail down bug 337750
-  long long bmFileSize = [[NSFileManager defaultManager] sizeOfFileAtPath:mPathToBookmarkFile traverseLink:YES];
-  NSLog(@"Bookmarks file '%@' is %qi bytes on shutdown", mPathToBookmarkFile, bmFileSize);
 }
 
 - (BOOL)bookmarksLoaded
