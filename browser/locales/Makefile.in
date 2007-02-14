@@ -108,13 +108,13 @@ endif
 PROFILE_CHROME = userChrome-example.css userContent-example.css
 
 libs:: $(addprefix $(LOCALE_SRCDIR)/,$(README_FILES))
-	$(INSTALL) $^ $(FINAL_TARGET)
+	$(SYSINSTALL) $(IFLAGS1) $^ $(FINAL_TARGET)
 
 libs:: $(addprefix $(LOCALE_SRCDIR)/profile/,$(PROFILE_FILES))
-	$(INSTALL) $^ $(FINAL_TARGET)/defaults/profile
+	$(SYSINSTALL) $(IFLAGS1) $^ $(FINAL_TARGET)/defaults/profile
 
 libs:: $(addprefix $(LOCALE_SRCDIR)/profile/chrome/,$(PROFILE_CHROME))
-	$(INSTALL) $^ $(FINAL_TARGET)/defaults/profile/chrome
+	$(SYSINSTALL) $(IFLAGS1) $^ $(FINAL_TARGET)/defaults/profile/chrome
 
 install:: $(addprefix $(LOCALE_SRCDIR)/profile/,$(PROFILE_FILES))
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/defaults/profile
@@ -126,7 +126,7 @@ SEARCH_PLUGINS = $(shell cat $(LOCALE_SRCDIR)/searchplugins/list.txt)
 SEARCH_PLUGIN_PREFIX = $(addprefix $(LOCALE_SRCDIR)/searchplugins/,$(SEARCH_PLUGINS))
 
 libs:: $(addsuffix .src,$(SEARCH_PLUGIN_PREFIX)) $(foreach base,$(SEARCH_PLUGIN_PREFIX),$(wildcard $(base).gif)$(wildcard $(base).png))
-	$(INSTALL) $^ $(FINAL_TARGET)/searchplugins
+	$(SYSINSTALL) $(IFLAGS1) $^ $(FINAL_TARGET)/searchplugins
 
 install:: $(addsuffix .src,$(SEARCH_PLUGIN_PREFIX)) $(foreach base,$(SEARCH_PLUGIN_PREFIX),$(wildcard $(base).gif)$(wildcard $(base).png))
 	$(SYSINSTALL) $(IFLAGS1) $^ $(DESTDIR)$(mozappdir)/searchplugins
@@ -266,9 +266,9 @@ ifeq ($(OS_ARCH),WINNT)
 	iconv -f UTF-8 -t $(WIN_INSTALLER_CHARSET) $< > $(FINAL_TARGET)/updater.ini
 else
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-	$(INSTALL) $^ $(FINAL_TARGET)/updater.app/Contents/MacOS
+	$(SYSINSTALL) $(IFLAGS1) $^ $(FINAL_TARGET)/updater.app/Contents/MacOS
 else
-	$(INSTALL) $^ $(FINAL_TARGET)
+	$(SYSINSTALL) $(IFLAGS1) $^ $(FINAL_TARGET)
 endif
 endif
 endif
