@@ -268,9 +268,6 @@ var gComposeRecyclingListener = {
 
   onReopen: function(params) {
     // Reset focus to avoid undesirable visual effect when reopening the window
-    var identityElement = document.getElementById("msgIdentity");
-    if (identityElement)
-      identityElement.focus();
 
     InitializeGlobalVariables();
     ComposeStartup(true, params);
@@ -1688,7 +1685,7 @@ function GenericSendMessage( msgType )
         {
           // We disable spellcheck for the following -subject line, attachment pane, identity and addressing widget
           // therefore we need to explicitly focus on the mail body when we have to do a spellcheck.
-          window.content.focus();
+          SetMsgBodyFrameFocus();
           window.cancelSendMessage = false;
           try {
             window.openDialog("chrome://editor/content/EdSpellCheck.xul", "_blank",
@@ -2344,7 +2341,7 @@ function getIdentityForKey(key)
 function AdjustFocus()
 {
   //dump("XXX adjusting focus\n");
-  var element = document.getElementById("addressCol2#" + awGetNumberOfRecipients());
+  var element = awGetInputElement(awGetNumberOfRecipients());
   if (element.value == "") {
       //dump("XXX focus on address\n");
       awSetFocus(awGetNumberOfRecipients(), element);
@@ -2358,7 +2355,7 @@ function AdjustFocus()
       }
       else {
         //dump("XXX focus on body\n");
-        window.content.focus();
+        SetMsgBodyFrameFocus();
       }
   }
 }
@@ -2936,12 +2933,12 @@ function subjectKeyPress(event)
   switch(event.keyCode) {
   case 9:
     if (!event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      window.content.focus();
+      SetMsgBodyFrameFocus();
       event.preventDefault();
     }
     break;
   case 13:
-    window.content.focus();
+    SetMsgBodyFrameFocus();
     break;
   }
 }
@@ -3116,7 +3113,9 @@ function SetMsgAttachmentElementFocus()
 
 function SetMsgBodyFrameFocus()
 {
-  window.content.focus();
+  //window.content.focus(); fails to blur the currently focused element
+  document.commandDispatcher
+          .advanceFocusIntoSubtree(document.getElementById("appcontent"));
 }
 
 function GetMsgAddressingWidgetElement()
