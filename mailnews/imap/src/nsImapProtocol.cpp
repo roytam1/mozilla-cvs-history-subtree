@@ -3517,7 +3517,7 @@ void nsImapProtocol::NormalMessageEndDownload()
 
   if (m_trackingTime)
     AdjustChunkSize();
-  if (m_imapMailFolderSink && GetServerStateParser().GetDownloadingHeaders())
+  if (m_imapMailFolderSink && m_curHdrInfo && GetServerStateParser().GetDownloadingHeaders())
   {
     m_curHdrInfo->SetMsgSize(GetServerStateParser().SizeOfMostRecentMessage());
     m_curHdrInfo->SetMsgUid(GetServerStateParser().CurrentResponseUID());
