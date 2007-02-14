@@ -71,3 +71,7 @@ uninstall/uninst.exe
 uninstall/uninstall.exe
 components/myspell/en-US.dic
 components/myspell/en-US.aff
+Microsoft.VC80.CRT.manifest
+msvcm80.dll
+msvcp80.dll
+msvcr80.dll
