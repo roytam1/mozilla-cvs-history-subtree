@@ -27,7 +27,7 @@
 
   <div style="text-align:center" class="extensions">
   
-    <img src="chrome://minimo/skin/extensions/google.png">
+    <img src="chrome://minimo/skin/extensions/icon-google.png">
     </img>
 
     <input type="text" id="search-google"
@@ -44,6 +44,7 @@
 <!--
   <div class="section">&titleExtensions.label;</div>
 -->
+
   <div class="item extensions" >
 
     <img>
