@@ -20,7 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Marcio S. Galli - mgalli@geckonnection.com
+ *   Marcio S. Galli - mgalli@mgalli.com
  * 
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -59,11 +59,16 @@ function URLBarEventCatch(event) {
    var escapeToHistory = false; 
 
    if(event.keyCode==KeyEvent.DOM_VK_RETURN) {
+	
 	URLBarEntered();
+
    } 
 
+
    if(event.keyCode==KeyEvent.DOM_VK_DOWN) {
+	
 	escapeToHistory = true;
+
    } 
 
    var currentURLBarString = document.getElementById("urlbar2").value;
@@ -76,6 +81,9 @@ function URLBarEventCatch(event) {
 
    var historyFound = false; 
 
+   if(currentURLBarString!="") {
+
+
    for(var i=0;i<historyItemsList.length;i++) {
 
 	var currentElement = historyItemsList[i];
@@ -87,22 +95,31 @@ function URLBarEventCatch(event) {
 	var brother = currentElement.previousSibling;
 
 	if(textValue.match(regExp)) {
-        brother.style.display="block";
-        historyFound=true;		
-        if(escapeToHistory) {
-          brother.childNodes[1].focus(); escapeToHistory = false;
-        }
-	} else {
-          brother.style.display="none";
-	} 
+		brother.style.display="block";
+
+		historyFound=true;	
 	
+	        if(escapeToHistory) {
+			brother.childNodes[1].focus(); escapeToHistory = false;
+		   }
+
+
+	} else {
+		brother.style.display="none";
+	} 
    } 
+   
+   }
   
    if(historyFound) {
+
 		hbSelect("timehistory");
-   } else {
-        hbSelectAll();
+
+   }	  else {
+		hbSelectAll();
+
    }
+
 
 }
 
