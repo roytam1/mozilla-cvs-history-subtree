@@ -515,7 +515,7 @@ function MiniNavStartup()
   try {
 	gKeyboardService = Components.classes["@mozilla.org/softkbservice/service;1"]
                                  .getService(nsISoftKeyBoard);
-  } catch (i) { }
+  } catch (i) { onErrorHandler(i) }
 
   /*
    * Add an observer to deal with the OS Soft keyboard 
@@ -717,7 +717,7 @@ function syncControlBar(fullList) {
           if(document.getElementById(elementName)) {
             document.getElementById(elementName).setAttribute("hidden","true");
           }
-        } catch (i) { } 
+        } catch (i) { onErrorHandler(i) } 
 	}
   } catch (e) {
   }
@@ -732,7 +732,7 @@ function syncControlBar(fullList) {
           if(document.getElementById(elementName)) {
             document.getElementById(elementName).setAttribute("hidden","false");
           }
-        } catch (i) { } 
+        } catch (i) { onErrorHandler(i) } 
 	}
   } catch (e) {
   }
@@ -2046,7 +2046,11 @@ function DoLeftSoftkeyWithModifier()
 
 function DoRightSoftkeyWithModifier()
 {
-  alert("DoRightSoftkeyWithModifier");
+
+  try { 
+  document.getElementById("contentAreaContextMenu").showPopup(document.commandDispatcher.focusedElement,-1,-1,"popup",'bottomleft', 'topleft');
+  } catch(i) { onErrorHandler(i) } 
+  
 }
 
 /*
@@ -2153,7 +2157,7 @@ function spinCreate() {
 
       try { 
         document.commandDispatcher.advanceFocusIntoSubtree(gBrowser.contentDocument.documentElement);
-      } catch(i) { } 
+      } catch(i) { onErrorHandler(i) } 
 
     }, 
     SpinOut:function () {
