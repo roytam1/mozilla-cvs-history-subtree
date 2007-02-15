@@ -49,10 +49,11 @@ cp -a bin/chrome/toolkit.manifest                        minimo/chrome
 #cp -a bin/chrome/mobile.jar                             minimo/chrome
 #cp -a bin/chrome/mobile.manifest                        minimo/chrome
 #
-cp -a bin/chrome/shopping.jar                           minimo/chrome
-cp -a bin/chrome/shopping.manifest                      minimo/chrome
-cp -a bin/chrome/sudoku.jar                           minimo/chrome
-cp -a bin/chrome/sudoku.manifest                      minimo/chrome
+#cp -a bin/chrome/shopping.jar                           minimo/chrome
+#cp -a bin/chrome/shopping.manifest                      minimo/chrome
+#
+#cp -a bin/chrome/sudoku.jar                           minimo/chrome
+#cp -a bin/chrome/sudoku.manifest                      minimo/chrome
 #
 #cp -a bin/chrome/technorati.jar                         minimo/chrome
 #cp -a bin/chrome/technorati.manifest                    minimo/chrome
