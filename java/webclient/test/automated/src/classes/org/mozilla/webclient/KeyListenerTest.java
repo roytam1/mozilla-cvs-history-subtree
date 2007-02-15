@@ -235,7 +235,7 @@ public class KeyListenerTest extends WebclientTestCase {
 	robot.keyPress(KeyEvent.VK_BACK_SPACE);
 	robot.keyRelease(KeyEvent.VK_BACK_SPACE);
 
-	Thread.currentThread().sleep(3000);
+	Thread.currentThread().sleep(5000);
 
 	assertTrue(bitSet.get(0));
 	assertTrue(bitSet.get(1));
