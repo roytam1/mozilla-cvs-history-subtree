@@ -74,6 +74,7 @@
 
 #include "nsIDOMKeyEvent.h"
 #include "nsIDOMEventListener.h"
+#include "nsIDOMHTMLInputElement.h"
 
 #include "nsIPrefService.h"
 #include "nsIPrefBranch2.h"
@@ -215,6 +216,12 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
   nsAutoString eventType;
   aEvent->GetType(eventType);
 
+  // if the event target is readonly, then ignore since we can never change it.
+  nsCOMPtr<nsIDOMHTMLInputElement> input = do_QueryInterface(target);
+
+  PRBool isReadOnly = PR_FALSE;
+  input->GetReadOnly(&isReadOnly);
+
   if (eventType.EqualsLiteral("keypress"))
   {
     PRUint32 keyCode;
@@ -234,7 +241,7 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
     return NS_OK;
   }
 
-  if (eventType.EqualsLiteral("click"))
+  if (!isReadOnly && eventType.EqualsLiteral("click"))
   {
     nsSoftKeyBoardService::OpenSIP();
     nsSoftKeyBoardService::ScrollElementIntoView(targetContent);
@@ -257,7 +264,7 @@ nsSoftKeyBoard::HandleEvent(nsIDOMEvent* aEvent)
   if (privateWindow)
     popupConditions = privateWindow->IsLoadingOrRunningTimeout();
   
-  if (eventType.EqualsLiteral("focus"))
+  if (!isReadOnly && eventType.EqualsLiteral("focus"))
   {
     //    if (popupConditions == PR_FALSE)
     nsSoftKeyBoardService::OpenSIP();
