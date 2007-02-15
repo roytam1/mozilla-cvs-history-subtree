@@ -44,7 +44,6 @@
 <!--
   <div class="section">&titleExtensions.label;</div>
 -->
-
   <div class="item extensions" >
 
     <img>
@@ -112,7 +111,7 @@
 <xsl:choose>
 <xsl:when test="@hbhistory" >
 
-  <div  class="item timehistory" ><img src="chrome://minimo/skin/m-nav.png" />
+  <div  class="item timehistory" >
 <a>
       <xsl:attribute name="href">javascript:</xsl:attribute> 	
       <xsl:attribute name="onclick">hbOpenAsTab('<xsl:value-of select="@value"/>');return false</xsl:attribute>
