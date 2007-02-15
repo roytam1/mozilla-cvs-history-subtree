@@ -199,6 +199,7 @@ nsBrowserStatusHandler.prototype =
             if (aWebProgress.DOMWindow == content) this.endDocumentLoad(aRequest, aStatus);
         }
 
+
         // disable and hides the nav-stop-button; and enables unhides the nav-menu-button button
         document.getElementById("nav-stopreload").className="reload-button";
         document.getElementById("nav-stopreload").setAttribute("command","cmd_BrowserReload");
@@ -1042,6 +1043,7 @@ function BrowserReload()
 
 /* 
  * Combine the two following functions in one
+
  */
 function BrowserOpenTab()
 {
@@ -2058,7 +2060,7 @@ function spinCycle() {
 
   gKeySpinCurrent.SpinOut();
   gKeySpinCurrent = gKeySpinCurrent.next;
-  setTimeout("gKeySpinCurrent.SpinIn()",30);
+  setTimeout("gKeySpinCurrent.SpinIn()",20);
 }
 
 /* 
@@ -2083,6 +2085,7 @@ function spinSetnext(ref) {
   } 
   
 }
+
 
 function spinCreate() {
 
@@ -2119,6 +2122,14 @@ function spinCreate() {
    * New homebase version uses it 
    */
 
+  var spinToolbarButtons = { 
+    SpinIn:function () {
+      document.getElementById("nav-back").focus();
+    }, 
+    SpinOut:function () {
+    }
+  }
+
   var spinRightMenu = { 
     SpinIn:function () {
       document.getElementById("nav-menu-button").focus();
@@ -2138,11 +2149,9 @@ function spinCreate() {
 
     SpinIn:function () {
 
-        /* Ask marcio, somehow advance and rewind Igot a better behavior, it kicks the focus to finds its first element in
-           in the doc, then the backwards allows to reach the actual first focused one */
-
-	  gBrowser.contentWindow.focus();
-	  document.commandDispatcher.advanceFocus();
+      try { 
+        document.commandDispatcher.advanceFocusIntoSubtree(gBrowser.contentDocument.documentElement);
+      } catch(i) { } 
 
     }, 
     SpinOut:function () {
@@ -2191,13 +2200,17 @@ function spinCreate() {
 
   gKeySpinCurrent = spinContent;
 
-  spinContent.next=spinRightMenu;  
-  spinRightMenu.next=spinTabs;  
+// marcio 30000
+
+  spinContent.next=spinToolbarButtons;
+  spinToolbarButtons.next=spinTabs;  
+  //spinRightMenu.next=spinTabs;  
   spinTabs.next=spinContent;
   gSpinLast=spinContent;
   gSpinDocument = spinDocument;
-  gSpinFirst=spinRightMenu;
+  gSpinFirst=spinContent;
   gSpinUrl=spinUrlBar;
+
 
 }
 
@@ -2321,6 +2334,11 @@ function BrowserTellChromeThemeRules(refName,ruleReference) {
 }
 
 function BrowserChromeThemeColorGet() {
+
+  // we need to normalize this function so it returns the color value only and not the 
+  // additional strings. For example the presence of the "! important" affects the apps. 
+  // 
+
   gGlobalThemeValue = document.styleSheets[1].cssRules[1].style.cssText;
   gGlobalThemeValue = gGlobalThemeValue.split(";")[0];
   gGlobalThemeValue = gGlobalThemeValue.split("! important")[0];
