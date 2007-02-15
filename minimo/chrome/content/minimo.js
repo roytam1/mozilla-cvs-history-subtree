@@ -2039,7 +2039,9 @@ function BrowserPanMouseHandlerDestroy(e) {
 
 function DoLeftSoftkeyWithModifier()
 {
-  alert("DoLeftSoftkeyWithModifier");
+  document.getElementById("nav-menu-button").focus();
+  document.getElementById("menu_NavPopup").showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
+  gShowingMenuCurrent=document.getElementById("menu_NavPopup");
 }
 
 function DoRightSoftkeyWithModifier()
