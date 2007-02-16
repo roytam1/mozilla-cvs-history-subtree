@@ -2239,7 +2239,8 @@ function BrowserNavMenuPopup() {
 	} 
 
       gShowingMenuCurrent.showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
-
+      document.getElementById("command_TabFocus").focus();
+      
    }
 }
   
