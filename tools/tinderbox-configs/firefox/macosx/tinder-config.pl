@@ -1,6 +1,6 @@
 #
-## hostname: bm-xserve01.mozilla.org
-## uname: Darwin bm-xserve01.mozilla.org 8.5.0 Darwin Kernel Version 8.5.0: Sun Jan 22 10:38:46 PST 2006; root:xnu-792.6.61.obj~1/RELEASE_PPC Power Macintosh powerpc
+## hostname: bm-xserve02.build.mozilla.org
+## uname: Darwin bm-xserve02.mozilla.org 8.7.0 Darwin Kernel Version 8.7.0: Fri May 26 15:20:53 PDT 2006; root:xnu-792.6.76.obj~1/RELEASE_PPC Power Macintosh powerpc
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -59,26 +59,27 @@ $ProductName              = 'BonEcho';
 $MacOSProductName         = 'BonEcho';
 $VendorName               = "";
 
-#$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-#$RegxpcomTest             = 1;
-#$AliveTest                = 1;
+$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+$RegxpcomTest             = 1;
+$AliveTest                = 1;
 #$JavaTest                 = 0;
 #$ViewerTest               = 0;
 #$BloatTest                = 0;  # warren memory bloat test
 #$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
 #$DomToTextConversionTest  = 0;  
 #$XpcomGlueTest            = 0;
-#$CodesizeTest             = 1;  # Z,  require mozilla/tools/codesighs
-#$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
+$CodesizeTest             = 1;  # Z,  require mozilla/tools/codesighs
+$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-#$LayoutPerformanceTest    = 1;  # Tp
-#$DHTMLPerformanceTest     = 0;  # Tdhtml
+$LayoutPerformanceTest    = 1;  # Tp
+$LayoutPerformanceLocalTest = 1;  # Tp
+$DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
-#$XULWindowOpenTest        = 1;  # Txul
+$XULWindowOpenTest        = 1;  # Txul
 $StartupPerformanceTest   = 1;  # Ts
 
-#$TestsPhoneHome           = 0;  # Should test report back to server?
+$TestsPhoneHome           = 1;  # Should test report back to server?
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -97,7 +98,7 @@ $StartupPerformanceTest   = 1;  # Ts
 #$CreateProfileTimeout             = 45;
 #$RegxpcomTestTimeout              = 120;
 
-#$AliveTestTimeout                 = 45;
+$AliveTestTimeout                 = 10;
 #$ViewerTestTimeout                = 45;
 #$EmbedTestTimeout                 = 45;
 #$BloatTestTimeout                 = 120;   # seconds
@@ -108,6 +109,7 @@ $StartupPerformanceTest   = 1;  # Ts
 #$CodesizeTestTimeout              = 900;     # seconds
 #$CodesizeTestType                 = "auto";  # {"auto"|"base"}
 #$LayoutPerformanceTestTimeout     = 1200;  # entire test, seconds
+#$LayoutPerformanceLocalTestTimeout     = 1200;  # entire test, seconds
 #$DHTMLPerformanceTestTimeout      = 1200;  # entire test, seconds
 #$QATestTimeout                    = 1200;   # entire test, seconds
 #$LayoutPerformanceTestPageTimeout = 30000; # each page, ms
