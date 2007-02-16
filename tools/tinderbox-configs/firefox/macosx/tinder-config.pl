@@ -139,7 +139,7 @@ $BuildNameExtra = 'Fx-Release';
 # Configure only, don't build.
 $ConfigureOnly = 1;
 %WGetFiles = (
-	      "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.2-candidates/rc2/firefox-2.0.0.2.en-US.mac.dmg" =>
+	      "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.2-candidates/rc4/firefox-2.0.0.2.en-US.mac.dmg" =>
 	      "/builds/tinderbox/Fx-Mozilla1.8-l10n-release/Darwin_8.7.0_Depend/firefox.dmg"
 	      );
 
