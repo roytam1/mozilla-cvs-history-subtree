@@ -7,7 +7,6 @@
 
 # Make flags
 mk_add_options MOZ_CO_PROJECT=browser
-mk_add_options MOZ_MAKE_FLAGS=-j4
 mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../build/unifox
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 
