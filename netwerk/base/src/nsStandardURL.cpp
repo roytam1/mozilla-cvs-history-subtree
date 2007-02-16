@@ -505,6 +505,8 @@ nsStandardURL::BuildNormalizedSpec(const char *spec)
     if (mHost.mLen > 0) {
         const nsCSubstring& tempHost =
             Substring(spec + mHost.mPos, spec + mHost.mPos + mHost.mLen);
+        if (tempHost.FindChar('\0') != kNotFound)
+            return NS_ERROR_MALFORMED_URI;  // null embedded in hostname
         if ((useEncHost = NormalizeIDN(tempHost, encHost)))
             approxLen += encHost.Length();
         else
@@ -1408,6 +1410,9 @@ nsStandardURL::SetHost(const nsACString &input)
         NS_ERROR("cannot set host on no-auth url");
         return NS_ERROR_UNEXPECTED;
     }
+
+    if (host && strlen(host) < flat.Length())
+        return NS_ERROR_MALFORMED_URI; // found embedded null
 
     InvalidateCache();
     mHostEncoding = eEncoding_ASCII;
