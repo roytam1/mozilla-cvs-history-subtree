@@ -68,12 +68,12 @@ $AliveTest                = 1;
 #$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
 #$DomToTextConversionTest  = 0;  
 #$XpcomGlueTest            = 0;
-$CodesizeTest             = 1;  # Z,  require mozilla/tools/codesighs
+$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
 $EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 1;  # Tp
-$LayoutPerformanceLocalTest = 1;  # Tp
+$LayoutPerformanceTest    = 0;  # Tp
+$LayoutPerformanceLocalTest = 0;  # Tp
 $DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
 $XULWindowOpenTest        = 1;  # Txul
