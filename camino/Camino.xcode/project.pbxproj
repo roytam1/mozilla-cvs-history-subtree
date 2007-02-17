@@ -4137,6 +4137,7 @@
 				DE74F8BC0AB270B800FD1D5B,
 				DEE9EC4E0AF5C613002BC511,
 				008116EC0B2722EB001CB3F0,
+				DEE349A80B84F45500BCD687,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5267,6 +5268,7 @@
 				DE74F8C60AB270F200FD1D5B,
 				DEE9EC510AF5C654002BC511,
 				008116ED0B2722EB001CB3F0,
+				DEE349AB0B84F47400BCD687,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -8045,6 +8047,7 @@
 				DE74F8BD0AB270B800FD1D5B,
 				DEE9EC4F0AF5C613002BC511,
 				008116EE0B2722EB001CB3F0,
+				DEE349A70B84F45500BCD687,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9176,6 +9179,7 @@
 				DE74F8C70AB270F200FD1D5B,
 				DEE9EC520AF5C654002BC511,
 				008116EF0B2722EB001CB3F0,
+				DEE349AA0B84F47400BCD687,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -14133,6 +14137,50 @@
 			settings = {
 			};
 		};
+		DEE349A60B84F45500BCD687 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			name = FileChangeWatcher.h;
+			path = src/download/FileChangeWatcher.h;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DEE349A70B84F45500BCD687 = {
+			fileRef = DEE349A60B84F45500BCD687;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DEE349A80B84F45500BCD687 = {
+			fileRef = DEE349A60B84F45500BCD687;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DEE349A90B84F47400BCD687 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.objc;
+			name = FileChangeWatcher.m;
+			path = src/download/FileChangeWatcher.m;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DEE349AA0B84F47400BCD687 = {
+			fileRef = DEE349A90B84F47400BCD687;
+			isa = PBXBuildFile;
+			settings = {
+				COMPILER_FLAGS = "-fobjc-exceptions";
+			};
+		};
+		DEE349AB0B84F47400BCD687 = {
+			fileRef = DEE349A90B84F47400BCD687;
+			isa = PBXBuildFile;
+			settings = {
+				COMPILER_FLAGS = "-fobjc-exceptions";
+			};
+		};
 		DEE9EC4D0AF5C613002BC511 = {
 			fileEncoding = 30;
 			isa = PBXFileReference;
@@ -14942,6 +14990,7 @@
 				F517395B020CE3740189DA0C,
 				3FC0FB7F05A0D2DC002F47DE,
 				3FC0FB8005A0D2DC002F47DE,
+				DEE349A90B84F47400BCD687,
 			);
 			isa = PBXGroup;
 			name = Camino;
@@ -15307,6 +15356,7 @@
 				F566BD1202EFA9AD01A967F3,
 				F59E9F3D0237E28401A967DF,
 				DE74F8BB0AB270B800FD1D5B,
+				DEE349A60B84F45500BCD687,
 				F5137A1102676B9101026D05,
 				F528E218020FD8400168DE43,
 				F5607CB5023944AD01A967DF,
