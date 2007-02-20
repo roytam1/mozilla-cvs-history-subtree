@@ -47,6 +47,7 @@ include $(topsrcdir)/config/rules.mk
 _TEST_FILES =	test_Application.html \
 		test_ApplicationPrefs.html \
 		test_ApplicationStorage.html \
+		test_Extensions.html \
 		$(NULL)
 
 libs::	$(_TEST_FILES)

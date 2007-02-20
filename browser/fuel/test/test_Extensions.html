@@ -1,0 +1,38 @@
+<html>
+<head>
+  <title>Testing Application.js</title>
+  <script type="text/javascript" src="/MochiKit/MochiKit.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/EventUtils.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css"></link>
+</head>
+<body>
+<pre id="test">
+<script class="testbody" type="text/javascript">
+
+// The various pieces that we'll be testing
+var test = {
+	dummyid: "fuel-dummy-extension@mozilla.org",
+	inspectorid: "inspector@mozilla.org",
+	inspectorname: "DOM Inspector",
+};
+
+test_Extensions();
+
+function test_Extensions() {
+  netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+
+  // test to see if a non-existant extension exists
+  ok(!Application.extensions.has(test.dummyid), "Check non-existant extension for existance");
+
+  // test to see if an extension exists
+  ok(Application.extensions.has(test.inspectorid), "Check extension for existance");
+
+  var inspector = Application.extensions.get(test.inspectorid);
+  is(inspector.id, test.inspectorid, "Check 'Extension.id' for known extension");
+  is(inspector.name, test.inspectorname, "Check 'Extension.name' for known extension");
+}
+</script>
+</pre>
+</body>
+</html>

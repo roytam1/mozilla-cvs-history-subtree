@@ -259,7 +259,7 @@ SessionStorage.prototype = {
 // Extension constructor
 function Extension( item ) {
   this._item = item;
-  this._prefs = new Preferences( "extensions." + _item.id + "." );
+  this._prefs = new Preferences( "extensions." + this._item.id + "." );
   this._storage = new SessionStorage();
   this._events = new Events();
   
@@ -323,7 +323,8 @@ Extensions.prototype = {
   },
   
   get : function(id) {
-    return this.has(id) && new Extension(id) || null;
+    if (this._extmgr == null) dump("no extmgr");
+    return this.has(id) && new Extension(this._extmgr.getItemForID(id)) || null;
   }
 };
 
