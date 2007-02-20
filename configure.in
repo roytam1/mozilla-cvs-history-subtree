@@ -112,7 +112,7 @@ dnl ========================================================
 GLIB_VERSION=1.2.0
 GTK_VERSION=1.2.0
 LIBIDL_VERSION=0.6.3
-PERL_VERSION=5.004
+PERL_VERSION=5.006
 QT_VERSION=3.2.0
 QT_VERSION_NUM=320
 LIBART_VERSION=2.3.4
@@ -126,6 +126,7 @@ GNOMEVFS_VERSION=2.0
 GNOMEUI_VERSION=2.2.0
 GCONF_VERSION=1.2.1
 LIBGNOME_VERSION=2.0
+STARTUP_NOTIFICATION_VERSION=0.8
 
 MSMANIFEST_TOOL=
 
@@ -610,6 +611,7 @@ if test -z "$PERL" || test "$PERL" = ":"; then
     AC_MSG_ERROR([perl not found in \$PATH])
 fi
 
+if test -z "$TINDERBOX_SKIP_PERL_VERSION_CHECK"; then
 AC_MSG_CHECKING([for minimum required perl version >= $PERL_VERSION])
 _perl_version=`PERL_VERSION=$PERL_VERSION $PERL -e 'print "$]"; if ($] >= $ENV{PERL_VERSION}) { exit(0); } else { exit(1); }' 2>&5`
 _perl_res=$?
@@ -617,6 +619,7 @@ AC_MSG_RESULT([$_perl_version])
 
 if test "$_perl_res" != 0; then
     AC_MSG_ERROR([Perl $PERL_VERSION or higher is required.])
+fi
 fi
 
 AC_MSG_CHECKING([for full perl installation])
@@ -1471,7 +1474,7 @@ case "$target" in
 *-beos*)
     no_x=yes
     MKSHLIB='$(CXX) $(CXXFLAGS) $(DSO_LDOPTS) -Wl,-h,$@ -o $@'
-    _PLATFORM_DEFAULT_TOOLKIT="beos"
+    _PLATFORM_DEFAULT_TOOLKIT="cairo-beos"
     DSO_LDOPTS='-nostart'
     TK_LIBS='-lbe -lroot'
     LIBS="$LIBS -lbe"
@@ -4796,6 +4799,41 @@ fi
 fi # COMPILE_ENVIRONMENT
 
 AC_SUBST(MOZ_DEFAULT_TOOLKIT)
+
+dnl ========================================================
+dnl = startup-notification support module
+dnl ========================================================
+
+if test "$MOZ_ENABLE_GTK2"
+then
+    MOZ_ENABLE_STARTUP_NOTIFICATION=
+
+    MOZ_ARG_ENABLE_BOOL(startup-notification,
+    [  --enable-startup-notification       Enable startup-notification support (default: disabled) ],
+        MOZ_ENABLE_STARTUP_NOTIFICATION=force,
+        MOZ_ENABLE_STARTUP_NOTIFICATION=)
+    if test "$MOZ_ENABLE_STARTUP_NOTIFICATION"
+    then
+        PKG_CHECK_MODULES(MOZ_STARTUP_NOTIFICATION,
+                          libstartup-notification-1.0 >= $STARTUP_NOTIFICATION_VERSION,
+        [MOZ_ENABLE_STARTUP_NOTIFICATION=1], [
+            if test "$MOZ_ENABLE_STARTUP_NOTIFICATION" = "force"
+            then
+                AC_MSG_ERROR([* * * Could not find startup-notification >= $STARTUP_NOTIFICATION_VERSION])
+            fi
+            MOZ_ENABLE_STARTUP_NOTIFICATION=
+        ])
+    fi
+
+    if test "$MOZ_ENABLE_STARTUP_NOTIFICATION"; then
+        AC_DEFINE(MOZ_ENABLE_STARTUP_NOTIFICATION)
+    fi
+
+    TK_LIBS="$TK_LIBS $MOZ_STARTUP_NOTIFICATION_LIBS"
+fi
+AC_SUBST(MOZ_ENABLE_STARTUP_NOTIFICATION)
+AC_SUBST(MOZ_STARTUP_NOTIFICATION_CFLAGS)
+AC_SUBST(MOZ_STARTUP_NOTIFICATION_LIBS)
 
 AC_SUBST(GTK_CONFIG)
 AC_SUBST(TK_CFLAGS)
