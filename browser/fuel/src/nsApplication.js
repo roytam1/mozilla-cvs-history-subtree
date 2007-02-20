@@ -319,7 +319,7 @@ Extensions.prototype = {
   },
   
   has : function(id) {
-    return !!(this._extmgr && this._extmgr.getItemForID(id));
+    return !!(this._extmgr && this._extmgr.getItemForID(id).type);
   },
   
   get : function(id) {
