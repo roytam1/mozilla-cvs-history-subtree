@@ -166,11 +166,11 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-%version%.en-US.linux-i686.tar.bz2" =>
-	      "/builds/tinderbox/Sb-Mozilla1.8-l10n/Linux_2.4.21-32.0.1.EL_Clobber/sunbird.tar.bz2"
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-%version%.en-US.linux-i686.tar.gz" =>
+	      "/builds/tinderbox/Sb-Mozilla1.8-l10n/Linux_2.4.21-32.0.1.EL_Clobber/sunbird.tar.gz"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Mozilla1.8-l10n/Linux_2.4.21-32.0.1.EL_Clobber/sunbird.tar.bz2";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Mozilla1.8-l10n/Linux_2.4.21-32.0.1.EL_Clobber/sunbird.tar.gz";
 
 #-
 #- The rest should not need to be changed
