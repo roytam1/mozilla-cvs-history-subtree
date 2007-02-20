@@ -140,9 +140,9 @@ $ConfigureOnly = 1;
 
 # Existing build files to download.
 %WGetFiles = (
-	      'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.2-candidates/rc4/unsigned/firefox-2.0.0.2.en-US.win32.installer.exe' =>
+	      'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.2-candidates/rc5/unsigned/firefox-2.0.0.2.en-US.win32.installer.exe' =>
 	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Depend/firefox-installer.exe",
-	      'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.2-candidates/rc4/unsigned/firefox-2.0.0.2.en-US.win32.zip' =>
+	      'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.2-candidates/rc5/unsigned/firefox-2.0.0.2.en-US.win32.zip' =>
 	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Depend/firefox.zip"
 	      );
 
