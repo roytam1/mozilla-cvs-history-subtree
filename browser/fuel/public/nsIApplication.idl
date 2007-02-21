@@ -103,6 +103,11 @@ interface nsIEvents : nsISupports
 interface nsIPreferences : nsISupports
 {
   /**
+   * All extensions in this preference area.
+   */
+  readonly attribute nsIVariant all;
+  
+  /**
    * The events object for the preferences
    */
   readonly attribute nsIEvents events;

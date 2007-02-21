@@ -114,6 +114,11 @@ function test_Preferences() {
   Application.prefs.reset(test.boolean);
   var val = Application.prefs.get(test.boolean, false);
   ok(val, "Reset existing string property for expected value");
+  
+  // test getting all preferences
+  var allPrefs = Application.prefs.all;
+  ok(allPrefs.length >= 800, "Check 'Application.prefs.all' for the right number of preferences");
+  is(allPrefs[0], "capability.policy.default.Window.parent.get", "Check 'Application.prefs.all' for the right starting preference");
 
   // check for change event when setting a value
   SimpleTest.waitForExplicitFinish();

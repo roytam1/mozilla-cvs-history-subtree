@@ -165,9 +165,18 @@ Preferences.prototype = {
     return this._events;
   },
   
-  find : function(findKeys) {
-    // XXX need to implement
-    return [];
+  get all() {
+    return this.find( {} );
+  },
+  
+  // XXX: Disabled until we can figure out the wrapped object issues
+  // name: "name" or /name/
+  // path: "foo.bar." or "" or /fo+\.bar/
+  // type: Boolean, Number, String (getPrefType)
+  // locked: true, false (prefIsLocked)
+  // changed: true, false (prefHasUserValue)
+  find : function(options) {
+    return this._prefs.getChildList( "", [] );
   },
   
   set : function(name, value) {
@@ -310,33 +319,17 @@ Extensions.prototype = {
   },
   
   // XXX: Disabled until we can figure out the wrapped object issues
+  // id: "some@id" or /id/
+  // name: "name" or /name/
+  // version: "1.0.1"
+  // minVersion: "1.0"
+  // maxVersion: "2.0"
   find : function(options) {
     var retVal = [],
       items = this._extmgr.getItemList( 2, {} );
     
     for ( var i = 0; i < items.length; i++ ) {
-      var item = items[i], pass = true;
-      
-      for ( var name in options ) {
-      	if ( options.hasOwnProperty( name ) ) {
-      	  var value = options[name];
-      	
-      	  if ( value.constructor == RegExp ) {
-      	    if ( !value.test( item[ name ] ) )
-      	      pass = false;
-      	  }
-      	  else {
-      	    if ( item[ name ] != value )
-              pass = false;
-      	  }
-      	}
-      	
-      	if ( !pass )
-      	  break;
-      }
-      
-      if ( pass )
-      	retVal.push( new Extension( item ) );
+      retVal.push( new Extension( items[i] ) );
     }
 
     return retVal;
@@ -373,13 +366,6 @@ function Application() {
   os.addObserver(this, "quit-application-granted", false);
   os.addObserver(this, "quit-application", false);
   os.addObserver(this, "xpcom-shutdown", false);
-  
-/* XXX To implement 
-  var idleServ = Components.classes["@mozilla.org/widget/idleservice;1"]
-                           .getService(Components.interfaces.nsIIdleService);
-
-  idleServ.addIdleObserver(this, 0);
-*/
 }
 
 //=================================================
