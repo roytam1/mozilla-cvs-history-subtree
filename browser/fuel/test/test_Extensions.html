@@ -13,6 +13,7 @@
 // The various pieces that we'll be testing
 var test = {
 	dummyid: "fuel-dummy-extension@mozilla.org",
+	dummyname: "Dummy Extension",
 	inspectorid: "inspector@mozilla.org",
 	inspectorname: "DOM Inspector"
 };
@@ -31,6 +32,28 @@ function test_Extensions() {
   var inspector = Application.extensions.get(test.inspectorid);
   is(inspector.id, test.inspectorid, "Check 'Extension.id' for known extension");
   is(inspector.name, test.inspectorname, "Check 'Extension.name' for known extension");
+  
+  // test to see if extension find works
+  is(Application.extensions.all.length, 1, "Check a find for all extensions");
+  
+  /* XXX: Disabled until we can figure out the JSObject Wrapper issues
+  is(Application.extensions.find("type", 2).length, 1, "Check a find for all extensions");
+  
+  is(Application.extensions.find( "id", test.inspectorid ).length, 1, "Look for an extension by id");
+  is(Application.extensions.find( "name", test.inspectorname ).length, 1, "Look for an extension by name");
+  is(Application.extensions.find({ id: test.inspectorid, name: test.inspectorname }).length, 1, "Look for an extension by name and id");
+
+  is(Application.extensions.find( "id", test.dummyid ).length, 0, "Look for a fake extension by id");
+  is(Application.extensions.find( "name", test.dummyname ).length, 0, "Look for a fake extension by name");
+  is(Application.extensions.find({ id: test.dummyid, name: test.dummyname }).length, 0, "Look for a fake extension by name and id");
+
+  is(Application.extensions.find({ id: test.inspectorid, name: test.dummyname }).length, 0, "Look for a real extension by real name and fake id");
+  is(Application.extensions.find({ id: test.dummyid, name: test.inspectorname }).length, 0, "Look for a real extension by fake name and real id");
+
+  is(Application.extensions.find( "name", /DOM/ ).length, 1, "Look for an extension by name regexp");
+  is(Application.extensions.find( "name", /inspector/i ).length, 1, "Look for an extension by name regexp");
+  is(Application.extensions.find( "id", /inspector/ ).length, 1, "Look for an extension by id regexp");
+  */
 }
 </script>
 </pre>

@@ -305,17 +305,41 @@ function Extensions() {
 //=================================================
 // Extensions implementation
 Extensions.prototype = {
-  find : function(findKeys) {
-    // XXX need to implement
-    var extension = null;
-  /*
-    var items = this._extmgr.getItemList(type, { });
-    for (var i=0; i<items.length; i++) {
-      if (items[i].id == id)
-        return true;
+  get all() {
+    return this.find( {} );
+  },
+  
+  // XXX: Disabled until we can figure out the wrapped object issues
+  find : function(options) {
+    var retVal = [],
+      items = this._extmgr.getItemList( 2, {} );
+    
+    for ( var i = 0; i < items.length; i++ ) {
+      var item = items[i], pass = true;
+      
+      for ( var name in options ) {
+      	if ( options.hasOwnProperty( name ) ) {
+      	  var value = options[name];
+      	
+      	  if ( value.constructor == RegExp ) {
+      	    if ( !value.test( item[ name ] ) )
+      	      pass = false;
+      	  }
+      	  else {
+      	    if ( item[ name ] != value )
+              pass = false;
+      	  }
+      	}
+      	
+      	if ( !pass )
+      	  break;
+      }
+      
+      if ( pass )
+      	retVal.push( new Extension( item ) );
     }
-  */
-    return extension;
+
+    return retVal;
   },
   
   has : function(id) {

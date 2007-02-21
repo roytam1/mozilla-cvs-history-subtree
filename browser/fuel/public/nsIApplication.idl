@@ -231,6 +231,11 @@ interface nsIExtension : nsISupports
 interface nsIExtensions : nsISupports
 {
   /**
+   * All extensions in the application.
+   */
+  readonly attribute nsIVariant all;
+
+  /**
    * Determines if an extension exists with the given id.
    * @param   id
    *          The id of an extension
