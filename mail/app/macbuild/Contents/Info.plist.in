@@ -4,6 +4,37 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>mozeml</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>thunderbird</string>
+			<key>CFBundleTypeName</key>
+			<string>Thunderbird Spotlight Metadata</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSTypeIsPackage</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>eml</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>thunderbird</string>
+			<key>CFBundleTypeName</key>
+			<string>e-Mail</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSTypeIsPackage</key>
+			<false/>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>thunderbird-bin</string>
 	<key>CFBundleGetInfoString</key>
