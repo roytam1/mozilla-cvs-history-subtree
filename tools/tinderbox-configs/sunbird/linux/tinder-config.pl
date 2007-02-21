@@ -165,15 +165,15 @@ $ConfigureOnly = 1;
 
 $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
-%WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/releases/0.3.1rc2/linux-i686/en-US/sunbird-%version%.en-US.linux-i686.tar.bz2" =>
-	      "/builds/tinderbox/Sb-Trunk-l10n/Linux_2.4.21-32.0.1.EL_Clobber/sunbird.tar.bz2"
-	      );
-
-#%WGetFiles = (
-#	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-%version%.en-US.linux-i686.tar.bz2" =>
+# %WGetFiles = (
+#	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/releases/0.3.1rc2/linux-i686/en-US/sunbird-%version%.en-US.linux-i686.tar.bz2" =>
 #	      "/builds/tinderbox/Sb-Trunk-l10n/Linux_2.4.21-32.0.1.EL_Clobber/sunbird.tar.bz2"
 #	      );
+
+%WGetFiles = (
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-%version%.en-US.linux-i686.tar.bz2" =>
+	      "/builds/tinderbox/Sb-Trunk-l10n/Linux_2.4.21-32.0.1.EL_Clobber/sunbird.tar.bz2"
+	      );
 
 $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk-l10n/Linux_2.4.21-32.0.1.EL_Clobber/sunbird.tar.bz2";
 
@@ -189,7 +189,7 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk-l10n/Linux_2.4.21-32.0.1.
 $BuildTree  = 'Mozilla-l10n';
 
 #$BuildName = '';
-$BuildTag = 'SUNBIRD_0_3_1_RELEASE';
+#$BuildTag = 'SUNBIRD_0_3_1_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
