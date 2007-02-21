@@ -162,8 +162,8 @@ $BuildNameExtra = 'Lt-Release';
 $BuildTree  = 'Sunbird-Mozilla1.8';
 
 #$BuildName = '';
-#$BuildTag = 'MOZILLA_1_8_BRANCH';
-$BuildTag = 'LIGHTNING_0_3_1_RELEASE';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
+#$BuildTag = 'LIGHTNING_0_3_1_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -231,4 +231,3 @@ $push_raw_xpis = 0;
 # Prevent Extension Manager from spawning child processes during tests
 # - processes that tbox scripts cannot kill.
 #$ENV{NO_EM_RESTART} = '1';
-
