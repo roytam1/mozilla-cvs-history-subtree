@@ -56,6 +56,11 @@ LOCAL_INCLUDES += \
 #MOZ_GTKEMBED_DYN = 1
 
 ifdef MOZ_GTKEMBED_DYN
+#DEFINES += -DFIXED_BUG347731
+FORCE_SHARED_LIB = 1
+ifdef MOZ_ENABLE_LIBXUL
+LIBXUL_LIBRARY  = 
+endif
 endif
 
 DEFINES += -DIMPL_XREAPI
@@ -182,6 +187,13 @@ EXTRA_DSO_LDOPTS += \
 		$(MOZ_COMPONENT_LIBS) \
 		$(MOZ_GTK2_LIBS) \
 		$(NULL)
+
+#Any Idea what can be used instead -lxul in FF configuration?
+ifndef MOZ_ENABLE_LIBXUL
+EXTRA_DSO_LDOPTS += \
+		-lxul \
+		$(NULL)
+endif
 endif
 endif
 

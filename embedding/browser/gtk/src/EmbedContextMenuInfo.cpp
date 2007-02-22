@@ -63,6 +63,7 @@
 #include "nsIWebBrowser.h"
 #include "nsIDOM3Document.h"
 #include "nsIContent.h"
+#include "nsIPresShell.h"
 #include "nsIFormControl.h"
 #include "nsIDOMNSHTMLInputElement.h"
 #include "nsIDOMNSHTMLTextAreaElement.h"
@@ -77,6 +78,9 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <glib.h>
+#if defined(FIXED_BUG347731) || !defined(MOZ_ENABLE_LIBXUL)
+#include "nsIFrame.h"
+#endif
 
 //*****************************************************************************
 // class EmbedContextMenuInfo
@@ -161,14 +165,16 @@ EmbedContextMenuInfo::GetFormControlType(nsIDOMEvent* aEvent)
     if (!presShell)
       return NS_OK;
     nsCOMPtr<nsIContent> tgContent = do_QueryInterface(mEventTarget);
+	nsIFrame* frame = nsnull;
+#if defined(FIXED_BUG347731) || !defined(MOZ_ENABLE_LIBXUL)
 #ifdef MOZILLA_1_8_BRANCH
-    nsIFrame* frame = nsnull;
     presShell->GetPrimaryFrameFor(tgContent, &frame);
 #else
-    nsIFrame* frame = presShell->GetPrimaryFrameFor(tgContent);
+    frame = presShell->GetPrimaryFrameFor(tgContent);
 #endif
     if (frame)
       mFormRect = frame->GetScreenRectExternal();
+#endif
     return NS_OK;
   }
   return NS_ERROR_FAILURE;
@@ -595,11 +601,12 @@ EmbedContextMenuInfo::UpdateContextData(nsIDOMEvent *aDOMEvent)
     return NS_OK;
   nsCOMPtr<nsIContent> tgContent = do_QueryInterface(mEventTarget);
   nsIFrame* frame = nsnull;
+#if defined(FIXED_BUG347731) || !defined(MOZ_ENABLE_LIBXUL)
   if (mEmbedCtxType & GTK_MOZ_EMBED_CTX_RICHEDIT)
     frame = presShell->GetRootFrame();
   else {
 #ifdef MOZILLA_1_8_BRANCH
-    nsIFrame* frame = nsnull;
+    frame = nsnull;
     presShell->GetPrimaryFrameFor(tgContent, &frame);
 #else
     frame = presShell->GetPrimaryFrameFor(tgContent);
@@ -608,6 +615,7 @@ EmbedContextMenuInfo::UpdateContextData(nsIDOMEvent *aDOMEvent)
   if (frame) {
     mFormRect = frame->GetScreenRectExternal();
   }
+#endif
   if (NS_SUCCEEDED(SetFormControlType(mEventTarget))) {
     return NS_OK;
   }

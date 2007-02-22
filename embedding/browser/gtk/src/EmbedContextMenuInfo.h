@@ -47,7 +47,7 @@
 #include "imgIContainer.h"
 #include "imgIRequest.h"
 #include "nsIDOMEventTarget.h"
-#include "nsIFrame.h"
+#include "nsRect.h"
 // for strings
 #ifdef MOZILLA_INTERNAL_API
 #include "nsXPIDLString.h"
@@ -84,7 +84,7 @@ public:
   nsCOMPtr<nsIDOMNode>    mEventNode;
   nsCOMPtr<nsIDOMEventTarget> mEventTarget;
   nsCOMPtr<nsIDOMDocument>mCtxDocument;
-  nsIntRect               mFormRect;
+  nsRect               mFormRect;
   nsCOMPtr<nsIDOMWindow>  mCtxDomWindow;
   nsCOMPtr<nsIDOMEvent>   mCtxEvent;
   nsCOMPtr<nsIDOMNSHTMLElement> mNSHHTMLElement;

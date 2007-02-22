@@ -47,6 +47,8 @@
 #include "nsIDOMUIEvent.h"
 #include "nsIDOMDocument.h"
 #include "nsIDocument.h"
+#include "nsIContent.h"
+#include "nsIPresShell.h"
 
 #include "EmbedEventListener.h"
 #include "EmbedPrivate.h"
@@ -580,6 +582,7 @@ EmbedEventListener::Focus(nsIDOMEvent* aEvent)
 
   return NS_OK;
 }
+
 
 NS_IMETHODIMP
 EmbedEventListener::Blur(nsIDOMEvent* aEvent)

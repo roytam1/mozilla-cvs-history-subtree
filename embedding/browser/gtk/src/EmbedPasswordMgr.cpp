@@ -79,28 +79,28 @@
 #include "nsCOMArray.h"
 #include "nsIServiceManager.h"
 #include "nsIIDNService.h"
-
 #include "nsIAuthInformation.h"
 #include "nsIChannel.h"
-#include "nsIPromptService2.h"
+
 #include "nsIProxiedChannel.h"
 #include "nsIProxyInfo.h"
 #include "nsIURI.h"
 #include "nsNetUtil.h"
 #include "nsEmbedCID.h"
-#include "nsPromptUtils.h"
-
+#include "nsIPromptService2.h"
 #include "EmbedPrivate.h"
 #include "gtkmozembedprivate.h"
 #ifdef MOZILLA_INTERNAL_API
 #include "nsString.h"
 #include "nsXPIDLString.h"
-#include "nsIForm.h"
 #else
 #include "nsDirectoryServiceUtils.h"
 #include "nsComponentManagerUtils.h"
-#include "nsIForm.h"
 #include "nsStringAPI.h"
+#endif
+#if defined(FIXED_BUG347731) || !defined(MOZ_ENABLE_LIBXUL)
+#include "nsPromptUtils.h"
+#include "nsIForm.h"
 #endif
 #include "nsIPassword.h"
 #include "nsIPasswordInternal.h"
@@ -886,6 +886,7 @@ EmbedPasswordMgr::OnStateChange(nsIWebProgress* aWebProgress,
   // one stored login that matches the username and password field names
   // on the form in question.  Note that we only need to worry about a
   // single login per form.
+#if defined(FIXED_BUG347731) || !defined(MOZ_ENABLE_LIBXUL)
   for (PRUint32 i = 0; i < formCount; ++i) {
     nsCOMPtr<nsIDOMNode> formNode;
     forms->Item(i, getter_AddRefs(formNode));
@@ -1033,6 +1034,7 @@ EmbedPasswordMgr::OnStateChange(nsIWebProgress* aWebProgress,
     mGlobalUserField = userField;
     mGlobalPassField = passField;
   }
+#endif
 done:
   nsCOMPtr<nsIDOMEventTarget> targ = do_QueryInterface(domDoc);
   targ->AddEventListener(
@@ -1102,6 +1104,7 @@ EmbedPasswordMgr::Notify(nsIContent* aFormNode,
     // The user has opted to never save passwords for this site.
     return NS_OK;
   }
+#if defined(FIXED_BUG347731) || !defined(MOZ_ENABLE_LIBXUL)
   nsCOMPtr<nsIForm> formElement = do_QueryInterface(aFormNode);
   PRUint32 numControls;
   formElement->GetElementCount(&numControls);
@@ -1356,6 +1359,7 @@ EmbedPasswordMgr::Notify(nsIContent* aFormNode,
   default:  // no passwords or something odd; be safe and just don't store anything
           break;
   }
+#endif // FIXED_BUG347731 || MOZ_ENABLE_LIBXUL
   return NS_OK;
 }
 
@@ -1708,6 +1712,7 @@ EmbedPasswordMgr::FillPassword(nsIDOMEvent* aEvent)
   userField->GetForm(getter_AddRefs(formEl));
   if (!formEl)
     return NS_OK;
+#if defined(FIXED_BUG347731) || !defined(MOZ_ENABLE_LIBXUL)
   nsCOMPtr<nsIForm> form = do_QueryInterface(formEl);
   nsCOMPtr<nsISupports> foundNode;
   form->ResolveName(foundEntry->passField, getter_AddRefs(foundNode));
@@ -1717,6 +1722,7 @@ EmbedPasswordMgr::FillPassword(nsIDOMEvent* aEvent)
   nsAutoString passValue;
   if (NS_SUCCEEDED(DecryptData(foundEntry->passValue, passValue)))
     passField->SetValue(passValue);
+#endif
   return NS_OK;
 }
 
@@ -1996,7 +2002,9 @@ EmbedSignonPrompt2::PromptAuth(nsIChannel* aChannel,
                                PRBool* aConfirm)
 {
   nsCAutoString key;
+#if defined(FIXED_BUG347731) || !defined(MOZ_ENABLE_LIBXUL)
   NS_GetAuthKey(aChannel, aAuthInfo, key);
+#endif
 
   nsAutoString checkMsg;
   PRBool checkValue = PR_FALSE;
@@ -2020,7 +2028,9 @@ EmbedSignonPrompt2::PromptAuth(nsIChannel* aChannel,
                                    outUser,
                                    outPassword);
 
+#if defined(FIXED_BUG347731) || !defined(MOZ_ENABLE_LIBXUL)
     NS_SetAuthInfo(aAuthInfo, outUser, outPassword);
+#endif
 
     if (!outUser.IsEmpty() || !outPassword.IsEmpty())
       checkValue = PR_TRUE;
