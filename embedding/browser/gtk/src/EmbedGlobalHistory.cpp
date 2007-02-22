@@ -75,7 +75,7 @@ static EmbedGlobalHistory *sEmbedGlobalHistory = nsnull;
 typedef struct _HistoryEntry {
   PRInt64         mLastVisitTime;     // Millisecs
   PRPackedBool    mWritten;           // TRUE if ever persisted
-  nsCString       mTitle;             // The entry title
+  nsCString       *mTitle;            // The entry title
   char            *url;               // The url itself
 } HistoryEntry;
 
@@ -305,7 +305,12 @@ nsresult SetIsWritten(HistoryEntry *entry)
 }
 
 // Change the entry title
-#define SET_TITLE(entry, aTitle) entry->mTitle.Assign (aTitle);
+#define SET_TITLE(entry, aTitle) \
+PR_BEGIN_MACRO \
+  if (!entry->mTitle) \
+    entry->mTitle = new nsCString(); \
+  entry->mTitle->Assign (aTitle); \
+PR_END_MACRO
 
 // Change the entry title
 nsresult SetURL(HistoryEntry *entry, const char *url)
@@ -319,7 +324,7 @@ nsresult SetURL(HistoryEntry *entry, const char *url)
 }
 
 // Return the entry title
-#define GET_TITLE(entry) (entry->mTitle)
+#define GET_TITLE(entry) (entry->mTitle ? entry->mTitle->get() : "")
 
 // Return the entry url
 char* GetURL(HistoryEntry *entry)
@@ -365,7 +370,8 @@ void history_entry_foreach_to_remove (gpointer data, gpointer user_data)
     /* XXX data should be a class and we should use new/delete instead of
      * g_crash_happy.
      */
-    entry->mTitle.~nsCString();
+    delete entry->mTitle;
+    entry->mTitle = nsnull;
     entry->mLastVisitTime = 0;
     g_free(entry);
   }
@@ -667,7 +673,8 @@ nsresult EmbedGlobalHistory::RemoveEntries(const PRUnichar *url, int time)
         entry->url = nsnull;
         NS_Free(entry);
       }
-      entry->mTitle.~nsCString();
+      delete entry->mTitle;
+      entry->mTitle = nsnull;
       entry->mLastVisitTime = 0;
       mURLList = g_list_remove (mURLList, entry);
     }
@@ -1028,7 +1035,7 @@ nsresult writeEntry(OUTPUT_STREAM *file_handle, HistoryEntry *entry)
   char sep = (char) defaultSeparator;
   char time[14];
   writePRInt64(time, GetLastVisitTime(entry));
-  char *line = g_strdup_printf("%s%c%s%c%s%c\n", time, sep, GetURL(entry), sep, GET_TITLE(entry).get(), sep);
+  char *line = g_strdup_printf("%s%c%s%c%s%c\n", time, sep, GetURL(entry), sep, GET_TITLE(entry), sep);
   BROKEN_STRING_BUILDER(line);
   guint64 size = file_handle_write (file_handle, (gpointer)line);
   if (size != strlen(line))
@@ -1059,7 +1066,7 @@ nsresult EmbedGlobalHistory::GetContentList(GtkMozHistoryItem **GtkHI, int *coun
     LL_DIV(temp, outValue, PR_USEC_PER_SEC);
     LL_L2I(accessed, temp);
     // Set the EAL history list
-    item[num_items].title = GET_TITLE(entry).get();
+    item[num_items].title = GET_TITLE(entry);
     BROKEN_STRING_BUILDER(item[num_items].title);
     item[num_items].url = GetURL(entry);
     item[num_items].accessed = accessed;
