@@ -158,6 +158,7 @@ class EmbedPrivate {
   PRBool      FindText(const char *exp, PRBool  reverse,
                        PRBool  whole_word, PRBool  case_sensitive,
                        PRBool  restart);
+  void        SetScrollTop(PRUint32 aTop);
   nsresult    ScrollToSelectedNode(nsIDOMNode *aDOMNode);
   nsresult    InsertTextToNode(nsIDOMNode *aDOMNode, const char *string);
   nsresult    GetFocusController(nsIFocusController **controller);

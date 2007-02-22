@@ -597,37 +597,32 @@ EmbedPrivate::Hide(void)
 void
 EmbedPrivate::Resize(PRUint32 aWidth, PRUint32 aHeight)
 {
-  if (mDoResizeEmbed) {
-    mWindow->SetDimensions(nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION |
-                           nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER,
-                           0, 0, aWidth, aHeight);
-  } else {
 #ifdef MOZ_WIDGET_GTK2
-    PRInt32 X, Y, W, H;
-    mWindow->GetDimensions(nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION, &X, &Y, &W, &H);
-    if (Y < 0) {
-      mWindow->SetDimensions(nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION, 0, 0, nsnull, nsnull);
-      return;
-    }
+  PRInt32 sub   = 0;
+  PRInt32 diff  = 0;
+
+  if(mDoResizeEmbed){
     EmbedContextMenuInfo * ctx_menu = mEventListener->GetContextInfo();
     gint x, y, width, height, depth;
-    gdk_window_get_geometry(gtk_widget_get_parent_window(GTK_WIDGET(mOwningWidget)),
-                            &x,
-                            &y,
-                            &width,
-                            &height,
-                            &depth);
+    gdk_window_get_geometry(gtk_widget_get_parent_window(GTK_WIDGET(mOwningWidget)),&x,&y,&width,&height,&depth);
+
     if (ctx_menu) {
       if (height < ctx_menu->mFormRect.y + ctx_menu->mFormRect.height) {
-        PRInt32 sub = ctx_menu->mFormRect.y - height + ctx_menu->mFormRect.height;
-        PRInt32 diff = ctx_menu->mFormRect.y - sub;
-//        printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!height: %i, Form.y: %i, Form.Height: %i, sub: %i, diff: %i\n", height, ctx_menu->mFormRect.y, ctx_menu->mFormRect.height, sub, diff);
-        if (sub > 0 && diff >= 0)
-          mWindow->SetDimensions(nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION, 0, -sub, nsnull, nsnull);
+        sub = ctx_menu->mFormRect.y - height + ctx_menu->mFormRect.height;
+        diff = height - aHeight;
       }
     }
-#endif
   }
+#endif
+  mWindow->SetDimensions(nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION |
+                          nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER,
+                          0, 0, aWidth, aHeight);
+
+#ifdef MOZ_WIDGET_GTK2
+  if (sub > 0 && diff >= 0){
+    SetScrollTop(sub + diff);
+  }
+#endif
 }
 
 void
@@ -1595,6 +1590,33 @@ EmbedPrivate::FindText(const char *exp, PRBool  reverse,
 
   return match;
 }
+
+void
+EmbedPrivate::SetScrollTop(PRUint32 aTop)
+{
+  EmbedContextMenuInfo * ctx_menu = mEventListener->GetContextInfo();
+  if(ctx_menu->mEmbedCtxType & GTK_MOZ_EMBED_CTX_IFRAME){
+    if (ctx_menu) {
+      nsCOMPtr<nsIDOMWindow>  mCtxDomWindows = ctx_menu->mCtxDomWindow;
+      if (mCtxDomWindows)
+      {
+        nsCOMPtr<nsIDOMDocument> domDoc;
+        mCtxDomWindows->GetDocument (getter_AddRefs(domDoc));
+        if (domDoc) {
+          ctx_menu->GetElementForScroll(domDoc);
+          if (ctx_menu->mNSHHTMLElementSc)
+            ctx_menu->mNSHHTMLElementSc->SetScrollTop(aTop);
+        }
+      }
+    }
+  } else {
+    nsCOMPtr<nsIDOMWindow> DOMWindow;
+    nsIWebBrowser *webBrowser = nsnull;
+    mWindow->GetWebBrowser(&webBrowser);
+    webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
+    DOMWindow->ScrollBy(0, aTop);
+  }
+} 
 
 nsresult
 EmbedPrivate::ScrollToSelectedNode(nsIDOMNode *aDOMNode)
