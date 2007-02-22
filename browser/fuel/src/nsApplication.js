@@ -290,6 +290,10 @@ Extension.prototype = {
     return this._item.name;
   },
   
+  get version() {
+    return this._item.version;
+  },
+  
   get storage() {
     return this._storage;
   },
@@ -357,6 +361,9 @@ function Application() {
   this._prefs = new Preferences();
   this._storage = new SessionStorage();
   this._events = new Events();
+  
+  this._item = Components.classes["@mozilla.org/xre/app-info;1"]
+                     .getService(Components.interfaces.nsIXULAppInfo);
     
   var os = Components.classes["@mozilla.org/observer-service;1"]
                      .getService(Components.interfaces.nsIObserverService);
@@ -371,6 +378,18 @@ function Application() {
 //=================================================
 // Application implementation
 Application.prototype = {
+  get id() {
+    return this._item.ID;
+  },
+  
+  get name() {
+    return this._item.name;
+  },
+  
+  get version() {
+    return this._item.version;
+  },
+  
   // for nsIObserver
   observe: function(subject, topic, data) {
     if (topic == "app-startup") {

@@ -210,6 +210,11 @@ interface nsIExtension : nsISupports
    * The name of the extension.
    */
   readonly attribute string name;
+  
+  /**
+   * The version number of the extension.
+   */
+  readonly attribute string version;
 
   /**
    * The preferences object for the extension. Defaults to the
@@ -266,6 +271,21 @@ interface nsIExtensions : nsISupports
 [scriptable, uuid(fe74cf80-aa2d-11db-abbd-0800200c9a66)]
 interface nsIApplication : nsISupports
 {
+  /**
+   * The id of the application.
+   */
+  readonly attribute string id;
+
+  /**
+   * The name of the application.
+   */
+  readonly attribute string name;
+  
+  /**
+   * The version number of the application.
+   */
+  readonly attribute string version;
+  
   /**
    * The console object for the application.
    */
