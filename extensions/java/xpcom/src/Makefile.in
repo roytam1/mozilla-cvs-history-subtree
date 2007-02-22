@@ -44,6 +44,7 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= javaxpcom
 LIBRARY_NAME	= javaxpcom
 LIBXUL_LIBRARY	= 1
+FORCE_STATIC_LIB = 1
 
 # On Mac OS X, JNI libraries must end with a '.jnilib' extension
 ifeq ($(OS_ARCH),Darwin)
@@ -66,6 +67,10 @@ CPPSRCS		= \
 		nsJavaXPCOMBindingUtils.cpp \
 		$(NULL)
 
+ifeq ($(OS_ARCH),Darwin)
+CMMSRCS = MacJawt.mm
+endif
+
 JARFILE = javaxpcom.jar
 JARFILE_SRC = $(patsubst %.jar,%-src.jar,$(JARFILE))
 
@@ -86,7 +91,11 @@ else
 ifeq ($(OS_ARCH),OS2)
 LOCAL_INCLUDES += -I$(JAVA_INCLUDE_PATH)/OS2
 else
+ifeq ($(OS_ARCH),Darwin)
+LOCAL_INCLUDES += -I/System/Library/Frameworks/CoreFoundation.framework/Headers
+else
 LOCAL_INCLUDES += -I$(JAVA_INCLUDE_PATH)/linux
+endif
 endif
 endif
 

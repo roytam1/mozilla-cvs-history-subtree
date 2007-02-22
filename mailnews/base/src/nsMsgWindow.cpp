@@ -288,12 +288,8 @@ NS_IMETHODIMP nsMsgWindow::SetRootDocShell(nsIDocShell * aDocShell)
   {
     mRootDocShellWeak = do_GetWeakReference(aDocShell);
     nsCOMPtr<nsIURIContentListener> listener(do_GetInterface(aDocShell));
-    if (listener) {
+    if (listener)
       listener->SetParentContentListener(this);
-    }
-	// be sure to set the application flag on the root docshell
-	// so it knows we are a mail application.
-	aDocShell->SetAppType(nsIDocShell::APP_TYPE_MAIL);
   }
   return NS_OK;
 }

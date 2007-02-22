@@ -72,15 +72,20 @@ static JSBool
 script_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 jsval *rval)
 {
+    uint32 indent;
     JSScript *script;
     size_t i, j, k, n;
     char buf[16];
     jschar *s, *t;
-    uint32 indent;
     JSString *str;
 
     if (!JS_InstanceOf(cx, obj, &js_ScriptClass, argv))
         return JS_FALSE;
+
+    indent = 0;
+    if (argc && !js_ValueToECMAUint32(cx, argv[0], &indent))
+        return JS_FALSE;
+
     script = (JSScript *) JS_GetPrivate(cx, obj);
 
     /* Let n count the source string length, j the "front porch" length. */
@@ -91,9 +96,6 @@ script_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
         k = 0;
         s = NULL;               /* quell GCC overwarning */
     } else {
-        indent = 0;
-        if (argc && !js_ValueToECMAUint32(cx, argv[0], &indent))
-            return JS_FALSE;
         str = JS_DecompileScript(cx, script, "Script.prototype.toSource",
                                  (uintN)indent);
         if (!str)
@@ -133,9 +135,13 @@ static JSBool
 script_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 jsval *rval)
 {
-    JSScript *script;
     uint32 indent;
+    JSScript *script;
     JSString *str;
+
+    indent = 0;
+    if (argc && !js_ValueToECMAUint32(cx, argv[0], &indent))
+        return JS_FALSE;
 
     if (!JS_InstanceOf(cx, obj, &js_ScriptClass, argv))
         return JS_FALSE;
@@ -145,9 +151,6 @@ script_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
         return JS_TRUE;
     }
 
-    indent = 0;
-    if (argc && !js_ValueToECMAUint32(cx, argv[0], &indent))
-        return JS_FALSE;
     str = JS_DecompileScript(cx, script, "Script.prototype.toString",
                              (uintN)indent);
     if (!str)
@@ -160,10 +163,10 @@ static JSBool
 script_compile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                jsval *rval)
 {
-    JSScript *oldscript, *script;
-    JSStackFrame *fp, *caller;
     JSString *str;
     JSObject *scopeobj;
+    JSScript *oldscript, *script;
+    JSStackFrame *fp, *caller;
     const char *file;
     uintN line;
     JSPrincipals *principals;
@@ -175,6 +178,19 @@ script_compile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     /* If no args, leave private undefined and return early. */
     if (argc == 0)
         goto out;
+
+    /* Otherwise, the first arg is the script source to compile. */
+    str = js_ValueToString(cx, argv[0]);
+    if (!str)
+        return JS_FALSE;
+    argv[0] = STRING_TO_JSVAL(str);
+
+    scopeobj = NULL;
+    if (argc >= 2) {
+        if (!js_ValueToObject(cx, argv[1], &scopeobj))
+            return JS_FALSE;
+        argv[1] = OBJECT_TO_JSVAL(scopeobj);
+    }
 
     /* XXX thread safety was completely neglected in this function... */
     oldscript = (JSScript *) JS_GetPrivate(cx, obj);
@@ -188,23 +204,11 @@ script_compile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
         }
     }
 
-    /* Otherwise, the first arg is the script source to compile. */
-    str = js_ValueToString(cx, argv[0]);
-    if (!str)
-        return JS_FALSE;
-    argv[0] = STRING_TO_JSVAL(str);
-
     /* Compile using the caller's scope chain, which js_Invoke passes to fp. */
     fp = cx->fp;
     caller = JS_GetScriptedCaller(cx, fp);
     JS_ASSERT(!caller || fp->scopeChain == caller->scopeChain);
 
-    scopeobj = NULL;
-    if (argc >= 2) {
-        if (!js_ValueToObject(cx, argv[1], &scopeobj))
-            return JS_FALSE;
-        argv[1] = OBJECT_TO_JSVAL(scopeobj);
-    }
     if (caller) {
         if (!scopeobj) {
             scopeobj = js_GetScopeChain(cx, caller);
@@ -261,16 +265,13 @@ out:
 static JSBool
 script_exec(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-    JSScript *script;
     JSObject *scopeobj, *parent;
     JSStackFrame *fp, *caller;
     JSPrincipals *principals;
+    JSScript *script;
 
     if (!JS_InstanceOf(cx, obj, &js_ScriptClass, argv))
         return JS_FALSE;
-    script = (JSScript *) JS_GetPrivate(cx, obj);
-    if (!script)
-        return JS_TRUE;
 
     scopeobj = NULL;
     if (argc) {
@@ -329,6 +330,10 @@ script_exec(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     scopeobj = js_CheckScopeChainValidity(cx, scopeobj, js_script_exec);
     if (!scopeobj)
         return JS_FALSE;
+
+    script = (JSScript *) JS_GetPrivate(cx, obj);
+    if (!script)
+        return JS_TRUE;
 
     /* Belt-and-braces: check that this script object has access to scopeobj. */
     principals = script->principals;

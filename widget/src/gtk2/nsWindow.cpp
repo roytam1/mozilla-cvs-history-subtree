@@ -254,6 +254,11 @@ static _gdk_display_get_default_fn    _gdk_display_get_default;
 static _gdk_cursor_new_from_pixbuf_fn _gdk_cursor_new_from_pixbuf;
 static PRBool sPixbufCursorChecked;
 
+// needed for GetAttention calls
+// gdk_window_set_urgency_hint was added in 2.8
+typedef void (*_gdk_window_set_urgency_hint_fn)(GdkWindow *window,
+                                                gboolean urgency);
+
 #define kWindowPositionSlop 20
 
 // cursor cache
@@ -677,8 +682,16 @@ nsWindow::SetFocus(PRBool aRaise)
 
     if (gRaiseWindows && aRaise && toplevelWidget &&
         !GTK_WIDGET_HAS_FOCUS(owningWidget) &&
-        !GTK_WIDGET_HAS_FOCUS(toplevelWidget))
-        GetAttention(-1);
+        !GTK_WIDGET_HAS_FOCUS(toplevelWidget)) {
+        GtkWidget* top_window = nsnull;
+        GetToplevelWidget(&top_window);
+        if (top_window && (GTK_WIDGET_VISIBLE(top_window)))
+        {
+            gdk_window_show(top_window->window);
+            // Unset the urgency hint if possible.
+            SetUrgencyHint(top_window, PR_FALSE);
+        }
+    }
 
     nsWindow  *owningWindow = get_window_for_gtk_widget(owningWidget);
     if (!owningWindow)
@@ -906,6 +919,15 @@ nsWindow::SetCursor(imgIContainer* aCursor,
     if (!pixbuf)
         return NS_ERROR_NOT_AVAILABLE;
 
+    int width = gdk_pixbuf_get_width(pixbuf);
+    int height = gdk_pixbuf_get_height(pixbuf);
+    // Reject cursors greater than 128 pixels in some direction, to prevent
+    // spoofing.
+    // XXX ideally we should rescale. Also, we could modify the API to
+    // allow trusted content to set larger cursors.
+    if (width > 128 || height > 128)
+        return NS_ERROR_NOT_AVAILABLE;
+
     // Looks like all cursors need an alpha channel (tested on Gtk 2.4.4). This
     // is of course not documented anywhere...
     // So add one if there isn't one yet
@@ -921,8 +943,6 @@ nsWindow::SetCursor(imgIContainer* aCursor,
     GdkCursor* cursor;
     if (!_gdk_cursor_new_from_pixbuf || !_gdk_display_get_default) {
         // Fallback to a monochrome cursor
-        int width = gdk_pixbuf_get_width(pixbuf);
-        int height = gdk_pixbuf_get_height(pixbuf);
         GdkPixmap* mask = gdk_pixmap_new(NULL, width, height, 1);
         if (!mask)
             return NS_ERROR_OUT_OF_MEMORY;
@@ -1363,9 +1383,15 @@ nsWindow::GetAttention(PRInt32 aCycleCount)
     LOG(("nsWindow::GetAttention [%p]\n", (void *)this));
 
     GtkWidget* top_window = nsnull;
+    GtkWidget* top_focused_window = nsnull;
     GetToplevelWidget(&top_window);
-    if (top_window && GTK_WIDGET_VISIBLE(top_window)) {
-        gdk_window_show(top_window->window);
+    if (gFocusWindow)
+        gFocusWindow->GetToplevelWidget(&top_focused_window);
+
+    // Don't get attention if the window is focused anyway.
+    if (top_window && (GTK_WIDGET_VISIBLE(top_window)) &&
+        top_window != top_focused_window) {
+        SetUrgencyHint(top_window, PR_TRUE);
     }
 
     return NS_OK;
@@ -1706,6 +1732,12 @@ nsWindow::OnContainerFocusInEvent(GtkWidget *aWidget, GdkEventFocus *aEvent)
 
     if (mIsTopLevel)
         mActivatePending = PR_TRUE;
+
+    // Unset the urgency hint, if possible
+    GtkWidget* top_window = nsnull;
+    GetToplevelWidget(&top_window);
+    if (top_window && (GTK_WIDGET_VISIBLE(top_window)))
+        SetUrgencyHint(top_window, PR_FALSE);
 
     // dispatch a got focus event
     DispatchGotFocusEvent();
@@ -3144,6 +3176,27 @@ nsWindow::GetContainerWindow(nsWindow **aWindow)
         get_gtk_widget_for_gdk_window(mDrawingarea->inner_window);
 
     *aWindow = get_window_for_gtk_widget(owningWidget);
+}
+
+void
+nsWindow::SetUrgencyHint(GtkWidget *top_window, PRBool state)
+{
+    if (!top_window)
+        return;
+
+    // Try to get a pointer to gdk_window_set_urgency_hint
+    PRLibrary* lib;
+    _gdk_window_set_urgency_hint_fn _gdk_window_set_urgency_hint = nsnull;
+    _gdk_window_set_urgency_hint = (_gdk_window_set_urgency_hint_fn)
+           PR_FindFunctionSymbolAndLibrary("gdk_window_set_urgency_hint", &lib);
+
+    if (_gdk_window_set_urgency_hint) {
+        _gdk_window_set_urgency_hint(top_window->window, state);
+        PR_UnloadLibrary(lib);
+    }
+    else if (state) {
+        gdk_window_show(top_window->window);
+    }
 }
 
 void *

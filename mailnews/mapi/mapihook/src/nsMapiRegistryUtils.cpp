@@ -1036,7 +1036,7 @@ nsresult nsMapiRegistryUtils::setDefaultMailClient()
     // Tell the MAPI Service to register the mapi proxy dll now that we are the default mail application
     nsCOMPtr<nsIMapiSupport> mapiService (do_GetService(NS_IMAPISUPPORT_CONTRACTID, &rv));
     NS_ENSURE_SUCCESS(rv, rv);
-    return mapiService->UnRegisterServer();
+    return mapiService->RegisterServer();
 }
 
 nsresult nsMapiRegistryUtils::unsetDefaultNewsClient() {

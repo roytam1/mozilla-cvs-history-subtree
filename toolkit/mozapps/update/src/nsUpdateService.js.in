@@ -66,6 +66,11 @@ const URI_UPDATES_PROPERTIES    = "chrome://mozapps/locale/update/updates.proper
 const URI_UPDATE_NS             = "http://www.mozilla.org/2005/app-update";
 
 const KEY_APPDIR          = "XCurProcD";
+#ifdef XP_WIN
+const KEY_LOCALDATA       = "DefProfLRt";
+const KEY_PROGRAMFILES    = "ProgF";
+const KEY_UAPPDATA        = "UAppData";
+#endif
 
 const DIR_UPDATES         = "updates";
 const FILE_UPDATE_STATUS  = "update.status";
@@ -125,6 +130,9 @@ var gOSVersion  = null;
 var gConsole    = null;
 var gLogEnabled = { };
 
+// shared code for suppressing bad cert dialogs
+#include ../../shared/src/badCertHandler.js
+
 /**
  * Logs a string to the error console. 
  * @param   string
@@ -135,28 +143,6 @@ function LOG(module, string) {
     dump("*** " + module + ": " + string + "\n");
     gConsole.logStringMessage(string);
   }
-}
-
-/**
- * Only allow built-in certs for HTTPS connections.  See bug 340198.
- */
-function checkCert(channel) {
-  if (!channel.originalURI.schemeIs("https"))  // bypass
-    return;
-
-  const Ci = Components.interfaces;  
-  var cert =
-      channel.securityInfo.QueryInterface(Ci.nsISSLStatusProvider).
-      SSLStatus.QueryInterface(Ci.nsISSLStatus).serverCert;
-
-  var issuer = cert.issuer;
-  while (issuer && !cert.equals(issuer)) {
-    cert = issuer;
-    issuer = cert.issuer;
-  }
-
-  if (!issuer || issuer.tokenName != "Builtin Object Token")
-    throw "cert issuer is not built-in";
 }
 
 /**
@@ -200,7 +186,7 @@ function getURLSpecFromFile(file) {
  *          parent directories that need to be created.
  */
 function getDir(key, pathArray) {
-  return getDirInternal(key, pathArray, true);
+  return getDirInternal(key, pathArray, true, false);
 }
 
 /**
@@ -215,7 +201,21 @@ function getDir(key, pathArray) {
  *          requested does not exist, it is NOT created.
  */
 function getDirNoCreate(key, pathArray) {
-  return getDirInternal(key, pathArray, false);
+  return getDirInternal(key, pathArray, false, false);
+}
+
+/**
+ * Gets the specified directory at the specified hierarchy under the 
+ * update root directory.
+ * @param   pathArray
+ *          An array of path components to locate beneath the directory 
+ *          specified by |key|
+ * @return  nsIFile object for the location specified. If the directory
+ *          requested does not exist, it is created, along with any
+ *          parent directories that need to be created.
+ */
+function getUpdateDir(pathArray) {
+  return getDirInternal(KEY_APPDIR, pathArray, true, true);
 }
 
 /**
@@ -230,12 +230,32 @@ function getDirNoCreate(key, pathArray) {
  *          true if the directory hierarchy specified in |pathArray|
  *          should be created if it does not exist,
  *          false otherwise.
+ * @param   update
+ *          true if finding the update directory,
+ *          false otherwise.
  * @return  nsIFile object for the location specified. 
  */
-function getDirInternal(key, pathArray, shouldCreate) {
+function getDirInternal(key, pathArray, shouldCreate, update) {
   var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"]
                               .getService(Components.interfaces.nsIProperties);
-  var dir = fileLocator.get(key, Components.interfaces.nsIFile);
+  var dir = fileLocator.get(key, Components.interfaces.nsILocalFile);
+#ifdef XP_WIN
+  if (update) {
+    // Fallback to previous behavior since getting ProgF
+    // (e.g. KEY_PROGRAMFILES) may fail on Win9x.
+    try {
+      var programFilesDir = fileLocator.get(KEY_PROGRAMFILES,
+          Components.interfaces.nsILocalFile);
+      if (programFilesDir.contains(dir, true)) {
+        var relativePath = dir.getRelativeDescriptor(programFilesDir);
+        var userLocalDir = fileLocator.get(KEY_LOCALDATA,
+            Components.interfaces.nsILocalFile).parent;
+        dir.setRelativeDescriptor(userLocalDir, relativePath);
+      }
+    }
+    catch (e) {}
+  }
+#endif
   for (var i = 0; i < pathArray.length; ++i) {
     dir.append(pathArray[i]);
     if (shouldCreate && !dir.exists())
@@ -258,6 +278,22 @@ function getDirInternal(key, pathArray, shouldCreate) {
  */
 function getFile(key, pathArray) {
   var file = getDir(key, pathArray.slice(0, -1));
+  file.append(pathArray[pathArray.length - 1]);
+  return file;
+}
+
+/**
+ * Gets the file at the speciifed hierarchy under the update root directory.
+ * @param   pathArray
+ *          An array of path components to locate beneath the directory 
+ *          specified by |key|. The last item in this array must be the
+ *          leaf name of a file.
+ * @return  nsIFile object for the file specified. The file is NOT created
+ *          if it does not exist, however all required directories along 
+ *          the way are.
+ */
+function getUpdateFile(pathArray) {
+  var file = getUpdateDir(pathArray.slice(0, -1));
   file.append(pathArray[pathArray.length - 1]);
   return file;
 }
@@ -309,18 +345,41 @@ function getStatusTextFromCode(code, defaultCode) {
 
 /**
  * Get the Active Updates directory
+ * @param   key
+ *          The Directory Service Key (optional).
+ *          If used, don't search local appdata on Win32 and don't create dir.
  * @returns The active updates directory, as a nsIFile object
  */
-function getUpdatesDir() {
+function getUpdatesDir(key) {
   // Right now, we only support downloading one patch at a time, so we always
   // use the same target directory.
   var fileLocator =
       Components.classes["@mozilla.org/file/directory_service;1"].
       getService(Components.interfaces.nsIProperties);
-  var appDir = fileLocator.get(KEY_APPDIR, Components.interfaces.nsIFile);
+  var appDir;
+  if (key)
+    appDir = fileLocator.get(key, Components.interfaces.nsILocalFile);
+  else {
+    appDir = fileLocator.get(KEY_APPDIR, Components.interfaces.nsILocalFile);
+#ifdef XP_WIN
+    // Fallback to previous behavior since getting ProgF
+    // (e.g. KEY_PROGRAMFILES) may fail on Win9x.
+    try {
+      var programFilesDir = fileLocator.get(KEY_PROGRAMFILES,
+          Components.interfaces.nsILocalFile);
+      if (programFilesDir.contains(appDir, true)) {
+        var relativePath = appDir.getRelativeDescriptor(programFilesDir);
+        var userLocalDir = fileLocator.get(KEY_LOCALDATA,
+            Components.interfaces.nsILocalFile).parent;
+        appDir.setRelativeDescriptor(userLocalDir, relativePath);
+      }
+    }
+    catch (e) {}
+#endif
+  }
   appDir.append(DIR_UPDATES);
   appDir.append("0");
-  if (!appDir.exists())
+  if (!appDir.exists() && !key)
     appDir.create(nsILocalFile.DIRECTORY_TYPE, PERMS_DIRECTORY);
   return appDir;
 }
@@ -357,17 +416,20 @@ function writeStatusFile(dir, state) {
 
 /**
  * Removes the Updates Directory
+ * @param   key
+ *          The Directory Service Key under which update directory resides
+ *          (optional).
  */
-function cleanUpUpdatesDir() {
+function cleanUpUpdatesDir(key) {
   // Bail out if we don't have appropriate permissions
   var updateDir;
   try {
-    updateDir = getUpdatesDir();
+    updateDir = getUpdatesDir(key);
   }
   catch (e) {
     return;
   }
-        
+
   var e = updateDir.directoryEntries;
   while (e.hasMoreElements()) {
     var f = e.getNext().QueryInterface(Components.interfaces.nsIFile);
@@ -406,8 +468,11 @@ function cleanUpUpdatesDir() {
 
 /**
  * Clean up updates list and the updates directory.
+ * @param   key
+ *          The Directory Service Key under which update directory resides
+ *          (optional).
  */
-function cleanupActiveUpdate() {
+function cleanupActiveUpdate(key) {
   // Move the update from the Active Update list into the Past Updates list.
   var um = 
       Components.classes["@mozilla.org/updates/update-manager;1"].
@@ -416,7 +481,7 @@ function cleanupActiveUpdate() {
   um.saveUpdates();
 
   // Now trash the updates directory, since we're done with it
-  cleanUpUpdatesDir();
+  cleanUpUpdatesDir(key);
 }
 
 /**
@@ -1068,6 +1133,30 @@ UpdateService.prototype = {
     if (status == "null")
       status = null;
 
+    var updRootKey = null;
+#ifdef XP_WIN
+    function findPreviousUpdate(key) {
+      var updateDir = getUpdatesDir(key);
+      if (updateDir.exists()) {
+        status = readStatusFile(updateDir);
+        // Previous download should succeed. Otherwise, we will not be here!
+        if (status == STATE_SUCCEEDED)
+          updRootKey = key;
+        else
+          status = null;
+      }
+    }
+
+    // required when updating from Fx 2.0.0.1 to 2.0.0.3 (or later)
+    // on Windows Vista.
+    if (status == null)
+      findPreviousUpdate(KEY_UAPPDATA);
+
+    // required to migrate from older versions.
+    if (status == null)
+      findPreviousUpdate(KEY_APPDIR);
+#endif
+
     if (status == STATE_DOWNLOADING) {
       LOG("UpdateService", "_postUpdateProcessing: Downloading patch, resuming...");
     }
@@ -1111,14 +1200,20 @@ UpdateService.prototype = {
         LOG("UpdateService", "_postUpdateProcessing: Install Succeeded, Showing UI");
         prompter.showUpdateInstalled(update);
 
+#ifdef MOZ_PHOENIX
+        // for now, this is firefox only.  
+        // we need to fix both nsPostUpdateWin.js and 
+        // the uninstaller to work for thunderbird and sunbird
+        //
         // Perform platform-specific post-update processing.
         if (POST_UPDATE_CONTRACTID in Components.classes) {
           Components.classes[POST_UPDATE_CONTRACTID].
               createInstance(Components.interfaces.nsIRunnable).run();
         }
-        
+#endif
+
         // Done with this update. Clean it up.
-        cleanupActiveUpdate();
+        cleanupActiveUpdate(updRootKey);
       }
       else {
         // If we hit an error, then the error code will be included in the
@@ -1423,7 +1518,7 @@ UpdateService.prototype = {
    */
   get canUpdate() {
     try {
-      var appDirFile = getFile(KEY_APPDIR, [FILE_PERMS_TEST]);
+      var appDirFile = getUpdateFile([FILE_PERMS_TEST]);
       if (!appDirFile.exists()) {
         appDirFile.create(nsILocalFile.NORMAL_FILE_TYPE, PERMS_FILE);
         appDirFile.remove(false);
@@ -1532,8 +1627,7 @@ UpdateService.prototype = {
  */
 function UpdateManager() {
   // Ensure the Active Update file is loaded
-  var updates = this._loadXMLFileIntoArray(getFile(KEY_APPDIR, 
-    [FILE_UPDATE_ACTIVE]));
+  var updates = this._loadXMLFileIntoArray(getUpdateFile([FILE_UPDATE_ACTIVE]));
   if (updates.length > 0)
     this._activeUpdate = updates[0];
 }
@@ -1600,7 +1694,7 @@ UpdateManager.prototype = {
    */
   _ensureUpdates: function() {
     if (!this._updates) {
-      this._updates = this._loadXMLFileIntoArray(getFile(KEY_APPDIR, 
+      this._updates = this._loadXMLFileIntoArray(getUpdateFile(
                         [FILE_UPDATES_DB]));
 
       // Make sure that any active update is part of our updates list
@@ -1653,7 +1747,7 @@ UpdateManager.prototype = {
     }
     else
       this._writeUpdatesToXMLFile([this._activeUpdate], 
-                                  getFile(KEY_APPDIR, [FILE_UPDATE_ACTIVE]));
+                                  getUpdateFile([FILE_UPDATE_ACTIVE]));
     return activeUpdate;
   },
   
@@ -1725,10 +1819,10 @@ UpdateManager.prototype = {
    */
   saveUpdates: function() {
     this._writeUpdatesToXMLFile([this._activeUpdate], 
-                                getFile(KEY_APPDIR, [FILE_UPDATE_ACTIVE]));
+                                getUpdateFile([FILE_UPDATE_ACTIVE]));
     if (this._updates) {
       this._writeUpdatesToXMLFile(this._updates, 
-                                  getFile(KEY_APPDIR, [FILE_UPDATES_DB]));
+                                  getUpdateFile([FILE_UPDATES_DB]));
     }
   },
   
@@ -1743,65 +1837,6 @@ UpdateManager.prototype = {
   }
 };
 
-/**
- * This class implements nsIBadCertListener.  It's job is to prevent "bad cert"
- * security dialogs from being shown to the user.  It is better to simply fail
- * if the certificate is bad.  See bug 304286.
- */
-function BadCertHandler() {
-}
-BadCertHandler.prototype = {
-  /**
-   * See nsIBadCertListener
-   */
-  confirmUnknownIssuer: function(socketInfo, cert, certAddType) {
-    return false;
-  },
-
-  confirmMismatchDomain: function(socketInfo, targetURL, cert) {
-    return false;
-  },
-
-  confirmCertExpired: function(socketInfo, cert) {
-    return false;
-  },
-
-  notifyCrlNextupdate: function(socketInfo, targetURL, cert) {
-  },
-
-  /**
-   * See nsIChannelEventSink
-   */
-  onChannelRedirect: function(oldChannel, newChannel, flags) {
-    // make sure the certificate of the old channel checks out before we follow
-    // a redirect from it.  See bug 340198.
-    checkCert(oldChannel);
-  },
-
-  /**
-   * See nsIInterfaceRequestor
-   */
-  getInterface: function(iid) {
-    if (iid.equals(Components.interfaces.nsIBadCertListener) ||
-        iid.equals(Components.interfaces.nsIChannelEventSink))
-      return this;
-
-    Components.returnCode = Components.results.NS_ERROR_NO_INTERFACE;
-    return null;
-  },
-
-  /**
-   * See nsISupports
-   */
-  QueryInterface: function(iid) {
-    if (!iid.equals(Components.interfaces.nsIBadCertListener) &&
-        !iid.equals(Components.interfaces.nsIChannelEventSink) &&
-        !iid.equals(Components.interfaces.nsIInterfaceRequestor) &&
-        !iid.equals(Components.interfaces.nsISupports))
-      throw Components.results.NS_ERROR_NO_INTERFACE;
-    return this;
-  }
-};
 
 /**
  * Checker

@@ -136,10 +136,11 @@ protected:
   virtual nsresult GetDatabase(nsIMsgWindow *aMsgWindow) = 0;
   virtual nsresult SendFlagNotifications(nsIMsgDBHdr *item, PRUint32 oldFlags, PRUint32 newFlags);
   nsresult CheckWithNewMessagesStatus(PRBool messageAdded);
+  void     UpdateNewMessages();
   nsresult OnHdrAddedOrDeleted(nsIMsgDBHdr *hdrChanged, PRBool added);
   nsresult CreateFileSpecForDB(const char *userLeafName, nsFileSpec &baseDir, nsIFileSpec **dbFileSpec);
 
-  nsresult GetFolderCacheKey(nsIFileSpec **aFileSpec);
+  nsresult GetFolderCacheKey(nsIFileSpec **aFileSpec, PRBool createDBIfMissing = PR_FALSE);
   nsresult GetFolderCacheElemFromFileSpec(nsIFileSpec *fileSpec, nsIMsgFolderCacheElement **cacheElement);
   nsresult AddDirectorySeparator(nsFileSpec &path);
   nsresult CheckIfFolderExists(const PRUnichar *newFolderName, nsIMsgFolder *parentFolder, nsIMsgWindow *msgWindow);

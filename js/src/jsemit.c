@@ -2787,6 +2787,15 @@ EmitSwitch(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
             tableLength = (uint32)(high - low + 1);
             if (tableLength >= JS_BIT(16) || tableLength > 2 * caseCount)
                 switchOp = JSOP_LOOKUPSWITCH;
+        } else if (switchOp == JSOP_LOOKUPSWITCH) {
+            /*
+             * Lookup switch supports only atom indexes below 64K limit.
+             * Conservatively estimate the maximum possible index during
+             * switch generation and use conditional switch if it exceeds
+             * the limit.
+             */
+            if (caseCount + cg->atomList.count > JS_BIT(16))
+                switchOp = JSOP_CONDSWITCH;
         }
     }
 
@@ -5249,7 +5258,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
          */
         pn2 = pn->pn_left;
         JS_ASSERT(pn2->pn_type != TOK_RP);
-        atomIndex = (jsatomid) -1;              /* quell GCC overwarning */
+        atomIndex = (jsatomid) -1;
         switch (pn2->pn_type) {
           case TOK_NAME:
             if (!BindNameToSlot(cx, &cg->treeContext, pn2, JS_FALSE))
@@ -5307,6 +5316,10 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 #if JS_HAS_GETTER_SETTER
         if (op == JSOP_GETTER || op == JSOP_SETTER) {
             /* We'll emit these prefix bytecodes after emitting the r.h.s. */
+            if (atomIndex != (jsatomid) -1 && atomIndex >= JS_BIT(16)) {
+                ReportStatementTooLarge(cx, cg);
+                return JS_FALSE;
+            }
         } else
 #endif
         /* If += or similar, dup the left operand and get its value. */
@@ -6097,6 +6110,11 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 #if JS_HAS_GETTER_SETTER
             op = pn2->pn_op;
             if (op == JSOP_GETTER || op == JSOP_SETTER) {
+                if (pn3->pn_type != TOK_NUMBER &&
+                    ALE_INDEX(ale) >= JS_BIT(16)) {
+                    ReportStatementTooLarge(cx, cg);
+                    return JS_FALSE;
+                }
                 if (js_Emit1(cx, cg, op) < 0)
                     return JS_FALSE;
             }

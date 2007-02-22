@@ -4376,7 +4376,7 @@ macbrowser)
   MOZ_APP_DISPLAYNAME=Mozilla
   MOZ_APP_VERSION=$MOZILLA_VERSION
   MOZ_STORAGE=1
-  MOZ_EXTENSIONS_DEFAULT=" cookie xmlextras universalchardet typeaheadfind transformiix permissions spellcheck"
+  MOZ_EXTENSIONS_DEFAULT=" cookie xmlextras universalchardet typeaheadfind transformiix permissions spellcheck auth"
   AC_DEFINE(MOZ_MACBROWSER)
   ;;
 

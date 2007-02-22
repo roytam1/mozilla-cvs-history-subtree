@@ -54,6 +54,7 @@
 #endif
 #include "nsCOMPtr.h"
 #include "nsIDOMKeyEvent.h"
+#include "nsWeakPtr.h"
 
 class nsIRenderingContext;
 class nsIRegion;
@@ -903,6 +904,7 @@ public:
   }
 
   nsIURI* mRequestingWindowURI; // owning reference
+  nsWeakPtr mRequestingWindow;
   nsIURI* mPopupWindowURI;      // owning reference
   nsString mPopupWindowFeatures;
 };

@@ -1580,7 +1580,10 @@ function MigrateJunkMailSettings()
   {
     // get the default account, check to see if we have values for our 
     // globally migrated prefs.
-    var defaultAccount = accountManager.defaultAccount;
+    var defaultAccount;
+    try {
+      defaultAccount = accountManager.defaultAccount;
+    } catch (ex) {}
     if (defaultAccount && defaultAccount.incomingServer)
     {
       // we only care about

@@ -88,7 +88,11 @@ _cairo_pen_init (cairo_pen_t *pen, double radius, cairo_gstate_t *gstate)
     pen->num_vertices = _cairo_pen_vertices_needed (gstate->tolerance,
 						    radius,
 						    &gstate->ctm);
-    
+
+    if (pen->num_vertices > 0xffff) {
+        return CAIRO_STATUS_NO_MEMORY;
+    }
+
     pen->vertices = malloc (pen->num_vertices * sizeof (cairo_pen_vertex_t));
     if (pen->vertices == NULL) {
 	return CAIRO_STATUS_NO_MEMORY;

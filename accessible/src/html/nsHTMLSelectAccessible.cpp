@@ -706,12 +706,9 @@ nsresult nsHTMLSelectOptionAccessible::GetFocusedOptionNode(nsIDOMNode *aListNod
       rv = selectElement->GetSelectedIndex(&focusedOptionIndex);
   }
 
-  // Either use options and focused index, or default to list node itself
-  if (NS_SUCCEEDED(rv) && options && focusedOptionIndex >= 0)   // Something is focused
+  // Either use options and focused index, or default return null
+  if (NS_SUCCEEDED(rv) && options && focusedOptionIndex >= 0) {  // Something is focused
     rv = options->Item(focusedOptionIndex, aFocusedOptionNode);
-  else {  // If no options in list or focusedOptionIndex <0, then we are not focused on an item
-    NS_ADDREF(*aFocusedOptionNode = aListNode);  // return normal target content
-    rv = NS_OK;
   }
 
   return rv;
@@ -910,7 +907,7 @@ NS_IMETHODIMP nsHTMLComboboxAccessible::GetDescription(nsAString& aDescription)
   aDescription.Truncate();
   nsCOMPtr<nsIAccessible> optionAccessible = GetFocusedOptionAccessible();
   NS_ENSURE_TRUE(optionAccessible, NS_ERROR_FAILURE);
-  return optionAccessible->GetDescription(aDescription);
+  return optionAccessible ? optionAccessible->GetDescription(aDescription) : NS_OK;
 }
 
 already_AddRefed<nsIAccessible>

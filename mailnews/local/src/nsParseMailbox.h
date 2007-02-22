@@ -61,6 +61,7 @@
 
 #include "nsIMsgFilterList.h"
 #include "nsIMsgFilterHitNotify.h"
+#include "nsIMsgFolderNotificationService.h"
 
 class nsFileSpec;
 class nsByteArray;
@@ -258,7 +259,11 @@ public:
   virtual void	ApplyFilters(PRBool *pMoved, nsIMsgWindow *msgWindow, 
                              PRUint32 msgOffset);
   nsresult    ApplyForwardAndReplyFilter(nsIMsgWindow *msgWindow);
+  void        NotifyGlobalListeners(nsIMsgDBHdr *newHdr);
 
+  // this keeps track of how many messages we downloaded that
+  // aren't new - e.g., marked read, or moved to an other server.
+  PRInt32     m_numNotNewMessages;
 protected:
   virtual nsresult GetTrashFolder(nsIMsgFolder **pTrashFolder);
   virtual nsresult  MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr, 
@@ -275,6 +280,7 @@ protected:
   nsCOMPtr <nsIMsgWindow> m_msgWindow;
   nsCOMPtr <nsIMsgFolder> m_downloadFolder;
   nsCOMArray <nsIMsgFolder> m_filterTargetFolders;
+  nsCOMPtr <nsIMsgFolderNotificationService> m_notificationService;
 
   nsImapMoveCoalescer *m_moveCoalescer; // strictly owned by nsParseNewMailState;
 

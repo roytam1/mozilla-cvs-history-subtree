@@ -80,6 +80,7 @@
 #include "nsIWebNavigation.h"
 #include "nsIDocShellTreeNode.h"
 #include "nsContentPolicyUtils.h"
+#include "nsIDOMHTMLImageElement.h"
 
 static const char kBlockRemoteImages[] = "mailnews.message_display.disable_remote_image";
 static const char kAllowPlugins[] = "mailnews.message_display.allow.plugins";
@@ -292,11 +293,11 @@ nsMsgContentPolicy::ShouldLoad(PRUint32          aContentType,
       contentScheme.LowerCaseEqualsLiteral("about"))
     isExposedProtocol = PR_TRUE;
 #endif
-    
-  rv = aContentLocation->SchemeIs("chrome", &isChrome);
-  NS_ENSURE_SUCCESS(rv, NS_OK);
 
-  if (isExposedProtocol || isChrome)
+  rv = aContentLocation->SchemeIs("chrome", &isChrome);
+  rv |= aContentLocation->SchemeIs("resource", &isRes);
+
+  if (isExposedProtocol || (NS_SUCCEEDED(rv) && (isChrome || isRes)))
   {
     *aDecision = nsIContentPolicy::ACCEPT;
     return NS_OK;
@@ -338,7 +339,7 @@ nsMsgContentPolicy::ShouldLoad(PRUint32          aContentType,
   NS_ENSURE_SUCCESS(rv, NS_OK);
 
   if (windowType.Equals(NS_LITERAL_STRING("msgcompose")))
-    ComposeShouldLoad(rootDocShell, aContentLocation, aDecision);
+    ComposeShouldLoad(rootDocShell, aRequestingContext, aContentLocation, aDecision);
   else
   {
     // the remote image could be nested in any number of iframes. For those cases, we don't really
@@ -399,6 +400,21 @@ nsresult nsMsgContentPolicy::MailShouldLoad(nsIURI * aRequestingLocation, nsIURI
 {
   NS_ENSURE_TRUE(aRequestingLocation, NS_OK);
 
+  // Allow remote content when using a remote start page in the message pane.
+  // aRequestingLocation is the url currently loaded in the message pane. 
+  // If that's an http / https url (as opposed to a mail url) then we 
+  // must be loading a start page and not a message.
+  PRBool isHttp;
+  PRBool isHttps;
+  nsresult rv = aRequestingLocation->SchemeIs("http", &isHttp);
+  rv |= aRequestingLocation->SchemeIs("https", &isHttps);
+  if (NS_SUCCEEDED(rv) && (isHttp || isHttps))
+  {
+    *aDecision = nsIContentPolicy::ACCEPT;
+    return NS_OK;
+  }
+
+
   // (1) examine the msg hdr value for the remote content policy on this particular message to
   //     see if this particular message has special rights to bypass the remote content check
   // (2) special case RSS urls, always allow them to load remote images since the user explicitly
@@ -407,7 +423,6 @@ nsresult nsMsgContentPolicy::MailShouldLoad(nsIURI * aRequestingLocation, nsIURI
   //     who are allowed to send us remote images
 
   // get the msg hdr for the message URI we are actually loading
-  nsresult rv;
   nsCOMPtr<nsIMsgMessageUrl> msgUrl = do_QueryInterface(aRequestingLocation, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -449,8 +464,8 @@ nsresult nsMsgContentPolicy::MailShouldLoad(nsIURI * aRequestingLocation, nsIURI
  * Content policy logic for compose windows
  * 
  */
-nsresult nsMsgContentPolicy::ComposeShouldLoad(nsIDocShell * aRootDocShell, nsIURI * aContentLocation, 
-                                               PRInt16 * aDecision)
+nsresult nsMsgContentPolicy::ComposeShouldLoad(nsIDocShell * aRootDocShell, nsISupports * aRequestingContext,
+                                               nsIURI * aContentLocation, PRInt16 * aDecision)
 {
   nsresult rv;
 
@@ -477,7 +492,8 @@ nsresult nsMsgContentPolicy::ComposeShouldLoad(nsIDocShell * aRootDocShell, nsIU
 
   // Only allow remote content for new mail compositions.
   // Block remote content for all other types (drafts, templates, forwards, replies, etc)
-  // unless there is an associated msgHdr which allows the load...
+  // unless there is an associated msgHdr which allows the load, or unless the image is being
+  // added by the user and not the quoted message content...
   if (composeType == nsIMsgCompType::New)
     *aDecision = nsIContentPolicy::ACCEPT;
   else if (!originalMsgURI.IsEmpty())
@@ -486,6 +502,25 @@ nsresult nsMsgContentPolicy::ComposeShouldLoad(nsIDocShell * aRootDocShell, nsIU
     rv = GetMsgDBHdrFromURI(originalMsgURI.get(), getter_AddRefs(msgHdr));
     NS_ENSURE_SUCCESS(rv, NS_OK);
     AllowRemoteContentForMsgHdr(msgHdr, nsnull, aContentLocation, aDecision);
+
+    // Special case image elements. When replying to a message, we want to allow the 
+    // user to add remote images to the message. But we don't want remote images
+    // that are a part of the quoted content to load. Fortunately, after the quoted message
+    // has been inserted into the document, mail compose flags remote content elements that came 
+    // from the original message with a moz-do-not-send attribute. 
+    if (*aDecision == nsIContentPolicy::REJECT_REQUEST)
+    {
+      PRBool insertingQuotedContent = PR_TRUE;
+      msgCompose->GetInsertingQuotedContent(&insertingQuotedContent);
+      nsCOMPtr<nsIDOMHTMLImageElement> imageElement = do_QueryInterface(aRequestingContext);
+      if (!insertingQuotedContent && imageElement)
+      {
+        PRBool doNotSendAttrib;
+        if (NS_SUCCEEDED(imageElement->HasAttribute(NS_LITERAL_STRING("moz-do-not-send"), &doNotSendAttrib)) && 
+            !doNotSendAttrib)
+           *aDecision = nsIContentPolicy::ACCEPT;
+      }
+    }
   }
 
   return NS_OK;

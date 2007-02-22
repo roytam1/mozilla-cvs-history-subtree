@@ -3098,6 +3098,13 @@ NS_IMETHODIMP nsWindow::SetCursor(imgIContainer* aCursor,
   frame->GetWidth(&width);
   frame->GetHeight(&height);
 
+  // Reject cursors greater than 128 pixels in some direction, to prevent
+  // spoofing.
+  // XXX ideally we should rescale. Also, we could modify the API to
+  // allow trusted content to set larger cursors.
+  if (width > 128 || height > 128)
+    return NS_ERROR_NOT_AVAILABLE;
+
   gfx_format format;
   nsresult rv = frame->GetFormat(&format);
   if (NS_FAILED(rv))

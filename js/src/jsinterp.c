@@ -1522,6 +1522,17 @@ JSBool
 js_InternalGetOrSet(JSContext *cx, JSObject *obj, jsid id, jsval fval,
                     JSAccessMode mode, uintN argc, jsval *argv, jsval *rval)
 {
+    int stackDummy;
+
+    /*
+     * js_InternalInvoke could result in another try to get or set the same id
+     * again, see bug 355497.
+     */
+    if (!JS_CHECK_STACK_SIZE(cx, stackDummy)) {
+        JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                             JSMSG_OVER_RECURSED);
+        return JS_FALSE;
+    }
     /*
      * Check general (not object-ops/class-specific) access from the running
      * script to obj.id only if id has a scripted getter or setter that we're
@@ -2835,8 +2846,11 @@ interrupt:
     JS_BEGIN_MACRO                                                            \
         if (SPROP_HAS_STUB_GETTER(sprop)) {                                   \
             /* Fast path for Object instance properties. */                   \
-            JS_ASSERT((sprop)->slot != SPROP_INVALID_SLOT);                   \
-            *vp = LOCKED_OBJ_GET_SLOT(pobj, (sprop)->slot);                   \
+            JS_ASSERT((sprop)->slot != SPROP_INVALID_SLOT ||                  \
+                      !SPROP_HAS_STUB_SETTER(sprop));                         \
+            *vp = ((sprop)->slot != SPROP_INVALID_SLOT)                       \
+                  ? LOCKED_OBJ_GET_SLOT(pobj, (sprop)->slot)                  \
+                  : JSVAL_VOID;                                               \
         } else {                                                              \
             SAVE_SP_AND_PC(fp);                                               \
             ok = js_NativeGet(cx, obj, pobj, sprop, vp);                      \
@@ -2847,9 +2861,9 @@ interrupt:
 
 #define NATIVE_SET(cx,obj,sprop,vp)                                           \
     JS_BEGIN_MACRO                                                            \
-        if (SPROP_HAS_STUB_SETTER(sprop)) {                                   \
+        if (SPROP_HAS_STUB_SETTER(sprop) &&                                   \
+            (sprop)->slot != SPROP_INVALID_SLOT) {                            \
             /* Fast path for Object instance properties. */                   \
-            JS_ASSERT((sprop)->slot != SPROP_INVALID_SLOT);                   \
             LOCKED_OBJ_SET_SLOT(obj, (sprop)->slot, *vp);                     \
         } else {                                                              \
             SAVE_SP_AND_PC(fp);                                               \

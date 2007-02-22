@@ -52,6 +52,13 @@
 #include "nsIMenuRollup.h"
 #include "nsGfxUtils.h"
 
+#include "nsIDocument.h"
+#include "nsIFrame.h"
+#include "nsIObjectFrame.h"
+#include "nsIPresShell.h"
+#include "nsIEventStateManager.h"
+#include "nsToolkit.h"
+
 static nsMacEventHandler* sLastActive;
 
 //#define DEBUG_TSM
@@ -2263,32 +2270,44 @@ nsMacEventHandler::HandleKeyUpDownEvent(EventHandlerCallRef aHandlerCallRef,
 
   PRBool sendToTSM = PR_FALSE;
   if (eventKind == kEventRawKeyDown) {
-    if (mTSMDocument != ::TSMGetActiveDocument()) {
-      // If some TSM document other than the one that we use for this window
-      // is active, first try to call through to the TSM handler during a
-      // keydown.  This can happen if a plugin installs its own TSM handler
-      // and activates its own TSM document.
-      // This is done early, before dispatching NS_KEY_DOWN because the
-      // plugin will receive the keyDown event carried in the NS_KEY_DOWN.
-      // If an IME session is active, this could cause the plugin to accept
-      // both raw keydowns and text input from the IME session as input.
-      err = ::CallNextEventHandler(aHandlerCallRef, aEvent);
-      if (err == noErr) {
-        // Someone other than us handled the event.  Don't send NS_KEY_DOWN.
-        return PR_TRUE;
-      }
+    if (IsPluginFocused()) {
+      if (mTSMDocument != ::TSMGetActiveDocument()) {
+        // If some TSM document other than the one that we use for this window
+        // is active, first try to call through to the TSM handler during a
+        // keydown.  This can happen if a plugin installs its own TSM handler
+        // and activates its own TSM document.
+        // This is done early, before dispatching NS_KEY_DOWN because the
+        // plugin will receive the keyDown event carried in the NS_KEY_DOWN.
+        // If an IME session is active, this could cause the plugin to accept
+        // both raw keydowns and text input from the IME session as input.
+        err = ::CallNextEventHandler(aHandlerCallRef, aEvent);
+        if (err == noErr) {
+          // Someone other than us handled the event.  Don't send NS_KEY_DOWN.
+          return PR_TRUE;
+        }
 
-      // No foreign handlers did anything.  Leave sendToTSM false so that
-      // no subsequent attempts to call through to the foreign handler will
-      // be made.
-    }
-    else {
-      // The TSM document matches the one corresponding to the window.
-      // An NS_KEY_DOWN event will be sent, and after that, it will be put
-      // back into the handler chain to go to the TSM input handlers.
-      // This assumes that the TSM handler is still ours, or that if
-      // something else changed the TSM handler, that the new handler will
-      // at least call through to ours.
+        // No foreign handlers did anything.  Leave sendToTSM false so that
+        // no subsequent attempts to call through to the foreign handler will
+        // be made.
+      }
+      else {
+        // The TSM document matches the one corresponding to the window.
+        // An NS_KEY_DOWN event will be sent, and after that, it will be put
+        // back into the handler chain to go to the TSM input handlers.
+        // This assumes that the TSM handler is still ours, or that if
+        // something else changed the TSM handler, that the new handler will
+        // at least call through to ours.
+        sendToTSM = PR_TRUE;
+      }
+    } else {
+      // If the focus isn't currently in any plugin and we have a TSM document
+      // that isn't currently active, activate it.  This helps with plugins
+      // that set their own TSM document and then don't set it back, or don't
+      // set it back correctly.  This should always have been the browser's
+      // responsibility in any case.  This change resolves bmo bug 355071, and
+      // also bmo bugs 345010 and (possibly) 318139 on the 1.8.1 branch.
+      if (mTSMDocument && (mTSMDocument != ::TSMGetActiveDocument()))
+        ::ActivateTSMDocument(mTSMDocument);
       sendToTSM = PR_TRUE;
     }
   }
@@ -2463,4 +2482,28 @@ nsMacEventHandler::ClearLastMouseUp()
   mLastMouseUpWhere.v = 0;
   mLastMouseUpWhen = 0;
   mClickCount = 0;
+}
+
+// Returns NS_TRUE if a plugin is currently focused, otherwise returns
+// NS_FALSE.
+PRBool
+nsMacEventHandler::IsPluginFocused()
+{
+  PRBool retval = PR_FALSE;
+  nsIWidget* widget = mEventDispatchHandler->GetActive();
+  nsIDocument *doc = nsToolkit::GetDocumentFor(widget);
+  if (doc) {
+    nsIPresShell* presShell = doc->GetShellAt(0);
+    nsIEventStateManager* esm = presShell->GetPresContext()->EventStateManager();
+    nsIFrame *focusedFrame = nsnull;
+    esm->GetFocusedFrame(&focusedFrame);
+    if (focusedFrame) {
+      nsIObjectFrame *pluginFrame;
+      // There's no need to call Release() on objectIFrame, since AddRef()
+      // and Release() don't work on frames.
+      if (NS_SUCCEEDED(CallQueryInterface(focusedFrame, &pluginFrame)))
+        retval = PR_TRUE;
+    }
+  }
+  return retval;
 }

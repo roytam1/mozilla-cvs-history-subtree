@@ -2163,15 +2163,22 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIFrame*             aParentFram
           return NS_ERROR_OUT_OF_MEMORY;
 
         counterList->Insert(node);
-        if (counterList->IsLast(node))
-          node->Calc(counterList);
-        else {
-          counterList->SetDirty();
-          CountersDirty();
+        PRBool dirty = counterList->IsDirty();
+        if (!dirty) {
+          if (counterList->IsLast(node)) {
+            node->Calc(counterList);
+            node->GetText(contentString);
+          }
+          // In all other cases (list already dirty or node not at the end),
+          // just start with an empty string for now and when we recalculate
+          // the list we'll change the value to the right one.
+          else {
+            counterList->SetDirty();
+            CountersDirty();
+          }
         }
 
         textPtr = &node->mText; // text node assigned below
-        node->GetText(contentString);
       }
       break;
 
@@ -6741,8 +6748,12 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsFrameConstructorState& aSta
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems); 
     }
+    PRUint32 flags = 0;
+    if (NS_STYLE_DISPLAY_INLINE_BLOCK == aDisplay->mDisplay) {
+      flags = NS_BLOCK_SPACE_MGR | NS_BLOCK_MARGIN_ROOT;
+    }
     // Create the block frame
-    rv = NS_NewBlockFrame(mPresShell, &newFrame);
+    rv = NS_NewBlockFrame(mPresShell, &newFrame, flags);
     if (NS_SUCCEEDED(rv)) { // That worked so construct the block and its children
       // XXXbz should we be passing in a non-null aContentParentFrame?
       rv = ConstructBlock(aState, aDisplay, aContent,

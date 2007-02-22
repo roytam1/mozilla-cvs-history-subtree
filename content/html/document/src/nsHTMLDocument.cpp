@@ -545,8 +545,31 @@ nsHTMLDocument::TryBookmarkCharset(nsIDocShell* aDocShell,
   return PR_FALSE;
 }
 
+static PRBool
+CheckSameOrigin(nsIDocument* aDoc1, nsIDocument* aDoc2)
+{
+  NS_PRECONDITION(aDoc1, "Null doc?");
+  NS_PRECONDITION(aDoc2, "Null doc?");
+
+  nsIScriptSecurityManager* secMan = nsContentUtils::GetSecurityManager();
+  if (!secMan) {
+    return PR_FALSE;
+  }
+
+  nsIPrincipal* principal1 = aDoc1->GetPrincipal();
+  nsIPrincipal* principal2 = aDoc2->GetPrincipal();
+
+  if (!principal1 || !principal2) {
+    return PR_FALSE;
+  }
+
+  return
+    NS_SUCCEEDED(secMan->CheckSameOriginPrincipal(principal1, principal2));
+}
+
 PRBool
 nsHTMLDocument::TryParentCharset(nsIDocumentCharsetInfo*  aDocInfo,
+                                 nsIDocument* aParentDocument,
                                  PRInt32& aCharsetSource,
                                  nsACString& aCharset)
 {
@@ -557,11 +580,24 @@ nsHTMLDocument::TryParentCharset(nsIDocumentCharsetInfo*  aDocInfo,
     aDocInfo->GetParentCharsetSource(&parentSource);
     if (kCharsetFromParentForced <= parentSource)
       source = kCharsetFromParentForced;
-    else if (kCharsetFromHintPrevDoc == parentSource)
+    else if (kCharsetFromHintPrevDoc == parentSource) {
+      // Make sure that's OK
+      if (!aParentDocument || !CheckSameOrigin(this, aParentDocument)) {
+        return PR_FALSE;
+      }
+      
       // if parent is posted doc, set this prevent autodections
+      // I'm not sure this makes much sense... but whatever.
       source = kCharsetFromHintPrevDoc;
-    else if (kCharsetFromCache <= parentSource)
+    }
+    else if (kCharsetFromCache <= parentSource) {
+      // Make sure that's OK
+      if (!aParentDocument || !CheckSameOrigin(this, aParentDocument)) {
+        return PR_FALSE;
+      }
+
       source = kCharsetFromParentFrame;
+    }
     else
       return PR_FALSE;
 
@@ -752,6 +788,32 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
   if(cx){
     mTexttype = GET_BIDI_OPTION_TEXTTYPE(cx->GetBidi());
   }
+  // Look for the parent document.  Note that at this point we don't have our
+  // content viewer set up yet, and therefore do not have a useful
+  // mParentDocument.
+
+  // in this block of code, if we get an error result, we return it
+  // but if we get a null pointer, that's perfectly legal for parent
+  // and parentContentViewer
+  nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(docShell));
+  NS_ENSURE_TRUE(docShellAsItem, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsIDocShellTreeItem> parentAsItem;
+  docShellAsItem->GetSameTypeParent(getter_AddRefs(parentAsItem));
+
+  nsCOMPtr<nsIDocShell> parent(do_QueryInterface(parentAsItem));
+  nsCOMPtr<nsIDocument> parentDocument;
+  nsCOMPtr<nsIContentViewer> parentContentViewer;
+  if (parent) {
+    rv = parent->GetContentViewer(getter_AddRefs(parentContentViewer));
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsCOMPtr<nsIDocumentViewer> docViewer =
+      do_QueryInterface(parentContentViewer);
+    if (docViewer) {
+      docViewer->GetDocument(getter_AddRefs(parentDocument));
+    }
+  }
+
   //
   // The following logic is mirrored in nsWebShell::Embed!
   //
@@ -762,26 +824,9 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
   if (cv) {
      muCV = do_QueryInterface(cv);
   } else {
-    // in this block of code, if we get an error result, we return it
-    // but if we get a null pointer, that's perfectly legal for parent
-    // and parentContentViewer
-    nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(docShell));
-    NS_ENSURE_TRUE(docShellAsItem, NS_ERROR_FAILURE);
-
-    nsCOMPtr<nsIDocShellTreeItem> parentAsItem;
-    docShellAsItem->GetSameTypeParent(getter_AddRefs(parentAsItem));
-
-    nsCOMPtr<nsIDocShell> parent(do_QueryInterface(parentAsItem));
-    if (parent) {
-      nsCOMPtr<nsIContentViewer> parentContentViewer;
-      rv = parent->GetContentViewer(getter_AddRefs(parentContentViewer));
-      if (NS_FAILED(rv)) { return rv; }
-      if (parentContentViewer) {
-        muCV = do_QueryInterface(parentContentViewer);
-        if (muCV) {
-          muCVIsParent = PR_TRUE;
-        }
-      }
+    muCV = do_QueryInterface(parentContentViewer);
+    if (muCV) {
+      muCVIsParent = PR_TRUE;
     }
   }
 
@@ -812,7 +857,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
     // should be always safe to try more sources.
     if (!TryUserForcedCharset(muCV, dcInfo, charsetSource, charset)) {
       TryHintCharset(muCV, charsetSource, charset);
-      TryParentCharset(dcInfo, charsetSource, charset);
+      TryParentCharset(dcInfo, parentDocument, charsetSource, charset);
       if (TryChannelCharset(aChannel, charsetSource, charset)) {
         // Use the channel's charset (e.g., charset from HTTP
         // "Content-Type" header).
@@ -1891,6 +1936,12 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
 
   nsresult rv = NS_OK;
 
+  // If we already have a parser we ignore the document.open call.
+  if (mParser) {
+
+    return NS_OK;
+  }
+
   if (!nsContentUtils::CanCallerAccess(NS_STATIC_CAST(nsIDOMHTMLDocument*, this))) {
     nsPIDOMWindow *win = GetWindow();
     if (win) {
@@ -1902,12 +1953,6 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
         return NS_ERROR_DOM_SECURITY_ERR;
       }
     }
-  }
-
-  // If we already have a parser we ignore the document.open call.
-  if (mParser) {
-
-    return NS_OK;
   }
 
   nsCOMPtr<nsIDocument> callerDoc =

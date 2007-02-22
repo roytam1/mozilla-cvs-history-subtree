@@ -92,6 +92,8 @@
 #define APP_REGISTRY_NAME "appreg"
 #endif
 
+#define PREF_OVERRIDE_DIRNAME "preferences"
+
 nsXREDirProvider* gDirServiceProvider = nsnull;
 
 nsXREDirProvider::nsXREDirProvider() :
@@ -178,6 +180,7 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
   nsresult rv = NS_ERROR_FAILURE;
   *aPersistent = PR_TRUE;
   nsCOMPtr<nsIFile> file;
+  PRBool ensureFilePermissions = PR_FALSE;
 
   if (!strcmp(aProperty, NS_OS_CURRENT_PROCESS_DIR) ||
       !strcmp(aProperty, NS_APP_INSTALL_CLEANUP_DIR)) {
@@ -282,6 +285,7 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
         else {
           rv |= file->AppendNative(NS_LITERAL_CSTRING("localstore.rdf"));
           EnsureProfileFileExists(file);
+          ensureFilePermissions = PR_TRUE;
         }
       }
       else if (!strcmp(aProperty, NS_APP_HISTORY_50_FILE)) {
@@ -292,6 +296,7 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
         rv = mProfileDir->Clone(getter_AddRefs(file));
         rv |= file->AppendNative(NS_LITERAL_CSTRING("mimeTypes.rdf"));
         EnsureProfileFileExists(file);
+        ensureFilePermissions = PR_TRUE;
       }
       else if (!strcmp(aProperty, NS_APP_STORAGE_50_FILE)) {
         rv = mProfileDir->Clone(getter_AddRefs(file));
@@ -300,6 +305,11 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
       else if (!strcmp(aProperty, NS_APP_DOWNLOADS_50_FILE)) {
         rv = mProfileDir->Clone(getter_AddRefs(file));
         rv |= file->AppendNative(NS_LITERAL_CSTRING("downloads.rdf"));
+      }
+      else if (!strcmp(aProperty, NS_APP_PREFS_OVERRIDE_DIR)) {
+        rv = mProfileDir->Clone(getter_AddRefs(file));
+        rv |= file->AppendNative(NS_LITERAL_CSTRING(PREF_OVERRIDE_DIRNAME));
+        rv |= EnsureDirectoryExists(file);
       }
       // XXXbsmedberg move these defines into application-specific providers.
       else if (!strcmp(aProperty, NS_APP_MAIL_50_DIR)) {
@@ -322,6 +332,19 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
   }
   if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
   if (!file) return NS_ERROR_FAILURE;
+
+  if (ensureFilePermissions) {
+    PRBool fileToEnsureExists;
+    PRBool isWritable;
+    if (NS_SUCCEEDED(file->Exists(&fileToEnsureExists)) && fileToEnsureExists
+        && NS_SUCCEEDED(file->IsWritable(&isWritable)) && !isWritable) {
+      PRUint32 permissions;
+      if (NS_SUCCEEDED(file->GetPermissions(&permissions))) {
+        rv = file->SetPermissions(permissions | 0600);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to ensure file permissions");
+      }
+    }
+  }
 
   NS_ADDREF(*aFile = file);
   return NS_OK;
@@ -461,22 +484,30 @@ nsXREDirProvider::GetFiles(const char* aProperty, nsISimpleEnumerator** aResult)
   }
   else if (!strcmp(aProperty, NS_APP_PREFS_DEFAULTS_DIR_LIST)) {
     nsCOMArray<nsIFile> directories;
+    PRBool exists;
 
     if (mXULAppDir) {
       nsCOMPtr<nsIFile> file;
       mXULAppDir->Clone(getter_AddRefs(file));
       file->AppendNative(NS_LITERAL_CSTRING("defaults"));
       file->AppendNative(NS_LITERAL_CSTRING("preferences"));
-      PRBool exists;
       if (NS_SUCCEEDED(file->Exists(&exists)) && exists)
         directories.AppendObject(file);
     }
+    
+    if (mProfileDir) {
+      nsCOMPtr<nsIFile> overrideFile;
+      mProfileDir->Clone(getter_AddRefs(overrideFile));
+      overrideFile->AppendNative(NS_LITERAL_CSTRING(PREF_OVERRIDE_DIRNAME));
+      if (NS_SUCCEEDED(overrideFile->Exists(&exists)) && exists)
+        directories.AppendObject(overrideFile);
 
-    if (mProfileDir && !gSafeMode) {
-      static const char *const kAppendPrefDir[] = { "defaults", "preferences", nsnull };
+      if (!gSafeMode) {
+        static const char *const kAppendPrefDir[] = { "defaults", "preferences", nsnull };
 
-      LoadDirsIntoArray(profileFile, "ExtensionDirs",
-                        kAppendPrefDir, directories);
+        LoadDirsIntoArray(profileFile, "ExtensionDirs",
+                          kAppendPrefDir, directories);
+      }
     }
 
     rv = NS_NewArrayEnumerator(aResult, directories);

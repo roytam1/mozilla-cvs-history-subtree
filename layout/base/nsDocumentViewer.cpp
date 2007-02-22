@@ -122,6 +122,7 @@
 
 #include "nsPIDOMWindow.h"
 #include "nsIFocusController.h"
+#include "nsIMenuParent.h"
 
 #include "nsIScrollableView.h"
 #include "nsIHTMLDocument.h"
@@ -365,6 +366,8 @@ private:
   nsresult GetPopupNode(nsIDOMNode** aNode);
   nsresult GetPopupLinkNode(nsIDOMNode** aNode);
   nsresult GetPopupImageNode(nsIImageLoadingContent** aNode);
+
+  void HideViewIfPopup(nsIView* aView);
 
   void DumpContentToPPM(const char* aFileName);
 
@@ -1181,32 +1184,68 @@ DocumentViewerImpl::PageHide(PRBool aIsUnload)
     return NS_ERROR_NULL_POINTER;
   }
 
+  nsresult rv = NS_OK;
+
   mDocument->OnPageHide(!aIsUnload);
-  if (!aIsUnload)
-    return NS_OK;
+  if (aIsUnload) {
+    // if Destroy() was called during OnPageHide(), mDocument is nsnull.
+    NS_ENSURE_STATE(mDocument);
 
-  // if Destroy() was called during OnPageHide(), mDocument is nsnull.
-  NS_ENSURE_STATE(mDocument);
+    // First, get the script global object from the document...
+    nsIScriptGlobalObject *global = mDocument->GetScriptGlobalObject();
 
-  // First, get the script global object from the document...
-  nsIScriptGlobalObject *global = mDocument->GetScriptGlobalObject();
+    if (!global) {
+      // Fail if no ScriptGlobalObject is available...
+      NS_ERROR("nsIScriptGlobalObject not set for document!");
+      return NS_ERROR_NULL_POINTER;
+    }
 
-  if (!global) {
-    // Fail if no ScriptGlobalObject is available...
-    NS_ERROR("nsIScriptGlobalObject not set for document!");
-    return NS_ERROR_NULL_POINTER;
+    // Now, fire an Unload event to the document...
+    nsEventStatus status = nsEventStatus_eIgnore;
+    nsEvent event(PR_TRUE, NS_PAGE_UNLOAD);
+
+    // Never permit popups from the unload handler, no matter how we get
+    // here.
+    nsAutoPopupStatePusher popupStatePusher(openAbused, PR_TRUE);
+
+    rv = global->HandleDOMEvent(mPresContext, &event, nsnull,
+                                NS_EVENT_FLAG_INIT, &status);
   }
 
-  // Now, fire an Unload event to the document...
-  nsEventStatus status = nsEventStatus_eIgnore;
-  nsEvent event(PR_TRUE, NS_PAGE_UNLOAD);
+  if (mPresShell) {
+    // look for open menupopups and close them after the unload event, in case
+    // the unload event listeners open any new popups
+    nsIViewManager *vm = mPresShell->GetViewManager();
+    if (vm) {
+      nsIView *rootView = nsnull;
+      vm->GetRootView(rootView);
+      if (rootView)
+        HideViewIfPopup(rootView);
+    }
+  }
 
-  // Never permit popups from the unload handler, no matter how we get
-  // here.
-  nsAutoPopupStatePusher popupStatePusher(openAbused, PR_TRUE);
+  return rv;
+}
 
-  return global->HandleDOMEvent(mPresContext, &event, nsnull,
-                                NS_EVENT_FLAG_INIT, &status);
+void
+DocumentViewerImpl::HideViewIfPopup(nsIView* aView)
+{
+  nsIFrame* frame = NS_STATIC_CAST(nsIFrame*, aView->GetClientData());
+  if (frame) {
+    nsIMenuParent* parent;
+    CallQueryInterface(frame, &parent);
+    if (parent) {
+      parent->HideChain();
+      // really make sure the view is hidden
+      mViewManager->SetViewVisibility(aView, nsViewVisibility_kHide);
+    }
+  }
+
+  nsIView* child = aView->GetFirstChild();
+  while (child) {
+    HideViewIfPopup(child);
+    child = child->GetNextSibling();
+  }
 }
 
 static void

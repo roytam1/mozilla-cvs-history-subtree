@@ -63,7 +63,7 @@
   ]]>
   </script>
 
-<tabbox>
+<tabbox id="folderPropTabBox">
   <tabs>
     <tab id="GeneralTab" label="&generalInfo.label;"/>
     <tab id="Retention" label="&retention.label;"/>
@@ -71,7 +71,7 @@
     <tab hidefor="movemail,pop3,rss,none,nntp" hidable="true" id="SharingTab" label="&folderSharingTab.label;"/>
     <tab hidefor="movemail,pop3,rss,none,nntp" hidable="true" id="QuotaTab" label="&folderQuotaTab.label;"/>
   </tabs>
-  <tabpanels id="folderPropTabPanel">
+  <tabpanels>
     <vbox>
       <hbox id="nameBox" align="center">
         <label value="&folderProps.name.label;" for="name"
@@ -123,13 +123,13 @@
                 <radio wsm_persist="true" accesskey="&retentionKeepNew.accesskey;" 
                         value="3" label="&retentionKeepNew.label;" oncommand="onCheckKeepMsg();"/>
                 <textbox wsm_persist="true" id="retention.keepNewMsgMin" size="2" value="30"/>
-                <label value="&message.label;"/>
+                <label value="&message.label;" control="retention.keepNewMsgMin"/>
               </hbox>
               <hbox flex="1" align="center">
                 <radio wsm_persist="true" accesskey="&retentionKeepMsg.accesskey;"
                         value="2" label="&retentionKeepMsg.label;" oncommand="onCheckKeepMsg();"/>
                 <textbox wsm_persist="true" id="retention.keepOldMsgMin" size="2" value="30"/>
-                <label value="&daysOld.label;"/>
+                <label value="&daysOld.label;" control="retention.keepOldMsgMin"/>
               </hbox>
             </radiogroup>
           </hbox>

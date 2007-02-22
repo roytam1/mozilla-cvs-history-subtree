@@ -354,6 +354,33 @@ mstrtok(const char *delims, char **str)
   return ret;
 }
 
+static void ensure_write_permissions(const char *path)
+{
+#ifdef XP_WIN
+  (void)_chmod(path, _S_IREAD | _S_IWRITE);
+#else
+  struct stat fs;
+  if (!stat(path, &fs) && !(fs.st_mode & S_IWUSR)) {
+    (void)chmod(path, fs.st_mode | S_IWUSR);
+  }
+#endif
+}
+
+static int ensure_remove(const char *path)
+{
+  ensure_write_permissions(path);
+  int rv = remove(path);
+  if (rv)
+    LOG(("remove failed: %d,%d (%s)\n", rv, errno, path));
+  return rv;
+}
+
+static int ensure_open(const char *path, int flags, int options)
+{
+  ensure_write_permissions(path);
+  return open(path, flags, options);
+}
+
 // Ensure that the directory containing this file exists.
 static int ensure_parent_dir(const char *path)
 {
@@ -392,7 +419,7 @@ static int copy_file(const char *spath, const char *dpath)
     return READ_ERROR;
   }
 
-  AutoFD dfd = open(dpath, O_WRONLY | O_TRUNC | O_CREAT | _O_BINARY, ss.st_mode);
+  AutoFD dfd = ensure_open(dpath, O_WRONLY | O_TRUNC | O_CREAT | _O_BINARY, ss.st_mode);
   if (dfd < 0) {
     LOG(("copy_file: failed to open: %s,%d\n", dpath, errno));
     return WRITE_ERROR;
@@ -446,7 +473,7 @@ static int backup_restore(const char *path)
   if (rv)
     return rv;
 
-  rv = remove(backup);
+  rv = ensure_remove(backup);
   if (rv)
     return WRITE_ERROR;
 
@@ -459,7 +486,7 @@ static int backup_discard(const char *path)
   char backup[MAXPATHLEN];
   snprintf(backup, sizeof(backup), "%s" BACKUP_EXT, path);
 
-  int rv = remove(backup);
+  int rv = ensure_remove(backup);
   if (rv)
     return WRITE_ERROR;
 
@@ -592,11 +619,9 @@ RemoveFile::Execute()
     return rv;
   }
 
-  rv = remove(mFile);
-  if (rv) {
-    LOG(("remove failed: %d\n", rv));
+  rv = ensure_remove(mFile);
+  if (rv)
     return WRITE_ERROR;
-  }
 
   return OK;
 }
@@ -660,7 +685,7 @@ AddFile::Execute()
     if (rv)
       return rv;
 
-    rv = remove(mFile);
+    rv = ensure_remove(mFile);
     if (rv)
       return WRITE_ERROR;
   }
@@ -716,7 +741,7 @@ PatchFile::~PatchFile()
   // delete the temporary patch file
   char spath[MAXPATHLEN];
   snprintf(spath, MAXPATHLEN, "%s/%d.patch", gSourcePath, mPatchIndex);
-  remove(spath);
+  ensure_remove(spath);
 
   free(buf);
 }
@@ -794,7 +819,7 @@ PatchFile::Prepare()
   char spath[MAXPATHLEN];
   snprintf(spath, MAXPATHLEN, "%s/%d.patch", gSourcePath, mPatchIndex);
 
-  remove(spath);
+  ensure_remove(spath);
 
   int rv = gArchiveReader.ExtractFile(mPatchFile, spath);
   if (rv)
@@ -837,11 +862,11 @@ PatchFile::Execute()
   if (rv)
     return rv;
 
-  rv = remove(mFile);
+  rv = ensure_remove(mFile);
   if (rv)
     return WRITE_ERROR;
 
-  AutoFD ofd = open(mFile, O_WRONLY | O_TRUNC | O_CREAT | _O_BINARY, ss.st_mode);
+  AutoFD ofd = ensure_open(mFile, O_WRONLY | O_TRUNC | O_CREAT | _O_BINARY, ss.st_mode);
   if (ofd < 0)
     return WRITE_ERROR;
 
@@ -998,7 +1023,7 @@ LaunchCallbackApp(const char *workingDir, int argc, char **argv)
 #elif defined(XP_MACOSX)
   LaunchChild(argc, argv);
 #elif defined(XP_WIN)
-  WinLaunchChild(argv[0], argc, argv);
+  WinLaunchChild(argv[0], argc, argv, -1);
 #else
 # warning "Need implementaton of LaunchCallbackApp"
 #endif
@@ -1012,7 +1037,7 @@ WriteStatusFile(int status)
   char filename[MAXPATHLEN];
   snprintf(filename, MAXPATHLEN, "%s/update.status", gSourcePath);
 
-  AutoFD fd = open(filename, O_WRONLY | O_TRUNC | O_CREAT | _O_BINARY, 0644);
+  AutoFD fd = ensure_open(filename, O_WRONLY | O_TRUNC | O_CREAT | _O_BINARY, 0644);
   if (fd < 0)
     return;
 
@@ -1158,8 +1183,10 @@ ActionList::Prepare()
   // If the action list is empty then we should fail in order to signal that
   // something has gone wrong. Otherwise we report success when nothing is
   // actually done. See bug 327140.
-  if (mCount == 0)
+  if (mCount == 0) {
+    LOG(("empty action list\n"));
     return UNEXPECTED_ERROR;
+  }
 
   Action *a = mFirst;
   while (a) {

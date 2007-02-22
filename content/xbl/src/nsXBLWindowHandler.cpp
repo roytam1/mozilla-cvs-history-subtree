@@ -298,7 +298,7 @@ nsXBLWindowHandler::WalkHandlersInternal(nsIDOMEvent* aEvent,
 
     // See if we're in a XUL doc.
     nsCOMPtr<nsIDOMElement> el = GetElement();
-    if (el) {
+    if (el && elt) {
       // We are.  Obtain our command attribute.
       nsAutoString command;
       elt->GetAttr(kNameSpaceID_None, nsXULAtoms::command, command);

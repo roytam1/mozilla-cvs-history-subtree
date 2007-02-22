@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Bill Law       law@netscape.com
+ *   Robert Strong  robert.bugzilla@gmail.com
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -261,6 +262,46 @@ private:
  * whether Mozilla is already running.
  */
 
+/* Update 2007 January
+ *
+ * A change in behavior was implemented in July 2004 which made the
+ * application on launch to add and on quit to remove the ddexec registry key.
+ * See bug 246078.
+ * Windows Vista has changed the methods used to set an application as default
+ * and the new methods are incompatible with removing the ddeexec registry key.
+ * See bug 353089.
+ *
+ * OS DDE Sequence:
+ * 1. OS checks if the dde name is registered.
+ * 2. If it is registered the OS sends a DDE request with the WWW_OpenURL topic
+ *    and the params as specified in the default value of the ddeexec registry
+ *    key for the verb (e.g. open).
+ * 3. If it isn't registered the OS launches the executable defined in the
+ *    verb's (e.g. open) command registry key.
+ * 4. If the ifexec registry key is not present the OS sends a DDE request with
+ *    the WWW_OpenURL topic and the params as specified in the default value of
+ *    the ddeexec registry key for the verb (e.g. open).
+ * 5. If the ifexec registry key is present the OS sends a DDE request with the
+ *    WWW_OpenURL topic and the params as specified in the ifexec registry key
+ *    for the verb (e.g. open).
+ *
+ * Application DDE Sequence:
+ * 1. If the application is running a DDE request is received with the
+ *    WWW_OpenURL topic and the params as specified in the default value of the
+ *    ddeexec registry key (e.g. "%1",,0,0,,,, where '%1' is the url to open)
+ *    for the verb (e.g. open).
+ * 2. If the application is not running it is launched with the -requestPending
+ *    and the -url argument.
+ * 2.1  If the application does not need to restart and the -requestPending
+ *      argument is present the accompanying url will not be used. Instead the
+ *      application will wait for the DDE message to open the url.
+ * 2.2  If the application needs to restart the -requestPending argument is
+ *      removed from the arguments used to restart the application and the url
+ *      will be handled normally.
+ *
+ * Note: Due to a bug in IE the ifexec key should not be used (see bug 355650).
+ */
+
 class nsNativeAppSupportWin : public nsNativeAppSupportBase,
                               public nsIObserver
 {
@@ -387,6 +428,15 @@ nsNativeAppSupportWin::CheckConsole() {
                 // Failed.  Probably because there already is one.
                 // There's little we can do, in any case.
             }
+
+            // Remove the console argument from the command line.
+            do {
+                gArgv[i] = gArgv[i + 1];
+                ++i;
+            } while (gArgv[i]);
+
+            --gArgc;
+
             // Don't bother doing this more than once.
             break;
         }
@@ -694,51 +744,6 @@ static PRBool isDefaultBrowser()
 #endif
 }
 
-// Utility function to delete a registry subkey.
-static DWORD deleteKey( HKEY baseKey, const char *keyName ) {
-    // Make sure input subkey isn't null.
-    DWORD rc;
-    if ( keyName && ::strlen(keyName) ) {
-        // Open subkey.
-        HKEY key;
-        rc = ::RegOpenKeyEx( baseKey,
-                             keyName,
-                             0,
-                             KEY_ENUMERATE_SUB_KEYS | DELETE,
-                             &key );
-        // Continue till we get an error or are done.
-        while ( rc == ERROR_SUCCESS ) {
-            char subkeyName[_MAX_PATH];
-            DWORD len = sizeof subkeyName;
-            // Get first subkey name.  Note that we always get the
-            // first one, then delete it.  So we need to get
-            // the first one next time, also.
-            rc = ::RegEnumKeyEx( key,
-                                 0,
-                                 subkeyName,
-                                 &len,
-                                 0,
-                                 0,
-                                 0,
-                                 0 );
-            if ( rc == ERROR_NO_MORE_ITEMS ) {
-                // No more subkeys.  Delete the main one.
-                rc = ::RegDeleteKey( baseKey, keyName );
-                break;
-            } else if ( rc == ERROR_SUCCESS ) {
-                // Another subkey, delete it, recursively.
-                rc = deleteKey( key, subkeyName );
-            }
-        }
-        // Close the key we opened.
-        ::RegCloseKey( key );
-    } else {
-        rc = ERROR_BADKEY;
-    }
-    return rc;
-}
-
-
 // Start DDE server.
 //
 // This used to be the Start() method when we were using DDE as the
@@ -834,15 +839,6 @@ nsNativeAppSupportWin::Quit() {
     mw.Destroy();
 
     if ( mInstance ) {
-        // Undo registry setting if we need to.
-        if ( mSupportingDDEExec && isDefaultBrowser() ) {
-            mSupportingDDEExec = PR_FALSE;
-#if MOZ_DEBUG_DDE
-            printf( "Deleting ddexec subkey on exit\n" );
-#endif
-            deleteKey( HKEY_CLASSES_ROOT, "http\\shell\\open\\ddeexec" );
-        }
-
         // Unregister application name.
         DdeNameService( mInstance, mApplication, 0, DNS_UNREGISTER );
         // Clean up strings.
@@ -858,6 +854,9 @@ nsNativeAppSupportWin::Quit() {
         }
         DdeUninitialize( mInstance );
         mInstance = 0;
+#if MOZ_DEBUG_DDE
+    printf( "DDE server stopped\n" );
+#endif
     }
 
     return NS_OK;
@@ -1018,6 +1017,7 @@ nsNativeAppSupportWin::HandleDDENotification( UINT uType,       // transaction t
 #endif
                     // Now handle it.
                     HandleCommandLine(url.get(), nsnull, nsICommandLine::STATE_REMOTE_EXPLICIT);
+
                     // Return pseudo window ID.
                     result = CreateDDEData( 1 );
                     break;

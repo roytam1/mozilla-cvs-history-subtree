@@ -63,3 +63,24 @@ interface nsIDOMPopupBlockedEvent : nsIDOMEvent
                              in nsIURI popupWindowURI,
                              in DOMString popupWindowFeatures);
 };
+
+[scriptable, uuid(45d7d2b4-2d98-4cdb-850f-860bc45deeae)]
+interface nsIDOMPopupBlockedEvent_MOZILLA_1_8_BRANCH : nsISupports
+{
+  /**
+   * The window object that attempted to open the blocked popup
+   * (i.e. the window object on which open() was called).
+   */
+  readonly attribute nsIDOMWindow requestingWindow;
+
+  /*
+   * This method must not be callable from unsafe script, see comment
+   * in the implementation.
+   */
+  [noscript] void initPopupBlockedEvent(in DOMString typeArg,
+                                        in boolean canBubbleArg,
+                                        in boolean cancelableArg,
+                                        in nsIDOMWindow requestingWindow,
+                                        in nsIURI popupWindowURI,
+                                        in DOMString popupWindowFeatures);
+};

@@ -89,6 +89,7 @@
 #include "nsIMIMEHeaderParam.h"
 #include "plbase64.h"
 #include <time.h>
+#include "nsIMsgFolderNotificationService.h"
 
 #define oneHour 3600000000U
 #include "nsMsgUtils.h"
@@ -473,6 +474,29 @@ NS_IMETHODIMP nsMsgDBFolder::ClearNewMessages()
   return rv;
 }
 
+void nsMsgDBFolder::UpdateNewMessages()
+{
+  if (! (mFlags & MSG_FOLDER_FLAG_VIRTUAL))
+  {
+    PRBool hasNewMessages = PR_FALSE;
+    for (PRUint32 keyIndex = 0; keyIndex < m_newMsgs.GetSize(); keyIndex++)
+    {
+      PRBool containsKey = PR_FALSE;
+      mDatabase->ContainsKey(m_newMsgs[keyIndex], &containsKey);
+      if (!containsKey)
+        continue;
+      PRBool isRead = PR_FALSE;
+      nsresult rv2 = mDatabase->IsRead(m_newMsgs[keyIndex], &isRead);
+      if (NS_SUCCEEDED(rv2) && !isRead)
+      {
+        hasNewMessages = PR_TRUE;
+        mDatabase->AddToNewList(m_newMsgs[keyIndex]);
+      }
+    }
+    SetHasNewMessages(hasNewMessages);
+  }
+}
+
 // helper function that gets the cache element that corresponds to the passed in file spec.
 // This could be static, or could live in another class - it's not specific to the current
 // nsMsgDBFolder. If it lived at a higher level, we could cache the account manager and folder cache.
@@ -515,7 +539,7 @@ nsresult nsMsgDBFolder::ReadDBFolderInfo(PRBool force)
   {
     nsCOMPtr <nsIFileSpec> dbPath;
     
-    result = GetFolderCacheKey(getter_AddRefs(dbPath));
+    result = GetFolderCacheKey(getter_AddRefs(dbPath), PR_TRUE /* createDBIfMissing */);
     
     if (dbPath)
     {
@@ -1112,7 +1136,7 @@ NS_IMETHODIMP nsMsgDBFolder::ReadFromFolderCacheElem(nsIMsgFolderCacheElement *e
   return rv;
 }
 
-nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec)
+nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec, PRBool createDBIfMissing /* = PR_FALSE */)
 {
   nsresult rv;
   nsCOMPtr <nsIFileSpec> path;
@@ -1141,7 +1165,7 @@ nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec)
       // create the .msf file
       // see bug #244217 for details
       PRBool exists;
-      if (NS_SUCCEEDED(dbPath->Exists(&exists)) && !exists)
+      if (createDBIfMissing && NS_SUCCEEDED(dbPath->Exists(&exists)) && !exists)
         dbPath->Touch();
     }
   }
@@ -3149,7 +3173,15 @@ NS_IMETHODIMP nsMsgDBFolder::RecursiveDelete(PRBool deleteStorage, nsIMsgWindow 
 
   // now delete the disk storage for _this_
   if (deleteStorage && (status == NS_OK))
-      status = Delete();
+  {
+    status = Delete();
+    nsCOMPtr <nsISupports> supports;
+    QueryInterface(NS_GET_IID(nsISupports), getter_AddRefs(supports));
+    nsCOMPtr <nsIMsgFolderNotificationService> notifier = do_GetService(NS_MSGNOTIFICATIONSERVICE_CONTRACTID);
+    if (notifier)
+      notifier->NotifyItemDeleted(supports);    
+    
+  }
   return status;
 }
 
@@ -4191,9 +4223,6 @@ NS_IMETHODIMP nsMsgDBFolder::SetBiffState(PRUint32 aBiffState)
     // Get the server and notify it and not inbox.
   if (oldBiffState != aBiffState)
   {
-    if (aBiffState == nsMsgBiffState_NoMail)
-      SetNumNewMessages(0);
-
     // we don't distinguish between unknown and noMail for servers
     if (! (oldBiffState == nsMsgBiffState_Unknown && aBiffState == nsMsgBiffState_NoMail))
     {
@@ -5218,19 +5247,24 @@ NS_IMETHODIMP nsMsgDBFolder::GetMsgTextFromStream(nsIMsgDBHdr *msgHdr, nsIInputS
     // we read the next line.
     if (lookingForBoundary) 
     {
-      PRInt32 boundaryIndex = curLine.Find("boundary=\"");
+      // Mail.app doesn't wrap the boundary id in quotes so we need 
+      // to be sure to handle an unquoted boundary.
+      PRInt32 boundaryIndex = curLine.Find("boundary=", PR_TRUE /* ignore case*/);
       if (boundaryIndex != kNotFound)
       {
-        boundaryIndex += 10;
+        boundaryIndex += 9;
+        if (curLine[boundaryIndex] == '\"')
+          boundaryIndex++;
+
         PRInt32 endBoundaryIndex = curLine.RFindChar('"');
-        if (endBoundaryIndex != kNotFound)
-        {
-          // prepend "--" to boundary, and then boundary delimiter, minus the trailing " 
-          boundary.Assign("--");
-          boundary.Append(Substring(curLine, boundaryIndex, endBoundaryIndex - boundaryIndex));
-          haveBoundary = PR_TRUE;
-          lookingForBoundary = PR_FALSE;
-        }
+        if (endBoundaryIndex == kNotFound)
+          endBoundaryIndex = curLine.Length(); // no trailing quote? assume the boundary runs to the end of the line
+
+        // prepend "--" to boundary, and then boundary delimiter, minus the trailing " 
+        boundary.Assign("--");
+        boundary.Append(Substring(curLine, boundaryIndex, endBoundaryIndex - boundaryIndex));
+        haveBoundary = PR_TRUE;
+        lookingForBoundary = PR_FALSE;
       }
     }
     rv = NS_ReadLine(stream, lineBuffer, curLine, &more);

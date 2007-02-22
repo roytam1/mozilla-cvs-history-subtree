@@ -219,6 +219,7 @@ nsMsgCompose::nsMsgCompose()
 #endif
 
   mQuotingToFollow = PR_FALSE;
+  mInsertingQuotedContent = PR_FALSE;
   mWhatHolder = 1;
   m_window = nsnull;
   m_editor = nsnull;
@@ -438,6 +439,21 @@ nsresult nsMsgCompose::TagEmbeddedObjects(nsIEditorMailSupport *aEditor)
 }
 
 NS_IMETHODIMP
+nsMsgCompose::GetInsertingQuotedContent(PRBool * aInsertingQuotedText)
+{
+  NS_ENSURE_ARG_POINTER(aInsertingQuotedText);
+  *aInsertingQuotedText = mInsertingQuotedContent;
+  return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsMsgCompose::SetInsertingQuotedContent(PRBool aInsertingQuotedText)
+{
+  mInsertingQuotedContent = aInsertingQuotedText;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsMsgCompose::ConvertAndLoadComposeWindow(nsString& aPrefix,
                                           nsString& aBuf,
                                           nsString& aSignature,
@@ -483,8 +499,9 @@ nsMsgCompose::ConvertAndLoadComposeWindow(nsString& aPrefix,
   m_identity->GetReplyOnTop(&reply_on_top);
   m_identity->GetSigBottom(&sig_bottom);
   PRBool sigOnTop = (reply_on_top == 1 && !sig_bottom);
-  if ( (aQuoted) )
+  if (aQuoted)
   {
+    mInsertingQuotedContent = PR_TRUE;
     if (!aPrefix.IsEmpty())
     {
       if (!aHTMLEditor)
@@ -513,6 +530,8 @@ nsMsgCompose::ConvertAndLoadComposeWindow(nsString& aPrefix,
       m_editor->EndOfDocument();
     }
 
+    mInsertingQuotedContent = PR_FALSE;
+
     (void)TagEmbeddedObjects(mailEditor);
 
     if (!aSignature.IsEmpty() )
@@ -534,7 +553,9 @@ nsMsgCompose::ConvertAndLoadComposeWindow(nsString& aPrefix,
   {
     if (aHTMLEditor && htmlEditor)
     {
+      mInsertingQuotedContent = PR_TRUE;
       htmlEditor->RebuildDocumentFromSource(aBuf);
+      mInsertingQuotedContent = PR_FALSE;
 
       m_editor->EndOfDocument();
 
@@ -2585,8 +2606,10 @@ QuotingOutputStreamListener::InsertToCompose(nsIEditor *aEditor,
   if (aEditor)
     aEditor->EnableUndo(PR_TRUE);
 
-  if (!mMsgBody.IsEmpty())
+  nsCOMPtr<nsIMsgCompose> compose = do_QueryReferent(mWeakComposeObj);
+  if (!mMsgBody.IsEmpty() && compose)
   {
+    compose->SetInsertingQuotedContent(PR_TRUE);
     if (!mCitePrefix.IsEmpty())
     {
       if (!aHTMLEditor)
@@ -2617,7 +2640,7 @@ QuotingOutputStreamListener::InsertToCompose(nsIEditor *aEditor,
       else
         mailEditor->InsertAsQuotation(mMsgBody, getter_AddRefs(nodeInserted));
     }
-
+    compose->SetInsertingQuotedContent(PR_FALSE);
   }
 
   if (aEditor)

@@ -1504,18 +1504,6 @@ nsHTMLInputElement::HandleDOMEvent(nsPresContext* aPresContext,
   //
   PRInt32 oldType = mType;
 
-  // Fire onchange (if necessary), before we do the blur, bug 357684.
-  if (aEvent->message == NS_BLUR_CONTENT) {
-    nsIFrame* primaryFrame = GetPrimaryFrame(PR_FALSE);
-    if (primaryFrame) {
-      nsITextControlFrame* textFrame = nsnull;
-      CallQueryInterface(primaryFrame, &textFrame);
-      if (textFrame) {
-        textFrame->CheckFireOnChange();
-      }
-    }
-  }
-
   // Try script event handlers first if its not a focus/blur event
   //we dont want the doc to get these
   rv = nsGenericHTMLFormElement::HandleDOMEvent(aPresContext, aEvent,

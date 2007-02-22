@@ -127,7 +127,7 @@ CreateJavaArray(JNIEnv* env, PRUint8 aType, PRUint32 aSize, const nsID& aIID,
         return rv;
 
       // Create proper Java interface name
-      nsCAutoString class_name("org/mozilla/xpcom/");
+      nsCAutoString class_name("org/mozilla/interfaces/");
       class_name.AppendASCII(iface_name);
       jclass ifaceClass = env->FindClass(class_name.get());
       if (!ifaceClass)
@@ -1359,7 +1359,7 @@ QueryMethodInfo(nsIInterfaceInfo* aIInfo, const char* aMethodName,
 /**
  *  org.mozilla.xpcom.XPCOMJavaProxy.internal.callXPCOMMethod
  */
-extern "C" NS_EXPORT jobject
+extern "C" NS_EXPORT jobject JNICALL
 JAVAPROXY_NATIVE(callXPCOMMethod) (JNIEnv *env, jclass that, jobject aJavaProxy,
                                    jstring aMethodName, jobjectArray aParams)
 {
@@ -1598,7 +1598,7 @@ CreateJavaProxy(JNIEnv* env, nsISupports* aXPCOMObject, const nsIID& aIID,
     jobject java_obj = nsnull;
 
     // Create proper Java interface name
-    nsCAutoString class_name("org.mozilla.xpcom.");
+    nsCAutoString class_name("org.mozilla.interfaces.");
     class_name.AppendASCII(iface_name);
     jclass ifaceClass = FindClassInLoader(env, aObjectLoader, class_name.get());
 
@@ -1669,7 +1669,7 @@ GetXPCOMInstFromProxy(JNIEnv* env, jobject aJavaObject, void** aResult)
 /**
  *  org.mozilla.xpcom.internal.XPCOMJavaProxy.finalizeProxy
  */
-extern "C" NS_EXPORT void
+extern "C" NS_EXPORT void JNICALL
 JAVAPROXY_NATIVE(finalizeProxy) (JNIEnv *env, jclass that, jobject aJavaProxy)
 {
 #ifdef DEBUG_JAVAXPCOM
@@ -1721,7 +1721,7 @@ JAVAPROXY_NATIVE(finalizeProxy) (JNIEnv *env, jclass that, jobject aJavaProxy)
 /**
  *  org.mozilla.xpcom.XPCOMJavaProxy.isSameXPCOMObject
  */
-extern "C" NS_EXPORT jboolean
+extern "C" NS_EXPORT jboolean JNICALL
 JAVAPROXY_NATIVE(isSameXPCOMObject) (JNIEnv *env, jclass that,
                                      jobject aProxy1, jobject aProxy2)
 {
@@ -1744,7 +1744,7 @@ JAVAPROXY_NATIVE(isSameXPCOMObject) (JNIEnv *env, jclass that,
 /**
  *  org.mozilla.xpcom.ProfileLock.release
  */
-extern "C" NS_EXPORT void
+extern "C" NS_EXPORT void JNICALL
 LOCKPROXY_NATIVE(release) (JNIEnv *env, jclass that, jlong aLockObject)
 {
   // Need to release object on the main thread.

@@ -54,6 +54,13 @@ textbox {
   -moz-box-align: center;
 }
 
+/* Override the 'secure' URL bar background-color in navigator.css with
+   something that works on mac */
+#urlbar[level="high"] > .autocomplete-textbox-container,
+#urlbar[level="low"] > .autocomplete-textbox-container {
+  background-color: #FFFFC7 !important;
+}
+
 /* ::::: history button ::::: */
 
 .autocomplete-history-dropmarker {

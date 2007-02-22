@@ -528,7 +528,7 @@ nsNativeScrollbar::UpdateScroller()
   BOOL enableScrollbar = (mIsEnabled && (mMaxValue > 0));
   [scrollbarView setEnabled:enableScrollbar];
   
-  [scrollbarView setNeedsDisplay:YES];
+  Invalidate(FALSE);
 }
 
 

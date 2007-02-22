@@ -272,11 +272,41 @@ nsresult nsJSThunk::EvaluateScript(nsIChannel *aChannel)
         // prevent it from accessing data it doesn't have permissions
         // to access.
 
+        // First check to make sure it's OK to evaluate this script to
+        // start with.  For example, script could be disabled.
+        nsCOMPtr<nsIPrincipal> enabledCheckPrincipal = principal;
+        if (!enabledCheckPrincipal) {
+            // We just need a principal that's not the system principal and
+            // isn't whitelisted by CanExecuteScripts.  An about:blank
+            // principal will do nicely.
+            nsCOMPtr<nsIURI> uri;
+            rv = NS_NewURI(getter_AddRefs(uri), "about:blank");
+            NS_ENSURE_SUCCESS(rv, rv);
+            rv = securityManager->
+                GetCodebasePrincipal(uri,
+                                     getter_AddRefs(enabledCheckPrincipal));
+            NS_ENSURE_SUCCESS(rv, rv);
+        }
+
+        JSContext *cx = (JSContext*)scriptContext->GetNativeContext();
+
+        PRBool ok;
+        rv = securityManager->CanExecuteScripts(cx, enabledCheckPrincipal,
+                                                &ok);
+        if (NS_FAILED(rv)) {
+            return rv;
+        }
+
+        if (!ok) {
+            // Treat this as returning undefined from the script.  That's what
+            // nsJSContext does.
+            return NS_ERROR_DOM_RETVAL_UNDEFINED;
+        }
+
         nsIXPConnect *xpc = nsContentUtils::XPConnect();
         nsCOMPtr<nsIXPConnect_MOZILLA_1_8_BRANCH> xpc_18 =
             do_QueryInterface(xpc);
 
-        JSContext *cx = (JSContext*)scriptContext->GetNativeContext();
         nsCOMPtr<nsIXPConnectJSObjectHolder> sandbox;
         rv = xpc_18->CreateSandbox(cx, principal, getter_AddRefs(sandbox));
         NS_ENSURE_SUCCESS(rv, rv);
@@ -286,6 +316,19 @@ nsresult nsJSThunk::EvaluateScript(nsIChannel *aChannel)
         if (NS_FAILED(rv)) {
             return rv;
         }
+
+        // Push our JSContext on the context stack so the JS_ValueToString call
+        // (and JS_ReportPendingException, if relevant) will use the principal
+        // of cx.  Note that we do this as late as possible to make popping
+        // simpler.
+        nsCOMPtr<nsIJSContextStack> stack =
+            do_GetService("@mozilla.org/js/xpc/ContextStack;1", &rv);
+        if (NS_SUCCEEDED(rv)) {
+            rv = stack->Push(cx);
+        }
+        if (NS_FAILED(rv)) {
+            return rv;
+        }    
 
         rv = xpc_18->EvalInSandboxObject(NS_ConvertUTF8toUTF16(script), cx,
                                          sandbox, &rval);
@@ -314,6 +357,8 @@ nsresult nsJSThunk::EvaluateScript(nsIChannel *aChannel)
                 result = nsDependentJSString(str);
             }
         }
+
+        stack->Pop(nsnull);
     } else {
         // No need to use the sandbox, evaluate the script directly in
         // the given scope.
