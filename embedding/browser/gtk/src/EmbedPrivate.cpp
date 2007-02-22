@@ -416,7 +416,7 @@ EmbedPrivate::EmbedPrivate(void)
   mIsDestroyed      = PR_FALSE;
   mDoResizeEmbed    = PR_TRUE;
   mOpenBlock        = PR_FALSE;
-  mNeedFav          = PR_FALSE;
+  mNeedFav          = PR_TRUE;
 
   PushStartup();
   if (!sWindowList) {
@@ -675,7 +675,7 @@ EmbedPrivate::Destroy(void)
   mOwningWidget = nsnull;
 
   mMozWindowWidget = 0;
-  mNeedFav = PR_FALSE;
+  mNeedFav = PR_TRUE;
 }
 
 void
@@ -1273,6 +1273,7 @@ EmbedPrivate::AttachListeners(void)
   }
   rv = mEventReceiver->AddEventListener(NS_LITERAL_STRING("focus"), eventListener, PR_TRUE);
   rv = mEventReceiver->AddEventListener(NS_LITERAL_STRING("blur"), eventListener, PR_TRUE);
+  rv = mEventReceiver->AddEventListener(NS_LITERAL_STRING("DOMLinkAdded"), eventListener, PR_TRUE);
   if (NS_FAILED(rv)) {
     NS_WARNING("Failed to add Mouse Motion listener\n");
     return;
@@ -1326,6 +1327,7 @@ EmbedPrivate::DetachListeners(void)
   }
   rv = mEventReceiver->RemoveEventListener(NS_LITERAL_STRING("focus"), eventListener, PR_TRUE);
   rv = mEventReceiver->RemoveEventListener(NS_LITERAL_STRING("blur"), eventListener, PR_TRUE);
+  rv = mEventReceiver->RemoveEventListener(NS_LITERAL_STRING("DOMLinkAdded"), eventListener, PR_TRUE);
   mListenersAttached = PR_FALSE;
 }
 

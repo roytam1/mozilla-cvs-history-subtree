@@ -89,6 +89,7 @@ EmbedEventListener::Init(EmbedPrivate *aOwner)
 #ifdef MOZ_WIDGET_GTK2
   mCtxInfo = new EmbedContextMenuInfo(aOwner);
 #endif
+  mOwner->mNeedFav = PR_TRUE;
   return NS_OK;
 }
 
@@ -150,7 +151,8 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
   NS_UTF16ToCString(name, NS_CSTRING_ENCODING_UTF8, cName);
 
   // XXX This does not handle |BLAH ICON POWER"
-  if (!cName.LowerCaseEqualsLiteral("icon")) {
+  if (cName.LowerCaseEqualsLiteral("icon") ||
+      cName.LowerCaseEqualsLiteral("shortcut icon")) {
 
     mOwner->mNeedFav = PR_FALSE;
     this->GetFaviconFromURI(url.get());
@@ -165,8 +167,8 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
     if (*navi_type == '\0')
       navi_type = NULL;
 
-    if (!cName.LowerCaseEqualsLiteral("alternate") &&
-        !cType.LowerCaseEqualsLiteral("application/rss+xml")) {
+    if (cName.LowerCaseEqualsLiteral("alternate") &&
+        cType.LowerCaseEqualsLiteral("application/rss+xml")) {
     }
     else {
     }

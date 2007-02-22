@@ -137,11 +137,6 @@ EmbedProgress::OnStateChange(nsIWebProgress *aWebProgress,
   tmpString.AssignLiteral(uriString);
 #endif
 
-  PRBool succeeded = PR_TRUE;
-  HandleHTTPStatus(aRequest, (const char*)uriString, succeeded);
-  if (!succeeded) {
-    mOwner->mNeedFav = PR_FALSE;
-  }
 
   // FIXME: workaround for broken progress values.
   if (mOwner->mOwningWidget) {
@@ -265,10 +260,6 @@ EmbedProgress::OnLocationChange(nsIWebProgress *aWebProgress,
   }
   mOwner->mNeedFav = PR_TRUE;
 
-  PRBool succeeded = PR_TRUE;
-  HandleHTTPStatus(aRequest, newURI.get(), succeeded);
-  if (!succeeded)
-    mOwner->mNeedFav = PR_FALSE;
 
   return NS_OK;
 }
