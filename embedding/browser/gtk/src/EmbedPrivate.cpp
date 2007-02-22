@@ -1584,7 +1584,7 @@ EmbedPrivate::FindText(const char *exp, PRBool  reverse,
   text = LocaleToUnicode (exp);
   finder->SetSearchString (text);
   finder->SetFindBackwards (reverse);
-  finder->SetWrapFind(TRUE); //DoWrapFind
+  finder->SetWrapFind(restart); //DoWrapFind
   finder->SetEntireWord (whole_word);
   finder->SetSearchFrames(TRUE); //SearchInFrames
   finder->SetMatchCase (case_sensitive);
@@ -1849,7 +1849,7 @@ EmbedPrivate::GetMIMEInfo (const char **aMime, nsIDOMNode *aDOMNode)
 {
   NS_ENSURE_ARG_POINTER(aMime);
   nsresult rv;
-#ifdef MOZ_ENABLE_GTK2
+#ifdef MOZ_WIDGET_GTK2
   if (aDOMNode && mEventListener) {
     EmbedContextMenuInfo * ctx = mEventListener->GetContextInfo();
     if (!ctx)
