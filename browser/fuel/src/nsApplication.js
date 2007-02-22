@@ -362,7 +362,7 @@ function Application() {
   this._storage = new SessionStorage();
   this._events = new Events();
   
-  this._item = Components.classes["@mozilla.org/xre/app-info;1"]
+  this._info = Components.classes["@mozilla.org/xre/app-info;1"]
                      .getService(Components.interfaces.nsIXULAppInfo);
     
   var os = Components.classes["@mozilla.org/observer-service;1"]
@@ -379,15 +379,15 @@ function Application() {
 // Application implementation
 Application.prototype = {
   get id() {
-    return this._item.ID;
+    return this._info.ID;
   },
   
   get name() {
-    return this._item.name;
+    return this._info.name;
   },
   
   get version() {
-    return this._item.version;
+    return this._info.version;
   },
   
   // for nsIObserver
