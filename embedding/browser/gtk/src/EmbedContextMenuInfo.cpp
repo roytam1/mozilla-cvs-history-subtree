@@ -194,8 +194,6 @@ EmbedContextMenuInfo::SetFormControlType(nsIDOMEventTarget *originalTarget)
         break;
       case NS_FORM_BUTTON_SUBMIT:
         break;
-      case NS_FORM_FIELDSET:
-        break;
       case NS_FORM_INPUT_BUTTON:
         break;
       case NS_FORM_INPUT_CHECKBOX:
