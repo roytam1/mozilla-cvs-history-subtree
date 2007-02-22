@@ -319,3 +319,13 @@ NS_IMETHODIMP ProgressListener::OnProgressChange64 (nsIWebProgress *aWebProgress
 
   return NS_OK;
 }
+
+NS_IMETHODIMP ProgressListener::OnRefreshAttempted(nsIWebProgress *aWebProgress,
+                                                   nsIURI *aUri, PRInt32 aDelay,
+                                                   PRBool aSameUri,
+                                                   PRBool *allowRefresh)
+{
+  *allowRefresh = PR_TRUE;
+  return NS_OK;
+}
+
