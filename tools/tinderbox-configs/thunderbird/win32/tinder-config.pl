@@ -115,7 +115,7 @@ $moz_cvsroot   = $ENV{CVSROOT};
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Tb-Release-Clobber';
+$BuildNameExtra = 'Tb-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -134,7 +134,7 @@ $BuildTree  = 'Mozilla1.8.0';
 #$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
-$BuildTag = 'THUNDERBIRD_1_5_0_9_RELEASE';
+$BuildTag = 'THUNDERBIRD_1_5_0_10_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -168,7 +168,7 @@ $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path      = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
-$milestone     = "thunderbird1.5.0.9";
+$milestone     = "thunderbird1.5.0.10";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 1;
