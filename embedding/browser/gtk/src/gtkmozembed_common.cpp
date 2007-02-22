@@ -625,27 +625,39 @@ gtk_moz_embed_common_get_plugins_list (GList **pluginArray)
   }
 
   nsString string;
-  for (int aIndex = 0; aIndex < (gint) aLength; aIndex++)
+  for (int plugin_index = 0; plugin_index < (gint) aLength; plugin_index++)
   {
     GtkMozPlugin *list_item = g_new0(GtkMozPlugin, 1);
     UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(list_item);
 
-    rv = aItems[aIndex]->GetName(string);
+    rv = aItems[plugin_index]->GetName(string);
     if (!NS_FAILED(rv))
       list_item->title = g_strdup(NS_ConvertUTF16toUTF8(string).get());
 
-    aItems[aIndex]->GetFilename(string);
+    aItems[plugin_index]->GetFilename(string);
     if (!NS_FAILED(rv))
       list_item->path = g_strdup(NS_ConvertUTF16toUTF8(string).get());
 
     nsCOMPtr<nsIDOMMimeType> mimeType;
-    rv = aItems[aIndex]->Item(aIndex, getter_AddRefs(mimeType));
+    PRUint32 mime_count = 0;
+    rv = aItems[plugin_index]->GetLength(&mime_count);
     if (NS_FAILED(rv))
       continue;
-
-    rv = mimeType->GetDescription(string);
-    if (!NS_FAILED(rv))
-      list_item->type = g_strdup(NS_ConvertUTF16toUTF8(string).get());
+    
+    nsString single_mime;
+    string.SetLength(0);
+    for (int mime_index = 0; mime_index < mime_count; ++mime_index) {
+      rv = aItems[plugin_index]->Item(mime_index, getter_AddRefs(mimeType));
+      if (NS_FAILED(rv))
+        continue;
+      rv = mimeType->GetDescription(single_mime);
+      if (!NS_FAILED(rv)) {
+        string.Append(single_mime);
+        string.AppendLiteral(";");
+      }
+    }
+    
+    list_item->type = g_strdup(NS_ConvertUTF16toUTF8(string).get());
     if (!NS_FAILED(rv))
       *pluginArray = g_list_append(*pluginArray, list_item);
   }
