@@ -43,6 +43,7 @@
 #include "nsCRT.h"
 #include "nsNetUtil.h"
 #include "nsIWebBrowserStream.h"
+#include "nsIHistoryEntry.h"
 #include "nsIWebBrowserFocus.h"
 #include "nsIDirectoryService.h"
 #include "nsAppDirectoryServiceDefs.h"
@@ -1907,4 +1908,71 @@ EmbedPrivate::GetCacheEntry(const char *aStorage,
   if (rv != NS_ERROR_CACHE_KEY_NOT_FOUND)
     NS_WARNING("OpenCacheEntry(ACCESS_READ) returned error for non-existent entry\n");
   return rv;
+}
+
+nsresult
+EmbedPrivate::GetSHistoryList(GtkMozHistoryItem **GtkHI,
+                              GtkMozEmbedSessionHistory type, gint *count)
+{
+   if (!mSessionHistory)
+     return NS_ERROR_FAILURE;
+
+   PRInt32 curIndex, totalCount, navIndex=0, maxItems=0;
+   nsresult result = NS_OK;
+
+   //Get the current index at session History
+   mSessionHistory->GetIndex(&curIndex);
+   //Gets the number of toplevel documents available in session history.
+   mSessionHistory->GetCount(&totalCount);
+
+   if(type == GTK_MOZ_EMBED_BACK_SHISTORY) {
+     navIndex =  curIndex - 1;
+     maxItems = curIndex;
+   } else if(type == GTK_MOZ_EMBED_FORWARD_SHISTORY) {
+     navIndex = curIndex + 1;
+     maxItems = totalCount - navIndex;
+   }
+
+   if(maxItems <= 0)
+     return NS_ERROR_FAILURE;
+
+   *GtkHI = g_new0(GtkMozHistoryItem, maxItems);
+   GtkMozHistoryItem * item = (GtkMozHistoryItem *)*GtkHI;
+
+   for(PRInt32 numItems = 0; numItems < maxItems; numItems++) {
+     // Get the HistoryEntry at a given index.
+     nsCOMPtr<nsIHistoryEntry> curEntry;
+     result = mSessionHistory->GetEntryAtIndex((navIndex), PR_FALSE,
+         getter_AddRefs(curEntry));
+     if (NS_FAILED(result) || (!curEntry))
+      continue;
+
+     // Get the URI of the HistoryEntry
+     nsCOMPtr<nsIURI> uri;
+     result = curEntry->GetURI(getter_AddRefs(uri));
+     if (NS_FAILED(result) || (!uri))
+      continue;
+
+     nsCString uriString;
+     result = uri->GetSpec(uriString);
+     if (NS_FAILED(result) || uriString.IsEmpty())
+      continue;
+
+     // Get the title of the HistoryEntry
+     PRUnichar* title;
+     result = curEntry->GetTitle (&title);
+     if (NS_FAILED(result) || (!title))
+      continue;
+
+     item[numItems].url = NS_strdup(uriString.get());
+     item[numItems].title = NS_strdup(NS_ConvertUTF16toUTF8(title).get());
+     item[numItems].accessed = 0;
+
+     if(type == GTK_MOZ_EMBED_BACK_SHISTORY)
+       navIndex--;
+     else if(type == GTK_MOZ_EMBED_FORWARD_SHISTORY)
+       navIndex++;
+   }
+   *count = maxItems;
+   return NS_OK;
 }

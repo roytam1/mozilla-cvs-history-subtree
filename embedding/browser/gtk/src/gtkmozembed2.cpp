@@ -1717,3 +1717,47 @@ gtk_moz_embed_get_doc_info(GtkMozEmbed *embed, gpointer node, gint docindex,
 
   return TRUE;
 }
+
+gint
+gtk_moz_embed_get_shistory_list(GtkMozEmbed *embed, GtkMozHistoryItem **GtkHI,
+                                guint type)
+{
+   g_return_val_if_fail ((embed != NULL), 0);
+   g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), 0);
+   EmbedPrivate *embedPrivate;
+   gint count = 0;
+
+   embedPrivate = (EmbedPrivate *)embed->data;
+   if (embedPrivate)
+     embedPrivate->GetSHistoryList(GtkHI,  (GtkMozEmbedSessionHistory)type, &count);
+   return count;
+}
+
+gint
+gtk_moz_embed_get_shistory_index(GtkMozEmbed *embed)
+{
+  g_return_val_if_fail ((embed != NULL), -1);
+  g_return_val_if_fail (GTK_IS_MOZ_EMBED(embed), -1);
+
+  PRInt32 curIndex;
+  EmbedPrivate *embedPrivate;
+  
+  embedPrivate = (EmbedPrivate *)embed->data;
+  if(embedPrivate->mSessionHistory)
+    embedPrivate->mSessionHistory->GetIndex(&curIndex);
+
+  return (gint)curIndex;
+}
+
+void
+gtk_moz_embed_shistory_goto_index(GtkMozEmbed *embed, gint index)
+{
+  g_return_if_fail (embed != NULL);
+  g_return_if_fail (GTK_IS_MOZ_EMBED(embed));
+
+  EmbedPrivate *embedPrivate;
+
+  embedPrivate = (EmbedPrivate *)embed->data;
+  if (embedPrivate->mNavigation)
+    embedPrivate->mNavigation->GotoIndex(index);
+}

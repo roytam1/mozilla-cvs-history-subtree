@@ -174,6 +174,9 @@ class EmbedPrivate {
                              PRUint32 aAccess,
                              PRBool aIsBlocking,
                              nsICacheEntryDescriptor **aDescriptor);
+  nsresult    GetSHistoryList (GtkMozHistoryItem **GtkHI,
+                               GtkMozEmbedSessionHistory type, gint *count);
+
 
 #ifdef MOZ_ACCESSIBILITY_ATK
   void *GetAtkObjectForCurrentDocument();

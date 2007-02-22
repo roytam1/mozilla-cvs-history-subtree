@@ -39,6 +39,7 @@
  * ***** END LICENSE BLOCK ***** */
 #ifndef gtkmozembed_common_h
 #define gtkmozembed_common_h
+#include "gtkmozembed.h"
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -140,16 +141,6 @@ typedef enum
   GTK_MOZ_EMBED_UNKNOWN_SECURITY
 } GtkMozEmbedSecurityMode;
 
-/** @struct GtkWebHistoryItem.
-  * Defines a web history item.
-  */
-typedef struct _GtkMozHistoryItem GtkMozHistoryItem;
-struct _GtkMozHistoryItem
-{
-    const gchar *title; /** < URL title */
-    const gchar *url;   /** < URL */
-    long accessed;      /** < The last time that the URL was accessed */
-};
 typedef struct _GtkMozCookieList GtkMozCookieList;
 struct _GtkMozCookieList
 {
