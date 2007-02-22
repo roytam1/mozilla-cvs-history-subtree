@@ -91,7 +91,7 @@ public:
 private:
   nsresult          SetFrameIndex();
   nsresult          SetFormControlType(nsIDOMEventTarget *originalTarget);
-  nsresult          CheckDomHtmlNode(nsIDOMNode *node);
+  nsresult          CheckDomHtmlNode(nsIDOMNode *aNode = nsnull);
 
   EmbedPrivate           *mOwner;
   nsCOMPtr<nsIDOMNode>    mOrigNode;

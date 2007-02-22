@@ -352,16 +352,29 @@ EmbedContextMenuInfo::GetImageRequest(imgIRequest **aRequest, nsIDOMNode *aDOMNo
 }
 
 nsresult
-EmbedContextMenuInfo::CheckDomHtmlNode(nsIDOMNode *node)
+EmbedContextMenuInfo::CheckDomHtmlNode(nsIDOMNode *aNode)
 {
   nsresult rv = NS_ERROR_FAILURE;
   nsString uTag;
   PRUint16 dnode_type;
+
+  nsCOMPtr<nsIDOMNode> node;
+  if (!aNode && mEventNode)
+    node = mEventNode;
+  nsCOMPtr<nsIDOMHTMLElement> element  = do_QueryInterface(node, &rv);
+  if (!element) {
+    element = do_QueryInterface(mOrigNode, &rv);
+    if (element) {
+      node = mOrigNode;
+      element  = do_QueryInterface(node, &rv);
+    }
+  }
+
   rv = node->GetNodeType(&dnode_type);
   if (NS_FAILED(rv)) {
     return rv;
   }
-  nsCOMPtr<nsIDOMHTMLElement> element  = do_QueryInterface(node);
+
   if (!((nsIDOMNode::ELEMENT_NODE == dnode_type) && element)) {
     return rv;
   }
@@ -597,13 +610,13 @@ EmbedContextMenuInfo::UpdateContextData(nsIDOMEvent *aDOMEvent)
   if (NS_SUCCEEDED(SetFormControlType(mEventTarget))) {
     return NS_OK;
   }
-  CheckDomHtmlNode(mEventNode);
+  CheckDomHtmlNode();
   nsCOMPtr<nsIDOMNode> node = mEventNode;
   nsCOMPtr<nsIDOMNode> parentNode;
   node->GetParentNode (getter_AddRefs(parentNode));
   node = parentNode;
   while (node) {
-    if (NS_FAILED(CheckDomHtmlNode(node)))
+    if (NS_FAILED(CheckDomHtmlNode()))
       break;
     node->GetParentNode (getter_AddRefs(parentNode));
     node = parentNode;
