@@ -207,11 +207,19 @@ SECStatus PK11_SetObjectNickname(PK11SlotInfo *slot, CK_OBJECT_HANDLE id,
 
 /* private */
 SECStatus pk11_TraverseAllSlots( SECStatus (*callback)(PK11SlotInfo *,void *),
-	void *cbArg, void *pwArg);
+	void *cbArg, PRBool forceLogin, void *pwArg);
 
 /* fetch multiple CRLs for a specific issuer */
 SECStatus pk11_RetrieveCrls(CERTCrlHeadNode *nodes, SECItem* issuer,
                                    void *wincx);
+
+/* set global options for NSS PKCS#11 module loader */
+SECStatus pk11_setGlobalOptions(PRBool noSingleThreadedModules,
+                                PRBool allowAlreadyInitializedModules,
+                                PRBool dontFinalizeModules);
+
+/* return whether NSS is allowed to call C_Finalize */
+PRBool pk11_getFinalizeModulesOption(void);
 
 SEC_END_PROTOS
 

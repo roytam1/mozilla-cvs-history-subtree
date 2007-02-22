@@ -81,9 +81,7 @@ static const PRTime _pr_filetime_offset = 116444736000000000LL;
 static const PRTime _pr_filetime_offset = 116444736000000000i64;
 #endif
 
-#ifdef MOZ_UNICODE
 static void InitUnicodeSupport(void);
-#endif
 
 static PRBool IsPrevCharSlash(const char *str, const char *current);
 
@@ -124,9 +122,7 @@ _PR_MD_INIT_IO()
 
     _PR_NT_InitSids();
 
-#ifdef MOZ_UNICODE
     InitUnicodeSupport();
-#endif
 }
 
 PRStatus
@@ -1120,37 +1116,48 @@ _PR_MD_PIPEAVAILABLE(PRFileDesc *fd)
 #ifdef MOZ_UNICODE
 
 typedef HANDLE (WINAPI *CreateFileWFn) (LPCWSTR, DWORD, DWORD, LPSECURITY_ATTRIBUTES, DWORD, DWORD, HANDLE);
-static CreateFileWFn createFileW = NULL; 
+static CreateFileWFn createFileW = CreateFileW;
 typedef HANDLE (WINAPI *FindFirstFileWFn) (LPCWSTR, LPWIN32_FIND_DATAW);
-static FindFirstFileWFn findFirstFileW = NULL; 
+static FindFirstFileWFn findFirstFileW = FindFirstFileW;
 typedef BOOL (WINAPI *FindNextFileWFn) (HANDLE, LPWIN32_FIND_DATAW);
-static FindNextFileWFn findNextFileW = NULL; 
+static FindNextFileWFn findNextFileW = FindNextFileW;
 typedef DWORD (WINAPI *GetFullPathNameWFn) (LPCWSTR, DWORD, LPWSTR, LPWSTR *);
-static GetFullPathNameWFn getFullPathNameW = NULL; 
+static GetFullPathNameWFn getFullPathNameW = GetFullPathNameW;
 typedef UINT (WINAPI *GetDriveTypeWFn) (LPCWSTR);
-static GetDriveTypeWFn getDriveTypeW = NULL; 
+static GetDriveTypeWFn getDriveTypeW = GetDriveTypeW;
+
+#endif /* MOZ_UNICODE */
+
+PRBool _pr_useUnicode = PR_FALSE;
 
 static void InitUnicodeSupport(void)
 {
-    HMODULE module;
-
     /*
-     * The W functions do not exist on Win9x.  NSPR won't run on Win9x
-     * if we call the W functions directly.  Use GetProcAddress() to
-     * look up their addresses at run time.
+     * The W functions exist on Win9x as stubs that fail with the
+     * ERROR_CALL_NOT_IMPLEMENTED error.  We plan to emulate the
+     * MSLU W functions on Win9x in the future.
      */
 
-    module = GetModuleHandle("Kernel32.dll");
-    if (!module) {
-        return;
-    }
+    /* Find out if we are running on a Unicode enabled version of Windows */
+    OSVERSIONINFOA osvi = {0};
 
-    createFileW = (CreateFileWFn)GetProcAddress(module, "CreateFileW"); 
-    findFirstFileW = (FindFirstFileWFn)GetProcAddress(module, "FindFirstFileW"); 
-    findNextFileW = (FindNextFileWFn)GetProcAddress(module, "FindNextFileW"); 
-    getDriveTypeW = (GetDriveTypeWFn)GetProcAddress(module, "GetDriveTypeW"); 
-    getFullPathNameW = (GetFullPathNameWFn)GetProcAddress(module, "GetFullPathNameW"); 
+    osvi.dwOSVersionInfoSize = sizeof(osvi);
+    if (GetVersionExA(&osvi)) {
+        _pr_useUnicode = (osvi.dwPlatformId >= VER_PLATFORM_WIN32_NT);
+    } else {
+        _pr_useUnicode = PR_FALSE;
+    }
+#ifdef DEBUG
+    /*
+     * In debug builds, allow explicit use of ANSI methods to simulate
+     * a Win9x environment for testing purposes.
+     */
+    if (getenv("WINAPI_USE_ANSI"))
+        _pr_useUnicode = PR_FALSE;
+#endif
 }
+
+#ifdef MOZ_UNICODE
 
 /* ================ UTF16 Interfaces ================================ */
 void FlipSlashesW(PRUnichar *cp, int len)
@@ -1175,11 +1182,6 @@ _PR_MD_OPEN_FILE_UTF16(const PRUnichar *name, PRIntn osflags, int mode)
     PSECURITY_DESCRIPTOR pSD = NULL;
     PACL pACL = NULL;
 
-    if (!createFileW) {
-        PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
-        return -1;
-    }
- 
     if (osflags & PR_CREATE_FILE) {
         if (_PR_NT_MakeSecurityDescriptorACL(mode, fileAccessTable,
                 &pSD, &pACL) == PR_SUCCESS) {
@@ -1235,11 +1237,6 @@ _PR_MD_OPEN_DIR_UTF16(_MDDirUTF16 *d, const PRUnichar *name)
     PRUnichar filename[ MAX_PATH ];
     int len;
 
-    if (!findFirstFileW) {
-        PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
-        return PR_FAILURE;
-    }
-
     len = wcslen(name);
     /* Need 5 bytes for \*.* and the trailing null byte. */
     if (len + 5 > MAX_PATH) {
@@ -1274,11 +1271,6 @@ _PR_MD_READ_DIR_UTF16(_MDDirUTF16 *d, PRIntn flags)
     PRInt32 err;
     BOOL rv;
     PRUnichar *fileName;
-
-    if (!findNextFileW) {
-        PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
-        return NULL;
-    }
 
     if ( d ) {
         while (1) {
@@ -1425,11 +1417,6 @@ _PR_MD_GETFILEINFO64_UTF16(const PRUnichar *fn, PRFileInfo64 *info)
     WIN32_FIND_DATAW findFileData;
     PRUnichar pathbuf[MAX_PATH + 1];
 
-    if (!findFirstFileW || !getFullPathNameW || !getDriveTypeW) {
-        PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
-        return -1;
-    }
-    
     if (NULL == fn || L'\0' == *fn) {
         PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
         return -1;

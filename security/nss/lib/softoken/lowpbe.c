@@ -249,7 +249,7 @@ nsspkcs5_PFXPBE(const SECHashObject *hashObj, NSSPKCS5PBEParameter *pbe_param,
 loser:
     if (state != NULL)
 	PORT_ZFree(state, state_len);
-    HMAC_Destroy(cx);
+    HMAC_Destroy(cx, PR_TRUE);
 
     if(rv != SECSuccess) {
 	SECITEM_ZfreeItem(ret_bits, PR_TRUE);
@@ -363,7 +363,7 @@ nsspkcs5_PBKFD2_F(const SECHashObject *hashobj, SECItem *pwitem, SECItem *salt,
     }
 loser:
     if (cx) {
-	HMAC_DestroyContext(cx);
+	HMAC_DestroyContext(cx, PR_TRUE);
     }
     if (last) {
 	PORT_ZFree(last,reaLastLength);
@@ -546,13 +546,15 @@ loser:
 	PORT_FreeArena(arena, PR_TRUE);
     }
 
-    /* if i != c, then we didn't complete the loop above and must of failed
-     * somwhere along the way */
-    if (i != c) {
-	SECITEM_ZfreeItem(A,PR_TRUE);
-	A = NULL;
-    } else {
-    	A->len = bytesNeeded;
+    if (A) {
+        /* if i != c, then we didn't complete the loop above and must of failed
+         * somwhere along the way */
+        if (i != c) {
+	    SECITEM_ZfreeItem(A,PR_TRUE);
+	    A = NULL;
+        } else {
+    	    A->len = bytesNeeded;
+        }
     }
     
     return A;
@@ -587,7 +589,7 @@ nsspkcs5_ComputeKeyAndIV(NSSPKCS5PBEParameter *pbe_param, SECItem *pwitem,
 	iv->len = pbe_param->ivLen;
     }
 
-    hashObj = &SECRawHashObjects[pbe_param->hashType];
+    hashObj = HASH_GetRawHashObject(pbe_param->hashType);
     switch (pbe_param->pbeType) {
     case NSSPKCS5_PBKDF1:
 	hash = nsspkcs5_PBKDF1Extended(hashObj,pbe_param,pwitem,faulty3DES);
@@ -634,7 +636,7 @@ nsspkcs5_ComputeKeyAndIV(NSSPKCS5PBEParameter *pbe_param, SECItem *pwitem,
 	PORT_Memcpy(key->data, hash->data, key->len);
     }
 
-    SECITEM_FreeItem(hash, PR_TRUE);
+    SECITEM_ZfreeItem(hash, PR_TRUE);
     return key;
 
 loser:
@@ -822,7 +824,7 @@ void
 nsspkcs5_DestroyPBEParameter(NSSPKCS5PBEParameter *pbe_param)
 {
     if (pbe_param != NULL) {
-	PORT_FreeArena(pbe_param->poolp, PR_TRUE);
+	PORT_FreeArena(pbe_param->poolp, PR_FALSE);
     }
 }
 

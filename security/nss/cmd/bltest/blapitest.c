@@ -184,7 +184,7 @@ static void Usage()
     PRINTUSAGE("",  "",   "  sect233r1, nistb233, sect239k1, sect283k1, nistk283,");
     PRINTUSAGE("",  "",   "  sect283r1, nistb283, sect409k1, nistk409, sect409r1,");
     PRINTUSAGE("",  "",   "  nistb409, sect571k1, nistk571, sect571r1, nistb571,");
-    PRINTUSAGE("",  "",   "  secp169k1, secp160r1, secp160r2, secp192k1, secp192r1,");
+    PRINTUSAGE("",  "",   "  secp160k1, secp160r1, secp160r2, secp192k1, secp192r1,");
     PRINTUSAGE("",  "",   "  nistp192, secp224k1, secp224r1, nistp224, secp256k1,");
     PRINTUSAGE("",  "",   "  secp256r1, nistp256, secp384r1, nistp384, secp521r1,");
     PRINTUSAGE("",  "",   "  nistp521, prime192v1, prime192v2, prime192v3,");
@@ -2499,9 +2499,12 @@ print_td:
       case bltestECDSA:
           if (td)
               fprintf(stdout, "%12s", "ec_curve");
-          else
+          else {
+	      ECCurveName curveName = info->params.ecdsa.eckey->ecParams.name;
               fprintf(stdout, "%12s",
-                      ecCurve_map[info->params.ecdsa.eckey->ecParams.name]->text);
+                      ecCurve_map[curveName]? ecCurve_map[curveName]->text:
+					      "Unsupported curve");
+	  }
           break;
 #endif
       case bltestMD2:
@@ -2789,8 +2792,11 @@ blapi_selftest(bltestCipherMode *modes, int numModes, int inoff, int outoff,
 #endif
 	PR_Close(file);
 	/* loop over the tests in the directory */
-	numtests = (int) (item.data[0] - '0');
-	for (j=1; j<item.len - 1; j++) {
+	numtests = 0;
+	for (j=0; j<item.len; j++) {
+	    if (!isdigit(item.data[j])) {
+		break;
+	    }
 	    numtests *= 10;
 	    numtests += (int) (item.data[j] - '0');
 	}

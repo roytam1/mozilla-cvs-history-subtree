@@ -63,8 +63,15 @@ nss_cmsrecipientinfo_usessubjectkeyid(NSSCMSRecipientInfo *ri)
     return PR_FALSE;
 }
 
-
-static SECOidData fakeContent = { 0 };
+/*
+ * NOTE: fakeContent marks CMSMessage structure which is only used as a carrier
+ * of pwfn_arg and arena pools. In an ideal world, NSSCMSMessage would not have
+ * been exported, and we would have added an ordinary enum to handle this 
+ * check. Unfortunatly wo don't have that luxury so we are overloading the
+ * contentTypeTag field. NO code should every try to interpret this content tag
+ * as a real OID tag, or use any fields other than pwfn_arg or poolp of this 
+ * CMSMessage for that matter */
+static const SECOidData fakeContent;
 NSSCMSRecipientInfo *
 nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg, NSSCMSRecipientIDSelector type,
                             CERTCertificate *cert, SECKEYPublicKey *pubKey, 
@@ -180,27 +187,9 @@ nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg, NSSCMSRecipientIDSelector type,
 	    rv = SECFailure;
 	}
 	break;
-    case SEC_OID_MISSI_KEA_DSS_OLD:
-    case SEC_OID_MISSI_KEA_DSS:
-    case SEC_OID_MISSI_KEA:
-        PORT_Assert(type != NSSCMSRecipientID_SubjectKeyID);
-	if (type == NSSCMSRecipientID_SubjectKeyID) {
-	    rv = SECFailure;
-	    break;
-	}
-	/* backward compatibility - this is not really a keytrans operation */
-	ri->recipientInfoType = NSSCMSRecipientInfoID_KeyTrans;
-	/* hardcoded issuerSN choice for now */
-	ri->ri.keyTransRecipientInfo.recipientIdentifier.identifierType = NSSCMSRecipientID_IssuerSN;
-	ri->ri.keyTransRecipientInfo.recipientIdentifier.id.issuerAndSN = CERT_GetCertIssuerAndSN(poolp, cert);
-	if (ri->ri.keyTransRecipientInfo.recipientIdentifier.id.issuerAndSN == NULL) {
-	    rv = SECFailure;
-	    break;
-	}
-	break;
     case SEC_OID_X942_DIFFIE_HELMAN_KEY: /* dh-public-number */
-        PORT_Assert(type != NSSCMSRecipientID_SubjectKeyID);
-	if (type == NSSCMSRecipientID_SubjectKeyID) {
+	PORT_Assert(type == NSSCMSRecipientID_IssuerSN);
+	if (type != NSSCMSRecipientID_IssuerSN) {
 	    rv = SECFailure;
 	    break;
 	}
@@ -288,6 +277,9 @@ done:
     return ri;
 
 loser:
+    if (ri && ri->cert) {
+        CERT_DestroyCertificate(ri->cert);
+    }
     if (freeSpki) {
       SECKEY_DestroySubjectPublicKeyInfo(freeSpki);
     }
@@ -519,20 +511,6 @@ NSS_CMSRecipientInfo_WrapBulkKey(NSSCMSRecipientInfo *ri, PK11SymKey *bulkkey,
 	}
 
 	rv = SECOID_SetAlgorithmID(poolp, &(ri->ri.keyTransRecipientInfo.keyEncAlg), certalgtag, NULL);
-	break;
-    case SEC_OID_MISSI_KEA_DSS_OLD:
-    case SEC_OID_MISSI_KEA_DSS:
-    case SEC_OID_MISSI_KEA:
-	rv = NSS_CMSUtil_EncryptSymKey_MISSI(poolp, cert, bulkkey,
-					bulkalgtag,
-					&ri->ri.keyTransRecipientInfo.encKey,
-					&params, ri->cmsg->pwfn_arg);
-	if (rv != SECSuccess)
-	    break;
-
-	/* here, we DO need to pass the params to the wrap function because, with
-	 * RSA, there is no funny stuff going on with generation of IV vectors or so */
-	rv = SECOID_SetAlgorithmID(poolp, &(ri->ri.keyTransRecipientInfo.keyEncAlg), certalgtag, params);
 	break;
     case SEC_OID_X942_DIFFIE_HELMAN_KEY: /* dh-public-number */
 	rek = ri->ri.keyAgreeRecipientInfo.recipientEncryptedKeys[0];

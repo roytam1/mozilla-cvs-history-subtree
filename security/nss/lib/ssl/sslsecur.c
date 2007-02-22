@@ -112,9 +112,9 @@ ssl_Do1stHandshake(sslSocket *ss)
     int loopCount = 0;
 
     do {
-	PORT_Assert( ssl_Have1stHandshakeLock(ss) );
-	PORT_Assert( !ssl_HaveRecvBufLock(ss)   );
-	PORT_Assert( !ssl_HaveXmitBufLock(ss)   );
+	PORT_Assert(ss->opt.noLocks ||  ssl_Have1stHandshakeLock(ss) );
+	PORT_Assert(ss->opt.noLocks || !ssl_HaveRecvBufLock(ss));
+	PORT_Assert(ss->opt.noLocks || !ssl_HaveXmitBufLock(ss));
 
 	if (ss->handshake == 0) {
 	    /* Previous handshake finished. Switch to next one */
@@ -153,8 +153,8 @@ ssl_Do1stHandshake(sslSocket *ss)
      */
     } while (rv != SECFailure);  	/* was (rv >= 0); XXX_1 */
 
-    PORT_Assert( !ssl_HaveRecvBufLock(ss)   );
-    PORT_Assert( !ssl_HaveXmitBufLock(ss)   );
+    PORT_Assert(ss->opt.noLocks || !ssl_HaveRecvBufLock(ss));
+    PORT_Assert(ss->opt.noLocks || !ssl_HaveXmitBufLock(ss));
 
     if (rv == SECWouldBlock) {
 	PORT_SetError(PR_WOULD_BLOCK_ERROR);
@@ -202,7 +202,7 @@ SSL_ResetHandshake(PRFileDesc *s, PRBool asServer)
     }
 
     /* Don't waste my time */
-    if (!ss->useSecurity)
+    if (!ss->opt.useSecurity)
 	return SECSuccess;
 
     SSL_LOCK_READER(ss);
@@ -231,7 +231,7 @@ SSL_ResetHandshake(PRFileDesc *s, PRBool asServer)
     ** Blow away old security state and get a fresh setup.
     */
     ssl_GetXmitBufLock(ss); 
-    ssl_ResetSecurityInfo(&ss->sec);
+    ssl_ResetSecurityInfo(&ss->sec, PR_TRUE);
     status = ssl_CreateSecurityInfo(ss);
     ssl_ReleaseXmitBufLock(ss); 
 
@@ -264,7 +264,7 @@ SSL_ReHandshake(PRFileDesc *fd, PRBool flushCache)
 	return SECFailure;
     }
 
-    if (!ss->useSecurity)
+    if (!ss->opt.useSecurity)
 	return SECSuccess;
     
     ssl_Get1stHandshakeLock(ss);
@@ -282,6 +282,19 @@ SSL_ReHandshake(PRFileDesc *fd, PRBool flushCache)
     ssl_Release1stHandshakeLock(ss);
 
     return rv;
+}
+
+/*
+** Same as above, but with an I/O timeout.
+ */
+SSL_IMPORT SECStatus SSL_ReHandshakeWithTimeout(PRFileDesc *fd,
+                                                PRBool flushCache,
+                                                PRIntervalTime timeout)
+{
+    if (SECSuccess != ssl_SetTimeout(fd, timeout)) {
+        return SECFailure;
+    }
+    return SSL_ReHandshake(fd, flushCache);
 }
 
 SECStatus
@@ -306,7 +319,7 @@ SSL_HandshakeCallback(PRFileDesc *fd, SSLHandshakeCallback cb,
 	return SECFailure;
     }
 
-    if (!ss->useSecurity) {
+    if (!ss->opt.useSecurity) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return SECFailure;
     }
@@ -347,7 +360,7 @@ SSL_ForceHandshake(PRFileDesc *fd)
     }
 
     /* Don't waste my time */
-    if (!ss->useSecurity) 
+    if (!ss->opt.useSecurity) 
     	return SECSuccess;
 
     ssl_Get1stHandshakeLock(ss);
@@ -378,6 +391,19 @@ SSL_ForceHandshake(PRFileDesc *fd)
     return rv;
 }
 
+/*
+ ** Same as above, but with an I/O timeout.
+ */
+SSL_IMPORT SECStatus SSL_ForceHandshakeWithTimeout(PRFileDesc *fd,
+                                                   PRIntervalTime timeout)
+{
+    if (SECSuccess != ssl_SetTimeout(fd, timeout)) {
+        return SECFailure;
+    }
+    return SSL_ForceHandshake(fd);
+}
+
+
 /************************************************************************/
 
 /*
@@ -388,17 +414,20 @@ SSL_ForceHandshake(PRFileDesc *fd)
 SECStatus
 sslBuffer_Grow(sslBuffer *b, unsigned int newLen)
 {
+    newLen = PR_MAX(newLen, MAX_FRAGMENT_LENGTH + 2048);
     if (newLen > b->space) {
+	unsigned char *newBuf;
 	if (b->buf) {
-	    b->buf = (unsigned char *) PORT_Realloc(b->buf, newLen);
+	    newBuf = (unsigned char *) PORT_Realloc(b->buf, newLen);
 	} else {
-	    b->buf = (unsigned char *) PORT_Alloc(newLen);
+	    newBuf = (unsigned char *) PORT_Alloc(newLen);
 	}
-	if (!b->buf) {
+	if (!newBuf) {
 	    return SECFailure;
 	}
 	SSL_TRC(10, ("%d: SSL: grow buffer from %d to %d",
 		     SSL_GETPID(), b->space, newLen));
+	b->buf = newBuf;
 	b->space = newLen;
     }
     return SECSuccess;
@@ -411,24 +440,23 @@ sslBuffer_Grow(sslBuffer *b, unsigned int newLen)
 ** Caller must hold xmitBufLock
 */
 SECStatus 
-ssl_SaveWriteData(sslSocket *ss, sslBuffer *buf, const void *data, 
-                      unsigned int len)
+ssl_SaveWriteData(sslSocket *ss, const void *data, unsigned int len)
 {
     unsigned int newlen;
     SECStatus    rv;
 
-    PORT_Assert( ssl_HaveXmitBufLock(ss) );
-    newlen = buf->len + len;
-    if (newlen > buf->space) {
-	rv = sslBuffer_Grow(buf, newlen);
+    PORT_Assert( ss->opt.noLocks || ssl_HaveXmitBufLock(ss) );
+    newlen = ss->pendingBuf.len + len;
+    if (newlen > ss->pendingBuf.space) {
+	rv = sslBuffer_Grow(&ss->pendingBuf, newlen);
 	if (rv) {
 	    return rv;
 	}
     }
     SSL_TRC(5, ("%d: SSL[%d]: saving %d bytes of data (%d total saved so far)",
 		 SSL_GETPID(), ss->fd, len, newlen));
-    PORT_Memcpy(buf->buf + buf->len, data, len);
-    buf->len = newlen;
+    PORT_Memcpy(ss->pendingBuf.buf + ss->pendingBuf.len, data, len);
+    ss->pendingBuf.len = newlen;
     return SECSuccess;
 }
 
@@ -439,28 +467,23 @@ ssl_SaveWriteData(sslSocket *ss, sslBuffer *buf, const void *data,
 ** Caller must hold xmitBufLock
 */
 int 
-ssl_SendSavedWriteData(sslSocket *ss, sslBuffer *buf, sslSendFunc send)
+ssl_SendSavedWriteData(sslSocket *ss)
 {
     int rv	= 0;
-    int len	= buf->len;
 
-    PORT_Assert( ssl_HaveXmitBufLock(ss) );
-    if (len != 0) {
+    PORT_Assert( ss->opt.noLocks || ssl_HaveXmitBufLock(ss) );
+    if (ss->pendingBuf.len != 0) {
 	SSL_TRC(5, ("%d: SSL[%d]: sending %d bytes of saved data",
-		     SSL_GETPID(), ss->fd, len));
-	rv = (*send)(ss, buf->buf, len, 0);
+		     SSL_GETPID(), ss->fd, ss->pendingBuf.len));
+	rv = ssl_DefSend(ss, ss->pendingBuf.buf, ss->pendingBuf.len, 0);
 	if (rv < 0) {
 	    return rv;
 	} 
-	if (rv < len) {
-	    /* UGH !! This shifts the whole buffer down by copying it, and 
-	    ** it depends on PORT_Memmove doing overlapping moves correctly!
-	    ** It should advance the pointer offset instead !!
-	    */
-	    PORT_Memmove(buf->buf, buf->buf + rv, len - rv);
-	    buf->len = len - rv;
-	} else {
-	    buf->len = 0;
+	ss->pendingBuf.len -= rv;
+	if (ss->pendingBuf.len > 0 && rv > 0) {
+	    /* UGH !! This shifts the whole buffer down by copying it */
+	    PORT_Memmove(ss->pendingBuf.buf, ss->pendingBuf.buf + rv, 
+	                 ss->pendingBuf.len);
     	}
     }
     return rv;
@@ -574,12 +597,7 @@ ssl_FindCertKEAType(CERTCertificate * cert)
   case SEC_OID_PKCS1_RSA_ENCRYPTION:
     keaType = kt_rsa;
     break;
-  case SEC_OID_MISSI_KEA_DSS_OLD:
-  case SEC_OID_MISSI_KEA_DSS:
-  case SEC_OID_MISSI_DSS_OLD:
-  case SEC_OID_MISSI_DSS:
-    keaType = kt_fortezza;
-    break;
+
   case SEC_OID_X942_DIFFIE_HELMAN_KEY:
     keaType = kt_dh;
     break;
@@ -608,6 +626,7 @@ SSL_ConfigSecureServer(PRFileDesc *fd, CERTCertificate *cert,
     SECStatus rv;
     sslSocket *ss;
     sslServerCerts  *sc;
+    SECKEYPublicKey * pubKey = NULL;
 
     ss = ssl_FindSocket(fd);
     if (!ss) {
@@ -640,7 +659,6 @@ SSL_ConfigSecureServer(PRFileDesc *fd, CERTCertificate *cert,
     	sc->serverCert = NULL;
     }
     if (cert) {
-	SECKEYPublicKey * pubKey;
 	sc->serverCert = CERT_DupCertificate(cert);
 	if (!sc->serverCert)
 	    goto loser;
@@ -649,8 +667,6 @@ SSL_ConfigSecureServer(PRFileDesc *fd, CERTCertificate *cert,
 	if (!pubKey) 
 	    goto loser;
 	sc->serverKeyBits = SECKEY_PublicKeyStrengthInBits(pubKey);
-	SECKEY_DestroyPublicKey(pubKey); 
-	pubKey = NULL;
     }
 
 
@@ -667,19 +683,48 @@ SSL_ConfigSecureServer(PRFileDesc *fd, CERTCertificate *cert,
     }
 
     /* load the private key */
-    if (sc->serverKey != NULL) {
-	SECKEY_DestroyPrivateKey(sc->serverKey);
-    	sc->serverKey = NULL;
+    if (sc->serverKeyPair != NULL) {
+        ssl3_FreeKeyPair(sc->serverKeyPair);
+        sc->serverKeyPair = NULL;
     }
     if (key) {
-	sc->serverKey = SECKEY_CopyPrivateKey(key);
-	if (sc->serverKey == NULL)
+	SECKEYPrivateKey * keyCopy	= NULL;
+	CK_MECHANISM_TYPE  keyMech	= CKM_INVALID_MECHANISM;
+
+	if (key->pkcs11Slot) {
+	    PK11SlotInfo * bestSlot;
+	    bestSlot = PK11_ReferenceSlot(key->pkcs11Slot);
+	    if (bestSlot) {
+		keyCopy = PK11_CopyTokenPrivKeyToSessionPrivKey(bestSlot, key);
+		PK11_FreeSlot(bestSlot);
+	    }
+	}
+	if (keyCopy == NULL)
+	    keyMech = PK11_MapSignKeyType(key->keyType);
+	if (keyMech != CKM_INVALID_MECHANISM) {
+	    PK11SlotInfo * bestSlot;
+	    /* XXX Maybe should be bestSlotMultiple? */
+	    bestSlot = PK11_GetBestSlot(keyMech, NULL /* wincx */);
+	    if (bestSlot) {
+		keyCopy = PK11_CopyTokenPrivKeyToSessionPrivKey(bestSlot, key);
+		PK11_FreeSlot(bestSlot);
+	    }
+	}
+	if (keyCopy == NULL)
+	    keyCopy = SECKEY_CopyPrivateKey(key);
+	if (keyCopy == NULL)
 	    goto loser;
-	SECKEY_CacheStaticFlags(sc->serverKey);
+	SECKEY_CacheStaticFlags(keyCopy);
+        sc->serverKeyPair = ssl3_NewKeyPair(keyCopy, pubKey);
+        if (sc->serverKeyPair == NULL) {
+            SECKEY_DestroyPrivateKey(keyCopy);
+            goto loser;
+        }
+	pubKey = NULL; /* adopted by serverKeyPair */
     }
 
     if (kea == kt_rsa && cert && sc->serverKeyBits > 512) {
-	if (ss->noStepDown) {
+	if (ss->opt.noStepDown) {
 	    /* disable all export ciphersuites */
 	} else {
 	    rv = ssl3_CreateRSAStepDownKeys(ss);
@@ -696,6 +741,10 @@ SSL_ConfigSecureServer(PRFileDesc *fd, CERTCertificate *cert,
     return SECSuccess;
 
 loser:
+    if (pubKey) {
+	SECKEY_DestroyPublicKey(pubKey); 
+	pubKey = NULL;
+    }
     if (sc->serverCert != NULL) {
 	CERT_DestroyCertificate(sc->serverCert);
 	sc->serverCert = NULL;
@@ -704,9 +753,9 @@ loser:
 	CERT_DestroyCertificateList(sc->serverCertChain);
 	sc->serverCertChain = NULL;
     }
-    if (sc->serverKey != NULL) {
-	SECKEY_DestroyPrivateKey(sc->serverKey);
-	sc->serverKey = NULL;
+    if (sc->serverKeyPair != NULL) {
+	ssl3_FreeKeyPair(sc->serverKeyPair);
+	sc->serverKeyPair = NULL;
     }
     return SECFailure;
 }
@@ -791,7 +840,7 @@ loser:
 ** Caller holds any relevant locks.
 */
 void 
-ssl_ResetSecurityInfo(sslSecurityInfo *sec)
+ssl_ResetSecurityInfo(sslSecurityInfo *sec, PRBool doMemset)
 {
     /* Destroy MAC */
     if (sec->hash && sec->hashcx) {
@@ -833,7 +882,10 @@ ssl_ResetSecurityInfo(sslSecurityInfo *sec)
 	ssl_FreeSID(sec->ci.sid);
     }
     PORT_ZFree(sec->ci.sendBuf.buf, sec->ci.sendBuf.space);
-    memset(&sec->ci, 0, sizeof sec->ci);
+    if (doMemset) {
+        memset(&sec->ci, 0, sizeof sec->ci);
+    }
+    
 }
 
 /*
@@ -844,7 +896,7 @@ ssl_ResetSecurityInfo(sslSecurityInfo *sec)
 void 
 ssl_DestroySecurityInfo(sslSecurityInfo *sec)
 {
-    ssl_ResetSecurityInfo(sec);
+    ssl_ResetSecurityInfo(sec, PR_FALSE);
 
     PORT_ZFree(sec->writeBuf.buf, sec->writeBuf.space);
     sec->writeBuf.buf = 0;
@@ -860,7 +912,7 @@ ssl_SecureConnect(sslSocket *ss, const PRNetAddr *sa)
     PRFileDesc *osfd = ss->fd->lower;
     int rv;
 
-    if ( ss->handshakeAsServer ) {
+    if ( ss->opt.handshakeAsServer ) {
 	ss->securityHandshake = ssl2_BeginServerHandshake;
 	ss->handshaking = sslHandshakingAsServer;
     } else {
@@ -895,7 +947,7 @@ ssl_SecureClose(sslSocket *ss)
     	ss->firstHsDone 			&& 
 	!(ss->shutdownHow & ssl_SHUTDOWN_SEND)	&&
 	!ss->recvdCloseNotify                   &&
-	(ss->ssl3 != NULL)) {
+	ss->ssl3.initialized) {
 
 	/* We don't want the final alert to be Nagle delayed. */
 	if (!ss->delayDisabled) {
@@ -927,7 +979,7 @@ ssl_SecureShutdown(sslSocket *ss, int nsprHow)
     	(ss->version >= SSL_LIBRARY_VERSION_3_0)	&&
 	ss->firstHsDone 				&& 
 	!ss->recvdCloseNotify                   	&&
-	(ss->ssl3 != NULL)) {
+	ss->ssl3.initialized) {
 
 	(void) SSL3_SendAlert(ss, alert_warning, close_notify);
     }
@@ -959,10 +1011,10 @@ ssl_SecureRecv(sslSocket *ss, unsigned char *buf, int len, int flags)
     	return PR_FAILURE;
     }
 
-    if (!ssl_SocketIsBlocking(ss) && !ss->fdx) {
+    if (!ssl_SocketIsBlocking(ss) && !ss->opt.fdx) {
 	ssl_GetXmitBufLock(ss);
 	if (ss->pendingBuf.len != 0) {
-	    rv = ssl_SendSavedWriteData(ss, &ss->pendingBuf, ssl_DefSend);
+	    rv = ssl_SendSavedWriteData(ss);
 	    if ((rv < 0) && (PORT_GetError() != PR_WOULD_BLOCK_ERROR)) {
 		ssl_ReleaseXmitBufLock(ss);
 		return SECFailure;
@@ -1017,7 +1069,7 @@ ssl_SecureSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
     ssl_GetXmitBufLock(ss);
     if (ss->pendingBuf.len != 0) {
 	PORT_Assert(ss->pendingBuf.len > 0);
-	rv = ssl_SendSavedWriteData(ss, &ss->pendingBuf, ssl_DefSend);
+	rv = ssl_SendSavedWriteData(ss);
 	if (rv >= 0 && ss->pendingBuf.len != 0) {
 	    PORT_Assert(ss->pendingBuf.len > 0);
 	    PORT_SetError(PR_WOULD_BLOCK_ERROR);
@@ -1051,6 +1103,10 @@ ssl_SecureSend(sslSocket *ss, const unsigned char *buf, int len, int flags)
     	return 0;
     }
     PORT_Assert(buf != NULL);
+    if (!buf) {
+	PORT_SetError(PR_INVALID_ARGUMENT_ERROR);
+    	return PR_FAILURE;
+    }
     
     SSL_TRC(2, ("%d: SSL[%d]: SecureSend: sending %d bytes",
 		SSL_GETPID(), ss->fd, len));
@@ -1135,7 +1191,7 @@ SSL_DataPending(PRFileDesc *fd)
 
     ss = ssl_FindSocket(fd);
 
-    if (ss && ss->useSecurity) {
+    if (ss && ss->opt.useSecurity) {
 
 	ssl_Get1stHandshakeLock(ss);
 	ssl_GetSSL3HandshakeLock(ss);
@@ -1183,7 +1239,7 @@ SSL_GetSessionID(PRFileDesc *fd)
 	ssl_Get1stHandshakeLock(ss);
 	ssl_GetSSL3HandshakeLock(ss);
 
-	if (ss->useSecurity && ss->firstHsDone && ss->sec.ci.sid) {
+	if (ss->opt.useSecurity && ss->firstHsDone && ss->sec.ci.sid) {
 	    item = (SECItem *)PORT_Alloc(sizeof(SECItem));
 	    if (item) {
 		sslSessionID * sid = ss->sec.ci.sid;

@@ -79,12 +79,16 @@ PK11_PQG_ParamGenSeedLen( unsigned int j, unsigned int seedBytes,
     PRArenaPool *varena = NULL;
     PQGParams *params = NULL;
     PQGVerify *verify = NULL;
-    CK_ULONG primeBits = j;
+    CK_ULONG primeBits = PQG_INDEX_TO_PBITS(j);
     CK_ULONG seedBits = seedBytes*8;
 
     *pParams = NULL;
     *pVfy =  NULL;
 
+    if (primeBits == (CK_ULONG)-1) {
+	PORT_SetError(SEC_ERROR_INVALID_ARGS);
+	goto loser;
+    }
     PK11_SETATTRS(attrs, CKA_PRIME_BITS,&primeBits,sizeof(primeBits)); attrs++;
     if (seedBits != 0) {
     	PK11_SETATTRS(attrs, CKA_NETSCAPE_PQG_SEED_BITS, 
@@ -115,6 +119,10 @@ PK11_PQG_ParamGenSeedLen( unsigned int j, unsigned int seedBytes,
     }
 
     parena = PORT_NewArena(60);
+    if (!parena) {
+	goto loser;
+    }        
+
     crv = PK11_GetAttributes(parena, slot, objectID, pTemplate, pTemplateCount);
     if (crv != CKR_OK) {
 	PORT_SetError( PK11_MapError(crv) );
@@ -141,6 +149,10 @@ PK11_PQG_ParamGenSeedLen( unsigned int j, unsigned int seedBytes,
 
 
     varena = PORT_NewArena(60);
+    if (!varena) {
+	goto loser;
+    }        
+
     crv = PK11_GetAttributes(varena, slot, objectID, vTemplate, vTemplateCount);
     if (crv != CKR_OK) {
 	PORT_SetError( PK11_MapError(crv) );

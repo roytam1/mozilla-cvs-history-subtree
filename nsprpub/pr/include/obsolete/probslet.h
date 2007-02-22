@@ -158,6 +158,15 @@ NSPR_API(void)        PR_FD_NSET(PRInt32 osfd, PR_fd_set *set);
 NSPR_API(void)        PR_FD_NCLR(PRInt32 osfd, PR_fd_set *set);
 NSPR_API(PRInt32)     PR_FD_NISSET(PRInt32 osfd, PR_fd_set *set);
 
+/*
+** The next two entry points should not be in the API, but they are
+** declared here for historical reasons.
+*/
+
+NSPR_API(PRInt32) PR_GetSysfdTableMax(void);
+
+NSPR_API(PRInt32) PR_SetSysfdTableSize(PRIntn table_size);
+
 #ifndef NO_NSPR_10_SUPPORT
 #ifdef XP_MAC
 #include <stat.h>

@@ -150,22 +150,6 @@ new_cache_entry(NSSArena *arena, void *value, PRBool ownArena)
     return ce;
 }
 
-/* sort the subject list from newest to oldest */
-static PRIntn subject_list_sort(void *v1, void *v2)
-{
-    NSSCertificate *c1 = (NSSCertificate *)v1;
-    NSSCertificate *c2 = (NSSCertificate *)v2;
-    nssDecodedCert *dc1 = nssCertificate_GetDecoding(c1);
-    nssDecodedCert *dc2 = nssCertificate_GetDecoding(c2);
-    if (!dc1) {
-	return dc2 ? 1 : 0;
-    } else if (!dc2) {
-	return -1;
-    } else { 
-	return dc1->isNewerThan(dc1, dc2) ? -1 : 1;
-    }
-}
-
 /* this should not be exposed in a header, but is here to keep the above
  * types/functions static
  */
@@ -445,7 +429,7 @@ remove_token_certs(const void *k, void *v, void *a)
     nssPKIObject *object = &c->object;
     struct token_cert_dtor *dtor = a;
     PRUint32 i;
-    PZ_Lock(object->lock);
+    nssPKIObject_Lock(object);
     for (i=0; i<object->numInstances; i++) {
 	if (object->instances[i]->token == dtor->token) {
 	    nssCryptokiObject_Destroy(object->instances[i]);
@@ -462,7 +446,7 @@ remove_token_certs(const void *k, void *v, void *a)
 	    break;
 	}
     }
-    PZ_Unlock(object->lock);
+    nssPKIObject_Unlock(object);
     return;
 }
 
@@ -598,7 +582,7 @@ add_subject_entry (
 	if (nickname) {
 	    ce->nickname = nssUTF8_Duplicate(nickname, arena);
 	}
-	nssList_SetSortFunction(list, subject_list_sort);
+	nssList_SetSortFunction(list, nssCertificate_SubjectListSort);
 	/* Add the cert entry to this list of subjects */
 	nssrv = nssList_AddUnique(list, cert);
 	if (nssrv != PR_SUCCESS) {
@@ -1166,6 +1150,9 @@ nssTrustDomain_GetCertsFromCache (
 	certList = certListOpt;
     } else {
 	certList = nssList_Create(NULL, PR_FALSE);
+	if (!certList) {
+	    return NULL;
+	}
     }
     PZ_Lock(td->cache->lock);
     nssHash_Iterate(td->cache->issuerAndSN, cert_iter, (void *)certList);

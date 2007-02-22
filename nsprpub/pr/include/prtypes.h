@@ -178,7 +178,9 @@
 
 #else /* Unix */
 
-#ifdef HAVE_VISIBILITY_PRAGMA
+/* GCC 3.3 and later support the visibility attribute. */
+#if (__GNUC__ >= 4) || \
+    (__GNUC__ == 3 && __GNUC_MINOR__ >= 3)
 #define PR_VISIBILITY_DEFAULT __attribute__((visibility("default")))
 #else
 #define PR_VISIBILITY_DEFAULT
@@ -468,10 +470,6 @@ typedef PRUint8 PRPackedBool;
 */
 typedef enum { PR_FAILURE = -1, PR_SUCCESS = 0 } PRStatus;
 
-#ifdef MOZ_UNICODE
-/*
- * EXPERIMENTAL: This type may be removed in a future release.
- */
 #ifndef __PRUNICHAR__
 #define __PRUNICHAR__
 #if defined(WIN32) || defined(XP_MAC)
@@ -480,7 +478,6 @@ typedef wchar_t PRUnichar;
 typedef PRUint16 PRUnichar;
 #endif
 #endif
-#endif /* MOZ_UNICODE */
 
 /*
 ** WARNING: The undocumented data types PRWord and PRUword are

@@ -52,6 +52,7 @@
 #               other tests
 #   ssl.sh    - tests SSL V2 SSL V3 and TLS
 #   smime.sh  - S/MIME testing
+#   crmf.sh   - CRMF/CMMF testing
 #   sdr.sh    - test NSS SDR
 #   cipher.sh - test NSS ciphers
 #   perf.sh   - Nightly performance measurments
@@ -77,7 +78,8 @@
 #
 ########################################################################
 
-TESTS="cert ssl sdr cipher smime perf tools fips dbtests"
+tests="cipher perf cert dbtests tools fips sdr crmf smime ssl"
+TESTS=${TESTS:-$tests}
 SCRIPTNAME=all.sh
 CLEANUP="${SCRIPTNAME}"
 cd `dirname $0`	# will cause problems if sourced 
@@ -91,12 +93,17 @@ fi
 for i in ${TESTS}
 do
     SCRIPTNAME=${i}.sh
-    echo "Running Tests for $i"
     if [ "$O_CRON" = "ON" ]
     then
-        (cd ${QADIR}/$i ; . ./$SCRIPTNAME all file >> ${LOGFILE} 2>&1)
+        echo "Running tests for $i" >> ${LOGFILE}
+        echo "TIMESTAMP $i BEGIN: `date`" >> ${LOGFILE}
+        (cd ${QADIR}/$i ; . ./$SCRIPTNAME all file) >> ${LOGFILE} 2>&1
+        echo "TIMESTAMP $i END: `date`" >> ${LOGFILE}
     else
-        (cd ${QADIR}/$i ; . ./$SCRIPTNAME all file 2>&1 | tee -a ${LOGFILE})
+        echo "Running tests for $i" | tee -a ${LOGFILE}
+        echo "TIMESTAMP $i BEGIN: `date`" | tee -a ${LOGFILE}
+        (cd ${QADIR}/$i ; . ./$SCRIPTNAME all file) 2>&1 | tee -a ${LOGFILE}
+        echo "TIMESTAMP $i END: `date`" | tee -a ${LOGFILE}
     fi
 done
 

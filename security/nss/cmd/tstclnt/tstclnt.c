@@ -20,6 +20,7 @@
  *
  * Contributor(s):
  *   Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
+ *   Douglas Stebila <douglas@stebila.ca>, Sun Microsystems Laboratories
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -76,6 +77,8 @@
 #define MAX_WAIT_FOR_SERVER 600
 #define WAIT_INTERVAL       100
 
+PRIntervalTime maxInterval    = PR_INTERVAL_NO_TIMEOUT;
+
 int ssl2CipherSuites[] = {
     SSL_EN_RC4_128_WITH_MD5,			/* A */
     SSL_EN_RC4_128_EXPORT40_WITH_MD5,		/* B */
@@ -83,39 +86,18 @@ int ssl2CipherSuites[] = {
     SSL_EN_RC2_128_CBC_EXPORT40_WITH_MD5,	/* D */
     SSL_EN_DES_64_CBC_WITH_MD5,			/* E */
     SSL_EN_DES_192_EDE3_CBC_WITH_MD5,		/* F */
-#ifdef NSS_ENABLE_ECC
-    /* NOTE: Since no new SSL2 ciphersuites are being 
-     * invented, and we've run out of lowercase letters
-     * for SSL3 ciphers, we use letters G and beyond
-     * for new SSL3 ciphers.
-     */
-    TLS_ECDH_ECDSA_WITH_NULL_SHA,       	/* G */
-    TLS_ECDH_ECDSA_WITH_RC4_128_SHA,       	/* H */
-    TLS_ECDH_ECDSA_WITH_DES_CBC_SHA,       	/* I */
-    TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA,    	/* J */
-    TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,     	/* K */
-    TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA,     	/* L */
-    TLS_ECDH_RSA_WITH_NULL_SHA,          	/* M */
-    TLS_ECDH_RSA_WITH_RC4_128_SHA,       	/* N */
-    TLS_ECDH_RSA_WITH_DES_CBC_SHA,       	/* O */
-    TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,      	/* P */
-    TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,       	/* Q */
-    TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,       	/* R */
-    TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,    	/* S */
-    TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,      	/* T */
-#endif /* NSS_ENABLE_ECC */
     0
 };
 
 int ssl3CipherSuites[] = {
-    SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA,	/* a */
-    SSL_FORTEZZA_DMS_WITH_RC4_128_SHA,		/* b */
+    -1, /* SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA* a */
+    -1, /* SSL_FORTEZZA_DMS_WITH_RC4_128_SHA,	 * b */
     SSL_RSA_WITH_RC4_128_MD5,			/* c */
     SSL_RSA_WITH_3DES_EDE_CBC_SHA,		/* d */
     SSL_RSA_WITH_DES_CBC_SHA,			/* e */
     SSL_RSA_EXPORT_WITH_RC4_40_MD5,		/* f */
     SSL_RSA_EXPORT_WITH_RC2_CBC_40_MD5,		/* g */
-    SSL_FORTEZZA_DMS_WITH_NULL_SHA,		/* h */
+    -1, /* SSL_FORTEZZA_DMS_WITH_NULL_SHA,	 * h */
     SSL_RSA_WITH_NULL_MD5,			/* i */
     SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA,		/* j */
     SSL_RSA_FIPS_WITH_DES_CBC_SHA,		/* k */
@@ -214,7 +196,7 @@ handshakeCallback(PRFileDesc *fd, void *client_data)
 static void Usage(const char *progName)
 {
     fprintf(stderr, 
-"Usage:  %s -h host [-p port] [-d certdir] [-n nickname] [-23Tfovx] \n"
+"Usage:  %s -h host [-p port] [-d certdir] [-n nickname] [-23BTfosvx] \n"
 "                   [-c ciphers] [-w passwd] [-q]\n", progName);
     fprintf(stderr, "%-20s Hostname to connect with\n", "-h host");
     fprintf(stderr, "%-20s Port number for SSL server\n", "-p port");
@@ -223,11 +205,14 @@ static void Usage(const char *progName)
 	    "-d certdir");
     fprintf(stderr, "%-20s Nickname of key and cert for client auth\n", 
                     "-n nickname");
+    fprintf(stderr, 
+            "%-20s Bypass PKCS11 layer for SSL encryption and MACing.\n", "-B");
     fprintf(stderr, "%-20s Disable SSL v2.\n", "-2");
     fprintf(stderr, "%-20s Disable SSL v3.\n", "-3");
     fprintf(stderr, "%-20s Disable TLS (SSL v3.1).\n", "-T");
     fprintf(stderr, "%-20s Client speaks first. \n", "-f");
     fprintf(stderr, "%-20s Override bad server cert. Make it OK.\n", "-o");
+    fprintf(stderr, "%-20s Disable SSL socket locking.\n", "-s");
     fprintf(stderr, "%-20s Verbose progress reporting.\n", "-v");
     fprintf(stderr, "%-20s Use export policy.\n", "-x");
     fprintf(stderr, "%-20s Ping the server and then exit.\n", "-q");
@@ -240,31 +225,12 @@ static void Usage(const char *progName)
 "D    SSL2 RC2 128 CBC EXPORT40 WITH MD5\n"
 "E    SSL2 DES 64 CBC WITH MD5\n"
 "F    SSL2 DES 192 EDE3 CBC WITH MD5\n"
-#ifdef NSS_ENABLE_ECC
-"G    TLS ECDH ECDSA WITH NULL SHA\n"
-"H    TLS ECDH ECDSA WITH RC4 128 SHA\n"
-"I    TLS ECDH ECDSA WITH DES CBC SHA\n"
-"J    TLS ECDH ECDSA WITH 3DES EDE CBC SHA\n"
-"K    TLS ECDH ECDSA WITH AES 128 CBC SHA\n"
-"L    TLS ECDH ECDSA WITH AES 256 CBC SHA\n"
-"M    TLS ECDH RSA WITH NULL SHA\n"
-"N    TLS ECDH RSA WITH RC4 128 SHA\n"
-"O    TLS ECDH RSA WITH DES CBC SHA\n"
-"P    TLS ECDH RSA WITH 3DES EDE CBC SHA\n"
-"Q    TLS ECDH RSA WITH AES 128 CBC SHA\n"
-"R    TLS ECDH RSA WITH AES 256 CBC SHA\n"
-"S    TLS ECDHE ECDSA WITH AES 128 CBC SHA\n"
-"T    TLS ECDHE RSA WITH AES 128 CBC SHA\n"
-#endif /* NSS_ENABLE_ECC */
 "\n"
-"a    SSL3 FORTEZZA DMS WITH FORTEZZA CBC SHA\n"
-"b    SSL3 FORTEZZA DMS WITH RC4 128 SHA\n"
 "c    SSL3 RSA WITH RC4 128 MD5\n"
 "d    SSL3 RSA WITH 3DES EDE CBC SHA\n"
 "e    SSL3 RSA WITH DES CBC SHA\n"
 "f    SSL3 RSA EXPORT WITH RC4 40 MD5\n"
 "g    SSL3 RSA EXPORT WITH RC2 CBC 40 MD5\n"
-"h    SSL3 FORTEZZA DMS WITH NULL SHA\n"
 "i    SSL3 RSA WITH NULL MD5\n"
 "j    SSL3 RSA FIPS WITH 3DES EDE CBC SHA\n"
 "k    SSL3 RSA FIPS WITH DES CBC SHA\n"
@@ -283,6 +249,8 @@ static void Usage(const char *progName)
 "x    SSL3 DHE RSA WITH AES 256 CBC SHA\n"
 "y    SSL3 RSA WITH AES 256 CBC SHA\n"
 "z    SSL3 RSA WITH NULL SHA\n"
+"\n"
+":WXYZ  Use cipher with hex code { 0xWX , 0xYZ } in TLS\n"
 	);
     exit(1);
 }
@@ -408,7 +376,7 @@ thread_main(void * arg)
 	rc = PR_Read(std_in, buf, sizeof buf);
 	if (rc <= 0)
 	    break;
-	wc = PR_Write(ps, buf, rc);
+	wc = PR_Send(ps, buf, rc, 0, maxInterval);
     } while (wc == rc);
     PR_Close(ps);
 }
@@ -432,6 +400,17 @@ printHostNameAndAddr(const char * host, const PRNetAddr * addr)
 #define SSOCK_FD 0
 #define STDIN_FD 1
 
+#define HEXCHAR_TO_INT(c, i) \
+    if (((c) >= '0') && ((c) <= '9')) { \
+	i = (c) - '0'; \
+    } else if (((c) >= 'a') && ((c) <= 'f')) { \
+	i = (c) - 'a' + 10; \
+    } else if (((c) >= 'A') && ((c) <= 'F')) { \
+	i = (c) - 'A' + 10; \
+    } else { \
+	Usage(progName); \
+    }
+
 int main(int argc, char **argv)
 {
     PRFileDesc *       s;
@@ -442,6 +421,7 @@ int main(int argc, char **argv)
     char *             certDir  =  NULL;
     char *             nickname =  NULL;
     char *             cipherString = NULL;
+    char *             tmp;
     int                multiplier = 0;
     SECStatus          rv;
     PRStatus           status;
@@ -451,6 +431,8 @@ int main(int argc, char **argv)
     int                disableSSL2 = 0;
     int                disableSSL3 = 0;
     int                disableTLS  = 0;
+    int                bypassPKCS11 = 0;
+    int                disableLocking = 0;
     int                useExportPolicy = 0;
     PRSocketOptionData opt;
     PRNetAddr          addr;
@@ -469,7 +451,15 @@ int main(int argc, char **argv)
 	progName = strrchr(argv[0], '\\');
     progName = progName ? progName+1 : argv[0];
 
-    optstate = PL_CreateOptState(argc, argv, "23Tfc:h:p:d:m:n:oqvw:x");
+    tmp = PR_GetEnv("NSS_DEBUG_TIMEOUT");
+    if (tmp && tmp[0]) {
+       int sec = PORT_Atoi(tmp);
+       if (sec > 0) {
+           maxInterval = PR_SecondsToInterval(sec);
+       }
+    }
+
+    optstate = PL_CreateOptState(argc, argv, "23BTfc:h:p:d:m:n:oqsvw:x");
     while ((optstatus = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch (optstate->option) {
 	  case '?':
@@ -478,6 +468,8 @@ int main(int argc, char **argv)
           case '2': disableSSL2 = 1; 			break;
 
           case '3': disableSSL3 = 1; 			break;
+
+          case 'B': bypassPKCS11 = 1; 			break;
 
           case 'T': disableTLS  = 1; 			break;
 
@@ -505,6 +497,8 @@ int main(int argc, char **argv)
 	  case 'p': port = strdup(optstate->value);	break;
 
 	  case 'q': pingServerFirst = PR_TRUE;          break;
+
+	  case 's': disableLocking = 1;                 break;
 
 	  case 'v': verbose++;	 			break;
 
@@ -664,19 +658,40 @@ int main(int argc, char **argv)
     	int ndx;
 
 	while (0 != (ndx = *cipherString++)) {
-	    int *cptr;
 	    int  cipher;
 
-	    if (! isalpha(ndx))
-	     	Usage(progName);
-	    cptr = islower(ndx) ? ssl3CipherSuites : ssl2CipherSuites;
-	    for (ndx &= 0x1f; (cipher = *cptr++) != 0 && --ndx > 0; ) 
-	    	/* do nothing */;
-	    if (cipher) {
+	    if (ndx == ':') {
+		int ctmp;
+
+		cipher = 0;
+		HEXCHAR_TO_INT(*cipherString, ctmp)
+		cipher |= (ctmp << 12);
+		cipherString++;
+		HEXCHAR_TO_INT(*cipherString, ctmp)
+		cipher |= (ctmp << 8);
+		cipherString++;
+		HEXCHAR_TO_INT(*cipherString, ctmp)
+		cipher |= (ctmp << 4);
+		cipherString++;
+		HEXCHAR_TO_INT(*cipherString, ctmp)
+		cipher |= ctmp;
+		cipherString++;
+	    } else {
+		const int *cptr;
+
+		if (! isalpha(ndx))
+		    Usage(progName);
+		cptr = islower(ndx) ? ssl3CipherSuites : ssl2CipherSuites;
+		for (ndx &= 0x1f; (cipher = *cptr++) != 0 && --ndx > 0; ) 
+		    /* do nothing */;
+	    }
+	    if (cipher > 0) {
 		SECStatus status;
 		status = SSL_CipherPrefSet(s, cipher, SSL_ALLOWED);
 		if (status != SECSuccess) 
 		    SECU_PrintError(progName, "SSL_CipherPrefSet()");
+	    } else {
+		Usage(progName);
 	    }
 	}
     }
@@ -705,6 +720,21 @@ int main(int argc, char **argv)
 	SECU_PrintError(progName, "error disabling v2 compatibility");
 	return 1;
     }
+
+    /* enable PKCS11 bypass */
+    rv = SSL_OptionSet(s, SSL_BYPASS_PKCS11, bypassPKCS11);
+    if (rv != SECSuccess) {
+	SECU_PrintError(progName, "error enabling PKCS11 bypass");
+	return 1;
+    }
+
+    /* disable SSL socket locking */
+    rv = SSL_OptionSet(s, SSL_NO_LOCKS, disableLocking);
+    if (rv != SECSuccess) {
+	SECU_PrintError(progName, "error disabling SSL socket locking");
+	return 1;
+    }
+
 
     if (useCommandLinePassword) {
 	SSL_SetPKCS11PinArg(s, password);
@@ -767,7 +797,8 @@ int main(int argc, char **argv)
     }
 
     pollset[SSOCK_FD].fd        = s;
-    pollset[SSOCK_FD].in_flags  = clientSpeaksFirst ? 0 : PR_POLL_READ;
+    pollset[SSOCK_FD].in_flags  = PR_POLL_EXCEPT |
+                                  (clientSpeaksFirst ? 0 : PR_POLL_READ);
     pollset[STDIN_FD].fd        = PR_GetSpecialFD(PR_StandardInput);
     pollset[STDIN_FD].in_flags  = PR_POLL_READ;
     npds                 = 2;
@@ -856,7 +887,7 @@ int main(int argc, char **argv)
 		FPRINTF(stderr, "%s: Writing %d bytes to server\n", 
 		        progName, nb);
 		do {
-		    PRInt32 cc = PR_Write(s, bufp, nb);
+		    PRInt32 cc = PR_Send(s, bufp, nb, 0, maxInterval);
 		    if (cc < 0) {
 		    	PRErrorCode err = PR_GetError();
 			if (err != PR_WOULD_BLOCK_ERROR) {
@@ -897,7 +928,7 @@ int main(int argc, char **argv)
 #endif
 	    ) {
 	    /* Read from socket and write to stdout */
-	    nb = PR_Read(pollset[SSOCK_FD].fd, buf, sizeof(buf));
+	    nb = PR_Recv(pollset[SSOCK_FD].fd, buf, sizeof buf, 0, maxInterval);
 	    FPRINTF(stderr, "%s: Read from server %d bytes\n", progName, nb);
 	    if (nb < 0) {
 		if (PR_GetError() != PR_WOULD_BLOCK_ERROR) {

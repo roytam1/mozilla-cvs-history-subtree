@@ -411,7 +411,7 @@ PR_IMPLEMENT(PRFileDesc*) PR_OpenFile(
     return fd;
 }
 
-PRInt32 PR_GetSysfdTableMax(void)
+PR_IMPLEMENT(PRInt32) PR_GetSysfdTableMax(void)
 {
 #if defined(XP_UNIX) && !defined(AIX) && !defined(NEXTSTEP) && !defined(QNX)
     struct rlimit rlim;
@@ -444,7 +444,7 @@ PRInt32 PR_GetSysfdTableMax(void)
 #endif
 }
 
-PRInt32 PR_SetSysfdTableSize(int table_size)
+PR_IMPLEMENT(PRInt32) PR_SetSysfdTableSize(int table_size)
 {
 #if defined(XP_UNIX) && !defined(AIX) && !defined(NEXTSTEP) && !defined(QNX)
     struct rlimit rlim;
