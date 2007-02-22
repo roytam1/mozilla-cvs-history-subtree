@@ -1710,6 +1710,12 @@ gtk_moz_embed_get_doc_info(GtkMozEmbed *embed, gpointer node, gint docindex,
       ctx_menu->CheckDomImageElement((nsIDOMNode*)node, imgSrc, width, height);
   }
 
+  if (title) {
+    EmbedContextMenuInfo * ctx_menu = embedPrivate->mEventListener->GetContextInfo();
+    if (ctx_menu)
+      *title = NEW_TOOLKIT_STRING(ctx_menu->GetCtxDocTitle());
+  }
+
   if (file_size && location && *location != nsnull) {
     nsCOMPtr<nsICacheEntryDescriptor> descriptor;
     nsresult rv;
