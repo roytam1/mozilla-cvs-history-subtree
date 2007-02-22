@@ -71,6 +71,8 @@
 #include "nsReadableUtils.h"
 #else
 #include "nsStringAPI.h"
+#include "nsComponentManagerUtils.h"
+#include "nsServiceManagerUtils.h"
 #endif
 
 #ifdef MOZ_WIDGET_GTK2
@@ -1545,8 +1547,6 @@ gtk_moz_embed_get_context_info(GtkMozEmbed *embed, gpointer event, gpointer *nod
   }
 
   if (embedPrivate->mEventListener) {
-#ifdef MOZILLA_INTERNAL_API //FIXME replace to using nsStringAPI
-
     EmbedContextMenuInfo * ctx_menu = embedPrivate->mEventListener->GetContextInfo();
     if (!ctx_menu)
       return 0;
@@ -1555,15 +1555,14 @@ gtk_moz_embed_get_context_info(GtkMozEmbed *embed, gpointer event, gpointer *nod
     *y = ctx_menu->mY;
     *docindex = ctx_menu->mCtxFrameNum;
     if (ctx_menu->mEmbedCtxType & GTK_MOZ_EMBED_CTX_LINK && !*url) {
-      *url = ToNewCString(ctx_menu->mCtxHref);
+      *url = ToNewUTF8String(ctx_menu->mCtxHref);
     }
     if (ctx_menu->mEmbedCtxType & GTK_MOZ_EMBED_CTX_IMAGE) {
-      *objurl = ToNewCString(ctx_menu->mCtxImgHref);
+      *objurl = ToNewUTF8String(ctx_menu->mCtxImgHref);
     }
-    *docurl = ToNewCString(ctx_menu->mCtxURI);
+    *docurl = ToNewUTF8String(ctx_menu->mCtxURI);
     *node = ctx_menu->mEventNode;
     return ctx_menu->mEmbedCtxType;
-#endif
   }
 #endif
   return 0;
@@ -1605,6 +1604,7 @@ gtk_moz_embed_insert_text(GtkMozEmbed *embed, const gchar *string, gpointer node
   }
   return FALSE;
 }
+
 
 gboolean
 gtk_moz_embed_save_target (GtkMozEmbed *aEmbed, gchar* aUrl,
@@ -1659,11 +1659,11 @@ gtk_moz_embed_save_target (GtkMozEmbed *aEmbed, gchar* aUrl,
     rv = ios->NewURI(nsDependentCString(aDestination), "", nsnull, getter_AddRefs(uri));
     rv = ios->NewURI(nsDependentCString(aDestination), "", nsnull, getter_AddRefs(contentFolder));
 
-    nsCAutoString contentFolderPath;
+    nsCString contentFolderPath;
     contentFolder->GetSpec(contentFolderPath);
     contentFolderPath.Append("_content");
     printf("GetNativePath=%s ", contentFolderPath.get());
-    rv = ios->NewURI(nsDependentCString(contentFolderPath), "", nsnull, getter_AddRefs(contentFolder));
+    rv = ios->NewURI(contentFolderPath, "", nsnull, getter_AddRefs(contentFolder));
 
     if (NS_FAILED(rv))
       return FALSE;

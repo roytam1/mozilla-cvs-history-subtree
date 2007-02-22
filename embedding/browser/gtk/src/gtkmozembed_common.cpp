@@ -68,6 +68,7 @@
 #ifdef MOZILLA_INTERNAL_API
 #include "nsXPIDLString.h"
 #include "nsReadableUtils.h"
+#include "nsString.h"
 #else
 #include "nsStringAPI.h"
 #include "nsComponentManagerUtils.h"
@@ -78,7 +79,6 @@
 #include "nsIDOMPluginArray.h"
 #include "nsIDOMPlugin.h"
 #include <plugin/nsIPluginHost.h>
-#include "nsString.h"
 #include "nsIDOMMimeType.h"
 #include "nsIObserverService.h"
 
@@ -506,7 +506,7 @@ gtk_moz_embed_common_remove_history (gchar *url, gint time) {
     myHistory->Observe(nsnull, "RemoveEntries", nsnull);
   else {
     EmbedGlobalHistory *history = EmbedGlobalHistory::GetInstance();
-    PRUnichar *uniurl = LocaleToUnicode(url);
+    PRUnichar *uniurl = ToNewUnicode(NS_ConvertUTF8toUTF16(url));
     rv = history->RemoveEntries (uniurl, time);
     NS_Free(uniurl);
   }

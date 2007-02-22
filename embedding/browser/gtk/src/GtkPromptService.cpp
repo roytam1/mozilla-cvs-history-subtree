@@ -85,12 +85,10 @@ GtkPromptService::Alert(
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[ALERT], TRUE)) {
-    nsCString dialogTitle, dialogText;
-    CopyUTF16toUTF8(aDialogTitle, dialogTitle);
-    CopyUTF16toUTF8(aDialogText, dialogText);
     gtk_signal_emit(GTK_OBJECT(parentWidget),
       moz_embed_signals[ALERT],
-      (const gchar *) dialogTitle.get(), (const gchar *) dialogText.get());
+      (const gchar *) NS_ConvertUTF16toUTF8(aDialogTitle).get(),
+      (const gchar *) NS_ConvertUTF16toUTF8(aDialogText).get());
     return NS_OK;
   }
 #ifndef MOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT
@@ -116,13 +114,12 @@ GtkPromptService::AlertCheck(
 
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[ALERT_CHECK], TRUE)) {
-    nsCString dialogTitle, dialogText, checkMsg;
-    CopyUTF16toUTF8(aDialogTitle, dialogTitle);
-    CopyUTF16toUTF8(aDialogText, dialogText);
-    CopyUTF16toUTF8(aCheckMsg, checkMsg);
     gtk_signal_emit(GTK_OBJECT(parentWidget),
                     moz_embed_signals[ALERT_CHECK],
-                    dialogTitle.get(), dialogTitle.get(), checkMsg.get(), aCheckValue);
+                    NS_ConvertUTF16toUTF8(aDialogTitle).get(),
+                    NS_ConvertUTF16toUTF8(aDialogTitle).get(),
+                    NS_ConvertUTF16toUTF8(aCheckMsg).get(),
+                    aCheckValue);
     return NS_OK;
   }
 #ifndef MOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT
@@ -147,12 +144,9 @@ GtkPromptService::Confirm(
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[CONFIRM], TRUE)) {
-    nsCString dialogTitle, dialogText;
-    CopyUTF16toUTF8(aDialogTitle, dialogTitle);
-    CopyUTF16toUTF8(aDialogText, dialogText);
     gtk_signal_emit(GTK_OBJECT(parentWidget),
                     moz_embed_signals[CONFIRM],
-                    dialogTitle.get(), dialogText.get(), aConfirm);
+                    NS_ConvertUTF16toUTF8(aDialogTitle).get(), NS_ConvertUTF16toUTF8(aDialogText).get(), aConfirm);
     return NS_OK;
   }
 #ifndef MOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT
@@ -180,15 +174,11 @@ GtkPromptService::ConfirmCheck(
 
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[CONFIRM_CHECK], TRUE)) {
-    nsCString dialogTitle, dialogText, checkMsg;
-    CopyUTF16toUTF8(aDialogTitle, dialogTitle);
-    CopyUTF16toUTF8(aDialogText, dialogText);
-    CopyUTF16toUTF8(aCheckMsg, checkMsg);
     gtk_signal_emit(GTK_OBJECT(parentWidget),
                     moz_embed_signals[CONFIRM_CHECK],
-                    dialogTitle.get(),
-                    dialogTitle.get(),
-                    checkMsg.get(),
+                    NS_ConvertUTF16toUTF8(aDialogTitle).get(),
+                    NS_ConvertUTF16toUTF8(aDialogTitle).get(),
+                    NS_ConvertUTF16toUTF8(aCheckMsg).get(),
                     aCheckValue,
                     aConfirm);
     return NS_OK;
@@ -223,23 +213,15 @@ GtkPromptService::ConfirmEx(
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[CONFIRM_EX], TRUE)) {
-    nsCString dialogTitle, dialogText, checkMsg;
-    nsCString button0,button1,button2;
-    CopyUTF16toUTF8(aDialogTitle, dialogTitle);
-    CopyUTF16toUTF8(aDialogText, dialogText);
-    CopyUTF16toUTF8(aCheckMsg, checkMsg);
-    CopyUTF16toUTF8(aButton0Title, button0);
-    CopyUTF16toUTF8(aButton1Title, button1);
-    CopyUTF16toUTF8(aButton2Title, button2);
     gtk_signal_emit(GTK_OBJECT(parentWidget),
                     moz_embed_signals[CONFIRM_EX],
-                    dialogTitle.get(),
-                    dialogTitle.get(),
+                    NS_ConvertUTF16toUTF8(aDialogTitle).get(),
+                    NS_ConvertUTF16toUTF8(aDialogText).get(),
                     aButtonFlags,
-                    button0.get(),
-                    button1.get(),
-                    button2.get(),
-                    checkMsg.get(),
+                    NS_ConvertUTF16toUTF8(aButton0Title).get(),
+                    NS_ConvertUTF16toUTF8(aButton1Title).get(),
+                    NS_ConvertUTF16toUTF8(aButton2Title).get(),
+                    NS_ConvertUTF16toUTF8(aCheckMsg).get(),
                     aCheckValue,
                     aRetVal);
     return NS_OK;
@@ -287,26 +269,20 @@ GtkPromptService::Prompt(
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[PROMPT], TRUE)) {
-    nsCString dialogTitle, dialogText, checkMsg, retValue;
-    CopyUTF16toUTF8(aDialogTitle, dialogTitle);
-    CopyUTF16toUTF8(aDialogText, dialogText);
-    CopyUTF16toUTF8(aCheckMsg, checkMsg);
-    CopyUTF16toUTF8(*aValue, retValue);
-    gchar * aGValue = g_strdup(retValue.get());
+    gchar * aGValue = ToNewCString(NS_ConvertUTF16toUTF8(*aValue));
     gtk_signal_emit(GTK_OBJECT(parentWidget),
                     moz_embed_signals[PROMPT],
-                    dialogTitle.get(),
-                    dialogText.get(),
+                    NS_ConvertUTF16toUTF8(aDialogTitle).get(),
+                    NS_ConvertUTF16toUTF8(aDialogText).get(),
                     &aGValue,
-                    checkMsg.get(),
+                    NS_ConvertUTF16toUTF8(aCheckMsg).get(),
                     aCheckValue,
                     aConfirm,
                     NULL);
     if (*aConfirm) {
       if (*aValue)
         NS_Free(*aValue);
-      retValue.Assign(aGValue);
-      *aValue = UTF8ToNewUnicode(retValue);
+      *aValue = ToNewUnicode(NS_ConvertUTF8toUTF16(aGValue));
     }
     g_free(aGValue);
     return NS_OK;
@@ -349,29 +325,24 @@ GtkPromptService::PromptUsernameAndPassword(
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[PROMPT_AUTH], TRUE)) {
-    nsCString dialogTitle, dialogText, checkMsg, retUsername, retPassword;
-    CopyUTF16toUTF8(aDialogTitle, dialogTitle);
-    CopyUTF16toUTF8(aDialogText, dialogText);
-    CopyUTF16toUTF8(aCheckMsg, checkMsg);
-    CopyUTF16toUTF8(*aUsername, retUsername);
-    CopyUTF16toUTF8(*aPassword, retPassword);
-    gchar * aGUsername = g_strdup(retUsername.get());
-    gchar * aGPassword = g_strdup(retPassword.get());
+    gchar * aGUsername = ToNewCString(NS_ConvertUTF16toUTF8(*aUsername));
+    gchar * aGPassword = ToNewCString(NS_ConvertUTF16toUTF8(*aPassword));
 
     gtk_signal_emit(GTK_OBJECT(parentWidget),
                     moz_embed_signals[PROMPT_AUTH],
-                    dialogTitle.get(), dialogText.get(), &aGUsername,
-                    &aGPassword, checkMsg.get(), aCheckValue, aConfirm);
+                    NS_ConvertUTF16toUTF8(aDialogTitle).get(),
+                    NS_ConvertUTF16toUTF8(aDialogText).get(),
+                    &aGUsername, &aGPassword,
+                    NS_ConvertUTF16toUTF8(aCheckMsg).get(),
+                    aCheckValue, aConfirm);
 
     if (*aConfirm) {
         if (*aUsername)
             NS_Free(*aUsername);
-        retUsername.Assign(aGUsername);
-        *aUsername = UTF8ToNewUnicode(retUsername);
+        *aUsername = ToNewUnicode(NS_ConvertUTF8toUTF16(aGUsername));
         if (*aPassword)
             NS_Free(*aPassword);
-        retPassword.Assign(aGPassword);
-        *aPassword = UTF8ToNewUnicode(retPassword);
+        *aPassword = ToNewUnicode(NS_ConvertUTF8toUTF16(aGPassword));
     }
     g_free(aGUsername);
     g_free(aGPassword);
@@ -418,27 +389,20 @@ GtkPromptService::PromptPassword(
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[PROMPT_AUTH], TRUE)) {
-    nsCString dialogTitle, dialogText, checkMsg, retPassword;
-    CopyUTF16toUTF8(aDialogTitle, dialogTitle);
-    CopyUTF16toUTF8(aDialogText, dialogText);
-    CopyUTF16toUTF8(aCheckMsg, checkMsg);
-    CopyUTF16toUTF8(*aPassword, retPassword);
-    gchar * aGPassword = g_strdup(retPassword.get());
-    gtk_signal_emit(
-      GTK_OBJECT(parentWidget),
-      moz_embed_signals[PROMPT_AUTH],
-      dialogTitle.get(),
-      dialogText.get(),
-      NULL,
-      &aGPassword,
-      checkMsg.get(),
-      aCheckValue,
-      aConfirm);
+    gchar * aGPassword = ToNewCString(NS_ConvertUTF16toUTF8(*aPassword));
+    gtk_signal_emit(GTK_OBJECT(parentWidget),
+                    moz_embed_signals[PROMPT_AUTH],
+                    NS_ConvertUTF16toUTF8(aDialogTitle).get(),
+                    NS_ConvertUTF16toUTF8(aDialogText).get(),
+                    NULL,
+                    &aGPassword,
+                    NS_ConvertUTF16toUTF8(aCheckMsg).get(),
+                    aCheckValue,
+                    aConfirm);
     if (*aConfirm) {
       if (*aPassword)
         NS_Free(*aPassword);
-      retPassword.Assign(aGPassword);
-      *aPassword = UTF8ToNewUnicode(retPassword);
+      *aPassword = ToNewUnicode(NS_ConvertUTF8toUTF16(aGPassword));
     }
     g_free(aGPassword);
     return NS_OK;
@@ -480,24 +444,20 @@ GtkPromptService::Select(
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[SELECT], TRUE)) {
-    nsCString dialogTitle, dialogText;
-    CopyUTF16toUTF8(aDialogTitle, dialogTitle);
-    CopyUTF16toUTF8(aDialogText, dialogText);
     GList * list = NULL;
     nsCString *itemList = new nsCString[aCount];
     NS_ENSURE_TRUE(itemList, NS_ERROR_OUT_OF_MEMORY);
     for (PRUint32 i = 0; i < aCount; ++i) {
-      CopyUTF16toUTF8(aSelectList[i], itemList[i]);
+      itemList[i] = ToNewCString(NS_ConvertUTF16toUTF8(aSelectList[i]));
       list = g_list_append(list, (gpointer)itemList[i].get());
     }
-    gtk_signal_emit(
-      GTK_OBJECT(parentWidget),
-      moz_embed_signals[SELECT],
-      dialogTitle.get(),
-      dialogText.get(),
-      (const GList**)&list,
-      outSelection,
-      aConfirm);
+    gtk_signal_emit(GTK_OBJECT(parentWidget),
+                    moz_embed_signals[SELECT],
+                    NS_ConvertUTF16toUTF8(aDialogTitle).get(),
+                    NS_ConvertUTF16toUTF8(aDialogText).get(),
+                    (const GList**)&list,
+                    outSelection,
+                    aConfirm);
     delete[] itemList;
     g_list_free(list);
     return NS_OK;

@@ -64,7 +64,4 @@ GetGtkWindowForDOMWindow(nsIDOMWindow* aDOMWindow);
 nsresult
 GetContentViewer (nsIWebBrowser *webBrowser, nsIContentViewer **aViewer);
 
-PRUnichar*
-LocaleToUnicode (const char *locStr);
-
 #endif /* __EmbedTools_h */

@@ -687,11 +687,7 @@ EmbedPrivate::SetURI(const char *aURI)
 #endif
 
 #ifdef MOZ_WIDGET_GTK2
-#ifdef MOZILLA_INTERNAL_API
-  CopyUTF8toUTF16(aURI, mURI);
-#else
-  mURI.AssignLiteral(aURI);
-#endif
+  mURI.Assign(NS_ConvertUTF8toUTF16(aURI));
 #endif
 }
 
@@ -859,8 +855,10 @@ void EmbedPrivate::SetPath(const char *aPath)
 {
   if (sPath)
     free(sPath);
-  if (aPath)
+  if (aPath) {
     sPath = strdup(aPath);
+    setenv("MOZILLA_FIVE_HOME", sPath, 0);
+  }
   else
     sPath = nsnull;
 }
@@ -1556,13 +1554,7 @@ EmbedPrivate::SetEncoding (const char *encoding)
   NS_ENSURE_TRUE (contentViewer, NS_ERROR_FAILURE);
   nsCOMPtr<nsIMarkupDocumentViewer> mDocViewer = do_QueryInterface(contentViewer);
   NS_ENSURE_TRUE (mDocViewer, NS_ERROR_FAILURE);
-  nsAutoString mCharset;
-#ifdef MOZILLA_INTERNAL_API
-  mCharset.AssignWithConversion (encoding);
-#else
-  mCharset.AssignLiteral (encoding);
-#endif
-  return mDocViewer->SetForceCharacterSet(NS_LossyConvertUTF16toASCII(ToNewUnicode(mCharset)));
+  return mDocViewer->SetForceCharacterSet(nsDependentCString(encoding));
 }
 
 PRBool
@@ -1577,7 +1569,7 @@ EmbedPrivate::FindText(const char *exp, PRBool  reverse,
   mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
   nsCOMPtr<nsIWebBrowserFind> finder(do_GetInterface (webBrowser));
   g_return_val_if_fail(finder != NULL, FALSE);
-  text = LocaleToUnicode (exp);
+  text = ToNewUnicode(NS_ConvertUTF8toUTF16(exp));
   finder->SetSearchString (text);
   finder->SetFindBackwards (reverse);
   finder->SetWrapFind(restart); //DoWrapFind
@@ -1672,19 +1664,9 @@ EmbedPrivate::InsertTextToNode(nsIDOMNode *aDOMNode, const char *string)
 
       if (selectionStart != selectionEnd)
         buffer.Cut(selectionStart, selectionEnd - selectionStart);
-#ifdef MOZILLA_INTERNAL_API
-      buffer.Insert(UTF8ToNewUnicode(nsDependentCString(string)), selectionStart);
-#else
-      nsString nsstr;
-      nsstr.AssignLiteral(string);
-      buffer.Insert(nsstr, selectionStart);
-#endif
+      buffer.Insert(NS_ConvertUTF8toUTF16(string), selectionStart);
     } else {
-#ifdef MOZILLA_INTERNAL_API
-      CopyUTF8toUTF16(string, buffer);
-#else
-      buffer.AssignLiteral(string);
-#endif
+      buffer.Assign(NS_ConvertUTF8toUTF16(string));
     }
 
     input->SetValue(buffer);
@@ -1714,18 +1696,9 @@ EmbedPrivate::InsertTextToNode(nsIDOMNode *aDOMNode, const char *string)
       if (selectionStart != selectionEnd) {
         buffer.Cut(selectionStart, selectionEnd - selectionStart);
       }
-#ifdef MOZILLA_INTERNAL_API
-      buffer.Insert(UTF8ToNewUnicode(nsDependentCString(string)), selectionStart);
-#else
-      nsString nsstr;
-      buffer.Insert(nsstr, selectionStart);
-#endif
+      buffer.Insert(NS_ConvertUTF8toUTF16(string), selectionStart);
     } else {
-#ifdef MOZILLA_INTERNAL_API
-      CopyUTF8toUTF16(string, buffer);
-#else
-      buffer.AssignLiteral(string);
-#endif
+      buffer.Assign(NS_ConvertUTF8toUTF16(string));
     }
 
     input->SetValue(buffer);
@@ -1754,12 +1727,7 @@ EmbedPrivate::InsertTextToNode(nsIDOMNode *aDOMNode, const char *string)
     htmlEditor = do_QueryInterface(theEditor, &rv);
     if (!htmlEditor)
       return NS_ERROR_FAILURE;
-
-#ifdef MOZILLA_INTERNAL_API
-    CopyUTF8toUTF16(string, buffer);
-#else
-    buffer.AssignLiteral(string);
-#endif
+    buffer.Assign(NS_ConvertUTF8toUTF16(string));
     htmlEditor->InsertHTML(buffer);
   }
   return NS_OK;

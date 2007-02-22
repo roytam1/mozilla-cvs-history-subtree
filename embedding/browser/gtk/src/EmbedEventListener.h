@@ -127,10 +127,6 @@ class EmbedEventListener : public nsIDOMKeyListener,
   NS_IMETHOD Blur(nsIDOMEvent* aEvent);
   NS_IMETHOD HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent);
 
-  // FIXME: dont not use nsCOMPtr<...> as param !! and how to ?
-  nsresult   GetLinkAttribute  (nsCOMPtr <nsIDOMElement>& linkElement,
-                                const char *name,
-                                nsString *value);
   nsresult   NewURI            (nsIURI **result,
                                 const char *spec);
   nsresult   GetIOService      (nsIIOService **ioService);

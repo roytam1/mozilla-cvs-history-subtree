@@ -45,6 +45,8 @@
 #include "nsString.h"
 #else
 #include "nsStringAPI.h"
+#include "nsComponentManagerUtils.h"
+#include "nsServiceManagerUtils.h"
 #endif
 #include "nsIWebNavigation.h"
 #include "nsISHistory.h"

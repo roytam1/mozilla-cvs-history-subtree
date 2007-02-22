@@ -103,11 +103,11 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
   if (!linkElement) return NS_ERROR_FAILURE;
 
   nsString name;
-  result = GetLinkAttribute(linkElement, "rel", &name);
+  result = linkElement->GetAttribute(NS_LITERAL_STRING("rel"), name);
   if (NS_FAILED(result)) return NS_ERROR_FAILURE;
 
   nsString link;
-  result = GetLinkAttribute(linkElement, "href", &link);
+  result = linkElement->GetAttribute(NS_LITERAL_STRING("href"), link);
   if (NS_FAILED(result) || link.IsEmpty()) return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIDOMDocument> domDoc;
@@ -120,55 +120,40 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
   nsString spec;
   domnode->GetBaseURI(spec);
 
-  nsCString cSpec;
-  NS_UTF16ToCString(spec, NS_CSTRING_ENCODING_UTF8, cSpec);
-
   nsCOMPtr<nsIURI> baseURI;
-  result = NewURI(getter_AddRefs(baseURI), cSpec.get());
+  result = NewURI(getter_AddRefs(baseURI), NS_ConvertUTF16toUTF8(spec).get());
   if (NS_FAILED(result) || !baseURI) return NS_ERROR_FAILURE;
 
-  nsCString linkstring;
-  NS_UTF16ToCString(link, NS_CSTRING_ENCODING_UTF8, linkstring);
   nsCString url;
-  result = baseURI->Resolve (linkstring, url);
+  result = baseURI->Resolve (NS_ConvertUTF16toUTF8(link), url);
   if (NS_FAILED(result)) return NS_ERROR_FAILURE;
 
   nsString type;
-  result = GetLinkAttribute(linkElement, "type", &type);
+  result = linkElement->GetAttribute(NS_LITERAL_STRING("type"), type);
   if (NS_FAILED(result)) return NS_ERROR_FAILURE;
-
-  nsCString cType;
-  NS_UTF16ToCString(type, NS_CSTRING_ENCODING_UTF8, cType);
 
   nsString title;
-  result = GetLinkAttribute(linkElement, "title", &title);
+  result = linkElement->GetAttribute(NS_LITERAL_STRING("title"), title);
   if (NS_FAILED(result)) return NS_ERROR_FAILURE;
 
-  nsCString cTitle;
-  NS_UTF16ToCString(title, NS_CSTRING_ENCODING_UTF8, cTitle);
-
-  nsCString cName;
-  NS_UTF16ToCString(name, NS_CSTRING_ENCODING_UTF8, cName);
-
   // XXX This does not handle |BLAH ICON POWER"
-  if (cName.LowerCaseEqualsLiteral("icon") ||
-      cName.LowerCaseEqualsLiteral("shortcut icon")) {
-
+  if (name.LowerCaseEqualsLiteral("icon") ||
+      name.LowerCaseEqualsLiteral("shortcut icon")) {
     mOwner->mNeedFav = PR_FALSE;
     this->GetFaviconFromURI(url.get());
   }
   else {
 
-    const gchar *navi_title = cTitle.get();
+    const gchar *navi_title = NS_ConvertUTF16toUTF8(title).get();
     if (*navi_title == '\0')
       navi_title = NULL;
 
-    const gchar *navi_type = cType.get();
+    const gchar *navi_type = NS_ConvertUTF16toUTF8(type).get();
     if (*navi_type == '\0')
       navi_type = NULL;
 
-    if (cName.LowerCaseEqualsLiteral("alternate") &&
-        cType.LowerCaseEqualsLiteral("application/rss+xml")) {
+    if (name.LowerCaseEqualsLiteral("alternate") &&
+        type.LowerCaseEqualsLiteral("application/rss+xml")) {
     }
     else {
     }
@@ -210,7 +195,8 @@ EmbedEventListener::HandleEvent(nsIDOMEvent* aDOMEvent)
   }
   else if (mOwner->mNeedFav) {
     mOwner->mNeedFav = PR_FALSE;
-    nsCString favicon_url = mOwner->mPrePath + nsCString("/favicon.ico");
+    nsCString favicon_url = mOwner->mPrePath;
+	favicon_url.AppendLiteral("/favicon.ico");
     this->GetFaviconFromURI(favicon_url.get());
   }
   return NS_OK;
@@ -722,18 +708,6 @@ EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
   }
 #endif
   return rv;
-}
-
-nsresult
-EmbedEventListener::GetLinkAttribute (nsCOMPtr<nsIDOMElement>& linkElement,
-                                      const char *name,
-                                      nsString *value)
-{
-  nsString n_name;
-  nsCString c_name(name);
-  NS_CStringToUTF16(c_name, NS_CSTRING_ENCODING_UTF8, n_name);
-
-  return linkElement->GetAttribute(n_name, *value);
 }
 
 nsresult

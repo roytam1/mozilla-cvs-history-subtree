@@ -98,10 +98,6 @@
 #include "nsIForm.h"
 #else
 #include "nsDirectoryServiceUtils.h"
-//FIXME
-typedef char* nsXPIDLCString;
-typedef PRUnichar* nsXPIDLString;
-#define getter_Copies(str) &str
 #include "nsComponentManagerUtils.h"
 #include "nsIForm.h"
 #include "nsStringAPI.h"
@@ -297,20 +293,13 @@ EmbedPasswordMgr::Init()
   NS_ASSERTION(progress, "No web progress service");
   progress->AddProgressListener(this, nsIWebProgress::NOTIFY_STATE_DOCUMENT);
   // Now read in the signon file
-  nsXPIDLCString signonFile;
-  mPrefBranch->GetCharPref("SignonFileName", getter_Copies(signonFile));
-#ifdef MOZILLA_INTERNAL_API
-  NS_ASSERTION(!signonFile.IsEmpty(), "Fallback for signon filename not present");
-#endif
+  char* signonFile = nsnull;
+  mPrefBranch->GetCharPref("SignonFileName", &signonFile);
+  NS_ASSERTION(signonFile, "Fallback for signon filename not present");
   NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(mSignonFile));
   NS_ENSURE_TRUE(mSignonFile, NS_ERROR_FAILURE);
-#ifdef MOZILLA_INTERNAL_API
-  mSignonFile->AppendNative(signonFile);
-#else
-  nsCString cSignonFile(signonFile);
-  mSignonFile->AppendNative(cSignonFile);
-#endif
-  nsCAutoString path;
+  mSignonFile->AppendNative(nsCString(signonFile));
+  nsCString path;
   mSignonFile->GetNativePath(path);
   ReadPasswords(mSignonFile);
   return NS_OK;
@@ -339,20 +328,20 @@ EmbedPasswordMgr::Register(nsIComponentManager* aCompMgr,
   nsresult rv;
   nsCOMPtr<nsICategoryManager> catman = do_GetService(NS_CATEGORYMANAGER_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
-  nsXPIDLCString prevEntry;
+  char* prevEntry;
   catman->AddCategoryEntry(NS_PASSWORDMANAGER_CATEGORY,
                            "MicroB Password Manager",
                            NS_PASSWORDMANAGER_CONTRACTID,
                            PR_TRUE,
                            PR_TRUE,
-                           getter_Copies(prevEntry));
+                           &prevEntry);
 
   catman->AddCategoryEntry("app-startup",
                            "MicroB Password Manager",
                            NS_PASSWORDMANAGER_CONTRACTID,
                            PR_TRUE,
                            PR_TRUE,
-                           getter_Copies(prevEntry));
+                           &prevEntry);
 
   return NS_OK;
 }
@@ -1148,34 +1137,22 @@ EmbedPasswordMgr::Notify(nsIContent* aFormNode,
       // If the username field or the form has autocomplete=off,
       // we don't store the login
       if (!sForceAutocompletion) {
-        nsAutoString autocomplete;
+        nsString autocomplete;
         if (userField) {
           nsCOMPtr<nsIDOMElement> userFieldElement = do_QueryInterface(userField);
           userFieldElement->GetAttribute(NS_LITERAL_STRING("autocomplete"),
                                          autocomplete);
-#ifdef MOZILLA_INTERNAL_API
-          if (autocomplete.EqualsIgnoreCase("off"))
-#else
-            if (autocomplete.LowerCaseEqualsLiteral("off"))
-#endif
-              return NS_OK;
+          if (autocomplete.LowerCaseEqualsLiteral("off"))
+            return NS_OK;
         }
         nsCOMPtr<nsIDOMElement> formDOMEl = do_QueryInterface(aFormNode);
         formDOMEl->GetAttribute(NS_LITERAL_STRING("autocomplete"), autocomplete);
-#ifdef MOZILLA_INTERNAL_API
-        if (autocomplete.EqualsIgnoreCase("off"))
-#else
-          if (autocomplete.LowerCaseEqualsLiteral("off"))
-#endif
+        if (autocomplete.LowerCaseEqualsLiteral("off"))
             return NS_OK;
         nsCOMPtr<nsIDOMElement> passFieldElement = do_QueryInterface(passFields.ObjectAt(0));
         passFieldElement->GetAttribute(NS_LITERAL_STRING("autocomplete"), autocomplete);
-#ifdef MOZILLA_INTERNAL_API
-        if (autocomplete.EqualsIgnoreCase("off"))
-#else
-          if (autocomplete.LowerCaseEqualsLiteral("off"))
-#endif
-            return NS_OK;
+        if (autocomplete.LowerCaseEqualsLiteral("off"))
+          return NS_OK;
       }
       // Check whether this signon is already stored.
       // Note that we don't prompt the user if only the password doesn't match;
@@ -1219,16 +1196,12 @@ EmbedPasswordMgr::Notify(nsIContent* aFormNode,
       rv = bundleService->CreateBundle("chrome://branding/locale/brand.properties",
                                        getter_AddRefs(brandBundle));
       NS_ENSURE_SUCCESS(rv, rv);
-      nsXPIDLString brandShortName;
+      PRUnichar* brandShortName;
       rv = brandBundle->GetStringFromName(NS_LITERAL_STRING("brandShortName").get(),
-                                          getter_Copies(brandShortName));
+                                          &brandShortName);
       NS_ENSURE_SUCCESS(rv, rv);
       const PRUnichar* formatArgs[1] = {
-#ifdef MOZILLA_INTERNAL_API
-        brandShortName.get()
-#else
           brandShortName
-#endif
       };
       nsAutoString dialogText;
       GetLocalizedString(NS_LITERAL_STRING("savePasswordText"),
@@ -1794,14 +1767,14 @@ EmbedPasswordMgr::GetLocalizedString(const nsAString& key,
       return;
     }
   }
-  nsXPIDLString str;
+  PRUnichar* str;
   if (aIsFormatted)
     sPMBundle->FormatStringFromName(PromiseFlatString(key).get(),
                                     aFormatArgs, aFormatArgsLength,
-                                    getter_Copies(str));
+                                    &str);
   else
     sPMBundle->GetStringFromName(PromiseFlatString(key).get(),
-                                 getter_Copies(str));
+                                 &str);
   aResult.Assign(str);
 }
 
