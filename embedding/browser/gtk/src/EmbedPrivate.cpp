@@ -66,7 +66,6 @@
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMAbstractView.h"
 #include "nsIDOMDocumentView.h"
-#include "nsIChromeEventHandler.h"
 
 // For seting scrollbar visibilty
 #include "nsIDOMBarProp.h"
