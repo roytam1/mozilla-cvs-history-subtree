@@ -2650,6 +2650,7 @@ nsNativeAppSupportWin::OnLastWindowClosing() {
     // in StartServerMode(), don't do anything.
     if ( mInitialWindowActive ) {
         mInitialWindowActive = PR_FALSE;
+        mShouldShowUI = PR_TRUE;
         return NS_OK;
     }
 
