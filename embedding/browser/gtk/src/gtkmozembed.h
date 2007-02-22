@@ -241,6 +241,7 @@ GTKMOZEMBED_API(gboolean,      gtk_moz_embed_save_target,         (GtkMozEmbed *
 GTKMOZEMBED_API(gint,          gtk_moz_embed_get_shistory_list,   (GtkMozEmbed *embed, GtkMozHistoryItem **GtkHI, guint type))
 GTKMOZEMBED_API(gint,          gtk_moz_embed_get_shistory_index,  (GtkMozEmbed *embed))
 GTKMOZEMBED_API(void,          gtk_moz_embed_shistory_goto_index, (GtkMozEmbed *embed, gint index))
+GTKMOZEMBED_API(gboolean,      gtk_moz_embed_get_server_cert,     (GtkMozEmbed *embed, gpointer *aCert))
 
 /* Defines used by download and upload components */
 #define GTK_MOZ_EMBED_COMMON_FILE_SCHEME "file://"

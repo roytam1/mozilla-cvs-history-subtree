@@ -106,6 +106,7 @@ REQUIRES	= xpcom \
 		  webbrowserpersist \
 		  cookie \
 		  nkcache \
+		  pipboot \
 		  $(NULL)
 
 ifdef ACCESSIBILITY

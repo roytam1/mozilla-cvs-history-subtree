@@ -65,6 +65,11 @@
 // so we can do our get_nsIWebBrowser later...
 #include "nsIWebBrowser.h"
 
+#include "nsISSLStatus.h"
+#include "nsISSLStatusProvider.h"
+#include "nsIX509Cert.h"
+#include "nsISecureBrowserUI.h"
+
 // for strings
 #ifdef MOZILLA_INTERNAL_API
 #include "nsXPIDLString.h"
@@ -1760,4 +1765,36 @@ gtk_moz_embed_shistory_goto_index(GtkMozEmbed *embed, gint index)
   embedPrivate = (EmbedPrivate *)embed->data;
   if (embedPrivate->mNavigation)
     embedPrivate->mNavigation->GotoIndex(index);
+}
+
+gboolean
+gtk_moz_embed_get_server_cert(GtkMozEmbed *embed, gpointer *aCert)
+{
+  g_return_val_if_fail(embed != NULL, FALSE);
+  g_return_val_if_fail(GTK_IS_MOZ_EMBED(embed), FALSE);
+
+  nsIWebBrowser *webBrowser = nsnull;
+  gtk_moz_embed_get_nsIWebBrowser (GTK_MOZ_EMBED (embed), &webBrowser);
+  if (!webBrowser) return FALSE;
+
+  nsCOMPtr<nsIDocShell> docShell(do_GetInterface((nsISupports*)webBrowser));
+  if(!docShell) return FALSE;
+
+  nsCOMPtr<nsISecureBrowserUI> mSecureUI;
+  docShell->GetSecurityUI (getter_AddRefs (mSecureUI));
+  if(!mSecureUI) return FALSE;
+
+  nsCOMPtr<nsISSLStatusProvider> mSecureProvider = do_QueryInterface (mSecureUI);
+  if(!mSecureProvider) return FALSE;
+
+  nsCOMPtr<nsISSLStatus> SSLStatus;
+  mSecureProvider->GetSSLStatus(getter_AddRefs(SSLStatus));
+  if(!SSLStatus) return FALSE;
+
+  nsCOMPtr<nsIX509Cert> serverCert;
+  SSLStatus->GetServerCert (getter_AddRefs (serverCert));
+  if(!serverCert) return FALSE;
+
+  *aCert = serverCert;
+  return TRUE;
 }

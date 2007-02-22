@@ -77,7 +77,8 @@
   GTKF(gtk_moz_embed_common_observe) \
   GTKF(gtk_moz_embed_get_shistory_list) \
   GTKF(gtk_moz_embed_get_shistory_index) \
-  GTKF(gtk_moz_embed_shistory_goto_index)
+  GTKF(gtk_moz_embed_shistory_goto_index) \
+  GTKF(gtk_moz_embed_get_server_cert)
 #else
 #define GTKMOZEMBED2_FUNCTIONS
 #endif
