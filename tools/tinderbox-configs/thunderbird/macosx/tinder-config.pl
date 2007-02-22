@@ -141,7 +141,7 @@ $BuildNameExtra = 'Tb-Universal-l10n-Release';
 # Configure only, don't build.
 $ConfigureOnly = 1;
 %WGetFiles = (
-	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.9-candidates/rc1/thunderbird-1.5.0.9.en-US.mac.dmg' =>
+	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.10-candidates/rc1/thunderbird-1.5.0.10.en-US.mac.dmg' =>
 	     "/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Darwin_8.7.0_Depend/thunderbird.dmg"
 	     );
 $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Darwin_8.7.0_Depend/thunderbird.dmg";
@@ -158,7 +158,7 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Darwi
 #- change to the tree you're actually building
 $BuildTree  = 'Mozilla1.8.0-l10n';
 #$BuildName = '';
-$BuildTag = 'THUNDERBIRD_1_5_0_9_RELEASE';
+$BuildTag = 'THUNDERBIRD_1_5_0_10_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -197,7 +197,7 @@ $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox";
-$milestone     = "thunderbird1.5.0.9";
+$milestone     = "thunderbird1.5.0.10";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
@@ -205,12 +205,12 @@ $archive       = 1;
 $push_raw_xpis = 0;
 $update_package = 1;
 $update_product = "Thunderbird";
-$update_version = "1.5.0.9";
+$update_version = "1.5.0.10";
 $update_platform = "Darwin_Universal-gcc3";
 $update_hash = "sha1";
 $update_filehost = "mozilla.osuosl.org";
-$update_appv = "1.5.0.9";
-$update_extv = "1.5.0.9";
+$update_appv = "1.5.0.10";
+$update_extv = "1.5.0.10";
 $update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
