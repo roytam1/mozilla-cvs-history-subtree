@@ -70,30 +70,31 @@
 #include "nsNetCID.h"
 #include <unistd.h>
 #include <gtkmozembed_download.h>
+
+#define UNKNOWN_FILE_SIZE -1
+
 class EmbedDownloadMgr;
 class ProgressListener : public nsIWebProgressListener2
 {
 public:
-    ProgressListener(EmbedDownload *aDownload, nsCAutoString aFilename, nsISupports *aContext) : mFilename (aFilename)
+    ProgressListener (EmbedDownload *aDownload)
     {
         mDownload = aDownload;
-        mContext = aContext;
     };
-    ~ProgressListener()
+
+    ~ProgressListener (void)
     {
     };
+
     NS_DECL_ISUPPORTS
     NS_DECL_NSIWEBPROGRESSLISTENER
     NS_DECL_NSIWEBPROGRESSLISTENER2
+
     EmbedDownload *mDownload;
-    nsISupports *mContext;            /** < The context object */
-    nsCOMPtr<nsILocalFile> mDestFile;
-    nsCAutoString mFilename;
-    nsCAutoString mLocalSaveFileName;
 };
 
-NS_IMPL_ISUPPORTS2(ProgressListener, nsIWebProgressListener2, nsIWebProgressListener)
-NS_IMPL_ISUPPORTS1(EmbedDownloadMgr, nsIHelperAppLauncherDialog)
+NS_IMPL_ISUPPORTS2 (ProgressListener, nsIWebProgressListener2, nsIWebProgressListener)
+NS_IMPL_ISUPPORTS1 (EmbedDownloadMgr, nsIHelperAppLauncherDialog)
 
 EmbedDownloadMgr::EmbedDownloadMgr(void)
 {
@@ -103,196 +104,218 @@ EmbedDownloadMgr::~EmbedDownloadMgr(void)
 {
 }
 
-nsresult
-EmbedDownloadMgr::Init()
+NS_IMETHODIMP
+EmbedDownloadMgr::RemoveSchemeFromFilePath (gchar **path)
 {
+  char** temp_splitv = NULL;
+  char* temp_path = NULL;
+
+  if (g_str_has_prefix (*path, "file://")) {
+    temp_path = *path;
+
+    temp_splitv = g_strsplit (*path, "file://", 2);
+    *path = g_strdup(temp_splitv[1]);
+
+    g_strfreev(temp_splitv);
+    g_free(temp_path);
+  }
+
   return NS_OK;
 }
 
 NS_IMETHODIMP
-EmbedDownloadMgr::Show(nsIHelperAppLauncher *aLauncher, nsISupports *aContext, PRUint32 aForced)
+EmbedDownloadMgr::Show (nsIHelperAppLauncher *aLauncher,
+                        nsISupports *aContext,
+                        PRUint32 aForced)
 {
   nsresult rv;
-  mContext = aContext;
-  mLauncher = aLauncher;
-  rv = GetDownloadInfo();
+
+  /* create a Download object */
+  GtkObject* instance = gtk_moz_embed_download_new ();
+  mDownload = (EmbedDownload *) GTK_MOZ_EMBED_DOWNLOAD(instance)->data;
+  mDownload->parent = instance;
+
+  rv = GetDownloadInfo(aLauncher, aContext);
+
+  /* Retrieve GtkMozEmbed object from DOM Window */
+  nsCOMPtr<nsIDOMWindow> parentDOMWindow = do_GetInterface (aContext);
+  mDownload->gtkMozEmbedParentWidget = GetGtkWidgetForDOMWindow(parentDOMWindow);
+
+  gtk_signal_emit (GTK_OBJECT (mDownload->gtkMozEmbedParentWidget),
+                   moz_embed_signals[DOWNLOAD_REQUEST],
+                   mDownload->server,
+                   mDownload->file_name,
+                   mDownload->file_type,
+                   (gulong) mDownload->file_size,
+                   1);
+
+  gtk_signal_emit (GTK_OBJECT (mDownload->parent),
+                   moz_embed_download_signals[DOWNLOAD_STARTED_SIGNAL],
+                   &mDownload->file_name_with_path);
+
+  if (!mDownload->file_name_with_path) {
+    gtk_moz_embed_download_do_command (GTK_MOZ_EMBED_DOWNLOAD (mDownload->parent),
+                                       GTK_MOZ_EMBED_DOWNLOAD_CANCEL);
+    return NS_OK;
+  }
+
+  rv = RemoveSchemeFromFilePath (&mDownload->file_name_with_path);
+
+  aLauncher->SaveToDisk (nsnull, PR_FALSE);
+
   return NS_OK;
 }
 
-NS_METHOD EmbedDownloadMgr::GetDownloadInfo (void)
+NS_METHOD
+EmbedDownloadMgr::GetDownloadInfo (nsIHelperAppLauncher *aLauncher,
+                                   nsISupports *aContext)
 {
-  nsresult rv;
-  // create a Download object
-  GtkObject* instance = gtk_moz_embed_download_new ();
-  EmbedDownload *download = (EmbedDownload *) GTK_MOZ_EMBED_DOWNLOAD(instance)->data;
-  // get file mimetype
-  rv = mLauncher->GetMIMEInfo (getter_AddRefs(mMIMEInfo));
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+  nsresult rv = NS_OK;
+
+  /* File type */
+  nsCOMPtr<nsIMIMEInfo> mMIMEInfo;
+  rv = aLauncher->GetMIMEInfo (getter_AddRefs(mMIMEInfo));
+  if (NS_FAILED (rv))
+    return NS_ERROR_FAILURE;
+
   nsCAutoString aMimeType;
   rv = mMIMEInfo->GetMIMEType (aMimeType);
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  // get file name
+  if (NS_FAILED (rv))
+    return NS_ERROR_FAILURE;
+
+  /* File name */
   nsCAutoString aTempFileName;
   nsAutoString aSuggestedFileName;
-  rv = mLauncher->GetSuggestedFileName (aSuggestedFileName);
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+  rv = aLauncher->GetSuggestedFileName (aSuggestedFileName);
+
+  if (NS_FAILED (rv))
+    return NS_ERROR_FAILURE;
+
   aTempFileName = NS_ConvertUTF16toUTF8 (aSuggestedFileName);
-  // get source url (concatened to file name)
-  rv = mLauncher->GetSource (getter_AddRefs(mUri));
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  rv = mUri->Resolve(NS_LITERAL_CSTRING("."), mSpec);
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  rv = mLauncher->GetTargetFile(getter_AddRefs(mDestFileTemp));
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  download->file_target = mDestFileTemp;
-  // creating a progress listener to follow the download and connecting it to the launcher which controls the download.
-  nsCOMPtr<nsIWebProgressListener2> listener = new ProgressListener(download, aTempFileName, mContext);
-  rv = mLauncher->SetWebProgressListener(listener);
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  // setting download vars to keep control of each download.
-  download->parent = instance;
-  download->started = 0;
-  download->downloaded_size = -1;
-  download->launcher = mLauncher;
-  download->file_name = g_strdup ((gchar *) aTempFileName.get());
-  download->server = g_strconcat(mSpec.get(), (gchar *) download->file_name, NULL);
-  download->file_type = g_strdup (aMimeType.get());
-  return NS_OK;
+
+  /* Complete source URL */
+  nsCOMPtr<nsIURI> mUri;
+  rv = aLauncher->GetSource (getter_AddRefs (mUri));
+  if (NS_FAILED (rv))
+    return NS_ERROR_FAILURE;
+
+  nsCAutoString mSpec;
+  rv = mUri->Resolve (NS_LITERAL_CSTRING ("."), mSpec);
+  if (NS_FAILED (rv))
+    return NS_ERROR_FAILURE;
+
+  /* Sets download object to keep control of each download. */
+  mDownload->launcher = aLauncher;
+  mDownload->downloaded_size = -1;
+  mDownload->file_name = g_strdup ((gchar *) aTempFileName.get ());
+  mDownload->server = g_strconcat(mSpec.get(), (gchar *) mDownload->file_name, NULL);
+  mDownload->file_type = g_strdup (aMimeType.get());
+  mDownload->file_size = UNKNOWN_FILE_SIZE;
+
+  return rv;
 }
 
-// it should be used... but it's not possible to do it according ui flow
 NS_IMETHODIMP EmbedDownloadMgr::PromptForSaveToFile (nsIHelperAppLauncher *aLauncher,
-                                                        nsISupports *aWindowContext,
-                                                        const PRUnichar *aDefaultFile,
-                                                        const PRUnichar *aSuggestedFileExtension,
-                                                        nsILocalFile **_retval)
+                                                     nsISupports *aWindowContext,
+                                                     const PRUnichar *aDefaultFile,
+                                                     const PRUnichar *aSuggestedFileExtension,
+                                                     nsILocalFile **_retval)
 {
+  nsresult rv;
+
+  nsCAutoString file_path;
+  file_path.Assign (mDownload->file_name_with_path);
+
+  nsCOMPtr <nsILocalFile> destFile;
+  NS_NewNativeLocalFile (file_path,
+                         PR_TRUE,
+                         getter_AddRefs (destFile));
+
+  NS_ADDREF (*_retval = destFile);
+
+  /* Progress listener to follow the download and connecting it to
+     the launcher which controls the download. */
+  nsCOMPtr<nsIWebProgressListener2> listener = new ProgressListener(mDownload);
+  rv = aLauncher->SetWebProgressListener (listener);
+  if (NS_FAILED (rv))
+    return NS_ERROR_FAILURE;
+
   return NS_OK;
 }
 
-// nsIWebProgressListener Functions
-// all these methods must be here due to nsIWebProgressListenr/2 inheritance
+/* nsIWebProgressListener Functions
+   all these methods must be here due to nsIWebProgressListenr/2 inheritance */
 NS_IMETHODIMP ProgressListener::OnStatusChange (nsIWebProgress *aWebProgress,
-                                                    nsIRequest *aRequest, nsresult aStatus,
-                                                    const PRUnichar *aMessage)
+                                                nsIRequest *aRequest,
+                                                nsresult aStatus,
+                                                const PRUnichar *aMessage)
 {
   if (NS_SUCCEEDED (aStatus))
     return NS_OK;
+
   return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP ProgressListener::OnStateChange (nsIWebProgress *aWebProgress,
-                                                    nsIRequest *aRequest, PRUint32 aStateFlags,
-                                                    nsresult aStatus)
+                                               nsIRequest *aRequest, PRUint32 aStateFlags,
+                                               nsresult aStatus)
 {
-  if (NS_SUCCEEDED (aStatus))
-    return NS_OK;
-  return NS_ERROR_FAILURE;
+  if (NS_FAILED (aStatus))
+    return NS_ERROR_FAILURE;
+
+  if (aStateFlags & STATE_STOP)
+    gtk_signal_emit(GTK_OBJECT(mDownload->parent),
+                    moz_embed_download_signals[DOWNLOAD_COMPLETED_SIGNAL]);
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP ProgressListener::OnProgressChange (nsIWebProgress *aWebProgress,
-                                                    nsIRequest *aRequest, PRInt32 aCurSelfProgress,
-                                                    PRInt32 aMaxSelfProgress, PRInt32 aCurTotalProgress,
-                                                    PRInt32 aMaxTotalProgress)
+                                                  nsIRequest *aRequest, PRInt32 aCurSelfProgress,
+                                                  PRInt32 aMaxSelfProgress, PRInt32 aCurTotalProgress,
+                                                  PRInt32 aMaxTotalProgress)
 {
-  return OnProgressChange64 (aWebProgress, aRequest, aCurSelfProgress, aMaxSelfProgress, aCurTotalProgress, aMaxTotalProgress);
+  return OnProgressChange64 (aWebProgress,
+                             aRequest,
+                             aCurSelfProgress,
+                             aMaxSelfProgress,
+                             aCurTotalProgress,
+                             aMaxTotalProgress);
 }
 
 NS_IMETHODIMP ProgressListener::OnLocationChange (nsIWebProgress *aWebProgress,
-                                                    nsIRequest *aRequest, nsIURI *location)
+                                                  nsIRequest *aRequest, nsIURI *location)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP ProgressListener::OnSecurityChange (nsIWebProgress *aWebProgress,
-                                                    nsIRequest *aRequest, PRUint32 state)
+                                                  nsIRequest *aRequest, PRUint32 state)
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-// nsIWebProgressListener 2
+/* nsIWebProgressListener2 method */
 NS_IMETHODIMP ProgressListener::OnProgressChange64 (nsIWebProgress *aWebProgress,
                                                     nsIRequest *aRequest, PRInt64 aCurSelfProgress,
                                                     PRInt64 aMaxSelfProgress, PRInt64 aCurTotalProgress,
                                                     PRInt64 aMaxTotalProgress)
 {
-  nsresult rv;
+  mDownload->request = aRequest;
 
-  if (!mDownload) return NS_OK;
-  if (mDownload->started == 0) {
-    mDownload->request = aRequest;
-    mDownload->started = 1;
-    // it might not work when there is more than one browser window opened
-    mDownload->file_size = aMaxSelfProgress;
-    nsCOMPtr<nsIDOMWindow> parentDOMWindow = do_GetInterface (mContext);
-    mDownload->gtkMozEmbedParentWidget = GetGtkWidgetForDOMWindow(parentDOMWindow);
-    if (mDownload->gtkMozEmbedParentWidget) {
-      gtk_signal_emit(GTK_OBJECT(mDownload->gtkMozEmbedParentWidget),
-                                    moz_embed_signals[DOWNLOAD_REQUEST],
-                                    mDownload->server,
-                                    mDownload->file_name,
-                                    mDownload->file_type,
-                                    (gulong) mDownload->file_size,
-                                    1);
-    }
-  }
-  if (mDownload->started == 1) {
-    // emit signal to get download progress and displays on download list dialog
-    gtk_signal_emit(GTK_OBJECT(mDownload->parent),
-                    moz_embed_download_signals[DOWNLOAD_STARTED_SIGNAL], &mDownload->file_name_with_path);
-    // in this case, user has canceled download from UI.
-    if (!mDownload->file_name_with_path) {
-      gtk_moz_embed_download_do_command (GTK_MOZ_EMBED_DOWNLOAD (mDownload->parent), GTK_MOZ_EMBED_DOWNLOAD_CANCEL);
-      return NS_OK;
-    }
-    // FIXME: Clean up this code bellow, please :)
-    gchar *localUrl = nsnull, *localFileName = nsnull;
-    // second step - the target file will be created
-    if (g_str_has_prefix (mDownload->file_name_with_path, FILE_SCHEME)) {
-      // if user has chosen to save file (contains file:// prefix)
-      gchar *localUrlWithFileName = (g_strsplit (mDownload->file_name_with_path, FILE_SCHEME, -1))[1];
-      gint i;
-      gchar **localUrlSplitted = (char **) (g_strsplit(localUrlWithFileName, SLASH, -1));
-      for(i = 0; localUrlSplitted[i]; i++);
-          localFileName = localUrlSplitted[i-1];
-      localUrl = (gchar *) (g_strsplit(localUrlWithFileName, localFileName, -1))[0];
-    } else {
-      // if user has chosen to open with application (in /var/tmp)
-      localUrl = (char *) (g_strsplit (mDownload->file_name_with_path, mFilename.get(), -1))[0];
-      localFileName = g_strdup ((gchar *) mFilename.get());
-    }
-    nsCAutoString localSavePath;
-    if (localUrl) {
-      localSavePath.Assign(localUrl);
-      g_free (localUrl);
-      localUrl = nsnull;
-    }
-    if (localFileName) {
-      mLocalSaveFileName.Assign(localFileName);
-      g_free (localFileName);
-      localFileName = nsnull;
-    }
-    // create the file where the download will be moved to
-    mDestFile = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID);
-    mDestFile->InitWithNativePath(localSavePath);
-    mDestFile->Create(nsIFile::NORMAL_FILE_TYPE, 0777);
-    mDownload->started = 2;
-  }
-  // when download finishes (bytes downloaded = total file size), emit completed signal
-  // FIXME: if you don't have aMaxSelfProgress available, the signal won't be emitted
-  if (aCurSelfProgress == aMaxSelfProgress) {
-    // signal to confirm that download has finished
-    gtk_signal_emit(GTK_OBJECT(mDownload->parent),
-                    moz_embed_download_signals[DOWNLOAD_COMPLETED_SIGNAL]);
-  } else {
-    // emit signal to get download progress and displays on download list dialog
+  if (aMaxSelfProgress != UNKNOWN_FILE_SIZE) {
     gtk_signal_emit(GTK_OBJECT(mDownload->parent),
                     moz_embed_download_signals[DOWNLOAD_PROGRESS_SIGNAL],
                     (gulong) aCurSelfProgress, (gulong) aMaxSelfProgress, 1);
   }
-  // storing current downloaded size.
+  else {
+    gtk_signal_emit(GTK_OBJECT(mDownload->parent),
+                    moz_embed_download_signals[DOWNLOAD_PROGRESS_SIGNAL],
+                    (gulong) aCurSelfProgress, 0, 1);
+  }
+
+  /* storing current downloaded size. */
   mDownload->downloaded_size = (gulong) aCurSelfProgress;
-  // moving the target file to the right place.
-  rv = mDownload->file_target->MoveToNative (mDestFile, mLocalSaveFileName);
+
   return NS_OK;
 }

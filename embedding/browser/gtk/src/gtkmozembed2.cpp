@@ -1640,34 +1640,35 @@ gtk_moz_embed_save_target (GtkMozEmbed *aEmbed, gchar* aUrl,
   if (!uri)
     return FALSE;
 
-  nsCOMPtr<nsIFileURL> fileURL(do_QueryInterface(uri));
-  if (!fileURL)
-    return FALSE;
-
-  nsCOMPtr<nsIFile> file;
-  rv = fileURL->GetFile(getter_AddRefs(file));
-  if (!file)
-    return FALSE;
-
   if (aSetting == 0)
   {
-    rv = ios->NewURI(nsDependentCString(aUrl), "", nsnull, getter_AddRefs(uri));
-    if (!uri)
+    nsCOMPtr<nsIURI> uri_s;
+    rv = ios->NewURI(nsDependentCString(aUrl), "", nsnull, getter_AddRefs(uri_s));
+    rv = ios->NewURI(nsDependentCString(aDestination), "", nsnull, getter_AddRefs(uri));
+
+    if (!uri_s)
       return FALSE;
-    rv = persist->SaveURI(uri, nsnull, nsnull, nsnull, "", file);
+    rv = persist->SaveURI(uri_s, nsnull, nsnull, nsnull, "", uri);  
+
     if (NS_SUCCEEDED(rv))
       return TRUE;
 
   } else if (aSetting == 1)
   {
-    nsCOMPtr<nsILocalFile> contentFolder;
-    nsCString contentFolderPath;
-    file->GetNativePath(contentFolderPath);
+    nsCOMPtr<nsIURI> contentFolder;
+    rv = ios->NewURI(nsDependentCString(aDestination), "", nsnull, getter_AddRefs(uri));
+    rv = ios->NewURI(nsDependentCString(aDestination), "", nsnull, getter_AddRefs(contentFolder));
+
+    nsCAutoString contentFolderPath;
+    contentFolder->GetSpec(contentFolderPath);
     contentFolderPath.Append("_content");
-    rv = NS_NewNativeLocalFile(contentFolderPath, PR_TRUE, getter_AddRefs(contentFolder));
+    printf("GetNativePath=%s ", contentFolderPath.get());
+    rv = ios->NewURI(nsDependentCString(contentFolderPath), "", nsnull, getter_AddRefs(contentFolder));
+
     if (NS_FAILED(rv))
       return FALSE;
-    rv = persist->SaveDocument(doc, file, contentFolder, nsnull, 0, 0);
+    
+    rv = persist->SaveDocument(doc, uri, contentFolder, nsnull, 0, 0);
     if (NS_SUCCEEDED(rv))
       return TRUE;
   } else if (aSetting == 2)
