@@ -52,6 +52,7 @@ LOCAL_INCLUDES += \
 		-I. \
 		$(NULL)
 
+#Temporary define for full migration from libxul
 #MOZ_GTKEMBED_DYN = 1
 
 ifdef MOZ_GTKEMBED_DYN
