@@ -573,15 +573,63 @@ EmbedEventListener::DragMove(nsIDOMEvent* aMouseEvent)
 NS_IMETHODIMP
 EmbedEventListener::Focus(nsIDOMEvent* aEvent)
 {
+  nsString eventType;
+  aEvent->GetType(eventType);
+#ifdef MOZ_WIDGET_GTK2
+  if (eventType.EqualsLiteral ("focus") &&
+      mCtxInfo->GetFormControlType(aEvent) &&
+      mCtxInfo->mEmbedCtxType & GTK_MOZ_EMBED_CTX_INPUT) {
+        gint return_val = FALSE;
+        gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                        moz_embed_signals[DOM_FOCUS],
+                        (void *)aEvent, &return_val);
+        if (return_val) {
+          aEvent->StopPropagation();
+          aEvent->PreventDefault();
+        }
+  }
+#endif
+
   return NS_OK;
 }
 
 NS_IMETHODIMP
 EmbedEventListener::Blur(nsIDOMEvent* aEvent)
 {
+  gint return_val = FALSE;
   mFocusInternalFrame = PR_FALSE;
+
+  nsCOMPtr<nsIDOMNSEvent> nsevent(do_QueryInterface(aEvent));
+  nsCOMPtr<nsIDOMEventTarget> target;
+  nsevent->GetOriginalTarget(getter_AddRefs(target));
+
+  if (!target)
+    return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIContent> targetContent = do_QueryInterface(target);
+
+  if (targetContent) {
+#ifdef MOZILLA_1_8_BRANCH
+    if (targetContent->IsContentOfType(nsIContent::eHTML_FORM_CONTROL)) {
+#else
+    if (targetContent->IsNodeOfType(nsIContent::eHTML_FORM_CONTROL)) {
+#endif
+      if (sLongPressTimer)
+        g_source_remove (sLongPressTimer);
+
+     /* Trick to force Blur event to stop cursor animation (CSM)
+      * (mozeal's mouse up handling only do that)
+      */
+      gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                  moz_embed_signals[DOM_MOUSE_UP],
+                  (void *)aEvent, &return_val);
+
+      sIsScrolling = PR_FALSE;
+      sMPressed = PR_FALSE;
+    }
+  }
   return NS_OK;
- }
+}
 
 NS_IMETHODIMP
 EmbedEventListener::HandleSelection(nsIDOMMouseEvent* aDOMMouseEvent)
