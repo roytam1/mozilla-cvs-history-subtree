@@ -43,37 +43,16 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= gtkembedmoz
-LIBRARY_NAME	= gtkembedmoz
-LIBXUL_LIBRARY	= 1
-FORCE_STATIC_LIB = 1
+MODULE          = gtkembedmoz
+LIBRARY_NAME    = gtkembedmoz
 
 LOCAL_INCLUDES += \
-                  -I. \
-                  $(NULL)
+		-I. \
+		$(NULL)
 
-#Define for building GtkmozEmbed with MOZILLA_1_8_BRANCH
-#MOZILLA_1_8_BRANCH = 1
-
-ifndef MOZ_ENABLE_LIBXUL
-MOZ_GTKEMBED_DYN = 1
-endif
-ifdef MOZILLA_1_8_BRANCH
-DEFINES += -DMOZILLA_1_8_BRANCH
-endif
-
-ifdef MOZ_MICROBEMBED_DYN
-MOZ_GTKEMBED_DYN = 1
-endif
-
-#ifdef MOZ_GNOMEVFS_CFLAGS
-#DEFINES += -DMOZ_ENABLE_GNOMEVFS
-#endif
+#MOZ_GTKEMBED_DYN = 1
 
 ifdef MOZ_GTKEMBED_DYN
-FORCE_SHARED_LIB = 1
-MOZILLA_INTERNAL_API = 1
-DEFINES += -DMOZILLA_INTERNAL_API
 endif
 
 DEFINES += -DIMPL_XREAPI
@@ -158,7 +137,7 @@ CPPSRCS		+= \
 		$(NULL)
 
 XPIDLSRCS       += \
-	        nsIPassword.idl \
+		nsIPassword.idl \
 		nsIPasswordInternal.idl \
 		$(NULL)
 endif
@@ -177,20 +156,7 @@ CPPSRCS         += \
 endif
 endif
 
-ifndef MOZ_ENABLE_LIBXUL
-REQUIRES += \
-		profdirserviceprovider \
-		$(NULL)
-endif
-
 include $(topsrcdir)/config/config.mk
-
-ifndef MOZ_ENABLE_LIBXUL
-SHARED_LIBRARY_LIBS += \
-		$(DIST)/lib/libembed_base_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/libprofdirserviceprovider_s.$(LIB_SUFFIX) \
-		$(NULL)
-endif
 
 EXPORTS		= \
 		gtkmozembed.h \
@@ -206,25 +172,12 @@ EXPORTS		+= \
 endif
 
 ifdef MOZ_GTKEMBED_DYN
-ifdef MOZ_ENABLE_GTK
-EXTRA_DSO_LDOPTS += -L$(DIST)/lib -lgtksuperwin
-endif
-
 ifneq (,$(filter gtk gtk2 qt xlib,$(MOZ_WIDGET_TOOLKIT)))
 EXTRA_DSO_LDOPTS += \
-		$(XLDFLAGS) \
-		$(XLIBS) \
-		$(MOZ_GTK_LDFLAGS) \
-		$(MOZ_XFT_LIBS) \
-		$(MOZ_GTK2_LIBS) \
-		$(XT_LIBS) \
+		$(DIST)/lib/libxpcomglue_s.$(LIB_SUFFIX) \
 		$(MOZ_COMPONENT_LIBS) \
+		$(MOZ_GTK2_LIBS) \
 		$(NULL)
-ifdef MOZ_GNOMEVFS_CFLAGS
-EXTRA_DSO_LDOPTS += \
-		$(MOZ_GNOMEVFS_LIBS) \
-		$(NULL)
-endif
 endif
 endif
 
