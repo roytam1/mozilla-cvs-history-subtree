@@ -1774,7 +1774,7 @@ gtk_moz_embed_shistory_goto_index(GtkMozEmbed *embed, gint index)
 }
 
 gboolean
-gtk_moz_embed_get_server_cert(GtkMozEmbed *embed, gpointer *aCert)
+gtk_moz_embed_get_server_cert(GtkMozEmbed *embed, gpointer *aCert, gpointer context)
 {
   g_return_val_if_fail(embed != NULL, FALSE);
   g_return_val_if_fail(GTK_IS_MOZ_EMBED(embed), FALSE);
