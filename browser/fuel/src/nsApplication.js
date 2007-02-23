@@ -134,8 +134,9 @@ const nsIPrefBranch2 = Components.interfaces.nsIPrefBranch2;
 const nsISupportsString = Components.interfaces.nsISupportsString;
 
 //=================================================
-// Preferences constructor
-function Preferences( branch ) {
+// PreferenceBranch constructor
+function PreferenceBranch( branch ) {
+  this._root = branch;
   this._prefs = Components.classes['@mozilla.org/preferences-service;1']
                           .getService(nsIPrefService);
 
@@ -152,13 +153,17 @@ function Preferences( branch ) {
 }
 
 //=================================================
-// Preferences implementation
-Preferences.prototype = {
+// PreferenceBranch implementation
+PreferenceBranch.prototype = {
   // for nsIObserver
   observe: function(subject, topic, data) {
     if (topic == "nsPref:changed") {
       this._events.dispatch("change", data);
     }
+  },
+  
+  get root() {
+    return this._root;
   },
   
   get events() {
@@ -269,7 +274,7 @@ SessionStorage.prototype = {
 function Extension( item ) {
   this._item = item;
   this._firstRun = false;
-  this._prefs = new Preferences( "extensions." + this._item.id + "." );
+  this._prefs = new PreferenceBranch( "extensions." + this._item.id + "." );
   this._storage = new SessionStorage();
   this._events = new Events();
   
@@ -388,7 +393,7 @@ const CONTRACT_ID = "@mozilla.org/application;1";
 // Application constructor
 function Application() {
   this._console = new Console();
-  this._prefs = new Preferences();
+  this._prefs = new PreferenceBranch("");
   this._storage = new SessionStorage();
   this._events = new Events();
   

@@ -100,8 +100,13 @@ interface nsIEvents : nsISupports
  * be preset to a value appropriate to the context.
  */
 [scriptable, uuid(ce697d40-aa5a-11db-abbd-0800200c9a66)]
-interface nsIPreferences : nsISupports
+interface nsIPreferenceBranch : nsISupports
 {
+  /**
+   * The name of the branch root.
+   */
+  readonly attribute string root;
+  
   /**
    * All extensions in this preference area.
    */
@@ -225,7 +230,7 @@ interface nsIExtension : nsISupports
    * The preferences object for the extension. Defaults to the
    * "extensions.@id-of-extension." branch.
    */
-  readonly attribute nsIPreferences prefs;
+  readonly attribute nsIPreferenceBranch prefs;
 
   /**
    * The storage object for the extension.
@@ -306,7 +311,7 @@ interface nsIApplication : nsISupports
    * The preferences object for the application. Defaults to the
    * root branch.
    */
-  readonly attribute nsIPreferences prefs;
+  readonly attribute nsIPreferenceBranch prefs;
 
   /**
    * The storage object for the application.

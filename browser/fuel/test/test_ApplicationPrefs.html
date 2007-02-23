@@ -120,6 +120,10 @@ function test_Preferences() {
   ok(allPrefs.length >= 800, "Check 'Application.prefs.all' for the right number of preferences");
   is(allPrefs[0], "capability.policy.default.Window.parent.get", "Check 'Application.prefs.all' for the right starting preference");
 
+  // test the value of the preference root
+  is(Application.prefs.root, "", "Check the Application preference root");
+  is(Application.extensions.all[0].prefs.root, "extensions.inspector@mozilla.org.", "Check an extension preference root");
+  
   // check for change event when setting a value
   SimpleTest.waitForExplicitFinish();
   Application.prefs.events.addListener("change", onPrefChange);
