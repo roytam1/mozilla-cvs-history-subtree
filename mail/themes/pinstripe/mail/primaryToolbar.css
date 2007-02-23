@@ -41,6 +41,10 @@
 
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
+#msgcomposeWindow {
+  -moz-appearance: none !important;
+}
+
 #mail-bar2 {
 	background-image: url("chrome://messenger/skin/icons/top-toolbar-background.gif");
 	background-repeat: repeat-x;

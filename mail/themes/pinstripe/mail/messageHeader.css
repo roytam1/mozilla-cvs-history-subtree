@@ -119,7 +119,7 @@ description[selectable="true"]:focus > descriptionitem[selected="true"]
 }
 
 #attachment-splitter {
-  min-height: 3px;
+  min-height: 7px;
   border-top: 1px solid #C8C8C8;
   background-color: #E6E6E6;
 }

@@ -20,10 +20,6 @@ classic.jar:
      skin/classic/messenger/virtualFolderListDialog.css
      skin/classic/messenger/searchDialog.css
      skin/classic/messenger/filterDialog.css
-+    skin/classic/global/splitter.css
-     skin/classic/global/splitter/grippy-horiz.png                      (../../../../toolkit/themes/pinstripe/global/splitter/grippy-horiz.png)
-     skin/classic/global/splitter/splitter-horiz-bg.gif                 (../../../../toolkit/themes/pinstripe/global/splitter/splitter-horiz-bg.gif)
-     skin/classic/global/splitter/splitter-vert-bg.gif                  (../../../../toolkit/themes/pinstripe/global/splitter/splitter-vert-bg.gif)
      skin/classic/messenger/addressbook/addressbook.css             (addrbook/addressbook.css)
      skin/classic/messenger/addressbook/abContactsPanel.css         (addrbook/abContactsPanel.css)
      skin/classic/messenger/addressbook/cardDialog.css              (addrbook/cardDialog.css)
@@ -192,6 +188,7 @@ classic.jar:
      skin/classic/messenger/icons/thread-new-closed-offl-kill.png   (icons/thread-new-closed-offl-kill.png)
      skin/classic/messenger/icons/thread-new-closed.png             (icons/thread-new-closed.png)
      skin/classic/messenger/icons/threadcol.png                     (icons/threadcol.png)
+     skin/classic/messenger/icons/threadpane-splitter-bg.gif        (icons/threadpane-splitter-bg.gif)
      skin/classic/messenger/icons/unreadmail-selected.png           (icons/unreadmail-selected.png)
      skin/classic/messenger/icons/unreadmail.png                    (icons/unreadmail.png)
      skin/classic/messenger/icons/unthreadcol.png                   (icons/unthreadcol.png)
