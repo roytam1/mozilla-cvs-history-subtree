@@ -217,6 +217,11 @@ interface nsIExtension : nsISupports
   readonly attribute string version;
 
   /**
+   * Indicates whether this is the extension's first run after install
+   */
+  readonly attribute boolean firstRun;
+
+  /**
    * The preferences object for the extension. Defaults to the
    * "extensions.@id-of-extension." branch.
    */

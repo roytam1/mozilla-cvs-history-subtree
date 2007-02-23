@@ -268,6 +268,7 @@ SessionStorage.prototype = {
 // Extension constructor
 function Extension( item ) {
   this._item = item;
+  this._firstRun = false;
   this._prefs = new Preferences( "extensions." + this._item.id + "." );
   this._storage = new SessionStorage();
   this._events = new Events();
@@ -275,8 +276,12 @@ function Extension( item ) {
   var installPref = "install-event-fired";
   if ( !this._prefs.has(installPref) ) {
     this._prefs.set(installPref, true);
-    this._events.dispatch("install", this._item.id);
+    this._firstRun = true;
   }
+  
+  var os = Components.classes["@mozilla.org/observer-service;1"]
+                     .getService(Components.interfaces.nsIObserverService);
+  os.addObserver(this, "em-action-requested", false);
 }
 
 //=================================================
@@ -294,6 +299,10 @@ Extension.prototype = {
     return this._item.version;
   },
   
+  get firstRun() {
+    return this._firstRun;
+  },
+  
   get storage() {
     return this._storage;
   },
@@ -304,7 +313,28 @@ Extension.prototype = {
   
   get events() {
     return this._events;
-  }
+  },
+
+  // for nsIObserver  
+  observe : function (subject, topic, data)
+  {
+    if ( (data == "item-uninstalled") &&
+         (subject instanceof Components.interfaces.nsIUpdateItem) &&
+         (subject.id == this._item.id) )
+    {
+      this._events.dispatch("uninstall", this._item.id);
+    }
+  },
+
+  QueryInterface: function(aIID) {
+    // add any other interfaces you support here
+    if ( !aIID.equals(nsIObserver) &&
+         !aIID.equals(nsISupports) )
+    {
+        throw Components.results.NS_ERROR_NO_INTERFACE;
+    }
+    return this;
+  }  
 };
 
 
