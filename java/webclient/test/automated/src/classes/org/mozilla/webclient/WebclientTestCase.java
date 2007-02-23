@@ -62,7 +62,7 @@ public abstract class WebclientTestCase extends TestCase
 
 public static final String WEBCLIENTSTUB_LOG_MODULE = "webclientstub";
 public static final String WEBCLIENT_LOG_MODULE = "webclient";
-public static String OUTPUT_FILE_ROOT = "build.test/";
+public static String OUTPUT_FILE_ROOT = null;
 public static final String TEST_LOG = "org.mozilla.webclient.test";
 public static final String TEST_LOG_STRINGS = "org.mozilla.webclient.TestLogStrings";
 
@@ -112,22 +112,8 @@ public static Logger getLogger( String loggerName ) {
 public void setUp()
 {
     verifyPreconditions();
+    verifyOutputFileRootIsSet();
     
-    // Set the OUTPUT_FILE_ROOT
-    String mozSrcValue = null;
-    File outputRoot = null;
-    
-    if (null != (mozSrcValue = System.getProperty("MOZ_SRC"))) {
-        OUTPUT_FILE_ROOT = mozSrcValue + File.separator +
-                "mozilla" + File.separator + "java" + File.separator +
-                "webclient" + File.separator + OUTPUT_FILE_ROOT;
-    }
-    else {
-        assertTrue(null != (OUTPUT_FILE_ROOT = System.getProperty("build.test.results.dir")));
-    }
-    outputRoot = new File(OUTPUT_FILE_ROOT);
-    assertTrue(outputRoot.exists());
-
     LOGGER.info(this.getClass().getName() + " setUp()");
     
 }
@@ -142,12 +128,12 @@ public void tearDown()
 //
 
 public static TestSuite createServerTestSuite() {
+    verifyOutputFileRootIsSet();
     TestSuite result = new TestSuite() {
 	    public void run(TestResult result) {
 		serverThread = 
 		    new THTTPD.ServerThread("LocalHTTPD",
-					    new File (getBrowserBinDir() +
-						      "/../../../java/webclient/build.test"), -1);
+					    new File (OUTPUT_FILE_ROOT), -1);
 		serverThread.start();
 		serverThread.P();
 		super.run(result);
@@ -216,6 +202,19 @@ protected String verifyOutputFileIsSet()
     assertTrue(null != (logFileValue = 
 			System.getProperty("NSPR_LOG_FILE")));
     return logFileValue;
+    
+}
+
+private static void verifyOutputFileRootIsSet() {
+    if (null != OUTPUT_FILE_ROOT) {
+        return;
+    }
+    OUTPUT_FILE_ROOT = System.getProperty("build.test.results.dir");
+    assertNotNull(OUTPUT_FILE_ROOT);
+
+    File outputRoot = new File(OUTPUT_FILE_ROOT);
+    assertTrue(outputRoot.exists());
+
     
 }
 
