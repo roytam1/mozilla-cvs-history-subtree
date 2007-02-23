@@ -845,7 +845,7 @@ NS_IMETHODIMP nsNNTPNewsgroupList::ApplyFilterHit(nsIMsgFilter *aFilter, nsIMsgW
         messageArray->AppendElement(m_newMsgHdr);
         nsCOMPtr <nsIMsgFolder> folder = do_QueryInterface(m_newsFolder, &rv);
         if (folder)
-          folder->AddKeywordToMessages(messageArray, keyword.get());
+          folder->AddKeywordsToMessages(messageArray, keyword.get());
         break;
       }
       case nsMsgFilterAction::Label:
