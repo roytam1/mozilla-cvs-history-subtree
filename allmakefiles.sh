@@ -1057,6 +1057,8 @@ mail/components/compose/Makefile
 mail/components/addrbook/Makefile
 mail/components/preferences/Makefile
 mail/components/build/Makefile
+mail/components/search/Makefile
+mail/components/search/mdimporter/Makefile
 mail/components/shell/Makefile
 mail/components/shell/public/Makefile
 mail/components/phishing/Makefile
