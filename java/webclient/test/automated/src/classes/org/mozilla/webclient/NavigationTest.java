@@ -96,8 +96,8 @@ public class NavigationTest extends WebclientTestCase {
 	
 	assertNotNull(currentPage);
 
-	File testPage = new File(getBrowserBinDir(), 
-				 "../../../java/webclient/test/automated/src/test/NavigationTest.txt");
+	File testPage = new File(getOutputFileRoot(), 
+				 "NavigationTest.txt");
 	
 	//
 	// try loading a file: url
