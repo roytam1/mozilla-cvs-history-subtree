@@ -112,6 +112,8 @@
 #include "nsMsgTagService.h"
 #include "nsMsgFolderNotificationService.h"
 
+#include "nsMailDirProvider.h"
+
 #ifdef XP_WIN
 #include "nsMessengerWinIntegration.h"
 #endif
@@ -190,6 +192,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerUnixIntegration, Init)
 #endif
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMessengerContentHandler)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgContentPolicy, Init)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMailDirProvider)
 
 static NS_METHOD
 RegisterMailnewsContentPolicy(nsIComponentManager *aCompMgr, nsIFile *aPath,
@@ -468,6 +471,14 @@ static const nsModuleComponentInfo gComponents[] = {
       NS_MSGCONTENTPOLICY_CONTRACTID,
       nsMsgContentPolicyConstructor,
       RegisterMailnewsContentPolicy, UnregisterMailnewsContentPolicy
+    },
+    {
+      "mail directory provider",
+      MAILDIRPROVIDER_CID,
+      NS_MAILDIRPROVIDER_CONTRACTID,
+      nsMailDirProviderConstructor,
+      nsMailDirProvider::Register,
+      nsMailDirProvider::Unregister
     }
 };
 
