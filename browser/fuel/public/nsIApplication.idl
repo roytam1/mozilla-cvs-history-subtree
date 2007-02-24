@@ -1,6 +1,8 @@
 #include "nsISupports.idl"
 #include "nsIVariant.idl"
 
+interface nsIPreference;
+
 /**
  * Interface that gives simplified access to the console
  */
@@ -124,7 +126,7 @@ interface nsIPreferenceBranch : nsISupports
    * @param   value
    *          The value to assign to the item
    */
-  nsIVariant set(in string name, in nsIVariant value);
+  nsIVariant setValue(in string name, in nsIVariant value);
 
   /**
    * Gets the value of a preference. Returns a default value if
@@ -136,7 +138,15 @@ interface nsIPreferenceBranch : nsISupports
    * @returns value of the preference or the given default value if preference
    *          does not exists.
    */
-  nsIVariant get(in string name, in nsIVariant defaultValue);
+  nsIVariant getValue(in string name, in nsIVariant defaultValue);
+  
+  /**
+   * Gets an object representing a preference
+   * @param   name
+   *          The name of preference
+   * @returns a preference object, or null if the preference does not exist
+   */
+  nsIPreference get(in string name);
   
   /**
    * Check to see if a preference exists.
@@ -147,14 +157,32 @@ interface nsIPreferenceBranch : nsISupports
   nsIVariant has(in string name);
 
   /**
-   * Resets a preference back to the default values. If name is null, all
-   * preferences in this branch are reset.
-   * @param   name
-   *          The name of the preference to reset or null to reset all 
-   *          preferences in this branch.
+   * Resets all preferences in a branch back to their default values.
    */
-  void reset(in string name);
-}; 
+  void reset();
+};
+
+/**
+ * Interface for accessing a single preference.
+ */
+[scriptable, uuid(2C7462E2-72C2-4473-9007-0E6AE71E23CA)]
+interface nsIPreference : nsISupports
+{
+  /**
+   * The name of the preference.
+   */
+  readonly attribute string name;
+  
+  /**
+   * The preference branch that contains this preference.
+   */
+  readonly attribute nsIPreferenceBranch branch;
+  
+  /**
+   * Resets a preference back to its default values.
+   */
+  void reset();
+};
 
 
 /**

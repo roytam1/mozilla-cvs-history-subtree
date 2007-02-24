@@ -25,22 +25,22 @@ function test_Preferences() {
   netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
 
   // test getting non-existing values
-  var itemValue = Application.prefs.get(test.missing, "default");
+  var itemValue = Application.prefs.getValue(test.missing, "default");
   is(itemValue, "default", "Check 'Application.prefs.get' for non-existing item");
   
   // test setting and getting a value
-  Application.prefs.set(test.dummy, "dummy");
-  itemValue = Application.prefs.get(test.dummy, "default");
+  Application.prefs.setValue(test.dummy, "dummy");
+  itemValue = Application.prefs.getValue(test.dummy, "default");
   is(itemValue, "dummy", "Check 'Application.prefs.get' for existing item");
 
   // test for overwriting an existing value
-  Application.prefs.set(test.dummy, "smarty");
-  itemValue = Application.prefs.get(test.dummy, "default");
+  Application.prefs.setValue(test.dummy, "smarty");
+  itemValue = Application.prefs.getValue(test.dummy, "default");
   is(itemValue, "smarty", "Check 'Application.prefs.get' for overwritten item");
 
   // test resetting a pref [since there is no default value, the pref should disappear]
-  Application.prefs.reset(test.dummy);
-  var itemValue = Application.prefs.get(test.dummy, "default");
+  Application.prefs.get(test.dummy).reset();
+  var itemValue = Application.prefs.getValue(test.dummy, "default");
   is(itemValue, "default", "Check 'Application.prefs.get' for reset pref");
   
   // test to see if a non-existant property exists
@@ -52,21 +52,21 @@ function test_Preferences() {
   ok(Application.prefs.has(test.string), "Check existing string property for existance");
   
   // test accessing a non-existant string property
-  var val = Application.prefs.get(test.dummy, "default");
+  var val = Application.prefs.getValue(test.dummy, "default");
   is(val, "default", "Check non-existant string property for expected value");
   
   // test accessing an existing string property
-  var val = Application.prefs.get(test.string, "default");
+  var val = Application.prefs.getValue(test.string, "default");
   is(val, "#EE0000", "Check existing string property for expected value");
   
   // test manipulating an existing string property
-  Application.prefs.set(test.string, "#EF0000");
-  var val = Application.prefs.get(test.string, "default");
+  Application.prefs.setValue(test.string, "#EF0000");
+  var val = Application.prefs.getValue(test.string, "default");
   is(val, "#EF0000", "Set existing string property");
   
   // test resetting an existing string property
-  Application.prefs.reset(test.string);
-  var val = Application.prefs.get(test.string, "default");
+  Application.prefs.get(test.string).reset();
+  var val = Application.prefs.getValue(test.string, "default");
   is(val, "#EE0000", "Reset existing string property");
   
   // PREF: integer permissions.default.image == 1
@@ -75,21 +75,21 @@ function test_Preferences() {
   ok(Application.prefs.has(test.integer), "Check existing integer property for existance");
   
   // test accessing a non-existant integer property
-  var val = Application.prefs.get(test.dummy, 0);
+  var val = Application.prefs.getValue(test.dummy, 0);
   is(val, 0, "Check non-existant integer property for expected value");
   
   // test accessing an existing integer property
-  var val = Application.prefs.get(test.integer, 0);
+  var val = Application.prefs.getValue(test.integer, 0);
   is(val, 1, "Check existing integer property for expected value");
 
   // test manipulating an existing integer property
-  Application.prefs.set(test.integer, 0);
-  var val = Application.prefs.get(test.integer, 1);
+  Application.prefs.setValue(test.integer, 0);
+  var val = Application.prefs.getValue(test.integer, 1);
   is(val, 0, "Set existing integer property");
   
   // test resetting an existing integer property
-  Application.prefs.reset(test.integer);
-  var val = Application.prefs.get(test.integer, 0);
+  Application.prefs.get(test.integer).reset();
+  var val = Application.prefs.getValue(test.integer, 0);
   is(val, 1, "Reset existing integer property");
 
   // PREF: boolean browser.blink_allowed == true
@@ -98,21 +98,21 @@ function test_Preferences() {
   ok(Application.prefs.has(test.boolean), "Check existing boolean property for existance");
   
   // test accessing a non-existant boolean property
-  var val = Application.prefs.get(test.dummy, true);
+  var val = Application.prefs.getValue(test.dummy, true);
   ok(val, "Check non-existant boolean property for expected value");
   
   // test accessing an existing boolean property
-  var val = Application.prefs.get(test.boolean, false);
+  var val = Application.prefs.getValue(test.boolean, false);
   ok(val, "Check existing boolean property for expected value");
   
   // test manipulating an existing boolean property
-  Application.prefs.set(test.boolean, false);
-  var val = Application.prefs.get(test.boolean, true);
+  Application.prefs.setValue(test.boolean, false);
+  var val = Application.prefs.getValue(test.boolean, true);
   ok(!val, "Set existing boolean property");
   
   // test resetting an existing boolean property
-  Application.prefs.reset(test.boolean);
-  var val = Application.prefs.get(test.boolean, false);
+  Application.prefs.get(test.boolean).reset();
+  var val = Application.prefs.getValue(test.boolean, false);
   ok(val, "Reset existing string property for expected value");
   
   // test getting all preferences
@@ -127,7 +127,7 @@ function test_Preferences() {
   // check for change event when setting a value
   SimpleTest.waitForExplicitFinish();
   Application.prefs.events.addListener("change", onPrefChange);
-  Application.prefs.set("fuel.fuel-test", "change event");
+  Application.prefs.setValue("fuel.fuel-test", "change event");
 }
 
 function onPrefChange(evt) {

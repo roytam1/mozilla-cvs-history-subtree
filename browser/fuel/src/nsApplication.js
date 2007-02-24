@@ -184,7 +184,8 @@ PreferenceBranch.prototype = {
     return this._prefs.getChildList( "", [] );
   },
   
-  set : function(name, value) {
+  setValue : function(name, value) {
+    name = this._root + name;
     var type = value != null ? value.constructor.name : "";
     
     switch (type) {
@@ -207,7 +208,12 @@ PreferenceBranch.prototype = {
     return value;
   },
   
-  get : function(name, value) {
+  get : function(name) {
+    return this.has( name ) ? new Preference( name, this ) : null;
+  },
+  
+  getValue : function(name, value) {
+    name = this._root + name;
     var type = this._prefs.getPrefType(name);
     
     switch (type) {
@@ -226,16 +232,35 @@ PreferenceBranch.prototype = {
   },
   
   has : function(name) {
-  	return this.get( name, null ) != null;
+  	return this.getValue( name, null ) != null;
   },
   
-  reset : function(name) {
-    if (name) {
-      this._prefs.clearUserPref(name);
-    }
-    else {
-      this._prefs.resetBranch("");
-    }
+  reset : function() {
+    this._prefs.resetBranch("");
+  }
+};
+
+
+//=================================================
+// Preference constructor
+function Preference( name, branch ) {
+  this._name = name;
+  this._branch = branch;
+}
+
+//=================================================
+// Preference implementation
+Preference.prototype = {
+  get name() {
+    return this._branch.root + this._name;
+  },
+  
+  get branch() {
+    return this._branch;
+  },
+  
+  reset : function() {
+    this._branch._prefs.clearUserPref(this.name);
   }
 };
 
@@ -280,7 +305,7 @@ function Extension( item ) {
   
   var installPref = "install-event-fired";
   if ( !this._prefs.has(installPref) ) {
-    this._prefs.set(installPref, true);
+    this._prefs.setValue(installPref, true);
     this._firstRun = true;
   }
   
