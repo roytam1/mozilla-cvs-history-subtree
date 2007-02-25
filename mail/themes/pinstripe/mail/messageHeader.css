@@ -101,17 +101,24 @@ description[selectable="true"]:focus > descriptionitem[selected="true"]
   width: 15em;
 }
 
-.attachmentBox[largeView="true"]
+#attachmentView[largeView="true"] .attachmentBox
 {
-  -moz-box-align: center;
-  -moz-box-pack: center;
+  -moz-box-orient: vertical;
 }
 
 #attachmentView
 {
   background-color: #E6E6E6;
-  padding: 4px 8px;  
-  min-height: 55px;
+  border: 1px solid #C8C8C8;
+  -moz-border-radius: 7px;
+  margin: 0px 6px 6px 6px;
+  padding: 4px;  
+  min-height: 30px;
+}
+
+#attachmentView[largeView="true"]
+{
+  min-height: 60px;
 }
 
 #attachmentView[attachmentOverflow="true"] {
