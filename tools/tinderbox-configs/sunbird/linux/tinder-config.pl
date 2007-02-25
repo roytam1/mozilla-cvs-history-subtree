@@ -49,7 +49,8 @@ $BuildLocales      = 1;      # Do l10n packaging?
 # Tests
 $CleanProfile             = 1;
 $ResetHomeDirForTests     = 1;
-$ProductName              = "Sunbird";
+#$ProductName              = "Sunbird";
+$ProductName              = 'Calendar';
 $VendorName               = 'Mozilla';
 
 #$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
