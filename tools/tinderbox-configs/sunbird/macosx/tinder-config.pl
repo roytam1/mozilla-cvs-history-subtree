@@ -84,7 +84,7 @@ $VendorName               = "";
   "other-licenses/branding/sunbird",
 );
 
-#$TestsPhoneHome           = 0;  # Should test report back to server?
+$TestsPhoneHome           = 1;  # Should test report back to server?
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -154,7 +154,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$moz_client_mk = 'client.mk';
 
 #- Set if you want to build in a separate object tree
-$ObjDir = '../build/unisunbird';
+$ObjDir = '../build/universal';
 
 # Extra build name, if needed.
 $BuildNameExtra = 'Sb-Release';
