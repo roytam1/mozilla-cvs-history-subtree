@@ -124,7 +124,7 @@ function InitSpotlightIntegration()
   try {
     gIndexMsgsToSpotlight = gPrefBranch.getBoolPref("mail.spotlight.enable");
     gLastFolderIndexedUri = gPrefBranch.getCharPref("mail.spotlight.lastFolderIndexedUri");
-  } catch (ex) {dump (ex)}
+  } catch (ex) {}
   
   if (!gIndexMsgsToSpotlight)
     return;
