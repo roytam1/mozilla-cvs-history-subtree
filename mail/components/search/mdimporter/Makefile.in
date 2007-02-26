@@ -68,7 +68,7 @@ export::
 	ln -fs $(srcdir)/GetMetadataForFile.c
 	ln -fs $(srcdir)/main.c
 	ln -fs $(srcdir)/schema.xml
-	ln -fs $(srcdir)/Info-*.plist .
+	ln -fs $(srcdir)/Info*.plist .
 endif
 
 libs install:: install-mdimporter
