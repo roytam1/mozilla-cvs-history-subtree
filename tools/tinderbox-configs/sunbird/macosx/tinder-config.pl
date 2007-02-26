@@ -50,15 +50,15 @@ $BuildLocales      = 1;      # Do l10n packaging?
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = 'Sunbird';
-$MacOSProductName         = 'Sunbird';
-#$ProductName              = 'Calendar';
-#$MacOSProductName         = 'Calendar';
+#$ProductName              = 'Sunbird';
+#$MacOSProductName         = 'Sunbird';
+$ProductName              = 'Calendar';
+$MacOSProductName         = 'Calendar';
 $VendorName               = 'Mozilla';
 
 #$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-$RegxpcomTest             = 0;
-$AliveTest                = 0;
+#$RegxpcomTest             = 1;
+#$AliveTest                = !;
 #$JavaTest                 = 0;
 #$ViewerTest               = 0;
 #$BloatTest                = 0;  # warren memory bloat test
