@@ -40,6 +40,8 @@ Components.utils.importModule("gre:FunctionUtils.js");
 EXPORTED_SYMBOLS = [ "urlToFile",
                      "fileToURL",
                      "openFileForWriting",
+                     "write16LE",
+                     "write32LE",
                      "openFileForReading",
                      "readFile",
                      "getProfileDir",
@@ -110,7 +112,7 @@ defun(
 
 defun(
   "Open a file for overwriting or appending. Returns an "+
-  "nsIFileOutputStream object. Permissions should be a 9 character "+
+  "nsIBinaryOutputStream object. Permissions should be a 9 character "+
   "string describing the permissions as 'ls -l' would display "+
   "them. Default permissions are 'rw-r--r--'.",
   function openFileForWriting(file, append, /* optional */ permissions)
@@ -140,6 +142,11 @@ defun(
       else
         ioflags |= IO_TRUNCATE;
       fos.init(file, ioflags, perms, null);
+
+      var bos = Components.classes["@mozilla.org/binaryoutputstream;1"]
+        .createInstance(Components.interfaces.nsIBinaryOutputStream);
+      bos.setOutputStream(fos);
+      fos = bos;
     }
     catch(e) {
       if (fos)
@@ -147,6 +154,24 @@ defun(
       fos = null;
     }
     return fos;
+  });
+
+defun(
+  "Writes the given 16 bit integer 'x' to the given output stream in "+
+  "little-endian order (low-order byte first)",
+  function write16LE(x, stream) {
+    stream.write8(x);
+    stream.write8(x>>8);
+  });
+
+defun(
+  "Writes the given 32 bit integer 'x' to the given output stream in "+
+  "little-endian order (low-order byte first)",
+  function write32LE(x, stream) {
+    stream.write8(x);
+    stream.write8(x>>8);
+    stream.write8(x>>16);
+    stream.write8(x>>24);
   });
 
 defun(
