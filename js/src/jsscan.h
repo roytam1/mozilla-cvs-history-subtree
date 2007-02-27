@@ -138,6 +138,7 @@ typedef enum JSTokenType {
     TOK_LET = 83,                       /* let keyword */
     TOK_BODY = 84,                      /* synthetic body of function with
                                            destructuring formal parameters */
+    TOK_INT = 85,                       /* int type */
     TOK_RESERVED,                       /* reserved keywords */
     TOK_LIMIT                           /* domain size */
 } JSTokenType;

@@ -858,6 +858,8 @@ struct BindData {
     JSObject                *obj;               /* the variable object */
     JSOp                    op;                 /* prolog bytecode or nop */
     Binder                  binder;             /* binder, discriminates u */
+    JSType                  type;
+    uintN                   attrs;
     union {
         struct {
             JSFunction      *fun;               /* must come first! see next */
@@ -867,7 +869,6 @@ struct BindData {
             JSClass         *clasp;
             JSPropertyOp    getter;
             JSPropertyOp    setter;
-            uintN           attrs;
         } var;
         struct {
             jsuint          index;
@@ -884,6 +885,25 @@ struct BindData {
 #define BIND_DATA_REPORT_ARGS(data, flags)                                    \
     (data)->pn ? (void *)(data)->pn : (void *)(data)->ts,                     \
     ((data)->pn ? JSREPORT_PN : JSREPORT_TS) | (flags)
+
+static JSBool
+TypeAnnotation(JSContext *cx, JSTokenStream *ts, BindData *data,
+               JSTreeContext *tc)
+{
+    if (!js_MatchToken(cx, ts, TOK_COLON))
+        return JS_TRUE;
+    if (!js_MatchToken(cx, ts, TOK_INT)) {
+        js_ReportCompileErrorNumber(cx,
+                                    BIND_DATA_REPORT_ARGS(data,
+                                        JSREPORT_WARNING |
+                                        JSREPORT_STRICT),
+                                    JSMSG_UNSUPPORTED_TYPE);
+        return JS_FALSE;
+    }
+    data->type = JSTYPE_INT;
+    data->attrs |= JSPROP_INT_TYPE;
+    return JS_TRUE;
+}
 
 static JSBool
 BumpFormalCount(JSContext *cx, JSFunction *fun)
@@ -942,7 +962,7 @@ BindArg(JSContext *cx, BindData *data, JSAtom *atom, JSTreeContext *tc)
     if (!js_AddHiddenProperty(cx, data->obj, ATOM_TO_JSID(atom),
                               js_GetArgument, js_SetArgument,
                               SPROP_INVALID_SLOT,
-                              JSPROP_PERMANENT | JSPROP_SHARED,
+                              data->attrs | JSPROP_PERMANENT | JSPROP_SHARED,
                               dupflag | SPROP_HAS_SHORTID,
                               fun->nargs)) {
         return JS_FALSE;
@@ -976,7 +996,7 @@ BindLocalVariable(JSContext *cx, BindData *data, JSAtom *atom)
     if (!js_AddHiddenProperty(cx, data->obj, ATOM_TO_JSID(atom),
                               data->u.var.getter, data->u.var.setter,
                               SPROP_INVALID_SLOT,
-                              data->u.var.attrs | JSPROP_SHARED,
+                              data->attrs | JSPROP_SHARED,
                               SPROP_HAS_SHORTID, fun->u.i.nvars)) {
         return JS_FALSE;
     }
@@ -1210,6 +1230,8 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
         data.obj = fun->object;
         data.op = JSOP_NOP;
         data.binder = BindArg;
+        data.type = JSTYPE_ANY;
+        data.attrs = 0;
         data.u.arg.fun = fun;
 
         do {
@@ -1233,7 +1255,7 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                 data.u.var.clasp = &js_FunctionClass;
                 data.u.var.getter = js_GetLocalVariable;
                 data.u.var.setter = js_SetLocalVariable;
-                data.u.var.attrs = JSPROP_PERMANENT;
+                data.attrs = JSPROP_PERMANENT;
 
                 /*
                  * Temporarily transfer the owneship of the recycle list to
@@ -1292,9 +1314,15 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 #endif /* JS_HAS_DESTRUCTURING */
 
               case TOK_NAME:
-                if (!data.binder(cx, &data, CURRENT_TOKEN(ts).t_atom, tc))
+              {
+                JSAtom *argAtom = CURRENT_TOKEN(ts).t_atom;
+
+                if (!TypeAnnotation(cx, ts, &data, tc))
+                    return NULL;
+                if (!data.binder(cx, &data, argAtom, tc))
                     return NULL;
                 break;
+              }
 
               default:
                 js_ReportCompileErrorNumber(cx, ts,
@@ -1898,7 +1926,7 @@ BindDestructuringVar(JSContext *cx, BindData *data, JSParseNode *pn,
     pn->pn_op = (data->op == JSOP_DEFCONST)
                 ? JSOP_SETCONST
                 : JSOP_SETNAME;
-    pn->pn_attrs = data->u.var.attrs;
+    pn->pn_attrs = data->attrs;
     return JS_TRUE;
 }
 
@@ -3062,6 +3090,8 @@ Statement(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
                 data.obj = tc->blockChain;
                 data.op = JSOP_NOP;
                 data.binder = BindLet;
+                data.type = JSTYPE_ANY;
+                data.attrs = 0;
                 data.u.let.index = 0;
                 data.u.let.overflow = JSMSG_TOO_MANY_CATCH_VARS;
 
@@ -3612,6 +3642,8 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
     data.ts = ts;
     data.op = let ? JSOP_NOP : CURRENT_TOKEN(ts).t_op;
     data.binder = let ? BindLet : BindVarOrConst;
+    data.type = JSTYPE_ANY;
+    data.attrs = 0;
     pn = NewParseNode(cx, ts, PN_LIST, tc);
     if (!pn)
         return NULL;
@@ -3650,9 +3682,9 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             data.u.var.setter = data.u.var.clasp->setProperty;
         }
 
-        data.u.var.attrs = (data.op == JSOP_DEFCONST)
-                           ? JSPROP_PERMANENT | JSPROP_READONLY
-                           : JSPROP_PERMANENT;
+        data.attrs = (data.op == JSOP_DEFCONST)
+                     ? JSPROP_PERMANENT | JSPROP_READONLY
+                     : JSPROP_PERMANENT;
     }
 
     do {
@@ -3695,17 +3727,20 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
             return NULL;
         }
         atom = CURRENT_TOKEN(ts).t_atom;
-        if (!data.binder(cx, &data, atom, tc))
-            return NULL;
-
         pn2 = NewParseNode(cx, ts, PN_NAME, tc);
         if (!pn2)
             return NULL;
+
+        if (!TypeAnnotation(cx, ts, &data, tc))
+            return NULL;
+        if (!data.binder(cx, &data, atom, tc))
+            return NULL;
+
         pn2->pn_op = JSOP_NAME;
         pn2->pn_atom = atom;
         pn2->pn_expr = NULL;
         pn2->pn_slot = -1;
-        pn2->pn_attrs = let ? 0 : data.u.var.attrs;
+        pn2->pn_attrs = data.attrs;
         PN_APPEND(pn, pn2);
 
         if (js_MatchToken(cx, ts, TOK_ASSIGN)) {
@@ -5314,6 +5349,8 @@ PrimaryExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
                 data.obj = tc->blockChain;
                 data.op = JSOP_NOP;
                 data.binder = BindLet;
+                data.type = JSTYPE_ANY;
+                data.attrs = 0;
                 data.u.let.index = 0;
                 data.u.let.overflow = JSMSG_ARRAY_INIT_TOO_BIG;
 

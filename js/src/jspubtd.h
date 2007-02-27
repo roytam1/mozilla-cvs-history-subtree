@@ -88,6 +88,8 @@ typedef enum JSType {
     JSTYPE_BOOLEAN,             /* boolean */
     JSTYPE_NULL,                /* null */
     JSTYPE_XML,                 /* xml object */
+    JSTYPE_INT,                 /* int */
+    JSTYPE_ANY,                 /* * */
     JSTYPE_LIMIT
 } JSType;
 

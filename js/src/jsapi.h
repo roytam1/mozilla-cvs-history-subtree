@@ -126,6 +126,8 @@ JS_BEGIN_EXTERN_C
                                            containing this property */
 #define JSPROP_INDEX            0x80    /* name is actually (jsint) index */
 
+#define JSPROP_INT_TYPE        0x100    /* int type annotation pseudo-flag */
+
 /* Function flags, set in JSFunctionSpec and passed to JS_NewFunction etc. */
 #define JSFUN_LAMBDA            0x08    /* expressed, not declared, function */
 #define JSFUN_GETTER            JSPROP_GETTER

@@ -76,6 +76,8 @@ const char *js_type_strs[] = {
     "boolean",
     "null",
     "xml",
+    "int",
+    js_star_str,
 };
 
 JS_STATIC_ASSERT(JSTYPE_LIMIT ==
