@@ -45,7 +45,7 @@ const nsIApplication = Components.interfaces.nsIApplication;
 // Console constructor
 function Console() {
   this._console = Components.classes['@mozilla.org/consoleservice;1']
-                            .getService(Components.interfaces.nsIConsoleService);
+    .getService(Components.interfaces.nsIConsoleService);
 }
 
 //=================================================
@@ -97,8 +97,8 @@ Events.prototype = {
       return;
 
     this._listeners.push({
-    	event: event,
-    	handler: handler
+      event: event,
+      handler: handler
     });
     
     function hasFilter(element) {
@@ -117,7 +117,9 @@ Events.prototype = {
   	
   	this._listeners.forEach(function(key){
       if (key.event == event) {
-        key.handler.handleEvent(eventItem);
+        key.handler.handleEvent ?
+        	key.handler.handleEvent(eventItem) :
+        	key.handler(eventItem);
       }
     });
     
@@ -166,12 +168,12 @@ PreferenceBranch.prototype = {
     return this._root;
   },
   
-  get events() {
-    return this._events;
-  },
-  
   get all() {
     return this.find( {} );
+  },
+  
+  get events() {
+    return this._events;
   },
   
   // XXX: Disabled until we can figure out the wrapped object issues
@@ -179,13 +181,45 @@ PreferenceBranch.prototype = {
   // path: "foo.bar." or "" or /fo+\.bar/
   // type: Boolean, Number, String (getPrefType)
   // locked: true, false (prefIsLocked)
-  // changed: true, false (prefHasUserValue)
+  // modified: true, false (prefHasUserValue)
   find : function(options) {
-    return this._prefs.getChildList( "", [] );
+    var retVal = [],
+      items = this._prefs.getChildList( "", [] );
+    
+    for ( var i = 0; i < items.length; i++ ) {
+      retVal.push( new Preference( items[i], this ) );
+    }
+
+    return retVal;
+  },
+  
+  has : function(name) {
+  	return !!this._prefs.getPrefType( name );
+  },
+  
+  get : function(name) {
+    return this.has( name ) ? new Preference( name, this ) : null;
+  },
+
+  getValue : function(name, value) {
+    var type = this._prefs.getPrefType(name);
+    
+    switch (type) {
+      case nsIPrefBranch2.PREF_STRING:
+        value = this._prefs.getComplexValue(name, nsISupportsString).data;
+        break;
+      case nsIPrefBranch2.PREF_BOOL:
+        value = this._prefs.getBoolPref(name);
+        break;
+      case nsIPrefBranch2.PREF_INT:
+        value = this._prefs.getIntPref(name);
+        break;
+    }
+    
+    return value;
   },
   
   setValue : function(name, value) {
-    name = this._root + name;
     var type = value != null ? value.constructor.name : "";
     
     switch (type) {
@@ -208,33 +242,6 @@ PreferenceBranch.prototype = {
     return value;
   },
   
-  get : function(name) {
-    return this.has( name ) ? new Preference( name, this ) : null;
-  },
-  
-  getValue : function(name, value) {
-    name = this._root + name;
-    var type = this._prefs.getPrefType(name);
-    
-    switch (type) {
-      case nsIPrefBranch2.PREF_STRING:
-        value = this._prefs.getComplexValue(name, nsISupportsString).data;
-        break;
-      case nsIPrefBranch2.PREF_BOOL:
-        value = this._prefs.getBoolPref(name);
-        break;
-      case nsIPrefBranch2.PREF_INT:
-        value = this._prefs.getIntPref(name);
-        break;
-    }
-    
-    return value;
-  },
-  
-  has : function(name) {
-  	return this.getValue( name, null ) != null;
-  },
-  
   reset : function() {
     this._prefs.resetBranch("");
   }
@@ -246,21 +253,73 @@ PreferenceBranch.prototype = {
 function Preference( name, branch ) {
   this._name = name;
   this._branch = branch;
+  this._events = new Events();
+  
+  var self = this;
+  
+  this.branch.events.addListener("change", function(event){
+    if ( event.data == self.name ) {
+      self.events.dispatch( event.type, event.data );
+    }
+  });
 }
 
 //=================================================
 // Preference implementation
 Preference.prototype = {
   get name() {
-    return this._branch.root + this._name;
+    return this._name;
+  },
+  
+  get type() {
+    var value = "";
+    var type = this._prefs.getPrefType(name);
+    
+    switch (type) {
+      case nsIPrefBranch2.PREF_STRING:
+        value = "String";
+        break;
+      case nsIPrefBranch2.PREF_BOOL:
+        value = "Boolean";
+        break;
+      case nsIPrefBranch2.PREF_INT:
+        value = "Number";
+        break;
+    }
+    
+    return value;
+  },
+  
+  get value() {
+    return this.branch.getValue( this._name, null );
+  },
+  
+  set value( value ) {
+    return this.branch.setValue( this._name, value );
+  },
+  
+  get locked() {
+    return this.branch._prefs.prefIsLocked( this.name );
+  },
+  
+  set locked(value) {
+  	this.branch._prefs[ value ? "lockPref" : "unlockPref" ]( this.name );
+  },
+  
+  get modified() {
+    return this.branch._prefs.prefHasUserValue( this.name );
   },
   
   get branch() {
     return this._branch;
   },
   
+  get events() {
+    return this._events;
+  },
+  
   reset : function() {
-    this._branch._prefs.clearUserPref(this.name);
+    this.branch._prefs.clearUserPref(this.name);
   }
 };
 
@@ -404,7 +463,6 @@ Extensions.prototype = {
   },
   
   get : function(id) {
-    if (this._extmgr == null) dump("no extmgr");
     return this.has(id) && new Extension(this._extmgr.getItemForID(id)) || null;
   }
 };

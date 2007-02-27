@@ -26,22 +26,29 @@ function test_Preferences() {
 
   // test getting non-existing values
   var itemValue = Application.prefs.getValue(test.missing, "default");
-  is(itemValue, "default", "Check 'Application.prefs.get' for non-existing item");
+  is(itemValue, "default", "Check 'Application.prefs.getValue' for non-existing item");
+  
+  is(Application.prefs.get(test.missing), null, "Check 'Application.prefs.get' for non-existing item");
   
   // test setting and getting a value
   Application.prefs.setValue(test.dummy, "dummy");
   itemValue = Application.prefs.getValue(test.dummy, "default");
-  is(itemValue, "dummy", "Check 'Application.prefs.get' for existing item");
+  is(itemValue, "dummy", "Check 'Application.prefs.getValue' for existing item");
 
   // test for overwriting an existing value
   Application.prefs.setValue(test.dummy, "smarty");
   itemValue = Application.prefs.getValue(test.dummy, "default");
-  is(itemValue, "smarty", "Check 'Application.prefs.get' for overwritten item");
+  is(itemValue, "smarty", "Check 'Application.prefs.getValue' for overwritten item");
+  
+  // test setting and getting a value
+  Application.prefs.get(test.dummy).value = "dummy2";
+  itemValue = Application.prefs.get(test.dummy).value;
+  is(itemValue, "dummy2", "Check 'Application.prefs.get().value' for existing item");
 
   // test resetting a pref [since there is no default value, the pref should disappear]
   Application.prefs.get(test.dummy).reset();
   var itemValue = Application.prefs.getValue(test.dummy, "default");
-  is(itemValue, "default", "Check 'Application.prefs.get' for reset pref");
+  is(itemValue, "default", "Check 'Application.prefs.getValue' for reset pref");
   
   // test to see if a non-existant property exists
   ok(!Application.prefs.has(test.dummy), "Check non-existant property for existance");
@@ -118,11 +125,33 @@ function test_Preferences() {
   // test getting all preferences
   var allPrefs = Application.prefs.all;
   ok(allPrefs.length >= 800, "Check 'Application.prefs.all' for the right number of preferences");
-  is(allPrefs[0], "capability.policy.default.Window.parent.get", "Check 'Application.prefs.all' for the right starting preference");
+  is(allPrefs[0].name, "capability.policy.default.Window.parent.get", "Check 'Application.prefs.all' for the right starting preference");
 
   // test the value of the preference root
   is(Application.prefs.root, "", "Check the Application preference root");
   is(Application.extensions.all[0].prefs.root, "extensions.inspector@mozilla.org.", "Check an extension preference root");
+  
+  // test for user changed preferences
+  ok(Application.prefs.get("browser.shell.checkDefaultBrowser").modified, "A single preference is marked as modified.");
+  ok(!Application.prefs.get(test.string).modified, "A single preference is marked as not modified.");
+  
+  // test for a locked preference
+  var pref = Application.prefs.get(test.string);
+  ok(!pref.locked, "A single preference should not be locked.");
+  
+  pref.locked = true;
+  ok(pref.locked, "A single preference should be locked.");
+  
+  try {
+    prev.value = "test value";
+    
+    ok(false, "A locked preference should not be able to be modified.");
+  } catch(e){
+    ok(true, "A locked preference should not be able to be modified.");
+  }
+  
+  pref.locked = false;
+  ok(!pref.locked, "A single preference should not be locked.");
   
   // check for change event when setting a value
   SimpleTest.waitForExplicitFinish();
@@ -134,6 +163,16 @@ function onPrefChange(evt) {
   netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
   is(evt.data, test.dummy, "Check 'Application.prefs.set' fired a change event");
   Application.prefs.events.removeListener("change", onPrefChange);
+
+  Application.prefs.get("fuel.fuel-test").events.addListener("change", onPrefChange2);
+  Application.prefs.setValue("fuel.fuel-test", "change event2");
+}
+
+function onPrefChange2(evt) {
+  netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+  is(evt.data, test.dummy, "Check 'Application.prefs.set' fired a change event for a single preference");
+  Application.prefs.events.removeListener("change", onPrefChange2);
+  
   SimpleTest.finish();
 }
 </script>
