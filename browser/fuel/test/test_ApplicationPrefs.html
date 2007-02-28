@@ -129,7 +129,6 @@ function test_Preferences() {
 
   // test the value of the preference root
   is(Application.prefs.root, "", "Check the Application preference root");
-  is(Application.extensions.all[0].prefs.root, "extensions.inspector@mozilla.org.", "Check an extension preference root");
   
   // test for user changed preferences
   ok(Application.prefs.get("browser.shell.checkDefaultBrowser").modified, "A single preference is marked as modified.");

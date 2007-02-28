@@ -36,11 +36,14 @@ function test_Extensions() {
   ok(inspector.version, "Check 'Extension.version' for known extension");
   ok(inspector.firstRun, "Check 'Extension.firstRun' for known extension");
   
-  // Reset the install event preference, so that we can test it again later
-  inspector.prefs.setValue("install-event-fired", false);
-  
   // test to see if extension find works
   is(Application.extensions.all.length, 1, "Check a find for all extensions");
+
+  // test the value of the preference root
+  is(Application.extensions.all[0].prefs.root, "extensions.inspector@mozilla.org.", "Check an extension preference root");
+  
+  // Reset the install event preference, so that we can test it again later
+  inspector.prefs.get("install-event-fired").reset();
 }
 </script>
 </pre>

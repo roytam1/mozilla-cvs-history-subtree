@@ -51,17 +51,24 @@ function Console() {
 //=================================================
 // Console implementation
 Console.prototype = {
-  log : function(msg) {
-    this._console.logStringMessage(msg);
+  log : function(aMsg) {
+    this._console.logStringMessage(aMsg);
+  },
+  
+  open : function() {
+    var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                       .getService(Components.interfaces.nsIWindowWatcher);
+    ww.openWindow(null, "chrome://global/content/console.xul",
+                  "errorconsole", "chrome,extrachrome,dependent", null);
   }
 };
 
 
 //=================================================
 // EventItem constructor
-function EventItem(type, data) {
-  this._type = type;
-  this._data = data;
+function EventItem(aType, aData) {
+  this._type = aType;
+  this._data = aData;
 }
 
 //=================================================
@@ -92,34 +99,34 @@ function Events() {
 //=================================================
 // Events implementation
 Events.prototype = {
-  addListener : function(event, handler) {
-	if (this._listeners.some(hasFilter))
+  addListener : function(aEvent, aListener) {
+  if (this._listeners.some(hasFilter))
       return;
 
     this._listeners.push({
-      event: event,
-      handler: handler
+      event: aEvent,
+      listener: aListener
     });
     
     function hasFilter(element) {
-      return element.event == event && element.handler == handler;
+      return element.event == aEvent && element.listener == aListener;
     }
   },
   
-  removeListener : function(event, handler) {
+  removeListener : function(aEvent, aListener) {
     this._listeners = this._listeners.filter(function(element){
-      return element.event != event && element.handler != handler;
+      return element.event != aEvent && element.listener != aListener;
     });
   },
   
-  dispatch : function(event, eventItem) {
-  	eventItem = new EventItem( event, eventItem );
-  	
-  	this._listeners.forEach(function(key){
-      if (key.event == event) {
-        key.handler.handleEvent ?
-        	key.handler.handleEvent(eventItem) :
-        	key.handler(eventItem);
+  dispatch : function(aEvent, aEventItem) {
+    eventItem = new EventItem( aEvent, aEventItem );
+    
+    this._listeners.forEach(function(key){
+      if (key.event == aEvent) {
+        key.listener.handleEvent ?
+          key.listener.handleEvent(eventItem) :
+          key.listener(eventItem);
       }
     });
     
@@ -137,13 +144,13 @@ const nsISupportsString = Components.interfaces.nsISupportsString;
 
 //=================================================
 // PreferenceBranch constructor
-function PreferenceBranch( branch ) {
-  this._root = branch;
+function PreferenceBranch( aBranch ) {
+  this._root = aBranch;
   this._prefs = Components.classes['@mozilla.org/preferences-service;1']
                           .getService(nsIPrefService);
 
-  if (branch) {
-    this._prefs = this._prefs.getBranch(branch);
+  if (aBranch) {
+    this._prefs = this._prefs.getBranch(aBranch);
   }
     
   this._prefs.QueryInterface(nsIPrefBranch);
@@ -158,9 +165,9 @@ function PreferenceBranch( branch ) {
 // PreferenceBranch implementation
 PreferenceBranch.prototype = {
   // for nsIObserver
-  observe: function(subject, topic, data) {
-    if (topic == "nsPref:changed") {
-      this._events.dispatch("change", data);
+  observe: function(aSubject, aTopic, aData) {
+    if (aTopic == "nsPref:changed") {
+      this._events.dispatch("change", aData);
     }
   },
   
@@ -182,7 +189,7 @@ PreferenceBranch.prototype = {
   // type: Boolean, Number, String (getPrefType)
   // locked: true, false (prefIsLocked)
   // modified: true, false (prefHasUserValue)
-  find : function(options) {
+  find : function(aOptions) {
     var retVal = [],
       items = this._prefs.getChildList( "", [] );
     
@@ -193,53 +200,51 @@ PreferenceBranch.prototype = {
     return retVal;
   },
   
-  has : function(name) {
-  	return !!this._prefs.getPrefType( name );
+  has : function(aName) {
+    return !!this._prefs.getPrefType( aName );
   },
   
-  get : function(name) {
-    return this.has( name ) ? new Preference( name, this ) : null;
+  get : function(aName) {
+    return this.has( aName ) ? new Preference( aName, this ) : null;
   },
 
-  getValue : function(name, value) {
-    var type = this._prefs.getPrefType(name);
+  getValue : function(aName, aValue) {
+    var type = this._prefs.getPrefType(aName);
     
     switch (type) {
       case nsIPrefBranch2.PREF_STRING:
-        value = this._prefs.getComplexValue(name, nsISupportsString).data;
+        aValue = this._prefs.getComplexValue(aName, nsISupportsString).data;
         break;
       case nsIPrefBranch2.PREF_BOOL:
-        value = this._prefs.getBoolPref(name);
+        aValue = this._prefs.getBoolPref(aName);
         break;
       case nsIPrefBranch2.PREF_INT:
-        value = this._prefs.getIntPref(name);
+        aValue = this._prefs.getIntPref(aName);
         break;
     }
     
-    return value;
+    return aValue;
   },
   
-  setValue : function(name, value) {
-    var type = value != null ? value.constructor.name : "";
+  setValue : function(aName, aValue) {
+    var type = aValue != null ? aValue.constructor.name : "";
     
     switch (type) {
       case "String":
         var str = Components.classes['@mozilla.org/supports-string;1']
                             .createInstance(nsISupportsString);
-        str.data = value;
-        this._prefs.setComplexValue(name, nsISupportsString, str);
+        str.data = aValue;
+        this._prefs.setComplexValue(aName, nsISupportsString, str);
         break;
       case "Boolean":
-        this._prefs.setBoolPref(name, value);
+        this._prefs.setBoolPref(aName, aValue);
         break;
       case "Number":
-        this._prefs.setIntPref(name, value);
+        this._prefs.setIntPref(aName, aValue);
         break;
       default:
         throw("Unknown preference value specified.");
     }
-    
-    return value;
   },
   
   reset : function() {
@@ -250,16 +255,16 @@ PreferenceBranch.prototype = {
 
 //=================================================
 // Preference constructor
-function Preference( name, branch ) {
-  this._name = name;
-  this._branch = branch;
+function Preference( aName, aBranch ) {
+  this._name = aName;
+  this._branch = aBranch;
   this._events = new Events();
   
   var self = this;
   
-  this.branch.events.addListener("change", function(event){
-    if ( event.data == self.name ) {
-      self.events.dispatch( event.type, event.data );
+  this.branch.events.addListener("change", function(aEvent){
+    if ( aEvent.data == self.name ) {
+      self.events.dispatch( aEvent.type, aEvent.data );
     }
   });
 }
@@ -294,16 +299,16 @@ Preference.prototype = {
     return this.branch.getValue( this._name, null );
   },
   
-  set value( value ) {
-    return this.branch.setValue( this._name, value );
+  set value(aValue) {
+    return this.branch.setValue( this._name, aValue );
   },
   
   get locked() {
     return this.branch._prefs.prefIsLocked( this.name );
   },
   
-  set locked(value) {
-  	this.branch._prefs[ value ? "lockPref" : "unlockPref" ]( this.name );
+  set locked(aValue) {
+    this.branch._prefs[ aValue ? "lockPref" : "unlockPref" ]( this.name );
   },
   
   get modified() {
@@ -338,25 +343,25 @@ SessionStorage.prototype = {
     return this._events;
   },
   
-  has : function(name) {
-    return this._storage.hasOwnProperty(name);
+  has : function(aName) {
+    return this._storage.hasOwnProperty(aName);
   },
   
-  set : function(name, value) {
-    this._storage[name] = value;
-    this._events.dispatch("change", name);
+  set : function(aName, aValue) {
+    this._storage[aName] = aValue;
+    this._events.dispatch("change", aName);
   },
   
-  get : function(name, defaultValue) {
-    return this.has(name) && this._storage[name] || defaultValue;
+  get : function(aName, aDefaultValue) {
+    return this.has(aName) && this._storage[aName] || aDefaultValue;
   }
 };
 
 
 //=================================================
 // Extension constructor
-function Extension( item ) {
-  this._item = item;
+function Extension(aItem) {
+  this._item = aItem;
   this._firstRun = false;
   this._prefs = new PreferenceBranch( "extensions." + this._item.id + "." );
   this._storage = new SessionStorage();
@@ -405,11 +410,11 @@ Extension.prototype = {
   },
 
   // for nsIObserver  
-  observe : function (subject, topic, data)
+  observe: function _observe(aSubject, aTopic, aData)
   {
-    if ( (data == "item-uninstalled") &&
-         (subject instanceof Components.interfaces.nsIUpdateItem) &&
-         (subject.id == this._item.id) )
+    if ( (aData == "item-uninstalled") &&
+         (aSubject instanceof Components.interfaces.nsIUpdateItem) &&
+         (aSubject.id == this._item.id) )
     {
       this._events.dispatch("uninstall", this._item.id);
     }
@@ -447,7 +452,7 @@ Extensions.prototype = {
   // version: "1.0.1"
   // minVersion: "1.0"
   // maxVersion: "2.0"
-  find : function(options) {
+  find : function(aOptions) {
     var retVal = [],
       items = this._extmgr.getItemList( 2, {} );
     
@@ -458,12 +463,12 @@ Extensions.prototype = {
     return retVal;
   },
   
-  has : function(id) {
-    return !!(this._extmgr && this._extmgr.getItemForID(id).type);
+  has : function(aId) {
+    return !!(this._extmgr && this._extmgr.getItemForID(aId).type);
   },
   
-  get : function(id) {
-    return this.has(id) && new Extension(this._extmgr.getItemForID(id)) || null;
+  get : function(aId) {
+    return this.has(aId) && new Extension(this._extmgr.getItemForID(aId)) || null;
   }
 };
 
@@ -509,21 +514,21 @@ Application.prototype = {
   },
   
   // for nsIObserver
-  observe: function(subject, topic, data) {
-    if (topic == "app-startup") {
+  observe: function _observe(aSubject, aTopic, aData) {
+    if (aTopic == "app-startup") {
       this._extensions = new Extensions();
       this._events.dispatch("start", "application");
     }
-    else if (topic == "final-ui-startup") {
+    else if (aTopic == "final-ui-startup") {
       this._events.dispatch("ready", "application");
     }
-    else if (topic == "quit-application-requested") {
+    else if (aTopic == "quit-application-requested") {
       // we can stop the quit by checking the return value
       if (this._events.dispatch("quit", "application")) {
-        data.value = true;
+        aData.value = true;
       }
     }
-    else if (topic == "xpcom-shutdown") {
+    else if (aTopic == "xpcom-shutdown") {
       this._events.dispatch("unload", "application");
 
       var os = Components.classes["@mozilla.org/observer-service;1"]
@@ -546,13 +551,13 @@ Application.prototype = {
   flags : nsIClassInfo.SINGLETON,
   implementationLanguage : Components.interfaces.nsIProgrammingLanguage.JAVASCRIPT,
 
-  getInterfaces : function(count) {
+  getInterfaces : function(aCount) {
     var interfaces = [nsIApplication, nsIObserver, nsIClassInfo];
-    count.value = interfaces.length;
+    aCount.value = interfaces.length;
     return interfaces;
   },
 
-  getHelperForLanguage : function(count) {
+  getHelperForLanguage : function(aCount) {
     return null;
   },
   

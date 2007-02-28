@@ -11,10 +11,10 @@ interface nsIConsole : nsISupports
 {
   /**
    * Sends a given string to the console.
-   * @param   msg
+   * @param   aMsg
    *          The text to send to the console
    */
-  void log(in string msg);
+  void log(in AString aMsg);
 
   /**
    * Opens the error console window.
@@ -24,24 +24,24 @@ interface nsIConsole : nsISupports
 
 
 /**
- * Interface hold information about an event.
+ * Interface holds information about an event.
  */
 [scriptable, function, uuid(05281820-ab62-11db-abbd-0800200c9a66)]
 interface nsIEventItem : nsISupports
 {
   /**
-   * The type of the event
+   * The name of the event
    */
-  readonly attribute string type;
+  readonly attribute AString type;
 
   /**
    * Can hold extra details and data associated with the event. This
    * is optional and event specific.
    */
-  readonly attribute string data;
+  readonly attribute AString data;
 
   /**
-   * 
+   * Cancels the event if it is cancelable.
    */
   void preventDefault();
 }; 
@@ -57,12 +57,12 @@ interface nsIEventListener : nsISupports
    * This method is called whenever an event occurs of the type for which 
    * the EventListener interface was registered.
    *
-   * @param   event
-   *            The EventItem contains contextual information about the 
-   *            event. It also contains the preventDefault method which
-   *            is used to cancel default action.
+   * @param   aEvent
+   *          The EventItem contains contextual information about the 
+   *          event. It also contains the preventDefault method which
+   *          is used to cancel the default action.
    */
-  void handleEvent(in nsIEventItem event);
+  void handleEvent(in nsIEventItem aEvent);
 }; 
 
 
@@ -73,33 +73,34 @@ interface nsIEventListener : nsISupports
 interface nsIEvents : nsISupports
 {
   /**
-   * Adds an event listener from the list. Calling remove
-   * with arguments which do not identify any currently registered
-   * EventListener has no effect.
-   * @param   event
+   * Adds an event listener to the list. Attempts to add duplicate
+   * instances are ignored.
+   * @param   aEvent
    *          The name of an event
-   * @param   listener
+   * @param   aListener
    *          The reference to a listener
    */
-  void addListener(in string event, in nsIEventListener listener);
+  void addListener(in AString aEvent, in nsIEventListener aListener);
 
   /**
    * Removes an event listener from the list. Calling remove
    * with arguments which do not identify any currently registered
    * EventListener has no effect.
-   * @param   event
+   * @param   aEvent
    *          The name of an event
-   * @param   listener
+   * @param   aListener
    *          The reference to a listener
    */
-  void removeListener(in string event, in nsIEventListener listener);
+  void removeListener(in AString aEvent, in nsIEventListener aListener);
 }; 
 
 
 /**
- * Interface for simplified access to preferences. This interface is
- * designed to be used in a predefined context. As such, the branch should
- * be preset to a value appropriate to the context.
+ * Interface for simplified access to preferences. The interface has a
+ * predefined root preference branch. The root branch is set based on the
+ * context of the owner. For example, an extension's preferences have a root
+ * of "extensions.<extensionid>.", while the application level preferences
+ * have an empty root.
  */
 [scriptable, uuid(ce697d40-aa5a-11db-abbd-0800200c9a66)]
 interface nsIPreferenceBranch : nsISupports
@@ -107,10 +108,10 @@ interface nsIPreferenceBranch : nsISupports
   /**
    * The name of the branch root.
    */
-  readonly attribute string root;
+  readonly attribute AString root;
   
   /**
-   * All extensions in this preference area.
+   * Array of nsIPreference listing all preferences in this branch.
    */
   readonly attribute nsIVariant all;
   
@@ -121,40 +122,40 @@ interface nsIPreferenceBranch : nsISupports
   
   /**
    * Check to see if a preference exists.
-   * @param   name
+   * @param   aName
    *          The name of preference
    * @returns true if the preference exists, false if not
    */
-  nsIVariant has(in string name);
+  boolean has(in AString aName);
   
   /**
    * Gets an object representing a preference
-   * @param   name
+   * @param   aName
    *          The name of preference
    * @returns a preference object, or null if the preference does not exist
    */
-  nsIPreference get(in string name);
+  nsIPreference get(in AString aName);
   
   /**
    * Gets the value of a preference. Returns a default value if
    * the preference does not exist.
-   * @param   name
+   * @param   aName
    *          The name of preference
-   * @param   defaultValue
+   * @param   aDefaultValue
    *          The value to return if preference does not exist
    * @returns value of the preference or the given default value if preference
    *          does not exists.
    */
-  nsIVariant getValue(in string name, in nsIVariant defaultValue);
+  nsIVariant getValue(in AString aName, in nsIVariant aDefaultValue);
 
   /**
    * Sets the value of a storage item with the given name.
-   * @param   name
+   * @param   aName
    *          The name of an item
-   * @param   value
+   * @param   aValue
    *          The value to assign to the item
    */
-  nsIVariant setValue(in string name, in nsIVariant value);
+  void setValue(in AString aName, in nsIVariant aValue);
 
   /**
    * Resets all preferences in a branch back to their default values.
@@ -163,7 +164,8 @@ interface nsIPreferenceBranch : nsISupports
 };
 
 /**
- * Interface for accessing a single preference.
+ * Interface for accessing a single preference. The data is not cached.
+ * All reads access the current state of the preference.
  */
 [scriptable, uuid(2C7462E2-72C2-4473-9007-0E6AE71E23CA)]
 interface nsIPreference : nsISupports
@@ -171,12 +173,12 @@ interface nsIPreference : nsISupports
   /**
    * The name of the preference.
    */
-  readonly attribute string name;
+  readonly attribute AString name;
   
   /**
    * A string representing the type of preference (String, Boolean, or Number).
    */
-  readonly attribute string type;
+  readonly attribute AString type;
   
   /**
    * Get/Set the value of the preference.
@@ -223,33 +225,33 @@ interface nsISessionStorage : nsISupports
 
   /**
    * Determines if a storage item exists with the given name.
-   * @param   name
+   * @param   aName
    *          The name of an item
    * @returns true if an item exists with the given name,
    *          false otherwise.
    */
-  boolean has(in string name);
+  boolean has(in AString aName);
 
   /**
    * Sets the value of a storage item with the given name.
-   * @param   name
+   * @param   aName
    *          The name of an item
-   * @param   value
+   * @param   aValue
    *          The value to assign to the item
    */
-  void set(in string name, in string value);
+  void set(in AString aName, in AString aValue);
 
   /**
    * Gets the value of a storage item with the given name. Returns a
    * default value if the item does not exist.
-   * @param   name
+   * @param   aName
    *          The name of an item
-   * @param   defaultValue
+   * @param   aDefaultValue
    *          The value to return if no item exists with the given name
    * @returns value of the item or the given default value if no item
    *          exists with the given name.
    */
-  string get(in string name, in string defaultValue);
+  AString get(in AString aName, in AString aDefaultValue);
 }; 
 
 
@@ -262,17 +264,17 @@ interface nsIExtension : nsISupports
   /**
    * The id of the extension.
    */
-  readonly attribute string id;
+  readonly attribute AString id;
 
   /**
    * The name of the extension.
    */
-  readonly attribute string name;
+  readonly attribute AString name;
   
   /**
    * The version number of the extension.
    */
-  readonly attribute string version;
+  readonly attribute AString version;
 
   /**
    * Indicates whether this is the extension's first run after install
@@ -304,27 +306,27 @@ interface nsIExtension : nsISupports
 interface nsIExtensions : nsISupports
 {
   /**
-   * All extensions in the application.
+   * Array of nsIExtension listing all extensions in the application.
    */
   readonly attribute nsIVariant all;
 
   /**
    * Determines if an extension exists with the given id.
-   * @param   id
+   * @param   aId
    *          The id of an extension
    * @returns true if an extension exists with the given id,
    *          false otherwise.
    */
-  boolean has(in string id);
+  boolean has(in AString aId);
 
   /**
    * Gets a nsIExtension object for an extension.
-   * @param   id
+   * @param   aId
    *          The id of an extension
    * @returns An extension object or null if no extension exists
    *          with the given id.
    */
-  nsIExtension get(in string id);
+  nsIExtension get(in AString aId);
 }; 
 
 
@@ -337,17 +339,17 @@ interface nsIApplication : nsISupports
   /**
    * The id of the application.
    */
-  readonly attribute string id;
+  readonly attribute AString id;
 
   /**
    * The name of the application.
    */
-  readonly attribute string name;
+  readonly attribute AString name;
   
   /**
    * The version number of the application.
    */
-  readonly attribute string version;
+  readonly attribute AString version;
   
   /**
    * The console object for the application.
@@ -361,7 +363,7 @@ interface nsIApplication : nsISupports
   readonly attribute nsIExtensions extensions;
 
   /**
-   * The preferences object for the application. Defaults to the
+   * The preferences object for the application. Defaults to an empty
    * root branch.
    */
   readonly attribute nsIPreferenceBranch prefs;

@@ -35,11 +35,11 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH           = ../../..
-topsrcdir       = @top_srcdir@
-srcdir          = @srcdir@
-VPATH           = @srcdir@
-relativesrcdir  = browser/fuel/test
+DEPTH          = ../../..
+topsrcdir      = @top_srcdir@
+srcdir         = @srcdir@
+VPATH          = @srcdir@
+relativesrcdir = browser/fuel/test
 
 include $(DEPTH)/config/autoconf.mk
 include $(topsrcdir)/config/rules.mk
