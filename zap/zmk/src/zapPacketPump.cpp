@@ -119,20 +119,9 @@ zapPacketPumpClock::DisconnectSource(zapIMediaSource *source,
 NS_IMETHODIMP
 zapPacketPumpClock::ConsumeFrame(zapIMediaFrame * frame)
 {
-  if (!mPump || !mPump->mInput || !mPump->mOutput) return NS_OK;
+  if (!mPump) return NS_OK;
 
-  nsRefPtr<zapPacketPumpClock> deathGrip(this);
-
-  // ok, our cue. attempt to pump a frame
-  nsCOMPtr<zapIMediaFrame> mframe;
-  if (NS_SUCCEEDED(mPump->mInput->ProduceFrame(getter_AddRefs(mframe)))) {
-    // the following check is important, since the graph might have been
-    // reconfigured by the ProduceFrame call
-    if (mPump->mOutput)
-      mPump->mOutput->ConsumeFrame(mframe);
-  }
-  
-  return NS_OK;
+  return mPump->Pump();
 }
 
 
@@ -165,6 +154,7 @@ NS_INTERFACE_MAP_BEGIN(zapPacketPump)
   NS_INTERFACE_MAP_ENTRY(zapIMediaNode)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSink)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSource)
+  NS_INTERFACE_MAP_ENTRY(zapIPacketPump)
 NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
@@ -173,8 +163,8 @@ NS_INTERFACE_MAP_END
 /* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
 zapPacketPump::AddedToGraph(zapIMediaGraph *graph,
-                              const nsACString & id,
-                              nsIPropertyBag2* node_pars)
+                            const nsACString & id,
+                            nsIPropertyBag2* node_pars)
 {
   mGraph = graph;
 
@@ -308,3 +298,24 @@ zapPacketPump::ProduceFrame(zapIMediaFrame ** frame)
   return NS_ERROR_FAILURE;
 }
 
+//----------------------------------------------------------------------
+// zapIPacketPump implementation:
+
+/* void pump (); */
+NS_IMETHODIMP
+zapPacketPump::Pump()
+{
+  if (!mInput || !mOutput) return NS_OK;
+
+  nsRefPtr<zapPacketPump> deathGrip(this);
+
+  nsCOMPtr<zapIMediaFrame> frame;
+  if (NS_SUCCEEDED(mInput->ProduceFrame(getter_AddRefs(frame)))) {
+    // the following check is important, since the graph might have
+    // been reconfigured by the ProduceFrame() call:
+    if (mOutput)
+      mOutput->ConsumeFrame(frame);
+  }
+  
+  return NS_OK;
+}

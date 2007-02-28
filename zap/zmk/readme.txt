@@ -822,15 +822,18 @@ audio/tone frames
 --------
 
 General purpose packet pump. Pumps an unaltered "input" packet to the
-output whenever a "clock" frame is received. The timestamp of the
-frame is NOT modified. Frames will only be pumped if an output sink is 
-connected.
+output whenever a "clock" frame is received or when prodded through
+zapIPacketPump. The timestamp of the frame is NOT modified. Frames
+will only be pumped if an output sink is connected.
 
 Sinks: 2 
 
 ACString "name" == "input" : pumped input frames; any stream type (active)
 ACString "name" == "clock" : reference clock; any stream type (passive)
+
 Sources: 1 (active)
+
+Control interfaces: zapIPacketPump
 
 Output stream:
 same as "input" stream

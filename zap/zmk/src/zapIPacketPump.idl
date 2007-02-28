@@ -34,49 +34,17 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_PACKETPUMP_H__
-#define __ZAP_PACKETPUMP_H__
+#include "nsISupports.idl"
 
-#include "zapIMediaNode.h"
-#include "zapIMediaSource.h"
-#include "zapIMediaSink.h"
-#include "zapIPacketPump.h"
-#include "nsCOMPtr.h"
-
-class zapPacketPumpClock;
-
-////////////////////////////////////////////////////////////////////////
-// zapPacketPump
-
-// {35A96EF1-5D16-4E31-9613-27127B35E799}
-#define ZAP_PACKETPUMP_CID                             \
-  { 0x35a96ef1, 0x5d16, 0x4e31, { 0x96, 0x13, 0x27, 0x12, 0x7b, 0x35, 0xe7, 0x99 } }
-
-#define ZAP_PACKETPUMP_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "pump"
-
-class zapPacketPump : public zapIMediaNode,
-                      public zapIMediaSource,
-                      public zapIMediaSink,
-                      public zapIPacketPump
+/**
+ * \ingroup ZMK_MODULE
+ */
+[scriptable, uuid(c77c79ac-a00a-452c-bcf9-2f18b0038ba6)]
+interface zapIPacketPump : nsISupports
 {
-  NS_DECL_ISUPPORTS
-  NS_DECL_ZAPIMEDIANODE
-  NS_DECL_ZAPIMEDIASOURCE
-  NS_DECL_ZAPIMEDIASINK
-  NS_DECL_ZAPIPACKETPUMP
-  
-  zapPacketPump();
-  ~zapPacketPump();
-
-private:
-  friend class zapPacketPumpClock;
-
-  nsCOMPtr<zapIMediaGraph> mGraph;
-  
-  zapPacketPumpClock *mClock; // weak reference managed by object itself
-  
-  nsCOMPtr<zapIMediaSink> mOutput;
-  nsCOMPtr<zapIMediaSource> mInput;
+  /**
+   * Attempt to pump a single packet. Will have no effect if either
+   * source or sink are disconnected.
+   */
+  void pump();
 };
-
-#endif // __ZAP_PACKETPUMP_H__

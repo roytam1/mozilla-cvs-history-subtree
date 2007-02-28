@@ -104,6 +104,7 @@ XPIDLSRCS	= \
 		zapIMediaSink.idl \
 		zapIMediaSource.idl \
 		zapIPacketBuffer.idl \
+		zapIPacketPump.idl \
 		zapIPortaudioDevice.idl \
 		zapIRTPFrame.idl \
 		zapISpeexAudioProcessor.idl \
