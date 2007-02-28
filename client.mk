@@ -238,11 +238,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = FIREFOX_1_5_0_10_RELEASE
+MOZ_CO_TAG           = CAMINO_1_0_4_RELEASE
 NSPR_CO_TAG          = NSPR_4_6_5_RTM
 NSS_CO_TAG           = NSS_3_11_5_RTM
-LDAPCSDK_CO_TAG      = FIREFOX_1_5_0_10_RELEASE
-LOCALES_CO_TAG       = FIREFOX_1_5_0_10_RELEASE
+LDAPCSDK_CO_TAG      = CAMINO_1_0_4_RELEASE
+LOCALES_CO_TAG       = CAMINO_1_0_4_RELEASE
 
 BUILD_MODULES = all
 
