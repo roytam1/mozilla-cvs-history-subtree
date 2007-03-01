@@ -56,10 +56,18 @@ Console.prototype = {
   },
   
   open : function() {
-    var ww = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                       .getService(Components.interfaces.nsIWindowWatcher);
-    ww.openWindow(null, "chrome://global/content/console.xul",
-                  "errorconsole", "chrome,extrachrome,dependent", null);
+    var wMediator = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                              .getService(Components.interfaces.nsIWindowMediator);
+    var console = wMediator.getMostRecentWindow("global:console");
+    if (!console) {
+      var wWatch = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                             .getService(Components.interfaces.nsIWindowWatcher);
+      wWatch.openWindow(null, "chrome://global/content/console.xul", "_blank",
+                        "chrome,dialog=no,all", cmdLine);
+    } else {
+      // console was already open
+      console.focus();
+    }
   }
 };
 
@@ -92,21 +100,26 @@ EventItem.prototype = {
 
 //=================================================
 // Events constructor
-function Events() {
+function Events(aCallback) {
   this._listeners = [];
+  this._callback = aCallback;
 }
 
 //=================================================
 // Events implementation
 Events.prototype = {
   addListener : function(aEvent, aListener) {
-  if (this._listeners.some(hasFilter))
+    if (this._listeners.some(hasFilter))
       return;
 
     this._listeners.push({
       event: aEvent,
       listener: aListener
     });
+    
+    if (this._callback) {
+      this._callback(true);
+    }
     
     function hasFilter(element) {
       return element.event == aEvent && element.listener == aListener;
@@ -117,6 +130,10 @@ Events.prototype = {
     this._listeners = this._listeners.filter(function(element){
       return element.event != aEvent && element.listener != aListener;
     });
+    
+    if (this._callback) {
+      this._callback(this._listeners.length > 0);
+    }
   },
   
   dispatch : function(aEvent, aEventItem) {
@@ -145,6 +162,10 @@ const nsISupportsString = Components.interfaces.nsISupportsString;
 //=================================================
 // PreferenceBranch constructor
 function PreferenceBranch( aBranch ) {
+  if (!aBranch) {
+    aBranch = "";
+  }
+  
   this._root = aBranch;
   this._prefs = Components.classes['@mozilla.org/preferences-service;1']
                           .getService(nsIPrefService);
@@ -155,15 +176,27 @@ function PreferenceBranch( aBranch ) {
     
   this._prefs.QueryInterface(nsIPrefBranch);
   this._prefs.QueryInterface(nsIPrefBranch2);
-    
-  this._events = new Events();
-
-  this._prefs.addObserver("", this, false);
+  
+  var self = this;
+  this._events = new Events( function(aHasListeners) { self._setupObserver(aHasListeners); } );
+  this._observing = false;
 }
 
 //=================================================
 // PreferenceBranch implementation
 PreferenceBranch.prototype = {
+  // dynamically add/remove observer so we don't leak
+  _setupObserver: function(aHasListeners) {
+    if (this._observing && !aHasListeners) {
+      this._prefs.removeObserver(this._root, this);
+      this._observing = false;
+    }
+    else if (!this._observing && aHasListeners) {
+      this._prefs.addObserver(this._root, this, false);
+      this._observing = true;
+    }
+  },
+  
   // for nsIObserver
   observe: function(aSubject, aTopic, aData) {
     if (aTopic == "nsPref:changed") {
@@ -258,7 +291,7 @@ PreferenceBranch.prototype = {
 function Preference( aName, aBranch ) {
   this._name = aName;
   this._branch = aBranch;
-  this._events = new Events();
+  this._events = new Events(null);
   
   var self = this;
   
@@ -333,7 +366,7 @@ Preference.prototype = {
 // SessionStorage constructor
 function SessionStorage() {
   this._storage = {};
-  this._events = new Events();
+  this._events = new Events(null);
 }
 
 //=================================================
@@ -365,17 +398,16 @@ function Extension(aItem) {
   this._firstRun = false;
   this._prefs = new PreferenceBranch( "extensions." + this._item.id + "." );
   this._storage = new SessionStorage();
-  this._events = new Events();
+  
+  var self = this;
+  this._events = new Events( function(aHasListeners) { self._setupObserver(aHasListeners); } );
+  this._observing = false;
   
   var installPref = "install-event-fired";
   if ( !this._prefs.has(installPref) ) {
     this._prefs.setValue(installPref, true);
     this._firstRun = true;
   }
-  
-  var os = Components.classes["@mozilla.org/observer-service;1"]
-                     .getService(Components.interfaces.nsIObserverService);
-  os.addObserver(this, "em-action-requested", false);
 }
 
 //=================================================
@@ -409,6 +441,22 @@ Extension.prototype = {
     return this._events;
   },
 
+  // dynamically add/remove observer so we don't leak
+  _setupObserver: function(aHasListeners) {
+    if (this._observing && !aHasListeners) {
+      var os = Components.classes["@mozilla.org/observer-service;1"]
+                         .getService(Components.interfaces.nsIObserverService);
+      os.removeObserver(this, "em-action-requested");
+      this._observing = false;
+    }
+    else if (!this._observing && aHasListeners) {
+      var os = Components.classes["@mozilla.org/observer-service;1"]
+                         .getService(Components.interfaces.nsIObserverService);
+      os.addObserver(this, "em-action-requested", false);
+      this._observing = true;
+    }
+  },
+  
   // for nsIObserver  
   observe: function _observe(aSubject, aTopic, aData)
   {
@@ -483,7 +531,7 @@ function Application() {
   this._console = new Console();
   this._prefs = new PreferenceBranch("");
   this._storage = new SessionStorage();
-  this._events = new Events();
+  this._events = new Events(null);
   
   this._info = Components.classes["@mozilla.org/xre/app-info;1"]
                      .getService(Components.interfaces.nsIXULAppInfo);
