@@ -2324,6 +2324,9 @@ nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr,
   NS_ASSERTION(NS_SUCCEEDED(truncRet), "unable to truncate file");
   if (NS_FAILED(truncRet))
    destIFolder->ThrowAlertMsg("filterFolderTruncateFailed", msgWindow);
+  else
+    // tell parser that we've truncated the Inbox
+    nsParseMailMessageState::Init(m_curHdrOffset);
 
   //  need to re-open the inbox file stream.
   m_inboxFileStream->Open(m_inboxFileSpec, (PR_RDWR | PR_CREATE_FILE));
@@ -2333,8 +2336,6 @@ nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr,
   if (destIFolder)
     destIFolder->ReleaseSemaphore (myISupports);
   
-  // tell parser that we've truncated the Inbox
-  nsParseMailMessageState::Init(m_curHdrOffset);
   
   (void) localFolder->RefreshSizeOnDisk();
   if (destIFolder)
