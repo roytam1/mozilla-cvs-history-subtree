@@ -156,7 +156,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Fx-Release';
+$BuildNameExtra = 'Fx-FS-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -171,7 +171,7 @@ $BuildNameExtra = 'Fx-Release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Mozilla1.8';
+$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
 $BuildTag = 'FIREFOX_2_0_0_2_RELEASE';
@@ -195,9 +195,9 @@ $BinaryName = 'firefox-bin';
 
 # Release build options
 $ReleaseBuild  = 1;
-$shiptalkback  = 1;
+$shiptalkback  = 0;
 $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
-$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
@@ -208,20 +208,12 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = 'firefox2.0.0.2';
+$milestone     = 'mozilla1.8-fs';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 0;
-$update_package = 1;
-$update_product = "Firefox";
-$update_version = "2.0";
-$update_platform = "Linux_x86-gcc3";
-$update_hash = "sha1";
-$update_filehost = "ftp.mozilla.org";
-$update_ver_file = "browser/config/version.txt";
-$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
