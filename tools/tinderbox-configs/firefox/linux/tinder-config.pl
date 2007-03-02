@@ -156,7 +156,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Fx-FS-Release';
+$BuildNameExtra = 'Mozilla1.8-FS-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -197,7 +197,7 @@ $BinaryName = 'firefox-bin';
 $ReleaseBuild  = 1;
 $shiptalkback  = 0;
 $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
-$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
