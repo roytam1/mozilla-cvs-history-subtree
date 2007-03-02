@@ -540,12 +540,15 @@ function haveOldInstall(key, brandFullName, version) {
 
 function checkRegistry()
 {
-  // XXX todo
-  // this is firefox specific
-  // figure out what to do about tbird and sunbird, etc   
   LOG("checkRegistry");
 
   var result = false;
+  
+  // Firefox is the only toolkit app that needs to do this. 
+  // return false for other applications.
+  var app = Components.classes["@mozilla.org/xre/app-info;1"].
+            getService(Components.interfaces.nsIXULAppInfo);
+  if (app.name == "Firefox") {          
   try {
     var key = new RegKey();
     key.open(RegKey.prototype.ROOT_KEY_CLASSES_ROOT, "FirefoxHTML\\shell\\open\\command", key.ACCESS_READ);
@@ -557,6 +560,7 @@ function checkRegistry()
     LOG("failed to open command key for FirefoxHTML: " + e);
   }
   key.close();
+  }
   return result;
 }
 
