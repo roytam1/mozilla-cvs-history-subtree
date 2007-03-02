@@ -1181,6 +1181,7 @@ echo_objdir:
 # xpcom/threads/nsIEventQueue.idl (removed)
 # xpcom/threads/plevent.c (removed)
 # xpcom/threads/plevent.h (removed)
+# xpcom/reflect/xptcall/public/xptcall.h
 # xpcom/proxy/public/nsIProxyObjectManager.idl
 # xpcom/proxy/public/nsProxyEvent.h (moved to ../src/)
 # xpcom/proxy/src/nsProxyEvent.cpp 
