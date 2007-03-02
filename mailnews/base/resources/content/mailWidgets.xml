@@ -1718,8 +1718,11 @@
               // XXXbz We really want client*, but event.client* is bogus inside a popup!
               var eventX = event.screenX - document.documentElement.boxObject.screenX;
               var eventY = event.screenY - document.documentElement.boxObject.screenY;
-              box.view.selection.select(box.getRowAt(eventX, eventY));
+              var index = box.getRowAt(eventX, eventY);
+              box.view.selection.select(index);
+              return index;
             }
+            return -1;
           ]]>
         </body>
       </method>
@@ -1742,17 +1745,6 @@
           ]]>
         </body>
       </method>
-      <field name="onKeyDownMenuList" readonly="true">
-        <![CDATA[
-          ({
-            parentNode: this.parentNode,
-            handleEvent: function handleEvent(event) {
-              if (this.parentNode.hasAttribute("open"))
-                event.stopPropagation();
-            }
-          })
-        ]]>
-      </field>
       <field name="onKeyPressMenuList" readonly="true">
         <![CDATA[
           ({
@@ -1772,6 +1764,7 @@
               var box = this.tree.treeBoxObject;
               if (this.parentNode.hasAttribute("open")) {
                 event.stopPropagation();
+                event.preventDefault();
                 switch (event.keyCode) {
                   case event.DOM_VK_ESCAPE:
                     this.self.hidePopup();
@@ -1876,12 +1869,10 @@
     </implementation>
     <handlers>
       <handler event="mousemove" action="this.updateHover(event);"/>
-      <handler event="click" action="this.updateHover(event);this.fire();"/>
+      <handler event="click" button="0" action="if (this.updateHover(event) >= 0) this.fire();"/>
       <handler event="popupshowing">
         <![CDATA[
           this.parentNode.addEventListener("blur", this.onBlurMenuList, false);
-          window.top.document.addEventListener("keydown", this.onKeyDownMenuList, true);
-          window.top.document.addEventListener("keypress", this.onKeyPressMenuList, true);
           var box = this.tree.treeBoxObject;
           box.focused = true;
           var index = this.setInitialSelection();
@@ -1892,11 +1883,14 @@
             setTimeout(function() { box.ensureRowIsVisible(index); }, 0);
         ]]>
       </handler>
+      <handler event="popupshown">
+        <![CDATA[
+          this.enableKeyboardNavigator(false);
+        ]]>
+      </handler>
       <handler event="popuphiding">
         <![CDATA[
           this.parentNode.removeEventListener("blur", this.onBlurMenuList, false);
-          window.top.document.removeEventListener("keydown", this.onKeyDownMenuList, true);
-          window.top.document.removeEventListener("keypress", this.onKeyPressMenuList, true);
         ]]>
       </handler>
     </handlers>
