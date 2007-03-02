@@ -212,11 +212,11 @@
   WriteRegStr HKLM "$0\shell\open\command" "" "$\"$8$\" -mail"
 
   ; options
-  WriteRegStr HKLM "$0\shell\properties" "" "$(CONTEXT_OPTIONS)"
+  WriteRegStr HKLM "$0\shell\properties" "" "$(OPTIONS)"
   WriteRegStr HKLM "$0\shell\properties\command" "" "$\"$8$\" -options"
 
   ; safemode
-  WriteRegStr HKLM "$0\shell\safemode" "" "$(CONTEXT_SAFE_MODE)"
+  WriteRegStr HKLM "$0\shell\safemode" "" "$(SAFE_MODE)"
   WriteRegStr HKLM "$0\shell\safemode\command" "" "$\"$8$\" -safe-mode"
 
   ; Protocols
