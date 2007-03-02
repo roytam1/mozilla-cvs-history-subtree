@@ -100,9 +100,9 @@ zapFilterNode::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 // zapIMediaSource methods:
 
 
-/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void connectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapFilterNode::ConnectSink(zapIMediaSink *sink, const nsACString & connection_id)
+zapFilterNode::ConnectSink(zapIMediaSink *sink)
 {
   NS_ASSERTION(!mOutput, "output end already connected");
   mOutput = sink;
@@ -110,9 +110,9 @@ zapFilterNode::ConnectSink(zapIMediaSink *sink, const nsACString & connection_id
   return NS_OK;
 }
 
-/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void disconnectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapFilterNode::DisconnectSink(zapIMediaSink *sink, const nsACString & connection_id)
+zapFilterNode::DisconnectSink(zapIMediaSink *sink)
 {
   mOutput = nsnull;
   mCurrentInputStreamInfo = nsnull;
@@ -145,9 +145,9 @@ zapFilterNode::ProduceFrame(zapIMediaFrame ** frame)
 //----------------------------------------------------------------------
 // zapIMediaSink methods:
 
-/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void connectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapFilterNode::ConnectSource(zapIMediaSource *source, const nsACString & connection_id)
+zapFilterNode::ConnectSource(zapIMediaSource *source)
 {
   NS_ASSERTION(!mInput, "input end already connected");
   mInput = source;
@@ -155,9 +155,9 @@ zapFilterNode::ConnectSource(zapIMediaSource *source, const nsACString & connect
   return NS_OK;
 }
 
-/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void disconnectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapFilterNode::DisconnectSource(zapIMediaSource *source, const nsACString & connection_id)
+zapFilterNode::DisconnectSource(zapIMediaSource *source)
 {
   mInput = nsnull;
   mCurrentInputStreamInfo = nsnull;

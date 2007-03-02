@@ -98,20 +98,18 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaSource methods:
 
-/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void connectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapAudioIOMonitor::ConnectSink(zapIMediaSink *sink,
-                               const nsACString & connection_id)
+zapAudioIOMonitor::ConnectSink(zapIMediaSink *sink)
 {
   NS_ASSERTION(!mOutput, "already connected");
   mOutput = sink;
   return NS_OK;
 }
 
-/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void disconnectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapAudioIOMonitor::DisconnectSink(zapIMediaSink *sink,
-                                  const nsACString & connection_id)
+zapAudioIOMonitor::DisconnectSink(zapIMediaSink *sink)
 {
   mOutput = nsnull;
   return NS_OK;
@@ -304,10 +302,9 @@ zapAudioIO::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 //----------------------------------------------------------------------
 // zapIMediaSink methods:
 
-/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void connectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapAudioIO::ConnectSource(zapIMediaSource *source,
-                          const nsACString & connection_id)
+zapAudioIO::ConnectSource(zapIMediaSource *source)
 {
   NS_ASSERTION(!mInput, "already connected");
 
@@ -316,10 +313,9 @@ zapAudioIO::ConnectSource(zapIMediaSource *source,
   return NS_OK;
 }
 
-/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void disconnectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapAudioIO::DisconnectSource(zapIMediaSource *source,
-                             const nsACString & connection_id)
+zapAudioIO::DisconnectSource(zapIMediaSource *source)
 {
   mInput = nsnull;
   return NS_OK;
@@ -336,10 +332,9 @@ zapAudioIO::ConsumeFrame(zapIMediaFrame * frame)
 //----------------------------------------------------------------------
 // zapIMediaSource methods:
 
-/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void connectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapAudioIO::ConnectSink(zapIMediaSink *sink,
-                        const nsACString & connection_id)
+zapAudioIO::ConnectSink(zapIMediaSink *sink)
 {
   if (mOutput) {
     NS_ERROR("output end already connected");
@@ -349,10 +344,9 @@ zapAudioIO::ConnectSink(zapIMediaSink *sink,
   return NS_OK;
 }
 
-/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void disconnectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapAudioIO::DisconnectSink(zapIMediaSink *sink,
-                           const nsACString & connection_id)
+zapAudioIO::DisconnectSink(zapIMediaSink *sink)
 {
   mOutput = nsnull;
   return NS_OK;

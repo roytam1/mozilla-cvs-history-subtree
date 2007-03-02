@@ -131,10 +131,9 @@ zapClockReducer::GetSink(nsIPropertyBag2 *sink_pars,
 //----------------------------------------------------------------------
 // zapIMediaSink methods:
 
-/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void connectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapClockReducer::ConnectSource(zapIMediaSource *source,
-                               const nsACString & connection_id)
+zapClockReducer::ConnectSource(zapIMediaSource *source)
 {
   NS_ASSERTION(!mInput, "already connected");
 
@@ -143,10 +142,9 @@ zapClockReducer::ConnectSource(zapIMediaSource *source,
   return NS_OK;
 }
 
-/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void disconnectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapClockReducer::DisconnectSource(zapIMediaSource *source,
-                                  const nsACString & connection_id)
+zapClockReducer::DisconnectSource(zapIMediaSource *source)
 {
   mInput = nsnull;
   return NS_OK;
@@ -168,10 +166,9 @@ zapClockReducer::ConsumeFrame(zapIMediaFrame * frame)
 //----------------------------------------------------------------------
 // zapIMediaSource methods:
 
-/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void connectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapClockReducer::ConnectSink(zapIMediaSink *sink,
-                        const nsACString & connection_id)
+zapClockReducer::ConnectSink(zapIMediaSink *sink)
 {
   NS_ASSERTION(!mOutput, "already connected");
   mOutput = sink;
@@ -179,10 +176,9 @@ zapClockReducer::ConnectSink(zapIMediaSink *sink,
   return NS_OK;
 }
 
-/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void disconnectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapClockReducer::DisconnectSink(zapIMediaSink *sink,
-                                const nsACString & connection_id)
+zapClockReducer::DisconnectSink(zapIMediaSink *sink)
 {
   mOutput = nsnull;
   return NS_OK;

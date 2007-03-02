@@ -235,8 +235,8 @@ zapMediaGraph::RemoveConnection(ConnectionDescriptor* d)
   d->prev->next = d->next;
   d->next->prev = d->prev;
 
-  d->sink->DisconnectSource(d->src, d->name);
-  d->src->DisconnectSink(d->sink, d->name);
+  d->sink->DisconnectSource(d->src);
+  d->src->DisconnectSink(d->sink);
   delete d;
 }
 
@@ -438,11 +438,11 @@ zapMediaGraph::Connect(const nsACString & source_node_id, nsIPropertyBag2 *sourc
   id.AppendInt(mConnectionIdCounter++);
 
   // try to form connection:
-  rv = source->ConnectSink(sink, id);
+  rv = source->ConnectSink(sink);
   if (NS_FAILED(rv)) return rv;
-  rv = sink->ConnectSource(source, id);
+  rv = sink->ConnectSource(source);
   if (NS_FAILED(rv)) {
-    source->DisconnectSink(sink, id);
+    source->DisconnectSink(sink);
     return rv;
   }
   

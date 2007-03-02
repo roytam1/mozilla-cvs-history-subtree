@@ -101,20 +101,18 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaSource methods:
 
-/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void connectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapStreamTapOutput::ConnectSink(zapIMediaSink *sink,
-                                const nsACString & connection_id)
+zapStreamTapOutput::ConnectSink(zapIMediaSink *sink)
 {
   NS_ASSERTION(!mOutput, "already connected");
   mOutput = sink;
   return NS_OK;
 }
 
-/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void disconnectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapStreamTapOutput::DisconnectSink(zapIMediaSink *sink,
-                                   const nsACString & connection_id)
+zapStreamTapOutput::DisconnectSink(zapIMediaSink *sink)
 {
   mOutput = nsnull;
   return NS_OK;
@@ -232,10 +230,9 @@ zapStreamTap::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 //----------------------------------------------------------------------
 // zapIMediaSink methods:
 
-/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void connectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapStreamTap::ConnectSource(zapIMediaSource *source,
-                            const nsACString & connection_id)
+zapStreamTap::ConnectSource(zapIMediaSource *source)
 {
   NS_ASSERTION(!mInput, "sink already connected");
   mInput = source;
@@ -243,10 +240,9 @@ zapStreamTap::ConnectSource(zapIMediaSource *source,
   return NS_OK;
 }
 
-/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void disconnectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapStreamTap::DisconnectSource(zapIMediaSource *source,
-                               const nsACString & connection_id)
+zapStreamTap::DisconnectSource(zapIMediaSource *source)
 {
   mInput = nsnull;
   return NS_OK;
@@ -263,20 +259,18 @@ zapStreamTap::ConsumeFrame(zapIMediaFrame * frame)
 //----------------------------------------------------------------------
 // zapIMediaSource methods:
 
-/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void connectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapStreamTap::ConnectSink(zapIMediaSink *sink,
-                          const nsACString & connection_id)
+zapStreamTap::ConnectSink(zapIMediaSink *sink)
 {
   NS_ASSERTION(!mMasterOutput, "already connected");
   mMasterOutput = sink;
   return NS_OK;
 }
 
-/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void disconnectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapStreamTap::DisconnectSink(zapIMediaSink *sink,
-                             const nsACString & connection_id)
+zapStreamTap::DisconnectSink(zapIMediaSink *sink)
 {
   mMasterOutput = nsnull;
   return NS_OK;

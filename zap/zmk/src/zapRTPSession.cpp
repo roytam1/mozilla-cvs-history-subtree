@@ -98,18 +98,18 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaSource methods:
 
-/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void connectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapRTPSessionFilter::ConnectSink(zapIMediaSink *sink, const nsACString & connection_id)
+zapRTPSessionFilter::ConnectSink(zapIMediaSink *sink)
 {
   NS_ASSERTION(!mOutput, "output end already connected");
   mOutput = sink;
   return NS_OK;
 }
 
-/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void disconnectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapRTPSessionFilter::DisconnectSink(zapIMediaSink *sink, const nsACString & connection_id)
+zapRTPSessionFilter::DisconnectSink(zapIMediaSink *sink)
 {
   mOutput = nsnull;
   return NS_OK;
@@ -133,18 +133,18 @@ zapRTPSessionFilter::ProduceFrame(zapIMediaFrame ** frame)
 //----------------------------------------------------------------------
 // zapIMediaSink methods:
 
-/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void connectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapRTPSessionFilter::ConnectSource(zapIMediaSource *source, const nsACString & connection_id)
+zapRTPSessionFilter::ConnectSource(zapIMediaSource *source)
 {
   NS_ASSERTION(!mInput, "input end already connected");
   mInput = source;
   return NS_OK;
 }
 
-/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void disconnectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapRTPSessionFilter::DisconnectSource(zapIMediaSource *source, const nsACString & connection_id)
+zapRTPSessionFilter::DisconnectSource(zapIMediaSource *source)
 {
   mInput = nsnull;
   return NS_OK;

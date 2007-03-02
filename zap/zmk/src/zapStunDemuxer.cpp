@@ -148,10 +148,9 @@ zapStunDemuxer::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 //----------------------------------------------------------------------
 // zapIMediaSink methods:
 
-/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void connectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapStunDemuxer::ConnectSource(zapIMediaSource *source,
-                              const nsACString & connection_id)
+zapStunDemuxer::ConnectSource(zapIMediaSource *source)
 {
   NS_ASSERTION(!mInput, "sink already connected");
   mInput = source;
@@ -159,10 +158,9 @@ zapStunDemuxer::ConnectSource(zapIMediaSource *source,
   return NS_OK;
 }
 
-/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void disconnectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapStunDemuxer::DisconnectSource(zapIMediaSource *source,
-                                 const nsACString & connection_id)
+zapStunDemuxer::DisconnectSource(zapIMediaSource *source)
 {
   mInput = nsnull;
   return NS_OK;

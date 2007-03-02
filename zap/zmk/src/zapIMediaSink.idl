@@ -49,13 +49,13 @@ interface zapIMediaSink : nsISupports
    * Called by the graph to connect a source to this sink.
    * Will be called after a successful source->connectSink().
    */
-  void connectSource(in zapIMediaSource source, in ACString connection_id);
+  void connectSource(in zapIMediaSource source);
   
   /**
    * Called by the graph to disconnect the previously connected source
    * from this sink. Will be followed by a call source->disconnectSink().
    */
-  void disconnectSource(in zapIMediaSource source, in ACString connection_id);
+  void disconnectSource(in zapIMediaSource source);
 
   /**
    * Called by an active source to push a frame to the sink.

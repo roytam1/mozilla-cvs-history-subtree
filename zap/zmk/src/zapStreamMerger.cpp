@@ -97,10 +97,9 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaSink methods:
 
-/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void connectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapStreamMergerInput::ConnectSource(zapIMediaSource *source,
-                                    const nsACString & connection_id)
+zapStreamMergerInput::ConnectSource(zapIMediaSource *source)
 {
   NS_ASSERTION(!mInput, "already connected");
   mInput = source;
@@ -108,10 +107,9 @@ zapStreamMergerInput::ConnectSource(zapIMediaSource *source,
   return NS_OK;
 }
 
-/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void disconnectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapStreamMergerInput::DisconnectSource(zapIMediaSource *source,
-                                       const nsACString & connection_id)
+zapStreamMergerInput::DisconnectSource(zapIMediaSource *source)
 {
   mInput = nsnull;
   return NS_OK;
@@ -201,19 +199,18 @@ zapStreamMerger::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 //----------------------------------------------------------------------
 // zapIMediaSource methods:
 
-/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void connectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapStreamMerger::ConnectSink(zapIMediaSink *sink, const nsACString & connection_id)
+zapStreamMerger::ConnectSink(zapIMediaSink *sink)
 {
   NS_ASSERTION(!mOutput, "sink already connected");
   mOutput = sink;
   return NS_OK;
 }
 
-/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void disconnectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapStreamMerger::DisconnectSink(zapIMediaSink *sink,
-                                const nsACString & connection_id)
+zapStreamMerger::DisconnectSink(zapIMediaSink *sink)
 {
   mOutput = nsnull;
   return NS_OK;

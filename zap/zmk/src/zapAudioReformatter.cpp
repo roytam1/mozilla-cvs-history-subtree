@@ -125,20 +125,18 @@ zapAudioReformatter::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval
 //----------------------------------------------------------------------
 // zapIMediaSource methods:
 
-/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void connectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapAudioReformatter::ConnectSink(zapIMediaSink *sink,
-                                 const nsACString & connection_id)
+zapAudioReformatter::ConnectSink(zapIMediaSink *sink)
 {
   NS_ASSERTION(!mOutput, "sink already connected");
   mOutput = sink;
   return NS_OK;
 }
 
-/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void disconnectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapAudioReformatter::DisconnectSink(zapIMediaSink *sink,
-                                    const nsACString & connection_id)
+zapAudioReformatter::DisconnectSink(zapIMediaSink *sink)
 {
   mOutput = nsnull;
   return NS_OK;
@@ -202,10 +200,9 @@ zapAudioReformatter::ProduceFrame(zapIMediaFrame ** _retval)
 //----------------------------------------------------------------------
 // zapIMediaSink methods:
 
-/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void connectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapAudioReformatter::ConnectSource(zapIMediaSource *source,
-                                   const nsACString & connection_id)
+zapAudioReformatter::ConnectSource(zapIMediaSource *source)
 {
   NS_ASSERTION(!mInput, "already connected");
 
@@ -214,10 +211,9 @@ zapAudioReformatter::ConnectSource(zapIMediaSource *source,
   return NS_OK;
 }
 
-/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void disconnectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapAudioReformatter::DisconnectSource(zapIMediaSource *source,
-                                      const nsACString & connection_id)
+zapAudioReformatter::DisconnectSource(zapIMediaSource *source)
 {
   mInput = nsnull;
   

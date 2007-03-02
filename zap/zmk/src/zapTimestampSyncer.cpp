@@ -95,10 +95,9 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaSink methods:
 
-/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void connectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapTimestampSyncerTimebase::ConnectSource(zapIMediaSource *source,
-                                          const nsACString & connection_id)
+zapTimestampSyncerTimebase::ConnectSource(zapIMediaSource *source)
 {
   NS_ASSERTION(!mInput, "already connected");
   mInput = source;
@@ -106,10 +105,9 @@ zapTimestampSyncerTimebase::ConnectSource(zapIMediaSource *source,
   return NS_OK;
 }
 
-/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void disconnectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapTimestampSyncerTimebase::DisconnectSource(zapIMediaSource *source,
-                                             const nsACString & connection_id)
+zapTimestampSyncerTimebase::DisconnectSource(zapIMediaSource *source)
 {
   mInput = nsnull;
   return NS_OK;
@@ -242,10 +240,9 @@ zapTimestampSyncer::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 //----------------------------------------------------------------------
 // zapIMediaSink methods:
 
-/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void connectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapTimestampSyncer::ConnectSource(zapIMediaSource *source,
-                                  const nsACString & connection_id)
+zapTimestampSyncer::ConnectSource(zapIMediaSource *source)
 {
   NS_ASSERTION(!mInput, "already connected");
   mInput = source;
@@ -253,10 +250,9 @@ zapTimestampSyncer::ConnectSource(zapIMediaSource *source,
   return NS_OK;
 }
 
-/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void disconnectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapTimestampSyncer::DisconnectSource(zapIMediaSource *source,
-                                     const nsACString & connection_id)
+zapTimestampSyncer::DisconnectSource(zapIMediaSource *source)
 {
   mInput = nsnull;
 
@@ -276,10 +272,9 @@ zapTimestampSyncer::ConsumeFrame(zapIMediaFrame * frame)
 //----------------------------------------------------------------------
 // zapIMediaSource methods:
 
-/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void connectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapTimestampSyncer::ConnectSink(zapIMediaSink *sink,
-                                const nsACString & connection_id)
+zapTimestampSyncer::ConnectSink(zapIMediaSink *sink)
 {
   if (mOutput) {
     NS_ERROR("output end already connected");
@@ -289,10 +284,9 @@ zapTimestampSyncer::ConnectSink(zapIMediaSink *sink,
   return NS_OK;
 }
 
-/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void disconnectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapTimestampSyncer::DisconnectSink(zapIMediaSink *sink,
-                                   const nsACString & connection_id)
+zapTimestampSyncer::DisconnectSink(zapIMediaSink *sink)
 {
   mOutput = nsnull;
   return NS_OK;

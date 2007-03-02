@@ -135,20 +135,18 @@ zapTToneToPCMConverter::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_ret
 //----------------------------------------------------------------------
 // zapIMediaSource methods:
 
-/* void connectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void connectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapTToneToPCMConverter::ConnectSink(zapIMediaSink *sink,
-                                    const nsACString & connection_id)
+zapTToneToPCMConverter::ConnectSink(zapIMediaSink *sink)
 {
   NS_ASSERTION(!mOutput, "sink already connected");
   mOutput = sink;
   return NS_OK;
 }
 
-/* void disconnectSink (in zapIMediaSink sink, in ACString connection_id); */
+/* void disconnectSink (in zapIMediaSink sink); */
 NS_IMETHODIMP
-zapTToneToPCMConverter::DisconnectSink(zapIMediaSink *sink,
-                                       const nsACString & connection_id)
+zapTToneToPCMConverter::DisconnectSink(zapIMediaSink *sink)
 {
   mOutput = nsnull;
   return NS_OK;
@@ -301,10 +299,9 @@ zapTToneToPCMConverter::ProduceFrame(zapIMediaFrame ** _retval)
 //----------------------------------------------------------------------
 // zapIMediaSink methods:
 
-/* void connectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void connectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapTToneToPCMConverter::ConnectSource(zapIMediaSource *source,
-                                      const nsACString & connection_id)
+zapTToneToPCMConverter::ConnectSource(zapIMediaSource *source)
 {
   NS_ASSERTION(!mInput, "already connected");
 
@@ -313,10 +310,9 @@ zapTToneToPCMConverter::ConnectSource(zapIMediaSource *source,
   return NS_OK;
 }
 
-/* void disconnectSource (in zapIMediaSource source, in ACString connection_id); */
+/* void disconnectSource (in zapIMediaSource source); */
 NS_IMETHODIMP
-zapTToneToPCMConverter::DisconnectSource(zapIMediaSource *source,
-                                    const nsACString & connection_id)
+zapTToneToPCMConverter::DisconnectSource(zapIMediaSource *source)
 {
   mInput = nsnull;
   
