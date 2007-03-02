@@ -185,7 +185,6 @@ function PreferenceBranch( aBranch ) {
 PreferenceBranch.prototype = {
   // cleanup observer so we don't leak
   _shutdown: function prefs_shutdown() {
-    dump(">>>>>>>shutdown prefs<<<<<<<\n");
     this._prefs.removeObserver(this._root, this);
   },
   
@@ -411,7 +410,6 @@ function Extension(aItem) {
 Extension.prototype = {
   // cleanup observer so we don't leak
   _shutdown: function ext_shutdown() {
-    dump(">>>>>>>shutdown ext<<<<<<<\n");
     var os = Components.classes["@mozilla.org/observer-service;1"]
                        .getService(Components.interfaces.nsIObserverService);
     os.removeObserver(this, "em-action-requested");
@@ -555,12 +553,14 @@ Application.prototype = {
       }
     }
     else if (aTopic == "xpcom-shutdown") {
-      for (var i=0; i<gShutdown.length; i++) {
-        gShutdown[i]();
-      }
-      
       this._events.dispatch("unload", "application");
 
+      // call the cleanup functions and empty the array
+      while (gShutdown.length) {
+        gShutdown.shift()();
+      }
+
+      // release our observers      
       var os = Components.classes["@mozilla.org/observer-service;1"]
                          .getService(Components.interfaces.nsIObserverService);
 
