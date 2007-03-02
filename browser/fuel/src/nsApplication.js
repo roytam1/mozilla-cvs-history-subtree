@@ -42,6 +42,11 @@ const nsIApplication = Components.interfaces.nsIApplication;
 
 
 //=================================================
+// Shutdown - used to store cleanup functions which will
+//            be called on Application shutdown
+var gShutdown = [];
+
+//=================================================
 // Console constructor
 function Console() {
   this._console = Components.classes['@mozilla.org/consoleservice;1']
@@ -51,11 +56,11 @@ function Console() {
 //=================================================
 // Console implementation
 Console.prototype = {
-  log : function(aMsg) {
+  log : function cs_log(aMsg) {
     this._console.logStringMessage(aMsg);
   },
   
-  open : function() {
+  open : function cs_open() {
     var wMediator = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                               .getService(Components.interfaces.nsIWindowMediator);
     var console = wMediator.getMostRecentWindow("global:console");
@@ -92,7 +97,7 @@ EventItem.prototype = {
     return this._data;
   },
   
-  preventDefault : function() {
+  preventDefault : function ei_pd() {
     this._cancel = true;
   }
 };
@@ -100,15 +105,14 @@ EventItem.prototype = {
 
 //=================================================
 // Events constructor
-function Events(aCallback) {
+function Events() {
   this._listeners = [];
-  this._callback = aCallback;
 }
 
 //=================================================
 // Events implementation
 Events.prototype = {
-  addListener : function(aEvent, aListener) {
+  addListener : function evts_al(aEvent, aListener) {
     if (this._listeners.some(hasFilter))
       return;
 
@@ -117,26 +121,18 @@ Events.prototype = {
       listener: aListener
     });
     
-    if (this._callback) {
-      this._callback(true);
-    }
-    
     function hasFilter(element) {
       return element.event == aEvent && element.listener == aListener;
     }
   },
   
-  removeListener : function(aEvent, aListener) {
+  removeListener : function evts_rl(aEvent, aListener) {
     this._listeners = this._listeners.filter(function(element){
       return element.event != aEvent && element.listener != aListener;
     });
-    
-    if (this._callback) {
-      this._callback(this._listeners.length > 0);
-    }
   },
   
-  dispatch : function(aEvent, aEventItem) {
+  dispatch : function evts_dispatch(aEvent, aEventItem) {
     eventItem = new EventItem( aEvent, aEventItem );
     
     this._listeners.forEach(function(key){
@@ -177,33 +173,29 @@ function PreferenceBranch( aBranch ) {
   this._prefs.QueryInterface(nsIPrefBranch);
   this._prefs.QueryInterface(nsIPrefBranch2);
   
+  this._prefs.addObserver(this._root, this, false);
+  this._events = new Events();
+  
   var self = this;
-  this._events = new Events( function(aHasListeners) { self._setupObserver(aHasListeners); } );
-  this._observing = false;
+  gShutdown.push( function() { self._shutdown(); } );
 }
 
 //=================================================
 // PreferenceBranch implementation
 PreferenceBranch.prototype = {
-  // dynamically add/remove observer so we don't leak
-  _setupObserver: function(aHasListeners) {
-    if (this._observing && !aHasListeners) {
-      this._prefs.removeObserver(this._root, this);
-      this._observing = false;
-    }
-    else if (!this._observing && aHasListeners) {
-      this._prefs.addObserver(this._root, this, false);
-      this._observing = true;
-    }
+  // cleanup observer so we don't leak
+  _shutdown: function prefs_shutdown() {
+    dump(">>>>>>>shutdown prefs<<<<<<<\n");
+    this._prefs.removeObserver(this._root, this);
   },
   
   // for nsIObserver
-  observe: function(aSubject, aTopic, aData) {
+  observe: function prefs_observe(aSubject, aTopic, aData) {
     if (aTopic == "nsPref:changed") {
       this._events.dispatch("change", aData);
     }
   },
-  
+
   get root() {
     return this._root;
   },
@@ -222,7 +214,7 @@ PreferenceBranch.prototype = {
   // type: Boolean, Number, String (getPrefType)
   // locked: true, false (prefIsLocked)
   // modified: true, false (prefHasUserValue)
-  find : function(aOptions) {
+  find : function prefs_find(aOptions) {
     var retVal = [],
       items = this._prefs.getChildList( "", [] );
     
@@ -233,15 +225,15 @@ PreferenceBranch.prototype = {
     return retVal;
   },
   
-  has : function(aName) {
+  has : function prefs_has(aName) {
     return !!this._prefs.getPrefType( aName );
   },
   
-  get : function(aName) {
+  get : function prefs_get(aName) {
     return this.has( aName ) ? new Preference( aName, this ) : null;
   },
 
-  getValue : function(aName, aValue) {
+  getValue : function prefs_gv(aName, aValue) {
     var type = this._prefs.getPrefType(aName);
     
     switch (type) {
@@ -259,7 +251,7 @@ PreferenceBranch.prototype = {
     return aValue;
   },
   
-  setValue : function(aName, aValue) {
+  setValue : function prefs_sv(aName, aValue) {
     var type = aValue != null ? aValue.constructor.name : "";
     
     switch (type) {
@@ -280,7 +272,7 @@ PreferenceBranch.prototype = {
     }
   },
   
-  reset : function() {
+  reset : function prefs_reset() {
     this._prefs.resetBranch("");
   }
 };
@@ -291,7 +283,7 @@ PreferenceBranch.prototype = {
 function Preference( aName, aBranch ) {
   this._name = aName;
   this._branch = aBranch;
-  this._events = new Events(null);
+  this._events = new Events();
   
   var self = this;
   
@@ -356,7 +348,7 @@ Preference.prototype = {
     return this._events;
   },
   
-  reset : function() {
+  reset : function pref_reset() {
     this.branch._prefs.clearUserPref(this.name);
   }
 };
@@ -366,7 +358,7 @@ Preference.prototype = {
 // SessionStorage constructor
 function SessionStorage() {
   this._storage = {};
-  this._events = new Events(null);
+  this._events = new Events();
 }
 
 //=================================================
@@ -376,16 +368,16 @@ SessionStorage.prototype = {
     return this._events;
   },
   
-  has : function(aName) {
+  has : function ss_has(aName) {
     return this._storage.hasOwnProperty(aName);
   },
   
-  set : function(aName, aValue) {
+  set : function ss_set(aName, aValue) {
     this._storage[aName] = aValue;
     this._events.dispatch("change", aName);
   },
   
-  get : function(aName, aDefaultValue) {
+  get : function ss_get(aName, aDefaultValue) {
     return this.has(aName) && this._storage[aName] || aDefaultValue;
   }
 };
@@ -398,21 +390,44 @@ function Extension(aItem) {
   this._firstRun = false;
   this._prefs = new PreferenceBranch( "extensions." + this._item.id + "." );
   this._storage = new SessionStorage();
-  
-  var self = this;
-  this._events = new Events( function(aHasListeners) { self._setupObserver(aHasListeners); } );
-  this._observing = false;
+  this._events = new Events();
   
   var installPref = "install-event-fired";
   if ( !this._prefs.has(installPref) ) {
     this._prefs.setValue(installPref, true);
     this._firstRun = true;
   }
+
+  var os = Components.classes["@mozilla.org/observer-service;1"]
+                     .getService(Components.interfaces.nsIObserverService);
+  os.addObserver(this, "em-action-requested", false);
+  
+  var self = this;
+  gShutdown.push( function() { self._shutdown(); } );
 }
 
 //=================================================
 // Extensions implementation
 Extension.prototype = {
+  // cleanup observer so we don't leak
+  _shutdown: function ext_shutdown() {
+    dump(">>>>>>>shutdown ext<<<<<<<\n");
+    var os = Components.classes["@mozilla.org/observer-service;1"]
+                       .getService(Components.interfaces.nsIObserverService);
+    os.removeObserver(this, "em-action-requested");
+  },
+  
+  // for nsIObserver  
+  observe: function ext_observe(aSubject, aTopic, aData)
+  {
+    if ( (aData == "item-uninstalled") &&
+         (aSubject instanceof Components.interfaces.nsIUpdateItem) &&
+         (aSubject.id == this._item.id) )
+    {
+      this._events.dispatch("uninstall", this._item.id);
+    }
+  },
+
   get id() {
     return this._item.id;
   },
@@ -439,44 +454,7 @@ Extension.prototype = {
   
   get events() {
     return this._events;
-  },
-
-  // dynamically add/remove observer so we don't leak
-  _setupObserver: function(aHasListeners) {
-    if (this._observing && !aHasListeners) {
-      var os = Components.classes["@mozilla.org/observer-service;1"]
-                         .getService(Components.interfaces.nsIObserverService);
-      os.removeObserver(this, "em-action-requested");
-      this._observing = false;
-    }
-    else if (!this._observing && aHasListeners) {
-      var os = Components.classes["@mozilla.org/observer-service;1"]
-                         .getService(Components.interfaces.nsIObserverService);
-      os.addObserver(this, "em-action-requested", false);
-      this._observing = true;
-    }
-  },
-  
-  // for nsIObserver  
-  observe: function _observe(aSubject, aTopic, aData)
-  {
-    if ( (aData == "item-uninstalled") &&
-         (aSubject instanceof Components.interfaces.nsIUpdateItem) &&
-         (aSubject.id == this._item.id) )
-    {
-      this._events.dispatch("uninstall", this._item.id);
-    }
-  },
-
-  QueryInterface: function(aIID) {
-    // add any other interfaces you support here
-    if ( !aIID.equals(nsIObserver) &&
-         !aIID.equals(nsISupports) )
-    {
-        throw Components.results.NS_ERROR_NO_INTERFACE;
-    }
-    return this;
-  }  
+  }
 };
 
 
@@ -500,7 +478,7 @@ Extensions.prototype = {
   // version: "1.0.1"
   // minVersion: "1.0"
   // maxVersion: "2.0"
-  find : function(aOptions) {
+  find : function exts_find(aOptions) {
     var retVal = [],
       items = this._extmgr.getItemList( 2, {} );
     
@@ -511,11 +489,11 @@ Extensions.prototype = {
     return retVal;
   },
   
-  has : function(aId) {
+  has : function exts_has(aId) {
     return !!(this._extmgr && this._extmgr.getItemForID(aId).type);
   },
   
-  get : function(aId) {
+  get : function exts_get(aId) {
     return this.has(aId) && new Extension(this._extmgr.getItemForID(aId)) || null;
   }
 };
@@ -531,7 +509,7 @@ function Application() {
   this._console = new Console();
   this._prefs = new PreferenceBranch("");
   this._storage = new SessionStorage();
-  this._events = new Events(null);
+  this._events = new Events();
   
   this._info = Components.classes["@mozilla.org/xre/app-info;1"]
                      .getService(Components.interfaces.nsIXULAppInfo);
@@ -562,7 +540,7 @@ Application.prototype = {
   },
   
   // for nsIObserver
-  observe: function _observe(aSubject, aTopic, aData) {
+  observe: function app_observe(aSubject, aTopic, aData) {
     if (aTopic == "app-startup") {
       this._extensions = new Extensions();
       this._events.dispatch("start", "application");
@@ -572,11 +550,15 @@ Application.prototype = {
     }
     else if (aTopic == "quit-application-requested") {
       // we can stop the quit by checking the return value
-      if (this._events.dispatch("quit", "application")) {
-        aData.value = true;
+      if (this._events.dispatch("quit", "application") == false) {
+        aSubject.data = true;
       }
     }
     else if (aTopic == "xpcom-shutdown") {
+      for (var i=0; i<gShutdown.length; i++) {
+        gShutdown[i]();
+      }
+      
       this._events.dispatch("unload", "application");
 
       var os = Components.classes["@mozilla.org/observer-service;1"]
@@ -599,18 +581,18 @@ Application.prototype = {
   flags : nsIClassInfo.SINGLETON,
   implementationLanguage : Components.interfaces.nsIProgrammingLanguage.JAVASCRIPT,
 
-  getInterfaces : function(aCount) {
+  getInterfaces : function app_gi(aCount) {
     var interfaces = [nsIApplication, nsIObserver, nsIClassInfo];
     aCount.value = interfaces.length;
     return interfaces;
   },
 
-  getHelperForLanguage : function(aCount) {
+  getHelperForLanguage : function app_ghfl(aCount) {
     return null;
   },
   
   // for nsISupports
-  QueryInterface: function(aIID) {
+  QueryInterface: function app_qi(aIID) {
     // add any other interfaces you support here
     if (!aIID.equals(nsIApplication) &&
         !aIID.equals(nsIObserver) &&
@@ -648,7 +630,7 @@ Application.prototype = {
 var ApplicationFactory = {
   singleton: null,
   
-  createInstance: function(aOuter, aIID)
+  createInstance: function af_ci(aOuter, aIID)
   {
     if (aOuter != null)
       throw Components.results.NS_ERROR_NO_AGGREGATION;
@@ -663,7 +645,7 @@ var ApplicationFactory = {
 //=================================================
 // Module
 var ApplicationModule = {
-  registerSelf: function(aCompMgr, aFileSpec, aLocation, aType)
+  registerSelf: function am_rs(aCompMgr, aFileSpec, aLocation, aType)
   {
     aCompMgr = aCompMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
     aCompMgr.registerFactoryLocation(CLASS_ID, CLASS_NAME, CONTRACT_ID, aFileSpec, aLocation, aType);
@@ -677,13 +659,13 @@ var ApplicationModule = {
     categoryManager.addCategoryEntry("JavaScript global property", "Application", CONTRACT_ID, true, true);
   },
 
-  unregisterSelf: function(aCompMgr, aLocation, aType)
+  unregisterSelf: function am_us(aCompMgr, aLocation, aType)
   {
     aCompMgr = aCompMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
     aCompMgr.unregisterFactoryLocation(CLASS_ID, aLocation);        
   },
   
-  getClassObject: function(aCompMgr, aCID, aIID)
+  getClassObject: function am_gco(aCompMgr, aCID, aIID)
   {
     if (!aIID.equals(Components.interfaces.nsIFactory))
       throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
@@ -694,7 +676,7 @@ var ApplicationModule = {
     throw Components.results.NS_ERROR_NO_INTERFACE;
   },
 
-  canUnload: function(aCompMgr) { return true; }
+  canUnload: function am_cu(aCompMgr) { return true; }
 };
 
 //module initialization
