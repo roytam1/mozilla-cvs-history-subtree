@@ -189,6 +189,11 @@ protected static String getBrowserBinDir() {
     return System.getProperty("BROWSER_BIN_DIR");
 }
 
+protected static String getOutputFileRoot() {
+    return OUTPUT_FILE_ROOT;
+}
+
+
 /**
 
 * assertTrue that NSPR_LOG_FILE is set.
