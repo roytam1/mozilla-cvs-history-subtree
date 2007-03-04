@@ -125,7 +125,7 @@ nsSpatialNavigation::KeyPress(nsIDOMEvent* aEvent)
       nsCOMPtr<nsIFormControl> formControl(do_QueryInterface(targetContent));
       formControlType = formControl->GetType();
       
-      if (!mService->mIgnoreTextFields)
+      if (mService->mIgnoreTextFields)
       {
         if (formControlType == NS_FORM_TEXTAREA ||
             formControlType == NS_FORM_INPUT_TEXT ||
@@ -219,11 +219,22 @@ nsSpatialNavigation::KeyPress(nsIDOMEvent* aEvent)
     // based on the selected position we decide to nav. or
     // not.
 
-    if (formControlType == NS_FORM_SELECT)
-      return NS_OK;
+    // ************************************************************************************
+    // NS_FORM_SELECT cases:
+    // * if it is a select form of 'size' attr != than '1' then we do as above.
+
+    // * if it is a select form of 'size' attr == than '1', snav can take care of it.
+    // if (formControlType == NS_FORM_SELECT)
+    //   return NS_OK;
+
+    // ************************************************************************************
+    // NS_FORM_TEXTAREA cases:
+
+    // ************************************************************************************
+    // NS_FORM_INPUT_TEXT | NS_FORM_INPUT_PASSWORD | NS_FORM_INPUT_FILE cases
 
     aEvent->StopPropagation();
-	aEvent->PreventDefault();
+    aEvent->PreventDefault();
     return Up();
   }
   
@@ -237,8 +248,19 @@ nsSpatialNavigation::KeyPress(nsIDOMEvent* aEvent)
     // based on the selected position we decide to nav. or
     // not.
 
-    if (formControlType == NS_FORM_SELECT)
-      return NS_OK;
+    // ************************************************************************************
+    // NS_FORM_SELECT cases:
+    // * if it is a select form of 'size' attr != than '1' then we do as above.
+
+    // * if it is a select form of 'size' attr == than '1', snav can take care of it.
+    // if (formControlType == NS_FORM_SELECT)
+    //   return NS_OK;
+
+    // ************************************************************************************
+    // NS_FORM_TEXTAREA cases:
+
+    // ************************************************************************************
+    // NS_FORM_INPUT_TEXT | NS_FORM_INPUT_PASSWORD | NS_FORM_INPUT_FILE cases
 
     aEvent->StopPropagation();  // We're using this key, no one else should
 	aEvent->PreventDefault();
@@ -541,9 +563,13 @@ nsSpatialNavigation::handleMove(int direction)
   nsCOMPtr<nsIContent> focusedContent;
   getFocusedContent(direction, getter_AddRefs(focusedContent));
 
-  if (!focusedContent)
-    return NS_OK;
-  
+  // there are some websites which have no focusable elements,
+  // only text, for example. In these cases, scrolling have to be
+  // performed by snav.
+  if (!focusedContent) {
+     ScrollWindow(direction, getContentWindow());
+     return NS_OK;
+  }
   nsPresContext* presContext = getPresContext(focusedContent);
   if(!presContext)
     return NS_ERROR_NULL_POINTER;
@@ -577,7 +603,7 @@ nsSpatialNavigation::handleMove(int direction)
     if (!doc)
       return NS_ERROR_FAILURE;
     
-    nsIPresShell *presShell = doc->GetShellAt(0);
+/*    nsIPresShell *presShell = doc->GetShellAt(0);
 
     nsIFrame* cframe;
     presShell->GetPrimaryFrameFor(c, &cframe);
@@ -587,9 +613,10 @@ nsSpatialNavigation::handleMove(int direction)
     if (b)
       setFocusedContent(c);
     else
-      ScrollWindow(direction, getContentWindow());
+      ScrollWindow(direction, getContentWindow());*/
 
-   return NS_OK;
+    setFocusedContent(c);
+    return NS_OK;
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -731,8 +758,9 @@ nsSpatialNavigation::setFocusedContent(nsIContent* c)
   nsCOMPtr<nsIDOMWindow> contentWindow;
   if (mService->mDisableJSWhenFocusing)
     contentWindow = getContentWindow();
-    
-  DisableJSScope foopy (contentWindow);
+
+  // We do not want to have JS disable at anytime - see bug 51075
+  // DisableJSScope foopy (contentWindow);
 
   //#ifdef OLDER_LAYOUT  
   nsPresContext* presContext = getPresContext(c);
