@@ -90,6 +90,7 @@ private:
                                                      const char * originalHost,
                                                      const char * originalPath,
                                                      nsIDOMNode * object);
+  nsresult                      ResetUrisForEmbeddedObjects();
   nsresult                      TagEmbeddedObjects(nsIEditorMailSupport *aMailEditor);
 
   nsCString                     mQuoteCharset;
