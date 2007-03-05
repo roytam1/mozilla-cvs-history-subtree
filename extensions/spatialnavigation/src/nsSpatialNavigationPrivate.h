@@ -82,6 +82,8 @@
 #include "nsIDOMNSEvent.h"
 #include "nsIDOMNSHTMLElement.h"
 #include "nsIDOMNSUIEvent.h"
+#include "nsIDOMNSHTMLInputElement.h"
+#include "nsIDOMNSHTMLTextAreaElement.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMWindow.h"
 #include "nsIDOMWindowInternal.h"
