@@ -55,18 +55,17 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode implementation:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapClientSink::AddedToGraph(zapIMediaGraph *graph,
-                            const nsACString & id,
-                            nsIPropertyBag2* node_pars)
+zapClientSink::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                     nsIPropertyBag2* node_pars)
 {
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapClientSink::RemovedFromGraph(zapIMediaGraph *graph)
+zapClientSink::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

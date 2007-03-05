@@ -35,7 +35,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapStreamMerger.h"
-#include "zapIMediaGraph.h"
 #include "nsAutoPtr.h"
 #include "zapIMediaFrame.h"
 
@@ -61,17 +60,11 @@ private:
 //----------------------------------------------------------------------
 zapStreamMergerInput::zapStreamMergerInput()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamMergerInput::zapStreamMergerInput()\n");
-#endif
 }
 
 zapStreamMergerInput::~zapStreamMergerInput()
 {
   NS_ASSERTION(mMerger, "Never initialized");
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamMergerInput::~zapStreamMergerInput()\n");
-#endif
   // clean up references:
   mMerger->mInputs.RemoveElement(this);
   mMerger = nsnull;
@@ -128,16 +121,10 @@ zapStreamMergerInput::ConsumeFrame(zapIMediaFrame * frame)
 
 zapStreamMerger::zapStreamMerger()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamMerger::zapStreamMerger()\n");
-#endif
 }
 
 zapStreamMerger::~zapStreamMerger()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamMerger::~zapStreamMerger()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -155,18 +142,17 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapStreamMerger::AddedToGraph(zapIMediaGraph *graph,
-                              const nsACString & id,
-                              nsIPropertyBag2* node_pars)
+zapStreamMerger::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                       nsIPropertyBag2* node_pars)
 {
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapStreamMerger::RemovedFromGraph(zapIMediaGraph *graph)
+zapStreamMerger::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

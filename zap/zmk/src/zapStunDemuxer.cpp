@@ -35,7 +35,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapStunDemuxer.h"
-#include "zapIMediaGraph.h"
 #include "nsHashPropertyBag.h"
 #include "nsAutoPtr.h"
 #include "math.h"
@@ -49,9 +48,6 @@
 
 zapStunDemuxer::zapStunDemuxer()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStunDemuxer::zapStunDemuxer()\n");
-#endif
   mStunReqOutput = new zapGenericSource();
   mStunResOutput = new zapGenericSource();
   mOtherOutput = new zapGenericSource();
@@ -60,9 +56,6 @@ zapStunDemuxer::zapStunDemuxer()
 
 zapStunDemuxer::~zapStunDemuxer()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStunDemuxer::~zapStunDemuxer()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -80,19 +73,18 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapStunDemuxer::AddedToGraph(zapIMediaGraph *graph,
-                             const nsACString & id,
-                             nsIPropertyBag2* node_pars)
+zapStunDemuxer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                      nsIPropertyBag2* node_pars)
 {
   ZMK_CREATE_STREAM_INFO(mStreamInfo, "stun");
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapStunDemuxer::RemovedFromGraph(zapIMediaGraph *graph)
+zapStunDemuxer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

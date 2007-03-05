@@ -40,7 +40,7 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "zapIMediaFrame.h"
 #include "nsCOMPtr.h"
 #include "nsIWritablePropertyBag2.h"
@@ -74,7 +74,6 @@ private:
   nsresult ParseDTMFData(const char *buf);
   void QueueTEvent(PRUint16 event);
   
-  // node parameters (set from zapIMediaGraph::AddNode()):
   PRUint32 mToneDuration; // tone duration in sample units
   PRUint32 mPauseDuration; // pause duration in sample units
   PRUint16 mVolume; // volume in dBm0 with reversed sign

@@ -36,7 +36,7 @@
 
 #include "nsISupports.idl"
 
-interface zapIMediaGraph;
+interface zapIMediaNodeContainer;
 interface zapIMediaSource;
 interface zapIMediaSink;
 interface nsIPropertyBag2;
@@ -48,19 +48,17 @@ interface nsIPropertyBag2;
 interface zapIMediaNode : nsISupports
 {
   /**
-   * Called when this node is first added to a media graph.
-   * 'id' is the identifier by which this node will be known
-   * in 'graph'.
+   * Called when this node is inserted into a medianode container.
    */
-  void addedToGraph(in zapIMediaGraph graph, in ACString id,
-                    in nsIPropertyBag2 node_pars);
+  void insertedIntoContainer(in zapIMediaNodeContainer container,
+                             in nsIPropertyBag2 node_pars);
 
   /**
-   * Called when this node is removed from the graph.
-   * The framework will call this method only after all connections
-   * have been disconnected.
+   * Called when this node is removed from the medianode container.
+   * The container promises to call this method only after all
+   * connections have been disconnected from the node.
    */
-  void removedFromGraph(in zapIMediaGraph graph);
+  void removedFromContainer(in zapIMediaNodeContainer container);
 
   /**
    * Return a source with the given parameters.

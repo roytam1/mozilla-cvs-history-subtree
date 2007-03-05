@@ -44,7 +44,7 @@
 #include "nsString.h"
 #include "nsVoidArray.h"
 #include "zapIMediaFrame.h"
-#include "zapMediaGraphAutoLock.h"
+#include "zapIMediaNodeContainer.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapSplitter
@@ -71,7 +71,7 @@ private:
 
   void RequestFrame();
 
-  nsCOMPtr<zapIMediaGraph> mGraph;
+  nsCOMPtr<zapIMediaNodeContainer> mContainer;
   
   // zapSplitterOutput outputs (weak references):
   nsVoidArray mOutputs;

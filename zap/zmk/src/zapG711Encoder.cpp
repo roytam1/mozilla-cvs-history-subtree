@@ -36,7 +36,7 @@
 
 #include "zapG711Encoder.h"
 #include "zapIMediaFrame.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "nsIPropertyBag2.h"
 #include "zapMediaFrame.h"
 #include "stdio.h"
@@ -48,16 +48,10 @@
 
 zapG711Encoder::zapG711Encoder()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapG711Encoder::zapG711Encoder()");
-#endif
 }
 
 zapG711Encoder::~zapG711Encoder()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapG711Encoder::~zapG711Encoder()");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -72,7 +66,8 @@ NS_INTERFACE_MAP_END_INHERITING(zapFilterNode)
 //----------------------------------------------------------------------
 
 NS_IMETHODIMP
-zapG711Encoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIPropertyBag2 *node_pars)
+zapG711Encoder::InsertedIntoContainer(zapIMediaNodeContainer * container,
+                                      nsIPropertyBag2 *node_pars)
 {
   // default: pcmu
   mType = pcmu;
@@ -100,7 +95,7 @@ zapG711Encoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIPr
 }
 
 NS_IMETHODIMP
-zapG711Encoder::RemovedFromGraph(zapIMediaGraph *graph)
+zapG711Encoder::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }
@@ -126,9 +121,6 @@ zapG711Encoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
                                                 &sampleRate)) ||
       sampleRate != 8000) {
     NS_ERROR("unsupported sample rate");
-#ifdef DEBUG_afri_zmk
-    printf("%f != 8000\n", sampleRate);
-#endif
     return NS_ERROR_FAILURE;
   }
 

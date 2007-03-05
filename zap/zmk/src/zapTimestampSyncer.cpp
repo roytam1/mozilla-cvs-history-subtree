@@ -38,7 +38,6 @@
 #include "nsIPropertyBag2.h"
 #include "stdio.h"
 #include "zapIMediaFrame.h"
-#include "zapIMediaGraph.h"
 #include "prmem.h"
 #include "nsAutoPtr.h"
 #include "nsString.h"
@@ -139,16 +138,10 @@ zapTimestampSyncer::zapTimestampSyncer()
       mOffsetStale(PR_TRUE),
       mOffset(0)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapTimestampSyncer::zapTimestampSyncer()\n");
-#endif
 }
 
 zapTimestampSyncer::~zapTimestampSyncer()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapTimestampSyncer::~zapTimestampSyncer()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -167,18 +160,17 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapTimestampSyncer::AddedToGraph(zapIMediaGraph *graph,
-                                 const nsACString & id,
-                                 nsIPropertyBag2* node_pars)
+zapTimestampSyncer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                          nsIPropertyBag2* node_pars)
 {
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapTimestampSyncer::RemovedFromGraph(zapIMediaGraph *graph)
+zapTimestampSyncer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

@@ -71,17 +71,11 @@ zapTToneGenerator::zapTToneGenerator()
       mBuffer(0),
       mSampleClock(0)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapTToneGenerator::zapTToneGenerator()\n");
-#endif
 }
 
 zapTToneGenerator::~zapTToneGenerator()
 {
   ClearState();
-#ifdef DEBUG_afri_zmk
-  printf("zapTToneGenerator::~zapTToneGenerator()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -100,11 +94,10 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapTToneGenerator::AddedToGraph(zapIMediaGraph *graph,
-                            const nsACString & id,
-                            nsIPropertyBag2* node_pars)
+zapTToneGenerator::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                         nsIPropertyBag2* node_pars)
 {
   double max_frame_duration = 0.02;
   // unpack node parameters:
@@ -124,9 +117,9 @@ zapTToneGenerator::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapTToneGenerator::RemovedFromGraph(zapIMediaGraph *graph)
+zapTToneGenerator::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }
@@ -215,9 +208,6 @@ zapTToneGenerator::ProduceFrame(zapIMediaFrame ** _retval)
     frame->mToneData.SetDuration(mMaxSamplesPerFrame);
     mSampleClock += mMaxSamplesPerFrame;
   }
-#ifdef DEBUG_afri_zmk
-  //printf("T<%u, %u>", frame->mTimestamp, frame->mToneData.GetDuration());
-#endif
   
   *_retval = frame;
   

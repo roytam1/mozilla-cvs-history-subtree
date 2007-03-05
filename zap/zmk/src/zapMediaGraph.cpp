@@ -60,19 +60,12 @@ zapMediaGraph::zapMediaGraph()
       mConnectionIdCounter(0),
       mLockCount(0)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapMediaGraph::zapMediaGraph()\n");
-#endif
-
   mNodes = new Descriptor();
   mConnections = new Descriptor();
 }
 
 zapMediaGraph::~zapMediaGraph()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapMediaGraph::~zapMediaGraph()\n");
-#endif
   Shutdown();
 
   NS_ASSERTION(mNodes && mNodes->prev == mNodes && mNodes->next == mNodes,
@@ -125,6 +118,7 @@ zapMediaGraph::Release()
 NS_INTERFACE_MAP_BEGIN(zapMediaGraph)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIRunnable)
   NS_INTERFACE_MAP_ENTRY(zapIMediaGraph)
+  NS_INTERFACE_MAP_ENTRY(zapIMediaNodeContainer)
   NS_INTERFACE_MAP_ENTRY(nsISupportsPriority)
   NS_INTERFACE_MAP_ENTRY(nsIRunnable)
 NS_INTERFACE_MAP_END
@@ -223,7 +217,7 @@ zapMediaGraph::RemoveDescriptor(Descriptor* d)
 
   if (d->type == Descriptor::NODE) {
     RemoveNodeDescriptorConnections(NS_STATIC_CAST(NodeDescriptor*, d));
-    NS_STATIC_CAST(NodeDescriptor*, d)->node->RemovedFromGraph(this);
+    NS_STATIC_CAST(NodeDescriptor*, d)->node->RemovedFromContainer(this);
   }
   delete d;
 }
@@ -262,14 +256,12 @@ zapMediaGraph::RemoveNodeDescriptorConnections(NodeDescriptor* d)
 
 /* ACString addNode (in ACString type, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapMediaGraph::AddNode(const nsACString & type, nsIPropertyBag2* node_pars,
+zapMediaGraph::AddNode(const nsACString & type,
+                       nsIPropertyBag2* node_pars,
                        nsACString & _retval)
 {
   // create a new instance of the given type:
   nsCString clazz = NS_LITERAL_CSTRING(ZAP_MEDIANODE_CONTRACTID_PREFIX)+type;
-#ifdef DEBUG_afri_zmk
-  printf("Trying to instantiate component %s\n", clazz.get());
-#endif
   nsCOMPtr<zapIMediaNode> node = do_CreateInstance(clazz.get());
   if (!node) return NS_ERROR_FAILURE;
 
@@ -278,7 +270,8 @@ zapMediaGraph::AddNode(const nsACString & type, nsIPropertyBag2* node_pars,
 
 /* [noscript] ACString addExternalNode (in zapIMediaNodeRawPtr node, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapMediaGraph::AddExternalNode(zapIMediaNode *node, nsIPropertyBag2 *node_pars,
+zapMediaGraph::AddExternalNode(zapIMediaNode *node,
+                               nsIPropertyBag2 *node_pars,
                                nsACString & _retval)
 {
   // make a new id:
@@ -291,7 +284,7 @@ zapMediaGraph::AddExternalNode(zapIMediaNode *node, nsIPropertyBag2 *node_pars,
   descriptor->next->prev = descriptor;
 
   // finally inform the node that it has been added to the graph:
-  if (NS_FAILED(node->AddedToGraph(this, id, node_pars))) {
+  if (NS_FAILED(node->InsertedIntoContainer(this, node_pars))) {
     // remove descriptor and all nodes pointing to it from list:
     RemoveDescriptor(descriptor);
     return NS_ERROR_FAILURE;
@@ -483,26 +476,6 @@ zapMediaGraph::Disconnect(const nsACString & connection_id)
   return NS_OK;
 }
 
-/* void lock (); */
-NS_IMETHODIMP
-zapMediaGraph::Lock()
-{
-  ++mLockCount;
-  return NS_OK;
-}
-
-/* void unlock (); */
-NS_IMETHODIMP
-zapMediaGraph::Unlock()
-{
-  if (mLockCount == 0) {
-    NS_ERROR("unbalanced lock/unlock calls");
-    return NS_ERROR_FAILURE;
-  }
-  --mLockCount;
-  return NS_OK;
-}
-
 /* void shutdown (); */
 NS_IMETHODIMP
 zapMediaGraph::Shutdown()
@@ -518,6 +491,29 @@ zapMediaGraph::Shutdown()
 
   // the thread will be shutdown from our dtor when all references
   // have been released
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+// zapIMediaNodeContainer methods:
+
+/* void lock (in zapIMediaNode node); */
+NS_IMETHODIMP
+zapMediaGraph::Lock(zapIMediaNode *node)
+{
+  ++mLockCount;
+  return NS_OK;
+}
+
+/* void unlock (in zapIMediaNode node); */
+NS_IMETHODIMP
+zapMediaGraph::Unlock(zapIMediaNode *node)
+{
+  if (mLockCount == 0) {
+    NS_ERROR("unbalanced lock/unlock calls");
+    return NS_ERROR_FAILURE;
+  }
+  --mLockCount;
   return NS_OK;
 }
 

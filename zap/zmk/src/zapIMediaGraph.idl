@@ -36,7 +36,6 @@
 
 #include "nsISupports.idl"
 interface nsIPropertyBag2;
-interface nsIEventTarget;
 interface zapIMediaNode;
 
 [ptr] native zapIMediaNodeRawPtr(zapIMediaNode);
@@ -115,32 +114,12 @@ interface zapIMediaGraph : nsISupports
   void disconnect(in ACString connection_id);
 
   /**
-   * Prevent connect()/disconnect()/removeNode()/shutdown() calls from
-   * modifying the media graph. Maintains a 'lock count', so n calls
-   * to lock() have to be followed by n calls to unlock() before
-   * modifications are allowed again.
-   */
-  void lock();
-
-  /**
-   * Reenable connect()/disconnect()/removeNode()/shutdown() calls.
-   * See documentation for lock()
-   */
-  void unlock();
-
-  /**
    * Shutdown this mediagraph instance.
    *
    * This method will always fail if the media graph is locked. See
    * lock()/unlock()
    */
   void shutdown();
-
-  /**
-   * The event target for this media graph
-   */
-  readonly attribute nsIEventTarget eventTarget;
-
 };
 
 %{ C++

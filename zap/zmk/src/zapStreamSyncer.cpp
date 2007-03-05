@@ -38,7 +38,6 @@
 #include "nsIPropertyBag2.h"
 #include "stdio.h"
 #include "zapIMediaFrame.h"
-#include "zapIMediaGraph.h"
 #include "prmem.h"
 #include "nsAutoPtr.h"
 #include "nsString.h"
@@ -147,16 +146,10 @@ zapStreamSyncer::zapStreamSyncer()
     : mClock(nsnull),
       mCurrentTime(-1)      
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamSyncer::zapStreamSyncer()\n");
-#endif
 }
 
 zapStreamSyncer::~zapStreamSyncer()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamSyncer::~zapStreamSyncer()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -176,18 +169,17 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapStreamSyncer::AddedToGraph(zapIMediaGraph *graph,
-                              const nsACString & id,
-                              nsIPropertyBag2* node_pars)
+zapStreamSyncer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                       nsIPropertyBag2* node_pars)
 {
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapStreamSyncer::RemovedFromGraph(zapIMediaGraph *graph)
+zapStreamSyncer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   Reset();
   return NS_OK;

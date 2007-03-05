@@ -41,7 +41,7 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #include "nsIWritablePropertyBag2.h"
@@ -90,7 +90,7 @@ private:
   // themselves), indexed by transaction id:
   RequestHash mRequests;
   
-  nsCOMPtr<zapIMediaGraph> mGraph;
+  nsCOMPtr<zapIMediaNodeContainer> mContainer;
   nsCOMPtr<zapINetUtils> mNetUtils;
 
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;

@@ -36,7 +36,6 @@
 
 #include "zapRTPSession.h"
 #include <stdlib.h> // for rand
-#include "zapIMediaGraph.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
 #include "nsHashPropertyBag.h"
@@ -69,18 +68,12 @@ public:
 zapRTPSessionFilter::zapRTPSessionFilter(zapRTPSession* parent,
                                          RTPSessionFilterFct fct)
 {
-#ifdef DEBUG
-  printf("zapRTPSessionFilter::zapRTPSessionFilter()\n");
-#endif
   mParent = parent;
   mFilterFct = fct;
 }
 
 zapRTPSessionFilter::~zapRTPSessionFilter()
 {
-#ifdef DEBUG
-  printf("zapRTPSessionFilter::~zapRTPSessionFilter()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -170,17 +163,11 @@ zapRTPSessionFilter::ConsumeFrame(zapIMediaFrame *frame)
 
 zapRTPSession::zapRTPSession()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapRTPSession::zapRTPSession()\n");
-#endif
 }
 
 zapRTPSession::~zapRTPSession()
 {
   NS_ASSERTION(!mLocal2RemoteRTP && !mRemote2LocalRTP, "unclean shutdown");
-#ifdef DEBUG_afri_zmk
-  printf("zapRTPSession::~zapRTPSession()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -197,11 +184,10 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapRTPSession::AddedToGraph(zapIMediaGraph *graph,
-                         const nsACString & id,
-                         nsIPropertyBag2* node_pars)
+zapRTPSession::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                     nsIPropertyBag2* node_pars)
 {
   // unpack node parameters:
 //   if (!node_pars) {
@@ -243,9 +229,9 @@ zapRTPSession::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapRTPSession::RemovedFromGraph(zapIMediaGraph *graph)
+zapRTPSession::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   mLocal2RemoteRTP = nsnull;
   mRemote2LocalRTP = nsnull;

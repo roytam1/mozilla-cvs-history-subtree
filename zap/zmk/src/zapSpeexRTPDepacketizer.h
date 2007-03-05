@@ -56,10 +56,9 @@ public:
   zapSpeexRTPDepacketizer();
   ~zapSpeexRTPDepacketizer();
   
-  NS_IMETHOD AddedToGraph(zapIMediaGraph *graph,
-                          const nsACString & id,
-                          nsIPropertyBag2 *node_pars);
-  NS_IMETHOD RemovedFromGraph(zapIMediaGraph *graph);
+  NS_IMETHOD InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                   nsIPropertyBag2 *node_pars);
+  NS_IMETHOD RemovedFromContainer(zapIMediaNodeContainer *container);
   virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
   virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
 

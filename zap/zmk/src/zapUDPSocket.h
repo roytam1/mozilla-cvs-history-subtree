@@ -40,7 +40,6 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
 #include "zapIMediaFrame.h"
 #include "nsCOMPtr.h"
 #include "nsIWritablePropertyBag2.h"

@@ -36,7 +36,6 @@
 
 #include "zapRTPTransmitter.h"
 #include "zapRTPFrame.h"
-#include "zapIMediaGraph.h"
 #include "nsString.h"
 #include "nsIPropertyBag2.h"
 #include "zapDatagramFrame.h"
@@ -48,21 +47,15 @@
 
 zapRTPTransmitter::zapRTPTransmitter()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapRTPTransmitter::zapRTPTransmitter()\n");
-#endif
 }
 
 zapRTPTransmitter::~zapRTPTransmitter()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapRTPTransmitter::~zapRTPTransmitter()\n");
-#endif
 }
 
 NS_IMETHODIMP
-zapRTPTransmitter::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
-                                nsIPropertyBag2 *node_pars)
+zapRTPTransmitter::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                         nsIPropertyBag2 *node_pars)
 {
   // unpack node parameters:
   if (!node_pars) {
@@ -81,7 +74,7 @@ zapRTPTransmitter::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
 }
 
 NS_IMETHODIMP
-zapRTPTransmitter::RemovedFromGraph(zapIMediaGraph *graph)
+zapRTPTransmitter::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

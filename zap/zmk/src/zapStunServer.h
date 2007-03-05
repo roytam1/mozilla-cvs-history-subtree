@@ -41,7 +41,7 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #include "nsICancelable.h"
@@ -76,7 +76,7 @@ public:
   NS_DECL_ZAPIMEDIASINK
   
 private:
-  nsCOMPtr<zapIMediaGraph> mGraph;
+  nsCOMPtr<zapIMediaNodeContainer> mContainer;
   nsCOMPtr<zapINetUtils> mNetUtils;
   nsCOMPtr<zapIStunServerListener> mListener;
   

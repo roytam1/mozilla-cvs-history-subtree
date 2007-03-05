@@ -40,7 +40,6 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
 #include "zapIMediaFrame.h"
 #include "nsCOMPtr.h"
 #include "nsIWritablePropertyBag2.h"
@@ -74,7 +73,6 @@ private:
   nsresult ParseTonesData(const char *buf);
   nsresult ParseTone(const char **bufp);
   
-  // node parameters (set from zapIMediaGraph::AddNode()):
   PRUint16 mMaxSamplesPerFrame;
 
   nsDeque mBuffer; // tone buffer

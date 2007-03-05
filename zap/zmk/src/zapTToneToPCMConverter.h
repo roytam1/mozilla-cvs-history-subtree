@@ -72,7 +72,6 @@ public:
 private:
   PRBool GetNextInputFrame();
   
-  // node parameters (set from zapIMediaGraph::AddNode()):
   zapAudioStreamParameters mOutStreamParameters;
   double mZtlp; // zero dBm0 tranmission level point as a fraction of
                 // max output amplitude

@@ -40,6 +40,7 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
+#include "zapIMediaNodeContainer.h"
 #include "zapIPacketPump.h"
 #include "nsCOMPtr.h"
 
@@ -71,7 +72,7 @@ class zapPacketPump : public zapIMediaNode,
 private:
   friend class zapPacketPumpClock;
 
-  nsCOMPtr<zapIMediaGraph> mGraph;
+  nsCOMPtr<zapIMediaNodeContainer> mContainer;
   
   zapPacketPumpClock *mClock; // weak reference managed by object itself
   

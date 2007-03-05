@@ -35,7 +35,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapRTPDemuxer.h"
-#include "zapIMediaGraph.h"
 #include "nsHashPropertyBag.h"
 #include "nsAutoPtr.h"
 #include "math.h"
@@ -66,17 +65,11 @@ private:
 
 zapRTPDemuxerOutput::zapRTPDemuxerOutput()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapRTPDemuxerOutput::zapRTPDemuxerOutput()\n");
-#endif
 }
 
 zapRTPDemuxerOutput::~zapRTPDemuxerOutput()
 {
   NS_ASSERTION(mRTPDemuxer, "Never initialized");
-#ifdef DEBUG_afri_zmk
-  printf("zapRTPDemuxerOutput::~zapRTPDemuxerOutput()\n");
-#endif
   // clean up references:
   if (mRTPDemuxer) {
     mRTPDemuxer->mOutputs.Remove(mPayloadType);
@@ -160,17 +153,11 @@ nsresult zapRTPDemuxerOutput::ConsumeFrame(zapIMediaFrame *frame)
 
 zapRTPDemuxer::zapRTPDemuxer()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapRTPDemuxer::zapRTPDemuxer()\n");
-#endif
   mOutputs.Init();
 }
 
 zapRTPDemuxer::~zapRTPDemuxer()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapRTPDemuxer::~zapRTPDemuxer()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -188,18 +175,17 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapRTPDemuxer::AddedToGraph(zapIMediaGraph *graph,
-                            const nsACString & id,
-                            nsIPropertyBag2* node_pars)
+zapRTPDemuxer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                     nsIPropertyBag2* node_pars)
 {
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapRTPDemuxer::RemovedFromGraph(zapIMediaGraph *graph)
+zapRTPDemuxer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }
@@ -270,9 +256,6 @@ zapRTPDemuxer::ConsumeFrame(zapIMediaFrame * frame)
   rtpFrame->GetPayloadType(&payloadType);
   zapRTPDemuxerOutput *output;
   if (!mOutputs.Get(payloadType, &output)) {
-#ifdef DEBUG_afri_zmk
-    printf("zapRTPDemuxer: unknown payload %d\n", payloadType);
-#endif
     return NS_ERROR_FAILURE;
   }
 

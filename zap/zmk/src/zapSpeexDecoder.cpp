@@ -36,7 +36,6 @@
 
 #include "zapSpeexDecoder.h"
 #include "zapIMediaFrame.h"
-#include "zapIMediaGraph.h"
 #include "nsString.h"
 #include "nsIPropertyBag2.h"
 #include "zapIAudioIn.h"
@@ -50,17 +49,11 @@
 zapSpeexDecoder::zapSpeexDecoder()
     : mDecoderState(nsnull)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapSpeexDecoder::zapSpeexDecoder()\n");
-#endif
 }
 
 zapSpeexDecoder::~zapSpeexDecoder()
 {
   NS_ASSERTION(!mDecoderState, "unclean shutdown");
-#ifdef DEBUG_afri_zmk
-  printf("zapSpeexDecoder::~zapSpeexDecoder()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -108,7 +101,8 @@ zapSpeexDecoder::GetMaxBitrate(PRUint32 *aMaxBitrate)
 // Implementation helpers:
 
 NS_IMETHODIMP
-zapSpeexDecoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIPropertyBag2 *node_pars)
+zapSpeexDecoder::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                       nsIPropertyBag2 *node_pars)
 {
   // default: nb mode
   const SpeexMode* speexmode = &speex_nb_mode;
@@ -142,7 +136,7 @@ zapSpeexDecoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIP
 }
 
 NS_IMETHODIMP
-zapSpeexDecoder::RemovedFromGraph(zapIMediaGraph *graph)
+zapSpeexDecoder::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   speex_bits_destroy(&mDecoderBits);
   speex_decoder_destroy(mDecoderState);

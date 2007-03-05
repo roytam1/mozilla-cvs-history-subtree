@@ -36,7 +36,6 @@
 
 #include "zapSpeexRTPDepacketizer.h"
 #include "zapRTPFrame.h"
-#include "zapIMediaGraph.h"
 #include "nsString.h"
 #include "nsIPropertyBag2.h"
 #include "zapMediaFrame.h"
@@ -55,15 +54,14 @@ zapSpeexRTPDepacketizer::~zapSpeexRTPDepacketizer()
 }
 
 NS_IMETHODIMP
-zapSpeexRTPDepacketizer::AddedToGraph(zapIMediaGraph *graph,
-                                      const nsACString & id,
-                                      nsIPropertyBag2 *node_pars)
+zapSpeexRTPDepacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                               nsIPropertyBag2 *node_pars)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-zapSpeexRTPDepacketizer::RemovedFromGraph(zapIMediaGraph *graph)
+zapSpeexRTPDepacketizer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

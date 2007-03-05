@@ -36,7 +36,6 @@
 
 #include "zapTEventToTToneConverter.h"
 #include "zapITelephoneEventFrame.h"
-#include "zapIMediaGraph.h"
 #include "nsString.h"
 #include "zapStreamUtils.h"
 #include "stdio.h"
@@ -53,13 +52,14 @@ zapTEventToTToneConverter::~zapTEventToTToneConverter()
 }
 
 NS_IMETHODIMP
-zapTEventToTToneConverter::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIPropertyBag2 *node_pars)
+zapTEventToTToneConverter::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                                 nsIPropertyBag2 *node_pars)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-zapTEventToTToneConverter::RemovedFromGraph(zapIMediaGraph *graph)
+zapTEventToTToneConverter::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }
@@ -109,9 +109,6 @@ zapTEventToTToneConverter::Filter(zapIMediaFrame* input, zapIMediaFrame** output
   
 
   if (E && timestamp == mCurrentFrameTimestamp && mCurrentFrameEndSent) {
-#ifdef DEBUG_afri_zmk
-    //printf("F1<redun>");
-#endif
     // this is a redundant end frame.
     // XXX what we really want to do here is request the next frame,
     // but with a passive filter that's not possible. -> ignore for now
@@ -131,9 +128,6 @@ zapTEventToTToneConverter::Filter(zapIMediaFrame* input, zapIMediaFrame** output
   
   if (mCurrentFrameTimestamp != timestamp) {
     // this is a new event or a new segment. reset state:
-#ifdef DEBUG_afri_zmk
-    //printf("F1<new>");
-#endif
     mCurrentFrameTimestamp = timestamp;
     mCurrentFrameSent = 0;
     mCurrentFrameEndSent = PR_FALSE;
@@ -142,10 +136,6 @@ zapTEventToTToneConverter::Filter(zapIMediaFrame* input, zapIMediaFrame** output
   outputFrame->SetDuration(duration - mCurrentFrameSent);
   outputFrame->mTimestamp = timestamp + mCurrentFrameSent;
 
-#ifdef DEBUG_afri_zmk
-  //printf("F1<%d,%d>", outputFrame->mTimestamp, duration - mCurrentFrameSent);
-#endif
-  
   // update state:
   mCurrentFrameSent = duration;
   mCurrentFrameEndSent = E;

@@ -80,14 +80,8 @@ zapAudioIn::zapAudioIn()
 {
   PaError err;
   if ((err = Pa_Initialize()) != paNoError) {
-#ifdef DEBUG_afri_zmk
-    printf("Failed to initialize portaudio: %s\n", Pa_GetErrorText(err));
-#endif
-  }
-  
-#ifdef DEBUG_afri_zmk
-  printf("zapAudioIn::zapAudioIn()\n");
-#endif
+    NS_WARNING("Failed to initialize portaudio");
+  }  
 }
 
 zapAudioIn::~zapAudioIn()
@@ -95,9 +89,6 @@ zapAudioIn::~zapAudioIn()
   NS_ASSERTION(!mStream, "stream still running");
 
   Pa_Terminate();
-#ifdef DEBUG_afri_zmk
-  printf("zapAudioIn::~zapAudioIn()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -116,19 +107,15 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapAudioIn::AddedToGraph(zapIMediaGraph *graph,
-                         const nsACString & id,
-                         nsIPropertyBag2* node_pars)
+zapAudioIn::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                  nsIPropertyBag2* node_pars)
 {
-  // Add a reference to the mediagraph. We must hang onto this
-  // reference until the node is destroyed so that any proxies on us
-  // have a context to shut down in even after the graph has shut
-  // down.
-  mGraph = graph;
+  //XXX needed to prevent premature destruction of the container thread
+  mContainer = container;
   
-  graph->GetEventTarget(getter_AddRefs(mEventTarget));
+  container->GetEventTarget(getter_AddRefs(mEventTarget));
   
   // node parameter defaults:
   mInputDevice = Pa_GetDefaultInputDeviceID();
@@ -149,9 +136,6 @@ zapAudioIn::AddedToGraph(zapIMediaGraph *graph,
   
   if (mBuffers < 2) mBuffers = 2;
   
-#ifdef DEBUG_afri_zmk
-  printf("(audioin using device %d)", mInputDevice);
-#endif
   if (NS_FAILED(mStreamParameters.InitWithProperties(node_pars)))
     return NS_ERROR_FAILURE;
 
@@ -161,13 +145,10 @@ zapAudioIn::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapAudioIn::RemovedFromGraph(zapIMediaGraph *graph)
+zapAudioIn::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
-#ifdef DEBUG_afri_zmk
-  printf("(audioin removed from graph)");
-#endif
   Stop();
   mEventTarget = nsnull;
   return NS_OK;
@@ -272,10 +253,6 @@ int AudioInCallback(void* inputBuffer, void* outputBuffer,
                     unsigned long framesPerBuffer,
                     PaTimestamp outTime, void* userData)
 {
-#ifdef DEBUG_afri_zmk
-//  printf("{");
-#endif
-
   zapAudioIn* audioin = (zapAudioIn*)userData;
   
   // Asynchronously post the frame.
@@ -291,9 +268,6 @@ int AudioInCallback(void* inputBuffer, void* outputBuffer,
     
   audioin->mEventTarget->Dispatch(ev, NS_DISPATCH_NORMAL);
   
-#ifdef DEBUG_afri_zmk
-//  printf("}");
-#endif
   return 0;
 }
 
@@ -322,10 +296,7 @@ nsresult zapAudioIn::StartStream()
                               AudioInCallback, this);
 
   if (err != paNoError) {
-#ifdef DEBUG_afri_zmk
-    printf("Failed to open portaudio input stream: %s\n",
-           Pa_GetErrorText(err));
-#endif
+    NS_WARNING("Failed to open portaudio input stream");
     return NS_ERROR_FAILURE;
   }
 
@@ -339,9 +310,6 @@ void zapAudioIn::CloseStream()
 
   Pa_CloseStream(mStream);
   mStream = nsnull;
-#ifdef DEBUG_afri_zmk
-  printf("(audioin stream closed)");
-#endif
 }
 
 void zapAudioIn::CreateFrame(const nsACString& data, double timestamp)

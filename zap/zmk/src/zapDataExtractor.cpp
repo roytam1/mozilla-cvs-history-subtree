@@ -35,7 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapDataExtractor.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "nsString.h"
 #include "nsIPropertyBag2.h"
 #include "nsHashPropertyBag.h"
@@ -47,21 +47,15 @@
 
 zapDataExtractor::zapDataExtractor()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapDataExtractor::zapDataExtractor()\n");
-#endif
 }
 
 zapDataExtractor::~zapDataExtractor()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapDataExtractor::~zapDataExtractor()\n");
-#endif
 }
 
 NS_IMETHODIMP
-zapDataExtractor::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
-                               nsIPropertyBag2 *node_pars)
+zapDataExtractor::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                        nsIPropertyBag2 *node_pars)
 {
   mStart = 0;
   
@@ -77,7 +71,7 @@ zapDataExtractor::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
 }
 
 NS_IMETHODIMP
-zapDataExtractor::RemovedFromGraph(zapIMediaGraph *graph)
+zapDataExtractor::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

@@ -35,7 +35,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapSplitter.h"
-#include "zapIMediaGraph.h"
 #include "nsHashPropertyBag.h"
 #include "nsAutoPtr.h"
 #include "math.h"
@@ -64,17 +63,11 @@ private:
 
 zapSplitterOutput::zapSplitterOutput()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapSplitterOutput::zapSplitterOutput()\n");
-#endif
 }
 
 zapSplitterOutput::~zapSplitterOutput()
 {
   NS_ASSERTION(mSplitter, "Never initialized");
-#ifdef DEBUG_afri_zmk
-  printf("zapSplitterOutput::~zapSplitterOutput()\n");
-#endif
   // clean up references:
   mSplitter->mOutputs.RemoveElement(this);
   mSplitter = nsnull;
@@ -140,16 +133,10 @@ void zapSplitterOutput::ConsumeFrame(zapIMediaFrame *frame)
 
 zapSplitter::zapSplitter()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapSplitter::zapSplitter()\n");
-#endif
 }
 
 zapSplitter::~zapSplitter()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapSplitter::~zapSplitter()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -167,19 +154,18 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapSplitter::AddedToGraph(zapIMediaGraph *graph,
-                          const nsACString & id,
-                          nsIPropertyBag2* node_pars)
+zapSplitter::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                   nsIPropertyBag2* node_pars)
 {
-  mGraph = graph;
+  mContainer = container;
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapSplitter::RemovedFromGraph(zapIMediaGraph *graph)
+zapSplitter::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

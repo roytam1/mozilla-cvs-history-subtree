@@ -36,7 +36,6 @@
 
 #include "zapAudioToneFrame.h"
 #include "zapTToneToPCMConverter.h"
-#include "zapIMediaGraph.h"
 #include "nsAutoPtr.h"
 #include "zapMediaFrame.h"
 #include "math.h"
@@ -68,11 +67,10 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapTToneToPCMConverter::AddedToGraph(zapIMediaGraph *graph,
-                                     const nsACString & id,
-                                     nsIPropertyBag2* node_pars)
+zapTToneToPCMConverter::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                              nsIPropertyBag2* node_pars)
 {
   // node parameter defaults:
   mZtlp = 1.0;
@@ -97,9 +95,9 @@ zapTToneToPCMConverter::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapTToneToPCMConverter::RemovedFromGraph(zapIMediaGraph *graph)
+zapTToneToPCMConverter::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }
@@ -194,22 +192,13 @@ zapTToneToPCMConverter::ProduceFrame(zapIMediaFrame ** _retval)
       // XXX is this the right strategy? should we instead expect that
       // sources are synchronized and move on to the next frame?
       mSampleClock = frameStart;
-#ifdef DEBUG_afri_zmk
-      //printf("P<past>");
-#endif
       continue;
     }
     else if ((PRInt64)(windowEnd - frameStart) <= 0) {
-#ifdef DEBUG_afri_zmk
-      //printf("P<future %d,%d>", windowEnd, frameStart);
-#endif
       // frame begins in the future. -> bail
       break;
     }
     else {
-#ifdef DEBUG_afri_zmk
-//      printf("P<>");
-#endif
       // we have a frame and it has samples in the current
       // sampling window
       
@@ -359,9 +348,6 @@ zapTToneToPCMConverter::GetNextInputFrame()
     mCurrentInputStreamInfo = streamInfo;
     // resynchronize our sample clock:
     mCurrentInputFrame->GetTimestamp(&mSampleClock);
-#ifdef DEBUG_afri_zmk
-    //printf("P<sampleclock %d>", mSampleClock);
-#endif
   }
   
   return PR_TRUE;

@@ -69,17 +69,11 @@ zapDTMFGenerator::zapDTMFGenerator()
       mBuffer(0),
       mSampleClock(0)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapDTMFGenerator::zapDTMFGenerator()\n");
-#endif
 }
 
 zapDTMFGenerator::~zapDTMFGenerator()
 {
   ClearState();
-#ifdef DEBUG_afri_zmk
-  printf("zapDTMFGenerator::~zapDTMFGenerator()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -98,11 +92,10 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapDTMFGenerator::AddedToGraph(zapIMediaGraph *graph,
-                            const nsACString & id,
-                            nsIPropertyBag2* node_pars)
+zapDTMFGenerator::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                        nsIPropertyBag2* node_pars)
 {
   // node parameter defaults:
   double tone_duration = 0.09;
@@ -141,9 +134,9 @@ zapDTMFGenerator::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer); */
 NS_IMETHODIMP
-zapDTMFGenerator::RemovedFromGraph(zapIMediaGraph *graph)
+zapDTMFGenerator::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }
@@ -251,9 +244,7 @@ zapDTMFGenerator::ProduceFrame(zapIMediaFrame ** _retval)
     if (currentTEvent->duration - mTEventSamplesPlayed <= mMaxSamplesPerFrame) {
       // the tevent (or whatever remainer we are currently playing of it)
       // will fit into one frame
-#ifdef DEBUG_afri_zmk
-//      printf("d<%d,%d,%d>", currentTEvent->teventData.GetEvent(), frame->mTimestamp, currentTEvent->duration);
-#endif
+      
       // set duration to cumulative duration (see RFC2833):
       frame->mTEventData.SetDuration((PRUint16)(currentTEvent->duration));
       frame->SetE(PR_TRUE);
@@ -282,10 +273,6 @@ zapDTMFGenerator::ProduceFrame(zapIMediaFrame ** _retval)
     else {
       // the tevent needs to be split over several frames:
       mTEventSamplesPlayed += mMaxSamplesPerFrame;
-      
-#ifdef DEBUG_afri_zmk
-//      printf("D<%d,%d,%d>", currentTEvent->teventData.GetEvent(), frame->mTimestamp, mTEventSamplesPlayed);
-#endif
       
 // set duration to cumulative duration (see RFC2833):
       frame->mTEventData.SetDuration(mTEventSamplesPlayed);
@@ -383,9 +370,6 @@ nsresult zapDTMFGenerator::ParseDTMFData(const char *buf)
 
 void zapDTMFGenerator::QueueTEvent(PRUint16 event)
 {
-#ifdef DEBUG_afri_zmk
-  printf("D<enqueue %d>", event);
-#endif
   TEvent* tevent = new TEvent;
   tevent->duration = mToneDuration;
   tevent->teventData.SetEvent(event);

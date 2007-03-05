@@ -36,7 +36,6 @@
 
 #include "zapSpeexEncoder.h"
 #include "zapIMediaFrame.h"
-#include "zapIMediaGraph.h"
 #include "nsIPropertyBag2.h"
 #include "zapIAudioIn.h"
 #include "zapMediaFrame.h"
@@ -50,17 +49,11 @@
 zapSpeexEncoder::zapSpeexEncoder()
     : mEncoderState(nsnull)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapSpeexEncoder::zapSpeexEncoder()\n");
-#endif
 }
 
 zapSpeexEncoder::~zapSpeexEncoder()
 {
   NS_ASSERTION(!mEncoderState, "unclean shutdown");
-#ifdef DEBUG_afri_zmk
-  printf("zapSpeexEncoder::~zapSpeexEncoder()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -223,7 +216,8 @@ zapSpeexEncoder::SetPlcTuning(PRUint32 aPlcTuning)
 // Implementation helpers:
 
 NS_IMETHODIMP
-zapSpeexEncoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIPropertyBag2 *node_pars)
+zapSpeexEncoder::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                       nsIPropertyBag2 *node_pars)
 {
   // default: nb mode
   const SpeexMode* speexmode = &speex_nb_mode;
@@ -255,7 +249,7 @@ zapSpeexEncoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIP
 }
 
 NS_IMETHODIMP
-zapSpeexEncoder::RemovedFromGraph(zapIMediaGraph *graph)
+zapSpeexEncoder::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   speex_bits_destroy(&mEncoderBits);
   speex_encoder_destroy(mEncoderState);
@@ -284,9 +278,6 @@ zapSpeexEncoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
                                                 &sampleRate)) ||
       sampleRate != mSampleRate) {
     NS_ERROR("unsupported sample rate");
-#ifdef DEBUG_afri_zmk
-    printf("%i != %i\n", sampleRate, mSampleRate);
-#endif
     return NS_ERROR_FAILURE;
   }
 

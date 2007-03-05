@@ -40,7 +40,7 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "nsCOMPtr.h"
 #include "nsIWritablePropertyBag2.h"
 #include "nsString.h"
@@ -70,7 +70,6 @@ public:
   NS_DECL_ZAPIFILEIN
 
 private:
-  // node parameters (set from zapIMediaGraph::AddNode()):
   PRUint32 mBlockSize;
   PRFileDesc *mFile;
   PRBool mLoop;

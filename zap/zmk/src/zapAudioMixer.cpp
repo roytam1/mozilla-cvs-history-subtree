@@ -35,13 +35,12 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapAudioMixer.h"
-#include "zapIMediaGraph.h"
 #include "nsHashPropertyBag.h"
 #include "nsAutoPtr.h"
 #include "zapIMediaFrame.h"
 #include "zapMediaFrame.h"
 #include "math.h"
-#include "zapMediaGraphAutoLock.h"
+#include "zapMediaUtils.h"
 #include "math.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -72,17 +71,11 @@ private:
 //----------------------------------------------------------------------
 zapAudioMixerInput::zapAudioMixerInput()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapAudioMixerInput::zapAudioMixerInput()\n");
-#endif
 }
 
 zapAudioMixerInput::~zapAudioMixerInput()
 {
   NS_ASSERTION(mMixer, "Never initialized");
-#ifdef DEBUG_afri_zmk
-  printf("zapAudioMixerInput::~zapAudioMixerInput()\n");
-#endif
   // clean up references:
   mMixer->mInputs.RemoveElement(this);
   mMixer = nsnull;
@@ -179,16 +172,10 @@ zapAudioMixer::zapAudioMixer()
     : mVolumeFactor(1.0),
       mMute(PR_FALSE)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapAudioMixer::zapAudioMixer()\n");
-#endif
 }
 
 zapAudioMixer::~zapAudioMixer()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapAudioMixer::~zapAudioMixer()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -207,13 +194,12 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapAudioMixer::AddedToGraph(zapIMediaGraph *graph,
-                            const nsACString & id,
-                            nsIPropertyBag2* node_pars)
+zapAudioMixer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                     nsIPropertyBag2* node_pars)
 {
-  mGraph = graph;
+  mContainer = container;
   
   // unpack node parameters:
   nsresult rv;
@@ -235,9 +221,9 @@ zapAudioMixer::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapAudioMixer::RemovedFromGraph(zapIMediaGraph *graph)
+zapAudioMixer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }
@@ -291,7 +277,7 @@ zapAudioMixer::DisconnectSink(zapIMediaSink *sink)
 NS_IMETHODIMP
 zapAudioMixer::ProduceFrame(zapIMediaFrame ** _retval)
 {
-  zapMediaGraphAutoLock lock(mGraph);
+  zapMediaNodeContainerAutoLock lock(mContainer, this);
   
   PRUint32 samplesPerFrame = mStreamParameters.samples * mStreamParameters.channels;
   

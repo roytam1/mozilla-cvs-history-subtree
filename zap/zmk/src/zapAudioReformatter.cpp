@@ -35,7 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapAudioReformatter.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "math.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -66,11 +66,10 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapAudioReformatter::AddedToGraph(zapIMediaGraph *graph,
-                                  const nsACString & id,
-                                  nsIPropertyBag2* node_pars)
+zapAudioReformatter::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                           nsIPropertyBag2* node_pars)
 {
   // unpack node parameters:
   if (NS_FAILED(mOutStreamPars.InitWithProperties(node_pars)))
@@ -87,9 +86,9 @@ zapAudioReformatter::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapAudioReformatter::RemovedFromGraph(zapIMediaGraph *graph)
+zapAudioReformatter::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

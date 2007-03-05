@@ -36,7 +36,7 @@
 
 #include "zapG711RTPDepacketizer.h"
 #include "zapRTPFrame.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "nsString.h"
 #include "nsIPropertyBag2.h"
 #include "zapMediaFrame.h"
@@ -55,9 +55,8 @@ zapG711RTPDepacketizer::~zapG711RTPDepacketizer()
 }
 
 NS_IMETHODIMP
-zapG711RTPDepacketizer::AddedToGraph(zapIMediaGraph *graph,
-                                     const nsACString & id,
-                                     nsIPropertyBag2 *node_pars)
+zapG711RTPDepacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                              nsIPropertyBag2 *node_pars)
 {
   // default: pcmu
   mType = pcmu;
@@ -85,7 +84,7 @@ zapG711RTPDepacketizer::AddedToGraph(zapIMediaGraph *graph,
 }
 
 NS_IMETHODIMP
-zapG711RTPDepacketizer::RemovedFromGraph(zapIMediaGraph *graph)
+zapG711RTPDepacketizer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

@@ -38,12 +38,10 @@
 #include "nsIPropertyBag2.h"
 #include "stdio.h"
 #include "zapIMediaFrame.h"
-#include "zapIMediaGraph.h"
 #include "prmem.h"
 #include "nsAutoPtr.h"
 #include "nsString.h"
 #include "nsIComponentManager.h"
-#include "zapMediaGraphAutoLock.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapPacketPumpClock
@@ -129,16 +127,10 @@ zapPacketPumpClock::ConsumeFrame(zapIMediaFrame * frame)
 zapPacketPump::zapPacketPump()
     : mClock(nsnull)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapPacketPump::zapPacketPump()\n");
-#endif
 }
 
 zapPacketPump::~zapPacketPump()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapPacketPump::~zapPacketPump()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -158,20 +150,19 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapPacketPump::AddedToGraph(zapIMediaGraph *graph,
-                            const nsACString & id,
-                            nsIPropertyBag2* node_pars)
+zapPacketPump::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                     nsIPropertyBag2* node_pars)
 {
-  mGraph = graph;
+  mContainer = container;
 
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapPacketPump::RemovedFromGraph(zapIMediaGraph *graph)
+zapPacketPump::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

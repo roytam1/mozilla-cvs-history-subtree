@@ -47,17 +47,11 @@
 
 zapUDPSocket::zapUDPSocket()
 {
-#ifdef DEBUG
-  printf("zapUDPSocket::zapUDPSocket()\n");
-#endif
 }
 
 zapUDPSocket::~zapUDPSocket()
 {
   NS_ASSERTION(!mSocket, "unclean shutdown");
-#ifdef DEBUG
-  printf("zapUDPSocket::~zapUDPSocket()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -79,11 +73,10 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapUDPSocket::AddedToGraph(zapIMediaGraph *graph,
-                         const nsACString & id,
-                         nsIPropertyBag2* node_pars)
+zapUDPSocket::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                    nsIPropertyBag2* node_pars)
 {
   // unpack node parameters:
   if (!node_pars ||
@@ -136,9 +129,9 @@ zapUDPSocket::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapUDPSocket::RemovedFromGraph(zapIMediaGraph *graph)
+zapUDPSocket::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   if (mSocket) {
     mSocket->Close();
@@ -233,9 +226,6 @@ zapUDPSocket::ConsumeFrame(zapIMediaFrame * frame)
 {
   nsCOMPtr<nsIDatagram> dg = do_QueryInterface(frame);
   if (!dg) {
-#ifdef DEBUG_afri_udp
-    printf("zmk udp socket: null datagram\n");
-#endif
     // drop incompatible frame
     return NS_ERROR_FAILURE;
   }

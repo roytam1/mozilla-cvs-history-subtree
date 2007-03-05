@@ -52,17 +52,11 @@
 zapFileIn::zapFileIn()
     : mFile(nsnull)
 {
-#ifdef DEBUG
-  printf("zapFileIn ctor\n");
-#endif
 }
 
 zapFileIn::~zapFileIn()
 {
   NS_ASSERTION(!mFile, "uh oh, cleanup failure");
-#ifdef DEBUG
-  printf("~zapFileIn\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -81,11 +75,10 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode implementation:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapFileIn::AddedToGraph(zapIMediaGraph *graph,
-                        const nsACString & id,
-                        nsIPropertyBag2* node_pars)
+zapFileIn::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                 nsIPropertyBag2* node_pars)
 {
   // node parameter defaults:
   mBlockSize = 8192;
@@ -135,9 +128,9 @@ zapFileIn::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer); */
 NS_IMETHODIMP
-zapFileIn::RemovedFromGraph(zapIMediaGraph *graph)
+zapFileIn::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   if (mFile) {
     PR_Close(mFile);

@@ -185,9 +185,8 @@ zapTimestampTrigger::RemoveAllTriggers()
 // Implementation helpers:
 
 NS_IMETHODIMP
-zapTimestampTrigger::AddedToGraph(zapIMediaGraph *graph,
-                                  const nsACString & id,
-                                  nsIPropertyBag2 *node_pars)
+zapTimestampTrigger::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                           nsIPropertyBag2 *node_pars)
 {
   NS_ASSERTION(!mTriggers, "inconsistent state");
   mTriggers = new zapTimestampTriggerNode;
@@ -196,7 +195,7 @@ zapTimestampTrigger::AddedToGraph(zapIMediaGraph *graph,
 }
 
 NS_IMETHODIMP
-zapTimestampTrigger::RemovedFromGraph(zapIMediaGraph *graph)
+zapTimestampTrigger::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   NS_ASSERTION(!mTriggerListLocked, "uh-oh, inconsitent state");
   RemoveAllTriggers();

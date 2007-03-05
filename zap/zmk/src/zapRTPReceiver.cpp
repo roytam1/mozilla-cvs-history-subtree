@@ -36,7 +36,6 @@
 
 #include "zapRTPReceiver.h"
 #include "zapRTPFrame.h"
-#include "zapIMediaGraph.h"
 #include "nsString.h"
 #include "nsIPropertyBag2.h"
 #include "zapDatagramFrame.h"
@@ -49,27 +48,21 @@
 
 zapRTPReceiver::zapRTPReceiver()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapRTPReceiver::zapRTPReceiver()\n");
-#endif
 }
 
 zapRTPReceiver::~zapRTPReceiver()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapRTPReceiver::~zapRTPReceiver()\n");
-#endif
 }
 
 NS_IMETHODIMP
-zapRTPReceiver::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
-                             nsIPropertyBag2 *node_pars)
+zapRTPReceiver::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                      nsIPropertyBag2 *node_pars)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-zapRTPReceiver::RemovedFromGraph(zapIMediaGraph *graph)
+zapRTPReceiver::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

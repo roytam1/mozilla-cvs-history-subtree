@@ -35,7 +35,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapTimestamper.h"
-#include "zapIMediaGraph.h"
 #include "nsString.h"
 #include "nsIPropertyBag2.h"
 #include "nsHashPropertyBag.h"
@@ -47,21 +46,15 @@
 
 zapTimestamper::zapTimestamper()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapTimestamper::zapTimestamper()\n");
-#endif
 }
 
 zapTimestamper::~zapTimestamper()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapDataExtractor::~zapDataExtractor()\n");
-#endif
 }
 
 NS_IMETHODIMP
-zapTimestamper::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
-                             nsIPropertyBag2 *node_pars)
+zapTimestamper::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                      nsIPropertyBag2 *node_pars)
 {
   mFrameCount = 0;
   mOffset = 0;
@@ -89,7 +82,7 @@ zapTimestamper::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
 }
 
 NS_IMETHODIMP
-zapTimestamper::RemovedFromGraph(zapIMediaGraph *graph)
+zapTimestamper::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

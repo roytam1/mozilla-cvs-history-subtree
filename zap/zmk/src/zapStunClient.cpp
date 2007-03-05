@@ -94,16 +94,10 @@ private:
 
 zapStunBindingRequest::zapStunBindingRequest()
 {
-#ifdef DEBUG
-  //printf("zapStunBindingRequest::zapStunBindingRequest()\n");
-#endif
 }
 
 zapStunBindingRequest::~zapStunBindingRequest()
 {
-#ifdef DEBUG
-  //printf("zapStunBindingRequest::~zapStunBindingRequest()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -152,7 +146,7 @@ zapStunBindingRequest::Init(zapStunClient* stunClient,
 
   // XXX SRV lookup
   nsCOMPtr<nsIEventTarget> eventTarget;
-  stunClient->mGraph->GetEventTarget(getter_AddRefs(eventTarget));
+  stunClient->mContainer->GetEventTarget(getter_AddRefs(eventTarget));
   nsCOMPtr<nsIDNSService> dnsService = do_GetService("@mozilla.org/network/dns-service;1");
   if (NS_FAILED(dnsService->AsyncResolve(mStunServerAddress, 0, this,
                                          eventTarget, getter_AddRefs(mDNSRequest)))) {
@@ -459,22 +453,21 @@ zapStunClient::SendBindingRequest(zapIStunClientListener *listener,
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapStunClient::AddedToGraph(zapIMediaGraph *graph,
-                            const nsACString & id,
-                            nsIPropertyBag2* node_pars)
+zapStunClient::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                     nsIPropertyBag2* node_pars)
 {
-  mGraph = graph;
+  mContainer = container;
   ZMK_CREATE_STREAM_INFO(mStreamInfo, "datagram");
   mNetUtils = do_GetService("@mozilla.org/zap/netutils;1");
   
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapStunClient::RemovedFromGraph(zapIMediaGraph *graph)
+zapStunClient::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

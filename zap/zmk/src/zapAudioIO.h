@@ -40,7 +40,7 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "zapIMediaFrame.h"
 #include "zapIAudioIO.h"
 #include "nsCOMPtr.h"
@@ -90,10 +90,9 @@ private:
   nsresult StartStream();
   void CloseStream();
     
-  nsCOMPtr<zapIMediaGraph> mGraph;
-  nsCOMPtr<nsIEventTarget> mEventTarget;   // media graph event target
+  nsCOMPtr<zapIMediaNodeContainer> mContainer;
+  nsCOMPtr<nsIEventTarget> mEventTarget;   // container event target
 
-  // node parameters (set in zapIMediaGraph::AddNode()):
   PRUint32 mBuffers; // number of internal port audio buffers (>=2)
   PaDeviceID mInputDevice;
   PaDeviceID mOutputDevice;

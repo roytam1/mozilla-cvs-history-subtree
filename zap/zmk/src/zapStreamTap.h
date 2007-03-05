@@ -40,6 +40,7 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
+#include "zapIMediaNodeContainer.h"
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #include "nsVoidArray.h"
@@ -72,7 +73,7 @@ private:
 
   void RequestFrame();
 
-  nsCOMPtr<zapIMediaGraph> mGraph;
+  nsCOMPtr<zapIMediaNodeContainer> mContainer;
   
   // zapStreamTapOutput active tap outputs (weak references):
   nsVoidArray mOutputs;

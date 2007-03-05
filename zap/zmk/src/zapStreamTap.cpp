@@ -35,11 +35,10 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapStreamTap.h"
-#include "zapIMediaGraph.h"
 #include "nsHashPropertyBag.h"
 #include "nsAutoPtr.h"
 #include "math.h"
-#include "zapMediaGraphAutoLock.h"
+#include "zapMediaUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapStreamTapOutput
@@ -65,17 +64,11 @@ private:
 
 zapStreamTapOutput::zapStreamTapOutput()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamTapOutput::zapStreamTapOutput()\n");
-#endif
 }
 
 zapStreamTapOutput::~zapStreamTapOutput()
 {
   NS_ASSERTION(mStreamTap, "Never initialized");
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamTapOutput::~zapStreamTapOutput()\n");
-#endif
   // clean up references:
   mStreamTap->mOutputs.RemoveElement(this);
   mStreamTap = nsnull;
@@ -141,16 +134,10 @@ void zapStreamTapOutput::ConsumeFrame(zapIMediaFrame *frame)
 
 zapStreamTap::zapStreamTap()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamTap::zapStreamTap()\n");
-#endif
 }
 
 zapStreamTap::~zapStreamTap()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamTap::~zapStreamTap()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -169,19 +156,18 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapStreamTap::AddedToGraph(zapIMediaGraph *graph,
-                           const nsACString & id,
-                           nsIPropertyBag2* node_pars)
+zapStreamTap::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                    nsIPropertyBag2* node_pars)
 {
-  mGraph = graph;
+  mContainer = container;
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapStreamTap::RemovedFromGraph(zapIMediaGraph *graph)
+zapStreamTap::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }
@@ -283,7 +269,7 @@ zapStreamTap::ProduceFrame(zapIMediaFrame ** frame)
   if (!mInput || NS_FAILED(mInput->ProduceFrame(frame)))
     return NS_ERROR_FAILURE;
 
-  zapMediaGraphAutoLock lock(mGraph);
+  zapMediaNodeContainerAutoLock lock(mContainer, this);
 
   // pass output to taps:
   for (int i=0, l=mOutputs.Count(); i<l; ++i) {

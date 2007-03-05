@@ -40,7 +40,7 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "zapIMediaFrame.h"
 #include "zapIAudioIn.h"
 #include "nsCOMPtr.h"
@@ -78,7 +78,6 @@ private:
   
   void CreateFrame(const nsACString& data, double timestamp);
   
-  // node parameters (set from zapIMediaGraph::AddNode()):
   PaDeviceID mInputDevice;
   zapAudioStreamParameters mStreamParameters;
 
@@ -87,8 +86,8 @@ private:
   
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
   
-  nsCOMPtr<zapIMediaGraph> mGraph; // media graph in which this node lives
-  nsCOMPtr<nsIEventTarget> mEventTarget; // media graph event target
+  nsCOMPtr<zapIMediaNodeContainer> mContainer; // container in which this node lives
+  nsCOMPtr<nsIEventTarget> mEventTarget; // container event target
   
   friend int AudioInCallback(void* inputBuffer, void* outputBuffer,
                              unsigned long framesPerBuffer,

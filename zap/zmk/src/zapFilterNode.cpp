@@ -36,7 +36,7 @@
 
 #include "zapFilterNode.h"
 #include "zapIMediaFrame.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "nsIPropertyBag2.h"
 #include "stdio.h"
 

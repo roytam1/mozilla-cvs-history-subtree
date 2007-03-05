@@ -72,12 +72,12 @@ public:
 private:
   friend class zapAudioMixerInput;
 
-  nsCOMPtr<zapIMediaGraph> mGraph;
+  nsCOMPtr<zapIMediaNodeContainer> mContainer;
 
   float mVolumeFactor;
   PRBool mMute;
   
-  // node parameters (set in zapIMediaGraph::AddNode()):
+  // node parameters:
   zapAudioStreamParameters mStreamParameters;
 
   // zapAudioMixerInput inputs (weak references):

@@ -69,7 +69,6 @@ public:
 private:
   friend class zapAudioMixerInput;
 
-  // node parameters (set in zapIMediaGraph::AddNode()):
   zapAudioStreamParameters mStreamParameters;
 
   // zapAudioMixerInput inputs (weak references):

@@ -47,9 +47,6 @@
 zapRtttlPlayer::zapRtttlPlayer()
     : mTones(nsnull)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapRtttlPlayer::zapRtttlPlayer()\n");
-#endif
 }
 
 zapRtttlPlayer::~zapRtttlPlayer()
@@ -59,9 +56,6 @@ zapRtttlPlayer::~zapRtttlPlayer()
     mTones = nsnull;
   }
   
-#ifdef DEBUG_afri_zmk
-  printf("zapRtttlPlayer::~zapRtttlPlayer()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -79,11 +73,10 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapRtttlPlayer::AddedToGraph(zapIMediaGraph *graph,
-                             const nsACString & id,
-                             nsIPropertyBag2* node_pars)
+zapRtttlPlayer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                      nsIPropertyBag2* node_pars)
 {
   // node parameter defaults:
   nsCString rtttl = NS_LITERAL_CSTRING("zap:d=32,o=5,b=140:b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,8p.,f4,f4,8p.,f4,f4,1p");
@@ -120,9 +113,9 @@ zapRtttlPlayer::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapRtttlPlayer::RemovedFromGraph(zapIMediaGraph *graph)
+zapRtttlPlayer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

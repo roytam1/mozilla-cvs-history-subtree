@@ -35,9 +35,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapUDPSocketPair.h"
-#include "zapIMediaGraph.h"
 #include "nsHashPropertyBag.h"
-#include "zapIUDPSocket.h"
+#include "zapUDPSocket.h"
 #include "nsIUDPSocket.h"
 #include "nsNetCID.h"
 #include "nsComponentManagerUtils.h"
@@ -48,16 +47,10 @@
 
 zapUDPSocketPair::zapUDPSocketPair()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapUDPSocketPair::zapUDPSocketPair()\n");
-#endif
 }
 
 zapUDPSocketPair::~zapUDPSocketPair()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapUDPSocketPair::~zapUDPSocketPair()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -69,18 +62,20 @@ NS_IMPL_THREADSAFE_RELEASE(zapUDPSocketPair)
 NS_INTERFACE_MAP_BEGIN(zapUDPSocketPair)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, zapIMediaNode)
   NS_INTERFACE_MAP_ENTRY(zapIMediaNode)
+  NS_INTERFACE_MAP_ENTRY(zapIMediaNodeContainer)
   NS_INTERFACE_MAP_ENTRY(zapIUDPSocketPair)
 NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapUDPSocketPair::AddedToGraph(zapIMediaGraph *graph,
-                               const nsACString & id,
-                               nsIPropertyBag2* node_pars)
+zapUDPSocketPair::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                        nsIPropertyBag2* node_pars)
 {
+  mContainer = container;
+  
   PRUint16 portbase = 49152;
   // unpack node parameters:
   if (node_pars) {
@@ -127,44 +122,35 @@ zapUDPSocketPair::AddedToGraph(zapIMediaGraph *graph,
   NS_NewHashPropertyBag2(getter_AddRefs(props));
 
   // create socket nodes:
+  mSocketA = new zapUDPSocket();
   props->SetPropertyAsInterface(NS_LITERAL_STRING("socket"), socketA);
-  NS_ENSURE_SUCCESS(graph->AddNode(NS_LITERAL_CSTRING("udp-socket"),
-                                   props, mSocketAID),
-                    NS_ERROR_FAILURE);
-  graph->GetNode(mSocketAID, NS_GET_IID(zapIMediaNode), true,
-                 getter_AddRefs(mSocketA));
-  if (!mSocketA) {
-    graph->RemoveNode(mSocketAID);
+  if (NS_FAILED(mSocketA->InsertedIntoContainer(this, props))) {
+    mSocketA = nsnull;
     return NS_ERROR_FAILURE;
   }
-  
+
+  mSocketB = new zapUDPSocket();
   props->SetPropertyAsInterface(NS_LITERAL_STRING("socket"), socketB);
-  if (NS_FAILED(graph->AddNode(NS_LITERAL_CSTRING("udp-socket"),
-                               props, mSocketBID))) {
-    graph->RemoveNode(mSocketAID);
+  if (NS_FAILED(mSocketA->InsertedIntoContainer(this, props))) {
+    mSocketA->RemovedFromContainer(this);
+    mSocketA = nsnull;
+    mSocketB = nsnull;
     return NS_ERROR_FAILURE;
   }
-  graph->GetNode(mSocketBID, NS_GET_IID(zapIMediaNode), true,
-                 getter_AddRefs(mSocketB));
-  if (!mSocketB) {
-    graph->RemoveNode(mSocketAID);
-    graph->RemoveNode(mSocketBID);
-    return NS_ERROR_FAILURE;
-  }
-  
+
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapUDPSocketPair::RemovedFromGraph(zapIMediaGraph *graph)
+zapUDPSocketPair::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   if (mSocketA) {
-    graph->RemoveNode(mSocketAID);
+    mSocketA->RemovedFromContainer(this);
     mSocketA = nsnull;
   }
   if (mSocketB) {
-    graph->RemoveNode(mSocketBID);
+    mSocketB->RemovedFromContainer(this);
     mSocketB = nsnull;
   }
   return NS_OK;
@@ -224,6 +210,30 @@ zapUDPSocketPair::GetSink(nsIPropertyBag2 *sink_pars, zapIMediaSink **_retval)
 
   NS_ERROR("unknown sink");
   return NS_ERROR_FAILURE;
+}
+
+//----------------------------------------------------------------------
+// zapIMediaNodeContainer methods:
+
+/* void lock (in zapIMediaNode node); */
+NS_IMETHODIMP
+zapUDPSocketPair::Lock(zapIMediaNode *node)
+{
+  return mContainer->Lock(node);
+}
+
+/* void unlock (in zapIMediaNode node); */
+NS_IMETHODIMP
+zapUDPSocketPair::Unlock(zapIMediaNode *node)
+{
+  return mContainer->Unlock(node);
+}
+
+/* readonly attribute nsIEventTarget eventTarget; */
+NS_IMETHODIMP
+zapUDPSocketPair::GetEventTarget(nsIEventTarget * *aEventTarget)
+{
+  return mContainer->GetEventTarget(aEventTarget);
 }
 
 //----------------------------------------------------------------------

@@ -38,7 +38,6 @@
 #include "nsIPropertyBag2.h"
 #include "stdio.h"
 #include "zapIMediaFrame.h"
-#include "zapIMediaGraph.h"
 #include "prmem.h"
 #include "nsAutoPtr.h"
 #include "nsString.h"
@@ -64,17 +63,11 @@ zapPacketBuffer::zapPacketBuffer()
     : mBuffer(0),
       mLifting(PR_TRUE)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapPacketBuffer::zapPacketBuffer()\n");
-#endif
 }
 
 zapPacketBuffer::~zapPacketBuffer()
 {
   ClearBuffer();
-#ifdef DEBUG_afri_zmk
-  printf("zapPacketBuffer::~zapPacketBuffer()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -94,15 +87,14 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapPacketBuffer::AddedToGraph(zapIMediaGraph *graph,
-                              const nsACString & id,
-                              nsIPropertyBag2* node_pars)
+zapPacketBuffer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                       nsIPropertyBag2* node_pars)
 {
-  // hang on to graph until destructor so that any interface
+  // hang on to container until destructor so that any interface
   // references to us have a message loop:
-  mGraph = graph;
+  mContainer = container;
   
   // node parameter defaults:
   mLiftCount = 0;
@@ -135,9 +127,9 @@ zapPacketBuffer::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapPacketBuffer::RemovedFromGraph(zapIMediaGraph *graph)
+zapPacketBuffer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }
@@ -198,9 +190,6 @@ NS_IMETHODIMP
 zapPacketBuffer::ConsumeFrame(zapIMediaFrame * frame)
 {
   if (mBuffer.GetSize() >= mMaxSize) {
-#ifdef DEBUG_afri_zmk
-    //printf("O");
-#endif
     if (!mDropCount)
       return NS_ERROR_FAILURE;
     // ... else pop mDropCount packets from front:
@@ -247,9 +236,6 @@ NS_IMETHODIMP
 zapPacketBuffer::ProduceFrame(zapIMediaFrame ** frame)
 {
   if (mLifting || mBuffer.GetSize() < mMinSize) {
-#ifdef DEBUG_afri_zmk
-//    printf("U");
-#endif
     *frame = nsnull;
     return NS_ERROR_FAILURE;
   }

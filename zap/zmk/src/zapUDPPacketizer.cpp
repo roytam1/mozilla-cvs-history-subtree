@@ -36,7 +36,6 @@
 
 #include "zapUDPPacketizer.h"
 #include "zapIMediaFrame.h"
-#include "zapIMediaGraph.h"
 #include "nsString.h"
 #include "nsIPropertyBag2.h"
 #include "zapDatagramFrame.h"
@@ -48,21 +47,15 @@
 
 zapUDPPacketizer::zapUDPPacketizer()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapUDPPacketizer::zapUDPPacketizer()\n");
-#endif
 }
 
 zapUDPPacketizer::~zapUDPPacketizer()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapUDPPacketizer::~zapUDPPacketizer()\n");
-#endif
 }
 
 NS_IMETHODIMP
-zapUDPPacketizer::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
-                               nsIPropertyBag2 *node_pars)
+zapUDPPacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                        nsIPropertyBag2 *node_pars)
 {
   // unpack node parameters:
   if (!node_pars) {
@@ -83,7 +76,7 @@ zapUDPPacketizer::AddedToGraph(zapIMediaGraph *graph, const nsACString & id,
 }
 
 NS_IMETHODIMP
-zapUDPPacketizer::RemovedFromGraph(zapIMediaGraph *graph)
+zapUDPPacketizer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

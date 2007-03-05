@@ -40,6 +40,7 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
+#include "zapIMediaNodeContainer.h"
 #include "nsCOMPtr.h"
 #include "speex/speex_echo.h"
 #include "speex/speex_preprocess.h"
@@ -73,7 +74,7 @@ class zapSpeexAudioProcessor : public zapIMediaNode,
 private:
   void Filter(zapIMediaFrame *frame, zapIMediaFrame **outframe);
   
-  nsCOMPtr<zapIMediaGraph> mGraph; // media graph in which this node lives
+  nsCOMPtr<zapIMediaNodeContainer> mContainer; 
   
   PRBool mAEC;
   PRBool mAEC2Stage;

@@ -117,13 +117,12 @@ zapStunServer::SetListener(zapIStunServerListener * aListener)
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapStunServer::AddedToGraph(zapIMediaGraph *graph,
-                            const nsACString & id,
-                            nsIPropertyBag2* node_pars)
+zapStunServer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                     nsIPropertyBag2* node_pars)
 {
-  mGraph = graph;
+  mContainer = container;
 
   if (!node_pars) return NS_ERROR_FAILURE;
 
@@ -140,9 +139,9 @@ zapStunServer::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapStunServer::RemovedFromGraph(zapIMediaGraph *graph)
+zapStunServer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

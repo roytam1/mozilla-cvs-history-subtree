@@ -101,6 +101,7 @@ XPIDLSRCS	= \
 		zapIMediaFrame.idl \
 		zapIMediaGraph.idl \
 		zapIMediaNode.idl \
+		zapIMediaNodeContainer.idl \
 		zapIMediaSink.idl \
 		zapIMediaSource.idl \
 		zapIPacketBuffer.idl \

@@ -43,7 +43,7 @@
 #include "nsDeque.h"
 #include "nsCOMPtr.h"
 #include "zapIPacketBuffer.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapPacketBuffer
@@ -71,7 +71,6 @@ class zapPacketBuffer : public zapIMediaNode,
 private:
   void ClearBuffer();
   
-  // node parameters (set in zapIMediaGraph::AddNode()):  
   PRUint32 mLiftCount; // number of packets to prefill the buffer with
   PRUint32 mDropCount;
   PRUint32 mMaxSize; // maximum number of packets buffered
@@ -83,7 +82,7 @@ private:
 
   nsCOMPtr<zapIMediaSink> mOutput;
   nsCOMPtr<zapIMediaSource> mInput;
-  nsCOMPtr<zapIMediaGraph> mGraph;
+  nsCOMPtr<zapIMediaNodeContainer> mContainer;
 };
 
 #endif // __ZAP_PACKETBUFFER_H__

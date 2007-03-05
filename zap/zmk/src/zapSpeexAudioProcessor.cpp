@@ -38,7 +38,6 @@
 #include "nsIPropertyBag2.h"
 #include "stdio.h"
 #include "zapMediaFrame.h"
-#include "zapIMediaGraph.h"
 #include "prmem.h"
 #include "nsAutoPtr.h"
 #include "nsString.h"
@@ -141,9 +140,6 @@ zapSpeexAudioProcessor::zapSpeexAudioProcessor()
     : mEchoState(nsnull),
       mEcho(nsnull)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapSpeexAudioProcessor::zapSpeexAudioProcessor()\n");
-#endif
 }
 
 zapSpeexAudioProcessor::~zapSpeexAudioProcessor()
@@ -153,11 +149,7 @@ zapSpeexAudioProcessor::~zapSpeexAudioProcessor()
   speex_preprocess_state_destroy(mPreprocessState);
   mPreprocessState = nsnull;
   delete[] mResidue;
-  mResidue = nsnull;
-  
-#ifdef DEBUG_afri_zmk
-  printf("zapSpeexAudioProcessor::~zapSpeexAudioProcessor()\n");
-#endif
+  mResidue = nsnull;  
 }
 
 //----------------------------------------------------------------------
@@ -177,17 +169,16 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapSpeexAudioProcessor::AddedToGraph(zapIMediaGraph *graph,
-                                     const nsACString & id,
-                                     nsIPropertyBag2* node_pars)
+zapSpeexAudioProcessor::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                              nsIPropertyBag2* node_pars)
 {
-  // Add a reference to the mediagraph. We must hang onto this
+  // Add a reference to the container. We must hang onto this
   // reference until the node is destroyed so that any proxies on us
-  // have a context to shut down in even after the graph has shut
+  // have a context to shut down in even after the container has shut
   // down.
-  mGraph = graph;
+  mContainer = container;
   
   // node parameter defaults:
   mAEC = PR_FALSE;
@@ -236,9 +227,9 @@ zapSpeexAudioProcessor::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapSpeexAudioProcessor::RemovedFromGraph(zapIMediaGraph *graph)
+zapSpeexAudioProcessor::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

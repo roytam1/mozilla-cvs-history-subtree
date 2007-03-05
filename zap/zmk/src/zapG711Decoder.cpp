@@ -36,7 +36,7 @@
 
 #include "zapG711Decoder.h"
 #include "zapIMediaFrame.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "nsString.h"
 #include "nsIPropertyBag2.h"
 #include "zapMediaFrame.h"
@@ -49,16 +49,10 @@
 
 zapG711Decoder::zapG711Decoder()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapG711Decoder::zapG711Decoder()");
-#endif
 }
 
 zapG711Decoder::~zapG711Decoder()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapG711Decoder::~zapG711Decoder()");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -73,13 +67,14 @@ NS_INTERFACE_MAP_END_INHERITING(zapFilterNode)
 //----------------------------------------------------------------------
 
 NS_IMETHODIMP
-zapG711Decoder::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIPropertyBag2 *node_pars)
+zapG711Decoder::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                      nsIPropertyBag2 *node_pars)
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-zapG711Decoder::RemovedFromGraph(zapIMediaGraph *graph)
+zapG711Decoder::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

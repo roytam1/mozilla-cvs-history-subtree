@@ -38,9 +38,9 @@
 #define __ZAP_UDPSOCKETPAIR_H__
 
 #include "zapIMediaNode.h"
+#include "zapIMediaNodeContainer.h"
 #include "zapIUDPSocketPair.h"
 #include "nsCOMPtr.h"
-#include "nsString.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapUDPSocketPair
@@ -52,6 +52,7 @@
 #define ZAP_UDPSOCKETPAIR_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "udp-socket-pair"
 
 class zapUDPSocketPair : public zapIMediaNode,
+                         public zapIMediaNodeContainer,
                          public zapIUDPSocketPair
 {
 public:
@@ -60,11 +61,12 @@ public:
 
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIANODE
+  NS_DECL_ZAPIMEDIANODECONTAINER
   NS_DECL_ZAPIUDPSOCKETPAIR
   
 private:
-  nsCString mSocketAID;
-  nsCString mSocketBID;
+  nsCOMPtr<zapIMediaNodeContainer> mContainer;
+  
   nsCOMPtr<zapIMediaNode> mSocketA;
   nsCOMPtr<zapIMediaNode> mSocketB;
 };

@@ -11,10 +11,10 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the Mozilla SIP client project.
+ * The Original Code is Joost Technologies B.V. code.
  *
- * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * The Initial Developer of the Original Code is Joost Technologies B.V.
+ * Portions created by the Initial Developer are Copyright (C) 2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,32 +34,39 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_MEDIAGRAPHAUTOLOCK_H__
-#define __ZAP_MEDIAGRAPHAUTOLOCK_H__
+#include "nsISupports.idl"
 
-#include "zapIMediaGraph.h"
-#include "nsCOMPtr.h"
+interface zapIMediaNode;
+interface nsIEventTarget;
 
-////////////////////////////////////////////////////////////////////////
-// A simple autolock guarding a mediagraph against modifications
-
-class zapMediaGraphAutoLock
+/**
+ * \ingroup ZMK_MODULE
+ */
+[scriptable, uuid(07649cb4-246a-4118-b538-4257d66b73f0)]
+interface zapIMediaNodeContainer : nsISupports
 {
-public:
-  zapMediaGraphAutoLock(zapIMediaGraph* graph)
-      : mGraph(graph) {
-    if (mGraph)
-      mGraph->Lock();
-  }
+  /**
+   * Prevent the container from modifying any of the node's
+   * connection or removing the node from the container until a call
+   * to unlock(). Nested lock/unlock calls (from the same node or
+   * different nodes) are allowed.
+   *
+   * Can be used by media nodes to prevent changes to their
+   * (immediate) connections during e.g. a call to ConsumeFrame().
+   *
+   * The locking granularity is not specified. The container may lock
+   * its complete node graph and even pass on the locking to
+   * containers higher up.
+   */
+  void lock(in zapIMediaNode node);
 
-  ~zapMediaGraphAutoLock() {
-    if (mGraph)
-      mGraph->Unlock();
-  }
-  
-private:
-  nsCOMPtr<zapIMediaGraph> mGraph;
-   
+  /**
+   * See documentation for lock()
+   */
+  void unlock(in zapIMediaNode node);
+
+  /**
+   * The event target for this container
+   */
+  readonly attribute nsIEventTarget eventTarget;
 };
-
-#endif // __ZAP_MEDIAGRAPHAUTOLOCK_H__

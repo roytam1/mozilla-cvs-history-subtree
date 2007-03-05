@@ -78,14 +78,8 @@ zapAudioOut::zapAudioOut()
 {
   PaError err;
   if ((err = Pa_Initialize()) != paNoError) {
-#ifdef DEBUG_afri_zmk
-    printf("Failed to initialize portaudio: %s\n", Pa_GetErrorText(err));
-#endif
-  }
-  
-#ifdef DEBUG_afri_zmk
-  printf("zapAudioOut::zapAudioOut()\n");
-#endif
+    NS_WARNING("Failed to initialize portaudio");
+  }  
 }
 
 zapAudioOut::~zapAudioOut()
@@ -93,9 +87,6 @@ zapAudioOut::~zapAudioOut()
   NS_ASSERTION(!mStream, "stream still running");
 
   Pa_Terminate();
-#ifdef DEBUG_afri_zmk
-  printf("zapAudioOut::~zapAudioOut()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -115,15 +106,14 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
-                          const nsACString & id,
-                          nsIPropertyBag2* node_pars)
+zapAudioOut::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                   nsIPropertyBag2* node_pars)
 {
-  mGraph = graph;
+  mContainer = container;
   
-  graph->GetEventTarget(getter_AddRefs(mEventTarget));
+  container->GetEventTarget(getter_AddRefs(mEventTarget));
 
   // node parameter defaults:
   mOutputDevice = Pa_GetDefaultOutputDeviceID();
@@ -143,10 +133,6 @@ zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
 
   if (mBuffers < 2) mBuffers = 2;
   
-#ifdef DEBUG_afri_zmk
-  printf("(audioout using device %d)", mOutputDevice);
-#endif
-  
   nsresult rv =  mStreamParameters.InitWithProperties(node_pars);
   if (NS_FAILED(rv)) return rv;
 
@@ -158,13 +144,10 @@ zapAudioOut::AddedToGraph(zapIMediaGraph *graph,
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapAudioOut::RemovedFromGraph(zapIMediaGraph *graph)
+zapAudioOut::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
-#ifdef DEBUG_afri_zmk
-  printf("(audioout removed from graph)");
-#endif
   return NS_OK;
 }
 
@@ -313,21 +296,7 @@ nsresult zapAudioOut::PlayFrame(void* outputBuffer)
     
   if (!frame || !ValidateFrame(frame)) {
     // undeflow or incompatible frame
-#ifdef DEBUG
-    if (mInput) {
-      if (frame) {
-        printf("Incompatible frame:\n");
-        nsCOMPtr<nsIPropertyBag2> streamInfo;
-        frame->GetStreamInfo(getter_AddRefs(streamInfo));
-        zapAudioStreamParameters pars;
-        pars.InitWithProperties(streamInfo);
-        printf("samples=%d, rate=%d, channels=%d, format=%d\n", pars.samples, pars.sample_rate, pars.channels, pars.sample_format);
-        printf("my pars: length=%d, rate=%d, channels=%d, format=%d\n", mStreamParameters.samples, mStreamParameters.sample_rate, mStreamParameters.channels, mStreamParameters.sample_format);
-      }
-//       else
-//         printf("U");
-    }
-#endif
+
     // Generate a silence buffer
     // XXX in the case of Float32 samples, this requires a sane
     // floating point representation where zero is 0 0 0 0.
@@ -341,11 +310,6 @@ nsresult zapAudioOut::PlayFrame(void* outputBuffer)
   }
   else {
     // we've got a frame. Consume it.
-#ifdef DEBUG_afri_zmk
-//       PRUint32 timestamp;
-//       audioout->mFrame->GetTimestamp(&timestamp);
-//       printf("<%d>", timestamp);
-#endif
     nsCString data;
     frame->GetData(data);
     
@@ -388,42 +352,6 @@ PRBool zapAudioOut::ValidateFrame(zapIMediaFrame* frame)
   // we have a new stream info. Check if the stream is compatible with
   // us:
   if (!CheckAudioStream(streamInfo, mStreamParameters)) {
-#ifdef DEBUG_afri_zmk
-    printf("(aout incomp. frames!)\n");
-    nsCString sample_format_str;
-    ZapAudioSampleFormatToStr( mStreamParameters.sample_format, sample_format_str );  
-
-    printf( "sample_rate: %i, samples: %i, frame duration: %10lf, channels: %i, sample_format: %s\n", 
-            mStreamParameters.sample_rate,
-            mStreamParameters.samples,
-            mStreamParameters.GetFrameDuration(),
-            mStreamParameters.channels,
-            sample_format_str.BeginReading() );
-
-    unsigned int sample_rate;
-    unsigned int samples;
-    unsigned int channels;
-    streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
-                                    &sample_rate);
-    streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING("samples"),
-                                    &samples);
-    streamInfo->GetPropertyAsUint32(NS_LITERAL_STRING("channels"),
-                                    &channels);
-    nsCString sampleformat_string;
-    streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("sample_format"),
-                                      sampleformat_string);
-    zapAudioStreamSampleFormat sampleformat = StrToZapAudioSampleFormat( sampleformat_string );
-    nsCString type_string;
-    streamInfo->GetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                      type_string);
-    printf( "sample_rate: %i, samples: %i, frame duration: %10lf, channels: %i, sample_format: %s, type: %s\n", 
-            sample_rate,
-            samples,
-            (double)samples / sample_rate,
-            channels,
-            sampleformat_string.BeginReading(),
-            type_string.BeginReading() );
-#endif
     return PR_FALSE;
   }
   
@@ -448,9 +376,7 @@ nsresult zapAudioOut::StartStream()
                               AudioOutCallback, this);
   
   if (err != paNoError) {
-#ifdef DEBUG_afri_zmk
-    printf("Failed to open portaudio output stream: %s\n", Pa_GetErrorText(err));
-#endif
+    NS_WARNING("Failed to open portaudio output stream");
     return NS_ERROR_FAILURE;
   }
 

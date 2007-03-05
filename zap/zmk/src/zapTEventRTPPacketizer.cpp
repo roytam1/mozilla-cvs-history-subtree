@@ -36,7 +36,6 @@
 
 #include "zapTEventRTPPacketizer.h"
 #include "zapRTPFrame.h"
-#include "zapIMediaGraph.h"
 #include "nsString.h"
 #include "nsIPropertyBag2.h"
 #include "zapMediaFrame.h"
@@ -56,7 +55,8 @@ zapTEventRTPPacketizer::~zapTEventRTPPacketizer()
 }
 
 NS_IMETHODIMP
-zapTEventRTPPacketizer::AddedToGraph(zapIMediaGraph *graph, const nsACString & id, nsIPropertyBag2 *node_pars)
+zapTEventRTPPacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                              nsIPropertyBag2 *node_pars)
 {
   // set defaults:
   mPayloadType = 96;
@@ -71,7 +71,7 @@ zapTEventRTPPacketizer::AddedToGraph(zapIMediaGraph *graph, const nsACString & i
 }
 
 NS_IMETHODIMP
-zapTEventRTPPacketizer::RemovedFromGraph(zapIMediaGraph *graph)
+zapTEventRTPPacketizer::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

@@ -40,7 +40,7 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
-#include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "zapIMediaFrame.h"
 #include "zapIAudioOut.h"
 #include "nsCOMPtr.h"
@@ -83,10 +83,9 @@ private:
   PRBool ValidateFrame(zapIMediaFrame* frame);
   nsresult StartStream();
     
-  nsCOMPtr<zapIMediaGraph> mGraph;
+  nsCOMPtr<zapIMediaNodeContainer> mContainer;
   nsCOMPtr<nsIEventTarget> mEventTarget;   // media graph event target
 
-  // node parameters (set in zapIMediaGraph::AddNode()):
   PaDeviceID mOutputDevice;
   zapAudioStreamParameters mStreamParameters;
   

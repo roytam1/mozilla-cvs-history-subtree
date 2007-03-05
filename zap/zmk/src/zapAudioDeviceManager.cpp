@@ -46,9 +46,7 @@ zapAudioDeviceManager::zapAudioDeviceManager()
 {
   PaError err;
   if ((err = Pa_Initialize()) != paNoError) {
-#ifdef DEBUG_afri_zmk
-    printf("Failed to initialize portaudio: %s\n", Pa_GetErrorText(err));
-#endif
+    NS_WARNING("Failed to initialize port audio");
   }
 }
 

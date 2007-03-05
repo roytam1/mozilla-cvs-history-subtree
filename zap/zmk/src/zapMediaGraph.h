@@ -38,6 +38,7 @@
 #define __ZAP_MEDIAGRAPH_H__
 
 #include "zapIMediaGraph.h"
+#include "zapIMediaNodeContainer.h"
 #include "nsIEventTarget.h"
 #include "nsIThread.h"
 #include "nsIRunnable.h"
@@ -48,12 +49,14 @@
 #include "nsISupportsPriority.h"
 
 class zapMediaGraph : public zapIMediaGraph,
+                      public zapIMediaNodeContainer,
                       public nsISupportsPriority,
                       public nsIRunnable
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_ZAPIMEDIAGRAPH
+  NS_DECL_ZAPIMEDIANODECONTAINER
   NS_DECL_NSISUPPORTSPRIORITY
   NS_DECL_NSIRUNNABLE
   

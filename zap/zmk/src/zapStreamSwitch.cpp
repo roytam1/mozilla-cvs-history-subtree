@@ -35,7 +35,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapStreamSwitch.h"
-#include "zapIMediaGraph.h"
 #include "nsHashPropertyBag.h"
 #include "nsAutoPtr.h"
 #include "math.h"
@@ -66,17 +65,11 @@ private:
 
 zapStreamSwitchOutput::zapStreamSwitchOutput()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamSwitchOutput::zapStreamSwitchOutput()\n");
-#endif
 }
 
 zapStreamSwitchOutput::~zapStreamSwitchOutput()
 {
   NS_ASSERTION(mStreamSwitch, "Never initialized");
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamSwitchOutput::~zapStreamSwitchOutput()\n");
-#endif
   // clean up references:
   if (mStreamSwitch) {
     mStreamSwitch->mOutputs.Remove(mID);
@@ -103,9 +96,6 @@ zapStreamSwitchOutput::Init(zapStreamSwitch* streamSwitch,
   
   mStreamSwitch = streamSwitch;
   // append ourselves to the StreamSwitch's array of inputs:
-#ifdef DEBUG_afri_zmk
-  printf("adding output %s to streamswitcher\n", mID.get());
-#endif
   mStreamSwitch->mOutputs.Put(mID, this);
   return NS_OK;
 }
@@ -169,17 +159,11 @@ nsresult zapStreamSwitchOutput::ConsumeFrame(zapIMediaFrame *frame)
 zapStreamSwitch::zapStreamSwitch()
     : mSelectedOutput(nsnull)
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamSwitch::zapStreamSwitch()\n");
-#endif
   mOutputs.Init();
 }
 
 zapStreamSwitch::~zapStreamSwitch()
 {
-#ifdef DEBUG_afri_zmk
-  printf("zapStreamSwitch::~zapStreamSwitch()\n");
-#endif
 }
 
 //----------------------------------------------------------------------
@@ -198,18 +182,17 @@ NS_INTERFACE_MAP_END
 //----------------------------------------------------------------------
 // zapIMediaNode methods:
 
-/* void addedToGraph (in zapIMediaGraph graph, in ACString id, in nsIPropertyBag2 node_pars); */
+/* void insertedIntoContainer (in zapIMediaNodeContainer container, in nsIPropertyBag2 node_pars); */
 NS_IMETHODIMP
-zapStreamSwitch::AddedToGraph(zapIMediaGraph *graph,
-                              const nsACString & id,
-                              nsIPropertyBag2* node_pars)
+zapStreamSwitch::InsertedIntoContainer(zapIMediaNodeContainer *container,
+                                       nsIPropertyBag2* node_pars)
 {
   return NS_OK;
 }
 
-/* void removedFromGraph (in zapIMediaGraph graph); */
+/* void removedFromContainer (in zapIMediaNodeContainer container); */
 NS_IMETHODIMP
-zapStreamSwitch::RemovedFromGraph(zapIMediaGraph *graph)
+zapStreamSwitch::RemovedFromContainer(zapIMediaNodeContainer *container)
 {
   return NS_OK;
 }

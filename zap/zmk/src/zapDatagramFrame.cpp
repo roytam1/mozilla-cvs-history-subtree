@@ -83,16 +83,10 @@ zapDatagramFrame::GetPort(PRInt32 *aPort)
 
 zapDatagramWrapperFrame::zapDatagramWrapperFrame()
 {
-#ifdef DEBUG_afri_zmk
-//  printf("'");
-#endif
 }
 
 zapDatagramWrapperFrame::~zapDatagramWrapperFrame()
 {
-#ifdef DEBUG_afri_zmk
-//  printf("`");
-#endif
 }
 
 //----------------------------------------------------------------------

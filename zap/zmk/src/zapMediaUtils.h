@@ -37,6 +37,9 @@
 #ifndef __ZAP_MEDIAUTILS_H__
 #define __ZAP_MEDIAUTILS_H__
 
+#include "zapIMediaNode.h"
+#include "zapIMediaNodeContainer.h"
+#include "nsCOMPtr.h"
 #include "nsHashPropertyBag.h"
 
 #define ZMK_VERIFY_STREAM_TYPE(streamInfo, type)      \
@@ -61,5 +64,29 @@
   streamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),    \
                                     NS_LITERAL_CSTRING(type));
 
+
+////////////////////////////////////////////////////////////////////////
+// A simple autolock guarding a node against modifications
+
+class zapMediaNodeContainerAutoLock
+{
+public:
+  zapMediaNodeContainerAutoLock(zapIMediaNodeContainer* container,
+                                zapIMediaNode* node)
+      : mContainer(container),
+        mNode(node) {
+    if (mContainer)
+      mContainer->Lock(mNode);
+  }
+
+  ~zapMediaNodeContainerAutoLock() {
+    if (mContainer)
+      mContainer->Unlock(mNode);
+  }
+  
+private:
+  nsCOMPtr<zapIMediaNodeContainer> mContainer;
+  nsCOMPtr<zapIMediaNode> mNode;
+};
 
 #endif // __ZAP_MEDIAUTILS_H__
