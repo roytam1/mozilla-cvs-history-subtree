@@ -1,6 +1,6 @@
 #
-## hostname: bm-xserve08.build.mozilla.org
-## uname: Darwin bm-xserve08.build.mozilla.org 8.8.4 Darwin Kernel Version 8.8.4: Sun Oct 29 15:26:54 PST 2006; root:xnu-792.16.4.obj~1/RELEASE_I386 i386 i386
+## hostname: bm-xserve01.mozilla.org
+## uname: Darwin bm-xserve01.mozilla.org 8.5.0 Darwin Kernel Version 8.5.0: Sun Jan 22 10:38:46 PST 2006; root:xnu-792.6.61.obj~1/RELEASE_PPC Power Macintosh powerpc
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -11,10 +11,6 @@ $ENV{NO_EM_RESTART} = "1";
 $ENV{DYLD_NO_FIX_PREBINDING} = "1";
 $ENV{LD_PREBIND_ALLOW_OVERLAP} = "1";
 $ENV{CVS_RSH} = "ssh";
-
-$MacUniversalBinary = 1;
-
-$BuildXForms = 1;
 
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
@@ -47,7 +43,7 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
@@ -57,11 +53,11 @@ $BuildAdministrator = 'build@mozilla.org';
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = 'Minefield';
-$VendorName               = "";
+$ProductName              = 'Firefox';
+$VendorName               = 'Mozilla';
 
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-$RegxpcomTest             = 1;
+#$RegxpcomTest             = 1;
 $AliveTest                = 1;
 #$JavaTest                 = 0;
 #$ViewerTest               = 0;
@@ -70,19 +66,16 @@ $AliveTest                = 1;
 #$DomToTextConversionTest  = 0;  
 #$XpcomGlueTest            = 0;
 $CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
-$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
+#$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 1;  # Tp
-$LayoutPerformanceLocalTest   = 0;  # Tp2
-$DHTMLPerformanceTest     = 1;  # Tdhtml
+$LayoutPerformanceTest    = 0;  # Tp
+#$DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
-$XULWindowOpenTest        = 1;  # Txul
-$StartupPerformanceTest   = 1;  # Ts
+$XULWindowOpenTest        = 0;  # Txul
+$StartupPerformanceTest   = 0;  # Ts
 
-$TestsPhoneHome           = 1;  # Should test report back to server?
-
-$GraphNameOverride        = 'xserve08.build.mozilla.org_Fx-Trunk';
+#$TestsPhoneHome           = 0;  # Should test report back to server?
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -93,7 +86,6 @@ $GraphNameOverride        = 'xserve08.build.mozilla.org_Fx-Trunk';
 #$results_server           = "build-graphs.mozilla.org";
 
 #$pageload_server          = "spider";  # localhost
-$pageload_server          = "axolotl.mozilla.org";  # localhost
 
 #
 # Timeouts, values are in seconds.
@@ -102,7 +94,7 @@ $pageload_server          = "axolotl.mozilla.org";  # localhost
 #$CreateProfileTimeout             = 45;
 #$RegxpcomTestTimeout              = 120;
 
-$AliveTestTimeout                 = 10;
+#$AliveTestTimeout                 = 45;
 #$ViewerTestTimeout                = 45;
 #$EmbedTestTimeout                 = 45;
 #$BloatTestTimeout                 = 120;   # seconds
@@ -113,7 +105,6 @@ $AliveTestTimeout                 = 10;
 #$CodesizeTestTimeout              = 900;     # seconds
 #$CodesizeTestType                 = "auto";  # {"auto"|"base"}
 #$LayoutPerformanceTestTimeout     = 1200;  # entire test, seconds
-#$LayoutPerformanceLocalTestTimeout     = 1200;  # entire test, seconds
 #$DHTMLPerformanceTestTimeout      = 1200;  # entire test, seconds
 #$QATestTimeout                    = 1200;   # entire test, seconds
 #$LayoutPerformanceTestPageTimeout = 30000; # each page, ms
@@ -145,7 +136,7 @@ $AliveTestTimeout                 = 10;
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
-$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$moz_cvsroot   = "/builds/cvs.hourly/cvsroot";
 
 #- Set these proper values for your tinderbox server
@@ -155,10 +146,10 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 #$moz_client_mk = 'client.mk';
 
 #- Set if you want to build in a separate object tree
-$ObjDir = '../build/universal';
+$ObjDir = '../build/unifox';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Universal Nightly';
+$BuildNameExtra = 'Mozilla1.8-FS-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -173,10 +164,12 @@ $BuildNameExtra = 'Universal Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Firefox';
+#$BuildTree  = 'Mozilla1.8';
+$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'FIREFOX_2_0_0_2_RELEASE';
+
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -197,34 +190,26 @@ $BinaryName = 'firefox-bin';
 
 # Release build options
 $ReleaseBuild  = 1;
-$shiptalkback  = 1;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = "4";
+$shiptalkback  = 0;
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$build_hour    = 3;
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $mac_bundle_path = "/browser/app";
-$ssh_version   = "2";
+$ssh_version   = 2;
 #$ssh_user      = "cltbld";
 #$ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "trunk";
-$notify_list   = "build-announce\@mozilla.org";
+$milestone     = 'mozilla1.8-fs';
+$notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 #$push_raw_xpis = 1;
-$update_package = 1;
-$update_product = "Firefox";
-$update_version = "trunk";
-$update_platform = "Darwin_Universal-gcc3";
-$update_hash = "md5";
-$update_filehost = "ftp.mozilla.org";
-$update_ver_file = 'browser/config/version.txt';
-$update_pushinfo = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -250,3 +235,8 @@ $update_pushinfo = 1;
 # Prevent Extension Manager from spawning child processes during tests
 # - processes that tbox scripts cannot kill. 
 #$ENV{NO_EM_RESTART} = '1';
+
+$MacUniversalBinary = 1;
+
+# Build XForms
+$BuildXForms = 0;
