@@ -69,12 +69,6 @@ nsSpatialNavigation::HandleEvent(nsIDOMEvent* aEvent)
 }
 
 NS_IMETHODIMP
-nsSpatialNavigation::KeyDown(nsIDOMEvent* aEvent)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
 nsSpatialNavigation::KeyUp(nsIDOMEvent* aEvent)
 {
   return NS_OK;
@@ -82,6 +76,12 @@ nsSpatialNavigation::KeyUp(nsIDOMEvent* aEvent)
 
 NS_IMETHODIMP
 nsSpatialNavigation::KeyPress(nsIDOMEvent* aEvent)
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSpatialNavigation::KeyDown(nsIDOMEvent* aEvent)
 {
   nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID);
   PRBool enabled;
@@ -136,7 +136,7 @@ nsSpatialNavigation::KeyPress(nsIDOMEvent* aEvent)
         }
       }
   }
-  else if (!mService->mIgnoreTextFields && targetContent->IsContentOfType(nsIContent::eHTML)) 
+  else if (mService->mIgnoreTextFields && targetContent->IsContentOfType(nsIContent::eHTML)) 
   {
     // Test for isindex, a deprecated kind of text field. We're using a string 
     // compare because <isindex> is not considered a form control, so it does 

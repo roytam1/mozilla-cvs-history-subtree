@@ -39,7 +39,7 @@
 nsSpatialNavigationService::nsSpatialNavigationService()  
 {
   mEnabled             = PR_TRUE;
-  mIgnoreTextFields    = PR_TRUE;
+  mIgnoreTextFields    = PR_FALSE;
   mDisableJSWhenFocusing = PR_TRUE;
 
   mKeyCodeLeft         = nsIDOMKeyEvent::DOM_VK_LEFT;
