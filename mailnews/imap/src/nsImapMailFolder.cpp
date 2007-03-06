@@ -811,7 +811,10 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
     nsCOMPtr <nsIURI> url;
     rv = imapService->SelectFolder(m_eventQueue, this, m_urlListener, msgWindow, getter_AddRefs(url));
     if (NS_SUCCEEDED(rv))
+    {
       m_urlRunning = PR_TRUE;
+      m_updatingFolder = PR_TRUE;
+    }
     if (url)
     {
       nsCOMPtr <nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(url);
