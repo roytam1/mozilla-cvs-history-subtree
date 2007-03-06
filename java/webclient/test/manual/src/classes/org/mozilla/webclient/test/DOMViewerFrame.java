@@ -27,6 +27,7 @@
 
 package org.mozilla.webclient.test;
 
+import org.mozilla.dom.util.DOMTreeModel;
 import org.mozilla.util.Assert;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
