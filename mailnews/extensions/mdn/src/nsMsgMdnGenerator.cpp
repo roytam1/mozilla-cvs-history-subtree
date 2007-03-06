@@ -62,6 +62,7 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
 #include "nsIStringBundle.h"
+#include "nsNativeCharsetUtils.h"
 
 #define MDN_NOT_IN_TO_CC          ((int) 0x0001)
 #define MDN_OUTSIDE_DOMAIN        ((int) 0x0002)
@@ -455,7 +456,6 @@ nsresult nsMsgMdnGenerator::CreateFirstPart()
     nsXPIDLString firstPart1;
     nsXPIDLString firstPart2;
     nsresult rv = NS_OK;
-    nsXPIDLString receipt_string;
     nsCOMPtr <nsIMsgCompUtils> compUtils;
     
     if (!m_mimeSeparator)
@@ -524,6 +524,7 @@ nsresult nsMsgMdnGenerator::CreateFirstPart()
       PUSH_N_FREE_STRING(tmpBuffer);
     }
 
+    nsXPIDLString receipt_string;
     switch (m_disposeType)
     {
     case nsIMsgMdnGenerator::eDisplayed:
@@ -563,28 +564,26 @@ nsresult nsMsgMdnGenerator::CreateFirstPart()
 
     if (NS_FAILED(rv)) 
         return rv;
+    
+    receipt_string.Append(NS_LITERAL_STRING(" - "));
+        
+    char * encodedReceiptString = nsMsgI18NEncodeMimePartIIStr(NS_ConvertUCS2toUTF8(receipt_string).get(), PR_FALSE, 
+                                                               "UTF-8", 0, conformToStandard);
    
     nsXPIDLCString subject;
     m_headers->ExtractHeader(HEADER_SUBJECT, PR_FALSE, getter_Copies(subject));
-    convbuf = nsMsgI18NEncodeMimePartIIStr(
-        subject.Length() ? subject.get() : "[no subject]", 
-        PR_TRUE, m_charset.get(), 0,
-        conformToStandard);
-    tmpBuffer = PR_smprintf("Subject: %s - %s" CRLF, 
-                            (receipt_string ? 
-                             NS_LossyConvertUCS2toASCII(receipt_string).get() :
-                             "Return Receipt"),
-                            (convbuf ? convbuf : 
-                             (subject.Length() ? subject.get() : 
+    convbuf = nsMsgI18NEncodeMimePartIIStr(subject.Length() ? subject.get() : "[no subject]", 
+                                           PR_FALSE, m_charset.get(), 0, conformToStandard);
+    tmpBuffer = PR_smprintf("Subject: %s%s" CRLF, 
+                             encodedReceiptString,
+                            (convbuf ? convbuf : (subject.Length() ? subject.get() : 
                               "[no subject]")));
 
     PUSH_N_FREE_STRING(tmpBuffer);
     PR_Free(convbuf);
+    PR_Free(encodedReceiptString);
 
-    convbuf = nsMsgI18NEncodeMimePartIIStr(
-        m_dntRrt, PR_TRUE, m_charset.get(), 0,
-        conformToStandard);
-
+    convbuf = nsMsgI18NEncodeMimePartIIStr(m_dntRrt, PR_TRUE, m_charset.get(), 0, conformToStandard);
     tmpBuffer = PR_smprintf("To: %s" CRLF, convbuf ? convbuf :
                             m_dntRrt.get());
     PUSH_N_FREE_STRING(tmpBuffer);
@@ -615,17 +614,16 @@ report-type=disposition-notification;\r\n\tboundary=\"%s\"" CRLF CRLF,
     tmpBuffer = PR_smprintf("--%s" CRLF, m_mimeSeparator.get());
     PUSH_N_FREE_STRING(tmpBuffer);
 
-    tmpBuffer = PR_smprintf("Content-Type: text/plain; charset=%s" CRLF,
-                            m_charset.get());
+    tmpBuffer = PR_smprintf("Content-Type: text/plain; charset=UTF-8" CRLF);
     PUSH_N_FREE_STRING(tmpBuffer);
 
     tmpBuffer = PR_smprintf("Content-Transfer-Encoding: %s" CRLF CRLF,
-                            ENCODING_7BIT);
+                            ENCODING_8BIT);
     PUSH_N_FREE_STRING(tmpBuffer);
   
     if (!firstPart1.IsEmpty())
     {
-        tmpBuffer = PR_smprintf("%s" CRLF CRLF, NS_LossyConvertUCS2toASCII(firstPart1).get());
+        tmpBuffer = PR_smprintf("%s" CRLF CRLF, NS_ConvertUCS2toUTF8(firstPart1).get());
         PUSH_N_FREE_STRING(tmpBuffer);
     }
 
@@ -673,7 +671,7 @@ report-type=disposition-notification;\r\n\tboundary=\"%s\"" CRLF CRLF,
     {
         tmpBuffer = 
             PR_smprintf("%s" CRLF CRLF, 
-                        NS_LossyConvertUCS2toASCII(firstPart2).get()); 
+                        NS_ConvertUCS2toUTF8(firstPart2).get()); 
         PUSH_N_FREE_STRING(tmpBuffer);
     }
     
