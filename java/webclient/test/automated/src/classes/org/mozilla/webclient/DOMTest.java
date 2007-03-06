@@ -39,6 +39,7 @@ import java.io.File;
 import java.io.FileInputStream;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 // DOMTest.java
@@ -127,10 +128,30 @@ public class DOMTest extends WebclientTestCase {
 	Document dom = currentPage.getDOM();
 	assertNotNull(dom);
 
-	Node node = dom.getElementById("HistoryTest1.html");
-	assertNotNull(node);
-	assertEquals(1, node.getNodeType());
-	node = node.getFirstChild();
+	Element element = dom.getElementById("HistoryTest1.html");
+	assertNotNull(element);
+	assertEquals(1, element.getNodeType());
+        
+        String strX = element.getAttribute("clientX");
+        String strY = element.getAttribute("clientY");
+        assertNotNull(strX);
+        assertNotNull(strY);
+        int x, y;
+        x = Integer.valueOf(strX).intValue();
+        assertEquals(8, x);
+        y = Integer.valueOf(strY).intValue();
+        assertEquals(103, y);
+
+        strX = element.getAttribute("screenX");
+        strY = element.getAttribute("screenY");
+        assertNotNull(strX);
+        assertNotNull(strY);
+        x = Integer.valueOf(strX).intValue();
+        assertEquals(8, x);
+        y = Integer.valueOf(strY).intValue();
+        assertEquals(102, y);
+        
+	Node node = element.getFirstChild();
 	assertEquals("next", node.getNodeValue());
 
 	frame.setVisible(false);
