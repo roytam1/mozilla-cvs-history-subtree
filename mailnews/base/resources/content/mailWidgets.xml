@@ -2191,8 +2191,11 @@
           
           if (topmostMsgWindow)
           {
-            mailSession.topmostMsgWindow.SelectFolder(this.folderUri);
-            mailSession.topmostMsgWindow.SelectMessage(this.messageUri);
+            try {
+              // SelectFolder throws an exception if the folder is not in the current folder view
+              mailSession.topmostMsgWindow.SelectFolder(this.folderUri);
+              mailSession.topmostMsgWindow.SelectMessage(this.messageUri);
+            } catch (ex) {}
           }
           else
           {
