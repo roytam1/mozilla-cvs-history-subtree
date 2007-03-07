@@ -244,9 +244,6 @@ GTKMOZEMBED_API(gint,          gtk_moz_embed_get_shistory_index,  (GtkMozEmbed *
 GTKMOZEMBED_API(void,          gtk_moz_embed_shistory_goto_index, (GtkMozEmbed *embed, gint index))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_get_server_cert,     (GtkMozEmbed *embed, gpointer *aCert, gpointer))
 
-/* Defines used by download and upload components */
-#define GTK_MOZ_EMBED_COMMON_FILE_SCHEME "file://"
-#define GTK_MOZ_EMBED_BLUETOOTH_FILE_SCHEME "obex://"
 typedef enum
 {
   GTK_MOZ_EMBED_BACK_SHISTORY,
