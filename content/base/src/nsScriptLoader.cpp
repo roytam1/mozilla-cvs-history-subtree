@@ -213,6 +213,7 @@ nsScriptLoaderEvent::Destroy(PLEvent* aEvent)
 nsScriptLoader::nsScriptLoader()
   : mDocument(nsnull),
     mEnabled(PR_TRUE),
+    mHadPendingScripts(PR_FALSE),
     mBlockerCount(0)
 {
 }
