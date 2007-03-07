@@ -49,6 +49,7 @@
 #include "nsIDocument.h"
 #include "nsIContent.h"
 #include "nsIPresShell.h"
+#include "nsIDOMNodeList.h"
 
 #include "EmbedEventListener.h"
 #include "EmbedPrivate.h"
@@ -139,26 +140,24 @@ EmbedEventListener::HandleLink (nsIDOMNode* node)
   if (NS_FAILED(result)) return NS_ERROR_FAILURE;
 
   // XXX This does not handle |BLAH ICON POWER"
-  if (name.LowerCaseEqualsLiteral("icon") ||
-      name.LowerCaseEqualsLiteral("shortcut icon")) {
+  if (mOwner->mNeedFav && (name.LowerCaseEqualsLiteral("icon") ||
+      name.LowerCaseEqualsLiteral("shortcut icon"))) {
     mOwner->mNeedFav = PR_FALSE;
     this->GetFaviconFromURI(url.get());
   }
-  else {
+  else if (name.LowerCaseEqualsLiteral("alternate") &&
+           type.LowerCaseEqualsLiteral("application/rss+xml")) {
 
-    const gchar *navi_title = NS_ConvertUTF16toUTF8(title).get();
+    gchar *navi_title = NS_strdup(NS_ConvertUTF16toUTF8(title).get());
     if (*navi_title == '\0')
       navi_title = NULL;
 
-    const gchar *navi_type = NS_ConvertUTF16toUTF8(type).get();
-    if (*navi_type == '\0')
-      navi_type = NULL;
+    // const gchar *navi_type = NS_ConvertUTF16toUTF8(type).get();
 
-    if (name.LowerCaseEqualsLiteral("alternate") &&
-        type.LowerCaseEqualsLiteral("application/rss+xml")) {
-    }
-    else {
-    }
+    gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                    moz_embed_signals[RSS_REQUEST], (gchar *)url.get(), navi_title);
+    if (navi_title)
+      NS_Free(navi_title);
   }
   return NS_OK;
 }
@@ -184,7 +183,7 @@ EmbedEventListener::HandleEvent(nsIDOMEvent* aDOMEvent)
     }
 #endif
 
-  if (eventType.EqualsLiteral ("DOMLinkAdded") && mOwner->mNeedFav) {
+  if (eventType.EqualsLiteral ("DOMLinkAdded")) {
 
     nsresult result;
     nsCOMPtr<nsIDOMEventTarget> eventTarget;
@@ -194,6 +193,36 @@ EmbedEventListener::HandleEvent(nsIDOMEvent* aDOMEvent)
     if (NS_FAILED(result) || !node)
       return NS_ERROR_FAILURE;
     HandleLink (node);
+  } else if (eventType.EqualsLiteral ("load")) {
+
+    nsIWebBrowser *webBrowser = nsnull;
+    gtk_moz_embed_get_nsIWebBrowser(mOwner->mOwningWidget, &webBrowser);
+    if (!webBrowser) return NS_ERROR_FAILURE;
+
+    nsCOMPtr<nsIDOMWindow> DOMWindow;
+    webBrowser->GetContentDOMWindow(getter_AddRefs(DOMWindow));
+    if (!DOMWindow) return NS_ERROR_FAILURE;
+
+    nsCOMPtr<nsIDOMDocument> doc;
+    DOMWindow->GetDocument (getter_AddRefs(doc));
+    if (!doc) return NS_ERROR_FAILURE;
+
+    nsCOMPtr<nsIDOMNodeList> nodelist = nsnull;
+    doc->GetElementsByTagName( NS_LITERAL_STRING( "rss" ), getter_AddRefs( nodelist ));
+    if(nodelist) {
+      PRUint32 length = 0;
+      nodelist->GetLength (&length);
+      if(length >= 1) {
+        gchar *url = gtk_moz_embed_get_location (mOwner->mOwningWidget);
+        gchar *title = gtk_moz_embed_get_title (mOwner->mOwningWidget);
+        gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                        moz_embed_signals[RSS_REQUEST], url, title);
+        if(url)
+          NS_Free(url);
+        if(title)
+          NS_Free(title);
+      }
+    }
   }
   else if (mOwner->mNeedFav) {
     mOwner->mNeedFav = PR_FALSE;

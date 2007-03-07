@@ -637,6 +637,16 @@ gtk_moz_embed_class_init(GtkMozEmbedClass *klass)
                    GTK_TYPE_STRING,
                    GTK_TYPE_STRING);
 
+  moz_embed_signals[RSS_REQUEST] =
+    gtk_signal_new("rss_request",
+                   GTK_RUN_LAST,
+                   GET_OBJECT_CLASS_TYPE(klass),
+                   GTK_SIGNAL_OFFSET(GtkMozEmbedClass, rss_request),
+                   gtkmozembed_VOID__STRING_STRING,
+                   GTK_TYPE_NONE,
+                   2,
+                   GTK_TYPE_STRING, GTK_TYPE_STRING);
+
 #endif
 
 #ifdef MOZ_WIDGET_GTK

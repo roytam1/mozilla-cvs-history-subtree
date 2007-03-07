@@ -188,6 +188,7 @@ struct _GtkMozEmbedClass
   void     (* icon_changed)    (GtkMozEmbed *, gpointer*);
   void     (* mailto)          (GtkMozEmbed *, gchar *);
   void     (* network_error)   (GtkMozEmbed *, gchar *, const gint, const gchar **);
+  void     (* rss_request)     (GtkMozEmbed *, gchar *, gchar *);
 };
 
 GTKMOZEMBED_API(GtkType,       gtk_moz_embed_get_type,            (void))

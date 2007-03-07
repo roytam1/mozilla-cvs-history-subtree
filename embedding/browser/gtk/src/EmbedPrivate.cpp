@@ -1272,6 +1272,7 @@ EmbedPrivate::AttachListeners(void)
   rv = mEventReceiver->AddEventListener(NS_LITERAL_STRING("focus"), eventListener, PR_TRUE);
   rv = mEventReceiver->AddEventListener(NS_LITERAL_STRING("blur"), eventListener, PR_TRUE);
   rv = mEventReceiver->AddEventListener(NS_LITERAL_STRING("DOMLinkAdded"), eventListener, PR_TRUE);
+  rv = mEventReceiver->AddEventListener(NS_LITERAL_STRING("load"), eventListener, PR_TRUE);
   if (NS_FAILED(rv)) {
     NS_WARNING("Failed to add Mouse Motion listener\n");
     return;
@@ -1326,6 +1327,7 @@ EmbedPrivate::DetachListeners(void)
   rv = mEventReceiver->RemoveEventListener(NS_LITERAL_STRING("focus"), eventListener, PR_TRUE);
   rv = mEventReceiver->RemoveEventListener(NS_LITERAL_STRING("blur"), eventListener, PR_TRUE);
   rv = mEventReceiver->RemoveEventListener(NS_LITERAL_STRING("DOMLinkAdded"), eventListener, PR_TRUE);
+  rv = mEventReceiver->RemoveEventListener(NS_LITERAL_STRING("load"), eventListener, PR_TRUE);
   mListenersAttached = PR_FALSE;
 }
 
