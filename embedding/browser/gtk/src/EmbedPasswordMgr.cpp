@@ -1199,12 +1199,12 @@ EmbedPasswordMgr::Notify(nsIContent* aFormNode,
       rv = bundleService->CreateBundle("chrome://branding/locale/brand.properties",
                                        getter_AddRefs(brandBundle));
       NS_ENSURE_SUCCESS(rv, rv);
-      PRUnichar* brandShortName;
+      nsString brandShortName;
       rv = brandBundle->GetStringFromName(NS_LITERAL_STRING("brandShortName").get(),
-                                          &brandShortName);
+                                          getter_Copies(brandShortName));
       NS_ENSURE_SUCCESS(rv, rv);
       const PRUnichar* formatArgs[1] = {
-          brandShortName
+          brandShortName.get()
       };
       nsAutoString dialogText;
       GetLocalizedString(NS_LITERAL_STRING("savePasswordText"),
@@ -1773,14 +1773,14 @@ EmbedPasswordMgr::GetLocalizedString(const nsAString& key,
       return;
     }
   }
-  PRUnichar* str;
+  nsString str;
   if (aIsFormatted)
     sPMBundle->FormatStringFromName(PromiseFlatString(key).get(),
                                     aFormatArgs, aFormatArgsLength,
-                                    &str);
+                                    getter_Copies(str));
   else
     sPMBundle->GetStringFromName(PromiseFlatString(key).get(),
-                                 &str);
+                                 getter_Copies(str));
   aResult.Assign(str);
 }
 
