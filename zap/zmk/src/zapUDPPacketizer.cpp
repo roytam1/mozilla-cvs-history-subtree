@@ -76,7 +76,7 @@ zapUDPPacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapUDPPacketizer::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapUDPPacketizer::RemovedFromContainer()
 {
   return NS_OK;
 }

@@ -163,9 +163,9 @@ zapSplitter::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapSplitter::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapSplitter::RemovedFromContainer()
 {
   return NS_OK;
 }

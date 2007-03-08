@@ -59,7 +59,7 @@ zapTEventToTToneConverter::InsertedIntoContainer(zapIMediaNodeContainer *contain
 }
 
 NS_IMETHODIMP
-zapTEventToTToneConverter::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapTEventToTToneConverter::RemovedFromContainer()
 {
   return NS_OK;
 }

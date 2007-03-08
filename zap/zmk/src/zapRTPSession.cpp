@@ -229,9 +229,9 @@ zapRTPSession::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapRTPSession::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapRTPSession::RemovedFromContainer()
 {
   mLocal2RemoteRTP = nsnull;
   mRemote2LocalRTP = nsnull;

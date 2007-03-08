@@ -70,7 +70,7 @@ zapSpeexRTPPacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapSpeexRTPPacketizer::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapSpeexRTPPacketizer::RemovedFromContainer()
 {
   return NS_OK;
 }

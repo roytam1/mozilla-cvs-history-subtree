@@ -128,9 +128,9 @@ zapFileIn::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapFileIn::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapFileIn::RemovedFromContainer()
 {
   if (mFile) {
     PR_Close(mFile);

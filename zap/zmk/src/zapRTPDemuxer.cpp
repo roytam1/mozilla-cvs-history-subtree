@@ -183,9 +183,9 @@ zapRTPDemuxer::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapRTPDemuxer::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapRTPDemuxer::RemovedFromContainer()
 {
   return NS_OK;
 }

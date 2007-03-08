@@ -58,7 +58,7 @@ interface zapIMediaNode : nsISupports
    * The container promises to call this method only after all
    * connections have been disconnected from the node.
    */
-  void removedFromContainer(in zapIMediaNodeContainer container);
+  void removedFromContainer();
 
   /**
    * Return a source with the given parameters.

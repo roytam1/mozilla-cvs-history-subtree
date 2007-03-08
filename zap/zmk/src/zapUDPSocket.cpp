@@ -129,9 +129,9 @@ zapUDPSocket::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapUDPSocket::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapUDPSocket::RemovedFromContainer()
 {
   if (mSocket) {
     mSocket->Close();

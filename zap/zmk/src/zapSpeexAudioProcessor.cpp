@@ -227,9 +227,9 @@ zapSpeexAudioProcessor::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapSpeexAudioProcessor::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapSpeexAudioProcessor::RemovedFromContainer()
 {
   return NS_OK;
 }

@@ -165,9 +165,9 @@ zapStreamTap::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapStreamTap::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapStreamTap::RemovedFromContainer()
 {
   return NS_OK;
 }

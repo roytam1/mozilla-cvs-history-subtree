@@ -82,7 +82,7 @@ zapTimestamper::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapTimestamper::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapTimestamper::RemovedFromContainer()
 {
   return NS_OK;
 }

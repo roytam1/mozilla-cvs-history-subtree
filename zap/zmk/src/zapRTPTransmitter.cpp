@@ -74,7 +74,7 @@ zapRTPTransmitter::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapRTPTransmitter::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapRTPTransmitter::RemovedFromContainer()
 {
   return NS_OK;
 }

@@ -86,9 +86,9 @@ zapAudioReformatter::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapAudioReformatter::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapAudioReformatter::RemovedFromContainer()
 {
   return NS_OK;
 }

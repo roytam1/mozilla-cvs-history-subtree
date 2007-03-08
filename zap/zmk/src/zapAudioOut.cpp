@@ -144,9 +144,9 @@ zapAudioOut::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapAudioOut::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapAudioOut::RemovedFromContainer()
 {
   return NS_OK;
 }

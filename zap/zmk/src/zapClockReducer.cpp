@@ -90,9 +90,9 @@ zapClockReducer::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapClockReducer::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapClockReducer::RemovedFromContainer()
 {
   return NS_OK;
 }

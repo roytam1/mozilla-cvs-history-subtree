@@ -62,7 +62,7 @@ zapRTPReceiver::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapRTPReceiver::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapRTPReceiver::RemovedFromContainer()
 {
   return NS_OK;
 }

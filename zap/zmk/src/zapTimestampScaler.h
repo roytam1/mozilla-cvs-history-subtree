@@ -54,7 +54,7 @@ class zapTimestampScaler : public zapFilterNode
 public:
   NS_IMETHOD InsertedIntoContainer(zapIMediaNodeContainer *container,
                                    nsIPropertyBag2 *node_pars);
-  NS_IMETHOD RemovedFromContainer(zapIMediaNodeContainer *container);
+  NS_IMETHOD RemovedFromContainer();
   virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
   virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
 

@@ -127,9 +127,9 @@ zapPacketBuffer::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapPacketBuffer::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapPacketBuffer::RemovedFromContainer()
 {
   return NS_OK;
 }

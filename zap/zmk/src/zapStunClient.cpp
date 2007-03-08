@@ -465,9 +465,9 @@ zapStunClient::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapStunClient::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapStunClient::RemovedFromContainer()
 {
   return NS_OK;
 }

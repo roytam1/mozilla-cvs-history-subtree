@@ -150,9 +150,9 @@ zapStreamMerger::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapStreamMerger::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapStreamMerger::RemovedFromContainer()
 {
   return NS_OK;
 }

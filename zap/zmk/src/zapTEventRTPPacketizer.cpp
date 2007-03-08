@@ -71,7 +71,7 @@ zapTEventRTPPacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapTEventRTPPacketizer::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapTEventRTPPacketizer::RemovedFromContainer()
 {
   return NS_OK;
 }

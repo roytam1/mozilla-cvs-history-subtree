@@ -74,7 +74,7 @@ zapG711Decoder::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapG711Decoder::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapG711Decoder::RemovedFromContainer()
 {
   return NS_OK;
 }

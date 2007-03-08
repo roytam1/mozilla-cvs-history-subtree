@@ -249,7 +249,7 @@ zapSpeexEncoder::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapSpeexEncoder::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapSpeexEncoder::RemovedFromContainer()
 {
   speex_bits_destroy(&mEncoderBits);
   speex_encoder_destroy(mEncoderState);

@@ -132,7 +132,7 @@ zapUDPSocketPair::InsertedIntoContainer(zapIMediaNodeContainer *container,
   mSocketB = new zapUDPSocket();
   props->SetPropertyAsInterface(NS_LITERAL_STRING("socket"), socketB);
   if (NS_FAILED(mSocketA->InsertedIntoContainer(this, props))) {
-    mSocketA->RemovedFromContainer(this);
+    mSocketA->RemovedFromContainer();
     mSocketA = nsnull;
     mSocketB = nsnull;
     return NS_ERROR_FAILURE;
@@ -141,16 +141,16 @@ zapUDPSocketPair::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapUDPSocketPair::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapUDPSocketPair::RemovedFromContainer()
 {
   if (mSocketA) {
-    mSocketA->RemovedFromContainer(this);
+    mSocketA->RemovedFromContainer();
     mSocketA = nsnull;
   }
   if (mSocketB) {
-    mSocketB->RemovedFromContainer(this);
+    mSocketB->RemovedFromContainer();
     mSocketB = nsnull;
   }
   return NS_OK;

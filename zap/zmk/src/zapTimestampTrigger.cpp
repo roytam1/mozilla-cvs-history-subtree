@@ -195,7 +195,7 @@ zapTimestampTrigger::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapTimestampTrigger::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapTimestampTrigger::RemovedFromContainer()
 {
   NS_ASSERTION(!mTriggerListLocked, "uh-oh, inconsitent state");
   RemoveAllTriggers();

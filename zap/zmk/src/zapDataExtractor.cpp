@@ -71,7 +71,7 @@ zapDataExtractor::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapDataExtractor::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapDataExtractor::RemovedFromContainer()
 {
   return NS_OK;
 }

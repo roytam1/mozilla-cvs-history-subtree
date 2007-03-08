@@ -73,7 +73,7 @@ zapTimestampScaler::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapTimestampScaler::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapTimestampScaler::RemovedFromContainer()
 {
   return NS_OK;
 }

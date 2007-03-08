@@ -136,7 +136,7 @@ zapSpeexDecoder::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapSpeexDecoder::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapSpeexDecoder::RemovedFromContainer()
 {
   speex_bits_destroy(&mDecoderBits);
   speex_decoder_destroy(mDecoderState);

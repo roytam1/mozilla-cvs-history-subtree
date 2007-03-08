@@ -217,7 +217,7 @@ zapMediaGraph::RemoveDescriptor(Descriptor* d)
 
   if (d->type == Descriptor::NODE) {
     RemoveNodeDescriptorConnections(NS_STATIC_CAST(NodeDescriptor*, d));
-    NS_STATIC_CAST(NodeDescriptor*, d)->node->RemovedFromContainer(this);
+    NS_STATIC_CAST(NodeDescriptor*, d)->node->RemovedFromContainer();
   }
   delete d;
 }

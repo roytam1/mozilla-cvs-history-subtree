@@ -116,9 +116,9 @@ zapPCMPing::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapPCMPing::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapPCMPing::RemovedFromContainer()
 {
   return NS_OK;
 }

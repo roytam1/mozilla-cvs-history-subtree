@@ -117,9 +117,9 @@ zapTToneGenerator::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapTToneGenerator::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapTToneGenerator::RemovedFromContainer()
 {
   return NS_OK;
 }

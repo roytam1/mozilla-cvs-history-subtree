@@ -61,7 +61,7 @@ zapSpeexRTPDepacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container
 }
 
 NS_IMETHODIMP
-zapSpeexRTPDepacketizer::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapSpeexRTPDepacketizer::RemovedFromContainer()
 {
   return NS_OK;
 }

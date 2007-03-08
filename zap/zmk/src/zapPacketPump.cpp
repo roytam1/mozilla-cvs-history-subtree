@@ -160,9 +160,9 @@ zapPacketPump::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapPacketPump::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapPacketPump::RemovedFromContainer()
 {
   return NS_OK;
 }

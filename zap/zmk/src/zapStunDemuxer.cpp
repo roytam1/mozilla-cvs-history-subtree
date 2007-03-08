@@ -82,9 +82,9 @@ zapStunDemuxer::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapStunDemuxer::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapStunDemuxer::RemovedFromContainer()
 {
   return NS_OK;
 }

@@ -168,9 +168,9 @@ zapTimestampSyncer::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapTimestampSyncer::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapTimestampSyncer::RemovedFromContainer()
 {
   return NS_OK;
 }

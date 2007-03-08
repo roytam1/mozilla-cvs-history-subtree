@@ -177,9 +177,9 @@ zapStreamSyncer::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapStreamSyncer::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapStreamSyncer::RemovedFromContainer()
 {
   Reset();
   return NS_OK;

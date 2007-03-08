@@ -63,9 +63,9 @@ zapClientSink::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapClientSink::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapClientSink::RemovedFromContainer()
 {
   return NS_OK;
 }

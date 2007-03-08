@@ -134,9 +134,9 @@ zapDTMFGenerator::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapDTMFGenerator::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapDTMFGenerator::RemovedFromContainer()
 {
   return NS_OK;
 }

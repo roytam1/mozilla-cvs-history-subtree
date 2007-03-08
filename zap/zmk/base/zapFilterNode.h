@@ -62,7 +62,7 @@ class zapFilterNode : public zapIMediaNode,
 
   // methods to be implemented by subclass:
   // NS_IMETHOD InsertedIntoContainer(zapIMediaNodeContainer *container, nsIPropertyBag2 *node_pars) = 0;
-  // NS_IMETHOD RemovedFromContainer(zapIMediaNodeContainer *container) = 0;
+  // NS_IMETHOD RemovedFromContainer() = 0;
   virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo)=0;
   virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output)=0;
   

@@ -95,9 +95,9 @@ zapTToneToPCMConverter::InsertedIntoContainer(zapIMediaNodeContainer *container,
   return NS_OK;
 }
 
-/* void removedFromContainer (in zapIMediaNodeContainer container); */
+/* void removedFromContainer (); */
 NS_IMETHODIMP
-zapTToneToPCMConverter::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapTToneToPCMConverter::RemovedFromContainer()
 {
   return NS_OK;
 }

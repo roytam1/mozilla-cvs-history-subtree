@@ -70,7 +70,7 @@ zapG711RTPPacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
 }
 
 NS_IMETHODIMP
-zapG711RTPPacketizer::RemovedFromContainer(zapIMediaNodeContainer *container)
+zapG711RTPPacketizer::RemovedFromContainer()
 {
   return NS_OK;
 }
