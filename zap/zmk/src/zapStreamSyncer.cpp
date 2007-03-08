@@ -340,11 +340,11 @@ zapStreamSyncer::PeekFrame(PRBool *_retval)
   return NS_OK;
 }
 
-/* readonly attribute unsigned long long currentTime; */
+/* readonly attribute unsigned long long currentTimestamp; */
 NS_IMETHODIMP
-zapStreamSyncer::GetCurrentTime(PRUint64 *aCurrentTime)
+zapStreamSyncer::GetCurrentTimestamp(PRUint64 *aCurrentTimestamp)
 {
-  *aCurrentTime = mCurrentTime;
+  *aCurrentTimestamp = mCurrentTime;
   return NS_OK;
 }
 
