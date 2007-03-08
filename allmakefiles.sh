@@ -1047,6 +1047,7 @@ zap/zmk/Makefile
 zap/zmk/portaudio_v18_1/Makefile
 zap/zmk/speex-1.1.10/Makefile
 zap/zmk/speex-1.1.10/libspeex/Makefile
+zap/zmk/base/Makefile
 zap/zmk/src/Makefile
 "
 

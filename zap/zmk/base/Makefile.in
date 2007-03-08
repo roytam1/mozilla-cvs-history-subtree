@@ -1,0 +1,40 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+MODULE		= zmk
+XPIDL_MODULE    = zmk_base
+LIBRARY_NAME	= zmk_base_s
+LIBXUL_LIBRARY	= 1
+
+REQUIRES	= \
+		xpcom \
+		string \
+		$(NULL)
+
+CPPSRCS		= \
+		zapFilterNode.cpp \
+		zapMediaFrame.cpp \
+		$(NULL)
+
+XPIDLSRCS	= \
+		zapIMediaFrame.idl \
+		zapIMediaNode.idl \
+		zapIMediaNodeContainer.idl \
+		zapIMediaSink.idl \
+		zapIMediaSource.idl \
+		$(NULL)
+
+EXPORTS 	= \
+		zapFilterNode.h \
+		zapMediaFrame.h \
+		$(NULL)
+
+FORCE_STATIC_LIB = 1
+
+include $(topsrcdir)/config/rules.mk
+
+

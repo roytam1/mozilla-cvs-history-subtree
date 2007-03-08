@@ -38,13 +38,11 @@ CPPSRCS		= \
 		zapDataExtractor.cpp \
 		zapDatagramFrame.cpp \
 		zapFileIn.cpp \
-		zapFilterNode.cpp \
 		zapG711Decoder.cpp \
 		zapG711Encoder.cpp \
 		zapG711RTPDepacketizer.cpp \
 		zapG711RTPPacketizer.cpp \
 		zapGenericSource.cpp \
-		zapMediaFrame.cpp \
 		zapMediaGraph.cpp \
 		zapMediaModule.cpp \
 		zapNullSink.cpp \
@@ -98,12 +96,7 @@ XPIDLSRCS	= \
 		zapIClientSink.idl \
 		zapIDTMFGenerator.idl \
 		zapIFileIn.idl \
-		zapIMediaFrame.idl \
 		zapIMediaGraph.idl \
-		zapIMediaNode.idl \
-		zapIMediaNodeContainer.idl \
-		zapIMediaSink.idl \
-		zapIMediaSource.idl \
 		zapIPacketBuffer.idl \
 		zapIPacketPump.idl \
 		zapIPortaudioDevice.idl \
@@ -128,6 +121,7 @@ SHARED_LIBRARY_LIBS += \
 		$(DIST)/lib/$(LIB_PREFIX)moz_portaudio_v18_1.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)moz_speex_v1_1_10.$(LIB_SUFFIX) \
 		$(DIST)/lib/$(LIB_PREFIX)moz_ccitt_adpcm.$(LIB_SUFFIX) \
+		$(DIST)/lib/$(LIB_PREFIX)zmk_base_s.$(LIB_SUFFIX) \
 		$(NULL)
 
 ifeq ($(OS_ARCH),WINNT)
