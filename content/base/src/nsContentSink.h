@@ -70,9 +70,6 @@ class nsContentSink : public nsICSSLoaderObserver,
   // nsICSSLoaderObserver
   NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet* aSheet, PRBool aNotify);
 
-  void ContinueInterruptedParsingAsync();
-  void ContinueInterruptedParsing();
-
 protected:
   nsContentSink();
   virtual ~nsContentSink();

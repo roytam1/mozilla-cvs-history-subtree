@@ -75,7 +75,6 @@
 #include "nsWeakReference.h"
 #include "nsUnicharUtils.h"
 #include "nsNodeInfoManager.h"
-#include "nsEventQueueUtils.h"
 
 
 #ifdef ALLOW_ASYNCH_STYLE_SHEETS
@@ -243,7 +242,7 @@ nsContentSink::ScriptAvailable(nsresult aResult,
       //     script load, assuming that that error code means that the user
       //     stopped the load through some action (like clicking a link). See
       //     http://bugzilla.mozilla.org/show_bug.cgi?id=243392.
-      ContinueInterruptedParsingAsync();
+      mParser->ContinueInterruptedParsing();
     }
   }
 
@@ -274,7 +273,7 @@ nsContentSink::ScriptEvaluated(nsresult aResult,
   }
 
   if (mParser && mParser->IsParserEnabled() && aWasPending) {
-    ContinueInterruptedParsingAsync();
+    mParser->ContinueInterruptedParsing();
   }
 
   return NS_OK;
@@ -949,62 +948,5 @@ nsContentSink::StartLayout(PRBool aIsFrameset)
 
       mRef = Substring(start, end);
     }
-  }
-}
-
-void
-nsContentSink::ContinueInterruptedParsing()
-{
-  if (mParser) {
-    mParser->ContinueInterruptedParsing();
-  }
-}
-
-class nsResumeParsingEvent : public PLEvent
-{
-public:
-  nsResumeParsingEvent(nsContentSink* aContentSink)
-    : mContentSink(aContentSink)
-  {
-    PL_InitEvent(this, aContentSink, Handle, Destroy);
-  }
-  
-  PR_STATIC_CALLBACK(void*) Handle(PLEvent* aEvent);
-  PR_STATIC_CALLBACK(void) Destroy(PLEvent* aEvent);
-
-  nsRefPtr<nsContentSink> mContentSink;
-};
-
-/* static */ void * PR_CALLBACK
-nsResumeParsingEvent::Handle(PLEvent* aEvent)
-{
-  NS_STATIC_CAST(nsResumeParsingEvent*, aEvent)->mContentSink->ContinueInterruptedParsing();
-
-  return nsnull;
-}
-
-/* static */ void PR_CALLBACK
-nsResumeParsingEvent::Destroy(PLEvent* aEvent)
-{
-  delete NS_STATIC_CAST(nsResumeParsingEvent*, aEvent);
-}
-
-void
-nsContentSink::ContinueInterruptedParsingAsync()
-{
-  nsCOMPtr<nsIEventQueue> uiThreadQueue;
-  NS_GetMainEventQ(getter_AddRefs(uiThreadQueue));
-  if (!uiThreadQueue) {
-    return;
-  }
-
-  PLEvent *evt = new nsResumeParsingEvent(this);
-  if (!evt) {
-    return;
-  }
-
-  nsresult rv = uiThreadQueue->PostEvent(evt);
-  if (NS_FAILED(rv)) {
-    PL_DestroyEvent(evt);
   }
 }
