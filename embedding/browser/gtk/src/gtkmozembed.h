@@ -223,7 +223,6 @@ GTKMOZEMBED_API(void,          gtk_moz_embed_set_chrome_mask,     (GtkMozEmbed *
 GTKMOZEMBED_API(guint32,       gtk_moz_embed_get_chrome_mask,     (GtkMozEmbed *embed))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_get_zoom_level,      (GtkMozEmbed *embed, gint*, gpointer))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_set_zoom_level,      (GtkMozEmbed *embed, gint, gpointer))
-GTKMOZEMBED_API(gboolean,      gtk_moz_embed_load_image,          (GtkMozEmbed *embed, const gchar*))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_find_text,           (GtkMozEmbed *embed, const gchar*, gboolean, gboolean, gboolean, gboolean, gint))
 GTKMOZEMBED_API(gboolean,      gtk_moz_embed_clipboard,           (GtkMozEmbed *embed, guint, gint))
 GTKMOZEMBED_API(void,          gtk_moz_embed_notify_plugins,      (GtkMozEmbed *embed, guint))

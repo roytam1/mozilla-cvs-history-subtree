@@ -65,7 +65,6 @@
   GTKF(gtk_moz_embed_common_get_history_list) \
   GTKF(gtk_moz_embed_get_zoom_level) \
   GTKF(gtk_moz_embed_set_zoom_level) \
-  GTKF(gtk_moz_embed_load_image) \
   GTKF(gtk_moz_embed_find_text) \
   GTKF(gtk_moz_embed_clipboard) \
   GTKF(gtk_moz_embed_notify_plugins) \

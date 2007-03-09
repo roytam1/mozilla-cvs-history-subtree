@@ -1465,17 +1465,6 @@ gtk_moz_embed_get_zoom_level (GtkMozEmbed *embed, gint *zoom_level, gpointer con
 }
 
 gboolean
-gtk_moz_embed_load_image (GtkMozEmbed *embed, const gchar *url)
-{
-  g_return_val_if_fail (embed != NULL, FALSE);
-  g_return_val_if_fail (embed, FALSE);
-
-  gtk_moz_embed_load_url (embed, url);
-
-  return TRUE;
-}
-
-gboolean
 gtk_moz_embed_find_text (GtkMozEmbed *embed, const gchar *string,
                          gboolean reverse, gboolean whole_word,
                          gboolean case_sensitive, gboolean restart, gint target)
