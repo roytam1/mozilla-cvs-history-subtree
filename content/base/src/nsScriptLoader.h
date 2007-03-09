@@ -109,6 +109,7 @@ public:
       else {
         ProcessPendingReqests();
       }
+      mHadPendingScripts = PR_FALSE;
     }
   }
 
