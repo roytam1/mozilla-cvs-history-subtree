@@ -986,6 +986,7 @@ gtk_moz_embed_load_url(GtkMozEmbed *embed, const gchar *url)
   embedPrivate = (EmbedPrivate *)embed->data;
 
   embedPrivate->SetURI(url);
+  embedPrivate->mOpenBlock = PR_FALSE;
 
   // If the widget is realized, load the URI.  If it isn't then we
   // will load it later.
