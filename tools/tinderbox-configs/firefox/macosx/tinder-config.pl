@@ -167,7 +167,7 @@ $BuildNameExtra = 'Fx-Release';
 $BuildTree  = 'Mozilla1.8';
 
 #$BuildName = '';
-$BuildTag = 'FIREFOX_2_0_0_2_RELEASE';
+$BuildTag = 'FIREFOX_2_0_0_3_RELEASE';
 
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -203,7 +203,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = 'firefox2.0.0.2';
+$milestone     = 'firefox2.0.0.3';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
