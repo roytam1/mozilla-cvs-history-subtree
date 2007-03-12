@@ -27,7 +27,7 @@ import org.mozilla.util.Assert;
 import org.mozilla.util.Log;
 import org.mozilla.util.ParameterCheck;
 
-import org.mozilla.webclient.impl.wrapper_native.WCRunnable;
+import org.mozilla.util.ReturnRunnable;
 import org.mozilla.webclient.impl.wrapper_native.NativeEventThread;
 
 /**
@@ -68,7 +68,7 @@ public class Win32BrowserControlCanvas extends BrowserControlCanvas {
 	 */
     protected int getWindow() {
 	Integer result = (Integer)
-	    NativeEventThread.instance.pushBlockingWCRunnable(new WCRunnable(){
+	    NativeEventThread.instance.pushBlockingReturnRunnable(new ReturnRunnable(){
 		    public Object run() {
 			Integer result = 
 			    new Integer(Win32BrowserControlCanvas.this.getHandleToPeer());

@@ -27,6 +27,7 @@ import org.mozilla.util.Assert;
 import org.mozilla.util.Log;
 import org.mozilla.util.ParameterCheck;
 import org.mozilla.util.RangeException;
+import org.mozilla.util.ReturnRunnable;
 
 import org.mozilla.webclient.BrowserControl;
 import org.mozilla.webclient.Navigation;
@@ -136,7 +137,7 @@ public void refresh(long loadFlags)
     final long finalLoadFlags = loadFlags;
     Assert.assert_it(-1 != getNativeBrowserControl());
     
-    NativeEventThread.instance.pushBlockingWCRunnable(new WCRunnable() {
+    NativeEventThread.instance.pushBlockingReturnRunnable(new ReturnRunnable() {
 	    public Object run() {
 		nativeRefresh(NavigationImpl.this.getNativeBrowserControl(), 
 			      finalLoadFlags);
@@ -154,7 +155,7 @@ public void stop()
     getWrapperFactory().verifyInitialized();
     Assert.assert_it(-1 != getNativeBrowserControl());
     
-    NativeEventThread.instance.pushBlockingWCRunnable(new WCRunnable() {
+    NativeEventThread.instance.pushBlockingReturnRunnable(new ReturnRunnable() {
 	    public Object run() {
 		nativeStop(getNativeBrowserControl());
 		return null;
