@@ -48,6 +48,7 @@ CPPSRCS		= \
 		zapNullSink.cpp \
 		zapPCMPing.cpp \
 		zapPacketBuffer.cpp \
+		zapPacketBurster.cpp \
 		zapPacketPump.cpp \
 		zapRTPDemuxer.cpp \
 		zapRTPFrame.cpp \
@@ -98,6 +99,7 @@ XPIDLSRCS	= \
 		zapIFileIn.idl \
 		zapIMediaGraph.idl \
 		zapIPacketBuffer.idl \
+		zapIPacketBurster.idl \
 		zapIPacketPump.idl \
 		zapIPortaudioDevice.idl \
 		zapIRTPFrame.idl \
