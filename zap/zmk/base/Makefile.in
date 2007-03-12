@@ -31,6 +31,8 @@ XPIDLSRCS	= \
 EXPORTS 	= \
 		zapFilterNode.h \
 		zapMediaFrame.h \
+		zapMediaNodeConnectionHolder.h \
+		zapMediaNodeHolder.h \
 		$(NULL)
 
 FORCE_STATIC_LIB = 1
