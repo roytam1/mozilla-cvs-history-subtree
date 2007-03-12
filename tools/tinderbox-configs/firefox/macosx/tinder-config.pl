@@ -167,7 +167,7 @@ $BuildNameExtra = 'Fx-Release';
 $BuildTree  = 'Mozilla1.8.0';
 
 $BuildName = 'Moz1.8.0-MacUniversal';
-$BuildTag = 'FIREFOX_1_5_0_10_RELEASE';
+$BuildTag = 'FIREFOX_1_5_0_11_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -205,7 +205,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly/";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/";
 $tbox_ftp_path = $ftp_path;
 $tbox_url_path = $url_path;
-$milestone     = "firefox1.5.0.10";
+$milestone     = "firefox1.5.0.11";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 1;
 $sea_installer = 1;
