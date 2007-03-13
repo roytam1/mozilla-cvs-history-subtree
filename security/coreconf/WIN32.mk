@@ -130,7 +130,6 @@ else # !NS_USE_GCC
 	endif
 	ifneq (,$(MOZ_PROFILE)$(MOZ_DEBUG_SYMBOLS))
 		DLLFLAGS += -DEBUG -OPT:REF
-		LDFLAGS += -DEBUG -OPT:REF
 	endif
     else
 	#
@@ -150,12 +149,8 @@ else # !NS_USE_GCC
 	USERNAME   := $(subst -,_,$(USERNAME))
 	DEFINES    += -DDEBUG -D_DEBUG -UNDEBUG -DDEBUG_$(USERNAME)
 	DLLFLAGS   += -DEBUG -OUT:"$@"
-	LDFLAGS    += -DEBUG 
-ifndef MOZ_DEBUG_SYMBOLS
-	LDFLAGS    += -PDB:NONE 
-endif
 	# Purify requires /FIXED:NO when linking EXEs.
-	LDFLAGS    += /FIXED:NO
+	LDFLAGS    += -DEBUG -PDB:NONE /FIXED:NO
     endif
 endif # NS_USE_GCC
 
