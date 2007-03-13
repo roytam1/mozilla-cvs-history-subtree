@@ -114,22 +114,12 @@ ifdef LIBRARY
 endif
 ifdef SHARED_LIBRARY
 	$(INSTALL) -m 775 $(SHARED_LIBRARY) $(SOURCE_LIB_DIR)
-ifdef MOZ_DEBUG_SYMBOLS
-ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
-	$(INSTALL) -m 644 $(SHARED_LIBRARY:$(DLL_SUFFIX)=pdb) $(SOURCE_LIB_DIR)
-endif
-endif
 endif
 ifdef IMPORT_LIBRARY
 	$(INSTALL) -m 775 $(IMPORT_LIBRARY) $(SOURCE_LIB_DIR)
 endif
 ifdef PROGRAM
 	$(INSTALL) -m 775 $(PROGRAM) $(SOURCE_BIN_DIR)
-ifdef MOZ_DEBUG_SYMBOLS
-ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
-	$(INSTALL) -m 644 $(PROGRAM:$(PROG_SUFFIX)=.pdb) $(SOURCE_BIN_DIR)
-endif
-endif
 endif
 ifdef PROGRAMS
 	$(INSTALL) -m 775 $(PROGRAMS) $(SOURCE_BIN_DIR)
@@ -429,15 +419,15 @@ PWD := $(shell pwd)
 endif
 endif
 
-core_abspath = $(if $(findstring :,$(1)),$(1),$(if $(filter /%,$(1)),$(1),$(PWD)/$(1)))
+abspath = $(if $(findstring :,$(1)),$(1),$(if $(filter /%,$(1)),$(1),$(PWD)/$(1)))
 
 $(OBJDIR)/$(PROG_PREFIX)%$(OBJ_SUFFIX): %.c
 	@$(MAKE_OBJDIR)
 ifdef USE_NT_C_SYNTAX
-	$(CC) -Fo$@ -c $(CFLAGS) $(call core_abspath,$<)
+	$(CC) -Fo$@ -c $(CFLAGS) $(call abspath,$<)
 else
 ifdef NEED_ABSOLUTE_PATH
-	$(CC) -o $@ -c $(CFLAGS) $(call core_abspath,$<)
+	$(CC) -o $@ -c $(CFLAGS) $(call abspath,$<)
 else
 	$(CC) -o $@ -c $(CFLAGS) $<
 endif
@@ -445,10 +435,10 @@ endif
 
 $(PROG_PREFIX)%$(OBJ_SUFFIX): %.c
 ifdef USE_NT_C_SYNTAX
-	$(CC) -Fo$@ -c $(CFLAGS) $(call core_abspath,$<)
+	$(CC) -Fo$@ -c $(CFLAGS) $(call abspath,$<)
 else
 ifdef NEED_ABSOLUTE_PATH
-	$(CC) -o $@ -c $(CFLAGS) $(call core_abspath,$<)
+	$(CC) -o $@ -c $(CFLAGS) $(call abspath,$<)
 else
 	$(CC) -o $@ -c $(CFLAGS) $<
 endif
@@ -477,10 +467,10 @@ $(OBJDIR)/$(PROG_PREFIX)%$(OBJ_SUFFIX): %.S
 $(OBJDIR)/$(PROG_PREFIX)%: %.cpp
 	@$(MAKE_OBJDIR)
 ifdef USE_NT_C_SYNTAX
-	$(CCC) -Fo$@ -c $(CFLAGS) $(call core_abspath,$<)
+	$(CCC) -Fo$@ -c $(CFLAGS) $(call abspath,$<)
 else
 ifdef NEED_ABSOLUTE_PATH
-	$(CCC) -o $@ -c $(CFLAGS) $(call core_abspath,$<)
+	$(CCC) -o $@ -c $(CFLAGS) $(call abspath,$<)
 else
 	$(CCC) -o $@ -c $(CFLAGS) $<
 endif
@@ -501,10 +491,10 @@ ifdef STRICT_CPLUSPLUS_SUFFIX
 	rm -f $(OBJDIR)/t_$*.cc
 else
 ifdef USE_NT_C_SYNTAX
-	$(CCC) -Fo$@ -c $(CFLAGS) $(call core_abspath,$<)
+	$(CCC) -Fo$@ -c $(CFLAGS) $(call abspath,$<)
 else
 ifdef NEED_ABSOLUTE_PATH
-	$(CCC) -o $@ -c $(CFLAGS) $(call core_abspath,$<)
+	$(CCC) -o $@ -c $(CFLAGS) $(call abspath,$<)
 else
 	$(CCC) -o $@ -c $(CFLAGS) $<
 endif
