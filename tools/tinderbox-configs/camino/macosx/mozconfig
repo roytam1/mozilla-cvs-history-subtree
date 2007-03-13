@@ -8,3 +8,4 @@ CCX=g++-3.3
 
 . $topsrcdir/camino/config/mozconfig
 
+ac_add_options --with-macos-sdk=/Developer/SDKs/MacOSX10.3.9.sdk
