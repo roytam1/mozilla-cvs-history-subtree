@@ -11,10 +11,10 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the Mozilla SIP client project.
+ * The Original Code is Joost Technologies B.V. code.
  *
- * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * The Initial Developer of the Original Code is Joost Technologies B.V.
+ * Portions created by the Initial Developer are Copyright (C) 2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,41 +34,15 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_TIMESTAMPSCALER_H__
-#define __ZAP_TIMESTAMPSCALER_H__
+#include "nsISupports.idl"
 
-#include "zapFilterNode.h"
-#include "nsIWritablePropertyBag2.h"
-#include "zapITimestampScaler.h"
-
-////////////////////////////////////////////////////////////////////////
-// zapTimestampScaler
-
-// {63F9BAB4-B355-4B42-ACD6-43881F2BF2C3}
-#define ZAP_TIMESTAMPSCALER_CID                             \
-  { 0x63f9bab4, 0xb355, 0x4b42, { 0xac, 0xd6, 0x43, 0x88, 0x1f, 0x2b, 0xf2, 0xc3 } }
-
-#define ZAP_TIMESTAMPSCALER_CONTRACTID ZAP_MEDIANODE_CONTRACTID_PREFIX "timestamp-scaler"
-
-class zapTimestampScaler : public zapFilterNode,
-                           public zapITimestampScaler
+/**
+ * \ingroup ZMK_MODULE
+ */
+[scriptable, uuid(ee6ab2b1-6c53-4323-b99a-e08afdc3cfbb)]
+interface zapITimestampScaler : nsISupports
 {
-public:
-
-  NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_ZAPITIMESTAMPSCALER
-  
-  NS_IMETHOD InsertedIntoContainer(zapIMediaNodeContainer *container,
-                                   nsIPropertyBag2 *node_pars);
-  NS_IMETHOD RemovedFromContainer();
-  virtual nsresult ValidateNewStream(nsIPropertyBag2* streamInfo);
-  virtual nsresult Filter(zapIMediaFrame* input, zapIMediaFrame** output);
-
-private:
-  nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  PRUint64 mOffset;
-  PRUint32 mNumerator;
-  PRUint32 mDenominator;
+  attribute unsigned long long offset;
+  attribute unsigned long numerator;
+  attribute unsigned long denominator;
 };
-
-#endif // __ZAP_TIMESTAMPSCALER_H__

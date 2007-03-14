@@ -59,10 +59,10 @@ zapTimestampScaler::InsertedIntoContainer(zapIMediaNodeContainer *container,
 
   node_pars->GetPropertyAsUint64(NS_LITERAL_STRING("offset"),
                                  &mOffset);
-  node_pars->GetPropertyAsInt32(NS_LITERAL_STRING("numerator"),
-                                &mNumerator);
-  node_pars->GetPropertyAsInt32(NS_LITERAL_STRING("denominator"),
-                                &mDenominator);
+  node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("numerator"),
+                                 &mNumerator);
+  node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("denominator"),
+                                 &mDenominator);
 
   if (mDenominator == 0) {
     NS_ERROR("denominator can't be 0");
@@ -93,5 +93,61 @@ zapTimestampScaler::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
   input->SetTimestamp(ts_out);
   *output = input;
   NS_ADDREF(*output);
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+// nsISupports methods:
+
+NS_IMPL_ADDREF_INHERITED(zapTimestampScaler, zapFilterNode)
+NS_IMPL_RELEASE_INHERITED(zapTimestampScaler, zapFilterNode)
+
+NS_INTERFACE_MAP_BEGIN(zapTimestampScaler)
+  NS_INTERFACE_MAP_ENTRY(zapITimestampScaler)
+NS_INTERFACE_MAP_END_INHERITING(zapFilterNode)
+
+//----------------------------------------------------------------------
+// zapITimestampScaler implementation
+
+/* attribute unsigned long long offset; */
+NS_IMETHODIMP
+zapTimestampScaler::GetOffset(PRUint64 *aOffset)
+{
+  *aOffset = mOffset;
+  return NS_OK;
+}
+NS_IMETHODIMP
+zapTimestampScaler::SetOffset(PRUint64 aOffset)
+{
+  mOffset = aOffset;
+  return NS_OK;
+}
+
+/* attribute unsigned long numerator; */
+NS_IMETHODIMP
+zapTimestampScaler::GetNumerator(PRUint32 *aNumerator)
+{
+  *aNumerator = mNumerator;
+  return NS_OK;
+}
+NS_IMETHODIMP
+zapTimestampScaler::SetNumerator(PRUint32 aNumerator)
+{
+  mNumerator = aNumerator;
+  return NS_OK;
+}
+
+/* attribute unsigned long denominator; */
+NS_IMETHODIMP
+zapTimestampScaler::GetDenominator(PRUint32 *aDenominator)
+{
+  *aDenominator = mDenominator;
+  return NS_OK;
+}
+NS_IMETHODIMP
+zapTimestampScaler::SetDenominator(PRUint32 aDenominator)
+{
+  if (!aDenominator) return NS_ERROR_FAILURE;
+  mDenominator = aDenominator;
   return NS_OK;
 }

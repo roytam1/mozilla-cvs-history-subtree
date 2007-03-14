@@ -1360,10 +1360,12 @@ Filter for modifying the timestamps t of input frames to
 (numerator*t)/denominator+offset.
 Note: Warning: this node mutates frames. XXX maybe we need cloning.
 
+Control interfaces: zapITimestampScaler
+
 Node parameters:
 - unsigned long long "offset": Offset to add to timestamps (default: 0)
-- long "numerator" : See description above (default: 1)
-- long "denominator" : See description above (default: 1)
+- unsigned long "numerator" : See description above (default: 1)
+- unsigned long "denominator" : See description above (default: 1)
 
 Input stream:
 any
@@ -1388,3 +1390,23 @@ any
 
 Output stream:
 same as input stream
+
+----------------------------------------------------------------------
+
+48) burster
+-----------
+
+General purpose packet 'burster'. Once started by calling
+zapIPacketBurster::start(), moves unaltered packets from the attached
+source to the attacked sink (if present) until stopped by calling
+zapIPacketBurster::stop(), or until the attached source is removed or
+the attached source returns an error for a produceFrame() call.
+
+Sinks: 1 (active)
+
+Sources: 1 (active)
+
+Control interfaces: zapIPacketBurster
+
+Output stream:
+same as "input" stream

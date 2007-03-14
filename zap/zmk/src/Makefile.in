@@ -112,6 +112,7 @@ XPIDLSRCS	= \
 		zapIStunClientListener.idl \
 		zapIStunServer.idl \
 		zapIStunServerListener.idl \
+		zapITimestampScaler.idl \
 		zapITimestampTrigger.idl \
 		zapITToneGenerator.idl \
 		zapITelephoneEventFrame.idl \
