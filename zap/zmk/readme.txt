@@ -1259,6 +1259,8 @@ Node for reformatting (but not resampling!) audio streams.
 Sinks: 1 (active)
 Sources: 1 (passive)
 
+Control interfaces: zapIAudioReformatter
+
 Node parameters:
 - unsigned long "sample_rate" : sample rate in Hz (default: 8000)
 - unsigned long "samples" : number of samples in frame *per channel* (default: 160)

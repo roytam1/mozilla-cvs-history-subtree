@@ -61,6 +61,7 @@ NS_INTERFACE_MAP_BEGIN(zapAudioReformatter)
   NS_INTERFACE_MAP_ENTRY(zapIMediaNode)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSource)
   NS_INTERFACE_MAP_ENTRY(zapIMediaSink)
+  NS_INTERFACE_MAP_ENTRY(zapIAudioReformatter)
 NS_INTERFACE_MAP_END
 
 //----------------------------------------------------------------------
@@ -226,6 +227,22 @@ zapAudioReformatter::ConsumeFrame(zapIMediaFrame * frame)
   NS_ERROR("Not a passive sink - maybe you need some buffering?");
   return NS_ERROR_FAILURE;
 }
+
+//----------------------------------------------------------------------
+// zapIAudioReformatter methods:
+
+/* void reset (); */
+NS_IMETHODIMP
+zapAudioReformatter::Reset()
+{
+  mInBufferPointer = 0;
+  mInBuffer.Truncate();
+  mOutFrame = nsnull;
+  mStreamInfo = nsnull;
+  mInStreamInfo = nsnull;
+  return NS_OK;
+}
+
 
 //----------------------------------------------------------------------
 

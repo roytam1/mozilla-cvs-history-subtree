@@ -93,6 +93,7 @@ XPIDLSRCS	= \
 		zapIAudioIn.idl \
 		zapIAudioMixer.idl \
 		zapIAudioOut.idl \
+		zapIAudioReformatter.idl \
 		zapIAudioToneFrame.idl \
 		zapIClientSink.idl \
 		zapIDTMFGenerator.idl \

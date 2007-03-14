@@ -47,6 +47,7 @@
 #include "zapAudioStreamUtils.h"
 #include "nsAutoPtr.h"
 #include "zapMediaFrame.h"
+#include "zapIAudioReformatter.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioReformatter
@@ -59,7 +60,8 @@
 
 class zapAudioReformatter : public zapIMediaNode,
                             public zapIMediaSource,
-                            public zapIMediaSink
+                            public zapIMediaSink,
+                            public zapIAudioReformatter
 {
 public:
   zapAudioReformatter();
@@ -69,6 +71,7 @@ public:
   NS_DECL_ZAPIMEDIANODE
   NS_DECL_ZAPIMEDIASOURCE
   NS_DECL_ZAPIMEDIASINK
+  NS_DECL_ZAPIAUDIOREFORMATTER
 
 private:
   PRBool IsInBufferEmpty();
