@@ -1,6 +1,6 @@
 #
-## hostname:
-## uname:
+## hostname: bm-xserve07
+## uname: Darwin bm-xserve07.build.mozilla.org 8.8.4 Darwin Kernel Version 8.8.4: Sun Oct 29 15:26:54 PST 2006; root:xnu-792.16.4.obj~1/RELEASE_I386 i386 i386
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -154,7 +154,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$moz_client_mk = 'client.mk';
 
 #- Set if you want to build in a separate object tree
-$ObjDir = '../build/universal';
+$ObjDir = 'build/unisunbird';
 
 # Extra build name, if needed.
 $BuildNameExtra = 'Sb-Release';
@@ -167,10 +167,10 @@ $BuildNameExtra = 'Sb-Release';
 #$ConfigureOnly = 0;
 %WGetFiles = (
 	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-0.3.en-US.mac.dmg" =>
-	      "/builds/tinderbox/Sb-Branch/Darwin_7.9.0_Depend/sunbird.dmg"
+	      "/builds/tinderbox/Sunbird-Mozilla1.8/Darwin_8.8.4_Depend/sunbird.dmg"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Branch/Darwin_7.9.0_Depend/sunbird.dmg";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sunbird-Mozilla1.8/Darwin_8.8.4_Depend/sunbird.dmg";
 
 #-
 #- The rest should not need to be changed
@@ -261,4 +261,4 @@ $update_pushinfo = 1;
 # - processes that tbox scripts cannot kill.
 $ENV{NO_EM_RESTART} = '1';
 
-$MacUniversalBinary = 0;
+$MacUniversalBinary = 1;
