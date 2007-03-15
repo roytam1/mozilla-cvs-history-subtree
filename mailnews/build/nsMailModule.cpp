@@ -989,6 +989,7 @@ static const nsModuleComponentInfo gComponents[] = {
     { "addressbook view", NS_ABVIEW_CID, NS_ABVIEW_CONTRACTID, nsAbViewConstructor},
     { "vcard helper service", NS_MSGVCARDSERVICE_CID, NS_MSGVCARDSERVICE_CONTRACTID, nsMsgVCardServiceConstructor },
     { "ldif handler service", NS_ABLDIFSERVICE_CID, NS_ABLDIFSERVICE_CONTRACTID, nsAbLDIFServiceConstructor },
+#if 0
 #ifdef XP_MACOSX
     { "OS X Address Book Directory", NS_ABOSXDIRECTORY_CID,
       NS_ABOSXDIRECTORY_CONTRACTID, nsAbOSXDirectoryConstructor },
@@ -996,6 +997,7 @@ static const nsModuleComponentInfo gComponents[] = {
       nsAbOSXCardConstructor },
     { "The OS X factory Interface", NS_ABOSXDIRFACTORY_CID,
       NS_ABOSXDIRFACTORY_CONTRACTID, nsAbOSXDirFactoryConstructor },
+#endif
 #endif
 
     ////////////////////////////////////////////////////////////////////////////////
