@@ -56,9 +56,9 @@ $ProductName              = 'Calendar';
 $MacOSProductName         = 'Calendar';
 $VendorName               = "";
 
-#$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-$RegxpcomTest             = 0;
-$AliveTest                = 0;
+$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+$RegxpcomTest             = 1;
+$AliveTest                = 1;
 #$JavaTest                 = 0;
 #$ViewerTest               = 0;
 #$BloatTest                = 0;  # warren memory bloat test
@@ -103,7 +103,7 @@ $TestsPhoneHome           = 1;  # Should test report back to server?
 #$CreateProfileTimeout             = 45;
 #$RegxpcomTestTimeout              = 120;
 
-#$AliveTestTimeout                 = 45;
+$AliveTestTimeout                 = 10;
 #$ViewerTestTimeout                = 45;
 #$EmbedTestTimeout                 = 45;
 #$BloatTestTimeout                 = 120;   # seconds
@@ -154,7 +154,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$moz_client_mk = 'client.mk';
 
 #- Set if you want to build in a separate object tree
-$ObjDir = 'build/unisunbird';
+$ObjDir = '../build/universal';
 
 # Extra build name, if needed.
 $BuildNameExtra = 'Sb-Release';
@@ -219,8 +219,8 @@ $ssh_version   = "2";
 #$ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
-#$tbox_ftp_path = $ftp_path;
-#$tbox_url_path = $url_path;
+$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox-builds";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox-builds";
 $milestone     = 'mozilla1.8';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
@@ -230,7 +230,7 @@ $archive       = 1;
 $update_package = 1;
 $update_product = "Sunbird";
 $update_version = "branch";
-$update_platform = "Darwin_ppc-gcc3";
+$update_platform = "Darwin_Universal-gcc3";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "calendar/sunbird/config/version.txt";

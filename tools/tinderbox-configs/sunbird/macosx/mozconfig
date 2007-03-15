@@ -6,10 +6,10 @@
 . $topsrcdir/build/macosx/universal/mozconfig
 
 mk_add_options MOZ_CO_PROJECT="calendar"
-mk_add_options MOZ_MAKE_FLAGS="-j6"
+mk_add_options MOZ_MAKE_FLAGS="-j4"
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 mk_add_options JS_READLINE=1
-mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../build/unisunbird
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../build
 
 ac_add_options --enable-application="calendar"
 ac_add_options --enable-update-channel="nightly"
@@ -21,10 +21,8 @@ ac_add_options --disable-installer
 
 ac_add_options --enable-static
 ac_add_options --disable-shared
-# Change to "ac_add_app_options ppc --enable-prebinding" when making universal
-ac_add_options --enable-prebinding
-
-ac_add_options --with-macos-sdk="/Developer/SDKs/MacOSX10.2.8.sdk"
+ac_add_app_options ppc --enable-prebinding
+#ac_add_options --with-macos-sdk="/Developer/SDKs/MacOSX10.2.8.sdk"
 
 # Use Carbon widgets, regardless of what the default is
 ac_add_options --enable-default-toolkit=mac
