@@ -286,7 +286,7 @@
 -->
 
   <hbox align="end">
-    <vbox align="start" flex="1">
+    <vbox align="start" flex="1" id="ExitHandlingBox">
       <checkbox hidefor="pop3,nntp,movemail" wsm_persist="true" id="imap.cleanupInboxOnExit"
                 label="&expungeOnExit.label;"
                 accesskey="&expungeOnExit.accesskey;"
