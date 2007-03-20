@@ -132,8 +132,8 @@ $ProductName              = "Thunderbird";
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
-$moz_cvsroot   = ":ext:calbld\@cvs.mozilla.org:/cvsroot";
-#$moz_cvsroot   = ":pserver:anonymous\@cvs-mirror.mozilla.org:/cvsroot";
+#$moz_cvsroot   = ":ext:calbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ':pserver:anonymous@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -202,7 +202,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/lightning/nigh
 $tbox_ftp_path = "/home/ftp/pub/calendar/lightning/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/lightning/tinderbox-builds";
 $milestone     = "mozilla1.8";
-$notify_list   = "build-announce\@mozilla.org";
+$notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
