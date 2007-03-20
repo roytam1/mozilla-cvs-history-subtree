@@ -135,13 +135,13 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDAPProcessChangeLogData)
 #endif
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbDirectoryQueryProxy)
-
+#if 0
 #ifdef XP_MACOSX
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXDirectory)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXCard)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXDirFactory)
 #endif
-
+#endif
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbView)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgVCardService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDIFService)
@@ -334,7 +334,7 @@ static const nsModuleComponentInfo components[] =
     NS_ABDIRECTORYQUERYPROXY_CID,
     NS_ABDIRECTORYQUERYPROXY_CONTRACTID,
     nsAbDirectoryQueryProxyConstructor },
-
+#if 0
 #ifdef XP_MACOSX
   { "OS X Address Book Directory",
     NS_ABOSXDIRECTORY_CID,
@@ -351,7 +351,7 @@ static const nsModuleComponentInfo components[] =
     NS_ABOSXDIRFACTORY_CONTRACTID,
     nsAbOSXDirFactoryConstructor },
 #endif
-
+#endif
   { "addressbook view",
     NS_ABVIEW_CID,
     NS_ABVIEW_CONTRACTID,

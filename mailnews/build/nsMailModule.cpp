@@ -407,13 +407,13 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbDirectoryQueryProxy)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbView)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgVCardService) 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDIFService)
-
+#if 0
 #ifdef XP_MACOSX
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXDirectory)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXCard)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXDirFactory)
 #endif
-
+#endif
 ////////////////////////////////////////////////////////////////////////////////
 // bayesian spam filter factories
 ////////////////////////////////////////////////////////////////////////////////
