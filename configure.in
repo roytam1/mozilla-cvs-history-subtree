@@ -634,8 +634,9 @@ fi
 
 AC_PATH_PROGS(PYTHON, $PYTHON python)
 if test -z "$PYTHON"; then
-    AC_MSG_WARN([TinderboxPrint: python not found in \$PATH .])
+    AC_MSG_ERROR([python was not found in \$PATH])
 fi
+echo PYTHON="$PYTHON"
 
 AC_PATH_PROG(DOXYGEN, doxygen, :)
 AC_PATH_PROG(WHOAMI, whoami, :)
@@ -1295,6 +1296,49 @@ LOOP_INPUT
 fi # GNU_CC
 fi # COMPILE_ENVIRONMENT
 
+dnl =================================================================
+dnl Set up and test static assertion macros used to avoid AC_TRY_RUN,
+dnl which is bad when cross compiling.
+dnl =================================================================
+if test "$COMPILE_ENVIRONMENT"; then
+configure_static_assert_macros='
+#define CONFIGURE_STATIC_ASSERT(condition) CONFIGURE_STATIC_ASSERT_IMPL(condition, __LINE__)
+#define CONFIGURE_STATIC_ASSERT_IMPL(condition, line) CONFIGURE_STATIC_ASSERT_IMPL2(condition, line)
+#define CONFIGURE_STATIC_ASSERT_IMPL2(condition, line) typedef int static_assert_line_##line[(condition) ? 1 : -1]
+'
+
+dnl test that the macros actually work:
+AC_MSG_CHECKING(that static assertion macros used in autoconf tests work)
+AC_CACHE_VAL(ac_cv_static_assertion_macros_work,
+ [AC_LANG_SAVE
+  AC_LANG_C
+  ac_cv_static_assertion_macros_work="yes"
+  AC_TRY_COMPILE([$configure_static_assert_macros],
+                 [CONFIGURE_STATIC_ASSERT(1)],
+                 ,
+                 ac_cv_static_assertion_macros_work="no")
+  AC_TRY_COMPILE([$configure_static_assert_macros],
+                 [CONFIGURE_STATIC_ASSERT(0)],
+                 ac_cv_static_assertion_macros_work="no",
+                 )
+  AC_LANG_CPLUSPLUS
+  AC_TRY_COMPILE([$configure_static_assert_macros],
+                 [CONFIGURE_STATIC_ASSERT(1)],
+                 ,
+                 ac_cv_static_assertion_macros_work="no")
+  AC_TRY_COMPILE([$configure_static_assert_macros],
+                 [CONFIGURE_STATIC_ASSERT(0)],
+                 ac_cv_static_assertion_macros_work="no",
+                 )
+  AC_LANG_RESTORE
+ ])
+AC_MSG_RESULT("$ac_cv_static_assertion_macros_work")
+if test "$ac_cv_static_assertion_macros_work" = "no"; then
+    AC_MSG_ERROR([Compiler cannot compile macros used in autoconf tests.])
+fi
+
+fi # COMPILE_ENVIRONMENT
+
 dnl ========================================================
 dnl Checking for 64-bit OS
 dnl ========================================================
@@ -1302,9 +1346,9 @@ if test "$COMPILE_ENVIRONMENT"; then
 AC_LANG_SAVE
 AC_LANG_C
 AC_MSG_CHECKING(for 64-bit OS)
-AC_TRY_RUN([ int main () {
-    if (sizeof(long) == 8) { return 0; } return 1; } ],
-        result="yes", result="no", result="maybe" )
+AC_TRY_COMPILE([$configure_static_assert_macros],
+               [CONFIGURE_STATIC_ASSERT(sizeof(long) == 8)],
+               result="yes", result="no")
 AC_MSG_RESULT("$result")
 if test "$result" = "yes"; then
     AC_DEFINE(HAVE_64BIT_OS)
@@ -1360,6 +1404,7 @@ case "$host" in
             AS_PERL=1
             PERL="${CYGWIN_WRAPPER} $PERL"
         fi
+        PYTHON="${CYGWIN_WRAPPER} $PYTHON"
         ;;
     esac
     ;;
@@ -2556,15 +2601,14 @@ dnl (we really don't need the unsignedness check anymore)
 dnl ========================================================
 
 AC_CACHE_CHECK(for usable wchar_t (2 bytes, unsigned),
-    ac_cv_have_usable_wchar,
-    [AC_TRY_RUN([#include <stddef.h>
-                 int main () {
-                   return (sizeof(wchar_t) != 2) ||
-                          (wchar_t)-1 < (wchar_t) 0 ; } ],
-                ac_cv_have_usable_wchar="yes",
-                ac_cv_have_usable_wchar="no",
-                ac_cv_have_usable_wchar="maybe")])
-if test "$ac_cv_have_usable_wchar" = "yes"; then
+    ac_cv_have_usable_wchar_v2,
+    [AC_TRY_COMPILE([#include <stddef.h>
+                     $configure_static_assert_macros],
+                    [CONFIGURE_STATIC_ASSERT(sizeof(wchar_t) == 2);
+                     CONFIGURE_STATIC_ASSERT((wchar_t)-1 > (wchar_t) 0)],
+                    ac_cv_have_usable_wchar_v2="yes",
+                    ac_cv_have_usable_wchar_v2="no")])
+if test "$ac_cv_have_usable_wchar_v2" = "yes"; then
     AC_DEFINE(HAVE_CPP_2BYTE_WCHAR_T)
     HAVE_CPP_2BYTE_WCHAR_T=1
 else
@@ -2580,16 +2624,15 @@ dnl Note that we assume that mac & win32 have short wchar (see nscore.h)
     CXXFLAGS="$CXXFLAGS -fshort-wchar"
 
     AC_CACHE_CHECK(for compiler -fshort-wchar option, 
-        ac_cv_have_usable_wchar_option,
-        [AC_TRY_RUN([#include <stddef.h>
-                     int main () {
-                       return (sizeof(wchar_t) != 2) ||
-                              (wchar_t)-1 < (wchar_t) 0 ; } ],
-                    ac_cv_have_usable_wchar_option="yes",
-                    ac_cv_have_usable_wchar_option="no",
-                    ac_cv_have_usable_wchar_option="maybe")])
+        ac_cv_have_usable_wchar_option_v2,
+        [AC_TRY_COMPILE([#include <stddef.h>
+                         $configure_static_assert_macros],
+                        [CONFIGURE_STATIC_ASSERT(sizeof(wchar_t) == 2);
+                         CONFIGURE_STATIC_ASSERT((wchar_t)-1 > (wchar_t) 0)],
+                        ac_cv_have_usable_wchar_option_v2="yes",
+                        ac_cv_have_usable_wchar_option_v2="no")])
 
-    if test "$ac_cv_have_usable_wchar_option" = "yes"; then
+    if test "$ac_cv_have_usable_wchar_option_v2" = "yes"; then
         AC_DEFINE(HAVE_CPP_2BYTE_WCHAR_T)
         HAVE_CPP_2BYTE_WCHAR_T=1
     else    
@@ -3960,8 +4003,11 @@ fi
 if test -z "$PNG_DIR" -o "$PNG_DIR" = no; then
     SYSTEM_PNG=
 else
+    _SAVE_PNG_LIBS=$PNG_LIBS
     AC_CHECK_LIB(png, png_get_valid, [SYSTEM_PNG=1 PNG_LIBS="-lpng $PNG_LIBS"],
                  SYSTEM_PNG=, $PNG_LIBS)
+    AC_CHECK_LIB(png, png_get_acTl, ,
+                 [SYSTEM_PNG= PNG_LIBS=$_SAVE_PNG_LIBS], $_SAVE_PNG_LIBS)
 fi
 if test "$SYSTEM_PNG" = 1; then
     LIBS="$PNG_LIBS $LIBS"
@@ -4025,7 +4071,6 @@ dnl ========================================================
 
 MOZ_ARG_HEADER(Application)
 
-BUILD_MODULES=all
 BUILD_STATIC_LIBS=
 ENABLE_TESTS=1
 MOZ_ACTIVEX_SCRIPTING_SUPPORT=
@@ -6800,10 +6845,9 @@ if test "$_PEDANTIC"; then
     _SAVE_CXXFLAGS=$CXXFLAGS
     CXXFLAGS="$CXXFLAGS ${_WARNINGS_CXXFLAGS} ${_COMPILER_PREFIX}-pedantic"
     AC_MSG_CHECKING([whether C++ compiler has -pedantic long long bug])
-    AC_TRY_RUN([ int main () {
-                if (sizeof(long long) != 8) { return 1; } 
-                    return 0; } ],
-        result="no", result="yes", result="maybe" )
+    AC_TRY_COMPILE([$configure_static_assert_macros],
+                   [CONFIGURE_STATIC_ASSERT(sizeof(long long) == 8)],
+                   result="no", result="yes" )
     AC_MSG_RESULT([$result])
     CXXFLAGS="$_SAVE_CXXFLAGS"
 
@@ -6814,9 +6858,6 @@ if test "$_PEDANTIC"; then
         ;;
     yes)
         AC_MSG_ERROR([Your compiler appears to have a known bug where long long is miscompiled when using -pedantic.  Reconfigure using --disable-pedantic. ])
-        ;;
-    maybe)
-        AC_MSG_WARN([Cannot test -pedantic long long bug when cross-compiling.])
         ;;
     esac
 fi
@@ -7044,22 +7085,6 @@ dnl = Standalone module options
 dnl = 
 dnl ========================================================
 MOZ_ARG_HEADER(Standalone module options (Not for building Mozilla))
-
-dnl ========================================================
-dnl = Only selectively build modules
-dnl ========================================================
-MOZ_ARG_ENABLE_STRING(standalone-modules,
-[  --enable-standalone-modules=mod1[,mod2]
-                          Enable standalone build of specific modules],
-[ BUILD_MODULES=`echo $enableval | sed 's/,/ /g'` ] )
-
-dnl Disable ldap if LDAP is not building all of Mozilla
-dnl and ldap isn't in the standalone list
-if test "$BUILD_MODULES" != "all" &&
-    test `echo "$BUILD_MODULES" | grep -c ldap` = 0 &&
-    test "$enable_ldap" != "yes"; then
-    MOZ_LDAP_XPCOM=
-fi
 
 dnl Check for GLib and libIDL.
 dnl ========================================================
@@ -7385,16 +7410,6 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c python` -ne 0; then
     dnl (note that it must be the python executable - which we
     dnl run to locate the relevant paths etc)
     dnl If not set, we use whatever Python we can find.
-    if test -z "$PYTHON"; then
-        AC_PATH_PROG(PYTHON, python, :)
-    fi
-    if test "$OS_ARCH" = "WINNT"; then
-        dnl Convert to cygwin style "mixed" (ie, "c:/path/file.exe")
-        PYTHON=`$CYGPATH_W $PYTHON | $CYGPATH_S`
-    fi
-    if test ! -x "$PYTHON"; then
-        AC_MSG_ERROR([Could not find Python - please adjust your PATH, or set PYTHON.])
-    fi
     MOZ_PYTHON=$PYTHON
     dnl Ask Python what its version number is
     changequote(,)
@@ -7695,7 +7710,6 @@ AC_SUBST(MOZ_SVG_FOREIGNOBJECT)
 AC_SUBST(MOZ_XSLT_STANDALONE)
 AC_SUBST(MOZ_JS_LIBS)
 AC_SUBST(MOZ_PSM)
-AC_SUBST(BUILD_MODULES)
 AC_SUBST(MOZ_DEBUG)
 AC_SUBST(MOZ_DEBUG_MODULES)
 AC_SUBST(MOZ_PROFILE_MODULES)
@@ -7824,6 +7838,7 @@ AC_SUBST(MOZ_TOOLS_DIR)
 AC_SUBST(CYGWIN_WRAPPER)
 AC_SUBST(AS_PERL)
 AC_SUBST(WIN32_REDIST_DIR)
+AC_SUBST(PYTHON)
 
 dnl Echo the CFLAGS to remove extra whitespace.
 CFLAGS=`echo \
