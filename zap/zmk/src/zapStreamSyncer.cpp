@@ -265,7 +265,7 @@ zapStreamSyncer::DisconnectSource(zapIMediaSource *source)
 NS_IMETHODIMP
 zapStreamSyncer::ConsumeFrame(zapIMediaFrame * frame)
 {
-  NS_ERROR("stream-syncer is an active source. Maybe you need some buffering?");
+  NS_ERROR("stream-syncer is an active sink. Maybe you need some buffering?");
   return NS_ERROR_FAILURE;
 }
 
@@ -296,7 +296,7 @@ zapStreamSyncer::DisconnectSink(zapIMediaSink *sink)
 NS_IMETHODIMP
 zapStreamSyncer::ProduceFrame(zapIMediaFrame ** frame)
 {
-  NS_ERROR("stream-syncer:input is an active sink. Maybe you need some buffering?");
+  NS_ERROR("stream-syncer:input is an active source. Maybe you need some buffering?");
   *frame = nsnull;
   return NS_ERROR_FAILURE;
 }
@@ -340,11 +340,17 @@ zapStreamSyncer::PeekFrame(PRBool *_retval)
   return NS_OK;
 }
 
-/* readonly attribute unsigned long long currentTimestamp; */
+/* attribute unsigned long long currentTimestamp; */
 NS_IMETHODIMP
 zapStreamSyncer::GetCurrentTimestamp(PRUint64 *aCurrentTimestamp)
 {
   *aCurrentTimestamp = mCurrentTime;
+  return NS_OK;
+}
+NS_IMETHODIMP
+zapStreamSyncer::SetCurrentTimestamp(PRUint64 aCurrentTimestamp)
+{
+  mCurrentTime = aCurrentTimestamp;
   return NS_OK;
 }
 
@@ -362,6 +368,10 @@ zapStreamSyncer::Wakeup()
   if (mNextFrame) {
     PRUint64 ts;
     mNextFrame->GetTimestamp(&ts);
+#ifdef DEBUG_alex
+//     printf("video ts = %d ", ts);
+//     printf("-- audio ts = %d \n", mCurrentTime);
+#endif
     if (ts <= mCurrentTime) {
       if (mOutput)
         mOutput->ConsumeFrame(mNextFrame);

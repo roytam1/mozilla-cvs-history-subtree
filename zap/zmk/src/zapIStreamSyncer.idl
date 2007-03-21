@@ -58,7 +58,7 @@ interface zapIStreamSyncer : nsISupports
 
   /**
    * Current synchronization time, as given by the most recent clock
-   * frame or peekFrame() call.
+   * frame or peekFrame() call. Can also be manually set.
    */
-  readonly attribute unsigned long long currentTimestamp;
+  attribute unsigned long long currentTimestamp;
 };
