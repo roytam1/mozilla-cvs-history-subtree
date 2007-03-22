@@ -900,8 +900,7 @@ sub BuildIt {
     # Bypass profile manager at startup.
     $ENV{MOZ_BYPASS_PROFILE_AT_STARTUP} = 1;
 
-    # Avoid debug assertion dialogs (win32)
-    $ENV{XPCOM_DEBUG_BREAK} = "warn";
+    $ENV{XPCOM_DEBUG_BREAK} = "$Settings::MozAssertBehavior";
 
     # Set up tag stuff.
     # Only one tag per file, so -r will override any -D settings.
