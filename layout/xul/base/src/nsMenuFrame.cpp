@@ -85,6 +85,7 @@
 #include "nsContentUtils.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
+#include "nsIReflowCallback.h"
 
 #define NS_MENU_POPUP_LIST_INDEX   0
 
@@ -179,36 +180,33 @@ nsMenuFrame::SetParent(const nsIFrame* aParent)
   return NS_OK;
 }
 
-struct nsASyncMenuInitialization : public PLEvent
+class nsASyncMenuInitialization : public nsIReflowCallback
 {
+public:
   nsASyncMenuInitialization(nsIFrame* aFrame)
     : mWeakFrame(aFrame)
   {
   }
 
-  void HandleEvent() {
+  NS_DECL_ISUPPORTS
+
+  NS_IMETHOD ReflowFinished(nsIPresShell* aShell, PRBool* aFlushFlag) {
     if (mWeakFrame.IsAlive()) {
       nsIMenuFrame* imenu = nsnull;
       CallQueryInterface(mWeakFrame.GetFrame(), &imenu);
       if (imenu) {
         nsMenuFrame* menu = NS_STATIC_CAST(nsMenuFrame*, imenu);
         menu->UpdateMenuType(menu->GetPresContext());
+        *aFlushFlag = PR_TRUE;
       }
     }
+    return NS_OK;
   }
 
   nsWeakFrame mWeakFrame;
 };
 
-static void* PR_CALLBACK HandleASyncMenuInitialization(PLEvent* aEvent)
-{
-  NS_STATIC_CAST(nsASyncMenuInitialization*, aEvent)->HandleEvent();
-  return nsnull;
-}
-static void PR_CALLBACK DestroyASyncMenuInitialization(PLEvent* aEvent)
-{
-  delete NS_STATIC_CAST(nsASyncMenuInitialization*, aEvent);
-}
+NS_IMPL_ISUPPORTS1(nsASyncMenuInitialization, nsIReflowCallback)
 
 NS_IMETHODIMP
 nsMenuFrame::Init(nsPresContext*  aPresContext,
@@ -269,25 +267,9 @@ nsMenuFrame::Init(nsPresContext*  aPresContext,
   }
   
   BuildAcceleratorText();
-  
-  nsCOMPtr<nsIEventQueueService> eventService =
-    do_GetService(kEventQueueServiceCID);
-  NS_ENSURE_TRUE(eventService, PR_FALSE);
-  nsCOMPtr<nsIEventQueue> eventQueue;
-    eventService->GetThreadEventQueue(PR_GetCurrentThread(),
-                                      getter_AddRefs(eventQueue));
-  if (eventQueue) {
-    nsASyncMenuInitialization* initialization =
-      new nsASyncMenuInitialization(this);
-    if (initialization) {
-      PL_InitEvent(initialization, nsnull,
-                   ::HandleASyncMenuInitialization,
-                   ::DestroyASyncMenuInitialization);
-      if (NS_FAILED(eventQueue->PostEvent(initialization))) {
-        PL_DestroyEvent(initialization);
-      }
-    }
-  }
+  nsCOMPtr<nsIReflowCallback> cb = new nsASyncMenuInitialization(this);
+  NS_ENSURE_TRUE(cb, NS_ERROR_OUT_OF_MEMORY);
+  mPresContext->PresShell()->PostReflowCallback(cb);
   return rv;
 }
 
@@ -2029,8 +2011,9 @@ nsMenuFrame::UpdateDismissalListener(nsIMenuParent* aMenuParent)
   nsMenuFrame::sDismissalListener->SetCurrentMenuParent(aMenuParent);
 }
 
-struct nsASyncMenuGeneration : public PLEvent
+class nsASyncMenuGeneration : public nsIReflowCallback
 {
+public:
   nsASyncMenuGeneration(nsIFrame* aFrame)
     : mWeakFrame(aFrame)
   {
@@ -2041,7 +2024,9 @@ struct nsASyncMenuGeneration : public PLEvent
     }
   }
 
-  void HandleEvent() {
+  NS_DECL_ISUPPORTS
+
+  NS_IMETHOD ReflowFinished(nsIPresShell* aShell, PRBool* aFlushFlag) {
     nsIFrame* frame = mWeakFrame.GetFrame();
     if (frame) {
       PRBool collapsed = PR_FALSE;
@@ -2052,27 +2037,21 @@ struct nsASyncMenuGeneration : public PLEvent
         CallQueryInterface(frame, &imenu);
         if (imenu) {
           imenu->MarkAsGenerated();
+          *aFlushFlag = PR_TRUE;
         }
       }
     }
     if (mDocument) {
       mDocument->UnblockOnload();
     }
+    return NS_OK;
   }
 
   nsWeakFrame           mWeakFrame;
   nsCOMPtr<nsIDocument> mDocument;
 };
 
-static void* PR_CALLBACK HandleASyncMenuGeneration(PLEvent* aEvent)
-{
-  NS_STATIC_CAST(nsASyncMenuGeneration*, aEvent)->HandleEvent();
-  return nsnull;
-}
-static void PR_CALLBACK DestroyASyncMenuGeneration(PLEvent* aEvent)
-{
-  delete NS_STATIC_CAST(nsASyncMenuGeneration*, aEvent);
-}
+NS_IMPL_ISUPPORTS1(nsASyncMenuGeneration, nsIReflowCallback)
 
 PRBool
 nsMenuFrame::SizeToPopup(nsBoxLayoutState& aState, nsSize& aSize)
@@ -2093,22 +2072,9 @@ nsMenuFrame::SizeToPopup(nsBoxLayoutState& aState, nsSize& aSize)
           nsAutoString genVal;
           child->GetAttr(kNameSpaceID_None, nsXULAtoms::menugenerated, genVal);
           if (genVal.IsEmpty()) {
-            nsCOMPtr<nsIEventQueueService> eventService =
-              do_GetService(kEventQueueServiceCID);
-            NS_ENSURE_TRUE(eventService, PR_FALSE);
-            nsCOMPtr<nsIEventQueue> eventQueue;
-              eventService->GetThreadEventQueue(PR_GetCurrentThread(),
-                                                getter_AddRefs(eventQueue));
-            if (eventQueue) {
-              nsASyncMenuGeneration* gen = new nsASyncMenuGeneration(this);
-              if (gen) {
-                PL_InitEvent(gen, nsnull,
-                             ::HandleASyncMenuGeneration,
-                             ::DestroyASyncMenuGeneration);
-                if (NS_FAILED(eventQueue->PostEvent(gen))) {
-                  PL_DestroyEvent(gen);
-                }
-              }
+            nsCOMPtr<nsIReflowCallback> cb = new nsASyncMenuGeneration(this);
+            if (cb) {
+              GetPresContext()->PresShell()->PostReflowCallback(cb);
             }
           }
         }
