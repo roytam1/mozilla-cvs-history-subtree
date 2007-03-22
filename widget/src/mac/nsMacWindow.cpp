@@ -402,8 +402,6 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
         mIsTopWidgetWindow = PR_TRUE;
         if (aInitData)
         {
-          // We never give dialog boxes a close box.
-
           switch (aInitData->mBorderStyle)
           {
             case eBorderStyle_none:
@@ -417,13 +415,13 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
             case eBorderStyle_all:
               windowClass = kDocumentWindowClass;
               attributes = kWindowCollapseBoxAttribute |
-                           kWindowResizableAttributes;
+                           kWindowResizableAttributes |
+                           kWindowCloseBoxAttribute;
               break;
 
             default:
                 windowClass = kDocumentWindowClass;
 
-                // we ignore the close flag here, since mac dialogs should never have a close box.
                 switch(aInitData->mBorderStyle & (eBorderStyle_resizeh | eBorderStyle_title))
                 {
                   // combinations of individual options.
@@ -450,8 +448,13 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
                     NS_WARNING("Unhandled combination of window flags");
                     break;
                 }
-              }
+
+                // if we set any attributes above then check the close flag and set it here
+                if (attributes != kWindowNoAttributes &&
+                    aInitData->mBorderStyle & eBorderStyle_close)
+                  attributes |= kWindowCloseBoxAttribute;
           }
+        }
         else
         {
           windowClass = kMovableModalWindowClass;
