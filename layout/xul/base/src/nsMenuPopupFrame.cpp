@@ -79,6 +79,7 @@
 #include "nsIBoxLayout.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
+#include "nsIReflowCallback.h"
 #ifdef XP_WIN
 #include "nsISound.h"
 #endif
@@ -758,14 +759,17 @@ nsMenuPopupFrame::MovePopupToOtherSideOfParent ( PRBool inFlushAboveBelow, PRInt
 
 } // MovePopupToOtherSideOfParent
 
-struct nsASyncMenuActivation : public PLEvent
+class nsASyncMenuActivation : public nsIReflowCallback
 {
+public:
   nsASyncMenuActivation(nsIContent* aContent)
     : mContent(aContent)
   {
   }
 
-  void HandleEvent() {
+  NS_DECL_ISUPPORTS
+
+  NS_IMETHOD ReflowFinished(nsIPresShell* aShell, PRBool* aFlushFlag) {
     nsAutoString shouldDisplay, menuActive;
     mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menuactive, menuActive);
     if (!menuActive.EqualsLiteral("true")) {
@@ -774,21 +778,16 @@ struct nsASyncMenuActivation : public PLEvent
       if(shouldDisplay.EqualsLiteral("true")) {
         mContent->SetAttr(kNameSpaceID_None, nsXULAtoms::menuactive,
                           NS_LITERAL_STRING("true"), PR_TRUE);
+        *aFlushFlag = PR_TRUE;
       }
     }
+    return NS_OK;
   }
 
   nsCOMPtr<nsIContent> mContent;
 };
 
-static void PR_CALLBACK HandleASyncMenuActivation(nsASyncMenuActivation* aEvent)
-{
-  aEvent->HandleEvent();
-}
-static void PR_CALLBACK DestroyASyncMenuActivation(nsASyncMenuActivation* aEvent)
-{
-  delete aEvent;
-}
+NS_IMPL_ISUPPORTS1(nsASyncMenuActivation, nsIReflowCallback)
 
 nsresult 
 nsMenuPopupFrame::SyncViewWithFrame(nsPresContext* aPresContext,
@@ -1172,23 +1171,9 @@ nsMenuPopupFrame::SyncViewWithFrame(nsPresContext* aPresContext,
   if (!menuActive.EqualsLiteral("true")) {
     mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menutobedisplayed, shouldDisplay);
     if ( shouldDisplay.EqualsLiteral("true") ) {
-      nsCOMPtr<nsIEventQueueService> eventService =
-        do_GetService(kEventQueueServiceCID);
-      NS_ENSURE_TRUE(eventService, NS_ERROR_FAILURE);
-      nsCOMPtr<nsIEventQueue> eventQueue;
-      eventService->GetThreadEventQueue(PR_GetCurrentThread(),
-                                        getter_AddRefs(eventQueue));
-      if (eventQueue) {
-        nsASyncMenuActivation* activation = new nsASyncMenuActivation(mContent);
-        if (activation) {
-          PL_InitEvent(activation, nsnull,
-                       (PLHandleEventProc) ::HandleASyncMenuActivation,
-                       (PLDestroyEventProc) ::DestroyASyncMenuActivation);
-          if (NS_FAILED(eventQueue->PostEvent(activation))) {
-            PL_DestroyEvent(activation);
-          }
-        }
-      }
+      nsCOMPtr<nsIReflowCallback> cb = new nsASyncMenuActivation(mContent);
+      NS_ENSURE_TRUE(cb, NS_ERROR_OUT_OF_MEMORY);
+      mPresContext->PresShell()->PostReflowCallback(cb);
     }
   }
 
