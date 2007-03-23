@@ -188,9 +188,6 @@ NSC_DestroyObject(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hObject)
     SFTKObject *object;
     SFTKFreeStatus status;
 
-    if (slot == NULL) {
-	return CKR_SESSION_HANDLE_INVALID;
-    }
     /*
      * This whole block just makes sure we really can destroy the
      * requested object.
@@ -628,37 +625,6 @@ finish_des:
 	}
 	context->update = (SFTKCipher) (isEncrypt ? DES_Encrypt : DES_Decrypt);
 	context->destroy = (SFTKDestroy) DES_DestroyContext;
-	break;
-
-    case CKM_CAMELLIA_CBC_PAD:
-	context->doPad = PR_TRUE;
-	/* fall thru */
-    case CKM_CAMELLIA_ECB:
-    case CKM_CAMELLIA_CBC:
-	context->blockSize = 16;
-	if (key_type != CKK_CAMELLIA) {
-	    crv = CKR_KEY_TYPE_INCONSISTENT;
-	    break;
-	}
-	att = sftk_FindAttribute(key,CKA_VALUE);
-	if (att == NULL) {
-	    crv = CKR_KEY_HANDLE_INVALID;
-	    break;
-	}
-	context->cipherInfo = Camellia_CreateContext(
-	    (unsigned char*)att->attrib.pValue,
-	    (unsigned char*)pMechanism->pParameter,
-	    pMechanism->mechanism ==
-	    CKM_CAMELLIA_ECB ? NSS_CAMELLIA : NSS_CAMELLIA_CBC,
-	    isEncrypt, att->attrib.ulValueLen);
-	sftk_FreeAttribute(att);
-	if (context->cipherInfo == NULL) {
-	    crv = CKR_HOST_MEMORY;
-	    break;
-	}
-	context->update = (SFTKCipher) (isEncrypt ?
-					Camellia_Encrypt : Camellia_Decrypt);
-	context->destroy = (SFTKDestroy) Camellia_DestroyContext;
 	break;
 
     case CKM_AES_CBC_PAD:
@@ -1590,16 +1556,6 @@ sftk_InitCBCMac(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
 	blockSize = 8;
 	PORT_Memset(ivBlock,0,blockSize);
 	cbc_mechanism.mechanism = CKM_CDMF_CBC;
-	cbc_mechanism.pParameter = &ivBlock;
-	cbc_mechanism.ulParameterLen = blockSize;
-	break;
-    case CKM_CAMELLIA_MAC_GENERAL:
-	mac_bytes = *(CK_ULONG *)pMechanism->pParameter;
-	/* fall through */
-    case CKM_CAMELLIA_MAC:
-	blockSize = 16;
-	PORT_Memset(ivBlock,0,blockSize);
-	cbc_mechanism.mechanism = CKM_CAMELLIA_CBC;
 	cbc_mechanism.pParameter = &ivBlock;
 	cbc_mechanism.ulParameterLen = blockSize;
 	break;
@@ -2749,10 +2705,6 @@ nsc_SetupBulkKeyGen(CK_MECHANISM_TYPE mechanism, CK_KEY_TYPE *key_type,
 	*key_type = CKK_DES3;
 	*key_length = 24;
 	break;
-    case CKM_CAMELLIA_KEY_GEN:
-	*key_type = CKK_CAMELLIA;
-	if (*key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
-	break;
     case CKM_AES_KEY_GEN:
 	*key_type = CKK_AES;
 	if (*key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
@@ -2905,9 +2857,7 @@ CK_RV NSC_GenerateKey(CK_SESSION_HANDLE hSession,
      */
     PRBool faultyPBE3DES = PR_FALSE;
 
-    if (!slot) {
-        return CKR_SESSION_HANDLE_INVALID;
-    }
+
     /*
      * now lets create an object to hang the attributes off of
      */
@@ -2949,7 +2899,6 @@ CK_RV NSC_GenerateKey(CK_SESSION_HANDLE hSession,
     case CKM_RC2_KEY_GEN:
     case CKM_RC4_KEY_GEN:
     case CKM_GENERIC_SECRET_KEY_GEN:
-    case CKM_CAMELLIA_KEY_GEN:
     case CKM_AES_KEY_GEN:
 #if NSS_SOFTOKEN_DOES_RC5
     case CKM_RC5_KEY_GEN:
@@ -3402,9 +3351,6 @@ CK_RV NSC_GenerateKeyPair (CK_SESSION_HANDLE hSession,
     ECParams *          ecParams;
 #endif /* NSS_ENABLE_ECC */
 
-    if (!slot) {
-        return CKR_SESSION_HANDLE_INVALID;
-    }
     /*
      * now lets create an object to hang the attributes off of
      */
@@ -4427,9 +4373,6 @@ CK_RV NSC_UnwrapKey(CK_SESSION_HANDLE hSession,
     SECItem bpki;
     CK_OBJECT_CLASS target_type = CKO_SECRET_KEY;
 
-    if (!slot) {
-        return CKR_SESSION_HANDLE_INVALID;
-    }
     /*
      * now lets create an object to hang the attributes off of
      */
@@ -4751,10 +4694,6 @@ CK_RV NSC_DeriveKey( CK_SESSION_HANDLE hSession,
     unsigned char   key_block2[MD5_LENGTH];
     PRBool          isFIPS;		
 
-
-    if (!slot) {
-        return CKR_SESSION_HANDLE_INVALID;
-    }
     /*
      * now lets create an object to hang the attributes off of
      */
