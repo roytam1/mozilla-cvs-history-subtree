@@ -11316,49 +11316,44 @@ nsCSSFrameConstructor::CreateContinuingTableFrame(nsIPresShell* aPresShell,
 
     // Replicate any header/footer frames
     nsFrameItems  childFrames;
-    nsIFrame* rowGroupFrame = aFrame->GetFirstChild(nsnull);
-    while (rowGroupFrame) {
-      // See if it's a header/footer
-      nsStyleContext*       rowGroupStyle = rowGroupFrame->GetStyleContext();
-      const nsStyleDisplay* display = rowGroupStyle->GetStyleDisplay();
-
-      if ((NS_STYLE_DISPLAY_TABLE_HEADER_GROUP == display->mDisplay) ||
-          (NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP == display->mDisplay)) {
-        // If the row group has was continued, then don't replicate it
+    nsIFrame* childFrame = aFrame->GetFirstChild(nsnull);
+    for ( ; childFrame; childFrame = childFrame->GetNextSibling()) {
+      // See if it's a header/footer, possibly wrapped in a scroll frame.
+      nsTableRowGroupFrame* rowGroupFrame =
+        nsTableFrame::GetRowGroupFrame(childFrame);
+      if (rowGroupFrame) {
+        // If the row group was continued, then don't replicate it.
         nsIFrame* rgNextInFlow = rowGroupFrame->GetNextInFlow();
         if (rgNextInFlow) {
-          ((nsTableRowGroupFrame*)rowGroupFrame)->SetRepeatable(PR_FALSE);
+          rowGroupFrame->SetRepeatable(PR_FALSE);
         }
-        // Replicate the header/footer frame if it is not too tall
-        else if (((nsTableRowGroupFrame*)rowGroupFrame)->IsRepeatable()) {        
-          nsIFrame*               headerFooterFrame;
+        else if (rowGroupFrame->IsRepeatable()) {        
+          // Replicate the header/footer frame.
+          nsTableRowGroupFrame*   headerFooterFrame;
           nsFrameItems            childItems;
           nsFrameConstructorState state(mPresShell, mFixedContainingBlock,
                                         GetAbsoluteContainingBlock(newFrame),
                                         nsnull);
-
-          NS_NewTableRowGroupFrame(aPresShell, &headerFooterFrame);
+          nsIFrame* tmp;
+          NS_NewTableRowGroupFrame(aPresShell, &tmp);
+          headerFooterFrame = NS_STATIC_CAST(nsTableRowGroupFrame*, tmp);
           nsIContent* headerFooter = rowGroupFrame->GetContent();
           headerFooterFrame->Init(aPresContext, headerFooter, newFrame,
-                                  rowGroupStyle, nsnull);
+                                  rowGroupFrame->GetStyleContext(), nsnull);
           nsTableCreator tableCreator(aPresShell); 
           ProcessChildren(state, headerFooter, headerFooterFrame,
                           PR_FALSE, childItems, PR_FALSE, &tableCreator);
           NS_ASSERTION(!state.mFloatedItems.childList, "unexpected floated element");
           headerFooterFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
-          ((nsTableRowGroupFrame*)headerFooterFrame)->SetRepeatable(PR_TRUE);
+          headerFooterFrame->SetRepeatable(PR_TRUE);
 
           // Table specific initialization
-          ((nsTableRowGroupFrame*)headerFooterFrame)->InitRepeatedFrame
-            (aPresContext, (nsTableRowGroupFrame*)rowGroupFrame);
+          headerFooterFrame->InitRepeatedFrame(aPresContext, rowGroupFrame);
 
           // XXX Deal with absolute and fixed frames...
           childFrames.AddChild(headerFooterFrame);
         }
       }
-
-      // Get the next row group frame
-      rowGroupFrame = rowGroupFrame->GetNextSibling();
     }
     
     // Set the table frame's initial child list
