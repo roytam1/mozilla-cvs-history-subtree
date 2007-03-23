@@ -42,6 +42,7 @@
 // XPCOMGlueStartup to glue the gtkmozembed functions.
 
 #include "gtkmozembed.h"
+#include "gtkmozembed_internal.h"
 #ifdef MOZ_WIDGET_GTK2
 #include "gtkmozembed_common.h"
 #include "gtkmozembed_download.h"
@@ -77,7 +78,8 @@
   GTKF(gtk_moz_embed_get_shistory_list) \
   GTKF(gtk_moz_embed_get_shistory_index) \
   GTKF(gtk_moz_embed_shistory_goto_index) \
-  GTKF(gtk_moz_embed_get_server_cert)
+  GTKF(gtk_moz_embed_get_server_cert) \
+  GTKF(gtk_moz_embed_get_nsIWebBrowser)
 #else
 #define GTKMOZEMBED2_FUNCTIONS
 #endif
