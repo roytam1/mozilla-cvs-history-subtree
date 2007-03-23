@@ -644,8 +644,8 @@ EmbedEventListener::Blur(nsIDOMEvent* aEvent)
                   moz_embed_signals[DOM_MOUSE_UP],
                   (void *)aEvent, &return_val);
 
+      sMPressed = sIsScrolling ? PR_FALSE : sMPressed;
       sIsScrolling = PR_FALSE;
-      sMPressed = PR_FALSE;
     }
   }
   return NS_OK;
