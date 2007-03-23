@@ -1483,6 +1483,9 @@ nsMathMLContainerFrame::FixInterFrameSpacing(nsHTMLReflowMetrics& aDesiredSize)
 {
   nscoord gap = 0;
   nsIContent* parentContent = mParent->GetContent();
+  if (NS_UNLIKELY(!parentContent)) {
+    return 0;
+  }
   nsIAtom *parentTag = parentContent->Tag();
   if (parentTag == nsMathMLAtoms::math ||
       parentTag == nsMathMLAtoms::mtd_) {
