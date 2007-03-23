@@ -598,14 +598,14 @@ EmbedEventListener::Focus(nsIDOMEvent* aEvent)
   if (eventType.EqualsLiteral ("focus") &&
       mCtxInfo->GetFormControlType(aEvent) &&
       mCtxInfo->mEmbedCtxType & GTK_MOZ_EMBED_CTX_INPUT) {
-        gint return_val = FALSE;
-        gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-                        moz_embed_signals[DOM_FOCUS],
-                        (void *)aEvent, &return_val);
-        if (return_val) {
-          aEvent->StopPropagation();
-          aEvent->PreventDefault();
-        }
+    gint return_val = FALSE;
+    gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
+                    moz_embed_signals[DOM_FOCUS],
+                    (void *)aEvent, &return_val);
+    if (return_val) {
+      aEvent->StopPropagation();
+      aEvent->PreventDefault();
+    }
   }
 #endif
 
@@ -636,13 +636,6 @@ EmbedEventListener::Blur(nsIDOMEvent* aEvent)
 #endif
       if (sLongPressTimer)
         g_source_remove (sLongPressTimer);
-
-     /* Trick to force Blur event to stop cursor animation (CSM)
-      * (mozeal's mouse up handling only do that)
-      */
-      gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
-                  moz_embed_signals[DOM_MOUSE_UP],
-                  (void *)aEvent, &return_val);
 
       sMPressed = sIsScrolling ? PR_FALSE : sMPressed;
       sIsScrolling = PR_FALSE;
@@ -801,7 +794,6 @@ EmbedEventListener::GeneratePixBuf()
     return;
   }
 
-  // now send the signal to eal then eal send another signal to UI
   gtk_signal_emit(GTK_OBJECT(mOwner->mOwningWidget),
                   moz_embed_signals[ICON_CHANGED],
                   pixbuf );
