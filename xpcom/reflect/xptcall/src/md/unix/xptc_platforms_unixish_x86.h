@@ -125,7 +125,13 @@
 #endif
 
 #elif defined(NTO) 
+#if (__GNUC__ == 2) && (__GNUC_MINOR__ <= 7)
+/* Old gcc 2.7.x.x.  What does gcc 2.8.x do?? */
 #define CFRONT_STYLE_THIS_ADJUST
+#else
+/* egcs and later */
+#define THUNK_BASED_THIS_ADJUST
+#endif
 
 #elif defined(__BEOS__) 
 #define CFRONT_STYLE_THIS_ADJUST
@@ -163,7 +169,7 @@
 /* Define KEEP_STACK_16_BYTE_ALIGNED if the stack needs to maintain alignment
  * in a CALL for some good reason (like ABI compliance). */
 
-#ifdef XP_MACOSX
+#if defined(XP_MACOSX) || defined(__QNXNTO__)
 /* http://developer.apple.com/documentation/DeveloperTools/Conceptual/LowLevelABI/Articles/IA32.html */
 #define KEEP_STACK_16_BYTE_ALIGNED
 #endif

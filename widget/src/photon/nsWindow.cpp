@@ -188,14 +188,15 @@ NS_IMETHODIMP nsWindow::CaptureRollupEvents( nsIRollupListener * aListener, PRBo
 		/* Different windows have different mLastMenu's */
 		if( mWindowType == eWindowType_popup && !( PtWidgetFlags( gMenuRegion ) & Pt_REALIZED ) ) {
 
-			PtWidget_t *pw = ((nsWindow*)mParent)->mLastMenu;
+			PtWidget_t *pw = mParent ? ((nsWindow*)mParent)->mLastMenu : NULL;
 
 			if( pw && ( PtWidgetFlags( pw ) & Pt_REALIZED ) && PtWidgetRid( pw ) > 0 )
 				PtSetResource( gMenuRegion, Pt_ARG_REGION_INFRONT, PtWidgetRid( pw ), 0 );
 			else {
 				if( !PtWidgetIsRealized( mWidget ) ) PtRealizeWidget( mWidget );
 				PtSetResource( gMenuRegion, Pt_ARG_REGION_INFRONT, PtWidgetRid( mWidget ), 0 );
-				((nsWindow*)mParent)->mLastMenu = mWidget;
+				if ( mParent )
+					((nsWindow*)mParent)->mLastMenu = mWidget;
 				}
 
 			PtRealizeWidget( gMenuRegion );
@@ -851,25 +852,16 @@ NS_METHOD nsWindow::Move( PRInt32 aX, PRInt32 aY ) {
 	switch( mWindowType ) {
 		case eWindowType_popup:
 			{
-			PhPoint_t offset, total_offset = { 0, 0 };
-    
-			PtWidget_t *parent, *disjoint = PtFindDisjoint( mWidget->parent );
+			PhPoint_t offset;
 
-			while( disjoint ) {
-				PtGetAbsPosition( disjoint, &offset.x, &offset.y );
-				total_offset.x += offset.x;
-				total_offset.y += offset.y;
-				if( PtWidgetIsClass( disjoint, PtWindow ) || PtWidgetIsClass( disjoint, PtServer ) ) break; /* Stop at the first PtWindow */
-				parent = PtWidgetParent(disjoint);
-				if( parent ) disjoint = PtFindDisjoint( parent );
-				else {
-					disjoint = parent;
-					break;
-					}           
-				}
-
-			aX += total_offset.x;
-			aY += total_offset.y;
+			//
+			// Previously we looped through the disjoint parents to add up
+			// all the offsets, but now the menu offset gets passed in,
+			// so we just need to account for the worldview window.
+			//
+			QueryVisible( );
+			aX += gConsoleRect.ul.x;
+			aY += gConsoleRect.ul.y;
 
 			/* Add the Offset if the widget is offset from its parent.. */
 			PtWidgetOffset( mWidget->parent, &offset );
