@@ -1014,6 +1014,7 @@ private:
   PRPackedBool        mQuotesDirty : 1;
   PRPackedBool        mCountersDirty : 1;
   PRPackedBool        mInitialContainingBlockIsAbsPosContainer : 1;
+  PRPackedBool        mIsDestroyingFrameTree : 1;
 
   nsCOMPtr<nsILayoutHistoryState> mTempFrameTreeState;
 

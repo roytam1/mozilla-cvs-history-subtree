@@ -1917,6 +1917,7 @@ nsCSSFrameConstructor::nsCSSFrameConstructor(nsIDocument *aDocument,
   , mQuotesDirty(PR_FALSE)
   , mCountersDirty(PR_FALSE)
   , mInitialContainingBlockIsAbsPosContainer(PR_FALSE)
+  , mIsDestroyingFrameTree(PR_FALSE)
 {
   if (!gGotXBLFormPrefs) {
     gGotXBLFormPrefs = PR_TRUE;
@@ -9879,6 +9880,14 @@ nsresult
 nsCSSFrameConstructor::RemoveMappingsForFrameSubtree(nsIFrame* aRemovedFrame, 
                                                      nsILayoutHistoryState* aFrameState)
 {
+  if (NS_UNLIKELY(mIsDestroyingFrameTree)) {
+    // The frame tree might not be in a consistent state after
+    // WillDestroyFrameTree() has been called. Most likely we're destroying
+    // the pres shell which means the frame manager takes care of clearing all
+    // mappings so there is no need to walk the frame tree here, bug 372576.
+    return NS_OK;
+  }
+
   // Save the frame tree's state before deleting it
   CaptureStateFor(aRemovedFrame, mTempFrameTreeState);
 
@@ -10831,6 +10840,8 @@ nsCSSFrameConstructor::WillDestroyFrameTree()
 #if defined(DEBUG_dbaron_off)
   mCounterManager.Dump();
 #endif
+
+  mIsDestroyingFrameTree = PR_TRUE;
 
   // Prevent frame tree destruction from being O(N^2)
   mQuoteList.Clear();
