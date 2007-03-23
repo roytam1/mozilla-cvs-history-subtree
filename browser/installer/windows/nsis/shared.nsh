@@ -1,4 +1,4 @@
-# ***** BEGIN LICENSE BLOCK *****
+﻿# ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
 # The contents of this file are subject to the Mozilla Public License Version
@@ -189,7 +189,7 @@
   WriteRegStr HKLM "$0\shell\properties\command" "" "$\"$8$\" -preferences"
 
   WriteRegStr HKLM "$0\shell\safemode" "" "${BrandFullNameInternal} $(SAFE_MODE)"
-  WriteRegStr HKLM "$0\shell\safemode\command" "" "$\"$8$\" -safemode"
+  WriteRegStr HKLM "$0\shell\safemode\command" "" "$\"$8$\" -safe-mode"
 
   ; Vista Capabilities registry keys
   WriteRegStr HKLM "$0\Capabilities" "ApplicationDescription" "$(REG_APP_DESC)"
