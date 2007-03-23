@@ -172,7 +172,7 @@ $BuildNameExtra = 'Release';
 $BuildTree  = 'Firefox';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_9a2_RELEASE';
+$BuildTag = 'MOZILLA_1_9a3_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -194,6 +194,8 @@ $BinaryName = 'firefox-bin';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
+$crashreporter_buildsymbols = 1;
+$crashreporter_pushsymbols = 0;
 $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
@@ -207,7 +209,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "mozilla1.9a2";
+$milestone     = "mozilla1.9a3";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;

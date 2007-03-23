@@ -7,7 +7,7 @@
 # . $topsrcdir/browser/config/mozconfig
 
 mk_add_options MOZ_CO_PROJECT=browser
-mk_add_options MOZ_MAKE_FLAGS="-j5"
+mk_add_options MOZ_MAKE_FLAGS="-j1"
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 mk_add_options MOZ_PACKAGE_NSIS=1
 
