@@ -1966,7 +1966,7 @@ EmbedPrivate::GetSHistoryList(GtkMozHistoryItem **GtkHI,
      // Get the title of the HistoryEntry
      PRUnichar* title;
      rv = curEntry->GetTitle (&title);
-     if (NS_FAILED(result) || (!title))
+     if (NS_FAILED(rv) || (!title))
        continue;
 
      item[numItems].url = NS_strdup(uriString.get());
