@@ -917,19 +917,13 @@ EmbedEventListener::OnStateChange(nsIWebProgress *aWebProgress,
 {
   /* if (!(aStateFlags & (STATE_STOP | STATE_IS_NETWORK | STATE_IS_DOCUMENT))){*/
 #ifdef MOZ_WIDGET_GTK2
-  if(aStateFlags & STATE_STOP)
-  {
+  if (aStateFlags & STATE_STOP)
     /* FINISH DOWNLOADING */
-    if (NS_SUCCEEDED(aStatus)) {
+    /* XXX sometimes this==0x0 and it cause crash in GeneratePixBuf, need workaround check for this */
+    if (NS_SUCCEEDED(aStatus) && this)
       GeneratePixBuf();
-      return NS_OK;
-    }
-  }
-  else {
-  }
 #endif
   return NS_OK;
-
 }
 
 NS_IMETHODIMP
