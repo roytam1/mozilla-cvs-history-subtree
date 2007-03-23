@@ -95,7 +95,7 @@ class EmbedEventListener : public nsIDOMKeyListener,
   // nsIDOMEventListener
   NS_DECL_NSIWEBPROGRESSLISTENER
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
-  NS_IMETHOD HandleLink (nsIDOMNode* node);
+  NS_IMETHOD HandleLink(nsIDOMNode* node);
   // nsIDOMKeyListener
 
   NS_IMETHOD KeyDown(nsIDOMEvent* aDOMEvent);
@@ -140,8 +140,8 @@ class EmbedEventListener : public nsIDOMKeyListener,
   EmbedContextMenuInfo *mCtxInfo;
 
   // Selection and some clipboard stuff
-  nsCOMPtr <nsISelectionController> mCurSelCon;
-  nsCOMPtr <nsISelectionController> mLastSelCon;
+  nsCOMPtr<nsISelectionController> mCurSelCon;
+  nsCOMPtr<nsISelectionController> mLastSelCon;
   PRBool mFocusInternalFrame;
   PRInt32 mClickCount;
 };

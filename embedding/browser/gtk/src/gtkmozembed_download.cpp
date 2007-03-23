@@ -86,7 +86,7 @@
 #define GET_OBJECT_CLASS_TYPE(x) (GTK_OBJECT_CLASS(x)->type)
 #endif /* MOZ_WIDGET_GTK */
 
-static void gtk_moz_embed_download_set_latest_object (GtkObject *o);
+static void gtk_moz_embed_download_set_latest_object(GtkObject *o);
 static GtkObject *latest_download_object = nsnull;
 
 // class and instance initialization
@@ -210,27 +210,27 @@ gtk_moz_embed_download_destroy(GtkObject *object)
 GtkObject *
 gtk_moz_embed_download_new(void)
 {
-  GtkObject *instance = (GtkObject *) gtk_type_new (gtk_moz_embed_download_get_type());
-  gtk_moz_embed_download_set_latest_object (instance);
+  GtkObject *instance = (GtkObject *) gtk_type_new(gtk_moz_embed_download_get_type());
+  gtk_moz_embed_download_set_latest_object(instance);
 
   return instance;
 }
 
 GtkObject *
-gtk_moz_embed_download_get_latest_object (void)
+gtk_moz_embed_download_get_latest_object(void)
 {
   return latest_download_object;
 }
 
 static void
-gtk_moz_embed_download_set_latest_object (GtkObject *obj)
+gtk_moz_embed_download_set_latest_object(GtkObject *obj)
 {
   latest_download_object = obj;
   return ;
 }
 
 void
-gtk_moz_embed_download_do_command (GtkMozEmbedDownload *item, guint command)
+gtk_moz_embed_download_do_command(GtkMozEmbedDownload *item, guint command)
 {
   EmbedDownload *download_priv = (EmbedDownload *) item->data;
 
@@ -238,14 +238,14 @@ gtk_moz_embed_download_do_command (GtkMozEmbedDownload *item, guint command)
     return;
 
   if (command == GTK_MOZ_EMBED_DOWNLOAD_CANCEL) {
-    download_priv->launcher->Cancel (GTK_MOZ_EMBED_STATUS_FAILED_USERCANCELED);
-    download_priv->launcher->SetWebProgressListener (nsnull);
+    download_priv->launcher->Cancel(GTK_MOZ_EMBED_STATUS_FAILED_USERCANCELED);
+    download_priv->launcher->SetWebProgressListener(nsnull);
 
     return;
   }
 
   if (command == GTK_MOZ_EMBED_DOWNLOAD_RESUME) {
-    download_priv->request->Resume ();
+    download_priv->request->Resume();
     download_priv->is_paused = FALSE;
 
     return;
@@ -253,7 +253,7 @@ gtk_moz_embed_download_do_command (GtkMozEmbedDownload *item, guint command)
 
   if (command == GTK_MOZ_EMBED_DOWNLOAD_PAUSE) {
     if (download_priv->request) {
-      download_priv->request->Suspend ();
+      download_priv->request->Suspend();
       download_priv->is_paused = TRUE;
     }
 
@@ -267,7 +267,7 @@ gtk_moz_embed_download_do_command (GtkMozEmbedDownload *item, guint command)
 }
 
 gchar*
-gtk_moz_embed_download_get_file_name (GtkMozEmbedDownload *item)
+gtk_moz_embed_download_get_file_name(GtkMozEmbedDownload *item)
 {
   EmbedDownload *download_priv = (EmbedDownload *) item->data;
 
@@ -278,7 +278,7 @@ gtk_moz_embed_download_get_file_name (GtkMozEmbedDownload *item)
 }
 
 gchar*
-gtk_moz_embed_download_get_url (GtkMozEmbedDownload *item)
+gtk_moz_embed_download_get_url(GtkMozEmbedDownload *item)
 {
   EmbedDownload *download_priv = (EmbedDownload *) item->data;
 
@@ -290,7 +290,7 @@ gtk_moz_embed_download_get_url (GtkMozEmbedDownload *item)
 }
 
 glong
-gtk_moz_embed_download_get_progress (GtkMozEmbedDownload *item)
+gtk_moz_embed_download_get_progress(GtkMozEmbedDownload *item)
 {
   EmbedDownload *download_priv = (EmbedDownload *) item->data;
 
@@ -301,7 +301,7 @@ gtk_moz_embed_download_get_progress (GtkMozEmbedDownload *item)
 }
 
 glong
-gtk_moz_embed_download_get_file_size (GtkMozEmbedDownload *item)
+gtk_moz_embed_download_get_file_size(GtkMozEmbedDownload *item)
 {
   EmbedDownload *download_priv = (EmbedDownload *) item->data;
 

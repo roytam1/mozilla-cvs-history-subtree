@@ -407,12 +407,12 @@ NS_IMETHODIMP
 EmbedPasswordMgr::InsertLogin(const char* username, const char* password)
 {
   if (username && mGlobalUserField)
-    mGlobalUserField->SetValue (NS_ConvertUTF8toUTF16(username));
+    mGlobalUserField->SetValue(NS_ConvertUTF8toUTF16(username));
   else
     return NS_ERROR_FAILURE;
 
   if (password && mGlobalPassField)
-    mGlobalPassField->SetValue (NS_ConvertUTF8toUTF16(password));
+    mGlobalPassField->SetValue(NS_ConvertUTF8toUTF16(password));
   else
     FillPassword();
 
@@ -425,14 +425,13 @@ EmbedPasswordMgr::RemovePasswordsByIndex(PRUint32 aIndex)
   nsCOMPtr<nsIPasswordManager> passwordManager = do_GetService(NS_PASSWORDMANAGER_CONTRACTID);
   if (!passwordManager)
     return NS_ERROR_NULL_POINTER;
-  nsCOMPtr<nsIIDNService> idnService (do_GetService ("@mozilla.org/network/idn-service;1"));
+  nsCOMPtr<nsIIDNService> idnService(do_GetService("@mozilla.org/network/idn-service;1"));
   if (!idnService)
     return NS_ERROR_NULL_POINTER;
-  nsresult result = NS_ERROR_FAILURE;
   nsCOMPtr<nsISimpleEnumerator> passwordEnumerator;
-  result = passwordManager->GetEnumerator(getter_AddRefs(passwordEnumerator));
-  if (NS_FAILED(result))
-    return result;
+  nsresult rv = passwordManager->GetEnumerator(getter_AddRefs(passwordEnumerator));
+  if (NS_FAILED(rv))
+    return rv;
   PRBool enumResult;
   PRUint32 i = 0;
   nsCOMPtr<nsIPassword> nsPassword;
@@ -440,14 +439,14 @@ EmbedPasswordMgr::RemovePasswordsByIndex(PRUint32 aIndex)
        enumResult == PR_TRUE && i <= aIndex;
        passwordEnumerator->HasMoreElements(&enumResult)) {
 
-    result = passwordEnumerator->GetNext (getter_AddRefs(nsPassword));
-    if (NS_FAILED(result) || !nsPassword)
-      return result;
+    rv = passwordEnumerator->GetNext(getter_AddRefs(nsPassword));
+    if (NS_FAILED(rv) || !nsPassword)
+      return rv;
 
     nsCString host;
-    nsPassword->GetHost (host);
+    nsPassword->GetHost(host);
 
-    if (StringBeginsWith (host, mLastHostQuery))
+    if (StringBeginsWith(host, mLastHostQuery))
       i++;
   }
 
@@ -457,11 +456,11 @@ EmbedPasswordMgr::RemovePasswordsByIndex(PRUint32 aIndex)
     nsCString host, idn_host;
     nsString unicodeName;
 
-    nsPassword->GetHost (host);
-    nsPassword->GetUser (unicodeName);
-    result = idnService->ConvertUTF8toACE (host, idn_host);
+    nsPassword->GetHost(host);
+    nsPassword->GetUser(unicodeName);
+    rv = idnService->ConvertUTF8toACE(host, idn_host);
 
-    result = passwordManager->RemoveUser(idn_host, unicodeName);
+    rv = passwordManager->RemoveUser(idn_host, unicodeName);
   }
   return NS_OK;
 }
@@ -472,27 +471,28 @@ EmbedPasswordMgr::RemovePasswords(const char *aHostName, const char *aUserName)
   nsCOMPtr<nsIPasswordManager> passwordManager = do_GetService(NS_PASSWORDMANAGER_CONTRACTID);
   if (!passwordManager)
     return NS_ERROR_NULL_POINTER;
-  nsCOMPtr<nsIIDNService> idnService (do_GetService ("@mozilla.org/network/idn-service;1"));
+  nsCOMPtr<nsIIDNService> idnService(do_GetService("@mozilla.org/network/idn-service;1"));
   if (!idnService)
     return NS_ERROR_NULL_POINTER;
-  nsresult result = NS_ERROR_FAILURE;
   nsCOMPtr<nsISimpleEnumerator> passwordEnumerator;
-  result = passwordManager->GetEnumerator(getter_AddRefs(passwordEnumerator));
-  if (NS_FAILED(result))
-    return result;
+  nsresult rv = passwordManager->GetEnumerator(getter_AddRefs(passwordEnumerator));
+  if (NS_FAILED(rv))
+    return rv;
   PRBool enumResult;
   for (passwordEnumerator->HasMoreElements(&enumResult);
-       enumResult == PR_TRUE ; passwordEnumerator->HasMoreElements(&enumResult)) {
+       enumResult;
+       passwordEnumerator->HasMoreElements(&enumResult)) {
     nsCOMPtr<nsIPassword> nsPassword;
-    result = passwordEnumerator->GetNext (getter_AddRefs(nsPassword));
-    if (NS_FAILED(result)) return FALSE;
+    rv = passwordEnumerator->GetNext(getter_AddRefs(nsPassword));
+    /* XXX XXX FALSE = NS_OK this is almost certainly wrong */
+    if (NS_FAILED(rv)) return FALSE;
     nsCString host, idn_host;
 
-    nsPassword->GetHost (host);
+    nsPassword->GetHost(host);
     nsString unicodeName;
-    nsPassword->GetUser (unicodeName);
-    result = idnService->ConvertUTF8toACE (host, idn_host);
-    result = passwordManager->RemoveUser(idn_host, unicodeName);
+    nsPassword->GetUser(unicodeName);
+    rv = idnService->ConvertUTF8toACE(host, idn_host);
+    rv = passwordManager->RemoveUser(idn_host, unicodeName);
   }
   return NS_OK;
 }
@@ -544,7 +544,7 @@ EmbedPasswordMgr::RemoveReject(const nsACString& aHost)
 NS_IMETHODIMP
 EmbedPasswordMgr::IsEqualToLastHostQuery(nsCString& aHost)
 {
-  return StringBeginsWith (aHost, mLastHostQuery);
+  return StringBeginsWith(aHost, mLastHostQuery);
 }
 
 /* static */ PLDHashOperator PR_CALLBACK
@@ -871,7 +871,7 @@ EmbedPasswordMgr::OnStateChange(nsIWebProgress* aWebProgress,
   if (!GetPasswordRealm(doc->GetDocumentURI(), realm))
     return NS_OK;
 
-  mLastHostQuery.Assign (realm);
+  mLastHostQuery.Assign(realm);
 
   SignonHashEntry* hashEnt;
   if (!mSignonTable.Get(realm, &hashEnt))
@@ -1222,11 +1222,11 @@ EmbedPasswordMgr::Notify(nsIContent* aFormNode,
       GetLocalizedString(NS_LITERAL_STRING("notNowButtonText"),
                          notNowButtonText);
       PRInt32 selection;
-      nsCOMPtr<nsIDOMWindow> domWindow (do_QueryInterface (aWindow));
+      nsCOMPtr<nsIDOMWindow> domWindow(do_QueryInterface(aWindow));
       GtkWidget *parentWidget = GetGtkWidgetForDOMWindow(domWindow);
       if (parentWidget)
-        gtk_signal_emit (GTK_OBJECT (GTK_MOZ_EMBED(parentWidget)->common),
-                         moz_embed_common_signals[COMMON_REMEMBER_LOGIN], &selection);
+        gtk_signal_emit(GTK_OBJECT(GTK_MOZ_EMBED(parentWidget)->common),
+                        moz_embed_common_signals[COMMON_REMEMBER_LOGIN], &selection);
       // FIXME These values (0,1,2,3,4) need constant variable.
       if (selection == GTK_MOZ_EMBED_LOGIN_REMEMBER_FOR_THIS_SITE ) {
         SignonDataEntry* entry = new SignonDataEntry();

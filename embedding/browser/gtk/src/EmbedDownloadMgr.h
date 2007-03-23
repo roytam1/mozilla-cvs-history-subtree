@@ -91,7 +91,7 @@ class EmbedDownloadMgr : public nsIHelperAppLauncherDialog
   private:
     /** Gets all informations about a file which is being downloaded.
     */
-    NS_METHOD GetDownloadInfo (nsIHelperAppLauncher *aLauncher, nsISupports *aContext);
+    NS_METHOD GetDownloadInfo(nsIHelperAppLauncher *aLauncher, nsISupports *aContext);
 
     EmbedDownload *mDownload;
 };

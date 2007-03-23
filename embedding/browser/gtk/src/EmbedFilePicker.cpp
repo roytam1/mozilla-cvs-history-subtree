@@ -144,14 +144,15 @@ NS_IMETHODIMP EmbedFilePicker::GetFile(nsILocalFile **aFile)
   localfile = do_QueryInterface(file, &rv);
 
   if (NS_SUCCEEDED(rv)) {
-    NS_ADDREF (*aFile = localfile);
+    NS_ADDREF(*aFile = localfile);
     return NS_OK;
   }
 
   NS_ENSURE_TRUE(mParent, NS_OK);
-  GtkWidget* parentWidget = GetGtkWidgetForDOMWindow (mParent);
+  GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(mParent);
   NS_ENSURE_TRUE(parentWidget, NS_OK);
-  g_signal_emit_by_name(GTK_OBJECT (parentWidget), "alert", "File protocol not supported.", NULL);
+  /* XXX this message isn't really sure what it's trying to say */
+  g_signal_emit_by_name(GTK_OBJECT(parentWidget), "alert", "File protocol not supported.", NULL);
   return NS_OK;
 }
 
@@ -159,11 +160,13 @@ NS_IMETHODIMP EmbedFilePicker::GetFile(nsILocalFile **aFile)
 NS_IMETHODIMP EmbedFilePicker::GetFileURL(nsIFileURL **aFileURL)
 {
   NS_ENSURE_ARG_POINTER(aFileURL);
+  *aFileURL = nsnull;
+
   nsCOMPtr<nsILocalFile> file;
-  GetFile (getter_AddRefs(file));
-  NS_ENSURE_TRUE (file, NS_ERROR_FAILURE);
-  nsCOMPtr<nsIFileURL> fileURL = do_CreateInstance (NS_STANDARDURL_CONTRACTID);
-  NS_ENSURE_TRUE (fileURL, NS_OK);
+  GetFile(getter_AddRefs(file));
+  NS_ENSURE_TRUE(file, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIFileURL> fileURL = do_CreateInstance(NS_STANDARDURL_CONTRACTID);
+  NS_ENSURE_TRUE(fileURL, NS_ERROR_OUT_OF_MEMORY);
   fileURL->SetFile(file);
   NS_ADDREF(*aFileURL = fileURL);
   return NS_OK;
@@ -181,18 +184,18 @@ NS_IMETHODIMP EmbedFilePicker::Show(PRInt16 *_retval)
   NS_ENSURE_ARG_POINTER(_retval);
   NS_ENSURE_TRUE(mParent, NS_OK);
 
-  GtkWidget *parentWidget = GetGtkWidgetForDOMWindow (mParent);
+  GtkWidget *parentWidget = GetGtkWidgetForDOMWindow(mParent);
   NS_ENSURE_TRUE(parentWidget, NS_OK);
 
   gboolean response = 0;
   char *retname = nsnull;
-  g_signal_emit_by_name (GTK_OBJECT (parentWidget),
-                         "upload_dialog",
-                         PR_GetEnv ("HOME"),
-                         "",
-                         &retname,
-                         &response,
-                         NULL);
+  g_signal_emit_by_name(GTK_OBJECT(parentWidget),
+                        "upload_dialog",
+                        PR_GetEnv("HOME"),
+                        "",
+                        &retname,
+                        &response,
+                        NULL);
 
   *_retval = response ? nsIFilePicker::returnOK : nsIFilePicker::returnCancel;
 

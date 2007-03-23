@@ -162,6 +162,7 @@ static guint64 file_handle_write(OUTPUT_STREAM *file_handle, gpointer line)
   PRUint32 amt = 0;
   nsresult rv;
   rv = file_handle->Write((char*)line, strlen((char*)line), &amt);
+  /* XXX booleans are not equivalent to guint64 */
   return NS_SUCCEEDED(rv);
 }
 
@@ -209,7 +210,7 @@ nsresult SetIsWritten(HistoryEntry *entry)
 }
 
 // Change the entry title
-#define SET_TITLE(entry, aTitle) (entry->mTitle.Assign (aTitle))
+#define SET_TITLE(entry, aTitle) (entry->mTitle.Assign(aTitle))
 
 // Return the entry title
 #define GET_TITLE(entry) (entry && !entry->mTitle.IsEmpty() ? entry->mTitle.get() : "")
@@ -219,7 +220,7 @@ nsresult SET_URL(HistoryEntry *aEntry, const char *aUrl)
 {
   NS_ENSURE_ARG(aEntry);
   NS_ENSURE_ARG(aUrl);
-  aEntry->mUrl.Assign (aUrl);
+  aEntry->mUrl.Assign(aUrl);
   return NS_OK;
 }
 
@@ -230,13 +231,13 @@ const char* GET_URL(HistoryEntry *aEntry)
 }
 
 // Traverse the history list trying to find a frame
-int history_entry_find_exist (gconstpointer a, gconstpointer b)
+int history_entry_find_exist(gconstpointer a, gconstpointer b)
 {
   return g_ascii_strcasecmp((char*)GET_URL((HistoryEntry *)a), (char *) b);
 }
 
 // Traverse the history list looking for the correct place to add a new item
-int find_insertion_place (gconstpointer a, gconstpointer b)
+int find_insertion_place(gconstpointer a, gconstpointer b)
 {
   PRInt64 lastVisitTime = GetLastVisitTime((HistoryEntry *) a);
   PRInt64 tempTime = GetLastVisitTime((HistoryEntry *) b);
@@ -253,11 +254,11 @@ PRBool entryHasExpired(HistoryEntry *entry)
   PRInt64 expirationIntervalAgo;
   LL_SUB(expirationIntervalAgo, nowInMilliSecs, mExpirationInterval);
   PRInt64 lastVisitTime = GetLastVisitTime(entry);
-  return (LL_CMP(lastVisitTime, <, expirationIntervalAgo));
+  return LL_CMP(lastVisitTime, <, expirationIntervalAgo);
 }
 
 // Traverse the history list to get all the entry data
-void history_entry_foreach_to_remove (gpointer data, gpointer user_data)
+void history_entry_foreach_to_remove(gpointer data, gpointer user_data)
 {
   HistoryEntry *entry = (HistoryEntry *) data;
   if (entry) {
@@ -396,6 +397,14 @@ NS_IMETHODIMP EmbedGlobalHistory::Init()
   }                                                               \
   PR_END_MACRO
 
+#define ALLOC_NOT_CHECKED(newed) PR_BEGIN_MACRO               \
+  /* This might not crash, but the code probably isn't really \
+   * designed to handle it, perhaps the code should be fixed? \
+   */                                                         \
+  if (!newed) {                                               \
+  }                                                           \
+  PR_END_MACRO
+
 //*****************************************************************************
 // EmbedGlobalHistory::nsIGlobalHistory
 //*****************************************************************************
@@ -412,7 +421,7 @@ NS_IMETHODIMP EmbedGlobalHistory::AddURI(nsIURI *aURI, PRBool aRedirect, PRBool 
   nsresult rv = NS_OK;
   rv |= aURI->SchemeIs("http", &isHTTP);
   rv |= aURI->SchemeIs("https", &isHTTPS);
-  NS_ENSURE_SUCCESS (rv, NS_ERROR_FAILURE);
+  NS_ENSURE_SUCCESS(rv, NS_ERROR_FAILURE);
   // Only get valid uri schemes
   if (!isHTTP && !isHTTPS)
   {
@@ -456,15 +465,15 @@ NS_IMETHODIMP EmbedGlobalHistory::AddURI(nsIURI *aURI, PRBool aRedirect, PRBool 
   // It is not in the history
   if (!entry) {
     entry = new HistoryEntry;
-    UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(entry);
+    ALLOC_NOT_CHECKED(entry);
     rv |= OnVisited(entry);
     SET_TITLE(entry, hostname);
     rv |= SET_URL(entry, aURL);
     BROKEN_RV_HANDLING_CODE(rv);
     unsigned int listSize = g_list_length(mURLList);
     if (listSize+1 > kDefaultMaxSize) {
-      GList *last = g_list_last (mURLList);
-      mURLList = g_list_remove (mURLList, last->data);
+      GList *last = g_list_last(mURLList);
+      mURLList = g_list_remove(mURLList, last->data);
     }
     mURLList = g_list_insert_sorted(mURLList, entry,
                                     (GCompareFunc) find_insertion_place);
@@ -472,16 +481,14 @@ NS_IMETHODIMP EmbedGlobalHistory::AddURI(nsIURI *aURI, PRBool aRedirect, PRBool 
     BROKEN_RV_HANDLING_CODE(rv);
     if (++mEntriesAddedSinceFlush >= kNewEntriesBetweenFlush)
       rv |= FlushData(kFlushModeAppend);
-    // emit signal to let EAL knows a new item was added
-    //FIXME REIMP g_signal_emit_by_name (g_mozilla_get_current_web(),
-    //"global-history-item-added", aURL);
+    // At this point, something understands there's a new global history item
   } else {
     // update the last visited time
     rv |= OnVisited(entry);
     SET_TITLE(entry, hostname);
     // Move the element to the start of the list
     BROKEN_RV_HANDLING_CODE(rv);
-    mURLList = g_list_remove (mURLList, entry);
+    mURLList = g_list_remove(mURLList, entry);
     mURLList = g_list_insert_sorted(mURLList, entry, (GCompareFunc) find_insertion_place);
     // Flush after kNewEntriesBetweenFlush changes
     BROKEN_RV_HANDLING_CODE(rv);
@@ -560,7 +567,7 @@ nsresult EmbedGlobalHistory::RemoveEntries(const PRUnichar *url, int time)
 
       entry->mLastVisitTime = 0;
       delete entry;
-      mURLList = g_list_remove (mURLList, entry);
+      mURLList = g_list_remove(mURLList, entry);
     }
   } else {
     g_list_foreach (mURLList, (GFunc) history_entry_foreach_to_remove, NULL);
@@ -733,7 +740,7 @@ nsresult EmbedGlobalHistory::FlushData(PRIntn mode)
   {
     if (!file_handle_seek(mFileHandle, FALSE))
       return NS_ERROR_FAILURE;
-    if (!file_handle_truncate (mFileHandle))
+    if (!file_handle_truncate(mFileHandle))
       return NS_ERROR_FAILURE;
     WriteEntryIfWritten(mURLList, mFileHandle);
     mFlushModeFullWriteNeeded = PR_FALSE;
@@ -791,7 +798,6 @@ nsresult EmbedGlobalHistory::GetEntry(const char *entry)
   url[urlLength]='\0';
   title[titleLength]='\0';
   HistoryEntry *newEntry = new HistoryEntry;
-  UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(newEntry);
   if (!newEntry)
     return NS_ERROR_OUT_OF_MEMORY;
 
@@ -873,7 +879,7 @@ nsresult writeEntry(OUTPUT_STREAM *file_handle, HistoryEntry *entry)
   writePRInt64(time, GetLastVisitTime(entry));
   char *line = g_strdup_printf("%s%c%s%c%s%c\n", time, sep, GET_URL(entry), sep, GET_TITLE(entry), sep);
   BROKEN_STRING_BUILDER(line);
-  guint64 size = file_handle_write (file_handle, (gpointer)line);
+  guint64 size = file_handle_write(file_handle, (gpointer)line);
   if (size != strlen(line))
     rv = NS_ERROR_FAILURE;
   rv |= SetIsWritten(entry);

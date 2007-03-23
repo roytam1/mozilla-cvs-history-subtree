@@ -110,6 +110,9 @@ RemoveSchemeFromFilePath(gchar *path)
   gchar *new_path = path;
 
   if (!strncmp(path, "file://", 7)) {
+    /* XXX this should really look for the first non / after file:/ instead of
+     * assuming file://tmp v. file:///tmp
+     */
     new_path = g_strdup(path+sizeof("file:/"));
     g_free(path);
   }
@@ -155,20 +158,16 @@ EmbedDownloadMgr::Show(nsIHelperAppLauncher *aLauncher,
 
   mDownload->file_name_with_path = RemoveSchemeFromFilePath(mDownload->file_name_with_path);
 
-  aLauncher->SaveToDisk(nsnull, PR_FALSE);
-
-  return NS_OK;
+  return aLauncher->SaveToDisk(nsnull, PR_FALSE);
 }
 
 NS_METHOD
 EmbedDownloadMgr::GetDownloadInfo(nsIHelperAppLauncher *aLauncher,
                                   nsISupports *aContext)
 {
-  nsresult rv = NS_OK;
-
   /* File type */
   nsCOMPtr<nsIMIMEInfo> mimeInfo;
-  rv = aLauncher->GetMIMEInfo(getter_AddRefs(mimeInfo));
+  nsresult rv = aLauncher->GetMIMEInfo(getter_AddRefs(mimeInfo));
   if (NS_FAILED(rv))
     return NS_ERROR_FAILURE;
 
@@ -206,7 +205,7 @@ EmbedDownloadMgr::GetDownloadInfo(nsIHelperAppLauncher *aLauncher,
   mDownload->file_type = g_strdup(mimeType.get());
   mDownload->file_size = UNKNOWN_FILE_SIZE;
 
-  return rv;
+  return NS_OK;
 }
 
 NS_IMETHODIMP EmbedDownloadMgr::PromptForSaveToFile(nsIHelperAppLauncher *aLauncher,
@@ -215,35 +214,34 @@ NS_IMETHODIMP EmbedDownloadMgr::PromptForSaveToFile(nsIHelperAppLauncher *aLaunc
                                                     const PRUnichar *aSuggestedFileExtension,
                                                     nsILocalFile **_retval)
 {
-  nsresult rv;
+  *_retval = nsnull;
 
   nsCAutoString filePath;
   filePath.Assign(mDownload->file_name_with_path);
 
-  nsCOMPtr <nsILocalFile> destFile;
+  nsCOMPtr<nsILocalFile> destFile;
   NS_NewNativeLocalFile(filePath,
                         PR_TRUE,
                         getter_AddRefs(destFile));
   if (!destFile)
-    return NS_ERROR_FAILURE;
-
-  NS_ADDREF(*_retval = destFile);
+    return NS_ERROR_OUT_OF_MEMORY;
 
   /* Progress listener to follow the download and connecting it to
      the launcher which controls the download. */
   nsCOMPtr<nsIWebProgressListener2> listener = new ProgressListener(mDownload);
   if (!listener)
-    return NS_ERROR_FAILURE;
+    return NS_ERROR_OUT_OF_MEMORY;
   
-  rv = aLauncher->SetWebProgressListener(listener);
+  nsresult rv = aLauncher->SetWebProgressListener(listener);
   if (NS_FAILED(rv))
     return NS_ERROR_FAILURE;
 
+  NS_ADDREF(*_retval = destFile);
   return NS_OK;
 }
 
 /* nsIWebProgressListener Functions
-   all these methods must be here due to nsIWebProgressListenr/2 inheritance */
+   all these methods must be here due to nsIWebProgressListener/2 inheritance */
 NS_IMETHODIMP ProgressListener::OnStatusChange(nsIWebProgress *aWebProgress,
                                                nsIRequest *aRequest,
                                                nsresult aStatus,

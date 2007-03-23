@@ -59,7 +59,7 @@ class EmbedFilePicker : public nsIFilePicker
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIFILEPICKER
-  EmbedFilePicker ();
+  EmbedFilePicker();
 
 protected:
   nsIDOMWindow *mParent;

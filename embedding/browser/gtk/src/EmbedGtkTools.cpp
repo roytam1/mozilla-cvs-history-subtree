@@ -79,7 +79,7 @@ GtkWindow * GetGtkWindowForDOMWindow(nsIDOMWindow* aDOMWindow)
   return NULL;
 }
 
-nsresult GetContentViewer (nsIWebBrowser *webBrowser, nsIContentViewer **aViewer)
+nsresult GetContentViewer(nsIWebBrowser *webBrowser, nsIContentViewer **aViewer)
 {
   g_return_val_if_fail(webBrowser, NS_ERROR_FAILURE);
   nsCOMPtr<nsIDocShell> docShell(do_GetInterface((nsISupports*)webBrowser));

@@ -140,7 +140,8 @@ NS_IMETHODIMP
 GtkPromptService::Confirm(
   nsIDOMWindow* aParent,
   const PRUnichar* aDialogTitle,
-  const PRUnichar* aDialogText, PRBool* aConfirm)
+  const PRUnichar* aDialogText, 
+  PRBool* aConfirm)
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[CONFIRM], TRUE)) {
@@ -257,6 +258,20 @@ GtkPromptService::ConfirmEx(
   return NS_OK;
 }
 
+#define XXX_ALLOCATOR_MISMATCH_XPCOM_GLIB(confused) PR_BEGIN_MACRO \
+  /* There is no way that this unforunate and confused object can  \
+   * possibly be handled correctly. It started its life as an      \
+   * XPCOM allocated pointer.                                      \
+   * Then someone called it a gchar which confused it.             \
+   * Then it was passed to a random function which probably        \
+   * assumed it had ownership.                                     \
+   * Finally it was freed using g_free.                            \
+   * This pointer is seriously confused.                           \
+   * XXX please please please help this pointer find some way to   \
+   * rest in peace.                                                \
+   */                                                              \
+  PR_END_MACRO
+
 NS_IMETHODIMP
 GtkPromptService::Prompt(
   nsIDOMWindow* aParent,
@@ -269,12 +284,13 @@ GtkPromptService::Prompt(
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[PROMPT], TRUE)) {
-    gchar * aGValue = ToNewCString(NS_ConvertUTF16toUTF8(*aValue));
+    gchar * value = ToNewCString(NS_ConvertUTF16toUTF8(*aValue));
+    XXX_ALLOCATOR_MISMATCH_XPCOM_GLIB(value);
     gtk_signal_emit(GTK_OBJECT(parentWidget),
                     moz_embed_signals[PROMPT],
                     NS_ConvertUTF16toUTF8(aDialogTitle).get(),
                     NS_ConvertUTF16toUTF8(aDialogText).get(),
-                    &aGValue,
+                    &value,
                     NS_ConvertUTF16toUTF8(aCheckMsg).get(),
                     aCheckValue,
                     aConfirm,
@@ -282,9 +298,9 @@ GtkPromptService::Prompt(
     if (*aConfirm) {
       if (*aValue)
         NS_Free(*aValue);
-      *aValue = ToNewUnicode(NS_ConvertUTF8toUTF16(aGValue));
+      *aValue = ToNewUnicode(NS_ConvertUTF8toUTF16(value));
     }
-    g_free(aGValue);
+    g_free(value);
     return NS_OK;
   }
 #ifndef MOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT
@@ -325,27 +341,29 @@ GtkPromptService::PromptUsernameAndPassword(
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[PROMPT_AUTH], TRUE)) {
-    gchar * aGUsername = ToNewCString(NS_ConvertUTF16toUTF8(*aUsername));
-    gchar * aGPassword = ToNewCString(NS_ConvertUTF16toUTF8(*aPassword));
+    gchar * username = ToNewCString(NS_ConvertUTF16toUTF8(*aUsername));
+    XXX_ALLOCATOR_MISMATCH_XPCOM_GLIB(username);
+    gchar * password = ToNewCString(NS_ConvertUTF16toUTF8(*aPassword));
+    XXX_ALLOCATOR_MISMATCH_XPCOM_GLIB(password);
 
     gtk_signal_emit(GTK_OBJECT(parentWidget),
                     moz_embed_signals[PROMPT_AUTH],
                     NS_ConvertUTF16toUTF8(aDialogTitle).get(),
                     NS_ConvertUTF16toUTF8(aDialogText).get(),
-                    &aGUsername, &aGPassword,
+                    &username, &password,
                     NS_ConvertUTF16toUTF8(aCheckMsg).get(),
                     aCheckValue, aConfirm);
 
     if (*aConfirm) {
-        if (*aUsername)
-            NS_Free(*aUsername);
-        *aUsername = ToNewUnicode(NS_ConvertUTF8toUTF16(aGUsername));
-        if (*aPassword)
-            NS_Free(*aPassword);
-        *aPassword = ToNewUnicode(NS_ConvertUTF8toUTF16(aGPassword));
+      if (*aUsername)
+        NS_Free(*aUsername);
+      *aUsername = ToNewUnicode(NS_ConvertUTF8toUTF16(username));
+      if (*aPassword)
+        NS_Free(*aPassword);
+      *aPassword = ToNewUnicode(NS_ConvertUTF8toUTF16(password));
     }
-    g_free(aGUsername);
-    g_free(aGPassword);
+    g_free(username);
+    g_free(password);
     return NS_OK;
   }
 #ifndef MOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT
@@ -389,22 +407,23 @@ GtkPromptService::PromptPassword(
 {
   GtkWidget* parentWidget = GetGtkWidgetForDOMWindow(aParent);
   if (parentWidget && gtk_signal_handler_pending(parentWidget, moz_embed_signals[PROMPT_AUTH], TRUE)) {
-    gchar * aGPassword = ToNewCString(NS_ConvertUTF16toUTF8(*aPassword));
+    gchar * password = ToNewCString(NS_ConvertUTF16toUTF8(*aPassword));
+    XXX_ALLOCATOR_MISMATCH_XPCOM_GLIB(password);
     gtk_signal_emit(GTK_OBJECT(parentWidget),
                     moz_embed_signals[PROMPT_AUTH],
                     NS_ConvertUTF16toUTF8(aDialogTitle).get(),
                     NS_ConvertUTF16toUTF8(aDialogText).get(),
                     NULL,
-                    &aGPassword,
+                    &password,
                     NS_ConvertUTF16toUTF8(aCheckMsg).get(),
                     aCheckValue,
                     aConfirm);
     if (*aConfirm) {
       if (*aPassword)
         NS_Free(*aPassword);
-      *aPassword = ToNewUnicode(NS_ConvertUTF8toUTF16(aGPassword));
+      *aPassword = ToNewUnicode(NS_ConvertUTF8toUTF16(password));
     }
-    g_free(aGPassword);
+    g_free(password);
     return NS_OK;
   }
 #ifndef MOZ_NO_GECKO_UI_FALLBACK_1_8_COMPAT
@@ -488,7 +507,7 @@ GtkPromptService::CookieDialog(
 {
   /* FIXME - missing gint actions and gboolean illegal_path */
   gint actions = 1;
-  nsCString hostName (aHostname);
+  nsCString hostName(aHostname);
   nsCString aName;
   aCookie->GetName(aName);
   nsCString aValue;
@@ -501,7 +520,7 @@ GtkPromptService::CookieDialog(
   gboolean illegal_path = FALSE;
   PRUint64 aExpires;
   aCookie->GetExpires(&aExpires);
-  nsCOMPtr<nsIDOMWindow> domWindow (do_QueryInterface (aParent));
+  nsCOMPtr<nsIDOMWindow> domWindow(do_QueryInterface(aParent));
   GtkMozEmbed *parentWidget = GTK_MOZ_EMBED(GetGtkWidgetForDOMWindow(domWindow));
   GtkMozEmbedCookie *cookie_struct = g_new0(GtkMozEmbedCookie, 1);
   UNACCEPTABLE_CRASHY_GLIB_ALLOCATION(cookie_struct);
@@ -511,7 +530,7 @@ GtkPromptService::CookieDialog(
       "ask-cookie",
       cookie_struct,
       actions,
-      (const gchar *) hostName.get (),
+      (const gchar *) hostName.get(),
       (const gchar *) aName.get(),
       (const gchar *) aValue.get(),
       (const gchar *) aDomain.get(),

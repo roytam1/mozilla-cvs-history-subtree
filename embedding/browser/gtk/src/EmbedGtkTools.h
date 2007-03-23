@@ -62,6 +62,6 @@ GtkWindow*
 GetGtkWindowForDOMWindow(nsIDOMWindow* aDOMWindow);
 
 nsresult
-GetContentViewer (nsIWebBrowser *webBrowser, nsIContentViewer **aViewer);
+GetContentViewer(nsIWebBrowser *webBrowser, nsIContentViewer **aViewer);
 
 #endif /* __EmbedTools_h */

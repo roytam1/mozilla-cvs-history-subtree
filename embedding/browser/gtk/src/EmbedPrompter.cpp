@@ -39,6 +39,14 @@
 
 #include "EmbedPrompter.h"
 
+#define ALLOC_NOT_CHECKED(newed) PR_BEGIN_MACRO               \
+  /* This might not crash, but the code probably isn't really \
+   * designed to handle it, perhaps the code should be fixed? \
+   */                                                         \
+  if (!newed) {                                               \
+  }                                                           \
+  PR_END_MACRO
+
 enum {
   INCLUDE_USERNAME = 1 << 0,
   INCLUDE_PASSWORD = 1 << 1,
@@ -108,7 +116,7 @@ EmbedPrompter::Create(PromptType aType, GtkWindow* aParentWindow)
   // only add the dialog to the window group if the parent already has a window group,
   // so as not to break app's expectations about modal dialogs.
   if (aParentWindow && aParentWindow->group) {
-    gtk_window_group_add_window (aParentWindow->group, GTK_WINDOW (mWindow));
+    gtk_window_group_add_window(aParentWindow->group, GTK_WINDOW(mWindow));
   }
 
   // gtk will resize this for us as necessary
@@ -326,6 +334,7 @@ EmbedPrompter::SetItems(const PRUnichar** aItemArray, PRUint32 aCount)
 
   mItemCount = aCount;
   mItemList = new nsCString[aCount];
+  ALLOC_NOT_CHECKED(mItemList);
   for (PRUint32 i = 0; i < aCount; ++i)
     mItemList[i].Assign(NS_ConvertUTF16toUTF8(aItemArray[i]));
 }
