@@ -22,7 +22,6 @@
 #
 # Contributor(s):
 #   Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
-#   Slavomir Katuscak <slavomir.katuscak@sun.com>, Sun Microsystems
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -68,9 +67,6 @@ ssl_init()
       cd ../common
       . ./init.sh
   fi
-  if [ -z "${IOPR_SSL_SOURCED}" ]; then
-      . ../iopr/ssl_iopr.sh
-  fi
   if [ ! -r $CERT_LOG_FILE ]; then  # we need certificates here
       cd ../cert
       . ./cert.sh
@@ -78,17 +74,11 @@ ssl_init()
   SCRIPTNAME=ssl.sh
   echo "$SCRIPTNAME: SSL tests ==============================="
 
-  grep "SUCCESS: SSL passed" $CERT_LOG_FILE >/dev/null || {
+  grep "SUCCESS: SSL passed" $CERT_LOG_FILE >/dev/null &&
+  grep "SUCCESS: SSL CRL prep passed" $CERT_LOG_FILE >/dev/null || {
       html_head "SSL Test failure"
-      Exit 8 "Fatal - cert.sh needs to pass first"
+      Exit 8 "Fatal - SSL of cert.sh needs to pass first"
   }
-
-  if [ -z "$NSS_TEST_DISABLE_CRL" ] ; then
-      grep "SUCCESS: SSL CRL prep passed" $CERT_LOG_FILE >/dev/null || {
-          html_head "SSL Test failure"
-          Exit 8 "Fatal - SSL of cert.sh needs to pass first"
-      }
-  fi
 
   PORT=${PORT-8443}
 
@@ -207,7 +197,6 @@ kill_selfserv()
   echo "selfserv with PID ${PID} killed at `date`"
 
   rm ${SERVERPID}
-  html_detect_core "<TR><TD>kill_selfserv core detection step"
 }
 
 ########################### start_selfserv #############################
@@ -221,8 +210,7 @@ start_selfserv()
       echo "$SCRIPTNAME: $testname ----"
   fi
   sparam=`echo $sparam | sed -e 's;_; ;g'`
-  if [ -n "$NSS_ENABLE_ECC" ] && \
-     [ -z "$NO_ECC_CERTS" -o "$NO_ECC_CERTS" != "1"  ] ; then
+  if [ -n "$NSS_ENABLE_ECC" ] ; then
       ECC_OPTIONS="-e ${HOSTADDR}-ec"
   else
       ECC_OPTIONS=""
@@ -286,7 +274,7 @@ ssl_cov()
 
   while read ectype tls param testname
   do
-      p=`echo "$testname" | sed -e "s/_.*//"`   #sonmi, only run extended test on SSL3 and TLS
+      p=`echo "$testname" | sed -e "s/ .*//"`   #sonmi, only run extended test on SSL3 and TLS
       
       if [ "$p" = "SSL2" -a "$NORM_EXT" = "Extended Test" ] ; then
           echo "$SCRIPTNAME: skipping  $testname for $NORM_EXT"
@@ -778,9 +766,8 @@ ssl_run()
 
 #this script may be sourced from the distributed stress test - in this case do nothing...
 
-CSHORT="-c ABCDEF:0041:0084cdefgijklmnvyz"
-CLONG="-c ABCDEF:C001:C002:C003:C004:C005:C006:C007:C008:C009:C00A:C00B:C00C:C00D:C00E:C00F:C010:C011:C012:C013:C014:0041:0084cdefgijklmnvyz"
-
+CSHORT="-c ABCDEFcdefgijklmnvyz"
+CLONG="-c ABCDEF:C001:C002:C003:C004:C005:C006:C007:C008:C009:C00A:C00B:C00C:C00D:C00E:C00F:C010:C011:C012:C013:C014cdefgijklmnvyz"
 
 if [ -z  "$DO_REM_ST" -a -z  "$DO_DIST_ST" ] ; then
 
@@ -794,44 +781,18 @@ if [ -z  "$DO_REM_ST" -a -z  "$DO_DIST_ST" ] ; then
     ORIG_P_R_SERVERDIR=$P_R_SERVERDIR
     ORIG_P_R_CLIENTDIR=$P_R_CLIENTDIR
 
-    if [ -z "$NSS_TEST_DISABLE_CRL" ] ; then
-        ssl_crl_ssl
-        ssl_crl_cache
-    else
-        echo "$SCRIPTNAME: Skipping CRL Client Tests"
-    fi
+    ssl_crl_ssl
+    ssl_crl_cache
 
-    # Test all combinations of client bypass and server bypass
+    # Test all combinations of server bypass and client bypass
+    CLIENT_OPTIONS="-B -s"
+    SERVER_OPTIONS=""
+    BYPASS_STRING="Client Bypass"
+    ssl_run
+    SERVER_OPTIONS="-B -s"
+    CLIENT_OPTIONS=""
+    BYPASS_STRING="Server Bypass"
+    ssl_run
 
-    if [ -z "$NSS_TEST_DISABLE_CIPHERS" ] ; then
-	if [ -n "$NSS_TEST_DISABLE_BYPASS" ] ; then
-            SERVER_OPTIONS=""
-            CLIENT_OPTIONS=""
-            BYPASS_STRING="No Bypass"
-            ssl_run
-	fi
-
-        if [ -z "$NSS_TEST_DISABLE_BYPASS" -a -z "$NSS_TEST_DISABLE_CLIENT_BYPASS" ] ; then
-            CLIENT_OPTIONS="-B -s"
-            SERVER_OPTIONS=""
-            BYPASS_STRING="Client Bypass"
-            ssl_run
-        else
-            echo "$SCRIPTNAME: Skipping Cipher Coverage - Client Bypass Tests"
-        fi
-
-        if [ -z "$NSS_TEST_DISABLE_BYPASS" -a -z "$NSS_TEST_DISABLE_SERVER_BYPASS" ] ; then
-            SERVER_OPTIONS="-B -s"
-            CLIENT_OPTIONS=""
-            BYPASS_STRING="Server Bypass"
-            ssl_run
-        else
-            echo "$SCRIPTNAME: Skipping Cipher Coverage - Server Bypass Tests"
-        fi
-    else
-        echo "$SCRIPTNAME: Skipping Cipher Coverage Tests"
-    fi
-
-    ssl_iopr_run
     ssl_cleanup
 fi
