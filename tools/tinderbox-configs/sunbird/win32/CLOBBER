@@ -1,3 +1,4 @@
 2007-03-02 16:56 UTC - Respin to pick up fix for bug 372366
 2007-03-08 16:10 UTC - Respinning to pick up fix for bad checkin
 2007-03-22 18:35 UTC - Respin to pick up fix for missing txn manager
+2007-03-24 15:41 UTC - Respinning to fix perms on stage
