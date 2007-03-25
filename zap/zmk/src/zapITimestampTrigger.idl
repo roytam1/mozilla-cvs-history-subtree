@@ -41,21 +41,24 @@
  * \ingroup ZMK_MODULE
  */
 
-[scriptable, uuid(baa13ba7-0951-48ab-bb77-dc42b7fd6fe7)]
+[scriptable, uuid(ba8da418-45f6-4006-9261-d9fda64fe7aa)]
 interface zapITimestampTriggerCallback : nsISupports
 {
-  void trigger(in long long triggertime, in ACString triggerID);
+  void trigger(in unsigned long long triggertime,
+               in ACString opaque,
+               in ACString triggerID);
 };
 
 
 
-[scriptable, uuid(42c7f821-9424-4c89-ba51-61fdb16a5a5f)]
+[scriptable, uuid(db2fa054-3941-4e95-875c-272cfdc72a7c)]
 interface zapITimestampTrigger : nsISupports
 {
   /**
    * Instruct the timestamp-trigger to call callback that when the
    * timstamp-trigger's input stream traverses the given timestamp
-   * 'triggertime'.
+   * 'triggertime'. 'opaque' is an opaque string that will be passed
+   * along when calling the callback.
    *
    * Traversing 'triggertime' means that the timestamp-trigger sees a
    * frame with timestamp >= triggertime and the previous frame
@@ -72,7 +75,8 @@ interface zapITimestampTrigger : nsISupports
    * Will fail if called synchronously from a callback.
    */
   ACString addTrigger(in zapITimestampTriggerCallback callback,
-                      in long long triggertime,
+                      in unsigned long long triggertime,
+                      in ACString opaque,
                       in boolean oneshot);
 
   /**

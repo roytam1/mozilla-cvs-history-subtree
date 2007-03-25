@@ -63,11 +63,12 @@ public:
   zapTriggerDescriptor(PRUint64 _triggertime,
                        zapITimestampTriggerCallback* _callback,
                        const nsACString &_id,
+                       const nsACString &_opaque,
                        PRBool _oneshot,
                        zapTimestampTriggerNode* _prev,
                        zapTimestampTriggerNode* _next)
       : triggertime(_triggertime), callback(_callback),
-        id(_id), oneshot(_oneshot)
+        id(_id), opaque(_opaque), oneshot(_oneshot)
   {
     type = TRIGGER;
     prev = _prev;
@@ -79,6 +80,7 @@ public:
   PRUint64 triggertime;
   nsCOMPtr<zapITimestampTriggerCallback> callback;
   nsCString id;
+  nsCString opaque;
   PRBool oneshot;  
 };
 
@@ -110,10 +112,11 @@ NS_INTERFACE_MAP_END_INHERITING(zapFilterNode)
 //----------------------------------------------------------------------
 // zapITimestampTrigger methods:
 
-/* ACString addTrigger (in zapITimestampTriggerCallback callback, in long long triggertime, in boolean oneshot); */
+/* ACString addTrigger (in zapITimestampTriggerCallback callback, in unsigned long long triggertime, in ACString opaque, in boolean oneshot); */
 NS_IMETHODIMP
 zapTimestampTrigger::AddTrigger(zapITimestampTriggerCallback *callback,
-                                PRInt64 triggertime,
+                                PRUint64 triggertime,
+                                const nsACString & opaque,
                                 PRBool oneshot, nsACString & _retval)
 {
   if (mTriggerListLocked) {
@@ -126,7 +129,7 @@ zapTimestampTrigger::AddTrigger(zapITimestampTriggerCallback *callback,
   id.AppendInt(mTriggerIdCount++);
   
   zapTriggerDescriptor *descr =
-    new zapTriggerDescriptor(triggertime, callback, id, oneshot,
+    new zapTriggerDescriptor(triggertime, callback, id, opaque, oneshot,
                              mTriggers->prev, mTriggers);
   mTriggers->prev->next = descr;
   mTriggers->prev = descr;
@@ -236,7 +239,7 @@ zapTimestampTrigger::Filter(zapIMediaFrame* input,
     node = node->next;
     if (descr->triggertime > mLastTimestamp &&
         timestamp >= descr->triggertime) {
-      descr->callback->Trigger(descr->triggertime, descr->id);
+      descr->callback->Trigger(descr->triggertime, descr->opaque, descr->id);
       if (descr->oneshot) {
         descr->prev->next = node;
         node->prev = descr->prev;
