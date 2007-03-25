@@ -359,7 +359,13 @@ EmbedWindow::GetSiteWindow(void **aSiteWindow)
 NS_IMETHODIMP
 EmbedWindow::GetVisibility(PRBool *aVisibility)
 {
-  *aVisibility = mVisibility;
+  // Work around the problem that sometimes the window
+  // is already visible even though mVisibility isn't true
+  // yet.
+  *aVisibility = mVisibility ||
+                 (!mOwner->mIsChrome &&
+                  mOwner->mOwningWidget &&
+                  GTK_WIDGET_MAPPED(mOwner->mOwningWidget));
   return NS_OK;
 }
 
