@@ -207,10 +207,11 @@ $BinaryName = 'sunbird-bin';
 
 # Release build options
 $ReleaseBuild  = 1;
+$ReleaseGroup = 'calendar';
 $LocaleProduct = "calendar";
 $shiptalkback  = 1;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "3";
 $package_creation_path = "/calendar/installer";
 # needs setting for mac + talkback:

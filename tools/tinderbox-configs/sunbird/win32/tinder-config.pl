@@ -218,10 +218,11 @@ $BinaryName = 'sunbird.exe';
 
 # Release build options
 $ReleaseBuild  = 1;
+$ReleaseGroup = 'calendar';
 $LocaleProduct = "calendar";
 $shiptalkback  = 1;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "3";
 $package_creation_path = "/calendar/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
@@ -230,8 +231,8 @@ $ssh_version   = "2";
 #$ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
-#$tbox_ftp_path = $ftp_path;
-#$tbox_url_path = $url_path;
+$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox-builds";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox-builds";
 $milestone     = "mozilla1.8";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
