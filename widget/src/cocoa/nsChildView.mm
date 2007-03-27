@@ -1809,6 +1809,12 @@ NS_IMETHODIMP nsChildView::WidgetToScreen(const nsRect& aLocalRect, nsRect& aGlo
     temp.origin.y = NSMaxY(mainScreenFrame) - temp.origin.y;
   }
   
+  // If this is rect has a size (and is not simply a point), it is important to account 
+  // for the fact that convertRect:toView:nil thought our passed-in point was in bottom-left 
+  // coords. Thus, we subtract the rect's height, to get the top-left rect's origin 
+  // where we want it.
+  temp.origin.y -= temp.size.height;
+
   ConvertCocoaToGeckoRect(temp, aGlobalRect);
   
   return NS_OK;
