@@ -2924,7 +2924,11 @@ nsDocument::AddBinding(nsIDOMElement* aContent, const nsAString& aURI)
   nsCOMPtr<nsIContent> content(do_QueryInterface(aContent));
 
   nsCOMPtr<nsIURI> uri;
-  NS_NewURI(getter_AddRefs(uri), aURI);
+  rv = NS_NewURI(getter_AddRefs(uri), aURI);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+  
   return mBindingManager->AddLayeredBinding(content, uri);
 }
 
