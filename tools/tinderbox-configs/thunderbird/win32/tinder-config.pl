@@ -140,9 +140,9 @@ $ConfigureOnly = 1;
 
 # On windows
 $LocalizationVersionFile = 'mail/config/version.txt';
-%WGetFiles = ("http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.0-candidates/rc1/thunderbird-2.0.0.0.en-US.win32.installer.exe" =>
+%WGetFiles = ("http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.0-candidates/rc1/unsigned/thunderbird-2.0.0.0.en-US.win32.installer.exe" =>
 	      "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird-installer.exe",
-        "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.0-candidates/rc1/thunderbird-2.0.0.0.en-US.win32.zip" =>
+        "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.0-candidates/rc1/unsigned/thunderbird-2.0.0.0.en-US.win32.zip" =>
 	      "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird.zip");
 
 $BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird-installer.exe";
