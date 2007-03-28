@@ -685,8 +685,55 @@ function MiniNavStartup()
    */
 
    gBrowser.addEventListener("TabClose", BrowserClosingTabs, true);
-
+   
+   
+  /*
+   * We kick the update service check after 3 minutes..
+   */
+  setTimeout("BrowserUpdateServiceCheck()",180000);
+  
+  
 }
+
+function BrowserUpdateServiceCheck() {
+ 
+ // URLs we have with the previous services..
+ // http://www.meer.net/dougt/minimo_ce/start/update.cgi
+ // http://www.mozilla.org/projects/minimo/update/latest-update.xhtml
+ 
+ try {
+	 var req = new XMLHttpRequest();
+	 req.open('GET', 'http://www.meer.net/dougt/minimo_ce/start/updateXML.cgi', true);
+	 req.onreadystatechange = function (aEvt) {
+	  if (req.readyState == 4) {
+	     if(req.status == 200) {
+	    	var docXml = req.responseXML;
+	    	var searchingElements = docXml.getElementsByTagName("update");
+	   		var updateCommand = null;
+	    		
+	   		for(var i=0;i<searchingElements.length;i++) {
+	   			updateCommand = searchingElements[i];
+			}
+				
+			if(updateCommand) {
+				var targetURL = updateCommand.getAttribute("target");
+				if (targetURL) {
+					BrowserOpenURLasTab(targetURL);		
+				}		
+			}			
+	     }
+	     else {
+	     	// failed somehow...
+	     } 
+	  }
+	 };
+	 req.send(null); 
+ } catch (i) {
+   // failed somehow...
+ }
+ 
+}
+
 
 function debug_test_f10(e) {
 
