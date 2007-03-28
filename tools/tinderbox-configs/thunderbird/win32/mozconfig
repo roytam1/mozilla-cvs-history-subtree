@@ -4,7 +4,7 @@
 #
 
 mk_add_options MOZ_CO_PROJECT=mail
-mk_add_options MOZ_CO_LOCALES=lt
+mk_add_options MOZ_CO_LOCALES=all
 mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
 mk_add_options MOZ_MAKE_FLAGS=-j1
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
