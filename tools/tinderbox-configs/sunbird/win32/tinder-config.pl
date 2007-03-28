@@ -219,6 +219,7 @@ $BinaryName = 'sunbird.exe';
 
 # Release build options
 $ReleaseBuild  = 1;
+$ReleaseGroup = 'calendar';
 $LocaleProduct = "calendar";
 $shiptalkback  = 0;
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
@@ -231,8 +232,8 @@ $ssh_user      = "cltbld";
 $ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
-$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox";
+$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox-builds";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox-builds";
 $milestone     = "mozilla1.8-l10n";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;

@@ -209,6 +209,7 @@ $BinaryName = 'sunbird-bin';
 
 # Release build options
 $ReleaseBuild  = 1;
+$ReleaseGroup = 'calendar';
 $LocaleProduct = "calendar";
 $shiptalkback  = 0;
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
