@@ -9762,6 +9762,7 @@ DoDeletingFrameSubtree(nsPresContext*  aPresContext,
       childListName = aFrame->GetAdditionalChildListName(childListIndex++);
     } while (childListName == nsLayoutAtoms::floatList    ||
              childListName == nsLayoutAtoms::absoluteList ||
+             childListName == nsLayoutAtoms::overflowOutOfFlowList ||
              childListName == nsLayoutAtoms::fixedList);
   } while (childListName);
 
