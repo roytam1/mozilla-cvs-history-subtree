@@ -3648,8 +3648,10 @@ js_SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 
             /* Don't clone a shared prototype property. */
             if (attrs & JSPROP_SHARED) {
-                JS_ASSERT(!SPROP_HAS_STUB_SETTER(sprop) ||
-                          (sprop->attrs & JSPROP_GETTER));
+                if (SPROP_HAS_STUB_SETTER(sprop) &&
+                    !(sprop->attrs & JSPROP_GETTER)) {
+                    return JS_TRUE;
+                }
                 return SPROP_SET(cx, sprop, obj, pobj, vp);
             }
 
