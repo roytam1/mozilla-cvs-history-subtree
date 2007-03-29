@@ -256,9 +256,13 @@ typedef struct JSWatchPoint {
 static JSBool
 DropWatchPoint(JSContext *cx, JSWatchPoint *wp, uintN flag)
 {
+    JSBool ok;
     JSScopeProperty *sprop;
+    JSObject *pobj;
+    JSProperty *prop;
     JSPropertyOp setter;
 
+    ok = JS_TRUE;
     wp->flags &= ~flag;
     if (wp->flags != 0)
         return JS_TRUE;
@@ -276,14 +280,31 @@ DropWatchPoint(JSContext *cx, JSWatchPoint *wp, uintN flag)
      */
     setter = js_GetWatchedSetter(cx->runtime, NULL, sprop);
     if (!setter) {
-        sprop = js_ChangeNativePropertyAttrs(cx, wp->object, sprop,
-                                             0, sprop->attrs,
-                                             sprop->getter, wp->setter);
+        ok = js_LookupProperty(cx, wp->object, sprop->id, &pobj, &prop);
+
+        /*
+         * If the property wasn't found on wp->object or didn't exist, then
+         * someone else has dealt with this sprop, and we don't need to change
+         * the property attributes.
+         */
+        if (ok && prop) {
+            if (pobj == wp->object) {
+                JS_ASSERT(OBJ_SCOPE(pobj)->object == pobj);
+
+                sprop = js_ChangeScopePropertyAttrs(cx, OBJ_SCOPE(pobj), sprop,
+                                                    0, sprop->attrs,
+                                                    sprop->getter,
+                                                    wp->setter);
+                if (!sprop)
+                    ok = JS_FALSE;
+            }
+            OBJ_DROP_PROPERTY(cx, pobj, prop);
+        }
     }
 
     js_RemoveRoot(cx->runtime, &wp->closure);
     JS_free(cx, wp);
-    return sprop != NULL;
+    return ok;
 }
 
 void
