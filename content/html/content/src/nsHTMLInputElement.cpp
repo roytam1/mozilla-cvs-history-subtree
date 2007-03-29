@@ -1033,7 +1033,7 @@ nsHTMLInputElement::MaybeSubmitForm(nsPresContext* aPresContext)
   }
   NS_ENSURE_SUCCESS(rv, rv);
             
-  nsIPresShell* shell = aPresContext->GetPresShell();
+  nsCOMPtr<nsIPresShell> shell = aPresContext->GetPresShell();
   if (shell) {
     if (submitControl) {
       // Fire the button's onclick handler and let the button handle
@@ -1493,7 +1493,7 @@ nsHTMLInputElement::HandleDOMEvent(nsPresContext* aPresContext,
       aEvent->message == NS_MOUSE_LEFT_CLICK && mType != NS_FORM_INPUT_TEXT) {
     nsUIEvent actEvent(NS_IS_TRUSTED_EVENT(aEvent), NS_UI_ACTIVATE, 1);
 
-    nsIPresShell *shell = aPresContext->GetPresShell();
+    nsCOMPtr<nsIPresShell> shell = aPresContext->GetPresShell();
     if (shell) {
       nsEventStatus status = nsEventStatus_eIgnore;
       SET_BOOLBIT(mBitField, BF_IN_INTERNAL_ACTIVATE, PR_TRUE);
@@ -1757,7 +1757,7 @@ nsHTMLInputElement::HandleDOMEvent(nsPresContext* aPresContext,
             event.originator      = this;
             nsEventStatus status  = nsEventStatus_eIgnore;
 
-            nsIPresShell *presShell = aPresContext->GetPresShell();
+            nsCOMPtr<nsIPresShell> presShell = aPresContext->GetPresShell();
 
             // If |nsIPresShell::Destroy| has been called due to
             // handling the event (base class HandleDOMEvent, above),

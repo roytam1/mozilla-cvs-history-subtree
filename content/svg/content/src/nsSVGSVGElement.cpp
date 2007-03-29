@@ -1355,7 +1355,7 @@ nsSVGSVGElement::SetCurrentScaleTranslate(float s, float x, float y)
   // now dispatch an SVGZoom event if we are the root element
   nsIDocument* doc = GetCurrentDoc();
   if (doc) {
-    nsIPresShell* presShell = doc->GetShellAt(0);
+    nsCOMPtr<nsIPresShell> presShell = doc->GetShellAt(0);
     NS_ASSERTION(presShell, "no presShell");
     if (presShell &&
         doc->GetRootContent() == NS_STATIC_CAST(nsIContent*, this)) {
@@ -1380,7 +1380,7 @@ nsSVGSVGElement::SetCurrentTranslate(float x, float y)
   // now dispatch an SVGScroll event if we are the root element
   nsIDocument* doc = GetCurrentDoc();
   if (doc) {
-    nsIPresShell* presShell = doc->GetShellAt(0);
+    nsCOMPtr<nsIPresShell> presShell = doc->GetShellAt(0);
     NS_ASSERTION(presShell, "no presShell");
     if (presShell &&
         doc->GetRootContent() == NS_STATIC_CAST(nsIContent*, this)) {

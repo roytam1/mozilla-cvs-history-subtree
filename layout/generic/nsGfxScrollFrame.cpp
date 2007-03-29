@@ -1818,7 +1818,7 @@ void
 nsGfxScrollFrameInner::FireScrollEvent()
 {
   mScrollEventQueue = nsnull;
-  nsIPresShell *presShell = mOuter->GetPresContext()->GetPresShell();
+  nsCOMPtr<nsIPresShell> presShell = mOuter->GetPresContext()->GetPresShell();
   if (!presShell)
     return;
   nsScrollbarEvent event(PR_TRUE, NS_SCROLL_EVENT, nsnull);
