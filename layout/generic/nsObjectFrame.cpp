@@ -3136,10 +3136,14 @@ nsObjectFrame::PluginNotAvailable(const char *aMimeType)
       !IsSupportedDocument(mContent, type)) {
     mIsBrokenPlugin = PR_TRUE;
 
+    nsIDocument *doc = mContent->GetDocument();
+    if (!doc) {
+      return;
+    }
+
     mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
 
-    GetParent()->ReflowDirtyChild(mContent->GetDocument()->GetShellAt(0),
-                                  this);
+    GetParent()->ReflowDirtyChild(doc->GetShellAt(0), this);
 
     // Make sure to fire the event AFTER we've finished touching out members.
 
