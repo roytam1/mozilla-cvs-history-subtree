@@ -4917,6 +4917,8 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             if (!JSVAL_IS_OBJECT(rval)) {
                 char numBuf[12];
                 JS_snprintf(numBuf, sizeof numBuf, "%u", (unsigned) i);
+
+                SAVE_SP(fp);
                 JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                                      JSMSG_BAD_SHARP_USE, numBuf);
                 ok = JS_FALSE;
