@@ -1771,7 +1771,7 @@ nsMenuFrame::OnCreate()
   
   nsresult rv = NS_OK;
 
-  nsIPresShell *shell = mPresContext->GetPresShell();
+  nsCOMPtr<nsIPresShell> shell = mPresContext->GetPresShell();
   if (shell) {
     if (child) {
       rv = shell->HandleDOMEventWithTarget(child, &event, &status);
@@ -1779,7 +1779,6 @@ nsMenuFrame::OnCreate()
     else {
       rv = shell->HandleDOMEventWithTarget(mContent, &event, &status);
     }
-    // shell may no longer be alive, don't use it here unless you keep a ref
   }
 
   if ( NS_FAILED(rv) || status == nsEventStatus_eConsumeNoDefault )
@@ -1860,7 +1859,7 @@ nsMenuFrame::OnCreated()
   GetMenuChildrenElement(getter_AddRefs(child));
   
   nsresult rv = NS_OK;
-  nsIPresShell *shell = mPresContext->GetPresShell();
+  nsCOMPtr<nsIPresShell> shell = mPresContext->GetPresShell();
   if (shell) {
     if (child) {
       rv = shell->HandleDOMEventWithTarget(child, &event, &status);
@@ -1868,7 +1867,6 @@ nsMenuFrame::OnCreated()
     else {
       rv = shell->HandleDOMEventWithTarget(mContent, &event, &status);
     }
-    // shell may no longer be alive, don't use it here unless you keep a ref
   }
 
   if ( NS_FAILED(rv) || status == nsEventStatus_eConsumeNoDefault )
@@ -1887,7 +1885,7 @@ nsMenuFrame::OnDestroy()
   GetMenuChildrenElement(getter_AddRefs(child));
   
   nsresult rv = NS_OK;
-  nsIPresShell *shell = mPresContext->GetPresShell();
+  nsCOMPtr<nsIPresShell> shell = mPresContext->GetPresShell();
   if (shell) {
     if (child) {
       rv = shell->HandleDOMEventWithTarget(child, &event, &status);
@@ -1895,7 +1893,6 @@ nsMenuFrame::OnDestroy()
     else {
       rv = shell->HandleDOMEventWithTarget(mContent, &event, &status);
     }
-    // shell may no longer be alive, don't use it here unless you keep a ref
   }
 
   if ( NS_FAILED(rv) || status == nsEventStatus_eConsumeNoDefault )
@@ -1914,7 +1911,7 @@ nsMenuFrame::OnDestroyed()
   GetMenuChildrenElement(getter_AddRefs(child));
   
   nsresult rv = NS_OK;
-  nsIPresShell *shell = mPresContext->GetPresShell();
+  nsCOMPtr<nsIPresShell> shell = mPresContext->GetPresShell();
   if (shell) {
     if (child) {
       rv = shell->HandleDOMEventWithTarget(child, &event, &status);
@@ -1922,7 +1919,6 @@ nsMenuFrame::OnDestroyed()
     else {
       rv = shell->HandleDOMEventWithTarget(mContent, &event, &status);
     }
-    // shell may no longer be alive, don't use it here unless you keep a ref
   }
 
   if ( NS_FAILED(rv) || status == nsEventStatus_eConsumeNoDefault )

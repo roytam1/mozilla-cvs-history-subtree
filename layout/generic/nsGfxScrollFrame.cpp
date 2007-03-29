@@ -1832,8 +1832,9 @@ nsGfxScrollFrameInner::FireScrollEvent()
                           NS_EVENT_FLAG_INIT, &status);
     }
   } else {
-    prescontext->PresShell()->HandleEventWithTarget(&event, mOuter, content,
-                                                    NS_EVENT_FLAG_INIT, &status);
+    nsCOMPtr<nsIPresShell> shell = prescontext->PresShell();
+    shell->HandleEventWithTarget(&event, mOuter, content, NS_EVENT_FLAG_INIT,
+                                 &status);
   }
 }
 
