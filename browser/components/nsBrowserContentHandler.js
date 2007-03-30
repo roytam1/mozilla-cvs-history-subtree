@@ -200,6 +200,9 @@ function getMostRecentWindow(aType) {
 #define BROKEN_WM_Z_ORDER
 #endif
 #endif
+#ifdef XP_OS2
+#define BROKEN_WM_Z_ORDER
+#endif
 
 // this returns the most recent non-popup browser window
 function getMostRecentBrowserWindow() {
