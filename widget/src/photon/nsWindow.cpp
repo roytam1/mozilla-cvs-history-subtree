@@ -852,8 +852,6 @@ NS_METHOD nsWindow::Move( PRInt32 aX, PRInt32 aY ) {
 	switch( mWindowType ) {
 		case eWindowType_popup:
 			{
-			PhPoint_t offset;
-
 			//
 			// Previously we looped through the disjoint parents to add up
 			// all the offsets, but now the menu offset gets passed in,
@@ -862,11 +860,6 @@ NS_METHOD nsWindow::Move( PRInt32 aX, PRInt32 aY ) {
 			QueryVisible( );
 			aX += gConsoleRect.ul.x;
 			aY += gConsoleRect.ul.y;
-
-			/* Add the Offset if the widget is offset from its parent.. */
-			PtWidgetOffset( mWidget->parent, &offset );
-			aX += offset.x;
-			aY += offset.y;
 			}
 			break;
 
