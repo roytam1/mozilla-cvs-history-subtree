@@ -160,7 +160,8 @@ void TestCanonicalizeHelper(const char* in, const char* expected)
   nsCString out, strIn(in), strExp(expected);
   nsUrlClassifierUtils utils;
   
-  utils.CanonicalizeURL(strIn, out);
+  nsresult rv = utils.CanonicalizeURL(strIn, out);
+  NS_ASSERTION(rv == NS_OK, "com didn't return NS_OK");
   CheckEquals(strExp, out);
 }
 
@@ -190,6 +191,5 @@ int main(int argc, char **argv)
   TestEnc();
   TestCanonicalize();
   printf("%d of %d tests passed\n", gPassedTests, gTotalTests);
-  // Non-zero return status signals test failure to build system.
   return (gPassedTests != gTotalTests);
 }
