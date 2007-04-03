@@ -171,10 +171,10 @@ $BuildNameExtra = 'Mozilla1.8-FS-Release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'MozillaTest';
+$BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
-$BuildTag = 'FIREFOX_2_0_0_2_RELEASE';
+$BuildTag = 'FIREFOX_2_0_0_3_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
