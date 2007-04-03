@@ -139,8 +139,11 @@ COMPONENT_LIBS += \
 	jsd \
 	$(NULL)
 
-ifdef MOZ_PLACES
+ifdef MOZ_STORAGE
 COMPONENT_LIBS += storagecomps
+endif
+
+ifdef MOZ_PLACES
 STATIC_LIBS += morkreader_s
 else
 COMPONENT_LIBS += \
