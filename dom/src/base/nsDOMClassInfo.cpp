@@ -8146,8 +8146,13 @@ nsHTMLDocumentSH::DocumentAllTagsNewResolve(JSContext *cx, JSObject *obj,
 
     JSString *str = JSVAL_TO_STRING(id);
 
+    JSObject *proto = ::JS_GetPrototype(cx, obj);
+    if (NS_UNLIKELY(!proto)) {
+      return JS_TRUE;
+    }
+
     JSBool found;
-    if (!::JS_HasUCProperty(cx, ::JS_GetPrototype(cx, obj),
+    if (!::JS_HasUCProperty(cx, proto,
                             ::JS_GetStringChars(str),
                             ::JS_GetStringLength(str), &found)) {
       return JS_FALSE;
@@ -8973,6 +8978,9 @@ nsHTMLExternalObjSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
                                  jsval *vp, PRBool *_retval)
 {
   JSObject *pi_obj = ::JS_GetPrototype(cx, obj);
+  if (NS_UNLIKELY(!pi_obj)) {
+    return NS_OK;
+  }
 
   const jschar *id_chars = nsnull;
   size_t id_length = 0;
@@ -9015,6 +9023,9 @@ nsHTMLExternalObjSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
                                  jsval *vp, PRBool *_retval)
 {
   JSObject *pi_obj = ::JS_GetPrototype(cx, obj);
+  if (NS_UNLIKELY(!pi_obj)) {
+    return NS_OK;
+  }
 
   const jschar *id_chars = nsnull;
   size_t id_length = 0;
