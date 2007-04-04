@@ -1233,6 +1233,20 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
         goto bad;
     }
 
+    if (xdr->mode == JSXDR_DECODE) {
+        fun->interpreted = JS_TRUE;
+        fun->flags = (uint8) flagsword;
+        fun->nregexps = (uint16) (flagsword >> 16);
+
+        *objp = fun->object;
+        if (atomstr) {
+            /* XXX only if this was a top-level function! */
+            fun->atom = js_AtomizeString(cx, atomstr, 0);
+            if (!fun->atom)
+                goto bad;
+        }
+    }
+
     /* do arguments and local vars */
     if (fun->object) {
         n = fun->nargs + fun->nvars;
@@ -1338,21 +1352,8 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
     if (!js_XDRScript(xdr, &fun->u.script, NULL))
         goto bad;
 
-    if (xdr->mode == JSXDR_DECODE) {
-        fun->interpreted = JS_TRUE;
-        fun->flags = (uint8) flagsword;
-        fun->nregexps = (uint16) (flagsword >> 16);
-
-        *objp = fun->object;
-        if (atomstr) {
-            /* XXX only if this was a top-level function! */
-            fun->atom = js_AtomizeString(cx, atomstr, 0);
-            if (!fun->atom)
-                goto bad;
-        }
-
+    if (xdr->mode == JSXDR_DECODE)
         js_CallNewScriptHook(cx, fun->u.script, fun);
-    }
 
 out:
     JS_POP_TEMP_ROOT(cx, &tvr);
