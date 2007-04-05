@@ -5405,6 +5405,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
           END_LITOPX_CASE
 
           case JSOP_GETFUNNS:
+            SAVE_SP(fp);
             ok = js_GetFunctionNamespace(cx, &rval);
             if (!ok)
                 goto out;
