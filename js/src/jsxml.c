@@ -1466,7 +1466,7 @@ ParseNodeToQName(JSContext *cx, JSParseNode *pn, JSXMLArray *inScopeNSes,
                     break;
                 }
             }
-            prefix = NULL;
+            prefix = IS_EMPTY(uri) ? cx->runtime->emptyString : NULL;
         }
         localName = str;
     }
