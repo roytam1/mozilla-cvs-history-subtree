@@ -87,8 +87,9 @@ static NS_DEFINE_IID(kIPluginStreamListenerIID, NS_IPLUGINSTREAMLISTENER_IID);
 ///////////////////////////////////////////////////////////////////////////////
 // ns4xPluginStreamListener Methods
 
-NS_IMPL_ISUPPORTS2(ns4xPluginStreamListener, nsIPluginStreamListener,
-                   nsITimerCallback)
+NS_IMPL_ISUPPORTS4(ns4xPluginStreamListener, nsIPluginStreamListener,
+                   nsITimerCallback, nsIHTTPHeaderListener,
+                   nsIHTTPHeaderListener_MOZILLA_1_8_BRANCH)
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -105,7 +106,8 @@ ns4xPluginStreamListener::ns4xPluginStreamListener(nsIPluginInstance* inst,
     mStreamStarted(PR_FALSE),
     mStreamCleanedUp(PR_FALSE),
     mCallNotify(PR_FALSE),
-    mIsSuspended(PR_FALSE)
+    mIsSuspended(PR_FALSE),
+    mResponseHeaderBuf(nsnull)
 {
   // Initialize the 4.x interface structure
   memset(&mNPStream, 0, sizeof(mNPStream));
@@ -152,6 +154,9 @@ ns4xPluginStreamListener::~ns4xPluginStreamListener(void)
 
   if (mNotifyURL)
     PL_strfree(mNotifyURL);
+
+  if (mResponseHeaderBuf)
+    PL_strfree(mResponseHeaderBuf);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -268,6 +273,11 @@ ns4xPluginStreamListener::OnStartBinding(nsIPluginStreamInfo* pluginInfo)
   pluginInfo->GetLastModified((PRUint32*)&(mNPStream.lastmodified));
   pluginInfo->IsSeekable(&seekable);
   pluginInfo->GetContentType(&contentType);
+  
+  if (!mResponseHeaders.IsEmpty()) {
+    mResponseHeaderBuf = PL_strdup(mResponseHeaders.get());
+    mNPStream.headers = mResponseHeaderBuf;
+  }
 
   mStreamInfo = pluginInfo;
 
@@ -750,6 +760,27 @@ ns4xPluginStreamListener::Notify(nsITimer *aTimer)
     StopDataPump();
   }
 
+  return NS_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+NS_IMETHODIMP
+ns4xPluginStreamListener::StatusLine(const char* line)
+{
+  mResponseHeaders.Append(line);
+  mResponseHeaders.Append('\n');
+  return NS_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+NS_IMETHODIMP
+ns4xPluginStreamListener::NewResponseHeader(const char* headerName,
+                                            const char* headerValue)
+{
+  mResponseHeaders.Append(headerName);
+  mResponseHeaders.Append(": ");
+  mResponseHeaders.Append(headerValue);
+  mResponseHeaders.Append('\n');
   return NS_OK;
 }
 
