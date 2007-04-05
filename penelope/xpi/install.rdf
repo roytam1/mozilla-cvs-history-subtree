@@ -4,7 +4,7 @@ xmlns="http://www.mozilla.org/2004/em-rdf#">
   <rdf:Description rdf:about="urn:mozilla:install-manifest">
     <id>{D1D37B8A-4F3C-11DB-8373-B622A1EF5492}</id>
     <name>penelope</name>
-    <version>0.1a14</version>
+    <version>0.1a15</version>
     <creator>QUALCOMM incorporated</creator>
     <developer>Mark Charlebois</developer>
     <homepageURL>http://www.mozilla.org/penelope/</homepageURL>
