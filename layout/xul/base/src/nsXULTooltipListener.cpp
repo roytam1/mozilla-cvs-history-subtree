@@ -75,15 +75,25 @@ nsXULTooltipListener::nsXULTooltipListener()
   , mLastTreeRow(-1)
 #endif
 {
+  if (sTooltipListenerCount++ == 0) {
+    // register the callback so we get notified of updates
+    nsContentUtils::RegisterPrefCallback("browser.chrome.toolbar_tips",
+                                         ToolbarTipsPrefChanged, nsnull);
+
+    // Call the pref callback to initialize our state.
+    ToolbarTipsPrefChanged("browser.chrome.toolbar_tips", nsnull);
+  }
 }
 
 nsXULTooltipListener::~nsXULTooltipListener()
 {
   HideTooltip();
 
-  // Unregister our pref observer
-  nsContentUtils::UnregisterPrefCallback("browser.chrome.toolbar_tips",
-                                         ToolbarTipsPrefChanged, this);
+  if (--sTooltipListenerCount == 0) {
+    // Unregister our pref observer
+    nsContentUtils::UnregisterPrefCallback("browser.chrome.toolbar_tips",
+                                           ToolbarTipsPrefChanged, nsnull);
+  }
 }
 
 NS_IMPL_ADDREF(nsXULTooltipListener)
@@ -271,6 +281,7 @@ nsXULTooltipListener::PopupHiding(nsIDOMEvent* aEvent)
 //// nsXULTooltipListener
 
 PRBool nsXULTooltipListener::sShowTooltips = PR_FALSE;
+PRUint32 nsXULTooltipListener::sTooltipListenerCount = 0;
 
 // XXX: This could all be done in the ctor.
 nsresult
@@ -285,14 +296,6 @@ nsXULTooltipListener::Init(nsIContent* aSourceNode, nsIRootBox* aRootBox)
   // case handling to do
   mIsSourceTree = mSourceNode->Tag() == nsXULAtoms::treechildren;
 #endif
-
-  // get the initial value of the pref
-  sShowTooltips =
-    nsContentUtils::GetBoolPref("browser.chrome.toolbar_tips", sShowTooltips);
-
-  // register the callback so we get notified of updates
-  nsContentUtils::RegisterPrefCallback("browser.chrome.toolbar_tips",
-                                       ToolbarTipsPrefChanged, this);
 
   return NS_OK;
 }
