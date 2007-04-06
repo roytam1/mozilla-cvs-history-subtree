@@ -4181,7 +4181,7 @@ GetProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     if (listobj) {
         roots[1] = OBJECT_TO_JSVAL(listobj);
         tvr.count++;
-        
+
         list = (JSXML *) JS_GetPrivate(cx, listobj);
         attributes = (OBJ_GET_CLASS(cx, nameqn->object) ==
                       &js_AttributeNameClass);
@@ -4456,7 +4456,9 @@ PutProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
                 if (parent) {
                     /* 2(e)(i). */
-                    parentobj = parent->object;
+                    parentobj = js_GetXMLObject(cx, parent);
+                    if (!parentobj)
+                        goto bad;
                     ok = PutProperty(cx, parentobj, id, vp);
                     if (!ok)
                         goto out;
