@@ -1287,7 +1287,7 @@ js_InternalInvoke(JSContext *cx, JSObject *obj, jsval fval, uintN flags,
 
         /*
          * Store *rval in the a scoped local root if a scope is open, else in
-         * the cx->lastInternalResult pigeon-hole GC root, solely so users of
+         * the lastInternalResult pigeon-hole GC root, solely so users of
          * js_InternalInvoke and its direct and indirect (js_ValueToString for
          * example) callers do not need to manage roots for local, temporary
          * references to such results.
@@ -1298,7 +1298,7 @@ js_InternalInvoke(JSContext *cx, JSObject *obj, jsval fval, uintN flags,
                 if (js_PushLocalRoot(cx, cx->localRootStack, *rval) < 0)
                     ok = JS_FALSE;
             } else {
-                cx->lastInternalResult = *rval;
+                cx->weakRoots.lastInternalResult = *rval;
             }
         }
     }
@@ -2325,7 +2325,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 /*
                  * Rewrite the iterator so we know to do the next case.
                  * Do this before calling the enumerator, which could
-                 * displace cx->newborn and cause GC.
+                 * displace newborn and cause GC.
                  */
                 *vp = OBJECT_TO_JSVAL(propobj);
 
@@ -3155,7 +3155,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             LOAD_BRANCH_CALLBACK(cx);
             LOAD_INTERRUPT_HANDLER(rt);
             if (!ok) {
-                cx->newborn[GCX_OBJECT] = NULL;
+                cx->weakRoots.newborn[GCX_OBJECT] = NULL;
                 goto out;
             }
 
@@ -4627,7 +4627,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             /* Restore fp->scopeChain now that obj is defined in parent. */
             fp->scopeChain = obj2;
             if (!ok) {
-                cx->newborn[GCX_OBJECT] = NULL;
+                cx->weakRoots.newborn[GCX_OBJECT] = NULL;
                 goto out;
             }
 
@@ -4702,7 +4702,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             /* Restore fp->scopeChain now that obj is defined in fp->varobj. */
             fp->scopeChain = obj2;
             if (!ok) {
-                cx->newborn[GCX_OBJECT] = NULL;
+                cx->weakRoots.newborn[GCX_OBJECT] = NULL;
                 goto out;
             }
 
@@ -4834,7 +4834,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             JS_ASSERT(sp - fp->spbase >= 1);
             lval = FETCH_OPND(-1);
             JS_ASSERT(JSVAL_IS_OBJECT(lval));
-            cx->newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(lval);
+            cx->weakRoots.newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(lval);
             break;
 
           case JSOP_INITPROP:

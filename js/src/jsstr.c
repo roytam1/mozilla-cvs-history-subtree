@@ -555,7 +555,7 @@ str_enumerate(JSContext *cx, JSObject *obj)
     str = js_ValueToString(cx, OBJECT_TO_JSVAL(obj));
     if (!str)
         return JS_TRUE;
-    cx->newborn[GCX_STRING] = (JSGCThing *) str;
+    cx->weakRoots.newborn[GCX_STRING] = (JSGCThing *) str;
 
     length = JSSTRING_LENGTH(str);
     for (i = 0; i < length; i++) {
@@ -584,7 +584,7 @@ str_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
     str = js_ValueToString(cx, OBJECT_TO_JSVAL(obj));
     if (!str)
         return JS_TRUE;
-    cx->newborn[GCX_STRING] = (JSGCThing *) str;
+    cx->weakRoots.newborn[GCX_STRING] = (JSGCThing *) str;
 
     slot = JSVAL_TO_INT(id);
     if ((size_t)slot < JSSTRING_LENGTH(str)) {

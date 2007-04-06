@@ -342,7 +342,7 @@ js_GetXMLNamespaceObject(JSContext *cx, JSXMLNamespace *ns)
     }
     obj = js_NewObject(cx, &js_NamespaceClass.base, NULL, NULL);
     if (!obj || !JS_SetPrivate(cx, obj, ns)) {
-        cx->newborn[GCX_OBJECT] = NULL;
+        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
     ns->object = obj;
@@ -607,7 +607,7 @@ js_GetXMLQNameObject(JSContext *cx, JSXMLQName *qn)
     }
     obj = js_NewObject(cx, &js_QNameClass.base, NULL, NULL);
     if (!obj || !JS_SetPrivate(cx, obj, qn)) {
-        cx->newborn[GCX_OBJECT] = NULL;
+        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
     qn->object = obj;
@@ -632,7 +632,7 @@ js_GetAttributeNameObject(JSContext *cx, JSXMLQName *qn)
 
     obj = js_NewObject(cx, &js_AttributeNameClass, NULL, NULL);
     if (!obj || !JS_SetPrivate(cx, obj, qn)) {
-        cx->newborn[GCX_OBJECT] = NULL;
+        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
 
@@ -3549,7 +3549,7 @@ Descendants(JSContext *cx, JSXML *xml, jsval id)
 
     /*
      * Protect nameqn's object and strings from GC by linking list to it
-     * temporarily.  The cx->newborn[GCX_OBJECT] GC root protects listobj,
+     * temporarily.  The newborn[GCX_OBJECT] GC root protects listobj,
      * which protects list.  Any other object allocations occuring beneath
      * DescendantsHelper use local roots.
      */
@@ -4119,7 +4119,7 @@ retry:
             return JS_FALSE;
 
         /*
-         * NB: nameqn is already protected from GC by cx->newborn[GCX_OBJECT]
+         * NB: nameqn is already protected from GC by newborn[GCX_OBJECT]
          * until listobj is created.  After that, a local root keeps listobj
          * alive, and listobj's private keeps nameqn alive via targetprop.
          */
@@ -5438,8 +5438,8 @@ xml_getMethod(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
          * value of roots[FUNCTION] since getMethod callers have a bad habit
          * of passing a pointer to unrooted local value as vp.
          */
-        cx->newborn[GCX_OBJECT] = (JSGCThing *)obj;
-        cx->lastInternalResult = roots[FUN_ROOT];
+        cx->weakRoots.newborn[GCX_OBJECT] = (JSGCThing *)obj;
+        cx->weakRoots.lastInternalResult = roots[FUN_ROOT];
     }
     JS_POP_TEMP_ROOT(cx, &tvr);
     return obj;
@@ -7623,7 +7623,7 @@ NewXMLObject(JSContext *cx, JSXML *xml)
 
     obj = js_NewObject(cx, &js_XMLClass, NULL, NULL);
     if (!obj || !JS_SetPrivate(cx, obj, xml)) {
-        cx->newborn[GCX_OBJECT] = NULL;
+        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
     METER(xml_stats.xmlobj);
@@ -8015,7 +8015,7 @@ js_GetAnyName(JSContext *cx, jsval *vp)
 
         obj = js_NewObject(cx, &js_AnyNameClass, NULL, NULL);
         if (!obj || !JS_SetPrivate(cx, obj, qn)) {
-            cx->newborn[GCX_OBJECT] = NULL;
+            cx->weakRoots.newborn[GCX_OBJECT] = NULL;
             return JS_FALSE;
         }
         qn->object = obj;
