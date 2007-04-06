@@ -1653,11 +1653,16 @@ EmitAtomIndexOp(JSContext *cx, JSOp op, jsatomid atomIndex, JSCodeGenerator *cg)
     if (atomIndex >= JS_BIT(16)) {
         mode = (js_CodeSpec[op].format & JOF_MODEMASK);
         if (op != JSOP_SETNAME) {
-            prefixOp = (mode == JOF_NAME)
+            prefixOp = ((mode != JOF_NAME && mode != JOF_PROP) ||
+#if JS_HAS_XML_SUPPORT
+                        op == JSOP_GETMETHOD ||
+                        op == JSOP_SETMETHOD ||
+#endif
+                        op == JSOP_SETCONST)
+                       ? JSOP_LITOPX
+                       : (mode == JOF_NAME)
                        ? JSOP_FINDNAME
-                       : (mode == JOF_PROP)
-                       ? JSOP_LITERAL
-                       : JSOP_LITOPX;
+                       : JSOP_LITERAL;
             off = js_EmitN(cx, cg, prefixOp, 3);
             if (off < 0)
                 return JS_FALSE;
@@ -1690,7 +1695,14 @@ EmitAtomIndexOp(JSContext *cx, JSOp op, jsatomid atomIndex, JSCodeGenerator *cg)
             ReportStatementTooLarge(cx, cg);
             return JS_FALSE;
 #endif
-          default:              JS_ASSERT(mode == 0); break;
+          default:
+#if JS_HAS_XML_SUPPORT
+            JS_ASSERT(mode == 0 || op == JSOP_SETCONST ||
+                      op == JSOP_GETMETHOD || op == JSOP_SETMETHOD);
+#else
+            JS_ASSERT(mode == 0 || op == JSOP_SETCONST);
+#endif
+            break;
         }
 
         return js_Emit1(cx, cg, op) >= 0;
