@@ -624,16 +624,15 @@ js_ComputeThis(JSContext *cx, JSObject *thisp, jsval *argv)
 
 static JSBool
 NoSuchMethod(JSContext *cx, JSStackFrame *fp, jsval *vp, uint32 flags,
-             uintN *argcp)
+             uintN argc)
 {
-    jsval v, *sp, *newsp;
     JSObject *thisp, *argsobj;
+    jsval *sp, roots[3];
+    JSTempValueRooter tvr;
     jsid id;
+    JSBool ok;
     jsbytecode *pc;
     jsatomid atomIndex;
-    JSAtom *atom;
-    uintN argc;
-    JSArena *a;
 
     /*
      * We must call js_ComputeThis here to censor Call objects.  A performance
@@ -662,6 +661,11 @@ NoSuchMethod(JSContext *cx, JSStackFrame *fp, jsval *vp, uint32 flags,
     thisp = js_ComputeThis(cx, thisp, vp + 2);
     if (!thisp)
         return JS_FALSE;
+    vp[1] = OBJECT_TO_JSVAL(thisp);
+
+    /* From here on, control must flow through label out: to return. */
+    memset(roots, 0, sizeof roots);
+    JS_PUSH_TEMP_ROOT(cx, JS_ARRAY_LENGTH(roots), roots, &tvr);
 
     id = ATOM_TO_JSID(cx->runtime->atomState.noSuchMethodAtom);
 #if JS_HAS_XML_SUPPORT
@@ -669,18 +673,21 @@ NoSuchMethod(JSContext *cx, JSStackFrame *fp, jsval *vp, uint32 flags,
         JSXMLObjectOps *ops;
 
         ops = (JSXMLObjectOps *) thisp->map->ops;
-        thisp = ops->getMethod(cx, thisp, id, &v);
-        if (!thisp)
-            return JS_FALSE;
+        thisp = ops->getMethod(cx, thisp, id, &roots[2]);
+        if (!thisp) {
+            ok = JS_FALSE;
+            goto out;
+        }
         vp[1] = OBJECT_TO_JSVAL(thisp);
     } else
 #endif
     {
-        if (!OBJ_GET_PROPERTY(cx, thisp, id, &v))
-            return JS_FALSE;
+        ok = OBJ_GET_PROPERTY(cx, thisp, id, &roots[2]);
+        if (!ok)
+            goto out;
     }
-    if (JSVAL_IS_PRIMITIVE(v))
-        goto bad;
+    if (JSVAL_IS_PRIMITIVE(roots[2]))
+        goto not_function;
 
     pc = (jsbytecode *) vp[-(intN)fp->script->depth];
     switch ((JSOp) *pc) {
@@ -690,55 +697,29 @@ NoSuchMethod(JSContext *cx, JSStackFrame *fp, jsval *vp, uint32 flags,
       case JSOP_GETMETHOD:
 #endif
         atomIndex = GET_ATOM_INDEX(pc);
-        atom = js_GetAtom(cx, &fp->script->atomMap, atomIndex);
-        argc = *argcp;
+        roots[0] = ATOM_KEY(js_GetAtom(cx, &fp->script->atomMap, atomIndex));
         argsobj = js_NewArrayObject(cx, argc, vp + 2);
-        if (!argsobj)
-            return JS_FALSE;
-
-        sp = vp + 4;
-        if (argc < 2) {
-            a = cx->stackPool.current;
-            if ((jsuword)sp > a->limit) {
-                /*
-                 * Arguments must be contiguous, and must include argv[-1]
-                 * and argv[-2], so allocate more stack, advance sp, and
-                 * set newsp[1] to thisp (vp[1]).  The other argv elements
-                 * will be set below, using negative indexing from sp.
-                 */
-                newsp = js_AllocRawStack(cx, 4, NULL);
-                if (!newsp)
-                    return JS_FALSE;
-                newsp[1] = OBJECT_TO_JSVAL(thisp);
-                sp = newsp + 4;
-            } else if ((jsuword)sp > a->avail) {
-                /*
-                 * Inline, optimized version of JS_ARENA_ALLOCATE to claim
-                 * the small number of words not already allocated as part
-                 * of the caller's operand stack.
-                 */
-                JS_ArenaCountAllocation(&cx->stackPool,
-                                        (jsuword)sp - a->avail);
-                a->avail = (jsuword)sp;
-            }
+        if (!argsobj) {
+            ok = JS_FALSE;
+            goto out;
         }
-
-        sp[-4] = v;
-        JS_ASSERT(sp[-3] == OBJECT_TO_JSVAL(thisp));
-        sp[-2] = ATOM_KEY(atom);
-        sp[-1] = OBJECT_TO_JSVAL(argsobj);
-        SAVE_SP(fp);
-        *argcp = 2;
+        roots[1] = OBJECT_TO_JSVAL(argsobj);
+        ok = js_InternalInvoke(cx, thisp, roots[2], flags | JSINVOKE_INTERNAL,
+                               2, roots, &vp[0]);
         break;
 
       default:
-        goto bad;
+        goto not_function;
     }
-    return JS_TRUE;
 
-bad:
+  out:
+    JS_POP_TEMP_ROOT(cx, &tvr);
+    return ok;
+
+  not_function:
     js_ReportIsNotFunction(cx, vp, flags & JSINVOKE_FUNFLAGS);
-    return JS_FALSE;
+    ok = JS_FALSE;
+    goto out;
 }
 
 #endif /* JS_HAS_NO_SUCH_METHOD */
@@ -1140,16 +1121,14 @@ js_Invoke(JSContext *cx, uintN argc, uintN flags)
      */
     if (JSVAL_IS_PRIMITIVE(v)) {
 #if JS_HAS_NO_SUCH_METHOD
-        if (!fp->script || (flags & JSINVOKE_INTERNAL))
-            goto bad;
-        ok = NoSuchMethod(cx, fp, vp, flags, &argc);
-        if (!ok)
+        if (fp->script && !(flags & JSINVOKE_INTERNAL)) {
+            ok = NoSuchMethod(cx, fp, vp, flags, argc);
+            if (ok)
+                frame.rval = *vp;
             goto out2;
-        RESTORE_SP(fp);
-        v = *vp;
-#else
-        goto bad;
+        }
 #endif
+        goto bad;
     }
 
     /* Load thisv after potentially calling NoSuchMethod, which may set it. */
@@ -3780,16 +3759,6 @@ interrupt:
             vp = sp - (argc + 2);
             lval = *vp;
             SAVE_SP_AND_PC(fp);
-#if JS_HAS_NO_SUCH_METHOD
-            if (JSVAL_IS_PRIMITIVE(lval)) {
-                ok = NoSuchMethod(cx, fp, vp, 0, &argc);
-                if (!ok)
-                    goto out;
-                RESTORE_SP(fp);
-                lval = *vp;
-            }
-#endif
-
             if (VALUE_IS_FUNCTION(cx, lval) &&
                 (obj = JSVAL_TO_OBJECT(lval),
                  fun = (JSFunction *) JS_GetPrivate(cx, obj),
