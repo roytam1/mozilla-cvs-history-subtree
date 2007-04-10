@@ -116,7 +116,7 @@ PERL_VERSION=5.006
 QT_VERSION=3.2.0
 QT_VERSION_NUM=320
 LIBART_VERSION=2.3.4
-CAIRO_VERSION=0.9.1
+CAIRO_VERSION=1.4.2
 GLITZ_VERSION=0.4.0
 GTK2_VERSION=1.3.7
 MAKE_VERSION=3.78
@@ -2097,7 +2097,7 @@ case "$target" in
     IMPORT_LIB_SUFFIX=lib
     DSO_PIC_CFLAGS=
     TARGET_MD_ARCH=os2
-    _PLATFORM_DEFAULT_TOOLKIT=os2
+    _PLATFORM_DEFAULT_TOOLKIT="cairo-os2"
     MOZ_ENABLE_POSTSCRIPT=
     RC=rc.exe
     RCFLAGS='-n'
@@ -2887,7 +2887,7 @@ else
     AC_CHECK_LIB(Xext, XShmCreateImage, _HAVE_XSHM_XEXT=1,,
         $XLIBS $XEXT_LIBS)
     AC_CHECK_HEADER(X11/extensions/XShm.h)
-    if test -n "$ac_cv_header_X11_extensions_XShm_h" &&
+    if test "$ac_cv_header_X11_extensions_XShm_h" = "yes" &&
         test -n "$_HAVE_XSHM_XEXT"; then
         AC_DEFINE(HAVE_XSHM)
     fi
@@ -4545,25 +4545,18 @@ MOZ_ARG_HEADER(Toolkit Options)
 	[  --enable-default-toolkit=TK
                           Select default toolkit
                           Platform specific defaults:
-                            BeOS - beos
-                            Mac OS X - mac (carbon)
+                            BeOS - cairo-beos
+                            Mac OS X - cairo-cocoa
                             Neutrino/QNX - photon
-                            OS/2 - os2
-                            Win32 - windows
-                            * - gtk],
+                            OS/2 - cairo-os2
+                            Win32 - cairo-windows
+                            WinCE - windows
+                            * - cairo-gtk2],
     [ _DEFAULT_TOOLKIT=$enableval ],
     [ _DEFAULT_TOOLKIT=$_PLATFORM_DEFAULT_TOOLKIT])
 
-    if test "$_DEFAULT_TOOLKIT" = "gtk" \
-        -o "$_DEFAULT_TOOLKIT" = "qt" \
-        -o "$_DEFAULT_TOOLKIT" = "gtk2" \
-        -o "$_DEFAULT_TOOLKIT" = "xlib" \
-        -o "$_DEFAULT_TOOLKIT" = "os2" \
-        -o "$_DEFAULT_TOOLKIT" = "beos" \
+    if test "$_DEFAULT_TOOLKIT" = "qt" \
         -o "$_DEFAULT_TOOLKIT" = "photon" \
-        -o "$_DEFAULT_TOOLKIT" = "mac" \
-        -o "$_DEFAULT_TOOLKIT" = "windows" \
-        -o "$_DEFAULT_TOOLKIT" = "cocoa" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-windows" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-gtk2" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-beos" \
@@ -4577,9 +4570,9 @@ MOZ_ARG_HEADER(Toolkit Options)
         MOZ_WIDGET_TOOLKIT=`echo "$_DEFAULT_TOOLKIT" | sed -e "s/,.*$//"`
     else
         if test "$no_x" != "yes"; then
-            AC_MSG_ERROR([Toolkit must be xlib, gtk, gtk2 or qt.])
+            AC_MSG_ERROR([Toolkit must be cairo-xlib, cairo-gtk2, or qt.])
         else
-            AC_MSG_ERROR([Toolkit must be $_PLATFORM_DEFAULT_TOOLKIT or cairo-$_PLATFORM_DEFAULT_TOOLKIT (if supported).])
+            AC_MSG_ERROR([Toolkit must be $_PLATFORM_DEFAULT_TOOLKIT (if supported).])
         fi
     fi
 
@@ -4590,38 +4583,6 @@ dnl = Enable the toolkit as needed                         =
 dnl ========================================================
 
 case "$MOZ_WIDGET_TOOLKIT" in
-gtk)
-	MOZ_ENABLE_GTK=1
-    MOZ_ENABLE_XREMOTE=1
-    if test "$_HAVE_FREETYPE2"; then
-        MOZ_ENABLE_FREETYPE2=1
-    fi
-    MOZ_ENABLE_XPRINT=1
-    TK_CFLAGS='$(MOZ_GTK_CFLAGS)'
-    TK_LIBS='$(MOZ_GTK_LDFLAGS)'
-	AC_DEFINE(MOZ_WIDGET_GTK)
-    ;;
-
-gtk2)
-    MOZ_ENABLE_GTK2=1
-    MOZ_ENABLE_XREMOTE=1
-    MOZ_ENABLE_COREXFONTS=${MOZ_ENABLE_COREXFONTS-}
-    TK_CFLAGS='$(MOZ_GTK2_CFLAGS)'
-    TK_LIBS='$(MOZ_GTK2_LIBS)'
-    AC_DEFINE(MOZ_WIDGET_GTK2)
-    ;;
-
-xlib)
-	MOZ_ENABLE_XLIB=1
-    if test "$_HAVE_FREETYPE2"; then
-        MOZ_ENABLE_FREETYPE2=1
-    fi
-    MOZ_ENABLE_XPRINT=1
-	TK_CFLAGS='$(MOZ_XLIB_CFLAGS)'
-	TK_LIBS='$(MOZ_XLIB_LDFLAGS)'
-	AC_DEFINE(MOZ_WIDGET_XLIB)
-    ;;
-
 qt)
     MOZ_ENABLE_QT=1
     if test "$_HAVE_FREETYPE2"; then
@@ -4636,20 +4597,6 @@ qt)
 photon)
 	MOZ_ENABLE_PHOTON=1
 	AC_DEFINE(MOZ_WIDGET_PHOTON)
-    ;;
-mac|cocoa)
-    TK_LIBS='-framework Carbon'
-    TK_CFLAGS="-I${MACOS_SDK_DIR}/Developer/Headers/FlatCarbon"
-    CFLAGS="$CFLAGS $TK_CFLAGS"
-    CXXFLAGS="$CXXFLAGS $TK_CFLAGS"
-    MOZ_USER_DIR="Mozilla"
-    AC_DEFINE(XP_MACOSX)
-    AC_DEFINE(TARGET_CARBON)
-    AC_DEFINE(TARGET_API_MAC_CARBON)
-    if test "$MOZ_WIDGET_TOOLKIT" = "cocoa"; then
-        MOZ_ENABLE_COCOA=1
-        AC_DEFINE(MOZ_WIDGET_COCOA)
-    fi
     ;;
 
 cairo-windows)
@@ -5355,21 +5302,24 @@ if test -n "$MOZ_OJI"; then
 fi
 
 dnl ========================================================
-dnl = This turns on xinerama support.  We just can't use the
-dnl = autodetection of the libraries since on Red Hat 7 linking with
-dnl = Xinerama crashes the dynamic loader.  Make people turn it on
-dnl = explicitly.  The autodetection is done above in the Xlib
+dnl = Xinerama support. The autodetection is done above in the Xlib
 dnl = detection routines.
 dnl ========================================================
-MOZ_ARG_ENABLE_BOOL(xinerama,
-[  --enable-xinerama       Enable Xinerama support
-                           ( not safe for Red Hat 7.0 ) ],
-    _ENABLE_XINERAMA=1,
-    _ENABLE_XINERAMA= )
 
-if test -n "$_ENABLE_XINERAMA" -a -n "$MOZ_XINERAMA_LIBS" -a \
-    -n "$ac_cv_header_X11_extensions_Xinerama_h"; then
+if test "$MOZ_WIDGET_TOOLKIT" = "gtk2"; then
     MOZ_ENABLE_XINERAMA=1
+fi
+
+MOZ_ARG_DISABLE_BOOL(xinerama,
+[  --disable-xinerama      Disable Xinerama support],
+    MOZ_ENABLE_XINERAMA=,
+    MOZ_ENABLE_XINERAMA=1 )
+
+if test -n "$MOZ_ENABLE_XINERAMA"; then
+    if test -z "$MOZ_XINERAMA_LIBS" || \
+        test "$ac_cv_header_X11_extensions_Xinerama_h" = "no"; then
+        AC_MSG_ERROR([Cannot find Xinerama library. To build without Xinerama support, rebuild with --disable-xinerama])
+    fi
     AC_DEFINE(MOZ_ENABLE_XINERAMA)
 fi
 
@@ -7272,7 +7222,6 @@ if test "$MOZ_SVG" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_GFX" ; then
        fi
        if test "$MOZ_WIDGET_TOOLKIT" = "mac" -o "$MOZ_WIDGET_TOOLKIT" = "cocoa"; then
            QUARTZ_SURFACE_FEATURE="#define CAIRO_HAS_QUARTZ_SURFACE 1"
-           NQUARTZ_SURFACE_FEATURE="#define CAIRO_HAS_NQUARTZ_SURFACE 1"
            ATSUI_FONT_FEATURE="#define CAIRO_HAS_ATSUI_FONT 1"
        fi
        if test "$MOZ_WIDGET_TOOLKIT" = "windows"; then
