@@ -1559,9 +1559,8 @@ tools are selected during the Xcode/Developer Tools installation.])
         # Use temp file for windres (bug 213281)
         RC="$WINDRES -O coff --use-temp-file"
     else
-# don't really need cygwin_wrapper anymore
-#        CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
-        CYGWIN_WRAPPER=
+ don't really need cygwin_wrapper anymore
+        CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
         CC=cl
         CXX=cl
         LD=link
