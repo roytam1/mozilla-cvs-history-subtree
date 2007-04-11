@@ -412,7 +412,7 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
 {
   [self hideDragDestinationIndicator];
 
-  NSArray* urls;
+  NSArray* urls = nil;
   NSArray* pasteBoardTypes = [[sender draggingPasteboard] types];
   if ([pasteBoardTypes containsObject:kCaminoBookmarkListPBoardType]) {
     NSArray* bookmarkUUIDs = [[sender draggingPasteboard] propertyListForType:kCaminoBookmarkListPBoardType];
