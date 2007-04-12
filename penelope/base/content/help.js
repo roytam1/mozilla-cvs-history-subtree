@@ -38,13 +38,17 @@
 
 function penelopeHelp()
 {
+    var urlToOpen = "http://wiki.mozilla.org/Documentation_Project";
+    openSomeURL(urlToOpen)
+}
+
+function openSomeURL(url)
+{
     try 
     {
-        var urlToOpen = "http://wiki.mozilla.org/Documentation_Project";
-
         var uri = Components.classes["@mozilla.org/network/io-service;1"]
               .getService(Components.interfaces.nsIIOService)
-              .newURI(urlToOpen, null, null);
+              .newURI(url, null, null);
 
         var protocolSvc = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"]
                       .getService(Components.interfaces.nsIExternalProtocolService);

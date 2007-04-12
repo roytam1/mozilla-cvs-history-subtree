@@ -625,6 +625,4 @@ xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
   </menubar>
 
-  <menuitem id="hintsAndTips" oncommand="penelopeHelp();"/>
-
 </overlay>
