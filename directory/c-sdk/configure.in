@@ -582,7 +582,7 @@ dnl host must be specified to cross compile
 if test -n "$host" ; then
     case $target in
     *-darwin*)
-        if [ $host != $target ]; then
+        if test "$host" != "$target" ; then
             cross_compiling=yes
         fi
     ;;
