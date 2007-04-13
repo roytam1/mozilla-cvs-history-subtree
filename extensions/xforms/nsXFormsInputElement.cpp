@@ -50,6 +50,8 @@ public:
                            nsRestrictionFlag *aRestriction,
                            nsAString &aUnallowedTypes);
 
+  virtual PRBool IsContentAllowed();
+
   nsXFormsInputElement(const nsAString& aType)
     : nsXFormsDelegateStub(aType)
     {}
@@ -79,6 +81,19 @@ nsXFormsInputElement::IsTypeAllowed(PRUint16 aType, PRBool *aIsAllowed,
   return NS_OK;
 }
 
+PRBool
+nsXFormsInputElement::IsContentAllowed()
+{
+  PRBool isAllowed = PR_TRUE;
+
+  // For input and secret elements, complexContent is not allowed.
+  PRBool isComplex = IsContentComplex();
+  if (isComplex) {
+    isAllowed = PR_FALSE;
+  }
+  return isAllowed;
+}
+
 class nsXFormsTextareaElement : public nsXFormsDelegateStub
 {
 public:
@@ -86,6 +101,8 @@ public:
   NS_IMETHOD IsTypeAllowed(PRUint16 aType, PRBool *aIsAllowed,
                            nsRestrictionFlag *aRestriction,
                            nsAString &aAllowedTypes);
+
+  virtual PRBool IsContentAllowed();
 
   nsXFormsTextareaElement()
     : nsXFormsDelegateStub(NS_LITERAL_STRING("textarea"))
@@ -113,6 +130,19 @@ nsXFormsTextareaElement::IsTypeAllowed(PRUint16 aType, PRBool *aIsAllowed,
   // build the string of types that textareas can bind to
   aAllowedTypes.AssignLiteral("xsd:string");
   return NS_OK;
+}
+
+PRBool
+nsXFormsTextareaElement::IsContentAllowed()
+{
+  PRBool isAllowed = PR_TRUE;
+
+  // Textarea elements may not be bound to complexContent.
+  PRBool isComplex = IsContentComplex();
+  if (isComplex) {
+    isAllowed = PR_FALSE;
+  }
+  return isAllowed;
 }
 
 // Creators

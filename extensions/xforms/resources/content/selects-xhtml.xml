@@ -51,15 +51,6 @@
         <children/>
       </html:div>
     </content>
-
-    <implementation>
-    <!-- nsIAccessibleProvider -->
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XFormsSelectFull;
-        </getter>
-      </property>
-    </implementation>
   </binding>
 
   <!-- SELECT1: APPEARANCE FULL -->
@@ -71,15 +62,6 @@
         <children/>
       </html:div>
     </content>
-
-    <implementation>
-      <!-- nsIAccessibleProvider -->
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XFormsSelectFull;
-        </getter>
-      </property>
-    </implementation>
 
     <handlers>
       <handler event="keypress" keycode="VK_UP" preventdefault="true">
@@ -153,14 +135,6 @@
       <children/>
     </content>
 
-    <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XFormsItemCheckgroup;
-        </getter>
-      </property>
-    </implementation>
-
     <handlers>
       <handler event="click">
         if (this.disabled)
@@ -186,14 +160,6 @@
       <html:input type="radio" anonid="control"/>
       <children/>
     </content>
-
-    <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XFormsItemRadiogroup;
-        </getter>
-      </property>
-    </implementation>
 
     <handlers>
       <handler event="click">

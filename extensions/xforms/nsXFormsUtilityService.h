@@ -44,4 +44,5 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIXFORMSUTILITYSERVICE
 
+  NS_IMETHOD GetBuiltinTypeName(nsIDOMNode *aElement, nsAString& aName);
 };
