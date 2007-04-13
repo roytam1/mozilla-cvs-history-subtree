@@ -984,21 +984,22 @@ nsSVGPathFrame::GetFlattenedPath(nsSVGPathData **data,
   nsISVGChildFrame *svgParent = nsnull;
   if (useLocalTransform) {
     CallQueryInterface(mParent, &svgParent);
-    if (!svgParent)
+    // svgParent==null is ok when the path is a child of nsSVGOuterSVGFrame
+    if (!svgParent && mParent->GetType() != nsLayoutAtoms::svgOuterSVGFrame)
       return NS_ERROR_FAILURE;
   }
 
-  if (useLocalTransform)
-    svgParent->SetMatrixPropagation(PR_FALSE);
-  else
-    SetMatrixPropagation(PR_FALSE);
+  nsISVGChildFrame* matrixFrame = useLocalTransform ? svgParent : this;
+
+  if (matrixFrame) {
+    matrixFrame->SetMatrixPropagation(PR_FALSE);
+  }
 
   GetGeometry()->Flatten(data);
 
-  if (useLocalTransform)
-    svgParent->SetMatrixPropagation(PR_TRUE);
-  else
-    SetMatrixPropagation(PR_TRUE);
+  if (matrixFrame) {
+    matrixFrame->SetMatrixPropagation(PR_TRUE);
+  }
 
   return NS_OK;
 }
