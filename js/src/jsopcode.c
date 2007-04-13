@@ -2118,15 +2118,8 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
               }
 
               case JSOP_EXCEPTION:
-                /*
-                 * The only other JSOP_EXCEPTION cases occur as part of a code
-                 * sequence that follows a SRC_CATCH-annotated JSOP_ENTERBLOCK
-                 * or that precedes a SRC_HIDDEN-annotated JSOP_POP emitted
-                 * when returning from within a finally clause.
-                 */
-                sn = js_GetSrcNote(jp->script, pc);
-                LOCAL_ASSERT(sn && SN_TYPE(sn) == SRC_HIDDEN);
-                todo = -2;
+                /* The catch decompiler handles this op itself. */
+                LOCAL_ASSERT(JS_FALSE);
                 break;
 
               case JSOP_POP:
@@ -2340,7 +2333,18 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                     pc += oplen;
                     LOCAL_ASSERT(*pc == JSOP_EXCEPTION);
                     pc += JSOP_EXCEPTION_LENGTH;
-
+                    if (*pc == JSOP_DUP) {
+                        sn2 = js_GetSrcNote(jp->script, pc);
+                        if (sn2 && SN_TYPE(sn2) == SRC_HIDDEN) {
+                            /*
+                             * This is a hidden dup to save the exception for
+                             * later. It must exist only when the catch has
+                             * an exception guard.
+                             */
+                            LOCAL_ASSERT(js_GetSrcNoteOffset(sn, 0) != 0);
+                            pc += JSOP_DUP_LENGTH;
+                        }
+                    }
 #if JS_HAS_DESTRUCTURING
                     if (*pc == JSOP_DUP) {
                         pc = DecompileDestructuring(ss, pc, endpc);
