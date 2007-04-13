@@ -1795,8 +1795,15 @@ restart:
         GC_MARK(cx, acx->globalObject, "global object", NULL);
         MarkWeakRoots(cx, &acx->weakRoots);
 #if JS_HAS_EXCEPTIONS
-        if (acx->throwing && JSVAL_IS_GCTHING(acx->exception))
-            GC_MARK(cx, JSVAL_TO_GCTHING(acx->exception), "exception", NULL);
+        if (acx->throwing) {
+            if (JSVAL_IS_GCTHING(acx->exception)) {
+                GC_MARK(cx, JSVAL_TO_GCTHING(acx->exception), "exception",
+                        NULL);
+            }
+        } else {
+            /* Avoid keeping GC-ed junk stored in JSContext.exception. */
+            acx->exception = JSVAL_NULL;
+        }
 #endif
 #if JS_HAS_LVALUE_RETURN
         if (acx->rval2set && JSVAL_IS_GCTHING(acx->rval2))
