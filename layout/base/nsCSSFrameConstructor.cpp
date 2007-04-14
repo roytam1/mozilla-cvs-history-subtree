@@ -3315,7 +3315,8 @@ nsCSSFrameConstructor::GetParentFrame(nsTableCreator&          aTableCreator,
 static PRBool
 IsSpecialContent(nsIContent* aContent,
                  nsIAtom*    aTag,
-                 PRInt32     aNameSpaceID)
+                 PRInt32     aNameSpaceID,
+                 nsStyleContext* aStyleContext)
 {
   // Gross hack. Return true if this is a content node that we'd create a
   // frame for based on something other than display -- in other words if this
@@ -3445,7 +3446,10 @@ IsSpecialContent(nsIContent* aContent,
       aTag == nsMathMLAtoms::mrow_   ||
       aTag == nsMathMLAtoms::merror_ ||
       aTag == nsMathMLAtoms::none_   ||
-      aTag == nsMathMLAtoms::mprescripts_;
+      aTag == nsMathMLAtoms::mprescripts_ ||
+      (aTag == nsMathMLAtoms::mtable_ &&
+       aStyleContext->GetStyleDisplay()->mDisplay == NS_STYLE_DISPLAY_TABLE) ||
+      aTag == nsMathMLAtoms::math;
 #endif
   return PR_FALSE;
 }
@@ -3456,6 +3460,7 @@ nsCSSFrameConstructor::AdjustParentFrame(nsIContent* aChildContent,
                                          const nsStyleDisplay* aChildDisplay,
                                          nsIAtom* aTag,
                                          PRInt32 aNameSpaceID,
+                                         nsStyleContext* aChildStyle,
                                          nsIFrame* & aParentFrame,
                                          nsFrameItems* & aFrameItems,
                                          nsFrameConstructorState& aState,
@@ -3478,7 +3483,7 @@ nsCSSFrameConstructor::AdjustParentFrame(nsIContent* aChildContent,
       (!IsTableRelated(aChildDisplay->mDisplay, PR_TRUE) ||
        // Also need to create a pseudo-parent if the child is going to end up
        // with a frame based on something other than display.
-       IsSpecialContent(aChildContent, aTag, aNameSpaceID))) {
+       IsSpecialContent(aChildContent, aTag, aNameSpaceID, aChildStyle))) {
     nsTableCreator tableCreator(aState.mPresShell);
     nsresult rv = GetPseudoCellFrame(tableCreator, aState, *aParentFrame);
     if (NS_FAILED(rv)) {
@@ -5951,7 +5956,8 @@ nsCSSFrameConstructor::ConstructXULFrame(nsFrameConstructorState& aState,
 
   // don't apply xul display types to tag based frames
   if (isXULDisplay && !isXULNS) {
-    isXULDisplay = !IsSpecialContent(aContent, aTag, aNameSpaceID);
+    isXULDisplay = !IsSpecialContent(aContent, aTag, aNameSpaceID,
+                                     aStyleContext);
   }
  
   if (isXULNS || isXULDisplay) {
@@ -7008,9 +7014,7 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsFrameConstructorState& aState,
 
   // Leverage IsSpecialContent to check if one of the |if aTag| below will
   // surely match (knowing that aNameSpaceID == kNameSpaceID_MathML here)
-  if (IsSpecialContent(aContent, aTag, aNameSpaceID) ||
-      (aTag == nsMathMLAtoms::mtable_ && 
-       disp->mDisplay == NS_STYLE_DISPLAY_TABLE)) {
+  if (IsSpecialContent(aContent, aTag, aNameSpaceID, aStyleContext)) {
     // process pending pseudo frames
     if (!aHasPseudoParent && !aState.mPseudoFrames.IsEmpty()) {
       ProcessPseudoFrames(aState, aFrameItems); 
@@ -7102,12 +7106,27 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsFrameConstructorState& aState,
     nsIFrame* outerTable;
     nsIFrame* innerTable;
     nsMathMLmtableCreator mathTableCreator(mPresShell);
+    
+    // XXXbz note: since we're constructing a table frame, and it does things
+    // based on whether its parent is a pseudo or not, we need to save our
+    // pseudo state here.  This can go away if we switch to a direct
+    // construction of mtable as an inline-table.
+    nsPseudoFrames priorPseudoFrames; 
+    aState.mPseudoFrames.Reset(&priorPseudoFrames);
+
     rv = ConstructTableFrame(aState, aContent, blockFrame, tableContext,
                              mathTableCreator, PR_FALSE, tempItems, PR_FALSE,
                              outerTable, innerTable);
     // Note: table construction function takes care of initializing the frame,
     // processing children, and setting the initial child list
 
+    NS_ASSERTION(aState.mPseudoFrames.IsEmpty(),
+                 "How did we end up with pseudo-frames here?");
+
+    // restore the incoming pseudo frame state.  Note that we MUST do this
+    // before adding things to aFrameItems.
+    aState.mPseudoFrames = priorPseudoFrames;
+    
     // set the outerTable as the initial child of the anonymous block
     blockFrame->SetInitialChildList(aState.mPresContext, nsnull, outerTable);
 
@@ -7822,8 +7841,8 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsFrameConstructorState& aState,
   PRBool pseudoParent = PR_FALSE;
   nsFrameConstructorSaveState pseudoSaveState;
   nsresult rv = AdjustParentFrame(aContent, display, aTag, aNameSpaceID,
-                                  adjParentFrame, frameItems, aState, 
-                                  pseudoSaveState, pseudoParent);
+                                  styleContext, adjParentFrame, frameItems,
+                                  aState, pseudoSaveState, pseudoParent);
   
   if (NS_FAILED(rv)) {
     return rv;

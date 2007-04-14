@@ -422,6 +422,7 @@ private:
                              const nsStyleDisplay* aChildDisplay,
                              nsIAtom* aTag,
                              PRInt32 aNameSpaceID,
+                             nsStyleContext* aChildStyle,
                              nsIFrame* & aParentFrame,
                              nsFrameItems* & aFrameItems,
                              nsFrameConstructorState& aState,
