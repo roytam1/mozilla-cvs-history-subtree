@@ -1,12 +1,13 @@
 #
-## hostname: argo
-## uname: Linux argo.mozilla.org 2.4.21-32.0.1.ELsmp #1 SMP Tue May 17 17:52:23 EDT 2005 i686 i686 i386 GNU/Linux
+## hostname: fx-linux-tbox
+## uname: Linux fx-linux-tbox.build.mozilla.org 2.6.9-42.ELsmp #1 SMP Sat Aug 12 09:39:11 CDT 2006 i686 i686 i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
+$BuildXForms = "1";
 $ENV{MOZILLA_OFFICIAL} = 1;
 $ENV{CVS_RSH} = "ssh";
 #$ENV{PATH} = "/usr/gcc-3.3.2rh/bin:$ENV{PATH}";
@@ -83,7 +84,7 @@ $DHTMLPerformanceTest     = 0;  # Tdhtml
 $StartupPerformanceTest   = 0;  # Ts
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
-$GraphNameOverride        = 'argo-vm';
+$GraphNameOverride        = 'fx-linux-tbox';
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -158,7 +159,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = '';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -174,6 +175,7 @@ $BuildNameExtra = 'Nightly';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 $BuildTree  = 'Firefox';
+#$BuildTree = "MozillaTest";
 
 #$BuildName = '';
 #$BuildTag = '';
@@ -206,8 +208,8 @@ $package_creation_path = "/browser/installer";
 $ssh_version   = "2";
 $ssh_user      = "cltbld";
 $ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 $milestone     = "trunk";
