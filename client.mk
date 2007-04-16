@@ -432,7 +432,7 @@ MOZ_CO_TAG           = ZAP_20050610_BRANCH
 
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
 NSS_CO_TAG           = NSS_3_11_5_RTM
-LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
+LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
 
 #######################################################################
@@ -695,8 +695,11 @@ MOZ_MODULE_LIST_NS := $(sort $(MOZ_MODULE_LIST_NS))
 ####################################
 # Suppress standalone modules if they're not needed.
 #
+CONFIGURES := $(TOPSRCDIR)/configure
 ifeq (,$(filter mozilla/xpcom,$(MOZ_MODULE_LIST)))
   CVSCO_NSPR :=
+else
+  CONFIGURES += $(TOPSRCDIR)/nsprpub/configure
 endif
 
 ifeq (,$(filter mozilla/security/manager,$(MOZ_MODULE_LIST)))
@@ -704,6 +707,8 @@ ifeq (,$(filter mozilla/security/manager,$(MOZ_MODULE_LIST)))
 endif
 ifeq (,$(filter mozilla/directory/xpcom,$(MOZ_MODULE_LIST)))
   CVSCO_LDAPCSDK :=
+else
+  CONFIGURES += $(TOPSRCDIR)/directory/c-sdk/configure
 endif
 
 MODULES_CO_FLAGS := -P
@@ -801,8 +806,7 @@ checkout::
 ifdef RUN_AUTOCONF_LOCALLY
 	@echo "Removing local configures" ; \
 	cd $(ROOTDIR) && \
-	$(RM) -f mozilla/configure mozilla/nsprpub/configure \
-		mozilla/directory/c-sdk/configure
+	$(RM) -f $(CONFIGURES)
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
 	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
@@ -828,6 +832,10 @@ real_checkout:
 		 `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
 		touch $(TOPSRCDIR)/security/manager/.nss.checkout; \
 	fi
+ifdef RUN_AUTOCONF_LOCALLY
+	cd $(ROOTDIR) && \
+	$(RM) -f $(CONFIGURES)
+endif
 #	@: Check the log for conflicts. ;
 	@conflicts=`egrep "^C " $(CVSCO_LOGFILE)` ;\
 	if test "$$conflicts" ; then \
@@ -837,12 +845,6 @@ real_checkout:
 	  false; \
 	else true; \
 	fi
-ifdef RUN_AUTOCONF_LOCALLY
-	@echo Generating configures using $(AUTOCONF) ; \
-	cd $(TOPSRCDIR) && $(AUTOCONF) && \
-	cd $(TOPSRCDIR)/nsprpub && $(AUTOCONF) && \
-	cd $(TOPSRCDIR)/directory/c-sdk && $(AUTOCONF)
-endif
 
 fast-update:
 #	@: Backup the last checkout log.
@@ -853,8 +855,7 @@ fast-update:
 ifdef RUN_AUTOCONF_LOCALLY
 	@echo "Removing local configures" ; \
 	cd $(ROOTDIR) && \
-	$(RM) -f mozilla/configure mozilla/nsprpub/configure \
-		mozilla/directory/c-sdk/configure
+	$(RM) -f $(CONFIGURES)
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
 	@echo '$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
@@ -882,6 +883,10 @@ real_fast-update:
 	@if test `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
 		touch $(TOPSRCDIR)/security/manager/.nss.checkout; \
 	fi
+ifdef RUN_AUTOCONF_LOCALLY
+	cd $(ROOTDIR) && \
+	$(RM) -f $(CONFIGURES)
+endif
 #	@: Check the log for conflicts. ;
 	@conflicts=`egrep "^C " $(CVSCO_LOGFILE)` ;\
 	if test "$$conflicts" ; then \
@@ -891,12 +896,6 @@ real_fast-update:
 	  false; \
 	else true; \
 	fi
-ifdef RUN_AUTOCONF_LOCALLY
-	@echo Generating configures using $(AUTOCONF) ; \
-	cd $(TOPSRCDIR) && $(AUTOCONF) && \
-	cd $(TOPSRCDIR)/nsprpub && $(AUTOCONF) && \
-	cd $(TOPSRCDIR)/directory/c-sdk && $(AUTOCONF)
-endif
 
 CVSCO_LOGFILE_L10N := $(ROOTDIR)/cvsco-l10n.log
 CVSCO_LOGFILE_L10N := $(shell echo $(CVSCO_LOGFILE_L10N) | sed s%//%/%)
@@ -1024,6 +1023,14 @@ EXTRA_CONFIG_DEPS := \
 $(TOPSRCDIR)/configure: $(TOPSRCDIR)/configure.in $(EXTRA_CONFIG_DEPS)
 	@echo Generating $@ using autoconf
 	cd $(TOPSRCDIR); $(AUTOCONF)
+
+$(TOPSRCDIR)/nsprpub/configure: $(TOPSRCDIR)/nsprpub/configure.in $(EXTRA_CONFIG_DEPS)
+	@echo Generating $@ using autoconf
+	cd $(TOPSRCDIR)/nsprpub; $(AUTOCONF)
+
+$(TOPSRCDIR)/directory/c-sdk/configure: $(TOPSRCDIR)/directory/c-sdk/configure.in $(EXTRA_CONFIG_DEPS)
+	@echo Generating $@ using autoconf
+	cd $(TOPSRCDIR)/directory/c-sdk; $(AUTOCONF)
 endif
 
 CONFIG_STATUS_DEPS := \
@@ -1051,7 +1058,7 @@ ifdef MOZ_TOOLS
   CONFIGURE = $(TOPSRCDIR)/configure
 endif
 
-configure::
+configure:: $(CONFIGURES)
 ifdef MOZ_BUILD_PROJECTS
 	@if test ! -d $(MOZ_OBJDIR); then $(MKDIR) $(MOZ_OBJDIR); else true; fi
 endif
