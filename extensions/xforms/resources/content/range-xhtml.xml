@@ -22,6 +22,7 @@
    -
    - Contributor(s):
    -  Alexander Surkov <surkov.alexander@gmail.com> (original author)
+   -  Merle Sterling <msterlin@us.ibm.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -54,7 +55,7 @@
     <content mozType:deferredrefresh="true">
       <children includes="label"/>
       <html:span mozType:slider="true" anonid="slider"
-                 xbl:inherits="min=start,max=end,step=step"/>
+                 xbl:inherits="min=start,max=end,step=step,mozType:tabindex=tabindex"/>
       <children/>
     </content>
 
@@ -101,7 +102,7 @@
             this.range.updateInstanceData(true);
           }
         };
-        this.control.addEventListener("change", changeHandler, false);
+        this.control.addEventListener("ValueChange", changeHandler, false);
       </constructor>
     </implementation>
 

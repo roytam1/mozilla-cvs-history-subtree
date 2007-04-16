@@ -52,6 +52,8 @@
 #include "nsISchemaDuration.h"
 #include "nsXFormsSchemaValidator.h"
 #include "prdtoa.h"
+#include "nsIXFormsControl.h"
+#include "nsIModelElementPrivate.h"
 
 NS_IMPL_ISUPPORTS1(nsXFormsUtilityService, nsIXFormsUtilityService)
 
@@ -60,6 +62,20 @@ NS_IMPL_ISUPPORTS1(nsXFormsUtilityService, nsIXFormsUtilityService)
  */
 #define NS_SCHEMAVALIDATOR_CONTRACTID  "@mozilla.org/schemavalidator;1"
 
+
+NS_IMETHODIMP
+nsXFormsUtilityService::GetBuiltinTypeName(nsIDOMNode *aElement,
+                                           nsAString& aName)
+{
+  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(aElement));
+  NS_ENSURE_TRUE(element, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsIModelElementPrivate> model = nsXFormsUtils::GetModel(element);
+  NS_ENSURE_TRUE(model, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsIXFormsControl> control(do_QueryInterface(element));
+  return model->GetBuiltinTypeNameForControl(control, aName);
+}
 
 NS_IMETHODIMP
 nsXFormsUtilityService::GetModelFromNode(nsIDOMNode *aNode, 

@@ -42,7 +42,7 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMEvent.h"
 #include "nsIDOMElement.h"
-#include "nsIXTFBindableElementWrapper.h"
+#include "nsIXTFGenericElementWrapper.h"
 
 #define DEFERRED_REBUILD     0x01
 #define DEFERRED_RECALCULATE 0x02
@@ -53,19 +53,19 @@ nsXFormsActionElement::nsXFormsActionElement() : mElement(nsnull)
 {
 }
 
-NS_IMPL_ADDREF_INHERITED(nsXFormsActionElement, nsXFormsBindableStub)
-NS_IMPL_RELEASE_INHERITED(nsXFormsActionElement, nsXFormsBindableStub)
+NS_IMPL_ADDREF_INHERITED(nsXFormsActionElement, nsXFormsStubElement)
+NS_IMPL_RELEASE_INHERITED(nsXFormsActionElement, nsXFormsStubElement)
 
 NS_INTERFACE_MAP_BEGIN(nsXFormsActionElement)
   NS_INTERFACE_MAP_ENTRY(nsIXFormsActionModuleElement)
   NS_INTERFACE_MAP_ENTRY(nsIXFormsActionElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
-NS_INTERFACE_MAP_END_INHERITING(nsXFormsBindableStub)
+NS_INTERFACE_MAP_END_INHERITING(nsXFormsStubElement)
 
 NS_IMETHODIMP
-nsXFormsActionElement::OnCreated(nsIXTFBindableElementWrapper* aWrapper)
+nsXFormsActionElement::OnCreated(nsIXTFGenericElementWrapper* aWrapper)
 {
-  nsresult rv = nsXFormsBindableStub::OnCreated(aWrapper);
+  nsresult rv = nsXFormsStubElement::OnCreated(aWrapper);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // It's ok to keep a weak pointer to mElement.  mElement will have an
@@ -75,6 +75,12 @@ nsXFormsActionElement::OnCreated(nsIXTFBindableElementWrapper* aWrapper)
   aWrapper->GetElementNode(getter_AddRefs(node));
   mElement = node;
   NS_ASSERTION(mElement, "Wrapper is not an nsIDOMElement, we'll crash soon");
+
+  aWrapper->SetNotificationMask(nsIXTFElement::NOTIFY_WILL_CHANGE_DOCUMENT |
+                                nsIXTFElement::NOTIFY_WILL_CHANGE_PARENT |
+                                nsIXTFElement::NOTIFY_DOCUMENT_CHANGED |
+                                nsIXTFElement::NOTIFY_PARENT_CHANGED);
+
   return NS_OK;
 }
 
@@ -86,8 +92,45 @@ nsXFormsActionElement::OnDestroyed() {
 }
 
 NS_IMETHODIMP
+nsXFormsActionElement::WillChangeParent(nsIDOMElement *aNewParent)
+{
+  SetRepeatState(eType_Unknown);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsActionElement::ParentChanged(nsIDOMElement *aNewParent)
+{
+  nsXFormsStubElement::ParentChanged(aNewParent);
+  UpdateRepeatState(aNewParent);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsActionElement::WillChangeDocument(nsIDOMDocument *aNewDocument)
+{
+  SetRepeatState(eType_Unknown);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsActionElement::DocumentChanged(nsIDOMDocument *aNewDocument)
+{
+  nsXFormsStubElement::DocumentChanged(aNewDocument);
+
+  nsCOMPtr<nsIDOMNode> parent;
+  mElement->GetParentNode(getter_AddRefs(parent));
+  UpdateRepeatState(parent);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsXFormsActionElement::HandleEvent(nsIDOMEvent* aEvent)
 {
+  if (GetRepeatState() == eType_Template) {
+    return NS_OK;
+  }
+
   return nsXFormsUtils::EventHandlingAllowed(aEvent, mElement) ?
            HandleAction(aEvent, nsnull) : NS_OK;
 }

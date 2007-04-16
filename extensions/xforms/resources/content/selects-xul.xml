@@ -51,15 +51,6 @@
         <children/>
       </xul:vbox>
     </content>
-
-    <implementation>
-      <!-- nsIAccessibleProvider -->
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XFormsSelectFull;
-        </getter>
-      </property>
-    </implementation>
   </binding>
 
 
@@ -103,13 +94,6 @@
     </content>
 
     <implementation>
-    <!-- nsIAccessibleProvider -->
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XFormsSelectFull;
-        </getter>
-      </property>
-
       <method name="getControlElement">
         <body>
           return this.ownerDocument.
@@ -166,13 +150,7 @@
       <children/>
     </content>
 
-    <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XFormsItemCheckgroup;
-        </getter>
-      </property>
-
+    <implementation>
       <property name="selected"
                 onget="return this.control.checked;"
                 onset="this.control.checked = val;"/>
@@ -227,13 +205,7 @@
       </xul:hbox>
     </content>
 
-    <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XFormsItemRadiogroup;
-        </getter>
-      </property>
-
+    <implementation>
       <property name="selected">
         <getter>
           return this.control.selected;

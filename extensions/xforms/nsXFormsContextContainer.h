@@ -75,7 +75,7 @@ protected:
  *       @see http://www.w3.org/TR/xforms/sliceF.html#id2645142
  *       @see http://bugzilla.mozilla.org/show_bug.cgi?id=271724
  */
-class nsXFormsContextContainer : public nsXFormsControlStub,
+class nsXFormsContextContainer : public nsXFormsBindableControlStub,
                                  public nsIXFormsRepeatItemElement
 {
 protected:

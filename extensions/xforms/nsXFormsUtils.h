@@ -63,6 +63,7 @@ class nsIDOMEvent;
 #define NS_NAMESPACE_XML_SCHEMA          "http://www.w3.org/2001/XMLSchema"
 #define NS_NAMESPACE_XML_SCHEMA_INSTANCE "http://www.w3.org/2001/XMLSchema-instance"
 #define NS_NAMESPACE_MOZ_XFORMS_TYPE     "http://www.mozilla.org/projects/xforms/2005/type"
+#define NS_NAMESPACE_SOAP_ENVELOPE       "http://schemas.xmlsoap.org/soap/envelope/"
 #define NS_NAMESPACE_MOZ_XFORMS_LAZY     "http://www.mozilla.org/projects/xforms/2005/lazy"
 
 /**
@@ -379,6 +380,9 @@ public:
    * @param aContextNode      The resulting context node
    * @param aContextPosition  The resulting context position
    * @param aContextSize      The resulting context size
+   *
+   * This function may return NS_OK_XFORMS_NOTREADY if parent context containers
+   * haven't yet had a chance to bind.
    */
   static NS_HIDDEN_(nsresult) FindParentContext(nsIDOMElement           *aElement,
                                                 nsIModelElementPrivate **aModel,
@@ -588,6 +592,15 @@ public:
    */
   static NS_HIDDEN_(nsresult) GetWindowFromDocument(nsIDOMDocument        *aDoc,
                                                     nsIDOMWindowInternal **aWindow);
+
+  /**
+   * Determine whether the given node contains an xf:itemset as a child.
+   * In valid XForms documents this should only be possible if aNode is an
+   * xf:select/1 or an xf:choices element.  This function is used primarily
+   * as a worker function for select/1's IsContentAllowed override.
+
+   */
+  static NS_HIDDEN_(PRBool) NodeHasItemset(nsIDOMNode *aNode);
 
 private:
   /**

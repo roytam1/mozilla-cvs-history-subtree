@@ -364,6 +364,9 @@ nsXFormsUtils::GetNodeContext(nsIDOMElement           *aElement,
     // set, it sets the model to the first model in the document.
   
     NS_ENSURE_SUCCESS(rv, rv);
+    if (rv == NS_OK_XFORMS_NOTREADY) {
+      return rv;
+    }
   }
 
   // if context node is not set, it's the document element of the model's
@@ -538,6 +541,9 @@ nsXFormsUtils::EvaluateNodeBinding(nsIDOMElement           *aElement,
                                &contextSize);
 
   NS_ENSURE_SUCCESS(rv, rv);
+  if (rv == NS_OK_XFORMS_NOTREADY) {
+    return rv;
+  }
 
   if (!contextNode) {
     return NS_OK;   // this will happen if the doc is still loading
@@ -686,8 +692,22 @@ nsXFormsUtils::GetNodeValue(nsIDOMNode* aDataNode, nsAString& aNodeValue)
 
   case nsIDOMNode::ELEMENT_NODE:
     {
-      // "If text child nodes are present, returns the string-value of the
-      // first text child node.  Otherwise, returns "" (the empty string)".
+      // XForms specs 8.1.1 (http://www.w3.org/TR/xforms/slice8.html#ui-processing)
+      // says: 'if text child nodes are present, returns the string-value of the
+      // first text child node. Otherwise, returns "" (the empty string)'.
+      // The 'text child node' that is mentioned above is from the xforms
+      // instance document which is, according to spec, is formed by
+      // 'creating an XPath data model'. So we need to treat 'text node' in
+      // this case as an XPath text node and not a DOM text node.
+      // DOM XPath specs (http://www.w3.org/TR/2002/WD-DOM-Level-3-XPath-20020328/xpath.html#TextNodes)
+      // says:
+      // 'Applications using XPath in an environment with fragmented text nodes
+      // must manually gather the text of a single logical text node possibly
+      // from multiple nodes beginning with the first Text node or CDATASection
+      // node returned by the implementation'.
+
+      // Therefore we concatenate contiguous CDATA/DOM text nodes and return
+      // as node value.
 
       // Find the first child text node.
       nsCOMPtr<nsIDOMNodeList> childNodes;
@@ -698,6 +718,7 @@ nsXFormsUtils::GetNodeValue(nsIDOMNode* aDataNode, nsAString& aNodeValue)
         PRUint32 childCount;
         childNodes->GetLength(&childCount);
 
+        nsAutoString value;
         for (PRUint32 i = 0; i < childCount; ++i) {
           childNodes->Item(i, getter_AddRefs(child));
           NS_ASSERTION(child, "DOMNodeList length is wrong!");
@@ -705,7 +726,9 @@ nsXFormsUtils::GetNodeValue(nsIDOMNode* aDataNode, nsAString& aNodeValue)
           child->GetNodeType(&nodeType);
           if (nodeType == nsIDOMNode::TEXT_NODE ||
               nodeType == nsIDOMNode::CDATA_SECTION_NODE) {
-            child->GetNodeValue(aNodeValue);
+            child->GetNodeValue(value);
+            aNodeValue.Append(value);
+          } else {
             break;
           }
         }
@@ -1234,6 +1257,30 @@ nsXFormsUtils::FindParentContext(nsIDOMElement           *aElement,
                                       &cPosition,
                                       &cSize);
       NS_ENSURE_SUCCESS(rv, rv);
+
+      // If we were unable to bind due to the context control not being ready,
+      // then let the context control know that we want to be told when it is
+      // ready.  But if this bind works and we are still waiting for
+      // notification, then remove ourselves from the list we think we
+      // are on.  All of this rigamarole just in case some crazy mutation
+      // handler is out there stirring the pot.
+      nsCOMPtr<nsIXFormsControl> control(do_QueryInterface(aElement));
+      if (control) {
+        if (rv == NS_OK_XFORMS_NOTREADY) {
+          contextControl->AddRemoveAbortedControl(control, PR_TRUE);
+          return rv;
+        }
+
+        if (rv == NS_OK) {
+          nsCOMPtr<nsIXFormsContextControl> ctxtControl;
+
+          control->GetAbortedBindListContainer(getter_AddRefs(ctxtControl));
+          if (ctxtControl) {
+            ctxtControl->AddRemoveAbortedControl(control, PR_FALSE);
+          }
+        }
+      }
+
       // If the call failed, it means that we _have_ a parent which sets the
       // context but it is invalid, ie. the XPath expression could have
       // generated an error.
@@ -2262,5 +2309,37 @@ nsXFormsUtils::SetSingleNodeBindingValue(nsIDOMElement *aElement,
       return PR_TRUE;
   }
   return PR_FALSE;
+}
+
+/* static */ PRBool
+nsXFormsUtils::NodeHasItemset(nsIDOMNode *aNode)
+{
+  PRBool hasItemset = PR_FALSE;
+
+  nsCOMPtr<nsIDOMNodeList> children;
+  aNode->GetChildNodes(getter_AddRefs(children));
+
+  PRUint32 childCount = 0;
+  if (children) {
+    children->GetLength(&childCount);
+  }
+
+  for (PRUint32 i = 0; i < childCount; ++i) {
+    nsCOMPtr<nsIDOMNode> child;
+    children->Item(i, getter_AddRefs(child));
+    if (nsXFormsUtils::IsXFormsElement(child, NS_LITERAL_STRING("itemset"))) {
+      hasItemset = PR_TRUE;
+      break;
+    } else if (nsXFormsUtils::IsXFormsElement(child,
+                                              NS_LITERAL_STRING("choices"))) {
+      // The choices element may have an itemset.
+      hasItemset = nsXFormsUtils::NodeHasItemset(child);
+      if (hasItemset) {
+        // No need to look at any other children.
+        break;
+      }
+    }
+  }
+  return hasItemset;
 }
 
