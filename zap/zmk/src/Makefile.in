@@ -122,9 +122,9 @@ XPIDLSRCS	= \
 		$(NULL)
 
 SHARED_LIBRARY_LIBS += \
-		$(DIST)/lib/$(LIB_PREFIX)moz_portaudio_v18_1.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)moz_speex_v1_1_10.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)moz_ccitt_adpcm.$(LIB_SUFFIX) \
+		../portaudio_v18_1/$(LIB_PREFIX)moz_portaudio_v18_1.$(LIB_SUFFIX) \
+		../speex-1.1.10/libspeex/$(LIB_PREFIX)moz_speex_v1_1_10.$(LIB_SUFFIX) \
+		../ccitt-adpcm/$(LIB_PREFIX)moz_ccitt_adpcm.$(LIB_SUFFIX) \
 		../base/$(LIB_PREFIX)zmk_base_s.$(LIB_SUFFIX) \
 		$(NULL)
 
