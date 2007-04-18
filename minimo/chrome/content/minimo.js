@@ -351,8 +351,6 @@ nsBrowserStatusHandler.prototype =
   
 function MiniNavStartup()
 {
-
-  // Chris suggestion - defaults to the homebase in startup time. 
   var homepage = "chrome://minimo/content/bookmarks/bmview.xhtml";
   var homepages = null; 
     
@@ -1395,7 +1393,7 @@ function DoBrowserSearch() {
   try { 
     var vQuery=document.getElementById("toolbar-search-tag").value;
     if(vQuery!="") {
-      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/xhtml?q='+vQuery+'&hl=en&lr=&safe=off&btnG=Search&site=search&mrestrict=xhtml');
+      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/m/search?uipref=3&mrestrict=xhtml&q='+vQuery);
       browserInit(gBrowser.selectedTab);
     }
   } catch (e) {
@@ -1424,7 +1422,7 @@ function DoBrowserPreferences() {
 function DoBrowserSearchURLBAR(vQuery) {
   try { 
     if(vQuery!="") {
-      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/xhtml?q='+vQuery+'&hl=en&lr=&safe=off&btnG=Search&site=search&mrestrict=xhtml');
+      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/m/search?uipref=3&mrestrict=xhtml&q='+vQuery);
       browserInit(gBrowser.selectedTab);
     }
   } catch (e) {
@@ -1565,8 +1563,6 @@ function DoTestSendCall(toCall) {
 }
 
 function DoGoogleToggle() {
-
-  //google xhtml string call http://www.google.com/gwt/n?q=xml&site=mozilla_minimo&u=www.xml.com/
   
   var locationAddress="google.com";
 
