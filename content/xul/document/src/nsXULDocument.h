@@ -47,7 +47,7 @@
 #include "nsForwardReference.h"
 #include "nsIContent.h"
 #include "nsIDOMEventReceiver.h"
-#include "nsIDOMXULCommandDispatcher.h"
+#include "nsXULCommandDispatcher.h"
 #include "nsIDOMXULDocument.h"
 #include "nsISupportsArray.h"
 #include "nsCOMArray.h"
@@ -272,7 +272,7 @@ protected:
     PRPackedBool               mApplyingPersistedAttrs;
     PRPackedBool               mIsWritingFastLoad;
     PRPackedBool               mDocumentLoaded;
-    nsCOMPtr<nsIDOMXULCommandDispatcher>     mCommandDispatcher; // [OWNER] of the focus tracker
+    nsRefPtr<nsXULCommandDispatcher> mCommandDispatcher; // [OWNER] of the focus tracker
 
     // Maintains the template builders that have been attached to
     // content elements

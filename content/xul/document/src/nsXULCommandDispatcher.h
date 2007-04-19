@@ -52,6 +52,7 @@
 #include "nsWeakReference.h"
 #include "nsIDOMNode.h"
 #include "nsString.h"
+#include "nsIBoxObject.h"
 
 class nsIDOMElement;
 class nsIFocusController;
@@ -68,7 +69,12 @@ protected:
 public:
 
     static NS_IMETHODIMP
-    Create(nsIDocument* aDocument, nsIDOMXULCommandDispatcher** aResult);
+    Create(nsIDocument* aDocument, nsXULCommandDispatcher** aResult);
+    void Disconnect()
+    {
+      mFocusController = nsnull;
+      mDocument = nsnull;
+    }
 
     // nsISupports
     NS_DECL_ISUPPORTS
@@ -82,19 +88,19 @@ protected:
 
     class Updater {
     public:
-      Updater(nsIDOMElement* aElement,
+      Updater(nsIBoxObject* aWeakElement,
               const nsAString& aEvents,
               const nsAString& aTargets)
-          : mElement(aElement),
+          : mWeakElement(aWeakElement),
             mEvents(aEvents),
             mTargets(aTargets),
             mNext(nsnull)
       {}
 
-      nsIDOMElement* mElement; // [WEAK]
-      nsString       mEvents;
-      nsString       mTargets;
-      Updater*       mNext;
+      nsCOMPtr<nsIBoxObject> mWeakElement;
+      nsString               mEvents;
+      nsString               mTargets;
+      Updater*               mNext;
     };
 
     Updater* mUpdaters;
