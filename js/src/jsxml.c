@@ -5626,7 +5626,7 @@ StartNonListXMLMethod(JSContext *cx, JSObject **objp, jsval *argv)
                              JSMSG_NON_LIST_XML_METHOD,
                              JS_GetFunctionName(fun), numBuf);
     }
-    return JS_FALSE;
+    return NULL;
 }
 
 #define XML_METHOD_PROLOG                                                     \
