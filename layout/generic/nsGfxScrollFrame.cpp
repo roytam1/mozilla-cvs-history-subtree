@@ -1540,6 +1540,37 @@ nsGfxScrollFrameInner::ScrollToRestoredPosition()
   }
 }
 
+struct nsAsyncScrollPortEvent : public PLEvent
+{
+public:
+  // nsAsyncScrollPortEvent owns aEvent.
+  nsAsyncScrollPortEvent(nsIContent* aTarget, nsPresContext* aPresContext,
+                         nsScrollPortEvent* aEvent)
+  : mTarget(aTarget), mPresContext(aPresContext), mEvent(aEvent) {}
+
+  void HandleEvent() {
+    if (mTarget) {
+      nsEventStatus status = nsEventStatus_eIgnore;
+      mTarget->HandleDOMEvent(mPresContext, mEvent, nsnull, NS_EVENT_FLAG_INIT,
+                              &status);
+    }
+  }
+private:
+  nsCOMPtr<nsIContent>         mTarget;
+  nsRefPtr<nsPresContext>      mPresContext;
+  nsAutoPtr<nsScrollPortEvent> mEvent;
+};
+
+static void* PR_CALLBACK HandleAsyncScrollPortEvent(PLEvent* aEvent)
+{
+  NS_STATIC_CAST(nsAsyncScrollPortEvent*, aEvent)->HandleEvent();
+  return nsnull;
+}
+static void PR_CALLBACK DestroyAsyncScrollPortEvent(PLEvent* aEvent)
+{
+  delete NS_STATIC_CAST(nsAsyncScrollPortEvent*, aEvent);
+}
+
 void
 nsGfxScrollFrameInner::PostScrollPortEvent(PRBool aOverflow, nsScrollPortEvent::orientType aType)
 {
@@ -1547,8 +1578,33 @@ nsGfxScrollFrameInner::PostScrollPortEvent(PRBool aOverflow, nsScrollPortEvent::
                                                    NS_SCROLLPORT_OVERFLOW :
                                                    NS_SCROLLPORT_UNDERFLOW,
                                                    nsnull);
+  if (!event) {
+    return;
+  }
   event->orient = aType;
-  mOuter->GetPresContext()->PresShell()->PostDOMEvent(mOuter->GetContent(), event);
+  nsCOMPtr<nsIEventQueueService> eventService =
+    do_GetService(kEventQueueServiceCID);
+  if (eventService) {
+    nsCOMPtr<nsIEventQueue> eventQueue;
+    eventService->GetThreadEventQueue(PR_GetCurrentThread(),
+                                      getter_AddRefs(eventQueue));
+    if (eventQueue) {
+      nsAsyncScrollPortEvent* scrollPortEvent =
+        new nsAsyncScrollPortEvent(mOuter->GetContent(), mOuter->GetPresContext(),
+                                 event);
+      if (scrollPortEvent) {
+        PL_InitEvent(scrollPortEvent, nsnull,
+                     ::HandleAsyncScrollPortEvent,
+                     ::DestroyAsyncScrollPortEvent);
+        if (NS_SUCCEEDED(eventQueue->PostEvent(scrollPortEvent))) {
+          return;
+        }
+        PL_DestroyEvent(scrollPortEvent);
+        return;
+      }
+    }
+  }
+  delete event;
 }
 
 void
