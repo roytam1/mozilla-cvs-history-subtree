@@ -63,6 +63,7 @@
 #include "prmem.h"
 #include "nsFileSpec.h"
 #include "plstr.h"
+#include "nsUTF8Utils.h"
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 static NS_DEFINE_CID(kEntityConverterCID, NS_ENTITYCONVERTER_CID);
@@ -578,3 +579,34 @@ nsMsgI18NGetAcceptLanguage(void)
   return "en";
 }
 
+nsresult nsMsgI18NShrinkUTF8Str(const nsAFlatCString &inString,
+                                PRUint32 aMaxLength,
+                                nsACString &outString)
+{
+  if (inString.IsEmpty()) {
+    outString.Truncate();
+    return NS_OK;
+  }
+  if (inString.Length() < aMaxLength) {
+    outString.Assign(inString);
+    return NS_OK;
+  }
+  NS_ASSERTION(IsUTF8(inString), "Invalid UTF-8 string is inputted");
+  const char* start = inString.get();
+  const char* end = start + inString.Length();
+  const char* last = start + aMaxLength;
+  const char* cur = start;
+  const char* prev = nsnull;
+  while (cur < last) {
+    prev = cur;
+    if (!UTF8CharEnumerator::NextChar(&cur, end))
+      break;
+  }
+  if (!prev) {
+    outString.Truncate();
+    return NS_OK;
+  }
+  PRUint32 len = prev - start;
+  outString.Assign(Substring(inString, 0, len));
+  return NS_OK;
+}
