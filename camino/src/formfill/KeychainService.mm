@@ -1122,6 +1122,14 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
 {
 }
 
+- (void)onResourceLoadingStarted:(NSNumber*)resourceIdentifier
+{
+}
+
+- (void)onResourceLoadingCompleted:(NSNumber*)resourceIdentifier
+{
+}
+
 - (void)onProgressChange:(long)currentBytes outOf:(long)maxBytes
 {
 }
