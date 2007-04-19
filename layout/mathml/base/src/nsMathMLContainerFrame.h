@@ -115,7 +115,6 @@ public:
   // --------------------------------------------------------------------------
   // Overloaded nsHTMLContainerFrame methods -- see documentation in nsIFrame.h
 
-  virtual nsIAtom* GetType() const;
   virtual PRBool IsFrameOfType(PRUint32 aFlags) const;
 
   NS_IMETHOD
@@ -264,7 +263,8 @@ public:
   static void
   GetReflowAndBoundingMetricsFor(nsIFrame*            aFrame,
                                  nsHTMLReflowMetrics& aReflowMetrics,
-                                 nsBoundingMetrics&   aBoundingMetrics);
+                                 nsBoundingMetrics&   aBoundingMetrics,
+                                 eMathMLFrameType*    aMathMLFrameType = nsnull);
 
   // helper to let the scriptstyle re-resolution pass through
   // a subtree that may contain non-MathML container frames
