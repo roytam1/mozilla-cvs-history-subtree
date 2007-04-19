@@ -68,6 +68,7 @@
 #include "nsReadableUtils.h"
 #include "nsCRT.h"
 #include "nsDOMError.h"
+#include "nsIDOMNSDocument.h"
 
 #ifdef PR_LOGGING
 static PRLogModuleInfo* gLog;
@@ -108,7 +109,7 @@ NS_IMPL_RELEASE(nsXULCommandDispatcher)
 
 
 NS_IMETHODIMP
-nsXULCommandDispatcher::Create(nsIDocument* aDoc, nsIDOMXULCommandDispatcher** aResult)
+nsXULCommandDispatcher::Create(nsIDocument* aDoc, nsXULCommandDispatcher** aResult)
 {
   nsXULCommandDispatcher* dispatcher = new nsXULCommandDispatcher(aDoc);
   if (!dispatcher)
@@ -122,7 +123,7 @@ nsXULCommandDispatcher::Create(nsIDocument* aDoc, nsIDOMXULCommandDispatcher** a
 void
 nsXULCommandDispatcher::EnsureFocusController()
 {
-  if (!mFocusController) {
+  if (!mFocusController && mDocument) {
     nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(mDocument->GetScriptGlobalObject()));
   
     // An inelegant way to retrieve this to be sure, but we are
@@ -242,6 +243,7 @@ nsXULCommandDispatcher::AddCommandUpdater(nsIDOMElement* aElement,
   if (! aElement)
     return NS_ERROR_NULL_POINTER;
 
+  NS_ENSURE_STATE(mDocument);
   nsCOMPtr<nsIDOMNode> doc(do_QueryInterface(mDocument));
 
   nsresult rv = nsContentUtils::CheckSameOrigin(doc, aElement);
@@ -250,11 +252,23 @@ nsXULCommandDispatcher::AddCommandUpdater(nsIDOMElement* aElement,
     return rv;
   }
 
+  nsCOMPtr<nsIDOMDocument> ownerDomDoc;
+  aElement->GetOwnerDocument(getter_AddRefs(ownerDomDoc));
+  nsCOMPtr<nsIDOMNSDocument> ownerDoc = do_QueryInterface(ownerDomDoc);
+  NS_ENSURE_STATE(ownerDoc);
+
+  // Box object is used as a weak reference to aElement.
+  nsCOMPtr<nsIBoxObject> boxObject;
+  ownerDoc->GetBoxObjectFor(aElement, getter_AddRefs(boxObject));
+  NS_ENSURE_STATE(boxObject);
+
   Updater* updater = mUpdaters;
   Updater** link = &mUpdaters;
 
   while (updater) {
-    if (updater->mElement == aElement) {
+    nsCOMPtr<nsIDOMElement> element;
+    updater->mWeakElement->GetElement(getter_AddRefs(element));
+    if (element == aElement) {
 
 #ifdef NS_DEBUG
       if (PR_LOG_TEST(gLog, PR_LOG_NOTICE)) {
@@ -299,7 +313,7 @@ nsXULCommandDispatcher::AddCommandUpdater(nsIDOMElement* aElement,
 #endif
 
   // If we get here, this is a new updater. Append it to the list.
-  updater = new Updater(aElement, aEvents, aTargets);
+  updater = new Updater(boxObject, aEvents, aTargets);
   if (! updater)
       return NS_ERROR_OUT_OF_MEMORY;
 
@@ -318,7 +332,9 @@ nsXULCommandDispatcher::RemoveCommandUpdater(nsIDOMElement* aElement)
   Updater** link = &mUpdaters;
 
   while (updater) {
-    if (updater->mElement == aElement) {
+    nsCOMPtr<nsIDOMElement> element;
+    updater->mWeakElement->GetElement(getter_AddRefs(element));
+    if (element == aElement) {
 #ifdef NS_DEBUG
       if (PR_LOG_TEST(gLog, PR_LOG_NOTICE)) {
         nsCAutoString eventsC, targetsC; 
@@ -369,6 +385,10 @@ nsXULCommandDispatcher::UpdateCommands(const nsAString& aEventName)
 #endif
   
   for (Updater* updater = mUpdaters; updater != nsnull; updater = updater->mNext) {
+    nsCOMPtr<nsIDOMElement> element;
+    updater->mWeakElement->GetElement(getter_AddRefs(element));
+    if (!element)
+      continue;
     // Skip any nodes that don't match our 'events' or 'targets'
     // filters.
     if (! Matches(updater->mEvents, aEventName))
@@ -377,7 +397,7 @@ nsXULCommandDispatcher::UpdateCommands(const nsAString& aEventName)
     if (! Matches(updater->mTargets, id))
       continue;
 
-    nsCOMPtr<nsIContent> content = do_QueryInterface(updater->mElement);
+    nsCOMPtr<nsIContent> content = do_QueryInterface(element);
     NS_ASSERTION(content != nsnull, "not an nsIContent");
     if (! content)
       return NS_ERROR_UNEXPECTED;
@@ -394,7 +414,7 @@ nsXULCommandDispatcher::UpdateCommands(const nsAString& aEventName)
       CopyUTF16toUTF8(aEventName, aeventnameC);
       PR_LOG(gLog, PR_LOG_NOTICE,
              ("xulcmd[%p] update %p event=%s",
-              this, updater->mElement,
+              this, element.get(),
               aeventnameC.get()));
     }
 #endif

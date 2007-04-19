@@ -374,6 +374,8 @@ nsXULDocument::nsXULDocument(void)
 
 nsXULDocument::~nsXULDocument()
 {
+    mCommandDispatcher->Disconnect();
+
     NS_ASSERTION(mNextSrcLoadWaiter == nsnull,
         "unreferenced document still waiting for script source to load?");
 
