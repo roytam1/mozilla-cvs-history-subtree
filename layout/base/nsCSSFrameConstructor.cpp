@@ -13193,6 +13193,9 @@ nsCSSFrameConstructor::CreateListBoxContent(nsPresContext* aPresContext,
                                 aParentFrame, aChild->Tag(),
                                 aChild->GetNameSpaceID(),
                                 styleContext, frameItems, PR_FALSE);
+    if (!state.mPseudoFrames.IsEmpty()) {
+      ProcessPseudoFrames(state, frameItems); 
+    }
     
     nsIFrame* newFrame = frameItems.childList;
     *aNewFrame = newFrame;
