@@ -73,6 +73,9 @@ nsDefaultURIFixup::~nsDefaultURIFixup()
 NS_IMETHODIMP
 nsDefaultURIFixup::CreateExposableURI(nsIURI *aURI, nsIURI **aReturn)
 {
+    // NOTE: Make sure that this function DOES NOT change which
+    // principal ought to correspond to aURI.
+    
     NS_ENSURE_ARG_POINTER(aURI);
     NS_ENSURE_ARG_POINTER(aReturn);
 
