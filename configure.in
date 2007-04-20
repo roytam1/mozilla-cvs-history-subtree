@@ -127,6 +127,7 @@ GNOMEUI_VERSION=2.2.0
 GCONF_VERSION=1.2.1
 LIBGNOME_VERSION=2.0
 STARTUP_NOTIFICATION_VERSION=0.8
+DBUS_VERSION=0.60
 
 MSMANIFEST_TOOL=
 
@@ -564,8 +565,8 @@ case "$target" in
 
     AC_DEFINE_UNQUOTED(WINVER,0x$WINVER)
     AC_DEFINE_UNQUOTED(_WIN32_WINNT,0x$WINVER)
-    # Require OS features provided by IE 4.0
-    AC_DEFINE_UNQUOTED(_WIN32_IE,0x0400)
+    # Require OS features provided by IE 5.0
+    AC_DEFINE_UNQUOTED(_WIN32_IE,0x0500)
     ;;
 esac
 
@@ -3993,7 +3994,7 @@ else
     _SAVE_PNG_LIBS=$PNG_LIBS
     AC_CHECK_LIB(png, png_get_valid, [SYSTEM_PNG=1 PNG_LIBS="-lpng $PNG_LIBS"],
                  SYSTEM_PNG=, $PNG_LIBS)
-    AC_CHECK_LIB(png, png_get_acTl, ,
+    AC_CHECK_LIB(png, png_get_acTL, ,
                  [SYSTEM_PNG= PNG_LIBS=$_SAVE_PNG_LIBS], $_SAVE_PNG_LIBS)
 fi
 if test "$SYSTEM_PNG" = 1; then
@@ -5230,13 +5231,13 @@ then
 
     if test "$MOZ_ENABLE_DBUS"
     then
-        PKG_CHECK_MODULES(MOZ_DBUS_GLIB, dbus-glib-1,
+        PKG_CHECK_MODULES(MOZ_DBUS_GLIB, dbus-glib-1 >= $DBUS_VERSION,
         [
             MOZ_ENABLE_DBUS=1
         ],[
             if test "$MOZ_ENABLE_DBUS" = "force"
             then
-                AC_MSG_ERROR([* * * Could not find dbus-glib-1])
+                AC_MSG_ERROR([* * * Could not find dbus-glib-1 >= $DBUS_VERSION])
             fi
             MOZ_ENABLE_DBUS=
         ])
