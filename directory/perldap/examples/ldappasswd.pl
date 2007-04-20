@@ -67,9 +67,6 @@ do
 } until ($new eq $new2);
 print "\n";
 
-$crypted = Mozilla::LDAP::Utils::unixCrypt("$new");
-
-
 #############################################################################
 # Now do all the searches, one by one. If there are no search criteria, we
 # will change the password for the user running the script.
@@ -86,7 +83,7 @@ foreach $search ($#ARGV >= $[ ? @ARGV : $ld{bind})
 
   while ($entry)
     {
-      $entry->{userpassword} = ["{crypt}" . $crypted];
+      $entry->{userpassword} = [$new];
       print "Changing password for: $entry->{dn}\n" if $opt_v;
 
       if (!$opt_n)

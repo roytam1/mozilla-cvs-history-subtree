@@ -176,15 +176,15 @@ if ($nspr_loc) {
 opendir(DIR,$lib_ldap);
 if ($ssl_def)
 {
-   @libfiles = grep{/ldap|ssl\d|nss\d|pl[cd]|nspr/} readdir(DIR);
+   @libfiles = grep{/ldap\d|ssl\d|nss\d|pl[cd]\d|nspr\d/} readdir(DIR);
 } else {
-   @libfiles = grep{/ldap/} readdir(DIR);
+   @libfiles = grep{/ldap\d/} readdir(DIR);
 }
 closedir(DIR);
 
 if ($lib_nspr && -d $lib_nspr) {
 opendir(DIR,$lib_nspr);
-push @libfiles, grep{/pl[cd]|nspr|ssl|nss/} readdir(DIR);
+push @libfiles, grep{/pl[cd]\d|nspr\d|ssl\d|nss\d/} readdir(DIR);
 closedir(DIR);
 }
 

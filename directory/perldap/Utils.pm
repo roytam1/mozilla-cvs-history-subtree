@@ -44,12 +44,9 @@ $VERSION = "1.5";
 			   isUrl
 			   printEntry
 			   printentry
-			   encodeBase64
-			   decodeBase64
 			   str2Scope
 			   askPassword
 			   ldapArgs
-			   unixCrypt
 			   userCredentials
 			   answer)]
 		);
@@ -111,60 +108,6 @@ sub printEntry
   print "\n";
 }
 *printentry = \*printEntry;
-
-
-#############################################################################
-# Perform Base64 encoding, this is based on MIME::Base64.pm, written
-# by Gisle Aas <gisle@aas.no>. If possible, use the MIME:: package instead.
-#
-sub encodeBase64
-{
-  my ($res) = "";
-  my ($eol) = "$_[1]";
-  my ($padding);
-
-  pos($_[0]) = 0;                          # ensure start at the beginning
-  while ($_[0] =~ /(.{1,45})/gs) {
-    $res .= substr(pack('u', $1), 1);
-    chop($res);
-  }
-
-  $res =~ tr|` -_|AA-Za-z0-9+/|;               # `# help emacs
-  $padding = (3 - length($_[0]) % 3) % 3;
-  $res =~ s/.{$padding}$/'=' x $padding/e if $padding;
-
-  if (length $eol) {
-    $res =~ s/(.{1,76})/$1$eol/g;
-  }
-
-  return $res;
-}
- 
- 
-#############################################################################
-# Perform Base64 decoding, this is based on MIME::Base64.pm, written
-# by Gisle Aas <gisle@aas.no>. If possible, use the MIME:: package instead.
-#
-sub decodeBase64
-{
-  my ($str) = shift;
-  my ($res) = "";
-  my ($len);
- 
-  $str =~ tr|A-Za-z0-9+=/||cd;
-  Carp::croak("Base64 decoder requires string length to be a multiple of 4")
-    if length($str) % 4;
-
-  $str =~ s/=+$//;                        # remove padding
-  $str =~ tr|A-Za-z0-9+/| -_|;            # convert to uuencoded format
-  while ($str =~ /(.{1,60})/gs)
-    {
-      $len = chr(32 + length($1)*3/4);
-      $res .= unpack("u", $len . $1 );    # uudecode
-    }
-
-  return $res;
-}
 
 
 #############################################################################
@@ -271,21 +214,6 @@ sub ldapArgs
     }
 
   return %ld;
-}
-
-
-#############################################################################
-# Create a Unix-type password, using the "crypt" function. A random salt
-# is always generated, perhaps it should be an optional argument?
-#
-sub unixCrypt
-{
-   my ($ascii) =
-      "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-   my ($salt) = substr($ascii, rand(62), 1) . substr($ascii, rand(62), 1);
-
-   srand(time ^ $$);
-   crypt($_[0], $salt);
 }
 
 

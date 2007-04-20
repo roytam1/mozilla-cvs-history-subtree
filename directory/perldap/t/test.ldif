@@ -1,0 +1,11 @@
+dn: uid=user,dc=example,dc=com
+objectclass: top
+objectclass: person
+objectclass: organizationalPerson
+objectclass: inetOrgPerson
+uid: user
+cn: Jay User
+sn: User
+givenName: Jay
+description:: aGVsbG8gd29ybGQ=
+

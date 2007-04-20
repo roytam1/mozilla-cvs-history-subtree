@@ -40,25 +40,28 @@ require Exporter;
 
 use strict;
 
+my $base64message = "Can't use MIME::Base64!
+Your version of perl does not have the module MIME::Base64.
+LDIF files may be have base64 encoded values.  An attribute followed
+by two colons (::) instead of a single colon (:) indicates the
+attribute value is base64 encoded binary.  Please install the
+MIME::Base64 module from CPAN or use the perl CPAN module to
+install this module.  The url is:
+http://www.perl.com/CPAN/modules/by-module/MIME/
+If you have trouble, try simply putting Base64.pm
+in a subdirectory named MIME, in one of the directories named in @INC
+(site_perl is a good choice).";
+
 BEGIN {
     eval 'use MIME::Base64';
     if ($@) {
 	my $complaint = $@;
-	eval q{
-	    require Mozilla::LDAP::Utils;
-	    *decode_base64 = \&Mozilla::LDAP::Utils::decodeBase64;
-	    *encode_base64 = \&Mozilla::LDAP::Utils::encodeBase64;
-	};
-	if ($@) {
+	if ($^W) {
 	    warn $complaint;
-	    die "Can't use MIME::Base64";
-# Get a copy from http://www.perl.com/CPAN/modules/by-module/MIME/
-# and install it.  If you have trouble, try simply putting Base64.pm
-# in a subdirectory named MIME, in one of the directories named in @INC
-# (site_perl is a good choice).
-	} elsif ($^W) {
+	    warn $base64message;
+	} else {
 	    warn $complaint;
-	    warn "Can't use MIME::Base64";
+	    die $base64message;
 	}
     }
 }
@@ -818,7 +821,7 @@ Mozilla::LDAP::LDIF - read or write LDIF (LDAP Data Interchange Format)
 
 =head1 REQUIRES
 
-MIME::Base64 (or Mozilla::LDAP::Utils), Exporter, Carp
+MIME::Base64, Exporter, Carp
 
 =head1 INSTALLATION
 
@@ -1201,8 +1204,7 @@ For example, B<unpack_LDIF>("abc") outputs this warning, and returns ("abc", und
 
 =item Can't use MIME::Base64
 
-(F) The MIME::Base64 module isn't installed, and
-Mozilla::LDAP::Utils can't be used (as an inferior substitute).
+(F) The MIME::Base64 module isn't installed.
 To rectify this, get a copy of MIME::Base64 from
 http://www.perl.com/CPAN/modules/by-module/MIME/ and install it.
 If you have trouble, try simply putting Base64.pm in a subdirectory named MIME,
