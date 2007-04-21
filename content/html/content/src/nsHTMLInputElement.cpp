@@ -125,6 +125,7 @@ static NS_DEFINE_CID(kXULControllersCID,  NS_XULCONTROLLERS_CID);
 #define BF_PARSER_CREATING 7
 #define BF_IN_INTERNAL_ACTIVATE 8
 #define BF_CHECKED_IS_TOGGLED 9
+#define BF_SETTING_FILE_FOCUS 10
 
 #define GET_BOOLBIT(bitfield, field) (((bitfield) & (0x01 << (field))) \
                                         ? PR_TRUE : PR_FALSE)
@@ -1152,8 +1153,12 @@ nsHTMLInputElement::Blur()
 NS_IMETHODIMP
 nsHTMLInputElement::Focus()
 {
-  if (ShouldFocus(this)) {
+  if (ShouldFocus(this) && !GET_BOOLBIT(mBitField, BF_SETTING_FILE_FOCUS)) {
+    if (mType == NS_FORM_INPUT_FILE) {
+      SET_BOOLBIT(mBitField, BF_SETTING_FILE_FOCUS, PR_TRUE);
+    }
     SetElementFocus(PR_TRUE);
+    SET_BOOLBIT(mBitField, BF_SETTING_FILE_FOCUS, PR_FALSE);
   }
 
   return NS_OK;
@@ -1202,6 +1207,24 @@ nsHTMLInputElement::SetFocus(nsPresContext* aPresContext)
   nsIFormControlFrame* formControlFrame = GetFormControlFrame(PR_TRUE);
 
   if (formControlFrame) {
+    if (mType == NS_FORM_INPUT_FILE &&
+        GET_BOOLBIT(mBitField, BF_SETTING_FILE_FOCUS)) {
+      nsIFrame* frame = nsnull;
+      CallQueryInterface(formControlFrame, &frame);
+      if (frame) {
+        for (frame = frame->GetFirstChild(nsnull);
+             frame;
+             frame = frame->GetNextSibling()) {
+          nsCOMPtr<nsIFormControl> control = do_QueryInterface(frame->GetContent());
+          if (control && control->GetType() == NS_FORM_INPUT_BUTTON) {
+            frame->GetContent()->SetFocus(aPresContext);
+            return;
+          }
+        }
+      }
+      NS_WARNING("Could not focus file input!");
+      return;
+    }
     formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
     formControlFrame->ScrollIntoView(aPresContext);
     // Could call SelectAll(aPresContext) here to automatically
