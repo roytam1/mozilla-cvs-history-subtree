@@ -13,7 +13,7 @@
 #
 # The Original Code is FUEL.
 #
-# The Initial Developer of the Original Code is Mozilla.
+# The Initial Developer of the Original Code is Mozilla Corporation.
 # Portions created by the Initial Developer are Copyright (C) 2006
 # the Initial Developer. All Rights Reserved.
 #
@@ -45,6 +45,6 @@ include $(DEPTH)/config/autoconf.mk
 MODULE        = fuel
 XPIDL_MODULE  = fuel
 
-XPIDLSRCS = nsIApplication.idl
+XPIDLSRCS = fuelIApplication.idl
 
 include $(topsrcdir)/config/rules.mk
