@@ -7088,7 +7088,7 @@ nsCSSFrameConstructor::ConstructMathMLFrame(nsFrameConstructorState& aState,
     if (NS_FAILED(rv)) return rv;
     nsRefPtr<nsStyleContext> blockContext;
     blockContext = styleSet->ResolvePseudoStyleFor(aContent,
-                                                   nsCSSAnonBoxes::mozAnonymousBlock,
+                                                   nsCSSAnonBoxes::mozMathMLAnonymousBlock,
                                                    mrowContext);
     InitAndRestoreFrame(aState, aContent, newFrame, blockContext, nsnull,
                         blockFrame);
