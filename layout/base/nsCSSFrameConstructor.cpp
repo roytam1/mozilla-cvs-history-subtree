@@ -6957,16 +6957,11 @@ already_AddRefed<nsStyleContext>
 nsCSSFrameConstructor::ResolveStyleContext(nsIFrame*         aParentFrame,
                                            nsIContent*       aContent)
 {
+  aParentFrame = nsFrame::CorrectStyleParentFrame(aParentFrame, nsnull);
+  
   // Resolve the style context based on the content object and the parent
   // style context
   nsStyleContext* parentStyleContext = aParentFrame->GetStyleContext();
-
-  // skip past any parents that are scrolled-content. We want to inherit directly
-  // from the outer scroll frame.
-  while (parentStyleContext && parentStyleContext->GetPseudoType() ==
-         nsCSSAnonBoxes::scrolledContent) {
-    parentStyleContext = parentStyleContext->GetParent();
-  }
 
   nsStyleSet *styleSet = mPresShell->StyleSet();
 
@@ -12217,7 +12212,10 @@ nsCSSFrameConstructor::ProcessChildren(nsFrameConstructorState& aState,
   // XXXbz ideally, this would do all the pushing of various
   // containing blocks as needed, so callers don't have to do it...
   nsresult rv = NS_OK;
-  nsStyleContext* styleContext = aFrame->GetStyleContext();
+  // :before/:after content should have the same style context parent
+  // as normal kids.
+  nsStyleContext* styleContext =
+    nsFrame::CorrectStyleParentFrame(aFrame, nsnull)->GetStyleContext();
     
   if (aCanHaveGeneratedContent) {
     // Probe for generated content before
