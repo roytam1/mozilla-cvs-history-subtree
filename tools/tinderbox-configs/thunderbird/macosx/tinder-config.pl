@@ -146,7 +146,7 @@ $LocalizationVersionFile = 'mail/config/version.txt';
 	     "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8.0/thunderbird-%version%.en-US.mac.dmg" =>
 	     "/builds/tinderbox/Tb-Mozilla1.8.0-l10n/Darwin_8.7.0_Depend/thunderbird.dmg"
 	     );
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Moz1.8.0-universal-l10n/Darwin_8.7.0_Depend/thunderbird.dmg";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8.0-l10n/Darwin_8.7.0_Depend/thunderbird.dmg";
 
 
 #-
