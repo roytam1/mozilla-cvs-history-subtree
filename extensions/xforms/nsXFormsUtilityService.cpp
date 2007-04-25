@@ -212,24 +212,30 @@ nsXFormsUtilityService::ValidateString(const nsAString & aValue,
 }
 
 NS_IMETHODIMP
-nsXFormsUtilityService::GetRepeatIndex(nsIDOMNode *aRepeat, PRInt32 *aIndex)
+nsXFormsUtilityService::GetRepeatIndexById(nsIDOMNode *aResolverNode,
+                                           const nsAString &aId,
+                                           PRUint32         *aIndex)
 {
-  NS_ASSERTION(aIndex, "no return buffer for index, we'll crash soon");
-  *aIndex = 0;
+  NS_ENSURE_ARG_POINTER(aIndex);
 
-  nsCOMPtr<nsIXFormsRepeatElement> repeatEle = do_QueryInterface(aRepeat);
-  if (!repeatEle) {
+  nsCOMPtr<nsIDOMElement> resolverElement(do_QueryInterface(aResolverNode));
+  NS_ENSURE_STATE(resolverElement);
+
+  nsCOMPtr<nsIDOMElement> element;
+  nsXFormsUtils::GetElementByContextId(resolverElement, aId,
+                                       getter_AddRefs(element));
+
+  nsCOMPtr<nsIDOMNode> node(do_QueryInterface(element));
+
+  nsCOMPtr<nsIXFormsRepeatElement> repeat = do_QueryInterface(node);
+  if (!repeat) {
     // if aRepeat isn't a repeat element, then setting aIndex to -1 to tell
     // XPath to return NaN.  Per 7.8.5 in the spec (1.0, 2nd edition)
     *aIndex = -1;
-  } else {
-    PRUint32 retIndex = 0;
-    nsresult rv = repeatEle->GetIndex(&retIndex);
-    NS_ENSURE_SUCCESS(rv, rv);
-    *aIndex = retIndex;
+    return NS_OK;
   }
 
-  return NS_OK;
+  return repeat->GetIndex(aIndex);
 }
 
 NS_IMETHODIMP
