@@ -54,15 +54,42 @@
 #include "pki3hack.h"
 #include "base.h"
 
+#define PENDING_SLOP (24L*60L*60L)
 
 /*
+ * WARNING - this function is depricated, and will go away in the near future.
+ *	It has been superseded by CERT_CheckCertValidTimes().
+ *
  * Check the validity times of a certificate
  */
 SECStatus
 CERT_CertTimesValid(CERTCertificate *c)
 {
-    SECCertTimeValidity valid = CERT_CheckCertValidTimes(c, PR_Now(), PR_TRUE);
-    return (valid == secCertTimeValid) ? SECSuccess : SECFailure;
+    int64 now, notBefore, notAfter, pendingSlop;
+    SECStatus rv;
+    
+    /* if cert is already marked OK, then don't bother to check */
+    if ( c->timeOK ) {
+	return(SECSuccess);
+    }
+    
+    /* get current time */
+    now = PR_Now();
+    rv = CERT_GetCertTimes(c, &notBefore, &notAfter);
+    
+    if (rv) {
+	return(SECFailure);
+    }
+    
+    LL_I2L(pendingSlop, PENDING_SLOP);
+    LL_SUB(notBefore, notBefore, pendingSlop);
+
+    if (LL_CMP(now, <, notBefore) || LL_CMP(now, >, notAfter)) {
+	PORT_SetError(SEC_ERROR_EXPIRED_CERTIFICATE);
+	return(SECFailure);
+    }
+
+    return(SECSuccess);
 }
 
 /*
@@ -1363,7 +1390,7 @@ CERT_VerifyCertificate(CERTCertDBHandle *handle, CERTCertificate *cert,
         if (PR_FALSE == checkedOCSP) {
             checkedOCSP = PR_TRUE; /* only check OCSP once */
             statusConfig = CERT_GetStatusConfig(handle);
-            if (requiredUsages != certificateUsageStatusResponder &&
+            if ( (! (requiredUsages == certificateUsageStatusResponder)) &&
                 statusConfig != NULL) {
                 if (statusConfig->statusChecker != NULL) {
                     rv = (* statusConfig->statusChecker)(handle, cert,
