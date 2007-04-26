@@ -169,10 +169,10 @@ $BuildNameExtra = 'Release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Firefox';
+$BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_9a3_RELEASE';
+$BuildTag = 'MOZILLA_1_9a4_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -209,7 +209,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "mozilla1.9a3";
+$milestone     = "mozilla1.9a4";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
@@ -222,8 +222,8 @@ $update_platform = "Darwin_Universal-gcc3";
 $update_hash = "md5";
 $update_filehost = "ftp.mozilla.org";
 $update_pushinfo = 0;
-$update_appv = "3.0a2";
-$update_extv = "3.0a2";
+$update_appv = "3.0";
+$update_extv = "3.0";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
