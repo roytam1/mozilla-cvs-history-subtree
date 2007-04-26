@@ -22,7 +22,6 @@
 #
 # Contributor(s):
 #   Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
-#   Slavomir Katuscak <slavomir.katuscak@sun.com>, Sun Microsystems
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -74,9 +73,6 @@ cert_init()
   if [ -z "${INIT_SOURCED}" ] ; then
       cd ../common
       . ./init.sh
-  fi
-  if [ -z "${IOPR_CERT_SOURCED}" ]; then
-       . ../iopr/cert_iopr.sh
   fi
   SCRIPTNAME="cert.sh"
   CRL_GRP_DATE=`date "+%Y%m%d%H%M%SZ"`
@@ -1320,17 +1316,12 @@ cert_smime_client
 cert_fips
 cert_eccurves
 cert_extensions
-
-if [ -z "$NSS_TEST_DISABLE_CRL" ] ; then
-    cert_crl_ssl
-else
-    echo "$SCRIPTNAME: Skipping CRL Tests"
-fi
-
-cert_iopr_setup
-
+cert_crl_ssl
 if [ -n "$DO_DIST_ST" -a "$DO_DIST_ST" = "TRUE" ] ; then
     cert_stresscerts 
-fi
+    #following lines to be used when databases are to be reused
+    #cp -r /u/sonmi/tmp/stress/kentuckyderby.13/* $HOSTDIR
+    #cp -r $HOSTDIR/../${HOST}.2/* $HOSTDIR
 
+fi
 cert_cleanup

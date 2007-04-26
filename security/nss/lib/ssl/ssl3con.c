@@ -107,15 +107,12 @@ static ssl3CipherSuiteCfg cipherSuites[ssl_V3_SUITES_IMPLEMENTED] = {
  { TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,     SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
 #endif /* NSS_ENABLE_ECC */
- { TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA,  SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
- { TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA,  SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_DHE_RSA_WITH_AES_256_CBC_SHA, 	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_DHE_DSS_WITH_AES_256_CBC_SHA, 	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
 #ifdef NSS_ENABLE_ECC
  { TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,      SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA,    SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
 #endif /* NSS_ENABLE_ECC */
- { TLS_RSA_WITH_CAMELLIA_256_CBC_SHA,  	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_RSA_WITH_AES_256_CBC_SHA,     	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
 
 #ifdef NSS_ENABLE_ECC
@@ -124,8 +121,6 @@ static ssl3CipherSuiteCfg cipherSuites[ssl_V3_SUITES_IMPLEMENTED] = {
  { TLS_ECDHE_RSA_WITH_RC4_128_SHA,         SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,     SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
 #endif /* NSS_ENABLE_ECC */
- { TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA,  SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
- { TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA,  SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_DHE_DSS_WITH_RC4_128_SHA,           SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_DHE_RSA_WITH_AES_128_CBC_SHA,       SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
@@ -135,7 +130,6 @@ static ssl3CipherSuiteCfg cipherSuites[ssl_V3_SUITES_IMPLEMENTED] = {
  { TLS_ECDH_ECDSA_WITH_RC4_128_SHA,        SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,    SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
 #endif /* NSS_ENABLE_ECC */
- { TLS_RSA_WITH_CAMELLIA_128_CBC_SHA,  	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { SSL_RSA_WITH_RC4_128_MD5,               SSL_NOT_ALLOWED, PR_TRUE, PR_FALSE},
  { SSL_RSA_WITH_RC4_128_SHA,               SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
  { TLS_RSA_WITH_AES_128_CBC_SHA,     	   SSL_NOT_ALLOWED, PR_FALSE,PR_FALSE},
@@ -224,8 +218,6 @@ static const ssl3BulkCipherDef bulk_cipher_defs[] = {
     {cipher_idea,      calg_idea,     16, 16, type_block,   8, 8, kg_strong},
     {cipher_aes_128,   calg_aes,      16, 16, type_block,  16,16, kg_strong},
     {cipher_aes_256,   calg_aes,      32, 32, type_block,  16,16, kg_strong},
-    {cipher_camellia_128, calg_camellia,16, 16, type_block,  16,16, kg_strong},
-    {cipher_camellia_256, calg_camellia,32, 32, type_block,  16,16, kg_strong},
     {cipher_missing,   calg_null,      0,  0, type_stream,  0, 0, kg_null},
 };
 
@@ -323,17 +315,6 @@ static const ssl3CipherSuiteDef cipher_suite_defs[] =
     {TLS_DH_ANON_WITH_AES_256_CBC_SHA, 	cipher_aes_256, mac_sha, kea_dh_anon},
 #endif
 
-    {TLS_RSA_WITH_CAMELLIA_128_CBC_SHA, cipher_camellia_128, mac_sha, kea_rsa},
-    {TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA,
-     cipher_camellia_128, mac_sha, kea_dhe_dss},
-    {TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA,
-     cipher_camellia_128, mac_sha, kea_dhe_rsa},
-    {TLS_RSA_WITH_CAMELLIA_256_CBC_SHA,	cipher_camellia_256, mac_sha, kea_rsa},
-    {TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA,
-     cipher_camellia_256, mac_sha, kea_dhe_dss},
-    {TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA,
-     cipher_camellia_256, mac_sha, kea_dhe_rsa},
-
     {TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA,
                                     cipher_des,    mac_sha,kea_rsa_export_1024},
     {TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,
@@ -401,7 +382,6 @@ static const SSLCipher2Mech alg2Mech[] = {
     { calg_idea     , CKM_IDEA_CBC			},
     { calg_fortezza , CKM_SKIPJACK_CBC64                },
     { calg_aes      , CKM_AES_CBC			},
-    { calg_camellia , CKM_CAMELLIA_CBC			},
 /*  { calg_init     , (CK_MECHANISM_TYPE)0x7fffffffL    }  */
 };
 
@@ -434,8 +414,6 @@ const char * const ssl3_cipherName[] = {
     "IDEA-CBC",
     "AES-128",
     "AES-256",
-    "Camellia-128",
-    "Camellia-256",
     "missing"
 };
 
@@ -1305,16 +1283,6 @@ const ssl3BulkCipherDef *cipher_def;
 	pwSpec->destroy = (SSLDestroy) AES_DestroyContext;
 	break;
 
-    case ssl_calg_camellia:
-      	initFn = (BLapiInitContextFunc)Camellia_InitContext;
-	mode = NSS_CAMELLIA_CBC;
-	optArg1 = server_encrypts;
-	optArg2 = CAMELLIA_BLOCK_SIZE;
-	pwSpec->encode  = (SSLCipher) Camellia_Encrypt;
-	pwSpec->decode  = (SSLCipher) Camellia_Decrypt;
-	pwSpec->destroy = (SSLDestroy) Camellia_DestroyContext;
-	break;
-
     case ssl_calg_idea:
     case ssl_calg_fortezza :
     default:
@@ -1333,8 +1301,7 @@ const ssl3BulkCipherDef *cipher_def;
 	goto bail_out;
     }
 
-    if (calg == ssl_calg_des || calg == ssl_calg_3des || calg == ssl_calg_aes
-	|| calg == ssl_calg_camellia) {
+    if (calg == ssl_calg_des || calg == ssl_calg_3des || calg == ssl_calg_aes) {
 	/* For block ciphers, if the server is encrypting, then the client
 	 * is decrypting, and vice versa.
 	 */
@@ -1684,7 +1651,7 @@ ssl3_ComputeRecordMAC(
     } else {
 	/* bypass version */
 	const SECHashObject *hashObj = NULL;
-	unsigned int       pad_bytes = 0;
+	unsigned int       pad_bytes;
 	PRUint64           write_mac_context[MAX_MAC_CONTEXT_LLONGS];
 
 	switch (mac_def->mac) {
@@ -3719,7 +3686,6 @@ static const CK_MECHANISM_TYPE wrapMechanismList[SSL_NUM_WRAP_MECHS] = {
     CKM_SKIPJACK_WRAP,
     CKM_SKIPJACK_CBC64,
     CKM_AES_ECB,
-    CKM_CAMELLIA_ECB,
     UNKNOWN_WRAP_MECHANISM
 };
 
@@ -3976,7 +3942,7 @@ getWrappingKey( sslSocket *       ss,
     /* wrap symmetric wrapping key in server's public key. */
     switch (exchKeyType) {
 #ifdef NSS_ENABLE_ECC
-    PK11SymKey *      Ks = NULL;
+    PK11SymKey *      Ks;
     SECKEYPublicKey   *pubWrapKey = NULL;
     SECKEYPrivateKey  *privWrapKey = NULL;
     ECCWrappedKeyInfo *ecWrapped;
@@ -6476,15 +6442,13 @@ ssl3_HandleRSAClientKeyExchange(sslSocket *ss,
     SECStatus         rv;
     SECItem           enc_pms;
     unsigned char     rsaPmsBuf[SSL3_RSA_PMS_LENGTH];
-    SECItem           pmsItem = {siBuffer, NULL, 0};
+    SECItem           pmsItem = {siBuffer, rsaPmsBuf, sizeof rsaPmsBuf};
 
     PORT_Assert( ss->opt.noLocks || ssl_HaveRecvBufLock(ss) );
     PORT_Assert( ss->opt.noLocks || ssl_HaveSSL3HandshakeLock(ss) );
 
     enc_pms.data = b;
     enc_pms.len  = length;
-    pmsItem.data = rsaPmsBuf;
-    pmsItem.len  = sizeof rsaPmsBuf;
 
     if (ss->ssl3.prSpec->version > SSL_LIBRARY_VERSION_3_0) { /* isTLS */
 	PRInt32 kLen;

@@ -42,7 +42,6 @@
 #ifndef _OCSPI_H_
 #define _OCSPI_H_
 
-SECStatus OCSP_InitGlobal(void);
-SECStatus OCSP_ShutdownCache(void);
+SECStatus InitOCSPGlobal(void);
 
 #endif /* _OCSPI_H_ */

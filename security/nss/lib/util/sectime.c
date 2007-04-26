@@ -116,10 +116,6 @@ CERT_CreateValidity(int64 notBefore, int64 notAfter)
     int rv;
     PRArenaPool *arena;
 
-    if (notBefore > notAfter) {
-       PORT_SetError(SEC_ERROR_INVALID_ARGS);
-       return NULL;
-    }
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     
     if ( !arena ) {

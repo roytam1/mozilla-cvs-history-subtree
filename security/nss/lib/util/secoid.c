@@ -169,13 +169,6 @@
 #define ANSI_X962_SIGNATURE_OID ANSI_X962_OID, 0x04
 #define ANSI_X962_SPECIFY_OID   ANSI_X962_SIGNATURE_OID, 0x03
 
-/* for Camellia: iso(1) member-body(2) jisc(392)
- *    mitsubishi(200011) isl(61) security(1) algorithm(1)
- */
-#define MITSUBISHI_ALG 0x2a,0x83,0x08,0x8c,0x9a,0x4b,0x3d,0x01,0x01
-#define CAMELLIA_ENCRYPT_OID MITSUBISHI_ALG,1
-#define CAMELLIA_WRAP_OID    MITSUBISHI_ALG,3
-
 #define CONST_OID static const unsigned char
 
 CONST_OID md2[]        				= { DIGEST, 0x02 };
@@ -334,8 +327,8 @@ CONST_OID x509NameConstraints[]       		= { ID_CE_OID, 30 };
 CONST_OID x509CRLDistPoints[]         		= { ID_CE_OID, 31 };
 CONST_OID x509CertificatePolicies[]   		= { ID_CE_OID, 32 };
 CONST_OID x509PolicyMappings[]        		= { ID_CE_OID, 33 };
+CONST_OID x509PolicyConstraints[]     		= { ID_CE_OID, 34 };
 CONST_OID x509AuthKeyID[]             		= { ID_CE_OID, 35 };
-CONST_OID x509PolicyConstraints[]     		= { ID_CE_OID, 36 };
 CONST_OID x509ExtKeyUsage[]           		= { ID_CE_OID, 37 };
 CONST_OID x509AuthInfoAccess[]        		= { PKIX_CERT_EXTENSIONS, 1 };
 
@@ -457,13 +450,6 @@ CONST_OID aes256_OFB[] 				= { AES, 43 };
 CONST_OID aes256_CFB[] 				= { AES, 44 };
 #endif
 CONST_OID aes256_KEY_WRAP[]			= { AES, 45 };
-
-CONST_OID camellia128_CBC[]			= { CAMELLIA_ENCRYPT_OID, 2};
-CONST_OID camellia192_CBC[]			= { CAMELLIA_ENCRYPT_OID, 3};
-CONST_OID camellia256_CBC[]			= { CAMELLIA_ENCRYPT_OID, 4};
-CONST_OID camellia128_KEY_WRAP[]		= { CAMELLIA_WRAP_OID, 2};
-CONST_OID camellia192_KEY_WRAP[]		= { CAMELLIA_WRAP_OID, 3};
-CONST_OID camellia256_KEY_WRAP[]		= { CAMELLIA_WRAP_OID, 4};
 
 CONST_OID sha256[]                              = { SHAXXX, 1 };
 CONST_OID sha384[]                              = { SHAXXX, 2 };
@@ -1483,14 +1469,6 @@ const static SECOidData oids[] = {
 	SEC_OID_ANSIX962_ECDSA_SHA512_SIGNATURE,
 	"X9.62 ECDSA signature with SHA512", CKM_INVALID_MECHANISM,
 	INVALID_CERT_EXTENSION ),
-
-    /* Camellia algorithm OIDs */
-    OD( camellia128_CBC, SEC_OID_CAMELLIA_128_CBC,
-	"CAMELLIA-128-CBC", CKM_CAMELLIA_CBC, INVALID_CERT_EXTENSION ),
-    OD( camellia192_CBC, SEC_OID_CAMELLIA_192_CBC,
-	"CAMELLIA-192-CBC", CKM_CAMELLIA_CBC, INVALID_CERT_EXTENSION ),
-    OD( camellia256_CBC, SEC_OID_CAMELLIA_256_CBC,
-	"CAMELLIA-256-CBC", CKM_CAMELLIA_CBC, INVALID_CERT_EXTENSION ),
 };
 
 /*
@@ -1865,7 +1843,7 @@ SECOID_Shutdown(void)
     /* Have to handle the case where the lock was created, but
     ** the pool wasn't. 
     ** I'm not going to attempt to create the lock, just to protect
-    ** the destruction of data that probably isn't initialized anyway.
+    ** the destruction of data the probably isn't inisialized anyway.
     */
     if (dynOidLock) {
 	NSSRWLock_LockWrite(dynOidLock);
