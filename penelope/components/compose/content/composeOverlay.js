@@ -130,14 +130,14 @@ function decreaseMsgPriority()
 function removeFormatting()
 {
     var currentEditor = GetCurrentEditor();
-    if (GetCurrentEditorType() != "textmail" && currentEditor.canCopy())
+    var selcon = currentEditor.selectionController;
+
+    var nsel = selcon.getSelection(selcon.SELECTION_NORMAL);
+    
+    if (nsel != "")
     {
-        currentEditor.beginTransaction();
-        // copy the selection to the clipboard 
-        currentEditor.copy();
-        // paste without formatting
-        currentEditor.pasteNoFormatting(nsISelectionController.SELECTION_NORMAL);
-        currentEditor.endTransaction();
+        goDoCommand('cmd_copy');
+        goDoCommand('cmd_pasteNoFormatting');
     }
 }
 

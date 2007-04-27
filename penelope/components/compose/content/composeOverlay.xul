@@ -145,6 +145,7 @@ xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
     <key id="key_penelopeRemoveQuoteLevel" command="cmd_penelopeRemoveQuoteLevel"/>
     <key id="key_penelopeIncMsgPriority" command="cmd_penelopeIncMsgPrio"/>
     <key id="key_penelopeDecMsgPriority" command="cmd_penelopeDecMsgPrio"/>
+    <key id="key_penelopeRemoveFormatting" command="cmd_penelopeRemoveFormatting"/>
   </keyset>
   <commandset id="mainCommandSet">
     <commandset id="penelopeComposeCommandset" />

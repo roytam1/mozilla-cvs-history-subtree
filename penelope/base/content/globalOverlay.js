@@ -252,10 +252,20 @@ function setKey(key, value)
         if(properties[1]) 
         {
             key.setAttribute("key", properties[1]);
+            try
+            {
+                key.attributes.removeNamedItem("keycode");
+            }
+            catch (e) {}
         }
         else if(properties[2]) 
         {
             key.setAttribute("keycode", properties[2]);
+            try
+            {
+                key.attributes.removeNamedItem("key");
+            }
+            catch (e) {}
         }
         else
         {

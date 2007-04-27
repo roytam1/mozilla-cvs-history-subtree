@@ -1204,6 +1204,6 @@ function penelopeFolderPaneSelectionChange()
     var topwin = document.getElementById("messengerWindow");
     if (topwin.getAttribute("folderwin") == "true")
     {
-        document.title = "Penelope";
+        document.title = "Mailboxes";
     }
 }
