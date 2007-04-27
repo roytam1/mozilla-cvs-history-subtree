@@ -38,6 +38,7 @@
 
 interface zapIMediaNode;
 interface nsIEventTarget;
+interface nsIPropertyBag2;
 
 /**
  * \ingroup ZMK_MODULE
@@ -65,6 +66,12 @@ interface zapIMediaNodeContainer : nsISupports
    */
   void unlock(in zapIMediaNode node);
 
+  /**
+   * Used by media nodes to notify their containers of an event, such
+   * as e.g. a processing error or an end-of-stream condition.
+   */
+  void notify(in zapIMediaNode node, in nsIPropertyBag2 event);
+  
   /**
    * The event target for this container
    */

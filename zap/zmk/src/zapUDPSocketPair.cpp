@@ -229,6 +229,14 @@ zapUDPSocketPair::Unlock(zapIMediaNode *node)
   return mContainer->Unlock(node);
 }
 
+/* void notify (in zapIMediaNode node, in nsIPropertyBag2 event); */
+NS_IMETHODIMP
+zapUDPSocketPair::Notify(zapIMediaNode *node, nsIPropertyBag2 *event)
+{
+  // our children don't generate any notifications
+  return NS_OK;
+}
+
 /* readonly attribute nsIEventTarget eventTarget; */
 NS_IMETHODIMP
 zapUDPSocketPair::GetEventTarget(nsIEventTarget * *aEventTarget)

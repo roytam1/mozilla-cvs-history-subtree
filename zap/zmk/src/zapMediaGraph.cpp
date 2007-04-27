@@ -517,6 +517,15 @@ zapMediaGraph::Unlock(zapIMediaNode *node)
   return NS_OK;
 }
 
+/* void notify (in zapIMediaNode node, in nsIPropertyBag2 event); */
+NS_IMETHODIMP
+zapMediaGraph::Notify(zapIMediaNode *node, nsIPropertyBag2 *event)
+{
+  // we don't handle any events at the moment
+  return NS_OK;
+}
+
+
 /* readonly attribute nsIEventTarget eventTarget; */
 NS_IMETHODIMP
 zapMediaGraph::GetEventTarget(nsIEventTarget * *aEventTarget)
