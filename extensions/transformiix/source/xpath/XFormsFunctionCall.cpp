@@ -210,7 +210,7 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
       NS_ENSURE_SUCCESS(rv, rv);
 
-      PRUint32 index = 0;
+      PRInt32 index = 0;
       double res = Double::NaN;
       rv = xformsService->GetRepeatIndexById(mResolverNode, indexId, &index);
       NS_ENSURE_SUCCESS(rv, rv);
