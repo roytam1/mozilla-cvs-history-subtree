@@ -2703,6 +2703,16 @@ nsGlobalWindow::SetScreenY(PRInt32 aScreenY)
 nsresult
 nsGlobalWindow::CheckSecurityWidthAndHeight(PRInt32* aWidth, PRInt32* aHeight)
 {
+  if (!nsContentUtils::IsCallerTrustedForWrite()) {
+    // if attempting to resize the window, hide any open popups
+    nsCOMPtr<nsIPresShell> presShell;
+    mDocShell->GetPresShell(getter_AddRefs(presShell));
+
+    nsCOMPtr<nsIPresShell_MOZILLA_1_8_BRANCH> presShell18 = do_QueryInterface(presShell);
+    if (presShell18)
+      presShell18->HidePopups();
+  }
+
   // This one is easy. Just ensure the variable is greater than 100;
   if ((aWidth && *aWidth < 100) || (aHeight && *aHeight < 100)) {
     // Check security state for use in determing window dimensions
@@ -2744,6 +2754,13 @@ nsGlobalWindow::CheckSecurityLeftAndTop(PRInt32* aLeft, PRInt32* aTop)
   }
 
   if (!enabled) {
+    // if attempting to move the window, hide any open popups
+    nsCOMPtr<nsIPresShell> presShell;
+    mDocShell->GetPresShell(getter_AddRefs(presShell));
+    nsCOMPtr<nsIPresShell_MOZILLA_1_8_BRANCH> presShell18 = do_QueryInterface(presShell);
+    if (presShell18)
+      presShell18->HidePopups();
+
     PRInt32 screenLeft, screenTop, screenWidth, screenHeight;
     PRInt32 winLeft, winTop, winWidth, winHeight;
 

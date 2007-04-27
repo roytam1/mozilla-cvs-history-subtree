@@ -746,8 +746,8 @@ protected:
 };
 
 #define NS_IPRESSHELL_MOZILLA_1_8_BRANCH_IID \
-{ 0x36b539e8, 0xf22f, 0x4fcb, \
-  { 0xb0, 0x5d, 0x00, 0x95, 0x29, 0x1e, 0x99, 0x68 } }
+{ 0x365C83FB, 0x7D4C, 0x4B53, \
+  { 0x84, 0xde, 0xa5, 0xcc, 0x9a, 0x05, 0x9a, 0x26 } }
 
 class nsIPresShell_MOZILLA_1_8_BRANCH : public nsIPresShell
 {
@@ -756,6 +756,8 @@ public:
 
   void AddWeakFrame(nsWeakFrame* aWeakFrame);
   void RemoveWeakFrame(nsWeakFrame* aWeakFrame);
+
+  virtual void HidePopups() = 0;
 
 protected:
   // A list of weak frames. This is a pointer to the last item in the list.
