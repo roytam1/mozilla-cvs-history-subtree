@@ -367,8 +367,6 @@ private:
   nsresult GetPopupLinkNode(nsIDOMNode** aNode);
   nsresult GetPopupImageNode(nsIImageLoadingContent** aNode);
 
-  void HideViewIfPopup(nsIView* aView);
-
   void DumpContentToPPM(const char* aFileName);
 
   void PrepareToStartLoad(void);
@@ -1212,40 +1210,13 @@ DocumentViewerImpl::PageHide(PRBool aIsUnload)
                                 NS_EVENT_FLAG_INIT, &status);
   }
 
-  if (mPresShell) {
-    // look for open menupopups and close them after the unload event, in case
-    // the unload event listeners open any new popups
-    nsIViewManager *vm = mPresShell->GetViewManager();
-    if (vm) {
-      nsIView *rootView = nsnull;
-      vm->GetRootView(rootView);
-      if (rootView)
-        HideViewIfPopup(rootView);
-    }
-  }
+  // look for open menupopups and close them after the unload event, in case
+  // the unload event listeners open any new popups
+  nsCOMPtr<nsIPresShell_MOZILLA_1_8_BRANCH> presShell18 = do_QueryInterface(mPresShell);
+  if (presShell18)
+    presShell18->HidePopups();
 
   return rv;
-}
-
-void
-DocumentViewerImpl::HideViewIfPopup(nsIView* aView)
-{
-  nsIFrame* frame = NS_STATIC_CAST(nsIFrame*, aView->GetClientData());
-  if (frame) {
-    nsIMenuParent* parent;
-    CallQueryInterface(frame, &parent);
-    if (parent) {
-      parent->HideChain();
-      // really make sure the view is hidden
-      mViewManager->SetViewVisibility(aView, nsViewVisibility_kHide);
-    }
-  }
-
-  nsIView* child = aView->GetFirstChild();
-  while (child) {
-    HideViewIfPopup(child);
-    child = child->GetNextSibling();
-  }
 }
 
 static void
