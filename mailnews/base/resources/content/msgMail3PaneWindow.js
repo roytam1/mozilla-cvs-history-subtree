@@ -1519,11 +1519,6 @@ function SelectMessage(messageUri)
     gDBView.selectMsgByKey(msgHdr.messageKey);
 }
 
-function ReloadWithAllParts()
-{
-  gDBView.reloadMessageWithAllParts();
-}
-
 function ReloadMessage()
 {
   gDBView.reloadMessage();
