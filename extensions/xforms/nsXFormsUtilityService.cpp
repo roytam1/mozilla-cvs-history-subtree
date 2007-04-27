@@ -214,7 +214,7 @@ nsXFormsUtilityService::ValidateString(const nsAString & aValue,
 NS_IMETHODIMP
 nsXFormsUtilityService::GetRepeatIndexById(nsIDOMNode *aResolverNode,
                                            const nsAString &aId,
-                                           PRUint32         *aIndex)
+                                           PRInt32         *aIndex)
 {
   NS_ENSURE_ARG_POINTER(aIndex);
 
@@ -235,7 +235,12 @@ nsXFormsUtilityService::GetRepeatIndexById(nsIDOMNode *aResolverNode,
     return NS_OK;
   }
 
-  return repeat->GetIndex(aIndex);
+  PRUint32 retIndex = 0;
+  nsresult rv = repeat->GetIndex(&retIndex);
+  NS_ENSURE_SUCCESS(rv, rv);
+  *aIndex = retIndex;
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
