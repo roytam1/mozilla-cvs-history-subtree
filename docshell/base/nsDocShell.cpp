@@ -6292,9 +6292,11 @@ nsDocShell::InternalLoad(nsIURI * aURI,
 
     nsCOMPtr<nsISupports> owner(aOwner);
     //
-    // Get an owner from the current document if necessary
+    // Get an owner from the current document if necessary, but only
+    // if this is not an external load.
     //
-    if (!owner && (aFlags & INTERNAL_LOAD_FLAGS_INHERIT_OWNER))
+    if (aLoadType != LOAD_NORMAL_EXTERNAL && !owner &&
+        (aFlags & INTERNAL_LOAD_FLAGS_INHERIT_OWNER))
         GetCurrentDocumentOwner(getter_AddRefs(owner));
 
     //
