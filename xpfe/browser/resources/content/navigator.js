@@ -1492,7 +1492,7 @@ function BrowserLoadURL(aTriggeringEvent)
         var newWin = openDialog(getBrowserURL(), "_blank", "all,dialog=no", url);
         // Reset url in the urlbar, copied from handleURLBarRevert()
         var oldURL = browser.currentURI.spec;
-        if (oldURL != "about:blank") {
+        if (oldURL != "about:blank" || content.opener) {
           gURLBar.value = oldURL;
           SetPageProxyState("valid", null);
         } else
@@ -2122,7 +2122,7 @@ function handleURLBarRevert()
   // don't revert to last valid url unless page is NOT loading
   // and user is NOT key-scrolling through autocomplete list
   if (!throbberElement.hasAttribute("busy") && !isScrolling) {
-    if (url != "about:blank") {
+    if (url != "about:blank" || content.opener) {
       gURLBar.value = url;
       gURLBar.select();
       SetPageProxyState("valid", null); // XXX Build a URI and pass it in here.

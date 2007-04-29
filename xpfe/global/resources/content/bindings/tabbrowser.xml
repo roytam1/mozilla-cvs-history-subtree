@@ -528,10 +528,12 @@
             // XXX https://bugzilla.mozilla.org/show_bug.cgi?id=22183#c239
             try {
               if (docElement.getAttribute("chromehidden").indexOf("location") != -1) {
-                var host = this.mURIFixup.createExposableURI(
-                             this.mCurrentBrowser.currentURI).prePath;
-                if (host)
-                  newTitle = host + sep + newTitle;
+                var uri  = this.mURIFixup.createExposableURI(
+                             this.mCurrentBrowser.currentURI);
+                if (uri.schemeIs("about"))
+                  newTitle = uri.spec + sep + newTitle;
+                else if (uri.host)
+                  newTitle = uri.prePath + sep + newTitle;
               }
             } catch (e) {}
 
