@@ -117,6 +117,7 @@ $use_blat       = 1;
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
@@ -139,11 +140,17 @@ $BuildNameExtra = 'Tb-Release-l10n-Release';
 $ConfigureOnly = 1;
 
 # On windows
-%WGetFiles = ("http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.10-candidates/rc1/thunderbird-1.5.0.10.en-US.win32.installer.exe" =>
+%WGetFiles = (
+# CONFIG:              "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.win32.installer.exe" =>
+              "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.10-candidates/rc1/thunderbird-1.5.0.10.en-US.win32.installer.exe" =>
+# CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird-installer.exe",
 	      "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/thunderbird-installer.exe",
+# CONFIG:	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.win32.zip" =>
 	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.10-candidates/rc1/thunderbird-1.5.0.10.en-US.win32.zip" =>
+# CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.zip");
 	      "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/thunderbird.zip");
 
+# CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.zip WIN32_INSTALLER_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird-installer.exe";
 $BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/thunderbird.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/thunderbird-installer.exe";
 
 #-
@@ -158,8 +165,8 @@ $BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Re
 $BuildTree  = 'Mozilla1.8.0-l10n';
 
 #$BuildName = '';
+# CONFIG: $BuildTag = '%productTag%_RELEASE';
 $BuildTag = 'THUNDERBIRD_1_5_0_10_RELEASE';
-#$BuildTag = 'FIREFOX_1_0_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -191,12 +198,15 @@ $build_hour    = "9";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
+# CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
+# CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
+# CONFIG: $milestone     = 'thunderbird%version%-l10n';
 $milestone     = "thunderbird1.5.0.10";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;

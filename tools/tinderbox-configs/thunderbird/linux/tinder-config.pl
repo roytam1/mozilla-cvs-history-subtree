@@ -125,6 +125,7 @@ $VendorName               = 'Mozilla';
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
@@ -147,10 +148,13 @@ $BuildNameExtra = 'Tb-Release-l10n-Release';
 $ConfigureOnly = 1;
 
 %WGetFiles = (
+# CONFIG:	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.linux-i686.tar.gz' =>
 	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.10-candidates/rc1/thunderbird-1.5.0.10.en-US.linux-i686.tar.gz' =>
+# CONFIG:	      '%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.gz'
 	      '/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Linux_2.4.18-14_Depend/thunderbird.tar.gz'
 	      );
 
+# CONFIG: $BuildLocalesArgs = 'ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.gz';
 $BuildLocalesArgs = 'ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Linux_2.4.18-14_Depend/thunderbird.tar.gz';
 
 #-
@@ -165,6 +169,7 @@ $BuildLocalesArgs = 'ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Linux
 $BuildTree  = 'Mozilla1.8.0-l10n';
 
 #$BuildName = '';
+# CONFIG: $BuildTag = '%productTag%_RELEASE';
 $BuildTag = 'THUNDERBIRD_1_5_0_10_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -197,12 +202,15 @@ $build_hour    = "9";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
+# CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
+# CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
+# CONFIG: $milestone     = 'thunderbird%version%-l10n';
 $milestone     = "thunderbird1.5.0.10";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
