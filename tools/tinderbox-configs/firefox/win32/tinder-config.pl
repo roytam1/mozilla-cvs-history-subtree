@@ -112,6 +112,7 @@ $use_blat       = 1;
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
@@ -135,12 +136,17 @@ $ConfigureOnly = 1;
 
 # Existing build files to download.
 %WGetFiles = (
+# CONFIG:	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.win32.installer.exe" =>
 	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.11-candidates/rc1/firefox-1.5.0.11.en-US.win32.installer.exe" =>
+# CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe",
 	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe",
+# CONFIG:	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.win32.zip" =>
 	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.11-candidates/rc1/firefox-1.5.0.11.en-US.win32.zip" =>
+# CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip"
 	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox.zip"
 	      );
 
+# CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip WIN32_INSTALLER_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe";
 $BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe";
 
 #-
@@ -155,6 +161,7 @@ $BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Re
 $BuildTree  = 'Mozilla1.8.0-l10n';
 
 #$BuildName = '';
+# CONFIG: $BuildTag = '%productTag%_RELEASE';
 $BuildTag = 'FIREFOX_1_5_0_11_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -186,12 +193,15 @@ $build_hour    = "9";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
+# CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
+# CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
+# CONFIG: $milestone     = 'firefox%version%-l10n';
 $milestone     = "firefox1.5.0.11";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
