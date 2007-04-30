@@ -118,6 +118,7 @@ $VendorName               = 'Mozilla';
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
@@ -139,10 +140,13 @@ $BuildNameExtra = 'Fx-Release';
 # Configure only, don't build.
 $ConfigureOnly = 1;
 %WGetFiles = (
+# CONFIG: 	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.mac.dmg" => 
 	      "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.3-candidates/rc1/firefox-2.0.0.3.en-US.mac.dmg" =>
+# CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox.dmg"
 	      "/builds/tinderbox/Fx-Mozilla1.8-l10n-release/Darwin_8.7.0_Depend/firefox.dmg"
 	      );
 
+# CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox.dmg";
 $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.8-l10n-release/Darwin_8.7.0_Depend/firefox.dmg";
 
 #-
@@ -158,6 +162,7 @@ $BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
 #
+# CONFIG: $BuildTag = '%productTag%_RELEASE';
 $BuildTag = 'FIREFOX_2_0_0_3_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -190,12 +195,15 @@ $build_hour    = "9";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $mac_bundle_path = "/browser/app";
+# CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
+# CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
+# CONFIG: $milestone     = 'firefox%version%-l10n';
 $milestone     = "firefox2.0.0.3-l10n";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
