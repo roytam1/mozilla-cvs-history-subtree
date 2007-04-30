@@ -103,6 +103,7 @@ $RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
@@ -130,10 +131,11 @@ $BuildNameExtra = 'Tb-Release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
+# CONFIG: $BuildTree  = '%buildTree%';
 $BuildTree  = 'Mozilla1.8.0';
-#$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
+# CONFIG: $BuildTag = '%productTag%_RELEASE';
 $BuildTag = 'THUNDERBIRD_1_5_0_10_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -164,12 +166,15 @@ $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "3";
 $package_creation_path = "/mail/installer";
 $ssh_version   = "2";
+# CONFIG: $ssh_user      = "%sshUser%";
 #$ssh_user      = "cltbld";
+# CONFIG: $ssh_server    = "%sshServer%";
 #$ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
+# CONFIG: $milestone     = 'thunderbird%version%';
 $milestone     = "thunderbird1.5.0.10";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
