@@ -12,15 +12,14 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla XForms support.
+ * The Original Code is Mozilla Communicator client code.
  *
  * The Initial Developer of the Original Code is
- * Olli Pettay.
- * Portions created by the Initial Developer are Copyright (C) 2004
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Olli Pettay <Olli.Pettay@helsinki.fi> (original author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -36,30 +35,40 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsXFormsActionModuleBase_h_
-#define nsXFormsActionModuleBase_h_
+#ifndef nsUEscapeToUnicode_h___
+#define nsUEscapeToUnicode_h___
+#include "nsISupports.h"
 
-#include "nsIDOMEventListener.h"
-#include "nsXFormsStubElement.h"
-#include "nsIDOMElement.h"
-#include "nsIXFormsActionModuleElement.h"
-#include "nsCOMPtr.h"
-#include "nsXFormsUtils.h"
+#include "nsUEscapeToUnicode.h"
+#include "nsUCSupport.h"
 
-class nsXFormsActionModuleBase : public nsIDOMEventListener,
-                                 public nsXFormsStubElement,
-                                 public nsIXFormsActionModuleElement
+//----------------------------------------------------------------------
+// Class nsUEscapeToUnicode [declaration]
+
+class nsUEscapeToUnicode : public nsBasicDecoderSupport
 {
 public:
-  nsXFormsActionModuleBase();
-  virtual ~nsXFormsActionModuleBase();
-  NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_NSIXTFGENERICELEMENT
-  NS_DECL_NSIDOMEVENTLISTENER
-  NS_IMETHOD OnDestroyed();
+
+  /**
+   * Class constructor.
+   */
+  nsUEscapeToUnicode() : nsBasicDecoderSupport() { Reset();};
+
+  NS_IMETHOD Convert(const char * aSrc, PRInt32 * aSrcLength,
+      PRUnichar * aDest, PRInt32 * aDestLength); 
+  NS_IMETHOD Reset();
+ 
 protected:
-  nsIDOMElement* mElement;
+  //--------------------------------------------------------------------
+  // Subclassing of nsDecoderSupport class [declaration]
+
+  NS_IMETHOD GetMaxLength(const char * aSrc, PRInt32 aSrcLength, 
+      PRInt32 * aDestLength);
+private:
+  PRUint8 mState;
+  PRUint16 mData;
+  PRUnichar mBuffer[2];
+  PRUint32  mBufferLen;
 };
 
-#endif
-
+#endif /* nsUEscapeToUnicode_h___ */

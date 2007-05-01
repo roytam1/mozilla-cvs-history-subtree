@@ -12,15 +12,14 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla XForms support.
+ * The Original Code is Mozilla Communicator client code.
  *
  * The Initial Developer of the Original Code is
- * Olli Pettay.
- * Portions created by the Initial Developer are Copyright (C) 2004
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Olli Pettay <Olli.Pettay@helsinki.fi> (original author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -36,30 +35,52 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsXFormsActionModuleBase_h_
-#define nsXFormsActionModuleBase_h_
+#ifndef nsUnicodeToUEscape_h___
+#define nsUnicodeToUEscape_h___
 
-#include "nsIDOMEventListener.h"
-#include "nsXFormsStubElement.h"
-#include "nsIDOMElement.h"
-#include "nsIXFormsActionModuleElement.h"
-#include "nsCOMPtr.h"
-#include "nsXFormsUtils.h"
+#include "nsUCSupport.h"
+#include "nsISupports.h"
 
-class nsXFormsActionModuleBase : public nsIDOMEventListener,
-                                 public nsXFormsStubElement,
-                                 public nsIXFormsActionModuleElement
+// XXX should we inherited from nsEncoderSupprt ? We don't want the buffer stuff there
+class nsUnicodeToUEscape : public nsEncoderSupport 
 {
 public:
-  nsXFormsActionModuleBase();
-  virtual ~nsXFormsActionModuleBase();
-  NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_NSIXTFGENERICELEMENT
-  NS_DECL_NSIDOMEVENTLISTENER
-  NS_IMETHOD OnDestroyed();
+
+  /**
+   * Class constructor.
+   */
+  nsUnicodeToUEscape() : nsEncoderSupport(6) {};
+
+  NS_IMETHOD FillInfo(PRUint32* aInfo)
+  {
+    memset(aInfo, 0xFF, (0x10000L >> 3));
+    return NS_OK;
+  }
+
+  NS_IMETHOD Convert(const PRUnichar * aSrc, PRInt32 * aSrcLength, 
+      char * aDest, PRInt32 * aDestLength);
+  NS_IMETHOD Finish(char * aDest, PRInt32 * aDestLength) 
+   {
+      return NS_OK;
+   }
+  NS_IMETHOD Reset()
+   {
+      return NS_OK;
+   }
+
 protected:
-  nsIDOMElement* mElement;
+
+  //--------------------------------------------------------------------
+  // Subclassing of nsEncoderSupport class [declaration]
+
+  NS_IMETHOD ConvertNoBuffNoErr(const PRUnichar * aSrc, PRInt32 * aSrcLength, 
+      char * aDest, PRInt32 * aDestLength) 
+  {
+      NS_ASSERTION(PR_FALSE, "should never call this");
+      return NS_ERROR_NOT_IMPLEMENTED;
+  };
+
 };
+nsresult NEW_UnicodeToUEscape(nsISupports **aResult);         
 
-#endif
-
+#endif /* nsUnicodeToUEscape_h___ */
