@@ -45,7 +45,7 @@ var gRedirectorType = "";
 var gServer;
 var gObserver;
 
-function onInit(aPageId, aServerId) 
+function onInit() 
 {
     initServerType();
 
@@ -312,4 +312,3 @@ function BrowseForNewsrc()
   if (fp.show() != nsIFilePicker.returnCancel)
     newsrcTextBox.value = fp.file.path;
 }
-

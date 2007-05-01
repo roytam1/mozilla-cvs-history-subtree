@@ -368,9 +368,7 @@ function unifinderOnSelect( event )
             dump( "e is "+e+"\n" );
             return;
          }
-         if (calendarEvent) {
-             ArrayOfEvents.push(calendarEvent);
-         }
+         ArrayOfEvents.push( calendarEvent );
       }
    }
    
@@ -381,7 +379,6 @@ function unifinderOnSelect( event )
    
    // Pass in true, so we don't end up in a circular loop
    currentView().setSelectedItems(ArrayOfEvents.length, ArrayOfEvents, true);
-   onSelectionChanged({detail: ArrayOfEvents});
 }
 
 function unifinderToDoHasFocus()

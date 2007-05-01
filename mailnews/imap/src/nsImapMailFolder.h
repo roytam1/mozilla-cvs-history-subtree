@@ -291,8 +291,8 @@ public:
                                                  PRBool aLocalOnly, nsIUrlListener *aUrlListener, 
                                                  PRBool *aAsyncResults);
 
-  NS_IMETHOD AddKeywordsToMessages(nsISupportsArray *aMessages, const char *aKeywords);
-  NS_IMETHOD RemoveKeywordsFromMessages(nsISupportsArray *aMessages, const char *aKeywords);
+  NS_IMETHOD AddKeywordToMessages(nsISupportsArray *aMessages, const char *aKeyword);
+  NS_IMETHOD RemoveKeywordFromMessages(nsISupportsArray *aMessages, const char *aKeyword);
 
   // nsIMsgImapMailFolder methods
   NS_DECL_NSIMSGIMAPMAILFOLDER
@@ -341,7 +341,7 @@ protected:
   // Helper methods
   
   void FindKeysToAdd(const nsMsgKeyArray &existingKeys, nsMsgKeyArray
-    &keysToFetch, PRUint32 &numNewUnread, nsIImapFlagAndUidState *flagState);
+    &keysToFetch, nsIImapFlagAndUidState *flagState);
   void FindKeysToDelete(const nsMsgKeyArray &existingKeys, nsMsgKeyArray
     &keysToFetch, nsIImapFlagAndUidState *flagState);
   void PrepareToAddHeadersToMailDB(nsIImapProtocol* aProtocol, const
@@ -472,7 +472,7 @@ protected:
   PRPackedBool m_performingBiff;
   PRPackedBool m_folderQuotaCommandIssued;
   PRPackedBool m_folderQuotaDataIsValid;
-  PRPackedBool m_updatingFolder;
+  
   nsMsgIMAPFolderACL *m_folderACL;
   PRUint32     m_aclFlags;
   PRUint32     m_supportedUserFlags;

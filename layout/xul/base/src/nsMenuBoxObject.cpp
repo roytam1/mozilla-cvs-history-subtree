@@ -44,7 +44,6 @@
 #include "nsGUIEvent.h"
 #include "nsIDOMNSUIEvent.h"
 #include "nsMenuBarListener.h"
-#include "nsPopupSetFrame.h"
 
 class nsMenuBoxObject : public nsIMenuBoxObject, public nsBoxObject
 {
@@ -91,9 +90,6 @@ NS_IMETHODIMP nsMenuBoxObject::OpenMenu(PRBool aOpenFlag)
 {
   nsIFrame* frame = GetFrame();
   if (!frame)
-    return NS_OK;
-
-  if (!nsPopupSetFrame::MayOpenPopup(frame))
     return NS_OK;
 
   nsIMenuFrame* menuFrame;

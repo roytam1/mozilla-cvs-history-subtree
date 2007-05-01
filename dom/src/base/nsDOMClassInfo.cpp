@@ -1893,7 +1893,6 @@ nsDOMClassInfo::Init()
 
   DOM_CLASSINFO_MAP_BEGIN(PopupBlockedEvent, nsIDOMPopupBlockedEvent)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMPopupBlockedEvent)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMPopupBlockedEvent_MOZILLA_1_8_BRANCH)
     DOM_CLASSINFO_EVENT_MAP_ENTRIES
   DOM_CLASSINFO_MAP_END
 
@@ -4301,13 +4300,12 @@ nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     nsresult rv = window->GetLocation(getter_AddRefs(location));
     NS_ENSURE_SUCCESS(rv, rv);
 
+    rv = location->SetHref(nsDependentJSString(val));
+    NS_ENSURE_SUCCESS(rv, rv);
+
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
     rv = WrapNative(cx, obj, location, NS_GET_IID(nsIDOMLocation), vp,
                     getter_AddRefs(holder));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = location->SetHref(nsDependentJSString(val));
-
     return NS_FAILED(rv) ? rv : NS_SUCCESS_I_DID_SOMETHING;
   }
 
@@ -4732,12 +4730,10 @@ nsDOMConstructor::HasInstance(nsIXPConnectWrappedNative *wrapper,
     return NS_OK;
   }
 
-  if (name_struct->mType != nsGlobalNameStruct::eTypeClassConstructor &&
-      name_struct->mType != nsGlobalNameStruct::eTypeExternalClassInfo &&
-      name_struct->mType != nsGlobalNameStruct::eTypeExternalConstructorAlias) {
-    // Doesn't have DOM interfaces.
-    return NS_OK;
-  }
+  NS_ASSERTION(name_struct->mType == nsGlobalNameStruct::eTypeClassConstructor ||
+               name_struct->mType == nsGlobalNameStruct::eTypeExternalClassInfo ||
+               name_struct->mType == nsGlobalNameStruct::eTypeExternalConstructorAlias,
+               "The constructor was set up with a struct of the wrong type.");
 
   if (!mClassName) {
     NS_ERROR("nsDOMConstructor::HasInstance can't get name.");
@@ -6724,26 +6720,6 @@ nsEventReceiverSH::AddEventListenerHelper(JSContext *cx, JSObject *obj,
     return JS_FALSE;
   }
 
-  // Set obj to be the object on which we'll actually register the
-  // event listener.
-  wrapper->GetJSObject(&obj);
-
-  // Check that the caller has permission to call obj's addEventListener.
-  if (NS_FAILED(sSecMan->CheckPropertyAccess(cx, obj,
-                                             JS_GET_CLASS(cx, obj)->name,
-                                             sAddEventListener_id,
-                                             nsIXPCSecurityManager::ACCESS_GET_PROPERTY)) ||
-      NS_FAILED(sSecMan->CheckPropertyAccess(cx, obj,
-                                             JS_GET_CLASS(cx, obj)->name,
-                                             sAddEventListener_id,
-                                             nsIXPCSecurityManager::ACCESS_CALL_METHOD))) {
-    // The caller doesn't have access to get or call the callee
-    // object's addEventListener method. The security manager already
-    // threw an exception for us, so simply return false.
-
-    return JS_FALSE;
-  }
-
   if (JSVAL_IS_PRIMITIVE(argv[1])) {
     // The second argument must be a function, or a
     // nsIDOMEventListener. Throw an error.
@@ -8166,13 +8142,8 @@ nsHTMLDocumentSH::DocumentAllTagsNewResolve(JSContext *cx, JSObject *obj,
 
     JSString *str = JSVAL_TO_STRING(id);
 
-    JSObject *proto = ::JS_GetPrototype(cx, obj);
-    if (NS_UNLIKELY(!proto)) {
-      return JS_TRUE;
-    }
-
     JSBool found;
-    if (!::JS_HasUCProperty(cx, proto,
+    if (!::JS_HasUCProperty(cx, ::JS_GetPrototype(cx, obj),
                             ::JS_GetStringChars(str),
                             ::JS_GetStringLength(str), &found)) {
       return JS_FALSE;
@@ -8998,9 +8969,6 @@ nsHTMLExternalObjSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
                                  jsval *vp, PRBool *_retval)
 {
   JSObject *pi_obj = ::JS_GetPrototype(cx, obj);
-  if (NS_UNLIKELY(!pi_obj)) {
-    return NS_OK;
-  }
 
   const jschar *id_chars = nsnull;
   size_t id_length = 0;
@@ -9043,9 +9011,6 @@ nsHTMLExternalObjSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
                                  jsval *vp, PRBool *_retval)
 {
   JSObject *pi_obj = ::JS_GetPrototype(cx, obj);
-  if (NS_UNLIKELY(!pi_obj)) {
-    return NS_OK;
-  }
 
   const jschar *id_chars = nsnull;
   size_t id_length = 0;
@@ -9269,12 +9234,7 @@ nsHTMLPluginObjElementSH::GetPluginJSObject(JSContext *cx, JSObject *obj,
   nsresult rv = sXPConnect->WrapNative(cx, ::JS_GetParent(cx, obj),
                                        scriptable_peer,
                                        scriptableIID, getter_AddRefs(holder));
-  // Wrapping a plugin object can fail if the plugins XPT file can't
-  // be found (i.e. is incorrectly installed). Return NS_OK in such a
-  // case to avoid having this generate exceptions in JS and to let
-  // the script still access the DOM node, even if the underlying
-  // plugin won't be scriptable.
-  NS_ENSURE_SUCCESS(rv, NS_OK);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // QI holder to nsIXPConnectWrappedNative so that we can reliably
   // access it's prototype

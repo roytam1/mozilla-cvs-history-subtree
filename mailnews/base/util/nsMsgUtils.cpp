@@ -84,8 +84,6 @@ static NS_DEFINE_CID(kCMailboxUrl, NS_MAILBOXURL_CID);
 static NS_DEFINE_CID(kCNntpUrlCID, NS_NNTPURL_CID);
 
 #define ILLEGAL_FOLDER_CHARS ";#"
-#define ILLEGAL_FOLDER_CHARS_AS_FIRST_LETTER "." 
-#define ILLEGAL_FOLDER_CHARS_AS_LAST_LETTER  ".~ "
 
 #define NS_PASSWORDMANAGER_CATEGORY "passwordmanager"
 static PRBool gInitPasswordManager = PR_FALSE;
@@ -341,22 +339,6 @@ nsresult NS_MsgHashIfNecessary(nsCAutoString &name)
   // certain filenames require hashing because they 
   // are too long or contain illegal characters
   PRInt32 illegalCharacterIndex = str.FindCharInSet(illegalChars);
-
-  // Need to check the first ('.') and last ('.', '~' and ' ') char
-  if (illegalCharacterIndex == kNotFound) 
-  {
-	NS_NAMED_LITERAL_CSTRING (illegalFirstChars, ILLEGAL_FOLDER_CHARS_AS_FIRST_LETTER);
-	NS_NAMED_LITERAL_CSTRING (illegalLastChars, ILLEGAL_FOLDER_CHARS_AS_LAST_LETTER);
-	  
-    PRInt32 lastIndex = str.Length() - 1;
-    if(str.FindCharInSet(illegalFirstChars) == 0)
-	  illegalCharacterIndex = 0;
-	else if(str.RFindCharInSet(illegalLastChars) == lastIndex)
-	  illegalCharacterIndex = lastIndex;
-	else
-	  illegalCharacterIndex = -1;
-  }
-
   char hashedname[MAX_LEN + 1];
   if (illegalCharacterIndex == kNotFound) 
   {
@@ -395,21 +377,6 @@ nsresult NS_MsgHashIfNecessary(nsAutoString &name)
 {
   PRInt32 illegalCharacterIndex = name.FindCharInSet(
                                   FILE_PATH_SEPARATOR FILE_ILLEGAL_CHARACTERS ILLEGAL_FOLDER_CHARS);
-
-  // Need to check the first ('.') and last ('.', '~' and ' ') char
-  if (illegalCharacterIndex == kNotFound) 
-  {
-	NS_NAMED_LITERAL_STRING (illegalFirstChars, ILLEGAL_FOLDER_CHARS_AS_FIRST_LETTER);
-	NS_NAMED_LITERAL_STRING (illegalLastChars, ILLEGAL_FOLDER_CHARS_AS_LAST_LETTER);
-	  
-    PRInt32 lastIndex = name.Length() - 1;
-    if(name.FindCharInSet(illegalFirstChars) == 0)
-	  illegalCharacterIndex = 0;
-	else if(name.RFindCharInSet(illegalLastChars) == lastIndex)
-	  illegalCharacterIndex = lastIndex;
-	else
-	  illegalCharacterIndex = -1;
-  }
 
   char hashedname[9];
   PRInt32 keptLength = -1;
@@ -1373,78 +1340,5 @@ nsresult MsgMailboxGetURI(const char *nativepath, nsCString &mailboxUri)
   }
   return mailboxUri.IsEmpty() ? NS_ERROR_FAILURE : NS_OK;
 }
-
-NS_MSG_BASE void MsgStripQuotedPrintable (unsigned char *src)
-{
-  // decode quoted printable text in place
-  
-  if (!*src)
-    return;
-  unsigned char *dest = src;
-  int srcIdx = 0, destIdx = 0;
-  
-  while (src[srcIdx] != 0)
-  {
-    if (src[srcIdx] == '=')
-    {
-      unsigned char *token = &src[srcIdx];
-      unsigned char c = 0;
-      
-      // decode the first quoted char
-      if (token[1] >= '0' && token[1] <= '9')
-        c = token[1] - '0';
-      else if (token[1] >= 'A' && token[1] <= 'F')
-        c = token[1] - ('A' - 10);
-      else if (token[1] >= 'a' && token[1] <= 'f')
-        c = token[1] - ('a' - 10);
-      else
-      {
-        // first char after '=' isn't hex. check if it's a normal char
-        // or a soft line break. If it's a soft line break, eat the
-        // CR/LF/CRLF.
-        if (src[srcIdx + 1] == nsCRT::CR || src[srcIdx + 1] == nsCRT::LF)
-        {
-          srcIdx++; // soft line break, ignore the '=';
-          if (src[srcIdx] == nsCRT::CR || src[srcIdx] == nsCRT::LF)
-          {
-            srcIdx++;
-            if (src[srcIdx] == nsCRT::LF)
-              srcIdx++;
-          }
-        }
-        else // normal char, copy it.
-        {
-          dest[destIdx++] = src[srcIdx++]; // aka token[0]
-        }
-        continue;
-      }
-      
-      // decode the second quoted char
-      c = (c << 4);
-      if (token[2] >= '0' && token[2] <= '9')
-        c += token[2] - '0';
-      else if (token[2] >= 'A' && token[2] <= 'F')
-        c += token[2] - ('A' - 10);
-      else if (token[2] >= 'a' && token[2] <= 'f')
-        c += token[2] - ('a' - 10);
-      else
-      {
-        // second char after '=' isn't hex. copy the '=' as a normal char and keep going
-        dest[destIdx++] = src[srcIdx++]; // aka token[0]
-        continue;
-      }
-      
-      // if we got here, we successfully decoded a quoted printable sequence,
-      // so bump each pointer past it and move on to the next char;
-      dest[destIdx++] = c; 
-      srcIdx += 3;
-      
-    }
-    else
-      dest[destIdx++] = src[srcIdx++];
-  }
-  
-  dest[destIdx] = src[srcIdx]; // null terminate
-}  
 
 

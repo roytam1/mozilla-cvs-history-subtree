@@ -95,8 +95,7 @@ function onLoad()
 {
     gFilterListMsgWindow = Components.classes["@mozilla.org/messenger/msgwindow;1"].createInstance(Components.interfaces.nsIMsgWindow);
     gFilterListMsgWindow.statusFeedback = gStatusFeedback;
-    gFilterListMsgWindow.SetDOMWindow(window);
-    gFilterListMsgWindow.rootDocShell.appType = Components.interfaces.nsIDocShell.APP_TYPE_MAIL; 
+    gFilterListMsgWindow.SetDOMWindow(window); 
 
     gFilterBundle = document.getElementById("bundle_filter");
     gFilterTree = document.getElementById("filterTree");
@@ -427,14 +426,16 @@ function runSelectedFilters()
   // make sure the tmp filter list uses the real filter list log stream
   filterList.logStream = currentFilterList().logStream;
   filterList.loggingEnabled = currentFilterList().loggingEnabled;
-  var index = 0, sel = gFilterTree.view.selection;
+  var sel = gFilterTree.view.selection;
   for (var i = 0; i < sel.getRangeCount(); i++) {
     var start = {}, end = {};
     sel.getRangeAt(i, start, end);
     for (var j = start.value; j <= end.value; j++) {
       var curFilter = getFilter(j);
       if (curFilter)
-        filterList.insertFilterAt(index++, curFilter);
+      {
+        filterList.insertFilterAt(start.value - j, curFilter);
+      }
     }
   }
 

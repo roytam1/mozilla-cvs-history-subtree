@@ -690,7 +690,7 @@ static PRFileDesc * InitializeRecording( void )
     logState = LogReset;
 
 #ifdef XP_UNIX
-    if ((getuid() != geteuid()) || (getgid() != getegid())) {
+    if (getuid() != geteuid()) {
         return NULL;
     }
 #endif /* XP_UNIX */

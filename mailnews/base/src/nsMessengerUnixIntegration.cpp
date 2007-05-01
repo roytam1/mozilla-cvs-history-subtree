@@ -68,7 +68,6 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
 #include "nsISupportsPrimitives.h"
-#include "nsIInterfaceRequestorUtils.h"
 
 #include "nsNativeCharsetUtils.h"
 
@@ -275,29 +274,12 @@ nsresult nsMessengerUnixIntegration::AlertFinished()
 
 nsresult nsMessengerUnixIntegration::AlertClicked()
 {
-#ifdef MOZ_THUNDERBIRD
-  nsresult rv;
-  nsCOMPtr<nsIMsgMailSession> mailSession = do_GetService(NS_MSGMAILSESSION_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv,rv);
-  nsCOMPtr<nsIMsgWindow> topMostMsgWindow;
-  rv = mailSession->GetTopmostMsgWindow(getter_AddRefs(topMostMsgWindow));
-  if (topMostMsgWindow)
-  {
-    nsCOMPtr<nsIDocShell> rootDocShell;
-    rv = topMostMsgWindow->GetRootDocShell(getter_AddRefs(rootDocShell));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIDOMWindowInternal> domWindow(do_GetInterface(rootDocShell, &rv));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    domWindow->Focus();
-  }
-#else
+  // make sure we don't insert the icon in the system tray since the user clicked on the alert.
   nsXPIDLCString folderURI;
   GetFirstFolderWithNewMail(getter_Copies(folderURI));
 
   openMailWindow(NS_LITERAL_STRING("mail:3pane").get(), folderURI);
-#endif
+ 
   return NS_OK;
 }
 

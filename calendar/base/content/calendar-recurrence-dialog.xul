@@ -61,7 +61,8 @@
 
   <script type="application/x-javascript" src="chrome://calendar/content/calendar-recurrence-dialog.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calendar-dialog-utils.js"/>
-  <script type="application/x-javascript" src="chrome://calendar/content/calUtils.js"/>
+  <script type="application/x-javascript" src="chrome://calendar/content/calendarUtils.js"/>
+  <script type="application/x-javascript" src="chrome://calendar/content/applicationUtil.js"/>
 
   <vbox>
 
@@ -100,7 +101,7 @@
             <vbox>
               <hbox align="center">
                 <label value="&newevent.recurrence.every.label;"/>
-                <textbox id="daily-days" value="1" size="3" oninput="validateIntegerRange(event, 1, 0x7FFF); updateAccept();"/>
+                <textbox id="daily-days" value="1" size="3" oninput="validateIntegers(event); updateAccept();"/>
                 <label value="&repeat.units.days;"/>
                 <spacer flex="1"/>
               </hbox>
@@ -112,7 +113,7 @@
               <hbox align="center">
                 <label value="&newevent.recurrence.every.label;"/>
                 <textbox id="weekly-weeks" value="1" size="3" 
-                         oninput="validateIntegerRange(event, 1, 0x7FFF); updateAccept();"/>
+                         oninput="validateIntegers(event); updateAccept();"/>
                 <label value="&newevent.recurrence.weeks.label;"/>
               </hbox>
               <hbox>
@@ -130,12 +131,11 @@
               </hbox>
             </vbox>
 
-            <!-- Monthly -->
             <vbox>
               <hbox align="center">
                 <label value="&newevent.recurrence.every.label;"/>
                 <textbox id="monthly-months" value="1" size="3"
-                         oninput="validateIntegerRange(event, 1, 0x7FFF); updateAccept();"/>
+                         oninput="validateIntegers(event); updateAccept();"/>
                 <label value="&newevent.recurrence.months.label;"/>
               </hbox>
               <radiogroup id="monthly-type">
@@ -146,17 +146,12 @@
               </radiogroup>
             </vbox>
 
-            <!-- Yearly -->
-            <vbox>
-              <hbox align="center">
-                <label value="&newevent.recurrence.every.label;"/>
-                <textbox id="yearly-years" value="1" size="3" 
-                         oninput="validateIntegerRange(event, 1, 0x7FFF); updateAccept();"/>
-                <label value="&repeat.units.years;"/>
-                <spacer flex="1"/>
-              </hbox>
+            <hbox align="top">
+              <label value="&newevent.recurrence.every.label;"/>
+              <textbox id="yearly-years" value="1" size="3" oninput="validateIntegers(event); updateAccept()"/>
+              <label value="&repeat.units.years;"/>
               <spacer flex="1"/>
-            </vbox>
+            </hbox>
 
           </deck>
         </row>
@@ -182,7 +177,7 @@
           <row>
             <radio label="&newevent.repeat.for.label;" value="ntimes"/>
             <hbox align="center">
-              <textbox id="repeat-ntimes-count" size="3" value="5" oninput="validateIntegerRange(event, 1, 0x7FFF); updateAccept();"/>
+              <textbox id="repeat-ntimes-count" size="3" value="5" oninput="validateIntegers(event); updateAccept();"/>
               <spacer flex="0.5"/>
               <label value="&repeat.units.occurence.both;"/>
               <spacer flex="1"/>

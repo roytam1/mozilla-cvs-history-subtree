@@ -677,6 +677,64 @@ nsresult nsMsgSearchTerm::DeStreamNew (char *inStream, PRInt16 /*length*/)
 }
 
 
+void nsMsgSearchTerm::StripQuotedPrintable (unsigned char *src)
+{
+  // decode quoted printable text in place
+  
+  if (!*src)
+    return;
+  unsigned char *dest = src;
+  int srcIdx = 0, destIdx = 0;
+  
+  while (src[srcIdx] != 0)
+  {
+    if (src[srcIdx] == '=')
+    {
+      unsigned char *token = &src[srcIdx];
+      unsigned char c = 0;
+      
+      // decode the first quoted char
+      if (token[1] >= '0' && token[1] <= '9')
+        c = token[1] - '0';
+      else if (token[1] >= 'A' && token[1] <= 'F')
+        c = token[1] - ('A' - 10);
+      else if (token[1] >= 'a' && token[1] <= 'f')
+        c = token[1] - ('a' - 10);
+      else
+      {
+        // first char after '=' isn't hex. copy the '=' as a normal char and keep going
+        dest[destIdx++] = src[srcIdx++]; // aka token[0]
+        continue;
+      }
+      
+      // decode the second quoted char
+      c = (c << 4);
+      if (token[2] >= '0' && token[2] <= '9')
+        c += token[2] - '0';
+      else if (token[2] >= 'A' && token[2] <= 'F')
+        c += token[2] - ('A' - 10);
+      else if (token[2] >= 'a' && token[2] <= 'f')
+        c += token[2] - ('a' - 10);
+      else
+      {
+        // second char after '=' isn't hex. copy the '=' as a normal char and keep going
+        dest[destIdx++] = src[srcIdx++]; // aka token[0]
+        continue;
+      }
+      
+      // if we got here, we successfully decoded a quoted printable sequence,
+      // so bump each pointer past it and move on to the next char;
+      dest[destIdx++] = c; 
+      srcIdx += 3;
+      
+    }
+    else
+      dest[destIdx++] = src[srcIdx++];
+  }
+  
+  dest[destIdx] = src[srcIdx]; // null terminate
+}
+
 // Looks in the MessageDB for the user specified arbitrary header, if it finds the header, it then looks for a match against
 // the value for the header. 
 nsresult nsMsgSearchTerm::MatchArbitraryHeader (nsIMsgSearchScopeTerm *scope,
@@ -799,36 +857,22 @@ nsresult nsMsgSearchTerm::MatchBody (nsIMsgSearchScopeTerm *scope, PRUint32 offs
   PRBool isQuotedPrintable = !nsMsgI18Nstateful_charset(folderCharset) &&
     (PL_strchr (m_value.string, '=') == nsnull);
   
-  nsCString compare;
   while (!endOfFile && result == boolContinueLoop)
   {
     if (bodyHan->GetNextLine(buf) >= 0)
     {
-      PRBool softLineBreak = PR_FALSE;
       // Do in-place decoding of quoted printable
       if (isQuotedPrintable)
-      {
-        softLineBreak = StringEndsWith(buf, NS_LITERAL_CSTRING("="));
-        MsgStripQuotedPrintable ((unsigned char*)buf.get());
-        if (softLineBreak)
-          buf.Truncate(buf.Length() - 1);
-      }
-      compare.Append(buf);
-      // If this line ends with a soft line break, loop around
-      // and get the next line before looking for the search string.
-      // This assumes the message can't end on a QP soft-line break.
-      // That seems like a pretty safe assumption.
-      if (softLineBreak) 
-        continue;
-      if (!compare.IsEmpty())
-      {
+        StripQuotedPrintable ((unsigned char*)buf.get());
+      nsCString  compare(buf);
+      //				ConvertToUnicode(charset, buf, compare);
+      if (!compare.IsEmpty()) {
         char startChar = (char) compare.CharAt(0);
         if (startChar != nsCRT::CR && startChar != nsCRT::LF)
         {
           err = MatchString (compare.get(), folderCharset, &result);
           lines++; 
         }
-        compare.Truncate();
       }
     }
     else 

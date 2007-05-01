@@ -73,6 +73,8 @@
                      searchSessions="addrbook" timeout="300" maxrows="4" 
                      autoFill="true" autoFillAfterMatch="true" forceComplete="true"
                      minResultsForPopup="1" ignoreBlurWhileSearching="true"
+                     ontextcommand="this.focus();"
+                     onerrorcommand=""
                      oninput="this.setAttribute('dirty','true');">
               <xul:image class="person-icon" onclick="this.parentNode.select();"/>
             </xul:textbox>
@@ -96,9 +98,11 @@
       <field name="mIsOffline">0</field>
       <field name="mLDAPSession">null</field>
       <field name="mSessionAdded">0</field>
+      <field name="mOwnerID">null</field>
+      <field name="mUserID">null</field>
       <field name="mOrganizerID">null</field>
       <field name="mIsReadOnly">false</field>
-      <field name="mIsInvitation">false</field>
+      <field name="mIsOrganizer">false</field>
       <field name="mPopupOpen">false</field>
 
       <constructor>
@@ -138,6 +142,7 @@
           this.mIOService = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
           this.mIsOffline = this.mIOService.offline;
           
+          this.onInitialize();
         ]]>
       </constructor>
 
@@ -160,8 +165,6 @@
                     break;
                 }
             }
-
-            this.onInitialize();
             
             // this trigger the continous update chain, which
             // effectively calls this.onModify() on predefined
@@ -189,15 +192,24 @@
 
             // assume we're the organizer [in case that the calendar
             // does not support the concept of identities].
-            this.mIsInvitation = false;
-
-            this.mOrganizerID = "";
+            this.mIsOrganizer = true;
+            
             try {
+              this.mUserID = "";
+              this.mOwnerID = "";
+              this.mOrganizerID = "";
+            
               var provider = calendar.QueryInterface(Components.interfaces.calIWcapCalendar);
-              this.mIsInvitation = provider.isInvitation(args.item);
+              this.mOwnerID = provider.ownerId;
+              this.mUserID = provider.session.userId;
               this.mOrganizerID = ((organizer == null || organizer.id == null)
-                              ? provider.ownerId // sensible default
+                              ? this.mOwnerID // sensible default
                               : organizer.id);
+
+              // set 'mIsOrganizer' if the current calid originally scheduled this event.
+              this.mIsOrganizer = false;
+              if(this.mOwnerID == this.mOrganizerID)
+                this.mIsOrganizer = true;
             }
             catch(e) {}
 
@@ -205,22 +217,8 @@
             var template = document.getAnonymousElementByAttribute(this, "anonid", "item");
             template.focus();
 
-            if(this.mIsReadOnly || this.mIsInvitation)
+            if(this.mIsReadOnly || !this.mIsOrganizer)
               listbox.setAttribute("disabled","true");
-            
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
-            // TODO: use calIWcapCalendar::owner
             
             // TODO: the organizer should show up in the attendee list, but this information
             // should be based on the organizer contained in the appropriate field of calIItemBase.
@@ -241,7 +239,8 @@
               }
               try {
                 var provider = calendar.QueryInterface(Components.interfaces.calIWcapCalendar);
-                var props = provider.getCalendarProperties("X-S1CS-CALPROPS-COMMON-NAME",{});
+                var organizerCalendar = provider.session.getCalendarByCalId(this.mOrganizerID);
+                var props = organizerCalendar.getCalendarProperties("X-S1CS-CALPROPS-COMMON-NAME",{});
                 if(props.length > 0)
                     organizer.commonName = props[0];
               }
@@ -264,6 +263,7 @@
             // until this function returns we add at least a single copy of this template back again.
             listbox.removeChild(template);
 
+            this.fitDummyRows();
             this.addDirectoryServerObserver();
             
             this.setFocus(this.mMaxAttendees);
@@ -294,29 +294,17 @@
           <![CDATA[
           // create a new listbox item and append it to our parent control.
           var newNode = aTemplateNode.cloneNode(true);
+          aParentNode.appendChild(newNode);
 
           var input = document.getAnonymousElementByAttribute(newNode, "anonid", "input");
           var icon = document.getAnonymousElementByAttribute(newNode, "anonid", "icon");
-
-          // We always clone the first row.  The problem is that the first row
-          // could be focused.  When we clone that row, we end up with a cloned
-          // XUL textbox that has a focused attribute set.  Therefore we think
-          // we're focused and don't properly refocus.  The best solution to this
-          // would be to clone a template row that didn't really have any presentation,
-          // rather than using the real visible first row of the listbox.
-          // For now we'll just put in a hack that ensures the focused attribute
-          // is never copied when the node is cloned.
-          if (input.getAttribute('focused') != '')
-            input.removeAttribute('focused');
-
-          aParentNode.appendChild(newNode);
 
           // the template could have its fields disabled,
           // that's why we need to reset their status.
           input.removeAttribute("disabled");
           icon.removeAttribute("disabled");
 
-          if(this.mIsReadOnly || this.mIsInvitation) {
+          if(this.mIsReadOnly || !this.mIsOrganizer) {
             input.setAttribute("disabled","true");
             icon.setAttribute("disabled","true");
           }
@@ -326,7 +314,7 @@
           if (aDisableIfOrganizer) {
             if (aAttendee) {
               if (this.mOrganizerID && this.mOrganizerID != "") {
-                if (aAttendee.id.toLowerCase() == this.mOrganizerID.toLowerCase()) {
+                if (aAttendee.id == this.mOrganizerID) {
                   input.setAttribute("disabled","true");
                 }
               }
@@ -347,24 +335,19 @@
 
           // construct the display string from common name and/or email address.
           var inputValue = aAttendee.commonName;
-          var regexp = new RegExp("^mailto:(.*)", "i");   
           if(inputValue) {
             var email = aAttendee.id;
             if(email && email.length) {
-              if (regexp.test(email)) {
-                inputValue += ' <' + RegExp.$1 + '>';
-              } else {
-                inputValue += ' <' + email + '>';
-              }
+                if (email.indexOf("mailto:") == 0)
+                    email = email.split("mailto:")[1]
+                inputValue += ' <'+email+'>';
             }
           } else {
             var email = aAttendee.id;
             if(email && email.length) {
-              if (regexp.test(email)) {
-                inputValue = RegExp.$1;
-              } else {
+                if (email.indexOf("mailto:") == 0)
+                    email = email.split("mailto:")[1]
                 inputValue = email;
-              }
             }
           }
 
@@ -379,7 +362,7 @@
 
           if (aAttendee) {
             if (this.mOrganizerID && this.mOrganizerID != "") {
-              if (aAttendee.id.toLowerCase() == this.mOrganizerID.toLowerCase()) {
+              if (aAttendee.id == this.mOrganizerID) {
               
                 icon.setAttribute("class","status-icon");
                 icon.setAttribute("status",aAttendee.participationStatus);
@@ -419,7 +402,7 @@
               input.removeAttribute("disabled");
               icon.removeAttribute("disabled");
 
-              if(this.mIsReadOnly || this.mIsInvitation) {
+              if(this.mIsReadOnly || !this.mIsOrganizer) {
                 input.setAttribute("disabled","true");
                 icon.setAttribute("disabled","true");
               }
@@ -506,9 +489,9 @@
                     // to look like an email-address, we prepend the prefix.
                     // this also allows for non-email-addresses.
                     var email = emailAddresses.value[0];
-                    if (email.toLowerCase().indexOf("mailto:") != 0)
+                    if (email.indexOf("mailto:") != 0)
                         if (email.indexOf("@") >= 0)
-                            email = "MAILTO:" + email;
+                            email = "mailto:" + email;
                     attendee.id = email;
                 }
                 if(names.value.length > 0) {
@@ -517,7 +500,7 @@
 
                 var addAttendee = true;
                 if (this.mOrganizerID && this.mOrganizerID != "") {
-                  if (attendee.id.toLowerCase() == this.mOrganizerID.toLowerCase()) {
+                  if (attendee.id == this.mOrganizerID) {
                     if (i == 1) {
                       addAttendee = false;
                     }
@@ -568,9 +551,9 @@
                     // to look like an email-address, we prepend the prefix.
                     // this also allows for non-email-addresses.
                     var email = emailAddresses.value[0];
-                    if (email.toLowerCase().indexOf("mailto:") != 0)
+                    if (email.indexOf("mailto:") != 0)
                         if (email.indexOf("@") >= 0)
-                            email = "MAILTO:" + email;
+                            email = "mailto:" + email;
                     attendee.id = email;
                 }
                 if(names.value.length > 0) {
@@ -578,7 +561,7 @@
                 }
 
                 if (this.mOrganizerID && this.mOrganizerID != "") {
-                  if (attendee.id.toLowerCase() == this.mOrganizerID.toLowerCase()) {
+                  if (attendee.id == this.mOrganizerID) {
                     return attendee;
                   }
                 }
@@ -615,9 +598,9 @@
                 // to look like an email-address, we prepend the prefix.
                 // this also allows for non-email-addresses.
                 email = emailAddresses.value[0];
-                if (email.toLowerCase().indexOf("mailto:") != 0)
+                if (email.indexOf("mailto:") != 0)
                   if (email.indexOf("@") >= 0)
-                    email = "MAILTO:" + email;
+                    email = "mailto:" + email;
               }
 
               var isdirty = false;
@@ -647,12 +630,8 @@
       <method name="fitDummyRows">
         <body>
           <![CDATA[
-            var self = this;
-            var func = function func() {
-              self.calcContentHeight();
-              self.createOrRemoveDummyRows();
-            }
-            setTimeout(func,0);
+            this.calcContentHeight();
+            this.createOrRemoveDummyRows();
           ]]>
         </body>
       </method>
@@ -1342,7 +1321,7 @@
             return;
           }
 
-          if(this.mIsReadOnly || this.mIsInvitation)
+          if(this.mIsReadOnly || !this.mIsOrganizer)
             return;
         
           if (event.originalTarget == null ||
@@ -1371,7 +1350,7 @@
 
       <handler event="keydown">
         <![CDATA[
-        if(this.mIsReadOnly || this.mIsInvitation)
+        if(this.mIsReadOnly || !this.mIsOrganizer)
           return;
         if(event.originalTarget.localName == "input") {
             switch(event.keyCode) {
@@ -1400,7 +1379,7 @@
         // appropriately and stop the event propagation.
         if(this.mPopupOpen)
           return;
-        if(this.mIsReadOnly || this.mIsInvitation)
+        if(this.mIsReadOnly || !this.mIsOrganizer)
           return;
         if(event.originalTarget.localName == "input") {
           switch(event.keyCode) {
@@ -2005,8 +1984,11 @@
       <field name="mStartHourDefault">8</field>
       <field name="mEndHourDefault">19</field>
 
+      <field name="mOwnerID">null</field>
+      <field name="mUserID">null</field>
+      <field name="mOrganizerID">null</field>
       <field name="mIsReadOnly">false</field>
-      <field name="mIsInvitation">false</field>
+      <field name="mIsOrganizer">false</field>
       <field name="mIgnoreUpdate">false</field>
       <field name="mDisplayTimezone">true</field>
 
@@ -2218,10 +2200,7 @@
             
             // tell the freebusy grid about the new start/enddate
             var grid = document.getAnonymousElementByAttribute(this, "anonid", "freebusy-grid");
-
-            var refresh = (grid.startDate == null) ||
-                          (grid.startDate.compare(this.mStartDate) != 0) ||
-                          (grid.endDate == null) ||
+            var refresh = (grid.startDate.compare(this.mStartDate) != 0) ||
                           (grid.endDate.compare(this.mEndDate) != 0);
             grid.startDate = this.mStartDate;
             grid.endDate = this.mEndDate;
@@ -2758,17 +2737,40 @@
 
             // assume we're the organizer [in case that the calendar
             // does not support the concept of identities].
-            this.mIsInvitation = false;
+            this.mIsOrganizer = true;
 
             //var organizerRow = document.getAnonymousElementByAttribute(this, "anonid", "event-organizer-row");
             //organizerRow.setAttribute("collapsed","true");
 
             try {
-              this.mIsInvitation = provider.isInvitation(args.item);
+              this.mUserID = "";
+              this.mOwnerID = "";
+              this.mOrganizerID = "";
+            
+              var provider = calendar.QueryInterface(Components.interfaces.calIWcapCalendar);
+              this.mOwnerID = provider.ownerId;
+              this.mUserID = provider.session.userId;
+              this.mOrganizerID = ((organizer == null || organizer.id == null)
+                              ? this.mOwnerID // sensible default
+                              : organizer.id);
+
+              // set 'mIsOrganizer' if the current calid originally scheduled this event.
+              this.mIsOrganizer = false;
+              if(this.mOwnerID == this.mOrganizerID)
+                this.mIsOrganizer = true;
+
+              // display the organizer [try to get the common name from the calid]
+              //TODO: either remove this row or enable this again -> organizerRow.removeAttribute("collapsed");
+              var organizer = document.getAnonymousElementByAttribute(this, "anonid", "event-organizer");
+              organizer.value = this.mOrganizerID;
+              var organizerCalendar = provider.session.getCalendarByCalId(this.mOrganizerID);
+              var props = organizerCalendar.getCalendarProperties("X-S1CS-CALPROPS-COMMON-NAME",{});
+              if(props.length > 0)
+                  organizer.value = props[0];
             }
             catch(e) {}
             
-            if(this.mIsReadOnly || this.mIsInvitation) {
+            if(this.mIsReadOnly || !this.mIsOrganizer) {
               document.getAnonymousElementByAttribute(this, "anonid", "next-slot").setAttribute('disabled', 'true');
               document.getAnonymousElementByAttribute(this, "anonid", "previous-slot").setAttribute('disabled', 'true');
             }            
@@ -3010,9 +3012,7 @@
           // tell the freebusy grid about the new start/enddate
           var grid = document.getAnonymousElementByAttribute(this, "anonid", "freebusy-grid");
           
-          var refresh = (grid.startDate == null) ||
-                        (grid.startDate.compare(this.mStartDate) != 0) ||
-                        (grid.endDate == null) ||
+          var refresh = (grid.startDate.compare(this.mStartDate) != 0) ||
                         (grid.endDate.compare(this.mEndDate) != 0);
           grid.startDate = this.mStartDate;
           grid.endDate = this.mEndDate;

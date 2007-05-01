@@ -183,17 +183,11 @@ inline void nsCounterNode::Calc(nsCounterList* aList)
 
 class nsCounterList : public nsGenConList {
 public:
-    nsCounterList() : nsGenConList(),
-                      mDirty(PR_FALSE)
-    {}
+    nsCounterList() : nsGenConList() {}
 
     void Insert(nsCounterNode* aNode) {
         nsGenConList::Insert(aNode);
-        // Don't SetScope if we're dirty -- we'll reset all the scopes anyway,
-        // and we can't usefully compute scopes right now.
-        if (NS_LIKELY(!IsDirty())) {
-            SetScope(aNode);
-        }
+        SetScope(aNode);
     }
 
     nsCounterNode* First() {

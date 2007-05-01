@@ -433,10 +433,8 @@
             if (this.pageReport) {
               var i = 0;
               while (i < this.pageReport.length) {
-                // Filter out irrelevant reports.
-                if (this.pageReport[i].requestingWindow &&
-                    (this.pageReport[i].requestingWindow.document ==
-                     this.pageReport[i].requestingDocument))
+                if (this.findChildShell(this.docShell,
+                                        this.pageReport[i].requestingWindowURI))
                   i++;
                 else
                   this.pageReport.splice(i, 1);
@@ -489,16 +487,19 @@
               this.pageReport = new Array();
             }
 
-            var obj = { requestingWindow: evt.requestingWindow,
-                        // Record the current document in the requesting windo
-                        // before it can change.
-                        requestingDocument: evt.requestingWindow.document,
+#ifdef MOZILLA_1_8_BRANCH
+# bug 314700
+            var obj = { requestingWindowURI: evt.requestingWindowURI,
+                        popupWindowURI: evt.popupWindowURI,
+                        popupWindowFeatures: evt.popupWindowFeatures };
+#else
+            var obj = { requestingWindowURI: evt.requestingWindowURI,
                         popupWindowURI: evt.popupWindowURI,
                         popupWindowFeatures: evt.popupWindowFeatures,
                         popupWindowName: evt.popupWindowName };
-
+#endif
             this.pageReport.push(obj);
-            this.updatePageReport();
+            this.updatePageReport()
           ]]> 
         </body>
       </method>

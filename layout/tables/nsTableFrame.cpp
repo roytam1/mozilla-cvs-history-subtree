@@ -2574,57 +2574,6 @@ nsTableFrame::InsertFrames(nsIAtom*        aListName,
   // See what kind of frame we have
   const nsStyleDisplay* display = aFrameList->GetStyleDisplay();
 
-  if (aPrevFrame) {
-    const nsStyleDisplay* prevDisplay = aPrevFrame->GetStyleDisplay();
-    // Make sure they belong on the same frame list
-    if ((display->mDisplay == NS_STYLE_DISPLAY_TABLE_COLUMN_GROUP) !=
-        (prevDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_COLUMN_GROUP)) {
-      // the previous frame is not valid, see comment at ::AppendFrames
-      // XXXbz Using content indices here means XBL will get screwed
-      // over...  Oh, well.
-      nsIFrame* pseudoFrame = aFrameList;
-      nsIContent* parentContent = GetContent();
-      nsIContent* content;
-      aPrevFrame = nsnull;
-      while (pseudoFrame  && (parentContent ==
-                              (content = pseudoFrame->GetContent()))) {
-        pseudoFrame = pseudoFrame->GetFirstChild(nsnull);
-      }
-      nsCOMPtr<nsIContent> container = content->GetParent();
-      PRInt32 newIndex = container->IndexOf(content);
-      nsIFrame* kidFrame;
-      PRBool isColGroup = (NS_STYLE_DISPLAY_TABLE_COLUMN_GROUP ==
-                           display->mDisplay);
-      if (isColGroup) {
-        kidFrame = mColGroups.FirstChild();
-      }
-      else {
-        kidFrame = mFrames.FirstChild();
-      }
-      // Important: need to start at a value smaller than all valid indices
-      PRInt32 lastIndex = -1;
-      while (kidFrame) {
-        if (isColGroup) {
-          nsTableColGroupType groupType =
-            ((nsTableColGroupFrame *)kidFrame)->GetColType();
-          if (eColGroupAnonymousCell == groupType) {
-            continue;
-          }
-        }
-        pseudoFrame = kidFrame;
-        while (pseudoFrame  && (parentContent ==
-                                (content = pseudoFrame->GetContent()))) {
-          pseudoFrame = pseudoFrame->GetFirstChild(nsnull);
-        }
-        PRInt32 index = container->IndexOf(content);
-        if (index > lastIndex && index < newIndex) {
-          lastIndex = index;
-          aPrevFrame = kidFrame;
-        }
-        kidFrame = kidFrame->GetNextSibling();
-      }
-    }
-  }
   if (NS_STYLE_DISPLAY_TABLE_COLUMN_GROUP == display->mDisplay) {
     // Insert the column group frame
     nsFrameList frames(aFrameList); // convience for getting last frame

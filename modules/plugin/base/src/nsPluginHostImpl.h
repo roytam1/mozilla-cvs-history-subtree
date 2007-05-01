@@ -195,8 +195,6 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  static const char *GetPluginName(nsIPluginInstance *aPluginInstance);
-
   //nsIPluginManager interface - the main interface nsIPlugin communicates to
 
   NS_IMETHOD

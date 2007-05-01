@@ -48,37 +48,29 @@
 //  calendar-management.js
 //
 
-var gCalendars = [];
-
 var gCachedStyleSheet;
 function addCalendarToTree(aCalendar)
 {
-    gCalendars.push(aCalendar);
+    var boxobj = document.getElementById("calendarTree").treeBoxObject;
+    boxobj.rowCountChanged(getIndexForCalendar(aCalendar), 1);
+
     if (!gCachedStyleSheet) {
         gCachedStyleSheet = getStyleSheet("chrome://calendar/content/calendar-view-bindings.css");
     }
     updateStyleSheetForObject(aCalendar, gCachedStyleSheet);
-    updateLtnStyleSheet(aCalendar);
-
-    var boxobj = document.getElementById("calendarTree").treeBoxObject;
-    boxobj.rowCountChanged(gCalendars.length-1, 1);
 }
 
 function removeCalendarFromTree(aCalendar)
 {
+    var calTree = document.getElementById("calendarTree")
     var index = getIndexForCalendar(aCalendar);
-    if (index == -1) {
-        return;
-    }
-
-    gCalendars.splice(index, 1);
-    var calTree = document.getElementById("calendarTree");
     calTree.boxObject.rowCountChanged(index, -1);
 
     // Just select the new last row, if we removed the last listed calendar
-    if (index == calTree.view.rowCount) {
+    if (index == calTree.view.rowCount-1) {
         index--;
     }
+
     calTree.view.selection.select(index);
 }
 
@@ -112,7 +104,6 @@ var ltnCalendarManagerObserver = {
             gCachedStyleSheet = getStyleSheet("chrome://calendar/content/calendar-view-bindings.css");
         }
         updateStyleSheetForObject(aCalendar, gCachedStyleSheet);
-        updateTreeView(aCalendar);
     },
 
     onCalendarPrefDeleting: function(aCalendar, aName) {
@@ -193,17 +184,19 @@ function getCalendarManager()
     return activeCalendarManager;
 }
 
-/**
- * Provides the gCalendars list for callers outside of this file.
- */
 function getCalendars()
 {
-    return gCalendars;
+    try {
+        return getCalendarManager().getCalendars({});
+    } catch (e) {
+        dump("Error getting calendars: " + e + "\n");
+        return [];
+    }
 }
 
 function ltnNewCalendar()
 {
-    openCalendarWizard();
+    openCalendarWizard(ltnSetTreeView);
 }
 
 function ltnRemoveCalendar(cal)
@@ -223,7 +216,7 @@ var ltnCalendarTreeView = {
     get rowCount()
     {
         try {
-            return gCalendars.length;
+            return getCalendars().length;
         } catch (e) {
             return 0;
         }
@@ -231,8 +224,8 @@ var ltnCalendarTreeView = {
 
     getCellProperties: function (row, col, properties)
     {
-        var cal = gCalendars[row];
         if (col.id == "col-calendar-Checkbox") {
+            var cal = getCalendars()[row];
             // We key off this to set the images for the checkboxes
             if (getCompositeCalendar().getCalendar(cal.uri)) {
                 properties.AppendElement(ltnGetAtom("checked"));
@@ -240,15 +233,12 @@ var ltnCalendarTreeView = {
             else {
                 properties.AppendElement(ltnGetAtom("unchecked"));
             }
-        } else if (col.id == "col-calendar-Color") {
-            var color = getCalendarManager().getCalendarPref(cal, "color");
-            properties.AppendElement(ltnGetAtom(getColorPropertyName(color)));
         }
     },
 
     cycleCell: function (row, col)
     {
-        var cal = gCalendars[row];
+        var cal = getCalendars()[row];
         if (getCompositeCalendar().getCalendar(cal.uri)) {
             // need to remove it
             getCompositeCalendar().removeCalendar(cal.uri);
@@ -262,7 +252,7 @@ var ltnCalendarTreeView = {
     getCellValue: function (row, col)
     {
         if (col.id == "col-calendar-Checkbox") {
-            var cal = gCalendars[row];
+            var cal = getCalendars()[row];
             if (getCompositeCalendar().getCalendar(cal.uri))
                 return "true";
             return "false";
@@ -289,14 +279,13 @@ var ltnCalendarTreeView = {
 
     getCellText: function (row, col)
     {
-        if (col.id == "col-calendar-Checkbox" ||
-            col.id == "col-calendar-Color") {
+        if (col.id == "col-calendar-Checkbox") {
             return "";          // tooltip
         }
 
         if (col.id == "col-calendar-Calendar") {
             try {
-                return gCalendars[row].name;
+                return getCalendars()[row].name;
             } catch (e) {
                 return "<Unknown " + row + ">";
             }
@@ -327,7 +316,7 @@ var ltnCalendarTreeView = {
         var row = tree.treeBoxObject.getRowAt(event.clientX, event.clientY);
 
         // If we clicked on a calendar, edit it, otherwise create a new one
-        var cal = gCalendars[row];
+        var cal = getCalendars()[row];
         if (!cal) {
             ltnNewCalendar();
         } else {
@@ -338,10 +327,6 @@ var ltnCalendarTreeView = {
 
 function ltnSetTreeView()
 {
-    gCalendars = getCalendarManager().getCalendars({});
-    for each (var cal in gCalendars) {
-        updateLtnStyleSheet(cal);
-    }
     document.getElementById("calendarTree").view = ltnCalendarTreeView;
 
     // Ensure that a calendar is selected in calendar tree after startup.
@@ -353,57 +338,13 @@ function ltnSetTreeView()
 }
 
 function getIndexForCalendar(aCalendar) {
-    for (var i = 0; i < gCalendars.length; ++i) {
-        if (gCalendars[i].id == aCalendar.id) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-function getColorPropertyName(color) {
-    // strip hash (#) from color string
-    return "color-" + (color ? color.substr(1) : "default");
-}
-
-var gLtnStyleSheet;
-
-function updateLtnStyleSheet(aCalendar) {
-    // check if rule already exists in style sheet
-    if (!gLtnStyleSheet) {
-        gLtnStyleSheet = getStyleSheet("chrome://lightning/skin/lightning.css");
-    }
-    var selectorPrefix = "treechildren::-moz-tree-cell";
-    var color = getCalendarManager().getCalendarPref(aCalendar, "color");
-    if (!color) {
-        return;
-    }
-    var propertyName = getColorPropertyName(color);
-    var selectorText = selectorPrefix + propertyName;
-    for (var i = 0; i < gLtnStyleSheet.cssRules.length; i++) {
-        if (gLtnStyleSheet.cssRules[i].selectorText == selectorText) {
-            return;
-        }
-    }
-
-    // add rule to style sheet
-    var ruleString = selectorPrefix + "(" + propertyName + ") { }";
-    gLtnStyleSheet.insertRule(ruleString, gLtnStyleSheet.cssRules.length);
-    var rule = gLtnStyleSheet.cssRules[gLtnStyleSheet.cssRules.length-1];
-    rule.style.backgroundColor = color;
-    rule.style.margin = "1px";
-}
-
-function updateColorCell(aCalendar) {
-    var row = getIndexForCalendar(aCalendar);
-    var treeBoxObject = document.getElementById("calendarTree").treeBoxObject;
-    var column = treeBoxObject.columns["col-calendar-Color"];
-    treeBoxObject.invalidateCell(row, column);
-}
-
-function updateTreeView(aCalendar) {
-    updateLtnStyleSheet(aCalendar);
-    updateColorCell(aCalendar);
+    // Special trick to compare interface pointers, since normal, ==
+    // comparison can fail due to javascript wrapping.
+    var sip = Components.classes["@mozilla.org/supports-interface-pointer;1"]
+                        .createInstance(Components.interfaces.nsISupportsInterfacePointer);
+    sip.data = aCalendar;
+    sip.dataIID = Components.interfaces.calICalendar;
+    return getCalendars().indexOf(sip.data);
 }
 
 window.addEventListener("load", ltnSetTreeView, false);

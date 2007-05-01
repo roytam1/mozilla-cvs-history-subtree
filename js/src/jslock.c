@@ -1225,15 +1225,6 @@ js_LockObj(JSContext *cx, JSObject *obj)
     JSScope *scope;
 
     JS_ASSERT(OBJ_IS_NATIVE(obj));
-
-    /*
-     * We must test whether the GC is calling and return without mutating any
-     * state, especially cx->lockedSealedScope.  Note asymmetry with respect to
-     * js_UnlockObj, which is a thin-layer on top of js_UnlockScope.
-     */
-    if (CX_THREAD_IS_RUNNING_GC(cx))
-        return;
-
     for (;;) {
         scope = OBJ_SCOPE(obj);
         if (SCOPE_IS_SEALED(scope) && scope->object == obj &&
@@ -1292,7 +1283,7 @@ js_IsScopeLocked(JSContext *cx, JSScope *scope)
      * a thin or fat lock to cope with shared (concurrent) ownership.
      */
     if (scope->ownercx) {
-        JS_ASSERT(scope->ownercx == cx || scope->ownercx->thread == cx->thread);
+        JS_ASSERT(scope->ownercx == cx);
         return JS_TRUE;
     }
     return js_CurrentThreadId() ==

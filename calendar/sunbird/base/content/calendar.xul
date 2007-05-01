@@ -84,7 +84,9 @@
 
 <!-- GENERAL CONTEXT MENU -->
 <popup id="context-menu"
-       onpopupshowing="document.getElementById('is_editable').hidden = (document.popupNode.getAttribute('id') == 'lefthandcalendar')">
+       onpopuphidden="gNewDateVariable = null;"
+       onpopupshowing="dump(document.popupNode.getAttribute('id'));
+                       document.getElementById('is_editable').hidden = (document.popupNode.getAttribute('id') == 'lefthandcalendar')">
 
   <menuitem label="&calendar.context.newevent.label;"
             accesskey="&calendar.context.newevent.accesskey;"

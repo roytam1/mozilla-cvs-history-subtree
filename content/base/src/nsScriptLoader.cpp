@@ -61,8 +61,6 @@
 #include "nsContentUtils.h"
 #include "nsUnicharUtils.h"
 #include "nsAutoPtr.h"
-#include "nsIEventQueue.h"
-#include "nsEventQueueUtils.h"
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
@@ -174,46 +172,12 @@ nsScriptLoadRequest::FireScriptEvaluated(nsresult aResult)
 }
 
 //////////////////////////////////////////////////////////////
-// PLEvent for delayed running of scripts
-//////////////////////////////////////////////////////////////
-
-class nsScriptLoaderEvent : public PLEvent
-{
-public:
-  nsScriptLoaderEvent(nsScriptLoader* aScriptLoader)
-    : mScriptLoader(aScriptLoader)
-  {
-    PL_InitEvent(this, aScriptLoader, Handle, Destroy);
-  }
-  
-  PR_STATIC_CALLBACK(void*) Handle(PLEvent* aEvent);
-  PR_STATIC_CALLBACK(void) Destroy(PLEvent* aEvent);
-
-  nsRefPtr<nsScriptLoader> mScriptLoader;
-};
-
-/* static */ void * PR_CALLBACK
-nsScriptLoaderEvent::Handle(PLEvent* aEvent)
-{
-  NS_STATIC_CAST(nsScriptLoaderEvent*, aEvent)->mScriptLoader->ProcessPendingReqests();
-
-  return nsnull;
-}
-
-/* static */ void PR_CALLBACK
-nsScriptLoaderEvent::Destroy(PLEvent* aEvent)
-{
-  delete NS_STATIC_CAST(nsScriptLoaderEvent*, aEvent);
-}
-
-//////////////////////////////////////////////////////////////
 //
 //////////////////////////////////////////////////////////////
 
 nsScriptLoader::nsScriptLoader()
   : mDocument(nsnull),
     mEnabled(PR_TRUE),
-    mHadPendingScripts(PR_FALSE),
     mBlockerCount(0)
 {
 }
@@ -828,28 +792,6 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
   }
 
   return rv;
-}
-
-void
-nsScriptLoader::ProcessPendingRequestsAsync()
-{
-  if (mPendingRequests.Count()) {
-    nsCOMPtr<nsIEventQueue> uiThreadQueue;
-    NS_GetMainEventQ(getter_AddRefs(uiThreadQueue));
-    if (!uiThreadQueue) {
-      return;
-    }
-
-    PLEvent *evt = new nsScriptLoaderEvent(this);
-    if (!evt) {
-      return;
-    }
-
-    nsresult rv = uiThreadQueue->PostEvent(evt);
-    if (NS_FAILED(rv)) {
-      PL_DestroyEvent(evt);
-    }
-  }
 }
 
 void

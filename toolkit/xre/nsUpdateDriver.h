@@ -58,7 +58,6 @@ class nsIFile;
  * This function does not modify greDir or appDir.
  */
 NS_HIDDEN_(nsresult) ProcessUpdates(nsIFile *greDir, nsIFile *appDir,
-                                    nsIFile *updRootDir,
                                     int argc, char **argv);
 
 #endif  // nsUpdateDriver_h__

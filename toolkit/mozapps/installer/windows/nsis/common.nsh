@@ -67,11 +67,6 @@ Exch 1   ; exchange the top of the stack with 2 below the top of the stack
 Exch $R9 ; exchange the new $R9 value with the top of the stack
 */
 
-; Modified version of the following MUI macros to support Mozilla localization.
-; MUI_LANGUAGE
-; MUI_LANGUAGEFILE_BEGIN
-; MOZ_MUI_LANGUAGEFILE_END
-; See <NSIS App Dir>/Contrib/Modern UI/System.nsh for more information
 !define MUI_INSTALLOPTIONS_READ "!insertmacro MUI_INSTALLOPTIONS_READ"
 
 !macro MOZ_MUI_LANGUAGE LANGUAGE
@@ -555,8 +550,8 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
     !define ${_MOZFUNC_UN}CanWriteToInstallDir "!insertmacro ${_MOZFUNC_UN}CanWriteToInstallDirCall"
 
     Function ${_MOZFUNC_UN}CanWriteToInstallDir
-      Push $R8
       Push $R7
+      Push $R8
 
       StrCpy $R9 "true"
       IfFileExists "$INSTDIR" 0 checkCreateDir
@@ -582,8 +577,8 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
       end:
       ClearErrors
 
-      Pop $R7
       Pop $R8
+      Pop $R7
       Push $R9
     FunctionEnd
 
@@ -621,6 +616,7 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
     !verbose pop
   !endif
 !macroend
+
 
 /**
  * Checks whether there is sufficient free space available on the installation
@@ -1109,15 +1105,12 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
 
       ClearErrors
       WriteRegStr SHCTX "$R6" "$R7" "$R8"
-
-!ifndef NO_LOG
       IfErrors 0 +3
       FileWrite $fhInstallLog "  ** ERROR Adding Registry String: $R5 | $R6 | $R7 | $R8 **$\r$\n"
       GoTo +4
       IntCmp $R9 1 0 +2
       FileWrite $fhUninstallLog "RegVal: $R5 | $R6 | $R7$\r$\n"
       FileWrite $fhInstallLog "  Added Registry String: $R5 | $R6 | $R7 | $R8$\r$\n"
-!endif
 
       Exch $R5
       Exch 4
@@ -1214,15 +1207,12 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
 
       ClearErrors
       WriteRegDWORD SHCTX "$R6" "$R7" "$R8"
-
-!ifndef NO_LOG
       IfErrors 0 +3
       FileWrite $fhInstallLog "  ** ERROR Adding Registry DWord: $R5 | $R6 | $R7 | $R8 **$\r$\n"
       GoTo +4
       IntCmp $R5 1 0 +2
       FileWrite $fhUninstallLog "RegVal: $R5 | $R6 | $R7$\r$\n"
       FileWrite $fhInstallLog "  Added Registry DWord: $R5 | $R6 | $R7 | $R8$\r$\n"
-!endif
 
       Exch $R5
       Exch 4
@@ -1319,15 +1309,12 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
 
       ClearErrors
       WriteRegStr HKCR "$R6" "$R7" "$R8"
-
-!ifndef NO_LOG
       IfErrors 0 +3
       FileWrite $fhInstallLog "  ** ERROR Adding Registry String: $R5 | $R6 | $R7 | $R8 **$\r$\n"
       GoTo +4
       IntCmp $R5 1 0 +2
       FileWrite $fhUninstallLog "RegVal: $R5 | $R6 | $R7$\r$\n"
       FileWrite $fhInstallLog "  Added Registry String: $R5 | $R6 | $R7 | $R8$\r$\n"
-!endif
 
       Exch $R5
       Exch 4
@@ -1443,7 +1430,6 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
       ; see definition of RegCreateKey
       System::Call "${RegCreateKey}($R6, '$R8', .r14) .r15"
 
-!ifndef NO_LOG
       ; if $R5 is not 0 then there was an error creating the registry key.
       IntCmp $R5 0 +3
       FileWrite $fhInstallLog "  ** ERROR Adding Registry Key: $R7 | $R8 **$\r$\n"
@@ -1451,7 +1437,6 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
       IntCmp $R9 1 0 +2
       FileWrite $fhUninstallLog "RegKey: $R7 | $R8$\r$\n"
       FileWrite $fhInstallLog "  Added Registry Key: $R7 | $R8$\r$\n"
-!endif
 
       Pop $R4
       Pop $R5
@@ -1611,273 +1596,6 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
     !define _MOZFUNC_UN
     !verbose pop
   !endif
-!macroend
-
-/**
- * Writes common registry values for a handler using SHCTX.
- * @param   _KEY
- *          The subkey in relation to the key root.
- * @param   _VALOPEN
- *          The path and args to launch the application.
- * @param   _VALICON
- *          The path to an exe that contains an icon and the icon resource id.
- * @param   _DISPNAME
- *          The display name for the handler. If emtpy no value will be set.
- * @param   _ISPROTOCOL
- *          Sets protocol handler specific registry values when "true".
- * @param   _ISDDE
- *          Sets DDE specific registry values when "true".
- *
- * $R3 = string value of the current registry key path.
- * $R4 = _KEY
- * $R5 = _VALOPEN
- * $R6 = _VALICON
- * $R7 = _DISPNAME
- * $R8 = _ISPROTOCOL
- * $R9 = _ISDDE
- */
-!macro AddHandlerValues
-
-  !ifndef ${_MOZFUNC_UN}AddHandlerValues
-    !verbose push
-    !verbose ${_MOZFUNC_VERBOSE}
-    !define ${_MOZFUNC_UN}AddHandlerValues "!insertmacro ${_MOZFUNC_UN}AddHandlerValuesCall"
-
-    Function ${_MOZFUNC_UN}AddHandlerValues
-      Exch $R9
-      Exch 1
-      Exch $R8
-      Exch 2
-      Exch $R7
-      Exch 3
-      Exch $R6
-      Exch 4
-      Exch $R5
-      Exch 5
-      Exch $R4
-      Push $R3
-
-      StrCmp "$R7" "" +6 0
-      ReadRegStr $R3 SHCTX "$R4" "FriendlyTypeName"
-
-      StrCmp "$R3" "" 0 +3
-      WriteRegStr SHCTX "$R4" "" "$R7"
-      WriteRegStr SHCTX "$R4" "FriendlyTypeName" "$R7"
-
-      StrCmp "$R8" "true" 0 +8
-      WriteRegStr SHCTX "$R4" "URL Protocol" ""
-      StrCpy $R3 ""
-      ClearErrors
-      ReadRegDWord $R3 SHCTX "$R4" "EditFlags"
-      StrCmp $R3 "" 0 +3 ; Only add EditFlags if a value doesn't exist
-      DeleteRegValue SHCTX "$R4" "EditFlags"
-      WriteRegDWord SHCTX "$R4" "EditFlags" 0x00000002
-
-      StrCmp "$R6" "" +2 0
-      WriteRegStr SHCTX "$R4\DefaultIcon" "" "$R6"
-
-      StrCmp "$R5" "" +2 0
-      WriteRegStr SHCTX "$R4\shell\open\command" "" "$R5"
-
-      StrCmp "$R9" "true" 0 +11
-      WriteRegStr SHCTX "$R4\shell\open\ddeexec" "" "$\"%1$\",,0,0,,,,"
-      WriteRegStr SHCTX "$R4\shell\open\ddeexec" "NoActivateHandler" ""
-      WriteRegStr SHCTX "$R4\shell\open\ddeexec\Application" "" "${DDEApplication}"
-      WriteRegStr SHCTX "$R4\shell\open\ddeexec\Topic" "" "WWW_OpenURL"
-      ; The ifexec key may have been added by another application so try to
-      ; delete it to prevent it from breaking this app's shell integration.
-      ; Also, IE 6 and below doesn't remove this key when it sets itself as the
-      ; default handler and if this key exists IE's shell integration breaks.
-      DeleteRegKey HKLM "$R4\shell\open\ddeexec\ifexec"
-      DeleteRegKey HKCU "$R4\shell\open\ddeexec\ifexec"
-
-      ClearErrors
-
-      Pop $R3
-      Exch $R4
-      Exch 5
-      Exch $R5
-      Exch 4
-      Exch $R6
-      Exch 3
-      Exch $R7
-      Exch 2
-      Exch $R8
-      Exch 1
-      Exch $R9
-    FunctionEnd
-
-    !verbose pop
-  !endif
-!macroend
-
-!macro AddHandlerValuesCall _KEY _VALOPEN _VALICON _DISPNAME _ISPROTOCOL _ISDDE
-  !verbose push
-  !verbose ${_MOZFUNC_VERBOSE}
-  Push "${_KEY}"
-  Push "${_VALOPEN}"
-  Push "${_VALICON}"
-  Push "${_DISPNAME}"
-  Push "${_ISPROTOCOL}"
-  Push "${_ISDDE}"
-  Call AddHandlerValues
-  !verbose pop
-!macroend
-
-!macro un.AddHandlerValuesCall _KEY _VALOPEN _VALICON _DISPNAME _ISPROTOCOL _ISDDE
-  !verbose push
-  !verbose ${_MOZFUNC_VERBOSE}
-  Push "${_KEY}"
-  Push "${_VALOPEN}"
-  Push "${_VALICON}"
-  Push "${_DISPNAME}"
-  Push "${_ISPROTOCOL}"
-  Push "${_ISDDE}"
-  Call un.AddHandlerValues
-  !verbose pop
-!macroend
-
-!macro un.AddHandlerValues
-  !ifndef un.AddHandlerValues
-    !verbose push
-    !verbose ${_MOZFUNC_VERBOSE}
-    !undef _MOZFUNC_UN
-    !define _MOZFUNC_UN "un."
-
-    !insertmacro AddHandlerValues
-
-    !undef _MOZFUNC_UN
-    !define _MOZFUNC_UN
-    !verbose pop
-  !endif
-!macroend
-
-/**
-* Returns the path found within a passed in string. The path is quoted or not
-* with the exception of an unquoted non 8dot3 path without arguments that is
-* also not a DefaultIcon path, is a 8dot3 path or not, has command line
-* arguments, or is a registry DefaultIcon path (e.g. <path to binary>,# where #
-* is the icon's resuorce id). The string does not need to be a valid path or
-* exist. It is up to the caller to pass in a string of one of the forms noted
-* above and to verify existence if necessary.
-*
-* IMPORTANT! $R9 will be overwritten by this macro with the return value so
-*            protect yourself!
-*
-* Examples:
-* In:  C:\PROGRA~1\MOZILL~1\FIREFOX.EXE -url "%1" -requestPending
-* In:  C:\PROGRA~1\MOZILL~1\FIREFOX.EXE,0
-* In:  C:\PROGRA~1\MOZILL~1\FIREFOX.EXE
-* In:  "C:\PROGRA~1\MOZILL~1\FIREFOX.EXE"
-* In:  "C:\PROGRA~1\MOZILL~1\FIREFOX.EXE" -url "%1" -requestPending
-* Out: C:\PROGRA~1\MOZILL~1\FIREFOX.EXE
-*
-* In:  "C:\Program Files\Mozilla Firefox\firefox.exe" -url "%1" -requestPending
-* In:  C:\Program Files\Mozilla Firefox\firefox.exe,0
-* In:  "C:\Program Files\Mozilla Firefox\firefox.exe"
-* Out: C:\Program Files\Mozilla Firefox\firefox.exe
-*
-* @param   _STRING
-*          The string containing the path
-* @param   _RESULT
-*          The register to store the path to.
-*
-* $R6 = counter for the outer loop's EnumRegKey
-* $R7 = value returned from ReadRegStr
-* $R8 = _STRING
-* $R9 = _RESULT
-*/
-!macro GetPathFromString
-
- !ifndef ${_MOZFUNC_UN}GetPathFromString
-   !verbose push
-   !verbose ${_MOZFUNC_VERBOSE}
-   !define ${_MOZFUNC_UN}GetPathFromString "!insertmacro ${_MOZFUNC_UN}GetPathFromStringCall"
-
-   Function ${_MOZFUNC_UN}GetPathFromString
-     Exch $R8
-     Push $R7
-     Push $R6
-     ClearErrors
-
-     StrCpy $R9 $R8
-     StrCpy $R6 0          ; Set the counter to 0.
-
-     ClearErrors
-     ; Handle quoted paths with arguments.
-     StrCpy $R7 $R9 1      ; Copy the first char.
-     StrCmp $R7 '"' +2 +1  ; Is it a "?
-     StrCmp $R7 "'" +1 +9  ; Is it a '?
-     StrCpy $R9 $R9 "" 1   ; Remove the first char.
-     IntOp $R6 $R6 + 1     ; Increment the counter.
-     StrCpy $R7 $R9 1 $R6  ; Starting from the counter copy the next char.
-     StrCmp $R7 "" end     ; Are there no more chars?
-     StrCmp $R7 '"' +2 +1  ; Is it a " char?
-     StrCmp $R7 "'" +1 -4  ; Is it a ' char?
-     StrCpy $R9 $R9 $R6    ; Copy chars up to the counter.
-     GoTo end
-
-     ; Handle DefaultIcon paths. DefaultIcon paths are not quoted and end with
-     ; a , and a number.
-     IntOp $R6 $R6 - 1     ; Decrement the counter.
-     StrCpy $R7 $R9 1 $R6  ; Copy one char from the end minus the counter.
-     StrCmp $R7 '' +4      ; Are there no more chars?
-     StrCmp $R7 ',' +1 -3  ; Is it a , char?
-     StrCpy $R9 $R9 $R6    ; Copy chars up to the end minus the counter.
-     GoTo end
-
-     ; Handle unquoted paths with arguments. An unquoted path with arguments
-     ; must be an 8dot3 path.
-     StrCpy $R6 -1          ; Set the counter to -1 so it will start at 0.
-     IntOp $R6 $R6 + 1      ; Increment the counter.
-     StrCpy $R7 $R9 1 $R6   ; Starting from the counter copy the next char.
-     StrCmp $R7 "" end      ; Are there no more chars?
-     StrCmp $R7 " " +1 -3   ; Is it a space char?
-     StrCpy $R9 $R9 $R6     ; Copy chars up to the counter.
-
-     end:
-
-     Pop $R6
-     Pop $R7
-     Exch $R8
-     Push $R9
-   FunctionEnd
-
-   !verbose pop
- !endif
-!macroend
-
-!macro GetPathFromStringCall _STRING _RESULT
- !verbose push
- !verbose ${_MOZFUNC_VERBOSE}
- Push "${_STRING}"
- Call GetPathFromString
- Pop ${_RESULT}
- !verbose pop
-!macroend
-
-!macro un.GetPathFromStringCall _STRING _RESULT
- !verbose push
- !verbose ${_MOZFUNC_VERBOSE}
- Push "${_STRING}"
- Call un.GetPathFromString
- Pop ${_RESULT}
- !verbose pop
-!macroend
-
-!macro un.GetPathFromString
- !ifndef un.GetPathFromString
-   !verbose push
-   !verbose ${_MOZFUNC_VERBOSE}
-   !undef _MOZFUNC_UN
-   !define _MOZFUNC_UN "un."
-
-   !insertmacro GetPathFromString
-
-   !undef _MOZFUNC_UN
-   !define _MOZFUNC_UN
-   !verbose pop
- !endif
 !macroend
 
 /**

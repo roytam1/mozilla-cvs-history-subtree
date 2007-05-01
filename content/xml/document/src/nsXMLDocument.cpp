@@ -294,12 +294,8 @@ nsXMLDocument::OnChannelRedirect(nsIChannel *aOldChannel,
 
     stack->Pop(&cx);
   
-    if (NS_FAILED(rv)) {
-      // The security manager set a pending exception.  Since we're
-      // running under the event loop, we need to report it.
-      ::JS_ReportPendingException(cx);
+    if (NS_FAILED(rv))
       return rv;
-    }
   }
 
   return secMan->GetCodebasePrincipal(newLocation, getter_AddRefs(mPrincipal));

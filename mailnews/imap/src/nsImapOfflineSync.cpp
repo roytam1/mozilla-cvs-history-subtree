@@ -538,24 +538,6 @@ void nsImapOfflineSync::ProcessMoveOperation(nsIMsgOfflineImapOperation *op)
             rv = m_currentFolder->GetMessageHeader(matchingFlagKeys.ElementAt(keyIndex), getter_AddRefs(mailHdr));
             if (NS_SUCCEEDED(rv) && mailHdr)
             {
-              PRUint32 msgSize;
-              // in case of a move, the header has already been deleted,
-              // so we've really got a fake header. We need to get its flags and
-              // size from the offline op to have any chance of doing the move.
-              mailHdr->GetMessageSize(&msgSize);
-              if (!msgSize)
-              {
-                imapMessageFlagsType newImapFlags;
-                PRUint32 msgFlags = 0;
-                op->GetMsgSize(&msgSize);
-                op->GetNewFlags(&newImapFlags);
-                // first three bits are the same
-                msgFlags |= (newImapFlags & 0x07);
-                if (newImapFlags & kImapMsgForwardedFlag)
-                  msgFlags |= MSG_FLAG_FORWARDED;
-                mailHdr->SetFlags(msgFlags);
-                mailHdr->SetMessageSize(msgSize);
-              }
               nsCOMPtr<nsISupports> iSupports;
               iSupports = do_QueryInterface(mailHdr);
               messages->AppendElement(iSupports);
@@ -752,8 +734,7 @@ nsresult nsImapOfflineSync::ProcessNextOperation()
     {
       if (CreateOfflineFolders())
         return NS_OK;
-      m_currentServer = nsnull;
-      AdvanceToNextFolder();
+      AdvanceToFirstIMAPFolder();
     }
     m_createdOfflineFolders = PR_TRUE;
   }
@@ -994,10 +975,7 @@ nsresult nsImapOfflineSync::ProcessNextOperation()
     
     // if we are updating more than one folder then we need the iterator
     if (!m_singleFolderToUpdate)
-    {
-      m_currentServer = nsnull;
-      AdvanceToNextFolder();
-    }
+      AdvanceToFirstIMAPFolder();
     if (m_singleFolderToUpdate)
     {
       m_singleFolderToUpdate->ClearFlag(MSG_FOLDER_FLAG_OFFLINEEVENTS);

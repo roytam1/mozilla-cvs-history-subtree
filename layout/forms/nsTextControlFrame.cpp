@@ -275,7 +275,7 @@ nsTextInputListener::NotifySelectionChanged(nsIDOMDocument* aDoc, nsISelection* 
       nsCOMPtr<nsIDocument> doc = content->GetDocument();
       if (doc) 
       {
-        nsCOMPtr<nsIPresShell> presShell = doc->GetShellAt(0);
+        nsIPresShell *presShell = doc->GetShellAt(0);
         if (presShell) 
         {
           nsEventStatus status = nsEventStatus_eIgnore;
@@ -338,7 +338,7 @@ nsTextInputListener::Blur(nsIDOMEvent* aEvent)
 
   mFrame->SetHasFocus(PR_FALSE);
 
-  return mFrame->CheckFireOnChange();
+  return NS_OK;
 }
 
 // END nsIFocusListener

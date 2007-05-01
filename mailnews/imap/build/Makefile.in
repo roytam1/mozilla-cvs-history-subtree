@@ -71,13 +71,13 @@ REQUIRES	= xpcom \
       uriloader \
 		  $(NULL)
 
-EXTRA_DSO_LIBS	+= rdfutil_s
-
 ifeq ($(USE_SHORT_LIBNAME),1)
-EXTRA_DSO_LIBS	+= msgbsutl
+EXTRA_DSO_LIBS	= msgbsutl
 else
-EXTRA_DSO_LIBS	+= msgbaseutil
+EXTRA_DSO_LIBS	= msgbaseutil
 endif
+
+EXTRA_DSO_LIBS	+= rdfutil_s
 
 CPPSRCS		= nsImapFactory.cpp
 

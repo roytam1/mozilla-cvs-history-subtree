@@ -468,34 +468,36 @@ nsFormFillController::OnSearchComplete()
 }
 
 NS_IMETHODIMP
-nsFormFillController::OnTextEntered(PRBool* aPrevent)
+nsFormFillController::OnTextEntered(PRBool *_retval)
 {
-  NS_ENSURE_ARG(aPrevent);
-  NS_ENSURE_TRUE(mFocusedInput, NS_OK);
   // Fire off a DOMAutoComplete event
   nsCOMPtr<nsIDOMDocument> domDoc;
   mFocusedInput->GetOwnerDocument(getter_AddRefs(domDoc));
 
   nsCOMPtr<nsIDOMDocumentEvent> doc = do_QueryInterface(domDoc);
-  NS_ENSURE_STATE(doc);
 
   nsCOMPtr<nsIDOMEvent> event;
   doc->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
-  nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
-  NS_ENSURE_STATE(privateEvent);
+  if (!event) {
+    NS_ERROR("Could not create DOM Event");
+    return NS_ERROR_FAILURE;
+  }
 
   event->InitEvent(NS_LITERAL_STRING("DOMAutoComplete"), PR_TRUE, PR_TRUE);
 
-  // XXXjst: We mark this event as a trusted event, it's up to the
-  // callers of this to ensure that it's only called from trusted
-  // code.
-  privateEvent->SetTrusted(PR_TRUE);
+  nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
+  if (privateEvent) {
+    // XXXjst: We mark this event as a trusted event, it's up to the
+    // callers of this to ensure that it's only called from trusted
+    // code.
+    privateEvent->SetTrusted(PR_TRUE);
+  }
 
   nsCOMPtr<nsIDOMEventTarget> targ = do_QueryInterface(mFocusedInput);
 
   PRBool defaultActionEnabled;
   targ->DispatchEvent(event, &defaultActionEnabled);
-  *aPrevent = !defaultActionEnabled;
+
   return NS_OK;
 }
 
