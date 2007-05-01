@@ -169,12 +169,12 @@ $BuildNameExtra = 'Fx-Release';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 # CONFIG: $BuildTree  = '%buildTree%';
-$BuildTree  = 'Mozilla1.8.0';
+$BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_1_5_0_11_RELEASE';
+$BuildTag = 'FIREFOX_1_5_0_12_RELEASE';
 
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -215,7 +215,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = 'firefox%version%';
-$milestone     = "firefox1.5.0.11";
+$milestone     = 'firefox1.5.0.12';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
