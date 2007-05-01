@@ -87,6 +87,7 @@ static const PRUint32 kLazyWriteTimeout = 5000; //msec
 static const PRUint32 kMaxNumberOfCookies = 1000;
 static const PRUint32 kMaxCookiesPerHost  = 50;
 static const PRUint32 kMaxBytesPerCookie  = 4096;
+static const PRUint32 kMaxBytesPerPath    = 1024;
 
 // this constant augments those defined on nsICookie, and indicates
 // the cookie should be rejected because of an error (rather than
@@ -1167,6 +1168,11 @@ nsCookieService::SetCookieInternal(nsIURI             *aHostURI,
     return newCookie;
   }
 
+  if (cookieAttributes.name.FindChar('\t') != kNotFound) {
+    COOKIE_LOGFAILURE(SET_COOKIE, aHostURI, cookieHeader, "invalid name character");
+    return newCookie;
+  }
+
   // calculate expiry time of cookie. we need to pass in cookieStatus, since
   // the cookie may have been downgraded to a session cookie by p3p.
   const nsInt64 currentTime = NOW_IN_SECONDS;
@@ -1853,8 +1859,12 @@ nsCookieService::CheckPath(nsCookieAttributes &aCookieAttributes,
       }
     }
 
-#if 0
   } else {
+    if (aCookieAttributes.path.Length() > kMaxBytesPerPath ||
+        aCookieAttributes.path.FindChar('\t') != kNotFound )
+      return PR_FALSE;
+
+#if 0
     /**
      * The following test is part of the RFC2109 spec.  Loosely speaking, it says that a site
      * cannot set a cookie for a path that it is not on.  See bug 155083.  However this patch
