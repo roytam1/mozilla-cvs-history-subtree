@@ -12,19 +12,18 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla XForms support.
+ * The Original Code is Mozilla Communicator client code.
  *
  * The Initial Developer of the Original Code is
- * Alexander Surkov.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *  Alexander Surkov <surkov.alexander@gmail.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * either of the GNU General Public License Version 2 or later (the "GPL"),
+ * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
  * under the terms of either the GPL or the LGPL, and not to allow others to
@@ -36,58 +35,52 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/**
- * Implementation of the XForms \<mediatype\> element.
- */
+#ifndef nsUnicodeToUEscape_h___
+#define nsUnicodeToUEscape_h___
 
-#include "nsXFormsDelegateStub.h"
-#include "nsIDOM3Node.h"
+#include "nsUCSupport.h"
+#include "nsISupports.h"
 
-class nsXFormsMediatypeElement : public nsXFormsDelegateStub
+// XXX should we inherited from nsEncoderSupprt ? We don't want the buffer stuff there
+class nsUnicodeToUEscape : public nsEncoderSupport 
 {
 public:
-  // nsIXFormsDelegate
-  NS_IMETHOD GetValue(nsAString& aValue);
 
-  nsXFormsMediatypeElement();
+  /**
+   * Class constructor.
+   */
+  nsUnicodeToUEscape() : nsEncoderSupport(6) {};
 
-#ifdef DEBUG_smaug
-  virtual const char* Name() { return "mediatype"; }
-#endif
-};
-
-nsXFormsMediatypeElement::nsXFormsMediatypeElement():
-  nsXFormsDelegateStub(NS_LITERAL_STRING("mediatype"))
-{
-}
-
-NS_IMETHODIMP
-nsXFormsMediatypeElement::GetValue(nsAString& aValue)
-{
-  // The order of precedence for determining the mediatype is:
-  //   single node binding, inline text
-
-  nsXFormsDelegateStub::GetValue(aValue);
-  if (aValue.IsVoid()) {
-    NS_ENSURE_STATE(mElement);
-
-    nsCOMPtr<nsIDOM3Node> inner(do_QueryInterface(mElement));
-    if (inner) {
-      inner->GetTextContent(aValue);
-    }
+  NS_IMETHOD FillInfo(PRUint32* aInfo)
+  {
+    memset(aInfo, 0xFF, (0x10000L >> 3));
+    return NS_OK;
   }
 
-  return NS_OK;
-}
+  NS_IMETHOD Convert(const PRUnichar * aSrc, PRInt32 * aSrcLength, 
+      char * aDest, PRInt32 * aDestLength);
+  NS_IMETHOD Finish(char * aDest, PRInt32 * aDestLength) 
+   {
+      return NS_OK;
+   }
+  NS_IMETHOD Reset()
+   {
+      return NS_OK;
+   }
 
-NS_HIDDEN_(nsresult)
-NS_NewXFormsMediatypeElement(nsIXTFElement **aResult)
-{
-  *aResult = new nsXFormsMediatypeElement();
-  if (!*aResult)
-    return NS_ERROR_OUT_OF_MEMORY;
+protected:
 
-  NS_ADDREF(*aResult);
-  return NS_OK;
-}
+  //--------------------------------------------------------------------
+  // Subclassing of nsEncoderSupport class [declaration]
 
+  NS_IMETHOD ConvertNoBuffNoErr(const PRUnichar * aSrc, PRInt32 * aSrcLength, 
+      char * aDest, PRInt32 * aDestLength) 
+  {
+      NS_ASSERTION(PR_FALSE, "should never call this");
+      return NS_ERROR_NOT_IMPLEMENTED;
+  };
+
+};
+nsresult NEW_UnicodeToUEscape(nsISupports **aResult);         
+
+#endif /* nsUnicodeToUEscape_h___ */

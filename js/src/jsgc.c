@@ -648,8 +648,8 @@ retry:
     lrs = cx->localRootStack;
     if (lrs) {
         /*
-         * If we're in a local root scope, don't set newborn[type] at all, to
-         * avoid entraining garbage from it for an unbounded amount of time
+         * If we're in a local root scope, don't set cx->newborn[type] at all,
+         * to avoid entraining garbage from it for an unbounded amount of time
          * on this context.  A caller will leave the local root scope and pop
          * this reference, allowing thing to be GC'd if it has no other refs.
          * See JS_EnterLocalRootScope and related APIs.
@@ -670,7 +670,7 @@ retry:
          * No local root scope, so we're stuck with the old, fragile model of
          * depending on a pigeon-hole newborn per type per context.
          */
-        cx->weakRoots.newborn[flags & GCF_TYPEMASK] = thing;
+        cx->newborn[flags & GCF_TYPEMASK] = thing;
     }
 
     /* We can't fail now, so update flags and rt->gc{,Private}Bytes. */
@@ -682,7 +682,7 @@ retry:
 
     /*
      * Clear thing before unlocking in case a GC run is about to scan it,
-     * finding it via newborn[].
+     * finding it via cx->newborn[].
      */
     thing->next = NULL;
     thing->flagp = NULL;
@@ -1506,7 +1506,12 @@ gc_lock_marker(JSDHashTable *table, JSDHashEntryHdr *hdr, uint32 num, void *arg)
 void
 js_ForceGC(JSContext *cx, uintN gcflags)
 {
-    JS_CLEAR_WEAK_ROOTS(&cx->weakRoots);
+    uintN i;
+
+    for (i = 0; i < GCX_NTYPES; i++)
+        cx->newborn[i] = NULL;
+    cx->lastInternalResult = JSVAL_NULL;
+    cx->lastAtom = NULL;
     cx->runtime->gcPoke = JS_TRUE;
     js_GC(cx, gcflags);
     JS_ArenaFinish();
@@ -1522,23 +1527,6 @@ js_ForceGC(JSContext *cx, uintN gcflags)
                 GC_MARK(cx, JSVAL_TO_GCTHING(_v), name, NULL);                \
         }                                                                     \
     JS_END_MACRO
-
-static void
-MarkWeakRoots(JSContext *cx, JSWeakRoots *wr)
-{
-    uintN i;
-    void *thing;
-
-    for (i = 0; i < GCX_NTYPES; i++)
-        GC_MARK(cx, wr->newborn[i], gc_typenames[i], NULL);
-    if (wr->lastAtom)
-        GC_MARK_ATOM(cx, wr->lastAtom, NULL);
-    if (JSVAL_IS_GCTHING(wr->lastInternalResult)) {
-        thing = JSVAL_TO_GCTHING(wr->lastInternalResult);
-        if (thing)
-            GC_MARK(cx, thing, "lastInternalResult", NULL);
-    }
-}
 
 void
 js_GC(JSContext *cx, uintN gcflags)
@@ -1793,17 +1781,18 @@ restart:
 
         /* Mark other roots-by-definition in acx. */
         GC_MARK(cx, acx->globalObject, "global object", NULL);
-        MarkWeakRoots(cx, &acx->weakRoots);
-#if JS_HAS_EXCEPTIONS
-        if (acx->throwing) {
-            if (JSVAL_IS_GCTHING(acx->exception)) {
-                GC_MARK(cx, JSVAL_TO_GCTHING(acx->exception), "exception",
-                        NULL);
-            }
-        } else {
-            /* Avoid keeping GC-ed junk stored in JSContext.exception. */
-            acx->exception = JSVAL_NULL;
+        for (i = 0; i < GCX_NTYPES; i++)
+            GC_MARK(cx, acx->newborn[i], gc_typenames[i], NULL);
+        if (acx->lastAtom)
+            GC_MARK_ATOM(cx, acx->lastAtom, NULL);
+        if (JSVAL_IS_GCTHING(acx->lastInternalResult)) {
+            thing = JSVAL_TO_GCTHING(acx->lastInternalResult);
+            if (thing)
+                GC_MARK(cx, thing, "lastInternalResult", NULL);
         }
+#if JS_HAS_EXCEPTIONS
+        if (acx->throwing && JSVAL_IS_GCTHING(acx->exception))
+            GC_MARK(cx, JSVAL_TO_GCTHING(acx->exception), "exception", NULL);
 #endif
 #if JS_HAS_LVALUE_RETURN
         if (acx->rval2set && JSVAL_IS_GCTHING(acx->rval2))
@@ -1831,9 +1820,6 @@ restart:
                 break;
               case JSTVU_SPROP:
                 MARK_SCOPE_PROPERTY(cx, tvr->u.sprop);
-                break;
-              case JSTVU_WEAK_ROOTS:
-                MarkWeakRoots(cx, tvr->u.weakRoots);
                 break;
               default:
                 JS_ASSERT(tvr->count >= 0);
@@ -2000,30 +1986,11 @@ restart:
         JS_UNLOCK_GC(rt);
 #endif
 
-    /* Execute JSGC_END callback outside the lock. */
     if (rt->gcCallback) {
-        JSWeakRoots savedWeakRoots;
-        JSTempValueRooter tvr;
-
-        if (gcflags & GC_ALREADY_LOCKED) {
-            /*
-             * We allow JSGC_END implementation to force a full GC or allocate
-             * new GC things. Thus we must protect the weak roots from GC or
-             * overwrites if GC is the last ditch which GC_ALREADY_LOCKED
-             * indicates.
-             */
-            savedWeakRoots = cx->weakRoots;
-            JS_PUSH_TEMP_ROOT_WEAK_COPY(cx, &savedWeakRoots, &tvr);
-            JS_KEEP_ATOMS(rt);
+        if (gcflags & GC_ALREADY_LOCKED)
             JS_UNLOCK_GC(rt);
-        }
-
         (void) rt->gcCallback(cx, JSGC_END);
-
-        if (gcflags & GC_ALREADY_LOCKED) {
+        if (gcflags & GC_ALREADY_LOCKED)
             JS_LOCK_GC(rt);
-            JS_UNKEEP_ATOMS(rt);
-            JS_POP_TEMP_ROOT(cx, &tvr);
-        }
     }
 }

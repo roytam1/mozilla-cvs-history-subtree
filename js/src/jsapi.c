@@ -1064,7 +1064,7 @@ JS_ToggleOptions(JSContext *cx, uint32 options)
 JS_PUBLIC_API(const char *)
 JS_GetImplementationVersion(void)
 {
-    return "JavaScript-C 1.6.1 2007-04-01";
+    return "JavaScript-C 1.6 2006-11-19";
 }
 
 
@@ -1663,7 +1663,12 @@ JS_AddNamedRoot(JSContext *cx, void *rp, const char *name)
 JS_PUBLIC_API(void)
 JS_ClearNewbornRoots(JSContext *cx)
 {
-    JS_CLEAR_WEAK_ROOTS(&cx->weakRoots);
+    uintN i;
+
+    for (i = 0; i < GCX_NTYPES; i++)
+        cx->newborn[i] = NULL;
+    cx->lastAtom = NULL;
+    cx->lastInternalResult = JSVAL_NULL;
 }
 
 JS_PUBLIC_API(JSBool)
@@ -2392,7 +2397,7 @@ JS_DefineObject(JSContext *cx, JSObject *obj, const char *name, JSClass *clasp,
         return NULL;
     if (!DefineProperty(cx, obj, name, OBJECT_TO_JSVAL(nobj), NULL, NULL, attrs,
                         0, 0)) {
-        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+        cx->newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
     return nobj;
@@ -3226,8 +3231,8 @@ JS_NewPropertyIterator(JSContext *cx, JSObject *obj)
     iterobj->slots[JSSLOT_ITER_INDEX] = INT_TO_JSVAL(index);
     return iterobj;
 
-  bad:
-    cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+bad:
+    cx->newborn[GCX_OBJECT] = NULL;
     return NULL;
 }
 
@@ -3677,7 +3682,7 @@ JS_CompileUCScript(JSContext *cx, JSObject *obj,
 #define LAST_FRAME_CHECKS(cx,result)                                          \
     JS_BEGIN_MACRO                                                            \
         if (!(cx)->fp) {                                                      \
-            (cx)->weakRoots.lastInternalResult = JSVAL_NULL;                  \
+            (cx)->lastInternalResult = JSVAL_NULL;                            \
             LAST_FRAME_EXCEPTION_CHECK(cx, result);                           \
         }                                                                     \
     JS_END_MACRO

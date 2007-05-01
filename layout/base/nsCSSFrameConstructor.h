@@ -132,7 +132,6 @@ public:
 
   void BeginUpdate() { ++mUpdateCount; }
   void EndUpdate();
-  void RecalcQuotesAndCounters();
 
   void WillDestroyFrameTree();
 
@@ -423,7 +422,6 @@ private:
                              const nsStyleDisplay* aChildDisplay,
                              nsIAtom* aTag,
                              PRInt32 aNameSpaceID,
-                             nsStyleContext* aChildStyle,
                              nsIFrame* & aParentFrame,
                              nsFrameItems* & aFrameItems,
                              nsFrameConstructorState& aState,
@@ -1016,7 +1014,6 @@ private:
   PRPackedBool        mQuotesDirty : 1;
   PRPackedBool        mCountersDirty : 1;
   PRPackedBool        mInitialContainingBlockIsAbsPosContainer : 1;
-  PRPackedBool        mIsDestroyingFrameTree : 1;
 
   nsCOMPtr<nsILayoutHistoryState> mTempFrameTreeState;
 
