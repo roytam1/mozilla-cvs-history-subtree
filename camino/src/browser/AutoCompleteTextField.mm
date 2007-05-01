@@ -839,11 +839,10 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 {
   id parentWindowController = [[self window] windowController];
   NSString* url = nil;
-  if ([parentWindowController isKindOfClass:[BrowserWindowController class]]) {
-    BrowserWrapper* wrapper = [(BrowserWindowController*)parentWindowController getBrowserWrapper];
-
-    if (![wrapper isEmpty])
-      url = [wrapper currentURI];
+  if ([parentWindowController isKindOfClass:[BrowserWindowController class]])
+  {
+    BrowserWindowController *controller = (BrowserWindowController*)parentWindowController;
+    url = [[controller getBrowserWrapper] getCurrentURI];
   }
 
   if (!url)

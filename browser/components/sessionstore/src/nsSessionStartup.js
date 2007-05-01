@@ -188,27 +188,13 @@ SessionStartup.prototype = {
 
   /**
    * Removes the default arguments from the first browser window
-   * (and removes the "domwindowopened" observer afterwards).
+   * (and removes the "domwindowopened" observer afterwards)
    */
   _onWindowOpened: function sss_onWindowOpened(aWindow) {
     var wType = aWindow.document.documentElement.getAttribute("windowtype");
     if (wType != "navigator:browser")
       return;
     
-    /**
-     * Note: this relies on the fact that nsBrowserContentHandler will return
-     * a different value the first time it's getter is called after an update,
-     * due to its needHomePageOverride() logic. We don't want to remove the
-     * default arguments in the update case, since they include the "What's
-     * New" page.
-     *
-     * Since we're garanteed to be at least the second caller of defaultArgs
-     * (nsBrowserContentHandler calls it to determine which arguments to pass
-     * at startup), we know that if the window's arguments don't match the
-     * current defaultArguments, we're either in the update case, or we're
-     * launching a non-default browser window, so we shouldn't remove the
-     * window's arguments.
-     */
     var defaultArgs = Cc["@mozilla.org/browser/clh;1"].
                       getService(Ci.nsIBrowserHandler).defaultArgs;
     if (aWindow.arguments && aWindow.arguments[0] &&
@@ -230,7 +216,7 @@ SessionStartup.prototype = {
   },
 
   /**
-   * Determine whether there is a pending session restore.
+   * Determine if session should be restored
    * @returns bool
    */
   doRestore: function sss_doRestore() {

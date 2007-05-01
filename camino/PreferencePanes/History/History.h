@@ -22,7 +22,7 @@
  *
  * Contributor(s):
  *   william@dell.wisner.name (William Dell Wisner)
- *   josh@mozilla.com (Josh Aas)
+ *   joshmoz@gmail.com (Josh Aas)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or

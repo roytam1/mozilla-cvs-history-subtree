@@ -64,9 +64,13 @@ nsXFormsSendElement::HandleAction(nsIDOMEvent* aEvent,
   if (submissionID.IsEmpty())
     return NS_OK;
 
+  nsCOMPtr<nsIDOMDocument> doc;
+  mElement->GetOwnerDocument(getter_AddRefs(doc));
+  if (!doc)
+    return NS_OK;
+
   nsCOMPtr<nsIDOMElement> el;
-  nsXFormsUtils::GetElementByContextId(mElement, submissionID,
-                                       getter_AddRefs(el));
+  doc->GetElementById(submissionID, getter_AddRefs(el));
 
   if (!el || !nsXFormsUtils::IsXFormsElement(el, submission)) {
     const PRUnichar *strings[] = { submissionID.get(), submission.get() };

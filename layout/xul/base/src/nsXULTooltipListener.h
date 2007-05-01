@@ -108,7 +108,6 @@ protected:
   // pref callback for when the "show tooltips" pref changes
   static int sTooltipPrefChanged (const char* aPref, void* aData);
   static PRBool sShowTooltips;
-  static PRUint32 sTooltipListenerCount;
 
   void KillTooltipTimer();
   void CreateAutoHideTimer();

@@ -256,9 +256,8 @@ ifdef MOZ_XPINSTALL
 tier_50_dirs     +=  xpinstall
 endif
 
-# JavaXPCOM JNI code is compiled into libXUL
 ifdef MOZ_JAVAXPCOM
-tier_50_dirs	+= extensions/java/xpcom/src
+tier_50_dirs += extensions/java
 endif
 
 ifdef MOZ_ENABLE_LIBXUL
@@ -312,10 +311,6 @@ endif
 
 ifdef MOZ_EXTENSIONS
 tier_99_dirs	+= extensions
-endif
-
-ifdef MOZ_JAVAXPCOM
-tier_99_dirs	+= extensions/java
 endif
 
 # axcontrol
@@ -420,6 +415,11 @@ endif
 # test harnesses 
 ifdef ENABLE_TESTS
 tier_99_dirs += tools/test-harness
+endif
+
+# This should be built last, after all IDL files in the tree have been processed
+ifdef MOZ_JAVAXPCOM
+tier_99_dirs += extensions/java/xpcom/interfaces
 endif
 
 else

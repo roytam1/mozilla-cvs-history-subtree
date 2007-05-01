@@ -1602,7 +1602,6 @@ nsMsgLocalMailFolder::InitCopyState(nsISupports* aSupport,
     return NS_ERROR_OUT_OF_MEMORY;
   
   mCopyState->m_dataBufferSize = COPY_BUFFER_SIZE;
-  mCopyState->m_destDB = msgDB;
   
   //Before we continue we should verify that there is enough diskspace.
   //XXX How do we do this?
@@ -1627,13 +1626,6 @@ nsMsgLocalMailFolder::InitCopyState(nsISupports* aSupport,
     mCopyState->m_listener = do_QueryInterface(listener, &rv);
   mCopyState->m_copyingMultipleMessages = PR_FALSE;
   return rv;
-}
-
-NS_IMETHODIMP nsMsgLocalMailFolder::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator)
-{
-  if (mCopyState)
-    mCopyState->m_destDB = nsnull;
-  return nsMsgDBFolder::OnAnnouncerGoingAway(instigator);
 }
 
 NS_IMETHODIMP
@@ -2610,9 +2602,9 @@ NS_IMETHODIMP nsMsgLocalMailFolder::EndCopy(PRBool copySucceeded)
     
     if(!mCopyState->m_parseMsgState)
     {
-      if(mCopyState->m_destDB)
+      if(mDatabase)
       {
-        rv = mCopyState->m_destDB->CopyHdrFromExistingHdr(mCopyState->m_curDstKey,
+        rv = mDatabase->CopyHdrFromExistingHdr(mCopyState->m_curDstKey,
           mCopyState->m_message, PR_TRUE,
           getter_AddRefs(newHdr));
         PRUint32 newHdrFlags;

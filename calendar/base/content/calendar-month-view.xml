@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0"?>
 <!--
    - ***** BEGIN LICENSE BLOCK *****
    - Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -24,8 +24,6 @@
    -   Vladimir Vukicevic <vladimir@pobox.com>
    -   Stefan Sitter <ssitter@googlemail.com>
    -   Clint Talbert <cmtalbert@myfastmail.com>
-   -   Michael Büttner <michael.buettner@sun.com>
-   -   Philipp Kewisch <mozilla@kewis.ch>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -42,7 +40,7 @@
    - ***** END LICENSE BLOCK *****
 -->
 
-<!-- Note that this file depends on helper functions in calUtils.js-->
+<!-- Note that this file depends on helper functions in calendarUtils.js-->
 
 <bindings id="calendar-month-view-bindings"
   xmlns="http://www.mozilla.org/xbl"
@@ -52,70 +50,18 @@
 
   <binding id="calendar-month-day-box-item" extends="chrome://calendar/content/calendar-view-core.xml#calendar-editable-item">
     <content>
-      <xul:vbox flex="1">
-        <xul:hbox>
-          <xul:image class="calendar-event-box-shadow-left"/>
-          <xul:box anonid="event-container" flex="1">
-            <xul:stack class="calendar-event-selection" flex="1">
-              <xul:hbox class="calendar-event-details">
-                <xul:label anonid="item-label"
-                           class="calendar-month-day-box-item-label"
-                           xbl:inherits="context"/>
-                <xul:vbox align="left"
-                          class="calendar-event-box-container"
-                          flex="1"
-                          xbl:inherits="context">
-                  <xul:label anonid="event-name"
-                             crop="end"
-                             flex="1"
-                             style="margin: 0;"/>
-                  <xul:textbox anonid="event-name-textbox"
-                               class="plain"
-                               crop="end"
-                               hidden="true"
-                               style="background: transparent !important;"
-                               wrap="true"/>
-                  <xul:spacer flex="1"/>
-                </xul:vbox>
-              </xul:hbox>
-              <xul:image anonid="gradient"
-                         class="calendar-event-box-gradient event-frame"
-                         hidden="true"/>
-            </xul:stack>
-          </xul:box>
-          <xul:image class="calendar-event-box-shadow-right"/>
-        </xul:hbox>
-        <xul:box orient="horizontal">
-          <xul:image class="calendar-event-box-shadow-edge-left"/>
-          <xul:image class="calendar-event-box-shadow-bottom" flex="1"/>
-          <xul:image class="calendar-event-box-shadow-edge-right"/>
-        </xul:box>
-      </xul:vbox>
-  </content>
+      <xul:hbox flex="1" class="calendar-item">
+        <xul:label anonid="item-label" class="calendar-month-day-box-item-label" xbl:inherits="context"/>
+        <xul:vbox class="calendar-event-box-container" xbl:inherits="context" flex="1" align="left">
+          <xul:label anonid="event-name" style="margin: 0px;" flex="1" crop="end"/>
+          <xul:textbox class="plain" style="background: transparent !important"
+            anonid="event-name-textbox" crop="end" hidden="true" wrap="true"/>
+          <xul:spacer flex="1"/>
+        </xul:vbox>
+      </xul:hbox>
+    </content>
 
     <implementation>
-      <constructor><![CDATA[
-        var gradient = document.getAnonymousElementByAttribute(this,
-                                                               "anonid",
-                                                               "gradient");
-        var container = document.getAnonymousElementByAttribute(this,
-                                                                "anonid",
-                                                                "event-container");
-        if (gradient) {
-          gradient.removeAttribute("hidden");
-          gradient.setAttribute("style",
-                                "height: " +
-                                container.boxObject.height+"px");
-        }
-
-        container.setAttribute("class", "calendar-item");
-        container.setAttribute("class", this.getAttribute("class"));
-        container.setAttribute("item-calendar", this.getAttribute("item-calendar"));
-        this.removeAttribute("class");
-        this.removeAttribute("item-calendar");
-      ]]>
-      </constructor>
-
       <property name="occurrence">
         <getter><![CDATA[
 	  return this.mOccurrence;
@@ -123,23 +69,20 @@
         <setter><![CDATA[
           this.mOccurrence = val;
 
-          var label = document.getAnonymousElementByAttribute(this,
-                                                              "anonid",
-                                                              "item-label");
           var str = null;
           // if val is an event and not an all day event, show start time in title
-          if (isEvent(val) && !val.startDate.isDate) {
-            var df = Cc["@mozilla.org/calendar/datetime-formatter;1"].
-                     getService(Ci.calIDateTimeFormatter);
+          if (val instanceof Components.interfaces.calIEvent && !val.startDate.isDate) {
+            var df = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
+                               .getService(Components.interfaces.calIDateTimeFormatter);
             str = df.formatTime(val.startDate.getInTimezone(this.calendarView.mTimezone));
-            label.setAttribute("time", "true");
-          } else if (isToDo(val)) {
+          } else if (val instanceof Components.interfaces.calITodo) {
             // yeah, this should really be a little picture instead of a "*"
-            str = "*";
+            str = "* ";
           } else {
-            str = "";
+            str = " ";
           }
 
+          var label = document.getAnonymousElementByAttribute(this, "anonid", "item-label");
           label.value = str;
 
           this.setEditableLabel();
@@ -154,21 +97,21 @@
 
     <handlers>
       <handler event="draggesture"><![CDATA[
-        var dragService = Cc["@mozilla.org/widget/dragservice;1"].
-                          getService(Ci.nsIDragService);
-        var transfer = Cc["@mozilla.org/widget/transferable;1"].
-                       createInstance(Ci.nsITransferable);
+        var dragService = Components.classes["@mozilla.org/widget/dragservice;1"]
+                                    .getService(Components.interfaces.nsIDragService);
+        var transfer = Components.classes["@mozilla.org/widget/transferable;1"]
+                                 .createInstance(Components.interfaces.nsITransferable);
 
         var item = this.occurrence;
         transfer.addDataFlavor("text/calendar");
 
         var flavourProvider = {
             QueryInterface: function(aIID) {
-                if (aIID.equals(Ci.nsIFlavorDataProvider) ||
-                    aIID.equals(Ci.nsISupports)) {
+                if (aIID.equals(Components.interfaces.nsIFlavorDataProvider) ||
+                    aIID.equals(Components.interfaces.nsISupports)) {
                     return this;
                 }
-                throw Cr.NS_NOINTERFACE;
+                throw Components.results.NS_NOINTERFACE;
             },
             item: item,
 
@@ -177,30 +120,31 @@
                     (aInFlavor == "application/vnd.x-moz-cal-task")) {
                     aOutData.value = this.item;
                     aOutDataLen.value = 1;
+                    return Components.results.NS_OK;
                 } else {
                     alert("error:"+aInFlavor);
                 }
             }
         };
 
-        if (isEvent(item)) {
+        if (item instanceof Components.interfaces.calIEvent) {
           transfer.addDataFlavor("application/vnd.x-moz-cal-event");
           transfer.setTransferData("application/vnd.x-moz-cal-event", flavourProvider, 0);
-        } else if (isToDo(item)) {
+        } else if (item instanceof Components.interfaces.calITodo) {
           transfer.addDataFlavor("application/vnd.x-moz-cal-task");
           transfer.setTransferData("application/vnd.x-moz-cal-task", flavourProvider, 0);
         }
 
         // Also set some normal data-types, in case we drag into another app
-        var supportsString = Cc["@mozilla.org/supports-string;1"].
-                             createInstance(Ci.nsISupportsString);
+        var supportsString = Components.classes["@mozilla.org/supports-string;1"]
+                                       .createInstance(Components.interfaces.nsISupportsString);
         supportsString.data = item.icalComponent.serializeToICS();
         transfer.setTransferData("text/calendar", supportsString, supportsString.data.length*2);
         transfer.setTransferData("text/unicode", supportsString, supportsString.data.length*2);
 
         var action = dragService.DRAGDROP_ACTION_MOVE;
-        var supArray = Cc["@mozilla.org/supports-array;1"].
-                       createInstance(Ci.nsISupportsArray);
+        var supArray = Components.classes["@mozilla.org/supports-array;1"]
+                                 .createInstance(Components.interfaces.nsISupportsArray);
         supArray.AppendElement(transfer);
 
         // OK, now that the data is all set up, start playing with the shadows
@@ -223,8 +167,8 @@
         // for that case.
         var monthbox = this.parentBox;
         monthbox.monthView.dropListener = function checkStillDragging() {
-            var dragService = Cc["@mozilla.org/widget/dragservice;1"].
-                              getService(Ci.nsIDragService);
+            var dragService = Components.classes["@mozilla.org/widget/dragservice;1"]
+                                        .getService(Components.interfaces.nsIDragService);
             var session;
             try {
                 session = dragService.getCurrentSession();
@@ -326,7 +270,7 @@
         <parameter name="aDate"/>
         <body><![CDATA[
           if (!aDate)
-            throw Cr.NS_ERROR_NULL_POINTER;
+            throw Components.results.NS_ERROR_NULL_POINTER;
 
           // Remove all the old events
           this.mItemData = new Array();
@@ -426,11 +370,11 @@
 
           this.mItemData.sort(
             function (a, b) {
-              var aIsEvent = isEvent(a.item);
-              var aIsTodo = isToDo(a.item);
+              var aIsEvent = (a.item instanceof Components.interfaces.calIEvent);
+              var aIsTodo = (a.item instanceof Components.interfaces.calITodo);
 
-              var bIsEvent = isEvent(b.item);
-              var bIsTodo = isToDo(b.item);
+              var bIsEvent = (b.item instanceof Components.interfaces.calIEvent);
+              var bIsTodo = (b.item instanceof Components.interfaces.calITodo);
 
               if ((!aIsEvent && !aIsTodo) || (!bIsEvent && !bIsTodo)) {
                 // XXX ????
@@ -448,10 +392,6 @@
               }
 
               if (aIsEvent && bIsEvent) {
-                // sort all day events before events with a duration
-                if (a.item.startDate.isDate && !b.item.startDate.isDate) return -1;
-                if (!a.item.startDate.isDate && b.item.startDate.isDate) return 1;
-
                 var cmp;
 
                 cmp = a.item.startDate.compare(b.item.startDate);
@@ -531,14 +471,9 @@
               dropbox.setAttribute("dropbox", "true");
               dropbox.setAttribute("flex", "1");
 
-              var box = this.monthView.findBoxForDate(shadowStart);
-              if (!box) {
-                  // Dragging to the end of a view
+              var box = this.monthView.findBoxForDate(shadowStart);              if (!box) {                  // Dragging to the end of a view
                   shadowStart.day += 1;
-                  shadowStart.normalize();
-                  continue;
-              }
-              box.box.dayitems.insertBefore(dropbox, box.box.dayitems.firstChild);
+                  shadowStart.normalize();                  continue;              }              box.box.dayitems.insertBefore(dropbox, box.box.dayitems.firstChild);
               this.monthView.mDropShadows.push(dropbox);
 
               shadowStart.day += 1;
@@ -573,8 +508,8 @@
         this.monthView.controller.createNewEvent();
       ]]></handler>
       <handler event="dragenter"><![CDATA[
-        var dragService = Cc["@mozilla.org/widget/dragservice;1"].
-                          getService(Ci.nsIDragService);
+        var dragService = Components.classes["@mozilla.org/widget/dragservice;1"]
+                                    .getService(Components.interfaces.nsIDragService);
         var session = dragService.getCurrentSession();
         session.canDrop = true;
         this.removeDropShadows();
@@ -582,8 +517,8 @@
       ]]></handler>
 
       <handler event="dragover"><![CDATA[
-        var dragService = Cc["@mozilla.org/widget/dragservice;1"].
-                          getService(Ci.nsIDragService);
+        var dragService = Components.classes["@mozilla.org/widget/dragservice;1"]
+                                    .getService(Components.interfaces.nsIDragService);
         var session = dragService.getCurrentSession();
         session.canDrop = true;
       ]]></handler>
@@ -592,19 +527,19 @@
             return;
         }
         this.removeDropShadows();
-        var dragService = Cc["@mozilla.org/widget/dragservice;1"].
-                          getService(Ci.nsIDragService);
+        var dragService = Components.classes["@mozilla.org/widget/dragservice;1"]
+                                    .getService(Components.interfaces.nsIDragService);
         var session = dragService.getCurrentSession();
         session.canDrop = false;
       ]]></handler>
 
       <handler event="dragdrop"><![CDATA[
-         var dragService = Cc["@mozilla.org/widget/dragservice;1"].
-                           getService(Ci.nsIDragService);
+         var dragService = Components.classes["@mozilla.org/widget/dragservice;1"]
+                                     .getService(Components.interfaces.nsIDragService);
          var session = dragService.getCurrentSession();
 
-         var transfer = Cc["@mozilla.org/widget/transferable;1"].
-                        createInstance(Ci.nsITransferable);
+         var transfer = Components.classes["@mozilla.org/widget/transferable;1"]
+                                  .createInstance(Components.interfaces.nsITransferable);
          transfer.addDataFlavor("application/x-moz-cal-event");
          session.getData(transfer, 0);
          var flavor = {};
@@ -635,32 +570,17 @@
 
          event.stopPropagation();
          var item = session.sourceNode.occurrence;
-         if (isEvent(item)) {
+         if (item instanceof Components.interfaces.calIEvent) {
            var beginMove = item.startDate.clone();
            beginMove.isDate = true;
            var duration = boxDate.subtractDate(beginMove);
-           
-           // Since both boxDate and beginMove are dates (note datetimes),
-           // subtractDate will only give us a non-zero number of hours on DST
-           // changes. While strictly speaking, subtractDate's behavior is 
-           // correct, we need to move the event a discrete number of days here.
-           // There is no need for normalization here, since addDuration does 
-           // the job for us.
-           if (duration.hours == 23) {
-             // entering DST
-             duration.hours++;
-           } else if (duration.hours == 1) {
-             // leaving DST
-             duration.hours--;
-           }
-
            newStart = item.startDate.clone();
            newStart.addDuration(duration);
            newStart.normalize();
            newEnd = item.endDate.clone();
            newEnd.addDuration(duration);
            newEnd.normalize();
-         } else if (isToDo(item)) {
+         } else if (item instanceof Components.interfaces.calITodo) {
            if (item.entryDate && item.dueDate) {
              var beginMove = item.entryDate.clone();
              beginMove.isDate = true;
@@ -673,20 +593,9 @@
              newEnd.normalize();
            } else if (item.entryDate) {
              newStart = adjustDate(item.entryDate);
-             // zero offset so we don't double-count
-             offset = 0;
            } else { // only due date
              newEnd = adjustDate(item.dueDate);
-             offset = 0;
            }
-         }
-         if (newStart && offset) {
-           newStart.day -= offset;
-           newStart.normalize();
-         }
-         if (newEnd && offset) {
-           newEnd.day -= offset;
-           newEnd.normalize();
          }
 
          this.removeDropShadows();
@@ -1109,7 +1018,7 @@
         <parameter name="aCount"/>
         <parameter name="aDates"/>
         <body><![CDATA[
-           throw Cr.NS_ERROR_NOT_IMPLEMENTED;
+           throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
         ]]></body>
       </method>
 
@@ -1166,9 +1075,6 @@
       <method name="popRefreshQueue">
         <body><![CDATA[
           if (this.mRefreshPending) {
-            if(this.mRefreshQueue.length > 0) {
-              this.relayout();
-            }
             return;
           }
 
@@ -1377,10 +1283,10 @@
           var boxes = new Array();
 
           // All our boxes are in default tz, so we need these times in them too.
-          if (isEvent(aItem)) {
+          if (aItem instanceof Components.interfaces.calIEvent) {
             targetDate = aItem.startDate.getInTimezone(this.mTimezone);
             finishDate = aItem.endDate.getInTimezone(this.mTimezone);
-          } else if (isToDo(aItem)) {
+          } else if (aItem instanceof Components.interfaces.calITodo) {
             if (aItem.entryDate) {
               targetDate = aItem.entryDate.getInTimezone(this.mTimezone);
               if (aItem.dueDate) {
@@ -1472,7 +1378,8 @@
 
       <method name="today">
         <body><![CDATA[
-          var date = createDateTime();
+          var date = Components.classes["@mozilla.org/calendar/datetime;1"]
+                               .createInstance(Components.interfaces.calIDateTime);
           date.jsDate = new Date();
           date = date.getInTimezone(this.mTimezone);
           date.isDate = true;
@@ -1487,9 +1394,9 @@
           calView: this,
 
           QueryInterface: function (aIID) {
-            if (!aIID.equals(Ci.calIOperationListener) &&
-                !aIID.equals(Ci.nsISupports)) {
-              throw Cr.NS_ERROR_NO_INTERFACE;
+            if (!aIID.equals(Components.interfaces.calIOperationListener) &&
+                !aIID.equals(Components.interfaces.nsISupports)) {
+              throw Components.results.NS_ERROR_NO_INTERFACE;
             }
 
             return this;
@@ -1517,20 +1424,19 @@
         // the calIObserver, and calICompositeObserver
         ({
           calView: this,
-          mBatchCount: 0,
 
           QueryInterface: function (aIID) {
-            if (!aIID.equals(Ci.calIObserver) &&
-                !aIID.equals(Ci.calICompositeObserver) &&
-                !aIID.equals(Ci.nsISupports)) {
-              throw Cr.NS_ERROR_NO_INTERFACE;
+            if (!aIID.equals(Components.interfaces.calIObserver) &&
+                !aIID.equals(Components.interfaces.calICompositeObserver) &&
+                !aIID.equals(Components.interfaces.nsISupports)) {
+              throw Components.results.NS_ERROR_NO_INTERFACE;
             }
 
             return this;
           },
 
           onStartBatch: function() {
-            this.mBatchCount++;
+            this.calView.mBatchCount++;
           },
           onEndBatch: function() {
             this.mBatchCount--;
@@ -1546,9 +1452,9 @@
                 return;
             }
 
-            if (isToDo(aItem) && !this.calView.mTasksInView) {
+            if (aItem instanceof Components.interfaces.calITodo &&
+                !this.calView.mTasksInView)
                 return;
-            }
 
             var occs = aItem.getOccurrencesBetween(this.calView.startDate,
                                                    this.calView.queryEndDate,
@@ -1561,10 +1467,10 @@
                 return;
             }
 
-            if (isToDo(aNewItem) && isToDo(aOldItem) &&
-                !this.calView.mTasksInView) {
+            if (aNewItem instanceof Components.interfaces.calITodo &&
+                aOldItem instanceof Components.interfaces.calITodo &&
+                !this.calView.mTasksInView)
                 return;
-            }
 
             var occs;
             occs = aOldItem.getOccurrencesBetween(this.calView.startDate,
@@ -1573,7 +1479,8 @@
             for each (var occ in occs)
               this.calView.doDeleteItem(occ);
 
-            if (isToDo(aNewItem) && !this.calView.mTasksInView) {
+            if (aNewItem instanceof Components.interfaces.calITodo &&
+                !this.mTasksInView) {
                 return;
             }
             occs = aNewItem.getOccurrencesBetween(this.calView.startDate,
@@ -1587,9 +1494,9 @@
                 return;
             }
 
-            if (isToDo(aItem) && !this.calView.mTasksInView) {
+            if (aItem instanceof Components.interfaces.calITodo &&
+                !this.calView.mTasksInView)
                 return;
-            }
 
             var occs = aItem.getOccurrencesBetween(this.calView.startDate,
                                                    this.calView.queryEndDate,
@@ -1622,15 +1529,15 @@
 
     <handlers>
       <handler event="keypress"><![CDATA[
-        const kKE = Ci.nsIDOMKeyEvent;
+        const kKE = Components.interfaces.nsIDOMKeyEvent;
         if (event.keyCode == kKE.DOM_VK_BACK_SPACE ||
             event.keyCode == kKE.DOM_VK_DELETE)
         {
             if (!this.activeInPlaceEdit && this.mSelectedItems.length && this.controller) {
-                this.controller.deleteOccurrences(this.mSelectedItems.length,
-                                                  this.mSelectedItems,
-                                                  event.ctrlKey,
-                                                  false);
+                for each (var item in this.mSelectedItems) {
+                    item = (event.ctrlKey) ? item.parentItem : item;
+                    this.controller.deleteOccurrence(item);
+                }
             }
         }
       ]]></handler>
