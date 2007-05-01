@@ -58,13 +58,19 @@ EXPORTS = \
 
 PRIVATE_EXPORTS = \
 	pk11pars.h \
+	pkcs11ni.h \
+	lowkeyi.h \
+	lowkeyti.h \
+	pcertt.h \
+	softoken.h \
+	softoknt.h \
 	$(NULL)
 
 CSRCS = \
-	alghmac.c \
 	dbinit.c \
 	dbmshim.c \
 	ecdecode.c \
+	fipsaudt.c \
 	fipstest.c \
 	fipstokn.c \
 	keydb.c    \
@@ -77,7 +83,6 @@ CSRCS = \
 	pkcs11.c   \
 	pkcs11c.c  \
 	pkcs11u.c  \
-	rawhash.c \
 	rsawrapr.c  \
 	softkver.c  \
 	tlsprf.c   \

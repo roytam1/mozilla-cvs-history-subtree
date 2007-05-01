@@ -97,6 +97,10 @@ PK11_DestroyTokenObject(PK11SlotInfo *slot,CK_OBJECT_HANDLE object) {
 
     
     rwsession = PK11_GetRWSession(slot);
+    if (rwsession == CK_INVALID_SESSION) {
+    	PORT_SetError(SEC_ERROR_BAD_DATA);
+    	return SECFailure;
+    }
 
     crv = PK11_GETTAB(slot)->C_DestroyObject(rwsession,object);
     if (crv != CKR_OK) {
@@ -210,6 +214,9 @@ PK11_GetAttributes(PRArenaPool *arena,PK11SlotInfo *slot,
     /* make pedantic happy... note that it's only used arena != NULL */ 
     void *mark = NULL; 
     CK_RV crv;
+    PORT_Assert(slot->session != CK_INVALID_SESSION);
+    if (slot->session == CK_INVALID_SESSION)
+	return CKR_SESSION_HANDLE_INVALID;
 
     /*
      * first get all the lengths of the parameters.
@@ -319,6 +326,10 @@ PK11_SetObjectNickname(PK11SlotInfo *slot, CK_OBJECT_HANDLE id,
 
     PK11_SETATTRS(&setTemplate, CKA_LABEL, (CK_CHAR *) nickname, len);
     rwsession = PK11_GetRWSession(slot);
+    if (rwsession == CK_INVALID_SESSION) {
+    	PORT_SetError(SEC_ERROR_BAD_DATA);
+    	return SECFailure;
+    }
     crv = PK11_GETTAB(slot)->C_SetAttributeValue(rwsession, id,
 			&setTemplate, 1);
     PK11_RestoreROSession(slot, rwsession);
@@ -389,7 +400,12 @@ PK11_CreateNewObject(PK11SlotInfo *slot, CK_SESSION_HANDLE session,
 	    rwsession =  PK11_GetRWSession(slot);
 	} else if (rwsession == CK_INVALID_SESSION) {
 	    rwsession =  slot->session;
-	    PK11_EnterSlotMonitor(slot);
+	    if (rwsession != CK_INVALID_SESSION)
+		PK11_EnterSlotMonitor(slot);
+	}
+	if (rwsession == CK_INVALID_SESSION) {
+	    PORT_SetError(SEC_ERROR_BAD_DATA);
+	    return SECFailure;
 	}
 	crv = PK11_GETTAB(slot)->C_CreateObject(rwsession, theTemplate,
 							count,objectID);
@@ -407,6 +423,7 @@ PK11_CreateNewObject(PK11SlotInfo *slot, CK_SESSION_HANDLE session,
 }
 
 
+/* This function may add a maximum of 9 attributes. */
 unsigned int
 pk11_OpFlagsToAttributes(CK_FLAGS flags, CK_ATTRIBUTE *attrs, CK_BBOOL *ckTrue)
 {
@@ -428,6 +445,7 @@ pk11_OpFlagsToAttributes(CK_FLAGS flags, CK_ATTRIBUTE *attrs, CK_BBOOL *ckTrue)
     for (; flags && test <= CKF_DERIVE; test <<= 1, ++pType) {
     	if (test & flags) {
 	    flags ^= test;
+	    PR_ASSERT(*pType);
 	    PK11_SETATTRS(attr, *pType, ckTrue, sizeof *ckTrue); 
 	    ++attr;
 	}
@@ -498,7 +516,7 @@ pk11_backupGetSignLength(SECKEYPrivateKey *key)
     unsigned char buf[20]; /* obviously to small */
     CK_ULONG smallLen = sizeof(buf);
 
-    mech.mechanism = pk11_mapSignKeyType(key->keyType);
+    mech.mechanism = PK11_MapSignKeyType(key->keyType);
 
     session = pk11_GetNewSession(slot,&owner);
     if (!owner || !(slot->isThreadSafe)) PK11_EnterSlotMonitor(slot);
@@ -532,11 +550,9 @@ int
 PK11_SignatureLen(SECKEYPrivateKey *key)
 {
     int val;
-#ifdef NSS_ENABLE_ECC
     CK_ATTRIBUTE theTemplate = { CKA_EC_PARAMS, NULL, 0 };
     SECItem params = {siBuffer, NULL, 0};
     int length; 
-#endif /* NSS_ENABLE_ECC */
 
     switch (key->keyType) {
     case rsaKey:
@@ -549,21 +565,22 @@ PK11_SignatureLen(SECKEYPrivateKey *key)
     case fortezzaKey:
     case dsaKey:
 	return 40;
-#ifdef NSS_ENABLE_ECC
     case ecKey:
 	if (PK11_GetAttributes(NULL, key->pkcs11Slot, key->pkcs11ID,
 			       &theTemplate, 1) == CKR_OK) {
 	    if (theTemplate.pValue != NULL) {
 	        params.len = theTemplate.ulValueLen;
 		params.data = (unsigned char *) theTemplate.pValue;
-	        length = SECKEY_ECParamsToKeySize(&params);
+	        length = SECKEY_ECParamsToBasePointOrderLen(&params);
 	        PORT_Free(theTemplate.pValue);
+		if (length == 0) {
+		    return pk11_backupGetSignLength(key);
+		}
+		length = ((length + 7)/8) * 2;
+		return length;
 	    }
-	    length = ((length + 7)/8) * 2;
-	    return length;
 	}
 	break;
-#endif /* NSS_ENABLE_ECC */
     default:
 	break;
     }
@@ -616,7 +633,7 @@ PK11_VerifyRecover(SECKEYPublicKey *key,
     CK_ULONG len;
     CK_RV crv;
 
-    mech.mechanism = pk11_mapSignKeyType(key->keyType);
+    mech.mechanism = PK11_MapSignKeyType(key->keyType);
 
     if (slot == NULL) {
 	slot = PK11_GetBestSlot(mech.mechanism,wincx);
@@ -673,7 +690,7 @@ PK11_Verify(SECKEYPublicKey *key, SECItem *sig, SECItem *hash, void *wincx)
     CK_SESSION_HANDLE session;
     CK_RV crv;
 
-    mech.mechanism = pk11_mapSignKeyType(key->keyType);
+    mech.mechanism = PK11_MapSignKeyType(key->keyType);
 
     if (slot == NULL) {
 	slot = PK11_GetBestSlot(mech.mechanism,wincx);
@@ -729,7 +746,7 @@ PK11_Sign(SECKEYPrivateKey *key, SECItem *sig, SECItem *hash)
     CK_ULONG len;
     CK_RV crv;
 
-    mech.mechanism = pk11_mapSignKeyType(key->keyType);
+    mech.mechanism = PK11_MapSignKeyType(key->keyType);
 
     if (SECKEY_HAS_ATTRIBUTE_SET(key,CKA_PRIVATE)) {
 	PK11_HandlePasswordCheck(slot, key->wincx);
@@ -934,7 +951,9 @@ PK11_UnwrapPrivKey(PK11SlotInfo *slot, PK11SymKey *wrappingKey,
 					 sizeof(cktrue)); attrs++;
     PK11_SETATTRS(attrs, CKA_SENSITIVE, sensitive ? &cktrue : &ckfalse,
 					sizeof(cktrue)); attrs++;
-    PK11_SETATTRS(attrs, CKA_LABEL, label->data, label->len); attrs++;
+    if (label && label->data) {
+	PK11_SETATTRS(attrs, CKA_LABEL, label->data, label->len); attrs++;
+    }
     PK11_SETATTRS(attrs, CKA_ID, ck_id->data, ck_id->len); attrs++;
     for (i=0; i < usageCount; i++) {
     	PK11_SETATTRS(attrs, usage[i], &cktrue, sizeof(cktrue)); attrs++;
@@ -967,11 +986,17 @@ PK11_UnwrapPrivKey(PK11SlotInfo *slot, PK11SymKey *wrappingKey,
     if (newKey) {
 	if (perm) {
 	    /* Get RW Session will either lock the monitor if necessary, 
-	     *  or return a thread safe session handle. */ 
+	     *  or return a thread safe session handle, or fail. */ 
 	    rwsession = PK11_GetRWSession(slot);
 	} else {
 	    rwsession = slot->session;
-	    PK11_EnterSlotMonitor(slot);
+	    if (rwsession != CK_INVALID_SESSION) 
+		PK11_EnterSlotMonitor(slot);
+	}
+	if (rwsession == CK_INVALID_SESSION) {
+	    PK11_FreeSymKey(newKey);
+	    PORT_SetError(SEC_ERROR_BAD_DATA);
+	    return NULL;
 	}
 	crv = PK11_GETTAB(slot)->C_UnwrapKey(rwsession, &mechanism, 
 					 newKey->objectID,
@@ -1148,7 +1173,7 @@ PK11_FindGenericObjects(PK11SlotInfo *slot, CK_OBJECT_CLASS objClass)
     CK_ATTRIBUTE template[1];
     CK_ATTRIBUTE *attrs = template;
     CK_OBJECT_HANDLE *objectIDs = NULL;
-    PK11GenericObject *lastObj, *obj;
+    PK11GenericObject *lastObj = NULL, *obj;
     PK11GenericObject *firstObj = NULL;
     int i, count = 0;
 
@@ -1548,8 +1573,8 @@ PK11_TraverseSlot(PK11SlotInfo *slot, void *arg)
  * Traverse all the objects in all slots.
  */
 SECStatus
-pk11_TraverseAllSlots( SECStatus (*callback)(PK11SlotInfo *,void *),
-						void *arg,void *wincx) {
+pk11_TraverseAllSlots( SECStatus (*callback)(PK11SlotInfo *,void *), 
+				void *arg, PRBool forceLogin, void *wincx) {
     PK11SlotList *list;
     PK11SlotListElement *le;
     SECStatus rv;
@@ -1560,9 +1585,11 @@ pk11_TraverseAllSlots( SECStatus (*callback)(PK11SlotInfo *,void *),
 
     /* look at each slot and authenticate as necessary */
     for (le = list->head ; le; le = le->next) {
-	rv = pk11_AuthenticateUnfriendly(le->slot, PR_FALSE, wincx);
-	if (rv != SECSuccess) {
-	    continue;
+	if (forceLogin) {
+	    rv = pk11_AuthenticateUnfriendly(le->slot, PR_FALSE, wincx);
+	    if (rv != SECSuccess) {
+		continue;
+	    }
 	}
 	if (callback) {
 	    (*callback)(le->slot,arg);

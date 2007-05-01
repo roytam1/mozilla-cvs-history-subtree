@@ -115,7 +115,7 @@ DSO_LDOPTS	= -dynamiclib -compatibility_version 1 -current_version 1 -install_na
 
 MKSHLIB		= $(CC) $(DSO_LDOPTS) $(DARWIN_SDK_SHLIBFLAGS)
 DLL_SUFFIX	= dylib
-PROCESS_MAP_FILE = grep -v ';+' $(LIBRARY_NAME).def | grep -v ';-' | \
+PROCESS_MAP_FILE = grep -v ';+' $< | grep -v ';-' | \
                 sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' -e 's,^,_,' > $@
 
 G++INCLUDES	= -I/usr/include/g++

@@ -79,6 +79,7 @@ nssCertificate_Create (
     /* mark? */
     NSSArena *arena = object->arena;
     PR_ASSERT(object->instances != NULL && object->numInstances > 0);
+    PR_ASSERT(object->lockType == nssPKIMonitor);
     rvCert = nss_ZNEW(arena, NSSCertificate);
     if (!rvCert) {
 	return (NSSCertificate *)NULL;
@@ -120,6 +121,10 @@ nssCertificate_Destroy (
   NSSCertificate *c
 )
 {
+    nssCertificateStoreTrace lockTrace = {NULL, NULL, PR_FALSE, PR_FALSE};
+    nssCertificateStoreTrace unlockTrace = {NULL, NULL, PR_FALSE, PR_FALSE};
+    PRBool locked = PR_FALSE;
+
     if (c) {
 	PRUint32 i;
 	nssDecodedCert *dc = c->decoding;
@@ -130,7 +135,8 @@ nssCertificate_Destroy (
 
 	/* --- LOCK storage --- */
 	if (cc) {
-	    nssCertificateStore_Lock(cc->certStore);
+	    nssCertificateStore_Lock(cc->certStore, &lockTrace);
+            locked = PR_TRUE;
 	} else {
 	    nssTrustDomain_LockCertCache(td);
 	}
@@ -138,7 +144,10 @@ nssCertificate_Destroy (
 	    /* --- remove cert and UNLOCK storage --- */
 	    if (cc) {
 		nssCertificateStore_RemoveCertLOCKED(cc->certStore, c);
-		nssCertificateStore_Unlock(cc->certStore);
+		nssCertificateStore_Unlock(cc->certStore, &lockTrace,
+                                           &unlockTrace);
+                nssCertificateStore_Check(&lockTrace, &unlockTrace);
+
 	    } else {
 		nssTrustDomain_RemoveCertFromCacheLOCKED(td, c);
 		nssTrustDomain_UnlockCertCache(td);
@@ -147,17 +156,23 @@ nssCertificate_Destroy (
 	    for (i=0; i<c->object.numInstances; i++) {
 		nssCryptokiObject_Destroy(c->object.instances[i]);
 	    }
-	    PZ_DestroyLock(c->object.lock);
+	    nssPKIObject_DestroyLock(&c->object);
 	    nssArena_Destroy(c->object.arena);
 	    nssDecodedCert_Destroy(dc);
 	} else {
 	    /* --- UNLOCK storage --- */
 	    if (cc) {
-		nssCertificateStore_Unlock(cc->certStore);
+		nssCertificateStore_Unlock(cc->certStore,
+					   &lockTrace,
+					   &unlockTrace);
+		nssCertificateStore_Check(&lockTrace, &unlockTrace);
 	    } else {
 		nssTrustDomain_UnlockCertCache(td);
 	    }
 	}
+    }
+    if (locked) {
+        nssCertificateStore_Check(&lockTrace, &unlockTrace);
     }
     return PR_SUCCESS;
 }
@@ -304,25 +319,17 @@ nssCertificate_GetDecoding (
   NSSCertificate *c
 )
 {
-    /* There is a race in assigning c->decoding.  
-    ** This is a workaround.  Bugzilla bug 225525.
-    */
+    nssDecodedCert* deco = NULL;
+    nssPKIObject_Lock(&c->object);
     if (!c->decoding) {
-	nssDecodedCert * deco =
-	    nssDecodedCert_Create(NULL, &c->encoding, c->type);
-	/* Once this race is fixed, an assertion should be put 
-	** here to detect any regressions. 
+	deco = nssDecodedCert_Create(NULL, &c->encoding, c->type);
     	PORT_Assert(!c->decoding); 
-	*/
-	if (!c->decoding) {
-	    /* we won the race. Use our copy. */
-	    c->decoding = deco;
-        } else {
-	    /* we lost the race.  discard deco. */
-	    nssDecodedCert_Destroy(deco);
-	}
+        c->decoding = deco;
+    } else {
+        deco = c->decoding;
     }
-    return c->decoding;
+    nssPKIObject_Unlock(&c->object);
+    return deco;
 }
 
 static NSSCertificate **
@@ -481,7 +488,7 @@ nssCertificate_BuildChain (
 {
     NSSCertificate **rvChain = NULL;
     NSSUsage issuerUsage = *usage;
-    nssPKIObjectCollection *collection;
+    nssPKIObjectCollection *collection = NULL;
     PRUint32  rvCount = 0;
     PRStatus  st;
     PRStatus  ret = PR_SUCCESS;
@@ -767,6 +774,26 @@ NSSCertificate_IsPrivateKeyAvailable (
     return isUser;
 }
 
+/* sort the subject cert list from newest to oldest */
+PRIntn
+nssCertificate_SubjectListSort (
+  void *v1,
+  void *v2
+)
+{
+    NSSCertificate *c1 = (NSSCertificate *)v1;
+    NSSCertificate *c2 = (NSSCertificate *)v2;
+    nssDecodedCert *dc1 = nssCertificate_GetDecoding(c1);
+    nssDecodedCert *dc2 = nssCertificate_GetDecoding(c2);
+    if (!dc1) {
+	return dc2 ? 1 : 0;
+    } else if (!dc2) {
+	return -1;
+    } else {
+	return dc1->isNewerThan(dc1, dc2) ? -1 : 1;
+    }
+}
+
 NSS_IMPLEMENT PRBool
 NSSUserCertificate_IsStillPresent (
   NSSUserCertificate *uc,
@@ -860,83 +887,6 @@ NSSUserCertificate_DeriveSymmetricKey (
     return NULL;
 }
 
-NSS_IMPLEMENT void 
-nssBestCertificate_SetArgs (
-  nssBestCertificateCB *best,
-  NSSTime *timeOpt,
-  NSSUsage *usage,
-  NSSPolicies *policies
-)
-{
-    if (timeOpt) {
-	best->time = timeOpt;
-    } else {
-	NSSTime_Now(&best->sTime);
-	best->time = &best->sTime;
-    }
-    best->usage = usage;
-    best->policies = policies;
-    best->cert = NULL;
-}
-
-NSS_IMPLEMENT PRStatus 
-nssBestCertificate_Callback (
-  NSSCertificate *c, 
-  void *arg
-)
-{
-    nssBestCertificateCB *best = (nssBestCertificateCB *)arg;
-    nssDecodedCert *dc, *bestdc;
-    dc = nssCertificate_GetDecoding(c);
-    if (!best->cert) {
-	/* usage */
-	if (best->usage->anyUsage) {
-	    best->cert = nssCertificate_AddRef(c);
-	} else {
-#ifdef NSS_3_4_CODE
-	    /* For this to work in NSS 3.4, we have to go out and fill in
-	     * all of the CERTCertificate fields.  Why?  Because the
-	     * matchUsage function calls CERT_IsCACert, which needs to know
-	     * what the trust values are for the cert.
-	     * Ignore the returned pointer, the refcount is in c anyway.
-	     */
-	    if (STAN_GetCERTCertificate(c) == NULL) {
-		return PR_FAILURE;
-	    }
-#endif
-	    if (dc->matchUsage(dc, best->usage)) {
-		best->cert = nssCertificate_AddRef(c);
-	    }
-	}
-	return PR_SUCCESS;
-    }
-    bestdc = nssCertificate_GetDecoding(best->cert);
-    /* time */
-    if (bestdc->isValidAtTime(bestdc, best->time)) {
-	/* The current best cert is valid at time */
-	if (!dc->isValidAtTime(dc, best->time)) {
-	    /* If the new cert isn't valid at time, it's not better */
-	    return PR_SUCCESS;
-	}
-    } else {
-	/* The current best cert is not valid at time */
-	if (dc->isValidAtTime(dc, best->time)) {
-	    /* If the new cert is valid at time, it's better */
-	    NSSCertificate_Destroy(best->cert);
-	    best->cert = nssCertificate_AddRef(c);
-	    return PR_SUCCESS;
-	}
-    }
-    /* either they are both valid at time, or neither valid; take the newer */
-    /* XXX later -- defer to policies */
-    if (!bestdc->isNewerThan(bestdc, dc)) {
-	NSSCertificate_Destroy(best->cert);
-	best->cert = nssCertificate_AddRef(c);
-    }
-    /* policies */
-    return PR_SUCCESS;
-}
-
 NSS_IMPLEMENT nssSMIMEProfile *
 nssSMIMEProfile_Create (
   NSSCertificate *cert,
@@ -953,7 +903,7 @@ nssSMIMEProfile_Create (
     if (!arena) {
 	return NULL;
     }
-    object = nssPKIObject_Create(arena, NULL, td, cc);
+    object = nssPKIObject_Create(arena, NULL, td, cc, nssPKILock);
     if (!object) {
 	goto loser;
     }
@@ -973,7 +923,8 @@ nssSMIMEProfile_Create (
     }
     return rvProfile;
 loser:
-    nssPKIObject_Destroy(object);
+    if (object) nssPKIObject_Destroy(object);
+    else if (arena)  nssArena_Destroy(arena);
     return (nssSMIMEProfile *)NULL;
 }
 
@@ -1048,7 +999,7 @@ nssTrust_Create (
     sha1_hash.data = sha1_hashin;
     sha1_hash.size = sizeof (sha1_hashin);
     /* trust has to peek into the base object members */
-    PZ_Lock(object->lock);
+    nssPKIObject_Lock(object);
     for (i=0; i<object->numInstances; i++) {
 	instance = object->instances[i];
 	myTrustOrder = nssToken_GetTrustOrder(instance->token);
@@ -1060,11 +1011,11 @@ nssTrust_Create (
 	                                        &emailProtection,
 	                                        &stepUp);
 	if (status != PR_SUCCESS) {
-	    PZ_Unlock(object->lock);
+	    nssPKIObject_Unlock(object);
 	    return (NSSTrust *)NULL;
 	}
 	if (PORT_Memcmp(sha1_hashin,sha1_hashcmp,SHA1_LENGTH) != 0) {
-	    PZ_Unlock(object->lock);
+	    nssPKIObject_Unlock(object);
 	    return (NSSTrust *)NULL;
 	}
 	if (rvt->serverAuth == nssTrustLevel_Unknown ||
@@ -1090,7 +1041,7 @@ nssTrust_Create (
 	rvt->stepUpApproved = stepUp;
 	lastTrustOrder = myTrustOrder;
     }
-    PZ_Unlock(object->lock);
+    nssPKIObject_Unlock(object);
     return rvt;
 }
 

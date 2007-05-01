@@ -1,4 +1,4 @@
-/*
+/* Private header file of libSSL.
  * Various and sundry protocol constants. DON'T CHANGE THESE. These
  * values are defined by the SSL 3.0 protocol specification.
  *
@@ -130,7 +130,14 @@ typedef enum {
     insufficient_security   = 71,
     internal_error          = 80,
     user_canceled           = 90,
-    no_renegotiation        = 100
+    no_renegotiation        = 100,
+
+/* Alerts for client hello extensions */
+    unsupported_extension           = 110,
+    certificate_unobtainable        = 111,
+    unrecognized_name               = 112,
+    bad_certificate_status_response = 113,
+    bad_certificate_hash_value      = 114
 
 } SSL3AlertDescription;
 
@@ -206,12 +213,12 @@ typedef enum {
     kea_dhe_rsa_export,
     kea_dh_anon, 
     kea_dh_anon_export, 
-    kea_fortezza, 
     kea_rsa_fips,
     kea_ecdh_ecdsa,
     kea_ecdhe_ecdsa,
     kea_ecdh_rsa,
-    kea_ecdhe_rsa
+    kea_ecdhe_rsa,
+    kea_ecdh_anon
 } SSL3KeyExchangeAlgorithm;
      
 typedef struct {
@@ -251,15 +258,10 @@ typedef enum {
     ct_DSS_fixed_DH 	=  4, 
     ct_RSA_ephemeral_DH =  5, 
     ct_DSS_ephemeral_DH =  6,
-    /* XXX The numbers assigned to the following EC-based 
-     * certificate types might change before the ECC in TLS
-     * draft becomes an IETF RFC.
-     */
-    ct_ECDSA_sign	=  7, 
-    ct_RSA_fixed_ECDH	=  8, 
-    ct_ECDSA_fixed_ECDH	=  9, 
+    ct_ECDSA_sign	=  64, 
+    ct_RSA_fixed_ECDH	=  65, 
+    ct_ECDSA_fixed_ECDH	=  66 
 
-    ct_Fortezza 	= 20
 } SSL3ClientCertificateType;
      
 typedef SECItem *SSL3DistinquishedName;
@@ -271,18 +273,6 @@ typedef struct {
      
 typedef SECItem SSL3EncryptedPreMasterSecret;
 
-/* Following struct is the format of a Fortezza ClientKeyExchange message. */
-typedef struct {
-    SECItem    y_c;
-    SSL3Opaque r_c                      [128];
-    SSL3Opaque y_signature              [40];
-    SSL3Opaque wrapped_client_write_key [12];
-    SSL3Opaque wrapped_server_write_key [12];
-    SSL3Opaque client_write_iv          [24];
-    SSL3Opaque server_write_iv          [24];
-    SSL3Opaque master_secret_iv         [24];
-    SSL3Opaque encrypted_preMasterSecret[48];
-} SSL3FortezzaKeys;
 
 typedef SSL3Opaque SSL3MasterSecret[48];
 
@@ -299,7 +289,6 @@ typedef struct {
     union {
 	SSL3EncryptedPreMasterSecret  rsa;
 	SSL3ClientDiffieHellmanPublic diffie_helman;
-	SSL3FortezzaKeys              fortezza;
     } exchange_keys;
 } SSL3ClientKeyExchange;
 

@@ -58,6 +58,7 @@
 #include <Process.h>	/* for getpid() */
 #endif
 
+#include <signal.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -89,7 +90,7 @@
 #define PORT_Malloc PR_Malloc
 #endif
 
-#define NUM_SID_CACHE_ENTRIES 1024
+int NumSidCacheEntries = 1024;
 
 static int handle_connection( PRFileDesc *, PRFileDesc *, int );
 
@@ -107,40 +108,18 @@ const int ssl2CipherSuites[] = {
     SSL_EN_RC2_128_CBC_EXPORT40_WITH_MD5,	/* D */
     SSL_EN_DES_64_CBC_WITH_MD5,			/* E */
     SSL_EN_DES_192_EDE3_CBC_WITH_MD5,		/* F */
-#ifdef NSS_ENABLE_ECC
-    /* NOTE: Since no new SSL2 ciphersuites are being 
-     * invented, and we've run out of lowercase letters
-     * for SSL3 ciphers, we use letters G and beyond
-     * for new SSL3 ciphers. A -1 indicates the cipher
-     * is not currently implemented.
-     */
-    TLS_ECDH_ECDSA_WITH_NULL_SHA,       	/* G */
-    TLS_ECDH_ECDSA_WITH_RC4_128_SHA,       	/* H */
-    TLS_ECDH_ECDSA_WITH_DES_CBC_SHA,       	/* I */
-    TLS_ECDH_ECDSA_WITH_3DES_EDE_CBC_SHA,    	/* J */
-    TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,     	/* K */
-    TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA,     	/* L */
-    TLS_ECDH_RSA_WITH_NULL_SHA,          	/* M */
-    TLS_ECDH_RSA_WITH_RC4_128_SHA,       	/* N */
-    TLS_ECDH_RSA_WITH_DES_CBC_SHA,       	/* O */
-    TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA,      	/* P */
-    TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,       	/* Q */
-    TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,       	/* R */
-    TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,    	/* S */
-    TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,      	/* T */
-#endif /* NSS_ENABLE_ECC */
     0
 };
 
 const int ssl3CipherSuites[] = {
-    SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA,	/* a */
-    SSL_FORTEZZA_DMS_WITH_RC4_128_SHA,		/* b */
+    -1, /* SSL_FORTEZZA_DMS_WITH_FORTEZZA_CBC_SHA* a */
+    -1, /* SSL_FORTEZZA_DMS_WITH_RC4_128_SHA	 * b */
     SSL_RSA_WITH_RC4_128_MD5,			/* c */
     SSL_RSA_WITH_3DES_EDE_CBC_SHA,		/* d */
     SSL_RSA_WITH_DES_CBC_SHA,			/* e */
     SSL_RSA_EXPORT_WITH_RC4_40_MD5,		/* f */
     SSL_RSA_EXPORT_WITH_RC2_CBC_40_MD5,		/* g */
-    SSL_FORTEZZA_DMS_WITH_NULL_SHA,		/* h */
+    -1, /* SSL_FORTEZZA_DMS_WITH_NULL_SHA,	 * h */
     SSL_RSA_WITH_NULL_MD5,			/* i */
     SSL_RSA_FIPS_WITH_3DES_EDE_CBC_SHA,		/* j */
     SSL_RSA_FIPS_WITH_DES_CBC_SHA,		/* k */
@@ -200,16 +179,17 @@ Usage(const char *progName)
 {
     fprintf(stderr, 
 
-"Usage: %s -n rsa_nickname -p port [-3DNRSTbmrvx] [-w password] [-t threads]\n"
+"Usage: %s -n rsa_nickname -p port [-3BDENRSTblmrsvx] [-w password] [-t threads]\n"
 #ifdef NSS_ENABLE_ECC
 "         [-i pid_file] [-c ciphers] [-d dbdir] [-e ec_nickname] \n"
-"         [-f fortezza_nickname] [-L [seconds]] [-M maxProcs] [-l] [-P dbprefix]\n"
+"         [-f fortezza_nickname] [-L [seconds]] [-M maxProcs] [-P dbprefix]\n"
 #else
 "         [-i pid_file] [-c ciphers] [-d dbdir] [-f fortezza_nickname] \n"
-"         [-L [seconds]] [-M maxProcs] [-l] [-P dbprefix]\n"
+"         [-L [seconds]] [-M maxProcs] [-P dbprefix] [-C SSLCacheEntries]\n"
 #endif /* NSS_ENABLE_ECC */
 "-S means disable SSL v2\n"
 "-3 means disable SSL v3\n"
+"-B bypasses the PKCS11 layer for SSL encryption and MACing\n"
 "-D means disable Nagle delays in TCP\n"
 "-E means disable export ciphersuites and SSL step down key gen\n"
 "-T means disable TLS\n"
@@ -221,6 +201,7 @@ Usage(const char *progName)
 "    2 -r's mean request  and require, cert on initial handshake.\n"
 "    3 -r's mean request, not require, cert on second handshake.\n"
 "    4 -r's mean request  and require, cert on second handshake.\n"
+"-s means disable SSL socket locking for performance\n"
 "-v means verbose output\n"
 "-x means use export policy.\n"
 "-L seconds means log statistics every 'seconds' seconds (default=30).\n"
@@ -228,39 +209,21 @@ Usage(const char *progName)
 "-N means do NOT use the server session cache.  Incompatible with -M.\n"
 "-t threads -- specify the number of threads to use for connections.\n"
 "-i pid_file file to write the process id of selfserve\n"
-"-c ciphers   Letter(s) chosen from the following list\n"
 "-l means use local threads instead of global threads\n"
+"-C SSLCacheEntries sets the maximum number of entries in the SSL session cache\n"
+"-c ciphers   Letter(s) chosen from the following list\n"
 "A    SSL2 RC4 128 WITH MD5\n"
 "B    SSL2 RC4 128 EXPORT40 WITH MD5\n"
 "C    SSL2 RC2 128 CBC WITH MD5\n"
 "D    SSL2 RC2 128 CBC EXPORT40 WITH MD5\n"
 "E    SSL2 DES 64 CBC WITH MD5\n"
 "F    SSL2 DES 192 EDE3 CBC WITH MD5\n"
-#ifdef NSS_ENABLE_ECC
-"G    TLS ECDH ECDSA WITH NULL SHA\n"
-"H    TLS ECDH ECDSA WITH RC4 128 SHA\n"
-"I    TLS ECDH ECDSA WITH DES CBC SHA\n"
-"J    TLS ECDH ECDSA WITH 3DES EDE CBC SHA\n"
-"K    TLS ECDH ECDSA WITH AES 128 CBC SHA\n"
-"L    TLS ECDH ECDSA WITH AES 256 CBC SHA\n"
-"M    TLS ECDH RSA WITH NULL SHA\n"
-"N    TLS ECDH RSA WITH RC4 128 SHA\n"
-"O    TLS ECDH RSA WITH DES CBC SHA\n"
-"P    TLS ECDH RSA WITH 3DES EDE CBC SHA\n"
-"Q    TLS ECDH RSA WITH AES 128 CBC SHA\n"
-"R    TLS ECDH RSA WITH AES 256 CBC SHA\n"
-"S    TLS ECDHE ECDSA WITH AES 128 CBC SHA\n"
-"T    TLS ECDHE RSA WITH AES 128 CBC SHA\n"
-#endif /* NSS_ENABLE_ECC */
 "\n"
-"a    SSL3 FORTEZZA DMS WITH FORTEZZA CBC SHA\n"
-"b    SSL3 FORTEZZA DMS WITH RC4 128 SHA\n"
 "c    SSL3 RSA WITH RC4 128 MD5\n"
 "d    SSL3 RSA WITH 3DES EDE CBC SHA\n"
 "e    SSL3 RSA WITH DES CBC SHA\n"
 "f    SSL3 RSA EXPORT WITH RC4 40 MD5\n"
 "g    SSL3 RSA EXPORT WITH RC2 CBC 40 MD5\n"
-"h    SSL3 FORTEZZA DMS WITH NULL SHA\n"
 "i    SSL3 RSA WITH NULL MD5\n"
 "j    SSL3 RSA FIPS WITH 3DES EDE CBC SHA\n"
 "k    SSL3 RSA FIPS WITH DES CBC SHA\n"
@@ -270,6 +233,8 @@ Usage(const char *progName)
 "v    SSL3 RSA WITH AES 128 CBC SHA\n"
 "y    SSL3 RSA WITH AES 256 CBC SHA\n"
 "z    SSL3 RSA WITH NULL SHA\n"
+"\n"
+":WXYZ  Use cipher with hex code { 0xWX , 0xYZ } in TLS\n"
 	,progName);
 }
 
@@ -635,6 +600,8 @@ terminateWorkerThreads(void)
     while (threadCount > 0) {
 	PZ_WaitCondVar(threadCountChangeCv, PR_INTERVAL_NO_TIMEOUT);
     }
+    /* The worker threads empty the jobQ before they terminate. */
+    PORT_Assert(PR_CLIST_IS_EMPTY(&jobQ));
     PZ_Unlock(qLock); 
 
     DESTROY_CONDVAR(jobQNotEmptyCv);
@@ -690,6 +657,8 @@ PRBool disableRollBack = PR_FALSE;
 PRBool NoReuse         = PR_FALSE;
 PRBool hasSidCache     = PR_FALSE;
 PRBool disableStepDown = PR_FALSE;
+PRBool bypassPKCS11    = PR_FALSE;
+PRBool disableLocking  = PR_FALSE;
 
 static const char stopCmd[] = { "GET /stop " };
 static const char getCmd[]  = { "GET " };
@@ -857,11 +826,8 @@ handle_fdx_connection(
 cleanup:
     if (ssl_sock) {
 	PR_Close(ssl_sock);
-    } else
-    {
-        if (tcp_sock) {
-	    PR_Close(tcp_sock);
-        }
+    } else if (tcp_sock) {
+	PR_Close(tcp_sock);
     }
 
     VLOG(("selfserv: handle_fdx_connection: exiting"));
@@ -916,6 +882,12 @@ reload_crl(PRFileDesc *crlFile)
     return rv;
 }
 
+void stop_server()
+{
+    stopping = 1;
+    PR_Interrupt(acceptorThread);
+    PZ_TraceFlush();
+}
 
 int
 handle_connection( 
@@ -1204,6 +1176,8 @@ handle_connection(
 cleanup:
     if (ssl_sock) {
         PR_Close(ssl_sock);
+    } else if (tcp_sock) {
+        PR_Close(tcp_sock);
     }
     if (local_file_fd)
 	PR_Close(local_file_fd);
@@ -1211,14 +1185,22 @@ cleanup:
 
     /* do a nice shutdown if asked. */
     if (!strncmp(buf, stopCmd, sizeof stopCmd - 1)) {
-	stopping = 1;
         VLOG(("selfserv: handle_connection: stop command"));
-	PR_Interrupt(acceptorThread);
-        PZ_TraceFlush();
+        stop_server();
     }
     VLOG(("selfserv: handle_connection: exiting"));
     return SECSuccess;	/* success */
 }
+
+#ifdef XP_UNIX
+
+void sigusr1_handler(int sig)
+{
+    VLOG(("selfserv: sigusr1_handler: stop server"));
+    stop_server();
+}
+
+#endif
 
 SECStatus
 do_accepts(
@@ -1229,11 +1211,24 @@ do_accepts(
 {
     PRNetAddr   addr;
     PRErrorCode  perr;
+#ifdef XP_UNIX
+    struct sigaction act;
+#endif
 
     VLOG(("selfserv: do_accepts: starting"));
     PR_SetThreadPriority( PR_GetCurrentThread(), PR_PRIORITY_HIGH);
 
     acceptorThread = PR_GetCurrentThread();
+#ifdef XP_UNIX
+    /* set up the signal handler */
+    act.sa_handler = sigusr1_handler;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags = 0;
+    if (sigaction(SIGUSR1, &act, NULL)) {
+        fprintf(stderr, "Error installing signal handler.\n");
+        exit(1);
+    }
+#endif
     while (!stopping) {
 	PRFileDesc *tcp_sock;
 	PRCList    *myLink;
@@ -1329,6 +1324,21 @@ getBoundListenSocket(unsigned short port)
 	errExit("PR_SetSocketOption(PR_SockOpt_Reuseaddr)");
     }
 
+#ifndef WIN95
+    /* Set PR_SockOpt_Linger because it helps prevent a server bind issue
+     * after clean shutdown . See bug 331413 .
+     * Don't do it in the WIN95 build configuration because clean shutdown is
+     * not implemented, and PR_SockOpt_Linger causes a hang in ssl.sh .
+     * See bug 332348 */
+    opt.option=PR_SockOpt_Linger;
+    opt.value.linger.polarity = PR_TRUE;
+    opt.value.linger.linger = PR_SecondsToInterval(1);
+    prStatus = PR_SetSocketOption(listen_sock, &opt);
+    if (prStatus < 0) {
+        errExit("PR_SetSocketOption(PR_SockOpt_Linger)");
+    }
+#endif
+
     prStatus = PR_Bind(listen_sock, &addr);
     if (prStatus < 0) {
 	errExit("PR_Bind");
@@ -1408,6 +1418,18 @@ server_main(
 	    errExit("error disabling SSL StepDown ");
 	}
     }
+    if (bypassPKCS11) {
+       rv = SSL_OptionSet(model_sock, SSL_BYPASS_PKCS11, PR_TRUE);
+	if (rv != SECSuccess) {
+	    errExit("error enabling PKCS11 bypass ");
+	}
+    }
+    if (disableLocking) {
+       rv = SSL_OptionSet(model_sock, SSL_NO_LOCKS, PR_TRUE);
+	if (rv != SECSuccess) {
+	    errExit("error disabling SSL socket locking ");
+	}
+    } 
 
     for (kea = kt_rsa; kea < kt_kea_size; kea++) {
 	if (cert[kea] != NULL) {
@@ -1605,6 +1627,21 @@ WaitForDebugger(void)
 }
 #endif
 
+#define HEXCHAR_TO_INT(c, i) \
+    if (((c) >= '0') && ((c) <= '9')) { \
+	i = (c) - '0'; \
+    } else if (((c) >= 'a') && ((c) <= 'f')) { \
+	i = (c) - 'a' + 10; \
+    } else if (((c) >= 'A') && ((c) <= 'F')) { \
+	i = (c) - 'A' + 10; \
+    } else if ((c) == '\0') { \
+	fprintf(stderr, "Invalid length of cipher string (-c :WXYZ).\n"); \
+	exit(9); \
+    } else { \
+	fprintf(stderr, "Non-hex char in cipher string (-c :WXYZ).\n"); \
+	exit(9); \
+    } 
+
 int
 main(int argc, char **argv)
 {
@@ -1650,13 +1687,17 @@ main(int argc, char **argv)
     ** numbers, then capital letters, then lower case, alphabetical. 
     */
     optstate = PL_CreateOptState(argc, argv, 
-    	"2:3DEL:M:NP:RSTbc:d:e:f:hi:lmn:op:rt:vw:xy");
+    	"2:3BC:DEL:M:NP:RSTbc:d:e:f:hi:lmn:op:rst:vw:xy");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	++optionsFound;
 	switch(optstate->option) {
 	case '2': fileName = optstate->value; break;
 
 	case '3': disableSSL3 = PR_TRUE; break;
+
+	case 'B': bypassPKCS11 = PR_TRUE; break;
+
+        case 'C': if (optstate->value) NumSidCacheEntries = PORT_Atoi(optstate->value); break;
 
 	case 'D': noDelay = PR_TRUE; break;
 	case 'E': disableStepDown = PR_TRUE; break;
@@ -1715,6 +1756,8 @@ main(int argc, char **argv)
 
 	case 'r': ++requestCert; break;
 
+	case 's': disableLocking = PR_TRUE; break;
+
 	case 't':
 	    maxThreads = PORT_Atoi(optstate->value);
 	    if ( maxThreads > MAX_THREADS ) maxThreads = MAX_THREADS;
@@ -1763,7 +1806,11 @@ main(int argc, char **argv)
 	exit(0);
     }
 
-    if ((nickName == NULL) && (fNickName == NULL)) {
+    if ((nickName == NULL) && (fNickName == NULL) 
+#ifdef NSS_ENABLE_ECC
+						&& (ecNickName == NULL)
+#endif
+    ) {
 	fprintf(stderr, "Required arg '-n' (rsa nickname) not supplied.\n");
 	fprintf(stderr, "Run '%s -h' for usage information.\n", progName);
         exit(6);
@@ -1822,7 +1869,7 @@ main(int argc, char **argv)
     } else if (maxProcs > 1) {
 	/* we're going to be the parent in a multi-process server.  */
 	listen_sock = getBoundListenSocket(port);
-	rv = SSL_ConfigMPServerSIDCache(NUM_SID_CACHE_ENTRIES, 0, 0, tmp);
+	rv = SSL_ConfigMPServerSIDCache(NumSidCacheEntries, 0, 0, tmp);
 	if (rv != SECSuccess)
 	    errExit("SSL_ConfigMPServerSIDCache");
     	hasSidCache = PR_TRUE;
@@ -1835,7 +1882,7 @@ main(int argc, char **argv)
 	if (prStatus != PR_SUCCESS)
 	    errExit("PR_SetFDInheritable");
 	if (!NoReuse) {
-	    rv = SSL_ConfigServerSessionIDCache(NUM_SID_CACHE_ENTRIES, 
+	    rv = SSL_ConfigServerSessionIDCache(NumSidCacheEntries, 
 	                                        0, 0, tmp);
 	    if (rv != SECSuccess)
 		errExit("SSL_ConfigServerSessionIDCache");
@@ -1884,22 +1931,45 @@ main(int argc, char **argv)
 	disableAllSSLCiphers();
 
 	while (0 != (ndx = *cipherString++)) {
-	    const int *cptr;
 	    int  cipher;
 
-	    if (! isalpha(ndx)) {
-		fprintf(stderr, 
-			"Non-alphabetic char in cipher string (-c arg).\n");
-		exit(9);
+	    if (ndx == ':') {
+		int ctmp;
+
+		cipher = 0;
+		HEXCHAR_TO_INT(*cipherString, ctmp)
+		cipher |= (ctmp << 12);
+		cipherString++;
+		HEXCHAR_TO_INT(*cipherString, ctmp)
+		cipher |= (ctmp << 8);
+		cipherString++;
+		HEXCHAR_TO_INT(*cipherString, ctmp)
+		cipher |= (ctmp << 4);
+		cipherString++;
+		HEXCHAR_TO_INT(*cipherString, ctmp)
+		cipher |= ctmp;
+		cipherString++;
+	    } else {
+		const int *cptr;
+
+		if (! isalpha(ndx)) {
+		    fprintf(stderr, 
+			    "Non-alphabetic char in cipher string (-c arg).\n");
+		    exit(9);
+		}
+		cptr = islower(ndx) ? ssl3CipherSuites : ssl2CipherSuites;
+		for (ndx &= 0x1f; (cipher = *cptr++) != 0 && --ndx > 0; ) 
+		    /* do nothing */;
 	    }
-	    cptr = islower(ndx) ? ssl3CipherSuites : ssl2CipherSuites;
-	    for (ndx &= 0x1f; (cipher = *cptr++) != 0 && --ndx > 0; ) 
-		/* do nothing */;
-	    if (cipher) {
+	    if (cipher > 0) {
 		SECStatus status;
 		status = SSL_CipherPrefSetDefault(cipher, SSL_ALLOWED);
 		if (status != SECSuccess) 
 		    SECU_PrintError(progName, "SSL_CipherPrefSet()");
+	    } else {
+		fprintf(stderr, 
+			"Invalid cipher specification (-c arg).\n");
+		exit(9);
 	    }
 	}
     }

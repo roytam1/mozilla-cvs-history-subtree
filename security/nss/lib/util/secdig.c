@@ -171,22 +171,22 @@ SGN_DecodeDigestInfo(SECItem *didata)
     arena = PORT_NewArena(SEC_ASN1_DEFAULT_ARENA_SIZE);
     if(arena == NULL)
 	return NULL;
-    
+
     rv = SECITEM_CopyItem(arena, &diCopy, didata);
     if (rv != SECSuccess) {
-       PORT_FreeArena(arena, PR_FALSE);
-       return NULL;
+	PORT_FreeArena(arena, PR_FALSE);
+    	return NULL;
     }
 
     di = (SGNDigestInfo *)PORT_ArenaZAlloc(arena, sizeof(SGNDigestInfo));
     if (di != NULL) {
-      di->arena = arena;
-      rv = SEC_QuickDERDecodeItem(arena, di, sgn_DigestInfoTemplate, &diCopy);
+	di->arena = arena;
+	rv = SEC_QuickDERDecodeItem(arena, di, sgn_DigestInfoTemplate, &diCopy);
     }
 	
     if ((di == NULL) || (rv != SECSuccess)) {
-      PORT_FreeArena(arena, PR_TRUE);
-      di = NULL;
+	PORT_FreeArena(arena, PR_FALSE);
+	di = NULL;
     }
 
     return di;

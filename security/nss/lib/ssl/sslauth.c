@@ -53,7 +53,7 @@ SSL_PeerCertificate(PRFileDesc *fd)
 		 SSL_GETPID(), fd));
 	return 0;
     }
-    if (ss->useSecurity && ss->sec.peerCert) {
+    if (ss->opt.useSecurity && ss->sec.peerCert) {
 	return CERT_DupCertificate(ss->sec.peerCert);
     }
     return 0;
@@ -71,7 +71,7 @@ SSL_LocalCertificate(PRFileDesc *fd)
 		 SSL_GETPID(), fd));
 	return NULL;
     }
-    if (ss->useSecurity) {
+    if (ss->opt.useSecurity) {
     	if (ss->sec.localCert) {
 	    return CERT_DupCertificate(ss->sec.localCert);
 	}
@@ -109,19 +109,21 @@ SSL_SecurityStatus(PRFileDesc *fd, int *op, char **cp, int *kp0, int *kp1,
 	*op = SSL_SECURITY_STATUS_OFF;
     }
 
-    if (ss->useSecurity && ss->firstHsDone) {
+    if (ss->opt.useSecurity && ss->firstHsDone) {
 
 	if (ss->version < SSL_LIBRARY_VERSION_3_0) {
 	    cipherName = ssl_cipherName[ss->sec.cipherType];
 	} else {
 	    cipherName = ssl3_cipherName[ss->sec.cipherType];
 	}
-	if (cipherName && PORT_Strstr(cipherName, "DES")) isDes = PR_TRUE;
-	/* do same key stuff for fortezza */
-    
-	if (cp) {
-	    *cp = PORT_Strdup(cipherName);
-	}
+	PORT_Assert(cipherName);
+	if (cipherName) {
+            if (PORT_Strstr(cipherName, "DES")) isDes = PR_TRUE;
+
+            if (cp) {
+                *cp = PORT_Strdup(cipherName);
+            }
+        }
 
 	if (kp0) {
 	    *kp0 = ss->sec.keyBits;

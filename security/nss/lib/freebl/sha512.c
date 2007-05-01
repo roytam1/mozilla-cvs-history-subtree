@@ -45,6 +45,7 @@
 #include "prtypes.h"	/* for PRUintXX */
 #include "secport.h"	/* for PORT_XXX */
 #include "blapi.h"
+#include "sha256.h"	/* for struct SHA256ContextStr */
 
 /* ============= Common constants and defines ======================= */
 
@@ -90,15 +91,6 @@ static const PRUint32 K256[64] = {
 static const PRUint32 H256[8] = {
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 
     0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-};
-
-struct SHA256ContextStr {
-    union {
-	PRUint32 w[64];	    /* message schedule, input buffer, plus 48 words */
-	PRUint8  b[256];
-    } u;
-    PRUint32 h[8];		/* 8 state variables */
-    PRUint32 sizeHi,sizeLo;	/* 64-bit count of hashed bytes. */
 };
 
 #if defined(_MSC_VER) && defined(_X86_)
@@ -513,6 +505,11 @@ SHA256_Resurrect(unsigned char *space, void *arg)
     if (ctx) 
 	PORT_Memcpy(ctx, space, sizeof *ctx);
     return ctx;
+}
+
+void SHA256_Clone(SHA256Context *dest, SHA256Context *src) 
+{
+    memcpy(dest, src, sizeof *dest);
 }
 
 
@@ -1168,6 +1165,11 @@ SHA512_Resurrect(unsigned char *space, void *arg)
     return ctx;
 }
 
+void SHA512_Clone(SHA512Context *dest, SHA512Context *src) 
+{
+    memcpy(dest, src, sizeof *dest);
+}
+
 /* ======================================================================= */
 /* SHA384 uses a SHA512Context as the real context. 
 ** The only differences between SHA384 an SHA512 are:
@@ -1263,6 +1265,11 @@ SHA384Context *
 SHA384_Resurrect(unsigned char *space, void *arg)
 {
     return SHA512_Resurrect(space, arg);
+}
+
+void SHA384_Clone(SHA384Context *dest, SHA384Context *src) 
+{
+    memcpy(dest, src, sizeof *dest);
 }
 
 /* ======================================================================= */
