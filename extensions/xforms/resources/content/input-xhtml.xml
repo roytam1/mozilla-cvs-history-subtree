@@ -63,8 +63,7 @@
             extends="chrome://xforms/content/input.xml#xformswidget-input-base">
     <content>
       <children includes="label"/>
-      <html:input class="xf-value" anonid="control"
-                  xbl:inherits="accesskey, tabindex"/>
+      <html:input class="xf-value" anonid="control" xbl:inherits="accesskey"/>
       <children/>
     </content>
 
@@ -127,8 +126,8 @@
            extends="chrome://xforms/content/input.xml#xformswidget-input-boolean-base">
     <content>
       <children includes="label"/>
-      <html:input anonid="control" type="checkbox" class="xf-value"
-                  xbl:inherits="accesskey, tabindex"/>
+      <html:input anonid="control" xbl:inherits="accesskey" type="checkbox"
+                  class="xf-value"/>
       <children/>
     </content>
 
@@ -191,16 +190,11 @@
            extends="chrome://xforms/content/input.xml#xformswidget-input-base">
     <content>
       <children includes="label"/>
-      <html:span class="-moz-date-container">
-        <html:input anonid="control" size="10"
-                    class="-moz-xforms-date-input xf-value"
-                    xbl:inherits="accesskey, tabindex"/>
-        <html:input mozType:dropmarker="true"
-                    type="button" anonid="dropmarker"
-                    title="&xforms.datepicker.title;"/>
-      </html:span>
+      <html:input anonid="control" xbl:inherits="accesskey" size="10"
+                  class="xf-value"/>
+      <html:input type="button" anonid="dropmarker"
+                  title="&xforms.datepicker.title;"/>
       <html:span mozType:calendar="true" anonid="picker"
-                 internaltabhandling="true"
                  style="position:absolute; display:none;"/>
       <children/>
     </content>
@@ -522,7 +516,7 @@
 
   <!-- INPUT: <DATE, APPEARANCE='FULL' -->
   <binding id="xformswidget-input-date-full"
-           extends="chrome://xforms/content/input.xml#xformswidget-input-date-calendar-base">
+           extends="chrome://xforms/content/input.xml#xformswidget-input-base">
     <content>
       <children includes="label"/>
       <html:span mozType:calendar="true" anonid="control"/>
@@ -555,8 +549,7 @@
            extends="chrome://xforms/content/input.xml#xformswidget-input-month-base">
     <content>
       <children includes="label"/>
-      <html:select anonid="control"
-                   xbl:inherits="style, tabindex, accesskey">
+      <html:select anonid="control" xbl:inherits="style, accesskey">
         <html:option value=""></html:option>
       </html:select>
       <children/>
@@ -605,8 +598,7 @@
            extends="chrome://xforms/content/input.xml#xformswidget-input-day-base">
     <content>
       <children includes="label"/>
-      <html:select anonid="control"
-                   xbl:inherits="style, accesskey, tabindex">
+      <html:select anonid="control" xbl:inherits="style, accesskey">
         <html:option value=""></html:option>
       </html:select>
       <children/>
@@ -655,20 +647,19 @@
            extends="chrome://xforms/content/input-xhtml.xml#xformswidget-input">
     <content>
       <children includes="label"/>
-      <html:input anonid="control" type="password"
-                  xbl:inherits="accesskey, tabindex"/>
+      <html:input anonid="control" xbl:inherits="accesskey" type="password"/>
       <children/>
     </content>
   </binding>
 
-
+  
   <!-- TEXTAREA: <DEFAULT> -->
   <binding id="xformswidget-textarea"
            extends="chrome://xforms/content/input.xml#xformswidget-input-base">
     <content>
        <children includes="label"/>
        <html:textarea class="xf-value" anonid="control"
-                      xbl:inherits="accesskey, tabindex"/>
+                      xbl:inherits="accesskey"/>
       <children/>
     </content>
 

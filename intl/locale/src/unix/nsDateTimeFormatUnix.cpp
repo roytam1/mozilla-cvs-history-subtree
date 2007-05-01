@@ -244,16 +244,16 @@ nsresult nsDateTimeFormatUnix::FormatTMTime(nsILocale* locale,
   if (PL_strlen(fmtD) && PL_strlen(fmtT)) {
     PL_strncat(fmtD, " ", NSDATETIME_FORMAT_BUFFER_LEN);
     PL_strncat(fmtD, fmtT, NSDATETIME_FORMAT_BUFFER_LEN);
-    strftime(strOut, NSDATETIME_FORMAT_BUFFER_LEN*2, fmtD, tmTime);
+    strftime(strOut, NSDATETIME_FORMAT_BUFFER_LEN, fmtD, tmTime);
   }
   else if (PL_strlen(fmtD) && !PL_strlen(fmtT)) {
-    strftime(strOut, NSDATETIME_FORMAT_BUFFER_LEN*2, fmtD, tmTime);
+    strftime(strOut, NSDATETIME_FORMAT_BUFFER_LEN, fmtD, tmTime);
   }
   else if (!PL_strlen(fmtD) && PL_strlen(fmtT)) {
-    strftime(strOut, NSDATETIME_FORMAT_BUFFER_LEN*2, fmtT, tmTime);
+    strftime(strOut, NSDATETIME_FORMAT_BUFFER_LEN, fmtT, tmTime);
   }
   else {
-    PL_strncpy(strOut, "", NSDATETIME_FORMAT_BUFFER_LEN*2);
+    PL_strncpy(strOut, "", NSDATETIME_FORMAT_BUFFER_LEN);
   }
   (void) setlocale(LC_TIME, old_locale);
 

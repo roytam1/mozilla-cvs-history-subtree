@@ -1035,9 +1035,8 @@ NS_IMETHODIMP nsImapMailFolder::RemoveSubFolder (nsIMsgFolder *which)
     nsCOMPtr<nsISupports> folderSupport = do_QueryInterface(which, &rv);
     if (NS_FAILED(rv)) return rv;
     folders->AppendElement(folderSupport);
-    rv = nsMsgDBFolder::DeleteSubFolders(folders, nsnull);
     which->Delete();
-    return rv;
+    return nsMsgDBFolder::DeleteSubFolders(folders, nsnull);
 }
 
 NS_IMETHODIMP nsImapMailFolder::CreateStorageIfMissing(nsIUrlListener* urlListener)

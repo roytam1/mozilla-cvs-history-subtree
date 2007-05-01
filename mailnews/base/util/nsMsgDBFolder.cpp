@@ -512,7 +512,7 @@ nsresult nsMsgDBFolder::ReadDBFolderInfo(PRBool force)
   {
     nsCOMPtr <nsIFileSpec> dbPath;
     
-    result = GetFolderCacheKey(getter_AddRefs(dbPath), PR_TRUE /* createDBIfMissing */);
+    result = GetFolderCacheKey(getter_AddRefs(dbPath));
     
     if (dbPath)
     {
@@ -1101,7 +1101,7 @@ NS_IMETHODIMP nsMsgDBFolder::ReadFromFolderCacheElem(nsIMsgFolderCacheElement *e
   return rv;
 }
 
-nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec, PRBool createDBIfMissing /* = PR_FALSE */)
+nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec)
 {
   nsresult rv;
   nsCOMPtr <nsIFileSpec> path;
@@ -1130,7 +1130,7 @@ nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec, PRBool create
       // create the .msf file
       // see bug #244217 for details
       PRBool exists;
-      if (createDBIfMissing && NS_SUCCEEDED(dbPath->Exists(&exists)) && !exists)
+      if (NS_SUCCEEDED(dbPath->Exists(&exists)) && !exists)
         dbPath->Touch();
     }
   }
