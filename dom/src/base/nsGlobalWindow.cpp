@@ -2789,16 +2789,6 @@ nsGlobalWindow::SetScreenY(PRInt32 aScreenY)
 nsresult
 nsGlobalWindow::CheckSecurityWidthAndHeight(PRInt32* aWidth, PRInt32* aHeight)
 {
-  if (!nsContentUtils::IsCallerTrustedForWrite()) {
-    // if attempting to resize the window, hide any open popups
-    nsCOMPtr<nsIPresShell> presShell;
-    mDocShell->GetPresShell(getter_AddRefs(presShell));
-
-    nsCOMPtr<nsIPresShell_MOZILLA_1_8_BRANCH> presShell18 = do_QueryInterface(presShell);
-    if (presShell18)
-      presShell18->HidePopups();
-  }
-
   // This one is easy. Just ensure the variable is greater than 100;
   if ((aWidth && *aWidth < 100) || (aHeight && *aHeight < 100)) {
     // Check security state for use in determing window dimensions
@@ -2840,13 +2830,6 @@ nsGlobalWindow::CheckSecurityLeftAndTop(PRInt32* aLeft, PRInt32* aTop)
   }
 
   if (!enabled) {
-    // if attempting to move the window, hide any open popups
-    nsCOMPtr<nsIPresShell> presShell;
-    mDocShell->GetPresShell(getter_AddRefs(presShell));
-    nsCOMPtr<nsIPresShell_MOZILLA_1_8_BRANCH> presShell18 = do_QueryInterface(presShell);
-    if (presShell18)
-      presShell18->HidePopups();
-
     PRInt32 screenLeft, screenTop, screenWidth, screenHeight;
     PRInt32 winLeft, winTop, winWidth, winHeight;
 
@@ -3707,25 +3690,6 @@ nsGlobalWindow::Home()
 #endif
     CopyASCIItoUTF16(DEFAULT_HOME_PAGE, homeURL);
   }
-
-#ifdef MOZ_PHOENIX
-  {
-    // Firefox lets the user specify multiple home pages to open in
-    // individual tabs by separating them with '|'. Since we don't
-    // have the machinery in place to easily open new tabs from here,
-    // simply truncate the homeURL at the first '|' character to
-    // prevent any possibilities of leaking the users list of home
-    // pages to the first home page.
-    //
-    // Once bug https://bugzilla.mozilla.org/show_bug.cgi?id=221445 is
-    // fixed we can revisit this.
-    PRInt32 firstPipe = homeURL.FindChar('|');
-
-    if (firstPipe > 0) {
-      homeURL.Truncate(firstPipe);
-    }
-  }
-#endif
 
   nsresult rv;
   nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
@@ -5169,7 +5133,7 @@ nsGlobalWindow::Atob(const nsAString& aAsciiBase64String,
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  PRUint32 dataLen = aAsciiBase64String.Length();
+  PRInt32 dataLen = aAsciiBase64String.Length();
 
   PRInt32 resultLen = dataLen;
   if (!aAsciiBase64String.IsEmpty() && base64[dataLen - 1] == '=') {

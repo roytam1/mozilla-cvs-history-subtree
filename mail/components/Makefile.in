@@ -42,7 +42,7 @@ VPATH   = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS    = compose preferences addrbook migration
+DIRS    = compose preferences addrbook migration search
 
 ifneq (,$(filter windows gtk2 mac cocoa, $(MOZ_WIDGET_TOOLKIT)))
 DIRS += shell

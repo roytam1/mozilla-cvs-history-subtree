@@ -48,12 +48,9 @@
 //  calendar-management.js
 //
 
-var gCalendars = [];
-
 var gCachedStyleSheet;
 function addCalendarToTree(aCalendar)
 {
-    gCalendars.push(aCalendar);
     if (!gCachedStyleSheet) {
         gCachedStyleSheet = getStyleSheet("chrome://calendar/content/calendar-view-bindings.css");
     }
@@ -61,24 +58,20 @@ function addCalendarToTree(aCalendar)
     updateLtnStyleSheet(aCalendar);
 
     var boxobj = document.getElementById("calendarTree").treeBoxObject;
-    boxobj.rowCountChanged(gCalendars.length-1, 1);
+    boxobj.rowCountChanged(getIndexForCalendar(aCalendar), 1);
 }
 
 function removeCalendarFromTree(aCalendar)
 {
+    var calTree = document.getElementById("calendarTree")
     var index = getIndexForCalendar(aCalendar);
-    if (index == -1) {
-        return;
-    }
-
-    gCalendars.splice(index, 1);
-    var calTree = document.getElementById("calendarTree");
     calTree.boxObject.rowCountChanged(index, -1);
 
     // Just select the new last row, if we removed the last listed calendar
-    if (index == calTree.view.rowCount) {
+    if (index == calTree.view.rowCount-1) {
         index--;
     }
+
     calTree.view.selection.select(index);
 }
 
@@ -193,17 +186,19 @@ function getCalendarManager()
     return activeCalendarManager;
 }
 
-/**
- * Provides the gCalendars list for callers outside of this file.
- */
 function getCalendars()
 {
-    return gCalendars;
+    try {
+        return getCalendarManager().getCalendars({});
+    } catch (e) {
+        dump("Error getting calendars: " + e + "\n");
+        return [];
+    }
 }
 
 function ltnNewCalendar()
 {
-    openCalendarWizard();
+    openCalendarWizard(ltnSetTreeView);
 }
 
 function ltnRemoveCalendar(cal)
@@ -223,7 +218,7 @@ var ltnCalendarTreeView = {
     get rowCount()
     {
         try {
-            return gCalendars.length;
+            return getCalendars().length;
         } catch (e) {
             return 0;
         }
@@ -231,7 +226,7 @@ var ltnCalendarTreeView = {
 
     getCellProperties: function (row, col, properties)
     {
-        var cal = gCalendars[row];
+        var cal = getCalendars()[row];
         if (col.id == "col-calendar-Checkbox") {
             // We key off this to set the images for the checkboxes
             if (getCompositeCalendar().getCalendar(cal.uri)) {
@@ -248,7 +243,7 @@ var ltnCalendarTreeView = {
 
     cycleCell: function (row, col)
     {
-        var cal = gCalendars[row];
+        var cal = getCalendars()[row];
         if (getCompositeCalendar().getCalendar(cal.uri)) {
             // need to remove it
             getCompositeCalendar().removeCalendar(cal.uri);
@@ -262,7 +257,7 @@ var ltnCalendarTreeView = {
     getCellValue: function (row, col)
     {
         if (col.id == "col-calendar-Checkbox") {
-            var cal = gCalendars[row];
+            var cal = getCalendars()[row];
             if (getCompositeCalendar().getCalendar(cal.uri))
                 return "true";
             return "false";
@@ -296,7 +291,7 @@ var ltnCalendarTreeView = {
 
         if (col.id == "col-calendar-Calendar") {
             try {
-                return gCalendars[row].name;
+                return getCalendars()[row].name;
             } catch (e) {
                 return "<Unknown " + row + ">";
             }
@@ -327,7 +322,7 @@ var ltnCalendarTreeView = {
         var row = tree.treeBoxObject.getRowAt(event.clientX, event.clientY);
 
         // If we clicked on a calendar, edit it, otherwise create a new one
-        var cal = gCalendars[row];
+        var cal = getCalendars()[row];
         if (!cal) {
             ltnNewCalendar();
         } else {
@@ -338,10 +333,6 @@ var ltnCalendarTreeView = {
 
 function ltnSetTreeView()
 {
-    gCalendars = getCalendarManager().getCalendars({});
-    for each (var cal in gCalendars) {
-        updateLtnStyleSheet(cal);
-    }
     document.getElementById("calendarTree").view = ltnCalendarTreeView;
 
     // Ensure that a calendar is selected in calendar tree after startup.
@@ -353,12 +344,13 @@ function ltnSetTreeView()
 }
 
 function getIndexForCalendar(aCalendar) {
-    for (var i = 0; i < gCalendars.length; ++i) {
-        if (gCalendars[i].id == aCalendar.id) {
-            return i;
-        }
-    }
-    return -1;
+    // Special trick to compare interface pointers, since normal, ==
+    // comparison can fail due to javascript wrapping.
+    var sip = Components.classes["@mozilla.org/supports-interface-pointer;1"]
+                        .createInstance(Components.interfaces.nsISupportsInterfacePointer);
+    sip.data = aCalendar;
+    sip.dataIID = Components.interfaces.calICalendar;
+    return getCalendars().indexOf(sip.data);
 }
 
 function getColorPropertyName(color) {

@@ -1819,9 +1819,9 @@ nsMsgNewsFolder::ApplyRetentionSettings()
 
 NS_IMETHODIMP nsMsgNewsFolder::GetMessageIdForKey(nsMsgKey key, char **result)
 {
-  nsresult rv = GetDatabase(nsnull);
+  nsresult rv;
 
-  if (!mDatabase) return rv;
+  if (!mDatabase) return NS_ERROR_UNEXPECTED;
 
   nsCOMPtr <nsIMsgDBHdr> hdr;
   rv = mDatabase->GetMsgHdrForKey(key, getter_AddRefs(hdr));

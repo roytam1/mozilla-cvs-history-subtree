@@ -199,7 +199,6 @@ nsBrowserStatusHandler.prototype =
             if (aWebProgress.DOMWindow == content) this.endDocumentLoad(aRequest, aStatus);
         }
 
-
         // disable and hides the nav-stop-button; and enables unhides the nav-menu-button button
         document.getElementById("nav-stopreload").className="reload-button";
         document.getElementById("nav-stopreload").setAttribute("command","cmd_BrowserReload");
@@ -351,6 +350,8 @@ nsBrowserStatusHandler.prototype =
   
 function MiniNavStartup()
 {
+
+  // Chris suggestion - defaults to the homebase in startup time. 
   var homepage = "chrome://minimo/content/bookmarks/bmview.xhtml";
   var homepages = null; 
     
@@ -513,7 +514,7 @@ function MiniNavStartup()
   try {
 	gKeyboardService = Components.classes["@mozilla.org/softkbservice/service;1"]
                                  .getService(nsISoftKeyBoard);
-  } catch (i) { onErrorHandler(i) }
+  } catch (i) { }
 
   /*
    * Add an observer to deal with the OS Soft keyboard 
@@ -683,55 +684,8 @@ function MiniNavStartup()
    */
 
    gBrowser.addEventListener("TabClose", BrowserClosingTabs, true);
-   
-   
-  /*
-   * We kick the update service check after 3 minutes..
-   */
-  setTimeout("BrowserUpdateServiceCheck()",180000);
-  
-  
-}
 
-function BrowserUpdateServiceCheck() {
- 
- // URLs we have with the previous services..
- // http://www.meer.net/dougt/minimo_ce/start/update.cgi
- // http://www.mozilla.org/projects/minimo/update/latest-update.xhtml
- 
- try {
-	 var req = new XMLHttpRequest();
-	 req.open('GET', 'http://www.meer.net/dougt/minimo_ce/start/updateXML.cgi', true);
-	 req.onreadystatechange = function (aEvt) {
-	  if (req.readyState == 4) {
-	     if(req.status == 200) {
-	    	var docXml = req.responseXML;
-	    	var searchingElements = docXml.getElementsByTagName("update");
-	   		var updateCommand = null;
-	    		
-	   		for(var i=0;i<searchingElements.length;i++) {
-	   			updateCommand = searchingElements[i];
-			}
-				
-			if(updateCommand) {
-				var targetURL = updateCommand.getAttribute("target");
-				if (targetURL) {
-					BrowserOpenURLasTab(targetURL);		
-				}		
-			}			
-	     }
-	     else {
-	     	// failed somehow...
-	     } 
-	  }
-	 };
-	 req.send(null); 
- } catch (i) {
-   // failed somehow...
- }
- 
 }
-
 
 function debug_test_f10(e) {
 
@@ -762,7 +716,7 @@ function syncControlBar(fullList) {
           if(document.getElementById(elementName)) {
             document.getElementById(elementName).setAttribute("hidden","true");
           }
-        } catch (i) { onErrorHandler(i) } 
+        } catch (i) { } 
 	}
   } catch (e) {
   }
@@ -777,7 +731,7 @@ function syncControlBar(fullList) {
           if(document.getElementById(elementName)) {
             document.getElementById(elementName).setAttribute("hidden","false");
           }
-        } catch (i) { onErrorHandler(i) } 
+        } catch (i) { } 
 	}
   } catch (e) {
   }
@@ -1088,7 +1042,6 @@ function BrowserReload()
 
 /* 
  * Combine the two following functions in one
-
  */
 function BrowserOpenTab()
 {
@@ -1393,7 +1346,7 @@ function DoBrowserSearch() {
   try { 
     var vQuery=document.getElementById("toolbar-search-tag").value;
     if(vQuery!="") {
-      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/m/search?uipref=3&mrestrict=xhtml&q='+vQuery);
+      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/xhtml?q='+vQuery+'&hl=en&lr=&safe=off&btnG=Search&site=search&mrestrict=xhtml');
       browserInit(gBrowser.selectedTab);
     }
   } catch (e) {
@@ -1422,7 +1375,7 @@ function DoBrowserPreferences() {
 function DoBrowserSearchURLBAR(vQuery) {
   try { 
     if(vQuery!="") {
-      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/m/search?uipref=3&mrestrict=xhtml&q='+vQuery);
+      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/xhtml?q='+vQuery+'&hl=en&lr=&safe=off&btnG=Search&site=search&mrestrict=xhtml');
       browserInit(gBrowser.selectedTab);
     }
   } catch (e) {
@@ -1563,6 +1516,8 @@ function DoTestSendCall(toCall) {
 }
 
 function DoGoogleToggle() {
+
+  //google xhtml string call http://www.google.com/gwt/n?q=xml&site=mozilla_minimo&u=www.xml.com/
   
   var locationAddress="google.com";
 
@@ -2082,18 +2037,12 @@ function BrowserPanMouseHandlerDestroy(e) {
 
 function DoLeftSoftkeyWithModifier()
 {
-  document.getElementById("nav-menu-button").focus();
-  document.getElementById("menu_NavPopup").showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
-  gShowingMenuCurrent=document.getElementById("menu_NavPopup");
+  alert("DoLeftSoftkeyWithModifier");
 }
 
 function DoRightSoftkeyWithModifier()
 {
-
-  try { 
-  document.getElementById("contentAreaContextMenu").showPopup(document.commandDispatcher.focusedElement,-1,-1,"popup",'bottomleft', 'topleft');
-  } catch(i) { onErrorHandler(i) } 
-  
+  alert("DoRightSoftkeyWithModifier");
 }
 
 /*
@@ -2109,7 +2058,7 @@ function spinCycle() {
 
   gKeySpinCurrent.SpinOut();
   gKeySpinCurrent = gKeySpinCurrent.next;
-  setTimeout("gKeySpinCurrent.SpinIn()",20);
+  setTimeout("gKeySpinCurrent.SpinIn()",30);
 }
 
 /* 
@@ -2134,7 +2083,6 @@ function spinSetnext(ref) {
   } 
   
 }
-
 
 function spinCreate() {
 
@@ -2171,14 +2119,6 @@ function spinCreate() {
    * New homebase version uses it 
    */
 
-  var spinToolbarButtons = { 
-    SpinIn:function () {
-      document.getElementById("nav-back").focus();
-    }, 
-    SpinOut:function () {
-    }
-  }
-
   var spinRightMenu = { 
     SpinIn:function () {
       document.getElementById("nav-menu-button").focus();
@@ -2198,9 +2138,11 @@ function spinCreate() {
 
     SpinIn:function () {
 
-      try { 
-        document.commandDispatcher.advanceFocusIntoSubtree(gBrowser.contentDocument.documentElement);
-      } catch(i) { onErrorHandler(i) } 
+        /* Ask marcio, somehow advance and rewind Igot a better behavior, it kicks the focus to finds its first element in
+           in the doc, then the backwards allows to reach the actual first focused one */
+
+	  gBrowser.contentWindow.focus();
+	  document.commandDispatcher.advanceFocus();
 
     }, 
     SpinOut:function () {
@@ -2249,17 +2191,13 @@ function spinCreate() {
 
   gKeySpinCurrent = spinContent;
 
-// marcio 30000
-
-  spinContent.next=spinToolbarButtons;
-  spinToolbarButtons.next=spinTabs;  
-  //spinRightMenu.next=spinTabs;  
+  spinContent.next=spinRightMenu;  
+  spinRightMenu.next=spinTabs;  
   spinTabs.next=spinContent;
   gSpinLast=spinContent;
   gSpinDocument = spinDocument;
-  gSpinFirst=spinContent;
+  gSpinFirst=spinRightMenu;
   gSpinUrl=spinUrlBar;
-
 
 }
 
@@ -2282,8 +2220,7 @@ function BrowserNavMenuPopup() {
 	} 
 
       gShowingMenuCurrent.showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
-      document.getElementById("command_TabFocus").focus();
-      
+
    }
 }
   
@@ -2384,14 +2321,8 @@ function BrowserTellChromeThemeRules(refName,ruleReference) {
 }
 
 function BrowserChromeThemeColorGet() {
-
-  // we need to normalize this function so it returns the color value only and not the 
-  // additional strings. For example the presence of the "! important" affects the apps. 
-  // 
-
   gGlobalThemeValue = document.styleSheets[1].cssRules[1].style.cssText;
   gGlobalThemeValue = gGlobalThemeValue.split(";")[0];
-  gGlobalThemeValue = gGlobalThemeValue.split("! important")[0];
 
   return gGlobalThemeValue;
 }

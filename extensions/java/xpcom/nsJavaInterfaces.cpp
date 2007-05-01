@@ -14,7 +14,7 @@
  * The Original Code is Java XPCOM Bindings.
  *
  * The Initial Developer of the Original Code is IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2007
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
@@ -238,16 +238,19 @@ InitXPCOM_Impl(JNIEnv* env, jobject aMozBinDirectory,
   }
 
   // create nsAppFileLocProviderProxy from given Java object
-  nsCOMPtr<nsIDirectoryServiceProvider> provider;
+  nsAppFileLocProviderProxy* provider = nsnull;
   if (aAppFileLocProvider) {
-    rv = NS_NewAppFileLocProviderProxy(aAppFileLocProvider,
-                                       getter_AddRefs(provider));
-    NS_ENSURE_SUCCESS(rv, rv);
+    provider = new nsAppFileLocProviderProxy(aAppFileLocProvider);
+    if (!provider)
+      return NS_ERROR_OUT_OF_MEMORY;
   }
 
   // init XPCOM
   nsCOMPtr<nsIServiceManager> servMan;
   rv = NS_InitXPCOM2(getter_AddRefs(servMan), directory, provider);
+  if (provider) {
+    delete provider;
+  }
   NS_ENSURE_SUCCESS(rv, rv);
 
   // init Event Queue
@@ -281,11 +284,11 @@ extern "C" NS_EXPORT void JNICALL
 XPCOM_NATIVE(shutdownXPCOM) (JNIEnv *env, jobject, jobject aServMgr)
 {
   nsresult rv;
-  nsIServiceManager* servMgr = nsnull;
+  nsCOMPtr<nsIServiceManager> servMgr;
   if (aServMgr) {
     // Get native XPCOM instance
     rv = GetNewOrUsedXPCOMObject(env, aServMgr, NS_GET_IID(nsIServiceManager),
-                                 (nsISupports**) &servMgr);
+                                 getter_AddRefs(servMgr));
     NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to get XPCOM obj for ServiceMgr.");
 
     // Even if we failed to get the matching xpcom object, we don't abort this
@@ -426,68 +429,4 @@ MOZILLA_NATIVE(getNativeHandleFromAWT) (JNIEnv* env, jobject clazz,
 #endif
 
   return handle;
-}
-
-extern "C" NS_EXPORT jlong JNICALL
-JXUTILS_NATIVE(wrapJavaObject) (JNIEnv* env, jobject, jobject aJavaObject,
-                                jstring aIID)
-{
-  nsresult rv;
-  nsISupports* xpcomObject = nsnull;
-
-  if (!aJavaObject || !aIID) {
-    rv = NS_ERROR_NULL_POINTER;
-  } else {
-    const char* str = env->GetStringUTFChars(aIID, nsnull);
-    if (!str) {
-      rv = NS_ERROR_OUT_OF_MEMORY;
-    } else {
-      nsID iid;
-      if (iid.Parse(str)) {
-        rv = GetNewOrUsedXPCOMObject(env, aJavaObject, iid, &xpcomObject);
-      } else {
-        rv = NS_ERROR_INVALID_ARG;
-      }
-
-      env->ReleaseStringUTFChars(aIID, str);
-    }
-  }
-
-  if (NS_FAILED(rv)) {
-    ThrowException(env, rv, "Failed to create XPCOM proxy for Java object");
-  }
-  return NS_REINTERPRET_CAST(jlong, xpcomObject);
-}
-
-extern "C" NS_EXPORT jobject JNICALL
-JXUTILS_NATIVE(wrapXPCOMObject) (JNIEnv* env, jobject, jlong aXPCOMObject,
-                                 jstring aIID)
-{
-  nsresult rv;
-  jobject javaObject = nsnull;
-  nsISupports* xpcomObject = NS_REINTERPRET_CAST(nsISupports*, aXPCOMObject);
-
-  if (!xpcomObject || !aIID) {
-    rv = NS_ERROR_NULL_POINTER;
-  } else {
-    const char* str = env->GetStringUTFChars(aIID, nsnull);
-    if (!str) {
-      rv = NS_ERROR_OUT_OF_MEMORY;
-    } else {
-      nsID iid;
-      if (iid.Parse(str)) {
-        // XXX Should we be passing something other than NULL for aObjectLoader?
-        rv = GetNewOrUsedJavaObject(env, xpcomObject, iid, nsnull, &javaObject);
-      } else {
-        rv = NS_ERROR_INVALID_ARG;
-      }
-
-      env->ReleaseStringUTFChars(aIID, str);
-    }
-  }
-
-  if (NS_FAILED(rv)) {
-    ThrowException(env, rv, "Failed to create XPCOM proxy for Java object");
-  }
-  return javaObject;
 }

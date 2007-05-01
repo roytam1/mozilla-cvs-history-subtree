@@ -251,9 +251,8 @@ function pasteFromClipboard()
                 if (!earliestDate || date.compare(earliestDate) < 0)
                     earliestDate = date;
             }
-            var destCal = ("ltnSelectedCalendar" in window) ?
-              ltnSelectedCalendar() : getDefaultCalendar();
-            var firstDate = currentView().selectedDay;
+            var destCal = getDefaultCalendar();
+            var firstDate = document.getElementById("view-deck").selectedPanel.selectedDay;
             if (!firstDate.isMutable) {
                 firstDate = firstDate.clone();
             }

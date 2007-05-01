@@ -974,7 +974,6 @@ var BookmarksToolbar =
 
   resizeFunc: function(event) 
   { 
-    BookmarksToolbarRDFObserver._overflowTimerInEffect = false;
     if (event && event.type == 'focus') 
       window.removeEventListener('focus', BookmarksToolbar.resizeFunc, false); // hack for bug 266737
     var buttons = document.getElementById("bookmarks-ptf");
@@ -986,12 +985,6 @@ var BookmarksToolbar =
       window.addEventListener('focus', BookmarksToolbar.resizeFunc, false);
       return;
     }
-
-    if (buttons.childNodes.length == 0) {
-      chevron.collapsed = true;
-      return;
-    }
-
     var myToolbar = buttons.parentNode.parentNode.parentNode;
     for (var i = myToolbar.childNodes.length-1; i >= 0; i--){
       var anItem = myToolbar.childNodes[i];
@@ -1030,6 +1023,7 @@ var BookmarksToolbar =
         }
       }
     }
+    BookmarksToolbarRDFObserver._overflowTimerInEffect = false;
   },
 
   // Fill in tooltips for personal toolbar

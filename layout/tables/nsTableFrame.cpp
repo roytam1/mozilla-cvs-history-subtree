@@ -2576,12 +2576,8 @@ nsTableFrame::InsertFrames(nsIAtom*        aListName,
 
   if (aPrevFrame) {
     const nsStyleDisplay* prevDisplay = aPrevFrame->GetStyleDisplay();
-    // Make sure they belong on the same frame list
-    if ((display->mDisplay == NS_STYLE_DISPLAY_TABLE_COLUMN_GROUP) !=
-        (prevDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_COLUMN_GROUP)) {
+    if (display->mDisplay != prevDisplay->mDisplay) {
       // the previous frame is not valid, see comment at ::AppendFrames
-      // XXXbz Using content indices here means XBL will get screwed
-      // over...  Oh, well.
       nsIFrame* pseudoFrame = aFrameList;
       nsIContent* parentContent = GetContent();
       nsIContent* content;
@@ -2601,8 +2597,7 @@ nsTableFrame::InsertFrames(nsIAtom*        aListName,
       else {
         kidFrame = mFrames.FirstChild();
       }
-      // Important: need to start at a value smaller than all valid indices
-      PRInt32 lastIndex = -1;
+      PRInt32 lastIndex = 0;
       while (kidFrame) {
         if (isColGroup) {
           nsTableColGroupType groupType =

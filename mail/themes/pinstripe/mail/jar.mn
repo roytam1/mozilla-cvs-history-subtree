@@ -20,6 +20,10 @@ classic.jar:
      skin/classic/messenger/virtualFolderListDialog.css
      skin/classic/messenger/searchDialog.css
      skin/classic/messenger/filterDialog.css
++    skin/classic/global/splitter.css
+     skin/classic/global/splitter/grippy-horiz.png                      (../../../../toolkit/themes/pinstripe/global/splitter/grippy-horiz.png)
+     skin/classic/global/splitter/splitter-horiz-bg.gif                 (../../../../toolkit/themes/pinstripe/global/splitter/splitter-horiz-bg.gif)
+     skin/classic/global/splitter/splitter-vert-bg.gif                  (../../../../toolkit/themes/pinstripe/global/splitter/splitter-vert-bg.gif)
      skin/classic/messenger/addressbook/addressbook.css             (addrbook/addressbook.css)
      skin/classic/messenger/addressbook/abContactsPanel.css         (addrbook/abContactsPanel.css)
      skin/classic/messenger/addressbook/cardDialog.css              (addrbook/cardDialog.css)
@@ -188,15 +192,13 @@ classic.jar:
      skin/classic/messenger/icons/thread-new-closed-offl-kill.png   (icons/thread-new-closed-offl-kill.png)
      skin/classic/messenger/icons/thread-new-closed.png             (icons/thread-new-closed.png)
      skin/classic/messenger/icons/threadcol.png                     (icons/threadcol.png)
-     skin/classic/messenger/icons/threadpane-splitter-bg.gif        (icons/threadpane-splitter-bg.gif)
      skin/classic/messenger/icons/unreadmail-selected.png           (icons/unreadmail-selected.png)
      skin/classic/messenger/icons/unreadmail.png                    (icons/unreadmail.png)
      skin/classic/messenger/icons/unthreadcol.png                   (icons/unthreadcol.png)
      skin/classic/messenger/icons/online.png                        (icons/online.png)
      skin/classic/messenger/icons/offline.png                       (icons/offline.png)
-     skin/classic/messenger/icons/warning.png                       (icons/warning.png)
      skin/classic/messenger/icons/arrow-dn-7.png                    (icons/arrow-dn-7.png)
-     skin/classic/messenger/icons/top-toolbar-background.gif        (icons/top-toolbar-background.gif) 
+     skin/classic/messenger/icons/top-toolbar-background.gif        (icons/top-toolbar-background.gif)	 
      skin/classic/messenger/accountcentral/accountsettings.png      (accountcentral/accountsettings.png)
      skin/classic/messenger/accountcentral/folder.png               (accountcentral/folder.png)
      skin/classic/messenger/accountcentral/getmail.png              (accountcentral/getmail.png)
@@ -227,8 +229,5 @@ classic.jar:
      skin/classic/communicator/icons/smileys/smiley-innocent.png    (icons/smiley-innocent.png)
      skin/classic/communicator/icons/smileys/smiley-cry.png         (icons/smiley-cry.png)
      skin/classic/communicator/icons/smileys/smiley-sealed.png      (icons/smiley-sealed.png)
-+    skin/classic/global/icons/find.png                             (icons/find.png)
-+    skin/classic/global/toolbar/toolbar-pinstripe-overlay.png      (icons/toolbar-pinstripe-overlay.png)
-+    skin/classic/mozapps/extensions/viewButtons.png                (icons/viewButtons.png)
      preview.png
      icon.png

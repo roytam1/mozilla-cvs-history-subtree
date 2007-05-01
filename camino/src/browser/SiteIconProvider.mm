@@ -555,12 +555,9 @@ NeckoCacheHelper::ClearCache()
 
 + (NSString*)defaultFaviconLocationStringFromURI:(NSString*)inURI
 {
-  if ([inURI hasPrefix:@"about:"])
+  // about: urls and local files are special
+  if ([inURI hasPrefix:@"about:"] || [inURI hasPrefix:@"file:"])
     return inURI;
-
-  // If the file exists, return its path, otherwise use generic icon location
-  if ([inURI hasPrefix:@"file:"])
-    return ([[NSFileManager defaultManager] fileExistsAtPath:[[NSURL URLWithString:inURI] path]] ? inURI : @"about:local_file");
 
   // we use nsIURI here, rather than NSURL, because the former does
   // a better job with suspect urls (e.g. those containing |), and 

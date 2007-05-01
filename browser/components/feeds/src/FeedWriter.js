@@ -240,7 +240,7 @@ FeedWriter.prototype = {
    */
   _setTitleImage: function FW__setTitleImage(container) {
     try {
-      var parts = container.image;
+      var parts = this._getPropertyAsBag(container, "image");
       
       // Set up the title image (supplied by the feed)
       var feedTitleImage = this._document.getElementById("feedTitleImage");
@@ -299,7 +299,7 @@ FeedWriter.prototype = {
         entryContainer.appendChild(title);
       }
 
-      var body = this._document.createElementNS(HTML_NS, "div");
+      var body = this._document.createElementNS(HTML_NS, "p");
       var summary = entry.summary || entry.content;
       var docFragment = null;
       if (summary) {
@@ -309,8 +309,7 @@ FeedWriter.prototype = {
         else
           LOG("no base?");
         docFragment = summary.createDocumentFragment(body);
-        if (docFragment)
-          body.appendChild(docFragment);
+        body.appendChild(docFragment);
 
         // If the entry doesn't have a title, append a # permalink
         // See http://scripting.com/rss.xml for an example
@@ -326,9 +325,6 @@ FeedWriter.prototype = {
       body.className = "feedEntryContent";
       entryContainer.appendChild(body);
       feedContent.appendChild(entryContainer);
-      var clearDiv = this._document.createElementNS(HTML_NS, "div");
-      clearDiv.style.clear = "both";
-      feedContent.appendChild(clearDiv);
     }
   },
   

@@ -107,17 +107,6 @@ calMemoryCalendar.prototype = {
     //
 
     // attribute AUTF8String name;
-    // attribute AUTF8String id;
-    mID: null,
-    get id() {
-        return this.mID;
-    },
-    set id(id) {
-        if (this.mID)
-            throw Components.results.NS_ERROR_ALREADY_INITIALIZED;
-        return (this.mID = id);
-    },
-
     get name() {
         return getCalendarManager().getCalendarPref(this, "NAME");
     },
@@ -155,8 +144,6 @@ calMemoryCalendar.prototype = {
     // attribute boolean suppressAlarms;
     get suppressAlarms() { return false; },
     set suppressAlarms(aSuppressAlarms) { throw Components.results.NS_ERROR_NOT_IMPLEMENTED; },
-
-    get sendItipInvitations() { return true; },
 
     // void addObserver( in calIObserver observer );
     addObserver: function (aObserver, aItemFilter) {
@@ -199,7 +186,7 @@ calMemoryCalendar.prototype = {
             // is this an error?
             if (aListener)
                 aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.interfaces.calIErrors.DUPLICATE_ID,
+                                               Components.results.NS_ERROR_FAILURE,
                                                aListener.ADD,
                                                aItem.id,
                                                "ID already exists for addItem");
@@ -207,21 +194,6 @@ calMemoryCalendar.prototype = {
         }
 
         aItem.calendar = this.calendarToReturn;
-        var rec = aItem.recurrenceInfo;
-        if (rec) {
-            var exceptions = rec.getExceptionIds({});
-            for each (var exid in exceptions) {
-                var exception = rec.getExceptionFor(exid, false);
-                if (exception) {
-                    if (!exception.isMutable) {
-                        exception = exception.clone();
-                    }
-                    exception.calendar = this.calendarToReturn;
-                    rec.modifyException(exception);
-                }
-            }
-        }
-        
         aItem.generation = 1;
         aItem.makeImmutable();
         this.mItems[aItem.id] = aItem;

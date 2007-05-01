@@ -70,7 +70,7 @@ NO_PKG_FILES = \
 	plugins \
 	res/arrow.gif \
 	res/arrowd.gif \
-	res/bloatcycle.html \
+	res/boatcycle.html \
 	res/cmessage.txt \
 	res/html \
 	res/loading-image.gif \

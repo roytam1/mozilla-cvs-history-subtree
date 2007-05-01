@@ -107,7 +107,7 @@ class CHDownloader;
 // A formal protocol for something that implements progress display.
 // Embedders can make a window or view controller that conforms to this
 // protocol, and reuse nsDownloadListener to get download UI.
-@protocol CHDownloadProgressDisplay <NSObject>
+@protocol CHDownloadProgressDisplay
 
 - (void)onStartDownload:(BOOL)isFileSave;
 - (void)onEndDownload:(BOOL)completedOK statusCode:(nsresult)aStatus;
@@ -121,12 +121,10 @@ class CHDownloader;
 - (void)setDestinationPath:(NSString*)aDestPath;
 - (NSString*)destinationPath;
 
-- (void)displayWillBeRemoved;
-
 @end
 
 // A formal protocol which is implemented by a factory of progress UI.
-@protocol CHDownloadDisplayFactory <NSObject>
+@protocol CHDownloadDisplayFactory
 
 - (id <CHDownloadProgressDisplay>)createProgressDisplay;
 
