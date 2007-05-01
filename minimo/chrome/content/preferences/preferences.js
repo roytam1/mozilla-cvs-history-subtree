@@ -602,12 +602,11 @@ function syncPref(refElement) {
 
 function PrefOkay() {
 
-   document.getElementById("okay-button").setAttribute("disabled",true);
-   if(!gCancelSync) {
-      syncPrefSaveDOM();
-   }
-   gWin.gBrowser.removeCurrentTab();
-   
+	document.getElementById("okay-button").setAttribute("disabled",true);
+
+      if(!gCancelSync) {
+		syncPrefSaveDOM();
+	}
 }
 
 /* 

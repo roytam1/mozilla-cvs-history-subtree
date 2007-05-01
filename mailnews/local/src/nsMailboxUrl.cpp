@@ -194,9 +194,8 @@ NS_IMETHODIMP nsMailboxUrl::GetUri(char ** aURI)
     if (filePath)
     {
       nsCAutoString baseUri;
-      // we blow off errors here so that we can open attachments
-      // in .eml files.
-      (void) MsgMailboxGetURI(m_file, baseUri);
+      nsresult rv = MsgMailboxGetURI(m_file, baseUri);
+      NS_ENSURE_SUCCESS(rv, rv);
       char * baseMessageURI;
       nsCreateLocalBaseMessageURI(baseUri.get(), &baseMessageURI);
       char * uri = nsnull;

@@ -1457,19 +1457,6 @@ morkWriter::PutTableDict(morkEnv* ev, morkTable* ioTable)
           r->NonRowTypeError(ev);
       }
     }
-    // we may have a change for a row which is no longer in the
-    // table, but contains a cell with something not in the dictionary.
-    // So, loop through the rows in the change log, writing out any
-    // dirty dictionary elements.
-    morkList* list = &ioTable->mTable_ChangeList;
-    morkNext* next = list->GetListHead();
-    while ( next && ev->Good() )
-    {
-      r = ((morkTableChange*) next)->mTableChange_Row;
-      if  ( r && r->IsRow() )
-        this->PutRowDict(ev, r);
-      next = next->GetNextLink();
-    }
   }
   if ( ev->Good() )
     this->EndDict(ev);
@@ -2180,7 +2167,7 @@ morkWriter::PutRow(morkEnv* ev, morkRow* ioRow)
       }
       stream->Write(ev->AsMdbEnv(), buf, ridSize + punctSize, &bytesWritten);
       mWriter_LineSize += bytesWritten;
-
+      
       // special case situation where row puts exactly one column:
       if ( !rowRewrite && mWriter_Incremental && ioRow->HasRowDelta() )
       {

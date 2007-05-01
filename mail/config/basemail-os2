@@ -96,8 +96,9 @@ components\myspell\*
 components\xpinstal.dll
 components\xpinstall.xpt
 
-; xmlextras (for XPointer support)
+; xmlextras (for RSS feeds and the like)
 components\xmlextra.dll
+components\xmlextras.xpt
 
 ; offline extension (may not be present in the build, that's ok)
 chrome\offline.jar

@@ -50,8 +50,7 @@
 <bindings id="widgetsBindingsForXHTML"
           xmlns="http://www.mozilla.org/xbl"
           xmlns:html="http://www.w3.org/1999/xhtml"
-          xmlns:xbl="http://www.mozilla.org/xbl"
-          xmlns:mozType="http://www.mozilla.org/projects/xforms/2005/type">
+          xmlns:xbl="http://www.mozilla.org/xbl">
 
 
 <!-- CALENDAR WIDGETS -->
@@ -64,8 +63,8 @@
       <stylesheet src="chrome://xforms/skin/widgets-xhtml.css"/>
     </resources>
 
-    <content xmlns:wairole="http://www.w3.org/2005/01/wai-rdf/GUIRoleTaxonomy#">
-      <html:table role="wairole:grid">
+    <content>
+      <html:table>
         <html:tbody anonid="dayContainer"/>
       </html:table>
     </content>
@@ -122,7 +121,6 @@
           var header;
           for (var i = 0; i < 7; i++) {
             header = this.ownerDocument.createElementNS(this.XHTML_NS, "th");
-            header.setAttribute("role", "wairole:columnheader");
             header.textContent = dayOfWeekNames[i];
             row.appendChild(header);
           }
@@ -135,7 +133,6 @@
 
             for (var y = 0; y < 7; y++) {
               cell = this.ownerDocument.createElementNS(this.XHTML_NS, "td");
-              cell.setAttribute("role", "wairole:gridcell");
               cell.setAttribute("tabindex", "-1");
               this._dayElements.push(cell);
               row.appendChild(cell);
@@ -178,8 +175,8 @@
 
   <!-- FULL CALENDAR -->
   <binding id="calendar-full" extends="#calendar-compact">
-    <content xmlns:wairole="http://www.w3.org/2005/01/wai-rdf/GUIRoleTaxonomy#">
-      <html:table role="wairole:grid">
+    <content>
+      <html:table>
         <html:tbody anonid="dayContainer">
         <html:tr>
           <html:td colspan="1">
@@ -215,28 +212,6 @@
       </method>
 
     <!-- private -->
-      <method name="getFocusedElement">
-        <body>
-          var selection = this.ownerDocument.defaultView.getSelection();
-          if (!selection)
-            return null;
-
-          var focused = selection.focusNode;
-          if (!focused)
-            return null;
-
-          // focusNode returns html:td if focused element is inside table cell
-          // (see bug 365900).
-          if (focused.localName != "input") {
-            input = focused.getElementsByTagNameNS(this.XHTML_NS, "input")[0];
-            if (input)
-              return input;
-          }
-
-          return focused;
-        </body>
-      </method>
-
       <property name="dateLabel" readonly="true">
         <getter>
           if (!this._dateLabel) {
@@ -272,7 +247,7 @@
     </implementation>
 
     <handlers>
-      <handler event="keypress" phase="capturing">
+      <handler event="keypress">
       <![CDATA[
         var target = event.originalTarget;
 
@@ -312,44 +287,6 @@
             break;
         }
       </handler>
-
-      <handler event="keypress" keycode="VK_TAB">
-        if (!this.hasAttribute("internaltabhandling"))
-          return;
-
-        event.preventDefault();
-
-        var focused = getFocusedElement();
-        if (!focused)
-          return;
-
-        if (focused == this.backButton) {
-          this.fwdButton.focus();
-        } else if (focused == this.fwdButton) {
-          this.focus();
-        } else {
-          this.backButton.focus();
-        }
-      </handler>
-
-      <handler event="keypress" keycode="VK_TAB" modifiers="shift">
-        if (!this.hasAttribute("internaltabhandling"))
-          return;
-
-        event.preventDefault();
-
-        var focused = getFocusedElement();
-        if (!focused)
-          return;
-
-        if (focused == this.backButton) {
-          this.focus();
-        } else if (focused == this.fwdButton) {
-          this.backButton.focus();
-        } else {
-          this.fwdButton.focus();
-        }
-      </handler>
     </handlers>
   </binding>
 
@@ -362,8 +299,7 @@
     <content>
       <html:span anonid="minlabel"/>
       <!-- XXX: width and height set by CSS, see bug 350870. -->
-      <html:canvas tabindex="0" anonid="canvas" width="260" height="40"
-                   xbl:inherits="tabindex=mozType:tabindex"/>
+      <html:canvas tabindex="0" anonid="canvas" width="260" height="40"/>
       <html:span anonid="maxlabel"/>
     </content>
 
@@ -399,7 +335,7 @@
             value = this.max;
 
           var boxobj = this.sliderController;
-          if (this.value != value)
+          if (!isNaN(value) && this.value != value)
             this.eraseSlider(boxobj.getXCoordFromValue(this.value));
           this.drawSlider(boxobj.getXCoordFromValue(value));
           this.setAttribute("value", value);
@@ -522,12 +458,6 @@
 
             // Takes a value and calculates the x position.
             getXCoordFromValue: function(aValue) {
-              if (isNaN(aValue) || isNaN(this.max) || isNaN(this.min)) {
-                // During initialization, it is possible that aValue will be
-                // NaN.  Math type stuff has issues with NaN, so we'll bow out
-                // early if we find that is the case.
-                return NaN;
-              }
               var k = this.barWidth / (this.max - this.min);
               var pos = aValue - this.min;
               return Math.round(pos * k) + this.barMargin;
@@ -569,10 +499,6 @@
         <parameter name="aPos"/>
         <body>
         <![CDATA[
-          if (isNaN(aPos)) {
-            // aPos could be NaN if getXCoordFromValue returns NaN, for example
-            return;
-          }
           var boxobj = this.sliderController;
           if (boxobj.barHeight <= 0 || boxobj.barWidth <=0)
             return;
@@ -608,10 +534,6 @@
         <parameter name="aPos"/>
         <body>
         <![CDATA[
-          if (isNaN(aPos)) {
-            // aPos could be NaN if getXCoordFromValue returns NaN, for example
-            return;
-          }
           var boxobj = this.sliderController;
           if (boxobj.barHeight <= 0 || boxobj.barWidth <= 0)
             return;
@@ -686,10 +608,8 @@
 
       <method name="dispatchChangeEvent">
         <body>
-          // We fire 'ValueChange' event because this event is handled by
-          // accessibility to know when value of widget is changed.
           var event = this.ownerDocument.createEvent("Events");
-          event.initEvent("ValueChange", false, false);
+          event.initEvent("change", false, false);
           this.dispatchEvent(event);
         </body>
       </method>
@@ -779,27 +699,19 @@
         nsIEvent = Components.interfaces.nsIDOMKeyEvent;
         switch (event.keyCode) {
           case nsIEvent.DOM_VK_RIGHT:
-          case nsIEvent.DOM_VK_DOWN:
+          case nsIEvent.DOM_VK_UP:
             this.value += this.step;
             break;
           case nsIEvent.DOM_VK_LEFT:
-          case nsIEvent.DOM_VK_UP:
+          case nsIEvent.DOM_VK_DOWN:
             this.value -= this.step;
             break;
-
-          // delta is at least as large as step and no more than 20% of the
-          // scale.
-          case nsIEvent.DOM_VK_PAGE_DOWN:
-            var delta =
-              parseInt((this.max - this.min) / 5 / this.step) * this.step;
-            this.value += delta ? delta : this.step;
-            break;
           case nsIEvent.DOM_VK_PAGE_UP:
-            var delta =
-              parseInt((this.max - this.min) / 5 / this.step) * this.step;
-            this.value -= delta ? delta : this.step;
+            this.value += this.step * 2;
             break;
-
+          case nsIEvent.DOM_VK_PAGE_DOWN:
+            this.value -= this.step * 2;
+            break;
           case nsIEvent.DOM_VK_END:
             this.value = this.max;
             break;
@@ -815,23 +727,4 @@
     </handlers>
   </binding>
 
-
-  <!-- DROPMARKER -->
-  <binding id="dropmarker">
-    <content tabindex="-1"/>
-
-    <resources>
-      <stylesheet src="chrome://xforms/skin/widgets-xhtml.css"/>
-    </resources>
-
-    <implementation implements="nsIAccessibleProvider">
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XFormsDropmarkerWidget;
-        </getter>
-      </property>
-    </implementation>
-  </binding>
-
 </bindings>
-

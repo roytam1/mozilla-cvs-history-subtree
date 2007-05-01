@@ -22,7 +22,7 @@
  * Contributor(s):
  *   Calum Robinson <calumr@mac.com>
  *   Simon Fraser <sfraser@netscape.com>
- *   Josh Aas <josh@mozilla.com>
+ *   Josh Aas <josha@mac.com>
  *   Nick Kreeger <nick.kreeger@park.edu>
  *   Bruce Davidson <mozilla@transoceanic.org.uk>
  *
@@ -59,6 +59,13 @@ enum {
   kLabelTagIcon
 };
 
+// Method helps set up a subscription to the download dir to listen for changes
+static void FileSystemNotificationProc(FNMessage message, OptionBits flags, void* refcon, FNSubscriptionRef subscription)
+{
+  [(ProgressViewController*)refcon checkFileExists];
+}
+
+
 @interface ProgressViewController(ProgressViewControllerPrivate)
 
 -(void)viewDidLoad;
@@ -67,7 +74,7 @@ enum {
 -(void)refreshDownloadInfo;
 -(void)launchFileIfAppropriate;
 -(void)setProgressViewFromDictionary:(NSDictionary*)aDict;
--(BOOL)shouldRemoveFromDownloadList;
+-(void)removeFromDownloadListIfAppropriate;
 
 @end
 
@@ -159,20 +166,10 @@ enum {
   return self;
 }
 
--(id)initWithWindowController:(ProgressDlgController*)aWindowController
-{
-  if ((self = [self init]))
-    mProgressWindowController = aWindowController;
-  
-  return self;
-}
-
--(id)initWithDictionary:(NSDictionary*)aDict 
-    andWindowController:(ProgressDlgController*)aWindowController
+-(id)initWithDictionary:(NSDictionary*)aDict
 {
   if ((self = [self init]))
   {
-    mProgressWindowController = aWindowController;
     [self setProgressViewFromDictionary:aDict];
   }
   
@@ -199,6 +196,8 @@ enum {
   // the views might outlive us, so clear refs to us
   [mCompletedView setController:nil];
   [mProgressView setController:nil];
+  
+  [self unsubscribeFileSystemNotification];
   
   [mStartTime release];
   [mSourceURL release];
@@ -251,20 +250,35 @@ enum {
 
 -(void)setupFileSystemNotification
 {
+  // there is some update, that is why we are being called again
+  // unsubscribe the old stuff and create a fresh subscription
+  [self unsubscribeFileSystemNotification];
+  
   [self checkFileExists];
-  if (mFileExists && !mFileIsWatched) {
-    // Adding ourselves to the watch kqueue creates an extra ref-count to our instance.
-    // We will remove ourselves from the watch kqueue on |displayWillBeRemoved|, which
-    // will remove the extra ref count from our instance.
-    [mProgressWindowController addFileDelegateToWatchList:self];
-    mFileIsWatched = YES;
+
+  NSString *dir = [mDestPath stringByDeletingLastPathComponent];
+  if (dir)
+  {
+    mSubUPP = NewFNSubscriptionUPP(FileSystemNotificationProc);
+    OSStatus err = FNSubscribeByPath(((const UInt8*)[dir fileSystemRepresentation]), mSubUPP, (void*)self, nil, &mSubRef);
+    if (err != noErr)
+      NSLog(@"Failed to subscribe to file system notification for %@", dir);
   }
 }
 
 -(void)unsubscribeFileSystemNotification
 {
-  [mProgressWindowController removeFileDelegateFromWatchList:self];
-  mFileIsWatched = NO;
+  if (mSubRef) 
+  {
+    FNUnsubscribe(mSubRef); 
+    mSubRef = nil;
+  }
+
+  if (mSubUPP) 
+  {
+    DisposeFNSubscriptionUPP(mSubUPP);
+    mSubUPP = nil;
+  }
 }
 
 -(IBAction)copySourceURL:(id)sender
@@ -366,10 +380,7 @@ enum {
     
     [self refreshDownloadInfo];
     [self launchFileIfAppropriate];
-    if ([self shouldRemoveFromDownloadList])
-      [mProgressWindowController removeDownload:self suppressRedraw:NO];
-    else if (!mDownloadFailed)
-      [self setupFileSystemNotification];
+    [self removeFromDownloadListIfAppropriate];
   }
 }
 
@@ -382,13 +393,14 @@ enum {
   }
 }
 
--(BOOL)shouldRemoveFromDownloadList
+// Remove the download from the view if the pref is set to remove upon successful download
+-(void)removeFromDownloadListIfAppropriate
 {
-  if (![self hasSucceeded])
-    return NO;
   int downloadRemoveActionValue = [[PreferenceManager sharedInstance] getIntPref:"browser.download.downloadRemoveAction" 
                                                                      withSuccess:NULL];
-  return (downloadRemoveActionValue == kRemoveUponSuccessfulDownloadPrefValue);
+  
+  if (!mUserCancelled && !mDownloadFailed && downloadRemoveActionValue == kRemoveUponSuccessfulDownloadPrefValue)
+    [mProgressWindowController removeDownload:self suppressRedraw:NO];
 }
 
 // this handles lots of things - all of the status updates
@@ -493,6 +505,11 @@ enum {
   }
 }
 
+-(void)setProgressWindowController:(ProgressDlgController*)progressWindowController
+{
+  mProgressWindowController = progressWindowController;
+}
+
 -(BOOL)isActive
 {
   return !mDownloadDone;
@@ -550,11 +567,6 @@ enum {
     mRefreshIcon = YES;
     [self refreshDownloadInfo];
   }
-  
-  // Unsubscribe our notice if the file has moved and is currently watched.
-  // This call is made to work around a bug in kqueue in OS X 10.3 (see bug 375420).
-  if (!fileExists && mFileIsWatched)
-    [self unsubscribeFileSystemNotification];
 }
 
 -(void)setProgressViewFromDictionary:(NSDictionary*)aDict
@@ -588,21 +600,6 @@ enum {
   [dict setObject:[NSNumber numberWithDouble: mDownloadTime] forKey:@"downloadTime"];
   
   return dict;
-}
-
--(const char*)representedFilePath
-{
-  return [mDestPath fileSystemRepresentation];
-}
-
--(void)fileDidChange
-{
-  // This method gets called on a background thread, so switch the |checkFileExists| call to the main thread.
-  NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-  [self performSelectorOnMainThread:@selector(checkFileExists)
-                         withObject:nil 
-                      waitUntilDone:NO];
-  [pool release];
 }
 
 -(NSMenu*)contextualMenu
@@ -778,26 +775,13 @@ enum {
 {
   [mDestPath autorelease];
   mDestPath = [aDestPath copy];
-  if (mDownloadDone)
-    [self setupFileSystemNotification];
+  [self setupFileSystemNotification];
   //[self tryToSetFinderComments];
 }
 
--(NSString*)destinationPath
+- (NSString*)destinationPath
 {
   return mDestPath;
-}
-
-//
-// This method exists because of an extra ref-count to ourselves in
-// |FileChangeWatcher|. To remove this extra refcount before |dealloc|,
-// this class gets notified when the view is about to be removed.
-//
--(void)displayWillBeRemoved
-{
-  // The file can only be watched if the download compeleted sucessfully
-  if (mFileIsWatched)
-    [self unsubscribeFileSystemNotification];
 }
 
 @end

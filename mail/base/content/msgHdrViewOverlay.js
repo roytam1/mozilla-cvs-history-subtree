@@ -442,7 +442,7 @@ var messageHeaderSink = {
 
       // display name optimization. Eliminate any large quantities of white space from the display name.
       // such that Hello       World.txt becomes Hello World.txt.
-      displayName = displayName.replace(/ +/g, " ");
+      var displayName = displayName.replace(/ +/g, " ");
           
       currentAttachments.push (new createNewAttachmentInfo(contentType, url, displayName, uri, isExternalAttachment));
       // if we have an attachment, set the MSG_FLAG_ATTACH flag on the hdr
@@ -775,11 +775,6 @@ function UpdateMessageHeaders()
   // header view table...
 
   var headerName;
-
-  // Remove the height attr so that it redraws correctly. Works around a problem that
-  // attachment-splitter causes if it's moved high enough to affect the header box:
-  document.getElementById('msgHeaderView').removeAttribute('height');
-
   for (headerName in currentHeaderData)
   {
     var headerField = currentHeaderData[headerName];
@@ -863,7 +858,6 @@ function HideMessageHeaderPane()
   document.getElementById("fileAttachmentMenu").setAttribute("disabled", "true");
   // disable the attachment box
   document.getElementById("attachmentView").collapsed = true;
-  document.getElementById("attachment-splitter").collapsed = true;
 }
 
 function OutputNewsgroups(headerEntry, headerValue)
@@ -932,7 +926,7 @@ function updateEmailAddressNode(emailAddressNode, address)
 function AddExtraAddressProcessing(emailAddress, addressNode)
 {
   var displayName = addressNode.getAttribute("displayName");  
-  var mailAddress = addressNode.getAttribute("emailAddress");
+  var emailAddress = addressNode.getAttribute("emailAddress");
 
   // always show the address for the from and reply-to fields
   var parentElementId = addressNode.parentNode.id;
@@ -942,9 +936,9 @@ function AddExtraAddressProcessing(emailAddress, addressNode)
 
   if (condenseName && gShowCondensedEmailAddresses && displayName)
   {
-    if (useDisplayNameForAddress(mailAddress))
+    if (useDisplayNameForAddress(emailAddress))
       addressNode.setAttribute("label", displayName);
-    addressNode.setAttribute("tooltiptext", mailAddress);
+    addressNode.setAttribute("tooltiptext", emailAddress);
     addressNode.setAttribute("tooltip", "emailAddressTooltip");
   }
   else
@@ -1230,28 +1224,16 @@ function cloneAttachment(aAttachment)
 function displayAttachmentsForExpandedView()
 {
   var numAttachments = currentAttachments.length;
-  var expandedAttachmentBox = document.getElementById('attachmentView');
-  var attachmentSplitter = document.getElementById('attachment-splitter');
   
-  if (numAttachments <= 0)
-  {
-    expandedAttachmentBox.collapsed = true;
-    attachmentSplitter.collapsed = true;
-  }
-  else if (!gBuildAttachmentsForCurrentMsg)
-  {
   // IMPORTANT: make sure we uncollapse the attachment box BEFORE we start adding
   // our attachments to the view. Otherwise, layout doesn't calculate the correct height for
   // the attachment view and we end up with a box that is too tall.
-    expandedAttachmentBox.collapsed = false;
-    attachmentSplitter.collapsed = false;
-    
-    if (gShowLargeAttachmentView)
-      expandedAttachmentBox.setAttribute("largeView", "true");
 
-    // Remove height attribute, or the attachments box could be drawn badly:
-    expandedAttachmentBox.removeAttribute("height");
+  var expandedAttachmentBox = document.getElementById('attachmentView');
+  expandedAttachmentBox.collapsed = numAttachments <= 0;
 
+  if (numAttachments > 0 && !gBuildAttachmentsForCurrentMsg)
+  {
     var attachmentList = document.getElementById('attachmentList');
     for (index in currentAttachments)
     {
@@ -1263,7 +1245,10 @@ function displayAttachmentsForExpandedView()
       attachmentView.setAttribute("class", "descriptionitem-iconic"); 
 
       if (gShowLargeAttachmentView)
+      {
         attachmentView.setAttribute("largeView", "true");
+        attachmentView.setAttribute("orient", "vertical");
+      }
 
       setApplicationIconForAttachment(attachment, attachmentView, gShowLargeAttachmentView);
       attachmentView.setAttribute("tooltip", "attachmentListTooltip");
@@ -1277,18 +1262,6 @@ function displayAttachmentsForExpandedView()
       var item = attachmentList.appendChild(attachmentView);
     } // for each attachment
     gBuildAttachmentsForCurrentMsg = true;
-
-    // Switch overflow off (via css attribute selector) temporarily to get the preferred window height:
-    var attachmentContainer = document.getElementById('attachmentView');
-    attachmentContainer.setAttribute("attachmentOverflow", "false");
-    var attachmentHeight = expandedAttachmentBox.boxObject.height;
-    attachmentContainer.setAttribute("attachmentOverflow", "true");
-
-    // If the attachments box takes up too much of the message pane, downsize:
-    var maxAttachmentHeight = document.getElementById('messagepanebox').boxObject.height / 4;
-    if (attachmentHeight > maxAttachmentHeight)
-      attachmentHeight = maxAttachmentHeight;
-    expandedAttachmentBox.setAttribute("height", attachmentHeight);
   }
 }
 

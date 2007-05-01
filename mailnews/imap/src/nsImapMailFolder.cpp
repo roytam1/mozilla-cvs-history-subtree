@@ -803,7 +803,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
   if (!canOpenThisFolder) 
     selectFolder = PR_FALSE;
   // don't run select if we can't select the folder...
-  if (NS_SUCCEEDED(rv) && !m_urlRunning && selectFolder)
+  if (NS_SUCCEEDED(rv) && !m_updatingFolder && selectFolder)
   {
     nsCOMPtr<nsIImapService> imapService = do_GetService(NS_IMAPSERVICE_CONTRACTID, &rv); 
     if (NS_FAILED(rv)) return rv;
@@ -811,10 +811,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
     nsCOMPtr <nsIURI> url;
     rv = imapService->SelectFolder(m_eventQueue, this, m_urlListener, msgWindow, getter_AddRefs(url));
     if (NS_SUCCEEDED(rv))
-    {
       m_urlRunning = PR_TRUE;
-      m_updatingFolder = PR_TRUE;
-    }
     if (url)
     {
       nsCOMPtr <nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(url);
@@ -840,7 +837,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
   }
   else if (NS_SUCCEEDED(rv))  // tell the front end that the folder is loaded if we're not going to 
   {                           // actually run a url.
-    if (!m_updatingFolder)    // if we're already running an update url, we'll let that one send the folder loaded
+    if (!m_urlRunning)        // if we're already running a url, we'll let that one send the folder loaded
       NotifyFolderEvent(mFolderLoadedAtom);
     NS_ENSURE_SUCCESS(rv,rv);
   }
@@ -3479,7 +3476,7 @@ NS_IMETHODIMP nsImapMailFolder::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWindo
           nsCOMPtr<nsISupportsArray> messageArray;
           NS_NewISupportsArray(getter_AddRefs(messageArray));
           messageArray->AppendElement(msgHdr);
-          AddKeywordsToMessages(messageArray, keyword.get());
+          AddKeywordToMessages(messageArray, keyword.get());
           break;
         }
         case nsMsgFilterAction::JunkScore:
@@ -4993,16 +4990,7 @@ nsImapMailFolder::OnStopRunningUrl(nsIURI *aUrl, nsresult aExitCode)
                 if (m_copyState->m_curIndex >= m_copyState->m_totalCount)
                 {
                   if (folderOpen)
-                  {
-                    // This gives a way for the caller to get notified 
-                    // when the UpdateFolder url is done.
-                    nsCOMPtr <nsIUrlListener> saveUrlListener = m_urlListener;
-                    if (m_copyState->m_listener)
-                      m_urlListener = do_QueryInterface(m_copyState->m_listener);
-
                     UpdateFolder(msgWindow);
-                    m_urlListener = saveUrlListener;
-                  }
                   if (m_copyState->m_msgWindow && m_copyState->m_undoMsgTxn)
                   {
                     nsCOMPtr<nsITransactionManager> txnMgr;
@@ -5789,7 +5777,7 @@ void nsMsgIMAPFolderACL::BuildInitialACLFromCache()
   if (startingFlags & IMAP_ACL_CREATE_SUBFOLDER_FLAG)
     myrights +="c";
   if (startingFlags & IMAP_ACL_DELETE_FLAG)
-    myrights += "dt";
+    myrights += "d";
   if (startingFlags & IMAP_ACL_ADMINISTER_FLAG)
     myrights += "a";
   
@@ -5970,8 +5958,7 @@ PRBool	nsMsgIMAPFolderACL::GetCanUserCreateSubfolder(const char *userName)
 
 PRBool	nsMsgIMAPFolderACL::GetCanUserDeleteInFolder(const char *userName)
 {
-  return GetFlagSetInRightsForUser(userName, 'd', PR_FALSE)
-    || GetFlagSetInRightsForUser(userName, 't', PR_FALSE);
+  return GetFlagSetInRightsForUser(userName, 'd', PR_FALSE);
 }
 
 PRBool	nsMsgIMAPFolderACL::GetCanUserAdministerFolder(const char *userName)
@@ -6016,8 +6003,7 @@ PRBool	nsMsgIMAPFolderACL::GetCanICreateSubfolder()
 
 PRBool	nsMsgIMAPFolderACL::GetCanIDeleteInFolder()
 {
-  return GetFlagSetInRightsForUser(nsnull, 'd', PR_TRUE) ||
-    GetFlagSetInRightsForUser(nsnull, 't', PR_TRUE);
+  return GetFlagSetInRightsForUser(nsnull, 'd', PR_TRUE);
 }
 
 PRBool	nsMsgIMAPFolderACL::GetCanIAdministerFolder()
@@ -8599,32 +8585,32 @@ NS_IMETHODIMP nsImapMailFolder::FetchMsgPreviewText(nsMsgKey *aKeysToFetch, PRUi
   return NS_OK;
 }
 
-NS_IMETHODIMP nsImapMailFolder::AddKeywordsToMessages(nsISupportsArray *aMessages, const char *aKeywords)
+NS_IMETHODIMP nsImapMailFolder::AddKeywordToMessages(nsISupportsArray *aMessages, const char *aKeyword)
 {
-  nsresult rv = nsMsgDBFolder::AddKeywordsToMessages(aMessages, aKeywords);
+  nsresult rv = nsMsgDBFolder::AddKeywordToMessages(aMessages, aKeyword);
   if (NS_SUCCEEDED(rv))
   {
     nsCAutoString messageIds;
     nsMsgKeyArray keys;
     rv = BuildIdsAndKeyArray(aMessages, messageIds, keys);
     NS_ENSURE_SUCCESS(rv, rv);
-    rv = StoreCustomKeywords(nsnull, aKeywords, nsnull, keys.GetArray(), keys.GetSize(), nsnull);
+    rv = StoreCustomKeywords(nsnull, aKeyword, nsnull, keys.GetArray(), keys.GetSize(), nsnull);
     if (mDatabase)
       mDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
   }
   return rv;
 }
 
-NS_IMETHODIMP nsImapMailFolder::RemoveKeywordsFromMessages(nsISupportsArray *aMessages, const char *aKeywords)
+NS_IMETHODIMP nsImapMailFolder::RemoveKeywordFromMessages(nsISupportsArray *aMessages, const char *aKeyword)
 {
-  nsresult rv = nsMsgDBFolder::RemoveKeywordsFromMessages(aMessages, aKeywords);
+  nsresult rv = nsMsgDBFolder::RemoveKeywordFromMessages(aMessages, aKeyword);
   if (NS_SUCCEEDED(rv))
   {
     nsCAutoString messageIds;
     nsMsgKeyArray keys;
     nsresult rv = BuildIdsAndKeyArray(aMessages, messageIds, keys);
     NS_ENSURE_SUCCESS(rv, rv);
-    rv = StoreCustomKeywords(nsnull, nsnull, aKeywords, keys.GetArray(), keys.GetSize(), nsnull);
+    rv = StoreCustomKeywords(nsnull, nsnull, aKeyword, keys.GetArray(), keys.GetSize(), nsnull);
     if (mDatabase)
       mDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
   }

@@ -358,14 +358,7 @@ NS_IMETHODIMP
 nsNewsDatabase::GetDefaultViewFlags(nsMsgViewFlagsTypeValue *aDefaultViewFlags)
 {
   NS_ENSURE_ARG_POINTER(aDefaultViewFlags);
-  GetIntPref("mailnews.default_news_view_flags", aDefaultViewFlags);
-  if (*aDefaultViewFlags < nsMsgViewFlagsType::kNone ||
-      *aDefaultViewFlags > (nsMsgViewFlagsType::kThreadedDisplay |
-                            nsMsgViewFlagsType::kShowIgnored |
-                            nsMsgViewFlagsType::kUnreadOnly |
-                            nsMsgViewFlagsType::kExpandAll |
-                            nsMsgViewFlagsType::kGroupBySort))
-    *aDefaultViewFlags = nsMsgViewFlagsType::kThreadedDisplay;
+  *aDefaultViewFlags = nsMsgViewFlagsType::kThreadedDisplay;
   return NS_OK;
 }
 

@@ -27,7 +27,7 @@
 
   <div style="text-align:center" class="extensions">
   
-    <img src="chrome://minimo/skin/extensions/icon-google.png">
+    <img src="chrome://minimo/skin/extensions/google.png">
     </img>
 
     <input type="text" id="search-google"
@@ -111,7 +111,7 @@
 <xsl:choose>
 <xsl:when test="@hbhistory" >
 
-  <div  class="item timehistory" >
+  <div  class="item timehistory" ><img src="chrome://minimo/skin/m-nav.png" />
 <a>
       <xsl:attribute name="href">javascript:</xsl:attribute> 	
       <xsl:attribute name="onclick">hbOpenAsTab('<xsl:value-of select="@value"/>');return false</xsl:attribute>
