@@ -81,7 +81,6 @@
 #include "nsIWebProgressListener.h"
 #include "nsIBrowserDOMWindow.h"
 #include "nsIPermissionManager.h"
-#include "nsIScriptSecurityManager.h"
 
 class nsIDOMPopupBlockedEvent;
 
@@ -89,7 +88,7 @@ class nsIDOMPopupBlockedEvent;
 static NSString* const kEnablePluginsChangedNotificationName = @"EnablePluginsChanged";
 
 // types of status bar messages, in order of priority for showing to the user
-enum StatusPriority {
+enum {
   eStatusLinkTarget    = 0, // link mouseover info
   eStatusProgress      = 1, // loading progress
   eStatusScript        = 2, // javascript window.status
@@ -109,10 +108,6 @@ enum StatusPriority {
 - (void)setSiteIconURI:(NSString*)inSiteIconURI;
 
 - (void)updateSiteIconImage:(NSImage*)inSiteIcon withURI:(NSString *)inSiteIconURI loadError:(BOOL)inLoadError;
-
-- (void)updateStatusString:(NSString*)statusString withPriority:(StatusPriority)priority;
-
-- (void)setPendingURI:(NSString*)inURI;
 
 - (NSString*)displayTitleForPageURL:(NSString*)inURL title:(NSString*)inTitle;
 
@@ -179,8 +174,6 @@ enum StatusPriority {
 
     mDisplayTitle = [[NSString alloc] init];
     
-    mLoadingResources = [[NSMutableSet alloc] init];
-    
     [self registerNotificationListener];
   }
   return self;
@@ -197,11 +190,9 @@ enum StatusPriority {
   [mSiteIconImage release];
   [mSiteIconURI release];
   [mStatusStrings release];
-  [mLoadingResources release];
 
   [mToolTip release];
   [mDisplayTitle release];
-  [mPendingURI release];
   
   NS_IF_RELEASE(mBlockedPopups);
   
@@ -264,11 +255,6 @@ enum StatusPriority {
   return mTabItem;
 }
 
--(NSString*)pendingURI
-{
-  return mPendingURI;
-}
-
 -(NSString*)currentURI
 {
   return [mBrowserView getCurrentURI];
@@ -315,11 +301,6 @@ enum StatusPriority {
     else
       [mBrowserView setFrame:bounds];
   }
-}
-
-- (void)reapplyFrame
-{
-  [self setFrame:[self frame] resizingBrowserViewIfHidden:YES];
 }
 
 - (void)setBrowserActive:(BOOL)inActive
@@ -390,8 +371,6 @@ enum StatusPriority {
   // trying to load, even if it doesn't work
   [mDelegate updateLocationFields:urlSpec ignoreTyping:YES];
   
-  [self setPendingURI:urlSpec];
-
   // if we're not the primary tab, make sure that the browser view is 
   // the correct size when loading a url so that if the url is a relative
   // anchor, which will cause a scroll to the anchor on load, the scroll
@@ -495,10 +474,9 @@ enum StatusPriority {
   [mDelegate loadingStarted];
   [mDelegate setLoadingActive:YES];
   [mDelegate setLoadingProgress:mProgress];
-  
-  [mLoadingResources removeAllObjects];
-  
-  [self updateStatusString:NSLocalizedString(@"TabLoading", @"") withPriority:eStatusProgress];
+
+  [mStatusStrings replaceObjectAtIndex:eStatusProgress withObject:NSLocalizedString(@"TabLoading", @"")];
+  [mDelegate updateStatus:[self statusString]];
 
   [(BrowserTabViewItem*)mTabItem startLoadAnimation];
   
@@ -513,11 +491,11 @@ enum StatusPriority {
   [mDelegate loadingDone:mActivateOnLoad];
   mActivateOnLoad = NO;
   mIsBusy = NO;
-  [self setPendingURI:nil];
   
   [mDelegate setLoadingActive:NO];
-  
-  [self updateStatusString:nil withPriority:eStatusProgress];
+
+  [mStatusStrings replaceObjectAtIndex:eStatusProgress withObject:[NSNull null]];
+  [mDelegate updateStatus:[self statusString]];
 
   [(BrowserTabViewItem*)mTabItem stopLoadAnimation];
 
@@ -539,24 +517,6 @@ enum StatusPriority {
     NSDictionary*   userInfo = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:succeeded] forKey:URLLoadSuccessKey];
     NSNotification* note     = [NSNotification notificationWithName:URLLoadNotification object:urlString userInfo:userInfo];
     [[NSNotificationQueue defaultQueue] enqueueNotification:note postingStyle:NSPostWhenIdle];
-  }
-}
-
-- (void)onResourceLoadingStarted:(NSNumber*)resourceIdentifier
-{
-  [mLoadingResources addObject:resourceIdentifier];
-}
-
-- (void)onResourceLoadingCompleted:(NSNumber*)resourceIdentifier
-{
-  if ([mLoadingResources containsObject:resourceIdentifier])
-  {
-    [mLoadingResources removeObject:resourceIdentifier];
-    // When the last sub-resource finishes loading (which may be after
-    // onLoadingCompleted: is called), clear the status string, since otherwise
-    // it will stay stuck on the last loading message.
-    if ([mLoadingResources count] == 0)
-      [self updateStatusString:nil withPriority:eStatusProgress];
   }
 }
 
@@ -583,14 +543,7 @@ enum StatusPriority {
   if (newPage)
   {
     // defer hiding of blocked popup view until we've loaded the new page
-    if (mBlockedPopupView) {
-      [self removeBlockedPopupViewAndDisplay];
-      // If we are being called from within a history navigation, then core code
-      // has already stored our old size, and will incorrectly truncate the page
-      // later (see bug 350752, and the XXXbryner comment in nsDocShell.cpp). To
-      // work around that, re-set the frame once core is done meddling.
-      [self performSelector:@selector(reapplyFrame) withObject:nil afterDelay:0];
-    }
+    [self removeBlockedPopupViewAndDisplay];
     if(mBlockedPopups)
       mBlockedPopups->Clear();
     [mDelegate showPopupBlocked:NO];
@@ -646,7 +599,8 @@ enum StatusPriority {
 
 - (void)onStatusChange:(NSString*)aStatusString
 {
-  [self updateStatusString:aStatusString withPriority:eStatusProgress];
+  [mStatusStrings replaceObjectAtIndex:eStatusProgress withObject:aStatusString];
+  [mDelegate updateStatus:[self statusString]];
 }
 
 //
@@ -664,24 +618,16 @@ enum StatusPriority {
 
 - (void)setStatus:(NSString *)statusString ofType:(NSStatusType)type 
 {
-  StatusPriority priority;
+  int index;
 
   if (type == NSStatusTypeScriptDefault)
-    priority = eStatusScriptDefault;
+    index = eStatusScriptDefault;
   else if (type == NSStatusTypeScript)
-    priority = eStatusScript;
+    index = eStatusScript;
   else
-    priority = eStatusLinkTarget;
+    index = eStatusLinkTarget;
 
-  [self updateStatusString:statusString withPriority:priority];
-}
-
-// Private method to consolidate all status string changes, as status strings
-// can come from Gecko through several callbacks.
-- (void)updateStatusString:(NSString*)statusString withPriority:(StatusPriority)priority
-{
-  [mStatusStrings replaceObjectAtIndex:priority withObject:(statusString ? (id)statusString
-                                                                         : (id)[NSNull null])];
+  [mStatusStrings replaceObjectAtIndex:index withObject:(statusString ? (id)statusString : (id)[NSNull null])];
   [mDelegate updateStatus:[self statusString]];
 }
 
@@ -1028,12 +974,6 @@ enum StatusPriority {
   }
 }
 
-- (void)setPendingURI:(NSString*)inURI
-{
-  [mPendingURI autorelease];
-  mPendingURI = [inURI retain];
-}
-
 - (void)registerNotificationListener
 {
   [[NSNotificationCenter defaultCenter] addObserver:self
@@ -1080,38 +1020,6 @@ enum StatusPriority {
 {
   NSString* currentURI = [self currentURI];
   return ([currentURI hasPrefix:@"about:"] || [currentURI hasPrefix:@"view-source:"]);
-}
-
-//
-// -isBookmarkable
-//
-// Returns YES if the current URI is appropriate and safe for bookmarking.
-//
-- (BOOL)isBookmarkable
-{
-  if ([self isEmpty])
-    return NO;
-
-  // Check for any potential security implications as determined by nsIScriptSecurityManager's
-  // DISALLOW_SCRIPT_OR_DATA. (e.g. |javascript:| or |data:| URIs)
-  nsCOMPtr<nsIDOMWindow> domWindow = [mBrowserView getContentWindow];
-  if (!domWindow) 
-    return NO;
-  nsCOMPtr<nsIDOMDocument> domDocument;
-  domWindow->GetDocument(getter_AddRefs(domDocument));
-  if (!domDocument)
-    return NO;
-  nsCOMPtr<nsIDocument> document(do_QueryInterface(domDocument));
-  if (!document)
-    return NO;
-  nsCOMPtr<nsIScriptSecurityManager> scriptSecurityManager(do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID));
-  if (!scriptSecurityManager)
-    return NO;
-  nsresult uriIsSafe = 
-    scriptSecurityManager->CheckLoadURIWithPrincipal(document->GetPrincipal(), 
-                                                     document->GetDocumentURI(), 
-                                                     nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA);
-  return (NS_SUCCEEDED(uriIsSafe) ? YES : NO);
 }
 
 - (BOOL)canReload
@@ -1215,8 +1123,6 @@ enum StatusPriority {
     nsCOMPtr<nsIArray> blockedSites = do_QueryInterface(mBlockedPopups);
     [mDelegate showBlockedPopups:blockedSites whitelistingSource:shouldWhitelist];
     [self removeBlockedPopupViewAndDisplay];
-    mBlockedPopups->Clear();
-    [mDelegate showPopupBlocked:NO];
   }
 }
 

@@ -114,18 +114,19 @@ function SelectAndScrollToKey(aMsgKey)
 // we select and scroll to the correct message (could be the first new message,
 // could be the last displayed message, etc.)
 // returns true if we ended up scrolling to a message
-function ScrollToMessageAfterFolderLoad(folder)
+function ScrollToMessageAfterFolderLoad (folder)
 {
   var scrolled = pref.getBoolPref("mailnews.scroll_to_new_message") &&
-                 ScrollToMessage(nsMsgNavigationType.firstNew, true, false /* selectMessage */);
-  if (!scrolled && folder && pref.getBoolPref("mailnews.remember_selected_message"))
+      ScrollToMessage(nsMsgNavigationType.firstNew, true, false /* selectMessage */);
+  if (!scrolled && folder && pref.getBoolPref("mailnews.remember_selected_message")) 
   {
+    // if we failed to scroll to a new message,
     // reselect the last selected message
     var lastMessageLoaded = folder.lastMessageLoaded;
     if (lastMessageLoaded != nsMsgKey_None)
       scrolled = SelectAndScrollToKey(lastMessageLoaded);
   }
-
+  
   if (!scrolled) 
   {
     // if we still haven't scrolled,
@@ -142,7 +143,7 @@ function ScrollToMessageAfterFolderLoad(folder)
          break;
       }
     }
-
+      
     // if still we haven't scrolled,
     // scroll to the top.
     if (!scrolled)
@@ -177,7 +178,6 @@ var folderListener = {
        var eventType = event.toString();
        if (eventType == "FolderLoaded") {
          if (folder) {
-           var scrolled = false;  
            var msgFolder = folder.QueryInterface(Components.interfaces.nsIMsgFolder);
            var uri = folder.URI;
            var rerootingFolder = (uri == gCurrentFolderToReroot);
@@ -210,7 +210,9 @@ var folderListener = {
                gCurrentLoadingFolderViewType = 0;
                gCurrentLoadingFolderViewFlags = 0;
 
-               scrolled = LoadCurrentlyDisplayedMessage();  //used for rename folder msg loading after folder is loaded.
+               var scrolled = false;
+
+               LoadCurrentlyDisplayedMessage();  //used for rename folder msg loading after folder is loaded.
 
                if (gStartMsgKey != nsMsgKey_None) {
                  scrolled = SelectAndScrollToKey(gStartMsgKey);
@@ -229,8 +231,7 @@ var folderListener = {
            if (uri == gCurrentLoadingFolderURI) {
              viewDebug("uri == current loading folder uri\n");
              gCurrentLoadingFolderURI = "";
-             if (!scrolled)
-               ScrollToMessageAfterFolderLoad(msgFolder);
+             scrolled = ScrollToMessageAfterFolderLoad(msgFolder);
              SetBusyCursor(window, false);
            }
            if (gNotifyDefaultInboxLoadedOnStartup && (folder.flags & 0x1000))
@@ -563,8 +564,7 @@ function HandleCompactCompleted(folder)
 
 function LoadCurrentlyDisplayedMessage()
 {
-  var scrolled = (gCurrentlyDisplayedMessage != nsMsgViewIndex_None);
-  if (scrolled)
+  if (gCurrentlyDisplayedMessage != nsMsgViewIndex_None)
   {
     var treeView = gDBView.QueryInterface(Components.interfaces.nsITreeView);
     var treeSelection = treeView.selection;
@@ -575,7 +575,6 @@ function LoadCurrentlyDisplayedMessage()
     SetFocusThreadPane();
     gCurrentlyDisplayedMessage = nsMsgViewIndex_None; //reset
   }
-  return scrolled;
 }
 
 function IsCurrentLoadedFolder(folder)
@@ -1517,6 +1516,11 @@ function SelectMessage(messageUri)
   var msgHdr = messenger.msgHdrFromURI(messageUri);
   if (msgHdr)
     gDBView.selectMsgByKey(msgHdr.messageKey);
+}
+
+function ReloadWithAllParts()
+{
+  gDBView.reloadMessageWithAllParts();
 }
 
 function ReloadMessage()

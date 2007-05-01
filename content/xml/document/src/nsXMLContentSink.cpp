@@ -1084,7 +1084,7 @@ nsXMLContentSink::HandleEndElement(const PRUnichar *aName)
     nsEventStatus status = nsEventStatus_eIgnore;
     nsEvent event(PR_TRUE, NS_SVG_LOAD);
     event.eventStructType = NS_SVG_EVENT;
-    nsCOMPtr<nsIPresShell> presShell = mDocument->GetShellAt(0);
+    nsIPresShell *presShell = mDocument->GetShellAt(0);
     if (presShell)
       presShell->HandleDOMEventWithTarget(content, &event, &status);
   }

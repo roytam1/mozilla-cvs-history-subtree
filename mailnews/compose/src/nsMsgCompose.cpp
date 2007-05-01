@@ -373,95 +373,6 @@ PRBool nsMsgCompose::IsEmbeddedObjectSafe(const char * originalScheme,
   return PR_FALSE;
 }
 
-/* Reset the uri's of embedded objects because we've saved the draft message, and the 
-   original message doesn't exist anymore.
- */
-nsresult nsMsgCompose::ResetUrisForEmbeddedObjects()
-{
-  nsCOMPtr<nsISupportsArray> aNodeList;
-  PRUint32 numNodes;
-  PRUint32 i;
-
-  nsCOMPtr<nsIEditorMailSupport> mailEditor (do_QueryInterface(m_editor));
-  if (!mailEditor)
-    return NS_ERROR_FAILURE;
-
-  nsresult rv = mailEditor->GetEmbeddedObjects(getter_AddRefs(aNodeList));
-  if ((NS_FAILED(rv) || (!aNodeList)))
-    return NS_ERROR_FAILURE;
-
-  if (NS_FAILED(aNodeList->Count(&numNodes)))
-    return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsIDOMNode> node;
-  nsXPIDLCString curDraftIdURL;
-
-  rv = m_compFields->GetDraftId(getter_Copies(curDraftIdURL));
-  NS_ASSERTION((NS_SUCCEEDED(rv) && (curDraftIdURL)), "RemoveCurrentDraftMessage can't get draft id");
-
-  // Skip if no draft id (probably a new draft msg).
-  if (NS_SUCCEEDED(rv) && mMsgSend && !curDraftIdURL.IsEmpty())
-  {
-    // we don't currently handle imap urls
-    if (StringBeginsWith(curDraftIdURL, NS_LITERAL_CSTRING("imap-message")))
-      return NS_OK;
-
-    nsCOMPtr <nsIMsgDBHdr> msgDBHdr;
-    rv = GetMsgDBHdrFromURI(curDraftIdURL, getter_AddRefs(msgDBHdr));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "RemoveCurrentDraftMessage can't get msg header DB interface pointer.");
-    if (NS_SUCCEEDED(rv) && msgDBHdr)
-    {
-      nsMsgKey oldDraftKey;
-
-      // build up the old and new ?number= parts. This code assumes it is 
-      // called *before* RemoveCurrentDraftMessage, so that curDraftIdURL
-      // is the previous draft.
-      // This code currently only works for local mail folders.
-      // For imap folders, the url looks like <folder>%3E<UID>?part=...
-      // We could handle the imap case as well, but it turns out 
-      // not to be so important because the old message is still on
-      // the imap server. If it turns out to be a problem, we can
-      // deal with imap urls as well.
-      msgDBHdr->GetMessageKey(&oldDraftKey);
-      nsAutoString oldNumberPart(NS_LITERAL_STRING("?number="));
-      oldNumberPart.AppendInt(oldDraftKey);
-      nsAutoString newNumberPart;
-      nsMsgKey newMsgKey;
-      mMsgSend->GetMessageKey(&newMsgKey);
-      newNumberPart.AppendInt(newMsgKey);
-
-      nsCOMPtr<nsIDOMElement> domElement;
-      for (i = 0; i < numNodes; i ++)
-      {
-        domElement = do_QueryElementAt(aNodeList, i);
-        if (!domElement)
-          continue;
-
-        nsCOMPtr<nsIDOMHTMLImageElement> image = do_QueryInterface(domElement);
-        if (!image)
-          continue;
-        // do we care about anything besides images?
-        nsAutoString objURL;
-        image->GetSrc(objURL);
-        // the objURL is the full path to the mailbox, 
-        // e.g., mailbox:///C/Documents%20Settings.../Local%20Folders/Drafts?number=
-        // Find the ?number= part of the uri, and replace the
-        // old number with the new msg key.
-
-        PRInt32 numberIndex = objURL.Find(oldNumberPart);
-        if (numberIndex != kNotFound)
-        {
-          objURL.Replace(numberIndex + 8, oldNumberPart.Length() - 8, newNumberPart);
-          image->SetSrc(objURL);
-        }
-      }
-    }
-  }
-
-  return NS_OK;
-}
-
-
 /* The purpose of this function is to mark any embedded object that wasn't a RFC822 part
    of the original message as moz-do-not-send.
    That will prevent us to attach data not specified by the user or not present in the
@@ -841,12 +752,10 @@ nsMsgCompose::Initialize(nsIDOMWindowInternal *aWindow, nsIMsgComposeParams *par
   params->GetSmtpPassword(getter_Copies(smtpPassword));
   mSmtpPassword = (const char *)smtpPassword;
 
-  if (aWindow)
-  {
-    // register the compose object with the compose service
-    rv = composeService->RegisterComposeWindow(aWindow, this);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
+  // register the compose object with the compose service
+  rv = composeService->RegisterComposeWindow(aWindow, this);
+  NS_ENSURE_SUCCESS(rv, rv);
+
   return CreateMessage(originalMsgURI, type, composeFields);
 }
 
@@ -1129,10 +1038,11 @@ NS_IMETHODIMP nsMsgCompose::SendMsg(MSG_DeliverMode deliverMode, nsIMsgIdentity 
                 CopyUTF16toUTF8(msgBody.get(), outCString);
                 m_compFields->SetCharacterSet("UTF-8");
                 break; 
-              case 1 : // return to the editor 
-                return NS_ERROR_MSG_MULTILINGUAL_SEND;
-              case 2 : // send anyway
+              case 1 : // send anyway 
                 break;
+              case 2 : // return to the editor
+              default :
+                return NS_ERROR_MSG_MULTILINGUAL_SEND;
             }
           }
         }
@@ -2768,7 +2678,7 @@ QuotingOutputStreamListener::InsertToCompose(nsIEditor *aEditor,
   return NS_OK;
 }
 
-NS_IMPL_ISUPPORTS2(QuotingOutputStreamListener, nsIMsgQuotingOutputStreamListener, nsIStreamListener)
+NS_IMPL_ISUPPORTS1(QuotingOutputStreamListener, nsIStreamListener)
 ////////////////////////////////////////////////////////////////////////////////////
 // END OF QUOTING LISTENER
 ////////////////////////////////////////////////////////////////////////////////////
@@ -3930,10 +3840,6 @@ nsMsgCompose::BuildBodyMessageAndSignature()
 
 nsresult nsMsgCompose::NotifyStateListeners(TStateListenerNotification aNotificationType, nsresult aResult)
 {
-
-  if (aNotificationType == eSaveInFolderDone)
-    ResetUrisForEmbeddedObjects();
-
   if (!mStateListeners)
     return NS_OK;    // maybe there just aren't any.
 

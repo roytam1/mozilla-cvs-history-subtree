@@ -14,7 +14,7 @@
  * The Original Code is Java XPCOM Bindings.
  *
  * The Initial Developer of the Original Code is IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2007
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
@@ -238,16 +238,19 @@ InitXPCOM_Impl(JNIEnv* env, jobject aMozBinDirectory,
   }
 
   // create nsAppFileLocProviderProxy from given Java object
-  nsCOMPtr<nsIDirectoryServiceProvider> provider;
+  nsAppFileLocProviderProxy* provider = nsnull;
   if (aAppFileLocProvider) {
-    rv = NS_NewAppFileLocProviderProxy(aAppFileLocProvider,
-                                       getter_AddRefs(provider));
-    NS_ENSURE_SUCCESS(rv, rv);
+    provider = new nsAppFileLocProviderProxy(aAppFileLocProvider);
+    if (!provider)
+      return NS_ERROR_OUT_OF_MEMORY;
   }
 
   // init XPCOM
   nsCOMPtr<nsIServiceManager> servMan;
   rv = NS_InitXPCOM2(getter_AddRefs(servMan), directory, provider);
+  if (provider) {
+    delete provider;
+  }
   NS_ENSURE_SUCCESS(rv, rv);
 
   // init Event Queue
@@ -281,11 +284,11 @@ extern "C" NS_EXPORT void JNICALL
 XPCOM_NATIVE(shutdownXPCOM) (JNIEnv *env, jobject, jobject aServMgr)
 {
   nsresult rv;
-  nsIServiceManager* servMgr = nsnull;
+  nsCOMPtr<nsIServiceManager> servMgr;
   if (aServMgr) {
     // Get native XPCOM instance
     rv = GetNewOrUsedXPCOMObject(env, aServMgr, NS_GET_IID(nsIServiceManager),
-                                 (nsISupports**) &servMgr);
+                                 getter_AddRefs(servMgr));
     NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to get XPCOM obj for ServiceMgr.");
 
     // Even if we failed to get the matching xpcom object, we don't abort this

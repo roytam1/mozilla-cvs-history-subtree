@@ -803,7 +803,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
   if (!canOpenThisFolder) 
     selectFolder = PR_FALSE;
   // don't run select if we can't select the folder...
-  if (NS_SUCCEEDED(rv) && !m_urlRunning && selectFolder)
+  if (NS_SUCCEEDED(rv) && !m_updatingFolder && selectFolder)
   {
     nsCOMPtr<nsIImapService> imapService = do_GetService(NS_IMAPSERVICE_CONTRACTID, &rv); 
     if (NS_FAILED(rv)) return rv;
@@ -811,10 +811,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
     nsCOMPtr <nsIURI> url;
     rv = imapService->SelectFolder(m_eventQueue, this, m_urlListener, msgWindow, getter_AddRefs(url));
     if (NS_SUCCEEDED(rv))
-    {
       m_urlRunning = PR_TRUE;
-      m_updatingFolder = PR_TRUE;
-    }
     if (url)
     {
       nsCOMPtr <nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(url);
@@ -840,7 +837,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
   }
   else if (NS_SUCCEEDED(rv))  // tell the front end that the folder is loaded if we're not going to 
   {                           // actually run a url.
-    if (!m_updatingFolder)    // if we're already running an update url, we'll let that one send the folder loaded
+    if (!m_urlRunning)        // if we're already running a url, we'll let that one send the folder loaded
       NotifyFolderEvent(mFolderLoadedAtom);
     NS_ENSURE_SUCCESS(rv,rv);
   }
@@ -5789,7 +5786,7 @@ void nsMsgIMAPFolderACL::BuildInitialACLFromCache()
   if (startingFlags & IMAP_ACL_CREATE_SUBFOLDER_FLAG)
     myrights +="c";
   if (startingFlags & IMAP_ACL_DELETE_FLAG)
-    myrights += "dt";
+    myrights += "d";
   if (startingFlags & IMAP_ACL_ADMINISTER_FLAG)
     myrights += "a";
   
@@ -5970,8 +5967,7 @@ PRBool	nsMsgIMAPFolderACL::GetCanUserCreateSubfolder(const char *userName)
 
 PRBool	nsMsgIMAPFolderACL::GetCanUserDeleteInFolder(const char *userName)
 {
-  return GetFlagSetInRightsForUser(userName, 'd', PR_FALSE)
-    || GetFlagSetInRightsForUser(userName, 't', PR_FALSE);
+  return GetFlagSetInRightsForUser(userName, 'd', PR_FALSE);
 }
 
 PRBool	nsMsgIMAPFolderACL::GetCanUserAdministerFolder(const char *userName)
@@ -6016,8 +6012,7 @@ PRBool	nsMsgIMAPFolderACL::GetCanICreateSubfolder()
 
 PRBool	nsMsgIMAPFolderACL::GetCanIDeleteInFolder()
 {
-  return GetFlagSetInRightsForUser(nsnull, 'd', PR_TRUE) ||
-    GetFlagSetInRightsForUser(nsnull, 't', PR_TRUE);
+  return GetFlagSetInRightsForUser(nsnull, 'd', PR_TRUE);
 }
 
 PRBool	nsMsgIMAPFolderACL::GetCanIAdministerFolder()

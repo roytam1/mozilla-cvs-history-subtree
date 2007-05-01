@@ -1737,7 +1737,9 @@ enum BWCOpenDest {
       action == @selector(closeSendersTab:) ||
       action == @selector(closeOtherTabs:) ||
       action == @selector(nextTab:) ||
-      action == @selector(previousTab:))
+      action == @selector(previousTab:) ||
+      action == @selector(addTabGroup:) ||
+      action == @selector(addTabGroupWithoutPrompt:))
   {
     return ([mTabBrowser numberOfTabViewItems] > 1);
   }
@@ -1746,12 +1748,7 @@ enum BWCOpenDest {
   if (action == @selector(addBookmark:) ||
       action == @selector(addBookmarkWithoutPrompt:))
   {
-    return [mBrowserView isBookmarkable];
-  }
-  if (action == @selector(addTabGroup:) ||
-      action == @selector(addTabGroupWithoutPrompt:))
-  {
-    return ([mTabBrowser numberOfBookmarkableTabViewItems] > 1);
+    return ![mBrowserView isEmpty];
   }
   if (action == @selector(makeTextBigger:))
     return [self canMakeTextBigger];
@@ -1918,11 +1915,6 @@ enum BWCOpenDest {
 //
 - (void)showBlockedPopups:(nsIArray*)blockedSites whitelistingSource:(BOOL)shouldWhitelist
 {
-  // Because of the way our UI is set up, we white/blacklist based on the top-level window URI,
-  // rather than the requesting URI (which can be different on framed sites).
-  if (shouldWhitelist)
-    [self whitelistPopupsFromURL:[mBrowserView currentURI]];
-
   nsCOMPtr<nsISimpleEnumerator> enumerator;
   blockedSites->Enumerate(getter_AddRefs(enumerator));
   PRBool hasMore = PR_FALSE;
@@ -1940,6 +1932,10 @@ enum BWCOpenDest {
     if (evt)
       [self showPopup:evt];
   }
+  // Because of the way our UI is set up, we white/blacklist based on the top-level window URI,
+  // rather than the requesting URI (which can be different on framed sites).
+  if (shouldWhitelist)
+    [self whitelistPopupsFromURL:[mBrowserView currentURI]];
 }
 
 - (void)showPopup:(nsIDOMPopupBlockedEvent*)aPopupBlockedEvent
@@ -2472,8 +2468,6 @@ enum BWCOpenDest {
     // open a new window and hide the toolbars for prettyness
     BrowserWindowController* controller = [[BrowserWindowController alloc] initWithWindowNibName:@"BrowserWindow"];
     [controller setChromeMask:kNoToolbarsChromeMask];
-    [controller disableAutosave]; // don't save view-source window size/position
-
     if (loadInBackground)
       [[controller window] orderWindow:NSWindowBelow relativeTo:[[self window] windowNumber]];
     else
@@ -2562,7 +2556,7 @@ enum BWCOpenDest {
   
   const char *aURLSpec = [currentURL lossyCString];
   NSString *aDomain = @"";
-  nsCOMPtr<nsIURI> aURI;
+  nsIURI *aURI = nil;
   
   // If we have an about: type URL, remove " site:%d" from the search string
   // This is a fix to deal with Google's Search this Site feature
@@ -2583,7 +2577,7 @@ enum BWCOpenDest {
   if ([[inSearchField stringValue] isEqualToString:@""]) {
     aURLSpec = [searchURL lossyCString];
     
-    if (NS_NewURI(getter_AddRefs(aURI), aURLSpec) == NS_OK) {
+    if (NS_NewURI(&aURI, aURLSpec, nsnull, nsnull) == NS_OK) {
       nsCAutoString spec;
       aURI->GetHost(spec);
       
@@ -2600,7 +2594,7 @@ enum BWCOpenDest {
     aURLSpec = [[[self getBrowserWrapper] currentURI] UTF8String];
     
     // Get the domain so that we can replace %d in our searchURL
-    if (NS_NewURI(getter_AddRefs(aURI), aURLSpec) == NS_OK) {
+    if (NS_NewURI(&aURI, aURLSpec, nsnull, nsnull) == NS_OK) {
       nsCAutoString spec;
       aURI->GetHost(spec);
       
@@ -2833,9 +2827,6 @@ enum BWCOpenDest {
   for (int i = 0; i < numTabs; i++)
   {
     BrowserWrapper* browserWrapper = (BrowserWrapper*)[[mTabBrowser tabViewItemAtIndex:i] view];
-    if (![browserWrapper isBookmarkable])
-      continue;
-
     NSString* curTitleString = [browserWrapper pageTitle];
     NSString* hrefString = [browserWrapper currentURI];
 
@@ -2851,7 +2842,6 @@ enum BWCOpenDest {
     [itemsArray addObject:itemInfo];
   }
 
-  NS_ASSERTION([itemsArray count], "Displaying the Add Bookmark dialog with no URIs");
   AddBookmarkDialogController* dlgController = [AddBookmarkDialogController sharedAddBookmarkDialogController];
   [dlgController showDialogWithLocationsAndTitles:itemsArray isFolder:NO onWindow:[self window]];
 
@@ -2868,45 +2858,32 @@ enum BWCOpenDest {
   NSString* itemTitle = [browserWrapper pageTitle];
   NSString* itemURL = [browserWrapper currentURI];
 
-  NS_ASSERTION([browserWrapper isBookmarkable], "Bookmarking an innappropriate URI");
   [parentFolder addBookmark:itemTitle url:itemURL inPosition:[parentFolder count] isSeparator:NO];
   [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
 }
 
 - (IBAction)addTabGroupWithoutPrompt:(id)aSender
 {
-  BookmarkFolder* newTabGroup = [[[BookmarkFolder alloc] init] autorelease];
-  [newTabGroup setIsGroup:YES];
+  BookmarkManager* bookmarkManager = [BookmarkManager sharedBookmarkManager];
+  BookmarkFolder*  parentFolder = [bookmarkManager lastUsedBookmarkFolder];
 
-  BrowserWrapper* currentBrowserWrapper = [self getBrowserWrapper];
-  int numberOfTabs = [mTabBrowser numberOfTabViewItems];
-  NSString *primaryTabTitle = nil;
+  unsigned int folderPosition = [parentFolder count];
+  unsigned int numItems = [mTabBrowser numberOfTabViewItems];
+  BrowserWrapper* browserWrapper = [self getBrowserWrapper];
 
-  for (int i = 0; i < numberOfTabs; i++) {
-    BrowserWrapper* browserWrapper = (BrowserWrapper*)[[mTabBrowser tabViewItemAtIndex:i] view];
-    if (![browserWrapper isBookmarkable])
-      continue;
+  NSString* titleString = [NSString stringWithFormat:NSLocalizedString(@"defaultTabGroupTitle", nil),
+                                                       numItems, [browserWrapper pageTitle]];
+  BookmarkFolder* newGroup = [parentFolder addBookmarkFolder:titleString inPosition:folderPosition isGroup:YES];
 
-    Bookmark *bookmark = [newTabGroup addBookmark];
-    [bookmark setTitle:[browserWrapper pageTitle]];
-    [bookmark setUrl:[browserWrapper currentURI]];
+  for (unsigned int i = 0; i < numItems; i++) {
+    browserWrapper = (BrowserWrapper*)[[mTabBrowser tabViewItemAtIndex:i] view];
+    NSString* itemTitle = [browserWrapper pageTitle];
+    NSString* itemURL = [browserWrapper currentURI];
 
-    if (browserWrapper == currentBrowserWrapper)
-      primaryTabTitle = [browserWrapper pageTitle];
+    [newGroup addBookmark:itemTitle url:itemURL inPosition:i isSeparator:NO];
   }
 
-  if (!primaryTabTitle && [newTabGroup count]) {
-    // The active tab was not included in the group.
-    primaryTabTitle = [[newTabGroup objectAtIndex:0] title];
-  }
-
-  NS_ASSERTION([newTabGroup count], "Adding a tab group with no children");
-  [newTabGroup setTitle:[NSString stringWithFormat:NSLocalizedString(@"defaultTabGroupTitle", nil),
-                                                   [newTabGroup count], 
-                                                   primaryTabTitle]];
-  BookmarkFolder* parentFolder = [[BookmarkManager sharedBookmarkManager] lastUsedBookmarkFolder];
-  [parentFolder appendChild:newTabGroup];
-  [[BookmarkManager sharedBookmarkManager] setLastUsedBookmarkFolder:parentFolder];
+  [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
 }
 
 - (IBAction)addBookmarkForLink:(id)aSender
@@ -3117,25 +3094,17 @@ enum BWCOpenDest {
   }
 }
 
-// Reloads the given BrowserWrapper, automatically performing the appropriate
-// checks to decide whether to do a force-reload if sender is non-nil.
 - (void)reloadBrowserWrapper:(BrowserWrapper *)inWrapper sender:(id)sender
 {
   unsigned int reloadFlags = NSLoadFlagsNone;
-  // If the sender is nil then the reload was programatically invoked, so we
-  // don't want to change behavior based on whether shift happens to be pressed.
-  if (sender) {
-    if ([sender respondsToSelector:@selector(keyEquivalent)]) {
-      // Capital R tests for shift when there's a keyEquivalent, keyEquivalentModifierMask
-      // tests when there isn't
-      if ([[sender keyEquivalent] isEqualToString:@"R"] ||
-          ([sender keyEquivalentModifierMask] & NSShiftKeyMask))
-        reloadFlags = NSLoadFlagsBypassCacheAndProxy;
-    }
-    // It's a toolbar button, so we test for shift using modifierFlags
-    else if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
+  if ([sender respondsToSelector:@selector(keyEquivalent)]) {
+    // Capital R tests for shift when there's a keyEquivalent, keyEquivalentModifierMask tests when there isn't
+    if ([[sender keyEquivalent] isEqualToString:@"R"] || ([sender keyEquivalentModifierMask] & NSShiftKeyMask))
       reloadFlags = NSLoadFlagsBypassCacheAndProxy;
   }
+  // It's a toolbar button, so we test for shift using modifierFlags
+  else if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
+    reloadFlags = NSLoadFlagsBypassCacheAndProxy;
 
   [inWrapper reload:reloadFlags];
 }
@@ -4034,7 +4003,6 @@ enum BWCOpenDest {
   BOOL showFrameItems = NO;
   BOOL showSpellingItems = NO;
   BOOL needsAlternates = NO;
-  BOOL isUnsafeLink = NO;
 
   NSArray* emailAddresses = nil;
   unsigned numEmailAddresses = 0;
@@ -4073,16 +4041,6 @@ enum BWCOpenDest {
     emailAddresses = [self mailAddressesInContextMenuLinkNode];
     if (emailAddresses != nil)
       numEmailAddresses = [emailAddresses count];
-
-    // Verify that it is safe to open this link.
-    NSString* referrerURL = [[mBrowserView getBrowserView] getFocusedURLString];
-    nsCOMPtr<nsIDOMElement> linkElement;
-    nsAutoString hrefURL;
-    GeckoUtils::GetEnclosingLinkElementAndHref(mDataOwner->mContextMenuNode,
-                                               getter_AddRefs(linkElement),
-                                               hrefURL);
-    if (!GeckoUtils::IsSafeToOpenURIFromReferrer(NS_ConvertUTF16toUTF8(hrefURL).get(), [referrerURL UTF8String]))
-      isUnsafeLink = YES;
 
     if ((contextMenuFlags & nsIContextMenuListener::CONTEXT_IMAGE) != 0) {
       if (numEmailAddresses > 0)
@@ -4154,25 +4112,12 @@ enum BWCOpenDest {
   // our only copy of the menu
   NSMenu* result = [[menuPrototype copy] autorelease];
 
-  if (isUnsafeLink) {
-    // To avoid updating the BrowserWindow.nib close to release time, the
-    // menu items to remove will be removed from index 0 three times. After
-    // the 1.1 release, this needs to be changed (see bug 378081). The first
-    // two remove calls will pull out the "Open Link in *" menu items.
-    [result removeItemAtIndex:0];
-    [result removeItemAtIndex:0];
-    [result removeItemAtIndex:0];  // remove separator 
-  }
-
   // validate View Page/Frame Source
   BrowserWrapper* browser = [self getBrowserWrapper];
   if ([browser isInternalURI] || ![[browser getBrowserView] isTextBasedContent]) {
     [[result itemWithTarget:self andAction:@selector(viewPageSource:)] setEnabled:NO];
     [[result itemWithTarget:self andAction:@selector(viewSource:)] setEnabled:NO];
   }
-
-  // validate 'Bookmark This Page'
-  [[result itemWithTarget:self andAction:@selector(addBookmark:)] setEnabled:[[self getBrowserWrapper] isBookmarkable]];
 
   if (showSpellingItems)
     showSpellingItems = [self prepareSpellingSuggestionMenu:result tag:kSpellingRelatedItemsTag];

@@ -108,9 +108,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 @interface MainController(Private)<NetworkServicesClient>
 
-- (void)ensureGeckoInitted;
-- (void)ensureInitializationCompleted;
-- (void)setInitialized:(BOOL)flag;
 - (void)setupStartpage;
 - (void)setupRendezvous;
 - (void)checkDefaultBrowser;
@@ -128,6 +125,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 - (void)loadApplicationPage:(NSString*)pageURL;
 - (NSArray*)browserWindows;
 + (NSURL*)decodeLocalFileURL:(NSURL*)url;
+- (BOOL)previousSessionTerminatedNormally;
 
 @end
 
@@ -203,46 +201,16 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   const nsModuleComponentInfo* comps = GetAppComponents(&numComps);
   CHBrowserService::RegisterAppComponents(comps, numComps);
 
+  // To work around a bug on Tiger where the view hookup order has been changed from postfix to prefix
+  // order, we need to set a user default to return to the old behavior.
+  [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"NSViewSetAncestorsWindowFirst"];
+
   mGeckoInitted = YES;
 }
 
-- (BOOL)isInitialized
+- (void)applicationDidFinishLaunching:(NSNotification*)aNotification
 {
-  return mInitialized;
-}
-
-- (void)setInitialized:(BOOL)flag
-{
-  mInitialized = flag;
-}
-
-// Shockwave for Director refuses to load if the host has no resource fork
-// (bug 151677), but AppleScript is confused by the presence of a rsrc file
-// that doesn't have an aete resource (bug 184449), so we set up a dummy
-// resource on the fly to placate Shockwave.
-// This is based on WebKit's solution for the same issue, which in turn
-// seems to be based on an older description of OmniWeb's workaround.
-- (void)initializeDummyResource
-{
-  short currentResourceFile = CurResFile();
-  UseResFile(kSystemResFile);
-  LMSetCurApRefNum(CurResFile());
-  UseResFile(currentResourceFile);
-}
-
-- (void)ensureInitializationCompleted
-{
-  if ([self isInitialized])
-    return;
-
   [self ensureGeckoInitted];
-
-  [self initializeDummyResource];
-
-  // To work around bugs on Tiger caused by the view hookup order having been
-  // changed from postfix to prefix order, we need to set a user default to
-  // return to the old behavior.
-  [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"NSViewSetAncestorsWindowFirst"];
 
   NSNotificationCenter* notificationCenter = [NSNotificationCenter defaultCenter];
   // turn on menu display notifications
@@ -299,19 +267,12 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   NSString* charsetPath = [NSBundle pathForResource:@"Charset" ofType:@"dict" inDirectory:[[NSBundle mainBundle] bundlePath]];
   mCharsets = [[NSDictionary dictionaryWithContentsOfFile:charsetPath] retain];
 
-  // Check whether Camino shut down normally last time...
-  [[NSUserDefaults standardUserDefaults] registerDefaults:[NSDictionary dictionaryWithObject:@"YES" forKey:kPreviousSessionTerminatedNormallyKey]];
-  BOOL previousSessionTerminatedNormally = [[NSUserDefaults standardUserDefaults] boolForKey:kPreviousSessionTerminatedNormallyKey];
-  // ... then reset the state for the next time around.
-  [[NSUserDefaults standardUserDefaults] setObject:@"NO" forKey:kPreviousSessionTerminatedNormallyKey];
-  [[NSUserDefaults standardUserDefaults] synchronize];
-
   // Determine if the previous session's window state should be restored.
   // Obey the camino.remember_window_state preference unless Camino crashed
   // last time, in which case the user is asked what to do.
   BOOL shouldRestoreWindowState = NO;
   if ([[SessionManager sharedInstance] hasSavedState]) {
-    if (previousSessionTerminatedNormally) {
+    if ([self previousSessionTerminatedNormally]) {
       shouldRestoreWindowState = [prefManager getBooleanPref:"camino.remember_window_state" withSuccess:NULL];
     }
     else if ([prefManager getBooleanPref:"browser.sessionstore.resume_from_crash" withSuccess:NULL]) {
@@ -336,13 +297,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   else {
     [[SessionManager sharedInstance] clearSavedState];
   }
-
-  [self setInitialized:YES];
-}
-
-- (void)applicationDidFinishLaunching:(NSNotification*)aNotification
-{
-  [self ensureInitializationCompleted];
 
   // open a new browser window if we don't already have one or we have a specific
   // start URL we need to show
@@ -419,14 +373,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 #if DEBUG
   NSLog(@"App will terminate notification");
 #endif
-  // If there's no pref manager then we didn't really start up, so we do nothing.
-  PreferenceManager* prefManager = [PreferenceManager sharedInstanceDontCreate];
-  if (prefManager) {
-    if ([prefManager getBooleanPref:"camino.remember_window_state" withSuccess:NULL])
-      [[SessionManager sharedInstance] saveWindowState];
-    else
-      [[SessionManager sharedInstance] clearSavedState];
-  }
+  if ([[PreferenceManager sharedInstanceDontCreate] getBooleanPref:"camino.remember_window_state" withSuccess:NULL])
+    [[SessionManager sharedInstance] saveWindowState];
+  else
+    [[SessionManager sharedInstance] clearSavedState];
 
   [NetworkServices shutdownNetworkServices];
 
@@ -552,6 +502,37 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
   // dock bookmarks
   [self updateDockMenuBookmarkFolder];
+}
+
+//
+// -previousSessionTerminatedNormally
+//
+// Checks a saved default indicating whether the last session ended normally.
+// The first invocation of this method will check the default on disk and then 
+// immediately reset it to "NO". This default is set to "YES" upon normal
+// termination in -applicationWillTerminate:.
+//
+- (BOOL)previousSessionTerminatedNormally
+{
+  static BOOL previousSessionTerminatedNormally = NO; // original value from defaults.
+  static BOOL checked = NO;
+
+  if (!checked) {
+    // Assume the application terminated normally if no key is present to otherwise 
+    // indicate the termination status. Prevents cases where preferences from older 
+    // versions of Camino would falsely indicate a crash.
+    [[NSUserDefaults standardUserDefaults] registerDefaults:[NSDictionary dictionaryWithObject:@"YES" forKey:kPreviousSessionTerminatedNormallyKey]];
+
+    previousSessionTerminatedNormally = [[NSUserDefaults standardUserDefaults] boolForKey:kPreviousSessionTerminatedNormallyKey];
+
+    // Reset the termination status default and write it to disk now.
+    [[NSUserDefaults standardUserDefaults] setObject:@"NO" forKey:kPreviousSessionTerminatedNormallyKey];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+
+    checked = YES;
+  }
+
+  return previousSessionTerminatedNormally;
 }
 
 #pragma mark -
@@ -699,7 +680,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       if (tabIndex != NSNotFound) {
         [tabView selectTabViewItemAtIndex:tabIndex];
         [[browser window] makeKeyAndOrderFront:self];
-        [browser reload:nil];
         return;
       }
     }
@@ -735,9 +715,9 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (BOOL)application:(NSApplication*)theApplication openFile:(NSString*)filename
 {
-  // We can get here before the application is fully initialized and the previous
-  // session is restored.  We want to avoid opening URLs before that happens.
-  [self ensureInitializationCompleted];
+  // We can get called before -applicationDidFinishLaunching, so make sure gecko
+  // has been initted
+  [self ensureGeckoInitted];
 
   NSURL* urlToOpen = [MainController decodeLocalFileURL:[NSURL fileURLWithPath:filename]];
   [self showURL:[urlToOpen absoluteString]];

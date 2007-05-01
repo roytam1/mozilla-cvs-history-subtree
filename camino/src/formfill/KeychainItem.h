@@ -44,12 +44,11 @@
  @private
   SecKeychainItemRef mKeychainItemRef; // strong
   BOOL mDataLoaded;
-  BOOL mPasswordLoaded;
   NSString* mUsername;                 // strong
   NSString* mPassword;                 // strong
   NSString* mHost;                     // strong
   NSString* mComment;                  // strong
-  NSString* mSecurityDomain;           // strong
+  NSArray* mSecurityDomains;           // strong
   SecProtocolType mPort;
   SecProtocolType mProtocol;
   SecAuthenticationType mAuthenticationType;
@@ -93,8 +92,8 @@
 - (void)setCreator:(OSType)creator;
 - (NSString*)comment;
 - (void)setComment:(NSString*)comment;
-- (void)setSecurityDomain:(NSString*)securityDomain;
-- (NSString*)securityDomain;
+- (void)setSecurityDomains:(NSArray*)securityDomains;
+- (NSArray*)securityDomains;
 
 - (void)removeFromKeychain;
 

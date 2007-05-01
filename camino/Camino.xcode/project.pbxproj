@@ -3343,6 +3343,7 @@
 				F5F190BB02D1F81A01026D5D,
 				F5F190BE02D217C201026D5D,
 				3F22CC1303DF42A200026DCE,
+				F56610A1039474CB01A9666E,
 				3003B8AB044514E300B85BF3,
 				3FFE23520847CB0D00D6CAFC,
 			);
@@ -3970,6 +3971,7 @@
 			buildPhases = (
 				3F44ABD705BDFB9E00CB4B08,
 				3F44AC2805BDFB9E00CB4B08,
+				3F44AC8005BDFB9E00CB4B08,
 				3F44AC8205BDFB9E00CB4B08,
 				3F44ACCF05BDFB9E00CB4B08,
 				0F66E4AC07D6D9B000444E2A,
@@ -4003,7 +4005,7 @@
 				GCC_OPTIMIZATION_LEVEL = 2;
 				GCC_PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				GCC_PREPROCESSOR_DEFINITIONS = "OSTYPE=Darwin1.4 OSARCH=Darwin MOZILLA_INTERNAL_API=1";
-				HEADER_SEARCH_PATHS = "../dist/include/caps ../dist/include/txtsvc ../dist/include/editor ../dist/include/spellchecker ../dist/include/composer ../dist/include/exthandler ../dist/include/helperAppDlg ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/uconv ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profdirserviceprovider ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/history ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/chardet ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/xpcom_obsolete ../dist/include/cookie ../dist/include/mork ../dist/include/js ../dist/include/xpconnect ../dist/include/ ../dist/public/nss ../ $(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon $(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers";
+				HEADER_SEARCH_PATHS = "../dist/include/txtsvc ../dist/include/editor ../dist/include/spellchecker ../dist/include/composer ../dist/include/exthandler ../dist/include/helperAppDlg ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/uconv ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profdirserviceprovider ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/history ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/chardet ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/xpcom_obsolete ../dist/include/cookie ../dist/include/mork ../dist/include/js ../dist/include/xpconnect ../dist/include/ ../dist/public/nss ../ $(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon $(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers";
 				INFOPLIST_FILE = "Info-Camino.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/Embed/components ../intl/unicharutil/util";
@@ -5143,6 +5145,15 @@
 			isa = PBXBuildFile;
 			settings = {
 			};
+		};
+		3F44AC8005BDFB9E00CB4B08 = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			isa = PBXShellScriptBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Rez the version resource resources, which are required for the Directory plugin to work.\n/Developer/Tools/Rez resources/application/ChimeraVersion.r -o $TARGET_BUILD_DIR/Camino.app/Contents/Resources/Camino.rsrc -useDF";
 		};
 		3F44AC8205BDFB9E00CB4B08 = {
 			buildActionMask = 2147483647;
@@ -7879,6 +7890,7 @@
 			buildPhases = (
 				3F44AE1005BDFBA000CB4B08,
 				3F44AE6105BDFBA000CB4B08,
+				3F44AEBA05BDFBA000CB4B08,
 				3F44AEBB05BDFBA000CB4B08,
 				3F44AF0905BDFBA000CB4B08,
 				3F44AF4805BDFBA000CB4B08,
@@ -7911,7 +7923,7 @@
 				GCC_OPTIMIZATION_LEVEL = 2;
 				GCC_PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				GCC_PREPROCESSOR_DEFINITIONS = "OSTYPE=Darwin1.4 OSARCH=Darwin _BUILD_STATIC_BIN MOZILLA_INTERNAL_API=1";
-				HEADER_SEARCH_PATHS = "../dist/include/caps ../dist/include/txtsvc ../dist/include/editor ../dist/include/spellchecker ../dist/include/composer ../dist/include/txtsvc ../dist/include/editor ../dist/include/spellchecker ../dist/include/helperAppDlg ../dist/include/exthandler ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/uconv ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profdirserviceprovider ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/history ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/chardet ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/xpcom_obsolete ../dist/include/cookie ../dist/include/mork ../dist/include/js ../dist/include/xpconnect ../dist/include/ ../dist/public/nss $(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon $(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers";
+				HEADER_SEARCH_PATHS = "../dist/include/txtsvc ../dist/include/editor ../dist/include/spellchecker ../dist/include/composer ../dist/include/txtsvc ../dist/include/editor ../dist/include/spellchecker ../dist/include/helperAppDlg ../dist/include/exthandler ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/uconv ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profdirserviceprovider ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/history ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/chardet ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/xpcom_obsolete ../dist/include/cookie ../dist/include/mork ../dist/include/js ../dist/include/xpconnect ../dist/include/ ../dist/public/nss $(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon $(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers";
 				INFOPLIST_FILE = "Info-CaminoStatic.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/lib/components ../js/src/liveconnect ../js/src/xpconnect/loader";
@@ -9050,6 +9062,15 @@
 			isa = PBXBuildFile;
 			settings = {
 			};
+		};
+		3F44AEBA05BDFBA000CB4B08 = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			isa = PBXShellScriptBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Rez the version resource resources, which are required for the Directory plugin to work.\n/Developer/Tools/Rez resources/application/ChimeraVersion.r -o $TARGET_BUILD_DIR/Camino.app/Contents/Resources/Camino.rsrc -useDF";
 		};
 		3F44AEBB05BDFBA000CB4B08 = {
 			buildActionMask = 2147483647;
@@ -16403,6 +16424,15 @@
 			path = src/extensions/IconTabViewItem.mm;
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
+		};
+		F56610A1039474CB01A9666E = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.rez;
+			name = ChimeraVersion.r;
+			path = resources/application/ChimeraVersion.r;
+			refType = 4;
+			sourceTree = "<group>";
 		};
 		F56610A40394767101A9666E = {
 			children = (

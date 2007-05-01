@@ -169,13 +169,7 @@
             {
               var filterActionRow = listBox.getItemAtIndex(index);
               if (filterActionRow != currentFilterActionRow)
-              {
-                var actionValue = filterActionRow.getAttribute('value');
-
-                // don't add the tag action, several tags can be set
-                if (actionValue != 'addtagtomessage')
-                  usedActions[actionValue] = true;
-              }
+                usedActions[filterActionRow.getAttribute('value')] = true;
             }
             return usedActions;
           ]]>

@@ -131,8 +131,6 @@ class nsIArray;
 
   NSImage*                  mSiteIconImage;    // current proxy icon image, which may be a site icon (favicon).
   NSString*                 mSiteIconURI;      // uri from  which we loaded the site icon	
-
-  NSString*                 mPendingURI;       // strong
   
     // the secure state of this browser. We need to hold it so that we can set
     // the global lock icon whenever we become the primary. Value is one of
@@ -143,12 +141,11 @@ class nsIArray;
     // array of popupevents that have been blocked. We can use them to reconstruct the popups
     // later. If nil, no sites are blocked. Cleared after each new page.
   nsIMutableArray*          mBlockedPopups;
-  NSMutableArray*           mFeedList;         // list of feeds found on page
+  NSMutableArray*           mFeedList;        // list of feeds found on page
 
-  CHBrowserView*            mBrowserView;      // retained
+  CHBrowserView*            mBrowserView;     // retained
   ToolTip*                  mToolTip;
-  NSMutableArray*           mStatusStrings;    // current status bar messages, STRONG
-  NSMutableSet*             mLoadingResources; // page resources currently loading, STRONG
+  NSMutableArray*           mStatusStrings;   // current status bar messages, STRONG
 
   IBOutlet NSView*          mBlockedPopupView;   // loaded on demand, can be nil, STRONG
   IBOutlet RolloverImageButton* mBlockedPopupCloseButton;
@@ -188,10 +185,8 @@ class nsIArray;
 - (BOOL)isBusy;
 - (BOOL)isEmpty;                      // is about:blank loaded?
 - (BOOL)isInternalURI;
-- (BOOL)isBookmarkable;
 - (BOOL)canReload;
 
-- (NSString*)pendingURI;
 - (NSString*)currentURI;
 - (NSString*)displayTitle;
 - (NSString*)pageTitle;
@@ -231,8 +226,6 @@ class nsIArray;
 // CHBrowserListener messages
 - (void)onLoadingStarted;
 - (void)onLoadingCompleted:(BOOL)succeeded;
-- (void)onResourceLoadingStarted:(NSNumber*)resourceIdentifier;
-- (void)onResourceLoadingCompleted:(NSNumber*)resourceIdentifier;
 - (void)onProgressChange64:(long long)currentBytes outOf:(long long)maxBytes;
 - (void)onProgressChange:(long)currentBytes outOf:(long)maxBytes;
 - (void)onLocationChange:(NSString*)urlSpec isNewPage:(BOOL)newPage requestSucceeded:(BOOL)requestOK;

@@ -48,7 +48,6 @@
 #include "nsIDOMElement.h"
 #include "nsIDOMWindow.h"
 #include "nsDataHashtable.h"
-#include "nsMemory.h"
 #ifndef MOZ_PLACES
 #include "nsIRDFService.h"
 #include "nsIRDFResource.h"
@@ -57,11 +56,6 @@
 #include "nsIArray.h"
 #include "nsComponentManagerUtils.h"
 #endif
-
-const nsUICommandCollector::EventHandler nsUICommandCollector::kEvents[] = {
-  { "command", &nsUICommandCollector::HandleCommandEvent },
-  { "TabMove", &nsUICommandCollector::HandleTabMoveEvent },
-};
 
 NS_IMPL_ISUPPORTS3(nsUICommandCollector, nsIObserver, nsIDOMEventListener,
                    nsIMetricsCollector)
@@ -77,9 +71,19 @@ const nsIDOMWindow* key, PRUint32 windowID, void* userArg)
     return PL_DHASH_NEXT;
   }
 
-  nsUICommandCollector* collector = NS_STATIC_CAST(nsUICommandCollector*,
-                                                   userArg);
-  collector->AddEventListeners(windowTarget);
+  nsIDOMEventListener* listener = NS_STATIC_CAST(nsIDOMEventListener*,
+                                                 userArg);
+  if (!listener) {
+    MS_LOG(("no event listener in userArg"));
+    return PL_DHASH_NEXT;
+  }
+
+  nsresult rv = windowTarget->AddEventListener(NS_LITERAL_STRING("command"),
+                                               listener, PR_TRUE);
+  if (NS_FAILED(rv)) {
+    MS_LOG(("Warning: Adding event listener failed, window %p (id %d)",
+            key, windowID));
+  }
   return PL_DHASH_NEXT;
 }
 
@@ -94,9 +98,19 @@ const nsIDOMWindow* key, PRUint32 windowID, void* userArg)
     return PL_DHASH_NEXT;
   }
 
-  nsUICommandCollector* collector = NS_STATIC_CAST(nsUICommandCollector*,
-                                                   userArg);
-  collector->RemoveEventListeners(windowTarget);
+  nsIDOMEventListener* listener = NS_STATIC_CAST(nsIDOMEventListener*,
+                                                 userArg);
+  if (!listener) {
+    MS_LOG(("no event listener in userArg"));
+    return PL_DHASH_NEXT;
+  }
+
+  nsresult rv = windowTarget->RemoveEventListener(NS_LITERAL_STRING("command"),
+                                                  listener, PR_TRUE);
+  if (NS_FAILED(rv)) {
+    MS_LOG(("Warning: Removing event listener failed, window %p (id %d)",
+            key, windowID));
+  }
   return PL_DHASH_NEXT;
 }
 
@@ -170,9 +184,16 @@ nsUICommandCollector::Observe(nsISupports *subject,
                               const PRUnichar *data)
 {
   if (strcmp(topic, "domwindowopened") == 0) {
+    // Attach a capturing command listener to the window.
+    // Use capturing instead of bubbling so that we still record
+    // the event even if propogation is canceled for some reason.
     nsCOMPtr<nsIDOMEventTarget> window = do_QueryInterface(subject);
     NS_ENSURE_STATE(window);
-    AddEventListeners(window);
+
+    nsresult rv = window->AddEventListener(NS_LITERAL_STRING("command"),
+                                           this,
+                                           PR_TRUE);
+    NS_ENSURE_SUCCESS(rv, rv);
   }
 
   return NS_OK;
@@ -182,26 +203,17 @@ nsUICommandCollector::Observe(nsISupports *subject,
 NS_IMETHODIMP
 nsUICommandCollector::HandleEvent(nsIDOMEvent* event)
 {
-  // First check that this is an event type that we expect.
-  // If so, call the appropriate handler method.
+  // First check that this is an event type that we expect
   nsString type;
   nsresult rv = event->GetType(type);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  for (PRUint32 i = 0; i < NS_ARRAY_LENGTH(kEvents); ++i) {
-    if (NS_ConvertASCIItoUTF16(kEvents[i].event).Equals(type)) {
-      return (this->*(kEvents[i].handler))(event);
-    }
+  if (!type.Equals(NS_LITERAL_STRING("command"))) {
+    MS_LOG(("UICommandCollector: Unexpected event type %s received",
+            NS_ConvertUTF16toUTF8(type).get()));
+    return NS_ERROR_UNEXPECTED;
   }
 
-  MS_LOG(("UICommandCollector: Unexpected event type %s received",
-          NS_ConvertUTF16toUTF8(type).get()));
-  return NS_ERROR_UNEXPECTED;
-}
-
-nsresult
-nsUICommandCollector::HandleCommandEvent(nsIDOMEvent* event)
-{
   PRUint32 window;
   if (NS_FAILED(GetEventWindow(event, &window))) {
     return NS_OK;
@@ -221,12 +233,11 @@ nsUICommandCollector::HandleCommandEvent(nsIDOMEvent* event)
   nsMetricsUtils::NewPropertyBag(getter_AddRefs(properties));
   NS_ENSURE_STATE(properties);
 
-  nsresult rv;
   rv = properties->SetPropertyAsUint32(NS_LITERAL_STRING("window"), window);
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = properties->SetPropertyAsAString(NS_LITERAL_STRING("action"),
-                                        NS_LITERAL_STRING("command"));
+                                        type);
   NS_ENSURE_SUCCESS(rv, rv);
 
   rv = SetHashedValue(properties, NS_LITERAL_STRING("targetidhash"), targetId);
@@ -256,42 +267,6 @@ nsUICommandCollector::HandleCommandEvent(nsIDOMEvent* event)
 
   // Actually log it
   rv = ms->LogEvent(item);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  MS_LOG(("Successfully logged UI Event"));
-  return NS_OK;
-}
-
-nsresult
-nsUICommandCollector::HandleTabMoveEvent(nsIDOMEvent* event)
-{
-  PRUint32 window;
-  if (NS_FAILED(GetEventWindow(event, &window))) {
-    return NS_OK;
-  }
-
-  // Fill a property bag with what we want to log
-  nsCOMPtr<nsIWritablePropertyBag2> properties;
-  nsMetricsUtils::NewPropertyBag(getter_AddRefs(properties));
-  NS_ENSURE_STATE(properties);
-
-  nsresult rv;
-  rv = properties->SetPropertyAsUint32(NS_LITERAL_STRING("window"), window);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = properties->SetPropertyAsAString(NS_LITERAL_STRING("action"),
-                                        NS_LITERAL_STRING("comand"));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // TabMove events just have a dummy target id of "TabMove_Event".
-  rv = SetHashedValue(properties, NS_LITERAL_STRING("targetidhash"),
-                      NS_LITERAL_STRING("TabMove_Event"));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsMetricsService *ms = nsMetricsService::get();
-  NS_ENSURE_STATE(ms);
-
-  rv = ms->LogEvent(NS_LITERAL_STRING("uielement"), properties);
   NS_ENSURE_SUCCESS(rv, rv);
 
   MS_LOG(("Successfully logged UI Event"));
@@ -418,40 +393,6 @@ nsUICommandCollector::GetEventWindow(nsIDOMEvent *event,
 
   *window = nsMetricsUtils::FindWindowForNode(targetNode);
   return NS_OK;
-}
-
-void
-nsUICommandCollector::AddEventListeners(nsIDOMEventTarget *window)
-{
-  for (PRUint32 i = 0; i < NS_ARRAY_LENGTH(kEvents); ++i) {
-    // Attach a capturing event listener to the window.
-    // Use capturing instead of bubbling so that we still record
-    // the event even if propagation is canceled for some reason.
-
-    // Using NS_LITERAL_STRING in const data is not allowed, so convert here.
-    // This is not performance-sensitive.
-    nsresult rv;
-    rv = window->AddEventListener(NS_ConvertASCIItoUTF16(kEvents[i].event),
-                                  this, PR_TRUE);
-    if (NS_FAILED(rv)) {
-      MS_LOG(("Couldn't add event listener %s", kEvents[i]));
-    }
-  }
-}
-
-void
-nsUICommandCollector::RemoveEventListeners(nsIDOMEventTarget *window)
-{
-  for (PRUint32 i = 0; i < NS_ARRAY_LENGTH(kEvents); ++i) {
-    // Using NS_LITERAL_STRING in const data is not allowed, so convert here.
-    // This is not performance-sensitive.
-    nsresult rv;
-    rv = window->RemoveEventListener(NS_ConvertASCIItoUTF16(kEvents[i].event),
-                                     this, PR_TRUE);
-    if (NS_FAILED(rv)) {
-      MS_LOG(("Couldn't remove event listener %s", kEvents[i]));
-    }
-  }
 }
 
 /* static */ nsresult

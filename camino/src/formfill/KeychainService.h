@@ -64,8 +64,6 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 
   BOOL mFormPasswordFillIsEnabled;
 
-  NSMutableDictionary* mAllowedActionHosts; // strong;
-
   nsIObserver* mFormSubmitObserver;
 }
 
@@ -83,7 +81,6 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 - (KeychainItem*)findKeychainEntryForHost:(NSString*)host
                                      port:(PRInt32)port
                                    scheme:(NSString*)scheme
-                           securityDomain:(NSString*)securityDomain
                                    isForm:(BOOL)isForm;
 - (void)storeUsername:(NSString*)username
              password:(NSString*)password
@@ -92,24 +89,21 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
                  port:(PRInt32)port
                scheme:(NSString*)scheme
                isForm:(BOOL)isForm;
-- (KeychainItem*)updateKeychainEntry:(KeychainItem*)keychainItem
-                        withUsername:(NSString*)username
-                            password:(NSString*)password
-                              scheme:(NSString*)scheme
-                              isForm:(BOOL)isForm;
+- (void)updateKeychainEntry:(KeychainItem*)keychainItem
+               withUsername:(NSString*)username
+                   password:(NSString*)password
+                     scheme:(NSString*)scheme
+                     isForm:(BOOL)isForm;
 - (void)removeAllUsernamesAndPasswords;
 
 - (void)addListenerToView:(CHBrowserView*)view;
 
 - (BOOL)formPasswordFillIsEnabled;
 
-// Methods to interact with the list of hosts we shouldn't ask about.
+// routines to manipulate the keychain deny list for which hosts we shouldn't
+// ask about
 - (void)addHostToDenyList:(NSString*)host;
 - (BOOL)isHostInDenyList:(NSString*)host;
-
-// Methods to interact with the list of approved form action hosts.
-- (void)setAllowedActionHosts:(NSArray*)actionHosts forHost:(NSString*)host;
-- (NSArray*)allowedActionHostsForHost:(NSString*)host;
 
 @end
 
@@ -151,7 +145,7 @@ protected:
   
   void PreFill(const PRUnichar *, PRUnichar **, PRUnichar **);
   void ProcessPrompt(const PRUnichar *, bool, PRUnichar *, PRUnichar *);
-  static void ExtractRealmComponents(const PRUnichar* inRealmBlob, NSString** outHost, NSString** outRealm, PRInt32* outPort);
+  static void ExtractHostAndPort(const PRUnichar* inRealm, NSString** outHost, PRInt32* outPort);
 
   nsCOMPtr<nsIPrompt>   mPrompt;
 };

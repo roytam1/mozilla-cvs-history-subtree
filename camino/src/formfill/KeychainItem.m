@@ -41,10 +41,11 @@
 @interface KeychainItem(Private)
 - (KeychainItem*)initWithRef:(SecKeychainItemRef)ref;
 - (void)loadKeychainData;
-- (void)loadKeychainPassword;
 - (BOOL)setAttributeType:(SecKeychainAttrType)type toString:(NSString*)value;
 - (BOOL)setAttributeType:(SecKeychainAttrType)type toValue:(void*)valuePtr withLength:(UInt32)length;
 @end
+
+NSString* const kSecurityDomainSeparator = @";";
 
 @implementation KeychainItem
 
@@ -182,7 +183,7 @@
   [mPassword release];
   [mHost release];
   [mComment release];
-  [mSecurityDomain release];
+  [mSecurityDomains release];
   [super dealloc];
 }
 
@@ -205,24 +206,29 @@
   attrInfo.format = NULL;
 
   SecKeychainAttributeList *attrList;
-  OSStatus result = SecKeychainItemCopyAttributesAndData(mKeychainItemRef, &attrInfo, NULL,
-                                                         &attrList, NULL, NULL);
+  UInt32 passwordLength;
+  char* passwordData;
+  OSStatus result = SecKeychainItemCopyAttributesAndData(mKeychainItemRef, &attrInfo, NULL, &attrList,
+                                                         &passwordLength, (void**)(&passwordData));
 
   [mUsername autorelease];
   mUsername = nil;
+  [mPassword autorelease];
+  mPassword = nil;
   [mHost autorelease];
   mHost = nil;
   [mComment autorelease];
   mComment = nil;
-  [mSecurityDomain autorelease];
-  mSecurityDomain = nil;
+  [mSecurityDomains autorelease];
+  mSecurityDomains = nil;
 
   if (result != noErr) {
-    NSLog(@"Couldn't load keychain data (error %d)", result);
+    NSLog(@"Couldn't load keychain data");
     mUsername = [[NSString alloc] init];
+    mPassword = [[NSString alloc] init];
     mHost = [[NSString alloc] init];
     mComment = [[NSString alloc] init];
-    mSecurityDomain = [[NSString alloc] init];
+    mSecurityDomains = [[NSArray alloc] init];
     return;
   }
 
@@ -234,8 +240,6 @@
       mHost = [[NSString alloc] initWithBytes:(char*)(attr.data) length:attr.length encoding:NSUTF8StringEncoding];
     else if (attr.tag == kSecCommentItemAttr)
       mComment = [[NSString alloc] initWithBytes:(char*)(attr.data) length:attr.length encoding:NSUTF8StringEncoding];
-    else if (attr.tag == kSecSecurityDomainItemAttr)
-      mSecurityDomain = [[NSString alloc] initWithBytes:(char*)(attr.data) length:attr.length encoding:NSUTF8StringEncoding];
     else if (attr.tag == kSecPortItemAttr)
       mPort = *((UInt16*)(attr.data));
     else if (attr.tag == kSecProtocolItemAttr)
@@ -244,39 +248,17 @@
       mAuthenticationType = *((SecAuthenticationType*)(attr.data));
     else if (attr.tag == kSecCreatorItemAttr)
       mCreator = attr.data ? *((OSType*)(attr.data)) : 0;
+    else if (attr.tag == kSecSecurityDomainItemAttr) {
+      NSString* domainsString = [[[NSString alloc] initWithBytes:(char*)(attr.data) length:attr.length encoding:NSUTF8StringEncoding] autorelease];
+      if ([domainsString isEqualToString:@""])
+        mSecurityDomains = [[NSArray alloc] init];
+      else
+        mSecurityDomains = [[domainsString componentsSeparatedByString:kSecurityDomainSeparator] retain];
+    }
   }
-  SecKeychainItemFreeAttributesAndData(attrList, NULL);
+  mPassword = [[NSString alloc] initWithBytes:passwordData length:passwordLength encoding:NSUTF8StringEncoding];
+  SecKeychainItemFreeAttributesAndData(attrList, (void*)passwordData);
   mDataLoaded = YES;
-}
-
-// Password is fetched separately, since trying to read the password will
-// trigger an auth request if we aren't on the trust list.
-- (void)loadKeychainPassword
-{
-  if (!mKeychainItemRef)
-    return;
-  UInt32 passwordLength;
-  char* passwordData;
-  OSStatus result = SecKeychainItemCopyAttributesAndData(mKeychainItemRef, NULL, NULL, NULL,
-                                                         &passwordLength, (void**)(&passwordData));
-  
-  [mPassword autorelease];
-  mPassword = nil;
-  
-  if (result == noErr) {
-    mPassword = [[NSString alloc] initWithBytes:passwordData
-                                         length:passwordLength
-                                       encoding:NSUTF8StringEncoding];
-    SecKeychainItemFreeAttributesAndData(NULL, (void*)passwordData);
-  }
-  else {
-    // Being denied access isn't a failure case, so don't log it.
-    if (result != errSecAuthFailed)
-      NSLog(@"Couldn't load keychain data (%d)", result);
-  }
-  // Mark it as loaded either way, so that we can return nil password as an
-  // indicator that the item is inaccessible.
-  mPasswordLoaded = YES;
 }
 
 - (NSString*)username
@@ -288,8 +270,8 @@
 
 - (NSString*)password
 {
-  if (!mPasswordLoaded)
-    [self loadKeychainPassword];
+  if (!mDataLoaded)
+    [self loadKeychainData];
   return mPassword;
 }
 
@@ -411,22 +393,23 @@
   }
 }
 
- - (void)setSecurityDomain:(NSString*)securityDomain
+ - (void)setSecurityDomains:(NSArray*)securityDomains
 {
-  if ([self setAttributeType:kSecSecurityDomainItemAttr toString:securityDomain]) {
-    [mSecurityDomain autorelease];
-    mSecurityDomain = [securityDomain copy];
+  NSString* domainsString = [securityDomains componentsJoinedByString:kSecurityDomainSeparator];
+  if([self setAttributeType:kSecSecurityDomainItemAttr toString:domainsString]) {
+    [mSecurityDomains autorelease];
+    mSecurityDomains = [securityDomains retain];
   }
   else {
     NSLog(@"Couldn't update keychain item security domains");
   }
 }
  
-- (NSString*)securityDomain
+- (NSArray*)securityDomains
 {
   if (!mDataLoaded)
     [self loadKeychainData];
-  return mSecurityDomain;
+  return mSecurityDomains;
 }
  
 

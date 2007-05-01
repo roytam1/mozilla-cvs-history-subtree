@@ -160,15 +160,6 @@ public:
   PRBool GetHandshakeInProgress() { return mHandshakeInProgress; }
   PRBool HandshakeTimeout();
 
-  void SetAllowTLSIntoleranceTimeout(PRBool aAllow);
-
-  enum BadCertUIStatusType {
-    bcuis_not_shown, bcuis_active, bcuis_was_shown
-  };
-
-  void SetBadCertUIStatus(BadCertUIStatusType aNewStatus);
-  BadCertUIStatusType GetBadCertUIStatus() { return mBadCertUIStatus; }
-
   nsresult RememberCAChain(CERTCertList *aCertList);
 
   /* Set SSL Status values */
@@ -186,8 +177,6 @@ protected:
   PRPackedBool mCanceled;
   PRPackedBool mHasCleartextPhase;
   PRPackedBool mHandshakeInProgress;
-  PRPackedBool mAllowTLSIntoleranceTimeout;
-  BadCertUIStatusType mBadCertUIStatus;
   PRIntervalTime mHandshakeStartTime;
   PRInt32 mPort;
   nsXPIDLCString mHostName;
