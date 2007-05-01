@@ -45,8 +45,6 @@ const kPhishingWithIPAddress = 1;
 const kPhishingWithMismatchedHosts = 2;
 
 var gPhishingDetector = {
-  mCheckForIPAddresses: true,
-  mCheckForMismatchedHosts: true,
   mPhishingWarden: null,
   /**
    * initialize the phishing warden. 
@@ -56,26 +54,23 @@ var gPhishingDetector = {
   init: function() 
   {
     try {
-      // set up the anti phishing service
-      var appContext = Components.classes["@mozilla.org/phishingprotection/application;1"]
-                         .getService().wrappedJSObject;
+    // set up the anti phishing service
+    var appContext = Components.classes["@mozilla.org/phishingprotection/application;1"]
+                       .getService().wrappedJSObject;
 
-      this.mPhishingWarden  = new appContext.PROT_PhishingWarden();
+    this.mPhishingWarden  = new appContext.PROT_PhishingWarden();
 
-      // Register tables
-      // XXX: move table names to a pref that we originally will download
-      // from the provider (need to workout protocol details)
-      this.mPhishingWarden.registerWhiteTable("goog-white-domain");
-      this.mPhishingWarden.registerWhiteTable("goog-white-url");
-      this.mPhishingWarden.registerBlackTable("goog-black-url");
-      this.mPhishingWarden.registerBlackTable("goog-black-enchash");
+    // Register tables
+    // XXX: move table names to a pref that we originally will download
+    // from the provider (need to workout protocol details)
+    this.mPhishingWarden.registerWhiteTable("goog-white-domain");
+    this.mPhishingWarden.registerWhiteTable("goog-white-url");
+    this.mPhishingWarden.registerBlackTable("goog-black-url");
+    this.mPhishingWarden.registerBlackTable("goog-black-enchash");
 
-      // Download/update lists if we're in non-enhanced mode
-      this.mPhishingWarden.maybeToggleUpdateChecking();  
-    } catch (ex) { dump('unable to create the phishing warden: ' + ex + '\n');}
-    
-    this.mCheckForIPAddresses = gPrefBranch.getBoolPref("mail.phishing.detection.ipaddresses");
-    this.mCheckForMismatchedHosts = gPrefBranch.getBoolPref("mail.phishing.detection.mismatched_hosts");
+    // Download/update lists if we're in non-enhanced mode
+    this.mPhishingWarden.maybeToggleUpdateChecking();  
+    } catch (ex) { dump('unable to create the phishing warde: ' + ex + '\n');}
   },
   
   /**
@@ -97,10 +92,11 @@ var gPhishingDetector = {
     var folder;
     try {
       folder = aUrl.folder;
-      if (folder.server.type == 'nntp' || folder.server.type == 'rss')
-        return;
     } catch (ex) {}
-
+    
+    if (folder.server.type == 'nntp' || folder.server.type == 'rss')
+      return;
+      
     // extract the link nodes in the message and analyze them, looking for suspicious URLs...
     var linkNodes = document.getElementById('messagepane').contentDocument.links;
     for (var index = 0; index < linkNodes.length; index++)
@@ -146,15 +142,15 @@ var gPhishingDetector = {
        var unobscuredHostName = {};
        unobscuredHostName.value = hrefURL.host;
        
-       if (this.mCheckForIPAddresses && this.hostNameIsIPAddress(hrefURL.host, unobscuredHostName) && !this.isLocalIPAddress(unobscuredHostName))
+       if (this.hostNameIsIPAddress(hrefURL.host, unobscuredHostName) && !this.isLocalIPAddress(unobscuredHostName))
          failsStaticTests = true;
-       else if (this.mCheckForMismatchedHosts && aLinkText && this.misMatchedHostWithLinkText(hrefURL, aLinkText, linkTextURL))
+       else if (aLinkText && this.misMatchedHostWithLinkText(hrefURL, aLinkText, linkTextURL))
          failsStaticTests = true;
        
        // Lookup the url against our local list. We want to do this even if the url fails our static
        // test checks because the url might be in the white list.
        if (this.mPhishingWarden)
-        this.mPhishingWarden.isEvilURL(GetLoadedMessage(), failsStaticTests, aUrl, this.localListCallback);
+       this.mPhishingWarden.isEvilURL(GetLoadedMessage(), failsStaticTests, aUrl, this.localListCallback);
        else
          this.localListCallback(GetLoadedMessage(), failsStaticTests, aUrl, 2 /* not found */);
     }
@@ -227,8 +223,7 @@ var gPhishingDetector = {
        {
          var ioService = Components.classes["@mozilla.org/network/io-service;1"].getService(Components.interfaces.nsIIOService);
          aLinkTextURL.value = ioService.newURI(aLinkNodeText, null, null);
-         // compare hosts, but ignore possible www. prefix
-         return !(aHrefURL.host.replace(/^www\./, "") == aLinkTextURL.value.host.replace(/^www\./, ""));
+         return aHrefURL.host != aLinkTextURL.value.host;
        }
     }
 

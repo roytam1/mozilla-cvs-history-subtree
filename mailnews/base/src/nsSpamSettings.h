@@ -78,7 +78,6 @@ private:
   nsCString mCurrentJunkFolderURI; // used to detect changes to the spam folder in ::initialize
 
   nsCString mServerFilterName;
-  nsCOMPtr<nsIFile> mServerFilterFile;
   PRInt32  mServerFilterTrustFlags;
 
   nsCOMPtr<nsIDateTimeFormat> mDateFormatter;

@@ -125,9 +125,7 @@
     <command id="cmd_BrowserMenu"             oncommand="BrowserMenuPopup()" />
     <command id="cmd_BrowserNavMenu"          oncommand="BrowserNavMenuPopup()" />
     <command id="cmd_Quit"                    oncommand="window.close();" />
-<!--
     <command id="cmd_Go"                      oncommand="URLBarEntered()" />
--->
     <command id="cmd_BrowserBookmark"         oncommand="BrowserBookmark()" />
     <command id="cmd_BrowserBookmarkThis"     oncommand="BrowserBookmarkThis()" />
     <command id="cmd_Pan"                     oncommand="BrowserPan()" />
@@ -334,7 +332,12 @@
       <menuitem id="command_reload"  
                 command="cmd_BrowserReload"  
                 label="&reloadCmd.label;"  /> 
-                  
+      
+      <menuitem id="command_go"
+                command="cmd_Go"  
+                label="&goCmd.label;"  /> 
+            
+            
 	<!-- this was in the main nav item --> 
 
       <menuitem id="command_Quit" 
@@ -347,12 +350,6 @@
     
     
   </popupset>
-
- 
-  <!-- a repository to overlay extensions information --> 
-  <extensions id="homebar" hidden="true">
-  </extensions>
-
   
 </window>
 

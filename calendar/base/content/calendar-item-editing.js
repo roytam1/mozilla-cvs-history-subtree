@@ -21,7 +21,6 @@
  * Contributor(s):
  *   Stuart Parmenter <stuart.parmenter@oracle.com>
  *   Robin Edrenius <robin.edrenius@gmail.com>
- *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,17 +37,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-function OpCompleteListener(respFunc) {
-    this.mRespFunc = respFunc;
-}
-OpCompleteListener.prototype = {
-    onOperationComplete: function opc_onOperationComplete(calendar, status, opType, id, detail) {
-        this.mRespFunc(Components.isSuccessCode(status) ? detail : null);
-    },
-    onGetResult: function opc_onGetResult() {
-    }
-};
-
 /* all params are optional */
 function createEventWithDialog(calendar, startDate, endDate, summary, event)
 {
@@ -56,29 +44,18 @@ function createEventWithDialog(calendar, startDate, endDate, summary, event)
 
 
     var onNewEvent = function(event, calendar, originalEvent) {
-        doTransaction('add', event, calendar, null,
-                      new OpCompleteListener(
-                          function respFunc(savedItem) {
-                              if (savedItem) {
-                                  checkForAttendees(savedItem, originalEvent);
-                              }
-                          }));
+        doTransaction('add', event, calendar, null, null);
     }
 
     if (event) {
-        openEventDialog(event, calendar, "new", onNewEvent, null);
+        openEventDialog(event, calendar, "new", onNewEvent);
         return;
     }
     
     event = createEvent();
 
     if (!startDate) {
-        // Have we shown the calendar view yet? (Lightning)
-        if (currentView().initialized) {
-            startDate = currentView().selectedDay.clone();
-        } else {
-            startDate = jsDateToDateTime(new Date()).getInTimezone(kDefaultTimezone);
-        }
+        startDate = currentView().selectedDay.clone();
         startDate.isDate = true;
     }
 
@@ -114,7 +91,7 @@ function createEventWithDialog(calendar, startDate, endDate, summary, event)
 
     setDefaultAlarmValues(event);
 
-    openEventDialog(event, calendar, "new", onNewEvent, null);
+    openEventDialog(event, calendar, "new", onNewEvent);
 }
 
 function createTodoWithDialog(calendar, dueDate, summary, todo)
@@ -122,21 +99,15 @@ function createTodoWithDialog(calendar, dueDate, summary, todo)
     const kDefaultTimezone = calendarDefaultTimezone();
 
     var onNewItem = function(item, calendar, originalItem) {
-        doTransaction('add', item, calendar, null,
-                      new OpCompleteListener(
-                          function respFunc(savedItem) {
-                              if (savedItem) {
-                                  checkForAttendees(savedItem, originalItem);
-                              }
-                          }));
+        doTransaction('add', item, calendar, null, null);
     }
 
     if (todo) {
-        openEventDialog(todo, calendar, "new", onNewItem, null);
+        openEventDialog(todo, calendar, "new", onNewItem);
         return;
     }
 
-    todo = createTodo();
+    todo = createToDo();
 
     if (calendar) {
         todo.calendar = calendar;
@@ -152,66 +123,53 @@ function createTodoWithDialog(calendar, dueDate, summary, todo)
         todo.dueDate = dueDate;
 
     var onNewItem = function(item, calendar, originalItem) {
-        calendar.addItem(item,
-                         new OpCompleteListener(
-                             function respFunc(savedItem) {
-                                 if (savedItem) {
-                                     checkForAttendees(savedItem, originalItem);
-                                 }
-                             }));
+        calendar.addItem(item, null);
     }
 
     setDefaultAlarmValues(todo);
 
-    openEventDialog(todo, calendar, "new", onNewItem, null);
+    openEventDialog(todo, calendar, "new", onNewItem);
 }
 
 
-function modifyEventWithDialog(item, job)
+function modifyEventWithDialog(item)
 {
     var onModifyItem = function(item, calendar, originalItem) {
-        var listener = new OpCompleteListener(
-            function respFunc(savedItem) {
-                if (savedItem) {
-                    checkForAttendees(savedItem, originalItem);
-                }
-            });
         // compare cal.uri because there may be multiple instances of
         // calICalendar or uri for the same spec, and those instances are
         // not ==.
         if (!originalItem.calendar || 
             (originalItem.calendar.uri.equals(calendar.uri)))
-            doTransaction('modify', item, item.calendar, originalItem, listener);
+            doTransaction('modify', item, item.calendar, originalItem, null);
         else {
-            doTransaction('move', item, calendar, originalItem, listener);
+            doTransaction('move', item, calendar, originalItem, null);
         }
     }
 
     if (item) {
-        openEventDialog(item, item.calendar, "modify", onModifyItem, job);
+        openEventDialog(item, item.calendar, "modify", onModifyItem);
     }
 }
 
-function openEventDialog(calendarItem, calendar, mode, callback, job)
+function openEventDialog(calendarItem, calendar, mode, callback)
 {
     var args = new Object();
     args.calendarEvent = calendarItem;
     args.calendar = calendar;
     args.mode = mode;
     args.onOk = callback;
-    args.job = job;
 
     // the dialog will reset this to auto when it is done loading.
     window.setCursor("wait");
 
-    // open the dialog modeless
-    var url = "chrome://calendar/content/calendar-event-dialog.xul";
-
+    // open the dialog modally
     if (getPrefSafe("calendar.prototypes.wcap", false)) {
-      url = "chrome://calendar/content/sun-calendar-event-dialog.xul";
+      openDialog("chrome://calendar/content/sun-calendar-event-dialog.xul", "_blank",
+                 "chrome,titlebar,modal,resizable", args);
+    } else {
+      openDialog("chrome://calendar/content/calendar-event-dialog.xul", "_blank",
+                 "chrome,titlebar,modal,resizable", args);
     }
-
-    openDialog(url, "_blank", "chrome,titlebar,resizable", args);
 }
 
 // When editing a single instance of a recurring event, we need to figure out
@@ -260,224 +218,133 @@ function getOccurrenceOrParent(occurrence) {
     }
 }
 
-/**
- * Read default alarm settings from user preferences and apply them to
- * the event/todo passed in.
- *
- * @param aItem   The event or todo the settings should be applied to.
- */
-function setDefaultAlarmValues(aItem)
-{
-    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
-                                .getService(Components.interfaces.nsIPrefService);
-    var alarmsBranch = prefService.getBranch("calendar.alarms.");
-
-    if (isEvent(aItem)) {
-        try {
-            if (alarmsBranch.getIntPref("onforevents") == 1) {
-                var alarmOffset = Components.classes["@mozilla.org/calendar/duration;1"]
-                                            .createInstance(Components.interfaces.calIDuration);
-                try {
-                    var units = alarmsBranch.getCharPref("eventalarmunit");
-                    alarmOffset[units] = alarmsBranch.getIntPref("eventalarmlen");
-                    alarmOffset.isNegative = true;
-                } catch(ex) {
-                    alarmOffset.minutes = 15;
-                }
-                aItem.alarmOffset = alarmOffset;
-                aItem.alarmRelated = Components.interfaces.calIItemBase.ALARM_RELATED_START;
-            }
-        } catch (ex) {
-            Components.utils.reportError(
-                "Failed to apply default alarm settings to event: " + ex);
-        }
-    } else if (isToDo(aItem)) {
-        try {
-            if (alarmsBranch.getIntPref("onfortodos") == 1) {
-                // You can't have an alarm if the entryDate doesn't exist.
-                if (!aItem.entryDate) {
-                    aItem.entryDate = getSelectedDay().clone();
-                }
-                var alarmOffset = Components.classes["@mozilla.org/calendar/duration;1"]
-                                            .createInstance(Components.interfaces.calIDuration);
-                try {
-                    var units = alarmsBranch.getCharPref("todoalarmunit");
-                    alarmOffset[units] = alarmsBranch.getIntPref("todoalarmlen");
-                    alarmOffset.isNegative = true;
-                } catch(ex) {
-                    alarmOffset.minutes = 15;
-                }
-                aItem.alarmOffset = alarmOffset;
-                aItem.alarmRelated = Components.interfaces.calIItemBase.ALARM_RELATED_START;
-            }
-        } catch (ex) {
-            Components.utils.reportError(
-                "Failed to apply default alarm settings to task: " + ex);
-        }
-    }
-}
-
 // Undo/Redo code
-function getTransactionMgr() {
-    return Components.classes["@mozilla.org/calendar/transactionmanager;1"]
-                     .getService(Components.interfaces.calITransactionManager);
-}
-
+var gTransactionMgr = Components.classes["@mozilla.org/transactionmanager;1"]
+                                .createInstance(Components.interfaces.nsITransactionManager);
 function doTransaction(aAction, aItem, aCalendar, aOldItem, aListener) {
-    getTransactionMgr().createAndCommitTxn(aAction,
-                                           aItem,
-                                           aCalendar,
-                                           aOldItem,
-                                           aListener);
+    var txn = new calTransaction(aAction, aItem, aCalendar, aOldItem, aListener);
+    gTransactionMgr.doTransaction(txn);
     updateUndoRedoMenu();
 }
 
 function undo() {
-    getTransactionMgr().undo();
+    gTransactionMgr.undoTransaction();
     updateUndoRedoMenu();
 }
 
 function redo() {
-    getTransactionMgr().redo();
+    gTransactionMgr.redoTransaction();
     updateUndoRedoMenu();
 }
 
 function startBatchTransaction() {
-    getTransactionMgr().beginBatch();
+    gTransactionMgr.beginBatch();
 }
 function endBatchTransaction() {
-    getTransactionMgr().endBatch();
+    gTransactionMgr.endBatch();
     updateUndoRedoMenu();
 }
 
 function canUndo() {
-    return getTransactionMgr().canUndo();
+    return (gTransactionMgr.numberOfUndoItems > 0);
 }
 function canRedo() {
-    return getTransactionMgr().canRedo();
+    return (gTransactionMgr.numberOfRedoItems > 0);
 }
 
-/**
- * checkForAttendees
- * Checks to see if the attendees were added or changed between the original
- * and new item.  If there is a change, it launches the calIITipTransport
- * service and sends the invitations
- */
-function checkForAttendees(aItem, aOriginalItem)
-{
-    // iTIP is only supported in Lightning right now
-    if (isSunbird()) {
-        return;
-    }
+// Valid values for aAction: 'add', 'modify', 'delete', 'move'
+// aOldItem is only needed for aAction == 'modify'
+function calTransaction(aAction, aItem, aCalendar, aOldItem, aListener) {
+    this.mAction = aAction;
+    this.mItem = aItem;
+    this.mCalendar = aCalendar;
+    this.mOldItem = aOldItem;
+    this.mListener = aListener;
+}
 
-    // Only send invitations for providers which need it.
-    if (!aItem.calendar.sendItipInvitations) {
-        return;
-    }
+calTransaction.prototype = {
+    mAction: null,
+    mItem: null,
+    mCalendar: null,
+    mOldItem: null,
+    mOldCalendar: null,
+    mListener: null,
 
-    // Only send invitations if the user checked the checkbox.
-    if (!aItem.hasProperty("X-MOZ-SEND-INVITATIONS")) {
-        return;
-    } else if (aItem.getProperty("X-MOZ-SEND-INVITATIONS") != "TRUE") {
-        return;
-    }
-
-    var sendInvite = false;
-    var itemAtt = aItem.getAttendees({});
-
-    if (itemAtt.length > 0) {
-        var originalAtt = aOriginalItem.getAttendees({});
-
-        if ( (originalAtt.length > 0) &&
-             (originalAtt.length == itemAtt.length) )
+    QueryInterface: function (aIID) {
+        if (!aIID.equals(Components.interfaces.nsISupports) &&
+            !aIID.equals(Components.interfaces.nsITransaction) &&
+            !aIID.equals(Components.interfaces.calIOperationListener))
         {
-            for (var i=0; i < itemAtt.length; i++) {
-                if (originalAtt[i].id != itemAtt[i].id) {
-                    sendInvite = true;
-                    break;
-                }
+            throw Components.results.NS_ERROR_NO_INTERFACE;
+        }
+        return this;
+    },
+
+    onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail) {
+        if (aStatus == Components.results.NS_OK) {
+            if (aOperationType == Components.interfaces.calIOperationListener.ADD ||
+                aOperationType ==Components.interfaces.calIOperationListener.MODIFY) {
+                // Add/Delete return the original item as detail for success
+                this.mItem = aDetail;
             }
         } else {
-            // We have attendees on item, not on original, attendees were
-            // added.
-            sendInvite = true;
+            Components.utils.reportError("Severe error in internal transaction code!\n" +
+                                         aDetail + '\n'+
+                                         "Please report this to the developers.\n");
         }
-    }
-
-    // XXX Until we rethink attendee support and until such support
-    // is worked into the event dialog (which has been done in the prototype
-    // dialog to a degree) then we are going to simply hack in some attendee
-    // support so that we can round-trip iTIP invitations.
-    if (sendInvite) {
-        // Since there is no way to determine the type of transport an
-        // attendee requires, we default to email
-        var emlSvc = Components.classes["@mozilla.org/calendar/itip-transport;1?type=email"]
-                               .createInstance(Components.interfaces.calIItipTransport);
-
-        var itipItem = Components.classes["@mozilla.org/calendar/itip-item;1"]
-                                 .createInstance(Components.interfaces.calIItipItem);
-
-        var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                            .getService(Components.interfaces.nsIStringBundleService);
-
-        var sb = sbs.createBundle("chrome://lightning/locale/lightning.properties");
-        var recipients = [];
-
-        // We have to modify our item a little, so we clone it.
-        var item = aItem.clone();
-
-        // Fix up our attendees for invitations using some good defaults
-        itemAtt = item.getAttendees({}); // reuse cloned attendees
-        item.removeAllAttendees();
-        for each (var attendee in itemAtt) {
-            attendee.role = "REQ-PARTICIPANT";
-            attendee.participationStatus = "NEEDS-ACTION";
-            attendee.rsvp = true;
-            item.addAttendee(attendee);
-            recipients.push(attendee);
+        if (this.mListener) {
+            this.mListener.onOperationComplete(aCalendar, aStatus, aOperationType, aId, aDetail);
         }
-
-        // XXX The event dialog has no means to set us as the organizer
-        // since we defaulted to email above, we know we need to prepend
-        // mailto when we convert it to an attendee
-        var organizer = Components.classes["@mozilla.org/calendar/attendee;1"]
-                                  .createInstance(Components.interfaces.calIAttendee);
-        organizer.id = "mailto:" + emlSvc.defaultIdentity;
-        organizer.role = "REQ-PARTICIPANT";
-        organizer.participationStatus = "ACCEPTED";
-        organizer.isOrganizer = true;
-
-        // Add our organizer to the item. Again, the event dialog really doesn't
-        // have a mechanism for creating an item with a method, so let's add
-        // that too while we're at it.  We'll also fake Sequence ID support.
-        item.organizer = organizer;
-        item.setProperty("METHOD", "REQUEST");
-        item.setProperty("SEQUENCE", "1");
-
-        var summary
-        if (item.getProperty("SUMMARY")) {
-            summary = item.getProperty("SUMMARY");
-        } else {
-            summary = "";
+    },
+    onGetResult: function(aCalendar, aStatus, aItemType, aDetail, aCount, aItems) {
+        if (this.mListener) {
+            this.mListener.onGetResult(aCalendar, aStatus, aItemType, aDetail, aCount, aItems);
         }
+    },
 
-        // Initialize and set our properties on the item
-        itipItem.init(item.icalString);
-        itipItem.isSend = true;
-        itipItem.receivedMethod = "REQUEST";
-        itipItem.responseMethod = "REQUEST";
-        itipItem.autoResponse = Components.interfaces.calIItipItem.USER;
-
-        // Get ourselves some default text - when we handle organizer properly
-        // We'll need a way to configure the Common Name attribute and we should
-        // use it here rather than the email address
-        var subject = sb.formatStringFromName("itipRequestSubject",
-                                              [summary], 1);
-        var body = sb.formatStringFromName("itipRequestBody",
-                                           [emlSvc.defaultIdentity, summary],
-                                           2);
-
-        // Send it!
-        emlSvc.sendItems(recipients.length, recipients, subject, body, itipItem);
+    doTransaction: function () {
+        switch (this.mAction) {
+            case 'add':
+                this.mCalendar.addItem(this.mItem, this);
+                break;
+            case 'modify':
+                this.mCalendar.modifyItem(this.mItem, this.mOldItem,
+                                          this);
+                break;
+            case 'delete':
+                this.mCalendar.deleteItem(this.mItem, this);
+                break;
+            case 'move':
+                this.mOldCalendar = this.mOldItem.calendar;
+                this.mOldCalendar.deleteItem(this.mOldItem, this);
+                this.mCalendar.addItem(this.mItem, this);
+                break;
+        }
+    },
+    undoTransaction: function () {
+        switch (this.mAction) {
+            case 'add':
+                this.mCalendar.deleteItem(this.mItem, this);
+                break;
+            case 'modify':
+                this.mCalendar.modifyItem(this.mOldItem, this.mItem, this);
+                break;
+            case 'delete':
+                this.mCalendar.addItem(this.mItem, this);
+                break;
+            case 'move':
+                this.mCalendar.deleteItem(this.mItem, this);
+                this.mOldCalendar.addItem(this.mOldItem, this);
+                break;
+        }
+    },
+    redoTransaction: function () {
+        this.doTransaction();
+    },
+    isTransient: false,
+    
+    merge: function (aTransaction) {
+        // No support for merging
+        return false;
     }
 }

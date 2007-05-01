@@ -22,7 +22,7 @@
  *
  * Contributor(s):
  *   william@dell.wisner.name (William Dell Wisner)
- *   josh@mozilla.com (Josh Aas)
+ *   joshmoz@gmail.com (Josh Aas)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -153,12 +153,6 @@ const int kDefaultExpireDays = 9;
 {
   if (sender == checkboxRememberWindowState)
     [self setPref:"camino.remember_window_state" toBoolean:([sender state] == NSOnState)];
-}
-
-- (IBAction)checkDefaultBrowserOnLaunchClicked:(id)sender
-{
-  if (sender == checkboxCheckDefaultBrowserOnLaunch)
-    [self setPref:"camino.check_default_browser" toBoolean:([sender state] == NSOnState)];
 }
 
 - (NSString*)getCurrentHomePage

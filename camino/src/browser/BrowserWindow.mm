@@ -110,31 +110,21 @@ static const int kEscapeKeyCode = 53;
 {
   BrowserWindowController* windowController = (BrowserWindowController*)[self delegate];
   NSString* keyString = [theEvent charactersIgnoringModifiers];
-  if ([keyString length] < 1)
-    return NO;
   unichar keyChar = [keyString characterAtIndex:0];
-  unsigned int standardModifierKeys = NSShiftKeyMask | NSControlKeyMask | NSAlternateKeyMask | NSCommandKeyMask;
 
   BOOL handled = NO;
   if (keyChar == NSCarriageReturnCharacter) {
     BOOL shiftKeyIsDown = (([theEvent modifierFlags] & NSShiftKeyMask) != 0);
     handled = [windowController handleCommandReturn:shiftKeyIsDown];
   } else if (keyChar == '+') {
-    // If someone assigns this shortcuts to a menu, we want that to win.
-    if ([[NSApp mainMenu] performKeyEquivalent:theEvent])
-      return YES;
-    
     if ([windowController canMakeTextBigger])
       [windowController makeTextBigger:nil];
     else
       NSBeep();
     handled = YES;
   } else if (keyChar >= '1' && keyChar <= '9') {
-    if (([theEvent modifierFlags] & standardModifierKeys) == NSCommandKeyMask) {
-      // If someone assigns one of these shortcuts to a menu, we want that to win.
-      if ([[NSApp mainMenu] performKeyEquivalent:theEvent])
-        return YES;
-
+    BOOL cmdKeyIsDown = (([theEvent modifierFlags] & NSCommandKeyMask) != 0);
+    if (cmdKeyIsDown) {
       // use |forceReuse| to disable looking at the modifier keys since we know the command
       // key is down right now.
       handled = [windowController loadBookmarkBarIndex:(keyChar - '1') openBehavior:eBookmarkOpenBehavior_ForceReuse];
@@ -144,17 +134,12 @@ static const int kEscapeKeyCode = 53;
   //completely different characters depending on whether or not you ignore the modifiers
   else {
     keyString = [theEvent characters];
-    if ([keyString length] < 1)
-      return NO;    
     keyChar = [keyString characterAtIndex:0];
     if (keyChar == 'd') {
+      unsigned int standardModifierKeys = NSShiftKeyMask | NSControlKeyMask | NSAlternateKeyMask | NSCommandKeyMask;
       if ((([theEvent modifierFlags] & standardModifierKeys) == NSCommandKeyMask) &&
           [windowController validateActionBySelector:@selector(addBookmark:)])
       {
-        // If someone assigns this shortcuts to a menu, we want that to win.
-        if ([[NSApp mainMenu] performKeyEquivalent:theEvent])
-          return YES;
-
         [windowController addBookmark:nil];
         handled = YES;
       }
@@ -170,9 +155,13 @@ static const int kEscapeKeyCode = 53;
 // accessor for the 'URL' Apple Event attribute
 - (NSString*)getURL
 {
-  BrowserWrapper* browserWrapper = [(BrowserWindowController*)[self delegate] getBrowserWrapper];
+  BrowserWindowController* windowController = (BrowserWindowController*)[self delegate];
+  
+  NSString* titleString = nil;
+  NSString* urlString = nil;
 
-  return [browserWrapper currentURI];
+  [[windowController getBrowserWrapper] getTitle:&titleString andHref:&urlString];
+  return urlString;
 }
 
 // True when the window has the unified toolbar bit set and is capable of

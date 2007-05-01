@@ -20,7 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Josh Aas - josh@mozilla.com
+ *   Josh Aas - josha@mac.com
  *   Nate Weaver (Wevah) - wevah@derailer.org
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -88,7 +88,6 @@ typedef enum EBookmarkOpenBehavior
     IBOutlet NSMenuItem*    mCreateBookmarksSeparatorMenuItem;  // unused
     IBOutlet NSMenuItem*    mShowAllBookmarksMenuItem;
 
-    BOOL                    mInitialized;
     BOOL                    mOffline;
     BOOL                    mGeckoInitted;
     BOOL                    mBookmarksMenuUpdatePending;
@@ -107,8 +106,6 @@ typedef enum EBookmarkOpenBehavior
     SharedMenusObj*         mSharedMenusObj;
     NSMutableDictionary*    mCharsets;
 }
-
-- (BOOL)isInitialized;
 
 // Application menu actions
 - (IBAction)aboutWindow:(id)sender;
@@ -180,6 +177,8 @@ typedef enum EBookmarkOpenBehavior
 // used by page info panel to show certificate information
 - (IBAction)showCertificates:(id)aSender;
 
+- (void)ensureGeckoInitted;
+
 // if the main/key window is a browser window, return its controller, otherwise nil
 - (BrowserWindowController*)getMainWindowBrowserController;
 - (BrowserWindowController*)getKeyWindowBrowserController;
@@ -188,7 +187,7 @@ typedef enum EBookmarkOpenBehavior
 
 - (BrowserWindowController*)openBrowserWindowWithURL:(NSString*)aURL andReferrer:(NSString*)aReferrer behind:(NSWindow*)window allowPopups:(BOOL)inAllowPopups;
 - (BrowserWindowController*)openBrowserWindowWithURLs:(NSArray*)urlArray behind:(NSWindow*)window allowPopups:(BOOL)inAllowPopups;
-- (void)showURL:(NSString*)aURL;
+- (void)openNewWindowOrTabWithURL:(NSString*)inURLString andReferrer:(NSString*)aReferrer alwaysInFront:(BOOL)forceFront;
 - (void)loadBookmark:(BookmarkItem*)item withBWC:(BrowserWindowController*)browserWindowController openBehavior:(EBookmarkOpenBehavior)behavior reverseBgToggle:(BOOL)reverseBackgroundPref;
 
 - (void)adjustCloseWindowMenuItemKeyEquivalent:(BOOL)inHaveTabs;

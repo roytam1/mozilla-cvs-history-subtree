@@ -42,9 +42,14 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+ifdef MOZ_XUL_APP
 EXPORT_DIR	= $(DIST)/bin/isp
+else
+EXPORT_DIR	= $(DIST)/bin/defaults/isp
+EXPORT_DIR_L10N	= $(DIST)/bin/defaults/isp/US
+endif
 
-EXPORT_RESOURCE_FILES = \
+EXPORT_RESOURCE_FILES = gmail.rdf \
 		$(NULL)
 
 ifdef MOZ_MOVEMAIL
@@ -59,8 +64,16 @@ include $(topsrcdir)/config/rules.mk
 
 GARBAGE		+= $(addprefix $(EXPORT_DIR)/, $(EXPORT_RESOURCE_FILES)) 
 
+ifndef MOZ_XUL_APP
+GARBAGE		+= $(addprefix $(EXPORT_DIR_L10N)/, $(EXPORT_RESOURE_FILES))
+endif
+ 
 ifneq ($(EXPORT_RESOURCE_FILES),$(NULL))
 libs::
 	$(INSTALL) $(addprefix $(srcdir)/, $(EXPORT_RESOURCE_FILES)) $(EXPORT_DIR)
 
+ifndef MOZ_XUL_APP
+libs::	
+	$(INSTALL) $(addprefix $(srcdir)/, $(EXPORT_RESOURCE_FILES)) $(EXPORT_DIR_L10N)
+endif
 endif

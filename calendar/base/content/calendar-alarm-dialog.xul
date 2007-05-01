@@ -1,4 +1,5 @@
 <?xml version="1.0"?>
+
 <!--
    - ***** BEGIN LICENSE BLOCK *****
    - Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -55,13 +56,13 @@
         persist="screenX screenY width height"
         buttons="accept"
         buttonlabelaccept="&calendar.alarm.dismissall.label;"
-        ondialogaccept="return onDismissAll();"
+        onunload="return onDismissAll();"
         width="400"
         height="200">
 
 <!-- Javascript includes -->
 <script type="application/x-javascript" src="chrome://calendar/content/calendar-alarm-dialog.js"/>
-<script type="application/x-javascript" src="chrome://calendar/content/calUtils.js"/>
+<script type="application/x-javascript" src="chrome://calendar/content/calendarUtils.js"/>
 
 <!-- The dialog -->
     <vbox id="alarmlist" flex="1" style="overflow: auto;">

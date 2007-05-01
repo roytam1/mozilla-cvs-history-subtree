@@ -58,13 +58,10 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 
 @interface KeychainService : NSObject
 {
-  IBOutlet id mConfirmStorePasswordPanel;
-  IBOutlet id mConfirmChangePasswordPanel;
-  IBOutlet id mConfirmFillPasswordPanel;
+  IBOutlet id confirmStorePasswordPanel;
+  IBOutlet id confirmChangePasswordPanel;
 
   BOOL mFormPasswordFillIsEnabled;
-
-  NSMutableDictionary* mAllowedActionHosts; // strong;
 
   nsIObserver* mFormSubmitObserver;
 }
@@ -77,39 +74,33 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 - (IBAction)hitButtonOther:(id)sender;
 
 - (KeychainPromptResult)confirmStorePassword:(NSWindow*)parent;
-- (BOOL)confirmChangePassword:(NSWindow*)parent;
-- (BOOL)confirmFillPassword:(NSWindow*)parent;
+- (BOOL)confirmChangedPassword:(NSWindow*)parent;
 
 - (KeychainItem*)findKeychainEntryForHost:(NSString*)host
                                      port:(PRInt32)port
                                    scheme:(NSString*)scheme
-                           securityDomain:(NSString*)securityDomain
                                    isForm:(BOOL)isForm;
 - (void)storeUsername:(NSString*)username
              password:(NSString*)password
               forHost:(NSString*)host
-       securityDomain:(NSString*)host
                  port:(PRInt32)port
                scheme:(NSString*)scheme
                isForm:(BOOL)isForm;
-- (KeychainItem*)updateKeychainEntry:(KeychainItem*)keychainItem
-                        withUsername:(NSString*)username
-                            password:(NSString*)password
-                              scheme:(NSString*)scheme
-                              isForm:(BOOL)isForm;
+- (void)updateKeychainEntry:(KeychainItem*)keychainItem
+               withUsername:(NSString*)username
+                   password:(NSString*)password
+                     scheme:(NSString*)scheme
+                     isForm:(BOOL)isForm;
 - (void)removeAllUsernamesAndPasswords;
 
 - (void)addListenerToView:(CHBrowserView*)view;
 
 - (BOOL)formPasswordFillIsEnabled;
 
-// Methods to interact with the list of hosts we shouldn't ask about.
+// routines to manipulate the keychain deny list for which hosts we shouldn't
+// ask about
 - (void)addHostToDenyList:(NSString*)host;
 - (BOOL)isHostInDenyList:(NSString*)host;
-
-// Methods to interact with the list of approved form action hosts.
-- (void)setAllowedActionHosts:(NSArray*)actionHosts forHost:(NSString*)host;
-- (NSArray*)allowedActionHostsForHost:(NSString*)host;
 
 @end
 
@@ -125,14 +116,16 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 @interface KeychainDenyList : NSObject
 {
   NSMutableArray* mDenyList;     // the list
+  BOOL mIsDirty;                 // do we need to write the list to disk?
 }
 
-+ (KeychainDenyList*)instance;
++ (KeychainDenyList*) instance;
+- (void) shutdown:(id)sender;
 
-- (BOOL)isHostPresent:(NSString*)host;
-- (void)addHost:(NSString*)host;
-- (void)removeHost:(NSString*)host;
-- (void)removeAllHosts;
+- (BOOL) isHostPresent:(NSString*)host;
+- (void) addHost:(NSString*)host;
+- (void) removeHost:(NSString*)host;
+- (void) writeToDisk;
 
 @end
 
@@ -151,7 +144,7 @@ protected:
   
   void PreFill(const PRUnichar *, PRUnichar **, PRUnichar **);
   void ProcessPrompt(const PRUnichar *, bool, PRUnichar *, PRUnichar *);
-  static void ExtractRealmComponents(const PRUnichar* inRealmBlob, NSString** outHost, NSString** outRealm, PRInt32* outPort);
+  static void ExtractHostAndPort(const PRUnichar* inRealm, NSString** outHost, PRInt32* outPort);
 
   nsCOMPtr<nsIPrompt>   mPrompt;
 };
@@ -171,6 +164,13 @@ public:
 
   // NS_DECL_NSIFORMSUBMITOBSERVER
   NS_IMETHOD Notify(nsIContent* formNode, nsIDOMWindowInternal* window, nsIURI* actionURL, PRBool* cancelSubmit);
+
+private:
+
+  static KeychainPromptResult CheckStorePasswordYN(nsIDOMWindowInternal*);
+  static BOOL CheckChangeDataYN(nsIDOMWindowInternal*);
+  
+  static NSWindow* GetNSWindow(nsIDOMWindowInternal* inWindow);
 };
 
 //

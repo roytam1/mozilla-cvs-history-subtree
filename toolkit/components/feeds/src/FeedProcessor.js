@@ -333,7 +333,7 @@ Feed.prototype = {
     categories: ["categories", "dc:subject"],
     rights: ["atom03:rights","atom:rights"],
     cloud: ["cloud"],
-    image: ["image", "rss1:image", "atom:logo"],
+    image: ["image", "rss1:image"],
     textInput: ["textInput", "rss1:textinput"],
     skipDays: ["skipDays"],
     skipHours: ["skipHours"],
@@ -355,11 +355,6 @@ Feed.prototype = {
     if (bagHasKey(this.fields, "links"))
       this._atomLinksToURI();
 
-    // Resolve relative image links
-    if (this.image && bagHasKey(this.image, "url")) {
-      this._resolveImageLink();
-    }
-
     this._resetBagMembersToRawText([this.searchLists.subtitle, 
                                     this.searchLists.title]);
   },
@@ -368,34 +363,20 @@ Feed.prototype = {
     var links = this.fields.getPropertyAsInterface("links", Ci.nsIArray);
     var alternates = findAtomLinks("alternate", links);
     if (alternates.length > 0) {
-      var href = alternates[0].getPropertyAsAString("href");
-      var base;
-      if (bagHasKey(alternates[0], "xml:base"))
-        base = alternates[0].getPropertyAsAString("xml:base");
-      this.link = this._resolveURI(href, base);
+      try {
+        var href = alternates[0].getPropertyAsAString("href");
+        var base;
+        if (bagHasKey(alternates[0], "xml:base"))
+          base = strToURI(alternates[0].getPropertyAsAString("xml:base"),
+                          this.baseURI);
+        else
+          base = this.baseURI;
+        this.link = strToURI(alternates[0].getPropertyAsAString("href"), base);
+      }
+      catch(e) {
+        LOG(e);
+      }
     }
-  },
-
-  _resolveImageLink: function Feed_resolveImageLink() {
-    var base;
-    if (bagHasKey(this.image, "xml:base"))
-      base = this.image.getPropertyAsAString("xml:base");
-    var url = this._resolveURI(this.image.getPropertyAsAString("url"), base);
-    if (url)
-      this.image.setPropertyAsAString("url", url.spec);
-  },
-
-  _resolveURI: function Feed_resolveURI(linkSpec, baseSpec) {
-    var uri = null;
-    try {
-      var base = baseSpec ? strToURI(baseSpec, this.baseURI) : this.baseURI;
-      uri = strToURI(linkSpec, base);
-    }
-    catch(e) {
-      LOG(e);
-    }
-
-    return uri;
   },
 
   // reset the bag to raw contents, not text constructs
@@ -469,7 +450,7 @@ Entry.prototype = {
       var isPermaLink = true;
       
       if (bagHasKey(guid, "isPermaLink"))
-        isPermaLink = guid.getProperty("isPermaLink").toLowerCase() != "false";
+        isPermaLink = new Boolean(guid.getProperty("isPermaLink"));
       
       if (guid && isPermaLink)
         this.link = strToURI(guid.getProperty("guid"));
@@ -496,7 +477,6 @@ Entry.prototype = {
 }
 
 Entry.prototype._atomLinksToURI = Feed.prototype._atomLinksToURI;
-Entry.prototype._resolveURI = Feed.prototype._resolveURI;
 Entry.prototype._resetBagMembersToRawText = 
    Feed.prototype._resetBagMembersToRawText;
 
@@ -653,12 +633,7 @@ function atomGenerator(s, generator) {
   generator.QueryInterface(Ci.nsIFeedGenerator);
   generator.agent = trimString(s);
   return generator;
-}
-
-// post-process atom:logo to create an RSS2-like structure
-function atomLogo(s, logo) {
-  logo.setPropertyAsAString("url", trimString(s));
-}
+} 
 
 // post-process an RSS category, map it to the Atom fields.
 function rssCatTerm(s, cat) {
@@ -1085,7 +1060,6 @@ function FeedProcessor() {
       "atom:contributor": new ElementInfo("contributors",  Cc[PERSON_CONTRACTID],
                                           null, true),
       "atom:link": new ElementInfo("links", null, null, true),
-      "atom:logo": new ElementInfo("atom:logo", null, atomLogo, false),
       "atom:entry": new ElementInfo("entries", Cc[ENTRY_CONTRACTID],
                                     null, true)
     },

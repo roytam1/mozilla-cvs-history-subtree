@@ -661,14 +661,14 @@ PRInt32	nsEudoraMailbox::FindStartLine( SimpleBufferTonyRCopiedOnce& data)
 		return( -1);
 	PRInt32	count = 0;
 	const char *pData = data.m_pBuffer + data.m_writeOffset;
-	while ((count < len) && (*pData != 0x0D) && (*pData != 0x0A)) {
+	while ((*pData != 0x0D) && (*pData != 0x0A) && (count < len)) {
 		pData++;
 		count++;
 	}
 	if (count == len)
 		return( -1);
 
-	while ((count < len) && ((*pData == 0x0D) || (*pData == 0x0A))) {
+	while (((*pData == 0x0D) || (*pData == 0x0A)) && (count < len)) {
 		pData++;
 		count++;
 	}
@@ -686,11 +686,11 @@ PRInt32 nsEudoraMailbox::FindNextEndLine( SimpleBufferTonyRCopiedOnce& data)
 		return( -1);
 	PRInt32	count = 0;
 	const char *pData = data.m_pBuffer + data.m_writeOffset;
-	while ((count < len) && ((*pData == 0x0D) || (*pData == 0x0A))) {
+	while (((*pData == 0x0D) || (*pData == 0x0A)) && (count < len)) {
 		pData++;
 		count++;
 	}
-	while ((count < len) && (*pData != 0x0D) && (*pData != 0x0A)) {
+	while ((*pData != 0x0D) && (*pData != 0x0A) && (count < len)) {
 		pData++;
 		count++;
 	}

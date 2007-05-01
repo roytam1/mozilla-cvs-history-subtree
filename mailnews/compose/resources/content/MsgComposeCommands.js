@@ -246,10 +246,8 @@ var gComposeRecyclingListener = {
         document.getElementById("FormatToolbar").hidden = false;
     }
 
-    // Stop InlineSpellCheckerUI so personal dictionary is saved
-    InlineSpellCheckerUI.enabled = false;
-    // clear any suggestions in the context menu
-    InlineSpellCheckerUI.clearSuggestionsFromMenu();
+    // Stop InlineSpellChecker so personal dictionary is saved
+    StopInlineSpellChecker();
 
     //Reset editor
     EditorResetFontAndColorAttributes();
@@ -268,6 +266,9 @@ var gComposeRecyclingListener = {
 
   onReopen: function(params) {
     // Reset focus to avoid undesirable visual effect when reopening the window
+    var identityElement = document.getElementById("msgIdentity");
+    if (identityElement)
+      identityElement.focus();
 
     InitializeGlobalVariables();
     ComposeStartup(true, params);
@@ -615,20 +616,21 @@ function updateComposeItems()
   } catch(e) {}
 }
 
-function openEditorContextMenu(popup)
+function openEditorContextMenu()
 {
   // if we have a mispelled word, show spellchecker context
   // menuitems as well as the usual context menu
-  InlineSpellCheckerUI.clearSuggestionsFromMenu();
-  InlineSpellCheckerUI.initFromEvent(document.popupRangeParent, document.popupRangeOffset);
-  var onMisspelling = InlineSpellCheckerUI.overMisspelling;
-  document.getElementById('spellCheckSuggestionsSeparator').hidden = !onMisspelling;
-  document.getElementById('spellCheckAddToDictionary').hidden = !onMisspelling;
-  document.getElementById('spellCheckIgnoreWord').hidden = !onMisspelling;
-  var separator = document.getElementById('spellCheckAddSep');
-  separator.hidden = !onMisspelling;
-  document.getElementById('spellCheckNoSuggestions').hidden = !onMisspelling ||
-      InlineSpellCheckerUI.addSuggestionsToMenu(popup, separator, 5);
+  var spellCheckNoSuggestionsItem = document.getElementById('spellCheckNoSuggestions');
+  var word;
+  var misspelledWordStatus = InlineSpellChecker.updateSuggestionsMenu(document.getElementById('msgComposeContext'),
+                             spellCheckNoSuggestionsItem, word);
+
+  var hideSpellingItems = (misspelledWordStatus == kSpellNoMispelling);
+  spellCheckNoSuggestionsItem.hidden = hideSpellingItems || misspelledWordStatus != kSpellNoSuggestionsFound;
+  document.getElementById('spellCheckAddToDictionary').hidden = hideSpellingItems;
+  document.getElementById('spellCheckIgnoreWord').hidden = hideSpellingItems;
+  document.getElementById('spellCheckAddSep').hidden = hideSpellingItems;
+  document.getElementById('spellCheckSuggestionsSeparator').hidden = hideSpellingItems;
 
   updateEditItems();
 }
@@ -1534,8 +1536,8 @@ function ComposeUnload()
 {
   dump("\nComposeUnload from XUL\n");
 
-  // Stop InlineSpellCheckerUI so personal dictionary is saved
-  InlineSpellCheckerUI.enabled = false;
+  // Stop InlineSpellChecker so personal dictionary is saved
+  StopInlineSpellChecker();
 
   EditorCleanup();
 
@@ -1684,7 +1686,7 @@ function GenericSendMessage( msgType )
         {
           // We disable spellcheck for the following -subject line, attachment pane, identity and addressing widget
           // therefore we need to explicitly focus on the mail body when we have to do a spellcheck.
-          SetMsgBodyFrameFocus();
+          window.content.focus();
           window.cancelSendMessage = false;
           try {
             window.openDialog("chrome://editor/content/EdSpellCheck.xul", "_blank",
@@ -1830,21 +1832,21 @@ function GenericSendMessage( msgType )
           var dlgText = sComposeMsgsBundle.getString("12553");  // NS_ERROR_MSG_MULTILINGUAL_SEND
           var result3 = gPromptService.confirmEx(window, dlgTitle, dlgText,
               (gPromptService.BUTTON_TITLE_IS_STRING * gPromptService.BUTTON_POS_0) +
-              (gPromptService.BUTTON_TITLE_CANCEL * gPromptService.BUTTON_POS_1) +
-              (gPromptService.BUTTON_TITLE_IS_STRING * gPromptService.BUTTON_POS_2),
-              sComposeMsgsBundle.getString('sendInUTF8'),
-              null,
-              sComposeMsgsBundle.getString('sendAnyway'), null, {value:0}); 
+              (gPromptService.BUTTON_TITLE_IS_STRING * gPromptService.BUTTON_POS_1) +
+              (gPromptService.BUTTON_TITLE_CANCEL * gPromptService.BUTTON_POS_2),
+              sComposeMsgsBundle.getString('sendInUTF8'), 
+              sComposeMsgsBundle.getString('sendAnyway'),
+              null, null, {value:0}); 
           switch(result3)
           {
             case 0: 
               fallbackCharset.value = "UTF-8";
               break;
-            case 1:  // cancel
-              return;
-            case 2:  // send anyway
+            case 1:  // send anyway
               msgCompFields.needToCheckCharset = false;
               break;
+            case 2:  // cancel
+              return;
           }
         }
         if (fallbackCharset && 
@@ -2074,7 +2076,7 @@ function SelectAddress()
 // walk through the recipients list and add them to the inline spell checker ignore list
 function addRecipientsToIgnoreList(aAddressesToAdd)
 {
-  if (InlineSpellCheckerUI.enabled)
+  if (InlineSpellChecker.inlineSpellChecker && InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell)
   {
     // break the list of potentially many recipients back into individual names
     var hdrParser = Components.classes["@mozilla.org/messenger/headerparser;1"].getService(Components.interfaces.nsIMsgHeaderParser);
@@ -2093,7 +2095,24 @@ function addRecipientsToIgnoreList(aAddressesToAdd)
         tokenizedNames = tokenizedNames.concat(splitNames);
     }
 
-    InlineSpellCheckerUI.mInlineSpellChecker.ignoreWords(tokenizedNames, tokenizedNames.length);
+    InlineSpellChecker.inlineSpellChecker.ignoreWords(tokenizedNames, tokenizedNames.length);
+  }
+}
+
+function StopInlineSpellChecker()
+{
+  if (InlineSpellChecker.inlineSpellChecker)
+    InlineSpellChecker.editor.QueryInterface(Components.interfaces.nsIEditor_MOZILLA_1_8_BRANCH).setSpellcheckUserOverride(false);
+}
+
+function ToggleInlineSpellChecker(target)
+{
+  if (InlineSpellChecker.inlineSpellChecker)
+  {
+    InlineSpellChecker.editor.QueryInterface(Components.interfaces.nsIEditor_MOZILLA_1_8_BRANCH).setSpellcheckUserOverride(!InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell);
+
+    if (InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell)
+      InlineSpellChecker.checkDocument(window.content.document);
   }
 }
 
@@ -2209,8 +2228,9 @@ function ChangeLanguage(event)
     sPrefs.setComplexValue("spellchecker.dictionary", nsISupportsString, str);
 
     // now check the document over again with the new dictionary
-    if (InlineSpellCheckerUI.enabled)
-      InlineSpellCheckerUI.mInlineSpellChecker.spellCheckRange(null);
+    if (InlineSpellChecker.inlineSpellChecker)
+      if (InlineSpellChecker.inlineSpellChecker.enableRealTimeSpell)
+        InlineSpellChecker.checkDocument(window.content.document);
   }
   event.stopPropagation();
 }
@@ -2340,7 +2360,7 @@ function getIdentityForKey(key)
 function AdjustFocus()
 {
   //dump("XXX adjusting focus\n");
-  var element = awGetInputElement(awGetNumberOfRecipients());
+  var element = document.getElementById("addressCol2#" + awGetNumberOfRecipients());
   if (element.value == "") {
       //dump("XXX focus on address\n");
       awSetFocus(awGetNumberOfRecipients(), element);
@@ -2354,7 +2374,7 @@ function AdjustFocus()
       }
       else {
         //dump("XXX focus on body\n");
-        SetMsgBodyFrameFocus();
+        window.content.focus();
       }
   }
 }
@@ -2932,12 +2952,12 @@ function subjectKeyPress(event)
   switch(event.keyCode) {
   case 9:
     if (!event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
-      SetMsgBodyFrameFocus();
+      window.content.focus();
       event.preventDefault();
     }
     break;
   case 13:
-    SetMsgBodyFrameFocus();
+    window.content.focus();
     break;
   }
 }
@@ -3112,9 +3132,7 @@ function SetMsgAttachmentElementFocus()
 
 function SetMsgBodyFrameFocus()
 {
-  //window.content.focus(); fails to blur the currently focused element
-  document.commandDispatcher
-          .advanceFocusIntoSubtree(document.getElementById("appcontent"));
+  window.content.focus();
 }
 
 function GetMsgAddressingWidgetElement()
@@ -3305,7 +3323,11 @@ function AutoSave()
 function InitEditor(editor)
 {
   gMsgCompose.initEditor(editor, window.content);
-  InlineSpellCheckerUI.init(editor);
-  InlineSpellCheckerUI.enabled = sPrefs.getBoolPref("mail.spellcheck.inline");
-  document.getElementById("menu_inlineSpellCheck").setAttribute("disabled", !InlineSpellCheckerUI.canSpellCheck);
+  try {
+    InlineSpellChecker.Init(editor, sPrefs.getBoolPref("mail.spellcheck.inline"));
+  } catch (e) {
+    // InlineSpellChecker.Init throws if there is no inline spellchecker
+    // so disable menuitem.
+    document.getElementById('menu_inlineSpellCheck').setAttribute('disabled', true);
+  }
 }

@@ -280,7 +280,6 @@ function findPeriodForItem(item)
     var start = item.startDate || item.entryDate || item.dueDate;
     if (!start) 
         return null;
-    start = start.getInTimezone(calendarDefaultTimezone());
     if (start.compare(this.today.end) == -1)
         return this.today;
         
@@ -298,24 +297,9 @@ agendaTreeView.addItem =
 function addItem(item)
 {
     var when = this.findPeriodForItem(item);
-    if (!when) {
+    if (!when)
         return;
-    }
-
-    // Prevent showing items with the same id but on multiple calendars from
-    // appearing multiple times in the agenda.
-    var dupe;
-    for (var i = 0; i < when.events.length; i++) {
-        if (item.id == when.events[i].id) {
-            when.events.splice(i, 1, item);
-            dupe = true;
-            return;
-        }
-        dupe = false;
-    }
-    if (!dupe) {
-        when.events.push(item);
-    }
+    when.events.push(item);
     this.calendarUpdateComplete();
 };
 
@@ -495,9 +479,7 @@ agendaTreeView.calendarObserver.onEndBatch = function() {
         this.agendaTreeView.refreshCalendarQuery();
     }
 };
-agendaTreeView.calendarObserver.onLoad = function() {
-    this.agendaTreeView.refreshCalendarQuery();
-};
+agendaTreeView.calendarObserver.onLoad = function() {};
 
 agendaTreeView.calendarObserver.onAddItem =
 function observer_onAddItem(item)

@@ -1057,8 +1057,6 @@ mail/components/compose/Makefile
 mail/components/addrbook/Makefile
 mail/components/preferences/Makefile
 mail/components/build/Makefile
-mail/components/search/Makefile
-mail/components/search/mdimporter/Makefile
 mail/components/shell/Makefile
 mail/components/shell/public/Makefile
 mail/components/phishing/Makefile
@@ -1113,7 +1111,6 @@ calendar/sunbird/base/Makefile
 
 MAKEFILES_macbrowser="
 camino/Makefile
-camino/flashblock/Makefile
 camino/installer/Makefile
 "
 
@@ -1373,6 +1370,7 @@ if [ "$MOZ_JAVAXPCOM" ]; then
         extensions/java/xpcom/interfaces/Makefile
         extensions/java/xpcom/src/Makefile
         extensions/java/xpcom/glue/Makefile
+        extensions/java/xpcom/tools/genifaces/Makefile
 "
 fi
 

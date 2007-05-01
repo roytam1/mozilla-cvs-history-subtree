@@ -69,8 +69,6 @@ extern NSString* const kTabBarBackgroundDoubleClickedNotification;
 
 - (BOOL)tabsVisible;
 
-- (int)numberOfBookmarkableTabViewItems;
-- (int)indexOfTabViewItemWithURL:(NSString*)aURL;
 - (BrowserTabViewItem*)itemWithTag:(int)tag;
 - (void)refreshTabBar:(BOOL)rebuild;
 - (void)refreshTab:(BrowserTabViewItem*)tab;
