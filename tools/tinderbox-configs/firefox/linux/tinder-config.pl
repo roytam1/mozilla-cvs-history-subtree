@@ -142,13 +142,13 @@ $BuildNameExtra = 'Fx-Release';
 $ConfigureOnly = 1;
 %WGetFiles = (
 # CONFIG: 	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.linux-i686.tar.gz" => 
-"http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.4-candidates/rc%rc%/firefox-2.0.0.4.en-US.linux-i686.tar.gz" => 
+             "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.4-candidates/rc1/firefox-2.0.0.4.en-US.linux-i686.tar.gz" => 
 # CONFIG:	      "/%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.gz"
-"/%l10n_buildDir%/Linux_2.4.20-28.8_Depend/firefox.tar.gz"
+             "/builds/tinderbox/Fx-Mozilla1.8-l10n-release/Linux_2.4.20-28.8_Depend/firefox.tar.gz"
 	      );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.gz";
-$BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/Linux_2.4.20-28.8_Depend/firefox.tar.gz";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.8-l10n-release/Linux_2.4.20-28.8_Depend/firefox.tar.gz";
 
 #-
 #- The rest should not need to be changed
