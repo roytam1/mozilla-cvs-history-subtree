@@ -123,7 +123,7 @@ var gAttachVCardOptionChanged;
 var gMailSession;
 var gAutoSaveInterval;
 var gAutoSaveTimeout;
-var gAutoSaveKickedIn;
+var gExplicitSave;
 var gEditingDraft;
 
 const kComposeAttachDirPrefName = "mail.compose.attach.dir";
@@ -1460,7 +1460,7 @@ function ComposeStartup(recycled, aParams)
   if (gAutoSaveInterval)
     gAutoSaveTimeout = setTimeout(AutoSave, gAutoSaveInterval);
 
-  gAutoSaveKickedIn = false;
+  gExplicitSave = false;
 }
 
 // The new, nice, simple way of getting notified when a new editor has been created
@@ -1880,21 +1880,21 @@ function GenericSendMessage( msgType )
           var dlgText = sComposeMsgsBundle.getString("12553");  // NS_ERROR_MSG_MULTILINGUAL_SEND
           var result3 = gPromptService.confirmEx(window, dlgTitle, dlgText,
               (gPromptService.BUTTON_TITLE_IS_STRING * gPromptService.BUTTON_POS_0) +
-              (gPromptService.BUTTON_TITLE_CANCEL * gPromptService.BUTTON_POS_1) +
-              (gPromptService.BUTTON_TITLE_IS_STRING * gPromptService.BUTTON_POS_2),
+              (gPromptService.BUTTON_TITLE_IS_STRING * gPromptService.BUTTON_POS_1) +
+              (gPromptService.BUTTON_TITLE_CANCEL * gPromptService.BUTTON_POS_2),
               sComposeMsgsBundle.getString('sendInUTF8'), 
-              null,
-              sComposeMsgsBundle.getString('sendAnyway'), null, {value:0}); 
+              sComposeMsgsBundle.getString('sendAnyway'),
+              null, null, {value:0}); 
           switch(result3)
           {
             case 0: 
               fallbackCharset.value = "UTF-8";
               break;
-            case 1:  // cancel
-              return;
-            case 2:  // send anyway
+            case 1:  // send anyway
               msgCompFields.needToCheckCharset = false;
               break;
+            case 2:  // cancel
+              return;
           }
         }
         if (fallbackCharset && 
@@ -2033,8 +2033,7 @@ function SaveAsDraft()
 {
   dump("SaveAsDraft from XUL\n");
 
-  gAutoSaveKickedIn = false;
-  gEditingDraft = true;
+  gExplicitSave = true;
 
   GenericSendMessage(nsIMsgCompDeliverMode.SaveAsDraft);
   defaultSaveOperation = "draft";
@@ -2043,9 +2042,6 @@ function SaveAsDraft()
 function SaveAsTemplate()
 {
   dump("SaveAsTemplate from XUL\n");
-
-  gAutoSaveKickedIn = false;
-  gEditingDraft = false;
 
   GenericSendMessage(nsIMsgCompDeliverMode.SaveAsTemplate);
   defaultSaveOperation = "template";
@@ -2500,7 +2496,7 @@ function ComposeCanClose()
   }
 
   // Returns FALSE only if user cancels save action
-  if (gContentChanged || gMsgCompose.bodyModified || gAutoSaveKickedIn)
+  if (gContentChanged || gMsgCompose.bodyModified || !gExplicitSave)
   {
     // call window.focus, since we need to pop up a dialog
     // and therefore need to be visible (to prevent user confusion)
@@ -2526,7 +2522,7 @@ function ComposeCanClose()
         case 2: //Don't Save
           // don't delete the draft if we didn't start off editing a draft
           // and the user hasn't explicitly saved it.
-          if (!gEditingDraft && gAutoSaveKickedIn)
+          if (!gEditingDraft && !gExplicitSave)
             RemoveDraft();
           break;
       }
@@ -3401,9 +3397,10 @@ function SetMsgAttachmentElementFocus()
 
 function SetMsgBodyFrameFocus()
 {
-  // window.content.focus() fails to blur the currently focused element
-  document.commandDispatcher
-          .advanceFocusIntoSubtree(document.getElementById("appcontent"));
+  // bug 236219: never just set the focus to window.content, that fails to perform
+  // the 'unfocus' operation on the element that currently has focus.
+  document.getElementById("appcontent").focus();  // focus to editor's container
+  window.content.focus();                         // focus to editor
 }
 
 function GetMsgAddressingWidgetTreeElement()
@@ -3609,10 +3606,7 @@ function AutoSave()
 {
   if (gMsgCompose.editor && (gContentChanged || gMsgCompose.bodyModified) 
       && !gSendOrSaveOperationInProgress)
-  {
     GenericSendMessage(nsIMsgCompDeliverMode.AutoSaveAsDraft);
-    gAutoSaveKickedIn = true;
-  }
 
   gAutoSaveTimeout = setTimeout(AutoSave, gAutoSaveInterval);
 }

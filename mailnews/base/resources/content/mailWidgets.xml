@@ -1718,11 +1718,8 @@
               // XXXbz We really want client*, but event.client* is bogus inside a popup!
               var eventX = event.screenX - document.documentElement.boxObject.screenX;
               var eventY = event.screenY - document.documentElement.boxObject.screenY;
-              var index = box.getRowAt(eventX, eventY);
-              box.view.selection.select(index);
-              return index;
+              box.view.selection.select(box.getRowAt(eventX, eventY));
             }
-            return -1;
           ]]>
         </body>
       </method>
@@ -1745,6 +1742,17 @@
           ]]>
         </body>
       </method>
+      <field name="onKeyDownMenuList" readonly="true">
+        <![CDATA[
+          ({
+            parentNode: this.parentNode,
+            handleEvent: function handleEvent(event) {
+              if (this.parentNode.hasAttribute("open"))
+                event.stopPropagation();
+            }
+          })
+        ]]>
+      </field>
       <field name="onKeyPressMenuList" readonly="true">
         <![CDATA[
           ({
@@ -1764,7 +1772,6 @@
               var box = this.tree.treeBoxObject;
               if (this.parentNode.hasAttribute("open")) {
                 event.stopPropagation();
-                event.preventDefault();
                 switch (event.keyCode) {
                   case event.DOM_VK_ESCAPE:
                     this.self.hidePopup();
@@ -1869,10 +1876,12 @@
     </implementation>
     <handlers>
       <handler event="mousemove" action="this.updateHover(event);"/>
-      <handler event="click" button="0" action="if (this.updateHover(event) >= 0) this.fire();"/>
+      <handler event="click" action="this.updateHover(event);this.fire();"/>
       <handler event="popupshowing">
         <![CDATA[
           this.parentNode.addEventListener("blur", this.onBlurMenuList, false);
+          window.top.document.addEventListener("keydown", this.onKeyDownMenuList, true);
+          window.top.document.addEventListener("keypress", this.onKeyPressMenuList, true);
           var box = this.tree.treeBoxObject;
           box.focused = true;
           var index = this.setInitialSelection();
@@ -1883,14 +1892,11 @@
             setTimeout(function() { box.ensureRowIsVisible(index); }, 0);
         ]]>
       </handler>
-      <handler event="popupshown">
-        <![CDATA[
-          this.enableKeyboardNavigator(false);
-        ]]>
-      </handler>
       <handler event="popuphiding">
         <![CDATA[
           this.parentNode.removeEventListener("blur", this.onBlurMenuList, false);
+          window.top.document.removeEventListener("keydown", this.onKeyDownMenuList, true);
+          window.top.document.removeEventListener("keypress", this.onKeyPressMenuList, true);
         ]]>
       </handler>
     </handlers>
@@ -2033,8 +2039,6 @@
             // skip servers, Trash and Junk folders
             if (!aFolder || aFolder.isServer || aFolder.getFlag(kMsgPopupFolderFlagJunk) || aFolder.getFlag(kMsgPopupFolderFlagTrash))
               return false;
-            var pref = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);         
-            var showPreviewText = pref.getBoolPref("mail.biff.alert.show_preview");
             var folderArray = new Array;
             if (aFolder.flags  & MSG_FOLDER_FLAG_VIRTUAL)
             {
@@ -2067,23 +2071,20 @@
               if (!numMsgKeys.value)
                 continue;
 
-
-              if (showPreviewText)
-              {
-                // fetchMsgPreviewText forces the previewText property to get generated
-                // for each of the message keys.
-                try {
-                  aFolder.fetchMsgPreviewText(msgKeys.value, numMsgKeys.value, false, aUrlListener, aOutAsync);
-                  aFolder.setMsgDatabase(null);
-                }
-                catch (ex)
-                {
-                  // fetchMsgPreviewText throws an error when we call it on a news folder, we should just not show
-                  // the tooltip if this method returns an error.
-                  aFolder.setMsgDatabase(null);
-                  continue; 
-                }
+              // fetchMsgPreviewText forces the previewText property to get generated
+              // for each of the message keys.
+              try {
+                aFolder.fetchMsgPreviewText(msgKeys.value, numMsgKeys.value, false, aUrlListener, aOutAsync);
+                aFolder.setMsgDatabase(null);
               }
+              catch (ex)
+              {
+                // fetchMsgPreviewText throws an error when we call it on a news folder, we should just not show
+                // the tooltip if this method returns an error.
+                aFolder.setMsgDatabase(null);
+                continue; 
+              }
+
               // if fetching the preview text is going to be an asynch operation and the caller
               // is set up to handle that fact, then don't bother filling in any of the fields since 
               // we'll have to do this all over again when the fetch for the preview text completes.
@@ -2110,25 +2111,14 @@
                 msgPopup.setAttribute('subject', msgSubject);
 
                 var previewText = msgHdr.getStringProperty('preview');
-                // convert the preview text from utf-8 to unicode
-                if (previewText)
-                {
-                  try
-                  {
-                    var text = unicodeConverter.ConvertToUnicode(previewText);
-                    if (text)
-                      msgPopup.setAttribute('previewText', text);
-                  }
-                  catch (ex) { }
-                }
+                // convert the preview text from utf-8 to unicode          
+                if (previewText)            
+                  msgPopup.setAttribute('previewText', unicodeConverter.ConvertToUnicode(previewText));
 
                 var names = {};
                 var emails = {};
                 var numAddresses = hdrParser.parseHeadersWithArray(msgHdr.mime2DecodedAuthor, emails, names, {});
-                msgPopup.setAttribute('sender', names.value[0] ? names.value[0] : emails.value[0]);
-                msgPopup.messageUri = aFolder.getUriForMsg(msgHdr);
-                msgPopup.folderUri = aFolder.URI;
-                msgPopup.msgKey = msgHdr.messageKey;
+                msgPopup.setAttribute('sender', ' - ' + (names.value[0] ? names.value[0] : emails.value[0]));
                 document.getAnonymousNodes(this)[0].appendChild(msgPopup);
               } 
               if (document.getAnonymousNodes(this)[0].childNodes.length >= this.mMaxMsgHdrsInPopup)
@@ -2153,7 +2143,7 @@
 
   <binding id="folderSummary-message">
     <content>
-      <xul:vbox class="folderSummaryMessage">
+      <xul:vbox>
         <xul:hbox class="folderSummary-message-row">
           <xul:label anonid="subject" flex="1" class="folderSummary-subject" xbl:inherits="value=subject" crop="right"/>
           <xul:label anonid="sender"  class="folderSummary-sender" xbl:inherits="value=sender" crop="right"/>
@@ -2179,38 +2169,5 @@
         ]]>
       </constructor>
     </implementation>
-    <handlers>
-      <handler event="click" button="0">
-        <![CDATA[
-          var mailSession = Components.classes["@mozilla.org/messenger/services/session;1"].
-                              getService(Components.interfaces.nsIMsgMailSession);
-          var topmostMsgWindow;
-          try {
-           topmostMsgWindow = mailSession.topmostMsgWindow;
-          } catch (ex) {}
-          
-          if (topmostMsgWindow)
-          {
-            try {
-              // SelectFolder throws an exception if the folder is not in the current folder view
-              mailSession.topmostMsgWindow.SelectFolder(this.folderUri);
-              mailSession.topmostMsgWindow.SelectMessage(this.messageUri);
-            } catch (ex) {}
-          }
-          else
-          {
-            // open a new window
-            var mailWindowService = Components.classes["@mozilla.org/messenger/windowservice;1"].
-                                      getService(Components.interfaces.nsIMessengerWindowService);
-            mailWindowService.openMessengerWindowWithUri("mail:3pane", this.folderUri, this.msgKey);
-          }
-          
-          try {
-            if (gAlertListener)
-              gAlertListener.observe(null, "alertclickcallback", "");
-          } catch (ex) {}
-        ]]>
-      </handler>
-    </handlers>    
   </binding>
 </bindings>

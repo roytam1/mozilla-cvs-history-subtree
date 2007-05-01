@@ -1826,11 +1826,12 @@ nsMsgComposeAndSend::GetBodyFromEditor()
               CopyUTF16toUTF8(bodyText, outCString);
               mCompFields->SetCharacterSet("UTF-8"); // tag as UTF-8
               break; 
-            case 1 : // return to the editor
+            case 1 : // send anyway 
+              break;
+            case 2 : // return to the editor
+            default :
               Recycle(bodyText);
               return NS_ERROR_MSG_MULTILINGUAL_SEND;
-            case 2 : // send anyway 
-              break;
           }
         }
       }

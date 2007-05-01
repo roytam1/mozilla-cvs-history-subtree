@@ -57,10 +57,6 @@ public:
   NS_DECL_NSIXTFGENERICELEMENT
   NS_DECL_NSIDOMEVENTLISTENER
   NS_IMETHOD OnDestroyed();
-  NS_IMETHOD WillChangeDocument(nsIDOMDocument *aNewDocument);
-  NS_IMETHOD DocumentChanged(nsIDOMDocument *aNewDocument);
-  NS_IMETHOD WillChangeParent(nsIDOMElement *aNewParent);
-  NS_IMETHOD ParentChanged(nsIDOMElement *aNewParent);
 protected:
   nsIDOMElement* mElement;
 };

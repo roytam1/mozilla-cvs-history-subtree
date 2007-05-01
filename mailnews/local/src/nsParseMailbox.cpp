@@ -1502,7 +1502,6 @@ nsParseNewMailState::nsParseNewMailState()
   m_ibuffer_size = 0;
   m_ibuffer_fp = 0;
   m_moveCoalescer = nsnull;
-  m_numNotNewMessages = 0;
  }
 
 NS_IMPL_ISUPPORTS_INHERITED1(nsParseNewMailState, nsMsgMailboxParser, nsIMsgFilterHitNotify)
@@ -1924,7 +1923,7 @@ NS_IMETHODIMP nsParseNewMailState::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWi
         nsCOMPtr<nsISupportsArray> messageArray;
         NS_NewISupportsArray(getter_AddRefs(messageArray));
         messageArray->AppendElement(msgHdr);
-        m_downloadFolder->AddKeywordsToMessages(messageArray, keyword.get());
+        m_downloadFolder->AddKeywordToMessages(messageArray, keyword.get());
         break;
       }
       case nsMsgFilterAction::Label:
@@ -1944,8 +1943,8 @@ NS_IMETHODIMP nsParseNewMailState::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWi
           msgIsNew = PR_FALSE;
         nsMsgKey msgKey;
         msgHdr->GetMessageKey(&msgKey);
-        msgHdr->SetStringProperty("junkscore", junkScoreStr.get());
-        msgHdr->SetStringProperty("junkscoreorigin", "plugin");
+        m_mailDB->SetStringProperty(msgKey, "junkscore", junkScoreStr.get());
+        m_mailDB->SetStringProperty(msgKey, "junkscoreorigin", /* ### should this be plugin? */"plugin");
         break;
       }
       case nsMsgFilterAction::Forward:
@@ -2029,7 +2028,6 @@ NS_IMETHODIMP nsParseNewMailState::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWi
     m_downloadFolder->GetNumNewMessages(PR_FALSE, &numNewMessages);
     if (numNewMessages > 0)
       m_downloadFolder->SetNumNewMessages(numNewMessages - 1);
-    m_numNotNewMessages++;
   }
   return rv;
 }
@@ -2324,9 +2322,6 @@ nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr,
   NS_ASSERTION(NS_SUCCEEDED(truncRet), "unable to truncate file");
   if (NS_FAILED(truncRet))
    destIFolder->ThrowAlertMsg("filterFolderTruncateFailed", msgWindow);
-  else
-    // tell parser that we've truncated the Inbox
-    nsParseMailMessageState::Init(m_curHdrOffset);
 
   //  need to re-open the inbox file stream.
   m_inboxFileStream->Open(m_inboxFileSpec, (PR_RDWR | PR_CREATE_FILE));
@@ -2336,6 +2331,8 @@ nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr,
   if (destIFolder)
     destIFolder->ReleaseSemaphore (myISupports);
   
+  // tell parser that we've truncated the Inbox
+  nsParseMailMessageState::Init(m_curHdrOffset);
   
   (void) localFolder->RefreshSizeOnDisk();
   if (destIFolder)

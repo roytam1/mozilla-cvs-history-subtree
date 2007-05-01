@@ -55,10 +55,6 @@ PREF_JS_EXPORTS = \
     $(srcdir)/profile/channel-prefs.js \
     $(NULL)
 
-ifndef MOZ_BRANDING_DIRECTORY
-PREF_JS_EXPORTS += $(srcdir)/thunderbird-branding.js
-endif
-
 ifeq ($(USE_SHORT_LIBNAME), 1)
 PROGRAM = thunderbird$(BIN_SUFFIX)
 else
@@ -315,13 +311,8 @@ clean clobber::
 	rm -rf $(DIST)/$(APP_NAME).app
 endif
 
-LICENSE_FILES = \
-	LICENSE.txt \
-	license.html \
-	$(NULL)
-
-libs:: $(addprefix $(topsrcdir)/mail/,$(LICENSE_FILES))
-	$(SYSINSTALL) $(IFLAGS1) $^ $(FINAL_TARGET)
+libs::
+	$(INSTALL) $(topsrcdir)/mail/LICENSE.txt $(DIST)/bin
 
 libs:: $(srcdir)/profile/prefs.js
 	$(INSTALL) $^ $(DIST)/bin/defaults/profile

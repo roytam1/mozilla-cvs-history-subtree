@@ -51,14 +51,14 @@ ifeq ($(OS_ARCH),Darwin)
 DLL_SUFFIX = .jnilib
 endif
 
-REQUIRES =  xpcom \
-			string \
-			xulapp \
+REQUIRES	= xpcom \
+		  string \
+		  xulapp \
 			js \
 			xpconnect \
-			$(NULL)
+		  $(NULL)
 
-CPPSRCS	= \
+CPPSRCS		= \
 		nsAppFileLocProviderProxy.cpp \
 		nsJavaInterfaces.cpp \
 		nsJavaWrapper.cpp \
@@ -147,9 +147,8 @@ $(JARFILE): org/mozilla/xpcom/internal/.class_done Makefile
 $(JARFILE_SRC): $(JARFILE)
 	$(JAR) cf $@ -C _javagen org
 
-jar-libs:: $(JARFILE)
-	$(INSTALL) $(IFLAGS1) $(JARFILE) $(FINAL_TARGET)
-
-jar-install:: $(JARFILE)
-	$(SYSINSTALL) $(IFLAGS2) $(JARFILE) $(DESTDIR)$(mozappdir)
+#libs:: $(JARFILE)
+#	$(INSTALL) $(IFLAGS1) $^ $(DIST)/bin
+jarfile:: $(JARFILE) $(JARFILE_SRC)
+	$(INSTALL) $(IFLAGS1) $^ $(DIST)/bin
 

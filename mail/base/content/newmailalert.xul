@@ -54,7 +54,7 @@
   <script type="application/x-javascript" src="chrome://messenger/content/newmailalert.js"/>
 
 
-  <stack id="alertContainer" mousethrough="always">
+  <stack id="alertContainer">
     <hbox id="alertBox">
       <hbox id ="alertImageBox" align="center" valign="center">
         <image id="alertImage"/>
