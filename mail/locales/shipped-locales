@@ -1,4 +1,3 @@
-be
 bg
 ca
 cs
@@ -12,25 +11,23 @@ es-ES
 eu
 fi
 fr
-ga-IE
+gu-IN win32 linux
+he
 hu
 it
 ja win32 linux
 ja-JP-mac osx osxppc
 ko
-lt
 mk
 nb-NO
 nl
-nn-NO
-pa-IN 
+pa-IN win32 linux
 pl
 pt-BR
-pt-PT
+ro
 ru
 sk
 sl
 sv-SE
 tr
 zh-CN
-zh-TW

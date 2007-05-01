@@ -42,32 +42,20 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var gPrintSettings = null;
+var gTempFile = null;
 
-function getCalendarView()
-{
-    var theView = window.opener.currentView();
-    if (!theView.startDay) {
-        theView = null;
-    }
-    return theView;
-}
+var gPrintSettings = null;
 
 function loadCalendarPrintDialog()
 {
     // set the datepickers to the currently selected dates
-    var theView = getCalendarView();
-    if (theView) {
-        document.getElementById("start-date-picker").value = theView.startDay.jsDate;
-        document.getElementById("end-date-picker").value = theView.endDay.jsDate;
-    } else {
-        document.getElementById("printCurrentViewRadio").setAttribute("disabled", true);
-    }
-    if (!theView || !theView.getSelectedItems({}).length) {
+    var theView = window.opener.currentView();
+    document.getElementById("start-date-picker").value = theView.startDay.jsDate;
+    document.getElementById("end-date-picker").value = theView.endDay.jsDate;
+
+    if (!theView.getSelectedItems({}).length) {
         document.getElementById("selected").setAttribute("disabled", true);
     }
-    document.getElementById(theView ? "printCurrentViewRadio" : "custom-range")
-            .setAttribute("selected", true);
 
     // Get a list of formatters
     var contractids = new Array();
@@ -95,6 +83,11 @@ function loadCalendarPrintDialog()
     self.focus();
 }
 
+function unloadCalendarPrintDialog()
+{
+    gTempFile.remove(false);
+}
+
 /**
  * Gets the settings from the dialog's UI widgets.
  * notifies an Object with title, layoutCId, eventList, start, and end
@@ -110,7 +103,7 @@ function getEventsAndDialogSettings(receiverFunc)
     settings.end = null;
     settings.eventList = null;
 
-    var theView = getCalendarView();
+    var theView = window.opener.currentView();
     switch (document.getElementById("view-field").selectedItem.value) {
         case 'currentview':
         case '': //just in case
@@ -164,7 +157,7 @@ function getEventsAndDialogSettings(receiverFunc)
  * updates the HTML in the iframe accordingly. This is also called when a
  * dialog UI element has changed, since we'll want to refresh the preview.
  */
-function refreshHtml(finishFunc)
+function refreshHtml()
 {
     getEventsAndDialogSettings(
         function getEventsAndDialogSettings_response(settings) {
@@ -177,66 +170,41 @@ function refreshHtml(finishFunc)
             var printformatter = Components.classes[settings.layoutCId]
                                            .createInstance(Components.interfaces.calIPrintFormatter);
 
-            var html = "";
+            // Fail-safe check to not init twice, to prevent leaking files
+            if (gTempFile) {
+                gTempFile.remove(false);
+            }
+            const nsIFile = Components.interfaces.nsIFile;
+            var dirService = Components.classes["@mozilla.org/file/directory_service;1"]
+                                       .getService(Components.interfaces.nsIProperties);
+            gTempFile = dirService.get("TmpD", nsIFile);
+            gTempFile.append("calendarPrint.html");
+            gTempFile.createUnique(nsIFile.NORMAL_FILE_TYPE, 0600); // 0600 = -rw-------
+            var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                                      .getService(Components.interfaces.nsIIOService);
+            var tempUri = ioService.newFileURI(gTempFile); 
+
+            var stream = Components.classes["@mozilla.org/network/file-output-stream;1"]
+                                   .createInstance(Components.interfaces.nsIFileOutputStream);
+
             try {
-                var pipe = Components.classes["@mozilla.org/pipe;1"]
-                                     .createInstance(Components.interfaces.nsIPipe);
-                const PR_UINT32_MAX = 4294967295; // signals "infinite-length"
-                pipe.init(true, true, 0, PR_UINT32_MAX, null);
-                printformatter.formatToHtml(pipe.outputStream,
+                // 0x2A = PR_TRUNCATE, PR_CREATE_FILE, PR_WRONLY
+                // 0600 = -rw-------
+                stream.init(gTempFile, 0x2A, 0600, 0);
+                printformatter.formatToHtml(stream,
                                             settings.start,
                                             settings.end,
                                             settings.eventList.length,
                                             settings.eventList,
                                             settings.title);
-                pipe.outputStream.close();
-                // convert byte-array to UTF-8 string:
-                var convStream =
-                    Components.classes["@mozilla.org/intl/converter-input-stream;1"]
-                              .createInstance(Components.interfaces.nsIConverterInputStream);
-                convStream.init(pipe.inputStream, "UTF-8", 0,
-                                Components.interfaces.nsIConverterInputStream.DEFAULT_REPLACEMENT_CHARACTER);
-                try {
-                    var portion = {};
-                    while (convStream.readString(-1, portion)) {
-                        html += portion.value;
-                    }
-                } finally {
-                    convStream.close();
-                }
+                stream.close();
             } catch (e) {
                 dump("printDialog::refreshHtml:" + e + "\n");
-                Components.utils.reportError(e);
             }
-            var iframeDoc = document.getElementById("content").contentDocument;
-            iframeDoc.documentElement.innerHTML = html;
-            iframeDoc.title = settings.title;
 
-            if (finishFunc) {
-                finishFunc();
-            }
+            document.getElementById("content").contentWindow.location = tempUri.spec;
         }
     );
-}
-
-function printAndClose()
-{
-    refreshHtml(
-        function finish() {
-            PrintUtils.print();
-            var closeDialog = true;
-#ifdef XP_UNIX
-#ifndef XP_MACOSX
-            closeDialog = false;
-#endif
-#endif
-            // XXX: printing fails "printing failed while in preview"
-            //      if dialog is closed too early on Unix
-            if (closeDialog) {
-                document.getElementById("calendar-new-printwindow").cancelDialog();
-            }
-        });
-    return false; // leave open
 }
 
 /**

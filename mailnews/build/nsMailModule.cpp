@@ -167,12 +167,6 @@
 #include "nsAbLDAPChangeLogData.h"
 #endif
 
-#ifdef XP_MACOSX
-#include "nsAbOSXDirectory.h"
-#include "nsAbOSXCard.h"
-#include "nsAbOSXDirFactory.h"
-#endif
-
 ////////////////////////////////////////////////////////////////////////////////
 // bayesian spam filter includes
 ////////////////////////////////////////////////////////////////////////////////
@@ -407,13 +401,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbDirectoryQueryProxy)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbView)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgVCardService) 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDIFService)
-#if 0
-#ifdef XP_MACOSX
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXDirectory)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXCard)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXDirFactory)
-#endif
-#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // bayesian spam filter factories
 ////////////////////////////////////////////////////////////////////////////////
@@ -989,16 +977,6 @@ static const nsModuleComponentInfo gComponents[] = {
     { "addressbook view", NS_ABVIEW_CID, NS_ABVIEW_CONTRACTID, nsAbViewConstructor},
     { "vcard helper service", NS_MSGVCARDSERVICE_CID, NS_MSGVCARDSERVICE_CONTRACTID, nsMsgVCardServiceConstructor },
     { "ldif handler service", NS_ABLDIFSERVICE_CID, NS_ABLDIFSERVICE_CONTRACTID, nsAbLDIFServiceConstructor },
-#if 0
-#ifdef XP_MACOSX
-    { "OS X Address Book Directory", NS_ABOSXDIRECTORY_CID,
-      NS_ABOSXDIRECTORY_CONTRACTID, nsAbOSXDirectoryConstructor },
-    { "OS X Address Book Card", NS_ABOSXCARD_CID, NS_ABOSXCARD_CONTRACTID,
-      nsAbOSXCardConstructor },
-    { "The OS X factory Interface", NS_ABOSXDIRFACTORY_CID,
-      NS_ABOSXDIRFACTORY_CONTRACTID, nsAbOSXDirFactoryConstructor },
-#endif
-#endif
 
     ////////////////////////////////////////////////////////////////////////////////
     // bayesian spam filter components

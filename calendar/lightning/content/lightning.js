@@ -19,7 +19,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Stefan Sitter <ssitter@googlemail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -37,15 +36,9 @@
 
 // This file contains all of the default preference values for Lightning
 
-// general settings
-pref("calendar.date.format", 0);
-pref("calendar.event.defaultlength", 60);
-
 // alarm settings
-pref("calendar.alarms.show", true);
-pref("calendar.alarms.showmissed", true);
-pref("calendar.alarms.playsound", true);
-pref("calendar.alarms.soundURL", "chrome://calendar/content/sound.wav");
+pref("calendar.alarms.playsound", false);
+pref("calendar.alarms.soundURL", "");
 pref("calendar.alarms.defaultsnoozelength", 5);
 
 // default alarm settings for new event
@@ -58,7 +51,7 @@ pref("calendar.alarms.onfortodos", 0);
 pref("calendar.alarms.todoalarmlen", 15);
 pref("calendar.alarms.todoalarmunit", "minutes");
 
-// autorefresh settings
++ // autorefresh settings
 pref("calendar.autorefresh.enabled", true);
 pref("calendar.autorefresh.timeout", 30);
 
@@ -66,8 +59,6 @@ pref("calendar.autorefresh.timeout", 30);
 // 0=Sunday, 1=Monday, 2=Tuesday, etc.  One day we might want to move this to
 // a locale specific file.
 pref("calendar.week.start", 0);
-pref("calendar.weeks.inview", 4);
-pref("calendar.previousweeks.inview", 0);
 
 // Default days off
 pref("calendar.week.d0sundaysoff", true);
@@ -78,17 +69,5 @@ pref("calendar.week.d4thursdaysoff", false);
 pref("calendar.week.d5fridaysoff", false);
 pref("calendar.week.d6saturdaysoff", true);
 
-// start and end work hour for day and week views
-pref("calendar.view.daystarthour", 8);
-pref("calendar.view.dayendhour", 17);
-
-// number of visible hours for day and week views
-pref("calendar.view.visiblehours", 9);
-
 // Do not set this!  If it's not there, then we guess the system timezone
 //pref("calendar.timezone.local", "");
-
-// categories settings
-// XXX One day we might want to move this to a locale specific file
-//     and include a list of locale specific default categories
-pref("calendar.categories.names", "");

@@ -163,16 +163,13 @@ pref("mail.use_fcc",                        true);
 pref("mail.cc_self",                        false);
 pref("mail.strictly_mime",                  false);
 pref("mail.strictly_mime_headers",          true);
-// 0/1 (RFC 2047), 2(RFC 2231), 3/4(RFC 2231, but name param is encoded by RFC 2047)
-// 0/3 the name param is never separated to multiple lines.
-pref("mail.strictly_mime.parm_folding",     3);  
+pref("mail.strictly_mime.parm_folding",     2);  // 0/1 (RFC 2047), 2(RFC 2231)
 pref("mail.label_ascii_only_mail_as_us_ascii", false); 
 pref("mail.file_attach_binary",             false);
 pref("mail.show_headers",                   1); // some
 pref("mail.pane_config",                    0);
 pref("mail.addr_book.mapit_url.format", "chrome://messenger-region/locale/region.properties");
 #ifdef MOZ_SUITE
-pref("mailnews.start_page.url", "chrome://messenger-region/locale/region.properties");
 pref("mail.addr_book.im.onlineCheckAllowed", false);
 pref("messenger.throbber.url","chrome://messenger-region/locale/region.properties");
 pref("compose.throbber.url","chrome://messenger-region/locale/region.properties");
@@ -395,6 +392,7 @@ pref("mailnews.reuse_message_window", true);
 pref("mailnews.reuse_thread_window2", false);
 pref("mailnews.open_window_warning", 10); // warn user if they attempt to open more than this many messages at once
 
+pref("mailnews.start_page.url", "chrome://messenger-region/locale/region.properties");
 pref("mailnews.start_page.enabled", true);
 
 pref("mailnews.remember_selected_message", true);

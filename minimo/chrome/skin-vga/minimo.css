@@ -170,28 +170,24 @@ toolbar *, #appcontent *, * {
 #menu-button
   {
 	  list-style-image      : url("chrome://minimo/skin/m.png");
-	  -moz-user-focus:normal;
   }
 
 #nav-menu-button 
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-more.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
 
   } 
 #nav-back 
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-back.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
 
 #nav-forward 
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-forward.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
 
 #nav-back.unactive
@@ -211,69 +207,59 @@ toolbar *, #appcontent *, * {
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-eye-plus.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
 
 #nav-ui-zoom-minus 
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-eye-minus.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
 
 #nav-find
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-find.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
 
 #nav-urlbar
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-urlbar.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
 
 #nav-bookmarkthis
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-bookmarkthis.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
 
 #nav-pan
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-pan.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
 
 #nav-stop
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-stop.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
 
 #nav-reload
   {
 	  list-style-image      : url("chrome://minimo/skin/icon-reload.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
 
 #nav-stopreload 
   {
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
   
 #nav-rss 
   {
 	  list-style-image      : url("chrome://minimo/skin/rssfavicon.png");
 	  margin-left:2px;
-	  -moz-user-focus:normal;
   }
 
 #nav-lock

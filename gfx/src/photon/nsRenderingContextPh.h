@@ -349,7 +349,7 @@ public:
 								const nsRect &aDestBounds, PRUint32 aCopyFlags);
 
 	 inline
-   NS_IMETHODIMP RetrieveCurrentNativeGraphicData(void **ngd)
+   NS_IMETHODIMP RetrieveCurrentNativeGraphicData(PRUint32 * ngd)
 		{
 		if( ngd != nsnull ) *ngd = nsnull;
 		return NS_OK;

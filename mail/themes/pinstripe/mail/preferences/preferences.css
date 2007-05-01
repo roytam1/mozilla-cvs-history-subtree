@@ -51,10 +51,7 @@ prefpane {
   list-style-image: url("chrome://messenger/skin/preferences/mail-options.png");
   padding: 0 5px;
   border-bottom: 1px solid #a3a3a3;
-  background-image: url("chrome://messenger/skin/icons/top-toolbar-background.gif");
-  background-repeat: repeat-x;
-  background-position: top right;
-  background-color: #e1e1e1;
+  background: url("chrome://global/skin/toolbar/toolbar-pinstripe-overlay.png") repeat;
   margin: 0;
 }
 
@@ -197,17 +194,10 @@ caption {
   padding: 0 4px;
 }
 
+
 tabpanels {
   padding: 18px 10px 10px 10px;
   margin: 0 6px 6px 6px;
 }
 
-/* override the color style for tag items when they 
-   have selection */
-#tagList listitem[selected="true"] {
-  color: -moz-DialogText !important;
-}
 
-#tagList:focus > listitem[selected="true"] {
-  color: HighlightText !important;
-}
