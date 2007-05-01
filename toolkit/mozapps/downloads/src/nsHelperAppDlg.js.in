@@ -248,10 +248,6 @@ nsUnknownContentTypeDialog.prototype = {
       if (!aLocalFile || !aLocalFile.exists())
         return null;
 
-      // Remove any leading periods, since we don't want to save hidden files
-      // automatically.
-      aLeafName = aLeafName.replace(/^\.+/, "");
-
       if (aLeafName == "")
         aLeafName = "unnamed" + (aFileExt ? "." + aFileExt : "");
       aLocalFile.append(aLeafName);
