@@ -113,7 +113,7 @@ $use_blat       = 1;
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -137,17 +137,17 @@ $ConfigureOnly = 1;
 # Existing build files to download.
 %WGetFiles = (
 # CONFIG:	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.win32.installer.exe" =>
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.11-candidates/rc1/firefox-1.5.0.11.en-US.win32.installer.exe" =>
+"http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.12-candidates/rc%rc%/firefox-1.5.0.12.en-US.win32.installer.exe" =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe",
-	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe",
+"%l10n_buildDir%/WINNT_5.2_Depend/firefox-installer.exe",
 # CONFIG:	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.win32.zip" =>
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.11-candidates/rc1/firefox-1.5.0.11.en-US.win32.zip" =>
+"http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.12-candidates/rc%rc%/firefox-1.5.0.12.en-US.win32.zip" =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip"
-	      "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox.zip"
+"%l10n_buildDir%/WINNT_5.2_Depend/firefox.zip"
 	      );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip WIN32_INSTALLER_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe";
-$BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/WINNT_5.2_Depend/firefox.zip WIN32_INSTALLER_IN=%l10n_buildDir%/WINNT_5.2_Depend/firefox-installer.exe";
 
 #-
 #- The rest should not need to be changed
@@ -162,7 +162,7 @@ $BuildTree  = 'Mozilla1.8.0-l10n';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_1_5_0_11_RELEASE';
+$BuildTag = 'FIREFOX_1_5_0_12_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -202,7 +202,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = 'firefox%version%-l10n';
-$milestone     = "firefox1.5.0.11";
+$milestone     = 'firefox1.5.0.12-l10n';
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 1;
