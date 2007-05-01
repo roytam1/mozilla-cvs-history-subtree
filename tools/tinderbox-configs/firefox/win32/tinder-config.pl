@@ -137,7 +137,7 @@ $use_blat       = 0;
 
 #$moz_cvsroot   = $ENV{CVSROOT};
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -165,11 +165,11 @@ $BuildNameExtra = 'Fx-Release';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 # CONFIG: $BuildTree  = '%buildTree%';
-$BuildTree  = 'Mozilla1.8';
+$BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_2_0_0_3_RELEASE';
+$BuildTag = 'FIREFOX_2_0_0_4_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -198,15 +198,15 @@ $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
-#$ssh_user      = "cltbld";
+$ssh_user      = "cltbld";
 # CONFIG: $ssh_server    = "%sshServer%";
-#$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = 'firefox%version%';
-$milestone     = 'firefox2.0.0.3';
+$milestone     = 'firefox2.0.0.4';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
