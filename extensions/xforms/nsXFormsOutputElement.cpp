@@ -84,8 +84,6 @@ public:
   NS_IMETHOD SetValue(const nsAString& aValue);
   NS_IMETHOD GetHasBoundNode(PRBool *aHasBoundNode);
 
-  virtual PRBool IsContentAllowed();
-
   nsXFormsOutputElement();
 
 private:
@@ -149,19 +147,6 @@ nsXFormsOutputElement::Bind(PRBool *aContextChanged)
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (rv == NS_OK_XFORMS_DEFERRED) {
-    // Can't leave the output in the model list.  Since the xforms processor
-    // is still deferring binds any contextcontrol helping to set the context
-    // for the output's value expression probably isn't in the control list
-    // yet.  And if that's the case, we can't have the output in the list
-    // before the contextcontrol or the output won't bind right once the
-    // deferred binds finallyhappen.  If we got mBoundNode in addition to
-    // mModel during BindToModel, it isn't likely good, either, so junk it, too.
-    mBoundNode = nsnull;
-    if (mModel) {
-      mModel->RemoveFormControl(this);
-      mModel = nsnull;
-    }
-  
     return NS_OK;
   }
 
@@ -210,19 +195,6 @@ nsXFormsOutputElement::SetValue(const nsAString& aValue)
 {
   // Setting the value on an output controls seems wrong semantically.
   return NS_ERROR_NOT_AVAILABLE;
-}
-
-PRBool
-nsXFormsOutputElement::IsContentAllowed()
-{
-  PRBool isAllowed = PR_TRUE;
-
-  // Output may not be bound to complexContent.
-  PRBool isComplex = IsContentComplex();
-  if (isComplex) {
-    isAllowed = PR_FALSE;
-  }
-  return isAllowed;
 }
 
 NS_HIDDEN_(nsresult)

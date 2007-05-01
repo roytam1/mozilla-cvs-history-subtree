@@ -92,12 +92,8 @@ public:
   NS_IMETHOD TryFocus(PRBool* aOK);
   NS_IMETHOD IsEventTarget(PRBool *aOK);
   NS_IMETHOD GetUsesModelBinding(PRBool *aRes);
-  NS_IMETHOD GetUsesSingleNodeBinding(PRBool *aRes);
   NS_IMETHOD GetDefaultIntrinsicState(PRInt32 *aRes);
   NS_IMETHOD GetDisabledIntrinsicState(PRInt32 *aRes);
-  NS_IMETHOD RebindAndRefresh();
-  NS_IMETHOD GetAbortedBindListContainer(nsIXFormsContextControl **aContainer);
-  NS_IMETHOD SetAbortedBindListContainer(nsIXFormsContextControl *aContainer);
 
   nsresult Create(nsIXTFElementWrapper *aWrapper);
   // for nsIXTFElement
@@ -106,7 +102,6 @@ public:
   nsresult OnDestroyed();
   nsresult WillChangeDocument(nsIDOMDocument *aNewDocument);
   nsresult DocumentChanged(nsIDOMDocument *aNewDocument);
-  nsresult WillChangeParent(nsIDOMElement *aNewParent);
   nsresult ParentChanged(nsIDOMElement *aNewParent);
   nsresult WillSetAttribute(nsIAtom *aName, const nsAString &aValue);
   nsresult AttributeSet(nsIAtom *aName, const nsAString &aValue);
@@ -131,29 +126,6 @@ public:
    */
   void AddRemoveSNBAttr(nsIAtom *aName, const nsAString &aValue);
 
-  /**
-   * This function is overridden by controls that are restricted in the
-   * type of content that may be bound to the control. For example,
-   * xf:input may only be bound to simpleContent.
-   *
-   */
-  virtual PRBool IsContentAllowed();
-
-  /**
-   * This function determines if the content to which the control is being
-   * bound is complex; ie contains Element children.
-   *
-   */
-  virtual PRBool IsContentComplex();
-
-  /**
-   * Get/Set the repeat state for the control.  The repeat state indicates
-   * whether the control lives inside a context container, a repeat element,
-   * an itemset or non of the above.
-   */
-  virtual nsRepeatState GetRepeatState();
-  virtual void SetRepeatState(nsRepeatState aState);
-
   // nsIXFormsContextControl
   NS_DECL_NSIXFORMSCONTEXTCONTROL
 
@@ -170,18 +142,15 @@ public:
                               nsIXTFElement::NOTIFY_ATTRIBUTE_REMOVED | 
                               nsIXTFElement::NOTIFY_WILL_CHANGE_DOCUMENT |
                               nsIXTFElement::NOTIFY_DOCUMENT_CHANGED |
-                              nsIXTFElement::NOTIFY_WILL_CHANGE_PARENT |
                               nsIXTFElement::NOTIFY_PARENT_CHANGED |
                               nsIXTFElement::NOTIFY_HANDLE_DEFAULT),
     kElementFlags(nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR),
     mHasParent(PR_FALSE),
-    mHasDoc(PR_FALSE),
     mPreventLoop(PR_FALSE),
     mUsesModelBinding(PR_FALSE),
     mAppearDisabled(PR_FALSE),
     mOnDeferredBindList(PR_FALSE),
-    mBindAttrsCount(0),
-    mRepeatState(eType_Unknown)
+    mBindAttrsCount(0)
     {};
 
 protected:
@@ -202,9 +171,6 @@ protected:
 
   /** State that tells whether control has a parent or not */
   PRPackedBool                        mHasParent;
-
-  /** State that tells whether control has a parent or not */
-  PRPackedBool                        mHasDoc;
 
   /** State to prevent infinite loop when generating and handling xforms-next
    *  and xforms-previous events
@@ -233,30 +199,11 @@ protected:
    */
   PRInt8 mBindAttrsCount;
 
-  nsRepeatState mRepeatState;
-
   /**
    * List of repeats that the node binding depends on.  This happens when using
    * the index() function in the binding expression.
    */
   nsCOMArray<nsIXFormsRepeatElement>  mIndexesUsed;
-
-  /**
-   * List of XForms elements contained by this control who tried to bind
-   * and couldn't because this control wasn't ready to bind, yet.  This means
-   * that these contained nodes couldn't bind because they could be potentially
-   * using this control's bound node as a context node.  When this control
-   * is ready to bind and successfully binds, then this list will be processed.
-   * And in turn, if these controls contain controls on THEIR mAbortedBindList,
-   * then they will be similarly processed.
-   */
-  nsCOMArray<nsIXFormsControl> mAbortedBindList;
-
-  /**
-   * The control that contains the aborted bind list that this control is on.
-   * A control should never be on more than one list at a time.
-   */
-  nsCOMPtr<nsIXFormsContextControl> mAbortedBindListContainer;
 
   /**
    * Does control have a binding attribute?
@@ -340,16 +287,6 @@ protected:
    * bound.
    */
   nsresult GetBoundBuiltinType(PRUint16 *aBuiltinType);
-
-  /**
-   * This is called when the parent node for a XForms control changes.
-   * It checks the ancestors of the element and returns an nsRepeatState
-   * depending on the element's place in the document.
-   *
-   * @param aParent           The new parent of the XForms control
-   */
-  virtual nsRepeatState UpdateRepeatState(nsIDOMNode *aParent);
-
 };
 
 /**
@@ -387,11 +324,6 @@ public:
   NS_IMETHOD DocumentChanged(nsIDOMDocument *aNewDocument)
   {
     return nsXFormsControlStubBase::DocumentChanged(aNewDocument);
-  }
-
-  NS_IMETHOD WillChangeParent(nsIDOMElement *aNewParent)
-  {
-    return nsXFormsControlStubBase::WillChangeParent(aNewParent);
   }
 
   NS_IMETHOD ParentChanged(nsIDOMElement *aNewParent)

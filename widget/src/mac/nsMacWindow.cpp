@@ -350,6 +350,7 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
           // I'm making the assumption here that any dialog created w/out a titlebar is modal and am
           // therefore keeping the old modal dialog proc. I'm only special-casing dialogs with a
           // titlebar since those are the only ones that might end up not being modal.
+          // We never give dialog boxes a close box.
 
           switch (aInitData->mBorderStyle)
           {
@@ -361,13 +362,13 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
             case eBorderStyle_all:
               windowClass = kDocumentWindowClass;
               attributes = kWindowCollapseBoxAttribute |
-                           kWindowResizableAttributes |
-                           kWindowCloseBoxAttribute;
+                           kWindowResizableAttributes;
               break;
 
             default:
                 windowClass = kDocumentWindowClass;
 
+                // we ignore the close flag here, since mac dialogs should never have a close box.
                 switch(aInitData->mBorderStyle & (eBorderStyle_resizeh | eBorderStyle_title))
                 {
                   // combinations of individual options.
@@ -385,13 +386,8 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
                     NS_WARNING("Unhandled combination of window flags");
                     break;
                 }
-                  
-                // if we set any attributes above then check the close flag and set it here
-                if (attributes != kWindowNoAttributes &&
-                    aInitData->mBorderStyle & eBorderStyle_close)
-                  attributes |= kWindowCloseBoxAttribute;
+              }
           }
-        }
         else
         {
           windowClass = kMovableModalWindowClass;
