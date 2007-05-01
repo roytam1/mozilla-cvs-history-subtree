@@ -137,17 +137,17 @@ $ConfigureOnly = 1;
 # Existing build files to download.
 %WGetFiles = (
 # CONFIG:	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.win32.installer.exe" =>
-"http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.12-candidates/rc%rc%/firefox-1.5.0.12.en-US.win32.installer.exe" =>
+             "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.12-candidates/rc1/firefox-1.5.0.12.en-US.win32.installer.exe" =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe",
-"%l10n_buildDir%/WINNT_5.2_Depend/firefox-installer.exe",
+             "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe",
 # CONFIG:	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.win32.zip" =>
-"http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.12-candidates/rc%rc%/firefox-1.5.0.12.en-US.win32.zip" =>
+             "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.5.0.12-candidates/rc1/firefox-1.5.0.12.en-US.win32.zip" =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip"
-"%l10n_buildDir%/WINNT_5.2_Depend/firefox.zip"
+             "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox.zip"
 	      );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip WIN32_INSTALLER_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe";
-$BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/WINNT_5.2_Depend/firefox.zip WIN32_INSTALLER_IN=%l10n_buildDir%/WINNT_5.2_Depend/firefox-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe";
 
 #-
 #- The rest should not need to be changed
