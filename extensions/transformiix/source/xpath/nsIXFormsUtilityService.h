@@ -52,11 +52,11 @@ class nsIXFormsModelElement; /* forward declaration */
 
 
 /* starting interface:    nsIXFormsUtilityService */
-#define NS_IXFORMSUTILITYSERVICE_IID_STR "1e51f8fb-22e1-4d5d-a5f3-ab34e76efe8e"
+#define NS_IXFORMSUTILITYSERVICE_IID_STR "4a744a59-8771-4065-959d-b8de3dad81da"
 
 #define NS_IXFORMSUTILITYSERVICE_IID \
-  {0x1e51f8fb, 0x22e1, 0x4d5d, \
-    { 0xa5, 0xf3, 0xab, 0x34, 0xe7, 0x6e, 0xfe, 0x8e }}
+  {0x4a744a59, 0x8771, 0x4065, \
+    { 0x95, 0x9d, 0xb8, 0xde, 0x3d, 0xad, 0x81, 0xda }}
 
 #define NS_XFORMS_UTILITY_CONTRACTID   "@mozilla.org/xforms-utility-service;1"
 
@@ -66,7 +66,7 @@ class nsIXFormsModelElement; /* forward declaration */
   NS_IMETHOD IsNodeAssocWithModel(nsIDOMNode *aNode, nsIDOMNode *aModel, PRBool *_retval); \
   NS_IMETHOD GetInstanceDocumentRoot(const nsAString & aID, nsIDOMNode *aModelNode, nsIDOMNode **_retval); \
   NS_IMETHOD ValidateString(const nsAString & aValue, const nsAString & aType, const nsAString & aNamespace, PRBool *_retval); \
-  NS_IMETHOD GetRepeatIndexById(nsIDOMNode *aResolverNode, const nsAString &aId, PRInt32 *aIndex); \
+  NS_IMETHOD GetRepeatIndex(nsIDOMNode *aRepeat, PRInt32 *aIndex); \
   NS_IMETHOD GetMonths(const nsAString & aValue, PRInt32 *aMonths); \
   NS_IMETHOD GetSeconds(const nsAString & aValue, double *aSeconds); \
   NS_IMETHOD GetSecondsFromDateTime(const nsAString & aValue, double *aSeconds); \
@@ -122,10 +122,10 @@ class NS_NO_VTABLE nsIXFormsUtilityService : public nsISupports {
   NS_IMETHOD ValidateString(const nsAString & aValue, const nsAString & aType, const nsAString & aNamespace, PRBool *_retval) = 0;
 
   /**
-   * Function to retrieve the index from the repeat element with the given id.
+   * Function to retrieve the index from the given repeat element.
    */
-  /* unsigned long getRepeatIndexById (in nsIDOMNode aResolverNode, in AString aRepeat); */
-  NS_IMETHOD GetRepeatIndexById(nsIDOMNode *aResolverNode, const nsAString &aId, PRInt32 *aIndex) = 0;
+  /* long getRepeatIndex (in nsIDOMNode aRepeat); */
+  NS_IMETHOD GetRepeatIndex(nsIDOMNode *aRepeat, PRInt32 *aIndex) = 0;
 
   /**
    * Function to retrieve the number of months represented by the 

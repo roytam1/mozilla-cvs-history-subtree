@@ -4,9 +4,9 @@ pref("keyword.enabled", true);
 pref("keyword.URL", "http://www.google.com/xhtml?q=");
 
 pref("browser.cache.disk.enable",           false);
-pref("browser.cache.disk.capacity",         4096);
+pref("browser.cache.disk.capacity",         1024);
 pref("browser.cache.memory.enable",         true);
-pref("browser.cache.memory.capacity",       512);
+pref("browser.cache.memory.capacity",       2048);
 
 // -1 = determine dynamically, 0 = none, n = memory capacity in kilobytes
 pref("browser.cache.disk_cache_ssl",        false);
@@ -20,7 +20,7 @@ pref("browser.sessionhistory.max_entries", 3);
 // of content viewers to cache based on the amount of available memory.
 pref("browser.sessionhistory.max_total_viewers", 0);
 
-pref("browser.display.use_document_fonts",  0);  // 0 = never, 1 = quick, 2 = always
+pref("browser.display.use_document_fonts",  1);  // 0 = never, 1 = quick, 2 = always
 pref("browser.display.use_document_colors", true);
 pref("browser.display.use_system_colors",   false);
 pref("browser.display.foreground_color",    "#000000");
@@ -195,6 +195,7 @@ pref("javascript.enabled",                  true);
 pref("javascript.allow.mailnews",           false);
 pref("javascript.options.strict",           false);
 
+
 // If there is ever a security firedrill that requires
 // us to block certian ports global, this is the pref 
 // to use.  Is is a comma delimited list of port numbers
@@ -259,28 +260,28 @@ pref("network.http.proxy.keep-alive", true);
 pref("network.http.keep-alive.timeout", 600);
 
 // limit the absolute number of http connections.
-pref("network.http.max-connections", 4);
+pref("network.http.max-connections", 24);
 
 // limit the absolute number of http connections that can be established per
 // host.  if a http proxy server is enabled, then the "server" is the proxy
 // server.  Otherwise, "server" is the http origin server.
-pref("network.http.max-connections-per-server", 2);
+pref("network.http.max-connections-per-server", 24);
 
 // if network.http.keep-alive is true, and if NOT connecting via a proxy, then
 // a new connection will only be attempted if the number of active persistent
 // connections to the server is less then max-persistent-connections-per-server.
-pref("network.http.max-persistent-connections-per-server", 2);
+pref("network.http.max-persistent-connections-per-server", 24);
 
 // if network.http.keep-alive is true, and if connecting via a proxy, then a
 // new connection will only be attempted if the number of active persistent
 // connections to the proxy is less then max-persistent-connections-per-proxy.
-pref("network.http.max-persistent-connections-per-proxy", 2);
+pref("network.http.max-persistent-connections-per-proxy", 24);
 
 // amount of time (in seconds) to suspend pending requests, before spawning a
 // new connection, once the limit on the number of persistent connections per
 // host has been reached.  however, a new connection will not be created if
 // max-connections or max-connections-per-server has also been reached.
-pref("network.http.request.max-start-delay", 15);
+pref("network.http.request.max-start-delay", 1);
 
 // Headers
 pref("network.http.accept.default", "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5");
@@ -333,6 +334,7 @@ pref("network.dir.format", 2);
 
 // enables the prefetch service (i.e., prefetching of <link rel="next"> URLs).
 pref("network.prefetch-next", false);
+
 
 // The following prefs pertain to the negotiate-auth extension (see bug 17578),
 // which provides transparent Kerberos or NTLM authentication using the SPNEGO
@@ -633,6 +635,18 @@ pref("accessibility.tabfocus_applies_to_xul", false);
 
 pref("browser.formfill.enable", true);
 
+
+/* These are opts. for slower devices */
+
+
+/* slow computer, slow connection */
+pref("nglayout.initialpaint.delay", 15000);
+pref("layout.reflow.timeslice", 15000000);
+pref("content.max.tokenizing.time", 15000);
+pref("content.notify.ontimer", true);
+pref("content.switch.threshold", 15000);
+pref("content.interrupt.parsing", true);
+
 pref("dom.disable_window_status_change", true);
 
 pref("browser.chrome.favicons",true);
@@ -657,5 +671,6 @@ pref("ui.fullscreen",false);
 
 pref("gps.enabled", true);
 
-pref("browser.bookmark.store", "<bm><li page='yes' title='Mocomo - Mobile Directory' iconsrc='chrome://minimo/skin/extensions/icon-mocomo.png'>http://people.mozilla.com/~chofmann/en-US/</li><li title='Del.icio.us Mobile Sites...' iconsrc='chrome://minimo/skin/extensions/icon-mobile.png' page='yes'>chrome://minimo/content/rssview/rssload.xhtml?url=http://del.icio.us/rss/tag/mobile-sites</li><li title=\"Map Browsing\" iconsrc=\"chrome://minimo/skin/extensions/icon-map.png\" page=\"yes\">http://people.mozilla.com/~chofmann/map.html</li><li title=\"Google Mobile Search\" iconsrc=\"chrome://minimo/skin/extensions/icon-google.png\" page=\"yes\">http://www.google.com/xhtml</li><li page='yes'  title='Weather...' iconsrc='chrome://minimo/skin/extensions/icon-weather.png'>http://mobile.wunderground.com</li></bm>");
-pref("ui.controlbar","nav-back;nav-forward;nav-stopreload;nav-find;nav-uizoom;nav-pan;nav-urlbar;nav-rss;");
+pref("browser.bookmark.store", "<bm><li title='Del.icio.us Mobile Sites...' iconsrc='chrome://minimo/skin/extensions/icon-mobile.png' page='yes'>chrome://minimo/content/rssview/rssload.xhtml?url=http://del.icio.us/rss/tag/mobile-sites</li><li title=\"Map Browsing\" iconsrc=\"chrome://minimo/skin/extensions/icon-map.png\" page=\"yes\">http://people.mozilla.com/~chofmann/map.html</li><li title=\"Google Mobile Search\" iconsrc=\"chrome://minimo/skin/extensions/icon-google.png\" page=\"yes\">http://www.google.com/xhtml</li><li page='yes'  title='Weather...' iconsrc='chrome://minimo/skin/extensions/icon-weather.png'>http://mobile.wunderground.com</li><li page='yes' title='Mocomo - Mobile Directory' iconsrc='chrome://minimo/skin/extensions/icon-mocomo.png'>http://people.mozilla.com/~chofmann/en-US/</li><li page='yes' title='Minimo Update...' iconsrc='http://www.meer.net/dougt/minimo_ce/start/update.cgi'>http://www.mozilla.org/projects/minimo/update/latest-update.xhtml</li></bm>");
+
+pref("ui.controlbar","nav-back;nav-forward;nav-stopreload;nav-find;nav-uizoom;nav-bookmarkthis;nav-pan;nav-urlbar;nav-rss;");

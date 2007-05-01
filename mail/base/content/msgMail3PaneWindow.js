@@ -1008,6 +1008,12 @@ function loadStartFolder(initialUri)
 
                 startFolderResource = inboxFolder.QueryInterface(Components.interfaces.nsIRDFResource);
             }
+            else
+            {
+                // set the startFolderResource to the server, so we select it
+                // so we'll get account central
+                startFolderResource = RDF.GetResource(defaultServer.serverURI);
+            }
         }
 
         var startFolder = startFolderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
@@ -1020,7 +1026,7 @@ function loadStartFolder(initialUri)
         // or a pop3 account that is deferred or deferred to,
         // or the case where initialUri is non-null (non-startup)
         if (!initialUri && isLoginAtStartUpEnabled && gLoadStartFolder
-            && !defaultServer.isDeferredTo && !gNewAccountToLoad &&
+            && !defaultServer.isDeferredTo &&
             defaultServer.rootFolder == defaultServer.rootMsgFolder)
           defaultServer.PerformBiff(msgWindow);        
 
@@ -1036,8 +1042,7 @@ function loadStartFolder(initialUri)
     }
     catch(ex)
     {
-      // this is the case where we're trying to auto-subscribe to a folder.
-      if (initialUri && !startFolder.parent)
+      if (initialUri)
       {
         messenger.loadURL(window, initialUri);
         return;
@@ -1737,6 +1742,11 @@ function SelectMessage(messageUri)
   var msgHdr = messenger.messageServiceFromURI(messageUri).messageURIToMsgHdr(messageUri);
   if (msgHdr)
     gDBView.selectMsgByKey(msgHdr.messageKey);
+}
+
+function ReloadWithAllParts()
+{
+  gDBView.reloadMessageWithAllParts();
 }
 
 function ReloadMessage()

@@ -43,6 +43,8 @@
 
 
 /* ::::: msg header toolbars ::::: */
+
+#attachmentView,
 #collapsedHeaderView,
 #expandedHeaderView {
   min-width: 1px;
@@ -58,13 +60,14 @@
 
 #attachmentList
 {
-  margin: 0px;
+  margin: 5px 30px 5px 15px;
 }
 
 /* XXX: Move all of the description attributes to the toolkit */
 
-description {
-  margin: 0 
+description[selectable="true"]
+{
+  margin              : 1px 5px 4px 5px;
 }
 
 descriptionitem
@@ -73,7 +76,6 @@ descriptionitem
   margin: 1px 1px 1px 1px;
   text-decoration: underline;
   color: blue;
-  border: none !important;
 }
 
 description[selectable="true"]:focus > descriptionitem[selected="true"][current="true"] 
@@ -102,35 +104,25 @@ description[selectable="true"]:focus > descriptionitem[selected="true"]
   width: 15em;
 }
 
-#attachmentView[largeView="true"] .attachmentBox
+.attachmentBox[largeView="true"]
 {
-  -moz-box-orient: vertical;
+  -moz-box-align: center;
+  -moz-box-pack: center;
 }
 
-#attachmentView
-{
+#attachmentView {
   background-color: #E6E6E6;
-  border: 1px solid #C8C8C8;
-  -moz-border-radius: 7px;
-  margin: 0px 6px 6px 6px;
-  padding: 4px;  
-  min-height: 30px;
-}
-
-#attachmentView[largeView="true"]
-{
-  min-height: 60px;
-}
-
-#attachmentView[attachmentOverflow="true"] {
-  overflow: auto;
-}
-
-#attachment-splitter {
-  min-height: 7px;
   border-top: 1px solid #C8C8C8;
-  background-color: #E6E6E6;
+  margin: 6px;
+  padding: 4px;
 }
+
+#attachmentLabel {
+  color: #505050;
+  -moz-box-orient: vertical;
+  -moz-box-align: center;
+}
+
 
 /* ::::: msg header captions ::::: */
 
@@ -142,13 +134,9 @@ description[selectable="true"]:focus > descriptionitem[selected="true"]
 }
 
 #msgHeaderView > deck {
-  margin: 0 8px 0 8px;
-  padding: 8px 0 4px 0;
-  border-bottom: 1px solid #ccc;
-}
-
-#msgHeaderView textbox {
-  background-color: transparent;
+  border-bottom: 1px solid #dedede;
+  margin: 6px;
+  padding: 6px 6px 10px 4px;
 }
 
 .headerNameBox {
@@ -164,8 +152,6 @@ description[selectable="true"]:focus > descriptionitem[selected="true"]
   padding: 0px;
   margin-top: 0;
 }
-
-
 
 .headerValue {
   margin: 0;
@@ -190,13 +176,6 @@ description[selectable="true"]:focus > descriptionitem[selected="true"]
 
 .headerValueBox[singleline="true"] {
   overflow: hidden;
-}
-
-#collapsedsubjectBox .collapsedHeaderDisplayName {
-  font-weight: bold;
-  color: #8f8f8f;
-  margin-top: 0;
-  -moz-margin-start: 8px; 
 }
 
 .subjectvalue {
@@ -248,7 +227,6 @@ description[selectable="true"]:focus > descriptionitem[selected="true"]
 .collapsedHeaderViewButton  {
   list-style-image:url("chrome://messenger/skin/icons/twisty-closed.gif");
 }
-
 
 /* ::::: collapsed view styles ::::: */
 

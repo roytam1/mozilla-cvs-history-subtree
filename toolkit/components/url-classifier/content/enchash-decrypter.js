@@ -84,8 +84,6 @@ PROT_EnchashDecrypter.REs.FIND_END_DOTS_GLOBAL =
 PROT_EnchashDecrypter.REs.FIND_MULTIPLE_DOTS = new RegExp("\\.{2,}");
 PROT_EnchashDecrypter.REs.FIND_MULTIPLE_DOTS_GLOBAL = 
   new RegExp("\\.{2,}", "g");
-PROT_EnchashDecrypter.REs.FIND_TRAILING_SPACE =
-  new RegExp("^(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}) ");
 PROT_EnchashDecrypter.REs.FIND_TRAILING_DOTS = new RegExp("\\.+$");
 PROT_EnchashDecrypter.REs.POSSIBLE_IP = 
   new RegExp("^((?:0x[0-9a-f]+|[0-9\\.])+)$", "i");
@@ -178,9 +176,7 @@ PROT_EnchashDecrypter.prototype.parseRegExps = function(data) {
  *          with hostname normalized, then specially url-encoded)
  */
 PROT_EnchashDecrypter.prototype.getCanonicalUrl = function(url) {
-  var urlUtils = Cc["@mozilla.org/url-classifier/utils;1"]
-                 .getService(Ci.nsIUrlClassifierUtils);
-  var escapedUrl = urlUtils.canonicalizeURL(url);
+  var escapedUrl = PROT_URLCanonicalizer.canonicalizeURL_(url);
   // Normalize the host
   var host = this.getCanonicalHost(escapedUrl);
   if (!host) {
@@ -250,20 +246,6 @@ PROT_EnchashDecrypter.prototype.parseIPAddress_ = function(host) {
 
   host = host.replace(this.REs_.FIND_TRAILING_DOTS_GLOBAL, "");
 
-  if (host.length <= 15) {
-    // The Windows resolver allows a 4-part dotted decimal IP address to
-    // have a space followed by any old rubbish, so long as the total length
-    // of the string doesn't get above 15 characters. So, "10.192.95.89 xy"
-    // is resolved to 10.192.95.89.
-    // If the string length is greater than 15 characters, e.g.
-    // "10.192.95.89 xy.wildcard.example.com", it will be resolved through
-    // DNS.
-    var match = this.REs_.FIND_TRAILING_SPACE.exec(host);
-    if (match) {
-      host = match[1];
-    }
-  }
-
   if (!this.REs_.POSSIBLE_IP.test(host))
     return "";
 
@@ -282,14 +264,13 @@ PROT_EnchashDecrypter.prototype.parseIPAddress_ = function(host) {
     }
     if (canon != "") 
       parts[k] = canon;
-    else
-      return "";
   }
 
   return parts.join(".");
 }
 
 PROT_EnchashDecrypter.prototype.canonicalNum_ = function(num, bytes, octal) {
+  
   if (bytes < 0) 
     return "";
   var temp_num;
@@ -311,10 +292,8 @@ PROT_EnchashDecrypter.prototype.canonicalNum_ = function(num, bytes, octal) {
       temp_num = -1;
 
   } else if (this.REs_.IS_HEX.test(num)) {
-    var matches = this.REs_.IS_HEX.exec(num);
-    if (matches) {
-      num = matches[1];
-    }
+
+    num = this.lastNChars_(num, 8);
 
     temp_num = parseInt(num, 16);
     if (isNaN(temp_num))

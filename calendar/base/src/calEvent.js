@@ -162,9 +162,6 @@ calEvent.prototype = {
         var calcomp = icssvc.createIcalComponent("VCALENDAR");
         calcomp.prodid = "-//Mozilla Calendar//NONSGML Sunbird//EN";
         calcomp.version = "2.0";
-        if (this.hasProperty("METHOD")) {
-            calcomp.method = this.getProperty("METHOD");
-        }
         calcomp.addSubcomponent(this.icalComponent);
         return calcomp.serializeToICS();
     },
@@ -252,11 +249,27 @@ calEvent.prototype = {
             return this.recurrenceInfo.getOccurrences(aStartDate, aEndDate, 0, aCount);
         }
 
-        var start = ensureDateTime(this.startDate);
-        var end = ensureDateTime(this.endDate);
+        // We need to convert dates to regular datetime-objects
+        // here in order to correctly handle allday-events that
+        // don't match day borders.
+        function convertDate(date) {
+          if (date.isDate) {
+            var newDate = date.clone();
+            newDate.hour = 0;
+            newDate.minute = 0;
+            newDate.second = 0;
+            newDate.isDate = false;
+            return newDate;
+          } else {
+            return date;
+          }
+        }
+
+        var start = convertDate(this.startDate);
+        var end = convertDate(this.endDate);
         
-        var queryStart = ensureDateTime(aStartDate);
-        var queryEnd = ensureDateTime(aEndDate);
+        var queryStart = convertDate(aStartDate);
+        var queryEnd = convertDate(aEndDate);
 
         var isZeroLength = !start.compare(end);
         if ((isZeroLength &&

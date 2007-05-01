@@ -48,6 +48,11 @@
   <!ENTITY % dtd3 SYSTEM "chrome://calendar/locale/calendar.dtd" > %dtd3;
 ]>
 
+<!-- This is used so that we can reuse the Thunderbird Notification bar style
+   - for our iMIP warning -->
+<?xml-stylesheet href="chrome://messenger/skin/primaryToolbar.css" type="text/css"?>
+<?xml-stylesheet href="chrome://messenger/skin/messageHeader.css" type="text/css"?>
+
 <?xml-stylesheet href="chrome://lightning/skin/lightning.css" type="text/css"?>
 
 <?xml-stylesheet href="chrome://calendar/content/calendar-view-bindings.css" type="text/css"?>
@@ -59,7 +64,7 @@
 <overlay id="ltnSidebarOverlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-<script type="application/x-javascript" src="chrome://calendar/content/calUtils.js"/>
+<script type="application/x-javascript" src="chrome://calendar/content/calendarUtils.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendarCreation.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/mouseoverPreviews.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendar-item-editing.js"/>
@@ -69,12 +74,13 @@
 <script type="application/x-javascript" src="chrome://lightning/content/calendar-management.js"/>
 <script type="application/x-javascript" src="chrome://lightning/content/messenger-overlay-sidebar.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendar-views.js"/>
-<script type="application/x-javascript" src="chrome://calendar/content/clipboard.js"/>
+<script type="application/x-javascript" src="chrome://lightning/content/imip-bar.js"/>
 <window id="messengerWindow">
   <commandset id="calendar_commands">
     <command id="publish_calendar" oncommand="ltnPublishCalendar()"/>
     <command id="import_command" oncommand="loadEventsFromFile()"/>
     <command id="export_command" oncommand="exportEntireCalendar()"/>
+    <command id="print_command" oncommand="calPrint()"/>
     <command id="reload_remote_calendars" oncommand="getCompositeCalendar().refresh();"/>
   </commandset>
 
@@ -149,8 +155,8 @@
     </hbox>
     <hbox id="ltnDateTextPickerBox">
       <spacer flex="1"/>
-      <datepicker id="ltnDateTextPicker" onchange="ltnMinimonthPick(this)"/>
-      <spacer flex="1"/>
+      <datepicker id="ltnDateTextPicker" oncommand="ltnGoToDate()"/>
+      <spacer flex="1"/> 
     </hbox>
 
     <tabbox id="ltnTabpanelBox" flex="1">
@@ -207,7 +213,23 @@
   </deck>
 </deck>
 
-<vbox id="messagepanebox"/>
+<vbox id="messagepanebox">
+  <hbox id="imip-bar" collapsed="true" insertbefore="msgHeaderView">
+    <hbox id="imipNotificationBar"
+          align="center"
+          flex="1">
+      <image id="imipNotificationImage"/>
+      <description id="imip-description"
+                   class="msgNotificationBarText"
+                   flex="1">
+        &lightning.imipbar.description;
+      </description>
+      <spacer flex="1"/>
+      <button id="imip-btn1" align="right"/>
+    </hbox>
+  </hbox>
+</vbox>
+
 </overlay>
 
 <!-- -*- Mode: xml; sgml-ident-step: 2; indent-tabs-mode: nil; -*- -->

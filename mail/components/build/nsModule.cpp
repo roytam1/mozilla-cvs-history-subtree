@@ -56,7 +56,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsOEProfileMigrator)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsOutlookProfileMigrator)
 
 #include "nsMailWinIntegration.h"
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsWindowsShellService, Init)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsWindowsShellService)
 #endif
 
 #if defined(XP_WIN32) || defined(XP_MACOSX)

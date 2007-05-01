@@ -5143,8 +5143,10 @@ nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgView
             break;
         case nsMsgNavigationType::nextUnreadThread:
             if (startIndex != nsMsgViewIndex_None)
-              ApplyCommandToIndices(nsMsgViewCommandType::markThreadRead, &startIndex, 1);
-
+            {
+                nsMsgKeyArray idsMarkedRead;
+                MarkThreadOfMsgRead(m_keys.GetAt(startIndex), startIndex, idsMarkedRead, PR_TRUE);
+            }
             return NavigateFromPos(nsMsgNavigationType::nextUnreadMessage, startIndex, pResultKey, pResultIndex, pThreadIndex, PR_TRUE);
         case nsMsgNavigationType::toggleThreadKilled:
             {
@@ -5968,7 +5970,6 @@ nsresult nsMsgDBView::CopyDBView(nsMsgDBView *aNewMsgDBView, nsIMessenger *aMess
   aNewMsgDBView->m_viewFlags = m_viewFlags;
   aNewMsgDBView->m_sortOrder = m_sortOrder;
   aNewMsgDBView->m_sortType = m_sortType;
-  aNewMsgDBView->m_sortValid = m_sortValid;
   aNewMsgDBView->m_db = m_db;
   aNewMsgDBView->mDateFormater = mDateFormater;
   if (m_db)

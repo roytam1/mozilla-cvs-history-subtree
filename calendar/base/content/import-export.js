@@ -24,7 +24,6 @@
  *                 Eric Belhaire <belhaire@ief.u-psud.fr>
  *                 Jussi Kukkonen <jussi.kukkonen@welho.com>
  *                 Michiel van Leeuwen <mvl@exedo.nl>
- *                 Stefan Sitter <ssitter@googlemail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -63,7 +62,8 @@ function loadEventsFromFile(aCalendar)
   
     var fp = Components.classes["@mozilla.org/filepicker;1"]
                        .createInstance(nsIFilePicker);
-    fp.init(window, calGetString("calendar", "Open"), nsIFilePicker.modeOpen);
+    fp.init(window, getCalStringBundle().GetStringFromName("Open"),
+            nsIFilePicker.modeOpen);
     fp.defaultExtension = "ics";
 
     // Get a list of exporters
@@ -107,13 +107,7 @@ function loadEventsFromFile(aCalendar)
         }
         catch(ex)
         {
-            switch (ex.result) {
-                case Components.interfaces.calIErrors.INVALID_TIMEZONE:
-                    showError(calGetString("calendar", "timezoneError", [filePath] , 1));
-                    break;
-                default:
-                    showError(calGetString("calendar", "unableToRead") + filePath + "\n"+ ex);
-            }
+           showError(getCalStringBundle().GetStringFromName("unableToRead") + filePath + "\n"+ex );
         }
 
         if (aCalendar) {
@@ -127,19 +121,19 @@ function loadEventsFromFile(aCalendar)
         if (count.value == 1) {
             // There's only one calendar, so it's silly to ask what calendar
             // the user wants to import into.
-            putItemsIntoCal(calendars[0], items, filePath);
+            putItemsIntoCal(calendars[0], items);
         } else {
             // Ask what calendar to import into
             var args = new Object();
-            args.onOk = function putItems(aCal) { putItemsIntoCal(aCal, items, filePath); };
-            args.promptText = calGetString("calendar", "importPrompt");
+            args.onOk = function putItems(aCal) { putItemsIntoCal(aCal, items); };
+            args.promptText = getCalStringBundle().GetStringFromName("importPrompt");
             openDialog("chrome://calendar/content/chooseCalendarDialog.xul", 
                        "_blank", "chrome,titlebar,modal,resizable", args);
         }
     }
 }
 
-function putItemsIntoCal(destCal, aItems, aFilePath) {
+function putItemsIntoCal(destCal, aItems) {
     // Set batch for the undo/redo transaction manager
     startBatchTransaction();
 
@@ -152,7 +146,6 @@ function putItemsIntoCal(destCal, aItems, aFilePath) {
     // be the last item added)
     var count = 0;
     var failedCount = 0;
-    var duplicateCount = 0;
     // Used to store the last error. Only the last error, because we don't
     // wan't to bomb the user with thousands of error messages in case
     // something went really wrong.
@@ -163,21 +156,14 @@ function putItemsIntoCal(destCal, aItems, aFilePath) {
         onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail) {
             count++;
             if (!Components.isSuccessCode(aStatus)) {
-                if (aStatus == Components.interfaces.calIErrors.DUPLICATE_ID) {
-                    duplicateCount++;
-                } else {
-                    failedCount++;
-                    lastError = aStatus;
-                }
+                failedCount++;
+                lastError = aStatus;
             }
             // See if it is time to end the calendar's batch.
             if (count == aItems.length) {
                 destCal.endBatch();
-                if (!failedCount && duplicateCount) {
-                    showError(calGetString("calendar", "duplicateError", [duplicateCount, aFilePath] , 2));
-                } else if (failedCount) {
-                    showError(calGetString("calendar", "importItemsFailed", [failedCount, lastError.toString()] , 2));
-                }
+                if (failedCount)
+                    showError(failedCount+" items failed to import. The last error was: "+lastError.toString());
             }
         }
     }
@@ -218,7 +204,7 @@ function saveEventsToFile(calendarEventArray, aDefaultFileName)
 
    if (!calendarEventArray.length)
    {
-      alert(calGetString("calendar", "noEventsToSave"));
+      alert(getCalStringBundle().GetStringFromName("noEventsToSave"));
       return;
    }
 
@@ -228,14 +214,15 @@ function saveEventsToFile(calendarEventArray, aDefaultFileName)
    var fp = Components.classes["@mozilla.org/filepicker;1"]
                       .createInstance(nsIFilePicker);
 
-   fp.init(window, calGetString("calendar", "SaveAs"), nsIFilePicker.modeSave);
+   fp.init(window,  getCalStringBundle().GetStringFromName("SaveAs"),
+           nsIFilePicker.modeSave);
 
    if (aDefaultFileName && aDefaultFileName.length && aDefaultFileName.length > 0) {
       fp.defaultString = aDefaultFileName;
    } else if (calendarEventArray.length == 1 && calendarEventArray[0].title) {
       fp.defaultString = calendarEventArray[0].title;
    } else {
-      fp.defaultString = calGetString("calendar", "defaultFileName");
+      fp.defaultString = getCalStringBundle().GetStringFromName("defaultFileName");
    }
 
    fp.defaultExtension = "ics";
@@ -300,7 +287,7 @@ function saveEventsToFile(calendarEventArray, aDefaultFileName)
       }
       catch(ex)
       {
-         showError(calGetString("calendar", "unableToWrite") + filePath);
+         showError(getCalStringBundle().GetStringFromName("unableToWrite") + filePath );
       }
    }
 }
@@ -340,7 +327,7 @@ function exportEntireCalendar(aCalendar) {
             // Ask what calendar to import into
             var args = new Object();
             args.onOk = getItemsFromCal;
-            args.promptText = calGetString("calendar", "exportPrompt");
+            args.promptText = getCalStringBundle().GetStringFromName("exportPrompt");
             openDialog("chrome://calendar/content/chooseCalendarDialog.xul", 
                        "_blank", "chrome,titlebar,modal,resizable", args);
         }
@@ -349,11 +336,19 @@ function exportEntireCalendar(aCalendar) {
     }
 }
 
+function getCalStringBundle()
+{
+    var strBundleService = 
+        Components.classes["@mozilla.org/intl/stringbundle;1"]
+                  .getService(Components.interfaces.nsIStringBundleService);
+    return strBundleService.createBundle("chrome://calendar/locale/calendar.properties");
+}
+
 function showError(aMsg)
 {
     var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
                                   .getService(Components.interfaces.nsIPromptService);
     promptService.alert(null,
-                        calGetString("calendar", "errorTitle"),
+                        getCalStringBundle().GetStringFromName('errorTitle'),
                         aMsg);
 }

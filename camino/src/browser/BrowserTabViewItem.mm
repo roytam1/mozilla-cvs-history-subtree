@@ -43,7 +43,7 @@
 #import "BrowserTabViewItem.h"
 #import "BrowserTabView.h"
 
-#import "BrowserWrapper.h"
+#import "CHBrowserView.h"
 #import "MainController.h"
 #import "BrowserWindowController.h"
 #import "TruncatingTextAndImageCell.h"
@@ -263,9 +263,9 @@ const int kMenuTruncationChars = 60;
   {
     mSelectTabOnMouseUp = NO;
 
-    BrowserWrapper* browserView = (BrowserWrapper*)[mTabViewItem view];
+    CHBrowserView* browserView = (CHBrowserView*)[mTabViewItem view];
     
-    NSString     *url = [browserView currentURI];
+    NSString     *url = [browserView getCurrentURI];
     NSString     *title = [mLabelCell stringValue];
     NSString     *cleanedTitle = [title stringByReplacingCharactersInSet:[NSCharacterSet controlCharacterSet] withString:@" "];
     

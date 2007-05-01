@@ -106,11 +106,24 @@ nsresult nsMsgQuoteListener::OnHeadersReady(nsIMimeHeaders * headers)
   if (msgQuote)
     msgQuote->GetStreamListener(getter_AddRefs(aStreamListener));
 
-  nsCOMPtr<nsIMsgQuotingOutputStreamListener>
-    quotingOutputStreamListener(do_QueryInterface(aStreamListener));
-  if (quotingOutputStreamListener)
-    quotingOutputStreamListener->SetMimeHeaders(headers);
-  return NS_OK;
+	if (aStreamListener)
+	{
+		QuotingOutputStreamListener * quoting;
+		if (NS_SUCCEEDED(aStreamListener->QueryInterface(NS_GET_IID(QuotingOutputStreamListener), (void**)&quoting)) &&
+			quoting)
+		{
+	  	quoting->SetMimeHeaders(headers);
+			NS_RELEASE(quoting);			
+		}
+		else
+			return NS_ERROR_FAILURE;
+/* ducarroz: Impossible to compile the COMPtr version of this code !!!!
+   		nsCOMPtr<QuotingOutputStreamListener> quoting (do_QueryInterface(streamListener));
+  		if (quoting)
+  		  	quoting->SetMimeHeaders(headers);
+*/
+	}
+	return NS_OK;
 }
 
 //

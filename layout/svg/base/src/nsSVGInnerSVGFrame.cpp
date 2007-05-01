@@ -742,6 +742,8 @@ nsSVGInnerSVGFrame::GetCoordContextProvider()
   nsSVGCoordCtxProvider *provider;
   mContent->QueryInterface(NS_GET_IID(nsSVGCoordCtxProvider), (void**)&provider);
 
+  NS_IF_ADDREF(provider);
+
   return provider;
 }
 
