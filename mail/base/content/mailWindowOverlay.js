@@ -493,44 +493,24 @@ function RemoveAllMessageTags()
   var selectedMsgUris = GetSelectedMessages();
   if (!selectedMsgUris.length)
     return;
-
-  var messages = Components.classes["@mozilla.org/supports-array;1"]
-                           .createInstance(Components.interfaces.nsISupportsArray);
-  var tagService = Components.classes["@mozilla.org/messenger/tagservice;1"]
-                             .getService(Components.interfaces.nsIMsgTagService);
-  var tagArray = tagService.getAllTags({});
-
-  var allKeys = "";
-  for (j = 0; j < tagArray.length; ++j)
-  {
-    if (j)
-      allKeys += " ";
-    allKeys += tagArray[j].key;
-  }
-
-  var prevHdrFolder = null;
-  // this crudely handles cross-folder virtual folders with selected messages
-  // that spans folders, by coalescing consecutive messages in the selection
-  // that happen to be in the same folder. nsMsgSearchDBView does this better,
-  // but nsIMsgDBView doesn't handle commands with arguments, and untag takes a
-  // key argument. Furthermore, we only delete legacy labels and known tags,
-  // keeping other keywords like (non)junk intact.
-  var j;
+    
+  var msg = Components.classes["@mozilla.org/supports-array;1"]
+                          .createInstance(Components.interfaces.nsISupportsArray);
+                          
   for (var i = 0; i < selectedMsgUris.length; ++i)
   {
+    // remove all tags by removing all their tag keys, all at once.
+    // (using a msgHdr's setStringProperty won't notify the threadPane!)
     var msgHdr = messenger.msgHdrFromURI(selectedMsgUris[i]);
     msgHdr.label = 0; // remove legacy label
-    if (prevHdrFolder != msgHdr.folder)
-    {
-      if (prevHdrFolder)
-        prevHdrFolder.removeKeywordsFromMessages(messages, allKeys);
-      messages.Clear();
-      prevHdrFolder = msgHdr.folder;
-    }
-    messages.AppendElement(msgHdr);
+    msg.Clear();
+    msg.AppendElement(msgHdr);
+    
+    var keywords = msgHdr.getStringProperty("keywords");
+    // this will remove all keywords at once...
+    if (keywords.length > 0)
+      msgHdr.folder.removeKeywordFromMessages(msg, keywords);
   }
-  if (prevHdrFolder)
-    prevHdrFolder.removeKeywordsFromMessages(messages, allKeys);
   OnTagsChange();
 }
 
@@ -574,7 +554,7 @@ function ToggleMessageTag(key, addKey)
   var msg = Components.classes["@mozilla.org/supports-array;1"]
                           .createInstance(Components.interfaces.nsISupportsArray);
   var selectedMsgUris = GetSelectedMessages();
-  var toggler = addKey ? "addKeywordsToMessages" : "removeKeywordsFromMessages";
+  var toggler = addKey ? "addKeywordToMessages" : "removeKeywordFromMessages";
   var prevHdrFolder = null;
   // this crudely handles cross-folder virtual folders with selected messages
   // that spans folders, by coalescing consecutive msgs in the selection
@@ -591,7 +571,7 @@ function ToggleMessageTag(key, addKey)
       // because resetting a label doesn't update the tree anymore...
       msg.Clear();
       msg.AppendElement(msgHdr);
-      msgHdr.folder.addKeywordsToMessages(msg, "$label" + msgHdr.label);
+      msgHdr.folder.addKeywordToMessages(msg, "$label" + msgHdr.label);
       msgHdr.label = 0; // remove legacy label
     }
     if (prevHdrFolder != msgHdr.folder)
@@ -918,7 +898,6 @@ function GetMessagesForInboxOnServer(server)
 
 function MsgGetMessage()
 {
-  gNewAccountToLoad = null;
   // if offline, prompt for getting messages
   if (MailOfflineMgr.isOnline() || MailOfflineMgr.getNewMail())
     GetFolderMessages();
@@ -2190,11 +2169,9 @@ function HandleJunkStatusChanged(folder)
     var msgHdr = null;
     if (GetNumSelectedMessages() == 1)
       msgHdr = messenger.msgHdrFromURI(loadedMessage);
-    var junkBarWasDisplayed = gMessageNotificationBar.isFlagSet(kMsgNotificationJunkBar);
     gMessageNotificationBar.setJunkMsg(msgHdr);
-
-    // only reload message if junk bar display state has changed.    
-    if (msgHdr && junkBarWasDisplayed != gMessageNotificationBar.isFlagSet(kMsgNotificationJunkBar))
+    
+    if (msgHdr)
     {
       // we may be forcing junk mail to be rendered with sanitized html. In that scenario, we want to 
       // reload the message if the status has just changed to not junk. 
@@ -2293,10 +2270,10 @@ var gMessageNotificationBar =
 };
 
 /**
- * LoadMsgWithRemoteContent
+ * loadMsgWithRemoteContent
  *   Reload the current message, allowing remote content
  */
-function LoadMsgWithRemoteContent()
+function loadMsgWithRemoteContent()
 {
   // we want to get the msg hdr for the currently selected message
   // change the "remoteContentBar" property on it

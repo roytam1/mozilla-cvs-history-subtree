@@ -29,7 +29,6 @@
  *                 Matthew Willis <lilmatt@mozilla.com>
  *                 Joey Minta <jminta@gmail.com>
  *                 Dan Mosedale <dan.mosedale@oracle.com>
- *                 Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -129,9 +128,6 @@ function calendarInit()
    getViewDeck().addEventListener("dayselect", observeViewDaySelect, false);
    getViewDeck().addEventListener("itemselect", onSelectionChanged, true);
 
-   // Setup undo/redo menu for additional main windows
-   updateUndoRedoMenu();
-
    // Handle commandline args
    for (var i=0; i < window.arguments.length; i++) {
        try {
@@ -145,50 +141,35 @@ function calendarInit()
 }
 
 function handleCommandLine(aComLine) {
-    var comLine = aComLine;
+    var calurl;
+    try {
+        calurl = aComLine.handleFlagWithParam("subscribe", false);
+    } catch(ex) {}
+    if (calurl) {
+        var uri = aComLine.resolveURI(calurl);
+        var cal = getCalendarManager().createCalendar('ics', uri);
+        getCalendarManager().registerCalendar(cal);
 
-    var validFlags = ["showdate", "subscribe", "url"];
-    var flagsToProcess = [];
+        // Strip ".ics" from filename for use as calendar name, taken from 
+        // calendarCreation.js
+        var fullPathRegex = new RegExp("([^/:]+)[.]ics$");
+        var prettyName = calurl.match(fullPathRegex);
+        var name;
 
-    for each (var flag in validFlags) {
-        if (comLine.findFlag(flag, false) >= 0) {
-            flagsToProcess.push(flag);
+        if (prettyName && prettyName.length >= 1) {
+            name = decodeURIComponent(prettyName[1]);
+        } else {
+            name = calGetString("calendar", "untitledCalendarName");
         }
+        cal.name = name;
     }
 
-    for each (var flag in flagsToProcess) {
-        var param = comLine.handleFlagWithParam(flag, false);
-
-        switch (flag) {
-            case "showdate":
-                currentView().goToDay(jsDateToDateTime(new Date(param)));
-                break;
-            case "subscribe":
-            case "url":
-                // Double-clicking an .ics file on the Mac causes
-                // LaunchServices to launch Sunbird with the -url command line
-                // switch like so:
-                // sunbird-bin -url file://localhost/Users/foo/mycal.ics -foreground
-                var uri = comLine.resolveURI(param);
-                var cal = getCalendarManager().createCalendar("ics", uri);
-                getCalendarManager().registerCalendar(cal);
-
-                // Strip ".ics" from filename for use as calendar name
-                var fullPathRegEx = new RegExp("([^/:]+)[.]ics$");
-                var prettyName = param.match(fullPathRegEx);
-
-                var name;
-                if (prettyName && prettyName.length >= 1) {
-                    name = decodeURIComponent(prettyName[1]);
-                } else {
-                    name = calGetString("calendar", "untitledCalendarName");
-                }
-                cal.name = name;
-                break;
-           default:
-                // no-op
-                break;
-        }
+    var date;
+    try {
+        date = aComLine.handleFlagWithParam("showdate", false);
+    } catch(ex) {}
+    if (date) {
+        currentView().goToDay(jsDateToDateTime(new Date(date)));
     }
 }
 
@@ -283,14 +264,46 @@ function getSelectedCalendarOrNull()
      return null;
 }
 
+/**
+*  This is called from the unifinder's delete command
+*
+*/
+function deleteItems( SelectedItems, DoNotConfirm )
+{
+    if (!SelectedItems)
+        return;
+
+    startBatchTransaction();
+    for (i in SelectedItems) {
+        var aOccurrence = SelectedItems[i];
+        if (aOccurrence.parentItem != aOccurrence) {
+            var event = aOccurrence.parentItem.clone();
+            event.recurrenceInfo.removeOccurrenceAt(aOccurrence.recurrenceId);
+            doTransaction('modify', event, event.calendar, aOccurrence.parentItem, null);
+        } else {
+            doTransaction('delete', aOccurrence, aOccurrence.calendar, null, null);
+        }
+    }
+    endBatchTransaction();
+}
+
+
+/**
+*  Delete the current selected items with focus from the unifinder list
+*/
+function deleteEventCommand( DoNotConfirm )
+{
+    var SelectedItems = currentView().getSelectedItems({});
+    deleteItems( SelectedItems, DoNotConfirm );
+}
 
 
 /**
 *  Delete the current selected item with focus from the ToDo unifinder list
 */
-function deleteToDoCommand(aDoNotConfirm)
+function deleteToDoCommand( DoNotConfirm )
 {
-   var selectedItems = new Array();
+   var SelectedItems = new Array();
    var tree = document.getElementById( ToDoUnifinderTreeName );
    var start = new Object();
    var end = new Object();
@@ -302,13 +315,10 @@ function deleteToDoCommand(aDoNotConfirm)
       tree.view.selection.getRangeAt(t, start, end);
       for (v = start.value; v <= end.value; v++) {
          toDoItem = tree.taskView.getCalendarTaskAtRow( v );
-         selectedItems.push( toDoItem );
+         SelectedItems.push( toDoItem );
       }
    }
-   calendarViewController.deleteOccurrences(selectedItems.length,
-                                            selectedItems,
-                                            false,
-                                            aDoNotConfirm);
+   deleteItems( SelectedItems, DoNotConfirm );
    tree.view.selection.clearSelection();
 }
 
@@ -483,23 +493,15 @@ function CalendarToolboxCustomizeDone(aToolboxChanged)
 }
 
 function updateUndoRedoMenu() {
-    // We need to make sure the menu is updated on all main windows
-    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                       .getService(Components.interfaces.nsIWindowMediator);
-    var enumerator = wm.getEnumerator('calendarMainWindow');
-    while (enumerator.hasMoreElements()) {
-        var doc = enumerator.getNext().document;
+    if (gTransactionMgr.numberOfUndoItems)
+        document.getElementById('undo_command').removeAttribute('disabled');
+    else    
+        document.getElementById('undo_command').setAttribute('disabled', true);
 
-        if (getTransactionMgr().canUndo())
-            doc.getElementById('undo_command').removeAttribute('disabled');
-        else
-            doc.getElementById('undo_command').setAttribute('disabled', true);
-
-        if (getTransactionMgr().canRedo())
-            doc.getElementById('redo_command').removeAttribute('disabled');
-        else
-            doc.getElementById('redo_command').setAttribute('disabled', true);
-    }
+    if (gTransactionMgr.numberOfRedoItems)
+        document.getElementById('redo_command').removeAttribute('disabled');
+    else    
+        document.getElementById('redo_command').setAttribute('disabled', true);
 }
 
 function openLocalCalendar() {

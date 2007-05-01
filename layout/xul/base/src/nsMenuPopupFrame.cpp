@@ -79,7 +79,6 @@
 #include "nsIBoxLayout.h"
 #include "nsIEventQueueService.h"
 #include "nsIServiceManager.h"
-#include "nsIReflowCallback.h"
 #ifdef XP_WIN
 #include "nsISound.h"
 #endif
@@ -159,8 +158,7 @@ NS_INTERFACE_MAP_END_INHERITING(nsBoxFrame)
 //
 nsMenuPopupFrame::nsMenuPopupFrame(nsIPresShell* aShell)
   :nsBoxFrame(aShell), mCurrentMenu(nsnull), mTimerMenu(nsnull), mCloseTimer(nsnull),
-    mMenuCanOverlapOSBar(PR_FALSE), mShouldAutoPosition(PR_TRUE), mShouldRollup(PR_TRUE),
-    mInContentShell(PR_TRUE)
+    mMenuCanOverlapOSBar(PR_FALSE), mShouldAutoPosition(PR_TRUE), mShouldRollup(PR_TRUE)
 {
   SetIsContextMenu(PR_FALSE);   // we're not a context menu by default
 } // ctor
@@ -217,13 +215,6 @@ nsMenuPopupFrame::Init(nsPresContext*  aPresContext,
   // is fixed.
   viewManager->SetViewContentTransparency(ourView, PR_FALSE);
 
-  nsCOMPtr<nsISupports> cont = aPresContext->GetContainer();
-  nsCOMPtr<nsIDocShellTreeItem> dsti = do_QueryInterface(cont);
-  PRInt32 type = -1;
-  if (dsti && NS_SUCCEEDED(dsti->GetItemType(&type)) &&
-      type == nsIDocShellTreeItem::typeChrome)
-    mInContentShell = PR_FALSE;
-
   // Create a widget for ourselves.
   nsWidgetInitData widgetData;
   widgetData.mWindowType = eWindowType_popup;
@@ -236,7 +227,15 @@ nsMenuPopupFrame::Init(nsPresContext*  aPresContext,
     nsCSSRendering::FindBackground(aPresContext, this, &bg, &isCanvas);
   PRBool viewHasTransparentContent = hasBG &&
     (bg->mBackgroundFlags & NS_STYLE_BG_COLOR_TRANSPARENT) &&
-    !GetStyleDisplay()->mAppearance && !mInContentShell;
+    !GetStyleDisplay()->mAppearance;
+  if (viewHasTransparentContent) {
+    nsCOMPtr<nsISupports> cont = GetPresContext()->GetContainer();
+    nsCOMPtr<nsIDocShellTreeItem> dsti = do_QueryInterface(cont);
+    PRInt32 type = -1;
+    if (!dsti || NS_FAILED(dsti->GetItemType(&type)) ||
+        type != nsIDocShellTreeItem::typeChrome)
+      viewHasTransparentContent = PR_FALSE;
+  }
 
   nsIContent* parentContent = aContent->GetParent();
   nsIAtom *tag = nsnull;
@@ -759,17 +758,14 @@ nsMenuPopupFrame::MovePopupToOtherSideOfParent ( PRBool inFlushAboveBelow, PRInt
 
 } // MovePopupToOtherSideOfParent
 
-class nsASyncMenuActivation : public nsIReflowCallback
+struct nsASyncMenuActivation : public PLEvent
 {
-public:
   nsASyncMenuActivation(nsIContent* aContent)
     : mContent(aContent)
   {
   }
 
-  NS_DECL_ISUPPORTS
-
-  NS_IMETHOD ReflowFinished(nsIPresShell* aShell, PRBool* aFlushFlag) {
+  void HandleEvent() {
     nsAutoString shouldDisplay, menuActive;
     mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menuactive, menuActive);
     if (!menuActive.EqualsLiteral("true")) {
@@ -778,16 +774,21 @@ public:
       if(shouldDisplay.EqualsLiteral("true")) {
         mContent->SetAttr(kNameSpaceID_None, nsXULAtoms::menuactive,
                           NS_LITERAL_STRING("true"), PR_TRUE);
-        *aFlushFlag = PR_TRUE;
       }
     }
-    return NS_OK;
   }
 
   nsCOMPtr<nsIContent> mContent;
 };
 
-NS_IMPL_ISUPPORTS1(nsASyncMenuActivation, nsIReflowCallback)
+static void PR_CALLBACK HandleASyncMenuActivation(nsASyncMenuActivation* aEvent)
+{
+  aEvent->HandleEvent();
+}
+static void PR_CALLBACK DestroyASyncMenuActivation(nsASyncMenuActivation* aEvent)
+{
+  delete aEvent;
+}
 
 nsresult 
 nsMenuPopupFrame::SyncViewWithFrame(nsPresContext* aPresContext,
@@ -799,7 +800,7 @@ nsMenuPopupFrame::SyncViewWithFrame(nsPresContext* aPresContext,
   NS_ENSURE_ARG(aPresContext);
   NS_ENSURE_ARG(aFrame);
 
-  if (!mShouldAutoPosition && !mInContentShell)
+  if (!mShouldAutoPosition) 
     return NS_OK;
 
   // |containingView|
@@ -918,21 +919,9 @@ nsMenuPopupFrame::SyncViewWithFrame(nsPresContext* aPresContext,
   // keep 3px margin to the right and bottom of the screen for WinXP dropshadow
   screenWidth -= 3;
   screenHeight -= 3;
-
-  // for content shells, clip to the client area rather than the screen area
-  if (mInContentShell) {
-    nsRect screenRect(screenLeft, screenTop, screenWidth, screenHeight);
-    nsRect rootScreenRect = presShell->GetRootFrame()->GetScreenRect();
-    screenRect.IntersectRect(screenRect, rootScreenRect);
-    screenLeft = screenRect.x;
-    screenTop = screenRect.y;
-    screenWidth = screenRect.width;
-    screenHeight = screenRect.height;
-  }
-
   screenRight = screenLeft + screenWidth;
   screenBottom = screenTop + screenHeight;
-
+  
   PRInt32 screenTopTwips    = NSIntPixelsToTwips(screenTop, p2t);
   PRInt32 screenLeftTwips   = NSIntPixelsToTwips(screenLeft, p2t);
   PRInt32 screenWidthTwips  = NSIntPixelsToTwips(screenWidth, p2t);
@@ -1183,9 +1172,23 @@ nsMenuPopupFrame::SyncViewWithFrame(nsPresContext* aPresContext,
   if (!menuActive.EqualsLiteral("true")) {
     mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menutobedisplayed, shouldDisplay);
     if ( shouldDisplay.EqualsLiteral("true") ) {
-      nsCOMPtr<nsIReflowCallback> cb = new nsASyncMenuActivation(mContent);
-      NS_ENSURE_TRUE(cb, NS_ERROR_OUT_OF_MEMORY);
-      mPresContext->PresShell()->PostReflowCallback(cb);
+      nsCOMPtr<nsIEventQueueService> eventService =
+        do_GetService(kEventQueueServiceCID);
+      NS_ENSURE_TRUE(eventService, NS_ERROR_FAILURE);
+      nsCOMPtr<nsIEventQueue> eventQueue;
+      eventService->GetThreadEventQueue(PR_GetCurrentThread(),
+                                        getter_AddRefs(eventQueue));
+      if (eventQueue) {
+        nsASyncMenuActivation* activation = new nsASyncMenuActivation(mContent);
+        if (activation) {
+          PL_InitEvent(activation, nsnull,
+                       (PLHandleEventProc) ::HandleASyncMenuActivation,
+                       (PLDestroyEventProc) ::DestroyASyncMenuActivation);
+          if (NS_FAILED(eventQueue->PostEvent(activation))) {
+            PL_DestroyEvent(activation);
+          }
+        }
+      }
     }
   }
 
@@ -2223,10 +2226,6 @@ nsMenuPopupFrame::MoveTo(PRInt32 aLeft, PRInt32 aTop)
 void
 nsMenuPopupFrame::MoveToInternal(PRInt32 aLeft, PRInt32 aTop)
 {
-  // just don't support moving popups for content shells
-  if (mInContentShell)
-    return;
-
   nsIView* view = GetView();
   NS_ASSERTION(view->GetParent(), "Must have parent!");
   

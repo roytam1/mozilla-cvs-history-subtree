@@ -53,8 +53,11 @@ function QueryInterface(aIID) {
 
 function getIcsFileTypes(aCount) {
     aCount.value = 1;
+    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                        .getService(Components.interfaces.nsIStringBundleService);
+    var props = sbs.createBundle("chrome://calendar/locale/calendar.properties");
     var wildmat = '*.ics';
-    var label = calGetString("calendar", 'filterIcs', [wildmat]);
+    var label = props.formatStringFromName('filterIcs', [wildmat], 1);
     return([{defaultExtension:'ics', 
              extensionFilter: wildmat, 
              description: label}]);

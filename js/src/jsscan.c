@@ -2012,7 +2012,7 @@ skipline:
             if (!JS7_ISDEC(c))
                 break;
             n = 10 * n + JS7_UNDEC(c);
-            if (n >= UINT16_LIMIT) {
+            if (n >= ATOM_INDEX_LIMIT) {
                 js_ReportCompileErrorNumber(cx, ts,
                                             JSREPORT_TS | JSREPORT_ERROR,
                                             JSMSG_SHARPVAR_TOO_BIG);

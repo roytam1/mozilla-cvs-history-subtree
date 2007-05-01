@@ -22,7 +22,6 @@
    - Contributor(s):
    -  Stuart Parmenter   <stuart.parmenter@oracle.com>
    -  Simon Paquet       <bugzilla@babylonsounds.com>
-   -  Stefan Sitter <ssitter@googlemail.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,70 +37,15 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<!DOCTYPE overlay [
-    <!ENTITY % lightningDTD SYSTEM "chrome://lightning/locale/lightning.dtd">
-    <!ENTITY % preferencesDTD SYSTEM "chrome://calendar/locale/preferences/preferences.dtd">
-    %lightningDTD;
-    %preferencesDTD;
-]>
+<!DOCTYPE overlay SYSTEM "chrome://lightning/locale/lightning.dtd" >
 
 <?xml-stylesheet href="chrome://lightning/skin/lightning.css"?>
 
 <overlay xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-    <prefwindow id="MailPreferences">
-        <prefpane id="paneLightning" 
-                  label="&lightning.taskLabel;"
-                  onpaneload="gCalendarGeneralPane.init(); gAlarmsPane.init(); 
-                              gCategoriesPane.init(); gViewsPane.init();
-                              gTimezonesPane.init(); gLightningPane.init();">
-            <preferences>
-                <preference id="calendar.preferences.lightning.selectedTabIndex"
-                            name="calendar.preferences.lightning.selectedTabIndex"
-                            type="int"/>
-            </preferences>
-            <tabbox id="calPreferencesTabbox" 
-                    flex="1" 
-                    onselect="gLightningPane.tabSelectionChanged();">
-                <tabs>
-                    <tab id="calPreferencesTabGeneral"
-                         label="&paneGeneral.title;"/>
-                    <tab id="calPreferencesTabAlarms"
-                         label="&paneAlarms.title;"/>
-                    <tab id="calPreferencesTabCategories"
-                         label="&paneCategories.title;"/>
-                    <tab id="calPreferencesTabViews"
-                         label="&paneViews.title;"/>
-                    <tab id="calPreferencesTabTimezones"
-                         label="&paneTimezones.title;"/>
-                </tabs>
-                <tabpanels flex="1">
-                    <tabpanel orient="vertical">
-                        <vbox id="calPreferencesBoxGeneral"/>
-                    </tabpanel>
-                    <tabpanel orient="vertical">
-                        <vbox id="calPreferencesBoxAlarms"/>
-                    </tabpanel>
-                    <tabpanel orient="vertical">
-                        <vbox id="calPreferencesBoxCategories"/>
-                    </tabpanel>
-                    <tabpanel orient="vertical">
-                        <vbox id="calPreferencesBoxViews">
-                            <groupbox id="viewsMultiweekGroupbox" hidden="true"/>
-                        </vbox>
-                    </tabpanel>
-                    <tabpanel orient="vertical">
-                        <vbox id="calPreferencesBoxTimezones"/>
-                    </tabpanel>
-                </tabpanels>
-            </tabbox>
-        </prefpane>
-
-        <script type="application/x-javascript"
-                src="chrome://calendar/content/calUtils.js"/>
-        <script type="application/x-javascript"
-                src="chrome://lightning/content/messenger-overlay-preferences.js"/>
-
-    </prefwindow>
+<prefwindow id="MailPreferences">
+  <prefpane id="paneLightning" label="&lightning.taskLabel;"
+            src="chrome://lightning/content/lightning-preferences.xul"/>
+</prefwindow>
 
 </overlay>

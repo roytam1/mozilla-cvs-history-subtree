@@ -56,7 +56,10 @@ function QueryInterface(aIID) {
 
 calListFormatter.prototype.getName =
 function list_getName() {
-    return calGetString("calendar", "formatListName");
+    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                        .getService(Components.interfaces.nsIStringBundleService);
+    var props = sbs.createBundle("chrome://calendar/locale/calendar.properties");
+    return props.GetStringFromName("formatListName");
 };
 calListFormatter.prototype.__defineGetter__("name", calListFormatter.prototype.getName);
 

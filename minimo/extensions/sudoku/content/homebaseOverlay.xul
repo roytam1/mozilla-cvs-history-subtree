@@ -46,11 +46,11 @@
 <script type="application/x-javascript" src="chrome://sudoku/content/widget.js"/>
  
  -->
-     <extensions id="homebar">
+     <vbox id="homebar">
 
-  			<toolbarbutton description="Sudoku Game" image="chrome://sudoku/skin/favicon.png" oncommand="BrowserOpenURLasTab('chrome://sudoku/content/sudoku.html')">
+  			<toolbarbutton image="chrome://sudoku/skin/favicon.png" oncommand="BrowserOpenURLasTab('chrome://sudoku/content/sudoku.html')">
 			</toolbarbutton >
 
-      </extensions>
+      </vbox>
     
 </overlay>

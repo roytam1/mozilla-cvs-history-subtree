@@ -265,7 +265,8 @@ function AbEditSelectedDirectory()
       goEditListDialog(dirUri, null, selecteduri, UpdateCardView);
     }
     else {
-      if (directory instanceof Components.interfaces.nsIAbLDAPDirectory) {
+      var properties = directory.directoryProperties;
+      if (properties.dirType == kLDAPDirectory) {
         var ldapUrlPrefix = "moz-abldapdirectory://";
         var args = { selectedDirectory: directory.dirName,
                      selectedDirectoryString: null};

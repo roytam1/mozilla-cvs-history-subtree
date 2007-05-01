@@ -22,7 +22,6 @@
  *
  * Contributor(s):
  *   David Hyatt <hyatt@mozilla.org> (Original Author)
- *   Sean Murphy <murph@seanmurph.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,43 +42,18 @@
 
 #import "MainController.h"
 
-static NSString* const kMainControllerIsInitializedKey = @"initialized";
-
 @implementation GetURLCommand
 
 - (id)performDefaultImplementation 
 {
   MainController* mainController = (MainController*)[NSApp delegate];
 
-  // We can get here before the application is fully initialized and the previous
-  // session is restored.  We want to avoid opening URLs before that happens.
-  if ([mainController isInitialized]) {
-    [mainController showURL:[self directParameter]];
-  }
-  else {
-    [self suspendExecution];
-    [mainController addObserver:self 
-                     forKeyPath:kMainControllerIsInitializedKey
-                        options:NSKeyValueObservingOptionNew 
-                        context:NULL];
-  }
+  // we can get here before -applicationDidFinishLaunching: is called,
+  // so we have to make sure that gecko has been initted
+  [mainController ensureGeckoInitted];
+
+  [mainController openNewWindowOrTabWithURL:[self directParameter] andReferrer:nil alwaysInFront:YES];
   return nil;
-}
-
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
-{
-  if ([keyPath isEqualToString:kMainControllerIsInitializedKey] && [[change objectForKey:NSKeyValueChangeNewKey] boolValue]) {
-    [object removeObserver:self forKeyPath:kMainControllerIsInitializedKey];
-    // explicitly perform the command's default implementation again, 
-    // since |resumeExecutionWithResult:| will not.
-    id result = [self executeCommand];
-    [self resumeExecutionWithResult:result];
-  }
-}
-
-- (void)dealloc
-{
-  [super dealloc];
 }
 
 @end
