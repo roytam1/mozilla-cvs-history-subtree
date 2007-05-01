@@ -103,6 +103,10 @@ components/libspellchecker.so
 components/libxpinstall.so
 components/xpinstall.xpt
 
+; xmlextras (for RSS feeds and the like)
+components/libxmlextras.so
+components/xmlextras.xpt
+
 ; offline extension (may not be present in the build, that's ok)
 chrome/offline.jar
 
@@ -382,8 +386,9 @@ components/libfileview.so
 ; updater
 updater
 
-; xmlextras, for XPointer support
+; xmlextras, optional for XMLHttpRequest support
 components/libxmlextras.so
+components/xmlextras.xpt
 
 res/ua.css
 res/html.css

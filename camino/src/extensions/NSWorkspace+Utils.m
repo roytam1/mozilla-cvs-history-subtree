@@ -21,7 +21,7 @@
  *
  * Contributor(s):
  *   Simon Fraser <smfr@smfr.org>
- *   Josh Aas <josh@mozilla.com>
+ *   Josh Aas <josha@mac.com>
  *   Nick Kreeger <nick.kreeger@park.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of

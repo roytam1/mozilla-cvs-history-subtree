@@ -20,7 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Marcio S. Galli - mgalli@mgalli.com
+ *   Marcio S. Galli - mgalli@geckonnection.com
  * 
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -59,16 +59,11 @@ function URLBarEventCatch(event) {
    var escapeToHistory = false; 
 
    if(event.keyCode==KeyEvent.DOM_VK_RETURN) {
-	
 	URLBarEntered();
-
    } 
 
-
    if(event.keyCode==KeyEvent.DOM_VK_DOWN) {
-	
 	escapeToHistory = true;
-
    } 
 
    var currentURLBarString = document.getElementById("urlbar2").value;
@@ -81,9 +76,6 @@ function URLBarEventCatch(event) {
 
    var historyFound = false; 
 
-   if(currentURLBarString!="") {
-
-
    for(var i=0;i<historyItemsList.length;i++) {
 
 	var currentElement = historyItemsList[i];
@@ -95,31 +87,22 @@ function URLBarEventCatch(event) {
 	var brother = currentElement.previousSibling;
 
 	if(textValue.match(regExp)) {
-		brother.style.display="block";
-
-		historyFound=true;	
-	
-	        if(escapeToHistory) {
-			brother.childNodes[1].focus(); escapeToHistory = false;
-		   }
-
-
+        brother.style.display="block";
+        historyFound=true;		
+        if(escapeToHistory) {
+          brother.childNodes[1].focus(); escapeToHistory = false;
+        }
 	} else {
-		brother.style.display="none";
+          brother.style.display="none";
 	} 
+	
    } 
-   
-   }
   
    if(historyFound) {
-
 		hbSelect("timehistory");
-
-   }	  else {
-		hbSelectAll();
-
+   } else {
+        hbSelectAll();
    }
-
 
 }
 
@@ -347,9 +330,10 @@ function bmInit(targetDoc, targetElement) {
 
 	}
 
-    var multiMarks = "<bmgroup>"+bookmarkStore+gHomebaseElements+myObserver.bookmarkStore+"</bmgroup>";
+    var multiMarks = "<bmgroup>"+gHomebaseElements+bookmarkStore+myObserver.bookmarkStore+"</bmgroup>";
 
 	var testLoad=new bmProcessor(multiMarks);
+	testLoad.xslSet("bookmark_template_multiple.xml");
 	testLoad.setTargetDocument(targetDoc);
 	testLoad.setTargetElement(targetElement);
 	testLoad.run();
@@ -406,8 +390,9 @@ function homebase_menuBuild(winRef) {
 
 function bmProcessor(bookmarkStore) {
 
+  this.xmlRef=document.implementation.createDocument("","",null);
+  this.xslRef=document.implementation.createDocument("http://www.w3.org/1999/XSL/Transform","stylesheet",null);
   this.xmlRef=null;
-  this.xslRef=null;
 
   var aDOMParser = new DOMParser();
 
@@ -428,13 +413,15 @@ function bmProcessor(bookmarkStore) {
     this.xmlRef = aDOMParser.parseFromString(bookmarkEmpty,"text/xml");
   }
 
-  var aDOMParser = new DOMParser();
-  var xsltTemplate = "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"                xmlns:dc=\"http://purl.org/dc/elements/1.1/\"                xmlns:rss=\"http://purl.org/rss/1.0/\" xmlns:html=\"http://www.w3.org/1999/xhtml\"                xmlns:xul=\"http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul\"><xsl:output method=\"html\" indent=\"yes\"/><xsl:template match=\"/\"><div id=\"container2\" >  <div style=\"\">    <img src=\"chrome://minimo/skin/extensions/icon-urlbar.png\">    </img>    <input type=\"text\" id=\"urlbar2\" style=\"text-align:left;background-color:white;width:90%\" />  </div>	  <div style=\"\" class=\"extensions\">      <img src=\"chrome://minimo/skin/extensions/icon-google.png\">    </img>    <input type=\"text\" id=\"search-google\"                 style=\"text-align:left;background-color:white;width:90%\"                 onchange=\"return SearchGoogle(this.value);\"  />      </div>	  <xsl:for-each select=\"/bmgroup/bm/li\"><xsl:choose><xsl:when test=\"@action\"><!--  <div class=\"section\">&titleExtensions.label;</div>-->  <div class=\"item extensions\" >    <img>      <xsl:attribute name=\"src\" >        <xsl:value-of select=\"@iconsrc\"/>      </xsl:attribute> 	    </img>    <a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\".\"/>');return false</xsl:attribute>      <xsl:value-of select=\"@title\"/>    </a>  </div>	</xsl:when></xsl:choose><xsl:choose><xsl:when test=\"@page\" >  <div class=\"item pagelink\" >    <img>      <xsl:attribute name=\"src\" >        <xsl:value-of select=\"@iconsrc\"/>      </xsl:attribute> 	    </img>    <a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\".\"/>');return false</xsl:attribute>      <xsl:value-of select=\"@title\"/>    </a>  </div>  </xsl:when></xsl:choose><xsl:choose><xsl:when test=\"@rss\" >  <div class=\"item rsslink\" >    <img>      <xsl:attribute name=\"src\" >        <xsl:value-of select=\"@iconsrc\"/>      </xsl:attribute> 	    </img>    <a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\".\"/>');return false</xsl:attribute>      <xsl:value-of select=\"@title\"/>    </a>  </div></xsl:when></xsl:choose></xsl:for-each><!--<h3>&titleHistory.label;</h3>--> <xsl:for-each select=\"/bmgroup/bm/li\"><xsl:choose><xsl:when test=\"@hbhistory\" >  <div  class=\"item timehistory\" ><a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\"@value\"/>');return false</xsl:attribute><xsl:attribute name=\"class\"><xsl:value-of select=\"@classdomainvalue\"/></xsl:attribute>      <xsl:value-of select=\".\"/>    </a>  </div><history><xsl:attribute name=\"value\"><xsl:value-of select=\"@value\"/></xsl:attribute></history>  </xsl:when></xsl:choose><xsl:choose><xsl:when test=\"@hbhistoryhandler\" ><a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbToggleClass('<xsl:value-of select=\"@classdomainvalue\"/>');return false</xsl:attribute>      [+]    </a>  <div  class=\"item timehistory\" ><a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\"@value\"/>');return false</xsl:attribute>      <xsl:value-of select=\".\"/>    </a>  </div><history><xsl:attribute name=\"value\"><xsl:value-of select=\"@value\"/></xsl:attribute></history>  </xsl:when></xsl:choose>  </xsl:for-each>  </div></xsl:template></xsl:stylesheet>";
+  this.xslUrl="";
 
-  this.xslRef = aDOMParser.parseFromString(xsltTemplate,"text/xml");
+  var myThis=this;
+  var omega=function thisScopeFunction2() { myThis.xslLoaded(); }
+
+  this.xslRef.addEventListener("load",omega,false);
 
   this.xmlLoadedState=true;
-  this.xslLoadedState=true;
+  this.xslLoadedState=false;
 }
 
 bmProcessor.prototype.xmlLoaded = function () {
@@ -445,6 +432,14 @@ bmProcessor.prototype.xmlLoaded = function () {
 bmProcessor.prototype.xslLoaded = function () {
 	this.xslLoadedState=true;
 	this.apply();
+}
+
+bmProcessor.prototype.xmlSet = function (urlstr) {
+	this.xmlUrl=urlstr;
+}
+
+bmProcessor.prototype.xslSet = function (urlstr) {
+	this.xslUrl=urlstr;
 }
 
 bmProcessor.prototype.setTargetDocument = function (targetDoc) {
@@ -483,6 +478,15 @@ bmProcessor.prototype.apply = function () {
 }
 
 bmProcessor.prototype.run = function () {
-  this.apply();
+	try {
+		// Already parsed.
+		// this.xmlRef.load(this.xmlUrl);
+	} catch (e) {
+	}
+	try {
+		this.xslRef.load(this.xslUrl);
+	} catch (e) {
+	}
+
 }
 

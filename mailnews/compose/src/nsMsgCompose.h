@@ -48,7 +48,7 @@
 #include "nsIMsgSendListener.h"
 #include "nsIMsgCopyServiceListener.h"
 #include "nsIMsgSend.h"
-#include "nsIMsgQuotingOutputStreamListener.h"
+#include "nsIStreamListener.h"
 #include "nsIMimeHeaders.h"
 #include "nsIBaseWindow.h"
 #include "nsIAbDirectory.h"
@@ -90,7 +90,6 @@ private:
                                                      const char * originalHost,
                                                      const char * originalPath,
                                                      nsIDOMNode * object);
-  nsresult                      ResetUrisForEmbeddedObjects();
   nsresult                      TagEmbeddedObjects(nsIEditorMailSupport *aMailEditor);
 
   nsCString                     mQuoteCharset;
@@ -165,8 +164,6 @@ private:
   nsCOMPtr<nsIMsgSendListener>              mExternalSendListener;
   nsCString                                 mSmtpPassword;
     
-  PRBool                                    mInsertingQuotedContent;
-    
   friend class QuotingOutputStreamListener;
 	friend class nsMsgComposeSendListener;
 };
@@ -175,7 +172,7 @@ private:
 // THIS IS THE CLASS THAT IS THE STREAM Listener OF THE HTML OUPUT
 // FROM LIBMIME. THIS IS FOR QUOTING
 ////////////////////////////////////////////////////////////////////////////////////
-class QuotingOutputStreamListener : public nsIMsgQuotingOutputStreamListener
+class QuotingOutputStreamListener : public nsIStreamListener
 {
 public:
     QuotingOutputStreamListener(const char *originalMsgURI,
@@ -191,10 +188,10 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIREQUESTOBSERVER
     NS_DECL_NSISTREAMLISTENER
-    NS_DECL_NSIMSGQUOTINGOUTPUTSTREAMLISTENER
 
     NS_IMETHOD  SetComposeObj(nsIMsgCompose *obj);
 	  NS_IMETHOD  ConvertToPlainText(PRBool formatflowed = PR_FALSE);
+	  NS_IMETHOD	SetMimeHeaders(nsIMimeHeaders * headers);
     NS_IMETHOD InsertToCompose(nsIEditor *aEditor, PRBool aHTMLEditor);
 
 private:

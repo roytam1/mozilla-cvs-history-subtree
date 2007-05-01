@@ -68,9 +68,9 @@ function onLoad() {
     updatingBox.removeAttribute("hidden");
 
     var args = window.arguments[0];
+    args.operationListenerWrapper.operationListener = operationListener;
     args.invitationsManager.getInvitations(
-        false,
-        operationListener,
+        args.operationListenerWrapper,
         args.onLoadOperationListener);
 
     opener.setCursor("auto");
@@ -78,7 +78,7 @@ function onLoad() {
 
 function onUnload() {
     var args = window.arguments[0];
-    args.requestManager.cancelPendingRequests();
+    args.operationListenerWrapper.operationListener = null;
 }
 
 function onAccept() {
@@ -105,7 +105,8 @@ function fillJobQueue(queue) {
         if (newStatus != oldStatus) {
             var actionString = "modify";
             var oldCalendarItem = richListItem.calendarItem;
-            var newCalendarItem = oldCalendarItem.clone();
+            var newCalendarItem = (oldCalendarItem.isMutable)
+                ? oldCalendarItem : oldCalendarItem.clone();
             richListItem.setCalendarItemParticipationStatus(newCalendarItem,
                 newStatus);
             var job = {

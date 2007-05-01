@@ -55,7 +55,7 @@
 
             <label  class="sectionlabel"  value="&networkCaption.label;"/>
 
-              <groupbox class='box-prefgroupitem' >
+              <groupbox class='box-prefgroupitem' flex="1">
 
                 <caption label="&proxyCaption.label;"/>
  

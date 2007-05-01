@@ -85,7 +85,7 @@ static NS_DEFINE_CID(kCNntpUrlCID, NS_NNTPURL_CID);
 
 #define ILLEGAL_FOLDER_CHARS ";#"
 #define ILLEGAL_FOLDER_CHARS_AS_FIRST_LETTER "." 
-#define ILLEGAL_FOLDER_CHARS_AS_LAST_LETTER  ".~ "
+#define ILLEGAL_FOLDER_CHARS_AS_LAST_LETTER  ".~"
 
 #define NS_PASSWORDMANAGER_CATEGORY "passwordmanager"
 static PRBool gInitPasswordManager = PR_FALSE;
@@ -342,7 +342,7 @@ nsresult NS_MsgHashIfNecessary(nsCAutoString &name)
   // are too long or contain illegal characters
   PRInt32 illegalCharacterIndex = str.FindCharInSet(illegalChars);
 
-  // Need to check the first ('.') and last ('.', '~' and ' ') char
+  // Need to check the first ('.') and last ('.' and '~') char
   if (illegalCharacterIndex == kNotFound) 
   {
 	NS_NAMED_LITERAL_CSTRING (illegalFirstChars, ILLEGAL_FOLDER_CHARS_AS_FIRST_LETTER);
@@ -396,7 +396,7 @@ nsresult NS_MsgHashIfNecessary(nsAutoString &name)
   PRInt32 illegalCharacterIndex = name.FindCharInSet(
                                   FILE_PATH_SEPARATOR FILE_ILLEGAL_CHARACTERS ILLEGAL_FOLDER_CHARS);
 
-  // Need to check the first ('.') and last ('.', '~' and ' ') char
+  // Need to check the first ('.') and last ('.' and '~') char
   if (illegalCharacterIndex == kNotFound) 
   {
 	NS_NAMED_LITERAL_STRING (illegalFirstChars, ILLEGAL_FOLDER_CHARS_AS_FIRST_LETTER);
@@ -1400,22 +1400,11 @@ NS_MSG_BASE void MsgStripQuotedPrintable (unsigned char *src)
       else
       {
         // first char after '=' isn't hex. check if it's a normal char
-        // or a soft line break. If it's a soft line break, eat the
-        // CR/LF/CRLF.
+        // or a soft line break.
         if (src[srcIdx + 1] == nsCRT::CR || src[srcIdx + 1] == nsCRT::LF)
-        {
           srcIdx++; // soft line break, ignore the '=';
-          if (src[srcIdx] == nsCRT::CR || src[srcIdx] == nsCRT::LF)
-          {
-            srcIdx++;
-            if (src[srcIdx] == nsCRT::LF)
-              srcIdx++;
-          }
-        }
         else // normal char, copy it.
-        {
           dest[destIdx++] = src[srcIdx++]; // aka token[0]
-        }
         continue;
       }
       

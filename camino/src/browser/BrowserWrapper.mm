@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
  
+#include <math.h>
+
 #import "NSString+Utils.h"
 #import "NSView+Utils.h"
 #import "ImageAdditions.h"
@@ -66,7 +68,6 @@
 
 #include "nsIArray.h"
 #include "nsIURI.h"
-#include "nsNetUtil.h"
 #include "nsIIOService.h"
 #include "nsIDocument.h"
 #include "nsIDOMWindow.h"
@@ -80,16 +81,16 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsIWebProgressListener.h"
 #include "nsIBrowserDOMWindow.h"
-#include "nsIPermissionManager.h"
-#include "nsIScriptSecurityManager.h"
 
 class nsIDOMPopupBlockedEvent;
+
+static NSString* const kOfflineNotificationName = @"offlineModeChanged";
 
 // for camino.enable_plugins; needs to match string in WebFeatures.mm
 static NSString* const kEnablePluginsChangedNotificationName = @"EnablePluginsChanged";
 
 // types of status bar messages, in order of priority for showing to the user
-enum StatusPriority {
+enum {
   eStatusLinkTarget    = 0, // link mouseover info
   eStatusProgress      = 1, // loading progress
   eStatusScript        = 2, // javascript window.status
@@ -110,18 +111,14 @@ enum StatusPriority {
 
 - (void)updateSiteIconImage:(NSImage*)inSiteIcon withURI:(NSString *)inSiteIconURI loadError:(BOOL)inLoadError;
 
-- (void)updateStatusString:(NSString*)statusString withPriority:(StatusPriority)priority;
-
-- (void)setPendingURI:(NSString*)inURI;
-
+- (void)setTabTitle:(NSString*)tabTitle windowTitle:(NSString*)windowTitle;
 - (NSString*)displayTitleForPageURL:(NSString*)inURL title:(NSString*)inTitle;
 
+- (void)updateOfflineStatus;
 - (void)updatePluginsEnabledState;
 
 - (void)checkForCustomViewOnLoad:(NSString*)inURL;
 
-- (BOOL)popupsAreBlacklistedForURL:(NSString*)inURL;
-- (void)showPopupsWhitelistingSource:(BOOL)shouldWhitelist;
 - (void)addBlockedPopupViewAndDisplay;
 - (void)removeBlockedPopupViewAndDisplay;
 
@@ -177,9 +174,7 @@ enum StatusPriority {
     mStatusStrings = [[NSMutableArray alloc] initWithObjects:[NSNull null], [NSNull null],
                                                              [NSNull null], [NSNull null], nil];
 
-    mDisplayTitle = [[NSString alloc] init];
-    
-    mLoadingResources = [[NSMutableSet alloc] init];
+    mTitle = [[NSString alloc] init];
     
     [self registerNotificationListener];
   }
@@ -197,13 +192,12 @@ enum StatusPriority {
   [mSiteIconImage release];
   [mSiteIconURI release];
   [mStatusStrings release];
-  [mLoadingResources release];
 
   [mToolTip release];
-  [mDisplayTitle release];
-  [mPendingURI release];
+  [mTitle release];
+  [mTabTitle release];
   
-  NS_IF_RELEASE(mBlockedPopups);
+  NS_IF_RELEASE(mBlockedSites);
   
   [mFeedList release];
   
@@ -264,12 +258,7 @@ enum StatusPriority {
   return mTabItem;
 }
 
--(NSString*)pendingURI
-{
-  return mPendingURI;
-}
-
--(NSString*)currentURI
+-(NSString*)getCurrentURI
 {
   return [mBrowserView getCurrentURI];
 }
@@ -317,11 +306,6 @@ enum StatusPriority {
   }
 }
 
-- (void)reapplyFrame
-{
-  [self setFrame:[self frame] resizingBrowserViewIfHidden:YES];
-}
-
 - (void)setBrowserActive:(BOOL)inActive
 {
   [mBrowserView setActive:inActive];
@@ -332,9 +316,9 @@ enum StatusPriority {
   return mIsBusy;
 }
 
-- (NSString*)displayTitle
+- (NSString*)windowTitle
 {
-  return mDisplayTitle;
+  return mTitle;
 }
 
 - (NSString*)pageTitle
@@ -366,10 +350,10 @@ enum StatusPriority {
 
 - (BOOL)popupsBlocked
 {
-  if (!mBlockedPopups) return NO;
+  if (!mBlockedSites) return NO;
   
   PRUint32 numBlocked = 0;
-  mBlockedPopups->GetLength(&numBlocked);
+  mBlockedSites->GetLength(&numBlocked);
   
   return (numBlocked > 0);
 }
@@ -390,8 +374,6 @@ enum StatusPriority {
   // trying to load, even if it doesn't work
   [mDelegate updateLocationFields:urlSpec ignoreTyping:YES];
   
-  [self setPendingURI:urlSpec];
-
   // if we're not the primary tab, make sure that the browser view is 
   // the correct size when loading a url so that if the url is a relative
   // anchor, which will cause a scroll to the anchor on load, the scroll
@@ -432,12 +414,19 @@ enum StatusPriority {
 - (void)didBecomeActiveBrowser
 {
   [self ensureContentClickListeners];
+  [self updateOfflineStatus];
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(offlineModeChanged:)
+                                               name:kOfflineNotificationName
+                                             object:nil];
+
 }
 
 -(void)willResignActiveBrowser
 {
   [mToolTip closeToolTip];
 
+  [[NSNotificationCenter defaultCenter] removeObserver:self name:kOfflineNotificationName object:nil];
   [mBrowserView setActive:NO];
 }
 
@@ -495,17 +484,18 @@ enum StatusPriority {
   [mDelegate loadingStarted];
   [mDelegate setLoadingActive:YES];
   [mDelegate setLoadingProgress:mProgress];
-  
-  [mLoadingResources removeAllObjects];
-  
-  [self updateStatusString:NSLocalizedString(@"TabLoading", @"") withPriority:eStatusProgress];
+
+  [mStatusStrings replaceObjectAtIndex:eStatusProgress withObject:NSLocalizedString(@"TabLoading", @"")];
+  [mDelegate updateStatus:[self statusString]];
 
   [(BrowserTabViewItem*)mTabItem startLoadAnimation];
   
   [mDelegate showFeedDetected:NO];
   [mFeedList removeAllObjects];
   
-  [mTabItem setLabel:NSLocalizedString(@"TabLoading", @"")];
+  [mTabTitle autorelease];
+  mTabTitle = [NSLocalizedString(@"TabLoading", @"") retain];
+  [mTabItem setLabel:mTabTitle];
 }
 
 - (void)onLoadingCompleted:(BOOL)succeeded
@@ -513,16 +503,17 @@ enum StatusPriority {
   [mDelegate loadingDone:mActivateOnLoad];
   mActivateOnLoad = NO;
   mIsBusy = NO;
-  [self setPendingURI:nil];
   
   [mDelegate setLoadingActive:NO];
-  
-  [self updateStatusString:nil withPriority:eStatusProgress];
+
+  [mStatusStrings replaceObjectAtIndex:eStatusProgress withObject:[NSNull null]];
+  [mDelegate updateStatus:[self statusString]];
 
   [(BrowserTabViewItem*)mTabItem stopLoadAnimation];
 
-  NSString *urlString = [self currentURI];
-  NSString *titleString = [self pageTitle];
+  NSString *urlString = nil;
+  NSString *titleString = nil;
+  [self getTitle:&titleString andHref:&urlString];
   
   // If we never got a page title, then the tab title will be stuck at "Loading..."
   // so be sure to set the title here
@@ -539,24 +530,6 @@ enum StatusPriority {
     NSDictionary*   userInfo = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:succeeded] forKey:URLLoadSuccessKey];
     NSNotification* note     = [NSNotification notificationWithName:URLLoadNotification object:urlString userInfo:userInfo];
     [[NSNotificationQueue defaultQueue] enqueueNotification:note postingStyle:NSPostWhenIdle];
-  }
-}
-
-- (void)onResourceLoadingStarted:(NSNumber*)resourceIdentifier
-{
-  [mLoadingResources addObject:resourceIdentifier];
-}
-
-- (void)onResourceLoadingCompleted:(NSNumber*)resourceIdentifier
-{
-  if ([mLoadingResources containsObject:resourceIdentifier])
-  {
-    [mLoadingResources removeObject:resourceIdentifier];
-    // When the last sub-resource finishes loading (which may be after
-    // onLoadingCompleted: is called), clear the status string, since otherwise
-    // it will stay stuck on the last loading message.
-    if ([mLoadingResources count] == 0)
-      [self updateStatusString:nil withPriority:eStatusProgress];
   }
 }
 
@@ -583,16 +556,9 @@ enum StatusPriority {
   if (newPage)
   {
     // defer hiding of blocked popup view until we've loaded the new page
-    if (mBlockedPopupView) {
-      [self removeBlockedPopupViewAndDisplay];
-      // If we are being called from within a history navigation, then core code
-      // has already stored our old size, and will incorrectly truncate the page
-      // later (see bug 350752, and the XXXbryner comment in nsDocShell.cpp). To
-      // work around that, re-set the frame once core is done meddling.
-      [self performSelector:@selector(reapplyFrame) withObject:nil afterDelay:0];
-    }
-    if(mBlockedPopups)
-      mBlockedPopups->Clear();
+    [self removeBlockedPopupViewAndDisplay];
+    if(mBlockedSites)
+      mBlockedSites->Clear();
     [mDelegate showPopupBlocked:NO];
   
     NSString* faviconURI = [SiteIconProvider defaultFaviconLocationStringFromURI:urlSpec];
@@ -646,7 +612,8 @@ enum StatusPriority {
 
 - (void)onStatusChange:(NSString*)aStatusString
 {
-  [self updateStatusString:aStatusString withPriority:eStatusProgress];
+  [mStatusStrings replaceObjectAtIndex:eStatusProgress withObject:aStatusString];
+  [mDelegate updateStatus:[self statusString]];
 }
 
 //
@@ -664,24 +631,16 @@ enum StatusPriority {
 
 - (void)setStatus:(NSString *)statusString ofType:(NSStatusType)type 
 {
-  StatusPriority priority;
+  int index;
 
   if (type == NSStatusTypeScriptDefault)
-    priority = eStatusScriptDefault;
+    index = eStatusScriptDefault;
   else if (type == NSStatusTypeScript)
-    priority = eStatusScript;
+    index = eStatusScript;
   else
-    priority = eStatusLinkTarget;
+    index = eStatusLinkTarget;
 
-  [self updateStatusString:statusString withPriority:priority];
-}
-
-// Private method to consolidate all status string changes, as status strings
-// can come from Gecko through several callbacks.
-- (void)updateStatusString:(NSString*)statusString withPriority:(StatusPriority)priority
-{
-  [mStatusStrings replaceObjectAtIndex:priority withObject:(statusString ? (id)statusString
-                                                                         : (id)[NSNull null])];
+  [mStatusStrings replaceObjectAtIndex:index withObject:(statusString ? statusString : [NSNull null])];
   [mDelegate updateStatus:[self statusString]];
 }
 
@@ -691,19 +650,35 @@ enum StatusPriority {
     [mStatusStrings replaceObjectAtIndex:i withObject:[NSNull null]];
 }
 
-- (NSString *)title
+- (NSString *)title 
 {
-  return mDisplayTitle;
+  return mTitle;
 }
 
 // this should only be called from the CHBrowserListener
 - (void)setTitle:(NSString *)title
 {
-  [mDisplayTitle autorelease];
-  mDisplayTitle = [[self displayTitleForPageURL:[self currentURI] title:title] retain];
+  [self setTabTitle:title windowTitle:title];
+}
+
+- (void)setTabTitle:(NSString*)tabTitle windowTitle:(NSString*)windowTitle
+{
+  NSString* curURL = [self getCurrentURI];
+
+  [mTabTitle autorelease];
+  mTabTitle  = [[self displayTitleForPageURL:curURL title:tabTitle] retain];
   
-  [mTabItem setLabel:mDisplayTitle];
-  [mDelegate updateWindowTitle:mDisplayTitle];
+  [mTitle autorelease];
+  
+  NSString* newWindowTitle = [self displayTitleForPageURL:curURL title:windowTitle];
+  if (mOffline)
+    newWindowTitle = [NSString stringWithFormat:NSLocalizedString(@"OfflineTitleFormat", @""), newWindowTitle];
+  mTitle = [newWindowTitle retain];
+  
+  [mDelegate updateWindowTitle:mTitle];
+  
+  // Always set the tab.
+  [mTabItem setLabel:mTabTitle];		// tab titles get truncated when setting them to tabs
 }
 
 - (NSString*)displayTitleForPageURL:(NSString*)inURL title:(NSString*)inTitle
@@ -724,6 +699,16 @@ enum StatusPriority {
   }
 
   return NSLocalizedString(@"UntitledPageTitle", @"");
+}
+
+- (void)updateOfflineStatus
+{
+  nsCOMPtr<nsIIOService> ioService(do_GetService("@mozilla.org/network/io-service;1"));
+  if (!ioService)
+      return;
+  PRBool offline = PR_FALSE;
+  ioService->GetOffline(&offline);
+  mOffline = offline;
 }
 
 - (void)updatePluginsEnabledState
@@ -762,21 +747,20 @@ enum StatusPriority {
 }
 
 //
-// - onPopupBlocked:
+// - onPopupBlocked:fromSite:
 //
 // Called when gecko blocks a popup, telling us who it came from, the modifiers of the popup
-// and more data that we'll need if the user wants to unblock the popup later.
+// and more data that we'll need if the user wants to unblock the popup later. This
+// doesn't show the blocked popup view, we wait until the page finishes loading
+// to do that.
 //
 - (void)onPopupBlocked:(nsIDOMPopupBlockedEvent*)eventData;
 {
-  // If popups from this site have been blacklisted, silently discard the event.
-  if ([self popupsAreBlacklistedForURL:[self currentURI]])
-    return;
   // lazily instantiate.
-  if (!mBlockedPopups)
-    CallCreateInstance(NS_ARRAY_CONTRACTID, &mBlockedPopups);
-  if (mBlockedPopups) {
-    mBlockedPopups->AppendElement((nsISupports*)eventData, PR_FALSE);
+  if (!mBlockedSites)
+    CallCreateInstance(NS_ARRAY_CONTRACTID, &mBlockedSites);
+  if (mBlockedSites) {
+    mBlockedSites->AppendElement((nsISupports*)eventData, PR_FALSE);
     [self addBlockedPopupViewAndDisplay];
     [mDelegate showPopupBlocked:YES];
   }
@@ -795,7 +779,7 @@ enum StatusPriority {
     // imageLoadedNotification selector gets called.
     if (![inIconURI isEqualToString:mSiteIconURI])
     {
-      [[SiteIconProvider sharedFavoriteIconProvider] fetchFavoriteIconForPage:[self currentURI]
+      [[SiteIconProvider sharedFavoriteIconProvider] fetchFavoriteIconForPage:[self getCurrentURI]
                                                              withIconLocation:inIconURI
                                                                  allowNetwork:YES
                                                               notifyingClient:self];
@@ -880,6 +864,26 @@ enum StatusPriority {
 - (void)didDismissPrompt
 {
   [[mWindow delegate] didDismissPromptForBrowser:self];
+}
+
+
+- (void)getTitle:(NSString **)outTitle andHref:(NSString**)outHrefString
+{
+  *outTitle = [self pageTitle];
+  *outHrefString = [self getCurrentURI];
+}
+
+- (void)offlineModeChanged:(NSNotification*)aNotification
+{
+  [self updateOfflineStatus];
+
+  // This is pretty broken, and unused. We'd need to do this title futzing
+  // on every title change, not just now.
+  // XXX localize me
+  NSString* titleTrailer = mOffline ? @" [Working Offline]" : @" [Working Offline]";
+  NSString* newWindowTitle = [mTitle stringByAppendingString:titleTrailer];
+
+  [mDelegate updateWindowTitle:newWindowTitle];
 }
 
 - (void)enablePluginsChanged:(NSNotification*)aNote
@@ -1028,12 +1032,6 @@ enum StatusPriority {
   }
 }
 
-- (void)setPendingURI:(NSString*)inURI
-{
-  [mPendingURI autorelease];
-  mPendingURI = [inURI retain];
-}
-
 - (void)registerNotificationListener
 {
   [[NSNotificationCenter defaultCenter] addObserver:self
@@ -1060,7 +1058,7 @@ enum StatusPriority {
     if (iconImage == nil)
       siteIconURI = @"";	// go back to default image
   
-    if ([pageURI isEqualToString:[self currentURI]]) // make sure it's for the current page
+    if ([pageURI isEqualToString:[self getCurrentURI]]) // make sure it's for the current page
       [self updateSiteIconImage:iconImage withURI:siteIconURI loadError:NO];
   }
 }
@@ -1073,50 +1071,18 @@ enum StatusPriority {
 //
 - (BOOL) isEmpty
 {
-  return [[self currentURI] isEqualToString:@"about:blank"];
+  return [[self getCurrentURI] isEqualToString:@"about:blank"];
 }
 
 - (BOOL)isInternalURI
 {
-  NSString* currentURI = [self currentURI];
+  NSString* currentURI = [self getCurrentURI];
   return ([currentURI hasPrefix:@"about:"] || [currentURI hasPrefix:@"view-source:"]);
-}
-
-//
-// -isBookmarkable
-//
-// Returns YES if the current URI is appropriate and safe for bookmarking.
-//
-- (BOOL)isBookmarkable
-{
-  if ([self isEmpty])
-    return NO;
-
-  // Check for any potential security implications as determined by nsIScriptSecurityManager's
-  // DISALLOW_SCRIPT_OR_DATA. (e.g. |javascript:| or |data:| URIs)
-  nsCOMPtr<nsIDOMWindow> domWindow = [mBrowserView getContentWindow];
-  if (!domWindow) 
-    return NO;
-  nsCOMPtr<nsIDOMDocument> domDocument;
-  domWindow->GetDocument(getter_AddRefs(domDocument));
-  if (!domDocument)
-    return NO;
-  nsCOMPtr<nsIDocument> document(do_QueryInterface(domDocument));
-  if (!document)
-    return NO;
-  nsCOMPtr<nsIScriptSecurityManager> scriptSecurityManager(do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID));
-  if (!scriptSecurityManager)
-    return NO;
-  nsresult uriIsSafe = 
-    scriptSecurityManager->CheckLoadURIWithPrincipal(document->GetPrincipal(), 
-                                                     document->GetDocumentURI(), 
-                                                     nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA);
-  return (NS_SUCCEEDED(uriIsSafe) ? YES : NO);
 }
 
 - (BOOL)canReload
 {
-  NSString* curURI = [[self currentURI] lowercaseString];
+  NSString* curURI = [[self getCurrentURI] lowercaseString];
   return (![self isEmpty] &&
           !([curURI isEqualToString:@"about:bookmarks"] ||
             [curURI isEqualToString:@"about:history"] ||
@@ -1127,7 +1093,7 @@ enum StatusPriority {
 {
   // Toss the favicon when force reloading
   if (reloadFlags == NSLoadFlagsBypassCacheAndProxy)
-    [[SiteIconProvider sharedFavoriteIconProvider] removeImageForPageURL:[self currentURI]];
+    [[SiteIconProvider sharedFavoriteIconProvider] removeImageForPageURL:[self getCurrentURI]];
 
   [mBrowserView reload:reloadFlags];
 }
@@ -1154,69 +1120,32 @@ enum StatusPriority {
 
 #pragma mark -
 
-- (BOOL)popupsAreBlacklistedForURL:(NSString*)inURL
+//
+// -configurePopupBlocking:
+//
+// Called when the user clicks on the "configure" button in the blocked popup view.
+// Sends the msg along to our UI delegate so they can handle it
+//
+- (IBAction)configurePopupBlocking:(id)sender
 {
-  nsCOMPtr<nsIURI> uri;
-  NS_NewURI(getter_AddRefs(uri), [inURL UTF8String]);
-  nsCOMPtr<nsIPermissionManager> pm(do_GetService(NS_PERMISSIONMANAGER_CONTRACTID));
-  if (pm && uri) {
-    PRUint32 permission;
-    pm->TestPermission(uri, "popup", &permission);
-    return (permission == nsIPermissionManager::DENY_ACTION);
-  }
-  return NO;
+  [mDelegate configurePopupBlocking];
 }
 
 //
-// -showPopups:
+// -unblockPopupSites:
 //
-// Called when the user clicks on the "Allow Once" button in the blocked popup view.
-// Shows the blocked popups without whitelisting the source page.
+// Called when the user clicks on the "unblock" button in the blocked popup view.
+// Sends the msg along with the list of sites whose popups we just blocked to our UI
+// delegate so they can handle it. This also removes the blocked popup UI from
+// the current window.
 //
-- (IBAction)showPopups:(id)sender
-{
-  [self showPopupsWhitelistingSource:NO];
-}
-
-//
-// -unblockPopups:
-//
-// Called when the user clicks on the "Always Allow" button in the blocked popup view.
-// Shows the blocked popups and whitelists the source page.
-//
-- (IBAction)unblockPopups:(id)sender
-{
-  [self showPopupsWhitelistingSource:YES];
-}
-
-//
-// -blacklistPopups:
-//
-// Called when the user clicks on the "Never Allow" button in the blocked popup view.
-// Adds the current site to the blacklist, and dismisses the blocked popup UI.
-//
-- (IBAction)blacklistPopups:(id)sender
-{
-  [mDelegate blacklistPopupsFromURL:[self currentURI]];
-  [self removeBlockedPopupViewAndDisplay];
-}
-
-//
-// -showPopupsWhitelistingSource:
-//
-// Private helper method to handle showing blocked popups.
-// Sends the the list of popups we just blocked to our UI delegate so it can
-// handle them. This also removes the blocked popup UI from the current window.
-//
-- (void)showPopupsWhitelistingSource:(BOOL)shouldWhitelist
+- (IBAction)unblockPopupSites:(id)sender
 {
   NS_ASSERTION([self popupsBlocked], "no popups to unblock!");
   if ([self popupsBlocked]) {
-    nsCOMPtr<nsIArray> blockedSites = do_QueryInterface(mBlockedPopups);
-    [mDelegate showBlockedPopups:blockedSites whitelistingSource:shouldWhitelist];
+    nsCOMPtr<nsIArray> blockedSites = do_QueryInterface(mBlockedSites);
+    [mDelegate unblockAllPopupSites:blockedSites];
     [self removeBlockedPopupViewAndDisplay];
-    mBlockedPopups->Clear();
-    [mDelegate showPopupBlocked:NO];
   }
 }
 
@@ -1231,10 +1160,6 @@ enum StatusPriority {
   if ([self popupsBlocked] && !mBlockedPopupView) {
     [NSBundle loadNibNamed:@"PopupBlockView" owner:self];
     
-    NSString* currentHost = [[NSURL URLWithString:[self currentURI]] host];
-    if (!currentHost)
-      currentHost = NSLocalizedString(@"GenericHostString", nil);
-    [mBlockedPopupLabel setStringValue:[NSString stringWithFormat:NSLocalizedString(@"PopupDisplayRequest", nil), currentHost]];
     [mBlockedPopupCloseButton setImage:[NSImage imageNamed:@"popup_close"]];
     [mBlockedPopupCloseButton setAlternateImage:[NSImage imageNamed:@"popup_close_pressed"]];
     [mBlockedPopupCloseButton setHoverImage:[NSImage imageNamed:@"popup_close_hover"]];
@@ -1326,7 +1251,7 @@ enum StatusPriority {
   while ((currentSubview = [subviewEnum nextObject])) {
     NSRect currentSubviewFrame = [currentSubview frame];
     // The panel's NSButtons draw incorrectly on non-integral pixel boundaries.
-    float verticallyCenteredYLocation = (int)((panelFrame.size.height - currentSubviewFrame.size.height) / 2.0f);
+    float verticallyCenteredYLocation = ceilf((panelFrame.size.height - currentSubviewFrame.size.height) / 2.0f);
 
     [currentSubview setFrameOrigin:NSMakePoint(currentSubviewFrame.origin.x, verticallyCenteredYLocation)];
   }
