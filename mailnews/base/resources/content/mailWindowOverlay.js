@@ -461,44 +461,16 @@ function RemoveAllMessageTags()
   var selectedMsgUris = GetSelectedMessages();
   if (!selectedMsgUris.length)
     return;
-
-  var messages = Components.classes["@mozilla.org/supports-array;1"]
-                           .createInstance(Components.interfaces.nsISupportsArray);
-  var tagService = Components.classes["@mozilla.org/messenger/tagservice;1"]
-                             .getService(Components.interfaces.nsIMsgTagService);
-  var tagArray = tagService.getAllTags({});
-
-  var allKeys = "";
-  for (j = 0; j < tagArray.length; ++j)
-  {
-    if (j)
-      allKeys += " ";
-    allKeys += tagArray[j].key;
-  }
-
-  var prevHdrFolder = null;
-  // this crudely handles cross-folder virtual folders with selected messages
-  // that spans folders, by coalescing consecutive messages in the selection
-  // that happen to be in the same folder. nsMsgSearchDBView does this better,
-  // but nsIMsgDBView doesn't handle commands with arguments, and untag takes a
-  // key argument. Furthermore, we only delete legacy labels and known tags,
-  // keeping other keywords like (non)junk intact.
-  var j;
+    
   for (var i = 0; i < selectedMsgUris.length; ++i)
   {
+    // remove all tags by removing all their tag keys at once
+    // (using a msgHdr's setStringProperty won't notify the threadPane!)
     var msgHdr = messenger.msgHdrFromURI(selectedMsgUris[i]);
     msgHdr.label = 0; // remove legacy label
-    if (prevHdrFolder != msgHdr.folder)
-    {
-      if (prevHdrFolder)
-        prevHdrFolder.removeKeywordsFromMessages(messages, allKeys);
-      messages.Clear();
-      prevHdrFolder = msgHdr.folder;
-    }
-    messages.AppendElement(msgHdr);
+    msgHdr.folder.getMsgDatabase(msgWindow)
+          .setStringProperty(msgHdr.messageKey, "keywords", "");
   }
-  if (prevHdrFolder)
-    prevHdrFolder.removeKeywordsFromMessages(messages, allKeys);
   OnTagsChange();
 }
 
@@ -541,7 +513,7 @@ function ToggleMessageTag(key, addKey)
   var msg = Components.classes["@mozilla.org/supports-array;1"]
                           .createInstance(Components.interfaces.nsISupportsArray);
   var selectedMsgUris = GetSelectedMessages();
-  var toggler = addKey ? "addKeywordsToMessages" : "removeKeywordsFromMessages";
+  var toggler = addKey ? "addKeywordToMessages" : "removeKeywordFromMessages";
   var prevHdrFolder = null;
   // this crudely handles cross-folder virtual folders with selected messages
   // that spans folders, by coalescing consecutive msgs in the selection
@@ -558,7 +530,7 @@ function ToggleMessageTag(key, addKey)
       // because resetting a label doesn't update the tree anymore...
       msg.Clear();
       msg.AppendElement(msgHdr);
-      msgHdr.folder.addKeywordsToMessages(msg, "$label" + msgHdr.label);
+      msgHdr.folder.addKeywordToMessages(msg, "$label" + msgHdr.label);
       msgHdr.label = 0; // remove legacy label
     }
     if (prevHdrFolder != msgHdr.folder)
@@ -1592,6 +1564,31 @@ function MsgSendUnsentMsgs()
   }
 }
 
+function GetPrintSettings()
+{
+  var prevPS = gPrintSettings;
+
+  try {
+    if (gPrintSettings == null) {
+      var useGlobalPrintSettings = gPrefBranch.getBoolPref("print.use_global_printsettings");
+
+      // I would rather be using nsIWebBrowserPrint API
+      // but I really don't have a document at this point
+      var printSettingsService = Components.classes["@mozilla.org/gfx/printsettings-service;1"]
+                                           .getService(Components.interfaces.nsIPrintSettingsService);
+      if (useGlobalPrintSettings) {
+        gPrintSettings = printSettingsService.globalPrintSettings;
+      } else {
+        gPrintSettings = printSettingsService.CreatePrintSettings();
+      }
+    }
+  } catch (e) {
+    dump("GetPrintSettings "+e);
+  }
+
+  return gPrintSettings;
+}
+
 function PrintEnginePrintInternal(messageList, numMessages, doPrintPreview, msgType)
 {
     if (numMessages == 0) {
@@ -1600,7 +1597,7 @@ function PrintEnginePrintInternal(messageList, numMessages, doPrintPreview, msgT
     }
 
     if (gPrintSettings == null) {
-      gPrintSettings = PrintUtils.getPrintSettings();
+      gPrintSettings = GetPrintSettings();
     }
     printEngineWindow = window.openDialog("chrome://messenger/content/msgPrintEngine.xul",
                                           "",
@@ -2145,7 +2142,7 @@ var gMessageNotificationBar =
     var headerParser = Components.classes["@mozilla.org/messenger/headerparser;1"]
                                  .getService(Components.interfaces.nsIMsgHeaderParser);
     var emailAddress = headerParser.extractHeaderAddressMailboxes(null, aMsgHdr.author);
-    document.getElementById('allowRemoteContentForAuthorDesc').textContent =
+    document.getElementById('allowRemoteContentForAuthorDesc').value =
       gMessengerBundle.getFormattedString('alwaysLoadRemoteContentForSender', [emailAddress ? emailAddress : aMsgHdr.author]);
     this.updateMsgNotificationBar(kMsgNotificationRemoteImages, true);
   },
@@ -2184,10 +2181,10 @@ var gMessageNotificationBar =
 };
 
 /**
- * LoadMsgWithRemoteContent
+ * loadMsgWithRemoteContent
  *   Reload the current message, allowing remote content
  */
-function LoadMsgWithRemoteContent()
+function loadMsgWithRemoteContent()
 {
   // we want to get the msg hdr for the currently selected message
   // change the "remoteContentBar" property on it

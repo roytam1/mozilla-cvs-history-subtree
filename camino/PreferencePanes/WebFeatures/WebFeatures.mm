@@ -22,7 +22,7 @@
  *
  * Contributor(s):
  *   william@dell.wisner.name (William Dell Wisner)
- *   josh@mozilla.com (Josh Aas)
+ *   joshmoz@gmail.com (Josh Aas)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -56,12 +56,8 @@
 // but that requires linkage and extra search paths.                            
 static NSString* XPCOMShutDownNotificationName = @"XPCOMShutDown";              
 
-// need to match the strings in PreferenceManager.mm
+// needs to match the string in PreferenceManager.mm
 static NSString* const AdBlockingChangedNotificationName = @"AdBlockingChanged";
-static NSString* const kFlashBlockChangedNotificationName = @"FlashBlockChanged";
-
-// for camino.enable_plugins; needs to match string in BrowserWrapper.mm
-static NSString* const kEnablePluginsChangedNotificationName = @"EnablePluginsChanged";
 
 // for accessibility.tabfocus
 const int kFocusLinks = (1 << 2);
@@ -77,8 +73,6 @@ const int kAnnoyancePrefSome = 3;
 -(NSString*)profilePath;
 - (int)annoyingWindowPrefs;
 - (int)preventAnimationCheckboxState;
-- (BOOL)isFlashBlockAllowed;
-- (void)updateFlashBlock;
 
 @end
 
@@ -119,11 +113,6 @@ const int kAnnoyancePrefSome = 3;
   BOOL javaEnabled = [self getBooleanPref:"security.enable_java" withSuccess:&gotPref] && gotPref;
   [mEnableJava setState:javaEnabled];
 
-  // Set initial value on Plug-ins checkbox.
-  // If we fail to get the pref, ensure we leave plugins enabled by default.
-  BOOL pluginsEnabled = [self getBooleanPref:"camino.enable_plugins" withSuccess:&gotPref] || !gotPref;
-  [mEnablePlugins setState:pluginsEnabled];
-
   // set initial value on popup blocking checkbox and disable the whitelist
   // button if it's off
   BOOL enablePopupBlocking = [self getBooleanPref:"dom.disable_open_during_load" withSuccess:&gotPref] && gotPref;  
@@ -147,22 +136,6 @@ const int kAnnoyancePrefSome = 3;
   BOOL enableAdBlock = [self getBooleanPref:"camino.enable_ad_blocking" withSuccess:&gotPref];
   [mEnableAdBlocking setState:enableAdBlock];
 
-  // Only allow FlashBlock if dependencies are set correctly
-  BOOL flashBlockAllowed = [self isFlashBlockAllowed];
-  [mEnableFlashBlock setEnabled:flashBlockAllowed];
- 
-  if (flashBlockAllowed) {
-    BOOL enableFlashBlock = [self getBooleanPref:"camino.enable_flashblock" withSuccess:nil];
-    [mEnableFlashBlock setState:(enableFlashBlock ? NSOnState : NSOffState)];
-  }
-
-  // Set up policy popups
-  NSPopUpButtonCell *popupButtonCell = [mPolicyColumn dataCell];
-  [popupButtonCell setEditable:YES];
-  [popupButtonCell addItemsWithTitles:[NSArray arrayWithObjects:[self getLocalizedString:@"Allow"],
-                                                                [self getLocalizedString:@"Deny"],
-                                                                nil]];
-
   // Set inital values for tabfocus pref.  Internally, it's a bitwise additive pref:
   // bit 0 adds focus for text fields (not exposed in the UI, so not given a constant)
   // bit 1 adds focus for other form elements (kFocusForms)
@@ -179,40 +152,23 @@ const int kAnnoyancePrefSome = 3;
 
 
 //
-// -clickEnableJS:
+// clickEnableJS
 //
-// Enable and disable JavaScript
+// Set pref if JavaScript is enabled
 //
 -(IBAction) clickEnableJS:(id)sender
 {
-  [self setPref:"javascript.enabled" toBoolean:([sender state] == NSOnState)];
-
-  // FlashBlock depends on Javascript so make sure to update the FlashBlock settings
-  [self updateFlashBlock];
+  [self setPref:"javascript.enabled" toBoolean:[sender state] == NSOnState];
 }
 
 //
-// -clickEnableJava:
+// clickEnableJava
 //
-// Enable and disable Java
+// Set pref if Java is enabled
 //
 -(IBAction) clickEnableJava:(id)sender
 {
-  [self setPref:"security.enable_java" toBoolean:([sender state] == NSOnState)];
-}
-
-//
-// -clickEnablePlugins:
-//
-// Enable and disable plugins
-//
--(IBAction) clickEnablePlugins:(id)sender
-{
-  [self setPref:"camino.enable_plugins" toBoolean:([sender state] == NSOnState)];
-  [[NSNotificationCenter defaultCenter] postNotificationName:kEnablePluginsChangedNotificationName object:nil];
-
-  // FlashBlock depends on plug-ins so make sure to update the FlashBlock settings
-  [self updateFlashBlock];
+  [self setPref:"security.enable_java" toBoolean:[sender state] == NSOnState];
 }
 
 //
@@ -223,7 +179,7 @@ const int kAnnoyancePrefSome = 3;
 //
 - (IBAction)clickEnableAdBlocking:(id)sender
 {
-  [self setPref:"camino.enable_ad_blocking" toBoolean:([sender state] == NSOnState)];
+  [self setPref:"camino.enable_ad_blocking" toBoolean:[sender state] == NSOnState];
   [[NSNotificationCenter defaultCenter] postNotificationName:AdBlockingChangedNotificationName object:nil]; 
 }
 
@@ -235,7 +191,7 @@ const int kAnnoyancePrefSome = 3;
 //
 - (IBAction)clickEnablePopupBlocking:(id)sender
 {
-  [self setPref:"dom.disable_open_during_load" toBoolean:([sender state] == NSOnState)];
+  [self setPref:"dom.disable_open_during_load" toBoolean:[sender state] == NSOnState];
   [mEditWhitelist setEnabled:[sender state]];
 }
 
@@ -246,7 +202,7 @@ const int kAnnoyancePrefSome = 3;
 //
 -(IBAction) clickEnableImageResizing:(id)sender
 {
-  [self setPref:"browser.enable_automatic_image_resizing" toBoolean:([sender state] == NSOnState)];
+  [self setPref:"browser.enable_automatic_image_resizing" toBoolean:[sender state] == NSOnState];
 }
 
 //
@@ -258,18 +214,6 @@ const int kAnnoyancePrefSome = 3;
 {
   [sender setAllowsMixedState:NO];
   [self setPref:"image.animation_mode" toString:([sender state] ? @"once" : @"normal")];
-}
-
-//
-// clickEnableFlashBlock:
-//
-// Enable and disable FlashBlock.  When enabled, an icon is displayed and the 
-// Flash animation plays when the user clicks it.  When disabled, Flash plays automatically
-//
--(IBAction) clickEnableFlashBlock:(id)sender
-{
-  [self setPref:"camino.enable_flashblock" toBoolean:([sender state] == NSOnState)];
-  [[NSNotificationCenter defaultCenter] postNotificationName:kFlashBlockChangedNotificationName object:nil];
 }
 
 //
@@ -414,61 +358,19 @@ const int kAnnoyancePrefSome = 3;
 
 - (id)tableView:(NSTableView *)aTableView objectValueForTableColumn:(NSTableColumn *)aTableColumn row:(int)rowIndex
 {
-  id retVal = nil;
+  NSString* retVal = nil;
   if ( mCachedPermissions ) {
     nsCOMPtr<nsISupports> rowItem = dont_AddRef(mCachedPermissions->ElementAt(rowIndex));
     nsCOMPtr<nsIPermission> perm ( do_QueryInterface(rowItem) );
     if ( perm ) {
-      if (aTableColumn == mPolicyColumn) {
-        PRUint32 capability;
-        perm->GetCapability(&capability);
-        retVal = [NSNumber numberWithInt:((capability == nsIPermissionManager::ALLOW_ACTION) ? 0 : 1)]; 
-      }
-      else { // website column
-        nsCAutoString host;
-        perm->GetHost(host);
-        retVal = [NSString stringWithCString:host.get()];
-      }
+      // only 1 column and it's the website url column
+      nsCAutoString host;
+      perm->GetHost(host);
+      retVal = [NSString stringWithCString:host.get()];
     }
   }
 
   return retVal;
-}
-
-// currently, this only applies to the site allow/deny, since that's the only editable column
--(void) tableView:(NSTableView *)aTableView
-   setObjectValue:anObject
-   forTableColumn:(NSTableColumn *)aTableColumn
-              row:(int)rowIndex
-{
-  if (aTableColumn == mPolicyColumn) {
-    if (!(mCachedPermissions && mManager))
-      return;
-    nsCOMPtr<nsISupports> rowItem = dont_AddRef(mCachedPermissions->ElementAt(rowIndex));
-    nsCOMPtr<nsIPermission> perm (do_QueryInterface(rowItem));
-    if (!perm)
-      return;
-    // create a URI from the hostname of the changed site
-    nsCAutoString host;
-    perm->GetHost(host);
-    NSString* url = [NSString stringWithFormat:@"http://%s", host.get()];
-    const char* siteURL = [url UTF8String];
-    nsCOMPtr<nsIURI> newURI;
-    NS_NewURI(getter_AddRefs(newURI), siteURL);
-    if (!newURI)
-      return;
-    // nsIPermissions are immutable, and there's no API to change the action,
-    // so instead we have to replace the previous policy entirely.
-    mManager->Add(newURI, "popup", ([anObject intValue] == 0) ? nsIPermissionManager::ALLOW_ACTION
-                                                              : nsIPermissionManager::DENY_ACTION);
-    // there really should be a better way to keep the cache up-to-date than rebuilding
-    // it, but the nsIPermissionManager interface doesn't have a way to get a pointer
-    // to a site's nsIPermission. It's this, use a custom class that duplicates the
-    // information (wasting a lot of memory), or find a way to tie in to
-    // PERM_CHANGE_NOTIFICATION to get the new nsIPermission that way.
-    mCachedPermissions->Clear();
-    [self populatePermissionCache:mCachedPermissions];
-  }
 }
 
 - (void)controlTextDidChange:(NSNotification*)notification
@@ -578,45 +480,6 @@ const int kAnnoyancePrefSome = 3;
   if (NS_FAILED(rv))
     return nil;
   return [NSString stringWithUTF8String:nativePath.get()];
-}
-
-//
-// isFlashBlockAllowed
-//
-// Checks whether FlashBlock can be enabled
-// FlashBlock only allowed if javascript and plug-ins enabled
-// NOTE: This code is duplicated in PreferenceManager.mm since the FlashBlock checkbox
-// settings are done by WebFeatures and stylesheet loading is done by PreferenceManager
-//
--(BOOL) isFlashBlockAllowed
-{
-  BOOL gotPref = NO;
-  BOOL jsEnabled = [self getBooleanPref:"javascript.enabled" withSuccess:&gotPref] && gotPref;
-  BOOL pluginsEnabled = [self getBooleanPref:"camino.enable_plugins" withSuccess:&gotPref] || !gotPref;
-
-  return jsEnabled && pluginsEnabled;
-}
-
-//
-// updateFlashBlock
-//
-// Update the state of the FlashBlock checkbox
-//
--(void) updateFlashBlock
-{
-  BOOL allowed = [self isFlashBlockAllowed];
-  [mEnableFlashBlock setEnabled:allowed];
-
-  // FlashBlock state can only change if it's already enabled 
-  // since changing dependencies won't have affect on disabled FlashBlock
-  if (![self getBooleanPref:"camino.enable_flashblock" withSuccess:nil])
-    return;
-
-  // FlashBlock preference is enabled.  Checkbox is on if FlashBlock also allowed
-  [mEnableFlashBlock setState:(allowed ? NSOnState : NSOffState)];
- 
-  // Always send a notification, dependency verification is done by receiver.
-  [[NSNotificationCenter defaultCenter] postNotificationName:kFlashBlockChangedNotificationName object:nil];
 }
 
 @end

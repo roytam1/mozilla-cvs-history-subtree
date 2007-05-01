@@ -51,12 +51,6 @@
 #include "nsISimpleEnumerator.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
-#include "nsIIOService.h"
-#include "nsIProtocolHandler.h"
-#include "nsIServiceManager.h"
-#include "nsIExternalProtocolHandler.h"
-#include "nsIScriptSecurityManager.h"
-#include "nsNetUtil.h"
 
 #include "nsIEditor.h"
 #include "nsISelection.h"
@@ -198,24 +192,6 @@ void GeckoUtils::GetEnclosingLinkElementAndHref(nsIDOMNode* aNode, nsIDOMElement
   aHref = href;
 }
 
-/*static*/
-PRBool GeckoUtils::isProtocolInternal(const char* aProtocol)
-{
-  nsCOMPtr<nsIIOService> ioService = do_GetService("@mozilla.org/network/io-service;1");
-  if (!ioService)
-    return PR_TRUE; // something went wrong, so punt
-
-  nsCOMPtr<nsIProtocolHandler> handler;
-  // try to get an external handler for the protocol
-  nsresult rv = ioService->GetProtocolHandler(aProtocol, getter_AddRefs(handler));
-  if (NS_FAILED(rv))
-    return PR_TRUE; // something went wrong, so punt
-
-  nsCOMPtr<nsIExternalProtocolHandler> extHandler = do_QueryInterface(handler);
-  // a null external handler means it's a protocol we handle internally
-  return (extHandler == nsnull);
-}
-
 /* static */
 void GeckoUtils::GetURIForDocShell(nsIDocShell* aDocShell, nsACString& aURI)
 {
@@ -226,25 +202,6 @@ void GeckoUtils::GetURIForDocShell(nsIDocShell* aDocShell, nsACString& aURI)
     aURI.Truncate();
   else
     uri->GetSpec(aURI);
-}
-
-/* static */
-PRBool 
-GeckoUtils::IsSafeToOpenURIFromReferrer(const char* aTargetUri, const char* aReferrerUri)
-{
-  PRBool isUnsafeLink = PR_TRUE;
-  nsCOMPtr<nsIURI> referrerUri;
-  nsCOMPtr<nsIURI> targetUri;
-  NS_NewURI(getter_AddRefs(referrerUri), aReferrerUri);
-  NS_NewURI(getter_AddRefs(targetUri), aTargetUri);
-
-  nsCOMPtr<nsIScriptSecurityManager> secManager = do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
-  if (secManager&& referrerUri && targetUri) {
-    nsresult rv = secManager->CheckLoadURI(referrerUri, targetUri, 0);
-    isUnsafeLink = NS_SUCCEEDED(rv);
-  }
-
-  return isUnsafeLink;
 }
 
 // NOTE: this addrefs the result!

@@ -56,7 +56,6 @@ INSTALLER_FILES = \
 	app.tag \
 	nsis/installer.nsi \
 	nsis/uninstaller.nsi \
-	nsis/shared.nsh \
 	$(NULL)
 
 BRANDING_FILES = \

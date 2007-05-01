@@ -68,9 +68,6 @@
 #ifndef CSIDL_LOCAL_APPDATA
 #define CSIDL_LOCAL_APPDATA             0x001C
 #endif
-#ifndef CSIDL_PROGRAM_FILES
-#define CSIDL_PROGRAM_FILES             0x0026
-#endif
 #endif
 #ifdef XP_MACOSX
 #include "nsILocalFileMac.h"
@@ -94,8 +91,6 @@
 #else
 #define APP_REGISTRY_NAME "appreg"
 #endif
-
-#define PREF_OVERRIDE_DIRNAME "preferences"
 
 nsXREDirProvider* gDirServiceProvider = nsnull;
 
@@ -137,6 +132,13 @@ nsXREDirProvider::SetProfile(nsIFile* aDir, nsIFile* aLocalDir)
 {
   NS_ASSERTION(aDir && aLocalDir, "We don't support no-profile apps yet!");
 
+#ifdef DEBUG_bsmedberg
+  nsCAutoString path, path2;
+  aDir->GetNativePath(path);
+  aLocalDir->GetNativePath(path2);
+  printf("nsXREDirProvider::SetProfile('%s', '%s')\n", path.get(), path2.get());
+#endif
+
   nsresult rv;
   
   rv = EnsureDirectoryExists(aDir);
@@ -176,7 +178,6 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
   nsresult rv = NS_ERROR_FAILURE;
   *aPersistent = PR_TRUE;
   nsCOMPtr<nsIFile> file;
-  PRBool ensureFilePermissions = PR_FALSE;
 
   if (!strcmp(aProperty, NS_OS_CURRENT_PROCESS_DIR) ||
       !strcmp(aProperty, NS_APP_INSTALL_CLEANUP_DIR)) {
@@ -201,11 +202,6 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
            !strcmp(aProperty, XRE_USER_APP_DATA_DIR)) {
     rv = GetUserAppDataDirectory((nsILocalFile**)(nsIFile**) getter_AddRefs(file));
   }
-#ifdef XP_WIN
-  else if (!strcmp(aProperty, XRE_UPDATE_ROOT_DIR)) {
-    rv = GetUpdateRootDir(getter_AddRefs(file));
-  }
-#endif
   else if (!strcmp(aProperty, NS_APP_APPLICATION_REGISTRY_FILE)) {
     rv = GetUserAppDataDirectory((nsILocalFile**)(nsIFile**) getter_AddRefs(file));
     rv |= file->AppendNative(NS_LITERAL_CSTRING(APP_REGISTRY_NAME));
@@ -286,7 +282,6 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
         else {
           rv |= file->AppendNative(NS_LITERAL_CSTRING("localstore.rdf"));
           EnsureProfileFileExists(file);
-          ensureFilePermissions = PR_TRUE;
         }
       }
       else if (!strcmp(aProperty, NS_APP_HISTORY_50_FILE)) {
@@ -297,7 +292,6 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
         rv = mProfileDir->Clone(getter_AddRefs(file));
         rv |= file->AppendNative(NS_LITERAL_CSTRING("mimeTypes.rdf"));
         EnsureProfileFileExists(file);
-        ensureFilePermissions = PR_TRUE;
       }
       else if (!strcmp(aProperty, NS_APP_STORAGE_50_FILE)) {
         rv = mProfileDir->Clone(getter_AddRefs(file));
@@ -306,11 +300,6 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
       else if (!strcmp(aProperty, NS_APP_DOWNLOADS_50_FILE)) {
         rv = mProfileDir->Clone(getter_AddRefs(file));
         rv |= file->AppendNative(NS_LITERAL_CSTRING("downloads.rdf"));
-      }
-      else if (!strcmp(aProperty, NS_APP_PREFS_OVERRIDE_DIR)) {
-        rv = mProfileDir->Clone(getter_AddRefs(file));
-        rv |= file->AppendNative(NS_LITERAL_CSTRING(PREF_OVERRIDE_DIRNAME));
-        rv |= EnsureDirectoryExists(file);
       }
       // XXXbsmedberg move these defines into application-specific providers.
       else if (!strcmp(aProperty, NS_APP_MAIL_50_DIR)) {
@@ -333,19 +322,6 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
   }
   if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
   if (!file) return NS_ERROR_FAILURE;
-
-  if (ensureFilePermissions) {
-    PRBool fileToEnsureExists;
-    PRBool isWritable;
-    if (NS_SUCCEEDED(file->Exists(&fileToEnsureExists)) && fileToEnsureExists
-        && NS_SUCCEEDED(file->IsWritable(&isWritable)) && !isWritable) {
-      PRUint32 permissions;
-      if (NS_SUCCEEDED(file->GetPermissions(&permissions))) {
-        rv = file->SetPermissions(permissions | 0600);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to ensure file permissions");
-      }
-    }
-  }
 
   NS_ADDREF(*aFile = file);
   return NS_OK;
@@ -485,30 +461,22 @@ nsXREDirProvider::GetFiles(const char* aProperty, nsISimpleEnumerator** aResult)
   }
   else if (!strcmp(aProperty, NS_APP_PREFS_DEFAULTS_DIR_LIST)) {
     nsCOMArray<nsIFile> directories;
-    PRBool exists;
 
     if (mXULAppDir) {
       nsCOMPtr<nsIFile> file;
       mXULAppDir->Clone(getter_AddRefs(file));
       file->AppendNative(NS_LITERAL_CSTRING("defaults"));
       file->AppendNative(NS_LITERAL_CSTRING("preferences"));
+      PRBool exists;
       if (NS_SUCCEEDED(file->Exists(&exists)) && exists)
         directories.AppendObject(file);
     }
-    
-    if (mProfileDir) {
-      nsCOMPtr<nsIFile> overrideFile;
-      mProfileDir->Clone(getter_AddRefs(overrideFile));
-      overrideFile->AppendNative(NS_LITERAL_CSTRING(PREF_OVERRIDE_DIRNAME));
-      if (NS_SUCCEEDED(overrideFile->Exists(&exists)) && exists)
-        directories.AppendObject(overrideFile);
 
-      if (!gSafeMode) {
-        static const char *const kAppendPrefDir[] = { "defaults", "preferences", nsnull };
+    if (mProfileDir && !gSafeMode) {
+      static const char *const kAppendPrefDir[] = { "defaults", "preferences", nsnull };
 
-        LoadDirsIntoArray(profileFile, "ExtensionDirs",
-                          kAppendPrefDir, directories);
-      }
+      LoadDirsIntoArray(profileFile, "ExtensionDirs",
+                        kAppendPrefDir, directories);
     }
 
     rv = NS_NewArrayEnumerator(aResult, directories);
@@ -725,54 +693,6 @@ GetShellFolderPath(int folder, char result[MAXPATHLEN])
     pMalloc->Free(pItemIDList);
   pMalloc->Release();
   return rv;
-}
-
-nsresult
-nsXREDirProvider::GetUpdateRootDir(nsIFile* *aResult)
-{
-  nsCOMPtr<nsIFile> appDir = GetAppDir();
-  nsCAutoString appPath;
-  nsresult rv = appDir->GetNativePath(appPath);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // AppDir may be a short path. Convert to long path to make sure
-  // the consistency of the update folder location
-  nsCString longPath;
-  longPath.SetLength(MAXPATHLEN);
-  char *buf = longPath.BeginWriting();
-  DWORD len = GetLongPathName(appPath.get(), buf, MAXPATHLEN);
-  // Failing GetLongPathName() is not fatal.
-  if (len <= 0 || len >= MAXPATHLEN)
-    longPath.Assign(appPath);
-  else
-    longPath.SetLength(len);
-
-  // Use <UserLocalDataDir>\updates\<relative path to app dir from
-  // Program Files> if app dir is under Program Files to avoid the
-  // folder virtualization mess on Windows Vista
-  char programFiles[MAXPATHLEN];
-  rv = GetShellFolderPath(CSIDL_PROGRAM_FILES, programFiles);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  PRUint32 programFilesLen = strlen(programFiles);
-  programFiles[programFilesLen++] = '\\';
-  programFiles[programFilesLen] = '\0';
-
-  if (longPath.Length() < programFilesLen)
-    return NS_ERROR_FAILURE;
-
-  if (_strnicmp(programFiles, longPath.get(), programFilesLen) != 0)
-    return NS_ERROR_FAILURE;
-
-  nsCOMPtr<nsILocalFile> updRoot;
-  rv = GetUserLocalDataDirectory(getter_AddRefs(updRoot));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = updRoot->AppendRelativeNativePath(Substring(longPath, programFilesLen));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  NS_ADDREF(*aResult = updRoot);
-  return NS_OK;
 }
 #endif
 

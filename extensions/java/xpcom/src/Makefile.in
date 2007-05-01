@@ -44,21 +44,20 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= javaxpcom
 LIBRARY_NAME	= javaxpcom
 LIBXUL_LIBRARY	= 1
-FORCE_STATIC_LIB = 1
 
 # On Mac OS X, JNI libraries must end with a '.jnilib' extension
 ifeq ($(OS_ARCH),Darwin)
 DLL_SUFFIX = .jnilib
 endif
 
-REQUIRES =  xpcom \
-			string \
-			xulapp \
+REQUIRES	= xpcom \
+		  string \
+		  xulapp \
 			js \
 			xpconnect \
-			$(NULL)
+		  $(NULL)
 
-CPPSRCS	= \
+CPPSRCS		= \
 		nsAppFileLocProviderProxy.cpp \
 		nsJavaInterfaces.cpp \
 		nsJavaWrapper.cpp \
@@ -66,10 +65,6 @@ CPPSRCS	= \
 		nsJavaXPTCStubWeakRef.cpp \
 		nsJavaXPCOMBindingUtils.cpp \
 		$(NULL)
-
-ifeq ($(OS_ARCH),Darwin)
-CMMSRCS = MacJawt.mm
-endif
 
 JARFILE = javaxpcom.jar
 JARFILE_SRC = $(patsubst %.jar,%-src.jar,$(JARFILE))
@@ -91,11 +86,7 @@ else
 ifeq ($(OS_ARCH),OS2)
 LOCAL_INCLUDES += -I$(JAVA_INCLUDE_PATH)/OS2
 else
-ifeq ($(OS_ARCH),Darwin)
-LOCAL_INCLUDES += -I/System/Library/Frameworks/CoreFoundation.framework/Headers
-else
 LOCAL_INCLUDES += -I$(JAVA_INCLUDE_PATH)/linux
-endif
 endif
 endif
 
@@ -147,9 +138,8 @@ $(JARFILE): org/mozilla/xpcom/internal/.class_done Makefile
 $(JARFILE_SRC): $(JARFILE)
 	$(JAR) cf $@ -C _javagen org
 
-jar-libs:: $(JARFILE)
-	$(INSTALL) $(IFLAGS1) $(JARFILE) $(FINAL_TARGET)
-
-jar-install:: $(JARFILE)
-	$(SYSINSTALL) $(IFLAGS2) $(JARFILE) $(DESTDIR)$(mozappdir)
+#libs:: $(JARFILE)
+#	$(INSTALL) $(IFLAGS1) $^ $(DIST)/bin
+jarfile:: $(JARFILE) $(JARFILE_SRC)
+	$(INSTALL) $(IFLAGS1) $^ $(DIST)/bin
 

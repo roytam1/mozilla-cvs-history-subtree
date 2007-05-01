@@ -130,7 +130,7 @@ function ViewChangeByValue(aValue)
     if (!selectedItems || !selectedItems.length)
     {
       // we may have a new item
-      RefreshAllViewPopups(viewPickerPopup, true);
+      RefreshViewPopup(viewPickerPopup, true);
       selectedItems = viewPickerPopup.getElementsByAttribute("value", aValue);
     }
     label = selectedItems && selectedItems.length && selectedItems.item(0).label;
@@ -299,10 +299,10 @@ function PrepareForViewChange()
 }
 
 
-// refresh view popup and its subpopups
-function RefreshAllViewPopups(aViewPopup, aIsMenulist)
+// recreate the entries for tags and custom views
+// and mark the current view's menuitem
+function RefreshViewPopup(aViewPopup, aIsMenulist)
 {
-  RefreshViewPopup(aViewPopup, aIsMenulist);
   var menupopups = aViewPopup.getElementsByTagName("menupopup");
   if (menupopups.length > 1)
   {
@@ -310,11 +310,6 @@ function RefreshAllViewPopups(aViewPopup, aIsMenulist)
     RefreshTagsPopup(menupopups[0], aIsMenulist);
     RefreshCustomViewsPopup(menupopups[1], aIsMenulist);
   }
-}
-
-
-function RefreshViewPopup(aViewPopup, aIsMenulist)
-{
   // mark default views if selected
   if (!aIsMenulist)
   {
@@ -391,7 +386,7 @@ function ViewPickerOnLoad()
 {
   var viewPickerPopup = document.getElementById("viewPickerPopup");
   if (viewPickerPopup)
-    RefreshAllViewPopups(viewPickerPopup, true);
+    RefreshViewPopup(viewPickerPopup, true);
 }
 
 

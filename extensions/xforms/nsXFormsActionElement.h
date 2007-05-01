@@ -46,7 +46,7 @@
 
 class nsIXTFBindableElementWrapper;
 
-class nsXFormsActionElement : public nsXFormsStubElement,
+class nsXFormsActionElement : public nsXFormsBindableStub,
                               public nsIXFormsActionElement,
                               public nsIXFormsActionModuleElement,
                               public nsIDOMEventListener
@@ -57,12 +57,8 @@ public:
   NS_DECL_NSIDOMEVENTLISTENER
   NS_DECL_NSIXFORMSACTIONELEMENT
   NS_DECL_NSIXFORMSACTIONMODULEELEMENT
-  NS_IMETHOD OnCreated(nsIXTFGenericElementWrapper* aWrapper);
+  NS_IMETHOD OnCreated(nsIXTFBindableElementWrapper* aWrapper);
   NS_IMETHOD OnDestroyed();
-  NS_IMETHOD WillChangeDocument(nsIDOMDocument *aNewDocument);
-  NS_IMETHOD DocumentChanged(nsIDOMDocument *aNewDocument);
-  NS_IMETHOD WillChangeParent(nsIDOMElement *aNewParent);
-  NS_IMETHOD ParentChanged(nsIDOMElement *aNewParent);
 private:
   nsIDOMElement*                                mElement;
   nsCOMPtr<nsIXFormsActionElement>              mParentAction;

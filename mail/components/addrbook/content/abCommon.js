@@ -43,7 +43,6 @@ var dirTree = 0;
 var abList = 0;
 var gAbResultsTree = null;
 var gAbView = null;
-var gAddressBookBundle;
 
 var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
 var gPrefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
@@ -265,7 +264,8 @@ function AbEditSelectedDirectory()
       goEditListDialog(dirUri, null, selecteduri, UpdateCardView);
     }
     else {
-      if (directory instanceof Components.interfaces.nsIAbLDAPDirectory) {
+      var properties = directory.directoryProperties;
+      if (properties.dirType == kLDAPDirectory) {
         var ldapUrlPrefix = "moz-abldapdirectory://";
         var args = { selectedDirectory: directory.dirName,
                      selectedDirectoryString: null};
@@ -299,7 +299,6 @@ function InitCommonJS()
   dirTree = document.getElementById("dirTree");
   abList = document.getElementById("addressbookList");
   gAbResultsTree = document.getElementById("abResultsTree");
-  gAddressBookBundle = document.getElementById("bundle_addressBook");
 }
 
 function SetupAbCommandUpdateHandlers()

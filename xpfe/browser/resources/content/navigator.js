@@ -627,7 +627,8 @@ function Startup()
 
     var browser = getBrowser();
     browser.popupDomain = null;
-    browser.popups = [];
+    browser.popupUrls = [];
+    browser.popupFeatures = [];
 
     if (uriToLoad != "about:blank") {
       gURLBar.value = uriToLoad;
@@ -1509,7 +1510,7 @@ function BrowserLoadURL(aTriggeringEvent)
             null, null, nsIWebNavigation.LOAD_FLAGS_ALLOW_THIRD_PARTY_FIXUP);
         // Reset url in the urlbar, copied from handleURLBarRevert()
         var oldURL = browser.currentURI.spec;
-        if (oldURL != "about:blank" || content.opener) {
+        if (oldURL != "about:blank") {
           gURLBar.value = oldURL;
           SetPageProxyState("valid", null);
         } else
@@ -2148,7 +2149,7 @@ function handleURLBarRevert()
   // don't revert to last valid url unless page is NOT loading
   // and user is NOT key-scrolling through autocomplete list
   if (!throbberElement.hasAttribute("busy") && !isScrolling) {
-    if (url != "about:blank" || content.opener) {
+    if (url != "about:blank") {
       gURLBar.value = url;
       gURLBar.select();
       SetPageProxyState("valid", null); // XXX Build a URI and pass it in here.
@@ -2307,8 +2308,7 @@ function onFullScreen()
   FullScreen.toggle();
 }
 
-function onPopupWindow(aEvent)
-{
+function onPopupWindow(aEvent) {
   var firstPopup = pref.getBoolPref("privacy.popups.first_popup");
   var blockingEnabled = pref.getBoolPref("dom.disable_open_during_load");
   if (blockingEnabled) {
@@ -2346,8 +2346,7 @@ function onPopupWindow(aEvent)
   }
 }
 
-function onPopupBlocked(aEvent)
-{
+function onPopupBlocked(aEvent) {
   var playSound = pref.getBoolPref("privacy.popups.sound_enabled");
 
   if (playSound) {
@@ -2384,29 +2383,26 @@ function onPopupBlocked(aEvent)
       }
       // Check for duplicates, remove the old occurence of this url,
       // to update the features, and put it at the end of the list.
-      for (var i = 0; i < browser.popups.length; ++i) {
-        if (browser.popups[i].url.equals(aEvent.popupWindowURI)) {
-          browser.popups.splice(i, 1);
+      for (var i = 0; i < browser.popupUrls.length; ++i) {
+        if (browser.popupUrls[i].equals(aEvent.popupWindowURI)) {
+          browser.popupUrls.splice(i, 1);
+          browser.popupFeatures.splice(i, 1);
           break;
         }
       }
       // Limit the length of the menu to some reasonable size.
       // We only add one item every time, so no need for more complex stuff.
-      if (browser.popups.length >= 100) {
-        browser.popups.shift();
+      if (browser.popupUrls.length >= 100) {
+        browser.popupUrls.shift();
+        browser.popupFeatures.shift();
       }
-      var popup = {url: aEvent.popupWindowURI,
-                   features: aEvent.popupWindowFeatures,
-                   name: "", // not supported on 1.8
-                   reqDoc: aEvent.requestingWindow.document,
-                   reqWin: aEvent.requestingWindow};
-      browser.popups.push(popup);
+      browser.popupUrls.push(aEvent.popupWindowURI);
+      browser.popupFeatures.push(aEvent.popupWindowFeatures);
     }
   }
 }
 
-function getBrowserForDocument(doc)
-{
+function getBrowserForDocument(doc) {  
   var browsers = getBrowser().browsers;
   for (var i = 0; i < browsers.length; i++) {
     if (browsers[i].contentDocument == doc)
@@ -2415,8 +2411,7 @@ function getBrowserForDocument(doc)
   return null;
 }
 
-function StatusbarViewPopupManager()
-{
+function StatusbarViewPopupManager() {
   var hostPort = "";
   try {
     hostPort = getBrowser().selectedBrowser.currentURI.hostPort;
@@ -2427,17 +2422,15 @@ function StatusbarViewPopupManager()
   viewPopups(hostPort);
 }
 
-function popupBlockerMenuShowing(event)
-{
+function popupBlockerMenuShowing(event) {
   var separator = document.getElementById("popupMenuSeparator");
 
   if (separator)
     separator.hidden = !createShowPopupsMenu(event.target);
 }
 
-function createShowPopupsMenu(parent)
-{
-  while (parent.lastChild && ("popup" in parent.lastChild))
+function createShowPopupsMenu(parent) {
+  while (parent.lastChild && parent.lastChild.hasAttribute("uri"))
     parent.removeChild(parent.lastChild);
 
   var browser = getBrowser();
@@ -2445,18 +2438,16 @@ function createShowPopupsMenu(parent)
   if (!browser)
     return false;
 
-  var popups = browser.selectedBrowser.popups;
+  var popupUrls = browser.selectedBrowser.popupUrls;
 
-  if (popups.length == 0)
+  if  (popupUrls.length == 0)
     return false;
 
-  for (var i = 0; i < popups.length; i++) {
-    var popup = popups[i];
+  for (var i = 0; i < popupUrls.length; i++) {
     var menuitem = document.createElement("menuitem");
-    var str = gNavigatorBundle.getFormattedString('popupMenuShow',
-                                                  [popup.url.spec]);
-    menuitem.setAttribute("label", str);
-    menuitem.popup = popup;
+    menuitem.setAttribute("label", gNavigatorBundle.getFormattedString('popupMenuShow', [popupUrls[i].spec]));
+    menuitem.setAttribute("uri", popupUrls[i].spec);
+    menuitem.setAttribute("features", browser.selectedBrowser.popupFeatures[i]);
     parent.appendChild(menuitem);
   }
 
@@ -2464,12 +2455,10 @@ function createShowPopupsMenu(parent)
 }
 
 function popupBlockerMenuCommand(target) {
-  if (!("popup" in target))
-    return;
-  var popup = target.popup;
-  var reqWin = popup.reqWin;
-  if (reqWin.document == popup.reqDoc)
-    reqWin.open(popup.url.spec, popup.name, popup.features);
+  var uri = target.getAttribute("uri");
+  if (uri) {
+    window.content.open(uri, "", target.getAttribute("features"));
+  }
 }
 
 function toHistory()

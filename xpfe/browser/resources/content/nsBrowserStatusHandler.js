@@ -297,7 +297,7 @@ nsBrowserStatusHandler.prototype =
       }
     }
 
-    if (!getWebNavigation().canGoBack && location == "about:blank" && !content.opener)
+    if (!getWebNavigation().canGoBack && location == "about:blank")
       location = "";
 
     // Disable menu entries for images, enable otherwise
@@ -341,7 +341,8 @@ nsBrowserStatusHandler.prototype =
     if (blank ||
         !("popupDomain" in browser)) {
       browser.popupDomain = null;
-      browser.popups = [];
+      browser.popupUrls = [];
+      browser.popupFeatures = [];
     }
     else {
       var hostPort = "";
@@ -351,7 +352,8 @@ nsBrowserStatusHandler.prototype =
       catch(ex) { }
       if (hostPort != browser.popupDomain) {
         browser.popupDomain = null;
-        browser.popups = [];
+        browser.popupUrls = [];
+        browser.popupFeatures = [];
       }
     }
 

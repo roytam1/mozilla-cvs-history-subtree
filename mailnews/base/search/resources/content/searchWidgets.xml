@@ -169,13 +169,7 @@
             {
               var filterActionRow = listBox.getItemAtIndex(index);
               if (filterActionRow != currentFilterActionRow)
-              {
-                var actionValue = filterActionRow.getAttribute('value');
-
-                // don't add the tag action, several tags can be set
-                if (actionValue != 'addtagtomessage')
-                  usedActions[actionValue] = true;
-              }
+                usedActions[filterActionRow.getAttribute('value')] = true;
             }
             return usedActions;
           ]]>
@@ -483,8 +477,8 @@
                 var header = enumerator.getNext();
                 if (header instanceof Components.interfaces.nsIMsgDBHdr)
                 {
-                  var msgTemplateUri = msgFolder.URI + "?messageId=" + header.messageId + '&subject=' + header.mime2DecodedSubject;
-                  var newItem = document.getAnonymousNodes(this)[0].appendItem(header.mime2DecodedSubject, msgTemplateUri);
+                  var msgTemplateUri = msgFolder.URI + "?messageId=" + header.messageId + '&subject=' + header.subject;
+                  var newItem = document.getAnonymousNodes(this)[0].appendItem(header.subject, msgTemplateUri);
                 }
               }
             }

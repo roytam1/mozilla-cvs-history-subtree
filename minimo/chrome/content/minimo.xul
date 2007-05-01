@@ -1,42 +1,7 @@
 <?xml version="1.0"?> <!-- -*- Mode: HTML -*- -->
 
-<!-- ***** BEGIN LICENSE BLOCK *****
-     - Version: MPL 1.1/GPL 2.0/LGPL 2.1
-     -
-     - The contents of this file are subject to the Mozilla Public License Version
-     - 1.1 (the "License"); you may not use this file except in compliance with
-     - the License. You may obtain a copy of the License at
-     - http://www.mozilla.org/MPL/
-     -
-     - Software distributed under the License is distributed on an "AS IS" basis,
-     - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-     - for the specific language governing rights and limitations under the
-     - License.
-     -
-     - The Original Code is Minimo.
-     -
-     - The Initial Developer of the Original Code is
-     - Netscape Communications Corporation
-     - Portions created by the Initial Developer are Copyright (C) 1998
-     - the Initial Developer. All Rights Reserved.
-     -
-     - Contributor(s):
-     -   Doug Turner <dougt@meer.net>
-     -   Marcio S. Galli <mgalli@geckonnection.com>
-     -
-     - Alternatively, the contents of this file may be used under the terms of
-     - either the GNU General Public License Version 2 or later (the "GPL"), or
-     - the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-     - in which case the provisions of the GPL or the LGPL are applicable instead
-     - of those above. If you wish to allow use of your version of this file only
-     - under the terms of either the GPL or the LGPL, and not to allow others to
-     - use your version of this file under the terms of the MPL, indicate your
-     - decision by deleting the provisions above and replace them with the notice
-     - and other provisions required by the LGPL or the GPL. If you do not delete
-     - the provisions above, a recipient may use your version of this file under
-     - the terms of any one of the MPL, the GPL or the LGPL.
-     -
-     - ***** END LICENSE BLOCK ***** -->
+<!-- this is temporary, see bug 360936 --> 
+<!-- License info: http://lxr.mozilla.org/mozilla1.8/source/minimo/chrome/content/temporary-license.txt --> 
 
 <?xml-stylesheet href="chrome://global/skin/global.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://minimo/skin/minimo.css" type="text/css"?> 
@@ -95,7 +60,7 @@
 
 
   <statusbar id="statusbar" hidden="false" >
-    <statusbarpanel id="statusbar-text" label="Minimo" flex="1" />
+    <statusbarpanel id="statusbar-text" label="Minimo" flex="1"/>
   </statusbar>
 
 
@@ -111,7 +76,6 @@
     <command id="cmd_ViewDeckSearch"          oncommand="BrowserViewDeckSearch()"/>
     <command id="cmd_ViewDeckDefault"         oncommand="BrowserViewDeckDefault()"/>
     <command id="cmd_ViewFind"                oncommand="BrowserViewFind()" />
-    <command id="cmd_ViewURLBar"              oncommand="BrowserViewURLBar()" />
     <command id="cmd_ViewDownload"            oncommand="BrowserViewDownload(true)" />
     <command id="cmd_ViewDownloadHidden"      oncommand="BrowserViewDownload(false)" />
     <command id="cmd_BrowserOpenLinkAsNewTab" oncommand="BrowserOpenLinkAsTab()" />
@@ -125,54 +89,16 @@
     <command id="cmd_BrowserMenu"             oncommand="BrowserMenuPopup()" />
     <command id="cmd_BrowserNavMenu"          oncommand="BrowserNavMenuPopup()" />
     <command id="cmd_Quit"                    oncommand="window.close();" />
-<!--
     <command id="cmd_Go"                      oncommand="URLBarEntered()" />
--->
     <command id="cmd_BrowserBookmark"         oncommand="BrowserBookmark()" />
     <command id="cmd_BrowserBookmarkThis"     oncommand="BrowserBookmarkThis()" />
     <command id="cmd_Pan"                     oncommand="BrowserPan()" />
     <command id="cmd_BrowserFileOpen"         oncommand="BrowserFileOpen()" />
-
-    <!-- UI zoom toolbar commands --> 
-
-    <command id="cmd_BrowserResetZoomPlus"    oncommand="BrowserResetZoomPlus()" />
-    <command id="cmd_BrowserResetZoomMinus"   oncommand="BrowserResetZoomMinus()" />
         
-
-
     <toolbar id="nav-bar" >
       
-	<!--
-      <toolbarbutton  id="menu-button"       command="cmd_BrowserMenu" />  
-	-->
-
-      <toolbarbutton  id="nav-back"          hidden="true" command="cmd_BrowserBack" />  
-      <toolbarbutton  id="nav-forward"       hidden="true" command="cmd_BrowserForward" />  
-      <toolbarbutton  id="nav-stopreload"    hidden="true" command="cmd_BrowserReload" class="reload-button" />
-
-	<box id="nav-uizoom" hidden="true">
-	      <toolbarbutton  id="nav-ui-zoom-plus"  command="cmd_BrowserResetZoomPlus" />  
-	      <toolbarbutton  id="nav-ui-zoom-minus" command="cmd_BrowserResetZoomMinus" />  
-	</box>
-
-      <toolbarbutton  id="nav-find"          hidden="true" command="cmd_ViewFind" />  
-
-      <toolbarbutton  id="nav-bookmarkthis"  hidden="true" command="cmd_BrowserBookmarkThis" />  
-
-      <toolbarbutton  id="nav-pan"           hidden="true" command="cmd_Pan" /> 
- 
-      <toolbarbutton  id="nav-urlbar"        hidden="true" command="cmd_ViewURLBar" />  
-
-      <toolbarbutton  id="nav-menu-button"   command="cmd_BrowserNavMenu" />  
+      <toolbarbutton tabindex="1" class="menu-button"  id="menu-button" command="cmd_BrowserMenu" />  
       
-      <toolbarbutton  id="nav-rss"  hidden="true" collapsed="true" />  
-      
-      <toolbarbutton  id="nav-lock" hidden="true"  />  
-      
-    </toolbar>
-
-	<toolbar id="toolbar-urlbar" collapsed="true" >
-
       <!-- WARNING: don't add tabindex to the following element. Somehow it conflicts with the popup history open --> 
       
       <textbox id="urlbar" 
@@ -193,8 +119,9 @@
         </hbox>
       </textbox>
       
-
-	</toolbar>
+      <toolbarbutton tabindex="2" class="nav-button"  id="nav-menu-button" command="cmd_BrowserNavMenu" />  
+      
+    </toolbar>
 
    <vbox id="keyboardContainer" hidden="true" style="border-bottom:2px solid gray;">
       <hbox id="keyboardHolder"  style="height:1px;" />
@@ -212,7 +139,9 @@
       
       
 	  <menuitem id="item-call"   label="" insertbefore="context-sep-view" oncommand="" hidden="true"/>
-        <menuitem id="link_as_new_tab"  label="&linknewtab.label;"   command="cmd_BrowserOpenLinkAsNewTab" hidden="true"/>
+      
+      
+      <menuitem id="link_as_new_tab"  label="&linknewtab.label;"   command="cmd_BrowserOpenLinkAsNewTab" hidden="true"/>
 	  <menuitem id="item-copy"        label="&contextCopy.label;"  oncommand="DoClipCopy()"              hidden="true"/>
 	  <menuitem id="item-paste"       label="&contextPaste.label;" oncommand="DoClipPaste()"             hidden="true"/>
 	  <menuitem id="item-find"        label="&findToolbar.label;"  command="cmd_ViewFind" />
@@ -266,30 +195,16 @@
 	  <menuitem id="menu_closeWindow" command="cmd_closeWindow" key="key_closeWindow" label=""  />
 	</popup>
     
- 
-
-    
-    <menupopup id="menu_NavPopup"
-
-               onpopupshowing="BrowserNavMenuRefresh()"
-               onpopuphidden="BrowserNavMenuHidden()" 
-
-               oncommand="spinSetnext(gSpinLast)" >
+    <menupopup id="menu_MainPopup"
+               onpopupshown="MenuEnableEscapeKeys()"
+               onpopuphidden="MenuDisableEscapeKeys()" 
+               onpopuphiding="MenuMainPopupHiding()" 
+               onpopupshowing="MenuMainPopupShowing()"
+               oncommand="spinSetnext(gSpinFirst)" >
       
-
-	<!-- this was in the main menu before --> 
-
-      <menu     id="command_TabFocus" 
-                label="&tabs.label;"  >
-        
-        <menupopup id="MenuTabsContainer" 
-                   onpopupshown="BrowserMenuTabsActive()" 
-                   onpopuphidden="BrowserMenuTabsDestroy()" >
-          
-        </menupopup>
-      </menu>
-
-
+      <menuitem id="command_BrowserOpenTab" 
+                command="cmd_BrowserOpenTab"  
+                label="&newtab.label;"  /> 
 
       <menuitem id="command_BrowserCloseTab" 
                 command="cmd_BrowserCloseTab" 
@@ -299,10 +214,55 @@
                 command="cmd_BrowserFileOpen" 
                 label="&fileopen.label;"  /> 
                       
-
+      <menu     id="command_TabFocus" 
+                label="&tabs.label;"  >
+        
+        <menupopup id="MenuTabsContainer" 
+                   onpopupshown="BrowserMenuTabsActive()" 
+                   onpopuphidden="BrowserMenuTabsDestroy()" >
+          
+        </menupopup>
+      </menu>
         
       <menuseparator/>
     
+      <menuitem id="togglet_google" 
+                label="&togglet_google.label;" 
+                oncommand="DoGoogleToggle()"/>
+      
+      
+	  <menuitem id="textplus" 
+                label="&textSizePlus.label;" 
+                oncommand="BrowserResetZoomPlus()"/>
+      
+	  <menuitem id="testminus" 
+                label="&textSizeMinus.label;" 
+                oncommand="BrowserResetZoomMinus()"/>
+      
+      <menuseparator/>
+      
+      <menuitem id="command_ViewFind"
+                command="cmd_ViewFind" 
+                label="&findToolbar.label;"  /> 
+      
+      <menuitem id="command_pan"
+                command="cmd_Pan"  
+                label="&panCmd.label;"  /> 
+      
+      <menuitem id="command_Quit" 
+                class="separator-menu"  
+                command="cmd_Quit" 
+                label="&quit.label;"  /> 
+      
+    </menupopup>  
+    
+    <menupopup id="menu_NavPopup"
+               onpopuphiding="MenuNavPopupHiding()"  
+               onpopupshown="MenuEnableEscapeKeys()"
+               onpopuphidden="MenuDisableEscapeKeys()"
+               onpopupshowing="Menu2PopupShowing()"
+               oncommand="spinSetnext(gSpinLast)" >
+      
 
       <menuitem id="command_DoPanelPreferences" 
                   command="cmd_DoPanelPreferences" 
@@ -334,25 +294,15 @@
       <menuitem id="command_reload"  
                 command="cmd_BrowserReload"  
                 label="&reloadCmd.label;"  /> 
-                  
-	<!-- this was in the main nav item --> 
-
-      <menuitem id="command_Quit" 
-                class="separator-menu"  
-                command="cmd_Quit" 
-                label="&quit.label;"  /> 
       
-
+      <menuitem id="command_go"
+                command="cmd_Go"  
+                label="&goCmd.label;"  /> 
+            
     </menupopup>  
     
     
   </popupset>
-
- 
-  <!-- a repository to overlay extensions information --> 
-  <extensions id="homebar" hidden="true">
-  </extensions>
-
   
 </window>
 

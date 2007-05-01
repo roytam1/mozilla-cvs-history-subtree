@@ -928,10 +928,6 @@ nsGenericHTMLElement::GetInnerHTML(nsAString& aInnerHTML)
 nsresult
 nsGenericHTMLElement::SetInnerHTML(const nsAString& aInnerHTML)
 {
-  // This BeginUpdate/EndUpdate pair is important to make us reenable the
-  // scriptloader before the last EndUpdate call.
-  mozAutoDocUpdate updateBatch(GetCurrentDoc(), UPDATE_CONTENT_MODEL, PR_TRUE);
-
   nsresult rv = NS_OK;
 
   nsCOMPtr<nsIDOMRange> range = new nsRange;
@@ -1526,7 +1522,7 @@ nsGenericHTMLElement::DispatchEvent(nsPresContext* aPresContext,
     return NS_OK;
   }
 
-  nsCOMPtr<nsIPresShell> shell = aPresContext->GetPresShell();
+  nsIPresShell *shell = aPresContext->GetPresShell();
   if (!shell) {
     return NS_OK;
   }
@@ -1681,7 +1677,7 @@ nsGenericHTMLElement::HandleDOMEventForAnchors(nsPresContext* aPresContext,
           }
 
           // The default action is simply to dispatch DOMActivate
-          nsCOMPtr<nsIPresShell> shell = aPresContext->GetPresShell();
+          nsIPresShell *shell = aPresContext->GetPresShell();
           if (shell) {
             // single-click
             nsUIEvent actEvent(NS_IS_TRUSTED_EVENT(aEvent), NS_UI_ACTIVATE, 1);

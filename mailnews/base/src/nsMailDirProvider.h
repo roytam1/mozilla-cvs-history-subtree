@@ -42,7 +42,6 @@
 #include "nsIDirectoryService.h"
 #include "nsIGenericFactory.h"
 #include "nsISimpleEnumerator.h"
-#include "nsString.h"
 
 class nsMailDirProvider : public nsIDirectoryServiceProvider2
 {
@@ -72,8 +71,6 @@ private:
   private:
     nsCOMPtr<nsISimpleEnumerator> mBase;
     nsCOMPtr<nsIFile>             mNext;
-    nsCOMPtr<nsIFile>             mNextWithLocale;
-    nsCString                     mLocale;
   };
 };
 

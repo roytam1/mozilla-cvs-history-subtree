@@ -16,9 +16,7 @@ bin/.autoreg
 bin\chrome\@AB_CD@.jar
 bin\chrome\@AB_CD@.manifest
 bin\defaults\pref\firefox-l10n.js
-bin\defaults\existing-profile-defaults.js
 bin\browserconfig.properties
-bin\old-homepage-default.properties
 bin\searchplugins\*
 bin\defaults\profile\bookmarks.html
 bin\defaults\profile\localstore.rdf
@@ -26,7 +24,7 @@ bin\defaults\profile\prefs.js
 bin\defaults\profile\search.rdf
 bin\defaults\profile\mimeTypes.rdf
 bin\defaults\profile\chrome\*
-bin\uninstall\helper.exe
+bin\uninstall\uninst.exe
 bin\updater.ini
 bin\dictionaries\*
 
@@ -222,7 +220,6 @@ bin\components\nsSessionStore.js
 bin\components\sessionstore.xpt
 bin\components\nsURLFormatter.js
 bin\components\urlformatter.xpt
-bin\components\nsDefaultCLH.js
 
 ; Safe Browsing
 bin\components\nsSafebrowsingApplication.js

@@ -43,7 +43,6 @@
 #include "nsDOMEvent.h"
 
 class nsDOMPopupBlockedEvent : public nsIDOMPopupBlockedEvent,
-                               public nsIDOMPopupBlockedEvent_MOZILLA_1_8_BRANCH,
                                public nsDOMEvent
 {
 public:
@@ -58,7 +57,6 @@ public:
 
   // nsIDOMPopupBlockedEvent Interface
   NS_DECL_NSIDOMPOPUPBLOCKEDEVENT
-  NS_DECL_NSIDOMPOPUPBLOCKEDEVENT_MOZILLA_1_8_BRANCH
 };
 
 #endif // nsDOMPopupBlockedEvent_h__

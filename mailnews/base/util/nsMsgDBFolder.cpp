@@ -89,7 +89,6 @@
 #include "nsIMIMEHeaderParam.h"
 #include "plbase64.h"
 #include <time.h>
-#include "nsIMsgFolderNotificationService.h"
 
 #define oneHour 3600000000U
 #include "nsMsgUtils.h"
@@ -474,29 +473,6 @@ NS_IMETHODIMP nsMsgDBFolder::ClearNewMessages()
   return rv;
 }
 
-void nsMsgDBFolder::UpdateNewMessages()
-{
-  if (! (mFlags & MSG_FOLDER_FLAG_VIRTUAL))
-  {
-    PRBool hasNewMessages = PR_FALSE;
-    for (PRUint32 keyIndex = 0; keyIndex < m_newMsgs.GetSize(); keyIndex++)
-    {
-      PRBool containsKey = PR_FALSE;
-      mDatabase->ContainsKey(m_newMsgs[keyIndex], &containsKey);
-      if (!containsKey)
-        continue;
-      PRBool isRead = PR_FALSE;
-      nsresult rv2 = mDatabase->IsRead(m_newMsgs[keyIndex], &isRead);
-      if (NS_SUCCEEDED(rv2) && !isRead)
-      {
-        hasNewMessages = PR_TRUE;
-        mDatabase->AddToNewList(m_newMsgs[keyIndex]);
-      }
-    }
-    SetHasNewMessages(hasNewMessages);
-  }
-}
-
 // helper function that gets the cache element that corresponds to the passed in file spec.
 // This could be static, or could live in another class - it's not specific to the current
 // nsMsgDBFolder. If it lived at a higher level, we could cache the account manager and folder cache.
@@ -539,7 +515,7 @@ nsresult nsMsgDBFolder::ReadDBFolderInfo(PRBool force)
   {
     nsCOMPtr <nsIFileSpec> dbPath;
     
-    result = GetFolderCacheKey(getter_AddRefs(dbPath), PR_TRUE /* createDBIfMissing */);
+    result = GetFolderCacheKey(getter_AddRefs(dbPath));
     
     if (dbPath)
     {
@@ -1136,7 +1112,7 @@ NS_IMETHODIMP nsMsgDBFolder::ReadFromFolderCacheElem(nsIMsgFolderCacheElement *e
   return rv;
 }
 
-nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec, PRBool createDBIfMissing /* = PR_FALSE */)
+nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec)
 {
   nsresult rv;
   nsCOMPtr <nsIFileSpec> path;
@@ -1165,7 +1141,7 @@ nsresult nsMsgDBFolder::GetFolderCacheKey(nsIFileSpec **aFileSpec, PRBool create
       // create the .msf file
       // see bug #244217 for details
       PRBool exists;
-      if (createDBIfMissing && NS_SUCCEEDED(dbPath->Exists(&exists)) && !exists)
+      if (NS_SUCCEEDED(dbPath->Exists(&exists)) && !exists)
         dbPath->Touch();
     }
   }
@@ -3173,15 +3149,7 @@ NS_IMETHODIMP nsMsgDBFolder::RecursiveDelete(PRBool deleteStorage, nsIMsgWindow 
 
   // now delete the disk storage for _this_
   if (deleteStorage && (status == NS_OK))
-  {
-    status = Delete();
-    nsCOMPtr <nsISupports> supports;
-    QueryInterface(NS_GET_IID(nsISupports), getter_AddRefs(supports));
-    nsCOMPtr <nsIMsgFolderNotificationService> notifier = do_GetService(NS_MSGNOTIFICATIONSERVICE_CONTRACTID);
-    if (notifier)
-      notifier->NotifyItemDeleted(supports);    
-    
-  }
+      status = Delete();
   return status;
 }
 
@@ -4223,6 +4191,9 @@ NS_IMETHODIMP nsMsgDBFolder::SetBiffState(PRUint32 aBiffState)
     // Get the server and notify it and not inbox.
   if (oldBiffState != aBiffState)
   {
+    if (aBiffState == nsMsgBiffState_NoMail)
+      SetNumNewMessages(0);
+
     // we don't distinguish between unknown and noMail for servers
     if (! (oldBiffState == nsMsgBiffState_Unknown && aBiffState == nsMsgBiffState_NoMail))
     {
@@ -5247,24 +5218,19 @@ NS_IMETHODIMP nsMsgDBFolder::GetMsgTextFromStream(nsIMsgDBHdr *msgHdr, nsIInputS
     // we read the next line.
     if (lookingForBoundary) 
     {
-      // Mail.app doesn't wrap the boundary id in quotes so we need 
-      // to be sure to handle an unquoted boundary.
-      PRInt32 boundaryIndex = curLine.Find("boundary=", PR_TRUE /* ignore case*/);
+      PRInt32 boundaryIndex = curLine.Find("boundary=\"");
       if (boundaryIndex != kNotFound)
       {
-        boundaryIndex += 9;
-        if (curLine[boundaryIndex] == '\"')
-          boundaryIndex++;
-
+        boundaryIndex += 10;
         PRInt32 endBoundaryIndex = curLine.RFindChar('"');
-        if (endBoundaryIndex == kNotFound)
-          endBoundaryIndex = curLine.Length(); // no trailing quote? assume the boundary runs to the end of the line
-
-        // prepend "--" to boundary, and then boundary delimiter, minus the trailing " 
-        boundary.Assign("--");
-        boundary.Append(Substring(curLine, boundaryIndex, endBoundaryIndex - boundaryIndex));
-        haveBoundary = PR_TRUE;
-        lookingForBoundary = PR_FALSE;
+        if (endBoundaryIndex != kNotFound)
+        {
+          // prepend "--" to boundary, and then boundary delimiter, minus the trailing " 
+          boundary.Assign("--");
+          boundary.Append(Substring(curLine, boundaryIndex, endBoundaryIndex - boundaryIndex));
+          haveBoundary = PR_TRUE;
+          lookingForBoundary = PR_FALSE;
+        }
       }
     }
     rv = NS_ReadLine(stream, lineBuffer, curLine, &more);
@@ -5495,7 +5461,7 @@ void nsMsgDBFolder::SetMRUTime()
 }
 
 
-NS_IMETHODIMP nsMsgDBFolder::AddKeywordsToMessages(nsISupportsArray *aMessages, const char *aKeywords)
+NS_IMETHODIMP nsMsgDBFolder::AddKeywordToMessages(nsISupportsArray *aMessages, const char *aKeyword)
 {
   nsresult rv = NS_OK;
   GetDatabase(nsnull);
@@ -5509,35 +5475,26 @@ NS_IMETHODIMP nsMsgDBFolder::AddKeywordsToMessages(nsISupportsArray *aMessages, 
 
     for(PRUint32 i = 0; i < count; i++)
     {
+      nsMsgKey msgKey;
       nsCOMPtr<nsIMsgDBHdr> message = do_QueryElementAt(aMessages, i, &rv);
       NS_ENSURE_SUCCESS(rv, rv);
+      (void) message->GetMessageKey(&msgKey);
 
       message->GetStringProperty("keywords", getter_Copies(keywords));
-      nsCStringArray keywordArray;
-      keywordArray.ParseString(aKeywords, " ");
-      for (PRInt32 j = 0; j < keywordArray.Count(); j++)
+      nsACString::const_iterator start, end;
+      if (!MsgFindKeyword(nsDependentCString(aKeyword), keywords, start, end))
       {
-        nsACString::const_iterator start, end;
-        if (!MsgFindKeyword(*(keywordArray[j]), keywords, start, end))
-        {
-          if (!keywords.IsEmpty())
-            keywords.Append(' ');
-          keywords.Append(keywordArray[j]->get());
-        }
+        if (!keywords.IsEmpty())
+          keywords.Append(' ');
+        keywords.Append(aKeyword);
+        mDatabase->SetStringProperty(msgKey, "keywords", keywords);
       }
-      // go through the msg, not the db, to set the string property, because
-      // in the case of filters running on incoming pop3 mail with quarantining
-      // turned on, the message key is wrong.
-      message->SetStringProperty("keywords", keywords);
-      PRUint32 msgFlags;
-      message->GetFlags(&msgFlags);
-      mDatabase->NotifyHdrChangeAll(message, msgFlags, msgFlags, nsnull);
     }
   }
   return rv;
 }
 
-NS_IMETHODIMP nsMsgDBFolder::RemoveKeywordsFromMessages(nsISupportsArray *aMessages, const char *aKeywords)
+NS_IMETHODIMP nsMsgDBFolder::RemoveKeywordFromMessages(nsISupportsArray *aMessages, const char *aKeyword)
 {
   nsresult rv = NS_OK;
   GetDatabase(nsnull);
@@ -5549,6 +5506,7 @@ NS_IMETHODIMP nsMsgDBFolder::RemoveKeywordsFromMessages(nsISupportsArray *aMessa
     NS_ENSURE_SUCCESS(rv, rv);
     nsXPIDLCString keywords;
     // If the tag is also a label, we should remove the label too...
+    PRBool keywordIsLabel = (!PL_strncasecmp(aKeyword, "$label", 6)  && aKeyword[6] >= '1' && aKeyword[6] <= '5');
 
     for(PRUint32 i = 0; i < count; i++)
     {
@@ -5556,38 +5514,32 @@ NS_IMETHODIMP nsMsgDBFolder::RemoveKeywordsFromMessages(nsISupportsArray *aMessa
       nsCOMPtr<nsIMsgDBHdr> message = do_QueryElementAt(aMessages, i, &rv);
       NS_ENSURE_SUCCESS(rv, rv);
       (void) message->GetMessageKey(&msgKey);
-      rv = message->GetStringProperty("keywords", getter_Copies(keywords));
-      nsCStringArray keywordArray;
-      keywordArray.ParseString(aKeywords, " ");
-      for (PRInt32 j = 0; j < keywordArray.Count(); j++)
+      if (keywordIsLabel)
       {
-        PRBool keywordIsLabel = (StringBeginsWith(*(keywordArray[j]), NS_LITERAL_CSTRING("$label"))  
-          && keywordArray[j]->CharAt(6) >= '1' && keywordArray[j]->CharAt(6) <= '5');
-        if (keywordIsLabel)
-        {
-          nsMsgLabelValue labelValue;
-          message->GetLabel(&labelValue);
-          // if we're removing the keyword that corresponds to a pre 2.0 label,
-          // we need to clear the old label attribute on the messsage.
-          if (labelValue == (nsMsgLabelValue) (keywordArray[j]->CharAt(6) - '0'))
-            message->SetLabel((nsMsgLabelValue) 0);
-        }
-
-        nsACString::const_iterator start, end;
-        nsACString::const_iterator saveStart;
-        keywords.BeginReading(saveStart);
-        if (MsgFindKeyword(*(keywordArray[j]), keywords, start, end))
-        {
-          keywords.Cut(Distance(saveStart, start), Distance(start, end));
-          NS_ASSERTION(keywords.IsEmpty() || keywords.CharAt(0) != ' ', "space only keyword");
-        }
+        nsMsgLabelValue labelValue;
+        message->GetLabel(&labelValue);
+        // if we're removing the keyword that corresponds to a pre 2.0 label,
+        // we need to clear the old label attribute on the messsage.
+        if (labelValue == (nsMsgLabelValue) (aKeyword[6] - '0'))
+          message->SetLabel((nsMsgLabelValue) 0);
       }
-      mDatabase->SetStringProperty(msgKey, "keywords", keywords);
+
+      rv = message->GetStringProperty("keywords", getter_Copies(keywords));
+      nsACString::const_iterator start, end;
+      nsACString::const_iterator saveStart;
+      keywords.BeginReading(saveStart);
+      if (MsgFindKeyword(nsDependentCString(aKeyword), keywords, start, end))
+      {
+        keywords.Cut(Distance(saveStart, start), Distance(start, end));
+        NS_ASSERTION(keywords.IsEmpty() || keywords.CharAt(0) != ' ', "space only keyword");
+        mDatabase->SetStringProperty(msgKey, "keywords", keywords);
+      }
     }
   }
   return rv;
 }
 
+ 
 NS_IMETHODIMP nsMsgDBFolder::GetCustomIdentity(nsIMsgIdentity **aIdentity)
 {
   NS_ENSURE_ARG_POINTER(aIdentity);

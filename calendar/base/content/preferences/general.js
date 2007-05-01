@@ -38,7 +38,7 @@
  * ***** END LICENSE BLOCK *****
  */
 
-var gCalendarGeneralPane = {
+var gGeneralPane = {
 
     init: function () {
         var df = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
@@ -58,12 +58,5 @@ var gCalendarGeneralPane = {
         var selectedIndex = dateFormatMenuList.selectedIndex;
         dateFormatMenuList.selectedIndex = -1;
         dateFormatMenuList.selectedIndex = selectedIndex;
-    },
-
-    autoRefreshPrefChanged: function() {
-        var autoRefreshPref =
-            document.getElementById("calendar.autorefresh.enabled").value;
-        document.getElementById("calendar.autorefresh.timeout").disabled = 
-            !autoRefreshPref;
     }
 };

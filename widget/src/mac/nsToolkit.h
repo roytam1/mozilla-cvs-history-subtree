@@ -63,8 +63,6 @@
 
 class nsIEventSink;
 class nsIWidget;
-class nsIView;
-class nsIDocument;
 
 #define MAC_OS_X_VERSION_10_0_HEX 0x00001000
 #define MAC_OS_X_VERSION_10_1_HEX 0x00001010
@@ -89,9 +87,6 @@ public:
   // stashed in properties of the window.
   static void GetWindowEventSink ( WindowPtr aWindow, nsIEventSink** outSink ) ;
   static void GetTopWidget ( WindowPtr aWindow, nsIWidget** outWidget ) ;
-  // Utility routines for wringing nsIDocument or nsIView info from an nsIWidget
-  static nsIView *GetViewFor(nsIWidget *aWidget);
-  static nsIDocument *GetDocumentFor(nsIWidget *aWidget);
 
   // Returns the OS X version as returned from
   // Gestalt(gestaltSystemVersion, ...)

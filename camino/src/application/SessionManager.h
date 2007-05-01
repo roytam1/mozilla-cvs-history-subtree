@@ -66,7 +66,4 @@
 // Deletes the window state file from the profile directory.
 - (void)clearSavedState;
 
-// Indicates whether there is persisted state available to restore.
-- (BOOL)hasSavedState;
-
 @end

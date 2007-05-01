@@ -128,13 +128,15 @@ function ip_parseString(aICSString) {
                     unexpandedItems.push(item);
                     if (item.recurrenceInfo) {
                         uid2parent[item.id] = item;
+                    } else {
+                        item.calendar = this;
+                        // force no recurrence info:
+                        item.recurrenceInfo = null;
+                        excItems.push(item);
                     }
-                } else {
-                    // force no recurrence info:
-                    item.recurrenceInfo = null;
-                    excItems.push(item);
                 }
             }
+
             subComp = calComp.getNextSubcomponent("ANY");
         }
         calComp = rootComp.getNextSubcomponent("VCALENDAR");

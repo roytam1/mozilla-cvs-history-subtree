@@ -73,7 +73,6 @@ struct nsLocalMailCopyState
   nsCOMPtr<nsIMsgParseMailMsgState> m_parseMsgState;
   nsCOMPtr<nsIMsgCopyServiceListener> m_listener;
   nsCOMPtr<nsIMsgWindow> m_msgWindow;
-  nsCOMPtr<nsIMsgDatabase> m_destDB;
 
   // for displaying status;
   nsCOMPtr <nsIMsgStatusFeedback> m_statusFeedback;
@@ -137,10 +136,9 @@ public:
 
   // nsIMsgFolder methods:
   NS_IMETHOD GetSubFolders(nsIEnumerator* *result);
-  NS_IMETHOD GetMsgDatabase(nsIMsgWindow *aMsgWindow,
+  NS_IMETHODIMP GetMsgDatabase(nsIMsgWindow *aMsgWindow,
                               nsIMsgDatabase** aMsgDatabase);
 
-  NS_IMETHOD OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator);
   NS_IMETHOD GetMessages(nsIMsgWindow *aMsgWindow, nsISimpleEnumerator* *result);
   NS_IMETHOD UpdateFolder(nsIMsgWindow *aWindow);
 
@@ -199,8 +197,8 @@ public:
   NS_IMETHOD FetchMsgPreviewText(nsMsgKey *aKeysToFetch, PRUint32 aNumKeys,
                                                  PRBool aLocalOnly, nsIUrlListener *aUrlListener, 
                                                  PRBool *aAsyncResults);
-  NS_IMETHOD AddKeywordsToMessages(nsISupportsArray *aMessages, const char *aKeywords);
-  NS_IMETHOD RemoveKeywordsFromMessages(nsISupportsArray *aMessages, const char *aKeywords);
+  NS_IMETHOD AddKeywordToMessages(nsISupportsArray *aMessages, const char *aKeyword);
+  NS_IMETHOD RemoveKeywordFromMessages(nsISupportsArray *aMessages, const char *aKeyword);
 
 protected:
   nsresult CopyFolderAcrossServer(nsIMsgFolder *srcFolder, nsIMsgWindow *msgWindow,nsIMsgCopyServiceListener* listener);

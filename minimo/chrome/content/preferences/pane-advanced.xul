@@ -52,7 +52,7 @@
           flex="1"
           collapsed="true" >
           
-            <label  class="sectionlabel"  value="&advanced.label;" /> 
+            <label value="&advanced.label;" /> 
 
                       <groupbox class='box-prefgroupitem'>
 
@@ -100,7 +100,6 @@
                         </vbox>
                       </groupbox>
 
-<!--
                       <groupbox class='box-prefgroupitem'>
 
                         <vbox class="box-prefpadding">
@@ -113,7 +112,6 @@
                         </vbox>
 
                       </groupbox>
--->
 
                       <groupbox class='box-prefgroupitem' id='home-box'>
 

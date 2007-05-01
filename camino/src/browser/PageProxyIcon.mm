@@ -76,8 +76,8 @@
 {
   if (isLocal)
     return NSDragOperationGeneric;
-
-  return (NSDragOperationLink | NSDragOperationCopy);
+  else
+    return NSDragOperationCopy;
 }
 
 - (void)mouseDown:(NSEvent *)theEvent
@@ -97,11 +97,8 @@
   NSString*		titleString = nil;
 
   id parentWindowController = [[self window] windowController];
-  if ([parentWindowController isKindOfClass:[BrowserWindowController class]]) {
-    BrowserWrapper* browserWrapper = [(BrowserWindowController*)parentWindowController getBrowserWrapper];
-    urlString = [browserWrapper currentURI];
-    titleString = [browserWrapper pageTitle];
-  }
+  if ([parentWindowController isKindOfClass:[BrowserWindowController class]])
+    [[(BrowserWindowController*)parentWindowController getBrowserWrapper] getTitle:&titleString andHref:&urlString];
 
   // don't allow dragging of proxy icon for empty pages
   if ((!urlString) || [MainController isBlankURL:urlString])

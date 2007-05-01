@@ -14,7 +14,7 @@
  * The Original Code is Java XPCOM Bindings.
  *
  * The Initial Developer of the Original Code is IBM Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2007
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * IBM Corporation. All Rights Reserved.
  *
  * Contributor(s):
@@ -50,10 +50,6 @@
 #include "nsXULAppAPI.h"
 #include "nsILocalFile.h"
 
-#ifdef XP_MACOSX
-#include "jawt.h"
-#endif
-
 // profile support
 #include "nsIObserverService.h"
 #include "nsIProfileChangeStatus.h"
@@ -78,7 +74,7 @@ private:
 };
 
 
-extern "C" NS_EXPORT void JNICALL
+extern "C" NS_EXPORT void
 MOZILLA_NATIVE(initialize) (JNIEnv* env, jobject)
 {
   if (!InitializeJavaGlobals(env)) {
@@ -120,7 +116,7 @@ InitEmbedding_Impl(JNIEnv* env, jobject aLibXULDirectory,
   return XRE_InitEmbedding(libXULDir, appDir, provider, nsnull, 0);
 }
 
-extern "C" NS_EXPORT void JNICALL
+extern "C" NS_EXPORT void
 GRE_NATIVE(initEmbedding) (JNIEnv* env, jobject, jobject aLibXULDirectory,
                            jobject aAppDirectory, jobject aAppDirProvider)
 {
@@ -133,7 +129,7 @@ GRE_NATIVE(initEmbedding) (JNIEnv* env, jobject, jobject aLibXULDirectory,
   }
 }
 
-extern "C" NS_EXPORT void JNICALL
+extern "C" NS_EXPORT void
 GRE_NATIVE(termEmbedding) (JNIEnv *env, jobject)
 {
   if (profileNotified) {
@@ -174,7 +170,7 @@ GRE_NATIVE(termEmbedding) (JNIEnv *env, jobject)
   XRE_TermEmbedding();
 }
 
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 GRE_NATIVE(lockProfileDirectory) (JNIEnv* env, jobject, jobject aDirectory)
 {
   nsresult rv = NS_ERROR_FAILURE;
@@ -207,7 +203,7 @@ GRE_NATIVE(lockProfileDirectory) (JNIEnv* env, jobject, jobject aDirectory)
   return nsnull;
 }
 
-extern "C" NS_EXPORT void JNICALL
+extern "C" NS_EXPORT void
 GRE_NATIVE(notifyProfile) (JNIEnv *env, jobject)
 {
   if (!profileNotified) {
@@ -238,16 +234,19 @@ InitXPCOM_Impl(JNIEnv* env, jobject aMozBinDirectory,
   }
 
   // create nsAppFileLocProviderProxy from given Java object
-  nsCOMPtr<nsIDirectoryServiceProvider> provider;
+  nsAppFileLocProviderProxy* provider = nsnull;
   if (aAppFileLocProvider) {
-    rv = NS_NewAppFileLocProviderProxy(aAppFileLocProvider,
-                                       getter_AddRefs(provider));
-    NS_ENSURE_SUCCESS(rv, rv);
+    provider = new nsAppFileLocProviderProxy(aAppFileLocProvider);
+    if (!provider)
+      return NS_ERROR_OUT_OF_MEMORY;
   }
 
   // init XPCOM
   nsCOMPtr<nsIServiceManager> servMan;
   rv = NS_InitXPCOM2(getter_AddRefs(servMan), directory, provider);
+  if (provider) {
+    delete provider;
+  }
   NS_ENSURE_SUCCESS(rv, rv);
 
   // init Event Queue
@@ -262,7 +261,7 @@ InitXPCOM_Impl(JNIEnv* env, jobject aMozBinDirectory,
                                 nsnull, aResult);
 }
 
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 XPCOM_NATIVE(initXPCOM) (JNIEnv* env, jobject, jobject aMozBinDirectory,
                          jobject aAppFileLocProvider)
 {
@@ -277,15 +276,15 @@ XPCOM_NATIVE(initXPCOM) (JNIEnv* env, jobject, jobject aMozBinDirectory,
   return nsnull;
 }
 
-extern "C" NS_EXPORT void JNICALL
+extern "C" NS_EXPORT void
 XPCOM_NATIVE(shutdownXPCOM) (JNIEnv *env, jobject, jobject aServMgr)
 {
   nsresult rv;
-  nsIServiceManager* servMgr = nsnull;
+  nsCOMPtr<nsIServiceManager> servMgr;
   if (aServMgr) {
     // Get native XPCOM instance
     rv = GetNewOrUsedXPCOMObject(env, aServMgr, NS_GET_IID(nsIServiceManager),
-                                 (nsISupports**) &servMgr);
+                                 getter_AddRefs(servMgr));
     NS_ASSERTION(NS_SUCCEEDED(rv), "Failed to get XPCOM obj for ServiceMgr.");
 
     // Even if we failed to get the matching xpcom object, we don't abort this
@@ -301,7 +300,7 @@ XPCOM_NATIVE(shutdownXPCOM) (JNIEnv *env, jobject, jobject aServMgr)
     ThrowException(env, rv, "NS_ShutdownXPCOM failed");
 }
 
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 XPCOM_NATIVE(newLocalFile) (JNIEnv *env, jobject, jstring aPath,
                             jboolean aFollowLinks)
 {
@@ -332,7 +331,7 @@ XPCOM_NATIVE(newLocalFile) (JNIEnv *env, jobject, jstring aPath,
   return nsnull;
 }
 
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 XPCOM_NATIVE(getComponentManager) (JNIEnv *env, jobject)
 {
   // Call XPCOM method
@@ -351,7 +350,7 @@ XPCOM_NATIVE(getComponentManager) (JNIEnv *env, jobject)
   return nsnull;
 }
 
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 XPCOM_NATIVE(getComponentRegistrar) (JNIEnv *env, jobject)
 {
   // Call XPCOM method
@@ -370,7 +369,7 @@ XPCOM_NATIVE(getComponentRegistrar) (JNIEnv *env, jobject)
   return nsnull;
 }
 
-extern "C" NS_EXPORT jobject JNICALL
+extern "C" NS_EXPORT jobject
 XPCOM_NATIVE(getServiceManager) (JNIEnv *env, jobject)
 {
   // Call XPCOM method
@@ -389,105 +388,3 @@ XPCOM_NATIVE(getServiceManager) (JNIEnv *env, jobject)
   return nsnull;
 }
 
-#ifdef XP_MACOSX
-extern PRUint64 GetPlatformHandle(JAWT_DrawingSurfaceInfo* dsi);
-#endif
-
-extern "C" NS_EXPORT jlong JNICALL
-MOZILLA_NATIVE(getNativeHandleFromAWT) (JNIEnv* env, jobject clazz,
-                                        jobject widget)
-{
-  PRUint64 handle = 0;
-
-#ifdef XP_MACOSX
-  JAWT awt;
-  awt.version = JAWT_VERSION_1_4;
-  jboolean result = JAWT_GetAWT(env, &awt);
-  if (result == JNI_FALSE)
-    return 0;
-    
-  JAWT_DrawingSurface* ds = awt.GetDrawingSurface(env, widget);
-  if (ds != nsnull) {
-    jint lock = ds->Lock(ds);
-    if (!(lock & JAWT_LOCK_ERROR)) {
-      JAWT_DrawingSurfaceInfo* dsi = ds->GetDrawingSurfaceInfo(ds);
-      if (dsi) {
-        handle = GetPlatformHandle(dsi);
-        ds->FreeDrawingSurfaceInfo(dsi);
-      }
-
-      ds->Unlock(ds);
-    }
-
-    awt.FreeDrawingSurface(ds);
-  }
-#else
-  NS_WARNING("getNativeHandleFromAWT JNI method not implemented");
-#endif
-
-  return handle;
-}
-
-extern "C" NS_EXPORT jlong JNICALL
-JXUTILS_NATIVE(wrapJavaObject) (JNIEnv* env, jobject, jobject aJavaObject,
-                                jstring aIID)
-{
-  nsresult rv;
-  nsISupports* xpcomObject = nsnull;
-
-  if (!aJavaObject || !aIID) {
-    rv = NS_ERROR_NULL_POINTER;
-  } else {
-    const char* str = env->GetStringUTFChars(aIID, nsnull);
-    if (!str) {
-      rv = NS_ERROR_OUT_OF_MEMORY;
-    } else {
-      nsID iid;
-      if (iid.Parse(str)) {
-        rv = GetNewOrUsedXPCOMObject(env, aJavaObject, iid, &xpcomObject);
-      } else {
-        rv = NS_ERROR_INVALID_ARG;
-      }
-
-      env->ReleaseStringUTFChars(aIID, str);
-    }
-  }
-
-  if (NS_FAILED(rv)) {
-    ThrowException(env, rv, "Failed to create XPCOM proxy for Java object");
-  }
-  return NS_REINTERPRET_CAST(jlong, xpcomObject);
-}
-
-extern "C" NS_EXPORT jobject JNICALL
-JXUTILS_NATIVE(wrapXPCOMObject) (JNIEnv* env, jobject, jlong aXPCOMObject,
-                                 jstring aIID)
-{
-  nsresult rv;
-  jobject javaObject = nsnull;
-  nsISupports* xpcomObject = NS_REINTERPRET_CAST(nsISupports*, aXPCOMObject);
-
-  if (!xpcomObject || !aIID) {
-    rv = NS_ERROR_NULL_POINTER;
-  } else {
-    const char* str = env->GetStringUTFChars(aIID, nsnull);
-    if (!str) {
-      rv = NS_ERROR_OUT_OF_MEMORY;
-    } else {
-      nsID iid;
-      if (iid.Parse(str)) {
-        // XXX Should we be passing something other than NULL for aObjectLoader?
-        rv = GetNewOrUsedJavaObject(env, xpcomObject, iid, nsnull, &javaObject);
-      } else {
-        rv = NS_ERROR_INVALID_ARG;
-      }
-
-      env->ReleaseStringUTFChars(aIID, str);
-    }
-  }
-
-  if (NS_FAILED(rv)) {
-    ThrowException(env, rv, "Failed to create XPCOM proxy for Java object");
-  }
-  return javaObject;
-}

@@ -511,15 +511,6 @@ public:
 
 #pragma mark -
 
-#if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4
-// Declare private NSSpellChecker method.
-@interface NSSpellChecker (CurrentlyPrivateWordLearning)
-- (void)learnWord:(NSString *)word;
-@end
-#endif
-
-#pragma mark -
-
 enum BWCOpenDest {
   kDestinationNewWindow = 0,
   kDestinationNewTab,
@@ -552,8 +543,8 @@ enum BWCOpenDest {
 - (void)sessionHistoryItemAtRelativeOffset:(int)indexOffset forWrapper:(BrowserWrapper*)inWrapper title:(NSString**)outTitle URL:(NSString**)outURLString;
 - (NSString *)locationToolTipWithFormat:(NSString *)format title:(NSString *)backTitle URL:(NSString *)backURL;
 
-- (void)whitelistPopupsFromURL:(NSString*)inURL;
-- (void)showPopup:(nsIDOMPopupBlockedEvent*)aBlockedPopup;
+- (void)whitelistURL:(nsIURI*)URL;
+- (void)whitelistAndShowPopup:(nsIDOMPopupBlockedEvent*)aBlockedPopup;
 
 - (void)clearContextMenuTarget;
 - (void)updateLock:(unsigned int)securityState;
@@ -561,8 +552,6 @@ enum BWCOpenDest {
 // create back/forward session history menus on toolbar button
 - (IBAction)backMenu:(id)inSender;
 - (IBAction)forwardMenu:(id)inSender;
-
-- (void)reloadBrowserWrapper:(BrowserWrapper *)inWrapper sender:(id)sender;
 
 // run a modal according to the users pref on opening a feed
 - (BOOL)shouldWarnBeforeOpeningFeed;
@@ -573,11 +562,6 @@ enum BWCOpenDest {
 - (BOOL)prepareSpellingSuggestionMenu:(NSMenu*)inMenu tag:(int)inTag;
 
 - (void)setZoomState:(NSRect)newFrame defaultFrame:(NSRect)defaultFrame;
-
-- (void)currentEditor:(nsIEditor**)outEditor;
-- (void)getMisspelledWordRange:(nsIDOMRange**)outRange inlineSpellChecker:(nsIInlineSpellChecker**)outInlineChecker;
-- (void)focusedElement:(nsIDOMElement**)outElement;
-- (void)focusController:(nsIFocusController**)outController;
 
 @end
 
@@ -1136,11 +1120,9 @@ enum BWCOpenDest {
                  ABS(MIN(newFrame.size.height, defaultFrame.size.height) - [[self window] frame].size.height) > kMinZoomChange);
 }
 
+// If the window is resized update the cached windowframe unless we are zooming the window
 - (void)windowDidResize:(NSNotification *)aNotification
 {
-  [self updateWindowTitle:[mBrowserView displayTitle]];
-
-  // Update the cached windowframe unless we are zooming the window
   if (!mShouldZoom)
     mLastFrameSize = [[self window] frame];
   else
@@ -1737,7 +1719,9 @@ enum BWCOpenDest {
       action == @selector(closeSendersTab:) ||
       action == @selector(closeOtherTabs:) ||
       action == @selector(nextTab:) ||
-      action == @selector(previousTab:))
+      action == @selector(previousTab:) ||
+      action == @selector(addTabGroup:) ||
+      action == @selector(addTabGroupWithoutPrompt:))
   {
     return ([mTabBrowser numberOfTabViewItems] > 1);
   }
@@ -1746,12 +1730,7 @@ enum BWCOpenDest {
   if (action == @selector(addBookmark:) ||
       action == @selector(addBookmarkWithoutPrompt:))
   {
-    return [mBrowserView isBookmarkable];
-  }
-  if (action == @selector(addTabGroup:) ||
-      action == @selector(addTabGroupWithoutPrompt:))
-  {
-    return ([mTabBrowser numberOfBookmarkableTabViewItems] > 1);
+    return ![mBrowserView isEmpty];
   }
   if (action == @selector(makeTextBigger:))
     return [self canMakeTextBigger];
@@ -1841,27 +1820,9 @@ enum BWCOpenDest {
   }
 }
 
-// Get the title's maximal width manually and truncate the title ourselves to work around
-// 10.3's crappy title truncation.  Also, this way we can middle-truncate, which 10.4 doesn't do
 - (void)updateWindowTitle:(NSString*)title
 {
-  if (!title)
-    return;
-
-  NSWindow* window = [self window];
-
-  float leftEdge = NSMaxX([[window standardWindowButton:NSWindowZoomButton] frame]);
-  NSButton* toolbarButton = [window standardWindowButton:NSWindowToolbarButton];
-  float rightEdge = toolbarButton ? [toolbarButton frame].origin.x : NSMaxX([window frame]);
-
-  // Leave 8 pixels of padding around the title.
-  const int kTitlePadding = 8;
-  float titleWidth = rightEdge - leftEdge - 2 * kTitlePadding;
-
-  // Sending |titleBarFontOfSize| 0 returns default size
-  NSDictionary* attributes = [NSDictionary dictionaryWithObject:[NSFont titleBarFontOfSize:0] forKey:NSFontAttributeName];
-
-  [window setTitle:[title stringByTruncatingToWidth:titleWidth at:kTruncateAtMiddle withAttributes:attributes]];
+  [[self window] setTitle:title];
 }
 
 - (void)updateStatus:(NSString*)status
@@ -1901,6 +1862,18 @@ enum BWCOpenDest {
 }
 
 //
+// -configurePopupBlocking
+//
+// Called to display our popup blocking configuration ui, which is in prefs. 
+// Show the prefs window focused on the "web features" panel.
+//
+- (void)configurePopupBlocking
+{
+  [[MVPreferencesController sharedInstance] showPreferences:nil];
+  [[MVPreferencesController sharedInstance] selectPreferencePaneByIdentifier:@"org.mozilla.camino.preference.webfeatures"];
+}
+
+//
 // -openFeedPrefPane
 //
 // Opens the preference pane that contains the options for opening feeds
@@ -1912,19 +1885,15 @@ enum BWCOpenDest {
 }
 
 //
-// showBlockedPopups:whitelistingSource:
+// -unblockAllPopupSites:
 //
-// UI delegate method to show the given blocked popups, optionally whitelisting the source.
+// Called in response to the menu item from the unblock popup. Puts all the
+// blocked popups in the array on the whitelist, and shows them.
 //
-- (void)showBlockedPopups:(nsIArray*)blockedSites whitelistingSource:(BOOL)shouldWhitelist
+- (void)unblockAllPopupSites:(nsIArray*)inSites
 {
-  // Because of the way our UI is set up, we white/blacklist based on the top-level window URI,
-  // rather than the requesting URI (which can be different on framed sites).
-  if (shouldWhitelist)
-    [self whitelistPopupsFromURL:[mBrowserView currentURI]];
-
   nsCOMPtr<nsISimpleEnumerator> enumerator;
-  blockedSites->Enumerate(getter_AddRefs(enumerator));
+  inSites->Enumerate(getter_AddRefs(enumerator));
   PRBool hasMore = PR_FALSE;
 
   // iterate over the array of blocked popup events, and unblock & show
@@ -1938,39 +1907,39 @@ enum BWCOpenDest {
     nsCOMPtr<nsIDOMPopupBlockedEvent> evt;
     evt = do_QueryInterface(curSupports);
     if (evt)
-      [self showPopup:evt];
+      [self whitelistAndShowPopup:evt];
   }
 }
 
-- (void)showPopup:(nsIDOMPopupBlockedEvent*)aPopupBlockedEvent
+- (void)whitelistAndShowPopup:(nsIDOMPopupBlockedEvent*)aPopupBlockedEvent
 { 
-  nsCOMPtr<nsIDOMPopupBlockedEvent_MOZILLA_1_8_BRANCH>
-    branchPopupBlockedEvent = do_QueryInterface(aPopupBlockedEvent);
-  if (!branchPopupBlockedEvent)
-    return;
-  nsCOMPtr<nsIDOMWindow> requestingWindow;
-  branchPopupBlockedEvent->GetRequestingWindow(getter_AddRefs(requestingWindow));
   // get the URIs for the popup window, and it's parent document
-  nsCOMPtr<nsIURI> popupWindowURI;
+  nsCOMPtr<nsIURI> requestingWindowURI, popupWindowURI;
+  aPopupBlockedEvent->GetRequestingWindowURI(getter_AddRefs(requestingWindowURI));
   aPopupBlockedEvent->GetPopupWindowURI(getter_AddRefs(popupWindowURI));
 
   nsAutoString windowName, features;
   
   // get the popup window's features
-  aPopupBlockedEvent->GetPopupWindowFeatures(features);
+  aPopupBlockedEvent->GetPopupWindowFeatures(features);  
   
 #ifndef MOZILLA_1_8_BRANCH
   // XXXhakan: nsIDOMPopupBlockedEvent didn't get the popupWindowName property added on branch, so
   // we can't set the popup window's original name for now.
   // see bug 343734
   aPopupBlockedEvent->GetPopupWindowName(windowName);
-#endif
+#endif 
 
   // find the docshell for the blocked popup window, in order to show it
-  if (!requestingWindow)
+  nsCOMPtr<nsIDocShell> popupWinDocShell = [[mBrowserView getBrowserView] findDocShellForURI:requestingWindowURI];
+  if (!popupWinDocShell)
     return;
 
-  nsCOMPtr<nsPIDOMWindow> piDomWin = do_QueryInterface(requestingWindow);
+  nsCOMPtr<nsIDOMWindowInternal> domWin = do_GetInterface(popupWinDocShell);
+  if (!domWin)
+    return;
+
+  nsCOMPtr<nsPIDOMWindow> piDomWin = do_QueryInterface(domWin);
   if (!piDomWin)
     return;
 
@@ -1980,29 +1949,20 @@ enum BWCOpenDest {
   nsCAutoString uriStr;
   popupWindowURI->GetSpec(uriStr);
   
+  // whitelist the URL
+  [self whitelistURL:requestingWindowURI];
+
   // show the blocked popup
   nsCOMPtr<nsIDOMWindow> openedWindow;
-  nsresult rv = piDomWin->Open(NS_ConvertUTF8toUTF16(uriStr), windowName, features, getter_AddRefs(openedWindow));
+  nsresult rv = domWin->Open(NS_ConvertUTF8toUTF16(uriStr), windowName, features, getter_AddRefs(openedWindow));
   if (NS_FAILED(rv))
-    NSLog(@"Couldn't show the blocked popup window for %@", [NSString stringWith_nsACString:uriStr]);
+    NSLog(@"Couldn't show the blocked popup window for %@", [NSString stringWith_nsACString:uriStr]);  
 }
 
-- (void)whitelistPopupsFromURL:(NSString*)inURL
+- (void)whitelistURL:(nsIURI*)URL
 {
-  nsCOMPtr<nsIURI> uri;
-  NS_NewURI(getter_AddRefs(uri), [inURL UTF8String]);
-  nsCOMPtr<nsIPermissionManager> pm(do_GetService(NS_PERMISSIONMANAGER_CONTRACTID));
-  if (pm && uri)
-    pm->Add(uri, "popup", nsIPermissionManager::ALLOW_ACTION);
-}
-
-- (void)blacklistPopupsFromURL:(NSString*)inURL
-{
-  nsCOMPtr<nsIURI> uri;
-  NS_NewURI(getter_AddRefs(uri), [inURL UTF8String]);
-  nsCOMPtr<nsIPermissionManager> pm(do_GetService(NS_PERMISSIONMANAGER_CONTRACTID));
-  if (pm && uri)
-    pm->Add(uri, "popup", nsIPermissionManager::DENY_ACTION);
+  nsCOMPtr<nsIPermissionManager> pm (do_GetService(NS_PERMISSIONMANAGER_CONTRACTID));
+  pm->Add(URL, "popup", nsIPermissionManager::ALLOW_ACTION);
 }
 
 //
@@ -2110,13 +2070,13 @@ enum BWCOpenDest {
 
 - (void)updateFromFrontmostTab
 {
-  [self updateWindowTitle:[mBrowserView displayTitle]];
+  [[self window] setTitle:[mBrowserView windowTitle]];
   [self setLoadingActive:[mBrowserView isBusy]];
   [self setLoadingProgress:[mBrowserView loadingProgress]];
   [self showSecurityState:[mBrowserView securityState]];
   [self updateSiteIcons:[mBrowserView siteIcon] ignoreTyping:NO];
   [self updateStatus:[mBrowserView statusString]];
-  [self updateLocationFields:[mBrowserView currentURI] ignoreTyping:NO];
+  [self updateLocationFields:[mBrowserView getCurrentURI] ignoreTyping:NO];
   [self showFeedDetected:[mBrowserView feedsDetected]];
 }
 
@@ -2472,8 +2432,6 @@ enum BWCOpenDest {
     // open a new window and hide the toolbars for prettyness
     BrowserWindowController* controller = [[BrowserWindowController alloc] initWithWindowNibName:@"BrowserWindow"];
     [controller setChromeMask:kNoToolbarsChromeMask];
-    [controller disableAutosave]; // don't save view-source window size/position
-
     if (loadInBackground)
       [[controller window] orderWindow:NSWindowBelow relativeTo:[[self window] windowNumber]];
     else
@@ -2498,7 +2456,7 @@ enum BWCOpenDest {
   // If it's a capital V, shift is down
   BOOL loadInBackground = ([[aSender keyEquivalent] isEqualToString:@"V"]);
 
-  NSString* urlStr = [mBrowserView currentURI];
+  NSString* urlStr = [[mBrowserView getBrowserView] getCurrentURI];
   [self loadSourceOfURL:urlStr inBackground:loadInBackground];
 }
 
@@ -2557,12 +2515,12 @@ enum BWCOpenDest {
   NSMutableString *searchURL = [NSMutableString stringWithString:
     [[BrowserWindowController searchURLDictionary] objectForKey:
       [inSearchField titleOfSelectedPopUpItem]]];
-  NSString *currentURL = [[self getBrowserWrapper] currentURI];
+  NSString *currentURL = [[self getBrowserWrapper] getCurrentURI];
   NSString *searchString = [inSearchField stringValue];
   
   const char *aURLSpec = [currentURL lossyCString];
   NSString *aDomain = @"";
-  nsCOMPtr<nsIURI> aURI;
+  nsIURI *aURI = nil;
   
   // If we have an about: type URL, remove " site:%d" from the search string
   // This is a fix to deal with Google's Search this Site feature
@@ -2583,7 +2541,7 @@ enum BWCOpenDest {
   if ([[inSearchField stringValue] isEqualToString:@""]) {
     aURLSpec = [searchURL lossyCString];
     
-    if (NS_NewURI(getter_AddRefs(aURI), aURLSpec) == NS_OK) {
+    if (NS_NewURI(&aURI, aURLSpec, nsnull, nsnull) == NS_OK) {
       nsCAutoString spec;
       aURI->GetHost(spec);
       
@@ -2597,10 +2555,10 @@ enum BWCOpenDest {
         [self loadURL:aDomain];
     } 
   } else {
-    aURLSpec = [[[self getBrowserWrapper] currentURI] UTF8String];
+    aURLSpec = [[[self getBrowserWrapper] getCurrentURI] UTF8String];
     
     // Get the domain so that we can replace %d in our searchURL
-    if (NS_NewURI(getter_AddRefs(aURI), aURLSpec) == NS_OK) {
+    if (NS_NewURI(&aURI, aURLSpec, nsnull, nsnull) == NS_OK) {
       nsCAutoString spec;
       aURI->GetHost(spec);
       
@@ -2641,17 +2599,19 @@ enum BWCOpenDest {
 
 - (IBAction)sendURL:(id)aSender
 {
-  BrowserWrapper* browserWrapper = [self getBrowserWrapper];
-  NSString* urlString = [browserWrapper currentURI];
+  NSString* titleString = nil;
+  NSString* urlString = nil;
+
+  [[self getBrowserWrapper] getTitle:&titleString andHref:&urlString];
+  
   if (!urlString)
     return;
 
-  // put < > around the URL to minimise problems when e-mailing
-  urlString = [NSString stringWithFormat:@"<%@>", urlString];
-
-  NSString* titleString = [browserWrapper pageTitle];
   if (!titleString)
     titleString = @"";
+
+  // put < > around the URL to minimise problems when e-mailing
+  urlString = [NSString stringWithFormat:@"<%@>", urlString];
 
   // we need to encode entities in the title and url strings first. For some reason
   // CFURLCreateStringByAddingPercentEscapes is only happy with UTF-8 strings.
@@ -2798,7 +2758,7 @@ enum BWCOpenDest {
 
 - (BOOL)bookmarkManagerIsVisible
 {
-  NSString* currentURL = [[[self getBrowserWrapper] currentURI] lowercaseString];
+  NSString* currentURL = [[[self getBrowserWrapper] getCurrentURI] lowercaseString];
   return [currentURL isEqualToString:@"about:bookmarks"] || [currentURL isEqualToString:@"about:history"];
 }
 
@@ -2833,11 +2793,9 @@ enum BWCOpenDest {
   for (int i = 0; i < numTabs; i++)
   {
     BrowserWrapper* browserWrapper = (BrowserWrapper*)[[mTabBrowser tabViewItemAtIndex:i] view];
-    if (![browserWrapper isBookmarkable])
-      continue;
-
-    NSString* curTitleString = [browserWrapper pageTitle];
-    NSString* hrefString = [browserWrapper currentURI];
+    NSString* curTitleString = nil;
+    NSString* hrefString = nil;
+    [browserWrapper getTitle:&curTitleString andHref:&hrefString];
 
     NSMutableDictionary* itemInfo = [NSMutableDictionary dictionaryWithObject:hrefString forKey:kAddBookmarkItemURLKey];
 
@@ -2851,7 +2809,6 @@ enum BWCOpenDest {
     [itemsArray addObject:itemInfo];
   }
 
-  NS_ASSERTION([itemsArray count], "Displaying the Add Bookmark dialog with no URIs");
   AddBookmarkDialogController* dlgController = [AddBookmarkDialogController sharedAddBookmarkDialogController];
   [dlgController showDialogWithLocationsAndTitles:itemsArray isFolder:NO onWindow:[self window]];
 
@@ -2864,49 +2821,36 @@ enum BWCOpenDest {
   BookmarkManager* bookmarkManager = [BookmarkManager sharedBookmarkManager];
   BookmarkFolder*  parentFolder = [bookmarkManager lastUsedBookmarkFolder];
 
-  BrowserWrapper* browserWrapper = [self getBrowserWrapper];
-  NSString* itemTitle = [browserWrapper pageTitle];
-  NSString* itemURL = [browserWrapper currentURI];
+  NSString* itemTitle = nil;
+  NSString* itemURL = nil;
+  [[self getBrowserWrapper] getTitle:&itemTitle andHref:&itemURL];
 
-  NS_ASSERTION([browserWrapper isBookmarkable], "Bookmarking an innappropriate URI");
   [parentFolder addBookmark:itemTitle url:itemURL inPosition:[parentFolder count] isSeparator:NO];
   [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
 }
 
 - (IBAction)addTabGroupWithoutPrompt:(id)aSender
 {
-  BookmarkFolder* newTabGroup = [[[BookmarkFolder alloc] init] autorelease];
-  [newTabGroup setIsGroup:YES];
+  BookmarkManager* bookmarkManager = [BookmarkManager sharedBookmarkManager];
+  BookmarkFolder*  parentFolder = [bookmarkManager lastUsedBookmarkFolder];
 
-  BrowserWrapper* currentBrowserWrapper = [self getBrowserWrapper];
-  int numberOfTabs = [mTabBrowser numberOfTabViewItems];
-  NSString *primaryTabTitle = nil;
+  unsigned int folderPosition = [parentFolder count];
+  unsigned int numItems = [mTabBrowser numberOfTabViewItems];
+  NSString* itemTitle = nil;
+  NSString* itemURL = nil;
+  [[self getBrowserWrapper] getTitle:&itemTitle andHref:&itemURL];
 
-  for (int i = 0; i < numberOfTabs; i++) {
+  NSString* titleString = [NSString stringWithFormat:NSLocalizedString(@"defaultTabGroupTitle", nil), numItems, itemTitle];
+  BookmarkFolder* newGroup = [parentFolder addBookmarkFolder:titleString inPosition:folderPosition isGroup:YES];
+
+  for (unsigned int i = 0; i < numItems; i++) {
     BrowserWrapper* browserWrapper = (BrowserWrapper*)[[mTabBrowser tabViewItemAtIndex:i] view];
-    if (![browserWrapper isBookmarkable])
-      continue;
+    [browserWrapper getTitle:&itemTitle andHref:&itemURL];
 
-    Bookmark *bookmark = [newTabGroup addBookmark];
-    [bookmark setTitle:[browserWrapper pageTitle]];
-    [bookmark setUrl:[browserWrapper currentURI]];
-
-    if (browserWrapper == currentBrowserWrapper)
-      primaryTabTitle = [browserWrapper pageTitle];
+    [newGroup addBookmark:itemTitle url:itemURL inPosition:i isSeparator:NO];
   }
 
-  if (!primaryTabTitle && [newTabGroup count]) {
-    // The active tab was not included in the group.
-    primaryTabTitle = [[newTabGroup objectAtIndex:0] title];
-  }
-
-  NS_ASSERTION([newTabGroup count], "Adding a tab group with no children");
-  [newTabGroup setTitle:[NSString stringWithFormat:NSLocalizedString(@"defaultTabGroupTitle", nil),
-                                                   [newTabGroup count], 
-                                                   primaryTabTitle]];
-  BookmarkFolder* parentFolder = [[BookmarkManager sharedBookmarkManager] lastUsedBookmarkFolder];
-  [parentFolder appendChild:newTabGroup];
-  [[BookmarkManager sharedBookmarkManager] setLastUsedBookmarkFolder:parentFolder];
+  [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
 }
 
 - (IBAction)addBookmarkForLink:(id)aSender
@@ -3095,49 +3039,18 @@ enum BWCOpenDest {
 
 - (IBAction)reload:(id)aSender
 {
-  [self reloadBrowserWrapper:mBrowserView sender:aSender];
-}
-
-- (IBAction)reloadSendersTab:(id)sender
-{
-  if ([sender isMemberOfClass:[NSMenuItem class]]) {
-    BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
-    if (tabViewItem)
-      [self reloadBrowserWrapper:[tabViewItem view] sender:sender];
-  }
-}
-
-- (IBAction)reloadAllTabs:(id)sender
-{
-  NSEnumerator* tabsEnum = [[mTabBrowser tabViewItems] objectEnumerator];
-  BrowserTabViewItem* curTabItem;
-  while ((curTabItem = [tabsEnum nextObject])) {
-    if ([curTabItem isKindOfClass:[BrowserTabViewItem class]])
-      [self reloadBrowserWrapper:[curTabItem view] sender:sender];
-  }
-}
-
-// Reloads the given BrowserWrapper, automatically performing the appropriate
-// checks to decide whether to do a force-reload if sender is non-nil.
-- (void)reloadBrowserWrapper:(BrowserWrapper *)inWrapper sender:(id)sender
-{
   unsigned int reloadFlags = NSLoadFlagsNone;
-  // If the sender is nil then the reload was programatically invoked, so we
-  // don't want to change behavior based on whether shift happens to be pressed.
-  if (sender) {
-    if ([sender respondsToSelector:@selector(keyEquivalent)]) {
-      // Capital R tests for shift when there's a keyEquivalent, keyEquivalentModifierMask
-      // tests when there isn't
-      if ([[sender keyEquivalent] isEqualToString:@"R"] ||
-          ([sender keyEquivalentModifierMask] & NSShiftKeyMask))
-        reloadFlags = NSLoadFlagsBypassCacheAndProxy;
-    }
-    // It's a toolbar button, so we test for shift using modifierFlags
-    else if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
+
+  if ([aSender respondsToSelector:@selector(keyEquivalent)]) {
+    // Capital R tests for shift when there's a keyEquivalent, keyEquivalentModifierMask tests when there isn't
+    if ([[aSender keyEquivalent] isEqualToString:@"R"] || ([aSender keyEquivalentModifierMask] & NSShiftKeyMask))
       reloadFlags = NSLoadFlagsBypassCacheAndProxy;
   }
+  // It's a toolbar button, so we test for shift using modifierFlags
+  else if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
+    reloadFlags = NSLoadFlagsBypassCacheAndProxy;
 
-  [inWrapper reload:reloadFlags];
+  [[mBrowserView getBrowserView] reload:reloadFlags];
 }
 
 - (IBAction)stop:(id)aSender
@@ -3534,12 +3447,48 @@ enum BWCOpenDest {
   [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
 }
 
+- (IBAction)reloadSendersTab:(id)sender
+{
+  if ([sender isMemberOfClass:[NSMenuItem class]]) {
+    BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
+    if (tabViewItem) {
+      unsigned int reloadFlags = NSLoadFlagsNone;
+      // Capital R tests for shift when there's a keyEquivalent, keyEquivalentModifierMask tests when there isn't
+      if ([[sender keyEquivalent] isEqualToString:@"R"] || ([sender keyEquivalentModifierMask] & NSShiftKeyMask))
+        reloadFlags = NSLoadFlagsBypassCacheAndProxy;
+
+      [[[tabViewItem view] getBrowserView] reload:reloadFlags];
+    }
+  }
+}
+
+- (IBAction)reloadAllTabs:(id)sender
+{
+  unsigned int reloadFlags = NSLoadFlagsNone;
+
+  if ([sender respondsToSelector:@selector(keyEquivalent)]) {
+    // Capital R tests for shift when there's a keyEquivalent, keyEquivalentModifierMask tests when there isn't
+    if ([[sender keyEquivalent] isEqualToString:@"R"] || ([sender keyEquivalentModifierMask] & NSShiftKeyMask))
+      reloadFlags = NSLoadFlagsBypassCacheAndProxy;
+  }
+  // It's a toolbar button, so we test for shift using modifierFlags
+  else if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
+    reloadFlags = NSLoadFlagsBypassCacheAndProxy;
+
+  NSEnumerator* tabsEnum = [[mTabBrowser tabViewItems] objectEnumerator];
+  BrowserTabViewItem* curTabItem;
+  while ((curTabItem = [tabsEnum nextObject])) {
+    if ([curTabItem isKindOfClass:[BrowserTabViewItem class]])
+      [[[curTabItem view] getBrowserView] reload:reloadFlags];
+  }
+}
+
 - (IBAction)moveTabToNewWindow:(id)sender
 {
   if ([sender isMemberOfClass:[NSMenuItem class]]) {
     BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
     if (tabViewItem) {
-      NSString* url = [[tabViewItem view] currentURI];
+      NSString* url = [[tabViewItem view] getCurrentURI];
       BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:nil];
 
       [self openNewWindowWithURL:url referrer:nil loadInBackground:backgroundLoad allowPopups:NO];
@@ -4034,7 +3983,6 @@ enum BWCOpenDest {
   BOOL showFrameItems = NO;
   BOOL showSpellingItems = NO;
   BOOL needsAlternates = NO;
-  BOOL isUnsafeLink = NO;
 
   NSArray* emailAddresses = nil;
   unsigned numEmailAddresses = 0;
@@ -4074,16 +4022,6 @@ enum BWCOpenDest {
     if (emailAddresses != nil)
       numEmailAddresses = [emailAddresses count];
 
-    // Verify that it is safe to open this link.
-    NSString* referrerURL = [[mBrowserView getBrowserView] getFocusedURLString];
-    nsCOMPtr<nsIDOMElement> linkElement;
-    nsAutoString hrefURL;
-    GeckoUtils::GetEnclosingLinkElementAndHref(mDataOwner->mContextMenuNode,
-                                               getter_AddRefs(linkElement),
-                                               hrefURL);
-    if (!GeckoUtils::IsSafeToOpenURIFromReferrer(NS_ConvertUTF16toUTF8(hrefURL).get(), [referrerURL UTF8String]))
-      isUnsafeLink = YES;
-
     if ((contextMenuFlags & nsIContextMenuListener::CONTEXT_IMAGE) != 0) {
       if (numEmailAddresses > 0)
         menuPrototype = mImageMailToLinkMenu;
@@ -4101,25 +4039,13 @@ enum BWCOpenDest {
   }
   else if ((contextMenuFlags & nsIContextMenuListener::CONTEXT_INPUT) != 0 ||
            (contextMenuFlags & nsIContextMenuListener::CONTEXT_TEXT) != 0 ||
-           isMidas)
-  {
-    // The following is a hack to work around bug 365183: If there is a no selection in the
-    // editor, we simulate a double click to select the word as native text fields do
-    // for context clicks, which allows spell check to operate on the word under the mouse.
-    // The behavior is not quite right since a right click outside of an existing selection should
-    // change the selection, but this gets us most of the way there until bug 365183 is fixed.
-    if (!hasSelection) {
-      NSEvent* realClick = [NSApp currentEvent];
-      NSEvent* fakeDoubleClickDown = [NSEvent mouseEventWithType:NSLeftMouseDown
-                                                        location:[realClick locationInWindow]
-                                                   modifierFlags:0
-                                                       timestamp:[realClick timestamp]
-                                                    windowNumber:[realClick windowNumber]
-                                                         context:[realClick context]
-                                                     eventNumber:[realClick eventNumber]
-                                                      clickCount:2
-                                                        pressure:[realClick pressure]];
-      NSEvent* fakeDoubleClickUp = [NSEvent mouseEventWithType:NSLeftMouseUp
+           isMidas) {
+    // simulate a double click to select the word as native text fields do for context clicks,
+    // which allows spell check to operate on the word under the mouse.
+    // ideally we'd tell the editor directly to move the anchor to the mouse location and select
+    // the word it ends up in, but there doesn't appear to be a way to do that.
+    NSEvent* realClick = [NSApp currentEvent];
+    NSEvent* fakeDoubleClickDown = [NSEvent mouseEventWithType:NSLeftMouseDown
                                                       location:[realClick locationInWindow]
                                                  modifierFlags:0
                                                      timestamp:[realClick timestamp]
@@ -4128,11 +4054,18 @@ enum BWCOpenDest {
                                                    eventNumber:[realClick eventNumber]
                                                     clickCount:2
                                                       pressure:[realClick pressure]];
-      NSView* textFieldView = [mContentView hitTest:[[mContentView superview] convertPoint:[realClick locationInWindow] fromView:nil]];
-      [textFieldView mouseDown:fakeDoubleClickDown];
-      [textFieldView mouseUp:fakeDoubleClickUp];
-    }
-    
+    NSEvent* fakeDoubleClickUp = [NSEvent mouseEventWithType:NSLeftMouseUp
+                                                    location:[realClick locationInWindow]
+                                               modifierFlags:0
+                                                   timestamp:[realClick timestamp]
+                                                windowNumber:[realClick windowNumber]
+                                                     context:[realClick context]
+                                                 eventNumber:[realClick eventNumber]
+                                                  clickCount:2
+                                                    pressure:[realClick pressure]];
+    NSView* textFieldView = [mContentView hitTest:[[mContentView superview] convertPoint:[realClick locationInWindow] fromView:nil]];
+    [textFieldView mouseDown:fakeDoubleClickDown];
+    [textFieldView mouseUp:fakeDoubleClickUp];
     menuPrototype = mInputMenu;
     showSpellingItems = YES;
   }
@@ -4154,25 +4087,12 @@ enum BWCOpenDest {
   // our only copy of the menu
   NSMenu* result = [[menuPrototype copy] autorelease];
 
-  if (isUnsafeLink) {
-    // To avoid updating the BrowserWindow.nib close to release time, the
-    // menu items to remove will be removed from index 0 three times. After
-    // the 1.1 release, this needs to be changed (see bug 378081). The first
-    // two remove calls will pull out the "Open Link in *" menu items.
-    [result removeItemAtIndex:0];
-    [result removeItemAtIndex:0];
-    [result removeItemAtIndex:0];  // remove separator 
-  }
-
   // validate View Page/Frame Source
   BrowserWrapper* browser = [self getBrowserWrapper];
   if ([browser isInternalURI] || ![[browser getBrowserView] isTextBasedContent]) {
     [[result itemWithTarget:self andAction:@selector(viewPageSource:)] setEnabled:NO];
     [[result itemWithTarget:self andAction:@selector(viewSource:)] setEnabled:NO];
   }
-
-  // validate 'Bookmark This Page'
-  [[result itemWithTarget:self andAction:@selector(addBookmark:)] setEnabled:[[self getBrowserWrapper] isBookmarkable]];
 
   if (showSpellingItems)
     showSpellingItems = [self prepareSpellingSuggestionMenu:result tag:kSpellingRelatedItemsTag];
@@ -4282,192 +4202,120 @@ enum BWCOpenDest {
 }
 
 //
-// -getMisspelledRange:inlineSpellChecker:
+// -prepareSpellingSuggestionMenu:tag:
 //
-// Upon return, |outRange| contains the range of the currently misspelled word and 
-// |outInlineChecker| contains the inline spell checker to allow for further action.
-// This method AddRef's both out parameters.
+// Adds suggestions to the top of |inMenu| for the currently mispelled word
+// under the insertion point. Starts inserting before the first item in the menu
+// with |inTag| and will insert up to |kMaxSuggestions|. 
 //
-- (void)getMisspelledWordRange:(nsIDOMRange**)outRange inlineSpellChecker:(nsIInlineSpellChecker**)outInlineChecker
+- (BOOL)prepareSpellingSuggestionMenu:(NSMenu*)inMenu tag:(int)inTag
 {
-  #define ENSURE_TRUE(x) if (!x) return;
-
-  if (!(outRange && outInlineChecker))
-    return;
-  *outRange = nsnull;
-  *outInlineChecker = nsnull;
-
+  #define ENSURE_TRUE(x) if (!x) return NO;
+  BOOL showSuggestions = YES;
+  
   nsCOMPtr<nsIEditor> editor;
   [self currentEditor:getter_AddRefs(editor)];
   ENSURE_TRUE(editor);
 
-  editor->GetInlineSpellChecker(outInlineChecker);
-  ENSURE_TRUE(*outInlineChecker);
-
-  PRBool checkingIsEnabled = NO;
-  (*outInlineChecker)->GetEnableRealTimeSpell(&checkingIsEnabled);
-  ENSURE_TRUE(checkingIsEnabled);
-
-  nsCOMPtr<nsISelection> selection;
-  editor->GetSelection(getter_AddRefs(selection));
-  ENSURE_TRUE(selection);
-
-  nsCOMPtr<nsIDOMNode> selectionEndNode;
-  PRInt32 selectionEndOffset = 0;
-  selection->GetFocusNode(getter_AddRefs(selectionEndNode));
-  selection->GetFocusOffset(&selectionEndOffset);
-
-  (*outInlineChecker)->GetMispelledWord(selectionEndNode, (long)selectionEndOffset, outRange);
-
-  #undef ENSURE_TRUE
-}
-
-//
-// -prepareSpellingSuggestionMenu:tag:
-//
-// Adds suggestions to the top of |inMenu| for the currently misspelled word
-// under the insertion point. Starts inserting before the first item in the menu
-// with |inTag| and will insert up to |kMaxSuggestions|.
-// Returns a BOOL indicating whether suggestions are shown.
-//
-- (BOOL)prepareSpellingSuggestionMenu:(NSMenu*)inMenu tag:(int)inTag
-{
-  nsCOMPtr<nsIDOMRange> misspelledRange;
   nsCOMPtr<nsIInlineSpellChecker> inlineChecker;
-  [self getMisspelledWordRange:getter_AddRefs(misspelledRange) inlineSpellChecker:getter_AddRefs(inlineChecker)];
-  if (!(misspelledRange && inlineChecker))
+  editor->GetInlineSpellChecker(getter_AddRefs(inlineChecker));
+  ENSURE_TRUE(inlineChecker);
+  
+  // verify inline spellchecking is "on" before we continue
+  PRBool enabled = NO;
+  inlineChecker->GetEnableRealTimeSpell(&enabled);
+  if (!enabled)
     return NO;
-
+  
   nsCOMPtr<nsIEditorSpellCheck> spellCheck;
   inlineChecker->GetSpellChecker(getter_AddRefs(spellCheck));
-  if (!spellCheck)
-    return NO;
-
-  // ask the spellchecker to check the misspelled word, which seems redundant but is also
-  // used to generate the suggestions list. 
-  nsString currentWord;
-  misspelledRange->ToString(currentWord);
+  ENSURE_TRUE(spellCheck);
+  
+  // if there is a mispelled word, ask the spellchecker to check it, which seems redundant
+  // but is also used to generate the suggestions list. 
   PRBool isIncorrect = NO;
-  spellCheck->CheckCurrentWord(currentWord.get(), &isIncorrect);
-  if (!isIncorrect)
-    return NO;
-
-  // there's still a misspelled word, loop over the suggestions. The spellchecker will return
-  // an empty string when it's done (NOT nil), so keep going until we get that or our max.
-  const unsigned long insertBase = [inMenu indexOfItemWithTag:inTag];
-  const unsigned long kMaxSuggestions = 7;
-  unsigned long numSuggestions = 0;
-  do {
-    PRUnichar* suggestion = nil;
-    spellCheck->GetSuggestedWord(&suggestion);
-    if (!nsCRT::strlen(suggestion))
-      break;
-
-    NSString* suggStr = [NSString stringWithPRUnichars:suggestion];
-    NSMenuItem* item = [inMenu insertItemWithTitle:suggStr action:@selector(replaceWord:) keyEquivalent:@"" atIndex:numSuggestions + insertBase];
-    [item setTarget:self];
-
-    ++numSuggestions;
-    nsCRT::free(suggestion);
-  } while (numSuggestions < kMaxSuggestions);
-
-  if (numSuggestions == 0) {
-    NSMenuItem* item = [[[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"No Guesses Found", nil) action:NULL keyEquivalent:@""] autorelease];
-    [item setEnabled:NO];
-    [inMenu insertItem:item atIndex:insertBase];
+  nsCOMPtr<nsIDOMNode> anchorNode;
+  PRInt32 anchorOffset = 0;
+  GeckoUtils::GetAnchorNodeFromSelection(editor, getter_AddRefs(anchorNode), &anchorOffset);
+  // the anchor is at the beginning of the word, which the spelling system for whatever reason
+  // doesn't consider to be inside of the mispelled range, so we check one character further
+  ++anchorOffset;
+  nsCOMPtr<nsIDOMRange> mispelledRange;
+  inlineChecker->GetMispelledWord(anchorNode, (long)anchorOffset, getter_AddRefs(mispelledRange));
+  if (mispelledRange) {
+    nsString currentWord;
+    mispelledRange->ToString(currentWord);
+    spellCheck->CheckCurrentWord(currentWord.get(), &isIncorrect);
   }
+  if (isIncorrect) {
+    // there's still a mispelled word, loop over the suggestions. The spellchecker will return
+    // an empty string when it's done (NOT nil), so keep going until we get that or our
+    // max.
+    const unsigned long insertBase = [inMenu indexOfItemWithTag:inTag];
+    const unsigned long kMaxSuggestions = 7;
+    unsigned long numSuggestions = 0;
+    do {
+      PRUnichar* suggestion = nil;
+      spellCheck->GetSuggestedWord(&suggestion);
+      if (!nsCRT::strlen(suggestion))
+        break;
+      
+      NSString* suggStr = [NSString stringWithPRUnichars:suggestion];
+      NSMenuItem* item = [inMenu insertItemWithTitle:suggStr action:@selector(replaceMispelledWord:) keyEquivalent:@"" atIndex:numSuggestions + insertBase];
+      [item setTarget:self];
+      
+      ++numSuggestions;
+      nsCRT::free(suggestion);
+    } while (numSuggestions < kMaxSuggestions);
 
-  // |inTag| has moved to a new location; fetch the current index
-  int dictionaryItemsInsertBase = [inMenu indexOfItemWithTag:inTag];
+    if (numSuggestions == 0) {
+      NSMenuItem* item = [[[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"No Guesses Found", nil) action:NULL keyEquivalent:@""] autorelease];
+      [item setEnabled:NO];
+      [inMenu insertItem:item atIndex:insertBase];
+    }
+  }
+  else
+    showSuggestions = NO;
 
-  [inMenu insertItem:[NSMenuItem separatorItem] atIndex:dictionaryItemsInsertBase];
-
-  [inMenu insertItemWithTitle:NSLocalizedString(@"Ignore Spelling", nil) 
-                       action:@selector(ignoreWord:) 
-                keyEquivalent:@"" 
-                      atIndex:(dictionaryItemsInsertBase + 1)];
-
-  [inMenu insertItemWithTitle:NSLocalizedString(@"Learn Spelling", nil) 
-                       action:@selector(learnWord:) 
-                keyEquivalent:@"" 
-                      atIndex:(dictionaryItemsInsertBase + 2)];
-
-  return YES;
+  return showSuggestions;
+  #undef ENSURE_TRUE
 }
 
 // Context menu methods
 
 //
-// -replaceWord:
+// -replaceMispelledWord:
 //
 // Context menu action for the suggestions in a text field. Replaces the
 // current word in the editor with string that's the title of the chosen menu
 // item.
 //
-- (IBAction)replaceWord:(id)inSender
+- (IBAction)replaceMispelledWord:(id)inSender
 {
-  nsCOMPtr<nsIDOMRange> misspelledRange;
-  nsCOMPtr<nsIInlineSpellChecker> inlineChecker;
-  [self getMisspelledWordRange:getter_AddRefs(misspelledRange) inlineSpellChecker:getter_AddRefs(inlineChecker)];
-  if (!(misspelledRange && inlineChecker))
-    return;
+  #define ENSURE_TRUE(x) if (!x) return;
 
-  // a node and offset are used to replace the word.
   // it's unfortunate that we have to re-fetch this stuff since we just did it
   // when buliding the context menu, but we don't really have any convenient place
   // to stash it where we can guarantee it will get cleaned up when the menu goes
   // away.
-  nsCOMPtr<nsIDOMNode> endNode;
-  PRInt32 endOffset = 0;
-  misspelledRange->GetEndContainer(getter_AddRefs(endNode));
-  misspelledRange->GetEndOffset(&endOffset);
+  nsCOMPtr<nsIEditor> editor;
+  [self currentEditor:getter_AddRefs(editor)];
+  ENSURE_TRUE(editor);
+
+  nsCOMPtr<nsIInlineSpellChecker> inlineChecker;
+  editor->GetInlineSpellChecker(getter_AddRefs(inlineChecker));
+  ENSURE_TRUE(inlineChecker);
+  nsCOMPtr<nsIDOMNode> anchorNode;
+  PRInt32 anchorOffset = 0;
+  GeckoUtils::GetAnchorNodeFromSelection(editor, getter_AddRefs(anchorNode), &anchorOffset);
+  // once again, we shift the anchor off the beginning of the word to make the spelling system happy
+  ++anchorOffset;
+
   nsString newWord;
   [[inSender title] assignTo_nsAString:newWord];
-  inlineChecker->ReplaceWord(endNode, endOffset, newWord);
-}
+  inlineChecker->ReplaceWord(anchorNode, anchorOffset, newWord);
 
-//
-// -ignoreWord:
-//
-// Context menu action for ignoring a misspelled word in a text field.
-// Ignores during the active editing session only.
-//
-- (IBAction)ignoreWord:(id)inSender
-{
-  nsCOMPtr<nsIDOMRange> misspelledRange;
-  nsCOMPtr<nsIInlineSpellChecker> inlineChecker;
-  [self getMisspelledWordRange:getter_AddRefs(misspelledRange) inlineSpellChecker:getter_AddRefs(inlineChecker)];
-  if (!(misspelledRange && inlineChecker))
-    return;
-
-  nsString misspelledWord;
-  misspelledRange->ToString(misspelledWord);
-  inlineChecker->IgnoreWord(misspelledWord);
-}
-
-//
-// -learnWord:
-//
-// Context menu action for adding a word to the spell checking dictionary.
-//
-// nsIInlineSpellChecker's AddWordToDictionary does not insert the learned
-// word into the shared system dictionary and instead remembers it using its
-// own personal dictionary. As an alternative, we use a currently undocumented
-// NSSpellChecker method |learnWord:| to achieve this functionality.
-//
-- (IBAction)learnWord:(id)inSender
-{
-  nsCOMPtr<nsIDOMRange> misspelledRange;
-  nsCOMPtr<nsIInlineSpellChecker> inlineChecker;
-  [self getMisspelledWordRange:getter_AddRefs(misspelledRange) inlineSpellChecker:getter_AddRefs(inlineChecker)];
-  if (!(misspelledRange && inlineChecker))
-    return;
-
-  nsString misspelledWord;
-  misspelledRange->ToString(misspelledWord);
-  [[NSSpellChecker sharedSpellChecker] learnWord:[NSString stringWith_nsAString:misspelledWord]];
-  // check the range again to remove the misspelled word indication
-  inlineChecker->SpellCheckRange(misspelledRange);
+  #undef ENSURE_TRUE
 }
 
 - (IBAction)openLinkInNewWindow:(id)aSender
@@ -4877,7 +4725,7 @@ enum BWCOpenDest {
     // kill any autocomplete that was in progress
     [mURLBar revertText];
     // set the text in the URL bar back to the current URL
-    [self updateLocationFields:[mBrowserView currentURI] ignoreTyping:YES];
+    [self updateLocationFields:[mBrowserView getCurrentURI] ignoreTyping:YES];
     
   // see if command-return came in the search field
   } else if ([mSearchBar isFirstResponder]) {

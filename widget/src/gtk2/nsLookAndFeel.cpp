@@ -500,10 +500,8 @@ nsLookAndFeel::InitColors()
     style = gtk_rc_get_style_by_paths(gtk_settings_get_default(),
                                       "gtk-tooltips", "GtkWindow",
                                       GTK_TYPE_WINDOW);
-    if (style) {
-        sInfoBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
-        sInfoText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
-    }
+    sInfoBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
+    sInfoText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
 
     // menu foreground & menu background
     GtkWidget *accel_label = gtk_accel_label_new("M");
@@ -521,20 +519,14 @@ nsLookAndFeel::InitColors()
     gtk_widget_realize(accel_label);
 
     style = gtk_widget_get_style(accel_label);
-    if (style) {
-        sMenuText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
-    }
+    sMenuText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
 
     style = gtk_widget_get_style(menu);
-    if (style) {
-        sMenuBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
-    }
+    sMenuBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
     
     style = gtk_widget_get_style(menuitem);
-    if (style) {
-        sMenuHover = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_PRELIGHT]);
-        sMenuHoverText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_PRELIGHT]);
-    }
+    sMenuHover = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_PRELIGHT]);
+    sMenuHoverText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_PRELIGHT]);
 
     gtk_widget_unref(menu);
 
@@ -556,18 +548,14 @@ nsLookAndFeel::InitColors()
     gtk_widget_realize(label);
 
     style = gtk_widget_get_style(label);
-    if (style) {
-        sButtonText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
-    }
+    sButtonText = GDK_COLOR_TO_NS_RGB(style->fg[GTK_STATE_NORMAL]);
 
     style = gtk_widget_get_style(button);
-    if (style) {
-        sButtonBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
-        sButtonOuterLightBorder =
-            GDK_COLOR_TO_NS_RGB(style->light[GTK_STATE_NORMAL]);
-        sButtonInnerDarkBorder =
-            GDK_COLOR_TO_NS_RGB(style->dark[GTK_STATE_NORMAL]);
-    }
+    sButtonBackground = GDK_COLOR_TO_NS_RGB(style->bg[GTK_STATE_NORMAL]);
+    sButtonOuterLightBorder =
+        GDK_COLOR_TO_NS_RGB(style->light[GTK_STATE_NORMAL]);
+    sButtonInnerDarkBorder =
+        GDK_COLOR_TO_NS_RGB(style->dark[GTK_STATE_NORMAL]);
 
     gtk_widget_destroy(window);
 }

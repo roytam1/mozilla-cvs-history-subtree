@@ -8,5 +8,3 @@
 
 !define FileMainEXE           "firefox.exe"
 !define WindowClass           "FirefoxMessageWindow"
-!define DDEApplication        "Firefox"
-!define AppRegName            "Firefox"

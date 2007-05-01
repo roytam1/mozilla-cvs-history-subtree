@@ -247,24 +247,17 @@ typedef struct JSWatchPoint {
     JSPropertyOp        setter;
     JSWatchPointHandler handler;
     void                *closure;
-    uintN               flags;
+    jsrefcount          nrefs;
 } JSWatchPoint;
 
-#define JSWP_LIVE       0x1             /* live because set and not cleared */
-#define JSWP_HELD       0x2             /* held while running handler/setter */
+#define HoldWatchPoint(wp) ((wp)->nrefs++)
 
 static JSBool
-DropWatchPoint(JSContext *cx, JSWatchPoint *wp, uintN flag)
+DropWatchPoint(JSContext *cx, JSWatchPoint *wp)
 {
-    JSBool ok;
     JSScopeProperty *sprop;
-    JSObject *pobj;
-    JSProperty *prop;
-    JSPropertyOp setter;
 
-    ok = JS_TRUE;
-    wp->flags &= ~flag;
-    if (wp->flags != 0)
+    if (--wp->nrefs != 0)
         return JS_TRUE;
 
     /*
@@ -273,38 +266,16 @@ DropWatchPoint(JSContext *cx, JSWatchPoint *wp, uintN flag)
      */
     JS_REMOVE_LINK(&wp->links);
     sprop = wp->sprop;
-
-    /*
-     * If js_ChangeNativePropertyAttrs fails, propagate failure after removing
-     * wp->closure's root and freeing wp.
-     */
-    setter = js_GetWatchedSetter(cx->runtime, NULL, sprop);
-    if (!setter) {
-        ok = js_LookupProperty(cx, wp->object, sprop->id, &pobj, &prop);
-
-        /*
-         * If the property wasn't found on wp->object or didn't exist, then
-         * someone else has dealt with this sprop, and we don't need to change
-         * the property attributes.
-         */
-        if (ok && prop) {
-            if (pobj == wp->object) {
-                JS_ASSERT(OBJ_SCOPE(pobj)->object == pobj);
-
-                sprop = js_ChangeScopePropertyAttrs(cx, OBJ_SCOPE(pobj), sprop,
-                                                    0, sprop->attrs,
-                                                    sprop->getter,
-                                                    wp->setter);
-                if (!sprop)
-                    ok = JS_FALSE;
-            }
-            OBJ_DROP_PROPERTY(cx, pobj, prop);
-        }
+    if (!js_GetWatchedSetter(cx->runtime, NULL, sprop)) {
+        sprop = js_ChangeNativePropertyAttrs(cx, wp->object, sprop,
+                                             0, sprop->attrs,
+                                             sprop->getter, wp->setter);
+        if (!sprop)
+            return JS_FALSE;
     }
-
     js_RemoveRoot(cx->runtime, &wp->closure);
     JS_free(cx, wp);
-    return ok;
+    return JS_TRUE;
 }
 
 void
@@ -378,10 +349,7 @@ js_watch_set(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
          wp != (JSWatchPoint *)&rt->watchPointList;
          wp = (JSWatchPoint *)wp->links.next) {
         sprop = wp->sprop;
-        if (wp->object == obj && SPROP_USERID(sprop) == id &&
-            !(wp->flags & JSWP_HELD)) {
-            wp->flags |= JSWP_HELD;
-
+        if (wp->object == obj && SPROP_USERID(sprop) == id) {
             JS_LOCK_OBJ(cx, obj);
             propid = ID_TO_VALUE(sprop->id);
             userid = (sprop->flags & SPROP_HAS_SHORTID)
@@ -389,11 +357,10 @@ js_watch_set(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
                      : propid;
             scope = OBJ_SCOPE(obj);
             JS_UNLOCK_OBJ(cx, obj);
-
-            /* NB: wp is held, so we can safely dereference it still. */
+            HoldWatchPoint(wp);
             ok = wp->handler(cx, obj, propid,
                              SPROP_HAS_VALID_SLOT(sprop, scope)
-                             ? OBJ_GET_SLOT(cx, obj, sprop->slot)
+                             ? OBJ_GET_SLOT(cx, obj, wp->sprop->slot)
                              : JSVAL_VOID,
                              vp, wp->closure);
             if (ok) {
@@ -438,7 +405,7 @@ js_watch_set(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
                 } else {
                     argv = JS_malloc(cx, nslots * sizeof(jsval));
                     if (!argv) {
-                        DropWatchPoint(cx, wp, JSWP_HELD);
+                        DropWatchPoint(cx, wp);
                         return JS_FALSE;
                     }
                 }
@@ -469,10 +436,11 @@ js_watch_set(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
                 if (argv != smallv)
                     JS_free(cx, argv);
             }
-            return DropWatchPoint(cx, wp, JSWP_HELD) && ok;
+            return DropWatchPoint(cx, wp) && ok;
         }
     }
-    return JS_TRUE;
+    JS_ASSERT(0);       /* XXX can't happen */
+    return JS_FALSE;
 }
 
 JSBool JS_DLL_CALLBACK
@@ -627,26 +595,21 @@ JS_SetWatchPoint(JSContext *cx, JSObject *obj, jsval id,
         wp->object = obj;
         JS_ASSERT(sprop->setter != js_watch_set || pobj != obj);
         wp->setter = sprop->setter;
-        wp->flags = JSWP_LIVE;
+        wp->nrefs = 1;
 
         /* XXXbe nest in obj lock here */
         sprop = js_ChangeNativePropertyAttrs(cx, obj, sprop, 0, sprop->attrs,
                                              sprop->getter, watcher);
         if (!sprop) {
-            /* Self-link so DropWatchPoint can JS_REMOVE_LINK it. */
+            /* Self-link wp->links so DropWatchPoint can JS_REMOVE_LINK it. */
             JS_INIT_CLIST(&wp->links);
-            DropWatchPoint(cx, wp, JSWP_LIVE);
+            DropWatchPoint(cx, wp);
             ok = JS_FALSE;
             goto out;
         }
         wp->sprop = sprop;
 
-        /*
-         * Now that wp is fully initialized, append it to rt's wp list.
-         * Because obj is locked we know that no other thread could have added
-         * a watchpoint for (obj, propid).
-         */
-        JS_ASSERT(!FindWatchPoint(rt, OBJ_SCOPE(obj), propid));
+        /* Now that wp is fully initialized, append it to rt's wp list. */
         JS_APPEND_LINK(&wp->links, &rt->watchPointList);
     }
     wp->handler = handler;
@@ -673,7 +636,7 @@ JS_ClearWatchPoint(JSContext *cx, JSObject *obj, jsval id,
                 *handlerp = wp->handler;
             if (closurep)
                 *closurep = wp->closure;
-            return DropWatchPoint(cx, wp, JSWP_LIVE);
+            return DropWatchPoint(cx, wp);
         }
     }
     if (handlerp)
@@ -694,7 +657,7 @@ JS_ClearWatchPointsForObject(JSContext *cx, JSObject *obj)
          wp != (JSWatchPoint *)&rt->watchPointList;
          wp = next) {
         next = (JSWatchPoint *)wp->links.next;
-        if (wp->object == obj && !DropWatchPoint(cx, wp, JSWP_LIVE))
+        if (wp->object == obj && !DropWatchPoint(cx, wp))
             return JS_FALSE;
     }
     return JS_TRUE;
@@ -711,7 +674,7 @@ JS_ClearAllWatchPoints(JSContext *cx)
          wp != (JSWatchPoint *)&rt->watchPointList;
          wp = next) {
         next = (JSWatchPoint *)wp->links.next;
-        if (!DropWatchPoint(cx, wp, JSWP_LIVE))
+        if (!DropWatchPoint(cx, wp))
             return JS_FALSE;
     }
     return JS_TRUE;

@@ -20,8 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Doug Turner - dougt@meer.net
- *   Marcio Galli - mgalli@geckonnection.com
+ *   Marcio S. Galli - mgalli@geckonnection.com
  * 
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -81,7 +80,6 @@ const NS_BINDING_ABORTED = 0x804b0002;
  */
 var gkeyBoardService = null;
 var gKeyBoardToggle = true;
-var gBackGroundColor = "#dddddd";
 
 var gTextSize = null;
 var gPanMode = null;
@@ -170,9 +168,8 @@ nsBrowserStatusHandler.prototype =
       if (aStateFlags & nsIWebProgressListener.STATE_START)
       {
         // disable and hides the nav-menu-button; and enables unhide the stop button
-
-        document.getElementById("nav-stopreload").className="stop-button";
-        document.getElementById("nav-stopreload").setAttribute("command","cmd_BrowserStop");
+        document.getElementById("nav-menu-button").className="stop-button";
+        document.getElementById("nav-menu-button").setAttribute("command","cmd_BrowserStop");
 
         document.getElementById("statusbar").hidden=false;
 
@@ -192,17 +189,16 @@ nsBrowserStatusHandler.prototype =
         document.getElementById("statusbar").hidden=true;
         document.getElementById("statusbar-text").label="";
 
-        // The background progress bar is currently disabled. 
-        //  document.styleSheets[1].cssRules[0].style.backgroundPosition=percentage+"px 100% ! important";
+        // gURLBarBoxObject width + 20 pixels.... so you cannot see it.         
+        document.getElementById("urlbar").inputField.style.backgroundPosition=gURLBarBoxObject.width+20+"px 100%";
         
         if (aRequest) {
             if (aWebProgress.DOMWindow == content) this.endDocumentLoad(aRequest, aStatus);
         }
 
-
         // disable and hides the nav-stop-button; and enables unhides the nav-menu-button button
-        document.getElementById("nav-stopreload").className="reload-button";
-        document.getElementById("nav-stopreload").setAttribute("command","cmd_BrowserReload");
+        document.getElementById("nav-menu-button").className="nav-button";
+        document.getElementById("nav-menu-button").setAttribute("command","cmd_BrowserNavMenu");
 
         return;
       }
@@ -242,10 +238,7 @@ nsBrowserStatusHandler.prototype =
 
     var percentage = parseInt((aCurTotalProgress/aMaxTotalProgress)*parseInt(gURLBarBoxObject.width));
     if(percentage<0) percentage=10;
-
-   // The background progress bar is currently disabled. 
-   // document.styleSheets[1].cssRules[0].style.backgroundPosition=percentage+" 0! important";
-
+    document.getElementById("urlbar").inputField.style.backgroundPosition=percentage+"px 100%";
   },
   onLocationChange : function(aWebProgress, aRequest, aLocation)
   {
@@ -307,20 +300,24 @@ nsBrowserStatusHandler.prototype =
     
     switch (aState) {
     case nsIWebProgressListener.STATE_IS_SECURE | nsIWebProgressListener.STATE_SECURE_HIGH:
-  
-    document.getElementById("nav-lock").className="security-notbroken";
+    //this.urlBar.value="level high";
+    document.styleSheets[1].cssRules[0].style.backgroundColor="yellow";
+    document.getElementById("lock-icon").className="security-notbroken";
     break;	
     case nsIWebProgressListener.STATE_IS_SECURE | nsIWebProgressListener.STATE_SECURE_LOW:
     // this.urlBar.value="level low";
-    document.getElementById("nav-lock").className="security-notbroken";
+    document.styleSheets[1].cssRules[0].style.backgroundColor="lightyellow";
+    document.getElementById("lock-icon").className="security-notbroken";
     break;
     case nsIWebProgressListener.STATE_IS_BROKEN:
     //this.urlBar.value="level broken";
-    document.getElementById("nav-lock").className="security-broken";
+    document.styleSheets[1].cssRules[0].style.backgroundColor="lightred";
+    document.getElementById("lock-icon").className="security-broken";
     break;
     case nsIWebProgressListener.STATE_IS_INSECURE:
     default:
-    document.getElementById("nav-lock").className="security-na";
+    document.styleSheets[1].cssRules[0].style.backgroundColor="white";
+    document.getElementById("lock-icon").className="security-na";
     break;
     }   
   },
@@ -351,6 +348,8 @@ nsBrowserStatusHandler.prototype =
   
 function MiniNavStartup()
 {
+
+  // Chris suggestion - defaults to the homebase in startup time. 
   var homepage = "chrome://minimo/content/bookmarks/bmview.xhtml";
   var homepages = null; 
     
@@ -403,11 +402,6 @@ function MiniNavStartup()
       } 
       catch(e) {page=null;}
 
-      try {
-        gBackGroundColor = gPref.getCharPref("ui.chromebackgroundcolor");
-      } 
-      catch(e) {gBackGroundColor="#eeeeee";}
-
       if (page == null)
         page = gPref.getCharPref("browser.startup.homepage");
 
@@ -426,10 +420,6 @@ function MiniNavStartup()
     onErrorHandler("Error trying to startup browser.  Please report this as a bug:\n" + e);
   }
 
-  /* 
-   * 
-   */
-
   var reg = Components.manager.QueryInterface(nsIComponentRegistrar);
   reg.registerFactory(Components.ID("{fe4d6bd5-e4cd-45f9-95bd-1e1796d2c7f7}"),
                        "Minimo Transfer Item",
@@ -437,27 +427,9 @@ function MiniNavStartup()
                        new TransferItemFactory());
 
   if(homepages) {
-    /* 
-     * We need to review this
-     * Now we have the concept of the Homebase as a possible location. We need to 
-     * check the store of Homepage custom vs Homepage multiple vs Homebase
-     */
-
     gBrowser.loadTabs(homepages,true,true); // force load in background.
-
   } else {
-
-    /* Because this is the very first time we load a Content, we need to register 
-       the URI through our singleton BrowserChrome services. This happens because 
-       we want chrome:// uris to be registered and associated with tabs to avoid 
-       multiple instantes of a Chrome tab */
-
-	loadURI(homepage);
-
-    if(homepage.indexOf("chrome")==0) {
-      /* We only do this Tab Memorize effect for chrome urls */
-      BrowserChromeRegisterTab(homepage,gBrowser.selectedTab);
-    }
+    loadURI(homepage);
   }
 
   try { 
@@ -481,10 +453,7 @@ function MiniNavStartup()
    * We save the inputField (anonymous node within textbox urlbar) BoxObject, so we can measure its width 
    * on progress load
    */
-
-  /* CHECK THIS - We need to think in other approach to have the Progress bar. */
-  
-  gURLBarBoxObject=(document.getBoxObjectFor(document.getElementById("nav-bar")));  
+  gURLBarBoxObject=(document.getBoxObjectFor(document.getElementById("urlbar").inputField));  
 
   /*
    * Local bundle repository
@@ -513,7 +482,7 @@ function MiniNavStartup()
   try {
 	gKeyboardService = Components.classes["@mozilla.org/softkbservice/service;1"]
                                  .getService(nsISoftKeyBoard);
-  } catch (i) { onErrorHandler(i) }
+  } catch (i) { }
 
   /*
    * Add an observer to deal with the OS Soft keyboard 
@@ -541,10 +510,8 @@ function MiniNavStartup()
           keyboardHeight = parseInt(b.value-t.value);
           keyboardLeft =parseInt(l.value);
           keyboardRight=parseInt(r.value);
-          document.getElementById("keyboardHolder").style.height=keyboardHeight +"px";
-
-          document.getElementById("keyboardContainer").style.height=keyboardHeight +"px";
-
+          document.getElementById("keyboardHolder").style.height=keyboardHeight +"px";
+          document.getElementById("keyboardContainer").style.height=keyboardHeight +"px";
                 
           var gKeyboardXULBox = document.getBoxObjectFor(document.getElementById("keyboardHolder"));
 
@@ -610,13 +577,16 @@ function MiniNavStartup()
     }
   };
      
+  
   try {
     var os = Components.classes["@mozilla.org/observer-service;1"]
                        .getService(nsIObserverService);
     os.addObserver(keyboardObserver,"software-keyboard", false);
+
     os.addObserver(minimoAppObserver,"open-url", false);
     os.addObserver(minimoAppObserver,"add-bm", false);
     os.addObserver(minimoAppObserver,"low-mem", false);
+
     os.addObserver(minimoAppObserver,"softkey", false);
 
   } catch(ignore) { }
@@ -662,128 +632,7 @@ function MiniNavStartup()
 
   BrowserInitializeTextSizeValue();
  
- /* 
-  * We get the visibility mask for the control bar 
-  * and apply to it in the XUL
-  */
-
-  syncControlBar();
-
-  BrowserChromeThemeColorSync(gBackGroundColor);
-
- /* 
-  * Hack to Debug the soft keybord emulation in the desktop 
-  */ 
-
-  //document.addEventListener("keydown",debug_test_f10,true);
-
-
-  /* 
-   * We watch closing tabs.. so that we know how to keep some of them 
-   */
-
-   gBrowser.addEventListener("TabClose", BrowserClosingTabs, true);
-   
-   
-  /*
-   * We kick the update service check after 3 minutes..
-   */
-  setTimeout("BrowserUpdateServiceCheck()",180000);
-  
-  
 }
-
-function BrowserUpdateServiceCheck() {
- 
- // URLs we have with the previous services..
- // http://www.meer.net/dougt/minimo_ce/start/update.cgi
- // http://www.mozilla.org/projects/minimo/update/latest-update.xhtml
- 
- try {
-	 var req = new XMLHttpRequest();
-	 req.open('GET', 'http://www.meer.net/dougt/minimo_ce/start/updateXML.cgi', true);
-	 req.onreadystatechange = function (aEvt) {
-	  if (req.readyState == 4) {
-	     if(req.status == 200) {
-	    	var docXml = req.responseXML;
-	    	var searchingElements = docXml.getElementsByTagName("update");
-	   		var updateCommand = null;
-	    		
-	   		for(var i=0;i<searchingElements.length;i++) {
-	   			updateCommand = searchingElements[i];
-			}
-				
-			if(updateCommand) {
-				var targetURL = updateCommand.getAttribute("target");
-				if (targetURL) {
-					BrowserOpenURLasTab(targetURL);		
-				}		
-			}			
-	     }
-	     else {
-	     	// failed somehow...
-	     } 
-	  }
-	 };
-	 req.send(null); 
- } catch (i) {
-   // failed somehow...
- }
- 
-}
-
-
-function debug_test_f10(e) {
-
- 	if(e.keyCode==KeyEvent.DOM_VK_F10) {
-
-		// marcio 20000 
-
-		spinCycle();
-
-      } 
-
-}
-
-
-function syncControlBar(fullList) {
-
- /* 
-  * Custom Toolbar 
-  * so far we have this check here in JS,. The ui.controlbar pref has a list of   
-  * ids that should be visible
-  */ 
-
-  try { 
-	var listItems = fullList.split(";");
-	for(var i=0;i<listItems.length;i++) {
-        try {			
-          var elementName =listItems[i]; 
-          if(document.getElementById(elementName)) {
-            document.getElementById(elementName).setAttribute("hidden","true");
-          }
-        } catch (i) { onErrorHandler(i) } 
-	}
-  } catch (e) {
-  }
-  
-
-  try { 
-    visibleToolbarItemsList = gPref.getCharPref("ui.controlbar");
-	var listItems = visibleToolbarItemsList.split(";");
-	for(var i=0;i<listItems.length;i++) {
-        try {			
-          var elementName =listItems[i]; 
-          if(document.getElementById(elementName)) {
-            document.getElementById(elementName).setAttribute("hidden","false");
-          }
-        } catch (i) { onErrorHandler(i) } 
-	}
-  } catch (e) {
-  }
-
-}
-
 
 function setScreenUpTimeout() {
 
@@ -802,6 +651,7 @@ function setScreenUpTimeout() {
 function PopupAutoCompleteShowPop(t1,t2,t3,t4,t5,t6) {
   document.getElementById("PopupAutoComplete").StoredShowPopup(t1,-1,-1,t4,"topleft","bottomleft");
 }
+
 
 /* 
  * UTILs to the keyboard / XUL interaction 
@@ -840,6 +690,7 @@ function getPosY(refElement) {
   
   return calcTop ;
 }
+
 
 /* 
  * XUL > Menu > Tabs > Creates menuitems for each tab. 
@@ -933,68 +784,46 @@ function BrowserLinkAdded(event) {
         //				feedButton.setAttribute("tooltiptext", gNavigatorBundle.getString("feedHasFeeds"));	
         document.getElementById("feed-button-menu").setAttribute("onpopupshowing","DoBrowserRSS('"+ehref+"')");
       }
-
-      var feedToolbarButton = document.getElementById("nav-rss");
-	if(	feedToolbarButton ) {
-
-		feedToolbarButton.collapsed=false;
-		feedToolbarButton.setAttribute("oncommand","DoBrowserRSS('"+ehref+"')");
-	}
-    } 
-
+    }
   }
 }
 
 function BrowserUpdateFeeds() {
   var feedButton = document.getElementById("feed-button");
-  var feedToolbarButton = document.getElementById("nav-rss");
-
   if (!feedButton)
-    return;
-
-  if (!feedToolbarButton)
     return;
   
   var feeds = gBrowser.mCurrentBrowser.feeds;
   
   if (!feeds || feeds.length == 0) {
-
     if (feedButton.hasAttribute("feeds")) feedButton.removeAttribute("feeds");
-
-    feedToolbarButton.collapsed=true;
-    feedToolbarButton.setAttribute("oncommand","");
-
+    //		feedButton.setAttribute("tooltiptext",  gNavigatorBundle.getString("feedNoFeeds"));
   } else {
-
     feedButton.setAttribute("feeds", "true");
     document.getElementById("feed-button-menu").setAttribute("onpopupshowing","DoBrowserRSS('"+feeds[0].href+"')");
     
-    feedToolbarButton.collapsed=false;
-    feedToolbarButton.setAttribute("oncommand","DoBrowserRSS('"+feeds[0].href+"')");
-
+    //		feedButton.setAttribute("tooltiptext", gNavigatorBundle.getString("feedHasFeeds"));
   }
 }
 
 /* 
  * For now, this updates via DOM the top menu. Context menu should be here as well. 
  */
-
 function BrowserUpdateBackForwardState() {
-
   if(gBrowser.webNavigation.canGoBack) {
     document.getElementById("command_back").hidden = false;
-    document.getElementById("nav-back").className="";
+    document.getElementById("item-back").hidden = false;
   } else {
     document.getElementById("command_back").hidden = true;
-    document.getElementById("nav-back").className="unactive";
+    document.getElementById("item-back").hidden = true;
   }
         
   if(gBrowser.webNavigation.canGoForward) {
     document.getElementById("command_forward").hidden = false;
-    document.getElementById("nav-forward").className="";
+    document.getElementById("item-forward").hidden = false;
   } else {
     document.getElementById("command_forward").hidden = true;
-    document.getElementById("nav-forward").className="unactive";
+    document.getElementById("item-forward").hidden = true;
   }
 }
 
@@ -1063,7 +892,6 @@ function BrowserHome()
   }
 
   loadURI(homepage);
-
 }
 
 function BrowserBack()
@@ -1088,7 +916,6 @@ function BrowserReload()
 
 /* 
  * Combine the two following functions in one
-
  */
 function BrowserOpenTab()
 {
@@ -1104,19 +931,7 @@ function BrowserOpenTab()
 
 function BrowserCloseTab()
 {
-
   gBrowser.removeCurrentTab();
-
-}
-
-/* 
- * This function is called always when tbabrowser tries to close a tab ..
- */ 
-
-function BrowserClosingTabs(e) {
-
-	BrowserChromeUnregisterTab(e.originalTarget);
-
 }
 
 /* 
@@ -1199,6 +1014,8 @@ function BrowserViewDeckDefault() {
   BrowserSetDeck(0,document.getElementById("command_ViewDeckDefault"));
 }
 
+
+
 /**
  * Has to go through some other approach like a XML-based rule system. 
  * Those are constraints conditions and action. 
@@ -1210,6 +1027,7 @@ function BrowserViewSearch() {
 	document.getElementById("command_ViewSearch").setAttribute("checked","false");
   }
 }
+
 
 /**
  * Has to go through some other approach like a XML-based rule system. 
@@ -1227,32 +1045,26 @@ function BrowserViewFind() {
   }
 }
 
-/* 
- * The new URLBar is a separated toolbar. Actually we have moved and created 
- * a new URLBAR option in the bookmarks/homebase. This is here because some users
- * may want to have an URLBar simultaneous experience 
- */
-
-function BrowserViewURLBar() {
-  document.getElementById("toolbar-urlbar").collapsed=!document.getElementById("toolbar-urlbar").collapsed;
-  if(document.getElementById("toolbar-urlbar").collapsed) {
-  }
-  else
-  {
-    document.getElementById("urlbar").focus();
-  }
-}
-
 /** 
  * urlbar indentity, style, progress indicator.
  **/ 
 function urlbar() {
 }
 
+
+/* Reset the text size */ 
+function BrowserResetZoomPlus() {
+  gBrowser.selectedBrowser.markupDocumentViewer.textZoom+= .1;
+}
+
+function BrowserResetZoomMinus() {
+  gBrowser.selectedBrowser.markupDocumentViewer.textZoom-= .1;
+}
+
+
 /* 
  * Text Size functions - works accross all the Tabs 
  */
-
 function BrowserResetZoomPlus() {
   gTextSize+= .1;
   BrowsersZoomUpdate();
@@ -1274,6 +1086,38 @@ function BrowserInitializeTextSizeValue() {
   gTextSize = gBrowser.selectedBrowser.markupDocumentViewer.textZoom;
 }
 
+/* 
+ * End of text size operations
+ */
+ 
+function Menu2PopupShowing() {
+
+}
+
+
+function MenuMainPopupShowing () {
+
+   try {
+    var hasTabs = (gBrowser.tabContainer.childNodes.length > 1);
+    document.getElementById("command_BrowserCloseTab").hidden=!hasTabs;
+    document.getElementById("command_TabFocus").hidden=!hasTabs;
+  }
+  catch(ex) { onErrorHandler(ex); }
+}
+
+function MenuNavPopupShowing () {
+
+  /*  
+  command_back
+  command_forward
+  command_go
+  command_reload
+  
+    
+  command_stop
+  */
+
+}
 
 function isContentFrame(aFocusedWindow)
 {
@@ -1378,12 +1222,11 @@ function BrowserBookmarkThis() {
 }
 
 function BrowserBookmark() {
-
-	/* Now we use the Chrome Open because we want to reuse tabs  instead
-         openning new ones */
-
-	BrowserChromeOpen("chrome://minimo/content/bookmarks/bmview.xhtml");
-
+  try {  
+    gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/bookmarks/bmview.xhtml');   
+    browserInit(gBrowser.selectedTab);
+  } catch (e) {
+  }  
 }
 
 /* Toolbar specific code - to be removed from here */ 
@@ -1393,7 +1236,7 @@ function DoBrowserSearch() {
   try { 
     var vQuery=document.getElementById("toolbar-search-tag").value;
     if(vQuery!="") {
-      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/m/search?uipref=3&mrestrict=xhtml&q='+vQuery);
+      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/xhtml?q='+vQuery+'&hl=en&lr=&safe=off&btnG=Search&site=search&mrestrict=xhtml');
       browserInit(gBrowser.selectedTab);
     }
   } catch (e) {
@@ -1401,18 +1244,21 @@ function DoBrowserSearch() {
   }  
 }
 
+
 /*
  * New preferences launches it in the tab 
  */
 
 function DoBrowserPreferences() {
   
-	/* Now we use the Chrome Open because we want to reuse tabs  instead
-     * openning new ones. 
-     * WARNING: We need to check the case where we close the preferences panel.
-     */
-	BrowserChromeOpen("chrome://minimo/content/preferences/preferences.xul#general");
+  try { 
+    gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/preferences/preferences.xul#general');    
+    browserInit(gBrowser.selectedTab);
+  } catch (e) {
+    
+  }  
 }
+
 
 /* 
  * Search extension to urlbar, deckmode.
@@ -1422,7 +1268,7 @@ function DoBrowserPreferences() {
 function DoBrowserSearchURLBAR(vQuery) {
   try { 
     if(vQuery!="") {
-      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/m/search?uipref=3&mrestrict=xhtml&q='+vQuery);
+      gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/xhtml?q='+vQuery+'&hl=en&lr=&safe=off&btnG=Search&site=search&mrestrict=xhtml');
       browserInit(gBrowser.selectedTab);
     }
   } catch (e) {
@@ -1432,23 +1278,35 @@ function DoBrowserSearchURLBAR(vQuery) {
 /* Toolbar specific code - to be removed from here */ 
 
 function DoBrowserRSS(sKey) {
+  
   if(!sKey) BrowserViewRSS(); // The toolbar is being used. Otherwise it is via the sb: trap protocol. 
+  
   try { 
+    
     if(sKey) {
       gRSSTag=sKey;
     } else if(document.getElementById("toolbar-rss-rsstag").value!="") {
       gRSSTag=document.getElementById("toolbar-rss-rsstag").value;
     }
+    
     gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/rssview/rssload.xhtml?url='+gRSSTag);
+    
     browserInit(gBrowser.selectedTab);
-  } catch (e) { }  
+  } catch (e) {
+    
+  }  
 }
 
 function DoBrowserGM(xmlRef) {
-  try {     
+  
+  try { 
+      
     gBrowser.selectedTab = gBrowser.addTab('chrome://minimo/content/moduleview/moduleload.xhtml?url='+xmlRef);
+    
     browserInit(gBrowser.selectedTab);
-  } catch (e) { }  
+  } catch (e) {
+    
+  }  
 }
 
 /* Toolbar specific code - to be removed from here */ 
@@ -1478,26 +1336,17 @@ function DoBrowserTarget(sKey) {
   var baseHandler=sKey.split(",");
 
   if(baseHandler[0]=="home") {
-
-     var baseURL="chrome://minimo/content/bookmarks/bmview.xhtml#";
-
+    var baseURL="chrome://minimo/content/bookmarks/bmview.xhtml#";
   }
-
   var baseURL="chrome://minimo/content/bookmarks/bmview.xhtml#";
-
   if(baseHandler[0]=="preferences") {
 	baseURL="chrome://minimo/content/preferences/preferences.xul#"
   } 
-  
   try { 
-	
     gBrowser.selectedTab = gBrowser.addTab(baseURL+baseHandler[1]);
     browserInit(gBrowser.selectedTab);
-
   } catch (e) {
-    
   }  
-
 }
 
 function DoBrowserGM(xmlRef) {
@@ -1563,6 +1412,8 @@ function DoTestSendCall(toCall) {
 }
 
 function DoGoogleToggle() {
+  // marcio
+  //google xhtml string call http://www.google.com/gwt/n?q=xml&site=mozilla_minimo&u=www.xml.com/
   
   var locationAddress="google.com";
 
@@ -1570,10 +1421,15 @@ function DoGoogleToggle() {
 	locationAddress=gURLBar.value.split("http://")[1];	
   }
 
-  try {  
+  try { 
+        
     gBrowser.selectedTab = gBrowser.addTab('http://www.google.com/gwt/n?q=xml&site=mozilla_minimo&u='+locationAddress);
+    
     browserInit(gBrowser.selectedTab);
-  } catch (e) {}  
+
+  } catch (e) {
+    
+  }  
 }
 
 function DoSSRToggle()
@@ -1619,6 +1475,9 @@ function DoToggleSoftwareKeyboard()
   
   spinSetnext(gKeySpinCurrent); 
 
+
+
+
   // During a page load, this key cause the page to stop
   // loading.  Probably should rename this function.
 
@@ -1643,7 +1502,7 @@ function DoToggleSoftwareKeyboard()
       else
         keyboard.show();
       
-        gKeyBoardToggle = !gKeyBoardToggle;
+      gKeyBoardToggle = !gKeyBoardToggle;
     }
     else {
       document.commandDispatcher.advanceFocus();
@@ -1686,7 +1545,7 @@ function DoFullScreen(fullscreen)
 }
 
 /* 
- * 
+   
  */
 function DoClipCopy()
 {
@@ -1807,18 +1666,14 @@ function URLBarEntered()
       try {
         var os = Components.classes["@mozilla.org/observer-service;1"]
           .getService(Components.interfaces.nsIObserverService);
-        var host = gURLBar.value;
+        var host = fixedUpURI.host;
         os.notifyObservers(null, "loading-domain", host);
       }
       catch(e) {onErrorHandler(e);}
 
     }
-
-    /* 
-     * Each new typed URL becomes a new Tab now 
-     */
-     
-    BrowserOpenURLasTab(gURLBar.value);
+    
+    loadURI(gURLBar.value);
 
     content.focus();
   }
@@ -1831,6 +1686,8 @@ function URLBarEntered()
 function PageProxyClickHandler(aEvent) {
   document.getElementById("urlbarModeSelector").showPopup(document.getElementById("proxy-deck"),-1,-1,"popup","bottomleft", "topleft");
 }
+
+
 
 /*
  * The URLBAR Deck mode selector 
@@ -1845,9 +1702,8 @@ function BrowserSetDeck(dMode,menuElement) {
   
 }
 
-/* 
- * ripped from browser.js, this should be shared in toolkit.
- */
+
+// ripped from browser.js, this should be shared in toolkit.
 function nsBrowserAccess()
 {
 }
@@ -2080,20 +1936,15 @@ function BrowserPanMouseHandlerDestroy(e) {
   }
 }
 
+
 function DoLeftSoftkeyWithModifier()
 {
-  document.getElementById("nav-menu-button").focus();
-  document.getElementById("menu_NavPopup").showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
-  gShowingMenuCurrent=document.getElementById("menu_NavPopup");
+  alert("DoLeftSoftkeyWithModifier");
 }
 
 function DoRightSoftkeyWithModifier()
 {
-
-  try { 
-  document.getElementById("contentAreaContextMenu").showPopup(document.commandDispatcher.focusedElement,-1,-1,"popup",'bottomleft', 'topleft');
-  } catch(i) { onErrorHandler(i) } 
-  
+  alert("DoRightSoftkeyWithModifier");
 }
 
 /*
@@ -2109,7 +1960,7 @@ function spinCycle() {
 
   gKeySpinCurrent.SpinOut();
   gKeySpinCurrent = gKeySpinCurrent.next;
-  setTimeout("gKeySpinCurrent.SpinIn()",20);
+  setTimeout("gKeySpinCurrent.SpinIn()",60);
 }
 
 /* 
@@ -2135,12 +1986,18 @@ function spinSetnext(ref) {
   
 }
 
-
 function spinCreate() {
 
-  /* 
-   * not in use with the new homebase 
-   */
+ var spinLeftMenu = { 
+    SpinIn:function () {
+      document.getElementById("menu-button").focus();
+      document.getElementById("menu_MainPopup").showPopup(document.getElementById("menu-button"),-1,-1,"popup","bottomleft", "topleft");
+      gShowingMenuCurrent=document.getElementById("menu_MainPopup");
+    }, 
+    SpinOut:function () {
+      document.getElementById("menu_MainPopup").hidePopup();
+    }
+  }
 
   var spinUrlBar = { 
     SpinIn:function () {
@@ -2167,18 +2024,6 @@ function spinCreate() {
     }
   }
 
-  /* 
-   * New homebase version uses it 
-   */
-
-  var spinToolbarButtons = { 
-    SpinIn:function () {
-      document.getElementById("nav-back").focus();
-    }, 
-    SpinOut:function () {
-    }
-  }
-
   var spinRightMenu = { 
     SpinIn:function () {
       document.getElementById("nav-menu-button").focus();
@@ -2187,45 +2032,6 @@ function spinCreate() {
     }, 
     SpinOut:function () {
       document.getElementById("menu_NavPopup").hidePopup();
-    }
-  }
-
-  /* 
-   * This reaches the actual content of the selected Tab 
-   */
-
-  var spinContent = { 
-
-    SpinIn:function () {
-
-      try { 
-        document.commandDispatcher.advanceFocusIntoSubtree(gBrowser.contentDocument.documentElement);
-      } catch(i) { onErrorHandler(i) } 
-
-    }, 
-    SpinOut:function () {
-
-    }
-  }
-
-  /* 
-   *  Reaches the tab level 
-   */
-
-  var spinTabs = { 
-
-    SpinIn:function () {
-
-
- 	 if(gBrowser.mPanelContainer.childNodes.length>1) {
-	  gBrowser.selectedTab.focus();
- 	 } else {
-		spinCycle();
-	 } 
-
-    }, 
-    SpinOut:function () {
-
     }
   }
 
@@ -2241,25 +2047,22 @@ function spinCreate() {
     }
   }
 
-
   gSpinTemp = {	
     SpinIn:function () { }, 
     SpinOut:function () { }
   }
 
-  gKeySpinCurrent = spinContent;
+  gKeySpinCurrent = spinRightMenu;
 
-// marcio 30000
+  spinLeftMenu.next=spinUrlBar;
+  spinUrlBar.next=spinRightMenu;
+  spinRightMenu.next=spinLeftMenu;
+  spinDocument.next=spinLeftMenu;   // this may show up in the middle. 
 
-  spinContent.next=spinToolbarButtons;
-  spinToolbarButtons.next=spinTabs;  
-  //spinRightMenu.next=spinTabs;  
-  spinTabs.next=spinContent;
-  gSpinLast=spinContent;
+  gSpinLast=spinRightMenu;
   gSpinDocument = spinDocument;
-  gSpinFirst=spinContent;
+  gSpinFirst=spinLeftMenu;
   gSpinUrl=spinUrlBar;
-
 
 }
 
@@ -2267,44 +2070,67 @@ function spinCreate() {
  * Menu Menu Controls
  */ 
 
-function BrowserNavMenuPopup() {
-
-   ref=document.getElementById("menu_NavPopup");
+function BrowserMenuPopup() {
+   ref=document.getElementById("menu_MainPopup");
 
    if(gShowingMenuCurrent==ref) {
-
 	gShowingMenuCurrent.hidePopup();
-
+	gShowingMenuCurrent=null;
    } else {
-
 	if(!gShowingMenuCurrent) {
 		gShowingMenuCurrent=ref;
 	} 
-
-      gShowingMenuCurrent.showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
-      document.getElementById("command_TabFocus").focus();
-      
+      gShowingMenuCurrent.showPopup(document.getElementById("menu-button"),-1,-1,"popup","bottomleft", "topleft");
    }
 }
-  
 
-function BrowserNavMenuRefresh() {
+function BrowserNavMenuPopup() {
+   ref=document.getElementById("menu_NavPopup");
 
-   try {
-    var hasTabs = (gBrowser.tabContainer.childNodes.length > 1);
-    document.getElementById("command_BrowserCloseTab").hidden=!hasTabs;
-    document.getElementById("command_TabFocus").hidden=!hasTabs;
-  }
-  catch(ex) { onErrorHandler(ex); }
-
+   if(gShowingMenuCurrent==ref) {
+	gShowingMenuCurrent.hidePopup();
+	gShowingMenuCurrent=null;
+   } else {
+	if(!gShowingMenuCurrent) {
+		gShowingMenuCurrent=ref;
+	} 
+      gShowingMenuCurrent.showPopup(document.getElementById("nav-menu-button"),-1,-1,"popup","bottomright", "topright");
+   }
 }
 
-function BrowserNavMenuHidden() {
-
-  gShowingMenuCurrent=null;
-
+function MenuMainPopupHiding() {
+	gShowingMenuCurrent=null;
 }
 
+function MenuNavPopupHiding() {
+	gShowingMenuCurrent=null;
+}
+
+function BrowserMenuPopupFalse() {
+  document.getElementById("menu_MainPopup").hidePopup();
+}
+
+/* 
+ * Ideally we want the XUL key assignements to work when popups are on.
+ * What we have here is a an alternate system to catch the SOFT KEYS so 
+ * when the popup is on, because XUL <key /> does not work, we enable 
+ * keydown listeners. And when the XUL menus are of the screen we 
+ * disable the listeners. 
+ * 
+ * Ref bugs: like https://bugzilla.mozilla.org/show_bug.cgi?id=55495 
+ */ 
+function MenuEnableEscapeKeys() {
+	// we remove the focus from the toolbar button to avoid a command_action (keyboard event) to 
+	// call the menu again. 
+
+	document.getElementById("menu_MainPopup").focus();
+    //	document.addEventListener("keydown",MenuHandleMenuEscape,true); 
+}
+
+function MenuDisableEscapeKeys() {
+  //  document.removeEventListener("keydown",MenuHandleMenuEscape,true); 
+
+}
 
 /*
  * File Open Functionality. For now we allow multiple selections and 
@@ -2351,77 +2177,3 @@ function BrowserFixUpURI(pageURI) {
   return fixedUpURI.spec;
 
 }
-
-/* 
- * Layout Theme System. This is the solution so that the general background color 
- * that is set via preferences->layout can affect the whole chrome panels.
- */
-
-var gBrowserChromeTabs = new Array();
-var gBrowserChromeThemeRules = new Array();
-
-function BrowserChromeThemeColorSync(value) {
-  document.styleSheets[1].cssRules[1].style.cssText="background-color:"+value;
-  for ( keyVar in gBrowserChromeThemeRules ) {
-    try {
-      gBrowserChromeThemeRules[keyVar].cssText="background-color:"+value;		
-    } catch (i) {} 
-  }
-}
-
-function BrowserChromeThemeColorSyncRaw(value) {
-  document.styleSheets[1].cssRules[1].style.cssText=value;
-  for ( keyVar in gBrowserChromeThemeRules ) {
-    try { 
-      gBrowserChromeThemeRules[keyVar].cssText=value;		
-    } catch (i) {
-    } 
-  }
-}
-
-function BrowserTellChromeThemeRules(refName,ruleReference) {
-  gBrowserChromeThemeRules[refName] = ruleReference;
-}
-
-function BrowserChromeThemeColorGet() {
-
-  // we need to normalize this function so it returns the color value only and not the 
-  // additional strings. For example the presence of the "! important" affects the apps. 
-  // 
-
-  gGlobalThemeValue = document.styleSheets[1].cssRules[1].style.cssText;
-  gGlobalThemeValue = gGlobalThemeValue.split(";")[0];
-  gGlobalThemeValue = gGlobalThemeValue.split("! important")[0];
-
-  return gGlobalThemeValue;
-}
-
-function BrowserChromeRegisterTab(URIvalue,tabReference) {
-  var newChromeApp = {
-    URIsrc:URIvalue,
-    tabReference:tabReference
-  } 
-  gBrowserChromeTabs[URIvalue] = newChromeApp;
-}
-
-function BrowserChromeUnregisterTab(tabReference) {
-
-  var uriToGo = gBrowser.getBrowserForTab(tabReference).currentURI.spec;
-
-  if(gBrowserChromeTabs[uriToGo]) {
-     gBrowserChromeTabs[uriToGo]=null;
-  } 
-}
-
-function BrowserChromeOpen(URIvalue) {
-  if(gBrowserChromeTabs[URIvalue]) {
-    gBrowser.selectedTab = gBrowserChromeTabs[URIvalue].tabReference;
-  } else {
-    try {  
-      gBrowser.selectedTab = gBrowser.addTab(URIvalue);   
-      browserInit(gBrowser.selectedTab);
-      BrowserChromeRegisterTab(URIvalue,gBrowser.selectedTab);
-    } catch (e) {}  
-  } 
-}
-

@@ -57,7 +57,7 @@
     "@mozilla.org/calendar/period;1"
 
 #define CAL_ICSSERVICE_CID \
-    { 0xae4ca6c3, 0x981b, 0x4f66, { 0xa0, 0xce, 0x2f, 0x2c, 0x21, 0x8a, 0xd9, 0xe3 } }
+    { 0xf2f65cf2, 0x880e, 0x4960, { 0xb3, 0x7b, 0xae, 0x02, 0x05, 0xb6, 0xe3, 0x42 } }
 #define CAL_ICSSERVICE_CONTRACTID \
     "@mozilla.org/calendar/ics-service;1"
 
@@ -96,6 +96,11 @@
     { 0x04027036, 0x5884, 0x4a30, { 0xb4, 0xaf, 0xf2, 0xca, 0xd7, 0x9f, 0x6e, 0xdf } }
 #define CAL_RECURRENCEINFO_CONTRACTID \
     "@mozilla.org/calendar/recurrence-info;1"
+
+#define CAL_ITIPITEM_CID \
+    { 0xb84de879, 0x4b85, 0x4d68, { 0x85, 0x50, 0xe0, 0xc5, 0x27, 0xe4, 0x6f, 0x98 } }
+#define CAL_ITIPITEM_CONTRACTID \
+    "@mozilla.org/calendar/itip-item;1"
 
 #define NS_ERROR_CALENDAR_WRONG_COMPONENT_TYPE		NS_ERROR_GENERATE_FAILURE(NS_ERROR_MODULE_CALENDAR, 1)
 // Until extensible xpconnect error mapping works

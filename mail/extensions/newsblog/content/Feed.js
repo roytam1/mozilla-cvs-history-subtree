@@ -248,11 +248,8 @@ Feed.prototype =
     return title;
   },
 
-  set title (aNewTitle)
+  set title (aNewTitle) 
   {
-    if (!aNewTitle)
-      return;
-
     var ds = getSubscriptionsDS(this.server);
     aNewTitle = rdf.GetLiteral(aNewTitle);
     var old_title = ds.GetTarget(this.resource, DC_TITLE, true);
@@ -321,9 +318,6 @@ Feed.prototype =
 
   set link (aNewLink)
   {
-    if (!aNewLink)
-      return;
-
     var ds = getSubscriptionsDS(this.server);
     aNewLink = rdf.GetLiteral(aNewLink);
     var old_link = ds.GetTarget(this.resource, RSS_LINK, true);

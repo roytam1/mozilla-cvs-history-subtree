@@ -71,16 +71,6 @@
 // such as showing the profile manager uI, this key will not be available.
 #define NS_APP_PROFILE_LOCAL_DIR_STARTUP "ProfLDS"
 
-/**
- * A directory service key which provides the update directory.
- * At present this is supported only on Windows.
- * Windows: Documents and Settings\<User>\Local Settings\Application Data\
- *          <Vendor>\<Application>\<relative path to app dir from Program Files>
- * If appDir is not under the Program Files, directory service will fail.
- * Callers should fallback to appDir.
- */
-#define XRE_UPDATE_ROOT_DIR "UpdRootD"
-
 class nsACString;
 struct nsXREAppData;
 struct nsStaticModuleInfo;
@@ -137,7 +127,7 @@ WriteConsoleLog();
 
 #ifdef XP_WIN
 BOOL
-WinLaunchChild(const char *exePath, int argc, char **argv, int needElevation);
+WinLaunchChild(const char *exePath, int argc, char **argv);
 #endif
 
 #define NS_NATIVEAPPSUPPORT_CONTRACTID "@mozilla.org/toolkit/native-app-support;1"

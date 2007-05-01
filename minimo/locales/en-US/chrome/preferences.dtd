@@ -1,7 +1,6 @@
 
 
 <!ENTITY advanced.label              "Advanced">
-<!ENTITY layout.label                "Layout">
 <!ENTITY privacy.label               "Privacy"> 
 <!ENTITY proxy.label                 "Proxy">
 <!ENTITY general.label               "General">
@@ -12,11 +11,6 @@
 <!-- Toolbar -->
 
 <!ENTITY closeWindow "C">
-
-<!-- Layout pane -->
-
-<!ENTITY layoutBackgroundColor.label        "Minimo Background Color">
-<!ENTITY layoutControlbar.label             "Customize Controlbar Elements">
 
 <!-- Privacy pane -->
 
@@ -36,12 +30,11 @@
 <!ENTITY dontAskForLaunch.label      "Always download to storage card when available">
 <!ENTITY setSaveDirectory.label      "Set Save Directory">
 
-<!-- General pane --> 
+<!-- Home pane --> 
 
 <!ENTITY homeCaption.label           "Home Page">
-<!ENTITY loadHomePageCurrent.label   "Current Tabs">
-<!ENTITY loadHomePageBlank.label     "Blank Page">
-<!ENTITY loadHomePageHomebase.label  "Homebase">
+<!ENTITY loadHomePageCurrent.label   "Use Current Pages">
+<!ENTITY loadHomePageBlank.label     "Use Blank Page">
 
 <!-- System Integration --> 
 

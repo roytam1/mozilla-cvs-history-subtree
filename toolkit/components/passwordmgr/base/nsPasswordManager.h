@@ -57,7 +57,6 @@ class nsIStringBundle;
 class nsIComponentManager;
 class nsIContent;
 class nsIDOMWindowInternal;
-class nsIForm;
 class nsIURI;
 class nsIDOMHTMLInputElement;
 class nsIAutoCompleteResult;
@@ -149,9 +148,7 @@ protected:
   nsresult FillDocument(nsIDOMDocument* aDomDoc);
   nsresult FillPassword(nsIDOMEvent* aEvent);
   void AttachToInput(nsIDOMHTMLInputElement* aElement);
-  static PRBool GetPasswordRealm(nsIURI* aURI, nsACString& aRealm);
-  
-  static nsresult GetActionRealm(nsIForm* aForm, nsCString& aURL);
+  PRBool GetPasswordRealm(nsIURI* aURI, nsACString& aRealm);
 
   static PLDHashOperator PR_CALLBACK FindEntryEnumerator(const nsACString& aKey,
                                                          SignonHashEntry* aEntry,

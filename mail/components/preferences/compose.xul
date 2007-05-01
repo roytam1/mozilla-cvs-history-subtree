@@ -74,7 +74,7 @@
       <preference id="ldap_2.autoComplete.directoryServer" name="ldap_2.autoComplete.directoryServer" type="string"/>
       <preference id="mail.collect_email_address_outgoing" name="mail.collect_email_address_outgoing" type="bool"/>
       <preference id="mail.collect_addressbook" name="mail.collect_addressbook" type="string"/>
-      <preference id="spellchecker.dictionary"  name="spellchecker.dictionary"   type="unichar"/>
+      <preference id="spellchecker.dictionary"  name="spellchecker.dictionary"   type="wstring"/>
       <preference id="msgcompose.font_face"      name="msgcompose.font_face" type="string"/>
       <preference id="msgcompose.font_size"      name="msgcompose.font_size" type="string"/>
       <preference id="msgcompose.text_color"     name="msgcompose.text_color" type="string"/>
@@ -228,7 +228,7 @@
 
             <hbox align="center" pack="start">
               <label value ="&languagePopup.label;" control="languageMenuList" accesskey="&languagePopup.accessKey;"/>
-              <menulist id="languageMenuList" preference="spellchecker.dictionary" flex="1">
+              <menulist id="languageMenuList" preference="spellchecker.dictionary">
                 <menupopup onpopupshowing="gComposePane.initLanguageMenu();">
                   <!-- dynamic content populated by JS -->
                 </menupopup>

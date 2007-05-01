@@ -51,11 +51,14 @@
 #include "nsIMsgMailSession.h"
 #include "nsMsgBaseCID.h"
 
+#ifdef MOZ_XUL_APP
+#include "nsIChromeRegistry.h"
 #include "nsMailDirServiceDefs.h"
 #include "nsDirectoryServiceUtils.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsISimpleEnumerator.h"
 #include "nsIDirectoryEnumerator.h"
+#endif
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFCompositeDataSourceCID, NS_RDFCOMPOSITEDATASOURCE_CID);
@@ -79,10 +82,47 @@ nsMsgServiceProviderService::Init()
   mInnerDataSource = do_CreateInstance(kRDFCompositeDataSourceCID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
+#ifdef MOZ_XUL_APP
   LoadISPFiles();
+#else
+  nsCOMPtr<nsIMsgMailSession> mailSession = do_GetService(NS_MSGMAILSESSION_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Get defaults directory for isp files. MailSession service appends 'isp' to the 
+  // the app defaults folder and returns it. Locale will be added to the path, if there is one.
+  nsCOMPtr<nsIFile> dataFilesDir;
+  rv = mailSession->GetDataFilesDir("isp", getter_AddRefs(dataFilesDir));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  // test if there is a locale provider
+  PRBool isexists = PR_FALSE;
+  rv = dataFilesDir->Exists(&isexists);
+  NS_ENSURE_SUCCESS(rv,rv);
+  if (isexists) {    
+    // now enumerate every file in the directory, and suck it into the datasource
+    PRBool hasMore = PR_FALSE;
+    nsCOMPtr<nsISimpleEnumerator> dirIterator;
+    rv = dataFilesDir->GetDirectoryEntries(getter_AddRefs(dirIterator));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIFile> dirEntry;
+
+    while ((rv = dirIterator->HasMoreElements(&hasMore)) == NS_OK && hasMore) {
+      rv = dirIterator->GetNext((nsISupports**)getter_AddRefs(dirEntry));
+      if (NS_FAILED(rv))
+        continue;
+
+      nsCAutoString urlSpec;
+      rv = NS_GetURLSpecFromFile(dirEntry, urlSpec);
+      rv = LoadDataSource(urlSpec.get());
+      NS_ASSERTION(NS_SUCCEEDED(rv), "Failed reading in the datasource\n");
+    }
+  }
+#endif
   return NS_OK;
 }
 
+#ifdef MOZ_XUL_APP
 /**
  * Looks for ISP configuration files in <.exe>\isp and any sub directories called isp
  * located in the user's extensions directory.
@@ -94,23 +134,54 @@ void nsMsgServiceProviderService::LoadISPFiles()
   if (NS_FAILED(rv))
     return;
 
-  // Walk through the list of isp directories
+  // get the current locale, we'll need this later on...don't bail out in the case of an error
+  nsCOMPtr<nsIXULChromeRegistry> packageRegistry = do_GetService("@mozilla.org/chrome/chrome-registry;1");
+  nsCAutoString localeName;
+  if (packageRegistry)
+    packageRegistry->GetSelectedLocale(NS_LITERAL_CSTRING("global"), localeName);
+
+  // First, process any isp files shipped by default in <location of exe>\isp
+  nsCOMPtr<nsIFile> ispDirectory;
+  rv = dirSvc->Get(NS_XPCOM_CURRENT_PROCESS_DIR,
+                   NS_GET_IID(nsIFile), getter_AddRefs(ispDirectory));
+  if (NS_SUCCEEDED(rv))
+  {
+    ispDirectory->AppendNative(NS_LITERAL_CSTRING("isp"));
+    LoadISPFilesFromDir(ispDirectory);
+    // also look in <location of exe>\isp\AB-CD
+    if (!localeName.IsEmpty())
+    {
+      ispDirectory->AppendNative(localeName);
+      LoadISPFilesFromDir(ispDirectory);
+    }
+  }
+
+  // Now walk through the extension directories
   nsCOMPtr<nsISimpleEnumerator> ispDirectories;
-  rv = dirSvc->Get(ISP_DIRECTORY_LIST,
+  rv = dirSvc->Get(ISP_SEARCH_DIRECTORY_LIST,
                    NS_GET_IID(nsISimpleEnumerator), getter_AddRefs(ispDirectories));
   if (NS_FAILED(rv))
     return;
 
   PRBool hasMore;
-  nsCOMPtr<nsIFile> ispDirectory;
-  while (NS_SUCCEEDED(ispDirectories->HasMoreElements(&hasMore)) && hasMore) 
-  {
+  while (NS_SUCCEEDED(ispDirectories->HasMoreElements(&hasMore)) && hasMore) {
     nsCOMPtr<nsISupports> elem;
     ispDirectories->GetNext(getter_AddRefs(elem));
 
     ispDirectory = do_QueryInterface(elem);
     if (ispDirectory)
+    {
       LoadISPFilesFromDir(ispDirectory);
+
+      // If we have a current locale, look in isp\ab-cd in case there are locale specific isp files.
+      nsCOMPtr<nsIFile> localeISPDir;
+      ispDirectory->Clone(getter_AddRefs(localeISPDir));
+      if (localeISPDir && !localeName.IsEmpty())
+      {
+        localeISPDir->AppendNative(localeName);
+        LoadISPFilesFromDir(localeISPDir);
+      }
+    }
   }
 }
 
@@ -150,6 +221,7 @@ void nsMsgServiceProviderService::LoadISPFilesFromDir(nsIFile* aDir)
       LoadDataSource(urlSpec.get());
   }
 }
+#endif
 
 nsresult
 nsMsgServiceProviderService::LoadDataSource(const char *aURI)

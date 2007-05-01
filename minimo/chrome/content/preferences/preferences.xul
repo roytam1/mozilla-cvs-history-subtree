@@ -44,7 +44,6 @@
 <?xml-stylesheet href="chrome://minimo/content/bindings/preferences.css" type="text/css"?> 
 
 <?xul-overlay href="chrome://minimo/content/preferences/pane-general.xul"?>
-<?xul-overlay href="chrome://minimo/content/preferences/pane-layout.xul"?>
 <?xul-overlay href="chrome://minimo/content/preferences/pane-advanced.xul"?>
 <?xul-overlay href="chrome://minimo/content/preferences/pane-privacy.xul"?>
 <?xul-overlay href="chrome://minimo/content/preferences/pane-connection.xul"?>
@@ -82,18 +81,12 @@
       <preferenceitem preftype="int"     id="network.proxy.http_port" name="networkProxyHTTP_Port" />
       <preferenceitem preftype="file"    id="browser.cache.disk.parent_directory" name="storeCacheStorageCard" />
       <preferenceitem preftype="bool"    id="browser.cache.disk.enable" name="useDiskCache" />
-<!--
       <preferenceitem preftype="bool"    id="network.prefetch-next" name="enablePreFetching" />
--->
       <preferenceitem preftype="int"     id="browser.cache.disk.capacity" name="cacheSizeField" />
       <preferenceitem preftype="file"    id="browser.download.dir" name="downloadDir" />
       <preferenceitem preftype="bool"    id="browser.download.progressDnlgDialog.dontAskForLaunch" name="dontAskForLaunch" />
-<!--
       <preferenceitem preftype="bool"    id="ui.fullscreen" name="setFullscreen" />
       <preferenceitem preftype="bool"    id="ui.homebar" name="setHomebar" />
--->
-      <preferenceitem preftype="string"  id="ui.controlbar" name="controlBarVisibleIds" />
-      <preferenceitem preftype="string"  id="ui.chromebackgroundcolor" name="uiChromeColor" />
       
   </preferenceset>
   
@@ -107,7 +100,6 @@
   <hbox class="pref-toolbar">
 		
     <button  oncommand="focusSkipToPanel()" onfocus="show('general-pane',this)"    id="general-button" />  
-    <button  oncommand="focusSkipToPanel()" onfocus="show('layout-pane',this)"     id="layout-button" />  
     <button  oncommand="focusSkipToPanel()" onfocus="show('advanced-pane',this)"   id="advanced-button" />  
     <button  oncommand="focusSkipToPanel()" onfocus="show('connection-pane',this)" id="connection-button"  />  
     <button  oncommand="focusSkipToPanel()" onfocus="show('privacy-pane',this)"    id="privacy-button"   />  
@@ -117,7 +109,7 @@
   
   <hbox style="height:6px" />
 
-    <scrollbox id="scroller"  onfocus="fixXULAutoScroll(event)"  style="overflow:-moz-scrollbars-vertical" flex="1">
+    <scrollbox id="scroller"  onfocus="fixXULAutoScroll(event)"  style="" flex="1">
        <hbox id="pref-panes" flex="1" >
 
 	 </hbox>

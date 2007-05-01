@@ -122,7 +122,6 @@
 
 #include "nsPIDOMWindow.h"
 #include "nsIFocusController.h"
-#include "nsIMenuParent.h"
 
 #include "nsIScrollableView.h"
 #include "nsIHTMLDocument.h"
@@ -1182,41 +1181,32 @@ DocumentViewerImpl::PageHide(PRBool aIsUnload)
     return NS_ERROR_NULL_POINTER;
   }
 
-  nsresult rv = NS_OK;
-
   mDocument->OnPageHide(!aIsUnload);
-  if (aIsUnload) {
-    // if Destroy() was called during OnPageHide(), mDocument is nsnull.
-    NS_ENSURE_STATE(mDocument);
+  if (!aIsUnload)
+    return NS_OK;
 
-    // First, get the script global object from the document...
-    nsIScriptGlobalObject *global = mDocument->GetScriptGlobalObject();
+  // if Destroy() was called during OnPageHide(), mDocument is nsnull.
+  NS_ENSURE_STATE(mDocument);
 
-    if (!global) {
-      // Fail if no ScriptGlobalObject is available...
-      NS_ERROR("nsIScriptGlobalObject not set for document!");
-      return NS_ERROR_NULL_POINTER;
-    }
+  // First, get the script global object from the document...
+  nsIScriptGlobalObject *global = mDocument->GetScriptGlobalObject();
 
-    // Now, fire an Unload event to the document...
-    nsEventStatus status = nsEventStatus_eIgnore;
-    nsEvent event(PR_TRUE, NS_PAGE_UNLOAD);
-
-    // Never permit popups from the unload handler, no matter how we get
-    // here.
-    nsAutoPopupStatePusher popupStatePusher(openAbused, PR_TRUE);
-
-    rv = global->HandleDOMEvent(mPresContext, &event, nsnull,
-                                NS_EVENT_FLAG_INIT, &status);
+  if (!global) {
+    // Fail if no ScriptGlobalObject is available...
+    NS_ERROR("nsIScriptGlobalObject not set for document!");
+    return NS_ERROR_NULL_POINTER;
   }
 
-  // look for open menupopups and close them after the unload event, in case
-  // the unload event listeners open any new popups
-  nsCOMPtr<nsIPresShell_MOZILLA_1_8_BRANCH> presShell18 = do_QueryInterface(mPresShell);
-  if (presShell18)
-    presShell18->HidePopups();
+  // Now, fire an Unload event to the document...
+  nsEventStatus status = nsEventStatus_eIgnore;
+  nsEvent event(PR_TRUE, NS_PAGE_UNLOAD);
 
-  return rv;
+  // Never permit popups from the unload handler, no matter how we get
+  // here.
+  nsAutoPopupStatePusher popupStatePusher(openAbused, PR_TRUE);
+
+  return global->HandleDOMEvent(mPresContext, &event, nsnull,
+                                NS_EVENT_FLAG_INIT, &status);
 }
 
 static void

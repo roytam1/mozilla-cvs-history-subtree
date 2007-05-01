@@ -43,14 +43,12 @@ import org.mozilla.xpcom.XPCOMInitializationException;
 
 public class MozillaImpl implements IMozilla {
 
-	public void initialize(File aLibXULDirectory)
-	throws XPCOMInitializationException {
-		JavaXPCOMMethods.registerJavaXPCOMMethods(aLibXULDirectory);
-		initializeNative();
-	}
+  public void initialize(File aLibXULDirectory)
+      throws XPCOMInitializationException {
+    JavaXPCOMMethods.registerJavaXPCOMMethods(aLibXULDirectory);
+    initializeNative();
+  }
 
-	private native void initializeNative();
-
-	public native long getNativeHandleFromAWT(Object widget);
+  private native void initializeNative();
 
 }

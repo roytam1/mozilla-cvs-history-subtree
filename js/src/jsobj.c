@@ -2440,7 +2440,7 @@ js_NewObject(JSContext *cx, JSClass *clasp, JSObject *proto, JSObject *parent)
 
 out:
     JS_POP_TEMP_ROOT(cx, &tvr);
-    cx->weakRoots.newborn[GCX_OBJECT] = (JSGCThing *) obj;
+    cx->newborn[GCX_OBJECT] = (JSGCThing *) obj;
     return obj;
 
 bad:
@@ -2667,7 +2667,7 @@ out:
     return obj;
 
 bad:
-    cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+    cx->newborn[GCX_OBJECT] = NULL;
     obj = NULL;
     goto out;
 }
@@ -3397,11 +3397,16 @@ js_NativeGet(JSContext *cx, JSObject *obj, JSObject *pobj,
     JS_ASSERT(scope->object == pobj);
 
     slot = sprop->slot;
-    *vp = (slot != SPROP_INVALID_SLOT)
-          ? LOCKED_OBJ_GET_SLOT(pobj, slot)
-          : JSVAL_VOID;
-    if (SPROP_HAS_STUB_GETTER(sprop))
-        return JS_TRUE;
+    if (slot != SPROP_INVALID_SLOT) {
+        *vp = LOCKED_OBJ_GET_SLOT(pobj, slot);
+
+        /* If sprop has a stub getter, we're done. */
+        if (SPROP_HAS_STUB_GETTER(sprop))
+            return JS_TRUE;
+    } else {
+        JS_ASSERT(!SPROP_HAS_STUB_GETTER(sprop));
+        *vp = JSVAL_VOID;
+    }
 
     sample = cx->runtime->propertyRemovals;
     JS_UNLOCK_SCOPE(cx, scope);
@@ -3445,13 +3450,7 @@ js_NativeSet(JSContext *cx, JSObject *obj, JSScopeProperty *sprop, jsval *vp)
         if (SPROP_HAS_STUB_SETTER(sprop))
             goto set_slot;
     } else {
-        /*
-         * Allow API consumers to create shared properties with stub setters.
-         * Such properties lack value storage, so setting them is like writing
-         * to /dev/null.
-         */
-        if (SPROP_HAS_STUB_SETTER(sprop))
-            return JS_TRUE;
+        JS_ASSERT(!SPROP_HAS_STUB_GETTER(sprop));
         pval = JSVAL_VOID;
     }
 
@@ -3648,10 +3647,7 @@ js_SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 
             /* Don't clone a shared prototype property. */
             if (attrs & JSPROP_SHARED) {
-                if (SPROP_HAS_STUB_SETTER(sprop) &&
-                    !(sprop->attrs & JSPROP_GETTER)) {
-                    return JS_TRUE;
-                }
+                JS_ASSERT(!SPROP_HAS_STUB_SETTER(sprop));
                 return SPROP_SET(cx, sprop, obj, pobj, vp);
             }
 
@@ -4437,7 +4433,7 @@ js_GetClassPrototype(JSContext *cx, JSObject *scope, jsid id,
              * instance that delegates to this object, or just query the
              * prototype for its class.
              */
-            cx->weakRoots.newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(v);
+            cx->newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(v);
         }
     }
     *protop = JSVAL_IS_OBJECT(v) ? JSVAL_TO_OBJECT(v) : NULL;

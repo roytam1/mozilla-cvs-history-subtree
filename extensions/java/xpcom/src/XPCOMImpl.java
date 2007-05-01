@@ -40,11 +40,10 @@ import java.io.File;
 
 import org.mozilla.xpcom.IAppFileLocProvider;
 import org.mozilla.xpcom.IXPCOM;
-
-import org.mozilla.interfaces.nsIComponentManager;
-import org.mozilla.interfaces.nsIComponentRegistrar;
-import org.mozilla.interfaces.nsILocalFile;
-import org.mozilla.interfaces.nsIServiceManager;
+import org.mozilla.xpcom.nsIComponentManager;
+import org.mozilla.xpcom.nsIComponentRegistrar;
+import org.mozilla.xpcom.nsILocalFile;
+import org.mozilla.xpcom.nsIServiceManager;
 
 
 public class XPCOMImpl implements IXPCOM {

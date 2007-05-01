@@ -141,7 +141,8 @@ static const nsModuleComponentInfo components[] =
   { "Browser Shell Service",
     NS_SHELLSERVICE_CID,
     NS_SHELLSERVICE_CONTRACTID,
-    nsWindowsShellServiceConstructor },
+    nsWindowsShellServiceConstructor,
+    nsWindowsShellService::Register },
 
 #elif defined(MOZ_WIDGET_GTK2)
   { "Browser Shell Service",

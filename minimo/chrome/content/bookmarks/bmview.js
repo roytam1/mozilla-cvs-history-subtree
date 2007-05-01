@@ -20,7 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Marcio S. Galli - mgalli@mgalli.com
+ *   Marcio S. Galli - mgalli@geckonnection.com
  * 
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,191 +36,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* 
- * URL Find Type in implementation
- */
-
-var gWin = null;
-var gURLBar = null;
-
-
-function URLBarEventCatch2(event) {
-
-   if(event.keyCode==KeyEvent.DOM_VK_DOWN) {
-	
-	document.commandDispatcher.advanceFocus();
-
-   }   
-
-}
-
-function URLBarEventCatch(event) {
-
-   var escapeToHistory = false; 
-
-   if(event.keyCode==KeyEvent.DOM_VK_RETURN) {
-	
-	URLBarEntered();
-
-   } 
-
-
-   if(event.keyCode==KeyEvent.DOM_VK_DOWN) {
-	
-	escapeToHistory = true;
-
-   } 
-
-   var currentURLBarString = document.getElementById("urlbar2").value;
-
-   var regExpFineString = currentURLBarString.replace(/\./g,"\.");
-
-   var historyItemsList = document.getElementsByTagName("history");
-
-   var regExp = new RegExp(currentURLBarString );
-
-   var historyFound = false; 
-
-   if(currentURLBarString!="") {
-
-
-   for(var i=0;i<historyItemsList.length;i++) {
-
-	var currentElement = historyItemsList[i];
-
-	var textValue = currentElement.getAttribute("value");
-
-	var plainValue = unescape(textValue);
-
-	var brother = currentElement.previousSibling;
-
-	if(textValue.match(regExp)) {
-		brother.style.display="block";
-
-		historyFound=true;	
-	
-	        if(escapeToHistory) {
-			brother.childNodes[1].focus(); escapeToHistory = false;
-		   }
-
-
-	} else {
-		brother.style.display="none";
-	} 
-   } 
-   
-   }
-  
-   if(historyFound) {
-
-		hbSelect("timehistory");
-
-   }	  else {
-		hbSelectAll();
-
-   }
-
-
-}
-
-/* 
- * This is called when the Hit Enter command goes on with the 
- * URLBAR field 
- */
-
-function URLBarEntered()
-{
-
-  gURLBar = document.getElementById("urlbar2");
-
-  try
-  {
-    if (!gURLBar)
-      return;
-    
-    var url = gURLBar.value;
-    if (gURLBar.value == "" || gURLBar.value == null)
-      return;
-    
-    /* Trap to SB 'protocol' */ 
-    
-    if(gURLBar.value.substring(0,3)=="sb:") {
-      gWin.DoBrowserSB(gURLBar.value.split("sb:")[1]);
-      return;
-    }
-
-    /* Trap to chrome targets 'target' */ 
-    
-    if(gURLBar.value.substring(0,3)=="go:") {
-      gWin.DoBrowserTarget(gURLBar.value.split("go:")[1]);
-      return;
-    }
-    
-    if(gURLBar.value.substring(0,4)=="rss:") {
-      gWin.DoBrowserRSS(gURLBar.value.split("rss:")[1]);
-      return;
-    }
-    
-    if(gURLBar.value.substring(0,3)=="gm:") {
-      gWin.DoBrowserGM(gURLBar.value.split("gm:")[1]);
-      return;
-    }
-    
-    /* Other normal cases */ 
-    
-    if (gURLBar.value.indexOf(" ") == -1)
-    {
-      gURLBar.value = gWin.BrowserFixUpURI(url);
-      
-      // Notify anyone interested that we are loading.
-
-      try {
-        var os = Components.classes["@mozilla.org/observer-service;1"]
-          .getService(Components.interfaces.nsIObserverService);
-        var host = gURLBar.value;
-        os.notifyObservers(null, "loading-domain", host);
-      }  catch(e) {gWin.onErrorHandler(e);}
-    }
-
-    gWin.BrowserOpenURLasTab(gURLBar.value);
-
-    return true;
-
-  }
-  catch(ex) {onErrorHandler(ex);}
- 
-}
-
-function SearchGoogle(vQuery) {
-  try { 
-    if(vQuery!="") {
-      gWin.gBrowser.selectedTab = gWin.gBrowser.addTab('http://www.google.com/xhtml?q='+vQuery+'&hl=en&lr=&safe=off&btnG=Search&site=search&mrestrict=xhtml');
-      gWin.browserInit(gBrowser.selectedTab);
-    }
-  } catch (e) {
-    
-  }  
-}
-
-/* 
- * This is called when the XSLT transformed document is alive. Search for blLoaded
- */
-
-function bmLoaded() {
-
-
-	document.getElementById("urlbar2").addEventListener("keydown",URLBarEventCatch,true);
-
-	//document.addEventListener("keypress",URLBarEventCatch2,true);
-
-	document.getElementById("urlbar2").focus();
-
-
-}
 
 /*
  * Homebase Application Implementation 
  */
+
 
 var hbArrayClasses = new Array();
 var hbArrayClassesFeedback= new Array();
@@ -237,18 +57,23 @@ hbArrayClassesFeedback["timehistory"]=7;
 hbArrayClassesFeedback["allFeedback"]=8;
 
 function hbSelect(refShow) {
+
 	for (var key in hbArrayClasses) {
 	    document.styleSheets[0].cssRules[hbArrayClasses[key]].style.display="none";
 	}
+
 	document.styleSheets[0].cssRules[hbArrayClasses[refShow]].style.display="block";
-    //hbFeedback(refShow);
+      hbFeedback(refShow);
+
 }
 
 function hbSelectAll() {
+
 	for (var key in hbArrayClasses) {
 	    document.styleSheets[0].cssRules[hbArrayClasses[key]].style.display="block";
 	}
-    //hbFeedback("allFeedback");
+      hbFeedback("allFeedback");
+
 }
 
 function hbFeedback(refShow) {
@@ -257,13 +82,15 @@ function hbFeedback(refShow) {
 	    document.styleSheets[0].cssRules[hbArrayClassesFeedback[key]].style.backgroundColor="transparent";
 	    document.styleSheets[0].cssRules[hbArrayClassesFeedback[key]].style.color="white";
 	}
+
 	document.styleSheets[0].cssRules[hbArrayClassesFeedback[refShow]].style.color="black";
 	document.styleSheets[0].cssRules[hbArrayClassesFeedback[refShow]].style.backgroundColor="white";
 
 }
 
 function hbOpenAsTab(ref) {
-  var win;
+
+   var win;
   var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
                      .getService(Components.interfaces.nsIWindowMediator);
   win = wm.getMostRecentWindow("navigator:browser");
@@ -276,14 +103,17 @@ function hbOpenAsTab(ref) {
     win.browserInit(gBrowser.selectedTab);
   } catch (e) {
   }  
+
   }
+
 }
 
 function bmInit(targetDoc, targetElement) {
 
-
   var gHomebaseElements = null; 
   var bookmarkStore=null;
+
+
 
   var win;
   var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
@@ -291,21 +121,11 @@ function bmInit(targetDoc, targetElement) {
   win = wm.getMostRecentWindow("navigator:browser");
   if(!win) win = window.opener; 
   if (win) {
-	
-	gWin = win;
 
 	gHomebaseElements = homebase_menuBuild(win);
 
   }
 
-  // This now is not using the solution to tip the main minimo window on its chrome background 
-  // color, because this is a panel so far with no background color. It's just white. We have to work this 
-  // better. Maybe these panels could simply inherit some sort of live style. 
-  // gWin.BrowserTellChromeThemeRules("homebase",document.styleSheets[0].cssRules[0].style);
-
-  /* 
-   * okay now the homebase / bookmarks starts...
-   */
 
   try {
         bookmarkStore=null;
@@ -313,6 +133,8 @@ function bmInit(targetDoc, targetElement) {
         bookmarkStore = gPref.getCharPref("browser.bookmark.store");
 
   } catch (ignore) {}
+
+
 
 	var myObserver = null;
 
@@ -323,45 +145,39 @@ function bmInit(targetDoc, targetElement) {
 	
 	  myObserver = {
 	      onSearchResult:function (q,w) { 
-            rr=w.QueryInterface(Components.interfaces.nsIAutoCompleteResult);
-            this.bookmarkStore="<bm>";
+	        rr=w.QueryInterface(Components.interfaces.nsIAutoCompleteResult);
+		  this.bookmarkStore="<bm>";
 	        for(var ii=0;ii<rr.matchCount;ii++) {
-              //var prepareValue = escape(rr.getValueAt(ii));
-		      var originalString = rr.getValueAt(ii);
-		      var prepareValue = originalString.replace(/&/g,"&amp;");
-	          this.bookmarkStore+="<li hbhistory='true' title='"+prepareValue+"'  value='"+prepareValue+"'>"+prepareValue+"</li>";
+	          this.bookmarkStore+="<li hbhistory='true' title='"+rr.getValueAt(ii)+"'>"+rr.getValueAt(ii)+"</li>";
 	        }
-            this.bookmarkStore+="</bm>";
+		  this.bookmarkStore+="</bm>";
 	      },
-          bookmarkStore:""
+            bookmarkStore:""
 	  }; 
 	
 
 	/* marcio - todo, fix the search string so that we can get everything */
-    // Right now what happens is, if we put "" minimo shows nothing as the result instead everything. 
-    // With FF 1.8 Desktop works fine "". In minimo the workaorund now is www. domains. 
-    
+
 	mySearch.startSearch("www.","",null, myObserver );
 	
 	} catch (ignore) {
 
 	}
 
-    var multiMarks = "<bmgroup>"+bookmarkStore+gHomebaseElements+myObserver.bookmarkStore+"</bmgroup>";
+      var multiMarks = "<bmgroup>"+gHomebaseElements+bookmarkStore+myObserver.bookmarkStore+"</bmgroup>";
+
 
 	var testLoad=new bmProcessor(multiMarks);
+	testLoad.xslSet("bookmark_template_multiple.xml");
 	testLoad.setTargetDocument(targetDoc);
 	testLoad.setTargetElement(targetElement);
 	testLoad.run();
 
+
+
   /*
-   * preselection of the style rule. This has to do with the solution so that 
-   * is possible to open a panel with sub selection of a given Target rule. 
-   * For example, if you want to open the homebase/bookmarks and get some 
-   * specific sub view in it. With the previous homebase it was a good thing. 
-   * Now the homebase is more like a linear list, so we should consider to remove 
-   * this feature or make it much better. For example a possible interesting rule 
-   * could be #filter=/RegExpValue/
+   * preselection of the style rule 
+   * marcio 4000
    */
 
    var targetLink = document.location.toString();
@@ -406,21 +222,20 @@ function homebase_menuBuild(winRef) {
 
 function bmProcessor(bookmarkStore) {
 
+  this.xmlRef=document.implementation.createDocument("","",null);
+  this.xslRef=document.implementation.createDocument("http://www.w3.org/1999/XSL/Transform","stylesheet",null);
   this.xmlRef=null;
-  this.xslRef=null;
 
   var aDOMParser = new DOMParser();
 
   try {
-    this.xmlRef = aDOMParser.parseFromString(bookmarkStore,"text/xml");
 
+    this.xmlRef = aDOMParser.parseFromString(bookmarkStore,"text/xml");
 
   } catch (ignore) {}
 
-
   if(this.xmlRef&&this.xmlRef.firstChild&&this.xmlRef.firstChild.nodeName=="bmgroup") {
-
-
+   
 
   } else {
     var bookmarkEmpty="<bm></bm>";
@@ -428,13 +243,15 @@ function bmProcessor(bookmarkStore) {
     this.xmlRef = aDOMParser.parseFromString(bookmarkEmpty,"text/xml");
   }
 
-  var aDOMParser = new DOMParser();
-  var xsltTemplate = "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"                xmlns:dc=\"http://purl.org/dc/elements/1.1/\"                xmlns:rss=\"http://purl.org/rss/1.0/\" xmlns:html=\"http://www.w3.org/1999/xhtml\"                xmlns:xul=\"http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul\"><xsl:output method=\"html\" indent=\"yes\"/><xsl:template match=\"/\"><div id=\"container2\" >  <div style=\"\">    <img src=\"chrome://minimo/skin/extensions/icon-urlbar.png\">    </img>    <input type=\"text\" id=\"urlbar2\" style=\"text-align:left;background-color:white;width:90%\" />  </div>	  <div style=\"\" class=\"extensions\">      <img src=\"chrome://minimo/skin/extensions/icon-google.png\">    </img>    <input type=\"text\" id=\"search-google\"                 style=\"text-align:left;background-color:white;width:90%\"                 onchange=\"return SearchGoogle(this.value);\"  />      </div>	  <xsl:for-each select=\"/bmgroup/bm/li\"><xsl:choose><xsl:when test=\"@action\"><!--  <div class=\"section\">&titleExtensions.label;</div>-->  <div class=\"item extensions\" >    <img>      <xsl:attribute name=\"src\" >        <xsl:value-of select=\"@iconsrc\"/>      </xsl:attribute> 	    </img>    <a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\".\"/>');return false</xsl:attribute>      <xsl:value-of select=\"@title\"/>    </a>  </div>	</xsl:when></xsl:choose><xsl:choose><xsl:when test=\"@page\" >  <div class=\"item pagelink\" >    <img>      <xsl:attribute name=\"src\" >        <xsl:value-of select=\"@iconsrc\"/>      </xsl:attribute> 	    </img>    <a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\".\"/>');return false</xsl:attribute>      <xsl:value-of select=\"@title\"/>    </a>  </div>  </xsl:when></xsl:choose><xsl:choose><xsl:when test=\"@rss\" >  <div class=\"item rsslink\" >    <img>      <xsl:attribute name=\"src\" >        <xsl:value-of select=\"@iconsrc\"/>      </xsl:attribute> 	    </img>    <a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\".\"/>');return false</xsl:attribute>      <xsl:value-of select=\"@title\"/>    </a>  </div></xsl:when></xsl:choose></xsl:for-each><!--<h3>&titleHistory.label;</h3>--> <xsl:for-each select=\"/bmgroup/bm/li\"><xsl:choose><xsl:when test=\"@hbhistory\" >  <div  class=\"item timehistory\" ><a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\"@value\"/>');return false</xsl:attribute><xsl:attribute name=\"class\"><xsl:value-of select=\"@classdomainvalue\"/></xsl:attribute>      <xsl:value-of select=\".\"/>    </a>  </div><history><xsl:attribute name=\"value\"><xsl:value-of select=\"@value\"/></xsl:attribute></history>  </xsl:when></xsl:choose><xsl:choose><xsl:when test=\"@hbhistoryhandler\" ><a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbToggleClass('<xsl:value-of select=\"@classdomainvalue\"/>');return false</xsl:attribute>      [+]    </a>  <div  class=\"item timehistory\" ><a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\"@value\"/>');return false</xsl:attribute>      <xsl:value-of select=\".\"/>    </a>  </div><history><xsl:attribute name=\"value\"><xsl:value-of select=\"@value\"/></xsl:attribute></history>  </xsl:when></xsl:choose>  </xsl:for-each>  </div></xsl:template></xsl:stylesheet>";
+  this.xslUrl="";
 
-  this.xslRef = aDOMParser.parseFromString(xsltTemplate,"text/xml");
+  var myThis=this;
+  var omega=function thisScopeFunction2() { myThis.xslLoaded(); }
+
+  this.xslRef.addEventListener("load",omega,false);
 
   this.xmlLoadedState=true;
-  this.xslLoadedState=true;
+  this.xslLoadedState=false;
 }
 
 bmProcessor.prototype.xmlLoaded = function () {
@@ -445,6 +262,14 @@ bmProcessor.prototype.xmlLoaded = function () {
 bmProcessor.prototype.xslLoaded = function () {
 	this.xslLoadedState=true;
 	this.apply();
+}
+
+bmProcessor.prototype.xmlSet = function (urlstr) {
+	this.xmlUrl=urlstr;
+}
+
+bmProcessor.prototype.xslSet = function (urlstr) {
+	this.xslUrl=urlstr;
 }
 
 bmProcessor.prototype.setTargetDocument = function (targetDoc) {
@@ -476,13 +301,19 @@ bmProcessor.prototype.apply = function () {
         } catch (e) {
         }
         this.targetElement.appendChild(htmlFragment.firstChild);
-	
-	  bmLoaded();
-
     }    
 }
 
 bmProcessor.prototype.run = function () {
-  this.apply();
+	try {
+		// Already parsed.
+		// this.xmlRef.load(this.xmlUrl);
+	} catch (e) {
+	}
+	try {
+		this.xslRef.load(this.xslUrl);
+	} catch (e) {
+	}
+
 }
 

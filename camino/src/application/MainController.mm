@@ -20,7 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Josh Aas - josh@mozilla.com
+ *   Josh Aas - josha@mac.com
  *   Nate Weaver (Wevah) - wevah@derailer.org
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -103,14 +103,8 @@ const int kOpenNewWindowOnAE = 0;
 const int kOpenNewTabOnAE = 1;
 const int kReuseWindowOnAE = 2;
 
-// Key in the defaults system used to determine if we crashed last time.
-NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTerminatedNormally";
-
 @interface MainController(Private)<NetworkServicesClient>
 
-- (void)ensureGeckoInitted;
-- (void)ensureInitializationCompleted;
-- (void)setInitialized:(BOOL)flag;
 - (void)setupStartpage;
 - (void)setupRendezvous;
 - (void)checkDefaultBrowser;
@@ -203,46 +197,16 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   const nsModuleComponentInfo* comps = GetAppComponents(&numComps);
   CHBrowserService::RegisterAppComponents(comps, numComps);
 
+  // To work around a bug on Tiger where the view hookup order has been changed from postfix to prefix
+  // order, we need to set a user default to return to the old behavior.
+  [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"NSViewSetAncestorsWindowFirst"];
+
   mGeckoInitted = YES;
 }
 
-- (BOOL)isInitialized
+- (void)applicationDidFinishLaunching:(NSNotification*)aNotification
 {
-  return mInitialized;
-}
-
-- (void)setInitialized:(BOOL)flag
-{
-  mInitialized = flag;
-}
-
-// Shockwave for Director refuses to load if the host has no resource fork
-// (bug 151677), but AppleScript is confused by the presence of a rsrc file
-// that doesn't have an aete resource (bug 184449), so we set up a dummy
-// resource on the fly to placate Shockwave.
-// This is based on WebKit's solution for the same issue, which in turn
-// seems to be based on an older description of OmniWeb's workaround.
-- (void)initializeDummyResource
-{
-  short currentResourceFile = CurResFile();
-  UseResFile(kSystemResFile);
-  LMSetCurApRefNum(CurResFile());
-  UseResFile(currentResourceFile);
-}
-
-- (void)ensureInitializationCompleted
-{
-  if ([self isInitialized])
-    return;
-
   [self ensureGeckoInitted];
-
-  [self initializeDummyResource];
-
-  // To work around bugs on Tiger caused by the view hookup order having been
-  // changed from postfix to prefix order, we need to set a user default to
-  // return to the old behavior.
-  [[NSUserDefaults standardUserDefaults] setBool:NO forKey:@"NSViewSetAncestorsWindowFirst"];
 
   NSNotificationCenter* notificationCenter = [NSNotificationCenter defaultCenter];
   // turn on menu display notifications
@@ -267,7 +231,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
   // register some special favicon images
   [[SiteIconProvider sharedFavoriteIconProvider] registerFaviconImage:[NSImage imageNamed:@"smallDocument"] forPageURI:@"about:blank"];
-  [[SiteIconProvider sharedFavoriteIconProvider] registerFaviconImage:[NSImage imageNamed:@"smallDocument"] forPageURI:@"about:local_file"];
   [[SiteIconProvider sharedFavoriteIconProvider] registerFaviconImage:[NSImage imageNamed:@"bm_favicon"]    forPageURI:@"about:bookmarks"];
   [[SiteIconProvider sharedFavoriteIconProvider] registerFaviconImage:[NSImage imageNamed:@"historyicon"]   forPageURI:@"about:history"];
 
@@ -299,50 +262,14 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   NSString* charsetPath = [NSBundle pathForResource:@"Charset" ofType:@"dict" inDirectory:[[NSBundle mainBundle] bundlePath]];
   mCharsets = [[NSDictionary dictionaryWithContentsOfFile:charsetPath] retain];
 
-  // Check whether Camino shut down normally last time...
-  [[NSUserDefaults standardUserDefaults] registerDefaults:[NSDictionary dictionaryWithObject:@"YES" forKey:kPreviousSessionTerminatedNormallyKey]];
-  BOOL previousSessionTerminatedNormally = [[NSUserDefaults standardUserDefaults] boolForKey:kPreviousSessionTerminatedNormallyKey];
-  // ... then reset the state for the next time around.
-  [[NSUserDefaults standardUserDefaults] setObject:@"NO" forKey:kPreviousSessionTerminatedNormallyKey];
-  [[NSUserDefaults standardUserDefaults] synchronize];
-
-  // Determine if the previous session's window state should be restored.
-  // Obey the camino.remember_window_state preference unless Camino crashed
-  // last time, in which case the user is asked what to do.
-  BOOL shouldRestoreWindowState = NO;
-  if ([[SessionManager sharedInstance] hasSavedState]) {
-    if (previousSessionTerminatedNormally) {
-      shouldRestoreWindowState = [prefManager getBooleanPref:"camino.remember_window_state" withSuccess:NULL];
-    }
-    else if ([prefManager getBooleanPref:"browser.sessionstore.resume_from_crash" withSuccess:NULL]) {
-      NSAlert* restoreAfterCrashAlert = [[[NSAlert alloc] init] autorelease];
-      [restoreAfterCrashAlert addButtonWithTitle:NSLocalizedString(@"RestoreAfterCrashActionButton", nil)];
-      [restoreAfterCrashAlert addButtonWithTitle:NSLocalizedString(@"RestoreAfterCrashCancelButton", nil)];
-      [restoreAfterCrashAlert setMessageText:NSLocalizedString(@"RestoreAfterCrashTitle", nil)];
-      [restoreAfterCrashAlert setInformativeText:NSLocalizedString(@"RestoreAfterCrashMessage", nil)];
-      [restoreAfterCrashAlert setAlertStyle:NSWarningAlertStyle];
-      if ([restoreAfterCrashAlert runModal] == NSAlertFirstButtonReturn)
-        shouldRestoreWindowState = YES;
-    }
-  }
-
-  if (shouldRestoreWindowState) {
+  // restore previous window state
+  if ([prefManager getBooleanPref:"camino.remember_window_state" withSuccess:NULL]) {
     // if we've already opened a window (e.g., command line argument or apple event), we need
     // to pull it to the front after restoring the window state
     NSWindow* existingWindow = [self getFrontmostBrowserWindow];
     [[SessionManager sharedInstance] restoreWindowState];
     [existingWindow makeKeyAndOrderFront:self];
   }
-  else {
-    [[SessionManager sharedInstance] clearSavedState];
-  }
-
-  [self setInitialized:YES];
-}
-
-- (void)applicationDidFinishLaunching:(NSNotification*)aNotification
-{
-  [self ensureInitializationCompleted];
 
   // open a new browser window if we don't already have one or we have a specific
   // start URL we need to show
@@ -419,14 +346,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 #if DEBUG
   NSLog(@"App will terminate notification");
 #endif
-  // If there's no pref manager then we didn't really start up, so we do nothing.
-  PreferenceManager* prefManager = [PreferenceManager sharedInstanceDontCreate];
-  if (prefManager) {
-    if ([prefManager getBooleanPref:"camino.remember_window_state" withSuccess:NULL])
-      [[SessionManager sharedInstance] saveWindowState];
-    else
-      [[SessionManager sharedInstance] clearSavedState];
-  }
+  if ([[PreferenceManager sharedInstanceDontCreate] getBooleanPref:"camino.remember_window_state" withSuccess:NULL])
+    [[SessionManager sharedInstance] saveWindowState];
+  else
+    [[SessionManager sharedInstance] clearSavedState];
 
   [NetworkServices shutdownNetworkServices];
 
@@ -445,11 +368,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   NSWindow* curMainWindow = [mApplication mainWindow];
   if (curMainWindow && [[curMainWindow windowController] respondsToSelector:@selector(autosaveWindowFrame)])
     [[curMainWindow windowController] autosaveWindowFrame];
-
-  // Indicate that Camino exited normally. Write the default to disk
-  // immediately since we cannot wait for automatic synchronization.
-  [[NSUserDefaults standardUserDefaults] setObject:@"YES" forKey:kPreviousSessionTerminatedNormallyKey];
-  [[NSUserDefaults standardUserDefaults] synchronize];
 
   // Cancel outstanding site icon loads
   [[RemoteDataProvider sharedRemoteDataProvider] cancelOutstandingRequests];
@@ -675,51 +593,43 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   return browser;
 }
 
-// Shows a given URL by finding and showing an existing tab/window with that URL, or
-// opening a new window or tab (observing the user's pref) if it's not already open
-- (void)showURL:(NSString*)aURL
+// open a new URL, observing the prefs on how to behave
+- (void)openNewWindowOrTabWithURL:(NSString*)inURLString andReferrer:(NSString*)aReferrer alwaysInFront:(BOOL)forceFront
 {
   // make sure we're initted
   [PreferenceManager sharedInstance];
 
   PRInt32 reuseWindow = 0;
+  PRBool loadInBackground = PR_FALSE;
 
   nsCOMPtr<nsIPref> prefService(do_GetService(NS_PREF_CONTRACTID));
-  if (prefService)
+  if (prefService) {
     prefService->GetIntPref("browser.reuse_window", &reuseWindow);
-
-  // Check to see if we already have the URL somewhere, and just show it if we do.
-  NSEnumerator* windowEnumerator = [[NSApp orderedWindows] objectEnumerator];
-  NSWindow* window;
-  while ((window = [windowEnumerator nextObject])) {
-    if ([[window windowController] isMemberOfClass:[BrowserWindowController class]]) {
-      BrowserWindowController* browser = (BrowserWindowController*)[window windowController];
-      BrowserTabView* tabView = [browser getTabBrowser];
-      int tabIndex = [tabView indexOfTabViewItemWithURL:aURL];
-      if (tabIndex != NSNotFound) {
-        [tabView selectTabViewItemAtIndex:tabIndex];
-        [[browser window] makeKeyAndOrderFront:self];
-        [browser reload:nil];
-        return;
-      }
-    }
+    if (!forceFront)
+      prefService->GetBoolPref("browser.tabs.loadInBackground", &loadInBackground);
   }
 
-  // If we got here, we didn't find it already open. Open it based on user prefs.
+  // reuse the main window (if there is one) based on the pref in the
+  // tabbed browsing panel. The user may have closed all of
+  // them or we may get this event at startup before we've had time to load
+  // our window.
   BrowserWindowController* controller = (BrowserWindowController*)[[self getFrontmostBrowserWindow] windowController];
   if (controller) {
     BOOL tabOrWindowIsAvailable = ([[controller getBrowserWrapper] isEmpty] && ![[controller getBrowserWrapper] isBusy]);
 
     if (tabOrWindowIsAvailable || reuseWindow == kReuseWindowOnAE)
-      [controller loadURL:aURL];
+      [controller loadURL:inURLString];
     else if (reuseWindow == kOpenNewTabOnAE)
-      [controller openNewTabWithURL:aURL referrer:nil loadInBackground:NO allowPopups:NO setJumpback:NO];
-    else
-      controller = [controller openNewWindowWithURL:aURL referrer:nil loadInBackground:NO allowPopups:NO];
-    [[controller window] makeKeyAndOrderFront:nil];
+      [controller openNewTabWithURL:inURLString referrer:aReferrer loadInBackground:loadInBackground allowPopups:NO setJumpback:NO];
+    else {
+      // note that we're opening a new window here
+      controller = [controller openNewWindowWithURL:inURLString referrer:aReferrer loadInBackground:loadInBackground allowPopups:NO];
+    }
+    if (!loadInBackground)
+      [[controller window] makeKeyAndOrderFront:nil];
   }
   else
-    controller = [self openBrowserWindowWithURL:aURL andReferrer:nil behind:nil allowPopups:NO];
+    controller = [self openBrowserWindowWithURL:inURLString andReferrer:aReferrer behind:nil allowPopups:NO];
 }
 
 // Convenience function for loading application pages either in a new window or a new
@@ -730,17 +640,17 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   if (browserController && [[browserController window] attachedSheet])
     [self openBrowserWindowWithURL:pageURL andReferrer:nil behind:nil allowPopups:NO];
   else
-    [self showURL:pageURL];
+    [self openNewWindowOrTabWithURL:pageURL andReferrer:nil alwaysInFront:YES];
 }
 
 - (BOOL)application:(NSApplication*)theApplication openFile:(NSString*)filename
 {
-  // We can get here before the application is fully initialized and the previous
-  // session is restored.  We want to avoid opening URLs before that happens.
-  [self ensureInitializationCompleted];
+  // We can get called before -applicationDidFinishLaunching, so make sure gecko
+  // has been initted
+  [self ensureGeckoInitted];
 
   NSURL* urlToOpen = [MainController decodeLocalFileURL:[NSURL fileURLWithPath:filename]];
-  [self showURL:[urlToOpen absoluteString]];
+  [self openNewWindowOrTabWithURL:[urlToOpen absoluteString] andReferrer:nil alwaysInFront:YES];
   return YES;
 }
 
@@ -840,13 +750,13 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
   if (resolvedURLs) {
     if ([resolvedURLs count] == 1)
-      [self showURL:[resolvedURLs lastObject]];
+      [self openNewWindowOrTabWithURL:[resolvedURLs lastObject] andReferrer:nil alwaysInFront:YES];
     else
       [self openBrowserWindowWithURLs:resolvedURLs behind:nil allowPopups:NO];
   }
   else {
     urlString = [urlString stringByRemovingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-    [self showURL:urlString];
+    [self openNewWindowOrTabWithURL:urlString andReferrer:nil alwaysInFront:YES];
   }
 }
 
@@ -951,9 +861,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     }
     [openWindows release];
 
-    // clear the saved session in case we crash
-    [[SessionManager sharedInstance] clearSavedState];
-
     // remove cache
     nsCOMPtr<nsICacheService> cacheServ (do_GetService("@mozilla.org/network/cache-service;1"));
     if (cacheServ)
@@ -979,8 +886,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     // remove downloads
     [[ProgressDlgController sharedDownloadController] clearAllDownloads];
 
+#if 0   // disable this for now (see bug 3202080)
     // remove saved names and passwords
     [[KeychainService instance] removeAllUsernamesAndPasswords];
+#endif
 
     // re-set all bookmarks visit counts to zero
     [[BookmarkManager sharedBookmarkManager] clearAllVisits];
@@ -1553,13 +1462,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     [self loadApplicationPage:pageToLoad];
 }
 
-- (IBAction)keyboardShortcutsLink:(id)aSender
-{
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"KeyboardShortcutsPageDefault", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"KeyboardShortcutsPageDefault"])
-    [self loadApplicationPage:pageToLoad];
-}
-
 - (IBAction)infoLink:(id)aSender
 {
   NSString* pageToLoad = NSLocalizedStringFromTable(@"InfoPageDefault", @"WebsiteDefaults", nil);
@@ -1570,6 +1472,27 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 - (IBAction)aboutPlugins:(id)aSender
 {
   [self loadApplicationPage:@"about:plugins"];
+}
+
+- (IBAction)releaseNoteLink:(id)aSender
+{
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"ReleaseNotesDefault", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"ReleaseNotesDefault"])
+    [self loadApplicationPage:pageToLoad];
+}
+
+- (IBAction)tipsTricksLink:(id)aSender
+{
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"TipsTricksPageDefault", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"TipsTricksPageDefault"])
+    [self loadApplicationPage:pageToLoad];
+}
+
+- (IBAction)searchCustomizeLink:(id)aSender
+{
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"SearchCustomPageDefault", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"SearchCustomPageDefault"])
+    [self loadApplicationPage:pageToLoad];
 }
 
 #pragma mark -
@@ -1905,7 +1828,7 @@ static int SortByProtocolAndName(NSDictionary* item1, NSDictionary* item2, void*
 {
   NSDictionary* dict = [note userInfo];
   if ([dict objectForKey:NetworkServicesClientKey] == self)
-    [self showURL:[dict objectForKey:NetworkServicesResolvedURLKey]];
+    [self openNewWindowOrTabWithURL:[dict objectForKey:NetworkServicesResolvedURLKey] andReferrer:nil alwaysInFront:YES];
 }
 
 //
