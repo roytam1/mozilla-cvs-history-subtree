@@ -900,13 +900,12 @@ js_Invoke(JSContext *cx, uintN argc, uintN flags)
      */
     if (JSVAL_IS_PRIMITIVE(v)) {
 #if JS_HAS_NO_SUCH_METHOD
-        jsval roots[3];
-        JSTempValueRooter tvr;
         jsid id;
-        JSBool reportNotAFunction;
         jsbytecode *pc;
         jsatomid atomIndex;
+        JSAtom *atom;
         JSObject *argsobj;
+        JSArena *a;
 
         if (!fp->script || (flags & JSINVOKE_INTERNAL))
             goto bad;
@@ -930,34 +929,24 @@ js_Invoke(JSContext *cx, uintN argc, uintN flags)
             goto out2;
         thisp = frame.thisp;
 
-        /* From here on, control must flow through label no_such_method_out. */
-        memset(roots, 0, sizeof roots);
-        JS_PUSH_TEMP_ROOT(cx, sizeof roots / sizeof roots[0], roots, &tvr);
-
-        reportNotAFunction = JS_FALSE;
         id = ATOM_TO_JSID(cx->runtime->atomState.noSuchMethodAtom);
-#if JS_HAS_XML_SUPPORT
         if (OBJECT_IS_XML(cx, thisp)) {
             JSXMLObjectOps *ops;
 
             ops = (JSXMLObjectOps *) thisp->map->ops;
-            thisp = ops->getMethod(cx, thisp, id, &roots[2]);
+            thisp = ops->getMethod(cx, thisp, id, &v);
             if (!thisp) {
                 ok = JS_FALSE;
-                goto no_such_method_out;
+                goto out2;
             }
             vp[1] = OBJECT_TO_JSVAL(thisp);
-        } else
-#endif
-        {
-            ok = OBJ_GET_PROPERTY(cx, thisp, id, &roots[2]);
-            if (!ok)
-                goto no_such_method_out;
+        } else {
+            ok = OBJ_GET_PROPERTY(cx, thisp, id, &v);
         }
-        if (JSVAL_IS_PRIMITIVE(roots[2])) {
-            reportNotAFunction = JS_TRUE;
-            goto no_such_method_out;
-        }
+        if (!ok)
+            goto out2;
+        if (JSVAL_IS_PRIMITIVE(v))
+            goto bad;
 
         pc = (jsbytecode *) vp[-(intN)fp->script->depth];
         switch ((JSOp) *pc) {
@@ -967,30 +956,53 @@ js_Invoke(JSContext *cx, uintN argc, uintN flags)
           case JSOP_GETMETHOD:
 #endif
             atomIndex = GET_ATOM_INDEX(pc);
-            roots[0] = ATOM_KEY(js_GetAtom(cx, &fp->script->atomMap,
-                                           atomIndex));
+            atom = js_GetAtom(cx, &fp->script->atomMap, atomIndex);
             argsobj = js_NewArrayObject(cx, argc, vp + 2);
             if (!argsobj) {
                 ok = JS_FALSE;
-                goto no_such_method_out;
+                goto out2;
             }
-            roots[1] = OBJECT_TO_JSVAL(argsobj);
-            ok = js_InternalInvoke(cx, thisp, roots[2],
-                                   flags | JSINVOKE_INTERNAL, 2, roots, &vp[0]);
-            if (ok)
-                frame.rval = *vp;
+
+            sp = vp + 4;
+            if (argc < 2) {
+                a = cx->stackPool.current;
+                if ((jsuword)sp > a->limit) {
+                    /*
+                     * Arguments must be contiguous, and must include argv[-1]
+                     * and argv[-2], so allocate more stack, advance sp, and
+                     * set newsp[1] to thisp (vp[1]).  The other argv elements
+                     * will be set below, using negative indexing from sp.
+                     */
+                    newsp = js_AllocRawStack(cx, 4, NULL);
+                    if (!newsp) {
+                        ok = JS_FALSE;
+                        goto out2;
+                    }
+                    newsp[1] = OBJECT_TO_JSVAL(thisp);
+                    sp = newsp + 4;
+                } else if ((jsuword)sp > a->avail) {
+                    /*
+                     * Inline, optimized version of JS_ARENA_ALLOCATE to claim
+                     * the small number of words not already allocated as part
+                     * of the caller's operand stack.
+                     */
+                    JS_ArenaCountAllocation(&cx->stackPool,
+                                            (jsuword)sp - a->avail);
+                    a->avail = (jsuword)sp;
+                }
+            }
+
+            sp[-4] = v;
+            JS_ASSERT(sp[-3] == OBJECT_TO_JSVAL(thisp));
+            sp[-2] = ATOM_KEY(atom);
+            sp[-1] = OBJECT_TO_JSVAL(argsobj);
+            fp->sp = sp;
+            argc = 2;
             break;
 
           default:
-            reportNotAFunction = JS_TRUE;
-            break;
-        }
-
-      no_such_method_out:
-        JS_POP_TEMP_ROOT(cx, &tvr);
-        if (reportNotAFunction)
             goto bad;
-        goto out2;
+        }
 #else
         goto bad;
 #endif
@@ -1275,7 +1287,7 @@ js_InternalInvoke(JSContext *cx, JSObject *obj, jsval fval, uintN flags,
 
         /*
          * Store *rval in the a scoped local root if a scope is open, else in
-         * the lastInternalResult pigeon-hole GC root, solely so users of
+         * the cx->lastInternalResult pigeon-hole GC root, solely so users of
          * js_InternalInvoke and its direct and indirect (js_ValueToString for
          * example) callers do not need to manage roots for local, temporary
          * references to such results.
@@ -1286,7 +1298,7 @@ js_InternalInvoke(JSContext *cx, JSObject *obj, jsval fval, uintN flags,
                 if (js_PushLocalRoot(cx, cx->localRootStack, *rval) < 0)
                     ok = JS_FALSE;
             } else {
-                cx->weakRoots.lastInternalResult = *rval;
+                cx->lastInternalResult = *rval;
             }
         }
     }
@@ -2313,7 +2325,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 /*
                  * Rewrite the iterator so we know to do the next case.
                  * Do this before calling the enumerator, which could
-                 * displace newborn and cause GC.
+                 * displace cx->newborn and cause GC.
                  */
                 *vp = OBJECT_TO_JSVAL(propobj);
 
@@ -3143,7 +3155,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             LOAD_BRANCH_CALLBACK(cx);
             LOAD_INTERRUPT_HANDLER(rt);
             if (!ok) {
-                cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+                cx->newborn[GCX_OBJECT] = NULL;
                 goto out;
             }
 
@@ -4615,7 +4627,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             /* Restore fp->scopeChain now that obj is defined in parent. */
             fp->scopeChain = obj2;
             if (!ok) {
-                cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+                cx->newborn[GCX_OBJECT] = NULL;
                 goto out;
             }
 
@@ -4690,7 +4702,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             /* Restore fp->scopeChain now that obj is defined in fp->varobj. */
             fp->scopeChain = obj2;
             if (!ok) {
-                cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+                cx->newborn[GCX_OBJECT] = NULL;
                 goto out;
             }
 
@@ -4822,7 +4834,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             JS_ASSERT(sp - fp->spbase >= 1);
             lval = FETCH_OPND(-1);
             JS_ASSERT(JSVAL_IS_OBJECT(lval));
-            cx->weakRoots.newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(lval);
+            cx->newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(lval);
             break;
 
           case JSOP_INITPROP:
@@ -4905,8 +4917,6 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
             if (!JSVAL_IS_OBJECT(rval)) {
                 char numBuf[12];
                 JS_snprintf(numBuf, sizeof numBuf, "%u", (unsigned) i);
-
-                SAVE_SP(fp);
                 JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                                      JSMSG_BAD_SHARP_USE, numBuf);
                 ok = JS_FALSE;
@@ -5393,7 +5403,6 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
           END_LITOPX_CASE
 
           case JSOP_GETFUNNS:
-            SAVE_SP(fp);
             ok = js_GetFunctionNamespace(cx, &rval);
             if (!ok)
                 goto out;

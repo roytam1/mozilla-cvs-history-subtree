@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,15 +12,14 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla XForms support.
+ * The Original Code is Mozilla Communicator client code.
  *
  * The Initial Developer of the Original Code is
- * Mozilla Foundation.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Alexander Surkov <surkov.alexander@gmail.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -36,20 +35,40 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#ifndef nsUEscapeToUnicode_h___
+#define nsUEscapeToUnicode_h___
+#include "nsISupports.h"
 
-/**
- * Interface should be implemented by XFroms elements that are represented by
- * combobox widgets. This interface is used by accessibility module.
- *
- * For example, select1[appearance="minimal"] or input[type="xsd:date"].
- */
-[scriptable, uuid(87960cb4-c8da-4727-9db9-4c2232d7018f)]
-interface nsIXFormsComboboxUIWidget : nsISupports
+#include "nsUEscapeToUnicode.h"
+#include "nsUCSupport.h"
+
+//----------------------------------------------------------------------
+// Class nsUEscapeToUnicode [declaration]
+
+class nsUEscapeToUnicode : public nsBasicDecoderSupport
 {
+public:
+
   /**
-   * Get/set open state of popup.
+   * Class constructor.
    */
-  attribute boolean open;
+  nsUEscapeToUnicode() : nsBasicDecoderSupport() { Reset();};
+
+  NS_IMETHOD Convert(const char * aSrc, PRInt32 * aSrcLength,
+      PRUnichar * aDest, PRInt32 * aDestLength); 
+  NS_IMETHOD Reset();
+ 
+protected:
+  //--------------------------------------------------------------------
+  // Subclassing of nsDecoderSupport class [declaration]
+
+  NS_IMETHOD GetMaxLength(const char * aSrc, PRInt32 aSrcLength, 
+      PRInt32 * aDestLength);
+private:
+  PRUint8 mState;
+  PRUint16 mData;
+  PRUnichar mBuffer[2];
+  PRUint32  mBufferLen;
 };
 
+#endif /* nsUEscapeToUnicode_h___ */
