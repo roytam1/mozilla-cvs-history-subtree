@@ -530,10 +530,7 @@ nsGlobalWindow::FreeInnerObjects(JSContext *cx)
   mDocument = nsnull;
 
   if (mJSObject && cx) {
-    // Clear mJSObject and its prototype chain, but not Object.prototype.
-    ::JS_ClearScope(cx, mJSObject);
-    for (JSObject *o = ::JS_GetPrototype(cx, mJSObject), *next;
-         o && (next = ::JS_GetPrototype(cx, o)); o = next)
+    for (JSObject *o = mJSObject; o; o = ::JS_GetPrototype(cx, o))
       ::JS_ClearScope(cx, o);
     ::JS_ClearWatchPointsForObject(cx, mJSObject);
 
@@ -1211,11 +1208,8 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
         // held in the bfcache.
         if (!currentInner->IsFrozen()) {
           if (!termFuncSet) {
-            // Clear currentInner->mJSObject and its prototype chain,
-            // but not Object.prototype.
-            ::JS_ClearScope(cx, currentInner->mJSObject);
-            for (JSObject *o = ::JS_GetPrototype(cx, currentInner->mJSObject), *next;
-                 o && (next = ::JS_GetPrototype(cx, o)); o = next)
+            for (JSObject *o = currentInner->mJSObject; o;
+                 o = ::JS_GetPrototype(cx, o))
               ::JS_ClearScope(cx, o);
             ::JS_ClearWatchPointsForObject(cx, currentInner->mJSObject);
           }
@@ -1429,10 +1423,7 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
       mDocument = nsnull;
 
       if (mJSObject) {
-        // Clear mJSObject and its prototype chain, but not Object.prototype.
-        ::JS_ClearScope(cx, mJSObject);
-        for (JSObject *o = ::JS_GetPrototype(cx, mJSObject), *next;
-             o && (next = ::JS_GetPrototype(cx, o)); o = next)
+        for (JSObject *o = mJSObject; o; o = ::JS_GetPrototype(cx, o))
           ::JS_ClearScope(cx, o);
         ::JS_ClearWatchPointsForObject(cx, mJSObject);
 
@@ -2789,16 +2780,6 @@ nsGlobalWindow::SetScreenY(PRInt32 aScreenY)
 nsresult
 nsGlobalWindow::CheckSecurityWidthAndHeight(PRInt32* aWidth, PRInt32* aHeight)
 {
-  if (!nsContentUtils::IsCallerTrustedForWrite()) {
-    // if attempting to resize the window, hide any open popups
-    nsCOMPtr<nsIPresShell> presShell;
-    mDocShell->GetPresShell(getter_AddRefs(presShell));
-
-    nsCOMPtr<nsIPresShell_MOZILLA_1_8_BRANCH> presShell18 = do_QueryInterface(presShell);
-    if (presShell18)
-      presShell18->HidePopups();
-  }
-
   // This one is easy. Just ensure the variable is greater than 100;
   if ((aWidth && *aWidth < 100) || (aHeight && *aHeight < 100)) {
     // Check security state for use in determing window dimensions
@@ -2840,13 +2821,6 @@ nsGlobalWindow::CheckSecurityLeftAndTop(PRInt32* aLeft, PRInt32* aTop)
   }
 
   if (!enabled) {
-    // if attempting to move the window, hide any open popups
-    nsCOMPtr<nsIPresShell> presShell;
-    mDocShell->GetPresShell(getter_AddRefs(presShell));
-    nsCOMPtr<nsIPresShell_MOZILLA_1_8_BRANCH> presShell18 = do_QueryInterface(presShell);
-    if (presShell18)
-      presShell18->HidePopups();
-
     PRInt32 screenLeft, screenTop, screenWidth, screenHeight;
     PRInt32 winLeft, winTop, winWidth, winHeight;
 
@@ -3708,25 +3682,6 @@ nsGlobalWindow::Home()
     CopyASCIItoUTF16(DEFAULT_HOME_PAGE, homeURL);
   }
 
-#ifdef MOZ_PHOENIX
-  {
-    // Firefox lets the user specify multiple home pages to open in
-    // individual tabs by separating them with '|'. Since we don't
-    // have the machinery in place to easily open new tabs from here,
-    // simply truncate the homeURL at the first '|' character to
-    // prevent any possibilities of leaking the users list of home
-    // pages to the first home page.
-    //
-    // Once bug https://bugzilla.mozilla.org/show_bug.cgi?id=221445 is
-    // fixed we can revisit this.
-    PRInt32 firstPipe = homeURL.FindChar('|');
-
-    if (firstPipe > 0) {
-      homeURL.Truncate(firstPipe);
-    }
-  }
-#endif
-
   nsresult rv;
   nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
   NS_ENSURE_TRUE(webNav, NS_ERROR_FAILURE);
@@ -4182,22 +4137,18 @@ PRBool IsPopupBlocked(nsIDOMDocument* aDoc)
 
 static
 void FirePopupBlockedEvent(nsIDOMDocument* aDoc,
-                           nsIDOMWindow *aRequestingWindow, nsIURI *aPopupURI,
+                           nsIURI *aRequestingURI, nsIURI *aPopupURI,
                            const nsAString &aPopupWindowFeatures)
 {
   if (aDoc) {
-    // Fire a "DOMPopupBlocked" event so that the UI can hear about
-    // blocked popups.
+    // Fire a "DOMPopupBlocked" event so that the UI can hear about blocked popups.
     nsCOMPtr<nsIDOMDocumentEvent> docEvent(do_QueryInterface(aDoc));
     nsCOMPtr<nsIDOMEvent> event;
-    docEvent->CreateEvent(NS_LITERAL_STRING("PopupBlockedEvents"),
-                          getter_AddRefs(event));
-    nsCOMPtr<nsIDOMPopupBlockedEvent_MOZILLA_1_8_BRANCH> pbev = 
-      do_QueryInterface(event);
-    if (pbev) {
+    docEvent->CreateEvent(NS_LITERAL_STRING("PopupBlockedEvents"), getter_AddRefs(event));
+    if (event) {
+      nsCOMPtr<nsIDOMPopupBlockedEvent> pbev(do_QueryInterface(event));
       pbev->InitPopupBlockedEvent(NS_LITERAL_STRING("DOMPopupBlocked"),
-                                  PR_TRUE, PR_TRUE, aRequestingWindow,
-                                  aPopupURI, aPopupWindowFeatures);
+              PR_TRUE, PR_TRUE, aRequestingURI, aPopupURI, aPopupWindowFeatures);
       nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(event));
       privateEvent->SetTrusted(PR_TRUE);
 
@@ -4340,7 +4291,12 @@ nsGlobalWindow::FireAbuseEvents(PRBool aBlocked, PRBool aWindow,
   nsCOMPtr<nsIDOMDocument> topDoc;
   topWindow->GetDocument(getter_AddRefs(topDoc));
 
+  nsCOMPtr<nsIURI> requestingURI;
   nsCOMPtr<nsIURI> popupURI;
+  nsCOMPtr<nsIWebNavigation> webNav =
+    do_GetInterface((nsIScriptGlobalObject *)this);
+  if (webNav)
+    webNav->GetCurrentURI(getter_AddRefs(requestingURI));
 
   // build the URI of the would-have-been popup window
   // (see nsWindowWatcher::URIfromURL)
@@ -4378,7 +4334,7 @@ nsGlobalWindow::FireAbuseEvents(PRBool aBlocked, PRBool aWindow,
 
   // fire an event chock full of informative URIs
   if (aBlocked)
-    FirePopupBlockedEvent(topDoc, this, popupURI, aPopupWindowFeatures);
+    FirePopupBlockedEvent(topDoc, requestingURI, popupURI, aPopupWindowFeatures);
   if (aWindow)
     FirePopupWindowEvent(topDoc);
 }
@@ -5169,11 +5125,11 @@ nsGlobalWindow::Atob(const nsAString& aAsciiBase64String,
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  PRUint32 dataLen = aAsciiBase64String.Length();
+  PRInt32 dataLen = aAsciiBase64String.Length();
 
   PRInt32 resultLen = dataLen;
-  if (!aAsciiBase64String.IsEmpty() && base64[dataLen - 1] == '=') {
-    if (aAsciiBase64String.Length() > 1 && base64[dataLen - 2] == '=') {
+  if (base64[dataLen - 1] == '=') {
+    if (base64[dataLen - 2] == '=') {
       resultLen = dataLen - 2;
     } else {
       resultLen = dataLen - 1;
@@ -6126,15 +6082,24 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
     aCalleePrincipal->GetURI(getter_AddRefs(currentCodebase));
   }
 
+  // These next two variables are only accessed when checkForPopup is true
+  PopupControlState abuseLevel;
+  OpenAllowValue allowReason;
+  if (checkForPopup) {
+    abuseLevel = CheckForAbusePoint();
+    allowReason = CheckOpenAllow(abuseLevel);
+    if (allowReason == allowNot) {
+      FireAbuseEvents(PR_TRUE, PR_FALSE, aUrl, aOptions);
+      return aDoJSFixups ? NS_OK : NS_ERROR_FAILURE;
+    }
+  }    
+
   // Note: it's very important that this be an nsXPIDLCString, since we want
   // .get() on it to return nsnull until we write stuff to it.  The window
   // watcher expects a null URL string if there is no URL to load.
   nsXPIDLCString url;
   nsresult rv = NS_OK;
 
-  // It's important to do this security check before determining whether this
-  // window opening should be blocked, to ensure that we don't FireAbuseEvents
-  // for a window opening that wouldn't have succeeded in the first place.
   if (!aUrl.IsEmpty()) {
     AppendUTF16toUTF8(aUrl, url);
 
@@ -6147,18 +6112,6 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
 
   if (NS_FAILED(rv))
     return rv;
-
-  // These next two variables are only accessed when checkForPopup is true
-  PopupControlState abuseLevel;
-  OpenAllowValue allowReason;
-  if (checkForPopup) {
-    abuseLevel = CheckForAbusePoint();
-    allowReason = CheckOpenAllow(abuseLevel);
-    if (allowReason == allowNot) {
-      FireAbuseEvents(PR_TRUE, PR_FALSE, aUrl, aOptions);
-      return aDoJSFixups ? NS_OK : NS_ERROR_FAILURE;
-    }
-  }    
 
   nsCOMPtr<nsIDOMWindow> domReturn;
 
@@ -6348,10 +6301,7 @@ nsGlobalWindow::ClearWindowScope(nsISupports *aWindow)
     JSObject *global = sgo->GetGlobalJSObject();
 
     if (global) {
-      // Clear global and its prototype chain, but not Object.prototype.
-      ::JS_ClearScope(cx, global);
-      for (JSObject *o = ::JS_GetPrototype(cx, global), *next;
-           o && (next = ::JS_GetPrototype(cx, o)); o = next)
+      for (JSObject *o = global; o; o = ::JS_GetPrototype(cx, o))
         ::JS_ClearScope(cx, o);
       ::JS_ClearWatchPointsForObject(cx, global);
     }

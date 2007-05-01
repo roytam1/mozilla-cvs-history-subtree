@@ -41,6 +41,7 @@
 
 var cvPrefs = 0;
 var addressbook = 0;
+var gAddressBookBundle;
 var gSearchTimer = null;
 var gStatusText = null;
 var gQueryURIFormat = null;
@@ -173,6 +174,7 @@ function OnLoadAddressBook()
 
 function delayedOnLoadAddressBook()
 {
+  gAddressBookBundle = document.getElementById("bundle_addressBook");
   gSearchInput = document.getElementById("searchInput");
 
   verifyAccounts(null); 	// this will do migration, if we need to.
@@ -420,6 +422,36 @@ function AbOnRenameAddressBook(aName)
   addressbook.modifyAddressBook(addressbookDS, parentDir, selectedABDirectory, properties);
 }
 
+function GetPrintSettings()
+{
+  var prevPS = gPrintSettings;
+
+  try {
+    if (gPrintSettings == null) {
+      var useGlobalPrintSettings = true;
+      var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                           .getService(Components.interfaces.nsIPrefBranch);
+      if (pref) {
+        useGlobalPrintSettings = pref.getBoolPref("print.use_global_printsettings", false);
+      }
+
+      // I would rather be using nsIWebBrowserPrint API
+      // but I really don't have a document at this point
+      var printSettingsService = Components.classes["@mozilla.org/gfx/printsettings-service;1"]
+                                           .getService(Components.interfaces.nsIPrintSettingsService);
+      if (useGlobalPrintSettings) {
+        gPrintSettings = printSettingsService.globalPrintSettings;
+      } else {
+        gPrintSettings = printSettingsService.CreatePrintSettings();
+      }
+    }
+  } catch (e) {
+    dump("GetPrintSettings "+e);
+  }
+
+  return gPrintSettings;
+}
+
 function AbPrintCardInternal(doPrintPreview, msgType)
 {
   var selectedItems = GetSelectedAbCards();
@@ -453,7 +485,7 @@ function AbPrintCardInternal(doPrintPreview, msgType)
 
   if (!gPrintSettings)
   {
-    gPrintSettings = PrintUtils.getPrintSettings();
+    gPrintSettings = GetPrintSettings();
   }
 
   printEngineWindow = window.openDialog("chrome://messenger/content/msgPrintEngine.xul",
@@ -501,7 +533,7 @@ function AbPrintAddressBookInternal(doPrintPreview, msgType)
   var printUrl = "addbook://" + abURIArr[0] + "/" + abURIArr[1] + "?action=print"
 
   if (!gPrintSettings) {
-    gPrintSettings = PrintUtils.getPrintSettings();
+    gPrintSettings = GetPrintSettings();
   }
 
 	printEngineWindow = window.openDialog("chrome://messenger/content/msgPrintEngine.xul",

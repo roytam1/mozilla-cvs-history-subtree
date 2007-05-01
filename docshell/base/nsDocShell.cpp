@@ -5515,14 +5515,8 @@ nsDocShell::RestoreFromHistory()
 
     nsCOMPtr<nsIDocument> document = do_QueryInterface(domDoc);
     if (document) {
-        // Use the uri from the mLSHE we had when we entered this function
-        // (which need not match the document's URI if anchors are involved),
-        // since that's the history entry we're loading.  Note that if we use
-        // origLSHE we don't have to worry about whether the entry in question
-        // is still mLSHE or whether it's now mOSHE.
-        nsCOMPtr<nsIURI> uri;
-        origLSHE->GetURI(getter_AddRefs(uri));
-        SetCurrentURI(uri, document->GetChannel(), PR_TRUE);
+        SetCurrentURI(document->GetDocumentURI(),
+                      document->GetChannel(), PR_TRUE);
     }
 
     // This is the end of our CreateContentViewer() replacement.
@@ -6292,11 +6286,9 @@ nsDocShell::InternalLoad(nsIURI * aURI,
 
     nsCOMPtr<nsISupports> owner(aOwner);
     //
-    // Get an owner from the current document if necessary, but only
-    // if this is not an external load.
+    // Get an owner from the current document if necessary
     //
-    if (aLoadType != LOAD_NORMAL_EXTERNAL && !owner &&
-        (aFlags & INTERNAL_LOAD_FLAGS_INHERIT_OWNER))
+    if (!owner && (aFlags & INTERNAL_LOAD_FLAGS_INHERIT_OWNER))
         GetCurrentDocumentOwner(getter_AddRefs(owner));
 
     //

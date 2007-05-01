@@ -106,8 +106,6 @@ class nsChildView;
   // rects that were invalidated during a draw, so have pending drawing
   NSMutableArray* mPendingDirtyRects;
   BOOL mPendingFullDisplay;
-  
-  PRUint32 mLastModifierState;
 }
 
 // these are sent to the first responder when the window key status

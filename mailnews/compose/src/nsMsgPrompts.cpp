@@ -181,8 +181,8 @@ nsMsgAskAboutUncoveredCharacters(nsIPrompt * aPrompt)
 
   nsXPIDLString title;
   nsXPIDLString msg;
-  nsXPIDLString sendInUTF8;
-  nsXPIDLString sendAnyway;
+  nsXPIDLString button0;
+  nsXPIDLString button1;
 
   composeBundle->
     GetStringFromName(NS_LITERAL_STRING("initErrorDlogTitle").get(),
@@ -192,18 +192,18 @@ nsMsgAskAboutUncoveredCharacters(nsIPrompt * aPrompt)
                     getter_Copies(msg));
   composeBundle->
     GetStringFromName(NS_LITERAL_STRING("sendInUTF8").get(),
-                      getter_Copies(sendInUTF8));
+                      getter_Copies(button0));
   composeBundle->
     GetStringFromName(NS_LITERAL_STRING("sendAnyway").get(),
-                      getter_Copies(sendAnyway));
+                      getter_Copies(button1));
 
   nsresult rv = dialog->
     ConfirmEx(title, msg, 
               nsIPrompt::BUTTON_TITLE_IS_STRING * nsIPrompt::BUTTON_POS_0 +
-              nsIPrompt::BUTTON_TITLE_CANCEL * nsIPrompt::BUTTON_POS_1 +
-              nsIPrompt::BUTTON_TITLE_IS_STRING * nsIPrompt::BUTTON_POS_2 +
+              nsIPrompt::BUTTON_TITLE_IS_STRING * nsIPrompt::BUTTON_POS_1 +
+              nsIPrompt::BUTTON_TITLE_CANCEL * nsIPrompt::BUTTON_POS_2 +
               nsIPrompt::BUTTON_POS_0_DEFAULT,
-              sendInUTF8, nsnull, sendAnyway, nsnull, 0, &result);
+              button0, button1, nsnull, nsnull, 0, &result);
 
   NS_ENSURE_SUCCESS(rv, 0);
   return result;

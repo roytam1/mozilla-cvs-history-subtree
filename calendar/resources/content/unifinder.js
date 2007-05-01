@@ -381,7 +381,6 @@ function unifinderOnSelect( event )
    
    // Pass in true, so we don't end up in a circular loop
    currentView().setSelectedItems(ArrayOfEvents.length, ArrayOfEvents, true);
-   onSelectionChanged({detail: ArrayOfEvents});
 }
 
 function unifinderToDoHasFocus()

@@ -111,10 +111,8 @@ nsBrowserDirectoryProvider::GetFile(const char *aKey, PRBool *aPersist,
 
   char const* leafName = nsnull;
   PRBool restoreBookmarksBackup = PR_FALSE;
-  PRBool ensureFilePermissions = PR_FALSE;
 
   if (!strcmp(aKey, NS_APP_BOOKMARKS_50_FILE)) {
-    ensureFilePermissions = PR_TRUE;
     restoreBookmarksBackup = PR_TRUE;
     leafName = "bookmarks.html";
 
@@ -132,15 +130,6 @@ nsBrowserDirectoryProvider::GetFile(const char *aKey, PRBool *aPersist,
   }
   else if (!strcmp(aKey, NS_APP_SEARCH_50_FILE)) {
     leafName = "search.rdf";
-  }
-  else if (!strcmp(aKey, NS_APP_EXISTING_PREF_OVERRIDE)) {
-    rv = NS_GetSpecialDirectory(NS_APP_DEFAULTS_50_DIR,
-                                getter_AddRefs(file));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    file->AppendNative(NS_LITERAL_CSTRING("existing-profile-defaults.js"));
-    file.swap(*aResult);
-    return NS_OK;
   }
   else if (!strcmp(aKey, NS_APP_MICROSUMMARY_DIR)) {
     rv = NS_GetSpecialDirectory(NS_XPCOM_CURRENT_PROCESS_DIR,
@@ -201,19 +190,6 @@ nsBrowserDirectoryProvider::GetFile(const char *aKey, PRBool *aPersist,
     if (!restoreBookmarksBackup ||
 	NS_FAILED(RestoreBookmarksFromBackup(leafstr, parentDir, file)))
       EnsureProfileFile(leafstr, parentDir, file);
-  }
-
-  if (ensureFilePermissions) {
-    PRBool fileToEnsureExists;
-    PRBool isWritable;
-    if (NS_SUCCEEDED(file->Exists(&fileToEnsureExists)) && fileToEnsureExists
-        && NS_SUCCEEDED(file->IsWritable(&isWritable)) && !isWritable) {
-      PRUint32 permissions;
-      if (NS_SUCCEEDED(file->GetPermissions(&permissions))) {
-        rv = file->SetPermissions(permissions | 0600);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to ensure file permissions");
-      }
-    }
   }
 
   *aPersist = PR_TRUE;

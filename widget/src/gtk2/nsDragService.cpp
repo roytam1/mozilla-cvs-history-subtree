@@ -799,6 +799,7 @@ nsDragService::IsTargetContextList(void)
 void
 nsDragService::GetTargetDragData(GdkAtom aFlavor)
 {
+    gtk_grab_add(mHiddenWidget);
     PR_LOG(sDragLm, PR_LOG_DEBUG, ("getting data flavor %d\n", aFlavor));
     PR_LOG(sDragLm, PR_LOG_DEBUG, ("mLastWidget is %p and mLastContext is %p\n",
                                    mTargetWidget, mTargetDragContext));
@@ -816,6 +817,7 @@ nsDragService::GetTargetDragData(GdkAtom aFlavor)
         gtk_main_iteration();
     }
     PR_LOG(sDragLm, PR_LOG_DEBUG, ("finished inner iteration\n"));
+    gtk_grab_remove(mHiddenWidget);
 }
 
 void

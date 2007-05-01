@@ -49,7 +49,7 @@ class nsMathMLTokenFrame : public nsMathMLContainerFrame {
 public:
   friend nsresult NS_NewMathMLTokenFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
-  virtual eMathMLFrameType GetMathMLFrameType();
+  virtual nsIAtom* GetType() const;
 
   NS_IMETHOD
   Init(nsPresContext*  aPresContext,

@@ -1151,11 +1151,6 @@ NS_IMETHODIMP nsMsgDBView::GetRowProperties(PRInt32 index, nsISupportsArray *pro
   FetchKeywords(msgHdr, getter_Copies(keywordProperty));
   if (!keywordProperty.IsEmpty())
     AppendKeywordProperties(keywordProperty.get(), properties, PR_FALSE);
-
-  // give the custom column handlers a chance to style the row.
-  for (int i = 0; i < m_customColumnHandlers.Count(); i++)
-    m_customColumnHandlers[i]->GetRowProperties(index, properties);
-
   return NS_OK;
 }
 
@@ -1326,7 +1321,7 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, nsITreeColumn *col, n
   if (colHandler != nsnull) 
   {
     colHandler->GetCellProperties(aRow, col, properties);
-    return NS_OK;
+  	return NS_OK;
   }
   
   return NS_OK;
@@ -1580,7 +1575,7 @@ nsIMsgCustomColumnHandler* nsMsgDBView::GetColumnHandler(const PRUnichar *colID)
   PRInt32 index = m_customColumnHandlerIDs.IndexOf(nsDependentString(colID));
   
   if (index > -1)
-    columnHandler = m_customColumnHandlers[index];
+    columnHandler =  m_customColumnHandlers[index];
   
   return columnHandler;
 }  
@@ -5143,8 +5138,10 @@ nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgView
             break;
         case nsMsgNavigationType::nextUnreadThread:
             if (startIndex != nsMsgViewIndex_None)
-              ApplyCommandToIndices(nsMsgViewCommandType::markThreadRead, &startIndex, 1);
-
+            {
+                nsMsgKeyArray idsMarkedRead;
+                MarkThreadOfMsgRead(m_keys.GetAt(startIndex), startIndex, idsMarkedRead, PR_TRUE);
+            }
             return NavigateFromPos(nsMsgNavigationType::nextUnreadMessage, startIndex, pResultKey, pResultIndex, pThreadIndex, PR_TRUE);
         case nsMsgNavigationType::toggleThreadKilled:
             {
@@ -5968,7 +5965,6 @@ nsresult nsMsgDBView::CopyDBView(nsMsgDBView *aNewMsgDBView, nsIMessenger *aMess
   aNewMsgDBView->m_viewFlags = m_viewFlags;
   aNewMsgDBView->m_sortOrder = m_sortOrder;
   aNewMsgDBView->m_sortType = m_sortType;
-  aNewMsgDBView->m_sortValid = m_sortValid;
   aNewMsgDBView->m_db = m_db;
   aNewMsgDBView->mDateFormater = mDateFormater;
   if (m_db)

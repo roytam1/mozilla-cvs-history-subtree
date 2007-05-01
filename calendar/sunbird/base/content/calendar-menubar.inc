@@ -283,7 +283,6 @@
                      observes="toggle_tasks_in_view"/>
            <menu id="menu-numberofweeks-inview"
                  label="&calendar.menu.numberofweeks.label;"
-                 accesskey="&calendar.menu.numberofweeks.accesskey;"
                  oncommand="gCalendarWindow.currentView.changeNumberOfWeeks(event.target)"
                  disabled="true">
            <menupopup>

@@ -1266,16 +1266,7 @@ PRBool nsImapProtocol::ProcessCurrentURL()
     EndIdle();
 
   if (m_retryUrlOnError)
-  {
-    // we clear this flag if we're re-running immediately, because that 
-    // means we never sent a start running url notification, and later we
-    // don't send start running notification if we think we're rerunning 
-    // the url (see first call to SetUrlState below). This means we won't
-    // send a start running notification, which means our stop running
-    // notification will be ignored because we don't think we were running.
-    m_runningUrl->SetRerunningUrl(PR_FALSE);
     return RetryUrl();
-  }
   Log("ProcessCurrentURL", nsnull, "entering");
   (void) GetImapHostName(); // force m_hostName to get set.
 
@@ -3015,7 +3006,9 @@ nsImapProtocol::FetchMessage(const char * messageIds,
         else
           headersToDL = PR_smprintf("%s %s",dbHeaders, arbitraryHeaders.get());
         
-        if (gUseEnvelopeCmd)
+        if (aolImapServer)
+          what = strdup(" XAOL-ENVELOPE INTERNALDATE)");
+        else if (gUseEnvelopeCmd)
           what = PR_smprintf(" ENVELOPE BODY.PEEK[HEADER.FIELDS (%s)])", headersToDL);
         else
           what = PR_smprintf(" BODY.PEEK[HEADER.FIELDS (%s)])",headersToDL);
@@ -3515,7 +3508,7 @@ void nsImapProtocol::NormalMessageEndDownload()
 
   if (m_trackingTime)
     AdjustChunkSize();
-  if (m_imapMailFolderSink && m_curHdrInfo && GetServerStateParser().GetDownloadingHeaders())
+  if (m_imapMailFolderSink && GetServerStateParser().GetDownloadingHeaders())
   {
     m_curHdrInfo->SetMsgSize(GetServerStateParser().SizeOfMostRecentMessage());
     m_curHdrInfo->SetMsgUid(GetServerStateParser().CurrentResponseUID());
@@ -5366,13 +5359,6 @@ void nsImapProtocol::OnAppendMsgFromFile()
       // convert msg flag label (0xE000000) to imap flag label (0x0E00)
       if (msgFlags & MSG_FLAG_LABELS)
         flagsToSet |= (msgFlags & MSG_FLAG_LABELS) >> 16;
-      if (msgFlags & MSG_FLAG_MARKED)
-        flagsToSet |= kImapMsgFlaggedFlag;
-      if (msgFlags & MSG_FLAG_REPLIED)
-        flagsToSet |= kImapMsgAnsweredFlag;
-      if (msgFlags & MSG_FLAG_FORWARDED)
-        flagsToSet |= kImapMsgForwardedFlag;
-
       // If the message copied was a draft, flag it as such
       nsImapAction imapAction;
       rv = m_runningUrl->GetImapAction(&imapAction);

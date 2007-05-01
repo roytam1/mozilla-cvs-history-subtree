@@ -2847,13 +2847,13 @@ void nsImapServerResponseParser::quota_data()
   nsCString quotaroot;
   if (!PL_strcasecmp(fNextToken, "QUOTAROOT"))
   {
-    nsCString quotaroot; 
-    AdvanceToNextToken();
-    while (ContinueParse() && !fAtEndOfLine)
+    do
     {
-      quotaroot.Adopt(CreateAstring());
       AdvanceToNextToken();
+      if (!fAtEndOfLine)
+        quotaroot.Adopt(CreateAstring());
     }
+    while (ContinueParse() && !fAtEndOfLine);
   }
   else if(!PL_strcasecmp(fNextToken, "QUOTA"))
   {

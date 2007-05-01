@@ -47,19 +47,7 @@
 @namespace html url("http://www.w3.org/1999/xhtml");
 
 #ab-toolbox {
-  -moz-appearance: none !important;
-  background-image: url("chrome://messenger/skin/icons/top-toolbar-background.gif");
-  background-repeat: repeat-x;
-  background-position: top right;
-  background-color: #e1e1e1;
-  margin-top: -1px;
-}
-
-toolbox,
-toolbar {
-  -moz-appearance: none !important;
-  background-color: transparent;
-  background-image: none;
+	 margin-bottom: -1px;
 }
 
 /* ::::: tools menu icon ::::: */
@@ -71,7 +59,7 @@ toolbar {
 /* ::::: primary toolbar buttons ::::: */
 
 .toolbarbutton-1 {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addressbook-toolbar.png");
+	list-style-image: url("chrome://messenger/skin/addressbook/icons/addressbook-toolbar.png");
   -moz-box-orient: vertical;
 }
 
@@ -85,7 +73,6 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
 /* ::::: new single card icon ::::: */
 
 #button-newcard {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addressbook-toolbar.png");
   -moz-image-region: rect(0px 32px 32px 0px);
 }
 
@@ -100,7 +87,6 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
 /* ::::: new list card icon ::::: */
 
 #button-newlist {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addressbook-toolbar.png");
   -moz-image-region: rect(0px 64px 32px 32px);
 }
 
@@ -115,7 +101,6 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
 /* ::::: edit card icon ::::: */
 
 #button-editcard {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addressbook-toolbar.png");
   -moz-image-region: rect(0px 96px 32px 64px);
 }
 
@@ -130,7 +115,6 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
 /* ::::: new message icon ::::: */
 
 #button-newmessage {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addressbook-toolbar.png");
   -moz-image-region: rect(0px 128px 32px 96px);
 }
 
@@ -145,7 +129,6 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
 /* ::::: instant message icon ::::: */
 
 #button-newim {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addressbook-toolbar.png");
   -moz-image-region: rect(0px 160px 32px 128px);
 }
  
@@ -160,7 +143,6 @@ toolbarbutton[type="menu-button"] > toolbarbutton {
 /* ::::: delete icon ::::: */
 
 #button-abdelete {
-  list-style-image: url("chrome://messenger/skin/addressbook/icons/addressbook-toolbar.png");
   -moz-image-region: rect(0px 192px 32px 160px);
 }
 

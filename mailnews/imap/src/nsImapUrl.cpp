@@ -1523,8 +1523,7 @@ void nsImapUrl::ParseCustomMsgFetchAttribute()
 
 void nsImapUrl::ParseNumBytes()
 {
-  const char *numBytes = (m_tokenPlaceHolder) ? nsCRT::strtok(m_tokenPlaceHolder, IMAP_URL_TOKEN_SEPARATOR, &m_tokenPlaceHolder) : 0;
-  m_numBytesToFetch = numBytes ? atoi(numBytes) : 0;
+  m_numBytesToFetch = m_tokenPlaceHolder ? atoi(nsCRT::strtok(m_tokenPlaceHolder, IMAP_URL_TOKEN_SEPARATOR, &m_tokenPlaceHolder)) : 0;
 }
 
 // nsIMsgI18NUrl support

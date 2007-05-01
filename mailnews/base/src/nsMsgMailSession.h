@@ -75,7 +75,6 @@ protected:
   nsCOMPtr<nsISupportsArray> mWindows;
   // stick this here temporarily
   nsCOMPtr <nsIMsgWindow> m_temporaryMsgWindow;
-  nsCOMPtr <nsISupports> m_desktopSearchService;
 };
 
 

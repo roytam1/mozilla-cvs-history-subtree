@@ -269,12 +269,9 @@ XULPopupListenerImpl::PreLaunchPopup(nsIDOMEvent* aMouseEvent)
   // submenu of an already-showing popup.  We don't need to do anything at all.
   if (popupType == eXULPopupType_popup) {
     nsCOMPtr<nsIContent> targetContent = do_QueryInterface(target);
-
-    if (targetContent) {
-      nsIAtom *tag = targetContent->Tag();
-      if (tag == nsXULAtoms::menu || tag == nsXULAtoms::menuitem)
-        return NS_OK;
-    }
+    nsIAtom *tag = targetContent->Tag();
+    if (tag == nsXULAtoms::menu || tag == nsXULAtoms::menuitem)
+      return NS_OK;
   }
 
   // Get the document with the popup.

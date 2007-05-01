@@ -213,7 +213,6 @@ function InitMsgWindow()
   mailSession.AddMsgWindow(msgWindow);
   getBrowser().docShell.allowAuth = false;
   msgWindow.rootDocShell.allowAuth = true; 
-  msgWindow.rootDocShell.appType = Components.interfaces.nsIDocShell.APP_TYPE_MAIL;
 }
 
 function AddDataSources()
@@ -487,47 +486,36 @@ function StopUrls()
   msgWindow.StopUrls();
 }
 
-/** 
- * @returns the pref name to use for fetching the start page url. Every time the application version changes, 
- * return "mailnews.start_page.override_url". If this is the first time the application has been 
- * launched, return "mailnews.start_page.welcome_url". Otherwise return "mailnews.start_page.url".
- */
-function startPageUrlPref()
-{
-  var prefForStartPageUrl = "mailnews.start_page.url";
-  var savedVersion = null;
-  try {
-    savedVersion = pref.getCharPref("mailnews.start_page_override.mstone");
-  } catch (ex) {}
-  
-  if (savedVersion != "ignore")
-  {
-    var currentPlatformVersion = Components.classes["@mozilla.org/xre/app-info;1"].
-                                            getService(Components.interfaces.nsIXULAppInfo).platformVersion;
-    pref.setCharPref("mailnews.start_page_override.mstone", currentPlatformVersion);
-    // Use the welcome URL the first time we run
-    if (!savedVersion)
-      prefForStartPageUrl = "mailnews.start_page.welcome_url";
-    else if (currentPlatformVersion != savedVersion)
-      prefForStartPageUrl = "mailnews.start_page.override_url";
-  }
-  
-  return prefForStartPageUrl;
-}
-
 function loadStartPage() 
 {
-  try
+  try 
   {
     gMessageNotificationBar.clearMsgNotifications();
+    
     var startpageenabled = pref.getBoolPref("mailnews.start_page.enabled");
-    // only load the start page if we are online
-    var startpage = getFormattedRegionURL(startPageUrlPref());
-    // load about:blank as the start page if we are offline or we don't have a start page url...
-    GetMessagePaneFrame().location.href = startpageenabled && startpage && MailOfflineMgr.isOnline() ? startpage : "about:blank";
-    ClearMessageSelection();
+    if (startpageenabled) 
+    {
+      
+      var startpage = pref.getComplexValue("mailnews.start_page.url", Components.interfaces.nsIPrefLocalizedString).data;
+
+      // Some users have our old default start page
+      // showing up as a user pref instead of a default pref. If this is the case, clear the user pref by hand 
+      // and re-read it again so we get the correct default start page.
+      if (startpage == "chrome://messenger/locale/start.html")
+      {
+        pref.clearUserPref("mailnews.start_page.url");
+        startpage = pref.getComplexValue("mailnews.start_page.url", Components.interfaces.nsIPrefLocalizedString).data;
+      }
+
+      if (startpage != "") 
+      {
+        GetMessagePaneFrame().location.href = startpage;
+        //dump("start message pane with: " + startpage + "\n");
+        ClearMessageSelection();
+      }
+    }
   }
-  catch (ex)
+  catch (ex) 
   {
     dump("Error loading start page.\n");
     return;
@@ -578,9 +566,6 @@ function ShowingThreadPane()
   var threadPaneSplitter = document.getElementById("threadpane-splitter");
   threadPaneSplitter.collapsed = false;
   GetMessagePane().collapsed = (threadPaneSplitter.getAttribute("state") == "collapsed");
-  // XXX We need to force the tree to refresh its new height
-  // so that it will correctly scroll to the newest message
-  GetThreadTree().boxObject.height;  
   document.getElementById("key_toggleMessagePane").removeAttribute("disabled");
 }
 

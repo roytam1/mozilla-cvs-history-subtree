@@ -119,8 +119,6 @@ struct JSContext;
 #define SM_REMOTESESSION 0x1000
 #endif
 
-#define REG_SUCCEEDED(val) (val == ERROR_SUCCESS)
-
 static HWND hwndForDOMWindow( nsISupports * );
 
 static
@@ -2123,45 +2121,30 @@ nsNativeAppSupportWin::EnsureProfile(nsICmdLineService* args)
 #if MOZ_DEBUG_DDE
 printf( "Setting ddexec subkey entries\n" );
 #endif
-
-      DWORD dwDisp;
-      HKEY hKey;
-      DWORD rc;
-
-      rc = ::RegCreateKeyEx( HKEY_CLASSES_ROOT,
-                             "http\\shell\\open\\ddeexec", 0,
-                             NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL,
-                             &hKey, &dwDisp );
-
-      if ( REG_SUCCEEDED( rc ) ) {
-        // Set ddeexec default value.
-        const BYTE ddeexec[] = "\"%1\",,-1,0,,,,";
-        ::RegSetValueEx( hKey, "", 0, REG_SZ, ddeexec, sizeof ddeexec );
-        ::RegCloseKey( hKey );
-      }
+      // Set ddeexec default value.
+      const BYTE ddeexec[] = "\"%1\",,-1,0,,,,";
+      ::RegSetValueEx( HKEY_CLASSES_ROOT,
+                       "http\\shell\\open\\ddeexec",
+                       0,
+                       REG_SZ,
+                       ddeexec,
+                       sizeof ddeexec );
 
       // Set application/topic (while we're running), reset at exit.
-      rc = ::RegCreateKeyEx( HKEY_CLASSES_ROOT,
-                             "http\\shell\\open\\ddeexec\\application", 0,
-                             NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL,
-                             &hKey, &dwDisp );
+      ::RegSetValueEx( HKEY_CLASSES_ROOT,
+                       "http\\shell\\open\\ddeexec\\application",
+                       0,
+                       REG_SZ,
+                       (unsigned char *)mAppName,
+                       ::strlen( mAppName ) + 1 );
 
-      if ( REG_SUCCEEDED( rc ) ) {
-        ::RegSetValueEx( hKey, "", 0, REG_SZ, (BYTE *) mAppName,
-                         ::strlen( mAppName ) + 1 );
-        ::RegCloseKey( hKey );
-      }
-
-      rc = ::RegCreateKeyEx( HKEY_CLASSES_ROOT,
-                             "http\\shell\\open\\ddeexec\\topic", 0,
-                             NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL,
-                             &hKey, &dwDisp );
-
-      if ( REG_SUCCEEDED( rc ) ) {
-        const BYTE topic[] = "WWW_OpenURL";
-        ::RegSetValueEx( hKey, "", 0, REG_SZ, topic, sizeof topic );
-        ::RegCloseKey( hKey );
-      }
+      const BYTE topic[] = "WWW_OpenURL";
+      ::RegSetValueEx( HKEY_CLASSES_ROOT,
+                       "http\\shell\\open\\ddeexec\\topic",
+                       0,
+                       REG_SZ,
+                       topic,
+                       sizeof topic );
 
       // Remember we need to undo this.
       mSupportingDDEExec = PR_TRUE;
@@ -2650,7 +2633,6 @@ nsNativeAppSupportWin::OnLastWindowClosing() {
     // in StartServerMode(), don't do anything.
     if ( mInitialWindowActive ) {
         mInitialWindowActive = PR_FALSE;
-        mShouldShowUI = PR_TRUE;
         return NS_OK;
     }
 

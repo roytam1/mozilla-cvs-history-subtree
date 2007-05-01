@@ -117,7 +117,7 @@
 #include "nsICacheEntryDescriptor.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsIMsgIdentity.h"
-#include "nsIMsgFolderNotificationService.h"
+
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
@@ -212,7 +212,6 @@ nsImapMailFolder::nsImapMailFolder() :
     m_performingBiff(PR_FALSE),
     m_folderQuotaCommandIssued(PR_FALSE),
     m_folderQuotaDataIsValid(PR_FALSE),
-    m_updatingFolder(PR_FALSE),
     m_downloadMessageForOfflineUse(PR_FALSE),
     m_downloadingFolderForOfflineUse(PR_FALSE),
     m_folderQuotaUsedKB(0),
@@ -697,7 +696,24 @@ nsresult nsImapMailFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
 
     if(mDatabase)
     {
-      UpdateNewMessages();
+      PRBool hasNewMessages = PR_FALSE; 
+      for (PRUint32 keyIndex = 0; keyIndex < m_newMsgs.GetSize(); keyIndex++) 
+      { 
+        PRBool containsKey = PR_FALSE;
+        mDatabase->ContainsKey(m_newMsgs[keyIndex], &containsKey);
+        if (!containsKey)
+          continue;
+        PRBool isRead = PR_FALSE; 
+        nsresult rv2 = mDatabase->IsRead(m_newMsgs[keyIndex], &isRead); 
+        if (NS_SUCCEEDED(rv2) && !isRead) 
+        { 
+          hasNewMessages = PR_TRUE; 
+          mDatabase->AddToNewList(m_newMsgs[keyIndex]); 
+        } 
+      } 
+      
+      SetHasNewMessages(hasNewMessages); 
+
       if(mAddListener)
         mDatabase->AddListener(this);
       UpdateSummaryTotals(PR_TRUE);
@@ -802,7 +818,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
   }
   if (!canOpenThisFolder) 
     selectFolder = PR_FALSE;
-  // don't run select if we can't select the folder...
+  // don't run select if we're already running a url/select...
   if (NS_SUCCEEDED(rv) && !m_urlRunning && selectFolder)
   {
     nsCOMPtr<nsIImapService> imapService = do_GetService(NS_IMAPSERVICE_CONTRACTID, &rv); 
@@ -811,10 +827,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
     nsCOMPtr <nsIURI> url;
     rv = imapService->SelectFolder(m_eventQueue, this, m_urlListener, msgWindow, getter_AddRefs(url));
     if (NS_SUCCEEDED(rv))
-    {
       m_urlRunning = PR_TRUE;
-      m_updatingFolder = PR_TRUE;
-    }
     if (url)
     {
       nsCOMPtr <nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(url);
@@ -840,7 +853,7 @@ nsImapMailFolder::UpdateFolder(nsIMsgWindow *msgWindow)
   }
   else if (NS_SUCCEEDED(rv))  // tell the front end that the folder is loaded if we're not going to 
   {                           // actually run a url.
-    if (!m_updatingFolder)    // if we're already running an update url, we'll let that one send the folder loaded
+    if (!m_urlRunning)        // if we're already running a url, we'll let that one send the folder loaded
       NotifyFolderEvent(mFolderLoadedAtom);
     NS_ENSURE_SUCCESS(rv,rv);
   }
@@ -1528,7 +1541,6 @@ NS_IMETHODIMP nsImapMailFolder::Delete ()
       if (NS_SUCCEEDED(mPath->GetFileSpec(&fileSpec)) && fileSpec.Exists())
         fileSpec.Delete(PR_FALSE);
     }
-    // should notify nsIMsgFolderListeners about the folder getting deleted...
     return rv;
 }
 
@@ -2617,7 +2629,6 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
     nsMsgKeyArray existingKeys;
     nsMsgKeyArray keysToDelete;
     nsMsgKeyArray keysToFetch;
-    PRUint32 numNewUnread;
     nsCOMPtr<nsIDBFolderInfo> dbFolderInfo;
     PRInt32 imapUIDValidity = 0;
     
@@ -2719,8 +2730,7 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
       if (flagState)
       {
         nsMsgKeyArray no_existingKeys;
-
-        FindKeysToAdd(no_existingKeys, keysToFetch, numNewUnread, flagState);
+        FindKeysToAdd(no_existingKeys, keysToFetch, flagState);
       }
       if (NS_FAILED(rv))
         dbName.Delete(PR_FALSE);
@@ -2739,7 +2749,7 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
       aSpec->GetBox_flags(&boxFlags);
       // if this is the result of an expunge then don't grab headers
       if (!(boxFlags & kJustExpunged))
-        FindKeysToAdd(existingKeys, keysToFetch, numNewUnread, flagState);
+        FindKeysToAdd(existingKeys, keysToFetch, flagState);
     }
     
     
@@ -2758,7 +2768,7 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
     // stand-alone biff about the new high water mark
     if (m_performingBiff)
     {
-      if (numNewUnread > 0)
+      if (keysToFetch.GetSize() > 0)
       {
         // We must ensure that the server knows that we are performing biff.
         // Otherwise the stand-alone biff won't fire.
@@ -2766,7 +2776,7 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
         if (NS_SUCCEEDED(GetServer(getter_AddRefs(server))) && server)
           server->SetPerformingBiff(PR_TRUE);
         
-         SetNumNewMessages(numNewUnread);
+         SetNumNewMessages(keysToFetch.GetSize());
       }
     }
     SyncFlags(flagState);
@@ -3066,13 +3076,7 @@ nsresult nsImapMailFolder::NormalEndHeaderParseStream(nsIImapProtocol *aProtocol
     }
     // here we need to tweak flags from uid state..
     if (mDatabase && (!m_msgMovedByFilter || ShowDeletedMessages()))
-    {
       mDatabase->AddNewHdrToDB(newMsgHdr, PR_TRUE);
-      nsCOMPtr <nsIMsgFolderNotificationService> notifier = do_GetService(NS_MSGNOTIFICATIONSERVICE_CONTRACTID);
-      if (notifier)
-        notifier->NotifyItemAdded(newMsgHdr);    
-      
-    }
     m_msgParser->Clear(); // clear out parser, because it holds onto a msg hdr.
     m_msgParser->SetMailDB(nsnull); // tell it to let go of the db too.
     // I don't think we want to do this - it does bad things like set the size incorrectly.
@@ -3433,7 +3437,7 @@ NS_IMETHODIMP nsImapMailFolder::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWindo
         {
           nsMsgKeyArray keysToFlag;
           keysToFlag.Add(msgKey);
-          mDatabase->MarkHdrRead(msgHdr, PR_TRUE, nsnull);
+          msgHdr->OrFlags(MSG_FLAG_READ, &newFlags);
           StoreImapFlags(kImapMsgSeenFlag, PR_TRUE, keysToFlag.GetArray(), keysToFlag.GetSize(), nsnull);
           msgIsNew = PR_FALSE;
         }
@@ -3442,7 +3446,6 @@ NS_IMETHODIMP nsImapMailFolder::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWindo
         {
           nsMsgKeyArray keysToFlag;
           keysToFlag.Add(msgKey);
-          mDatabase->MarkHdrMarked(msgHdr, PR_TRUE, nsnull);
           StoreImapFlags(kImapMsgFlaggedFlag, PR_TRUE, keysToFlag.GetArray(), keysToFlag.GetSize(), nsnull);
         }
         break;
@@ -3479,7 +3482,7 @@ NS_IMETHODIMP nsImapMailFolder::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWindo
           nsCOMPtr<nsISupportsArray> messageArray;
           NS_NewISupportsArray(getter_AddRefs(messageArray));
           messageArray->AppendElement(msgHdr);
-          AddKeywordsToMessages(messageArray, keyword.get());
+          AddKeywordToMessages(messageArray, keyword.get());
           break;
         }
         case nsMsgFilterAction::JunkScore:
@@ -3994,14 +3997,13 @@ void nsImapMailFolder::FindKeysToDelete(const nsMsgKeyArray &existingKeys, nsMsg
   }
 }
 
-void nsImapMailFolder::FindKeysToAdd(const nsMsgKeyArray &existingKeys, nsMsgKeyArray &keysToFetch, PRUint32 &numNewUnread, nsIImapFlagAndUidState *flagState)
+void nsImapMailFolder::FindKeysToAdd(const nsMsgKeyArray &existingKeys, nsMsgKeyArray &keysToFetch, nsIImapFlagAndUidState *flagState)
 {
   PRBool showDeletedMessages = ShowDeletedMessages();
   int dbIndex=0; // current index into existingKeys
   PRInt32 existTotal, numberOfKnownKeys;
   PRInt32 messageIndex;
- 
-  numNewUnread = 0;
+  
   existTotal = numberOfKnownKeys = existingKeys.GetSize();
   flagState->GetNumberOfMessages(&messageIndex);
   for (PRInt32 flagIndex=0; flagIndex < messageIndex; flagIndex++)
@@ -4033,8 +4035,6 @@ void nsImapMailFolder::FindKeysToAdd(const nsMsgKeyArray &existingKeys, nsMsgKey
           }
         }
         keysToFetch.Add(uidOfMessage);
-        if (! (flags & kImapMsgSeenFlag))
-          numNewUnread++;
       }
     }
   }
@@ -4775,13 +4775,6 @@ NS_IMETHODIMP
 nsImapMailFolder::OnStartRunningUrl(nsIURI *aUrl)
 {
   NS_PRECONDITION(aUrl, "sanity check - need to be be running non-null url");
-  nsCOMPtr<nsIMsgMailNewsUrl> mailUrl = do_QueryInterface(aUrl);
-  if (mailUrl)
-  {
-    PRBool updatingFolder;
-    mailUrl->GetUpdatingFolder(&updatingFolder);
-    m_updatingFolder = updatingFolder;
-  }
   m_urlRunning = PR_TRUE;
   return NS_OK;
 }
@@ -4792,7 +4785,6 @@ nsImapMailFolder::OnStopRunningUrl(nsIURI *aUrl, nsresult aExitCode)
   nsresult rv = NS_OK;
   PRBool endedOfflineDownload = PR_FALSE;
   m_urlRunning = PR_FALSE;
-  m_updatingFolder = PR_FALSE;
   if (m_downloadingFolderForOfflineUse)
   {
     ReleaseSemaphore(NS_STATIC_CAST(nsIMsgImapMailFolder*, this));
@@ -4885,7 +4877,7 @@ nsImapMailFolder::OnStopRunningUrl(nsIURI *aUrl, nsresult aExitCode)
                 if (NS_SUCCEEDED(rv))
                 {
                   PRBool showPreviewText;
-                  prefBranch->GetBoolPref("mail.biff.alert.show_preview", &showPreviewText);
+                  prefBranch->GetBoolPref("mail.showPreviewText", &showPreviewText);
                   // if we're showing preview text, update ourselves if we got a new unread
                   // message copied so that we can download the new headers and have a chance
                   // to preview the msg bodies.
@@ -4993,16 +4985,7 @@ nsImapMailFolder::OnStopRunningUrl(nsIURI *aUrl, nsresult aExitCode)
                 if (m_copyState->m_curIndex >= m_copyState->m_totalCount)
                 {
                   if (folderOpen)
-                  {
-                    // This gives a way for the caller to get notified 
-                    // when the UpdateFolder url is done.
-                    nsCOMPtr <nsIUrlListener> saveUrlListener = m_urlListener;
-                    if (m_copyState->m_listener)
-                      m_urlListener = do_QueryInterface(m_copyState->m_listener);
-
                     UpdateFolder(msgWindow);
-                    m_urlListener = saveUrlListener;
-                  }
                   if (m_copyState->m_msgWindow && m_copyState->m_undoMsgTxn)
                   {
                     nsCOMPtr<nsITransactionManager> txnMgr;
@@ -5789,7 +5772,7 @@ void nsMsgIMAPFolderACL::BuildInitialACLFromCache()
   if (startingFlags & IMAP_ACL_CREATE_SUBFOLDER_FLAG)
     myrights +="c";
   if (startingFlags & IMAP_ACL_DELETE_FLAG)
-    myrights += "dt";
+    myrights += "d";
   if (startingFlags & IMAP_ACL_ADMINISTER_FLAG)
     myrights += "a";
   
@@ -5970,8 +5953,7 @@ PRBool	nsMsgIMAPFolderACL::GetCanUserCreateSubfolder(const char *userName)
 
 PRBool	nsMsgIMAPFolderACL::GetCanUserDeleteInFolder(const char *userName)
 {
-  return GetFlagSetInRightsForUser(userName, 'd', PR_FALSE)
-    || GetFlagSetInRightsForUser(userName, 't', PR_FALSE);
+  return GetFlagSetInRightsForUser(userName, 'd', PR_FALSE);
 }
 
 PRBool	nsMsgIMAPFolderACL::GetCanUserAdministerFolder(const char *userName)
@@ -6016,8 +5998,7 @@ PRBool	nsMsgIMAPFolderACL::GetCanICreateSubfolder()
 
 PRBool	nsMsgIMAPFolderACL::GetCanIDeleteInFolder()
 {
-  return GetFlagSetInRightsForUser(nsnull, 'd', PR_TRUE) ||
-    GetFlagSetInRightsForUser(nsnull, 't', PR_TRUE);
+  return GetFlagSetInRightsForUser(nsnull, 'd', PR_TRUE);
 }
 
 PRBool	nsMsgIMAPFolderACL::GetCanIAdministerFolder()
@@ -8294,7 +8275,7 @@ PRBool nsImapMailFolder::ShowPreviewText()
   PRBool showPreviewText = PR_FALSE;
   nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
   if (prefBranch)
-    prefBranch->GetBoolPref("mail.biff.alert.show_preview", &showPreviewText);
+    prefBranch->GetBoolPref("mail.showPreviewText", &showPreviewText);
   return showPreviewText;
 }
 
@@ -8599,32 +8580,32 @@ NS_IMETHODIMP nsImapMailFolder::FetchMsgPreviewText(nsMsgKey *aKeysToFetch, PRUi
   return NS_OK;
 }
 
-NS_IMETHODIMP nsImapMailFolder::AddKeywordsToMessages(nsISupportsArray *aMessages, const char *aKeywords)
+NS_IMETHODIMP nsImapMailFolder::AddKeywordToMessages(nsISupportsArray *aMessages, const char *aKeyword)
 {
-  nsresult rv = nsMsgDBFolder::AddKeywordsToMessages(aMessages, aKeywords);
+  nsresult rv = nsMsgDBFolder::AddKeywordToMessages(aMessages, aKeyword);
   if (NS_SUCCEEDED(rv))
   {
     nsCAutoString messageIds;
     nsMsgKeyArray keys;
     rv = BuildIdsAndKeyArray(aMessages, messageIds, keys);
     NS_ENSURE_SUCCESS(rv, rv);
-    rv = StoreCustomKeywords(nsnull, aKeywords, nsnull, keys.GetArray(), keys.GetSize(), nsnull);
+    rv = StoreCustomKeywords(nsnull, aKeyword, nsnull, keys.GetArray(), keys.GetSize(), nsnull);
     if (mDatabase)
       mDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
   }
   return rv;
 }
 
-NS_IMETHODIMP nsImapMailFolder::RemoveKeywordsFromMessages(nsISupportsArray *aMessages, const char *aKeywords)
+NS_IMETHODIMP nsImapMailFolder::RemoveKeywordFromMessages(nsISupportsArray *aMessages, const char *aKeyword)
 {
-  nsresult rv = nsMsgDBFolder::RemoveKeywordsFromMessages(aMessages, aKeywords);
+  nsresult rv = nsMsgDBFolder::RemoveKeywordFromMessages(aMessages, aKeyword);
   if (NS_SUCCEEDED(rv))
   {
     nsCAutoString messageIds;
     nsMsgKeyArray keys;
     nsresult rv = BuildIdsAndKeyArray(aMessages, messageIds, keys);
     NS_ENSURE_SUCCESS(rv, rv);
-    rv = StoreCustomKeywords(nsnull, nsnull, aKeywords, keys.GetArray(), keys.GetSize(), nsnull);
+    rv = StoreCustomKeywords(nsnull, nsnull, aKeyword, keys.GetArray(), keys.GetSize(), nsnull);
     if (mDatabase)
       mDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
   }

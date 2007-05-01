@@ -405,8 +405,6 @@ function onUseDefaultRetentionSettings()
 {
   var useDefault = document.getElementById("retention.useDefault").checked;
   document.getElementById('retention.keepMsg').disabled = useDefault;
-  document.getElementById('retention.keepNewMsgMinLabel').disabled = useDefault;
-  document.getElementById('retention.keepOldMsgMinLabel').disabled = useDefault;
 }
 
 function RebuildSummaryInformation()

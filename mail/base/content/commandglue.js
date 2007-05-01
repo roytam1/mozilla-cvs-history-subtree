@@ -516,7 +516,7 @@ function UpdateStatusQuota(folder)
     // get data from backend
     folder.getQuota(valid, used, max);
   } catch (e) { dump(e + "\n"); }
-  if (valid.value && max.value > 0)
+  if (valid.value)
   {
     var percent = Math.round(used.value / max.value * 100);
 

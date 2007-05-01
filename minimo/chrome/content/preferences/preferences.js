@@ -1,18 +1,3 @@
-
-
-/* 
- * Layout Panel
- */
-
-function setChromeColor(value) {
-  try {
-	gWin.BrowserChromeThemeColorSync(value+" ! important");
-      document.getElementById('uiChromeColor').value=value;
-      document.getElementById('dumpColor').value=value;
-  } catch (i) { alert (i) }
-
-}
-
 /*
  * Utils 
  */ 
@@ -53,44 +38,6 @@ function fixXULAutoScroll(e) {
  * These are usually simple DOM XML translators. We need to make this XBL-based elements.
  */ 
 
-// panel-layout.xul
-function controlbarUIMaskRead() {
-  try {
-    var visibleToolbarItemsList = document.getElementById("ui.controlbar").value;
-    var listItems = visibleToolbarItemsList.split(";");
-    for(var i=0;i<listItems.length;i++) {
-      try {			
-        var prefCheckboxName ="pref_controlbar_"+listItems[i]; 
-        if(document.getElementById(prefCheckboxName)) {
-          document.getElementById(prefCheckboxName).checked=true;
-        }
-      } catch (i) { } 
-    }
-  } catch(i) {}
-}
-
-// panel-layout.xul
-
-function controlbarUIMaskWrite() {
-	var visibleToolbarItemsList = document.getElementById("controlBarFullList").getAttribute("value");
-	var listItems = visibleToolbarItemsList.split(";");
-	var strCheckedMaskList = "";
-	for(var i=0;i<listItems.length;i++) {
-		try {			
-			var prefCheckboxName ="pref_controlbar_"+listItems[i]; 
-			if(document.getElementById(prefCheckboxName).checked) {
-				strCheckedMaskList += listItems[i]+";";
-			}
-		} catch (i) { } 
-	}
-
-	gRefreshUIControlBar = true; 
-
-	
-	return strCheckedMaskList;
-}
-
-gRefreshUIControlBar = false;
 
 function readEnableImagesPref()
 {
@@ -418,14 +365,6 @@ function loadHomePageBlank() {
    syncPref(homePageField);
 }
 
-
-function loadHomePageHomebase() {
-   var homePageField = document.getElementById("browserStartupHomepage");
-   homePageField.value = "chrome://minimo/content/bookmarks/bmview.xhtml";
-   syncPref(homePageField);
-}
-
-
 function setDefaultBrowser() {
 
   /* In the device, there is a live synch here. With desktop we fail nice here, so 
@@ -463,30 +402,8 @@ var gPaneSelected=null;
 var gToolbarButtonSelected=null;
 var gPrefArray=null;
 var gPref=null;
-var gWin = null;
 
 function prefStartup() {
-
-    /* 
-     * Keep the reference to the main window 
-     */
-
-	 var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-	                     .getService(Components.interfaces.nsIWindowMediator);
-	 gWin = wm.getMostRecentWindow("navigator:browser");
-	 if(!gWin) gWin = window.opener;
-
-
-     /* 
-      * Each chrome app tells the chrome rule reference that represents the color background. 
-      * This works as a registration service and so far is a very proprietary solution. 
-      * When there is a Color Sync general event ( see BrowserChromeThemeColorSync ), 
-      * then each registered Style Rule receives a property value for a new color. 
-      */
-
-	gWin.BrowserTellChromeThemeRules("preferences",document.styleSheets[2].cssRules[0].style);
-	var colorvalue = gWin.BrowserChromeThemeColorGet();
-	gWin.BrowserChromeThemeColorSyncRaw(colorvalue+" ! important");
 
     /* fix the size of the scrollbox contents */
 
@@ -508,7 +425,6 @@ function prefStartup() {
      * Example: chrome://minimo/content/preferences/preferences.xul#general
      */
 
-
      var targetURI = document.location;
 
      var keyTarget = targetURI.toString().split("#")[1];
@@ -517,11 +433,11 @@ function prefStartup() {
 
         if(keyTarget) {
 
-		  gPanelSelected = document.getElementById(keyTarget+"-pane");
-	        gToolbarButtonSelected = document.getElementById(keyTarget+"-button");
+          gPanelSelected = document.getElementById(keyTarget+"-pane");
+          gToolbarButtonSelected = document.getElementById(keyTarget+"-button");
 
-	        gToolbarButtonSelected.className="base-button prefselectedbutton";  // local to preferences.css (may have to be promoted minimo.css)
-    		  gToolbarButtonSelected.focus();
+          gToolbarButtonSelected.className="base-button prefselectedbutton";  // local to preferences.css (may have to be promoted minimo.css)
+          gToolbarButtonSelected.focus();
 
 	  } else { };
 
@@ -555,7 +471,6 @@ function focusSkipToPanel() {
 	} catch (e) { alert(e) }
 
 }
-
 
 /* 
  * Called from the XUL 
@@ -595,19 +510,14 @@ function syncPref(refElement) {
 	
 }
 
-
 /*
  * Okay, just close the window with sync mode. 
  */
 
 function PrefOkay() {
 
-   document.getElementById("okay-button").setAttribute("disabled",true);
-   if(!gCancelSync) {
-      syncPrefSaveDOM();
-   }
-   gWin.gBrowser.removeCurrentTab();
-   
+	document.getElementById("okay-button").setAttribute("disabled",true);
+
 }
 
 /* 
@@ -618,9 +528,7 @@ function PrefCancel() {
     gCancelSync=true;
 }
 
-
 function syncPrefSaveDOM() {
-
 	try {
 		var psvc = Components.classes["@mozilla.org/preferences-service;1"]
                          .getService(Components.interfaces.nsIPrefService);
@@ -649,7 +557,7 @@ function syncPrefSaveDOM() {
 			if (document.getElementById(prefName).getAttribute("preftype")=="string"){
 				try { 
 					gPref.setCharPref(prefName, prefSETValue);
-				} catch (e) {  } 
+				} catch (e) { } 
 			} 
 	
 			if (document.getElementById(prefName).getAttribute("preftype")=="int") {
@@ -676,30 +584,13 @@ function syncPrefSaveDOM() {
                    // }
 	             //else lf = prefSETValue.QueryInterface(Components.interfaces.nsILocalFile);
 
-	             lf = prefSETValue.QueryInterface(Components.interfaces.nsILocalFile);
+                   lf = prefSETValue.QueryInterface(Components.interfaces.nsILocalFile);
                    gPref.setComplexValue(prefName, Components.interfaces.nsILocalFile, lf);
 	 
                    }	
-
 		}
-
-
-		if( gRefreshUIControlBar) {
-
-			/* 
-		       * we can now also sync the main app so that 
-		       * it refreshes ... 
-		       */
-		
-		
-			gWin.syncControlBar(document.getElementById("controlBarFullList").getAttribute("value"));
-
-		}
-
-
 
 		psvc.savePrefFile(null);
-
 
 	} catch (e) { alert(e); }
 
@@ -807,8 +698,6 @@ function syncPrefLoadDOM(elementList) {
 	}
 	UIdependencyCheck();
 }
-
-
 
 function prefFocus(el) {
 	document.getElementById(el).className="box-prefgroupitem2";

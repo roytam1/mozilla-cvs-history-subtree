@@ -860,7 +860,6 @@ nsPop3Sink::IncorporateComplete(nsIMsgWindow *aMsgWindow, PRInt32 aSize)
               }
             }
             m_newMailParser->m_mailDB->AddNewHdrToDB(hdr, PR_TRUE);
-            m_newMailParser->NotifyGlobalListeners(hdr);
           }
         }
         else
@@ -949,9 +948,6 @@ nsresult
 nsPop3Sink::SetBiffStateAndUpdateFE(PRUint32 aBiffState, PRInt32 numNewMessages, PRBool notify)
 {
   m_biffState = aBiffState;
-  if (m_newMailParser)
-    numNewMessages -= m_newMailParser->m_numNotNewMessages;
-
   if (notify && m_folder && numNewMessages > 0 && numNewMessages != m_numNewMessages 
       && aBiffState == nsIMsgFolder::nsMsgBiffState_NewMail)
   {

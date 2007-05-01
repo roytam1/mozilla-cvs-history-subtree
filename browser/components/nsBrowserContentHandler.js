@@ -106,69 +106,28 @@ function resolveURIInternal(aCmdLine, aArgument) {
   return uri;
 }
 
-const OVERRIDE_NONE        = 0;
-const OVERRIDE_NEW_PROFILE = 1;
-const OVERRIDE_NEW_MSTONE  = 2;
-/**
- * Determines whether a home page override is needed.
- * Returns:
- *  OVERRIDE_NEW_PROFILE if this is the first run with a new profile.
- *  OVERRIDE_NEW_MSTONE if this is the first run with a build with a different
- *                      Gecko milestone (i.e. right after an upgrade).
- *  OVERRIDE_NONE otherwise.
- */
 function needHomepageOverride(prefb) {
-  var savedmstone = null;
+  var savedmstone;
   try {
     savedmstone = prefb.getCharPref("browser.startup.homepage_override.mstone");
-  } catch (e) {}
+  }
+  catch (e) {
+  }
 
   if (savedmstone == "ignore")
-    return OVERRIDE_NONE;
+    return 0;
 
   var mstone = Components.classes["@mozilla.org/network/protocol;1?name=http"]
                          .getService(nsIHttpProtocolHandler).misc;
 
   if (mstone != savedmstone) {
     prefb.setCharPref("browser.startup.homepage_override.mstone", mstone);
-    return (savedmstone ? OVERRIDE_NEW_MSTONE : OVERRIDE_NEW_PROFILE);
+    // Return 1 if true if the pref didn't exist (i.e. new profile) or 2 for an upgrade
+    return (savedmstone ? 2 : 1);
   }
-
-  return OVERRIDE_NONE;
-}
-
-// Copies a pref override file into the user's profile pref-override folder,
-// and then tells the pref service to reload it's default prefs.
-function copyPrefOverride() {
-  try {
-    var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"]
-                                .getService(Components.interfaces.nsIProperties);
-    const NS_APP_EXISTING_PREF_OVERRIDE = "ExistingPrefOverride";
-    var prefOverride = fileLocator.get(NS_APP_EXISTING_PREF_OVERRIDE,
-                                       Components.interfaces.nsIFile);
-    if (!prefOverride.exists())
-      return; // nothing to do
-
-    const NS_APP_PREFS_OVERRIDE_DIR     = "PrefDOverride";
-    var prefOverridesDir = fileLocator.get(NS_APP_PREFS_OVERRIDE_DIR,
-                                           Components.interfaces.nsIFile);
-
-    // Check for any existing pref overrides, and remove them if present
-    var existingPrefOverridesFile = prefOverridesDir.clone();
-    existingPrefOverridesFile.append(prefOverride.leafName);
-    if (existingPrefOverridesFile.exists())
-      existingPrefOverridesFile.remove(false);
-
-    prefOverride.copyTo(prefOverridesDir, null);
-
-    // Now that we've installed the new-profile pref override file,
-    // re-read the default prefs.
-    var prefSvcObs = Components.classes["@mozilla.org/preferences-service;1"]
-                               .getService(Components.interfaces.nsIObserver);
-    prefSvcObs.observe(null, "reload-default-prefs", null);
-  } catch (ex) {
-    Components.utils.reportError(ex);
-  }
+  
+  // Return 0 if not a new profile and not an upgrade
+  return 0;
 }
 
 function openWindow(parent, url, target, features, args) {
@@ -206,9 +165,6 @@ function getMostRecentWindow(aType) {
 #ifndef XP_MACOSX
 #define BROKEN_WM_Z_ORDER
 #endif
-#endif
-#ifdef XP_OS2
-#define BROKEN_WM_Z_ORDER
 #endif
 
 // this returns the most recent non-popup browser window
@@ -326,17 +282,14 @@ var nsBrowserContentHandler = {
     if (remoteCommand != null) {
       try {
         var a = /^\s*(\w+)\(([^\)]*)\)\s*$/.exec(remoteCommand);
-        var remoteVerb;
-        if (a) {
-          remoteVerb = a[1].toLowerCase();
-          var remoteParams = [];
-          var sepIndex = a[2].lastIndexOf(",");
-          if (sepIndex == -1)
-            remoteParams[0] = a[2];
-          else {
-            remoteParams[0] = a[2].substring(0, sepIndex);
-            remoteParams[1] = a[2].substring(sepIndex + 1);
-          }
+        var remoteVerb = a[1].toLowerCase();
+        var remoteParams = [];
+        var sepIndex = a[2].lastIndexOf(",");
+        if (sepIndex == -1)
+          remoteParams[0] = a[2];
+        else {
+          remoteParams[0] = a[2].substring(0, sepIndex);
+          remoteParams[1] = a[2].substring(sepIndex + 1);
         }
 
         switch (remoteVerb) {
@@ -346,26 +299,15 @@ var nsBrowserContentHandler = {
           // openURL(<url>,new-window)
           // openURL(<url>,new-tab)
 
-          // First param is the URL, second param (if present) is the "target"
-          // (tab, window)
-          var url = remoteParams[0];
-          var target = nsIBrowserDOMWindow.OPEN_DEFAULTWINDOW;
-          if (remoteParams[1]) {
-            var targetParam = remoteParams[1].toLowerCase()
-                                             .replace(/^\s*|\s*$/g, "");
-            if (targetParam == "new-tab")
-              target = nsIBrowserDOMWindow.OPEN_NEWTAB;
-            else if (targetParam == "new-window")
-              target = nsIBrowserDOMWindow.OPEN_NEWWINDOW;
-            else {
-              // The "target" param isn't one of our supported values, so
-              // assume it's part of a URL that contains commas.
-              url += "," + remoteParams[1];
-            }
-          }
+          var uri = resolveURIInternal(cmdLine, remoteParams[0]);
 
-          var uri = resolveURIInternal(cmdLine, url);
-          handURIToExistingBrowser(uri, target, cmdLine);
+          var location = nsIBrowserDOMWindow.OPEN_DEFAULTWINDOW;
+          if (/new-window/.test(remoteParams[1]))
+            location = nsIBrowserDOMWindow.OPEN_NEWWINDOW;
+          else if (/new-tab/.test(remoteParams[1]))
+            location = nsIBrowserDOMWindow.OPEN_NEWTAB;
+
+          handURIToExistingBrowser(uri, location, cmdLine);
           break;
 
         case "xfedocommand":
@@ -381,13 +323,12 @@ var nsBrowserContentHandler = {
         default:
           // Somebody sent us a remote command we don't know how to process:
           // just abort.
-          throw "Unknown remote command.";
+          throw NS_ERROR_ABORT;
         }
 
         cmdLine.preventDefault = true;
       }
       catch (e) {
-        Components.utils.reportError(e);
         // If we had a -remote flag but failed to process it, throw
         // NS_ERROR_ABORT so that the xremote code knows to return a failure
         // back to the handling code.
@@ -473,53 +414,39 @@ var nsBrowserContentHandler = {
     var formatter = Components.classes["@mozilla.org/toolkit/URLFormatterService;1"]
                               .getService(Components.interfaces.nsIURLFormatter);
 
-    var overridePage = "";
-    var haveUpdateSession = false;
+    var pagesToLoad = "";
+    var overrideState = needHomepageOverride(prefb);
     try {
-      switch (needHomepageOverride(prefb)) {
-        case OVERRIDE_NEW_PROFILE:
-          // New profile.
-          overridePage = formatter.formatURLPref("startup.homepage_welcome_url");
-          break;
-        case OVERRIDE_NEW_MSTONE:
-          // Existing profile.
-          copyPrefOverride();
-
-          // Check whether we have a session to restore. If we do, we assume
-          // that this is an "update" session.
-          var ss = Components.classes["@mozilla.org/browser/sessionstartup;1"]
-                             .getService(Components.interfaces.nsISessionStartup);
-          haveUpdateSession = ss.doRestore();
-          overridePage = formatter.formatURLPref("startup.homepage_override_url");
-          break;
+      if (overrideState == 1) {
+        pagesToLoad = formatter.formatURLPref("startup.homepage_welcome_url");
       }
-    } catch (e) {}
+      else if (overrideState == 2) {
+        pagesToLoad = formatter.formatURLPref("startup.homepage_override_url");
+      }
+    }
+    catch (e) {
+    }
 
-    // formatURLPref might return "about:blank" if getting the pref fails
-    if (overridePage == "about:blank")
-      overridePage = "";
-
-    var startPage = "";
+    var startpage = "";
     try {
       var choice = prefb.getIntPref("browser.startup.page");
       if (choice == 1)
-        startPage = this.startPage;
+        startpage = this.startPage;
 
       if (choice == 2)
-        startPage = Components.classes["@mozilla.org/browser/global-history;2"]
+        startpage = Components.classes["@mozilla.org/browser/global-history;2"]
                               .getService(nsIBrowserHistory).lastPageVisited;
-    } catch (e) {
-      Components.utils.reportError(e);
+    }
+    catch (e) {
     }
 
-    if (startPage == "about:blank")
-      startPage = "";
+    if (startpage == "about:blank")
+      startpage = "";
 
-    // Only show the startPage if we're not restoring an update session.
-    if (overridePage && startPage && !haveUpdateSession)
-      return overridePage + "|" + startPage;
- 
-    return overridePage || startPage || "about:blank";
+    if (pagesToLoad && startpage) pagesToLoad += "|";
+    pagesToLoad += startpage;
+
+    return (pagesToLoad ?  pagesToLoad : "about:blank");
   },
 
   get startPage() {
@@ -657,71 +584,23 @@ var nsDefaultCommandLineHandler = {
     return this;
   },
 
-  // List of uri's that were passed via the command line without the app
-  // running and have already been handled. This is compared against uri's
-  // opened using DDE on Win32 so we only open one of the requests.
-  _handledURIs: [ ],
-#ifdef XP_WIN
-  _haveProfile: false,
-#endif
-
   /* nsICommandLineHandler */
   handle : function dch_handle(cmdLine) {
     var urilist = [];
 
-#ifdef XP_WIN
-    // If we don't have a profile selected yet (e.g. the Profile Manager is
-    // displayed) we will crash if we open an url and then select a profile. To
-    // prevent this handle all url command line flags and set the command line's
-    // preventDefault to true to prevent the display of the ui. The initial
-    // command line will be retained when nsAppRunner calls LaunchChild though
-    // urls launched after the initial launch will be lost.
-    if (!this._haveProfile) {
-      try {
-        // This will throw when a profile has not been selected.
-        var fl = Components.classes["@mozilla.org/file/directory_service;1"]
-                           .getService(Components.interfaces.nsIProperties);
-        var dir = fl.get("ProfD", Components.interfaces.nsILocalFile);
-        this._haveProfile = true;
-      }
-      catch (e) {
-        while ((ar = cmdLine.handleFlagWithParam("url", false))) { }
-        cmdLine.preventDefault = true;
-      }
-    }
-#endif
-
     try {
       var ar;
       while ((ar = cmdLine.handleFlagWithParam("url", false))) {
-        var found = false;
-        var uri = resolveURIInternal(cmdLine, ar);
-        // count will never be greater than zero except on Win32.
-        var count = this._handledURIs.length;
-        for (var i = 0; i < count; ++i) {
-          if (this._handledURIs[i].spec == uri.spec) {
-            this._handledURIs.splice(i, 1);
-            found = true;
-            cmdLine.preventDefault = true;
-            break;
-          }
-        }
-        if (!found) {
-          urilist.push(uri);
-          // The requestpending command line flag is only used on Win32.
-          if (cmdLine.handleFlag("requestpending", false) &&
-              cmdLine.state == nsICommandLine.STATE_INITIAL_LAUNCH)
-            this._handledURIs.push(uri)
-        }
+        urilist.push(resolveURIInternal(cmdLine, ar));
       }
     }
     catch (e) {
       Components.utils.reportError(e);
     }
 
-    count = cmdLine.length;
+    var count = cmdLine.length;
 
-    for (i = 0; i < count; ++i) {
+    for (var i = 0; i < count; ++i) {
       var curarg = cmdLine.getArgument(i);
       if (curarg.match(/^-/)) {
         Components.utils.reportError("Warning: unrecognized command line flag " + curarg + "\n");
@@ -752,7 +631,7 @@ var nsDefaultCommandLineHandler = {
       }
 
       var speclist = [];
-      for (uri in urilist) {
+      for (var uri in urilist) {
         if (shouldLoadURI(urilist[uri]))
           speclist.push(urilist[uri].spec);
       }

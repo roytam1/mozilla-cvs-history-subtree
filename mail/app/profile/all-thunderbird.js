@@ -74,10 +74,10 @@ pref("app.update.vendorName.override", "Mozilla");
 
 // URL user can browse to manually if for some reason all update installation
 // attempts fail.  TODO: Change this URL
-pref("app.update.url.manual", "http://%LOCALE%.www.mozilla.com/%LOCALE%/%APP%/");
+pref("app.update.url.manual", "http://www.mozilla.org/products/thunderbird/");
 // A default value for the "More information about this update" link
 // supplied in the "An update is available" page of the update wizard. 
-pref("app.update.url.details", "http://%LOCALE%.www.mozilla.com/%LOCALE%/%APP%/releases/");
+pref("app.update.url.details", "chrome://messenger-region/locale/region.properties");
 // User-settable override to app.update.url for testing purposes.
 //pref("app.update.url.override", "");
 
@@ -100,9 +100,6 @@ pref("app.update.timer", 600000);
 // a whatsNewURL field in their brand.properties that contains a link to a page
 // which tells users what's new in this new update.
 pref("app.update.showInstalledUI", false);
-
-// Release notes URL
-pref("app.releaseNotesURL", "http://%LOCALE%.www.mozilla.com/%LOCALE%/%APP%/%VERSION%/releasenotes/");
 
 // Blocklist preferences
 pref("extensions.blocklist.enabled", true);
@@ -182,17 +179,12 @@ pref("mail.showFolderPaneColumns", false); // setting to true will allow total/u
 pref("mail.showCondensedAddresses", true); // show the friendly display name for people I know
 
 // hidden pref for changing how we present attachments in the message pane
-pref("mailnews.attachments.display.largeView", true); 
+pref("mailnews.attachments.display.largeView", false); 
 pref("mail.pane_config.dynamic",            0);
 pref("mailnews.reuse_thread_window2", true);
 pref("mail.spam.display.sanitize", true); // sanitize the HTML in spam messages
 pref("mail.standalone", true); 
 pref("editor.singleLine.pasteNewlines", 4);  // substitute commas for new lines in single line text boxes
-
-// make messages available for Thunderbird's spotlight importer.
-#ifdef XP_MACOSX
-pref("mail.spotlight.enable", false);
-#endif
 
 // hidden pref to ensure a certain number of headers in the message pane
 // to avoid the height of the header area from changing when headers are present / not present
@@ -232,7 +224,6 @@ pref("intl.menuitems.insertseparatorbeforeaccesskeys","chrome://global/locale/in
 pref("signon.rememberSignons",              true);
 pref("signon.expireMasterPassword",         false);
 pref("signon.SignonFileName",               "signons.txt");
-pref("signon.SignonFileName2",              "signons2.txt");
 
 pref("browser.hiddenWindowChromeURL", "chrome://messenger/content/hiddenWindow.xul");
 pref("network.search.url","http://cgi.netscape.com/cgi-bin/url_search.cgi?search=");
@@ -255,12 +246,7 @@ pref("offline.send.unsent_messages",            0);
 // 2 Never synchronize the offline store when going offline
 pref("offline.download.download_messages",  0);
 pref("offline.prompt_synch_on_exit",            true);
-
-#ifdef XP_WIN
-pref("offline.autoDetect", true); // automatically move the user offline or online based on the network connection
-#else
-pref("offline.autoDetect", false);
-#endif
+pref("offline.autoDetect",                      true); // automatically move the user offline or online based on the network connection
 
 // Expose only select protocol handlers. All others should go
 // through the external protocol handler route.
@@ -375,12 +361,7 @@ pref("alerts.totalOpenTime", 3000);
 // 2 and other values, no download manager, no progress dialog. 
 pref("browser.downloadmanager.behavior", 1);
 
-// analyze urls in mail messages for scams
-pref("mail.phishing.detection.enabled", true);
-// If phishing detection is enabled, allow fine grained control
-// of the local, static tests
-pref("mail.phishing.detection.ipaddresses", true); 
-pref("mail.phishing.detection.mismatched_hosts", true);
+pref("mail.phishing.detection.enabled", true); // enable / disable phishing detection for link clicks
 
 pref("browser.safebrowsing.enabled", false);
 

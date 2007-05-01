@@ -825,8 +825,8 @@ function OnLoadMessenger()
     }
     else // for higher resolution displays, use larger values for height and width
     {
-      defaultWidth = screen.availWidth <= 1024 ? screen.availWidth * .95 : screen.availWidth * .8;      
-      defaultHeight = screen.availHeight * .8;
+      defaultWidth = screen.availWidth * .8;
+      defaultHeight = screen.availHeight * .8; 
     }
 
     document.documentElement.setAttribute("width", defaultWidth);
@@ -891,16 +891,14 @@ function delayedOnLoadMessenger()
 #ifdef HAVE_SHELL_SERVICE
   var nsIShellService = Components.interfaces.nsIShellService;
   var shellService;
-  var defaultAccount;
   try {
     shellService = Components.classes["@mozilla.org/mail/shell-service;1"].getService(nsIShellService);
-    defaultAccount = accountManager.defaultAccount;
   } catch (ex) {}
   
   // show the default client dialog only if we have at least one account, 
   // if we should check for the default client, 
   // and we aren't already the default for all of our recognized types (mail, news, rss)
-  if (shellService && defaultAccount && shellService.shouldCheckDefaultClient 
+  if (shellService && accountManager.defaultAccount && shellService.shouldCheckDefaultClient 
       && !shellService.isDefaultClient(true, nsIShellService.MAIL))
     window.openDialog("chrome://messenger/content/defaultClientDialog.xul", "DefaultClient", 
                       "modal,centerscreen,chrome,resizable=no");
@@ -1008,6 +1006,12 @@ function loadStartFolder(initialUri)
 
                 startFolderResource = inboxFolder.QueryInterface(Components.interfaces.nsIRDFResource);
             }
+            else
+            {
+                // set the startFolderResource to the server, so we select it
+                // so we'll get account central
+                startFolderResource = RDF.GetResource(defaultServer.serverURI);
+            }
         }
 
         var startFolder = startFolderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
@@ -1020,7 +1024,7 @@ function loadStartFolder(initialUri)
         // or a pop3 account that is deferred or deferred to,
         // or the case where initialUri is non-null (non-startup)
         if (!initialUri && isLoginAtStartUpEnabled && gLoadStartFolder
-            && !defaultServer.isDeferredTo && !gNewAccountToLoad &&
+            && !defaultServer.isDeferredTo &&
             defaultServer.rootFolder == defaultServer.rootMsgFolder)
           defaultServer.PerformBiff(msgWindow);        
 
@@ -1036,8 +1040,7 @@ function loadStartFolder(initialUri)
     }
     catch(ex)
     {
-      // this is the case where we're trying to auto-subscribe to a folder.
-      if (initialUri && !startFolder.parent)
+      if (initialUri)
       {
         messenger.loadURL(window, initialUri);
         return;
@@ -1053,7 +1056,7 @@ function loadStartFolder(initialUri)
       MsgGetMessagesForAllServers(defaultServer);
 
     // if appropriate, send unsent messages. This may end up prompting the user
-    if (MailOfflineMgr.isOnline() && MailOfflineMgr.shouldSendUnsentMessages())
+    if (MailOfflineMgr.shouldSendUnsentMessages())
       SendUnsentMessages();
 }
 
@@ -1739,6 +1742,11 @@ function SelectMessage(messageUri)
     gDBView.selectMsgByKey(msgHdr.messageKey);
 }
 
+function ReloadWithAllParts()
+{
+  gDBView.reloadMessageWithAllParts();
+}
+
 function ReloadMessage()
 {
   gDBView.reloadMessage();
@@ -1768,20 +1776,6 @@ function GetFolderAttribute(tree, source, attribute)
   return target;
 }
 
-function LoadNavigatedToMessage(msgHdr, folder, folderUri)
-{
-  if (IsCurrentLoadedFolder(folder))
-  {
-    gDBView.selectMsgByKey(msgHdr.messageKey);
-  }
-  else
-  {
-    gStartMsgKey = msgHdr.messageKey;
-    SelectFolder(folderUri);
-  }
-  
-}
-
 // Some of the per account junk mail settings have been
 // converted to global prefs. Let's try to migrate some
 // of those settings from the default account.
@@ -1792,10 +1786,7 @@ function MigrateJunkMailSettings()
   {
     // get the default account, check to see if we have values for our 
     // globally migrated prefs.
-    var defaultAccount;
-    try {
-      defaultAccount = accountManager.defaultAccount;
-    } catch (ex) {}
+    var defaultAccount = accountManager.defaultAccount;
     if (defaultAccount && defaultAccount.incomingServer)
     {
       // we only care about

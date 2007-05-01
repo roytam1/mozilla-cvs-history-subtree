@@ -105,7 +105,6 @@
 #include "nsRssIncomingServer.h"
 #include "nsRssService.h"
 #include "nsMsgTagService.h"
-#include "nsMsgFolderNotificationService.h"
 #include "nsMailDirProvider.h"
 
 #ifdef XP_WIN
@@ -165,12 +164,6 @@
 #include "nsAbLDAPReplicationData.h"
 #include "nsAbLDAPChangeLogQuery.h"
 #include "nsAbLDAPChangeLogData.h"
-#endif
-
-#ifdef XP_MACOSX
-#include "nsAbOSXDirectory.h"
-#include "nsAbOSXCard.h"
-#include "nsAbOSXDirFactory.h"
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -342,7 +335,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgOfflineManager)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgProgress)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsSpamSettings)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgTagService)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgFolderNotificationService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCidProtocolHandler)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMailDirProvider)
 #ifdef XP_WIN
@@ -407,13 +399,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbDirectoryQueryProxy)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbView)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgVCardService) 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbLDIFService)
-#if 0
-#ifdef XP_MACOSX
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXDirectory)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXCard)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsAbOSXDirFactory)
-#endif
-#endif
+
 ////////////////////////////////////////////////////////////////////////////////
 // bayesian spam filter factories
 ////////////////////////////////////////////////////////////////////////////////
@@ -851,11 +837,6 @@ static const nsModuleComponentInfo gComponents[] = {
       NS_MSGTAGSERVICE_CONTRACTID,
       nsMsgTagServiceConstructor,
     },
-    { "Msg Notification Service", NS_MSGNOTIFICATIONSERVICE_CID,
-      NS_MSGNOTIFICATIONSERVICE_CONTRACTID,
-      nsMsgFolderNotificationServiceConstructor,
-    },
-  
     { "cid protocol", NS_CIDPROTOCOL_CID,
       NS_CIDPROTOCOLHANDLER_CONTRACTID,
       nsCidProtocolHandlerConstructor,
@@ -989,16 +970,6 @@ static const nsModuleComponentInfo gComponents[] = {
     { "addressbook view", NS_ABVIEW_CID, NS_ABVIEW_CONTRACTID, nsAbViewConstructor},
     { "vcard helper service", NS_MSGVCARDSERVICE_CID, NS_MSGVCARDSERVICE_CONTRACTID, nsMsgVCardServiceConstructor },
     { "ldif handler service", NS_ABLDIFSERVICE_CID, NS_ABLDIFSERVICE_CONTRACTID, nsAbLDIFServiceConstructor },
-#if 0
-#ifdef XP_MACOSX
-    { "OS X Address Book Directory", NS_ABOSXDIRECTORY_CID,
-      NS_ABOSXDIRECTORY_CONTRACTID, nsAbOSXDirectoryConstructor },
-    { "OS X Address Book Card", NS_ABOSXCARD_CID, NS_ABOSXCARD_CONTRACTID,
-      nsAbOSXCardConstructor },
-    { "The OS X factory Interface", NS_ABOSXDIRFACTORY_CID,
-      NS_ABOSXDIRFACTORY_CONTRACTID, nsAbOSXDirFactoryConstructor },
-#endif
-#endif
 
     ////////////////////////////////////////////////////////////////////////////////
     // bayesian spam filter components

@@ -43,7 +43,7 @@
 #import "BrowserTabViewItem.h"
 #import "BrowserTabView.h"
 
-#import "BrowserWrapper.h"
+#import "CHBrowserView.h"
 #import "MainController.h"
 #import "BrowserWindowController.h"
 #import "TruncatingTextAndImageCell.h"
@@ -180,9 +180,20 @@ const int kMenuTruncationChars = 60;
   return NSDragOperationGeneric;
 }
 
+- (unsigned int)draggingUpdated:(id <NSDraggingInfo>)sender
+{
+  if (![self shouldAcceptDragFrom:[sender draggingSource]]) {
+    [self hideDragDestinationIndicator];
+    return NSDragOperationNone;
+  }
+
+  [self showDragDestinationIndicator];
+  return NSDragOperationGeneric;
+}
+
 - (void)draggingExited:(id <NSDraggingInfo>)sender
 {
-  [self hideDragDestinationIndicator];
+    [self hideDragDestinationIndicator];
 }
 
 - (BOOL)prepareForDragOperation:(id <NSDraggingInfo>)sender
@@ -205,12 +216,9 @@ const int kMenuTruncationChars = 60;
 
 // NSDraggingSource methods
 
-- (unsigned int)draggingSourceOperationMaskForLocal:(BOOL)isLocal
+- (unsigned int)draggingSourceOperationMaskForLocal:(BOOL)flag
 {
-  if (isLocal)
-    return (NSDragOperationGeneric | NSDragOperationCopy);
-
-  return (NSDragOperationGeneric | NSDragOperationCopy | NSDragOperationLink);
+	return NSDragOperationGeneric | NSDragOperationCopy;
 }
 
 // NSResponder methods
@@ -263,9 +271,9 @@ const int kMenuTruncationChars = 60;
   {
     mSelectTabOnMouseUp = NO;
 
-    BrowserWrapper* browserView = (BrowserWrapper*)[mTabViewItem view];
+    CHBrowserView* browserView = (CHBrowserView*)[mTabViewItem view];
     
-    NSString     *url = [browserView currentURI];
+    NSString     *url = [browserView getCurrentURI];
     NSString     *title = [mLabelCell stringValue];
     NSString     *cleanedTitle = [title stringByReplacingCharactersInSet:[NSCharacterSet controlCharacterSet] withString:@" "];
     

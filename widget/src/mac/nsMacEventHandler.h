@@ -169,8 +169,6 @@ protected:
 		                           PRUint32 aModifiers);
 		void ClearLastMouseUp();
 
-		PRBool IsPluginFocused();
-
 protected:
 	nsMacEventDispatchHandler* mEventDispatchHandler;
 	nsMacWindow*	mTopLevelWidget;

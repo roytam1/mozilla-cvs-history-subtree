@@ -145,9 +145,7 @@ private:
                    nsISimpleEnumerator** aResult);
 
   nsresult AddToCompositeDataSource(PRBool aUseProfile);
-
-  nsresult FlagXPCNativeWrappers();
-
+  
   nsresult GetBaseURL(const nsACString& aPackage,
                       const nsACString& aProvider, 
                       nsACString& aBaseURL);

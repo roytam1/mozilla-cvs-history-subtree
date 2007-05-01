@@ -211,7 +211,8 @@ function view_init()
 
   // hide the views menu item if the user doesn't have the views toolbar button visible
   viewsToolbarButton = document.getElementById("mailviews-container");
-  document.getElementById('viewMessageViewMenu').hidden = !viewsToolbarButton;
+  if (!viewsToolbarButton)
+    document.getElementById('viewMessageViewMenu').collapsed = true;
 
   // Initialize the View Attachment Inline menu
   var viewAttachmentInline = pref.getBoolPref("mail.inline_attachments");
@@ -493,44 +494,24 @@ function RemoveAllMessageTags()
   var selectedMsgUris = GetSelectedMessages();
   if (!selectedMsgUris.length)
     return;
-
-  var messages = Components.classes["@mozilla.org/supports-array;1"]
-                           .createInstance(Components.interfaces.nsISupportsArray);
-  var tagService = Components.classes["@mozilla.org/messenger/tagservice;1"]
-                             .getService(Components.interfaces.nsIMsgTagService);
-  var tagArray = tagService.getAllTags({});
-
-  var allKeys = "";
-  for (j = 0; j < tagArray.length; ++j)
-  {
-    if (j)
-      allKeys += " ";
-    allKeys += tagArray[j].key;
-  }
-
-  var prevHdrFolder = null;
-  // this crudely handles cross-folder virtual folders with selected messages
-  // that spans folders, by coalescing consecutive messages in the selection
-  // that happen to be in the same folder. nsMsgSearchDBView does this better,
-  // but nsIMsgDBView doesn't handle commands with arguments, and untag takes a
-  // key argument. Furthermore, we only delete legacy labels and known tags,
-  // keeping other keywords like (non)junk intact.
-  var j;
+    
+  var msg = Components.classes["@mozilla.org/supports-array;1"]
+                          .createInstance(Components.interfaces.nsISupportsArray);
+                          
   for (var i = 0; i < selectedMsgUris.length; ++i)
   {
+    // remove all tags by removing all their tag keys, all at once.
+    // (using a msgHdr's setStringProperty won't notify the threadPane!)
     var msgHdr = messenger.msgHdrFromURI(selectedMsgUris[i]);
     msgHdr.label = 0; // remove legacy label
-    if (prevHdrFolder != msgHdr.folder)
-    {
-      if (prevHdrFolder)
-        prevHdrFolder.removeKeywordsFromMessages(messages, allKeys);
-      messages.Clear();
-      prevHdrFolder = msgHdr.folder;
-    }
-    messages.AppendElement(msgHdr);
+    msg.Clear();
+    msg.AppendElement(msgHdr);
+    
+    var keywords = msgHdr.getStringProperty("keywords");
+    // this will remove all keywords at once...
+    if (keywords.length > 0)
+      msgHdr.folder.removeKeywordFromMessages(msg, keywords);
   }
-  if (prevHdrFolder)
-    prevHdrFolder.removeKeywordsFromMessages(messages, allKeys);
   OnTagsChange();
 }
 
@@ -574,7 +555,7 @@ function ToggleMessageTag(key, addKey)
   var msg = Components.classes["@mozilla.org/supports-array;1"]
                           .createInstance(Components.interfaces.nsISupportsArray);
   var selectedMsgUris = GetSelectedMessages();
-  var toggler = addKey ? "addKeywordsToMessages" : "removeKeywordsFromMessages";
+  var toggler = addKey ? "addKeywordToMessages" : "removeKeywordFromMessages";
   var prevHdrFolder = null;
   // this crudely handles cross-folder virtual folders with selected messages
   // that spans folders, by coalescing consecutive msgs in the selection
@@ -591,7 +572,7 @@ function ToggleMessageTag(key, addKey)
       // because resetting a label doesn't update the tree anymore...
       msg.Clear();
       msg.AppendElement(msgHdr);
-      msgHdr.folder.addKeywordsToMessages(msg, "$label" + msgHdr.label);
+      msgHdr.folder.addKeywordToMessages(msg, "$label" + msgHdr.label);
       msgHdr.label = 0; // remove legacy label
     }
     if (prevHdrFolder != msgHdr.folder)
@@ -694,7 +675,7 @@ function backToolbarMenu_init(menuPopup)
   populateHistoryMenu(menuPopup, true);
 }
 
-var gNavDebug = false;
+var gNavDebug = true;
 function navDebug(str)
 {
   if (gNavDebug)
@@ -762,10 +743,17 @@ function NavigateToUri(target)
   var folder = RDF.GetResource(folderUri).QueryInterface(Components.interfaces.nsIMsgFolder);
   var msgHdr = messenger.msgHdrFromURI(msgUri);
   navDebug("navigating from " + messenger.navigatePos + " by " + historyIndex + " to " + msgUri + "\n");
-  navDebug("folderUri = " + folderUri + "\n");
   // this "- 0" seems to ensure that historyIndex is treated as an int, not a string.
-  messenger.navigatePos += (historyIndex - 0);
-  LoadNavigatedToMessage(msgHdr, folder, folderUri);
+  messenger.navigatePos += historyIndex - 0;
+  if (IsCurrentLoadedFolder(folder))
+  {
+    gDBView.selectMsgByKey(msgHdr.messageKey);
+  }
+  else
+  {
+    gStartMsgKey = msgHdr.messageKey;
+    SelectFolder(folderUri);
+  }
 }
 
 function forwardToolbarMenu_init(menuPopup)
@@ -918,7 +906,6 @@ function GetMessagesForInboxOnServer(server)
 
 function MsgGetMessage()
 {
-  gNewAccountToLoad = null;
   // if offline, prompt for getting messages
   if (MailOfflineMgr.isOnline() || MailOfflineMgr.getNewMail())
     GetFolderMessages();
@@ -1744,6 +1731,31 @@ function MsgSendUnsentMsgs()
     MailOfflineMgr.goOnlineToSendMessages(msgWindow);
 }
 
+function GetPrintSettings()
+{
+  var prevPS = gPrintSettings;
+
+  try {
+    if (gPrintSettings == null) {
+      var useGlobalPrintSettings = gPrefBranch.getBoolPref("print.use_global_printsettings");
+
+      // I would rather be using nsIWebBrowserPrint API
+      // but I really don't have a document at this point
+      var printSettingsService = Components.classes["@mozilla.org/gfx/printsettings-service;1"]
+                                           .getService(Components.interfaces.nsIPrintSettingsService);
+      if (useGlobalPrintSettings) {
+        gPrintSettings = printSettingsService.globalPrintSettings;
+      } else {
+        gPrintSettings = printSettingsService.CreatePrintSettings();
+      }
+    }
+  } catch (e) {
+    dump("GetPrintSettings "+e);
+  }
+
+  return gPrintSettings;
+}
+
 function PrintEnginePrintInternal(messageList, numMessages, doPrintPreview, msgType)
 {
     if (numMessages == 0) {
@@ -1752,7 +1764,7 @@ function PrintEnginePrintInternal(messageList, numMessages, doPrintPreview, msgT
     }
 
     if (gPrintSettings == null) {
-      gPrintSettings = PrintUtils.getPrintSettings();
+      gPrintSettings = GetPrintSettings();
     }
     printEngineWindow = window.openDialog("chrome://messenger/content/msgPrintEngine.xul",
                                           "",
@@ -2190,11 +2202,9 @@ function HandleJunkStatusChanged(folder)
     var msgHdr = null;
     if (GetNumSelectedMessages() == 1)
       msgHdr = messenger.msgHdrFromURI(loadedMessage);
-    var junkBarWasDisplayed = gMessageNotificationBar.isFlagSet(kMsgNotificationJunkBar);
     gMessageNotificationBar.setJunkMsg(msgHdr);
-
-    // only reload message if junk bar display state has changed.    
-    if (msgHdr && junkBarWasDisplayed != gMessageNotificationBar.isFlagSet(kMsgNotificationJunkBar))
+    
+    if (msgHdr)
     {
       // we may be forcing junk mail to be rendered with sanitized html. In that scenario, we want to 
       // reload the message if the status has just changed to not junk. 
@@ -2252,7 +2262,7 @@ var gMessageNotificationBar =
     // update the allow remote content for sender string
     var headerParser = Components.classes["@mozilla.org/messenger/headerparser;1"].getService(Components.interfaces.nsIMsgHeaderParser);
     var emailAddress = headerParser.extractHeaderAddressMailboxes(null, aMsgHdr.author);
-    document.getElementById('allowRemoteContentForAuthorDesc').textContent  = 
+    document.getElementById('allowRemoteContentForAuthorDesc').value = 
       gMessengerBundle.getFormattedString('alwaysLoadRemoteContentForSender', [emailAddress ? emailAddress : aMsgHdr.author]);
     this.updateMsgNotificationBar(kMsgNotificationRemoteImages, true);
   },
@@ -2293,10 +2303,10 @@ var gMessageNotificationBar =
 };
 
 /**
- * LoadMsgWithRemoteContent
+ * loadMsgWithRemoteContent
  *   Reload the current message, allowing remote content
  */
-function LoadMsgWithRemoteContent()
+function loadMsgWithRemoteContent()
 {
   // we want to get the msg hdr for the currently selected message
   // change the "remoteContentBar" property on it

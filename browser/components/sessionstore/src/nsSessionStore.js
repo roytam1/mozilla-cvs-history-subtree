@@ -570,8 +570,7 @@ SessionStoreService.prototype = {
     
     // store closed-tab data for undo
     var tabState = this._windows[aWindow.__SSi].tabs[aTab._tPos];
-    if (tabState && (tabState.entries.length > 1 ||
-        tabState.entries[0].url != "about:blank")) {
+    if (tabState && tabState.entries[0].url != "about:blank") {
       this._windows[aWindow.__SSi]._closedTabs.unshift({
         state: tabState,
         title: aTab.getAttribute("label"),
@@ -916,18 +915,10 @@ SessionStoreService.prototype = {
     }
     
     if (!aPanel.__SS_text) {
-      aPanel.__SS_text = [];
-      aPanel.__SS_text._refs = [];
+      aPanel.__SS_text = {};
     }
-    
-    // get the index of the reference to the text element
-    var ix = aPanel.__SS_text._refs.indexOf(aTextarea);
-    if (ix == -1) {
-      // we haven't registered this text element yet - do so now
-      aPanel.__SS_text._refs.push(aTextarea);
-      ix = aPanel.__SS_text.length;
-    }
-    else if (!aPanel.__SS_text[ix].cache) {
+    else if (aPanel.__SS_text[aTextarea] &&
+             !aPanel.__SS_text[aTextarea].cache) {
       // we've already marked this text element for saving (the cache is
       // added during save operations and would have to be updated here)
       return false;
@@ -943,7 +934,7 @@ SessionStoreService.prototype = {
     }
     
     // mark this element for saving
-    aPanel.__SS_text[ix] = { id: id, element: wrappedTextarea };
+    aPanel.__SS_text[aTextarea] = { id: id, element: wrappedTextarea };
     
     return true;
   },
@@ -983,8 +974,8 @@ SessionStoreService.prototype = {
         
         var text = [];
         if (aBrowser.parentNode.__SS_text && this._checkPrivacyLevel(aBrowser.currentURI.schemeIs("https"))) {
-          for (var ix = aBrowser.parentNode.__SS_text.length - 1; ix >= 0; ix--) {
-            var data = aBrowser.parentNode.__SS_text[ix];
+          for (var key in aBrowser.parentNode.__SS_text) {
+            var data = aBrowser.parentNode.__SS_text[key];
             if (!data.cache) {
               // update the text element's value before adding it to the data structure
               data.cache = encodeURI(data.element.value);

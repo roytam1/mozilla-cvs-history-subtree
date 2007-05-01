@@ -166,7 +166,7 @@ function verifyAccounts(wizardcallback)
           if (!adminUrl)
             newProfile = false;
         }
-        if ((newProfile  && !accountCount) || accountCount == invalidAccounts.length) {
+        if (newProfile || accountCount == invalidAccounts.length) {
             try {
                   var messengerMigrator = Components.classes[messengerMigratorContractID].getService(Components.interfaces.nsIMessengerMigrator); 
                   messengerMigrator.UpgradePrefs();
@@ -300,8 +300,7 @@ function loadInboxForNewAccount()
     SelectFolder(inboxFolder.URI);
     window.focus();
     setTimeout(MsgGetMessage, 0);
-    // we clear gNewAccountToLoad in MsgGetMessage so that the biff startup
-    // code which runs before can check if we're loading a new account.
+    gNewAccountToLoad = null;
   }
 }
 

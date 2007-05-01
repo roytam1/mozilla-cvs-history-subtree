@@ -64,7 +64,7 @@ pref("chimera.log_js_to_console", false);
 
 // Identify Camino in the UA string
 pref("general.useragent.vendor", "Camino");
-pref("general.useragent.vendorSub", "1.1b+");
+pref("general.useragent.vendorSub", "1.1a2+");
 
 pref("browser.chrome.favicons", true);
 pref("browser.urlbar.autocomplete.enabled", true);
@@ -137,6 +137,3 @@ pref("dom.disable_open_during_load", true);
 
 // don't hide user:pass when fixing up URIs
 pref("browser.fixup.hide_user_pass", false);
-
-// give users the option of restoring windows after a crash
-pref("browser.sessionstore.resume_from_crash", true);

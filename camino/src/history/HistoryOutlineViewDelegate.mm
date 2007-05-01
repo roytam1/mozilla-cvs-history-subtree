@@ -468,10 +468,7 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 
 - (unsigned int)outlineView:(NSOutlineView *)outlineView draggingSourceOperationMaskForLocal:(BOOL)localFlag
 {
-  if (localFlag)
-    return NSDragOperationGeneric;
-
-  return (NSDragOperationGeneric | NSDragOperationCopy | NSDragOperationLink);
+  return NSDragOperationGeneric;
 }
 
 - (void)outlineViewItemDidExpand:(NSNotification *)notification

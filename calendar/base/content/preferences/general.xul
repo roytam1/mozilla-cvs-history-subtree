@@ -21,7 +21,6 @@
    -
    - Contributor(s):
    -   Cédric Corazza <cedric.corazza@wanadoo.fr>
-   -   Stefan Sitter <ssitter@googlemail.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -48,14 +47,14 @@
     %preferencesDTD;
 ]>
 
-<overlay id="CalendarGeneralPaneOverlay"
+<overlay id="GeneralPaneOverlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
-    <vbox id="calPreferencesBoxGeneral">
+    <prefpane id="paneGeneral" onpaneload="gGeneralPane.init();">
         <script type="application/x-javascript"
                 src="chrome://calendar/content/preferences/general.js"/>
         <script type="application/x-javascript"
-                src="chrome://calendar/content/calendar-dialog-utils.js"/>
+                src="chrome://calendar/content/calendarUtils.js"/>
 
         <!-- Get the localized text for use in the .js -->
         <script type="application/x-javascript">
@@ -72,13 +71,6 @@
                         type="int"/>
             <preference id="calendar.alarms.defaultsnoozelength"
                         name="calendar.alarms.defaultsnoozelength"
-                        type="int"/>
-            <preference id="calendar.autorefresh.enabled"
-                        name="calendar.autorefresh.enabled"
-                        type="bool"
-                        onchange="gCalendarGeneralPane.autoRefreshPrefChanged();"/>
-            <preference id="calendar.autorefresh.timeout"
-                        name="calendar.autorefresh.timeout"
                         type="int"/>
         </preferences>
 
@@ -125,23 +117,7 @@
 
         </groupbox>
 
-        <groupbox>
-            <caption label="&pref.refreshbox.label;"/>
-            <hbox align="center">
-                <checkbox id="autorefreshenabled"
-                          label="&pref.autorefresh.label;"
-                          preference="calendar.autorefresh.enabled"
-                          accesskey="&pref.autorefresh.accesskey;"/>
-                <textbox id="refreshtimeout"
-                         preference="calendar.autorefresh.timeout"
-                         maxlength="3"
-                         size="3"
-                         oninput="validateNaturalNums(event);"/>
-                <label value="&calendar.global.units.minutes;"/>
-            </hbox>
-        </groupbox>
-
         <separator/>
 
-    </vbox>
+    </prefpane>
 </overlay>

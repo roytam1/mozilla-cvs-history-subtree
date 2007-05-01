@@ -518,12 +518,14 @@ const gPopupBlockerObserver = {
         var label = bundle_browser.getFormattedString("popupShowPopupPrefix",
                                                       [popupURIspec]);
         menuitem.setAttribute("label", label);
+        menuitem.setAttribute("requestingWindowURI", pageReport[i].requestingWindowURI.spec);
         menuitem.setAttribute("popupWindowURI", popupURIspec);
         menuitem.setAttribute("popupWindowFeatures", pageReport[i].popupWindowFeatures);
+#ifndef MOZILLA_1_8_BRANCH
+# bug 314700
         menuitem.setAttribute("popupWindowName", pageReport[i].popupWindowName);
+#endif
         menuitem.setAttribute("oncommand", "gPopupBlockerObserver.showBlockedPopup(event);");
-        menuitem.requestingWindow = pageReport[i].requestingWindow;
-        menuitem.requestingDocument = pageReport[i].requestingDocument;
         aEvent.target.appendChild(menuitem);
       }
     }
@@ -548,17 +550,30 @@ const gPopupBlockerObserver = {
 
   showBlockedPopup: function (aEvent)
   {
-    var target = aEvent.target;
-    var popupWindowURI = target.getAttribute("popupWindowURI");
-    var features = target.getAttribute("popupWindowFeatures");
-    var name = target.getAttribute("popupWindowName");
+    var requestingWindow = aEvent.target.getAttribute("requestingWindowURI");
+    var requestingWindowURI =
+                      Components.classes["@mozilla.org/network/io-service;1"]
+                                .getService(Components.interfaces.nsIIOService)
+                                .newURI(requestingWindow, null, null);
 
-    var dwi = target.requestingWindow;
+    var popupWindowURI = aEvent.target.getAttribute("popupWindowURI");
+    var features = aEvent.target.getAttribute("popupWindowFeatures");
+#ifndef MOZILLA_1_8_BRANCH
+# bug 314700
+    var name = aEvent.target.getAttribute("popupWindowName");
+#endif
 
-    // If we have a requesting window and the requesting document is
-    // still the current document, open the popup.
-    if (dwi && dwi.document == target.requestingDocument) {
+    var shell = findChildShell(null, gBrowser.selectedBrowser.docShell,
+                               requestingWindowURI);
+    if (shell) {
+      var ifr = shell.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
+      var dwi = ifr.getInterface(Components.interfaces.nsIDOMWindowInternal);
+#ifdef MOZILLA_1_8_BRANCH
+# bug 314700
+      dwi.open(popupWindowURI, "", features);
+#else
       dwi.open(popupWindowURI, name, features);
+#endif
     }
   },
 
@@ -1410,8 +1425,7 @@ function ctrlNumberTabSelection(event)
   if (!event.metaKey)
 #else
 #ifdef XP_UNIX
-  // don't let tab selection clash with numeric accesskeys (bug 366084)
-  if (!event.altKey || event.shiftKey)
+  if (!event.altKey)
 #else
   if (!event.ctrlKey)
 #endif
@@ -1901,9 +1915,7 @@ function BrowserCloseTabOrWindow()
 
   if (gBrowser.localName == "tabbrowser" && (gBrowser.tabContainer.childNodes.length > 1 ||
       !gPrefService.getBoolPref("browser.tabs.autoHide") && window.toolbar.visible)) {
-    // Just close up a tab (and focus the address bar if it was the last one).
-    if (gBrowser.tabContainer.childNodes.length == 1 && gURLBar)
-      setTimeout(function() { gURLBar.focus(); }, 0);
+    // Just close up a tab.
     gBrowser.removeCurrentTab();
     return;
   }
@@ -2279,7 +2291,7 @@ function handleURLBarRevert()
   // don't revert to last valid url unless page is NOT loading
   // and user is NOT key-scrolling through autocomplete list
   if ((!throbberElement || !throbberElement.hasAttribute("busy")) && !isScrolling) {
-    if (url != "about:blank" || content.opener) {
+    if (url != "about:blank") {
       gURLBar.value = url;
       gURLBar.select();
       SetPageProxyState("valid");
@@ -3851,9 +3863,8 @@ nsBrowserStatusHandler.prototype =
 
       var location = aLocation.spec;
 
-      if ((location == "about:blank" && !content.opener) ||
-           location == "") {                        //second condition is for new tabs, otherwise
-        location = "";                              //reload function is enabled until tab is refreshed
+      if (location == "about:blank" || location == "") {   //second condition is for new tabs, otherwise
+        location = "";                                     //reload function is enabled until tab is refreshed
         this.reloadCommand.setAttribute("disabled", "true");
         this.reloadSkipCacheCommand.setAttribute("disabled", "true");
       } else {

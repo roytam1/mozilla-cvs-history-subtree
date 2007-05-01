@@ -868,29 +868,30 @@ NS_IMETHODIMP
 nsMessenger::SaveAttachmentToFolder(const char * contentType, const char * url, const char * displayName, 
                                     const char * messageUri, nsILocalFile * aDestFolder, nsILocalFile ** aOutFile)
 {
-  NS_ENSURE_ARG_POINTER(aDestFolder);
-  nsresult rv;
-
-  nsCOMPtr<nsIFile> clone;
-  rv = aDestFolder->Clone(getter_AddRefs(clone));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsILocalFile> attachmentDestination = do_QueryInterface(clone);
-
+  nsresult rv = NS_OK;
   nsXPIDLCString unescapedFileName;
+  
   rv = ConvertAndSanitizeFileName(displayName, nsnull, getter_Copies(unescapedFileName));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = attachmentDestination->AppendNative(unescapedFileName);
-  NS_ENSURE_SUCCESS(rv, rv);
-
   nsCOMPtr<nsIFileSpec> fileSpec;
-  rv = NS_NewFileSpecFromIFile(attachmentDestination, getter_AddRefs(fileSpec));
+
+  rv = NS_NewFileSpecFromIFile(aDestFolder, getter_AddRefs(fileSpec));
   NS_ENSURE_SUCCESS(rv, rv);
 
+  fileSpec->SetLeafName(unescapedFileName);
+
+  // ok now we have a file spec for the destination
   rv = SaveAttachment(fileSpec, url, messageUri, contentType, nsnull);
 
-  attachmentDestination.swap(*aOutFile);
+  // before we return, we need to convert our file spec back to a nsIFile to return to the caller
+  nsCOMPtr<nsILocalFile> outputFile;
+  nsFileSpec actualSpec;
+  fileSpec->GetFileSpec(&actualSpec);
+  NS_FileSpecToIFile(&actualSpec, getter_AddRefs(outputFile));
+
+  NS_IF_ADDREF(*aOutFile = outputFile);
+
   return rv;
 }
 
@@ -1448,7 +1449,7 @@ nsMessenger::MsgHdrFromURI(const char *aUri, nsIMsgDBHdr **aMsgHdr)
   nsCOMPtr <nsIMsgMessageService> msgService;
   nsresult rv;
  
-  if (mMsgWindow && (!strncmp(aUri, "file:", 5) || PL_strstr(aUri, "type=application/x-message-display")))
+  if (!strncmp(aUri, "file:", 5) || PL_strstr(aUri, "type=application/x-message-display"))
   {
     nsCOMPtr <nsIMsgHeaderSink> headerSink;
     mMsgWindow->GetMsgHeaderSink(getter_AddRefs(headerSink));
@@ -2761,16 +2762,7 @@ public:
   nsCOMPtr<nsIMsgWindow> mMsgWindow;                // our UI window
   PRUint32 mNewMessageKey;                          // new message key
   PRUint32 mOrigMsgFlags;
-
-  
-   enum {
-      eStarting,
-      eCopyingNewMsg,
-      eUpdatingFolder, // for IMAP
-      eDeletingOldMessage,
-      eSelectingNewMessage
-    } m_state;
-   // temp
+  // temp
   PRBool mWrittenExtra;
   PRBool mDetaching;
   nsCStringArray mDetachedFileUris;
@@ -2819,7 +2811,6 @@ nsDelAttachListener::OnStopRequest(nsIRequest * aRequest, nsISupports * aContext
   mMsgFileSpec->CloseStream();
   mNewMessageKey = PR_UINT32_MAX;
   nsCOMPtr<nsIMsgCopyService> copyService = do_GetService(NS_MSGCOPYSERVICE_CONTRACTID);
-  m_state = eCopyingNewMsg;
   if (copyService)
     rv = copyService->CopyFileMessage(mMsgFileSpec, mMessageFolder, nsnull, PR_FALSE, 
                                       mOrigMsgFlags, listenerCopyService, mMsgWindow);
@@ -2864,7 +2855,6 @@ nsresult nsDelAttachListener::DeleteOriginalMessage()
   QueryInterface( NS_GET_IID(nsIMsgCopyServiceListener), getter_AddRefs(listenerCopyService) );
 
   mOriginalMessage = nsnull;
-  m_state = eDeletingOldMessage;
   return mMessageFolder->DeleteMessages( 
     messageArray,         // messages
     mMsgWindow,           // msgWindow
@@ -2895,14 +2885,13 @@ NS_IMETHODIMP
 nsDelAttachListener::OnStopRunningUrl(nsIURI * aUrl, nsresult aExitCode)
 {
   nsresult rv = NS_OK;
+  // the imap code gets here, since the delete triggers an OnStopRunningUrl.
+  // the local msg code doesn't get here.
   const char * messageUri = mAttach->mAttachmentArray[0].mMessageUri;
   if (mOriginalMessage && !strncmp(messageUri, "imap-message:", 13))
-  {
-    if (m_state == eUpdatingFolder)
-      rv = DeleteOriginalMessage();
-  }
+    rv = DeleteOriginalMessage();
   // check if we've deleted the original message, and we know the new msg id.
-  else if (m_state == eDeletingOldMessage && mMsgWindow)
+  else if (!mOriginalMessage && mNewMessageKey != PR_UINT32_MAX && mMsgWindow)
     SelectNewMessage();
 
   return rv;
@@ -2953,7 +2942,7 @@ nsDelAttachListener::OnStopCopy(nsresult aStatus)
     return aStatus;
 
   // check if we've deleted the original message, and we know the new msg id.
-  if (m_state == eDeletingOldMessage && mMsgWindow)
+  if (!mOriginalMessage && mNewMessageKey != PR_UINT32_MAX && mMsgWindow)
     SelectNewMessage();
   // do this for non-imap messages - for imap, we'll do the delete in
   // OnStopRunningUrl. For local messages, we won't get an OnStopRunningUrl
@@ -2966,8 +2955,6 @@ nsDelAttachListener::OnStopCopy(nsresult aStatus)
   const char * messageUri = mAttach->mAttachmentArray[0].mMessageUri;
   if (mOriginalMessage && strncmp(messageUri, "imap-message:", 13))
     return DeleteOriginalMessage();
-  else
-    m_state = eUpdatingFolder;
   return NS_OK;
 }
 
@@ -2981,7 +2968,6 @@ nsDelAttachListener::nsDelAttachListener()
   mSaveFirst = PR_FALSE;
   mWrittenExtra = PR_FALSE;
   mNewMessageKey = PR_UINT32_MAX;
-  m_state = eStarting;
 }
 
 nsDelAttachListener::~nsDelAttachListener()
