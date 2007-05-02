@@ -126,7 +126,7 @@ $VendorName               = 'Mozilla';
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -149,13 +149,13 @@ $ConfigureOnly = 1;
 
 %WGetFiles = (
 # CONFIG:	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.linux-i686.tar.gz' =>
-	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.10-candidates/rc1/thunderbird-1.5.0.10.en-US.linux-i686.tar.gz' =>
+'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc%rc%/thunderbird-1.5.0.12.en-US.linux-i686.tar.gz' =>
 # CONFIG:	      '%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.gz'
-	      '/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Linux_2.4.18-14_Depend/thunderbird.tar.gz'
+'%l10n_buildDir%/Linux_2.4.18-14_Depend/thunderbird.tar.gz'
 	      );
 
 # CONFIG: $BuildLocalesArgs = 'ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.gz';
-$BuildLocalesArgs = 'ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Linux_2.4.18-14_Depend/thunderbird.tar.gz';
+$BuildLocalesArgs = 'ZIP_IN=%l10n_buildDir%/Linux_2.4.18-14_Depend/thunderbird.tar.gz';
 
 #-
 #- The rest should not need to be changed
@@ -170,7 +170,7 @@ $BuildTree  = 'Mozilla1.8.0-l10n';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'THUNDERBIRD_1_5_0_10_RELEASE';
+$BuildTag = 'THUNDERBIRD_1_5_0_12_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -211,7 +211,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
 # CONFIG: $milestone     = 'thunderbird%version%-l10n';
-$milestone     = "thunderbird1.5.0.10";
+$milestone     = 'thunderbird1.5.0.12-l10n';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
