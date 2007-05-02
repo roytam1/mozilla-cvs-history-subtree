@@ -15,9 +15,8 @@ ac_add_options --enable-application="calendar"
 ac_add_options --enable-update-channel="nightly"
 ac_add_options --enable-update-packaging
 ac_add_options --disable-debug
-ac_add_options --enable-optimize="-O2 -g"
+#ac_add_options --enable-optimize="-O2 -g"
 ac_add_options --disable-tests
-ac_add_options --disable-installer
 ac_add_options --enable-static
 ac_add_options --disable-shared
 ac_add_app_options ppc --enable-prebinding
