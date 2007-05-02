@@ -141,17 +141,17 @@ $ConfigureOnly = 1;
 
 # On windows
 %WGetFiles = (
-# CONFIG:              "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.win32.installer.exe" =>
-"http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc%rc%/thunderbird-1.5.0.12.en-US.win32.installer.exe" =>
+# CONFIG:              "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/unsigned/thunderbird-%version%.en-US.win32.installer.exe" =>
+             "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc1/unsigned/thunderbird-1.5.0.12.en-US.win32.installer.exe" =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird-installer.exe",
-"%l10n_buildDir%/WINNT_5.2_Depend/thunderbird-installer.exe",
-# CONFIG:	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.win32.zip" =>
-"http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc%rc%/thunderbird-1.5.0.12.en-US.win32.zip" =>
+             "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/thunderbird-installer.exe",
+# CONFIG:	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/unsigned/thunderbird-%version%.en-US.win32.zip" =>
+             "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc1/unsigned/thunderbird-1.5.0.12.en-US.win32.zip" =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.zip");
-"%l10n_buildDir%/WINNT_5.2_Depend/thunderbird.zip");
+             "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/thunderbird.zip");
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.zip WIN32_INSTALLER_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird-installer.exe";
-$BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/WINNT_5.2_Depend/thunderbird.zip WIN32_INSTALLER_IN=%l10n_buildDir%/WINNT_5.2_Depend/thunderbird-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/thunderbird.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/thunderbird-installer.exe";
 
 #-
 #- The rest should not need to be changed
