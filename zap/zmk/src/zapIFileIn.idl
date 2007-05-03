@@ -53,6 +53,10 @@ interface zapIFileIn : nsISupports
    * Seek to the given position or by the given offset. A new
    * streaminfo will be set, if this filein node was opened with
    * generateEOF==true.
+   * Throws an exception if 'origin' is not one of the constants
+   * defined above, or if the file is not open.
+   * Returns the new offset measured in bytes from the beginning of
+   * the file if the seek was successful, or -1 otherwise.
    */
-  void seek(in long long offset, in short origin);
+  long long seek(in long long offset, in short origin);
 };

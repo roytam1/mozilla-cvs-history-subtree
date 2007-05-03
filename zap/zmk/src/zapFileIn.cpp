@@ -237,16 +237,17 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
 //----------------------------------------------------------------------
 // zapIFileIn:
 
-/* void seek (in long long offset, in short origin); */
+/* long long seek (in long long offset, in short origin); */
 NS_IMETHODIMP
-zapFileIn::Seek(PRInt64 offset, PRInt16 origin)
+zapFileIn::Seek(PRInt64 offset, PRInt16 origin, PRInt64 *_retval)
 {
   if (!mFile) return NS_ERROR_FAILURE;
   if (origin<0 || origin>2) return NS_ERROR_FAILURE;
   
   if (mGenerateEOF)
     mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
-  PR_Seek(mFile, offset, (PRSeekWhence)origin);
-  mOffset = offset;
+  *_retval = PR_Seek64(mFile, offset, (PRSeekWhence)origin);
+  if (*_retval != -1)
+    mOffset = offset;
   return NS_OK;
 }
