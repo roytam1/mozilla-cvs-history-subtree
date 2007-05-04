@@ -32,6 +32,7 @@ import junit.framework.Test;
 import java.util.Enumeration;
 import javax.swing.tree.TreeModel;
 import javax.swing.tree.TreeNode;
+import org.mozilla.mcp.junit.WebclientTestCase;
 
 // BookmarksTest.java
 

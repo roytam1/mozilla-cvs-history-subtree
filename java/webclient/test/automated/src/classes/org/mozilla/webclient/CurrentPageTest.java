@@ -43,6 +43,7 @@ import java.awt.datatransfer.DataFlavor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.BufferedReader;
+import org.mozilla.mcp.junit.WebclientTestCase;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;

@@ -31,7 +31,7 @@ package org.mozilla.webclient.impl.wrapper_native;
 import org.mozilla.util.Assert;
 import org.mozilla.util.ParameterCheck;
 
-import org.mozilla.webclient.WebclientTestCase;
+import org.mozilla.mcp.junit.WebclientTestCase;
 
 /**
  *

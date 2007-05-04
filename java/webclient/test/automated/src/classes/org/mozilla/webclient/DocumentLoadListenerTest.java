@@ -42,6 +42,7 @@ import java.io.InputStream;
 
 import java.awt.Robot;
 import java.awt.event.InputEvent;
+import org.mozilla.mcp.junit.WebclientTestCase;
 
 
 // DocumentLoadListenerTest.java

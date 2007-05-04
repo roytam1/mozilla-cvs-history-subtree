@@ -31,7 +31,7 @@ import junit.framework.Test;
 
 import org.mozilla.webclient.BrowserControl;
 import org.mozilla.webclient.BrowserControlFactory;
-import org.mozilla.webclient.WebclientTestCase;
+import org.mozilla.mcp.junit.WebclientTestCase;
 import org.mozilla.webclient.impl.BrowserControlImpl;
 
 // WrapperFactoryImplTest.java

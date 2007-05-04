@@ -37,6 +37,7 @@ import java.awt.BorderLayout;
 
 import java.io.File;
 import java.io.FileInputStream;
+import org.mozilla.mcp.junit.WebclientTestCase;
 
 // HistoryTest.java
 

@@ -24,7 +24,7 @@
  * Contributor(s): Ed Burns &lt;edburns@acm.org&gt;
  */
 
-package org.mozilla.webclient;
+package org.mozilla.mcp;
 
 import java.io.*;
 

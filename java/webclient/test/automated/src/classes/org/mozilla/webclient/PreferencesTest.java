@@ -31,6 +31,7 @@ import junit.framework.Test;
 
 import java.util.Properties;
 import java.util.Iterator;
+import org.mozilla.mcp.junit.WebclientTestCase;
 
 // PreferencesTest.java
 

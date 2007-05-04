@@ -36,6 +36,7 @@ import java.awt.event.KeyListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.InputEvent;
 import java.awt.BorderLayout;
+import org.mozilla.mcp.junit.WebclientTestCase;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 

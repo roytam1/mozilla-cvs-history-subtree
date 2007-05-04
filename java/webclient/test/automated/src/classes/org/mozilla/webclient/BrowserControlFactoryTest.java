@@ -28,6 +28,7 @@ package org.mozilla.webclient;
 
 import junit.framework.TestSuite;
 import junit.framework.Test;
+import org.mozilla.mcp.junit.WebclientTestCase;
 
 // BrowserControlFactoryTest.java
 

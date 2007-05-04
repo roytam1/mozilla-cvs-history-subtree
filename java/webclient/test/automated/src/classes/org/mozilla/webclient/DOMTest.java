@@ -37,6 +37,7 @@ import java.awt.Robot;
 
 import java.io.File;
 import java.io.FileInputStream;
+import org.mozilla.mcp.junit.WebclientTestCase;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

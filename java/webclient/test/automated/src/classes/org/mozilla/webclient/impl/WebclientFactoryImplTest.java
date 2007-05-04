@@ -29,7 +29,7 @@ package org.mozilla.webclient.impl;
 import junit.framework.TestSuite;
 import junit.framework.Test;
 
-import org.mozilla.webclient.WebclientTestCase;
+import org.mozilla.mcp.junit.WebclientTestCase;
 
 // WebclientFactoryImplTest.java
 
