@@ -727,6 +727,11 @@ GetShellFolderPath(int folder, char result[MAXPATHLEN])
   return rv;
 }
 
+
+#define COMPILE_NEWAPIS_STUBS
+#define WANT_GETLONGPATHNAME_WRAPPER
+#include "NewAPIs.h"
+
 nsresult
 nsXREDirProvider::GetUpdateRootDir(nsIFile* *aResult)
 {
@@ -741,6 +746,7 @@ nsXREDirProvider::GetUpdateRootDir(nsIFile* *aResult)
   longPath.SetLength(MAXPATHLEN);
   char *buf = longPath.BeginWriting();
   DWORD len = GetLongPathName(appPath.get(), buf, MAXPATHLEN);
+
   // Failing GetLongPathName() is not fatal.
   if (len <= 0 || len >= MAXPATHLEN)
     longPath.Assign(appPath);
