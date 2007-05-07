@@ -2130,6 +2130,12 @@ sub run_all_tests {
                 set_pref($pref_file, 'dom.disable_open_during_load', 'false');
             }
 
+            if ($Settings::BinaryName =~ /^seamonkey/ ||
+                $Settings::BinaryName =~ /^thunderbird/) {
+                # Suppress seamonkey's palm sync conduit installer
+                set_pref($pref_file, 'extensions.palmsync.conduitRegistered', 'true');
+            }
+
             # Suppress security warnings for QA test.
             if ($Settings::QATest) {
                 set_pref($pref_file, 'security.warn_submit_insecure', 'true');
