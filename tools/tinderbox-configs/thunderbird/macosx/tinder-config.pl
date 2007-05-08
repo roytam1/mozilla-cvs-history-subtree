@@ -143,7 +143,7 @@ $BuildNameExtra = 'Tb-Universal-l10n-Release';
 $ConfigureOnly = 1;
 %WGetFiles = (
 # CONFIG:	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.mac.dmg' =>
-             'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc1/thunderbird-1.5.0.12.en-US.mac.dmg' =>
+             'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc2/thunderbird-1.5.0.12.en-US.mac.dmg' =>
 # CONFIG:	     "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.dmg"
              "/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Darwin_8.7.0_Depend/thunderbird.dmg"
 	     );

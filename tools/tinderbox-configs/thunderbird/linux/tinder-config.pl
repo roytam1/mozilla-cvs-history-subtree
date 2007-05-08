@@ -149,7 +149,7 @@ $ConfigureOnly = 1;
 
 %WGetFiles = (
 # CONFIG:	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.linux-i686.tar.gz' =>
-             'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc1/thunderbird-1.5.0.12.en-US.linux-i686.tar.gz' =>
+             'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc2/thunderbird-1.5.0.12.en-US.linux-i686.tar.gz' =>
 # CONFIG:	      '%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.gz'
              '/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Linux_2.4.18-14_Depend/thunderbird.tar.gz'
 	      );

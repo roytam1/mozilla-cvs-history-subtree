@@ -142,11 +142,11 @@ $ConfigureOnly = 1;
 # On windows
 %WGetFiles = (
 # CONFIG:              "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.win32.installer.exe" =>
-             "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc1/thunderbird-1.5.0.12.en-US.win32.installer.exe" =>
+             "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc2/thunderbird-1.5.0.12.en-US.win32.installer.exe" =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird-installer.exe",
              "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/thunderbird-installer.exe",
 # CONFIG:	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.win32.zip" =>
-             "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc1/thunderbird-1.5.0.12.en-US.win32.zip" =>
+             "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.12-candidates/rc2/thunderbird-1.5.0.12.en-US.win32.zip" =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.zip");
              "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/WINNT_5.2_Depend/thunderbird.zip");
 
