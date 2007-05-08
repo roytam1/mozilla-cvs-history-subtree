@@ -482,10 +482,14 @@ case "$target" in
         # bug #249782
         # ensure that mt.exe is Microsoft (R) Manifest Tool and not magnetic tape manipulation utility (or something else)
         if test "$_CC_SUITE" -ge "8"; then
+                changequote(,)
+                _MSMT_VER_FILTER='s|.* \([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*|\1|p'
+                changequote([,])
+
                 MSMT_TOOL=`mt 2>&1|grep 'Microsoft (R) Manifest Tool'`
-                if test -n "MSMT_TOOL"; then
-                        MSMANIFEST_TOOL_VERSION=`echo ${MSMANIFEST_TOOL}|grep -Po "(^|\s)[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(\s|$)"`
-                        if test -z "MSMANIFEST_TOOL_VERSION"; then
+                if test -n "$MSMT_TOOL"; then
+                        MSMANIFEST_TOOL_VERSION=`echo ${MSMT_TOOL}|sed -ne "$_MSMT_VER_FILTER"`
+                        if test -z "$MSMANIFEST_TOOL_VERSION"; then
                                 AC_MSG_WARN([Unknown version of the Microsoft (R) Manifest Tool.])
                         fi
                         MSMANIFEST_TOOL=1
@@ -2879,13 +2883,6 @@ else
     esac
 
     dnl ========================================================
-    dnl = Check for Xinerama
-    dnl ========================================================
-    AC_CHECK_LIB(Xinerama, XineramaIsActive, [MOZ_XINERAMA_LIBS="-lXinerama"],,
-        $XLIBS $XEXT_LIBS)
-    AC_CHECK_HEADER(X11/extensions/Xinerama.h)
-
-    dnl ========================================================
     dnl = Check for XShm
     dnl ========================================================
     AC_CHECK_LIB(Xext, XShmCreateImage, _HAVE_XSHM_XEXT=1,,
@@ -4322,7 +4319,8 @@ suite)
   MOZ_PROFILESHARING=
   MOZ_APP_VERSION=$SEAMONKEY_VERSION
   if test "$MOZ_XUL_APP"; then
-    MOZ_EXTENSIONS_DEFAULT=" wallet xml-rpc p3p venkman inspector irc typeaheadfind gnomevfs sroaming reporter"
+    MOZ_NO_XPCOM_OBSOLETE=1
+    MOZ_EXTENSIONS_DEFAULT=" wallet xml-rpc p3p venkman inspector irc typeaheadfind gnomevfs reporter"
   else
     MOZ_EXTENSIONS_DEFAULT=" wallet xml-rpc help p3p venkman inspector irc typeaheadfind gnomevfs sroaming reporter"
   fi
@@ -4565,7 +4563,6 @@ MOZ_ARG_HEADER(Toolkit Options)
         -o "$_DEFAULT_TOOLKIT" = "cairo-gtk2" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-beos" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-os2" \
-        -o "$_DEFAULT_TOOLKIT" = "cairo-xlib" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-mac" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-cocoa"
     then
@@ -4574,7 +4571,7 @@ MOZ_ARG_HEADER(Toolkit Options)
         MOZ_WIDGET_TOOLKIT=`echo "$_DEFAULT_TOOLKIT" | sed -e "s/,.*$//"`
     else
         if test "$no_x" != "yes"; then
-            AC_MSG_ERROR([Toolkit must be cairo-xlib, cairo-gtk2, or qt.])
+            AC_MSG_ERROR([Toolkit must be cairo-gtk2 or qt.])
         else
             AC_MSG_ERROR([Toolkit must be $_PLATFORM_DEFAULT_TOOLKIT (if supported).])
         fi
@@ -4635,16 +4632,6 @@ cairo-os2)
     TK_LIBS='$(MOZ_CAIRO_LIBS)'
     ;;
 
-cairo-xlib)
-    MOZ_WIDGET_TOOLKIT=xlib
-    MOZ_GFX_TOOLKIT=cairo
-    MOZ_ENABLE_CAIRO_GFX=1
-	MOZ_ENABLE_XLIB=1
-	TK_CFLAGS='$(MOZ_XLIB_CFLAGS) $(MOZ_CAIRO_FLAGS)'
-	TK_LIBS='$(MOZ_XLIB_LDFLAGS) $(MOZ_CAIRO_LIBS)'
-	AC_DEFINE(MOZ_WIDGET_XLIB)
-    ;;
-
 cairo-mac|cairo-cocoa)
     if test "$MOZ_WIDGET_TOOLKIT" = "cairo-cocoa"; then
         MOZ_WIDGET_TOOLKIT=cocoa
@@ -4671,25 +4658,9 @@ if test "$MOZ_ENABLE_XREMOTE"; then
 fi
 
 if test "$COMPILE_ENVIRONMENT"; then
-if test "$MOZ_ENABLE_GTK"
-then
-    AM_PATH_GTK($GTK_VERSION,,
-    AC_MSG_ERROR(Test for GTK failed.))
-
-    MOZ_GTK_LDFLAGS=$GTK_LIBS
-    MOZ_GTK_CFLAGS=$GTK_CFLAGS
-fi
-
 if test "$MOZ_ENABLE_GTK2"
 then
     PKG_CHECK_MODULES(MOZ_GTK2, gtk+-2.0 >= 1.3.7 gdk-x11-2.0 glib-2.0 gobject-2.0)
-fi
-
-if test "$MOZ_ENABLE_XLIB"
-then
-    MOZ_XLIB_CFLAGS="$X_CFLAGS"
-    MOZ_XLIB_LDFLAGS="$XLDFLAGS"
-    MOZ_XLIB_LDFLAGS="$MOZ_XLIB_LDFLAGS $XEXT_LIBS $X11_LIBS"
 fi
 
 if test "$MOZ_ENABLE_QT"
@@ -4803,8 +4774,6 @@ AC_SUBST(GTK_CONFIG)
 AC_SUBST(TK_CFLAGS)
 AC_SUBST(TK_LIBS)
 
-AC_SUBST(MOZ_ENABLE_GTK)
-AC_SUBST(MOZ_ENABLE_XLIB)
 AC_SUBST(MOZ_ENABLE_GTK2)
 AC_SUBST(MOZ_ENABLE_QT)
 AC_SUBST(MOZ_ENABLE_PHOTON)
@@ -4812,12 +4781,8 @@ AC_SUBST(MOZ_ENABLE_COCOA)
 AC_SUBST(MOZ_ENABLE_CAIRO_GFX)
 AC_SUBST(MOZ_ENABLE_GLITZ)
 AC_SUBST(MOZ_ENABLE_XREMOTE)
-AC_SUBST(MOZ_GTK_CFLAGS)
-AC_SUBST(MOZ_GTK_LDFLAGS)
 AC_SUBST(MOZ_GTK2_CFLAGS)
 AC_SUBST(MOZ_GTK2_LIBS)
-AC_SUBST(MOZ_XLIB_CFLAGS)
-AC_SUBST(MOZ_XLIB_LDFLAGS)
 AC_SUBST(MOZ_QT_CFLAGS)
 AC_SUBST(MOZ_QT_LDFLAGS)
 
@@ -4829,9 +4794,7 @@ then
     AC_DEFINE(MOZ_CAIRO_GFX)
 fi
 
-if test "$MOZ_ENABLE_GTK" \
-|| test "$MOZ_ENABLE_QT" \
-|| test "$MOZ_ENABLE_XLIB" \
+if test "$MOZ_ENABLE_QT" \
 || test "$MOZ_ENABLE_GTK2"
 then
     AC_DEFINE(MOZ_X11)
@@ -5222,12 +5185,10 @@ dnl ========================================================
 
 if test "$MOZ_ENABLE_GTK2"
 then
-    MOZ_ENABLE_DBUS=1
-
-    MOZ_ARG_DISABLE_BOOL(dbus,
-    [  --disable-dbus       Disable dbus support (default: auto, optional at runtime) ],
-        MOZ_ENABLE_DBUS=,
-        MOZ_ENABLE_DBUS=force)
+    MOZ_ARG_ENABLE_BOOL(dbus,
+    [  --enable-dbus       Enable dbus support (default: disabled) ],
+        MOZ_ENABLE_DBUS=force,
+        MOZ_ENABLE_DBUS=)
 
     if test "$MOZ_ENABLE_DBUS"
     then
@@ -5259,9 +5220,8 @@ dnl = those converters are not built on other platforms/toolkits.
 dnl = (see bug 180851)
 dnl ========================================================
 
-if (test "$MOZ_ENABLE_GTK"  || test "$MOZ_ENABLE_GTK2") \
+if test "$MOZ_ENABLE_GTK2" \
 && test "$MOZ_ENABLE_COREXFONTS" \
-|| test "$MOZ_ENABLE_XLIB" \
 || test "$MOZ_ENABLE_XPRINT" 
 then
     AC_DEFINE(MOZ_EXTRA_X11CONVERTERS)
@@ -5303,30 +5263,6 @@ MOZ_ARG_DISABLE_BOOL(oji,
     MOZ_OJI=1)
 if test -n "$MOZ_OJI"; then
     AC_DEFINE(OJI)
-fi
-
-dnl ========================================================
-dnl = Xinerama support. The autodetection is done above in the Xlib
-dnl = detection routines.
-dnl ========================================================
-
-if test "$MOZ_WIDGET_TOOLKIT" = "gtk2"; then
-    MOZ_ENABLE_XINERAMA=1
-fi
-
-MOZ_ARG_DISABLE_BOOL(xinerama,
-[  --disable-xinerama      Disable Xinerama support],
-    MOZ_ENABLE_XINERAMA=,
-    MOZ_ENABLE_XINERAMA=1 )
-
-if test -n "$MOZ_ENABLE_XINERAMA"; then
-    if test -z "$MOZ_XINERAMA_LIBS" || \
-        test "$ac_cv_header_X11_extensions_Xinerama_h" = "no"; then
-        AC_MSG_ERROR([Cannot find Xinerama library. To build without Xinerama support, rebuild with --disable-xinerama])
-    fi
-    # Xinerama depends on libXext which is not automatically included on older distribs
-    MOZ_XINERAMA_LIBS="$MOZ_XINERAMA_LIBS $XEXT_LIBS"
-    AC_DEFINE(MOZ_ENABLE_XINERAMA)
 fi
 
 dnl bi-directional support always on
@@ -7061,9 +6997,6 @@ then
     if test "$MOZ_ENABLE_GTK2"; then
         PKG_CHECK_MODULES(LIBIDL, libIDL-2.0 >= 0.8.0 glib-2.0 gobject-2.0, _LIBIDL_FOUND=1,_LIBIDL_FOUND=)
     fi
-    if test "$MOZ_ENABLE_GTK"; then
-        AM_PATH_LIBIDL($LIBIDL_VERSION,_LIBIDL_FOUND=1)
-    fi
     dnl if no gtk/libIDL1 or gtk2/libIDL2 combination was found, fall back
     dnl to either libIDL1 or libIDL2.
     if test -z "$_LIBIDL_FOUND"; then
@@ -7702,8 +7635,6 @@ AC_SUBST(MOZ_XPRINT_CFLAGS)
 AC_SUBST(MOZ_XPRINT_LDFLAGS)
 AC_SUBST(MOZ_ENABLE_XPRINT)
 AC_SUBST(MOZ_ENABLE_POSTSCRIPT)
-AC_SUBST(MOZ_XINERAMA_LIBS)
-AC_SUBST(MOZ_ENABLE_XINERAMA)
 
 AC_SUBST(XPCOM_USE_LEA)
 AC_SUBST(BUILD_STATIC_LIBS)

@@ -161,7 +161,6 @@ gfx/src/psshared/Makefile
 gfx/src/photon/Makefile
 gfx/src/mac/Makefile
 gfx/src/qt/Makefile
-gfx/src/xlib/Makefile
 gfx/src/os2/Makefile
 gfx/src/xlibrgb/Makefile
 gfx/src/windows/Makefile
@@ -311,7 +310,6 @@ content/html/document/public/Makefile
 content/html/document/src/Makefile
 content/xml/Makefile
 content/xml/content/Makefile
-content/xml/content/public/Makefile
 content/xml/content/src/Makefile
 content/xml/document/Makefile
 content/xml/document/public/Makefile
@@ -572,17 +570,13 @@ widget/public/Makefile
 widget/src/Makefile
 widget/src/beos/Makefile
 widget/src/build/Makefile
-widget/src/gtk/Makefile
-widget/src/gtksuperwin/Makefile
 widget/src/gtkxtbin/Makefile
 widget/src/qt/Makefile
 widget/src/photon/Makefile
 widget/src/mac/Makefile
 widget/src/cocoa/Makefile
-widget/src/xlib/Makefile
 widget/src/os2/Makefile
 widget/src/windows/Makefile
-widget/src/xlibxtbin/Makefile
 widget/src/xpwidgets/Makefile
 widget/src/support/Makefile
 "
@@ -798,8 +792,6 @@ embedding/config/Makefile
 embedding/tests/Makefile
 embedding/tests/cocoaEmbed/Makefile
 embedding/tests/winEmbed/Makefile
-embedding/tests/mfcembed/Makefile
-embedding/tests/mfcembed/components/Makefile
 "
 
 MAKEFILES_minimo="
@@ -912,8 +904,6 @@ browser/components/sidebar/src/Makefile
 browser/components/shell/Makefile
 browser/components/shell/public/Makefile
 browser/components/shell/src/Makefile
-browser/extensions/Makefile
-browser/extensions/layout-debug/Makefile
 browser/installer/Makefile
 browser/installer/unix/Makefile
 browser/installer/windows/Makefile
@@ -982,6 +972,7 @@ toolkit/components/history/src/Makefile
 toolkit/components/passwordmgr/Makefile
 toolkit/components/passwordmgr/base/Makefile
 toolkit/components/passwordmgr/resources/Makefile
+toolkit/components/passwordmgr/test/Makefile
 toolkit/components/places/Makefile
 toolkit/components/places/public/Makefile
 toolkit/components/places/src/Makefile

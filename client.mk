@@ -431,7 +431,7 @@ MODULES_all :=                                  \
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
 
 NSPR_CO_TAG          = NSPRPUB_PRE_4_2_CLIENT_BRANCH
-NSS_CO_TAG           = NSS_3_11_5_RTM
+NSS_CO_TAG           = NSS_3_11_7_BETA1
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
 
@@ -1176,8 +1176,8 @@ cleansrcdir:
 # (! IS_FIRST_CHECKOUT)
 endif
 
-echo_objdir:
-	@echo $(OBJDIR)
+echo-variable-%:
+	@echo $($*)
 
 #######################################################################
 # Branch maintenance
