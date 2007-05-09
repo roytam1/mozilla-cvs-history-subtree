@@ -1,4 +1,4 @@
-# ***** BEGIN LICENSE BLOCK *****
+b# ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
 # The contents of this file are subject to the Mozilla Public License Version
@@ -258,7 +258,7 @@ MODULES_all :=                                  \
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
 MOZ_CO_TAG           = SEAMONKEY_1_1_2_RELEASE
-NSPR_CO_TAG          = NSPR_4_6_7_BETA1
+NSPR_CO_TAG          = NSPR_4_6_7_RTM
 NSS_CO_TAG           = NSS_3_11_5_RTM
 LDAPCSDK_CO_TAG      = SEAMONKEY_1_1_2_RELEASE
 LOCALES_CO_TAG       = SEAMONKEY_1_1_2_RELEASE
