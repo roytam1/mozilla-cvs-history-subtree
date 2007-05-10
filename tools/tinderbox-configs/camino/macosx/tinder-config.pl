@@ -178,7 +178,7 @@ $ObjDir = '../build';
 #$SubObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Cm1.6-M1.8';
+$BuildNameExtra = 'Cm1.5-M1.8';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -196,7 +196,7 @@ $BuildSleep = 5;
 $BuildTree  = 'Camino';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'CAMINO_1_5_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -237,7 +237,7 @@ $ftp_path      = "/home/ftp/pub/camino/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/camino/nightly";
 $tbox_ftp_path = '/home/ftp/pub/camino/tinderbox-builds';
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/camino/tinderbox-builds";
-$milestone     = "1.6-M1.8";
+$milestone     = "1.5-M1.8";
 #$notify_list   = 'build-announce@mozilla.org';
 #$stub_installer = 1;
 #$sea_installer = 1;
