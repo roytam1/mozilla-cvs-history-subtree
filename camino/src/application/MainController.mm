@@ -181,6 +181,20 @@ const int kReuseWindowOnAE = 2;
   // will get called more than once.
 }
 
+// Shockwave for Director refuses to load if the host has no resource fork
+// (bug 151677), but AppleScript is confused by the presence of a rsrc file
+// that doesn't have an aete resource (bug 184449), so we set up a dummy
+// resource on the fly to placate Shockwave.
+// This is based on WebKit's solution for the same issue, which in turn
+// seems to be based on an older description of OmniWeb's workaround.
+- (void)initializeDummyResource
+{
+  short currentResourceFile = CurResFile();
+  UseResFile(kSystemResFile);
+  LMSetCurApRefNum(CurResFile());
+  UseResFile(currentResourceFile);
+}
+
 - (void)ensureGeckoInitted
 {
   if (mGeckoInitted)
@@ -193,6 +207,9 @@ const int kReuseWindowOnAE = 2;
   unsigned int numComps = 0;
   const nsModuleComponentInfo* comps = GetAppComponents(&numComps);
   CHBrowserService::RegisterAppComponents(comps, numComps);
+
+  // Set up the Shockwave workaround
+  [self initializeDummyResource];
 
   // To work around a bug on Tiger where the view hookup order has been changed from postfix to prefix
   // order, we need to set a user default to return to the old behavior.
