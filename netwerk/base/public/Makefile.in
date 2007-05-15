@@ -124,9 +124,12 @@ XPIDLSRCS	= \
 		nsPISocketTransportService.idl \
 		nsIChannelEventSink.idl \
 		nsINetUtil.idl \
-		nsIUDPSocket.idl \
 		nsIProxiedChannel.idl \
 		$(NULL)
+
+ifdef MOZ_ZAP
+XPIDLSRCS    += nsIUDPSocket.idl
+endif
 
 EXPORTS		= \
 		netCore.h \
