@@ -45,6 +45,7 @@
 #include "nsIFile.h"
 #include "nsIFileURL.h"
 #include "nsILocalFile.h"
+#include "prerror.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapFileIn
@@ -196,7 +197,7 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
   nsRefPtr<zapMediaFrame> frame = new zapMediaFrame();
   frame->mStreamInfo = mStreamInfo;
   frame->mTimestamp = mOffset;
-  PRUint32 bytesRead;
+  PRInt32 bytesRead;
   
   if (mLoop && PR_Available(mFile) <= 0) {
     // Create a new stream info, so that downstream nodes get the
@@ -217,10 +218,15 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
   frame->mData.SetLength(mBlockSize);
   bytesRead = PR_Read(mFile, frame->mData.BeginWriting(), mBlockSize);
   if (bytesRead <= 0) {
+#ifdef DEBUG_alex
+    if (bytesRead == -1)
+      printf("PR_Read returned error %d\n", PR_GetError());
+#endif
     mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
     if (!mGenerateEOF)
       return NS_ERROR_FAILURE;
     // ... else fall through to emit the frame.
+    bytesRead = 0;
   }
   else {
     mOffset += bytesRead;
