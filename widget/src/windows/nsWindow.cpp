@@ -224,76 +224,6 @@ static PRBool gOverrideHWKeys = PR_TRUE;
 static PRInt32 gSoftkeyContextDelay = 1000;
 static PRInt32 gBackRepeatDelay = 500;
 
-typedef BOOL (__stdcall *UnregisterFunc1Proc)( UINT, UINT );
-static UnregisterFunc1Proc gProcUnregisterFunc = NULL;
-static HINSTANCE gCoreDll = NULL;
-
-UINT gHardwareKeys[][2] =
-  {
-    { 0xc1, MOD_WIN },
-    { 0xc2, MOD_WIN },
-    { 0xc3, MOD_WIN },
-    { 0xc4, MOD_WIN },
-    { 0xc5, MOD_WIN },
-    { 0xc6, MOD_WIN },
-
-    { 0x72, 0 },// Answer - 0x72 Modifier - 0  
-    { 0x73, 0 },// Hangup - 0x73 Modifier - 0 
-    { 0x74, 0 },// 
-    { 0x75, 0 },// Volume Up   - 0x75 Modifier - 0
-    { 0x76, 0 },// Volume Down - 0x76 Modifier - 0
-    { 0, 0 },
-  };
-
-static void MapHardwareButtons(HWND window)
-{
-  if (!window)
-    return;
-
-  // handle hardware buttons so that they broadcast into our
-  // application. the following code is based on an article
-  // on the Pocket PC Developer Network:
-  //
-  // http://www.pocketpcdn.com/articles/handle_hardware_keys.html
-  
-  if (gOverrideHWKeys)
-  {
-    if (!gProcUnregisterFunc)
-    {
-      gCoreDll = LoadLibrary(_T("coredll.dll")); // leak
-      
-      if (gCoreDll)
-        gProcUnregisterFunc = (UnregisterFunc1Proc)GetProcAddress( gCoreDll, _T("UnregisterFunc1"));
-    }
-    
-    if (gProcUnregisterFunc)
-    {    
-      for (int i=0; gHardwareKeys[i][0]; i++)
-      {
-        UINT mod = gHardwareKeys[i][1];
-        UINT kc = gHardwareKeys[i][0];
-        
-        gProcUnregisterFunc(mod, kc);
-        RegisterHotKey(window, kc, mod, kc);
-      }
-    }
-  }
-}
-
-static void UnmapHardwareButtons()
-{
-  if (!gProcUnregisterFunc)
-    return;
-
-  for (int i=0; gHardwareKeys[i][0]; i++)
-  {
-    UINT mod = gHardwareKeys[i][1];
-    UINT kc = gHardwareKeys[i][0];
-
-    gProcUnregisterFunc(mod, kc);
-  }
-}
-
 // We want the back key to be able to repeat while the key is held down.
 VOID CALLBACK BackSoftkeyTimer(HWND hwnd, UINT uMsg, UINT idEvent, DWORD dwTime)
 {
@@ -1796,7 +1726,6 @@ nsWindow::StandardWindowCreate(nsIWidget *aParent,
       mWindowType == eWindowType_popup )
   {  
     CreateSoftKeyMenuBar(mWnd);
-    MapHardwareButtons(mWnd);
   }
 #endif
 
@@ -2536,10 +2465,6 @@ NS_METHOD nsWindow::SetFocus(PRBool aRaise)
     if (::IsIconic(toplevelWnd))
       ::ShowWindow(toplevelWnd, SW_RESTORE);
     ::SetFocus(mWnd);
-
-#ifdef WINCE
-    MapHardwareButtons(mWnd);
-#endif
 
   }
   return NS_OK;
@@ -4761,44 +4686,6 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
         result = 0;
         break;
       }
-
-      nsString key;
-      
-      switch (wParam) 
-      {
-        case VK_APP1:
-          key = NS_LITERAL_STRING("VK_APP1");
-          break;
-
-        case VK_APP2:
-          key = NS_LITERAL_STRING("VK_APP2");
-          break;
-
-        case VK_APP3:
-          key = NS_LITERAL_STRING("VK_APP3");
-          break;
-
-        case VK_APP4:
-          key = NS_LITERAL_STRING("VK_APP4");
-          break;
-
-        case VK_APP5:
-          key = NS_LITERAL_STRING("VK_APP5");
-          break;
-
-        case VK_APP6:
-          key = NS_LITERAL_STRING("VK_APP6");
-          break;
-        default:
-          key = NS_LITERAL_STRING("unknown");
-      }
-
-      result = 0;
-      
-      nsCOMPtr<nsIObserverService> observerService = do_GetService("@mozilla.org/observer-service;1");
-      if (observerService)
-        observerService->NotifyObservers(nsnull, "hardware-key", key.get());
-
     }
     break;
 #endif
