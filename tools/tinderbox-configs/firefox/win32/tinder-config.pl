@@ -68,7 +68,7 @@ $CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
 $EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 $MailBloatTest            = 0;
 $EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 0;  # Tp
+$LayoutPerformanceTest    = 1;  # Tp
 $DHTMLPerformanceTest     = 0;  # Tdhtml
 $QATest                   = 0;  
 $XULWindowOpenTest        = 0;  # Txul
@@ -87,7 +87,10 @@ $GraphNameOverride        = 'fx-win32-tbox-places';
 # - cmp@mozilla.org
 #$results_server           = "build-graphs.mozilla.org";
 
-$pageload_server          = "axolotl.mozilla.org";  # localhost
+#$pageload_server          = "axolotl.mozilla.org";  # localhost
+# FIXME rhelmer testing new pageserver for reed 20070517 
+$pageload_server          = "bm-tester01.build.mozilla.org"; 
+
 
 #
 # Timeouts, values are in seconds.
