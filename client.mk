@@ -1186,6 +1186,9 @@ echo-variable-%:
 # for posterity (deleting branch tags is not a good idea):
 # Makefile.in
 # js/src/xpconnect/Makefile.in
+# js/src/xpconnect/idl/xpcIJSModuleLoader.idl
+# js/src/xpconnect/loader/Makefile.in
+# js/src/xpconnect/loader/mozJSComponentLoader.h
 # js/src/xpconnect/src/xpcmodule.cpp
 # js/src/xpconnect/src/xpcprivate.h
 # xpcom/threads/nsEventQueue.cpp
@@ -1221,6 +1224,9 @@ echo-variable-%:
 # extensions/jssh/resources/content/tasksOverlay.xul
 # extensions/jssh/xemacs/moz-jssh.el
 
+# deleted from branch:
+# js/src/xpconnect/loader/ComponentUtils.jsm 
+
 ZAP_BRANCH_MODIFIED_FILES = \
 	js/src/xpconnect/Makefile.in \
 	js/src/xpconnect/src/xpcmodule.cpp \
@@ -1233,6 +1239,7 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	Makefile.in \
 	js/src/xpconnect/idl/Makefile.in \
 	js/src/xpconnect/idl/xpccomponents.idl \
+	js/src/xpconnect/idl/xpcIJSModuleLoader.idl \
 	js/src/xpconnect/loader/Makefile.in \
 	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
 	js/src/xpconnect/loader/mozJSComponentLoader.h \
@@ -1282,8 +1289,6 @@ ZAP_BRANCH_MODIFIED_FILES = \
 
 
 ZAP_BRANCH_NEW_FILES = \
-	js/src/xpconnect/loader/ComponentUtils.jsm \
-	js/src/xpconnect/idl/xpcIJSModuleLoader.idl \
 	js/src/xpconnect/idl/xpcIJSWeakRef.idl \
 	js/src/xpconnect/src/xpcJSWeakRef.h \
 	js/src/xpconnect/src/xpcJSWeakRef.cpp \

@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:DocUtils.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:DocUtils.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,9 +35,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-Components.utils.importModule("gre:FunctionUtils.js");
-Components.utils.importModule("gre:StringUtils.js");
-Components.utils.importModule("gre:ArrayUtils.js");
+Components.utils.import("gre:FunctionUtils.js");
+Components.utils.import("gre:StringUtils.js");
+Components.utils.import("gre:ArrayUtils.js");
 
 EXPORTED_SYMBOLS = [ "describe",
                      "gendoc" ];

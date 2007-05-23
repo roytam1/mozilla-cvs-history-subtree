@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:SipResolver.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipResolver.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,12 +38,12 @@
 
 debug("*** loading SipResolver.js\n");
 
-Components.utils.importModule("gre:ComponentUtils.jsm");
-Components.utils.importModule("gre:ClassUtils.js");
-Components.utils.importModule("gre:ArrayUtils.js");
-Components.utils.importModule("gre:StringUtils.js");
-Components.utils.importModule("gre:ObjectUtils.js");
-Components.utils.importModule("gre:SipUtils.js");
+Components.utils.import("gre:XPCOMUtils.jsm");
+Components.utils.import("gre:ClassUtils.js");
+Components.utils.import("gre:ArrayUtils.js");
+Components.utils.import("gre:StringUtils.js");
+Components.utils.import("gre:ObjectUtils.js");
+Components.utils.import("gre:SipUtils.js");
 
 // name our global object:
 // function toString() { return "[SipResolver.js]"; }
@@ -119,10 +119,10 @@ SipResolver.fun(
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = ComponentUtils.generateNSGetModule(
+NSGetModule = XPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP SIP Resolver",
      cid        : Components.ID("{5dcd9252-efd0-4664-9a6d-546e89a5cd22}"),
      contractID : "@mozilla.org/zap/sipresolver;1",
-     factory    : ComponentUtils.generateFactory(function() { return SipResolver.instantiate(); })
+     factory    : XPCOMUtils.generateFactory(function() { return SipResolver.instantiate(); })
   }]);
 

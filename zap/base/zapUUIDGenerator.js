@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:zapUUIDGenerator.js', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapUUIDGenerator.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,11 +37,11 @@
 
 debug("*** loading zapUUIDGenerator.js\n");
 
-Components.utils.importModule("gre:ComponentUtils.jsm");
-Components.utils.importModule("gre:ClassUtils.js");
-Components.utils.importModule("gre:ArrayUtils.js");
-Components.utils.importModule("gre:StringUtils.js");
-Components.utils.importModule("gre:ObjectUtils.js");
+Components.utils.import("gre:XPCOMUtils.jsm");
+Components.utils.import("gre:ClassUtils.js");
+Components.utils.import("gre:ArrayUtils.js");
+Components.utils.import("gre:StringUtils.js");
+Components.utils.import("gre:ObjectUtils.js");
 
 // name our global object:
 // function toString() { return "[zapUUIDGenerator.js]"; }
@@ -97,13 +97,12 @@ zapUUIDGenerator.fun(
 
 var theUUIDGenerator = zapUUIDGenerator.instantiate();
 
-
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = ComponentUtils.generateNSGetModule(
+NSGetModule = XPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP UUID Generator",
      cid        : Components.ID("{a119ec9d-ebdf-4df9-aec6-a659f6e4d674}"),
      contractID : "@mozilla.org/zap/uuid-generator;1",
-     factory    : ComponentUtils.generateFactory(function() { return theUUIDGenerator; })
+     factory    : XPCOMUtils.generateFactory(function() { return theUUIDGenerator; })
   }]);

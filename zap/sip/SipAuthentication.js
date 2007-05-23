@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:SipAuthentication.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipAuthentication.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,12 +37,12 @@
 
 debug("*** loading SipResolver.js\n");
 
-Components.utils.importModule("gre:ComponentUtils.jsm");
-Components.utils.importModule("gre:ClassUtils.js");
-Components.utils.importModule("gre:ArrayUtils.js");
-Components.utils.importModule("gre:StringUtils.js");
-Components.utils.importModule("gre:ObjectUtils.js");
-Components.utils.importModule("gre:SipUtils.js");
+Components.utils.import("gre:XPCOMUtils.jsm");
+Components.utils.import("gre:ClassUtils.js");
+Components.utils.import("gre:ArrayUtils.js");
+Components.utils.import("gre:StringUtils.js");
+Components.utils.import("gre:ObjectUtils.js");
+Components.utils.import("gre:SipUtils.js");
 
 // name our global object:
 // function toString() { return "[SipAuthentication.js]"; }
@@ -272,10 +272,10 @@ SipAuthentication.fun(
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = ComponentUtils.generateNSGetModule(
+NSGetModule = XPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP SIP Authentication API",
      cid        : Components.ID("{5e6e20ab-3ebb-43f8-9b60-41adce227ab4}"),
      contractID : "@mozilla.org/zap/sipauth;1",
-     factory    : ComponentUtils.generateFactory(function() { return SipAuthentication.instantiate(); })
+     factory    : XPCOMUtils.generateFactory(function() { return SipAuthentication.instantiate(); })
   }]);
 

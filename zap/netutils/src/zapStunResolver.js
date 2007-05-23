@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:zapStunResolver.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapStunResolver.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,13 +37,13 @@
 
 debug("*** loading zapStunResolver\n");
 
-Components.utils.importModule("gre:ComponentUtils.jsm");
-Components.utils.importModule("gre:ClassUtils.js");
-Components.utils.importModule("gre:ArrayUtils.js");
-Components.utils.importModule("gre:StringUtils.js");
-Components.utils.importModule("gre:ObjectUtils.js");
-Components.utils.importModule("gre:FunctionUtils.js");
-Components.utils.importModule("gre:AsyncUtils.js");
+Components.utils.import("gre:XPCOMUtils.jsm");
+Components.utils.import("gre:ClassUtils.js");
+Components.utils.import("gre:ArrayUtils.js");
+Components.utils.import("gre:StringUtils.js");
+Components.utils.import("gre:ObjectUtils.js");
+Components.utils.import("gre:FunctionUtils.js");
+Components.utils.import("gre:AsyncUtils.js");
 
 ////////////////////////////////////////////////////////////////////////
 // globals
@@ -294,11 +294,11 @@ zapStunResolver.fun(
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = ComponentUtils.generateNSGetModule(
+NSGetModule = XPCOMUtils.generateNSGetModule(
   [
    { className  : "ZAP STUN Resolver",
      cid        : Components.ID("{3e2e9ff8-89b8-442a-a190-8cecabb93c78}"),
      contractID : "@mozilla.org/zap/stun-resolver;1",
-     factory    : ComponentUtils.generateFactory(function() { return zapStunResolver.instantiate(); })
+     factory    : XPCOMUtils.generateFactory(function() { return zapStunResolver.instantiate(); })
    }
   ]);

@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:SipTransport.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipTransport.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,13 +37,13 @@
 
 debug("*** loading SipTransport\n");
 
-Components.utils.importModule("gre:ComponentUtils.jsm");
-Components.utils.importModule("gre:ClassUtils.js");
-Components.utils.importModule("gre:ArrayUtils.js");
-Components.utils.importModule("gre:StringUtils.js");
-Components.utils.importModule("gre:ObjectUtils.js");
-Components.utils.importModule("gre:SipUtils.js");
-Components.utils.importModule("gre:AsyncUtils.js");
+Components.utils.import("gre:XPCOMUtils.jsm");
+Components.utils.import("gre:ClassUtils.js");
+Components.utils.import("gre:ArrayUtils.js");
+Components.utils.import("gre:StringUtils.js");
+Components.utils.import("gre:ObjectUtils.js");
+Components.utils.import("gre:SipUtils.js");
+Components.utils.import("gre:AsyncUtils.js");
 
 debug("*** SipTransport 1\n");
 
@@ -1191,17 +1191,17 @@ debug("*** SipTransport 3\n");
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = ComponentUtils.generateNSGetModule(
+NSGetModule = XPCOMUtils.generateNSGetModule(
   [
    { className  : "ZAP SIP Transceiver",
      cid        : Components.ID("{a872ed47-0696-46d5-b6ed-12e2ee691737}"),
      contractID : "@mozilla.org/zap/siptransceiver;1",
-     factory    : ComponentUtils.generateFactory(function() { return SipTransceiver.instantiate(); })
+     factory    : XPCOMUtils.generateFactory(function() { return SipTransceiver.instantiate(); })
    },
    { className  : "ZAP SIP Transport",
      cid        : Components.ID("{564b569b-4350-420c-b247-2581ace9e780}"),
      contractID : "@mozilla.org/zap/siptransport;1",
-     factory    : ComponentUtils.generateFactory(function() { return SipTransport.instantiate(); })
+     factory    : XPCOMUtils.generateFactory(function() { return SipTransport.instantiate(); })
    }
   ]);
 

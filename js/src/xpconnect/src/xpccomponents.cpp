@@ -3542,16 +3542,18 @@ xpc_EvalInSandbox(JSContext *cx, JSObject *sandbox, const nsAString& source,
 }
 #endif /* !XPCONNECT_STANDALONE */
 
-
-/* JSObject importModule (in AUTF8String moduleURL, [optional] in JSObject targetObj); */
+/* JSObject import (in AUTF8String moduleURL,
+ *                  [optional] in JSObject targetObj);
+ */
 NS_IMETHODIMP
-nsXPCComponents_Utils::ImportModule(const nsACString & registryLocation)
+nsXPCComponents_Utils::Import(const nsACString & registryLocation)
 {
 #ifdef MOZ_JSLOADER
-    nsCOMPtr<xpcIJSModuleLoader> moduleloader = do_GetService(MOZJSCOMPONENTLOADER_CONTRACTID);
+    nsCOMPtr<xpcIJSModuleLoader> moduleloader =
+        do_GetService(MOZJSCOMPONENTLOADER_CONTRACTID);
     if (!moduleloader)
         return NS_ERROR_FAILURE;
-    return moduleloader->ImportModule(registryLocation);
+    return moduleloader->Import(registryLocation);
 #else
     return NS_ERROR_NOT_AVAILABLE;
 #endif

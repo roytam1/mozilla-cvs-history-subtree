@@ -38,12 +38,12 @@
 ////////////////////////////////////////////////////////////////////////
 // imports
 
-Components.utils.importModule("gre:ClassUtils.js");
-Components.utils.importModule("gre:RDFUtils.js");
-Components.utils.importModule("gre:FileUtils.js");
-Components.utils.importModule("gre:StringUtils.js");
-Components.utils.importModule("gre:AsyncUtils.js");
-Components.utils.importModule("gre:ArrayUtils.js");
+Components.utils.import("gre:ClassUtils.js");
+Components.utils.import("gre:RDFUtils.js");
+Components.utils.import("gre:FileUtils.js");
+Components.utils.import("gre:StringUtils.js");
+Components.utils.import("gre:AsyncUtils.js");
+Components.utils.import("gre:ArrayUtils.js");
 
 ////////////////////////////////////////////////////////////////////////
 // globals
@@ -71,8 +71,7 @@ var wServicesContainer;
 var wIdentitiesDS;
 var wIdentitiesContainer;
 var wCurrentIdentity;
-var wPasswordManager;
-var wPasswordManagerInt;
+var wLoginManager;
 
 var wContactsDS;
 // all contacts live in the urn:mozilla:zap:contacts sequence:
@@ -522,9 +521,8 @@ function getIdentityByGridPar(grid) {
 }
 
 function initIdentities() {
-  wPasswordManager = Components.classes["@mozilla.org/passwordmanager;1"].
-    createInstance(Components.interfaces.nsIPasswordManager);
-  wPasswordManagerInt = wPasswordManager.QueryInterface(Components.interfaces.nsIPasswordManagerInternal);
+  wLoginManager = Components.classes["@mozilla.org/login-manager;1"].
+    createInstance(Components.interfaces.nsILoginManager);
   wIdentitiesContainer = Components.classes["@mozilla.org/rdf/container;1"].
     createInstance(Components.interfaces.nsIRDFContainer);
   wIdentitiesContainer.Init(wIdentitiesDS,
@@ -734,22 +732,41 @@ Identity.fun(
       if (!hasRejectedCredentials) return true;
     }
     else {
-      // try to get the credentials from the password manager:
-      
+      // try to get the credentials from the login manager:
+            
+      var logins = wLoginManager.findLogins({},
+                                            realm,
+                                            null,
+                                            realm);
+
+      // select one login from returned array, matching up against
+      // username if this is our realm:
+
+      var login = null;
       if (is_our_realm) {
-        // fill in username from identity database
-        username.value = this["urn:mozilla:zap:username"];
-        if (!username.value)
-          username.value = this.getUser();
+        // get username from identity database
+        var user = this["urn:mozilla:zap:username"];
+        if (!user)
+          user = this.getUser();
+        for (var i=0; i<logins.length; ++i) {
+          if (logins[i].username == user) {
+            login = logins[i];
+            break;
+          }
+        }
+      }
+      else if (logins.length) {
+        login = logins[0];
+      }
+
+      // if we have a login, fill in username & password:
+      if (login) {
+        username.value = login.username;
+        password.value = login.password;
       }
       
-      try {
-        wPasswordManagerInt.findPasswordEntry(realm, username.value, null,
-                                              {}, username, password);
-        if (!hasRejectedCredentials) return true;
-      }
-      catch(e) {
-      }
+      if (login && !hasRejectedCredentials) return true;
+
     }
     
     // either we don't know the credentials yet or we have previously
@@ -779,12 +796,29 @@ Identity.fun(
           this["urn:mozilla:zap:username"] = username.value;
         }
       }
+      // create a login info and store it in the login-manager:
+      var login = Components.classes["@mozilla.org/login-manager/loginInfo;1"].createInstance(Components.interfaces.nsILoginInfo);
+      login.init(realm, null, realm, username.value, password.value, null, null);
       try {
-        // addUser doesn't update when there already is an existing entry.
-        // -> try removing first
-        wPasswordManager.removeUser(realm, username.value);
-      } catch(e) {}
-      wPasswordManager.addUser(realm, username.value, password.value);
+        wLoginManager.addLogin(login);
+      }
+      catch(e) {
+        // aha, there is probably already an entry. find it & modify
+        var logins = wLoginManager.findLogins({}, realm, null, realm);
+        var old_login = null;
+        for (var i=0; i<logins.length; ++i) {
+          if (logins[i].equalsIgnorePassword(login)) {
+            old_login = logins[i];
+            break;
+          }
+        }
+        if (old_login) {
+          wLoginManager.modifyLogin(old_login, login);
+        }
+        else {
+          this._dump("Failure storing login! "+e);
+        }
+      }
     }
         
     return true;

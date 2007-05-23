@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:MediaSession.js', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:MediaSession.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,13 +38,13 @@
 
 debug("*** loading MediaSession\n");
 
-Components.utils.importModule("gre:ComponentUtils.jsm");
-Components.utils.importModule("gre:ClassUtils.js");
-Components.utils.importModule("gre:ArrayUtils.js");
-Components.utils.importModule("gre:StringUtils.js");
-Components.utils.importModule("gre:ObjectUtils.js");
-Components.utils.importModule("gre:zapICE.js");
-Components.utils.importModule("gre:zapCodecRegistry.js");
+Components.utils.import("gre:XPCOMUtils.jsm");
+Components.utils.import("gre:ClassUtils.js");
+Components.utils.import("gre:ArrayUtils.js");
+Components.utils.import("gre:StringUtils.js");
+Components.utils.import("gre:ObjectUtils.js");
+Components.utils.import("gre:zapICE.js");
+Components.utils.import("gre:zapCodecRegistry.js");
 
 // name our global object:
 // function toString() { return "[MediaSession.js]"; }
@@ -62,7 +62,7 @@ var PB = makePropertyBag2Proxy;
 
 // access the sdp service directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gSdpService = Components.utils.importModule('gre:SdpService.js', null).theSdpService;
+var gSdpService = Components.utils.import('gre:SdpService.js', null).theSdpService;
 
 ////////////////////////////////////////////////////////////////////////
 // Class MediaSession
@@ -449,9 +449,9 @@ MediaSession.fun(
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = ComponentUtils.generateNSGetModule(
+NSGetModule = XPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP Media Session",
      cid        : Components.ID("{6ec361e6-eb0d-40ae-a2a5-5bcc942784b6}"),
      contractID : "@mozilla.org/zap/mediasession;1",
-     factory    : ComponentUtils.generateFactory(function() { return MediaSession.instantiate(); })
+     factory    : XPCOMUtils.generateFactory(function() { return MediaSession.instantiate(); })
   }]);

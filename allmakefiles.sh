@@ -683,7 +683,6 @@ xpfe/components/Makefile
 xpfe/components/bookmarks/Makefile
 xpfe/components/bookmarks/public/Makefile
 xpfe/components/bookmarks/src/Makefile
-xpfe/components/bookmarks/resources/Makefile
 xpfe/components/directory/Makefile
 xpfe/components/download-manager/Makefile
 xpfe/components/download-manager/src/Makefile
@@ -924,6 +923,7 @@ suite/build/Makefile
 suite/common/Makefile
 suite/components/Makefile
 suite/components/xulappinfo/Makefile
+suite/installer/Makefile
 suite/locales/Makefile
 suite/profile/Makefile
 suite/profile/migration/Makefile
@@ -944,6 +944,17 @@ xulrunner/installer/mac/Makefile
 MAKEFILES_xulapp="
 toolkit/Makefile
 toolkit/library/Makefile
+toolkit/airbag/Makefile
+toolkit/airbag/client/Makefile
+toolkit/airbag/airbag/src/client/Makefile
+toolkit/airbag/airbag/src/client/mac/handler/Makefile
+toolkit/airbag/airbag/src/client/windows/Makefile
+toolkit/airbag/airbag/src/client/windows/handler/Makefile
+toolkit/airbag/airbag/src/client/windows/sender/Makefile
+toolkit/airbag/airbag/src/common/Makefile
+toolkit/airbag/airbag/src/common/mac/Makefile
+toolkit/airbag/airbag/src/common/windows/Makefile
+toolkit/airbag/airbag/src/tools/mac/dump_syms/Makefile
 toolkit/content/Makefile
 toolkit/content/buildconfig.html
 toolkit/obsolete/Makefile
@@ -970,8 +981,9 @@ toolkit/components/history/Makefile
 toolkit/components/history/public/Makefile
 toolkit/components/history/src/Makefile
 toolkit/components/passwordmgr/Makefile
-toolkit/components/passwordmgr/base/Makefile
-toolkit/components/passwordmgr/resources/Makefile
+toolkit/components/passwordmgr/public/Makefile
+toolkit/components/passwordmgr/src/Makefile
+toolkit/components/passwordmgr/content/Makefile
 toolkit/components/passwordmgr/test/Makefile
 toolkit/components/places/Makefile
 toolkit/components/places/public/Makefile

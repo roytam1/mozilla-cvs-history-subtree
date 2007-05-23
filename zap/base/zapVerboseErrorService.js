@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:zapVerboseErrorService.js', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapVerboseErrorService.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,11 +37,11 @@
 
 debug("*** loading zapVerboseErrorService.js\n");
 
-Components.utils.importModule("gre:ComponentUtils.jsm");
-Components.utils.importModule("gre:ClassUtils.js");
-Components.utils.importModule("gre:ArrayUtils.js");
-Components.utils.importModule("gre:StringUtils.js");
-Components.utils.importModule("gre:ObjectUtils.js");
+Components.utils.import("gre:XPCOMUtils.jsm");
+Components.utils.import("gre:ClassUtils.js");
+Components.utils.import("gre:ArrayUtils.js");
+Components.utils.import("gre:StringUtils.js");
+Components.utils.import("gre:ObjectUtils.js");
 
 // name our global object:
 // function toString() { return "[zapVerboseErrorService.js]"; }
@@ -119,9 +119,9 @@ var theVerboseErrorService = zapVerboseErrorService.instantiate();
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = ComponentUtils.generateNSGetModule(
+NSGetModule = XPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP Verbose Error Service",
      cid        : Components.ID("{071b583f-174e-452c-a558-697601e04e20}"),
      contractID : "@mozilla.org/zap/verbose-error-service;1",
-     factory    : ComponentUtils.generateFactory(function() { return theVerboseErrorService; })
+     factory    : XPCOMUtils.generateFactory(function() { return theVerboseErrorService; })
   }]);

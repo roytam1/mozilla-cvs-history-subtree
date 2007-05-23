@@ -123,7 +123,7 @@ interface nsIXPCComponents_utils_Sandbox : nsISupports
 /**
 * interface of Components.utils
 */
-[scriptable, uuid(da2267f2-d4cc-448f-9d70-1c7fe134d2fe)]
+[scriptable, uuid(5f4fc051-6b1d-4b5e-b4fe-f5096717630b)]
 interface nsIXPCComponents_Utils : nsISupports
 {
 
@@ -169,19 +169,19 @@ interface nsIXPCComponents_Utils : nsISupports
      * var thirtyFive = C.u.evalInSandbox("five * seven", s);
      */
     void evalInSandbox(in AString source/*, obj */);
-
+    
     /*
      * To be called from JS only.
      *
-     * importModule(moduleURL, [optional] targetObj) synchronously
-     * loads and evaluates the js file located at 'registryLocation'
-     * with a new, fully privileged global object. It then looks for a
-     * property 'EXPORTED_SYMBOLS' on the global object.
-     * 'EXPORTED_SYMBOLS' is expected to be an array of strings
-     * identifying properties on the global object. If present, these
-     * properties will be installed as properties on 'targetObj' (if
-     * != null), or, if 'targetObj' is not given, on the caller's
-     * global object.  Finally, the global object will be returned.
+     * import(moduleURL, [optional] targetObj) synchronously loads and
+     * evaluates the js file located at 'registryLocation' with a new,
+     * fully privileged global object. It then looks for a property
+     * 'EXPORTED_SYMBOLS' on the global object.  'EXPORTED_SYMBOLS' is
+     * expected to be an array of strings identifying properties on
+     * the global object. If present, these properties will be
+     * installed as properties on 'targetObj' (if != null), or, if
+     * 'targetObj' is not given, on the caller's global object.
+     * Finally, the global object will be returned.
      *
      * The implementation maintains a hash of registryLocation->global
      * obj. Subsequent invocations of importModule with the same
@@ -190,9 +190,9 @@ interface nsIXPCComponents_Utils : nsISupports
      * specified target object and the global object returned as
      * above.
      */
-    void /* JSObject */ importModule(in AUTF8String registryLocation
-                                     /*, [optional] in JSObject targetObj */);
-
+    void /* JSObject */ import(in AUTF8String registryLocation
+                               /*, [optional] in JSObject targetObj */);
+    
     /*
      * To be called from JS only.
      *

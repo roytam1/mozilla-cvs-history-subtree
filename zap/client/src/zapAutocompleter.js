@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:zapAutocompleter.js', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapAutocompleter.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,12 +38,12 @@
 
 debug("*** loading zapAutocompleter\n");
 
-Components.utils.importModule("gre:ComponentUtils.jsm");
-Components.utils.importModule("gre:ClassUtils.js");
-Components.utils.importModule("gre:ArrayUtils.js");
-Components.utils.importModule("gre:StringUtils.js");
-Components.utils.importModule("gre:ObjectUtils.js");
-Components.utils.importModule("gre:FileUtils.js");
+Components.utils.import("gre:XPCOMUtils.jsm");
+Components.utils.import("gre:ClassUtils.js");
+Components.utils.import("gre:ArrayUtils.js");
+Components.utils.import("gre:StringUtils.js");
+Components.utils.import("gre:ObjectUtils.js");
+Components.utils.import("gre:FileUtils.js");
 
 // name our global object:
 // function toString() { return "[zapAutocompleter.js]"; }
@@ -237,9 +237,9 @@ zapAutocompleter.fun(function stopSearch() {});
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = ComponentUtils.generateNSGetModule(
+NSGetModule = XPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP Autocompleter",
      cid        : Components.ID("{d65246a4-9778-4124-8c3d-e76efe44b6d8}"),
      contractID : "@mozilla.org/autocomplete/search;1?name=zap-autocomplete",
-     factory    : ComponentUtils.generateFactory(function() { return zapAutocompleter.instantiate(); })
+     factory    : XPCOMUtils.generateFactory(function() { return zapAutocompleter.instantiate(); })
   }]);

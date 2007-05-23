@@ -53,6 +53,7 @@
 #include "nsITimer.h"
 #include "nsIObserver.h"
 #include "xpcIJSModuleLoader.h"
+#include "nsClassHashtable.h"
 #ifndef XPCONNECT_STANDALONE
 #include "nsIPrincipal.h"
 #endif
@@ -95,8 +96,8 @@ class mozJSComponentLoader : public nsIModuleLoader,
  public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIMODULELOADER
-    NS_DECL_NSIOBSERVER
     NS_DECL_XPCIJSMODULELOADER
+    NS_DECL_NSIOBSERVER
 
     mozJSComponentLoader();
     virtual ~mozJSComponentLoader();
@@ -107,7 +108,9 @@ class mozJSComponentLoader : public nsIModuleLoader,
     nsresult ReallyInit();
     void UnloadModules();
 
-    nsresult GlobalForLocation(nsILocalFile *aComponent, JSObject **aGlobal);
+    nsresult GlobalForLocation(nsILocalFile *aComponent,
+                               JSObject **aGlobal,
+                               char **location);
 
     nsresult StartFastLoad(nsIFastLoadService *flSvc);
     nsresult ReadScript(nsIFastLoadService *flSvc, const char *nativePath,
@@ -117,6 +120,9 @@ class mozJSComponentLoader : public nsIModuleLoader,
                          nsIURI *uri, JSContext *cx);
     static void CloseFastLoad(nsITimer *timer, void *closure);
     void CloseFastLoad();
+    nsresult ReportOnCaller(nsIXPCNativeCallContext *cc,
+                            const char *format, ...);
+                                 
 
     nsCOMPtr<nsIComponentManager> mCompMgr;
     nsCOMPtr<nsIJSRuntimeService> mRuntimeService;
@@ -130,8 +136,37 @@ class mozJSComponentLoader : public nsIModuleLoader,
 #endif
     JSRuntime *mRuntime;
     JSContext *mContext;
-    PLHashTable *mModules;
-    PLHashTable *mGlobals;
+
+    class ModuleEntry
+    {
+    public:
+        ModuleEntry() {
+            global = nsnull;
+            location = nsnull;
+        }
+
+        ~ModuleEntry() {
+            module = nsnull;
+
+            if (global) {
+                JSAutoRequest ar(sSelf->mContext);
+                JS_ClearScope(sSelf->mContext, global);
+                JS_RemoveRoot(sSelf->mContext, &global);
+            }
+
+            if (location)
+                NS_Free(location);
+        }
+
+        nsCOMPtr<nsIModule>  module;
+        JSObject            *global;
+        char                *location;
+    };
+
+    friend class ModuleEntry;
+
+    nsClassHashtable<nsHashableHashKey, ModuleEntry> mModules;
+    nsClassHashtable<nsHashableHashKey, ModuleEntry> mImports;
 
     PRBool mInitialized;
 };

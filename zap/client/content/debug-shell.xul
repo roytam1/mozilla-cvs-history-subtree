@@ -54,9 +54,9 @@
 
   <script type="application/x-javascript">
   <![CDATA[
-  Components.utils.importModule("gre:ClassUtils.js");
-  Components.utils.importModule("gre:SipUtils.js");
-  Components.utils.importModule("gre:FileUtils.js");
+  Components.utils.import("gre:ClassUtils.js");
+  Components.utils.import("gre:SipUtils.js");
+  Components.utils.import("gre:FileUtils.js");
 
   var wOutput;
   var wOutputStream;

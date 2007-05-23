@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:SipUAStack.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipUAStack.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,15 +38,15 @@
 
 debug("*** loading SipUAStack\n");
 
-Components.utils.importModule("gre:ComponentUtils.jsm");
-Components.utils.importModule("gre:ClassUtils.js");
-Components.utils.importModule("gre:ArrayUtils.js");
-Components.utils.importModule("gre:StringUtils.js");
-Components.utils.importModule("gre:ObjectUtils.js");
-Components.utils.importModule("gre:SipUtils.js");
-Components.utils.importModule("gre:SipUARequestCore.js");
-Components.utils.importModule("gre:SipDialog.js");
-Components.utils.importModule("gre:FunctionUtils.js");
+Components.utils.import("gre:XPCOMUtils.jsm");
+Components.utils.import("gre:ClassUtils.js");
+Components.utils.import("gre:ArrayUtils.js");
+Components.utils.import("gre:StringUtils.js");
+Components.utils.import("gre:ObjectUtils.js");
+Components.utils.import("gre:SipUtils.js");
+Components.utils.import("gre:SipUARequestCore.js");
+Components.utils.import("gre:SipDialog.js");
+Components.utils.import("gre:FunctionUtils.js");
 
 // name our global object:
 // function toString() { return "[SipUAStack.js]"; }
@@ -75,7 +75,7 @@ function createSipTransport() {
 
   // create a sip transport object directly from js (less overhead, no
   // type safety, access to non-xpcom interface):
-  return Components.utils.importModule("gre:SipTransport.js", null).SipTransport.instantiate();
+  return Components.utils.import("gre:SipTransport.js", null).SipTransport.instantiate();
 }
 
 //----------------------------------------------------------------------
@@ -87,7 +87,7 @@ function createSipTransactionManager() {
 
   // create a sip transaction manager directly from js (less overhead,
   // no type safety, access to non-xpcom interface):
-  return Components.utils.importModule("gre:SipTransactions.js", null).SipTransactionManager.instantiate();
+  return Components.utils.import("gre:SipTransactions.js", null).SipTransactionManager.instantiate();
 }
 
 //----------------------------------------------------------------------
@@ -780,10 +780,10 @@ SipUAStack.fun(
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = ComponentUtils.generateNSGetModule(
+NSGetModule = XPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP SIP User Agent Stack",
      cid        : Components.ID("{7377a41d-7bee-4729-8803-0b32218c1a9e}"),
      contractID : "@mozilla.org/zap/sipstack;1",
-     factory    : ComponentUtils.generateFactory(function() { return SipUAStack.instantiate(); })
+     factory    : XPCOMUtils.generateFactory(function() { return SipUAStack.instantiate(); })
   }]);
 
