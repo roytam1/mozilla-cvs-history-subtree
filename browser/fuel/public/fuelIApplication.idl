@@ -339,6 +339,165 @@ interface fuelIExtensions : nsISupports
 }; 
 
 
+interface fuelIBookmarkFolder;
+
+/**
+ * Interface representing a collection of annotations associated
+ * with a bookmark or bookmark folder.
+ */
+[scriptable, uuid(335c9292-91a1-4ca0-ad0b-07d5f63ed6cd)]
+interface fuelIAnnotations : nsISupports
+{
+  /**
+   * Determines if an annotation exists with the given name.
+   * @param   aName
+   *          The name of the annotation
+   * @returns true if an annotation exists with the given name,
+   *          false otherwise.
+   */
+  boolean has(in AString aName);
+
+  /**
+   * Gets the value of an annotation with the given name.
+   * @param   aName
+   *          The name of the annotation
+   * @returns A variant containing the value of the annotation. Supports
+   *          string, boolean and number.
+   */
+  nsIVariant get(in AString aName);
+
+  /**
+   * Sets the value of an annotation with the given name.
+   * @param   aName
+   *          The name of the annotation
+   * @param   aValue
+   *          The new value of the annotation. Supports string, boolean
+   *          and number
+   * @param   aExpiration
+   *          The expiration policy for the annotation.
+   *          See nsIAnnotationService.
+   */
+  void set(in AString aName, in nsIVariant aValue, in PRInt32 aExpiration);
+
+  /**
+   * Removes the named annotation from the owner item. Can also remove all
+   * annotations.
+   * @param   aName
+   *          The name of annotation. If null, all annotations are removed.
+   */
+  void remove(in AString aName);
+};
+
+
+/**
+ * Interface representing a bookmark item.
+ */
+[scriptable, uuid(808585b6-7568-4b26-8c62-545221bf2b8c)]
+interface fuelIBookmark : nsISupports
+{
+  /**
+   * The title of the bookmark.
+   */
+  attribute AString title;
+
+  /**
+   * The url of the bookmark.
+   */
+  attribute AString uri;
+
+  /**
+   * The description of the bookmark.
+   */
+  attribute AString description;
+
+  /**
+   * The keywords associated with the bookmark.
+   */
+  attribute AString keyword;
+
+  /**
+   * The type of the bookmark.
+   * values: "bookmark", "livemark", "separator"
+   */
+  readonly attribute AString type;
+
+  /**
+   * The parent folder of the bookmark.
+   */
+  readonly attribute fuelIBookmarkFolder parent;
+
+  /**
+   * The annotations object for the bookmark.
+   */
+  readonly attribute fuelIAnnotations annotations;
+
+  /**
+   * The events object for the bookmark.
+   * supports: "remove", "change", "visit", "move"
+   */
+  readonly attribute fuelIEvents events;
+
+  /**
+   * Removes the bookmark from the parent folder.
+   */
+  void remove();
+}; 
+
+
+/**
+ * Interface representing a bookmark folder or container. Folders
+ * can hold bookmarks, separators and other folders.
+ */
+[scriptable, uuid(9f42fe20-52de-4a55-8632-a459c7716aa0)]
+interface fuelIBookmarkFolder : nsISupports
+{
+
+  /**
+   * The title of the folder.
+   */
+  attribute AString title;
+
+  /**
+   * The description of the folder.
+   */
+  attribute AString description;
+
+  /**
+   * The type of the folder.
+   * values: "folder"
+   */
+  readonly attribute AString type;
+
+  /**
+   * The parent folder of the folder.
+   */
+  readonly attribute fuelIBookmarkFolder parent;
+
+  /**
+   * The annotations object for the folder.
+   */
+  readonly attribute fuelIAnnotations annotations;
+
+  /**
+   * The events object for the folder.
+   * supports: "add", "addchild", "remove", "removechild", "change", "move"
+   */
+  readonly attribute fuelIEvents events;
+
+  /**
+   * Array of all bookmarks, spearators and folders contained
+   * in this folder.
+   */
+  readonly attribute nsIVariant all;
+
+  fuelIBookmark addBookmark(in AString aId, in AString aURI);
+  fuelIBookmark addLivemark(in AString aId, in AString aURI, in AString aFeedURI);
+  fuelIBookmarkFolder addFolder(in AString aId);
+
+  void remove();
+}; 
+
+
 /**
  * Interface for managing and accessing the applications systems
  */
@@ -387,4 +546,9 @@ interface fuelIApplication : nsISupports
    * supports: "load", "ready", "quit", "unload"
    */
   readonly attribute fuelIEvents events;
+
+  /**
+   * The root bookmarks object for the application.
+   */
+  readonly attribute fuelIBookmarkFolder bookmarks;
 }; 
