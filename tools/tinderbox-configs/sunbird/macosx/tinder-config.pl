@@ -42,7 +42,7 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
@@ -52,8 +52,10 @@ $BuildAdministrator = 'build@mozilla.org';
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = 'Calendar';
-$MacOSProductName         = 'Calendar';
+#$ProductName              = 'Calendar';
+#$MacOSProductName         = 'Calendar';
+$ProductName              = 'Sunbird';
+$MacOSProductName         = 'Sunbird';
 $VendorName               = "";
 
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
@@ -186,7 +188,8 @@ $BuildTree  = 'Sunbird-Mozilla1.8';
 #$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
+#$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'SUNBIRD_0_5_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
