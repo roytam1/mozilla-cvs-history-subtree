@@ -1,6 +1,6 @@
 #
-## hostname: bm-xserve08.build.mozilla.org
-## uname: Darwin bm-xserve08.build.mozilla.org 8.8.4 Darwin Kernel Version 8.8.4: Sun Oct 29 15:26:54 PST 2006; root:xnu-792.16.4.obj~1/RELEASE_I386 i386 i386
+## hostname: bm-xservex11.build.mozilla.org
+## uname: Darwin bm-xserve11.build.mozilla.org 8.8.4 Darwin Kernel Version 8.8.4: Sun Oct 29 15:26:54 PST 2006; root:xnu-792.16.4.obj~1/RELEASE_I386 i386 i386
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -80,7 +80,7 @@ $StartupPerformanceTest   = 1;  # Ts
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
 
-$GraphNameOverride        = 'xserve08.build.mozilla.org_Fx-Trunk';
+$GraphNameOverride        = 'xserve11.build.mozilla.org_TextFrame';
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -156,7 +156,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 $ObjDir = '../build/universal';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Universal Nightly';
+$BuildNameExtra = 'TextFrame';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -171,7 +171,7 @@ $BuildNameExtra = 'Universal Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Firefox';
+$BuildTree  = 'MozillaExperimental';
 
 #$BuildName = '';
 #$BuildTag = '';
@@ -205,8 +205,8 @@ $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 #$ssh_user      = "cltbld";
 #$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/textframe";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/textframe";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 $milestone     = "trunk";
@@ -222,9 +222,9 @@ $update_platform = "Darwin_Universal-gcc3";
 $update_hash = "md5";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = 'browser/config/version.txt';
-$update_pushinfo = 1;
-$crashreporter_buildsymbols = 1;
-$crashreporter_pushsymbols = 1;
+$update_pushinfo = 0;
+$crashreporter_buildsymbols = 0;
+$crashreporter_pushsymbols = 0;
 $ENV{SYMBOL_SERVER_HOST} = 'stage.mozilla.org';
 $ENV{SYMBOL_SERVER_USER}   = 'ffxbld';
 $ENV{SYMBOL_SERVER_PATH}   = '/mnt/netapp/breakpad/symbols_ffx/';
