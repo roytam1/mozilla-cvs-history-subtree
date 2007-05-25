@@ -645,8 +645,9 @@ Browser.prototype = {
   
   _watch : function(aType) {
   	var self = this;
-	this._browser.mTabContainer.addEventListener(aType, 
-		this._cleanup[aType] = function(e){ self._event(e); }, false);
+  	this._browser.mTabContainer.addEventListener(aType, 
+		  this._cleanup[aType] = function(e){ self._event(e); },
+		  false);
   },
   
   _event : function(aEvent) {
@@ -654,9 +655,10 @@ Browser.prototype = {
   },
   
   get tabs() {
-  	var tabs = [], browsers = this._browser.browsers;
+  	var tabs = [];
+  	var browsers = this._browser.browsers;
   	
-  	for ( var i = 0; i < browsers.length; i++ )
+  	for (var i=0; i<browsers.length; i++)
   		tabs.push(new BrowserTab(this._browser, browsers[i]));
   	
   	return tabs;
@@ -666,28 +668,29 @@ Browser.prototype = {
   	return new BrowserTab(this._browser, this._browser.selectedBrowser);
   },
   
-  insertBefore : function( aInsert, aBefore ) {
-  	this._browser.mTabContainer.insertBefore(aInsert,aBefore);
+  insertBefore : function(aInsert, aBefore) {
+  	this._browser.mTabContainer.insertBefore(aInsert, aBefore);
   },
   
-  append : function( aInsert ) {
+  append : function(aInsert) {
   	this._browser.mTabContainer.appendChild(aInsert);
   },
   
-  open : function( aURL ) {
-  	return new BrowserTab(this._browser.addTab(aURL));
+  open : function(aURL) {
+  	return new BrowserTab(this._browser, this._browser.addTab(aURL).linkedBrowser);
   },
   
   _shutdown : function() {
   	this._browser = null;
   	this._events = null;
   	
-  	for ( var type in this._cleanup )
+  	for (var type in this._cleanup)
   		this._browser.removeListener(type, this._cleanup[type]);
   		
   	this._cleanup = null;
   }
 };
+
 
 //=================================================
 // BrowserTab implementation
@@ -704,6 +707,23 @@ function BrowserTab(aBrowser, aBrowserTab) {
 }
 
 BrowserTab.prototype = {
+  get url() {
+    return this._browsertab.currentURI.spec;
+  },
+  
+  set url(aSpec) {
+    return this._browsertab.currentURI.spec = aSpec;
+  },
+  
+  get index() {
+  	var tabs = this._browser.mTabContainer.childNodes;
+  	for (var i=0; i<tabs.length; i++) {
+  	  if (tabs[i].linkedBrowser == this._browsertab)
+  	    return i;
+  	}
+  	return -1;
+  },
+
   get events() {
     return this._events;
   },
@@ -718,8 +738,9 @@ BrowserTab.prototype = {
   
   _watch : function(aType) {
   	var self = this;
-	this._browser.addEventListener(aType,
-		this._cleanup[aType] = function(e){ self._event(e); }, false);
+  	this._browser.addEventListener(aType,
+		  this._cleanup[aType] = function(e){ self._event(e); },
+		  false);
   },
   
   _event : function(aEvent) {
@@ -730,13 +751,22 @@ BrowserTab.prototype = {
   	this._events.dispatch(aEvent.type, "");
   },
   
+  _getTab : function() {
+  	var tabs = this._browser.mTabContainer.childNodes;
+  	for (var i=0; i<tabs.length; i++) {
+  	  if (tabs[i].linkedBrowser == this._browsertab)
+  	    return tabs[i];
+  	}
+  	return null;
+  },
+  
   focus : function() {
-  	this._browser.selectedTab = this._browsertab;
+  	this._browser.selectedTab = this._getTab();
   	this._browser.focus();
   },
   
   close : function() {
-  	this._browser.removeTab(this._browsertab);
+  	this._browser.removeTab(this.getTab());
   },
   
   _shutdown : function() {
@@ -744,12 +774,13 @@ BrowserTab.prototype = {
   	this._browsertab = null;
   	this._events = null;
   	
-   	for ( var type in this._cleanup )
+   	for (var type in this._cleanup)
   		this._browser.removeListener(type, this._cleanup[type]);
   		
   	this._cleanup = null;
   }
 };
+
 
 //=================================================
 // Bookmark implementation

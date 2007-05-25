@@ -15,13 +15,24 @@ test_Browser();
 function test_Browser() {
   netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
 
-  var win = Application.browsers;
-  ok(win, "Check access to browser windows");
-  ok(win.length, "There should be at least one browser window open");
+  var browsers = Application.browsers;
+  ok(browsers, "Check access to browser windows");
+  ok(browsers.length, "There should be at least one browser window open");
   
-  Application.activeBrowser.open("http://mozilla.org/").focus();
-  Application.activeBrowser.open("http://google.com/");
+  var activeBrowser = Application.activeBrowser;
+  var moz = activeBrowser.open("http://mozilla.org/");
+  var goog = activeBrowser.open("http://google.com/");
+  goog.focus();
+
+  is(activeBrowser.tabs.length, 3, "Checking length of 'Browser.tabs' after opening 2 additional tabs");
+  is(activeBrowser.activeTab.index, goog.index, "Checking 'Browser.activeTab' after setting focus");
   
+  // need to wait for the url's to be refreshed during the load
+  function checkURL() {
+    is(moz.url, "http://mozilla.org/", "Checking 'BrowserTab.url' after opening");  
+    is(goog.url, "http://google.com/", "Checking 'BrowserTab.url' after opening");  
+  }
+  setTimeout(checkURL, 50);
 }
 </script>
 </pre>

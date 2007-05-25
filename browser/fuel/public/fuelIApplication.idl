@@ -552,6 +552,16 @@ interface fuelIBrowser : nsISupports
 interface fuelIBrowserTab : nsISupports
 {
   /**
+   * The current url of this tab.
+   */
+  attribute AString url;
+  
+  /**
+   * The current index of this tab in the browser window.
+   */
+  readonly attribute PRInt32 index;
+
+  /**
    * The browser window that is holding the tab.
    */
   readonly attribute fuelIBrowser browser;
