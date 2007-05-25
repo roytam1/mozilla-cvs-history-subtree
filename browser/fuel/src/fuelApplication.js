@@ -555,6 +555,15 @@ var Utilities = {
     return this._history;
   },
   
+  _window : null,
+  get window() {
+    if (!this._window) {
+  	  this._window = Cc["@mozilla.org/appshell/window-mediator;1"].
+  	                   getService(Components.interfaces.nsIWindowMediator);
+  	}
+  	return this._window;
+  },
+  
   specToURI : function(aSpec) {
     if (!aSpec)
       return null;
@@ -612,6 +621,135 @@ Annotations.prototype = {
   }
 };
 
+
+//=================================================
+// Browser implementation
+function Browser(aBrowser) {
+  this._browser = aBrowser;
+  this._events = new Events();
+  this._cleanup = {};
+  
+  this._watch("TabOpen");
+  this._watch("TabMove");
+  this._watch("TabClose");
+  this._watch("TabSelect");
+                                 
+  var self = this;
+  gShutdown.push(function() { self._shutdown(); });
+}
+
+Browser.prototype = {
+  get events() {
+    return this._events;
+  },
+  
+  _watch : function(aType) {
+  	var self = this;
+	this._browser.mTabContainer.addEventListener(aType, 
+		this._cleanup[aType] = function(e){ self._event(e); }, false);
+  },
+  
+  _event : function(aEvent) {
+  	this._events.dispatch(aEvent.type, "");
+  },
+  
+  get tabs() {
+  	var tabs = [], browsers = this._browser.browsers;
+  	
+  	for ( var i = 0; i < browsers.length; i++ )
+  		tabs.push(new BrowserTab(this._browser, browsers[i]));
+  	
+  	return tabs;
+  },
+  
+  get activeTab() {
+  	return new BrowserTab(this._browser, this._browser.selectedBrowser);
+  },
+  
+  insertBefore : function( aInsert, aBefore ) {
+  	this._browser.mTabContainer.insertBefore(aInsert,aBefore);
+  },
+  
+  append : function( aInsert ) {
+  	this._browser.mTabContainer.appendChild(aInsert);
+  },
+  
+  open : function( aURL ) {
+  	return new BrowserTab(this._browser.addTab(aURL));
+  },
+  
+  _shutdown : function() {
+  	this._browser = null;
+  	this._events = null;
+  	
+  	for ( var type in this._cleanup )
+  		this._browser.removeListener(type, this._cleanup[type]);
+  		
+  	this._cleanup = null;
+  }
+};
+
+//=================================================
+// BrowserTab implementation
+function BrowserTab(aBrowser, aBrowserTab) {
+  this._browser = aBrowser;
+  this._browsertab = aBrowserTab;
+  this._events = new Events();
+  this._cleanup = {};
+  
+  this._watch("load");
+                                 
+  var self = this;
+  gShutdown.push(function() { self._shutdown(); });
+}
+
+BrowserTab.prototype = {
+  get events() {
+    return this._events;
+  },
+  
+  get browser() {
+  	return this._browser;
+  },
+  
+  get document() {
+  	return this._browsertab.content.document;
+  },
+  
+  _watch : function(aType) {
+  	var self = this;
+	this._browser.addEventListener(aType,
+		this._cleanup[aType] = function(e){ self._event(e); }, false);
+  },
+  
+  _event : function(aEvent) {
+  	if (aEvent.type == "load" && (!aEvent.originalTarget instanceof HTMLDocument ||
+  		aEvent.originalTarget.defaultView.frameElement))
+  		return;
+  		
+  	this._events.dispatch(aEvent.type, "");
+  },
+  
+  focus : function() {
+  	this._browser.selectedTab = this._browsertab;
+  	this._browser.focus();
+  },
+  
+  close : function() {
+  	this._browser.removeTab(this._browsertab);
+  },
+  
+  _shutdown : function() {
+  	this._browser = null;
+  	this._browsertab = null;
+  	this._events = null;
+  	
+   	for ( var type in this._cleanup )
+  		this._browser.removeListener(type, this._cleanup[type]);
+  		
+  	this._cleanup = null;
+  }
+};
 
 //=================================================
 // Bookmark implementation
@@ -1051,8 +1189,21 @@ Application.prototype = {
         this._bookmarks = new BookmarkFolder(null, null);
 
     return this._bookmarks;
-  }  
-}
+  },
+  
+  get browsers() {
+  	var win = [], enum = Utilities.window.getEnumerator("navigator:browser");
+  	
+	while (enum.hasMoreElements())
+		win.push(new Browser(enum.getNext().getBrowser()));
+	
+	return win;
+  },
+  
+  get activeBrowser() {
+  	return new Browser(Utilities.window.getMostRecentWindow("navigator:browser").getBrowser());
+  }
+};
 
 //=================================================
 // Factory - Treat Application as a singleton

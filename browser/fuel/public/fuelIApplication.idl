@@ -1,7 +1,11 @@
 #include "nsISupports.idl"
 #include "nsIVariant.idl"
 
+interface nsIDOMHTMLDocument;
+
 interface fuelIPreference;
+interface fuelIBookmarkFolder;
+interface fuelIBrowserTab;
 
 /**
  * Interface that gives simplified access to the console
@@ -263,9 +267,9 @@ interface fuelISessionStorage : nsISupports
 }; 
 
 
-  /**
-   * Interface representing an extension
-   */
+/**
+ * Interface representing an extension
+ */
 [scriptable, uuid(ea563b60-aa5a-11db-abbd-0800200c9a66)]
 interface fuelIExtension : nsISupports
 {
@@ -338,8 +342,6 @@ interface fuelIExtensions : nsISupports
   fuelIExtension get(in AString aId);
 }; 
 
-
-interface fuelIBookmarkFolder;
 
 /**
  * Interface representing a collection of annotations associated
@@ -495,7 +497,86 @@ interface fuelIBookmarkFolder : nsISupports
   fuelIBookmarkFolder addFolder(in AString aId);
 
   void remove();
-}; 
+};
+
+/**
+ * Interface representing a browser window.
+ */
+[scriptable, uuid(207edb28-eb5e-424e-a862-b0e97C8de866)]
+interface fuelIBrowser : nsISupports
+{
+  /**
+   * A collection of browser tabs within the browser window.
+   */
+  readonly attribute nsIVariant tabs;
+  
+  /**
+   * The currently-active tab within the browser window.
+   */
+  readonly attribute fuelIBrowserTab activeTab;
+  
+  /**
+   * Insert a browser tab before another browser tab within the window.
+   * @param   aInsert
+   *          The tab that will be inserted
+   * @param   aBefore
+   *          The tab before which the other tab will be inserted
+   */
+  void insertBefore(in fuelIBrowserTab aInsert, in fuelIBrowserTab aBefore);
+  
+  /**
+   * Append a browser tab as the last tab within the window.
+   * @param   aInsert
+   *          The tab that will be appended
+   */
+  void append(in fuelIBrowserTab aInsert);
+  
+  /**
+   * Open a new browser tab, pointing to the specified URL.
+   * @param   aURL
+   *          The url to open the browser tab to
+   */
+  fuelIBrowserTab open(in AString aURL);
+  
+  /**
+   * The events object for the browser window.
+   * supports: "TabOpen", "TabClose", "TabMove", "TabSelect"
+   */
+  readonly attribute fuelIEvents events;
+};
+
+/**
+ * Interface representing a browser tab.
+ */
+[scriptable, uuid(3073ceff-777c-41ce-9ace-ab37268147c1)]
+interface fuelIBrowserTab : nsISupports
+{
+  /**
+   * The browser window that is holding the tab.
+   */
+  readonly attribute fuelIBrowser browser;
+  
+  /**
+   * The currently-active tab within the browser window.
+   */
+  readonly attribute nsIDOMHTMLDocument document;
+  
+  /**
+   * Give focus to this browser tab, and bring it to the front.
+   */
+  void focus();
+  
+  /**
+   * Close the browser tab.
+   */
+  void close();
+  
+  /**
+   * The events object for the browser tab.
+   * supports: "load"
+   */
+  readonly attribute fuelIEvents events;
+};
 
 
 /**
@@ -551,4 +632,14 @@ interface fuelIApplication : nsISupports
    * The root bookmarks object for the application.
    */
   readonly attribute fuelIBookmarkFolder bookmarks;
+  
+  /**
+   * An array of browser windows within the application.
+   */
+  readonly attribute nsIVariant browsers;
+  
+  /**
+   * The currently active browser window.
+   */
+  readonly attribute fuelIBrowser activeBrowser;
 }; 

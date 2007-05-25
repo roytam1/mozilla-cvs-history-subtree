@@ -1,0 +1,29 @@
+<html>
+<head>
+  <title>Testing Browser</title>
+  <script type="text/javascript" src="/MochiKit/MochiKit.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/SimpleTest.js"></script>
+  <script type="text/javascript" src="/tests/SimpleTest/EventUtils.js"></script>
+  <link rel="stylesheet" type="text/css" href="/tests/SimpleTest/test.css"></link>
+</head>
+<body>
+<pre id="test">
+<script class="testbody" type="text/javascript">
+
+test_Browser();
+
+function test_Browser() {
+  netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+
+  var win = Application.browsers;
+  ok(win, "Check access to browser windows");
+  ok(win.length, "There should be at least one browser window open");
+  
+  Application.activeBrowser.open("http://mozilla.org/").focus();
+  Application.activeBrowser.open("http://google.com/");
+  
+}
+</script>
+</pre>
+</body>
+</html>
