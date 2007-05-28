@@ -195,7 +195,7 @@ $ReleaseBuild  = 1;
 $shiptalkback  = 0;
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = "4";
+$build_hour    = "7";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
@@ -219,12 +219,13 @@ $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = 'browser/config/version.txt';
 $update_pushinfo = 0;
-$crashreporter_buildsymbols = 0;
-$crashreporter_pushsymbols = 0;
+$crashreporter_buildsymbols = 1;
+$crashreporter_pushsymbols = 1;
 $ENV{SYMBOL_SERVER_HOST} = 'stage.mozilla.org';
 $ENV{SYMBOL_SERVER_USER}   = 'ffxbld';
 $ENV{SYMBOL_SERVER_PATH}   = '/mnt/netapp/breakpad/symbols_ffx/';
 $ENV{SYMBOL_SERVER_SSH_KEY}   = "$ENV{HOME}/.ssh/ffxbld_dsa";
+$ENV{MOZ_SYMBOLS_EXTRA_BUILDID} = 'textframe';
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
