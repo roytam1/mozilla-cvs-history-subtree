@@ -1189,9 +1189,7 @@ PK11_FindGenericObjects(PK11SlotInfo *slot, CK_OBJECT_CLASS objClass)
     for (i=0; i < count; i++) {
 	obj = PORT_New(PK11GenericObject);
 	if ( !obj ) {
-	    if (firstObj) {
-		PK11_DestroyGenericObjects(firstObj);
-	    }
+	    PK11_DestroyGenericObjects(firstObj);
 	    PORT_Free(objectIDs);
 	    return NULL;
 	}
@@ -1293,7 +1291,7 @@ SECStatus
 PK11_DestroyGenericObjects(PK11GenericObject *objects)
 {
     PK11GenericObject *nextObject;
-    PK11GenericObject *prevObject;
+    PK11GenericObject *prevObject = objects->prev;
  
     if (objects == NULL) {
 	return SECSuccess;

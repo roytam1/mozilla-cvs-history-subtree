@@ -192,7 +192,7 @@ endif
 # to bind the blapi function references in FREEBLVector vector
 # (ldvector.c) to the blapi functions defined in the freebl
 # shared libraries.
-ifeq (,$(filter-out BSD_OS FreeBSD Linux NetBSD OpenBSD, $(OS_TARGET)))
+ifeq (,$(filter-out BSD_OS FreeBSD Linux NetBSD, $(OS_TARGET)))
     MKSHLIB += -Wl,-Bsymbolic
 endif
 
@@ -378,7 +378,7 @@ else
  	    MPCPU_SRCS =
 	endif
 	DEFINES += -DNSS_BEVAND_ARCFOUR -DMPI_AMD64 -DMP_ASSEMBLY_MULTIPLY
-	DEFINES += -DNSS_USE_COMBA -DMP_CHAR_STORE_SLOW -DMP_IS_LITTLE_ENDIAN
+	DEFINES += -DNSS_USE_COMBA
 	MPI_SRCS += mpi_amd64.c
     else
 	# Solaris x86
