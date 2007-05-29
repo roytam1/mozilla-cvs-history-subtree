@@ -1,2 +1,2 @@
 # List clobbering rationale in this file. Please include bug numbers whenever possible.
-
+- 20070529: CLOBBER to get symbols uploaded for the first time
