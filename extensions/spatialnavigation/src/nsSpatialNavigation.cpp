@@ -117,7 +117,7 @@ nsSpatialNavigation::KeyDown(nsIDOMEvent* aEvent)
   
   nsCOMPtr<nsIContent> targetContent = do_QueryInterface(domEventTarget);
 
-  if (targetContent->IsContentOfType(nsIContent::eXUL)) 
+  if (targetContent->IsContentOfType(nsIContent::eXUL))
     return NS_OK;
   
   if (targetContent->IsContentOfType(nsIContent::eHTML_FORM_CONTROL)) 
@@ -191,79 +191,73 @@ nsSpatialNavigation::KeyDown(nsIDOMEvent* aEvent)
     if (!isModifier)
       return NS_OK;  
   }
-  
-  
+
   if (keyCode == mService->mKeyCodeLeft)
   {
-  
-    // ************************************************************************************
-    // NS_FORM_TEXTAREA cases:
-    
-    // ************************************************************************************
-    // NS_FORM_INPUT_TEXT | NS_FORM_INPUT_PASSWORD | NS_FORM_INPUT_FILE cases
+    //************************************************************************************
+    // NS_FORM_TEXTAREA & (NS_FORM_INPUT_TEXT | NS_FORM_INPUT_PASSWORD | NS_FORM_INPUT_FILE) cases
 
-
+    PRInt32 selectionStart = 0, textLength = 0;
     if (formControlType == NS_FORM_INPUT_TEXT || 
-        formControlType == NS_FORM_INPUT_PASSWORD)
+        formControlType == NS_FORM_INPUT_PASSWORD ||
+        formControlType == NS_FORM_INPUT_FILE)
     {
-      PRInt32 selectionStart, textLength;
       nsCOMPtr<nsIDOMNSHTMLInputElement> input = do_QueryInterface(targetContent);
       if (input) {
         input->GetSelectionStart (&selectionStart);
         input->GetTextLength (&textLength);
-      } else {
-        nsCOMPtr<nsIDOMNSHTMLTextAreaElement> textArea = do_QueryInterface(targetContent);
-        if (textArea) {
-          textArea->GetSelectionStart (&selectionStart);
-          textArea->GetTextLength (&textLength);
-        }
       }
-	  
-      if (textLength != 0 && selectionStart != 0)
-        return NS_OK;
+    } else if (formControlType == NS_FORM_TEXTAREA) {
+
+      nsCOMPtr<nsIDOMNSHTMLTextAreaElement> textArea = do_QueryInterface(targetContent);
+      if (textArea) {
+        textArea->GetSelectionStart (&selectionStart);
+        textArea->GetTextLength (&textLength);
+      }
     }
+
+    if (textLength != 0 && selectionStart != 0)
+      return NS_OK;
 
     // We're using this key, no one else should
     aEvent->StopPropagation();
-	aEvent->PreventDefault();
+    aEvent->PreventDefault();
     return Left();
   }
-  
+
   if (keyCode == mService->mKeyCodeRight)
   {
-    // ************************************************************************************
-    // NS_FORM_TEXTAREA cases:
+    //************************************************************************************
+    // NS_FORM_TEXTAREA & (NS_FORM_INPUT_TEXT | NS_FORM_INPUT_PASSWORD | NS_FORM_INPUT_FILE) cases
 
-    // ************************************************************************************
-    // NS_FORM_INPUT_TEXT | NS_FORM_INPUT_PASSWORD | NS_FORM_INPUT_FILE cases
+    PRInt32 selectionEnd = 0, textLength = 0;
 
     if (formControlType == NS_FORM_INPUT_TEXT || 
-        formControlType == NS_FORM_INPUT_PASSWORD)
+        formControlType == NS_FORM_INPUT_PASSWORD ||
+        formControlType == NS_FORM_INPUT_FILE)
     {
-      PRInt32 selectionEnd, textLength;
       nsCOMPtr<nsIDOMNSHTMLInputElement> input = do_QueryInterface(targetContent);
       if (input) {
         input->GetSelectionEnd (&selectionEnd);
         input->GetTextLength (&textLength);
-      } else {
-        nsCOMPtr<nsIDOMNSHTMLTextAreaElement> textArea = do_QueryInterface(targetContent);
-        if (textArea) {
-          textArea->GetSelectionEnd (&selectionEnd);
-          textArea->GetTextLength (&textLength);
-        }
       }
-      
-      // going down.
+    } else if (formControlType == NS_FORM_TEXTAREA) {
 
-      if (textLength  != selectionEnd)
-        return NS_OK;
+      nsCOMPtr<nsIDOMNSHTMLTextAreaElement> textArea = do_QueryInterface(targetContent);
+      if (textArea) {
+        textArea->GetSelectionEnd (&selectionEnd);
+        textArea->GetTextLength (&textLength);
+      }
     }
 
+    if (textLength  != selectionEnd)
+      return NS_OK;
+
     aEvent->StopPropagation();
-	aEvent->PreventDefault();
+    aEvent->PreventDefault();
     return Right();
   }
-  
+
   if (keyCode == mService->mKeyCodeUp)
   {
 
@@ -283,17 +277,28 @@ nsSpatialNavigation::KeyDown(nsIDOMEvent* aEvent)
     // if (formControlType == NS_FORM_SELECT)
     //   return NS_OK;
 
-    // ************************************************************************************
-    // NS_FORM_TEXTAREA cases:
+    //************************************************************************************
+    // NS_FORM_TEXTAREA & (NS_FORM_INPUT_TEXT | NS_FORM_INPUT_PASSWORD | NS_FORM_INPUT_FILE) cases
 
-    // ************************************************************************************
-    // NS_FORM_INPUT_TEXT | NS_FORM_INPUT_PASSWORD | NS_FORM_INPUT_FILE cases
+    if (formControlType == NS_FORM_TEXTAREA) {
 
+      PRInt32 selectionStart = 0, textLength = 0;
+      nsCOMPtr<nsIDOMNSHTMLTextAreaElement> textArea = do_QueryInterface(targetContent);
+      if (textArea) {
+        textArea->GetSelectionStart (&selectionStart);
+        textArea->GetTextLength (&textLength);
+      }
+
+      if (textLength != 0 && selectionStart != 0)
+        return NS_OK;
+    }
+
+    // We're using this key, no one else should
     aEvent->StopPropagation();
     aEvent->PreventDefault();
     return Up();
   }
-  
+
   if (keyCode == mService->mKeyCodeDown)
   {
     // If we are going up or down, in a select, lets not
@@ -312,19 +317,27 @@ nsSpatialNavigation::KeyDown(nsIDOMEvent* aEvent)
     // if (formControlType == NS_FORM_SELECT)
     //   return NS_OK;
 
-    // ************************************************************************************
-    // NS_FORM_TEXTAREA cases:
+    if (formControlType == NS_FORM_TEXTAREA) {
 
-    // ************************************************************************************
-    // NS_FORM_INPUT_TEXT | NS_FORM_INPUT_PASSWORD | NS_FORM_INPUT_FILE cases
+      PRInt32 selectionEnd = 0, textLength = 0;
+      nsCOMPtr<nsIDOMNSHTMLTextAreaElement> textArea = do_QueryInterface(targetContent);
+      if (textArea) {
+        textArea->GetSelectionEnd (&selectionEnd);
+        textArea->GetTextLength (&textLength);
+      }
+
+      if (textLength  != selectionEnd)
+        return NS_OK;
+    }
 
     aEvent->StopPropagation();  // We're using this key, no one else should
-	aEvent->PreventDefault();
+    aEvent->PreventDefault();
     return Down();
   }
   
   return NS_OK;
 }
+
 
 NS_IMETHODIMP 
 nsSpatialNavigation::Init(nsIDOMWindow *aWindow)

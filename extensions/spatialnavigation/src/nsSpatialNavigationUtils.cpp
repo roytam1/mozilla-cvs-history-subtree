@@ -410,7 +410,12 @@ isTargetable(PRBool focusDocuments, nsIFrame* frame)
   nsAutoString inputType;
   nsCOMPtr<nsIDOMHTMLInputElement> inputElement = do_QueryInterface(currentContent);
   if (inputElement && NS_SUCCEEDED(inputElement->GetDisabled(&disabled)) && NS_SUCCEEDED(inputElement->GetType(inputType)))
-    return !disabled && (! inputType.EqualsIgnoreCase("hidden"));
+    return !disabled && (! inputType.LowerCaseEqualsLiteral("hidden")) && (!inputType.LowerCaseEqualsLiteral("button"));
+
+  nsAutoString textareaType;
+  nsCOMPtr<nsIDOMHTMLTextAreaElement> textareaElement = do_QueryInterface(currentContent);
+  if (textareaElement && NS_SUCCEEDED(textareaElement->GetDisabled(&disabled)) && NS_SUCCEEDED(textareaElement->GetType(textareaType)))
+    return !disabled && (! textareaType.LowerCaseEqualsLiteral("hidden"));
 
   return PR_FALSE;
 }
