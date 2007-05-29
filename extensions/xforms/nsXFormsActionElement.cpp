@@ -42,39 +42,27 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMEvent.h"
 #include "nsIDOMElement.h"
-#include "nsIXTFGenericElementWrapper.h"
+#include "nsIXTFBindableElementWrapper.h"
 
 #define DEFERRED_REBUILD     0x01
 #define DEFERRED_RECALCULATE 0x02
 #define DEFERRED_REVALIDATE  0x04
 #define DEFERRED_REFRESH     0x08
 
-nsXFormsActionElement::nsXFormsActionElement() : mElement(nsnull)
-{
-}
-
-NS_IMPL_ADDREF_INHERITED(nsXFormsActionElement, nsXFormsStubElement)
-NS_IMPL_RELEASE_INHERITED(nsXFormsActionElement, nsXFormsStubElement)
+NS_IMPL_ADDREF_INHERITED(nsXFormsActionElement, nsXFormsBindableControlStub)
+NS_IMPL_RELEASE_INHERITED(nsXFormsActionElement, nsXFormsBindableControlStub)
 
 NS_INTERFACE_MAP_BEGIN(nsXFormsActionElement)
   NS_INTERFACE_MAP_ENTRY(nsIXFormsActionModuleElement)
   NS_INTERFACE_MAP_ENTRY(nsIXFormsActionElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
-NS_INTERFACE_MAP_END_INHERITING(nsXFormsStubElement)
+NS_INTERFACE_MAP_END_INHERITING(nsXFormsBindableControlStub)
 
 NS_IMETHODIMP
-nsXFormsActionElement::OnCreated(nsIXTFGenericElementWrapper* aWrapper)
+nsXFormsActionElement::OnCreated(nsIXTFBindableElementWrapper* aWrapper)
 {
-  nsresult rv = nsXFormsStubElement::OnCreated(aWrapper);
+  nsresult rv = nsXFormsBindableControlStub::OnCreated(aWrapper);
   NS_ENSURE_SUCCESS(rv, rv);
-
-  // It's ok to keep a weak pointer to mElement.  mElement will have an
-  // owning reference to this object, so as long as we null out mElement in
-  // OnDestroyed, it will always be valid.
-  nsCOMPtr<nsIDOMElement> node;
-  aWrapper->GetElementNode(getter_AddRefs(node));
-  mElement = node;
-  NS_ASSERTION(mElement, "Wrapper is not an nsIDOMElement, we'll crash soon");
 
   aWrapper->SetNotificationMask(nsIXTFElement::NOTIFY_WILL_CHANGE_DOCUMENT |
                                 nsIXTFElement::NOTIFY_WILL_CHANGE_PARENT |
@@ -101,7 +89,7 @@ nsXFormsActionElement::WillChangeParent(nsIDOMElement *aNewParent)
 NS_IMETHODIMP
 nsXFormsActionElement::ParentChanged(nsIDOMElement *aNewParent)
 {
-  nsXFormsStubElement::ParentChanged(aNewParent);
+  mHasParent = aNewParent != nsnull;
   UpdateRepeatState(aNewParent);
   return NS_OK;
 }
@@ -116,7 +104,7 @@ nsXFormsActionElement::WillChangeDocument(nsIDOMDocument *aNewDocument)
 NS_IMETHODIMP
 nsXFormsActionElement::DocumentChanged(nsIDOMDocument *aNewDocument)
 {
-  nsXFormsStubElement::DocumentChanged(aNewDocument);
+  mHasDoc = aNewDocument != nsnull;
 
   nsCOMPtr<nsIDOMNode> parent;
   mElement->GetParentNode(getter_AddRefs(parent));
