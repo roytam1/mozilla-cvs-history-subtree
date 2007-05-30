@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   L. David Baron <dbaron@dbaron.org>, Mozilla Corporation
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -340,9 +339,8 @@ nsImageFrame::RecalculateTransform()
   // XXXbz does this introduce rounding errors because of the cast to
   // float?  Should we just manually add that stuff in every time
   // instead?
-  nsRect innerArea = GetInnerArea();
-  mTransform.SetToTranslate(float(innerArea.x),
-                            float(innerArea.y - GetContinuationOffset()));
+  mTransform.SetToTranslate(float(mBorderPadding.left),
+                            float(mBorderPadding.top - GetContinuationOffset()));
   
   // Set the scale factors
   if (mIntrinsicSize.width != 0 && mIntrinsicSize.height != 0 &&
@@ -727,18 +725,36 @@ nsImageFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
 nsRect 
 nsImageFrame::GetInnerArea() const
 {
-  return GetContentRect() - GetPosition();
+  nsRect r;
+  r.x = mBorderPadding.left;
+  r.y = GetPrevInFlow() ? 0 : mBorderPadding.top;
+  r.width = mRect.width - mBorderPadding.left - mBorderPadding.right;
+  r.height = mRect.height -
+    (GetPrevInFlow() ? 0 : mBorderPadding.top) -
+    (GetNextInFlow() ? 0 : mBorderPadding.bottom);
+  return r;
 }
 
 // get the offset into the content area of the image where aImg starts if it is a continuation.
 nscoord 
-nsImageFrame::GetContinuationOffset() const
+nsImageFrame::GetContinuationOffset(nscoord* aWidth) const
 {
   nscoord offset = 0;
-  for (nsIFrame *f = GetPrevInFlow(); f; f = f->GetPrevInFlow()) {
-    offset += f->GetContentRect().height;
+  if (aWidth) {
+    *aWidth = 0;
   }
-  NS_ASSERTION(offset >= 0, "bogus GetContentRect");
+
+  if (GetPrevInFlow()) {
+    for (nsIFrame* prevInFlow = GetPrevInFlow() ; prevInFlow; prevInFlow = prevInFlow->GetPrevInFlow()) {
+      nsRect rect = prevInFlow->GetRect();
+      if (aWidth) {
+        *aWidth = rect.width;
+      }
+      offset += rect.height;
+    }
+    offset -= mBorderPadding.top;
+    offset = PR_MAX(0, offset);
+  }
   return offset;
 }
 
@@ -798,6 +814,10 @@ nsImageFrame::Reflow(nsPresContext*          aPresContext,
     mState |= IMAGE_GOTINITIALREFLOW;
   }
 
+  // Set our borderpadding so that if GetDesiredSize has to recalc the
+  // transform it can.
+  mBorderPadding   = aReflowState.mComputedBorderPadding;
+
   mComputedSize = 
     nsSize(aReflowState.ComputedWidth(), aReflowState.mComputedHeight);
   RecalculateTransform();
@@ -806,13 +826,12 @@ nsImageFrame::Reflow(nsPresContext*          aPresContext,
   aMetrics.height = mComputedSize.height;
 
   // add borders and padding
-  aMetrics.width  += aReflowState.mComputedBorderPadding.LeftRight();
-  aMetrics.height += aReflowState.mComputedBorderPadding.TopBottom();
+  aMetrics.width  += mBorderPadding.left + mBorderPadding.right;
+  aMetrics.height += mBorderPadding.top + mBorderPadding.bottom;
   
   if (GetPrevInFlow()) {
-    aMetrics.width = GetPrevInFlow()->GetSize().width;
-    nscoord y = GetContinuationOffset();
-    aMetrics.height -= y + aReflowState.mComputedBorderPadding.top;
+    nscoord y = GetContinuationOffset(&aMetrics.width);
+    aMetrics.height -= y + mBorderPadding.top;
     aMetrics.height = PR_MAX(0, aMetrics.height);
   }
 
@@ -1011,7 +1030,6 @@ struct nsRecessedBorder : public nsStyleBorder {
 
 void
 nsImageFrame::DisplayAltFeedback(nsIRenderingContext& aRenderingContext,
-                                 const nsRect&        aDirtyRect,
                                  imgIRequest*         aRequest,
                                  nsPoint              aPt)
 {
@@ -1068,10 +1086,11 @@ nsImageFrame::DisplayAltFeedback(nsIRenderingContext& aRenderingContext,
       }
       if (imgCon) {
         // draw it
+        nsRect source(0,0,size,size);
         nsRect dest((vis->mDirection == NS_STYLE_DIRECTION_RTL) ?
                     inner.XMost() - size : inner.x,
                     inner.y, size, size);
-        nsLayoutUtils::DrawImage(&aRenderingContext, imgCon, dest, aDirtyRect);
+        aRenderingContext.DrawImage(imgCon, source, dest);
         iconUsed = PR_TRUE;
       }
     }
@@ -1117,7 +1136,6 @@ static void PaintAltFeedback(nsIFrame* aFrame, nsIRenderingContext* aCtx,
 {
   nsImageFrame* f = NS_STATIC_CAST(nsImageFrame*, aFrame);
   f->DisplayAltFeedback(*aCtx,
-                        aDirtyRect,
                         IMAGE_OK(f->GetContent()->IntrinsicState(), PR_TRUE)
                            ? nsImageFrame::gIconLoad->mLoadingImage
                            : nsImageFrame::gIconLoad->mBrokenImage,
@@ -1174,19 +1192,64 @@ nsImageFrame::PaintImage(nsIRenderingContext& aRenderingContext, nsPoint aPt,
 {
   // Render the image into our content area (the area inside
   // the borders and padding)
-  NS_ASSERTION(GetInnerArea().width == mComputedSize.width, "bad width");
   nsRect inner = GetInnerArea() + aPt;
-  nsRect clip;
-  clip.IntersectRect(inner, aDirtyRect);
+  nsRect paintArea(inner);
 
-  nsRect dest(inner.TopLeft(), mComputedSize);
-  dest.y -= GetContinuationOffset();
+  nscoord offsetY = 0;
 
-  nsLayoutUtils::DrawImage(&aRenderingContext, aImage, dest, clip);
+  // if the image is split account for y-offset
+  if (GetPrevInFlow()) {
+    offsetY = GetContinuationOffset();
+  }
+
+  if (mIntrinsicSize == mComputedSize) {
+    // Find the actual rect to be painted to in the rendering context
+    paintArea.IntersectRect(paintArea, aDirtyRect);
+
+    // Rect in the image to paint
+    nsRect r(paintArea.x - inner.x,
+             paintArea.y - inner.y + offsetY,
+             paintArea.width,
+             paintArea.height);
+
+    aRenderingContext.DrawImage(aImage, r, paintArea);
+  } else {
+    // The computed size is the total size of all the continuations,
+    // including ourselves.  Note that we're basically inverting
+    // mTransform here (would it too much to ask for
+    // nsTransform2D::Invert?), since we need to convert from
+    // rendering context coords to image coords...
+    nsTransform2D trans;
+    trans.SetToScale((float(mIntrinsicSize.width) / float(mComputedSize.width)),
+                     (float(mIntrinsicSize.height) / float(mComputedSize.height)));
+
+    // XXXbz it looks like we should take
+    // IntersectRect(paintArea, aDirtyRect) here too, but things
+    // get very weird if I do that ....
+    //   paintArea.IntersectRect(paintArea, aDirtyRect);
+
+    // dirty rect in image our coord size...
+    nsRect r(paintArea.x - inner.x,
+             paintArea.y - inner.y + offsetY,
+             paintArea.width,
+             paintArea.height);
+
+    // Transform that to image coords
+    trans.TransformCoord(&r.x, &r.y, &r.width, &r.height);
+
+#ifdef DEBUG_decode
+    printf("IF draw src (%d,%d,%d,%d) -> dst (%d,%d,%d,%d)\n",
+           r.x, r.y, r.width, r.height, paintArea.x, paintArea.y,
+           paintArea.width, paintArea.height);
+#endif
+
+    aRenderingContext.DrawImage(aImage, r, paintArea);
+  }
 
   nsPresContext* presContext = PresContext();
   nsImageMap* map = GetImageMap(presContext);
   if (nsnull != map) {
+    nsRect inner = GetInnerArea() + aPt;
     aRenderingContext.PushState();
     aRenderingContext.SetColor(NS_RGB(0, 0, 0));
     aRenderingContext.SetLineStyle(nsLineStyle_kDotted);
@@ -1630,19 +1693,6 @@ mRect.height);
   return NS_OK;
 }
 #endif
-
-PRIntn
-nsImageFrame::GetSkipSides() const
-{
-  PRIntn skip = 0;
-  if (nsnull != GetPrevInFlow()) {
-    skip |= 1 << NS_SIDE_TOP;
-  }
-  if (nsnull != GetNextInFlow()) {
-    skip |= 1 << NS_SIDE_BOTTOM;
-  }
-  return skip;
-}
 
 NS_IMETHODIMP 
 nsImageFrame::GetIntrinsicImageSize(nsSize& aSize)

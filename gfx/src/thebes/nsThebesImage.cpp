@@ -327,11 +327,20 @@ nsThebesImage::UnlockImagePixels(PRBool aMaskPixels)
 
 /* NB: These are pixels, not twips. */
 NS_IMETHODIMP
-nsThebesImage::Draw(nsIRenderingContext &aContext,
-                    const gfxRect &aSourceRect,
-                    const gfxRect &aDestRect)
+nsThebesImage::Draw(nsIRenderingContext &aContext, nsIDrawingSurface *aSurface,
+                    PRInt32 aX, PRInt32 aY, PRInt32 aWidth, PRInt32 aHeight)
 {
-    if (NS_UNLIKELY(aDestRect.IsEmpty())) {
+    return Draw(aContext, aSurface, 0, 0, mWidth, mHeight, aX, aY, aWidth, aHeight);
+}
+
+/* NB: These are pixels, not twips. */
+/* BUT nsRenderingContextImpl's DrawImage calls this with twips. */
+NS_IMETHODIMP
+nsThebesImage::Draw(nsIRenderingContext &aContext, nsIDrawingSurface *aSurface,
+                   PRInt32 aSX, PRInt32 aSY, PRInt32 aSWidth, PRInt32 aSHeight,
+                   PRInt32 aDX, PRInt32 aDY, PRInt32 aDWidth, PRInt32 aDHeight)
+{
+    if (NS_UNLIKELY(aDWidth == 0 || aDHeight == 0)) {
         NS_ERROR("nsThebesImage::Draw zero dest size - please fix caller.");
         return NS_OK;
     }
@@ -341,7 +350,7 @@ nsThebesImage::Draw(nsIRenderingContext &aContext,
 
 #if 0
     fprintf (stderr, "nsThebesImage::Draw src [%d %d %d %d] dest [%d %d %d %d] tx [%f %f] dec [%d %d %d %d]\n",
-             aSourceRect.pos.x, aSourceRect.pos.y, aSWidth, aSHeight, aDX, aDY, aDWidth, aDHeight,
+             aSX, aSY, aSWidth, aSHeight, aDX, aDY, aDWidth, aDHeight,
              ctx->CurrentMatrix().GetTranslation().x, ctx->CurrentMatrix().GetTranslation().y,
              mDecoded.x, mDecoded.y, mDecoded.width, mDecoded.height);
 #endif
@@ -354,45 +363,46 @@ nsThebesImage::Draw(nsIRenderingContext &aContext,
         // otherwise
         ctx->SetColor(mSinglePixelColor);
         ctx->NewPath();
-        ctx->Rectangle(aDestRect, PR_TRUE);
+        ctx->Rectangle(gfxRect(aDX, aDY, aDWidth, aDHeight), PR_TRUE);
         ctx->Fill();
         return NS_OK;
     }
 
-    gfxFloat xscale = aDestRect.size.width / aSourceRect.size.width;
-    gfxFloat yscale = aDestRect.size.height / aSourceRect.size.height;
-
-    gfxRect srcRect(aSourceRect);
-    gfxRect destRect(aDestRect);
+    gfxFloat xscale = gfxFloat(aDWidth) / aSWidth;
+    gfxFloat yscale = gfxFloat(aDHeight) / aSHeight;
 
     if (!GetIsImageComplete()) {
-      srcRect = srcRect.Intersect(gfxRect(mDecoded.x, mDecoded.y,
-                                          mDecoded.width, mDecoded.height));
+      nsRect srcRect(aSX, aSY, aSWidth, aSHeight);
+      srcRect.IntersectRect(srcRect, mDecoded);
 
       // This happens when mDecoded.width or height is zero. bug 368427.
-      if (NS_UNLIKELY(srcRect.size.width == 0 || srcRect.size.height == 0))
+      if (NS_UNLIKELY(srcRect.width == 0 || srcRect.height == 0))
           return NS_OK;
 
-      destRect.pos.x += (srcRect.pos.x - aSourceRect.pos.x)*xscale;
-      destRect.pos.y += (srcRect.pos.y - aSourceRect.pos.y)*yscale;
+      aDX += (PRInt32)((srcRect.x - aSX)*xscale);
+      aDY += (PRInt32)((srcRect.y - aSY)*yscale);
 
       // use '+ 1 - *scale' to get rid of rounding errors
-      destRect.size.width  = (srcRect.size.width)*xscale + 1 - xscale;
-      destRect.size.height = (srcRect.size.height)*yscale + 1 - yscale;
+      aDWidth  = (PRInt32)((srcRect.width)*xscale + 1 - xscale);
+      aDHeight = (PRInt32)((srcRect.height)*yscale + 1 - yscale);
+
+      aSX = srcRect.x;
+      aSY = srcRect.y;
     }
 
     // Reject over-wide or over-tall images.
-    if (!AllowedImageSize(destRect.size.width, destRect.size.height))
+    if (!AllowedImageSize(aDWidth, aDHeight))
         return NS_ERROR_FAILURE;
 
+    gfxRect dr(aDX, aDY, aDWidth, aDHeight);
     gfxMatrix mat;
-    mat.Translate(srcRect.pos);
+    mat.Translate(gfxPoint(aSX, aSY));
     mat.Scale(1.0/xscale, 1.0/yscale);
+    mat.Translate(-gfxPoint((PRInt32)aDX, (PRInt32)aDY));
 
     /* Translate the start point of the image (srcRect.pos)
      * to coincide with the destination rectangle origin
      */
-    mat.Translate(-destRect.pos);
 
     nsRefPtr<gfxPattern> pat = new gfxPattern(ThebesSurface());
     pat->SetMatrix(mat);
@@ -414,7 +424,7 @@ nsThebesImage::Draw(nsIRenderingContext &aContext,
 
     ctx->NewPath();
     ctx->SetPattern(pat);
-    ctx->Rectangle(destRect);
+    ctx->Rectangle(dr);
     ctx->Fill();
 
     return NS_OK;

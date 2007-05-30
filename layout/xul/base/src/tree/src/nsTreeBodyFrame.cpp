@@ -3236,8 +3236,7 @@ nsTreeBodyFrame::PaintTwisty(PRInt32              aRowIndex,
         }
           
         // Paint the image.
-        nsLayoutUtils::DrawImage(&aRenderingContext, image,
-                                 r, aDirtyRect, &imageSize);
+        aRenderingContext.DrawImage(image, imageSize, r);
       }
     }        
   }
@@ -3358,11 +3357,15 @@ nsTreeBodyFrame::PaintImage(PRInt32              aRowIndex,
     // Essentially, we are scaling the image as dictated by the CSS destination
     // height and width, and we are then clipping the scaled image by the cell
     // width and height.
-    nsRect clip;
-    clip.IntersectRect(aDirtyRect, destRect);
-    nsLayoutUtils::DrawImage(&aRenderingContext, image,
-                             nsRect(destRect.TopLeft(), imageDestSize),
-                             clip, &sourceRect);
+    if (destRect.width != imageDestSize.width) {
+      sourceRect.width = sourceRect.width * destRect.width / imageDestSize.width;
+    }
+    if (destRect.height != imageDestSize.height) {
+      sourceRect.height = sourceRect.height * destRect.height / imageDestSize.height;
+    }
+
+    // Finally we can paint the image.
+    aRenderingContext.DrawImage(image, sourceRect, destRect);
   }
 
   // Update the aRemainingWidth and aCurrX values.
@@ -3521,8 +3524,7 @@ nsTreeBodyFrame::PaintCheckbox(PRInt32              aRowIndex,
     }
 
     // Paint the image.
-    nsLayoutUtils::DrawImage(&aRenderingContext, image,
-                             r, aDirtyRect, &imageSize);
+    aRenderingContext.DrawImage(image, imageSize, r);
   }
 }
 

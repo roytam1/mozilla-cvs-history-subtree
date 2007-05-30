@@ -20,7 +20,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   L. David Baron <dbaron@dbaron.org>, Mozilla Corporation
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -141,8 +140,6 @@ public:
   NS_IMETHOD List(FILE* out, PRInt32 aIndent) const;
 #endif
 
-  virtual PRIntn GetSkipSides() const;
-
   NS_IMETHOD GetImageMap(nsPresContext *aPresContext, nsIImageMap **aImageMap);
 
   NS_IMETHOD GetIntrinsicImageSize(nsSize& aSize);
@@ -164,7 +161,6 @@ public:
                                           nsStyleContext* aStyleContext);
   
   void DisplayAltFeedback(nsIRenderingContext& aRenderingContext,
-                          const nsRect&        aDirtyRect,
                           imgIRequest*         aRequest,
                           nsPoint              aPt);
 
@@ -242,7 +238,7 @@ private:
 
   inline void GetLoadGroup(nsPresContext *aPresContext,
                            nsILoadGroup **aLoadGroup);
-  nscoord GetContinuationOffset() const;
+  nscoord GetContinuationOffset(nscoord* aWidth = 0) const;
   void GetDocumentCharacterSet(nsACString& aCharset) const;
 
   /**
@@ -280,6 +276,8 @@ private:
   nsSize mIntrinsicSize;
   nsTransform2D mTransform;
   
+  nsMargin            mBorderPadding;
+
   static nsIIOService* sIOService;
 
   /* loading / broken image icon support */

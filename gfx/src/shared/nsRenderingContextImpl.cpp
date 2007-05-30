@@ -306,7 +306,6 @@ nsRenderingContextImpl::GetRightToLeftText(PRBool* aIsRTL)
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
 
-#ifndef MOZ_CAIRO_GFX
 NS_IMETHODIMP nsRenderingContextImpl::DrawImage(imgIContainer *aImage, const nsRect & aSrcRect, const nsRect & aDestRect)
 {
   nsRect dr = aDestRect;
@@ -396,7 +395,6 @@ NS_IMETHODIMP nsRenderingContextImpl::DrawImage(imgIContainer *aImage, const nsR
   return img->Draw(*this, surface, sr.x, sr.y, sr.width, sr.height,
                    dr.x, dr.y, dr.width, dr.height);
 }
-#endif
 
 /* [noscript] void drawTile (in imgIContainer aImage, in nscoord aXImageStart, in nscoord aYImageStart, [const] in nsRect aTargetRect); */
 NS_IMETHODIMP

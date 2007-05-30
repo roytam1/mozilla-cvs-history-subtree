@@ -195,7 +195,7 @@ void nsDisplayBullet::Paint(nsDisplayListBuilder* aBuilder,
      nsIRenderingContext* aCtx, const nsRect& aDirtyRect)
 {
   NS_STATIC_CAST(nsBulletFrame*, mFrame)->
-    PaintBullet(*aCtx, aBuilder->ToReferenceFrame(mFrame), aDirtyRect);
+    PaintBullet(*aCtx, aBuilder->ToReferenceFrame(mFrame));
 }
 
 NS_IMETHODIMP
@@ -212,8 +212,7 @@ nsBulletFrame::BuildDisplayList(nsDisplayListBuilder*   aBuilder,
 }
 
 void
-nsBulletFrame::PaintBullet(nsIRenderingContext& aRenderingContext, nsPoint aPt,
-                           const nsRect& aDirtyRect)
+nsBulletFrame::PaintBullet(nsIRenderingContext& aRenderingContext, nsPoint aPt)
 {
   const nsStyleList* myList = GetStyleList();
   PRUint8 listStyleType = myList->mListStyleType;
@@ -226,11 +225,11 @@ nsBulletFrame::PaintBullet(nsIRenderingContext& aRenderingContext, nsPoint aPt,
       nsCOMPtr<imgIContainer> imageCon;
       mImageRequest->GetImage(getter_AddRefs(imageCon));
       if (imageCon) {
-        nsRect dest(mPadding.left, mPadding.top,
-                    mRect.width - (mPadding.left + mPadding.right),
-                    mRect.height - (mPadding.top + mPadding.bottom));
-        nsLayoutUtils::DrawImage(&aRenderingContext, imageCon,
-                                 dest + aPt, aDirtyRect);
+        nsRect innerArea(0, 0,
+                         mRect.width - (mPadding.left + mPadding.right),
+                         mRect.height - (mPadding.top + mPadding.bottom));
+        nsRect dest(mPadding.left, mPadding.top, innerArea.width, innerArea.height);
+        aRenderingContext.DrawImage(imageCon, innerArea, dest + aPt);
         return;
       }
     }

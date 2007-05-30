@@ -58,7 +58,6 @@ REQUIRES= \
 		  necko \
 		  dom \
 		  locale \
-		  thebes \
 		  $(NULL)
 
 CPPSRCS = \
