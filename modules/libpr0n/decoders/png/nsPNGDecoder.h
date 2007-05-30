@@ -69,10 +69,6 @@ public:
   nsPNGDecoder();
   virtual ~nsPNGDecoder();
 
-  void CreateFrame(png_uint_32 x_offset, png_uint_32 y_offset, 
-                    PRInt32 width, PRInt32 height, gfx_format format);
-  void SetAnimFrameInfo();
-  
 public:
   nsCOMPtr<imgIContainer> mImage;
   nsCOMPtr<gfxIImageFrame> mFrame;
@@ -81,8 +77,6 @@ public:
 
   png_structp mPNG;
   png_infop mInfo;
-  gfx_format format;
-  PRUint8 apngFlags;
   PRUint8 *interlacebuf;
   PRUint32 ibpr;
   PRPackedBool mError;

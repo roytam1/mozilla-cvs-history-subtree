@@ -900,19 +900,6 @@ defined(PNG_READ_BACKGROUND_SUPPORTED)
    png_fixed_point int_y_blue;
 #endif
 
-#if defined(PNG_APNG_SUPPORTED)
-   png_uint_32 num_frames; /* including default image */
-   png_uint_32 num_plays;
-   png_uint_32 next_frame_width;
-   png_uint_32 next_frame_height;
-   png_uint_32 next_frame_x_offset;
-   png_uint_32 next_frame_y_offset;
-   png_uint_16 next_frame_delay_num;
-   png_uint_16 next_frame_delay_den;
-   png_byte next_frame_dispose_op;
-   png_byte next_frame_blend_op;
-#endif
-
 } png_info;
 
 typedef png_info FAR * png_infop;
@@ -1014,8 +1001,6 @@ typedef png_info FAR * FAR * png_infopp;
 #define PNG_INFO_sPLT 0x2000   /* ESR, 1.0.6 */
 #define PNG_INFO_sCAL 0x4000   /* ESR, 1.0.6 */
 #define PNG_INFO_IDAT 0x8000L  /* ESR, 1.0.6 */
-#define PNG_INFO_acTL 0x10000L
-#define PNG_INFO_fcTL 0x20000L
 
 /* This is used for the transformation routines, as some of them
  * change these values for the row.  It also should enable using
@@ -1056,10 +1041,6 @@ typedef void (PNGAPI *png_progressive_info_ptr) PNGARG((png_structp, png_infop))
 typedef void (PNGAPI *png_progressive_end_ptr) PNGARG((png_structp, png_infop));
 typedef void (PNGAPI *png_progressive_row_ptr) PNGARG((png_structp, png_bytep,
    png_uint_32, int));
-#if defined(PNG_APNG_SUPPORTED)
-typedef void (PNGAPI *png_progressive_frame_ptr) PNGARG((png_structp, 
-   png_uint_32));
-#endif
 #endif
 
 #if defined(PNG_READ_USER_TRANSFORM_SUPPORTED) || \
@@ -1386,40 +1367,8 @@ struct png_struct_def
    png_uint_32 user_height_max;
 #endif
 
-#if defined(PNG_APNG_SUPPORTED)
-   png_uint_32 apng_flags;
-   png_uint_32 next_seq_num;         /* next fcTL/fdAT chunk sequence number */
-   png_uint_32 first_frame_width;
-   png_uint_32 first_frame_height;
-#endif
-
-#if defined(PNG_READ_APNG_SUPPORTED)
-   png_uint_32 num_frames_read;      /* incremented after all image data of */
-                                     /* a frame is read */
-#ifdef PNG_PROGRESSIVE_READ_SUPPORTED
-   png_progressive_frame_ptr frame_info_fn; /* frame info read callback */
-   png_progressive_frame_ptr frame_end_fn;  /* frame data read callback */
-#endif
-#endif
-
-#if defined(PNG_WRITE_APNG_SUPPORTED)
-   png_uint_32 num_frames_to_write;
-   png_uint_32 num_frames_written;
-#endif
-
 };
 
-/* For png_struct.apng_flags: */
-#define PNG_FIRST_FRAME_HIDDEN       0x0001
-
-/* dispose_op flags from inside fcTL */
-#define PNG_DISPOSE_OP_NONE        0x00
-#define PNG_DISPOSE_OP_BACKGROUND  0x01
-#define PNG_DISPOSE_OP_PREVIOUS    0x02
-
-/* blend_op flags from inside fcTL */
-#define PNG_BLEND_OP_SOURCE        0x00
-#define PNG_BLEND_OP_OVER          0x01
 
 /* This triggers a compiler error in png.c, if png.c and png.h
  * do not agree upon the version number.
@@ -1739,18 +1688,6 @@ extern PNG_EXPORT(void,png_write_rows) PNGARG((png_structp png_ptr,
 extern PNG_EXPORT(void,png_write_image) PNGARG((png_structp png_ptr,
    png_bytepp image));
 
-#if defined(PNG_WRITE_APNG_SUPPORTED)
-extern PNG_EXPORT (void,png_write_frame_head) PNGARG((png_structp png_ptr,
-   png_infop png_info, png_bytepp row_pointers,
-   png_uint_32 width, png_uint_32 height,
-   png_uint_32 x_offset, png_uint_32 y_offset, 
-   png_uint_16 delay_num, png_uint_16 delay_den, png_byte dispose_op,
-   png_byte blend_op));
-
-extern PNG_EXPORT (void,png_write_frame_tail) PNGARG((png_structp png_ptr,
-   png_infop png_info));
-#endif
-   
 /* writes the end of the PNG file. */
 extern PNG_EXPORT(void,png_write_end) PNGARG((png_structp png_ptr,
    png_infop info_ptr));
@@ -1999,11 +1936,6 @@ extern PNG_EXPORT(void,png_set_progressive_read_fn) PNGARG((png_structp png_ptr,
    png_voidp progressive_ptr,
    png_progressive_info_ptr info_fn, png_progressive_row_ptr row_fn,
    png_progressive_end_ptr end_fn));
-#if defined(PNG_READ_APNG_SUPPORTED)
-extern PNG_EXPORT(void,png_set_progressive_frame_fn) PNGARG((png_structp png_ptr,
-   png_progressive_frame_ptr frame_info_fn,
-   png_progressive_frame_ptr frame_end_fn));
-#endif
 
 /* returns the user pointer associated with the push read functions */
 extern PNG_EXPORT(png_voidp,png_get_progressive_ptr)
@@ -2432,59 +2364,6 @@ extern PNG_EXPORT(void,png_set_sCAL_s) PNGARG((png_structp png_ptr,
 #endif
 #endif /* PNG_sCAL_SUPPORTED || PNG_WRITE_sCAL_SUPPORTED */
 
-#if defined(PNG_APNG_SUPPORTED)
-extern PNG_EXPORT(png_uint_32,png_get_acTL) PNGARG((png_structp png_ptr,
-   png_infop info_ptr, png_uint_32 *num_frames, png_uint_32 *num_plays));
-extern PNG_EXPORT(png_uint_32,png_set_acTL) PNGARG((png_structp png_ptr, 
-   png_infop info_ptr, png_uint_32 num_frames, png_uint_32 num_plays));
-extern PNG_EXPORT(png_uint_32,png_get_num_frames) PNGARG((png_structp png_ptr,
-   png_infop info_ptr));
-extern PNG_EXPORT(png_uint_32,png_get_num_plays) 
-   PNGARG((png_structp png_ptr, png_infop info_ptr));
-
-extern PNG_EXPORT(png_uint_32,png_get_next_frame_fcTL) 
-   PNGARG((png_structp png_ptr, png_infop info_ptr, png_uint_32 *width, 
-   png_uint_32 *height, png_uint_32 *x_offset, png_uint_32 *y_offset, 
-   png_uint_16 *delay_num, png_uint_16 *delay_den, png_byte *dispose_op,
-   png_byte *blend_op));
-extern PNG_EXPORT(png_uint_32,png_set_next_frame_fcTL) 
-   PNGARG((png_structp png_ptr, png_infop info_ptr, png_uint_32 width, 
-   png_uint_32 height, png_uint_32 x_offset, png_uint_32 y_offset, 
-   png_uint_16 delay_num, png_uint_16 delay_den, png_byte dispose_op,
-   png_byte blend_op));
-extern PNG_EXPORT(void,png_ensure_fcTL_is_valid)
-   PNGARG((png_structp png_ptr,
-   png_uint_32 width, png_uint_32 height,
-   png_uint_32 x_offset, png_uint_32 y_offset,
-   png_uint_16 delay_num, png_uint_16 delay_den,
-   png_byte dispose_op, png_byte blend_op));
-extern PNG_EXPORT(png_uint_32,png_get_next_frame_width)
-   PNGARG((png_structp png_ptr, png_infop info_ptr));
-extern PNG_EXPORT(png_uint_32,png_get_next_frame_height)
-   PNGARG((png_structp png_ptr, png_infop info_ptr));
-extern PNG_EXPORT(png_uint_32,png_get_next_frame_x_offset)
-   PNGARG((png_structp png_ptr, png_infop info_ptr));
-extern PNG_EXPORT(png_uint_32,png_get_next_frame_y_offset)
-   PNGARG((png_structp png_ptr, png_infop info_ptr));
-extern PNG_EXPORT(png_uint_16,png_get_next_frame_delay_num)
-   PNGARG((png_structp png_ptr, png_infop info_ptr));
-extern PNG_EXPORT(png_uint_16,png_get_next_frame_delay_den)
-   PNGARG((png_structp png_ptr, png_infop info_ptr));
-extern PNG_EXPORT(png_byte,png_get_next_frame_dispose_op)
-   PNGARG((png_structp png_ptr, png_infop info_ptr));
-extern PNG_EXPORT(png_byte,png_get_next_frame_blend_op)
-   PNGARG((png_structp png_ptr, png_infop info_ptr));
-extern PNG_EXPORT(png_byte,png_get_first_frame_is_hidden)
-   PNGARG((png_structp png_ptr, png_infop info_ptr));
-extern PNG_EXPORT(png_uint_32,png_set_first_frame_is_hidden)
-   PNGARG((png_structp png_ptr, png_infop info_ptr, png_byte is_hidden));
-#endif /* PNG_APNG_SUPPORTED */
-
-#if defined(PNG_READ_APNG_SUPPORTED)
-extern PNG_EXPORT(void,png_read_frame_head) PNGARG((png_structp png_ptr,
-   png_infop info_ptr));
-#endif
-
 #if defined(PNG_UNKNOWN_CHUNKS_SUPPORTED)
 /* provide a list of chunks and how they are to be handled, if the built-in
    handling or default unknown chunk handling is not desired.  Any chunks not
@@ -2788,8 +2667,6 @@ extern PNG_EXPORT(void,png_save_uint_16)
 #define PNG_BACKGROUND_IS_GRAY     0x800
 #define PNG_HAVE_PNG_SIGNATURE    0x1000
 #define PNG_HAVE_CHUNK_AFTER_IDAT 0x2000 /* Have another chunk after IDAT */
-#define PNG_HAVE_acTL             0x4000
-#define PNG_HAVE_fcTL             0x8000L
 
 /* flags for the transformations the PNG library does on the image data */
 #define PNG_BGR                0x0001
@@ -2933,9 +2810,6 @@ extern PNG_EXPORT(void,png_save_uint_16)
 #define PNG_tIME const png_byte png_tIME[5] = {116,  73,  77,  69, '\0'}
 #define PNG_tRNS const png_byte png_tRNS[5] = {116,  82,  78,  83, '\0'}
 #define PNG_zTXt const png_byte png_zTXt[5] = {122,  84,  88, 116, '\0'}
-#define PNG_acTL const png_byte png_acTL[5] = { 97,  99,  84,  76, '\0'}
-#define PNG_fcTL const png_byte png_fcTL[5] = {102,  99,  84,  76, '\0'}
-#define PNG_fdAT const png_byte png_fdAT[5] = {102, 100,  65,  84, '\0'}
 
 #ifdef PNG_USE_GLOBAL_ARRAYS
 PNG_EXPORT_VAR (const png_byte FARDATA) png_IHDR[5];
@@ -2959,9 +2833,6 @@ PNG_EXPORT_VAR (const png_byte FARDATA) png_tEXt[5];
 PNG_EXPORT_VAR (const png_byte FARDATA) png_tIME[5];
 PNG_EXPORT_VAR (const png_byte FARDATA) png_tRNS[5];
 PNG_EXPORT_VAR (const png_byte FARDATA) png_zTXt[5];
-PNG_EXPORT_VAR (const png_byte FARDATA) png_acTL[5];
-PNG_EXPORT_VAR (const png_byte FARDATA) png_fcTL[5];
-PNG_EXPORT_VAR (const png_byte FARDATA) png_fdAT[5];
 #endif /* PNG_USE_GLOBAL_ARRAYS */
 
 #if defined(PNG_1_0_X) || defined (PNG_1_2_X)
@@ -3236,17 +3107,6 @@ PNG_EXTERN void png_write_sCAL_s PNGARG((png_structp png_ptr,
 #endif
 #endif
 
-#if defined(PNG_WRITE_APNG_SUPPORTED)
-PNG_EXTERN void png_write_acTL PNGARG((png_structp png_ptr,
-   png_uint_32 num_frames, png_uint_32 num_plays));
-
-PNG_EXTERN void png_write_fcTL PNGARG((png_structp png_ptr, 
-   png_uint_32 width, png_uint_32 height, 
-   png_uint_32 x_offset, png_uint_32 y_offset, 
-   png_uint_16 delay_num, png_uint_16 delay_den,
-   png_byte dispose_op, png_byte blend_op));
-#endif
-
 /* Called when finished processing a row of data */
 PNG_EXTERN void png_write_finish_row PNGARG((png_structp png_ptr));
 
@@ -3297,20 +3157,6 @@ PNG_EXTERN void png_read_start_row PNGARG((png_structp png_ptr));
 /* optional call to update the users info structure */
 PNG_EXTERN void png_read_transform_info PNGARG((png_structp png_ptr,
    png_infop info_ptr));
-
-#if defined(PNG_READ_APNG_SUPPORTED)
-/* private, reset some things to become ready for reading next frame */
-PNG_EXTERN void png_read_reset PNGARG((png_structp png_ptr));
-PNG_EXTERN void png_read_reinit PNGARG((png_structp png_ptr,
-   png_infop info_ptr));
-PNG_EXTERN void png_progressive_read_reset PNGARG((png_structp png_ptr));
-#endif
-#if defined(PNG_WRITE_APNG_SUPPORTED)
-/* private, reset some things to become ready for writing next frame */
-PNG_EXTERN void png_write_reset PNGARG((png_structp png_ptr));
-PNG_EXTERN void png_write_reinit PNGARG((png_structp png_ptr, 
-   png_infop info_ptr, png_uint_32 width, png_uint_32 height));
-#endif
 
 /* these are the functions that do the transformations */
 #if defined(PNG_READ_FILLER_SUPPORTED)
@@ -3524,18 +3370,6 @@ PNG_EXTERN void png_handle_tRNS PNGARG((png_structp png_ptr, png_infop info_ptr,
 
 #if defined(PNG_READ_zTXt_SUPPORTED)
 PNG_EXTERN void png_handle_zTXt PNGARG((png_structp png_ptr, png_infop info_ptr,
-   png_uint_32 length));
-#endif
-
-#if defined(PNG_READ_APNG_SUPPORTED)
-PNG_EXTERN void png_handle_acTL PNGARG((png_structp png_ptr, png_infop info_ptr,
-   png_uint_32 length));
-PNG_EXTERN void png_handle_fcTL PNGARG((png_structp png_ptr, png_infop info_ptr,
-   png_uint_32 length));
-PNG_EXTERN void png_have_info PNGARG((png_structp png_ptr, png_infop info_ptr));
-PNG_EXTERN void png_handle_fdAT PNGARG((png_structp png_ptr, png_infop info_ptr,
-   png_uint_32 length));
-PNG_EXTERN void png_ensure_sequence_number PNGARG((png_structp png_ptr, 
    png_uint_32 length));
 #endif
 

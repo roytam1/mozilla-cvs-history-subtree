@@ -48,7 +48,6 @@
 
 #include "imgILoad.h"
 
-#include "imgContainer.h"
 
 /*******************************************************************************
  * Gif decoder allocator
@@ -103,7 +102,7 @@ NS_IMETHODIMP nsGIFDecoder2::Init(imgILoad *aLoad)
 {
   mObserver = do_QueryInterface(aLoad);
 
-  mImageContainer = do_CreateInstance("@mozilla.org/image/container;1");
+  mImageContainer = do_CreateInstance("@mozilla.org/image/container;1?type=image/gif");
   aLoad->SetImage(mImageContainer);
   
   if (!gGifAllocator) {
@@ -258,7 +257,7 @@ NS_IMETHODIMP nsGIFDecoder2::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
 
 
 //******************************************************************************
-// GIF decoder callback methods. Part of public API for GIF2
+// GIF decoder callback methods. Part of pulic API for GIF2
 //******************************************************************************
 
 //******************************************************************************
@@ -476,7 +475,7 @@ int nsGIFDecoder2::HaveDecodedRow(
 
     if (!cmap) { // cmap could have null value if the global color table flag is 0
       for (int i = 0; i < aDuplicateCount; ++i) {
-        imgContainer::BlackenFrame(decoder->mImageFrame, 0, aRowNumber+i, width, 1);
+        imgContainerGIF::BlackenFrame(decoder->mImageFrame, 0, aRowNumber+i, width, 1);
       }
     } else {
       PRUint8* rowBufIndex = aRowBufPtr;

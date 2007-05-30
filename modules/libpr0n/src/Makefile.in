@@ -54,8 +54,6 @@ REQUIRES	= xpcom \
 		  necko \
 		  nkcache \
 		  gfx \
-		  thebes \
-		  cairo \
 		  $(NULL)
 
 CPPSRCS		= \

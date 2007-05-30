@@ -61,6 +61,7 @@
 
 #ifdef IMG_BUILD_DECODER_gif
 // gif
+#include "imgContainerGIF.h"
 #include "nsGIFDecoder2.h"
 #endif
 
@@ -105,6 +106,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(imgRequestProxy)
 
 #ifdef IMG_BUILD_DECODER_gif
 // gif
+NS_GENERIC_FACTORY_CONSTRUCTOR(imgContainerGIF)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsGIFDecoder2)
 #endif
 
@@ -220,6 +222,10 @@ static const nsModuleComponentInfo components[] =
 
 #ifdef IMG_BUILD_DECODER_gif
   // gif
+  { "GIF image container",
+    NS_GIFCONTAINER_CID,
+    "@mozilla.org/image/container;1?type=image/gif",
+    imgContainerGIFConstructor, },
   { "GIF Decoder",
      NS_GIFDECODER2_CID,
      "@mozilla.org/image/decoder;2?type=image/gif",

@@ -190,11 +190,6 @@ png_push_read_chunk(png_structp png_ptr, png_infop info_ptr)
 #if defined(PNG_READ_zTXt_SUPPORTED)
       PNG_zTXt;
 #endif
-#if defined(PNG_READ_APNG_SUPPORTED)
-      PNG_acTL;
-      PNG_fcTL;
-      PNG_fdAT;
-#endif
 #endif /* PNG_USE_LOCAL_ARRAYS */
    /* First we make sure we have enough data for the 4 byte chunk name
     * and the 4 byte chunk length before proceeding with decoding the
@@ -218,104 +213,7 @@ png_push_read_chunk(png_structp png_ptr, png_infop info_ptr)
       png_crc_read(png_ptr, png_ptr->chunk_name, 4);
       png_ptr->mode |= PNG_HAVE_CHUNK_HEADER;
    }
-   
-#if defined(PNG_READ_APNG_SUPPORTED)
-   if (png_ptr->num_frames_read > 0 && 
-       png_ptr->num_frames_read < info_ptr->num_frames)
-   {
-      if (!png_memcmp(png_ptr->chunk_name, png_IDAT, 4))
-      {
-         /* discard trailing IDATs for the first frame */
-         if (png_ptr->mode & PNG_HAVE_fcTL || png_ptr->num_frames_read > 1)
-            png_error(png_ptr, "out of place IDAT");
-         
-         if (png_ptr->push_length + 4 > png_ptr->buffer_size)
-         {
-            png_push_save_buffer(png_ptr);
-            return;
-         }
-         png_push_crc_skip(png_ptr, png_ptr->push_length);
-         png_ptr->mode &= ~PNG_HAVE_CHUNK_HEADER;
-         return;
-      }
-      else if (!png_memcmp(png_ptr->chunk_name, png_fdAT, 4))
-      {
-         if (png_ptr->buffer_size < 4)
-         {
-            png_push_save_buffer(png_ptr);
-            return;
-         }
-         png_ensure_sequence_number(png_ptr, 4);
-         
-         if (!(png_ptr->mode & PNG_HAVE_fcTL))
-         {
-            /* discard trailing fdATs for frames other than the first */
-            if (png_ptr->num_frames_read < 2)
-               png_error(png_ptr, "out of place fdAT");
-            
-            if (png_ptr->push_length + 4 > png_ptr->buffer_size)
-            {
-               png_push_save_buffer(png_ptr);
-               return;
-            }
-            png_push_crc_skip(png_ptr, png_ptr->push_length);
-            png_ptr->mode &= ~PNG_HAVE_CHUNK_HEADER;
-            return;
-         }
-         else
-         {
-            /* frame data follows */
-            png_ptr->idat_size = png_ptr->push_length - 4;
-            png_ptr->mode |= PNG_HAVE_IDAT;
-            png_ptr->process_mode = PNG_READ_IDAT_MODE;
-            
-            return;
-         }
-      }
-      else if(!png_memcmp(png_ptr->chunk_name, png_fcTL, 4))
-      {
-         if (png_ptr->push_length + 4 > png_ptr->buffer_size)
-         {
-            png_push_save_buffer(png_ptr);
-            return;
-         }
-         
-         png_read_reset(png_ptr);
-         png_ptr->mode &= ~PNG_HAVE_fcTL;
-         
-         png_handle_fcTL(png_ptr, info_ptr, png_ptr->push_length);
-         
-         if (!(png_ptr->mode & PNG_HAVE_fcTL))
-            png_error(png_ptr, "missing required fcTL chunk");
-         
-         png_read_reinit(png_ptr, info_ptr);
-         png_progressive_read_reset(png_ptr);
-         
-         if (png_ptr->frame_info_fn != NULL)
-            (*(png_ptr->frame_info_fn))(png_ptr, png_ptr->num_frames_read);
-         
-         png_ptr->mode &= ~PNG_HAVE_CHUNK_HEADER;
-         
-         return;
-      }
-      else
-      {
-         if (png_ptr->push_length + 4 > png_ptr->buffer_size)
-         {
-            png_push_save_buffer(png_ptr);
-            return;
-         }
-         png_warning(png_ptr, "Skipped (ignored) a chunk "
-                              "between APNG chunks");
-         png_push_crc_skip(png_ptr, png_ptr->push_length);
-         png_ptr->mode &= ~PNG_HAVE_CHUNK_HEADER;
-         return;
-      }
-      
-      return;
-   }
-#endif /* PNG_READ_APNG_SUPPORTED */
-   
+
    if (!png_memcmp(png_ptr->chunk_name, (png_bytep)png_IDAT, 4))
      if(png_ptr->mode & PNG_AFTER_IDAT)
         png_ptr->mode |= PNG_HAVE_CHUNK_AFTER_IDAT;
@@ -395,9 +293,6 @@ png_push_read_chunk(png_structp png_ptr, png_infop info_ptr)
             png_error(png_ptr, "Too many IDAT's found");
       }
 
-#if defined(PNG_READ_APNG_SUPPORTED)
-      png_have_info(png_ptr, info_ptr);
-#endif
       png_ptr->idat_size = png_ptr->push_length;
       png_ptr->mode |= PNG_HAVE_IDAT;
       png_ptr->process_mode = PNG_READ_IDAT_MODE;
@@ -593,35 +488,6 @@ png_push_read_chunk(png_structp png_ptr, png_infop info_ptr)
       png_push_handle_iTXt(png_ptr, info_ptr, png_ptr->push_length);
    }
 #endif
-#if defined(PNG_READ_APNG_SUPPORTED)
-   else if (!png_memcmp(png_ptr->chunk_name, png_acTL, 4))
-   {
-      if (png_ptr->push_length + 4 > png_ptr->buffer_size)
-      {
-         png_push_save_buffer(png_ptr);
-         return;
-      }
-      png_handle_acTL(png_ptr, info_ptr, png_ptr->push_length);
-   }
-   else if (!png_memcmp(png_ptr->chunk_name, png_fcTL, 4))
-   {
-      if (png_ptr->push_length + 4 > png_ptr->buffer_size)
-      {
-         png_push_save_buffer(png_ptr);
-         return;
-      }
-      png_handle_fcTL(png_ptr, info_ptr, png_ptr->push_length);
-   }
-   else if (!png_memcmp(png_ptr->chunk_name, png_fdAT, 4))
-   {
-      if (png_ptr->push_length + 4 > png_ptr->buffer_size)
-      {
-         png_push_save_buffer(png_ptr);
-         return;
-      }
-      png_handle_fdAT(png_ptr, info_ptr, png_ptr->push_length);
-   }
-#endif /* PNG_READ_APNG_SUPPORTED */
    else
    {
       if (png_ptr->push_length + 4 > png_ptr->buffer_size)
@@ -792,16 +658,12 @@ png_push_read_IDAT(png_structp png_ptr)
 {
 #ifdef PNG_USE_LOCAL_ARRAYS
    PNG_IDAT;
-#if defined(PNG_READ_APNG_SUPPORTED)
-   PNG_fdAT;
-   PNG_IEND;
-#endif
 #endif
    if (!(png_ptr->mode & PNG_HAVE_CHUNK_HEADER))
    {
       png_byte chunk_length[4];
 
-      if (png_ptr->buffer_size < 12)
+      if (png_ptr->buffer_size < 8)
       {
          png_push_save_buffer(png_ptr);
          return;
@@ -813,59 +675,15 @@ png_push_read_IDAT(png_structp png_ptr)
       png_crc_read(png_ptr, png_ptr->chunk_name, 4);
       png_ptr->mode |= PNG_HAVE_CHUNK_HEADER;
 
-#if defined(PNG_READ_APNG_SUPPORTED)
-      if (png_memcmp(png_ptr->chunk_name, (png_bytep)png_fdAT, 4)
-          && png_ptr->num_frames_read > 0)
-      {
-          if (png_ptr->flags & PNG_FLAG_ZLIB_FINISHED)
-          {
-              png_ptr->process_mode = PNG_READ_CHUNK_MODE;
-              if (png_ptr->frame_end_fn != NULL)
-                 (*(png_ptr->frame_end_fn))(png_ptr, png_ptr->num_frames_read);
-              png_ptr->num_frames_read++;
-              return;
-          }
-          else
-          {
-              if (!png_memcmp(png_ptr->chunk_name, png_IEND, 4))
-                  png_error(png_ptr, "Not enough image data");
-              if (png_ptr->push_length + 4 > png_ptr->buffer_size)
-              {
-                 png_push_save_buffer(png_ptr);
-                 return;
-              }
-              png_warning(png_ptr, "Skipping (ignoring) a chunk between "
-                                   "APNG chunks");
-              png_crc_finish(png_ptr, png_ptr->push_length);
-              png_ptr->mode &= ~PNG_HAVE_CHUNK_HEADER;
-              return;
-          }
-      }
-      else 
-#endif
-      if ( png_memcmp(png_ptr->chunk_name, (png_bytep)png_IDAT, 4)
-                && (png_ptr->num_frames_read == 0) )
+      if (png_memcmp(png_ptr->chunk_name, (png_bytep)png_IDAT, 4))
       {
          png_ptr->process_mode = PNG_READ_CHUNK_MODE;
          if (!(png_ptr->flags & PNG_FLAG_ZLIB_FINISHED))
             png_error(png_ptr, "Not enough compressed data");
-#if defined(PNG_READ_APNG_SUPPORTED)
-         if (png_ptr->frame_end_fn != NULL)
-            (*(png_ptr->frame_end_fn))(png_ptr, png_ptr->num_frames_read);
-         png_ptr->num_frames_read++;
-#endif
          return;
       }
 
       png_ptr->idat_size = png_ptr->push_length;
-      
-#if defined(PNG_READ_APNG_SUPPORTED)
-      if(png_ptr->num_frames_read > 0)
-      {
-         png_ensure_sequence_number(png_ptr, 4);
-         png_ptr->idat_size -= 4;
-      }
-#endif
    }
    if (png_ptr->idat_size && png_ptr->save_buffer_size)
    {
@@ -1751,17 +1569,6 @@ png_set_progressive_read_fn(png_structp png_ptr, png_voidp progressive_ptr,
 
    png_set_read_fn(png_ptr, progressive_ptr, png_push_fill_buffer);
 }
-
-#if defined(PNG_READ_APNG_SUPPORTED)
-void PNGAPI
-png_set_progressive_frame_fn(png_structp png_ptr,
-   png_progressive_frame_ptr frame_info_fn,
-   png_progressive_frame_ptr frame_end_fn)
-{
-   png_ptr->frame_info_fn = frame_info_fn;
-   png_ptr->frame_end_fn = frame_end_fn;
-}
-#endif
 
 png_voidp PNGAPI
 png_get_progressive_ptr(png_structp png_ptr)

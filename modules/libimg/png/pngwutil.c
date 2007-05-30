@@ -1,9 +1,9 @@
 
 /* pngwutil.c - utilities to write a PNG file
  *
- * Last changed in libpng 1.2.11 June 4, 2006
+ * Last changed in libpng 1.2.15 January 5, 2007
  * For conditions of distribution and use, see copyright notice in png.h
- * Copyright (c) 1998-2006 Glenn Randers-Pehrson
+ * Copyright (c) 1998-2007 Glenn Randers-Pehrson
  * (Version 0.96 Copyright (c) 1996, 1997 Andreas Dilger)
  * (Version 0.88 Copyright (c) 1995, 1996 Guy Eric Schalnat, Group 42, Inc.)
  */
@@ -62,6 +62,7 @@ void PNGAPI
 png_write_chunk(png_structp png_ptr, png_bytep chunk_name,
    png_bytep data, png_size_t length)
 {
+   if(png_ptr == NULL) return;
    png_write_chunk_start(png_ptr, chunk_name, (png_uint_32)length);
    png_write_chunk_data(png_ptr, data, length);
    png_write_chunk_end(png_ptr);
@@ -77,6 +78,7 @@ png_write_chunk_start(png_structp png_ptr, png_bytep chunk_name,
 {
    png_byte buf[4];
    png_debug2(0, "Writing %s chunk (%lu bytes)\n", chunk_name, length);
+   if(png_ptr == NULL) return;
 
    /* write the length */
    png_save_uint_32(buf, length);
@@ -98,6 +100,7 @@ void PNGAPI
 png_write_chunk_data(png_structp png_ptr, png_bytep data, png_size_t length)
 {
    /* write the data, and run the CRC over it */
+   if(png_ptr == NULL) return;
    if (data != NULL && length > 0)
    {
       png_calculate_crc(png_ptr, data, length);
@@ -110,6 +113,8 @@ void PNGAPI
 png_write_chunk_end(png_structp png_ptr)
 {
    png_byte buf[4];
+
+   if(png_ptr == NULL) return;
 
    /* write the crc */
    png_save_uint_32(buf, png_ptr->crc);
@@ -491,11 +496,6 @@ png_write_IHDR(png_structp png_ptr, png_uint_32 width, png_uint_32 height,
    /* write the chunk */
    png_write_chunk(png_ptr, (png_bytep)png_IHDR, buf, (png_size_t)13);
 
-#if defined(PNG_WRITE_APNG_SUPPORTED)
-   png_ptr->first_frame_width = width;
-   png_ptr->first_frame_height = height;
-#endif
-
    /* initialize zlib with PNG info */
    png_ptr->zstream.zalloc = png_zalloc;
    png_ptr->zstream.zfree = png_zfree;
@@ -607,9 +607,6 @@ png_write_IDAT(png_structp png_ptr, png_bytep data, png_size_t length)
 {
 #ifdef PNG_USE_LOCAL_ARRAYS
    PNG_IDAT;
-#if defined(PNG_WRITE_APNG_SUPPORTED)
-   PNG_fdAT;
-#endif
 #endif
    png_debug(1, "in png_write_IDAT\n");
 
@@ -652,28 +649,7 @@ png_write_IDAT(png_structp png_ptr, png_bytep data, png_size_t length)
             "Invalid zlib compression method or flags in IDAT");
    }
 
-#if defined(PNG_WRITE_APNG_SUPPORTED)
-   if(png_ptr->num_frames_written == 0)
-#endif
-      png_write_chunk(png_ptr, (png_bytep)png_IDAT, data, length);
-#if defined(PNG_WRITE_APNG_SUPPORTED)
-   else
-   {
-      png_byte buf[4];
-      
-      png_write_chunk_start(png_ptr, (png_bytep)png_fdAT, 4 + length);
-      
-      png_save_uint_32(buf, png_ptr->next_seq_num);
-      png_write_chunk_data(png_ptr, buf, 4);
-      
-      png_write_chunk_data(png_ptr, data, length);
-      
-      png_write_chunk_end(png_ptr);
-      
-      png_ptr->next_seq_num++;
-   }
-#endif
-
+   png_write_chunk(png_ptr, (png_bytep)png_IDAT, data, length);
    png_ptr->mode |= PNG_HAVE_IDAT;
 }
 
@@ -757,6 +733,7 @@ png_write_iCCP(png_structp png_ptr, png_charp name, int compression_type,
    png_size_t name_len;
    png_charp new_name;
    compression_state comp;
+   int embedded_profile_len = 0;
 
    png_debug(1, "in png_write_iCCP\n");
 
@@ -778,6 +755,27 @@ png_write_iCCP(png_structp png_ptr, png_charp name, int compression_type,
 
    if (profile == NULL)
       profile_len = 0;
+
+   if (profile_len > 3)
+      embedded_profile_len =
+          ((*( (png_bytep)profile  ))<<24) |
+          ((*( (png_bytep)profile+1))<<16) |
+          ((*( (png_bytep)profile+2))<< 8) |
+          ((*( (png_bytep)profile+3))    );
+
+   if (profile_len < embedded_profile_len)
+     {
+        png_warning(png_ptr,
+          "Embedded profile length too large in iCCP chunk");
+        return;
+     }
+
+   if (profile_len > embedded_profile_len)
+     {
+        png_warning(png_ptr,
+          "Truncating profile to actual length in iCCP chunk");
+        profile_len = embedded_profile_len;
+     }
 
    if (profile_len)
        profile_len = png_text_compress(png_ptr, profile, (png_size_t)profile_len,
@@ -1722,70 +1720,6 @@ png_write_tIME(png_structp png_ptr, png_timep mod_time)
 }
 #endif
 
-#if defined(PNG_WRITE_APNG_SUPPORTED)
-void /* PRIVATE */
-png_write_acTL(png_structp png_ptr,
-   png_uint_32 num_frames, png_uint_32 num_plays)
-{
-#ifdef PNG_USE_LOCAL_ARRAYS
-    PNG_acTL;
-#endif
-    png_byte data[16];
-    
-    png_debug(1, "in png_write_acTL\n");
-    
-    png_ptr->num_frames_to_write = num_frames;
-    
-    if (png_ptr->apng_flags & PNG_FIRST_FRAME_HIDDEN)
-        num_frames--;
-    
-    png_save_uint_32(data, num_frames);
-    png_save_uint_32(data + 4, num_plays);
-    
-    png_write_chunk(png_ptr, (png_bytep)png_acTL, data, (png_size_t)8);
-}
-
-void /* PRIVATE */
-png_write_fcTL(png_structp png_ptr, png_uint_32 width, png_uint_32 height, 
-    png_uint_32 x_offset, png_uint_32 y_offset,
-    png_uint_16 delay_num, png_uint_16 delay_den, png_byte dispose_op, 
-    png_byte blend_op)
-{
-#ifdef PNG_USE_LOCAL_ARRAYS
-    PNG_fcTL;
-#endif
-    png_byte data[26];
-    
-    png_debug(1, "in png_write_fcTL\n");
-    
-    if (png_ptr->num_frames_written == 0 && (x_offset != 0 || y_offset != 0))
-        png_error(png_ptr, "x and/or y offset for the first frame aren't 0\n");
-    if (png_ptr->num_frames_written == 0 && 
-        (width != png_ptr->first_frame_width || 
-         height != png_ptr->first_frame_height))
-        png_error(png_ptr, "width and/or height in the first frame's fcTL "
-                           "don't match the ones in IHDR\n");
-    
-    /* more error checking */
-    png_ensure_fcTL_is_valid(png_ptr, width, height, x_offset, y_offset, 
-                             delay_num, delay_den, dispose_op, blend_op);
-    
-    png_save_uint_32(data, png_ptr->next_seq_num);
-    png_save_uint_32(data + 4, width);
-    png_save_uint_32(data + 8, height);
-    png_save_uint_32(data + 12, x_offset);
-    png_save_uint_32(data + 16, y_offset);
-    png_save_uint_16(data + 20, delay_num);
-    png_save_uint_16(data + 22, delay_den);
-    data[24] = dispose_op;
-    data[25] = blend_op;
-    
-    png_write_chunk(png_ptr, (png_bytep)png_fcTL, data, (png_size_t)26);
-    
-    png_ptr->next_seq_num++;
-}
-#endif /* PNG_WRITE_APNG_SUPPORTED */
-
 /* initializes the row writing capability of libpng */
 void /* PRIVATE */
 png_write_start_row(png_structp png_ptr)
@@ -1813,16 +1747,14 @@ png_write_start_row(png_structp png_ptr)
       png_ptr->usr_channels*png_ptr->usr_bit_depth,png_ptr->width)+1);
 
    /* set up row buffer */
-   if (png_ptr->row_buf == NULL)
-      png_ptr->row_buf = (png_bytep)png_malloc(png_ptr, (png_uint_32)buf_size);
+   png_ptr->row_buf = (png_bytep)png_malloc(png_ptr, (png_uint_32)buf_size);
    png_ptr->row_buf[0] = PNG_FILTER_VALUE_NONE;
 
    /* set up filtering buffer, if using this filter */
    if (png_ptr->do_filter & PNG_FILTER_SUB)
    {
-      if (png_ptr->sub_row == NULL)
-         png_ptr->sub_row = (png_bytep)png_malloc(png_ptr,
-            (png_ptr->rowbytes + 1));
+      png_ptr->sub_row = (png_bytep)png_malloc(png_ptr,
+         (png_ptr->rowbytes + 1));
       png_ptr->sub_row[0] = PNG_FILTER_VALUE_SUB;
    }
 
@@ -1830,31 +1762,27 @@ png_write_start_row(png_structp png_ptr)
    if (png_ptr->do_filter & (PNG_FILTER_AVG | PNG_FILTER_UP | PNG_FILTER_PAETH))
    {
      /* set up previous row buffer */
-      if (png_ptr->prev_row == NULL)
-         png_ptr->prev_row = (png_bytep)png_malloc(png_ptr, (png_uint_32)buf_size);
+      png_ptr->prev_row = (png_bytep)png_malloc(png_ptr, (png_uint_32)buf_size);
       png_memset(png_ptr->prev_row, 0, buf_size);
 
       if (png_ptr->do_filter & PNG_FILTER_UP)
       {
-         if (png_ptr->up_row == NULL)
-            png_ptr->up_row = (png_bytep )png_malloc(png_ptr,
-               (png_ptr->rowbytes + 1));
+         png_ptr->up_row = (png_bytep )png_malloc(png_ptr,
+            (png_ptr->rowbytes + 1));
          png_ptr->up_row[0] = PNG_FILTER_VALUE_UP;
       }
 
       if (png_ptr->do_filter & PNG_FILTER_AVG)
       {
-         if (png_ptr->avg_row == NULL)
-            png_ptr->avg_row = (png_bytep)png_malloc(png_ptr,
-               (png_ptr->rowbytes + 1));
+         png_ptr->avg_row = (png_bytep)png_malloc(png_ptr,
+            (png_ptr->rowbytes + 1));
          png_ptr->avg_row[0] = PNG_FILTER_VALUE_AVG;
       }
 
       if (png_ptr->do_filter & PNG_FILTER_PAETH)
       {
-         if (png_ptr->paeth_row == NULL)
-            png_ptr->paeth_row = (png_bytep )png_malloc(png_ptr,
-               (png_ptr->rowbytes + 1));
+         png_ptr->paeth_row = (png_bytep )png_malloc(png_ptr,
+            (png_ptr->rowbytes + 1));
          png_ptr->paeth_row[0] = PNG_FILTER_VALUE_PAETH;
       }
    }
@@ -2846,39 +2774,4 @@ png_write_filtered_row(png_structp png_ptr, png_bytep filtered_row)
    }
 #endif
 }
-
-#if defined(PNG_WRITE_APNG_SUPPORTED)
-void /* PRIVATE */
-png_write_reset(png_structp png_ptr)
-{
-    png_ptr->row_number = 0;
-    png_ptr->pass = 0;
-    png_ptr->mode &= ~PNG_HAVE_IDAT;
-}
-
-void /* PRIVATE */
-png_write_reinit(png_structp png_ptr, png_infop info_ptr, 
-                 png_uint_32 width, png_uint_32 height)
-{
-    if (png_ptr->num_frames_written == 0 && 
-        (width != png_ptr->first_frame_width || 
-         height != png_ptr->first_frame_height))
-        png_error(png_ptr, "width and/or height in the first frame's fcTL "
-                           "don't match the ones in IHDR\n");
-    if (width > png_ptr->first_frame_width || 
-        height > png_ptr->first_frame_height)
-        png_error(png_ptr, "width and/or height for a frame greater than"
-                           "the ones in IHDR");
-    
-    png_set_IHDR(png_ptr, info_ptr, width, height, 
-                 info_ptr->bit_depth, info_ptr->color_type, 
-                 info_ptr->interlace_type, info_ptr->compression_type,
-                 info_ptr->filter_type);
-   
-    png_ptr->width = width;
-    png_ptr->height = height;
-    png_ptr->rowbytes = PNG_ROWBYTES(png_ptr->pixel_depth, width);
-    png_ptr->usr_width = png_ptr->width;
-}
-#endif
 #endif /* PNG_WRITE_SUPPORTED */

@@ -42,7 +42,7 @@
 
 #include "nsCOMPtr.h"
 #include "imgIDecoder.h"
-#include "imgIContainer.h"
+#include "imgContainerGIF.h"
 #include "imgIDecoderObserver.h"
 #include "gfxIImageFrame.h"
 
