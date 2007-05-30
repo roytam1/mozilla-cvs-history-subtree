@@ -90,6 +90,7 @@ public:
   static int prefChanged(const char *aPref, void *aClosure);
 
   virtual PRBool CheckDPIChange();
+  virtual PRBool SetPixelScale(float aScale);
 
 protected:
   nsresult   SetDPI(PRInt32 aPrefDPI = 96);
