@@ -5392,8 +5392,18 @@ nsDocShell::RestoreFromHistory()
     nsCOMPtr<nsIMarkupDocumentViewer> oldMUDV(do_QueryInterface(mContentViewer));
     nsCOMPtr<nsIMarkupDocumentViewer> newMUDV(do_QueryInterface(viewer));
     float zoom = 1.0;
-    if (oldMUDV && newMUDV)
+    float fullZoom = 1.0;
+    if (oldMUDV && newMUDV) {
         oldMUDV->GetTextZoom(&zoom);
+        newMUDV->GetFullZoom(&fullZoom);
+        newMUDV->SetFullZoom(fullZoom);
+/*Ups not xulrunner build can't link with presContext....
+        Let see newMUDV->Set or oldMUDV->Set
+        nsCOMPtr<nsPresContext> presContext;
+        GetEldestPresContext(getter_AddRefs(presContext));
+        if (presContext)
+            presContext->SetFullZoom(fullZoom, PR_TRUE);*/
+    }
 
     // Protect against mLSHE going away via a load triggered from
     // pagehide or unload.

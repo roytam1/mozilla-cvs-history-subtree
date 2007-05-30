@@ -410,6 +410,7 @@ protected:
   nsIWidget* mParentWidget;          // purposely won't be ref counted
 
   float mTextZoom;      // Text zoom, defaults to 1.0
+  float mFullZoom;      // Full layout zoom, defaults to 1.0
 
   PRInt16 mNumURLStarts;
   PRInt16 mDestroyRefCount;    // a second "refcount" for the document viewer's "destroy"
@@ -507,7 +508,7 @@ void DocumentViewerImpl::PrepareToStartLoad()
 DocumentViewerImpl::DocumentViewerImpl()
   : mTextZoom(1.0),
     mIsSticky(PR_TRUE),
-    mHintCharsetSource(kCharsetUninitialized)
+    mHintCharsetSource(kCharsetUninitialized), mFullZoom(1.0)
 {
   PrepareToStartLoad();
 }
@@ -686,6 +687,7 @@ DocumentViewerImpl::InitPresentationStuff(PRBool aDoInitialReflow)
   mViewManager->DisableRefresh();
   mViewManager->SetWindowDimensions(width, height);
   mPresContext->SetTextZoom(mTextZoom);
+  mFullZoom = mPresContext->FullZoom();
 
   // Setup default view manager background color
 
@@ -2635,16 +2637,23 @@ DocumentViewerImpl::CallChildren(CallChildFunc aFunc, void* aClosure)
   }
 }
 
-struct TextZoomInfo
+struct ZoomInfo
 {
-  float mTextZoom;
+  float mZoom;
 };
 
 static void
 SetChildTextZoom(nsIMarkupDocumentViewer* aChild, void* aClosure)
 {
-  struct TextZoomInfo* textZoomInfo = (struct TextZoomInfo*) aClosure;
-  aChild->SetTextZoom(textZoomInfo->mTextZoom);
+  struct ZoomInfo* ZoomInfo = (struct ZoomInfo*) aClosure;
+  aChild->SetTextZoom(ZoomInfo->mZoom);
+}
+
+static void
+SetChildFullZoom(nsIMarkupDocumentViewer* aChild, void* aClosure)
+{
+  struct ZoomInfo* ZoomInfo = (struct ZoomInfo*) aClosure;
+  aChild->SetFullZoom(ZoomInfo->mZoom);
 }
 
 NS_IMETHODIMP
@@ -2660,8 +2669,8 @@ DocumentViewerImpl::SetTextZoom(float aTextZoom)
   // change, our children's zoom may be different, though it would be unusual).
   // Do this first, in case kids are auto-sizing and post reflow commands on
   // our presshell (which should be subsumed into our own style change reflow).
-  struct TextZoomInfo textZoomInfo = { aTextZoom };
-  CallChildren(SetChildTextZoom, &textZoomInfo);
+  struct ZoomInfo ZoomInfo = { aTextZoom };
+  CallChildren(SetChildTextZoom, &ZoomInfo);
 
   // Now change our own zoom
   if (mPresContext && aTextZoom != mPresContext->TextZoom()) {
@@ -2685,6 +2694,46 @@ DocumentViewerImpl::GetTextZoom(float* aTextZoom)
   *aTextZoom = mTextZoom;
   return NS_OK;
 }
+
+NS_IMETHODIMP
+DocumentViewerImpl::SetFullZoom(float aFullZoom)
+{
+  mFullZoom = aFullZoom;
+
+  if (mViewManager) {
+    mViewManager->BeginUpdateViewBatch();
+  }
+
+  // Set the full zoom on all children of mContainer (even if our zoom didn't
+  // change, our children's zoom may be different, though it would be unusual).
+  // Do this first, in case kids are auto-sizing and post reflow commands on
+  // our presshell (which should be subsumed into our own style change reflow).
+  struct ZoomInfo ZoomInfo = { aFullZoom };
+  CallChildren(SetChildFullZoom, &ZoomInfo);
+
+  // Now change our own zoom
+
+  if (mPresContext && aFullZoom != mPresContext->FullZoom()) {
+      mPresContext->SetFullZoom(aFullZoom);
+  }
+
+  if (mViewManager) {
+    mViewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+DocumentViewerImpl::GetFullZoom(float* aFullZoom)
+{
+  NS_ENSURE_ARG_POINTER(aFullZoom);
+  if (mPresContext->FullZoom() != mFullZoom)
+     printf("DocumentViewerImpl:WARNING: mPresContext->FullZoom() != mFullZoom\n");
+  *aFullZoom = mFullZoom;
+  return NS_OK;
+}
+
 
 static void
 SetChildAuthorStyleDisabled(nsIMarkupDocumentViewer* aChild, void* aClosure)

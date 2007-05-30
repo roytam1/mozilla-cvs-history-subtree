@@ -56,6 +56,7 @@ NS_IMPL_ISUPPORTS3(DeviceContextImpl, nsIDeviceContext, nsIObserver, nsISupports
 DeviceContextImpl::DeviceContextImpl()
 {
   mAppUnitsPerDevPixel = -1;
+  mAppUnitsPerDevNotScaledPixel = -1;
   mAppUnitsPerInch = -1;
   mFontCache = nsnull;
   mWidget = nsnull;
@@ -499,6 +500,7 @@ nsFontCache::GetMetricsFor(const nsFont& aFont, nsIAtom* aLangGroup,
   for (PRInt32 i = n; i >= 0; --i) {
     fm = NS_STATIC_CAST(nsIFontMetrics*, mFontMetrics[i]);
     if (fm->Font().Equals(aFont)) {
+    if (mContext->AppUnitsPerDevPixel() == fm->mP2A) {
       nsCOMPtr<nsIAtom> langGroup;
       fm->GetLangGroup(getter_AddRefs(langGroup));
       if (aLangGroup == langGroup.get()) {
@@ -509,6 +511,7 @@ nsFontCache::GetMetricsFor(const nsFont& aFont, nsIAtom* aLangGroup,
         NS_ADDREF(aMetrics = fm);
         return NS_OK;
       }
+    }
     }
   }
 

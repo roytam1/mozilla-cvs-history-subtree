@@ -575,3 +575,13 @@ NS_IMETHODIMP nsDeviceContextPS::InitForPrinting(nsIDeviceContextSpec* spec)
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+PRBool nsDeviceContextPS::SetPixelScale(float aScale)
+{
+  if (aScale != 0.0 && mPixelScale == aScale)
+    return PR_FALSE;
+  if (mPixelScale == 1.0)
+    mAppUnitsPerDevNotScaledPixel = mAppUnitsPerDevPixel;
+  mAppUnitsPerDevPixel = (PRInt32)((float)mAppUnitsPerDevNotScaledPixel / aScale);
+  mPixelScale = aScale;
+  return PR_TRUE;
+}

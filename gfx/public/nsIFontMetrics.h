@@ -233,6 +233,11 @@ public:
    */
   NS_IMETHOD  GetSpaceWidth(nscoord& aSpaceCharWidth) = 0;
 
+  /**
+   * DPI Value
+   */
+  PRInt32 mP2A;
+
 protected:
 
   nsFont mFont;		// The font for this metrics object.

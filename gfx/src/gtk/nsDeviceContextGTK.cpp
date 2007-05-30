@@ -135,6 +135,7 @@ nsDeviceContextGTK::nsDeviceContextGTK()
   mAppUnitsPerInch = -1;
   mDepth = 0 ;
   mNumCells = 0;
+  mPixelScale = 1.0;
 
   mDeviceWindow = nsnull;
 }
@@ -656,6 +657,18 @@ PRBool nsDeviceContextGTK::CheckDPIChange()
 
     return oldDevPixels != mAppUnitsPerDevPixel ||
            oldInches != mAppUnitsPerInch;
+}
+
+PRBool
+nsDeviceContextGTK::SetPixelScale(float aScale)
+{
+    if (aScale != 0.0 && mPixelScale == aScale)
+        return PR_FALSE;
+    if (mPixelScale == 1.0)
+        mAppUnitsPerDevNotScaledPixel = mAppUnitsPerDevPixel;
+    mAppUnitsPerDevPixel = (PRInt32)((float)mAppUnitsPerDevNotScaledPixel / aScale);
+    mPixelScale = aScale;
+    return PR_TRUE;
 }
 
 #define DEFAULT_TWIP_FONT_SIZE 240

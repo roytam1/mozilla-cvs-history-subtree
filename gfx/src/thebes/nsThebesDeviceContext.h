@@ -115,6 +115,7 @@ public:
     static void DebugShowCairoSurface (const char *aName, cairo_surface_t *aSurface);
 
     virtual PRBool CheckDPIChange();
+    virtual PRBool SetPixelScale(float aScale);
 
     nsNativeWidget GetWidget() { return mWidget; }
 #ifdef XP_WIN

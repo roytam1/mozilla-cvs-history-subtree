@@ -202,7 +202,6 @@ protected:
 private:
     nsThebesDeviceContext *mDeviceContext;
     nsCOMPtr<nsIAtom> mLangGroup;
-    PRInt32 mP2A;
     PRPackedBool mIsRightToLeft;
     PRPackedBool mTextRunRTL;
 };

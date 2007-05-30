@@ -102,6 +102,7 @@ public:
 
   PRBool      CheckDPIChange();
   NS_IMETHOD  InitForPrinting(nsIDeviceContextSpec *aSpec);
+  PRBool      SetPixelScale(float scale);
 
 protected:
   virtual     ~nsDeviceContextPS();

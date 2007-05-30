@@ -229,6 +229,7 @@ public:
   PRPackedBool mHorizontalOverflow:1;
   PRPackedBool mVerticalOverflow:1;
   PRPackedBool mPostedReflowCallback:1;
+  PRPackedBool mFullTrueZoomMode:1;
 };
 
 /**

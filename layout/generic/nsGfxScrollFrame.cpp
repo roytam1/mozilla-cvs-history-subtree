@@ -428,6 +428,8 @@ nsHTMLScrollFrame::ReflowScrolledFrame(const ScrollReflowState& aState,
   }
   // pixel align the content
   nsPresContext* presContext = PresContext();
+  if (mInner.mFullTrueZoomMode)
+    availWidth = availWidth * presContext->FullZoom();
   nscoord twp = nsPresContext::CSSPixelsToAppUnits(1);
   availWidth -=  availWidth % twp;
 
@@ -1229,8 +1231,10 @@ nsGfxScrollFrameInner::nsGfxScrollFrameInner(nsContainerFrame* aOuter,
     mHadNonInitialReflow(PR_FALSE),
     mHorizontalOverflow(PR_FALSE),
     mVerticalOverflow(PR_FALSE),
-    mPostedReflowCallback(PR_FALSE)
+    mPostedReflowCallback(PR_FALSE),
+    mFullTrueZoomMode(PR_TRUE)
 {
+  mFullTrueZoomMode = nsContentUtils::GetBoolPref("layout.full.true.zoom.mode", PR_TRUE);
 }
 
 nsGfxScrollFrameInner::~nsGfxScrollFrameInner()
@@ -1423,7 +1427,7 @@ nsGfxScrollFrameInner::GetScrollbarStylesFromFrame() const
 
     nsCOMPtr<nsISupports> container = presContext->GetContainer();
     nsCOMPtr<nsIScrollable> scrollable = do_QueryInterface(container);
-    if (scrollable) {
+    if (scrollable && presContext->FullZoom() == 1 && mFullTrueZoomMode) {
       HandleScrollPref(scrollable, nsIScrollable::ScrollOrientation_X,
                        result.mHorizontal);
       HandleScrollPref(scrollable, nsIScrollable::ScrollOrientation_Y,

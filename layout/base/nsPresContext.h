@@ -450,6 +450,7 @@ public:
   nsIAtom* GetLangGroup() { return mLangGroup; }
 
   float TextZoom() { return mTextZoom; }
+  float FullZoom() { return mFullZoom; }
   void SetTextZoomInternal(float aZoom) {
     mTextZoom = aZoom;
     ClearStyleDataAndReflow();
@@ -460,6 +461,8 @@ public:
 #else
   void SetTextZoom(float aZoom) { SetTextZoomExternal(aZoom); }
 #endif
+
+  void SetFullZoom(float aZoom, PRBool onlyDevice = PR_FALSE);
 
   static PRInt32 AppUnitsPerCSSPixel() { return nsIDeviceContext::AppUnitsPerCSSPixel(); }
   PRInt32 AppUnitsPerDevPixel() const  { return mDeviceContext->AppUnitsPerDevPixel(); }
@@ -768,6 +771,7 @@ protected:
   nsTArray<nsIFrame*>   mActivePopups;
 
   float                 mTextZoom;      // Text zoom, defaults to 1.0
+  float                 mFullZoom;      // Text zoom, defaults to 1.0
 
 #ifdef IBMBIDI
   nsBidiPresUtils*      mBidiUtils;

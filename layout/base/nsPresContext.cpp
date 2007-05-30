@@ -179,7 +179,8 @@ nsPresContext::nsPresContext(nsIDocument* aDocument, nsPresContextType aType)
     mDefaultFantasyFont("fantasy", NS_FONT_STYLE_NORMAL,
                         NS_FONT_VARIANT_NORMAL, NS_FONT_WEIGHT_NORMAL, 0, 0),
     mCanPaginatedScroll(PR_FALSE),
-    mIsRootPaginatedDocument(PR_FALSE)
+    mIsRootPaginatedDocument(PR_FALSE),
+		mFullZoom(1.0f)
 {
   // NOTE! nsPresContext::operator new() zeroes out all members, so don't
   // bother initializing members to 0.
@@ -661,14 +662,16 @@ nsPresContext::PreferenceChanged(const char* aPrefName)
     nsRect bounds(mVisibleArea);
     bounds *= 1.0f / AppUnitsPerDevPixel();
     if (mDeviceContext->CheckDPIChange() && mShell) {
-      mDeviceContext->FlushFontCache();
+      //ROMAXA mDeviceContext->FlushFontCache();
 
       nsIViewManager* vm = GetViewManager();
       nscoord width = DevPixelsToAppUnits(bounds.width);
       nscoord height = DevPixelsToAppUnits(bounds.height);
-      vm->SetWindowDimensions(width, height);
+      //vm->SetWindowDimensions(width, height);
+      mShell->FrameNeedsReflow(mShell->GetRootFrame(), nsIPresShell::eStyleChange, NS_FRAME_IS_DIRTY);
+      mShell->ResizeReflow(width, height);
 
-      ClearStyleDataAndReflow();
+      //ClearStyleDataAndReflow();
     }
     return;
   }
@@ -680,6 +683,30 @@ nsPresContext::PreferenceChanged(const char* aPrefName)
       return;
     mPrefChangedTimer->InitWithFuncCallback(nsPresContext::PrefChangedUpdateTimerCallback, (void*)this, 0, nsITimer::TYPE_ONE_SHOT);
   }
+}
+
+void
+nsPresContext::SetFullZoom(float aZoom, PRBool onlyDevice)
+{
+  nsRect bounds(mVisibleArea);
+  bounds *= 1.0f / AppUnitsPerDevPixel();
+  if (!mShell || !mDeviceContext->SetPixelScale(aZoom) || onlyDevice)
+    return;
+  mFullZoom = aZoom;
+//  mDeviceContext->FlushFontCache();
+  nscoord width = DevPixelsToAppUnits(bounds.width);
+  nscoord height = DevPixelsToAppUnits(bounds.height);
+  if (nsContentUtils::GetBoolPref("layout.full.zoom.mode.fast", PR_TRUE)) {
+    /* XXX this way of reflow works 3x faster, but buggy
+       Internal scrolbars also resized (Iframe, textarea...)
+    */
+    mShell->FrameNeedsReflow(mShell->GetRootFrame(), nsIPresShell::eStyleChange, NS_FRAME_IS_DIRTY);
+    mShell->ResizeReflow(width, height);
+    return;
+  }
+  nsIViewManager* vm = GetViewManager();
+  vm->SetWindowDimensions(width, height);
+  ClearStyleDataAndReflow();
 }
 
 void
@@ -715,6 +742,8 @@ nsPresContext::Init(nsIDeviceContext* aDeviceContext)
 
   mDeviceContext = aDeviceContext;
   NS_ADDREF(mDeviceContext);
+
+  mFullZoom = mDeviceContext->GetPixelScale();
 
   if (!mImageLoaders.Init())
     return NS_ERROR_OUT_OF_MEMORY;

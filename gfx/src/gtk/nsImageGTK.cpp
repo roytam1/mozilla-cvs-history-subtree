@@ -680,6 +680,22 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
   if (mDecodedX2 < mDecodedX1 || mDecodedY2 < mDecodedY1)
     return NS_OK;
 
+  float scale = 1.0f;
+  nsCOMPtr<nsIDeviceContext> theDeviceContext;
+  aContext.GetDeviceContext(*getter_AddRefs(theDeviceContext));
+  if (theDeviceContext)
+    scale = theDeviceContext->GetPixelScale();
+  if (scale != 1.0) {
+    aSWidth = mWidth;
+    aDWidth = NSToIntRound((float)(mWidth) * scale + 2);
+    aDX -= aSX;
+    aSX = 0;
+    aSHeight = mHeight;
+    aDHeight = NSToIntRound((float)(mHeight) * scale + 1);
+    aDY -= aSY;
+    aSY = 0;
+  }
+
 #ifdef TRACE_IMAGE_ALLOCATION
   fprintf(stderr, "nsImageGTK::Draw(%p) s=(%4d %4d %4d %4d) d=(%4d %4d %4d %4d)\n",
          this,

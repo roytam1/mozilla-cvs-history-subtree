@@ -118,6 +118,7 @@ nsThebesDeviceContext::nsThebesDeviceContext()
     mDepth = 0;
     mWidth = 0;
     mHeight = 0;
+    mPixelScale = 1.0;
 
     mDeviceContextSpec = nsnull;
 
@@ -242,8 +243,10 @@ nsThebesDeviceContext::SetDPI()
          */
         mAppUnitsPerDevPixel = (AppUnitsPerCSSPixel() * 96) / dpi;
     }
+    mAppUnitsPerDevNotScaledPixel = mAppUnitsPerDevPixel;
 
     mAppUnitsPerInch = NSIntPixelsToAppUnits(dpi, mAppUnitsPerDevPixel);
+    mPixelScale = (float)nsIDeviceContext::AppUnitsPerCSSPixel()/(float)mAppUnitsPerDevPixel;
 
     return NS_OK;
 }
@@ -411,7 +414,7 @@ nsThebesDeviceContext::GetSystemFont(nsSystemFontID aID, nsFont *aFont) const
     aFont->familyNameQuirks = fontStyle.familyNameQuirks;
     aFont->weight = fontStyle.weight;
     aFont->decorations = NS_FONT_DECORATION_NONE;
-    aFont->size = NSFloatPixelsToAppUnits(fontStyle.size, AppUnitsPerDevPixel());
+    aFont->size = NSFloatPixelsToAppUnits(fontStyle.size, AppUnitsPerCSSPixel() * 96);
     //aFont->langGroup = fontStyle.langGroup;
     aFont->sizeAdjust = fontStyle.sizeAdjust;
 
@@ -745,4 +748,16 @@ PRBool nsThebesDeviceContext::CheckDPIChange() {
 
     return oldDevPixels != mAppUnitsPerDevPixel ||
            oldInches != mAppUnitsPerInch;
+}
+
+PRBool
+nsThebesDeviceContext::SetPixelScale(float aScale)
+{
+    if (aScale != 0.0 && mPixelScale == aScale)
+        return PR_FALSE;
+    if (mPixelScale == 1.0)
+        mAppUnitsPerDevNotScaledPixel = mAppUnitsPerDevPixel;
+    mAppUnitsPerDevPixel = (PRInt32)((float)mAppUnitsPerDevNotScaledPixel / aScale);
+    mPixelScale = aScale;
+    return PR_TRUE;
 }
