@@ -811,7 +811,7 @@ void nsDisplayOpacity::Paint(nsDisplayListBuilder* aBuilder,
 
 #elif !defined(XP_MACOSX)
 
-  nsIViewManager* vm = mFrame->GetPresContext()->GetViewManager();
+  nsIViewManager* vm = mFrame->PresContext()->GetViewManager();
   nsIViewManager::BlendingBuffers* buffers =
       vm->CreateBlendingBuffers(aCtx, PR_FALSE, nsnull, mNeedAlpha, bounds);
   if (!buffers) {

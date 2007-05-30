@@ -4926,7 +4926,7 @@ PresShell::HandleEvent(nsIView         *aView,
     if (!frame)
       return NS_OK;
 
-    nsPresContext* framePresContext = frame->GetPresContext();
+    nsPresContext* framePresContext = frame->PresContext();
     nsPresContext* rootPresContext = framePresContext->RootPresContext();
     NS_ASSERTION(rootPresContext = mPresContext->RootPresContext(),
                  "How did we end up outside the connected prescontext/viewmanager hierarchy?"); 
@@ -4954,7 +4954,7 @@ PresShell::HandleEvent(nsIView         *aView,
     nsIFrame* targetFrame = nsLayoutUtils::GetFrameForPoint(frame, eventPoint);
     if (targetFrame) {
       PresShell* shell =
-          NS_STATIC_CAST(PresShell*, targetFrame->GetPresContext()->PresShell());
+          NS_STATIC_CAST(PresShell*, targetFrame->PresContext()->PresShell());
       if (shell != this) {
         // Handle the event in the correct shell.
         // Prevent deletion until we're done with event handling (bug 336582).

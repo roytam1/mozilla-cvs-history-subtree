@@ -62,7 +62,9 @@
 #include "nsBidiPresUtils.h"
 #include "gfxIImageFrame.h"
 #include "imgIContainer.h"
+#ifdef MOZ_CAIRO_GFX
 #include "gfxRect.h"
+#endif
 #include "gfxContext.h"
 #include "nsIImage.h"
 #include "nsIInterfaceRequestorUtils.h"

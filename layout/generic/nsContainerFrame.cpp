@@ -438,7 +438,7 @@ nsContainerFrame::SyncFrameViewAfterReflow(nsPresContext* aPresContext,
                                            const nsRect*   aCombinedArea,
                                            PRUint32        aFlags)
 {
-  if (!aView) {
+  if (!aView || !aCombinedArea) {
     return;
   }
 
