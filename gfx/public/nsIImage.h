@@ -41,9 +41,9 @@
 #include "nsISupports.h"
 #include "nsIRenderingContext.h"
 #include "nsRect.h"
+#ifdef MOZ_CAIRO_GFX
 #include "gfxRect.h"
 
-#ifdef MOZ_CAIRO_GFX
 class gfxASurface;
 #endif
 

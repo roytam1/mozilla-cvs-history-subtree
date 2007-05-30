@@ -4437,6 +4437,7 @@ MOZ_ARG_HEADER(Toolkit Options)
         -o "$_DEFAULT_TOOLKIT" = "photon" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-windows" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-gtk2" \
+        -o "$_DEFAULT_TOOLKIT" = "gtk2" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-beos" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-os2" \
         -o "$_DEFAULT_TOOLKIT" = "cairo-mac" \
@@ -4492,6 +4493,15 @@ cairo-gtk2)
     TK_LIBS='$(MOZ_GTK2_LIBS) $(MOZ_CAIRO_LIBS)'
     AC_DEFINE(MOZ_WIDGET_GTK2)
     ;;
+
+gtk2)
+    MOZ_ENABLE_GTK2=1
+    MOZ_ENABLE_COREXFONTS=${MOZ_ENABLE_COREXFONTS-}
+    TK_CFLAGS='$(MOZ_GTK2_CFLAGS)'
+    TK_LIBS='$(MOZ_GTK2_LIBS)'
+    AC_DEFINE(MOZ_WIDGET_GTK2)
+    ;;
+
 cairo-beos)
     MOZ_WIDGET_TOOLKIT=beos
     MOZ_GFX_TOOLKIT=cairo
