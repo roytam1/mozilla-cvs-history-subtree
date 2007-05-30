@@ -56,7 +56,7 @@ public:
   static void Shutdown(); // to be called from module destructor
 
   NS_IMETHOD  Init(nsNativeWidget aNativeWidget);
-
+  NS_IMETHOD  InitForPrinting(nsIDeviceContextSpec* aDevSpec);
   NS_IMETHOD  CreateRenderingContext(nsIRenderingContext *&aContext);
   NS_IMETHOD  CreateRenderingContext(nsIView *aView, nsIRenderingContext *&aContext) {return (DeviceContextImpl::CreateRenderingContext(aView,aContext));}
   NS_IMETHOD  CreateRenderingContext(nsIWidget *aWidget, nsIRenderingContext *&aContext) {return (DeviceContextImpl::CreateRenderingContext(aWidget,aContext));}
@@ -89,8 +89,10 @@ public:
 
   static int prefChanged(const char *aPref, void *aClosure);
 
+  virtual PRBool CheckDPIChange();
+
 protected:
-  nsresult   SetDPI(PRInt32 aPrefDPI);
+  nsresult   SetDPI(PRInt32 aPrefDPI = 96);
   
 private:
   PRUint32      mDepth;

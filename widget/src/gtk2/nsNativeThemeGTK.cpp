@@ -570,17 +570,24 @@ nsNativeThemeGTK::DrawWidgetBackground(nsIRenderingContext* aContext,
     return NS_OK;
     
 #ifndef MOZ_CAIRO_GFX
+  nsCOMPtr<nsIDeviceContext> dctx = nsnull;
+  aContext->GetDeviceContext(*getter_AddRefs(dctx));
+  PRInt32 p2a = dctx->AppUnitsPerDevPixel();
+#define FROM_TWIPS_INT(_x)  (NSToIntRound((float)((_x)/((float)p2a))))
+#define NS_RECT_FROM_TWIPS_RECT(_r)   (nsRect(FROM_TWIPS_INT((_r).x), FROM_TWIPS_INT((_r).y), FROM_TWIPS_INT((_r).width), FROM_TWIPS_INT((_r).height)))
+
   GdkWindow* window = NS_STATIC_CAST(GdkWindow*,
     aContext->GetNativeGraphicData(nsIRenderingContext::NATIVE_GDK_DRAWABLE));
 
   nsTransform2D* transformMatrix;
   aContext->GetCurrentTransform(transformMatrix);
 
-  nsRect tr(aRect);
+  nsRect tr(NS_RECT_FROM_TWIPS_RECT(aRect));
   transformMatrix->TransformCoord(&tr.x, &tr.y, &tr.width, &tr.height);
   GdkRectangle gdk_rect = {tr.x, tr.y, tr.width, tr.height};
 
-  nsRect cr(aClipRect);
+
+  nsRect cr(NS_RECT_FROM_TWIPS_RECT(aClipRect));
   transformMatrix->TransformCoord(&cr.x, &cr.y, &cr.width, &cr.height);
   GdkRectangle gdk_clip = {cr.x, cr.y, cr.width, cr.height};
 

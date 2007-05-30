@@ -224,6 +224,8 @@ public:
   NS_IMETHOD CopyOffScreenBits(nsIDrawingSurface* aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
                                const nsRect &aDestBounds, PRUint32 aCopyFlags);
 
+  NS_IMETHOD DrawTile(imgIContainer *aImage, nscoord aXOffset, nscoord aYOffset,
+                      const nsRect *aTargetRect);
   NS_IMETHOD SetRightToLeftText(PRBool aIsRTL);
   NS_IMETHOD GetRightToLeftText(PRBool* aIsRTL);
   NS_IMETHOD GetClusterInfo(const PRUnichar *aText, PRUint32 aLength,
@@ -274,7 +276,6 @@ private:
   nsIDeviceContext      *mContext;
   nsIFontMetricsGTK     *mFontMetrics;
   nsCOMPtr<nsIRegion>    mClipRegion;
-  float                  mP2T;
   GdkWChar*              mDrawStringBuf;
   PRUint32               mDrawStringSize;
 

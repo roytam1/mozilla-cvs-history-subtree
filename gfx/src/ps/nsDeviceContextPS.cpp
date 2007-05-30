@@ -203,18 +203,18 @@ nsDeviceContextPS::InitDeviceContextPS(nsIDeviceContext *aCreatingDeviceContext,
 
   mDepth = 24; /* Our PostScript module code expects images and other stuff in 24bit RGB-format (8bits per gun)*/
 
-  mTwipsToPixels = (float)72.0/(float)NSIntPointsToTwips(72);
-  mPixelsToTwips = 1.0f / mTwipsToPixels;
+  mAppUnitsPerDevPixel = ((float)AppUnitsPerCSSPixel() * 96.) / (float)72;
+  mAppUnitsPerInch = NSIntPixelsToAppUnits(72, mAppUnitsPerDevPixel);
 
-  newscale = TwipsToDevUnits();
-  origscale = aParentContext->TwipsToDevUnits();
-  mCPixelScale = newscale / origscale;
+  newscale = AppUnitsPerDevPixel();
+  origscale = aParentContext->AppUnitsPerDevPixel();
+//  mCPixelScale = newscale / origscale;
 
-  t2d = aParentContext->TwipsToDevUnits();
-  a2d = aParentContext->AppUnitsToDevUnits();
+  t2d = aParentContext->AppUnitsPerDevPixel();
+  a2d = aParentContext->AppUnitsPerDevPixel();
 
-  mAppUnitsToDevUnits = (a2d / t2d) * mTwipsToPixels;
-  mDevUnitsToAppUnits = 1.0f / mAppUnitsToDevUnits;
+  float mAppUnitsToDevUnits = (a2d / t2d) * mAppUnitsPerDevPixel;
+  float mDevUnitsToAppUnits = 1.0f / mAppUnitsToDevUnits;
 
   mParentDeviceContext = aParentContext;
 
@@ -564,3 +564,14 @@ NS_IMETHODIMP nsDeviceContextPS::CreateFontCache()
   
   return mFontCache->Init(this);
 }
+
+PRBool nsDeviceContextPS::CheckDPIChange()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsDeviceContextPS::InitForPrinting(nsIDeviceContextSpec* spec)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+

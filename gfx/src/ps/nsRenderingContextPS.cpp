@@ -187,7 +187,7 @@ nsRenderingContextPS::Init(nsIDeviceContext* aContext)
   NS_ENSURE_TRUE(nsnull != aContext, NS_ERROR_NULL_POINTER);
 
   mContext = aContext;
-  mP2T = mContext->DevUnitsToAppUnits();
+  mP2T = mContext->AppUnitsPerDevPixel();
 
   mPSObj = NS_REINTERPRET_CAST(nsDeviceContextPS *, mContext.get())->GetPrintContext();
 
@@ -594,8 +594,8 @@ nsRenderingContextPS :: DrawLine(nscoord aX0, nscoord aY0, nscoord aX1, nscoord 
     return NS_OK;
 
   // Layout expects lines to be one scaled pixel wide.
-  float scale;
-  NS_REINTERPRET_CAST(DeviceContextImpl *, mContext.get())->GetCanonicalPixelScale(scale);
+  float scale = 1.0f;
+  //NS_REINTERPRET_CAST(DeviceContextImpl *, mContext.get())->GetCanonicalPixelScale(scale);
   int width = NSToCoordRound(TWIPS_PER_POINT_FLOAT * scale);
 
   // If this line is vertical (horizontal), the geometric line defined

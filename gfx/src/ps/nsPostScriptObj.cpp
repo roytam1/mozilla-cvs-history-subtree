@@ -398,8 +398,10 @@ nsPostScriptObj::write_prolog(FILE *aHandle, PRBool aFTPEnable)
 {
   FILE *f = aHandle;
 
-  float fWidth = NSTwipsToFloatPoints(mPrintContext->prSetup->width);
-  float fHeight = NSTwipsToFloatPoints(mPrintContext->prSetup->height);
+  float fWidth =
+        NSAppUnitsToFloatPixels(mPrintContext->prSetup->width, nsIDeviceContext::AppUnitsPerCSSPixel());
+  float fHeight =
+        NSAppUnitsToFloatPixels(mPrintContext->prSetup->height, nsIDeviceContext::AppUnitsPerCSSPixel());
 
   // PostScript comments marked with %% are document structuring conventions
   // (DSC) comments. See Adobe specification 5001 at
@@ -1822,8 +1824,8 @@ nsPostScriptObj::write_script(FILE *aDestHandle)
     "} if\n"
     "%%%%EndFeature\n",
     mPrintSetup->paper_name,
-    fpCString(NSTwipsToFloatPoints(mPrintContext->prSetup->width)).get(),
-    fpCString(NSTwipsToFloatPoints(mPrintContext->prSetup->height)).get());
+    fpCString(NSAppUnitsToFloatPixels(mPrintContext->prSetup->width, nsIDeviceContext::AppUnitsPerCSSPixel())).get(),
+    fpCString(NSAppUnitsToFloatPixels(mPrintContext->prSetup->height, nsIDeviceContext::AppUnitsPerCSSPixel())).get());
   fputs("%%EndSetup\n", aDestHandle);
 
   char buf[BUFSIZ];

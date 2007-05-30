@@ -73,6 +73,10 @@
 #define FORCE_PR_LOG
 #include "prlog.h"
 
+// XXXTODO get rid of this macro
+#define ROUND_TO_TWIPS(x) (nscoord)floor(((x) * mP2A) + 0.5)
+#define TWIPS_TO_ROUND(x) (nscoord)floor((float(x) / mP2A) + 0.5)
+
 // Abstract class nsFontXft is the base class for nsFontXftUnicode and
 // nsFontXftCustom, either of which is an instance of fonts.  The 
 // |nsFontMetricsXft| class is made up of a collection of these little 
@@ -359,8 +363,8 @@ nsFontMetricsXft::Init(const nsFont& aFont, nsIAtom* aLangGroup,
     // Hang onto the device context
     mDeviceContext = aContext;
 
-    float app2dev = mDeviceContext->AppUnitsToDevUnits();
-    mPixelSize = NSTwipsToFloatPixels(mFont.size, app2dev);
+    mP2A = mDeviceContext->AppUnitsPerDevPixel();
+    mPixelSize = NSAppUnitsToFloatPixels(mFont.size, mP2A);
 
     // Make sure to clamp the pixel size to something reasonable so we
     // don't make the X server blow up.
@@ -489,9 +493,7 @@ nsFontMetricsXft::GetWidth(const char* aString, PRUint32 aLength,
     XftTextExtents8(GDK_DISPLAY(), font, (FcChar8 *)aString,
                     aLength, &glyphInfo);
 
-    float f;
-    f = mDeviceContext->DevUnitsToAppUnits();
-    aWidth = NSToCoordRound(glyphInfo.xOff * f);
+    aWidth = NSIntPixelsToAppUnits(glyphInfo.xOff, mP2A);
 
     return NS_OK;
 }
@@ -508,10 +510,7 @@ nsFontMetricsXft::GetWidth(const PRUnichar* aString, PRUint32 aLength,
     }
 
     gint rawWidth = RawGetWidth(aString, aLength);
-
-    float f;
-    f = mDeviceContext->DevUnitsToAppUnits();
-    aWidth = NSToCoordRound(rawWidth * f);
+    aWidth = NSIntPixelsToAppUnits(rawWidth, mP2A);
 
     if (aFontID)
         *aFontID = 0;
@@ -539,12 +538,9 @@ nsFontMetricsXft::GetTextDimensions(const PRUnichar* aString,
 
     NS_ENSURE_SUCCESS(rv, rv);
 
-    float P2T;
-    P2T = mDeviceContext->DevUnitsToAppUnits();
-
-    aDimensions.width = NSToCoordRound(aDimensions.width * P2T);
-    aDimensions.ascent = NSToCoordRound(aDimensions.ascent * P2T);
-    aDimensions.descent = NSToCoordRound(aDimensions.descent * P2T);
+    aDimensions.width = NSIntPixelsToAppUnits(aDimensions.width, mP2A);
+    aDimensions.ascent = NSIntPixelsToAppUnits(aDimensions.ascent, mP2A);
+    aDimensions.descent = NSIntPixelsToAppUnits(aDimensions.descent, mP2A);
 
     if (nsnull != aFontID)
         *aFontID = 0;
@@ -597,11 +593,11 @@ nsFontMetricsXft::DrawString(const char *aString, PRUint32 aLength,
     DrawStringData data;
     memset(&data, 0, sizeof(data));
 
-    data.x = aX;
-    data.y = aY;
+    data.x = TWIPS_TO_ROUND(aX);
+    data.y = TWIPS_TO_ROUND(aY);
     data.spacing = aSpacing;
     data.context = aContext;
-    data.p2t = mDeviceContext->DevUnitsToAppUnits();
+    data.p2t = mP2A;
 
     PrepareToDraw(aContext, aSurface, &data.draw, data.color);
 
@@ -626,11 +622,11 @@ nsFontMetricsXft::DrawString(const PRUnichar* aString, PRUint32 aLength,
     DrawStringData data;
     memset(&data, 0, sizeof(data));
 
-    data.x = aX;
-    data.y = aY;
+    data.x = TWIPS_TO_ROUND(aX);
+    data.y = TWIPS_TO_ROUND(aY);
     data.spacing = aSpacing;
     data.context = aContext;
-    data.p2t = mDeviceContext->DevUnitsToAppUnits();
+    data.p2t = mP2A;
 
     // set up our colors and clip regions
     PrepareToDraw(aContext, aSurface, &data.draw, data.color);
@@ -666,16 +662,13 @@ nsFontMetricsXft::GetBoundingMetrics(const char *aString, PRUint32 aLength,
                          &nsFontMetricsXft::BoundingMetricsCallback, &data);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    float P2T;
-    P2T = mDeviceContext->DevUnitsToAppUnits();
-
     aBoundingMetrics.leftBearing =
-        NSToCoordRound(aBoundingMetrics.leftBearing * P2T);
+        NSIntPixelsToAppUnits(aBoundingMetrics.leftBearing, mP2A);
     aBoundingMetrics.rightBearing =
-        NSToCoordRound(aBoundingMetrics.rightBearing * P2T);
-    aBoundingMetrics.width = NSToCoordRound(aBoundingMetrics.width * P2T);
-    aBoundingMetrics.ascent = NSToCoordRound(aBoundingMetrics.ascent * P2T);
-    aBoundingMetrics.descent = NSToCoordRound(aBoundingMetrics.descent * P2T);
+        NSIntPixelsToAppUnits(aBoundingMetrics.rightBearing, mP2A);
+    aBoundingMetrics.width = NSIntPixelsToAppUnits(aBoundingMetrics.width, mP2A);
+    aBoundingMetrics.ascent = NSIntPixelsToAppUnits(aBoundingMetrics.ascent, mP2A);
+    aBoundingMetrics.descent = NSIntPixelsToAppUnits(aBoundingMetrics.descent, mP2A);
 
     return NS_OK;
 }
@@ -704,16 +697,13 @@ nsFontMetricsXft::GetBoundingMetrics(const PRUnichar *aString,
                          &nsFontMetricsXft::BoundingMetricsCallback, &data);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    float P2T;
-    P2T = mDeviceContext->DevUnitsToAppUnits();
-
     aBoundingMetrics.leftBearing =
-        NSToCoordRound(aBoundingMetrics.leftBearing * P2T);
+        NSIntPixelsToAppUnits(aBoundingMetrics.leftBearing, mP2A);
     aBoundingMetrics.rightBearing =
-        NSToCoordRound(aBoundingMetrics.rightBearing * P2T);
-    aBoundingMetrics.width = NSToCoordRound(aBoundingMetrics.width * P2T);
-    aBoundingMetrics.ascent = NSToCoordRound(aBoundingMetrics.ascent * P2T);
-    aBoundingMetrics.descent = NSToCoordRound(aBoundingMetrics.descent * P2T);
+        NSIntPixelsToAppUnits(aBoundingMetrics.rightBearing, mP2A);
+    aBoundingMetrics.width = NSIntPixelsToAppUnits(aBoundingMetrics.width, mP2A);
+    aBoundingMetrics.ascent = NSIntPixelsToAppUnits(aBoundingMetrics.ascent, mP2A);
+    aBoundingMetrics.descent = NSIntPixelsToAppUnits(aBoundingMetrics.descent, mP2A);
 
     if (nsnull != aFontID)
         *aFontID = 0;
@@ -807,9 +797,8 @@ nsresult
 nsFontMetricsXft::CacheFontMetrics(void)
 {
     // Get our scale factor
-    float f;
     float val;
-    f = mDeviceContext->DevUnitsToAppUnits();
+    PRInt32 f = mDeviceContext->AppUnitsPerDevPixel();
     
     // Get our font face
     XftFont *xftFont = mWesternFont->mXftFont;
@@ -1563,14 +1552,13 @@ nsFontMetricsXft::DrawStringCallback(const FcChar32 *aString, PRUint32 aLen,
                              data->draw);
 
             if (data->spacing) {
-                data->xOffset += *data->spacing;
+                data->xOffset += TWIPS_TO_ROUND(*data->spacing);
                 data->spacing += IS_NON_BMP(ch) ? 2 : 1;
             }
             else {
                 data->xOffset +=
                     NSToCoordRound((mMiniFontWidth*(IS_NON_BMP(ch) ? 3 : 2) +
-                                mMiniFontPadding*(IS_NON_BMP(ch) ? 6:5)) *
-                            data->p2t);
+                                mMiniFontPadding*(IS_NON_BMP(ch) ? 6:5)));
             }
         }
 
@@ -2012,12 +2000,14 @@ nsFontXft::DrawStringSpec(FcChar32 *aString, PRUint32 aLen, void *aData)
     NS_PRECONDITION(mXftFont, "FindFont should not return bad fonts");
     DrawStringData *data = (DrawStringData *)aData;
 
+    PRInt32 mP2A = data->p2t;
     FcChar32 *pstr = aString;
     const FcChar32 *end = aString + aLen;
 
+
     while(pstr < end) {
-        nscoord x = data->x + data->xOffset;               
-        nscoord y = data->y;                        
+        nscoord x = data->x + data->xOffset;
+        nscoord y = data->y;
         /* Convert to device coordinate. */   
         data->context->GetTranMatrix()->TransformCoord(&x, &y);
                                                                  
@@ -2030,13 +2020,13 @@ nsFontXft::DrawStringSpec(FcChar32 *aString, PRUint32 aLen, void *aData)
         data->drawBuffer->Draw(x, y, mXftFont, glyph);
 
         if (data->spacing) {
-            data->xOffset += *data->spacing;
-            data->spacing += IS_NON_BMP(*pstr) ? 2 : 1; 
+            data->xOffset += TWIPS_TO_ROUND(*data->spacing);
+            data->spacing += IS_NON_BMP(*pstr) ? 2 : 1;
         }
         else {
             XGlyphInfo info;                        
             XftGlyphExtents(GDK_DISPLAY(), mXftFont, &glyph, 1, &info);
-            data->xOffset += NSToCoordRound(info.xOff * data->p2t);
+            data->xOffset += NSToCoordRound(info.xOff);
         }
 
         ++pstr;

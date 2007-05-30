@@ -131,8 +131,8 @@ static nsSystemFontsGTK *gSystemFonts = nsnull;
 nsDeviceContextGTK::nsDeviceContextGTK()
   : DeviceContextImpl()
 {
-  mTwipsToPixels = 1.0;
-  mPixelsToTwips = 1.0;
+  mAppUnitsPerDevPixel = -1;
+  mAppUnitsPerInch = -1;
   mDepth = 0 ;
   mNumCells = 0;
 
@@ -237,9 +237,9 @@ NS_IMETHODIMP nsDeviceContextGTK::CreateRenderingContext(nsIRenderingContext *&a
 {
 #ifdef NS_PRINT_PREVIEW
   // Defer to Alt when there is one
-  if (mAltDC && ((mUseAltDC & kUseAltDCFor_CREATERC_PAINT) || (mUseAltDC & kUseAltDCFor_CREATERC_REFLOW))) {
-    return mAltDC->CreateRenderingContext(aContext);
-  }
+//  if (mAltDC && ((mUseAltDC & kUseAltDCFor_CREATERC_PAINT) || (mUseAltDC & kUseAltDCFor_CREATERC_REFLOW))) {
+//    return mAltDC->CreateRenderingContext(aContext);
+//  }
 #endif
 
   nsresult             rv;
@@ -329,7 +329,7 @@ NS_IMETHODIMP nsDeviceContextGTK::GetSystemFont(nsSystemFontID aID, nsFont *aFon
   nsresult status = NS_OK;
 
   if (!gSystemFonts) {
-    gSystemFonts = new nsSystemFontsGTK(mPixelsToTwips);
+    gSystemFonts = new nsSystemFontsGTK(AppUnitsPerDevPixel());
   }
 
   switch (aID) {
@@ -376,9 +376,9 @@ NS_IMETHODIMP nsDeviceContextGTK::GetDeviceSurfaceDimensions(PRInt32 &aWidth, PR
 {
 #ifdef NS_PRINT_PREVIEW
   // Defer to Alt when there is one
-  if (mAltDC && (mUseAltDC & kUseAltDCFor_SURFACE_DIM)) {
-    return mAltDC->GetDeviceSurfaceDimensions(aWidth, aHeight);
-  }
+//  if (mAltDC && (mUseAltDC & kUseAltDCFor_SURFACE_DIM)) {
+//    return mAltDC->GetDeviceSurfaceDimensions(aWidth, aHeight);
+//  }
 #endif
 
   PRInt32 width = 0, height = 0;
@@ -390,8 +390,8 @@ NS_IMETHODIMP nsDeviceContextGTK::GetDeviceSurfaceDimensions(PRInt32 &aWidth, PR
     screen->GetRect(&x, &y, &width, &height);
   }
 
-  aWidth = NSToIntRound(float(width) * mDevUnitsToAppUnits);
-  aHeight = NSToIntRound(float(height) * mDevUnitsToAppUnits);
+  aWidth = NSIntPixelsToAppUnits(width, AppUnitsPerDevPixel());
+  aHeight = NSIntPixelsToAppUnits(height, AppUnitsPerDevPixel());
 
   return NS_OK;
 }
@@ -411,10 +411,10 @@ NS_IMETHODIMP nsDeviceContextGTK::GetRect(nsRect &aRect)
     nsCOMPtr<nsIScreen> screen;
     mScreenManager->ScreenForRect(x, y, width, height, getter_AddRefs(screen));
     screen->GetRect(&aRect.x, &aRect.y, &aRect.width, &aRect.height);
-    aRect.x = NSToIntRound(mDevUnitsToAppUnits * aRect.x);
-    aRect.y = NSToIntRound(mDevUnitsToAppUnits * aRect.y);
-    aRect.width = NSToIntRound(mDevUnitsToAppUnits * aRect.width);
-    aRect.height = NSToIntRound(mDevUnitsToAppUnits * aRect.height);
+    aRect.x = NSIntPixelsToAppUnits(aRect.x, AppUnitsPerDevPixel());
+    aRect.y = NSIntPixelsToAppUnits(aRect.y, AppUnitsPerDevPixel());
+    aRect.width = NSIntPixelsToAppUnits(aRect.width, AppUnitsPerDevPixel());
+    aRect.height = NSIntPixelsToAppUnits(aRect.height, AppUnitsPerDevPixel());
   }
   else {
     PRInt32 width, height;
@@ -443,10 +443,10 @@ NS_IMETHODIMP nsDeviceContextGTK::GetClientRect(nsRect &aRect)
     nsCOMPtr<nsIScreen> screen;
     mScreenManager->ScreenForRect(x, y, width, height, getter_AddRefs(screen));
     screen->GetAvailRect(&aRect.x, &aRect.y, &aRect.width, &aRect.height);
-    aRect.x = NSToIntRound(mDevUnitsToAppUnits * aRect.x);
-    aRect.y = NSToIntRound(mDevUnitsToAppUnits * aRect.y);
-    aRect.width = NSToIntRound(mDevUnitsToAppUnits * aRect.width);
-    aRect.height = NSToIntRound(mDevUnitsToAppUnits * aRect.height);
+    aRect.x = NSIntPixelsToAppUnits(aRect.x, AppUnitsPerDevPixel());
+    aRect.y = NSIntPixelsToAppUnits(aRect.y, AppUnitsPerDevPixel());
+    aRect.width = NSIntPixelsToAppUnits(aRect.width, AppUnitsPerDevPixel());
+    aRect.height = NSIntPixelsToAppUnits(aRect.height, AppUnitsPerDevPixel());
   }
   else {
     PRInt32 width, height;
@@ -458,6 +458,27 @@ NS_IMETHODIMP nsDeviceContextGTK::GetClientRect(nsRect &aRect)
   }
 
   return NS_OK;
+}
+
+/*
+ * below methods are for printing
+ */
+NS_IMETHODIMP
+nsDeviceContextGTK::InitForPrinting(nsIDeviceContextSpec *aDevice)
+{
+    NS_ENSURE_ARG_POINTER(aDevice);
+/*
+    NS_ADDREF(mDeviceContextSpec = aDevice);
+
+    mPrinter = PR_TRUE;
+
+    aDevice->GetSurfaceForPrinter(getter_AddRefs(mPrintingSurface));
+
+    Init(nsnull);
+
+    CalcPrintingSize();
+*/
+    return NS_OK;
 }
 
 NS_IMETHODIMP nsDeviceContextGTK::GetDeviceContextFor(nsIDeviceContextSpec *aDevice,
@@ -579,12 +600,12 @@ nsDeviceContextGTK::SetDPI(PRInt32 aPrefDPI)
     // value is under 96ppi, then use 96.
     mDpi = 96;
   }
-  
-  int pt2t = 72;
 
   // make p2t a nice round number - this prevents rounding problems
-  mPixelsToTwips = float(NSToIntRound(float(NSIntPointsToTwips(pt2t)) / float(mDpi)));
-  mTwipsToPixels = 1.0f / mPixelsToTwips;
+  mAppUnitsPerDevPixel = ((float)AppUnitsPerCSSPixel() * 96.) / (float)mDpi;
+  mAppUnitsPerInch = NSIntPixelsToAppUnits(mDpi, mAppUnitsPerDevPixel);
+  mAppUnitsPerDevPixel = mAppUnitsPerDevPixel;
+  mPixelScale = (float)nsIDeviceContext::AppUnitsPerCSSPixel()/(float)mAppUnitsPerDevPixel;
 
   // XXX need to reflow all documents
   return NS_OK;
@@ -624,6 +645,17 @@ int nsDeviceContextGTK::prefChanged(const char *aPref, void *aClosure)
   }
 
   return 0;
+}
+
+PRBool nsDeviceContextGTK::CheckDPIChange()
+{
+    PRInt32 oldDevPixels = mAppUnitsPerDevPixel;
+    PRInt32 oldInches = mAppUnitsPerInch;
+
+    SetDPI();
+
+    return oldDevPixels != mAppUnitsPerDevPixel ||
+           oldInches != mAppUnitsPerInch;
 }
 
 #define DEFAULT_TWIP_FONT_SIZE 240
@@ -818,16 +850,18 @@ nsSystemFontsGTK::GetSystemFontInfo(GtkWidget *aWidget, nsFont* aFont,
 
   float size = float(pango_font_description_get_size(desc) / PANGO_SCALE);
 #ifdef MOZ_ENABLE_XFT
+#ifdef REAL_DEVICE_DPI
   if (NS_IsXftEnabled()) {
     PRInt32 dpi = GetXftDPI();
     if (dpi != 0) {
       // pixels/inch * twips/pixel * inches/twip == 1, except it isn't, since
       // our idea of dpi may be different from Xft's.
-      size *= float(dpi) * aPixelsToTwips * (1.0f/1440.0f);
+      size *= 96 * aPixelsToTwips * (1.0f/1440.0f);
     }
   }
+#endif
 #endif /* MOZ_ENABLE_XFT */
-  aFont->size = NSFloatPointsToTwips(size);
+  aFont->size = NSFloatPixelsToAppUnits(size, 60 * 1.3);
   
   pango_font_description_free(desc);
 

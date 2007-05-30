@@ -54,6 +54,13 @@
 #include "nsDeviceContextGTK.h"
 #include "nsFontMetricsUtils.h"
 
+#include "imgIContainer.h"
+#include "gfxIImageFrame.h"
+#include "nsIImage.h"
+
+#include "nsIServiceManager.h"
+#include "nsIInterfaceRequestorUtils.h"
+
 #ifdef MOZ_WIDGET_GTK2
 #include <gdk/gdkwindow.h>
 #endif
@@ -68,6 +75,11 @@ NS_IMPL_ISUPPORTS1(nsRenderingContextGTK, nsIRenderingContext)
   gdk.height = ns.height; \
   PR_END_MACRO
 
+#define FROM_TWIPS_INT(_x)  (NSToIntRound((float)((_x)/(mContext->AppUnitsPerDevPixel()))))
+#define FROM_TWIPS_INT2(_x)  (NSToIntRound((float)((_x)/(mContext->AppUnitsPerDevPixel()))+0.5))
+#define FROM_TWIPS(_x)  ((float)((_x)/(mContext->AppUnitsPerDevPixel())))
+#define NS_RECT_FROM_TWIPS_RECT(_r)   (nsRect(FROM_TWIPS_INT((_r).x), FROM_TWIPS_INT((_r).y), FROM_TWIPS_INT2((_r).width), FROM_TWIPS_INT2((_r).height)))
+
 static nsGCCache *gcCache = nsnull;
 static nsFixedSizeAllocator *gStatePool = nsnull;
 
@@ -80,7 +92,7 @@ nsRenderingContextGTK::nsRenderingContextGTK()
   mCurrentColor = NS_RGB(255, 255, 255);  // set it to white
   mCurrentLineStyle = nsLineStyle_kSolid;
   mTranMatrix = nsnull;
-  mP2T = 1.0f;
+  //mP2T = 1.0f;
   mClipRegion = nsnull;
   mDrawStringBuf = nsnull;
   mGC = nsnull;
@@ -198,9 +210,9 @@ NS_IMETHODIMP nsRenderingContextGTK::Init(nsIDeviceContext* aContext,
 
 NS_IMETHODIMP nsRenderingContextGTK::CommonInit()
 {
-  mP2T = mContext->DevUnitsToAppUnits();
-  float app2dev;
-  app2dev = mContext->AppUnitsToDevUnits();
+  //printf("nsRenderingContextGTK::CommonInit: mU2D:%i\n", mU2D);
+  float app2dev = 1.0;
+//  mTranMatrix->AddScale(app2dev, app2dev); //ROMAXA?
   mTranMatrix->AddScale(app2dev, app2dev);
 
   return NS_OK;
@@ -521,7 +533,7 @@ nsRenderingContextGTK::CreateClipRegion()
 NS_IMETHODIMP nsRenderingContextGTK::SetClipRect(const nsRect& aRect,
                                                  nsClipCombine aCombine)
 {
-  nsRect trect = aRect;
+  nsRect trect(NS_RECT_FROM_TWIPS_RECT(aRect));
   mTranMatrix->TransformCoord(&trect.x, &trect.y,
                               &trect.width, &trect.height);
   SetClipRectInPixels(trect, aCombine);
@@ -785,7 +797,7 @@ NS_IMETHODIMP nsRenderingContextGTK::GetFontMetrics(nsIFontMetrics *&aFontMetric
 // add the passed in translation to the current translation
 NS_IMETHODIMP nsRenderingContextGTK::Translate(nscoord aX, nscoord aY)
 {
-  mTranMatrix->AddTranslation((float)aX,(float)aY);
+  mTranMatrix->AddTranslation((float)FROM_TWIPS(aX),(float)FROM_TWIPS(aY));
   return NS_OK;
 }
 
@@ -846,16 +858,22 @@ NS_IMETHODIMP nsRenderingContextGTK::DestroyDrawingSurface(nsIDrawingSurface* aD
 
 NS_IMETHODIMP nsRenderingContextGTK::DrawLine(nscoord aX0, nscoord aY0, nscoord aX1, nscoord aY1)
 {
-  nscoord diffX,diffY;
-
   g_return_val_if_fail(mTranMatrix != NULL, NS_ERROR_FAILURE);
   g_return_val_if_fail(mSurface != NULL, NS_ERROR_FAILURE);
 
-  mTranMatrix->TransformCoord(&aX0,&aY0);
-  mTranMatrix->TransformCoord(&aX1,&aY1);
+  nscoord x,y,x1,y1;
+  nscoord diffX,diffY;
 
-  diffX = aX1-aX0;
-  diffY = aY1-aY0;
+  x = FROM_TWIPS_INT(aX0);
+  y = FROM_TWIPS_INT(aY0);
+  x1 = FROM_TWIPS_INT(aX1);
+  y1 = FROM_TWIPS_INT(aY1);
+
+  mTranMatrix->TransformCoord(&x,&y);
+  mTranMatrix->TransformCoord(&x1,&y1);
+
+  diffX = x1-x;
+  diffY = y1-y;
 
   if (0!=diffX) {
     diffX = (diffX>0?1:-1);
@@ -867,7 +885,11 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawLine(nscoord aX0, nscoord aY0, nscoord 
   UpdateGC();
 
   ::XDrawLine(mDisplay, GDK_DRAWABLE_XID(mSurface->GetDrawable()),
-              GDK_GC_XGC(mGC), aX0, aY0, aX1 - diffX, aY1 - diffY);
+              GDK_GC_XGC(mGC),
+              x,
+              y,
+              x1 - diffX,
+              y1 - diffY);
 
   return NS_OK;
 }
@@ -886,8 +908,8 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawPolyline(const nsPoint aPoints[], PRInt
 
   for (i = 0; i < aNumPoints; i++){
     thispoint = (xpoints+i);
-    thispoint->x = aPoints[i].x;
-    thispoint->y = aPoints[i].y;
+    thispoint->x = FROM_TWIPS_INT(aPoints[i].x);
+    thispoint->y = FROM_TWIPS_INT(aPoints[i].y);
     mTranMatrix->TransformCoord((PRInt32*)&thispoint->x,(PRInt32*)&thispoint->y);
   }
 
@@ -916,10 +938,10 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawRect(nscoord aX, nscoord aY, nscoord aW
 
   nscoord x,y,w,h;
 
-  x = aX;
-  y = aY;
-  w = aWidth;
-  h = aHeight;
+  x = FROM_TWIPS_INT(aX);
+  y = FROM_TWIPS_INT(aY);
+  w = FROM_TWIPS_INT(aWidth);
+  h = FROM_TWIPS_INT(aHeight);
 
   g_return_val_if_fail ((mSurface->GetDrawable() != NULL) ||
                         (mGC != NULL), NS_ERROR_FAILURE);
@@ -963,10 +985,10 @@ NS_IMETHODIMP nsRenderingContextGTK::FillRect(nscoord aX, nscoord aY, nscoord aW
 
   nscoord x,y,w,h;
 
-  x = aX;
-  y = aY;
-  w = aWidth;
-  h = aHeight;
+  x = FROM_TWIPS_INT(aX);
+  y = FROM_TWIPS_INT(aY);
+  w = FROM_TWIPS_INT(aWidth);
+  h = FROM_TWIPS_INT(aHeight);
 
   mTranMatrix->TransformCoord(&x,&y,&w,&h);
 
@@ -1005,10 +1027,10 @@ NS_IMETHODIMP nsRenderingContextGTK::InvertRect(nscoord aX, nscoord aY, nscoord 
   mCurrentColor = NS_RGB(255, 255, 255);
   nscoord x,y,w,h;
 
-  x = aX;
-  y = aY;
-  w = aWidth;
-  h = aHeight;
+  x = FROM_TWIPS_INT(aX);
+  y = FROM_TWIPS_INT(aY);
+  w = FROM_TWIPS_INT(aWidth);
+  h = FROM_TWIPS_INT(aHeight);
 
   mTranMatrix->TransformCoord(&x,&y,&w,&h);
 
@@ -1025,10 +1047,7 @@ NS_IMETHODIMP nsRenderingContextGTK::InvertRect(nscoord aX, nscoord aY, nscoord 
   ::XFillRectangle(mDisplay,
                    GDK_DRAWABLE_XID(mSurface->GetDrawable()),
                    GDK_GC_XGC(mGC),
-                   x,
-                   y,
-                   w,
-                   h);
+                   x,y,w,h);
 
   // Back to normal copy drawing mode
   mFunction = GDK_COPY;
@@ -1054,8 +1073,8 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawPolygon(const nsPoint aPoints[], PRInt3
 
   for (i = 0; i < aNumPoints; i++){
     thispoint = (xpoints+i);
-    thispoint->x = aPoints[i].x;
-    thispoint->y = aPoints[i].y;
+    thispoint->x = FROM_TWIPS_INT(aPoints[i].x);
+    thispoint->y = FROM_TWIPS_INT(aPoints[i].y);
     mTranMatrix->TransformCoord((PRInt32*)&thispoint->x,(PRInt32*)&thispoint->y);
   }
 
@@ -1083,7 +1102,7 @@ NS_IMETHODIMP nsRenderingContextGTK::FillPolygon(const nsPoint aPoints[], PRInt3
   NS_ENSURE_TRUE(xpoints != nsnull, NS_ERROR_OUT_OF_MEMORY);
 
   for (i = 0; i < aNumPoints; ++i) {
-    nsPoint p = aPoints[i];
+    nsPoint p(FROM_TWIPS_INT(aPoints[i].x), FROM_TWIPS_INT(aPoints[i].y));
     mTranMatrix->TransformCoord(&p.x, &p.y);
     xpoints[i].x = p.x;
     xpoints[i].y = p.y;
@@ -1113,10 +1132,10 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawEllipse(nscoord aX, nscoord aY, nscoord
 
   nscoord x,y,w,h;
 
-  x = aX;
-  y = aY;
-  w = aWidth;
-  h = aHeight;
+  x = FROM_TWIPS_INT(aX);
+  y = FROM_TWIPS_INT(aY);
+  w = FROM_TWIPS_INT(aWidth);
+  h = FROM_TWIPS_INT(aHeight);
 
   mTranMatrix->TransformCoord(&x,&y,&w,&h);
 
@@ -1142,10 +1161,10 @@ NS_IMETHODIMP nsRenderingContextGTK::FillEllipse(nscoord aX, nscoord aY, nscoord
 
   nscoord x,y,w,h;
 
-  x = aX;
-  y = aY;
-  w = aWidth;
-  h = aHeight;
+  x = FROM_TWIPS_INT(aX);
+  y = FROM_TWIPS_INT(aY);
+  w = FROM_TWIPS_INT(aWidth);
+  h = FROM_TWIPS_INT(aHeight);
 
   mTranMatrix->TransformCoord(&x,&y,&w,&h);
 
@@ -1184,10 +1203,10 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawArc(nscoord aX, nscoord aY,
 
   nscoord x,y,w,h;
 
-  x = aX;
-  y = aY;
-  w = aWidth;
-  h = aHeight;
+  x = FROM_TWIPS_INT(aX);
+  y = FROM_TWIPS_INT(aY);
+  w = FROM_TWIPS_INT(aWidth);
+  h = FROM_TWIPS_INT(aHeight);
 
   mTranMatrix->TransformCoord(&x,&y,&w,&h);
 
@@ -1218,10 +1237,10 @@ NS_IMETHODIMP nsRenderingContextGTK::FillArc(nscoord aX, nscoord aY,
 
   nscoord x,y,w,h;
 
-  x = aX;
-  y = aY;
-  w = aWidth;
-  h = aHeight;
+  x = FROM_TWIPS_INT(aX);
+  y = FROM_TWIPS_INT(aY);
+  w = FROM_TWIPS_INT(aWidth);
+  h = FROM_TWIPS_INT(aHeight);
 
   mTranMatrix->TransformCoord(&x,&y,&w,&h);
 
@@ -1502,10 +1521,101 @@ NS_IMETHODIMP nsRenderingContextGTK::GetRangeWidth(const char *aText, PRUint32 a
   return mFontMetrics->GetRangeWidth(aText, aLength, aStart, aEnd, aWidth);
 }
 
-NS_IMETHODIMP nsRenderingContextGTK::DrawImage(imgIContainer *aImage, const nsRect & aSrcRect, const nsRect & aDestRect)
+NS_IMETHODIMP nsRenderingContextGTK::DrawImage(imgIContainer *aImage, const nsRect & twSrcRect, const nsRect & twDestRect)
 {
   UpdateGC();
-  return nsRenderingContextImpl::DrawImage(aImage, aSrcRect, aDestRect);
+#define NS_RECT_FROM_TWIPS_RECT2(_r)   (nsRect(FROM_TWIPS_INT2((_r).x), FROM_TWIPS_INT2((_r).y), FROM_TWIPS_INT2((_r).width), FROM_TWIPS_INT2((_r).height)))
+#define NS_RECT_FROM_TWIPS_RECT3(_r)   (nsRect(FROM_TWIPS_INT((_r).x), FROM_TWIPS_INT((_r).y), FROM_TWIPS_INT((_r).width), FROM_TWIPS_INT((_r).height)))
+  nsRect aDestRect = NS_RECT_FROM_TWIPS_RECT(twDestRect);
+  nsRect aSrcRect = NS_RECT_FROM_TWIPS_RECT2(twSrcRect);
+  //1,2,3... Some problems with images... stipes....;
+  nsRect dr = aDestRect;
+  mTranMatrix->TransformCoord(&dr.x, &dr.y, &dr.width, &dr.height);
+
+  // We should NOT be transforming the source rect (which is based on the image
+  // origin) using the rendering context's translation!
+  // However, given that we are, remember that the transformation of a
+  // height depends on the position, since what we are really doing is
+  // transforming the edges.  So transform *with* a translation, based
+  // on the origin of the *destination* rect, and then fix up the
+  // origin.
+  nsRect sr(aDestRect.TopLeft(), aSrcRect.Size());
+  mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
+
+  if (sr.IsEmpty() || dr.IsEmpty())
+    return NS_OK;
+
+  sr.MoveTo(aSrcRect.TopLeft());
+  mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
+
+  nsCOMPtr<gfxIImageFrame> iframe;
+  aImage->GetCurrentFrame(getter_AddRefs(iframe));
+  if (!iframe) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIImage> img(do_GetInterface(iframe));
+  if (!img) return NS_ERROR_FAILURE;
+
+  nsIDrawingSurface *surface = nsnull;
+  GetDrawingSurface(&surface);
+  if (!surface) return NS_ERROR_FAILURE;
+
+  // For Bug 87819
+  // iframe may want image to start at different position, so adjust
+  nsRect iframeRect;
+  iframe->GetRect(iframeRect);
+
+  if (iframeRect.x > 0) {
+    // Adjust for the iframe offset before we do scaling.
+    sr.x -= iframeRect.x;
+
+    nscoord scaled_x = sr.x;
+    if (dr.width != sr.width) {
+      PRFloat64 scale_ratio = PRFloat64(dr.width) / PRFloat64(sr.width);
+      scaled_x = NSToCoordRound(scaled_x * scale_ratio);
+    }
+    if (sr.x < 0) {
+      dr.x -= scaled_x;
+      sr.width += sr.x;
+      dr.width += scaled_x;
+      if (sr.width <= 0 || dr.width <= 0)
+        return NS_OK;
+      sr.x = 0;
+    } else if (sr.x > iframeRect.width) {
+      return NS_OK;
+    }
+  }
+
+  if (iframeRect.y > 0) {
+    // Adjust for the iframe offset before we do scaling.
+    sr.y -= iframeRect.y;
+
+    nscoord scaled_y = sr.y;
+    if (dr.height != sr.height) {
+      PRFloat64 scale_ratio = PRFloat64(dr.height) / PRFloat64(sr.height);
+      scaled_y = NSToCoordRound(scaled_y * scale_ratio);
+    }
+    if (sr.y < 0) {
+      dr.y -= scaled_y;
+      sr.height += sr.y;
+      dr.height += scaled_y;
+      if (sr.height <= 0 || dr.height <= 0)
+        return NS_OK;
+      sr.y = 0;
+    } else if (sr.y > iframeRect.height) {
+      return NS_OK;
+    }
+  }
+
+  // Multiple paint rects may have been coalesced into a bounding box, so
+  // ensure that this rect is actually within the clip region before we draw.
+  nsCOMPtr<nsIRegion> clipRegion;
+  GetClipRegion(getter_AddRefs(clipRegion));
+  if (clipRegion && !clipRegion->ContainsRect(dr.x, dr.y, dr.width, dr.height))
+    return NS_OK;
+
+  return img->Draw(*this, surface, sr.x, sr.y, sr.width, sr.height,
+                   dr.x, dr.y, dr.width, dr.height);
+
 }
 
 NS_IMETHODIMP nsRenderingContextGTK::GetBackbuffer(const nsRect &aRequestedSize,
@@ -1523,3 +1633,53 @@ NS_IMETHODIMP nsRenderingContextGTK::ReleaseBackbuffer(void) {
   // the backbuffer as needed and it doesn't cause a performance hit. @see bug 95952
   return DestroyCachedBackbuffer();
 }
+
+NS_IMETHODIMP
+nsRenderingContextGTK::DrawTile(imgIContainer *aImage,
+                                nscoord aXImageStart, nscoord aYImageStart,
+                                const nsRect *aTargetRect)
+{
+  nsRect dr(NS_RECT_FROM_TWIPS_RECT(*aTargetRect));
+  aXImageStart = FROM_TWIPS_INT(aXImageStart);
+  aYImageStart = FROM_TWIPS_INT(aYImageStart);
+  mTranMatrix->TransformCoord(&dr.x, &dr.y, &dr.width, &dr.height);
+  mTranMatrix->TransformCoord(&aXImageStart, &aYImageStart);
+
+  // may have become empty due to transform shinking small number to 0
+  if (dr.IsEmpty())
+    return NS_OK;
+
+  nscoord width, height;
+  aImage->GetWidth(&width);
+  aImage->GetHeight(&height);
+
+  if (width == 0 || height == 0)
+    return NS_OK;
+
+  nscoord xOffset = (dr.x - aXImageStart) % width;
+  nscoord yOffset = (dr.y - aYImageStart) % height;
+
+  nsCOMPtr<gfxIImageFrame> iframe;
+  aImage->GetCurrentFrame(getter_AddRefs(iframe));
+  if (!iframe) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIImage> img(do_GetInterface(iframe));
+  if (!img) return NS_ERROR_FAILURE;
+
+  nsIDrawingSurface *surface = nsnull;
+  GetDrawingSurface(&surface);
+  if (!surface) return NS_ERROR_FAILURE;
+
+  /* bug 113561 - frame can be smaller than container */
+  nsRect iframeRect;
+  iframe->GetRect(iframeRect);
+  PRInt32 padx = width - iframeRect.width;
+  PRInt32 pady = height - iframeRect.height;
+
+  return img->DrawTile(*this, surface,
+                       xOffset - iframeRect.x, yOffset - iframeRect.y,
+                       padx, pady,
+                       dr);
+
+}
+

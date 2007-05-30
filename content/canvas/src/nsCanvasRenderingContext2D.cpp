@@ -988,7 +988,7 @@ nsCanvasRenderingContext2D::Render(nsIRenderingContext *rc)
     }
 
     if (tx->GetType() & MG_2DSCALE) {
-        sx = sy = dctx->DevUnitsToTwips();
+        sx = sy = dctx->AppUnitsPerCSSPixel();
         tx->TransformNoXLate(&sx, &sy);
     }
 
@@ -2698,6 +2698,11 @@ nsCanvasRenderingContext2D::DrawWindow(nsIDOMWindow* aWindow, PRInt32 aX, PRInt3
 
     Redraw();
 #else
+
+    nsRect r(nsPresContext::CSSPixelsToAppUnits(aX),
+             nsPresContext::CSSPixelsToAppUnits(aY),
+             nsPresContext::CSSPixelsToAppUnits(aW),
+             nsPresContext::CSSPixelsToAppUnits(aH));
 
     nsCOMPtr<nsIRenderingContext> blackCtx;
 #ifdef MOZILLA_1_8_BRANCH

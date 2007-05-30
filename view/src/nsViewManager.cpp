@@ -579,9 +579,11 @@ void nsViewManager::Refresh(nsView *aView, nsIRenderingContext *aContext,
 #else
   // widgetDamageRectInPixels is the clipped damage area bounds,
   // in pixels-relative-to-widget-origin
+#define FROM_TWIPS_INT(_x) NSToIntRound((float)((_x)/((float)p2a)))
+#define NS_RECT_FROM_TWIPS_RECT(_r)   (nsRect(FROM_TWIPS_INT((_r).x), FROM_TWIPS_INT((_r).y), FROM_TWIPS_INT((_r).width), FROM_TWIPS_INT((_r).height)))
   nsRect widgetDamageRectInPixels = damageRect;
   widgetDamageRectInPixels.MoveBy(-viewRect.x, -viewRect.y);
-  widgetDamageRectInPixels.ScaleRoundOut(t2p);
+  widgetDamageRectInPixels = NS_RECT_FROM_TWIPS_RECT(widgetDamageRectInPixels);
 
   // On the Mac, we normally turn doublebuffering off because Quartz is
   // doublebuffering for us. But we need to turn it on anyway if we need

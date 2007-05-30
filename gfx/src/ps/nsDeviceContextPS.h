@@ -100,6 +100,9 @@ public:
   nsHashtable*        GetPSFontGeneratorList() { return mPSFontGeneratorList; }
   PRBool               mFTPEnable;
 
+  PRBool      CheckDPIChange();
+  NS_IMETHOD  InitForPrinting(nsIDeviceContextSpec *aSpec);
+
 protected:
   virtual     ~nsDeviceContextPS();
   

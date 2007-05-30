@@ -178,7 +178,7 @@ nsFontMetricsPS::RealizeFont()
 {
   if (mDeviceContext) {
     float dev2app;
-    dev2app = mDeviceContext->DevUnitsToAppUnits();
+    dev2app = mDeviceContext->AppUnitsPerDevPixel();
     fontps *font = (fontps*)mFontsPS->ElementAt(0);
 #if defined(MOZ_ENABLE_FREETYPE2) || defined(MOZ_ENABLE_XFT)
     NS_ASSERTION(font && font->entry, "no font available");
@@ -657,14 +657,14 @@ nsFontPSAFM::RealizeFont(nsFontMetricsPS* aFontMetrics, float dev2app)
   // convert the font size which is in twips to points
   fontSize = mFont->size / TWIPS_PER_POINT_FLOAT;
 
-  offset = NSFloatPointsToTwips(fontSize * mAFMInfo->mPSFontInfo->mXHeight) / 1000.0f;
+  offset = NSFloatPixelsToAppUnits(fontSize * mAFMInfo->mPSFontInfo->mXHeight, nsIDeviceContext::AppUnitsPerCSSPixel()) / 1000.0f;
   nscoord xHeight = NSToCoordRound(offset);
   aFontMetrics->SetXHeight(xHeight);
   aFontMetrics->SetSuperscriptOffset(xHeight);
   aFontMetrics->SetSubscriptOffset(xHeight);
   aFontMetrics->SetStrikeout((nscoord)(xHeight / 2), onePixel);
 
-  offset = NSFloatPointsToTwips(fontSize * mAFMInfo->mPSFontInfo->mUnderlinePosition) / 1000.0f;
+  offset = NSFloatPixelsToAppUnits(fontSize * mAFMInfo->mPSFontInfo->mUnderlinePosition, nsIDeviceContext::AppUnitsPerCSSPixel()) / 1000.0f;
   aFontMetrics->SetUnderline(NSToCoordRound(offset), onePixel);
 
   nscoord size = NSToCoordRound(fontSize * dev2app);
@@ -673,13 +673,13 @@ nsFontPSAFM::RealizeFont(nsFontMetricsPS* aFontMetrics, float dev2app)
   aFontMetrics->SetMaxAdvance(size);
   aFontMetrics->SetMaxHeight(size);
 
-  offset = NSFloatPointsToTwips(fontSize * mAFMInfo->mPSFontInfo->mAscender) / 1000.0f;
+  offset = NSFloatPixelsToAppUnits(fontSize * mAFMInfo->mPSFontInfo->mAscender, nsIDeviceContext::AppUnitsPerCSSPixel()) / 1000.0f;
   nscoord ascent = NSToCoordRound(offset);
   aFontMetrics->SetAscent(ascent);
   aFontMetrics->SetEmAscent(ascent);
   aFontMetrics->SetMaxAscent(ascent);
 
-  offset = NSFloatPointsToTwips(fontSize * mAFMInfo->mPSFontInfo->mDescender) / 1000.0f;
+  offset = NSFloatPixelsToAppUnits(fontSize * mAFMInfo->mPSFontInfo->mDescender, nsIDeviceContext::AppUnitsPerCSSPixel()) / 1000.0f;
   nscoord descent = -(NSToCoordRound(offset));
   aFontMetrics->SetDescent(descent);
   aFontMetrics->SetEmDescent(descent);
@@ -1048,7 +1048,7 @@ nsFontPSXft::Init(nsXftEntry* aEntry,
   float app2dev;
   nsIDeviceContext* dc = mFontMetrics->GetDeviceContext();
   NS_ENSURE_TRUE(dc, NS_ERROR_NULL_POINTER);
-  app2dev = dc->AppUnitsToDevUnits();
+  app2dev = dc->AppUnitsPerDevPixel();
   
   mPixelSize = NSToIntRound(app2dev * mFont->size);
 
@@ -1124,7 +1124,7 @@ nsFontPSXft::GetWidth(const PRUnichar* aString, PRUint32 aLength)
   nsDeviceContextPS* dc = mFontMetrics->GetDeviceContext();
   NS_ENSURE_TRUE(dc, 0);
 
-  origin_x *= dc->DevUnitsToAppUnits();
+  origin_x *= dc->AppUnitsPerDevPixel();
 
   return NSToCoordRound((nscoord)origin_x);
 }
@@ -1890,7 +1890,7 @@ nsFontPSFreeType::Init(nsITrueTypeFontCatalogEntry* aEntry,
   float app2dev;
   nsIDeviceContext* dc = mFontMetrics->GetDeviceContext();
   NS_ENSURE_TRUE(dc, NS_ERROR_NULL_POINTER);
-  app2dev = dc->AppUnitsToDevUnits();
+  app2dev = dc->AppUnitsPerDevPixel();
   
   mPixelSize = NSToIntRound(app2dev * mFont->size);
 
@@ -1955,7 +1955,7 @@ nsFontPSFreeType::GetWidth(const PRUnichar* aString, PRUint32 aLength)
   NS_ENSURE_TRUE(dc, 0);
 
   float dev2app;
-  dev2app = dc->DevUnitsToAppUnits();
+  dev2app = dc->AppUnitsPerDevPixel();
   origin_x *= dev2app;
   origin_x /= FT_REG_TO_16_16(1);
 
