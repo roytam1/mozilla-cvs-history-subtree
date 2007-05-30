@@ -49,7 +49,9 @@
 #include "ImageLogging.h"
 #include "nsIImage.h"
 #include "nsIInterfaceRequestorUtils.h"
+#ifdef MOZ_CAIRO_GFX
 #include "gfxColor.h"
+#endif
 
 #include "jerror.h"
 
