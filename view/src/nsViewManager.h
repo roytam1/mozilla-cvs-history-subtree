@@ -234,6 +234,7 @@ public:
   nsIWidget* GetWidget() { return mRootView ? mRootView->GetWidget() : nsnull; }
   NS_IMETHOD ForceUpdate();
  
+  NS_IMETHOD AllowDoubleBuffering(PRBool aDoubleBuffer);
   NS_IMETHOD IsPainting(PRBool& aIsPainting);
   NS_IMETHOD SetDefaultBackgroundColor(nscolor aColor);
   NS_IMETHOD GetDefaultBackgroundColor(nscolor* aColor);
@@ -284,7 +285,7 @@ private:
    */
   void DefaultRefresh(nsView* aView, nsIRenderingContext *aContext, const nsRect* aRect);
   void RenderViews(nsView *aRootView, nsIRenderingContext& aRC,
-                   const nsRegion& aRegion);
+                   const nsRegion& aRegion, nsIDrawingSurface* aRCSurface);
 
   void InvalidateRectDifference(nsView *aView, const nsRect& aRect, const nsRect& aCutOut, PRUint32 aUpdateFlags);
   void InvalidateHorizontalBandDifference(nsView *aView, const nsRect& aRect, const nsRect& aCutOut,
@@ -485,6 +486,7 @@ private:
   // mRootViewManager is a strong ref unless it equals |this|.  It's
   // never null (if we have no ancestors, it will be |this|).
   nsViewManager     *mRootViewManager;
+  PRPackedBool      mAllowDoubleBuffering;
 
   nsRevocableEventPtr<nsViewManagerEvent> mSynthMouseMoveEvent;
   nsRevocableEventPtr<nsViewManagerEvent> mInvalidateEvent;
