@@ -88,7 +88,6 @@ class nsILayoutHistoryState;
 class nsIReflowCallback;
 class nsISupportsArray;
 class nsIDOMNode;
-class nsIRegion;
 class nsIStyleFrameConstruction;
 class nsIStyleSheet;
 class nsCSSFrameConstructor;
@@ -96,7 +95,6 @@ class nsISelection;
 template<class E> class nsCOMArray;
 class nsWeakFrame;
 class nsIScrollableFrame;
-class gfxASurface;
 
 typedef short SelectionType;
 typedef PRUint32 nsFrameState;
@@ -696,36 +694,6 @@ public:
                              PRBool aIgnoreViewportScrolling,
                              nscolor aBackgroundColor,
                              nsIRenderingContext** aRenderedContext) = 0;
-
-  /**
-   * Renders a node aNode to a surface and returns it. The aRegion may be used
-   * to clip the rendering. This region is measured in device pixels from the
-   * edge of the presshell area. The aPoint, aScreenRect and aSurface
-   * arguments function in a similar manner as RenderSelection.
-   */
-  virtual already_AddRefed<gfxASurface> RenderNode(nsIDOMNode* aNode,
-                                                   nsIRegion* aRegion,
-                                                   nsPoint& aPoint,
-                                                   nsRect* aScreenRect) = 0;
-
-  /*
-   * Renders a selection to a surface and returns it. This method is primarily
-   * intended to create the drag feedback when dragging a selection.
-   *
-   * aScreenRect will be filled in with the bounding rectangle of the
-   * selection area on screen.
-   *
-   * If the area of the selection is large, the image will be scaled down.
-   * The argument aPoint is used in this case as a reference point when
-   * determining the new screen rectangle after scaling. Typically, this
-   * will be the mouse position, so that the screen rectangle is positioned
-   * such that the mouse is over the same point in the scaled image as in
-   * the original. When scaling does not occur, the mouse point isn't used
-   * as the position can be determined from the displayed frames.
-   */
-  virtual already_AddRefed<gfxASurface> RenderSelection(nsISelection* aSelection,
-                                                        nsPoint& aPoint,
-                                                        nsRect* aScreenRect) = 0;
 
   virtual void HidePopups() = 0;
 

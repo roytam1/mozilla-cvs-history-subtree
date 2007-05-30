@@ -40,8 +40,6 @@
 
 #include "nsIImageToPixbuf.h"
 
-class gfxASurface;
-
 class nsImageToPixbuf : public nsIImageToPixbuf {
     public:
         NS_DECL_ISUPPORTS
@@ -50,10 +48,6 @@ class nsImageToPixbuf : public nsIImageToPixbuf {
         // Friendlier version of ConvertImageToPixbuf for callers inside of
         // widget
         static GdkPixbuf* ImageToPixbuf(nsIImage* aImage);
-#ifdef MOZ_CAIRO_GFX
-        static GdkPixbuf* SurfaceToPixbuf(gfxASurface* aSurface,
-                                          PRInt32 aWidth, PRInt32 aHeight);
-#endif
     private:
         ~nsImageToPixbuf() {}
 };
