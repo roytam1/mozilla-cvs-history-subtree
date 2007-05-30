@@ -136,6 +136,7 @@ NS_IMETHODIMP nsRenderingContextGTK::Init(nsIDeviceContext* aContext,
 //  ::gdk_rgb_init();
 
   mSurface = new nsDrawingSurfaceGTK();
+  mDisplay = GDK_DISPLAY();
 
   if (mSurface)
   {
@@ -609,7 +610,7 @@ void nsRenderingContextGTK::UpdateGC()
                        rgn);
 
   if (mDashes)
-    ::XSetDashes(GDK_DISPLAY(), GDK_GC_XGC(mGC),
+    ::XSetDashes(mDisplay, GDK_GC_XGC(mGC),
                  0, mDashList, mDashes);
 }
 
@@ -865,36 +866,39 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawLine(nscoord aX0, nscoord aY0, nscoord 
 
   UpdateGC();
 
-  ::gdk_draw_line(mSurface->GetDrawable(),
-                  mGC,
-                  aX0, aY0, aX1-diffX, aY1-diffY);
+  ::XDrawLine(mDisplay, GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+              GDK_GC_XGC(mGC), aX0, aY0, aX1 - diffX, aY1 - diffY);
 
   return NS_OK;
 }
 
 NS_IMETHODIMP nsRenderingContextGTK::DrawPolyline(const nsPoint aPoints[], PRInt32 aNumPoints)
 {
-  PRInt32 i;
+  NS_ENSURE_TRUE(mTranMatrix != nsnull, NS_ERROR_FAILURE);
+  NS_ENSURE_TRUE(mSurface    != nsnull, NS_ERROR_FAILURE);
 
-  g_return_val_if_fail(mTranMatrix != NULL, NS_ERROR_FAILURE);
-  g_return_val_if_fail(mSurface != NULL, NS_ERROR_FAILURE);
+  PRInt32  i;
+  XPoint * xpoints;
+  XPoint * thispoint;
 
-  GdkPoint *pts = new GdkPoint[aNumPoints];
-  for (i = 0; i < aNumPoints; i++)
-  {
-    nsPoint p = aPoints[i];
-    mTranMatrix->TransformCoord(&p.x,&p.y);
-    pts[i].x = p.x;
-    pts[i].y = p.y;
+  xpoints = (XPoint *) malloc(sizeof(XPoint) * aNumPoints);
+  NS_ENSURE_TRUE(xpoints != nsnull, NS_ERROR_OUT_OF_MEMORY);
+
+  for (i = 0; i < aNumPoints; i++){
+    thispoint = (xpoints+i);
+    thispoint->x = aPoints[i].x;
+    thispoint->y = aPoints[i].y;
+    mTranMatrix->TransformCoord((PRInt32*)&thispoint->x,(PRInt32*)&thispoint->y);
   }
 
   UpdateGC();
 
-  ::gdk_draw_lines(mSurface->GetDrawable(),
-                   mGC,
-                   pts, aNumPoints);
+  ::XDrawLines(mDisplay,
+               GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+               GDK_GC_XGC(mGC),
+               xpoints, aNumPoints, CoordModeOrigin);
 
-  delete[] pts;
+  free((void *)xpoints);
 
   return NS_OK;
 }
@@ -933,11 +937,14 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawRect(nscoord aX, nscoord aY, nscoord aW
 
     UpdateGC();
 
-    ::gdk_draw_rectangle(mSurface->GetDrawable(), mGC,
-                         FALSE,
-                         x, y,
-                         w - 1,
-                         h - 1);
+    ::XDrawRectangle(mDisplay,
+                     GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+                     GDK_GC_XGC(mGC),
+                     x,
+                     y,
+                     w-1,
+                     h-1);
+
   }
 
   return NS_OK;
@@ -970,9 +977,13 @@ NS_IMETHODIMP nsRenderingContextGTK::FillRect(nscoord aX, nscoord aY, nscoord aW
 
   UpdateGC();
 
-  ::gdk_draw_rectangle(mSurface->GetDrawable(), mGC,
-                       TRUE,
-                       x, y, w, h);
+  if (!mDisplay)
+    mDisplay = GDK_DISPLAY();
+
+  ::XFillRectangle(mDisplay,
+                   GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+                   GDK_GC_XGC(mGC),
+                   x,y,w,h);
 
   return NS_OK;
 }
@@ -1011,9 +1022,13 @@ NS_IMETHODIMP nsRenderingContextGTK::InvertRect(nscoord aX, nscoord aY, nscoord 
   UpdateGC();
 
   // Fill the rect
-  ::gdk_draw_rectangle(mSurface->GetDrawable(), mGC,
-                       TRUE,
-                       x, y, w, h);
+  ::XFillRectangle(mDisplay,
+                   GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+                   GDK_GC_XGC(mGC),
+                   x,
+                   y,
+                   w,
+                   h);
 
   // Back to normal copy drawing mode
   mFunction = GDK_COPY;
@@ -1026,23 +1041,32 @@ NS_IMETHODIMP nsRenderingContextGTK::InvertRect(nscoord aX, nscoord aY, nscoord 
 
 NS_IMETHODIMP nsRenderingContextGTK::DrawPolygon(const nsPoint aPoints[], PRInt32 aNumPoints)
 {
-  g_return_val_if_fail(mTranMatrix != NULL, NS_ERROR_FAILURE);
-  g_return_val_if_fail(mSurface != NULL, NS_ERROR_FAILURE);
 
-  GdkPoint *pts = new GdkPoint[aNumPoints];
-  for (PRInt32 i = 0; i < aNumPoints; i++)
-  {
-    nsPoint p = aPoints[i];
-    mTranMatrix->TransformCoord(&p.x,&p.y);
-    pts[i].x = p.x;
-    pts[i].y = p.y;
+  NS_ENSURE_TRUE(mTranMatrix != nsnull, NS_ERROR_FAILURE);
+  NS_ENSURE_TRUE(mSurface    != nsnull, NS_ERROR_FAILURE);
+
+  PRInt32 i ;
+  XPoint * xpoints;
+  XPoint * thispoint;
+
+  xpoints = (XPoint *) malloc(sizeof(XPoint) * aNumPoints);
+  NS_ENSURE_TRUE(xpoints != nsnull, NS_ERROR_OUT_OF_MEMORY);
+
+  for (i = 0; i < aNumPoints; i++){
+    thispoint = (xpoints+i);
+    thispoint->x = aPoints[i].x;
+    thispoint->y = aPoints[i].y;
+    mTranMatrix->TransformCoord((PRInt32*)&thispoint->x,(PRInt32*)&thispoint->y);
   }
 
   UpdateGC();
 
-  ::gdk_draw_polygon(mSurface->GetDrawable(), mGC, FALSE, pts, aNumPoints);
+  ::XDrawLines(mDisplay,
+               GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+               GDK_GC_XGC(mGC),
+               xpoints, aNumPoints, CoordModeOrigin);
 
-  delete[] pts;
+  free((void *)xpoints);
 
   return NS_OK;
 }
@@ -1052,20 +1076,27 @@ NS_IMETHODIMP nsRenderingContextGTK::FillPolygon(const nsPoint aPoints[], PRInt3
   g_return_val_if_fail(mTranMatrix != NULL, NS_ERROR_FAILURE);
   g_return_val_if_fail(mSurface != NULL, NS_ERROR_FAILURE);
 
-  GdkPoint *pts = new GdkPoint[aNumPoints];
-  for (PRInt32 i = 0; i < aNumPoints; i++)
-  {
+  PRInt32 i ;
+  XPoint * xpoints;
+
+  xpoints = (XPoint *) malloc(sizeof(XPoint) * aNumPoints);
+  NS_ENSURE_TRUE(xpoints != nsnull, NS_ERROR_OUT_OF_MEMORY);
+
+  for (i = 0; i < aNumPoints; ++i) {
     nsPoint p = aPoints[i];
-    mTranMatrix->TransformCoord(&p.x,&p.y);
-    pts[i].x = p.x;
-    pts[i].y = p.y;
+    mTranMatrix->TransformCoord(&p.x, &p.y);
+    xpoints[i].x = p.x;
+    xpoints[i].y = p.y;
   }
 
   UpdateGC();
 
-  ::gdk_draw_polygon(mSurface->GetDrawable(), mGC, TRUE, pts, aNumPoints);
+  ::XFillPolygon(mDisplay,
+                 GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+                 GDK_GC_XGC(mGC),
+                 xpoints, aNumPoints, Complex, CoordModeOrigin);
 
-  delete[] pts;
+  free((void *)xpoints);
 
   return NS_OK;
 }
@@ -1091,9 +1122,10 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawEllipse(nscoord aX, nscoord aY, nscoord
 
   UpdateGC();
 
-  ::gdk_draw_arc(mSurface->GetDrawable(), mGC, FALSE,
-                 x, y, w, h,
-                 0, 360 * 64);
+  ::XDrawArc(mDisplay,
+             GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+             GDK_GC_XGC(mGC),
+             x, y, w, h, 0, 360 * 64);
 
   return NS_OK;
 }
@@ -1123,14 +1155,16 @@ NS_IMETHODIMP nsRenderingContextGTK::FillEllipse(nscoord aX, nscoord aY, nscoord
     /* Fix for bug 91816 ("bullets are not displayed correctly on certain text zooms")
      * De-uglify bullets on some X servers:
      * 1st: Draw... */
-    ::gdk_draw_arc(mSurface->GetDrawable(), mGC, FALSE,
-                   x, y, w, h,
-                   0, 360 * 64);
+     ::XDrawArc(mDisplay,
+               GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+               GDK_GC_XGC(mGC),
+               x, y, w, h, 0, 360*64);
     /*  ...then fill. */
   }
-  ::gdk_draw_arc(mSurface->GetDrawable(), mGC, TRUE,
-                 x, y, w, h,
-                 0, 360 * 64);
+  ::XFillArc(mDisplay,
+             GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+             GDK_GC_XGC(mGC),
+             x, y, w, h, 0, 360*64);
 
   return NS_OK;
 }
@@ -1159,10 +1193,11 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawArc(nscoord aX, nscoord aY,
 
   UpdateGC();
 
-  ::gdk_draw_arc(mSurface->GetDrawable(), mGC, FALSE,
-                 x, y, w, h,
-                 NSToIntRound(aStartAngle * 64.0f),
-                 NSToIntRound(aEndAngle * 64.0f));
+  ::XDrawArc(mDisplay,
+             GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+             GDK_GC_XGC(mGC),
+             x,y,w,h, NSToIntRound(aStartAngle * 64.0f),
+             NSToIntRound(aEndAngle * 64.0f));
 
   return NS_OK;
 }
@@ -1192,10 +1227,11 @@ NS_IMETHODIMP nsRenderingContextGTK::FillArc(nscoord aX, nscoord aY,
 
   UpdateGC();
 
-  ::gdk_draw_arc(mSurface->GetDrawable(), mGC, TRUE,
-                 x, y, w, h,
-                 NSToIntRound(aStartAngle * 64.0f),
-                 NSToIntRound(aEndAngle * 64.0f));
+  ::XFillArc(mDisplay,
+             GDK_DRAWABLE_XID(mSurface->GetDrawable()),
+             GDK_GC_XGC(mGC),
+             x,y,w,h, NSToIntRound(aStartAngle * 64.0f),
+             NSToIntRound(aEndAngle * 64.0f));
 
   return NS_OK;
 }

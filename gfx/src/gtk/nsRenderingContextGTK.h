@@ -53,6 +53,7 @@
 #include "nsDrawingSurfaceGTK.h"
 #include "nsRegionGTK.h"
 #include "nsIFontMetricsGTK.h"
+#include "X11/Xlib.h"
 
 #include <gtk/gtk.h>
 
@@ -287,6 +288,7 @@ private:
   int                    mDashes;
   nscolor                mCurrentColor;
   nsLineStyle            mCurrentLineStyle;
+  Display                *mDisplay;
 
   // ConditionRect is used to fix coordinate overflow problems for
   // rectangles after they are transformed to screen coordinates

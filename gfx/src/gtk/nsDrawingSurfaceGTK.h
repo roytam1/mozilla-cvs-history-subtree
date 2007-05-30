@@ -101,7 +101,7 @@ public:
  * that might hang around with the return from these.  instead use the ones
  * above.  pav
  */
-  GdkDrawable *GetDrawable(void) { return mPixmap; }
+  inline GdkDrawable *GetDrawable(void) { return mPixmap; }
 
   void GetSize(PRUint32 *aWidth, PRUint32 *aHeight) { *aWidth = mWidth; *aHeight = mHeight; }
 
