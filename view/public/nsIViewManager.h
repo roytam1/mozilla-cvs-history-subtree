@@ -390,6 +390,41 @@ public:
   NS_IMETHOD GetRootScrollableView(nsIScrollableView **aScrollable) = 0;
 
   /**
+   * Dump the specified view into a new offscreen rendering context.
+   * @param aRect is the region to capture into the offscreen buffer, in the view's
+   * coordinate system
+   * @param aUntrusted set to PR_TRUE if the contents may be passed to malicious
+   * agents. E.g. we might choose not to paint the contents of sensitive widgets
+   * such as the file name in a file upload widget, and we might choose not
+   * to paint themes.
+   * @param aIgnoreViewportScrolling ignore clipping/scrolling/scrollbar painting
+   * due to scrolling in the viewport
+   * @param aBackgroundColor a background color to render onto
+   * @param aRenderedContext gets set to a rendering context whose offscreen
+   * buffer can be locked to get the data. The buffer's size will be aRect's size.
+   * In all cases the caller must clean it up by calling
+   * cx->DestroyDrawingSurface(cx->GetDrawingSurface()).
+   */
+  NS_IMETHOD RenderOffscreen(nsIView* aView, nsRect aRect, PRBool aUntrusted,
+                             PRBool aIgnoreViewportScrolling,
+                             nscolor aBackgroundColor,
+                             nsIRenderingContext** aRenderedContext) = 0;
+
+  /**
+   * Add a listener to the view manager's composite listener list.
+   * @param aListener - new listener
+   * @result error status
+   */
+  NS_IMETHOD AddCompositeListener(nsICompositeListener *aListener) = 0;
+
+  /**
+   * Remove a listener from the view manager's composite listener list.
+   * @param aListener - listener to remove
+   * @result error status
+   */
+  NS_IMETHOD RemoveCompositeListener(nsICompositeListener *aListener) = 0;
+
+  /**
    * Retrieve the widget at the root of the view manager. This is the
    * widget associated with the root view, if the root view exists and has
    * a widget.
@@ -459,6 +494,45 @@ public:
    * (aFromScroll is false) or scrolled (aFromScroll is true).
    */
   NS_IMETHOD SynthesizeMouseMove(PRBool aFromScroll)=0;
+
+  /**
+   TEMPORARY. Expose BlendingBuffers to layout so layout can
+   paint with opacity. This will go away with cairo/thebes, or be moved
+   to layout, depending on what happens first.
+
+    This class represents an offscreen buffer which may have an alpha channel.
+    Currently, if an alpha channel is required, we implement it by rendering into
+    two buffers: one with a black background, one with a white background. We can
+    recover the alpha values by comparing corresponding final values for each pixel.
+  */
+  class BlendingBuffers {
+  public:
+    BlendingBuffers(nsIRenderingContext* aCleanupContext);
+    ~BlendingBuffers();
+
+    // used by the destructor to cleanup resources
+    nsCOMPtr<nsIRenderingContext> mCleanupContext;
+    // The primary rendering context. When an alpha channel is in use, this
+    // holds the black background.
+    nsCOMPtr<nsIRenderingContext> mBlackCX;
+    // Only used when an alpha channel is required; holds the white background.
+    nsCOMPtr<nsIRenderingContext> mWhiteCX;
+
+    PRBool mOwnBlackSurface;
+    // drawing surface for mBlackCX
+    nsIDrawingSurface*  mBlack;
+    // drawing surface for mWhiteCX
+    nsIDrawingSurface*  mWhite;
+
+    // The offset within the current widget at which this buffer will
+    // eventually be composited
+    nsPoint mOffset;
+  };
+
+  virtual BlendingBuffers* CreateBlendingBuffers(nsIRenderingContext *aRC, PRBool aBorrowContext,
+                                                 nsIDrawingSurface* aBorrowSurface, PRBool aNeedAlpha,
+                                                 const nsRect& aArea) = 0;
+  virtual nsIBlender* GetBlender() = 0;
 };
 
 NS_DEFINE_STATIC_IID_ACCESSOR(nsIViewManager, NS_IVIEWMANAGER_IID)
