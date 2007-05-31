@@ -93,6 +93,9 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsServerSocket)
 #include "nsUDPSocket.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsUDPSocket)
     
+#include "nsUDPSocketProvider.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsUDPSocketProvider)
+
 #include "nsAsyncStreamCopier.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAsyncStreamCopier)
 
@@ -1029,6 +1032,12 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
        NS_SOCKS4SOCKETPROVIDER_CID,
        NS_NETWORK_SOCKET_CONTRACTID_PREFIX "socks4",
        nsSOCKSSocketProvider::CreateV4
+    },
+
+    {  "nsUDPSocketProvider",
+       NS_UDPSOCKETPROVIDER_CID,
+       NS_NETWORK_SOCKET_CONTRACTID_PREFIX "udp",
+       nsUDPSocketProviderConstructor
     },
 
     {  NS_CACHESERVICE_CLASSNAME,
