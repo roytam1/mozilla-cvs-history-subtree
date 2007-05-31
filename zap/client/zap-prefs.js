@@ -4,6 +4,7 @@ pref("general.useragent.extra.zap", "zap/0.2.3");
 pref("signon.SignonFileName", "credentials.txt");
 pref("signon.SignonFileName2", "credentials2.txt");
 pref("signon.rememberSignons", true);
+pref("signon.debug", false);
 pref("general.useragent.locale", "en-US");
 pref("browser.preferences.instantApply", false);
 pref("browser.preferences.animateFadeIn", false);
