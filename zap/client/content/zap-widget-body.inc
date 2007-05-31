@@ -34,8 +34,7 @@
     <![CDATA[
       if (!this._validator) {
         var vexpr = this.getAttribute('validator');
-        if (!vexpr) vexpr = "function() {return true;}";
-        this._validator = eval(vexpr);
+        this._validator = vexpr ? eval(vexpr) : function() {return true;};
       }
       return this._validator;
     ]]>
