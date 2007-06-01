@@ -1,4 +1,4 @@
-/* -*- moz-jssh-buffer-globalobj: "Components.utils.importModule('gre:JSComponentUtils.jsm', null)" -*- */
+/* -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:JSComponentUtils.jsm', null)" -*- */
 /*
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -42,7 +42,7 @@
  * loader.
  *
  * Import into a JS component using
- * 'importModule("res:/jscodelib/ComponentUtils.js");'
+ * 'Components.utils.import("res:/jscodelib/ComponentUtils.js");'
  * 
  */
 
