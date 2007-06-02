@@ -74,22 +74,12 @@ static long monthToDayInYear[12] = {
     31+28+31+30+31+30+31+31+30+31+30,
 };
 
-static const PRTime January1st1     = (PRTime) LL_INIT(0xff234001U, 0x00d44000U);
-static const PRTime January1st1950  = (PRTime) LL_INIT(0xfffdc1f8U, 0x793da000U);
-static const PRTime January1st2050  = LL_INIT(0x0008f81e, 0x1b098000);
-static const PRTime January1st10000 = LL_INIT(0x0384440c, 0xcc736000);
-
 /* gmttime must contains UTC time in micro-seconds unit */
 SECStatus
 DER_TimeToUTCTimeArena(PRArenaPool* arenaOpt, SECItem *dst, int64 gmttime)
 {
     PRExplodedTime printableTime;
     unsigned char *d;
-
-    if ( (gmttime < January1st1950) || (gmttime >= January1st2050) ) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-        return SECFailure;
-    }
 
     dst->len = 13;
     if (arenaOpt) {
@@ -107,6 +97,10 @@ DER_TimeToUTCTimeArena(PRArenaPool* arenaOpt, SECItem *dst, int64 gmttime)
 
     /* The month in UTC time is base one */
     printableTime.tm_month++;
+
+    /* UTC time does not handle the years before 1950 */
+    if (printableTime.tm_year < 1950)
+	    return SECFailure;
 
     /* remove the century since it's added to the tm_year by the 
        PR_ExplodeTime routine, but is not needed for UTC time */
@@ -275,10 +269,6 @@ DER_TimeToGeneralizedTimeArena(PRArenaPool* arenaOpt, SECItem *dst, int64 gmttim
     PRExplodedTime printableTime;
     unsigned char *d;
 
-    if ( (gmttime<January1st1) || (gmttime>=January1st10000) ) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-        return SECFailure;
-    }
     dst->len = 15;
     if (arenaOpt) {
         dst->data = d = (unsigned char*) PORT_ArenaAlloc(arenaOpt, dst->len);
@@ -290,7 +280,9 @@ DER_TimeToGeneralizedTimeArena(PRArenaPool* arenaOpt, SECItem *dst, int64 gmttim
 	return SECFailure;
     }
 
-    /* Convert an int64 time to a printable format.  */
+    /*Convert a int64 time to a printable format. This is a temporary call
+	  until we change to NSPR 2.0
+     */
     PR_ExplodeTime(gmttime, PR_GMTParameters, &printableTime);
 
     /* The month in Generalized time is base one */
