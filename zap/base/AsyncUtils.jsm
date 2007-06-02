@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:AsyncUtils.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:AsyncUtils.jsm', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,7 +35,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-Components.utils.import("gre:FunctionUtils.js");
+Components.utils.import("gre:FunctionUtils.jsm");
 
 
 EXPORTED_SYMBOLS = [ "getMainThread",
@@ -93,7 +93,7 @@ defun(
     // We need to use 'this.Components' to ensure that xpconnect wraps
     // the timer for the caller's global object (assuming that the
     // callback has the same global object). See also the comments in
-    // ClassUtils.js, function makeClass().
+    // ClassUtils.jsm, function makeClass().
     var timer = this.Components.classes[CLASS_TIMER].createInstance(this.Components.interfaces.nsITimer);
     timer.initWithCallback(callback, duration, this.Components.interfaces.nsITimer.TYPE_ONE_SHOT);
     return timer;

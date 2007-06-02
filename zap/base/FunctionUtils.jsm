@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:FunctionUtils.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:FunctionUtils.jsm', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -40,7 +40,7 @@ EXPORTED_SYMBOLS = [ "defun",
                      "makeServiceGetter" ];
 
 // name our global object:
-// function toString() { return "[FunctionUtils.js]"; }
+// function toString() { return "[FunctionUtils.jsm]"; }
 
 //----------------------------------------------------------------------
 // defun

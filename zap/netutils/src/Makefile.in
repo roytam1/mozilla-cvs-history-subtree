@@ -35,7 +35,7 @@ XPIDLSRCS	= \
 		$(NULL)
 
 EXTRA_PP_COMPONENTS = \
-	zapStunResolver.js \
+	zapStunResolver.jsm \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

@@ -10,7 +10,7 @@ MODULE       = zap_client
 export XPI_NAME	= 
 
 EXTRA_PP_COMPONENTS = \
-	zapAutocompleter.js \
+	zapAutocompleter.jsm \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

@@ -38,12 +38,12 @@
 ////////////////////////////////////////////////////////////////////////
 // imports
 
-Components.utils.import("gre:ClassUtils.js");
-Components.utils.import("gre:RDFUtils.js");
-Components.utils.import("gre:FileUtils.js");
-Components.utils.import("gre:StringUtils.js");
-Components.utils.import("gre:AsyncUtils.js");
-Components.utils.import("gre:ArrayUtils.js");
+Components.utils.import("gre:ClassUtils.jsm");
+Components.utils.import("gre:RDFUtils.jsm");
+Components.utils.import("gre:FileUtils.jsm");
+Components.utils.import("gre:StringUtils.jsm");
+Components.utils.import("gre:AsyncUtils.jsm");
+Components.utils.import("gre:ArrayUtils.jsm");
 
 ////////////////////////////////////////////////////////////////////////
 // globals
@@ -622,7 +622,7 @@ Identity.rdfLiteralAttrib("urn:mozilla:zap:registration_status",
 
 // This is to provide an entrypoint for template recursion. see
 // e.g. calls.xul for usage and comments in
-// RDFUtils.js::rdfPointerAttrib:
+// RDFUtils.jsm::rdfPointerAttrib:
 Identity.rdfPointerAttrib("urn:mozilla:zap:root",
                           "urn:mozilla:zap:current-identity",
                           "ephemeral");
@@ -1969,7 +1969,7 @@ ForeignRegistration.rdfLiteralAttrib("urn:mozilla:zap:aor", "");
 
 // This is to provide an entrypoint for template recursion. see
 // e.g. calls.xul for usage and comments in
-// RDFUtils.js::rdfPointerAttrib:
+// RDFUtils.jsm::rdfPointerAttrib:
 ForeignRegistration.rdfPointerAttrib("urn:mozilla:zap:root",
                                      "urn:mozilla:zap:current-foreign-registration",
                                      "ephemeral");
@@ -2583,7 +2583,7 @@ SIPCall.rdfLiteralAttrib("urn:mozilla:zap:chromepage",
 
 // This is to provide an entrypoint for template recursion. see
 // e.g. calls.xul for usage and comments in
-// RDFUtils.js::rdfPointerAttrib:
+// RDFUtils.jsm::rdfPointerAttrib:
 SIPCall.rdfPointerAttrib("urn:mozilla:zap:root",
                       "urn:mozilla:zap:current-call",
                       "ephemeral");

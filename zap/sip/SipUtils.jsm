@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipUtils.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipUtils.jsm', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -43,9 +43,9 @@
 
 debug("*** loading SipUtils\n");
 
-Components.utils.import("gre:StringUtils.js");
-Components.utils.import("gre:FunctionUtils.js");
-Components.utils.import("gre:AsyncUtils.js");
+Components.utils.import("gre:StringUtils.jsm");
+Components.utils.import("gre:FunctionUtils.jsm");
+Components.utils.import("gre:AsyncUtils.jsm");
 
 EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     "getSIPThread",
@@ -60,12 +60,12 @@ EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     "constructServerTransactionKey",
                     "constructClientDialogID",
                     "constructServerDialogID",
-                    "makeOneShotTimer", // from AsyncUtils.js
-                    "resetOneShotTimer" // from AsyncUtils.js
+                    "makeOneShotTimer", // from AsyncUtils.jsm
+                    "resetOneShotTimer" // from AsyncUtils.jsm
                     ];
 
 // name our global object:
-// function toString() { return "[SipUtils.js]"; }
+// function toString() { return "[SipUtils.jsm]"; }
 
 ////////////////////////////////////////////////////////////////////////
 // Constants:
@@ -81,7 +81,7 @@ var BRANCH_COOKIE = "z9hG4bK";
 // The SIP stack runs on the main UI thread; handing off to other
 // threads for asynchronous actions, such as sending data or querying
 // dns.
-var getSIPThread = getMainThread; // from AsyncUtils.js
+var getSIPThread = getMainThread; // from AsyncUtils.jsm
 
 // Some of our objects need to be manually proxied so that they only
 // get called on the main SIP thread,
@@ -115,7 +115,7 @@ function getProxyOnSIPThread(aObject, aInterface) {
 
 // access the syntax factory directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gSyntaxFactory = Components.utils.import('gre:SipSyntaxFactory.js', null).theSyntaxFactory;
+var gSyntaxFactory = Components.utils.import('gre:SipSyntaxFactory.jsm', null).theSyntaxFactory;
 
 ////////////////////////////////////////////////////////////////////////
 // getDNSService: get the global dns service instance
@@ -139,13 +139,13 @@ var getNetUtils = makeServiceGetter("@mozilla.org/zap/netutils;1",
 
 // access the logging service directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gLoggingService = Components.utils.import('gre:LoggingService.js', null).theLoggingService;
+var gLoggingService = Components.utils.import('gre:LoggingService.jsm', null).theLoggingService;
 
 ////////////////////////////////////////////////////////////////////////
 // gUUIDGenerator: global UUID generator service instance
 
 // access directly via JS:
-var gUUIDGenerator = Components.utils.import('gre:zapUUIDGenerator.js', null).theUUIDGenerator;
+var gUUIDGenerator = Components.utils.import('gre:zapUUIDGenerator.jsm', null).theUUIDGenerator;
 
 
 ////////////////////////////////////////////////////////////////////////

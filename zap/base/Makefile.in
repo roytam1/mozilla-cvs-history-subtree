@@ -27,18 +27,18 @@ CPPSRCS		= \
 		$(NULL)
 
 EXTRA_PP_COMPONENTS = \
-	ArrayUtils.js \
-	AsyncUtils.js \
-	ClassUtils.js  \
-	DocUtils.js \
-	FileUtils.js \
-	FunctionUtils.js \
-	LoggingService.js \
-	ObjectUtils.js \
-	RDFUtils.js \
-	StringUtils.js \
-	zapUUIDGenerator.js \
-	zapVerboseErrorService.js \
+	ArrayUtils.jsm \
+	AsyncUtils.jsm \
+	ClassUtils.jsm  \
+	DocUtils.jsm \
+	FileUtils.jsm \
+	FunctionUtils.jsm \
+	LoggingService.jsm \
+	ObjectUtils.jsm \
+	RDFUtils.jsm \
+	StringUtils.jsm \
+	zapUUIDGenerator.jsm \
+	zapVerboseErrorService.jsm \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

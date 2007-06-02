@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:RDFUtils.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:RDFUtils.jsm', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,14 +35,14 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-Components.utils.import("gre:ArrayUtils.js");
-Components.utils.import("gre:ClassUtils.js");
-Components.utils.import("gre:ObjectUtils.js");
+Components.utils.import("gre:ArrayUtils.jsm");
+Components.utils.import("gre:ClassUtils.jsm");
+Components.utils.import("gre:ObjectUtils.jsm");
 
 EXPORTED_SYMBOLS = [ "PersistentRDFObject"];
 
 // name our global object:
-// function toString() { return "[RDFUtils.js]"; }
+// function toString() { return "[RDFUtils.jsm]"; }
 
 
 ////////////////////////////////////////////////////////////////////////

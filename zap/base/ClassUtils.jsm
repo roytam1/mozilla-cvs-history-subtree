@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:ClassUtils.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:ClassUtils.jsm', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,9 +35,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-Components.utils.import("gre:ArrayUtils.js");
-Components.utils.import("gre:ObjectUtils.js");
-Components.utils.import("gre:AsyncUtils.js");
+Components.utils.import("gre:ArrayUtils.jsm");
+Components.utils.import("gre:ObjectUtils.jsm");
+Components.utils.import("gre:AsyncUtils.jsm");
 
 EXPORTED_SYMBOLS = [ "StdClass",
                      "makeClass",
@@ -58,7 +58,7 @@ EXPORTED_SYMBOLS = [ "StdClass",
                      "WeakHash"];
 
 // name our global object:
-// function toString() { return "[ClassUtils.js]"; }
+// function toString() { return "[ClassUtils.jsm]"; }
 
 ////////////////////////////////////////////////////////////////////////
 // StdClass bootstrapping
@@ -422,17 +422,17 @@ function makeClass(name /*, [opt] base classes to merge */) {
   // wrapped.
   // This can cause COM identity problems (and inefficiencies) if we are
   // not careful about object's parent chains. E.g. consider a class
-  // foo, defined in module [foo.js]. If foo was created with instantiate(),
-  // rather than instantiateWithParent, its parent would be [ClassUtils.js]
-  // rather than [foo.js]. Its methods, however, defined in [foo.js] would
-  // have the parent [foo.js].
+  // foo, defined in module [foo.jsm]. If foo was created with instantiate(),
+  // rather than instantiateWithParent, its parent would be [ClassUtils.jsm]
+  // rather than [foo.jsm]. Its methods, however, defined in [foo.jsm] would
+  // have the parent [foo.jsm].
   // Consider a method on foo that creates a new timer, sets foo itself
   // as callback and then stores the timer in a variable T. Since foo's
-  // method's have [foo.js] as parent, T will be wrapped for [foo.js].
+  // method's have [foo.jsm] as parent, T will be wrapped for [foo.jsm].
   // When the timer fires, it calls foo.notify and passes itself as
   // argument. In wrapping this argument, xpconnect examines foo for
   // its global object. The timer argument will thus be wrapped for
-  // [ClassUtils.js]. If the foo.notify() now compares the argument
+  // [ClassUtils.jsm]. If the foo.notify() now compares the argument
   // against T, the objects will appear as not equal, because they
   // have different wrappers!
   // To avoid these problems, it is usually sufficient to ensure that
@@ -476,7 +476,7 @@ function getVerboseErrorService() {
     //gVerboseErrorService = Components.classes["@mozilla.org/zap/verbose-error-reporter;1"].getService(Components.interfaces.zapIVerboseErrorService);
 
     // create via js:
-    gVerboseErrorService = Components.utils.import("gre:zapVerboseErrorService.js", null).theVerboseErrorService;
+    gVerboseErrorService = Components.utils.import("gre:zapVerboseErrorService.jsm", null).theVerboseErrorService;
   }
   return gVerboseErrorService;
 }
@@ -684,7 +684,7 @@ ClassInfoImpl.obj("flags", 0);
 // Class PropertyBag: a class implementing nsIPropertyBag, 
 // nsIPropertyBag2 and nsIWritablePropertyBag.
 // Values are stored as properties on the instance, with keys prefixed
-// by '$' (see ObjectUtils.js hash functions).
+// by '$' (see ObjectUtils.jsm hash functions).
 
 var PropertyBag = makeClass("PropertyBag", SupportsImpl);
 PropertyBag.addInterfaces(Components.interfaces.nsIPropertyBag,

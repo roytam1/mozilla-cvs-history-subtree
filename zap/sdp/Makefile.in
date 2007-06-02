@@ -10,10 +10,10 @@ DIRS         = idl
 MODULE       = zap_sdp
 
 EXTRA_PP_COMPONENTS = \
-	SdpService.js \
-	MediaSession.js \
-	zapCodecRegistry.js \
-	zapICE.js \
+	SdpService.jsm \
+	MediaSession.jsm \
+	zapCodecRegistry.jsm \
+	zapICE.jsm \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

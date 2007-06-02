@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapCodecRegistry.js', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapCodecRegistry.jsm', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -36,15 +36,15 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-debug("*** loading zapCodecRegistry.js\n");
+debug("*** loading zapCodecRegistry.jsm\n");
 
-Components.utils.import("gre:ClassUtils.js");
-Components.utils.import("gre:ObjectUtils.js");
+Components.utils.import("gre:ClassUtils.jsm");
+Components.utils.import("gre:ObjectUtils.jsm");
 
 EXPORTED_SYMBOLS = [ "createCodecInstance" ];
 
 // name our global object:
-// function toString() { return "[zapCodecRegistry.js]"; }
+// function toString() { return "[zapCodecRegistry.jsm]"; }
 
 var PB = makePropertyBag2Proxy;
 
@@ -59,7 +59,7 @@ var PB = makePropertyBag2Proxy;
 
 // access the sdp service directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gSdpService = Components.utils.import('gre:SdpService.js', null).theSdpService;
+var gSdpService = Components.utils.import('gre:SdpService.jsm', null).theSdpService;
 
 ////////////////////////////////////////////////////////////////////////
 // gCodecRegistry: global codec registry

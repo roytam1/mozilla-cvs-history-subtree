@@ -10,15 +10,15 @@ DIRS         = idl
 MODULE       = zap_sip
 
 EXTRA_PP_COMPONENTS = \
-	SipSyntaxFactory.js \
-	SipTransport.js \
-	SipUAStack.js \
-	SipTransactions.js \
-	SipResolver.js \
-	SipAuthentication.js \
-	SipUtils.js \
-	SipUARequestCore.js \
-	SipDialog.js \
+	SipSyntaxFactory.jsm \
+	SipTransport.jsm \
+	SipUAStack.jsm \
+	SipTransactions.jsm \
+	SipResolver.jsm \
+	SipAuthentication.jsm \
+	SipUtils.jsm \
+	SipUARequestCore.jsm \
+	SipDialog.jsm \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

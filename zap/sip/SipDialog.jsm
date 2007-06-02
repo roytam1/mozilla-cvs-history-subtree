@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipDialog.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipDialog.jsm', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -42,15 +42,15 @@ EXPORTED_SYMBOLS = [ "constructClientDialogID",
                      "constructServerDialogID",
                      "SipDialog" ];
 
-Components.utils.import("gre:ClassUtils.js");
-Components.utils.import("gre:ArrayUtils.js");
-Components.utils.import("gre:StringUtils.js");
-Components.utils.import("gre:ObjectUtils.js");
-Components.utils.import("gre:SipUtils.js");
-Components.utils.import("gre:SipUARequestCore.js");
+Components.utils.import("gre:ClassUtils.jsm");
+Components.utils.import("gre:ArrayUtils.jsm");
+Components.utils.import("gre:StringUtils.jsm");
+Components.utils.import("gre:ObjectUtils.jsm");
+Components.utils.import("gre:SipUtils.jsm");
+Components.utils.import("gre:SipUARequestCore.jsm");
 
 // name our global object:
-// function toString() { return "[SipDialog.js]"; }
+// function toString() { return "[SipDialog.jsm]"; }
 
 
 ////////////////////////////////////////////////////////////////////////
