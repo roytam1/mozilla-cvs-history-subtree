@@ -476,7 +476,7 @@ function getVerboseErrorService() {
     //gVerboseErrorService = Components.classes["@mozilla.org/zap/verbose-error-reporter;1"].getService(Components.interfaces.zapIVerboseErrorService);
 
     // create via js:
-    gVerboseErrorService = Components.utils.import("gre:zapVerboseErrorService.jsm", null).theVerboseErrorService;
+    gVerboseErrorService = Components.utils.import("gre:zapVerboseErrorService.js", null).theVerboseErrorService;
   }
   return gVerboseErrorService;
 }

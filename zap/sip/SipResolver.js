@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipResolver.jsm', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipResolver.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -36,7 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 
-debug("*** loading SipResolver.jsm\n");
+debug("*** loading SipResolver.js\n");
 
 Components.utils.import("gre:XPCOMUtils.jsm");
 Components.utils.import("gre:ClassUtils.jsm");
@@ -46,7 +46,7 @@ Components.utils.import("gre:ObjectUtils.jsm");
 Components.utils.import("gre:SipUtils.jsm");
 
 // name our global object:
-// function toString() { return "[SipResolver.jsm]"; }
+// function toString() { return "[SipResolver.js]"; }
 
 
 ////////////////////////////////////////////////////////////////////////

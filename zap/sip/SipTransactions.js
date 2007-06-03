@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipTransactions.jsm', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipTransactions.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -45,7 +45,7 @@ Components.utils.import("gre:ObjectUtils.jsm");
 Components.utils.import("gre:SipUtils.jsm");
 
 // name our global object:
-// function toString() { return "[SipTransactions.jsm]"; }
+// function toString() { return "[SipTransactions.js]"; }
 
 
 //----------------------------------------------------------------------

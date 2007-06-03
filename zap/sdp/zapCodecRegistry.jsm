@@ -59,7 +59,7 @@ var PB = makePropertyBag2Proxy;
 
 // access the sdp service directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gSdpService = Components.utils.import('gre:SdpService.jsm', null).theSdpService;
+var gSdpService = Components.utils.import('gre:SdpService.js', null).theSdpService;
 
 ////////////////////////////////////////////////////////////////////////
 // gCodecRegistry: global codec registry

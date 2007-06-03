@@ -10,12 +10,12 @@ DIRS         = idl
 MODULE       = zap_sip
 
 EXTRA_PP_COMPONENTS = \
-	SipSyntaxFactory.jsm \
-	SipTransport.jsm \
-	SipUAStack.jsm \
-	SipTransactions.jsm \
-	SipResolver.jsm \
-	SipAuthentication.jsm \
+	SipSyntaxFactory.js \
+	SipTransport.js \
+	SipUAStack.js \
+	SipTransactions.js \
+	SipResolver.js \
+	SipAuthentication.js \
 	SipUtils.jsm \
 	SipUARequestCore.jsm \
 	SipDialog.jsm \

@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:LoggingService.jsm', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:LoggingService.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,7 +35,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-debug("*** loading LoggingService.jsm\n");
+debug("*** loading LoggingService.js\n");
 
 Components.utils.import("gre:XPCOMUtils.jsm");
 Components.utils.import("gre:ClassUtils.jsm");
@@ -44,7 +44,7 @@ Components.utils.import("gre:StringUtils.jsm");
 Components.utils.import("gre:ObjectUtils.jsm");
 
 // name our global object:
-// function toString() { return "[LoggingService.jsm]"; }
+// function toString() { return "[LoggingService.js]"; }
 
 ////////////////////////////////////////////////////////////////////////
 // Class LoggingService

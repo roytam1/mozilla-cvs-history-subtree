@@ -115,7 +115,7 @@ function getProxyOnSIPThread(aObject, aInterface) {
 
 // access the syntax factory directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gSyntaxFactory = Components.utils.import('gre:SipSyntaxFactory.jsm', null).theSyntaxFactory;
+var gSyntaxFactory = Components.utils.import('gre:SipSyntaxFactory.js', null).theSyntaxFactory;
 
 ////////////////////////////////////////////////////////////////////////
 // getDNSService: get the global dns service instance
@@ -139,13 +139,13 @@ var getNetUtils = makeServiceGetter("@mozilla.org/zap/netutils;1",
 
 // access the logging service directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gLoggingService = Components.utils.import('gre:LoggingService.jsm', null).theLoggingService;
+var gLoggingService = Components.utils.import('gre:LoggingService.js', null).theLoggingService;
 
 ////////////////////////////////////////////////////////////////////////
 // gUUIDGenerator: global UUID generator service instance
 
 // access directly via JS:
-var gUUIDGenerator = Components.utils.import('gre:zapUUIDGenerator.jsm', null).theUUIDGenerator;
+var gUUIDGenerator = Components.utils.import('gre:zapUUIDGenerator.js', null).theUUIDGenerator;
 
 
 ////////////////////////////////////////////////////////////////////////

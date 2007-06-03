@@ -10,8 +10,8 @@ DIRS         = idl
 MODULE       = zap_sdp
 
 EXTRA_PP_COMPONENTS = \
-	SdpService.jsm \
-	MediaSession.jsm \
+	SdpService.js \
+	MediaSession.js \
 	zapCodecRegistry.jsm \
 	zapICE.jsm \
 	$(NULL)

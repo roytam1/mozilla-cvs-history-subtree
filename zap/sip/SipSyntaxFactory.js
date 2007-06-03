@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipSyntaxFactory.jsm', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipSyntaxFactory.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -44,7 +44,7 @@ Components.utils.import("gre:StringUtils.jsm");
 Components.utils.import("gre:ObjectUtils.jsm");
 
 // name our global object:
-// function toString() { return "[SipSyntaxFactory.jsm]"; }
+// function toString() { return "[SipSyntaxFactory.js]"; }
 
 
 ////////////////////////////////////////////////////////////////////////

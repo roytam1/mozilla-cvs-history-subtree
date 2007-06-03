@@ -33,12 +33,12 @@ EXTRA_PP_COMPONENTS = \
 	DocUtils.jsm \
 	FileUtils.jsm \
 	FunctionUtils.jsm \
-	LoggingService.jsm \
+	LoggingService.js \
 	ObjectUtils.jsm \
 	RDFUtils.jsm \
 	StringUtils.jsm \
-	zapUUIDGenerator.jsm \
-	zapVerboseErrorService.jsm \
+	zapUUIDGenerator.js \
+	zapVerboseErrorService.js \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

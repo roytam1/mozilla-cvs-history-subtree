@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapAutocompleter.jsm', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapAutocompleter.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -46,7 +46,7 @@ Components.utils.import("gre:ObjectUtils.jsm");
 Components.utils.import("gre:FileUtils.jsm");
 
 // name our global object:
-// function toString() { return "[zapAutocompleter.jsm]"; }
+// function toString() { return "[zapAutocompleter.js]"; }
 
 ////////////////////////////////////////////////////////////////////////
 // Globals

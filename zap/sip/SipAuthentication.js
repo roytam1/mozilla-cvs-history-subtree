@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipAuthentication.jsm', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipAuthentication.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,7 +35,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-debug("*** loading SipResolver.jsm\n");
+debug("*** loading SipAuthentication.js\n");
 
 Components.utils.import("gre:XPCOMUtils.jsm");
 Components.utils.import("gre:ClassUtils.jsm");
@@ -45,7 +45,7 @@ Components.utils.import("gre:ObjectUtils.jsm");
 Components.utils.import("gre:SipUtils.jsm");
 
 // name our global object:
-// function toString() { return "[SipAuthentication.jsm]"; }
+// function toString() { return "[SipAuthentication.js]"; }
 
 ////////////////////////////////////////////////////////////////////////
 // SipAuthentication
@@ -93,7 +93,7 @@ function unquote(data) {
   if (!data) return "";
   if (data[0] == '"' && data[data.length-1] == '"')
     return data.substring(1, data.length-1);
-  dump("warning: SipAuthentication.jsm::unquote: "+data+" is already unquoted\n");
+  dump("warning: SipAuthentication.js::unquote: "+data+" is already unquoted\n");
   return data;
 }
 

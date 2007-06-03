@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:SdpService.jsm', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:SdpService.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -45,7 +45,7 @@ Components.utils.import("gre:StringUtils.jsm");
 Components.utils.import("gre:ObjectUtils.jsm");
 
 // name our global object:
-// function toString() { return "[SdpService.jsm]"; }
+// function toString() { return "[SdpService.js]"; }
 
 ////////////////////////////////////////////////////////////////////////
 // global constants

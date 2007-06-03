@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapVerboseErrorService.jsm', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapVerboseErrorService.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,7 +35,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-debug("*** loading zapVerboseErrorService.jsm\n");
+debug("*** loading zapVerboseErrorService.js\n");
 
 Components.utils.import("gre:XPCOMUtils.jsm");
 Components.utils.import("gre:ClassUtils.jsm");
@@ -44,7 +44,7 @@ Components.utils.import("gre:StringUtils.jsm");
 Components.utils.import("gre:ObjectUtils.jsm");
 
 // name our global object:
-// function toString() { return "[zapVerboseErrorService.jsm]"; }
+// function toString() { return "[zapVerboseErrorService.js]"; }
 
 // XXX 51 is the GENERAL error module. We should define our own
 // NS_ERROR_MODULE_ZAP in xpcom/base/nsError.h at some point
