@@ -971,26 +971,6 @@ toolkit/themes/winstripe/mozapps/Makefile
 toolkit/xre/Makefile
 "
 
-MAKEFILES_zap="
-zap/Makefile
-zap/base/Makefile
-zap/base/idl/Makefile
-zap/sdp/Makefile
-zap/sdp/idl/Makefile
-zap/sip/Makefile
-zap/sip/idl/Makefile
-zap/sip/idl/syntax/Makefile
-zap/client/Makefile
-zap/client/profile/Makefile
-zap/client/src/Makefile
-zap/zmk/Makefile
-zap/zmk/portaudio_v18_1/Makefile
-zap/zmk/speex-1.1.10/Makefile
-zap/zmk/speex-1.1.10/libspeex/Makefile
-zap/zmk/base/Makefile
-zap/zmk/src/Makefile
-"
-
 MAKEFILES_standalone_composer="
 composer/Makefile
 composer/app/Makefile
@@ -1417,10 +1397,6 @@ fi
 
 if test -n "$MOZ_XULRUNNER"; then
     add_makefiles "$MAKEFILES_xulrunner"
-fi
-
-if test -n "$MOZ_ZAP"; then
-    add_makefiles "$MAKEFILES_zap"
 fi
 
 if test -n "$MOZ_STANDALONE_COMPOSER"; then
