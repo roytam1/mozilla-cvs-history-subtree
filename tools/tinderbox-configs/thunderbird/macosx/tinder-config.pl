@@ -142,7 +142,7 @@ $ConfigureOnly = 1;
 
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.0-candidates/rc1/thunderbird-2.0.0.0.en-US.mac.dmg" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.4-candidates/rc1/thunderbird-2.0.0.4.en-US.mac.dmg" =>
 	     "/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/Darwin_8.7.0_Depend/thunderbird.dmg"
 	     );
 
@@ -161,7 +161,7 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/Darwin_
 $BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
-$BuildTag = 'THUNDERBIRD_2_0_0_0_RELEASE';
+$BuildTag = 'THUNDERBIRD_2_0_0_4_RELEASE';
 #$BuildTag = 'AVIARY_1_0_1_20050124_BRANCH';
 #$BuildTag = 'FIREFOX_1_0_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
@@ -201,7 +201,7 @@ $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
-$milestone     = "thunderbird2.0.0.0-l10n";
+$milestone     = "thunderbird2.0.0.4-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
