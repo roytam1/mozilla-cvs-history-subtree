@@ -219,18 +219,9 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
         mkdir -p ${TESTDIR}
     fi
 
-#HOST and DOMSUF are needed for the server cert
-
-    DOMAINNAME=`which domainname`
-    if [ -z "${DOMSUF}" -a $? -eq 0 -a -n "${DOMAINNAME}" ]; then
-        DOMSUF=`domainname`
-    fi
-
+#HOST and DOMSUF are needed for the server cert 
     case $HOST in
         *\.*)
-            if [ -z "${DOMSUF}" ]; then
-                DOMSUF=`echo $HOST | sed -e "s/^[^.]*\.//"`
-            fi
             HOST=`echo $HOST | sed -e "s/\..*//"`
             ;;
         ?*)
@@ -239,9 +230,6 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
             HOST=`uname -n`
             case $HOST in
                 *\.*)
-                    if [ -z "${DOMSUF}" ]; then
-                        DOMSUF=`echo $HOST | sed -e "s/^[^.]*\.//"`
-                    fi
                     HOST=`echo $HOST | sed -e "s/\..*//"`
                     ;;
                 ?*)
@@ -255,10 +243,12 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     esac
 
     if [ -z "${DOMSUF}" ]; then
-        echo "$SCRIPTNAME: Fatal DOMSUF env. variable is not defined."
-        exit 1 #does not need to be Exit, very early in script
+        DOMSUF=`domainname`
+        if  [ -z "${DOMSUF}" ]; then
+            echo "$SCRIPTNAME: Fatal DOMSUF env. variable is not defined."
+            exit 1 #does not need to be Exit, very early in script
+        fi
     fi
-
 #HOSTADDR was a workaround for the dist. stress test, and is probably 
 #not needed anymore (purpose: be able to use IP address for the server 
 #cert instead of PC name which was not in the DNS because of dyn IP address
@@ -397,11 +387,6 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     EXT_SERVERDIR=${HOSTDIR}/ext_server
     EXT_CLIENTDIR=${HOSTDIR}/ext_client
 
-    IOPR_CADIR=${HOSTDIR}/CA_iopr
-    IOPR_SSL_SERVERDIR=${HOSTDIR}/server_ssl_iopr
-    IOPR_SSL_CLIENTDIR=${HOSTDIR}/client_ssl_iopr
-    IOPR_OCSP_CLIENTDIR=${HOSTDIR}/client_ocsp_iopr
-
     CERT_EXTENSIONS_DIR=${HOSTDIR}/cert_extensions
 
     PWFILE=${TMP}/tests.pw.$$
@@ -435,10 +420,6 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     R_CADIR=../CA
     R_SERVERDIR=../server
     R_CLIENTDIR=../client
-    R_IOPR_CADIR=../CA_iopr
-    R_IOPR_SSL_SERVERDIR=../server_ssl_iopr
-    R_IOPR_SSL_CLIENTDIR=../client_ssl_iopr
-    R_IOPR_OCSP_CLIENTDIR=../client_ocsp_iopr
     R_ALICEDIR=../alicedir
     R_BOBDIR=../bobdir
     R_DAVEDIR=../dave
@@ -542,20 +523,6 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     TOTAL_GRP_NUM=3
     
     RELOAD_CRL=1
-
-    #################################################
-    # Interoperability testing constatnts
-    #
-    # if suite is setup for testing, IOPR_HOSTADDR_LIST should have
-    # at least one host name(FQDN)
-    # Example   IOPR_HOSTADDR_LIST="goa1.SFBay.Sun.COM"
-
-    if [ -z "`echo ${IOPR_HOSTADDR_LIST} | grep '[A-Za-z]'`" ]; then
-        IOPR=0
-    else
-        IOPR=1
-    fi
-    #################################################
 
     SCRIPTNAME=$0
     INIT_SOURCED=TRUE   #whatever one does - NEVER export this one please

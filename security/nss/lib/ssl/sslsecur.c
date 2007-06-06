@@ -433,20 +433,6 @@ sslBuffer_Grow(sslBuffer *b, unsigned int newLen)
     return SECSuccess;
 }
 
-SECStatus 
-sslBuffer_Append(sslBuffer *b, const void * data, unsigned int len)
-{
-    unsigned int newLen = b->len + len;
-    SECStatus rv;
-
-    rv = sslBuffer_Grow(b, newLen);
-    if (rv != SECSuccess)
-    	return rv;
-    PORT_Memcpy(b->buf + b->len, data, len);
-    b->len += len;
-    return SECSuccess;
-}
-
 /*
 ** Save away write data that is trying to be written before the security
 ** handshake has been completed. When the handshake is completed, we will
@@ -456,13 +442,22 @@ sslBuffer_Append(sslBuffer *b, const void * data, unsigned int len)
 SECStatus 
 ssl_SaveWriteData(sslSocket *ss, const void *data, unsigned int len)
 {
+    unsigned int newlen;
     SECStatus    rv;
 
     PORT_Assert( ss->opt.noLocks || ssl_HaveXmitBufLock(ss) );
-    rv = sslBuffer_Append(&ss->pendingBuf, data, len);
-    SSL_TRC(5, ("%d: SSL[%d]: saving %u bytes of data (%u total saved so far)",
-		 SSL_GETPID(), ss->fd, len, ss->pendingBuf.len));
-    return rv;
+    newlen = ss->pendingBuf.len + len;
+    if (newlen > ss->pendingBuf.space) {
+	rv = sslBuffer_Grow(&ss->pendingBuf, newlen);
+	if (rv) {
+	    return rv;
+	}
+    }
+    SSL_TRC(5, ("%d: SSL[%d]: saving %d bytes of data (%d total saved so far)",
+		 SSL_GETPID(), ss->fd, len, newlen));
+    PORT_Memcpy(ss->pendingBuf.buf + ss->pendingBuf.len, data, len);
+    ss->pendingBuf.len = newlen;
+    return SECSuccess;
 }
 
 /*
