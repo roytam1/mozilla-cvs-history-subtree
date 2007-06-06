@@ -86,7 +86,6 @@ typedef SSLSignType     SSL3SignType;
 #define calg_idea	ssl_calg_idea
 #define calg_fortezza	ssl_calg_fortezza /* deprecated, must preserve */
 #define calg_aes	ssl_calg_aes
-#define calg_camellia	ssl_calg_camellia
 
 #define mac_null	ssl_mac_null
 #define mac_md5 	ssl_mac_md5
@@ -171,7 +170,7 @@ typedef enum { SSLAppOpRead = 0,
 #define SSL3_MASTER_SECRET_LENGTH 48
 
 /* number of wrap mechanisms potentially used to wrap master secrets. */
-#define SSL_NUM_WRAP_MECHS              15
+#define SSL_NUM_WRAP_MECHS              14
 
 /* This makes the cert cache entry exactly 4k. */
 #define SSL_MAX_CACHED_CERT_LEN		4060
@@ -312,9 +311,9 @@ typedef struct {
 } ssl3CipherSuiteCfg;
 
 #ifdef NSS_ENABLE_ECC
-#define ssl_V3_SUITES_IMPLEMENTED 49
+#define ssl_V3_SUITES_IMPLEMENTED 43
 #else
-#define ssl_V3_SUITES_IMPLEMENTED 29
+#define ssl_V3_SUITES_IMPLEMENTED 23
 #endif /* NSS_ENABLE_ECC */
 
 typedef struct sslOptionsStr {
@@ -470,8 +469,6 @@ typedef enum {
     cipher_idea, 
     cipher_aes_128,
     cipher_aes_256,
-    cipher_camellia_128,
-    cipher_camellia_256,
     cipher_missing              /* reserved for no such supported cipher */
     /* This enum must match ssl3_cipherName[] in ssl3con.c.  */
 } SSL3BulkCipher;
@@ -724,7 +721,6 @@ const ssl3CipherSuiteDef *suite_def;
     PRBool                usedStepDownKey;  /* we did a server key exchange. */
     sslBuffer             msgState;    /* current state for handshake messages*/
                                        /* protected by recvBufLock */
-    sslBuffer             messages;    /* Accumulated handshake messages */
 #ifdef NSS_ENABLE_ECC
     PRUint32              negotiatedECCurves; /* bit mask */
 #endif /* NSS_ENABLE_ECC */
@@ -1148,8 +1144,6 @@ extern SECStatus ssl2_BeginServerHandshake(sslSocket *ss);
 extern int       ssl_Do1stHandshake(sslSocket *ss);
 
 extern SECStatus sslBuffer_Grow(sslBuffer *b, unsigned int newLen);
-extern SECStatus sslBuffer_Append(sslBuffer *b, const void * data, 
-		                  unsigned int len);
 
 extern void      ssl2_UseClearSendFunc(sslSocket *ss);
 extern void      ssl_ChooseSessionIDProcs(sslSecurityInfo *sec);

@@ -152,7 +152,6 @@ static smime_cipher_map_entry smime_cipher_map[] = {
     { SMIME_RC2_CBC_64,		SEC_OID_RC2_CBC,	&param_int64,	PR_TRUE, PR_TRUE },
     { SMIME_RC2_CBC_128,	SEC_OID_RC2_CBC,	&param_int128,	PR_TRUE, PR_TRUE },
     { SMIME_DES_EDE3_168,	SEC_OID_DES_EDE3_CBC,	NULL,		PR_TRUE, PR_TRUE },
-    { SMIME_AES_CBC_128,	SEC_OID_AES_128_CBC,	NULL,		PR_TRUE, PR_TRUE },
     { SMIME_FORTEZZA,		SEC_OID_FORTEZZA_SKIPJACK, NULL,	PR_TRUE, PR_TRUE }
 };
 static const int smime_cipher_map_count = sizeof(smime_cipher_map) / sizeof(smime_cipher_map_entry);
@@ -270,9 +269,6 @@ nss_smime_get_cipher_for_alg_and_key(SECAlgorithmID *algid, PK11SymKey *key, uns
     case SEC_OID_DES_EDE3_CBC:
 	c = SMIME_DES_EDE3_168;
 	break;
-    case SEC_OID_AES_128_CBC:
-	c = SMIME_AES_CBC_128;
-	break;
     case SEC_OID_FORTEZZA_SKIPJACK:
 	c = SMIME_FORTEZZA;
 	break;
@@ -355,14 +351,10 @@ nss_SMIME_FindCipherForSMIMECap(NSSSMIMECapability *cap)
 	 * 2 NULLs as equal and NULL and non-NULL as not equal), we could
 	 * use that here instead of all of the following comparison code.
 	 */
-	if (!smime_cipher_map[i].parms) { 
-	    if (!cap->parameters.data || !cap->parameters.len)
-		break;	/* both empty: bingo */
-	    if (cap->parameters.len     == 2  &&
-	        cap->parameters.data[0] == SEC_ASN1_NULL &&
-		cap->parameters.data[1] == 0) 
-		break;  /* DER NULL == NULL, bingo */
-	} else if (cap->parameters.data != NULL && 
+	if (cap->parameters.data == NULL && smime_cipher_map[i].parms == NULL)
+	    break;	/* both empty: bingo */
+
+	if (cap->parameters.data != NULL && smime_cipher_map[i].parms != NULL &&
 	    cap->parameters.len == smime_cipher_map[i].parms->len &&
 	    PORT_Memcmp (cap->parameters.data, smime_cipher_map[i].parms->data,
 			     cap->parameters.len) == 0)
@@ -373,7 +365,8 @@ nss_SMIME_FindCipherForSMIMECap(NSSSMIMECapability *cap)
 
     if (i == smime_cipher_map_count)
 	return 0;				/* no match found */
-    return smime_cipher_map[i].cipher;	/* match found, point to cipher */
+    else
+	return smime_cipher_map[i].cipher;	/* match found, point to cipher */
 }
 
 /*
@@ -536,7 +529,6 @@ smime_keysize_by_cipher (unsigned long which)
 	keysize = 64;
 	break;
       case SMIME_RC2_CBC_128:
-      case SMIME_AES_CBC_128:
 	keysize = 128;
 	break;
       case SMIME_DES_CBC_56:

@@ -152,10 +152,11 @@ struct sidCacheEntryStr {
 /*  4 */    SSL3KEAType exchKeyType;
 /*  4 */    PRInt32     certIndex;
 /*116 */} ssl3;
-/* force sizeof(sidCacheEntry) to be a multiple of cache line size */
-        struct {
-/*120 */    PRUint8     filler[120]; /* 72+120==196, a multiple of 16 */
+#if defined(LINUX)                      /* XXX Why only on Linux ? */
+	struct {
+	    PRUint8     filler[144];	/* XXX why this number ? */
 	} forceSize;
+#endif
     } u;
 };
 typedef struct sidCacheEntryStr sidCacheEntry;
@@ -1152,7 +1153,11 @@ SSL_ConfigServerSessionIDCacheInstance(	cacheDesc *cache,
 #if defined(DEBUG_nelsonb)
     printf("sizeof(sidCacheEntry) == %u\n", sizeof(sidCacheEntry));
 #endif
-    PORT_Assert(sizeof(sidCacheEntry) == 192);
+#if !(defined(SOLARIS) && defined(i386))
+#ifndef XP_OS2
+    PORT_Assert(sizeof(sidCacheEntry) % 8 == 0);
+#endif
+#endif
     PORT_Assert(sizeof(certCacheEntry) == 4096);
 
     myPid = SSL_GETPID();

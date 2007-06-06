@@ -59,9 +59,6 @@ include $(CORE_DEPTH)/coreconf/config.mk
 #######################################################################
 include config.mk
 
-ifdef BUILD_LIBPKIX_TESTS
-MAPFILE_SOURCE = $(OBJDIR)/pkixtest.def
-endif
 
 #######################################################################
 # (5) Execute "global" rules. (OPTIONAL)                              #
@@ -81,7 +78,3 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 
 export:: private_export
 
-ifdef BUILD_LIBPKIX_TESTS
-$(MAPFILE_SOURCE): nss.def pkixpriv.def
-	cat $+ > $@
-endif
