@@ -163,7 +163,7 @@ $AliveTestTimeout                 = 5;
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = "argo-vm test perf";
+$BuildNameExtra = "argo-vm perf test";
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
