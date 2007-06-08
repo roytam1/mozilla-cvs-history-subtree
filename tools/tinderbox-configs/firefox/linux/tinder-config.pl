@@ -92,8 +92,7 @@ $MatchBuildname = "Linux prometheus-vm Depend Fx-Nightly";
 # - cmp@mozilla.org
 #$results_server           = "build-graphs.mozilla.org";
 
-$pageload_server          = "spider";  # localhost
-#$pageload_server          = "localhost";  # localhost
+$pageload_server          = "spider.office.mozilla.org";
 
 #
 # Timeouts, values are in seconds.
