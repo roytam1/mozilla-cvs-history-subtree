@@ -87,9 +87,7 @@ $GraphNameOverride        = 'fx-win32-tbox-places';
 # - cmp@mozilla.org
 #$results_server           = "build-graphs.mozilla.org";
 
-$pageload_server          = "axolotl.mozilla.org";  # localhost
-# FIXME rhelmer testing new pageserver for reed 20070517 
-#$pageload_server          = "bm-tester01.build.mozilla.org"; 
+$pageload_server          = "pageload.build.mozilla.org";  # localhost
 
 
 #
