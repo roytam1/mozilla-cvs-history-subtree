@@ -93,8 +93,7 @@ $MatchBuildname = 'WINNT 5.2 fx-win32-tbox Depend Nightly';
 # - cmp@mozilla.org
 #$results_server           = "build-graphs.mozilla.org";
 
-#$pageload_server          = "axolotl.mozilla.org";  # localhost
-$pageload_server          = "spider";  # localhost
+$pageload_server          = "spider.office.mozilla.org";
 
 #
 # Timeouts, values are in seconds.
