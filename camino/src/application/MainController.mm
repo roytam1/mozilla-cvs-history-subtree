@@ -72,6 +72,7 @@
 #import "SharedMenusObj.h"
 #import "SiteIconProvider.h"
 #import "SessionManager.h"
+#import "CHPermissionManager.h"
 
 #include "nsBuildID.h"
 #include "nsCOMPtr.h"
@@ -88,7 +89,6 @@
 #include "nsIGenericFactory.h"
 #include "nsIEventQueueService.h"
 #include "nsNetCID.h"
-#include "nsIPermissionManager.h"
 #include "nsICookieManager.h"
 #include "nsIBrowserHistory.h"
 #include "nsICacheService.h"
@@ -966,10 +966,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       mCookieManager->RemoveAll();
 
     // remove site permissions
-    nsCOMPtr<nsIPermissionManager> pm(do_GetService(NS_PERMISSIONMANAGER_CONTRACTID));
-    nsIPermissionManager* mPermissionManager = pm.get();
-    if (mPermissionManager)
-      mPermissionManager->RemoveAll();
+    [[CHPermissionManager permissionManager] removeAllPermissions];
 
     // remove history
     nsCOMPtr<nsIBrowserHistory> hist (do_GetService("@mozilla.org/browser/global-history;2"));
