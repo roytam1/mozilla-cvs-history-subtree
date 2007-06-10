@@ -141,25 +141,30 @@ public void addNotify ()
 	super.addNotify();
 
 	windowRelativeBounds = new Rectangle();
+        if (0 != nativeWindow) {
+            return;
+        }
+        
+        synchronized (getTreeLock()) {
+            //Create the Native gtkWindow and it's container and
+            //get a handle to this widget
+            nativeWindow = getWindow();
 
-    //Create the Native gtkWindow and it's container and
-    //get a handle to this widget
-   	nativeWindow = getWindow();
+            try {
+                Rectangle r = new Rectangle(getBoundsRelativeToWindow());
+                Assert.assert_it(null != webShell);
 
-	try {
-		Rectangle r = new Rectangle(getBoundsRelativeToWindow());
-        Assert.assert_it(null != webShell);
-
-        WindowControl wc = (WindowControl)
-            webShell.queryInterface(BrowserControl.WINDOW_CONTROL_NAME);
-        //This createWindow call sets in motion the creation of the
-        //nativeInitContext and the creation of the Mozilla embedded
-        //webBrowser
-        wc.createWindow(nativeWindow, r);
-	} catch (Exception e) {
-		System.out.println(e.toString());
-		return;
-	}
+                WindowControl wc = (WindowControl)
+                webShell.queryInterface(BrowserControl.WINDOW_CONTROL_NAME);
+                //This createWindow call sets in motion the creation of the
+                //nativeInitContext and the creation of the Mozilla embedded
+                //webBrowser
+                wc.createWindow(nativeWindow, r);
+            } catch (Exception e) {
+                System.out.println(e.toString());
+                return;
+            }
+        }
 
 	initializeOK = true;
 	webShellCount++;
