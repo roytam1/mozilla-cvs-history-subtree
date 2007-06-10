@@ -66,7 +66,7 @@ static void _cairo_os2_surface_blit_pixels(cairo_os2_surface_t *pOS2Surface,
                                            PRECTL prclBeginPaintRect)
 {
   POINTL aptlPoints[4];
-  LONG lOldYInversion;
+  LONG lOldYInversion, rc = GPI_OK;
 
   /* Enable Y Inversion for the HPS, so the
    * GpiDrawBits will work with upside-top image, not with upside-down image!
@@ -129,13 +129,61 @@ static void _cairo_os2_surface_blit_pixels(cairo_os2_surface_t *pOS2Surface,
       }
   }
   */
-  GpiDrawBits(hpsBeginPaint,
-              pOS2Surface->pchPixels,
-              &(pOS2Surface->bmi2BitmapInfo),
-              4,
-              aptlPoints,
-              ROP_SRCCOPY,
-              BBO_IGNORE);
+  rc = GpiDrawBits (hpsBeginPaint,
+                    pOS2Surface->pchPixels,
+                    &(pOS2Surface->bmi2BitmapInfo),
+                    4,
+                    aptlPoints,
+                    ROP_SRCCOPY,
+                    BBO_IGNORE);
+
+  if (rc != GPI_OK) {
+    /* if GpiDrawBits () failed then this is most likely because the
+     * display driver could not handle a 32bit bitmap. So we need to
+     * - create a buffer that only contains 3 bytes per pixel
+     * - change the bitmap info header to contain 24bit
+     * - pass the new buffer to GpiDrawBits () again
+     * - clean up the new buffer
+     */
+    BITMAPINFOHEADER2 bmpheader;
+    unsigned char *pchPixBuf, *pchPixSource;
+    void *pBufStart;
+    unsigned int iPixels;
+
+    /* allocate temporary pixel buffer */
+    pchPixBuf = (unsigned char *) malloc (3 * pOS2Surface->bmi2BitmapInfo.cx *
+                                          pOS2Surface->bmi2BitmapInfo.cy);
+    pchPixSource = pOS2Surface->pchPixels; /* start at beginning of pixel buffer */
+    pBufStart = pchPixBuf; /* remember beginning of the new pixel buffer */
+
+    /* copy the first three bytes for each pixel but skip over the fourth */
+    for (iPixels = 0; iPixels < pOS2Surface->bmi2BitmapInfo.cx * pOS2Surface->bmi2BitmapInfo.cy; iPixels++)
+    {
+      memcpy (pchPixBuf, pchPixSource, 3); /* copy BGR */
+      pchPixSource += 4; /* jump over BGR and alpha channel in source buffer */
+      pchPixBuf += 3; /* just advance over BGR in target buffer */
+    }
+
+    /* jump back to start of the buffer for display and cleanup */
+    pchPixBuf = pBufStart;
+
+    /* set up the bitmap header, but this time with 24bit depth only */
+    memset (&bmpheader, 0, sizeof (bmpheader));
+    bmpheader.cbFix = sizeof (BITMAPINFOHEADER2);
+    bmpheader.cx = pOS2Surface->bmi2BitmapInfo.cx;
+    bmpheader.cy = pOS2Surface->bmi2BitmapInfo.cy;
+    bmpheader.cPlanes = pOS2Surface->bmi2BitmapInfo.cPlanes;
+    bmpheader.cBitCount = 24;
+    rc = GpiDrawBits (hpsBeginPaint,
+                      pchPixBuf,
+                      (PBITMAPINFO2)&bmpheader,
+                      4,
+                      aptlPoints,
+                      ROP_SRCCOPY,
+                      BBO_IGNORE);
+
+    free (pchPixBuf);
+  }
 
   /* Restore Y inversion */
   GpiEnableYInversion(hpsBeginPaint, lOldYInversion);
