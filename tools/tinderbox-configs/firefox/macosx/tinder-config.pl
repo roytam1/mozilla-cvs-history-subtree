@@ -165,7 +165,6 @@ $BuildNameExtra = 'Fx-Release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-# CONFIG: $BuildTree  = '%buildTree%';
 $BuildTree  = 'MozillaRelease';
 
 $BuildName = 'Moz1.8.0-MacUniversal';
