@@ -163,8 +163,13 @@ public class CurrentPageTest extends WebclientTestCase implements ClipboardOwner
             buf.append(contentLine);
             System.out.println(contentLine);
         }
-	assertEquals("HistoryTest0This is page 0 of the history test.next",
-		     buf.toString());
+        String bufString = buf.toString();
+        int i,j;
+        assertTrue(-1 != (i = bufString.indexOf("HistoryTest0")));
+        assertTrue(-1 != (j = bufString.indexOf("This is page 0 of the history test.")));
+        assertTrue(i < j);
+        assertTrue(-1 != (i = bufString.indexOf("next")));
+        assertTrue(j < i);
         
         // Test HTML copy
         
