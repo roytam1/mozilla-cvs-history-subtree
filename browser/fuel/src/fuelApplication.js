@@ -1238,34 +1238,18 @@ Application.prototype = {
 
 //=================================================
 // Factory - Treat Application as a singleton
+var gSingleton = null;
 var ApplicationFactory = {
-  singleton: null,
   
-  createInstance: function af_ci(aOuter, aIID)
-  {
+  createInstance: function af_ci(aOuter, aIID) {
     if (aOuter != null)
       throw Components.results.NS_ERROR_NO_AGGREGATION;
       
-    if (this.singleton == null) {
-      var os = Components.classes["@mozilla.org/observer-service;1"]
-                         .getService(Ci.nsIObserverService);
-      os.addObserver(this, "xpcom-shutdown", false);    
-
-      this.singleton = new Application();
+    if (gSingleton == null) {
+      gSingleton = new Application();
     }
 
-    return this.singleton.QueryInterface(aIID);
-  },
-  
-  // for nsIObserver
-  observe: function af_observe(aSubject, aTopic, aData) {
-    if (aTopic == "xpcom-shutdown") {
-      var os = Components.classes["@mozilla.org/observer-service;1"]
-                         .getService(Ci.nsIObserverService);
-      os.removeObserver(this, "xpcom-shutdown");
-dump("+-+-+-+-+-+ factory cleanup +-+-+-+-+-+");
-      this.singleton = null;
-    }
+    return gSingleton.QueryInterface(aIID);
   }
 };
 
@@ -1286,7 +1270,6 @@ var ApplicationModule = {
   },
 
   unregisterSelf: function am_us(aCompMgr, aLocation, aType) {
-    dump("++++++unreg++++++++");
     aCompMgr = aCompMgr.QueryInterface(Ci.nsIComponentRegistrar);
     aCompMgr.unregisterFactoryLocation(CLASS_ID, aLocation);        
 
