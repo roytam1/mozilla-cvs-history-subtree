@@ -81,13 +81,13 @@ $StartupPerformanceTest   = 1;  # Ts
 $TestsPhoneHome           = 1;  # Should test report back to server?
 $TestOnlyTinderbox = 1;
 $DownloadBuildFile = 'firefox-3.0a6pre.en-US.linux-i686.tar.bz2';
-$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/argo-vm-trunk';
+$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/fx-linux-tbox-trunk';
 $DownloadBuildDir = 'firefox';
 
 # If TestOnlyTinderbox is enabled, fetch the latest build info from tinderbox in a 
 # parseable format
 $TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=Firefox&quickparse=1';
-$MatchBuildname = 'Linux argo-vm Depend Nightly';
+$MatchBuildname = 'Linux fx-linux-tbox Depend Nightly';
 #$GraphNameOverride        = $MatchBuildname."-test1"; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
@@ -161,7 +161,7 @@ $AliveTestTimeout                 = 5;
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = "argo-vm perf test";
+$BuildNameExtra = "fx-linux-tbox perf test";
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
