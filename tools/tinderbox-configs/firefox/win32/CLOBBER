@@ -1,2 +1,3 @@
-Clobbering a win32 trunk build to test aus2 migration (see http://wiki.mozilla.org/WeeklyUpdates/2007-05-21#Build and http://weblogs.mozillazine.org/preed/2007/05/aus2s_a_movin_can_you_help_us.html)
+- 2007/06/12: clobbering for bug 345517 (enable libxul)
 - 2007/05/28: clobbering for bug 382141 to get symbols uploaded
+- 2007/05/22: clobbering a win32 trunk build to test aus2 migration (see http://wiki.mozilla.org/WeeklyUpdates/2007-05-21#Build and http://weblogs.mozillazine.org/preed/2007/05/aus2s_a_movin_can_you_help_us.html)
