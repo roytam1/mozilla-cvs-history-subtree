@@ -91,7 +91,7 @@ $GraphNameOverride        = 'xserve06.build.mozilla.org_Fx-Trunk-Cairo-Cocoa';
 #$results_server           = "build-graphs.mozilla.org";
 
 #$pageload_server          = "spider";  # localhost
-$pageload_server          = "pageload.build.mozilla.org";
+$pageload_server          = "axolotl.mozilla.org";
 
 #
 # Timeouts, values are in seconds.
