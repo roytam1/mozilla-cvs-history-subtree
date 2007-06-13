@@ -88,7 +88,7 @@ $DownloadBuildDir = 'firefox';
 # parseable format
 $TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=Firefox&quickparse=1';
 $MatchBuildname = 'Linux fx-linux-tbox Depend Nightly';
-#$GraphNameOverride        = $MatchBuildname."-test1"; # Override name built from ::hostname() and $BuildTag
+$GraphNameOverride        = "bl-bldlnx01_fx-linux-tbox-HEAD"; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
