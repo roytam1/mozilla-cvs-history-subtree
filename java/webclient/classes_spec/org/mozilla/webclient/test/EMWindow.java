@@ -44,6 +44,7 @@ import javax.swing.*;
 import java.util.Enumeration;
 import java.util.Properties;
 import java.util.*;
+import org.mozilla.mcp.RandomHTMLInputStream;
 
 import org.mozilla.webclient.*;
 import org.mozilla.util.Assert;

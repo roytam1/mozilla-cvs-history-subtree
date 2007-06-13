@@ -71,7 +71,7 @@ public class MCP {
     private static final String MCP_LOG = "org.mozilla.mcp";
     private static final String MCP_LOG_STRINGS = "org.mozilla.mcp.MCPLogStrings";
 
-    private static final Logger LOGGER = getLogger(MCP_LOG);
+    static final Logger LOGGER = getLogger(MCP_LOG);
     
     private static Logger getLogger( String loggerName ) {
         return Logger.getLogger(loggerName, MCP_LOG_STRINGS );
