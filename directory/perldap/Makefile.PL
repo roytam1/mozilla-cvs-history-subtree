@@ -173,10 +173,30 @@ if ($nspr_loc) {
    $pr_def = "-DPRLDAP"
 }
 
+print "Directory containing NSS API 'lib'\n";
+print "directories for NSS support (type 'n' or 'none' to omit) (default: $nss_loc): ";
+if (!$ENV{NSSDIR} && !$ENV{NSSLIBDIR}) {
+   $silent = 0;
+   chomp ($input = <STDIN>);
+   if ($input =~ /^n/i) {
+      $nss_loc = undef;
+   } elsif ($input =~ /\S/) {
+       $nss_loc = $input;
+   }
+} else {
+   print "$nss_loc\n";
+}
+
+if ($nss_loc) {
+   if (!$lib_nss) {
+      $lib_nss = $nss_loc . ${dir_sep} . 'lib';
+   }
+}
+
 opendir(DIR,$lib_ldap);
 if ($ssl_def)
 {
-   @libfiles = grep{/ldap\d|ssl\d|nss\d|pl[cd]\d|nspr\d/} readdir(DIR);
+   @libfiles = grep{/ldap\d|ssl\d|nss\d|pl[cd]\d|nspr\d|ldappr\d/} readdir(DIR);
 } else {
    @libfiles = grep{/ldap\d/} readdir(DIR);
 }
@@ -196,25 +216,32 @@ closedir(DIR);
 
 @libs = ();
 foreach $candidate (@libfiles) {
+   next if $candidate !~ /($libexts)$/;
    $candidate =~ s/^lib//;
-   $candidate =~ s/\.($libexts)$//;
+   if ($osname !~ /mswin/i) {
+     $candidate =~ s/\.($libexts)$//;
+   }
    push(@libs, $candidate) unless grep(/^$candidate$/, @libs);
 }
 
-if (!((@ldaplib = grep{/ldapssl$/} @libs) && $ssl_def))
-{
-   @ldaplib = grep{/^(ns)?ldap.*$/} @libs;
-   @prldaplib = grep{/^(prldap|nsldappr).*$/} @libs;
-   @lberlib = grep{/^(ns)?lber.*$/} @libs;
-
-   @ldapslib = grep{/^(ssldap|nsldapssl).*$/} @libs if $ssl_def;
-   @ssllib = grep{/^ssl\d.*$/} @libs if $ssl_def;
-   @nsslib = grep{/^nss\d.*$/} @libs if $ssl_def;
-   @plclib = grep{/^plc\d.*$/} @libs if $ssl_def;
-   @pldslib = grep{/^plds\d.*$/} @libs if $ssl_def;
+if ($osname =~ /mswin/i) {
+   @ldaplib = grep{/^nsldap\d.*$/} @libs;
+   @prldaplib = grep{/^nsldappr.*$/} @libs;
+   @lberlib = grep{/^nslber.*$/} @libs;
+   @ldapslib = grep{/^nsldapssl.*$/} @libs if $ssl_def;
+} else {
+   @ldaplib = grep{/^ldap\d.*$/} @libs;
+   @prldaplib = grep{/^prldap.*$/} @libs;
+   @lberlib = grep{/^lber.*$/} @libs;
+   @ldapslib = grep{/^ssldap.*$/} @libs if $ssl_def;
 }
+@ssllib = grep{/^ssl\d.*$/} @libs if $ssl_def;
+@nsslib = grep{/^nss\d.*$/} @libs if $ssl_def;
+@plclib = grep{/^plc\d.*$/} @libs if $ssl_def;
+@pldslib = grep{/^plds\d.*$/} @libs if $ssl_def;
 
 @nsprlib = grep{/^nspr\d.*$/} @libs;
+
 
 if ($#ldaplib < 0)
 {
@@ -277,8 +304,8 @@ $my_includes .= " -I$include_nspr" if $pr_def;
 @extras = ();
 if ($osname =~ /mswin/i)
 {
-   $my_extlib = "$lib_ldap\\$ldaplib[0].lib";
-   $my_extlib .= " $lib_ldap\\$lberlib[0].lib" if $#lberlib >= 0;
+   $my_extlib = "$lib_ldap\\$ldaplib[0]";
+   $my_extlib .= " $lib_ldap\\$lberlib[0]" if $#lberlib >= 0;
    push(@extras, 'dynamic_lib' => {
      'OTHERLDFLAGS' => "kernel32.lib oldnames.lib" });
 } else {

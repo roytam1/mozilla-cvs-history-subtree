@@ -65,7 +65,7 @@ my_vlvint_t     T_IV
 #########
 INPUT
 T_timeval
-	$var.tv_sec = atof((char *)SvPV($arg,PL_na));
+	$var.tv_sec = (long)atof((char *)SvPV($arg,PL_na));
 	$var.tv_usec = 0
 T_berval
 	$var.bv_val = (char *)SvPV($arg,PL_na);

@@ -1253,16 +1253,17 @@ ldap_msgtype(lm)
 int
 ldap_multisort_entries(ld,chain,attr,...)
 	LDAP *		ld
-	LDAPMessage *	chain
+	LDAPMessage *	&chain
 	char **		attr
 	CODE:
 	{
 	   SV		*cmp;
-	   int		(*func)(const char *s, const char *t) = &StrCaseCmp;
+	   LDAP_CMP_CALLBACK		*func = &StrCaseCmp;
 
 	   if (items > 3) {
 	      cmp = ST(3);
-	      if (SvTYPE(SvRV(cmp)) == SVt_PVCV) {
+	      if (SvROK(cmp) &&
+	          (SvTYPE(SvRV(cmp)) == SVt_PVCV)) {
 		 func = &internal_sortcmp_proc;
 		 ldap_perl_sortcmp = cmp;
 	      }
@@ -1624,19 +1625,20 @@ ldap_simple_bind_s(ld,who,passwd)
 int
 ldap_sort_entries(ld,chain,attr,...)
 	LDAP *		ld
-	LDAPMessage *	chain
+	LDAPMessage *	&chain
 	char *		attr
 
 	CODE:
 	{
 	   SV		*cmp;
-	   int		(*func)(const char *s, const char *t) = &StrCaseCmp;
+	   LDAP_CMP_CALLBACK		*func = &StrCaseCmp;
 
 	   if (items > 3) {
 	      cmp = ST(3);
-	      if (SvTYPE(SvRV(cmp)) == SVt_PVCV) {
-		 func = &internal_sortcmp_proc;
-		 ldap_perl_sortcmp = cmp;
+	      if (SvROK(cmp) &&
+	          (SvTYPE(SvRV(cmp)) == SVt_PVCV)) {
+	         func = &internal_sortcmp_proc;
+	         ldap_perl_sortcmp = cmp;
 	      }
 	   }
 	   RETVAL = ldap_sort_entries(ld,&chain,attr,func);
