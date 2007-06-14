@@ -18,3 +18,7 @@ ac_add_options --enable-default-toolkit=cairo-gtk2
 
 ac_add_options --enable-trace-malloc
 ac_add_options --disable-libxul
+
+# Temporary debugging of bug 381199.
+export CFLAGS="$CFLAGS -DDEBUG_CC"
+export CXXFLAGS="$CXXFLAGS -DDEBUG_CC"
