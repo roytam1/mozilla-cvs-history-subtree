@@ -71,6 +71,7 @@
 #ifndef XPCONNECT_STANDALONE
 #include "nsIScriptSecurityManager.h"
 #include "nsIURI.h"
+#include "nsIFileURL.h"
 #include "nsNetUtil.h"
 #endif
 #include "jsxdrapi.h"
@@ -511,9 +512,9 @@ mozJSComponentLoader::ReallyInit()
     uint32 options = JS_GetOptions(mContext);
     JS_SetOptions(mContext, options | JSOPTION_XML);
 
-    // enable Javascript 1.7 features (let, yield, etc. - see bug#351515)
-    JS_SetVersion(mContext, JSVERSION_1_7);
-    
+  // Always use the latest js version
+  JS_SetVersion(mContext, JSVERSION_LATEST);
+
 #ifndef XPCONNECT_STANDALONE
     nsCOMPtr<nsIScriptSecurityManager> secman = 
         do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
@@ -1389,17 +1390,26 @@ mozJSComponentLoader::ImportInto(const nsACString & aLocation,
         NS_ENSURE_SUCCESS(rv, rv);
     }
     
-    // Use the old component manager to find the nsIFile for
-    // aLocation.  The needed method is still used in the new manager,
-    // just not exposed on an interface.
-    nsCOMPtr<nsIComponentManager> cm;
-    rv = NS_GetComponentManager(getter_AddRefs(cm));
+    nsCOMPtr<nsIIOService> ioService = do_GetIOService(&rv);
     NS_ENSURE_SUCCESS(rv, rv);
-    nsCOMPtr<nsIComponentManagerObsolete> mgr = do_QueryInterface(cm, &rv);
+
+    nsCAutoString scheme;
+    rv = ioService->ExtractScheme(aLocation, scheme);
+    if (NS_FAILED(rv) ||
+        !scheme.EqualsLiteral("resource")) {
+      *_retval = nsnull;
+      return NS_ERROR_INVALID_ARG;
+    }
+
+    // Get the resource:// URI.
+    nsCOMPtr<nsIURI> resURI;
+    rv = ioService->NewURI(aLocation, nsnull, nsnull, getter_AddRefs(resURI));
+    nsCOMPtr<nsIFileURL> fileURL = do_QueryInterface(resURI, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
+
+    // Get the file belonging to it.
     nsCOMPtr<nsIFile> file;
-    rv = mgr->SpecForRegistryLocation(PromiseFlatCString(aLocation).get(),
-                                      getter_AddRefs(file));
+    rv = fileURL->GetFile(getter_AddRefs(file));
     NS_ENSURE_SUCCESS(rv, rv);
     nsCOMPtr<nsILocalFile> componentFile = do_QueryInterface(file, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1421,7 +1431,7 @@ mozJSComponentLoader::ImportInto(const nsACString & aLocation,
                                &newEntry->location);
         if (NS_FAILED(rv)) {
             *_retval = nsnull;
-            return NS_ERROR_FAILURE;
+            return NS_ERROR_FILE_NOT_FOUND;
         }
         
         mod = newEntry;

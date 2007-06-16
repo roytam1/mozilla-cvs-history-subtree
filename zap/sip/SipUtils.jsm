@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipUtils.jsm', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('resource://gre/components/SipUtils.jsm', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -43,9 +43,9 @@
 
 debug("*** loading SipUtils\n");
 
-Components.utils.import("gre:StringUtils.jsm");
-Components.utils.import("gre:FunctionUtils.jsm");
-Components.utils.import("gre:AsyncUtils.jsm");
+Components.utils.import("resource://gre/components/StringUtils.jsm");
+Components.utils.import("resource://gre/components/FunctionUtils.jsm");
+Components.utils.import("resource://gre/components/AsyncUtils.jsm");
 
 EXPORTED_SYMBOLS = ["BRANCH_COOKIE",
                     "getSIPThread",
@@ -115,7 +115,7 @@ function getProxyOnSIPThread(aObject, aInterface) {
 
 // access the syntax factory directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gSyntaxFactory = Components.utils.import('gre:SipSyntaxFactory.js', null).theSyntaxFactory;
+var gSyntaxFactory = Components.utils.import('resource://gre/components/SipSyntaxFactory.js', null).theSyntaxFactory;
 
 ////////////////////////////////////////////////////////////////////////
 // getDNSService: get the global dns service instance
@@ -139,13 +139,13 @@ var getNetUtils = makeServiceGetter("@mozilla.org/zap/netutils;1",
 
 // access the logging service directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gLoggingService = Components.utils.import('gre:LoggingService.js', null).theLoggingService;
+var gLoggingService = Components.utils.import('resource://gre/components/LoggingService.js', null).theLoggingService;
 
 ////////////////////////////////////////////////////////////////////////
 // gUUIDGenerator: global UUID generator service instance
 
 // access directly via JS:
-var gUUIDGenerator = Components.utils.import('gre:zapUUIDGenerator.js', null).theUUIDGenerator;
+var gUUIDGenerator = Components.utils.import('resource://gre/components/zapUUIDGenerator.js', null).theUUIDGenerator;
 
 
 ////////////////////////////////////////////////////////////////////////

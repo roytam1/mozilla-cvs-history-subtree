@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapStunResolver.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('resource://gre/components/zapStunResolver.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,13 +37,13 @@
 
 debug("*** loading zapStunResolver\n");
 
-Components.utils.import("gre:XPCOMUtils.jsm");
-Components.utils.import("gre:ClassUtils.jsm");
-Components.utils.import("gre:ArrayUtils.jsm");
-Components.utils.import("gre:StringUtils.jsm");
-Components.utils.import("gre:ObjectUtils.jsm");
-Components.utils.import("gre:FunctionUtils.jsm");
-Components.utils.import("gre:AsyncUtils.jsm");
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/ClassUtils.jsm");
+Components.utils.import("resource://gre/components/ArrayUtils.jsm");
+Components.utils.import("resource://gre/components/StringUtils.jsm");
+Components.utils.import("resource://gre/components/ObjectUtils.jsm");
+Components.utils.import("resource://gre/components/FunctionUtils.jsm");
+Components.utils.import("resource://gre/components/AsyncUtils.jsm");
 
 ////////////////////////////////////////////////////////////////////////
 // globals

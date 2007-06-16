@@ -38,12 +38,12 @@
 
 debug("*** loading zapAutocompleter\n");
 
-Components.utils.import("gre:XPCOMUtils.jsm");
-Components.utils.import("gre:ClassUtils.jsm");
-Components.utils.import("gre:ArrayUtils.jsm");
-Components.utils.import("gre:StringUtils.jsm");
-Components.utils.import("gre:ObjectUtils.jsm");
-Components.utils.import("gre:FileUtils.jsm");
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/ClassUtils.jsm");
+Components.utils.import("resource://gre/components/ArrayUtils.jsm");
+Components.utils.import("resource://gre/components/StringUtils.jsm");
+Components.utils.import("resource://gre/components/ObjectUtils.jsm");
+Components.utils.import("resource://gre/components/FileUtils.jsm");
 
 // name our global object:
 // function toString() { return "[zapAutocompleter.js]"; }

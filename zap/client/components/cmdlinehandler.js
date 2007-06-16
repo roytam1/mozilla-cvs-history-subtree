@@ -34,7 +34,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-Components.utils.import("gre:XPCOMUtils.jsm");
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
 
 function ZAPCmdLineHandler() {
 }

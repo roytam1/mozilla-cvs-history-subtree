@@ -57,7 +57,7 @@
   var wContentDoc;
 
   function windowInit() {
-    Components.utils.import("gre:FileUtils.jsm");
+    Components.utils.import("resource://gre/components/FileUtils.jsm");
     wContentDoc = document.getElementById("content").contentDocument;
     // determine log filter from uri query part:
     var callidpar = /\?callid=(.+)/(document.documentURI);

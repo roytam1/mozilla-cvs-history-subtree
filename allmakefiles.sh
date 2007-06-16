@@ -155,14 +155,11 @@ gfx/idl/Makefile
 gfx/public/Makefile
 gfx/src/Makefile
 gfx/src/beos/Makefile
-gfx/src/gtk/Makefile
 gfx/src/ps/Makefile
 gfx/src/psshared/Makefile
 gfx/src/photon/Makefile
 gfx/src/mac/Makefile
-gfx/src/qt/Makefile
 gfx/src/os2/Makefile
-gfx/src/xlibrgb/Makefile
 gfx/src/windows/Makefile
 gfx/src/thebes/Makefile
 gfx/tests/Makefile
@@ -566,7 +563,6 @@ widget/src/Makefile
 widget/src/beos/Makefile
 widget/src/build/Makefile
 widget/src/gtkxtbin/Makefile
-widget/src/qt/Makefile
 widget/src/photon/Makefile
 widget/src/mac/Makefile
 widget/src/cocoa/Makefile
@@ -729,8 +725,6 @@ xpfe/components/xremote/src/Makefile
 xpfe/appshell/Makefile
 xpfe/appshell/src/Makefile
 xpfe/appshell/public/Makefile
-xpfe/bootstrap/Makefile
-xpfe/bootstrap/init.d/Makefile
 xpfe/bootstrap/appleevents/Makefile
 xpfe/browser/Makefile
 xpfe/browser/src/Makefile
@@ -767,9 +761,6 @@ embedding/browser/webBrowser/Makefile
 embedding/browser/gtk/Makefile
 embedding/browser/gtk/src/Makefile
 embedding/browser/gtk/tests/Makefile
-embedding/browser/qt/Makefile
-embedding/browser/qt/src/Makefile
-embedding/browser/qt/tests/Makefile
 embedding/browser/photon/Makefile
 embedding/browser/photon/src/Makefile
 embedding/browser/photon/tests/Makefile
@@ -832,40 +823,6 @@ widget/public/Makefile
 modules/libpref/public/Makefile
 content/base/public/Makefile
 intl/locale/public/Makefile
-"
-
-MAKEFILES_phoenix="
-browser/Makefile
-browser/app/Makefile
-browser/app/profile/extensions/Makefile
-browser/base/Makefile
-browser/components/Makefile
-browser/components/bookmarks/Makefile
-browser/components/bookmarks/public/Makefile
-browser/components/bookmarks/src/Makefile
-browser/components/build/Makefile
-browser/components/dirprovider/Makefile
-browser/components/history/Makefile
-browser/components/migration/Makefile
-browser/components/migration/public/Makefile
-browser/components/migration/src/Makefile
-browser/components/places/Makefile
-browser/components/preferences/Makefile
-browser/components/search/Makefile
-browser/components/sidebar/Makefile
-browser/components/sidebar/src/Makefile
-browser/components/shell/Makefile
-browser/components/shell/public/Makefile
-browser/components/shell/src/Makefile
-browser/installer/Makefile
-browser/installer/unix/Makefile
-browser/installer/windows/Makefile
-browser/locales/Makefile
-browser/themes/Makefile
-browser/themes/pinstripe/browser/Makefile
-browser/themes/pinstripe/Makefile
-browser/themes/winstripe/browser/Makefile
-browser/themes/winstripe/Makefile
 "
 
 MAKEFILES_xulrunner="
@@ -1385,10 +1342,6 @@ fi
 
 if test -n "$MOZ_CALENDAR"; then
     add_makefiles "$MAKEFILES_calendar"
-fi
-
-if test -n "$MOZ_PHOENIX"; then
-    add_makefiles "$MAKEFILES_phoenix"
 fi
 
 if test -n "$MOZ_XUL_APP"; then

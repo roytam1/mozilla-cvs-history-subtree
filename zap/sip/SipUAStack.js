@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:SipUAStack.js', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('resource://gre/components/SipUAStack.js', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,15 +38,15 @@
 
 debug("*** loading SipUAStack\n");
 
-Components.utils.import("gre:XPCOMUtils.jsm");
-Components.utils.import("gre:ClassUtils.jsm");
-Components.utils.import("gre:ArrayUtils.jsm");
-Components.utils.import("gre:StringUtils.jsm");
-Components.utils.import("gre:ObjectUtils.jsm");
-Components.utils.import("gre:SipUtils.jsm");
-Components.utils.import("gre:SipUARequestCore.jsm");
-Components.utils.import("gre:SipDialog.jsm");
-Components.utils.import("gre:FunctionUtils.jsm");
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/ClassUtils.jsm");
+Components.utils.import("resource://gre/components/ArrayUtils.jsm");
+Components.utils.import("resource://gre/components/StringUtils.jsm");
+Components.utils.import("resource://gre/components/ObjectUtils.jsm");
+Components.utils.import("resource://gre/components/SipUtils.jsm");
+Components.utils.import("resource://gre/components/SipUARequestCore.jsm");
+Components.utils.import("resource://gre/components/SipDialog.jsm");
+Components.utils.import("resource://gre/components/FunctionUtils.jsm");
 
 // name our global object:
 // function toString() { return "[SipUAStack.js]"; }
@@ -75,7 +75,7 @@ function createSipTransport() {
 
   // create a sip transport object directly from js (less overhead, no
   // type safety, access to non-xpcom interface):
-  return Components.utils.import("gre:SipTransport.js", null).SipTransport.instantiate();
+  return Components.utils.import("resource://gre/components/SipTransport.js", null).SipTransport.instantiate();
 }
 
 //----------------------------------------------------------------------
@@ -87,7 +87,7 @@ function createSipTransactionManager() {
 
   // create a sip transaction manager directly from js (less overhead,
   // no type safety, access to non-xpcom interface):
-  return Components.utils.import("gre:SipTransactions.js", null).SipTransactionManager.instantiate();
+  return Components.utils.import("resource://gre/components/SipTransactions.js", null).SipTransactionManager.instantiate();
 }
 
 //----------------------------------------------------------------------

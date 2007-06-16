@@ -232,16 +232,6 @@ ifdef MOZ_MATHML
 COMPONENT_LIBS += ucvmath
 endif
 
-ifneq (,$(MOZ_ENABLE_XPRINT))
-STATIC_LIBS += xlibrgb
-endif
-
-ifdef MOZ_ENABLE_XPRINT
-DEFINES += -DMOZ_ENABLE_XPRINT
-STATIC_LIBS += xprintutil
-COMPONENTS_LIBS += gfxxprint
-endif
-
 ifdef MOZ_ENABLE_GTK2
 COMPONENT_LIBS += widget_gtk2
 ifdef MOZ_PREF_EXTENSIONS
@@ -286,15 +276,6 @@ else # Platform-specific GFX layer
   ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
   COMPONENT_LIBS += gfx_mac
   endif
-  ifeq (qt,$(MOZ_WIDGET_TOOLKIT))
-  COMPONENT_LIBS += widget_qt
-  endif
-  ifneq (,$(filter gtk2,$(MOZ_WIDGET_TOOLKIT)))
-  COMPONENT_LIBS += gfx_gtk
-  endif
-  ifdef MOZ_ENABLE_QT
-  COMPONENT_LIBS += gfx_qt
-  endif
   ifdef MOZ_ENABLE_PHOTON
   COMPONENT_LIBS += gfx_photon
   endif
@@ -311,9 +292,6 @@ COMPONENT_LIBS += wdgtos2
 endif
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 COMPONENT_LIBS += widget_mac
-endif
-ifeq (qt,$(MOZ_WIDGET_TOOLKIT))
-COMPONENT_LIBS += widget_qt
 endif
 
 ifdef MOZ_ENABLE_PHOTON

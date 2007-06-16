@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:zapVerboseErrorService.js', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('resource://gre/components/zapVerboseErrorService.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -37,11 +37,11 @@
 
 debug("*** loading zapVerboseErrorService.js\n");
 
-Components.utils.import("gre:XPCOMUtils.jsm");
-Components.utils.import("gre:ClassUtils.jsm");
-Components.utils.import("gre:ArrayUtils.jsm");
-Components.utils.import("gre:StringUtils.jsm");
-Components.utils.import("gre:ObjectUtils.jsm");
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/ClassUtils.jsm");
+Components.utils.import("resource://gre/components/ArrayUtils.jsm");
+Components.utils.import("resource://gre/components/StringUtils.jsm");
+Components.utils.import("resource://gre/components/ObjectUtils.jsm");
 
 // name our global object:
 // function toString() { return "[zapVerboseErrorService.js]"; }

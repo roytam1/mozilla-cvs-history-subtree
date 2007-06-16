@@ -1,4 +1,4 @@
-/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('gre:ClassUtils.jsm', null)" -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.utils.import('resource://gre/components/ClassUtils.jsm', null)" -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -35,9 +35,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-Components.utils.import("gre:ArrayUtils.jsm");
-Components.utils.import("gre:ObjectUtils.jsm");
-Components.utils.import("gre:AsyncUtils.jsm");
+Components.utils.import("resource://gre/components/ArrayUtils.jsm");
+Components.utils.import("resource://gre/components/ObjectUtils.jsm");
+Components.utils.import("resource://gre/components/AsyncUtils.jsm");
 
 EXPORTED_SYMBOLS = [ "StdClass",
                      "makeClass",
@@ -476,7 +476,7 @@ function getVerboseErrorService() {
     //gVerboseErrorService = Components.classes["@mozilla.org/zap/verbose-error-reporter;1"].getService(Components.interfaces.zapIVerboseErrorService);
 
     // create via js:
-    gVerboseErrorService = Components.utils.import("gre:zapVerboseErrorService.js", null).theVerboseErrorService;
+    gVerboseErrorService = Components.utils.import("resource://gre/components/zapVerboseErrorService.js", null).theVerboseErrorService;
   }
   return gVerboseErrorService;
 }

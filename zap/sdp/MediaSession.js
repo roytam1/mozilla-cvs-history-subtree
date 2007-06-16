@@ -1,4 +1,4 @@
-// -*- moz-jssh-buffer-globalobj: "Components.utils.import('gre:MediaSession.js', null)" -*-
+// -*- moz-jssh-buffer-globalobj: "Components.utils.import('resource://gre/components/MediaSession.js', null)" -*-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,13 +38,13 @@
 
 debug("*** loading MediaSession\n");
 
-Components.utils.import("gre:XPCOMUtils.jsm");
-Components.utils.import("gre:ClassUtils.jsm");
-Components.utils.import("gre:ArrayUtils.jsm");
-Components.utils.import("gre:StringUtils.jsm");
-Components.utils.import("gre:ObjectUtils.jsm");
-Components.utils.import("gre:zapICE.jsm");
-Components.utils.import("gre:zapCodecRegistry.jsm");
+Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/ClassUtils.jsm");
+Components.utils.import("resource://gre/components/ArrayUtils.jsm");
+Components.utils.import("resource://gre/components/StringUtils.jsm");
+Components.utils.import("resource://gre/components/ObjectUtils.jsm");
+Components.utils.import("resource://gre/components/zapICE.jsm");
+Components.utils.import("resource://gre/components/zapCodecRegistry.jsm");
 
 // name our global object:
 // function toString() { return "[MediaSession.js]"; }
@@ -62,7 +62,7 @@ var PB = makePropertyBag2Proxy;
 
 // access the sdp service directly (less overhead, no type safety,
 // access to non-xpcom interface):
-var gSdpService = Components.utils.import('gre:SdpService.js', null).theSdpService;
+var gSdpService = Components.utils.import('resource://gre/components/SdpService.js', null).theSdpService;
 
 ////////////////////////////////////////////////////////////////////////
 // Class MediaSession

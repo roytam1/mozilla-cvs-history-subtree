@@ -38,12 +38,12 @@
 ////////////////////////////////////////////////////////////////////////
 // imports
 
-Components.utils.import("gre:ClassUtils.jsm");
-Components.utils.import("gre:RDFUtils.jsm");
-Components.utils.import("gre:FileUtils.jsm");
-Components.utils.import("gre:StringUtils.jsm");
-Components.utils.import("gre:AsyncUtils.jsm");
-Components.utils.import("gre:ArrayUtils.jsm");
+Components.utils.import("resource://gre/components/ClassUtils.jsm");
+Components.utils.import("resource://gre/components/RDFUtils.jsm");
+Components.utils.import("resource://gre/components/FileUtils.jsm");
+Components.utils.import("resource://gre/components/StringUtils.jsm");
+Components.utils.import("resource://gre/components/AsyncUtils.jsm");
+Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 
 ////////////////////////////////////////////////////////////////////////
 // globals
