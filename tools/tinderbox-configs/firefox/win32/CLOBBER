@@ -1,1 +1,3 @@
-Clobber to see if I can get the backout of the patch for bug 350616 to take effect
+Edit this file and include an explanation of why you're respinning. - #build
+
+20070617 - clobber for problem with pushing to ftp (bug 383775)
