@@ -1477,20 +1477,6 @@ int sqlite3_table_column_metadata(
 #endif
 
 /*
-** Given a wildcard parameter name, return the set of indexes of the
-** variables with that name.  If there are no variables with the given
-** name, return 0.  Otherwise, return the number of indexes returned
-** in *pIndexes.  The array should be freed with
-** sqlite3_free_parameter_indexes.
-*/
-int sqlite3_bind_parameter_indexes(
-    sqlite3_stmt *pStmt,
-    const char *zName,
-    int **pIndexes
-);
-void sqlite3_free_parameter_indexes(int *pIndexes);
-
-/*
 ** Preload the databases into the pager cache, up to the maximum size of the
 ** pager cache.
 **
