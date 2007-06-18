@@ -1,4 +1,5 @@
 # List clobbering rationale in this file. Please include bug numbers whenever possible.
+- 20070618: clobbering for bug 345517 (enable libxul), after it was backed out for Mac
 - 20070612: clobbering for bug 345517 (enable libxul). Again, after fixing mozconfig
 - 20070612: clobbering for bug 345517 (enable libxul)
 - 20070529: CLOBBER to get symbols uploaded for the first time
