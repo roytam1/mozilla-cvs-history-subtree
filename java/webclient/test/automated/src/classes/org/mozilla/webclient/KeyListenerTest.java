@@ -192,7 +192,7 @@ public class KeyListenerTest extends WebclientTestCase {
         assertNotNull(screenX);
         assertNotNull(screenY);
         int x = Integer.valueOf(screenX).intValue();
-        int y = Integer.valueOf(screenY).intValue() - 5;
+        int y = Integer.valueOf(screenY).intValue();
 
 	Robot robot = new Robot();
 	robot.mouseMove(x, y);

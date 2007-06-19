@@ -50,7 +50,7 @@ import org.mozilla.webclient.impl.WrapperFactory;
  * Win32BrowserControlCanvas provides a concrete realization
  * of the RaptorCanvas.
  */
-public class Win32BrowserControlCanvas extends BrowserControlCanvas {
+public class Win32BrowserControlCanvas extends NativeBrowserControlCanvas {
 
     //New method for obtaining access to the Native Peer handle
     private native int getHandleToPeer();
