@@ -122,7 +122,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 $ObjDir = '../build/universal';
 
 # Extra build name, if needed.
-#$BuildNameExtra = 'GTK1 (gcc 3.4)';
+$BuildNameExtra = 'Debug + Leak Test';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
