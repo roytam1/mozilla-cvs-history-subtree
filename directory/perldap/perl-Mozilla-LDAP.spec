@@ -4,8 +4,8 @@
 
 Summary: LDAP Perl module that wraps the Mozilla C SDK
 Name: perl-Mozilla-LDAP
-Version: 1.5
-Release: 10%{?dist}
+Version: 1.5.1
+Release: 1%{?dist}
 License: GPL/LGPL/MPL
 Group: Development/Libraries
 URL: http://www.mozilla.org/directory/perldap.html
@@ -15,7 +15,7 @@ BuildRequires: perl >= 2:5.8.0
 BuildRequires: %{nspr_name}-devel >= 4.6
 BuildRequires: %{nss_name}-devel >= 3.11
 BuildRequires: %{mozldap_name}-devel >= 6.0
-Source0: ftp://ftp.mozilla.org/pub/mozilla.org/directory/perldap/releases/1.5/perl-mozldap-1.5.tar.gz
+Source0: ftp://ftp.mozilla.org/pub/mozilla.org/directory/perldap/releases/1.5/perl-mozldap-%{version}.tar.gz
 Source1: ftp://ftp.mozilla.org/pub/mozilla.org/directory/perldap/releases/1.5/Makefile.PL.rpm
 
 %description
@@ -86,7 +86,7 @@ rm -rf $RPM_BUILD_ROOT
 %doc CREDITS ChangeLog README MPL-1.1.txt
 
 %changelog
-* Wed Jun 20 2007 Rich Megginson <richm@stanfordalumni.org> - 1.5-10
+* Wed Jun 20 2007 Rich Megginson <richm@stanfordalumni.org> - 1.5.1-1
 - all files have been GPL/LGPL/MPL tri-licensed
 
 * Wed Jan 10 2007 Rich Megginson <richm@stanfordalumni.org> - 1.5-9
