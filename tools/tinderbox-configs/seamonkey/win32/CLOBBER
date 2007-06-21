@@ -1,1 +1,1 @@
-Force new nightly for testing Talkback integration, take 2.
+CLOBBER to generate new nightlies after suiterunner switch (bug 328887)

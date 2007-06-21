@@ -86,7 +86,8 @@ $TestsPhoneHome           = 1;  # Should test report back to server?
 # - cmp@mozilla.org
 #$results_server           = "build-graphs.mozilla.org";
 
-$pageload_server          = "pageload.build.mozilla.org";
+#$pageload_server          = "spider";  # localhost
+$pageload_server          = "axolotl.mozilla.org";  # localhost
 
 #
 # Timeouts, values are in seconds.
@@ -191,7 +192,6 @@ $ReleaseBuild  = 1;
 $shiptalkback  = 1;
 #$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$ReleaseGroup = 'seamonkey'; # group to set uploaded files to
 $build_hour    = "1";
 $package_creation_path = "/suite/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";

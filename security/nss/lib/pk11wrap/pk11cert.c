@@ -540,10 +540,6 @@ PK11_FindCertFromNickname(char *nickname, void *wincx)
     char *tokenName;
 
     nickCopy = PORT_Strdup(nickname);
-    if (!nickCopy) {
-        /* error code is set */
-        return NULL;
-    }
     if ((delimit = PORT_Strchr(nickCopy,':')) != NULL) {
 	tokenName = nickCopy;
 	nickname = delimit + 1;
@@ -655,10 +651,6 @@ PK11_FindCertsFromNickname(char *nickname, void *wincx)
     SECStatus rv;
 
     nickCopy = PORT_Strdup(nickname);
-    if (!nickCopy) {
-        /* error code is set */
-        return NULL;
-    }
     if ((delimit = PORT_Strchr(nickCopy,':')) != NULL) {
 	tokenName = nickCopy;
 	nickname = delimit + 1;
@@ -746,19 +738,15 @@ PK11_FindCertsFromNickname(char *nickname, void *wincx)
 	PRTime now = PR_Now();
 	certList = CERT_NewCertList();
 	for (i=0, c = *foundCerts; c; c = foundCerts[++i]) {
-	    if (certList) {
-	 	CERTCertificate *certCert = STAN_GetCERTCertificateOrRelease(c);
-		/* c may be invalid after this, don't reference it */
-		if (certCert) {
-		    /* CERT_AddCertToListSorted adopts certCert  */
-		    CERT_AddCertToListSorted(certList, certCert,
-				CERT_SortCBValidity, &now);
-		}
-	    } else {
-		nssCertificate_Destroy(c);
+	    CERTCertificate *certCert = STAN_GetCERTCertificateOrRelease(c);
+	    /* c may be invalid after this, don't reference it */
+	    if (certCert) {
+	        /* CERT_AddCertToListSorted adopts certCert  */
+		CERT_AddCertToListSorted(certList, certCert,
+			CERT_SortCBValidity, &now);
 	    }
 	}
-	if (certList && CERT_LIST_HEAD(certList) == NULL) {
+	if (CERT_LIST_HEAD(certList) == NULL) {
 	    CERT_DestroyCertList(certList);
 	    certList = NULL;
 	}
@@ -847,9 +835,6 @@ PK11_ImportCert(PK11SlotInfo *slot, CERTCertificate *cert,
 	c = cert->nssCertificate;
     } else {
 	c = STAN_GetNSSCertificate(cert);
-	if (c == NULL) {
-	    goto loser;
-	}
     }
 
     if (c->object.cryptoContext) {
@@ -1686,11 +1671,6 @@ PK11_NumberCertsForCertSubject(CERTCertificate *cert)
 	PK11SlotListElement *le;
 	int count = 0;
 
-	if (!list) {
-            /* error code is set */
-            return 0;
-	}
-
 	/* loop through all the fortezza tokens */
 	for (le = list->head; le; le = le->next) {
 	    count += PK11_NumberObjectsFor(le->slot,theTemplate,templateSize);
@@ -1717,10 +1697,6 @@ PK11_TraverseCertsForSubject(CERTCertificate *cert,
 							PR_FALSE,PR_TRUE,NULL);
 	PK11SlotListElement *le;
 
-	if (!list) {
-            /* error code is set */
-            return SECFailure;
-	}
 	/* loop through all the tokens */
 	for (le = list->head; le; le = le->next) {
 	    PK11_TraverseCertsForSubjectInSlot(cert,le->slot,callback,arg);
@@ -2119,9 +2095,7 @@ PK11_FortezzaHasKEA(CERTCertificate *cert) {
    }
 
    oid = SECOID_FindOID(&cert->subjectPublicKeyInfo.algorithm.algorithm);
-   if (!oid) {
-       return PR_FALSE;
-   }
+
 
    return (PRBool)((oid->offset == SEC_OID_MISSI_KEA_DSS_OLD) || 
 		(oid->offset == SEC_OID_MISSI_KEA_DSS) ||
@@ -2162,11 +2136,6 @@ PK11_FindBestKEAMatch(CERTCertificate *server, void *wincx)
     PK11SlotListElement *le;
     CERTCertificate *returnedCert = NULL;
     SECStatus rv;
-
-    if (!keaList) {
-        /* error code is set */
-        return NULL;
-    }
 
     /* loop through all the fortezza tokens */
     for (le = keaList->head; le; le = le->next) {
@@ -2440,9 +2409,6 @@ listCertsCallback(CERTCertificate* cert, void*arg)
     nssCryptokiObject **instances;
     NSSCertificate *c = STAN_GetNSSCertificate(cert);
 
-    if (c == NULL) {
-        return SECFailure;
-    }
     instances = nssPKIObject_GetInstances(&c->object);
     if (!instances) {
         return SECFailure;
@@ -2491,46 +2457,3 @@ PK11_ListCertsInSlot(PK11SlotInfo *slot)
     return certs;
 }
 
-PK11SlotList *
-PK11_GetAllSlotsForCert(CERTCertificate *cert, void *arg)
-{
-    NSSCertificate *c = STAN_GetNSSCertificate(cert);
-    /* add multiple instances to the cert list */
-    nssCryptokiObject **ip;
-    nssCryptokiObject **instances = nssPKIObject_GetInstances(&c->object);
-    PK11SlotList *slotList;
-    PRBool found = PR_FALSE;
-
-    if (!cert) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
-	return NULL;
-    }
-
-    if (!instances) {
-	PORT_SetError(SEC_ERROR_NO_TOKEN);
-	return NULL;
-    }
-
-    slotList = PK11_NewSlotList();
-    if (!slotList) {
-	nssCryptokiObjectArray_Destroy(instances);
-	return NULL;
-    }
-
-    for (ip = instances; *ip; ip++) {
-	nssCryptokiObject *instance = *ip;
-	PK11SlotInfo *slot = instance->token->pk11slot;
-	if (slot) {
-	    PK11_AddSlotToList(slotList, slot);
-	    found = PR_TRUE;
-	}
-    }
-    if (!found) {
-	PK11_FreeSlotList(slotList);
-	PORT_SetError(SEC_ERROR_NO_TOKEN);
-	slotList = NULL;
-    }
-
-    nssCryptokiObjectArray_Destroy(instances);
-    return slotList;
-}

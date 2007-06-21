@@ -93,7 +93,7 @@ $StartupPerformanceTest   = 1;  # Ts
 #$CompareLocalesAviary     = 0;  # Should the compare-locales commands use the
                                 # aviary directory structure?
 
-$TestsPhoneHome           = 1;  # Should test report back to server?
+#$TestsPhoneHome           = 0;  # Should test report back to server?
 #$GraphNameOverride        = ''; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
@@ -104,7 +104,7 @@ $TestsPhoneHome           = 1;  # Should test report back to server?
 # - cmp@mozilla.org
 #$results_server           = "build-graphs.mozilla.org";
 
-$pageload_server = "pageload.build.mozilla.org";
+$pageload_server = "axolotl.mozilla.org";
 
 #
 # Timeouts, values are in seconds.
@@ -217,15 +217,14 @@ $BinaryName = 'Camino';
 #$ShellOverride = '';
 
 # Release build options
-$ReleaseBuild  = 1;
+#$ReleaseBuild  = 1;
 #$clean_objdir = 1; # remove objdir when starting release cycle?
 #$clean_srcdir = 1; # remove srcdir when starting release cycle?
 #$LocaleProduct = "browser";
-$shiptalkback  = 1;
-$UsePrebuiltTalkback = "/builds/tinderbox/CmTrunk/talkback-camino-trunk-mac.tar.bz2";
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$OfficialBuildMachinery = 1; # Allow official clobber nightlies.  When false, $cachebuild in post-mozilla-rel.pl can never be true.
+#$shiptalkback  = 1;
+#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$OfficialBuildMachinery = 0; # Allow official clobber nightlies.  When false, $cachebuild in post-mozilla-rel.pl can never be true.
 #$ReleaseGroup = ''; # group to set uploaded files to (if non-empty)
 $build_hour    = "22";
 $package_creation_path = "/camino/installer";
@@ -234,8 +233,8 @@ $mac_bundle_path = "/camino";
 #$ssh_version   = "2";
 $ssh_user      = "caminobld";
 #$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/camino/experimental";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/camino/experimental";
+$ftp_path      = "/home/ftp/pub/camino/nightly";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/camino/nightly";
 $tbox_ftp_path = '/home/ftp/pub/camino/tinderbox-builds';
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/camino/tinderbox-builds";
 $milestone     = "trunk";

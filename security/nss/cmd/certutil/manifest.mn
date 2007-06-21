@@ -43,7 +43,6 @@ DEFINES += -DNSPR20
 MODULE = nss 
 
 CSRCS = \
-	certext.c \
 	certutil.c \
 	keystuff.c \
 	$(NULL)

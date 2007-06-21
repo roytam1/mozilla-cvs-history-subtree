@@ -78,12 +78,7 @@
 #
 ########################################################################
 
-LIBPKIX=
-if [ -n "$BUILD_LIBPKIX_TESTS" ] ; then
-    LIBPKIX=libpkix
-fi
-
-tests="cipher perf ${LIBPKIX} cert dbtests tools fips sdr crmf smime ssl ocsp"
+tests="cipher perf cert dbtests tools fips sdr crmf smime ssl"
 TESTS=${TESTS:-$tests}
 SCRIPTNAME=all.sh
 CLEANUP="${SCRIPTNAME}"
