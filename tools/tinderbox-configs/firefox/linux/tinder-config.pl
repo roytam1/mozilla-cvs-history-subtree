@@ -83,7 +83,7 @@ $DHTMLPerformanceTest     = 0;  # Tdhtml
 $StartupPerformanceTest   = 0;  # Ts
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
-$GraphNameOverride        = 'fx-linux-tbox';
+$GraphNameOverride        = 'fxnewref-linux-tbox';
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -94,7 +94,7 @@ $GraphNameOverride        = 'fx-linux-tbox';
 #$results_server           = "build-graphs.mozilla.org";
 
 #$pageload_server          = "spider";  # localhost
-$pageload_server      = "axolotl.mozilla.org";
+#$pageload_server      = "axolotl.mozilla.org";
 
 
 #
@@ -158,7 +158,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = 'NewRef';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -173,7 +173,7 @@ $BuildNameExtra = 'Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Firefox';
+$BuildTree  = 'MozillaExperimental';
 #$BuildTree = "MozillaTest";
 
 #$BuildName = '';
@@ -199,16 +199,16 @@ $BinaryName = 'firefox-bin';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = 4;
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 $ssh_user      = "cltbld";
 $ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/linux-newref";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/linux-newref";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 $milestone     = "trunk";
@@ -217,7 +217,7 @@ $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 0;
-$update_pushinfo = 1;
+$update_pushinfo = 0;
 $update_package = 1;
 $update_product = "Firefox";
 $update_version = "trunk";
