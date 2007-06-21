@@ -69,7 +69,7 @@
 
 class nsExtProtocolChannel : public nsIChannel
 {
-    friend class nsWebProtocolRedirect;
+    friend class nsProtocolRedirect;
 
 public:
     NS_DECL_ISUPPORTS
@@ -199,19 +199,42 @@ NS_IMETHODIMP nsExtProtocolChannel::Open(nsIInputStream **_retval)
   return NS_ERROR_NO_CONTENT; // force caller to abort.
 }
 
-class nsWebProtocolRedirect : public nsRunnable {
+class nsProtocolRedirect : public nsRunnable {
   public:
-    nsWebProtocolRedirect(nsIURI *aURI, const nsACString & aUriTemplate,
-                          nsIStreamListener *aListener, nsISupports *aContext,
-                          nsExtProtocolChannel *aOriginalChannel)
-      : mURI(aURI), mUriTemplate(aUriTemplate), mListener(aListener), 
+    nsProtocolRedirect(nsIURI *aURI, nsIHandlerInfo *aHandlerInfo,
+                       nsIStreamListener *aListener, nsISupports *aContext,
+                       nsExtProtocolChannel *aOriginalChannel)
+      : mURI(aURI), mHandlerInfo(aHandlerInfo), mListener(aListener), 
         mContext(aContext), mOriginalChannel(aOriginalChannel) {}
 
     NS_IMETHOD Run() 
     {
+      // for now, this code path is only take for a web-based protocol handler
+      nsCOMPtr<nsIHandlerApp> handlerApp;
+      nsresult rv = 
+        mHandlerInfo->GetPreferredApplicationHandler(getter_AddRefs(handlerApp));
+      if (NS_FAILED(rv)) {
+        AbandonOriginalChannel(rv);
+        return NS_OK; 
+      }
+
+      nsCOMPtr<nsIWebHandlerApp> webHandlerApp = do_QueryInterface(handlerApp,
+                                                                   &rv);
+      if (NS_FAILED(rv)) {
+        AbandonOriginalChannel(rv);
+        return NS_OK; 
+      }
+
+      nsCAutoString uriTemplate;
+      rv = webHandlerApp->GetUriTemplate(uriTemplate);
+      if (NS_FAILED(rv)) {
+        AbandonOriginalChannel(rv);
+        return NS_OK; 
+      }
+            
       // get the URI spec so we can escape it for insertion into the template 
       nsCAutoString uriSpecToHandle;
-      nsresult rv = mURI->GetSpec(uriSpecToHandle);
+      rv = mURI->GetSpec(uriSpecToHandle);
       if (NS_FAILED(rv)) {
         AbandonOriginalChannel(rv);
         return NS_OK; 
@@ -235,13 +258,13 @@ class nsWebProtocolRedirect : public nsRunnable {
       // handled.  The HTML5 draft doesn't prohibit %s from occurring more than
       // once, and if it does, I can't think of any problems that could
       // cause, (though I don't know why anyone would need or want to do it). 
-      mUriTemplate.ReplaceSubstring(NS_LITERAL_CSTRING("%s"),
-                                    escapedUriSpecToHandle);
-  
+      uriTemplate.ReplaceSubstring(NS_LITERAL_CSTRING("%s"),
+                                   escapedUriSpecToHandle);
+
       // convert spec to URI; no original charset needed since there's no way
       // to communicate that information to any handler
       nsCOMPtr<nsIURI> uriToSend;
-      rv = NS_NewURI(getter_AddRefs(uriToSend), mUriTemplate);
+      rv = NS_NewURI(getter_AddRefs(uriToSend), uriTemplate);
       if (NS_FAILED(rv)) {
         AbandonOriginalChannel(rv);
         return NS_OK; 
@@ -285,7 +308,7 @@ class nsWebProtocolRedirect : public nsRunnable {
 
   private:
     nsCOMPtr<nsIURI> mURI;
-    nsCString mUriTemplate;
+    nsCOMPtr<nsIHandlerInfo> mHandlerInfo;
     nsCOMPtr<nsIStreamListener> mListener;
     nsCOMPtr<nsISupports> mContext;
     nsCOMPtr<nsExtProtocolChannel> mOriginalChannel;
@@ -309,31 +332,38 @@ NS_IMETHODIMP nsExtProtocolChannel::AsyncOpen(nsIStreamListener *listener, nsISu
   nsCAutoString urlScheme;  
   nsresult rv = mUrl->GetScheme(urlScheme);
   NS_ENSURE_SUCCESS(rv, rv);
-  
-  nsCOMPtr<nsIExternalProtocolService> extProtService =
-    do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-  
-  nsCAutoString uriTemplate;
-  rv = nsExternalHelperAppService::GetWebProtocolHandlerURITemplate(urlScheme,
-       uriTemplate);
-  if (NS_SUCCEEDED(rv)) {
 
-    // redirecting to the web handler involvegs calling OnChannelRedirect,
-    // which is supposed to happen after AsyncOpen completes, so we do it in an
-    // event
-    nsCOMPtr<nsIRunnable> event = new nsWebProtocolRedirect(mUrl, uriTemplate,
-                                                            listener, ctxt, 
-                                                            this);
-    // We don't check if |event| was successfully created because
-    // |NS_DispatchToCurrentThread| will do that for us.
-    rv = NS_DispatchToCurrentThread(event);
-    if (NS_SUCCEEDED(rv)) {
-      return rv;
+  if (!gExtProtSvc) {
+    return NS_ERROR_FAILURE;
+  }
+    
+  nsCOMPtr<nsIHandlerInfo> handlerInfo;
+  rv = gExtProtSvc->GetProtocolHandlerInfo(urlScheme, 
+                                           getter_AddRefs(handlerInfo));
+  if (NS_SUCCEEDED(rv)) {
+    PRInt32 preferredAction;                                           
+    rv = handlerInfo->GetPreferredAction(&preferredAction);
+
+    // for now, anything that triggers a helper app is going to be a web-based
+    // protocol handler, so we use that to decide which path to take...
+    if (preferredAction == nsIHandlerInfo::useHelperApp) {
+
+      // redirecting to the web handler involvegs calling OnChannelRedirect
+      // (which is supposed to happen after AsyncOpen completes) or possibly
+      // opening a dialog, so we do it in an event
+      nsCOMPtr<nsIRunnable> event = new nsProtocolRedirect(mUrl, handlerInfo,
+                                                           listener, ctxt,
+                                                           this);
+      // We don't check if |event| was successfully created because
+      // |NS_DispatchToCurrentThread| will do that for us.
+      rv = NS_DispatchToCurrentThread(event);
+      if (NS_SUCCEEDED(rv)) {
+        return rv;
+      }
     }
   }
-
-  // try for an OS-provided handler
+  
+  // no protocol info found, just fall back on whatever the OS has to offer
   OpenURL();
   return NS_ERROR_NO_CONTENT; // force caller to abort.
 }

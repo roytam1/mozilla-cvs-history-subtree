@@ -48,9 +48,15 @@ nsMIMEInfoMac::LaunchWithFile(nsIFile* aFile)
 {
   nsIFile* application;
 
-  if (mPreferredAction == useHelperApp)
-    application = mPreferredApplication;
-  else if (mPreferredAction == useSystemDefault)
+  if (mPreferredAction == useHelperApp) {
+    nsresult rv;
+    nsCOMPtr<nsILocalHandlerApp> localHandlerApp =
+      do_QueryInterface(mPreferredApplication, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+          
+    rv = localHandlerApp->GetExecutable(&application);
+    NS_ENSURE_SUCCESS(rv, rv);
+  } else if (mPreferredAction == useSystemDefault)
     application = mDefaultApplication;
   else
     return NS_ERROR_INVALID_ARG;
