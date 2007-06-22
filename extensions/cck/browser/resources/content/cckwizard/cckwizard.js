@@ -1715,6 +1715,7 @@ function CCKWriteDefaultJS(destdir)
   var throbber1 = 'pref("browser.throbber.url",            "';
   var homepage1 = 'pref("browser.startup.homepage",        "';
   var homepage2 = 'pref("startup.homepage_override_url",   "chrome://cck/content/cck.properties");\n';
+  var override  = 'pref("browser.startup.homepage_override.mstone",   "ignore");\n';
   var chromeurl =   "chrome://cck/content/cck.properties";
   var prefend = '");\n';
   var useragent1begin = 'pref("general.useragent.vendorComment", "CK-';
@@ -1759,6 +1760,12 @@ function CCKWriteDefaultJS(destdir)
   } else if (overrideurl && overrideurl.length) {
     fos.write(homepage2, homepage2.length);
   }
+  
+  if (document.getElementById("noWelcomePage").checked) {
+    fos.write(override, override.length);
+  }
+  
+  
   var bundle = document.getElementById("bundle_cckwizard");
 
   if (document.getElementById("defaultSearchEngine").value != bundle.getString("useBrowserDefault")) {
@@ -2645,6 +2652,9 @@ function CCKReadConfigFile(srcdir)
   
   var aboutconfig = document.getElementById("noaboutconfig");
   aboutconfig.checked = configarray["noaboutconfig"];
+  
+  var noWelcomePage = document.getElementById("noWelcomePage");
+  noWelcomePage.checked = configarray["noWelcomePage"];
 
 
   var proxyitem = document.getElementById("shareAllProxies");

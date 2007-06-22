@@ -62,9 +62,9 @@
 <!ENTITY  homePage.label                "Default Home Page URL:">
 <!ENTITY  homePage.description          "This page is displayed when users first start the Firefox browser, or when they click the Home button.">
 
-<!ENTITY  homePageOverride.label        "Override Home Page URL:">
-<!ENTITY  homePageOverride.description  "This page is displayed  on the very first invocation of Firefox after a new profile is created. It is optional.">
-
+<!ENTITY  homePageOverride.description  "On the very first invocation of Firefox after a new profile is created, a welcome page is displayed. You can choose to replace this page or to not display it at all.">
+<!ENTITY  homePageOverride.label        "Replacement Welcome Page URL:">
+<!ENTITY  noWelcomePage.label           "Do not display the welcome page">
 
 <!ENTITY  titleBar.caption              "Browser Window&apos;s Title Bar Text">
 <!ENTITY  titleBar.label                "Custom Title Bar Text:">

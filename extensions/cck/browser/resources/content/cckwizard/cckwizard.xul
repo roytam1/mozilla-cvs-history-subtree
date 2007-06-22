@@ -220,6 +220,9 @@
         <label control="HomePageOverrideURL">&homePageOverride.label;</label>
         <textbox id="HomePageOverrideURL" flex="1"/>
       </hbox>
+       <hbox align="center">
+         <checkbox id="noWelcomePage" label="&noWelcomePage.label;"/>
+       </hbox>
     </groupbox>
     <groupbox>
       <caption label="&titleBar.caption;"/>
