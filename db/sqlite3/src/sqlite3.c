@@ -15791,7 +15791,7 @@ int sqlite3WinOpenExclusive(const char *zFilename, OsFile **pId, int delFlag){
   fileflags = FILE_FLAG_RANDOM_ACCESS;
 #if !OS_WINCE
   if( delFlag ){
-    fileflags |= FILE_ATTRIBUTE_TEMPORARY;// XXX sqlite Issue 2441 | FILE_FLAG_DELETE_ON_CLOSE;
+    fileflags |= FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE;
   }
 #endif
   if( isNT() ){
