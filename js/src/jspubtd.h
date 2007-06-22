@@ -131,6 +131,7 @@ typedef struct JSXMLObjectOps    JSXMLObjectOps;
 typedef struct JSRuntime         JSRuntime;
 typedef struct JSRuntime         JSTaskState;   /* XXX deprecated name */
 typedef struct JSScript          JSScript;
+typedef struct JSStackFrame      JSStackFrame;
 typedef struct JSString          JSString;
 typedef struct JSXDRState        JSXDRState;
 typedef struct JSExceptionState  JSExceptionState;
