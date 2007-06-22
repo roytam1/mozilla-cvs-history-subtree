@@ -1353,7 +1353,7 @@ function CCKZip(zipfile, location)
     gPromptService.alert(window, bundle.getString("windowTitle"),
                        bundle.getString("zipError"));
   }
-//  scriptfile.remove(false);
+  scriptfile.remove(false);
 }
 
 function CCKWriteXULOverlay(destdir)
