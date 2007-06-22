@@ -306,6 +306,7 @@ function ClearAll()
         document.getElementById(elements[i].id).clear();
       } else if (elements[i].id == "defaultSearchEngine") {
         document.getElementById(elements[i].id).removeAllItems();
+        document.getElementById(elements[i].id).value = "";
       }
     }
 }
@@ -529,18 +530,24 @@ function OnBookmarkLoad()
   if (window.name == 'editbookmark') {
     document.getElementById('bookmarkname').value = listbox.selectedItem.label;
     document.getElementById('bookmarkurl').value = listbox.selectedItem.value;
-    if (listbox.selectedItem.cck['type'] == "live")
-      document.getElementById('liveBookmark').checked = true;
+    document.getElementById('bookmarktype').value = listbox.selectedItem.cck['type'];
   }
   bookmarkCheckOKButton();
 }
 
 function bookmarkCheckOKButton()
 {
-  if ((document.getElementById("bookmarkname").value) && (document.getElementById("bookmarkurl").value)) {
-    document.documentElement.getButton("accept").setAttribute( "disabled", "false" );
+  if (document.getElementById('bookmarktype').value == "separator") {
+    document.getElementById('bookmarkname').disabled = true;
+    document.getElementById('bookmarkurl').disabled = true;
   } else {
-    document.documentElement.getButton("accept").setAttribute( "disabled", "true" );  
+    document.getElementById('bookmarkname').disabled = false;
+    document.getElementById('bookmarkurl').disabled = false;
+  }
+  if ((document.getElementById('bookmarktype').value == "separator") || ((document.getElementById("bookmarkname").value) && (document.getElementById("bookmarkurl").value))) {
+    document.documentElement.getButton("accept").disabled = false;
+  } else {
+    document.documentElement.getButton("accept").disabled = true;  
   }
 }
 
@@ -550,19 +557,29 @@ function OnBookmarkOK()
   listbox = this.opener.document.getElementById(getPageId() +'.bookmarkList');
   var listitem;
   if (window.name == 'newbookmark') {
-    listitem = listbox.appendItem(document.getElementById('bookmarkname').value, document.getElementById('bookmarkurl').value);
+    if (document.getElementById('bookmarktype').value == "separator") {
+      listitem = listbox.appendItem("----------", "");
+    } else {
+      listitem = listbox.appendItem(document.getElementById('bookmarkname').value, document.getElementById('bookmarkurl').value);
+    }
     listitem.setAttribute("class", "listitem-iconic");
   } else {
     listitem = listbox.selectedItem;
-    listitem.setAttribute("label", document.getElementById('bookmarkname').value);
-    listitem.setAttribute("value", document.getElementById('bookmarkurl').value);
+    if (document.getElementById('bookmarktype').value == "separator") {
+      listitem.setAttribute("label", "----------");
+      listitem.setAttribute("value", "");
+    } else {
+      listitem.setAttribute("label", document.getElementById('bookmarkname').value);
+      listitem.setAttribute("value", document.getElementById('bookmarkurl').value);
+    }
   }
-  if (document.getElementById('liveBookmark').checked) {
-    listitem.cck['type'] = "live";
+  listitem.cck['type'] = document.getElementById('bookmarktype').value;
+  if (document.getElementById('bookmarktype').value == "live") {
     listitem.setAttribute("image", "chrome://browser/skin/page-livemarks.png");
+  } else if (document.getElementById('bookmarktype').value == "separator") {
+    listitem.setAttribute("image", "");
   } else {
     listitem.setAttribute("image", "chrome://browser/skin/Bookmarks-folder.png");
-    listitem.cck['type'] = "";
   }
 }
 
@@ -1017,7 +1034,8 @@ function CreateCCK()
     destdir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE, 0775);
   } catch(ex) {}
 
-  CCKCopyChromeToFile("cckService.js", destdir);
+//  CCKCopyChromeToFile("cckService.js", destdir);
+  CCKWriteCCKServiceJS(destdir);
   if (document.getElementById("noaboutconfig").checked)
     CCKCopyChromeToFile("disableAboutConfig.js", destdir);
   
@@ -1282,10 +1300,15 @@ function CCKZip(zipfile, location)
     line += "/d ";
   line += "\"" + location.path + "\"\n";
   fos.write(line, line.length);
+  var zipParams = "-r";
+  /* check for 7zip */
+  if (zipLocation.match("7z")) {
+    zipParams = "a -tZIP";
+  }
   if ((navigator.platform == "Win32") || (navigator.platform == "OS/2"))
-    line =  "\"" + zipLocation + "\" -r \"" + location.path + "\\" + zipfile + "\"";
+    line =  "\"" + zipLocation + "\" " + zipParams + " \"" + location.path + "\\" + zipfile + "\"";
   else
-    line = zipLocation + " -r \"" + location.path + "/" + zipfile + "\"";  
+    line = zipLocation + " " + zipParmams + " \"" + location.path + "/" + zipfile + "\"";  
   for (var i=2; i < arguments.length; i++) {
     line += " " + arguments[i];
   }
@@ -1329,12 +1352,12 @@ function CCKZip(zipfile, location)
     gPromptService.alert(window, bundle.getString("windowTitle"),
                        bundle.getString("zipError"));
   }
-  scriptfile.remove(false);
+//  scriptfile.remove(false);
 }
 
 function CCKWriteXULOverlay(destdir)
 {
-  var tooltipXUL  = '  <button id="navigator-throbber" oncommand="goClickThrobber(\'browser.throbber.url\', event)" onclick="checkForMiddleClick(this, event);" tooltiptext="&throbber.tooltip;"/>\n';
+  var tooltipXUL  = '  <button id="navigator-throbber" oncommand="goClickThrobber(\'browser.throbber.url\', event)" onclick="checkForMiddleClick(this, event);" tooltiptext="&throbber.tooltip;" disabled="false"/>\n';
   var titlebarXUL = '  <window id="main-window" titlemodifier="&mainWindow.titlemodifier;"/>\n';
 
   var helpmenu1   = '  <menupopup id="menu_HelpPopup">\n';
@@ -1849,6 +1872,57 @@ function CCKWriteDefaultJS(destdir)
   fos.close();
 }
 
+function CCKWriteCCKServiceJS(destdir)
+{
+  var idline =          "<em:id>%id%</em:id>";
+
+
+  var file = destdir.clone();
+
+  file.append("cckService.js");
+  try {
+    file.remove(false);                         
+  } catch (ex) {
+  }
+  var fos = Components.classes["@mozilla.org/network/file-output-stream;1"]
+                       .createInstance(Components.interfaces.nsIFileOutputStream);
+  var cos = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
+                      .createInstance(Components.interfaces.nsIConverterOutputStream);
+
+  fos.init(file, -1, -1, false);
+  cos.init(fos, null, 0, null);
+
+  var ioService=Components.classes["@mozilla.org/network/io-service;1"]
+    .getService(Components.interfaces.nsIIOService);
+  var scriptableStream=Components
+    .classes["@mozilla.org/scriptableinputstream;1"]
+    .getService(Components.interfaces.nsIScriptableInputStream);
+
+  var channel=ioService.newChannel("chrome://cckwizard/content/srcfiles/cckService.js.in",null,null);
+  var input=channel.open();
+  scriptableStream.init(input);
+  var str=scriptableStream.read(input.available());
+  scriptableStream.close();
+  input.close();
+
+  var uuidString = "{31aec909-8e86-4397-9380-63a59e0c5ff6}";
+  try {
+    var uuidGenerator = 
+      Components.classes["@mozilla.org/uuid-generator;1"]
+                .getService(Components.interfaces.nsIUUIDGenerator);
+      var uuid = uuidGenerator.generateUUID();
+      uuidString = uuid.toString();
+  } catch (ex) {}
+
+  str = str.replace(/%uuid%/g, uuidString);
+  str = str.replace(/%OrganizationName%/g, document.getElementById("OrganizationName").value);
+
+  cos.writeString(str);
+  cos.close();
+  fos.close();
+}
+
+
 function CCKWriteInstallRDF(destdir)
 {
   var idline =          "<em:id>%id%</em:id>";
@@ -2267,9 +2341,14 @@ function CCKWriteConfigFile(destdir)
         cos.writeString(line);
       }
     } else if (elements[i].id == "defaultSearchEngine") {
-      if (elements[i].value) {
-        var line = "DefaultSearchEngine=" + elements[i].value + "\n";
-        cos.writeString(line);
+      if (elements[i].selectedItem) {
+        if (elements[i].selectedItem.value) {
+          var line = "DefaultSearchEngine=" + elements[i].selectedItem.value + "\n";
+          cos.writeString(line);
+        }
+      } else {
+          var line = "DefaultSearchEngine=" + elements[i].value + "\n";
+          cos.writeString(line);
       }
     }
   }
@@ -2376,11 +2455,18 @@ function CCKReadConfigFile(srcdir)
 
   var i = 1;
   while( name = configarray['ToolbarFolder1.BookmarkTitle' + i]) {
-    listitem = listbox.appendItem(name, configarray['ToolbarFolder1.BookmarkURL' + i]);
+    if (configarray['ToolbarFolder1.BookmarkType' + i] == "separator") {
+      listitem = listbox.appendItem("----------", "");
+    } else {
+      listitem = listbox.appendItem(name, configarray['ToolbarFolder1.BookmarkURL' + i]);
+    }
     listitem.setAttribute("class", "listitem-iconic");
     if (configarray['ToolbarFolder1.BookmarkType' + i] == "live") {
       listitem.cck['type'] = "live";
       listitem.setAttribute("image", "chrome://browser/skin/page-livemarks.png");
+    } else if (configarray['ToolbarFolder1.BookmarkType' + i] == "separator") {
+      listitem.cck['type'] = "separator";
+      listitem.setAttribute("image", "");
     } else {
       listitem.cck['type'] = "";
       listitem.setAttribute("image", "chrome://browser/skin/Bookmarks-folder.png");
@@ -2393,11 +2479,18 @@ function CCKReadConfigFile(srcdir)
 
   var i = 1;
   while( name = configarray['ToolbarBookmarkTitle' + i]) {
-    listitem = listbox.appendItem(name, configarray['ToolbarBookmarkURL' + i]);
+    if (configarray['ToolbarBookmarkType' + i] == "separator") {
+      listitem = listbox.appendItem("----------", "");
+    } else {
+      listitem = listbox.appendItem(name, configarray['ToolbarBookmarkURL' + i]);
+    }
     listitem.setAttribute("class", "listitem-iconic");
     if (configarray['ToolbarBookmarkType' + i] == "live") {
       listitem.cck['type'] = "live";
       listitem.setAttribute("image", "chrome://browser/skin/page-livemarks.png");
+    } else if (configarray['ToolbarBookmarkType' + i] == "separator") {
+      listitem.cck['type'] = "separator";
+      listitem.setAttribute("image", "");
     } else {
       listitem.cck['type'] = "";
       listitem.setAttribute("image", "chrome://browser/skin/Bookmarks-folder.png");
@@ -2411,11 +2504,18 @@ function CCKReadConfigFile(srcdir)
 
   var i = 1;
   while( name = configarray['BookmarkFolder1.BookmarkTitle' + i]) {
-    listitem = listbox.appendItem(name, configarray['BookmarkFolder1.BookmarkURL' + i]);
+    if (configarray['BookmarkFolder1.BookmarkType' + i] == "separator") {
+      listitem = listbox.appendItem("----------", "");
+    } else {
+      listitem = listbox.appendItem(name, configarray['BookmarkFolder1.BookmarkURL' + i]);
+    }
     listitem.setAttribute("class", "listitem-iconic");
     if (configarray['BookmarkFolder1.BookmarkType' + i] == "live") {
       listitem.cck['type'] = "live";
       listitem.setAttribute("image", "chrome://browser/skin/page-livemarks.png");
+    } else if (configarray['BookmarkFolder1.BookmarkType' + i] == "separator") {
+      listitem.cck['type'] = "separator";
+      listitem.setAttribute("image", "");
     } else {
       listitem.cck['type'] = "";
       listitem.setAttribute("image", "chrome://browser/skin/Bookmarks-folder.png");
@@ -2428,11 +2528,18 @@ function CCKReadConfigFile(srcdir)
 
   var i = 1;
   while( name = configarray['BookmarkTitle' + i]) {
-    listitem = listbox.appendItem(name, configarray['BookmarkURL' + i]);
+    if (configarray['BookmarkType' + i] == "separator") {
+      listitem = listbox.appendItem("----------", "");
+    } else {
+      listitem = listbox.appendItem(name, configarray['BookmarkURL' + i]);
+    }
     listitem.setAttribute("class", "listitem-iconic");
     if (configarray['BookmarkType' + i] == "live") {
       listitem.cck['type'] = "live";
       listitem.setAttribute("image", "chrome://browser/skin/page-livemarks.png");
+    } else if (configarray['BookmarkType' + i] == "separator") {
+      listitem.cck['type'] = "separator";
+      listitem.setAttribute("image", "");
     } else {
       listitem.cck['type'] = "";
       listitem.setAttribute("image", "chrome://browser/skin/Bookmarks-folder.png");

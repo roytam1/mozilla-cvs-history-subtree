@@ -146,6 +146,8 @@
 <!ENTITY  bookmark.description          "Enter a Bookmark">
 <!ENTITY  bookmarkTitle.label           "Title:">
 <!ENTITY  bookmarkURL.label             "URL:">
+<!ENTITY  liveBookmark.label            "Live Bookmark">
+<!ENTITY  separator.label               "Separator">
 
 
 <!ENTITY  customizePrefs.label          "Customize Preferences">
