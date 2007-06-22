@@ -26,12 +26,7 @@
 <!ENTITY  saveOnExit.label              "Save configuration automatically on exit">
 <!ENTITY  zipLocation.label             "In order to create the XPI, we need to use ZIP. If ZIP is not in your path, you can specify it here:">
 
-
-
-
 <!ENTITY  customizeExt.label            "Customize Extension">
-<!ENTITY  customizeExt.description      "">
-
 
 <!ENTITY  id.label                      "Unique ID:">
 <!ENTITY  id.format                     "Format: companyname-cck@extensions.domainname.tld">
@@ -175,6 +170,9 @@
 <!ENTITY  registry.label                "Registry">
 <!ENTITY  registry.description          "Use the buttons below to add entries to the Windows registry. Note these items will be added/updated every time the browser starts.">
 
+<!ENTITY  regDescription.label          "Description">
+
+
 <!ENTITY  regRootKey.label              "Root Key">
 <!ENTITY  regKey.label                  "Key">
 <!ENTITY  regName.label                 "Name">
@@ -243,8 +241,6 @@
 <!ENTITY  HTTPport.accesskey            "p">
 <!ENTITY  SSLport.accesskey             "o">
 <!ENTITY  FTPport.accesskey             "r">
-<!-- No accesskey for gopher (':' doesn't go well) - mpt's going to redesign the window -->
-<!ENTITY  gopherPort.accesskey          "">
 <!ENTITY  SOCKSport.accesskey           "t">
 <!ENTITY  noproxy.label                 "No Proxy for:">
 <!ENTITY  noproxy.accesskey             "n">

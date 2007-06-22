@@ -911,7 +911,8 @@ function onNewBundle()
   try {
     var nsIFilePicker = Components.interfaces.nsIFilePicker;
     var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
-    fp.init(window, "Choose File...", nsIFilePicker.modeOpen);
+    var bundle = document.getElementById("bundle_cckwizard");
+    fp.init(window, bundle.getString("chooseFile"), nsIFilePicker.modeOpen);
     fp.appendFilters(nsIFilePicker.filterHTML | nsIFilePicker.filterText |
                      nsIFilePicker.filterAll | nsIFilePicker.filterImages | nsIFilePicker.filterXML);
 
