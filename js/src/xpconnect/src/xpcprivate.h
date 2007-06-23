@@ -107,6 +107,7 @@
 #include "nsIPropertyBag.h"
 #include "nsIProperty.h"
 #include "nsSupportsArray.h"
+#include "nsTArray.h"
 
 #include "nsIXPCScriptNotify.h"  // used to notify: ScriptEvaluated
 #ifndef XPCONNECT_STANDALONE
@@ -2717,6 +2718,15 @@ private:
 /***************************************************************************/
 // XPCJSContextStack is not actually an xpcom object, but xpcom calls are
 // delegated to it as an implementation detail.
+struct JSContextAndFrame {
+    JSContextAndFrame(JSContext* aCx) :
+        cx(aCx),
+        frame(nsnull)
+    {}
+    JSContext* cx;
+    JSStackFrame* frame;  // Frame to be restored when this JSContext becomes
+                          // the topmost one.
+};
 
 class XPCJSContextStack
 {
@@ -2731,14 +2741,14 @@ public:
     JSBool DEBUG_StackHasJSContext(JSContext*  aJSContext);
 #endif
 
-    const nsDeque &GetStack()
-    { return mStack; }
+    const nsTArray<JSContextAndFrame>* GetStack()
+    { return &mStack; }
 
 private:
     void SyncJSContexts();
 
 private:
-    nsDeque     mStack;
+    nsTArray<JSContextAndFrame> mStack;
     JSContext*  mSafeJSContext;
 
     // If non-null, we own it; same as mSafeJSContext if SetSafeJSContext
@@ -2759,8 +2769,8 @@ public:
     NS_DECL_NSIJSCONTEXTSTACKITERATOR
 
 private:
-    // XXX These don't really want to be pointers.
-    nsAutoPtr<nsDequeIterator> mIterator;
+    const nsTArray<JSContextAndFrame> *mStack;
+    PRUint32 mPosition;
 };
 
 /**************************************************************/
