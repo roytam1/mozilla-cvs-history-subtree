@@ -931,7 +931,7 @@ PRBool nsExternalHelperAppService::MIMETypeIsInDataSource(const char * aContentT
 nsresult nsExternalHelperAppService::FillMIMEInfoForMimeTypeFromDS(
   const nsACString& aContentType, nsIMIMEInfo * aMIMEInfo)
 {
-#ifdef MOZ_RDF 
+#ifdef MOZ_RDF
   NS_ENSURE_ARG_POINTER(aMIMEInfo);
   nsresult rv = InitDataSource();
   if (NS_FAILED(rv)) return rv;
@@ -960,9 +960,7 @@ nsresult nsExternalHelperAppService::FillMIMEInfoForMimeTypeFromDS(
   NS_ENSURE_SUCCESS(rv, rv);
 
   return FillHandlerInfoForTypeFromDS(typeNodeResource.get(), type, rdf, 
-                                      NC_CONTENT_NODE_PREFIX, 
-                                      NS_STATIC_CAST(nsIHandlerInfo *,
-                                                     aMIMEInfo));
+                                      NC_CONTENT_NODE_PREFIX, aMIMEInfo); 
 #else
   return NS_ERROR_NOT_AVAILABLE;
 #endif
@@ -971,7 +969,7 @@ nsresult nsExternalHelperAppService::FillMIMEInfoForMimeTypeFromDS(
 nsresult nsExternalHelperAppService::FillProtoInfoForSchemeFromDS(
     const nsACString& aType, nsIHandlerInfo * aHandlerInfo)
 {
-#ifdef MOZ_RDF 
+#ifdef MOZ_RDF
   NS_ENSURE_ARG_POINTER(aHandlerInfo);
   nsresult rv = InitDataSource();
   if (NS_FAILED(rv)) return rv;
@@ -1482,9 +1480,8 @@ nsExternalHelperAppService::GetProtocolHandlerInfo(const nsACString &aScheme,
   if (!mimeInfo) {
     return NS_ERROR_OUT_OF_MEMORY;    
   }
-  nsresult rv = CallQueryInterface(mimeInfo, aHandlerInfo); 
-  NS_ENSURE_SUCCESS(rv, rv);
 
+  NS_ADDREF(*aHandlerInfo = mimeInfo);    
   return FillProtoInfoForSchemeFromDS(aScheme, *aHandlerInfo);
 }
  
@@ -3069,7 +3066,7 @@ NS_IMETHODIMP nsExternalHelperAppService::GetTypeFromFile(nsIFile* aFile, nsACSt
 }
 
 nsresult nsExternalHelperAppService::FillMIMEInfoForMimeTypeFromExtras(
-  const nsACString& aContentType, nsIMIMEInfo * aMIMEInfo )
+  const nsACString& aContentType, nsIMIMEInfo * aMIMEInfo)
 {
   NS_ENSURE_ARG( aMIMEInfo );
 

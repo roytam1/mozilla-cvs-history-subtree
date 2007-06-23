@@ -46,7 +46,7 @@
 NS_IMETHODIMP
 nsMIMEInfoMac::LaunchWithFile(nsIFile* aFile)
 {
-  nsIFile* application;
+  nsCOMPtr<nsIFile> application;
 
   if (mPreferredAction == useHelperApp) {
     nsresult rv;
@@ -54,7 +54,7 @@ nsMIMEInfoMac::LaunchWithFile(nsIFile* aFile)
       do_QueryInterface(mPreferredApplication, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
           
-    rv = localHandlerApp->GetExecutable(&application);
+    rv = localHandlerApp->GetExecutable(getter_AddRefs(application));
     NS_ENSURE_SUCCESS(rv, rv);
   } else if (mPreferredAction == useSystemDefault)
     application = mDefaultApplication;

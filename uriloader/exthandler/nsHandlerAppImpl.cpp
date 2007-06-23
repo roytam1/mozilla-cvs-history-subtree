@@ -68,7 +68,7 @@ NS_IMETHODIMP nsLocalHandlerApp::GetName(nsAString& aName)
     // without changing the description....
     mExecutable->GetLeafName(aName);
   } else {
-    aName = mName;
+    aName.Assign(mName);
   }
   
   return NS_OK;

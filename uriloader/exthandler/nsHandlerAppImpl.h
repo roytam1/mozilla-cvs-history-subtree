@@ -51,8 +51,8 @@ public:
   NS_DECL_NSIHANDLERAPP
 
   nsHandlerAppBase() NS_HIDDEN {};
-  nsHandlerAppBase(const PRUnichar *aName) NS_HIDDEN { mName.Assign (aName); };
-  nsHandlerAppBase(const nsAString & aName) NS_HIDDEN { mName.Assign(aName); };
+  nsHandlerAppBase(const PRUnichar *aName) NS_HIDDEN  { mName.Assign(aName); };
+  nsHandlerAppBase(const nsAString & aName) NS_HIDDEN  { mName.Assign(aName); };
   virtual ~nsHandlerAppBase() {};
 
 protected:
@@ -79,7 +79,8 @@ public:
 
   virtual ~nsLocalHandlerApp() {};
 
-  // overriding to keep old caching behavior
+  // overriding to keep old caching behavior (that a useful name is returned
+  // even if none was given to the constructor)
   NS_IMETHOD GetName(nsAString & aName);
     
 protected: 

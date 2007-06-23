@@ -446,6 +446,7 @@ nsProgressDialog.prototype = {
 
             // Target is the "preferred" application.  Hide if empty.
             if ( this.MIMEInfo && 
+                 this.MIMEInfo.preferredApplicationHandler &&
                  this.MIMEInfo.preferredApplicationHandler.executable ) {
                 var appName = 
                   this.MIMEInfo.preferredApplicationHandler.executable.leafName;

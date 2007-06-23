@@ -36,11 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/**
- * nsIHandlerInfo gives access to the information about how a given protocol
- * scheme or MIME-type is handled.
- */
-
 #include "nsISupports.idl"
 
 interface nsIURI;
@@ -50,6 +45,10 @@ interface nsIHandlerApp;
 
 typedef long nsHandlerInfoAction;
 
+/**
+ * nsIHandlerInfo gives access to the information about how a given protocol
+ * scheme or MIME-type is handled.
+ */
 [scriptable, uuid(feaa5a46-45aa-4124-8e9e-bc23d517c2d4)]
 interface nsIHandlerInfo : nsISupports {
     /**
@@ -58,16 +57,15 @@ interface nsIHandlerInfo : nsISupports {
     attribute AString description;
 
     /**
-     * Returns a nsIFile that points to the application the user has said
-     * they want associated with this content type. This is not always
-     * guaranteed to be set!!
+     * The application the user has said they want associated with this content
+     * type. This is not always guaranteed to be set!!
      */
     attribute nsIHandlerApp preferredApplicationHandler;
 
     /**
      * Indicates whether a default application handler exists,
      * i.e. whether launchWithFile with action = useSystemDefault is possible
-     * and applicationDescription will contain usable information.
+     * and defaultDescription will contain usable information.
      */
     readonly attribute boolean hasDefaultHandler;
 
@@ -89,18 +87,19 @@ interface nsIHandlerInfo : nsISupports {
      */
     void launchWithFile(in nsIFile aFile);
 
+    /**
+     * preferredAction is how the user specified they would like to handle
+     * this content type: save to disk, use specified helper app, use OS
+     * default handler or handle using navigator; possible value constants
+     * listed below
+     */
+    attribute nsHandlerInfoAction preferredAction;
+
     const long saveToDisk = 0;
     const long alwaysAsk = 1;
     const long useHelperApp = 2;
     const long handleInternally = 3;
     const long useSystemDefault = 4;
-
-    /**
-     * preferredAction is how the user specified they would like to handle
-     * this content type: save to disk, use specified helper app, use OS
-     * default handler or handle using navigator.
-     */
-    attribute nsHandlerInfoAction preferredAction;
 
     /**
      * alwaysAskBeforeHandling: if true, we should always give the user a
@@ -110,7 +109,7 @@ interface nsIHandlerInfo : nsISupports {
 };
 
 /**
- * nsIMIMEInfo extends nsIHandleInfo with a bunch of information specific to
+ * nsIMIMEInfo extends nsIHandlerInfo with a bunch of information specific to
  * MIME content-types. There is a one-to-many relationship between MIME types
  * and file extensions. This means that a MIMEInfo object may have multiple
  * file extensions associated with it.  However, the reverse is not true.
@@ -118,7 +117,6 @@ interface nsIHandlerInfo : nsISupports {
  * MIMEInfo objects are generally retrieved from the MIME Service
  * @see nsIMIMEService
  */
-
 [scriptable, uuid(ba01eb13-c2fd-4652-94f8-b33c61e6d77e)]
 interface nsIMIMEInfo : nsIHandlerInfo {
     /**
@@ -169,11 +167,10 @@ interface nsIMIMEInfo : nsIHandlerInfo {
     attribute PRUint32 macCreator;
 
     /**
-     * Returns whether or not these two MIME infos are logically
-     * equivalent maintaining the one-to-many relationship between
-     * MIME types and file extensions.
+     * Returns whether or not these two nsIMIMEInfos are logically
+     * equivalent.
      *
-     * @returns TRUE if the two are considered equal
+     * @returns PR_TRUE if the two are considered equal
      */
     boolean equals(in nsIMIMEInfo aMIMEInfo);
 };
