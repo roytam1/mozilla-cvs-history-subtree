@@ -60,6 +60,7 @@ class nsXFormsXPathAnalyzer {
 private:
   nsCOMPtr<nsIXFormsXPathEvaluator>    mEvaluator;
   nsCOMPtr<nsIDOMNode>                 mResolver;
+  nsCOMPtr<nsIDOMNode>                 mOrigCtxt;
 
   nsCOMArray<nsIDOMNode>              *mCurSet;
   nsCOMPtr<nsIDOMNSXPathExpression>    mCurExpression;
@@ -75,7 +76,8 @@ private:
 
 public:
   nsXFormsXPathAnalyzer(nsIXFormsXPathEvaluator  *aEvaluator,
-                        nsIDOMNode               *aResolver);
+                        nsIDOMNode               *aResolver,
+                        nsIDOMNode               *aOrigCtxt);
   ~nsXFormsXPathAnalyzer();
   
   nsresult Analyze(nsIDOMNode                *aContextNode,

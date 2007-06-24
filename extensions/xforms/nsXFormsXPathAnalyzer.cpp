@@ -46,8 +46,11 @@
 #endif
 
 nsXFormsXPathAnalyzer::nsXFormsXPathAnalyzer(nsIXFormsXPathEvaluator  *aEvaluator,
-                                             nsIDOMNode               *aResolver)
-  : mEvaluator(aEvaluator), mResolver(aResolver)
+                                             nsIDOMNode               *aResolver,
+                                             nsIDOMNode               *aOrigCtxt)
+  : mEvaluator(aEvaluator),
+    mResolver(aResolver),
+    mOrigCtxt(aOrigCtxt)
 {
   MOZ_COUNT_CTOR(nsXFormsXPathAnalyzer);
 }
@@ -175,7 +178,7 @@ nsXFormsXPathAnalyzer::AnalyzeRecursively(nsIDOMNode              *aContextNode,
                      aNode->mEndIndex - aNode->mStartIndex);
     }
     rv = mEvaluator->Evaluate(xp, aContextNode, mCurPosition, mCurSize,
-                              mResolver, nsIDOMXPathResult::ANY_TYPE,
+                              mResolver, mOrigCtxt, nsIDOMXPathResult::ANY_TYPE,
                               nsnull, getter_AddRefs(result));
     if (NS_FAILED(rv)) {
       const PRUnichar *strings[] = { xp.get() };
@@ -196,7 +199,8 @@ nsXFormsXPathAnalyzer::AnalyzeRecursively(nsIDOMNode              *aContextNode,
                                                  xp.Length() - indexSize - 1); // remove final ')' too
       nsCOMPtr<nsIDOMXPathResult> stringRes;
       rv = mEvaluator->Evaluate(indexExpr, aContextNode, mCurPosition, mCurSize,
-                                mResolver, nsIDOMXPathResult::STRING_TYPE,
+                                mResolver, mOrigCtxt,
+                                nsIDOMXPathResult::STRING_TYPE,
                                 nsnull, getter_AddRefs(stringRes));
       NS_ENSURE_SUCCESS(rv, rv);
 

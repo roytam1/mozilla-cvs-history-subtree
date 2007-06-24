@@ -2339,19 +2339,6 @@ nsXFormsModelElement::ProcessBind(nsIXFormsXPathEvaluator *aEvaluator,
     sModelPropsList[i]->ToString(attrStr);
 
     aBindElement->GetAttribute(attrStr, propStrings[i]);
-    if (!propStrings[i].IsEmpty() &&
-        i != eModel_type &&
-        i != eModel_p3ptype) {
-      rv = aEvaluator->CreateExpression(propStrings[i], aBindElement,
-                                        getter_AddRefs(props[i]));
-      if (NS_FAILED(rv)) {
-        const PRUnichar *strings[] = { propStrings[i].get() };
-        nsXFormsUtils::ReportError(NS_LITERAL_STRING("mipParseError"),
-                                   strings, 1, aBindElement, aBindElement);
-        nsXFormsUtils::DispatchEvent(mElement, eEvent_ComputeException);
-        return rv;
-      }
-    }
   }
 
   // Find the nodeset that this bind applies to.
@@ -2362,8 +2349,9 @@ nsXFormsModelElement::ProcessBind(nsIXFormsXPathEvaluator *aEvaluator,
   if (expr.IsEmpty()) {
     expr = NS_LITERAL_STRING(".");
   }
+
   rv = aEvaluator->Evaluate(expr, aContextNode, aContextPosition, aContextSize,
-                            aBindElement,
+                            aBindElement, aContextNode,
                             nsIDOMXPathResult::ORDERED_NODE_SNAPSHOT_TYPE,
                             nsnull, getter_AddRefs(result));
   if (NS_FAILED(rv)) {
@@ -2420,10 +2408,9 @@ nsXFormsModelElement::ProcessBind(nsIXFormsXPathEvaluator *aEvaluator,
       continue;
     }
     
-
     // Apply MIPs
     nsXFormsXPathParser parser;
-    nsXFormsXPathAnalyzer analyzer(aEvaluator, aBindElement);
+    nsXFormsXPathAnalyzer analyzer(aEvaluator, aBindElement, node);
     PRBool multiMIP = PR_FALSE;
     for (PRUint32 j = 0; j < eModel__count; ++j) {
       if (propStrings[j].IsEmpty())
@@ -2457,6 +2444,16 @@ nsXFormsModelElement::ProcessBind(nsIXFormsXPathEvaluator *aEvaluator,
           NS_ENSURE_SUCCESS(rv, rv);
         }
       } else {
+        rv = aEvaluator->CreateExpression(propStrings[j], aBindElement, node,
+                                          getter_AddRefs(props[j]));
+        if (NS_FAILED(rv)) {
+          const PRUnichar *strings[] = { propStrings[j].get() };
+          nsXFormsUtils::ReportError(NS_LITERAL_STRING("mipParseError"),
+                                     strings, 1, aBindElement, aBindElement);
+          nsXFormsUtils::DispatchEvent(mElement, eEvent_ComputeException);
+          return rv;
+        }
+
         // the rest of the MIPs are given to the MDG
         nsCOMPtr<nsIDOMNSXPathExpression> expr = props[j];
 

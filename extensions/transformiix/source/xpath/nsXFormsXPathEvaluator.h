@@ -70,8 +70,10 @@ private:
     class XFormsParseContextImpl : public txIParseContext
     {
     public:
-        XFormsParseContextImpl(nsIDOMNode* aResolverNode)
-              : mResolverNode(aResolverNode), mLastError(NS_OK)
+        XFormsParseContextImpl(nsIDOMNode* aResolverNode, nsIDOMNode* aOrigCtxt)
+              : mResolverNode(aResolverNode),
+                mOriginalContext(aOrigCtxt),
+                mLastError(NS_OK)
         {
         }
 
@@ -92,6 +94,7 @@ private:
 
     private:
         nsIDOMNode* mResolverNode;
+        nsIDOMNode* mOriginalContext;
         nsresult mLastError;
     };
 

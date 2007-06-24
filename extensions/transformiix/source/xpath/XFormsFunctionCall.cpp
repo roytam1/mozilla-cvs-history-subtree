@@ -61,9 +61,9 @@
 /*
  * Creates a XFormsFunctionCall of the given type
  */
-XFormsFunctionCall::XFormsFunctionCall(XFormsFunctions aType, nsIDOMNode *aResolverNode)
+XFormsFunctionCall::XFormsFunctionCall(XFormsFunctions aType, nsIDOMNode *aNode)
     : mType(aType)
-    , mResolverNode(aResolverNode)
+    , mNode(aNode)
 {
 }
 
@@ -206,13 +206,13 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
       // now get the index value from the xforms:repeat.  Need to use the
       //   service to do this work so that we don't have dependencies in
       //   transformiix on XForms.
-      nsCOMPtr<nsIXFormsUtilityService>xformsService = 
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
             do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
       NS_ENSURE_SUCCESS(rv, rv);
 
       PRInt32 index = 0;
       double res = Double::NaN;
-      rv = xformsService->GetRepeatIndexById(mResolverNode, indexId, &index);
+      rv = xformsService->GetRepeatIndexById(mNode, indexId, &index);
       NS_ENSURE_SUCCESS(rv, rv);
 
       if (index >= 0) {
@@ -242,12 +242,12 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
    
       // here document is the XForms document
       nsCOMPtr<nsIDOMDocument> document;
-      rv = mResolverNode->GetOwnerDocument(getter_AddRefs(document)); 
+      rv = mNode->GetOwnerDocument(getter_AddRefs(document));
       NS_ENSURE_SUCCESS(rv, rv);
       NS_ENSURE_TRUE(document, NS_ERROR_NULL_POINTER);
  
       nsCOMPtr<nsIDOMElement> instEle;
-      rv = document->GetElementById(instanceId, getter_AddRefs(instEle)); 
+      rv = document->GetElementById(instanceId, getter_AddRefs(instEle));
  
       PRBool foundInstance = PR_FALSE;
       nsAutoString localname, namespaceURI;
@@ -509,6 +509,29 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 
       return aContext->recycler()->getNumberResult(res, aResult);
     }
+    case CURRENT:
+    {
+      if (!requireParams(0, 0, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+   
+      nsRefPtr<txNodeSet> resultSet;
+      rv = aContext->recycler()->getNodeSet(getter_AddRefs(resultSet));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // mNode will be the original context node that was used when the
+      // expression was built.
+      if (mNode) {
+        nsAutoPtr<txXPathNode> txNode(txXPathNativeNode::createXPathNode(mNode));
+        if (txNode) {
+          resultSet->add(*txNode);
+        }
+      }
+
+      *aResult = resultSet;
+      NS_ADDREF(*aResult);
+
+      return NS_OK;
+    }
   } /* switch() */
 
   aContext->receiveError(NS_LITERAL_STRING("Internal error"),
@@ -589,6 +612,11 @@ XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
     case SECONDSFROMDATETIME:
     {
       *aAtom = txXPathAtoms::secondsFromDateTime;
+      break;
+    }
+    case CURRENT:
+    {
+      *aAtom = txXPathAtoms::current;
       break;
     }
     default:
