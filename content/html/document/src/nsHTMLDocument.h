@@ -74,7 +74,8 @@ public:
   nsHTMLDocument();
   virtual ~nsHTMLDocument();
   virtual nsresult Init();
-
+  virtual NS_HIDDEN_(void) Destroy();
+ 
   NS_IMETHOD QueryInterface(REFNSIID aIID, void** aInstancePtr);
 
   NS_IMETHOD_(nsrefcnt) AddRef(void);
