@@ -2132,7 +2132,9 @@ nsGenericElement::HandleDOMEvent(nsPresContext* aPresContext,
       aEvent->message != NS_SCRIPT_LOAD &&
       aEvent->message != NS_IMAGE_LOAD &&
       aEvent->message != NS_IMAGE_ERROR &&
-      aEvent->message != NS_SCROLL_EVENT) {
+      aEvent->message != NS_SCROLL_EVENT &&
+      !(aEvent->eventStructType == NS_MUTATION_EVENT &&
+        IsAnonymousForEvents())) {
     //Initiate capturing phase.  Special case first call to document
     if (parent) {
       parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
@@ -2213,7 +2215,9 @@ nsGenericElement::HandleDOMEvent(nsPresContext* aPresContext,
       aEvent->message != NS_PAGE_LOAD && aEvent->message != NS_SCRIPT_LOAD &&
       aEvent->message != NS_IMAGE_ERROR && aEvent->message != NS_IMAGE_LOAD &&
       !(aEvent->message == NS_SCROLL_EVENT &&
-        aEvent->flags & NS_EVENT_FLAG_CANT_BUBBLE)) {
+        aEvent->flags & NS_EVENT_FLAG_CANT_BUBBLE) &&
+      !(aEvent->eventStructType == NS_MUTATION_EVENT &&
+        IsAnonymousForEvents())) {
     if (parent) {
       // If there's a parent we pass the event to the parent...
 

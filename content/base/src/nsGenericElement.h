@@ -854,6 +854,14 @@ protected:
   void GetContentsAsText(nsAString& aText);
 
   /**
+   * Returns PR_TRUE if this content is anonymous for event handling.
+   */
+  PRBool IsAnonymousForEvents() const
+  {
+    return !!(GetFlags() & GENERIC_ELEMENT_IS_ANONYMOUS);
+  }
+
+  /**
    * Information about this type of node
    */
   nsCOMPtr<nsINodeInfo> mNodeInfo;          // OWNER
