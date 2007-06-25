@@ -2171,7 +2171,9 @@ nsGenericElement::HandleDOMEvent(nsPresContext* aPresContext,
       aEvent->message != NS_SCRIPT_LOAD &&
       aEvent->message != NS_IMAGE_LOAD &&
       aEvent->message != NS_IMAGE_ERROR &&
-      aEvent->message != NS_SCROLL_EVENT) {
+      aEvent->message != NS_SCROLL_EVENT &&
+      !(aEvent->eventStructType == NS_MUTATION_EVENT &&
+        IsAnonymousForEvents())) {
     //Initiate capturing phase.  Special case first call to document
     if (parent) {
       parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
@@ -2248,7 +2250,9 @@ nsGenericElement::HandleDOMEvent(nsPresContext* aPresContext,
       aEvent->message != NS_IMAGE_ERROR && aEvent->message != NS_IMAGE_LOAD &&
       // scroll events fired at elements don't bubble (although scroll events
       // fired at documents do, to the window)
-      aEvent->message != NS_SCROLL_EVENT) {
+      aEvent->message != NS_SCROLL_EVENT &&
+      !(aEvent->eventStructType == NS_MUTATION_EVENT &&
+        IsAnonymousForEvents())) {
     if (parent) {
       // If there's a parent we pass the event to the parent...
 
