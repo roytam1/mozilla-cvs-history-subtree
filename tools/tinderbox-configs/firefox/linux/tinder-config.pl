@@ -34,7 +34,7 @@ $CleanProfile             = 1;
 $ProductName               = "Firefox";
 $VendorName                = "Mozilla";
 $ENV{NO_EM_RESTART}        = '1';
-$ENV{XPCOM_DEBUG_BREAK}    = 'abort';
+$ENV{XPCOM_DEBUG_BREAK}    = 'warn';
 
 #$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 #$RegxpcomTest             = 1;
