@@ -50,7 +50,8 @@ $BloatTest2               = 1;  # dbaron memory bloat test, require tracemalloc
 #$XULWindowOpenTest        = 0;  # Txul
 #$StartupPerformanceTest   = 0;  # Ts
 
-$TestsPhoneHome           = 0;  # Should test report back to server?
+$TestsPhoneHome           = 1;  # Should test report back to server?
+$GraphNameOverride        = 'balsa-1_8'; # Override name built from ::hostname() and $BuildTag
 #$results_server           = "axolotl.mozilla.org"; # was tegu
 #$pageload_server          = "spider";  # localhost
 
