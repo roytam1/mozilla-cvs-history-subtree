@@ -545,6 +545,8 @@ NS_IMETHODIMP nsMsgLocalMailFolder::GetDatabaseWithReparse(nsIUrlListener *aRepa
           {
             if (folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING)
               dbFolderInfo->SetFlags(mFlags);
+            dbFolderInfo->SetNumMessages(0);
+            dbFolderInfo->SetNumUnreadMessages(0);
             dbFolderInfo->GetTransferInfo(getter_AddRefs(transferInfo));
           }
           dbFolderInfo = nsnull;
@@ -569,8 +571,6 @@ NS_IMETHODIMP nsMsgLocalMailFolder::GetDatabaseWithReparse(nsIUrlListener *aRepa
           return rv;
         else if (transferInfo && mDatabase)
         {
-          transferInfo->SetNumMessages(0);
-          transferInfo->SetNumUnreadMessages(0);
           SetDBTransferInfo(transferInfo);
         }
       }
