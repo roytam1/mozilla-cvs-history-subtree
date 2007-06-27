@@ -1,3 +1,4 @@
+
 #
 ## hostname: bm-xserve01.mozilla.org
 ## uname: Darwin bm-xserve01.mozilla.org 8.5.0 Darwin Kernel Version 8.5.0: Sun Jan 22 10:38:46 PST 2006; root:xnu-792.6.61.obj~1/RELEASE_PPC Power Macintosh powerpc
@@ -138,6 +139,8 @@ $StartupPerformanceTest   = 0;  # Ts
 #$moz_cvsroot   = $ENV{CVSROOT};
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
+
+$MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
