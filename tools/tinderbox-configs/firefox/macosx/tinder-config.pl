@@ -139,6 +139,8 @@ $MozProfileName = 'Moz1.8.0-MacUniversal';
 #$moz_cvsroot   = $ENV{CVSROOT};
 $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
+$MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
+
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
 
