@@ -49,8 +49,8 @@ $BuildLocales      = 1;      # Do l10n packaging?
 # Tests
 $CleanProfile             = 1;
 $ResetHomeDirForTests     = 1;
-$ProductName              = "Sunbird";
-#$ProductName              = 'Calendar';
+#$ProductName              = "Sunbird";
+$ProductName              = 'Calendar';
 $VendorName               = 'Mozilla';
 
 #$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
@@ -166,13 +166,8 @@ $ConfigureOnly = 1;
 
 $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
-#%WGetFiles = (
-#	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-%version%.en-US.linux-i686.tar.gz" =>
-#	      "/builds/tinderbox/Sb-Mozilla1.8-l10n/Linux_2.4.21-37.EL_Clobber/sunbird.tar.gz"
-#	      );
-
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/candidates/0.5rc1/sunbird-%version%.en-US.linux-i686.tar.gz" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-%version%.en-US.linux-i686.tar.gz" =>
 	      "/builds/tinderbox/Sb-Mozilla1.8-l10n/Linux_2.4.21-37.EL_Clobber/sunbird.tar.gz"
 	      );
 
@@ -190,8 +185,8 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Mozilla1.8-l10n/Linux_2.4.21-37
 $BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
-#$BuildTag = 'MOZILLA_1_8_BRANCH';
-$BuildTag = 'SUNBIRD_0_5_RELEASE';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
+#$BuildTag = 'SUNBIRD_0_5_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 

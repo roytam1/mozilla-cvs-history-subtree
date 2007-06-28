@@ -25,7 +25,5 @@ ac_add_options --enable-default-toolkit=mac
 # SVG now requires Cairo, so disable it for now.
 ac_add_options --disable-svg
 
-ac_add_options --enable-official-branding
-
 CC=gcc-3.3
 CCX=g++-3.3
