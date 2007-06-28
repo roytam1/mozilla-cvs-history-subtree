@@ -1,7 +1,7 @@
 #
-## hostname: argo-vm
-## uname: Linux argo-vm.mozilla.org 2.4.21-32.0.1.ELsmp #1 SMP Tue May 17 17:52:23 EDT 2005 i686 i686 i386 GNU/Linux
-#
+## hostname: fx-linux-tbox
+## Linux fx-linux-tbox.build.mozilla.org 2.6.9-42.ELsmp #1 SMP Sat Aug 12 09:39:11 CDT 2006 i686 athlon i386 GNU/Linux 
+##
 
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
@@ -178,7 +178,7 @@ $BuildNameExtra = 'Release';
 $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_9a5_RELEASE';
+$BuildTag = 'MOZILLA_1_9a6_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -214,7 +214,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "mozilla1.9a5";
+$milestone     = "mozilla1.9a6";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;

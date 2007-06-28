@@ -178,7 +178,7 @@ $BuildNameExtra = 'Release';
 $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_9a5_RELEASE';
+$BuildTag = 'MOZILLA_1_9a6_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -214,7 +214,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "mozilla1.9a5";
+$milestone     = "mozilla1.9a6";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
