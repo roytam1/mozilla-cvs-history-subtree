@@ -67,6 +67,8 @@ REQUIRES = \
 	layout \
 	cairo \
 	libpixman \
+	js \
+	xpconnect \
 	$(NULL)
 
 CPPSRCS = \
