@@ -57,14 +57,14 @@ pref("camino.enable_plugins", true);
 pref("camino.warn_when_closing", true);
 
 // show warning when attempting to open a feed to another application
-pref("camino.warn_before_opening_feed", true);
+pref("camino.warn_before_opening_feed", true); 
 
 // turn off dumping of JS and CSS errors to the console
 pref("chimera.log_js_to_console", false);
 
 // Identify Camino in the UA string
 pref("general.useragent.vendor", "Camino");
-pref("general.useragent.vendorSub", "2.0a1pre");
+pref("general.useragent.vendorSub", "1.6a1pre");
 
 // work around stupid sites sniffing for firefox instead of gecko
 pref("general.useragent.extra.notfox", "(like Firefox/@FOX_APP_VERSION@)");
@@ -125,7 +125,7 @@ pref("browser.backspace_action", 0);
 // bring download window to the front when each download starts
 pref("browser.download.progressDnldDialog.bringToFront", true);
 
-// 0 = spellcheck nothing, 1 = check multi-line controls, 2 = check 
+// 0 = spellcheck nothing, 1 = check multi-line controls, 2 = check
 //  multi/single line controls
 pref("layout.spellcheckDefault", 2);
 
@@ -143,6 +143,3 @@ pref("browser.fixup.hide_user_pass", false);
 
 // give users the option of restoring windows after a crash
 pref("browser.sessionstore.resume_from_crash", true);
-
-// Camino makes its own popup windows (context menus, tooltips)
-pref("ui.use_native_popup_windows", true);
