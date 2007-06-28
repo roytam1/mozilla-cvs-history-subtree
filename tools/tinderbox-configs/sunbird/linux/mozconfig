@@ -13,7 +13,7 @@ mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 mk_add_options JS_READLINE=1
 
 ac_add_options --enable-application="calendar"
-ac_add_options --enable-update-channel="release"
+ac_add_options --enable-update-channel="nightly"
 ac_add_options --enable-update-packaging
 ac_add_options --disable-debug
 ac_add_options --enable-optimize="-O2 -gstabs+"
@@ -23,5 +23,3 @@ ac_add_options --disable-installer
 
 ac_add_options --enable-static
 ac_add_options --disable-shared
-
-ac_add_options --enable-official-branding
