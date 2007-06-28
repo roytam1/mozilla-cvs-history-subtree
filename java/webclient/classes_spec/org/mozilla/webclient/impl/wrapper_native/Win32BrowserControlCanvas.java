@@ -22,7 +22,9 @@
 package org.mozilla.webclient.impl.wrapper_native;
 
 
+import java.util.List;
 import org.mozilla.util.ReturnRunnable;
+import org.mozilla.webclient.NewWindowEvent;
 
 /**
 
@@ -76,6 +78,23 @@ public class Win32BrowserControlCanvas extends NativeBrowserControlCanvas {
 		});
 	return result.intValue();
     }
+    
+    void performPlatformAppropriateNewWindowRealization(final NewWindowEvent event) {
+        final List<Runnable> addToList =
+                event.getRealizeNewWindowRunnableList();
+        NativeEventThread.instance.pushRunnable(new Runnable() {
+            public void run() {
+                addToList.add(event.getRealizeNewWindowRunnable());
+            }
+
+            public String toString() {
+                return "EventRegistrationImpl.RealizeNewWindowEvent";
+            }
+        });
+    
+        NativeEventThread.instance.runUntilEventOfType(WindowControlImpl.NativeRealizeWCRunnable.class);
+    }
+    
 
     public static NativeEventThread newNativeEventThread(WrapperFactory owner) {
         NativeEventThread result = new NativeEventThread("WebclientEventThread",
