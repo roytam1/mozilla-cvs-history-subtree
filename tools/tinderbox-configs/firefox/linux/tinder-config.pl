@@ -36,6 +36,12 @@ $ENV{LANG} = "en_US.iso885915";
 #           and on the Talkback server.
 #$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp";
 
+# Breakpad server variables
+$ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
+$ENV{'SYMBOL_SERVER_USER'}   = 'ffxbld';
+$ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_ffx/';
+$ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{'HOME'}/.ssh/ffxbld_dsa";
+
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 $BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
@@ -201,7 +207,7 @@ $BinaryName = 'firefox-bin';
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
 $crashreporter_buildsymbols = 1;
-$crashreporter_pushsymbols = 0;
+$crashreporter_pushsymbols = 1;
 $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = 4;
