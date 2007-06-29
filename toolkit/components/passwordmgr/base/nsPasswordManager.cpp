@@ -795,7 +795,7 @@ nsPasswordManager::Observe(nsISupports* aSubject,
 
     obsService->AddObserver(this, "profile-after-change", PR_TRUE);
   } else if (!strcmp(aTopic, "profile-after-change"))
-    nsCOMPtr<nsIPasswordManager> pm = do_GetService(NS_PASSWORDMANAGER_CONTRACTID);
+    LoadPasswords();
 
   return NS_OK;
 }
