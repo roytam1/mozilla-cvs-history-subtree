@@ -251,7 +251,9 @@ STDMETHODIMP nsAccessibleWrap::get_accChild(
 
   nsCOMPtr<nsIAccessible> childAccessible;
   GetChildAt(varChild.lVal - 1, getter_AddRefs(childAccessible));
-  *ppdispChild = NativeAccessible(childAccessible);
+  if (childAccessible) {
+    *ppdispChild = NativeAccessible(childAccessible);
+  }
 
   return (*ppdispChild)? S_OK: E_FAIL;
 }
@@ -1015,6 +1017,10 @@ NS_IMETHODIMP nsAccessibleWrap::GetNativeInterface(void **aOutAccessible)
 
 IDispatch *nsAccessibleWrap::NativeAccessible(nsIAccessible *aXPAccessible)
 {
+  if (!aXPAccessible) {
+    return NULL;
+  }
+  
   nsCOMPtr<nsIAccessibleWin32Object> accObject(do_QueryInterface(aXPAccessible));
   if (accObject) {
     void* hwnd;
