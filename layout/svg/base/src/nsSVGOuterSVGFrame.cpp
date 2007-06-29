@@ -74,6 +74,12 @@
 #include "nsSVGRect.h"
 #include "nsLayoutAtoms.h"
 #include "nsIDocument.h"
+#ifdef XP_OS2
+#define INCL_WINWINDOWMGR
+#define INCL_GPIBITMAPS
+#include <os2.h>
+#include "cairo-os2.h"
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // VMRectInvalidator: helper class for invalidating rects on the viewmanager.
@@ -313,6 +319,9 @@ nsSVGOuterSVGFrame::nsSVGOuterSVGFrame()
       mNeedsReflow(PR_FALSE),
       mViewportInitialized(PR_FALSE)
 {
+#ifdef XP_OS2
+  cairo_os2_initialize();
+#endif
 }
 
 nsSVGOuterSVGFrame::~nsSVGOuterSVGFrame()
@@ -325,6 +334,10 @@ nsSVGOuterSVGFrame::~nsSVGOuterSVGFrame()
     NS_REMOVE_SVGVALUE_OBSERVER(mZoomAndPan);
 
   RemoveAsWidthHeightObserver();
+
+#ifdef XP_OS2
+  cairo_os2_uninitialize();
+#endif
 }
 
 nsresult nsSVGOuterSVGFrame::Init()

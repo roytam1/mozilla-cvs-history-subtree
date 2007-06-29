@@ -34,8 +34,10 @@
  */
 
 #include <stdio.h>
+#include <float.h>
 #include "cairoint.h"
 #include "cairo-os2-private.h"
+#include "fontconfig/fontconfig.h"
 
 /* Forward declaration */
 static const cairo_surface_backend_t cairo_os2_surface_backend;
@@ -50,16 +52,59 @@ static const cairo_surface_backend_t cairo_os2_surface_backend;
 BOOL APIENTRY GpiEnableYInversion(HPS hps, LONG lHeight);
 LONG APIENTRY GpiQueryYInversion(HPS hps);
 
-#ifdef __WATCOMC__
-/* Function declaration for GpiDrawBits() (missing from OpenWatcom headers) */
-LONG APIENTRY GpiDrawBits(HPS hps,
-                          PVOID pBits,
-                          PBITMAPINFO2 pbmiInfoTable,
-                          LONG lCount,
-                          PPOINTL aptlPoints,
-                          LONG lRop,
-                          ULONG flOptions);
+/* Initialization counter: */
+static int cairo_os2_initialization_count = 0;
+
+static void inline
+DisableFPUException (void)
+{
+  unsigned short usCW;
+
+  /* Some OS/2 PM API calls modify the FPU Control Word,
+   * but forget to restore it.
+   *
+   * This can result in XCPT_FLOAT_INVALID_OPCODE exceptions,
+   * so to be sure, we disable Invalid Opcode FPU exception
+   * before using FPU stuffs.
+   */
+  usCW = _control87 (0, 0);
+  usCW = usCW | EM_INVALID | 0x80;
+  _control87 (usCW, MCW_EM | 0x80);
+}
+
+void cairo_os2_initialize (void)
+{
+  /* This may initialize some stuffs */
+
+  cairo_os2_initialization_count++;
+  if (cairo_os2_initialization_count > 1) return;
+
+  DisableFPUException ();
+
+  /* Initialize FontConfig */
+  FcInit ();
+}
+
+void cairo_os2_uninitialize (void)
+{
+  /* This has to uninitialize some stuffs */
+
+  if (cairo_os2_initialization_count <= 0) return;
+  cairo_os2_initialization_count--;
+  if (cairo_os2_initialization_count > 0) return;
+
+  DisableFPUException ();
+
+  /* Free allocated memories! */
+  /* (Check cairo_debug_reset_static_date () for an example of this!) */
+  _cairo_font_reset_static_data ();
+#ifdef CAIRO_HAS_FT_FONT
+  _cairo_ft_font_reset_static_data ();
 #endif
+
+  /* Uninitialize FontConfig */
+  FcFini ();
+}
 
 static void _cairo_os2_surface_blit_pixels(cairo_os2_surface_t *pOS2Surface,
                                            HPS hpsBeginPaint,
