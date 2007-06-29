@@ -363,37 +363,19 @@ secu_InitSlotPassword(PK11SlotInfo *slot, PRBool retry, void *arg)
 SECStatus
 SECU_ChangePW(PK11SlotInfo *slot, char *passwd, char *pwFile)
 {
-    return SECU_ChangePW2(slot, passwd, 0, pwFile, 0);
-}
-
-SECStatus
-SECU_ChangePW2(PK11SlotInfo *slot, char *oldPass, char *newPass,
-			char *oldPwFile, char *newPwFile)
-{
     SECStatus rv;
     secuPWData pwdata, newpwdata;
     char *oldpw = NULL, *newpw = NULL;
 
-    if (oldPass) {
+    if (passwd) {
 	pwdata.source = PW_PLAINTEXT;
-	pwdata.data = oldPass;
-    } else if (oldPwFile) {
+	pwdata.data = passwd;
+    } else if (pwFile) {
 	pwdata.source = PW_FROMFILE;
-	pwdata.data = oldPwFile;
+	pwdata.data = pwFile;
     } else {
 	pwdata.source = PW_NONE;
 	pwdata.data = NULL;
-    }
-
-    if (newPass) {
-	newpwdata.source = PW_PLAINTEXT;
-	newpwdata.data = newPass;
-    } else if (newPwFile) {
-	newpwdata.source = PW_FROMFILE;
-	newpwdata.data = newPwFile;
-    } else {
-	newpwdata.source = PW_NONE;
-	newpwdata.data = NULL;
     }
 
     if (PK11_NeedUserInit(slot)) {
@@ -419,6 +401,9 @@ SECU_ChangePW2(PK11SlotInfo *slot, char *oldPass, char *newPass,
 
 	PORT_Free(oldpw);
     }
+
+    newpwdata.source = PW_NONE;
+    newpwdata.data = NULL;
 
     newpw = secu_InitSlotPassword(slot, PR_FALSE, &newpwdata);
 
@@ -915,20 +900,7 @@ SECU_PrintInteger(FILE *out, SECItem *i, char *m, int level)
     } else if (i->len > 4) {
 	SECU_PrintAsHex(out, i, m, level);
     } else {
-   	if (i->type == siUnsignedInteger && *i->data & 0x80) {
-            /* Make sure i->data has zero in the highest bite 
-             * if i->data is an unsigned integer */
-            SECItem tmpI;
-            char data[] = {0, 0, 0, 0, 0};
-
-            PORT_Memcpy(data + 1, i->data, i->len);
-            tmpI.len = i->len + 1;
-            tmpI.data = (void*)data;
-
-            iv = DER_GetInteger(&tmpI);
-	} else {
-            iv = DER_GetInteger(i);
-	}
+	iv = DER_GetInteger(i);
 	SECU_Indent(out, level); 
 	if (m) {
 	    fprintf(out, "%s: %d (0x%x)\n", m, iv, iv);
@@ -3049,7 +3021,7 @@ SECU_ParseCommandLine(int argc, char **argv, char *progName, secuCommand *cmd)
     char *optstring;
     int i, j;
 
-    optstring = (char *)PORT_Alloc(cmd->numCommands + 2*cmd->numOptions);
+    optstring = (char *)malloc(cmd->numCommands + 2*cmd->numOptions);
     j = 0;
 
     for (i=0; i<cmd->numCommands; i++) {
@@ -3062,10 +3034,7 @@ SECU_ParseCommandLine(int argc, char **argv, char *progName, secuCommand *cmd)
     }
     optstring[j] = '\0';
     optstate = PL_CreateOptState(argc, argv, optstring);
-    if (!optstate) {
-        PORT_Free(optstring);
-        return SECFailure;
-    }
+
     /* Parse command line arguments */
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 
@@ -3095,23 +3064,16 @@ SECU_ParseCommandLine(int argc, char **argv, char *progName, secuCommand *cmd)
 		if (optstate->value) {
 		    cmd->options[i].arg = (char *)optstate->value;
 		} else if (cmd->options[i].needsArg) {
-		    status = PL_OPT_BAD;
-		    goto loser;
-		}
+                    return SECFailure;
+                }
 		found = PR_TRUE;
 		break;
 	    }
 	}
 
-	if (!found) {
-	    status = PL_OPT_BAD;
-	    break;
-	}
+	if (!found)
+	    return SECFailure;
     }
-
-loser:
-    PL_DestroyOptState(optstate);
-    PORT_Free(optstring);
     if (status == PL_OPT_BAD)
 	return SECFailure;
     return SECSuccess;
@@ -3273,10 +3235,9 @@ bestCertName(CERTCertificate *cert) {
 }
 
 void
-SECU_printCertProblemsOnDate(FILE *outfile, CERTCertDBHandle *handle, 
+SECU_printCertProblems(FILE *outfile, CERTCertDBHandle *handle, 
 	CERTCertificate *cert, PRBool checksig, 
-	SECCertificateUsage certUsage, void *pinArg, PRBool verbose,
-	PRTime datetime)
+	SECCertificateUsage certUsage, void *pinArg, PRBool verbose)
 {
     CERTVerifyLog      log;
     CERTVerifyLogNode *node   = NULL;
@@ -3288,7 +3249,7 @@ SECU_printCertProblemsOnDate(FILE *outfile, CERTCertDBHandle *handle,
     log.arena = PORT_NewArena(512);
     log.head = log.tail = NULL;
     log.count = 0;
-    CERT_VerifyCertificate(handle, cert, checksig, certUsage, datetime, pinArg, &log, NULL);
+    CERT_VerifyCertificate(handle, cert, checksig, certUsage, PR_Now(), pinArg, &log, NULL);
 
     if (log.count > 0) {
 	fprintf(outfile,"PROBLEM WITH THE CERT CHAIN:\n");
@@ -3372,15 +3333,6 @@ SECU_printCertProblemsOnDate(FILE *outfile, CERTCertDBHandle *handle,
 	}    
     }
     PORT_SetError(err); /* restore original error code */
-}
-
-void
-SECU_printCertProblems(FILE *outfile, CERTCertDBHandle *handle, 
-	CERTCertificate *cert, PRBool checksig, 
-	SECCertificateUsage certUsage, void *pinArg, PRBool verbose)
-{
-    SECU_printCertProblemsOnDate(outfile, handle, cert, checksig, 
-	                         certUsage, pinArg, verbose, PR_Now());
 }
 
 SECOidTag 

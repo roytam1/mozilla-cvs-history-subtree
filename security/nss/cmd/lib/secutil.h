@@ -92,16 +92,6 @@ typedef struct {
 */
 SECStatus SECU_ChangePW(PK11SlotInfo *slot, char *passwd, char *pwFile);
 
-/*
-** Change a password on a token, or initialize a token with a password
-** if it does not already have one.
-** In this function, you can specify both the old and new passwords
-** as either a string or file. NOTE: any you don't specify will
-** be prompted for
-*/
-SECStatus SECU_ChangePW2(PK11SlotInfo *slot, char *oldPass, char *newPass,
-                        char *oldPwFile, char *newPwFile);
-
 /*  These were stolen from the old sec.h... */
 /*
 ** Check a password for legitimacy. Passwords must be at least 8
@@ -178,17 +168,11 @@ extern void SECU_PrintSystemError(char *progName, char *msg, ...);
 /* Return informative error string */
 extern const char * SECU_Strerror(PRErrorCode errNum);
 
-/* print information about cert verification failure at time == now */
+/* print information about cert verification failure */
 extern void
 SECU_printCertProblems(FILE *outfile, CERTCertDBHandle *handle, 
 	CERTCertificate *cert, PRBool checksig, 
 	SECCertificateUsage certUsage, void *pinArg, PRBool verbose);
-
-/* print information about cert verification failure at specified time */
-extern void
-SECU_printCertProblemsOnDate(FILE *outfile, CERTCertDBHandle *handle, 
-	CERTCertificate *cert, PRBool checksig, SECCertificateUsage certUsage, 
-	void *pinArg, PRBool verbose, PRTime datetime);
 
 /* Read the contents of a file into a SECItem */
 extern SECStatus SECU_FileToItem(SECItem *dst, PRFileDesc *src);

@@ -299,19 +299,13 @@ $(PROGRAM): $(OBJS)
 	@$(MAKE_OBJDIR)
 ifeq ($(NS_USE_GCC)_$(OS_ARCH),_WINNT)
 	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
-ifdef MT
-	@if test -f $@.manifest; then \
-		$(MT) -NOLOGO -MANIFEST $@.manifest -OUTPUTRESOURCE:$@\;1; \
-		rm -f $@.manifest; \
-	fi
-endif	# MSVC with manifest tool
-else	# WINNT && !GCC
+else
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
 	$(CC) $(OBJS) -Fe$@ $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
 else
 	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
 endif
-endif	# WINNT && !GCC
+endif
 ifdef ENABLE_STRIP
 	$(STRIP) $@
 endif
@@ -346,13 +340,7 @@ ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
 else	# AIX 4.1
 ifeq ($(NS_USE_GCC)_$(OS_ARCH),_WINNT)
 	$(LINK_DLL) -MAP $(DLLBASE) $(DLL_LIBS) $(EXTRA_LIBS) $(OBJS) $(RES)
-ifdef MT
-	@if test -f $@.manifest; then \
-		$(MT) -NOLOGO -MANIFEST $@.manifest -OUTPUTRESOURCE:$@\;2; \
-		rm -f $@.manifest; \
-	fi
-endif	# MSVC with manifest tool
-else	# WINNT && !GCC
+else
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
 	$(LINK_DLL) $(DLLBASE) $(OBJS) $(OS_LIBS) $(EXTRA_LIBS) $(MAPFILE)
 else	# !os2 vacpp
@@ -366,7 +354,7 @@ ifeq ($(OS_TARGET), OpenVMS)
 endif	# OpenVMS
 	$(MKSHLIB) $(OBJS) $(RES) $(EXTRA_LIBS)
 endif   # OS2 vacpp
-endif	# WINNT && !GCC
+endif	# WINNT
 endif	# AIX 4.1
 ifdef ENABLE_STRIP
 	$(STRIP) $@
