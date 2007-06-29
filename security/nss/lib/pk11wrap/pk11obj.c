@@ -237,8 +237,6 @@ PK11_GetAttributes(PRArenaPool *arena,PK11SlotInfo *slot,
      * now allocate space to store the results.
      */
     for (i=0; i < count; i++) {
-	if (attr[i].ulValueLen == 0)
-	    continue;
 	if (arena) {
 	    attr[i].pValue = PORT_ArenaAlloc(arena,attr[i].ulValueLen);
 	    if (attr[i].pValue == NULL) {
@@ -1191,9 +1189,7 @@ PK11_FindGenericObjects(PK11SlotInfo *slot, CK_OBJECT_CLASS objClass)
     for (i=0; i < count; i++) {
 	obj = PORT_New(PK11GenericObject);
 	if ( !obj ) {
-	    if (firstObj) {
-		PK11_DestroyGenericObjects(firstObj);
-	    }
+	    PK11_DestroyGenericObjects(firstObj);
 	    PORT_Free(objectIDs);
 	    return NULL;
 	}
@@ -1295,7 +1291,7 @@ SECStatus
 PK11_DestroyGenericObjects(PK11GenericObject *objects)
 {
     PK11GenericObject *nextObject;
-    PK11GenericObject *prevObject;
+    PK11GenericObject *prevObject = objects->prev;
  
     if (objects == NULL) {
 	return SECSuccess;
@@ -1486,10 +1482,7 @@ PK11_MatchItem(PK11SlotInfo *slot, CK_OBJECT_HANDLE searchID,
 
     if ((theTemplate[0].ulValueLen == 0) || (theTemplate[0].ulValueLen == -1)) {
 	PORT_FreeArena(arena,PR_FALSE);
-	if (matchclass == CKO_CERTIFICATE)
-	    PORT_SetError(SEC_ERROR_BAD_KEY);
-	else
-	    PORT_SetError(SEC_ERROR_NO_KEY);
+	PORT_SetError(SEC_ERROR_BAD_KEY);
 	return CK_INVALID_HANDLE;
      }
 	

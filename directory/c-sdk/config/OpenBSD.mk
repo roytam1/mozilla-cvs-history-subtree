@@ -43,7 +43,6 @@ include $(MOD_DEPTH)/config/UNIX.mk
 
 CC                     = gcc
 CCC                    = g++
-LD                     = $(CC)
 RANLIB                 = ranlib
 
 OS_REL_CFLAGS          =
@@ -67,8 +66,16 @@ ARCH                   = openbsd
 DLL_SUFFIX             = so.1.0
 
 DSO_CFLAGS             = -fPIC
-
+DSO_LDOPTS             = -Bshareable
+ifeq ($(OS_TEST),alpha)
 DSO_LDOPTS             = -shared
+endif
+ifeq ($(OS_TEST),mips)
+DSO_LDOPTS             = -shared
+endif
+ifeq ($(OS_TEST),pmax)  
+DSO_LDOPTS             = -shared
+endif
 
 MKSHLIB                        = $(LD) $(DSO_LDOPTS)
 
