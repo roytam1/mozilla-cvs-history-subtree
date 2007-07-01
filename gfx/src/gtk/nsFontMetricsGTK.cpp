@@ -77,6 +77,7 @@
 #include <gdk/gdk.h>
 
 #define IS_SURROGATE(u)      (u > 0x10000)
+#define SAFE_CCMAP_HAS_CHAR_EXT(ccmap,c) ((ccmap) && ((IS_SURROGATE(c) && (ccmap)==gDoubleByteSpecialCharsCCMap) ? PR_FALSE : (CCMAP_HAS_CHAR_EXT(ccmap,c))))
 
 #define UCS2_NOMAPPING 0XFFFD
 
@@ -2042,7 +2043,7 @@ nsFontMetricsGTK::LocateFont(PRUint32 aChar, PRInt32 & aCount)
   // see if one of our loaded fonts can represent the character
   for (i = 0; i < aCount; ++i) {
     font = (nsFontGTK*)mLoadedFonts[i];
-    if (CCMAP_HAS_CHAR_EXT(font->mCCMap, aChar))
+    if (SAFE_CCMAP_HAS_CHAR_EXT(font->mCCMap, aChar))
       return font;
   }
 
@@ -2084,7 +2085,7 @@ nsFontMetricsGTK::ResolveForwards(const PRUnichar        *aString,
   //This if block is meant to speedup the process in normal situation, when
   //most characters can be found in first font
   if (currFont == mLoadedFonts[0]) {
-    while (currChar < lastChar && CCMAP_HAS_CHAR_EXT(currFont->mCCMap,*currChar))
+    while (currChar < lastChar && SAFE_CCMAP_HAS_CHAR_EXT(currFont->mCCMap,*currChar))
       ++currChar;
     fontSwitch.mFontGTK = currFont;
     if (!(*aFunc)(&fontSwitch, firstChar, currChar - firstChar, aData))
@@ -3359,7 +3360,7 @@ SetFontCharsetInfo(nsFontGTK *aFont, nsFontCharSetInfo* aCharSet,
   if (aCharSet->mCharSet) {
     aFont->mCCMap = aCharSet->mCCMap;
     // check that the font is not empty
-    if (CCMAP_HAS_CHAR_EXT(aFont->mCCMap, aChar)) {
+    if (!aFont->mCCMap || CCMAP_HAS_CHAR_EXT(aFont->mCCMap, aChar)) {
       aFont->LoadFont();
       if (!aFont->GetXFont()) {
         return PR_FALSE;
@@ -3683,7 +3684,7 @@ nsFontMetricsGTK::GetWidth  (const PRUnichar* aString, PRUint32 aLength,
         nsFontGTK** font = mLoadedFonts;
         nsFontGTK** end = &mLoadedFonts[mLoadedFontsCount];
         while (font < end) {
-            if (CCMAP_HAS_CHAR_EXT((*font)->mCCMap, c)) {
+            if (SAFE_CCMAP_HAS_CHAR_EXT((*font)->mCCMap, c)) {
                 currFont = *font;
                 goto FoundFont; // for speed -- avoid "if" statement
             }
@@ -3842,7 +3843,7 @@ nsFontMetricsGTK::DrawString(const PRUnichar* aString, PRUint32 aLength,
         nsFontGTK** font = mLoadedFonts;
         nsFontGTK** lastFont = &mLoadedFonts[mLoadedFontsCount];
         while (font < lastFont) {
-            if (CCMAP_HAS_CHAR_EXT((*font)->mCCMap, c)) {
+            if (SAFE_CCMAP_HAS_CHAR_EXT((*font)->mCCMap, c)) {
                 currFont = *font;
                 goto FoundFont; // for speed -- avoid "if" statement
             }
@@ -4020,7 +4021,7 @@ nsFontMetricsGTK::GetBoundingMetrics(const PRUnichar *aString,
         nsFontGTK** end = &mLoadedFonts[mLoadedFontsCount];
 
         while (font < end) {
-            if (CCMAP_HAS_CHAR_EXT((*font)->mCCMap, c)) {
+            if (SAFE_CCMAP_HAS_CHAR_EXT((*font)->mCCMap, c)) {
                 currFont = *font;
                 goto FoundFont; // for speed -- avoid "if" statement
             }
@@ -4114,7 +4115,7 @@ nsFontMetricsGTK::GetTextDimensions (const PRUnichar* aString,
         nsFontGTK** end = &mLoadedFonts[mLoadedFontsCount];
 
         while (font < end) {
-            if (CCMAP_HAS_CHAR_EXT((*font)->mCCMap, c)) {
+            if (SAFE_CCMAP_HAS_CHAR_EXT((*font)->mCCMap, c)) {
                 currFont = *font;
                 goto FoundFont; // for speed -- avoid "if" statement
             }
@@ -6253,16 +6254,16 @@ if (gAllowDoubleByteSpecialChars) {
         sub_font->mCCMap = gDoubleByteSpecialCharsCCMap;
         AddToLoadedFontsList(sub_font);
       }
-      if (western_font && CCMAP_HAS_CHAR_EXT(western_font->mCCMap, aChar)) {
+      if (western_font && SAFE_CCMAP_HAS_CHAR_EXT(western_font->mCCMap, aChar)) {
         return western_font;
       }
-      else if (symbol_font && CCMAP_HAS_CHAR_EXT(symbol_font->mCCMap, aChar)) {
+      else if (symbol_font && SAFE_CCMAP_HAS_CHAR_EXT(symbol_font->mCCMap, aChar)) {
         return symbol_font;
       }
-      else if (euro_font && CCMAP_HAS_CHAR_EXT(euro_font->mCCMap, aChar)) {
+      else if (euro_font && SAFE_CCMAP_HAS_CHAR_EXT(euro_font->mCCMap, aChar)) {
         return euro_font;
       }
-      else if (sub_font && CCMAP_HAS_CHAR_EXT(sub_font->mCCMap, aChar)) {
+      else if (sub_font && SAFE_CCMAP_HAS_CHAR_EXT(sub_font->mCCMap, aChar)) {
         FIND_FONT_PRINTF(("      transliterate special chars for single byte docs"));
         return sub_font;
       }
@@ -6350,7 +6351,7 @@ nsFontMetricsGTK::FindSubstituteFont(PRUint32 aChar)
 {
   if (!mSubstituteFont) {
     for (int i = 0; i < mLoadedFontsCount; i++) {
-      if (CCMAP_HAS_CHAR_EXT(mLoadedFonts[i]->mCCMap, 'a')) {
+      if (SAFE_CCMAP_HAS_CHAR_EXT(mLoadedFonts[i]->mCCMap, 'a')) {
         mSubstituteFont = new nsFontGTKSubstitute(mLoadedFonts[i]);
         break;
       }
