@@ -175,6 +175,7 @@ nsMenuPopupFrame::Init(nsPresContext*  aPresContext,
                        nsIFrame*        aPrevInFlow)
 {
   nsresult rv = nsBoxFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // lookup if we're allowed to overlap the OS bar (menubar/taskbar) from the
   // look&feel object
@@ -186,7 +187,8 @@ nsMenuPopupFrame::Init(nsPresContext*  aPresContext,
   // XXX Hack
   mPresContext = aPresContext;
 
-  CreateViewForFrame(aPresContext, this, aContext, PR_TRUE);
+  rv = CreateViewForFrame(aPresContext, this, aContext, PR_TRUE);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // Now that we've made a view, remove it and insert it at the correct
   // position in the view hierarchy (as the root view).  We do this so that we

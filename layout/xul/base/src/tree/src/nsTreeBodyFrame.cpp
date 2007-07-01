@@ -201,8 +201,15 @@ nsTreeBodyFrame::Init(nsPresContext* aPresContext, nsIContent* aContent,
 {
   mPresContext = aPresContext;
   nsresult rv = nsLeafBoxFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
-  nsBoxFrame::CreateViewForFrame(aPresContext, this, aContext, PR_TRUE);
-  nsLeafBoxFrame::GetView()->CreateWidget(kWidgetCID);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = nsBoxFrame::CreateViewForFrame(aPresContext, this, aContext, PR_TRUE);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsIView* view = nsLeafBoxFrame::GetView();
+  if (!view->HasWidget()) {
+    view->CreateWidget(kWidgetCID);
+  }
 
   mIndentation = GetIndentation();
   mRowHeight = GetRowHeight();

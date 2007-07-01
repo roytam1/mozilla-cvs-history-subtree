@@ -103,6 +103,7 @@ nsNativeScrollbarFrame::Init(nsPresContext* aPresContext, nsIContent* aContent,
                                nsIFrame* aParent, nsStyleContext* aContext, nsIFrame* aPrevInFlow)
 {
   nsresult  rv = nsBoxFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // create a view for this frame and then associate the view with the native
   // scrollbar widget. The net result of this is that the view will automatically
@@ -111,7 +112,7 @@ nsNativeScrollbarFrame::Init(nsPresContext* aPresContext, nsIContent* aContent,
   static NS_DEFINE_IID(kScrollbarCID,  NS_NATIVESCROLLBAR_CID);
   if ( NS_SUCCEEDED(CreateViewForFrame(aPresContext, this, aContext, PR_TRUE)) ) {
     nsIView* myView = GetView();
-    if ( myView ) {
+    if (myView && !myView->HasWidget()) {
       nsWidgetInitData widgetData;
       if ( NS_SUCCEEDED(myView->CreateWidget(kScrollbarCID, &widgetData, nsnull)) ) {
         mScrollbar = myView->GetWidget();
