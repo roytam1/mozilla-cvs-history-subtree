@@ -225,8 +225,8 @@ _cairo_gstate_clone (cairo_gstate_t *gstate)
 	    free (clone);
 	    return NULL;
 	}
+	clone->next = NULL;
     }
-    clone->next = NULL;
 
     return clone;
 }
