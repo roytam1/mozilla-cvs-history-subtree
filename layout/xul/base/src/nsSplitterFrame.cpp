@@ -359,13 +359,15 @@ nsSplitterFrame::Init(nsPresContext*  aPresContext,
   }
 
   nsresult  rv = nsBoxFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // XXX Hack because we need the pres context in some of the event handling functions...
   mPresContext = aPresContext; 
 
   nsHTMLContainerFrame::CreateViewForFrame(this, nsnull, PR_TRUE);
-  nsIView* view = GetView();
+  NS_ENSURE_SUCCESS(rv, rv);
 
+  nsIView* view = GetView();
   nsIViewManager* viewManager = view->GetViewManager();
   viewManager->SetViewContentTransparency(view, PR_TRUE);
 
@@ -374,7 +376,10 @@ nsSplitterFrame::Init(nsPresContext*  aPresContext,
     static NS_DEFINE_CID(kCChildCID, NS_CHILD_CID);
 
     // Need to have a widget to appear on top of other widgets.
-    view->CreateWidget(kCChildCID);
+    NS_ASSERTION(!view->HasWidget(), "have an unwanted widget");
+    if (!view->HasWidget()) {
+      view->CreateWidget(kCChildCID);
+    }
   }
 
   mInner->mState = nsSplitterFrameInner::Open;

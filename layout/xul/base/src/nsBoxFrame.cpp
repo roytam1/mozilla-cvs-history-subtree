@@ -221,13 +221,15 @@ nsBoxFrame::Init(nsPresContext*  aPresContext,
   mPresContext = aPresContext;
 
   nsresult  rv = nsContainerFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // see if we need a widget. Get our parent. Querty interface the parent we are given. 
   if (aParent && aParent->IsBoxFrame()) {
     PRBool needsWidget = PR_FALSE;
     aParent->ChildrenMustHaveWidgets(needsWidget);
     if (needsWidget) {
-        nsHTMLContainerFrame::CreateViewForFrame(this, nsnull, PR_TRUE);
+        rv = nsHTMLContainerFrame::CreateViewForFrame(this, nsnull, PR_TRUE);
+        NS_ENSURE_SUCCESS(rv, rv);
 
         nsIView* view = GetView();
         if (!view->HasWidget())
