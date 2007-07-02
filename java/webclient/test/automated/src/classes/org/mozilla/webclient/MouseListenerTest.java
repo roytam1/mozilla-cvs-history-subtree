@@ -284,7 +284,6 @@ public class MouseListenerTest extends WebclientTestCase {
         assertTrue(bitSet.get(TestFeature.MOUSE_ENTERED.ordinal()));
         assertTrue(bitSet.get(TestFeature.MOUSE_PRESSED.ordinal()));
         assertTrue(bitSet.get(TestFeature.MOUSE_RELEASED.ordinal()));
-        assertTrue(bitSet.get(TestFeature.MOUSE_EXITED.ordinal()));
 
         frame.setVisible(false);
         
