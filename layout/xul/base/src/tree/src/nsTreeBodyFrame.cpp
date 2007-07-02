@@ -227,8 +227,11 @@ nsTreeBodyFrame::GetMinSize(nsBoxLayoutState& aBoxLayoutState, nsSize& aSize)
   nsIContent* baseElement = GetBaseElement();
 
   PRInt32 desiredRows;
-  if (baseElement->Tag() == nsHTMLAtoms::select &&
-      baseElement->IsContentOfType(nsIContent::eHTML)) {
+  if (NS_UNLIKELY(!baseElement)) {
+    desiredRows = 0;
+  }
+  else if (baseElement->Tag() == nsHTMLAtoms::select &&
+           baseElement->IsContentOfType(nsIContent::eHTML)) {
     aSize.width = CalcMaxRowWidth();
     nsAutoString size;
     baseElement->GetAttr(kNameSpaceID_None, nsHTMLAtoms::size, size);
@@ -501,7 +504,8 @@ NS_IMETHODIMP nsTreeBodyFrame::SetView(nsITreeView * aView)
       sel->SetTree(nsnull);
     mView->SetTree(nsnull);
     mView = nsnull;
-    box->RemoveProperty(view.get());
+    if (box)
+      box->RemoveProperty(view.get());
 
     // Only reset the top row index and delete the columns if we had an old non-null view.
     mTopRowIndex = 0;
@@ -536,7 +540,8 @@ NS_IMETHODIMP nsTreeBodyFrame::SetView(nsITreeView * aView)
     mView->SetTree(mTreeBoxObject);
     mView->GetRowCount(&mRowCount);
  
-    box->SetPropertyAsSupports(view.get(), mView);
+    if (box)
+      box->SetPropertyAsSupports(view.get(), mView);
 
     ScrollParts parts = GetScrollParts();
     // The scrollbar will need to be updated.
@@ -743,7 +748,9 @@ nsTreeBodyFrame::ScrollParts nsTreeBodyFrame::GetScrollParts()
   nsPresContext* presContext = GetPresContext();
   ScrollParts result = { nsnull, nsnull };
   nsIFrame* treeFrame = nsnull;
-  presContext->PresShell()->GetPrimaryFrameFor(GetBaseElement(), &treeFrame);
+  nsIContent* baseElement = GetBaseElement();
+  if (baseElement)
+    presContext->PresShell()->GetPrimaryFrameFor(baseElement, &treeFrame);
   if (treeFrame) {
     // The way we do this, searching through the entire frame subtree, is pretty
     // dumb! We should know where these frames are.
@@ -1363,7 +1370,7 @@ nsTreeBodyFrame::MarkDirtyIfSelect()
 {
   nsIContent* baseElement = GetBaseElement();
 
-  if (baseElement->Tag() == nsHTMLAtoms::select &&
+  if (baseElement && baseElement->Tag() == nsHTMLAtoms::select &&
       baseElement->IsContentOfType(nsIContent::eHTML)) {
     // If we are an intrinsically sized select widget, we may need to
     // resize, if the widest item was removed or a new item was added.
