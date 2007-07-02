@@ -6890,8 +6890,8 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsFrameConstructorState& aSta
       }
   
     default:
-      NS_NOTREACHED("How did we get here?");
-      break;
+      NS_NOTREACHED("How did we get here? (ok if from CantRenderReplacedElement)");
+      return NS_ERROR_FAILURE;
     }
   }
 
