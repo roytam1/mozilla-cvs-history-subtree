@@ -37,7 +37,6 @@ import java.awt.BorderLayout;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import org.mozilla.mcp.junit.WebclientTestCase;
-import org.mozilla.webclient.NewWindowEvent.RealizeNewWindowEvent;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
