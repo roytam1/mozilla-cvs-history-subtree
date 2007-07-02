@@ -465,7 +465,7 @@ nsTreeBodyFrame::SetBounds(nsBoxLayoutState& aBoxLayoutState, const nsRect& aRec
 }
 
 
-NS_IMETHODIMP
+nsresult
 nsTreeBodyFrame::ReflowFinished(nsIPresShell* aPresShell, PRBool* aFlushFlag)
 {
   if (!mView) {
