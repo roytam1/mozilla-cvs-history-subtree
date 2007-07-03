@@ -4603,7 +4603,8 @@ nsFrame::CorrectStyleParentFrame(nsIFrame* aProspectiveParent,
     }
       
     nsIAtom* parentPseudo = parent->GetStyleContext()->GetPseudoType();
-    if (!parentPseudo || !nsCSSAnonBoxes::IsAnonBox(parentPseudo)) {
+    if (!parentPseudo || !nsCSSAnonBoxes::IsAnonBox(parentPseudo) ||
+        parentPseudo == nsCSSAnonBoxes::dummyOption) {
       return parent;
     }
 
