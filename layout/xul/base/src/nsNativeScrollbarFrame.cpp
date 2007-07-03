@@ -135,8 +135,8 @@ nsNativeScrollbarFrame::Init(nsPresContext* aPresContext, nsIContent* aContent,
   return rv;
 }
 
-void
-nsNativeScrollbarFrame::Destroy()
+NS_IMETHODIMP
+nsNativeScrollbarFrame::Destroy(nsPresContext* aPresContext)
 {
   nsCOMPtr<nsINativeScrollbar> scrollbar(do_QueryInterface(mScrollbar));
   if (scrollbar) {
@@ -144,6 +144,7 @@ nsNativeScrollbarFrame::Destroy()
     // the content node just to be safe about lifetime issues
     scrollbar->SetContent(nsnull, nsnull, nsnull);
   }
+  return nsBoxFrame::Destroy(aPresContext);
 }
 
 //
