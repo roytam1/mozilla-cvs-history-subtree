@@ -83,7 +83,7 @@ public:
 
 private:
     nsresult OpenURL();
-    void AsyncFinish(nsresult aResult);
+    void Finish(nsresult aResult);
     
     nsCOMPtr<nsIURI> mUrl;
     nsCOMPtr<nsIURI> mOriginalURI;
@@ -221,21 +221,21 @@ class nsProtocolRedirect : public nsRunnable {
       nsresult rv = 
         mHandlerInfo->GetPreferredApplicationHandler(getter_AddRefs(handlerApp));
       if (NS_FAILED(rv)) {
-        mOriginalChannel->AsyncFinish(rv);
+        mOriginalChannel->Finish(rv);
         return NS_OK;
       }
 
       nsCOMPtr<nsIWebHandlerApp> webHandlerApp = do_QueryInterface(handlerApp,
                                                                    &rv);
       if (NS_FAILED(rv)) {
-        mOriginalChannel->AsyncFinish(rv);
+        mOriginalChannel->Finish(rv);
         return NS_OK; 
       }
 
       nsCAutoString uriTemplate;
       rv = webHandlerApp->GetUriTemplate(uriTemplate);
       if (NS_FAILED(rv)) {
-        mOriginalChannel->AsyncFinish(rv);
+        mOriginalChannel->Finish(rv);
         return NS_OK; 
       }
             
@@ -243,7 +243,7 @@ class nsProtocolRedirect : public nsRunnable {
       nsCAutoString uriSpecToHandle;
       rv = mURI->GetSpec(uriSpecToHandle);
       if (NS_FAILED(rv)) {
-        mOriginalChannel->AsyncFinish(rv);
+        mOriginalChannel->Finish(rv);
         return NS_OK; 
       }
 
@@ -273,7 +273,7 @@ class nsProtocolRedirect : public nsRunnable {
       nsCOMPtr<nsIURI> uriToSend;
       rv = NS_NewURI(getter_AddRefs(uriToSend), uriTemplate);
       if (NS_FAILED(rv)) {
-        mOriginalChannel->AsyncFinish(rv);
+        mOriginalChannel->Finish(rv);
         return NS_OK; 
       }
 
@@ -285,7 +285,7 @@ class nsProtocolRedirect : public nsRunnable {
                          mOriginalChannel->mLoadFlags 
                          | nsIChannel::LOAD_REPLACE);
       if (NS_FAILED(rv)) {
-        mOriginalChannel->AsyncFinish(rv);
+        mOriginalChannel->Finish(rv);
         return NS_OK; 
       }
 
@@ -299,18 +299,18 @@ class nsProtocolRedirect : public nsRunnable {
                                           nsIChannelEventSink::REDIRECT_TEMPORARY |
                                           nsIChannelEventSink::REDIRECT_INTERNAL);
         if (NS_FAILED(rv)) {
-          mOriginalChannel->AsyncFinish(rv);
+          mOriginalChannel->Finish(rv);
           return NS_OK;
         }
       }
 
       rv = newChannel->AsyncOpen(mListener, mContext);
       if (NS_FAILED(rv)) {
-        mOriginalChannel->AsyncFinish(rv);
+        mOriginalChannel->Finish(rv);
         return NS_OK; 
       }
       
-      mOriginalChannel->AsyncFinish(NS_BINDING_REDIRECTED);
+      mOriginalChannel->Finish(NS_BINDING_REDIRECTED);
       return NS_OK;
     }
 
@@ -382,19 +382,24 @@ NS_IMETHODIMP nsExtProtocolChannel::AsyncOpen(nsIStreamListener *listener, nsISu
   return NS_ERROR_NO_CONTENT; // force caller to abort.
 }
 
-// Finish out what was started in AsyncOpen.  Note that we always call
-// OnStartRequest && OnStopRequest here, since there is no actual work bein
-// done by this channel.  This can be called in either the success or the
-// failure case.
-void nsExtProtocolChannel::AsyncFinish(nsresult aStatus)
+/**
+ * Finish out what was started in AsyncOpen.  This can be called in either the
+ * success or the failure case.  
+ *
+ * @param aStatus  used to set the channel's status, and, if this is a 
+ *                 failure code, OnStartRequest and OnStopRequest will be
+ *                 called, since Necko guarantees this will happen unless 
+ *                 the redirect took place.
+ */
+void nsExtProtocolChannel::Finish(nsresult aStatus)
 {
   mStatus = aStatus;
 
-  // necko guarantees that if AsyncOpen has succeeds, OnStartRequest
-  // and OnStopRequest will get called    
-  (void)mListener->OnStartRequest(this, mContext);
-  (void)mListener->OnStopRequest(this, mContext, aStatus);
-
+  if (NS_FAILED(aStatus) && mListener) {
+    (void)mListener->OnStartRequest(this, mContext);
+    (void)mListener->OnStopRequest(this, mContext, aStatus);
+  }
+  
   mIsPending = PR_FALSE;
   
   if (mLoadGroup) {
