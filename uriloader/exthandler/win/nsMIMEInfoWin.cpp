@@ -129,6 +129,6 @@ nsMIMEInfoWin::GetProperty(const nsAString& aName, nsIVariant* *_retval)
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
-  return NS_ERROR_FAILURE;
+  return NS_OK;
 }
 
